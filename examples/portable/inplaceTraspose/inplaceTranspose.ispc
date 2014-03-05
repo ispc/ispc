@@ -31,6 +31,7 @@ int __sj(const int i, const uniform int j, const uniform int m, const uniform in
 }
 
 
+#if 0
 static inline 
 void transpose_serial(uniform T A[], const uniform int m, const uniform int n)
 {
@@ -83,6 +84,7 @@ void transpose_serial(uniform T A[], const uniform int m, const uniform int n)
   delete joverb;
   delete tmp;
 }
+#endif
 
 static uniform   T * uniform tmpAll = NULL;
 static uniform int * uniform joverb = NULL;
@@ -90,9 +92,9 @@ static uniform int * uniform iovera = NULL;
 static uniform int a,b,c;
 
 static 
-void transpose_init(const uniform int m, const uniform int n, const uniform int taskCount)
+void transpose_init(const uniform int m, const uniform int n, const uniform int nTask)
 {
-  const uniform int tmpSize = max(m,n) * programCount * taskCount;
+  const uniform int tmpSize = max(m,n) * programCount * nTask;
   tmpAll = uniform new uniform T  [tmpSize];
   joverb = uniform new uniform int[n];
   iovera = uniform new uniform int[m];
@@ -178,7 +180,7 @@ void transpose(uniform T A[], const uniform int m, const uniform int n)
 #if 0
   transpose_serial(A, m, n);
 #else
-  const uniform int nTask = num_cores()*4;
+  const uniform int nTask = 32*8; //num_cores()*4;
   transpose_init(m,n,nTask);
 
   launch [nTask] transpose_step1(A, m, n);
@@ -192,5 +194,6 @@ void transpose(uniform T A[], const uniform int m, const uniform int n)
 
   transpose_finalize();
 #endif
+  sync;
 }
 

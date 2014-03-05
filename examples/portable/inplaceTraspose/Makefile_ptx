@@ -1,12 +1,12 @@
-PROG=radixSort
-ISPC_SRC=radixSort.ispc
+PROG=inplaceTranspose
+ISPC_SRC=inplaceTranspose.ispc
 
-CU_SRC=radixSort.cu
+#CU_SRC=inplaceTranspose.cu
 # NVCC_FLAGS=-Xptxas=-O1
-CXX_SRC=radixSort.cpp  radixSort.cpp
-PTXCC_REGMAX=64
+CXX_SRC=inplaceTranspose.cpp
+PTXCC_REGMAX=32
 
-LLVM_GPU=1
+# LLVM_GPU=1
 NVVM_GPU=1
 
 include ../common_ptx.mk

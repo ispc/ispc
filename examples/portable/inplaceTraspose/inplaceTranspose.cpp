@@ -43,38 +43,44 @@ int main(int argc, char * argv[])
       m*n*sizeof(int)*2/1e6);
 
 
-  std::vector< std::pair<int,int> > A(m*n);
+  std::pair<int,int> *A     = new std::pair<int,int>[m*n];
+  std::pair<int,int> *Acopy = new std::pair<int,int>[m*n];
+
+  for (int j = 0; j < n; j++)
+    for (int i = 0; i < m; i++)
+      A[j*m+i] = std::make_pair(i,j);
+
+  if (verbose)
+  {
+    fprintf(stderr, "Original: \n");
+    for (int j = 0; j < n; j++)
+    {
+      for (int i = 0; i < m; i++)
+      {
+        fprintf(stderr, "(%2d,%2d) ", A[j*m+i].first, A[j*m+i].second);
+      }
+      fprintf(stderr, "\n");
+    }
+    fprintf(stderr, "\n");
+    for (int i = 0; i < m*n; i++)
+      fprintf(stderr, "(%2d,%2d) ", A[i].first, A[i].second);
+    fprintf(stderr, "\n");
+    fprintf(stderr, "\n");
+  }
+
+
+  for (int j = 0; j < n; j++)
+    for (int i = 0; i < m; i++)
+      assert(A[j*m+i].first == i && A[j*m+i].second == j);
+
+  ispcSetMallocHeapLimit(1024ull*1024*1024*8);
+  ispcMemcpy(&Acopy[0], &A[0], sizeof(T)*m*n);
 
   int nrep = 10;
   double dt = 1e10;
   for (int r = 0; r < nrep; r++)
   {
-    for (int j = 0; j < n; j++)
-      for (int i = 0; i < m; i++)
-        A[j*m+i] = std::make_pair(i,j);
-
-    if (r == 0 && verbose)
-    {
-      fprintf(stderr, "Original: \n");
-      for (int j = 0; j < n; j++)
-      {
-        for (int i = 0; i < m; i++)
-        {
-          fprintf(stderr, "(%2d,%2d) ", A[j*m+i].first, A[j*m+i].second);
-        }
-        fprintf(stderr, "\n");
-      }
-      fprintf(stderr, "\n");
-      for (int i = 0; i < m*n; i++)
-        fprintf(stderr, "(%2d,%2d) ", A[i].first, A[i].second);
-      fprintf(stderr, "\n");
-      fprintf(stderr, "\n");
-    }
-
-    for (int j = 0; j < n; j++)
-      for (int i = 0; i < m; i++)
-        assert(A[j*m+i].first == i && A[j*m+i].second == j);
-
+    ispcMemcpy(&A[0], &Acopy[0], sizeof(T)*m*n);
     reset_and_start_timer();
     ispc::transpose((T*)&A[0], n, m);
     const double t1 = rtc();
