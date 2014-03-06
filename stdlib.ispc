@@ -4943,8 +4943,20 @@ static inline uniform int64 saturating_mul(uniform int64 a, uniform int64 b) {
     uniform unsigned int64 ret = 0;
     
     uniform int8 sign = (((a > 0) && (b > 0)) || ((a < 0) && (b < 0))) ? 1 : -1;    
-    uniform unsigned int64 a_abs = (a > 0) ? a : -a;
-    uniform unsigned int64 b_abs = (b > 0) ? b : -b;
+    uniform unsigned int64 a_abs = 0;
+    uniform unsigned int64 b_abs = 0;
+    
+    if (a == INT64_MIN)
+        a_abs = (uniform unsigned int64) INT64_MIN;
+                // Operation "-" is undefined for "INT64_MIN". 
+                //See 6.3.1.3 section in C99 standart.  
+    else
+        a_abs = (a > 0) ? a : -a;
+     
+    if (b == INT64_MIN)
+        b_abs = (uniform unsigned int64) INT64_MIN;
+    else
+        b_abs = (b > 0) ? b : -b;  
 
     uniform unsigned int32 a0 = a_abs & 0xFFFFFFFF;
     uniform unsigned int32 b0 = b_abs & 0xFFFFFFFF;
@@ -4969,7 +4981,7 @@ static inline uniform int64 saturating_mul(uniform int64 a, uniform int64 b) {
     }
     
     
-    if ((sign < 0) && (ret >= -INT64_MIN)) {
+    if ((sign < 0) && (ret >= (uniform unsigned int64) INT64_MIN)) {
         return INT64_MIN;
     } else if ((sign > 0) && (ret >= INT64_MAX)) {
         return INT64_MAX;
@@ -4981,9 +4993,22 @@ static inline uniform int64 saturating_mul(uniform int64 a, uniform int64 b) {
 static inline varying int64 saturating_mul(varying int64 a, varying int64 b) {
     varying unsigned int64 ret = 0;
     
-    varying int8 sign = (((a > 0) && (b > 0)) || ((a < 0) && (b < 0))) ? 1 : -1;    
-    varying unsigned int64 a_abs = (a > 0) ? a : -a;
-    varying unsigned int64 b_abs = (b > 0) ? b : -b;
+    varying int8 sign = (((a > 0) && (b > 0)) || ((a < 0) && (b < 0))) ? 1 : -1; 
+    varying unsigned int64 a_abs = 0;
+    varying unsigned int64 b_abs = 0;
+    
+    if (a == INT64_MIN)
+        a_abs = (varying unsigned int64) INT64_MIN; 
+                // Operation "-" is undefined for "INT64_MIN". 
+                //See 6.3.1.3 section in C99 standart. 
+    else
+        a_abs = (a > 0) ? a : -a;
+     
+    if (b == INT64_MIN)
+        b_abs = (varying unsigned int64) INT64_MIN;
+    else
+        b_abs = (b > 0) ? b : -b;    
+    
 
     varying unsigned int32 a0 = a_abs & 0xFFFFFFFF;
     varying unsigned int32 b0 = b_abs & 0xFFFFFFFF;
@@ -5008,7 +5033,7 @@ static inline varying int64 saturating_mul(varying int64 a, varying int64 b) {
     }
     
     
-    if ((sign < 0) && (ret >= -INT64_MIN)) {
+    if ((sign < 0) && (ret >= (varying unsigned int64) INT64_MIN)) {
         return INT64_MIN;
     } else if ((sign > 0) && (ret >= INT64_MAX)) {
         return INT64_MAX;

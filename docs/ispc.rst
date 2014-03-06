@@ -3617,8 +3617,8 @@ normalized exponent as a power of two in the ``pw2`` parameter.
 
 Saturating Arithmetic
 ---------------------
-A saturation addition, substraction, multiplication and division of all integer 
-types is provided by the ``ispc`` standard library.
+A saturation (no overflow possible) addition, substraction, multiplication and 
+division of all integer types is provided by the ``ispc`` standard library.
 
 ::
 
@@ -3645,9 +3645,7 @@ types is provided by the ``ispc`` standard library.
 
 In addition to the ``int8`` variants of saturating arithmetic functions listed 
 above, there are versions that supports ``int16``, ``int32`` and ``int64`` 
-values as well. Functions that have best high-speed performance are functions 
-that support ``varying signed/unsined int8/int16`` on Intel® SSE and Intel® AVX, 
-because they have hardware implementation.
+values as well.
 
 
 Pseudo-Random Numbers
