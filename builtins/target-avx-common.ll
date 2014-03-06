@@ -203,49 +203,51 @@ define void @__fastmath() nounwind alwaysinline {
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; float min/max
 
-declare <4 x float> @llvm.x86.sse.max.ss(<4 x float>, <4 x float>) nounwind readnone
-declare <4 x float> @llvm.x86.sse.min.ss(<4 x float>, <4 x float>) nounwind readnone
-
 define float @__max_uniform_float(float, float) nounwind readonly alwaysinline {
-  sse_binary_scalar(ret, 4, float, @llvm.x86.sse.max.ss, %0, %1)
+  %cmp = fcmp ogt float %1, %0
+  %ret = select i1 %cmp, float %1, float %0
   ret float %ret
 }
 
 define float @__min_uniform_float(float, float) nounwind readonly alwaysinline {
-  sse_binary_scalar(ret, 4, float, @llvm.x86.sse.min.ss, %0, %1)
+  %cmp = fcmp ogt float %1, %0
+  %ret = select i1 %cmp, float %0, float %1
   ret float %ret
 }
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; double precision min/max
 
-declare <2 x double> @llvm.x86.sse2.max.sd(<2 x double>, <2 x double>) nounwind readnone
-declare <2 x double> @llvm.x86.sse2.min.sd(<2 x double>, <2 x double>) nounwind readnone
-
 define double @__min_uniform_double(double, double) nounwind readnone alwaysinline {
-  sse_binary_scalar(ret, 2, double, @llvm.x86.sse2.min.sd, %0, %1)
+  %cmp = fcmp ogt double %1, %0
+  %ret = select i1 %cmp, double %0, double %1
   ret double %ret
 }
 
 define double @__max_uniform_double(double, double) nounwind readnone alwaysinline {
-  sse_binary_scalar(ret, 2, double, @llvm.x86.sse2.max.sd, %0, %1)
+  %cmp = fcmp ogt double %1, %0
+  %ret = select i1 %cmp, double %1, double %0
   ret double %ret
 }
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+declare <4 x i32> @llvm.x86.sse41.pminsd(<4 x i32>, <4 x i32>) nounwind readnone
+declare <4 x i32> @llvm.x86.sse41.pmaxsd(<4 x i32>, <4 x i32>) nounwind readnone
+declare <4 x i32> @llvm.x86.sse41.pminud(<4 x i32>, <4 x i32>) nounwind readnone
+declare <4 x i32> @llvm.x86.sse41.pmaxud(<4 x i32>, <4 x i32>) nounwind readnone
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; int min/max
 
-declare <4 x i32> @llvm.x86.sse41.pminsd(<4 x i32>, <4 x i32>) nounwind readnone
-declare <4 x i32> @llvm.x86.sse41.pmaxsd(<4 x i32>, <4 x i32>) nounwind readnone
-
 define i32 @__min_uniform_int32(i32, i32) nounwind readonly alwaysinline {
-  sse_binary_scalar(ret, 4, i32, @llvm.x86.sse41.pminsd, %0, %1)
+  %cmp = icmp sgt i32 %1, %0
+  %ret = select i1 %cmp, i32 %0, i32 %1
   ret i32 %ret
 }
 
 define i32 @__max_uniform_int32(i32, i32) nounwind readonly alwaysinline {
-  sse_binary_scalar(ret, 4, i32, @llvm.x86.sse41.pmaxsd, %0, %1)
+  %cmp = icmp sgt i32 %1, %0
+  %ret = select i1 %cmp, i32 %1, i32 %0
   ret i32 %ret
 }
 
@@ -253,16 +255,15 @@ define i32 @__max_uniform_int32(i32, i32) nounwind readonly alwaysinline {
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; unsigned int min/max
 
-declare <4 x i32> @llvm.x86.sse41.pminud(<4 x i32>, <4 x i32>) nounwind readnone
-declare <4 x i32> @llvm.x86.sse41.pmaxud(<4 x i32>, <4 x i32>) nounwind readnone
-
 define i32 @__min_uniform_uint32(i32, i32) nounwind readonly alwaysinline {
-  sse_binary_scalar(ret, 4, i32, @llvm.x86.sse41.pminud, %0, %1)
+  %cmp = icmp ugt i32 %1, %0
+  %ret = select i1 %cmp, i32 %0, i32 %1
   ret i32 %ret
 }
 
 define i32 @__max_uniform_uint32(i32, i32) nounwind readonly alwaysinline {
-  sse_binary_scalar(ret, 4, i32, @llvm.x86.sse41.pmaxud, %0, %1)
+  %cmp = icmp ugt i32 %1, %0
+  %ret = select i1 %cmp, i32 %1, i32 %0
   ret i32 %ret
 }
 

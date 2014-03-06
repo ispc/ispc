@@ -3,10 +3,10 @@ export uniform int width() { return programCount; }
 
 
 
-export void f_fu(uniform float RET[], uniform float aFOO[], uniform float b) {
-    float a = aFOO[programIndex];
-    RET[programIndex] = max(3 * a, 10.f);
-    RET[width()-1] = max(b, 100);
+export void f_du(uniform float RET[], uniform double aFOO[], uniform double b) {
+    double a = aFOO[programIndex];
+    RET[programIndex] = max(3 * a, (double)10.f);
+    RET[width()-1] = max(b, (double)100);
 }
 
 
