@@ -97,8 +97,10 @@
 #include "llvm/Support/FormattedStream.h"
 #if defined(LLVM_3_1) || defined(LLVM_3_2)
   #include "llvm/Support/InstVisitor.h"
-#else // LLVM 3.3+
+#elif defined (LLVM_3_3) || defined (LLVM_3_4)
   #include "llvm/InstVisitor.h"
+#else // LLVM 3.5+
+  #include "llvm/IR/InstVisitor.h"
 #endif
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/TargetRegistry.h"
