@@ -72,10 +72,12 @@
     #include <llvm/IR/Verifier.h>
     #include <llvm/IR/IRPrintingPasses.h>
     #include <llvm/IR/PatternMatch.h>
+    #include <llvm/IR/DebugInfo.h>
 #else
     #include <llvm/Analysis/Verifier.h>
     #include <llvm/Assembly/PrintModulePass.h>
     #include <llvm/Support/PatternMatch.h>
+    #include <llvm/DebugInfo.h>
 #endif
 #include <llvm/Analysis/ConstantFolding.h>
 #include <llvm/Target/TargetLibraryInfo.h>
@@ -94,7 +96,6 @@
 #include <llvm/Target/TargetMachine.h>
 #include <llvm/Analysis/Passes.h>
 #include <llvm/Support/raw_ostream.h>
-#include <llvm/DebugInfo.h>
 #include <llvm/Support/Dwarf.h>
 #ifdef ISPC_IS_LINUX
   #include <alloca.h>

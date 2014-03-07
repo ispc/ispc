@@ -66,7 +66,11 @@
   #include <llvm/IR/Intrinsics.h>
   #include <llvm/IR/DerivedTypes.h>
 #endif
-#include <llvm/Linker.h>
+#if defined(LLVM_3_5)
+    #include <llvm/Linker/Linker.h>
+#else
+    #include <llvm/Linker.h>
+#endif
 #include <llvm/Target/TargetMachine.h>
 #include <llvm/ADT/Triple.h>
 #include <llvm/Support/MemoryBuffer.h>

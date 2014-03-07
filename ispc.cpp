@@ -57,9 +57,9 @@
   #include <llvm/IR/Module.h>
   #include <llvm/IR/Instructions.h>
 #endif
-#if defined(LLVM_3_1)
-  #include <llvm/Analysis/DebugInfo.h>
-  #include <llvm/Analysis/DIBuilder.h>
+#if defined(LLVM_3_5)
+  #include <llvm/IR/DebugInfo.h>
+  #include <llvm/IR/DIBuilder.h>
 #else
   #include <llvm/DebugInfo.h>
   #include <llvm/DIBuilder.h>
