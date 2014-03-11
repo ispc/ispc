@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2013, Intel Corporation
+  Copyright (c) 2010-2014, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -81,6 +81,7 @@ lShouldPrintName(const std::string &name) {
     the given element type. */
 static llvm::DIType
 lCreateDIArray(llvm::DIType eltType, int count) {
+#ifdef LLVM_3_2
     int lowerBound = 0, upperBound = count-1;
 
     if (count == 0) {
@@ -90,6 +91,9 @@ lCreateDIArray(llvm::DIType eltType, int count) {
     }
 
     llvm::Value *sub = m->diBuilder->getOrCreateSubrange(lowerBound, upperBound);
+#else // LLVM 3.3+
+    llvm::Value *sub = m->diBuilder->getOrCreateSubrange(0, count);
+#endif
     std::vector<llvm::Value *> subs;
     subs.push_back(sub);
     llvm::DIArray subArray = m->diBuilder->getOrCreateArray(subs);
@@ -571,7 +575,11 @@ AtomicType::GetDIType(llvm::DIDescriptor scope) const {
     }
     else if (variability == Variability::Varying) {
         llvm::DIType unifType = GetAsUniformType()->GetDIType(scope);
+#ifdef LLVM_3_2
         llvm::Value *sub = m->diBuilder->getOrCreateSubrange(0, g->target->getVectorWidth()-1);
+#else // LLVM 3.3+
+        llvm::Value *sub = m->diBuilder->getOrCreateSubrange(0, g->target->getVectorWidth());
+#endif
         llvm::DIArray subArray = m->diBuilder->getOrCreateArray(sub);
         uint64_t size =  unifType.getSizeInBits()  * g->target->getVectorWidth();
         uint64_t align = unifType.getAlignInBits() * g->target->getVectorWidth();
@@ -838,7 +846,11 @@ EnumType::GetDIType(llvm::DIDescriptor scope) const {
     case Variability::Uniform:
         return diType;
     case Variability::Varying: {
+#ifdef LLVM_3_2
         llvm::Value *sub = m->diBuilder->getOrCreateSubrange(0, g->target->getVectorWidth()-1);
+#else // LLVM 3.3+
+        llvm::Value *sub = m->diBuilder->getOrCreateSubrange(0, g->target->getVectorWidth());
+#endif
         llvm::DIArray subArray = m->diBuilder->getOrCreateArray(sub);
         uint64_t size =  diType.getSizeInBits()  * g->target->getVectorWidth();
         uint64_t align = diType.getAlignInBits() * g->target->getVectorWidth();
@@ -1720,7 +1732,11 @@ VectorType::LLVMType(llvm::LLVMContext *ctx) const {
 llvm::DIType
 VectorType::GetDIType(llvm::DIDescriptor scope) const {
     llvm::DIType eltType = base->GetDIType(scope);
+#ifdef LLVM_3_2
     llvm::Value *sub = m->diBuilder->getOrCreateSubrange(0, numElements-1);
+#else // LLVM 3.3+
+    llvm::Value *sub = m->diBuilder->getOrCreateSubrange(0, numElements);
+#endif
     llvm::DIArray subArray = m->diBuilder->getOrCreateArray(sub);
 
     uint64_t sizeBits = eltType.getSizeInBits() * numElements;
