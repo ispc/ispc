@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2013, Intel Corporation
+  Copyright (c) 2010-2014, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -948,6 +948,15 @@ Module::writeOutput(OutputType outputType, const char *outFileName,
 
         lStripUnusedDebugInfo(module);
     }
+
+#if defined (LLVM_3_4) || defined (LLVM_3_5)
+    // In LLVM_3_4 after r195494 and r195504 revisions we should pass
+    // "Debug Info Version" constant to the module. LLVM will ignore
+    // our Debug Info metadata without it.
+    if (g->generateDebuggingSymbols == true) {
+        module->addModuleFlag(llvm::Module::Error, "Debug Info Version", llvm::DEBUG_METADATA_VERSION);
+    }
+#endif
 
     // First, issue a warning if the output file suffix and the type of
     // file being created seem to mismatch.  This can help catch missing
