@@ -1,6 +1,6 @@
 // -*- mode: c++ -*-
 /*
-  Copyright (c) 2010-2012, Intel Corporation
+  Copyright (c) 2010-2014, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -4947,9 +4947,12 @@ static inline uniform int64 saturating_mul(uniform int64 a, uniform int64 b) {
     uniform unsigned int64 b_abs = 0;
     
     if (a == INT64_MIN)
+        // Operation "-" is undefined for "INT64_MIN", as it causes overflow.
+        // But converting INT64_MIN to unsigned type yields the correct result,
+        // i.e. it will be positive value -INT64_MIN.
+        // See 6.3.1.3 section in C99 standart for more details (ISPC follows
+        // C standard, unless it's specifically different in the language).
         a_abs = (uniform unsigned int64) INT64_MIN;
-                // Operation "-" is undefined for "INT64_MIN". 
-                //See 6.3.1.3 section in C99 standart.  
     else
         a_abs = (a > 0) ? a : -a;
      
@@ -4998,9 +5001,12 @@ static inline varying int64 saturating_mul(varying int64 a, varying int64 b) {
     varying unsigned int64 b_abs = 0;
     
     if (a == INT64_MIN)
+        // Operation "-" is undefined for "INT64_MIN", as it causes overflow.
+        // But converting INT64_MIN to unsigned type yields the correct result,
+        // i.e. it will be positive value -INT64_MIN.
+        // See 6.3.1.3 section in C99 standart for more details (ISPC follows
+        // C standard, unless it's specifically different in the language).
         a_abs = (varying unsigned int64) INT64_MIN; 
-                // Operation "-" is undefined for "INT64_MIN". 
-                //See 6.3.1.3 section in C99 standart. 
     else
         a_abs = (a > 0) ? a : -a;
      
