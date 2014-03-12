@@ -354,7 +354,7 @@ the ``vout`` array before the next iteration of the ``foreach`` loop runs.
 
 On Linux\* and Mac OS\*, the makefile in that directory compiles this program.
 For Windows\*, open the ``examples/examples.sln`` file in Microsoft Visual
-C++ 2010\* to build this (and the other) examples.  In either case,
+C++ 2012\* to build this (and the other) examples.  In either case,
 build it now!  We'll walk through the details of the compilation steps in
 the following section, `Using The ISPC Compiler`_.)  In addition to
 compiling the ``ispc`` program, in this case the ``ispc`` compiler also
@@ -3618,7 +3618,7 @@ normalized exponent as a power of two in the ``pw2`` parameter.
 Saturating Arithmetic
 ---------------------
 A saturation (no overflow possible) addition, substraction, multiplication and 
-division of all integer types is provided by the ``ispc`` standard library.
+division of all integer types are provided by the ``ispc`` standard library.
 
 ::
 
@@ -4958,7 +4958,7 @@ countries.
 
 * Other names and brands may be claimed as the property of others.
 
-Copyright(C) 2011-2013, Intel Corporation. All rights reserved.
+Copyright(C) 2011-2014, Intel Corporation. All rights reserved.
 
 
 Optimization Notice
