@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2011-2012, Intel Corporation
+  Copyright (c) 2011-2013, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
