@@ -3615,6 +3615,39 @@ normalized exponent as a power of two in the ``pw2`` parameter.
                         uniform int * uniform pw2)
 
 
+Saturating Arithmetic
+---------------------
+A saturation (no overflow possible) addition, substraction, multiplication and 
+division of all integer types is provided by the ``ispc`` standard library.
+
+::
+
+     int8 saturating_add(uniform int8 a, uniform int8 b)
+     int8 saturating_add(varying int8 a, varying int8 b)    
+     unsigned int8 saturating_add(uniform unsigned int8 a, uniform unsigned int8 b)
+     unsigned int8 saturating_add(varying unsigned int8 a, varying unsigned int8 b)
+
+     int8 saturating_sub(uniform int8 a, uniform int8 b)
+     int8 saturating_sub(varying int8 a, varying int8 b)    
+     unsigned int8 saturating_sub(uniform unsigned int8 a, uniform unsigned int8 b)
+     unsigned int8 saturating_sub(varying unsigned int8 a, varying unsigned int8 b)
+
+     int8 saturating_mul(uniform int8 a, uniform int8 b)
+     int8 saturating_mul(varying int8 a, varying int8 b)    
+     unsigned int8 saturating_mul(uniform unsigned int8 a, uniform unsigned int8 b)
+     unsigned int8 saturating_mul(varying unsigned int8 a, varying unsigned int8 b)
+
+     int8 saturating_div(uniform int8 a, uniform int8 b)
+     int8 saturating_div(varying int8 a, varying int8 b)    
+     unsigned int8 saturating_div(uniform unsigned int8 a, uniform unsigned int8 b)
+     unsigned int8 saturating_div(varying unsigned int8 a,varying unsigned int8 b)
+
+
+In addition to the ``int8`` variants of saturating arithmetic functions listed 
+above, there are versions that supports ``int16``, ``int32`` and ``int64`` 
+values as well.
+
+
 Pseudo-Random Numbers
 ---------------------
 
