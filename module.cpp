@@ -2099,12 +2099,12 @@ Module::execPreprocessor(const char *infilename, llvm::raw_string_ostream *ostre
         }
     }
 
-#if defined(LLVM_3_1)
-    inst.getLangOpts().BCPLComment = 1;
-#else
     inst.getLangOpts().LineComment = 1;
-#endif
+#if defined(LLVM_3_5)
+    inst.createPreprocessor(clang::TU_Complete);
+#else
     inst.createPreprocessor();
+#endif
 
     diagPrinter->BeginSourceFile(inst.getLangOpts(), &inst.getPreprocessor());
     clang::DoPrintPreprocessedInput(inst.getPreprocessor(),

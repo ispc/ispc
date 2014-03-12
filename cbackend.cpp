@@ -464,7 +464,11 @@ namespace {
 
       // Must not be used in inline asm, extractelement, or shufflevector.
       if (I.hasOneUse()) {
+#if defined(LLVM_3_5)
+        const llvm::Instruction &User = llvm::cast<llvm::Instruction>(*I.user_back());
+#else
         const llvm::Instruction &User = llvm::cast<llvm::Instruction>(*I.use_back());
+#endif
         if (isInlineAsm(User) || llvm::isa<llvm::ExtractElementInst>(User) ||
             llvm::isa<llvm::ShuffleVectorInst>(User) || llvm::isa<llvm::AtomicRMWInst>(User) ||
             llvm::isa<llvm::AtomicCmpXchgInst>(User))
@@ -472,7 +476,11 @@ namespace {
       }
 
       // Only inline instruction it if it's use is in the same BB as the inst.
+#if defined(LLVM_3_5)
+      return I.getParent() == llvm::cast<llvm::Instruction>(I.user_back())->getParent();
+#else
       return I.getParent() == llvm::cast<llvm::Instruction>(I.use_back())->getParent();
+#endif
     }
 
     // isDirectAlloca - Define fixed sized allocas in the entry block as direct
