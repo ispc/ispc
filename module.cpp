@@ -1156,11 +1156,11 @@ lContainsPtrToVarying(const StructType *st) {
  */
 static void
 lEmitStructDecl(const StructType *st, std::vector<const StructType *> *emittedStructs,
-                FILE *file, bool printGenericHeader=false, bool emitUnifs=true) {
+                FILE *file, bool emitUnifs=true) {
 
     // if we're emitting this for a generic dispatch header file and it's 
     // struct that only contains uniforms, don't bother if we're emitting uniforms
-    if (printGenericHeader && !emitUnifs && !lContainsPtrToVarying(st)) {
+    if (!emitUnifs && !lContainsPtrToVarying(st)) {
       return;
     }
 
@@ -1176,33 +1176,20 @@ lEmitStructDecl(const StructType *st, std::vector<const StructType *> *emittedSt
         const StructType *elementStructType =
             lGetElementStructType(st->GetElementType(i));
         if (elementStructType != NULL)
-          lEmitStructDecl(elementStructType, emittedStructs, file, printGenericHeader, emitUnifs);
+          lEmitStructDecl(elementStructType, emittedStructs, file, emitUnifs);
     }
 
     // And now it's safe to declare this one
     emittedStructs->push_back(st);
-
     
-    if (printGenericHeader && lContainsPtrToVarying(st)) {
-      fprintf(file, "#ifndef __ISPC_STRUCT_%s%d__\n",
-              st->GetStructName().c_str(), 
-              g->target->getVectorWidth());
-      fprintf(file, "#define __ISPC_STRUCT_%s%d__\n",
-              st->GetStructName().c_str(),
-              g->target->getVectorWidth());
-    }
-    else {
-      fprintf(file, "#ifndef __ISPC_STRUCT_%s__\n",st->GetStructName().c_str());
-      fprintf(file, "#define __ISPC_STRUCT_%s__\n",st->GetStructName().c_str());
-    }
-    fprintf(file, "struct %s", st->GetStructName().c_str());
+    fprintf(file, "#ifndef __ISPC_STRUCT_%s__\n",st->GetCStructName().c_str());
+    fprintf(file, "#define __ISPC_STRUCT_%s__\n",st->GetCStructName().c_str());
+
+    fprintf(file, "struct %s", st->GetCStructName().c_str());
     if (st->GetSOAWidth() > 0)
         // This has to match the naming scheme in
         // StructType::GetCDeclaration().
         fprintf(file, "_SOA%d", st->GetSOAWidth());
-    if (printGenericHeader && lContainsPtrToVarying(st)) {
-      fprintf(file, "%d", g->target->getVectorWidth());
-    }
     fprintf(file, " {\n");
 
     for (int i = 0; i < st->GetElementCount(); ++i) {
@@ -1219,10 +1206,10 @@ lEmitStructDecl(const StructType *st, std::vector<const StructType *> *emittedSt
     header file, emit their declarations.
  */
 static void
-lEmitStructDecls(std::vector<const StructType *> &structTypes, FILE *file, bool printGenericHeader=false, bool emitUnifs=true) {
+lEmitStructDecls(std::vector<const StructType *> &structTypes, FILE *file, bool emitUnifs=true) {
     std::vector<const StructType *> emittedStructs;
     for (unsigned int i = 0; i < structTypes.size(); ++i)
-      lEmitStructDecl(structTypes[i], &emittedStructs, file, printGenericHeader, emitUnifs);
+      lEmitStructDecl(structTypes[i], &emittedStructs, file, emitUnifs);
 }
 
 
@@ -1938,7 +1925,7 @@ Module::writeDispatchHeader(DispatchHeaderInfo *DHI) {
           lEmitVectorTypedefs(exportedVectorTypes, f);
           lEmitEnumDecls(exportedEnumTypes, f);
         }
-        lEmitStructDecls(exportedStructTypes, f, true, DHI->EmitUnifs);
+        lEmitStructDecls(exportedStructTypes, f, DHI->EmitUnifs);
         
         // Update flags
         DHI->EmitUnifs = false;
