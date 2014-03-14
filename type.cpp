@@ -460,15 +460,9 @@ AtomicType::GetCDeclaration(const std::string &name) const {
         ret += name;
     }
 
-    if (variability == Variability::Varying ||
-        variability == Variability::SOA) {
+    if (variability == Variability::SOA) {
         char buf[32];
-        // get program count
-        // g->mangleFunctionsNamesWithTarget - hack check for void *
-        int vWidth = (variability == Variability::Varying) ? 
-                        g->target->getVectorWidth() :
-                        variability.soaWidth;
-        sprintf(buf, "[%d]", vWidth);
+        sprintf(buf, "[%d]", variability.soaWidth);
         ret += buf;
     }
 
@@ -1108,19 +1102,26 @@ PointerType::GetCDeclaration(const std::string &name) const {
     }
 
     std::string ret = baseType->GetCDeclaration("");
+    
+    bool baseIsBasicVarying = (IsBasicType(baseType)) && (baseType->IsVaryingType());
+    
+    if (baseIsBasicVarying) ret += std::string("(");
     ret += std::string(" *");
     if (isConst) ret += " const";
     ret += std::string(" ");
     ret += name;
+    if (baseIsBasicVarying) ret += std::string(")");
 
-    if (variability == Variability::SOA ||
-        variability == Variability::Varying) {
-        int vWidth = (variability == Variability::Varying) ?
-            g->target->getVectorWidth() :
-            variability.soaWidth;
+    if (variability == Variability::SOA) {
         char buf[32];
-        sprintf(buf, "[%d]", vWidth);
+        sprintf(buf, "[%d]", variability.soaWidth);
         ret += buf;
+    }
+    if (baseIsBasicVarying) {
+      int vWidth = g->target->getVectorWidth();
+      char buf[32];
+      sprintf(buf, "[%d]", vWidth);
+      ret += buf;
     }
 
     return ret;
@@ -1906,6 +1907,10 @@ StructType::StructType(const std::string &n, const llvm::SmallVector<const Type 
     }
 }
 
+const std::string 
+StructType::GetCStructName() const {
+  return lMangleStructName(name, variability);
+}
 
 Variability
 StructType::GetVariability() const  {
@@ -2094,7 +2099,7 @@ std::string
 StructType::GetCDeclaration(const std::string &n) const {
     std::string ret;
     if (isConst) ret += "const ";
-    ret += std::string("struct ") + name;
+    ret += std::string("struct ") + GetCStructName();
     if (lShouldPrintName(n)) {
         ret += std::string(" ") + n;
 

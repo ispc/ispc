@@ -714,7 +714,8 @@ public:
     const SourcePos &GetElementPosition(int i) const { return elementPositions[i]; }
 
     /** Returns the name of the structure type.  (e.g. struct Foo -> "Foo".) */
-    const std::string &GetStructName() const { return name; }
+    const std::string &GetStructName() const  { return name; }
+    const std::string GetCStructName() const;
 
 private:
     static bool checkIfCanBeSOA(const StructType *st);
