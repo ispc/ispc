@@ -228,7 +228,7 @@ Type::IsReferenceType() const {
 
 bool
 Type::IsVoidType() const {
-    return this == AtomicType::Void;
+    return EqualIgnoringConst(this, AtomicType::Void);
 }
 
 bool
@@ -290,7 +290,7 @@ AtomicType::GetAsUnsignedType() const {
 
 const AtomicType *
 AtomicType::GetAsConstType() const {
-    if (basicType == TYPE_VOID || isConst == true)
+    if (isConst == true)
         return this;
 
     if (asOtherConstType == NULL) {
@@ -303,7 +303,7 @@ AtomicType::GetAsConstType() const {
 
 const AtomicType *
 AtomicType::GetAsNonConstType() const {
-    if (basicType == TYPE_VOID || isConst == false)
+    if (isConst == false)
         return this;
 
     if (asOtherConstType == NULL) {
@@ -380,8 +380,8 @@ AtomicType::ResolveUnboundVariability(Variability v) const {
 std::string
 AtomicType::GetString() const {
     std::string ret;
+    if (isConst)   ret += "const ";
     if (basicType != TYPE_VOID) {
-        if (isConst)   ret += "const ";
         ret += variability.GetString();
         ret += " ";
     }
@@ -1167,7 +1167,7 @@ PointerType::LLVMType(llvm::LLVMContext *ctx) const {
         if (ftype != NULL)
             ptype = llvm::PointerType::get(ftype->LLVMFunctionType(ctx), 0);
         else {
-            if (baseType == AtomicType::Void)
+            if (baseType->IsVoidType())
                 ptype = LLVMTypes::VoidPointerType;
             else
                 ptype = llvm::PointerType::get(baseType->LLVMType(ctx), 0);
@@ -1235,7 +1235,7 @@ ArrayType::ArrayType(const Type *c, int a)
     : SequentialType(ARRAY_TYPE), child(c), numElements(a) {
     // 0 -> unsized array.
     Assert(numElements >= 0);
-    Assert(Type::Equal(c, AtomicType::Void) == false);
+    Assert(c->IsVoidType() == false);
 }
 
 
@@ -3015,7 +3015,7 @@ FunctionType::LLVMFunctionType(llvm::LLVMContext *ctx, bool removeMask) const {
             Assert(m->errorCount > 0);
             return NULL;
         }
-        Assert(Type::Equal(paramTypes[i], AtomicType::Void) == false);
+        Assert(paramTypes[i]->IsVoidType() == false);
 
         llvm::Type *t = paramTypes[i]->LLVMType(ctx);
         if (t == NULL) {

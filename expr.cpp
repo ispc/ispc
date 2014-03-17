@@ -209,14 +209,14 @@ lDoTypeConv(const Type *fromType, const Type *toType, Expr **expr,
     if (Type::Equal(toType, fromType))
         return true;
 
-    if (Type::Equal(fromType, AtomicType::Void)) {
+    if (fromType->IsVoidType()) {
         if (!failureOk)
             Error(pos, "Can't convert from \"void\" to \"%s\" for %s.",
                   toType->GetString().c_str(), errorMsgBase);
         return false;
     }
 
-    if (Type::Equal(toType, AtomicType::Void)) {
+    if (toType->IsVoidType()) {
         if (!failureOk)
             Error(pos, "Can't convert type \"%s\" to \"void\" for %s.",
                   fromType->GetString().c_str(), errorMsgBase);
@@ -342,7 +342,8 @@ lDoTypeConv(const Type *fromType, const Type *toType, Expr **expr,
             return false;
         }
         else if (PointerType::IsVoidPointer(toPointerType)) {
-          if (fromPointerType->GetBaseType()->IsConstType()) {
+          if (fromPointerType->GetBaseType()->IsConstType() &&
+              !(toPointerType->GetBaseType()->IsConstType())) {
             if (!failureOk)
               Error(pos, "Can't convert pointer to const \"%s\" to void pointer.",
                     fromPointerType->GetString().c_str());
@@ -3611,7 +3612,7 @@ FunctionCallExpr::GetValue(FunctionEmitContext *ctx) const {
 
     const FunctionType *ft = lGetFunctionType(func);
     AssertPos(pos, ft != NULL);
-    bool isVoidFunc = Type::Equal(ft->GetReturnType(), AtomicType::Void);
+    bool isVoidFunc = ft->GetReturnType()->IsVoidType();
 
     // Automatically convert function call args to references if needed.
     // FIXME: this should move to the TypeCheck() method... (but the
@@ -3898,7 +3899,7 @@ FunctionCallExpr::TypeCheck() {
 
         if (fptrType->IsVaryingType()) {
             const Type *retType = funcType->GetReturnType();
-            if (Type::Equal(retType, AtomicType::Void) == false &&
+            if (retType->IsVoidType() == false &&
                 retType->IsUniformType()) {
                 Error(pos, "Illegal to call a varying function pointer that "
                       "points to a function with a uniform return type \"%s\".",
@@ -4606,7 +4607,7 @@ IndexExpr::TypeCheck() {
 
     if (!CastType<SequentialType>(baseExprType->GetReferenceTarget())) {
         if (const PointerType *pt = CastType<PointerType>(baseExprType)) {
-            if (Type::Equal(AtomicType::Void, pt->GetBaseType())) {
+            if (pt->GetBaseType()->IsVoidType()) {
                 Error(pos, "Illegal to dereference void pointer type \"%s\".",
                       baseExprType->GetString().c_str());
                 return NULL;
@@ -6800,7 +6801,7 @@ TypeCastExpr::GetValue(FunctionEmitContext *ctx) const {
         return NULL;
     }
 
-    if (Type::Equal(toType, AtomicType::Void)) {
+    if (toType->IsVoidType()) {
         // emit the code for the expression in case it has side-effects but
         // then we're done.
         (void)expr->GetValue(ctx);
@@ -7163,10 +7164,10 @@ TypeCastExpr::TypeCheck() {
     toType = lDeconstifyType(toType);
 
     // Anything can be cast to void...
-    if (Type::Equal(toType, AtomicType::Void))
+    if (toType->IsVoidType())
         return this;
 
-    if (Type::Equal(fromType, AtomicType::Void) ||
+    if (fromType->IsVoidType() ||
         (fromType->IsVaryingType() && toType->IsUniformType())) {
         Error(pos, "Can't type cast from type \"%s\" to type \"%s\"",
               fromType->GetString().c_str(), toType->GetString().c_str());
@@ -7589,7 +7590,7 @@ PtrDerefExpr::TypeCheck() {
     }
 
     if (const PointerType *pt = CastType<PointerType>(type)) {
-        if (Type::Equal(AtomicType::Void, pt->GetBaseType())) {
+        if (pt->GetBaseType()->IsVoidType()) {
             Error(pos, "Illegal to dereference void pointer type \"%s\".",
                   type->GetString().c_str());
             return NULL;
