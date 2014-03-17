@@ -427,7 +427,7 @@ Function::emitCode(FunctionEmitContext *ctx, llvm::Function *function,
         // issue a warning.  Also need to warn if it's the entry block for
         // the function (in which case it will not have predeccesors but is
         // still reachable.)
-        if (Type::Equal(type->GetReturnType(), AtomicType::Void) == false &&
+        if (type->GetReturnType()->IsVoidType() == false &&
             (pred_begin(ec.bblock) != pred_end(ec.bblock) || (ec.bblock == entryBBlock)))
             Warning(sym->pos, "Missing return statement in function returning \"%s\".",
                     type->rType->GetString().c_str());

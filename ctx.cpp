@@ -276,7 +276,7 @@ FunctionEmitContext::FunctionEmitContext(Function *func, Symbol *funSym,
     disableGSWarningCount = 0;
 
     const Type *returnType = function->GetReturnType();
-    if (!returnType || Type::Equal(returnType, AtomicType::Void))
+    if (!returnType || returnType->IsVoidType())
         returnValuePtr = NULL;
     else {
         llvm::Type *ftype = returnType->LLVMType(g->ctx);
@@ -1244,7 +1244,7 @@ FunctionEmitContext::GetLabels() {
 void
 FunctionEmitContext::CurrentLanesReturned(Expr *expr, bool doCoherenceCheck) {
     const Type *returnType = function->GetReturnType();
-    if (Type::Equal(returnType, AtomicType::Void)) {
+    if (returnType->IsVoidType()) {
         if (expr != NULL)
             Error(expr->pos, "Can't return non-void type \"%s\" from void function.",
                   expr->GetType()->GetString().c_str());
@@ -3516,7 +3516,7 @@ FunctionEmitContext::ReturnInst() {
         rinst = llvm::ReturnInst::Create(*g->ctx, retVal, bblock);
     }
     else {
-        AssertPos(currentPos, Type::Equal(function->GetReturnType(), AtomicType::Void));
+        AssertPos(currentPos, function->GetReturnType()->IsVoidType());
         rinst = llvm::ReturnInst::Create(*g->ctx, bblock);
     }
 

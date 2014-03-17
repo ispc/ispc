@@ -80,19 +80,19 @@ lApplyTypeQualifiers(int typeQualifiers, const Type *type, SourcePos pos) {
     }
 
     if ((typeQualifiers & TYPEQUAL_UNIFORM) != 0) {
-        if (Type::Equal(type, AtomicType::Void))
+        if (type->IsVoidType())
             Error(pos, "\"uniform\" qualifier is illegal with \"void\" type.");
         else
             type = type->GetAsUniformType();
     }
     else if ((typeQualifiers & TYPEQUAL_VARYING) != 0) {
-        if (Type::Equal(type, AtomicType::Void))
+        if (type->IsVoidType())
             Error(pos, "\"varying\" qualifier is illegal with \"void\" type.");
         else
             type = type->GetAsVaryingType();
     }
     else {
-        if (Type::Equal(type, AtomicType::Void) == false)
+        if (type->IsVoidType() == false)
             type = type->GetAsUnboundVariabilityType();
     }
 
@@ -392,7 +392,7 @@ Declarator::InitFromType(const Type *baseType, DeclSpecs *ds) {
             type = refType;
     }
     else if (kind == DK_ARRAY) {
-        if (Type::Equal(baseType, AtomicType::Void)) {
+        if (baseType->IsVoidType()) {
             Error(pos, "Arrays of \"void\" type are illegal.");
             return;
         }
@@ -454,7 +454,7 @@ Declarator::InitFromType(const Type *baseType, DeclSpecs *ds) {
                       "function parameter declaration for parameter \"%s\".",
                       lGetStorageClassName(d->declSpecs->storageClass),
                       decl->name.c_str());
-            if (Type::Equal(decl->type, AtomicType::Void)) {
+            if (decl->type->IsVoidType()) {
                 Error(decl->pos, "Parameter with type \"void\" illegal in function "
                       "parameter list.");
                 decl->type = NULL;
@@ -625,7 +625,7 @@ Declaration::GetVariableDeclarations() const {
             continue;
         }
 
-        if (Type::Equal(decl->type, AtomicType::Void))
+        if (decl->type->IsVoidType())
             Error(decl->pos, "\"void\" type variable illegal in declaration.");
         else if (CastType<FunctionType>(decl->type) == NULL) {
             decl->type = decl->type->ResolveUnboundVariability(Variability::Varying);
@@ -689,7 +689,7 @@ GetStructTypesNamesPositions(const std::vector<StructDeclaration *> &sd,
         // FIXME: making this fake little DeclSpecs here is really
         // disgusting
         DeclSpecs ds(type);
-        if (Type::Equal(type, AtomicType::Void) == false) {
+        if (type->IsVoidType() == false) {
             if (type->IsUniformType())
                 ds.typeQualifiers |= TYPEQUAL_UNIFORM;
             else if (type->IsVaryingType())
@@ -703,7 +703,7 @@ GetStructTypesNamesPositions(const std::vector<StructDeclaration *> &sd,
             Declarator *d = (*sd[i]->declarators)[j];
             d->InitFromDeclSpecs(&ds);
 
-            if (Type::Equal(d->type, AtomicType::Void))
+            if (d->type->IsVoidType())
                 Error(d->pos, "\"void\" type illegal for struct member.");
 
             elementTypes->push_back(d->type);

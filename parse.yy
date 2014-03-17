@@ -617,7 +617,7 @@ rate_qualified_type_specifier
     {
         if ($2 == NULL)
             $$ = NULL;
-        else if (Type::Equal($2, AtomicType::Void)) {
+        else if ($2->IsVoidType()) {
             Error(@1, "\"uniform\" qualifier is illegal with \"void\" type.");
             $$ = NULL;
         }
@@ -628,7 +628,7 @@ rate_qualified_type_specifier
     {
         if ($2 == NULL)
             $$ = NULL;
-        else if (Type::Equal($2, AtomicType::Void)) {
+        else if ($2->IsVoidType()) {
             Error(@1, "\"varying\" qualifier is illegal with \"void\" type.");
             $$ = NULL;
         }
@@ -1081,7 +1081,7 @@ specifier_qualifier_list
     {
         if ($2 != NULL) {
             if ($1 == TYPEQUAL_UNIFORM) {
-                if (Type::Equal($2, AtomicType::Void)) {
+                if ($2->IsVoidType()) {
                     Error(@1, "\"uniform\" qualifier is illegal with \"void\" type.");
                     $$ = NULL;
                 }
@@ -1089,7 +1089,7 @@ specifier_qualifier_list
                     $$ = $2->GetAsUniformType();
             }
             else if ($1 == TYPEQUAL_VARYING) {
-                if (Type::Equal($2, AtomicType::Void)) {
+                if ($2->IsVoidType()) {
                     Error(@1, "\"varying\" qualifier is illegal with \"void\" type.");
                     $$ = NULL;
                 }

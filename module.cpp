@@ -426,7 +426,7 @@ Module::AddGlobalVariable(const std::string &name, const Type *type, Expr *initE
         return;
     }
 
-    if (Type::Equal(type, AtomicType::Void)) {
+    if (type->IsVoidType()) {
         Error(pos, "\"void\" type global variable is illegal.");
         return;
     }
@@ -818,7 +818,7 @@ Module::AddFunctionDeclaration(const std::string &name,
               "exported function \"%s\"", name.c_str());
 
     if (functionType->isTask &&
-        Type::Equal(functionType->GetReturnType(), AtomicType::Void) == false)
+        functionType->GetReturnType()->IsVoidType() == false)
         Error(pos, "Task-qualified functions must have void return type.");
 
     if (functionType->isExported || functionType->isExternC)
