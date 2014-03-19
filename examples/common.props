@@ -23,23 +23,27 @@
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
     <CharacterSet>Unicode</CharacterSet>
+    <PlatformToolset>v110</PlatformToolset>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
     <CharacterSet>Unicode</CharacterSet>
+    <PlatformToolset>v110</PlatformToolset>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>Unicode</CharacterSet>
+    <PlatformToolset>v110</PlatformToolset>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>Unicode</CharacterSet>
+    <PlatformToolset>v110</PlatformToolset>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <ImportGroup Label="ExtensionSettings">
@@ -156,12 +160,12 @@
   <ItemGroup>
     <CustomBuild Include='$(ISPC_file).ispc'>
       <FileType>Document</FileType>
-      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(ISPC_compiler) -O2 %(Filename).ispc -o %(Filename).obj -h %(Filename)_ispc.h --arch=x86 --target=$(Target_str)</Command>
-      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(ISPC_compiler) -O2 %(Filename).ispc -o %(Filename).obj -h %(Filename)_ispc.h --target=$(Target_str)</Command>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(ISPC_compiler) -O2 %(Filename).ispc -o %(Filename).obj -h %(Filename)_ispc.h --arch=x86 --target=$(Target_str) $(flags)</Command>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(ISPC_compiler) -O2 %(Filename).ispc -o %(Filename).obj -h %(Filename)_ispc.h --target=$(Target_str) $(flags)</Command>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(Target_out)</Outputs>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(Target_out)</Outputs>
-      <Command Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(ISPC_compiler) -O2 %(Filename).ispc -o %(Filename).obj -h %(Filename)_ispc.h --arch=x86 --target=$(Target_str)</Command>
-      <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(ISPC_compiler) -O2 %(Filename).ispc -o %(Filename).obj -h %(Filename)_ispc.h --target=$(Target_str)</Command>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(ISPC_compiler) -O2 %(Filename).ispc -o %(Filename).obj -h %(Filename)_ispc.h --arch=x86 --target=$(Target_str) $(flags)</Command>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(ISPC_compiler) -O2 %(Filename).ispc -o %(Filename).obj -h %(Filename)_ispc.h --target=$(Target_str) $(flags)</Command>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(Target_out)</Outputs>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(Target_out)</Outputs>
     </CustomBuild>

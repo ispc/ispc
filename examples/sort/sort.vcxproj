@@ -17,7 +17,7 @@
       <Configuration>Release</Configuration>
       <Platform>x64</Platform>
     </ProjectConfiguration>
-  </ItemGroup>	
+  </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{6D3EF8C5-AE26-407B-9ECE-C27CB988D9C2}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>

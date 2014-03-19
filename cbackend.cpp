@@ -66,9 +66,15 @@
 #if defined(LLVM_3_5)
     #include "llvm/IR/Verifier.h"
     #include <llvm/IR/IRPrintingPasses.h>
+    #include "llvm/IR/CallSite.h"
+    #include "llvm/IR/CFG.h"
+    #include "llvm/IR/GetElementPtrTypeIterator.h"
 #else
     #include "llvm/Analysis/Verifier.h"
     #include <llvm/Assembly/PrintModulePass.h>
+    #include "llvm/Support/CallSite.h"
+    #include "llvm/Support/CFG.h"
+    #include "llvm/Support/GetElementPtrTypeIterator.h"
 #endif
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/CodeGen/Passes.h"
@@ -82,22 +88,19 @@
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/MCSymbol.h"
-#if defined(LLVM_3_1)
-  #include "llvm/Target/TargetData.h"
-#elif defined(LLVM_3_2)
+#if defined(LLVM_3_2)
   #include "llvm/DataLayout.h"
 #else // LLVM 3.3+
   #include "llvm/IR/DataLayout.h"
 #endif
-#include "llvm/Support/CallSite.h"
-#include "llvm/Support/CFG.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FormattedStream.h"
-#include "llvm/Support/GetElementPtrTypeIterator.h"
 #if defined(LLVM_3_1) || defined(LLVM_3_2)
   #include "llvm/Support/InstVisitor.h"
-#else // LLVM 3.3+
+#elif defined (LLVM_3_3) || defined (LLVM_3_4)
   #include "llvm/InstVisitor.h"
+#else // LLVM 3.5+
+  #include "llvm/IR/InstVisitor.h"
 #endif
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/TargetRegistry.h"
@@ -461,7 +464,11 @@ namespace {
 
       // Must not be used in inline asm, extractelement, or shufflevector.
       if (I.hasOneUse()) {
+#if defined(LLVM_3_5)
+        const llvm::Instruction &User = llvm::cast<llvm::Instruction>(*I.user_back());
+#else
         const llvm::Instruction &User = llvm::cast<llvm::Instruction>(*I.use_back());
+#endif
         if (isInlineAsm(User) || llvm::isa<llvm::ExtractElementInst>(User) ||
             llvm::isa<llvm::ShuffleVectorInst>(User) || llvm::isa<llvm::AtomicRMWInst>(User) ||
             llvm::isa<llvm::AtomicCmpXchgInst>(User))
@@ -469,7 +476,11 @@ namespace {
       }
 
       // Only inline instruction it if it's use is in the same BB as the inst.
+#if defined(LLVM_3_5)
+      return I.getParent() == llvm::cast<llvm::Instruction>(I.user_back())->getParent();
+#else
       return I.getParent() == llvm::cast<llvm::Instruction>(I.use_back())->getParent();
+#endif
     }
 
     // isDirectAlloca - Define fixed sized allocas in the entry block as direct
@@ -1462,7 +1473,7 @@ void CWriter::printConstant(llvm::Constant *CPV, bool Static) {
         char Buffer[100];
 
         uint64_t ll = llvm::DoubleToBits(V);
-        sprintf(Buffer, "0x%"PRIx64, ll);
+        sprintf(Buffer, "0x%" PRIx64, ll);
 
         std::string Num(&Buffer[0], &Buffer[6]);
         unsigned long Val = strtoul(Num.c_str(), 0, 16);
@@ -3123,7 +3134,11 @@ void CWriter::visitSwitchInst(llvm::SwitchInst &SI) {
     Out << ":\n";
     printPHICopiesForSuccessor (SI.getParent(), Succ, 2);
     printBranchToBlock(SI.getParent(), Succ, 2);
+#if defined (LLVM_3_5)
+    if (llvm::Function::iterator(Succ) == std::next(llvm::Function::iterator(SI.getParent())))
+#else
     if (llvm::Function::iterator(Succ) == llvm::next(llvm::Function::iterator(SI.getParent())))
+#endif
       Out << "    break;\n";
   }
 
@@ -3144,7 +3159,11 @@ bool CWriter::isGotoCodeNecessary(llvm::BasicBlock *From, llvm::BasicBlock *To) 
   /// FIXME: This should be reenabled, but loop reordering safe!!
   return true;
 
+#if defined (LLVM_3_5)
+  if (std::next(llvm::Function::iterator(From)) != llvm::Function::iterator(To))
+#else
   if (llvm::next(llvm::Function::iterator(From)) != llvm::Function::iterator(To))
+#endif
     return true;  // Not the direct successor, we need a goto.
 
   //llvm::isa<llvm::SwitchInst>(From->getTerminator())
@@ -3752,7 +3771,11 @@ void CWriter::lowerIntrinsics(llvm::Function &F) {
             // All other intrinsic calls we must lower.
             llvm::Instruction *Before = 0;
             if (CI != &BB->front())
+#if defined(LLVM_3_5)
+              Before = std::prev(llvm::BasicBlock::iterator(CI));
+#else
               Before = prior(llvm::BasicBlock::iterator(CI));
+#endif
 
             IL->LowerIntrinsicCall(CI);
             if (Before) {        // Move iterator to instruction after call

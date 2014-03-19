@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2013, Intel Corporation
+  Copyright (c) 2010-2014, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -278,7 +278,7 @@ FunctionEmitContext::FunctionEmitContext(Function *func, Symbol *funSym,
     disableGSWarningCount = 0;
 
     const Type *returnType = function->GetReturnType();
-    if (!returnType || Type::Equal(returnType, AtomicType::Void))
+    if (!returnType || returnType->IsVoidType())
         returnValuePtr = NULL;
     else {
         llvm::Type *ftype = returnType->LLVMType(g->ctx);
@@ -1246,7 +1246,7 @@ FunctionEmitContext::GetLabels() {
 void
 FunctionEmitContext::CurrentLanesReturned(Expr *expr, bool doCoherenceCheck) {
     const Type *returnType = function->GetReturnType();
-    if (Type::Equal(returnType, AtomicType::Void)) {
+    if (returnType->IsVoidType()) {
         if (expr != NULL)
             Error(expr->pos, "Can't return non-void type \"%s\" from void function.",
                   expr->GetType()->GetString().c_str());
@@ -1628,7 +1628,14 @@ FunctionEmitContext::StartScope() {
         llvm::DILexicalBlock lexicalBlock =
             m->diBuilder->createLexicalBlock(parentScope, diFile,
                                              currentPos.first_line,
+#if defined(LLVM_3_5)
+        // Revision 202736 in LLVM adds support of DWARF discriminator
+        // to the last argument and revision 202737 in clang adds 0
+        // for the last argument by default.
+                                             currentPos.first_column, 0);
+#else
                                              currentPos.first_column);
+#endif
         AssertPos(currentPos, lexicalBlock.Verify());
         debugScopes.push_back(lexicalBlock);
     }
@@ -3592,7 +3599,7 @@ FunctionEmitContext::ReturnInst() {
         rinst = llvm::ReturnInst::Create(*g->ctx, retVal, bblock);
     }
     else {
-        AssertPos(currentPos, Type::Equal(function->GetReturnType(), AtomicType::Void));
+        AssertPos(currentPos, function->GetReturnType()->IsVoidType());
         rinst = llvm::ReturnInst::Create(*g->ctx, bblock);
     }
 

@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2011-2013, Intel Corporation
+  Copyright (c) 2011-2014, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -74,11 +74,12 @@
 #if defined(LLVM_3_5)
     #include <llvm/IR/Verifier.h>
     #include <llvm/IR/IRPrintingPasses.h>
+    #include <llvm/IR/CFG.h>
 #else
     #include <llvm/Analysis/Verifier.h>
     #include <llvm/Assembly/PrintModulePass.h>
+    #include <llvm/Support/CFG.h>
 #endif
-#include <llvm/Support/CFG.h>
 #include <llvm/Support/ToolOutputFile.h>
 
 Function::Function(Symbol *s, Stmt *c) {
@@ -438,7 +439,7 @@ Function::emitCode(FunctionEmitContext *ctx, llvm::Function *function,
         // issue a warning.  Also need to warn if it's the entry block for
         // the function (in which case it will not have predeccesors but is
         // still reachable.)
-        if (Type::Equal(type->GetReturnType(), AtomicType::Void) == false &&
+        if (type->GetReturnType()->IsVoidType() == false &&
             (pred_begin(ec.bblock) != pred_end(ec.bblock) || (ec.bblock == entryBBlock)))
             Warning(sym->pos, "Missing return statement in function returning \"%s\".",
                     type->rType->GetString().c_str());

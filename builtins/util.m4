@@ -1,4 +1,4 @@
-;;  Copyright (c) 2010-2013, Intel Corporation
+;;  Copyright (c) 2010-2014, Intel Corporation
 ;;  All rights reserved.
 ;;
 ;;  Redistribution and use in source and binary forms, with or without
@@ -1497,7 +1497,12 @@ define <$1 x $2> @__atomic_compare_exchange_$3_global($2* %ptr, <$1 x $2> %cmp,
   per_lane($1, <$1 x MASK> %mask, `
    %cmp_LANE_ID = extractelement <$1 x $2> %cmp, i32 LANE
    %val_LANE_ID = extractelement <$1 x $2> %val, i32 LANE
-   %r_LANE_ID = cmpxchg $2 * %ptr, $2 %cmp_LANE_ID, $2 %val_LANE_ID seq_cst
+  ifelse(LLVM_VERSION,LLVM_3_5,`
+    %r_LANE_ID = cmpxchg $2 * %ptr, $2 %cmp_LANE_ID, $2 %val_LANE_ID seq_cst seq_cst
+  ',`
+    %r_LANE_ID = cmpxchg $2 * %ptr, $2 %cmp_LANE_ID, $2 %val_LANE_ID seq_cst
+  ')
+
    %rp_LANE_ID = getelementptr $2 * %rptr32, i32 LANE
    store $2 %r_LANE_ID, $2 * %rp_LANE_ID')
 
@@ -1507,7 +1512,11 @@ define <$1 x $2> @__atomic_compare_exchange_$3_global($2* %ptr, <$1 x $2> %cmp,
 
 define $2 @__atomic_compare_exchange_uniform_$3_global($2* %ptr, $2 %cmp,
                                                        $2 %val) nounwind alwaysinline {
-  %r = cmpxchg $2 * %ptr, $2 %cmp, $2 %val seq_cst
+  ifelse(LLVM_VERSION,LLVM_3_5,`
+   %r = cmpxchg $2 * %ptr, $2 %cmp, $2 %val seq_cst seq_cst
+  ',`
+   %r = cmpxchg $2 * %ptr, $2 %cmp, $2 %val seq_cst
+  ')
   ret $2 %r
 }
 ')

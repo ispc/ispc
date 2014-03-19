@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2012, Intel Corporation
+  Copyright (c) 2010-2014, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -41,8 +41,11 @@
 
 #include "ispc.h"
 #include "ast.h"
-#if !defined(LLVM_3_1) && !defined(LLVM_3_2) && !defined(LLVM_3_3)
+#if defined(LLVM_3_4)
   #include <llvm/DebugInfo.h>
+#endif
+#if defined(LLVM_3_5)
+  #include <llvm/IR/DebugInfo.h>
 #endif
 
 namespace llvm

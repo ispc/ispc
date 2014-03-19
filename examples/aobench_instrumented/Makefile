@@ -20,7 +20,7 @@ ao: objs/ao.o objs/instrument.o objs/ao_ispc.o ../tasksys.cpp
 objs/%.o: %.cpp dirs
 	$(CXX) $< $(CXXFLAGS) -c -o $@
 
-objs/ao.o: objs/ao_ispc.h 
+objs/ao.o: objs/ao_instrumented_ispc.h
 
 objs/%_ispc.h objs/%_ispc.o: %.ispc dirs
 	$(ISPC) $(ISPCFLAGS) $< -o objs/$*_ispc.o -h objs/$*_instrumented_ispc.h

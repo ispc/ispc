@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2013, Intel Corporation
+  Copyright (c) 2010-2014, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -71,9 +71,13 @@
 #if defined(LLVM_3_5)
     #include <llvm/IR/Verifier.h>
     #include <llvm/IR/IRPrintingPasses.h>
+    #include <llvm/IR/PatternMatch.h>
+    #include <llvm/IR/DebugInfo.h>
 #else
     #include <llvm/Analysis/Verifier.h>
     #include <llvm/Assembly/PrintModulePass.h>
+    #include <llvm/Support/PatternMatch.h>
+    #include <llvm/DebugInfo.h>
 #endif
 #include <llvm/Analysis/ConstantFolding.h>
 #include <llvm/Target/TargetLibraryInfo.h>
@@ -83,9 +87,7 @@
 #include <llvm/Transforms/IPO.h>
 #include <llvm/Transforms/Utils/BasicBlockUtils.h>
 #include <llvm/Target/TargetOptions.h>
-#if defined(LLVM_3_1)
-  #include <llvm/Target/TargetData.h>
-#elif defined(LLVM_3_2)
+#if defined(LLVM_3_2)
   #include <llvm/DataLayout.h>
 #else // LLVM 3.3+
   #include <llvm/IR/DataLayout.h>
@@ -94,12 +96,6 @@
 #include <llvm/Target/TargetMachine.h>
 #include <llvm/Analysis/Passes.h>
 #include <llvm/Support/raw_ostream.h>
-#include <llvm/Support/PatternMatch.h>
-#if defined(LLVM_3_1)
-  #include <llvm/Analysis/DebugInfo.h>
-#else
-  #include <llvm/DebugInfo.h>
-#endif
 #include <llvm/Support/Dwarf.h>
 #ifdef ISPC_IS_LINUX
   #include <alloca.h>
@@ -474,19 +470,19 @@ Optimize(llvm::Module *module, int optLevel) {
         new llvm::TargetLibraryInfo(llvm::Triple(module->getTargetTriple()));
     optPM.add(targetLibraryInfo);
 
-
-#if defined(LLVM_3_1)
-    optPM.add(new llvm::TargetData(*g->target->getDataLayout()));
+#if defined(LLVM_3_5)
+    optPM.add(new llvm::DataLayoutPass(*g->target->getDataLayout()));
 #else
     optPM.add(new llvm::DataLayout(*g->target->getDataLayout()));
+#endif
 
     llvm::TargetMachine *targetMachine = g->target->GetTargetMachine();
-  #ifdef LLVM_3_2
+
+#ifdef LLVM_3_2
     optPM.add(new llvm::TargetTransformInfo(targetMachine->getScalarTargetTransformInfo(),
                                             targetMachine->getVectorTargetTransformInfo()));
-  #else // LLVM 3.3+
+#else // LLVM 3.3+
     targetMachine->addAnalysisPasses(optPM.getPM());
-  #endif
 #endif
 
     optPM.add(llvm::createIndVarSimplifyPass());

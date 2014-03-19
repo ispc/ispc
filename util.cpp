@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2013, Intel Corporation
+  Copyright (c) 2010-2014, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -577,7 +577,7 @@ GetDirectoryAndFileName(const std::string &currentDirectory,
     const char *basenameStart = strrchr(fp, '/');
     Assert(basenameStart != NULL);
     ++basenameStart;
-    Assert(basenameStart != '\0');
+    Assert(basenameStart[0] != '\0');
     *filename = basenameStart;
     *directory = std::string(fp, basenameStart - fp);
 #endif // ISPC_IS_WINDOWS

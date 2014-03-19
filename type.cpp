@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2013, Intel Corporation
+  Copyright (c) 2010-2014, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -50,9 +50,9 @@
   #include <llvm/IR/Value.h>
   #include <llvm/IR/Module.h>
 #endif
-#if defined(LLVM_3_1)
-  #include <llvm/Analysis/DebugInfo.h>
-  #include <llvm/Analysis/DIBuilder.h>
+#if defined(LLVM_3_5)
+  #include <llvm/IR/DebugInfo.h>
+  #include <llvm/IR/DIBuilder.h>
 #else
   #include <llvm/DebugInfo.h>
   #include <llvm/DIBuilder.h>
@@ -81,6 +81,7 @@ lShouldPrintName(const std::string &name) {
     the given element type. */
 static llvm::DIType
 lCreateDIArray(llvm::DIType eltType, int count) {
+#ifdef LLVM_3_2
     int lowerBound = 0, upperBound = count-1;
 
     if (count == 0) {
@@ -90,6 +91,9 @@ lCreateDIArray(llvm::DIType eltType, int count) {
     }
 
     llvm::Value *sub = m->diBuilder->getOrCreateSubrange(lowerBound, upperBound);
+#else // LLVM 3.3+
+    llvm::Value *sub = m->diBuilder->getOrCreateSubrange(0, count);
+#endif
     std::vector<llvm::Value *> subs;
     subs.push_back(sub);
     llvm::DIArray subArray = m->diBuilder->getOrCreateArray(subs);
@@ -224,7 +228,7 @@ Type::IsReferenceType() const {
 
 bool
 Type::IsVoidType() const {
-    return this == AtomicType::Void;
+    return EqualIgnoringConst(this, AtomicType::Void);
 }
 
 bool
@@ -286,7 +290,7 @@ AtomicType::GetAsUnsignedType() const {
 
 const AtomicType *
 AtomicType::GetAsConstType() const {
-    if (basicType == TYPE_VOID || isConst == true)
+    if (isConst == true)
         return this;
 
     if (asOtherConstType == NULL) {
@@ -299,7 +303,7 @@ AtomicType::GetAsConstType() const {
 
 const AtomicType *
 AtomicType::GetAsNonConstType() const {
-    if (basicType == TYPE_VOID || isConst == false)
+    if (isConst == false)
         return this;
 
     if (asOtherConstType == NULL) {
@@ -376,8 +380,8 @@ AtomicType::ResolveUnboundVariability(Variability v) const {
 std::string
 AtomicType::GetString() const {
     std::string ret;
+    if (isConst)   ret += "const ";
     if (basicType != TYPE_VOID) {
-        if (isConst)   ret += "const ";
         ret += variability.GetString();
         ret += " ";
     }
@@ -456,15 +460,9 @@ AtomicType::GetCDeclaration(const std::string &name) const {
         ret += name;
     }
 
-    if (variability == Variability::Varying ||
-        variability == Variability::SOA) {
+    if (variability == Variability::SOA) {
         char buf[32];
-        // get program count
-        // g->mangleFunctionsNamesWithTarget - hack check for void *
-        int vWidth = (variability == Variability::Varying) ? 
-                        g->target->getVectorWidth() :
-                        variability.soaWidth;
-        sprintf(buf, "[%d]", vWidth);
+        sprintf(buf, "[%d]", variability.soaWidth);
         ret += buf;
     }
 
@@ -571,7 +569,11 @@ AtomicType::GetDIType(llvm::DIDescriptor scope) const {
     }
     else if (variability == Variability::Varying) {
         llvm::DIType unifType = GetAsUniformType()->GetDIType(scope);
+#ifdef LLVM_3_2
         llvm::Value *sub = m->diBuilder->getOrCreateSubrange(0, g->target->getVectorWidth()-1);
+#else // LLVM 3.3+
+        llvm::Value *sub = m->diBuilder->getOrCreateSubrange(0, g->target->getVectorWidth());
+#endif
         llvm::DIArray subArray = m->diBuilder->getOrCreateArray(sub);
         uint64_t size =  unifType.getSizeInBits()  * g->target->getVectorWidth();
         uint64_t align = unifType.getAlignInBits() * g->target->getVectorWidth();
@@ -838,7 +840,11 @@ EnumType::GetDIType(llvm::DIDescriptor scope) const {
     case Variability::Uniform:
         return diType;
     case Variability::Varying: {
+#ifdef LLVM_3_2
         llvm::Value *sub = m->diBuilder->getOrCreateSubrange(0, g->target->getVectorWidth()-1);
+#else // LLVM 3.3+
+        llvm::Value *sub = m->diBuilder->getOrCreateSubrange(0, g->target->getVectorWidth());
+#endif
         llvm::DIArray subArray = m->diBuilder->getOrCreateArray(sub);
         uint64_t size =  diType.getSizeInBits()  * g->target->getVectorWidth();
         uint64_t align = diType.getAlignInBits() * g->target->getVectorWidth();
@@ -1096,19 +1102,26 @@ PointerType::GetCDeclaration(const std::string &name) const {
     }
 
     std::string ret = baseType->GetCDeclaration("");
+    
+    bool baseIsBasicVarying = (IsBasicType(baseType)) && (baseType->IsVaryingType());
+    
+    if (baseIsBasicVarying) ret += std::string("(");
     ret += std::string(" *");
     if (isConst) ret += " const";
     ret += std::string(" ");
     ret += name;
+    if (baseIsBasicVarying) ret += std::string(")");
 
-    if (variability == Variability::SOA ||
-        variability == Variability::Varying) {
-        int vWidth = (variability == Variability::Varying) ?
-            g->target->getVectorWidth() :
-            variability.soaWidth;
+    if (variability == Variability::SOA) {
         char buf[32];
-        sprintf(buf, "[%d]", vWidth);
+        sprintf(buf, "[%d]", variability.soaWidth);
         ret += buf;
+    }
+    if (baseIsBasicVarying) {
+      int vWidth = g->target->getVectorWidth();
+      char buf[32];
+      sprintf(buf, "[%d]", vWidth);
+      ret += buf;
     }
 
     return ret;
@@ -1154,7 +1167,7 @@ PointerType::LLVMType(llvm::LLVMContext *ctx) const {
         if (ftype != NULL)
             ptype = llvm::PointerType::get(ftype->LLVMFunctionType(ctx), 0);
         else {
-            if (baseType == AtomicType::Void)
+            if (baseType->IsVoidType())
                 ptype = LLVMTypes::VoidPointerType;
             else
                 ptype = llvm::PointerType::get(baseType->LLVMType(ctx), 0);
@@ -1222,7 +1235,7 @@ ArrayType::ArrayType(const Type *c, int a)
     : SequentialType(ARRAY_TYPE), child(c), numElements(a) {
     // 0 -> unsized array.
     Assert(numElements >= 0);
-    Assert(Type::Equal(c, AtomicType::Void) == false);
+    Assert(c->IsVoidType() == false);
 }
 
 
@@ -1720,7 +1733,11 @@ VectorType::LLVMType(llvm::LLVMContext *ctx) const {
 llvm::DIType
 VectorType::GetDIType(llvm::DIDescriptor scope) const {
     llvm::DIType eltType = base->GetDIType(scope);
+#ifdef LLVM_3_2
     llvm::Value *sub = m->diBuilder->getOrCreateSubrange(0, numElements-1);
+#else // LLVM 3.3+
+    llvm::Value *sub = m->diBuilder->getOrCreateSubrange(0, numElements);
+#endif
     llvm::DIArray subArray = m->diBuilder->getOrCreateArray(sub);
 
     uint64_t sizeBits = eltType.getSizeInBits() * numElements;
@@ -1890,6 +1907,10 @@ StructType::StructType(const std::string &n, const llvm::SmallVector<const Type 
     }
 }
 
+const std::string 
+StructType::GetCStructName() const {
+  return lMangleStructName(name, variability);
+}
 
 Variability
 StructType::GetVariability() const  {
@@ -2078,7 +2099,7 @@ std::string
 StructType::GetCDeclaration(const std::string &n) const {
     std::string ret;
     if (isConst) ret += "const ";
-    ret += std::string("struct ") + name;
+    ret += std::string("struct ") + GetCStructName();
     if (lShouldPrintName(n)) {
         ret += std::string(" ") + n;
 
@@ -2994,7 +3015,7 @@ FunctionType::LLVMFunctionType(llvm::LLVMContext *ctx, bool removeMask) const {
             Assert(m->errorCount > 0);
             return NULL;
         }
-        Assert(Type::Equal(paramTypes[i], AtomicType::Void) == false);
+        Assert(paramTypes[i]->IsVoidType() == false);
 
         llvm::Type *t = paramTypes[i]->LLVMType(ctx);
         if (t == NULL) {

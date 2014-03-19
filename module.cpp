@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2013, Intel Corporation
+  Copyright (c) 2010-2014, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -86,9 +86,7 @@
 #include <llvm/Support/FileUtilities.h>
 #include <llvm/Target/TargetMachine.h>
 #include <llvm/Target/TargetOptions.h>
-#if defined(LLVM_3_1)
-  #include <llvm/Target/TargetData.h>
-#elif defined(LLVM_3_2)
+#if defined(LLVM_3_2)
   #include <llvm/DataLayout.h>
   #include <llvm/TargetTransformInfo.h>
 #else // LLVM 3.3+
@@ -98,11 +96,12 @@
 #if defined(LLVM_3_5)
     #include <llvm/IR/Verifier.h>
     #include <llvm/IR/IRPrintingPasses.h>
+    #include <llvm/IR/CFG.h>
 #else
     #include <llvm/Analysis/Verifier.h>
     #include <llvm/Assembly/PrintModulePass.h>
+    #include <llvm/Support/CFG.h>
 #endif
-#include <llvm/Support/CFG.h>
 #include <clang/Frontend/CompilerInstance.h>
 #include <clang/Frontend/TextDiagnosticPrinter.h>
 #include <clang/Frontend/Utils.h>
@@ -427,7 +426,7 @@ Module::AddGlobalVariable(const std::string &name, const Type *type, Expr *initE
         return;
     }
 
-    if (Type::Equal(type, AtomicType::Void)) {
+    if (type->IsVoidType()) {
         Error(pos, "\"void\" type global variable is illegal.");
         return;
     }
@@ -867,7 +866,7 @@ Module::AddFunctionDeclaration(const std::string &name,
               "exported function \"%s\"", name.c_str());
 
     if (functionType->isTask &&
-        Type::Equal(functionType->GetReturnType(), AtomicType::Void) == false)
+        functionType->GetReturnType()->IsVoidType() == false)
         Error(pos, "Task-qualified functions must have void return type.");
 
     if (g->target->getISA() == Target::NVPTX &&
@@ -1007,6 +1006,15 @@ Module::writeOutput(OutputType outputType, const char *outFileName,
 
         lStripUnusedDebugInfo(module);
     }
+
+#if defined (LLVM_3_4) || defined (LLVM_3_5)
+    // In LLVM_3_4 after r195494 and r195504 revisions we should pass
+    // "Debug Info Version" constant to the module. LLVM will ignore
+    // our Debug Info metadata without it.
+    if (g->generateDebuggingSymbols == true) {
+        module->addModuleFlag(llvm::Module::Error, "Debug Info Version", llvm::DEBUG_METADATA_VERSION);
+    }
+#endif
 
     // First, issue a warning if the output file suffix and the type of
     // file being created seem to mismatch.  This can help catch missing
@@ -1150,9 +1158,13 @@ Module::writeObjectFileOrAssembly(llvm::TargetMachine *targetMachine,
     bool binary = (fileType == llvm::TargetMachine::CGFT_ObjectFile);
 #if defined(LLVM_3_1) || defined(LLVM_3_2) || defined(LLVM_3_3)
     unsigned int flags = binary ? llvm::raw_fd_ostream::F_Binary : 0;
-#else
+#elif defined(LLVM_3_4)
     llvm::sys::fs::OpenFlags flags = binary ? llvm::sys::fs::F_Binary :
         llvm::sys::fs::F_None;
+#else
+    llvm::sys::fs::OpenFlags flags = binary ? llvm::sys::fs::F_None :
+        llvm::sys::fs::F_Text;
+
 #endif
 
     std::string error;
@@ -1163,8 +1175,8 @@ Module::writeObjectFileOrAssembly(llvm::TargetMachine *targetMachine,
     }
 
     llvm::PassManager pm;
-#if defined(LLVM_3_1)
-    pm.add(new llvm::TargetData(*g->target->getDataLayout()));
+#if defined(LLVM_3_5)
+    pm.add(new llvm::DataLayoutPass(*g->target->getDataLayout()));
 #else
     pm.add(new llvm::DataLayout(*g->target->getDataLayout()));
 #endif
@@ -1222,11 +1234,11 @@ lContainsPtrToVarying(const StructType *st) {
  */
 static void
 lEmitStructDecl(const StructType *st, std::vector<const StructType *> *emittedStructs,
-                FILE *file, bool printGenericHeader=false, bool emitUnifs=true) {
+                FILE *file, bool emitUnifs=true) {
 
     // if we're emitting this for a generic dispatch header file and it's 
     // struct that only contains uniforms, don't bother if we're emitting uniforms
-    if (printGenericHeader && !emitUnifs && !lContainsPtrToVarying(st)) {
+    if (!emitUnifs && !lContainsPtrToVarying(st)) {
       return;
     }
 
@@ -1242,33 +1254,20 @@ lEmitStructDecl(const StructType *st, std::vector<const StructType *> *emittedSt
         const StructType *elementStructType =
             lGetElementStructType(st->GetElementType(i));
         if (elementStructType != NULL)
-          lEmitStructDecl(elementStructType, emittedStructs, file, printGenericHeader, emitUnifs);
+          lEmitStructDecl(elementStructType, emittedStructs, file, emitUnifs);
     }
 
     // And now it's safe to declare this one
     emittedStructs->push_back(st);
-
     
-    if (printGenericHeader && lContainsPtrToVarying(st)) {
-      fprintf(file, "#ifndef __ISPC_STRUCT_%s%d__\n",
-              st->GetStructName().c_str(), 
-              g->target->getVectorWidth());
-      fprintf(file, "#define __ISPC_STRUCT_%s%d__\n",
-              st->GetStructName().c_str(),
-              g->target->getVectorWidth());
-    }
-    else {
-      fprintf(file, "#ifndef __ISPC_STRUCT_%s__\n",st->GetStructName().c_str());
-      fprintf(file, "#define __ISPC_STRUCT_%s__\n",st->GetStructName().c_str());
-    }
-    fprintf(file, "struct %s", st->GetStructName().c_str());
+    fprintf(file, "#ifndef __ISPC_STRUCT_%s__\n",st->GetCStructName().c_str());
+    fprintf(file, "#define __ISPC_STRUCT_%s__\n",st->GetCStructName().c_str());
+
+    fprintf(file, "struct %s", st->GetCStructName().c_str());
     if (st->GetSOAWidth() > 0)
         // This has to match the naming scheme in
         // StructType::GetCDeclaration().
         fprintf(file, "_SOA%d", st->GetSOAWidth());
-    if (printGenericHeader && lContainsPtrToVarying(st)) {
-      fprintf(file, "%d", g->target->getVectorWidth());
-    }
     fprintf(file, " {\n");
 
     for (int i = 0; i < st->GetElementCount(); ++i) {
@@ -1285,10 +1284,10 @@ lEmitStructDecl(const StructType *st, std::vector<const StructType *> *emittedSt
     header file, emit their declarations.
  */
 static void
-lEmitStructDecls(std::vector<const StructType *> &structTypes, FILE *file, bool printGenericHeader=false, bool emitUnifs=true) {
+lEmitStructDecls(std::vector<const StructType *> &structTypes, FILE *file, bool emitUnifs=true) {
     std::vector<const StructType *> emittedStructs;
     for (unsigned int i = 0; i < structTypes.size(); ++i)
-      lEmitStructDecl(structTypes[i], &emittedStructs, file, printGenericHeader, emitUnifs);
+      lEmitStructDecl(structTypes[i], &emittedStructs, file, emitUnifs);
 }
 
 
@@ -2004,7 +2003,7 @@ Module::writeDispatchHeader(DispatchHeaderInfo *DHI) {
           lEmitVectorTypedefs(exportedVectorTypes, f);
           lEmitEnumDecls(exportedEnumTypes, f);
         }
-        lEmitStructDecls(exportedStructTypes, f, true, DHI->EmitUnifs);
+        lEmitStructDecls(exportedStructTypes, f, DHI->EmitUnifs);
         
         // Update flags
         DHI->EmitUnifs = false;
@@ -2185,12 +2184,12 @@ Module::execPreprocessor(const char *infilename, llvm::raw_string_ostream *ostre
       opts.addMacroDef("taskCount=__taskCount()");
     }
 
-#if defined(LLVM_3_1)
-    inst.getLangOpts().BCPLComment = 1;
-#else
     inst.getLangOpts().LineComment = 1;
-#endif
+#if defined(LLVM_3_5)
+    inst.createPreprocessor(clang::TU_Complete);
+#else
     inst.createPreprocessor();
+#endif
 
     diagPrinter->BeginSourceFile(inst.getLangOpts(), &inst.getPreprocessor());
     clang::DoPrintPreprocessedInput(inst.getPreprocessor(),
