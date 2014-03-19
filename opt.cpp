@@ -55,6 +55,7 @@
   #include <llvm/Function.h>
   #include <llvm/BasicBlock.h>
   #include <llvm/Constants.h>
+  #include <llvm/InlineAsm.h>
 #else
   #include <llvm/IR/Module.h>
   #include <llvm/IR/Instructions.h>
@@ -62,6 +63,7 @@
   #include <llvm/IR/Function.h>
   #include <llvm/IR/BasicBlock.h>
   #include <llvm/IR/Constants.h>
+  #include <llvm/IR/InlineAsm.h>
 #endif
 #if defined (LLVM_3_4) || defined(LLVM_3_5)
   #include <llvm/Transforms/Instrumentation.h>
@@ -520,8 +522,6 @@ Optimize(llvm::Module *module, int optLevel) {
         llvm::initializeInstrumentation(*registry);
         llvm::initializeTarget(*registry);
 
-        if (g->target->getISA() == Target::NVPTX)
-          optPM.add(CreatePromoteLocalToPrivatePass());
         optPM.add(llvm::createGlobalDCEPass(), 185);
 
         // Setup to use LLVM default AliasAnalysis
@@ -698,6 +698,7 @@ Optimize(llvm::Module *module, int optLevel) {
 
         if (g->target->getISA() == Target::NVPTX)
         {
+          optPM.add(CreatePromoteLocalToPrivatePass());
           optPM.add(llvm::createGlobalDCEPass());
 
           optPM.add(llvm::createTypeBasedAliasAnalysisPass());
@@ -5433,6 +5434,34 @@ PromoteLocalToPrivatePass::runOnBasicBlock(llvm::BasicBlock &BB)
 
   bool modifiedAny  = false;
 
+#if 1
+restart:
+  for (llvm::BasicBlock::iterator I = BB.begin(), E = --BB.end(); I != E; ++I)
+  {
+    llvm::Instruction *inst = &*I;
+    if (llvm::CallInst *ci = llvm::dyn_cast<llvm::CallInst>(inst))
+    {
+      llvm::Function *func = ci->getCalledFunction();
+      if (func && func->getName() == "llvm.trap")
+      {
+        std::vector<llvm::Type*> funcTyArgs;
+        llvm::FunctionType *funcTy = llvm::FunctionType::get(
+            /*Result=*/llvm::Type::getVoidTy(*g->ctx),
+            /*Params=*/funcTyArgs,
+            /*isVarArg=*/false);
+        llvm::InlineAsm *trap_ptx = llvm::InlineAsm::get(funcTy, "trap;", "", false);
+        assert(trap_ptx != NULL);
+        llvm::Instruction *trap_call = llvm::CallInst::Create(trap_ptx);
+        assert(trap_call != NULL);
+        llvm::ReplaceInstWithInst(ci, trap_call);
+        modifiedAny = true;
+        goto restart;
+      }
+    }
+  }
+#endif
+
+#if 0
   llvm::Function *cvtFunc = m->module->getFunction("__cvt_loc2gen_var");
 
   // Find allocas that are safe to promote, by looking at all instructions in
@@ -5460,6 +5489,7 @@ PromoteLocalToPrivatePass::runOnBasicBlock(llvm::BasicBlock &BB)
       }
     }
   }
+#endif
   return modifiedAny;
 }
 
