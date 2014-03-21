@@ -2931,23 +2931,26 @@ Function Overloading
 --------------------
 
 Functions can be overloaded by parameter type.  Given multiple definitions
-of a function, ``ispc`` uses the following methods to try to find a match.
-If a single match of a given type is found, it is used; if multiple matches
-of a given type are found, an error is issued.
+of a function, ``ispc`` uses the following model to choose the best function:
+each conversion of two types has its cost. ``ispc`` tries to find conversion
+with the smallest cost. When ``ispc`` can't find any conversion it means that
+this function is not suitable. Then ``ispc`` sums costs for all arguments and
+chooses the function with the smallest final cost.
+Costs of type conversions placed from small to big:
 
-* All parameter types match exactly.
-* All parameter types match exactly, where any reference-type
-  parameters are considered equivalent to their underlying type.
-* Parameters match with only type conversions that don't risk losing any
-  information (for example, converting an ``int16`` value to an ``int32``
-  parameter value.)
-* Parameters match with only promotions from ``uniform`` to ``varying``
-  types.
-* Parameters match using arbitrary type conversion, without changing
-  variability from ``uniform`` to ``varying`` (e.g., ``int`` to ``float``,
-  ``float`` to ``int``.)
-* Parameters match using arbitrary type conversion, including also changing
-  variability from ``uniform`` to ``varying`` as needed.
+1. Parameter types match exactly.
+2. Function parameter type is reference and parameters match when any reference-type parameter are considered equivalent to their underlying type.
+3. Function parameter type is const-reference and parameters match when any reference-type parameter are considered equivalent to their underlying type ignoring const attributes.
+4. Parameters match exactly, except constant attributes. [NO CONSTANT ATTRIBUTES LATER]
+5. Parameters match exactly, except reference attributes. [NO REFERENCES ATTRIBUTES LATER]
+6. Parameters match with only type conversions that don't risk losing any information (for example, converting an int16 value to an int32 parameter value.)
+7. Parameters match with only promotions from uniform to varying types.
+8. Parameters match using arbitrary type conversion, without changing variability from uniform to varying (e.g., int to float, float to int.)
+9. Parameters match with widening and promotions from uniform to varying types. (combination of "6" and "7")
+10. Parameters match using arbitrary type conversion, including also changing variability from uniform to varying.
+
+* If function parameter type is reference and neither "2" nor "3" aren't suitable, function is not suitable
+* If "10" isn't suitable, function is not suitable
 
 
 Re-establishing The Execution Mask

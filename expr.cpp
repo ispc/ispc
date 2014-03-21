@@ -8091,23 +8091,6 @@ lGetOverloadCandidateMessage(const std::vector<Symbol *> &funcs,
 }
 
 
-static bool
-lIsMatchToNonConstReference(const Type *callType, const Type *funcArgType) {
-    return (CastType<ReferenceType>(funcArgType) &&
-            (funcArgType->IsConstType() == false) &&
-            Type::Equal(callType, funcArgType->GetReferenceTarget()));
-}
-
-
-static bool
-lIsMatchToNonConstReferenceUnifToVarying(const Type *callType,
-                                         const Type *funcArgType) {
-    return (CastType<ReferenceType>(funcArgType) &&
-            (funcArgType->IsConstType() == false) &&
-            Type::Equal(callType->GetAsVaryingType(),
-                        funcArgType->GetReferenceTarget()));
-}
-
 /** Helper function used for function overload resolution: returns true if
     converting the argument to the call type only requires a type
     conversion that won't lose information.  Otherwise return false.
@@ -8151,31 +8134,6 @@ lIsMatchWithTypeWidening(const Type *callType, const Type *funcArgType) {
         FATAL("Unhandled atomic type");
         return false;
     }
-}
-
-
-/** Helper function used for function overload resolution: returns true if
-    the call argument type and the function argument type match if we only
-    do a uniform -> varying type conversion but otherwise have exactly the
-    same type.
- */
-static bool
-lIsMatchWithUniformToVarying(const Type *callType, const Type *funcArgType) {
-    return (callType->IsUniformType() &&
-            funcArgType->IsVaryingType() &&
-            Type::EqualIgnoringConst(callType->GetAsVaryingType(), funcArgType));
-}
-
-
-/** Helper function used for function overload resolution: returns true if
-    we can type convert from the call argument type to the function
-    argument type, but without doing a uniform -> varying conversion.
- */
-static bool
-lIsMatchWithTypeConvSameVariability(const Type *callType,
-                                    const Type *funcArgType) {
-    return (CanConvertTypes(callType, funcArgType) &&
-            (callType->GetVariability() == funcArgType->GetVariability()));
 }
 
 
@@ -8249,11 +8207,12 @@ FunctionSymbolExpr::computeOverloadCost(const FunctionType *ftype,
 
         if (Type::Equal(callType, fargType))
             // Perfect match: no cost
+            // Step "1" from documentation
             costSum += 0;
         else if (argCouldBeNULL && (*argCouldBeNULL)[i] &&
                  lArgIsPointerType(fargType))
-            // Passing NULL to a pointer-typed parameter is also a no-cost
-            // operation
+            // Passing NULL to a pointer-typed parameter is also a no-cost operation
+            // Step "1" from documentation
             costSum += 0;
         else {
             // If the argument is a compile-time constant, we'd like to
@@ -8261,32 +8220,82 @@ FunctionSymbolExpr::computeOverloadCost(const FunctionType *ftype,
             // cost if it wasn't--so scale up the cost when this isn't the
             // case..
             if (argIsConstant == NULL || (*argIsConstant)[i] == false)
-                costScale *= 128;
+                costScale *= 512;
 
-            // For convenience, normalize to non-const types (except for
-            // references, where const-ness matters).  For all other types,
-            // we're passing by value anyway, so const doesn't matter.
-            const Type *callTypeNC = callType, *fargTypeNC = fargType;
-            if (CastType<ReferenceType>(callType) == NULL)
-                callTypeNC = callType->GetAsNonConstType();
-            if (CastType<ReferenceType>(fargType) == NULL)
-                fargTypeNC = fargType->GetAsNonConstType();
-
-            if (Type::Equal(callTypeNC, fargTypeNC))
-                // Exact match (after dealing with references, above)
-                costSum += 1 * costScale;
-            // note: orig fargType for the next two...
-            else if (lIsMatchToNonConstReference(callTypeNC, fargType))
+            if (CastType<ReferenceType>(fargType)) {
+                // Here we completely handle the case where fargType is reference.
+                if (callType->IsConstType() && !fargType->IsConstType()) {
+                    // It is forbidden to pass const object to non-const reference (cvf -> vfr)
+                    return -1;
+                }
+                if (!callType->IsConstType() && fargType->IsConstType()) {
+                    // It is possible to pass (vf -> cvfr)
+                    // but it is worse than (vf -> vfr) or (cvf -> cvfr)
+                    // Step "3" from documentation
+                    costSum += 2 * costScale;
+                }
+                if (!Type::Equal(callType->GetReferenceTarget()->GetAsNonConstType(),
+                                 fargType->GetReferenceTarget()->GetAsNonConstType())) {
+                    // Types under references must be equal completely.
+                    // vd -> vfr or vd -> cvfr are forbidden. (Although clang allows vd -> cvfr case.)
+                    return -1;
+                }
+                // penalty for equal types under reference (vf -> vfr is worse than vf -> vf)
+                // Step "2" from documentation
                 costSum += 2 * costScale;
-            else if (lIsMatchToNonConstReferenceUnifToVarying(callTypeNC, fargType))
-                costSum += 4 * costScale;
-            else if (lIsMatchWithTypeWidening(callTypeNC, fargTypeNC))
+                continue;
+            }
+            const Type *callTypeNP = callType;
+            if (CastType<ReferenceType>(callType)) {
+                callTypeNP = callType->GetReferenceTarget();
+                // we can treat vfr as vf for callType with some penalty
+                // Step "5" from documentation
+                costSum += 2 * costScale;
+            }
+
+            // Now we deal with references, so we can normalize to non-const types
+            // because we're passing by value anyway, so const doesn't matter.
+            const Type *callTypeNC = callTypeNP, *fargTypeNC = fargType;
+            callTypeNC = callTypeNP->GetAsNonConstType();
+            fargTypeNC = fargType->GetAsNonConstType();
+
+            // Now we forget about constants and references!
+            if (Type::Equal(callTypeNC, fargTypeNC)) {
+                // The best case: vf -> vf.
+                // Step "4" from documentation
+                costSum += 1 * costScale;
+                continue;
+            }
+            if (lIsMatchWithTypeWidening(callTypeNC, fargTypeNC)) {
+                // A little bit worse case: vf -> vd.
+                // Step "6" from documentation
                 costSum += 8 * costScale;
-            else if (lIsMatchWithUniformToVarying(callTypeNC, fargTypeNC))
-                costSum += 16 * costScale;
-            else if (lIsMatchWithTypeConvSameVariability(callTypeNC, fargTypeNC))
-                costSum += 32 * costScale;
-            else if (CanConvertTypes(callTypeNC, fargTypeNC))
+                continue;
+            }
+            if (fargType->IsVaryingType() && callType->IsUniformType()) {
+                // Here we deal with brodcasting uniform to varying.
+                // callType - varying and fargType - uniform is forbidden.
+                if (Type::Equal(callTypeNC->GetAsVaryingType(), fargTypeNC)) {
+                    // uf -> vf is better than uf -> ui or uf -> ud
+                    // Step "7" from documentation
+                    costSum += 16 * costScale;
+                    continue;
+                }
+                if (lIsMatchWithTypeWidening(callTypeNC->GetAsVaryingType(), fargTypeNC)) {
+                    // uf -> vd is better than uf -> vi (128 < 128 + 64)
+                    // but worse than uf -> ui (128 > 64)
+                    // Step "9" from documentation
+                    costSum += 128 * costScale;
+                    continue;
+                }
+                // 128 + 64 is the max. uf -> vi is the worst case.
+                // Step "10" from documentation
+                costSum += 128 * costScale;
+            }
+            if (CanConvertTypes(callTypeNC, fargTypeNC))
+                // two cases: the worst is 128 + 64: uf -> vi and
+                // the only 64: (64 < 128) uf -> ui worse than uf -> vd
+                // Step "8" from documentation
                 costSum += 64 * costScale;
             else
                 // Failure--no type conversion possible...
