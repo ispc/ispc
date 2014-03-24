@@ -2935,7 +2935,9 @@ of a function, ``ispc`` uses the following model to choose the best function:
 each conversion of two types has its cost. ``ispc`` tries to find conversion
 with the smallest cost. When ``ispc`` can't find any conversion it means that
 this function is not suitable. Then ``ispc`` sums costs for all arguments and
-chooses the function with the smallest final cost.
+chooses the function with the smallest final cost. If the chosen function 
+has some arguments which costs are bigger than their costs in other function
+this treats as ambiguous.
 Costs of type conversions placed from small to big:
 
 1. Parameter types match exactly.

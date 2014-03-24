@@ -11,7 +11,7 @@ export void f_fu(uniform float RET[], uniform float aFOO[], uniform float b) {
 
     uniform int index[4] = { 0, 1, 2, 4 };
     float v = index[programIndex & 0x3];
-    x[min(a,39)][v] = 0;
+    x[min(a,39.f)][v] = 0;
     RET[programIndex] = x[v+1][v];
 }
 

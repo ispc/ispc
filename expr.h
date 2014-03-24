@@ -635,7 +635,8 @@ private:
     static int computeOverloadCost(const FunctionType *ftype,
                                    const std::vector<const Type *> &argTypes,
                                    const std::vector<bool> *argCouldBeNULL,
-                            const std::vector<bool> *argIsConstant);
+                                   const std::vector<bool> *argIsConstant,
+                                   int * cost);
 
     /** Name of the function that is being called. */
     std::string name;
