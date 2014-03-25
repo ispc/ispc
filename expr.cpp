@@ -8188,13 +8188,15 @@ int
 FunctionSymbolExpr::computeOverloadCost(const FunctionType *ftype,
                                         const std::vector<const Type *> &argTypes,
                                         const std::vector<bool> *argCouldBeNULL,
-                                        const std::vector<bool> *argIsConstant) {
+                                        const std::vector<bool> *argIsConstant,
+                                        int * cost) {
     int costSum = 0;
 
     // In computing the cost function, we only worry about the actual
     // argument types--using function default parameter values is free for
     // the purposes here...
     for (int i = 0; i < (int)argTypes.size(); ++i) {
+        cost[i] = 0;
         // The cost imposed by this argument will be a multiple of
         // costScale, which has a value set so that for each of the cost
         // buckets, even if all of the function arguments undergo the next
@@ -8208,12 +8210,12 @@ FunctionSymbolExpr::computeOverloadCost(const FunctionType *ftype,
         if (Type::Equal(callType, fargType))
             // Perfect match: no cost
             // Step "1" from documentation
-            costSum += 0;
+            cost[i] += 0;
         else if (argCouldBeNULL && (*argCouldBeNULL)[i] &&
                  lArgIsPointerType(fargType))
             // Passing NULL to a pointer-typed parameter is also a no-cost operation
             // Step "1" from documentation
-            costSum += 0;
+            cost[i] += 0;
         else {
             // If the argument is a compile-time constant, we'd like to
             // count the cost of various conversions as much lower than the
@@ -8232,7 +8234,7 @@ FunctionSymbolExpr::computeOverloadCost(const FunctionType *ftype,
                     // It is possible to pass (vf -> cvfr)
                     // but it is worse than (vf -> vfr) or (cvf -> cvfr)
                     // Step "3" from documentation
-                    costSum += 2 * costScale;
+                    cost[i] += 2 * costScale;
                 }
                 if (!Type::Equal(callType->GetReferenceTarget()->GetAsNonConstType(),
                                  fargType->GetReferenceTarget()->GetAsNonConstType())) {
@@ -8242,7 +8244,7 @@ FunctionSymbolExpr::computeOverloadCost(const FunctionType *ftype,
                 }
                 // penalty for equal types under reference (vf -> vfr is worse than vf -> vf)
                 // Step "2" from documentation
-                costSum += 2 * costScale;
+                cost[i] += 2 * costScale;
                 continue;
             }
             const Type *callTypeNP = callType;
@@ -8250,7 +8252,7 @@ FunctionSymbolExpr::computeOverloadCost(const FunctionType *ftype,
                 callTypeNP = callType->GetReferenceTarget();
                 // we can treat vfr as vf for callType with some penalty
                 // Step "5" from documentation
-                costSum += 2 * costScale;
+                cost[i] += 2 * costScale;
             }
 
             // Now we deal with references, so we can normalize to non-const types
@@ -8263,13 +8265,13 @@ FunctionSymbolExpr::computeOverloadCost(const FunctionType *ftype,
             if (Type::Equal(callTypeNC, fargTypeNC)) {
                 // The best case: vf -> vf.
                 // Step "4" from documentation
-                costSum += 1 * costScale;
+                cost[i] += 1 * costScale;
                 continue;
             }
             if (lIsMatchWithTypeWidening(callTypeNC, fargTypeNC)) {
                 // A little bit worse case: vf -> vd.
                 // Step "6" from documentation
-                costSum += 8 * costScale;
+                cost[i] += 8 * costScale;
                 continue;
             }
             if (fargType->IsVaryingType() && callType->IsUniformType()) {
@@ -8278,31 +8280,34 @@ FunctionSymbolExpr::computeOverloadCost(const FunctionType *ftype,
                 if (Type::Equal(callTypeNC->GetAsVaryingType(), fargTypeNC)) {
                     // uf -> vf is better than uf -> ui or uf -> ud
                     // Step "7" from documentation
-                    costSum += 16 * costScale;
+                    cost[i] += 16 * costScale;
                     continue;
                 }
                 if (lIsMatchWithTypeWidening(callTypeNC->GetAsVaryingType(), fargTypeNC)) {
                     // uf -> vd is better than uf -> vi (128 < 128 + 64)
                     // but worse than uf -> ui (128 > 64)
                     // Step "9" from documentation
-                    costSum += 128 * costScale;
+                    cost[i] += 128 * costScale;
                     continue;
                 }
                 // 128 + 64 is the max. uf -> vi is the worst case.
                 // Step "10" from documentation
-                costSum += 128 * costScale;
+                cost[i] += 128 * costScale;
             }
             if (CanConvertTypes(callTypeNC, fargTypeNC))
                 // two cases: the worst is 128 + 64: uf -> vi and
                 // the only 64: (64 < 128) uf -> ui worse than uf -> vd
                 // Step "8" from documentation
-                costSum += 64 * costScale;
+                cost[i] += 64 * costScale;
             else
                 // Failure--no type conversion possible...
                 return -1;
         }
     }
 
+    for (int i = 0; i < (int)argTypes.size(); ++i) {
+        costSum = costSum + cost[i];
+    }
     return costSum;
 }
 
@@ -8337,6 +8342,7 @@ FunctionSymbolExpr::ResolveOverloads(SourcePos argPos,
     int bestMatchCost = 1<<30;
     std::vector<Symbol *> matches;
     std::vector<int> candidateCosts;
+    std::vector<int*> candidateExpandCosts;
 
     if (actualCandidates.size() == 0)
         goto failure;
@@ -8346,9 +8352,12 @@ FunctionSymbolExpr::ResolveOverloads(SourcePos argPos,
         const FunctionType *ft =
             CastType<FunctionType>(actualCandidates[i]->type);
         AssertPos(pos, ft != NULL);
+        int * cost = new int[argTypes.size()];
         candidateCosts.push_back(computeOverloadCost(ft, argTypes,
                                                      argCouldBeNULL,
-                                                     argIsConstant));
+                                                     argIsConstant,
+                                                     cost));
+        candidateExpandCosts.push_back(cost);
     }
 
     // Find the best cost, and then the candidate or candidates that have
@@ -8361,8 +8370,28 @@ FunctionSymbolExpr::ResolveOverloads(SourcePos argPos,
     if (bestMatchCost == (1<<30))
         goto failure;
     for (int i = 0; i < (int)candidateCosts.size(); ++i) {
-        if (candidateCosts[i] == bestMatchCost)
+        if (candidateCosts[i] == bestMatchCost) {
+            for (int j = 0; j < (int)candidateCosts.size(); ++j) {
+                for (int k = 0; k < argTypes.size(); k++) {
+                    if (candidateCosts[j] != -1 &&
+                        candidateExpandCosts[j][k] < candidateExpandCosts[i][k]) {
+                        std::vector<Symbol *> temp;
+                        temp.push_back(actualCandidates[i]);
+                        temp.push_back(actualCandidates[j]);
+                        std::string candidateMessage =
+                            lGetOverloadCandidateMessage(temp, argTypes, argCouldBeNULL);
+                        Warning(pos, "call to \"%s\" is ambiguous. "
+                                    "This warning will be turned into error in the next ispc release.\n"
+                                    "Please add explicit cast to arguments to have unambiguous match."
+                                    "\n%s", funName, candidateMessage.c_str());
+                    }
+                }
+            }
             matches.push_back(actualCandidates[i]);
+        }
+    }
+    for (int i = 0; i < (int)candidateExpandCosts.size(); ++i) {
+        delete [] candidateExpandCosts[i];
     }
 
     if (matches.size() == 1) {

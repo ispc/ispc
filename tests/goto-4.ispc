@@ -9,7 +9,7 @@ export void f_f(uniform float RET[], uniform float aFOO[]) {
  encore:
     ++RET[programIndex];
     if (any(a != 0)) {
-        a = max(a-1, 0);
+        a = max(a-1, 0.f);
         goto encore;
     }
 }
