@@ -793,7 +793,6 @@ Module::AddFunctionDeclaration(const std::string &name,
     // Set function attributes: we never throw exceptions
     function->setDoesNotThrow();
     if (storageClass != SC_EXTERN_C &&
-        !g->generateDebuggingSymbols &&
         isInline)
 #ifdef LLVM_3_2
         function->addFnAttr(llvm::Attributes::AlwaysInline);
