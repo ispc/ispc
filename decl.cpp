@@ -58,6 +58,8 @@ lPrintTypeQualifiers(int typeQualifiers) {
     if (typeQualifiers & TYPEQUAL_UNSIGNED)  printf("unsigned ");
     if (typeQualifiers & TYPEQUAL_EXPORT)    printf("export ");
     if (typeQualifiers & TYPEQUAL_UNMASKED)  printf("unmasked ");
+    if (typeQualifiers & TYPEQUAL_SATURATED)    printf("saturated ");
+    if (typeQualifiers & TYPEQUAL_UNSATURATED)  printf("unsaturated ");
 }
 
 
@@ -116,6 +118,29 @@ lApplyTypeQualifiers(int typeQualifiers, const Type *type, SourcePos pos) {
         const Type *resolvedType =
             type->ResolveUnboundVariability(Variability::Varying);
         Error(pos, "\"signed\" qualifier is illegal with non-integer type "
+              "\"%s\".", resolvedType->GetString().c_str());
+    }
+
+    if ((typeQualifiers & TYPEQUAL_UNSATURATED) != 0) {
+        if ((typeQualifiers & TYPEQUAL_SATURATED) != 0)
+            Error(pos, "Illegal to apply both \"saturated\" and \"unsaturated\" "
+                  "qualifiers.");
+
+        const Type *saruratedType = type->GetAsSaturatedType();
+        if (saruratedType != NULL)
+            type = saruratedType;
+        else {
+            const Type *resolvedType =
+                type->ResolveUnboundVariability(Variability::Varying);
+            Error(pos, "\"unsaturated\" qualifier is illegal with \"%s\" type.",
+                  resolvedType->GetString().c_str());
+        }
+    }
+
+    if ((typeQualifiers & TYPEQUAL_SATURATED) != 0 && type->IsIntType() == false) {
+        const Type *resolvedType =
+            type->ResolveUnboundVariability(Variability::Varying);
+        Error(pos, "\"saturated\" qualifier is illegal with non-integer type "
               "\"%s\".", resolvedType->GetString().c_str());
     }
 

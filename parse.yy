@@ -124,15 +124,15 @@ static const char *lBuiltinTokens[] = {
     "float", "for", "foreach", "foreach_active", "foreach_tiled",
      "foreach_unique", "goto", "if", "in", "inline",
     "int", "int8", "int16", "int32", "int64", "launch", "new", "NULL",
-    "print", "return", "signed", "sizeof", "static", "struct", "switch",
-    "sync", "task", "true", "typedef", "uniform", "unmasked", "unsigned",
-    "varying", "void", "while", NULL
+    "print", "return", "saturated", "signed", "sizeof", "static", "struct", 
+    "switch", "sync", "task", "true", "typedef", "uniform", "unmasked", 
+    "unsaturated", "unsigned", "varying", "void", "while", NULL
 };
 
 static const char *lParamListTokens[] = {
     "bool", "const", "double", "enum", "false", "float", "int",
-    "int8", "int16", "int32", "int64", "signed", "struct", "true",
-    "uniform", "unsigned", "varying", "void", NULL
+    "int8", "int16", "int32", "int64", "saturated", "signed", "struct", "true",
+    "uniform", "unsaturated", "unsigned", "varying", "void", NULL
 };
 
 struct ForeachDimension {
@@ -197,7 +197,7 @@ struct ForeachDimension {
 
 %token TOKEN_EXTERN TOKEN_EXPORT TOKEN_STATIC TOKEN_INLINE TOKEN_TASK TOKEN_DECLSPEC
 %token TOKEN_UNIFORM TOKEN_VARYING TOKEN_TYPEDEF TOKEN_SOA TOKEN_UNMASKED
-%token TOKEN_CHAR TOKEN_INT TOKEN_SIGNED TOKEN_UNSIGNED TOKEN_FLOAT TOKEN_DOUBLE
+%token TOKEN_CHAR TOKEN_INT TOKEN_SIGNED TOKEN_UNSIGNED TOKEN_FLOAT TOKEN_DOUBLE TOKEN_SATURATED TOKEN_UNSATURATED
 %token TOKEN_INT8 TOKEN_INT16 TOKEN_INT64 TOKEN_CONST TOKEN_VOID TOKEN_BOOL
 %token TOKEN_ENUM TOKEN_STRUCT TOKEN_TRUE TOKEN_FALSE
 
@@ -1115,6 +1115,26 @@ specifier_qualifier_list
                     $$ = $2;
                 }
             }
+
+            else if ($1 == TYPEQUAL_SATURATED) {
+                if ($2->IsIntType() == false) {
+                    Error(@1, "Can't apply \"saturated\" qualifier to \"%s\" type.",
+                          $2->ResolveUnboundVariability(Variability::Varying)->GetString().c_str());
+                    $$ = $2;
+                }
+            }
+            else if ($1 == TYPEQUAL_UNSATURATED) {
+                const Type *t = $2->GetAsSaturatedType();
+                if (t)
+                    $$ = t;
+                else {
+                    Error(@1, "Can't apply \"unsaturated\" qualifier to \"%s\" type. Ignoring.",
+                          $2->ResolveUnboundVariability(Variability::Varying)->GetString().c_str());
+                    $$ = $2;
+                }
+            }
+
+
             else if ($1 == TYPEQUAL_INLINE) {
                 Error(@1, "\"inline\" qualifier is illegal outside of "
                       "function declarations.");
@@ -1272,6 +1292,8 @@ type_qualifier
     | TOKEN_INLINE     { $$ = TYPEQUAL_INLINE; }
     | TOKEN_SIGNED     { $$ = TYPEQUAL_SIGNED; }
     | TOKEN_UNSIGNED   { $$ = TYPEQUAL_UNSIGNED; }
+    | TOKEN_SATURATED  { $$ = TYPEQUAL_SATURATED; }
+    | TOKEN_UNSATURATED  { $$ = TYPEQUAL_UNSATURATED; }
     ;
 
 type_qualifier_list

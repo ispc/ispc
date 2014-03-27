@@ -119,6 +119,11 @@ public:
         this is true for unsigned integers and short vectors of unsigned
         integer types. */
     virtual bool IsUnsignedType() const = 0;
+    
+    /** Returns true if the underlying type is saturated.  In other words,
+        this is true for saturated integers and short vectors of saturated
+        integer types. */
+    virtual bool IsSaturatedType() const = 0;
 
     /** Returns true if the underlying type is either a pointer type */
     bool IsPointerType() const;
@@ -186,6 +191,10 @@ public:
     /** If this is a signed integer type, return the unsigned version of
         the type.  Otherwise, return the original type. */
     virtual const Type *GetAsUnsignedType() const;
+    
+    /** If this is a unsarurated integer type, return the sarurated version of
+        the type.  Otherwise, return the original type. */
+    virtual const Type *GetAsSaturatedType() const;
 
     /** Returns the basic root type of the given type.  For example, for an
         array or short-vector, this returns the element type.  For a struct
@@ -291,6 +300,7 @@ public:
     bool IsFloatType() const;
     bool IsIntType() const;
     bool IsUnsignedType() const;
+    bool IsSaturatedType() const;
     bool IsConstType() const;
 
     /** For AtomicTypes, the base type is just the same as the AtomicType
@@ -303,6 +313,7 @@ public:
 
     const AtomicType *ResolveUnboundVariability(Variability v) const;
     const AtomicType *GetAsUnsignedType() const;
+    const AtomicType *GetAsSaturatedType() const;
     const AtomicType *GetAsConstType() const;
     const AtomicType *GetAsNonConstType() const;
 
@@ -328,6 +339,14 @@ public:
         TYPE_INT64,
         TYPE_UINT64,
         TYPE_DOUBLE,
+        TYPE_SINT8,
+        TYPE_SUINT8,
+        TYPE_SINT16,
+        TYPE_SUINT16,
+        TYPE_SINT32,
+        TYPE_SUINT32,
+        TYPE_SINT64,
+        TYPE_SUINT64,
         NUM_BASIC_TYPES
     };
 
@@ -345,6 +364,15 @@ public:
     static const AtomicType *UniformUInt64, *VaryingUInt64;
     static const AtomicType *UniformDouble, *VaryingDouble;
     static const AtomicType *Void;
+    
+    static const AtomicType *UniformSInt8, *VaryingSInt8;
+    static const AtomicType *UniformSInt16, *VaryingSInt16;
+    static const AtomicType *UniformSInt32, *VaryingSInt32;
+    static const AtomicType *UniformSUInt8, *VaryingSUInt8;
+    static const AtomicType *UniformSUInt16, *VaryingSUInt16;
+    static const AtomicType *UniformSUInt32, *VaryingSUInt32;
+    static const AtomicType *UniformSInt64, *VaryingSInt64;
+    static const AtomicType *UniformSUInt64, *VaryingSUInt64;
 
 private:
     const Variability variability;
@@ -370,6 +398,7 @@ public:
     bool IsFloatType() const;
     bool IsIntType() const;
     bool IsUnsignedType() const;
+    bool IsSaturatedType() const;
     bool IsConstType() const;
 
     const EnumType *GetBaseType() const;
@@ -448,6 +477,7 @@ public:
     bool IsFloatType() const;
     bool IsIntType() const;
     bool IsUnsignedType() const;
+    bool IsSaturatedType() const;
     bool IsConstType() const;
 
     bool IsSlice() const { return isSlice; }
@@ -556,6 +586,7 @@ public:
     bool IsFloatType() const;
     bool IsIntType() const;
     bool IsUnsignedType() const;
+    bool IsSaturatedType() const;
     bool IsConstType() const;
 
     const Type *GetBaseType() const;
@@ -566,6 +597,7 @@ public:
     const ArrayType *ResolveUnboundVariability(Variability v) const;
 
     const ArrayType *GetAsUnsignedType() const;
+    const ArrayType *GetAsSaturatedType() const;
     const ArrayType *GetAsConstType() const;
     const ArrayType *GetAsNonConstType() const;
 
@@ -624,6 +656,7 @@ public:
     bool IsFloatType() const;
     bool IsIntType() const;
     bool IsUnsignedType() const;
+    bool IsSaturatedType() const;
     bool IsConstType() const;
 
     const Type *GetBaseType() const;
@@ -674,6 +707,7 @@ public:
     bool IsFloatType() const;
     bool IsIntType() const;
     bool IsUnsignedType() const;
+    bool IsSaturatedType() const;
     bool IsConstType() const;
 
     const Type *GetBaseType() const;
@@ -762,6 +796,7 @@ public:
     bool IsFloatType() const;
     bool IsIntType() const;
     bool IsUnsignedType() const;
+    bool IsSaturatedType() const;
     bool IsConstType() const;
 
     const Type *GetBaseType() const;
@@ -804,6 +839,7 @@ public:
     bool IsFloatType() const;
     bool IsIntType() const;
     bool IsUnsignedType() const;
+    bool IsSaturatedType() const;
     bool IsConstType() const;
 
     const Type *GetBaseType() const;
@@ -858,6 +894,7 @@ public:
     bool IsFloatType() const;
     bool IsIntType() const;
     bool IsUnsignedType() const;
+    bool IsSaturatedType() const;
     bool IsConstType() const;
 
     const Type *GetBaseType() const;

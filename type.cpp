@@ -195,6 +195,31 @@ const AtomicType *AtomicType::VaryingDouble =
     new AtomicType(AtomicType::TYPE_DOUBLE, Variability::Varying, false);
 const AtomicType *AtomicType::Void =
     new AtomicType(TYPE_VOID, Variability::Uniform, false);
+    
+const AtomicType *AtomicType::UniformSInt8 =
+    new AtomicType(AtomicType::TYPE_SINT8, Variability::Uniform, false);
+const AtomicType *AtomicType::VaryingSInt8 =
+    new AtomicType(AtomicType::TYPE_SINT8, Variability::Varying, false);
+const AtomicType *AtomicType::UniformSUInt8 =
+    new AtomicType(AtomicType::TYPE_SUINT8, Variability::Uniform, false);
+const AtomicType *AtomicType::VaryingSUInt8 =
+    new AtomicType(AtomicType::TYPE_SUINT8, Variability::Varying, false);
+const AtomicType *AtomicType::UniformSInt16 =
+    new AtomicType(AtomicType::TYPE_SINT16, Variability::Uniform, false);
+const AtomicType *AtomicType::VaryingSInt16 =
+    new AtomicType(AtomicType::TYPE_SINT16, Variability::Varying, false);
+const AtomicType *AtomicType::UniformSUInt16 =
+    new AtomicType(AtomicType::TYPE_SUINT16, Variability::Uniform, false);
+const AtomicType *AtomicType::VaryingSUInt16 =
+    new AtomicType(AtomicType::TYPE_SUINT16, Variability::Varying, false);
+const AtomicType *AtomicType::UniformSInt32 =
+    new AtomicType(AtomicType::TYPE_SINT32, Variability::Uniform, false);
+const AtomicType *AtomicType::VaryingSInt32 =
+    new AtomicType(AtomicType::TYPE_SINT32, Variability::Varying, false);
+const AtomicType *AtomicType::UniformSUInt32 =
+    new AtomicType(AtomicType::TYPE_SUINT32, Variability::Uniform, false);
+const AtomicType *AtomicType::VaryingSUInt32 =
+    new AtomicType(AtomicType::TYPE_SUINT32, Variability::Varying, false);
 
 
 AtomicType::AtomicType(BasicType bt, Variability v, bool ic)
@@ -238,17 +263,31 @@ AtomicType::IsFloatType() const {
 
 bool
 AtomicType::IsIntType() const {
-    return (basicType == TYPE_INT8  || basicType == TYPE_UINT8  ||
-            basicType == TYPE_INT16 || basicType == TYPE_UINT16 ||
-            basicType == TYPE_INT32 || basicType == TYPE_UINT32 ||
-            basicType == TYPE_INT64 || basicType == TYPE_UINT64);
+    return (basicType == TYPE_INT8   || basicType == TYPE_UINT8   ||
+            basicType == TYPE_INT16  || basicType == TYPE_UINT16  ||
+            basicType == TYPE_INT32  || basicType == TYPE_UINT32  ||
+            basicType == TYPE_INT64  || basicType == TYPE_UINT64  ||
+            basicType == TYPE_SINT8  || basicType == TYPE_SUINT8  ||
+            basicType == TYPE_SINT16 || basicType == TYPE_SUINT16 ||
+            basicType == TYPE_SINT32 || basicType == TYPE_SUINT32 ||
+            basicType == TYPE_SINT64 || basicType == TYPE_SUINT64);
 }
 
 
 bool
 AtomicType::IsUnsignedType() const {
-    return (basicType == TYPE_UINT8  || basicType == TYPE_UINT16 ||
-            basicType == TYPE_UINT32 || basicType == TYPE_UINT64);
+    return (basicType == TYPE_UINT8   || basicType == TYPE_UINT16  ||
+            basicType == TYPE_UINT32  || basicType == TYPE_UINT64  ||
+            basicType == TYPE_SUINT8  || basicType == TYPE_SUINT16 ||
+            basicType == TYPE_SUINT32 || basicType == TYPE_SUINT64);
+}
+
+bool
+AtomicType::IsSaturatedType() const {
+    return (basicType == TYPE_SINT8  || basicType == TYPE_SUINT8  ||
+            basicType == TYPE_SINT16 || basicType == TYPE_SUINT16 ||
+            basicType == TYPE_SINT32 || basicType == TYPE_SUINT32 ||
+            basicType == TYPE_SINT64 || basicType == TYPE_SUINT64);
 }
 
 
@@ -281,8 +320,48 @@ AtomicType::GetAsUnsignedType() const {
         return new AtomicType(TYPE_UINT32, variability, isConst);
     case TYPE_INT64:
         return new AtomicType(TYPE_UINT64, variability, isConst);
+        
+    case TYPE_SINT8:
+        return new AtomicType(TYPE_SUINT8, variability, isConst);
+    case TYPE_SINT16:
+        return new AtomicType(TYPE_SUINT16, variability, isConst);
+    case TYPE_SINT32:
+        return new AtomicType(TYPE_SUINT32, variability, isConst);
+    case TYPE_SINT64:
+        return new AtomicType(TYPE_SUINT64, variability, isConst);
     default:
         FATAL("Unexpected basicType in GetAsUnsignedType()");
+        return NULL;
+    }
+}
+
+const AtomicType *
+AtomicType::GetAsSaturatedType() const {
+    if (IsSaturatedType() == true)
+        return this;
+
+    if (IsIntType() == false)
+        return NULL;
+
+    switch (basicType) {
+    case TYPE_INT8:
+        return new AtomicType(TYPE_SINT8, variability, isConst);
+    case TYPE_UINT8:
+        return new AtomicType(TYPE_SUINT8, variability, isConst);
+    case TYPE_INT16:
+        return new AtomicType(TYPE_SINT16, variability, isConst);
+    case TYPE_UINT16:
+        return new AtomicType(TYPE_SUINT16, variability, isConst);
+	case TYPE_INT32:
+        return new AtomicType(TYPE_SINT32, variability, isConst);
+    case TYPE_UINT32:
+        return new AtomicType(TYPE_SUINT32, variability, isConst);
+    case TYPE_INT64:
+        return new AtomicType(TYPE_SINT64, variability, isConst);
+    case TYPE_UINT64:
+        return new AtomicType(TYPE_SUINT64, variability, isConst);
+    default:
+        FATAL("Unexpected basicType in GetAsSaturatedType()");
         return NULL;
     }
 }
@@ -399,6 +478,15 @@ AtomicType::GetString() const {
     case TYPE_INT64:  ret += "int64";           break;
     case TYPE_UINT64: ret += "unsigned int64";  break;
     case TYPE_DOUBLE: ret += "double";          break;
+    
+    case TYPE_SINT8:   ret += "saturated int8";  		   break;
+    case TYPE_SUINT8:  ret += "saturated unsigned int8";   break;
+    case TYPE_SINT16:  ret += "saturated int16";           break;
+    case TYPE_SUINT16: ret += "saturated unsigned int16";  break;
+    case TYPE_SINT32:  ret += "saturated int32";           break;
+    case TYPE_SUINT32: ret += "saturated unsigned int32";  break;
+    case TYPE_SINT64:  ret += "saturated int64";           break;
+    case TYPE_SUINT64: ret += "saturated unsigned int64";  break;
     default: FATAL("Logic error in AtomicType::GetString()");
     }
     return ret;
@@ -424,6 +512,15 @@ AtomicType::Mangle() const {
     case TYPE_INT64:  ret += "I"; break;
     case TYPE_UINT64: ret += "U"; break;
     case TYPE_DOUBLE: ret += "d"; break;
+    
+    case TYPE_SINT8:   ret += "st"; break;
+    case TYPE_SUINT8:  ret += "ST"; break;
+    case TYPE_SINT16:  ret += "ss"; break;
+    case TYPE_SUINT16: ret += "SS"; break;
+    case TYPE_SINT32:  ret += "si"; break;
+    case TYPE_SUINT32: ret += "su"; break;
+    case TYPE_SINT64:  ret += "SI"; break;
+    case TYPE_SUINT64: ret += "SU"; break;
     default: FATAL("Logic error in AtomicType::Mangle()");
     }
     return ret;
@@ -452,6 +549,15 @@ AtomicType::GetCDeclaration(const std::string &name) const {
     case TYPE_INT64:  ret += "int64_t";  break;
     case TYPE_UINT64: ret += "uint64_t"; break;
     case TYPE_DOUBLE: ret += "double";   break;
+    
+    case TYPE_SINT8:   ret += "int8_t";   break;
+    case TYPE_SUINT8:  ret += "uint8_t";  break;
+    case TYPE_SINT16:  ret += "int16_t";  break;
+    case TYPE_SUINT16: ret += "uint16_t"; break;
+    case TYPE_SINT32:  ret += "int32_t";  break;
+    case TYPE_SUINT32: ret += "uint32_t"; break;
+    case TYPE_SINT64:  ret += "int64_t";  break;
+    case TYPE_SUINT64: ret += "uint64_t"; break;
     default: FATAL("Logic error in AtomicType::GetCDeclaration()");
     }
 
@@ -484,17 +590,25 @@ AtomicType::LLVMType(llvm::LLVMContext *ctx) const {
             return isUniform ? LLVMTypes::BoolType : LLVMTypes::BoolVectorType;
         case TYPE_INT8:
         case TYPE_UINT8:
+        case TYPE_SINT8:
+        case TYPE_SUINT8:        
             return isUniform ? LLVMTypes::Int8Type : LLVMTypes::Int8VectorType;
         case TYPE_INT16:
         case TYPE_UINT16:
+        case TYPE_SINT16:
+        case TYPE_SUINT16:
             return isUniform ? LLVMTypes::Int16Type : LLVMTypes::Int16VectorType;
         case TYPE_INT32:
         case TYPE_UINT32:
+        case TYPE_SINT32:
+        case TYPE_SUINT32:
             return isUniform ? LLVMTypes::Int32Type : LLVMTypes::Int32VectorType;
         case TYPE_FLOAT:
             return isUniform ? LLVMTypes::FloatType : LLVMTypes::FloatVectorType;
         case TYPE_INT64:
         case TYPE_UINT64:
+        case TYPE_SINT64:
+        case TYPE_SUINT64:
             return isUniform ? LLVMTypes::Int64Type : LLVMTypes::Int64VectorType;
         case TYPE_DOUBLE:
             return isUniform ? LLVMTypes::DoubleType : LLVMTypes::DoubleVectorType;
@@ -562,6 +676,39 @@ AtomicType::GetDIType(llvm::DIDescriptor scope) const {
             return m->diBuilder->createBasicType("uint64", 64 /* size */, 64 /* align */,
                                                  llvm::dwarf::DW_ATE_unsigned);
             break;
+        
+        case TYPE_SINT8:
+            return m->diBuilder->createBasicType("sint8", 8 /* size */, 8 /* align */,
+                                                 llvm::dwarf::DW_ATE_signed);
+            break;
+        case TYPE_SUINT8:
+            return m->diBuilder->createBasicType("suint8", 8 /* size */, 8 /* align */,
+                                                 llvm::dwarf::DW_ATE_unsigned);
+            break;
+        case TYPE_SINT16:
+            return m->diBuilder->createBasicType("sint16", 16 /* size */, 16 /* align */,
+                                                 llvm::dwarf::DW_ATE_signed);
+            break;
+        case TYPE_SUINT16:
+            return m->diBuilder->createBasicType("suint16", 16 /* size */, 16 /* align */,
+                                                 llvm::dwarf::DW_ATE_unsigned);
+            break;
+        case TYPE_SINT32:
+            return m->diBuilder->createBasicType("sint32", 32 /* size */, 32 /* align */,
+                                                 llvm::dwarf::DW_ATE_signed);
+            break;
+        case TYPE_SUINT32:
+            return m->diBuilder->createBasicType("suint32", 32 /* size */, 32 /* align */,
+                                                 llvm::dwarf::DW_ATE_unsigned);
+        case TYPE_SINT64:
+            return m->diBuilder->createBasicType("sint64", 64 /* size */, 64 /* align */,
+                                                 llvm::dwarf::DW_ATE_signed);
+            break;
+        case TYPE_SUINT64:
+            return m->diBuilder->createBasicType("suint64", 64 /* size */, 64 /* align */,
+                                                 llvm::dwarf::DW_ATE_unsigned);
+            break;
+        
         default:
             FATAL("unhandled basic type in AtomicType::GetDIType()");
             return llvm::DIType();
@@ -634,6 +781,10 @@ EnumType::IsUnsignedType() const {
     return true;
 }
 
+bool
+EnumType::IsSaturatedType() const {
+    return false;
+}
 
 bool
 EnumType::IsConstType() const {
@@ -940,6 +1091,10 @@ PointerType::IsUnsignedType() const {
     return false;
 }
 
+bool
+PointerType::IsSaturatedType() const {
+    return false;
+}
 
 bool
 PointerType::IsConstType() const {
@@ -1278,6 +1433,10 @@ ArrayType::IsUnsignedType() const {
     return false;
 }
 
+bool
+ArrayType::IsSaturatedType() const {
+    return false;
+}
 
 bool
 ArrayType::IsBoolType() const {
@@ -1361,6 +1520,15 @@ ArrayType::GetAsUnsignedType() const {
         return NULL;
     }
     return new ArrayType(child->GetAsUnsignedType(), numElements);
+}
+
+const ArrayType *
+ArrayType::GetAsSaturatedType() const {
+    if (child == NULL) {
+        Assert(m->errorCount > 0);
+        return NULL;
+    }
+    return new ArrayType(child->GetAsSaturatedType(), numElements);
 }
 
 
@@ -1596,6 +1764,11 @@ VectorType::IsIntType() const {
 bool
 VectorType::IsUnsignedType() const {
     return base->IsUnsignedType();
+}
+
+bool
+VectorType::IsSaturatedType() const {
+    return base->IsSaturatedType();
 }
 
 
@@ -1941,6 +2114,10 @@ StructType::IsUnsignedType() const {
     return false;
 }
 
+bool
+StructType::IsSaturatedType() const {
+    return false;
+}
 
 bool
 StructType::IsConstType() const {
@@ -2301,6 +2478,10 @@ UndefinedStructType::IsUnsignedType() const {
     return false;
 }
 
+bool
+UndefinedStructType::IsSaturatedType() const {
+    return false;
+}
 
 bool
 UndefinedStructType::IsConstType() const {
@@ -2486,6 +2667,14 @@ ReferenceType::IsUnsignedType() const {
     return targetType->IsUnsignedType();
 }
 
+bool
+ReferenceType::IsSaturatedType() const {
+    if (targetType == NULL) {
+        Assert(m->errorCount > 0);
+        return false;
+    }
+    return targetType->IsSaturatedType();
+}
 
 bool
 ReferenceType::IsConstType() const {
@@ -2757,6 +2946,10 @@ FunctionType::IsUnsignedType() const {
     return false;
 }
 
+bool
+FunctionType::IsSaturatedType() const {
+    return false;
+}
 
 bool
 FunctionType::IsConstType() const {
@@ -3106,6 +3299,12 @@ Type::GetReferenceTarget() const {
 
 const Type *
 Type::GetAsUnsignedType() const {
+    // For many types, this doesn't make any sesne
+    return NULL;
+}
+
+const Type *
+Type::GetAsSaturatedType() const {
     // For many types, this doesn't make any sesne
     return NULL;
 }
