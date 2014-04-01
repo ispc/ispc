@@ -53,7 +53,7 @@ will do all the work for you. Do the following: \n
 2. Set ISPC_HOME variable to your ISPC location (probably current folder).
 3. Run alloy.py tool to checkout and build LLVM: \n
   alloy.py -b --version=3.4 \n
-4. Add $LLVM_HOME/bin-3.4/bin path to your PATH. \n
+4. Add $$LLVM_HOME/bin-3.4/bin path to your PATH. \n
 ==============================================================================
 endef
 
@@ -114,7 +114,7 @@ ifeq ($(LLVM_VERSION),LLVM_3_4)
 endif
 
 ifeq ($(LLVM_VERSION),LLVM_3_5)
-    ISPC_LIBS += -lcurses
+    ISPC_LIBS += -lcurses -lz
 endif
 
 ifeq ($(ARCH_OS),Linux)
