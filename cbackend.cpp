@@ -1769,7 +1769,11 @@ std::string CWriter::GetValueName(const llvm::Value *Operand) {
 
   // Resolve potential alias.
   if (const llvm::GlobalAlias *GA = llvm::dyn_cast<llvm::GlobalAlias>(Operand)) {
+#if defined(LLVM_3_5)
+    if (const llvm::Value *V = GA->getAliasedGlobal())
+#else
     if (const llvm::Value *V = GA->resolveAliasedGlobal(false))
+#endif
       Operand = V;
   }
 
