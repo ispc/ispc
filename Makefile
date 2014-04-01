@@ -34,10 +34,40 @@
 # ispc Makefile
 #
 
+define newline
+
+
+endef
+
+define WARNING_BODY
+ ============================== !!! WARNING !!! =============================== \n
+Location of LLVM files in your PATH is different than path in LLVM_HOME \n
+variable (or LLVM_HOME is not set). The most likely this means that you are \n
+using default LLVM installation on your system, which is very bad sign. \n
+Note, that ISPC uses LLVM optimizer and is highly dependent on it. We recommend \n
+using *patched* version of LLVM 3.3 or 3.4. Patches are availible in \n
+llvm_patches folder. You can build LLVM manually, or run our scripts, which \n
+will do all the work for you. Do the following: \n
+1. Create a folder, where LLVM will reside and set LLVM_HOME variable to its \n
+  path. \n
+2. Set ISPC_HOME variable to your ISPC location (probably current folder).
+3. Run alloy.py tool to checkout and build LLVM: \n
+  alloy.py -b --version=3.4 \n
+4. Add $LLVM_HOME/bin-3.4/bin path to your PATH. \n
+==============================================================================
+endef
+
 # If you have your own special version of llvm and/or clang, change
 # these variables to match.
 LLVM_CONFIG=$(shell which llvm-config)
 CLANG_INCLUDE=$(shell $(LLVM_CONFIG) --includedir)
+
+RIGHT_LLVM = $(WARNING_BODY)
+ifdef LLVM_HOME
+	ifeq ($(findstring $(LLVM_HOME), $(LLVM_CONFIG)), $(LLVM_HOME))
+		RIGHT_LLVM = LLVM from $$LLVM_HOME is used.
+	endif
+endif
 
 # Enable ARM by request
 # To enable: make ARM_ENABLED=1
@@ -188,6 +218,7 @@ llvm_check:
 	 echo "ERROR: llvm-config not found in your PATH";  \
 	 echo "******************************************"; \
 	 echo; exit 1)
+	@echo -e '$(subst $(newline), ,$(RIGHT_LLVM))'
 
 print_llvm_src: llvm_check
 	@echo Using LLVM `llvm-config --version` from `llvm-config --libdir`
