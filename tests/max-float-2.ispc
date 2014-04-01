@@ -6,7 +6,7 @@ export uniform int width() { return programCount; }
 export void f_fu(uniform float RET[], uniform float aFOO[], uniform float b) {
     float a = aFOO[programIndex];
     RET[programIndex] = max(-10 * (a-3), .1f);
-    RET[width() - 1] = max(-10 * b, 2);
+    RET[width() - 1] = max(-10 * b, 2.f);
 }
 
 export void result(uniform float RET[]) {

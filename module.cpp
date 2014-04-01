@@ -840,7 +840,6 @@ Module::AddFunctionDeclaration(const std::string &name,
     // Set function attributes: we never throw exceptions
     function->setDoesNotThrow();
     if (storageClass != SC_EXTERN_C &&
-        !g->generateDebuggingSymbols &&
         isInline)
 #ifdef LLVM_3_2
         function->addFnAttr(llvm::Attributes::AlwaysInline);
@@ -1273,7 +1272,12 @@ lEmitStructDecl(const StructType *st, std::vector<const StructType *> *emittedSt
     for (int i = 0; i < st->GetElementCount(); ++i) {
         const Type *type = st->GetElementType(i)->GetAsNonConstType();
         std::string d = type->GetCDeclaration(st->GetElementName(i));
-        fprintf(file, "    %s;\n", d.c_str());
+        if (type->IsVaryingType()) {
+          fprintf(file, "    %s[%d];\n", d.c_str(), g->target->getVectorWidth());
+        }
+        else {
+          fprintf(file, "    %s;\n", d.c_str());
+        }
     }
     fprintf(file, "};\n");
     fprintf(file, "#endif\n\n");

@@ -19,7 +19,7 @@ export void f_fu(uniform float RET[], uniform float aFOO[], uniform float b) {
     for (uniform int i = 0; i < 16; ++i)
         for (uniform int j = 0; j < 16; ++j)
             bar.foo[i].x[j] = b;
-    RET[programIndex] = bar.foo[min(15, a-1)].x[min(15, a-1)];
+    RET[programIndex] = bar.foo[min(15.f, a-1)].x[min(15.f, a-1)];
 }
 
 export void result(uniform float RET[]) { RET[programIndex] = 5; }

@@ -6,7 +6,7 @@ export uniform int width() { return programCount; }
 export void f_fu(uniform float RET[], uniform float aFOO[], uniform float b) {
     float a = aFOO[programIndex];
     RET[programIndex] = min(3 * a, 10.f);
-    RET[width()-1] = min(b, 100);
+    RET[width()-1] = min(b, 100.f);
 }
 
 

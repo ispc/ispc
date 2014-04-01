@@ -1909,7 +1909,15 @@ StructType::StructType(const std::string &n, const llvm::SmallVector<const Type 
 
 const std::string 
 StructType::GetCStructName() const {
-  return lMangleStructName(name, variability);
+  // only return mangled name for varying structs for backwards
+  // compatibility...
+
+  if (variability == Variability::Varying) {
+    return lMangleStructName(name, variability);
+  }
+  else {
+    return GetStructName();
+  }
 }
 
 Variability
