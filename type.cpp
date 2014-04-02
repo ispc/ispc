@@ -826,7 +826,7 @@ EnumType::GetDIType(llvm::DIDescriptor scope) const {
 
     llvm::DIFile diFile = pos.GetDIFile();
     llvm::DIType diType =
-        m->diBuilder->createEnumerationType(scope, name, diFile, pos.first_line,
+        m->diBuilder->createEnumerationType(diFile, name, diFile, pos.first_line,
                                             32 /* size in bits */,
                                             32 /* align in bits */,
                                             elementArray
@@ -2179,7 +2179,7 @@ StructType::GetDIType(llvm::DIDescriptor scope) const {
     llvm::DIArray elements = m->diBuilder->getOrCreateArray(elementLLVMTypes);
     llvm::DIFile diFile = pos.GetDIFile();
     return m->diBuilder->createStructType(
-        scope,
+        diFile,
         name,
         diFile,
         pos.first_line, // Line number
@@ -2422,7 +2422,7 @@ UndefinedStructType::GetDIType(llvm::DIDescriptor scope) const {
     llvm::DIFile diFile = pos.GetDIFile();
     llvm::DIArray elements;
     return m->diBuilder->createStructType(
-        scope,
+        diFile,
         name,
         diFile,
         pos.first_line, // Line number
