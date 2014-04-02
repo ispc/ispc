@@ -105,7 +105,6 @@
     <ClInclude Include="sym.h" />
     <ClInclude Include="type.h" />
     <ClInclude Include="util.h" />
-    <ClInclude Include="winstuff\unistd.h" />
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="stdlib.ispc">
@@ -396,7 +395,7 @@
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>NOMINMAX;%LLVM_VERSION%</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>$(LLVM_INSTALL_DIR)\include;.;.\winstuff;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(LLVM_INSTALL_DIR)\include;.;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <DisableSpecificWarnings>4146;4800;4996;4355;4624;4244</DisableSpecificWarnings>
     </ClCompile>
     <Link>
@@ -415,7 +414,7 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <PreprocessorDefinitions>NOMINMAX;%LLVM_VERSION%</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>$(LLVM_INSTALL_DIR)\include;.;.\winstuff;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(LLVM_INSTALL_DIR)\include;.;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <DisableSpecificWarnings>4146;4800;4996;4355;4624;4244</DisableSpecificWarnings>
     </ClCompile>
     <Link>

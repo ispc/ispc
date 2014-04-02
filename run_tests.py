@@ -211,7 +211,7 @@ def run_test(testname):
                     obj_name = "%s.obj" % os.path.basename(filename)
                 exe_name = "%s.exe" % os.path.basename(filename)
 
-                cc_cmd = "%s /I. /I../winstuff /Zi /nologo /DTEST_SIG=%d %s %s /Fe%s" % \
+                cc_cmd = "%s /I. /Zi /nologo /DTEST_SIG=%d %s %s /Fe%s" % \
                          (options.compiler_exe, match, add_prefix("test_static.cpp"), obj_name, exe_name)
                 if should_fail:
                     cc_cmd += " /DEXPECT_FAILURE"
