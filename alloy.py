@@ -292,6 +292,8 @@ def build_ispc(version_LLVM, make):
         p_temp = os.getenv("LLVM_INSTALL_DIR")
         v_temp = os.getenv("LLVM_VERSION")
         os.environ["LLVM_INSTALL_DIR"] = os.environ["LLVM_HOME"] + "\\bin-" + version_LLVM
+        if version_LLVM == "3.2":
+            temp = "3_2"
         if version_LLVM == "3.3":
             temp = "3_3"
         if version_LLVM == "3.4":
