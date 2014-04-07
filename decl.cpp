@@ -121,8 +121,8 @@ lApplyTypeQualifiers(int typeQualifiers, const Type *type, SourcePos pos) {
               "\"%s\".", resolvedType->GetString().c_str());
     }
 
-    if ((typeQualifiers & TYPEQUAL_UNSATURATED) != 0) {
-        if ((typeQualifiers & TYPEQUAL_SATURATED) != 0)
+    if ((typeQualifiers & TYPEQUAL_SATURATED) != 0) {
+        if ((typeQualifiers & TYPEQUAL_UNSATURATED) != 0)
             Error(pos, "Illegal to apply both \"saturated\" and \"unsaturated\" "
                   "qualifiers.");
 
@@ -137,7 +137,7 @@ lApplyTypeQualifiers(int typeQualifiers, const Type *type, SourcePos pos) {
         }
     }
 
-    if ((typeQualifiers & TYPEQUAL_SATURATED) != 0 && type->IsIntType() == false) {
+    if ((typeQualifiers & TYPEQUAL_UNSATURATED) != 0 && type->IsIntType() == false) {
         const Type *resolvedType =
             type->ResolveUnboundVariability(Variability::Varying);
         Error(pos, "\"saturated\" qualifier is illegal with non-integer type "

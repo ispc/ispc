@@ -220,7 +220,14 @@ const AtomicType *AtomicType::UniformSUInt32 =
     new AtomicType(AtomicType::TYPE_SUINT32, Variability::Uniform, false);
 const AtomicType *AtomicType::VaryingSUInt32 =
     new AtomicType(AtomicType::TYPE_SUINT32, Variability::Varying, false);
-
+const AtomicType *AtomicType::UniformSInt64 =
+    new AtomicType(AtomicType::TYPE_SINT64, Variability::Uniform, false);
+const AtomicType *AtomicType::VaryingSInt64 =
+    new AtomicType(AtomicType::TYPE_SINT64, Variability::Varying, false);
+const AtomicType *AtomicType::UniformSUInt64 =
+    new AtomicType(AtomicType::TYPE_SUINT64, Variability::Uniform, false);
+const AtomicType *AtomicType::VaryingSUInt64 =
+    new AtomicType(AtomicType::TYPE_SUINT64, Variability::Varying, false);
 
 AtomicType::AtomicType(BasicType bt, Variability v, bool ic)
     : Type(ATOMIC_TYPE), basicType(bt), variability(v), isConst(ic) {

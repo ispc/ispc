@@ -1115,15 +1115,7 @@ specifier_qualifier_list
                     $$ = $2;
                 }
             }
-
             else if ($1 == TYPEQUAL_SATURATED) {
-                if ($2->IsIntType() == false) {
-                    Error(@1, "Can't apply \"saturated\" qualifier to \"%s\" type.",
-                          $2->ResolveUnboundVariability(Variability::Varying)->GetString().c_str());
-                    $$ = $2;
-                }
-            }
-            else if ($1 == TYPEQUAL_UNSATURATED) {
                 const Type *t = $2->GetAsSaturatedType();
                 if (t)
                     $$ = t;
@@ -1133,8 +1125,13 @@ specifier_qualifier_list
                     $$ = $2;
                 }
             }
-
-
+            else if ($1 == TYPEQUAL_UNSATURATED) {
+                if ($2->IsIntType() == false) {
+                    Error(@1, "Can't apply \"saturated\" qualifier to \"%s\" type.",
+                          $2->ResolveUnboundVariability(Variability::Varying)->GetString().c_str());
+                    $$ = $2;
+                }
+            }
             else if ($1 == TYPEQUAL_INLINE) {
                 Error(@1, "\"inline\" qualifier is illegal outside of "
                       "function declarations.");
