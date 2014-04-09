@@ -16,6 +16,6 @@ export void result(uniform float RET[]) {
         RET[programIndex] = (uniform unsigned int32) 0; // min unsigned int32
     }
     else {
-        RET[programIndex] = (uniform unsigned int32) 0xFFFFFFFB; // max unsigned int32 - 5
+        RET[programIndex] = (uniform unsigned int32) 0xFFFFFFFA; // max unsigned int32 - 5
     } 
 }
