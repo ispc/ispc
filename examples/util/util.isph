@@ -1,5 +1,9 @@
+#ifndef UTIL_ISPH
+#define UTIL_ISPH
 
 // utility function to read the value of programCount from C/C++
 export uniform int32 get_programCount() {
   return programCount;
 }
+
+#endif // UTIL_ISPH
