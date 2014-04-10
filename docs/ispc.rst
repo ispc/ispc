@@ -50,6 +50,7 @@ Contents:
   + `Updating ISPC Programs For Changes In ISPC 1.3`_
   + `Updating ISPC Programs For Changes In ISPC 1.5.0`_
   + `Updating ISPC Programs For Changes In ISPC 1.6.0`_
+  + `Updating ISPC Programs For Changes In ISPC 1.7.0`_
 
 * `Getting Started with ISPC`_
 
@@ -291,6 +292,32 @@ This release adds support for `Operators Overloading`_, so a word ``operator``
 becomes a keyword and it potentially creates a conflict with existing user 
 function. Also a new library function packed_store_active2() was introduced,
 which also may create a conflict with existing user functions.
+
+Updating ISPC Programs For Changes In ISPC 1.7.0
+------------------------------------------------
+
+This release contains several changes that may affect compatibility with
+older versions:
+
+* The algorithm for selecting overloaded functions was extended to cover more
+  types of overloading, and handling of reference types was fixed. At the same
+  time the old scheme, which blindly used the function with "the best score"
+  summed for all arguments, was switched to the C++ approach, which requires
+  "the best score" for each argument. If the best function doesn't exist, a
+  warning is issued in this version. It will be turned into an error in the
+  next version. A simple example: Suppose we have two functions: max(int, int)
+  and max(unsigned int, unsigned int). The new rules lead to an error when
+  calling max(int, unsigned int), as the best choice is ambiguous.
+
+* Implicit cast of pointer to const type to void* was disallowed. Use explicit
+  cast if needed.
+
+* A bug which prevented "const" qualifiers from appearing in emitted .h files
+  was fixed. Consequently, "const" qualifiers now properly appearing in emitted
+  .h files may cause compile errors in pre-existing codes.
+
+* get_ProgramCount() was moved from stdlib to examples/util/util.isph file. You
+  need to include this file to be able to use this function.
 
 
 Getting Started with ISPC
