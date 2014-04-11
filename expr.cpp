@@ -1120,49 +1120,35 @@ lEmitBinaryPointerArith(BinaryExpr::Op op, llvm::Value *value0,
 const AtomicType* GetBaseInt (const AtomicType* type) {
 	if (type == NULL)
 		return NULL;
-	if (type->IsUniformType())
-		switch (type->basicType) {
-			case AtomicType::TYPE_SINT8:
-				return AtomicType::UniformInt8;
-			case AtomicType::TYPE_SUINT8:
-				return AtomicType::UniformUInt8;
-			case AtomicType::TYPE_SINT16:
-				return AtomicType::UniformInt16;
-			case AtomicType::TYPE_SUINT16:
-				return AtomicType::UniformUInt16;
-			case AtomicType::TYPE_SINT32:
-				return AtomicType::UniformInt32;
-			case AtomicType::TYPE_SUINT32:
-				return AtomicType::UniformUInt32;
-			case AtomicType::TYPE_SINT64:
-				return AtomicType::UniformInt64;
-			case AtomicType::TYPE_SUINT64:
-				return AtomicType::UniformUInt64;
-			default:
-				return NULL;
-		}
-	else
-		switch (type->basicType) {
-			case AtomicType::TYPE_SINT8:
-				return AtomicType::VaryingInt8;
-			case AtomicType::TYPE_SUINT8:
-				return AtomicType::VaryingUInt8;
-			case AtomicType::TYPE_SINT16:
-				return AtomicType::VaryingInt16;
-			case AtomicType::TYPE_SUINT16:
-				return AtomicType::VaryingUInt16;
-			case AtomicType::TYPE_SINT32:
-				return AtomicType::VaryingInt32;
-			case AtomicType::TYPE_SUINT32:
-				return AtomicType::VaryingUInt32;
-			case AtomicType::TYPE_SINT64:
-				return AtomicType::VaryingInt64;
-			case AtomicType::TYPE_SUINT64:
-				return AtomicType::VaryingUInt64;
-			default:
-				return NULL;	
-		}
-		
+	bool isUniform = type->IsUniformType();
+	switch (type->basicType) {
+		case AtomicType::TYPE_SINT8:
+			return isUniform ? AtomicType::UniformInt8 :
+							   AtomicType::VaryingInt8;
+		case AtomicType::TYPE_SUINT8:
+			return isUniform ? AtomicType::UniformUInt8 :
+							   AtomicType::VaryingUInt8;
+		case AtomicType::TYPE_SINT16:
+			return isUniform ? AtomicType::UniformInt16 :
+							   AtomicType::VaryingInt16;
+		case AtomicType::TYPE_SUINT16:
+			return isUniform ? AtomicType::UniformUInt16 :
+							   AtomicType::VaryingUInt16;
+		case AtomicType::TYPE_SINT32:
+			return isUniform ? AtomicType::UniformInt32 :
+							   AtomicType::VaryingInt32;
+		case AtomicType::TYPE_SUINT32:
+			return isUniform ? AtomicType::UniformUInt32 :
+							   AtomicType::VaryingUInt32;
+		case AtomicType::TYPE_SINT64:
+			return isUniform ? AtomicType::UniformInt64 :
+							   AtomicType::VaryingInt64;
+		case AtomicType::TYPE_SUINT64:
+			return isUniform ? AtomicType::UniformUInt64 :
+							   AtomicType::VaryingUInt64;
+		default:
+			return NULL;
+	}	
 }
 
 
@@ -1203,7 +1189,7 @@ lEmitBinarySaturArith(BinaryExpr::Op op, Expr *arg0, Expr *arg1,
 
 		std::string fullOpName = std::string("saturating_") + opName;
 		std::vector<Symbol *> funs;
-		m->symbolTable->LookupFunction(fullOpName.c_str(), &funs);	
+		m->symbolTable->LookupFunction(fullOpName.c_str(), &funs);
 		if (funs.size() == 0) {
 			FATAL("Invalid op type passed to lEmitBinarySaturArith()");
 			return NULL;
@@ -1247,7 +1233,6 @@ lEmitPrePostIncDec(UnaryExpr::Op op, Expr *expr, SourcePos pos,
         lvalue = expr->GetValue(ctx);
 
         Expr *deref = new RefDerefExpr(expr, expr->pos);
-        saturRvalue = deref;
         rvalue = deref->GetValue(ctx);
     }
     else {
@@ -1273,14 +1258,14 @@ lEmitPrePostIncDec(UnaryExpr::Op op, Expr *expr, SourcePos pos,
     int delta = (op == UnaryExpr::PreInc || op == UnaryExpr::PostInc) ? 1 : -1;
 
     std::string opName = rvalue->getName().str();
-    std::string saturOpName = "saturating_";
+    BinaryExpr::Op opSign; // Determines type of operation for saturated int
     if (op == UnaryExpr::PreInc || op == UnaryExpr::PostInc) {
         opName += "_plus1";
-        saturOpName += "add";
+        opSign = BinaryExpr::Add;
     }
     else {
         opName += "_minus1";
-        saturOpName += "sub";
+		opSign = BinaryExpr::Sub;
     }
 
     if (CastType<PointerType>(type) != NULL) {
@@ -1296,35 +1281,99 @@ lEmitPrePostIncDec(UnaryExpr::Op op, Expr *expr, SourcePos pos,
                                         dval, opName.c_str());
         else
 			if (type->IsSaturatedType()) {
-				Expr* saturDelta = NULL;
+				bool isUniform = type->IsUniformType();
+				
+				Expr* saturDval = NULL;
 				switch (GetBaseInt(CastType<AtomicType>(type))->basicType) {
 					case AtomicType::TYPE_INT8:
-						saturDelta = new ConstExpr(type, (int8_t) delta, pos); break;
-					case AtomicType::TYPE_UINT8: 
-						saturDelta = new ConstExpr(type, (uint8_t) delta, pos); break;
+						if (isUniform)
+							saturDval = new ConstExpr(type, (int8_t) 1, pos);
+						else {
+							int8_t vecDelta_i8 [ISPC_MAX_NVEC];
+							for (int i = 0; i < ISPC_MAX_NVEC; ++i)
+								vecDelta_i8 [i] = 1; 
+							saturDval = new ConstExpr(type, (int8_t*) vecDelta_i8, pos);
+						}
+						break;
+					case AtomicType::TYPE_UINT8:
+						if (isUniform)
+							saturDval = new ConstExpr(type, (uint8_t) 1, pos);
+						else {
+							uint8_t vecDelta_ui8 [ISPC_MAX_NVEC];
+							for (int i = 0; i < ISPC_MAX_NVEC; ++i)
+								vecDelta_ui8 [i] = 1; 
+							saturDval = new ConstExpr(type, (uint8_t*) vecDelta_ui8, pos);
+						}
+						break;
 					case AtomicType::TYPE_INT16:
-						saturDelta = new ConstExpr(type, (int16_t) delta, pos); break;
+						if (isUniform)
+							saturDval = new ConstExpr(type, (int16_t) 1, pos);
+						else {
+							int16_t vecDelta_i16 [ISPC_MAX_NVEC];
+							for (int i = 0; i < ISPC_MAX_NVEC; ++i)
+								vecDelta_i16 [i] = 1; 
+							saturDval = new ConstExpr(type, (int16_t*) vecDelta_i16, pos);
+						}
+						break;
 					case AtomicType::TYPE_UINT16:
-						saturDelta = new ConstExpr(type, (uint16_t) delta, pos); break;
+						if (isUniform)
+							saturDval = new ConstExpr(type, (uint16_t) 1, pos);
+						else {
+							uint16_t vecDelta_ui16 [ISPC_MAX_NVEC];
+							for (int i = 0; i < ISPC_MAX_NVEC; ++i)
+								vecDelta_ui16 [i] = 1; 
+							saturDval = new ConstExpr(type, (uint16_t*) vecDelta_ui16, pos);
+						}
+						break;
 					case AtomicType::TYPE_INT32:
-						saturDelta = new ConstExpr(type, (int32_t) delta, pos); break;
+						if (isUniform)
+							saturDval = new ConstExpr(type, (int32_t) 1, pos);
+						else {
+							int32_t vecDelta_i32 [ISPC_MAX_NVEC];
+							for (int i = 0; i < ISPC_MAX_NVEC; ++i)
+								vecDelta_i32 [i] = 1; 
+							saturDval = new ConstExpr(type, (int32_t*) vecDelta_i32, pos);
+						}
+						break;
 					case AtomicType::TYPE_UINT32:
-						saturDelta = new ConstExpr(type, (uint32_t) delta, pos); break;
+						if (isUniform)
+							saturDval = new ConstExpr(type, (uint32_t) 1, pos);
+						else {
+							uint32_t vecDelta_ui32 [ISPC_MAX_NVEC];
+							for (int i = 0; i < ISPC_MAX_NVEC; ++i)
+								vecDelta_ui32 [i] = 1; 
+							saturDval = new ConstExpr(type, (uint32_t*) vecDelta_ui32, pos);
+						}
+						break;
 					case AtomicType::TYPE_INT64:
-						saturDelta = new ConstExpr(type, (int64_t) delta, pos); break;
+						if (isUniform)
+							saturDval = new ConstExpr(type, (int64_t) 1, pos);
+						else {
+							int64_t vecDelta_i64 [ISPC_MAX_NVEC];
+							for (int i = 0; i < ISPC_MAX_NVEC; ++i)
+								vecDelta_i64 [i] = 1; 
+							saturDval = new ConstExpr(type, (int64_t*) vecDelta_i64, pos);
+						}
+						break;
 					case AtomicType::TYPE_UINT64:
-						saturDelta = new ConstExpr(type, (uint64_t) delta, pos); break;
+						if (isUniform)
+							saturDval = new ConstExpr(type, (uint64_t) 1, pos);
+						else {
+							uint64_t vecDelta_ui64 [ISPC_MAX_NVEC];
+							for (int i = 0; i < ISPC_MAX_NVEC; ++i)
+								vecDelta_ui64 [i] = 1; 
+							saturDval = new ConstExpr(type, (uint64_t*) vecDelta_ui64, pos);
+						}
+						break;
 					default:
 						FATAL("Invalid op type passed to lEmitPrePostIncDec() \
 							   for saturated int");
 						 break;
 				}
-				binop = lEmitBinarySaturArith(BinaryExpr::Add, 
-											  saturRvalue, saturDelta, ctx, pos);
+				binop = lEmitBinarySaturArith(opSign, saturRvalue, saturDval, ctx, pos);
 			}
             else
-				binop = ctx->BinaryOperator(llvm::Instruction::Add, rvalue,
-											dval, opName.c_str());
+				binop = ctx->BinaryOperator(llvm::Instruction::Add, rvalue, dval, opName.c_str());
     }
 
     // And store the result out to the lvalue
@@ -8911,7 +8960,7 @@ FunctionSymbolExpr::ResolveOverloads(SourcePos argPos,
 
     if (actualCandidates.size() == 0)
         goto failure;
-
+	
     // Compute the cost for calling each of the candidate functions
     for (int i = 0; i < (int)actualCandidates.size(); ++i) {
         const FunctionType *ft =
