@@ -124,7 +124,7 @@ lApplyTypeQualifiers(int typeQualifiers, const Type *type, SourcePos pos) {
     if ((typeQualifiers & TYPEQUAL_SATURATED) != 0) {
         if ((typeQualifiers & TYPEQUAL_UNSATURATED) != 0)
             Error(pos, "Illegal to apply both \"saturated\" and \"unsaturated\" "
-                  "qualifiers.");
+                       "qualifiers.");
 
         const Type *saruratedType = type->GetAsSaturatedType();
         if (saruratedType != NULL)

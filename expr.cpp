@@ -1116,57 +1116,58 @@ lEmitBinaryPointerArith(BinaryExpr::Op op, llvm::Value *value0,
 }
 
 
-// Returns equivalent int type for saturated int type
+/* Returns equivalent int type for saturated int type
+ */
 const AtomicType* GetBaseInt (const AtomicType* type) {
-	if (type == NULL)
-		return NULL;
-	bool isUniform = type->IsUniformType();
-	switch (type->basicType) {
-		case AtomicType::TYPE_SINT8:
-			return isUniform ? AtomicType::UniformInt8 :
-							   AtomicType::VaryingInt8;
-		case AtomicType::TYPE_SUINT8:
-			return isUniform ? AtomicType::UniformUInt8 :
-							   AtomicType::VaryingUInt8;
-		case AtomicType::TYPE_SINT16:
-			return isUniform ? AtomicType::UniformInt16 :
-							   AtomicType::VaryingInt16;
-		case AtomicType::TYPE_SUINT16:
-			return isUniform ? AtomicType::UniformUInt16 :
-							   AtomicType::VaryingUInt16;
-		case AtomicType::TYPE_SINT32:
-			return isUniform ? AtomicType::UniformInt32 :
-							   AtomicType::VaryingInt32;
-		case AtomicType::TYPE_SUINT32:
-			return isUniform ? AtomicType::UniformUInt32 :
-							   AtomicType::VaryingUInt32;
-		case AtomicType::TYPE_SINT64:
-			return isUniform ? AtomicType::UniformInt64 :
-							   AtomicType::VaryingInt64;
-		case AtomicType::TYPE_SUINT64:
-			return isUniform ? AtomicType::UniformUInt64 :
-							   AtomicType::VaryingUInt64;
-		default:
-			return NULL;
-	}	
+    if (type == NULL)
+        return NULL;
+    bool isUniform = type->IsUniformType();
+    switch (type->basicType) {
+        case AtomicType::TYPE_SINT8:
+            return isUniform ? AtomicType::UniformInt8 :
+                               AtomicType::VaryingInt8;
+        case AtomicType::TYPE_SUINT8:
+            return isUniform ? AtomicType::UniformUInt8 :
+                               AtomicType::VaryingUInt8;
+        case AtomicType::TYPE_SINT16:
+            return isUniform ? AtomicType::UniformInt16 :
+                               AtomicType::VaryingInt16;
+        case AtomicType::TYPE_SUINT16:
+            return isUniform ? AtomicType::UniformUInt16 :
+                               AtomicType::VaryingUInt16;
+        case AtomicType::TYPE_SINT32:
+            return isUniform ? AtomicType::UniformInt32 :
+                               AtomicType::VaryingInt32;
+        case AtomicType::TYPE_SUINT32:
+            return isUniform ? AtomicType::UniformUInt32 :
+                               AtomicType::VaryingUInt32;
+        case AtomicType::TYPE_SINT64:
+            return isUniform ? AtomicType::UniformInt64 :
+                               AtomicType::VaryingInt64;
+        case AtomicType::TYPE_SUINT64:
+            return isUniform ? AtomicType::UniformUInt64 :
+                               AtomicType::VaryingUInt64;
+        default:
+            return NULL;
+    }   
 }
 
 
 /** Utility routine to emit saturated arithmetic function based on 
-	the given Binary Expr::Op.
+    the given Binary Expr::Op.
 */
 static llvm::Value *
 lEmitBinarySaturArith(BinaryExpr::Op op, Expr *arg0, Expr *arg1, 
-						FunctionEmitContext *ctx, SourcePos pos) {
+                        FunctionEmitContext *ctx, SourcePos pos) {
     
     const PointerType *ptrType = CastType<PointerType>(arg0->GetType());
-	
-	const Type* type0 = arg0->GetType();
-	const Type* type1 = arg1->GetType();
-	
+    
+    const Type* type0 = arg0->GetType();
+    const Type* type1 = arg1->GetType();
+    
     if (ptrType != NULL)
         return lEmitBinaryPointerArith(op, arg0->GetValue(ctx), arg1->GetValue(ctx), 
-									   type0, type1, ctx, pos);
+                                       type0, type1, ctx, pos);
     else {
         const char *opName = NULL;
         switch (op) {
@@ -1187,29 +1188,29 @@ lEmitBinarySaturArith(BinaryExpr::Op op, Expr *arg0, Expr *arg1,
             return NULL;
         }
 
-		std::string fullOpName = std::string("saturating_") + opName;
-		std::vector<Symbol *> funs;
-		m->symbolTable->LookupFunction(fullOpName.c_str(), &funs);
-		if (funs.size() == 0) {
-			FATAL("Invalid op type passed to lEmitBinarySaturArith()");
-			return NULL;
-		}
-		FunctionSymbolExpr *func = new FunctionSymbolExpr(fullOpName.c_str(), funs, pos);
-		
-		std::vector<const Type *> paramTypes;
-		TypeCastExpr *arg0_cast = new TypeCastExpr(GetBaseInt(CastType<AtomicType>(type0)),
-																				arg0, pos);
-		TypeCastExpr *arg1_cast = new TypeCastExpr(GetBaseInt(CastType<AtomicType>(type1)),
-																				arg1, pos);
-		paramTypes.push_back(arg0_cast->GetType());
-		paramTypes.push_back(arg1_cast->GetType());
-        func->ResolveOverloads(pos, paramTypes);	
-		ExprList *args = new ExprList(pos);
-		args->exprs.push_back(arg0);
-		args->exprs.push_back(arg1);
-		FunctionCallExpr *opCallExpr = new FunctionCallExpr(func, args, pos);
-		return opCallExpr->GetValue(ctx);
-	} 
+        std::string fullOpName = std::string("saturating_") + opName;
+        std::vector<Symbol *> funs;
+        m->symbolTable->LookupFunction(fullOpName.c_str(), &funs);
+        if (funs.size() == 0) {
+            FATAL("Invalid op type passed to lEmitBinarySaturArith()");
+            return NULL;
+        }
+        FunctionSymbolExpr *func = new FunctionSymbolExpr(fullOpName.c_str(), funs, pos);
+        
+        std::vector<const Type *> paramTypes;
+        TypeCastExpr *arg0_cast = new TypeCastExpr(GetBaseInt(CastType<AtomicType>(type0)),
+                                                                                arg0, pos);
+        TypeCastExpr *arg1_cast = new TypeCastExpr(GetBaseInt(CastType<AtomicType>(type1)),
+                                                                                arg1, pos);
+        paramTypes.push_back(arg0_cast->GetType());
+        paramTypes.push_back(arg1_cast->GetType());
+        func->ResolveOverloads(pos, paramTypes);    
+        ExprList *args = new ExprList(pos);
+        args->exprs.push_back(arg0);
+        args->exprs.push_back(arg1);
+        FunctionCallExpr *opCallExpr = new FunctionCallExpr(func, args, pos);
+        return opCallExpr->GetValue(ctx);
+    } 
 }
 
 
@@ -1265,7 +1266,7 @@ lEmitPrePostIncDec(UnaryExpr::Op op, Expr *expr, SourcePos pos,
     }
     else {
         opName += "_minus1";
-		opSign = BinaryExpr::Sub;
+        opSign = BinaryExpr::Sub;
     }
 
     if (CastType<PointerType>(type) != NULL) {
@@ -1280,100 +1281,100 @@ lEmitPrePostIncDec(UnaryExpr::Op op, Expr *expr, SourcePos pos,
             binop = ctx->BinaryOperator(llvm::Instruction::FAdd, rvalue,
                                         dval, opName.c_str());
         else
-			if (type->IsSaturatedType()) {
-				bool isUniform = type->IsUniformType();
-				
-				Expr* saturDval = NULL;
-				switch (GetBaseInt(CastType<AtomicType>(type))->basicType) {
-					case AtomicType::TYPE_INT8:
-						if (isUniform)
-							saturDval = new ConstExpr(type, (int8_t) 1, pos);
-						else {
-							int8_t vecDelta_i8 [ISPC_MAX_NVEC];
-							for (int i = 0; i < ISPC_MAX_NVEC; ++i)
-								vecDelta_i8 [i] = 1; 
-							saturDval = new ConstExpr(type, (int8_t*) vecDelta_i8, pos);
-						}
-						break;
-					case AtomicType::TYPE_UINT8:
-						if (isUniform)
-							saturDval = new ConstExpr(type, (uint8_t) 1, pos);
-						else {
-							uint8_t vecDelta_ui8 [ISPC_MAX_NVEC];
-							for (int i = 0; i < ISPC_MAX_NVEC; ++i)
-								vecDelta_ui8 [i] = 1; 
-							saturDval = new ConstExpr(type, (uint8_t*) vecDelta_ui8, pos);
-						}
-						break;
-					case AtomicType::TYPE_INT16:
-						if (isUniform)
-							saturDval = new ConstExpr(type, (int16_t) 1, pos);
-						else {
-							int16_t vecDelta_i16 [ISPC_MAX_NVEC];
-							for (int i = 0; i < ISPC_MAX_NVEC; ++i)
-								vecDelta_i16 [i] = 1; 
-							saturDval = new ConstExpr(type, (int16_t*) vecDelta_i16, pos);
-						}
-						break;
-					case AtomicType::TYPE_UINT16:
-						if (isUniform)
-							saturDval = new ConstExpr(type, (uint16_t) 1, pos);
-						else {
-							uint16_t vecDelta_ui16 [ISPC_MAX_NVEC];
-							for (int i = 0; i < ISPC_MAX_NVEC; ++i)
-								vecDelta_ui16 [i] = 1; 
-							saturDval = new ConstExpr(type, (uint16_t*) vecDelta_ui16, pos);
-						}
-						break;
-					case AtomicType::TYPE_INT32:
-						if (isUniform)
-							saturDval = new ConstExpr(type, (int32_t) 1, pos);
-						else {
-							int32_t vecDelta_i32 [ISPC_MAX_NVEC];
-							for (int i = 0; i < ISPC_MAX_NVEC; ++i)
-								vecDelta_i32 [i] = 1; 
-							saturDval = new ConstExpr(type, (int32_t*) vecDelta_i32, pos);
-						}
-						break;
-					case AtomicType::TYPE_UINT32:
-						if (isUniform)
-							saturDval = new ConstExpr(type, (uint32_t) 1, pos);
-						else {
-							uint32_t vecDelta_ui32 [ISPC_MAX_NVEC];
-							for (int i = 0; i < ISPC_MAX_NVEC; ++i)
-								vecDelta_ui32 [i] = 1; 
-							saturDval = new ConstExpr(type, (uint32_t*) vecDelta_ui32, pos);
-						}
-						break;
-					case AtomicType::TYPE_INT64:
-						if (isUniform)
-							saturDval = new ConstExpr(type, (int64_t) 1, pos);
-						else {
-							int64_t vecDelta_i64 [ISPC_MAX_NVEC];
-							for (int i = 0; i < ISPC_MAX_NVEC; ++i)
-								vecDelta_i64 [i] = 1; 
-							saturDval = new ConstExpr(type, (int64_t*) vecDelta_i64, pos);
-						}
-						break;
-					case AtomicType::TYPE_UINT64:
-						if (isUniform)
-							saturDval = new ConstExpr(type, (uint64_t) 1, pos);
-						else {
-							uint64_t vecDelta_ui64 [ISPC_MAX_NVEC];
-							for (int i = 0; i < ISPC_MAX_NVEC; ++i)
-								vecDelta_ui64 [i] = 1; 
-							saturDval = new ConstExpr(type, (uint64_t*) vecDelta_ui64, pos);
-						}
-						break;
-					default:
-						FATAL("Invalid op type passed to lEmitPrePostIncDec() \
-							   for saturated int");
-						 break;
-				}
-				binop = lEmitBinarySaturArith(opSign, saturRvalue, saturDval, ctx, pos);
-			}
+            if (type->IsSaturatedType()) {
+                bool isUniform = type->IsUniformType();
+                
+                Expr* saturDval = NULL;
+                switch (GetBaseInt(CastType<AtomicType>(type))->basicType) {
+                    case AtomicType::TYPE_INT8:
+                        if (isUniform)
+                            saturDval = new ConstExpr(type, (int8_t) 1, pos);
+                        else {
+                            int8_t vecDelta_i8 [ISPC_MAX_NVEC];
+                            for (int i = 0; i < ISPC_MAX_NVEC; ++i)
+                                vecDelta_i8 [i] = 1; 
+                            saturDval = new ConstExpr(type, (int8_t*) vecDelta_i8, pos);
+                        }
+                        break;
+                    case AtomicType::TYPE_UINT8:
+                        if (isUniform)
+                            saturDval = new ConstExpr(type, (uint8_t) 1, pos);
+                        else {
+                            uint8_t vecDelta_ui8 [ISPC_MAX_NVEC];
+                            for (int i = 0; i < ISPC_MAX_NVEC; ++i)
+                                vecDelta_ui8 [i] = 1; 
+                            saturDval = new ConstExpr(type, (uint8_t*) vecDelta_ui8, pos);
+                        }
+                        break;
+                    case AtomicType::TYPE_INT16:
+                        if (isUniform)
+                            saturDval = new ConstExpr(type, (int16_t) 1, pos);
+                        else {
+                            int16_t vecDelta_i16 [ISPC_MAX_NVEC];
+                            for (int i = 0; i < ISPC_MAX_NVEC; ++i)
+                                vecDelta_i16 [i] = 1; 
+                            saturDval = new ConstExpr(type, (int16_t*) vecDelta_i16, pos);
+                        }
+                        break;
+                    case AtomicType::TYPE_UINT16:
+                        if (isUniform)
+                            saturDval = new ConstExpr(type, (uint16_t) 1, pos);
+                        else {
+                            uint16_t vecDelta_ui16 [ISPC_MAX_NVEC];
+                            for (int i = 0; i < ISPC_MAX_NVEC; ++i)
+                                vecDelta_ui16 [i] = 1; 
+                            saturDval = new ConstExpr(type, (uint16_t*) vecDelta_ui16, pos);
+                        }
+                        break;
+                    case AtomicType::TYPE_INT32:
+                        if (isUniform)
+                            saturDval = new ConstExpr(type, (int32_t) 1, pos);
+                        else {
+                            int32_t vecDelta_i32 [ISPC_MAX_NVEC];
+                            for (int i = 0; i < ISPC_MAX_NVEC; ++i)
+                                vecDelta_i32 [i] = 1; 
+                            saturDval = new ConstExpr(type, (int32_t*) vecDelta_i32, pos);
+                        }
+                        break;
+                    case AtomicType::TYPE_UINT32:
+                        if (isUniform)
+                            saturDval = new ConstExpr(type, (uint32_t) 1, pos);
+                        else {
+                            uint32_t vecDelta_ui32 [ISPC_MAX_NVEC];
+                            for (int i = 0; i < ISPC_MAX_NVEC; ++i)
+                                vecDelta_ui32 [i] = 1; 
+                            saturDval = new ConstExpr(type, (uint32_t*) vecDelta_ui32, pos);
+                        }
+                        break;
+                    case AtomicType::TYPE_INT64:
+                        if (isUniform)
+                            saturDval = new ConstExpr(type, (int64_t) 1, pos);
+                        else {
+                            int64_t vecDelta_i64 [ISPC_MAX_NVEC];
+                            for (int i = 0; i < ISPC_MAX_NVEC; ++i)
+                                vecDelta_i64 [i] = 1; 
+                            saturDval = new ConstExpr(type, (int64_t*) vecDelta_i64, pos);
+                        }
+                        break;
+                    case AtomicType::TYPE_UINT64:
+                        if (isUniform)
+                            saturDval = new ConstExpr(type, (uint64_t) 1, pos);
+                        else {
+                            uint64_t vecDelta_ui64 [ISPC_MAX_NVEC];
+                            for (int i = 0; i < ISPC_MAX_NVEC; ++i)
+                                vecDelta_ui64 [i] = 1; 
+                            saturDval = new ConstExpr(type, (uint64_t*) vecDelta_ui64, pos);
+                        }
+                        break;
+                    default:
+                        FATAL("Invalid op type passed to lEmitPrePostIncDec() \
+                               for saturated int");
+                         break;
+                }
+                binop = lEmitBinarySaturArith(opSign, saturRvalue, saturDval, ctx, pos);
+            }
             else
-				binop = ctx->BinaryOperator(llvm::Instruction::Add, rvalue, dval, opName.c_str());
+                binop = ctx->BinaryOperator(llvm::Instruction::Add, rvalue, dval, opName.c_str());
     }
 
     // And store the result out to the lvalue
@@ -2261,9 +2262,10 @@ BinaryExpr::GetValue(FunctionEmitContext *ctx) const {
     case Mul:
     case Div:
     case Mod:
-		if (arg0->GetType()->IsSaturatedType() || arg1->GetType()->IsSaturatedType()) 
-			return lEmitBinarySaturArith(op, arg0, arg1, ctx, pos);
-        return lEmitBinaryArith(op, value0, value1, arg0->GetType(), arg1->GetType(),
+        if (arg0->GetType()->IsSaturatedType() || arg1->GetType()->IsSaturatedType()) 
+            return lEmitBinarySaturArith(op, arg0, arg1, ctx, pos);
+        else
+            return lEmitBinaryArith(op, value0, value1, arg0->GetType(), arg1->GetType(),
                                 ctx, pos);
     case Lt:
     case Gt:
@@ -3159,11 +3161,11 @@ lEmitOpAssign(AssignExpr::Op op, Expr *arg0, Expr *arg1, const Type *type,
     case AssignExpr::ModAssign:
     case AssignExpr::AddAssign:
     case AssignExpr::SubAssign:
-		if (arg0->GetType()->IsSaturatedType() || arg1->GetType()->IsSaturatedType()) 
-			newValue = lEmitBinarySaturArith(basicop, arg0, arg1, ctx, pos);
+        if (arg0->GetType()->IsSaturatedType() || arg1->GetType()->IsSaturatedType()) 
+            newValue = lEmitBinarySaturArith(basicop, arg0, arg1, ctx, pos);
         else
-			newValue = lEmitBinaryArith(basicop, oldLHS, rvalue, type,
-										arg1->GetType(), ctx, pos);
+            newValue = lEmitBinaryArith(basicop, oldLHS, rvalue, type,
+                                        arg1->GetType(), ctx, pos);
         break;
     case AssignExpr::ShlAssign:
     case AssignExpr::ShrAssign:
@@ -5584,8 +5586,8 @@ ConstExpr::ConstExpr(const Type *t, int8_t i, SourcePos p)
     type = t;
     type = type->GetAsConstType();
     AssertPos(pos, Type::Equal(type, AtomicType::UniformInt8->GetAsConstType()) ||
-				   Type::Equal(type, AtomicType::UniformSInt8->GetAsConstType()));
-	int8Val[0] = i;
+                   Type::Equal(type, AtomicType::UniformSInt8->GetAsConstType()));
+    int8Val[0] = i;
 }
 
 
@@ -5597,8 +5599,8 @@ ConstExpr::ConstExpr(const Type *t, int8_t *i, SourcePos p)
                    Type::Equal(type, AtomicType::VaryingInt8->GetAsConstType())  ||
                    Type::Equal(type, AtomicType::UniformSInt8->GetAsConstType()) ||
                    Type::Equal(type, AtomicType::VaryingSInt8->GetAsConstType()));
-	for (int j = 0; j < Count(); ++j)
-		int8Val[j] = i[j];
+    for (int j = 0; j < Count(); ++j)
+        int8Val[j] = i[j];
 }
 
 
@@ -5607,8 +5609,8 @@ ConstExpr::ConstExpr(const Type *t, uint8_t u, SourcePos p)
     type = t;
     type = type->GetAsConstType();
     AssertPos(pos, Type::Equal(type, AtomicType::UniformUInt8->GetAsConstType()) || 
-				   Type::Equal(type, AtomicType::UniformSUInt8->GetAsConstType()));
-	uint8Val[0] = u;
+                   Type::Equal(type, AtomicType::UniformSUInt8->GetAsConstType()));
+    uint8Val[0] = u;
 }
 
 
@@ -5620,8 +5622,8 @@ ConstExpr::ConstExpr(const Type *t, uint8_t *u, SourcePos p)
                    Type::Equal(type, AtomicType::VaryingUInt8->GetAsConstType())  ||
                    Type::Equal(type, AtomicType::UniformSUInt8->GetAsConstType()) ||
                    Type::Equal(type, AtomicType::VaryingSUInt8->GetAsConstType()));
-	for (int j = 0; j < Count(); ++j)
-		uint8Val[j] = u[j];
+    for (int j = 0; j < Count(); ++j)
+        uint8Val[j] = u[j];
 }
 
 
@@ -5631,7 +5633,7 @@ ConstExpr::ConstExpr(const Type *t, int16_t i, SourcePos p)
     type = type->GetAsConstType();
     AssertPos(pos, Type::Equal(type, AtomicType::UniformInt16->GetAsConstType()) ||
                    Type::Equal(type, AtomicType::UniformSInt16->GetAsConstType()));
-	int16Val[0] = i;
+    int16Val[0] = i;
 }
 
 
@@ -5643,8 +5645,8 @@ ConstExpr::ConstExpr(const Type *t, int16_t *i, SourcePos p)
                    Type::Equal(type, AtomicType::VaryingInt16->GetAsConstType())  ||
                    Type::Equal(type, AtomicType::UniformSInt16->GetAsConstType()) ||
                    Type::Equal(type, AtomicType::VaryingSInt16->GetAsConstType()));
-	for (int j = 0; j < Count(); ++j)
-		int16Val[j] = i[j];
+    for (int j = 0; j < Count(); ++j)
+        int16Val[j] = i[j];
 }
 
 
@@ -5654,7 +5656,7 @@ ConstExpr::ConstExpr(const Type *t, uint16_t u, SourcePos p)
     type = type->GetAsConstType();
     AssertPos(pos, Type::Equal(type, AtomicType::UniformUInt16->GetAsConstType()) ||
                    Type::Equal(type, AtomicType::UniformSUInt16->GetAsConstType()));
-	uint16Val[0] = u;
+    uint16Val[0] = u;
 }
 
 
@@ -5663,11 +5665,11 @@ ConstExpr::ConstExpr(const Type *t, uint16_t *u, SourcePos p)
     type = t;
     type = type->GetAsConstType();
     AssertPos(pos, Type::Equal(type, AtomicType::UniformUInt16->GetAsConstType())  ||
-				   Type::Equal(type, AtomicType::VaryingUInt16->GetAsConstType())  ||
-				   Type::Equal(type, AtomicType::UniformSUInt16->GetAsConstType()) ||
-				   Type::Equal(type, AtomicType::VaryingSUInt16->GetAsConstType()));
-	for (int j = 0; j < Count(); ++j)
-		uint16Val[j] = u[j];
+                   Type::Equal(type, AtomicType::VaryingUInt16->GetAsConstType())  ||
+                   Type::Equal(type, AtomicType::UniformSUInt16->GetAsConstType()) ||
+                   Type::Equal(type, AtomicType::VaryingSUInt16->GetAsConstType()));
+    for (int j = 0; j < Count(); ++j)
+        uint16Val[j] = u[j];
 }
 
 
@@ -5676,8 +5678,8 @@ ConstExpr::ConstExpr(const Type *t, int32_t i, SourcePos p)
     type = t;
     type = type->GetAsConstType();
     AssertPos(pos, Type::Equal(type, AtomicType::UniformInt32->GetAsConstType()) ||
-				   Type::Equal(type, AtomicType::UniformSInt32->GetAsConstType()));
-	int32Val[0] = i;
+                   Type::Equal(type, AtomicType::UniformSInt32->GetAsConstType()));
+    int32Val[0] = i;
 }
 
 
@@ -5686,11 +5688,11 @@ ConstExpr::ConstExpr(const Type *t, int32_t *i, SourcePos p)
     type = t;
     type = type->GetAsConstType();
     AssertPos(pos, Type::Equal(type, AtomicType::UniformInt32->GetAsConstType())  ||
-				   Type::Equal(type, AtomicType::VaryingInt32->GetAsConstType())  ||
-				   Type::Equal(type, AtomicType::UniformSInt32->GetAsConstType()) ||
-				   Type::Equal(type, AtomicType::VaryingSInt32->GetAsConstType()));
-	for (int j = 0; j < Count(); ++j)
-		int32Val[j] = i[j];
+                   Type::Equal(type, AtomicType::VaryingInt32->GetAsConstType())  ||
+                   Type::Equal(type, AtomicType::UniformSInt32->GetAsConstType()) ||
+                   Type::Equal(type, AtomicType::VaryingSInt32->GetAsConstType()));
+    for (int j = 0; j < Count(); ++j)
+        int32Val[j] = i[j];
 }
 
 
@@ -5699,9 +5701,9 @@ ConstExpr::ConstExpr(const Type *t, uint32_t u, SourcePos p)
     type = t;
     type = type->GetAsConstType();
     AssertPos(pos, Type::Equal(type, AtomicType::UniformUInt32->GetAsConstType())  ||
-				   Type::Equal(type, AtomicType::UniformSUInt32->GetAsConstType()) ||
-				   (CastType<EnumType>(type) != NULL && type->IsUniformType()));
-	uint32Val[0] = u;
+                   Type::Equal(type, AtomicType::UniformSUInt32->GetAsConstType()) ||
+                   (CastType<EnumType>(type) != NULL && type->IsUniformType()));
+    uint32Val[0] = u;
 }
 
 
@@ -5713,9 +5715,9 @@ ConstExpr::ConstExpr(const Type *t, uint32_t *u, SourcePos p)
                    Type::Equal(type, AtomicType::VaryingUInt32->GetAsConstType())  ||
                    Type::Equal(type, AtomicType::UniformSUInt32->GetAsConstType()) ||
                    Type::Equal(type, AtomicType::VaryingSUInt32->GetAsConstType()) ||
-				   (CastType<EnumType>(type) != NULL));
-	for (int j = 0; j < Count(); ++j)
-		uint32Val[j] = u[j];
+                   (CastType<EnumType>(type) != NULL));
+    for (int j = 0; j < Count(); ++j)
+        uint32Val[j] = u[j];
 }
 
 
@@ -5744,8 +5746,8 @@ ConstExpr::ConstExpr(const Type *t, int64_t i, SourcePos p)
     type = t;
     type = type->GetAsConstType();
     AssertPos(pos, Type::Equal(type, AtomicType::UniformInt64->GetAsConstType()) ||
-				   Type::Equal(type, AtomicType::UniformSInt64->GetAsConstType()));
-	int64Val[0] = i;
+                   Type::Equal(type, AtomicType::UniformSInt64->GetAsConstType()));
+    int64Val[0] = i;
 }
 
 
@@ -5754,11 +5756,11 @@ ConstExpr::ConstExpr(const Type *t, int64_t *i, SourcePos p)
     type = t;
     type = type->GetAsConstType();
     AssertPos(pos, Type::Equal(type, AtomicType::UniformInt64->GetAsConstType())  ||
-				   Type::Equal(type, AtomicType::VaryingInt64->GetAsConstType())  ||
-				   Type::Equal(type, AtomicType::UniformSInt64->GetAsConstType()) ||
-				   Type::Equal(type, AtomicType::VaryingSInt64->GetAsConstType()));
-	for (int j = 0; j < Count(); ++j)
-		int64Val[j] = i[j];
+                   Type::Equal(type, AtomicType::VaryingInt64->GetAsConstType())  ||
+                   Type::Equal(type, AtomicType::UniformSInt64->GetAsConstType()) ||
+                   Type::Equal(type, AtomicType::VaryingSInt64->GetAsConstType()));
+    for (int j = 0; j < Count(); ++j)
+        int64Val[j] = i[j];
 }
 
 
@@ -5767,8 +5769,8 @@ ConstExpr::ConstExpr(const Type *t, uint64_t u, SourcePos p)
     type = t;
     type = type->GetAsConstType();
     AssertPos(pos, Type::Equal(type, AtomicType::UniformUInt64->GetAsConstType()) ||
-				   Type::Equal(type, AtomicType::UniformSUInt64->GetAsConstType()));
-	uint64Val[0] = u;
+                   Type::Equal(type, AtomicType::UniformSUInt64->GetAsConstType()));
+    uint64Val[0] = u;
 }
 
 
@@ -5777,11 +5779,11 @@ ConstExpr::ConstExpr(const Type *t, uint64_t *u, SourcePos p)
     type = t;
     type = type->GetAsConstType();
     AssertPos(pos, Type::Equal(type, AtomicType::UniformUInt64->GetAsConstType())  ||
-				   Type::Equal(type, AtomicType::VaryingUInt64->GetAsConstType())  ||
-				   Type::Equal(type, AtomicType::UniformSUInt64->GetAsConstType()) ||
-				   Type::Equal(type, AtomicType::VaryingSUInt64->GetAsConstType()));
-	for (int j = 0; j < Count(); ++j)
-		uint64Val[j] = u[j];
+                   Type::Equal(type, AtomicType::VaryingUInt64->GetAsConstType())  ||
+                   Type::Equal(type, AtomicType::UniformSUInt64->GetAsConstType()) ||
+                   Type::Equal(type, AtomicType::VaryingSUInt64->GetAsConstType()));
+    for (int j = 0; j < Count(); ++j)
+        uint64Val[j] = u[j];
 }
 
 
@@ -5837,26 +5839,32 @@ ConstExpr::ConstExpr(ConstExpr *old, double *v)
             boolVal[i] = (v[i] != 0.);
         break;
     case AtomicType::TYPE_INT8:
+    case AtomicType::TYPE_SINT8:
         for (int i = 0; i < Count(); ++i)
             int8Val[i] = (int)v[i];
         break;
     case AtomicType::TYPE_UINT8:
+    case AtomicType::TYPE_SUINT8:
         for (int i = 0; i < Count(); ++i)
             uint8Val[i] = (unsigned int)v[i];
         break;
     case AtomicType::TYPE_INT16:
+    case AtomicType::TYPE_SINT16:
         for (int i = 0; i < Count(); ++i)
             int16Val[i] = (int)v[i];
         break;
     case AtomicType::TYPE_UINT16:
+    case AtomicType::TYPE_SUINT16:
         for (int i = 0; i < Count(); ++i)
             uint16Val[i] = (unsigned int)v[i];
         break;
     case AtomicType::TYPE_INT32:
+    case AtomicType::TYPE_SINT32:
         for (int i = 0; i < Count(); ++i)
             int32Val[i] = (int)v[i];
         break;
     case AtomicType::TYPE_UINT32:
+    case AtomicType::TYPE_SUINT32
         for (int i = 0; i < Count(); ++i)
             uint32Val[i] = (unsigned int)v[i];
         break;
@@ -5868,33 +5876,6 @@ ConstExpr::ConstExpr(ConstExpr *old, double *v)
         for (int i = 0; i < Count(); ++i)
             doubleVal[i] = v[i];
         break;
-        
-	case AtomicType::TYPE_SINT8:
-        for (int i = 0; i < Count(); ++i)
-            int8Val[i] = (int)v[i];
-        break;
-    case AtomicType::TYPE_SUINT8:
-        for (int i = 0; i < Count(); ++i)
-            uint8Val[i] = (unsigned int)v[i];
-        break;
-    case AtomicType::TYPE_SINT16:
-        for (int i = 0; i < Count(); ++i)
-            int16Val[i] = (int)v[i];
-        break;
-    case AtomicType::TYPE_SUINT16:
-        for (int i = 0; i < Count(); ++i)
-            uint16Val[i] = (unsigned int)v[i];
-        break;
-    case AtomicType::TYPE_SINT32:
-        for (int i = 0; i < Count(); ++i)
-            int32Val[i] = (int)v[i];
-        break;
-    case AtomicType::TYPE_SUINT32:
-        for (int i = 0; i < Count(); ++i)
-            uint32Val[i] = (unsigned int)v[i];
-        break;
-        
-        
     case AtomicType::TYPE_INT64:
     case AtomicType::TYPE_UINT64:
     case AtomicType::TYPE_SINT64:
@@ -5919,21 +5900,27 @@ ConstExpr::ConstExpr(ConstExpr *old, SourcePos p)
         memcpy(boolVal, old->boolVal, Count() * sizeof(bool));
         break;
     case AtomicType::TYPE_INT8:
+    case AtomicType::TYPE_SINT8:
         memcpy(int8Val, old->int8Val, Count() * sizeof(int8_t));
         break;
     case AtomicType::TYPE_UINT8:
+    case AtomicType::TYPE_SUINT8:
         memcpy(uint8Val, old->uint8Val, Count() * sizeof(uint8_t));
         break;
     case AtomicType::TYPE_INT16:
+    case AtomicType::TYPE_SINT16:
         memcpy(int16Val, old->int16Val, Count() * sizeof(int16_t));
         break;
     case AtomicType::TYPE_UINT16:
+    case AtomicType::TYPE_SUINT16:
         memcpy(uint16Val, old->uint16Val, Count() * sizeof(uint16_t));
         break;
     case AtomicType::TYPE_INT32:
+    case AtomicType::TYPE_SINT32:
         memcpy(int32Val, old->int32Val, Count() * sizeof(int32_t));
         break;
     case AtomicType::TYPE_UINT32:
+    case AtomicType::TYPE_SUINT32:
         memcpy(uint32Val, old->uint32Val, Count() * sizeof(uint32_t));
         break;
     case AtomicType::TYPE_FLOAT:
@@ -5943,42 +5930,16 @@ ConstExpr::ConstExpr(ConstExpr *old, SourcePos p)
         memcpy(doubleVal, old->doubleVal, Count() * sizeof(double));
         break;
     case AtomicType::TYPE_INT64:
-        memcpy(int64Val, old->int64Val, Count() * sizeof(int64_t));
-        break;
-    case AtomicType::TYPE_UINT64:
-        memcpy(uint64Val, old->uint64Val, Count() * sizeof(uint64_t));
-        break;
-        
-	case AtomicType::TYPE_SINT8:
-        memcpy(int8Val, old->int8Val, Count() * sizeof(int8_t));
-        break;
-    case AtomicType::TYPE_SUINT8:
-        memcpy(uint8Val, old->uint8Val, Count() * sizeof(uint8_t));
-        break;
-    case AtomicType::TYPE_SINT16:
-        memcpy(int16Val, old->int16Val, Count() * sizeof(int16_t));
-        break;
-    case AtomicType::TYPE_SUINT16:
-        memcpy(uint16Val, old->uint16Val, Count() * sizeof(uint16_t));
-        break;
-    case AtomicType::TYPE_SINT32:
-        memcpy(int32Val, old->int32Val, Count() * sizeof(int32_t));
-        break;
-    case AtomicType::TYPE_SUINT32:
-        memcpy(uint32Val, old->uint32Val, Count() * sizeof(uint32_t));
-        break;
     case AtomicType::TYPE_SINT64:
         memcpy(int64Val, old->int64Val, Count() * sizeof(int64_t));
         break;
+    case AtomicType::TYPE_UINT64:
     case AtomicType::TYPE_SUINT64:
         memcpy(uint64Val, old->uint64Val, Count() * sizeof(uint64_t));
         break;
-        
-        
     default:
         FATAL("unimplemented const type");
     }
-
 }
 
 
@@ -6014,61 +5975,43 @@ ConstExpr::GetValue(FunctionEmitContext *ctx) const {
         else
             return boolVal[0] ? LLVMTrue : LLVMFalse;
     case AtomicType::TYPE_INT8:
+    case AtomicType::TYPE_SINT8:
         return isVarying ? LLVMInt8Vector(int8Val) :
                            LLVMInt8(int8Val[0]);
     case AtomicType::TYPE_UINT8:
+    case AtomicType::TYPE_SUINT8:
         return isVarying ? LLVMUInt8Vector(uint8Val) :
                            LLVMUInt8(uint8Val[0]);
     case AtomicType::TYPE_INT16:
+    case AtomicType::TYPE_SINT16:
         return isVarying ? LLVMInt16Vector(int16Val) :
                            LLVMInt16(int16Val[0]);
     case AtomicType::TYPE_UINT16:
+    case AtomicType::TYPE_SUINT16:
         return isVarying ? LLVMUInt16Vector(uint16Val) :
                            LLVMUInt16(uint16Val[0]);
     case AtomicType::TYPE_INT32:
+    case AtomicType::TYPE_SINT32:
         return isVarying ? LLVMInt32Vector(int32Val) :
                            LLVMInt32(int32Val[0]);
     case AtomicType::TYPE_UINT32:
+    case AtomicType::TYPE_SUINT32:
         return isVarying ? LLVMUInt32Vector(uint32Val) :
                            LLVMUInt32(uint32Val[0]);
     case AtomicType::TYPE_FLOAT:
         return isVarying ? LLVMFloatVector(floatVal) :
                            LLVMFloat(floatVal[0]);
     case AtomicType::TYPE_INT64:
+    case AtomicType::TYPE_SINT64:
         return isVarying ? LLVMInt64Vector(int64Val) :
                            LLVMInt64(int64Val[0]);
     case AtomicType::TYPE_UINT64:
+    case AtomicType::TYPE_SUINT64:
         return isVarying ? LLVMUInt64Vector(uint64Val) :
                            LLVMUInt64(uint64Val[0]);
     case AtomicType::TYPE_DOUBLE:
         return isVarying ? LLVMDoubleVector(doubleVal) :
                            LLVMDouble(doubleVal[0]);
-                           
-    case AtomicType::TYPE_SINT8:
-        return isVarying ? LLVMInt8Vector(int8Val) :
-                           LLVMInt8(int8Val[0]);
-    case AtomicType::TYPE_SUINT8:
-        return isVarying ? LLVMUInt8Vector(uint8Val) :
-                           LLVMUInt8(uint8Val[0]);
-    case AtomicType::TYPE_SINT16:
-        return isVarying ? LLVMInt16Vector(int16Val) :
-                           LLVMInt16(int16Val[0]);
-    case AtomicType::TYPE_SUINT16:
-        return isVarying ? LLVMUInt16Vector(uint16Val) :
-                           LLVMUInt16(uint16Val[0]);
-    case AtomicType::TYPE_SINT32:
-        return isVarying ? LLVMInt32Vector(int32Val) :
-                           LLVMInt32(int32Val[0]);
-    case AtomicType::TYPE_SUINT32:
-        return isVarying ? LLVMUInt32Vector(uint32Val) :
-                           LLVMUInt32(uint32Val[0]);
-    case AtomicType::TYPE_SINT64:
-        return isVarying ? LLVMInt64Vector(int64Val) :
-                           LLVMInt64(int64Val[0]);
-    case AtomicType::TYPE_SUINT64:
-        return isVarying ? LLVMUInt64Vector(uint64Val) :
-                           LLVMUInt64(uint64Val[0]);                       
-    
     default:
         FATAL("unimplemented const type");
         return NULL;
@@ -6127,27 +6070,25 @@ lConvert(const From *from, To *to, int count, bool forceVarying) {
 int
 ConstExpr::GetValues(int64_t *ip, bool forceVarying) const {
     switch (getBasicType()) {
-    case AtomicType::TYPE_BOOL:   lConvert(boolVal,   ip, Count(), forceVarying); break;
-    case AtomicType::TYPE_INT8:   lConvert(int8Val,   ip, Count(), forceVarying); break;
-    case AtomicType::TYPE_UINT8:  lConvert(uint8Val,  ip, Count(), forceVarying); break;
-    case AtomicType::TYPE_INT16:  lConvert(int16Val,  ip, Count(), forceVarying); break;
-    case AtomicType::TYPE_UINT16: lConvert(uint16Val, ip, Count(), forceVarying); break;
-    case AtomicType::TYPE_INT32:  lConvert(int32Val,  ip, Count(), forceVarying); break;
-    case AtomicType::TYPE_UINT32: lConvert(uint32Val, ip, Count(), forceVarying); break;
-    case AtomicType::TYPE_FLOAT:  lConvert(floatVal,  ip, Count(), forceVarying); break;
-    case AtomicType::TYPE_DOUBLE: lConvert(doubleVal, ip, Count(), forceVarying); break;
-    case AtomicType::TYPE_INT64:  lConvert(int64Val,  ip, Count(), forceVarying); break;
-    case AtomicType::TYPE_UINT64: lConvert(uint64Val, ip, Count(), forceVarying); break;
-    
-	case AtomicType::TYPE_SINT8:   lConvert(int8Val,   ip, Count(), forceVarying); break;
+    case AtomicType::TYPE_BOOL:    lConvert(boolVal,   ip, Count(), forceVarying); break;
+    case AtomicType::TYPE_INT8:
+    case AtomicType::TYPE_SINT8:   lConvert(int8Val,   ip, Count(), forceVarying); break;
+    case AtomicType::TYPE_UINT8:
     case AtomicType::TYPE_SUINT8:  lConvert(uint8Val,  ip, Count(), forceVarying); break;
+    case AtomicType::TYPE_INT16:
     case AtomicType::TYPE_SINT16:  lConvert(int16Val,  ip, Count(), forceVarying); break;
+    case AtomicType::TYPE_UINT16:
     case AtomicType::TYPE_SUINT16: lConvert(uint16Val, ip, Count(), forceVarying); break;
+    case AtomicType::TYPE_INT32:
     case AtomicType::TYPE_SINT32:  lConvert(int32Val,  ip, Count(), forceVarying); break;
+    case AtomicType::TYPE_UINT32:
     case AtomicType::TYPE_SUINT32: lConvert(uint32Val, ip, Count(), forceVarying); break;
+    case AtomicType::TYPE_FLOAT:   lConvert(floatVal,  ip, Count(), forceVarying); break;
+    case AtomicType::TYPE_DOUBLE:  lConvert(doubleVal, ip, Count(), forceVarying); break;
+    case AtomicType::TYPE_INT64:
     case AtomicType::TYPE_SINT64:  lConvert(int64Val,  ip, Count(), forceVarying); break;
+    case AtomicType::TYPE_UINT64:
     case AtomicType::TYPE_SUINT64: lConvert(uint64Val, ip, Count(), forceVarying); break;
-    
     default:
         FATAL("unimplemented const type");
     }
@@ -6158,27 +6099,25 @@ ConstExpr::GetValues(int64_t *ip, bool forceVarying) const {
 int
 ConstExpr::GetValues(uint64_t *up, bool forceVarying) const {
     switch (getBasicType()) {
-    case AtomicType::TYPE_BOOL:   lConvert(boolVal,   up, Count(), forceVarying); break;
-    case AtomicType::TYPE_INT8:   lConvert(int8Val,   up, Count(), forceVarying); break;
-    case AtomicType::TYPE_UINT8:  lConvert(uint8Val,  up, Count(), forceVarying); break;
-    case AtomicType::TYPE_INT16:  lConvert(int16Val,  up, Count(), forceVarying); break;
-    case AtomicType::TYPE_UINT16: lConvert(uint16Val, up, Count(), forceVarying); break;
-    case AtomicType::TYPE_INT32:  lConvert(int32Val,  up, Count(), forceVarying); break;
-    case AtomicType::TYPE_UINT32: lConvert(uint32Val, up, Count(), forceVarying); break;
-    case AtomicType::TYPE_FLOAT:  lConvert(floatVal,  up, Count(), forceVarying); break;
-    case AtomicType::TYPE_DOUBLE: lConvert(doubleVal, up, Count(), forceVarying); break;
-    case AtomicType::TYPE_INT64:  lConvert(int64Val,  up, Count(), forceVarying); break;
-    case AtomicType::TYPE_UINT64: lConvert(uint64Val, up, Count(), forceVarying); break;
-    
+    case AtomicType::TYPE_BOOL:    lConvert(boolVal,   up, Count(), forceVarying); break;
+    case AtomicType::TYPE_INT8:
     case AtomicType::TYPE_SINT8:   lConvert(int8Val,   up, Count(), forceVarying); break;
+    case AtomicType::TYPE_UINT8:
     case AtomicType::TYPE_SUINT8:  lConvert(uint8Val,  up, Count(), forceVarying); break;
+    case AtomicType::TYPE_INT16:
     case AtomicType::TYPE_SINT16:  lConvert(int16Val,  up, Count(), forceVarying); break;
+    case AtomicType::TYPE_UINT16:
     case AtomicType::TYPE_SUINT16: lConvert(uint16Val, up, Count(), forceVarying); break;
+    case AtomicType::TYPE_INT32:
     case AtomicType::TYPE_SINT32:  lConvert(int32Val,  up, Count(), forceVarying); break;
+    case AtomicType::TYPE_UINT32:
     case AtomicType::TYPE_SUINT32: lConvert(uint32Val, up, Count(), forceVarying); break;
+    case AtomicType::TYPE_FLOAT:   lConvert(floatVal,  up, Count(), forceVarying); break;
+    case AtomicType::TYPE_DOUBLE:  lConvert(doubleVal, up, Count(), forceVarying); break;
+    case AtomicType::TYPE_INT64:
     case AtomicType::TYPE_SINT64:  lConvert(int64Val,  up, Count(), forceVarying); break;
+    case AtomicType::TYPE_UINT64:
     case AtomicType::TYPE_SUINT64: lConvert(uint64Val, up, Count(), forceVarying); break;
-    
     default:
         FATAL("unimplemented const type");
     }
@@ -6189,27 +6128,25 @@ ConstExpr::GetValues(uint64_t *up, bool forceVarying) const {
 int
 ConstExpr::GetValues(double *d, bool forceVarying) const {
     switch (getBasicType()) {
-    case AtomicType::TYPE_BOOL:   lConvert(boolVal,   d, Count(), forceVarying); break;
-    case AtomicType::TYPE_INT8:   lConvert(int8Val,   d, Count(), forceVarying); break;
-    case AtomicType::TYPE_UINT8:  lConvert(uint8Val,  d, Count(), forceVarying); break;
-    case AtomicType::TYPE_INT16:  lConvert(int16Val,  d, Count(), forceVarying); break;
-    case AtomicType::TYPE_UINT16: lConvert(uint16Val, d, Count(), forceVarying); break;
-    case AtomicType::TYPE_INT32:  lConvert(int32Val,  d, Count(), forceVarying); break;
-    case AtomicType::TYPE_UINT32: lConvert(uint32Val, d, Count(), forceVarying); break;
-    case AtomicType::TYPE_FLOAT:  lConvert(floatVal,  d, Count(), forceVarying); break;
-    case AtomicType::TYPE_DOUBLE: lConvert(doubleVal, d, Count(), forceVarying); break;
-    case AtomicType::TYPE_INT64:  lConvert(int64Val,  d, Count(), forceVarying); break;
-    case AtomicType::TYPE_UINT64: lConvert(uint64Val, d, Count(), forceVarying); break;
-    
+    case AtomicType::TYPE_BOOL:    lConvert(boolVal,   d, Count(), forceVarying); break;
+    case AtomicType::TYPE_INT8:
     case AtomicType::TYPE_SINT8:   lConvert(int8Val,   d, Count(), forceVarying); break;
+    case AtomicType::TYPE_UINT8:
     case AtomicType::TYPE_SUINT8:  lConvert(uint8Val,  d, Count(), forceVarying); break;
+    case AtomicType::TYPE_INT16:
     case AtomicType::TYPE_SINT16:  lConvert(int16Val,  d, Count(), forceVarying); break;
+    case AtomicType::TYPE_UINT16:
     case AtomicType::TYPE_SUINT16: lConvert(uint16Val, d, Count(), forceVarying); break;
+    case AtomicType::TYPE_INT32:
     case AtomicType::TYPE_SINT32:  lConvert(int32Val,  d, Count(), forceVarying); break;
+    case AtomicType::TYPE_UINT32:
     case AtomicType::TYPE_SUINT32: lConvert(uint32Val, d, Count(), forceVarying); break;
+    case AtomicType::TYPE_FLOAT:   lConvert(floatVal,  d, Count(), forceVarying); break;
+    case AtomicType::TYPE_DOUBLE:  lConvert(doubleVal, d, Count(), forceVarying); break;
+    case AtomicType::TYPE_INT64:
     case AtomicType::TYPE_SINT64:  lConvert(int64Val,  d, Count(), forceVarying); break;
+    case AtomicType::TYPE_UINT64:
     case AtomicType::TYPE_SUINT64: lConvert(uint64Val, d, Count(), forceVarying); break;
-    
     default:
         FATAL("unimplemented const type");
     }
@@ -6220,27 +6157,25 @@ ConstExpr::GetValues(double *d, bool forceVarying) const {
 int
 ConstExpr::GetValues(float *fp, bool forceVarying) const {
     switch (getBasicType()) {
-    case AtomicType::TYPE_BOOL:   lConvert(boolVal,   fp, Count(), forceVarying); break;
-    case AtomicType::TYPE_INT8:   lConvert(int8Val,   fp, Count(), forceVarying); break;
-    case AtomicType::TYPE_UINT8:  lConvert(uint8Val,  fp, Count(), forceVarying); break;
-    case AtomicType::TYPE_INT16:  lConvert(int16Val,  fp, Count(), forceVarying); break;
-    case AtomicType::TYPE_UINT16: lConvert(uint16Val, fp, Count(), forceVarying); break;
-    case AtomicType::TYPE_INT32:  lConvert(int32Val,  fp, Count(), forceVarying); break;
-    case AtomicType::TYPE_UINT32: lConvert(uint32Val, fp, Count(), forceVarying); break;
-    case AtomicType::TYPE_FLOAT:  lConvert(floatVal,  fp, Count(), forceVarying); break;
-    case AtomicType::TYPE_DOUBLE: lConvert(doubleVal, fp, Count(), forceVarying); break;
-    case AtomicType::TYPE_INT64:  lConvert(int64Val,  fp, Count(), forceVarying); break;
-    case AtomicType::TYPE_UINT64: lConvert(uint64Val, fp, Count(), forceVarying); break;
-    
-	case AtomicType::TYPE_SINT8:   lConvert(int8Val,   fp, Count(), forceVarying); break;
+    case AtomicType::TYPE_BOOL:    lConvert(boolVal,   fp, Count(), forceVarying); break;
+    case AtomicType::TYPE_INT8:
+    case AtomicType::TYPE_SINT8:   lConvert(int8Val,   fp, Count(), forceVarying); break;
+    case AtomicType::TYPE_UINT8:
     case AtomicType::TYPE_SUINT8:  lConvert(uint8Val,  fp, Count(), forceVarying); break;
+    case AtomicType::TYPE_INT16:
     case AtomicType::TYPE_SINT16:  lConvert(int16Val,  fp, Count(), forceVarying); break;
+    case AtomicType::TYPE_UINT16:
     case AtomicType::TYPE_SUINT16: lConvert(uint16Val, fp, Count(), forceVarying); break;
+    case AtomicType::TYPE_INT32:
     case AtomicType::TYPE_SINT32:  lConvert(int32Val,  fp, Count(), forceVarying); break;
+    case AtomicType::TYPE_UINT32:
     case AtomicType::TYPE_SUINT32: lConvert(uint32Val, fp, Count(), forceVarying); break;
+    case AtomicType::TYPE_FLOAT:   lConvert(floatVal,  fp, Count(), forceVarying); break;
+    case AtomicType::TYPE_DOUBLE:  lConvert(doubleVal, fp, Count(), forceVarying); break;
+    case AtomicType::TYPE_INT64:
     case AtomicType::TYPE_SINT64:  lConvert(int64Val,  fp, Count(), forceVarying); break;
+    case AtomicType::TYPE_UINT64:
     case AtomicType::TYPE_SUINT64: lConvert(uint64Val, fp, Count(), forceVarying); break;
-    
     default:
         FATAL("unimplemented const type");
     }
@@ -6251,27 +6186,25 @@ ConstExpr::GetValues(float *fp, bool forceVarying) const {
 int
 ConstExpr::GetValues(bool *b, bool forceVarying) const {
     switch (getBasicType()) {
-    case AtomicType::TYPE_BOOL:   lConvert(boolVal,   b, Count(), forceVarying); break;
-    case AtomicType::TYPE_INT8:   lConvert(int8Val,   b, Count(), forceVarying); break;
-    case AtomicType::TYPE_UINT8:  lConvert(uint8Val,  b, Count(), forceVarying); break;
-    case AtomicType::TYPE_INT16:  lConvert(int16Val,  b, Count(), forceVarying); break;
-    case AtomicType::TYPE_UINT16: lConvert(uint16Val, b, Count(), forceVarying); break;
-    case AtomicType::TYPE_INT32:  lConvert(int32Val,  b, Count(), forceVarying); break;
-    case AtomicType::TYPE_UINT32: lConvert(uint32Val, b, Count(), forceVarying); break;
-    case AtomicType::TYPE_FLOAT:  lConvert(floatVal,  b, Count(), forceVarying); break;
-    case AtomicType::TYPE_DOUBLE: lConvert(doubleVal, b, Count(), forceVarying); break;
-    case AtomicType::TYPE_INT64:  lConvert(int64Val,  b, Count(), forceVarying); break;
-    case AtomicType::TYPE_UINT64: lConvert(uint64Val, b, Count(), forceVarying); break;
-    
+    case AtomicType::TYPE_BOOL:    lConvert(boolVal,   b, Count(), forceVarying); break;
+    case AtomicType::TYPE_INT8:
     case AtomicType::TYPE_SINT8:   lConvert(int8Val,   b, Count(), forceVarying); break;
+    case AtomicType::TYPE_UINT8:
     case AtomicType::TYPE_SUINT8:  lConvert(uint8Val,  b, Count(), forceVarying); break;
+    case AtomicType::TYPE_INT16:
     case AtomicType::TYPE_SINT16:  lConvert(int16Val,  b, Count(), forceVarying); break;
+    case AtomicType::TYPE_UINT16:
     case AtomicType::TYPE_SUINT16: lConvert(uint16Val, b, Count(), forceVarying); break;
+    case AtomicType::TYPE_INT32:
     case AtomicType::TYPE_SINT32:  lConvert(int32Val,  b, Count(), forceVarying); break;
+    case AtomicType::TYPE_UINT32:
     case AtomicType::TYPE_SUINT32: lConvert(uint32Val, b, Count(), forceVarying); break;
+    case AtomicType::TYPE_FLOAT:   lConvert(floatVal,  b, Count(), forceVarying); break;
+    case AtomicType::TYPE_DOUBLE:  lConvert(doubleVal, b, Count(), forceVarying); break;
+    case AtomicType::TYPE_INT64:
     case AtomicType::TYPE_SINT64:  lConvert(int64Val,  b, Count(), forceVarying); break;
+    case AtomicType::TYPE_UINT64:
     case AtomicType::TYPE_SUINT64: lConvert(uint64Val, b, Count(), forceVarying); break;
-    
     default:
         FATAL("unimplemented const type");
     }
@@ -6282,27 +6215,25 @@ ConstExpr::GetValues(bool *b, bool forceVarying) const {
 int
 ConstExpr::GetValues(int8_t *ip, bool forceVarying) const {
     switch (getBasicType()) {
-    case AtomicType::TYPE_BOOL:   lConvert(boolVal,   ip, Count(), forceVarying); break;
-    case AtomicType::TYPE_INT8:   lConvert(int8Val,   ip, Count(), forceVarying); break;
-    case AtomicType::TYPE_UINT8:  lConvert(uint8Val,  ip, Count(), forceVarying); break;
-    case AtomicType::TYPE_INT16:  lConvert(int16Val,  ip, Count(), forceVarying); break;
-    case AtomicType::TYPE_UINT16: lConvert(uint16Val, ip, Count(), forceVarying); break;
-    case AtomicType::TYPE_INT32:  lConvert(int32Val,  ip, Count(), forceVarying); break;
-    case AtomicType::TYPE_UINT32: lConvert(uint32Val, ip, Count(), forceVarying); break;
-    case AtomicType::TYPE_FLOAT:  lConvert(floatVal,  ip, Count(), forceVarying); break;
-    case AtomicType::TYPE_DOUBLE: lConvert(doubleVal, ip, Count(), forceVarying); break;
-    case AtomicType::TYPE_INT64:  lConvert(int64Val,  ip, Count(), forceVarying); break;
-    case AtomicType::TYPE_UINT64: lConvert(uint64Val, ip, Count(), forceVarying); break;
-    
+    case AtomicType::TYPE_BOOL:    lConvert(boolVal,   ip, Count(), forceVarying); break;
+    case AtomicType::TYPE_INT8:
     case AtomicType::TYPE_SINT8:   lConvert(int8Val,   ip, Count(), forceVarying); break;
+    case AtomicType::TYPE_UINT8:
     case AtomicType::TYPE_SUINT8:  lConvert(uint8Val,  ip, Count(), forceVarying); break;
+    case AtomicType::TYPE_INT16:
     case AtomicType::TYPE_SINT16:  lConvert(int16Val,  ip, Count(), forceVarying); break;
+    case AtomicType::TYPE_UINT16:
     case AtomicType::TYPE_SUINT16: lConvert(uint16Val, ip, Count(), forceVarying); break;
+    case AtomicType::TYPE_INT32:
     case AtomicType::TYPE_SINT32:  lConvert(int32Val,  ip, Count(), forceVarying); break;
+    case AtomicType::TYPE_UINT32:
     case AtomicType::TYPE_SUINT32: lConvert(uint32Val, ip, Count(), forceVarying); break;
+    case AtomicType::TYPE_FLOAT:   lConvert(floatVal,  ip, Count(), forceVarying); break;
+    case AtomicType::TYPE_DOUBLE:  lConvert(doubleVal, ip, Count(), forceVarying); break;
+    case AtomicType::TYPE_INT64:
     case AtomicType::TYPE_SINT64:  lConvert(int64Val,  ip, Count(), forceVarying); break;
+    case AtomicType::TYPE_UINT64:
     case AtomicType::TYPE_SUINT64: lConvert(uint64Val, ip, Count(), forceVarying); break;
-    
     default:
         FATAL("unimplemented const type");
     }
@@ -6313,27 +6244,25 @@ ConstExpr::GetValues(int8_t *ip, bool forceVarying) const {
 int
 ConstExpr::GetValues(uint8_t *up, bool forceVarying) const {
     switch (getBasicType()) {
-    case AtomicType::TYPE_BOOL:   lConvert(boolVal,   up, Count(), forceVarying); break;
-    case AtomicType::TYPE_INT8:   lConvert(int8Val,   up, Count(), forceVarying); break;
-    case AtomicType::TYPE_UINT8:  lConvert(uint8Val,  up, Count(), forceVarying); break;
-    case AtomicType::TYPE_INT16:  lConvert(int16Val,  up, Count(), forceVarying); break;
-    case AtomicType::TYPE_UINT16: lConvert(uint16Val, up, Count(), forceVarying); break;
-    case AtomicType::TYPE_INT32:  lConvert(int32Val,  up, Count(), forceVarying); break;
-    case AtomicType::TYPE_UINT32: lConvert(uint32Val, up, Count(), forceVarying); break;
-    case AtomicType::TYPE_FLOAT:  lConvert(floatVal,  up, Count(), forceVarying); break;
-    case AtomicType::TYPE_DOUBLE: lConvert(doubleVal, up, Count(), forceVarying); break;
-    case AtomicType::TYPE_INT64:  lConvert(int64Val,  up, Count(), forceVarying); break;
-    case AtomicType::TYPE_UINT64: lConvert(uint64Val, up, Count(), forceVarying); break;
-    
+    case AtomicType::TYPE_BOOL:    lConvert(boolVal,   up, Count(), forceVarying); break;
+    case AtomicType::TYPE_INT8:
     case AtomicType::TYPE_SINT8:   lConvert(int8Val,   up, Count(), forceVarying); break;
+    case AtomicType::TYPE_UINT8:
     case AtomicType::TYPE_SUINT8:  lConvert(uint8Val,  up, Count(), forceVarying); break;
+    case AtomicType::TYPE_INT16:
     case AtomicType::TYPE_SINT16:  lConvert(int16Val,  up, Count(), forceVarying); break;
+    case AtomicType::TYPE_UINT16:
     case AtomicType::TYPE_SUINT16: lConvert(uint16Val, up, Count(), forceVarying); break;
+    case AtomicType::TYPE_INT32:
     case AtomicType::TYPE_SINT32:  lConvert(int32Val,  up, Count(), forceVarying); break;
+    case AtomicType::TYPE_UINT32:
     case AtomicType::TYPE_SUINT32: lConvert(uint32Val, up, Count(), forceVarying); break;
+    case AtomicType::TYPE_FLOAT:   lConvert(floatVal,  up, Count(), forceVarying); break;
+    case AtomicType::TYPE_DOUBLE:  lConvert(doubleVal, up, Count(), forceVarying); break;
+    case AtomicType::TYPE_INT64:
     case AtomicType::TYPE_SINT64:  lConvert(int64Val,  up, Count(), forceVarying); break;
+    case AtomicType::TYPE_UINT64:
     case AtomicType::TYPE_SUINT64: lConvert(uint64Val, up, Count(), forceVarying); break;
-    
     default:
         FATAL("unimplemented const type");
     }
@@ -6344,27 +6273,25 @@ ConstExpr::GetValues(uint8_t *up, bool forceVarying) const {
 int
 ConstExpr::GetValues(int16_t *ip, bool forceVarying) const {
     switch (getBasicType()) {
-    case AtomicType::TYPE_BOOL:   lConvert(boolVal,   ip, Count(), forceVarying); break;
-    case AtomicType::TYPE_INT8:   lConvert(int8Val,   ip, Count(), forceVarying); break;
-    case AtomicType::TYPE_UINT8:  lConvert(uint8Val,  ip, Count(), forceVarying); break;
-    case AtomicType::TYPE_INT16:  lConvert(int16Val,  ip, Count(), forceVarying); break;
-    case AtomicType::TYPE_UINT16: lConvert(uint16Val, ip, Count(), forceVarying); break;
-    case AtomicType::TYPE_INT32:  lConvert(int32Val,  ip, Count(), forceVarying); break;
-    case AtomicType::TYPE_UINT32: lConvert(uint32Val, ip, Count(), forceVarying); break;
-    case AtomicType::TYPE_FLOAT:  lConvert(floatVal,  ip, Count(), forceVarying); break;
-    case AtomicType::TYPE_DOUBLE: lConvert(doubleVal, ip, Count(), forceVarying); break;
-    case AtomicType::TYPE_INT64:  lConvert(int64Val,  ip, Count(), forceVarying); break;
-    case AtomicType::TYPE_UINT64: lConvert(uint64Val, ip, Count(), forceVarying); break;
-    
+    case AtomicType::TYPE_BOOL:    lConvert(boolVal,   ip, Count(), forceVarying); break;
+    case AtomicType::TYPE_INT8:
     case AtomicType::TYPE_SINT8:   lConvert(int8Val,   ip, Count(), forceVarying); break;
+    case AtomicType::TYPE_UINT8:
     case AtomicType::TYPE_SUINT8:  lConvert(uint8Val,  ip, Count(), forceVarying); break;
+    case AtomicType::TYPE_INT16:
     case AtomicType::TYPE_SINT16:  lConvert(int16Val,  ip, Count(), forceVarying); break;
+    case AtomicType::TYPE_UINT16:
     case AtomicType::TYPE_SUINT16: lConvert(uint16Val, ip, Count(), forceVarying); break;
+    case AtomicType::TYPE_INT32:
     case AtomicType::TYPE_SINT32:  lConvert(int32Val,  ip, Count(), forceVarying); break;
+    case AtomicType::TYPE_UINT32:
     case AtomicType::TYPE_SUINT32: lConvert(uint32Val, ip, Count(), forceVarying); break;
+    case AtomicType::TYPE_FLOAT:   lConvert(floatVal,  ip, Count(), forceVarying); break;
+    case AtomicType::TYPE_DOUBLE:  lConvert(doubleVal, ip, Count(), forceVarying); break;
+    case AtomicType::TYPE_INT64:
     case AtomicType::TYPE_SINT64:  lConvert(int64Val,  ip, Count(), forceVarying); break;
+    case AtomicType::TYPE_UINT64:
     case AtomicType::TYPE_SUINT64: lConvert(uint64Val, ip, Count(), forceVarying); break;
-    
     default:
         FATAL("unimplemented const type");
     }
@@ -6375,27 +6302,25 @@ ConstExpr::GetValues(int16_t *ip, bool forceVarying) const {
 int
 ConstExpr::GetValues(uint16_t *up, bool forceVarying) const {
     switch (getBasicType()) {
-    case AtomicType::TYPE_BOOL:   lConvert(boolVal,   up, Count(), forceVarying); break;
-    case AtomicType::TYPE_INT8:   lConvert(int8Val,   up, Count(), forceVarying); break;
-    case AtomicType::TYPE_UINT8:  lConvert(uint8Val,  up, Count(), forceVarying); break;
-    case AtomicType::TYPE_INT16:  lConvert(int16Val,  up, Count(), forceVarying); break;
-    case AtomicType::TYPE_UINT16: lConvert(uint16Val, up, Count(), forceVarying); break;
-    case AtomicType::TYPE_INT32:  lConvert(int32Val,  up, Count(), forceVarying); break;
-    case AtomicType::TYPE_UINT32: lConvert(uint32Val, up, Count(), forceVarying); break;
-    case AtomicType::TYPE_FLOAT:  lConvert(floatVal,  up, Count(), forceVarying); break;
-    case AtomicType::TYPE_DOUBLE: lConvert(doubleVal, up, Count(), forceVarying); break;
-    case AtomicType::TYPE_INT64:  lConvert(int64Val,  up, Count(), forceVarying); break;
-    case AtomicType::TYPE_UINT64: lConvert(uint64Val, up, Count(), forceVarying); break;
-    
+    case AtomicType::TYPE_BOOL:    lConvert(boolVal,   up, Count(), forceVarying); break;
+    case AtomicType::TYPE_INT8:
     case AtomicType::TYPE_SINT8:   lConvert(int8Val,   up, Count(), forceVarying); break;
+    case AtomicType::TYPE_UINT8:
     case AtomicType::TYPE_SUINT8:  lConvert(uint8Val,  up, Count(), forceVarying); break;
+    case AtomicType::TYPE_INT16:
     case AtomicType::TYPE_SINT16:  lConvert(int16Val,  up, Count(), forceVarying); break;
+    case AtomicType::TYPE_UINT16:
     case AtomicType::TYPE_SUINT16: lConvert(uint16Val, up, Count(), forceVarying); break;
+    case AtomicType::TYPE_INT32:
     case AtomicType::TYPE_SINT32:  lConvert(int32Val,  up, Count(), forceVarying); break;
+    case AtomicType::TYPE_UINT32:
     case AtomicType::TYPE_SUINT32: lConvert(uint32Val, up, Count(), forceVarying); break;
+    case AtomicType::TYPE_FLOAT:   lConvert(floatVal,  up, Count(), forceVarying); break;
+    case AtomicType::TYPE_DOUBLE:  lConvert(doubleVal, up, Count(), forceVarying); break;
+    case AtomicType::TYPE_INT64:
     case AtomicType::TYPE_SINT64:  lConvert(int64Val,  up, Count(), forceVarying); break;
+    case AtomicType::TYPE_UINT64:
     case AtomicType::TYPE_SUINT64: lConvert(uint64Val, up, Count(), forceVarying); break;
-    
     default:
         FATAL("unimplemented const type");
     }
@@ -6406,27 +6331,25 @@ ConstExpr::GetValues(uint16_t *up, bool forceVarying) const {
 int
 ConstExpr::GetValues(int32_t *ip, bool forceVarying) const {
     switch (getBasicType()) {
-    case AtomicType::TYPE_BOOL:   lConvert(boolVal,   ip, Count(), forceVarying); break;
-    case AtomicType::TYPE_INT8:   lConvert(int8Val,   ip, Count(), forceVarying); break;
-    case AtomicType::TYPE_UINT8:  lConvert(uint8Val,  ip, Count(), forceVarying); break;
-    case AtomicType::TYPE_INT16:  lConvert(int16Val,  ip, Count(), forceVarying); break;
-    case AtomicType::TYPE_UINT16: lConvert(uint16Val, ip, Count(), forceVarying); break;
-    case AtomicType::TYPE_INT32:  lConvert(int32Val,  ip, Count(), forceVarying); break;
-    case AtomicType::TYPE_UINT32: lConvert(uint32Val, ip, Count(), forceVarying); break;
-    case AtomicType::TYPE_FLOAT:  lConvert(floatVal,  ip, Count(), forceVarying); break;
-    case AtomicType::TYPE_DOUBLE: lConvert(doubleVal, ip, Count(), forceVarying); break;
-    case AtomicType::TYPE_INT64:  lConvert(int64Val,  ip, Count(), forceVarying); break;
-    case AtomicType::TYPE_UINT64: lConvert(uint64Val, ip, Count(), forceVarying); break;
-    
+    case AtomicType::TYPE_BOOL:    lConvert(boolVal,   ip, Count(), forceVarying); break;
+    case AtomicType::TYPE_INT8:
     case AtomicType::TYPE_SINT8:   lConvert(int8Val,   ip, Count(), forceVarying); break;
+    case AtomicType::TYPE_UINT8:
     case AtomicType::TYPE_SUINT8:  lConvert(uint8Val,  ip, Count(), forceVarying); break;
+    case AtomicType::TYPE_INT16:
     case AtomicType::TYPE_SINT16:  lConvert(int16Val,  ip, Count(), forceVarying); break;
+    case AtomicType::TYPE_UINT16:
     case AtomicType::TYPE_SUINT16: lConvert(uint16Val, ip, Count(), forceVarying); break;
+    case AtomicType::TYPE_INT32:
     case AtomicType::TYPE_SINT32:  lConvert(int32Val,  ip, Count(), forceVarying); break;
+    case AtomicType::TYPE_UINT32:
     case AtomicType::TYPE_SUINT32: lConvert(uint32Val, ip, Count(), forceVarying); break;
+    case AtomicType::TYPE_FLOAT:   lConvert(floatVal,  ip, Count(), forceVarying); break;
+    case AtomicType::TYPE_DOUBLE:  lConvert(doubleVal, ip, Count(), forceVarying); break;
+    case AtomicType::TYPE_INT64:
     case AtomicType::TYPE_SINT64:  lConvert(int64Val,  ip, Count(), forceVarying); break;
+    case AtomicType::TYPE_UINT64:
     case AtomicType::TYPE_SUINT64: lConvert(uint64Val, ip, Count(), forceVarying); break;
-    
     default:
         FATAL("unimplemented const type");
     }
@@ -6437,27 +6360,25 @@ ConstExpr::GetValues(int32_t *ip, bool forceVarying) const {
 int
 ConstExpr::GetValues(uint32_t *up, bool forceVarying) const {
     switch (getBasicType()) {
-    case AtomicType::TYPE_BOOL:   lConvert(boolVal,   up, Count(), forceVarying); break;
-    case AtomicType::TYPE_INT8:   lConvert(int8Val,   up, Count(), forceVarying); break;
-    case AtomicType::TYPE_UINT8:  lConvert(uint8Val,  up, Count(), forceVarying); break;
-    case AtomicType::TYPE_INT16:  lConvert(int16Val,  up, Count(), forceVarying); break;
-    case AtomicType::TYPE_UINT16: lConvert(uint16Val, up, Count(), forceVarying); break;
-    case AtomicType::TYPE_INT32:  lConvert(int32Val,  up, Count(), forceVarying); break;
-    case AtomicType::TYPE_UINT32: lConvert(uint32Val, up, Count(), forceVarying); break;
-    case AtomicType::TYPE_FLOAT:  lConvert(floatVal,  up, Count(), forceVarying); break;
-    case AtomicType::TYPE_DOUBLE: lConvert(doubleVal, up, Count(), forceVarying); break;
-    case AtomicType::TYPE_INT64:  lConvert(int64Val,  up, Count(), forceVarying); break;
-    case AtomicType::TYPE_UINT64: lConvert(uint64Val, up, Count(), forceVarying); break;
-    
+    case AtomicType::TYPE_BOOL:    lConvert(boolVal,   up, Count(), forceVarying); break;
+    case AtomicType::TYPE_INT8:
     case AtomicType::TYPE_SINT8:   lConvert(int8Val,   up, Count(), forceVarying); break;
+    case AtomicType::TYPE_UINT8:
     case AtomicType::TYPE_SUINT8:  lConvert(uint8Val,  up, Count(), forceVarying); break;
+    case AtomicType::TYPE_INT16:
     case AtomicType::TYPE_SINT16:  lConvert(int16Val,  up, Count(), forceVarying); break;
+    case AtomicType::TYPE_UINT16:
     case AtomicType::TYPE_SUINT16: lConvert(uint16Val, up, Count(), forceVarying); break;
+    case AtomicType::TYPE_INT32:
     case AtomicType::TYPE_SINT32:  lConvert(int32Val,  up, Count(), forceVarying); break;
+    case AtomicType::TYPE_UINT32:
     case AtomicType::TYPE_SUINT32: lConvert(uint32Val, up, Count(), forceVarying); break;
+    case AtomicType::TYPE_FLOAT:   lConvert(floatVal,  up, Count(), forceVarying); break;
+    case AtomicType::TYPE_DOUBLE:  lConvert(doubleVal, up, Count(), forceVarying); break;
+    case AtomicType::TYPE_INT64:
     case AtomicType::TYPE_SINT64:  lConvert(int64Val,  up, Count(), forceVarying); break;
+    case AtomicType::TYPE_UINT64:
     case AtomicType::TYPE_SUINT64: lConvert(uint64Val, up, Count(), forceVarying); break;
-    
     default:
         FATAL("unimplemented const type");
     }
@@ -6650,61 +6571,43 @@ ConstExpr::Print() const {
             printf("%s", boolVal[i] ? "true" : "false");
             break;
         case AtomicType::TYPE_INT8:
+        case AtomicType::TYPE_SINT8:
             printf("%d", (int)int8Val[i]);
             break;
         case AtomicType::TYPE_UINT8:
+        case AtomicType::TYPE_SUINT8:
             printf("%u", (int)uint8Val[i]);
             break;
         case AtomicType::TYPE_INT16:
+        case AtomicType::TYPE_SINT16:
             printf("%d", (int)int16Val[i]);
             break;
         case AtomicType::TYPE_UINT16:
+        case AtomicType::TYPE_SUINT16:
             printf("%u", (int)uint16Val[i]);
             break;
         case AtomicType::TYPE_INT32:
+        case AtomicType::TYPE_SINT32:
             printf("%d", int32Val[i]);
             break;
         case AtomicType::TYPE_UINT32:
+        case AtomicType::TYPE_SUINT32:
             printf("%u", uint32Val[i]);
             break;
         case AtomicType::TYPE_FLOAT:
             printf("%f", floatVal[i]);
             break;
         case AtomicType::TYPE_INT64:
+        case AtomicType::TYPE_SINT64:
             printf("%" PRId64, int64Val[i]);
             break;
         case AtomicType::TYPE_UINT64:
+        case AtomicType::TYPE_SUINT64:
             printf("%" PRIu64, uint64Val[i]);
             break;
         case AtomicType::TYPE_DOUBLE:
             printf("%f", doubleVal[i]);
             break;
-            
-		case AtomicType::TYPE_SINT8:
-            printf("%d", (int)int8Val[i]);
-            break;
-        case AtomicType::TYPE_SUINT8:
-            printf("%u", (int)uint8Val[i]);
-            break;
-        case AtomicType::TYPE_SINT16:
-            printf("%d", (int)int16Val[i]);
-            break;
-        case AtomicType::TYPE_SUINT16:
-            printf("%u", (int)uint16Val[i]);
-            break;
-        case AtomicType::TYPE_SINT32:
-            printf("%d", int32Val[i]);
-            break;
-        case AtomicType::TYPE_SUINT32:
-            printf("%u", uint32Val[i]);
-            break;
-        case AtomicType::TYPE_SINT64:
-            printf("%" PRId64, int64Val[i]);
-            break;
-        case AtomicType::TYPE_SUINT64:
-            printf("%" PRIu64, uint64Val[i]);
-            break;
-            
         default:
             FATAL("unimplemented const type");
         }
@@ -6739,28 +6642,27 @@ lTypeConvAtomic(FunctionEmitContext *ctx, llvm::Value *exprVal,
     std::string opName = exprVal->getName().str();
     switch (toType->basicType) {
     case AtomicType::TYPE_BOOL: opName += "_to_bool"; break;
-    case AtomicType::TYPE_INT8: opName += "_to_int8"; break;
-    case AtomicType::TYPE_UINT8: opName += "_to_uint8"; break;
-    case AtomicType::TYPE_INT16: opName += "_to_int16"; break;
-    case AtomicType::TYPE_UINT16: opName += "_to_uint16"; break;
-    case AtomicType::TYPE_INT32: opName += "_to_int32"; break;
-    case AtomicType::TYPE_UINT32: opName += "_to_uint32"; break;
-    case AtomicType::TYPE_INT64: opName += "_to_int64"; break;
-    case AtomicType::TYPE_UINT64: opName += "_to_uint64"; break;
+    case AtomicType::TYPE_INT8:
+    case AtomicType::TYPE_SINT8: opName += "_to_int8"; break;
+    case AtomicType::TYPE_UINT8:
+    case AtomicType::TYPE_SUINT8: opName += "_to_uint8"; break;
+    case AtomicType::TYPE_INT16:
+    case AtomicType::TYPE_SINT16: opName += "_to_int16"; break;
+    case AtomicType::TYPE_UINT16:
+    case AtomicType::TYPE_SUINT16: opName += "_to_uint16"; break;
+    case AtomicType::TYPE_INT32: 
+    case AtomicType::TYPE_SINT32: opName += "_to_int32"; break;
+    case AtomicType::TYPE_UINT32:
+    case AtomicType::TYPE_SUINT32: opName += "_to_uint32"; break;
+    case AtomicType::TYPE_INT64: 
+    case AtomicType::TYPE_SINT64: opName += "_to_int64"; break;
+    case AtomicType::TYPE_UINT64:
+    case AtomicType::TYPE_SUINT64: opName += "_to_uint64"; break;
     case AtomicType::TYPE_FLOAT: opName += "_to_float"; break;
     case AtomicType::TYPE_DOUBLE: opName += "_to_double"; break;
-    
-    case AtomicType::TYPE_SINT8: opName += "_to_int8"; break;
-    case AtomicType::TYPE_SUINT8: opName += "_to_uint8"; break;
-    case AtomicType::TYPE_SINT16: opName += "_to_int16"; break;
-    case AtomicType::TYPE_SUINT16: opName += "_to_uint16"; break;
-    case AtomicType::TYPE_SINT32: opName += "_to_int32"; break;
-    case AtomicType::TYPE_SUINT32: opName += "_to_uint32"; break;
-    case AtomicType::TYPE_SINT64: opName += "_to_int64"; break;
-    case AtomicType::TYPE_SUINT64: opName += "_to_uint64"; break;
-    
     default: FATAL("Unimplemented");
     }
+    
     const char *cOpName = opName.c_str();
 
     switch (toType->basicType) {
@@ -6783,7 +6685,7 @@ lTypeConvAtomic(FunctionEmitContext *ctx, llvm::Value *exprVal,
         case AtomicType::TYPE_INT16:
         case AtomicType::TYPE_INT32:
         case AtomicType::TYPE_INT64:
-		case AtomicType::TYPE_SINT8:
+        case AtomicType::TYPE_SINT8:
         case AtomicType::TYPE_SINT16:
         case AtomicType::TYPE_SINT32:
         case AtomicType::TYPE_SINT64:

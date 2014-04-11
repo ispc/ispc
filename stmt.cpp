@@ -2946,23 +2946,23 @@ lEncodeType(const Type *t) {
     if (Type::Equal(t, AtomicType::UniformBool))     return 'b';
     if (Type::Equal(t, AtomicType::VaryingBool))     return 'B';
     if (Type::Equal(t, AtomicType::UniformInt32)  ||
-		Type::Equal(t, AtomicType::UniformSInt32))   return 'i';
+        Type::Equal(t, AtomicType::UniformSInt32))   return 'i';
     if (Type::Equal(t, AtomicType::VaryingInt32)  ||
-		Type::Equal(t, AtomicType::VaryingSInt32))   return 'I';
+        Type::Equal(t, AtomicType::VaryingSInt32))   return 'I';
     if (Type::Equal(t, AtomicType::UniformUInt32) ||
-		Type::Equal(t, AtomicType::UniformSUInt32))  return 'u';
+        Type::Equal(t, AtomicType::UniformSUInt32))  return 'u';
     if (Type::Equal(t, AtomicType::VaryingUInt32) ||
-		Type::Equal(t, AtomicType::VaryingSUInt32))  return 'U';
+        Type::Equal(t, AtomicType::VaryingSUInt32))  return 'U';
     if (Type::Equal(t, AtomicType::UniformFloat))    return 'f';
     if (Type::Equal(t, AtomicType::VaryingFloat))    return 'F';
     if (Type::Equal(t, AtomicType::UniformInt64)  ||
-		Type::Equal(t, AtomicType::UniformSInt64))   return 'l';
+        Type::Equal(t, AtomicType::UniformSInt64))   return 'l';
     if (Type::Equal(t, AtomicType::VaryingInt64)  ||
-		Type::Equal(t, AtomicType::VaryingSInt64))   return 'L';
+        Type::Equal(t, AtomicType::VaryingSInt64))   return 'L';
     if (Type::Equal(t, AtomicType::UniformUInt64) ||
-		Type::Equal(t, AtomicType::UniformSUInt64))  return 'v';
+        Type::Equal(t, AtomicType::UniformSUInt64))  return 'v';
     if (Type::Equal(t, AtomicType::VaryingUInt64) ||
-		Type::Equal(t, AtomicType::VaryingSUInt64))  return 'V';
+        Type::Equal(t, AtomicType::VaryingSUInt64))  return 'V';
     if (Type::Equal(t, AtomicType::UniformDouble))   return 'd';
     if (Type::Equal(t, AtomicType::VaryingDouble))   return 'D';
     if (CastType<PointerType>(t) != NULL) {

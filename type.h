@@ -363,8 +363,7 @@ public:
     static const AtomicType *UniformInt64, *VaryingInt64;
     static const AtomicType *UniformUInt64, *VaryingUInt64;
     static const AtomicType *UniformDouble, *VaryingDouble;
-    static const AtomicType *Void;
-    
+    static const AtomicType *Void; 
     static const AtomicType *UniformSInt8, *VaryingSInt8;
     static const AtomicType *UniformSInt16, *VaryingSInt16;
     static const AtomicType *UniformSInt32, *VaryingSInt32;

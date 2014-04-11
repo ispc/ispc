@@ -544,27 +544,26 @@ AtomicType::GetCDeclaration(const std::string &name) const {
     if (isConst) ret += "const ";
 
     switch (basicType) {
-    case TYPE_VOID:   ret += "void";     break;
-    case TYPE_BOOL:   ret += "bool";     break;
-    case TYPE_INT8:   ret += "int8_t";   break;
-    case TYPE_UINT8:  ret += "uint8_t";  break;
-    case TYPE_INT16:  ret += "int16_t";  break;
-    case TYPE_UINT16: ret += "uint16_t"; break;
-    case TYPE_INT32:  ret += "int32_t";  break;
-    case TYPE_UINT32: ret += "uint32_t"; break;
-    case TYPE_FLOAT:  ret += "float";    break;
-    case TYPE_INT64:  ret += "int64_t";  break;
-    case TYPE_UINT64: ret += "uint64_t"; break;
-    case TYPE_DOUBLE: ret += "double";   break;
-    
+    case TYPE_VOID:    ret += "void";     break;
+    case TYPE_BOOL:    ret += "bool";     break;
+    case TYPE_INT8:
     case TYPE_SINT8:   ret += "int8_t";   break;
+    case TYPE_UINT8:
     case TYPE_SUINT8:  ret += "uint8_t";  break;
+    case TYPE_INT16:
     case TYPE_SINT16:  ret += "int16_t";  break;
+    case TYPE_UINT16:
     case TYPE_SUINT16: ret += "uint16_t"; break;
+    case TYPE_INT32: 
     case TYPE_SINT32:  ret += "int32_t";  break;
+    case TYPE_UINT32:
     case TYPE_SUINT32: ret += "uint32_t"; break;
+    case TYPE_FLOAT:   ret += "float";    break;
+    case TYPE_INT64: 
     case TYPE_SINT64:  ret += "int64_t";  break;
+    case TYPE_UINT64:
     case TYPE_SUINT64: ret += "uint64_t"; break;
+    case TYPE_DOUBLE:  ret += "double";   break;
     default: FATAL("Logic error in AtomicType::GetCDeclaration()");
     }
 
@@ -682,8 +681,7 @@ AtomicType::GetDIType(llvm::DIDescriptor scope) const {
         case TYPE_UINT64:
             return m->diBuilder->createBasicType("uint64", 64 /* size */, 64 /* align */,
                                                  llvm::dwarf::DW_ATE_unsigned);
-            break;
-        
+            break;    
         case TYPE_SINT8:
             return m->diBuilder->createBasicType("sint8", 8 /* size */, 8 /* align */,
                                                  llvm::dwarf::DW_ATE_signed);
@@ -714,8 +712,7 @@ AtomicType::GetDIType(llvm::DIDescriptor scope) const {
         case TYPE_SUINT64:
             return m->diBuilder->createBasicType("suint64", 64 /* size */, 64 /* align */,
                                                  llvm::dwarf::DW_ATE_unsigned);
-            break;
-        
+            break; 
         default:
             FATAL("unhandled basic type in AtomicType::GetDIType()");
             return llvm::DIType();
