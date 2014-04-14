@@ -449,7 +449,10 @@ Target::Target(const char *arch, const char *cpu, const char *isa, bool pic) :
         this->m_maskBitCount = 1;
         this->m_hasHalf = true;
         this->m_hasTranscendentals = true;
-        this->m_hasTrigonometry = true;
+        // It's set to false, because stdlib implementation of math functions
+        // is faster on MIC, than "native" implementation profided by the
+        // icc compiler.
+        this->m_hasTrigonometry = false;
         this->m_hasGather = this->m_hasScatter = true;
         this->m_hasRsqrtd = this->m_hasRcpd = true;
     }
