@@ -5864,7 +5864,7 @@ ConstExpr::ConstExpr(ConstExpr *old, double *v)
             int32Val[i] = (int)v[i];
         break;
     case AtomicType::TYPE_UINT32:
-    case AtomicType::TYPE_SUINT32
+    case AtomicType::TYPE_SUINT32:
         for (int i = 0; i < Count(); ++i)
             uint32Val[i] = (unsigned int)v[i];
         break;
