@@ -3286,10 +3286,16 @@ void CWriter::visitBinaryOperator(llvm::Instruction &I) {
       if ((I.getOpcode() == llvm::Instruction::Shl ||
            I.getOpcode() == llvm::Instruction::LShr ||
            I.getOpcode() == llvm::Instruction::AShr)) {
-          if (LLVMVectorValuesAllEqual(I.getOperand(1))) {
-              Out << "__extract_element(";
-              writeOperand(I.getOperand(1));
-              Out << ", 0) ";
+          llvm::Value *splat = NULL;
+          if (LLVMVectorValuesAllEqual(I.getOperand(1), &splat)) {
+              if (splat) {
+                  // Avoid __extract_element(splat(value), 0), if possible.
+                  writeOperand(splat);
+              } else {
+                  Out << "__extract_element(";
+                  writeOperand(I.getOperand(1));
+                  Out << ", 0) ";
+              }
           }
           else
               writeOperand(I.getOperand(1));

@@ -818,7 +818,8 @@ LLVMExtractVectorInts(llvm::Value *v, int64_t ret[], int *nElts) {
 
 static bool
 lVectorValuesAllEqual(llvm::Value *v, int vectorLength,
-                      std::vector<llvm::PHINode *> &seenPhis);
+                      std::vector<llvm::PHINode *> &seenPhis,
+                      llvm::Value **splatValue = NULL);
 
 
 /** This function checks to see if the given (scalar or vector) value is an
@@ -1068,20 +1069,37 @@ lVectorShiftRightAllEqual(llvm::Value *val, llvm::Value *shift,
 
 static bool
 lVectorValuesAllEqual(llvm::Value *v, int vectorLength,
-                      std::vector<llvm::PHINode *> &seenPhis) {
+                      std::vector<llvm::PHINode *> &seenPhis,
+                      llvm::Value **splatValue) {
     if (vectorLength == 1)
         return true;
 
-    if (llvm::isa<llvm::ConstantAggregateZero>(v))
+    if (llvm::isa<llvm::ConstantAggregateZero>(v)) {
+        if (splatValue) {
+            llvm::ConstantAggregateZero *caz =
+                llvm::dyn_cast<llvm::ConstantAggregateZero>(v);
+            *splatValue = caz->getSequentialElement();
+        }
         return true;
+    }
 
     llvm::ConstantVector *cv = llvm::dyn_cast<llvm::ConstantVector>(v);
-    if (cv != NULL)
-        return (cv->getSplatValue() != NULL);
+    if (cv != NULL) {
+        llvm::Value* splat = cv->getSplatValue();
+        if (splat != NULL && splatValue) {
+            *splatValue = splat;
+        }
+        return (splat != NULL);
+    }
 
     llvm::ConstantDataVector *cdv = llvm::dyn_cast<llvm::ConstantDataVector>(v);
-    if (cdv != NULL)
-        return (cdv->getSplatValue() != NULL);
+    if (cdv != NULL) {
+        llvm::Value* splat = cdv->getSplatValue();
+        if (splat != NULL && splatValue) {
+            *splatValue = splat;
+        }
+        return (splat != NULL);
+    }
 
     llvm::BinaryOperator *bop = llvm::dyn_cast<llvm::BinaryOperator>(v);
     if (bop != NULL) {
@@ -1178,14 +1196,14 @@ lVectorValuesAllEqual(llvm::Value *v, int vectorLength,
     where the values are actually all equal.
 */
 bool
-LLVMVectorValuesAllEqual(llvm::Value *v) {
+LLVMVectorValuesAllEqual(llvm::Value *v, llvm::Value **splat) {
     llvm::VectorType *vt =
         llvm::dyn_cast<llvm::VectorType>(v->getType());
     Assert(vt != NULL);
     int vectorLength = vt->getNumElements();
 
     std::vector<llvm::PHINode *> seenPhis;
-    bool equal = lVectorValuesAllEqual(v, vectorLength, seenPhis);
+    bool equal = lVectorValuesAllEqual(v, vectorLength, seenPhis, splat);
 
     Debug(SourcePos(), "LLVMVectorValuesAllEqual(%s) -> %s.",
           v->getName().str().c_str(), equal ? "true" : "false");
