@@ -534,8 +534,6 @@ Optimize(llvm::Module *module, int optLevel) {
         optPM.add(llvm::createScalarReplAggregatesPass());
         optPM.add(llvm::createEarlyCSEPass());
         optPM.add(llvm::createLowerExpectIntrinsicPass());
-        optPM.add(llvm::createTypeBasedAliasAnalysisPass());
-        optPM.add(llvm::createBasicAliasAnalysisPass());
 
         // Early optimizations to try to reduce the total amount of code to
         // work with if we can
