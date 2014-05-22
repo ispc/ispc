@@ -1569,6 +1569,8 @@ lExtractFirstVectorElement(llvm::Value *v,
                                                      phiMap);
         llvm::Value *v1 = lExtractFirstVectorElement(bop->getOperand(1),
                                                      phiMap);
+        Assert(v0 != NULL);
+        Assert(v1 != NULL);
         // Note that the new binary operator is inserted immediately before
         // the previous vector one
         return llvm::BinaryOperator::Create(bop->getOpcode(), v0, v1,
@@ -1615,10 +1617,22 @@ lExtractFirstVectorElement(llvm::Value *v,
         return scalarPhi;
     }
 
+    // We should consider "shuffle" case and "insertElement" case separately.
+    // For example we can have shuffle(mul, undef, zero) but function
+    // "LLVMFlattenInsertChain" can handle only case shuffle(insertElement, undef, zero).
+    // Also if we have insertElement under shuffle we will handle it the next call of
+    // "lExtractFirstVectorElement" function.
+    if (llvm::isa<llvm::ShuffleVectorInst>(v)) {
+        llvm::ShuffleVectorInst *shuf = llvm::dyn_cast<llvm::ShuffleVectorInst>(v);
+        llvm::Value *indices = shuf->getOperand(2);
+        if (llvm::isa<llvm::ConstantAggregateZero>(indices)) {
+            return lExtractFirstVectorElement(shuf->getOperand(0), phiMap);
+        }
+    }
+
     // If we have a chain of insertelement instructions, then we can just
     // flatten them out and grab the value for the first one.
-    if (llvm::isa<llvm::InsertElementInst>(v) ||
-        llvm::isa<llvm::ShuffleVectorInst>(v)) {
+    if (llvm::isa<llvm::InsertElementInst>(v)) {
         return LLVMFlattenInsertChain(v, vt->getNumElements(), false);
     }
 
