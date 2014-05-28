@@ -81,15 +81,15 @@ struct Variability {
 /** Enumerant that records each of the types that inherit from the Type
     baseclass. */
 enum TypeId {
-    ATOMIC_TYPE,
-    ENUM_TYPE,
-    POINTER_TYPE,
-    ARRAY_TYPE,
-    VECTOR_TYPE,
-    STRUCT_TYPE,
-    UNDEFINED_STRUCT_TYPE,
-    REFERENCE_TYPE,
-    FUNCTION_TYPE
+  ATOMIC_TYPE,           // 0
+  ENUM_TYPE,             // 1
+  POINTER_TYPE,          // 2
+  ARRAY_TYPE,            // 3
+  VECTOR_TYPE,           // 4
+  STRUCT_TYPE,           // 5
+  UNDEFINED_STRUCT_TYPE, // 6
+  REFERENCE_TYPE,        // 7
+  FUNCTION_TYPE          // 8
 };
 
 
@@ -675,6 +675,7 @@ public:
     bool IsIntType() const;
     bool IsUnsignedType() const;
     bool IsConstType() const;
+    bool IsDefined() const;
 
     const Type *GetBaseType() const;
     const StructType *GetAsVaryingType() const;

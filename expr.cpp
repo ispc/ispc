@@ -5143,9 +5143,18 @@ MemberExpr::create(Expr *e, const char *id, SourcePos p, SourcePos idpos,
                   exprType->GetString().c_str());
         return NULL;
     }
-
-    if (CastType<StructType>(exprType) != NULL)
+    if (CastType<StructType>(exprType) != NULL) {
+      const StructType *st = CastType<StructType>(exprType);
+      if (st->IsDefined()) { 
         return new StructMemberExpr(e, id, p, idpos, derefLValue);
+      }
+      else {
+        Error(p, "Member operator \"%s\" can't be applied to declared "
+              "struct \"%s\" containing an undefined struct type.", derefLValue ? "->" : ".",
+              exprType->GetString().c_str());
+        return NULL;
+      }
+    }
     else if (CastType<VectorType>(exprType) != NULL)
         return new VectorMemberExpr(e, id, p, idpos, derefLValue);
     else if (CastType<UndefinedStructType>(exprType)) {
@@ -8706,6 +8715,12 @@ NewExpr::TypeCheck() {
     if (CastType<UndefinedStructType>(allocType) != NULL) {
         Error(pos, "Can't dynamically allocate storage for declared "
               "but not defined type \"%s\".", allocType->GetString().c_str());
+        return NULL;
+    }
+    const StructType *st = CastType<StructType>(allocType);
+    if (st != NULL && !st->IsDefined()) {
+        Error(pos, "Can't dynamically allocate storage for declared "
+              "type \"%s\" containing undefined member type.", allocType->GetString().c_str());
         return NULL;
     }
 

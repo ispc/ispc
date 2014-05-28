@@ -1956,6 +1956,25 @@ StructType::IsConstType() const {
 }
 
 
+bool
+StructType::IsDefined() const {
+  for (int i = 0; i < GetElementCount(); i++) {
+    const Type *t = GetElementType(i);
+    const UndefinedStructType *ust = CastType<UndefinedStructType>(t);
+    if (ust != NULL) {
+      return false;
+    }
+    const StructType *st = CastType<StructType>(t);
+    if (st != NULL) {
+      if (!st->IsDefined()) {
+        return false;
+      }
+    }
+  }
+  return true;
+}
+
+
 const Type *
 StructType::GetBaseType() const {
     return this;
