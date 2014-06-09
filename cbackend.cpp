@@ -2163,7 +2163,13 @@ static SpecialGlobalClass getGlobalVariableClass(const llvm::GlobalVariable *GV)
 
   // Otherwise, if it is other metadata, don't print it.  This catches things
   // like debug information.
+#if defined(LLVM_3_5)
+  // Here we compare char *
+  if (!strcmp(GV->getSection(), "llvm.metadata"))
+#else
+  // Here we compare strings
   if (GV->getSection() == "llvm.metadata")
+#endif
     return NotPrinted;
 
   return NotSpecial;
