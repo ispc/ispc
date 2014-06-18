@@ -1498,7 +1498,8 @@ define <$1 x $2> @__atomic_compare_exchange_$3_global($2* %ptr, <$1 x $2> %cmp,
    %cmp_LANE_ID = extractelement <$1 x $2> %cmp, i32 LANE
    %val_LANE_ID = extractelement <$1 x $2> %val, i32 LANE
   ifelse(LLVM_VERSION,LLVM_3_5,`
-    %r_LANE_ID = cmpxchg $2 * %ptr, $2 %cmp_LANE_ID, $2 %val_LANE_ID seq_cst seq_cst
+    %r_LANE_ID_t = cmpxchg $2 * %ptr, $2 %cmp_LANE_ID, $2 %val_LANE_ID seq_cst seq_cst
+    %r_LANE_ID = extractvalue { $2, i1 } %r_LANE_ID_t, 0
   ',`
     %r_LANE_ID = cmpxchg $2 * %ptr, $2 %cmp_LANE_ID, $2 %val_LANE_ID seq_cst
   ')
@@ -1513,7 +1514,8 @@ define <$1 x $2> @__atomic_compare_exchange_$3_global($2* %ptr, <$1 x $2> %cmp,
 define $2 @__atomic_compare_exchange_uniform_$3_global($2* %ptr, $2 %cmp,
                                                        $2 %val) nounwind alwaysinline {
   ifelse(LLVM_VERSION,LLVM_3_5,`
-   %r = cmpxchg $2 * %ptr, $2 %cmp, $2 %val seq_cst seq_cst
+   %r_t = cmpxchg $2 * %ptr, $2 %cmp, $2 %val seq_cst seq_cst
+   %r = extractvalue { $2, i1 } %r_t, 0
   ',`
    %r = cmpxchg $2 * %ptr, $2 %cmp, $2 %val seq_cst
   ')
