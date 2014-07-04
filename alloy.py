@@ -84,6 +84,10 @@ def build_LLVM(version_LLVM, revision, folder, tarball, debug, selfbuild, extra,
     # Here we understand what and where do we want to build
     current_path = os.getcwd()
     llvm_home = os.environ["LLVM_HOME"]
+    
+
+    make_sure_dir_exists(llvm_home)
+    
     os.chdir(llvm_home)
     FOLDER_NAME=version_LLVM
     if  version_LLVM == "trunk":
@@ -583,7 +587,7 @@ def validation_run(only, only_targets, reference_branch, number, notify, update,
         msg.attach(text)
         attach_mail_file(msg, alloy_build, "alloy_build.log")
         s = smtplib.SMTP(smtp_server)
-        s.sendmail('ISPC_test_system', options.notify, msg.as_string())
+        s.sendmail('ISPC_test_system', options.notify.split(" "), msg.as_string())
         s.quit()
 
 def Main():
@@ -630,7 +634,8 @@ def Main():
     current_path = os.getcwd()
     make = "make -j" + options.speed
     if os.environ["ISPC_HOME"] != os.getcwd():
-        error("you ISPC_HOME and your current path are different!\n", 2)
+        error("you ISPC_HOME and your current path are different! (" + os.environ["ISPC_HOME"] + " is not equal to " + os.getcwd() +
+        ")\n", 2)
     if options.perf_llvm == True:
         if options.branch == "master":
             options.branch = "trunk"
@@ -679,6 +684,7 @@ import common
 error = common.error
 take_lines = common.take_lines
 print_debug = common.print_debug
+make_sure_dir_exists = common.make_sure_dir_exists
 if __name__ == '__main__':
     # parsing options
     class MyParser(OptionParser):
