@@ -473,7 +473,10 @@ def validation_run(only, only_targets, reference_branch, number, notify, update,
                     for i2 in range(0,len(opts)):
                         stability.arch = arch[i1]
                         stability.no_opt = opts[i2]
-                        execute_stability(stability, R, print_version)
+                        try:
+                            execute_stability(stability, R, print_version)
+                        except:
+                            print_debug("Exception in execute_stability - maybe some test subprocess terminated before it should have\n", False, stability_log)
                         print_version = 0
             for j in range(0,len(sde_targets)):
                 stability.target = sde_targets[j][1]
@@ -580,6 +583,8 @@ def validation_run(only, only_targets, reference_branch, number, notify, update,
         f_lines = fp.readlines()
         fp.close()
         line = ""
+        if  not sys.exc_info()[0] == None:
+            line = line + "Last exception: " + str(sys.exc_info()) + '\n'
         for i in range(0,len(f_lines)):
             line = line + f_lines[i][:-1]
             line = line + '   \n'
@@ -664,6 +669,7 @@ from optparse import OptionParser
 from optparse import OptionGroup
 import sys
 import os
+import errno
 import operator
 import time
 import glob
