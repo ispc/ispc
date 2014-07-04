@@ -34,6 +34,7 @@
 # // Author: Filippov Ilia
 import sys
 import os
+import errno
 import shutil
 
 def write_to_file(filename, line):
@@ -48,6 +49,14 @@ def remove_if_exists(filename):
             shutil.rmtree(filename)
         else:
             os.remove(filename)
+
+def make_sure_dir_exists(path):
+    try:
+        os.makedirs(path)
+    except OSError as exception:
+        if exception.errno != errno.EEXIST:
+            raise
+
 
 # detect version which is printed after command
 def take_lines(command, which):
