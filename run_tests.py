@@ -80,10 +80,11 @@ def run_cmds(compile_cmds, run_cmd, filename, expect_failure):
             if output != "":
                 print_debug("%s" % output.encode("utf-8"), s, run_tests_log)
             return (1, 0)
-
-    (return_code, output) = run_command(run_cmd)
-    run_failed = (return_code != 0)
-
+    if not options.save_bin:
+        (return_code, output) = run_command(run_cmd)
+        run_failed = (return_code != 0)
+    else:
+        run_failed = 0
     surprise = ((expect_failure and not run_failed) or
                 (not expect_failure and run_failed))
     if surprise == True:
@@ -275,13 +276,14 @@ def run_test(testname):
 
         # clean up after running the test
         try:
-            if not run_error:
-                os.unlink(exe_name)
-                if is_windows:
-                    basename = os.path.basename(filename)
-                    os.unlink("%s.pdb" % basename)
-                    os.unlink("%s.ilk" % basename)
-            os.unlink(obj_name)
+            if not options.save_bin:
+                if not run_error:
+                    os.unlink(exe_name)
+                    if is_windows:
+                        basename = os.path.basename(filename)
+                        os.unlink("%s.pdb" % basename)
+                        os.unlink("%s.ilk" % basename)
+                os.unlink(obj_name)
         except:
             None
 
@@ -792,6 +794,8 @@ if __name__ == "__main__":
                   action = "store_true")
     parser.add_option("--file", dest='in_file', help='file to save run_tests output', default="")
     parser.add_option("--verify", dest='verify', help='verify the file fail_db.txt', default=False, action="store_true")
+    parser.add_option("--save-bin", dest='save_bin', help='compile and create bin, but don\'t execute it',
+                  default=False, action="store_true")
     (options, args) = parser.parse_args()
     L = run_tests(options, args, 1)
     exit(0)
