@@ -59,10 +59,15 @@ def run_command(cmd):
     lexer.whitespace_split = True
     lexer.escape = ''
     arg_list = list(lexer)
-
-    sp = subprocess.Popen(arg_list, stdin=None,
+    
+    try:
+        sp = subprocess.Popen(arg_list, stdin=None,
                           stdout=subprocess.PIPE,
                           stderr=subprocess.PIPE)
+    except:
+        print_debug("ERROR: The child (%s) raised an esception: %s\n" % (cmd, sys.exc_info()[1]), s, run_tests_log)
+        raise
+
     out = sp.communicate()
     output = ""
     output += out[0].decode("utf-8")
@@ -213,7 +218,7 @@ def run_test(testname):
                     obj_name = "%s.obj" % os.path.basename(filename)
                 exe_name = "%s.exe" % os.path.basename(filename)
 
-                cc_cmd = "%s /I. /I../winstuff /Zi /nologo /DTEST_SIG=%d %s %s /Fe%s" % \
+                cc_cmd = "%s /I. /Zi /nologo /DTEST_SIG=%d %s %s /Fe%s" % \
                          (options.compiler_exe, match, add_prefix("test_static.cpp"), obj_name, exe_name)
                 if should_fail:
                     cc_cmd += " /DEXPECT_FAILURE"
@@ -355,7 +360,11 @@ def run_tasks_from_queue(queue, queue_ret, queue_skip, total_tests_arg, max_test
             sys.exit(0)
 
         if check_test(filename):
-            (compile_error, run_error) = run_test(filename)
+            try:
+                (compile_error, run_error) = run_test(filename)
+            except:
+                sys.exit(-1) # This is in case the child has unexpectedly died
+            
             if compile_error != 0:
                 compile_error_files += [ filename ]
             if run_error != 0:
@@ -680,14 +689,21 @@ def run_tests(options1, args, print_version):
     task_threads = [0] * nthreads
     for x in range(nthreads):
         task_threads[x] = multiprocessing.Process(target=run_tasks_from_queue, args=(q, qret, qskip, total_tests,
-            max_test_length, finished_tests_counter, finished_tests_counter_lock, glob_var))
+                max_test_length, finished_tests_counter, finished_tests_counter_lock, glob_var))
         task_threads[x].start()
+
     # wait for them to all finish and then return the number that failed
     # (i.e. return 0 if all is ok)
     for t in task_threads:
         t.join()
     if options.non_interactive == False:
         print_debug("\n", s, run_tests_log)
+
+    
+    for jb in task_threads:
+        if not jb.exitcode == 0:
+            raise OSError(2, 'Some test subprocess has thrown an exception', '')
+
 
     temp_time = (time.time() - start_time)
     elapsed_time = time.strftime('%Hh%Mm%Ssec.', time.gmtime(temp_time))

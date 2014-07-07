@@ -818,7 +818,8 @@ LLVMExtractVectorInts(llvm::Value *v, int64_t ret[], int *nElts) {
 
 static bool
 lVectorValuesAllEqual(llvm::Value *v, int vectorLength,
-                      std::vector<llvm::PHINode *> &seenPhis);
+                      std::vector<llvm::PHINode *> &seenPhis,
+                      llvm::Value **splatValue = NULL);
 
 
 /** This function checks to see if the given (scalar or vector) value is an
@@ -1068,20 +1069,37 @@ lVectorShiftRightAllEqual(llvm::Value *val, llvm::Value *shift,
 
 static bool
 lVectorValuesAllEqual(llvm::Value *v, int vectorLength,
-                      std::vector<llvm::PHINode *> &seenPhis) {
+                      std::vector<llvm::PHINode *> &seenPhis,
+                      llvm::Value **splatValue) {
     if (vectorLength == 1)
         return true;
 
-    if (llvm::isa<llvm::ConstantAggregateZero>(v))
+    if (llvm::isa<llvm::ConstantAggregateZero>(v)) {
+        if (splatValue) {
+            llvm::ConstantAggregateZero *caz =
+                llvm::dyn_cast<llvm::ConstantAggregateZero>(v);
+            *splatValue = caz->getSequentialElement();
+        }
         return true;
+    }
 
     llvm::ConstantVector *cv = llvm::dyn_cast<llvm::ConstantVector>(v);
-    if (cv != NULL)
-        return (cv->getSplatValue() != NULL);
+    if (cv != NULL) {
+        llvm::Value* splat = cv->getSplatValue();
+        if (splat != NULL && splatValue) {
+            *splatValue = splat;
+        }
+        return (splat != NULL);
+    }
 
     llvm::ConstantDataVector *cdv = llvm::dyn_cast<llvm::ConstantDataVector>(v);
-    if (cdv != NULL)
-        return (cdv->getSplatValue() != NULL);
+    if (cdv != NULL) {
+        llvm::Value* splat = cdv->getSplatValue();
+        if (splat != NULL && splatValue) {
+            *splatValue = splat;
+        }
+        return (splat != NULL);
+    }
 
     llvm::BinaryOperator *bop = llvm::dyn_cast<llvm::BinaryOperator>(v);
     if (bop != NULL) {
@@ -1178,14 +1196,14 @@ lVectorValuesAllEqual(llvm::Value *v, int vectorLength,
     where the values are actually all equal.
 */
 bool
-LLVMVectorValuesAllEqual(llvm::Value *v) {
+LLVMVectorValuesAllEqual(llvm::Value *v, llvm::Value **splat) {
     llvm::VectorType *vt =
         llvm::dyn_cast<llvm::VectorType>(v->getType());
     Assert(vt != NULL);
     int vectorLength = vt->getNumElements();
 
     std::vector<llvm::PHINode *> seenPhis;
-    bool equal = lVectorValuesAllEqual(v, vectorLength, seenPhis);
+    bool equal = lVectorValuesAllEqual(v, vectorLength, seenPhis, splat);
 
     Debug(SourcePos(), "LLVMVectorValuesAllEqual(%s) -> %s.",
           v->getName().str().c_str(), equal ? "true" : "false");
@@ -1551,6 +1569,8 @@ lExtractFirstVectorElement(llvm::Value *v,
                                                      phiMap);
         llvm::Value *v1 = lExtractFirstVectorElement(bop->getOperand(1),
                                                      phiMap);
+        Assert(v0 != NULL);
+        Assert(v1 != NULL);
         // Note that the new binary operator is inserted immediately before
         // the previous vector one
         return llvm::BinaryOperator::Create(bop->getOpcode(), v0, v1,
@@ -1597,10 +1617,22 @@ lExtractFirstVectorElement(llvm::Value *v,
         return scalarPhi;
     }
 
+    // We should consider "shuffle" case and "insertElement" case separately.
+    // For example we can have shuffle(mul, undef, zero) but function
+    // "LLVMFlattenInsertChain" can handle only case shuffle(insertElement, undef, zero).
+    // Also if we have insertElement under shuffle we will handle it the next call of
+    // "lExtractFirstVectorElement" function.
+    if (llvm::isa<llvm::ShuffleVectorInst>(v)) {
+        llvm::ShuffleVectorInst *shuf = llvm::dyn_cast<llvm::ShuffleVectorInst>(v);
+        llvm::Value *indices = shuf->getOperand(2);
+        if (llvm::isa<llvm::ConstantAggregateZero>(indices)) {
+            return lExtractFirstVectorElement(shuf->getOperand(0), phiMap);
+        }
+    }
+
     // If we have a chain of insertelement instructions, then we can just
     // flatten them out and grab the value for the first one.
-    if (llvm::isa<llvm::InsertElementInst>(v) ||
-        llvm::isa<llvm::ShuffleVectorInst>(v)) {
+    if (llvm::isa<llvm::InsertElementInst>(v)) {
         return LLVMFlattenInsertChain(v, vt->getNumElements(), false);
     }
 

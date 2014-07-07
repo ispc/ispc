@@ -2,6 +2,14 @@
 ispc News
 =========
 
+ispc 1.7.0 is Released
+----------------------
+
+A major new version of ISPC with several language and library extensions and
+fixes in debug info support. Binaries for all platforms are based on patched
+version on LLVM 3.4. There also performance improvements beyond switchover to
+LLVM 3.4.
+
 ispc 1.6.0 is Released
 ----------------------
 
@@ -10,7 +18,6 @@ performance and stability. Several new targets were added. There are also
 a number of language and library extensions. Released binaries are based on
 patched LLVM 3.3 on Linux and MacOS and LLVM 3.4rc3 on Windows. Please refer
 to Release Notes for complete set of changes.
-
 
 ispc 1.5.0 is Released
 ----------------------

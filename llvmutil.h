@@ -228,7 +228,8 @@ extern llvm::Constant *LLVMMaskAllOff;
 /** Tests to see if all of the elements of the vector in the 'v' parameter
     are equal.  Like lValuesAreEqual(), this is a conservative test and may
     return false for arrays where the values are actually all equal.  */
-extern bool LLVMVectorValuesAllEqual(llvm::Value *v);
+extern bool LLVMVectorValuesAllEqual(llvm::Value *v,
+                                     llvm::Value **splat = NULL);
 
 /** Given vector of integer-typed values, this function returns true if it
     can determine that the elements of the vector have a step of 'stride'

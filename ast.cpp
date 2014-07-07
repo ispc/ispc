@@ -389,6 +389,11 @@ lCheckAllOffSafety(ASTNode *node, void *data) {
         return false;
     }
 
+    if (dynamic_cast<PrintStmt *>(node) != NULL) {
+        *okPtr = false;
+        return false;
+    }
+
     if (dynamic_cast<NewExpr *>(node) != NULL ||
         dynamic_cast<DeleteStmt *>(node) != NULL) {
         // We definitely don't want to run the uniform variants of these if

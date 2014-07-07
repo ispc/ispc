@@ -183,7 +183,7 @@ struct TaskInfo {
     void *data;
     int taskIndex;
     int taskCount3d[3];
-#if defined(ISPC_IS_WINDOWS)
+#if defined(  ISPC_USE_CONCRT)
     event taskEvent;
 #endif
     int taskCount() const { return taskCount3d[0]*taskCount3d[1]*taskCount3d[2]; }
@@ -1003,7 +1003,7 @@ TaskGroup::Launch(int baseIndex, int count) {
         // Actually run the task. 
         // TBB does not expose the task -> thread mapping so we pretend it's 1:1
         int threadIndex = ti->taskIndex;
-        int threadCount = ti->taskCount;
+        int threadCount = ti->taskCount();
 
         ti->func(ti->data, threadIndex, threadCount, ti->taskIndex, ti->taskCount(),
             ti->taskIndex0(), ti->taskIndex1(), ti->taskIndex2(),
@@ -1033,7 +1033,7 @@ TaskGroup::Launch(int baseIndex, int count) {
 
             // TBB does not expose the task -> thread mapping so we pretend it's 1:1
             int threadIndex = ti->taskIndex;
-            int threadCount = ti->taskCount;
+            int threadCount = ti->taskCount();
             ti->func(ti->data, threadIndex, threadCount, ti->taskIndex, ti->taskCount(),
             ti->taskIndex0(), ti->taskIndex1(), ti->taskIndex2(),
             ti->taskCount0(), ti->taskCount1(), ti->taskCount2());

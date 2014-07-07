@@ -69,6 +69,7 @@
     #include "llvm/IR/CallSite.h"
     #include "llvm/IR/CFG.h"
     #include "llvm/IR/GetElementPtrTypeIterator.h"
+    #include "llvm/Support/FileSystem.h"
 #else
     #include "llvm/Analysis/Verifier.h"
     #include <llvm/Assembly/PrintModulePass.h>
@@ -1769,7 +1770,11 @@ std::string CWriter::GetValueName(const llvm::Value *Operand) {
 
   // Resolve potential alias.
   if (const llvm::GlobalAlias *GA = llvm::dyn_cast<llvm::GlobalAlias>(Operand)) {
+#if defined(LLVM_3_5)
+    if (const llvm::Value *V = GA->getAliasee())
+#else
     if (const llvm::Value *V = GA->resolveAliasedGlobal(false))
+#endif
       Operand = V;
   }
 
@@ -2158,7 +2163,13 @@ static SpecialGlobalClass getGlobalVariableClass(const llvm::GlobalVariable *GV)
 
   // Otherwise, if it is other metadata, don't print it.  This catches things
   // like debug information.
+#if defined(LLVM_3_5)
+  // Here we compare char *
+  if (!strcmp(GV->getSection(), "llvm.metadata"))
+#else
+  // Here we compare strings
   if (GV->getSection() == "llvm.metadata")
+#endif
     return NotPrinted;
 
   return NotSpecial;
@@ -3282,10 +3293,16 @@ void CWriter::visitBinaryOperator(llvm::Instruction &I) {
       if ((I.getOpcode() == llvm::Instruction::Shl ||
            I.getOpcode() == llvm::Instruction::LShr ||
            I.getOpcode() == llvm::Instruction::AShr)) {
-          if (LLVMVectorValuesAllEqual(I.getOperand(1))) {
-              Out << "__extract_element(";
-              writeOperand(I.getOperand(1));
-              Out << ", 0) ";
+          llvm::Value *splat = NULL;
+          if (LLVMVectorValuesAllEqual(I.getOperand(1), &splat)) {
+              if (splat) {
+                  // Avoid __extract_element(splat(value), 0), if possible.
+                  writeOperand(splat);
+              } else {
+                  Out << "__extract_element(";
+                  writeOperand(I.getOperand(1));
+                  Out << ", 0) ";
+              }
           }
           else
               writeOperand(I.getOperand(1));

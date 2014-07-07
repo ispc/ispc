@@ -1,3 +1,47 @@
+=== v1.7.0 === (18 April 2014)
+
+A major new version of ISPC with several language and library extensions and
+fixes in debug info support. Binaries for all platforms are based on patched
+version on LLVM 3.4. There also performance improvements beyond switchover to
+LLVM 3.4.
+
+The list of language and library changes:
+
+* Support for varying types in exported functions was added. See documentation
+  for more details.
+
+* get_programCount() function was moved from stdlib.ispc to
+  examples/util/util.isph, which needs to be included somewhere in your
+  project, if you want to use it.
+
+* Library functions for saturated arithmetic were added. add/sub/mul/div
+  operations are supported for signed and unsigned 8/16/32/64 integer types
+  (both uniform and varying).
+
+* The algorithm for selecting overloaded function was extended to cover more
+  types of overloading. Handling of reference types in overloaded functions was
+  fixed. The rules for selecting the best match were changed to match C++,
+  which requires the function to be the best match for all parameters. In
+  ambiguous cases, a warning is issued, but it will be converted to an error
+  in the next release.
+
+* Explicit typecasts between any two reference types were allowed.
+
+* Implicit cast of pointer to const type to void* was disallowed.
+
+The list of other notable changes is:
+
+* Number of fixes for better debug info support.
+
+* Memory corruption bug was fixed, which caused rare but not reproducible
+  compile time fails.
+
+* Alias analysis was enabled (more aggressive optimizations are expected).
+
+* A bug involving inaccurate handling of "const" qualifier was fixed. As a
+  result, more "const" qualifiers may appear in .h files, which may cause
+  compilation errors.
+
 === v1.6.0 === (19 December 2013)
 
 A major new version of ISPC with major improvements in performance and

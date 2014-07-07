@@ -765,7 +765,7 @@ AddBitcodeToModule(const unsigned char *bitcode, int length,
     llvm::MemoryBuffer *bcBuf = llvm::MemoryBuffer::getMemBuffer(sb);
 #if defined(LLVM_3_5)
     llvm::ErrorOr<llvm::Module *> ModuleOrErr = llvm::parseBitcodeFile(bcBuf, *g->ctx);
-    if (llvm::error_code EC = ModuleOrErr.getError())
+    if (std::error_code EC = ModuleOrErr.getError())
         Error(SourcePos(), "Error parsing stdlib bitcode: %s", EC.message().c_str());
     else {
         llvm::Module *bcModule = ModuleOrErr.get();
