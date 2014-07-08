@@ -274,7 +274,7 @@ Target::Target(const char *arch, const char *cpu, const char *isa, bool pic) :
         this->m_arch = arch;
     }
 
-    const char * cpuFromIsa;
+    const char * cpuFromIsa = "";
 
     // Check default LLVM generated targets
     if (!strcasecmp(isa, "sse2") ||
