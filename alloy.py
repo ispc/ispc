@@ -296,6 +296,17 @@ def build_ispc(version_LLVM, make):
         p_temp = os.getenv("PATH")
         os.environ["PATH"] = os.environ["LLVM_HOME"] + "/bin-" + version_LLVM + "/bin:" + os.environ["PATH"]
         try_do_LLVM("clean ISPC for building", "make clean", True)
+        folder = os.environ["LLVM_HOME"]  + os.sep + "llvm-" 
+        if options.folder == "":
+            folder += version_LLVM
+        if options.debug == True:
+            folder +=  "dbg"
+       
+        p = subprocess.Popen("svnversion " + folder, shell=True, \
+               stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        (revision_llvm, err) = p.communicate()
+        
+        try_do_LLVM("recognize LLVM revision", "svn info " + folder, True)
         try_do_LLVM("build ISPC with LLVM version " + version_LLVM + " ", make, True)
         os.environ["PATH"] = p_temp
     else:
@@ -703,6 +714,7 @@ import smtplib
 import datetime
 import copy
 import multiprocessing
+import subprocess
 from email.MIMEMultipart import MIMEMultipart
 from email.MIMEBase import MIMEBase
 from email.mime.text import MIMEText
