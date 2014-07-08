@@ -4954,7 +4954,7 @@ Overview
 --------
 SPMD programming in ``ispc`` is similar to a warp-synchronous CUDA programming.
 Namely, program instances in a gang are equivalent of CUDA threads in a single
-warp. Hence, to run efficiently on a GPU `ispc`` program must use tasking
+warp. Hence, to run efficiently on a GPU ``ispc`` program must use tasking
 functionality via ``launch`` keyword to ensure multiple number of warps are
 executed concurrently on the GPU.
 
@@ -4965,7 +4965,7 @@ utilize ``launch`` keyword to schedule work on a GPU.
 
 At the PTX level, ``launch`` keyword is mapped to CUDA Dynamic Parallelism and
 it schedules a grid of thread-blocks each 4 warps-wide (128 threads).  As a
-result, `ispc`` has a tasking-granularity of 4 tasks with PTX target; this
+result, ``ispc`` has a tasking-granularity of 4 tasks with PTX target; this
 restriction will be eliminated in future.
 
 When passing pointers to an ``export`` function, it is important that they
@@ -4982,30 +4982,31 @@ Compiling For The NVIDIA Kepler GPU
 -----------------------------------
 Compilation for NVIDIA Kepler GPU is a several step procedure.
 
-First, we need to generate a LLVM bitcode from ``ispc`` source file:
+First, we need to generate a LLVM assembly from ``ispc`` source file (``ispc``
+generates LLVM assembly instead of bitcode when ``nvptx`` target is chosen):
 
 ::
 
-  $ISPC_HOME/ispc foo.ispc --emit-llvm --target=nvptx -o foo.bc
+  $ISPC_HOME/ispc foo.ispc --emit-llvm --target=nvptx -o foo.ll
 
-If ``ispc`` is compiled with LLVM 3.2, the resulting bitcode can immediately be
-compiled into PTX with the help of ``ptxgen`` tool; this tool uses ``libNVVM``
-which is a part of a CUDA Toolkit.
 
-::
-
-  $ISPC_HOME/ptxtools/ptxgen --use_fast_math foo.bc -o foo.ptx
-
-If ``ispc`` is compiled with  LLVM >3.2, the resulting bitcode must first be
-decompiled with the ``llvm-dis`` from LLVM 3.2 distribution; this "trick" is
-required to generate an IR compatible with libNVVM:
+This LLVM assembly can immediately be compiled into PTX with the help of
+``ptxgen`` tool; this tool uses ``libNVVM`` which is a part of a CUDA Toolkit.
 
 ::
 
-  $LLVM32/bin/llvm-dis foo.bc -o foo.ll
   $ISPC_HOME/ptxtools/ptxgen --use_fast_math foo.ll -o foo.ptx
 
-The resulting PTX code is ready for execution on  a GPU, for example via CUDA
+.. If ``ispc`` is compiled with  LLVM >3.2, the resulting bitcode must first be
+.. decompiled with the ``llvm-dis`` from LLVM 3.2 distribution; this "trick" is
+.. required to generate an IR compatible with libNVVM:
+
+.. ::
+.. 
+..   $LLVM32/bin/llvm-dis foo.bc -o foo.ll
+..   $ISPC_HOME/ptxtools/ptxgen --use_fast_math foo.ll -o foo.ptx
+
+This PTX is ready for execution on a GPU, for example via CUDA
 Driver API. Alternatively, we also provide a simple ``ptxcc`` tool, which
 compiles the resulting PTX code into an object file:
 
