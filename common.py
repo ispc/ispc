@@ -36,6 +36,16 @@ import sys
 import os
 import errno
 import shutil
+class ExecutionStatGatherer:
+    def __init__(self):
+        optimizations = ['O0', 'O2']
+        architectures = ['x86', 'x86-64']
+        all_est_targets  = ['sse2-i32x4', 'sse2-i32x8', 'sse4-i32x4', 'sse4-i32x8', 'sse4-i16x8',
+                            'sse4-i8x16', 'avx1-i32x8', 'avx1-i32x16', 'avx1.1-i32x8', 
+                            'avx1.1-i32x16', 'avx2-i32x8', 'avx2-i32x16', 'generic-x1', 
+                            'generic-x4', 'generic-x8', 'generic-x16', 'generic-x32', 
+                            'generic-x64', 'knc']
+
 
 def write_to_file(filename, line):
     f = open(filename, 'a')

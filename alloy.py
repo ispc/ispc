@@ -253,7 +253,7 @@ def check_targets():
                 targets[j][2] = True
             break
     # generate targets for KNC
-    if current_OS != "Windows":
+    if  current_OS == "Linux":
         answer_knc = ["knc"]
 
     if current_OS != "Windows":
