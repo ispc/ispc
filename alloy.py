@@ -75,8 +75,7 @@ def try_do_LLVM(text, command, from_validation):
         if options.notify != "":
             msg = MIMEMultipart()
             attach_mail_file(msg, alloy_build, "alloy_build.log")
-            send_mail("ISPC test system download/build fail", "ISPC_test_system", options.notify,\
-                      "Unable to build or download something. See logs  for more information.", msg)
+            send_mail("Unable to build or download something. See logs  for more information.", msg)
         error("can't " + text, 1)
     print_debug("DONE.\n", from_validation, alloy_build)
 
@@ -615,24 +614,24 @@ def validation_run(only, only_targets, reference_branch, number, notify, update,
         fp = open(os.environ["ISPC_HOME"] + os.sep + "notify_log.log", 'rb')
         f_lines = fp.readlines()
         fp.close()
-        line = ""
+        body = ""
         if  not sys.exc_info()[0] == None:
-            line = line + "Last exception: " + str(sys.exc_info()) + '\n'
+            body = body + "Last exception: " + str(sys.exc_info()) + '\n'
         for i in range(0,len(f_lines)):
-            line = line + f_lines[i][:-1]
-            line = line + '   \n'
+            body = body + f_lines[i][:-1]
+            body = body + '   \n'
         attach_mail_file(msg, alloy_build, "alloy_build.log")
-        send_mail("ISPC test system results", "ISPC_test_system", options.notify, line, msg)
+        send_mail(body, msg)
 
-def send_mail(subject, from_field, to, line, msg):
+def send_mail(body, msg):
         smtp_server = os.environ["SMTP_ISPC"]
-        msg['Subject'] = subject
-        msg['From'] = from_field
-        msg['To'] = to
-        text = MIMEText(line, "", "KOI-8")
+        msg['Subject'] = "ISPC test system results"
+        msg['From'] = "ISPC_test_system"
+        msg['To'] = options.notify
+        text = MIMEText(body, "", "KOI-8")
         msg.attach(text)
         s = smtplib.SMTP(smtp_server)
-        s.sendmail(from_field, options.notify.split(" "), msg.as_string())
+        s.sendmail(options.notify, options.notify.split(" "), msg.as_string())
         s.quit()
 
 def Main():
