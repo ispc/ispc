@@ -124,23 +124,23 @@ define i64* @__cvt_const2gen(i64 addrspace(4)*) nounwind readnone alwaysinline
 ;; i32
 define internal i32 @__shfl_i32_nvptx(i32, i32) nounwind readnone alwaysinline
 {
-  %shfl = tail call i32 asm sideeffect "shfl.idx.b32  $0, $1, $2, 0x1f;", "=r,r,r"(i32 %0, i32 %1) nounwind readnone alwaysinline
+  %shfl = tail call i32 asm sideeffect "shfl.idx.b32  $0, $1, $2, 0x1f;", "=r,r,r"(i32 %0, i32 %1) 
   ret i32 %shfl
 }
 define internal i32 @__shfl_xor_i32_nvptx(i32, i32) nounwind readnone alwaysinline
 {
-  %shfl = tail call i32 asm sideeffect "shfl.bfly.b32  $0, $1, $2, 0x1f;", "=r,r,r"(i32 %0, i32 %1) nounwind readnone alwaysinline
+  %shfl = tail call i32 asm sideeffect "shfl.bfly.b32  $0, $1, $2, 0x1f;", "=r,r,r"(i32 %0, i32 %1) 
   ret i32 %shfl
 }
 ;; float
 define internal float @__shfl_float_nvptx(float, i32) nounwind readnone alwaysinline
 {
-  %shfl = tail call float asm sideeffect "shfl.idx.b32  $0, $1, $2, 0x1f;", "=f,f,r"(float %0, i32 %1) nounwind readnone alwaysinline
+  %shfl = tail call float asm sideeffect "shfl.idx.b32  $0, $1, $2, 0x1f;", "=f,f,r"(float %0, i32 %1)
   ret float %shfl
 }
 define internal float @__shfl_xor_float_nvptx(float, i32) nounwind readnone alwaysinline
 {
-  %shfl = tail call float asm sideeffect "shfl.bfly.b32  $0, $1, $2, 0x1f;", "=f,f,r"(float %0, i32 %1) nounwind readnone alwaysinline
+  %shfl = tail call float asm sideeffect "shfl.bfly.b32  $0, $1, $2, 0x1f;", "=f,f,r"(float %0, i32 %1) 
   ret float %shfl
 }
 
@@ -148,12 +148,12 @@ define internal float @__shfl_xor_float_nvptx(float, i32) nounwind readnone alwa
 ;; float/double
 define internal float @__fminf_nvptx(float,float) nounwind readnone alwaysinline
 {
-  %min = tail call float asm sideeffect "min.f32 $0, $1, $2;", "=f,f,f"(float %0, float %1) nounwind readnone alwaysinline
+  %min = tail call float asm sideeffect "min.f32 $0, $1, $2;", "=f,f,f"(float %0, float %1)
   ret float %min
 }
 define internal float @__fmaxf_nvptx(float,float) nounwind readnone alwaysinline
 {
-  %max = tail call float asm sideeffect "max.f32 $0, $1, $2;", "=f,f,f"(float %0, float %1) nounwind readnone alwaysinline
+  %max = tail call float asm sideeffect "max.f32 $0, $1, $2;", "=f,f,f"(float %0, float %1)
   ret float %max
 }
 
@@ -245,12 +245,12 @@ define internal i32 @__ballot_nvptx(i1) nounwind readnone alwaysinline
       "{ .reg .pred %p1; 
          setp.ne.u32 %p1, $1, 0; 
          vote.ballot.b32  $0, %p1; 
-      }", "=r,r"(i32 %conv) nounwind readnone alwaysinline
+      }", "=r,r"(i32 %conv) 
   ret i32 %res
 }
 define internal i32 @__lanemask_lt_nvptx() nounwind readnone alwaysinline
 {
-  %mask = tail call i32 asm sideeffect "mov.u32 $0, %lanemask_lt;", "=r"() nounwind readnone alwaysinline
+  %mask = tail call i32 asm sideeffect "mov.u32 $0, %lanemask_lt;", "=r"() 
   ret i32 %mask
 }
 
@@ -418,7 +418,7 @@ define float @__half_to_float_uniform(i16 %v) nounwind readnone alwaysinline
       "{ .reg .f16 tmp; 
         mov.b16 tmp, $1;
         cvt.f32.f16 $0, tmp;
-     }", "=f,h"(i16 %v) nounwind readnone alwaysinline
+     }", "=f,h"(i16 %v) 
   ret float %res
 }
 define i16 @__float_to_half_uniform(float %v) nounwind readnone alwaysinline
@@ -429,7 +429,7 @@ define i16 @__float_to_half_uniform(float %v) nounwind readnone alwaysinline
       "{ .reg .f16 tmp; 
         cvt.rn.f16.f32 tmp, $1;
         mov.b16 $0, tmp;
-     }", "=h,f"(float %v) nounwind readnone alwaysinline
+     }", "=h,f"(float %v) 
   ret i16 %half
 }
 define <WIDTH x float> @__half_to_float_varying(<WIDTH x i16> %v) nounwind readnone alwaysinline
@@ -473,7 +473,7 @@ define internal float @__round_uniform_float_ptx(float) nounwind readnone always
            cvt.rzi.f32.f32	f9, f4;
 BB2_2:
            mov.f32 $0, f9;
-        }", "=f,f"(float %0) nounwind readnone alwaysinline
+        }", "=f,f"(float %0) 
   ret float %2
 }
 define  float @__round_uniform_float(float) nounwind readonly alwaysinline {
@@ -490,12 +490,12 @@ define  float @__round_uniform_float(float) nounwind readonly alwaysinline {
 }
 define float @__floor_uniform_float(float) nounwind readnone alwaysinline
 {
-  %2 = tail call float asm sideeffect "cvt.rmi.f32.f32 $0, $1;", "=f,f"(float %0) nounwind alwaysinline readnone
+  %2 = tail call float asm sideeffect "cvt.rmi.f32.f32 $0, $1;", "=f,f"(float %0) 
   ret float %2
 }
 define float @__ceil_uniform_float(float) nounwind readnone alwaysinline
 {
-  %2 = tail call float asm sideeffect "cvt.rpi.f32.f32 $0, $1;", "=f,f"(float %0) nounwind alwaysinline readnone
+  %2 = tail call float asm sideeffect "cvt.rpi.f32.f32 $0, $1;", "=f,f"(float %0)
   ret float %2
 }
 
@@ -534,17 +534,17 @@ define double @__round_uniform_double(double) nounwind readnone alwaysinline
 
 BB5_2:
           mov.f64	$0, fd8;
-        }", "=d,d"(double %0) nounwind readnone alwaysinline
+        }", "=d,d"(double %0)
   ret double %2
 }
 define double @__floor_uniform_double(double) nounwind readnone alwaysinline
 {
-  %2 = tail call double asm sideeffect "cvt.rmi.f64.f64 $0, $1;", "=f,f"(double %0) nounwind alwaysinline readnone
+  %2 = tail call double asm sideeffect "cvt.rmi.f64.f64 $0, $1;", "=f,f"(double %0)
   ret double %2
 }
 define double @__ceil_uniform_double(double) nounwind readnone alwaysinline
 {
-  %2 = tail call double asm sideeffect "cvt.rpi.f64.f64 $0, $1;", "=f,f"(double %0) nounwind alwaysinline readnone
+  %2 = tail call double asm sideeffect "cvt.rpi.f64.f64 $0, $1;", "=f,f"(double %0)
   ret double %2
 }
 
@@ -763,7 +763,7 @@ declare i32 @llvm.ctpop.i32(i32) nounwind readnone
 define  i32 @__popcnt_int32(i32) nounwind readonly alwaysinline {
  %call = call i32 @llvm.ctpop.i32(i32 %0)
  ret i32 %call
-;;  %res = tail call i32 asm sideeffect "popc.b32 $0, $1;", "=r,r"(i32 %0) nounwind readnone alwaysinline
+;;  %res = tail call i32 asm sideeffect "popc.b32 $0, $1;", "=r,r"(i32 %0)
  ;; ret i32 %res
 }
 
@@ -1117,7 +1117,7 @@ define internal i32 @__shfl_reduce_and_step_i32_nvptx(i32, i32) nounwind readnon
         shfl.bfly.b32  r0|p, $1, $2, 0;
         @p and.b32 r0, r0, $3;
         mov.u32 $0, r0;
-      }", "=r,r,r,r"(i32 %0, i32 %1, i32 %0) nounwind readnone alwaysinline
+      }", "=r,r,r,r"(i32 %0, i32 %1, i32 %0)
   ret i32 %shfl
 }
 shfl64(__shfl_reduce_and_step, i64)
@@ -1298,7 +1298,7 @@ define internal i32 @__shfl_scan_add_step_i32(i32 %partial, i32 %up_offset) noun
        shfl.up.b32 r0|p, $1, $2, 0;
        @p add.u32 r0, r0, $3;
        mov.u32 $0, r0;
-       }", "=r,r,r,r"(i32 %partial, i32 %up_offset, i32 %partial) nounwind readnone alwaysinline
+       }", "=r,r,r,r"(i32 %partial, i32 %up_offset, i32 %partial)
   ret i32 %result;
 }
 define <1 x i32> @__exclusive_scan_add_i32(<1 x i32>, <1 x i1>) nounwind readnone alwaysinline
@@ -1325,7 +1325,7 @@ define internal i32 @__shfl_scan_or_step_i32(i32 %partial, i32 %up_offset) nounw
        shfl.up.b32 r0|p, $1, $2, 0;
        @p or.b32 r0, r0, $3;
        mov.u32 $0, r0;
-       }", "=r,r,r,r"(i32 %partial, i32 %up_offset, i32 %partial) nounwind alwaysinline
+       }", "=r,r,r,r"(i32 %partial, i32 %up_offset, i32 %partial)
   ret i32 %result;
 }
 define <1 x i32> @__exclusive_scan_or_i32(<1 x i32>, <1 x i1>) nounwind readnone alwaysinline
@@ -1341,7 +1341,7 @@ define <1 x i32> @__exclusive_scan_or_i32(<1 x i32>, <1 x i1>) nounwind readnone
         shfl.up.b32 r0|p, $1, 1, 0;
         @!p mov.u32 r0, 0;
         mov.u32 $0, r0;
-      }","=r,r"(i32 %v1); alwaysinline nounwind
+      }","=r,r"(i32 %v1)
   
   %s1 = tail call i32 @__shfl_scan_or_step_i32(i32 %v,  i32  1);
   %s2 = tail call i32 @__shfl_scan_or_step_i32(i32 %s1, i32  2);
@@ -1360,7 +1360,7 @@ define internal i32 @__shfl_scan_and_step_i32(i32 %partial, i32 %up_offset) noun
        shfl.up.b32 r0|p, $1, $2, 0;
        @p and.b32 r0, r0, $3;
        mov.u32 $0, r0;
-       }", "=r,r,r,r"(i32 %partial, i32 %up_offset, i32 %partial) alwaysinline
+       }", "=r,r,r,r"(i32 %partial, i32 %up_offset, i32 %partial)
   ret i32 %result;
 }
 define <1 x i32> @__exclusive_scan_and_i32(<1 x i32>, <1 x i1>) nounwind readnone alwaysinline
@@ -1376,7 +1376,7 @@ define <1 x i32> @__exclusive_scan_and_i32(<1 x i32>, <1 x i1>) nounwind readnon
         shfl.up.b32 r0|p, $1, 1, 0;
         @!p mov.u32 r0, -1;
         mov.u32 $0, r0;
-      }","=r,r"(i32 %v1); alwaysinline
+      }","=r,r"(i32 %v1)
 
   %s1 = call i32 @__shfl_scan_and_step_i32(i32 %v,  i32  1);
   %s2 = call i32 @__shfl_scan_and_step_i32(i32 %s1, i32  2);
@@ -1395,7 +1395,7 @@ define internal float @__shfl_scan_add_step_float(float %partial, i32 %up_offset
        shfl.up.b32 f0|p, $1, $2, 0;
        @p add.f32 f0, f0, $3;
        mov.f32 $0, f0;
-       }", "=f,f,r,f"(float %partial, i32 %up_offset, float %partial) nounwind readnone alwaysinline
+       }", "=f,f,r,f"(float %partial, i32 %up_offset, float %partial)
   ret float %result;
 }
 define <1 x float> @__exclusive_scan_add_float(<1 x float>, <1 x i1>) nounwind readnone alwaysinline
@@ -1427,7 +1427,7 @@ define internal double @__shfl_scan_add_step_double(double %partial, i32 %up_off
        mov.b64 fd0, {r3,r4};
        @p add.f64 fd0, fd0, $3;
        mov.f64 $0, fd0;
-       }", "=d,d,r,d"(double %partial, i32 %up_offset, double %partial) nounwind readnone alwaysinline
+       }", "=d,d,r,d"(double %partial, i32 %up_offset, double %partial)
   ret double %result;
 }
 define <1 x double> @__exclusive_scan_add_double(<1 x double>, <1 x i1>) nounwind readnone alwaysinline
@@ -1460,7 +1460,7 @@ define internal i64 @__shfl_scan_add_step_i64(i64 %partial, i32 %up_offset) noun
        mov.b64 rl0, {r3,r4};
        @p add.s64 rl0, rl0, $3;
        mov.s64 $0, rl0;
-       }", "=l,l,r,l"(i64 %partial, i32 %up_offset, i64 %partial) nounwind readnone alwaysinline
+       }", "=l,l,r,l"(i64 %partial, i32 %up_offset, i64 %partial) 
   ret i64 %result;
 }
 define <1 x i64> @__exclusive_scan_add_i64(<1 x i64>, <1 x i1>) nounwind readnone alwaysinline

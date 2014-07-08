@@ -58,6 +58,7 @@
 #include <set>
 #include <sstream>
 #include <iostream>
+#include <map>
 #ifdef ISPC_IS_WINDOWS
 #include <windows.h>
 #include <io.h>
@@ -71,6 +72,7 @@
   #include <llvm/Instructions.h>
   #include <llvm/Intrinsics.h>
   #include <llvm/DerivedTypes.h>
+  #include "llvm/Assembly/AssemblyAnnotationWriter.h"
 #else
   #include <llvm/IR/LLVMContext.h>
   #include <llvm/IR/Module.h>
@@ -78,6 +80,7 @@
   #include <llvm/IR/Instructions.h>
   #include <llvm/IR/Intrinsics.h>
   #include <llvm/IR/DerivedTypes.h>
+  #include "llvm/Assembly/AssemblyAnnotationWriter.h"
 #endif
 #include <llvm/PassManager.h>
 #include <llvm/PassRegistry.h>
@@ -1034,8 +1037,14 @@ Module::writeOutput(OutputType outputType, const char *outFileName,
                 fileType = "assembly";
             break;
         case Bitcode:
-            if (strcasecmp(suffix, "bc"))
-                fileType = "LLVM bitcode";
+            if (g->target->getISA() != Target::NVPTX)
+            {
+              if (strcasecmp(suffix, "bc"))
+                  fileType = "LLVM bitcode";
+            }
+            else
+              if (strcasecmp(suffix, "ll"))
+                  fileType = "LLVM assembly";
             break;
         case Object:
             if (strcasecmp(suffix, "o") && strcasecmp(suffix, "obj"))
@@ -1104,6 +1113,73 @@ Module::writeOutput(OutputType outputType, const char *outFileName,
         return writeObjectFileOrAssembly(outputType, outFileName);
 }
 
+typedef std::vector<std::string> vecString_t;
+static vecString_t 
+lSplitString(const std::string &s)
+{
+  std::stringstream ss(s);
+  std::istream_iterator<std::string> begin(ss);
+  std::istream_iterator<std::string> end;
+  return vecString_t(begin,end);
+}
+
+static void 
+lFixAttributes(const vecString_t &src, vecString_t &dst)
+{
+  dst.clear();
+
+  std::vector< std::pair<int,int> > attributePos;
+
+  typedef std::map<std::string, std::string> attributeMap_t;
+  attributeMap_t attributeMap;
+
+  for (vecString_t::const_iterator it = src.begin();  it != src.end(); it++)
+  {
+    const vecString_t words = lSplitString(*it);
+    if (!words.empty() && words[0] == "attributes" && words[1][0] == '#')
+    {
+      const int nWords = words.size();
+      assert(nWords > 3);
+      assert(words[2       ] == "=");
+      assert(words[3       ] == "{");
+      assert(words[nWords-1] == "}");
+      std::string attributes;
+      for (int w = 4; w < nWords-1; w++)
+          attributes += words[w] + " ";
+      attributeMap[words[1]] = attributes;
+    }
+  }
+  for (vecString_t::const_iterator it = src.begin();  it != src.end(); it++)
+  {
+    vecString_t words = lSplitString(*it);
+    if (!words.empty() && words[0] == "attributes")
+      continue;
+    std::string s;
+    std::map<std::string, std::string> attributeSet;
+#if 1  /* this attributed cannot be used in function parametrers, so remove them */
+    attributeSet["readnone"]   = " ";
+    attributeSet["readonly"]   = " ";
+    attributeSet["readnone,"]   = ",";
+    attributeSet["readonly,"]   = ",";
+#endif
+
+
+    for (vecString_t::iterator w = words.begin(); w != words.end(); w++)
+    {
+      if (attributeSet.find(*w) != attributeSet.end())
+        *w = attributeSet[*w];
+
+      if ((*w)[0] == '#')
+      {
+        attributeMap_t::iterator m = attributeMap.find(*w);
+        assert (m != attributeMap.end());
+        *w = attributeMap[*w];
+      }
+      s += *w + " ";
+    }
+    dst.push_back(s);
+  }
+}
 
 bool
 Module::writeBitcode(llvm::Module *module, const char *outFileName) {
@@ -1128,12 +1204,44 @@ Module::writeBitcode(llvm::Module *module, const char *outFileName) {
     }
 
     llvm::raw_fd_ostream fos(fd, (fd != 1), false);
-    if (g->target->getISA() == Target::NVPTX)
+    if (g->target->getISA() != Target::NVPTX)
     {
+     llvm::WriteBitcodeToFile(module, fos);
+    }
+    else
+    {
+      /* when using "nvptx" target, emit patched/hacked assembly 
+       * NVPTX only accepts 3.2-style LLVM assembly, where attributes
+       * must be inlined, rather then referenced by #attribute_d
+       * As soon as NVVM support 3.3,3.4 style assembly this fix won't be needed
+       */
       const std::string dl_string = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v16:16:16-v32:32:32-v64:64:64-v128:128:128-n16:32:64";
       module->setDataLayout(dl_string);
+
+      std::string s;
+      llvm::raw_string_ostream out(s);
+      llvm::OwningPtr<llvm::AssemblyAnnotationWriter> Annotator;
+      module->print(out, Annotator.get());
+      std::istringstream iss(s);
+
+      vecString_t input,output;
+      while (std::getline(iss,s))
+        input.push_back(s);
+      output = input;
+
+#if !(defined(LLVM_3_1) || defined(LLVM_3_2))
+      /* do not fix attributed with LLVM 3.2, everything is fine there */
+      lFixAttributes(input,output);
+#endif
+
+      for (vecString_t::iterator it = output.begin(); it != output.end(); it++)
+      {
+        *it += "\n";
+        fos << *it;
+      }
     }
-    llvm::WriteBitcodeToFile(module, fos);
+
+
     return true;
 }
 
