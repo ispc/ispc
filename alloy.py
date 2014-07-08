@@ -72,6 +72,9 @@ def try_do_LLVM(text, command, from_validation):
         postfix = " >> " + alloy_build + " 2>> " + alloy_build
     if os.system(command + postfix) != 0:
         print_debug("ERROR.\n", from_validation, alloy_build)
+        send_mail("ISPC test system download/build fail", "ISPC_test_system", options.notify,\
+                  "Unable to build or download something. See logs  for more information.", \
+                  alloy_build, "alloy_build.log")
         error("can't " + text, 1)
     print_debug("DONE.\n", from_validation, alloy_build)
 
@@ -296,6 +299,7 @@ def build_ispc(version_LLVM, make):
         p_temp = os.getenv("PATH")
         os.environ["PATH"] = os.environ["LLVM_HOME"] + "/bin-" + version_LLVM + "/bin:" + os.environ["PATH"]
         try_do_LLVM("clean ISPC for building", "make clean", True)
+        
         folder = os.environ["LLVM_HOME"]  + os.sep + "llvm-" 
         if options.folder == "":
             folder += version_LLVM
@@ -628,6 +632,20 @@ def validation_run(only, only_targets, reference_branch, number, notify, update,
         for name in options.notify.split(" "):
             print "Sending to: ", name
             s.sendmail('ISPC_test_system', name, msg.as_string())
+        s.quit()
+
+def send_mail(subject, _from, to, line, attach_filename, attach_name):
+        smtp_server = os.environ["SMTP_ISPC"]
+        msg = MIMEMultipart()
+        msg['Subject'] = subject
+        msg['From'] = _from
+        msg['To'] = to
+        text = MIMEText(line, "", "KOI-8")
+        msg.attach(text)
+        attach_mail_file(msg, attach_filename, attach_name)
+        s = smtplib.SMTP(smtp_server)
+        for name in options.notify.split(" "):
+            s.sendmail(_from, name, msg.as_string())
         s.quit()
 
 def Main():
