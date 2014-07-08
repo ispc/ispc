@@ -1375,7 +1375,7 @@ FunctionEmitContext::None(llvm::Value *mask) {
 llvm::Value *
 FunctionEmitContext::LaneMask(llvm::Value *v) 
 {
-#if 1 /* this makes mandelbrot example slower, why ?!? */
+#if 1 /* this makes mandelbrot example slower with "nvptx" target. Need further investigation. */
   const char *__movmsk = g->target->getISA() == Target::NVPTX ? "__movmsk_ptx" : "__movmsk";
 #else
   const char *__movmsk = "__movmsk";

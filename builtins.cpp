@@ -985,7 +985,7 @@ DefineStdlib(SymbolTable *symbolTable, llvm::LLVMContext *ctx, llvm::Module *mod
     case Target::NVPTX: 
       {
         if (runtime32) {
-            fprintf(stderr, "Unforetunatly 32bit targets are supported at the moment .. \n");
+            fprintf(stderr, "Unfortunatly 32bit targets are not supported at the moment .. \n");
             assert(0);
         }
         else {
