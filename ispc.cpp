@@ -600,6 +600,7 @@ Target::Target(const char *arch, const char *cpu, const char *isa, bool pic) :
         this->m_hasTranscendentals = true;
         this->m_hasTrigonometry = true;
         this->m_hasGather = this->m_hasScatter = false;
+        cpuFromIsa = "sm_35";
     }
     else {
         Error(SourcePos(), "Target \"%s\" is unknown.  Choices are: %s.",
