@@ -21,14 +21,15 @@ ifdef PTXCC_REGMAX
 endif
 
 #
-ISPC=ispc
+ISPC=$(ISPC_HOME)/ispc
 ISPC_FLAGS+=-O3 --math-lib=fast --target=nvptx --opt=fast-math
 #
 #
 #
 ISPC_LLVM_OBJS=$(ISPC_SRC:%.ispc=objs_ptx/%_llvm_ispc.o)
 ISPC_NVVM_OBJS=$(ISPC_SRC:%.ispc=objs_ptx/%_nvvm_ispc.o)
-ISPC_BCS=$(ISPC_SRC:%.ispc=objs_ptx/%_ispc.bc)
+#ISPC_BCS=$(ISPC_SRC:%.ispc=objs_ptx/%_ispc.bc)
+ISPC_LLS=$(ISPC_SRC:%.ispc=objs_ptx/%_ispc.ll)
 ISPC_LLVM_PTX=$(ISPC_SRC:%.ispc=objs_ptx/%_llvm_ispc.ptx)
 ISPC_NVVM_PTX=$(ISPC_SRC:%.ispc=objs_ptx/%_nvvm_ispc.ptx)
 ISPC_HEADERS=$(ISPC_SRC:%.ispc=objs_ptx/%_ispc.h)
@@ -42,13 +43,13 @@ CXX_OBJS+=objs_ptx/ispc_malloc_gcc.o
 PTXGEN = $(ISPC_HOME)/ptxtools/ptxgen
 PTXGEN += --use_fast_math
 
-LLVM32=$(HOME)/usr/local/llvm/bin-3.2
-LLVM32DIS=$(LLVM32)/bin/llvm-dis
+#LLVM32=$(HOME)/usr/local/llvm/bin-3.2
+#LLVM32DIS=$(LLVM32)/bin/llvm-dis
 
-LLC=$(HOME)/usr/local/llvm/bin-trunk/bin/llc
+LLC=$(LLVM_ROOT)/bin/llc
 LLC_FLAGS=-march=nvptx64 -mcpu=sm_35
 
-# .SUFFIXES: .bc .o .cu 
+# .SUFFIXES: .bc .o .cu  .ll
 
 ifdef LLVM_GPU
   OBJSptx_llvm=$(ISPC_LLVM_OBJS) $(CXX_OBJS) $(NVCC_OBJS) 
@@ -74,7 +75,7 @@ endif
 all: dirs  \
 	$(PROGptx_nvvm)  \
 	$(PROGptx_llvm)  \
-	$(PROGcu) $(ISPC_BC)  $(ISPC_HEADERS) $(ISPC_NVVM_PTX) $(ISPC_LLVM_PTX)
+	$(PROGcu) $(ISPC_BCS) $(ISPC_LLS)  $(ISPC_HEADERS) $(ISPC_NVVM_PTX) $(ISPC_LLVM_PTX)
 
 dirs:
 	/bin/mkdir -p objs_ptx/
@@ -109,15 +110,21 @@ objs_ptx/%_nvcc.o: %.cu
 	$(NVCC) $(NVCC_FLAGS) -o $@ -c $<
 
 # compile ISPC to LLVM BC
-objs_ptx/%_ispc.h objs_ptx/%_ispc.bc: %.ispc 
-	$(ISPC) $(ISPC_FLAGS) --emit-llvm -h objs_ptx/$*_ispc.h -o objs_ptx/$*_ispc.bc $<
+#objs_ptx/%_ispc.h objs_ptx/%_ispc.bc: %.ispc 
+#	$(ISPC) $(ISPC_FLAGS) --emit-llvm -h objs_ptx/$*_ispc.h -o objs_ptx/$*_ispc.bc $<
+objs_ptx/%_ispc.h objs_ptx/%_ispc.ll: %.ispc 
+	$(ISPC) $(ISPC_FLAGS) --emit-llvm -h objs_ptx/$*_ispc.h -o objs_ptx/$*_ispc.ll $<
 
 # generate PTX from LLVM BC
-objs_ptx/%_llvm_ispc.ptx: objs_ptx/%_ispc.bc
+#objs_ptx/%_llvm_ispc.ptx: objs_ptx/%_ispc.bc
+#	$(LLC) $(LLC_FLAGS) -o $@ $<
+objs_ptx/%_llvm_ispc.ptx: objs_ptx/%_ispc.ll
 	$(LLC) $(LLC_FLAGS) -o $@ $<
-objs_ptx/%_nvvm_ispc.ptx: objs_ptx/%_ispc.bc
-	$(LLVM32DIS) $< -o objs_ptx/$*_ispc-ll32.ll
-	$(PTXGEN) objs_ptx/$*_ispc-ll32.ll -o $@
+#objs_ptx/%_nvvm_ispc.ptx: objs_ptx/%_ispc.bc
+#	$(LLVM32DIS) $< -o objs_ptx/$*_ispc-ll32.ll
+#	$(PTXGEN) objs_ptx/$*_ispc-ll32.ll -o $@
+objs_ptx/%_nvvm_ispc.ptx: objs_ptx/%_ispc.ll
+	$(PTXGEN) $< -o $@
 
 # generate an object file from PTX
 objs_ptx/%_ispc.o: objs_ptx/%_ispc.ptx
