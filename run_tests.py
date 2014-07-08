@@ -64,8 +64,8 @@ def run_command(cmd):
         sp = subprocess.Popen(arg_list, stdin=None,
                           stdout=subprocess.PIPE,
                           stderr=subprocess.PIPE)
-    except:
-        print_debug("ERROR: The child (%s) raised an esception: %s\n" % (cmd, sys.exc_info()[1]), s, run_tests_log)
+    except: 
+        print_debug("ERROR: The child (%s) raised an exception: %s\n" % (cmd, sys.exc_info()[1]), s, run_tests_log)
         raise
 
     out = sp.communicate()
@@ -360,7 +360,7 @@ def run_tasks_from_queue(queue, queue_ret, queue_skip, total_tests_arg, max_test
         os.chdir(tmpdir)
     else:
         olddir = ""
-        
+    
     compile_error_files = [ ]
     run_error_files = [ ]
     skip_files = [ ]
@@ -387,7 +387,8 @@ def run_tasks_from_queue(queue, queue_ret, queue_skip, total_tests_arg, max_test
             try:
                 (compile_error, run_error) = run_test(filename)
             except:
-                sys.exit(-1) # This is in case the child has unexpectedly died
+                print_debug("ERROR: run_test function raised an exception: %s\n" % (sys.exc_info()[1]), s, run_tests_log)
+                sys.exit(-1) # This is in case the child has unexpectedly died or some other exception happened
             
             if compile_error != 0:
                 compile_error_files += [ filename ]

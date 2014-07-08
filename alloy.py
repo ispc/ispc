@@ -231,6 +231,7 @@ def build_LLVM(version_LLVM, revision, folder, tarball, debug, selfbuild, extra,
 def check_targets():
     answer = []
     answer_generic = []
+    answer_knc = []
     answer_sde = []
     # check what native targets do we have
     if current_OS != "Windows":
@@ -242,6 +243,7 @@ def check_targets():
     AVX   = ["avx1-i32x4",  "avx1-i32x8",  "avx1-i32x16",  "avx1-i64x4"]
     AVX11 = ["avx1.1-i32x8","avx1.1-i32x16","avx1.1-i64x4"]
     AVX2  = ["avx2-i32x8",  "avx2-i32x16",  "avx2-i64x4"]
+
     targets = [["AVX2", AVX2, False], ["AVX1.1", AVX11, False], ["AVX", AVX, False], ["SSE4", SSE4, False], ["SSE2", SSE2, False]]
     f_lines = take_lines("check_isa.exe", "first")
     for i in range(0,5):
@@ -250,6 +252,10 @@ def check_targets():
                 answer = targets[j][1] + answer
                 targets[j][2] = True
             break
+    # generate targets for KNC
+    if  current_OS == "Linux":
+        answer_knc = ["knc"]
+
     if current_OS != "Windows":
         answer_generic = ["generic-4", "generic-16", "generic-8", "generic-1", "generic-32", "generic-64"]
     # now check what targets we have with the help of SDE
@@ -269,7 +275,7 @@ def check_targets():
         error("you haven't got sde neither in SDE_HOME nor in your PATH.\n" + 
             "To test all platforms please set SDE_HOME to path containing SDE.\n" +
             "Please refer to http://www.intel.com/software/sde for SDE download information.", 2)
-        return [answer, answer_generic, answer_sde]
+        return [answer, answer_generic, answer_sde, answer_knc]
     # here we have SDE
     f_lines = take_lines(sde_exists + " -help", "all")
     for i in range(0,len(f_lines)):
@@ -281,7 +287,7 @@ def check_targets():
             answer_sde = answer_sde + [["-ivb", "avx1.1-i32x8"], ["-ivb", "avx1.1-i32x16"], ["-ivb", "avx1.1-i64x4"]]
         if targets[0][2] == False and "hsw" in f_lines[i]:
             answer_sde = answer_sde + [["-hsw", "avx2-i32x8"], ["-hsw", "avx2-i32x16"], ["-hsw", "avx2-i64x4"]]
-    return [answer, answer_generic, answer_sde]
+    return [answer, answer_generic, answer_sde, answer_knc]
 
 def build_ispc(version_LLVM, make):
     current_path = os.getcwd()
@@ -313,6 +319,7 @@ def build_ispc(version_LLVM, make):
 
 def execute_stability(stability, R, print_version):
     stability1 = copy.deepcopy(stability)
+
     b_temp = run_tests.run_tests(stability1, [], print_version)
     temp = b_temp[0]
     time = b_temp[1]
@@ -370,6 +377,7 @@ def validation_run(only, only_targets, reference_branch, number, notify, update,
         print_debug("\n\nStability validation run\n\n", False, "")
         stability = options_for_drivers()
 # stability constant options
+        stability.save_bin = False
         stability.random = False
         stability.ispc_flags = ""
         stability.compiler_exe = None
@@ -388,7 +396,7 @@ def validation_run(only, only_targets, reference_branch, number, notify, update,
         stability.no_opt = False
         stability.wrapexe = ""
 # prepare parameters of run
-        [targets_t, targets_generic_t, sde_targets_t] = check_targets()
+        [targets_t, targets_generic_t, sde_targets_t, targets_knc_t] = check_targets()
         rebuild = True
         opts = []
         archs = []
@@ -414,10 +422,13 @@ def validation_run(only, only_targets, reference_branch, number, notify, update,
             rebuild = False
         else:
             common.check_tools(1)
+
         if only_targets != "":
             only_targets += " "
             only_targets = only_targets.replace("generic "," generic-4 generic-16 ")
             only_targets_t = only_targets.split(" ")
+
+            
             for i in only_targets_t:
                 if i == "":
                     continue
@@ -434,11 +445,17 @@ def validation_run(only, only_targets, reference_branch, number, notify, update,
                     if i in sde_targets_t[j][1]:
                         sde_targets.append(sde_targets_t[j])
                         err = False
+                for j in range(0,len(targets_knc_t)):
+                    if i in targets_knc_t[j]:
+                        targets.append(targets_knc_t[j])
+                        err = False
                 if err == True:
                     error("You haven't sde for target " + i, 1)
         else:
             targets = targets_t + targets_generic_t[:-4]
             sde_targets = sde_targets_t
+
+
         if "build" in only:
             targets = []
             sde_targets = []
@@ -451,6 +468,7 @@ def validation_run(only, only_targets, reference_branch, number, notify, update,
         if len(LLVM) == 0:
             LLVM = [newest_LLVM, "trunk"]
         gen_archs = ["x86-64"]
+        knc_archs = ["x86-64"]
         need_LLVM = check_LLVM(LLVM)
         for i in range(0,len(need_LLVM)):
             build_LLVM(need_LLVM[i], "", "", "", False, False, False, True, False, make)
@@ -467,6 +485,8 @@ def validation_run(only, only_targets, reference_branch, number, notify, update,
                 stability.wrapexe = ""
                 if "generic" in targets[j]:
                     arch = gen_archs
+                elif "knc" in targets[j]:
+                    arch = knc_archs
                 else:
                     arch = archs
                 for i1 in range(0,len(arch)):
@@ -592,7 +612,11 @@ def validation_run(only, only_targets, reference_branch, number, notify, update,
         msg.attach(text)
         attach_mail_file(msg, alloy_build, "alloy_build.log")
         s = smtplib.SMTP(smtp_server)
-        s.sendmail('ISPC_test_system', options.notify.split(" "), msg.as_string())
+
+        print "Sending an e-mail with logs:", options.notify
+        for name in options.notify.split(" "):
+            print "Sending to: ", name
+            s.sendmail('ISPC_test_system', name, msg.as_string())
         s.quit()
 
 def Main():
@@ -707,7 +731,10 @@ if __name__ == '__main__':
     "Stability validation run with LLVM 3.2, 3.3; -O0; x86,\nupdate fail_db.txt with passes and fails\n\talloy.py -r --only='3.2 -O0 stability 3.3 x86' --update-errors=FP\n" +
     "Try to build compiler with all LLVM\n\talloy.py -r --only=build\n" +
     "Performance validation run with 10 runs of each test and comparing to branch 'old'\n\talloy.py -r --only=performance --compare-with=old --number=10\n" +
-    "Validation run. Update fail_db.txt with new fails, send results to my@my.com\n\talloy.py -r --update-errors=F --notify='my@my.com'\n")
+    "Validation run. Update fail_db.txt with new fails, send results to my@my.com\n\talloy.py -r --update-errors=F --notify='my@my.com'\n" +
+    "Test KNC target (not tested when tested all supported targets, so should be set explicitly via --only-targets)\n\talloy.py -r --only='satbility' --only-targets='knc'\n")
+
+
     num_threads="%s" % multiprocessing.cpu_count()
     parser = MyParser(usage="Usage: alloy.py -r/-b [options]", epilog=examples)
     parser.add_option('-b', '--build-llvm', dest='build_llvm',
