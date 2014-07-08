@@ -1325,7 +1325,7 @@ define internal i32 @__shfl_scan_or_step_i32(i32 %partial, i32 %up_offset) nounw
        shfl.up.b32 r0|p, $1, $2, 0;
        @p or.b32 r0, r0, $3;
        mov.u32 $0, r0;
-       }", "=r,r,r,r"(i32 %partial, i32 %up_offset, i32 %partial) nounwind readnone alwaysinline
+       }", "=r,r,r,r"(i32 %partial, i32 %up_offset, i32 %partial) nounwind alwaysinline
   ret i32 %result;
 }
 define <1 x i32> @__exclusive_scan_or_i32(<1 x i32>, <1 x i1>) nounwind readnone alwaysinline
@@ -1341,7 +1341,7 @@ define <1 x i32> @__exclusive_scan_or_i32(<1 x i32>, <1 x i1>) nounwind readnone
         shfl.up.b32 r0|p, $1, 1, 0;
         @!p mov.u32 r0, 0;
         mov.u32 $0, r0;
-      }","=r,r"(i32 %v1);
+      }","=r,r"(i32 %v1); alwaysinline nounwind
   
   %s1 = tail call i32 @__shfl_scan_or_step_i32(i32 %v,  i32  1);
   %s2 = tail call i32 @__shfl_scan_or_step_i32(i32 %s1, i32  2);
@@ -1354,13 +1354,13 @@ define <1 x i32> @__exclusive_scan_or_i32(<1 x i32>, <1 x i1>) nounwind readnone
 ;;
 define internal i32 @__shfl_scan_and_step_i32(i32 %partial, i32 %up_offset) nounwind readnone alwaysinline
 {
-  %result = tail call i32 asm sideeffect  
+  %result = call i32 asm 
       "{.reg .u32 r0;
        .reg .pred p;
        shfl.up.b32 r0|p, $1, $2, 0;
        @p and.b32 r0, r0, $3;
        mov.u32 $0, r0;
-       }", "=r,r,r,r"(i32 %partial, i32 %up_offset, i32 %partial) nounwind readnone alwaysinline
+       }", "=r,r,r,r"(i32 %partial, i32 %up_offset, i32 %partial) alwaysinline
   ret i32 %result;
 }
 define <1 x i32> @__exclusive_scan_and_i32(<1 x i32>, <1 x i1>) nounwind readnone alwaysinline
@@ -1370,19 +1370,19 @@ define <1 x i32> @__exclusive_scan_and_i32(<1 x i32>, <1 x i1>) nounwind readnon
   %v1   = select i1 %mask, i32 %v0, i32 -1
 
   ;; shfl-up by one for exclusive scan
-  %v = tail call i32 asm sideeffect
+  %v = call i32 asm
       "{.reg .u32 r0;
         .reg .pred p;
         shfl.up.b32 r0|p, $1, 1, 0;
         @!p mov.u32 r0, -1;
         mov.u32 $0, r0;
-      }","=r,r"(i32 %v1);
+      }","=r,r"(i32 %v1); alwaysinline
 
-  %s1 = tail call i32 @__shfl_scan_and_step_i32(i32 %v,  i32  1);
-  %s2 = tail call i32 @__shfl_scan_and_step_i32(i32 %s1, i32  2);
-  %s3 = tail call i32 @__shfl_scan_and_step_i32(i32 %s2, i32  4);
-  %s4 = tail call i32 @__shfl_scan_and_step_i32(i32 %s3, i32  8);
-  %s5 = tail call i32 @__shfl_scan_and_step_i32(i32 %s4, i32 16);
+  %s1 = call i32 @__shfl_scan_and_step_i32(i32 %v,  i32  1);
+  %s2 = call i32 @__shfl_scan_and_step_i32(i32 %s1, i32  2);
+  %s3 = call i32 @__shfl_scan_and_step_i32(i32 %s2, i32  4);
+  %s4 = call i32 @__shfl_scan_and_step_i32(i32 %s3, i32  8);
+  %s5 = call i32 @__shfl_scan_and_step_i32(i32 %s4, i32 16);
   %retv = insertelement <1 x i32> undef, i32 %s5, i32 0
   ret <1 x i32> %retv
 }
