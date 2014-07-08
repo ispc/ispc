@@ -85,10 +85,11 @@ def run_cmds(compile_cmds, run_cmd, filename, expect_failure):
             if output != "":
                 print_debug("%s" % output.encode("utf-8"), s, run_tests_log)
             return (1, 0)
-
-    (return_code, output) = run_command(run_cmd)
-    run_failed = (return_code != 0)
-
+    if not options.save_bin:
+        (return_code, output) = run_command(run_cmd)
+        run_failed = (return_code != 0)
+    else:
+        run_failed = 0
     surprise = ((expect_failure and not run_failed) or
                 (not expect_failure and run_failed))
     if surprise == True:
@@ -161,8 +162,12 @@ def run_test(testname):
     # is this a test to make sure an error is issued?
     want_error = (filename.find("tests_errors") != -1)
     if want_error == True:
-        ispc_cmd = ispc_exe_rel + " --werror --nowrap %s --arch=%s --target=%s" % \
-            (filename, options.arch, options.target)
+        if (options.target == "knc"):
+            ispc_cmd = ispc_exe_rel + " --werror --nowrap %s --arch=%s --target=%s" % \
+                (filename, options.arch, "generic-16")
+        else:
+            ispc_cmd = ispc_exe_rel + " --werror --nowrap %s --arch=%s --target=%s" % \
+                (filename, options.arch, options.target)
         (return_code, output) = run_command(ispc_cmd)
         got_error = (return_code != 0)
 
@@ -256,12 +261,18 @@ def run_test(testname):
                         and (options.include_file.find("knc-i1x16.h")!=-1 or options.include_file.find("knc.h")!=-1 or options.include_file.find("knc2x.h")!=-1):
                     gcc_isa = '-mmic'
 
-                cc_cmd = "%s -O2 -I. %s %s test_static.cpp -DTEST_SIG=%d %s -o %s" % \
-                         (options.compiler_exe, gcc_arch, gcc_isa, match, obj_name, exe_name)
+                if (options.target == "knc"):
+                    cc_cmd = "%s -O2 -I. %s %s test_static.cpp -DTEST_SIG=%d %s -o %s" % \
+                         (options.compiler_exe, gcc_arch, "-mmic", match, obj_name, exe_name)
+                else:
+                    cc_cmd = "%s -O2 -I. %s %s test_static.cpp -DTEST_SIG=%d %s -o %s" % \
+                         (options.compiler_exe, gcc_arch, gcc_isa, match, obj_name, exe_name)                    
+
                 if platform.system() == 'Darwin':
                     cc_cmd += ' -Wl,-no_pie'
                 if should_fail:
                     cc_cmd += " -DEXPECT_FAILURE"
+
                 if is_nvptx_target:
                   nvptxcc_exe = "ptxtools/runtest_ptxcc.sh"
                   nvptxcc_exe_rel = add_prefix(nvptxcc_exe)
@@ -270,10 +281,19 @@ def run_test(testname):
 
             ispc_cmd = ispc_exe_rel + " --woff %s -o %s -O3 --arch=%s --target=%s" % \
                        (filename, obj_name, options.arch, options.target)
+
+            if (options.target == "knc"):
+                ispc_cmd = ispc_exe_rel + " --woff %s -o %s --arch=%s --target=%s" % \
+                           (filename, obj_name, options.arch, "generic-16")
+            else:
+                ispc_cmd = ispc_exe_rel + " --woff %s -o %s --arch=%s --target=%s" % \
+                           (filename, obj_name, options.arch, options.target)
+
             if options.no_opt:
                 ispc_cmd += " -O0" 
             if is_generic_target:
                 ispc_cmd += " --emit-c++ --c++-include-file=%s" % add_prefix(options.include_file)
+
             if is_nvptx_target:
                 filename4ptx = "/tmp/"+os.path.basename(filename)+".parsed.ispc"
 #                grep_cmd = "grep -v 'export uniform int width' %s > %s " % \
@@ -290,6 +310,9 @@ def run_test(testname):
                   ispc_cmd = ispc_exe_rel + " --woff %s -o %s -O3 --emit-asm --target=%s" % \
                          (filename4ptx, obj_name, options.target)
 
+
+             
+
         # compile the ispc code, make the executable, and run it...
         (compile_error, run_error) = run_cmds([ispc_cmd, cc_cmd], 
                                               options.wrapexe + " " + exe_name, \
@@ -297,13 +320,14 @@ def run_test(testname):
 
         # clean up after running the test
         try:
-            if not run_error:
-                os.unlink(exe_name)
-                if is_windows:
-                    basename = os.path.basename(filename)
-                    os.unlink("%s.pdb" % basename)
-                    os.unlink("%s.ilk" % basename)
-            os.unlink(obj_name)
+            if not options.save_bin:
+                if not run_error:
+                    os.unlink(exe_name)
+                    if is_windows:
+                        basename = os.path.basename(filename)
+                        os.unlink("%s.pdb" % basename)
+                        os.unlink("%s.ilk" % basename)
+                os.unlink(obj_name)
         except:
             None
 
@@ -498,7 +522,7 @@ def verify():
               "sse4-i8x16", "avx1-i32x4" "avx1-i32x8", "avx1-i32x16", "avx1-i64x4", "avx1.1-i32x8",
               "avx1.1-i32x16", "avx1.1-i64x4", "avx2-i32x8", "avx2-i32x16", "avx2-i64x4",
               "generic-1", "generic-4", "generic-8",
-              "generic-16", "generic-32", "generic-64"]]
+              "generic-16", "generic-32", "generic-64", "knc"]]
     for i in range (0,len(f_lines)):
         if f_lines[i][0] == "%":
             continue
@@ -571,11 +595,14 @@ def run_tests(options1, args, print_version):
     print_debug("Testing ispc: " + ispc_exe + "\n", s, run_tests_log)
     ispc_exe += " " + options.ispc_flags
 
-    global is_generic_target
+    global is_generic_target 
+    is_generic_target = ((options.target.find("generic-") != -1 and
+                     options.target != "generic-1" and options.target != "generic-x1") or 
+                     options.target == "knc")
+
     global is_nvptx_target
-    is_generic_target = (options.target.find("generic-") != -1 and
-                     options.target != "generic-1" and options.target != "generic-x1")
     is_nvptx_target = (options.target.find("nvptx") != -1)
+
     if is_generic_target and options.include_file == None:
         if options.target == "generic-4" or options.target == "generic-x4":
             error("No generics #include specified; using examples/intrinsics/sse4.h\n", 2)
@@ -596,9 +623,14 @@ def run_tests(options1, args, print_version):
             error("No generics #include specified; using examples/intrinsics/generic-64.h\n", 2)
             options.include_file = "examples/intrinsics/generic-64.h"
             options.target = "generic-64"
+        elif options.target == "knc":
+            error("No knc #include specified; using examples/intrinsics/knc-i1x16.h\n", 2)
+            options.include_file = "examples/intrinsics/knc-i1x16.h"
  
     if options.compiler_exe == None:
-        if is_windows:
+        if (options.target == "knc"): 
+            options.compiler_exe = "icpc"
+        elif is_windows:
             options.compiler_exe = "cl.exe"
         else:
             options.compiler_exe = "clang++"
@@ -620,7 +652,30 @@ def run_tests(options1, args, print_version):
         common.print_version(ispc_exe, "", options.compiler_exe, False, run_tests_log, is_windows)
  
     ispc_root = "."
-    
+
+    # checks the required environment otherwise prints an error message
+    if (options.target == "knc"):
+        options.wrapexe = "micnativeloadex"
+        PATH_dir = string.split(os.getenv("PATH"), os.pathsep)
+        wrapexe_exists = False
+        for counter in PATH_dir:
+            if os.path.exists(counter + os.sep + options.wrapexe):
+                wrapexe_exists = True
+                break
+
+        if not wrapexe_exists:
+            error("missing the required launcher: %s \nAdd it to your $PATH\n" % options.wrapexe, 1)
+        
+        if platform.system() == 'Windows' or 'CYGWIN_NT' in platform.system():
+            OS = "Windows"
+        else:
+            if platform.system() == 'Darwin':
+                OS = "Mac"
+            else:
+                OS = "Linux"
+
+        if not (OS  == 'Linux'):
+            error ("knc target supported only on Linux", 1)
     # if no specific test files are specified, run all of the tests in tests/,
     # failing_tests/, and tests_errors/
     if len(args) == 0:
@@ -776,7 +831,7 @@ if __name__ == "__main__":
     parser.add_option("-f", "--ispc-flags", dest="ispc_flags", help="Additional flags for ispc (-g, -O1, ...)",
                   default="")
     parser.add_option('-t', '--target', dest='target',
-                  help='Set compilation target (sse2-i32x4, sse2-i32x8, sse4-i32x4, sse4-i32x8, sse4-i16x8, sse4-i8x16, avx1-i32x8, avx1-i32x16, avx1.1-i32x8, avx1.1-i32x16, avx2-i32x8, avx2-i32x16, generic-x1, generic-x4, generic-x8, generic-x16, generic-x32, generic-x64)',
+                  help='Set compilation target (sse2-i32x4, sse2-i32x8, sse4-i32x4, sse4-i32x8, sse4-i16x8, sse4-i8x16, avx1-i32x8, avx1-i32x16, avx1.1-i32x8, avx1.1-i32x16, avx2-i32x8, avx2-i32x16, generic-x1, generic-x4, generic-x8, generic-x16, generic-x32, generic-x64, knc)',
                                     default="sse4")
     parser.add_option('-a', '--arch', dest='arch',
                   help='Set architecture (arm, x86, x86-64)',
@@ -801,6 +856,8 @@ if __name__ == "__main__":
                   action = "store_true")
     parser.add_option("--file", dest='in_file', help='file to save run_tests output', default="")
     parser.add_option("--verify", dest='verify', help='verify the file fail_db.txt', default=False, action="store_true")
+    parser.add_option("--save-bin", dest='save_bin', help='compile and create bin, but don\'t execute it',
+                  default=False, action="store_true")
     (options, args) = parser.parse_args()
     L = run_tests(options, args, 1)
     exit(0)
