@@ -181,9 +181,9 @@ Contents:
 * `Experimental support for PTX`_
 
   + `Overview`_
-  + `Generation of PTX`_
-  + `Execution of PTX`_
+  + `Compiling For The NVIDIA Kepler GPU`_
   + `Hints`_
+  + `Limitations & known issues`_
 
 * `Disclaimer and Legal Information`_
 
@@ -4945,27 +4945,90 @@ program instances improves performance.
 
 Experimental support for PTX
 ============================
-One of the ``ispc`` goals is also to offer performance portability of ISPC
-program across various parallel processors, in particular CPUs and GPUs. This
-section describes how to use ISPC in combination with CUDA Toolkit to generate
-and execute PTX.
+``ispc`` has a limited support for PTX code generation which currently targets
+NVIDIA GPUs with compute capability 3.5 [Kepler GPUs with support for dynamic
+parallelism]. Due to its experimental support in ``ispc``, the PTX backend
+currently impose several restrictions on the source code which will detailed
+below.
 
 Overview
 --------
-SPMD programming model can be mapped to CUDA cores.
+SPMD programming in ``ispc`` with PTX target in mind should be thought of a
+warp-synchronous CUDA programming. In particular, every program instances is
+mapped to a CUDA thread, and a gang is mapped to a CUDA warp. To run efficiently
+on GPU, `ispc`` program must use tasking functionality via ``launch`` keyword.
+
+``export`` functions are also equipped with a CUDA C wrapper that schedule a
+single thread-block of 32 threads--a warp--. In contract to CPU programming, it
+is expected that this exported function, either directly or otherwise, will
+utilize ``launch`` keyword to schedule a work across GPU. In contrast to CPU,
+there is no other way to efficiently utilize rich GPU compute resources.
+
+At PTX level, ``launch`` keyword is mapped to a CUDA Dynamic Parallelism that
+schedules a grid of thread-blocks each 128 threads--or 4 warps--wide
+[dim3(128,1,1)]. Therefore ``ispc`` currently tasking-granularity with PTX
+target is 4 tasks; this restriction will be eliminated in future. 
+
+When passing pointers to an ``export`` function compiled for execution on GPU,
+it is important that these pointers remain legal when access from GPU. Prior to
+CUDA 6.0, this pointers has to hold address that is only accessible from the
+GPU.  With the release of CUDA 6.0, it is possible to pass a pointer to unified
+memory. For this, ``ispc`` provides helper wrapper functions that call CUDA API
+for managed memory allocations, therefore allowing the programming to avoid
+explicit memory copies.
 
 
-Generation of PTX
-------------------
-To generate PTX.
-  
-Execution of PTX
-----------------
-To execute PTX
+
+Compiling For The NVIDIA Kepler GPU
+-----------------------------------
+Compilation for NVIDIA Kepler GPU is currently a several step procedure.
+
+First we need to generate a LLVM bitcode from ``ispc`` source file:
+
+::
+
+  $ISPC_HOME/ispc foo.ispc --emit-llvm --target=nvptx -o foo.bc
+
+If ``ispc`` is compiled with LLVM 3.2, the resulting bitcode  can immediately be
+compile to PTX with the help of ``ptxgen`` tool which uses ``libNVVM`` [this
+requires CUDA Toolkit installation]:
+
+::
+
+  $ISPC_HOME/ptxtools/ptxgen --use_fast_math foo.bc -o foo.ptx
+
+Otherwise, we need to decompile the bitcode with the ``llvm-dis`` that comes
+with LLVM 3.2 distribution; this "trick" is required to generate an IR
+compatible with libNVVM:
+
+::
+
+  $LLVM32/bin/llvm-dis foo.bc -o foo.ll
+  $ISPC_HOME/ptxtools/ptxgen --use_fast_math foo.ll -o foo.ptx
+
+At this point the resulting PTX code could be used to run on GPU with the help
+of, for example, CUDA Driver API. Instead, we provide a ``ptxcc`` tool, which
+compiles the PTX code into an object file:
+
+::
+
+   $ISPC_HOME/ptxtools/ptxcc foo.ptx -o foo_cu.o -Xnvcc="--maxrregcount=64
+   -Xptxas=-v"
+
+Finally, this object file can be linked with the main program via ``nvcc``:
+
+::
+
+    nvcc foo_cu.o foo_main.o -o foo
+
 
 Hints
 -----
 Few things to observe
+  
+Limitations & known issues
+--------------------------
+
 
 
 Disclaimer and Legal Information
