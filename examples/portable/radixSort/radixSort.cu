@@ -9,7 +9,7 @@ typedef long long Key;
 __forceinline__ __device__ int atomic_add_global(int* ptr, int value)
 {
   return atomicAdd(ptr, value);
-} 
+}
 
 static __device__ __forceinline__ int shfl_scan_add_step(int partial, int up_offset)
 {
@@ -92,7 +92,7 @@ void sortPass(
 
   const  int mask = (1 << NUMBITS) - 1;
 
-  /* copy digit offset from Gmem to Lmem */ 
+  /* copy digit offset from Gmem to Lmem */
 #if 1
   __shared__ int digitOffsets_sh[NUMDIGITS*4];
   volatile int *digitOffsets = digitOffsets_sh + warpIdx*NUMDIGITS;
@@ -191,7 +191,7 @@ void completeScanGlobal(
   }
 }
 
-__device__ static 
+__device__ static
 inline void radixExclusiveScan(
     const  int numBlocks,
     int excScanPtr[],
@@ -242,11 +242,11 @@ void radixSort_alloc___export(const  int n)
   nPrefixSum    = NUMDIGITS*numBlocks;
 
 
-  const  int nalloc = 
+  const  int nalloc =
     nSharedCounts +
     nCountsGlobal +
     nExcScan +
-    nCountsBlock + 
+    nCountsBlock +
     nPartialSum +
     nPrefixSum;
 
@@ -261,7 +261,7 @@ void radixSort_alloc___export(const  int n)
   prefixSum    = partialSum   + nPartialSum;
 }
 
-extern "C" 
+extern "C"
 void radixSort_alloc(const  int n)
 {
   radixSort_alloc___export<<<1,32>>>(n);
@@ -269,7 +269,7 @@ void radixSort_alloc(const  int n)
 }
 
 
-__device__  static 
+__device__  static
 void radixSort_freeBufKeys()
 {
   if (numElementsBuf > 0)
@@ -344,9 +344,9 @@ __global__ void radixSort___export(
     /* sorting */
     launch (numBlocks,1,1,
       sortPass)(
-          bufKeys, 
-          keys, 
-          bit, 
+          bufKeys,
+          keys,
+          bit,
           numElements,
           excScan);
     sync;

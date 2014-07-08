@@ -5,8 +5,8 @@ uniform int gcd(uniform int a, uniform int b)
 {
   while ( a != 0 )
   {
-    uniform int c = a; 
-    a = b%a;  
+    uniform int c = a;
+    a = b%a;
     b = c;
   }
   return b;
@@ -32,7 +32,7 @@ int __sj(const int i, const uniform int j, const uniform int m, const uniform in
 
 
 #if 0
-static inline 
+static inline
 void transpose_serial(uniform T A[], const uniform int m, const uniform int n)
 {
   const uniform int tmpSize = max(m,n) * programCount;
@@ -90,7 +90,7 @@ static uniform int * uniform joverb = NULL;
 static uniform int * uniform iovera = NULL;
 static uniform int a,b,c;
 
-static 
+static
 void transpose_init(const uniform int m, const uniform int n, const uniform int nTask)
 {
   joverb = uniform new uniform int[n];
@@ -105,14 +105,14 @@ void transpose_init(const uniform int m, const uniform int n, const uniform int 
     iovera[i] = i/a;
 }
 
-static 
+static
 void transpose_finalize()
 {
   delete iovera;
   delete joverb;
 }
 
-task 
+task
 void transpose_step1(uniform T A[], const uniform int m, const uniform int n)
 {
   const uniform int n_per_task = (n + taskCount - 1)/taskCount;
@@ -140,7 +140,7 @@ void transpose_step2(uniform T A[], const uniform int m, const uniform int n)
   const uniform int m_per_task = (m + taskCount - 1)/taskCount;
   const uniform int mibeg = taskIndex * m_per_task;
   const uniform int miend = min(mibeg + m_per_task, m);
-  
+
   uniform  T * uniform tmp = uniform new uniform T[n*programCount];
 
   uniform T (*uniform tmp2D)[programCount] = (uniform T (*uniform)[programCount])tmp;
@@ -161,7 +161,7 @@ void transpose_step3(uniform T A[], const uniform int m, const uniform int n)
   const uniform int n_per_task = (n + taskCount - 1)/taskCount;
   const uniform int nibeg = taskIndex * n_per_task;
   const uniform int niend = min(nibeg + n_per_task, n);
-  
+
   uniform  T * uniform tmp = uniform new uniform T[m];
 
   for (uniform int j = nibeg; j < niend; j++)
@@ -176,7 +176,7 @@ void transpose_step3(uniform T A[], const uniform int m, const uniform int n)
   delete tmp;
 }
 
-export 
+export
 void transpose(uniform T A[], const uniform int m, const uniform int n)
 {
 #if 0
@@ -187,7 +187,7 @@ void transpose(uniform T A[], const uniform int m, const uniform int n)
 
   launch [nTask] transpose_step1(A, m, n);
   sync;
-  
+
   launch [nTask] transpose_step2(A, m, n);
   sync;
 

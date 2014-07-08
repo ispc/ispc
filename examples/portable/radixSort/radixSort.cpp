@@ -42,7 +42,7 @@ int main (int argc, char *argv[])
   Key *keys = new Key [n];
   Key *keys_orig = new Key [n];
   unsigned int *keys_gold = new unsigned int [n];
-  
+
   srand48(rtc()*65536);
 
   int sortBits = 32;
@@ -63,7 +63,7 @@ int main (int argc, char *argv[])
     keys_gold[i] = keys[i].key;
     keys_orig[i] = keys[i];
   }
-    
+
   ispcSetMallocHeapLimit(1024*1024*1024);
 
   ispc::radixSort_alloc(n);

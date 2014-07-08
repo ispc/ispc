@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2011, Intel Corporation
+  Copyright (c) 2010-2014, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -28,7 +28,7 @@
    PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
    LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
    NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
-   SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.  
+   SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
 #ifdef _MSC_VER
@@ -83,7 +83,7 @@ static void writeImage(int *idImage, float *depthImage, int width, int height,
             fputc(g, f);
             fputc(b, f);
         }
-    }            
+    }
     fclose(f);
     printf("Wrote image file %s\n", filename);
 }
@@ -116,7 +116,7 @@ int main(int argc, char *argv[]) {
     if (fread(&(var), sizeof(var), n, f) != (unsigned int)n) {  \
         fprintf(stderr, "Unexpected EOF reading scene file\n"); \
         return 1;                                               \
-    } else /* eat ; */                                                     
+    } else /* eat ; */
 
     //
     // Read the camera specification information from the camera file
@@ -145,7 +145,7 @@ int main(int argc, char *argv[]) {
     READ(raster2camera[0][0], 16);
 
     //
-    // Read in the serialized BVH 
+    // Read in the serialized BVH
     //
     sprintf(fnbuf, "%s.bvh", filename);
     f = fopen(fnbuf, "rb");
@@ -178,7 +178,7 @@ int main(int argc, char *argv[]) {
         READ(nodes[i].pad, 1);
     }
 
-    // And then read the triangles 
+    // And then read the triangles
     uint nTris;
     READ(nTris, 1);
     Triangle *triangles = new Triangle[nTris];
@@ -204,7 +204,7 @@ int main(int argc, char *argv[]) {
     // the first interseciton
     int *id = new int[width*height];
     float *image = new float[width*height];
-    
+
     ispc_memset(id, 0, width*height*sizeof(int));
     ispc_memset(image, 0, width*height*sizeof(float));
 
@@ -220,7 +220,7 @@ int main(int argc, char *argv[]) {
         printf("@time of ISPC + TASKS run:\t\t\t[%.3f] msec\n", dt);
         minTimeISPCtasks = std::min(dt, minTimeISPCtasks);
     }
-    printf("[rt ispc + tasks]:\t\t[%.3f] msec for %d x %d image\n", 
+    printf("[rt ispc + tasks]:\t\t[%.3f] msec for %d x %d image\n",
            minTimeISPCtasks, width, height);
 
     writeImage(id, image, width, height, "rt-ispc-tasks.ppm");

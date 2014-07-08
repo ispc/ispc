@@ -1,6 +1,6 @@
 // -*- mode: c++ -*-
 /*
-   Copyright (c) 2010-2011, Intel Corporation
+   Copyright (c) 2010-2014, Intel Corporation
    All rights reserved.
 
    Redistribution and use in source and binary forms, with or without
@@ -29,7 +29,7 @@ met:
  PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
  LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
  NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
- SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.  
+ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 /*
    Based on Syoyo Fujita's aobench: http://code.google.com/p/aobench
@@ -37,7 +37,7 @@ met:
 
 #include "cuda_helpers.cuh"
 
-#define NAO_SAMPLES		8
+#define NAO_SAMPLES        8
 //#define M_PI 3.1415926535f
 
 #define vec Float3
@@ -109,7 +109,7 @@ static inline unsigned int random(RNGState * state)
 
     b  = ((state->z1 << 6) ^ state->z1) >> 13;
     state->z1 = ((state->z1 & 4294967294U) << 18) ^ b;
-    b  = ((state->z2 << 2) ^ state->z2) >> 27; 
+    b  = ((state->z2 << 2) ^ state->z2) >> 27;
     state->z2 = ((state->z2 & 4294967288U) << 2) ^ b;
     b  = ((state->z3 << 13) ^ state->z3) >> 21;
     state->z3 = ((state->z3 & 4294967280U) << 7) ^ b;
@@ -128,7 +128,7 @@ static inline float frandom(RNGState * state)
 }
 
 __device__
-static inline void seed_rng(RNGState * state, 
+static inline void seed_rng(RNGState * state,
                             unsigned int seed) {
     state->z1 = seed;
     state->z2 = seed ^ 0xbeeff00d;
@@ -143,7 +143,7 @@ struct Isect {
   float      t;
   vec        p;
   vec        n;
-  int        hit; 
+  int        hit;
 };
 
 struct Sphere {
@@ -190,7 +190,7 @@ ray_plane_intersect(Isect &isect,const  Ray &ray, const  Plane &plane) {
   float v = dot(ray.dir, plane.n);
 
 #if 0
-  if (abs(v) < 1.0f-17) 
+  if (abs(v) < 1.0f-17)
     return;
   else {
     float t = -(dot(ray.org, plane.n) + d) / v;
@@ -238,7 +238,7 @@ ray_sphere_intersect(Isect &isect,const  Ray &ray, const Sphere &sphere) {
     }
   }
 #else
-    if (D <= 0.0f) 
+    if (D <= 0.0f)
       return;
 
     float t = -B - sqrt(D);
@@ -319,8 +319,8 @@ ambient_occlusion(Isect &isect,  const Plane &plane, const  Sphere spheres[3],
       occIsect.hit = 0;
 
       for ( int snum = 0; snum < 3; ++snum)
-        ray_sphere_intersect(occIsect, ray, spheres[snum]); 
-      ray_plane_intersect (occIsect, ray, plane); 
+        ray_sphere_intersect(occIsect, ray, spheres[snum]);
+      ray_plane_intersect (occIsect, ray, plane);
 
       if (occIsect.hit) occlusion += 1.0f;
     }
@@ -337,10 +337,10 @@ ambient_occlusion(Isect &isect,  const Plane &plane, const  Sphere spheres[3],
 __device__
 static inline void ao_tiles(
      int x0,  int x1,
-     int y0,  int y1, 
+     int y0,  int y1,
      int w,  int h,
-     int nsubsamples, 
-     float image[]) 
+     int nsubsamples,
+     float image[])
 {
   const  Plane plane = { { 0.0f, -0.5f, 0.0f }, { 0.f, 1.f, 0.f } };
   const  Sphere spheres[3] = {
@@ -411,8 +411,8 @@ static inline void ao_tiles(
 
 extern "C"
 __global__
-void ao_task( int width,  int height, 
-     int nsubsamples,  float image[]) 
+void ao_task( int width,  int height,
+     int nsubsamples,  float image[])
 {
   if (taskIndex0 >= taskCount0) return;
   if (taskIndex1 >= taskCount1) return;
@@ -428,8 +428,8 @@ void ao_task( int width,  int height,
 extern "C"
 __global__
 void ao_ispc_tasks___export(
-    int w, int h, int nsubsamples, 
-    float image[]) 
+    int w, int h, int nsubsamples,
+    float image[])
 {
   const int ntilex = (w+TILEX-1)/TILEX;
   const int ntiley = (h+TILEY-1)/TILEY;
@@ -439,8 +439,8 @@ void ao_ispc_tasks___export(
 
 extern "C"
 __host__ void ao_ispc_tasks(
-    int w, int h, int nsubsamples, 
-    float image[]) 
+    int w, int h, int nsubsamples,
+    float image[])
 {
   ao_ispc_tasks___export<<<1,32>>>(w,h,nsubsamples,image);
   cudaDeviceSynchronize();

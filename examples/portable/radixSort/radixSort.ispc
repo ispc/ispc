@@ -63,7 +63,7 @@ void sortPass(
 
   const uniform int mask = (1 << NUMBITS) - 1;
 
-  /* copy digit offset from Gmem to Lmem */ 
+  /* copy digit offset from Gmem to Lmem */
 #if 1
   uniform int digitOffsets[NUMDIGITS];
   foreach (digit = 0 ... NUMDIGITS)
@@ -95,7 +95,7 @@ void partialScanLocal(
   const uniform int  blockDim = (numBlocks+taskCount-1)/taskCount;
   const uniform int      bbeg = blockIdx * blockDim;
   const uniform int      bend = min(bbeg + blockDim, numBlocks);
-    
+
   uniform int (* uniform  countsBlock)[NUMDIGITS] = (uniform int (*)[NUMDIGITS])countsAll;
   uniform int (* uniform excScanBlock)[NUMDIGITS] = (uniform int (*)[NUMDIGITS])excScanAll;
   uniform int (* uniform   partialSum)[NUMDIGITS] = (uniform int (*)[NUMDIGITS])partialSumAll;
@@ -142,7 +142,7 @@ void completeScanGlobal(
   const uniform int  blockDim = (numBlocks+taskCount-1)/taskCount;
   const uniform int      bbeg = blockIdx * blockDim;
   const uniform int      bend = min(bbeg  + blockDim, numBlocks);
-  
+
   uniform int (* uniform excScanBlock)[NUMDIGITS] = (uniform int (*)[NUMDIGITS])excScanAll;
   uniform int (* uniform   carryValue)[NUMDIGITS] = (uniform int (*)[NUMDIGITS])carryValueAll;
 
@@ -154,7 +154,7 @@ void completeScanGlobal(
   }
 }
 
-static 
+static
 inline void radixExclusiveScan(
     const uniform int numBlocks,
     uniform int excScanPtr[],
@@ -207,11 +207,11 @@ export void radixSort_alloc(const uniform int n)
   nPrefixSum    = NUMDIGITS*numBlocks;
 
 
-  const uniform int nalloc = 
+  const uniform int nalloc =
     nSharedCounts +
     nCountsGlobal +
     nExcScan +
-    nCountsBlock + 
+    nCountsBlock +
     nPartialSum +
     nPrefixSum;
 
@@ -225,7 +225,7 @@ export void radixSort_alloc(const uniform int n)
   prefixSum    = partialSum   + nPartialSum;
 }
 
-static 
+static
 void radixSort_freeBufKeys()
 {
   if (numElementsBuf > 0)
@@ -283,16 +283,16 @@ export void radixSort(
       excScan[digit] = scan + carry;
       carry += broadcast(scan+value, programCount-1);
     }
-          
+
     /* computing offsets for each digit */
     radixExclusiveScan(numBlocks, excScan, counts, partialSum, prefixSum);
 
     /* sorting */
-    launch [numBlocks] 
+    launch [numBlocks]
       sortPass(
-          bufKeys, 
-          keys, 
-          bit, 
+          bufKeys,
+          keys,
+          bit,
           numElements,
           excScan);
     sync;

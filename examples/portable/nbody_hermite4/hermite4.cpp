@@ -61,7 +61,7 @@ struct Hermite4
     const real R0 = 1;
     const real mp = 1.0/n;
 #pragma omp parallel for schedule(runtime)
-    for (int i = 0; i < n; i++) 
+    for (int i = 0; i < n; i++)
     {
       real xp, yp, zp, s2 = 2*R0;
       real vx, vy, vz;
@@ -73,7 +73,7 @@ struct Hermite4
         vx = drand48() * 0.1;
         vy = drand48() * 0.1;
         vz = drand48() * 0.1;
-      } 
+      }
       g_posx[i] = xp;
       g_posy[i] = yp;
       g_posz[i] = zp;
@@ -104,7 +104,7 @@ struct Hermite4
 
   void forces();
 
-  real step(const real dt) 
+  real step(const real dt)
   {
     const real dt2 = dt*real(1.0/2.0);
     const real dt3 = dt*real(1.0/3.0);
@@ -149,9 +149,9 @@ struct Hermite4
       {
         /* compute snp & crk */
 
-        const real Amx = g_accx[i] - accx0[i]; 
-        const real Amy = g_accy[i] - accy0[i]; 
-        const real Amz = g_accz[i] - accz0[i]; 
+        const real Amx = g_accx[i] - accx0[i];
+        const real Amy = g_accy[i] - accy0[i];
+        const real Amz = g_accz[i] - accz0[i];
 
         const real Jmx = h*(g_jrkx[i] - jrkx0[i]);
         const real Jmy = h*(g_jrky[i] - jrky0[i]);
@@ -199,18 +199,18 @@ struct Hermite4
       }
     }
 
-    if (dt_min == HUGE) 
+    if (dt_min == HUGE)
       return dt;
-    else 
+    else
       return dt_min;
   }
 
-  void energy(real &Ekin, real &Epot) 
+  void energy(real &Ekin, real &Epot)
   {
     real ekin = 0, epot = 0;
 
 #pragma omp parallel for reduction(+:ekin,epot)
-    for (int i = 0; i < n; i++) 
+    for (int i = 0; i < n; i++)
     {
       ekin += g_mass[i] * (g_velx[i]*g_velx[i] + g_vely[i]*g_vely[i] + g_velz[i]*g_velz[i]) * real(0.5f);
       epot += real(0.5f)*g_mass[i] * g_gpot[i];
@@ -241,7 +241,7 @@ struct Hermite4
     real dt = 1.0/131072;
     real Epot, Ekin, Etot = Etot0;
     while (t_global < t_end) {
-      if (iter % ntime == 0) 
+      if (iter % ntime == 0)
         t0 = rtc();
 
       if (iter >= niter) return;
@@ -302,7 +302,7 @@ void run(const int nbodies, const real eta, const int nstep)
   h4.integrate(nstep);
 }
 
-int main(int argc, char *argv[]) 
+int main(int argc, char *argv[])
 {
   printf("  Usage: %s [nbodies=8192] [nsteps=40] [eta=0.1] \n", argv[0]);
 
