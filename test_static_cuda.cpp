@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2011, Intel Corporation
+  Copyright (c) 2010-2014, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -94,12 +94,12 @@ static void createContext(const int deviceId = 0, const bool verbose = true)
   int devMajor, devMinor;
   checkCudaErrors(cuDeviceComputeCapability(&devMajor, &devMinor, device));
   if (verbose)
-    std::cout << "Device Compute Capability: " 
+    std::cout << "Device Compute Capability: "
       << devMajor << "." << devMinor << "\n";
   if (devMajor < 2) {
     if (verbose)
       std::cerr << "ERROR: Device 0 is not SM 2.0 or greater\n";
-    exit(1); 
+    exit(1);
   }
 
   // Create driver context
@@ -180,7 +180,7 @@ static CUmodule loadModule(
     if (print_log)
       fprintf(stderr, "Loading ptx..\n");
     myErr = cuLinkAddData(*lState, CU_JIT_INPUT_PTX, (void*)module, strlen(module)+1, 0, 0, 0, 0);
-    myErr = cuLinkAddFile(*lState, CU_JIT_INPUT_LIBRARY, cudadevrt_lib, 0,0,0); 
+    myErr = cuLinkAddFile(*lState, CU_JIT_INPUT_LIBRARY, cudadevrt_lib, 0,0,0);
     // PTX May also be loaded from file, as per below.
     // myErr = cuLinkAddFile(*lState, CU_JIT_INPUT_PTX, "myPtx64.ptx",0,0,0);
   }
@@ -190,10 +190,10 @@ static CUmodule loadModule(
 
   if ( myErr != CUDA_SUCCESS )
   {
-    // Errors will be put in error_log, per CU_JIT_ERROR_LOG_BUFFER option above. 
+    // Errors will be put in error_log, per CU_JIT_ERROR_LOG_BUFFER option above.
     fprintf(stderr,"PTX Linker Error:\n%s\n",error_log);
     assert(0);
-  }    
+  }
 
   // Linker walltime and info_log were requested in options above.
  if (print_log)
@@ -260,13 +260,13 @@ static std::vector<char> readBinary(const char * filename, const bool print_size
     fprintf(stderr, "file %s not found\n", filename);
     assert(0);
   }
-  fseek(fp, 0, SEEK_END); 
+  fseek(fp, 0, SEEK_END);
   const unsigned long long size = ftell(fp);         /*calc the size needed*/
-  fseek(fp, 0, SEEK_SET); 
+  fseek(fp, 0, SEEK_SET);
   buffer.resize(size);
 
   if (fp == NULL){ /*ERROR detection if file == empty*/
-    fprintf(stderr, "Error: There was an Error reading the file %s \n",filename);           
+    fprintf(stderr, "Error: There was an Error reading the file %s \n",filename);
     exit(1);
   }
   else if (fread(&buffer[0], sizeof(char), size, fp) != size){ /* if count of read bytes != calculated size of .bin file -> ERROR*/
@@ -279,7 +279,7 @@ static std::vector<char> readBinary(const char * filename, const bool print_size
 }
 
 static double CUDALaunch(
-    void **handlePtr, 
+    void **handlePtr,
     const char * func_name,
     void **func_args,
     const bool print_log = true,
@@ -396,7 +396,7 @@ int main(int argc, char *argv[]) {
 #endif
 
     float expected_result[64];
-    
+
     memset(expected_result, 0, 64*sizeof(float));
     devicePtr d_expected_result = deviceMalloc(64*sizeof(float));
     memcpyH2D(d_expected_result, expected_result, 64*sizeof(float));
