@@ -377,6 +377,7 @@ def validation_run(only, only_targets, reference_branch, number, notify, update,
         print_debug("\n\nStability validation run\n\n", False, "")
         stability = options_for_drivers()
 # stability constant options
+        stability.save_bin = False
         stability.random = False
         stability.ispc_flags = ""
         stability.compiler_exe = None
