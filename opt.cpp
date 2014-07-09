@@ -55,7 +55,9 @@
   #include <llvm/Function.h>
   #include <llvm/BasicBlock.h>
   #include <llvm/Constants.h>
+#ifdef ISPC_NVPTX_ENABLED
   #include <llvm/InlineAsm.h>
+#endif /* ISPC_NVPTX_ENABLED */
 #else
   #include <llvm/IR/Module.h>
   #include <llvm/IR/Instructions.h>
@@ -63,7 +65,9 @@
   #include <llvm/IR/Function.h>
   #include <llvm/IR/BasicBlock.h>
   #include <llvm/IR/Constants.h>
+#ifdef ISPC_NVPTX_ENABLED
   #include <llvm/IR/InlineAsm.h>
+#endif /* ISPC_NVPTX_ENABLED */
 #endif
 #if defined (LLVM_3_4) || defined(LLVM_3_5)
   #include <llvm/Transforms/Instrumentation.h>
@@ -131,7 +135,9 @@ static llvm::Pass *CreateDebugPass(char * output);
 static llvm::Pass *CreateReplaceStdlibShiftPass();
 
 static llvm::Pass *CreateFixBooleanSelectPass();
+#ifdef ISPC_NVPTX_ENABLED
 static llvm::Pass *CreatePromoteLocalToPrivatePass();
+#endif /* ISPC_NVPTX_ENABLED */
 
 #define DEBUG_START_PASS(NAME)                                 \
     if (g->debugPrint &&                                       \
@@ -495,9 +501,11 @@ Optimize(llvm::Module *module, int optLevel) {
         // run absolutely no optimizations, since the front-end needs us to
         // take the various __pseudo_* functions it has emitted and turn
         // them into something that can actually execute.
-        
+        optPM.add(CreateImproveMemoryOpsPass(), 100);
+#ifdef ISPC_NVPTX_ENABLED
         if (g->opt.disableGatherScatterOptimizations == false &&
             g->target->getVectorWidth() > 1) 
+#endif /* ISPC_NVPTX_ENABLED */
           optPM.add(CreateImproveMemoryOpsPass(), 100);
 
         if (g->opt.disableHandlePseudoMemoryOps == false)
@@ -579,7 +587,9 @@ Optimize(llvm::Module *module, int optLevel) {
         optPM.add(llvm::createReassociatePass());
         optPM.add(llvm::createIPConstantPropagationPass());
 
+#ifdef ISPC_NVPTX_ENABLED
         if (g->target->getISA() != Target::NVPTX)
+#endif /* ISPC_NVPTX_ENABLED */
           optPM.add(CreateReplaceStdlibShiftPass(),229);
 
         optPM.add(llvm::createDeadArgEliminationPass(),230);
@@ -693,7 +703,7 @@ Optimize(llvm::Module *module, int optLevel) {
 
         // Should be the last
         optPM.add(CreateFixBooleanSelectPass(), 400);
-
+#ifdef ISPC_NVPTX_ENABLED
         if (g->target->getISA() == Target::NVPTX)
         {
           optPM.add(CreatePromoteLocalToPrivatePass());
@@ -799,6 +809,7 @@ Optimize(llvm::Module *module, int optLevel) {
           optPM.add(llvm::createConstantMergePass());
 #endif
         }
+#endif /* ISPC_NVPTX_ENABLED */
     }
 
     // Finish up by making sure we didn't mess anything up in the IR along
@@ -5410,6 +5421,7 @@ CreateFixBooleanSelectPass() {
     return new FixBooleanSelectPass();
 }
 
+#ifdef ISPC_NVPTX_ENABLED
 ///////////////////////////////////////////////////////////////////////////////
 // Detect addrspace(3)
 ///////////////////////////////////////////////////////////////////////////////
@@ -5498,4 +5510,5 @@ CreatePromoteLocalToPrivatePass() {
 
 
 
+#endif /* ISPC_NVPTX_ENABLED */
 

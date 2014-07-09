@@ -58,7 +58,9 @@
 #include <set>
 #include <sstream>
 #include <iostream>
+#ifdef ISPC_NVPTX_ENABLED
 #include <map>
+#endif /* ISPC_NVPTX_ENABLED */
 #ifdef ISPC_IS_WINDOWS
 #include <windows.h>
 #include <io.h>
@@ -72,7 +74,9 @@
   #include <llvm/Instructions.h>
   #include <llvm/Intrinsics.h>
   #include <llvm/DerivedTypes.h>
+#ifdef ISPC_NVPTX_ENABLED
   #include "llvm/Assembly/AssemblyAnnotationWriter.h"
+#endif /* ISPC_NVPTX_ENABLED */
 #else
   #include <llvm/IR/LLVMContext.h>
   #include <llvm/IR/Module.h>
@@ -80,7 +84,9 @@
   #include <llvm/IR/Instructions.h>
   #include <llvm/IR/Intrinsics.h>
   #include <llvm/IR/DerivedTypes.h>
+#ifdef ISPC_NVPTX_ENABLED
   #include "llvm/Assembly/AssemblyAnnotationWriter.h"
+#endif /* ISPC_NVPTX_ENABLED */
 #endif
 #include <llvm/PassManager.h>
 #include <llvm/PassRegistry.h>
@@ -446,6 +452,7 @@ Module::AddGlobalVariable(const std::string &name, const Type *type, Expr *initE
         return;
     }
 
+#ifdef ISPC_NVPTX_ENABLED
     if (g->target->getISA() == Target::NVPTX && 
 #if 0
         !type->IsConstType()  &&
@@ -476,7 +483,7 @@ Module::AddGlobalVariable(const std::string &name, const Type *type, Expr *initE
           type = new ArrayType(type->GetAsUniformType(), nel);
 #endif
     }
-
+#endif /* ISPC_NVPTX_ENABLED */
 
     llvm::Type *llvmType = type->LLVMType(g->ctx);
     if (llvmType == NULL)
@@ -677,6 +684,7 @@ lCheckExportedParameterTypes(const Type *type, const std::string &name,
     }
 }
 
+#ifdef ISPC_NVPTX_ENABLED
 static void
 lCheckTaskParameterTypes(const Type *type, const std::string &name,
                              SourcePos pos) {
@@ -691,7 +699,7 @@ lCheckTaskParameterTypes(const Type *type, const std::string &name,
           name.c_str());
     }
 }
-
+#endif /* ISPC_NVPTX_ENABLED */
 
 /** Given a function type, loop through the function parameters and see if
     any are StructTypes.  If so, issue an error; this is currently broken
@@ -849,8 +857,12 @@ Module::AddFunctionDeclaration(const std::string &name,
 #else // LLVM 3.1 and 3.3+
         function->addFnAttr(llvm::Attribute::AlwaysInline);
 #endif
-    /* evghenii: fails function verification when "if" executed in nvptx target */
-    if (functionType->isTask && g->target->getISA() != Target::NVPTX)
+
+    if (functionType->isTask)
+#ifdef ISPC_NVPTX_ENABLED
+      /* evghenii: fails function verification when "if" executed in nvptx target */
+      if (g->target->getISA() != Target::NVPTX)
+#endif /* ISPC_NVPTX_ENABLED */
         // This also applies transitively to members I think?
 #if defined(LLVM_3_1)
         function->setDoesNotAlias(1, true);
@@ -871,12 +883,14 @@ Module::AddFunctionDeclaration(const std::string &name,
         functionType->GetReturnType()->IsVoidType() == false)
         Error(pos, "Task-qualified functions must have void return type.");
 
+#ifdef ISPC_NVPTX_ENABLED
     if (g->target->getISA() == Target::NVPTX &&
         Type::Equal(functionType->GetReturnType(), AtomicType::Void) == false &&
         functionType->isExported)
     {
         Error(pos, "Export-qualified functions must have void return type with \"nvptx\" target.");
     }
+#endif /* ISPC_NVPTX_ENABLED */
 
     if (functionType->isExported || functionType->isExternC)
         lCheckForStructParameters(functionType, pos);
@@ -897,9 +911,12 @@ Module::AddFunctionDeclaration(const std::string &name,
         if (functionType->isExported) {
           lCheckExportedParameterTypes(argType, argName, argPos);
         }
+
+#ifdef ISPC_NVPTX_ENABLED
         if (functionType->isTask) {
           lCheckTaskParameterTypes(argType, argName, argPos);
         }
+#endif /* ISPC_NVPTX_ENABLED */
 
         // ISPC assumes that no pointers alias.  (It should be possible to
         // specify when this is not the case, but this should be the
@@ -1027,24 +1044,28 @@ Module::writeOutput(OutputType outputType, const char *outFileName,
         const char *fileType = NULL;
         switch (outputType) {
         case Asm:
-            if (g->target->getISA() != Target::NVPTX)
-            {
-              if (strcasecmp(suffix, "s"))
+#ifdef ISPC_NVPTX_ENABLED
+          if (g->target->getISA() == Target::NVPTX)
+          {
+            if (strcasecmp(suffix, "ptx"))
                 fileType = "assembly";
-            }
-            else
-              if (strcasecmp(suffix, "ptx"))
+          }
+          else
+#endif /* ISPC_NVPTX_ENABLED */
+            if (strcasecmp(suffix, "s"))
                 fileType = "assembly";
             break;
         case Bitcode:
-            if (g->target->getISA() != Target::NVPTX)
-            {
-              if (strcasecmp(suffix, "bc"))
-                  fileType = "LLVM bitcode";
-            }
-            else
-              if (strcasecmp(suffix, "ll"))
-                  fileType = "LLVM assembly";
+#ifdef ISPC_NVPTX_ENABLED
+          if (g->target->getISA() == Target::NVPTX)
+          {
+            if (strcasecmp(suffix, "ll"))
+                fileType = "LLVM assembly";
+          }
+          else
+#endif /* ISPC_NVPTX_ENABLED */
+            if (strcasecmp(suffix, "bc"))
+                fileType = "LLVM bitcode";
             break;
         case Object:
             if (strcasecmp(suffix, "o") && strcasecmp(suffix, "obj"))
@@ -1113,6 +1134,7 @@ Module::writeOutput(OutputType outputType, const char *outFileName,
         return writeObjectFileOrAssembly(outputType, outFileName);
 }
 
+#ifdef ISPC_NVPTX_ENABLED
 typedef std::vector<std::string> vecString_t;
 static vecString_t 
 lSplitString(const std::string &s)
@@ -1180,6 +1202,7 @@ lFixAttributes(const vecString_t &src, vecString_t &dst)
     dst.push_back(s);
   }
 }
+#endif /* ISPC_NVPTX_ENABLED */
 
 bool
 Module::writeBitcode(llvm::Module *module, const char *outFileName) {
@@ -1204,11 +1227,8 @@ Module::writeBitcode(llvm::Module *module, const char *outFileName) {
     }
 
     llvm::raw_fd_ostream fos(fd, (fd != 1), false);
-    if (g->target->getISA() != Target::NVPTX)
-    {
-     llvm::WriteBitcodeToFile(module, fos);
-    }
-    else
+#ifdef ISPC_NVPTX_ENABLED
+    if (g->target->getISA() == Target::NVPTX)
     {
       /* when using "nvptx" target, emit patched/hacked assembly 
        * NVPTX only accepts 3.2-style LLVM assembly, where attributes
@@ -1240,7 +1260,9 @@ Module::writeBitcode(llvm::Module *module, const char *outFileName) {
         fos << *it;
       }
     }
-
+    else
+#endif /* ISPC_NVPTX_ENABLED */
+      llvm::WriteBitcodeToFile(module, fos);
 
     return true;
 }
@@ -2275,6 +2297,7 @@ Module::execPreprocessor(const char *infilename, llvm::raw_string_ostream *ostre
             opts.addMacroDef(g->cppArgs[i].substr(2));
         }
     }
+#ifdef ISPC_NVPTX_ENABLED
     if (g->target->getISA() == Target::NVPTX)
     {
       opts.addMacroDef("__NVPTX__");
@@ -2295,6 +2318,7 @@ Module::execPreprocessor(const char *infilename, llvm::raw_string_ostream *ostre
       opts.addMacroDef("taskCount2=__taskCount2()");
       opts.addMacroDef("taskCount=__taskCount()");
     }
+#endif /* ISPC_NVPTX_ENABLED */
 
     inst.getLangOpts().LineComment = 1;
 #if defined(LLVM_3_5)
@@ -2740,6 +2764,7 @@ lCreateDispatchModule(std::map<std::string, FunctionTargetVariants> &functions) 
     return module;
 }
 
+#ifdef ISPC_NVPTX_ENABLED
 static std::string lCBEMangle(const std::string &S) {
   std::string Result;
 
@@ -2762,7 +2787,7 @@ static std::string lCBEMangle(const std::string &S) {
   }
   return Result;
 }
-
+#endif /* ISPC_NVPTX_ENABLED */
 
 int
 Module::CompileAndOutput(const char *srcFile,
@@ -2778,7 +2803,7 @@ Module::CompileAndOutput(const char *srcFile,
                          const char *hostStubFileName,
                          const char *devStubFileName)
 {
-  if (target == NULL || strchr(target, ',') == NULL) {
+    if (target == NULL || strchr(target, ',') == NULL) {
         // We're only compiling to a single target
         g->target = new Target(arch, cpu, target, generatePIC);
         if (!g->target->isValid())
@@ -2786,7 +2811,7 @@ Module::CompileAndOutput(const char *srcFile,
 
         m = new Module(srcFile);
         if (m->CompileFile() == 0) {
-
+#ifdef ISPC_NVPTX_ENABLED
             /* NVPTX:
              * for PTX target replace '.' with '_' in all global variables 
              * a PTX identifier name must match [a-zA-Z$_][a-zA-Z$_0-9]*
@@ -2811,7 +2836,7 @@ Module::CompileAndOutput(const char *srcFile,
                 }
               }
             }
-
+#endif /* ISPC_NVPTX_ENABLED */
             if (outputType == CXX) {
                 if (target == NULL || strncmp(target, "generic-", 8) != 0) {
                     Error(SourcePos(), "When generating C++ output, one of the \"generic-*\" "
@@ -3014,5 +3039,4 @@ Module::CompileAndOutput(const char *srcFile,
 
         return errorCount > 0;
     }
-    return true;
 }

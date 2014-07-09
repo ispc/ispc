@@ -179,7 +179,10 @@ public:
         flexible/performant of them will apear last in the enumerant.  Note
         also that __best_available_isa() needs to be updated if ISAs are
         added or the enumerant values are reordered.  */
-    enum ISA { NVPTX,
+    enum ISA {
+#ifdef ISPC_NVPTX_ENABLED
+               NVPTX,
+#endif 
 #ifdef ISPC_ARM_ENABLED
                NEON32, NEON16, NEON8,
 #endif
@@ -611,7 +614,6 @@ struct Globals {
     /** Indicates that alignment in memory allocation routines should be
         forced to have given value. -1 value means natural alignment for the platforms. */
     int forceAlignment;
-    std::string PtxString;
 };
 
 enum {

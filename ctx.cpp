@@ -57,8 +57,10 @@
   #include <llvm/IR/Instructions.h>
   #include <llvm/IR/DerivedTypes.h>
 #endif
+#ifdef ISPC_NVPTX_ENABLED
 #include <llvm/Support/raw_ostream.h>
 #include <llvm/Support/FormattedStream.h>
+#endif /* ISPC_NVPTX_ENABLED */
 
 /** This is a small utility structure that records information related to one
     level of nested control flow.  It's mostly used in correctly restoring
@@ -1373,28 +1375,30 @@ FunctionEmitContext::None(llvm::Value *mask) {
 
 
 llvm::Value *
-FunctionEmitContext::LaneMask(llvm::Value *v) 
-{
-#if 1 /* this makes mandelbrot example slower with "nvptx" target. Need further investigation. */
-  const char *__movmsk = g->target->getISA() == Target::NVPTX ? "__movmsk_ptx" : "__movmsk";
+FunctionEmitContext::LaneMask(llvm::Value *v) {
+#ifdef ISPC_NVPTX_ENABLED
+    /* this makes mandelbrot example slower with "nvptx" target. 
+     * Needs further investigation. */
+    const char *__movmsk = g->target->getISA() == Target::NVPTX ? "__movmsk_ptx" : "__movmsk";
 #else
-  const char *__movmsk = "__movmsk";
+    const char *__movmsk = "__movmsk";
 #endif
-  // Call the target-dependent movmsk function to turn the vector mask
-  // into an i64 value
-  std::vector<Symbol *> mm;
-  m->symbolTable->LookupFunction(__movmsk, &mm);
-  if (g->target->getMaskBitCount() == 1)
-    AssertPos(currentPos, mm.size() == 1);
-  else
-    // There should be one with signed int signature, one unsigned int.
-    AssertPos(currentPos, mm.size() == 2);
-  // We can actually call either one, since both are i32s as far as
-  // LLVM's type system is concerned...
-  llvm::Function *fmm = mm[0]->function;
-  return CallInst(fmm, NULL, v, LLVMGetName(v, "_movmsk"));
+    // Call the target-dependent movmsk function to turn the vector mask
+    // into an i64 value
+    std::vector<Symbol *> mm;
+    m->symbolTable->LookupFunction(__movmsk, &mm);
+    if (g->target->getMaskBitCount() == 1)
+        AssertPos(currentPos, mm.size() == 1);
+    else
+        // There should be one with signed int signature, one unsigned int.
+        AssertPos(currentPos, mm.size() == 2);
+    // We can actually call either one, since both are i32s as far as
+    // LLVM's type system is concerned...
+    llvm::Function *fmm = mm[0]->function;
+    return CallInst(fmm, NULL, v, LLVMGetName(v, "_movmsk"));
 }
 
+#ifdef ISPC_NVPTX_ENABLED
 bool lAppendInsertExtractName(llvm::Value *vector, std::string &funcName)
 {
   llvm::Type *type = vector->getType();
@@ -1447,19 +1451,21 @@ FunctionEmitContext::Extract(llvm::Value *vector, llvm::Value *lane)
   llvm::Value *ret = llvm::CallInst::Create(func, args, LLVMGetName(vector, funcName.c_str()), GetCurrentBasicBlock());
   return ret;
 }
+#endif /* ISPC_NVPTX_ENABLED */
 
 
 llvm::Value *
 FunctionEmitContext::MasksAllEqual(llvm::Value *v1, llvm::Value *v2) {
-  if (g->target->getISA() == Target::NVPTX)
-  {
-    // Compare the two masks to get a vector of i1s
-    llvm::Value *cmp = CmpInst(llvm::Instruction::ICmp, llvm::CmpInst::ICMP_EQ,
-        v1, v2, "v1==v2");
-    return ExtractInst(cmp, 0);  /* this works without calling All(..) in PTX. Why ?!? */
-  }
-  else
-  {
+#ifdef ISPC_NVPTX_ENABLED
+    if (g->target->getISA() == Target::NVPTX)
+    {
+      // Compare the two masks to get a vector of i1s
+      llvm::Value *cmp = CmpInst(llvm::Instruction::ICmp, llvm::CmpInst::ICMP_EQ,
+          v1, v2, "v1==v2");
+      return ExtractInst(cmp, 0);  /* this works without calling All(..) in PTX. Why ?!? */
+    }
+#endif /* ISPC_NVPTX_ENABLED */
+
 #if 0
     // Compare the two masks to get a vector of i1s
     llvm::Value *cmp = CmpInst(llvm::Instruction::ICmp, llvm::CmpInst::ICMP_EQ,
@@ -1474,7 +1480,6 @@ FunctionEmitContext::MasksAllEqual(llvm::Value *v1, llvm::Value *v2) {
     return CmpInst(llvm::Instruction::ICmp, llvm::CmpInst::ICMP_EQ, mm1, mm2,
         LLVMGetName("equal", v1, v2));
 #endif
-  }
 }
 
 llvm::Value *
@@ -1489,6 +1494,8 @@ FunctionEmitContext::ProgramIndexVector(bool is32bits) {
 
     return index;
 }
+
+#ifdef ISPC_NVPTX_ENABLED
 llvm::Value *
 FunctionEmitContext::ProgramIndexVectorPTX(bool is32bits) {
     llvm::Function *func_program_index  = m->module->getFunction("__program_index");
@@ -1500,6 +1507,7 @@ FunctionEmitContext::ProgramIndexVectorPTX(bool is32bits) {
 #endif
     return index;
 }
+#endif /* ISPC_NVPTX_ENABLED */
 
 
 llvm::Value *
@@ -1919,7 +1927,6 @@ FunctionEmitContext::PtrToIntInst(llvm::Value *value, const char *name) {
 
     if (name == NULL)
         name = LLVMGetName(value, "_ptr2int");
-
     llvm::Type *type = LLVMTypes::PointerIntType;
     llvm::Instruction *inst = new llvm::PtrToIntInst(value, type, name, bblock);
     AddDebugPos(inst);
@@ -3613,75 +3620,8 @@ llvm::Value *
 FunctionEmitContext::LaunchInst(llvm::Value *callee,
                                 std::vector<llvm::Value *> &argVals,
                                 llvm::Value *launchCount[3]){
-
-    if (g->target->getISA() != Target::NVPTX)
-    {
-      if (callee == NULL) {
-        AssertPos(currentPos, m->errorCount > 0);
-        return NULL;
-      }
-
-      launchedTasks = true;
-
-      AssertPos(currentPos, llvm::isa<llvm::Function>(callee));
-      llvm::Type *argType =
-        (llvm::dyn_cast<llvm::Function>(callee))->arg_begin()->getType();
-      AssertPos(currentPos, llvm::PointerType::classof(argType));
-      llvm::PointerType *pt =
-        llvm::dyn_cast<llvm::PointerType>(argType);
-      AssertPos(currentPos, llvm::StructType::classof(pt->getElementType()));
-      llvm::StructType *argStructType =
-        static_cast<llvm::StructType *>(pt->getElementType());
-
-      llvm::Function *falloc = m->module->getFunction("ISPCAlloc");
-      AssertPos(currentPos, falloc != NULL);
-      llvm::Value *structSize = g->target->SizeOf(argStructType, bblock);
-      if (structSize->getType() != LLVMTypes::Int64Type)
-        // ISPCAlloc expects the size as an uint64_t, but on 32-bit
-        // targets, SizeOf returns a 32-bit value
-        structSize = ZExtInst(structSize, LLVMTypes::Int64Type,
-            "struct_size_to_64");
-      int align = 4 * RoundUpPow2(g->target->getNativeVectorWidth());
-
-      std::vector<llvm::Value *> allocArgs;
-      allocArgs.push_back(launchGroupHandlePtr);
-      allocArgs.push_back(structSize);
-      allocArgs.push_back(LLVMInt32(align));
-      llvm::Value *voidmem = CallInst(falloc, NULL, allocArgs, "args_ptr");
-      llvm::Value *argmem = BitCastInst(voidmem, pt);
-
-      // Copy the values of the parameters into the appropriate place in
-      // the argument block
-      for (unsigned int i = 0; i < argVals.size(); ++i) {
-        llvm::Value *ptr = AddElementOffset(argmem, i, NULL, "funarg");
-        // don't need to do masked store here, I think
-        StoreInst(argVals[i], ptr);
-      }
-
-      if (argStructType->getNumElements() == argVals.size() + 1) {
-        // copy in the mask
-        llvm::Value *mask = GetFullMask();
-        llvm::Value *ptr = AddElementOffset(argmem, argVals.size(), NULL,
-            "funarg_mask");
-        StoreInst(mask, ptr);
-      }
-
-      // And emit the call to the user-supplied task launch function, passing
-      // a pointer to the task function being called and a pointer to the
-      // argument block we just filled in
-      llvm::Value *fptr = BitCastInst(callee, LLVMTypes::VoidPointerType);
-      llvm::Function *flaunch = m->module->getFunction("ISPCLaunch");
-      AssertPos(currentPos, flaunch != NULL);
-      std::vector<llvm::Value *> args;
-      args.push_back(launchGroupHandlePtr);
-      args.push_back(fptr);
-      args.push_back(voidmem);
-      args.push_back(launchCount[0]);
-      args.push_back(launchCount[1]);
-      args.push_back(launchCount[2]);
-      return CallInst(flaunch, NULL, args, "");
-    }
-    else /* NVPTX */
+#ifdef ISPC_NVPTX_ENABLED
+    if (g->target->getISA() == Target::NVPTX)
     {
       if (callee == NULL) {
         AssertPos(currentPos, m->errorCount > 0);
@@ -3764,38 +3704,79 @@ FunctionEmitContext::LaunchInst(llvm::Value *callee,
       llvm::Value *ret =  CallInst(flaunch, NULL, args, "");
       return ret;
     }
+#endif /* ISPC_NVPTX_ENABLED */
+
+    if (callee == NULL) {
+      AssertPos(currentPos, m->errorCount > 0);
+      return NULL;
+    }
+
+    launchedTasks = true;
+
+    AssertPos(currentPos, llvm::isa<llvm::Function>(callee));
+    llvm::Type *argType =
+      (llvm::dyn_cast<llvm::Function>(callee))->arg_begin()->getType();
+    AssertPos(currentPos, llvm::PointerType::classof(argType));
+    llvm::PointerType *pt =
+      llvm::dyn_cast<llvm::PointerType>(argType);
+    AssertPos(currentPos, llvm::StructType::classof(pt->getElementType()));
+    llvm::StructType *argStructType =
+      static_cast<llvm::StructType *>(pt->getElementType());
+
+    llvm::Function *falloc = m->module->getFunction("ISPCAlloc");
+    AssertPos(currentPos, falloc != NULL);
+    llvm::Value *structSize = g->target->SizeOf(argStructType, bblock);
+    if (structSize->getType() != LLVMTypes::Int64Type)
+      // ISPCAlloc expects the size as an uint64_t, but on 32-bit
+      // targets, SizeOf returns a 32-bit value
+      structSize = ZExtInst(structSize, LLVMTypes::Int64Type,
+          "struct_size_to_64");
+    int align = 4 * RoundUpPow2(g->target->getNativeVectorWidth());
+
+    std::vector<llvm::Value *> allocArgs;
+    allocArgs.push_back(launchGroupHandlePtr);
+    allocArgs.push_back(structSize);
+    allocArgs.push_back(LLVMInt32(align));
+    llvm::Value *voidmem = CallInst(falloc, NULL, allocArgs, "args_ptr");
+    llvm::Value *argmem = BitCastInst(voidmem, pt);
+
+    // Copy the values of the parameters into the appropriate place in
+    // the argument block
+    for (unsigned int i = 0; i < argVals.size(); ++i) {
+      llvm::Value *ptr = AddElementOffset(argmem, i, NULL, "funarg");
+      // don't need to do masked store here, I think
+      StoreInst(argVals[i], ptr);
+    }
+
+    if (argStructType->getNumElements() == argVals.size() + 1) {
+      // copy in the mask
+      llvm::Value *mask = GetFullMask();
+      llvm::Value *ptr = AddElementOffset(argmem, argVals.size(), NULL,
+          "funarg_mask");
+      StoreInst(mask, ptr);
+    }
+
+    // And emit the call to the user-supplied task launch function, passing
+    // a pointer to the task function being called and a pointer to the
+    // argument block we just filled in
+    llvm::Value *fptr = BitCastInst(callee, LLVMTypes::VoidPointerType);
+    llvm::Function *flaunch = m->module->getFunction("ISPCLaunch");
+    AssertPos(currentPos, flaunch != NULL);
+    std::vector<llvm::Value *> args;
+    args.push_back(launchGroupHandlePtr);
+    args.push_back(fptr);
+    args.push_back(voidmem);
+    args.push_back(launchCount[0]);
+    args.push_back(launchCount[1]);
+    args.push_back(launchCount[2]);
+    return CallInst(flaunch, NULL, args, "");
 }
 
 
 void
 FunctionEmitContext::SyncInst() {
-    if (g->target->getISA() != Target::NVPTX)
-    {
-      llvm::Value *launchGroupHandle = LoadInst(launchGroupHandlePtr);
-      llvm::Value *nullPtrValue =
-        llvm::Constant::getNullValue(LLVMTypes::VoidPointerType);
-      llvm::Value *nonNull = CmpInst(llvm::Instruction::ICmp,
-          llvm::CmpInst::ICMP_NE,
-          launchGroupHandle, nullPtrValue);
-      llvm::BasicBlock *bSync = CreateBasicBlock("call_sync");
-      llvm::BasicBlock *bPostSync = CreateBasicBlock("post_sync");
-      BranchInst(bSync, bPostSync, nonNull);
-
-      SetCurrentBasicBlock(bSync);
-      llvm::Function *fsync = m->module->getFunction("ISPCSync");
-      if (fsync == NULL)
-        FATAL("Couldn't find ISPCSync declaration?!");
-      CallInst(fsync, NULL, launchGroupHandle, "");
-
-      // zero out the handle so that if ISPCLaunch is called again in this
-      // function, it knows it's starting out from scratch
-      StoreInst(nullPtrValue, launchGroupHandlePtr);
-
-      BranchInst(bPostSync);
-
-      SetCurrentBasicBlock(bPostSync);
-    }
-    else /* NVPTX: don't do test, just call sync */
+#ifdef ISPC_NVPTX_ENABLED 
+    if (g->target->getISA() == Target::NVPTX)
     {
       llvm::Value *launchGroupHandle = LoadInst(launchGroupHandlePtr);
       llvm::Value *nullPtrValue =
@@ -3805,7 +3786,33 @@ FunctionEmitContext::SyncInst() {
         FATAL("Couldn't find ISPCSync declaration?!");
       CallInst(fsync, NULL, launchGroupHandle, "");
       StoreInst(nullPtrValue, launchGroupHandlePtr);
+      return;
     }
+#endif /* ISPC_NVPTX_ENABLED */
+
+    llvm::Value *launchGroupHandle = LoadInst(launchGroupHandlePtr);
+    llvm::Value *nullPtrValue =
+        llvm::Constant::getNullValue(LLVMTypes::VoidPointerType);
+    llvm::Value *nonNull = CmpInst(llvm::Instruction::ICmp,
+                                   llvm::CmpInst::ICMP_NE,
+                                   launchGroupHandle, nullPtrValue);
+    llvm::BasicBlock *bSync = CreateBasicBlock("call_sync");
+    llvm::BasicBlock *bPostSync = CreateBasicBlock("post_sync");
+    BranchInst(bSync, bPostSync, nonNull);
+
+    SetCurrentBasicBlock(bSync);
+    llvm::Function *fsync = m->module->getFunction("ISPCSync");
+    if (fsync == NULL)
+        FATAL("Couldn't find ISPCSync declaration?!");
+    CallInst(fsync, NULL, launchGroupHandle, "");
+
+    // zero out the handle so that if ISPCLaunch is called again in this
+    // function, it knows it's starting out from scratch
+    StoreInst(nullPtrValue, launchGroupHandlePtr);
+
+    BranchInst(bPostSync);
+
+    SetCurrentBasicBlock(bPostSync);
 }
 
 

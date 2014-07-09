@@ -73,6 +73,10 @@ endif
 # To enable: make ARM_ENABLED=1
 ARM_ENABLED=0
 
+# Disable NVPTX by request
+# To disable: make NVPTX_ENABLED=0
+NVPTX_ENABLED=1
+
 # Add llvm bin to the path so any scripts run will go to the right llvm-config
 LLVM_BIN= $(shell $(LLVM_CONFIG) --bindir)
 export PATH:=$(LLVM_BIN):$(PATH)
@@ -89,7 +93,7 @@ LLVM_CXXFLAGS=$(shell $(LLVM_CONFIG) --cppflags)
 LLVM_VERSION=LLVM_$(shell $(LLVM_CONFIG) --version | sed -e 's/svn//' -e 's/\./_/' -e 's/\..*//')
 LLVM_VERSION_DEF=-D$(LLVM_VERSION)
 
-LLVM_COMPONENTS = engine ipo bitreader bitwriter instrumentation linker nvptx
+LLVM_COMPONENTS = engine ipo bitreader bitwriter instrumentation linker 
 # Component "option" was introduced in 3.3 and starting with 3.4 it is required for the link step.
 # We check if it's available before adding it (to not break 3.2 and earlier).
 ifeq ($(shell $(LLVM_CONFIG) --components |grep -c option), 1)
@@ -98,6 +102,9 @@ endif
 ifneq ($(ARM_ENABLED), 0)
     LLVM_COMPONENTS+=arm
 endif
+ifneq ($(NVPTX_ENABLED), 0)
+    LLVM_COMPONENTS+=nvptx
+endif	
 LLVM_LIBS=$(shell $(LLVM_CONFIG) --libs $(LLVM_COMPONENTS))
 
 CLANG=clang
@@ -156,6 +163,9 @@ endif
 ifneq ($(ARM_ENABLED), 0)
     CXXFLAGS+=-DISPC_ARM_ENABLED
 endif
+ifneq ($(NVPTX_ENABLED), 0)
+    CXXFLAGS+=-DISPC_NVPTX_ENABLED
+endif
 
 LDFLAGS=
 ifeq ($(ARCH_OS),Linux)
@@ -174,11 +184,14 @@ CXX_SRC=ast.cpp builtins.cpp cbackend.cpp ctx.cpp decl.cpp expr.cpp func.cpp \
 	type.cpp util.cpp
 HEADERS=ast.h builtins.h ctx.h decl.h expr.h func.h ispc.h llvmutil.h module.h \
 	opt.h stmt.h sym.h type.h util.h
-TARGETS=nvptx avx2-i64x4 avx11-i64x4 avx1-i64x4 avx1 avx1-x2 avx11 avx11-x2 avx2 avx2-x2 \
+TARGETS=avx2-i64x4 avx11-i64x4 avx1-i64x4 avx1 avx1-x2 avx11 avx11-x2 avx2 avx2-x2 \
 	sse2 sse2-x2 sse4-8 sse4-16 sse4 sse4-x2 \
 	generic-4 generic-8 generic-16 generic-32 generic-64 generic-1
 ifneq ($(ARM_ENABLED), 0)
     TARGETS+=neon-32 neon-16 neon-8
+endif
+ifneq ($(NVPTX_ENABLED), 0)
+    TARGETS+=nvptx
 endif
 # These files need to be compiled in two versions - 32 and 64 bits.
 BUILTINS_SRC_TARGET=$(addprefix builtins/target-, $(addsuffix .ll, $(TARGETS)))

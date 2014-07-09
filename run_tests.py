@@ -233,7 +233,7 @@ def run_test(testname):
                 elif is_nvptx_target:
                   if os.environ.get("NVVM") == "1":
                     is_nvptx_nvvm = True
-                    obj_name = "%s.bc" % testname
+                    obj_name = "%s.ll" % testname
                   else:
                     obj_name = "%s.ptx" % testname
                     is_nvptx_nvvm = False
