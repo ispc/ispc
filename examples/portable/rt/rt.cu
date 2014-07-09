@@ -96,7 +96,7 @@ static inline float Dot(const float3 a, const float3 b) {
 
 __device__
 inline
-static void generateRay( const float raster2camera[4][4], 
+static void generateRay( const float raster2camera[4][4],
                          const float camera2world[4][4],
                         float x, float y, Ray &ray) {
     ray.mint = 0.f;
@@ -113,11 +113,11 @@ static void generateRay( const float raster2camera[4][4],
     camy /= camw;
     camz /= camw;
 
-    ray.dir.x = camera2world[0][0] * camx + camera2world[0][1] * camy + 
+    ray.dir.x = camera2world[0][0] * camx + camera2world[0][1] * camy +
         camera2world[0][2] * camz;
-    ray.dir.y = camera2world[1][0] * camx + camera2world[1][1] * camy + 
+    ray.dir.y = camera2world[1][0] * camx + camera2world[1][1] * camy +
         camera2world[1][2] * camz;
-    ray.dir.z = camera2world[2][0] * camx + camera2world[2][1] * camy + 
+    ray.dir.z = camera2world[2][0] * camx + camera2world[2][1] * camy +
         camera2world[2][2] * camz;
 
     ray.origin.x = camera2world[0][3] / camera2world[3][3];
@@ -139,7 +139,7 @@ static void generateRay( const float raster2camera[4][4],
 
 __device__
 inline
-static bool BBoxIntersect(const  float bounds[2][3], 
+static bool BBoxIntersect(const  float bounds[2][3],
                           const Ray &ray) {
      float3 bounds0 = { bounds[0][0], bounds[0][1], bounds[0][2] };
      float3 bounds1 = { bounds[1][0], bounds[1][1], bounds[1][2] };
@@ -172,7 +172,7 @@ static bool BBoxIntersect(const  float bounds[2][3],
     }
     t0 = max(tNear.z, t0);
     t1 = min(tFar.z, t1);
-    
+
     return (t0 <= t1);
 }
 
@@ -220,7 +220,7 @@ static bool TriIntersect(const  Triangle &tri, Ray &ray) {
 
 __device__
 inline
-bool BVHIntersect(const  LinearBVHNode nodes[], 
+bool BVHIntersect(const  LinearBVHNode nodes[],
                   const  Triangle tris[], Ray &r,
                    int todo[]) {
     Ray ray = r;
@@ -240,7 +240,7 @@ bool BVHIntersect(const  LinearBVHNode nodes[],
                     if (TriIntersect(tris[primitivesOffset+i], ray))
                         hit = true;
                 }
-                if (todoOffset == 0) 
+                if (todoOffset == 0)
                     break;
                 nodeNum = todo[--todoOffset];
             }
@@ -275,10 +275,10 @@ bool BVHIntersect(const  LinearBVHNode nodes[],
 __device__
 inline
 static void raytrace_tile( int x0,  int x1,
-                           int y0,  int y1, 
+                           int y0,  int y1,
                            int width,  int height,
                            int baseWidth,  int baseHeight,
-                          const  float raster2camera[4][4], 
+                          const  float raster2camera[4][4],
                           const  float camera2world[4][4],
                            float image[],  int id[],
                           const  LinearBVHNode nodes[],
@@ -317,7 +317,7 @@ static void raytrace_tile( int x0,  int x1,
 __global__
 void raytrace_tile_task( int width,  int height,
                               int baseWidth,  int baseHeight,
-                             const  float raster2camera[4][4], 
+                             const  float raster2camera[4][4],
                              const  float camera2world[4][4],
                               float image[],  int id[],
                              const  LinearBVHNode nodes[],
@@ -328,8 +328,8 @@ void raytrace_tile_task( int width,  int height,
      int x1 = min(x0 + dx, width);
      int y0 = (taskIndex / xBuckets) * dy;
      int y1 = min(y0 + dy, height);
-                             
-    raytrace_tile(x0, x1, y0, y1, width, height, baseWidth, baseHeight, 
+
+    raytrace_tile(x0, x1, y0, y1, width, height, baseWidth, baseHeight,
                   raster2camera, camera2world, image,
                   id, nodes, triangles);
 }
@@ -337,7 +337,7 @@ void raytrace_tile_task( int width,  int height,
 
 extern "C" __global__ void raytrace_ispc_tasks___export( int width,  int height,
                                  int baseWidth,  int baseHeight,
-                                const  float raster2camera[4][4], 
+                                const  float raster2camera[4][4],
                                 const  float camera2world[4][4],
                                  float image[],  int id[],
                                 const  LinearBVHNode nodes[],
@@ -347,8 +347,8 @@ extern "C" __global__ void raytrace_ispc_tasks___export( int width,  int height,
      int yBuckets = (height + (dy-1)) / dy;
      int nTasks = xBuckets * yBuckets;
      launch(nTasks,1,1,raytrace_tile_task)
-       (width, height, baseWidth, baseHeight, 
-        raster2camera, camera2world, 
+       (width, height, baseWidth, baseHeight,
+        raster2camera, camera2world,
         image, id, nodes, triangles);
      cudaDeviceSynchronize();
 }
@@ -357,7 +357,7 @@ extern "C" __global__ void raytrace_ispc_tasks___export( int width,  int height,
 
 extern "C" __host__ void raytrace_ispc_tasks( int width,  int height,
     int baseWidth,  int baseHeight,
-    const  float raster2camera[4][4], 
+    const  float raster2camera[4][4],
     const  float camera2world[4][4],
     float image[],  int id[],
     const  LinearBVHNode nodes[],

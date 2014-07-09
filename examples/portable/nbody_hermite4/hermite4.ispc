@@ -12,7 +12,7 @@ struct Predictor
   vec3 pos, vel;
 };
 
-static inline 
+static inline
 void body_body_force(
     Force &fi,
     const Predictor &pi,
@@ -40,14 +40,14 @@ void body_body_force(
   fi.acc.y += minv_ds3 * dy;
   fi.acc.z += minv_ds3 * dz;
   fi.pot   -= minv_ds;
-  
+
   const real dvx = pj.vel.x - pi.vel.x;
   const real dvy = pj.vel.y - pi.vel.y;
   const real dvz = pj.vel.z - pi.vel.z;
   const real rv  = dx*dvx + dy*dvy + dz*dvz;
-  
+
   const real Jij = (real)(-3.0) * (rv * inv_ds2 * minv_ds3);
-  
+
   fi.jrk.x += minv_ds3*dvx + Jij*dx;
   fi.jrk.y += minv_ds3*dvy + Jij*dy;
   fi.jrk.z += minv_ds3*dvz + Jij*dz;
@@ -75,7 +75,7 @@ task void compute_forces_task(
   const uniform int nibeg = taskIndex * nPerTask;
   const uniform int niend = min(n, nibeg + nPerTask);
 
-  if (nibeg >= n) 
+  if (nibeg >= n)
     return;
 
   uniform real shdata[7][programCount];
@@ -88,7 +88,7 @@ task void compute_forces_task(
     fi.acc = (real)0.0;
     fi.jrk = (real)0.0;
     fi.pot = (real)0.0;
-   
+
     Predictor pi;
     pi.pos.x = posx[i];
     pi.pos.y = posy[i];
@@ -155,7 +155,7 @@ export void compute_forces(
 
   launch [nTask]  compute_forces_task(
       n, nPerTask,
-      mass, 
+      mass,
       posx,posy,posz,
       velx,vely,velz,
       accx,accy,accz,

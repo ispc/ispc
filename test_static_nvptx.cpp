@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2011, Intel Corporation
+  Copyright (c) 2010-2014, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -110,7 +110,7 @@ int main(int argc, char *argv[]) {
 
     int errors = 0;
     for (int i = 0; i < w; ++i) {
-        if (returned_result[i] != expected_result[i]) 
+        if (returned_result[i] != expected_result[i])
         {
 #ifdef EXPECT_FAILURE
             // bingo, failed

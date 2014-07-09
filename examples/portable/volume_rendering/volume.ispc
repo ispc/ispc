@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2011, Intel Corporation
+  Copyright (c) 2011-2014, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -28,7 +28,7 @@
    PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
    LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
    NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
-   SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.  
+   SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
 
@@ -41,7 +41,7 @@ struct Ray {
 
 
 static inline void
-generateRay(const uniform float raster2camera[4][4], 
+generateRay(const uniform float raster2camera[4][4],
             const uniform float camera2world[4][4],
             float x, float y, Ray &ray) {
     // transform raster coordinate (x, y, 0) to camera space
@@ -100,7 +100,7 @@ IntersectP(Ray ray, float3 pMin, float3 pMax, float &hit0, float &hit1) {
     }
     t0 = max(tNear.z, t0);
     t1 = min(tFar.z, t1);
-    
+
     if (t0 <= t1) {
         hit0 = t0;
         hit1 = t1;
@@ -116,7 +116,7 @@ static inline float Lerp(float t, float a, float b) {
 }
 
 
-static inline float D(int x, int y, int z, uniform int nVoxels[3], 
+static inline float D(int x, int y, int z, uniform int nVoxels[3],
                       uniform float density[]) {
     x = clamp(x, 0, nVoxels[0]-1);
     y = clamp(y, 0, nVoxels[1]-1);
@@ -131,9 +131,9 @@ static inline float3 Offset(float3 p, float3 pMin, float3 pMax) {
 }
 
 
-static inline float Density(float3 Pobj, float3 pMin, float3 pMax, 
+static inline float Density(float3 Pobj, float3 pMin, float3 pMax,
                      uniform float density[], uniform int nVoxels[3]) {
-    if (!Inside(Pobj, pMin, pMax)) 
+    if (!Inside(Pobj, pMin, pMax))
         return 0;
     // Compute voxel coordinates and offsets for _Pobj_
     float3 vox = Offset(Pobj, pMin, pMax);
@@ -144,13 +144,13 @@ static inline float Density(float3 Pobj, float3 pMin, float3 pMax,
     float dx = vox.x - vx, dy = vox.y - vy, dz = vox.z - vz;
 
     // Trilinearly interpolate density values to compute local density
-    float d00 = Lerp(dx, D(vx, vy, vz, nVoxels, density),     
+    float d00 = Lerp(dx, D(vx, vy, vz, nVoxels, density),
                      D(vx+1, vy, vz, nVoxels, density));
-    float d10 = Lerp(dx, D(vx, vy+1, vz, nVoxels, density),   
+    float d10 = Lerp(dx, D(vx, vy+1, vz, nVoxels, density),
                      D(vx+1, vy+1, vz, nVoxels, density));
-    float d01 = Lerp(dx, D(vx, vy, vz+1, nVoxels, density),   
+    float d01 = Lerp(dx, D(vx, vy, vz+1, nVoxels, density),
                      D(vx+1, vy, vz+1, nVoxels, density));
-    float d11 = Lerp(dx, D(vx, vy+1, vz+1, nVoxels, density), 
+    float d11 = Lerp(dx, D(vx, vy+1, vz+1, nVoxels, density),
                      D(vx+1, vy+1, vz+1, nVoxels, density));
     float d0 = Lerp(dy, d00, d10);
     float d1 = Lerp(dy, d01, d11);
@@ -164,7 +164,7 @@ static inline float Density(float3 Pobj, float3 pMin, float3 pMax,
    array. */
 static inline float
 transmittance(uniform float3 p0, float3 p1, uniform float3 pMin,
-              uniform float3 pMax, uniform float sigma_t, 
+              uniform float3 pMax, uniform float sigma_t,
               uniform float density[], uniform int nVoxels[3]) {
     float rayT0, rayT1;
     Ray ray;
@@ -204,7 +204,7 @@ distanceSquared(float3 a, float3 b) {
 }
 
 
-static inline float 
+static inline float
 raymarch(uniform float density[], uniform int nVoxels[3], Ray ray) {
     float rayT0, rayT1;
     const uniform float3 pMin = {.3, -.2, .3}, pMax = {1.8, 2.3, 1.8};
@@ -232,7 +232,7 @@ raymarch(uniform float density[], uniform int nVoxels[3], Ray ray) {
     float t = rayT0;
     float3 pos = ray.origin + ray.dir * rayT0;
     float3 dirStep = ray.dir * stepT;
-    while (t < rayT1) 
+    while (t < rayT1)
     {
         float d = Density(pos, pMin, pMax, density, nVoxels);
 
@@ -242,7 +242,7 @@ raymarch(uniform float density[], uniform int nVoxels[3], Ray ray) {
             break;
 
         // direct lighting
-        float Li = lightIntensity / distanceSquared(lightPos, pos) * 
+        float Li = lightIntensity / distanceSquared(lightPos, pos) *
             transmittance(lightPos, pos, pMin, pMax, sigma_a + sigma_s,
                           density, nVoxels);
         L += stepDist * atten * d * sigma_s * (Li + Le);
@@ -265,16 +265,16 @@ raymarch(uniform float density[], uniform int nVoxels[3], Ray ray) {
  */
 static inline void
 volume_tile(uniform int x0, uniform int y0, uniform int x1,
-            uniform int y1, uniform float density[], uniform int nVoxels[3], 
+            uniform int y1, uniform float density[], uniform int nVoxels[3],
             const uniform float raster2camera[4][4],
-            const uniform float camera2world[4][4], 
+            const uniform float camera2world[4][4],
             uniform int width, uniform int height, uniform float image[]) {
   // Work on 4x4=16 pixel big tiles of the image.  This function thus
   // implicitly assumes that both (x1-x0) and (y1-y0) are evenly divisble
   // by 4.
 #if 0
-  for (uniform int y = y0; y < y1; y += 8) 
-    for (uniform int x = x0; x < x1; x += 8) 
+  for (uniform int y = y0; y < y1; y += 8)
+    for (uniform int x = x0; x < x1; x += 8)
       foreach (o = 0 ... 64)
       {
         // These two arrays encode the mapping from [0,15] to
@@ -304,7 +304,7 @@ volume_tile(uniform int x0, uniform int y0, uniform int x1,
           image[offset] = raymarch(density, nVoxels, ray);
       }
 #else
-  foreach_tiled (y = y0 ... y1, x = x0 ... x1) 
+  foreach_tiled (y = y0 ... y1, x = x0 ... x1)
   {
     // Use viewing parameters to compute the corresponding ray
     // for the pixel
@@ -321,10 +321,10 @@ volume_tile(uniform int x0, uniform int y0, uniform int x1,
 
 
 task void
-volume_task(uniform float density[], uniform int _nVoxels[3], 
+volume_task(uniform float density[], uniform int _nVoxels[3],
             const uniform float _raster2camera[4][4],
-            const uniform float _camera2world[4][4], 
-            uniform int width, uniform int height, uniform float image[]) 
+            const uniform float _camera2world[4][4],
+            uniform int width, uniform int height, uniform float image[])
 {
   if (taskIndex >= taskCount) return;
 
@@ -351,7 +351,7 @@ volume_task(uniform float density[], uniform int _nVoxels[3],
   raster2camera[3][1] = _raster2camera[3][1];
   raster2camera[3][2] = _raster2camera[3][2];
   raster2camera[3][3] = _raster2camera[3][3];
-  
+
   uniform float camera2world[4][4];
   camera2world[0][0] = _camera2world[0][0];
   camera2world[0][1] = _camera2world[0][1];
@@ -390,24 +390,24 @@ volume_task(uniform float density[], uniform int _nVoxels[3],
 
 
 export void
-volume_ispc(uniform float density[], uniform int nVoxels[3], 
+volume_ispc(uniform float density[], uniform int nVoxels[3],
             const uniform float raster2camera[4][4],
-            const uniform float camera2world[4][4], 
+            const uniform float camera2world[4][4],
             uniform int width, uniform int height, uniform float image[]) {
-    volume_tile(0, 0, width, height, density, nVoxels, raster2camera, 
+    volume_tile(0, 0, width, height, density, nVoxels, raster2camera,
                 camera2world, width, height,  image);
 }
 
 
 export void
-volume_ispc_tasks(uniform float density[], uniform int nVoxels[3], 
+volume_ispc_tasks(uniform float density[], uniform int nVoxels[3],
                   const uniform float raster2camera[4][4],
-                  const uniform float camera2world[4][4], 
+                  const uniform float camera2world[4][4],
                   uniform int width, uniform int height, uniform float image[]) {
     // Launch tasks to work on (dx,dy)-sized tiles of the image
     const uniform int dx = 8, dy = 8;
     const uniform int nTasks = ((width+(dx-1))/dx) * ((height+(dy-1))/dy);
-    launch[nTasks] volume_task(density, nVoxels, raster2camera, camera2world, 
+    launch[nTasks] volume_task(density, nVoxels, raster2camera, camera2world,
                                width, height, image);
     sync;
 }

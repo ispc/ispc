@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2011, Intel Corporation
+  Copyright (c) 2010-2014, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -28,7 +28,7 @@
    PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
    LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
    NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
-   SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.  
+   SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
 #define NOMINMAX
@@ -96,7 +96,7 @@ int main(int argc, char *argv[]) {
     sum = 0.;
     for (int i = 0; i < nOptions; ++i)
       sum += result[i];
-    printf("[binomial ispc, tasks]:\t\t[%.3f] msec (avg %f)\n", 
+    printf("[binomial ispc, tasks]:\t\t[%.3f] msec (avg %f)\n",
            binomial_tasks, sum / nOptions);
 
     //
@@ -112,7 +112,7 @@ int main(int argc, char *argv[]) {
             sum += result[i];
         bs_ispc_tasks = std::min(bs_ispc_tasks, dt);
     }
-    printf("[black-scholes ispc, tasks]:\t[%.3f] msec (avg %f)\n", 
+    printf("[black-scholes ispc, tasks]:\t[%.3f] msec (avg %f)\n",
            bs_ispc_tasks, sum / nOptions);
 
 

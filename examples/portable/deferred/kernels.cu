@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2011, Intel Corporation
+  Copyright (c) 2010-2014, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -28,7 +28,7 @@
    PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
    LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
    NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
-   SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.  
+   SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
 
@@ -46,7 +46,7 @@
 #define int16 short
 #define int8 char
 
-__device__ static inline float clamp(float v, float low, float high) 
+__device__ static inline float clamp(float v, float low, float high)
 {
       return min(max(v, low), high);
 }
@@ -122,8 +122,8 @@ struct Uniform
     const int2 idx = get_chunk(i);
     return __shfl(data[idx.x], idx.y);
   }
-  
-  __device__ inline void set(const bool active, const int i, T value) 
+
+  __device__ inline void set(const bool active, const int i, T value)
   {
     const int2 idx = get_chunk(i);
     const int chunkIdx = idx.x;
@@ -160,9 +160,9 @@ struct Uniform
   {
     return data[i];
   }
-  
+
   __device__ inline T* get_ptr(const int i) {return &data[i]; }
-  __device__ inline void set(const bool active, const int i, T value) 
+  __device__ inline void set(const bool active, const int i, T value)
   {
     if (active)
       data[i] = value;
@@ -185,8 +185,8 @@ struct Uniform
   {
     return shdata[i];
   }
-  
-  __device__ inline void set(const bool active, const int i, T value) 
+
+  __device__ inline void set(const bool active, const int i, T value)
   {
     if (active)
       shdata[i] = value;
@@ -264,7 +264,7 @@ static __device__ __forceinline__ int2 warpBinExclusiveScan(const bool p)
   const int b = __ballot(p);
   return make_int2(__popc(b), __popc(b & lanemask_lt()));
 }
-  __device__ static inline 
+  __device__ static inline
 int packed_store_active(bool active, int* ptr, int value)
 {
   const int2 res = warpBinExclusiveScan(active);
@@ -358,7 +358,7 @@ IntersectLightsWithTileMinMax(
 {
      float gBufferScale_x = 0.5f * (float)gBufferWidth;
      float gBufferScale_y = 0.5f * (float)gBufferHeight;
-        
+
      float frustumPlanes_xy[4] = {
         -(cameraProj_11 * gBufferScale_x),
          (cameraProj_11 * gBufferScale_x),
@@ -371,7 +371,7 @@ IntersectLightsWithTileMinMax(
         -tileStartY + gBufferScale_y };
 
     for ( int i = 0; i < 4; ++i) {
-         float norm = rsqrt(frustumPlanes_xy[i] * frustumPlanes_xy[i] + 
+         float norm = rsqrt(frustumPlanes_xy[i] * frustumPlanes_xy[i] +
                                    frustumPlanes_z[i] * frustumPlanes_z[i]);
         frustumPlanes_xy[i] *= norm;
         frustumPlanes_z[i] *= norm;
@@ -393,32 +393,32 @@ IntersectLightsWithTileMinMax(
 
         d = maxZ - light_positionView_z;
         inFrustum = inFrustum && (d >= light_attenuationEndNeg);
-        
+
         // This seems better than cif(!inFrustum) ccontinue; here since we
         // don't actually need to mask the rest of this function - this is
         // just a greedy early-out.  Could also structure all of this as
         // nested if() statements, but this a bit easier to read
-        if (__ballot(inFrustum) > 0) 
+        if (__ballot(inFrustum) > 0)
         {
             float light_positionView_x = light_positionView_x_array[lightIndex];
             float light_positionView_y = light_positionView_y_array[lightIndex];
 
-            d = light_positionView_z * frustumPlanes_z[0] + 
+            d = light_positionView_z * frustumPlanes_z[0] +
                 light_positionView_x * frustumPlanes_xy[0];
             inFrustum = inFrustum && (d >= light_attenuationEndNeg);
 
-            d = light_positionView_z * frustumPlanes_z[1] + 
+            d = light_positionView_z * frustumPlanes_z[1] +
                 light_positionView_x * frustumPlanes_xy[1];
             inFrustum = inFrustum && (d >= light_attenuationEndNeg);
 
-            d = light_positionView_z * frustumPlanes_z[2] + 
+            d = light_positionView_z * frustumPlanes_z[2] +
                 light_positionView_y * frustumPlanes_xy[2];
             inFrustum = inFrustum && (d >= light_attenuationEndNeg);
 
-            d = light_positionView_z * frustumPlanes_z[3] + 
+            d = light_positionView_z * frustumPlanes_z[3] +
                 light_positionView_y * frustumPlanes_xy[3];
             inFrustum = inFrustum && (d >= light_attenuationEndNeg);
-        
+
             // Pack and store intersecting lights
             const bool active = inFrustum && lightIndex < numLights;
 #if 0
@@ -472,7 +472,7 @@ IntersectLightsWithTile(
      int32 tileNumLights = IntersectLightsWithTileMinMax(
         tileStartX, tileEndX, tileStartY, tileEndY, minZ, maxZ,
         gBufferWidth, gBufferHeight, cameraProj_11, cameraProj_22,
-        MAX_LIGHTS, light_positionView_x_array, light_positionView_y_array, 
+        MAX_LIGHTS, light_positionView_x_array, light_positionView_y_array,
         light_positionView_z_array, light_attenuationEnd_array,
         tileLightIndices);
 
@@ -505,7 +505,7 @@ ShadeTile(
          unsigned int8 c = (unsigned int8)(min(tileNumLights << 2, 255));
         for ( int32 y = tileStartY; y < tileEndY; ++y) {
             for ( int xb = tileStartX ; xb < tileEndX; xb += programCount)
-            { 
+            {
               const int x = xb + programIndex;
               if (x >= tileEndX) continue;
                 int32 framebufferIndex = (y * gBufferWidth + x);
@@ -517,16 +517,16 @@ ShadeTile(
     } else {
          float twoOverGBufferWidth = 2.0f / gBufferWidth;
          float twoOverGBufferHeight = 2.0f / gBufferHeight;
-        
+
         for ( int32 y = tileStartY; y < tileEndY; ++y) {
              float positionScreen_y = -(((0.5f + y) * twoOverGBufferHeight) - 1.f);
 
             for ( int xb = tileStartX ; xb < tileEndX; xb += programCount)
-            { 
+            {
               const int x = xb + programIndex;
 //              if (x >= tileEndX) break;
                 int32 gBufferOffset = y * gBufferWidth + x;
-                
+
                 // Reconstruct position and (negative) view vector from G-buffer
                 float surface_positionView_x, surface_positionView_y, surface_positionView_z;
                 float Vneg_x, Vneg_y, Vneg_z;
@@ -535,19 +535,19 @@ ShadeTile(
 
                 // Compute screen/clip-space position
                 // NOTE: Mind DX11 viewport transform and pixel center!
-                float positionScreen_x = (0.5f + (float)(x)) * 
+                float positionScreen_x = (0.5f + (float)(x)) *
                     twoOverGBufferWidth - 1.0f;
 
                 // Unproject depth buffer Z value into view space
                 surface_positionView_z = cameraProj_43 / (z - cameraProj_33);
-                surface_positionView_x = positionScreen_x * surface_positionView_z / 
+                surface_positionView_x = positionScreen_x * surface_positionView_z /
                     cameraProj_11;
-                surface_positionView_y = positionScreen_y * surface_positionView_z / 
+                surface_positionView_y = positionScreen_y * surface_positionView_z /
                     cameraProj_22;
-                
+
                 // We actually end up with a vector pointing *at* the
                 // surface (i.e. the negative view vector)
-                normalize3(surface_positionView_x, surface_positionView_y, 
+                normalize3(surface_positionView_x, surface_positionView_y,
                            surface_positionView_z, Vneg_x, Vneg_y, Vneg_z);
 
                 // Reconstruct normal from G-buffer
@@ -556,51 +556,51 @@ ShadeTile(
                 float normal_x = __half2float(inputData.normalEncoded_x[gBufferOffset]);
                 float normal_y = __half2float(inputData.normalEncoded_y[gBufferOffset]);
                 asm("// half2float //");
-                    
+
                 float f = (normal_x - normal_x * normal_x) + (normal_y - normal_y * normal_y);
                 float m = sqrt(4.0f * f - 1.0f);
-                    
+
                 surface_normal_x = m * (4.0f * normal_x - 2.0f);
                 surface_normal_y = m * (4.0f * normal_y - 2.0f);
                 surface_normal_z = 3.0f - 8.0f * f;
 
                 // Load other G-buffer parameters
-                float surface_specularAmount = 
+                float surface_specularAmount =
                     __half2float(inputData.specularAmount[gBufferOffset]);
-                float surface_specularPower  = 
+                float surface_specularPower  =
                     __half2float(inputData.specularPower[gBufferOffset]);
                 float surface_albedo_x = Unorm8ToFloat32(inputData.albedo_x[gBufferOffset]);
                 float surface_albedo_y = Unorm8ToFloat32(inputData.albedo_y[gBufferOffset]);
                 float surface_albedo_z = Unorm8ToFloat32(inputData.albedo_z[gBufferOffset]);
-                
+
                 float lit_x = 0.0f;
                 float lit_y = 0.0f;
                 float lit_z = 0.0f;
-                for ( int32 tileLightIndex = 0; tileLightIndex < tileNumLights; 
+                for ( int32 tileLightIndex = 0; tileLightIndex < tileNumLights;
                      ++tileLightIndex) {
                      int32 lightIndex = tileLightIndices.get(tileLightIndex);
-                                        
+
                     // Gather light data relevant to initial culling
-                     float light_positionView_x = 
+                     float light_positionView_x =
                         __ldg(&inputData.lightPositionView_x[lightIndex]);
-                     float light_positionView_y = 
+                     float light_positionView_y =
                         __ldg(&inputData.lightPositionView_y[lightIndex]);
-                     float light_positionView_z = 
+                     float light_positionView_z =
                         __ldg(&inputData.lightPositionView_z[lightIndex]);
-                     float light_attenuationEnd = 
+                     float light_attenuationEnd =
                         __ldg(&inputData.lightAttenuationEnd[lightIndex]);
-                    
+
                     // Compute light vector
                     float L_x = light_positionView_x - surface_positionView_x;
                     float L_y = light_positionView_y - surface_positionView_y;
                     float L_z = light_positionView_z - surface_positionView_z;
 
                     float distanceToLight2 = dot3(L_x, L_y, L_z, L_x, L_y, L_z);
-                    
+
                     // Clip at end of attenuation
                     float light_attenutaionEnd2 = light_attenuationEnd * light_attenuationEnd;
 
-                    if (distanceToLight2 < light_attenutaionEnd2) {                    
+                    if (distanceToLight2 < light_attenutaionEnd2) {
                         float distanceToLight = sqrt(distanceToLight2);
 
                         // HLSL "rcp" is allowed to be fairly inaccurate
@@ -610,12 +610,12 @@ ShadeTile(
                         L_z *= distanceToLightRcp;
 
                         // Start computing brdf
-                        float NdotL = dot3(surface_normal_x, surface_normal_y, 
+                        float NdotL = dot3(surface_normal_x, surface_normal_y,
                                            surface_normal_z, L_x, L_y, L_z);
-                    
+
                         // Clip back facing
                         if (NdotL > 0.0f) {
-                             float light_attenuationBegin = 
+                             float light_attenuationBegin =
                                 inputData.lightAttenuationBegin[lightIndex];
 
                             // Light distance attenuation (linstep)
@@ -627,19 +627,19 @@ ShadeTile(
                             float H_y = (L_y - Vneg_y);
                             float H_z = (L_z - Vneg_z);
                             normalize3(H_x, H_y, H_z, H_x, H_y, H_z);
-                    
-                            float NdotH = dot3(surface_normal_x, surface_normal_y, 
+
+                            float NdotH = dot3(surface_normal_x, surface_normal_y,
                                                surface_normal_z, H_x, H_y, H_z);
                             NdotH = max(NdotH, 0.0f);
 
                             float specular = pow(NdotH, surface_specularPower);
-                            float specularNorm = (surface_specularPower + 2.0f) * 
+                            float specularNorm = (surface_specularPower + 2.0f) *
                                 (1.0f / 8.0f);
-                            float specularContrib = surface_specularAmount * 
+                            float specularContrib = surface_specularAmount *
                                 specularNorm * specular;
 
                             float k = attenuation * NdotL * (1.0f + specularContrib);
-                    
+
                              float light_color_x = inputData.lightColor_x[lightIndex];
                              float light_color_y = inputData.lightColor_y[lightIndex];
                              float light_color_z = inputData.lightColor_z[lightIndex];
@@ -663,7 +663,7 @@ ShadeTile(
                 lit_x = pow(clamp(lit_x, 0.0f, 1.0f), gamma);
                 lit_y = pow(clamp(lit_y, 0.0f, 1.0f), gamma);
                 lit_z = pow(clamp(lit_z, 0.0f, 1.0f), gamma);
-                
+
                 framebuffer_r[gBufferOffset] = Float32ToUnorm8(lit_x);
                 framebuffer_g[gBufferOffset] = Float32ToUnorm8(lit_y);
                 framebuffer_b[gBufferOffset] = Float32ToUnorm8(lit_z);
@@ -707,8 +707,8 @@ RenderTile( int num_groups_x,  int num_groups_y,
     // Light intersection: figure out which lights illuminate this tile.
      Uniform<int,MAX_LIGHTS> tileLightIndices;  // Light list for the tile
 #if 1
-     int numTileLights = 
-        IntersectLightsWithTile(tile_start_x, tile_end_x, 
+     int numTileLights =
+        IntersectLightsWithTile(tile_start_x, tile_end_x,
                                 tile_start_y, tile_end_y,
                                 framebufferWidth, framebufferHeight,
                                 inputData.zBuffer,
@@ -716,9 +716,9 @@ RenderTile( int num_groups_x,  int num_groups_y,
                                 cameraProj_22, cameraProj_32,
                                 inputHeader.cameraNear, inputHeader.cameraFar,
                                 MAX_LIGHTS,
-                                inputData.lightPositionView_x, 
-                                inputData.lightPositionView_y, 
-                                inputData.lightPositionView_z, 
+                                inputData.lightPositionView_x,
+                                inputData.lightPositionView_y,
+                                inputData.lightPositionView_z,
                                 inputData.lightAttenuationEnd,
                                 tileLightIndices);
 
@@ -726,7 +726,7 @@ RenderTile( int num_groups_x,  int num_groups_y,
     ShadeTile(tile_start_x, tile_end_x, tile_start_y, tile_end_y,
               framebufferWidth, framebufferHeight, inputData,
               cameraProj_00, cameraProj_11, cameraProj_22, cameraProj_32,
-              tileLightIndices, numTileLights, visualizeLightCount, 
+              tileLightIndices, numTileLights, visualizeLightCount,
               framebuffer_r, framebuffer_g, framebuffer_b);
 #endif
 }
@@ -745,9 +745,9 @@ RenderStatic___export( InputHeader inputHeaderPtr[],
   const  InputDataArrays inputData = *inputDataPtr;
 
 
-     int num_groups_x = (inputHeader.framebufferWidth + 
+     int num_groups_x = (inputHeader.framebufferWidth +
                                 MIN_TILE_WIDTH - 1) / MIN_TILE_WIDTH;
-     int num_groups_y = (inputHeader.framebufferHeight + 
+     int num_groups_y = (inputHeader.framebufferHeight +
                                 MIN_TILE_HEIGHT - 1) / MIN_TILE_HEIGHT;
      int num_groups = num_groups_x * num_groups_y;
 

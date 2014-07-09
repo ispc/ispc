@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2011-2012, Intel Corporation
+  Copyright (c) 2014, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -28,11 +28,11 @@
    PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
    LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
    NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
-   SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.  
+   SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
 
-#define DBG(x) 
+#define DBG(x)
 #include <omp.h>
 #include <malloc.h>
 
@@ -62,15 +62,15 @@ struct TaskInfo {
     event taskEvent;
 #endif
     int taskCount() const { return taskCount3d[0]*taskCount3d[1]*taskCount3d[2]; }
-    int taskIndex0() const 
+    int taskIndex0() const
     {
       return taskIndex % taskCount3d[0];
     }
-    int taskIndex1() const 
+    int taskIndex1() const
     {
       return ( taskIndex / taskCount3d[0] ) % taskCount3d[1];
     }
-    int taskIndex2() const 
+    int taskIndex2() const
     {
       return taskIndex / ( taskCount3d[0]*taskCount3d[1] );
     }
@@ -85,7 +85,7 @@ __attribute__((aligned(32)));
 ;
 
 // ispc expects these functions to have C linkage / not be mangled
-extern "C" { 
+extern "C" {
     void ISPCLaunch(void **handlePtr, void *f, void *data, int countx, int county, int countz);
     void *ISPCAlloc(void **handlePtr, int64_t size, int32_t alignment);
     void ISPCSync(void *handle);
@@ -144,10 +144,10 @@ private:
 };
 
 
-inline TaskGroupBase::TaskGroupBase() { 
-    nextTaskInfoIndex = 0; 
+inline TaskGroupBase::TaskGroupBase() {
+    nextTaskInfoIndex = 0;
 
-    curMemBuffer = 0; 
+    curMemBuffer = 0;
     curMemBufferOffset = 0;
     memBuffers[0] = mem;
     memBufferSize[0] = sizeof(mem) / sizeof(mem[0]);
@@ -171,8 +171,8 @@ inline TaskGroupBase::~TaskGroupBase() {
 
 inline void
 TaskGroupBase::Reset() {
-    nextTaskInfoIndex = 0; 
-    curMemBuffer = 0; 
+    nextTaskInfoIndex = 0;
+    curMemBuffer = 0;
     curMemBufferOffset = 0;
 }
 
@@ -253,7 +253,7 @@ lAtomicCompareAndSwapPointer(void **v, void *newValue, void *oldValue) {
 #endif // ISPC_IS_WINDOWS
 }
 
-static int32_t 
+static int32_t
 lAtomicCompareAndSwap32(volatile int32_t *v, int32_t newValue, int32_t oldValue) {
 #ifdef ISPC_IS_WINDOWS
     return InterlockedCompareExchange((volatile LONG *)v, newValue, oldValue);
@@ -264,7 +264,7 @@ lAtomicCompareAndSwap32(volatile int32_t *v, int32_t newValue, int32_t oldValue)
 #endif // ISPC_IS_WINDOWS
 }
 
-static inline int32_t 
+static inline int32_t
 lAtomicAdd(volatile int32_t *v, int32_t delta) {
 #ifdef ISPC_IS_WINDOWS
     return InterlockedExchangeAdd((volatile LONG *)v, delta)+delta;
@@ -300,11 +300,11 @@ TaskGroup::Launch(int baseIndex, int count) {
 
     TaskInfo ti = *GetTaskInfo(baseIndex);
 #pragma omp for schedule(runtime)
-    for(int i = 0; i < count; i++) 
+    for(int i = 0; i < count; i++)
     {
         ti.taskIndex = i;
 
-        // Actually run the task. 
+        // Actually run the task.
         ti.func(ti.data, threadIndex, threadCount, ti.taskIndex, ti.taskCount(),
             ti.taskIndex0(), ti.taskIndex1(), ti.taskIndex2(),
             ti.taskCount0(), ti.taskCount1(), ti.taskCount2());
@@ -322,7 +322,7 @@ TaskGroup::Sync() {
 static TaskGroup *freeTaskGroups[MAX_FREE_TASK_GROUPS];
 
   static inline TaskGroup *
-AllocTaskGroup() 
+AllocTaskGroup()
 {
   for (int i = 0; i < MAX_FREE_TASK_GROUPS; ++i) {
     TaskGroup *tg = freeTaskGroups[i];
@@ -339,7 +339,7 @@ AllocTaskGroup()
 
 
   static inline void
-FreeTaskGroup(TaskGroup *tg) 
+FreeTaskGroup(TaskGroup *tg)
 {
   tg->Reset();
 
@@ -355,7 +355,7 @@ FreeTaskGroup(TaskGroup *tg)
 }
 
   void
-ISPCLaunch(void **taskGroupPtr, void *func, void *data, int count0, int count1, int count2) 
+ISPCLaunch(void **taskGroupPtr, void *func, void *data, int count0, int count1, int count2)
 {
   const int count = count0*count1*count2;
   TaskGroup *taskGroup;
@@ -382,7 +382,7 @@ ISPCLaunch(void **taskGroupPtr, void *func, void *data, int count0, int count1, 
 
 
   void
-ISPCSync(void *h) 
+ISPCSync(void *h)
 {
   TaskGroup *taskGroup = (TaskGroup *)h;
   if (taskGroup != NULL) {
@@ -393,7 +393,7 @@ ISPCSync(void *h)
 
 
   void *
-ISPCAlloc(void **taskGroupPtr, int64_t size, int32_t alignment) 
+ISPCAlloc(void **taskGroupPtr, int64_t size, int32_t alignment)
 {
   TaskGroup *taskGroup;
   if (*taskGroupPtr == NULL) {

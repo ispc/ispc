@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2011, Intel Corporation
+  Copyright (c) 2010-2014, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -28,7 +28,7 @@
    PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
    LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
    NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
-   SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.  
+   SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
 #ifdef _MSC_VER
@@ -141,12 +141,12 @@ int main(int argc, char **argv)
     }
 
     // Report results and save image
-    printf("[aobench ispc + tasks]:\t\t[%.3f] msec (%d x %d image)\n", 
+    printf("[aobench ispc + tasks]:\t\t[%.3f] msec (%d x %d image)\n",
            minTimeISPCTasks, width, height);
-    savePPM("ao-ispc-tasks.ppm", width, height); 
+    savePPM("ao-ispc-tasks.ppm", width, height);
 
     delete img;
     delete fimg;
-        
+
     return 0;
 }

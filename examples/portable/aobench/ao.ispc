@@ -1,6 +1,6 @@
 // -*- mode: c++ -*-
 /*
-  Copyright (c) 2010-2011, Intel Corporation
+  Copyright (c) 2010-2014, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -29,13 +29,13 @@
    PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
    LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
    NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
-   SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.  
+   SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 /*
   Based on Syoyo Fujita's aobench: http://code.google.com/p/aobench
 */
 
-#define NAO_SAMPLES		8
+#define NAO_SAMPLES        8
 #define M_PI 3.1415926535f
 
 typedef float<3> vec;
@@ -50,7 +50,7 @@ struct Isect {
     float      t;
     vec        p;
     vec        n;
-    int        hit; 
+    int        hit;
 };
 
 struct Sphere {
@@ -94,7 +94,7 @@ ray_plane_intersect(Isect &isect, Ray &ray, const Plane &plane) {
     float v = dot(ray.dir, plane.n);
 
 #if 0
-    cif (abs(v) < 1.0e-17) 
+    cif (abs(v) < 1.0e-17)
         return;
     else {
         float t = -(dot(ray.org, plane.n) + d) / v;
@@ -141,7 +141,7 @@ ray_sphere_intersect(Isect &isect, Ray &ray, const Sphere &sphere) {
         }
     }
 #else
-    cif (D <=0.0f) 
+    cif (D <=0.0f)
       return;
 
     float t = -B - sqrt(D);
@@ -220,8 +220,8 @@ ambient_occlusion(Isect &isect, const Plane &plane, const Sphere spheres[3],
             occIsect.hit = 0;
 
             for (uniform int snum = 0; snum < 3; ++snum)
-                ray_sphere_intersect(occIsect, ray, spheres[snum]); 
-            ray_plane_intersect (occIsect, ray, plane); 
+                ray_sphere_intersect(occIsect, ray, spheres[snum]);
+            ray_plane_intersect (occIsect, ray, plane);
 
             if (occIsect.hit) occlusion += 1.0;
         }
@@ -233,10 +233,10 @@ ambient_occlusion(Isect &isect, const Plane &plane, const Sphere spheres[3],
 
 static  inline void ao_tiles(
     uniform int x0, uniform int x1,
-    uniform int y0, uniform int y1, 
+    uniform int y0, uniform int y1,
     uniform int w, uniform int h,
-    uniform int nsubsamples, 
-    uniform float image[]) 
+    uniform int nsubsamples,
+    uniform float image[])
 {
   const Plane plane = { { 0.0f, -0.5f, 0.0f }, { 0.f, 1.f, 0.f } };
   const Sphere spheres[3] = {
@@ -306,7 +306,7 @@ static  inline void ao_tiles(
 #define TILEX max(64,programCount*2)
 #define TILEY 4
 
-export void ao_ispc(uniform int w, uniform int h, uniform int nsubsamples, 
+export void ao_ispc(uniform int w, uniform int h, uniform int nsubsamples,
                     uniform float image[]) {
   const uniform int x0 = 0;
   const uniform int x1 = w;
@@ -315,8 +315,8 @@ export void ao_ispc(uniform int w, uniform int h, uniform int nsubsamples,
   ao_tiles(x0,x1,y0,y1, w, h, nsubsamples, image);
 }
 
-void task ao_task(uniform int width, uniform int height, 
-    uniform int nsubsamples, uniform float image[]) 
+void task ao_task(uniform int width, uniform int height,
+    uniform int nsubsamples, uniform float image[])
 {
   if (taskIndex0 >= taskCount0) return;
   if (taskIndex1 >= taskCount1) return;
@@ -330,8 +330,8 @@ void task ao_task(uniform int width, uniform int height,
 }
 
 
-export void ao_ispc_tasks(uniform int w, uniform int h, uniform int nsubsamples, 
-    uniform float image[]) 
+export void ao_ispc_tasks(uniform int w, uniform int h, uniform int nsubsamples,
+    uniform float image[])
 {
   const uniform int ntilex = (w+TILEX-1)/TILEX;
   const uniform int ntiley = (h+TILEY-1)/TILEY;

@@ -1,6 +1,6 @@
 // -*- mode: c++ -*-
 /*
-  Copyright (c) 2010-2011, Intel Corporation
+  Copyright (c) 2010-2014, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -29,13 +29,13 @@
    PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
    LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
    NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
-   SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.  
+   SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
 #include "options_defs.h"
 #include "cuda_helpers.cuh"
 
-__device__ static inline void __range_reduce_log(float input, float * reduced, 
+__device__ static inline void __range_reduce_log(float input, float * reduced,
                                       int * exponent) {
     int int_version = __float_as_int(input); //intbits(input);
     // single precision = SEEE EEEE EMMM MMMM MMMM MMMM MMMM MMMM
@@ -195,9 +195,9 @@ CND(float X) {
     return w;
 }
 
-__global__ 
+__global__
 void bs_task( float Sa[],  float Xa[],  float Ta[],
-    float ra[],  float va[], 
+    float ra[],  float va[],
     float result[],  int count) {
   if (taskIndex >= taskCount) return;
      int first = taskIndex * (count/taskCount);
@@ -218,7 +218,7 @@ void bs_task( float Sa[],  float Xa[],  float Ta[],
 extern "C"
 __global__ void
 black_scholes_ispc_tasks___export( float Sa[],  float Xa[],  float Ta[],
-                          float ra[],  float va[], 
+                          float ra[],  float va[],
                           float result[],  int count) {
   int nTasks = 2048; //count/16384; //max((int)64, (int)count/16384);
   launch(nTasks,1,1,bs_task)
@@ -228,7 +228,7 @@ black_scholes_ispc_tasks___export( float Sa[],  float Xa[],  float Ta[],
 extern "C"
 __host__ void
 black_scholes_ispc_tasks( float Sa[],  float Xa[],  float Ta[],
-                          float ra[],  float va[], 
+                          float ra[],  float va[],
                           float result[],  int count) {
   black_scholes_ispc_tasks___export<<<1,32>>>(Sa,Xa,Ta,ra,va,result,count);
   cudaDeviceSynchronize();
@@ -243,8 +243,8 @@ struct loop
   __device__ static void op1(float V[], const float u, const float X, const float S)
   {
     const int j = NBEG;
-    float upow = powf(u, (float)(2*j-BINOMIAL_NUM)); 
-    V[j] = max(0.0f, X - S * upow);  
+    float upow = powf(u, (float)(2*j-BINOMIAL_NUM));
+    V[j] = max(0.0f, X - S * upow);
     loop<j+STEP,NEND,STEP>::op1(V,u,X,S);
   }
   __device__ static void op2(float V[], const float Pu, const float disc)
@@ -257,9 +257,9 @@ struct loop
   }
 };
 
-template<int NEND, int STEP> 
+template<int NEND, int STEP>
 struct loop<NEND,NEND,STEP>
-{ 
+{
   __device__ static void op1(float V[], const float u, const float X, const float S) {}
   __device__ static void op2(float V[], const float Pu, const float disc) {}
 };
@@ -295,10 +295,10 @@ binomial_put(float S, float X, float T, float r, float v)
 
 
 __global__ void
-binomial_task( float Sa[],  float Xa[], 
-               float Ta[],  float ra[], 
-               float va[],  float result[], 
-               int count) 
+binomial_task( float Sa[],  float Xa[],
+               float Ta[],  float ra[],
+               float va[],  float result[],
+               int count)
 {
   int first = taskIndex * (count/taskCount);
   int last = min(count, (int)((taskIndex+1) * (count/taskCount)));
@@ -313,9 +313,9 @@ binomial_task( float Sa[],  float Xa[],
 
 
 extern "C" __global__ void
-binomial_put_ispc_tasks___export( float Sa[],  float Xa[], 
-                         float Ta[],  float ra[], 
-                         float va[],  float result[], 
+binomial_put_ispc_tasks___export( float Sa[],  float Xa[],
+                         float Ta[],  float ra[],
+                         float va[],  float result[],
                          int count) {
   int nTasks = 2048; //count/16384; //max((int)64, (int)count/16384);
   launch(nTasks,1,1,binomial_task)
@@ -325,7 +325,7 @@ binomial_put_ispc_tasks___export( float Sa[],  float Xa[],
 extern "C"
 __host__ void
 binomial_put_ispc_tasks( float Sa[],  float Xa[],  float Ta[],
-                          float ra[],  float va[], 
+                          float ra[],  float va[],
                           float result[],  int count) {
 
   cudaDeviceSetCacheConfig (cudaFuncCachePreferL1);

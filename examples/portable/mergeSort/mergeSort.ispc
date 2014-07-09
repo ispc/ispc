@@ -25,9 +25,9 @@ int nextPowerOfTwo(int x)
 
 static inline
 int binarySearchInclusiveRanks(
-    const int val, 
+    const int val,
     uniform int *data,
-    const int L, 
+    const int L,
     int stride)
 {
   cif (L == 0)
@@ -47,9 +47,9 @@ int binarySearchInclusiveRanks(
 
 static inline
 int binarySearchExclusiveRanks(
-    const int val, 
-    uniform int *data, 
-    const int L, 
+    const int val,
+    uniform int *data,
+    const int L,
     int stride)
 {
   cif (L == 0)
@@ -69,9 +69,9 @@ int binarySearchExclusiveRanks(
 
 static inline
 int binarySearchInclusive(
-    const Key_t val, 
+    const Key_t val,
     uniform Key_t *data,
-    const int L, 
+    const int L,
     int stride)
 {
   cif (L == 0)
@@ -91,9 +91,9 @@ int binarySearchInclusive(
 
 static inline
 int binarySearchExclusive(
-    const Key_t val, 
-    uniform Key_t *data, 
-    const int L, 
+    const Key_t val,
+    uniform Key_t *data,
+    const int L,
     int stride)
 {
   cif (L == 0)
@@ -113,9 +113,9 @@ int binarySearchExclusive(
 
 static inline
 int binarySearchInclusive1(
-    const Key_t val, 
+    const Key_t val,
     Key_t data,
-    const uniform int L, 
+    const uniform int L,
     uniform int stride)
 {
   if (L == 0)
@@ -135,9 +135,9 @@ int binarySearchInclusive1(
 
 static inline
 int binarySearchExclusive1(
-    const Key_t val, 
-    Key_t data, 
-    const uniform int L, 
+    const Key_t val,
+    Key_t data,
+    const uniform int L,
     uniform int stride)
 {
   if (L == 0)
@@ -158,7 +158,7 @@ int binarySearchExclusive1(
 ////////////////////////////////////////////////////////////////////////////////
 // Bottom-level merge sort (binary search-based)
 ////////////////////////////////////////////////////////////////////////////////
-task 
+task
 void mergeSortGangKernel(
     uniform int batchSize,
     uniform Key_t dstKey[],
@@ -189,7 +189,7 @@ void mergeSortGangKernel(
       const int offset = 2 * (programIndex - lPos);
       uniform Key_t *baseKey = s_key + 2 * (programIndex - lPos);
       uniform Val_t *baseVal = s_val + 2 * (programIndex - lPos);
-      
+
       Key_t keyA = baseKey[lPos +      0];
       Val_t valA = baseVal[lPos +      0];
       Key_t keyB = baseKey[lPos + stride];
@@ -244,7 +244,7 @@ void generateSampleRanksKernel(
   const uniform int blockDim = (nBlocks + taskCount - 1)/taskCount;
   const uniform int blockBeg =     blockIdx * blockDim;
   const uniform int blockEnd = min(blockBeg + blockDim, nBlocks);
-  
+
   for (uniform int block = blockBeg; block < blockEnd; block++)
   {
     const int pos = block * programCount + programIndex;
@@ -290,8 +290,8 @@ void generateSampleRanks(
     uniform int N)
 {
   uniform int lastSegmentElements = N % (2 * stride);
-  uniform int threadCount = (lastSegmentElements > stride) ? 
-    (N + 2 * stride - lastSegmentElements) / (2 * SAMPLE_STRIDE) : 
+  uniform int threadCount = (lastSegmentElements > stride) ?
+    (N + 2 * stride - lastSegmentElements) / (2 * SAMPLE_STRIDE) :
     (N - lastSegmentElements) / (2 * SAMPLE_STRIDE);
 
   uniform int nBlocks = iDivUp(threadCount, SAMPLE_STRIDE);
@@ -306,7 +306,7 @@ void generateSampleRanks(
 ////////////////////////////////////////////////////////////////////////////////
 // Merge step 2: generate sample ranks and indices
 ////////////////////////////////////////////////////////////////////////////////
-task 
+task
 void mergeRanksAndIndicesKernel(
     uniform int nBlocks,
     uniform int in_Limits[],
@@ -319,7 +319,7 @@ void mergeRanksAndIndicesKernel(
   const uniform int blockDim = (nBlocks + taskCount - 1)/taskCount;
   const uniform int blockBeg =     blockIdx * blockDim;
   const uniform int blockEnd = min(blockBeg + blockDim, nBlocks);
-  
+
   for (uniform int block = blockBeg; block < blockEnd; block++)
   {
     int pos = block * programCount + programIndex;
@@ -359,8 +359,8 @@ void mergeRanksAndIndices(
     uniform int N)
 {
   const uniform int lastSegmentElements = N % (2 * stride);
-  const uniform int threadCount = (lastSegmentElements > stride) ? 
-    (N + 2 * stride - lastSegmentElements) / (2 * SAMPLE_STRIDE) : 
+  const uniform int threadCount = (lastSegmentElements > stride) ?
+    (N + 2 * stride - lastSegmentElements) / (2 * SAMPLE_STRIDE) :
     (N - lastSegmentElements) / (2 * SAMPLE_STRIDE);
 
   const uniform int nBlocks = iDivUp(threadCount, SAMPLE_STRIDE);
@@ -462,12 +462,12 @@ void mergeElementaryIntervalsKernel(
     if (programIndex < lenSrcB && dstPosB < lenSrcB)
       dstB = segmentBase + startDstB + dstPosB;
 
-    if (dstA >= 0) 
+    if (dstA >= 0)
     {
       dstKey[dstA] = keyA;
       dstVal[dstA] = valA;
     }
-    if (dstB >= 0) 
+    if (dstB >= 0)
     {
       dstKey[dstB] = keyB;
       dstVal[dstB] = valB;
@@ -521,7 +521,7 @@ static uniform int * uniform limitsA;
 static uniform int * uniform limitsB;
 static uniform int MAX_SAMPLE_COUNT = 0;
 
-export 
+export
 void openMergeSort()
 {
   MAX_SAMPLE_COUNT = 8*32 * 131072 / programCount;
@@ -542,7 +542,7 @@ void closeMergeSort()
   memPool = NULL;
 }
 
-export 
+export
 void mergeSort(
     uniform Key_t dstKey[],
     uniform Val_t dstVal[],
@@ -601,7 +601,7 @@ void mergeSort(
         }
 #endif
 
-        // cpu: 287  gpu: 194 M/s 
+        // cpu: 287  gpu: 194 M/s
         //Merge elementary intervals
         mergeElementaryIntervals(oKey, oVal, iKey, iVal, limitsA, limitsB, stride, N);
       }

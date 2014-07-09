@@ -1,6 +1,6 @@
 // -*- mode: c++ -*-
 /*
-  Copyright (c) 2010-2011, Intel Corporation
+  Copyright (c) 2010-2014, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -29,7 +29,7 @@
    PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
    LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
    NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
-   SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.  
+   SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
 #include "options_defs.h"
@@ -57,7 +57,7 @@ CND(float X) {
 
 task void
 bs_task(uniform float Sa[], uniform float Xa[], uniform float Ta[],
-        uniform float ra[], uniform float va[], 
+        uniform float ra[], uniform float va[],
         uniform float result[], uniform int count) {
     uniform int first = taskIndex * (count/taskCount);
     uniform int last = min(count, (int)((taskIndex+1) * (count/taskCount)));
@@ -74,7 +74,7 @@ bs_task(uniform float Sa[], uniform float Xa[], uniform float Ta[],
 
 export void
 black_scholes_ispc_tasks(uniform float Sa[], uniform float Xa[], uniform float Ta[],
-                         uniform float ra[], uniform float va[], 
+                         uniform float ra[], uniform float va[],
                          uniform float result[], uniform int count) {
     uniform int nTasks = 2048; //count/16384; //max((int)64, (int)count/16384);
     launch[nTasks] bs_task(Sa, Xa, Ta, ra, va, result, count);
@@ -85,7 +85,7 @@ black_scholes_ispc_tasks(uniform float Sa[], uniform float Xa[], uniform float T
 
 export void
 black_scholes_ispc(uniform float Sa[], uniform float Xa[], uniform float Ta[],
-                   uniform float ra[], uniform float va[], 
+                   uniform float ra[], uniform float va[],
                    uniform float result[], uniform int count) {
     foreach (i = 0 ... count) {
         float S = Sa[i], X = Xa[i], T = Ta[i], r = ra[i], v = va[i];
@@ -135,7 +135,7 @@ binomial_put(float S, float X, float T, float r, float v) {
         V[j] = max(0., X - S * upow); }
 #define OP10(k) \
     OP(k+0); OP(k+1); OP(k+2); OP(k+3); OP(k+4) \
-    OP(k+5); OP(k+6); OP(k+7); OP(k+8); OP(k+9); 
+    OP(k+5); OP(k+6); OP(k+7); OP(k+8); OP(k+9);
     OP10(0)
     OP10(10)
     OP10(20)
@@ -176,8 +176,8 @@ binomial_put(float S, float X, float T, float r, float v) {
 
 
 export void
-binomial_put_ispc(uniform float Sa[], uniform float Xa[], uniform float Ta[], 
-                  uniform float ra[], uniform float va[], 
+binomial_put_ispc(uniform float Sa[], uniform float Xa[], uniform float Ta[],
+                  uniform float ra[], uniform float va[],
                   uniform float result[], uniform int count) {
     foreach (i = 0 ... count) {
         float S = Sa[i], X = Xa[i], T = Ta[i], r = ra[i], v = va[i];
@@ -187,9 +187,9 @@ binomial_put_ispc(uniform float Sa[], uniform float Xa[], uniform float Ta[],
 
 
 task void
-binomial_task(uniform float Sa[], uniform float Xa[], 
-              uniform float Ta[], uniform float ra[], 
-              uniform float va[], uniform float result[], 
+binomial_task(uniform float Sa[], uniform float Xa[],
+              uniform float Ta[], uniform float ra[],
+              uniform float va[], uniform float result[],
               uniform int count) {
     uniform int first = taskIndex * (count/taskCount);
     uniform int last = min(count, (int)((taskIndex+1) * (count/taskCount)));
@@ -202,9 +202,9 @@ binomial_task(uniform float Sa[], uniform float Xa[],
 
 
 export void
-binomial_put_ispc_tasks(uniform float Sa[], uniform float Xa[], 
-                        uniform float Ta[], uniform float ra[], 
-                        uniform float va[], uniform float result[], 
+binomial_put_ispc_tasks(uniform float Sa[], uniform float Xa[],
+                        uniform float Ta[], uniform float ra[],
+                        uniform float va[], uniform float result[],
                         uniform int count) {
     uniform int nTasks = 2048; //count/16384; //max((int)64, (int)count/16384);
     launch[nTasks] binomial_task(Sa, Xa, Ta, ra, va, result, count);

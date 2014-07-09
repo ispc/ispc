@@ -71,7 +71,7 @@ int main (int argc, char *argv[])
     valsGld[i] = valsSrc[i];
   }
   delete keys;
-    
+
   ispcSetMallocHeapLimit(1024*1024*1024);
 
   ispc::openMergeSort();
@@ -115,7 +115,7 @@ int main (int argc, char *argv[])
   }
   printf("\n---\n");
 #endif
-    
+
 
 
   std::sort(keysGld, keysGld + n);
