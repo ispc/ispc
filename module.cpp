@@ -2004,19 +2004,33 @@ Module::execPreprocessor(const char *infilename, llvm::raw_string_ostream *ostre
 #endif
     inst.setDiagnostics(diagEngine);
 
+#if defined(LLVM_3_1) || defined(LLVM_3_2) || defined(LLVM_3_3) || defined(LLVM_3_4)
     clang::TargetOptions &options = inst.getTargetOpts();
+#else // LLVM 3.5+
+    const std::shared_ptr< clang::TargetOptions > &options = 
+          std::make_shared< clang::TargetOptions >(inst.getTargetOpts());
+#endif
+
     llvm::Triple triple(module->getTargetTriple());
     if (triple.getTriple().empty()) {
         triple.setTriple(llvm::sys::getDefaultTargetTriple());
     }
+
+#if defined(LLVM_3_1) || defined(LLVM_3_2) || defined(LLVM_3_3) || defined(LLVM_3_4)
     options.Triple = triple.getTriple();
+#else // LLVM 3.5+
+   options->Triple = triple.getTriple();
+#endif
 
 #if defined(LLVM_3_1) || defined(LLVM_3_2)
     clang::TargetInfo *target =
         clang::TargetInfo::CreateTargetInfo(inst.getDiagnostics(), options);
-#else // LLVM 3.3+
+#elif defined(LLVM_3_3) || defined(LLVM_3_4)
     clang::TargetInfo *target =
         clang::TargetInfo::CreateTargetInfo(inst.getDiagnostics(), &options);
+#else // LLVM 3.5+
+    clang::TargetInfo *target =
+        clang::TargetInfo::CreateTargetInfo(inst.getDiagnostics(), options);
 #endif
 
     inst.setTarget(target);
