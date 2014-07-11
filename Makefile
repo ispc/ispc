@@ -240,9 +240,9 @@ ispc: print_llvm_src dirs $(OBJS)
 clang: ispc
 clang: CXX=clang++
 
-# Use gcc as a default compiler, instead of gcc
+# Use gcc as a default compiler
 gcc: ispc
-gcc: CXX=clang++
+gcc: CXX=g++
 
 # Build ispc with address sanitizer instrumentation using clang compiler
 # Note that this is not portable build
