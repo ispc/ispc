@@ -90,7 +90,6 @@ def try_do_LLVM(text, command, from_validation):
             msg = MIMEMultipart()
             attach_mail_file(msg, alloy_build, "alloy_build.log", 400)
             attach_mail_file(msg, stability_log, "stability.log")
-            attach_mail_file(msg, stability.in_file, "run_tests_log.log")
             send_mail("Error while executing " + command + ". Examine logs  for more information.", msg)
         error("can't " + text, 1)
     print_debug("DONE.\n", from_validation, alloy_build)
