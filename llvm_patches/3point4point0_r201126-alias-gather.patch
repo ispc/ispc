@@ -1,3 +1,5 @@
+# This patch needs to be applied only to 3.4 (not 3.4.2), so this has the name,
+# which doesn't trigger automatic application of the patch (no 3_4 in the name).
 Index: include/llvm/IR/IntrinsicsX86.td
 ===================================================================
 --- include/llvm/IR/IntrinsicsX86.td	(revision 201125)

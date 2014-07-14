@@ -97,7 +97,7 @@ def build_LLVM(version_LLVM, revision, folder, tarball, debug, selfbuild, extra,
     if  version_LLVM == "trunk":
         SVN_PATH="trunk"
     if  version_LLVM == "3.4":
-        SVN_PATH="tags/RELEASE_34/final"
+        SVN_PATH="tags/RELEASE_34/dot2-final"
         version_LLVM = "3_4"
     if  version_LLVM == "3.3":
         SVN_PATH="tags/RELEASE_33/final"
