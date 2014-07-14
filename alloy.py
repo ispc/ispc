@@ -33,16 +33,29 @@
 
 # // Author: Filippov Ilia
 
+def tail_and_save(file_in, file_out, tail = 100):    
+    with open(file_in, 'r') as f_in:
+        lines = f_in.readlines()[-tail:]
+        
+    with open(file_out, 'w') as f_out:
+        f_out.writelines(lines)
 
-def attach_mail_file(msg, filename, name):
+
+def attach_mail_file(msg, filename, name, tail = -1):
     if os.path.exists(filename):
-        fp = open(filename, "rb")
+        if tail > 0:
+            tail_and_save(filename, filename + '.tail', tail)
+            fp = open(filename + '.tail', "rb")
+        else:
+            fp = open(filename, "rb")
+        
         to_attach = MIMEBase("application", "octet-stream")
         to_attach.set_payload(fp.read())
         encode_base64(to_attach)
         to_attach.add_header("Content-Disposition", "attachment", filename=name)
         fp.close()
         msg.attach(to_attach)
+
 
 def setting_paths(llvm, ispc, sde):
     if llvm != "":
@@ -75,8 +88,9 @@ def try_do_LLVM(text, command, from_validation):
         print_debug("ERROR.\n", from_validation, alloy_build)
         if options.notify != "":
             msg = MIMEMultipart()
-            attach_mail_file(msg, alloy_build, "alloy_build.log")
-            send_mail("Unable to build or download something. See logs  for more information.", msg)
+            attach_mail_file(msg, alloy_build, "alloy_build.log", 400)
+            attach_mail_file(msg, stability_log, "stability.log")
+            send_mail("Error while executing " + command + ". Examine logs  for more information.", msg)
         error("can't " + text, 1)
     print_debug("DONE.\n", from_validation, alloy_build)
 
@@ -98,7 +112,7 @@ def build_LLVM(version_LLVM, revision, folder, tarball, debug, selfbuild, extra,
     if  version_LLVM == "trunk":
         SVN_PATH="trunk"
     if  version_LLVM == "3.4":
-        SVN_PATH="tags/RELEASE_34/final"
+        SVN_PATH="tags/RELEASE_34/dot2-final"
         version_LLVM = "3_4"
     if  version_LLVM == "3.3":
         SVN_PATH="tags/RELEASE_33/final"
@@ -629,7 +643,7 @@ def validation_run(only, only_targets, reference_branch, number, notify, update,
         for i in range(0,len(f_lines)):
             body = body + f_lines[i][:-1]
             body = body + '   \n'
-        attach_mail_file(msg, alloy_build, "alloy_build.log")
+        attach_mail_file(msg, alloy_build, "alloy_build.log", 100)
         send_mail(body, msg)
 
 def send_mail(body, msg):
