@@ -33,6 +33,7 @@
 
 # // Author: Filippov Ilia
 
+
 def attach_mail_file(msg, filename, name):
     if os.path.exists(filename):
         fp = open(filename, "rb")
@@ -239,7 +240,12 @@ def check_targets():
     answer_sde = []
     # check what native targets do we have
     if current_OS != "Windows":
-        try_do_LLVM("build check_ISA", "g++ check_isa.cpp -o check_isa.exe", True)
+        if options.ispc_build_compiler == "clang":
+            cisa_compiler = "clang"
+        elif options.ispc_build_compiler == "gcc":
+            cisa_compiler = "g++"
+
+        try_do_LLVM("build check_ISA", cisa_compiler + " check_isa.cpp -o check_isa.exe", True)
     else:
         try_do_LLVM("build check_ISA", "cl check_isa.cpp", True)
     SSE2  = ["sse2-i32x4",  "sse2-i32x8"]
@@ -297,16 +303,7 @@ def build_ispc(version_LLVM, make):
     current_path = os.getcwd()
     os.chdir(os.environ["ISPC_HOME"])
 
-    # the default 'make' variable for ISPC and LLVM may be actually different,
-    # so we have to manually set a new make command here (make targets are already verified in Main() )
-    if (options.ispc_compiler == "clang"):
-        make_target = "clang"
-    elif (options.ispc_compiler == "gcc"):
-        make_target = "gcc"
-    elif (options.ispc_compiler == "g++"):
-        make_target = "gcc"
-
-    make_ispc = "make " + make_target + " -j" + options.speed
+    make_ispc = "make " + options.ispc_build_compiler + " -j" + options.speed
 
     if current_OS != "Windows":
         p_temp = os.getenv("PATH")
@@ -664,14 +661,9 @@ def Main():
 
     # set appropriate makefile target
     # gcc and g++ options are equal and added for ease of use 
-    if (options.ispc_compiler == "clang"):
-        make_target = "clang"
-    elif (options.ispc_compiler == "gcc"):
-        make_target = "gcc"
-    elif (options.ispc_compiler == "g++"):
-        make_target = "gcc"
-    else:
-        error("unknow option for --ispc-compiler: " + options.ispc_compiler, 1)
+    if options.ispc_build_compiler != "clang" and \
+       options.ispc_build_compiler != "gcc":   
+        error("unknow option for --ispc-compiler: " + options.ispc_build_compiler, 1)
         parser.print_help()
         exit(0)
 
@@ -784,8 +776,8 @@ if __name__ == '__main__':
         help='ask for validation run', default=False, action="store_true")
     parser.add_option('-j', dest='speed',
         help='set -j for make', default=num_threads)
-    parser.add_option('--ispc-compiler', dest='ispc_compiler',
-        help='set compiler to build ispc binary (clang or g++)', default="clang")
+    parser.add_option('--ispc-build-compiler', dest='ispc_build_compiler',
+        help='set compiler to build ispc binary (clang/gcc)', default="clang")
     # options for activity "build LLVM"
     llvm_group = OptionGroup(parser, "Options for building LLVM",
                     "These options must be used with -b option.")
