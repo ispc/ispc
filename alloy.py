@@ -677,7 +677,7 @@ def Main():
     # gcc and g++ options are equal and added for ease of use 
     if options.ispc_build_compiler != "clang" and \
        options.ispc_build_compiler != "gcc":   
-        error("unknow option for --ispc-compiler: " + options.ispc_build_compiler, 1)
+        error("unknow option for --ispc-build-compiler: " + options.ispc_build_compiler, 1)
         parser.print_help()
         exit(0)
 
