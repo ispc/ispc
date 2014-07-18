@@ -438,6 +438,9 @@ def validation_run(only, only_targets, reference_branch, number, notify, update,
         LLVM = []
         targets = []
         sde_targets = []
+# sometimes clang++ is not avaluable. if --ispc-build-compiler = gcc we will pass in g++ compiler
+        if options.ispc_build_compiler == "gcc":
+            stability.compiler_exe = "g++"
 # parsing option only, update parameters of run
         if "-O2" in only:
             opts.append(False)
