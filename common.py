@@ -36,23 +36,36 @@ import sys
 import os
 import errno
 import shutil
-class ExecutionStatGatherer:
-    def __init__(self):
-        optimizations = ['O0', 'O2']
-        architectures = ['x86', 'x86-64']
-        all_est_targets  = ['sse2-i32x4', 'sse2-i32x8', 'sse4-i32x4', 'sse4-i32x8', 'sse4-i16x8',
-                            'sse4-i8x16', 'avx1-i32x8', 'avx1-i32x16', 'avx1.1-i32x8', 
-                            'avx1.1-i32x16', 'avx2-i32x8', 'avx2-i32x16', 'generic-x1', 
-                            'generic-x4', 'generic-x8', 'generic-x16', 'generic-x32', 
-                            'generic-x64', 'knc']
+from regression import *
 
+
+# this class instance is intended to gather and store all information
+# regarding the testing process. Defined in 'regression.py'
+ex_state = ExecutionStateGatherer()
+
+# load/save almost every object to a file (good for bug reproducing)
+def dump(fname, obj):
+    import pickle
+    with open(fname, 'w') as fp:
+        pickle.dump(obj, fp)  
+
+def undump(fname):
+    import pickle
+    with open(fname, 'r') as fp:
+        obj = pickle.load(fp) 
+    return obj
+
+# retrieve the host name
+def get_host_name():
+    import socket
+    return socket.gethostname()
 
 def write_to_file(filename, line):
     f = open(filename, 'a')
     f.writelines(line)
     f.close()
 
-#remove file if it exists
+# remove file if it exists
 def remove_if_exists(filename):
     if os.path.exists(filename):
         if os.path.isdir(filename):

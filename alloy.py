@@ -631,7 +631,8 @@ def validation_run(only, only_targets, reference_branch, number, notify, update,
         if options.notify != "":
             attach_mail_file(msg, performance.in_file, "performance.log")
             attach_mail_file(msg, "." + os.sep + "logs" + os.sep + "perf_build.log", "perf_build.log")
-
+# dumping gathered info to the file
+    commom.ex_state.dump(alloy_folder + "test_table.dump", commom.ex_state.tt)
 # sending e-mail with results
     if options.notify != "":
         fp = open(os.environ["ISPC_HOME"] + os.sep + "notify_log.log", 'rb')
@@ -702,6 +703,8 @@ def Main():
     f_date = "logs"
     common.remove_if_exists(f_date)
     os.makedirs(f_date)
+    global alloy_folder
+    alloy_folder = os.getcwd() + os.sep + f_date + os.sep
     global alloy_build
     alloy_build = os.getcwd() + os.sep + f_date + os.sep + "alloy_build.log"
     global stability_log
