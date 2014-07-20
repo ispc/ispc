@@ -592,7 +592,6 @@ def run_tests(options1, args, print_version):
             options.compiler_exe = "cl.exe"
         else:
             options.compiler_exe = "clang++"
- 
 
     # checks the required compiler otherwise prints an error message
     PATH_dir = string.split(os.getenv("PATH"), os.pathsep) 
