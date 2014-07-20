@@ -330,9 +330,13 @@ def build_ispc(version_LLVM, make):
         if options.debug == True:
             folder +=  "dbg"
        
-        p = subprocess.Popen("svnversion " + folder, shell=True, \
+        p = subprocess.Popen("svn info " + folder, shell=True, \
                stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        (revision_llvm, err) = p.communicate()
+        (info_llvm, err) = p.communicate()
+        info_llvm = re.split('\n', info_llvm)
+        for i in info_llvm:
+            if len(i) > 0 and i.startswith("Last Changed Rev: "):
+                common.ex_state.switch_revision(str(i[len("Last Changed Rev: "):]))
         
         try_do_LLVM("recognize LLVM revision", "svn info " + folder, True)
         try_do_LLVM("build ISPC with LLVM version " + version_LLVM + " ", make_ispc, True)
@@ -641,7 +645,7 @@ def validation_run(only, only_targets, reference_branch, number, notify, update,
             attach_mail_file(msg, performance.in_file, "performance.log")
             attach_mail_file(msg, "." + os.sep + "logs" + os.sep + "perf_build.log", "perf_build.log")
 # dumping gathered info to the file
-    commom.ex_state.dump(alloy_folder + "test_table.dump", commom.ex_state.tt)
+    common.ex_state.dump(alloy_folder + "test_table.dump", common.ex_state.tt)
 # sending e-mail with results
     if options.notify != "":
         fp = open(os.environ["ISPC_HOME"] + os.sep + "notify_log.log", 'rb')
@@ -762,6 +766,7 @@ import datetime
 import copy
 import multiprocessing
 import subprocess
+import re
 from email.MIMEMultipart import MIMEMultipart
 from email.MIMEBase import MIMEBase
 from email.mime.text import MIMEText

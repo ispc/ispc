@@ -52,14 +52,17 @@ if __name__ == '__main__':
             return self.epilog
 
     examples =  ("Examples:\n" +
-    "Load test_table object\n\tregression_read.py -l\n")
+    "Load test_table object\n\tregression_read.py -l 'test_table.dump'\n")
     
     parser = MyParser(usage="Usage: regression_read.py -l [options]", epilog=examples)
     parser.add_option('-l', '--load-tt', dest='load_tt',
-        help='load test_table.dump from file', default=None)
+        help='load TestTable() from file', default=None)
 
     (options, args) = parser.parse_args()
-
+    if (options.load_tt == None):
+        parser.print_help()
+        exit(0)
+        
     tt = read_test_table(options.load_tt)
     print tt
     print "\n\n ------------------------\n\n"
