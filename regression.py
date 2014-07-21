@@ -77,7 +77,7 @@ class TestCase(object):
 
     def __repr__(self):
         string = "%s %s %s: " % (self.arch, self.opt, self.target)
-        string = string + repr(self.result) + '\n'
+        string = string + repr(self.result)
         return string
 
     def __hash__(self):

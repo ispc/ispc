@@ -35,7 +35,7 @@
 
 from optparse import OptionParser
 from regression import *
-import pickle
+import pickle, re
 
 
 
@@ -44,7 +44,22 @@ def read_test_table(filename):
         tt = pickle.load(fp) 
     return tt
         
-        
+
+def print_with_specific_results(tests, runfailed, compfailed):
+    for test in tests:
+        for test_case in test.test_cases:
+            if test_case.result == TestResult(runfailed, compfailed):
+                print test.name.rjust(40) + repr(test_case).rjust(50)
+
+
+
+def check_rev_in_tt(tt, rev, tt_location):
+    if not rev in tt.table.keys():
+        print "Unable to locate", rev, "in table", tt_location
+        print "Available LLVM revisions:", tt.table.keys()
+        exit(0)
+
+
 if __name__ == '__main__':
     # parsing options
     class MyParser(OptionParser):
@@ -52,22 +67,71 @@ if __name__ == '__main__':
             return self.epilog
 
     examples =  ("Examples:\n" +
-    "Load test_table object\n\tregression_read.py -l 'test_table.dump'\n")
-    
+    "Load test_table object\n\tregression_read.py -l 'test_table.dump'\n" +
+    "Show runfailed, compfailed and succeed tests in rev '213493'\n\t" + 
+    "regression_read.py -l 'test_table.dump' -r '213493' --succeed --runfailed --compfailed\n" +
+    "Show regression between two revisions\n\t" +
+    "regression_read.py -l 'test_table.dump' -R '210929 213493'\n")
+
     parser = MyParser(usage="Usage: regression_read.py -l [options]", epilog=examples)
     parser.add_option('-l', '--load-tt', dest='load_tt',
         help='load TestTable() from file', default=None)
+    parser.add_option('-r', '--revision', dest='revision',
+        help='show only specified revision', default=None)
+    parser.add_option('--runfailed', dest='runfailed',
+        help='show runfailed tests', default=False, action='store_true')
+    parser.add_option('--compfailed', dest='compfailed',
+        help='show compfailed tests', default=False, action='store_true')
+    parser.add_option('--succeed', dest='succeed',
+        help='show succeed tests', default=False, action='store_true')
+    parser.add_option('-R', '--regression', dest='regression',
+        help='show regression between two specified revisions', default="")
 
     (options, args) = parser.parse_args()
     if (options.load_tt == None):
         parser.print_help()
         exit(0)
-        
+    
     tt = read_test_table(options.load_tt)
-    print tt
-    print "\n\n ------------------------\n\n"
-    print "Avaluable LLVM revisions:", tt.table.keys()
-    #print tt.regression(tt.table.keys()[1], tt.table.keys()[0])
+    print "Available LLVM revisions:", tt.table.keys()
 
+    if options.revision != None:
+        check_rev_in_tt(tt, options.revision, options.load_tt)
+        revisions = [options.revision]
+    else:
+        revisions = tt.table.keys()
+
+
+    # print test cases
+    if (options.succeed):
+        print "\n\n Succeed:"
+        for rev in revisions:
+            print "Revision %s" % (rev)
+            print_with_specific_results(tt.table[rev], 0, 0)
+
+    if (options.runfailed):
+        print "\n\n Runfailed:"
+        for rev in revisions:
+            print "Revision %s" % (rev)
+            print_with_specific_results(tt.table[rev], 1, 0)
+
+    if (options.compfailed):
+        print "\n\n Compfailed:"
+        for rev in revisions:
+            print "Revision %s" % (rev)
+            print_with_specific_results(tt.table[rev], 0, 1)
+            
+     
+    # print regression
+    if options.regression != "":
+        regr_revs = re.split('\ ', options.regression)
+        if len(regr_revs) != 2:
+            print "Invalid input:", regr_revs
+            exit(0)
+
+        check_rev_in_tt(tt, regr_revs[0], options.load_tt)
+        check_rev_in_tt(tt, regr_revs[1], options.load_tt)
+
+        print tt.regression(regr_revs[0], regr_revs[1])
 
 
