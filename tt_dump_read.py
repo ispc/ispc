@@ -34,7 +34,7 @@
 # // Authors: Anton Mitrokhin
 
 from optparse import OptionParser
-from regression import *
+from common import *
 import pickle, re
 
 
