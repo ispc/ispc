@@ -722,9 +722,9 @@ def Main():
     global alloy_folder
     alloy_folder = os.getcwd() + os.sep + f_date + os.sep
     global alloy_build
-    alloy_build = os.getcwd() + os.sep + f_date + os.sep + "alloy_build.log"
+    alloy_build = alloy_folder + "alloy_build.log"
     global stability_log
-    stability_log = os.getcwd() + os.sep + f_date + os.sep + "stability.log"
+    stability_log = alloy_folder + "stability.log"
     current_path = os.getcwd()
     make = "make -j" + options.speed
     if os.environ["ISPC_HOME"] != os.getcwd():
