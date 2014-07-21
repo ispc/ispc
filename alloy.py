@@ -330,9 +330,13 @@ def build_ispc(version_LLVM, make):
         if options.debug == True:
             folder +=  "dbg"
        
-        p = subprocess.Popen("svnversion " + folder, shell=True, \
+        p = subprocess.Popen("svn info " + folder, shell=True, \
                stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        (revision_llvm, err) = p.communicate()
+        (info_llvm, err) = p.communicate()
+        info_llvm = re.split('\n', info_llvm)
+        for i in info_llvm:
+            if len(i) > 0 and i.startswith("Last Changed Rev: "):
+                common.ex_state.switch_revision(str(i[len("Last Changed Rev: "):]))
         
         try_do_LLVM("recognize LLVM revision", "svn info " + folder, True)
         try_do_LLVM("build ISPC with LLVM version " + version_LLVM + " ", make_ispc, True)
@@ -511,6 +515,7 @@ def validation_run(only, only_targets, reference_branch, number, notify, update,
 # begin validation run for stabitily
         common.remove_if_exists(stability.in_file)
         R = [[[],[]],[[],[]],[[],[]],[[],[]]]
+        print_debug("\n" + common.get_host_name() + "\n", False, stability_log)
         print_debug("\n_________________________STABILITY REPORT_________________________\n", False, stability_log)
         for i in range(0,len(LLVM)):
             print_version = 2
@@ -640,13 +645,16 @@ def validation_run(only, only_targets, reference_branch, number, notify, update,
         if options.notify != "":
             attach_mail_file(msg, performance.in_file, "performance.log")
             attach_mail_file(msg, "." + os.sep + "logs" + os.sep + "perf_build.log", "perf_build.log")
-
+# dumping gathered info to the file
+    common.ex_state.dump(alloy_folder + "test_table.dump", common.ex_state.tt)
 # sending e-mail with results
     if options.notify != "":
         fp = open(os.environ["ISPC_HOME"] + os.sep + "notify_log.log", 'rb')
         f_lines = fp.readlines()
         fp.close()
         body = ""
+        body += "Hostname: " + common.get_host_name() + "\n\n"
+
         if  not sys.exc_info()[0] == None:
             body = body + "Last exception: " + str(sys.exc_info()) + '\n'
         for i in range(0,len(f_lines)):
@@ -711,10 +719,12 @@ def Main():
     f_date = "logs"
     common.remove_if_exists(f_date)
     os.makedirs(f_date)
+    global alloy_folder
+    alloy_folder = os.getcwd() + os.sep + f_date + os.sep
     global alloy_build
-    alloy_build = os.getcwd() + os.sep + f_date + os.sep + "alloy_build.log"
+    alloy_build = alloy_folder + "alloy_build.log"
     global stability_log
-    stability_log = os.getcwd() + os.sep + f_date + os.sep + "stability.log"
+    stability_log = alloy_folder + "stability.log"
     current_path = os.getcwd()
     make = "make -j" + options.speed
     if os.environ["ISPC_HOME"] != os.getcwd():
@@ -759,6 +769,7 @@ import datetime
 import copy
 import multiprocessing
 import subprocess
+import re
 from email.MIMEMultipart import MIMEMultipart
 from email.MIMEBase import MIMEBase
 from email.mime.text import MIMEText

@@ -322,12 +322,13 @@ def run_tasks_from_queue(queue, queue_ret, queue_skip, total_tests_arg, max_test
         olddir = ""
     
     compile_error_files = [ ]
+    run_succeed_files = [ ]
     run_error_files = [ ]
     skip_files = [ ]
     while True:
         filename = queue.get()
         if (filename == 'STOP'):
-            queue_ret.put((compile_error_files, run_error_files, skip_files))
+            queue_ret.put((compile_error_files, run_error_files, skip_files, run_succeed_files))
             if is_windows:
                 try:
                     os.remove("test_static.obj")
@@ -350,6 +351,8 @@ def run_tasks_from_queue(queue, queue_ret, queue_skip, total_tests_arg, max_test
                 print_debug("ERROR: run_test function raised an exception: %s\n" % (sys.exc_info()[1]), s, run_tests_log)
                 sys.exit(-1) # This is in case the child has unexpectedly died or some other exception happened
             
+            if compile_error == 0 and run_error == 0:
+                run_succeed_files += [ filename ]
             if compile_error != 0:
                 compile_error_files += [ filename ]
             if run_error != 0:
@@ -503,7 +506,7 @@ def run_tests(options1, args, print_version):
     global s
     s = options.silent
     
-    # prepare run_tests_log and fail_db files
+    # prepare run_tests_log and fail_db file
     global run_tests_log
     if options.in_file:
         run_tests_log = os.getcwd() + os.sep + options.in_file
@@ -669,6 +672,7 @@ def run_tests(options1, args, print_version):
     total_tests = len(files)
 
     compile_error_files = [ ]
+    run_succeed_files = [ ]
     run_error_files = [ ]
     skip_files = [ ]
 
@@ -709,20 +713,42 @@ def run_tests(options1, args, print_version):
     if options.non_interactive == False:
         print_debug("\n", s, run_tests_log)
 
-    
-    for jb in task_threads:
-        if not jb.exitcode == 0:
-            raise OSError(2, 'Some test subprocess has thrown an exception', '')
-
-
     temp_time = (time.time() - start_time)
     elapsed_time = time.strftime('%Hh%Mm%Ssec.', time.gmtime(temp_time))
 
     while not qret.empty():
-        (c, r, skip) = qret.get()
+        (c, r, skip, ss) = qret.get()
         compile_error_files += c
         run_error_files += r
         skip_files += skip
+        run_succeed_files += ss
+
+    # Detect opt_set
+    if options.no_opt == True:
+        opt = "-O0"
+    else:
+        opt = "-O2"
+
+    common.ex_state.add_to_rinf_testall(total_tests)
+    for fname in skip_files:
+        # We do not add skipped tests to test table as we do not know the test result
+        common.ex_state.add_to_rinf(options.arch, opt, options.target, 0, 0, 0, 1)
+
+    for fname in compile_error_files:
+        common.ex_state.add_to_tt(fname, options.arch, opt, options.target, 0, 1)
+        common.ex_state.add_to_rinf(options.arch, opt, options.target, 0, 0, 1, 0)
+
+    for fname in run_error_files:
+        common.ex_state.add_to_tt(fname, options.arch, opt, options.target, 1, 0)
+        common.ex_state.add_to_rinf(options.arch, opt, options.target, 0, 1, 0, 0)
+
+    for fname in run_succeed_files:
+        common.ex_state.add_to_tt(fname, options.arch, opt, options.target, 0, 0)
+        common.ex_state.add_to_rinf(options.arch, opt, options.target, 1, 0, 0, 0)
+
+    for jb in task_threads:
+        if not jb.exitcode == 0:
+            raise OSError(2, 'Some test subprocess has thrown an exception', '')
 
     if options.non_interactive:
         print_debug(" Done %d / %d\n" % (finished_tests_counter.value, total_tests), s, run_tests_log)
