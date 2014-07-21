@@ -515,6 +515,7 @@ def validation_run(only, only_targets, reference_branch, number, notify, update,
 # begin validation run for stabitily
         common.remove_if_exists(stability.in_file)
         R = [[[],[]],[[],[]],[[],[]],[[],[]]]
+        print_debug("\n" + common.get_host_name() + "\n", False, stability_log)
         print_debug("\n_________________________STABILITY REPORT_________________________\n", False, stability_log)
         for i in range(0,len(LLVM)):
             print_version = 2
@@ -652,6 +653,8 @@ def validation_run(only, only_targets, reference_branch, number, notify, update,
         f_lines = fp.readlines()
         fp.close()
         body = ""
+        body += "Hostname: " + common.get_host_name() + "\n\n"
+
         if  not sys.exc_info()[0] == None:
             body = body + "Last exception: " + str(sys.exc_info()) + '\n'
         for i in range(0,len(f_lines)):
