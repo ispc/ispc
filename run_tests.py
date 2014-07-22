@@ -729,22 +729,28 @@ def run_tests(options1, args, print_version):
     else:
         opt = "-O2"
 
-    common.ex_state.add_to_rinf_testall(total_tests)
-    for fname in skip_files:
-        # We do not add skipped tests to test table as we do not know the test result
-        common.ex_state.add_to_rinf(options.arch, opt, options.target, 0, 0, 0, 1)
+    try:
+        common.ex_state.add_to_rinf_testall(total_tests)
+        for fname in skip_files:
+            # We do not add skipped tests to test table as we do not know the test result
+            common.ex_state.add_to_rinf(options.arch, opt, options.target, 0, 0, 0, 1)
 
-    for fname in compile_error_files:
-        common.ex_state.add_to_tt(fname, options.arch, opt, options.target, 0, 1)
-        common.ex_state.add_to_rinf(options.arch, opt, options.target, 0, 0, 1, 0)
+        for fname in compile_error_files:
+            common.ex_state.add_to_tt(fname, options.arch, opt, options.target, 0, 1)
+            common.ex_state.add_to_rinf(options.arch, opt, options.target, 0, 0, 1, 0)
 
-    for fname in run_error_files:
-        common.ex_state.add_to_tt(fname, options.arch, opt, options.target, 1, 0)
-        common.ex_state.add_to_rinf(options.arch, opt, options.target, 0, 1, 0, 0)
+        for fname in run_error_files:
+            common.ex_state.add_to_tt(fname, options.arch, opt, options.target, 1, 0)
+            common.ex_state.add_to_rinf(options.arch, opt, options.target, 0, 1, 0, 0)
 
-    for fname in run_succeed_files:
-        common.ex_state.add_to_tt(fname, options.arch, opt, options.target, 0, 0)
-        common.ex_state.add_to_rinf(options.arch, opt, options.target, 1, 0, 0, 0)
+        for fname in run_succeed_files:
+            common.ex_state.add_to_tt(fname, options.arch, opt, options.target, 0, 0)
+            common.ex_state.add_to_rinf(options.arch, opt, options.target, 1, 0, 0, 0)
+    
+    except:
+        print_debug("Exception in ex_state. Skipping...", s, run_tests_log)
+
+
 
     for jb in task_threads:
         if not jb.exitcode == 0:

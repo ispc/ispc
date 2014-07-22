@@ -442,9 +442,9 @@ class ExecutionStateGatherer(object):
         self.revision = ""
         self.rinf = []
         self.tt = TestTable()
+        self.switch_revision("undefined")
 
     def switch_revision(self, revision):
-        print "Switching revision to " + revision
         self.revision = revision
         self.rinf.append(RevisionInfo(self.hostname, self.revision))
 
