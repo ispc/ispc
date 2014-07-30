@@ -352,7 +352,7 @@ FunctionEmitContext::FunctionEmitContext(Function *func, Symbol *funSym,
             AssertPos(currentPos, diSubprogramType.Verify());
         }
 
-#if defined(LLVM_3_4) || defined(LLVM_3_5)
+#if defined(LLVM_3_4) || defined(LLVM_3_5) || defined(LLVM_3_6)
         Assert(diSubprogramType.isCompositeType());
         llvm::DICompositeType diSubprogramType_n =
             static_cast<llvm::DICompositeType>(diSubprogramType);
@@ -1546,7 +1546,7 @@ FunctionEmitContext::StartScope() {
         llvm::DILexicalBlock lexicalBlock =
             m->diBuilder->createLexicalBlock(parentScope, diFile,
                                              currentPos.first_line,
-#if defined(LLVM_3_5)
+#if defined(LLVM_3_5) || defined(LLVM_3_6)
         // Revision 202736 in LLVM adds support of DWARF discriminator
         // to the last argument and revision 202737 in clang adds 0
         // for the last argument by default.

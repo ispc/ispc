@@ -47,7 +47,7 @@
   #include <llvm/IR/InstrTypes.h>
   #include <llvm/IR/Instructions.h>
 #endif
-#if defined(LLVM_3_5)
+#if defined(LLVM_3_5) || defined(LLVM_3_6)
   #include <llvm/IR/DebugInfo.h>
   #include <llvm/IR/DIBuilder.h>
 #else

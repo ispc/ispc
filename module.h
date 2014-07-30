@@ -44,7 +44,7 @@
 #if defined(LLVM_3_4)
   #include <llvm/DebugInfo.h>
 #endif
-#if defined(LLVM_3_5)
+#if defined(LLVM_3_5) || defined(LLVM_3_6)
   #include <llvm/IR/DebugInfo.h>
 #endif
 

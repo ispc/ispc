@@ -40,8 +40,8 @@
 
 #define ISPC_VERSION "1.7.1dev"
 
-#if !defined(LLVM_3_1) && !defined(LLVM_3_2) && !defined(LLVM_3_3) && !defined(LLVM_3_4) && !defined(LLVM_3_5)
-#error "Only LLVM 3.1, 3.2, 3.3, 3.4 and the 3.5 development branch are supported"
+#if !defined(LLVM_3_1) && !defined(LLVM_3_2) && !defined(LLVM_3_3) && !defined(LLVM_3_4) && !defined(LLVM_3_5) && !defined(LLVM_3_6)
+#error "Only LLVM 3.1, 3.2, 3.3, 3.4, 3.5 and the 3.6 development branch are supported"
 #endif
 
 #if defined(_WIN32) || defined(_WIN64)

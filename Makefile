@@ -117,6 +117,10 @@ ifeq ($(LLVM_VERSION),LLVM_3_5)
     ISPC_LIBS += -lcurses -lz
 endif
 
+ifeq ($(LLVM_VERSION),LLVM_3_6)
+    ISPC_LIBS += -lcurses -lz
+endif
+
 ifeq ($(ARCH_OS),Linux)
 	ISPC_LIBS += -ldl
 endif
@@ -151,6 +155,9 @@ CXXFLAGS=$(OPT) $(LLVM_CXXFLAGS) -I. -Iobjs/ -I$(CLANG_INCLUDE)  \
 	-DBUILD_DATE="\"$(BUILD_DATE)\"" -DBUILD_VERSION="\"$(BUILD_VERSION)\"" \
 	-Wno-sign-compare -Wno-unused-function -Werror
 ifeq ($(LLVM_VERSION),LLVM_3_5)
+	CXXFLAGS+=-std=c++11 -Wno-c99-extensions -Wno-deprecated-register
+endif
+ifeq ($(LLVM_VERSION),LLVM_3_6)
 	CXXFLAGS+=-std=c++11 -Wno-c99-extensions -Wno-deprecated-register
 endif
 ifneq ($(ARM_ENABLED), 0)

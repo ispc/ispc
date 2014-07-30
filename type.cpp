@@ -50,7 +50,7 @@
   #include <llvm/IR/Value.h>
   #include <llvm/IR/Module.h>
 #endif
-#if defined(LLVM_3_5)
+#if defined(LLVM_3_5) || defined(LLVM_3_6)
   #include <llvm/IR/DebugInfo.h>
   #include <llvm/IR/DIBuilder.h>
 #else
@@ -2987,7 +2987,7 @@ FunctionType::GetDIType(llvm::DIDescriptor scope) const {
     for (int i = 0; i < GetNumParameters(); ++i) {
         const Type *t = GetParameterType(i);
         if (t == NULL)
-#if defined(LLVM_3_4) || defined(LLVM_3_5)
+#if defined(LLVM_3_4) || defined(LLVM_3_5) || defined(LLVM_3_6)
             return llvm::DICompositeType();
 #else
             return llvm::DIType();
