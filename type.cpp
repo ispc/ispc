@@ -2994,9 +2994,14 @@ FunctionType::GetDIType(llvm::DIDescriptor scope) const {
 #endif
         retArgTypes.push_back(t->GetDIType(scope));
     }
-
+#if defined(LLVM_3_6)
+    llvm::DITypeArray retArgTypesArray =
+        m->diBuilder->getOrCreateTypeArray(llvm::ArrayRef<llvm::Value *>(retArgTypes));
+#else
     llvm::DIArray retArgTypesArray =
         m->diBuilder->getOrCreateArray(llvm::ArrayRef<llvm::Value *>(retArgTypes));
+#endif
+    
     llvm::DIType diType =
         // FIXME: DIFile
         m->diBuilder->createSubroutineType(llvm::DIFile(), retArgTypesArray);

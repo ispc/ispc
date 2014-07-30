@@ -111,6 +111,9 @@ def build_LLVM(version_LLVM, revision, folder, tarball, debug, selfbuild, extra,
     FOLDER_NAME=version_LLVM
     if  version_LLVM == "trunk":
         SVN_PATH="trunk"
+    if  version_LLVM == "3.5":
+        SVN_PATH="tags/RELEASE_35/rc1"
+        version_LLVM = "3_5"
     if  version_LLVM == "3.4":
         SVN_PATH="tags/RELEASE_34/dot2-final"
         version_LLVM = "3_4"
@@ -351,8 +354,10 @@ def build_ispc(version_LLVM, make):
             temp = "3_3"
         if version_LLVM == "3.4":
             temp = "3_4"
-        if version_LLVM == "trunk":
+        if version_LLVM == "3.5":
             temp = "3_5"
+        if version_LLVM == "trunk":
+            temp = "3_6"
         os.environ["LLVM_VERSION"] = "LLVM_" + temp
         try_do_LLVM("clean ISPC for building", "msbuild ispc.vcxproj /t:clean", True)
         try_do_LLVM("build ISPC with LLVM version " + version_LLVM + " ", "msbuild ispc.vcxproj /V:m /p:Platform=Win32 /p:Configuration=Release /t:rebuild", True)
@@ -454,7 +459,7 @@ def validation_run(only, only_targets, reference_branch, number, notify, update,
             archs.append("x86-64")
         if "native" in only:
             sde_targets_t = []
-        for i in ["3.1", "3.2", "3.3", "3.4", "trunk"]:
+        for i in ["3.1", "3.2", "3.3", "3.4", "3.5", "trunk"]:
             if i in only:
                 LLVM.append(i)
         if "current" in only:
@@ -707,7 +712,7 @@ def Main():
         if os.environ.get("SMTP_ISPC") == None:
             error("you have no SMTP_ISPC in your environment for option notify", 1)
     if options.only != "":
-        test_only_r = " 3.1 3.2 3.3 3.4 trunk current build stability performance x86 x86-64 -O0 -O2 native "
+        test_only_r = " 3.1 3.2 3.3 3.4 3.5 trunk current build stability performance x86 x86-64 -O0 -O2 native "
         test_only = options.only.split(" ")
         for iterator in test_only:
             if not (" " + iterator + " " in test_only_r):
@@ -816,7 +821,7 @@ if __name__ == '__main__':
     llvm_group = OptionGroup(parser, "Options for building LLVM",
                     "These options must be used with -b option.")
     llvm_group.add_option('--version', dest='version',
-        help='version of llvm to build: 3.1 3.2 3.3 3.4 trunk. Default: trunk', default="trunk")
+        help='version of llvm to build: 3.1 3.2 3.3 3.4 3.5 trunk. Default: trunk', default="trunk")
     llvm_group.add_option('--revision', dest='revision',
         help='revision of llvm to build in format r172870', default="")
     llvm_group.add_option('--debug', dest='debug',
@@ -851,7 +856,7 @@ if __name__ == '__main__':
     run_group.add_option('--only', dest='only',
         help='set types of tests. Possible values:\n' + 
             '-O0, -O2, x86, x86-64, stability (test only stability), performance (test only performance)\n' +
-            'build (only build with different LLVM), 3.1, 3.2, 3.3, 3.4, trunk, native (do not use SDE), current (do not rebuild ISPC).',
+            'build (only build with different LLVM), 3.1, 3.2, 3.3, 3.4 3.5, trunk, native (do not use SDE), current (do not rebuild ISPC).',
             default="")
     run_group.add_option('--perf_LLVM', dest='perf_llvm',
         help='compare LLVM 3.3 with "--compare-with", default trunk', default=False, action='store_true')
