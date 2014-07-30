@@ -77,8 +77,7 @@ If you are not using pre-built binaries, you may notice the following changes:
   This is a preferred way to build LLVM for ISPC, as all required patches for
   better performance and stability will automatically apply.
 
-* LLVM 3.5 is supported.
-* LLVM 3.6 (current trunk) is supported.
+* LLVM 3.5 (current trunk) is supported.
 
 There are also multiple fixes for better performance and stability, most
 notable are:

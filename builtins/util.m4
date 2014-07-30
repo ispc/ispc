@@ -1500,7 +1500,7 @@ define <$1 x $2> @__atomic_compare_exchange_$3_global($2* %ptr, <$1 x $2> %cmp,
   ifelse(LLVM_VERSION,LLVM_3_5,`
     %r_LANE_ID_t = cmpxchg $2 * %ptr, $2 %cmp_LANE_ID, $2 %val_LANE_ID seq_cst seq_cst
     %r_LANE_ID = extractvalue { $2, i1 } %r_LANE_ID_t, 0
-  ',LLVM_VERSION,LLVM_3_6,`
+  ',LLVM_VERSION,LLVM_3_6,` ; this is duplicated for 3.6 since m4 has no OR and AND operators
     %r_LANE_ID_t = cmpxchg $2 * %ptr, $2 %cmp_LANE_ID, $2 %val_LANE_ID seq_cst seq_cst
     %r_LANE_ID = extractvalue { $2, i1 } %r_LANE_ID_t, 0
   ',`
@@ -1518,7 +1518,7 @@ define $2 @__atomic_compare_exchange_uniform_$3_global($2* %ptr, $2 %cmp,
   ifelse(LLVM_VERSION,LLVM_3_5,`
    %r_t = cmpxchg $2 * %ptr, $2 %cmp, $2 %val seq_cst seq_cst
    %r = extractvalue { $2, i1 } %r_t, 0
-  ',LLVM_VERSION,LLVM_3_6,`
+  ',LLVM_VERSION,LLVM_3_6,` ; this is duplicated for 3.6 since m4 has no OR and AND operators
    %r_t = cmpxchg $2 * %ptr, $2 %cmp, $2 %val seq_cst seq_cst
    %r = extractvalue { $2, i1 } %r_t, 0
   ',`
