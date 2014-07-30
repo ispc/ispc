@@ -113,11 +113,9 @@ ifeq ($(LLVM_VERSION),LLVM_3_4)
     ISPC_LIBS += -lcurses
 endif
 
-ifeq ($(LLVM_VERSION),LLVM_3_5)
-    ISPC_LIBS += -lcurses -lz
-endif
-
-ifeq ($(LLVM_VERSION),LLVM_3_6)
+# There is no logical OR in GNU make. 
+# This 'ifneq' acts like if($(LLVM_VERSION) == LLVM_3_5 || $(LLVM_VERSION) == LLVM_3_6)
+ifneq (,$(filter $(LLVM_VERSION), LLVM_3_5 LLVM_3_6))
     ISPC_LIBS += -lcurses -lz
 endif
 
@@ -154,10 +152,9 @@ CXXFLAGS=$(OPT) $(LLVM_CXXFLAGS) -I. -Iobjs/ -I$(CLANG_INCLUDE)  \
 	-Wall \
 	-DBUILD_DATE="\"$(BUILD_DATE)\"" -DBUILD_VERSION="\"$(BUILD_VERSION)\"" \
 	-Wno-sign-compare -Wno-unused-function -Werror
-ifeq ($(LLVM_VERSION),LLVM_3_5)
-	CXXFLAGS+=-std=c++11 -Wno-c99-extensions -Wno-deprecated-register
-endif
-ifeq ($(LLVM_VERSION),LLVM_3_6)
+
+# if($(LLVM_VERSION) == LLVM_3_5 || $(LLVM_VERSION) == LLVM_3_6)
+ifneq (,$(filter $(LLVM_VERSION),  LLVM_3_5 LLVM_3_6))
 	CXXFLAGS+=-std=c++11 -Wno-c99-extensions -Wno-deprecated-register
 endif
 ifneq ($(ARM_ENABLED), 0)
