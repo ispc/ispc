@@ -93,7 +93,7 @@
   #include <llvm/IR/DataLayout.h>
   #include <llvm/Analysis/TargetTransformInfo.h>
 #endif
-#if defined(LLVM_3_5)
+#if defined(LLVM_3_5) || defined(LLVM_3_6)
     #include <llvm/IR/Verifier.h>
     #include <llvm/IR/IRPrintingPasses.h>
     #include <llvm/IR/CFG.h>
@@ -948,7 +948,7 @@ Module::writeOutput(OutputType outputType, const char *outFileName,
         lStripUnusedDebugInfo(module);
     }
 
-#if defined (LLVM_3_4) || defined (LLVM_3_5)
+#if defined (LLVM_3_4) || defined (LLVM_3_5) || defined(LLVM_3_6)
     // In LLVM_3_4 after r195494 and r195504 revisions we should pass
     // "Debug Info Version" constant to the module. LLVM will ignore
     // our Debug Info metadata without it.
@@ -1105,7 +1105,7 @@ Module::writeObjectFileOrAssembly(llvm::TargetMachine *targetMachine,
     }
 
     llvm::PassManager pm;
-#if defined(LLVM_3_5)
+#if defined(LLVM_3_5) || defined(LLVM_3_6)
     pm.add(new llvm::DataLayoutPass(*g->target->getDataLayout()));
 #else
     pm.add(new llvm::DataLayout(*g->target->getDataLayout()));
@@ -2114,7 +2114,7 @@ Module::execPreprocessor(const char *infilename, llvm::raw_string_ostream *ostre
     }
 
     inst.getLangOpts().LineComment = 1;
-#if defined(LLVM_3_5)
+#if defined(LLVM_3_5) || defined(LLVM_3_6)
     inst.createPreprocessor(clang::TU_Complete);
 #else
     inst.createPreprocessor();

@@ -63,7 +63,7 @@
 #include "llvm/Analysis/ConstantsScanner.h"
 #include "llvm/Analysis/FindUsedTypes.h"
 #include "llvm/Analysis/LoopInfo.h"
-#if defined(LLVM_3_5)
+#if defined(LLVM_3_5) || defined(LLVM_3_6)
     #include "llvm/IR/Verifier.h"
     #include <llvm/IR/IRPrintingPasses.h>
     #include "llvm/IR/CallSite.h"
@@ -250,7 +250,7 @@ namespace {
   class CBEMCAsmInfo : public llvm::MCAsmInfo {
   public:
     CBEMCAsmInfo() {
-#if !defined(LLVM_3_5)
+#if !defined(LLVM_3_5) && !defined(LLVM_3_6)
       GlobalPrefix = "";
 #endif
       PrivateGlobalPrefix = "";
@@ -465,7 +465,7 @@ namespace {
 
       // Must not be used in inline asm, extractelement, or shufflevector.
       if (I.hasOneUse()) {
-#if defined(LLVM_3_5)
+#if defined(LLVM_3_5) || defined(LLVM_3_6)
         const llvm::Instruction &User = llvm::cast<llvm::Instruction>(*I.user_back());
 #else
         const llvm::Instruction &User = llvm::cast<llvm::Instruction>(*I.use_back());
@@ -477,7 +477,7 @@ namespace {
       }
 
       // Only inline instruction it if it's use is in the same BB as the inst.
-#if defined(LLVM_3_5)
+#if defined(LLVM_3_5) || defined(LLVM_3_6)
       return I.getParent() == llvm::cast<llvm::Instruction>(I.user_back())->getParent();
 #else
       return I.getParent() == llvm::cast<llvm::Instruction>(I.use_back())->getParent();
@@ -1770,7 +1770,7 @@ std::string CWriter::GetValueName(const llvm::Value *Operand) {
 
   // Resolve potential alias.
   if (const llvm::GlobalAlias *GA = llvm::dyn_cast<llvm::GlobalAlias>(Operand)) {
-#if defined(LLVM_3_5)
+#if defined(LLVM_3_5) || defined(LLVM_3_6)
     if (const llvm::Value *V = GA->getAliasee())
 #else
     if (const llvm::Value *V = GA->resolveAliasedGlobal(false))
@@ -2163,7 +2163,7 @@ static SpecialGlobalClass getGlobalVariableClass(const llvm::GlobalVariable *GV)
 
   // Otherwise, if it is other metadata, don't print it.  This catches things
   // like debug information.
-#if defined(LLVM_3_5)
+#if defined(LLVM_3_5) || defined(LLVM_3_6)
   // Here we compare char *
   if (!strcmp(GV->getSection(), "llvm.metadata"))
 #else
@@ -2225,7 +2225,7 @@ bool CWriter::doInitialization(llvm::Module &M) {
 #endif
   TAsm = new CBEMCAsmInfo();
   MRI  = new llvm::MCRegisterInfo();
-#if defined(LLVM_3_4) || defined(LLVM_3_5)
+#if defined(LLVM_3_4) || defined(LLVM_3_5) || defined(LLVM_3_6)
   TCtx = new llvm::MCContext(TAsm, MRI, NULL);
 #else
   TCtx = new llvm::MCContext(*TAsm, *MRI, NULL);
@@ -2349,7 +2349,7 @@ bool CWriter::doInitialization(llvm::Module &M) {
       if (I->hasExternalLinkage() || I->hasExternalWeakLinkage() ||
           I->hasCommonLinkage())
         Out << "extern ";
-#if defined (LLVM_3_5)
+#if defined (LLVM_3_5) || defined(LLVM_3_6)
       else if (I->hasDLLImportStorageClass())
 #else
       else if (I->hasDLLImportLinkage())
@@ -2525,7 +2525,7 @@ bool CWriter::doInitialization(llvm::Module &M) {
 
         if (I->hasLocalLinkage())
           Out << "static ";
-#if defined(LLVM_3_5)
+#if defined(LLVM_3_5) || defined(LLVM_3_6)
         else if (I->hasDLLImportStorageClass()) Out << "__declspec(dllimport) ";
         else if (I->hasDLLExportStorageClass()) Out << "__declspec(dllexport) ";
 #else
@@ -2810,7 +2810,7 @@ void CWriter::printFunctionSignature(const llvm::Function *F, bool Prototype) {
   bool isStructReturn = F->hasStructRetAttr();
 
   if (F->hasLocalLinkage()) Out << "static ";
-#if defined(LLVM_3_5)
+#if defined(LLVM_3_5) || defined(LLVM_3_6)
   if (F->hasDLLImportStorageClass()) Out << "__declspec(dllimport) ";
   if (F->hasDLLExportStorageClass()) Out << "__declspec(dllexport) ";
 #else
@@ -3145,7 +3145,7 @@ void CWriter::visitSwitchInst(llvm::SwitchInst &SI) {
     Out << ":\n";
     printPHICopiesForSuccessor (SI.getParent(), Succ, 2);
     printBranchToBlock(SI.getParent(), Succ, 2);
-#if defined (LLVM_3_5)
+#if defined (LLVM_3_5) || defined(LLVM_3_6)
     if (llvm::Function::iterator(Succ) == std::next(llvm::Function::iterator(SI.getParent())))
 #else
     if (llvm::Function::iterator(Succ) == llvm::next(llvm::Function::iterator(SI.getParent())))
@@ -3170,7 +3170,7 @@ bool CWriter::isGotoCodeNecessary(llvm::BasicBlock *From, llvm::BasicBlock *To) 
   /// FIXME: This should be reenabled, but loop reordering safe!!
   return true;
 
-#if defined (LLVM_3_5)
+#if defined (LLVM_3_5) || defined(LLVM_3_6)
   if (std::next(llvm::Function::iterator(From)) != llvm::Function::iterator(To))
 #else
   if (llvm::next(llvm::Function::iterator(From)) != llvm::Function::iterator(To))
@@ -3788,7 +3788,7 @@ void CWriter::lowerIntrinsics(llvm::Function &F) {
             // All other intrinsic calls we must lower.
             llvm::Instruction *Before = 0;
             if (CI != &BB->front())
-#if defined(LLVM_3_5)
+#if defined(LLVM_3_5) || defined(LLVM_3_6)
               Before = std::prev(llvm::BasicBlock::iterator(CI));
 #else
               Before = prior(llvm::BasicBlock::iterator(CI));

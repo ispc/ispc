@@ -63,12 +63,12 @@
   #include <llvm/IR/BasicBlock.h>
   #include <llvm/IR/Constants.h>
 #endif
-#if defined (LLVM_3_4) || defined(LLVM_3_5)
+#if defined (LLVM_3_4) || defined(LLVM_3_5) || defined(LLVM_3_6)
   #include <llvm/Transforms/Instrumentation.h>
 #endif
 #include <llvm/PassManager.h>
 #include <llvm/PassRegistry.h>
-#if defined(LLVM_3_5)
+#if defined(LLVM_3_5) || defined(LLVM_3_6)
     #include <llvm/IR/Verifier.h>
     #include <llvm/IR/IRPrintingPasses.h>
     #include <llvm/IR/PatternMatch.h>
@@ -444,7 +444,7 @@ DebugPassManager::add(llvm::Pass * P, int stage = -1) {
                 number, P->getPassName());
             PM.add(CreateDebugPass(buf));
         }
-#if defined(LLVM_3_4) || defined(LLVM_3_5)
+#if defined(LLVM_3_4) || defined(LLVM_3_5) || defined(LLVM_3_6)
         if (g->debugIR == number) {
             // adding generating of LLVM IR debug after optimization
             char buf[100];
@@ -469,7 +469,7 @@ Optimize(llvm::Module *module, int optLevel) {
         new llvm::TargetLibraryInfo(llvm::Triple(module->getTargetTriple()));
     optPM.add(targetLibraryInfo);
 
-#if defined(LLVM_3_5)
+#if defined(LLVM_3_5) || defined(LLVM_3_6)
     optPM.add(new llvm::DataLayoutPass(*g->target->getDataLayout()));
 #else
     optPM.add(new llvm::DataLayout(*g->target->getDataLayout()));
