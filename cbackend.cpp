@@ -105,7 +105,10 @@
 #include "llvm/Support/TargetRegistry.h"
 #include "llvm/Support/Host.h"
 #include "llvm/Target/TargetMachine.h"
-#include "llvm/Config/config.h"
+
+#if defined(LLVM_3_1) || defined(LLVM_3_2) || defined(LLVM_3_3) || defined(LLVM_3_4)
+    #include "llvm/Config/config.h"
+#endif
 
 #include <llvm/Transforms/IPO.h>
 #include <llvm/Transforms/Utils/BasicBlockUtils.h>
