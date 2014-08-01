@@ -46,7 +46,7 @@
 #include "util.h"
 #include <stdio.h>
 
-#if defined(LLVM_3_1) || defined(LLVM_3_2)
+#if defined(LLVM_3_2)
   #include <llvm/LLVMContext.h>
   #include <llvm/Module.h>
   #include <llvm/Type.h>
@@ -355,9 +355,7 @@ Function::emitCode(FunctionEmitContext *ctx, llvm::Function *function,
         // isn't worth the code bloat / overhead.
         bool checkMask = (type->isTask == true) ||
             (
-#if defined(LLVM_3_1)
-              (function->hasFnAttr(llvm::Attribute::AlwaysInline) == false)
-#elif defined(LLVM_3_2)
+#if defined(LLVM_3_2)
               (function->getFnAttributes().hasAttribute(llvm::Attributes::AlwaysInline) == false)
 #else // LLVM 3.3+
               (function->getAttributes().getFnAttributes().hasAttribute(llvm::AttributeSet::FunctionIndex, llvm::Attribute::AlwaysInline) == false)
@@ -502,11 +500,8 @@ Function::GenerateIR() {
                     functionName += std::string("_") + g->target->GetISAString();
                 llvm::Function *appFunction =
                     llvm::Function::Create(ftype, linkage, functionName.c_str(), m->module);
-#if defined(LLVM_3_1)
-                appFunction->setDoesNotThrow(true);
-#else
                 appFunction->setDoesNotThrow();
-#endif
+
                 // We should iterate from 1 because zero parameter is return.
                 // We should iterate till getNumParams instead of getNumParams+1 because new
                 // function is export function and doesn't contain the last parameter "mask".

@@ -40,7 +40,7 @@
 
 #include "ispc.h"
 #include <map>
-#if defined(LLVM_3_1) || defined(LLVM_3_2)
+#if defined(LLVM_3_2)
   #include <llvm/InstrTypes.h>
   #include <llvm/Instructions.h>
 #else

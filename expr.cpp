@@ -56,7 +56,7 @@
 #include <list>
 #include <set>
 #include <stdio.h>
-#if defined(LLVM_3_1) || defined(LLVM_3_2)
+#if defined(LLVM_3_2)
   #include <llvm/Module.h>
   #include <llvm/Type.h>
   #include <llvm/Instructions.h>
@@ -3184,14 +3184,7 @@ static llvm::Value *
 lEmitVaryingSelect(FunctionEmitContext *ctx, llvm::Value *test,
                    llvm::Value *expr1, llvm::Value *expr2,
                    const Type *type) {
-#if 0 // !defined(LLVM_3_1)
-    // Though it should be equivalent, this seems to cause non-trivial
-    // performance regressions versus the below.  This may be related to
-    // http://llvm.org/bugs/show_bug.cgi?id=16941.
-    if (test->getType() != LLVMTypes::Int1VectorType)
-        test = ctx->TruncInst(test, LLVMTypes::Int1VectorType);
-    return ctx->SelectInst(test, expr1, expr2, "select");
-#else
+    
     llvm::Value *resultPtr = ctx->AllocaInst(expr1->getType(), "selectexpr_tmp");
     // Don't need to worry about masking here
     ctx->StoreInst(expr2, resultPtr);
@@ -3200,7 +3193,6 @@ lEmitVaryingSelect(FunctionEmitContext *ctx, llvm::Value *test,
            PointerType::GetUniform(type)->LLVMType(g->ctx));
     ctx->StoreInst(expr1, resultPtr, test, type, PointerType::GetUniform(type));
     return ctx->LoadInst(resultPtr, "selectexpr_final");
-#endif // !LLVM_3_1
 }
 
 

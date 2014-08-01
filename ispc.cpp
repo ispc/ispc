@@ -48,7 +48,7 @@
   #include <sys/types.h>
   #include <unistd.h>
 #endif
-#if defined(LLVM_3_1) || defined(LLVM_3_2)
+#if defined(LLVM_3_2)
   #include <llvm/LLVMContext.h>
   #include <llvm/Module.h>
   #include <llvm/Instructions.h>
@@ -67,9 +67,7 @@
 #include <llvm/Support/Dwarf.h>
 #include <llvm/Target/TargetMachine.h>
 #include <llvm/Target/TargetOptions.h>
-#if defined(LLVM_3_1)
-  #include <llvm/Target/TargetData.h>
-#elif defined(LLVM_3_2)
+#if defined(LLVM_3_2)
   #include <llvm/DataLayout.h>
 #else // LLVM 3.3+
   #include <llvm/IR/DataLayout.h>
@@ -165,10 +163,8 @@ static const char *supportedCPUs[] = {
     "cortex-a9", "cortex-a15",
 #endif
     "atom", "penryn", "core2", "corei7", "corei7-avx"
-#if !defined(LLVM_3_1)
     , "core-avx-i", "core-avx2"
-#endif // LLVM 3.2+
-#if !defined(LLVM_3_1) && !defined(LLVM_3_2) && !defined(LLVM_3_3)
+#if !defined(LLVM_3_2) && !defined(LLVM_3_3)
     , "slm"
 #endif // LLVM 3.4+
 };
@@ -176,18 +172,14 @@ static const char *supportedCPUs[] = {
 Target::Target(const char *arch, const char *cpu, const char *isa, bool pic) :
     m_target(NULL),
     m_targetMachine(NULL),
-#if defined(LLVM_3_1)
-    m_targetData(NULL),
-#else
     m_dataLayout(NULL),
-#endif
     m_valid(false),
     m_isa(SSE2),
     m_arch(""),
     m_is32Bit(true),
     m_cpu(""),
     m_attributes(""),
-#if !defined(LLVM_3_1) && !defined(LLVM_3_2)
+#if !defined(LLVM_3_2)
     m_tf_attributes(NULL),
 #endif
     m_nativeVectorWidth(-1),
@@ -644,10 +636,8 @@ Target::Target(const char *arch, const char *cpu, const char *isa, bool pic) :
             m_isa == Target::NEON32)
             options.FloatABIType = llvm::FloatABI::Hard;
 #endif
-#if !defined(LLVM_3_1)
         if (g->opt.disableFMA == false)
             options.AllowFPOpFusion = llvm::FPOpFusion::Fast;
-#endif // !LLVM_3_1
 
 #ifdef ISPC_IS_WINDOWS
         if (strcmp("x86", arch) == 0) {
@@ -666,11 +656,7 @@ Target::Target(const char *arch, const char *cpu, const char *isa, bool pic) :
         // Initialize TargetData/DataLayout in 3 steps.
         // 1. Get default data layout first
         std::string dl_string;
-#if defined(LLVM_3_1)
-        dl_string = m_targetMachine->getTargetData()->getStringRepresentation();
-#else
         dl_string = m_targetMachine->getDataLayout()->getStringRepresentation();
-#endif
 
         // 2. Adjust for generic
         if (m_isa == Target::GENERIC) {
@@ -685,11 +671,7 @@ Target::Target(const char *arch, const char *cpu, const char *isa, bool pic) :
         }
 
         // 3. Finally set member data
-#if defined(LLVM_3_1)
-        m_targetData = new llvm::TargetData(dl_string);
-#else
         m_dataLayout = new llvm::DataLayout(dl_string);
-#endif
 
         // Set is32Bit
         // This indicates if we are compiling for 32 bit platform
@@ -697,7 +679,7 @@ Target::Target(const char *arch, const char *cpu, const char *isa, bool pic) :
         // FIXME: all generic targets are handled as 64 bit, which is incorrect.
         this->m_is32Bit = (getDataLayout()->getPointerSize() == 4);
 
-#if !defined(LLVM_3_1) && !defined(LLVM_3_2)
+#if !defined(LLVM_3_2)
         // This is LLVM 3.3+ feature.
         // Initialize target-specific "target-feature" attribute.
         if (!m_attributes.empty()) {
@@ -973,7 +955,7 @@ Target::StructOffset(llvm::Type *type, int element,
 }
 
 void Target::markFuncWithTargetAttr(llvm::Function* func) {
-#if !defined(LLVM_3_1) && !defined(LLVM_3_2)
+#if !defined(LLVM_3_2)
     if (m_tf_attributes) {
         func->addAttributes(llvm::AttributeSet::FunctionIndex, *m_tf_attributes);
     }

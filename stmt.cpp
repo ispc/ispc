@@ -48,7 +48,7 @@
 #include <stdio.h>
 #include <map>
 
-#if defined(LLVM_3_1) || defined(LLVM_3_2)
+#if defined(LLVM_3_2)
   #include <llvm/Module.h>
   #include <llvm/Type.h>
   #include <llvm/Instructions.h>

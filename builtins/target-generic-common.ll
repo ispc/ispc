@@ -275,20 +275,7 @@ declare void @__masked_store_i64(<WIDTH x i64>* nocapture, <WIDTH x i64>,
 declare void @__masked_store_double(<WIDTH x double>* nocapture, <WIDTH x double>,
                                     <WIDTH x i1> %mask) nounwind 
 
-ifelse(LLVM_VERSION, `LLVM_3_0', `
-declare void @__masked_store_blend_i8(<WIDTH x i8>* nocapture, <WIDTH x i8>, 
-                                      <WIDTH x i1>) nounwind 
-declare void @__masked_store_blend_i16(<WIDTH x i16>* nocapture, <WIDTH x i16>, 
-                                       <WIDTH x i1>) nounwind 
-declare void @__masked_store_blend_i32(<WIDTH x i32>* nocapture, <WIDTH x i32>, 
-                                       <WIDTH x i1>) nounwind 
-declare void @__masked_store_blend_float(<WIDTH x float>* nocapture, <WIDTH x float>, 
-                                       <WIDTH x i1>) nounwind 
-declare void @__masked_store_blend_i64(<WIDTH x i64>* nocapture, <WIDTH x i64>,
-                                       <WIDTH x i1> %mask) nounwind 
-declare void @__masked_store_blend_double(<WIDTH x double>* nocapture, <WIDTH x double>,
-                                       <WIDTH x i1> %mask) nounwind 
-', `
+
 define void @__masked_store_blend_i8(<WIDTH x i8>* nocapture, <WIDTH x i8>, 
                                      <WIDTH x i1>) nounwind alwaysinline {
   %v = load <WIDTH x i8> * %0
@@ -336,7 +323,6 @@ define void @__masked_store_blend_double(<WIDTH x double>* nocapture,
   store <WIDTH x double> %v1, <WIDTH x double> * %0
   ret void
 }
-')
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; gather/scatter

@@ -31,8 +31,7 @@
 
 include(`target-avx1-i64x4base.ll')
 
-ifelse(LLVM_VERSION, `LLVM_3_1', `rdrand_decls()',
-       `rdrand_definition()')
+rdrand_definition()
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; int min/max

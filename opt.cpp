@@ -48,7 +48,7 @@
 #include <set>
 
 #include <llvm/Pass.h>
-#if defined(LLVM_3_1) || defined(LLVM_3_2)
+#if defined(LLVM_3_2)
   #include <llvm/Module.h>
   #include <llvm/Instructions.h>
   #include <llvm/Intrinsics.h>
@@ -583,7 +583,7 @@ Optimize(llvm::Module *module, int optLevel) {
         optPM.add(llvm::createCFGSimplificationPass());
 
         optPM.add(llvm::createArgumentPromotionPass());
-#if defined(LLVM_3_1) || defined(LLVM_3_2) || defined(LLVM_3_3)
+#if defined(LLVM_3_2) || defined(LLVM_3_3)
         // Starting from 3.4 this functionality was moved to
         // InstructionCombiningPass. See r184459 for details.
         optPM.add(llvm::createSimplifyLibCallsPass(), 240);
@@ -4654,7 +4654,7 @@ PeepholePass::PeepholePass()
     : BasicBlockPass(ID) {
 }
 
-#if !defined(LLVM_3_1) && !defined(LLVM_3_2)
+#if !defined(LLVM_3_2)
 
 using namespace llvm::PatternMatch;
 
@@ -4975,7 +4975,7 @@ lMatchAvgDownInt16(llvm::Value *inst) {
     }
     return NULL;
 }
-#endif // !LLVM_3_1 && !LLVM_3_2
+#endif // !LLVM_3_2
 
 
 bool
@@ -4988,7 +4988,7 @@ PeepholePass::runOnBasicBlock(llvm::BasicBlock &bb) {
         llvm::Instruction *inst = &*iter;
 
         llvm::Instruction *builtinCall = NULL;
-#if !defined(LLVM_3_1) && !defined(LLVM_3_2)
+#if !defined(LLVM_3_2)
         if (!builtinCall)
           builtinCall = lMatchAvgUpUInt8(inst);
         if (!builtinCall)
@@ -5005,7 +5005,7 @@ PeepholePass::runOnBasicBlock(llvm::BasicBlock &bb) {
           builtinCall = lMatchAvgDownInt8(inst);
         if (!builtinCall)
           builtinCall = lMatchAvgDownInt16(inst);
-#endif // !LLVM_3_1 && !LLVM_3_2
+#endif // !LLVM_3_2
         if (builtinCall != NULL) {
           llvm::ReplaceInstWithInst(inst, builtinCall);
           modifiedAny = true;
