@@ -106,7 +106,7 @@
 #include "llvm/Support/Host.h"
 #include "llvm/Target/TargetMachine.h"
 
-#if defined(LLVM_3_1) || defined(LLVM_3_2) || defined(LLVM_3_3) || defined(LLVM_3_4)
+#if defined(LLVM_3_2) || defined(LLVM_3_3) || defined(LLVM_3_4)
     #include "llvm/Config/config.h"
 #endif
 
