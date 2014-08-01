@@ -155,9 +155,8 @@ CXXFLAGS=$(OPT) $(LLVM_CXXFLAGS) -I. -Iobjs/ -I$(CLANG_INCLUDE)  \
 
 # if( !($(LLVM_VERSION) == LLVM_3_2 || $(LLVM_VERSION) == LLVM_3_3 || $(LLVM_VERSION) == LLVM_3_4))
 ifeq (,$(filter $(LLVM_VERSION), LLVM_3_2 LLVM_3_3 LLVM_3_4))
-    ISPC_LIBS += -lcurses -lz
+	CXXFLAGS+=-std=c++11 -Wno-c99-extensions -Wno-deprecated-register
 endif
-
 ifneq ($(ARM_ENABLED), 0)
     CXXFLAGS+=-DISPC_ARM_ENABLED
 endif
