@@ -74,7 +74,7 @@
   #include <llvm/IR/CallingConv.h>
 #endif
 #include <llvm/ExecutionEngine/GenericValue.h>
-#if defined(LLVM_3_5) || defined(LLVM_3_6)
+#if !defined(LLVM_3_2) && !defined(LLVM_3_3) && !defined(LLVM_3_4) // LLVM 3.5+
   #include <llvm/IR/InstIterator.h>
 #else
   #include <llvm/Support/InstIterator.h>

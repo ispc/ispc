@@ -57,7 +57,7 @@
   #include <llvm/IR/Module.h>
   #include <llvm/IR/Instructions.h>
 #endif
-#if defined(LLVM_3_5) || defined(LLVM_3_6)
+#if !defined(LLVM_3_2) && !defined(LLVM_3_3) && !defined(LLVM_3_4) // LLVM 3.5+
   #include <llvm/IR/DebugInfo.h>
   #include <llvm/IR/DIBuilder.h>
 #else

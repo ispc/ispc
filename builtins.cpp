@@ -66,7 +66,7 @@
   #include <llvm/IR/Intrinsics.h>
   #include <llvm/IR/DerivedTypes.h>
 #endif
-#if defined(LLVM_3_5) || defined(LLVM_3_6)
+#if !defined(LLVM_3_2) && !defined(LLVM_3_3) && !defined(LLVM_3_4) // LLVM 3.5+
     #include <llvm/Linker/Linker.h>
 #else
     #include <llvm/Linker.h>
@@ -705,7 +705,8 @@ AddBitcodeToModule(const unsigned char *bitcode, int length,
                    llvm::Module *module, SymbolTable *symbolTable) {
     llvm::StringRef sb = llvm::StringRef((char *)bitcode, length);
     llvm::MemoryBuffer *bcBuf = llvm::MemoryBuffer::getMemBuffer(sb);
-#if defined(LLVM_3_5) || defined(LLVM_3_6)
+
+#if !defined(LLVM_3_2) && !defined(LLVM_3_3) && !defined(LLVM_3_4) // LLVM 3.5+
     llvm::ErrorOr<llvm::Module *> ModuleOrErr = llvm::parseBitcodeFile(bcBuf, *g->ctx);
     if (std::error_code EC = ModuleOrErr.getError())
         Error(SourcePos(), "Error parsing stdlib bitcode: %s", EC.message().c_str());
@@ -762,7 +763,7 @@ AddBitcodeToModule(const unsigned char *bitcode, int length,
             // architecture and investigate what happened.
             // Generally we allow library DataLayout to be subset of module
             // DataLayout or library DataLayout to be empty.
-#if defined(LLVM_3_5) || defined(LLVM_3_6)
+#if !defined(LLVM_3_2) && !defined(LLVM_3_3) && !defined(LLVM_3_4) // LLVM 3.5+
             if (!VerifyDataLayoutCompatibility(module->getDataLayoutStr(),
                                                bcModule->getDataLayoutStr())) {
               Warning(SourcePos(), "Module DataLayout is incompatible with "

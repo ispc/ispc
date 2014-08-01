@@ -69,7 +69,7 @@
 #include <llvm/Target/TargetMachine.h>
 #include <llvm/Target/TargetOptions.h>
 #include <llvm/PassManager.h>
-#if defined(LLVM_3_5) || defined(LLVM_3_6)
+#if !defined(LLVM_3_2) && !defined(LLVM_3_3) && !defined(LLVM_3_4) // LLVM 3.5+
     #include <llvm/IR/Verifier.h>
     #include <llvm/IR/IRPrintingPasses.h>
     #include <llvm/IR/CFG.h>
@@ -476,7 +476,8 @@ Function::GenerateIR() {
     }
 
     if (m->errorCount == 0) {
-#if defined (LLVM_3_5) || defined(LLVM_3_6)
+
+#if !defined(LLVM_3_2) && !defined(LLVM_3_3) && !defined(LLVM_3_4) // LLVM 3.5+
         if (llvm::verifyFunction(*function) == true) {
 #else
         if (llvm::verifyFunction(*function, llvm::ReturnStatusAction) == true) {
@@ -523,7 +524,8 @@ Function::GenerateIR() {
                     emitCode(&ec, appFunction, firstStmtPos);
                     if (m->errorCount == 0) {
                         sym->exportedFunction = appFunction;
-#if defined(LLVM_3_5) || defined(LLVM_3_6)
+
+#if !defined(LLVM_3_2) && !defined(LLVM_3_3) && !defined(LLVM_3_4) // LLVM 3.5+
                         if (llvm::verifyFunction(*appFunction) == true) {
 #else
                         if (llvm::verifyFunction(*appFunction,
