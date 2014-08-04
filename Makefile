@@ -114,8 +114,8 @@ ifeq ($(LLVM_VERSION),LLVM_3_4)
 endif
 
 # There is no logical OR in GNU make. 
-# This 'ifneq' acts like if($(LLVM_VERSION) == LLVM_3_5 || $(LLVM_VERSION) == LLVM_3_6)
-ifneq (,$(filter $(LLVM_VERSION), LLVM_3_5 LLVM_3_6))
+# This 'ifneq' acts like if( !($(LLVM_VERSION) == LLVM_3_2 || $(LLVM_VERSION) == LLVM_3_3 || $(LLVM_VERSION) == LLVM_3_4))
+ifeq (,$(filter $(LLVM_VERSION), LLVM_3_2 LLVM_3_3 LLVM_3_4))
     ISPC_LIBS += -lcurses -lz
 endif
 
@@ -153,8 +153,8 @@ CXXFLAGS=$(OPT) $(LLVM_CXXFLAGS) -I. -Iobjs/ -I$(CLANG_INCLUDE)  \
 	-DBUILD_DATE="\"$(BUILD_DATE)\"" -DBUILD_VERSION="\"$(BUILD_VERSION)\"" \
 	-Wno-sign-compare -Wno-unused-function -Werror
 
-# if($(LLVM_VERSION) == LLVM_3_5 || $(LLVM_VERSION) == LLVM_3_6)
-ifneq (,$(filter $(LLVM_VERSION),  LLVM_3_5 LLVM_3_6))
+# if( !($(LLVM_VERSION) == LLVM_3_2 || $(LLVM_VERSION) == LLVM_3_3 || $(LLVM_VERSION) == LLVM_3_4))
+ifeq (,$(filter $(LLVM_VERSION), LLVM_3_2 LLVM_3_3 LLVM_3_4))
 	CXXFLAGS+=-std=c++11 -Wno-c99-extensions -Wno-deprecated-register
 endif
 ifneq ($(ARM_ENABLED), 0)

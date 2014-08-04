@@ -43,14 +43,14 @@
 
 #include <stdio.h>
 #include <map>
-#if defined(LLVM_3_1) || defined(LLVM_3_2)
+#if defined(LLVM_3_2)
   #include <llvm/Value.h>
   #include <llvm/Module.h>
 #else
   #include <llvm/IR/Value.h>
   #include <llvm/IR/Module.h>
 #endif
-#if defined(LLVM_3_5) || defined(LLVM_3_6)
+#if !defined(LLVM_3_2) && !defined(LLVM_3_3) && !defined(LLVM_3_4) // LLVM 3.5+
   #include <llvm/IR/DebugInfo.h>
   #include <llvm/IR/DIBuilder.h>
 #else
@@ -830,9 +830,7 @@ EnumType::GetDIType(llvm::DIDescriptor scope) const {
                                             32 /* size in bits */,
                                             32 /* align in bits */,
                                             elementArray
-#if !defined(LLVM_3_1)
                                             , llvm::DIType()
-#endif
                                             );
 
 
@@ -2205,7 +2203,7 @@ StructType::GetDIType(llvm::DIDescriptor scope) const {
         currentSize,    // Size in bits
         align,          // Alignment in bits
         0,              // Flags
-#if !defined(LLVM_3_1) && !defined(LLVM_3_2)
+#if !defined(LLVM_3_2)
         llvm::DIType(), // DerivedFrom
 #endif
         elements);
@@ -2448,7 +2446,7 @@ UndefinedStructType::GetDIType(llvm::DIDescriptor scope) const {
         0,              // Size
         0,              // Align
         0,              // Flags
-#if !defined(LLVM_3_1) && !defined(LLVM_3_2)
+#if !defined(LLVM_3_2)
         llvm::DIType(), // DerivedFrom
 #endif
         elements);
@@ -2711,12 +2709,8 @@ ReferenceType::GetDIType(llvm::DIDescriptor scope) const {
     }
 
     llvm::DIType diTargetType = targetType->GetDIType(scope);
-#if defined(LLVM_3_1)
-    return m->diBuilder->createReferenceType(diTargetType);
-#else
     return m->diBuilder->createReferenceType(llvm::dwarf::DW_TAG_reference_type,
                                              diTargetType);
-#endif
 }
 
 
@@ -2987,14 +2981,16 @@ FunctionType::GetDIType(llvm::DIDescriptor scope) const {
     for (int i = 0; i < GetNumParameters(); ++i) {
         const Type *t = GetParameterType(i);
         if (t == NULL)
-#if defined(LLVM_3_4) || defined(LLVM_3_5) || defined(LLVM_3_6)
+
+#if !defined(LLVM_3_2) && !defined(LLVM_3_3)// LLVM 3.4+
             return llvm::DICompositeType();
 #else
             return llvm::DIType();
 #endif
         retArgTypes.push_back(t->GetDIType(scope));
     }
-#if defined(LLVM_3_6)
+
+#if !defined(LLVM_3_2) && !defined(LLVM_3_3) && !defined(LLVM_3_4) && !defined(LLVM_3_5) // LLVM 3.6+
     llvm::DITypeArray retArgTypesArray =
         m->diBuilder->getOrCreateTypeArray(llvm::ArrayRef<llvm::Value *>(retArgTypes));
 #else

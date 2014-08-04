@@ -29,13 +29,11 @@
 ;;   NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 ;;   SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.  
 
-ifelse(LLVM_VERSION, `LLVM_3_1', `',
-       `define(`HAVE_GATHER', `1')')
+define(`HAVE_GATHER', `1')
 
 include(`target-avx1-i64x4base.ll')
 
-ifelse(LLVM_VERSION, `LLVM_3_1', `rdrand_decls()',
-       `rdrand_definition()')
+rdrand_definition()
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; int min/max
@@ -125,15 +123,6 @@ define i16 @__float_to_half_uniform(float %v) nounwind readnone {
 ;; gather
 
 declare void @llvm.trap() noreturn nounwind
-
-
-ifelse(LLVM_VERSION, `LLVM_3_1', `
-gen_gather_factored(i8)
-gen_gather_factored(i16)
-gen_gather_factored(i32)
-gen_gather_factored(float)
-gen_gather_factored(i64)
-gen_gather_factored(double)', `
 
 gen_gather(i8)
 gen_gather(i16)
@@ -351,5 +340,3 @@ define <4 x double> @__gather64_double(<4 x i64> %ptrs,
 
   ret <4 x double> %v
 }
-
-')

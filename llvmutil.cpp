@@ -38,7 +38,7 @@
 #include "llvmutil.h"
 #include "ispc.h"
 #include "type.h"
-#if defined(LLVM_3_1) || defined(LLVM_3_2)
+#if defined(LLVM_3_2)
   #include <llvm/Instructions.h>
   #include <llvm/BasicBlock.h>
 #else

@@ -65,9 +65,7 @@
 #include <set>
 #include <algorithm>
 
-#if defined(LLVM_3_1)
-  #include <llvm/Target/TargetData.h>
-#elif defined(LLVM_3_2)
+#if defined(LLVM_3_2)
   #include <llvm/DataLayout.h>
 #else // LLVM 3.3+
   #include <llvm/IR/DataLayout.h>
@@ -616,13 +614,9 @@ VerifyDataLayoutCompatibility(const std::string &module_dl,
     // which contradic: f80:128:128 followed by f80:32:32. This is a bug, but
     // correct thing to do is to interpret this exactly how LLVM would treat it,
     // so we create a DataLayout class and take its string representation.
-#if defined(LLVM_3_1)
-    llvm::TargetData d1(module_dl);
-    llvm::TargetData d2(lib_dl);
-#else // LLVM 3.2+
+
     llvm::DataLayout d1(module_dl);
     llvm::DataLayout d2(lib_dl);
-#endif
 
     std::string module_dl_canonic = d1.getStringRepresentation();
     std::string lib_dl_canonic = d2.getStringRepresentation();

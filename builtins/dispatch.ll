@@ -46,8 +46,6 @@
 ;; corresponding to one of the Target::ISA enumerant values that gives the
 ;; most capable ISA that the curremt system can run.
 ;;
-;; Note: clang from LLVM 3.1 should be used if this is updated, for maximum
-;; backwards compatibility for anyone building ispc with LLVM 3.1
 ;;
 ;; #include <stdint.h>
 ;; #include <stdlib.h>

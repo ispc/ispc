@@ -46,7 +46,7 @@
 #include "sym.h"
 #include <map>
 #include <llvm/Support/Dwarf.h>
-#if defined(LLVM_3_1) || defined(LLVM_3_2)
+#if defined(LLVM_3_2)
   #include <llvm/Metadata.h>
   #include <llvm/Module.h>
   #include <llvm/Instructions.h>
@@ -336,7 +336,7 @@ FunctionEmitContext::FunctionEmitContext(Function *func, Symbol *funSym,
         diFile = funcStartPos.GetDIFile();
         AssertPos(currentPos, diFile.Verify());
 
-#if defined(LLVM_3_1) || defined(LLVM_3_2) || defined(LLVM_3_3)
+#if defined(LLVM_3_2) || defined(LLVM_3_3)
         llvm::DIScope scope = llvm::DIScope(m->diBuilder->getCU());
 #else // LLVM_3_4+
         llvm::DIScope scope = llvm::DIScope(m->diCompileUnit);
@@ -352,7 +352,7 @@ FunctionEmitContext::FunctionEmitContext(Function *func, Symbol *funSym,
             AssertPos(currentPos, diSubprogramType.Verify());
         }
 
-#if defined(LLVM_3_4) || defined(LLVM_3_5) || defined(LLVM_3_6)
+#if !defined(LLVM_3_2) && !defined(LLVM_3_3)
         Assert(diSubprogramType.isCompositeType());
         llvm::DICompositeType diSubprogramType_n =
             static_cast<llvm::DICompositeType>(diSubprogramType);
@@ -1546,7 +1546,7 @@ FunctionEmitContext::StartScope() {
         llvm::DILexicalBlock lexicalBlock =
             m->diBuilder->createLexicalBlock(parentScope, diFile,
                                              currentPos.first_line,
-#if defined(LLVM_3_5) || defined(LLVM_3_6)
+#if !defined(LLVM_3_2) && !defined(LLVM_3_3) && !defined(LLVM_3_4) // LLVM 3.5+
         // Revision 202736 in LLVM adds support of DWARF discriminator
         // to the last argument and revision 202737 in clang adds 0
         // for the last argument by default.
@@ -3339,7 +3339,7 @@ FunctionEmitContext::CallInst(llvm::Value *func, const FunctionType *funcType,
         // alias analysis.
         // TODO: what other attributes needs to be copied?
         // TODO: do the same for varing path.
-#if !defined (LLVM_3_1) && !defined (LLVM_3_2) // LLVM 3.3+
+#if !defined (LLVM_3_2) // LLVM 3.3+
         llvm::CallInst *cc = llvm::dyn_cast<llvm::CallInst>(ci);
         if (cc &&
             cc->getCalledFunction() &&
