@@ -112,7 +112,8 @@ def build_LLVM(version_LLVM, revision, folder, tarball, debug, selfbuild, extra,
     if  version_LLVM == "trunk":
         SVN_PATH="trunk"
     if  version_LLVM == "3.5":
-        SVN_PATH="tags/RELEASE_35/rc1"
+        # SVN_PATH=tags/RELEASE_35/rc1
+        SVN_PATH="branches/release_35"
         version_LLVM = "3_5"
     if  version_LLVM == "3.4":
         SVN_PATH="tags/RELEASE_34/dot2-final"
@@ -607,7 +608,7 @@ def validation_run(only, only_targets, reference_branch, number, notify, update,
         output_test_results(R)
         print_debug("__________________Watch stability.log for details_________________\n", False, stability_log)
         if options.notify != "":
-            attach_mail_file(msg, stability.in_file, "run_tests_log.log")
+            attach_mail_file(msg, stability.in_file, "run_tests_log.log", 100)
             attach_mail_file(msg, stability_log, "stability.log")
 
 # *** *** ***
