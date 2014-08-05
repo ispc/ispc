@@ -603,7 +603,7 @@ def validation_run(only, only_targets, reference_branch, number, notify, update,
 # 
         run_special_tests() # dead code?
 
-        print_debug("TOTAL:\n", False, stability_log)
+        print_debug("\n\nTOTAL:\n", False, stability_log)
         output_test_results(R)
         print_debug("__________________Watch stability.log for details_________________\n", False, stability_log)
         if options.notify != "":
