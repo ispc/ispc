@@ -583,7 +583,7 @@ def validation_run(only, only_targets, reference_branch, number, notify, update,
                         print_debug("\t\t\t" + temp5[1][i][k], True, stability_log)
         print_debug("__________________Watch stability.log for details_________________\n", False, stability_log)
         if options.notify != "":
-            attach_mail_file(msg, stability.in_file, "run_tests_log.log")
+            attach_mail_file(msg, stability.in_file, "run_tests_log.log", 100)
             attach_mail_file(msg, stability_log, "stability.log")
 
 # *** *** ***
