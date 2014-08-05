@@ -370,7 +370,7 @@ def execute_stability(stability, R, print_version):
     temp = b_temp[0]
     time = b_temp[1]
     for j in range(0,4):
-        R[j][0] = R[j][0] + temp[j]
+        R[j][0] = R[j][0] + temp[j] # new_runfails, new_compfails, new_passes_runfails, new_passes_compfails
         for i in range(0,len(temp[j])):
             R[j][1].append(temp[4])
     number_of_fails = temp[5]
@@ -393,6 +393,42 @@ def execute_stability(stability, R, print_version):
     else:
         str_time = "\n"
     print_debug(temp[4][1:-3] + str_fails + str_new_fails + str_new_passes + str_time, False, stability_log)
+
+'''
+R       = [[new_runfails,        [new_line, new_line...]],
+           [new_compfails,       [new_line, new_line...]],
+           [new_passes_runfails, [new_line, new_line...]],
+           [new_passes_runfails, [new_line, new_line...]]]
+'''
+def output_test_results(R):
+    ttt = ["NEW RUNFAILS: ", "NEW COMPFAILS: ", "NEW PASSES RUNFAILS: ", "NEW PASSES COMPFAILS: "]
+    for j in range(0, 4):
+        if len(R[j][0]) == 0:
+            print_debug("NO " + ttt[j][:-2] + "\n", False, stability_log)
+        else:
+            print_debug(ttt[j] + str(len(R[j][0])) + "\n", False, stability_log)
+            to_print = {}
+            for (fail_name, opt_str) in zip(R[j][0], R[j][1]):
+                if fail_name not in to_print:
+                    to_print[fail_name] = []
+                to_print[fail_name].append(opt_str)
+
+            # sort
+            for key in to_print.keys():
+                to_print[key] = sorted(to_print[key])
+
+            # print out
+            for fail_name in sorted(to_print.keys()):
+                print_debug("\t" + fail_name + "\n", True, stability_log)
+                for opt_str in to_print[fail_name]:
+                    print_debug("\t\t\t" + opt_str, True, stability_log)
+
+def concatenate_test_results(R1, R2):
+    R = [[[],[]],[[],[]],[[],[]],[[],[]]]
+    for j in range(0, 4):
+        R[j][0] = R1[j][0] + R2[j][0]
+        R[j][1] = R1[j][1] + R2[j][1]
+    return R
 
 def run_special_tests():
    i = 5 
@@ -521,6 +557,7 @@ def validation_run(only, only_targets, reference_branch, number, notify, update,
         print_debug("\n" + common.get_host_name() + "\n", False, stability_log)
         print_debug("\n_________________________STABILITY REPORT_________________________\n", False, stability_log)
         for i in range(0,len(LLVM)):
+            R_tmp = [[[],[]],[[],[]],[[],[]],[[],[]]]
             print_version = 2
             if rebuild:
                 build_ispc(LLVM[i], make)
@@ -546,7 +583,7 @@ def validation_run(only, only_targets, reference_branch, number, notify, update,
                         stability.arch = arch[i1]
                         stability.no_opt = opts[i2]
                         try:
-                            execute_stability(stability, R, print_version)
+                            execute_stability(stability, R_tmp, print_version)
                         except:
                             print_debug("Exception in execute_stability - maybe some test subprocess terminated before it should have\n", False, stability_log)
                         print_version = 0
@@ -557,31 +594,18 @@ def validation_run(only, only_targets, reference_branch, number, notify, update,
                     for i2 in range(0,len(opts)):
                         stability.arch = archs[i1]
                         stability.no_opt = opts[i2]
-                        execute_stability(stability, R, print_version)
+                        execute_stability(stability, R_tmp, print_version)
                         print_version = 0
+            
+            # Output testing results separate for each tested LLVM version
+            R = concatenate_test_results(R, R_tmp)
+            output_test_results(R_tmp)
 # run special tests like embree
 # 
-        run_special_tests()
-        ttt = ["NEW RUNFAILS: ", "NEW COMPFAILS: ", "NEW PASSES RUNFAILS: ", "NEW PASSES COMPFAILS: "]
-        for j in range(0,4):
-            if len(R[j][0]) == 0:
-                print_debug("NO " + ttt[j][:-2] + "\n", False, stability_log)
-            else:
-                print_debug(ttt[j] + str(len(R[j][0])) + "\n", False, stability_log)
-                temp5 = [[],[]]
-                for i in range(0,len(R[j][0])):
-                    er = True
-                    for k in range(0,len(temp5[0])):
-                        if R[j][0][i] == temp5[0][k]:
-                            temp5[1][k].append(R[j][1][i])
-                            er = False
-                    if er == True:
-                        temp5[0].append(R[j][0][i])
-                        temp5[1].append([R[j][1][i]])
-                for i in range(0,len(temp5[0])):
-                    print_debug("\t" + temp5[0][i] + "\n", True, stability_log)
-                    for k in range(0,len(temp5[1][i])):
-                        print_debug("\t\t\t" + temp5[1][i][k], True, stability_log)
+        run_special_tests() # dead code?
+
+        print_debug("\n\nTOTAL:\n", False, stability_log)
+        output_test_results(R)
         print_debug("__________________Watch stability.log for details_________________\n", False, stability_log)
         if options.notify != "":
             attach_mail_file(msg, stability.in_file, "run_tests_log.log", 100)
