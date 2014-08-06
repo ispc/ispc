@@ -57,10 +57,13 @@
   #include <llvm/IR/Module.h>
   #include <llvm/IR/Instructions.h>
 #endif
+#if !defined(LLVM_3_2) && !defined(LLVM_3_3) && !defined(LLVM_3_4) && !defined(LLVM_3_5) // LLVM 3.6+
+  #include <llvm/Target/TargetSubtargetInfo.h>
+#endif
 #if !defined(LLVM_3_2) && !defined(LLVM_3_3) && !defined(LLVM_3_4) // LLVM 3.5+
   #include <llvm/IR/DebugInfo.h>
   #include <llvm/IR/DIBuilder.h>
-#else
+#else // LLVM 3.2, 3.3, 3.4
   #include <llvm/DebugInfo.h>
   #include <llvm/DIBuilder.h>
 #endif
@@ -656,8 +659,12 @@ Target::Target(const char *arch, const char *cpu, const char *isa, bool pic) :
         // Initialize TargetData/DataLayout in 3 steps.
         // 1. Get default data layout first
         std::string dl_string;
-        dl_string = m_targetMachine->getDataLayout()->getStringRepresentation();
 
+#if !defined(LLVM_3_2) && !defined(LLVM_3_3) && !defined(LLVM_3_4) && !defined(LLVM_3_5) // LLVM 3.6+
+        dl_string = m_targetMachine->getSubtargetImpl()->getDataLayout()->getStringRepresentation();
+#else
+        dl_string = m_targetMachine->getDataLayout()->getStringRepresentation();
+#endif
         // 2. Adjust for generic
         if (m_isa == Target::GENERIC) {
             // <16 x i1> vectors only need 16 bit / 2 byte alignment, so add
@@ -677,6 +684,7 @@ Target::Target(const char *arch, const char *cpu, const char *isa, bool pic) :
         // This indicates if we are compiling for 32 bit platform
         // and can assume 32 bit runtime.
         // FIXME: all generic targets are handled as 64 bit, which is incorrect.
+
         this->m_is32Bit = (getDataLayout()->getPointerSize() == 4);
 
 #if !defined(LLVM_3_2)
