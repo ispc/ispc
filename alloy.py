@@ -394,11 +394,6 @@ def execute_stability(stability, R, print_version):
         str_time = "\n"
     print_debug(temp[4][1:-3] + str_fails + str_new_fails + str_new_passes + str_time, False, stability_log)
 
-def run_special_tests():
-   i = 5 
-
-class options_for_drivers:
-    pass
 
 def validation_run(only, only_targets, reference_branch, number, notify, update, speed_number, make, perf_llvm, time):
     os.chdir(os.environ["ISPC_HOME"])
@@ -417,7 +412,7 @@ def validation_run(only, only_targets, reference_branch, number, notify, update,
 # *** *** ***
     if ((("stability" in only) == True) or ("performance" in only) == False):
         print_debug("\n\nStability validation run\n\n", False, "")
-        stability = options_for_drivers()
+        stability = common.EmptyClass()
 # stability constant options
         stability.save_bin = False
         stability.random = False
@@ -559,9 +554,7 @@ def validation_run(only, only_targets, reference_branch, number, notify, update,
                         stability.no_opt = opts[i2]
                         execute_stability(stability, R, print_version)
                         print_version = 0
-# run special tests like embree
-# 
-        run_special_tests()
+
         ttt = ["NEW RUNFAILS: ", "NEW COMPFAILS: ", "NEW PASSES RUNFAILS: ", "NEW PASSES COMPFAILS: "]
         for j in range(0,4):
             if len(R[j][0]) == 0:

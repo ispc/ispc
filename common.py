@@ -37,7 +37,8 @@ import os
 import errno
 import shutil
 
-
+# generic empty class
+class EmptyClass(object): pass
 
 # load/save almost every object to a file (good for bug reproducing)
 def dump(fname, obj):
