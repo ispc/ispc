@@ -89,7 +89,7 @@ def try_do_LLVM(text, command, from_validation):
         if options.notify != "":
             msg = MIMEMultipart()
             attach_mail_file(msg, stability_log, "stability.log")
-            send_mail("ERROR: Error while executing " + command + ". Examine logs  for more information.", msg)
+            send_mail("ERROR: Non-zero exit status while executing " + command + ". Examine build log for more information.", msg)
         error("can't " + text, 1)
     print_debug("DONE.\n", from_validation, alloy_build)
 
@@ -342,8 +342,8 @@ def build_ispc(version_LLVM, make):
         
         if llvm_rev != "":
             common.ex_state.switch_revision(llvm_rev)
-            print_debug("\n----------------------------------------\nBuilding ISPC with LLVM" \
-                                              + llvm_rev + ":\n", False, stability_log)
+            print_debug("\nBuilding ISPC with LLVM %s (%s):\n" \
+                                              % (version_LLVM, llvm_rev), False, stability_log)
         else:
             print_debug("Unable to retrieve LLVM revision\n", False, stability_log)
             raise
@@ -620,8 +620,8 @@ def validation_run(only, only_targets, reference_branch, number, notify, update,
         print_debug("__________________Watch stability.log for details_________________\n", False, stability_log)
         if options.notify != "":
             # e-mail header for performance test:
-            msg_additional_info += "New runfails(%d) New compfails(%d) New passes runfails(%d)" + \
-                                   "New passes compfails(%d)" % (len(R[0][0]), len(R[1][0]), len(R[2][0]), len(R[3][0]))
+            msg_additional_info += "New runfails(%d) New compfails(%d) New passes runfails(%d) New passes compfails(%d)" \
+                                                                      % (len(R[0][0]), len(R[1][0]), len(R[2][0]), len(R[3][0]))
             attach_mail_file(msg, stability.in_file, "run_tests_log.log", 100)
             attach_mail_file(msg, stability_log, "stability.log")
 
@@ -706,11 +706,12 @@ def send_mail(body_header, msg):
 
     if  not sys.exc_info()[0] == None:
         body += "ERROR: Exception(last) - " + str(sys.exc_info()) + '\n'
+
+    body += body_header + '\n'
     for i in range(0, len(f_lines)):
         body += f_lines[i][:-1]
         body += '   \n'
 
-    body += body_header + '\n'
     attach_mail_file(msg, alloy_build, "alloy_build.log", 100) # build.log is always being sent
     smtp_server = os.environ["SMTP_ISPC"]
     msg['Subject'] = "ISPC test system results"
