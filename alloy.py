@@ -529,7 +529,6 @@ def validation_run(only, only_targets, reference_branch, number, notify, update,
             targets = targets_t + targets_generic_t[:-4]
             sde_targets = sde_targets_t
 
-
         if "build" in only:
             targets = []
             sde_targets = []
@@ -608,7 +607,7 @@ def validation_run(only, only_targets, reference_branch, number, notify, update,
     if ((("performance" in only) == True) or ("stability" in only) == False):
         print_debug("\n\nPerformance validation run\n\n", False, "")
         common.check_tools(1)
-        performance = options_for_drivers()
+        performance = common.EmptyClass()
 # performance constant options
         performance.number = number
         performance.config = "." + os.sep + "perf.ini"
