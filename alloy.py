@@ -394,6 +394,7 @@ def execute_stability(stability, R, print_version):
         str_time = "\n"
     print_debug(temp[4][1:-3] + str_fails + str_new_fails + str_new_passes + str_time, False, stability_log)
 
+
 '''
 R       = [[new_runfails,        [new_line, new_line...]],
            [new_compfails,       [new_line, new_line...]],
@@ -430,12 +431,6 @@ def concatenate_test_results(R1, R2):
         R[j][1] = R1[j][1] + R2[j][1]
     return R
 
-def run_special_tests():
-   i = 5 
-
-class options_for_drivers:
-    pass
-
 def validation_run(only, only_targets, reference_branch, number, notify, update, speed_number, make, perf_llvm, time):
     os.chdir(os.environ["ISPC_HOME"])
     if current_OS != "Windows":
@@ -453,7 +448,7 @@ def validation_run(only, only_targets, reference_branch, number, notify, update,
 # *** *** ***
     if ((("stability" in only) == True) or ("performance" in only) == False):
         print_debug("\n\nStability validation run\n\n", False, "")
-        stability = options_for_drivers()
+        stability = common.EmptyClass()
 # stability constant options
         stability.save_bin = False
         stability.random = False
@@ -534,7 +529,6 @@ def validation_run(only, only_targets, reference_branch, number, notify, update,
             targets = targets_t + targets_generic_t[:-4]
             sde_targets = sde_targets_t
 
-
         if "build" in only:
             targets = []
             sde_targets = []
@@ -595,14 +589,10 @@ def validation_run(only, only_targets, reference_branch, number, notify, update,
                         stability.arch = archs[i1]
                         stability.no_opt = opts[i2]
                         execute_stability(stability, R_tmp, print_version)
-                        print_version = 0
-            
+                        print_version = 0            
             # Output testing results separate for each tested LLVM version
             R = concatenate_test_results(R, R_tmp)
             output_test_results(R_tmp)
-# run special tests like embree
-# 
-        run_special_tests() # dead code?
 
         print_debug("\n\nTOTAL:\n", False, stability_log)
         output_test_results(R)
@@ -617,7 +607,7 @@ def validation_run(only, only_targets, reference_branch, number, notify, update,
     if ((("performance" in only) == True) or ("stability" in only) == False):
         print_debug("\n\nPerformance validation run\n\n", False, "")
         common.check_tools(1)
-        performance = options_for_drivers()
+        performance = common.EmptyClass()
 # performance constant options
         performance.number = number
         performance.config = "." + os.sep + "perf.ini"
