@@ -88,9 +88,8 @@ def try_do_LLVM(text, command, from_validation):
         print_debug("ERROR.\n", from_validation, alloy_build)
         if options.notify != "":
             msg = MIMEMultipart()
-            attach_mail_file(msg, alloy_build, "alloy_build.log", 400)
             attach_mail_file(msg, stability_log, "stability.log")
-            send_mail("Error while executing " + command + ". Examine logs  for more information.", msg)
+            send_mail("ERROR: Non-zero exit status while executing " + command + ". Examine build log for more information.", msg)
         error("can't " + text, 1)
     print_debug("DONE.\n", from_validation, alloy_build)
 
@@ -104,7 +103,6 @@ def build_LLVM(version_LLVM, revision, folder, tarball, debug, selfbuild, extra,
     current_path = os.getcwd()
     llvm_home = os.environ["LLVM_HOME"]
     
-
     make_sure_dir_exists(llvm_home)
     
     os.chdir(llvm_home)
@@ -330,15 +328,26 @@ def build_ispc(version_LLVM, make):
             folder += version_LLVM
         if options.debug == True:
             folder +=  "dbg"
-       
+      
+
+        llvm_rev = ""
+        # determine LLVM revision
         p = subprocess.Popen("svn info " + folder, shell=True, \
                stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         (info_llvm, err) = p.communicate()
         info_llvm = re.split('\n', info_llvm)
         for i in info_llvm:
             if len(i) > 0 and i.startswith("Last Changed Rev: "):
-                common.ex_state.switch_revision(str(i[len("Last Changed Rev: "):]))
+                llvm_rev = str(i[len("Last Changed Rev: "):])
         
+        if llvm_rev != "":
+            common.ex_state.switch_revision(llvm_rev)
+            print_debug("\nBuilding ISPC with LLVM %s (%s):\n" \
+                                              % (version_LLVM, llvm_rev), False, stability_log)
+        else:
+            print_debug("Unable to retrieve LLVM revision\n", False, stability_log)
+            raise
+
         try_do_LLVM("recognize LLVM revision", "svn info " + folder, True)
         try_do_LLVM("build ISPC with LLVM version " + version_LLVM + " ", make_ispc, True)
         os.environ["PATH"] = p_temp
@@ -443,6 +452,7 @@ def validation_run(only, only_targets, reference_branch, number, notify, update,
     date = datetime.datetime.now()
     print_debug("Date: " + date.strftime('%H:%M %d/%m/%Y') + "\n", False, "")
     newest_LLVM="3.4"
+    msg_additional_info = ""
 # *** *** ***
 # Stability validation run
 # *** *** ***
@@ -579,7 +589,7 @@ def validation_run(only, only_targets, reference_branch, number, notify, update,
                         try:
                             execute_stability(stability, R_tmp, print_version)
                         except:
-                            print_debug("Exception in execute_stability - maybe some test subprocess terminated before it should have\n", False, stability_log)
+                            print_debug("ERROR: Exception in execute_stability - maybe some test subprocess terminated before it should have\n", False, stability_log)
                         print_version = 0
             for j in range(0,len(sde_targets)):
                 stability.target = sde_targets[j][1]
@@ -593,11 +603,15 @@ def validation_run(only, only_targets, reference_branch, number, notify, update,
             # Output testing results separate for each tested LLVM version
             R = concatenate_test_results(R, R_tmp)
             output_test_results(R_tmp)
+            print_debug("\n", False, stability_log)
 
-        print_debug("\n\nTOTAL:\n", False, stability_log)
+        print_debug("\n----------------------------------------\nTOTAL:\n", False, stability_log)
         output_test_results(R)
         print_debug("__________________Watch stability.log for details_________________\n", False, stability_log)
         if options.notify != "":
+            # e-mail header for performance test:
+            msg_additional_info += "New runfails(%d) New compfails(%d) New passes runfails(%d) New passes compfails(%d)" \
+                                                                      % (len(R[0][0]), len(R[1][0]), len(R[2][0]), len(R[3][0]))
             attach_mail_file(msg, stability.in_file, "run_tests_log.log", 100)
             attach_mail_file(msg, stability_log, "stability.log")
 
@@ -657,39 +671,47 @@ def validation_run(only, only_targets, reference_branch, number, notify, update,
             build_ispc(newest_LLVM, make)
             os.rename("ispc", "ispc_ref")
             build_ispc(reference_branch, make)
-# begin validation run for performance. output is inserted into perf()
+        # begin validation run for performance. output is inserted into perf()
         perf.perf(performance, [])
         if options.notify != "":
             attach_mail_file(msg, performance.in_file, "performance.log")
             attach_mail_file(msg, "." + os.sep + "logs" + os.sep + "perf_build.log", "perf_build.log")
-# dumping gathered info to the file
+    # dumping gathered info to the file
     common.ex_state.dump(alloy_folder + "test_table.dump", common.ex_state.tt)
-# sending e-mail with results
+
+    # sending e-mail with results
     if options.notify != "":
+        send_mail(msg_additional_info, msg)
+
+def send_mail(body_header, msg):
+    try:
         fp = open(os.environ["ISPC_HOME"] + os.sep + "notify_log.log", 'rb')
         f_lines = fp.readlines()
         fp.close()
-        body = ""
-        body += "Hostname: " + common.get_host_name() + "\n\n"
+    except:
+        body_header += "\nUnable to open notify_log.log: " + str(sys.exc_info()) + "\n"
+        print_debug("Unable to open notify_log.log: " + str(sys.exc_info()) + "\n", False, stability_log)
+    
+    body = "Hostname: " + common.get_host_name() + "\n\n"
 
-        if  not sys.exc_info()[0] == None:
-            body = body + "Last exception: " + str(sys.exc_info()) + '\n'
-        for i in range(0,len(f_lines)):
-            body = body + f_lines[i][:-1]
-            body = body + '   \n'
-        attach_mail_file(msg, alloy_build, "alloy_build.log", 100)
-        send_mail(body, msg)
+    if  not sys.exc_info()[0] == None:
+        body += "ERROR: Exception(last) - " + str(sys.exc_info()) + '\n'
 
-def send_mail(body, msg):
-        smtp_server = os.environ["SMTP_ISPC"]
-        msg['Subject'] = "ISPC test system results"
-        msg['From'] = "ISPC_test_system"
-        msg['To'] = options.notify
-        text = MIMEText(body, "", "KOI-8")
-        msg.attach(text)
-        s = smtplib.SMTP(smtp_server)
-        s.sendmail(options.notify, options.notify.split(" "), msg.as_string())
-        s.quit()
+    body += body_header + '\n'
+    for i in range(0, len(f_lines)):
+        body += f_lines[i][:-1]
+        body += '   \n'
+
+    attach_mail_file(msg, alloy_build, "alloy_build.log", 100) # build.log is always being sent
+    smtp_server = os.environ["SMTP_ISPC"]
+    msg['Subject'] = "ISPC test system results"
+    msg['From'] = "ISPC_test_system"
+    msg['To'] = options.notify
+    text = MIMEText(body, "", "KOI-8")
+    msg.attach(text)
+    s = smtplib.SMTP(smtp_server)
+    s.sendmail(options.notify, options.notify.split(" "), msg.as_string())
+    s.quit()
 
 def Main():
     global current_OS
