@@ -320,7 +320,8 @@ def run_tasks_from_queue(queue, queue_ret, queue_error, queue_finish, total_test
         os.chdir(tmpdir)
     else:
         olddir = ""
-    
+
+    # by default, the thread is presumed to fail
     queue_error.put('ERROR')
     compile_error_files = [ ]
     run_succeed_files = [ ]
@@ -334,10 +335,15 @@ def run_tasks_from_queue(queue, queue_ret, queue_error, queue_finish, total_test
                 try:
                     (compile_error, run_error) = run_test(filename)
                 except:
+                    # This is in case the child has unexpectedly died or some other exception happened
+                    # it`s not what we wanted, so we leave ERROR in queue_error
                     print_debug("ERROR: run_test function raised an exception: %s\n" % (sys.exc_info()[1]), s, run_tests_log)
+                    # minus one thread, minus one STOP
                     queue_finish.get()
+                    # needed for queue join
                     queue_finish.task_done()
-                    break # This is in case the child has unexpectedly died or some other exception happened
+                    # exiting the loop, returning from the thread
+                    break
 
                 if compile_error == 0 and run_error == 0:
                     run_succeed_files += [ filename ]
@@ -366,9 +372,14 @@ def run_tasks_from_queue(queue, queue_ret, queue_error, queue_finish, total_test
                 except:
                     None
 
+            # the next line is crucial for error indication!
+            # this thread ended correctly, so take ERROR back
             queue_error.get()
+            # minus one thread, minus one STOP
             queue_finish.get()
+            # needed for queue join
             queue_finish.task_done()
+            # exiting the loop, returning from the thread
             break
 
 
@@ -692,10 +703,14 @@ def run_tests(options1, args, print_version):
     q = multiprocessing.Queue()
     for fn in files:
         q.put(fn)
+    # qret is a queue for returned data
     qret = multiprocessing.Queue()
+    # qerr is an error indication queue
     qerr = multiprocessing.Queue()
+    # qfin is a waiting queue: JoinableQueue has join() and task_done() methods
     qfin = multiprocessing.JoinableQueue()
 
+    # for each thread, there is a STOP in qfin to synchronize execution
     for x in range(nthreads):
         qfin.put('STOP')
 
@@ -716,8 +731,8 @@ def run_tests(options1, args, print_version):
                 max_test_length, finished_tests_counter, finished_tests_counter_lock, glob_var))
         task_threads[x].start()
 
-    # wait for them to all finish and then return the number that failed
-    # (i.e. return 0 if all is ok)
+    # wait for them all to finish and rid the queue of STOPs
+    # join() here just waits for synchronization
     qfin.join()
 
     if options.non_interactive == False:
@@ -762,6 +777,7 @@ def run_tests(options1, args, print_version):
 
 
 
+    # if all threads ended correctly, qerr is empty
     if not qerr.empty():
         raise OSError(2, 'Some test subprocess has thrown an exception', '')
 
