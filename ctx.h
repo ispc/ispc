@@ -40,14 +40,14 @@
 
 #include "ispc.h"
 #include <map>
-#if defined(LLVM_3_1) || defined(LLVM_3_2)
+#if defined(LLVM_3_2)
   #include <llvm/InstrTypes.h>
   #include <llvm/Instructions.h>
 #else
   #include <llvm/IR/InstrTypes.h>
   #include <llvm/IR/Instructions.h>
 #endif
-#if defined(LLVM_3_5)
+#if !defined(LLVM_3_2) && !defined(LLVM_3_3) && !defined(LLVM_3_4) // LLVM 3.5+
   #include <llvm/IR/DebugInfo.h>
   #include <llvm/IR/DIBuilder.h>
 #else

@@ -48,7 +48,7 @@
 #include <set>
 
 #include <llvm/Pass.h>
-#if defined(LLVM_3_1) || defined(LLVM_3_2)
+#if defined(LLVM_3_2)
   #include <llvm/Module.h>
   #include <llvm/Instructions.h>
   #include <llvm/Intrinsics.h>
@@ -69,12 +69,12 @@
   #include <llvm/IR/InlineAsm.h>
 #endif /* ISPC_NVPTX_ENABLED */
 #endif
-#if defined (LLVM_3_4) || defined(LLVM_3_5)
+#if !defined(LLVM_3_2) && !defined(LLVM_3_3) // LLVM 3.4+
   #include <llvm/Transforms/Instrumentation.h>
 #endif
 #include <llvm/PassManager.h>
 #include <llvm/PassRegistry.h>
-#if defined(LLVM_3_5)
+#if !defined(LLVM_3_2) && !defined(LLVM_3_3) && !defined(LLVM_3_4) // LLVM 3.5+
     #include <llvm/IR/Verifier.h>
     #include <llvm/IR/IRPrintingPasses.h>
     #include <llvm/IR/PatternMatch.h>
@@ -453,7 +453,8 @@ DebugPassManager::add(llvm::Pass * P, int stage = -1) {
                 number, P->getPassName());
             PM.add(CreateDebugPass(buf));
         }
-#if defined(LLVM_3_4) || defined(LLVM_3_5)
+
+#if !defined(LLVM_3_2) && !defined(LLVM_3_3) // LLVM 3.4+
         if (g->debugIR == number) {
             // adding generating of LLVM IR debug after optimization
             char buf[100];
@@ -478,7 +479,7 @@ Optimize(llvm::Module *module, int optLevel) {
         new llvm::TargetLibraryInfo(llvm::Triple(module->getTargetTriple()));
     optPM.add(targetLibraryInfo);
 
-#if defined(LLVM_3_5)
+#if !defined(LLVM_3_2) && !defined(LLVM_3_3) && !defined(LLVM_3_4) // LLVM 3.5+
     optPM.add(new llvm::DataLayoutPass(*g->target->getDataLayout()));
 #else
     optPM.add(new llvm::DataLayout(*g->target->getDataLayout()));
@@ -603,7 +604,7 @@ Optimize(llvm::Module *module, int optLevel) {
         optPM.add(llvm::createCFGSimplificationPass());
 
         optPM.add(llvm::createArgumentPromotionPass());
-#if defined(LLVM_3_1) || defined(LLVM_3_2) || defined(LLVM_3_3)
+#if defined(LLVM_3_2) || defined(LLVM_3_3)
         // Starting from 3.4 this functionality was moved to
         // InstructionCombiningPass. See r184459 for details.
         optPM.add(llvm::createSimplifyLibCallsPass(), 240);
@@ -4781,7 +4782,7 @@ PeepholePass::PeepholePass()
     : BasicBlockPass(ID) {
 }
 
-#if !defined(LLVM_3_1) && !defined(LLVM_3_2)
+#if !defined(LLVM_3_2)
 
 using namespace llvm::PatternMatch;
 
@@ -5102,7 +5103,7 @@ lMatchAvgDownInt16(llvm::Value *inst) {
     }
     return NULL;
 }
-#endif // !LLVM_3_1 && !LLVM_3_2
+#endif // !LLVM_3_2
 
 
 bool
@@ -5115,7 +5116,7 @@ PeepholePass::runOnBasicBlock(llvm::BasicBlock &bb) {
         llvm::Instruction *inst = &*iter;
 
         llvm::Instruction *builtinCall = NULL;
-#if !defined(LLVM_3_1) && !defined(LLVM_3_2)
+#if !defined(LLVM_3_2)
         if (!builtinCall)
           builtinCall = lMatchAvgUpUInt8(inst);
         if (!builtinCall)
@@ -5132,7 +5133,7 @@ PeepholePass::runOnBasicBlock(llvm::BasicBlock &bb) {
           builtinCall = lMatchAvgDownInt8(inst);
         if (!builtinCall)
           builtinCall = lMatchAvgDownInt16(inst);
-#endif // !LLVM_3_1 && !LLVM_3_2
+#endif // !LLVM_3_2
         if (builtinCall != NULL) {
           llvm::ReplaceInstWithInst(inst, builtinCall);
           modifiedAny = true;

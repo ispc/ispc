@@ -745,7 +745,7 @@ InitTaskSystem() {
 
                     threads = (pthread_t *)malloc(nThreads * sizeof(pthread_t));
                     for (int i = 0; i < nThreads; ++i) {
-                        err = pthread_create(&threads[i], NULL, &lTaskEntry, (void *)(i));
+                      err = pthread_create(&threads[i], NULL, &lTaskEntry, (void *)((long long)i));
                         if (err != 0) {
                             fprintf(stderr, "Error creating pthread %d: %s\n", i, strerror(err));
                             exit(1);

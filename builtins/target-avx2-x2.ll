@@ -29,15 +29,11 @@
 ;;   NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 ;;   SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.  
 
-ifelse(LLVM_VERSION, `LLVM_3_0', `',
-       LLVM_VERSION, `LLVM_3_1', `',
-       `define(`HAVE_GATHER', `1')')
+define(`HAVE_GATHER', `1')
 
 include(`target-avx-x2.ll')
 
-ifelse(LLVM_VERSION, `LLVM_3_0', `rdrand_decls()',
-       LLVM_VERSION, `LLVM_3_1', `rdrand_decls()',
-       `rdrand_definition()')
+rdrand_definition()
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; int min/max
@@ -74,9 +70,6 @@ define <16 x i32> @__max_varying_uint32(<16 x i32>, <16 x i32>) nounwind readonl
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; float/half conversions
 
-ifelse(LLVM_VERSION, `LLVM_3_0', `
-;; nothing to define...
-', `
 declare <8 x float> @llvm.x86.vcvtph2ps.256(<8 x i16>) nounwind readnone
 ; 0 is round nearest even
 declare <8 x i16> @llvm.x86.vcvtps2ph.256(<8 x float>, i32) nounwind readnone
@@ -127,7 +120,7 @@ define i16 @__float_to_half_uniform(float %v) nounwind readnone {
   %r = extractelement <8 x i16> %rv, i32 0
   ret i16 %r
 }
-')
+
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; gather
@@ -176,20 +169,6 @@ define(`assemble_4s', `
   assemble_8s($1, $2, $2_1, $2_2)
 ')
 
-ifelse(LLVM_VERSION, `LLVM_3_0', `
-gen_gather_factored(i8)
-gen_gather_factored(i16)
-gen_gather_factored(i32)
-gen_gather_factored(float)
-gen_gather_factored(i64)
-gen_gather_factored(double)',
-LLVM_VERSION, `LLVM_3_1', `
-gen_gather_factored(i8)
-gen_gather_factored(i16)
-gen_gather_factored(i32)
-gen_gather_factored(float)
-gen_gather_factored(i64)
-gen_gather_factored(double)', `
 
 gen_gather(i8)
 gen_gather(i16)
@@ -557,5 +536,3 @@ define <16 x double> @__gather64_double(<16 x i64> %ptrs,
 
   ret <16 x double> %v
 }
-
-')

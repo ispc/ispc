@@ -336,8 +336,8 @@ def run_test(testname):
 # pull tests to run from the given queue and run them.  Multiple copies of
 # this function will be running in parallel across all of the CPU cores of
 # the system.
-def run_tasks_from_queue(queue, queue_ret, queue_skip, total_tests_arg, max_test_length_arg, counter, mutex, glob_var):
-    # This is needed on windows because windows doen't copy globals from parent process whili multiprocessing
+def run_tasks_from_queue(queue, queue_ret, queue_error, queue_finish, total_tests_arg, max_test_length_arg, counter, mutex, glob_var):
+    # This is needed on windows because windows doesn't copy globals from parent process while multiprocessing
     global is_windows
     is_windows = glob_var[0]
     global options
@@ -360,14 +360,45 @@ def run_tasks_from_queue(queue, queue_ret, queue_skip, total_tests_arg, max_test
         os.chdir(tmpdir)
     else:
         olddir = ""
-    
+
+    # by default, the thread is presumed to fail
+    queue_error.put('ERROR')
     compile_error_files = [ ]
+    run_succeed_files = [ ]
     run_error_files = [ ]
     skip_files = [ ]
+
     while True:
-        filename = queue.get()
-        if (filename == 'STOP'):
-            queue_ret.put((compile_error_files, run_error_files, skip_files))
+        if not queue.empty():
+            filename = queue.get()
+            if check_test(filename):
+                try:
+                    (compile_error, run_error) = run_test(filename)
+                except:
+                    # This is in case the child has unexpectedly died or some other exception happened
+                    # it`s not what we wanted, so we leave ERROR in queue_error
+                    print_debug("ERROR: run_test function raised an exception: %s\n" % (sys.exc_info()[1]), s, run_tests_log)
+                    # minus one thread, minus one STOP
+                    queue_finish.get()
+                    # needed for queue join
+                    queue_finish.task_done()
+                    # exiting the loop, returning from the thread
+                    break
+
+                if compile_error == 0 and run_error == 0:
+                    run_succeed_files += [ filename ]
+                if compile_error != 0:
+                    compile_error_files += [ filename ]
+                if run_error != 0:
+                    run_error_files += [ filename ]
+
+                with mutex:
+                    update_progress(filename, total_tests_arg, counter, max_test_length_arg)
+            else:
+                skip_files += [ filename ]
+
+        else:
+            queue_ret.put((compile_error_files, run_error_files, skip_files, run_succeed_files))
             if is_windows:
                 try:
                     os.remove("test_static.obj")
@@ -380,25 +411,16 @@ def run_tasks_from_queue(queue, queue_ret, queue_skip, total_tests_arg, max_test
                     os.rmdir(tmpdir)
                 except:
                     None
-                
-            sys.exit(0)
 
-        if check_test(filename):
-            try:
-                (compile_error, run_error) = run_test(filename)
-            except:
-                print_debug("ERROR: run_test function raised an exception: %s\n" % (sys.exc_info()[1]), s, run_tests_log)
-                sys.exit(-1) # This is in case the child has unexpectedly died or some other exception happened
-            
-            if compile_error != 0:
-                compile_error_files += [ filename ]
-            if run_error != 0:
-                run_error_files += [ filename ]
-
-            with mutex:
-                update_progress(filename, total_tests_arg, counter, max_test_length_arg)
-        else:
-            skip_files += [ filename ]
+            # the next line is crucial for error indication!
+            # this thread ended correctly, so take ERROR back
+            queue_error.get()
+            # minus one thread, minus one STOP
+            queue_finish.get()
+            # needed for queue join
+            queue_finish.task_done()
+            # exiting the loop, returning from the thread
+            break
 
 
 def sigint(signum, frame):
@@ -518,7 +540,7 @@ def verify():
     f_lines = f.readlines()
     f.close()
     check = [["g++", "clang++", "cl"],["-O0", "-O2"],["x86","x86-64"],
-             ["Linux","Windows","Mac"],["LLVM 3.1","LLVM 3.2","LLVM 3.3","LLVM 3.4","LLVM trunk"],
+             ["Linux","Windows","Mac"],["LLVM 3.2","LLVM 3.3","LLVM 3.4","LLVM 3.5","LLVM trunk"],
              ["sse2-i32x4", "sse2-i32x8", "sse4-i32x4", "sse4-i32x8", "sse4-i16x8",
               "sse4-i8x16", "avx1-i32x4" "avx1-i32x8", "avx1-i32x16", "avx1-i64x4", "avx1.1-i32x8",
               "avx1.1-i32x16", "avx1.1-i64x4", "avx2-i32x8", "avx2-i32x16", "avx2-i64x4",
@@ -543,7 +565,7 @@ def run_tests(options1, args, print_version):
     global s
     s = options.silent
     
-    # prepare run_tests_log and fail_db files
+    # prepare run_tests_log and fail_db file
     global run_tests_log
     if options.in_file:
         run_tests_log = os.getcwd() + os.sep + options.in_file
@@ -635,7 +657,7 @@ def run_tests(options1, args, print_version):
             options.compiler_exe = "cl.exe"
         else:
             options.compiler_exe = "clang++"
- 
+
     # checks the required compiler otherwise prints an error message
     PATH_dir = string.split(os.getenv("PATH"), os.pathsep) 
     compiler_exists = False
@@ -715,6 +737,7 @@ def run_tests(options1, args, print_version):
     total_tests = len(files)
 
     compile_error_files = [ ]
+    run_succeed_files = [ ]
     run_error_files = [ ]
     skip_files = [ ]
 
@@ -726,10 +749,16 @@ def run_tests(options1, args, print_version):
     q = multiprocessing.Queue()
     for fn in files:
         q.put(fn)
-    for x in range(nthreads):
-        q.put('STOP')
+    # qret is a queue for returned data
     qret = multiprocessing.Queue()
-    qskip = multiprocessing.Queue()
+    # qerr is an error indication queue
+    qerr = multiprocessing.Queue()
+    # qfin is a waiting queue: JoinableQueue has join() and task_done() methods
+    qfin = multiprocessing.JoinableQueue()
+
+    # for each thread, there is a STOP in qfin to synchronize execution
+    for x in range(nthreads):
+        qfin.put('STOP')
 
     # need to catch sigint so that we can terminate all of the tasks if
     # we're interrupted
@@ -744,31 +773,59 @@ def run_tests(options1, args, print_version):
     global task_threads
     task_threads = [0] * nthreads
     for x in range(nthreads):
-        task_threads[x] = multiprocessing.Process(target=run_tasks_from_queue, args=(q, qret, qskip, total_tests,
+        task_threads[x] = multiprocessing.Process(target=run_tasks_from_queue, args=(q, qret, qerr, qfin, total_tests,
                 max_test_length, finished_tests_counter, finished_tests_counter_lock, glob_var))
         task_threads[x].start()
 
-    # wait for them to all finish and then return the number that failed
-    # (i.e. return 0 if all is ok)
-    for t in task_threads:
-        t.join()
+    # wait for them all to finish and rid the queue of STOPs
+    # join() here just waits for synchronization
+    qfin.join()
+
     if options.non_interactive == False:
         print_debug("\n", s, run_tests_log)
-
-    
-    for jb in task_threads:
-        if not jb.exitcode == 0:
-            raise OSError(2, 'Some test subprocess has thrown an exception', '')
-
 
     temp_time = (time.time() - start_time)
     elapsed_time = time.strftime('%Hh%Mm%Ssec.', time.gmtime(temp_time))
 
     while not qret.empty():
-        (c, r, skip) = qret.get()
+        (c, r, skip, ss) = qret.get()
         compile_error_files += c
         run_error_files += r
         skip_files += skip
+        run_succeed_files += ss
+
+    # Detect opt_set
+    if options.no_opt == True:
+        opt = "-O0"
+    else:
+        opt = "-O2"
+
+    try:
+        common.ex_state.add_to_rinf_testall(total_tests)
+        for fname in skip_files:
+            # We do not add skipped tests to test table as we do not know the test result
+            common.ex_state.add_to_rinf(options.arch, opt, options.target, 0, 0, 0, 1)
+
+        for fname in compile_error_files:
+            common.ex_state.add_to_tt(fname, options.arch, opt, options.target, 0, 1)
+            common.ex_state.add_to_rinf(options.arch, opt, options.target, 0, 0, 1, 0)
+
+        for fname in run_error_files:
+            common.ex_state.add_to_tt(fname, options.arch, opt, options.target, 1, 0)
+            common.ex_state.add_to_rinf(options.arch, opt, options.target, 0, 1, 0, 0)
+
+        for fname in run_succeed_files:
+            common.ex_state.add_to_tt(fname, options.arch, opt, options.target, 0, 0)
+            common.ex_state.add_to_rinf(options.arch, opt, options.target, 1, 0, 0, 0)
+    
+    except:
+        print_debug("Exception in ex_state. Skipping...", s, run_tests_log)
+
+
+
+    # if all threads ended correctly, qerr is empty
+    if not qerr.empty():
+        raise OSError(2, 'Some test subprocess has thrown an exception', '')
 
     if options.non_interactive:
         print_debug(" Done %d / %d\n" % (finished_tests_counter.value, total_tests), s, run_tests_log)

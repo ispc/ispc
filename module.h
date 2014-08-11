@@ -44,7 +44,7 @@
 #if defined(LLVM_3_4)
   #include <llvm/DebugInfo.h>
 #endif
-#if defined(LLVM_3_5)
+#if !defined(LLVM_3_2) && !defined(LLVM_3_3) && !defined(LLVM_3_4) // LLVM 3.5+
   #include <llvm/IR/DebugInfo.h>
 #endif
 
@@ -161,7 +161,7 @@ public:
     /** The diBuilder manages generating debugging information */
     llvm::DIBuilder *diBuilder;
 
-#if !defined(LLVM_3_1) && !defined(LLVM_3_2) && !defined(LLVM_3_3)
+#if !defined(LLVM_3_2) && !defined(LLVM_3_3)
     llvm::DICompileUnit diCompileUnit;
 #endif // LLVM_3_4+
 

@@ -46,7 +46,7 @@
 #include "util.h"
 #include <stdio.h>
 
-#if defined(LLVM_3_1) || defined(LLVM_3_2)
+#if defined(LLVM_3_2)
 #ifdef ISPC_NVPTX_ENABLED
   #include <llvm/Metadata.h>
 #endif /* ISPC_NVPTX_ENABLED */
@@ -75,7 +75,7 @@
 #include <llvm/Target/TargetMachine.h>
 #include <llvm/Target/TargetOptions.h>
 #include <llvm/PassManager.h>
-#if defined(LLVM_3_5)
+#if !defined(LLVM_3_2) && !defined(LLVM_3_3) && !defined(LLVM_3_4) // LLVM 3.5+
     #include <llvm/IR/Verifier.h>
     #include <llvm/IR/IRPrintingPasses.h>
     #include <llvm/IR/CFG.h>
@@ -381,9 +381,7 @@ Function::emitCode(FunctionEmitContext *ctx, llvm::Function *function,
         // isn't worth the code bloat / overhead.
         bool checkMask = (type->isTask == true) ||
             (
-#if defined(LLVM_3_1)
-              (function->hasFnAttr(llvm::Attribute::AlwaysInline) == false)
-#elif defined(LLVM_3_2)
+#if defined(LLVM_3_2)
               (function->getFnAttributes().hasAttribute(llvm::Attributes::AlwaysInline) == false)
 #else // LLVM 3.3+
               (function->getAttributes().getFnAttributes().hasAttribute(llvm::AttributeSet::FunctionIndex, llvm::Attribute::AlwaysInline) == false)
@@ -504,7 +502,8 @@ Function::GenerateIR() {
     }
 
     if (m->errorCount == 0) {
-#if defined (LLVM_3_5)
+
+#if !defined(LLVM_3_2) && !defined(LLVM_3_3) && !defined(LLVM_3_4) // LLVM 3.5+
         if (llvm::verifyFunction(*function) == true) {
 #else
         if (llvm::verifyFunction(*function, llvm::ReturnStatusAction) == true) {
@@ -543,11 +542,8 @@ Function::GenerateIR() {
 #endif /* ISPC_NVPTX_ENABLED */
                 llvm::Function *appFunction =
                     llvm::Function::Create(ftype, linkage, functionName.c_str(), m->module);
-#if defined(LLVM_3_1)
-                appFunction->setDoesNotThrow(true);
-#else
                 appFunction->setDoesNotThrow();
-#endif
+
                 // We should iterate from 1 because zero parameter is return.
                 // We should iterate till getNumParams instead of getNumParams+1 because new
                 // function is export function and doesn't contain the last parameter "mask".
@@ -569,7 +565,8 @@ Function::GenerateIR() {
                     emitCode(&ec, appFunction, firstStmtPos);
                     if (m->errorCount == 0) {
                         sym->exportedFunction = appFunction;
-#if defined(LLVM_3_5)
+
+#if !defined(LLVM_3_2) && !defined(LLVM_3_3) && !defined(LLVM_3_4) // LLVM 3.5+
                         if (llvm::verifyFunction(*appFunction) == true) {
 #else
                         if (llvm::verifyFunction(*appFunction,

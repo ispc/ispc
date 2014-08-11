@@ -50,7 +50,7 @@
 #if defined(LLVM_3_2)
   #include <llvm/Attributes.h>
 #endif
-#if defined(LLVM_3_1) || defined(LLVM_3_2)
+#if defined(LLVM_3_2)
   #include <llvm/LLVMContext.h>
   #include <llvm/Module.h>
   #include <llvm/Type.h>
@@ -66,7 +66,7 @@
   #include <llvm/IR/Intrinsics.h>
   #include <llvm/IR/DerivedTypes.h>
 #endif
-#if defined(LLVM_3_5)
+#if !defined(LLVM_3_2) && !defined(LLVM_3_3) && !defined(LLVM_3_4) // LLVM 3.5+
     #include <llvm/Linker/Linker.h>
 #else
     #include <llvm/Linker.h>
@@ -781,7 +781,8 @@ AddBitcodeToModule(const unsigned char *bitcode, int length,
                    llvm::Module *module, SymbolTable *symbolTable) {
     llvm::StringRef sb = llvm::StringRef((char *)bitcode, length);
     llvm::MemoryBuffer *bcBuf = llvm::MemoryBuffer::getMemBuffer(sb);
-#if defined(LLVM_3_5)
+
+#if !defined(LLVM_3_2) && !defined(LLVM_3_3) && !defined(LLVM_3_4) // LLVM 3.5+
     llvm::ErrorOr<llvm::Module *> ModuleOrErr = llvm::parseBitcodeFile(bcBuf, *g->ctx);
     if (std::error_code EC = ModuleOrErr.getError())
         Error(SourcePos(), "Error parsing stdlib bitcode: %s", EC.message().c_str());
@@ -841,7 +842,7 @@ AddBitcodeToModule(const unsigned char *bitcode, int length,
             // architecture and investigate what happened.
             // Generally we allow library DataLayout to be subset of module
             // DataLayout or library DataLayout to be empty.
-#if defined(LLVM_3_5)
+#if !defined(LLVM_3_2) && !defined(LLVM_3_3) && !defined(LLVM_3_4) // LLVM 3.5+
             if (!VerifyDataLayoutCompatibility(module->getDataLayoutStr(),
                                                bcModule->getDataLayoutStr())) {
               Warning(SourcePos(), "Module DataLayout is incompatible with "
@@ -932,7 +933,7 @@ lDefineConstantIntFunc(const char *name, int val, llvm::Module *module,
     Assert(func != NULL); // it should be declared already...
 #if defined(LLVM_3_2)
     func->addFnAttr(llvm::Attributes::AlwaysInline);
-#else // LLVM 3.1 and 3.3+
+#else // LLVM 3.3+
     func->addFnAttr(llvm::Attribute::AlwaysInline);
 #endif
     llvm::BasicBlock *bblock = llvm::BasicBlock::Create(*g->ctx, "entry", func, 0);

@@ -33,15 +33,29 @@
 
 # // Author: Filippov Ilia
 
-def attach_mail_file(msg, filename, name):
+def tail_and_save(file_in, file_out, tail = 100):    
+    with open(file_in, 'r') as f_in:
+        lines = f_in.readlines()[-tail:]
+        
+    with open(file_out, 'w') as f_out:
+        f_out.writelines(lines)
+
+
+def attach_mail_file(msg, filename, name, tail = -1):
     if os.path.exists(filename):
-        fp = open(filename, "rb")
+        if tail > 0:
+            tail_and_save(filename, filename + '.tail', tail)
+            fp = open(filename + '.tail', "rb")
+        else:
+            fp = open(filename, "rb")
+        
         to_attach = MIMEBase("application", "octet-stream")
         to_attach.set_payload(fp.read())
         encode_base64(to_attach)
         to_attach.add_header("Content-Disposition", "attachment", filename=name)
         fp.close()
         msg.attach(to_attach)
+
 
 def setting_paths(llvm, ispc, sde):
     if llvm != "":
@@ -72,6 +86,10 @@ def try_do_LLVM(text, command, from_validation):
         postfix = " >> " + alloy_build + " 2>> " + alloy_build
     if os.system(command + postfix) != 0:
         print_debug("ERROR.\n", from_validation, alloy_build)
+        if options.notify != "":
+            msg = MIMEMultipart()
+            attach_mail_file(msg, stability_log, "stability.log")
+            send_mail("ERROR: Non-zero exit status while executing " + command + ". Examine build log for more information.", msg)
         error("can't " + text, 1)
     print_debug("DONE.\n", from_validation, alloy_build)
 
@@ -85,15 +103,18 @@ def build_LLVM(version_LLVM, revision, folder, tarball, debug, selfbuild, extra,
     current_path = os.getcwd()
     llvm_home = os.environ["LLVM_HOME"]
     
-
     make_sure_dir_exists(llvm_home)
     
     os.chdir(llvm_home)
     FOLDER_NAME=version_LLVM
     if  version_LLVM == "trunk":
         SVN_PATH="trunk"
+    if  version_LLVM == "3.5":
+        # SVN_PATH=tags/RELEASE_35/rc1
+        SVN_PATH="branches/release_35"
+        version_LLVM = "3_5"
     if  version_LLVM == "3.4":
-        SVN_PATH="tags/RELEASE_34/final"
+        SVN_PATH="tags/RELEASE_34/dot2-final"
         version_LLVM = "3_4"
     if  version_LLVM == "3.3":
         SVN_PATH="tags/RELEASE_33/final"
@@ -101,9 +122,6 @@ def build_LLVM(version_LLVM, revision, folder, tarball, debug, selfbuild, extra,
     if  version_LLVM == "3.2":
         SVN_PATH="tags/RELEASE_32/final"
         version_LLVM = "3_2"
-    if  version_LLVM == "3.1":
-        SVN_PATH="tags/RELEASE_31/final"
-        version_LLVM = "3_1"
     if revision != "":
         FOLDER_NAME = FOLDER_NAME + "_" + revision
         revision = "-" + revision
@@ -235,7 +253,12 @@ def check_targets():
     answer_sde = []
     # check what native targets do we have
     if current_OS != "Windows":
-        try_do_LLVM("build check_ISA", "clang check_isa.cpp -o check_isa.exe", True)
+        if options.ispc_build_compiler == "clang":
+            cisa_compiler = "clang"
+        elif options.ispc_build_compiler == "gcc":
+            cisa_compiler = "g++"
+
+        try_do_LLVM("build check_ISA", cisa_compiler + " check_isa.cpp -o check_isa.exe", True)
     else:
         try_do_LLVM("build check_ISA", "cl check_isa.cpp", True)
     SSE2  = ["sse2-i32x4",  "sse2-i32x8"]
@@ -292,11 +315,41 @@ def check_targets():
 def build_ispc(version_LLVM, make):
     current_path = os.getcwd()
     os.chdir(os.environ["ISPC_HOME"])
+
+    make_ispc = "make " + options.ispc_build_compiler + " -j" + options.speed
+
     if current_OS != "Windows":
         p_temp = os.getenv("PATH")
         os.environ["PATH"] = os.environ["LLVM_HOME"] + "/bin-" + version_LLVM + "/bin:" + os.environ["PATH"]
         try_do_LLVM("clean ISPC for building", "make clean", True)
-        try_do_LLVM("build ISPC with LLVM version " + version_LLVM + " ", make, True)
+        
+        folder = os.environ["LLVM_HOME"]  + os.sep + "llvm-" 
+        if options.folder == "":
+            folder += version_LLVM
+        if options.debug == True:
+            folder +=  "dbg"
+      
+
+        llvm_rev = ""
+        # determine LLVM revision
+        p = subprocess.Popen("svn info " + folder, shell=True, \
+               stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        (info_llvm, err) = p.communicate()
+        info_llvm = re.split('\n', info_llvm)
+        for i in info_llvm:
+            if len(i) > 0 and i.startswith("Last Changed Rev: "):
+                llvm_rev = str(i[len("Last Changed Rev: "):])
+        
+        if llvm_rev != "":
+            common.ex_state.switch_revision(llvm_rev)
+            print_debug("\nBuilding ISPC with LLVM %s (%s):\n" \
+                                              % (version_LLVM, llvm_rev), False, stability_log)
+        else:
+            print_debug("Unable to retrieve LLVM revision\n", False, stability_log)
+            raise
+
+        try_do_LLVM("recognize LLVM revision", "svn info " + folder, True)
+        try_do_LLVM("build ISPC with LLVM version " + version_LLVM + " ", make_ispc, True)
         os.environ["PATH"] = p_temp
     else:
         p_temp = os.getenv("LLVM_INSTALL_DIR")
@@ -308,8 +361,10 @@ def build_ispc(version_LLVM, make):
             temp = "3_3"
         if version_LLVM == "3.4":
             temp = "3_4"
-        if version_LLVM == "trunk":
+        if version_LLVM == "3.5":
             temp = "3_5"
+        if version_LLVM == "trunk":
+            temp = "3_6"
         os.environ["LLVM_VERSION"] = "LLVM_" + temp
         try_do_LLVM("clean ISPC for building", "msbuild ispc.vcxproj /t:clean", True)
         try_do_LLVM("build ISPC with LLVM version " + version_LLVM + " ", "msbuild ispc.vcxproj /V:m /p:Platform=Win32 /p:Configuration=Release /t:rebuild", True)
@@ -324,7 +379,7 @@ def execute_stability(stability, R, print_version):
     temp = b_temp[0]
     time = b_temp[1]
     for j in range(0,4):
-        R[j][0] = R[j][0] + temp[j]
+        R[j][0] = R[j][0] + temp[j] # new_runfails, new_compfails, new_passes_runfails, new_passes_compfails
         for i in range(0,len(temp[j])):
             R[j][1].append(temp[4])
     number_of_fails = temp[5]
@@ -348,11 +403,42 @@ def execute_stability(stability, R, print_version):
         str_time = "\n"
     print_debug(temp[4][1:-3] + str_fails + str_new_fails + str_new_passes + str_time, False, stability_log)
 
-def run_special_tests():
-   i = 5 
 
-class options_for_drivers:
-    pass
+'''
+R       = [[new_runfails,        [new_line, new_line...]],
+           [new_compfails,       [new_line, new_line...]],
+           [new_passes_runfails, [new_line, new_line...]],
+           [new_passes_runfails, [new_line, new_line...]]]
+'''
+def output_test_results(R):
+    ttt = ["NEW RUNFAILS: ", "NEW COMPFAILS: ", "NEW PASSES RUNFAILS: ", "NEW PASSES COMPFAILS: "]
+    for j in range(0, 4):
+        if len(R[j][0]) == 0:
+            print_debug("NO " + ttt[j][:-2] + "\n", False, stability_log)
+        else:
+            print_debug(ttt[j] + str(len(R[j][0])) + "\n", False, stability_log)
+            to_print = {}
+            for (fail_name, opt_str) in zip(R[j][0], R[j][1]):
+                if fail_name not in to_print:
+                    to_print[fail_name] = []
+                to_print[fail_name].append(opt_str)
+
+            # sort
+            for key in to_print.keys():
+                to_print[key] = sorted(to_print[key])
+
+            # print out
+            for fail_name in sorted(to_print.keys()):
+                print_debug("\t" + fail_name + "\n", True, stability_log)
+                for opt_str in to_print[fail_name]:
+                    print_debug("\t\t\t" + opt_str, True, stability_log)
+
+def concatenate_test_results(R1, R2):
+    R = [[[],[]],[[],[]],[[],[]],[[],[]]]
+    for j in range(0, 4):
+        R[j][0] = R1[j][0] + R2[j][0]
+        R[j][1] = R1[j][1] + R2[j][1]
+    return R
 
 def validation_run(only, only_targets, reference_branch, number, notify, update, speed_number, make, perf_llvm, time):
     os.chdir(os.environ["ISPC_HOME"])
@@ -360,22 +446,19 @@ def validation_run(only, only_targets, reference_branch, number, notify, update,
         os.environ["PATH"] = os.environ["ISPC_HOME"] + ":" + os.environ["PATH"]
     if options.notify != "":
         common.remove_if_exists(os.environ["ISPC_HOME"] + os.sep + "notify_log.log")
-        smtp_server = os.environ["SMTP_ISPC"]
         msg = MIMEMultipart()
-        msg['Subject'] = 'ISPC test system results'
-        msg['From'] = 'ISPC_test_system'
-        msg['To'] = options.notify
     print_debug("Command: " + ' '.join(sys.argv) + "\n", False, "")
     print_debug("Folder: " + os.environ["ISPC_HOME"] + "\n", False, "")
     date = datetime.datetime.now()
     print_debug("Date: " + date.strftime('%H:%M %d/%m/%Y') + "\n", False, "")
     newest_LLVM="3.4"
+    msg_additional_info = ""
 # *** *** ***
 # Stability validation run
 # *** *** ***
     if ((("stability" in only) == True) or ("performance" in only) == False):
         print_debug("\n\nStability validation run\n\n", False, "")
-        stability = options_for_drivers()
+        stability = common.EmptyClass()
 # stability constant options
         stability.save_bin = False
         stability.random = False
@@ -403,6 +486,7 @@ def validation_run(only, only_targets, reference_branch, number, notify, update,
         LLVM = []
         targets = []
         sde_targets = []
+
 # parsing option only, update parameters of run
         if "-O2" in only:
             opts.append(False)
@@ -414,7 +498,7 @@ def validation_run(only, only_targets, reference_branch, number, notify, update,
             archs.append("x86-64")
         if "native" in only:
             sde_targets_t = []
-        for i in ["3.1", "3.2", "3.3", "3.4", "trunk"]:
+        for i in ["3.2", "3.3", "3.4", "3.5", "trunk"]:
             if i in only:
                 LLVM.append(i)
         if "current" in only:
@@ -455,7 +539,6 @@ def validation_run(only, only_targets, reference_branch, number, notify, update,
             targets = targets_t + targets_generic_t[:-4]
             sde_targets = sde_targets_t
 
-
         if "build" in only:
             targets = []
             sde_targets = []
@@ -475,14 +558,24 @@ def validation_run(only, only_targets, reference_branch, number, notify, update,
 # begin validation run for stabitily
         common.remove_if_exists(stability.in_file)
         R = [[[],[]],[[],[]],[[],[]],[[],[]]]
+        print_debug("\n" + common.get_host_name() + "\n", False, stability_log)
         print_debug("\n_________________________STABILITY REPORT_________________________\n", False, stability_log)
         for i in range(0,len(LLVM)):
+            R_tmp = [[[],[]],[[],[]],[[],[]],[[],[]]]
             print_version = 2
             if rebuild:
                 build_ispc(LLVM[i], make)
             for j in range(0,len(targets)):
                 stability.target = targets[j]
                 stability.wrapexe = ""
+                # choosing right compiler for a given target
+                # sometimes clang++ is not avaluable. if --ispc-build-compiler = gcc we will pass in g++ compiler
+                if options.ispc_build_compiler == "gcc":
+                    stability.compiler_exe = "g++"
+                # but 'knc' target is supported only by icpc, so set explicitly
+                if "knc" in targets[j]:
+                    stability.compiler_exe = "icpc"
+                # now set archs for targets
                 if "generic" in targets[j]:
                     arch = gen_archs
                 elif "knc" in targets[j]:
@@ -494,9 +587,9 @@ def validation_run(only, only_targets, reference_branch, number, notify, update,
                         stability.arch = arch[i1]
                         stability.no_opt = opts[i2]
                         try:
-                            execute_stability(stability, R, print_version)
+                            execute_stability(stability, R_tmp, print_version)
                         except:
-                            print_debug("Exception in execute_stability - maybe some test subprocess terminated before it should have\n", False, stability_log)
+                            print_debug("ERROR: Exception in execute_stability - maybe some test subprocess terminated before it should have\n", False, stability_log)
                         print_version = 0
             for j in range(0,len(sde_targets)):
                 stability.target = sde_targets[j][1]
@@ -505,34 +598,21 @@ def validation_run(only, only_targets, reference_branch, number, notify, update,
                     for i2 in range(0,len(opts)):
                         stability.arch = archs[i1]
                         stability.no_opt = opts[i2]
-                        execute_stability(stability, R, print_version)
-                        print_version = 0
-# run special tests like embree
-# 
-        run_special_tests()
-        ttt = ["NEW RUNFAILS: ", "NEW COMPFAILS: ", "NEW PASSES RUNFAILS: ", "NEW PASSES COMPFAILS: "]
-        for j in range(0,4):
-            if len(R[j][0]) == 0:
-                print_debug("NO " + ttt[j][:-2] + "\n", False, stability_log)
-            else:
-                print_debug(ttt[j] + str(len(R[j][0])) + "\n", False, stability_log)
-                temp5 = [[],[]]
-                for i in range(0,len(R[j][0])):
-                    er = True
-                    for k in range(0,len(temp5[0])):
-                        if R[j][0][i] == temp5[0][k]:
-                            temp5[1][k].append(R[j][1][i])
-                            er = False
-                    if er == True:
-                        temp5[0].append(R[j][0][i])
-                        temp5[1].append([R[j][1][i]])
-                for i in range(0,len(temp5[0])):
-                    print_debug("\t" + temp5[0][i] + "\n", True, stability_log)
-                    for k in range(0,len(temp5[1][i])):
-                        print_debug("\t\t\t" + temp5[1][i][k], True, stability_log)
+                        execute_stability(stability, R_tmp, print_version)
+                        print_version = 0            
+            # Output testing results separate for each tested LLVM version
+            R = concatenate_test_results(R, R_tmp)
+            output_test_results(R_tmp)
+            print_debug("\n", False, stability_log)
+
+        print_debug("\n----------------------------------------\nTOTAL:\n", False, stability_log)
+        output_test_results(R)
         print_debug("__________________Watch stability.log for details_________________\n", False, stability_log)
         if options.notify != "":
-            attach_mail_file(msg, stability.in_file, "run_tests_log.log")
+            # e-mail header for performance test:
+            msg_additional_info += "New runfails(%d) New compfails(%d) New passes runfails(%d) New passes compfails(%d)" \
+                                                                      % (len(R[0][0]), len(R[1][0]), len(R[2][0]), len(R[3][0]))
+            attach_mail_file(msg, stability.in_file, "run_tests_log.log", 100)
             attach_mail_file(msg, stability_log, "stability.log")
 
 # *** *** ***
@@ -541,7 +621,7 @@ def validation_run(only, only_targets, reference_branch, number, notify, update,
     if ((("performance" in only) == True) or ("stability" in only) == False):
         print_debug("\n\nPerformance validation run\n\n", False, "")
         common.check_tools(1)
-        performance = options_for_drivers()
+        performance = common.EmptyClass()
 # performance constant options
         performance.number = number
         performance.config = "." + os.sep + "perf.ini"
@@ -591,33 +671,47 @@ def validation_run(only, only_targets, reference_branch, number, notify, update,
             build_ispc(newest_LLVM, make)
             os.rename("ispc", "ispc_ref")
             build_ispc(reference_branch, make)
-# begin validation run for performance. output is inserted into perf()
+        # begin validation run for performance. output is inserted into perf()
         perf.perf(performance, [])
         if options.notify != "":
             attach_mail_file(msg, performance.in_file, "performance.log")
             attach_mail_file(msg, "." + os.sep + "logs" + os.sep + "perf_build.log", "perf_build.log")
+    # dumping gathered info to the file
+    common.ex_state.dump(alloy_folder + "test_table.dump", common.ex_state.tt)
 
-# sending e-mail with results
+    # sending e-mail with results
     if options.notify != "":
+        send_mail(msg_additional_info, msg)
+
+def send_mail(body_header, msg):
+    try:
         fp = open(os.environ["ISPC_HOME"] + os.sep + "notify_log.log", 'rb')
         f_lines = fp.readlines()
         fp.close()
-        line = ""
-        if  not sys.exc_info()[0] == None:
-            line = line + "Last exception: " + str(sys.exc_info()) + '\n'
-        for i in range(0,len(f_lines)):
-            line = line + f_lines[i][:-1]
-            line = line + '   \n'
-        text = MIMEText(line, "", "KOI-8")
-        msg.attach(text)
-        attach_mail_file(msg, alloy_build, "alloy_build.log")
-        s = smtplib.SMTP(smtp_server)
+    except:
+        body_header += "\nUnable to open notify_log.log: " + str(sys.exc_info()) + "\n"
+        print_debug("Unable to open notify_log.log: " + str(sys.exc_info()) + "\n", False, stability_log)
+    
+    body = "Hostname: " + common.get_host_name() + "\n\n"
 
-        print "Sending an e-mail with logs:", options.notify
-        for name in options.notify.split(" "):
-            print "Sending to: ", name
-            s.sendmail('ISPC_test_system', name, msg.as_string())
-        s.quit()
+    if  not sys.exc_info()[0] == None:
+        body += "ERROR: Exception(last) - " + str(sys.exc_info()) + '\n'
+
+    body += body_header + '\n'
+    for i in range(0, len(f_lines)):
+        body += f_lines[i][:-1]
+        body += '   \n'
+
+    attach_mail_file(msg, alloy_build, "alloy_build.log", 100) # build.log is always being sent
+    smtp_server = os.environ["SMTP_ISPC"]
+    msg['Subject'] = "ISPC test system results"
+    msg['From'] = "ISPC_test_system"
+    msg['To'] = options.notify
+    text = MIMEText(body, "", "KOI-8")
+    msg.attach(text)
+    s = smtplib.SMTP(smtp_server)
+    s.sendmail(options.notify, options.notify.split(" "), msg.as_string())
+    s.quit()
 
 def Main():
     global current_OS
@@ -635,6 +729,19 @@ def Main():
         parser.print_help()
         exit(0)
 
+    # set appropriate makefile target
+    # gcc and g++ options are equal and added for ease of use 
+    if options.ispc_build_compiler != "clang" and \
+       options.ispc_build_compiler != "gcc":   
+        error("unknow option for --ispc-build-compiler: " + options.ispc_build_compiler, 1)
+        parser.print_help()
+        exit(0)
+
+    if options.notify != "":
+        # in case 'notify' option is used but build (in '-b' for example) failed we do not want to have trash in our message body
+        # NOTE! 'notify.log' must also be cleaned up at the beginning of every message sending function, i.e. in 'validation_run()'
+        common.remove_if_exists(os.environ["ISPC_HOME"] + os.sep + "notify_log.log")
+
     setting_paths(options.llvm_home, options.ispc_home, options.sde_home)
     if os.environ.get("LLVM_HOME") == None:
         error("you have no LLVM_HOME", 1)
@@ -644,7 +751,7 @@ def Main():
         if os.environ.get("SMTP_ISPC") == None:
             error("you have no SMTP_ISPC in your environment for option notify", 1)
     if options.only != "":
-        test_only_r = " 3.1 3.2 3.3 3.4 trunk current build stability performance x86 x86-64 -O0 -O2 native "
+        test_only_r = " 3.2 3.3 3.4 3.5 trunk current build stability performance x86 x86-64 -O0 -O2 native "
         test_only = options.only.split(" ")
         for iterator in test_only:
             if not (" " + iterator + " " in test_only_r):
@@ -656,10 +763,12 @@ def Main():
     f_date = "logs"
     common.remove_if_exists(f_date)
     os.makedirs(f_date)
+    global alloy_folder
+    alloy_folder = os.getcwd() + os.sep + f_date + os.sep
     global alloy_build
-    alloy_build = os.getcwd() + os.sep + f_date + os.sep + "alloy_build.log"
+    alloy_build = alloy_folder + "alloy_build.log"
     global stability_log
-    stability_log = os.getcwd() + os.sep + f_date + os.sep + "stability.log"
+    stability_log = alloy_folder + "stability.log"
     current_path = os.getcwd()
     make = "make -j" + options.speed
     if os.environ["ISPC_HOME"] != os.getcwd():
@@ -703,6 +812,8 @@ import smtplib
 import datetime
 import copy
 import multiprocessing
+import subprocess
+import re
 from email.MIMEMultipart import MIMEMultipart
 from email.MIMEBase import MIMEBase
 from email.mime.text import MIMEText
@@ -743,11 +854,13 @@ if __name__ == '__main__':
         help='ask for validation run', default=False, action="store_true")
     parser.add_option('-j', dest='speed',
         help='set -j for make', default=num_threads)
+    parser.add_option('--ispc-build-compiler', dest='ispc_build_compiler',
+        help='set compiler to build ispc binary (clang/gcc)', default="clang")
     # options for activity "build LLVM"
     llvm_group = OptionGroup(parser, "Options for building LLVM",
                     "These options must be used with -b option.")
     llvm_group.add_option('--version', dest='version',
-        help='version of llvm to build: 3.1 3.2 3.3 3.4 trunk. Default: trunk', default="trunk")
+        help='version of llvm to build: 3.2 3.3 3.4 3.5 trunk. Default: trunk', default="trunk")
     llvm_group.add_option('--revision', dest='revision',
         help='revision of llvm to build in format r172870', default="")
     llvm_group.add_option('--debug', dest='debug',
@@ -782,7 +895,7 @@ if __name__ == '__main__':
     run_group.add_option('--only', dest='only',
         help='set types of tests. Possible values:\n' + 
             '-O0, -O2, x86, x86-64, stability (test only stability), performance (test only performance)\n' +
-            'build (only build with different LLVM), 3.1, 3.2, 3.3, 3.4, trunk, native (do not use SDE), current (do not rebuild ISPC).',
+            'build (only build with different LLVM), 3.2, 3.3, 3.4 3.5, trunk, native (do not use SDE), current (do not rebuild ISPC).',
             default="")
     run_group.add_option('--perf_LLVM', dest='perf_llvm',
         help='compare LLVM 3.3 with "--compare-with", default trunk', default=False, action='store_true')
