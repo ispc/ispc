@@ -737,6 +737,11 @@ def Main():
         parser.print_help()
         exit(0)
 
+    if options.notify != "":
+        # in case 'notify' option is used but build (in '-b' for example) failed we do not want to have trash in our message body
+        # NOTE! 'notify.log' must also be cleaned up at the beginning of every message sending function, i.e. in 'validation_run()'
+        common.remove_if_exists(os.environ["ISPC_HOME"] + os.sep + "notify_log.log")
+
     setting_paths(options.llvm_home, options.ispc_home, options.sde_home)
     if os.environ.get("LLVM_HOME") == None:
         error("you have no LLVM_HOME", 1)
