@@ -38,6 +38,8 @@
 #include <immintrin.h>
 #include <zmmintrin.h>
 
+#define INT32_MIN   (-0x7fffffff - 1)
+
 #ifdef _MSC_VER
 #define FORCEINLINE __forceinline
 #define PRE_ALIGN(x)  /*__declspec(align(x))*/
@@ -2370,6 +2372,7 @@ static FORCEINLINE void __scatter_base_offsets32_float(void *base, uint32_t scal
 static FORCEINLINE void __scatter_base_offsets64_float(uint8_t *_base, uint32_t scale, __vec16_i64 _offsets, __vec16_f value, __vec16_i1 mask) 
 { 
   const __vec16_i64 offsets = _offsets.cvt2hilo();
+  const __vec16_i32 signed_offsets = _mm512_add_epi32(offsets.v_lo, __smear_i32<__vec16_i32>((int32_t)INT32_MIN));
 
   __vec16_i1 still_to_do = mask;
   while (still_to_do) {
@@ -2380,8 +2383,9 @@ static FORCEINLINE void __scatter_base_offsets64_float(uint8_t *_base, uint32_t 
         _MM_CMPINT_EQ);
 
     void * base = (void*)((unsigned long)_base  +
-        ((scale*(unsigned long)hi32) << 32));    
-    _mm512_mask_i32extscatter_ps(base, match, offsets.v_lo, 
+        ((scale*(unsigned long)hi32) << 32) - INT32_MIN);   
+
+    _mm512_mask_i32extscatter_ps(base, match, signed_offsets, 
         value,
         _MM_DOWNCONV_PS_NONE, scale,
         _MM_HINT_NONE);
