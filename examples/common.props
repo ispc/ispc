@@ -160,8 +160,8 @@
   <ItemGroup>
     <CustomBuild Include='$(ISPC_file).ispc'>
       <FileType>Document</FileType>
-      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(ISPC_compiler) -O2 %(Filename).ispc -o %(Filename).obj -h %(Filename)_ispc.h --arch=x86 --target=$(Target_str) $(flags)</Command>
-      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(ISPC_compiler) -O2 %(Filename).ispc -o %(Filename).obj -h %(Filename)_ispc.h --target=$(Target_str) $(flags)</Command>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(ISPC_compiler) -O0 %(Filename).ispc -o %(Filename).obj -h %(Filename)_ispc.h --arch=x86 --target=$(Target_str) -g $(flags)</Command>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(ISPC_compiler) -O0 %(Filename).ispc -o %(Filename).obj -h %(Filename)_ispc.h --target=$(Target_str) -g $(flags)</Command>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(Target_out)</Outputs>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(Target_out)</Outputs>
       <Command Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(ISPC_compiler) -O2 %(Filename).ispc -o %(Filename).obj -h %(Filename)_ispc.h --arch=x86 --target=$(Target_str) $(flags)</Command>
