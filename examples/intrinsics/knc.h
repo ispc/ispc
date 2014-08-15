@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2012, Intel Corporation
+  Copyright (c) 2012-2014, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -31,6 +31,7 @@
    SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.  
 */
 
+#include <limits.h> // INT_MIN
 #include <stdint.h>
 #include <math.h>
 #include <assert.h>
@@ -39,8 +40,6 @@
 
 #include <immintrin.h>
 #include <zmmintrin.h>
-
-#define INT32_MIN   (-0x7fffffff - 1)
 
 #include <iostream> // for operator<<(m512[i])
 #include <iomanip>  // for operator<<(m512[i])
@@ -1751,7 +1750,7 @@ static FORCEINLINE __vec16_f
 __gather_base_offsets64_float(uint8_t *_base, uint32_t scale, __vec16_i64 offsets,
                               __vec16_i1 mask) {
 
-  const __vec16_i32 signed_offsets = _mm512_add_epi32(offsets.v_lo, __smear_i32<__vec16_i32>((int32_t)INT32_MIN));
+  const __vec16_i32 signed_offsets = _mm512_add_epi32(offsets.v_lo, __smear_i32<__vec16_i32>((int32_t)INT_MIN));
     // There is no gather instruction with 64-bit offsets in KNC.
     // We have to manually iterate over the upper 32 bits ;-)
     __vec16_i1 still_to_do = mask;
@@ -1763,7 +1762,7 @@ __gather_base_offsets64_float(uint8_t *_base, uint32_t scale, __vec16_i64 offset
                                                       __smear_i32<__vec16_i32>((int32_t)hi32),
                                                       _MM_CMPINT_EQ);
         void * base = (void*)((unsigned long)_base  +
-            ((scale*(unsigned long)hi32) << 32) + scale*(unsigned long)(-(long)INT32_MIN));
+            ((scale*(unsigned long)hi32) << 32) + scale*(unsigned long)(-(long)INT_MIN));
         
         ret = _mm512_mask_i32extgather_ps(ret, match, signed_offsets, base,
                                           _MM_UPCONV_PS_NONE, scale,
@@ -1780,7 +1779,7 @@ __gather_base_offsets64_i8(uint8_t *_base, uint32_t scale, __vec16_i64 offsets,
                            __vec16_i1 mask) 
 { 
 
-    const __vec16_i32 signed_offsets = _mm512_add_epi32(offsets.v_lo, __smear_i32<__vec16_i32>((int32_t)INT32_MIN));
+    const __vec16_i32 signed_offsets = _mm512_add_epi32(offsets.v_lo, __smear_i32<__vec16_i32>((int32_t)INT_MIN));
     __vec16_i1 still_to_do = mask;
     __vec16_i32 tmp;
     while (still_to_do) {
@@ -1791,7 +1790,7 @@ __gather_base_offsets64_i8(uint8_t *_base, uint32_t scale, __vec16_i64 offsets,
                                                       _MM_CMPINT_EQ);
     
         void * base = (void*)((unsigned long)_base  +
-            ((scale*(unsigned long)hi32) << 32) + scale*(unsigned long)(-(long)INT32_MIN));
+            ((scale*(unsigned long)hi32) << 32) + scale*(unsigned long)(-(long)INT_MIN));
         tmp = _mm512_mask_i32extgather_epi32(tmp, match, signed_offsets, base,
                                              _MM_UPCONV_EPI32_SINT8, scale,
                                              _MM_HINT_NONE);
@@ -1808,7 +1807,7 @@ __scatter_base_offsets64_float(uint8_t *_base, uint32_t scale, __vec16_i64 offse
                                __vec16_f value,
                                __vec16_i1 mask) { 
 
-    const __vec16_i32 signed_offsets = _mm512_add_epi32(offsets.v_lo, __smear_i32<__vec16_i32>((int32_t)INT32_MIN));
+    const __vec16_i32 signed_offsets = _mm512_add_epi32(offsets.v_lo, __smear_i32<__vec16_i32>((int32_t)INT_MIN));
     __vec16_i1 still_to_do = mask;
     while (still_to_do) {
         int first_active_lane = _mm_tzcnt_32((int)still_to_do);
@@ -1818,7 +1817,7 @@ __scatter_base_offsets64_float(uint8_t *_base, uint32_t scale, __vec16_i64 offse
                                                       _MM_CMPINT_EQ);
 
         void * base = (void*)((unsigned long)_base  +
-            ((scale*(unsigned long)hi32) << 32) + scale*(unsigned long)(-(long)INT32_MIN));   
+            ((scale*(unsigned long)hi32) << 32) + scale*(unsigned long)(-(long)INT_MIN));   
         _mm512_mask_i32extscatter_ps(base, match, signed_offsets, 
                                      value,
                                      _MM_DOWNCONV_PS_NONE, scale,
@@ -1832,7 +1831,7 @@ __scatter_base_offsets64_i32(uint8_t *_base, uint32_t scale, __vec16_i64 offsets
                              __vec16_i32 value,
                              __vec16_i1 mask) { 
 
-    const __vec16_i32 signed_offsets = _mm512_add_epi32(offsets.v_lo, __smear_i32<__vec16_i32>((int32_t)INT32_MIN));
+    const __vec16_i32 signed_offsets = _mm512_add_epi32(offsets.v_lo, __smear_i32<__vec16_i32>((int32_t)INT_MIN));
     __vec16_i1 still_to_do = mask;
     while (still_to_do) {
         int first_active_lane = _mm_tzcnt_32((int)still_to_do);
@@ -1842,7 +1841,7 @@ __scatter_base_offsets64_i32(uint8_t *_base, uint32_t scale, __vec16_i64 offsets
                                                       _MM_CMPINT_EQ);
     
         void * base = (void*)((unsigned long)_base  +
-            ((scale*(unsigned long)hi32) << 32) + scale*(unsigned long)(-(long)INT32_MIN));  
+            ((scale*(unsigned long)hi32) << 32) + scale*(unsigned long)(-(long)INT_MIN));  
         _mm512_mask_i32extscatter_epi32(base, match, signed_offsets, 
                                         value,
                                         _MM_DOWNCONV_EPI32_NONE, scale,
