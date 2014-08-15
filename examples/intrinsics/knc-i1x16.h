@@ -52,7 +52,7 @@
 #endif
 
 #define KNC 1
-#if 1
+#if 0
 extern "C" 
 {
   int printf(const unsigned char *, ...);
