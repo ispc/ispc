@@ -293,7 +293,6 @@
 ./tests/ptr-22.ispc runfail  x86-64      generic-4   Linux LLVM 3.5 clang++3.4 -O0 *
 ./tests/ptr-22.ispc runfail  x86-64     generic-16   Linux LLVM 3.5 clang++3.4 -O0 *
 ./tests/ptr-assign-lhs-math-1.ispc compfail  x86-64            knc   Linux LLVM 3.4   icpc13.1 -O2 *
-./tests/ptr-22.ispc runfail  x86-64            knc   Linux LLVM 3.4   icpc13.1 -O0 *
 ./tests/atomics-1.ispc compfail  x86-64            knc   Linux LLVM 3.4   icpc13.1 -O0 *
 ./tests/atomics-10.ispc compfail  x86-64            knc   Linux LLVM 3.4   icpc13.1 -O0 *
 ./tests/atomics-11.ispc compfail  x86-64            knc   Linux LLVM 3.4   icpc13.1 -O0 *
