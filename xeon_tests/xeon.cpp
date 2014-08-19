@@ -11,15 +11,33 @@
 
 void gather32_double(double  *d  , int *mask);
 void gather32_float (float   *f  , int *mask);
+void gather32_i8    (int8_t  *i8 , int *mask);
 void gather32_i16   (int16_t *i16, int *mask);
 void gather32_i32   (int32_t *i32, int *mask);
 void gather32_i64   (int64_t *i64, int *mask);
 
 void gather64_double(double  *d  , int *mask);
 void gather64_float (float   *f  , int *mask);
+void gather64_i8    (int8_t  *i8 , int *mask);
 void gather64_i16   (int16_t *i16, int *mask);
 void gather64_i32   (int32_t *i32, int *mask);
 void gather64_i64   (int64_t *i64, int *mask);
+
+
+void gather_base_offsets32_double(double  *d  , int *mask);
+void gather_base_offsets32_float (float   *f  , int *mask);
+void gather_base_offsets32_i8    (int8_t  *i8 , int *mask);
+void gather_base_offsets32_i16   (int16_t *i16, int *mask);
+void gather_base_offsets32_i32   (int32_t *i32, int *mask);
+void gather_base_offsets32_i64   (int64_t *i64, int *mask);
+
+void gather_base_offsets64_double(double  *d  , int *mask);
+void gather_base_offsets64_float (float   *f  , int *mask);
+void gather_base_offsets64_i8    (int8_t  *i8 , int *mask);
+void gather_base_offsets64_i16   (int16_t *i16, int *mask);
+void gather_base_offsets64_i32   (int32_t *i32, int *mask);
+void gather_base_offsets64_i64   (int64_t *i64, int *mask);
+
 
 int main () {
     printf ("Start\n");
@@ -29,6 +47,7 @@ int main () {
     float   f_32[16];
     double  d_64[16];
     float   f_64[16];
+    int8_t i8 [16];
     int16_t i16 [16];
     int32_t i32 [16];
     int64_t i64 [16];
@@ -49,6 +68,9 @@ int main () {
     f_64[0] = INT64_MAX;
     f_64[1] = INT64_MIN;
 
+    i8[0] = INT8_MAX;
+    i8[1] = INT8_MIN;
+
     i16[0] = INT16_MAX;
     i16[1] = INT16_MIN;
 
@@ -63,6 +85,7 @@ int main () {
         f_32[i] = (i + 1) * 2;
         d_64[i] = (i + 1) * 2;
         f_64[i] = (i + 1) * 2;
+        i8[i] = (i + 1) * 2;
         i16[i] = (i + 1) * 2;
         i32[i] = (i + 1) * 2;
         i64[i] = (i + 1) * 2;
@@ -79,18 +102,35 @@ int main () {
 #endif
 
     printf ("\n");
-        
+    
     gather32_double(d_32, mask);
     gather32_float(f_32, mask);   
+    gather32_i8(i8, mask);
     gather32_i16(i16, mask);
     gather32_i32(i32, mask);
     gather32_i64(i64, mask);
 
     gather64_double(d_64, mask);
     gather64_float(f_64, mask);
+    gather64_i8(i8, mask);
     gather64_i16(i16, mask);
     gather64_i32(i32, mask);
     gather64_i64(i64, mask);
+    
+    gather_base_offsets32_double(d_32, mask);
+    gather_base_offsets32_float(f_32, mask);
+    gather_base_offsets32_i8(i8, mask);
+    //gather_base_offsets32_i16(i16, mask); segfault if offsets[i] < 0
+    gather_base_offsets32_i32(i32, mask);
+    gather_base_offsets32_i64(i64, mask);
+
+    gather_base_offsets64_double(d_64, mask);
+    gather_base_offsets64_float(f_64, mask);
+    gather_base_offsets64_i8(i8, mask);
+    gather_base_offsets64_i16(i16, mask);
+    gather_base_offsets64_i32(i32, mask);
+    gather_base_offsets64_i64(i64, mask);
+
 
   return 0;
 }
