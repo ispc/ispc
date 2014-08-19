@@ -212,49 +212,105 @@ SCATTER(int64_t, __vec16_i64, int16_t, __vec16_i16, scatter64_i16   , __scatter6
 SCATTER(int64_t, __vec16_i64, int32_t, __vec16_i32, scatter64_i32   , __scatter64_i32)
 SCATTER(int64_t, __vec16_i64, int64_t, __vec16_i64, scatter64_i64   , __scatter64_i64)
 
+/////////////////////////////////////////////////////////////////////////////////////////////
+
+#define SCATTER_OFFSETS(GATHER_SCALAR_TYPE, GATHER_VEC_TYPE, TYPE, VEC_TYPE, FUNC_NAME, FUNC_CALL)  \
+void FUNC_NAME(TYPE *data, int *m) {                                                        \
+    printf (#FUNC_NAME, ":");                                                               \
+                                                                                            \
+    TYPE copy_m[16];                                                                        \
+    for (int i = 0; i < 16; i++)                                                            \
+        copy_m[i] = m[i];                                                                   \
+                                                                                            \
+    TYPE *b[16];                                                                            \
+    allocator<TYPE>(b);                                                                     \
+    uint8_t *base = (uint8_t*) b[0];                                                        \
+    uint32_t scale = sizeof(TYPE);                                                          \
+    GATHER_VEC_TYPE offsets;                                                                \
+    VEC_TYPE input;                                                                         \
+    for (int i = 0; i < 16; i++) {                                                          \
+        offsets[i] = (GATHER_SCALAR_TYPE) ((b[i] - b[0]));                                  \
+        input[i] = (TYPE) data[i];                                                          \
+    }                                                                                       \
+                                                                                            \
+    __vec16_i1 mask = __vec16_i1(copy_m[0],  copy_m[1],  copy_m[2],  copy_m[3],             \
+                                 copy_m[4],  copy_m[5],  copy_m[6],  copy_m[7],             \
+                                 copy_m[8],  copy_m[9],  copy_m[10], copy_m[11],            \
+                                 copy_m[12], copy_m[13], copy_m[14], copy_m[15]);           \
+                                                                                            \
+    FUNC_CALL(base, scale, offsets, input, mask);                                           \
+                                                                                            \
+    int err_counter = 0;                                                                    \
+    for (int i = 0; i < 16; i++){                                                           \
+        if (m[i] != 0 && *b[i] != data[i])                                                  \
+            err_counter++;                                                                  \
+    }                                                                                       \
+                                                                                            \
+    if (err_counter != 0)                                                                   \
+        printf(" errors %d\n", err_counter);                                                \
+    else                                                                                    \
+        printf(" no fails\n");                                                              \
+                                                                                            \
+    for (int i = 0; i < 16; i++)                                                            \
+        free(b[i]);                                                                         \
+                                                                                            \
+}
+
+SCATTER_OFFSETS(int32_t, __vec16_i32, double , __vec16_d  , scatter_base_offsets32_double, __scatter_base_offsets32_double)
+SCATTER_OFFSETS(int32_t, __vec16_i32, float  , __vec16_f  , scatter_base_offsets32_float , __scatter_base_offsets32_float)
+SCATTER_OFFSETS(int32_t, __vec16_i32, int8_t , __vec16_i8 , scatter_base_offsets32_i8    , __scatter_base_offsets32_i8)
+SCATTER_OFFSETS(int32_t, __vec16_i32, int16_t, __vec16_i16, scatter_base_offsets32_i16   , __scatter_base_offsets32_i16)
+SCATTER_OFFSETS(int32_t, __vec16_i32, int32_t, __vec16_i32, scatter_base_offsets32_i32   , __scatter_base_offsets32_i32)
+SCATTER_OFFSETS(int32_t, __vec16_i32, int64_t, __vec16_i64, scatter_base_offsets32_i64   , __scatter_base_offsets32_i64)
+
+SCATTER_OFFSETS(int64_t, __vec16_i64, double , __vec16_d  , scatter_base_offsets64_double, __scatter_base_offsets64_double)
+SCATTER_OFFSETS(int64_t, __vec16_i64, float  , __vec16_f  , scatter_base_offsets64_float , __scatter_base_offsets64_float)
+SCATTER_OFFSETS(int64_t, __vec16_i64, int8_t , __vec16_i8 , scatter_base_offsets64_i8    , __scatter_base_offsets64_i8)
+SCATTER_OFFSETS(int64_t, __vec16_i64, int16_t, __vec16_i16, scatter_base_offsets64_i16   , __scatter_base_offsets64_i16)
+SCATTER_OFFSETS(int64_t, __vec16_i64, int32_t, __vec16_i32, scatter_base_offsets64_i32   , __scatter_base_offsets64_i32)
+SCATTER_OFFSETS(int64_t, __vec16_i64, int64_t, __vec16_i64, scatter_base_offsets64_i64   , __scatter_base_offsets64_i64)
+
 /*
-#define SCATTER(GATHER_SCALAR_TYPE, GATHER_VEC_TYPE, TYPE, VEC_TYPE, FUNC_NAME, FUNC_CALL)  \
-void FUNC_NAME(TYPE *data, int *m) {
-    printf (#FUNC_NAME, ":");
+void scatter_base_offsets32_i8(int8_t *data, int *m) {
+    printf ("scatter_base_offsets32_i8:");
 
-    TYPE copy_m[16];
-    for (int i = 0; i < 16; i++) {
+    int8_t copy_m[16];
+    for (int i = 0; i < 16; i++)
         copy_m[i] = m[i];
-    }
 
-    GATHER_VEC_TYPE ptrs;
-    VEC_TYPE input;
-    TYPE *b[16];
-    allocator(b);
+    int8_t *b[16];
+    allocator<int8_t>(b);
+    uint8_t *base = (uint8_t*) b[0];
+    uint32_t scale = sizeof(int8_t);
+    __vec16_i32 offsets;
+    __vec16_i8 input;
     for (int i = 0; i < 16; i++) {
-        ptrs[i] = (GATHER_VEC_TYPE) b[i];
-        input[i] = data[i];
+        offsets[i] = (int32_t) ((b[i] - b[0]));
+        input[i] = (int8_t) data[i];
     }
 
     __vec16_i1 mask = __vec16_i1(copy_m[0],  copy_m[1],  copy_m[2],  copy_m[3],
                                  copy_m[4],  copy_m[5],  copy_m[6],  copy_m[7],
                                  copy_m[8],  copy_m[9],  copy_m[10], copy_m[11],
                                  copy_m[12], copy_m[13], copy_m[14], copy_m[15]);
+   
+    printf("\n base: %d, scale: %d\n offsets   |  input  |  b[i]\n", base, scale);
+    for (int i = 0; i < 16; i++) 
+        printf ("%10d | %10d | %10d\n", offsets[i], input[i], b[i]);
+    printf ("-------------------------------------------");
+    fflush(stdout);
+    __scatter_base_offsets32_i8(base, scale, offsets, input, mask);
 
-    FUNC_CALL(ptrs, input, mask);
-    
     int err_counter = 0;
     for (int i = 0; i < 16; i++){
-        TYPE *p =  (TYPE*) ptrs[i];
-        if (m[i] != 0 && *p  != data[i])
+        if (m[i] != 0 && *b[i] != data[i])
             err_counter++;
     }
-    
+
     if (err_counter != 0)
         printf(" errors %d\n", err_counter);
     else
         printf(" no fails\n");
-
-    printf("ptr    |    data|     ((uint*)&ptrs)[i]\n");
-    for (int i = 0; i < 16; i++){
-        TYPE *p =  (TYPE*) ptrs[i];
-        printf("%10d | %10d | %10d\n", ptrs[i], data[i], *p);
-    }
 
     for (int i = 0; i < 16; i++)
         free(b[i]);
