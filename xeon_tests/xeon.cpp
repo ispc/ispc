@@ -2,10 +2,12 @@
 #define __STDC_LIMIT_MACROS // enable intN_t limits from stdint.h
 #include <stdint.h>
 
+#include "templ.h"
+
 #ifdef KNC_H
-    #include "knc.h"
+//    #include "knc.h"
 #else
-    #include "knc-i1x16.h"
+//    #include "knc-i1x16.h"
     #include <stdio.h>
 #endif
 
@@ -37,6 +39,21 @@ void gather_base_offsets64_i8    (int8_t  *i8 , int *mask);
 void gather_base_offsets64_i16   (int16_t *i16, int *mask);
 void gather_base_offsets64_i32   (int32_t *i32, int *mask);
 void gather_base_offsets64_i64   (int64_t *i64, int *mask);
+
+
+void scatter32_double(double  *d  , int *mask);
+void scatter32_float (float   *f  , int *mask);
+void scatter32_i8    (int8_t  *i8 , int *mask);
+void scatter32_i16   (int16_t *i16, int *mask);
+void scatter32_i32   (int32_t *i32, int *mask);
+void scatter32_i64   (int64_t *i64, int *mask);
+
+void scatter64_double(double  *d  , int *mask);
+void scatter64_float (float   *f  , int *mask);
+void scatter64_i8    (int8_t  *i8 , int *mask);
+void scatter64_i16   (int16_t *i16, int *mask);
+void scatter64_i32   (int32_t *i32, int *mask);
+void scatter64_i64   (int64_t *i64, int *mask);
 
 
 int main () {
@@ -102,7 +119,7 @@ int main () {
 #endif
 
     printf ("\n");
-    
+    /*
     gather32_double(d_32, mask);
     gather32_float(f_32, mask);   
     gather32_i8(i8, mask);
@@ -116,6 +133,7 @@ int main () {
     gather64_i16(i16, mask);
     gather64_i32(i32, mask);
     gather64_i64(i64, mask);
+
     
     gather_base_offsets32_double(d_32, mask);
     gather_base_offsets32_float(f_32, mask);
@@ -130,9 +148,24 @@ int main () {
     gather_base_offsets64_i16(i16, mask);
     gather_base_offsets64_i32(i32, mask);
     gather_base_offsets64_i64(i64, mask);
+    */
+    
+    scatter32_double(d_32, mask);
+    scatter32_float(f_32, mask);
+    scatter32_i8(i8, mask);
+    scatter32_i16(i16, mask);
+    scatter32_i32(i32, mask);
+    scatter32_i64(i64, mask);
+
+    scatter64_double(d_64, mask);
+    scatter64_float(f_64, mask);
+    scatter64_i8(i8, mask);
+    scatter64_i16(i16, mask);
+    scatter64_i32(i32, mask);
+    scatter64_i64(i64, mask);
 
 
-  return 0;
+return 0;
 }
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
