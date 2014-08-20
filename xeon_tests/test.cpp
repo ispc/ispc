@@ -356,3 +356,34 @@ MASKED_STORE(int8_t , __vec16_i8 , masked_store_i8    , __masked_store_i8)
 MASKED_STORE(int16_t, __vec16_i16, masked_store_i16   , __masked_store_i16)
 MASKED_STORE(int32_t, __vec16_i32, masked_store_i32   , __masked_store_i32)
 MASKED_STORE(int64_t, __vec16_i64, masked_store_i64   , __masked_store_i64)
+
+MASKED_STORE(double , __vec16_d  , masked_store_blend_double, __masked_store_blend_double)
+MASKED_STORE(float  , __vec16_f  , masked_store_blend_float , __masked_store_blend_float)
+MASKED_STORE(int8_t , __vec16_i8 , masked_store_blend_i8    , __masked_store_blend_i8)
+MASKED_STORE(int16_t, __vec16_i16, masked_store_blend_i16   , __masked_store_blend_i16)
+MASKED_STORE(int32_t, __vec16_i32, masked_store_blend_i32   , __masked_store_blend_i32)
+MASKED_STORE(int64_t, __vec16_i64, masked_store_blend_i64   , __masked_store_blend_i64)
+/////////////////////////////////////////////////////////////////////////////////////////////
+
+void movmsk(int *m) {
+    printf ("movmsk: ");
+    
+    int copy_m[16];
+    for (int i = 0; i < 16; i++) 
+        copy_m[i] = m[i];
+
+    __vec16_i1 mask = __vec16_i1(copy_m[0],  copy_m[1],  copy_m[2],  copy_m[3],
+                                 copy_m[4],  copy_m[5],  copy_m[6],  copy_m[7],
+                                 copy_m[8],  copy_m[9],  copy_m[10], copy_m[11],
+                                 copy_m[12], copy_m[13], copy_m[14], copy_m[15]);
+
+    __vec16_i1 copy_mask = mask;
+
+    __vec16_i1 output;
+    output = __movmsk(copy_mask);
+
+    if (output != mask)
+        printf(" error 1\n");
+    else
+        printf(" no fails\n");
+}

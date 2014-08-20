@@ -87,6 +87,16 @@ void masked_store_i32   (int32_t *i32, int *mask);
 void masked_store_i64   (int64_t *i64, int *mask);
 
 
+void masked_store_blend_double(double  *d  , int *mask);
+void masked_store_blend_float (float   *f  , int *mask);
+void masked_store_blend_i8    (int8_t  *i8 , int *mask);
+void masked_store_blend_i16   (int16_t *i16, int *mask);
+void masked_store_blend_i32   (int32_t *i32, int *mask);
+void masked_store_blend_i64   (int64_t *i64, int *mask);
+
+
+void movmsk(int *mask);
+
 int main () {
     printf ("Start\n");
 // Prepare input data
@@ -226,6 +236,18 @@ int main () {
     masked_store_i16(i16, mask);
     masked_store_i32(i32, mask);
     masked_store_i64(i64, mask);
+
+
+    masked_store_blend_double(d_32, mask);
+    masked_store_blend_float(f_32, mask);
+    masked_store_blend_i8(i8, mask);
+    masked_store_blend_i16(i16, mask);
+    masked_store_blend_i32(i32, mask);
+    masked_store_blend_i64(i64, mask);
+
+    
+    movmsk(mask);
+
 
 return 0;
 }
