@@ -71,6 +71,14 @@ void scatter_base_offsets64_i32   (int32_t *i32, int *mask);
 void scatter_base_offsets64_i64   (int64_t *i64, int *mask);
 
 
+void masked_load_double(double  *d  , int *mask);
+void masked_load_float (float   *f  , int *mask);
+void masked_load_i8    (int8_t  *i8 , int *mask);
+void masked_load_i16   (int16_t *i16, int *mask);
+void masked_load_i32   (int32_t *i32, int *mask);
+void masked_load_i64   (int64_t *i64, int *mask);
+
+
 int main () {
     printf ("Start\n");
 // Prepare input data
@@ -134,6 +142,7 @@ int main () {
 #endif
 
     printf ("\n");
+    
     /*
     gather32_double(d_32, mask);
     gather32_float(f_32, mask);   
@@ -153,7 +162,7 @@ int main () {
     gather_base_offsets32_double(d_32, mask);
     gather_base_offsets32_float(f_32, mask);
     gather_base_offsets32_i8(i8, mask);
-    //gather_base_offsets32_i16(i16, mask); segfault if offsets[i] < 0
+    gather_base_offsets32_i16(i16, mask); // modify define with type conversion(int32_t)
     gather_base_offsets32_i32(i32, mask);
     gather_base_offsets32_i64(i64, mask);
 
@@ -178,14 +187,14 @@ int main () {
     scatter64_i16(i16, mask);
     scatter64_i32(i32, mask);
     scatter64_i64(i64, mask);
-    */
+    
 
     scatter_base_offsets32_double(d_32, mask);
     scatter_base_offsets32_float(f_32, mask);
-    //scatter_base_offsets32_i8(i8, mask); cause seagfault 
-    //scatter_base_offsets32_i16(i16, mask); cause seagfault
+    scatter_base_offsets32_i8(i8, mask); // modify define with type conversion(int32_t)
+    scatter_base_offsets32_i16(i16, mask); // modify define with type conversion(int32_t)
     scatter_base_offsets32_i32(i32, mask);
-    //scatter_base_offsets32_i64(i64, mask); cause seagfault
+    scatter_base_offsets32_i64(i64, mask); // modify define with type conversion(int32_t)
 
     scatter_base_offsets64_double(d_64, mask);
     scatter_base_offsets64_float(f_64, mask);
@@ -193,6 +202,15 @@ int main () {
     scatter_base_offsets64_i16(i16, mask);
     scatter_base_offsets64_i32(i32, mask);
     scatter_base_offsets64_i64(i64, mask);
+    */    
+    
+    masked_load_double(d_32, mask);
+    masked_load_float(f_32, mask);
+    masked_load_i8(i8, mask);
+    masked_load_i16(i16, mask);
+    masked_load_i32(i32, mask);
+    masked_load_i64(i64, mask);
+
 
 return 0;
 }
