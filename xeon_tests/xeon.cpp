@@ -79,6 +79,14 @@ void masked_load_i32   (int32_t *i32, int *mask);
 void masked_load_i64   (int64_t *i64, int *mask);
 
 
+void masked_store_double(double  *d  , int *mask);
+void masked_store_float (float   *f  , int *mask);
+void masked_store_i8    (int8_t  *i8 , int *mask);
+void masked_store_i16   (int16_t *i16, int *mask);
+void masked_store_i32   (int32_t *i32, int *mask);
+void masked_store_i64   (int64_t *i64, int *mask);
+
+
 int main () {
     printf ("Start\n");
 // Prepare input data
@@ -143,7 +151,7 @@ int main () {
 
     printf ("\n");
     
-    /*
+    
     gather32_double(d_32, mask);
     gather32_float(f_32, mask);   
     gather32_i8(i8, mask);
@@ -202,7 +210,7 @@ int main () {
     scatter_base_offsets64_i16(i16, mask);
     scatter_base_offsets64_i32(i32, mask);
     scatter_base_offsets64_i64(i64, mask);
-    */    
+        
     
     masked_load_double(d_32, mask);
     masked_load_float(f_32, mask);
@@ -211,6 +219,13 @@ int main () {
     masked_load_i32(i32, mask);
     masked_load_i64(i64, mask);
 
+
+    masked_store_double(d_32, mask);
+    masked_store_float(f_32, mask);
+    masked_store_i8(i8, mask);
+    masked_store_i16(i16, mask);
+    masked_store_i32(i32, mask);
+    masked_store_i64(i64, mask);
 
 return 0;
 }

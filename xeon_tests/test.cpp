@@ -222,10 +222,10 @@ void FUNC_NAME(TYPE *data, int *m) {                                            
     allocator<TYPE>(b);                                                                     \
     uint8_t *base = (uint8_t*) b[0];                                                        \
     uint32_t scale = sizeof(TYPE);                                                          \
-    SCATTER_VEC_TYPE offsets;                                                                \
+    SCATTER_VEC_TYPE offsets;                                                               \
     VEC_TYPE input;                                                                         \
     for (int i = 0; i < 16; i++) {                                                          \
-        offsets[i] = (SCATTER_SCALAR_TYPE) ((b[i] - b[0]));                                  \
+        offsets[i] = (SCATTER_SCALAR_TYPE) ((b[i] - b[0]));                                 \
         input[i] = (TYPE) data[i];                                                          \
     }                                                                                       \
                                                                                             \
@@ -298,6 +298,7 @@ void FUNC_NAME(TYPE *data, int *m) {                                            
         if (m[i] != 0 && output[i] != data[i])                                              \
             err_counter++;                                                                  \
     }                                                                                       \
+                                                                                            \
     if (err_counter != 0)                                                                   \
         printf(" errors %d\n", err_counter);                                                \
     else                                                                                    \
@@ -313,4 +314,45 @@ MASKED_LOAD(int64_t, __vec16_i64, masked_load_i64   , __masked_load_i64)
 
 /////////////////////////////////////////////////////////////////////////////////////////////
 
+#define MASKED_STORE(TYPE, VEC_TYPE, FUNC_NAME, FUNC_CALL)                                  \
+void FUNC_NAME(TYPE *data, int *m) {                                                        \
+    printf (#FUNC_NAME, ":");                                                               \
+                                                                                            \
+    TYPE copy_data[16];                                                                     \
+    int copy_m[16];                                                                         \
+    for (int i = 0; i < 16; i++) {                                                          \
+        copy_data[i] = data[i];                                                             \
+        copy_m[i] = m[i];                                                                   \
+    }                                                                                       \
+                                                                                            \
+    TYPE ptrs[16];                                                                          \
+    /* TODO: make unordered memory allocation*/                                             \
+    VEC_TYPE input;                                                                         \
+    for (int i = 0; i < 16; i++)                                                            \
+        input[i] = (TYPE) copy_data[i];                                                     \
+                                                                                            \
+    __vec16_i1 mask = __vec16_i1(copy_m[0],  copy_m[1],  copy_m[2],  copy_m[3],             \
+                                 copy_m[4],  copy_m[5],  copy_m[6],  copy_m[7],             \
+                                 copy_m[8],  copy_m[9],  copy_m[10], copy_m[11],            \
+                                 copy_m[12], copy_m[13], copy_m[14], copy_m[15]);           \
+                                                                                            \
+    FUNC_CALL(ptrs, input, mask);                                                           \
+                                                                                            \
+    int err_counter = 0;                                                                    \
+    for (int i = 0; i < 16; i++){                                                           \
+        if (m[i] != 0 && ptrs[i] != data[i])                                                \
+            err_counter++;                                                                  \
+    }                                                                                       \
+                                                                                            \
+    if (err_counter != 0)                                                                   \
+        printf(" errors %d\n", err_counter);                                                \
+    else                                                                                    \
+        printf(" no fails\n");                                                              \
+}
 
+MASKED_STORE(double , __vec16_d  , masked_store_double, __masked_store_double)
+MASKED_STORE(float  , __vec16_f  , masked_store_float , __masked_store_float)
+MASKED_STORE(int8_t , __vec16_i8 , masked_store_i8    , __masked_store_i8)
+MASKED_STORE(int16_t, __vec16_i16, masked_store_i16   , __masked_store_i16)
+MASKED_STORE(int32_t, __vec16_i32, masked_store_i32   , __masked_store_i32)
+MASKED_STORE(int64_t, __vec16_i64, masked_store_i64   , __masked_store_i64)
