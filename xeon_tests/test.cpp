@@ -159,6 +159,36 @@ STORE(int32_t, __vec16_i32, store_i32   , 64)
 STORE(int64_t, __vec16_i64, store_i64   , 128)
 
 /////////////////////////////////////////////////////////////////////////////////////////////
+#define SMEAR_TEST(TYPE, VEC_TYPE, FUNC_NAME, FUNC_CALL)                                    \
+void FUNC_NAME(TYPE *data) {                                                                \
+    printf (#FUNC_NAME, ":");                                                               \
+                                                                                            \
+    TYPE copy_data[16];                                                                     \
+    for (uint32_t i = 0; i < 16; i++)                                                       \
+        copy_data[i] = data[i];                                                             \
+                                                                                            \
+    VEC_TYPE output;                                                                        \
+    int err_counter = 0;                                                                    \
+    for (uint32_t i = 0; i < 16; i++) {                                                     \
+        output = FUNC_CALL<VEC_TYPE>(copy_data[i]);                                         \
+        for (uint32_t j = 0; j < 16; j++)                                                   \
+            if (__extract_element(output, j) != data[i])                                    \
+                err_counter++;                                                              \
+    }                                                                                       \
+    if (err_counter != 0)                                                                   \
+        printf(" errors %d\n", err_counter);                                                \
+    else                                                                                    \
+        printf(" no fails\n");                                                              \
+}
+
+SMEAR_TEST(double , __vec16_d  , smear_double, __smear_double)
+SMEAR_TEST(float  , __vec16_f  , smear_float , __smear_float)
+SMEAR_TEST(int8_t , __vec16_i8 , smear_i8    , __smear_i8)
+SMEAR_TEST(int16_t, __vec16_i16, smear_i16   , __smear_i16)
+SMEAR_TEST(int32_t, __vec16_i32, smear_i32   , __smear_i32)
+SMEAR_TEST(int64_t, __vec16_i64, smear_i64   , __smear_i64)
+
+/////////////////////////////////////////////////////////////////////////////////////////////
 
 #define GATHER(GATHER_SCALAR_TYPE, GATHER_VEC_TYPE, TYPE, VEC_TYPE, FUNC_NAME, FUNC_CALL)   \
 void FUNC_NAME(TYPE *data, int *m) {                                                        \

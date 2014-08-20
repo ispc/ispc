@@ -122,6 +122,14 @@ void store_i32   (int32_t *i32);
 void store_i64   (int64_t *i64);
 
 
+void smear_double(double  *d  );
+void smear_float (float   *f  );
+void smear_i8    (int8_t  *i8 );
+void smear_i16   (int16_t *i16);
+void smear_i32   (int32_t *i32);
+void smear_i64   (int64_t *i64);
+
+
 int main () {
     printf ("Start\n");
 // Prepare input data
@@ -296,8 +304,15 @@ int main () {
     store_i16(i16);
     store_i32(i32);
     store_i64(i64);
-    */
 
+
+    smear_double(d_32);
+    smear_float(f_32);
+    smear_i8(i8);
+    smear_i16(i16);
+    smear_i32(i32);
+    smear_i64(i64);
+    */
 
     return 0;
 }
