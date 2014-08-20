@@ -137,6 +137,15 @@ void setzero_i16   ();
 void setzero_i32   ();
 void setzero_i64   ();
 
+
+void select_double(double  *d  , int *mask);
+void select_float (float   *f  , int *mask);
+void select_i8    (int8_t  *i8 , int *mask);
+void select_i16   (int16_t *i16, int *mask);
+void select_i32   (int32_t *i32, int *mask);
+void select_i64   (int64_t *i64, int *mask);
+
+
 int main () {
     printf ("Start\n");
 // Prepare input data
@@ -327,10 +336,19 @@ int main () {
     setzero_i16();
     setzero_i32();
     setzero_i64();
+    
+
+    select_double(d_32, mask);
+    select_float(f_32, mask);
+    select_i8(i8, mask);
+    select_i16(i16, mask);
+    select_i32(i32, mask);
+    select_i64(i64, mask);    
     */
 
 
-    return 0;
+
+return 0;
 }
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////
 

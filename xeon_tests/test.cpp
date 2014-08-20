@@ -41,6 +41,10 @@ void allocator(T **array) {
         copy_m[i] = m[i];
     }
 
+    __vec16_i1 mask = __vec16_i1(copy_m[0],  copy_m[1],  copy_m[2],  copy_m[3],
+                                 copy_m[4],  copy_m[5],  copy_m[6],  copy_m[7],
+                                 copy_m[8],  copy_m[9],  copy_m[10], copy_m[11],
+                                 copy_m[12], copy_m[13], copy_m[14], copy_m[15]);
 
     int err_counter = 0;
     for (uint32_t i = 0; i < 16; i++){
@@ -213,6 +217,53 @@ SETZERO_TEST(__vec16_i8 , setzero_i8    , __setzero_i8)
 SETZERO_TEST(__vec16_i16, setzero_i16   , __setzero_i16)
 SETZERO_TEST(__vec16_i32, setzero_i32   , __setzero_i32)
 SETZERO_TEST(__vec16_i64, setzero_i64   , __setzero_i64)
+
+/////////////////////////////////////////////////////////////////////////////////////////////
+#define SELECT_TEST(TYPE, VEC_TYPE, FUNC_NAME)                                              \
+void FUNC_NAME(TYPE *data, int *m) {                                                        \
+    printf (#FUNC_NAME, ":");                                                               \
+                                                                                            \
+    TYPE copy_data[16];                                                                     \
+    int copy_m[16];                                                                         \
+    for (uint32_t i = 0; i < 16; i++) {                                                     \
+        copy_data[i] = data[i];                                                             \
+        copy_m[i] = m[i];                                                                   \
+    }                                                                                       \
+                                                                                            \
+    VEC_TYPE input1;                                                                        \
+    VEC_TYPE input2;                                                                        \
+    for (uint32_t i = 0; i < 16; i++) {                                                     \
+        __insert_element(&input1, i, (TYPE) copy_data[i]);                                  \
+        __insert_element(&input2, i, (TYPE) copy_data[i] / 2);                              \
+    }                                                                                       \
+                                                                                            \
+    __vec16_i1 mask = __vec16_i1(copy_m[0],  copy_m[1],  copy_m[2],  copy_m[3],             \
+                                 copy_m[4],  copy_m[5],  copy_m[6],  copy_m[7],             \
+                                 copy_m[8],  copy_m[9],  copy_m[10], copy_m[11],            \
+                                 copy_m[12], copy_m[13], copy_m[14], copy_m[15]);           \
+                                                                                            \
+    VEC_TYPE output;                                                                        \
+    output = __select(mask, input1, input2);                                                \
+                                                                                            \
+    int err_counter = 0;                                                                    \
+    for (uint32_t i = 0; i < 16; i++){                                                      \
+        if (m[i] != 0 && __extract_element(output, i) != data[i])                           \
+            err_counter++;                                                                  \
+        if (m[i] == 0 && __extract_element(output, i) != data[i] / 2)                       \
+            err_counter++;                                                                  \
+    }                                                                                       \
+    if (err_counter != 0)                                                                   \
+        printf(" errors %d\n", err_counter);                                                \
+    else                                                                                    \
+         printf(" no fails\n");                                                             \
+}
+
+SELECT_TEST(double , __vec16_d  , select_double)
+SELECT_TEST(float  , __vec16_f  , select_float )
+SELECT_TEST(int8_t , __vec16_i8 , select_i8    )
+SELECT_TEST(int16_t, __vec16_i16, select_i16   )
+SELECT_TEST(int32_t, __vec16_i32, select_i32   )
+SELECT_TEST(int64_t, __vec16_i64, select_i64   )
 
 /////////////////////////////////////////////////////////////////////////////////////////////
 
