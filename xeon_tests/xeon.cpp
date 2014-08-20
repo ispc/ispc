@@ -97,6 +97,14 @@ void masked_store_blend_i64   (int64_t *i64, int *mask);
 
 void movmsk(int *mask);
 
+
+void insert_extract_element_double(double  *d  );
+void insert_extract_element_float (float   *f  );
+void insert_extract_element_i8    (int8_t  *i8 );
+void insert_extract_element_i16   (int16_t *i16);
+void insert_extract_element_i32   (int32_t *i32);
+void insert_extract_element_i64   (int64_t *i64);
+
 int main () {
     printf ("Start\n");
 // Prepare input data
@@ -248,7 +256,13 @@ int main () {
     
     movmsk(mask);
 
-
+    
+    insert_extract_element_double(d_32);
+    insert_extract_element_float(f_32);
+    insert_extract_element_i8(i8);
+    insert_extract_element_i16(i16);
+    insert_extract_element_i32(i32);
+    insert_extract_element_i64(i64);
 return 0;
 }
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////

@@ -33,6 +33,63 @@ void allocator(T **array) {
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////
+/*
+    int8_t copy_data[16];
+    int copy_m[16];
+    for (uint32_t i = 0; i < 16; i++) {
+        copy_data[i] = data[i];
+        copy_m[i] = m[i];
+    }
+
+
+    int err_counter = 0;
+    for (uint32_t i = 0; i < 16; i++){
+        if (m[i] != 0 && __extract_element(output, i) != data[i])
+            err_counter++;
+    }
+    if (err_counter != 0)
+        printf(" errors %d\n", err_counter);
+    else
+         printf(" no fails\n");
+*/
+/////////////////////////////////////////////////////////////////////////////////////////////
+#define INSERT_EXTRACT_ELEMENT(TYPE, VEC_TYPE, FUNC_NAME)                                   \
+void FUNC_NAME(TYPE *data) {                                                                \
+    printf (#FUNC_NAME, ":");                                                               \
+                                                                                            \
+    TYPE copy_data[16];                                                                     \
+    for (uint32_t i = 0; i < 16; i++)                                                       \
+        copy_data[i] = data[i];                                                             \
+                                                                                            \
+    VEC_TYPE input;                                                                         \
+    for (uint32_t i = 0; i < 16; i++)                                                       \
+        __insert_element(&input, i, (TYPE)copy_data[i]);                                    \
+                                                                                            \
+    TYPE output[16];                                                                        \
+    for (uint32_t i = 0; i < 16; i++)                                                       \
+        output[i] = __extract_element(input, i);                                            \
+                                                                                            \
+    int err_counter = 0;                                                                    \
+    for (uint32_t i = 0; i < 16; i++){                                                      \
+        if (output[i] != data[i])                                                           \
+            err_counter++;                                                                  \
+        if (copy_data[i] != data[i])                                                        \
+            err_counter++;                                                                  \
+    }                                                                                       \
+    if (err_counter != 0)                                                                   \
+        printf(" errors %d\n", err_counter);                                                \
+    else                                                                                    \
+         printf(" no fails\n");                                                             \
+}
+
+INSERT_EXTRACT_ELEMENT(double , __vec16_d  , insert_extract_element_double)
+INSERT_EXTRACT_ELEMENT(float  , __vec16_f  , insert_extract_element_float )
+INSERT_EXTRACT_ELEMENT(int8_t , __vec16_i8 , insert_extract_element_i8    )
+INSERT_EXTRACT_ELEMENT(int16_t, __vec16_i16, insert_extract_element_i16   )
+INSERT_EXTRACT_ELEMENT(int32_t, __vec16_i32, insert_extract_element_i32   )
+INSERT_EXTRACT_ELEMENT(int64_t, __vec16_i64, insert_extract_element_i64   )
+
+/////////////////////////////////////////////////////////////////////////////////////////////
 
 #define GATHER(GATHER_SCALAR_TYPE, GATHER_VEC_TYPE, TYPE, VEC_TYPE, FUNC_NAME, FUNC_CALL)   \
 void FUNC_NAME(TYPE *data, int *m) {                                                        \
@@ -40,7 +97,7 @@ void FUNC_NAME(TYPE *data, int *m) {                                            
                                                                                             \
     TYPE copy_data[16];                                                                     \
     int copy_m[16];                                                                         \
-    for (int i = 0; i < 16; i++) {                                                          \
+    for (uint32_t i = 0; i < 16; i++) {                                                     \
         copy_data[i] = data[i];                                                             \
         copy_m[i] = m[i];                                                                   \
     }                                                                                       \
@@ -48,9 +105,9 @@ void FUNC_NAME(TYPE *data, int *m) {                                            
     GATHER_VEC_TYPE ptrs;                                                                   \
     TYPE *b[16];                                                                            \
     allocator<TYPE>(b);                                                                     \
-    for (int i = 0; i < 16; i++) {                                                          \
+    for (uint32_t i = 0; i < 16; i++) {                                                     \
         *b[i] = (TYPE) copy_data[i];                                                        \
-        ptrs[i] = (GATHER_SCALAR_TYPE) b[i];                                                \
+        __insert_element(&ptrs, i, (GATHER_SCALAR_TYPE)b[i]);                               \
     }                                                                                       \
                                                                                             \
     __vec16_i1 mask = __vec16_i1(copy_m[0],  copy_m[1],  copy_m[2],  copy_m[3],             \
@@ -62,8 +119,8 @@ void FUNC_NAME(TYPE *data, int *m) {                                            
     output = FUNC_CALL(ptrs, mask);                                                         \
                                                                                             \
     int err_counter = 0;                                                                    \
-    for (int i = 0; i < 16; i++){                                                           \
-        if (m[i] != 0 && output[i] != data[i])                                              \
+    for (uint32_t i = 0; i < 16; i++){                                                      \
+        if (m[i] != 0 && __extract_element(output, i) != data[i])                           \
             err_counter++;                                                                  \
     }                                                                                       \
     if (err_counter != 0)                                                                   \
@@ -71,7 +128,7 @@ void FUNC_NAME(TYPE *data, int *m) {                                            
     else                                                                                    \
          printf(" no fails\n");                                                             \
                                                                                             \
-    for (int i = 0; i < 16; i++)                                                            \
+    for (uint32_t i = 0; i < 16; i++)                                                       \
         free(b[i]);                                                                         \
 }
 
@@ -97,7 +154,7 @@ void FUNC_NAME(TYPE *data, int *m) {                                            
                                                                                             \
     TYPE copy_data[16];                                                                     \
     int copy_m[16];                                                                         \
-    for (int i = 0; i < 16; i++) {                                                          \
+    for (uint32_t i = 0; i < 16; i++) {                                                     \
         copy_data[i] = data[i];                                                             \
         copy_m[i] = m[i];                                                                   \
     }                                                                                       \
@@ -107,9 +164,9 @@ void FUNC_NAME(TYPE *data, int *m) {                                            
     uint8_t *base = (uint8_t*) b[0];                                                        \
     uint32_t scale = sizeof(TYPE);                                                          \
     GATHER_VEC_TYPE offsets;                                                                \
-    for (int i = 0; i < 16; i++) {                                                          \
+    for (uint32_t i = 0; i < 16; i++) {                                                     \
         *b[i] = (TYPE) copy_data[i];                                                        \
-        offsets[i] = (GATHER_SCALAR_TYPE) ((b[i] - b[0]));                                  \
+        __insert_element(&offsets, i, (GATHER_SCALAR_TYPE)(b[i] - b[0]));                   \
     }                                                                                       \
                                                                                             \
     __vec16_i1 mask = __vec16_i1(copy_m[0],  copy_m[1],  copy_m[2],  copy_m[3],             \
@@ -121,8 +178,8 @@ void FUNC_NAME(TYPE *data, int *m) {                                            
     output = FUNC_CALL(base, scale, offsets, mask);                                         \
                                                                                             \
     int err_counter = 0;                                                                    \
-    for (int i = 0; i < 16; i++){                                                           \
-        if (m[i] != 0 && output[i] != data[i])                                              \
+    for (uint32_t i = 0; i < 16; i++){                                                      \
+        if (m[i] != 0 && __extract_element(output, i) != data[i])                           \
             err_counter++;                                                                  \
     }                                                                                       \
                                                                                             \
@@ -131,7 +188,7 @@ void FUNC_NAME(TYPE *data, int *m) {                                            
     else                                                                                    \
         printf(" no fails\n");                                                              \
                                                                                             \
-    for (int i = 0; i < 16; i++)                                                            \
+    for (uint32_t i = 0; i < 16; i++)                                                       \
         free(b[i]);                                                                         \
                                                                                             \
 }
@@ -157,7 +214,7 @@ void FUNC_NAME(TYPE *data, int *m) {                                            
     printf (#FUNC_NAME, ":");                                                               \
                                                                                             \
     TYPE copy_m[16];                                                                        \
-    for (int i = 0; i < 16; i++) {                                                          \
+    for (uint32_t i = 0; i < 16; i++) {                                                     \
         copy_m[i] = m[i];                                                                   \
     }                                                                                       \
                                                                                             \
@@ -165,9 +222,9 @@ void FUNC_NAME(TYPE *data, int *m) {                                            
     VEC_TYPE input;                                                                         \
     TYPE *b[16];                                                                            \
     allocator(b);                                                                           \
-    for (int i = 0; i < 16; i++) {                                                          \
-        ptrs[i] = (SCATTER_SCALAR_TYPE) b[i];                                               \
-        input[i] = (TYPE) data[i];                                                          \
+    for (uint32_t i = 0; i < 16; i++) {                                                     \
+        __insert_element(&ptrs,  i, (SCATTER_SCALAR_TYPE) b[i]);                            \
+        __insert_element(&input, i, (TYPE) data[i]);                                        \
     }                                                                                       \
                                                                                             \
     __vec16_i1 mask = __vec16_i1(copy_m[0],  copy_m[1],  copy_m[2],  copy_m[3],             \
@@ -178,8 +235,8 @@ void FUNC_NAME(TYPE *data, int *m) {                                            
     FUNC_CALL(ptrs, input, mask);                                                           \
                                                                                             \
     int err_counter = 0;                                                                    \
-    for (int i = 0; i < 16; i++){                                                           \
-        TYPE *p =  (TYPE*) ptrs[i];                                                         \
+    for (uint32_t i = 0; i < 16; i++){                                                      \
+        TYPE *p =  (TYPE*) __extract_element(ptrs, i);                                      \
         if (m[i] != 0 && *p  != data[i])                                                    \
             err_counter++;                                                                  \
     }                                                                                       \
@@ -189,7 +246,7 @@ void FUNC_NAME(TYPE *data, int *m) {                                            
     else                                                                                    \
         printf(" no fails\n");                                                              \
                                                                                             \
-    for (int i = 0; i < 16; i++)                                                            \
+    for (uint32_t i = 0; i < 16; i++)                                                       \
         free(b[i]);                                                                         \
                                                                                             \
 }
@@ -215,7 +272,7 @@ void FUNC_NAME(TYPE *data, int *m) {                                            
     printf (#FUNC_NAME, ":");                                                               \
                                                                                             \
     TYPE copy_m[16];                                                                        \
-    for (int i = 0; i < 16; i++)                                                            \
+    for (uint32_t i = 0; i < 16; i++)                                                       \
         copy_m[i] = m[i];                                                                   \
                                                                                             \
     TYPE *b[16];                                                                            \
@@ -224,9 +281,9 @@ void FUNC_NAME(TYPE *data, int *m) {                                            
     uint32_t scale = sizeof(TYPE);                                                          \
     SCATTER_VEC_TYPE offsets;                                                               \
     VEC_TYPE input;                                                                         \
-    for (int i = 0; i < 16; i++) {                                                          \
-        offsets[i] = (SCATTER_SCALAR_TYPE) ((b[i] - b[0]));                                 \
-        input[i] = (TYPE) data[i];                                                          \
+    for (uint32_t i = 0; i < 16; i++) {                                                     \
+        __insert_element(&offsets, i, (SCATTER_SCALAR_TYPE) (b[i] - b[0]));                 \
+        __insert_element(&input,   i, (TYPE) data[i]);                                      \
     }                                                                                       \
                                                                                             \
     __vec16_i1 mask = __vec16_i1(copy_m[0],  copy_m[1],  copy_m[2],  copy_m[3],             \
@@ -237,7 +294,7 @@ void FUNC_NAME(TYPE *data, int *m) {                                            
     FUNC_CALL(base, scale, offsets, input, mask);                                           \
                                                                                             \
     int err_counter = 0;                                                                    \
-    for (int i = 0; i < 16; i++){                                                           \
+    for (uint32_t i = 0; i < 16; i++){                                                      \
         if (m[i] != 0 && *b[i] != data[i])                                                  \
             err_counter++;                                                                  \
     }                                                                                       \
@@ -247,7 +304,7 @@ void FUNC_NAME(TYPE *data, int *m) {                                            
     else                                                                                    \
         printf(" no fails\n");                                                              \
                                                                                             \
-    for (int i = 0; i < 16; i++)                                                            \
+    for (uint32_t i = 0; i < 16; i++)                                                       \
         free(b[i]);                                                                         \
                                                                                             \
 }
@@ -274,14 +331,13 @@ void FUNC_NAME(TYPE *data, int *m) {                                            
                                                                                             \
     TYPE copy_data[16];                                                                     \
     int copy_m[16];                                                                         \
-    for (int i = 0; i < 16; i++) {                                                          \
+    for (uint32_t i = 0; i < 16; i++) {                                                     \
         copy_data[i] = data[i];                                                             \
         copy_m[i] = m[i];                                                                   \
     }                                                                                       \
                                                                                             \
     TYPE ptrs[16];                                                                          \
-    /*TODO: make unordered memory allocation*/                                              \
-    for (int i = 0; i < 16; i++) {                                                          \
+    for (uint32_t i = 0; i < 16; i++) {                                                     \
         ptrs[i] = (TYPE) copy_data[i];                                                      \
     }                                                                                       \
                                                                                             \
@@ -294,8 +350,8 @@ void FUNC_NAME(TYPE *data, int *m) {                                            
     output = FUNC_CALL(ptrs, mask);                                                         \
                                                                                             \
     int err_counter = 0;                                                                    \
-    for (int i = 0; i < 16; i++){                                                           \
-        if (m[i] != 0 && output[i] != data[i])                                              \
+    for (uint32_t i = 0; i < 16; i++){                                                      \
+        if (m[i] != 0 && __extract_element(output, i) != data[i])                           \
             err_counter++;                                                                  \
     }                                                                                       \
                                                                                             \
@@ -320,16 +376,15 @@ void FUNC_NAME(TYPE *data, int *m) {                                            
                                                                                             \
     TYPE copy_data[16];                                                                     \
     int copy_m[16];                                                                         \
-    for (int i = 0; i < 16; i++) {                                                          \
+    for (uint32_t i = 0; i < 16; i++) {                                                     \
         copy_data[i] = data[i];                                                             \
         copy_m[i] = m[i];                                                                   \
     }                                                                                       \
                                                                                             \
     TYPE ptrs[16];                                                                          \
-    /* TODO: make unordered memory allocation*/                                             \
     VEC_TYPE input;                                                                         \
-    for (int i = 0; i < 16; i++)                                                            \
-        input[i] = (TYPE) copy_data[i];                                                     \
+    for (uint32_t i = 0; i < 16; i++)                                                       \
+        __insert_element(&input, i, (TYPE) copy_data[i]);                                   \
                                                                                             \
     __vec16_i1 mask = __vec16_i1(copy_m[0],  copy_m[1],  copy_m[2],  copy_m[3],             \
                                  copy_m[4],  copy_m[5],  copy_m[6],  copy_m[7],             \
@@ -339,7 +394,7 @@ void FUNC_NAME(TYPE *data, int *m) {                                            
     FUNC_CALL(ptrs, input, mask);                                                           \
                                                                                             \
     int err_counter = 0;                                                                    \
-    for (int i = 0; i < 16; i++){                                                           \
+    for (uint32_t i = 0; i < 16; i++){                                                      \
         if (m[i] != 0 && ptrs[i] != data[i])                                                \
             err_counter++;                                                                  \
     }                                                                                       \
@@ -369,7 +424,7 @@ void movmsk(int *m) {
     printf ("movmsk: ");
     
     int copy_m[16];
-    for (int i = 0; i < 16; i++) 
+    for (uint32_t i = 0; i < 16; i++) 
         copy_m[i] = m[i];
 
     __vec16_i1 mask = __vec16_i1(copy_m[0],  copy_m[1],  copy_m[2],  copy_m[3],
