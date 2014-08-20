@@ -189,6 +189,32 @@ SMEAR_TEST(int32_t, __vec16_i32, smear_i32   , __smear_i32)
 SMEAR_TEST(int64_t, __vec16_i64, smear_i64   , __smear_i64)
 
 /////////////////////////////////////////////////////////////////////////////////////////////
+#define SETZERO_TEST(VEC_TYPE, FUNC_NAME, FUNC_CALL)                                        \
+void FUNC_NAME() {                                                                          \
+    printf (#FUNC_NAME, ":");                                                               \
+                                                                                            \
+    VEC_TYPE output;                                                                        \
+    output = FUNC_CALL<VEC_TYPE>();                                                         \
+                                                                                            \
+    int err_counter = 0;                                                                    \
+    for (uint32_t i = 0; i < 16; i++) {                                                     \
+        if (__extract_element(output, i) != 0)                                              \
+            err_counter++;                                                                  \
+    }                                                                                       \
+    if (err_counter != 0)                                                                   \
+        printf(" errors %d\n", err_counter);                                                \
+    else                                                                                    \
+        printf(" no fails\n");                                                              \
+}
+
+SETZERO_TEST(__vec16_d  , setzero_double, __setzero_double)
+SETZERO_TEST(__vec16_f  , setzero_float , __setzero_float)
+SETZERO_TEST(__vec16_i8 , setzero_i8    , __setzero_i8)
+SETZERO_TEST(__vec16_i16, setzero_i16   , __setzero_i16)
+SETZERO_TEST(__vec16_i32, setzero_i32   , __setzero_i32)
+SETZERO_TEST(__vec16_i64, setzero_i64   , __setzero_i64)
+
+/////////////////////////////////////////////////////////////////////////////////////////////
 
 #define GATHER(GATHER_SCALAR_TYPE, GATHER_VEC_TYPE, TYPE, VEC_TYPE, FUNC_NAME, FUNC_CALL)   \
 void FUNC_NAME(TYPE *data, int *m) {                                                        \

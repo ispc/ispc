@@ -130,6 +130,13 @@ void smear_i32   (int32_t *i32);
 void smear_i64   (int64_t *i64);
 
 
+void setzero_double();
+void setzero_float ();
+void setzero_i8    ();
+void setzero_i16   ();
+void setzero_i32   ();
+void setzero_i64   ();
+
 int main () {
     printf ("Start\n");
 // Prepare input data
@@ -312,7 +319,16 @@ int main () {
     smear_i16(i16);
     smear_i32(i32);
     smear_i64(i64);
+
+    
+    setzero_double();
+    setzero_float();
+    setzero_i8();
+    setzero_i16();
+    setzero_i32();
+    setzero_i64();
     */
+
 
     return 0;
 }
