@@ -91,6 +91,75 @@ INSERT_EXTRACT_ELEMENT(int64_t, __vec16_i64, insert_extract_element_i64   )
 
 /////////////////////////////////////////////////////////////////////////////////////////////
 
+#define LOAD(TYPE, VEC_TYPE, FUNC_NAME, ALIGN_NUM)                                          \
+void FUNC_NAME(TYPE *data) {                                                                \
+    printf (#FUNC_NAME, ":");                                                               \
+                                                                                            \
+    TYPE copy_data[16];                                                                     \
+    for (uint32_t i = 0; i < 16; i++)                                                       \
+        copy_data[i] = data[i];                                                             \
+                                                                                            \
+    VEC_TYPE ptrs;                                                                          \
+    for (uint32_t i = 0; i < 16; i++)                                                       \
+        __insert_element(&ptrs, i, (TYPE)copy_data[i]);                                     \
+                                                                                            \
+    VEC_TYPE output;                                                                        \
+    output = __load<ALIGN_NUM>(&ptrs);                                                      \
+                                                                                            \
+    int err_counter = 0;                                                                    \
+    for (uint32_t i = 0; i < 16; i++){                                                      \
+        if (__extract_element(output, i) != data[i])                                        \
+            err_counter++;                                                                  \
+    }                                                                                       \
+    if (err_counter != 0)                                                                   \
+        printf(" errors %d\n", err_counter);                                                \
+    else                                                                                    \
+         printf(" no fails\n");                                                             \
+}
+
+LOAD(double , __vec16_d  , load_double, 128)
+LOAD(float  , __vec16_f  , load_float , 64)
+LOAD(int8_t , __vec16_i8 , load_i8    , 16)
+LOAD(int16_t, __vec16_i16, load_i16   , 32)
+LOAD(int32_t, __vec16_i32, load_i32   , 64)
+LOAD(int64_t, __vec16_i64, load_i64   , 128)
+
+/////////////////////////////////////////////////////////////////////////////////////////////
+#define STORE(TYPE, VEC_TYPE, FUNC_NAME, ALIGN_NUM)                                         \
+void FUNC_NAME(TYPE *data) {                                                                \
+    printf (#FUNC_NAME, ":");                                                               \
+                                                                                            \
+    TYPE copy_data[16];                                                                     \
+    for (uint32_t i = 0; i < 16; i++)                                                       \
+        copy_data[i] = data[i];                                                             \
+                                                                                            \
+    VEC_TYPE input;                                                                         \
+    for (uint32_t i = 0; i < 16; i++)                                                       \
+        __insert_element(&input, i, (TYPE)data[i]);                                         \
+                                                                                            \
+    VEC_TYPE output;                                                                        \
+    __store<ALIGN_NUM>(&output, input);                                                     \
+                                                                                            \
+    int err_counter = 0;                                                                    \
+    for (uint32_t i = 0; i < 16; i++){                                                      \
+        if (__extract_element(output, i) != data[i])                                        \
+            err_counter++;                                                                  \
+    }                                                                                       \
+    if (err_counter != 0)                                                                   \
+        printf(" errors %d\n", err_counter);                                                \
+    else                                                                                    \
+        printf(" no fails\n");                                                              \
+}
+
+STORE(double , __vec16_d  , store_double, 128)
+STORE(float  , __vec16_f  , store_float , 64)
+STORE(int8_t , __vec16_i8 , store_i8    , 16)
+STORE(int16_t, __vec16_i16, store_i16   , 32)
+STORE(int32_t, __vec16_i32, store_i32   , 64)
+STORE(int64_t, __vec16_i64, store_i64   , 128)
+
+/////////////////////////////////////////////////////////////////////////////////////////////
+
 #define GATHER(GATHER_SCALAR_TYPE, GATHER_VEC_TYPE, TYPE, VEC_TYPE, FUNC_NAME, FUNC_CALL)   \
 void FUNC_NAME(TYPE *data, int *m) {                                                        \
     printf (#FUNC_NAME, ":");                                                               \

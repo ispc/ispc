@@ -105,6 +105,23 @@ void insert_extract_element_i16   (int16_t *i16);
 void insert_extract_element_i32   (int32_t *i32);
 void insert_extract_element_i64   (int64_t *i64);
 
+
+void load_double(double  *d  );
+void load_float (float   *f  );
+void load_i8    (int8_t  *i8 );
+void load_i16   (int16_t *i16);
+void load_i32   (int32_t *i32);
+void load_i64   (int64_t *i64);
+
+
+void store_double(double  *d  );
+void store_float (float   *f  );
+void store_i8    (int8_t  *i8 );
+void store_i16   (int16_t *i16);
+void store_i32   (int32_t *i32);
+void store_i64   (int64_t *i64);
+
+
 int main () {
     printf ("Start\n");
 // Prepare input data
@@ -169,7 +186,7 @@ int main () {
 
     printf ("\n");
     
-    
+    /*
     gather32_double(d_32, mask);
     gather32_float(f_32, mask);   
     gather32_i8(i8, mask);
@@ -263,7 +280,26 @@ int main () {
     insert_extract_element_i16(i16);
     insert_extract_element_i32(i32);
     insert_extract_element_i64(i64);
-return 0;
+
+
+    load_double(d_32);
+    load_float(f_32);
+    load_i8(i8);
+    load_i16(i16);
+    load_i32(i32);
+    load_i64(i64);
+    
+
+    store_double(d_32);
+    store_float(f_32);
+    store_i8(i8);
+    store_i16(i16);
+    store_i32(i32);
+    store_i64(i64);
+    */
+
+
+    return 0;
 }
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
