@@ -301,6 +301,41 @@ BROADCAST_TEST(int32_t, __vec16_i32, broadcast_i32   )
 BROADCAST_TEST(int64_t, __vec16_i64, broadcast_i64   )
 
 /////////////////////////////////////////////////////////////////////////////////////////////
+#define ROTATE_TEST(TYPE, VEC_TYPE, FUNC_NAME)                                              \
+void FUNC_NAME(TYPE *data) {                                                                \
+    printf (#FUNC_NAME, ":");                                                               \
+                                                                                            \
+    TYPE copy_data[16];                                                                     \
+    for (uint32_t i = 0; i < 16; i++)                                                       \
+        copy_data[i] = data[i];                                                             \
+                                                                                            \
+    VEC_TYPE input;                                                                         \
+    for (uint32_t i = 0; i < 16; i++)                                                       \
+        __insert_element(&input, i, (TYPE) copy_data[i]);                                   \
+                                                                                            \
+    VEC_TYPE output;                                                                        \
+    int err_counter = 0;                                                                    \
+    for (uint32_t i = 0; i < 16; i++){                                                      \
+        output = __##FUNC_NAME(input, i);                                                   \
+        for (uint32_t j = 0; j < 16; j++){                                                  \
+            if (__extract_element(output, j) != data[(i + j) % 16])                         \
+                err_counter++;                                                              \
+        }                                                                                   \
+    }                                                                                       \
+    if (err_counter != 0)                                                                   \
+        printf(" errors %d\n", err_counter);                                                \
+    else                                                                                    \
+         printf(" no fails\n");                                                             \
+}
+
+ROTATE_TEST(double , __vec16_d  , rotate_double)
+ROTATE_TEST(float  , __vec16_f  , rotate_float )
+ROTATE_TEST(int8_t , __vec16_i8 , rotate_i8    )
+ROTATE_TEST(int16_t, __vec16_i16, rotate_i16   )
+ROTATE_TEST(int32_t, __vec16_i32, rotate_i32   )
+ROTATE_TEST(int64_t, __vec16_i64, rotate_i64   )
+
+/////////////////////////////////////////////////////////////////////////////////////////////
 
 #define GATHER(GATHER_SCALAR_TYPE, GATHER_VEC_TYPE, TYPE, VEC_TYPE, FUNC_NAME)              \
 void FUNC_NAME(TYPE *data, int *m) {                                                        \

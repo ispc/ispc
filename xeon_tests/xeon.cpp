@@ -154,6 +154,13 @@ void broadcast_i32   (int32_t *i32);
 void broadcast_i64   (int64_t *i64);
 
 
+void rotate_double(double  *d  );
+void rotate_float (float   *f  );
+void rotate_i8    (int8_t  *i8 );
+void rotate_i16   (int16_t *i16);
+void rotate_i32   (int32_t *i32);
+void rotate_i64   (int64_t *i64);\
+
 int main () {
     printf ("Start\n");
 // Prepare input data
@@ -218,7 +225,7 @@ int main () {
 
     printf ("\n");
     
-    
+    /*    
     gather32_double(d_32, mask);
     gather32_float(f_32, mask);   
     gather32_i8(i8, mask);
@@ -360,7 +367,14 @@ int main () {
     broadcast_i16(i16);
     broadcast_i32(i32);
     broadcast_i64(i64);
+    */
 
+    rotate_double(d_32);
+    rotate_float(f_32);
+    rotate_i8(i8);
+    rotate_i16(i16);
+    rotate_i32(i32);
+    rotate_i64(i64);
 return 0;
 }
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////
