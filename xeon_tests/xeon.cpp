@@ -86,7 +86,6 @@ void masked_store_i16   (int16_t *i16, int *mask);
 void masked_store_i32   (int32_t *i32, int *mask);
 void masked_store_i64   (int64_t *i64, int *mask);
 
-
 void masked_store_blend_double(double  *d  , int *mask);
 void masked_store_blend_float (float   *f  , int *mask);
 void masked_store_blend_i8    (int8_t  *i8 , int *mask);
@@ -175,22 +174,46 @@ void shuffle_float (float   *f  );
 void shuffle_i8    (int8_t  *i8 );
 void shuffle_i16   (int16_t *i16);
 void shuffle_i32   (int32_t *i32);
-void shuffle_i64   (int64_t *i64);
+
+
+void cast_i64_i32(int32_t *i32);
+void cast_i64_i16(int16_t *i16);
+void cast_i64_i8 (int8_t  *i8);
+void cast_i32_i16(int16_t *i16);
+void cast_i32_i8 (int8_t  *i8);
+void cast_i16_i8 (int8_t  *i8);
+
+void cast_ui64_ui32(uint32_t *ui32);
+void cast_ui64_ui16(uint16_t *ui16);
+void cast_ui64_ui8 (uint8_t  *ui8);
+void cast_ui32_ui16(uint16_t *ui16);
+void cast_ui32_ui8 (uint8_t  *ui8);
+void cast_ui16_ui8 (uint8_t  *ui8);
+
+void trunk_i32_i64(int64_t *i64);
+void trunk_i16_i64(int64_t *i64);
+void trunk_i8_i64 (int64_t *i64);
+void trunk_i16_i32(int32_t *i32);
+void trunk_i8_i32 (int32_t *i32);
+void trunk_i8_i16 (int16_t *i16);
 
 
 int main () {
     printf ("Start\n");
 // Prepare input data
     int mask [16];
-    double  d_32[16];
-    float   f_32[16];
-    double  d_64[16];
-    float   f_64[16];
-    int8_t i8 [16];
-    int16_t i16 [16];
-    int32_t i32 [16];
-    int64_t i64 [16];
-    
+    double   d_32[16];
+    float    f_32[16];
+    double   d_64[16];
+    float    f_64[16];
+    int8_t   i8 [16];
+    int16_t  i16 [16];
+    int32_t  i32 [16];
+    int64_t  i64 [16];
+    uint8_t  ui8 [16];
+    uint16_t ui16 [16];
+    uint32_t ui32 [16];
+    uint64_t ui64 [16]; 
     
     mask[0] = 1;
     mask[1] = 1;
@@ -219,15 +242,31 @@ int main () {
     i64[0] = INT64_MAX;
     i64[1] = INT64_MIN;
 
+    ui8[0] = UINT8_MAX;
+    ui8[1] = 0;
+
+    ui16[0] = UINT16_MAX;
+    ui16[1] = 0;
+
+    ui32[0] = UINT32_MAX;
+    ui32[1] = 0;
+
+    ui64[0] = INT64_MAX;
+    ui64[1] = INT64_MIN;
+
     for (int i = 2; i < 16; i++) {
         d_32[i] = (i + 1) * 2;
         f_32[i] = (i + 1) * 2;
         d_64[i] = (i + 1) * 2;
         f_64[i] = (i + 1) * 2;
-        i8[i] = (i + 1) * 2;
-        i16[i] = (i + 1) * 2;
-        i32[i] = (i + 1) * 2;
-        i64[i] = (i + 1) * 2;
+        i8  [i] = (i + 1) * 2;
+        i16 [i] = (i + 1) * 2;
+        i32 [i] = (i + 1) * 2;
+        i64 [i] = (i + 1) * 2;
+        ui8 [i] = (i + 1) * 2;
+        ui16[i] = (i + 1) * 2;
+        ui32[i] = (i + 1) * 2;
+        ui64[i] = (i + 1) * 2;
         if (i % 2 == 0)
             mask[i] = 0;
         else
@@ -318,7 +357,6 @@ int main () {
     masked_store_i32(i32, mask);
     masked_store_i64(i64, mask);
 
-
     masked_store_blend_double(d_32, mask);
     masked_store_blend_float(f_32, mask);
     masked_store_blend_i8(i8, mask);
@@ -400,16 +438,36 @@ int main () {
     shift_i16(i16);
     shift_i32(i32);
     shift_i64(i64);
-    */
+    
 
     shuffle_double(d_32);
     shuffle_float(f_32);
     shuffle_i8(i8);
     shuffle_i16(i16);
     shuffle_i32(i32);
-    //shuffle_i64(i64);
+    */
 
+    cast_i64_i32(i32);
+    cast_i64_i16(i16);
+    cast_i64_i8(i8);
+    cast_i32_i16(i16);
+    cast_i32_i8(i8);
+    cast_i16_i8(i8);
 
+    cast_ui64_ui32(ui32);
+    cast_ui64_ui16(ui16);
+    cast_ui64_ui8 (ui8);
+    cast_ui32_ui16(ui16);
+    cast_ui32_ui8 (ui8);
+    cast_ui16_ui8 (ui8);
+
+    trunk_i32_i64(i64);
+    trunk_i16_i64(i64);
+    trunk_i8_i64 (i64);
+    trunk_i16_i32(i32);
+    trunk_i8_i32 (i32);
+    trunk_i8_i16 (i16);
+        
 return 0;
 }
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////
