@@ -146,6 +146,14 @@ void select_i32   (int32_t *i32, int *mask);
 void select_i64   (int64_t *i64, int *mask);
 
 
+void broadcast_double(double  *d  );
+void broadcast_float (float   *f  );
+void broadcast_i8    (int8_t  *i8 );
+void broadcast_i16   (int16_t *i16);
+void broadcast_i32   (int32_t *i32);
+void broadcast_i64   (int64_t *i64);
+
+
 int main () {
     printf ("Start\n");
 // Prepare input data
@@ -346,7 +354,12 @@ int main () {
     select_i64(i64, mask);    
     */
 
-
+    broadcast_double(d_32);
+    broadcast_float(f_32);
+    broadcast_i8(i8);
+    broadcast_i16(i16);
+    broadcast_i32(i32);
+    broadcast_i64(i64);
 
 return 0;
 }
