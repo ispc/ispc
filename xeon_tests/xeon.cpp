@@ -170,6 +170,14 @@ void shift_i32   (int32_t *i32);
 void shift_i64   (int64_t *i64);
 
 
+void shuffle_double(double  *d  );
+void shuffle_float (float   *f  );
+void shuffle_i8    (int8_t  *i8 );
+void shuffle_i16   (int16_t *i16);
+void shuffle_i32   (int32_t *i32);
+void shuffle_i64   (int64_t *i64);
+
+
 int main () {
     printf ("Start\n");
 // Prepare input data
@@ -384,7 +392,6 @@ int main () {
     rotate_i16(i16);
     rotate_i32(i32);
     rotate_i64(i64);
-    */
 
 
     shift_double(d_32);
@@ -393,11 +400,21 @@ int main () {
     shift_i16(i16);
     shift_i32(i32);
     shift_i64(i64);
+    */
+
+    shuffle_double(d_32);
+    shuffle_float(f_32);
+    shuffle_i8(i8);
+    shuffle_i16(i16);
+    shuffle_i32(i32);
+    //shuffle_i64(i64);
+
+
 return 0;
 }
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-// Usefull staff
+// Usefull stuff
 /*
     uint32_t a_ = 65535;
 
