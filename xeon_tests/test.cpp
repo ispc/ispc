@@ -1,3 +1,4 @@
+// TODO: change input index in insert/extract
 #define __STDC_LIMIT_MACROS // enable intN_t limits from stdint.h
 #include <stdint.h>
 
@@ -219,6 +220,7 @@ SETZERO_TEST(__vec16_i32, setzero_i32   )
 SETZERO_TEST(__vec16_i64, setzero_i64   )
 
 /////////////////////////////////////////////////////////////////////////////////////////////
+
 #define SELECT_TEST(TYPE, VEC_TYPE, FUNC_NAME)                                              \
 void FUNC_NAME(TYPE *data, int *m) {                                                        \
     printf (#FUNC_NAME, ":");                                                               \
@@ -282,8 +284,13 @@ void FUNC_NAME(TYPE *data) {                                                    
     int err_counter = 0;                                                                    \
     for (uint32_t i = 0; i < 16; i++) {                                                     \
         output = __##FUNC_NAME(input, i);                                                   \
-       for (int32_t j = 0; j < 16; j++){                                                    \
+        for (int32_t j = 0; j < 16; j++){                                                   \
         if (__extract_element(output, j) != data[i])                                        \
+            err_counter++;                                                                  \
+        }                                                                                   \
+        output = __##FUNC_NAME(input, -i);                                                  \
+        for (int32_t j = 0; j < 16; j++){                                                   \
+        if (__extract_element(output, j) != data[(16 - i) % 16])                            \
             err_counter++;                                                                  \
         }                                                                                   \
     }                                                                                       \
@@ -318,7 +325,12 @@ void FUNC_NAME(TYPE *data) {                                                    
     for (uint32_t i = 0; i < 16; i++){                                                      \
         output = __##FUNC_NAME(input, i);                                                   \
         for (uint32_t j = 0; j < 16; j++){                                                  \
-            if (__extract_element(output, j) != data[(i + j) % 16])                         \
+            if (__extract_element(output, j) != data[(j + i) % 16])                         \
+                err_counter++;                                                              \
+        }                                                                                   \
+        output = __##FUNC_NAME(input, -i);                                                  \
+        for (uint32_t j = 0; j < 16; j++){                                                  \
+            if (__extract_element(output, j) != data[(j - i) % 16])                         \
                 err_counter++;                                                              \
         }                                                                                   \
     }                                                                                       \
@@ -334,6 +346,51 @@ ROTATE_TEST(int8_t , __vec16_i8 , rotate_i8    )
 ROTATE_TEST(int16_t, __vec16_i16, rotate_i16   )
 ROTATE_TEST(int32_t, __vec16_i32, rotate_i32   )
 ROTATE_TEST(int64_t, __vec16_i64, rotate_i64   )
+
+/////////////////////////////////////////////////////////////////////////////////////////////
+#define SHIFT_TEST(TYPE, VEC_TYPE, FUNC_NAME)                                               \
+void FUNC_NAME(TYPE *data) {                                                                \
+    printf (#FUNC_NAME, ":");                                                               \
+                                                                                            \
+    TYPE copy_data[16];                                                                     \
+    for (uint32_t i = 0; i < 16; i++)                                                       \
+        copy_data[i] = data[i];                                                             \
+                                                                                            \
+    VEC_TYPE input;                                                                         \
+    for (uint32_t i = 0; i < 16; i++)                                                       \
+        __insert_element(&input, i, (TYPE) copy_data[i]);                                   \
+                                                                                            \
+    VEC_TYPE output;                                                                        \
+    int err_counter = 0;                                                                    \
+    for (uint32_t i = 0; i < 16; i++){                                                      \
+        output = __##FUNC_NAME(input, i);                                                   \
+        for (uint32_t j = 0; j < 16; j++) {                                                 \
+            if ((j + i >=16 || j + i < 0) && __extract_element(output, j) != 0)             \
+                err_counter++;                                                              \
+            if (j + i < 16 && __extract_element(output, j) != data[i + j])                  \
+                err_counter++;                                                              \
+        }                                                                                   \
+                                                                                            \
+        output = __##FUNC_NAME(input, -i);                                                  \
+        for (uint32_t j = 0; j < 16; j++) {                                                 \
+            if ((j - i >=16 || j - i < 0) && __extract_element(output, j) != 0)             \
+                err_counter++;                                                              \
+            if (j - i < 16 && __extract_element(output, j) != data[j - i])                  \
+                err_counter++;                                                              \
+        }                                                                                   \
+    }                                                                                       \
+    if (err_counter != 0)                                                                   \
+        printf(" errors %d\n", err_counter);                                                \
+    else                                                                                    \
+         printf(" no fails\n");                                                             \
+}
+
+SHIFT_TEST(double , __vec16_d  , shift_double)
+SHIFT_TEST(float  , __vec16_f  , shift_float )
+SHIFT_TEST(int8_t , __vec16_i8 , shift_i8    )
+SHIFT_TEST(int16_t, __vec16_i16, shift_i16   )
+SHIFT_TEST(int32_t, __vec16_i32, shift_i32   )
+SHIFT_TEST(int64_t, __vec16_i64, shift_i64   )
 
 /////////////////////////////////////////////////////////////////////////////////////////////
 

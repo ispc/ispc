@@ -159,7 +159,16 @@ void rotate_float (float   *f  );
 void rotate_i8    (int8_t  *i8 );
 void rotate_i16   (int16_t *i16);
 void rotate_i32   (int32_t *i32);
-void rotate_i64   (int64_t *i64);\
+void rotate_i64   (int64_t *i64);
+
+
+void shift_double(double  *d  );
+void shift_float (float   *f  );
+void shift_i8    (int8_t  *i8 );
+void shift_i16   (int16_t *i16);
+void shift_i32   (int32_t *i32);
+void shift_i64   (int64_t *i64);
+
 
 int main () {
     printf ("Start\n");
@@ -367,7 +376,7 @@ int main () {
     broadcast_i16(i16);
     broadcast_i32(i32);
     broadcast_i64(i64);
-    */
+    
 
     rotate_double(d_32);
     rotate_float(f_32);
@@ -375,6 +384,15 @@ int main () {
     rotate_i16(i16);
     rotate_i32(i32);
     rotate_i64(i64);
+    */
+
+
+    shift_double(d_32);
+    shift_float(f_32);
+    shift_i8(i8);
+    shift_i16(i16);
+    shift_i32(i32);
+    shift_i64(i64);
 return 0;
 }
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////
