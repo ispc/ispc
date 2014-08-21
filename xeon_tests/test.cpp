@@ -163,7 +163,7 @@ STORE(int32_t, __vec16_i32, store_i32   , 64)
 STORE(int64_t, __vec16_i64, store_i64   , 128)
 
 /////////////////////////////////////////////////////////////////////////////////////////////
-#define SMEAR_TEST(TYPE, VEC_TYPE, FUNC_NAME, FUNC_CALL)                                    \
+#define SMEAR_TEST(TYPE, VEC_TYPE, FUNC_NAME)                                               \
 void FUNC_NAME(TYPE *data) {                                                                \
     printf (#FUNC_NAME, ":");                                                               \
                                                                                             \
@@ -174,7 +174,7 @@ void FUNC_NAME(TYPE *data) {                                                    
     VEC_TYPE output;                                                                        \
     int err_counter = 0;                                                                    \
     for (uint32_t i = 0; i < 16; i++) {                                                     \
-        output = FUNC_CALL<VEC_TYPE>(copy_data[i]);                                         \
+        output = __##FUNC_NAME<VEC_TYPE>(copy_data[i]);                                     \
         for (uint32_t j = 0; j < 16; j++)                                                   \
             if (__extract_element(output, j) != data[i])                                    \
                 err_counter++;                                                              \
@@ -185,20 +185,20 @@ void FUNC_NAME(TYPE *data) {                                                    
         printf(" no fails\n");                                                              \
 }
 
-SMEAR_TEST(double , __vec16_d  , smear_double, __smear_double)
-SMEAR_TEST(float  , __vec16_f  , smear_float , __smear_float)
-SMEAR_TEST(int8_t , __vec16_i8 , smear_i8    , __smear_i8)
-SMEAR_TEST(int16_t, __vec16_i16, smear_i16   , __smear_i16)
-SMEAR_TEST(int32_t, __vec16_i32, smear_i32   , __smear_i32)
-SMEAR_TEST(int64_t, __vec16_i64, smear_i64   , __smear_i64)
+SMEAR_TEST(double , __vec16_d  , smear_double)
+SMEAR_TEST(float  , __vec16_f  , smear_float )
+SMEAR_TEST(int8_t , __vec16_i8 , smear_i8    )
+SMEAR_TEST(int16_t, __vec16_i16, smear_i16   )
+SMEAR_TEST(int32_t, __vec16_i32, smear_i32   )
+SMEAR_TEST(int64_t, __vec16_i64, smear_i64   )
 
 /////////////////////////////////////////////////////////////////////////////////////////////
-#define SETZERO_TEST(VEC_TYPE, FUNC_NAME, FUNC_CALL)                                        \
+#define SETZERO_TEST(VEC_TYPE, FUNC_NAME)                                                   \
 void FUNC_NAME() {                                                                          \
     printf (#FUNC_NAME, ":");                                                               \
                                                                                             \
     VEC_TYPE output;                                                                        \
-    output = FUNC_CALL<VEC_TYPE>();                                                         \
+    output = __##FUNC_NAME<VEC_TYPE>();                                                     \
                                                                                             \
     int err_counter = 0;                                                                    \
     for (uint32_t i = 0; i < 16; i++) {                                                     \
@@ -211,12 +211,12 @@ void FUNC_NAME() {                                                              
         printf(" no fails\n");                                                              \
 }
 
-SETZERO_TEST(__vec16_d  , setzero_double, __setzero_double)
-SETZERO_TEST(__vec16_f  , setzero_float , __setzero_float)
-SETZERO_TEST(__vec16_i8 , setzero_i8    , __setzero_i8)
-SETZERO_TEST(__vec16_i16, setzero_i16   , __setzero_i16)
-SETZERO_TEST(__vec16_i32, setzero_i32   , __setzero_i32)
-SETZERO_TEST(__vec16_i64, setzero_i64   , __setzero_i64)
+SETZERO_TEST(__vec16_d  , setzero_double)
+SETZERO_TEST(__vec16_f  , setzero_float )
+SETZERO_TEST(__vec16_i8 , setzero_i8    )
+SETZERO_TEST(__vec16_i16, setzero_i16   )
+SETZERO_TEST(__vec16_i32, setzero_i32   )
+SETZERO_TEST(__vec16_i64, setzero_i64   )
 
 /////////////////////////////////////////////////////////////////////////////////////////////
 #define SELECT_TEST(TYPE, VEC_TYPE, FUNC_NAME)                                              \
@@ -302,7 +302,7 @@ BROADCAST_TEST(int64_t, __vec16_i64, broadcast_i64   )
 
 /////////////////////////////////////////////////////////////////////////////////////////////
 
-#define GATHER(GATHER_SCALAR_TYPE, GATHER_VEC_TYPE, TYPE, VEC_TYPE, FUNC_NAME, FUNC_CALL)   \
+#define GATHER(GATHER_SCALAR_TYPE, GATHER_VEC_TYPE, TYPE, VEC_TYPE, FUNC_NAME)              \
 void FUNC_NAME(TYPE *data, int *m) {                                                        \
     printf (#FUNC_NAME, ":");                                                               \
                                                                                             \
@@ -327,7 +327,7 @@ void FUNC_NAME(TYPE *data, int *m) {                                            
                                  copy_m[12], copy_m[13], copy_m[14], copy_m[15]);           \
                                                                                             \
     VEC_TYPE output;                                                                        \
-    output = FUNC_CALL(ptrs, mask);                                                         \
+    output = __##FUNC_NAME(ptrs, mask);                                                     \
                                                                                             \
     int err_counter = 0;                                                                    \
     for (uint32_t i = 0; i < 16; i++){                                                      \
@@ -343,23 +343,23 @@ void FUNC_NAME(TYPE *data, int *m) {                                            
         free(b[i]);                                                                         \
 }
 
-GATHER(int32_t, __vec16_i32, double , __vec16_d  , gather32_double, __gather32_double)
-GATHER(int32_t, __vec16_i32, float  , __vec16_f  , gather32_float , __gather32_float)
-GATHER(int32_t, __vec16_i32, int8_t , __vec16_i8 , gather32_i8    , __gather32_i8)
-GATHER(int32_t, __vec16_i32, int16_t, __vec16_i16, gather32_i16   , __gather32_i16)
-GATHER(int32_t, __vec16_i32, int32_t, __vec16_i32, gather32_i32   , __gather32_i32)
-GATHER(int32_t, __vec16_i32, int64_t, __vec16_i64, gather32_i64   , __gather32_i64)
+GATHER(int32_t, __vec16_i32, double , __vec16_d  , gather32_double)
+GATHER(int32_t, __vec16_i32, float  , __vec16_f  , gather32_float )
+GATHER(int32_t, __vec16_i32, int8_t , __vec16_i8 , gather32_i8    )
+GATHER(int32_t, __vec16_i32, int16_t, __vec16_i16, gather32_i16   )
+GATHER(int32_t, __vec16_i32, int32_t, __vec16_i32, gather32_i32   )
+GATHER(int32_t, __vec16_i32, int64_t, __vec16_i64, gather32_i64   )
 
-GATHER(int64_t, __vec16_i64, double , __vec16_d  , gather64_double, __gather64_double)
-GATHER(int64_t, __vec16_i64, float  , __vec16_f  , gather64_float , __gather64_float)
-GATHER(int64_t, __vec16_i64, int8_t , __vec16_i8 , gather64_i8    , __gather64_i8)
-GATHER(int64_t, __vec16_i64, int16_t, __vec16_i16, gather64_i16   , __gather64_i16)
-GATHER(int64_t, __vec16_i64, int32_t, __vec16_i32, gather64_i32   , __gather64_i32)
-GATHER(int64_t, __vec16_i64, int64_t, __vec16_i64, gather64_i64   , __gather64_i64)
+GATHER(int64_t, __vec16_i64, double , __vec16_d  , gather64_double)
+GATHER(int64_t, __vec16_i64, float  , __vec16_f  , gather64_float )
+GATHER(int64_t, __vec16_i64, int8_t , __vec16_i8 , gather64_i8    )
+GATHER(int64_t, __vec16_i64, int16_t, __vec16_i16, gather64_i16   )
+GATHER(int64_t, __vec16_i64, int32_t, __vec16_i32, gather64_i32   )
+GATHER(int64_t, __vec16_i64, int64_t, __vec16_i64, gather64_i64   )
 
 /////////////////////////////////////////////////////////////////////////////////////////////
 
-#define GATHER_OFFSETS(GATHER_SCALAR_TYPE, GATHER_VEC_TYPE, TYPE, VEC_TYPE, FUNC_NAME, FUNC_CALL)   \
+#define GATHER_OFFSETS(GATHER_SCALAR_TYPE, GATHER_VEC_TYPE, TYPE, VEC_TYPE, FUNC_NAME)      \
 void FUNC_NAME(TYPE *data, int *m) {                                                        \
     printf (#FUNC_NAME, ":");                                                               \
                                                                                             \
@@ -386,7 +386,7 @@ void FUNC_NAME(TYPE *data, int *m) {                                            
                                  copy_m[12], copy_m[13], copy_m[14], copy_m[15]);           \
                                                                                             \
     VEC_TYPE output;                                                                        \
-    output = FUNC_CALL(base, scale, offsets, mask);                                         \
+    output = __##FUNC_NAME(base, scale, offsets, mask);                                     \
                                                                                             \
     int err_counter = 0;                                                                    \
     for (uint32_t i = 0; i < 16; i++){                                                      \
@@ -404,23 +404,23 @@ void FUNC_NAME(TYPE *data, int *m) {                                            
                                                                                             \
 }
 
-GATHER_OFFSETS(int32_t, __vec16_i32, double , __vec16_d  , gather_base_offsets32_double, __gather_base_offsets32_double)
-GATHER_OFFSETS(int32_t, __vec16_i32, float  , __vec16_f  , gather_base_offsets32_float , __gather_base_offsets32_float)
-GATHER_OFFSETS(int32_t, __vec16_i32, int8_t , __vec16_i8 , gather_base_offsets32_i8    , __gather_base_offsets32_i8)
-GATHER_OFFSETS(int32_t, __vec16_i32, int16_t, __vec16_i16, gather_base_offsets32_i16   , __gather_base_offsets32_i16)
-GATHER_OFFSETS(int32_t, __vec16_i32, int32_t, __vec16_i32, gather_base_offsets32_i32   , __gather_base_offsets32_i32)
-GATHER_OFFSETS(int32_t, __vec16_i32, int64_t, __vec16_i64, gather_base_offsets32_i64   , __gather_base_offsets32_i64)
+GATHER_OFFSETS(int32_t, __vec16_i32, double , __vec16_d  , gather_base_offsets32_double)
+GATHER_OFFSETS(int32_t, __vec16_i32, float  , __vec16_f  , gather_base_offsets32_float )
+GATHER_OFFSETS(int32_t, __vec16_i32, int8_t , __vec16_i8 , gather_base_offsets32_i8    )
+GATHER_OFFSETS(int32_t, __vec16_i32, int16_t, __vec16_i16, gather_base_offsets32_i16   )
+GATHER_OFFSETS(int32_t, __vec16_i32, int32_t, __vec16_i32, gather_base_offsets32_i32   )
+GATHER_OFFSETS(int32_t, __vec16_i32, int64_t, __vec16_i64, gather_base_offsets32_i64   )
 
-GATHER_OFFSETS(int64_t, __vec16_i64, double , __vec16_d  , gather_base_offsets64_double, __gather_base_offsets64_double)
-GATHER_OFFSETS(int64_t, __vec16_i64, float  , __vec16_f  , gather_base_offsets64_float , __gather_base_offsets64_float)
-GATHER_OFFSETS(int64_t, __vec16_i64, int8_t , __vec16_i8 , gather_base_offsets64_i8    , __gather_base_offsets64_i8)
-GATHER_OFFSETS(int64_t, __vec16_i64, int16_t, __vec16_i16, gather_base_offsets64_i16   , __gather_base_offsets64_i16)
-GATHER_OFFSETS(int64_t, __vec16_i64, int32_t, __vec16_i32, gather_base_offsets64_i32   , __gather_base_offsets64_i32)
-GATHER_OFFSETS(int64_t, __vec16_i64, int64_t, __vec16_i64, gather_base_offsets64_i64   , __gather_base_offsets64_i64)
+GATHER_OFFSETS(int64_t, __vec16_i64, double , __vec16_d  , gather_base_offsets64_double)
+GATHER_OFFSETS(int64_t, __vec16_i64, float  , __vec16_f  , gather_base_offsets64_float )
+GATHER_OFFSETS(int64_t, __vec16_i64, int8_t , __vec16_i8 , gather_base_offsets64_i8    )
+GATHER_OFFSETS(int64_t, __vec16_i64, int16_t, __vec16_i16, gather_base_offsets64_i16   )
+GATHER_OFFSETS(int64_t, __vec16_i64, int32_t, __vec16_i32, gather_base_offsets64_i32   )
+GATHER_OFFSETS(int64_t, __vec16_i64, int64_t, __vec16_i64, gather_base_offsets64_i64   )
 
 /////////////////////////////////////////////////////////////////////////////////////////////
 
-#define SCATTER(SCATTER_SCALAR_TYPE, SCATTER_VEC_TYPE, TYPE, VEC_TYPE, FUNC_NAME, FUNC_CALL)  \
+#define SCATTER(SCATTER_SCALAR_TYPE, SCATTER_VEC_TYPE, TYPE, VEC_TYPE, FUNC_NAME)           \
 void FUNC_NAME(TYPE *data, int *m) {                                                        \
     printf (#FUNC_NAME, ":");                                                               \
                                                                                             \
@@ -443,7 +443,7 @@ void FUNC_NAME(TYPE *data, int *m) {                                            
                                  copy_m[8],  copy_m[9],  copy_m[10], copy_m[11],            \
                                  copy_m[12], copy_m[13], copy_m[14], copy_m[15]);           \
                                                                                             \
-    FUNC_CALL(ptrs, input, mask);                                                           \
+    __##FUNC_NAME(ptrs, input, mask);                                                       \
                                                                                             \
     int err_counter = 0;                                                                    \
     for (uint32_t i = 0; i < 16; i++){                                                      \
@@ -462,23 +462,23 @@ void FUNC_NAME(TYPE *data, int *m) {                                            
                                                                                             \
 }
 
-SCATTER(int32_t, __vec16_i32, double , __vec16_d  , scatter32_double, __scatter32_double)
-SCATTER(int32_t, __vec16_i32, float  , __vec16_f  , scatter32_float , __scatter32_float)
-SCATTER(int32_t, __vec16_i32, int8_t , __vec16_i8 , scatter32_i8    , __scatter32_i8)
-SCATTER(int32_t, __vec16_i32, int16_t, __vec16_i16, scatter32_i16   , __scatter32_i16)
-SCATTER(int32_t, __vec16_i32, int32_t, __vec16_i32, scatter32_i32   , __scatter32_i32)
-SCATTER(int32_t, __vec16_i32, int64_t, __vec16_i64, scatter32_i64   , __scatter32_i64)
+SCATTER(int32_t, __vec16_i32, double , __vec16_d  , scatter32_double)
+SCATTER(int32_t, __vec16_i32, float  , __vec16_f  , scatter32_float )
+SCATTER(int32_t, __vec16_i32, int8_t , __vec16_i8 , scatter32_i8    )
+SCATTER(int32_t, __vec16_i32, int16_t, __vec16_i16, scatter32_i16   )
+SCATTER(int32_t, __vec16_i32, int32_t, __vec16_i32, scatter32_i32   )
+SCATTER(int32_t, __vec16_i32, int64_t, __vec16_i64, scatter32_i64   )
 
-SCATTER(int64_t, __vec16_i64, double , __vec16_d  , scatter64_double, __scatter64_double)
-SCATTER(int64_t, __vec16_i64, float  , __vec16_f  , scatter64_float , __scatter64_float)
-SCATTER(int64_t, __vec16_i64, int8_t , __vec16_i8 , scatter64_i8    , __scatter64_i8)
-SCATTER(int64_t, __vec16_i64, int16_t, __vec16_i16, scatter64_i16   , __scatter64_i16)
-SCATTER(int64_t, __vec16_i64, int32_t, __vec16_i32, scatter64_i32   , __scatter64_i32)
-SCATTER(int64_t, __vec16_i64, int64_t, __vec16_i64, scatter64_i64   , __scatter64_i64)
+SCATTER(int64_t, __vec16_i64, double , __vec16_d  , scatter64_double)
+SCATTER(int64_t, __vec16_i64, float  , __vec16_f  , scatter64_float )
+SCATTER(int64_t, __vec16_i64, int8_t , __vec16_i8 , scatter64_i8    )
+SCATTER(int64_t, __vec16_i64, int16_t, __vec16_i16, scatter64_i16   )
+SCATTER(int64_t, __vec16_i64, int32_t, __vec16_i32, scatter64_i32   )
+SCATTER(int64_t, __vec16_i64, int64_t, __vec16_i64, scatter64_i64   )
 
 /////////////////////////////////////////////////////////////////////////////////////////////
 
-#define SCATTER_OFFSETS(SCATTER_SCALAR_TYPE, SCATTER_VEC_TYPE, TYPE, VEC_TYPE, FUNC_NAME, FUNC_CALL)  \
+#define SCATTER_OFFSETS(SCATTER_SCALAR_TYPE, SCATTER_VEC_TYPE, TYPE, VEC_TYPE, FUNC_NAME)   \
 void FUNC_NAME(TYPE *data, int *m) {                                                        \
     printf (#FUNC_NAME, ":");                                                               \
                                                                                             \
@@ -502,7 +502,7 @@ void FUNC_NAME(TYPE *data, int *m) {                                            
                                  copy_m[8],  copy_m[9],  copy_m[10], copy_m[11],            \
                                  copy_m[12], copy_m[13], copy_m[14], copy_m[15]);           \
                                                                                             \
-    FUNC_CALL(base, scale, offsets, input, mask);                                           \
+    __##FUNC_NAME(base, scale, offsets, input, mask);                                       \
                                                                                             \
     int err_counter = 0;                                                                    \
     for (uint32_t i = 0; i < 16; i++){                                                      \
@@ -520,23 +520,23 @@ void FUNC_NAME(TYPE *data, int *m) {                                            
                                                                                             \
 }
 
-SCATTER_OFFSETS(int32_t, __vec16_i32, double , __vec16_d  , scatter_base_offsets32_double, __scatter_base_offsets32_double)
-SCATTER_OFFSETS(int32_t, __vec16_i32, float  , __vec16_f  , scatter_base_offsets32_float , __scatter_base_offsets32_float)
-SCATTER_OFFSETS(int32_t, __vec16_i32, int8_t , __vec16_i8 , scatter_base_offsets32_i8    , __scatter_base_offsets32_i8)
-SCATTER_OFFSETS(int32_t, __vec16_i32, int16_t, __vec16_i16, scatter_base_offsets32_i16   , __scatter_base_offsets32_i16)
-SCATTER_OFFSETS(int32_t, __vec16_i32, int32_t, __vec16_i32, scatter_base_offsets32_i32   , __scatter_base_offsets32_i32)
-SCATTER_OFFSETS(int32_t, __vec16_i32, int64_t, __vec16_i64, scatter_base_offsets32_i64   , __scatter_base_offsets32_i64)
+SCATTER_OFFSETS(int32_t, __vec16_i32, double , __vec16_d  , scatter_base_offsets32_double)
+SCATTER_OFFSETS(int32_t, __vec16_i32, float  , __vec16_f  , scatter_base_offsets32_float )
+SCATTER_OFFSETS(int32_t, __vec16_i32, int8_t , __vec16_i8 , scatter_base_offsets32_i8    )
+SCATTER_OFFSETS(int32_t, __vec16_i32, int16_t, __vec16_i16, scatter_base_offsets32_i16   )
+SCATTER_OFFSETS(int32_t, __vec16_i32, int32_t, __vec16_i32, scatter_base_offsets32_i32   )
+SCATTER_OFFSETS(int32_t, __vec16_i32, int64_t, __vec16_i64, scatter_base_offsets32_i64   )
 
-SCATTER_OFFSETS(int64_t, __vec16_i64, double , __vec16_d  , scatter_base_offsets64_double, __scatter_base_offsets64_double)
-SCATTER_OFFSETS(int64_t, __vec16_i64, float  , __vec16_f  , scatter_base_offsets64_float , __scatter_base_offsets64_float)
-SCATTER_OFFSETS(int64_t, __vec16_i64, int8_t , __vec16_i8 , scatter_base_offsets64_i8    , __scatter_base_offsets64_i8)
-SCATTER_OFFSETS(int64_t, __vec16_i64, int16_t, __vec16_i16, scatter_base_offsets64_i16   , __scatter_base_offsets64_i16)
-SCATTER_OFFSETS(int64_t, __vec16_i64, int32_t, __vec16_i32, scatter_base_offsets64_i32   , __scatter_base_offsets64_i32)
-SCATTER_OFFSETS(int64_t, __vec16_i64, int64_t, __vec16_i64, scatter_base_offsets64_i64   , __scatter_base_offsets64_i64)
+SCATTER_OFFSETS(int64_t, __vec16_i64, double , __vec16_d  , scatter_base_offsets64_double)
+SCATTER_OFFSETS(int64_t, __vec16_i64, float  , __vec16_f  , scatter_base_offsets64_float )
+SCATTER_OFFSETS(int64_t, __vec16_i64, int8_t , __vec16_i8 , scatter_base_offsets64_i8    )
+SCATTER_OFFSETS(int64_t, __vec16_i64, int16_t, __vec16_i16, scatter_base_offsets64_i16   )
+SCATTER_OFFSETS(int64_t, __vec16_i64, int32_t, __vec16_i32, scatter_base_offsets64_i32   )
+SCATTER_OFFSETS(int64_t, __vec16_i64, int64_t, __vec16_i64, scatter_base_offsets64_i64   )
 
 /////////////////////////////////////////////////////////////////////////////////////////////
 
-#define MASKED_LOAD(TYPE, VEC_TYPE, FUNC_NAME, FUNC_CALL)                                   \
+#define MASKED_LOAD(TYPE, VEC_TYPE, FUNC_NAME)                                              \
 void FUNC_NAME(TYPE *data, int *m) {                                                        \
     printf (#FUNC_NAME, ":");                                                               \
                                                                                             \
@@ -558,7 +558,7 @@ void FUNC_NAME(TYPE *data, int *m) {                                            
                                  copy_m[12], copy_m[13], copy_m[14], copy_m[15]);           \
                                                                                             \
     VEC_TYPE output;                                                                        \
-    output = FUNC_CALL(ptrs, mask);                                                         \
+    output = __##FUNC_NAME(ptrs, mask);                                                     \
                                                                                             \
     int err_counter = 0;                                                                    \
     for (uint32_t i = 0; i < 16; i++){                                                      \
@@ -572,16 +572,16 @@ void FUNC_NAME(TYPE *data, int *m) {                                            
         printf(" no fails\n");                                                              \
 }
 
-MASKED_LOAD(double , __vec16_d  , masked_load_double, __masked_load_double)
-MASKED_LOAD(float  , __vec16_f  , masked_load_float , __masked_load_float)
-MASKED_LOAD(int8_t , __vec16_i8 , masked_load_i8    , __masked_load_i8)
-MASKED_LOAD(int16_t, __vec16_i16, masked_load_i16   , __masked_load_i16)
-MASKED_LOAD(int32_t, __vec16_i32, masked_load_i32   , __masked_load_i32)
-MASKED_LOAD(int64_t, __vec16_i64, masked_load_i64   , __masked_load_i64)
+MASKED_LOAD(double , __vec16_d  , masked_load_double)
+MASKED_LOAD(float  , __vec16_f  , masked_load_float )
+MASKED_LOAD(int8_t , __vec16_i8 , masked_load_i8    )
+MASKED_LOAD(int16_t, __vec16_i16, masked_load_i16   )
+MASKED_LOAD(int32_t, __vec16_i32, masked_load_i32   )
+MASKED_LOAD(int64_t, __vec16_i64, masked_load_i64   )
 
 /////////////////////////////////////////////////////////////////////////////////////////////
 
-#define MASKED_STORE(TYPE, VEC_TYPE, FUNC_NAME, FUNC_CALL)                                  \
+#define MASKED_STORE(TYPE, VEC_TYPE, FUNC_NAME)                                             \
 void FUNC_NAME(TYPE *data, int *m) {                                                        \
     printf (#FUNC_NAME, ":");                                                               \
                                                                                             \
@@ -602,7 +602,7 @@ void FUNC_NAME(TYPE *data, int *m) {                                            
                                  copy_m[8],  copy_m[9],  copy_m[10], copy_m[11],            \
                                  copy_m[12], copy_m[13], copy_m[14], copy_m[15]);           \
                                                                                             \
-    FUNC_CALL(ptrs, input, mask);                                                           \
+    __##FUNC_NAME(ptrs, input, mask);                                                       \
                                                                                             \
     int err_counter = 0;                                                                    \
     for (uint32_t i = 0; i < 16; i++){                                                      \
@@ -616,19 +616,19 @@ void FUNC_NAME(TYPE *data, int *m) {                                            
         printf(" no fails\n");                                                              \
 }
 
-MASKED_STORE(double , __vec16_d  , masked_store_double, __masked_store_double)
-MASKED_STORE(float  , __vec16_f  , masked_store_float , __masked_store_float)
-MASKED_STORE(int8_t , __vec16_i8 , masked_store_i8    , __masked_store_i8)
-MASKED_STORE(int16_t, __vec16_i16, masked_store_i16   , __masked_store_i16)
-MASKED_STORE(int32_t, __vec16_i32, masked_store_i32   , __masked_store_i32)
-MASKED_STORE(int64_t, __vec16_i64, masked_store_i64   , __masked_store_i64)
+MASKED_STORE(double , __vec16_d  , masked_store_double)
+MASKED_STORE(float  , __vec16_f  , masked_store_float )
+MASKED_STORE(int8_t , __vec16_i8 , masked_store_i8    )
+MASKED_STORE(int16_t, __vec16_i16, masked_store_i16   )
+MASKED_STORE(int32_t, __vec16_i32, masked_store_i32   )
+MASKED_STORE(int64_t, __vec16_i64, masked_store_i64   )
 
-MASKED_STORE(double , __vec16_d  , masked_store_blend_double, __masked_store_blend_double)
-MASKED_STORE(float  , __vec16_f  , masked_store_blend_float , __masked_store_blend_float)
-MASKED_STORE(int8_t , __vec16_i8 , masked_store_blend_i8    , __masked_store_blend_i8)
-MASKED_STORE(int16_t, __vec16_i16, masked_store_blend_i16   , __masked_store_blend_i16)
-MASKED_STORE(int32_t, __vec16_i32, masked_store_blend_i32   , __masked_store_blend_i32)
-MASKED_STORE(int64_t, __vec16_i64, masked_store_blend_i64   , __masked_store_blend_i64)
+MASKED_STORE(double , __vec16_d  , masked_store_blend_double)
+MASKED_STORE(float  , __vec16_f  , masked_store_blend_float )
+MASKED_STORE(int8_t , __vec16_i8 , masked_store_blend_i8    )
+MASKED_STORE(int16_t, __vec16_i16, masked_store_blend_i16   )
+MASKED_STORE(int32_t, __vec16_i32, masked_store_blend_i32   )
+MASKED_STORE(int64_t, __vec16_i64, masked_store_blend_i64   )
 /////////////////////////////////////////////////////////////////////////////////////////////
 
 void movmsk(int *m) {

@@ -218,7 +218,7 @@ int main () {
 
     printf ("\n");
     
-    /*
+    
     gather32_double(d_32, mask);
     gather32_float(f_32, mask);   
     gather32_i8(i8, mask);
@@ -352,7 +352,7 @@ int main () {
     select_i16(i16, mask);
     select_i32(i32, mask);
     select_i64(i64, mask);    
-    */
+    
 
     broadcast_double(d_32);
     broadcast_float(f_32);
