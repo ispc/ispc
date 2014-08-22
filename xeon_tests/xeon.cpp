@@ -215,19 +215,49 @@ void cast_d_ui16(uint16_t *ui16);
 void cast_d_ui32(uint32_t *ui32);
 void cast_d_ui64(uint64_t *ui64);
 
+void cast_i8_f (float  *f_8);
+void cast_i16_f(float  *f_16);
+void cast_i32_f(float  *f_32);
+void cast_i64_f(float  *f_64);
+void cast_i8_d (double *d_8);
+void cast_i16_d(double *d_16);
+void cast_i32_d(double *d_32);
+void cast_i64_d(double *d_64);
+
+void cast_ui8_f (float  *f_u8);
+void cast_ui16_f(float  *f_u16);
+void cast_ui32_f(float  *f_u32);
+void cast_ui64_f(float  *f_u64);
+void cast_ui8_d (double *d_u8);
+void cast_ui16_d(double *d_u16);
+void cast_ui32_d(double *d_u32);
+void cast_ui64_d(double *d_u64);
+
 int main () {
     printf ("Start\n");
 // Prepare input data
-    int mask [16];
-    double   d_32[16];
-    float    f_32[16];
-    double   d_64[16];
-    float    f_64[16];
-    int8_t   i8 [16];
-    int16_t  i16 [16];
-    int32_t  i32 [16];
-    int64_t  i64 [16];
-    uint8_t  ui8 [16];
+    int      mask [16];
+    double   d_8  [16];
+    double   d_16 [16];
+    double   d_32 [16];
+    double   d_64 [16];
+    float    f_8  [16];
+    float    f_16 [16];
+    float    f_32 [16];
+    float    f_64 [16];
+    double   d_u8 [16];
+    double   d_u16[16];
+    double   d_u32[16];
+    double   d_u64[16];
+    float    f_u8 [16];
+    float    f_u16[16];
+    float    f_u32[16];
+    float    f_u64[16];
+    int8_t   i8   [16];
+    int16_t  i16  [16];
+    int32_t  i32  [16];
+    int64_t  i64  [16];
+    uint8_t  ui8  [16];
     uint16_t ui16 [16];
     uint32_t ui32 [16];
     uint64_t ui64 [16]; 
@@ -235,14 +265,50 @@ int main () {
     mask[0] = 1;
     mask[1] = 1;
 
+    d_u8[0] = UINT8_MAX;
+    d_u8[1] = 0;
+
+    d_u16[0] = UINT16_MAX;
+    d_u16[1] = 0;
+
+    d_u32[0] = UINT32_MAX;
+    d_u32[1] = 0;
+
+    d_u64[0] = UINT64_MAX;
+    d_u64[1] = 0;
+
+    f_u8[0] = UINT8_MAX;
+    f_u8[1] = 0;
+
+    f_u16[0] = UINT16_MAX;
+    f_u16[1] = 0;
+
+    f_u32[0] = UINT32_MAX;
+    f_u32[1] = 0;
+
+    f_u64[0] = UINT64_MAX;
+    f_u64[1] = 0;
+
+    d_8[0] = INT8_MAX;
+    d_8[1] = INT8_MIN;
+
+    d_16[0] = INT16_MAX;
+    d_16[1] = INT16_MIN;
+
     d_32[0] = INT32_MAX;
     d_32[1] = INT32_MIN;
 
-    f_32[0] = INT32_MAX;
-    f_32[1] = INT32_MIN;
-
     d_64[0] = INT64_MAX;
     d_64[1] = INT64_MIN;
+
+    f_8[0] = INT8_MAX;
+    f_8[1] = INT8_MIN;
+
+    f_16[0] = INT16_MAX;
+    f_16[1] = INT16_MIN;
+
+    f_32[0] = INT32_MAX;
+    f_32[1] = INT32_MIN;
 
     f_64[0] = INT64_MAX;
     f_64[1] = INT64_MIN;
@@ -272,18 +338,30 @@ int main () {
     ui64[1] = INT64_MIN;
 
     for (int i = 2; i < 16; i++) {
-        d_32[i] = (i + 1) * 2;
-        f_32[i] = (i + 1) * 2;
-        d_64[i] = (i + 1) * 2;
-        f_64[i] = (i + 1) * 2;
-        i8  [i] = (i + 1) * 2;
-        i16 [i] = (i + 1) * 2;
-        i32 [i] = (i + 1) * 2;
-        i64 [i] = (i + 1) * 2;
-        ui8 [i] = (i + 1) * 2;
-        ui16[i] = (i + 1) * 2;
-        ui32[i] = (i + 1) * 2;
-        ui64[i] = (i + 1) * 2;
+        d_u8 [i] = (i + 1) * 2;
+        f_u8 [i] = (i + 1) * 2;
+        d_u16[i] = (i + 1) * 2;
+        f_u16[i] = (i + 1) * 2;
+        d_u32[i] = (i + 1) * 2;
+        f_u32[i] = (i + 1) * 2;
+        d_u64[i] = (i + 1) * 2;
+        f_u64[i] = (i + 1) * 2;
+        d_8  [i] = (i + 1) * 2;
+        f_8  [i] = (i + 1) * 2;
+        d_16 [i] = (i + 1) * 2;
+        f_16 [i] = (i + 1) * 2;
+        d_32 [i] = (i + 1) * 2;
+        f_32 [i] = (i + 1) * 2;
+        d_64 [i] = (i + 1) * 2;
+        f_64 [i] = (i + 1) * 2;
+        i8   [i] = (i + 1) * 2;
+        i16  [i] = (i + 1) * 2;
+        i32  [i] = (i + 1) * 2;
+        i64  [i] = (i + 1) * 2;
+        ui8  [i] = (i + 1) * 2;
+        ui16 [i] = (i + 1) * 2;
+        ui32 [i] = (i + 1) * 2;
+        ui64 [i] = (i + 1) * 2;
         if (i % 2 == 0)
             mask[i] = 0;
         else
@@ -305,7 +383,7 @@ int main () {
     gather32_i16(i16, mask);
     gather32_i32(i32, mask);
     gather32_i64(i64, mask);
-
+    
     gather64_double(d_64, mask);
     gather64_float(f_64, mask);
     gather64_i8(i8, mask);
@@ -503,7 +581,23 @@ int main () {
     cast_d_ui32(ui32);
     cast_d_ui64(ui64);
 
-
+    cast_i8_f (f_8);
+    cast_i16_f(f_16);
+    cast_i32_f(f_32);
+    cast_i64_f(f_64);
+    cast_i8_d (d_8);
+    cast_i16_d(d_16);
+    cast_i32_d(d_32);
+    cast_i64_d(d_64);
+    
+    cast_ui8_f (f_u8);
+    cast_ui16_f(f_u16);
+    cast_ui32_f(f_u32);
+    cast_ui64_f(f_u64);
+    cast_ui8_d (d_u8);
+    cast_ui16_d(d_u16);
+    cast_ui32_d(d_u32);
+    cast_ui64_d(d_u64);
 
 return 0;
 }
