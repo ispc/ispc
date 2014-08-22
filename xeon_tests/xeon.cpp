@@ -386,6 +386,16 @@ void signed_greater_than_i64_and_mask (int64_t *i64, int *mask);
 void greater_than_double_and_mask(double *d, int *mask);
 void greater_than_float_and_mask (float  *f, int *mask);
 
+
+void cast_bits_scalar_ui32_f(float    *f_u32);
+void cast_bits_scalar_i32_f (float    *f_32);
+void cast_bits_scalar_f_ui32(uint32_t *ui32);
+void cast_bits_scalar_f_i32 (int32_t  *i32);
+void cast_bits_scalar_ui64_d(double   *d_u64);
+void cast_bits_scalar_i64_d (double   *d_64);
+void cast_bits_scalar_d_ui64(uint64_t *ui64);
+void cast_bits_scalar_d_i64 (int64_t  *i64);
+
 int main () {
     printf ("Start\n");
 // Prepare input data
@@ -708,7 +718,7 @@ int main () {
     setzero_i16();
     setzero_i32();
     setzero_i64();
-    */
+    
 
     select_double(d_32, mask);
     select_float(f_32, mask);
@@ -723,7 +733,8 @@ int main () {
     select_i16_cond(i16, mask);
     select_i32_cond(i32, mask);
     select_i64_cond(i64, mask);
-    /*
+    
+
     broadcast_double(d_32);
     broadcast_float(f_32);
     broadcast_i8(i8);
@@ -966,6 +977,15 @@ int main () {
     greater_than_double_and_mask(d_32, mask);
     greater_than_float_and_mask (f_32, mask);
     */
+
+    cast_bits_scalar_ui32_f(f_u32);
+    cast_bits_scalar_i32_f (f_32);
+    cast_bits_scalar_f_ui32(ui32);
+    cast_bits_scalar_f_i32 (i32);
+    cast_bits_scalar_ui64_d(d_u64);
+    cast_bits_scalar_i64_d (d_64);
+    cast_bits_scalar_d_ui64(ui64);
+    cast_bits_scalar_d_i64 (i64);
 return 0;
 }
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////

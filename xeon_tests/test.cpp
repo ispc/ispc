@@ -679,7 +679,7 @@ void FUNC_NAME(FROM *data) {                                                    
                                                                                             \
     int err_counter = 0;                                                                    \
     for (uint32_t i = 0; i < 16; i++){                                                      \
-        if (!(TO)__extract_element(output, i) != !(TO)data[i])                                \
+        if (!(TO)__extract_element(output, i) != !(TO)data[i])                              \
             err_counter++;                                                                  \
     }                                                                                       \
     if (err_counter != 0)                                                                   \
@@ -755,6 +755,46 @@ CAST_TEST(uint64_t, __vec16_i64, double, __vec16_d, cast_ui64_d, __cast_fptoui)
 
 CAST_TEST(float , __vec16_f, double, __vec16_d, cast_f_d, __cast_fptrunc)
 CAST_TEST(double, __vec16_d, float , __vec16_f, cast_d_f, __cast_fpext)
+
+/////////////////////////////////////////////////////////////////////////////////////////////
+
+#define CAST_BITS_SCALAR_TEST(TO, FROM, FUNC_NAME)                                          \
+void FUNC_NAME(FROM *data) {                                                                \
+    printf (#FUNC_NAME, ":");                                                               \
+                                                                                            \
+    FROM copy_data[16];                                                                     \
+    for (uint32_t i = 0; i < 16; i++)                                                       \
+        copy_data[i] = data[i];                                                             \
+                                                                                            \
+    union {                                                                                 \
+        TO to;                                                                              \
+        FROM from;                                                                          \
+    } u;                                                                                    \
+                                                                                            \
+    TO output;                                                                              \
+    int err_counter = 0;                                                                    \
+    for (uint32_t i = 0; i < 16; i++) {                                                     \
+        output = __cast_bits(output, copy_data[i]);                                         \
+        u.from = data[i];                                                                   \
+        if ((isnan(output) || isnan(u.to)) && (!isnan(output) != !isnan(u.to)))             \
+            err_counter++;                                                                  \
+        if (!isnan(output) && !isnan(u.to) && output != (TO) u.to)                          \
+            err_counter++;                                                                  \
+    }                                                                                       \
+    if (err_counter != 0)                                                                   \
+        printf(" errors %d\n", err_counter);                                                \
+    else                                                                                    \
+         printf(" no fails\n");                                                             \
+}
+
+CAST_BITS_SCALAR_TEST(uint32_t, float   , cast_bits_scalar_ui32_f)
+CAST_BITS_SCALAR_TEST(int32_t , float   , cast_bits_scalar_i32_f)
+CAST_BITS_SCALAR_TEST(float   , uint32_t, cast_bits_scalar_f_ui32)
+CAST_BITS_SCALAR_TEST(float   , int32_t , cast_bits_scalar_f_i32)
+CAST_BITS_SCALAR_TEST(uint64_t, double  , cast_bits_scalar_ui64_d)
+CAST_BITS_SCALAR_TEST(int64_t , double  , cast_bits_scalar_i64_d)
+CAST_BITS_SCALAR_TEST(double  , uint64_t, cast_bits_scalar_d_ui64)
+CAST_BITS_SCALAR_TEST(double  , int64_t , cast_bits_scalar_d_i64)
 
 /////////////////////////////////////////////////////////////////////////////////////////////
 
