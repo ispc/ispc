@@ -244,6 +244,76 @@ void cast_ui64_d(double *d_u64);
 void cast_f_d(double *d);
 void cast_d_f(float  *f);
 
+void __add(int8_t *a, int8_t *b);
+
+
+void equal_double(double  *d  );
+void equal_float (float   *f  );
+void equal_i1    (bool    *i1 );
+void equal_i8    (int8_t  *i8 );
+void equal_i16   (int16_t *i16);
+void equal_i32   (int32_t *i32);
+void equal_i64   (int64_t *i64);
+
+void not_equal_double(double  *d  );
+void not_equal_float (float   *f  );
+void not_equal_i8    (int8_t  *i8 );
+void not_equal_i16   (int16_t *i16);
+void not_equal_i32   (int32_t *i32);
+void not_equal_i64   (int64_t *i64);
+
+void unsigned_less_equal_i8  (uint8_t  *ui8 );
+void unsigned_less_equal_i16 (uint16_t *ui16);
+void unsigned_less_equal_i32 (uint32_t *ui32);
+void unsigned_less_equal_i64 (uint64_t *ui64);
+
+void signed_less_equal_i8  (int8_t  *i8 );
+void signed_less_equal_i16 (int16_t *i16);
+void signed_less_equal_i32 (int32_t *i32);
+void signed_less_equal_i64 (int64_t *i64);
+
+void less_equal_double(double *d);
+void less_equal_float (float  *f);
+
+void unsigned_greater_equal_i8  (uint8_t  *ui8 );
+void unsigned_greater_equal_i16 (uint16_t *ui16);
+void unsigned_greater_equal_i32 (uint32_t *ui32);
+void unsigned_greater_equal_i64 (uint64_t *ui64);
+
+void signed_greater_equal_i8  (int8_t  *i8 );
+void signed_greater_equal_i16 (int16_t *i16);
+void signed_greater_equal_i32 (int32_t *i32);
+void signed_greater_equal_i64 (int64_t *i64);
+
+void greater_equal_double(double *d);
+void greater_equal_float (float  *f);
+
+void unsigned_less_than_i8  (uint8_t  *ui8 );
+void unsigned_less_than_i16 (uint16_t *ui16);
+void unsigned_less_than_i32 (uint32_t *ui32);
+void unsigned_less_than_i64 (uint64_t *ui64);
+
+void signed_less_than_i8  (int8_t  *i8 );
+void signed_less_than_i16 (int16_t *i16);
+void signed_less_than_i32 (int32_t *i32);
+void signed_less_than_i64 (int64_t *i64);
+
+void less_than_double(double *d);
+void less_than_float (float  *f);
+
+void unsigned_greater_than_i8  (uint8_t  *ui8 );
+void unsigned_greater_than_i16 (uint16_t *ui16);
+void unsigned_greater_than_i32 (uint32_t *ui32);
+void unsigned_greater_than_i64 (uint64_t *ui64);
+
+void signed_greater_than_i8  (int8_t  *i8 );
+void signed_greater_than_i16 (int16_t *i16);
+void signed_greater_than_i32 (int32_t *i32);
+void signed_greater_than_i64 (int64_t *i64);
+
+void greater_than_double(double *d);
+void greater_than_float (float  *f);
+
 int main () {
     printf ("Start\n");
 // Prepare input data
@@ -353,38 +423,54 @@ int main () {
     ui64[1] = INT64_MIN;
 
     for (int i = 2; i < 16; i++) {
-        d_u8 [i] = (i + 1) * 2;
-        f_u8 [i] = (i + 1) * 2;
-        d_u16[i] = (i + 1) * 2;
-        f_u16[i] = (i + 1) * 2;
-        d_u32[i] = (i + 1) * 2;
-        f_u32[i] = (i + 1) * 2;
-        d_u64[i] = (i + 1) * 2;
-        f_u64[i] = (i + 1) * 2;
-        d_8  [i] = (i + 1) * 2;
-        f_8  [i] = (i + 1) * 2;
-        d_16 [i] = (i + 1) * 2;
-        f_16 [i] = (i + 1) * 2;
-        d_32 [i] = (i + 1) * 2;
-        f_32 [i] = (i + 1) * 2;
-        d_64 [i] = (i + 1) * 2;
-        f_64 [i] = (i + 1) * 2;
-        i8   [i] = (i + 1) * 2;
-        i16  [i] = (i + 1) * 2;
-        i32  [i] = (i + 1) * 2;
-        i64  [i] = (i + 1) * 2;
-        ui8  [i] = (i + 1) * 2;
-        ui16 [i] = (i + 1) * 2;
-        ui32 [i] = (i + 1) * 2;
-        ui64 [i] = (i + 1) * 2;
-        if (i % 2 == 0) {
-            mask[i] = 0;
+        d_u8 [i] = (i + 1) * 8;
+        f_u8 [i] = (i + 1) * 8;
+        d_u16[i] = (i + 1) * 16;
+        f_u16[i] = (i + 1) * 16;
+        d_u32[i] = (i + 1) * 32;
+        f_u32[i] = (i + 1) * 32;
+        d_u64[i] = (i + 1) * 64;
+        f_u64[i] = (i + 1) * 64;
+        ui8  [i] = (i + 1) * 8;
+        ui16 [i] = (i + 1) * 16;
+        ui32 [i] = (i + 1) * 32;
+        ui64 [i] = (i + 1) * 64;    
+
+        if (i % 3 == 0) {
+            d_8  [i] = (i + 1) * 8;
+            f_8  [i] = (i + 1) * 8;
+            d_16 [i] = (i + 1) * 16;
+            f_16 [i] = (i + 1) * 16;
+            d_32 [i] = (i + 1) * 32;
+            f_32 [i] = (i + 1) * 32;
+            d_64 [i] = (i + 1) * 64;
+            f_64 [i] = (i + 1) * 64;
+            i8   [i] = (i + 1) * 8;
+            i16  [i] = (i + 1) * 16;
+            i32  [i] = (i + 1) * 32;
+            i64  [i] = (i + 1) * 64;
             i1  [i] = false;
         }
         else {
-            mask[i] = 1;
+            d_8  [i] = -1 * (i + 1) * 8;
+            f_8  [i] = -1 * (i + 1) * 8;
+            d_16 [i] = -1 * (i + 1) * 16;
+            f_16 [i] = -1 * (i + 1) * 16;
+            d_32 [i] = -1 * (i + 1) * 32;
+            f_32 [i] = -1 * (i + 1) * 32;
+            d_64 [i] = -1 * (i + 1) * 64;
+            f_64 [i] = -1 * (i + 1) * 64;
+            i8   [i] = -1 * (i + 1) * 8;
+            i16  [i] = -1 * (i + 1) * 16;
+            i32  [i] = -1 * (i + 1) * 32;
+            i64  [i] = -1 * (i + 1) * 64;
             i1  [i] = true;
         }
+    
+        if (i % 2 == 0) 
+            mask[i] = 0;
+        else 
+            mask[i] = 1;
     }
 
 #ifdef KNC_H
@@ -392,7 +478,37 @@ int main () {
 #else
     printf ("Include knc-i1x16.h\n");
 #endif
-
+/*
+    for(int i = 0; i < 16; i++) {
+        printf("\n%d-----------------------------\n", i);
+        printf("int     :%d\n", mask [i]);
+        printf("double  :%f\n", d_8  [i]);
+        printf("double  :%f\n", d_16 [i]);
+        printf("double  :%f\n", d_32 [i]);
+        printf("double  :%f\n", d_64 [i]);
+        printf("float   :%f\n", f_8  [i]);
+        printf("float   :%f\n", f_16 [i]);
+        printf("float   :%f\n", f_32 [i]);
+        printf("float   :%f\n", f_64 [i]);
+        printf("double  :%f\n", d_u8 [i]);
+        printf("double  :%f\n", d_u16[i]);
+        printf("double  :%f\n", d_u32[i]);
+        printf("double  :%f\n", d_u64[i]);
+        printf("float   :%f\n", f_u8 [i]);
+        printf("float   :%f\n", f_u16[i]);
+        printf("float   :%f\n", f_u32[i]);
+        printf("float   :%f\n", f_u64[i]);
+        printf("bool    :%d\n", i1   [i]);
+        printf("int8_t  :%d\n", i8   [i]);
+        printf("int16_t :%d\n", i16  [i]);
+        printf("int32_t :%d\n", i32  [i]);
+        printf("int64_t :%d\n", i64  [i]);
+        printf("uint8_t :%d\n", ui8  [i]);
+        printf("uint16_t:%d\n", ui16 [i]);
+        printf("uint32_t:%d\n", ui32 [i]);
+        printf("uint64_t:%d\n", ui64 [i]);
+    }
+*/
     printf ("\n");
     
     /*
@@ -559,7 +675,7 @@ int main () {
     shuffle_i8(i8);
     shuffle_i16(i16);
     shuffle_i32(i32);
-    */
+    
 
     cast_i64_i32(i32);
     cast_i64_i16(i16);
@@ -635,8 +751,77 @@ int main () {
     cast_d_f(f_16);
     cast_d_f(f_32);
     cast_d_f(f_64);
-     
+    */  
 
+    //__add(i8, i8); 
+
+
+    equal_double(d_32);
+    equal_float (f_32);
+    equal_i1    (i1);
+    equal_i8    (i8);
+    equal_i16   (i16);
+    equal_i32   (i32);
+    equal_i64   (i64);
+
+    not_equal_double(d_32);
+    not_equal_float (f_32);
+    not_equal_i8    (i8);
+    not_equal_i16   (i16);
+    not_equal_i32   (i32);
+    not_equal_i64   (i64);
+
+    unsigned_less_equal_i8  (ui8);
+    unsigned_less_equal_i16 (ui16);
+    unsigned_less_equal_i32 (ui32);
+    unsigned_less_equal_i64 (ui64);
+
+    signed_less_equal_i8  (i8);
+    signed_less_equal_i16 (i16);
+    signed_less_equal_i32 (i32);
+    signed_less_equal_i64 (i64);
+
+    less_equal_double(d_32);
+    less_equal_float (f_32);
+
+    unsigned_greater_equal_i8  (ui8);
+    unsigned_greater_equal_i16 (ui16);
+    unsigned_greater_equal_i32 (ui32);
+    unsigned_greater_equal_i64 (ui64);
+
+    signed_greater_equal_i8  (i8);
+    signed_greater_equal_i16 (i16);
+    signed_greater_equal_i32 (i32);
+    signed_greater_equal_i64 (i64);
+
+    greater_equal_double(d_32);
+    greater_equal_float (f_32);
+
+    unsigned_less_than_i8  (ui8);
+    unsigned_less_than_i16 (ui16);
+    unsigned_less_than_i32 (ui32);
+    unsigned_less_than_i64 (ui64);
+
+    signed_less_than_i8  (i8);
+    signed_less_than_i16 (i16);
+    signed_less_than_i32 (i32);
+    signed_less_than_i64 (i64);
+
+    less_than_double(d_32);
+    less_than_float (f_32);
+
+    unsigned_greater_than_i8  (ui8);
+    unsigned_greater_than_i16 (ui16);
+    unsigned_greater_than_i32 (ui32);
+    unsigned_greater_than_i64 (ui64);
+
+    signed_greater_than_i8  (i8);
+    signed_greater_than_i16 (i16);
+    signed_greater_than_i32 (i32);
+    signed_greater_than_i64 (i64);
+
+    greater_than_double(d_32);
+    greater_than_float (f_32);
 return 0;
 }
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////

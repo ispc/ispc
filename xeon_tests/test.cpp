@@ -57,7 +57,141 @@ void allocator(T **array) {
     else
          printf(" no fails\n");
 */
+
 /////////////////////////////////////////////////////////////////////////////////////////////
+
+void __add(int8_t *a, int8_t *b) {
+    int8_t copy_a[16];
+    int8_t copy_b[16];
+    for (uint32_t i = 0; i < 16; i++){
+        copy_a[i] = a[i];
+        copy_b[i] = b[i];
+    }
+
+    __vec16_i8 input_a;
+    __vec16_i8 input_b;
+    for (uint32_t i = 0; i < 16; i++){
+        __insert_element(&input_a, i, (int8_t)copy_a[i]);
+        __insert_element(&input_b, i, (int8_t)copy_b[i]);
+    }
+
+    __vec16_i8 output;
+    output = __add(input_a, input_b);
+
+    int err_counter = 0;
+    for (uint32_t i = 2; i < 16; i++){/* from 2 because in overflow behavior is undefined */
+        if ((int8_t)__extract_element(output, i) != (int8_t)a[i] + (int8_t)b[i])
+            err_counter++;
+    }
+    if (err_counter != 0)
+        printf(" errors %d\n", err_counter);
+    else
+         printf(" no fails\n");
+
+}
+
+/////////////////////////////////////////////////////////////////////////////////////////////
+#define CMP(TYPE, VEC_TYPE, OP, FUNC_NAME)                                                  \
+void FUNC_NAME(TYPE *data) {                                                                \
+    printf (#FUNC_NAME, ":");                                                               \
+    TYPE copy_data[16];                                                                     \
+    for (uint32_t i = 0; i < 16; i++)                                                       \
+        copy_data[i] = data[i];                                                             \
+                                                                                            \
+    VEC_TYPE input_a;                                                                       \
+    VEC_TYPE input_b;                                                                       \
+    for (uint32_t i = 0; i < 16; i++){                                                      \
+        if (i % 2 == 0)                                                                     \
+            __insert_element(&input_a, i, 10);                                              \
+        else                                                                                \
+            __insert_element(&input_a, i, (TYPE)copy_data[i]);                              \
+        __insert_element(&input_b, i, (TYPE)copy_data[i]);                                  \
+    }                                                                                       \
+                                                                                            \
+    __vec16_i1 output;                                                                      \
+    output = __##FUNC_NAME(input_a, input_b);                                               \
+                                                                                            \
+    int err_counter = 0;                                                                    \
+    for (uint32_t i = 0; i < 16; i++){                                                      \
+        if (i % 2 == 0 && !__extract_element(output, i) != !(10 OP data[i]))                \
+            err_counter++;                                                                  \
+        if (i % 2 != 0 &&  !__extract_element(output, i) != !(data[i] OP data[i]))          \
+            err_counter++;                                                                  \
+    }                                                                                       \
+    if (err_counter != 0)                                                                   \
+        printf(" errors %d\n", err_counter);                                                \
+    else                                                                                    \
+         printf(" no fails\n");                                                             \
+}
+
+CMP(double , __vec16_d  , ==, equal_double)
+CMP(float  , __vec16_f  , ==, equal_float )
+CMP(bool   , __vec16_i1 , ==, equal_i1    ) // unique CMP for mask
+CMP(int8_t , __vec16_i8 , ==, equal_i8    )
+CMP(int16_t, __vec16_i16, ==, equal_i16   )
+CMP(int32_t, __vec16_i32, ==, equal_i32   )
+CMP(int64_t, __vec16_i64, ==, equal_i64   )
+
+CMP(double , __vec16_d  ,  !=, not_equal_double)
+CMP(float  , __vec16_f  ,  !=, not_equal_float )
+CMP(int8_t , __vec16_i8 ,  !=, not_equal_i8    )
+CMP(int16_t, __vec16_i16,  !=, not_equal_i16   )
+CMP(int32_t, __vec16_i32,  !=, not_equal_i32   )
+CMP(int64_t, __vec16_i64,  !=, not_equal_i64   )
+
+CMP(uint8_t , __vec16_i8 ,  <=, unsigned_less_equal_i8 )
+CMP(uint16_t, __vec16_i16,  <=, unsigned_less_equal_i16)
+CMP(uint32_t, __vec16_i32,  <=, unsigned_less_equal_i32)
+CMP(uint64_t, __vec16_i64,  <=, unsigned_less_equal_i64)
+
+CMP(int8_t , __vec16_i8 ,  <=, signed_less_equal_i8 )
+CMP(int16_t, __vec16_i16,  <=, signed_less_equal_i16)
+CMP(int32_t, __vec16_i32,  <=, signed_less_equal_i32)
+CMP(int64_t, __vec16_i64,  <=, signed_less_equal_i64)
+
+CMP(double , __vec16_d  ,  <=, less_equal_double)
+CMP(float  , __vec16_f  ,  <=, less_equal_float )
+
+CMP(uint8_t , __vec16_i8 ,  >=, unsigned_greater_equal_i8 )
+CMP(uint16_t, __vec16_i16,  >=, unsigned_greater_equal_i16)
+CMP(uint32_t, __vec16_i32,  >=, unsigned_greater_equal_i32)
+CMP(uint64_t, __vec16_i64,  >=, unsigned_greater_equal_i64)
+
+CMP(int8_t , __vec16_i8 ,  >=, signed_greater_equal_i8 )
+CMP(int16_t, __vec16_i16,  >=, signed_greater_equal_i16)
+CMP(int32_t, __vec16_i32,  >=, signed_greater_equal_i32)
+CMP(int64_t, __vec16_i64,  >=, signed_greater_equal_i64)
+
+CMP(double , __vec16_d  ,  >=, greater_equal_double)
+CMP(float  , __vec16_f  ,  >=, greater_equal_float )
+
+CMP(uint8_t , __vec16_i8 ,  <, unsigned_less_than_i8 )
+CMP(uint16_t, __vec16_i16,  <, unsigned_less_than_i16)
+CMP(uint32_t, __vec16_i32,  <, unsigned_less_than_i32)
+CMP(uint64_t, __vec16_i64,  <, unsigned_less_than_i64)
+
+CMP(int8_t , __vec16_i8 ,  <, signed_less_than_i8 )
+CMP(int16_t, __vec16_i16,  <, signed_less_than_i16)
+CMP(int32_t, __vec16_i32,  <, signed_less_than_i32)
+CMP(int64_t, __vec16_i64,  <, signed_less_than_i64)
+
+CMP(double , __vec16_d  ,  <, less_than_double)
+CMP(float  , __vec16_f  ,  <, less_than_float )
+
+CMP(uint8_t , __vec16_i8 ,  >, unsigned_greater_than_i8 )
+CMP(uint16_t, __vec16_i16,  >, unsigned_greater_than_i16)
+CMP(uint32_t, __vec16_i32,  >, unsigned_greater_than_i32)
+CMP(uint64_t, __vec16_i64,  >, unsigned_greater_than_i64)
+
+CMP(int8_t , __vec16_i8 ,  >, signed_greater_than_i8 )
+CMP(int16_t, __vec16_i16,  >, signed_greater_than_i16)
+CMP(int32_t, __vec16_i32,  >, signed_greater_than_i32)
+CMP(int64_t, __vec16_i64,  >, signed_greater_than_i64)
+
+CMP(double , __vec16_d  ,  >, greater_than_double)
+CMP(float  , __vec16_f  ,  >, greater_than_float )
+/////////////////////////////////////////////////////////////////////////////////////////////
+
 #define INSERT_EXTRACT_ELEMENT(TYPE, VEC_TYPE, FUNC_NAME)                                   \
 void FUNC_NAME(TYPE *data) {                                                                \
     printf (#FUNC_NAME, ":");                                                               \
@@ -488,7 +622,6 @@ CAST_TEST(int32_t, __vec16_i32, bool   , __vec16_i1 , cast_i32_i1 , __cast_sext)
 CAST_TEST(int16_t, __vec16_i16, int8_t , __vec16_i8 , cast_i16_i8 , __cast_sext)
 CAST_TEST(int16_t, __vec16_i16, bool   , __vec16_i1 , cast_i16_i1 , __cast_sext)
 CAST_TEST(int8_t , __vec16_i8 , bool   , __vec16_i1 , cast_i8_i1  , __cast_sext)
-// TODO: __vec16_i1 cast
 
 CAST_TEST(uint64_t, __vec16_i64, uint32_t, __vec16_i32, cast_ui64_ui32, __cast_zext)
 CAST_TEST(uint64_t, __vec16_i64, uint16_t, __vec16_i16, cast_ui64_ui16, __cast_zext)
