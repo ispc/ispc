@@ -396,6 +396,12 @@ void cast_bits_scalar_i64_d (double   *d_64);
 void cast_bits_scalar_d_ui64(uint64_t *ui64);
 void cast_bits_scalar_d_i64 (int64_t  *i64);
 
+
+void cast_bits_f_i32(int32_t *i32);
+void cast_bits_i32_f(float   *f_32);
+void cast_bits_d_i64(int64_t *i64);
+void cast_bits_i64_d(double  *d_64);
+
 int main () {
     printf ("Start\n");
 // Prepare input data
@@ -976,7 +982,7 @@ int main () {
 
     greater_than_double_and_mask(d_32, mask);
     greater_than_float_and_mask (f_32, mask);
-    */
+    
 
     cast_bits_scalar_ui32_f(f_u32);
     cast_bits_scalar_i32_f (f_32);
@@ -986,6 +992,13 @@ int main () {
     cast_bits_scalar_i64_d (d_64);
     cast_bits_scalar_d_ui64(ui64);
     cast_bits_scalar_d_i64 (i64);
+    */
+
+    cast_bits_f_i32(i32);
+    cast_bits_i32_f(f_32);
+    cast_bits_d_i64(i64);
+    cast_bits_i64_d(d_64);
+
 return 0;
 }
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////

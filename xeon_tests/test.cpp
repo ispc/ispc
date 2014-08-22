@@ -757,6 +757,53 @@ CAST_TEST(float , __vec16_f, double, __vec16_d, cast_f_d, __cast_fptrunc)
 CAST_TEST(double, __vec16_d, float , __vec16_f, cast_d_f, __cast_fpext)
 
 /////////////////////////////////////////////////////////////////////////////////////////////
+#define CAST_BITS_TEST(TO, TO_VEC, FROM, FROM_VEC, FUNC_NAME)                               \
+void FUNC_NAME(FROM *data) {                                                                \
+    printf (#FUNC_NAME, ":");                                                               \
+                                                                                            \
+    FROM copy_data[16];                                                                     \
+    for (uint32_t i = 0; i < 16; i++)                                                       \
+        copy_data[i] = data[i];                                                             \
+                                                                                            \
+    union {                                                                                 \
+        TO to;                                                                              \
+        FROM from;                                                                          \
+    }u;                                                                                     \
+                                                                                            \
+    FROM_VEC input;                                                                         \
+    for (uint32_t i = 0; i < 16; i++)                                                       \
+        __insert_element(&input, i, (FROM) copy_data[i]);                                   \
+                                                                                            \
+    TO_VEC result;                                                                          \
+    for (uint32_t i = 0; i < 16; i++) {                                                     \
+        u.from = data[i];                                                                   \
+        __insert_element(&result, i, (TO) u.to);                                            \
+    }                                                                                       \
+                                                                                            \
+    TO_VEC output;                                                                          \
+    output = __cast_bits(output, input);                                                    \
+                                                                                            \
+    int err_counter = 0;                                                                    \
+    for (uint32_t i = 0; i < 16; i++){                                                      \
+        if((isnan(__extract_element(output, i)) || isnan(__extract_element(result, i))) &&  \
+          (!isnan(__extract_element(output, i)) != !isnan(__extract_element(result, i))))   \
+             err_counter++;                                                                 \
+        if(!isnan(__extract_element(output, i)) && !isnan(__extract_element(result, i)) &&  \
+          (__extract_element(output, i) != __extract_element(result, i)))                   \
+             err_counter++;                                                                 \
+    }                                                                                       \
+    if (err_counter != 0)                                                                   \
+        printf(" errors %d\n", err_counter);                                                \
+    else                                                                                    \
+         printf(" no fails\n");                                                             \
+}
+
+CAST_BITS_TEST(float  , __vec16_f  , int32_t, __vec16_i32, cast_bits_f_i32)
+CAST_BITS_TEST(int32_t, __vec16_i32, float  , __vec16_f  , cast_bits_i32_f)
+CAST_BITS_TEST(double , __vec16_d  , int64_t, __vec16_i64, cast_bits_d_i64)
+CAST_BITS_TEST(int64_t, __vec16_i64, double , __vec16_d  , cast_bits_i64_d)
+
+/////////////////////////////////////////////////////////////////////////////////////////////
 
 #define CAST_BITS_SCALAR_TEST(TO, FROM, FUNC_NAME)                                          \
 void FUNC_NAME(FROM *data) {                                                                \
