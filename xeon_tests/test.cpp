@@ -469,7 +469,7 @@ void FUNC_NAME(FROM *data) {                                                    
                                                                                             \
     int err_counter = 0;                                                                    \
     for (uint32_t i = 0; i < 16; i++){                                                      \
-        if ((TO)__extract_element(output, i) != (TO)data[i])                                \
+        if (!(TO)__extract_element(output, i) != !(TO)data[i])                                \
             err_counter++;                                                                  \
     }                                                                                       \
     if (err_counter != 0)                                                                   \
@@ -481,17 +481,25 @@ void FUNC_NAME(FROM *data) {                                                    
 CAST_TEST(int64_t, __vec16_i64, int32_t, __vec16_i32, cast_i64_i32, __cast_sext)
 CAST_TEST(int64_t, __vec16_i64, int16_t, __vec16_i16, cast_i64_i16, __cast_sext)
 CAST_TEST(int64_t, __vec16_i64, int8_t , __vec16_i8 , cast_i64_i8 , __cast_sext)
+CAST_TEST(int64_t, __vec16_i64, bool   , __vec16_i1 , cast_i64_i1 , __cast_sext)
 CAST_TEST(int32_t, __vec16_i32, int16_t, __vec16_i16, cast_i32_i16, __cast_sext)
 CAST_TEST(int32_t, __vec16_i32, int8_t , __vec16_i8 , cast_i32_i8 , __cast_sext)
+CAST_TEST(int32_t, __vec16_i32, bool   , __vec16_i1 , cast_i32_i1 , __cast_sext)
 CAST_TEST(int16_t, __vec16_i16, int8_t , __vec16_i8 , cast_i16_i8 , __cast_sext)
+CAST_TEST(int16_t, __vec16_i16, bool   , __vec16_i1 , cast_i16_i1 , __cast_sext)
+CAST_TEST(int8_t , __vec16_i8 , bool   , __vec16_i1 , cast_i8_i1  , __cast_sext)
 // TODO: __vec16_i1 cast
 
 CAST_TEST(uint64_t, __vec16_i64, uint32_t, __vec16_i32, cast_ui64_ui32, __cast_zext)
 CAST_TEST(uint64_t, __vec16_i64, uint16_t, __vec16_i16, cast_ui64_ui16, __cast_zext)
 CAST_TEST(uint64_t, __vec16_i64, uint8_t , __vec16_i8 , cast_ui64_ui8 , __cast_zext)
+CAST_TEST(uint64_t, __vec16_i64, bool    , __vec16_i1 , cast_ui64_ui1 , __cast_zext)
 CAST_TEST(uint32_t, __vec16_i32, uint16_t, __vec16_i16, cast_ui32_ui16, __cast_zext)
 CAST_TEST(uint32_t, __vec16_i32, uint8_t , __vec16_i8 , cast_ui32_ui8 , __cast_zext)
+CAST_TEST(uint32_t, __vec16_i32, bool    , __vec16_i1 , cast_ui32_ui1 , __cast_zext)
 CAST_TEST(uint16_t, __vec16_i16, uint8_t , __vec16_i8 , cast_ui16_ui8 , __cast_zext)
+CAST_TEST(uint16_t, __vec16_i16, bool    , __vec16_i1 , cast_ui16_ui1 , __cast_zext)
+CAST_TEST(uint8_t , __vec16_i8 , bool    , __vec16_i1 , cast_ui8_ui1  , __cast_zext)
 
 CAST_TEST(int32_t, __vec16_i32, int64_t, __vec16_i64, trunk_i32_i64, __cast_trunc)
 CAST_TEST(int16_t, __vec16_i16, int64_t, __vec16_i64, trunk_i16_i64, __cast_trunc)
@@ -535,6 +543,9 @@ CAST_TEST(uint8_t , __vec16_i8 , double, __vec16_d, cast_ui8_d , __cast_fptoui)
 CAST_TEST(uint16_t, __vec16_i16, double, __vec16_d, cast_ui16_d, __cast_fptoui)
 CAST_TEST(uint32_t, __vec16_i32, double, __vec16_d, cast_ui32_d, __cast_fptoui)
 CAST_TEST(uint64_t, __vec16_i64, double, __vec16_d, cast_ui64_d, __cast_fptoui)
+
+CAST_TEST(float , __vec16_f, double, __vec16_d, cast_f_d, __cast_fptrunc)
+CAST_TEST(double, __vec16_d, float , __vec16_f, cast_d_f, __cast_fpext)
 
 /////////////////////////////////////////////////////////////////////////////////////////////
 

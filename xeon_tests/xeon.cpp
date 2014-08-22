@@ -179,16 +179,24 @@ void shuffle_i32   (int32_t *i32);
 void cast_i64_i32(int32_t *i32);
 void cast_i64_i16(int16_t *i16);
 void cast_i64_i8 (int8_t  *i8);
+void cast_i64_i1 (bool    *i1);
 void cast_i32_i16(int16_t *i16);
 void cast_i32_i8 (int8_t  *i8);
+void cast_i32_i1 (bool    *i1);
 void cast_i16_i8 (int8_t  *i8);
+void cast_i16_i1 (bool    *i1);
+void cast_i8_i1 (bool    *i1);
 
 void cast_ui64_ui32(uint32_t *ui32);
 void cast_ui64_ui16(uint16_t *ui16);
 void cast_ui64_ui8 (uint8_t  *ui8);
+void cast_ui64_ui1 (bool      *ui1);
 void cast_ui32_ui16(uint16_t *ui16);
 void cast_ui32_ui8 (uint8_t  *ui8);
+void cast_ui32_ui1 (bool      *ui1);
 void cast_ui16_ui8 (uint8_t  *ui8);
+void cast_ui16_ui1 (bool      *ui1);
+void cast_ui8_ui1 (bool      *ui1);
 
 void trunk_i32_i64(int64_t *i64);
 void trunk_i16_i64(int64_t *i64);
@@ -233,6 +241,9 @@ void cast_ui16_d(double *d_u16);
 void cast_ui32_d(double *d_u32);
 void cast_ui64_d(double *d_u64);
 
+void cast_f_d(double *d);
+void cast_d_f(float  *f);
+
 int main () {
     printf ("Start\n");
 // Prepare input data
@@ -253,6 +264,7 @@ int main () {
     float    f_u16[16];
     float    f_u32[16];
     float    f_u64[16];
+    bool     i1   [16];
     int8_t   i8   [16];
     int16_t  i16  [16];
     int32_t  i32  [16];
@@ -313,6 +325,9 @@ int main () {
     f_64[0] = INT64_MAX;
     f_64[1] = INT64_MIN;
 
+    i1[0] = true;
+    i1[1] = false;
+
     i8[0] = INT8_MAX;
     i8[1] = INT8_MIN;
 
@@ -362,10 +377,14 @@ int main () {
         ui16 [i] = (i + 1) * 2;
         ui32 [i] = (i + 1) * 2;
         ui64 [i] = (i + 1) * 2;
-        if (i % 2 == 0)
+        if (i % 2 == 0) {
             mask[i] = 0;
-        else
+            i1  [i] = false;
+        }
+        else {
             mask[i] = 1;
+            i1  [i] = true;
+        }
     }
 
 #ifdef KNC_H
@@ -376,14 +395,14 @@ int main () {
 
     printf ("\n");
     
-    /*    
+    /*
     gather32_double(d_32, mask);
     gather32_float(f_32, mask);   
     gather32_i8(i8, mask);
     gather32_i16(i16, mask);
     gather32_i32(i32, mask);
     gather32_i64(i64, mask);
-    
+     
     gather64_double(d_64, mask);
     gather64_float(f_64, mask);
     gather64_i8(i8, mask);
@@ -544,17 +563,25 @@ int main () {
 
     cast_i64_i32(i32);
     cast_i64_i16(i16);
-    cast_i64_i8(i8);
+    cast_i64_i8 (i8);
+    cast_i64_i1 (i1);
     cast_i32_i16(i16);
-    cast_i32_i8(i8);
-    cast_i16_i8(i8);
+    cast_i32_i8 (i8);
+    cast_i32_i1 (i1);
+    cast_i16_i8 (i8);
+    cast_i16_i1 (i1);
+    cast_i8_i1  (i1);
 
     cast_ui64_ui32(ui32);
     cast_ui64_ui16(ui16);
     cast_ui64_ui8 (ui8);
+    cast_ui64_ui1 (i1);
     cast_ui32_ui16(ui16);
     cast_ui32_ui8 (ui8);
+    cast_ui32_ui1 (i1);
     cast_ui16_ui8 (ui8);
+    cast_ui16_ui1 (i1);
+    cast_ui8_ui1  (i1);
 
     trunk_i32_i64(i64);
     trunk_i16_i64(i64);
@@ -598,6 +625,17 @@ int main () {
     cast_ui16_d(d_u16);
     cast_ui32_d(d_u32);
     cast_ui64_d(d_u64);
+    
+
+    cast_f_d(d_8);
+    cast_f_d(d_16);
+    cast_f_d(d_32);
+    cast_f_d(d_64);
+    cast_d_f(f_8);
+    cast_d_f(f_16);
+    cast_d_f(f_32);
+    cast_d_f(f_64);
+     
 
 return 0;
 }
