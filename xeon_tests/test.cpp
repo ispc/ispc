@@ -94,6 +94,7 @@ void __add(int8_t *a, int8_t *b) {
 #define CMP(TYPE, VEC_TYPE, OP, FUNC_NAME)                                                  \
 void FUNC_NAME(TYPE *data) {                                                                \
     printf (#FUNC_NAME, ":");                                                               \
+                                                                                            \
     TYPE copy_data[16];                                                                     \
     for (uint32_t i = 0; i < 16; i++)                                                       \
         copy_data[i] = data[i];                                                             \
@@ -122,11 +123,51 @@ void FUNC_NAME(TYPE *data) {                                                    
         printf(" errors %d\n", err_counter);                                                \
     else                                                                                    \
          printf(" no fails\n");                                                             \
+}                                                                                           \
+                                                                                            \
+void FUNC_NAME##_and_mask(TYPE *data, int *m) {                                             \
+    printf (#FUNC_NAME "_and_mask" ":");                                                    \
+                                                                                            \
+    TYPE copy_data[16];                                                                     \
+    int copy_m[16];                                                                         \
+    for (uint32_t i = 0; i < 16; i++) {                                                     \
+        copy_data[i] = data[i];                                                             \
+        copy_m[i] = m[i];                                                                   \
+    }                                                                                       \
+                                                                                            \
+    VEC_TYPE input_a;                                                                       \
+    VEC_TYPE input_b;                                                                       \
+    for (uint32_t i = 0; i < 16; i++){                                                      \
+        if (i % 2 == 0)                                                                     \
+            __insert_element(&input_a, i, 10);                                              \
+        else                                                                                \
+            __insert_element(&input_a, i, (TYPE)copy_data[i]);                              \
+        __insert_element(&input_b, i, (TYPE)copy_data[i]);                                  \
+    }                                                                                       \
+                                                                                            \
+    __vec16_i1 mask = __vec16_i1(copy_m[0],  copy_m[1],  copy_m[2],  copy_m[3],             \
+                                 copy_m[4],  copy_m[5],  copy_m[6],  copy_m[7],             \
+                                 copy_m[8],  copy_m[9],  copy_m[10], copy_m[11],            \
+                                 copy_m[12], copy_m[13], copy_m[14], copy_m[15]);           \
+                                                                                            \
+    __vec16_i1 output;                                                                      \
+    output = __##FUNC_NAME##_and_mask(input_a, input_b, mask);                              \
+                                                                                            \
+    int err_counter = 0;                                                                    \
+    for (uint32_t i = 0; i < 16; i++){                                                      \
+        if (m[i] != 0 && i % 2 == 0 && !__extract_element(output, i) != !(10 OP data[i]))   \
+            err_counter++;                                                                  \
+        if (m[i]!=0 && i % 2 != 0 && !__extract_element(output,i) != !(data[i] OP data[i])) \
+            err_counter++;                                                                  \
+    }                                                                                       \
+    if (err_counter != 0)                                                                   \
+        printf(" errors %d\n", err_counter);                                                \
+    else                                                                                    \
+         printf(" no fails\n");                                                             \
 }
 
 CMP(double , __vec16_d  , ==, equal_double)
 CMP(float  , __vec16_f  , ==, equal_float )
-CMP(bool   , __vec16_i1 , ==, equal_i1    ) // unique CMP for mask
 CMP(int8_t , __vec16_i8 , ==, equal_i8    )
 CMP(int16_t, __vec16_i16, ==, equal_i16   )
 CMP(int32_t, __vec16_i32, ==, equal_i32   )

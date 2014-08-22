@@ -249,7 +249,6 @@ void __add(int8_t *a, int8_t *b);
 
 void equal_double(double  *d  );
 void equal_float (float   *f  );
-void equal_i1    (bool    *i1 );
 void equal_i8    (int8_t  *i8 );
 void equal_i16   (int16_t *i16);
 void equal_i32   (int32_t *i32);
@@ -313,6 +312,72 @@ void signed_greater_than_i64 (int64_t *i64);
 
 void greater_than_double(double *d);
 void greater_than_float (float  *f);
+
+void equal_double_and_mask(double  *d  , int *mask);
+void equal_float_and_mask (float   *f  , int *mask);
+void equal_i8_and_mask    (int8_t  *i8 , int *mask);
+void equal_i16_and_mask   (int16_t *i16, int *mask);
+void equal_i32_and_mask   (int32_t *i32, int *mask);
+void equal_i64_and_mask   (int64_t *i64, int *mask);
+
+void not_equal_double_and_mask(double  *d  , int *mask);
+void not_equal_float_and_mask (float   *f  , int *mask);
+void not_equal_i8_and_mask    (int8_t  *i8 , int *mask);
+void not_equal_i16_and_mask   (int16_t *i16, int *mask);
+void not_equal_i32_and_mask   (int32_t *i32, int *mask);
+void not_equal_i64_and_mask   (int64_t *i64, int *mask);
+
+void unsigned_less_equal_i8_and_mask  (uint8_t  *ui8 , int *mask);
+void unsigned_less_equal_i16_and_mask (uint16_t *ui16, int *mask);
+void unsigned_less_equal_i32_and_mask (uint32_t *ui32, int *mask);
+void unsigned_less_equal_i64_and_mask (uint64_t *ui64, int *mask);
+
+void signed_less_equal_i8_and_mask  (int8_t  *i8 , int *mask);
+void signed_less_equal_i16_and_mask (int16_t *i16, int *mask);
+void signed_less_equal_i32_and_mask (int32_t *i32, int *mask);
+void signed_less_equal_i64_and_mask (int64_t *i64, int *mask);
+
+void less_equal_double_and_mask(double *d, int *mask);
+void less_equal_float_and_mask (float  *f, int *mask);
+
+void unsigned_greater_equal_i8_and_mask  (uint8_t  *ui8 , int *mask);
+void unsigned_greater_equal_i16_and_mask (uint16_t *ui16, int *mask);
+void unsigned_greater_equal_i32_and_mask (uint32_t *ui32, int *mask);
+void unsigned_greater_equal_i64_and_mask (uint64_t *ui64, int *mask);
+
+void signed_greater_equal_i8_and_mask  (int8_t  *i8 , int *mask);
+void signed_greater_equal_i16_and_mask (int16_t *i16, int *mask);
+void signed_greater_equal_i32_and_mask (int32_t *i32, int *mask);
+void signed_greater_equal_i64_and_mask (int64_t *i64, int *mask);
+
+void greater_equal_double_and_mask(double *d, int *mask);
+void greater_equal_float_and_mask (float  *f, int *mask);
+
+void unsigned_less_than_i8_and_mask  (uint8_t  *ui8 , int *mask);
+void unsigned_less_than_i16_and_mask (uint16_t *ui16, int *mask);
+void unsigned_less_than_i32_and_mask (uint32_t *ui32, int *mask);
+void unsigned_less_than_i64_and_mask (uint64_t *ui64, int *mask);
+
+void signed_less_than_i8_and_mask  (int8_t  *i8 , int *mask);
+void signed_less_than_i16_and_mask (int16_t *i16, int *mask);
+void signed_less_than_i32_and_mask (int32_t *i32, int *mask);
+void signed_less_than_i64_and_mask (int64_t *i64, int *mask);
+
+void less_than_double_and_mask(double *d, int *mask);
+void less_than_float_and_mask (float  *f, int *mask);
+
+void unsigned_greater_than_i8_and_mask  (uint8_t  *ui8 , int *mask);
+void unsigned_greater_than_i16_and_mask (uint16_t *ui16, int *mask);
+void unsigned_greater_than_i32_and_mask (uint32_t *ui32, int *mask);
+void unsigned_greater_than_i64_and_mask (uint64_t *ui64, int *mask);
+
+void signed_greater_than_i8_and_mask  (int8_t  *i8 , int *mask);
+void signed_greater_than_i16_and_mask (int16_t *i16, int *mask);
+void signed_greater_than_i32_and_mask (int32_t *i32, int *mask);
+void signed_greater_than_i64_and_mask (int64_t *i64, int *mask);
+
+void greater_than_double_and_mask(double *d, int *mask);
+void greater_than_float_and_mask (float  *f, int *mask);
 
 int main () {
     printf ("Start\n");
@@ -751,14 +816,13 @@ int main () {
     cast_d_f(f_16);
     cast_d_f(f_32);
     cast_d_f(f_64);
-    */  
+      
 
     //__add(i8, i8); 
 
 
     equal_double(d_32);
     equal_float (f_32);
-    equal_i1    (i1);
     equal_i8    (i8);
     equal_i16   (i16);
     equal_i32   (i32);
@@ -822,6 +886,73 @@ int main () {
 
     greater_than_double(d_32);
     greater_than_float (f_32);
+    */
+    equal_double_and_mask(d_32, mask);
+    equal_float_and_mask (f_32, mask);
+    equal_i8_and_mask    (i8, mask);
+    equal_i16_and_mask   (i16, mask);
+    equal_i32_and_mask   (i32, mask);
+    equal_i64_and_mask   (i64, mask);
+
+    not_equal_double_and_mask(d_32, mask);
+    not_equal_float_and_mask (f_32, mask);
+    not_equal_i8_and_mask    (i8, mask);
+    not_equal_i16_and_mask   (i16, mask);
+    not_equal_i32_and_mask   (i32, mask);
+    not_equal_i64_and_mask   (i64, mask);
+
+    unsigned_less_equal_i8_and_mask  (ui8, mask);
+    unsigned_less_equal_i16_and_mask (ui16, mask);
+    unsigned_less_equal_i32_and_mask (ui32, mask);
+    unsigned_less_equal_i64_and_mask (ui64, mask);
+
+    signed_less_equal_i8_and_mask  (i8, mask);
+    signed_less_equal_i16_and_mask (i16, mask);
+    signed_less_equal_i32_and_mask (i32, mask);
+    signed_less_equal_i64_and_mask (i64, mask);
+
+    less_equal_double_and_mask(d_32, mask);
+    less_equal_float_and_mask (f_32, mask);
+
+    unsigned_greater_equal_i8_and_mask  (ui8, mask);
+    unsigned_greater_equal_i16_and_mask (ui16, mask);
+    unsigned_greater_equal_i32_and_mask (ui32, mask);
+    unsigned_greater_equal_i64_and_mask (ui64, mask);
+
+    signed_greater_equal_i8_and_mask  (i8, mask);
+    signed_greater_equal_i16_and_mask (i16, mask);
+    signed_greater_equal_i32_and_mask (i32, mask);
+    signed_greater_equal_i64_and_mask (i64, mask);
+
+    greater_equal_double_and_mask(d_32, mask);
+    greater_equal_float_and_mask (f_32, mask);
+
+    unsigned_less_than_i8_and_mask  (ui8, mask);
+    unsigned_less_than_i16_and_mask (ui16, mask);
+    unsigned_less_than_i32_and_mask (ui32, mask);
+    unsigned_less_than_i64_and_mask (ui64, mask);
+
+    signed_less_than_i8_and_mask  (i8, mask);
+    signed_less_than_i16_and_mask (i16, mask);
+    signed_less_than_i32_and_mask (i32, mask);
+    signed_less_than_i64_and_mask (i64, mask);
+
+    less_than_double_and_mask(d_32, mask);
+    less_than_float_and_mask (f_32, mask);
+
+    unsigned_greater_than_i8_and_mask  (ui8, mask);
+    unsigned_greater_than_i16_and_mask (ui16, mask);
+    unsigned_greater_than_i32_and_mask (ui32, mask);
+    unsigned_greater_than_i64_and_mask (ui64, mask);
+
+    signed_greater_than_i8_and_mask  (i8, mask);
+    signed_greater_than_i16_and_mask (i16, mask);
+    signed_greater_than_i32_and_mask (i32, mask);
+    signed_greater_than_i64_and_mask (i64, mask);
+
+    greater_than_double_and_mask(d_32, mask);
+    greater_than_float_and_mask (f_32, mask);
+
 return 0;
 }
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////
