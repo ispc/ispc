@@ -500,6 +500,24 @@ CAST_TEST(int16_t, __vec16_i16, int32_t, __vec16_i32, trunk_i16_i32, __cast_trun
 CAST_TEST(int8_t , __vec16_i8 , int32_t, __vec16_i32, trunk_i8_i32 , __cast_trunc)
 CAST_TEST(int8_t , __vec16_i8 , int16_t, __vec16_i16, trunk_i8_i16 , __cast_trunc)
 
+CAST_TEST(float , __vec16_f, int8_t , __vec16_i8,  cast_f_i8,  __cast_sitofp)
+CAST_TEST(float , __vec16_f, int16_t, __vec16_i16, cast_f_i16, __cast_sitofp)
+CAST_TEST(float , __vec16_f, int32_t, __vec16_i32, cast_f_i32, __cast_sitofp)
+CAST_TEST(float , __vec16_f, int64_t, __vec16_i64, cast_f_i64, __cast_sitofp)
+CAST_TEST(double, __vec16_d, int8_t , __vec16_i8 , cast_d_i8,  __cast_sitofp)
+CAST_TEST(double, __vec16_d, int16_t, __vec16_i16, cast_d_i16, __cast_sitofp)
+CAST_TEST(double, __vec16_d, int32_t, __vec16_i32, cast_d_i32, __cast_sitofp)
+CAST_TEST(double, __vec16_d, int64_t, __vec16_i64, cast_d_i64, __cast_sitofp)
+
+CAST_TEST(float , __vec16_f, uint8_t , __vec16_i8,  cast_f_ui8,  __cast_uitofp)
+CAST_TEST(float , __vec16_f, uint16_t, __vec16_i16, cast_f_ui16, __cast_uitofp)
+CAST_TEST(float , __vec16_f, uint32_t, __vec16_i32, cast_f_ui32, __cast_uitofp)
+CAST_TEST(float , __vec16_f, uint64_t, __vec16_i64, cast_f_ui64, __cast_uitofp)
+CAST_TEST(double, __vec16_d, uint8_t , __vec16_i8 , cast_d_ui8,  __cast_uitofp)
+CAST_TEST(double, __vec16_d, uint16_t, __vec16_i16, cast_d_ui16, __cast_uitofp)
+CAST_TEST(double, __vec16_d, uint32_t, __vec16_i32, cast_d_ui32, __cast_uitofp)
+CAST_TEST(double, __vec16_d, uint64_t, __vec16_i64, cast_d_ui64, __cast_uitofp)
+
 /////////////////////////////////////////////////////////////////////////////////////////////
 
 #define GATHER(GATHER_SCALAR_TYPE, GATHER_VEC_TYPE, TYPE, VEC_TYPE, FUNC_NAME)              \

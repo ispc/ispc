@@ -197,6 +197,23 @@ void trunk_i16_i32(int32_t *i32);
 void trunk_i8_i32 (int32_t *i32);
 void trunk_i8_i16 (int16_t *i16);
 
+void cast_f_i8 (int8_t *i8);
+void cast_f_i16(int16_t *i16);
+void cast_f_i32(int32_t *i32);
+void cast_f_i64(int64_t *i64);
+void cast_d_i8 (int8_t *i8);
+void cast_d_i16(int16_t *i16);
+void cast_d_i32(int32_t *i32);
+void cast_d_i64(int64_t *i64);
+
+void cast_f_ui8 (uint8_t *ui8);
+void cast_f_ui16(uint16_t *ui16);
+void cast_f_ui32(uint32_t *ui32);
+void cast_f_ui64(uint64_t *ui64);
+void cast_d_ui8 (uint8_t *ui8);
+void cast_d_ui16(uint16_t *ui16);
+void cast_d_ui32(uint32_t *ui32);
+void cast_d_ui64(uint64_t *ui64);
 
 int main () {
     printf ("Start\n");
@@ -467,7 +484,27 @@ int main () {
     trunk_i16_i32(i32);
     trunk_i8_i32 (i32);
     trunk_i8_i16 (i16);
-        
+  
+    cast_f_i8 (i8);
+    cast_f_i16(i16);
+    cast_f_i32(i32);
+    cast_f_i64(i64);
+    cast_d_i8 (i8);
+    cast_d_i16(i16);
+    cast_d_i32(i32);
+    cast_d_i64(i64);
+
+    cast_f_ui8 (ui8);
+    cast_f_ui16(ui16);
+    cast_f_ui32(ui32);
+    cast_f_ui64(ui64);
+    cast_d_ui8 (ui8);
+    cast_d_ui16(ui16);
+    cast_d_ui32(ui32);
+    cast_d_ui64(ui64);
+
+
+
 return 0;
 }
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////
