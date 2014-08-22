@@ -144,6 +144,13 @@ void select_i16   (int16_t *i16, int *mask);
 void select_i32   (int32_t *i32, int *mask);
 void select_i64   (int64_t *i64, int *mask);
 
+void select_double_cond(double  *d  , int *mask);
+void select_float_cond (float   *f  , int *mask);
+void select_i8_cond    (int8_t  *i8 , int *mask);
+void select_i16_cond   (int16_t *i16, int *mask);
+void select_i32_cond   (int32_t *i32, int *mask);
+void select_i64_cond   (int64_t *i64, int *mask);
+
 
 void broadcast_double(double  *d  );
 void broadcast_float (float   *f  );
@@ -701,7 +708,7 @@ int main () {
     setzero_i16();
     setzero_i32();
     setzero_i64();
-    
+    */
 
     select_double(d_32, mask);
     select_float(f_32, mask);
@@ -710,7 +717,13 @@ int main () {
     select_i32(i32, mask);
     select_i64(i64, mask);    
     
-
+    select_double_cond(d_32, mask);
+    select_float_cond(f_32, mask);
+    select_i8_cond(i8, mask);
+    select_i16_cond(i16, mask);
+    select_i32_cond(i32, mask);
+    select_i64_cond(i64, mask);
+    /*
     broadcast_double(d_32);
     broadcast_float(f_32);
     broadcast_i8(i8);
@@ -886,7 +899,7 @@ int main () {
 
     greater_than_double(d_32);
     greater_than_float (f_32);
-    */
+    
     equal_double_and_mask(d_32, mask);
     equal_float_and_mask (f_32, mask);
     equal_i8_and_mask    (i8, mask);
@@ -952,7 +965,7 @@ int main () {
 
     greater_than_double_and_mask(d_32, mask);
     greater_than_float_and_mask (f_32, mask);
-
+    */
 return 0;
 }
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////

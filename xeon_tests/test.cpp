@@ -433,6 +433,41 @@ void FUNC_NAME(TYPE *data, int *m) {                                            
         printf(" errors %d\n", err_counter);                                                \
     else                                                                                    \
          printf(" no fails\n");                                                             \
+}                                                                                           \
+                                                                                            \
+void FUNC_NAME##_cond(TYPE *data, int *m) {                                                 \
+    printf (#FUNC_NAME "_cond" ":");                                                        \
+                                                                                            \
+    TYPE copy_data[16];                                                                     \
+    int copy_m[16];                                                                         \
+    for (uint32_t i = 0; i < 16; i++) {                                                     \
+        copy_data[i] = data[i];                                                             \
+        copy_m[i] = m[i];                                                                   \
+    }                                                                                       \
+                                                                                            \
+    VEC_TYPE input1;                                                                        \
+    VEC_TYPE input2;                                                                        \
+    for (uint32_t i = 0; i < 16; i++) {                                                     \
+        __insert_element(&input1, i, (TYPE) copy_data[i]);                                  \
+        __insert_element(&input2, i, (TYPE) copy_data[i] * -1);                             \
+    }                                                                                       \
+                                                                                            \
+    VEC_TYPE output;                                                                        \
+                                                                                            \
+    int err_counter = 0;                                                                    \
+    for (uint32_t i = 0; i < 16; i++){                                                      \
+        output = __select(copy_m[i], input1, input2);                                       \
+        for (uint32_t j = 0; j < 16; j++){                                                  \
+            if (m[i] != 0 && __extract_element(output, j) != (TYPE)data[j])                 \
+                err_counter++;                                                              \
+            if (m[i] == 0 && __extract_element(output, j) != (TYPE)(data[j] * -1))          \
+                err_counter++;                                                              \
+        }                                                                                   \
+    }                                                                                       \
+    if (err_counter != 0)                                                                   \
+        printf(" errors %d\n", err_counter);                                                \
+    else                                                                                    \
+         printf(" no fails\n");                                                             \
 }
 
 SELECT_TEST(double , __vec16_d  , select_double)
