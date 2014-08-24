@@ -1546,12 +1546,14 @@ FunctionEmitContext::StartScope() {
         llvm::DILexicalBlock lexicalBlock =
             m->diBuilder->createLexicalBlock(parentScope, diFile,
                                              currentPos.first_line,
-#if !defined(LLVM_3_2) && !defined(LLVM_3_3) && !defined(LLVM_3_4) // LLVM 3.5+
+#if defined(LLVM_3_5)
         // Revision 202736 in LLVM adds support of DWARF discriminator
         // to the last argument and revision 202737 in clang adds 0
         // for the last argument by default.
                                              currentPos.first_column, 0);
 #else
+        // Revision 216239 in LLVM removes support of DWARF discriminator
+        // as the last argument
                                              currentPos.first_column);
 #endif
         AssertPos(currentPos, lexicalBlock.Verify());
