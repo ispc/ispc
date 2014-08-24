@@ -1555,7 +1555,7 @@ FunctionEmitContext::StartScope() {
         // Revision 216239 in LLVM removes support of DWARF discriminator
         // as the last argument
                                              currentPos.first_column);
-#endif
+#endif // LLVM 3.2, 3.3, 3.4 and 3.6+
         AssertPos(currentPos, lexicalBlock.Verify());
         debugScopes.push_back(lexicalBlock);
     }
