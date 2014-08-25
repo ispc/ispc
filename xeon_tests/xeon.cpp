@@ -303,6 +303,9 @@ void sdiv_i16(int16_t *i16_1, int16_t *i16_2);
 void sdiv_i32(int32_t *i32_1, int32_t *i32_2);
 void sdiv_i64(int64_t *i64_1, int64_t *i64_2);
 
+void div_double(double *d_1, double *d_2);
+void div_float (float  *f_1, float  *f_2);
+
 void urem_ui8 (uint8_t  *ui8_1 , uint8_t  *ui8_2 );
 void urem_ui16(uint16_t *ui16_1, uint16_t *ui16_2);
 void urem_ui32(uint32_t *ui32_1, uint32_t *ui32_2);
@@ -322,6 +325,16 @@ void ashr_i8 (int8_t  *i8_1 , int8_t  *i8_2 );
 void ashr_i16(int16_t *i16_1, int16_t *i16_2);
 void ashr_i32(int32_t *i32_1, int32_t *i32_2);
 void ashr_i64(int64_t *i64_1, int64_t *i64_2);
+
+void lshr_ui8_uniform (uint8_t  *ui8 , int32_t *i32);
+void lshr_ui16_uniform(uint16_t *ui16, int32_t *i32);
+void lshr_ui32_uniform(uint32_t *ui32, int32_t *i32);
+void lshr_ui64_uniform(uint64_t *ui64, int32_t *i32);
+
+void ashr_i8_uniform (int8_t  *i8 , int32_t *i32);
+void ashr_i16_uniform(int16_t *i16, int32_t *i32);
+void ashr_i32_uniform(int32_t *i32_1, int32_t *i32);
+void ashr_i64_uniform(int64_t *i64, int32_t *i32);
 
 
 void equal_double(double  *d  );
@@ -1055,6 +1068,9 @@ int main () {
     sdiv_i32(no_of_i32 , no_of_i32);
     sdiv_i64(no_of_i64 , no_of_i64);
     
+    div_double(no_of_d_32 , no_of_d_32);
+    div_float (no_of_f_32 , no_of_f_32);
+
     urem_ui8 (no_of_ui8  , no_of_ui8);
     urem_ui16(no_of_ui16 , no_of_ui16);
     urem_ui32(no_of_ui32 , no_of_ui32);
@@ -1074,6 +1090,16 @@ int main () {
     ashr_i16(no_of_i16 , no_of_i16);
     ashr_i32(no_of_i32 , no_of_i32);
     ashr_i64(no_of_i64 , no_of_i64);
+
+    lshr_ui8_uniform (no_of_ui8 , no_of_i32);
+    lshr_ui16_uniform(no_of_ui16, no_of_i32);
+    lshr_ui32_uniform(no_of_ui32, no_of_i32);
+    lshr_ui64_uniform(no_of_ui64, no_of_i32);
+
+    ashr_i8_uniform (no_of_i8 , no_of_i32);
+    ashr_i16_uniform(no_of_i16, no_of_i32);
+    ashr_i32_uniform(no_of_i32, no_of_i32);
+    ashr_i64_uniform(no_of_i64, no_of_i32);
     /*
     equal_double(d_32);
     equal_float (f_32);

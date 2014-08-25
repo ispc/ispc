@@ -83,7 +83,7 @@ void  FUNC_NAME##_##TYPE_MOD(TYPE *a, TYPE *b) {                                
     int err_counter = 0;                                                                    \
     TYPE result = 0;                                                                        \
     for (uint32_t i = 0; i < 16; i++){                                                      \
-        result = (TYPE) a[i] OP (TYPE) b[i];                                                \
+        result = (TYPE) (a[i]) OP (TYPE) (b[i]);                                            \
         if (__extract_element(output, i) != result)                                         \
             err_counter++;                                                                  \
     }                                                                                       \
@@ -144,6 +144,9 @@ BINARY_OP_TEST(int16_t, __vec16_i16, /, sdiv, i16)
 BINARY_OP_TEST(int32_t, __vec16_i32, /, sdiv, i32)
 BINARY_OP_TEST(int64_t, __vec16_i64, /, sdiv, i64)
 
+BINARY_OP_TEST(double, __vec16_d, /, div, double)
+BINARY_OP_TEST(float , __vec16_f, /, div, float)
+
 BINARY_OP_TEST(uint8_t , __vec16_i8 , %, urem, ui8)
 BINARY_OP_TEST(uint16_t, __vec16_i16, %, urem, ui16)
 BINARY_OP_TEST(uint32_t, __vec16_i32, %, urem, ui32)
@@ -163,6 +166,50 @@ BINARY_OP_TEST(int8_t , __vec16_i8 , >>, ashr, i8)
 BINARY_OP_TEST(int16_t, __vec16_i16, >>, ashr, i16)
 BINARY_OP_TEST(int32_t, __vec16_i32, >>, ashr, i32)
 BINARY_OP_TEST(int64_t, __vec16_i64, >>, ashr, i64)
+
+/////////////////////////////////////////////////////////////////////////////////////////////
+
+#define SHIFT_UNIFORM_TEST(TYPE, VEC_TYPE, OP, FUNC_NAME, TYPE_MOD)                         \
+void  FUNC_NAME##_##TYPE_MOD##_uniform(TYPE *a, int32_t *b) {                               \
+    printf (#FUNC_NAME "_" #TYPE_MOD ":");                                                  \
+                                                                                            \
+    TYPE copy_a[16];                                                                        \
+    int32_t copy_b[16];                                                                     \
+    for (uint32_t i = 0; i < 16; i++){                                                      \
+        copy_a[i] = a[i];                                                                   \
+        copy_b[i] = b[i];                                                                   \
+    }                                                                                       \
+                                                                                            \
+    VEC_TYPE input_a;                                                                       \
+    for (uint32_t i = 0; i < 16; i++)                                                       \
+        __insert_element(&input_a, i, (TYPE)copy_a[i]);                                     \
+                                                                                            \
+    VEC_TYPE output;                                                                        \
+    int err_counter = 0;                                                                    \
+    TYPE result = 0;                                                                        \
+    for (uint32_t i = 0; i < 16; i++){                                                      \
+        output = __##FUNC_NAME(input_a, copy_b[i]);                                         \
+        for (uint32_t j = 0; j < 16; j++){                                                  \
+            result = (TYPE) (a[j]) OP (b[i]);                                               \
+            if (__extract_element(output, j) != result)                                     \
+                err_counter++;                                                              \
+        }                                                                                   \
+    }                                                                                       \
+    if (err_counter != 0)                                                                   \
+        printf(" errors %d\n", err_counter);                                                \
+    else                                                                                    \
+         printf(" no fails\n");                                                             \
+}
+
+SHIFT_UNIFORM_TEST(uint8_t , __vec16_i8 , >>, lshr, ui8)
+SHIFT_UNIFORM_TEST(uint16_t, __vec16_i16, >>, lshr, ui16)
+SHIFT_UNIFORM_TEST(uint32_t, __vec16_i32, >>, lshr, ui32)
+SHIFT_UNIFORM_TEST(uint64_t, __vec16_i64, >>, lshr, ui64)
+
+SHIFT_UNIFORM_TEST(int8_t , __vec16_i8 , >>, ashr, i8)
+SHIFT_UNIFORM_TEST(int16_t, __vec16_i16, >>, ashr, i16)
+SHIFT_UNIFORM_TEST(int32_t, __vec16_i32, >>, ashr, i32)
+SHIFT_UNIFORM_TEST(int64_t, __vec16_i64, >>, ashr, i64)
 
 /////////////////////////////////////////////////////////////////////////////////////////////
 
