@@ -59,36 +59,80 @@ void allocator(T **array) {
 */
 
 /////////////////////////////////////////////////////////////////////////////////////////////
-
-void __add(int8_t *a, int8_t *b) {
-    int8_t copy_a[16];
-    int8_t copy_b[16];
-    for (uint32_t i = 0; i < 16; i++){
-        copy_a[i] = a[i];
-        copy_b[i] = b[i];
-    }
-
-    __vec16_i8 input_a;
-    __vec16_i8 input_b;
-    for (uint32_t i = 0; i < 16; i++){
-        __insert_element(&input_a, i, (int8_t)copy_a[i]);
-        __insert_element(&input_b, i, (int8_t)copy_b[i]);
-    }
-
-    __vec16_i8 output;
-    output = __add(input_a, input_b);
-
-    int err_counter = 0;
-    for (uint32_t i = 2; i < 16; i++){/* from 2 because in overflow behavior is undefined */
-        if ((int8_t)__extract_element(output, i) != (int8_t)a[i] + (int8_t)b[i])
-            err_counter++;
-    }
-    if (err_counter != 0)
-        printf(" errors %d\n", err_counter);
-    else
-         printf(" no fails\n");
-
+#define BINARY_OP_TEST(TYPE, VEC_TYPE, OP, FUNC_NAME, TYPE_MOD)                             \
+void  FUNC_NAME##_##TYPE_MOD(TYPE *a, TYPE *b) {                                            \
+    printf (#FUNC_NAME "_" #TYPE_MOD ":");                                                  \
+                                                                                            \
+    TYPE copy_a[16];                                                                        \
+    TYPE copy_b[16];                                                                        \
+    for (uint32_t i = 0; i < 16; i++){                                                      \
+        copy_a[i] = a[i];                                                                   \
+        copy_b[i] = b[i];                                                                   \
+    }                                                                                       \
+                                                                                            \
+    VEC_TYPE input_a;                                                                       \
+    VEC_TYPE input_b;                                                                       \
+    for (uint32_t i = 0; i < 16; i++){                                                      \
+        __insert_element(&input_a, i, (TYPE)copy_a[i]);                                     \
+        __insert_element(&input_b, i, (TYPE)copy_b[i]);                                     \
+    }                                                                                       \
+                                                                                            \
+    VEC_TYPE output;                                                                        \
+    output = __##FUNC_NAME(input_a, input_b);                                               \
+                                                                                            \
+    int err_counter = 0;                                                                    \
+    TYPE result = 0;                                                                        \
+    for (uint32_t i = 0; i < 16; i++){                                                      \
+        result = a[i] OP b[i];                                                              \
+        if (__extract_element(output, i) != result)                                         \
+            err_counter++;                                                                  \
+    }                                                                                       \
+    if (err_counter != 0)                                                                   \
+        printf(" errors %d\n", err_counter);                                                \
+    else                                                                                    \
+         printf(" no fails\n");                                                             \
 }
+
+BINARY_OP_TEST(double , __vec16_d  , +, add, double)
+BINARY_OP_TEST(float  , __vec16_f  , +, add, float)
+BINARY_OP_TEST(int8_t , __vec16_i8 , +, add, i8)
+BINARY_OP_TEST(int16_t, __vec16_i16, +, add, i16)
+BINARY_OP_TEST(int32_t, __vec16_i32, +, add, i32)
+BINARY_OP_TEST(int64_t, __vec16_i64, +, add, i64)
+
+BINARY_OP_TEST(double , __vec16_d  , -, sub, double)
+BINARY_OP_TEST(float  , __vec16_f  , -, sub, float)
+BINARY_OP_TEST(int8_t , __vec16_i8 , -, sub, i8)
+BINARY_OP_TEST(int16_t, __vec16_i16, -, sub, i16)
+BINARY_OP_TEST(int32_t, __vec16_i32, -, sub, i32)
+BINARY_OP_TEST(int64_t, __vec16_i64, -, sub, i64)
+
+BINARY_OP_TEST(double , __vec16_d  , *, mul, double)
+BINARY_OP_TEST(float  , __vec16_f  , *, mul, float)
+BINARY_OP_TEST(int8_t , __vec16_i8 , *, mul, i8)
+BINARY_OP_TEST(int16_t, __vec16_i16, *, mul, i16)
+BINARY_OP_TEST(int32_t, __vec16_i32, *, mul, i32)
+BINARY_OP_TEST(int64_t, __vec16_i64, *, mul, i64)
+
+BINARY_OP_TEST(int8_t , __vec16_i8 , |, or, i8)
+BINARY_OP_TEST(int16_t, __vec16_i16, |, or, i16)
+BINARY_OP_TEST(int32_t, __vec16_i32, |, or, i32)
+BINARY_OP_TEST(int64_t, __vec16_i64, |, or, i64)
+
+BINARY_OP_TEST(int8_t , __vec16_i8 , &, and, i8)
+BINARY_OP_TEST(int16_t, __vec16_i16, &, and, i16)
+BINARY_OP_TEST(int32_t, __vec16_i32, &, and, i32)
+BINARY_OP_TEST(int64_t, __vec16_i64, &, and, i64)
+
+BINARY_OP_TEST(int8_t , __vec16_i8 , ^, xor, i8)
+BINARY_OP_TEST(int16_t, __vec16_i16, ^, xor, i16)
+BINARY_OP_TEST(int32_t, __vec16_i32, ^, xor, i32)
+BINARY_OP_TEST(int64_t, __vec16_i64, ^, xor, i64)
+
+BINARY_OP_TEST(int8_t , __vec16_i8 , <<, shl, i8)
+BINARY_OP_TEST(int16_t, __vec16_i16, <<, shl, i16)
+BINARY_OP_TEST(int32_t, __vec16_i32, <<, shl, i32)
+BINARY_OP_TEST(int64_t, __vec16_i64, <<, shl, i64)
 
 /////////////////////////////////////////////////////////////////////////////////////////////
 #define CMP(TYPE, VEC_TYPE, OP, FUNC_NAME)                                                  \

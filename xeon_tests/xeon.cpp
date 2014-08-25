@@ -251,7 +251,47 @@ void cast_ui64_d(double *d_u64);
 void cast_f_d(double *d);
 void cast_d_f(float  *f);
 
-void __add(int8_t *a, int8_t *b);
+
+void add_double(double  *d_1  , double  *d_2  );
+void add_float (float   *f_1  , float   *f_2  );
+void add_i8    (int8_t  *i8_1 , int8_t  *i8_2 );
+void add_i16   (int16_t *i16_1, int16_t *i16_2);
+void add_i32   (int32_t *i32_1, int32_t *i32_2);
+void add_i64   (int64_t *i64_1, int64_t *i64_2);
+
+void sub_double(double  *d_1  , double  *d_2  );
+void sub_float (float   *f_1  , float   *f_2  );
+void sub_i8    (int8_t  *i8_1 , int8_t  *i8_2 );
+void sub_i16   (int16_t *i16_1, int16_t *i16_2);
+void sub_i32   (int32_t *i32_1, int32_t *i32_2);
+void sub_i64   (int64_t *i64_1, int64_t *i64_2);
+
+void mul_double(double  *d_1  , double  *d_2  );
+void mul_float (float   *f_1  , float   *f_2  );
+void mul_i8    (int8_t  *i8_1 , int8_t  *i8_2 );
+void mul_i16   (int16_t *i16_1, int16_t *i16_2);
+void mul_i32   (int32_t *i32_1, int32_t *i32_2);
+void mul_i64   (int64_t *i64_1, int64_t *i64_2);
+
+void or_i8    (int8_t  *i8_1 , int8_t  *i8_2 );
+void or_i16   (int16_t *i16_1, int16_t *i16_2);
+void or_i32   (int32_t *i32_1, int32_t *i32_2);
+void or_i64   (int64_t *i64_1, int64_t *i64_2);
+
+void and_i8    (int8_t  *i8_1 , int8_t  *i8_2 );
+void and_i16   (int16_t *i16_1, int16_t *i16_2);
+void and_i32   (int32_t *i32_1, int32_t *i32_2);
+void and_i64   (int64_t *i64_1, int64_t *i64_2);
+
+void xor_i8    (int8_t  *i8_1 , int8_t  *i8_2 );
+void xor_i16   (int16_t *i16_1, int16_t *i16_2);
+void xor_i32   (int32_t *i32_1, int32_t *i32_2);
+void xor_i64   (int64_t *i64_1, int64_t *i64_2);
+
+void shl_i8    (int8_t  *i8_1 , int8_t  *i8_2 );
+void shl_i16   (int16_t *i16_1, int16_t *i16_2);
+void shl_i32   (int32_t *i32_1, int32_t *i32_2);
+void shl_i64   (int64_t *i64_1, int64_t *i64_2);
 
 
 void equal_double(double  *d  );
@@ -932,11 +972,50 @@ int main () {
     cast_d_f(f_16);
     cast_d_f(f_32);
     cast_d_f(f_64);
-      
+    */  
 
-    //__add(i8, i8); 
+    add_double(no_of_d_32, no_of_d_32);
+    add_float (no_of_f_32, no_of_f_32);
+    add_i8    (no_of_i8  , no_of_i8);
+    add_i16   (no_of_i16 , no_of_i16);
+    add_i32   (no_of_i32 , no_of_i32);
+    add_i64   (no_of_i64 , no_of_i64);
 
+    sub_double(no_of_d_32, no_of_d_32);
+    sub_float (no_of_f_32, no_of_f_32);
+    sub_i8    (no_of_i8  , no_of_i8);
+    sub_i16   (no_of_i16 , no_of_i16);
+    sub_i32   (no_of_i32 , no_of_i32);
+    sub_i64   (no_of_i64 , no_of_i64);
 
+    mul_double(no_of_d_32, no_of_d_32);
+    mul_float (no_of_f_32, no_of_f_32);
+    mul_i8    (no_of_i8  , no_of_i8);
+    mul_i16   (no_of_i16 , no_of_i16);
+    mul_i32   (no_of_i32 , no_of_i32);
+    mul_i64   (no_of_i64 , no_of_i64);
+
+    or_i8    (no_of_i8  , no_of_i8);
+    or_i16   (no_of_i16 , no_of_i16);
+    or_i32   (no_of_i32 , no_of_i32);
+    or_i64   (no_of_i64 , no_of_i64);    
+    
+    and_i8    (no_of_i8  , no_of_i8);
+    and_i16   (no_of_i16 , no_of_i16);
+    and_i32   (no_of_i32 , no_of_i32);
+    and_i64   (no_of_i64 , no_of_i64); 
+
+    xor_i8    (no_of_i8  , no_of_i8);
+    xor_i16   (no_of_i16 , no_of_i16);
+    xor_i32   (no_of_i32 , no_of_i32);
+    xor_i64   (no_of_i64 , no_of_i64);
+   
+    shl_i8    (no_of_i8  , no_of_i8);
+    shl_i16   (no_of_i16 , no_of_i16);
+    shl_i32   (no_of_i32 , no_of_i32);
+    shl_i64   (no_of_i64 , no_of_i64);
+
+    /*
     equal_double(d_32);
     equal_float (f_32);
     equal_i8    (i8);
@@ -1106,7 +1185,7 @@ int main () {
     reduce_max_uint32 (ui32);
     reduce_max_int64  (i64);
     reduce_max_uint64 (ui64);
-    */
+    
 
     popcnt_int32(ui32);
     popcnt_int64(ui64);
@@ -1117,6 +1196,7 @@ int main () {
 
     count_leading_zeros_i32(ui32);
     count_leading_zeros_i64(ui64);
+    */
 return 0;
 }
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////
