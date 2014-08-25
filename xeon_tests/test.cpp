@@ -1174,6 +1174,38 @@ MASKED_STORE(int32_t, __vec16_i32, masked_store_blend_i32   )
 MASKED_STORE(int64_t, __vec16_i64, masked_store_blend_i64   )
 
 /////////////////////////////////////////////////////////////////////////////////////////////
+#define REDUCE_ADD_TEST(TYPE, VEC_TYPE, FUNC_NAME)                                          \
+void FUNC_NAME(TYPE *data) {                                                                \
+    printf (#FUNC_NAME, ":");                                                               \
+                                                                                            \
+    TYPE copy_data[16];                                                                     \
+    for (uint32_t i = 0; i < 16; i++)                                                       \
+        copy_data[i] = data[i];                                                             \
+                                                                                            \
+    VEC_TYPE input;                                                                         \
+    for (uint32_t i = 0; i < 16; i++)                                                       \
+        __insert_element(&input, i, (TYPE) copy_data[i]);                                   \
+                                                                                            \
+    TYPE output;                                                                            \
+    output = __##FUNC_NAME(input);                                                          \
+                                                                                            \
+    TYPE result = 0;                                                                        \
+    for (uint32_t i = 0; i < 16; i++)                                                       \
+        result += (TYPE) data[i];                                                           \
+                                                                                            \
+    if ((TYPE) output != (TYPE) result)                                                     \
+        printf(" errors 1\n");                                                              \
+    else                                                                                    \
+         printf(" no fails\n");                                                             \
+}
+
+REDUCE_ADD_TEST(double , __vec16_d  , reduce_add_double)
+REDUCE_ADD_TEST(float  , __vec16_f  , reduce_add_float )
+REDUCE_ADD_TEST(int8_t , __vec16_i8 , reduce_add_int8  )
+REDUCE_ADD_TEST(int16_t, __vec16_i16, reduce_add_int16 )
+REDUCE_ADD_TEST(int32_t, __vec16_i32, reduce_add_int32 )
+REDUCE_ADD_TEST(int64_t, __vec16_i64, reduce_add_int64 )
+/////////////////////////////////////////////////////////////////////////////////////////////
 
 void movmsk(int *m) {
     printf ("movmsk: ");

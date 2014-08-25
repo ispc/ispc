@@ -402,6 +402,13 @@ void cast_bits_i32_f(float   *f_32);
 void cast_bits_d_i64(int64_t *i64);
 void cast_bits_i64_d(double  *d_64);
 
+void reduce_add_double(double  *d  );
+void reduce_add_float (float   *f  );
+void reduce_add_int8  (int8_t  *i8 );
+void reduce_add_int16 (int16_t *i16);
+void reduce_add_int32 (int32_t *i32);
+void reduce_add_int64 (int64_t *i64);
+
 int main () {
     printf ("Start\n");
 // Prepare input data
@@ -561,6 +568,61 @@ int main () {
             mask[i] = 1;
     }
 
+// variables, which can't cause overflow
+        double   no_of_d_8  [16];
+        double   no_of_d_16 [16];
+        double   no_of_d_32 [16];
+        double   no_of_d_64 [16];
+        float    no_of_f_8  [16];
+        float    no_of_f_16 [16];
+        float    no_of_f_32 [16];
+        float    no_of_f_64 [16];
+        double   no_of_d_u8 [16];
+        double   no_of_d_u16[16];
+        double   no_of_d_u32[16];
+        double   no_of_d_u64[16];
+        float    no_of_f_u8 [16];
+        float    no_of_f_u16[16];
+        float    no_of_f_u32[16];
+        float    no_of_f_u64[16];
+        bool     no_of_i1   [16];
+        int8_t   no_of_i8   [16];
+        int16_t  no_of_i16  [16];
+        int32_t  no_of_i32  [16];
+        int64_t  no_of_i64  [16];
+        uint8_t  no_of_ui8  [16];
+        uint16_t no_of_ui16 [16];
+        uint32_t no_of_ui32 [16];
+        uint64_t no_of_ui64 [16];
+
+        for (int i = 0; i < 16; i++) {
+            no_of_d_8  [i] = i;
+            no_of_d_16 [i] = i;
+            no_of_d_32 [i] = i;
+            no_of_d_64 [i] = i;
+            no_of_f_8  [i] = i;
+            no_of_f_16 [i] = i;
+            no_of_f_32 [i] = i;
+            no_of_f_64 [i] = i;
+            no_of_d_u8 [i] = i;
+            no_of_d_u16[i] = i;
+            no_of_d_u32[i] = i;
+            no_of_d_u64[i] = i;
+            no_of_f_u8 [i] = i;
+            no_of_f_u16[i] = i;
+            no_of_f_u32[i] = i;
+            no_of_f_u64[i] = i;
+            no_of_i1   [i] = i;
+            no_of_i8   [i] = i;
+            no_of_i16  [i] = i;
+            no_of_i32  [i] = i;
+            no_of_i64  [i] = i;
+            no_of_ui8  [i] = i;
+            no_of_ui16 [i] = i;
+            no_of_ui32 [i] = i;
+            no_of_ui64 [i] = i;
+        }
+        
 #ifdef KNC_H
     printf ("Include knc.h\n");
 #else
@@ -992,12 +1054,20 @@ int main () {
     cast_bits_scalar_i64_d (d_64);
     cast_bits_scalar_d_ui64(ui64);
     cast_bits_scalar_d_i64 (i64);
-    */
+    
 
     cast_bits_f_i32(i32);
     cast_bits_i32_f(f_32);
     cast_bits_d_i64(i64);
     cast_bits_i64_d(d_64);
+    */
+
+    reduce_add_double(no_of_d_32);
+    reduce_add_float (no_of_f_32);
+    reduce_add_int8  (no_of_i8);
+    reduce_add_int16 (no_of_i16);
+    reduce_add_int32 (no_of_i32);
+    reduce_add_int64 (no_of_i64);
 
 return 0;
 }
