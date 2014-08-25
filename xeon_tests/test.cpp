@@ -1221,9 +1221,6 @@ void FUNC_NAME(TYPE *data) {                                                    
                                                                                             \
     TYPE output;                                                                            \
     output = __##FUNC_NAME(input);                                                          \
-    printf("\n %d | %d\n %f | %f\n", output, data[RES_NUM], output, data[RES_NUM]);         \
-    for (uint32_t i = 0; i < 16; i++)                                                       \
-        printf("#%d | %d | %f\n", i, data[i], data[i]);                                               \
     if ((TYPE) output != (TYPE) data[RES_NUM])                                              \
         printf(" errors 1\n");                                                              \
     else                                                                                    \
@@ -1242,6 +1239,103 @@ REDUCE_MINMAX_TEST(int32_t , __vec16_i32, 0, reduce_max_int32)
 REDUCE_MINMAX_TEST(uint32_t, __vec16_i32, 0, reduce_max_uint32)
 REDUCE_MINMAX_TEST(int64_t , __vec16_i64, 0, reduce_max_int64)
 REDUCE_MINMAX_TEST(uint64_t, __vec16_i64, 0, reduce_max_uint64)
+
+/////////////////////////////////////////////////////////////////////////////////////////////
+#define POPCNT_TEST(TYPE, FUNC_NAME)                                                        \
+void FUNC_NAME(TYPE *data) {                                                                \
+    printf (#FUNC_NAME, ":");                                                               \
+                                                                                            \
+    TYPE copy_data[16];                                                                     \
+    for (uint32_t i = 0; i < 16; i++)                                                       \
+        copy_data[i] = data[i];                                                             \
+                                                                                            \
+    int err_counter = 0;                                                                    \
+    int32_t output = 0;                                                                     \
+    int32_t result = 0;                                                                     \
+    for (uint32_t i = 0; i < 16; i++){                                                      \
+        output = __##FUNC_NAME(copy_data[i]);                                               \
+        result = 0;                                                                         \
+        for (result = 0; copy_data[i] != 0; result++)                                       \
+             copy_data[i] &= copy_data[i] - 1;                                              \
+        if (output != result)                                                               \
+            err_counter++;                                                                  \
+    }                                                                                       \
+    if (err_counter != 0)                                                                   \
+        printf(" errors %d\n", err_counter);                                                \
+    else                                                                                    \
+        printf(" no fails\n");                                                              \
+}
+
+POPCNT_TEST(uint32_t, popcnt_int32)
+POPCNT_TEST(uint64_t, popcnt_int64)
+
+/////////////////////////////////////////////////////////////////////////////////////////////
+#define COUNT_TRAILING_ZEROS(TYPE, BIT_NUM, FUNC_NAME)                                      \
+void FUNC_NAME(TYPE *data) {                                                                \
+    printf (#FUNC_NAME, ":");                                                               \
+                                                                                            \
+    TYPE copy_data[16];                                                                     \
+    for (uint32_t i = 0; i < 16; i++)                                                       \
+        copy_data[i] = data[i];                                                             \
+                                                                                            \
+    int err_counter = 0;                                                                    \
+    int32_t output = 0;                                                                     \
+    int32_t result = 0;                                                                     \
+    for (uint32_t i = 0; i < 16; i++){                                                      \
+        output = __##FUNC_NAME(copy_data[i]);                                               \
+        TYPE mask = 1;                                                                      \
+        for (TYPE j = 0; j < BIT_NUM; j++, mask <<= 1)                                      \
+            if ((data[i] & mask) != 0){                                                     \
+                result = j;                                                                 \
+                break;                                                                      \
+            }                                                                               \
+        if (data[i] == 0)                                                                   \
+            result = BIT_NUM;                                                               \
+        if (output != result)                                                               \
+            err_counter++;                                                                  \
+    }                                                                                       \
+    if (err_counter != 0)                                                                   \
+        printf(" errors %d\n", err_counter);                                                \
+    else                                                                                    \
+        printf(" no fails\n");                                                              \
+}
+
+COUNT_TRAILING_ZEROS(uint32_t, 32, count_trailing_zeros_i32)
+COUNT_TRAILING_ZEROS(uint64_t, 64, count_trailing_zeros_i64)
+
+/////////////////////////////////////////////////////////////////////////////////////////////
+#define COUNT_LEADING_ZEROS(TYPE, BIT_NUM, FUNC_NAME)                                       \
+void FUNC_NAME(TYPE *data) {                                                                \
+    printf (#FUNC_NAME, ":");                                                               \
+                                                                                            \
+    TYPE copy_data[16];                                                                     \
+    for (uint32_t i = 0; i < 16; i++)                                                       \
+        copy_data[i] = data[i];                                                             \
+                                                                                            \
+    int err_counter = 0;                                                                    \
+    int32_t output = 0;                                                                     \
+    int32_t result = 0;                                                                     \
+    for (uint32_t i = 0; i < 16; i++){                                                      \
+        output = __count_leading_zeros_i32(copy_data[i]);                                   \
+        TYPE mask = 1 << 31;                                                                \
+        for (uint32_t j = 0; j < 32; j++, mask >>= 1)                                       \
+            if ((data[i] & mask) != 0){                                                     \
+                result = j;                                                                 \
+                break;                                                                      \
+            }                                                                               \
+        if (data[i] == 0)                                                                   \
+            result = 32;                                                                    \
+        if (output != result)                                                               \
+            err_counter++;                                                                  \
+    }                                                                                       \
+    if (err_counter != 0)                                                                   \
+        printf(" errors %d\n", err_counter);                                                \
+    else                                                                                    \
+        printf(" no fails\n");                                                              \
+}
+
+COUNT_LEADING_ZEROS(uint32_t, 32, count_leading_zeros_i32)
+COUNT_LEADING_ZEROS(uint64_t, 64, count_leading_zeros_i64)
 
 /////////////////////////////////////////////////////////////////////////////////////////////
 

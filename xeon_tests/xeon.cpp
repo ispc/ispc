@@ -425,6 +425,14 @@ void reduce_max_uint32 (uint32_t *ui32);
 void reduce_max_int64  (int64_t *i64);
 void reduce_max_uint64 (uint64_t *ui64);
 
+void popcnt_int32(uint32_t *ui32);
+void popcnt_int64(uint64_t *ui64);
+
+void count_trailing_zeros_i32(uint32_t *ui32);
+void count_trailing_zeros_i64(uint64_t *ui64);
+
+void count_leading_zeros_i32(uint32_t *ui32);
+void count_leading_zeros_i64(uint64_t *ui64);
 int main () {
     printf ("Start\n");
 // Prepare input data
@@ -1084,7 +1092,7 @@ int main () {
     reduce_add_int16 (no_of_i16);
     reduce_add_int32 (no_of_i32);
     reduce_add_int64 (no_of_i64);
-    
+     
   
     reduce_min_double (d_32);
     reduce_min_float  (f_32);
@@ -1100,6 +1108,15 @@ int main () {
     reduce_max_uint64 (ui64);
     */
 
+    popcnt_int32(ui32);
+    popcnt_int64(ui64);
+    
+
+    count_trailing_zeros_i32(ui32);
+    count_trailing_zeros_i64(ui64);
+
+    count_leading_zeros_i32(ui32);
+    count_leading_zeros_i64(ui64);
 return 0;
 }
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////
