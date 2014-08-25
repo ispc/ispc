@@ -83,7 +83,7 @@ void  FUNC_NAME##_##TYPE_MOD(TYPE *a, TYPE *b) {                                
     int err_counter = 0;                                                                    \
     TYPE result = 0;                                                                        \
     for (uint32_t i = 0; i < 16; i++){                                                      \
-        result = a[i] OP b[i];                                                              \
+        result = (TYPE) a[i] OP (TYPE) b[i];                                                \
         if (__extract_element(output, i) != result)                                         \
             err_counter++;                                                                  \
     }                                                                                       \
@@ -134,7 +134,38 @@ BINARY_OP_TEST(int16_t, __vec16_i16, <<, shl, i16)
 BINARY_OP_TEST(int32_t, __vec16_i32, <<, shl, i32)
 BINARY_OP_TEST(int64_t, __vec16_i64, <<, shl, i64)
 
+BINARY_OP_TEST(uint8_t , __vec16_i8 , /, udiv, ui8)
+BINARY_OP_TEST(uint16_t, __vec16_i16, /, udiv, ui16)
+BINARY_OP_TEST(uint32_t, __vec16_i32, /, udiv, ui32)
+BINARY_OP_TEST(uint64_t, __vec16_i64, /, udiv, ui64)
+
+BINARY_OP_TEST(int8_t , __vec16_i8 , /, sdiv, i8)
+BINARY_OP_TEST(int16_t, __vec16_i16, /, sdiv, i16)
+BINARY_OP_TEST(int32_t, __vec16_i32, /, sdiv, i32)
+BINARY_OP_TEST(int64_t, __vec16_i64, /, sdiv, i64)
+
+BINARY_OP_TEST(uint8_t , __vec16_i8 , %, urem, ui8)
+BINARY_OP_TEST(uint16_t, __vec16_i16, %, urem, ui16)
+BINARY_OP_TEST(uint32_t, __vec16_i32, %, urem, ui32)
+BINARY_OP_TEST(uint64_t, __vec16_i64, %, urem, ui64)
+
+BINARY_OP_TEST(int8_t , __vec16_i8 , %, srem, i8)
+BINARY_OP_TEST(int16_t, __vec16_i16, %, srem, i16)
+BINARY_OP_TEST(int32_t, __vec16_i32, %, srem, i32)
+BINARY_OP_TEST(int64_t, __vec16_i64, %, srem, i64)
+
+BINARY_OP_TEST(uint8_t , __vec16_i8 , >>, lshr, ui8)
+BINARY_OP_TEST(uint16_t, __vec16_i16, >>, lshr, ui16)
+BINARY_OP_TEST(uint32_t, __vec16_i32, >>, lshr, ui32)
+BINARY_OP_TEST(uint64_t, __vec16_i64, >>, lshr, ui64)
+
+BINARY_OP_TEST(int8_t , __vec16_i8 , >>, ashr, i8)
+BINARY_OP_TEST(int16_t, __vec16_i16, >>, ashr, i16)
+BINARY_OP_TEST(int32_t, __vec16_i32, >>, ashr, i32)
+BINARY_OP_TEST(int64_t, __vec16_i64, >>, ashr, i64)
+
 /////////////////////////////////////////////////////////////////////////////////////////////
+
 #define CMP(TYPE, VEC_TYPE, OP, FUNC_NAME)                                                  \
 void FUNC_NAME(TYPE *data) {                                                                \
     printf (#FUNC_NAME, ":");                                                               \

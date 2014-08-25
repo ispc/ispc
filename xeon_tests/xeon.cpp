@@ -273,25 +273,55 @@ void mul_i16   (int16_t *i16_1, int16_t *i16_2);
 void mul_i32   (int32_t *i32_1, int32_t *i32_2);
 void mul_i64   (int64_t *i64_1, int64_t *i64_2);
 
-void or_i8    (int8_t  *i8_1 , int8_t  *i8_2 );
-void or_i16   (int16_t *i16_1, int16_t *i16_2);
-void or_i32   (int32_t *i32_1, int32_t *i32_2);
-void or_i64   (int64_t *i64_1, int64_t *i64_2);
+void or_i8 (int8_t  *i8_1 , int8_t  *i8_2 );
+void or_i16(int16_t *i16_1, int16_t *i16_2);
+void or_i32(int32_t *i32_1, int32_t *i32_2);
+void or_i64(int64_t *i64_1, int64_t *i64_2);
 
-void and_i8    (int8_t  *i8_1 , int8_t  *i8_2 );
-void and_i16   (int16_t *i16_1, int16_t *i16_2);
-void and_i32   (int32_t *i32_1, int32_t *i32_2);
-void and_i64   (int64_t *i64_1, int64_t *i64_2);
+void and_i8 (int8_t  *i8_1 , int8_t  *i8_2 );
+void and_i16(int16_t *i16_1, int16_t *i16_2);
+void and_i32(int32_t *i32_1, int32_t *i32_2);
+void and_i64(int64_t *i64_1, int64_t *i64_2);
 
-void xor_i8    (int8_t  *i8_1 , int8_t  *i8_2 );
-void xor_i16   (int16_t *i16_1, int16_t *i16_2);
-void xor_i32   (int32_t *i32_1, int32_t *i32_2);
-void xor_i64   (int64_t *i64_1, int64_t *i64_2);
+void xor_i8 (int8_t  *i8_1 , int8_t  *i8_2 );
+void xor_i16(int16_t *i16_1, int16_t *i16_2);
+void xor_i32(int32_t *i32_1, int32_t *i32_2);
+void xor_i64(int64_t *i64_1, int64_t *i64_2);
 
-void shl_i8    (int8_t  *i8_1 , int8_t  *i8_2 );
-void shl_i16   (int16_t *i16_1, int16_t *i16_2);
-void shl_i32   (int32_t *i32_1, int32_t *i32_2);
-void shl_i64   (int64_t *i64_1, int64_t *i64_2);
+void shl_i8 (int8_t  *i8_1 , int8_t  *i8_2 );
+void shl_i16(int16_t *i16_1, int16_t *i16_2);
+void shl_i32(int32_t *i32_1, int32_t *i32_2);
+void shl_i64(int64_t *i64_1, int64_t *i64_2);
+
+void udiv_ui8 (uint8_t  *ui8_1 , uint8_t  *ui8_2 );
+void udiv_ui16(uint16_t *ui16_1, uint16_t *ui16_2);
+void udiv_ui32(uint32_t *ui32_1, uint32_t *ui32_2);
+void udiv_ui64(uint64_t *ui64_1, uint64_t *ui64_2);
+
+void sdiv_i8 (int8_t  *i8_1 , int8_t  *i8_2 );
+void sdiv_i16(int16_t *i16_1, int16_t *i16_2);
+void sdiv_i32(int32_t *i32_1, int32_t *i32_2);
+void sdiv_i64(int64_t *i64_1, int64_t *i64_2);
+
+void urem_ui8 (uint8_t  *ui8_1 , uint8_t  *ui8_2 );
+void urem_ui16(uint16_t *ui16_1, uint16_t *ui16_2);
+void urem_ui32(uint32_t *ui32_1, uint32_t *ui32_2);
+void urem_ui64(uint64_t *ui64_1, uint64_t *ui64_2);
+
+void srem_i8 (int8_t  *i8_1 , int8_t  *i8_2 );
+void srem_i16(int16_t *i16_1, int16_t *i16_2);
+void srem_i32(int32_t *i32_1, int32_t *i32_2);
+void srem_i64(int64_t *i64_1, int64_t *i64_2);
+
+void lshr_ui8 (uint8_t  *ui8_1 , uint8_t  *ui8_2 );
+void lshr_ui16(uint16_t *ui16_1, uint16_t *ui16_2);
+void lshr_ui32(uint32_t *ui32_1, uint32_t *ui32_2);
+void lshr_ui64(uint64_t *ui64_1, uint64_t *ui64_2);
+
+void ashr_i8 (int8_t  *i8_1 , int8_t  *i8_2 );
+void ashr_i16(int16_t *i16_1, int16_t *i16_2);
+void ashr_i32(int32_t *i32_1, int32_t *i32_2);
+void ashr_i64(int64_t *i64_1, int64_t *i64_2);
 
 
 void equal_double(double  *d  );
@@ -660,31 +690,31 @@ int main () {
         uint64_t no_of_ui64 [16];
 
         for (int i = 0; i < 16; i++) {
-            no_of_d_8  [i] = i;
-            no_of_d_16 [i] = i;
-            no_of_d_32 [i] = i;
-            no_of_d_64 [i] = i;
-            no_of_f_8  [i] = i;
-            no_of_f_16 [i] = i;
-            no_of_f_32 [i] = i;
-            no_of_f_64 [i] = i;
-            no_of_d_u8 [i] = i;
-            no_of_d_u16[i] = i;
-            no_of_d_u32[i] = i;
-            no_of_d_u64[i] = i;
-            no_of_f_u8 [i] = i;
-            no_of_f_u16[i] = i;
-            no_of_f_u32[i] = i;
-            no_of_f_u64[i] = i;
-            no_of_i1   [i] = i;
-            no_of_i8   [i] = i;
-            no_of_i16  [i] = i;
-            no_of_i32  [i] = i;
-            no_of_i64  [i] = i;
-            no_of_ui8  [i] = i;
-            no_of_ui16 [i] = i;
-            no_of_ui32 [i] = i;
-            no_of_ui64 [i] = i;
+            no_of_d_8  [i] = i + 1;
+            no_of_d_16 [i] = i + 1;
+            no_of_d_32 [i] = i + 1;
+            no_of_d_64 [i] = i + 1;
+            no_of_f_8  [i] = i + 1;
+            no_of_f_16 [i] = i + 1;
+            no_of_f_32 [i] = i + 1;
+            no_of_f_64 [i] = i + 1;
+            no_of_d_u8 [i] = i + 1;
+            no_of_d_u16[i] = i + 1;
+            no_of_d_u32[i] = i + 1;
+            no_of_d_u64[i] = i + 1;
+            no_of_f_u8 [i] = i + 1;
+            no_of_f_u16[i] = i + 1;
+            no_of_f_u32[i] = i + 1;
+            no_of_f_u64[i] = i + 1;
+            no_of_i1   [i] = i + 1;
+            no_of_i8   [i] = i + 1;
+            no_of_i16  [i] = i + 1;
+            no_of_i32  [i] = i + 1;
+            no_of_i64  [i] = i + 1;
+            no_of_ui8  [i] = i + 1;
+            no_of_ui16 [i] = i + 1;
+            no_of_ui32 [i] = i + 1;
+            no_of_ui64 [i] = i + 1;
         }
         
 #ifdef KNC_H
@@ -995,26 +1025,55 @@ int main () {
     mul_i32   (no_of_i32 , no_of_i32);
     mul_i64   (no_of_i64 , no_of_i64);
 
-    or_i8    (no_of_i8  , no_of_i8);
-    or_i16   (no_of_i16 , no_of_i16);
-    or_i32   (no_of_i32 , no_of_i32);
-    or_i64   (no_of_i64 , no_of_i64);    
+    or_i8 (no_of_i8  , no_of_i8);
+    or_i16(no_of_i16 , no_of_i16);
+    or_i32(no_of_i32 , no_of_i32);
+    or_i64(no_of_i64 , no_of_i64);    
     
-    and_i8    (no_of_i8  , no_of_i8);
-    and_i16   (no_of_i16 , no_of_i16);
-    and_i32   (no_of_i32 , no_of_i32);
-    and_i64   (no_of_i64 , no_of_i64); 
+    and_i8 (no_of_i8  , no_of_i8);
+    and_i16(no_of_i16 , no_of_i16);
+    and_i32(no_of_i32 , no_of_i32);
+    and_i64(no_of_i64 , no_of_i64); 
 
-    xor_i8    (no_of_i8  , no_of_i8);
-    xor_i16   (no_of_i16 , no_of_i16);
-    xor_i32   (no_of_i32 , no_of_i32);
-    xor_i64   (no_of_i64 , no_of_i64);
+    xor_i8 (no_of_i8  , no_of_i8);
+    xor_i16(no_of_i16 , no_of_i16);
+    xor_i32(no_of_i32 , no_of_i32);
+    xor_i64(no_of_i64 , no_of_i64);
    
-    shl_i8    (no_of_i8  , no_of_i8);
-    shl_i16   (no_of_i16 , no_of_i16);
-    shl_i32   (no_of_i32 , no_of_i32);
-    shl_i64   (no_of_i64 , no_of_i64);
+    shl_i8 (no_of_i8  , no_of_i8);
+    shl_i16(no_of_i16 , no_of_i16);
+    shl_i32(no_of_i32 , no_of_i32);
+    shl_i64(no_of_i64 , no_of_i64);
+    
+    udiv_ui8 (no_of_ui8  , no_of_ui8);
+    udiv_ui16(no_of_ui16 , no_of_ui16);
+    udiv_ui32(no_of_ui32 , no_of_ui32);
+    udiv_ui64(no_of_ui64 , no_of_ui64);
 
+    sdiv_i8 (no_of_i8  , no_of_i8);
+    sdiv_i16(no_of_i16 , no_of_i16);
+    sdiv_i32(no_of_i32 , no_of_i32);
+    sdiv_i64(no_of_i64 , no_of_i64);
+    
+    urem_ui8 (no_of_ui8  , no_of_ui8);
+    urem_ui16(no_of_ui16 , no_of_ui16);
+    urem_ui32(no_of_ui32 , no_of_ui32);
+    urem_ui64(no_of_ui64 , no_of_ui64);
+
+    srem_i8 (no_of_i8  , no_of_i8);
+    srem_i16(no_of_i16 , no_of_i16);
+    srem_i32(no_of_i32 , no_of_i32);
+    srem_i64(no_of_i64 , no_of_i64);
+
+    lshr_ui8 (no_of_ui8  , no_of_ui8);
+    lshr_ui16(no_of_ui16 , no_of_ui16);
+    lshr_ui32(no_of_ui32 , no_of_ui32);
+    lshr_ui64(no_of_ui64 , no_of_ui64);
+
+    ashr_i8 (no_of_i8  , no_of_i8);
+    ashr_i16(no_of_i16 , no_of_i16);
+    ashr_i32(no_of_i32 , no_of_i32);
+    ashr_i64(no_of_i64 , no_of_i64);
     /*
     equal_double(d_32);
     equal_float (f_32);
