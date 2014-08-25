@@ -55,7 +55,7 @@ void allocator(T **array) {
     if (err_counter != 0)
         printf(" errors %d\n", err_counter);
     else
-         printf(" no fails\n");
+        printf(" no fails\n");
 */
 
 /////////////////////////////////////////////////////////////////////////////////////////////
@@ -163,7 +163,7 @@ void FUNC_NAME##_and_mask(TYPE *data, int *m) {                                 
     if (err_counter != 0)                                                                   \
         printf(" errors %d\n", err_counter);                                                \
     else                                                                                    \
-         printf(" no fails\n");                                                             \
+        printf(" no fails\n");                                                              \
 }
 
 CMP(double , __vec16_d  , ==, equal_double)
@@ -259,7 +259,7 @@ void FUNC_NAME(TYPE *data) {                                                    
     if (err_counter != 0)                                                                   \
         printf(" errors %d\n", err_counter);                                                \
     else                                                                                    \
-         printf(" no fails\n");                                                             \
+        printf(" no fails\n");                                                              \
 }
 
 INSERT_EXTRACT_ELEMENT(double , __vec16_d  , insert_extract_element_double)
@@ -294,7 +294,7 @@ void FUNC_NAME(TYPE *data) {                                                    
     if (err_counter != 0)                                                                   \
         printf(" errors %d\n", err_counter);                                                \
     else                                                                                    \
-         printf(" no fails\n");                                                             \
+        printf(" no fails\n");                                                              \
 }
 
 LOAD(double , __vec16_d  , load_double, 128)
@@ -467,7 +467,7 @@ void FUNC_NAME##_cond(TYPE *data, int *m) {                                     
     if (err_counter != 0)                                                                   \
         printf(" errors %d\n", err_counter);                                                \
     else                                                                                    \
-         printf(" no fails\n");                                                             \
+        printf(" no fails\n");                                                              \
 }
 
 SELECT_TEST(double , __vec16_d  , select_double)
@@ -507,7 +507,7 @@ void FUNC_NAME(TYPE *data) {                                                    
     if (err_counter != 0)                                                                   \
         printf(" errors %d\n", err_counter);                                                \
     else                                                                                    \
-         printf(" no fails\n");                                                             \
+        printf(" no fails\n");                                                              \
 }
 
 BROADCAST_TEST(double , __vec16_d  , broadcast_double)
@@ -547,7 +547,7 @@ void FUNC_NAME(TYPE *data) {                                                    
     if (err_counter != 0)                                                                   \
         printf(" errors %d\n", err_counter);                                                \
     else                                                                                    \
-         printf(" no fails\n");                                                             \
+        printf(" no fails\n");                                                              \
 }
 
 ROTATE_TEST(double , __vec16_d  , rotate_double)
@@ -592,7 +592,7 @@ void FUNC_NAME(TYPE *data) {                                                    
     if (err_counter != 0)                                                                   \
         printf(" errors %d\n", err_counter);                                                \
     else                                                                                    \
-         printf(" no fails\n");                                                             \
+        printf(" no fails\n");                                                              \
 }
 
 SHIFT_TEST(double , __vec16_d  , shift_double)
@@ -651,7 +651,7 @@ void FUNC_NAME(TYPE *data) {                                                    
     if (err_counter != 0)                                                                   \
         printf(" errors %d\n", err_counter);                                                \
     else                                                                                    \
-         printf(" no fails\n");                                                             \
+        printf(" no fails\n");                                                              \
 }
 
 SHUFFLE_TEST(double , __vec16_d  , shuffle_double)
@@ -685,7 +685,7 @@ void FUNC_NAME(FROM *data) {                                                    
     if (err_counter != 0)                                                                   \
         printf(" errors %d\n", err_counter);                                                \
     else                                                                                    \
-         printf(" no fails\n");                                                             \
+        printf(" no fails\n");                                                              \
 }
 
 CAST_TEST(int64_t, __vec16_i64, int32_t, __vec16_i32, cast_i64_i32, __cast_sext)
@@ -795,7 +795,7 @@ void FUNC_NAME(FROM *data) {                                                    
     if (err_counter != 0)                                                                   \
         printf(" errors %d\n", err_counter);                                                \
     else                                                                                    \
-         printf(" no fails\n");                                                             \
+        printf(" no fails\n");                                                              \
 }
 
 CAST_BITS_TEST(float  , __vec16_f  , int32_t, __vec16_i32, cast_bits_f_i32)
@@ -831,7 +831,7 @@ void FUNC_NAME(FROM *data) {                                                    
     if (err_counter != 0)                                                                   \
         printf(" errors %d\n", err_counter);                                                \
     else                                                                                    \
-         printf(" no fails\n");                                                             \
+        printf(" no fails\n");                                                              \
 }
 
 CAST_BITS_SCALAR_TEST(uint32_t, float   , cast_bits_scalar_ui32_f)
@@ -880,7 +880,7 @@ void FUNC_NAME(TYPE *data, int *m) {                                            
     if (err_counter != 0)                                                                   \
         printf(" errors %d\n", err_counter);                                                \
     else                                                                                    \
-         printf(" no fails\n");                                                             \
+        printf(" no fails\n");                                                              \
                                                                                             \
     for (uint32_t i = 0; i < 16; i++)                                                       \
         free(b[i]);                                                                         \
@@ -1196,7 +1196,7 @@ void FUNC_NAME(TYPE *data) {                                                    
     if ((TYPE) output != (TYPE) result)                                                     \
         printf(" errors 1\n");                                                              \
     else                                                                                    \
-         printf(" no fails\n");                                                             \
+        printf(" no fails\n");                                                              \
 }
 
 REDUCE_ADD_TEST(double , __vec16_d  , reduce_add_double)
@@ -1205,6 +1205,44 @@ REDUCE_ADD_TEST(int8_t , __vec16_i8 , reduce_add_int8  )
 REDUCE_ADD_TEST(int16_t, __vec16_i16, reduce_add_int16 )
 REDUCE_ADD_TEST(int32_t, __vec16_i32, reduce_add_int32 )
 REDUCE_ADD_TEST(int64_t, __vec16_i64, reduce_add_int64 )
+
+/////////////////////////////////////////////////////////////////////////////////////////////
+#define REDUCE_MINMAX_TEST(TYPE, VEC_TYPE, RES_NUM, FUNC_NAME)                              \
+void FUNC_NAME(TYPE *data) {                                                                \
+    printf (#FUNC_NAME, ":");                                                               \
+                                                                                            \
+    TYPE copy_data[16];                                                                     \
+    for (uint32_t i = 0; i < 16; i++)                                                       \
+        copy_data[i] = data[i];                                                             \
+                                                                                            \
+    VEC_TYPE input;                                                                         \
+    for (uint32_t i = 0; i < 16; i++)                                                       \
+        __insert_element(&input, i, (TYPE) copy_data[i]);                                   \
+                                                                                            \
+    TYPE output;                                                                            \
+    output = __##FUNC_NAME(input);                                                          \
+    printf("\n %d | %d\n %f | %f\n", output, data[RES_NUM], output, data[RES_NUM]);         \
+    for (uint32_t i = 0; i < 16; i++)                                                       \
+        printf("#%d | %d | %f\n", i, data[i], data[i]);                                               \
+    if ((TYPE) output != (TYPE) data[RES_NUM])                                              \
+        printf(" errors 1\n");                                                              \
+    else                                                                                    \
+        printf(" no fails\n");                                                              \
+} 
+
+REDUCE_MINMAX_TEST(double  , __vec16_d  , 1, reduce_min_double)
+REDUCE_MINMAX_TEST(float   , __vec16_f  , 1, reduce_min_float)
+REDUCE_MINMAX_TEST(int32_t , __vec16_i32, 1, reduce_min_int32)
+REDUCE_MINMAX_TEST(uint32_t, __vec16_i32, 1, reduce_min_uint32)
+REDUCE_MINMAX_TEST(int64_t , __vec16_i64, 1, reduce_min_int64)
+REDUCE_MINMAX_TEST(uint64_t, __vec16_i64, 1, reduce_min_uint64)
+REDUCE_MINMAX_TEST(double  , __vec16_d  , 0, reduce_max_double)
+REDUCE_MINMAX_TEST(float   , __vec16_f  , 0, reduce_max_float)
+REDUCE_MINMAX_TEST(int32_t , __vec16_i32, 0, reduce_max_int32)
+REDUCE_MINMAX_TEST(uint32_t, __vec16_i32, 0, reduce_max_uint32)
+REDUCE_MINMAX_TEST(int64_t , __vec16_i64, 0, reduce_max_int64)
+REDUCE_MINMAX_TEST(uint64_t, __vec16_i64, 0, reduce_max_uint64)
+
 /////////////////////////////////////////////////////////////////////////////////////////////
 
 void movmsk(int *m) {

@@ -402,12 +402,28 @@ void cast_bits_i32_f(float   *f_32);
 void cast_bits_d_i64(int64_t *i64);
 void cast_bits_i64_d(double  *d_64);
 
+
 void reduce_add_double(double  *d  );
 void reduce_add_float (float   *f  );
 void reduce_add_int8  (int8_t  *i8 );
 void reduce_add_int16 (int16_t *i16);
 void reduce_add_int32 (int32_t *i32);
 void reduce_add_int64 (int64_t *i64);
+
+
+void reduce_min_double (double  *d  );
+void reduce_min_float  (float   *f  );
+void reduce_min_int32  (int32_t *i32);
+void reduce_min_uint32 (uint32_t *ui32);
+void reduce_min_int64  (int64_t *i64);
+void reduce_min_uint64 (uint64_t *ui64);
+
+void reduce_max_double (double  *d  );
+void reduce_max_float  (float   *f  );
+void reduce_max_int32  (int32_t *i32);
+void reduce_max_uint32 (uint32_t *ui32);
+void reduce_max_int64  (int64_t *i64);
+void reduce_max_uint64 (uint64_t *ui64);
 
 int main () {
     printf ("Start\n");
@@ -515,7 +531,7 @@ int main () {
     ui32[1] = 0;
 
     ui64[0] = INT64_MAX;
-    ui64[1] = INT64_MIN;
+    ui64[1] = 0;
 
     for (int i = 2; i < 16; i++) {
         d_u8 [i] = (i + 1) * 8;
@@ -1060,7 +1076,7 @@ int main () {
     cast_bits_i32_f(f_32);
     cast_bits_d_i64(i64);
     cast_bits_i64_d(d_64);
-    */
+    
 
     reduce_add_double(no_of_d_32);
     reduce_add_float (no_of_f_32);
@@ -1068,6 +1084,21 @@ int main () {
     reduce_add_int16 (no_of_i16);
     reduce_add_int32 (no_of_i32);
     reduce_add_int64 (no_of_i64);
+    
+  
+    reduce_min_double (d_32);
+    reduce_min_float  (f_32);
+    reduce_min_int32  (i32);
+    reduce_min_uint32 (ui32);
+    reduce_min_int64  (i64);
+    reduce_min_uint64 (ui64);
+    reduce_max_double (d_32);
+    reduce_max_float  (f_32);
+    reduce_max_int32  (i32);
+    reduce_max_uint32 (ui32);
+    reduce_max_int64  (i64);
+    reduce_max_uint64 (ui64);
+    */
 
 return 0;
 }
