@@ -321,18 +321,18 @@ template <int ALIGN> static FORCEINLINE void __store(__vec16_i1 *p, __vec16_i1 v
     *ptr = v;
 }
 
-template <class RetVecType> RetVecType __smear_i1(int i);
-template <> static FORCEINLINE __vec16_i1 __smear_i1<__vec16_i1>(int i) {
+template <class RetVecType> static RetVecType __smear_i1(int i);
+template <> FORCEINLINE __vec16_i1 __smear_i1<__vec16_i1>(int i) {
     return i?0xFFFF:0x0;
 }
 
-template <class RetVecType> RetVecType __setzero_i1();
-template <> static FORCEINLINE __vec16_i1 __setzero_i1<__vec16_i1>() {
+template <class RetVecType> static RetVecType __setzero_i1();
+template <> FORCEINLINE __vec16_i1 __setzero_i1<__vec16_i1>() {
     return 0;
 }
 
-template <class RetVecType> RetVecType __undef_i1();
-template <> static FORCEINLINE __vec16_i1 __undef_i1<__vec16_i1>() {
+template <class RetVecType> static RetVecType __undef_i1();
+template <> FORCEINLINE __vec16_i1 __undef_i1<__vec16_i1>() {
     return __vec16_i1();
 }
 
@@ -532,8 +532,8 @@ static FORCEINLINE void __insert_element(__vec16_i32 *v, uint32_t index, int32_t
     ((int32_t *)v)[index] = val;
 }
 
-template <class RetVecType> RetVecType __smear_i32(int32_t i);
-template <> static FORCEINLINE __vec16_i32 __smear_i32<__vec16_i32>(int32_t i) {
+template <class RetVecType> static RetVecType __smear_i32(int32_t i);
+template <> FORCEINLINE __vec16_i32 __smear_i32<__vec16_i32>(int32_t i) {
     return _mm512_set1_epi32(i);
 }
 
@@ -542,13 +542,13 @@ static const __vec16_i32 __ispc_thirty_two = __smear_i32<__vec16_i32>(32);
 static const __vec16_i32 __ispc_ffffffff = __smear_i32<__vec16_i32>(-1);
 static const __vec16_i32 __ispc_stride1(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15);
 
-template <class RetVecType> RetVecType __setzero_i32();
-template <> static FORCEINLINE __vec16_i32 __setzero_i32<__vec16_i32>() {
+template <class RetVecType> static RetVecType __setzero_i32();
+template <> FORCEINLINE __vec16_i32 __setzero_i32<__vec16_i32>() {
     return _mm512_setzero_epi32();
 }
 
-template <class RetVecType> RetVecType __undef_i32();
-template <> static FORCEINLINE __vec16_i32 __undef_i32<__vec16_i32>() {
+template <class RetVecType> static RetVecType __undef_i32();
+template <> FORCEINLINE __vec16_i32 __undef_i32<__vec16_i32>() {
     return __vec16_i32();
 }
 
@@ -578,7 +578,7 @@ template <int ALIGN> static FORCEINLINE __vec16_i32 __load(const __vec16_i32 *p)
 #endif
 }
 
-template <> static FORCEINLINE __vec16_i32 __load<64>(const __vec16_i32 *p) {
+template <> FORCEINLINE __vec16_i32 __load<64>(const __vec16_i32 *p) {
     return _mm512_load_epi32(p);
 }
 
@@ -591,7 +591,7 @@ template <int ALIGN> static FORCEINLINE void __store(__vec16_i32 *p, __vec16_i32
 #endif
 }
 
-template <> static FORCEINLINE void __store<64>(__vec16_i32 *p, __vec16_i32 v) {
+template <> FORCEINLINE void __store<64>(__vec16_i32 *p, __vec16_i32 v) {
     _mm512_store_epi32(p, v);
 }
 
@@ -611,16 +611,16 @@ static FORCEINLINE void __insert_element(__vec16_i64 *v, uint32_t index, int64_t
 }
 
 
-template <class RetVecType> RetVecType __setzero_i64();
-template <> static FORCEINLINE __vec16_i64 __setzero_i64<__vec16_i64>() {
+template <class RetVecType> static RetVecType __setzero_i64();
+template <> FORCEINLINE __vec16_i64 __setzero_i64<__vec16_i64>() {
     __vec16_i64 ret;
     ret.v_lo = _mm512_setzero_epi32();
     ret.v_hi = _mm512_setzero_epi32();
     return ret;
 }
 
-template <class RetVecType> RetVecType __undef_i64();
-template <> static FORCEINLINE __vec16_i64 __undef_i64<__vec16_i64>() {
+template <class RetVecType> static RetVecType __undef_i64();
+template <> FORCEINLINE __vec16_i64 __undef_i64<__vec16_i64>() {
     return __vec16_i64();
 }
 
@@ -753,7 +753,7 @@ static FORCEINLINE __vec16_i64 __select(__vec16_i1 mask,
     return ret;
 }
 
-template <class RetVecType> RetVecType __smear_i64(const int64_t &l);
+template <class RetVecType> static RetVecType __smear_i64(const int64_t &l);
 template <> FORCEINLINE  __vec16_i64 __smear_i64<__vec16_i64>(const int64_t &l) {
     const int *i = (const int*)&l;
     return __vec16_i64(_mm512_set1_epi32(i[0]), _mm512_set1_epi32(i[1]));
@@ -783,7 +783,7 @@ template <int ALIGN> static FORCEINLINE __vec16_i64 __load(const __vec16_i64 *p)
     return ret;    
 }
 
-template <> static FORCEINLINE __vec16_i64 __load<64>(const __vec16_i64 *p) {
+template <> FORCEINLINE __vec16_i64 __load<64>(const __vec16_i64 *p) {
     __m512i v2 = _mm512_load_epi32(p);
     __m512i v1 = _mm512_load_epi32(((uint8_t*)p)+64);
     __vec16_i64 ret;
@@ -802,7 +802,7 @@ template <> static FORCEINLINE __vec16_i64 __load<64>(const __vec16_i64 *p) {
     return ret;    
 }
 
-template <> static FORCEINLINE __vec16_i64 __load<128>(const __vec16_i64 *p) {
+template <> FORCEINLINE __vec16_i64 __load<128>(const __vec16_i64 *p) {
     return __load<64>(p);
 }
 
@@ -827,7 +827,7 @@ template <int ALIGN> static FORCEINLINE void __store(__vec16_i64 *p, __vec16_i64
     _mm512_extpackstorehi_epi32((uint8_t*)p+128, v1, _MM_DOWNCONV_EPI32_NONE, _MM_HINT_NONE);
 }
 
-template <> static FORCEINLINE void __store<64>(__vec16_i64 *p, __vec16_i64 v) {
+template <> FORCEINLINE void __store<64>(__vec16_i64 *p, __vec16_i64 v) {
     __m512i v1;
     __m512i v2;
     v1 = _mm512_mask_permutevar_epi32(_mm512_undefined_epi32(), 0xAAAA,
@@ -846,7 +846,7 @@ template <> static FORCEINLINE void __store<64>(__vec16_i64 *p, __vec16_i64 v) {
     _mm512_store_epi64(((uint8_t*)p)+64, v1);
 }
 
-template <> static FORCEINLINE void __store<128>(__vec16_i64 *p, __vec16_i64 v) {
+template <> FORCEINLINE void __store<128>(__vec16_i64 *p, __vec16_i64 v) {
     __store<64>(p, v);
 }
 
@@ -948,18 +948,18 @@ static FORCEINLINE void  __insert_element(__vec16_f *v, uint32_t index, float va
     ((float *)v)[index] = val;
 }
 
-template <class RetVecType> RetVecType __smear_float(float f);
-template <> static FORCEINLINE __vec16_f __smear_float<__vec16_f>(float f) {
+template <class RetVecType> static RetVecType __smear_float(float f);
+template <> FORCEINLINE __vec16_f __smear_float<__vec16_f>(float f) {
     return _mm512_set_1to16_ps(f);
 }
 
-template <class RetVecType> RetVecType __setzero_float();
-template <> static FORCEINLINE __vec16_f __setzero_float<__vec16_f>() {
+template <class RetVecType> static RetVecType __setzero_float();
+template <> FORCEINLINE __vec16_f __setzero_float<__vec16_f>() {
     return _mm512_setzero_ps();
 }
 
-template <class RetVecType> RetVecType __undef_float();
-template <> static FORCEINLINE __vec16_f __undef_float<__vec16_f>() {
+template <class RetVecType> static RetVecType __undef_float();
+template <> FORCEINLINE __vec16_f __undef_float<__vec16_f>() {
     return __vec16_f();
 }
 
@@ -983,7 +983,7 @@ template <int ALIGN> static FORCEINLINE __vec16_f __load(const __vec16_f *p) {
 #endif
 }
 
-template <> static FORCEINLINE __vec16_f __load<64>(const __vec16_f *p) {
+template <> FORCEINLINE __vec16_f __load<64>(const __vec16_f *p) {
     return _mm512_load_ps(p);
 }
 
@@ -996,7 +996,7 @@ template <int ALIGN> static FORCEINLINE void __store(__vec16_f *p, __vec16_f v) 
 #endif
 }
 
-template <> static FORCEINLINE void __store<64>(__vec16_f *p, __vec16_f v) {
+template <> FORCEINLINE void __store<64>(__vec16_f *p, __vec16_f v) {
     _mm512_store_ps(p, v);
 }
 
@@ -1178,24 +1178,24 @@ static FORCEINLINE void  __insert_element(__vec16_d *v, uint32_t index, double v
     ((double *)v)[index] = val;
 }
 
-template <class RetVecType> RetVecType __smear_double(double d);
-template <> static FORCEINLINE __vec16_d __smear_double<__vec16_d>(double d) {
+template <class RetVecType> static RetVecType __smear_double(double d);
+template <> FORCEINLINE __vec16_d __smear_double<__vec16_d>(double d) {
     __vec16_d ret;
     ret.v1 = _mm512_set1_pd(d);
     ret.v2 = _mm512_set1_pd(d);
     return ret;
 }
 
-template <class RetVecType> RetVecType __setzero_double();
-template <> static FORCEINLINE __vec16_d __setzero_double<__vec16_d>() {
+template <class RetVecType> static RetVecType __setzero_double();
+template <> FORCEINLINE __vec16_d __setzero_double<__vec16_d>() {
     __vec16_d ret;
     ret.v1 = _mm512_setzero_pd();
     ret.v2 = _mm512_setzero_pd();
     return ret;
 }
 
-template <class RetVecType> RetVecType __undef_double();
-template <> static FORCEINLINE __vec16_d __undef_double<__vec16_d>() {
+template <class RetVecType> static RetVecType __undef_double();
+template <> FORCEINLINE __vec16_d __undef_double<__vec16_d>() {
     return __vec16_d();
 }
 
@@ -1216,14 +1216,14 @@ template <int ALIGN> static FORCEINLINE __vec16_d __load(const __vec16_d *p) {
     return ret;
 }
 
-template <> static FORCEINLINE __vec16_d __load<64>(const __vec16_d *p) {
+template <> FORCEINLINE __vec16_d __load<64>(const __vec16_d *p) {
     __vec16_d ret;
     ret.v1 = _mm512_load_pd(p);
     ret.v2 = _mm512_load_pd(((uint8_t*)p)+64);
     return ret;
 }
 
-template <> static FORCEINLINE __vec16_d __load<128>(const __vec16_d *p) {
+template <> FORCEINLINE __vec16_d __load<128>(const __vec16_d *p) {
     return __load<64>(p);
 }
  
@@ -1234,12 +1234,12 @@ template <int ALIGN> static FORCEINLINE void __store(__vec16_d *p, __vec16_d v) 
     _mm512_extpackstorehi_pd((uint8_t*)p+128, v.v2, _MM_DOWNCONV_PD_NONE, _MM_HINT_NONE);
 }
 
-template <> static FORCEINLINE void __store<64>(__vec16_d *p, __vec16_d v) {
+template <> FORCEINLINE void __store<64>(__vec16_d *p, __vec16_d v) {
     _mm512_store_pd(p, v.v1);
     _mm512_store_pd(((uint8_t*)p)+64, v.v2);
 }
 
-template <> static FORCEINLINE void __store<128>(__vec16_d *p, __vec16_d v) {
+template <> FORCEINLINE void __store<128>(__vec16_d *p, __vec16_d v) {
     __store<64>(p, v);
 }
 
