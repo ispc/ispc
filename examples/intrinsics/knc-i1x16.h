@@ -2214,7 +2214,7 @@ static FORCEINLINE VTYPE FUNC(unsigned char *b, uint32_t scale,         \
     int8_t *base = (int8_t *)b;                                         \
     for (int i = 0; i < 16; ++i)                                        \
         if ((mask.v & (1 << i)) != 0) {                                 \
-            STYPE *ptr = (STYPE *)(base + scale * offset[i]);         \
+            STYPE *ptr = (STYPE *)((uint32_t)base + scale * offset[i]);         \
             ret[i] = *ptr;                                            \
         }                                                               \
     return ret;                                                         \
@@ -2394,7 +2394,7 @@ static FORCEINLINE void FUNC(unsigned char *b, uint32_t scale,          \
     int8_t *base = (int8_t *)b;                                         \
     for (int i = 0; i < 16; ++i)                                        \
         if ((mask.v & (1 << i)) != 0) {                                 \
-            STYPE *ptr = (STYPE *)(base + scale * offset[i]);         \
+            STYPE *ptr = (STYPE *)((uint32_t)base + scale * offset[i]);         \
             *ptr = val[i];                                            \
         }                                                               \
 }
