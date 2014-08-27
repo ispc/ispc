@@ -412,7 +412,6 @@ void FUNC_NAME(TYPE *data) {                                                    
                                                                                             \
     int err_counter = 0;                                                                    \
     for (uint32_t i = 0; i < 16; i++){                                                      \
-        printf("%d | %d | %d\n", i, __extract_element(output, i), data[i]);                   \
         if (__extract_element(output, i) != data[i])                                        \
             err_counter++;                                                                  \
     }                                                                                       \
@@ -428,7 +427,7 @@ LOAD(float  , __vec16_f  , load_float , 64)
 //LOAD(int16_t, __vec16_i16, load_i16   , 32)
 LOAD(int32_t, __vec16_i32, load_i32   , 64)
 LOAD(int64_t, __vec16_i64, load_i64   , 128)
-/*
+
 /////////////////////////////////////////////////////////////////////////////////////////////
 #define STORE(TYPE, VEC_TYPE, FUNC_NAME, ALIGN_NUM)                                         \
 void FUNC_NAME(TYPE *data) {                                                                \
@@ -601,7 +600,7 @@ SELECT_TEST(float  , __vec16_f  , select_float )
 //SELECT_TEST(int16_t, __vec16_i16, select_i16   )
 SELECT_TEST(int32_t, __vec16_i32, select_i32   )
 SELECT_TEST(int64_t, __vec16_i64, select_i64   )
-
+/*
 /////////////////////////////////////////////////////////////////////////////////////////////
 #define BROADCAST_TEST(TYPE, VEC_TYPE, FUNC_NAME)                                           \
 void FUNC_NAME(TYPE *data) {                                                                \

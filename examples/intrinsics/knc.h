@@ -1155,6 +1155,7 @@ static FORCEINLINE __vec16_i64 __shuffle2_i64(__vec16_i64 v0, __vec16_i64 v1, __
 
 
 template <int ALIGN> static FORCEINLINE __vec16_i64 __load(const __vec16_i64 *p) {
+<<<<<<< HEAD
   __vec16_i32 v1;
   __vec16_i32 v2;
   const uint8_t*ptr = (const uint8_t*)p;
@@ -1205,6 +1206,7 @@ template <> FORCEINLINE __vec16_i64 __load<128>(const __vec16_i64 *p) {
 #endif
 
 template <int ALIGN> static FORCEINLINE void __store(__vec16_i64 *p, __vec16_i64 v) {
+<<<<<<< HEAD
   __m512i v1;
   __m512i v2;
   v1 = _mm512_mask_permutevar_epi32(_mm512_undefined_epi32(), 0xAAAA,
@@ -1242,6 +1244,29 @@ template <> FORCEINLINE void __store<64>(__vec16_i64 *p, __vec16_i64 v) {
       v.v_lo);    
   _mm512_store_epi64(p, v2);
   _mm512_store_epi64(((uint8_t*)p)+64, v1);
+=======
+    __m512i v1;
+    __m512i v2;
+    v2 = _mm512_permutevar_epi32(_mm512_set_16to16_pi(15,14,13,12,11,10,9,8,7,6,5,4,3,2,1,0),
+                                       v.v_hi);
+    v1 = _mm512_permutevar_epi32(_mm512_set_16to16_pi(15,14,13,12,11,10,9,8,7,6,5,4,3,2,1,0),
+                                       v.v_lo);
+    _mm512_extpackstorelo_epi32(p, v2, _MM_DOWNCONV_EPI32_NONE, _MM_HINT_NONE);
+    _mm512_extpackstorehi_epi32((uint8_t*)p+64, v2, _MM_DOWNCONV_EPI32_NONE, _MM_HINT_NONE);
+    _mm512_extpackstorelo_epi32((uint8_t*)p+64, v1, _MM_DOWNCONV_EPI32_NONE, _MM_HINT_NONE);
+    _mm512_extpackstorehi_epi32((uint8_t*)p+128, v1, _MM_DOWNCONV_EPI32_NONE, _MM_HINT_NONE);
+}
+
+template <> FORCEINLINE void __store<64>(__vec16_i64 *p, __vec16_i64 v) {
+    __m512i v1;
+    __m512i v2;
+    v2 = _mm512_permutevar_epi32(_mm512_set_16to16_pi(15,14,13,12,11,10,9,8,7,6,5,4,3,2,1,0),
+                                       v.v_hi);
+    v1 = _mm512_permutevar_epi32(_mm512_set_16to16_pi(15,14,13,12,11,10,9,8,7,6,5,4,3,2,1,0),
+                                       v.v_lo);
+    _mm512_store_epi64(p, v2);
+    _mm512_store_epi64(((uint8_t*)p)+64, v1);
+>>>>>>> Store_i64 and load_i64 fix
 }
 
 template <> FORCEINLINE void __store<128>(__vec16_i64 *p, __vec16_i64 v) {

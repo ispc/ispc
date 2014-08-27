@@ -730,6 +730,25 @@ int main () {
             no_of_ui64 [i] = i + 1;
         }
         
+    d_64[2] = INT32_MAX;
+    d_64[4] = INT32_MIN;
+
+    f_64[2] = INT32_MAX;
+    f_64[4] = INT32_MIN;
+
+    i64[2] = INT32_MAX;
+    i64[4] = INT32_MIN;
+    
+    d_u64[2] = UINT32_MAX;
+    d_u64[4] = 0;
+
+    f_u64[2] = UINT32_MAX;
+    f_u64[4] = 0;
+
+    ui64[2] = UINT32_MAX;
+    ui64[4] = 0; 
+    //for (int i = 5; i < 16; i++)
+    //    i64[i] = 576460752303423488 * i;
 #ifdef KNC_H
     printf ("Include knc.h\n");
 #else
@@ -861,8 +880,8 @@ int main () {
     //insert_extract_element_i16(i16);
     insert_extract_element_i32(i32);
     insert_extract_element_i64(i64);
-
-    */
+    
+    
     load_double(d_32);
     load_float(f_32);
     //load_i8(i8);
@@ -870,46 +889,46 @@ int main () {
     load_i32(i32);
     load_i64(i64);
     
-    /*
+    
     store_double(d_32);
     store_float(f_32);
     //store_i8(i8);
     //store_i16(i16);
     store_i32(i32);
     store_i64(i64);
-
+    
     
     smear_double(d_32);
     smear_float(f_32);
-    smear_i8(i8);
-    smear_i16(i16);
+    //smear_i8(i8);
+    //smear_i16(i16);
     smear_i32(i32);
     smear_i64(i64);
 
     
     setzero_double();
     setzero_float();
-    setzero_i8();
-    setzero_i16();
+    //setzero_i8();
+    //setzero_i16();
     setzero_i32();
     setzero_i64();
     
-
+    */
     select_double(d_32, mask);
     select_float(f_32, mask);
-    select_i8(i8, mask);
-    select_i16(i16, mask);
+    //select_i8(i8, mask);
+    //select_i16(i16, mask);
     select_i32(i32, mask);
     select_i64(i64, mask);    
     
     select_double_cond(d_32, mask);
     select_float_cond(f_32, mask);
-    select_i8_cond(i8, mask);
-    select_i16_cond(i16, mask);
+    //select_i8_cond(i8, mask);
+    //select_i16_cond(i16, mask);
     select_i32_cond(i32, mask);
     select_i64_cond(i64, mask);
     
-
+    /*
     broadcast_double(d_32);
     broadcast_float(f_32);
     broadcast_i8(i8);
