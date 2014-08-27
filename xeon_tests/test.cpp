@@ -600,7 +600,7 @@ SELECT_TEST(float  , __vec16_f  , select_float )
 //SELECT_TEST(int16_t, __vec16_i16, select_i16   )
 SELECT_TEST(int32_t, __vec16_i32, select_i32   )
 SELECT_TEST(int64_t, __vec16_i64, select_i64   )
-/*
+
 /////////////////////////////////////////////////////////////////////////////////////////////
 #define BROADCAST_TEST(TYPE, VEC_TYPE, FUNC_NAME)                                           \
 void FUNC_NAME(TYPE *data) {                                                                \
@@ -639,7 +639,7 @@ BROADCAST_TEST(float  , __vec16_f  , broadcast_float )
 //BROADCAST_TEST(int8_t , __vec16_i8 , broadcast_i8    )
 //BROADCAST_TEST(int16_t, __vec16_i16, broadcast_i16   )
 BROADCAST_TEST(int32_t, __vec16_i32, broadcast_i32   )
-BROADCAST_TEST(int64_t, __vec16_i64, broadcast_i64   )
+//BROADCAST_TEST(int64_t, __vec16_i64, broadcast_i64   )
 
 /////////////////////////////////////////////////////////////////////////////////////////////
 #define ROTATE_TEST(TYPE, VEC_TYPE, FUNC_NAME)                                              \
@@ -674,12 +674,12 @@ void FUNC_NAME(TYPE *data) {                                                    
         printf(" no fails\n");                                                              \
 }
 
-ROTATE_TEST(double , __vec16_d  , rotate_double)
-ROTATE_TEST(float  , __vec16_f  , rotate_float )
+//ROTATE_TEST(double , __vec16_d  , rotate_double)
+//ROTATE_TEST(float  , __vec16_f  , rotate_float )
 //ROTATE_TEST(int8_t , __vec16_i8 , rotate_i8    )
 //ROTATE_TEST(int16_t, __vec16_i16, rotate_i16   )
 ROTATE_TEST(int32_t, __vec16_i32, rotate_i32   )
-ROTATE_TEST(int64_t, __vec16_i64, rotate_i64   )
+//ROTATE_TEST(int64_t, __vec16_i64, rotate_i64   )
 
 /////////////////////////////////////////////////////////////////////////////////////////////
 #define SHIFT_TEST(TYPE, VEC_TYPE, FUNC_NAME)                                               \
@@ -719,12 +719,12 @@ void FUNC_NAME(TYPE *data) {                                                    
         printf(" no fails\n");                                                              \
 }
 
-SHIFT_TEST(double , __vec16_d  , shift_double)
-SHIFT_TEST(float  , __vec16_f  , shift_float )
+//SHIFT_TEST(double , __vec16_d  , shift_double)
+//SHIFT_TEST(float  , __vec16_f  , shift_float )
 //SHIFT_TEST(int8_t , __vec16_i8 , shift_i8    )
 //SHIFT_TEST(int16_t, __vec16_i16, shift_i16   )
-SHIFT_TEST(int32_t, __vec16_i32, shift_i32   )
-SHIFT_TEST(int64_t, __vec16_i64, shift_i64   )
+//SHIFT_TEST(int32_t, __vec16_i32, shift_i32   )
+//SHIFT_TEST(int64_t, __vec16_i64, shift_i64   )
 
 /////////////////////////////////////////////////////////////////////////////////////////////
 #define SHUFFLE_TEST(TYPE, VEC_TYPE, FUNC_NAME)                                             \
@@ -740,7 +740,7 @@ void FUNC_NAME(TYPE *data) {                                                    
         __insert_element(&input, i ,(int32_t) copy_data[i]);                                \
                                                                                             \
     __vec16_i32 index;                                                                      \
-    /* 8|12|9|13|10|14|11|15|0|1|2|3|7|6|5|4                                              \
+    /* 8|12|9|13|10|14|11|15|0|1|2|3|7|6|5|4 */                                             \
     for (uint32_t i = 0; i < 8; i++)                                                        \
         if (i % 2 == 0)                                                                     \
             __insert_element(&index, i , 8 + i / 2);                                        \
@@ -778,7 +778,7 @@ void FUNC_NAME(TYPE *data) {                                                    
         printf(" no fails\n");                                                              \
 }
 
-SHUFFLE_TEST(double , __vec16_d  , shuffle_double)
+//SHUFFLE_TEST(double , __vec16_d  , shuffle_double)
 SHUFFLE_TEST(float  , __vec16_f  , shuffle_float )
 //SHUFFLE_TEST(int8_t , __vec16_i8 , shuffle_i8    )
 //SHUFFLE_TEST(int16_t, __vec16_i16, shuffle_i16   )
@@ -815,10 +815,10 @@ void FUNC_NAME(FROM *data) {                                                    
 CAST_TEST(int64_t, __vec16_i64, int32_t, __vec16_i32, cast_i64_i32, __cast_sext)
 //CAST_TEST(int64_t, __vec16_i64, int16_t, __vec16_i16, cast_i64_i16, __cast_sext)
 //CAST_TEST(int64_t, __vec16_i64, int8_t , __vec16_i8 , cast_i64_i8 , __cast_sext)
-CAST_TEST(int64_t, __vec16_i64, bool   , __vec16_i1 , cast_i64_i1 , __cast_sext)
+//CAST_TEST(int64_t, __vec16_i64, bool   , __vec16_i1 , cast_i64_i1 , __cast_sext)
 //CAST_TEST(int32_t, __vec16_i32, int16_t, __vec16_i16, cast_i32_i16, __cast_sext)
 //CAST_TEST(int32_t, __vec16_i32, int8_t , __vec16_i8 , cast_i32_i8 , __cast_sext)
-CAST_TEST(int32_t, __vec16_i32, bool   , __vec16_i1 , cast_i32_i1 , __cast_sext)
+//CAST_TEST(int32_t, __vec16_i32, bool   , __vec16_i1 , cast_i32_i1 , __cast_sext)
 //CAST_TEST(int16_t, __vec16_i16, int8_t , __vec16_i8 , cast_i16_i8 , __cast_sext)
 //CAST_TEST(int16_t, __vec16_i16, bool   , __vec16_i1 , cast_i16_i1 , __cast_sext)
 //CAST_TEST(int8_t , __vec16_i8 , bool   , __vec16_i1 , cast_i8_i1  , __cast_sext)
@@ -826,15 +826,15 @@ CAST_TEST(int32_t, __vec16_i32, bool   , __vec16_i1 , cast_i32_i1 , __cast_sext)
 CAST_TEST(uint64_t, __vec16_i64, uint32_t, __vec16_i32, cast_ui64_ui32, __cast_zext)
 //CAST_TEST(uint64_t, __vec16_i64, uint16_t, __vec16_i16, cast_ui64_ui16, __cast_zext)
 //CAST_TEST(uint64_t, __vec16_i64, uint8_t , __vec16_i8 , cast_ui64_ui8 , __cast_zext)
-CAST_TEST(uint64_t, __vec16_i64, bool    , __vec16_i1 , cast_ui64_ui1 , __cast_zext)
+//CAST_TEST(uint64_t, __vec16_i64, bool    , __vec16_i1 , cast_ui64_ui1 , __cast_zext)
 //CAST_TEST(uint32_t, __vec16_i32, uint16_t, __vec16_i16, cast_ui32_ui16, __cast_zext)
 //CAST_TEST(uint32_t, __vec16_i32, uint8_t , __vec16_i8 , cast_ui32_ui8 , __cast_zext)
-CAST_TEST(uint32_t, __vec16_i32, bool    , __vec16_i1 , cast_ui32_ui1 , __cast_zext)
+//CAST_TEST(uint32_t, __vec16_i32, bool    , __vec16_i1 , cast_ui32_ui1 , __cast_zext)
 //CAST_TEST(uint16_t, __vec16_i16, uint8_t , __vec16_i8 , cast_ui16_ui8 , __cast_zext)
 //CAST_TEST(uint16_t, __vec16_i16, bool    , __vec16_i1 , cast_ui16_ui1 , __cast_zext)
 //CAST_TEST(uint8_t , __vec16_i8 , bool    , __vec16_i1 , cast_ui8_ui1  , __cast_zext)
 
-CAST_TEST(int32_t, __vec16_i32, int64_t, __vec16_i64, trunk_i32_i64, __cast_trunc)
+//CAST_TEST(int32_t, __vec16_i32, int64_t, __vec16_i64, trunk_i32_i64, __cast_trunc)
 //CAST_TEST(int16_t, __vec16_i16, int64_t, __vec16_i64, trunk_i16_i64, __cast_trunc)
 //CAST_TEST(int8_t , __vec16_i8 , int64_t, __vec16_i64, trunk_i8_i64 , __cast_trunc)
 //CAST_TEST(int16_t, __vec16_i16, int32_t, __vec16_i32, trunk_i16_i32, __cast_trunc)
@@ -844,38 +844,38 @@ CAST_TEST(int32_t, __vec16_i32, int64_t, __vec16_i64, trunk_i32_i64, __cast_trun
 //CAST_TEST(float , __vec16_f, int8_t , __vec16_i8,  cast_f_i8,  __cast_sitofp)
 //CAST_TEST(float , __vec16_f, int16_t, __vec16_i16, cast_f_i16, __cast_sitofp)
 CAST_TEST(float , __vec16_f, int32_t, __vec16_i32, cast_f_i32, __cast_sitofp)
-CAST_TEST(float , __vec16_f, int64_t, __vec16_i64, cast_f_i64, __cast_sitofp)
+//CAST_TEST(float , __vec16_f, int64_t, __vec16_i64, cast_f_i64, __cast_sitofp)
 //CAST_TEST(double, __vec16_d, int8_t , __vec16_i8 , cast_d_i8,  __cast_sitofp)
 //CAST_TEST(double, __vec16_d, int16_t, __vec16_i16, cast_d_i16, __cast_sitofp)
 CAST_TEST(double, __vec16_d, int32_t, __vec16_i32, cast_d_i32, __cast_sitofp)
-CAST_TEST(double, __vec16_d, int64_t, __vec16_i64, cast_d_i64, __cast_sitofp)
+//CAST_TEST(double, __vec16_d, int64_t, __vec16_i64, cast_d_i64, __cast_sitofp)
 
 //CAST_TEST(float , __vec16_f, uint8_t , __vec16_i8,  cast_f_ui8,  __cast_uitofp)
 //CAST_TEST(float , __vec16_f, uint16_t, __vec16_i16, cast_f_ui16, __cast_uitofp)
 CAST_TEST(float , __vec16_f, uint32_t, __vec16_i32, cast_f_ui32, __cast_uitofp)
-CAST_TEST(float , __vec16_f, uint64_t, __vec16_i64, cast_f_ui64, __cast_uitofp)
+//CAST_TEST(float , __vec16_f, uint64_t, __vec16_i64, cast_f_ui64, __cast_uitofp)
 //CAST_TEST(double, __vec16_d, uint8_t , __vec16_i8 , cast_d_ui8,  __cast_uitofp)
 //CAST_TEST(double, __vec16_d, uint16_t, __vec16_i16, cast_d_ui16, __cast_uitofp)
-CAST_TEST(double, __vec16_d, uint32_t, __vec16_i32, cast_d_ui32, __cast_uitofp)
-CAST_TEST(double, __vec16_d, uint64_t, __vec16_i64, cast_d_ui64, __cast_uitofp)
+//CAST_TEST(double, __vec16_d, uint32_t, __vec16_i32, cast_d_ui32, __cast_uitofp)
+//CAST_TEST(double, __vec16_d, uint64_t, __vec16_i64, cast_d_ui64, __cast_uitofp)
 
 //CAST_TEST(int8_t , __vec16_i8 , float , __vec16_f, cast_i8_f , __cast_fptosi)
 //CAST_TEST(int16_t, __vec16_i16, float , __vec16_f, cast_i16_f, __cast_fptosi)
 CAST_TEST(int32_t, __vec16_i32, float , __vec16_f, cast_i32_f, __cast_fptosi)
-CAST_TEST(int64_t, __vec16_i64, float , __vec16_f, cast_i64_f, __cast_fptosi)
+//CAST_TEST(int64_t, __vec16_i64, float , __vec16_f, cast_i64_f, __cast_fptosi)
 //CAST_TEST(int8_t , __vec16_i8 , double, __vec16_d, cast_i8_d , __cast_fptosi)
 //CAST_TEST(int16_t, __vec16_i16, double, __vec16_d, cast_i16_d, __cast_fptosi)
-CAST_TEST(int32_t, __vec16_i32, double, __vec16_d, cast_i32_d, __cast_fptosi)
-CAST_TEST(int64_t, __vec16_i64, double, __vec16_d, cast_i64_d, __cast_fptosi)
+//CAST_TEST(int32_t, __vec16_i32, double, __vec16_d, cast_i32_d, __cast_fptosi)
+//CAST_TEST(int64_t, __vec16_i64, double, __vec16_d, cast_i64_d, __cast_fptosi)
 
 //CAST_TEST(uint8_t , __vec16_i8 , float , __vec16_f, cast_ui8_f , __cast_fptoui)
 //CAST_TEST(uint16_t, __vec16_i16, float , __vec16_f, cast_ui16_f, __cast_fptoui)
 CAST_TEST(uint32_t, __vec16_i32, float , __vec16_f, cast_ui32_f, __cast_fptoui)
-CAST_TEST(uint64_t, __vec16_i64, float , __vec16_f, cast_ui64_f, __cast_fptoui)
+//CAST_TEST(uint64_t, __vec16_i64, float , __vec16_f, cast_ui64_f, __cast_fptoui)
 //CAST_TEST(uint8_t , __vec16_i8 , double, __vec16_d, cast_ui8_d , __cast_fptoui)
 //CAST_TEST(uint16_t, __vec16_i16, double, __vec16_d, cast_ui16_d, __cast_fptoui)
-CAST_TEST(uint32_t, __vec16_i32, double, __vec16_d, cast_ui32_d, __cast_fptoui)
-CAST_TEST(uint64_t, __vec16_i64, double, __vec16_d, cast_ui64_d, __cast_fptoui)
+//CAST_TEST(uint32_t, __vec16_i32, double, __vec16_d, cast_ui32_d, __cast_fptoui)
+//CAST_TEST(uint64_t, __vec16_i64, double, __vec16_d, cast_ui64_d, __cast_fptoui)
 
 CAST_TEST(float , __vec16_f, double, __vec16_d, cast_f_d, __cast_fptrunc)
 CAST_TEST(double, __vec16_d, float , __vec16_f, cast_d_f, __cast_fpext)
@@ -958,14 +958,14 @@ void FUNC_NAME(FROM *data) {                                                    
         printf(" no fails\n");                                                              \
 }
 
-CAST_BITS_SCALAR_TEST(uint32_t, float   , cast_bits_scalar_ui32_f)
-CAST_BITS_SCALAR_TEST(int32_t , float   , cast_bits_scalar_i32_f)
-CAST_BITS_SCALAR_TEST(float   , uint32_t, cast_bits_scalar_f_ui32)
-CAST_BITS_SCALAR_TEST(float   , int32_t , cast_bits_scalar_f_i32)
-CAST_BITS_SCALAR_TEST(uint64_t, double  , cast_bits_scalar_ui64_d)
-CAST_BITS_SCALAR_TEST(int64_t , double  , cast_bits_scalar_i64_d)
-CAST_BITS_SCALAR_TEST(double  , uint64_t, cast_bits_scalar_d_ui64)
-CAST_BITS_SCALAR_TEST(double  , int64_t , cast_bits_scalar_d_i64)
+//CAST_BITS_SCALAR_TEST(uint32_t, float   , cast_bits_scalar_ui32_f)
+//CAST_BITS_SCALAR_TEST(int32_t , float   , cast_bits_scalar_i32_f)
+//CAST_BITS_SCALAR_TEST(float   , uint32_t, cast_bits_scalar_f_ui32)
+//CAST_BITS_SCALAR_TEST(float   , int32_t , cast_bits_scalar_f_i32)
+//CAST_BITS_SCALAR_TEST(uint64_t, double  , cast_bits_scalar_ui64_d)
+//CAST_BITS_SCALAR_TEST(int64_t , double  , cast_bits_scalar_i64_d)
+//CAST_BITS_SCALAR_TEST(double  , uint64_t, cast_bits_scalar_d_ui64)
+//CAST_BITS_SCALAR_TEST(double  , int64_t , cast_bits_scalar_d_i64)
 
 /////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -1010,19 +1010,19 @@ void FUNC_NAME(TYPE *data, int *m) {                                            
         free(b[i]);                                                                         \
 }
 
-GATHER(int32_t, __vec16_i32, double , __vec16_d  , gather32_double)
-GATHER(int32_t, __vec16_i32, float  , __vec16_f  , gather32_float )
+//GATHER(int32_t, __vec16_i32, double , __vec16_d  , gather32_double)
+//GATHER(int32_t, __vec16_i32, float  , __vec16_f  , gather32_float )
 //GATHER(int32_t, __vec16_i32, int8_t , __vec16_i8 , gather32_i8    )
 //GATHER(int32_t, __vec16_i32, int16_t, __vec16_i16, gather32_i16   )
-GATHER(int32_t, __vec16_i32, int32_t, __vec16_i32, gather32_i32   )
-GATHER(int32_t, __vec16_i32, int64_t, __vec16_i64, gather32_i64   )
+//GATHER(int32_t, __vec16_i32, int32_t, __vec16_i32, gather32_i32   )
+//GATHER(int32_t, __vec16_i32, int64_t, __vec16_i64, gather32_i64   )
 
-GATHER(int64_t, __vec16_i64, double , __vec16_d  , gather64_double)
-GATHER(int64_t, __vec16_i64, float  , __vec16_f  , gather64_float )
-GATHER(int64_t, __vec16_i64, int8_t , __vec16_i8 , gather64_i8    )
+//GATHER(int64_t, __vec16_i64, double , __vec16_d  , gather64_double)
+//GATHER(int64_t, __vec16_i64, float  , __vec16_f  , gather64_float )
+//GATHER(int64_t, __vec16_i64, int8_t , __vec16_i8 , gather64_i8    )
 //GATHER(int64_t, __vec16_i64, int16_t, __vec16_i16, gather64_i16   )
-GATHER(int64_t, __vec16_i64, int32_t, __vec16_i32, gather64_i32   )
-GATHER(int64_t, __vec16_i64, int64_t, __vec16_i64, gather64_i64   )
+//GATHER(int64_t, __vec16_i64, int32_t, __vec16_i32, gather64_i32   )
+//GATHER(int64_t, __vec16_i64, int64_t, __vec16_i64, gather64_i64   )
 
 /////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -1076,14 +1076,14 @@ GATHER_OFFSETS(int32_t, __vec16_i32, float  , __vec16_f  , gather_base_offsets32
 //GATHER_OFFSETS(int32_t, __vec16_i32, int8_t , __vec16_i8 , gather_base_offsets32_i8    )
 //GATHER_OFFSETS(int32_t, __vec16_i32, int16_t, __vec16_i16, gather_base_offsets32_i16   )
 GATHER_OFFSETS(int32_t, __vec16_i32, int32_t, __vec16_i32, gather_base_offsets32_i32   )
-GATHER_OFFSETS(int32_t, __vec16_i32, int64_t, __vec16_i64, gather_base_offsets32_i64   )
+//GATHER_OFFSETS(int32_t, __vec16_i32, int64_t, __vec16_i64, gather_base_offsets32_i64   )
 
-GATHER_OFFSETS(int64_t, __vec16_i64, double , __vec16_d  , gather_base_offsets64_double)
+//GATHER_OFFSETS(int64_t, __vec16_i64, double , __vec16_d  , gather_base_offsets64_double)
 GATHER_OFFSETS(int64_t, __vec16_i64, float  , __vec16_f  , gather_base_offsets64_float )
 //GATHER_OFFSETS(int64_t, __vec16_i64, int8_t , __vec16_i8 , gather_base_offsets64_i8    )
 //GATHER_OFFSETS(int64_t, __vec16_i64, int16_t, __vec16_i16, gather_base_offsets64_i16   )
 GATHER_OFFSETS(int64_t, __vec16_i64, int32_t, __vec16_i32, gather_base_offsets64_i32   )
-GATHER_OFFSETS(int64_t, __vec16_i64, int64_t, __vec16_i64, gather_base_offsets64_i64   )
+//GATHER_OFFSETS(int64_t, __vec16_i64, int64_t, __vec16_i64, gather_base_offsets64_i64   )
 
 /////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -1129,19 +1129,19 @@ void FUNC_NAME(TYPE *data, int *m) {                                            
                                                                                             \
 }
 
-SCATTER(int32_t, __vec16_i32, double , __vec16_d  , scatter32_double)
-SCATTER(int32_t, __vec16_i32, float  , __vec16_f  , scatter32_float )
+//SCATTER(int32_t, __vec16_i32, double , __vec16_d  , scatter32_double)
+//SCATTER(int32_t, __vec16_i32, float  , __vec16_f  , scatter32_float )
 //SCATTER(int32_t, __vec16_i32, int8_t , __vec16_i8 , scatter32_i8    )
 //SCATTER(int32_t, __vec16_i32, int16_t, __vec16_i16, scatter32_i16   )
-SCATTER(int32_t, __vec16_i32, int32_t, __vec16_i32, scatter32_i32   )
-SCATTER(int32_t, __vec16_i32, int64_t, __vec16_i64, scatter32_i64   )
+//SCATTER(int32_t, __vec16_i32, int32_t, __vec16_i32, scatter32_i32   )
+//SCATTER(int32_t, __vec16_i32, int64_t, __vec16_i64, scatter32_i64   )
 
-SCATTER(int64_t, __vec16_i64, double , __vec16_d  , scatter64_double)
-SCATTER(int64_t, __vec16_i64, float  , __vec16_f  , scatter64_float )
+//SCATTER(int64_t, __vec16_i64, double , __vec16_d  , scatter64_double)
+//SCATTER(int64_t, __vec16_i64, float  , __vec16_f  , scatter64_float )
 //SCATTER(int64_t, __vec16_i64, int8_t , __vec16_i8 , scatter64_i8    )
 //SCATTER(int64_t, __vec16_i64, int16_t, __vec16_i16, scatter64_i16   )
-SCATTER(int64_t, __vec16_i64, int32_t, __vec16_i32, scatter64_i32   )
-SCATTER(int64_t, __vec16_i64, int64_t, __vec16_i64, scatter64_i64   )
+//SCATTER(int64_t, __vec16_i64, int32_t, __vec16_i32, scatter64_i32   )
+//SCATTER(int64_t, __vec16_i64, int64_t, __vec16_i64, scatter64_i64   )
 
 /////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -1187,19 +1187,19 @@ void FUNC_NAME(TYPE *data, int *m) {                                            
                                                                                             \
 }
 
-SCATTER_OFFSETS(int32_t, __vec16_i32, double , __vec16_d  , scatter_base_offsets32_double)
+//SCATTER_OFFSETS(int32_t, __vec16_i32, double , __vec16_d  , scatter_base_offsets32_double)
 SCATTER_OFFSETS(int32_t, __vec16_i32, float  , __vec16_f  , scatter_base_offsets32_float )
 //SCATTER_OFFSETS(int32_t, __vec16_i32, int8_t , __vec16_i8 , scatter_base_offsets32_i8    )
 //SCATTER_OFFSETS(int32_t, __vec16_i32, int16_t, __vec16_i16, scatter_base_offsets32_i16   )
 SCATTER_OFFSETS(int32_t, __vec16_i32, int32_t, __vec16_i32, scatter_base_offsets32_i32   )
-SCATTER_OFFSETS(int32_t, __vec16_i32, int64_t, __vec16_i64, scatter_base_offsets32_i64   )
+//SCATTER_OFFSETS(int32_t, __vec16_i32, int64_t, __vec16_i64, scatter_base_offsets32_i64   )
 
-SCATTER_OFFSETS(int64_t, __vec16_i64, double , __vec16_d  , scatter_base_offsets64_double)
+//SCATTER_OFFSETS(int64_t, __vec16_i64, double , __vec16_d  , scatter_base_offsets64_double)
 SCATTER_OFFSETS(int64_t, __vec16_i64, float  , __vec16_f  , scatter_base_offsets64_float )
 //SCATTER_OFFSETS(int64_t, __vec16_i64, int8_t , __vec16_i8 , scatter_base_offsets64_i8    )
 //SCATTER_OFFSETS(int64_t, __vec16_i64, int16_t, __vec16_i16, scatter_base_offsets64_i16   )
 SCATTER_OFFSETS(int64_t, __vec16_i64, int32_t, __vec16_i32, scatter_base_offsets64_i32   )
-SCATTER_OFFSETS(int64_t, __vec16_i64, int64_t, __vec16_i64, scatter_base_offsets64_i64   )
+//SCATTER_OFFSETS(int64_t, __vec16_i64, int64_t, __vec16_i64, scatter_base_offsets64_i64   )
 
 /////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -1244,7 +1244,7 @@ MASKED_LOAD(float  , __vec16_f  , masked_load_float )
 //MASKED_LOAD(int8_t , __vec16_i8 , masked_load_i8    )
 //MASKED_LOAD(int16_t, __vec16_i16, masked_load_i16   )
 MASKED_LOAD(int32_t, __vec16_i32, masked_load_i32   )
-MASKED_LOAD(int64_t, __vec16_i64, masked_load_i64   )
+//MASKED_LOAD(int64_t, __vec16_i64, masked_load_i64   )
 
 /////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -1288,14 +1288,14 @@ MASKED_STORE(float  , __vec16_f  , masked_store_float )
 //MASKED_STORE(int8_t , __vec16_i8 , masked_store_i8    )
 //MASKED_STORE(int16_t, __vec16_i16, masked_store_i16   )
 MASKED_STORE(int32_t, __vec16_i32, masked_store_i32   )
-MASKED_STORE(int64_t, __vec16_i64, masked_store_i64   )
+//MASKED_STORE(int64_t, __vec16_i64, masked_store_i64   )
 
-MASKED_STORE(double , __vec16_d  , masked_store_blend_double)
+//MASKED_STORE(double , __vec16_d  , masked_store_blend_double)
 MASKED_STORE(float  , __vec16_f  , masked_store_blend_float )
 //MASKED_STORE(int8_t , __vec16_i8 , masked_store_blend_i8    )
 //MASKED_STORE(int16_t, __vec16_i16, masked_store_blend_i16   )
 MASKED_STORE(int32_t, __vec16_i32, masked_store_blend_i32   )
-MASKED_STORE(int64_t, __vec16_i64, masked_store_blend_i64   )
+//MASKED_STORE(int64_t, __vec16_i64, masked_store_blend_i64   )
 
 /////////////////////////////////////////////////////////////////////////////////////////////
 #define REDUCE_ADD_TEST(TYPE, VEC_TYPE, FUNC_NAME)                                          \
@@ -1327,8 +1327,8 @@ REDUCE_ADD_TEST(double , __vec16_d  , reduce_add_double)
 REDUCE_ADD_TEST(float  , __vec16_f  , reduce_add_float )
 //REDUCE_ADD_TEST(int8_t , __vec16_i8 , reduce_add_int8  )
 //REDUCE_ADD_TEST(int16_t, __vec16_i16, reduce_add_int16 )
-REDUCE_ADD_TEST(int32_t, __vec16_i32, reduce_add_int32 )
-REDUCE_ADD_TEST(int64_t, __vec16_i64, reduce_add_int64 )
+//REDUCE_ADD_TEST(int32_t, __vec16_i32, reduce_add_int32 )
+//REDUCE_ADD_TEST(int64_t, __vec16_i64, reduce_add_int64 )
 
 /////////////////////////////////////////////////////////////////////////////////////////////
 #define REDUCE_MINMAX_TEST(TYPE, VEC_TYPE, RES_NUM, FUNC_NAME)                              \
@@ -1353,16 +1353,24 @@ void FUNC_NAME(TYPE *data) {                                                    
 
 REDUCE_MINMAX_TEST(double  , __vec16_d  , 1, reduce_min_double)
 REDUCE_MINMAX_TEST(float   , __vec16_f  , 1, reduce_min_float)
-REDUCE_MINMAX_TEST(int32_t , __vec16_i32, 1, reduce_min_int32)
-REDUCE_MINMAX_TEST(uint32_t, __vec16_i32, 1, reduce_min_uint32)
-REDUCE_MINMAX_TEST(int64_t , __vec16_i64, 1, reduce_min_int64)
-REDUCE_MINMAX_TEST(uint64_t, __vec16_i64, 1, reduce_min_uint64)
+#ifdef KNC_H
+    REDUCE_MINMAX_TEST(int32_t , __vec16_i32, 1, reduce_min_i32)
+#else
+    REDUCE_MINMAX_TEST(int32_t , __vec16_i32, 1, reduce_min_int32)
+#endif
+//REDUCE_MINMAX_TEST(uint32_t, __vec16_i32, 1, reduce_min_uint32)
+//REDUCE_MINMAX_TEST(int64_t , __vec16_i64, 1, reduce_min_int64)
+//REDUCE_MINMAX_TEST(uint64_t, __vec16_i64, 1, reduce_min_uint64)
 REDUCE_MINMAX_TEST(double  , __vec16_d  , 0, reduce_max_double)
 REDUCE_MINMAX_TEST(float   , __vec16_f  , 0, reduce_max_float)
-REDUCE_MINMAX_TEST(int32_t , __vec16_i32, 0, reduce_max_int32)
-REDUCE_MINMAX_TEST(uint32_t, __vec16_i32, 0, reduce_max_uint32)
-REDUCE_MINMAX_TEST(int64_t , __vec16_i64, 0, reduce_max_int64)
-REDUCE_MINMAX_TEST(uint64_t, __vec16_i64, 0, reduce_max_uint64)
+#ifdef KNC_H
+    REDUCE_MINMAX_TEST(int32_t , __vec16_i32, 0, reduce_max_i32)
+#else
+    REDUCE_MINMAX_TEST(int32_t , __vec16_i32, 0, reduce_max_int32)
+#endif
+//REDUCE_MINMAX_TEST(uint32_t, __vec16_i32, 0, reduce_max_uint32)
+//REDUCE_MINMAX_TEST(int64_t , __vec16_i64, 0, reduce_max_int64)
+//REDUCE_MINMAX_TEST(uint64_t, __vec16_i64, 0, reduce_max_uint64)
 
 /////////////////////////////////////////////////////////////////////////////////////////////
 #define POPCNT_TEST(TYPE, FUNC_NAME)                                                        \
@@ -1458,8 +1466,8 @@ void FUNC_NAME(TYPE *data) {                                                    
         printf(" no fails\n");                                                              \
 }
 
-COUNT_LEADING_ZEROS(uint32_t, 32, count_leading_zeros_i32)
-COUNT_LEADING_ZEROS(uint64_t, 64, count_leading_zeros_i64)
+//COUNT_LEADING_ZEROS(uint32_t, 32, count_leading_zeros_i32)
+//COUNT_LEADING_ZEROS(uint64_t, 64, count_leading_zeros_i64)
 
 /////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -1485,4 +1493,3 @@ void movmsk(int *m) {
     else
         printf(" no fails\n");
 }
-*/
