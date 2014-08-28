@@ -903,6 +903,7 @@ int main () {
     //store_i8(i8);
     //store_i16(i16);
     store_i32(i32);
+    
     store_i64(i64);
     
     
