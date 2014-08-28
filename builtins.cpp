@@ -704,7 +704,11 @@ void
 AddBitcodeToModule(const unsigned char *bitcode, int length,
                    llvm::Module *module, SymbolTable *symbolTable) {
     llvm::StringRef sb = llvm::StringRef((char *)bitcode, length);
+#if defined(LLVM_3_2) || defined(LLVM_3_3) || defined(LLVM_3_4) || defined(LLVM_3_5)
     llvm::MemoryBuffer *bcBuf = llvm::MemoryBuffer::getMemBuffer(sb);
+#else // LLVM 3.6+
+    llvm::MemoryBufferRef bcBuf = llvm::MemoryBuffer::getMemBuffer(sb)->getMemBufferRef();
+#endif
 
 #if !defined(LLVM_3_2) && !defined(LLVM_3_3) && !defined(LLVM_3_4) // LLVM 3.5+
     llvm::ErrorOr<llvm::Module *> ModuleOrErr = llvm::parseBitcodeFile(bcBuf, *g->ctx);
