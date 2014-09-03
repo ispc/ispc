@@ -741,6 +741,7 @@ FunctionEmitContext::Break(bool doCoherenceCheck) {
         // that have executed a 'break' statement:
         // breakLanes = breakLanes | mask
         AssertPos(currentPos, breakLanesPtr != NULL);
+
         llvm::Value *mask = GetInternalMask();
         llvm::Value *breakMask = LoadInst(breakLanesPtr,
                                           "break_mask");
@@ -879,7 +880,7 @@ FunctionEmitContext::jumpIfAllLoopLanesAreDone(llvm::BasicBlock *target) {
             finishedLanes = BinaryOperator(llvm::Instruction::Or, finishedLanes,
                                            continued, "returned|breaked|continued");
         }
-        
+          
         finishedLanes = BinaryOperator(llvm::Instruction::And,
                                        finishedLanes, GetFunctionMask(),
                                        "finished&func");
@@ -920,6 +921,16 @@ FunctionEmitContext::RestoreContinuedLanes() {
 
     // continueLanes = 0
     StoreInst(LLVMMaskAllOff, continueLanesPtr);
+}
+
+
+void
+FunctionEmitContext::ClearBreakLanes() {
+  if (breakLanesPtr == NULL)
+    return;
+
+  // breakLanes = 0
+  StoreInst(LLVMMaskAllOff, breakLanesPtr);
 }
 
 
