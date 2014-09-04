@@ -195,6 +195,13 @@ public:
         'continue' statement when going through the loop body in the
         previous iteration. */
     void RestoreContinuedLanes();
+    
+    /** This method is called by code emitting IR for a loop.  It clears 
+        any lanes that contained a break since the mask has been updated to take
+        them into account.  This is necessary as all the bail out checks for 
+        breaks are meant to only deal with lanes breaking on the current iteration.
+     */
+    void ClearBreakLanes();
 
     /** Indicates that code generation for a "switch" statement is about to
         start.  isUniform indicates whether the "switch" value is uniform,
