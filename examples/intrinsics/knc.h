@@ -366,8 +366,8 @@ static FORCEINLINE bool __extract_element(__vec16_i1 mask, uint32_t index) {
 
 static FORCEINLINE int64_t __extract_element(const __vec16_i64 &v, uint32_t index)
 {
-  uint *src = (uint *)&v;
-  //const uint *src = (const uint *)&v;
+  //uint *src = (uint *)&v;
+  const uint *src = (const uint *)&v;
   return src[index+16] | (uint64_t(src[index]) << 32);
 }
 
