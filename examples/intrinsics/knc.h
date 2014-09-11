@@ -44,6 +44,15 @@
 #include <iostream> // for operator<<(m512[i])
 #include <iomanip>  // for operator<<(m512[i])
 
+#define STRING(x) #x
+#define TOSTRING(x) STRING(x)
+#define PING std::cout << __FILE__ << " (" << __LINE__ << "): " << __FUNCTION__ << std::endl
+#define PRINT(x) std::cout << STRING(x) << " = " << (x) << std::endl
+#define PRINT2(x,y) std::cout << STRING(x) << " = " << (x) << ", " << STRING(y) << " = " << (y) << std::endl
+#define PRINT3(x,y,z) std::cout << STRING(x) << " = " << (x) << ", " << STRING(y) << " = " << (y) << ", " << STRING(z) << " = " << (z) << std::endl
+#define PRINT4(x,y,z,w) std::cout << STRING(x) << " = " << (x) << ", " << STRING(y) << " = " << (y) << ", " << STRING(z) << " = " << (z) << ", " << STRING(w) << " = " << (w) << std::endl
+
+
 #define FORCEINLINE __forceinline
 #ifdef _MSC_VER
 #define PRE_ALIGN(x)  /*__declspec(align(x))*/
@@ -75,8 +84,11 @@ typedef int64_t __vec1_i64;
 
 struct __vec16_i32;
 
-//typedef __mmask16 POST_ALIGN(2) __vec16_i1;
-
+/* (iw) actually, this *SHOULD* be the right implementation for a
+   vec16_i1: this one is a class that can have a constructor (which
+   ISPC sometimes emits for these vectors...) This version might 
+   not be working with embree's ISPC bindings, probably because 
+   embree still uses the 'wrong' implementation */
 typedef struct PRE_ALIGN(2) __vec16_i1
 {
     FORCEINLINE operator __mmask16() const { return v; }
