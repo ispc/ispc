@@ -800,6 +800,13 @@ static FORCEINLINE __vec16_i64 __shl(__vec16_i64 a, __vec16_i64 b) {
     return __vec16_i64(lo, hi);
 }
 
+static FORCEINLINE __vec16_i64 __shl(__vec16_i64 a, unsigned long long b) {
+  __vec16_i32 hi = _mm512_or_epi32(_mm512_slli_epi32(a.v_hi, b), 
+                                   _mm512_srli_epi32(a.v_lo, 32-b));
+  __vec16_i32 lo = _mm512_slli_epi32(a.v_lo, b);
+  return __vec16_i64(lo, hi);
+}
+
 static FORCEINLINE __vec16_i64 __lshr(__vec16_i64 a, __vec16_i64 b) {
     __vec16_i32 shift = _mm512_sub_epi32(__ispc_thirty_two, b.v_lo);
     __vec16_i32 xfer = _mm512_and_epi32(_mm512_sllv_epi32(__ispc_ffffffff, shift), _mm512_sllv_epi32(a.v_hi, shift));
@@ -818,6 +825,16 @@ static FORCEINLINE __vec16_i64 __ashr(__vec16_i64 a, __vec16_i64 b) {
     __vec16_i32 hi = _mm512_srav_epi32(a.v_hi, b.v_lo);
     __vec16_i32 lo = _mm512_or_epi32(xfer, _mm512_srlv_epi32(a.v_lo, b.v_lo));
     return __vec16_i64(lo, hi);
+}
+
+static FORCEINLINE __vec16_i64 __ashr(__vec16_i64 a, unsigned long long b) {
+  __vec16_i32 xfer
+    = _mm512_slli_epi32(_mm512_and_epi32(a.v_hi, 
+                                         _mm512_set1_epi32((1<<b)-1)),
+                        32-b);
+  __vec16_i32 hi = _mm512_srai_epi32(a.v_hi, b);
+  __vec16_i32 lo = _mm512_or_epi32(xfer, _mm512_srli_epi32(a.v_lo, b));
+  return __vec16_i64(lo, hi);
 }
 
 static FORCEINLINE __vec16_i1 __equal_i64(const __vec16_i64 &a, const __vec16_i64 &b) {
@@ -848,6 +865,10 @@ static FORCEINLINE __vec16_i64 __select(__vec16_i1 mask,
     ret.v_lo = _mm512_mask_mov_epi32(b.v_lo, mask, a.v_lo);
     return ret;
 }
+
+// static FORCEINLINE int64_t __extract_element(__vec16_i64 v, uint32_t index) {
+//     return (uint64_t(((int32_t *)&v.v_hi)[index])<<32) | (uint64_t(((int32_t *)&v.v_lo)[index]));
+// }
 
 template <class RetVecType> static RetVecType __smear_i64(const int64_t &l);
 template <> FORCEINLINE  __vec16_i64 __smear_i64<__vec16_i64>(const int64_t &l) {
@@ -1609,12 +1630,14 @@ static FORCEINLINE __vec16_f __rsqrt_varying_float(__vec16_f v) {
     return _mm512_invsqrt_ps(v);
 #endif
 }
+
 static FORCEINLINE __vec16_d __rsqrt_varying_double(__vec16_d x) {
   __vec16_d y;
   for (int i = 0; i < 16; i++)
     __insert_element(&y, i, 1.0/sqrt(__extract_element(x,i)));
   return y;
 }
+
 static FORCEINLINE double __rsqrt_uniform_double(double v) 
 {
   return 1.0/v;
