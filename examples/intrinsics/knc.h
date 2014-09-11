@@ -1772,6 +1772,44 @@ static FORCEINLINE __vec16_d __masked_load_double(void *p, __vec16_i1 mask) {
 #endif
 }
 
+static FORCEINLINE void __masked_store_i8(void *p, const __vec16_i8 &val, __vec16_i1 mask) {
+  PING;
+  PRINT(mask);
+  PRINT(p);
+  PRINT(val);
+  __vec16_i32 tmp = _mm512_extload_epi32(&val, _MM_UPCONV_EPI32_SINT8, _MM_BROADCAST32_NONE, _MM_HINT_NONE);
+  PING;
+  _mm512_mask_extstore_epi32(p, mask, tmp, _MM_DOWNCONV_EPI32_SINT8,_MM_HINT_NONE);
+  PING;
+}
+
+static FORCEINLINE __vec16_i8 __masked_load_i8(void *p, __vec16_i1 mask) {
+  PING;
+  __vec16_i8 ret;
+  __vec16_i32 tmp = _mm512_mask_extload_epi32(_mm512_undefined_epi32(),mask,p,
+                                              _MM_UPCONV_EPI32_SINT8, 
+                                              _MM_BROADCAST32_NONE, _MM_HINT_NONE);
+  _mm512_extstore_epi32(&ret, tmp, _MM_DOWNCONV_EPI32_SINT8,_MM_HINT_NONE);
+  return ret;
+}
+template <int ALIGN> static FORCEINLINE __vec16_i8 __load(const __vec16_i8 *p) {
+  return *p;
+}
+template <int ALIGN> static FORCEINLINE void __store(__vec16_i8 *p, __vec16_i8 v) {
+  *p = v;
+}
+static FORCEINLINE void
+__scatter_base_offsets32_i8(uint8_t *b, uint32_t scale, __vec16_i32 offsets,
+                             __vec16_i8 val, __vec16_i1 mask)
+{
+  __vec16_i32 tmp = _mm512_extload_epi32(&val,_MM_UPCONV_EPI32_SINT8, 
+                                         _MM_BROADCAST32_NONE, _MM_HINT_NONE);
+  printf("__scatter_base_offsets32_i8\n");
+  _mm512_mask_i32extscatter_epi32(b, mask, offsets, tmp, 
+                                  _MM_DOWNCONV_EPI32_SINT8, scale, 
+                                  _MM_HINT_NONE);
+}
+
 static FORCEINLINE void __masked_store_i32(void *p, __vec16_i32 val, __vec16_i1 mask) {
 #ifdef ISPC_FORCE_ALIGNED_MEMORY
     _mm512_mask_store_epi32(p, mask, val.v);
