@@ -208,14 +208,15 @@ struct vec16 {
 
 PRE_ALIGN(16) struct __vec16_i8   : public vec16<int8_t> { 
     FORCEINLINE __vec16_i8() { }
-    FORCEINLINE __vec16_i8(const __vec16_i8 &o);
-    FORCEINLINE __vec16_i8& operator =(const __vec16_i8 &o);
+    
     FORCEINLINE __vec16_i8(int8_t v0, int8_t v1, int8_t v2, int8_t v3, 
                            int8_t v4, int8_t v5, int8_t v6, int8_t v7,
                            int8_t v8, int8_t v9, int8_t v10, int8_t v11, 
                            int8_t v12, int8_t v13, int8_t v14, int8_t v15)
         : vec16<int8_t>(v0, v1, v2, v3, v4, v5, v6, v7,
                         v8, v9, v10, v11, v12, v13, v14, v15) { }
+    FORCEINLINE __vec16_i8(const __vec16_i8 &o);
+    FORCEINLINE __vec16_i8& operator =(const __vec16_i8 &o);
 } POST_ALIGN(16);
 
 PRE_ALIGN(32) struct __vec16_i16  : public vec16<int16_t> { 
