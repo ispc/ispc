@@ -363,6 +363,20 @@ static FORCEINLINE bool __extract_element(__vec16_i1 mask, uint32_t index) {
     return (mask & (1 << index)) ? true : false;
 }
 
+
+static FORCEINLINE int64_t __extract_element(const __vec16_i64 &v, uint32_t index)
+{
+  uint *src = (uint *)&v;
+  //const uint *src = (const uint *)&v;
+  return src[index+16] | (uint64_t(src[index]) << 32);
+}
+
+
+
+
+
+
+
 /*
 static FORCEINLINE void __insert_element(__vec16_i1 *vec, int index, 
                                          bool val) {
@@ -621,6 +635,10 @@ static FORCEINLINE __vec16_i32 __broadcast_i32(__vec16_i32 v, int index) {
     return _mm512_set1_epi32(val);
 }
 
+static FORCEINLINE __vec16_i32 __cast_trunc(__vec16_i32, const __vec16_i64 i64) {
+  return __vec16_i32(i64.v_lo);
+}
+
 static FORCEINLINE __vec16_i32 __rotate_i32(__vec16_i32 v, int index) {
     __vec16_i32 idx = __smear_i32<__vec16_i32>(index);
     __vec16_i32 shuffle = _mm512_and_epi32(_mm512_add_epi32(__ispc_stride1, idx),  __smear_i32<__vec16_i32>(0xf));
@@ -663,11 +681,7 @@ template <> FORCEINLINE void __store<64>(__vec16_i32 *p, __vec16_i32 v) {
 // int64
 ///////////////////////////////////////////////////////////////////////////
 
-static FORCEINLINE int64_t __extract_element(const __vec16_i64 &v, uint32_t index)
-{
-    uint *src = (uint *)&v;
-    return src[index+16] | (int64_t(src[index]) << 32);
-}
+
 
 static FORCEINLINE void __insert_element(__vec16_i64 *v, uint32_t index, int64_t val) {
     ((int32_t *)&v->v_hi)[index] = val>>32;
