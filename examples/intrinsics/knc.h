@@ -878,12 +878,13 @@ template <> FORCEINLINE  __vec16_i64 __smear_i64<__vec16_i64>(const int64_t &l) 
 template <int ALIGN> static FORCEINLINE __vec16_i64 __load(const __vec16_i64 *p) {
     __vec16_i32 v1;
     __vec16_i32 v2;
-    v2 = _mm512_extloadunpacklo_epi32(v2, p, _MM_UPCONV_EPI32_NONE, _MM_HINT_NONE);
-    v2 = _mm512_extloadunpackhi_epi32(v2, (uint8_t*)p+64, _MM_UPCONV_EPI32_NONE, _MM_HINT_NONE);
-    v1 = _mm512_extloadunpacklo_epi32(v1, (uint8_t*)p+64, _MM_UPCONV_EPI32_NONE, _MM_HINT_NONE);
-    v1 = _mm512_extloadunpackhi_epi32(v1, (uint8_t*)p+128, _MM_UPCONV_EPI32_NONE, _MM_HINT_NONE);
-
-    __vec16_i64 ret;
+    const uint8_t*ptr = (const uint8_t*)p;
+    v2 = _mm512_extloadunpacklo_epi32(v2, ptr, _MM_UPCONV_EPI32_NONE, _MM_HINT_NONE);
+    v2 = _mm512_extloadunpackhi_epi32(v2, ptr+64, _MM_UPCONV_EPI32_NONE, _MM_HINT_NONE);
+    v1 = _mm512_extloadunpacklo_epi32(v1, ptr+64, _MM_UPCONV_EPI32_NONE, _MM_HINT_NONE);
+    v1 = _mm512_extloadunpackhi_epi32(v1, ptr+128, _MM_UPCONV_EPI32_NONE, _MM_HINT_NONE);
+  
+  __vec16_i64 ret;
     ret.v_hi = _mm512_mask_permutevar_epi32(ret.v_hi, 0xFF00,
                                             _mm512_set_16to16_pi(15,13,11,9,7,5,3,1,14,12,10,8,6,4,2,0),
                                             v1);
