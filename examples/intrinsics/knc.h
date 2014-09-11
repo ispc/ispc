@@ -843,9 +843,9 @@ static FORCEINLINE __vec16_i1 __equal_i64(const __vec16_i64 &a, const __vec16_i6
 
 static FORCEINLINE __vec16_i1 __equal_i64_and_mask(const __vec16_i64 &a, const __vec16_i64 &b,
                                                    __vec16_i1 mask) {
-    __mmask16 lo_match = _mm512_cmpeq_epi32_mask(a.v_lo,b.v_lo);
+    __mmask16 lo_match = _mm512_mask_cmpeq_epi32_mask((__mmask16)mask, a.v_lo,b.v_lo);
     __mmask16 full_match = _mm512_mask_cmpeq_epi32_mask(lo_match,a.v_hi,b.v_hi);
-    return _mm512_kand(full_match, (__mmask16)mask);
+    return full_match;
 }
 
 static FORCEINLINE __vec16_i1 __not_equal_i64(const __vec16_i64 &a, const __vec16_i64 &b) {
