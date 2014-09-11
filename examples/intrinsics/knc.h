@@ -865,10 +865,6 @@ static FORCEINLINE __vec16_i64 __select(__vec16_i1 mask,
     return ret;
 }
 
-// static FORCEINLINE int64_t __extract_element(__vec16_i64 v, uint32_t index) {
-//     return (uint64_t(((int32_t *)&v.v_hi)[index])<<32) | (uint64_t(((int32_t *)&v.v_lo)[index]));
-// }
-
 template <class RetVecType> static RetVecType __smear_i64(const int64_t &l);
 template <> FORCEINLINE  __vec16_i64 __smear_i64<__vec16_i64>(const int64_t &l) {
     const int *i = (const int*)&l;
@@ -1921,6 +1917,34 @@ __gather_base_offsets32_double(uint8_t *base, uint32_t scale, __vec16_i32 offset
     return ret;
 }
 
+// TODO: Test this implementation
+static FORCEINLINE __vec16_f
+__gather64_float(__vec16_i64 addr, __vec16_i1 mask) 
+{
+    __vec16_f ret;
+
+    // There is no gather instruction with 64-bit offsets in KNC.
+    // We have to manually iterate over the upper 32 bits ;-)
+    __vec16_i1 still_to_do = mask;
+    const __vec16_i32 signed_offsets = _mm512_add_epi32(addr.v_lo, __smear_i32<__vec16_i32>((int32_t)INT_MIN));
+    while (still_to_do) {
+        int first_active_lane = _mm_tzcnt_32((int)still_to_do);
+        const uint &hi32 = ((uint*)&addr.v_hi)[first_active_lane];
+        __vec16_i1 match = _mm512_mask_cmp_epi32_mask(still_to_do,addr.v_hi,
+                                                  __smear_i32<__vec16_i32>((int32_t)hi32),
+                                                  _MM_CMPINT_EQ);
+      
+        void * base = (void*)((((unsigned long)hi32) << 32) + (unsigned long)(-(long)INT_MIN));
+
+        ret.v = _mm512_mask_i32extgather_ps(ret.v, match, signed_offsets, 
+                                        base, _MM_UPCONV_PS_NONE, 1,
+                                        _MM_HINT_NONE);
+        still_to_do = _mm512_kxor(match, still_to_do);
+    }
+    
+    return ret;
+}
+
 /*! gather with 64-bit offsets.
 
   \todo add optimization that falls back to 32-bit offset gather if
@@ -1932,7 +1956,7 @@ static FORCEINLINE __vec16_f
 __gather_base_offsets64_float(uint8_t *_base, uint32_t scale, __vec16_i64 offsets,
                               __vec16_i1 mask) {
 
-  const __vec16_i32 signed_offsets = _mm512_add_epi32(offsets.v_lo, __smear_i32<__vec16_i32>((int32_t)INT_MIN));
+    const __vec16_i32 signed_offsets = _mm512_add_epi32(offsets.v_lo, __smear_i32<__vec16_i32>((int32_t)INT_MIN));
     // There is no gather instruction with 64-bit offsets in KNC.
     // We have to manually iterate over the upper 32 bits ;-)
     __vec16_i1 still_to_do = mask;
