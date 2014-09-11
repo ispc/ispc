@@ -257,6 +257,28 @@ inline std::ostream &operator<<(std::ostream &out, const __m512 &v)
   return out;
 }
 
+inline std::ostream &operator<<(std::ostream &out, const __vec16_i8 &v)
+{
+  out << "[";
+  for (int i=0;i<16;i++)  
+    out << (i?",":"") << std::dec << std::setw(8) << (int)((unsigned char*)&v)[i] << std::dec;
+    // out << (i?",":"") << std::hex << std::setw(8) << ((int*)&v)[i] << std::dec;
+  
+  out << "]" << std::flush;
+  return out;
+}
+
+inline std::ostream &operator<<(std::ostream &out, const __vec16_i64 &v)
+{
+  out << "[";
+	uint32_t *ptr = (uint32_t*)&v;
+  for (int i=0;i<16;i++) {
+uint64_t val = (uint64_t(ptr[i])<<32)+ptr[i+16];
+    out << (i?",":"") << ((int*)val);
+}  
+  out << "]" << std::flush;
+  return out;
+}
 
 ///////////////////////////////////////////////////////////////////////////
 // macros...
