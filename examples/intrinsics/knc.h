@@ -680,8 +680,26 @@ template <> FORCEINLINE void __store<64>(__vec16_i32 *p, __vec16_i32 v) {
 ///////////////////////////////////////////////////////////////////////////
 // int64
 ///////////////////////////////////////////////////////////////////////////
-
-
+static FORCEINLINE 
+void __masked_store_i64(void *p, const __vec16_i64 &v, __vec16_i1 mask) 
+{
+    __m512i v1;
+    __m512i v2;
+    v1 = _mm512_mask_permutevar_epi32(_mm512_undefined_epi32(), 0xAAAA,
+                                      _mm512_set_16to16_pi(15,15,14,14,13,13,12,12,11,11,10,10,9,9,8,8),
+                                      v.v_hi);
+    v1 = _mm512_mask_permutevar_epi32(v1, 0x5555,
+                                      _mm512_set_16to16_pi(15,15,14,14,13,13,12,12,11,11,10,10,9,9,8,8),
+                                      v.v_lo);
+    v2 = _mm512_mask_permutevar_epi32(_mm512_undefined_epi32(), 0xAAAA,
+                                      _mm512_set_16to16_pi(7,7,6,6,5,5,4,4,3,3,2,2,1,1,0,0),
+                                      v.v_hi);
+    v2 = _mm512_mask_permutevar_epi32(v2, 0x5555,
+                                      _mm512_set_16to16_pi(7,7,6,6,5,5,4,4,3,3,2,2,1,1,0,0),
+                                      v.v_lo);
+    _mm512_mask_store_epi64(p, mask, v2);
+    _mm512_mask_store_epi64(((uint8_t*)p)+64, mask>>8, v1);
+}
 
 static FORCEINLINE void __insert_element(__vec16_i64 *v, uint32_t index, int64_t val) {
     ((int32_t *)&v->v_hi)[index] = val>>32;
