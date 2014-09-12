@@ -470,10 +470,14 @@ Optimize(llvm::Module *module, int optLevel) {
         new llvm::TargetLibraryInfo(llvm::Triple(module->getTargetTriple()));
     optPM.add(targetLibraryInfo);
 
-#if !defined(LLVM_3_2) && !defined(LLVM_3_3) && !defined(LLVM_3_4) // LLVM 3.5+
-    optPM.add(new llvm::DataLayoutPass(*g->target->getDataLayout()));
-#else
+#if defined(LLVM_3_2) || defined(LLVM_3_3) || defined(LLVM_3_4)
     optPM.add(new llvm::DataLayout(*g->target->getDataLayout()));
+#elif defined(LLVM_3_5)
+    optPM.add(new llvm::DataLayoutPass(*g->target->getDataLayout()));
+#else // LLVM 3.6+
+    llvm::DataLayoutPass *dlp= new llvm::DataLayoutPass();
+    dlp->doInitialization(*module);
+    optPM.add(dlp);
 #endif
 
     llvm::TargetMachine *targetMachine = g->target->GetTargetMachine();

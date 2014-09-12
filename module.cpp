@@ -1107,10 +1107,14 @@ Module::writeObjectFileOrAssembly(llvm::TargetMachine *targetMachine,
     }
 
     llvm::PassManager pm;
-#if !defined(LLVM_3_2) && !defined(LLVM_3_3) && !defined(LLVM_3_4) // LLVM 3.5+
-    pm.add(new llvm::DataLayoutPass(*g->target->getDataLayout()));
-#else
+#if defined(LLVM_3_2) || defined(LLVM_3_3) || defined(LLVM_3_4)
     pm.add(new llvm::DataLayout(*g->target->getDataLayout()));
+#elif defined(LLVM_3_5)
+    pm.add(new llvm::DataLayoutPass(*g->target->getDataLayout()));
+#else // LLVM 3.6+
+    llvm::DataLayoutPass *dlp= new llvm::DataLayoutPass();
+    dlp->doInitialization(*module);
+    pm.add(dlp);
 #endif
 
     llvm::formatted_raw_ostream fos(of->os());
