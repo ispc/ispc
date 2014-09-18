@@ -963,6 +963,71 @@ template <> FORCEINLINE void __store<128>(__vec16_i64 *p, __vec16_i64 v) {
     __store<64>(p, v);
 }
 
+
+/*! gather vector of 64-bit ints from addresses pointing to uniform ints 
+
+  (iw) WARNING: THIS CODE ONLY WORKS FOR GATHERS FROM ARRAYS OF
+  ***UNIFORM*** INT64's/POINTERS.  (problem is that ispc doesn't
+  expose whether it's from array of uniform or array of varying
+  poitners, so in here there's no way to tell - only thing we can do
+  is pick one...
+ */
+static FORCEINLINE __vec16_i64
+__gather_base_offsets32_i64(uint8_t *base, uint32_t scale, __vec16_i32 offsets, 
+                            __vec16_i1 mask) {
+  __vec16_i64 ret;
+  ret.v_lo = _mm512_mask_i32extgather_epi32(_mm512_undefined_epi32(), mask, offsets, 
+                                            base, _MM_UPCONV_EPI32_NONE, scale,
+                                            _MM_HINT_NONE);
+  ret.v_hi = _mm512_mask_i32extgather_epi32(_mm512_undefined_epi32(), mask, offsets, 
+                                            base+4, _MM_UPCONV_EPI32_NONE, scale,
+                                            _MM_HINT_NONE);
+  return ret;
+}
+
+/*! gather vector of 64-bit ints from addresses pointing to uniform ints 
+
+  (iw) WARNING: THIS CODE ONLY WORKS FOR GATHERS FROM ARRAYS OF
+  ***UNIFORM*** INT64's/POINTERS.  (problem is that ispc doesn't
+  expose whether it's from array of uniform or array of varying
+  poitners, so in here there's no way to tell - only thing we can do
+  is pick one...
+ */
+static FORCEINLINE __vec16_i64
+__gather64_i64(__vec16_i64 addr, 
+               __vec16_i1 mask) 
+{//TODO
+  __vec16_i64 ret;
+
+  // There is no gather instruction with 64-bit offsets in KNC.
+  // We have to manually iterate over the upper 32 bits ;-)
+  __vec16_i1 still_to_do = mask;
+  __m512i offsets = addr.v_lo;
+  while (still_to_do) {
+    int first_active_lane = _mm_tzcnt_32((int)still_to_do);
+    const uint32_t &hi32 = ((uint*)&addr.v_hi)[first_active_lane];
+    __vec16_i1 match = _mm512_mask_cmp_epi32_mask(still_to_do,addr.v_hi,
+                                                  __smear_i32<__vec16_i32>((int32_t)hi32),
+                                                  _MM_CMPINT_EQ);
+      
+    const uint8_t * base = (const uint8_t*)((uint64_t)hi32 << 32);
+    ret.v_lo = _mm512_mask_i32extgather_epi32(ret.v_lo, match, offsets, 
+                                              base, _MM_UPCONV_EPI32_NONE, 1,
+                                              _MM_HINT_NONE);
+    ret.v_hi = _mm512_mask_i32extgather_epi32(ret.v_hi, match, offsets, 
+                                              base+4, _MM_UPCONV_EPI32_NONE, 1,
+                                              _MM_HINT_NONE);
+      
+    still_to_do = _mm512_kxor(match, still_to_do);
+  }
+    
+  return ret;
+}
+
+
+
+
+
 ///////////////////////////////////////////////////////////////////////////
 // float
 ///////////////////////////////////////////////////////////////////////////
@@ -1945,6 +2010,7 @@ __gather64_float(__vec16_i64 addr, __vec16_i1 mask)
     return ret;
 }
 
+
 /*! gather with 64-bit offsets.
 
   \todo add optimization that falls back to 32-bit offset gather if
@@ -2056,6 +2122,33 @@ __scatter_base_offsets64_i32(uint8_t *_base, uint32_t scale, __vec16_i64 offsets
     }
 }
 
+static FORCEINLINE void // TODO
+__scatter_base_offsets64_i8(uint8_t *_base, uint32_t scale, __vec16_i64 offsets,
+                            __vec16_i8 value,
+                            __vec16_i1 mask) { 
+    __vec16_i1 still_to_do = mask;
+
+  __vec16_i32 tmp = _mm512_extload_epi32(&value, _MM_UPCONV_EPI32_SINT8,
+                                         _MM_BROADCAST32_NONE, _MM_HINT_NONE);
+  // PING;
+  // _mm512_mask_extstore_epi32(p, mask, tmp, _MM_DOWNCONV_EPI32_SINT8,_MM_HINT_NONE);
+
+    while (still_to_do) {
+        int first_active_lane = _mm_tzcnt_32((int)still_to_do);
+        const uint &hi32 = ((uint*)&offsets.v_hi)[first_active_lane];
+        __vec16_i1 match = _mm512_mask_cmp_epi32_mask(mask,offsets.v_hi,
+                                                      __smear_i32<__vec16_i32>((int32_t)hi32),
+                                                      _MM_CMPINT_EQ);
+    
+        void * base = (void*)((unsigned long)_base  +
+                              ((scale*(unsigned long)hi32) << 32));    
+        _mm512_mask_i32extscatter_epi32(base, match, offsets.v_lo, 
+                                        tmp,
+                                        _MM_DOWNCONV_EPI32_SINT8, scale,
+                                        _MM_HINT_NONE);
+        still_to_do = _mm512_kxor(match,still_to_do);
+    }
+}
 
 
 static FORCEINLINE __vec16_i32
