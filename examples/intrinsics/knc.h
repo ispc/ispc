@@ -994,37 +994,34 @@ __gather_base_offsets32_i64(uint8_t *base, uint32_t scale, __vec16_i32 offsets,
   is pick one...
  */
 static FORCEINLINE __vec16_i64
-__gather64_i64(__vec16_i64 addr, 
-               __vec16_i1 mask) 
-{//TODO
-  __vec16_i64 ret;
+__gather64_i64(__vec16_i64 addr, __vec16_i1 mask) 
+{
+    __vec16_i64 ret;
 
-  // There is no gather instruction with 64-bit offsets in KNC.
-  // We have to manually iterate over the upper 32 bits ;-)
-  __vec16_i1 still_to_do = mask;
-  __m512i offsets = addr.v_lo;
-  while (still_to_do) {
-    int first_active_lane = _mm_tzcnt_32((int)still_to_do);
-    const uint32_t &hi32 = ((uint*)&addr.v_hi)[first_active_lane];
-    __vec16_i1 match = _mm512_mask_cmp_epi32_mask(still_to_do,addr.v_hi,
+    // There is no gather instruction with 64-bit offsets in KNC.
+    // We have to manually iterate over the upper 32 bits ;-)
+    __vec16_i1 still_to_do = mask;
+    const __vec16_i32 signed_offsets = _mm512_add_epi32(addr.v_lo, __smear_i32<__vec16_i32>((int32_t)INT_MIN));
+    while (still_to_do) {
+        int first_active_lane = _mm_tzcnt_32((int)still_to_do);
+        const uint32_t &hi32 = ((uint*)&addr.v_hi)[first_active_lane];
+        __vec16_i1 match = _mm512_mask_cmp_epi32_mask(still_to_do,addr.v_hi,
                                                   __smear_i32<__vec16_i32>((int32_t)hi32),
                                                   _MM_CMPINT_EQ);
       
-    const uint8_t * base = (const uint8_t*)((uint64_t)hi32 << 32);
-    ret.v_lo = _mm512_mask_i32extgather_epi32(ret.v_lo, match, offsets, 
+        void * base = (void*)((((unsigned long)hi32) << 32) + (unsigned long)(-(long)INT_MIN));
+        ret.v_lo = _mm512_mask_i32extgather_epi32(ret.v_lo, match, signed_offsets, 
                                               base, _MM_UPCONV_EPI32_NONE, 1,
                                               _MM_HINT_NONE);
-    ret.v_hi = _mm512_mask_i32extgather_epi32(ret.v_hi, match, offsets, 
+        ret.v_hi = _mm512_mask_i32extgather_epi32(ret.v_hi, match, signed_offsets, 
                                               base+4, _MM_UPCONV_EPI32_NONE, 1,
                                               _MM_HINT_NONE);
       
-    still_to_do = _mm512_kxor(match, still_to_do);
-  }
+        still_to_do = _mm512_kxor(match, still_to_do);
+    }
     
-  return ret;
+    return ret;
 }
-
-
 
 
 
@@ -1982,7 +1979,6 @@ __gather_base_offsets32_double(uint8_t *base, uint32_t scale, __vec16_i32 offset
     return ret;
 }
 
-// TODO: Test this implementation
 static FORCEINLINE __vec16_f
 __gather64_float(__vec16_i64 addr, __vec16_i1 mask) 
 {
