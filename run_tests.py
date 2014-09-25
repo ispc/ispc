@@ -601,8 +601,8 @@ def run_tests(options1, args, print_version):
             options.include_file = "examples/intrinsics/generic-64.h"
             options.target = "generic-64"
         elif options.target == "knc":
-            error("No knc #include specified; using examples/intrinsics/knc-i1x16.h\n", 2)
-            options.include_file = "examples/intrinsics/knc-i1x16.h"
+            error("No knc #include specified; using examples/intrinsics/knc.h\n", 2)
+            options.include_file = "examples/intrinsics/knc.h"
  
     if options.compiler_exe == None:
         if (options.target == "knc"): 
