@@ -84,6 +84,7 @@ typedef int64_t __vec1_i64;
 
 struct __vec16_i32;
 
+#if 0
 /* (iw) actually, this *SHOULD* be the right implementation for a
    vec16_i1: this one is a class that can have a constructor (which
    ISPC sometimes emits for these vectors...) This version might 
@@ -117,6 +118,10 @@ typedef struct PRE_ALIGN(2) __vec16_i1
     }
     __mmask16 v;
 } POST_ALIGN(2) __vec16_i1;
+
+#else
+typedef __mmask16 POST_ALIGN(2) __vec16_i1;
+#endif
 
 typedef struct PRE_ALIGN(64) __vec16_f {
     FORCEINLINE operator __m512() const { return v; }
