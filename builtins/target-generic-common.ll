@@ -370,6 +370,8 @@ declare void @__prefetch_read_uniform_2(i8 * nocapture) nounwind
 declare void @__prefetch_read_uniform_3(i8 * nocapture) nounwind 
 declare void @__prefetch_read_uniform_nt(i8 * nocapture) nounwind 
 
+declare void @__prefetch_read_varying_1(<WIDTH x i64> %addr, <WIDTH x MASK> %mask) nounwind
+declare void @__prefetch_read_varying_1_native(i8 * %base, i32 %scale, <WIDTH x i32> %offsets, <WIDTH x MASK> %mask) nounwind
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; int8/int16 builtins
 

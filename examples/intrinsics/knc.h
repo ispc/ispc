@@ -1926,6 +1926,14 @@ static FORCEINLINE void __prefetch_read_uniform_nt(const char *p) {
     // _mm_prefetch(p, _MM_HINT_NTA); // prefetch into L1$ with non-temporal hint
 }
 
+static FORCEINLINE void __prefetch_read_varying_1_native(uint8_t *base, uint32_t scale, 
+    __vec16_i32 offsets, __vec16_i1 mask) { 
+    _mm512_prefetch_i32gather_ps(offsets, base, scale, _MM_HINT_T0); 
+    offsets = _mm512_permutevar_epi32(_mm512_set_16to16_pi(0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15), offsets);
+    /* TODO: permutevar mask */ 
+    _mm512_prefetch_i32gather_ps(offsets, base, scale, _MM_HINT_T0); 
+} 
+
 ///////////////////////////////////////////////////////////////////////////
 // atomics
 ///////////////////////////////////////////////////////////////////////////

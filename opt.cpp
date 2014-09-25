@@ -1994,8 +1994,8 @@ static bool
 lGSToGSBaseOffsets(llvm::CallInst *callInst) {
     struct GSInfo {
         GSInfo(const char *pgFuncName, const char *pgboFuncName,
-               const char *pgbo32FuncName, bool ig)
-            : isGather(ig) {
+               const char *pgbo32FuncName, bool ig, bool ip)
+            : isGather(ig), isPrefetch(ip) {
             func = m->module->getFunction(pgFuncName);
             baseOffsetsFunc = m->module->getFunction(pgboFuncName);
             baseOffsets32Func = m->module->getFunction(pgbo32FuncName);
@@ -2003,6 +2003,7 @@ lGSToGSBaseOffsets(llvm::CallInst *callInst) {
         llvm::Function *func;
         llvm::Function *baseOffsetsFunc, *baseOffsets32Func;
         const bool isGather;
+        const bool isPrefetch;
     };
 
     GSInfo gsFuncs[] = {
@@ -2011,148 +2012,155 @@ lGSToGSBaseOffsets(llvm::CallInst *callInst) {
                "__pseudo_gather_factored_base_offsets32_i8",
                g->target->hasGather() ? "__pseudo_gather_base_offsets32_i8" :
                "__pseudo_gather_factored_base_offsets32_i8",
-               true),
+               true, false),
         GSInfo("__pseudo_gather32_i16",
                g->target->hasGather() ? "__pseudo_gather_base_offsets32_i16" :
                "__pseudo_gather_factored_base_offsets32_i16",
                g->target->hasGather() ? "__pseudo_gather_base_offsets32_i16" :
                "__pseudo_gather_factored_base_offsets32_i16",
-               true),
+               true, false),
         GSInfo("__pseudo_gather32_i32",
                g->target->hasGather() ? "__pseudo_gather_base_offsets32_i32" :
                "__pseudo_gather_factored_base_offsets32_i32",
                g->target->hasGather() ? "__pseudo_gather_base_offsets32_i32" :
                "__pseudo_gather_factored_base_offsets32_i32",
-               true),
+               true, false),
         GSInfo("__pseudo_gather32_float",
                g->target->hasGather() ? "__pseudo_gather_base_offsets32_float" :
                "__pseudo_gather_factored_base_offsets32_float",
                g->target->hasGather() ? "__pseudo_gather_base_offsets32_float" :
                "__pseudo_gather_factored_base_offsets32_float",
-               true),
+               true, false),
         GSInfo("__pseudo_gather32_i64",
                g->target->hasGather() ? "__pseudo_gather_base_offsets32_i64" :
                "__pseudo_gather_factored_base_offsets32_i64",
                g->target->hasGather() ? "__pseudo_gather_base_offsets32_i64" :
                "__pseudo_gather_factored_base_offsets32_i64",
-               true),
+               true, false),
         GSInfo("__pseudo_gather32_double",
                g->target->hasGather() ? "__pseudo_gather_base_offsets32_double" :
                "__pseudo_gather_factored_base_offsets32_double",
                g->target->hasGather() ? "__pseudo_gather_base_offsets32_double" :
                "__pseudo_gather_factored_base_offsets32_double",
-               true),
+               true, false),
 
         GSInfo("__pseudo_scatter32_i8",
                g->target->hasScatter() ? "__pseudo_scatter_base_offsets32_i8" :
                "__pseudo_scatter_factored_base_offsets32_i8",
                g->target->hasScatter() ? "__pseudo_scatter_base_offsets32_i8" :
                "__pseudo_scatter_factored_base_offsets32_i8",
-               false),
+               false, false),
         GSInfo("__pseudo_scatter32_i16",
                g->target->hasScatter() ? "__pseudo_scatter_base_offsets32_i16" :
                "__pseudo_scatter_factored_base_offsets32_i16",
                g->target->hasScatter() ? "__pseudo_scatter_base_offsets32_i16" :
                "__pseudo_scatter_factored_base_offsets32_i16",
-               false),
+               false, false),
         GSInfo("__pseudo_scatter32_i32",
                g->target->hasScatter() ? "__pseudo_scatter_base_offsets32_i32" :
                "__pseudo_scatter_factored_base_offsets32_i32",
                g->target->hasScatter() ? "__pseudo_scatter_base_offsets32_i32" :
                "__pseudo_scatter_factored_base_offsets32_i32",
-               false),
+               false, false),
         GSInfo("__pseudo_scatter32_float",
                g->target->hasScatter() ? "__pseudo_scatter_base_offsets32_float" :
                "__pseudo_scatter_factored_base_offsets32_float",
                g->target->hasScatter() ? "__pseudo_scatter_base_offsets32_float" :
                "__pseudo_scatter_factored_base_offsets32_float",
-               false),
+               false, false),
         GSInfo("__pseudo_scatter32_i64",
                g->target->hasScatter() ? "__pseudo_scatter_base_offsets32_i64" :
                "__pseudo_scatter_factored_base_offsets32_i64",
                g->target->hasScatter() ? "__pseudo_scatter_base_offsets32_i64" :
                "__pseudo_scatter_factored_base_offsets32_i64",
-               false),
+               false, false),
         GSInfo("__pseudo_scatter32_double",
                g->target->hasScatter() ? "__pseudo_scatter_base_offsets32_double" :
                "__pseudo_scatter_factored_base_offsets32_double",
                g->target->hasScatter() ? "__pseudo_scatter_base_offsets32_double" :
                "__pseudo_scatter_factored_base_offsets32_double",
-               false),
+               false, false),
 
         GSInfo("__pseudo_gather64_i8",
                g->target->hasGather() ? "__pseudo_gather_base_offsets64_i8" :
                "__pseudo_gather_factored_base_offsets64_i8",
                g->target->hasGather() ? "__pseudo_gather_base_offsets32_i8" :
                "__pseudo_gather_factored_base_offsets32_i8",
-               true),
+               true, false),
         GSInfo("__pseudo_gather64_i16",
                g->target->hasGather() ? "__pseudo_gather_base_offsets64_i16" :
                "__pseudo_gather_factored_base_offsets64_i16",
                g->target->hasGather() ? "__pseudo_gather_base_offsets32_i16" :
                "__pseudo_gather_factored_base_offsets32_i16",
-               true),
+               true, false),
         GSInfo("__pseudo_gather64_i32",
                g->target->hasGather() ? "__pseudo_gather_base_offsets64_i32" :
                "__pseudo_gather_factored_base_offsets64_i32",
                g->target->hasGather() ? "__pseudo_gather_base_offsets32_i32" :
                "__pseudo_gather_factored_base_offsets32_i32",
-               true),
+               true, false),
         GSInfo("__pseudo_gather64_float",
                g->target->hasGather() ? "__pseudo_gather_base_offsets64_float" :
                "__pseudo_gather_factored_base_offsets64_float",
                g->target->hasGather() ? "__pseudo_gather_base_offsets32_float" :
                "__pseudo_gather_factored_base_offsets32_float",
-               true),
+               true, false),
         GSInfo("__pseudo_gather64_i64",
                g->target->hasGather() ? "__pseudo_gather_base_offsets64_i64" :
                "__pseudo_gather_factored_base_offsets64_i64",
                g->target->hasGather() ? "__pseudo_gather_base_offsets32_i64" :
                "__pseudo_gather_factored_base_offsets32_i64",
-               true),
+               true, false),
         GSInfo("__pseudo_gather64_double",
                g->target->hasGather() ? "__pseudo_gather_base_offsets64_double" :
                "__pseudo_gather_factored_base_offsets64_double",
                g->target->hasGather() ? "__pseudo_gather_base_offsets32_double" :
                "__pseudo_gather_factored_base_offsets32_double",
-               true),
+               true, false),
 
         GSInfo("__pseudo_scatter64_i8",
                g->target->hasScatter() ? "__pseudo_scatter_base_offsets64_i8" :
                "__pseudo_scatter_factored_base_offsets64_i8",
                g->target->hasScatter() ? "__pseudo_scatter_base_offsets32_i8" :
                "__pseudo_scatter_factored_base_offsets32_i8",
-               false),
+               false, false),
         GSInfo("__pseudo_scatter64_i16",
                g->target->hasScatter() ? "__pseudo_scatter_base_offsets64_i16" :
                "__pseudo_scatter_factored_base_offsets64_i16",
                g->target->hasScatter() ? "__pseudo_scatter_base_offsets32_i16" :
                "__pseudo_scatter_factored_base_offsets32_i16",
-               false),
+               false, false),
         GSInfo("__pseudo_scatter64_i32",
                g->target->hasScatter() ? "__pseudo_scatter_base_offsets64_i32" :
                "__pseudo_scatter_factored_base_offsets64_i32",
                g->target->hasScatter() ? "__pseudo_scatter_base_offsets32_i32" :
                "__pseudo_scatter_factored_base_offsets32_i32",
-               false),
+               false, false),
         GSInfo("__pseudo_scatter64_float",
                g->target->hasScatter() ? "__pseudo_scatter_base_offsets64_float" :
                "__pseudo_scatter_factored_base_offsets64_float",
                g->target->hasScatter() ? "__pseudo_scatter_base_offsets32_float" :
                "__pseudo_scatter_factored_base_offsets32_float",
-               false),
+               false, false),
         GSInfo("__pseudo_scatter64_i64",
                g->target->hasScatter() ? "__pseudo_scatter_base_offsets64_i64" :
                "__pseudo_scatter_factored_base_offsets64_i64",
                g->target->hasScatter() ? "__pseudo_scatter_base_offsets32_i64" :
                "__pseudo_scatter_factored_base_offsets32_i64",
-               false),
+               false, false),
         GSInfo("__pseudo_scatter64_double",
                g->target->hasScatter() ? "__pseudo_scatter_base_offsets64_double" :
                "__pseudo_scatter_factored_base_offsets64_double",
                g->target->hasScatter() ? "__pseudo_scatter_base_offsets32_double" :
                "__pseudo_scatter_factored_base_offsets32_double",
-               false),
+               false, false),
+        
+        GSInfo("__pseudo_prefetch_read_varying_1",
+               g->target->hasVecPrefetch() ? "__pseudo_prefetch_read_varying_1_native" : 
+               "__prefetch_read_varying_1",
+               g->target->hasVecPrefetch() ? "__pseudo_prefetch_read_varying_1_native" : 
+               "__prefetch_read_varying_1",
+               false, true),
     };
 
     int numGSFuncs = sizeof(gsFuncs) / sizeof(gsFuncs[0]);
@@ -2178,7 +2186,8 @@ lGSToGSBaseOffsets(llvm::CallInst *callInst) {
     llvm::Value *basePtr = lGetBasePtrAndOffsets(ptrs, &offsetVector,
                                                  callInst);
 
-    if (basePtr == NULL || offsetVector == NULL)
+    if (basePtr == NULL || offsetVector == NULL || 
+        (info->isGather == false && info->isPrefetch == true && g->target->hasVecPrefetch() == false))
         // It's actually a fully general gather/scatter with a varying
         // set of base pointers, so leave it as is and continune onward
         // to the next instruction...
@@ -2193,7 +2202,9 @@ lGSToGSBaseOffsets(llvm::CallInst *callInst) {
     llvm::Function *gatherScatterFunc = info->baseOffsetsFunc;
 
     if ((info->isGather == true && g->target->hasGather()) ||
-        (info->isGather == false && g->target->hasScatter())) {
+        (info->isGather == false && info->isPrefetch == false && g->target->hasScatter()) ||
+        (info->isGather == false && info->isPrefetch == true && g->target->hasVecPrefetch())) {
+
         // See if the offsets are scaled by 2, 4, or 8.  If so,
         // extract that scale factor and rewrite the offsets to remove
         // it.
@@ -2207,7 +2218,7 @@ lGSToGSBaseOffsets(llvm::CallInst *callInst) {
             gatherScatterFunc = info->baseOffsets32Func;
         }
 
-        if (info->isGather) {
+        if (info->isGather || info->isPrefetch) {
             llvm::Value *mask = callInst->getArgOperand(1);
 
             // Generate a new function call to the next pseudo gather
@@ -2264,7 +2275,7 @@ lGSToGSBaseOffsets(llvm::CallInst *callInst) {
             gatherScatterFunc = info->baseOffsets32Func;
         }
 
-        if (info->isGather) {
+        if (info->isGather || info->isPrefetch) {
             llvm::Value *mask = callInst->getArgOperand(1);
 
             // Generate a new function call to the next pseudo gather
@@ -2306,13 +2317,14 @@ lGSToGSBaseOffsets(llvm::CallInst *callInst) {
 static bool
 lGSBaseOffsetsGetMoreConst(llvm::CallInst *callInst) {
     struct GSBOInfo {
-        GSBOInfo(const char *pgboFuncName, const char *pgbo32FuncName, bool ig)
-            : isGather(ig) {
+        GSBOInfo(const char *pgboFuncName, const char *pgbo32FuncName, bool ig, bool ip)
+            : isGather(ig), isPrefetch(ip) {
             baseOffsetsFunc = m->module->getFunction(pgboFuncName);
             baseOffsets32Func = m->module->getFunction(pgbo32FuncName);
         }
         llvm::Function *baseOffsetsFunc, *baseOffsets32Func;
         const bool isGather;
+        const bool isPrefetch;
     };
 
     GSBOInfo gsFuncs[] = {
@@ -2320,63 +2332,69 @@ lGSBaseOffsetsGetMoreConst(llvm::CallInst *callInst) {
                                        "__pseudo_gather_factored_base_offsets32_i8",
                  g->target->hasGather() ? "__pseudo_gather_base_offsets32_i8" :
                                        "__pseudo_gather_factored_base_offsets32_i8",
-                 true),
+                 true, false),
         GSBOInfo(g->target->hasGather() ? "__pseudo_gather_base_offsets32_i16" :
                                        "__pseudo_gather_factored_base_offsets32_i16",
                  g->target->hasGather() ? "__pseudo_gather_base_offsets32_i16" :
                                        "__pseudo_gather_factored_base_offsets32_i16",
-                 true),
+                 true, false),
         GSBOInfo(g->target->hasGather() ? "__pseudo_gather_base_offsets32_i32" :
                                        "__pseudo_gather_factored_base_offsets32_i32",
                  g->target->hasGather() ? "__pseudo_gather_base_offsets32_i32" :
                                        "__pseudo_gather_factored_base_offsets32_i32",
-                 true),
+                 true, false),
         GSBOInfo(g->target->hasGather() ? "__pseudo_gather_base_offsets32_float" :
                                        "__pseudo_gather_factored_base_offsets32_float",
                  g->target->hasGather() ? "__pseudo_gather_base_offsets32_float" :
                                        "__pseudo_gather_factored_base_offsets32_float",
-                 true),
+                 true, false),
         GSBOInfo(g->target->hasGather() ? "__pseudo_gather_base_offsets32_i64" :
                                        "__pseudo_gather_factored_base_offsets32_i64",
                  g->target->hasGather() ? "__pseudo_gather_base_offsets32_i64" :
                                        "__pseudo_gather_factored_base_offsets32_i64",
-                 true),
+                 true, false),
         GSBOInfo(g->target->hasGather() ? "__pseudo_gather_base_offsets32_double" :
                                        "__pseudo_gather_factored_base_offsets32_double",
                  g->target->hasGather() ? "__pseudo_gather_base_offsets32_double" :
                                        "__pseudo_gather_factored_base_offsets32_double",
-                 true),
+                 true, false),
 
         GSBOInfo( g->target->hasScatter() ? "__pseudo_scatter_base_offsets32_i8" :
                                          "__pseudo_scatter_factored_base_offsets32_i8",
                   g->target->hasScatter() ? "__pseudo_scatter_base_offsets32_i8" :
                                          "__pseudo_scatter_factored_base_offsets32_i8",
-                  false),
+                  false, false),
         GSBOInfo(g->target->hasScatter() ? "__pseudo_scatter_base_offsets32_i16" :
                                         "__pseudo_scatter_factored_base_offsets32_i16",
                  g->target->hasScatter() ? "__pseudo_scatter_base_offsets32_i16" :
                                         "__pseudo_scatter_factored_base_offsets32_i16",
-                 false),
+                 false, false),
         GSBOInfo(g->target->hasScatter() ? "__pseudo_scatter_base_offsets32_i32" :
                                         "__pseudo_scatter_factored_base_offsets32_i32",
                  g->target->hasScatter() ? "__pseudo_scatter_base_offsets32_i32" :
                                         "__pseudo_scatter_factored_base_offsets32_i32",
-                 false),
+                 false, false),
         GSBOInfo(g->target->hasScatter() ? "__pseudo_scatter_base_offsets32_float" :
                                         "__pseudo_scatter_factored_base_offsets32_float",
                  g->target->hasScatter() ? "__pseudo_scatter_base_offsets32_float" :
                                         "__pseudo_scatter_factored_base_offsets32_float",
-                 false),
+                 false, false),
         GSBOInfo(g->target->hasScatter() ? "__pseudo_scatter_base_offsets32_i64" :
                                         "__pseudo_scatter_factored_base_offsets32_i64",
                  g->target->hasScatter() ? "__pseudo_scatter_base_offsets32_i64" :
                                         "__pseudo_scatter_factored_base_offsets32_i64",
-                 false),
+                 false, false),
         GSBOInfo(g->target->hasScatter() ? "__pseudo_scatter_base_offsets32_double" :
                                         "__pseudo_scatter_factored_base_offsets32_double",
                  g->target->hasScatter() ? "__pseudo_scatter_base_offsets32_double" :
                                         "__pseudo_scatter_factored_base_offsets32_double",
-                 false),
+                 false, false),
+
+        GSBOInfo(g->target->hasVecPrefetch() ? "__pseudo_prefetch_read_varying_1_native" :
+                                            "__prefetch_read_varying_1",
+                 g->target->hasVecPrefetch() ? "__pseudo_prefetch_read_varying_1_native" :
+                                            "__prefetch_read_varying_1",
+                 false, true)
     };
 
     int numGSFuncs = sizeof(gsFuncs) / sizeof(gsFuncs[0]);
@@ -4167,149 +4185,155 @@ lReplacePseudoMaskedStore(llvm::CallInst *callInst) {
 static bool
 lReplacePseudoGS(llvm::CallInst *callInst) {
     struct LowerGSInfo {
-        LowerGSInfo(const char *pName, const char *aName, bool ig)
-            : isGather(ig) {
+        LowerGSInfo(const char *pName, const char *aName, bool ig, bool ip)
+            : isGather(ig), isPrefetch(ip) {
             pseudoFunc = m->module->getFunction(pName);
             actualFunc = m->module->getFunction(aName);
         }
         llvm::Function *pseudoFunc;
         llvm::Function *actualFunc;
         const bool isGather;
+        const bool isPrefetch;
     };
 
     LowerGSInfo lgsInfo[] = {
-        LowerGSInfo("__pseudo_gather32_i8",  "__gather32_i8",  true),
-        LowerGSInfo("__pseudo_gather32_i16", "__gather32_i16", true),
-        LowerGSInfo("__pseudo_gather32_i32", "__gather32_i32", true),
-        LowerGSInfo("__pseudo_gather32_float", "__gather32_float", true),
-        LowerGSInfo("__pseudo_gather32_i64", "__gather32_i64", true),
-        LowerGSInfo("__pseudo_gather32_double", "__gather32_double", true),
+        LowerGSInfo("__pseudo_gather32_i8",  "__gather32_i8",  true, false),
+        LowerGSInfo("__pseudo_gather32_i16", "__gather32_i16", true, false),
+        LowerGSInfo("__pseudo_gather32_i32", "__gather32_i32", true, false),
+        LowerGSInfo("__pseudo_gather32_float", "__gather32_float", true, false),
+        LowerGSInfo("__pseudo_gather32_i64", "__gather32_i64", true, false),
+        LowerGSInfo("__pseudo_gather32_double", "__gather32_double", true, false),
 
-        LowerGSInfo("__pseudo_gather64_i8",  "__gather64_i8",  true),
-        LowerGSInfo("__pseudo_gather64_i16", "__gather64_i16", true),
-        LowerGSInfo("__pseudo_gather64_i32", "__gather64_i32", true),
-        LowerGSInfo("__pseudo_gather64_float", "__gather64_float", true),
-        LowerGSInfo("__pseudo_gather64_i64", "__gather64_i64", true),
-        LowerGSInfo("__pseudo_gather64_double", "__gather64_double", true),
+        LowerGSInfo("__pseudo_gather64_i8",  "__gather64_i8",  true, false),
+        LowerGSInfo("__pseudo_gather64_i16", "__gather64_i16", true, false),
+        LowerGSInfo("__pseudo_gather64_i32", "__gather64_i32", true, false),
+        LowerGSInfo("__pseudo_gather64_float", "__gather64_float", true, false),
+        LowerGSInfo("__pseudo_gather64_i64", "__gather64_i64", true, false),
+        LowerGSInfo("__pseudo_gather64_double", "__gather64_double", true, false),
 
         LowerGSInfo("__pseudo_gather_factored_base_offsets32_i8",
-                    "__gather_factored_base_offsets32_i8",  true),
+                    "__gather_factored_base_offsets32_i8",  true, false),
         LowerGSInfo("__pseudo_gather_factored_base_offsets32_i16",
-                    "__gather_factored_base_offsets32_i16", true),
+                    "__gather_factored_base_offsets32_i16", true, false),
         LowerGSInfo("__pseudo_gather_factored_base_offsets32_i32",
-                    "__gather_factored_base_offsets32_i32", true),
+                    "__gather_factored_base_offsets32_i32", true, false),
         LowerGSInfo("__pseudo_gather_factored_base_offsets32_float",
-                    "__gather_factored_base_offsets32_float", true),
+                    "__gather_factored_base_offsets32_float", true, false),
         LowerGSInfo("__pseudo_gather_factored_base_offsets32_i64",
-                    "__gather_factored_base_offsets32_i64", true),
+                    "__gather_factored_base_offsets32_i64", true, false),
         LowerGSInfo("__pseudo_gather_factored_base_offsets32_double",
-                    "__gather_factored_base_offsets32_double", true),
+                    "__gather_factored_base_offsets32_double", true, false),
 
         LowerGSInfo("__pseudo_gather_factored_base_offsets64_i8",
-                    "__gather_factored_base_offsets64_i8",  true),
+                    "__gather_factored_base_offsets64_i8",  true, false),
         LowerGSInfo("__pseudo_gather_factored_base_offsets64_i16",
-                    "__gather_factored_base_offsets64_i16", true),
+                    "__gather_factored_base_offsets64_i16", true, false),
         LowerGSInfo("__pseudo_gather_factored_base_offsets64_i32",
-                    "__gather_factored_base_offsets64_i32", true),
+                    "__gather_factored_base_offsets64_i32", true, false),
         LowerGSInfo("__pseudo_gather_factored_base_offsets64_float",
-                    "__gather_factored_base_offsets64_float", true),
+                    "__gather_factored_base_offsets64_float", true, false),
         LowerGSInfo("__pseudo_gather_factored_base_offsets64_i64",
-                    "__gather_factored_base_offsets64_i64", true),
+                    "__gather_factored_base_offsets64_i64", true, false),
         LowerGSInfo("__pseudo_gather_factored_base_offsets64_double",
-                    "__gather_factored_base_offsets64_double", true),
+                    "__gather_factored_base_offsets64_double", true, false),
 
         LowerGSInfo("__pseudo_gather_base_offsets32_i8",
-                    "__gather_base_offsets32_i8",  true),
+                    "__gather_base_offsets32_i8",  true, false),
         LowerGSInfo("__pseudo_gather_base_offsets32_i16",
-                    "__gather_base_offsets32_i16", true),
+                    "__gather_base_offsets32_i16", true, false),
         LowerGSInfo("__pseudo_gather_base_offsets32_i32",
-                    "__gather_base_offsets32_i32", true),
+                    "__gather_base_offsets32_i32", true, false),
         LowerGSInfo("__pseudo_gather_base_offsets32_float",
-                    "__gather_base_offsets32_float", true),
+                    "__gather_base_offsets32_float", true, false),
         LowerGSInfo("__pseudo_gather_base_offsets32_i64",
-                    "__gather_base_offsets32_i64", true),
+                    "__gather_base_offsets32_i64", true, false),
         LowerGSInfo("__pseudo_gather_base_offsets32_double",
-                    "__gather_base_offsets32_double", true),
+                    "__gather_base_offsets32_double", true, false),
 
         LowerGSInfo("__pseudo_gather_base_offsets64_i8",
-                    "__gather_base_offsets64_i8",  true),
+                    "__gather_base_offsets64_i8",  true, false),
         LowerGSInfo("__pseudo_gather_base_offsets64_i16",
-                    "__gather_base_offsets64_i16", true),
+                    "__gather_base_offsets64_i16", true, false),
         LowerGSInfo("__pseudo_gather_base_offsets64_i32",
-                    "__gather_base_offsets64_i32", true),
+                    "__gather_base_offsets64_i32", true, false),
         LowerGSInfo("__pseudo_gather_base_offsets64_float",
-                    "__gather_base_offsets64_float", true),
+                    "__gather_base_offsets64_float", true, false),
         LowerGSInfo("__pseudo_gather_base_offsets64_i64",
-                    "__gather_base_offsets64_i64", true),
+                    "__gather_base_offsets64_i64", true, false),
         LowerGSInfo("__pseudo_gather_base_offsets64_double",
-                    "__gather_base_offsets64_double", true),
+                    "__gather_base_offsets64_double", true, false),
 
-        LowerGSInfo("__pseudo_scatter32_i8",  "__scatter32_i8",  false),
-        LowerGSInfo("__pseudo_scatter32_i16", "__scatter32_i16", false),
-        LowerGSInfo("__pseudo_scatter32_i32", "__scatter32_i32", false),
-        LowerGSInfo("__pseudo_scatter32_float", "__scatter32_float", false),
-        LowerGSInfo("__pseudo_scatter32_i64", "__scatter32_i64", false),
-        LowerGSInfo("__pseudo_scatter32_double", "__scatter32_double", false),
+        LowerGSInfo("__pseudo_scatter32_i8",  "__scatter32_i8",  false, false),
+        LowerGSInfo("__pseudo_scatter32_i16", "__scatter32_i16", false, false),
+        LowerGSInfo("__pseudo_scatter32_i32", "__scatter32_i32", false, false),
+        LowerGSInfo("__pseudo_scatter32_float", "__scatter32_float", false, false),
+        LowerGSInfo("__pseudo_scatter32_i64", "__scatter32_i64", false, false),
+        LowerGSInfo("__pseudo_scatter32_double", "__scatter32_double", false, false),
 
-        LowerGSInfo("__pseudo_scatter64_i8",  "__scatter64_i8",  false),
-        LowerGSInfo("__pseudo_scatter64_i16", "__scatter64_i16", false),
-        LowerGSInfo("__pseudo_scatter64_i32", "__scatter64_i32", false),
-        LowerGSInfo("__pseudo_scatter64_float", "__scatter64_float", false),
-        LowerGSInfo("__pseudo_scatter64_i64", "__scatter64_i64", false),
-        LowerGSInfo("__pseudo_scatter64_double", "__scatter64_double", false),
+        LowerGSInfo("__pseudo_scatter64_i8",  "__scatter64_i8",  false, false),
+        LowerGSInfo("__pseudo_scatter64_i16", "__scatter64_i16", false, false),
+        LowerGSInfo("__pseudo_scatter64_i32", "__scatter64_i32", false, false),
+        LowerGSInfo("__pseudo_scatter64_float", "__scatter64_float", false, false),
+        LowerGSInfo("__pseudo_scatter64_i64", "__scatter64_i64", false, false),
+        LowerGSInfo("__pseudo_scatter64_double", "__scatter64_double", false, false),
 
         LowerGSInfo("__pseudo_scatter_factored_base_offsets32_i8",
-                    "__scatter_factored_base_offsets32_i8",  false),
+                    "__scatter_factored_base_offsets32_i8",  false, false),
         LowerGSInfo("__pseudo_scatter_factored_base_offsets32_i16",
-                    "__scatter_factored_base_offsets32_i16", false),
+                    "__scatter_factored_base_offsets32_i16", false, false),
         LowerGSInfo("__pseudo_scatter_factored_base_offsets32_i32",
-                    "__scatter_factored_base_offsets32_i32", false),
+                    "__scatter_factored_base_offsets32_i32", false, false),
         LowerGSInfo("__pseudo_scatter_factored_base_offsets32_float",
-                    "__scatter_factored_base_offsets32_float", false),
+                    "__scatter_factored_base_offsets32_float", false, false),
         LowerGSInfo("__pseudo_scatter_factored_base_offsets32_i64",
-                    "__scatter_factored_base_offsets32_i64", false),
+                    "__scatter_factored_base_offsets32_i64", false, false),
         LowerGSInfo("__pseudo_scatter_factored_base_offsets32_double",
-                    "__scatter_factored_base_offsets32_double", false),
+                    "__scatter_factored_base_offsets32_double", false, false),
 
         LowerGSInfo("__pseudo_scatter_factored_base_offsets64_i8",
-                    "__scatter_factored_base_offsets64_i8",  false),
+                    "__scatter_factored_base_offsets64_i8",  false, false),
         LowerGSInfo("__pseudo_scatter_factored_base_offsets64_i16",
-                    "__scatter_factored_base_offsets64_i16", false),
+                    "__scatter_factored_base_offsets64_i16", false, false),
         LowerGSInfo("__pseudo_scatter_factored_base_offsets64_i32",
-                    "__scatter_factored_base_offsets64_i32", false),
+                    "__scatter_factored_base_offsets64_i32", false, false),
         LowerGSInfo("__pseudo_scatter_factored_base_offsets64_float",
-                    "__scatter_factored_base_offsets64_float", false),
+                    "__scatter_factored_base_offsets64_float", false, false),
         LowerGSInfo("__pseudo_scatter_factored_base_offsets64_i64",
-                    "__scatter_factored_base_offsets64_i64", false),
+                    "__scatter_factored_base_offsets64_i64", false, false),
         LowerGSInfo("__pseudo_scatter_factored_base_offsets64_double",
-                    "__scatter_factored_base_offsets64_double", false),
+                    "__scatter_factored_base_offsets64_double", false, false),
 
 
         LowerGSInfo("__pseudo_scatter_base_offsets32_i8",
-                    "__scatter_base_offsets32_i8",  false),
+                    "__scatter_base_offsets32_i8",  false, false),
         LowerGSInfo("__pseudo_scatter_base_offsets32_i16",
-                    "__scatter_base_offsets32_i16", false),
+                    "__scatter_base_offsets32_i16", false, false),
         LowerGSInfo("__pseudo_scatter_base_offsets32_i32",
-                    "__scatter_base_offsets32_i32", false),
+                    "__scatter_base_offsets32_i32", false, false),
         LowerGSInfo("__pseudo_scatter_base_offsets32_float",
-                    "__scatter_base_offsets32_float", false),
+                    "__scatter_base_offsets32_float", false, false),
         LowerGSInfo("__pseudo_scatter_base_offsets32_i64",
-                    "__scatter_base_offsets32_i64", false),
+                    "__scatter_base_offsets32_i64", false, false),
         LowerGSInfo("__pseudo_scatter_base_offsets32_double",
-                    "__scatter_base_offsets32_double", false),
+                    "__scatter_base_offsets32_double", false, false),
 
         LowerGSInfo("__pseudo_scatter_base_offsets64_i8",
-                    "__scatter_base_offsets64_i8",  false),
+                    "__scatter_base_offsets64_i8",  false, false),
         LowerGSInfo("__pseudo_scatter_base_offsets64_i16",
-                    "__scatter_base_offsets64_i16", false),
+                    "__scatter_base_offsets64_i16", false, false),
         LowerGSInfo("__pseudo_scatter_base_offsets64_i32",
-                    "__scatter_base_offsets64_i32", false),
+                    "__scatter_base_offsets64_i32", false, false),
         LowerGSInfo("__pseudo_scatter_base_offsets64_float",
-                    "__scatter_base_offsets64_float", false),
+                    "__scatter_base_offsets64_float", false, false),
         LowerGSInfo("__pseudo_scatter_base_offsets64_i64",
-                    "__scatter_base_offsets64_i64", false),
+                    "__scatter_base_offsets64_i64", false, false),
         LowerGSInfo("__pseudo_scatter_base_offsets64_double",
-                    "__scatter_base_offsets64_double", false),
+                    "__scatter_base_offsets64_double", false, false),
+
+        LowerGSInfo("__pseudo_prefetch_read_varying_1",
+                    "__prefetch_read_varying_1", false, true),
+        LowerGSInfo("__pseudo_prefetch_read_varying_1_native",
+                    "__prefetch_read_varying_1_native", false, true),
     };
 
     llvm::Function *calledFunc = callInst->getCalledFunction();
@@ -4336,7 +4360,7 @@ lReplacePseudoGS(llvm::CallInst *callInst) {
     if (gotPosition && g->target->getVectorWidth() > 1) {
         if (info->isGather)
             PerformanceWarning(pos, "Gather required to load value.");
-        else
+        else if (!info->isPrefetch)
             PerformanceWarning(pos, "Scatter required to store value.");
     }
     return true;
@@ -4617,6 +4641,7 @@ MakeInternalFuncsStaticPass::runOnModule(llvm::Module &module) {
         "__scatter64_i8", "__scatter64_i16",
         "__scatter64_i32", "__scatter64_i64",
         "__scatter64_float", "__scatter64_double",
+        "__prefetch_read_varying_1",
         "__keep_funcs_live",
     };
 
