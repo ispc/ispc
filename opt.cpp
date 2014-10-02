@@ -2161,6 +2161,27 @@ lGSToGSBaseOffsets(llvm::CallInst *callInst) {
                g->target->hasVecPrefetch() ? "__pseudo_prefetch_read_varying_1_native" : 
                "__prefetch_read_varying_1",
                false, true),
+
+        GSInfo("__pseudo_prefetch_read_varying_2",
+               g->target->hasVecPrefetch() ? "__pseudo_prefetch_read_varying_2_native" :
+               "__prefetch_read_varying_2",
+               g->target->hasVecPrefetch() ? "__pseudo_prefetch_read_varying_2_native" :
+               "__prefetch_read_varying_2",
+               false, true),
+
+        GSInfo("__pseudo_prefetch_read_varying_3",
+               g->target->hasVecPrefetch() ? "__pseudo_prefetch_read_varying_3_native" :
+               "__prefetch_read_varying_3",
+               g->target->hasVecPrefetch() ? "__pseudo_prefetch_read_varying_3_native" :
+               "__prefetch_read_varying_3",
+               false, true),
+
+        GSInfo("__pseudo_prefetch_read_varying_nt",
+               g->target->hasVecPrefetch() ? "__pseudo_prefetch_read_varying_nt_native" :
+               "__prefetch_read_varying_nt",
+               g->target->hasVecPrefetch() ? "__pseudo_prefetch_read_varying_nt_native" :
+               "__prefetch_read_varying_nt",
+               false, true),
     };
 
     int numGSFuncs = sizeof(gsFuncs) / sizeof(gsFuncs[0]);
@@ -2394,7 +2415,25 @@ lGSBaseOffsetsGetMoreConst(llvm::CallInst *callInst) {
                                             "__prefetch_read_varying_1",
                  g->target->hasVecPrefetch() ? "__pseudo_prefetch_read_varying_1_native" :
                                             "__prefetch_read_varying_1",
-                 false, true)
+                 false, true),
+
+        GSBOInfo(g->target->hasVecPrefetch() ? "__pseudo_prefetch_read_varying_2_native" :
+                                            "__prefetch_read_varying_2",
+                 g->target->hasVecPrefetch() ? "__pseudo_prefetch_read_varying_2_native" :
+                                            "__prefetch_read_varying_2",
+                 false, true),
+
+        GSBOInfo(g->target->hasVecPrefetch() ? "__pseudo_prefetch_read_varying_3_native" :
+                                            "__prefetch_read_varying_3",
+                 g->target->hasVecPrefetch() ? "__pseudo_prefetch_read_varying_3_native" :
+                                            "__prefetch_read_varying_3",
+                 false, true),
+
+        GSBOInfo(g->target->hasVecPrefetch() ? "__pseudo_prefetch_read_varying_nt_native" :
+                                            "__prefetch_read_varying_nt",
+                 g->target->hasVecPrefetch() ? "__pseudo_prefetch_read_varying_nt_native" :
+                                            "__prefetch_read_varying_nt",
+                 false, true),
     };
 
     int numGSFuncs = sizeof(gsFuncs) / sizeof(gsFuncs[0]);
@@ -4334,6 +4373,21 @@ lReplacePseudoGS(llvm::CallInst *callInst) {
                     "__prefetch_read_varying_1", false, true),
         LowerGSInfo("__pseudo_prefetch_read_varying_1_native",
                     "__prefetch_read_varying_1_native", false, true),
+
+        LowerGSInfo("__pseudo_prefetch_read_varying_2",
+                    "__prefetch_read_varying_2", false, true),
+        LowerGSInfo("__pseudo_prefetch_read_varying_2_native",
+                    "__prefetch_read_varying_2_native", false, true),
+
+        LowerGSInfo("__pseudo_prefetch_read_varying_3",
+                    "__prefetch_read_varying_3", false, true),
+        LowerGSInfo("__pseudo_prefetch_read_varying_3_native",
+                    "__prefetch_read_varying_3_native", false, true),
+
+        LowerGSInfo("__pseudo_prefetch_read_varying_nt",
+                    "__prefetch_read_varying_nt", false, true),
+        LowerGSInfo("__pseudo_prefetch_read_varying_nt_native",
+                    "__prefetch_read_varying_nt_native", false, true),
     };
 
     llvm::Function *calledFunc = callInst->getCalledFunction();
@@ -4641,7 +4695,8 @@ MakeInternalFuncsStaticPass::runOnModule(llvm::Module &module) {
         "__scatter64_i8", "__scatter64_i16",
         "__scatter64_i32", "__scatter64_i64",
         "__scatter64_float", "__scatter64_double",
-        "__prefetch_read_varying_1",
+        "__prefetch_read_varying_1", "__prefetch_read_varying_2",
+        "__prefetch_read_varying_3", "__prefetch_read_varying_nt",
         "__keep_funcs_live",
     };
 

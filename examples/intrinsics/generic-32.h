@@ -1624,6 +1624,16 @@ static FORCEINLINE void __prefetch_read_uniform_3(unsigned char *) {
 static FORCEINLINE void __prefetch_read_uniform_nt(unsigned char *) {
 }
 
+#define PREFETCH_READ_VARYING(CACHE_NUM)                                                                    \
+static FORCEINLINE void __prefetch_read_varying_##CACHE_NUM##_native(uint8_t *base, uint32_t scale,         \
+                                                                   __vec32_i32 offsets, __vec32_i1 mask) {} \
+static FORCEINLINE void __prefetch_read_varying_##CACHE_NUM(__vec32_i64 addr, __vec32_i1 mask) {}           \
+
+PREFETCH_READ_VARYING(1)
+PREFETCH_READ_VARYING(2)
+PREFETCH_READ_VARYING(3)
+PREFETCH_READ_VARYING(nt)
+
 ///////////////////////////////////////////////////////////////////////////
 // atomics
 
