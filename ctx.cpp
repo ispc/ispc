@@ -1606,8 +1606,14 @@ FunctionEmitContext::EmitVariableDebugInfo(Symbol *sym) {
                                           diType,
                                           true /* preserve through opts */);
     AssertPos(currentPos, var.Verify());
+#if !defined(LLVM_3_2) && !defined(LLVM_3_3) && !defined(LLVM_3_4) && !defined(LLVM_3_5)// LLVM 3.6+
+    llvm::DIExpression E = m->diBuilder->createExpression();
+    llvm::Instruction *declareInst =
+        m->diBuilder->insertDeclare(sym->storagePtr, var, E, bblock);
+#else
     llvm::Instruction *declareInst =
         m->diBuilder->insertDeclare(sym->storagePtr, var, bblock);
+#endif
     AddDebugPos(declareInst, &sym->pos, &scope);
 }
 
@@ -1633,8 +1639,14 @@ FunctionEmitContext::EmitFunctionParameterDebugInfo(Symbol *sym, int argNum) {
                                           flags,
                                           argNum+1);
     AssertPos(currentPos, var.Verify());
+#if !defined(LLVM_3_2) && !defined(LLVM_3_3) && !defined(LLVM_3_4) && !defined(LLVM_3_5)// LLVM 3.6+
+    llvm::DIExpression E =  m->diBuilder->createExpression();
+    llvm::Instruction *declareInst =
+        m->diBuilder->insertDeclare(sym->storagePtr, var, E, bblock);
+#else
     llvm::Instruction *declareInst =
         m->diBuilder->insertDeclare(sym->storagePtr, var, bblock);
+#endif
     AddDebugPos(declareInst, &sym->pos, &scope);
 }
 
