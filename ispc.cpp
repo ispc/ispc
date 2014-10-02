@@ -199,7 +199,8 @@ Target::Target(const char *arch, const char *cpu, const char *isa, bool pic) :
     m_hasTranscendentals(false),
     m_hasTrigonometry(false),
     m_hasRsqrtd(false),
-    m_hasRcpd(false)
+    m_hasRcpd(false),
+    m_hasVecPrefetch(false)
 {
     if (isa == NULL) {
         if (cpu != NULL) {
@@ -381,6 +382,8 @@ Target::Target(const char *arch, const char *cpu, const char *isa, bool pic) :
         this->m_hasTrigonometry = false;
         this->m_hasGather = this->m_hasScatter = true;
         this->m_hasRsqrtd = this->m_hasRcpd = true;
+        // It's set to true, because MIC has hardware vector prefetch instruction
+        this->m_hasVecPrefetch = true;
     }
     else if (!strcasecmp(isa, "generic-32") ||
              !strcasecmp(isa, "generic-x32")) {

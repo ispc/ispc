@@ -820,43 +820,19 @@ static inline void prefetch_nt(const void * uniform ptr) {
 }
 
 static inline void prefetch_l1(const void * varying ptr) {
-    const void * uniform ptrArray[programCount];
-    ptrArray[programIndex] = ptr;
-
-    foreach_active (i) {
-        const void * uniform p = ptrArray[i];
-        prefetch_l1(p);
-    }
+    __pseudo_prefetch_read_varying_1((int64)ptr, (IntMaskType)__mask);
 }
 
 static inline void prefetch_l2(const void * varying ptr) {
-    const void * uniform ptrArray[programCount];
-    ptrArray[programIndex] = ptr;
-
-    foreach_active (i) {
-        const void * uniform p = ptrArray[i];
-        prefetch_l2(p);
-    }
+     __pseudo_prefetch_read_varying_2((int64)ptr, (IntMaskType)__mask);
 }
 
 static inline void prefetch_l3(const void * varying ptr) {
-    const void * uniform ptrArray[programCount];
-    ptrArray[programIndex] = ptr;
-
-    foreach_active (i) {
-        const void * uniform p = ptrArray[i];
-        prefetch_l3(p);
-    }
+     __pseudo_prefetch_read_varying_3((int64)ptr, (IntMaskType)__mask);
 }
 
 static inline void prefetch_nt(const void * varying ptr) {
-    const void * uniform ptrArray[programCount];
-    ptrArray[programIndex] = ptr;
-
-    foreach_active (i) {
-        const void * uniform p = ptrArray[i];
-        prefetch_nt(p);
-    }
+    __pseudo_prefetch_read_varying_nt((int64)ptr, (IntMaskType)__mask);
 }
 
 ///////////////////////////////////////////////////////////////////////////
