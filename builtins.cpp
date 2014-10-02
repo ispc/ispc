@@ -839,12 +839,23 @@ lDefineConstantInt(const char *name, int val, llvm::Module *module,
         // have the DW_AT_artifical attribute.  It's not clear if this
         // matters for anything though.
         llvm::DIGlobalVariable var =
+#if !defined(LLVM_3_2) && !defined(LLVM_3_3) && !defined(LLVM_3_4) && !defined(LLVM_3_5)// LLVM 3.6+
+            m->diBuilder->createGlobalVariable(file,
+                                               name,
+                                               name,
+                                               file,
+                                               0 /* line */,
+                                               diType,
+                                               true /* static */,
+                                               sym->storagePtr);
+#else
             m->diBuilder->createGlobalVariable(name,
                                                file,
                                                0 /* line */,
                                                diType,
                                                true /* static */,
                                                sym->storagePtr);
+#endif
         Assert(var.Verify());
     }
 }
@@ -899,12 +910,23 @@ lDefineProgramIndex(llvm::Module *module, SymbolTable *symbolTable) {
         llvm::DIType diType = sym->type->GetDIType(file);
         Assert(diType.Verify());
         llvm::DIGlobalVariable var =
+#if !defined(LLVM_3_2) && !defined(LLVM_3_3) && !defined(LLVM_3_4) && !defined(LLVM_3_5)// LLVM 3.6+
+            m->diBuilder->createGlobalVariable(file,
+                                               sym->name.c_str(),
+                                               sym->name.c_str(),
+                                               file,
+                                               0 /* line */,
+                                               diType,
+                                               false /* static */,
+                                               sym->storagePtr);
+#else
             m->diBuilder->createGlobalVariable(sym->name.c_str(),
                                                file,
                                                0 /* line */,
                                                diType,
                                                false /* static */,
                                                sym->storagePtr);
+#endif    
         Assert(var.Verify());
     }
 }
