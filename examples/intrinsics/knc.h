@@ -1535,33 +1535,37 @@ static FORCEINLINE __vec16_i64 __cast_bits(__vec16_i64, __vec16_d val) {
   __vec16_i64 ret;
   ret.v_hi = _mm512_mask_permutevar_epi32(_mm512_undefined_epi32(), 0xFF00,
       _mm512_set_16to16_pi(15,13,11,9,7,5,3,1,14,12,10,8,6,4,2,0),
-      val.v2);
+      _mm512_castpd_si512(val.v2));
   ret.v_hi = _mm512_mask_permutevar_epi32(ret.v_hi, 0x00FF,
       _mm512_set_16to16_pi(14,12,10,8,6,4,2,0,15,13,11,9,7,5,3,1),
-      val.v1);
+      _mm512_castpd_si512(val.v1));
   ret.v_lo = _mm512_mask_permutevar_epi32(_mm512_undefined_epi32(), 0xFF00,
       _mm512_set_16to16_pi(14,12,10,8,6,4,2,0,15,13,11,9,7,5,3,1),
-      val.v2);
+      _mm512_castpd_si512(val.v2));
   ret.v_lo = _mm512_mask_permutevar_epi32(ret.v_lo, 0x00FF,
       _mm512_set_16to16_pi(15,13,11,9,7,5,3,1,14,12,10,8,6,4,2,0),
-      val.v1);
+      _mm512_castpd_si512(val.v1));
   return ret;
 }
 
 static FORCEINLINE __vec16_d __cast_bits(__vec16_d, __vec16_i64 val) {
   __vec16_d ret;
-  ret.v2 = _mm512_mask_permutevar_epi32(_mm512_undefined_epi32(), 0xAAAA,
-      _mm512_set_16to16_pi(15,15,14,14,13,13,12,12,11,11,10,10,9,9,8,8),
-      val.v_hi);
-  ret.v2 = _mm512_mask_permutevar_epi32(ret.v2, 0x5555,
-      _mm512_set_16to16_pi(15,15,14,14,13,13,12,12,11,11,10,10,9,9,8,8),
-      val.v_lo);
-  ret.v1 = _mm512_mask_permutevar_epi32(_mm512_undefined_epi32(), 0xAAAA,
-      _mm512_set_16to16_pi(7,7,6,6,5,5,4,4,3,3,2,2,1,1,0,0),
-      val.v_hi);
-  ret.v1 = _mm512_mask_permutevar_epi32(ret.v1, 0x5555,
-      _mm512_set_16to16_pi(7,7,6,6,5,5,4,4,3,3,2,2,1,1,0,0),
-      val.v_lo);
+  ret.v2 = _mm512_castsi512_pd(
+      _mm512_mask_permutevar_epi32(_mm512_undefined_epi32(), 0xAAAA,
+        _mm512_set_16to16_pi(15,15,14,14,13,13,12,12,11,11,10,10,9,9,8,8),
+	val.v_hi));
+  ret.v2 = _mm512_castsi512_pd(
+      _mm512_mask_permutevar_epi32(_mm512_castpd_si512(ret.v2), 0x5555,
+        _mm512_set_16to16_pi(15,15,14,14,13,13,12,12,11,11,10,10,9,9,8,8),
+	val.v_lo));
+  ret.v1 = _mm512_castsi512_pd(
+      _mm512_mask_permutevar_epi32(_mm512_undefined_epi32(), 0xAAAA,
+        _mm512_set_16to16_pi(7,7,6,6,5,5,4,4,3,3,2,2,1,1,0,0),
+	val.v_hi));
+  ret.v1 = _mm512_castsi512_pd(
+      _mm512_mask_permutevar_epi32(_mm512_castpd_si512(ret.v1), 0x5555,
+        _mm512_set_16to16_pi(7,7,6,6,5,5,4,4,3,3,2,2,1,1,0,0),
+	val.v_lo));
   return ret;
 }
 
