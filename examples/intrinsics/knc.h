@@ -2214,7 +2214,8 @@ static FORCEINLINE void __prefetch_read_uniform_2(const char *p) {
 }
 
 static FORCEINLINE void __prefetch_read_uniform_3(const char *p) {
-  // There is no L3$ on KNC, don't want to pollute L2$ unecessarily
+  // There is no L3$ on KNC, but we prefetch into L2$ instead.
+  _mm_prefetch(p, _MM_HINT_T1); // prefetch into L2$
 }
 
 static FORCEINLINE void __prefetch_read_uniform_nt(const char *p) {
@@ -2226,21 +2227,14 @@ static FORCEINLINE void __prefetch_read_uniform_nt(const char *p) {
 static FORCEINLINE void __prefetch_read_varying_##CACHE_NUM##_native(uint8_t *base, uint32_t scale,         \
                                                                    __vec16_i32 offsets, __vec16_i1 mask) {  \
     _mm512_mask_prefetch_i32gather_ps (offsets, mask, base, scale, HINT);                                   \
-    offsets = _mm512_permutevar_epi32(_mm512_set_16to16_pi(7,6,5,4,3,2,1,0,15,14,13,12,11,10,9,8), offsets);\
-    __vec16_i1 copy_mask = _mm512_kmov(mask);                                                               \
-    _mm512_kswapb(mask, copy_mask);                                                                         \
-    _mm512_mask_prefetch_i32gather_ps (offsets, mask, base, scale, _MM_HINT_T0);                            \
 }                                                                                                           \
 static FORCEINLINE void __prefetch_read_varying_##CACHE_NUM(__vec16_i64 addr, __vec16_i1 mask) {}           \
 
 PREFETCH_READ_VARYING(1, _MM_HINT_T0)
 PREFETCH_READ_VARYING(2, _MM_HINT_T1)
+// L3 prefetch is mapped to L2 cache
+PREFETCH_READ_VARYING(3, _MM_HINT_T1)
 PREFETCH_READ_VARYING(nt, _MM_HINT_T2)
-
-static FORCEINLINE void __prefetch_read_varying_3_native(uint8_t *base, uint32_t scale,
-                                                         __vec16_i32 offsets, __vec16_i1 mask) {}
-
-static FORCEINLINE void __prefetch_read_varying_3(__vec16_i64 addr, __vec16_i1 mask) {}
 
 ///////////////////////////////////////////////////////////////////////////
 // atomics
