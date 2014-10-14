@@ -1,3 +1,5 @@
+# This patch allows ISPC code to be debugged in Visual Studio 2012 and above
+# Requires LLVM 3.5
 Index: include/llvm/Support/COFF.h
 ===================================================================
 --- include/llvm/Support/COFF.h	(revision 215535)
