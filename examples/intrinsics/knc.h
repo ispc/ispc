@@ -85,7 +85,7 @@ typedef int64_t __vec1_i64;
 
 struct __vec16_i32;
 
-#if 0
+#if 1
 /* (iw) actually, this *SHOULD* be the right implementation for a
 vec16_i1: this one is a class that can have a constructor (which
 ISPC sometimes emits for these vectors...) This version might 
