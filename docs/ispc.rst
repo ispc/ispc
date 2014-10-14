@@ -5025,8 +5025,8 @@ This object file can be linked with the main program via ``nvcc``:
 Hints
 -----
 - ``uniform`` arrays in a function scope are statically allocated in
-  ``__shared__`` memory, with all ensuing consequences. For example, if more
-  all allocated than shared memory available per SMX, a linking or runtime error will occur
+  ``__shared__`` memory, with all ensuing consequences. For example, if more 
+  than avaiable shared memory per SMX is allocated, a link- or runtime-error will occur
 - If ``uniform`` arrays of large size are desired, we recommend to use
   ``uniform new uniform T[size]`` for their allocation, ideally outside the
   tasking function (see ``deferred/kernels.ispc`` in the deferred shading example)
