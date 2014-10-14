@@ -712,7 +712,6 @@ IfStmt::emitMaskedTrueAndFalse(FunctionEmitContext *ctx, llvm::Value *oldMask,
     }
 }
 
-
 /** Emit code for an if test that checks the mask and the test values and
     tries to be smart about jumping over code that doesn't need to be run.
  */
@@ -1101,8 +1100,10 @@ void DoStmt::EmitCode(FunctionEmitContext *ctx) const {
     // the code for the test.  This is only necessary for varying loops;
     // 'uniform' loops just jump when they hit a continue statement and
     // don't mess with the mask.
-    if (!uniformTest)
+    if (!uniformTest) {
         ctx->RestoreContinuedLanes();
+        ctx->ClearBreakLanes();
+    }
     llvm::Value *testValue = testExpr->GetValue(ctx);
     if (!testValue)
         return;
@@ -1310,6 +1311,8 @@ ForStmt::EmitCode(FunctionEmitContext *ctx) const {
     // test code.
     ctx->SetCurrentBasicBlock(bstep);
     ctx->RestoreContinuedLanes();
+    ctx->ClearBreakLanes();
+
     if (step)
         step->EmitCode(ctx);
     ctx->BranchInst(btest);

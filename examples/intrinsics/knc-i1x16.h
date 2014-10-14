@@ -1,5 +1,5 @@
 /**
-  Copyright (c) 2010-2013, Intel Corporation
+  Copyright (c) 2010-2014, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -31,7 +31,8 @@
    SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.  
 */
 
-#include <stdint.h>
+#include <limits.h> // INT_MIN
+#include <stdint.h> 
 #include <math.h>
 #include <assert.h>
 #include <algorithm>
@@ -525,11 +526,11 @@ template <int ALIGN> static FORCEINLINE void __store(__vec16_i1 *p, __vec16_i1 v
   *p = v;
 }
 
-template <class RetVecType> RetVecType __smear_i1(int i);
-template <> static FORCEINLINE __vec16_i1 __smear_i1<__vec16_i1>(int i) { return i?0xFFFF:0x0; }
+template <class RetVecType> static RetVecType __smear_i1(int i);
+template <> FORCEINLINE __vec16_i1 __smear_i1<__vec16_i1>(int i) { return i?0xFFFF:0x0; }
 
-template <class RetVecType> RetVecType __setzero_i1();
-template <> static FORCEINLINE __vec16_i1 __setzero_i1<__vec16_i1>() { return 0; }
+template <class RetVecType> static RetVecType __setzero_i1();
+template <> FORCEINLINE __vec16_i1 __setzero_i1<__vec16_i1>() { return 0; }
 
 template <class RetVecType> __vec16_i1 __undef_i1();
 template <> FORCEINLINE __vec16_i1 __undef_i1<__vec16_i1>() { return __vec16_i1(); }
@@ -677,8 +678,8 @@ static FORCEINLINE __vec16_i32 __select(      bool cond, __vec16_i32 a, __vec16_
 static FORCEINLINE int32_t __extract_element(__vec16_i32  v,  int32_t index)              { return v[index];    }
 static FORCEINLINE void    __insert_element (__vec16_i32 *v, uint32_t index, int32_t val) { (*v)[index] = val;  }
 
-template <class RetVecType> RetVecType __smear_i32(int32_t i);
-template <> static FORCEINLINE __vec16_i32 __smear_i32<__vec16_i32>(int32_t i) { return _mm512_set1_epi32(i); }
+template <class RetVecType> RetVecType static __smear_i32(int32_t i);
+template <> FORCEINLINE __vec16_i32 __smear_i32<__vec16_i32>(int32_t i) { return _mm512_set1_epi32(i); }
 
 static const __vec16_i32 __ispc_one = __smear_i32<__vec16_i32>(1);
 static const __vec16_i32 __ispc_zero = __smear_i32<__vec16_i32>(0);
@@ -686,11 +687,11 @@ static const __vec16_i32 __ispc_thirty_two = __smear_i32<__vec16_i32>(32);
 static const __vec16_i32 __ispc_ffffffff = __smear_i32<__vec16_i32>(-1);
 static const __vec16_i32 __ispc_stride1(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15);
 
-template <class RetVecType> RetVecType __setzero_i32();
-template <> static FORCEINLINE __vec16_i32 __setzero_i32<__vec16_i32>() { return _mm512_setzero_epi32(); }
+template <class RetVecType> static RetVecType __setzero_i32();
+template <> FORCEINLINE __vec16_i32 __setzero_i32<__vec16_i32>() { return _mm512_setzero_epi32(); }
 
-template <class RetVecType> RetVecType __undef_i32();
-template <> static FORCEINLINE __vec16_i32 __undef_i32<__vec16_i32>() { return __vec16_i32(); }
+template <class RetVecType> static RetVecType __undef_i32();
+template <> FORCEINLINE __vec16_i32 __undef_i32<__vec16_i32>() { return __vec16_i32(); }
 
 static FORCEINLINE __vec16_i32 __broadcast_i32(__vec16_i32 v, int index) { return _mm512_mask_permutevar_epi32(v, 0xFFFF, _mm512_set1_epi32(index), v); }
 
@@ -742,11 +743,11 @@ template <int ALIGN> static FORCEINLINE void __store(__vec16_i32 *p, __vec16_i32
 }
 
 #if 0 /* knc::fails  ./tests/foreach-25.ispc ./tests/forach-26.ispc ./tests/foreach-27.ispc */
-template <> static FORCEINLINE __vec16_i32 __load<64>(const __vec16_i32 *p) 
+template <> FORCEINLINE __vec16_i32 __load<64>(const __vec16_i32 *p) 
 {
   return _mm512_load_epi32(p);
 }
-template <> static FORCEINLINE void __store<64>(__vec16_i32 *p, __vec16_i32 v) 
+template <> FORCEINLINE void __store<64>(__vec16_i32 *p, __vec16_i32 v) 
 {
   _mm512_store_epi32(p, v);
 }
@@ -1017,21 +1018,21 @@ template <int ALIGN> static FORCEINLINE void __store(__vec16_i64 *p, __vec16_i64
 }
 
 #if 0 /* knc::fails  as with _i32 this may generate fails ... so commetining it out */
-template <> static FORCEINLINE __vec16_i64 __load<64>(const __vec16_i64 *p) 
+template <> FORCEINLINE __vec16_i64 __load<64>(const __vec16_i64 *p) 
 {
   __m512i v2 = _mm512_load_epi32(p);
   __m512i v1 = _mm512_load_epi32(((uint8_t*)p)+64);
   return __vec16_i64(v2,v1);
 }
-template <> static FORCEINLINE __vec16_i64 __load<128>(const __vec16_i64 *p) {    return __load<64>(p); }
-template <> static FORCEINLINE void __store<64>(__vec16_i64 *p, __vec16_i64 v) 
+template <> FORCEINLINE __vec16_i64 __load<128>(const __vec16_i64 *p) {    return __load<64>(p); }
+template <> FORCEINLINE void __store<64>(__vec16_i64 *p, __vec16_i64 v) 
 {
   __m512i v1 = v.v2;
   __m512i v2 = v.v1;
   _mm512_store_epi64(p, v2);
   _mm512_store_epi64(((uint8_t*)p)+64, v1);
 }
-template <> static FORCEINLINE void __store<128>(__vec16_i64 *p, __vec16_i64 v) {    __store<64>(p, v); }
+template <> FORCEINLINE void __store<128>(__vec16_i64 *p, __vec16_i64 v) {    __store<64>(p, v); }
 #endif
 
 
@@ -1067,14 +1068,14 @@ static FORCEINLINE __vec16_f __select(      bool cond, __vec16_f a, __vec16_f b)
 static FORCEINLINE float __extract_element(__vec16_f  v, uint32_t index)            { return v[index];   }
 static FORCEINLINE void   __insert_element(__vec16_f *v, uint32_t index, float val) { (*v)[index] = val; }
 
-template <class RetVecType> RetVecType __smear_float(float f);
-template <> static FORCEINLINE __vec16_f __smear_float<__vec16_f>(float f) { return _mm512_set_1to16_ps(f); }
+template <class RetVecType> static RetVecType __smear_float(float f);
+template <> FORCEINLINE __vec16_f __smear_float<__vec16_f>(float f) { return _mm512_set_1to16_ps(f); }
 
-template <class RetVecType> RetVecType __setzero_float();
-template <> static FORCEINLINE __vec16_f __setzero_float<__vec16_f>() { return _mm512_setzero_ps(); }
+template <class RetVecType> static RetVecType __setzero_float();
+template <> FORCEINLINE __vec16_f __setzero_float<__vec16_f>() { return _mm512_setzero_ps(); }
 
-template <class RetVecType> RetVecType __undef_float();
-template <> static FORCEINLINE __vec16_f __undef_float<__vec16_f>() { return __vec16_f(); }
+template <class RetVecType> static RetVecType __undef_float();
+template <> FORCEINLINE __vec16_f __undef_float<__vec16_f>() { return __vec16_f(); }
 
 static FORCEINLINE __vec16_f __broadcast_float(__vec16_f _v, int index) 
 {
@@ -1131,12 +1132,12 @@ template <int ALIGN> static FORCEINLINE void __store(__vec16_f *p, __vec16_f v)
 }
 
 #if 0 /* knc::fails  ./tests/gs-improve-progindex.ispc with segfault */
-template <> static FORCEINLINE __vec16_f __load<64>(const __vec16_f *p) 
+template <> FORCEINLINE __vec16_f __load<64>(const __vec16_f *p) 
 {
     return _mm512_load_ps(p);
 }
 /* this one doesn't fail but it is  commented out for completeness, no aligned load/stores */
-template <> static FORCEINLINE void __store<64>(__vec16_f *p, __vec16_f v) 
+template <> FORCEINLINE void __store<64>(__vec16_f *p, __vec16_f v) 
 {
   _mm512_store_ps(p, v);
 }
@@ -1309,14 +1310,14 @@ static FORCEINLINE __vec16_d __select(bool cond, __vec16_d a, __vec16_d b)
 static FORCEINLINE double __extract_element(__vec16_d  v, uint32_t index)             { return v[index];   }
 static FORCEINLINE void    __insert_element(__vec16_d *v, uint32_t index, double val) { (*v)[index] = val; }
 
-template <class RetVecType> RetVecType __smear_double(double d);
-template <> static FORCEINLINE __vec16_d __smear_double<__vec16_d>(double d) { return __vec16_d(_mm512_set1_pd(d), _mm512_set1_pd(d)); }
+template <class RetVecType> static RetVecType __smear_double(double d);
+template <> FORCEINLINE __vec16_d __smear_double<__vec16_d>(double d) { return __vec16_d(_mm512_set1_pd(d), _mm512_set1_pd(d)); }
 
-template <class RetVecType> RetVecType __setzero_double();
-template <> static FORCEINLINE __vec16_d __setzero_double<__vec16_d>() { return __vec16_d(_mm512_setzero_pd(), _mm512_setzero_pd()); }
+template <class RetVecType> static RetVecType __setzero_double();
+template <> FORCEINLINE __vec16_d __setzero_double<__vec16_d>() { return __vec16_d(_mm512_setzero_pd(), _mm512_setzero_pd()); }
 
-template <class RetVecType> RetVecType __undef_double();
-template <> static FORCEINLINE __vec16_d __undef_double<__vec16_d>() { return __vec16_d(); }
+template <class RetVecType> static RetVecType __undef_double();
+template <> FORCEINLINE __vec16_d __undef_double<__vec16_d>() { return __vec16_d(); }
 
 #define CASTD2F(_v_, _v_hi_, _v_lo_) \
   __vec16_f _v_hi_, _v_lo_;  \
@@ -1390,17 +1391,17 @@ template <int ALIGN> static FORCEINLINE void __store(__vec16_d *p, __vec16_d v)
 
 
 #if 0 /* knc::fails  as with _f this may generate fails ... so commetining it out */
-template <> static FORCEINLINE __vec16_d __load<64>(const __vec16_d *p) 
+template <> FORCEINLINE __vec16_d __load<64>(const __vec16_d *p) 
 {
   return __vec16_d(_mm512_load_pd(p), _mm512_load_pd(((uint8_t*)p)+64));
 }
-template <> static FORCEINLINE void __store<64>(__vec16_d *p, __vec16_d v) 
+template <> FORCEINLINE void __store<64>(__vec16_d *p, __vec16_d v) 
 {
   _mm512_store_pd(p, v.v1);
   _mm512_store_pd(((uint8_t*)p)+64, v.v2);
 }
-template <> static FORCEINLINE __vec16_d __load <128>(const __vec16_d *p)        { return __load<64>(p); }
-template <> static FORCEINLINE      void __store<128>(__vec16_d *p, __vec16_d v) { __store<64>(p, v);    }
+template <> FORCEINLINE __vec16_d __load <128>(const __vec16_d *p)        { return __load<64>(p); }
+template <> FORCEINLINE      void __store<128>(__vec16_d *p, __vec16_d v) { __store<64>(p, v);    }
 #endif
 
 ///////////////////////////////////////////////////////////////////////////
@@ -2162,6 +2163,7 @@ static FORCEINLINE __vec16_i8 __gather_base_offsets32_i8(uint8_t *base, uint32_t
 static FORCEINLINE __vec16_i8 __gather_base_offsets64_i8(uint8_t *_base, uint32_t scale, __vec16_i64 _offsets, __vec16_i1 mask) 
 { 
   const __vec16_i64 offsets = _offsets.cvt2hilo();
+  const __vec16_i32 signed_offsets = _mm512_add_epi32(offsets.v_lo, __smear_i32<__vec16_i32>((int32_t)INT_MIN));
   __vec16_i1 still_to_do = mask;
   __vec16_i32 tmp;
   while (still_to_do) {
@@ -2172,8 +2174,8 @@ static FORCEINLINE __vec16_i8 __gather_base_offsets64_i8(uint8_t *_base, uint32_
         _MM_CMPINT_EQ);
 
     void * base = (void*)((unsigned long)_base  +
-        ((scale*(unsigned long)hi32) << 32));    
-    tmp = _mm512_mask_i32extgather_epi32(tmp, match, offsets.v_lo, base,
+        ((scale*(unsigned long)hi32) << 32) + scale*(unsigned long)(-(long)INT_MIN));
+    tmp = _mm512_mask_i32extgather_epi32(tmp, match, signed_offsets, base,
         _MM_UPCONV_EPI32_SINT8, scale,
         _MM_HINT_NONE);
     still_to_do = _mm512_kxor(match,still_to_do);
@@ -2197,6 +2199,7 @@ static FORCEINLINE __vec16_i32 __gather_base_offsets32_i32(uint8_t *base, uint32
 static FORCEINLINE __vec16_i32 __gather_base_offsets64_i32(uint8_t *_base, uint32_t scale, __vec16_i64 _offsets,  __vec16_i1 mask) 
 {
   const __vec16_i64 offsets = _offsets.cvt2hilo();
+  const __vec16_i32 signed_offsets = _mm512_add_epi32(offsets.v_lo, __smear_i32<__vec16_i32>((int32_t)INT_MIN));
   // There is no gather instruction with 64-bit offsets in KNC.
   // We have to manually iterate over the upper 32 bits ;-)
   __vec16_i1  still_to_do = mask;
@@ -2207,10 +2210,10 @@ static FORCEINLINE __vec16_i32 __gather_base_offsets64_i32(uint8_t *_base, uint3
     __vec16_i1 match = _mm512_mask_cmp_epi32_mask(mask,offsets.v_hi,
         __smear_i32<__vec16_i32>((int32_t)hi32),
         _MM_CMPINT_EQ);
-
+         
     void * base = (void*)((unsigned long)_base  +
-        ((scale*(unsigned long)hi32) << 32));
-    ret = _mm512_mask_i32extgather_epi32(ret, match, offsets.v_lo, base,
+        ((scale*(unsigned long)hi32) << 32) + scale*(unsigned long)(-(long)INT_MIN));
+    ret = _mm512_mask_i32extgather_epi32(ret, match, signed_offsets, base,
         _MM_UPCONV_EPI32_NONE, scale,
         _MM_HINT_NONE);
     still_to_do = _mm512_kxor(match, still_to_do);
@@ -2230,6 +2233,7 @@ static FORCEINLINE __vec16_f __gather_base_offsets32_float(uint8_t *base, uint32
 static FORCEINLINE __vec16_f __gather_base_offsets64_float(uint8_t *_base, uint32_t scale, __vec16_i64 _offsets,  __vec16_i1 mask) 
 {
   const __vec16_i64 offsets = _offsets.cvt2hilo();
+  const __vec16_i32 signed_offsets = _mm512_add_epi32(offsets.v_lo, __smear_i32<__vec16_i32>((int32_t)INT_MIN));
   // There is no gather instruction with 64-bit offsets in KNC.
   // We have to manually iterate over the upper 32 bits ;-)
   __vec16_i1 still_to_do = mask;
@@ -2242,8 +2246,8 @@ static FORCEINLINE __vec16_f __gather_base_offsets64_float(uint8_t *_base, uint3
         _MM_CMPINT_EQ);
 
     void * base = (void*)((unsigned long)_base  +
-        ((scale*(unsigned long)hi32) << 32));
-    ret = _mm512_mask_i32extgather_ps(ret, match, offsets.v_lo, base,
+        ((scale*(unsigned long)hi32) << 32) + scale*(unsigned long)(-(long)INT_MIN));
+    ret = _mm512_mask_i32extgather_ps(ret, match, signed_offsets, base,
         _MM_UPCONV_PS_NONE, scale,
         _MM_HINT_NONE);
     still_to_do = _mm512_kxor(match, still_to_do);
@@ -2339,7 +2343,8 @@ static FORCEINLINE void __scatter_base_offsets32_i32(uint8_t *b, uint32_t scale,
 static FORCEINLINE void __scatter_base_offsets64_i32(uint8_t *_base, uint32_t scale, __vec16_i64 _offsets, __vec16_i32 value, __vec16_i1 mask) 
 {
   const __vec16_i64 offsets = _offsets.cvt2hilo();
-
+  const __vec16_i32 signed_offsets = _mm512_add_epi32(offsets.v_lo, __smear_i32<__vec16_i32>((int32_t)INT_MIN));
+  
   __vec16_i1 still_to_do = mask;
   while (still_to_do) {
     int first_active_lane = _mm_tzcnt_32((int)still_to_do);
@@ -2349,8 +2354,8 @@ static FORCEINLINE void __scatter_base_offsets64_i32(uint8_t *_base, uint32_t sc
         _MM_CMPINT_EQ);
 
     void * base = (void*)((unsigned long)_base  +
-        ((scale*(unsigned long)hi32) << 32));    
-    _mm512_mask_i32extscatter_epi32(base, match, offsets.v_lo, 
+        ((scale*(unsigned long)hi32) << 32) + scale*(unsigned long)(-(long)INT_MIN));  
+    _mm512_mask_i32extscatter_epi32(base, match, signed_offsets, 
         value,
         _MM_DOWNCONV_EPI32_NONE, scale,
         _MM_HINT_NONE);
@@ -2370,7 +2375,8 @@ static FORCEINLINE void __scatter_base_offsets32_float(void *base, uint32_t scal
 static FORCEINLINE void __scatter_base_offsets64_float(uint8_t *_base, uint32_t scale, __vec16_i64 _offsets, __vec16_f value, __vec16_i1 mask) 
 { 
   const __vec16_i64 offsets = _offsets.cvt2hilo();
-
+  const __vec16_i32 signed_offsets = _mm512_add_epi32(offsets.v_lo, __smear_i32<__vec16_i32>((int32_t)INT_MIN));
+  
   __vec16_i1 still_to_do = mask;
   while (still_to_do) {
     int first_active_lane = _mm_tzcnt_32((int)still_to_do);
@@ -2380,8 +2386,9 @@ static FORCEINLINE void __scatter_base_offsets64_float(uint8_t *_base, uint32_t 
         _MM_CMPINT_EQ);
 
     void * base = (void*)((unsigned long)_base  +
-        ((scale*(unsigned long)hi32) << 32));    
-    _mm512_mask_i32extscatter_ps(base, match, offsets.v_lo, 
+        ((scale*(unsigned long)hi32) << 32) + scale*(unsigned long)(-(long)INT_MIN));   
+
+    _mm512_mask_i32extscatter_ps(base, match, signed_offsets, 
         value,
         _MM_DOWNCONV_PS_NONE, scale,
         _MM_HINT_NONE);
@@ -2542,6 +2549,26 @@ static FORCEINLINE void __prefetch_read_uniform_nt(unsigned char *p) {
     _mm_prefetch((char *)p, _MM_HINT_T2); // prefetch into L2$ with non-temporal hint
     // _mm_prefetch(p, _MM_HINT_NTA); // prefetch into L1$ with non-temporal hint
 }
+
+#define PREFETCH_READ_VARYING(CACHE_NUM, HINT)                                                              \
+static FORCEINLINE void __prefetch_read_varying_##CACHE_NUM##_native(uint8_t *base, uint32_t scale,         \
+                                                                   __vec16_i32 offsets, __vec16_i1 mask) {  \
+    _mm512_mask_prefetch_i32gather_ps (offsets, mask, base, scale, HINT);                                   \
+    offsets = _mm512_permutevar_epi32(_mm512_set_16to16_pi(7,6,5,4,3,2,1,0,15,14,13,12,11,10,9,8), offsets);\
+    __vec16_i1 copy_mask = _mm512_kmov(mask);                                                               \
+    _mm512_kswapb(mask, copy_mask);                                                                         \
+    _mm512_mask_prefetch_i32gather_ps (offsets, mask, base, scale, _MM_HINT_T0);                            \
+}                                                                                                           \
+static FORCEINLINE void __prefetch_read_varying_##CACHE_NUM(__vec16_i64 addr, __vec16_i1 mask) {}           \
+
+PREFETCH_READ_VARYING(1, _MM_HINT_T0)
+PREFETCH_READ_VARYING(2, _MM_HINT_T1)
+PREFETCH_READ_VARYING(nt, _MM_HINT_T2)
+
+static FORCEINLINE void __prefetch_read_varying_3_native(uint8_t *base, uint32_t scale,
+                                                         __vec16_i32 offsets, __vec16_i1 mask) {}
+
+static FORCEINLINE void __prefetch_read_varying_3(__vec16_i64 addr, __vec16_i1 mask) {}
 
 ///////////////////////////////////////////////////////////////////////////
 // atomics

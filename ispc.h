@@ -283,6 +283,8 @@ public:
     
     bool hasRcpd() const {return m_hasRcpd;}
 
+    bool hasVecPrefetch() const {return m_hasVecPrefetch;}
+
 private:
 
     /** llvm Target object representing this target. */
@@ -385,6 +387,9 @@ private:
     
     /** Indicates whether there is an ISA double precision rcp. */
     bool m_hasRcpd;
+
+    /** Indicates whether the target has hardware instruction for vector prefetch. */
+    bool m_hasVecPrefetch;
 };
 
 

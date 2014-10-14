@@ -4945,9 +4945,19 @@ WriteCXXFile(llvm::Module *module, const char *fn, int vectorWidth,
     llvm::sys::fs::OpenFlags flags = llvm::sys::fs::F_None;
 #endif
 
+#if defined(LLVM_3_2) || defined(LLVM_3_3) || defined(LLVM_3_4) || defined(LLVM_3_5)
     std::string error;
+#else // LLVM 3.6+
+    std::error_code error;
+#endif
+
     llvm::tool_output_file *of = new llvm::tool_output_file(fn, error, flags);
+
+#if defined(LLVM_3_2) || defined(LLVM_3_3) || defined(LLVM_3_4) || defined(LLVM_3_5)
     if (error.size()) {
+#else // LLVM 3.6+
+    if (error) {
+#endif
         fprintf(stderr, "Error opening output file \"%s\".\n", fn);
         return false;
     }

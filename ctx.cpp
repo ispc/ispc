@@ -745,6 +745,7 @@ FunctionEmitContext::Break(bool doCoherenceCheck) {
         // that have executed a 'break' statement:
         // breakLanes = breakLanes | mask
         AssertPos(currentPos, breakLanesPtr != NULL);
+
         llvm::Value *mask = GetInternalMask();
         llvm::Value *breakMask = LoadInst(breakLanesPtr,
                                           "break_mask");
@@ -883,7 +884,7 @@ FunctionEmitContext::jumpIfAllLoopLanesAreDone(llvm::BasicBlock *target) {
             finishedLanes = BinaryOperator(llvm::Instruction::Or, finishedLanes,
                                            continued, "returned|breaked|continued");
         }
-        
+          
         finishedLanes = BinaryOperator(llvm::Instruction::And,
                                        finishedLanes, GetFunctionMask(),
                                        "finished&func");
@@ -924,6 +925,16 @@ FunctionEmitContext::RestoreContinuedLanes() {
 
     // continueLanes = 0
     StoreInst(LLVMMaskAllOff, continueLanesPtr);
+}
+
+
+void
+FunctionEmitContext::ClearBreakLanes() {
+  if (breakLanesPtr == NULL)
+    return;
+
+  // breakLanes = 0
+  StoreInst(LLVMMaskAllOff, breakLanesPtr);
 }
 
 
@@ -1636,14 +1647,16 @@ FunctionEmitContext::StartScope() {
         llvm::DILexicalBlock lexicalBlock =
             m->diBuilder->createLexicalBlock(parentScope, diFile,
                                              currentPos.first_line,
-#if !defined(LLVM_3_2) && !defined(LLVM_3_3) && !defined(LLVM_3_4) // LLVM 3.5+
+#if defined(LLVM_3_5)
         // Revision 202736 in LLVM adds support of DWARF discriminator
         // to the last argument and revision 202737 in clang adds 0
         // for the last argument by default.
                                              currentPos.first_column, 0);
 #else
+        // Revision 216239 in LLVM removes support of DWARF discriminator
+        // as the last argument
                                              currentPos.first_column);
-#endif
+#endif // LLVM 3.2, 3.3, 3.4 and 3.6+
         AssertPos(currentPos, lexicalBlock.Verify());
         debugScopes.push_back(lexicalBlock);
     }
@@ -1683,8 +1696,14 @@ FunctionEmitContext::EmitVariableDebugInfo(Symbol *sym) {
                                           diType,
                                           true /* preserve through opts */);
     AssertPos(currentPos, var.Verify());
+#if !defined(LLVM_3_2) && !defined(LLVM_3_3) && !defined(LLVM_3_4) && !defined(LLVM_3_5)// LLVM 3.6+
+    llvm::DIExpression E = m->diBuilder->createExpression();
+    llvm::Instruction *declareInst =
+        m->diBuilder->insertDeclare(sym->storagePtr, var, E, bblock);
+#else
     llvm::Instruction *declareInst =
         m->diBuilder->insertDeclare(sym->storagePtr, var, bblock);
+#endif
     AddDebugPos(declareInst, &sym->pos, &scope);
 }
 
@@ -1710,8 +1729,14 @@ FunctionEmitContext::EmitFunctionParameterDebugInfo(Symbol *sym, int argNum) {
                                           flags,
                                           argNum+1);
     AssertPos(currentPos, var.Verify());
+#if !defined(LLVM_3_2) && !defined(LLVM_3_3) && !defined(LLVM_3_4) && !defined(LLVM_3_5)// LLVM 3.6+
+    llvm::DIExpression E =  m->diBuilder->createExpression();
+    llvm::Instruction *declareInst =
+        m->diBuilder->insertDeclare(sym->storagePtr, var, E, bblock);
+#else
     llvm::Instruction *declareInst =
         m->diBuilder->insertDeclare(sym->storagePtr, var, bblock);
+#endif
     AddDebugPos(declareInst, &sym->pos, &scope);
 }
 

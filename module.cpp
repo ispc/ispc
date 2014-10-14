@@ -604,12 +604,23 @@ Module::AddGlobalVariable(const std::string &name, const Type *type, Expr *initE
     if (diBuilder) {
         llvm::DIFile file = pos.GetDIFile();
         llvm::DIGlobalVariable var =
+#if !defined(LLVM_3_2) && !defined(LLVM_3_3) && !defined(LLVM_3_4) && !defined(LLVM_3_5)// LLVM 3.6+
+            diBuilder->createGlobalVariable(file,
+                                            name,
+                                            name,
+                                            file,
+                                            pos.first_line,
+                                            sym->type->GetDIType(file),
+                                            (sym->storageClass == SC_STATIC),
+                                            sym->storagePtr);
+#else
             diBuilder->createGlobalVariable(name,
                                             file,
                                             pos.first_line,
                                             sym->type->GetDIType(file),
                                             (sym->storageClass == SC_STATIC),
                                             sym->storagePtr);
+#endif
         Assert(var.Verify());
     }
 }
@@ -1304,18 +1315,33 @@ Module::writeObjectFileOrAssembly(llvm::TargetMachine *targetMachine,
 
 #endif
 
+#if defined(LLVM_3_2) || defined(LLVM_3_3) || defined(LLVM_3_4) || defined(LLVM_3_5)
     std::string error;
+#else // LLVM 3.6+
+    std::error_code error;
+#endif
+
     llvm::tool_output_file *of = new llvm::tool_output_file(outFileName, error, flags);
+
+#if defined(LLVM_3_2) || defined(LLVM_3_3) || defined(LLVM_3_4) || defined(LLVM_3_5)
     if (error.size()) {
+#else // LLVM 3.6+
+    if (error) {
+#endif
+
         fprintf(stderr, "Error opening output file \"%s\".\n", outFileName);
         return false;
     }
 
     llvm::PassManager pm;
-#if !defined(LLVM_3_2) && !defined(LLVM_3_3) && !defined(LLVM_3_4) // LLVM 3.5+
-    pm.add(new llvm::DataLayoutPass(*g->target->getDataLayout()));
-#else
+#if defined(LLVM_3_2) || defined(LLVM_3_3) || defined(LLVM_3_4)
     pm.add(new llvm::DataLayout(*g->target->getDataLayout()));
+#elif defined(LLVM_3_5)
+    pm.add(new llvm::DataLayoutPass(*g->target->getDataLayout()));
+#else // LLVM 3.6+
+    llvm::DataLayoutPass *dlp= new llvm::DataLayoutPass();
+    dlp->doInitialization(*module);
+    pm.add(dlp);
 #endif
 
     llvm::formatted_raw_ostream fos(of->os());

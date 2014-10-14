@@ -555,6 +555,10 @@ lSetInternalFunctions(llvm::Module *module) {
         "__prefetch_read_uniform_2",
         "__prefetch_read_uniform_3",
         "__prefetch_read_uniform_nt",
+        "__pseudo_prefetch_read_varying_1",
+        "__pseudo_prefetch_read_varying_2",
+        "__pseudo_prefetch_read_varying_3",
+        "__pseudo_prefetch_read_varying_nt",
         "__psubs_vi8",
         "__psubs_vi16",
         "__psubus_vi8",
@@ -780,7 +784,11 @@ void
 AddBitcodeToModule(const unsigned char *bitcode, int length,
                    llvm::Module *module, SymbolTable *symbolTable) {
     llvm::StringRef sb = llvm::StringRef((char *)bitcode, length);
+#if defined(LLVM_3_2) || defined(LLVM_3_3) || defined(LLVM_3_4) || defined(LLVM_3_5)
     llvm::MemoryBuffer *bcBuf = llvm::MemoryBuffer::getMemBuffer(sb);
+#else // LLVM 3.6+
+    llvm::MemoryBufferRef bcBuf = llvm::MemoryBuffer::getMemBuffer(sb)->getMemBufferRef();
+#endif
 
 #if !defined(LLVM_3_2) && !defined(LLVM_3_3) && !defined(LLVM_3_4) // LLVM 3.5+
     llvm::ErrorOr<llvm::Module *> ModuleOrErr = llvm::parseBitcodeFile(bcBuf, *g->ctx);
@@ -910,12 +918,23 @@ lDefineConstantInt(const char *name, int val, llvm::Module *module,
         // have the DW_AT_artifical attribute.  It's not clear if this
         // matters for anything though.
         llvm::DIGlobalVariable var =
+#if !defined(LLVM_3_2) && !defined(LLVM_3_3) && !defined(LLVM_3_4) && !defined(LLVM_3_5)// LLVM 3.6+
+            m->diBuilder->createGlobalVariable(file,
+                                               name,
+                                               name,
+                                               file,
+                                               0 /* line */,
+                                               diType,
+                                               true /* static */,
+                                               sym->storagePtr);
+#else
             m->diBuilder->createGlobalVariable(name,
                                                file,
                                                0 /* line */,
                                                diType,
                                                true /* static */,
                                                sym->storagePtr);
+#endif
         Assert(var.Verify());
     }
 }
@@ -970,12 +989,23 @@ lDefineProgramIndex(llvm::Module *module, SymbolTable *symbolTable) {
         llvm::DIType diType = sym->type->GetDIType(file);
         Assert(diType.Verify());
         llvm::DIGlobalVariable var =
+#if !defined(LLVM_3_2) && !defined(LLVM_3_3) && !defined(LLVM_3_4) && !defined(LLVM_3_5)// LLVM 3.6+
+            m->diBuilder->createGlobalVariable(file,
+                                               sym->name.c_str(),
+                                               sym->name.c_str(),
+                                               file,
+                                               0 /* line */,
+                                               diType,
+                                               false /* static */,
+                                               sym->storagePtr);
+#else
             m->diBuilder->createGlobalVariable(sym->name.c_str(),
                                                file,
                                                0 /* line */,
                                                diType,
                                                false /* static */,
                                                sym->storagePtr);
+#endif    
         Assert(var.Verify());
     }
 }

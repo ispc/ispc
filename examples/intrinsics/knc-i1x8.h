@@ -2606,6 +2606,26 @@ static FORCEINLINE void __prefetch_read_uniform_nt(unsigned char *p) {
     // _mm_prefetch(p, _MM_HINT_NTA); // prefetch into L1$ with non-temporal hint
 }
 
+#define PREFETCH_READ_VARYING(CACHE_NUM, HINT)                                                              \
+static FORCEINLINE void __prefetch_read_varying_##CACHE_NUM##_native(uint8_t *base, uint32_t scale,         \
+                                                                   __vec16_i32 offsets, __vec16_i1 mask) {  \
+    _mm512_mask_prefetch_i32gather_ps (offsets, mask, base, scale, HINT);                                   \
+    offsets = _mm512_permutevar_epi32(_mm512_set_16to16_pi(7,6,5,4,3,2,1,0,15,14,13,12,11,10,9,8), offsets);\
+    __vec16_i1 copy_mask = _mm512_kmov(mask);                                                               \
+    _mm512_kswapb(mask, copy_mask);                                                                         \
+    _mm512_mask_prefetch_i32gather_ps (offsets, mask, base, scale, _MM_HINT_T0);                            \
+}                                                                                                           \
+static FORCEINLINE void __prefetch_read_varying_##CACHE_NUM(__vec16_i64 addr, __vec16_i1 mask) {}           \
+
+PREFETCH_READ_VARYING(1, _MM_HINT_T0)
+PREFETCH_READ_VARYING(2, _MM_HINT_T1)
+PREFETCH_READ_VARYING(nt, _MM_HINT_T2)
+
+static FORCEINLINE void __prefetch_read_varying_3_native(uint8_t *base, uint32_t scale,
+                                                         __vec16_i32 offsets, __vec16_i1 mask) {}
+
+static FORCEINLINE void __prefetch_read_varying_3(__vec16_i64 addr, __vec16_i1 mask) {}
+
 ///////////////////////////////////////////////////////////////////////////
 // atomics
 
