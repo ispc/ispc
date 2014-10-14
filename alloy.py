@@ -450,7 +450,7 @@ def validation_run(only, only_targets, reference_branch, number, notify, update,
     print_debug("Folder: " + os.environ["ISPC_HOME"] + "\n", False, "")
     date = datetime.datetime.now()
     print_debug("Date: " + date.strftime('%H:%M %d/%m/%Y') + "\n", False, "")
-    newest_LLVM="3.4"
+    newest_LLVM="3.5"
     msg_additional_info = ""
 # *** *** ***
 # Stability validation run
@@ -897,7 +897,7 @@ if __name__ == '__main__':
             'build (only build with different LLVM), 3.2, 3.3, 3.4 3.5, trunk, native (do not use SDE), current (do not rebuild ISPC).',
             default="")
     run_group.add_option('--perf_LLVM', dest='perf_llvm',
-        help='compare LLVM 3.3 with "--compare-with", default trunk', default=False, action='store_true')
+        help='compare LLVM 3.5 with "--compare-with", default trunk', default=False, action='store_true')
     parser.add_option_group(run_group)
     # options for activity "setup PATHS"
     setup_group = OptionGroup(parser, "Options for setup",
