@@ -85,7 +85,11 @@
   #include <llvm/IR/Intrinsics.h>
   #include <llvm/IR/DerivedTypes.h>
 #ifdef ISPC_NVPTX_ENABLED
-  #include "llvm/Assembly/AssemblyAnnotationWriter.h"
+#if !defined(LLVM_3_2) && !defined(LLVM_3_3) && !defined(LLVM_3_4) // LLVM 3.5+
+  #include <llvm/IR/AssemblyAnnotationWriter.h>
+#else
+  #include <llvm/Assembly/AssemblyAnnotationWriter.h>
+#endif
 #endif /* ISPC_NVPTX_ENABLED */
 #endif
 #include <llvm/PassManager.h>
@@ -1165,6 +1169,15 @@ lFixAttributes(const vecString_t &src, vecString_t &dst)
   for (vecString_t::const_iterator it = src.begin();  it != src.end(); it++)
   {
     vecString_t words = lSplitString(*it);
+    if (words.size() > 1 && (words[0] == "target" && words[1] == "datalayout"))
+    {
+      std::string s = "target datalayout = ";
+      s += '"';
+      s += "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v16:16:16-v32:32:32-v64:64:64-v128:128:128-n16:32:64";
+      s += '"';
+      dst.push_back(s);
+      continue;
+    }
     if (!words.empty() && words[0] == "attributes")
       continue;
     std::string s;
@@ -1231,7 +1244,11 @@ Module::writeBitcode(llvm::Module *module, const char *outFileName) {
 
       std::string s;
       llvm::raw_string_ostream out(s);
+#if !defined(LLVM_3_2) && !defined(LLVM_3_3) && !defined(LLVM_3_4) // LLVM 3.5+
+      std::unique_ptr<llvm::AssemblyAnnotationWriter> Annotator;
+#else
       llvm::OwningPtr<llvm::AssemblyAnnotationWriter> Annotator;
+#endif
       module->print(out, Annotator.get());
       std::istringstream iss(s);
 
