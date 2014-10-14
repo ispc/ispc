@@ -98,7 +98,7 @@ static void lGetAllArgs(int Argc, char *Argv[], int &argc, char *argv[128])
 }
 const char *lGetExt (const char *fspec) 
 {
-  char *e = strrchr (fspec, '.');
+  const char *e = strrchr (fspec, '.');
   return e;
 }
 
