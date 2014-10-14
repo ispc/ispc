@@ -3467,3 +3467,26 @@ saturation_arithmetic_novec_universal(sub)
 saturation_arithmetic_novec_universal(add)
 ')
 
+declare void @__pseudo_prefetch_read_varying_1(<WIDTH x i64>, <WIDTH x MASK>) nounwind
+
+declare void
+@__pseudo_prefetch_read_varying_1_native(i8 *, i32, <WIDTH x i32>,
+                                         <WIDTH x MASK>) nounwind
+
+declare void @__pseudo_prefetch_read_varying_2(<WIDTH x i64>, <WIDTH x MASK>) nounwind
+
+declare void
+@__pseudo_prefetch_read_varying_2_native(i8 *, i32, <WIDTH x i32>,
+                                         <WIDTH x MASK>) nounwind
+
+declare void @__pseudo_prefetch_read_varying_3(<WIDTH x i64>, <WIDTH x MASK>) nounwind
+
+declare void
+@__pseudo_prefetch_read_varying_3_native(i8 *, i32, <WIDTH x i32>,
+                                         <WIDTH x MASK>) nounwind
+
+declare void @__pseudo_prefetch_read_varying_nt(<WIDTH x i64>, <WIDTH x MASK>) nounwind
+
+declare void
+@__pseudo_prefetch_read_varying_nt_native(i8 *, i32, <WIDTH x i32>,
+                                         <WIDTH x MASK>) nounwind
