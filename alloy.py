@@ -93,7 +93,7 @@ def try_do_LLVM(text, command, from_validation):
         error("can't " + text, 1)
     print_debug("DONE.\n", from_validation, alloy_build)
 
-def build_LLVM(version_LLVM, revision, folder, tarball, debug, selfbuild, extra, from_validation, force, make):
+def build_LLVM(version_LLVM, revision, folder, tarball, debug, selfbuild, extra, from_validation, force, make, gcc_toolchain_path):
     print_debug("Building LLVM. Version: " + version_LLVM + ". ", from_validation, alloy_build)
     if revision != "":
         print_debug("Revision: " + revision + ".\n", from_validation, alloy_build)
@@ -210,7 +210,9 @@ def build_LLVM(version_LLVM, revision, folder, tarball, debug, selfbuild, extra,
         os.chdir(LLVM_BUILD_selfbuild)
         try_do_LLVM("configure release version for selfbuild ",
                     "../" + LLVM_SRC + "/configure --prefix=" + llvm_home + "/" +
-                    LLVM_BIN_selfbuild + " --enable-optimized",
+                    LLVM_BIN_selfbuild + " --enable-optimized" +
+                    " --enable-targets=x86,x86_64" +
+                    ((" --with-gcc-toolchain=" + gcc_toolchain_path) if gcc_toolchain_path != "" else ""),
                     from_validation)
         try_do_LLVM("build release version for selfbuild ",
                     make, from_validation)
@@ -225,7 +227,9 @@ def build_LLVM(version_LLVM, revision, folder, tarball, debug, selfbuild, extra,
         if current_OS != "Windows":
             try_do_LLVM("configure release version ",
                     "../" + LLVM_SRC + "/configure --prefix=" + llvm_home + "/" +
-                    LLVM_BIN + " --enable-optimized" + selfbuild_compiler,
+                    LLVM_BIN + " --enable-optimized" + selfbuild_compiler +
+                    " --enable-targets=x86,x86_64" +
+                    ((" --with-gcc-toolchain=" + gcc_toolchain_path) if gcc_toolchain_path != "" else ""),
                     from_validation)
         else:
             try_do_LLVM("configure release version ",
@@ -235,7 +239,9 @@ def build_LLVM(version_LLVM, revision, folder, tarball, debug, selfbuild, extra,
     else:
         try_do_LLVM("configure debug version ",
                     "../" + LLVM_SRC + "/configure --prefix=" + llvm_home + "/" + LLVM_BIN +
-                    " --enable-debug-runtime --enable-debug-symbols --enable-keep-symbols" + selfbuild_compiler,
+                    " --enable-debug-runtime --enable-debug-symbols --enable-keep-symbols" + selfbuild_compiler +
+                    " --enable-targets=x86,x86_64" +
+                    ((" --with-gcc-toolchain=" + gcc_toolchain_path) if gcc_toolchain_path != "" else ""),
                     from_validation)
     # building llvm
     if current_OS != "Windows":
@@ -553,7 +559,7 @@ def validation_run(only, only_targets, reference_branch, number, notify, update,
         knc_archs = ["x86-64"]
         need_LLVM = check_LLVM(LLVM)
         for i in range(0,len(need_LLVM)):
-            build_LLVM(need_LLVM[i], "", "", "", False, False, False, True, False, make)
+            build_LLVM(need_LLVM[i], "", "", "", False, False, False, True, False, make, options.gcc_toolchain_path)
 # begin validation run for stabitily
         common.remove_if_exists(stability.in_file)
         R = [[[],[]],[[],[]],[[],[]],[[],[]]]
@@ -636,7 +642,7 @@ def validation_run(only, only_targets, reference_branch, number, notify, update,
 # prepare newest LLVM
         need_LLVM = check_LLVM([newest_LLVM])
         if len(need_LLVM) != 0:
-            build_LLVM(need_LLVM[0], "", "", "", False, False, False, True, False, make)
+            build_LLVM(need_LLVM[0], "", "", "", False, False, False, True, False, make, options.gcc_toolchain_path)
         if perf_llvm == False:
             # prepare reference point. build both test and reference compilers
             try_do_LLVM("apply git", "git branch", True)
@@ -780,7 +786,7 @@ def Main():
         start_time = time.time()
         if options.build_llvm:
             build_LLVM(options.version, options.revision, options.folder, options.tarball,
-                    options.debug, options.selfbuild, options.extra, False, options.force, make)
+                    options.debug, options.selfbuild, options.extra, False, options.force, make, options.gcc_toolchain_path)
         if options.validation_run:
             validation_run(options.only, options.only_targets, options.branch,
                     options.number_for_performance, options.notify, options.update, int(options.speed),
@@ -860,6 +866,10 @@ if __name__ == '__main__':
                     "These options must be used with -b option.")
     llvm_group.add_option('--version', dest='version',
         help='version of llvm to build: 3.2 3.3 3.4 3.5 trunk. Default: trunk', default="trunk")
+    llvm_group.add_option('--with-gcc-toolchain', dest='gcc_toolchain_path',
+         help='GCC install dir to use when building clang. It is important to set when ' +
+         'you have alternative gcc installation. Note that otherwise gcc from standard ' +
+         'location will be used, not from your PATH', default="")
     llvm_group.add_option('--revision', dest='revision',
         help='revision of llvm to build in format r172870', default="")
     llvm_group.add_option('--debug', dest='debug',
