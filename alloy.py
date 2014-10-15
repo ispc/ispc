@@ -1,6 +1,6 @@
 #!/usr/bin/python
 #
-#  Copyright (c) 2013, Intel Corporation
+#  Copyright (c) 2013-2014, Intel Corporation
 #  All rights reserved.
 # 
 #  Redistribution and use in source and binary forms, with or without
@@ -138,6 +138,21 @@ def build_LLVM(version_LLVM, revision, folder, tarball, debug, selfbuild, extra,
     common.remove_if_exists(LLVM_SRC)
     common.remove_if_exists(LLVM_BUILD)
     common.remove_if_exists(LLVM_BIN)
+
+    # Starting with MacOS 10.9 Maverics, we depend on XCode being installed, as it contains C and C++ library headers.
+    # sysroot trick below helps finding C headers. For C++ we just check out libc++ sources.
+    mac_system_root = ""
+    if current_OS == "MacOS" and int(current_OS_version.split(".")[0]) >= 13:
+        search_path = string.split(os.environ["PATH"], os.pathsep)
+        found_xcrun = False
+        for path in search_path:
+            if os.path.exists(os.path.join(path, "xcrun")):
+                found_xcrun = True
+        if found_xcrun:
+            mac_system_root = " --with-default-sysroot=`xcrun --show-sdk-path`"
+        else:
+            error("Can't find XCode (xcrun tool) - it's required on MacOS 10.9 and newer", 1)
+
     if selfbuild:
         common.remove_if_exists(LLVM_BUILD_selfbuild)
         common.remove_if_exists(LLVM_BIN_selfbuild)
@@ -212,7 +227,8 @@ def build_LLVM(version_LLVM, revision, folder, tarball, debug, selfbuild, extra,
                     "../" + LLVM_SRC + "/configure --prefix=" + llvm_home + "/" +
                     LLVM_BIN_selfbuild + " --enable-optimized" +
                     " --enable-targets=x86,x86_64" +
-                    ((" --with-gcc-toolchain=" + gcc_toolchain_path) if gcc_toolchain_path != "" else ""),
+                    ((" --with-gcc-toolchain=" + gcc_toolchain_path) if gcc_toolchain_path != "" else "") +
+                    mac_system_root,
                     from_validation)
         try_do_LLVM("build release version for selfbuild ",
                     make, from_validation)
@@ -229,7 +245,8 @@ def build_LLVM(version_LLVM, revision, folder, tarball, debug, selfbuild, extra,
                     "../" + LLVM_SRC + "/configure --prefix=" + llvm_home + "/" +
                     LLVM_BIN + " --enable-optimized" + selfbuild_compiler +
                     " --enable-targets=x86,x86_64" +
-                    ((" --with-gcc-toolchain=" + gcc_toolchain_path) if gcc_toolchain_path != "" else ""),
+                    ((" --with-gcc-toolchain=" + gcc_toolchain_path) if gcc_toolchain_path != "" else "") +
+                    mac_system_root,
                     from_validation)
         else:
             try_do_LLVM("configure release version ",
@@ -241,7 +258,8 @@ def build_LLVM(version_LLVM, revision, folder, tarball, debug, selfbuild, extra,
                     "../" + LLVM_SRC + "/configure --prefix=" + llvm_home + "/" + LLVM_BIN +
                     " --enable-debug-runtime --enable-debug-symbols --enable-keep-symbols" + selfbuild_compiler +
                     " --enable-targets=x86,x86_64" +
-                    ((" --with-gcc-toolchain=" + gcc_toolchain_path) if gcc_toolchain_path != "" else ""),
+                    ((" --with-gcc-toolchain=" + gcc_toolchain_path) if gcc_toolchain_path != "" else "") +
+                    mac_system_root,
                     from_validation)
     # building llvm
     if current_OS != "Windows":
