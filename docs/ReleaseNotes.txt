@@ -6,8 +6,8 @@ debugging support on Windows and fixes several bugs. We also ship experimental
 build for Sony PlayStation4 target in this release. Binaries for all platforms
 are based on LLVM 3.5.
 
-Note that MacOS binaries are build for MacOS 10.9 Maverics. Linux binaries are
-compatibile with kernel 2.6.32 (ok for RHEL6) and later.
+Note that MacOS binaries are build for MacOS 10.9 Mavericks. Linux binaries are
+compatible with kernel 2.6.32 (ok for RHEL6) and later.
 
 More details:
 
