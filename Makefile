@@ -179,7 +179,7 @@ ifeq ($(ARCH_OS),Linux)
   # Linking everything statically isn't easy (too many things are required),
   # but linking libstdc++ and libgcc is necessary when building with relatively
   # new gcc, when going to distribute to old systems.
-    LDFLAGS=-static-libgcc -static-libstdc++
+#    LDFLAGS=-static-libgcc -static-libstdc++
 endif
 
 LEX=flex
