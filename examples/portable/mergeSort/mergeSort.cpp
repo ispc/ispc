@@ -42,26 +42,28 @@
 #include "ispc_malloc.h"
 #include "mergeSort_ispc.h"
 
-/* progress bar by Ross Hemsley;
- * http://www.rosshemsley.co.uk/2011/02/creating-a-progress-bar-in-c-or-any-other-console-app/ */
-static inline void progressbar (unsigned int x, unsigned int n, unsigned int w = 50)
+static void progressBar(const int x, const int n, const int width = 50)
 {
-  if (n < 100)
-  {
-    x *= 100/n;
-    n = 100;
-  }
+  assert(n > 1);
+  assert(x >= 0 && x < n);
+  assert(width > 10);
+  const float f = static_cast<float>(x)/(n-1);
+  const int   w = static_cast<int>(f * width);
 
-  if ((x != n) && (x % (n/100) != 0)) return;
+  // print bar
+  std::string bstr("[");
+  for (int i = 0; i < width; i++)
+    bstr += i < w ? '=' : ' ';
+  bstr += "]";
 
-  using namespace std;
-  float ratio  =  x/(float)n;
-  int c =  ratio * w;
+  // print percentage 
+  char pstr0[32];
+  sprintf(pstr0, " %2d %c ", static_cast<int>(f*100.0),'%');
+  const std::string pstr(pstr0);
+  std::copy(pstr.begin(), pstr.end(), bstr.begin() + (width/2-2));
 
-  cout << setw(3) << (int)(ratio*100) << "% [";
-  for (int x=0; x<c; x++) cout << "=";
-  for (int x=c; x<w; x++) cout << " ";
-  cout << "]\r" << flush;
+  std::cout << bstr;
+  std::cout << (x == n-1 ? "\n" : "\r") << std::flush;
 }
 
 #include "keyType.h"
@@ -121,7 +123,7 @@ int main (int argc, char *argv[])
     tISPC2 = std::min(tISPC2, get_elapsed_msec());
 
     if (argc != 3)
-        progressbar (i, m);
+        progressBar (i, m);
   }
 
   ispc::closeMergeSort();
