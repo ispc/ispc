@@ -2,12 +2,7 @@
 #define __STDC_LIMIT_MACROS // enable intN_t limits from stdint.h
 #include <stdint.h>
 
-#ifdef KNC_H
-    #include "knc.h"
-#else
-    #include "knc-i1x16.h"
-    #include <stdio.h>
-#endif
+#include "knc.h"
 
 template <typename T>
 void allocator(T **array) {
@@ -210,13 +205,13 @@ SHIFT_UNIFORM_TEST(uint32_t, __vec16_i32, >>, lshr, ui32)
 //SHIFT_UNIFORM_TEST(int8_t , __vec16_i8 , >>, ashr, i8)
 //SHIFT_UNIFORM_TEST(int16_t, __vec16_i16, >>, ashr, i16)
 SHIFT_UNIFORM_TEST(int32_t, __vec16_i32, >>, ashr, i32)
-//SHIFT_UNIFORM_TEST(int64_t, __vec16_i64, >>, ashr, i64)
+SHIFT_UNIFORM_TEST(int64_t, __vec16_i64, >>, ashr, i64)
 
 /////////////////////////////////////////////////////////////////////////////////////////////
 
 #define CMP(TYPE, VEC_TYPE, OP, FUNC_NAME)                                                  \
 void FUNC_NAME(TYPE *data) {                                                                \
-    printf (#FUNC_NAME, ":");                                                               \
+    printf (#FUNC_NAME ":");                                                                \
                                                                                             \
     TYPE copy_data[16];                                                                     \
     for (uint32_t i = 0; i < 16; i++)                                                       \
@@ -359,7 +354,7 @@ CMP(float  , __vec16_f  ,  >, greater_than_float )
 
 #define INSERT_EXTRACT_ELEMENT(TYPE, VEC_TYPE, FUNC_NAME)                                   \
 void FUNC_NAME(TYPE *data) {                                                                \
-    printf (#FUNC_NAME, ":");                                                               \
+    printf (#FUNC_NAME ":");                                                                \
                                                                                             \
     TYPE copy_data[16];                                                                     \
     for (uint32_t i = 0; i < 16; i++)                                                       \
@@ -397,7 +392,7 @@ INSERT_EXTRACT_ELEMENT(int64_t, __vec16_i64, insert_extract_element_i64   )
 
 #define LOAD(TYPE, VEC_TYPE, FUNC_NAME, ALIGN_NUM)                                          \
 void FUNC_NAME(TYPE *data) {                                                                \
-    printf (#FUNC_NAME, ":");                                                               \
+    printf (#FUNC_NAME ":");                                                                \
                                                                                             \
     TYPE copy_data[16];                                                                     \
     for (uint32_t i = 0; i < 16; i++)                                                       \
@@ -426,9 +421,9 @@ LOAD(float  , __vec16_f  , load_float , 64)
 //LOAD(int8_t , __vec16_i8 , load_i8    , 16)
 //LOAD(int16_t, __vec16_i16, load_i16   , 32)
 LOAD(int32_t, __vec16_i32, load_i32   , 64)
-#ifdef KNC_H
+
 void load_i64(int64_t *data) { 
-    printf ("load_i64", ":"); 
+    printf ("load_i64" ":"); 
     int64_t copy_data[16]; 
     for (uint32_t i = 0; i < 16; i++) 
         copy_data[i] = data[i]; 
@@ -451,13 +446,11 @@ void load_i64(int64_t *data) {
     else 
         printf(" no fails\n"); 
 } 
-#else
-    LOAD(int64_t, __vec16_i64, load_i64   , 128)
-#endif
+
 /////////////////////////////////////////////////////////////////////////////////////////////
 #define STORE(TYPE, VEC_TYPE, FUNC_NAME, ALIGN_NUM)                                         \
 void FUNC_NAME(TYPE *data) {                                                                \
-    printf (#FUNC_NAME, ":");                                                               \
+    printf (#FUNC_NAME ":");                                                                \
                                                                                             \
     TYPE copy_data[16];                                                                     \
     for (uint32_t i = 0; i < 16; i++)                                                       \
@@ -486,9 +479,9 @@ STORE(float  , __vec16_f  , store_float , 64)
 //STORE(int8_t , __vec16_i8 , store_i8    , 16)
 //STORE(int16_t, __vec16_i16, store_i16   , 32)
 STORE(int32_t, __vec16_i32, store_i32   , 64)
-#ifdef KNC_H
+
 void store_i64(int64_t *data) { 
-    printf ("store_i64", ":"); 
+    printf ("store_i64" ":"); 
     
     int64_t copy_data[16]; 
     for (uint32_t i = 0; i < 16; i++) 
@@ -519,13 +512,11 @@ void store_i64(int64_t *data) {
     else 
         printf(" no fails\n"); 
 }
-#else
-    STORE(int64_t, __vec16_i64, store_i64   , 128)
-#endif
+
 /////////////////////////////////////////////////////////////////////////////////////////////
 #define SMEAR_TEST(TYPE, VEC_TYPE, FUNC_NAME)                                               \
 void FUNC_NAME(TYPE *data) {                                                                \
-    printf (#FUNC_NAME, ":");                                                               \
+    printf (#FUNC_NAME ":");                                                                \
                                                                                             \
     TYPE copy_data[16];                                                                     \
     for (uint32_t i = 0; i < 16; i++)                                                       \
@@ -555,7 +546,7 @@ SMEAR_TEST(int64_t, __vec16_i64, smear_i64   )
 /////////////////////////////////////////////////////////////////////////////////////////////
 #define SETZERO_TEST(VEC_TYPE, FUNC_NAME)                                                   \
 void FUNC_NAME() {                                                                          \
-    printf (#FUNC_NAME, ":");                                                               \
+    printf (#FUNC_NAME ":");                                                                \
                                                                                             \
     VEC_TYPE output;                                                                        \
     output = __##FUNC_NAME<VEC_TYPE>();                                                     \
@@ -582,7 +573,7 @@ SETZERO_TEST(__vec16_i64, setzero_i64   )
 
 #define SELECT_TEST(TYPE, VEC_TYPE, FUNC_NAME)                                              \
 void FUNC_NAME(TYPE *data, int *m) {                                                        \
-    printf (#FUNC_NAME, ":");                                                               \
+    printf (#FUNC_NAME ":");                                                                \
                                                                                             \
     TYPE copy_data[16];                                                                     \
     int copy_m[16];                                                                         \
@@ -664,7 +655,7 @@ SELECT_TEST(int64_t, __vec16_i64, select_i64   )
 /////////////////////////////////////////////////////////////////////////////////////////////
 #define BROADCAST_TEST(TYPE, VEC_TYPE, FUNC_NAME)                                           \
 void FUNC_NAME(TYPE *data) {                                                                \
-    printf (#FUNC_NAME, ":");                                                               \
+    printf (#FUNC_NAME ":");                                                                \
                                                                                             \
     TYPE copy_data[16];                                                                     \
     for (uint32_t i = 0; i < 16; i++)                                                       \
@@ -704,7 +695,7 @@ BROADCAST_TEST(int32_t, __vec16_i32, broadcast_i32   )
 /////////////////////////////////////////////////////////////////////////////////////////////
 #define ROTATE_TEST(TYPE, VEC_TYPE, FUNC_NAME)                                              \
 void FUNC_NAME(TYPE *data) {                                                                \
-    printf (#FUNC_NAME, ":");                                                               \
+    printf (#FUNC_NAME ":");                                                                \
                                                                                             \
     TYPE copy_data[16];                                                                     \
     for (uint32_t i = 0; i < 16; i++)                                                       \
@@ -744,7 +735,7 @@ ROTATE_TEST(int32_t, __vec16_i32, rotate_i32   )
 /////////////////////////////////////////////////////////////////////////////////////////////
 #define SHIFT_TEST(TYPE, VEC_TYPE, FUNC_NAME)                                               \
 void FUNC_NAME(TYPE *data) {                                                                \
-    printf (#FUNC_NAME, ":");                                                               \
+    printf (#FUNC_NAME ":");                                                                \
                                                                                             \
     TYPE copy_data[16];                                                                     \
     for (uint32_t i = 0; i < 16; i++)                                                       \
@@ -789,7 +780,7 @@ void FUNC_NAME(TYPE *data) {                                                    
 /////////////////////////////////////////////////////////////////////////////////////////////
 #define SHUFFLE_TEST(TYPE, VEC_TYPE, FUNC_NAME)                                             \
 void FUNC_NAME(TYPE *data) {                                                                \
-    printf (#FUNC_NAME, ":");                                                               \
+    printf (#FUNC_NAME ":");                                                                \
                                                                                             \
     TYPE copy_data[16];                                                                     \
     for (uint32_t i = 0; i < 16; i++)                                                       \
@@ -848,7 +839,7 @@ SHUFFLE_TEST(int32_t, __vec16_i32, shuffle_i32   )
 /////////////////////////////////////////////////////////////////////////////////////////////
 #define CAST_TEST(TO, TO_VEC, FROM, FROM_VEC, FUNC_NAME, FUNC_CALL)                         \
 void FUNC_NAME(FROM *data) {                                                                \
-    printf (#FUNC_NAME, ":");                                                               \
+    printf (#FUNC_NAME ":");                                                                \
                                                                                             \
     FROM copy_data[16];                                                                     \
     for (uint32_t i = 0; i < 16; i++)                                                       \
@@ -894,7 +885,7 @@ CAST_TEST(uint64_t, __vec16_i64, uint32_t, __vec16_i32, cast_ui64_ui32, __cast_z
 //CAST_TEST(uint16_t, __vec16_i16, bool    , __vec16_i1 , cast_ui16_ui1 , __cast_zext)
 //CAST_TEST(uint8_t , __vec16_i8 , bool    , __vec16_i1 , cast_ui8_ui1  , __cast_zext)
 
-//CAST_TEST(int32_t, __vec16_i32, int64_t, __vec16_i64, trunk_i32_i64, __cast_trunc)
+CAST_TEST(int32_t, __vec16_i32, int64_t, __vec16_i64, trunk_i32_i64, __cast_trunc)
 //CAST_TEST(int16_t, __vec16_i16, int64_t, __vec16_i64, trunk_i16_i64, __cast_trunc)
 //CAST_TEST(int8_t , __vec16_i8 , int64_t, __vec16_i64, trunk_i8_i64 , __cast_trunc)
 //CAST_TEST(int16_t, __vec16_i16, int32_t, __vec16_i32, trunk_i16_i32, __cast_trunc)
@@ -943,7 +934,7 @@ CAST_TEST(double, __vec16_d, float , __vec16_f, cast_d_f, __cast_fpext)
 /////////////////////////////////////////////////////////////////////////////////////////////
 #define CAST_BITS_TEST(TO, TO_VEC, FROM, FROM_VEC, FUNC_NAME)                               \
 void FUNC_NAME(FROM *data) {                                                                \
-    printf (#FUNC_NAME, ":");                                                               \
+    printf (#FUNC_NAME ":");                                                                \
                                                                                             \
     FROM copy_data[16];                                                                     \
     for (uint32_t i = 0; i < 16; i++)                                                       \
@@ -991,7 +982,7 @@ CAST_BITS_TEST(int64_t, __vec16_i64, double , __vec16_d  , cast_bits_i64_d)
 
 #define CAST_BITS_SCALAR_TEST(TO, FROM, FUNC_NAME)                                          \
 void FUNC_NAME(FROM *data) {                                                                \
-    printf (#FUNC_NAME, ":");                                                               \
+    printf (#FUNC_NAME ":");                                                                \
                                                                                             \
     FROM copy_data[16];                                                                     \
     for (uint32_t i = 0; i < 16; i++)                                                       \
@@ -1031,7 +1022,7 @@ void FUNC_NAME(FROM *data) {                                                    
 
 #define GATHER(GATHER_SCALAR_TYPE, GATHER_VEC_TYPE, TYPE, VEC_TYPE, FUNC_NAME)              \
 void FUNC_NAME(TYPE *data, int *m) {                                                        \
-    printf (#FUNC_NAME, ":");                                                               \
+    printf (#FUNC_NAME ":");                                                                \
                                                                                             \
     TYPE copy_data[16];                                                                     \
     int copy_m[16];                                                                         \
@@ -1078,17 +1069,17 @@ void FUNC_NAME(TYPE *data, int *m) {                                            
 //GATHER(int32_t, __vec16_i32, int64_t, __vec16_i64, gather32_i64   )
 
 //GATHER(int64_t, __vec16_i64, double , __vec16_d  , gather64_double)
-//GATHER(int64_t, __vec16_i64, float  , __vec16_f  , gather64_float )
+GATHER(int64_t, __vec16_i64, float  , __vec16_f  , gather64_float )
 //GATHER(int64_t, __vec16_i64, int8_t , __vec16_i8 , gather64_i8    )
 //GATHER(int64_t, __vec16_i64, int16_t, __vec16_i16, gather64_i16   )
 //GATHER(int64_t, __vec16_i64, int32_t, __vec16_i32, gather64_i32   )
-//GATHER(int64_t, __vec16_i64, int64_t, __vec16_i64, gather64_i64   )
+GATHER(int64_t, __vec16_i64, int64_t, __vec16_i64, gather64_i64   )
 
 /////////////////////////////////////////////////////////////////////////////////////////////
 
 #define GATHER_OFFSETS(GATHER_SCALAR_TYPE, GATHER_VEC_TYPE, TYPE, VEC_TYPE, FUNC_NAME)      \
 void FUNC_NAME(TYPE *data, int *m) {                                                        \
-    printf (#FUNC_NAME, ":");                                                               \
+    printf (#FUNC_NAME ":");                                                                \
                                                                                             \
     TYPE copy_data[16];                                                                     \
     int copy_m[16];                                                                         \
@@ -1136,7 +1127,7 @@ GATHER_OFFSETS(int32_t, __vec16_i32, float  , __vec16_f  , gather_base_offsets32
 //GATHER_OFFSETS(int32_t, __vec16_i32, int8_t , __vec16_i8 , gather_base_offsets32_i8    )
 //GATHER_OFFSETS(int32_t, __vec16_i32, int16_t, __vec16_i16, gather_base_offsets32_i16   )
 GATHER_OFFSETS(int32_t, __vec16_i32, int32_t, __vec16_i32, gather_base_offsets32_i32   )
-//GATHER_OFFSETS(int32_t, __vec16_i32, int64_t, __vec16_i64, gather_base_offsets32_i64   )
+GATHER_OFFSETS(int32_t, __vec16_i32, int64_t, __vec16_i64, gather_base_offsets32_i64   )
 
 //GATHER_OFFSETS(int64_t, __vec16_i64, double , __vec16_d  , gather_base_offsets64_double)
 GATHER_OFFSETS(int64_t, __vec16_i64, float  , __vec16_f  , gather_base_offsets64_float )
@@ -1149,7 +1140,7 @@ GATHER_OFFSETS(int64_t, __vec16_i64, int32_t, __vec16_i32, gather_base_offsets64
 
 #define SCATTER(SCATTER_SCALAR_TYPE, SCATTER_VEC_TYPE, TYPE, VEC_TYPE, FUNC_NAME)           \
 void FUNC_NAME(TYPE *data, int *m) {                                                        \
-    printf (#FUNC_NAME, ":");                                                               \
+    printf (#FUNC_NAME ":");                                                                \
                                                                                             \
     TYPE copy_m[16];                                                                        \
     for (uint32_t i = 0; i < 16; i++) {                                                     \
@@ -1207,7 +1198,7 @@ void FUNC_NAME(TYPE *data, int *m) {                                            
 
 #define SCATTER_OFFSETS(SCATTER_SCALAR_TYPE, SCATTER_VEC_TYPE, TYPE, VEC_TYPE, FUNC_NAME)   \
 void FUNC_NAME(TYPE *data, int *m) {                                                        \
-    printf (#FUNC_NAME, ":");                                                               \
+    printf (#FUNC_NAME ":");                                                                \
                                                                                             \
     TYPE copy_m[16];                                                                        \
     for (uint32_t i = 0; i < 16; i++)                                                       \
@@ -1265,7 +1256,7 @@ SCATTER_OFFSETS(int64_t, __vec16_i64, int32_t, __vec16_i32, scatter_base_offsets
 
 #define MASKED_LOAD(TYPE, VEC_TYPE, FUNC_NAME)                                              \
 void FUNC_NAME(TYPE *data, int *m) {                                                        \
-    printf (#FUNC_NAME, ":");                                                               \
+    printf (#FUNC_NAME ":");                                                                \
                                                                                             \
     TYPE copy_data[16];                                                                     \
     int copy_m[16];                                                                         \
@@ -1310,7 +1301,7 @@ MASKED_LOAD(int32_t, __vec16_i32, masked_load_i32   )
 
 #define MASKED_STORE(TYPE, VEC_TYPE, FUNC_NAME)                                             \
 void FUNC_NAME(TYPE *data, int *m) {                                                        \
-    printf (#FUNC_NAME, ":");                                                               \
+    printf (#FUNC_NAME ":");                                                                \
                                                                                             \
     TYPE copy_data[16];                                                                     \
     int copy_m[16];                                                                         \
@@ -1348,7 +1339,7 @@ MASKED_STORE(float  , __vec16_f  , masked_store_float )
 //MASKED_STORE(int8_t , __vec16_i8 , masked_store_i8    )
 //MASKED_STORE(int16_t, __vec16_i16, masked_store_i16   )
 MASKED_STORE(int32_t, __vec16_i32, masked_store_i32   )
-//MASKED_STORE(int64_t, __vec16_i64, masked_store_i64   )
+MASKED_STORE(int64_t, __vec16_i64, masked_store_i64   )
 
 //MASKED_STORE(double , __vec16_d  , masked_store_blend_double)
 MASKED_STORE(float  , __vec16_f  , masked_store_blend_float )
@@ -1360,7 +1351,7 @@ MASKED_STORE(int32_t, __vec16_i32, masked_store_blend_i32   )
 /////////////////////////////////////////////////////////////////////////////////////////////
 #define REDUCE_ADD_TEST(TYPE, VEC_TYPE, FUNC_NAME)                                          \
 void FUNC_NAME(TYPE *data) {                                                                \
-    printf (#FUNC_NAME, ":");                                                               \
+    printf (#FUNC_NAME ":");                                                                \
                                                                                             \
     TYPE copy_data[16];                                                                     \
     for (uint32_t i = 0; i < 16; i++)                                                       \
@@ -1393,7 +1384,7 @@ REDUCE_ADD_TEST(float  , __vec16_f  , reduce_add_float )
 /////////////////////////////////////////////////////////////////////////////////////////////
 #define REDUCE_MINMAX_TEST(TYPE, VEC_TYPE, RES_NUM, FUNC_NAME)                              \
 void FUNC_NAME(TYPE *data) {                                                                \
-    printf (#FUNC_NAME, ":");                                                               \
+    printf (#FUNC_NAME ":");                                                                \
                                                                                             \
     TYPE copy_data[16];                                                                     \
     for (uint32_t i = 0; i < 16; i++)                                                       \
@@ -1413,21 +1404,13 @@ void FUNC_NAME(TYPE *data) {                                                    
 
 REDUCE_MINMAX_TEST(double  , __vec16_d  , 1, reduce_min_double)
 REDUCE_MINMAX_TEST(float   , __vec16_f  , 1, reduce_min_float)
-#ifdef KNC_H
-    REDUCE_MINMAX_TEST(int32_t , __vec16_i32, 1, reduce_min_i32)
-#else
-    REDUCE_MINMAX_TEST(int32_t , __vec16_i32, 1, reduce_min_int32)
-#endif
+REDUCE_MINMAX_TEST(int32_t , __vec16_i32, 1, reduce_min_i32)
 //REDUCE_MINMAX_TEST(uint32_t, __vec16_i32, 1, reduce_min_uint32)
 //REDUCE_MINMAX_TEST(int64_t , __vec16_i64, 1, reduce_min_int64)
 //REDUCE_MINMAX_TEST(uint64_t, __vec16_i64, 1, reduce_min_uint64)
 REDUCE_MINMAX_TEST(double  , __vec16_d  , 0, reduce_max_double)
 REDUCE_MINMAX_TEST(float   , __vec16_f  , 0, reduce_max_float)
-#ifdef KNC_H
-    REDUCE_MINMAX_TEST(int32_t , __vec16_i32, 0, reduce_max_i32)
-#else
-    REDUCE_MINMAX_TEST(int32_t , __vec16_i32, 0, reduce_max_int32)
-#endif
+REDUCE_MINMAX_TEST(int32_t , __vec16_i32, 0, reduce_max_i32)
 //REDUCE_MINMAX_TEST(uint32_t, __vec16_i32, 0, reduce_max_uint32)
 //REDUCE_MINMAX_TEST(int64_t , __vec16_i64, 0, reduce_max_int64)
 //REDUCE_MINMAX_TEST(uint64_t, __vec16_i64, 0, reduce_max_uint64)
@@ -1435,7 +1418,7 @@ REDUCE_MINMAX_TEST(float   , __vec16_f  , 0, reduce_max_float)
 /////////////////////////////////////////////////////////////////////////////////////////////
 #define POPCNT_TEST(TYPE, FUNC_NAME)                                                        \
 void FUNC_NAME(TYPE *data) {                                                                \
-    printf (#FUNC_NAME, ":");                                                               \
+    printf (#FUNC_NAME ":");                                                                \
                                                                                             \
     TYPE copy_data[16];                                                                     \
     for (uint32_t i = 0; i < 16; i++)                                                       \
@@ -1464,7 +1447,7 @@ POPCNT_TEST(uint64_t, popcnt_int64)
 /////////////////////////////////////////////////////////////////////////////////////////////
 #define COUNT_TRAILING_ZEROS(TYPE, BIT_NUM, FUNC_NAME)                                      \
 void FUNC_NAME(TYPE *data) {                                                                \
-    printf (#FUNC_NAME, ":");                                                               \
+    printf (#FUNC_NAME ":");                                                                \
                                                                                             \
     TYPE copy_data[16];                                                                     \
     for (uint32_t i = 0; i < 16; i++)                                                       \
@@ -1498,7 +1481,7 @@ COUNT_TRAILING_ZEROS(uint64_t, 64, count_trailing_zeros_i64)
 /////////////////////////////////////////////////////////////////////////////////////////////
 #define COUNT_LEADING_ZEROS(TYPE, BIT_NUM, FUNC_NAME)                                       \
 void FUNC_NAME(TYPE *data) {                                                                \
-    printf (#FUNC_NAME, ":");                                                               \
+    printf (#FUNC_NAME ":");                                                                \
                                                                                             \
     TYPE copy_data[16];                                                                     \
     for (uint32_t i = 0; i < 16; i++)                                                       \

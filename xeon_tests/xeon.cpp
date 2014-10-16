@@ -1,15 +1,7 @@
 // TODO: make free in tests, make allocation of pseudo-random sizes between itearations. use -O0
 #define __STDC_LIMIT_MACROS // enable intN_t limits from stdint.h
 #include <stdint.h>
-
-#include "templ.h"
-
-#ifdef KNC_H
-//    #include "knc.h"
-#else
-//    #include "knc-i1x16.h"
-    #include <stdio.h>
-#endif
+#include <stdio.h>
 
 void gather32_double(double  *d  , int *mask);
 void gather32_float (float   *f  , int *mask);
@@ -518,6 +510,8 @@ void count_trailing_zeros_i64(uint64_t *ui64);
 
 void count_leading_zeros_i32(uint32_t *ui32);
 void count_leading_zeros_i64(uint64_t *ui64);
+
+///////////////////////////////////////////////////////////////////////////////////////
 int main () {
     printf ("Start\n");
 // Prepare input data
@@ -749,19 +743,8 @@ int main () {
 
     ui64[2] = UINT32_MAX;
     ui64[4] = 0; 
-    //for (int i = 5; i < 16; i++)
-    //    i64[i] = 576460752303423488 * i;
-#ifdef KNC_H
-    printf ("Include knc.h\n");
 
-    reduce_min_i32  (i32);
-    reduce_max_i32  (i32);
-#else
-    printf ("Include knc-i1x16.h\n");
 
-    reduce_min_int32  (i32);
-    reduce_max_int32  (i32);
-#endif
 /*
     for(int i = 0; i < 16; i++) {
         printf("\n%d-----------------------------\n", i);
@@ -804,19 +787,19 @@ int main () {
     //gather32_i64(i64, mask);
      
     //gather64_double(d_64, mask);
-    //gather64_float(f_64, mask);
+    gather64_float(f_64, mask);
     //gather64_i8(i8, mask);
     //gather64_i16(i16, mask);
     //gather64_i32(i32, mask);
-    //gather64_i64(i64, mask);
+    gather64_i64(i64, mask);
 
     
     gather_base_offsets32_double(d_32, mask);
     gather_base_offsets32_float(f_32, mask);
     //gather_base_offsets32_i8(i8, mask);
-    //gather_base_offsets32_i16(i16, mask); // modify define with type conversion(int32_t)
+    //gather_base_offsets32_i16(i16, mask);
     gather_base_offsets32_i32(i32, mask);
-    //gather_base_offsets32_i64(i64, mask);
+    gather_base_offsets32_i64(i64, mask);
 
     //gather_base_offsets64_double(d_64, mask);
     gather_base_offsets64_float(f_64, mask);
@@ -869,7 +852,7 @@ int main () {
     //masked_store_i8(i8, mask);
     //masked_store_i16(i16, mask);
     masked_store_i32(i32, mask);
-    //masked_store_i64(i64, mask);
+    masked_store_i64(i64, mask);
 
     //masked_store_blend_double(d_32, mask);
     masked_store_blend_float(f_32, mask);
@@ -935,7 +918,7 @@ int main () {
     //select_i8_cond(i8, mask);
     //select_i16_cond(i16, mask);
     select_i32_cond(i32, mask);
-    //select_i64_cond(i64, mask);
+    select_i64_cond(i64, mask);
     
     
     broadcast_double(d_32);
@@ -991,7 +974,7 @@ int main () {
     //cast_ui16_ui1 (i1);
     //cast_ui8_ui1  (i1);
 
-    //trunk_i32_i64(i64);
+    trunk_i32_i64(i64);
     //trunk_i16_i64(i64);
     //trunk_i8_i64 (i64);
     //trunk_i16_i32(i32);
@@ -1127,7 +1110,7 @@ int main () {
     //ashr_i8_uniform (no_of_i8 , no_of_i32);
     //ashr_i16_uniform(no_of_i16, no_of_i32);
     ashr_i32_uniform(no_of_i32, no_of_i32);
-    //ashr_i64_uniform(no_of_i64, no_of_i32);
+    ashr_i64_uniform(no_of_i64, no_of_i32);
     
 
     equal_double(d_32);
@@ -1277,8 +1260,8 @@ int main () {
     cast_bits_i32_f(f_32);
     cast_bits_d_i64(i64);
     cast_bits_i64_d(d_64);
-    
-    
+
+ 
     reduce_add_double(no_of_d_32);
     reduce_add_float (no_of_f_32);
     //reduce_add_int8  (no_of_i8);
@@ -1289,13 +1272,13 @@ int main () {
     
     reduce_min_double (d_32);
     reduce_min_float  (f_32);
-    //reduce_min_int32  (i32); call in section KNC_H
+    reduce_min_i32    (i32);
     //reduce_min_uint32 (ui32);
     //reduce_min_int64  (i64);
     //reduce_min_uint64 (ui64);
     reduce_max_double (d_32);
     reduce_max_float  (f_32);
-    ////reduce_max_int32  (i32); call in section KNC_H
+    reduce_max_i32    (i32); 
     //reduce_max_uint32 (ui32);
     //reduce_max_int64  (i64);
     //reduce_max_uint64 (ui64);
@@ -1314,26 +1297,3 @@ int main () {
 return 0;
 }
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-// Usefull stuff
-/*
-    uint32_t a_ = 65535;
-
-  __vec16_i32 ptrs = __smear_i32<__vec16_i32>((int32_t)&a_);
-  __vec16_i1 mask = __smear_i1<__vec16_i1>((int32_t)a_);
-  __vec16_d res;
-  res =  __gather32_double(ptrs, mask);
-
-  __vec16_i8 smear = __smear_i8<__vec16_i8>((int8_t) -128);
-  for (int i = 0; i < 16; ++i){
-    printf("%d\n", smear[i]);
-  }
-
-  for (int i = 0; i < 16; ++i){
-    printf("%d\n", ((uint*)&res)[i]);
-  }
-
-  __vec16_i64 smear_64 = __smear_i64<__vec16_i64>((int64_t) -65535);
-  for (int i = 0; i < 16; ++i){
-    printf("%d\n", smear_64[i]);
-  }
