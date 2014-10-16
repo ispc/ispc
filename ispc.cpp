@@ -701,10 +701,12 @@ Target::Target(const char *arch, const char *cpu, const char *isa, bool pic) :
                 "i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-s0:64:64-"
                 "f80:128:128-n8:16:32:64-S128-v16:16:16-v32:32:32-v4:128:128";
         }
+#ifdef ISPC_NVPTX_ENABLED
         else if (m_isa == Target::NVPTX)
         {
           dl_string = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v16:16:16-v32:32:32-v64:64:64-v128:128:128-n16:32:64";
         }
+#endif
 
         // 3. Finally set member data
         m_dataLayout = new llvm::DataLayout(dl_string);
