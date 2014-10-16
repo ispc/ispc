@@ -1,0 +1,7 @@
+EXAMPLE=ao
+CXX_SRC=ao.cpp 
+ISPC_SRC=ao.ispc
+ISPC_INTRINSICS=../../intrinsics/knc-i1x16.h
+ISPC_TARGET=generic-16
+
+include ../common_knc.mk

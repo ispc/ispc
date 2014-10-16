@@ -9,9 +9,9 @@ struct Foo {
 
 export void f_fu(uniform float RET[], uniform float aFOO[], uniform float b) {
     float a = aFOO[programIndex];
-    Foo foo[17];
+    Foo foo[programCount+1];
     uniform int i;
-    cfor (i = 0; i < 17; ++i)
+    cfor (i = 0; i < programCount+1; ++i)
         foo[i].f = i*a;
     RET[programIndex] = foo[(int)a].f;
 }

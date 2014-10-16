@@ -2,22 +2,23 @@
 export uniform int width() { return programCount; }
 
 
-#define N0 10
+#define N0 12
 #define N1 20
 #define N2 50
 static uniform float array[N2][N1][N0];
 
-task void x(const float f) {
+task void x(const uniform float farray[]) {
+    const float f = farray[programIndex];
     uniform int j;
 
-    assert(taskCount  == (int32)N0*N1*N2);
-    assert(taskCount0 == (int32)N0);
-    assert(taskCount1 == (int32)N1);
-    assert(taskCount2 == (int32)N2);
-    assert(taskIndex  == (int32)taskIndex0 + (int32)N0*(taskIndex1 +(int32) N1*taskIndex2));
-    assert(taskIndex0 < (int32)N0);
-    assert(taskIndex1 < (int32)N1);
-    assert(taskIndex2 < (int32)N2);
+    assert(taskCount  == (uniform int32)N0*N1*N2);
+    assert(taskCount0 == (uniform int32)N0);
+    assert(taskCount1 == (uniform int32)N1);
+    assert(taskCount2 == (uniform int32)N2);
+    assert(taskIndex  == (uniform int32)taskIndex0 + (uniform int32)N0*(taskIndex1 +(uniform int32) N1*taskIndex2));
+    assert(taskIndex0 < (uniform int32)N0);
+    assert(taskIndex1 < (uniform int32)N1);
+    assert(taskIndex2 < (uniform int32)N2);
 
     const uniform int i0 = taskIndex0;
     const uniform int i1 = taskIndex1;
@@ -30,7 +31,7 @@ task void x(const float f) {
         array[i2][i1][i0] = i;
 }
 export void f_f(uniform float RET[], uniform float fFOO[]) { 
-    float f = fFOO[programIndex];
+    uniform float * uniform f = fFOO;
     launch[N2][N1][N0] x(f);
     sync;
     RET[programIndex] = array[N2-1][N1-1][N0-1];
@@ -38,5 +39,5 @@ export void f_f(uniform float RET[], uniform float fFOO[]) {
 
 
 export void result(uniform float RET[]) {
-    RET[programIndex] = 9999.000000;
+    RET[programIndex] = 11999.000000;
 }

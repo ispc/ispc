@@ -1,0 +1,10 @@
+
+EXAMPLE=deferred_shading
+CPP_SRC=common.cpp main.cpp dynamic_c.cpp 
+# CPP_SRC+=dynamic_cilk.cpp
+ISPC_SRC=kernels.ispc
+ISPC_IA_TARGETS=avx1-i32x16
+ISPC_ARM_TARGETS=neon
+ISPC_FLAGS=--opt=fast-math
+
+include ../common_cpu.mk

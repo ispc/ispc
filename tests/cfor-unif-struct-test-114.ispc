@@ -8,9 +8,9 @@ struct Foo {
 };
 export void f_fi(uniform float RET[], uniform float a[], uniform int bFOO[]) {
     int b = bFOO[programIndex];
-    uniform struct Foo myFoo[17];
+    uniform struct Foo myFoo[programCount+1];
     uniform int i;
-    cfor (i = 0; i < 17; ++i) {
+    cfor (i = 0; i < programCount+1; ++i) {
         myFoo[i].x = i;
         myFoo[i].f = 2*i;
     }

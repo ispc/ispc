@@ -1,0 +1,7 @@
+EXAMPLE=mergeSort
+CXX_SRC=mergeSort.cpp 
+ISPC_SRC=mergeSort.ispc
+ISPC_INTRINSICS=../../intrinsics/knc-i1x16.h
+ISPC_TARGET=generic-16
+
+include ../common_knc.mk

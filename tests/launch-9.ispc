@@ -2,12 +2,13 @@
 export uniform int width() { return programCount; }
 
 
-#define N0 10
+#define N0 12
 #define N1 20
 #define N2 50
 static uniform float array[N2][N1][N0];
 
-task void x(const float f) {
+task void x(const uniform float farray[]) {
+    const float f = farray[programIndex];
     uniform int j;
 
     assert(taskCount  == (int32)N0*N1*N2);
@@ -30,13 +31,13 @@ task void x(const float f) {
         array[i2][i1][i0] = i;
 }
 export void f_f(uniform float RET[], uniform float fFOO[]) { 
-    float f = fFOO[programIndex];
-    launch[N0,N1,N2] x(f);
+    uniform float * uniform f = fFOO;
+    launch[N2][N1][N0] x(f);
     sync;
     RET[programIndex] = array[N2-1][N1-1][N0-1];
 }
 
 
 export void result(uniform float RET[]) {
-    RET[programIndex] = 9999.000000;
+    RET[programIndex] = 11999.000000;
 }

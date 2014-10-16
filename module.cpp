@@ -58,6 +58,9 @@
 #include <set>
 #include <sstream>
 #include <iostream>
+#ifdef ISPC_NVPTX_ENABLED
+#include <map>
+#endif /* ISPC_NVPTX_ENABLED */
 #ifdef ISPC_IS_WINDOWS
 #include <windows.h>
 #include <io.h>
@@ -71,6 +74,9 @@
   #include <llvm/Instructions.h>
   #include <llvm/Intrinsics.h>
   #include <llvm/DerivedTypes.h>
+#ifdef ISPC_NVPTX_ENABLED
+  #include "llvm/Assembly/AssemblyAnnotationWriter.h"
+#endif /* ISPC_NVPTX_ENABLED */
 #else
   #include <llvm/IR/LLVMContext.h>
   #include <llvm/IR/Module.h>
@@ -78,6 +84,13 @@
   #include <llvm/IR/Instructions.h>
   #include <llvm/IR/Intrinsics.h>
   #include <llvm/IR/DerivedTypes.h>
+#ifdef ISPC_NVPTX_ENABLED
+#if !defined(LLVM_3_2) && !defined(LLVM_3_3) && !defined(LLVM_3_4) // LLVM 3.5+
+  #include <llvm/IR/AssemblyAnnotationWriter.h>
+#else
+  #include <llvm/Assembly/AssemblyAnnotationWriter.h>
+#endif
+#endif /* ISPC_NVPTX_ENABLED */
 #endif
 #include <llvm/PassManager.h>
 #include <llvm/PassRegistry.h>
@@ -443,6 +456,39 @@ Module::AddGlobalVariable(const std::string &name, const Type *type, Expr *initE
         return;
     }
 
+#ifdef ISPC_NVPTX_ENABLED
+    if (g->target->getISA() == Target::NVPTX && 
+#if 0
+        !type->IsConstType()  &&
+#endif
+#if 1
+        at != NULL &&
+#endif
+        type->IsVaryingType())
+    {
+      Error(pos, "Global \"varying\" variables are not yet supported in \"nvptx\" target.");
+      return;
+#if 0
+        int nel = 32;  /* warp-size */
+        if (type->IsArrayType())
+        {
+          const ArrayType *at = CastType<ArrayType>(type);
+          /* we must scale # elements by 4, because a thread-block will run 4 warps
+           * or 128 threads.
+           * ***note-to-me***:please define these value (128threads/4warps)
+           * in nvptx-target definition
+           * instead of compile-time constants 
+           */
+          nel *= at->GetElementCount();
+          assert (!type->IsSOAType());
+          type = new ArrayType(at->GetElementType()->GetAsUniformType(), nel);
+        }
+        else
+          type = new ArrayType(type->GetAsUniformType(), nel);
+#endif
+    }
+#endif /* ISPC_NVPTX_ENABLED */
+
     llvm::Type *llvmType = type->LLVMType(g->ctx);
     if (llvmType == NULL)
         return;
@@ -653,6 +699,22 @@ lCheckExportedParameterTypes(const Type *type, const std::string &name,
     }
 }
 
+#ifdef ISPC_NVPTX_ENABLED
+static void
+lCheckTaskParameterTypes(const Type *type, const std::string &name,
+                             SourcePos pos) {
+  if (g->target->getISA() != Target::NVPTX) 
+    return;
+  if (lRecursiveCheckValidParamType(type, false) == false) {
+    if (CastType<VectorType>(type))
+      Error(pos, "Vector-typed parameter \"%s\" is illegal in a task "
+          "function with \"nvptx\" target.", name.c_str());
+    else
+      Error(pos, "Varying parameter \"%s\" is illegal in a task function with \"nvptx\" target.",
+          name.c_str());
+    }
+}
+#endif /* ISPC_NVPTX_ENABLED */
 
 /** Given a function type, loop through the function parameters and see if
     any are StructTypes.  If so, issue an error; this is currently broken
@@ -810,7 +872,12 @@ Module::AddFunctionDeclaration(const std::string &name,
 #else // LLVM 3.3+
         function->addFnAttr(llvm::Attribute::AlwaysInline);
 #endif
+
     if (functionType->isTask)
+#ifdef ISPC_NVPTX_ENABLED
+      /* evghenii: fails function verification when "if" executed in nvptx target */
+      if (g->target->getISA() != Target::NVPTX)
+#endif /* ISPC_NVPTX_ENABLED */
         // This also applies transitively to members I think?
         function->setDoesNotAlias(1);
 
@@ -826,6 +893,15 @@ Module::AddFunctionDeclaration(const std::string &name,
     if (functionType->isTask &&
         functionType->GetReturnType()->IsVoidType() == false)
         Error(pos, "Task-qualified functions must have void return type.");
+
+#ifdef ISPC_NVPTX_ENABLED
+    if (g->target->getISA() == Target::NVPTX &&
+        Type::Equal(functionType->GetReturnType(), AtomicType::Void) == false &&
+        functionType->isExported)
+    {
+        Error(pos, "Export-qualified functions must have void return type with \"nvptx\" target.");
+    }
+#endif /* ISPC_NVPTX_ENABLED */
 
     if (functionType->isExported || functionType->isExternC)
         lCheckForStructParameters(functionType, pos);
@@ -846,6 +922,12 @@ Module::AddFunctionDeclaration(const std::string &name,
         if (functionType->isExported) {
           lCheckExportedParameterTypes(argType, argName, argPos);
         }
+
+#ifdef ISPC_NVPTX_ENABLED
+        if (functionType->isTask) {
+          lCheckTaskParameterTypes(argType, argName, argPos);
+        }
+#endif /* ISPC_NVPTX_ENABLED */
 
         // ISPC assumes that no pointers alias.  (It should be possible to
         // specify when this is not the case, but this should be the
@@ -968,10 +1050,26 @@ Module::writeOutput(OutputType outputType, const char *outFileName,
         const char *fileType = NULL;
         switch (outputType) {
         case Asm:
+#ifdef ISPC_NVPTX_ENABLED
+          if (g->target->getISA() == Target::NVPTX)
+          {
+            if (strcasecmp(suffix, "ptx"))
+                fileType = "assembly";
+          }
+          else
+#endif /* ISPC_NVPTX_ENABLED */
             if (strcasecmp(suffix, "s"))
                 fileType = "assembly";
             break;
         case Bitcode:
+#ifdef ISPC_NVPTX_ENABLED
+          if (g->target->getISA() == Target::NVPTX)
+          {
+            if (strcasecmp(suffix, "ll"))
+                fileType = "LLVM assembly";
+          }
+          else
+#endif /* ISPC_NVPTX_ENABLED */
             if (strcasecmp(suffix, "bc"))
                 fileType = "LLVM bitcode";
             break;
@@ -1042,6 +1140,84 @@ Module::writeOutput(OutputType outputType, const char *outFileName,
         return writeObjectFileOrAssembly(outputType, outFileName);
 }
 
+#ifdef ISPC_NVPTX_ENABLED
+typedef std::vector<std::string> vecString_t;
+static vecString_t 
+lSplitString(const std::string &s)
+{
+  std::stringstream ss(s);
+  std::istream_iterator<std::string> begin(ss);
+  std::istream_iterator<std::string> end;
+  return vecString_t(begin,end);
+}
+
+static void 
+lFixAttributes(const vecString_t &src, vecString_t &dst)
+{
+  dst.clear();
+
+  std::vector< std::pair<int,int> > attributePos;
+
+  typedef std::map<std::string, std::string> attributeMap_t;
+  attributeMap_t attributeMap;
+
+  for (vecString_t::const_iterator it = src.begin();  it != src.end(); it++)
+  {
+    const vecString_t words = lSplitString(*it);
+    if (!words.empty() && words[0] == "attributes" && words[1][0] == '#')
+    {
+      const int nWords = words.size();
+      assert(nWords > 3);
+      assert(words[2       ] == "=");
+      assert(words[3       ] == "{");
+      assert(words[nWords-1] == "}");
+      std::string attributes;
+      for (int w = 4; w < nWords-1; w++)
+          attributes += words[w] + " ";
+      attributeMap[words[1]] = attributes;
+    }
+  }
+  for (vecString_t::const_iterator it = src.begin();  it != src.end(); it++)
+  {
+    vecString_t words = lSplitString(*it);
+    if (words.size() > 1 && (words[0] == "target" && words[1] == "datalayout"))
+    {
+      std::string s = "target datalayout = ";
+      s += '"';
+      s += "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v16:16:16-v32:32:32-v64:64:64-v128:128:128-n16:32:64";
+      s += '"';
+      dst.push_back(s);
+      continue;
+    }
+    if (!words.empty() && words[0] == "attributes")
+      continue;
+    std::string s;
+    std::map<std::string, std::string> attributeSet;
+#if 1  /* this attributed cannot be used in function parametrers, so remove them */
+    attributeSet["readnone"]   = " ";
+    attributeSet["readonly"]   = " ";
+    attributeSet["readnone,"]   = ",";
+    attributeSet["readonly,"]   = ",";
+#endif
+
+
+    for (vecString_t::iterator w = words.begin(); w != words.end(); w++)
+    {
+      if (attributeSet.find(*w) != attributeSet.end())
+        *w = attributeSet[*w];
+
+      if ((*w)[0] == '#')
+      {
+        attributeMap_t::iterator m = attributeMap.find(*w);
+        assert (m != attributeMap.end());
+        *w = attributeMap[*w];
+      }
+      s += *w + " ";
+    }
+    dst.push_back(s);
+  }
+}
+#endif /* ISPC_NVPTX_ENABLED */
 
 bool
 Module::writeBitcode(llvm::Module *module, const char *outFileName) {
@@ -1066,7 +1242,47 @@ Module::writeBitcode(llvm::Module *module, const char *outFileName) {
     }
 
     llvm::raw_fd_ostream fos(fd, (fd != 1), false);
-    llvm::WriteBitcodeToFile(module, fos);
+#ifdef ISPC_NVPTX_ENABLED
+    if (g->target->getISA() == Target::NVPTX)
+    {
+      /* when using "nvptx" target, emit patched/hacked assembly 
+       * NVPTX only accepts 3.2-style LLVM assembly, where attributes
+       * must be inlined, rather then referenced by #attribute_d
+       * As soon as NVVM support 3.3,3.4 style assembly this fix won't be needed
+       */
+      const std::string dl_string = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v16:16:16-v32:32:32-v64:64:64-v128:128:128-n16:32:64";
+      module->setDataLayout(dl_string);
+
+      std::string s;
+      llvm::raw_string_ostream out(s);
+#if !defined(LLVM_3_2) && !defined(LLVM_3_3) && !defined(LLVM_3_4) // LLVM 3.5+
+      std::unique_ptr<llvm::AssemblyAnnotationWriter> Annotator;
+#else
+      llvm::OwningPtr<llvm::AssemblyAnnotationWriter> Annotator;
+#endif
+      module->print(out, Annotator.get());
+      std::istringstream iss(s);
+
+      vecString_t input,output;
+      while (std::getline(iss,s))
+        input.push_back(s);
+      output = input;
+
+#if !(defined(LLVM_3_1) || defined(LLVM_3_2))
+      /* do not fix attributed with LLVM 3.2, everything is fine there */
+      lFixAttributes(input,output);
+#endif
+
+      for (vecString_t::iterator it = output.begin(); it != output.end(); it++)
+      {
+        *it += "\n";
+        fos << *it;
+      }
+    }
+    else
+#endif /* ISPC_NVPTX_ENABLED */
+      llvm::WriteBitcodeToFile(module, fos);
+
     return true;
 }
 
@@ -2117,6 +2333,28 @@ Module::execPreprocessor(const char *infilename, llvm::raw_string_ostream *ostre
             opts.addMacroDef(g->cppArgs[i].substr(2));
         }
     }
+#ifdef ISPC_NVPTX_ENABLED
+    if (g->target->getISA() == Target::NVPTX)
+    {
+      opts.addMacroDef("__NVPTX__");
+      opts.addMacroDef("programIndex=__programIndex()");
+#if 1
+      opts.addMacroDef("cif=if");
+      opts.addMacroDef("cfor=for");
+      opts.addMacroDef("cwhile=while");
+      opts.addMacroDef("ccontinue=continue");
+      opts.addMacroDef("cdo=do");
+#endif
+      opts.addMacroDef("taskIndex0=__taskIndex0()");
+      opts.addMacroDef("taskIndex1=__taskIndex1()");
+      opts.addMacroDef("taskIndex2=__taskIndex2()");
+      opts.addMacroDef("taskIndex=__taskIndex()");
+      opts.addMacroDef("taskCount0=__taskCount0()");
+      opts.addMacroDef("taskCount1=__taskCount1()");
+      opts.addMacroDef("taskCount2=__taskCount2()");
+      opts.addMacroDef("taskCount=__taskCount()");
+    }
+#endif /* ISPC_NVPTX_ENABLED */
 
     inst.getLangOpts().LineComment = 1;
 
@@ -2563,6 +2801,30 @@ lCreateDispatchModule(std::map<std::string, FunctionTargetVariants> &functions) 
     return module;
 }
 
+#ifdef ISPC_NVPTX_ENABLED
+static std::string lCBEMangle(const std::string &S) {
+  std::string Result;
+
+  for (unsigned i = 0, e = S.size(); i != e; ++i) {
+    if (i+1 != e && ((S[i] == '>' && S[i+1] == '>') ||
+                     (S[i] == '<' && S[i+1] == '<'))) {
+      Result += '_';
+      Result += 'A'+(S[i]&15);
+      Result += 'A'+((S[i]>>4)&15);
+      Result += '_';
+      i++;
+    } else if (isalnum(S[i]) || S[i] == '_' || S[i] == '<' || S[i] == '>') {
+      Result += S[i];
+    } else {
+      Result += '_';
+      Result += 'A'+(S[i]&15);
+      Result += 'A'+((S[i]>>4)&15);
+      Result += '_';
+    }
+  }
+  return Result;
+}
+#endif /* ISPC_NVPTX_ENABLED */
 
 int
 Module::CompileAndOutput(const char *srcFile,
@@ -2586,6 +2848,32 @@ Module::CompileAndOutput(const char *srcFile,
 
         m = new Module(srcFile);
         if (m->CompileFile() == 0) {
+#ifdef ISPC_NVPTX_ENABLED
+            /* NVPTX:
+             * for PTX target replace '.' with '_' in all global variables 
+             * a PTX identifier name must match [a-zA-Z$_][a-zA-Z$_0-9]*
+             */
+            if (g->target->getISA() == Target::NVPTX)
+            {
+              /* mangle global variables names */
+              {
+                llvm::Module::global_iterator I = m->module->global_begin(), E = m->module->global_end();
+                for (; I != E; I++)
+                  I->setName(lCBEMangle(I->getName()));
+              }
+
+              /* mangle functions names */
+              {
+                llvm::Module::iterator I = m->module->begin(), E = m->module->end();
+                for (; I != E; I++)
+                {
+                  std::string str = I->getName();
+                  if (str.find("operator") != std::string::npos)
+                    I->setName(lCBEMangle(str));
+                }
+              }
+            }
+#endif /* ISPC_NVPTX_ENABLED */
             if (outputType == CXX) {
                 if (target == NULL || strncmp(target, "generic-", 8) != 0) {
                     Error(SourcePos(), "When generating C++ output, one of the \"generic-*\" "

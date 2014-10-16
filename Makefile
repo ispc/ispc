@@ -73,6 +73,10 @@ endif
 # To enable: make ARM_ENABLED=1
 ARM_ENABLED=0
 
+# Disable NVPTX by request
+# To disable: make NVPTX_ENABLED=0
+NVPTX_ENABLED=1
+
 # Add llvm bin to the path so any scripts run will go to the right llvm-config
 LLVM_BIN= $(shell $(LLVM_CONFIG) --bindir)
 export PATH:=$(LLVM_BIN):$(PATH)
@@ -89,7 +93,7 @@ LLVM_CXXFLAGS=$(shell $(LLVM_CONFIG) --cppflags)
 LLVM_VERSION=LLVM_$(shell $(LLVM_CONFIG) --version | sed -e 's/svn//' -e 's/\./_/' -e 's/\..*//')
 LLVM_VERSION_DEF=-D$(LLVM_VERSION)
 
-LLVM_COMPONENTS = engine ipo bitreader bitwriter instrumentation linker
+LLVM_COMPONENTS = engine ipo bitreader bitwriter instrumentation linker 
 # Component "option" was introduced in 3.3 and starting with 3.4 it is required for the link step.
 # We check if it's available before adding it (to not break 3.2 and earlier).
 ifeq ($(shell $(LLVM_CONFIG) --components |grep -c option), 1)
@@ -98,6 +102,9 @@ endif
 ifneq ($(ARM_ENABLED), 0)
     LLVM_COMPONENTS+=arm
 endif
+ifneq ($(NVPTX_ENABLED), 0)
+    LLVM_COMPONENTS+=nvptx
+endif	
 LLVM_LIBS=$(shell $(LLVM_CONFIG) --libs $(LLVM_COMPONENTS))
 
 CLANG=clang
@@ -160,6 +167,9 @@ endif
 ifneq ($(ARM_ENABLED), 0)
     CXXFLAGS+=-DISPC_ARM_ENABLED
 endif
+ifneq ($(NVPTX_ENABLED), 0)
+    CXXFLAGS+=-DISPC_NVPTX_ENABLED
+endif
 
 LDFLAGS=
 ifeq ($(ARCH_OS),Linux)
@@ -183,6 +193,9 @@ TARGETS=avx2-i64x4 avx11-i64x4 avx1-i64x4 avx1 avx1-x2 avx11 avx11-x2 avx2 avx2-
 	generic-4 generic-8 generic-16 generic-32 generic-64 generic-1
 ifneq ($(ARM_ENABLED), 0)
     TARGETS+=neon-32 neon-16 neon-8
+endif
+ifneq ($(NVPTX_ENABLED), 0)
+    TARGETS+=nvptx
 endif
 # These files need to be compiled in two versions - 32 and 64 bits.
 BUILTINS_SRC_TARGET=$(addprefix builtins/target-, $(addsuffix .ll, $(TARGETS)))
@@ -289,15 +302,15 @@ objs/lex.o: objs/lex.cpp $(HEADERS) objs/parse.cc
 	@echo Compiling $<
 	@$(CXX) $(CXXFLAGS) -o $@ -c $<
 
-objs/builtins-dispatch.cpp: builtins/dispatch.ll builtins/util.m4 builtins/svml.m4 $(wildcard builtins/*common.ll)
+objs/builtins-dispatch.cpp: builtins/dispatch.ll builtins/util.m4 builtins/util-nvptx.m4 builtins/svml.m4 $(wildcard builtins/*common.ll)
 	@echo Creating C++ source from builtins definition file $<
 	@m4 -Ibuiltins/ -DLLVM_VERSION=$(LLVM_VERSION) -DBUILD_OS=UNIX $< | python bitcode2cpp.py $< > $@
 
-objs/builtins-%-32bit.cpp: builtins/%.ll builtins/util.m4 builtins/svml.m4 $(wildcard builtins/*common.ll)
+objs/builtins-%-32bit.cpp: builtins/%.ll builtins/util.m4 builtins/util-nvptx.m4 builtins/svml.m4 $(wildcard builtins/*common.ll)
 	@echo Creating C++ source from builtins definition file $< \(32 bit version\)
 	@m4 -Ibuiltins/ -DLLVM_VERSION=$(LLVM_VERSION) -DBUILD_OS=UNIX -DRUNTIME=32 $< | python bitcode2cpp.py $< 32bit > $@
 
-objs/builtins-%-64bit.cpp: builtins/%.ll builtins/util.m4 builtins/svml.m4 $(wildcard builtins/*common.ll)
+objs/builtins-%-64bit.cpp: builtins/%.ll builtins/util.m4 builtins/util-nvptx.m4 builtins/svml.m4 $(wildcard builtins/*common.ll)
 	@echo Creating C++ source from builtins definition file $< \(64 bit version\)
 	@m4 -Ibuiltins/ -DLLVM_VERSION=$(LLVM_VERSION) -DBUILD_OS=UNIX -DRUNTIME=64 $< | python bitcode2cpp.py $< 64bit > $@
 

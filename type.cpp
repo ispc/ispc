@@ -3058,7 +3058,11 @@ FunctionType::LLVMFunctionType(llvm::LLVMContext *ctx, bool removeMask) const {
         llvmArgTypes.push_back(LLVMTypes::MaskType);
 
     std::vector<llvm::Type *> callTypes;
-    if (isTask) {
+    if (isTask 
+#ifdef ISPC_NVPTX_ENABLED
+      && (g->target->getISA() != Target::NVPTX)
+#endif 
+      ){
         // Tasks take three arguments: a pointer to a struct that holds the
         // actual task arguments, the thread index, and the total number of
         // threads the tasks system has running.  (Task arguments are

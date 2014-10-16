@@ -1,0 +1,8 @@
+
+EXAMPLE=hermite4
+CPP_SRC=hermite4.cpp 
+ISPC_SRC=hermite4.ispc
+ISPC_IA_TARGETS=avx1-i32x8
+ISPC_ARM_TARGETS=neon
+
+include ../common_cpu.mk
