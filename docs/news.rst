@@ -2,10 +2,19 @@
 ispc News
 =========
 
+ispc 1.8.0 is Released
+----------------------
+
+A major new version of ``ispc``, which introduces experimental support for NVPTX
+target, brings numerous improvements to our KNC (Xeon Phi) support, introduces
+debugging support on Windows and fixes several bugs. We also ship experimental
+build for Sony PlayStation4 target in this release. Binaries for all platforms
+are based on LLVM 3.5.
+
 ispc 1.7.0 is Released
 ----------------------
 
-A major new version of ISPC with several language and library extensions and
+A major new version of ``ispc`` with several language and library extensions and
 fixes in debug info support. Binaries for all platforms are based on patched
 version on LLVM 3.4. There also performance improvements beyond switchover to
 LLVM 3.4.

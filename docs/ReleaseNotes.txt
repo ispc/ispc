@@ -1,3 +1,38 @@
+=== v1.8.0 === (16 October 2014)
+
+A major new version of ISPC, which introduces experimental support for NVPTX
+target, brings numerous improvements to our KNC (Xeon Phi) support, introduces
+debugging support on Windows and fixes several bugs. We also ship experimental
+build for Sony PlayStation4 target in this release. Binaries for all platforms
+are based on LLVM 3.5.
+
+Note that MacOS binaries are build for MacOS 10.9 Maverics. Linux binaries are
+compatibile with kernel 2.6.32 (ok for RHEL6) and later.
+
+More details:
+
+* Experimental NVPTX support is available for users of our binary distribution
+  on Linux only at the moment. MacOS and Windows users willing to experiment
+  with this target are welcome to build it from source. Note that GPU imposes
+  some limitation on ISPC language, which are discussed in corresponding section
+  of ISPC User's Guide. Implementation of NVPTX support was done by our
+  contributor Evghenii Gaburov.
+
+* KNC support was greatly extended in knc.h header file. Beyond new features
+  there are stability fixes and changes for icc 15.0 compatibility. Stdlib
+  prefetch functions were improved to map to KNC vector prefetches.
+
+* PS4 experimental build is Windows to PS4 cross compiler, which disables arch
+  and cpu selection (which are preset to PS4 hardware).
+
+* Debug info support on Windows (compatible with VS2010, VS2012 and VS2013).
+
+* Critical bug fix, which caused code generation for incorrect target, despite
+  explicit target switches, under some conditions.
+
+* Stability fix of the bug, which caused print() function to execute under
+  all-off mask under some conditions.
+
 === v1.7.0 === (18 April 2014)
 
 A major new version of ISPC with several language and library extensions and
