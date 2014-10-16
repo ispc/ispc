@@ -74,7 +74,7 @@ endif
 ARM_ENABLED=0
 
 # Disable NVPTX by request
-# To disable: make NVPTX_ENABLED=0
+# To enable: make NVPTX_ENABLED=1
 NVPTX_ENABLED=0
 
 # Add llvm bin to the path so any scripts run will go to the right llvm-config
@@ -176,6 +176,10 @@ ifeq ($(ARCH_OS),Linux)
   # try to link everything statically under Linux (including libstdc++) so
   # that the binaries we generate will be portable across distributions...
 #    LDFLAGS=-static
+  # Linking everything statically isn't easy (too many things are required),
+  # but linking libstdc++ and libgcc is necessary when building with relatively
+  # new gcc, when going to distribute to old systems.
+    LDFLAGS=-static-libgcc -static-libstdc++
 endif
 
 LEX=flex
