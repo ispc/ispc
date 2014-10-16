@@ -136,6 +136,8 @@ typedef struct PRE_ALIGN(64) __vec16_f {
                         float v12, float v13, float v14, float v15) {
       v = _mm512_set_16to16_ps(v15, v14, v13, v12, v11, v10, v09, v08, v07, v06, v05, v04, v03, v02, v01, v00);
   }
+  FORCEINLINE const float& operator[](const int i) const {  return ((float*)this)[i]; }
+  FORCEINLINE       float& operator[](const int i)       {  return ((float*)this)[i]; }
   __m512 v;
 } POST_ALIGN(64) __vec16_f;
 
@@ -151,6 +153,8 @@ typedef struct PRE_ALIGN(64) __vec16_d {
       v1 = _mm512_set_8to8_pd(v15, v14, v13, v12, v11, v10, v09, v08);
       v2 = _mm512_set_8to8_pd(v07, v06, v05, v04, v03, v02, v01, v00);
   }
+  FORCEINLINE const double& operator[](const int i) const {  return ((double*)this)[i]; }
+  FORCEINLINE       double& operator[](const int i)       {  return ((double*)this)[i]; }
   __m512d v1;
   __m512d v2;
 } POST_ALIGN(64) __vec16_d;
@@ -168,6 +172,8 @@ typedef struct PRE_ALIGN(64) __vec16_i32 {
                           int32_t v12, int32_t v13, int32_t v14, int32_t v15) {
       v = _mm512_set_16to16_pi(v15, v14, v13, v12, v11, v10, v09, v08, v07, v06, v05, v04, v03, v02, v01, v00);
   }
+  FORCEINLINE const int32_t& operator[](const int i) const {  return ((int32_t*)this)[i]; }
+  FORCEINLINE       int32_t& operator[](const int i)       {  return ((int32_t*)this)[i]; }
   __m512i v;
 } POST_ALIGN(64) __vec16_i32;
 
@@ -195,6 +201,8 @@ typedef struct PRE_ALIGN(64) __vec16_i64 {
           _mm512_set_16to16_pi(15,13,11,9,7,5,3,1,14,12,10,8,6,4,2,0),
           v2);
   }
+  FORCEINLINE const int64_t& operator[](const int i) const {  return ((int64_t*)this)[i]; }
+  FORCEINLINE       int64_t& operator[](const int i)       {  return ((int64_t*)this)[i]; }
   __m512i v_hi;
   __m512i v_lo;
 } POST_ALIGN(64) __vec16_i64;
@@ -209,6 +217,8 @@ struct vec16 {
     v[8] = v8;        v[9] = v9;        v[10] = v10;      v[11] = v11;
     v[12] = v12;      v[13] = v13;      v[14] = v14;      v[15] = v15;
   }
+  FORCEINLINE const T& operator[](const int i) const { return data[i]; }
+  FORCEINLINE       T& operator[](const int i)       { return data[i]; }
   T v[16]; 
 };
 
