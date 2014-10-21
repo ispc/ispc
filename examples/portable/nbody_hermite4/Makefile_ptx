@@ -1,0 +1,14 @@
+PROG=hermite4
+ISPC_SRC=hermite4.ispc
+#CU_SRC=hermite4.cu
+CXX_SRC=hermite4.cpp 
+PTXCC_REGMAX=64
+#ISPC_FLAGS= --opt=disable-uniform-control-flow
+
+#LLVM_GPU=1
+NVVM_GPU=1
+
+include ../common_ptx.mk
+
+
+

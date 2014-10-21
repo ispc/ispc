@@ -66,7 +66,7 @@ extern "C" {
     void ISPCSync(void *handle);
     void *ISPCAlloc(void **handlePtr, int64_t size, int32_t alignment);
 }
- 
+
 void ISPCLaunch(void **handle, void *f, void *d, int count0, int count1, int count2) {
     *handle = (void *)0xdeadbeef;
     typedef void (*TaskFuncType)(void *, int, int, int, int, int, int, int, int, int, int);

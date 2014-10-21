@@ -178,6 +178,13 @@ Contents:
   + `Data Alignment and Aliasing`_
   + `Restructuring Existing Programs to Use ISPC`_
 
+* `Experimental support for PTX`_
+
+  + `Overview`_
+  + `Compiling For The NVIDIA Kepler GPU`_
+  + `Hints`_
+  + `Limitations & known issues`_
+
 * `Disclaimer and Legal Information`_
 
 * `Optimization Notice`_
@@ -4934,6 +4941,129 @@ groups of work that will tend to do similar computation across the SPMD
 program instances improves performance.
 
 .. _ispc Performance Tuning Guide: http://ispc.github.com/perfguide.html
+
+
+Experimental support for PTX
+============================
+``ispc`` provides experimental support for PTX code generation which currently
+targets NVIDIA GPUs with compute capability >3.5 [Kepler GPUs with support for
+dynamic parallelism]. Due to its nature, the PTX backend currently impose
+several restrictions on the ``ispc`` program, which will be described below.
+
+Overview
+--------
+SPMD programming in ``ispc`` is similar to a warp-synchronous CUDA programming.
+Namely, program instances in a gang are equivalent of CUDA threads in a single
+warp. Hence, to run efficiently on a GPU ``ispc`` program must use tasking
+functionality via ``launch`` keyword to ensure multiple number of warps are
+executed concurrently on the GPU.
+
+``export`` functions are equipped with a CUDA C wrapper which schedules a
+single warp--a thread-block with a total of 32 threads. In contract to CPU
+programming, this exported function, either directly or otherwise, should
+utilize ``launch`` keyword to schedule work on a GPU.
+
+At the PTX level, ``launch`` keyword is mapped to CUDA Dynamic Parallelism and
+it schedules a grid of thread-blocks each 4 warps-wide (128 threads).  As a
+result, ``ispc`` has a tasking-granularity of 4 tasks with PTX target; this
+restriction will be eliminated in future.
+
+When passing pointers to an ``export`` function, it is important that they
+remain legal when are accessed from GPU. Prior to CUDA 6.0, such a pointer were
+holding an address that is only accessible from the GPU.  With the release of
+CUDA 6.0, it is possible to pass a pointer to a unified memory allocated with
+``cudaMallocManaged``. Examples provides rudimentary wrapper functions that
+call CUDA API for managed memory allocations, allowing the programmers to avoid
+explicit memory copies.
+
+
+
+Compiling For The NVIDIA Kepler GPU
+-----------------------------------
+Compilation for NVIDIA Kepler GPU is a several step procedure.
+
+First, we need to generate a LLVM assembly from ``ispc`` source file (``ispc``
+generates LLVM assembly instead of bitcode when ``nvptx`` target is chosen):
+
+::
+
+  $ISPC_HOME/ispc foo.ispc --emit-llvm --target=nvptx -o foo.ll
+
+
+This LLVM assembly can immediately be compiled into PTX with the help of
+``ptxgen`` tool; this tool uses ``libNVVM`` which is a part of a CUDA Toolkit.
+
+::
+
+  $ISPC_HOME/ptxtools/ptxgen --use_fast_math foo.ll -o foo.ptx
+
+.. If ``ispc`` is compiled with  LLVM >3.2, the resulting bitcode must first be
+.. decompiled with the ``llvm-dis`` from LLVM 3.2 distribution; this "trick" is
+.. required to generate an IR compatible with libNVVM:
+
+.. ::
+.. 
+..   $LLVM32/bin/llvm-dis foo.bc -o foo.ll
+..   $ISPC_HOME/ptxtools/ptxgen --use_fast_math foo.ll -o foo.ptx
+
+This PTX is ready for execution on a GPU, for example via CUDA
+Driver API. Alternatively, we also provide a simple ``ptxcc`` tool, which
+compiles the resulting PTX code into an object file:
+
+::
+
+   $ISPC_HOME/ptxtools/ptxcc foo.ptx -o foo_cu.o -Xnvcc="--maxrregcount=64
+   -Xptxas=-v"
+
+This object file can be linked with the main program via ``nvcc``:
+
+::
+
+    nvcc foo_cu.o foo_main.o -o foo
+
+
+Hints
+-----
+- ``uniform`` arrays in a function scope are statically allocated in
+  ``__shared__`` memory, with all ensuing consequences. For example, if more 
+  than avaiable shared memory per SMX is allocated, a link- or runtime-error will occur
+- If ``uniform`` arrays of large size are desired, we recommend to use
+  ``uniform new uniform T[size]`` for their allocation, ideally outside the
+  tasking function (see ``deferred/kernels.ispc`` in the deferred shading example)
+
+Examples that produces executables for CPU, XeonPhi and Kepler GPU display
+several tuning approaches that can benefit GPU performance. 
+``ispc`` may also generate performance warning, that if followed, may improve
+GPU application performance.
+
+Limitations & known issues
+--------------------------
+Due to its experimental form, PTX code generation is known to impose several
+limitation on the ``ispc`` program which are documented in the following list:
+
+- Must use ``ispc`` tasking functionality to run efficiently on GPU
+- Must use ``new/delete`` and/or ``ispc_malloc``/``ispc_free``/``ispc_memset``/``ispc_memcpy`` to allocate/free/set/copy memory that is visible to GPU
+- ``export`` functions must have ``void`` return type.
+- ``task``/``export`` functions do not accept varying data-types
+- ``new``/``delete`` currently only works with ``uniform`` data-types
+- ``aossoa``/``soaaos`` is not yet supported
+- ``sizeof(varying)`` is not yet unsupported
+- Function pointers do not work yet (may or may not generate compilation fail)
+- ``memset``/``memcpy``/``memmove`` is not yet supported
+- ``uniform`` arrays in global scope are mapped to global memory
+- ``varying`` arrays in global scope are not yet supported
+- ``uniform`` arrays in local  scope are mapped to shared memory
+- ``varying`` arrays in local  scope are mapped to local  memory
+- ``const uniform/varying`` arrays are mapped to local memory
+- ``const static uniform`` arrays are mapped to constant memory
+- ``const static varying``  arrays are mapped to global   memory
+- ``static`` data types in local scope are not allowed; compilation will fail
+- Best performance is obtained with libNVVM (LLVM PTX backend can also be used but it requires libdevice.compute_35.10.bc that comes with libNVVM)
+
+
+Likely there are more... which, together with some of the above-mentioned
+issues, will be fixed in due time.
+
 
 
 Disclaimer and Legal Information

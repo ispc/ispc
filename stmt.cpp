@@ -142,6 +142,64 @@ lHasUnsizedArrays(const Type *type) {
         return lHasUnsizedArrays(at->GetElementType());
 }
 
+#ifdef ISPC_NVPTX_ENABLED
+static llvm::Value* lConvertToGenericPtr(FunctionEmitContext *ctx, llvm::Value *value, const SourcePos &currentPos, const bool variable = false)
+{
+  if (!value->getType()->isPointerTy() || g->target->getISA() != Target::NVPTX) 
+    return value;
+  llvm::PointerType *pt = llvm::dyn_cast<llvm::PointerType>(value->getType());
+  const int addressSpace = pt->getAddressSpace();
+  if (addressSpace != 3 && addressSpace != 4) 
+    return value;
+
+  llvm::Type *elTy = pt->getElementType();
+
+  /* convert elTy addrspace(3)* to i64* addrspace(3)* */
+  llvm::PointerType *Int64Ptr3 = llvm::PointerType::get(LLVMTypes::Int64Type, addressSpace);
+  value = ctx->BitCastInst(value, Int64Ptr3, "gep2gen_cast1");
+
+  /* convert i64* addrspace(3) to i64* */
+  llvm::Function *__cvt2gen = m->module->getFunction(
+      addressSpace == 3 ? (variable ? "__cvt_loc2gen_var" : "__cvt_loc2gen") : "__cvt_const2gen");
+
+  std::vector<llvm::Value *> __cvt2gen_args;
+  __cvt2gen_args.push_back(value);
+  value = llvm::CallInst::Create(__cvt2gen, __cvt2gen_args, variable ? "gep2gen_cvt_var" : "gep2gen_cvt", ctx->GetCurrentBasicBlock());
+
+  /* compute offset */
+  if (addressSpace == 3)
+  {
+    assert(elTy->isArrayTy());
+    const int numElTot = elTy->getArrayNumElements();
+    const int numEl    = numElTot/4;
+#if 0
+    fprintf(stderr, " --- detected addrspace(3) sz= %d --- \n", numEl);
+#endif
+    llvm::ArrayType *arrTy = llvm::dyn_cast<llvm::ArrayType>(pt->getArrayElementType());
+    assert(arrTy != NULL);
+    llvm::Type *arrElTy = arrTy->getElementType();
+#if 0
+    if (arrElTy->isArrayTy())
+      Error(currentPos, "Currently \"nvptx\" target doesn't support array-of-array");
+#endif
+
+    /* convert i64* to errElTy* */
+    llvm::PointerType *arrElTyPt0 = llvm::PointerType::get(arrElTy, 0);
+    value  = ctx->BitCastInst(value, arrElTyPt0, "gep2gen_cast2");
+
+    llvm::Function *func_warp_index    = m->module->getFunction("__warp_index");
+    llvm::Value *warpId = ctx->CallInst(func_warp_index, NULL, std::vector<llvm::Value*>(),  "gep2gen_warp_index");
+    llvm::Value *offset = ctx->BinaryOperator(llvm::Instruction::Mul, warpId, LLVMInt32(numEl), "gep2gen_offset");
+    value = llvm::GetElementPtrInst::Create(value, offset, "gep2gen_offset", ctx->GetCurrentBasicBlock());
+  }
+
+  /* convert arrElTy* to elTy* */
+  llvm::PointerType *elTyPt0 = llvm::PointerType::get(elTy, 0);
+  value  = ctx->BitCastInst(value, elTyPt0, "gep2gen_cast3");
+
+  return value;
+}
+#endif /* ISPC_NVPTX_ENABLED */
 
 void
 DeclStmt::EmitCode(FunctionEmitContext *ctx) const {
@@ -206,6 +264,23 @@ DeclStmt::EmitCode(FunctionEmitContext *ctx) const {
         }
 
         if (sym->storageClass == SC_STATIC) {
+#ifdef ISPC_NVPTX_ENABLED
+            if (g->target->getISA() == Target::NVPTX && !sym->type->IsConstType())
+            {
+                Error(sym->pos, 
+                    "Non-constant static variable ""\"%s\" is not supported with ""\"nvptx\" target.",
+                    sym->name.c_str());
+                return;
+            }
+            if (g->target->getISA() == Target::NVPTX && sym->type->IsVaryingType())
+                PerformanceWarning(sym->pos, 
+                    "\"const static varying\" variable ""\"%s\" is stored in __global address space with ""\"nvptx\" target.",
+                    sym->name.c_str());
+            if (g->target->getISA() == Target::NVPTX && sym->type->IsUniformType())
+                PerformanceWarning(sym->pos, 
+                    "\"const static uniform\" variable ""\"%s\" is stored in __constant address space with ""\"nvptx\" target.",
+                    sym->name.c_str());
+#endif /* ISPC_NVPTX_ENABLED */
             // For static variables, we need a compile-time constant value
             // for its initializer; if there's no initializer, we use a
             // zero value.
@@ -235,6 +310,24 @@ DeclStmt::EmitCode(FunctionEmitContext *ctx) const {
 
             // Allocate space for the static variable in global scope, so
             // that it persists across function calls
+#ifdef ISPC_NVPTX_ENABLED
+            int addressSpace = 0;
+            if (g->target->getISA() == Target::NVPTX &&
+                sym->type->IsConstType() &&
+                sym->type->IsUniformType())
+              addressSpace = 4;
+            sym->storagePtr =
+                new llvm::GlobalVariable(*m->module, llvmType,
+                                         sym->type->IsConstType(),
+                                         llvm::GlobalValue::InternalLinkage, cinit,
+                                         llvm::Twine("static.") +
+                                         llvm::Twine(sym->pos.first_line) +
+                                         llvm::Twine(".") + sym->name.c_str(),
+                                         NULL,
+                                         llvm::GlobalVariable::NotThreadLocal,
+                                         addressSpace);
+            sym->storagePtr = lConvertToGenericPtr(ctx, sym->storagePtr, sym->pos);
+#else /* ISPC_NVPTX_ENABLED */
             sym->storagePtr =
                 new llvm::GlobalVariable(*m->module, llvmType,
                                          sym->type->IsConstType(),
@@ -242,16 +335,90 @@ DeclStmt::EmitCode(FunctionEmitContext *ctx) const {
                                          llvm::Twine("static.") +
                                          llvm::Twine(sym->pos.first_line) +
                                          llvm::Twine(".") + sym->name.c_str());
+#endif /* ISPC_NVPTX_ENABLED */
             // Tell the FunctionEmitContext about the variable
             ctx->EmitVariableDebugInfo(sym);
         }
-        else {
+#ifdef ISPC_NVPTX_ENABLED
+        else if ((sym->type->IsUniformType() || sym->type->IsSOAType()) &&
+          /* NVPTX:
+           * only non-constant uniform data types are stored in shared memory 
+           * constant uniform are automatically promoted to varying 
+           */
+           !sym->type->IsConstType() &&
+#if 1     
+           sym->type->IsArrayType() &&
+#endif
+           g->target->getISA() == Target::NVPTX)
+          {
+              PerformanceWarning(sym->pos,
+                  "Non-constant \"uniform\" data types might be slow with \"nvptx\" target. "
+                  "Unless data sharing between program instances is desired, try \"const [static] uniform\", \"varying\" or \"uniform new uniform \"+\"delete\" if possible.");
+
+              /* with __shared__ memory everything must be an array */
+              int nel = 4;
+              ArrayType *nat;
+              bool variable = true;
+              if (sym->type->IsArrayType())
+              {
+                const ArrayType *at = CastType<ArrayType>(sym->type);
+                /* we must scale # elements by 4, because a thread-block will run 4 warps
+                 * or 128 threads.
+                 * ***note-to-me***:please define these value (128threads/4warps)
+                 * in nvptx-target definition
+                 * instead of compile-time constants 
+                 */
+                nel *= at->GetElementCount();
+                if (sym->type->IsSOAType())
+                  nel *= sym->type->GetSOAWidth();
+                nat = new ArrayType(at->GetElementType(), nel);
+                variable = false;
+              }
+              else
+                nat = new ArrayType(sym->type, nel);
+
+              llvm::Type *llvmTypeUn = nat->LLVMType(g->ctx);
+              llvm::Constant *cinit = llvm::UndefValue::get(llvmTypeUn);
+
+              sym->storagePtr =
+                new llvm::GlobalVariable(*m->module, llvmTypeUn,
+                    sym->type->IsConstType(),
+                    llvm::GlobalValue::InternalLinkage, 
+                    cinit,
+                    llvm::Twine("local_") + 
+                    llvm::Twine(sym->pos.first_line) +
+                    llvm::Twine("_") + sym->name.c_str(),
+                    NULL,
+                    llvm::GlobalVariable::NotThreadLocal,
+                    /*AddressSpace=*/3);
+              sym->storagePtr = lConvertToGenericPtr(ctx, sym->storagePtr, sym->pos, variable);
+              llvm::PointerType *ptrTy = llvm::PointerType::get(sym->type->LLVMType(g->ctx),0);
+              sym->storagePtr = ctx->BitCastInst(sym->storagePtr, ptrTy, "uniform_decl");
+
+              // Tell the FunctionEmitContext about the variable; must do
+              // this before the initializer stuff.
+              ctx->EmitVariableDebugInfo(sym);
+
+              if (initExpr == 0 && sym->type->IsConstType())
+                Error(sym->pos, "Missing initializer for const variable "
+                    "\"%s\".", sym->name.c_str());
+
+              // And then get it initialized...
+              sym->parentFunction = ctx->GetFunction();
+              InitSymbol(sym->storagePtr, sym->type, initExpr, ctx, sym->pos);
+          }
+#endif /* ISPC_NVPTX_ENABLED */
+          else
+          {
             // For non-static variables, allocate storage on the stack
             sym->storagePtr = ctx->AllocaInst(llvmType, sym->name.c_str());
 
             // Tell the FunctionEmitContext about the variable; must do
             // this before the initializer stuff.
             ctx->EmitVariableDebugInfo(sym);
+            if (initExpr == 0 && sym->type->IsConstType())
+              Error(sym->pos, "Missing initializer for const variable "
+                  "\"%s\".", sym->name.c_str());
 
             // And then get it initialized...
             sym->parentFunction = ctx->GetFunction();
@@ -414,6 +581,19 @@ IfStmt::EmitCode(FunctionEmitContext *ctx) const {
     llvm::Value *testValue = test->GetValue(ctx);
     if (testValue == NULL)
         return;
+
+#ifdef ISPC_NVPTX_ENABLED
+#if 0
+    if (!isUniform && g->target->getISA() == Target::NVPTX)
+    {
+      /* With "nvptx" target, SIMT hardware takes care of non-uniform 
+       * control flow. We trick ISPC to generate uniform control flow.
+       */
+      testValue = ctx->ExtractInst(testValue, 0);
+      isUniform = true;
+    }
+#endif
+#endif /* ISPC_NVPTX_ENABLED */
 
     if (isUniform) {
         ctx->StartUniformIf();
@@ -695,7 +875,17 @@ IfStmt::emitMaskMixed(FunctionEmitContext *ctx, llvm::Value *oldMask,
 
     // Do any of the program instances want to run the 'true'
     // block?  If not, jump ahead to bNext.
+
+#ifdef ISPC_NVPTX_ENABLED
+#if 0
+    llvm::Value *maskAnyTrueQ = ctx->ExtractInst(ctx->GetFullMask(),0);
+#else
     llvm::Value *maskAnyTrueQ = ctx->Any(ctx->GetFullMask());
+#endif
+#else /* ISPC_NVPTX_ENABLED */
+    llvm::Value *maskAnyTrueQ = ctx->Any(ctx->GetFullMask());
+#endif /* ISPC_NVPTX_ENABLED */
+
     ctx->BranchInst(bRunTrue, bNext, maskAnyTrueQ);
 
     // Emit statements for true
@@ -712,7 +902,16 @@ IfStmt::emitMaskMixed(FunctionEmitContext *ctx, llvm::Value *oldMask,
 
     // Similarly, check to see if any of the instances want to
     // run the 'false' block...
+
+#ifdef ISPC_NVPTX_ENABLED
+#if 0
+    llvm::Value *maskAnyFalseQ = ctx->ExtractInst(ctx->GetFullMask(),0);
+#else
     llvm::Value *maskAnyFalseQ = ctx->Any(ctx->GetFullMask());
+#endif
+#else /* ISPC_NVPTX_ENABLED */
+    llvm::Value *maskAnyFalseQ = ctx->Any(ctx->GetFullMask());
+#endif /* ISPC_NVPTX_ENABLED */
     ctx->BranchInst(bRunFalse, bDone, maskAnyFalseQ);
 
     // Emit code for false
@@ -1277,6 +1476,95 @@ lUpdateVaryingCounter(int dim, int nDims, FunctionEmitContext *ctx,
                       llvm::Value *uniformCounterPtr,
                       llvm::Value *varyingCounterPtr,
                       const std::vector<int> &spans) {
+#ifdef ISPC_NVPTX_ENABLED
+    if (g->target->getISA() == Target::NVPTX)
+    {
+      // Smear the uniform counter value out to be varying
+      llvm::Value *counter = ctx->LoadInst(uniformCounterPtr);
+      llvm::Value *smearCounter = ctx->BroadcastValue(
+          counter, LLVMTypes::Int32VectorType, "smear_counter");
+
+      // Figure out the offsets; this is a little bit tricky.  As an example,
+      // consider a 2D tiled foreach loop, where we're running 8-wide and
+      // where the inner dimension has a stride of 4 and the outer dimension
+      // has a stride of 2.  For the inner dimension, we want the offsets
+      // (0,1,2,3,0,1,2,3), and for the outer dimension we want
+      // (0,0,0,0,1,1,1,1).
+      int32_t delta[ISPC_MAX_NVEC];
+      const int vecWidth = 32; 
+      std::vector<llvm::Constant*> constDeltaList;
+      for (int i = 0; i < vecWidth; ++i) 
+      {
+        int d = i;
+        // First, account for the effect of any dimensions at deeper
+        // nesting levels than the current one.
+        int prevDimSpanCount = 1;
+        for (int j = dim; j < nDims-1; ++j)
+          prevDimSpanCount *= spans[j+1];
+        d /= prevDimSpanCount;
+
+        // And now with what's left, figure out our own offset
+        delta[i] = d % spans[dim];
+        constDeltaList.push_back(LLVMInt8(delta[i]));
+      }
+
+      llvm::ArrayType* ArrayDelta = llvm::ArrayType::get(LLVMTypes::Int8Type, 32);
+  //    llvm::PointerType::get(ArrayDelta, 4); /* constant memory */
+
+
+      llvm::GlobalVariable* globalDelta = new llvm::GlobalVariable(
+          /*Module=*/*m->module,
+          /*Type=*/ArrayDelta,
+          /*isConstant=*/true,
+          /*Linkage=*/llvm::GlobalValue::PrivateLinkage,
+          /*Initializer=*/0, // has initializer, specified below
+          /*Name=*/"constDeltaForeach");
+#if 0
+          /*ThreadLocalMode=*/llvm::GlobalVariable::NotThreadLocal,
+          /*unsigned AddressSpace=*/4 /*constant*/);
+#endif
+
+
+      llvm::Constant* constDelta = llvm::ConstantArray::get(ArrayDelta, constDeltaList);
+
+      globalDelta->setInitializer(constDelta);
+      llvm::Function *func_program_index = m->module->getFunction("__program_index");
+      llvm::Value *laneIdx = ctx->CallInst(func_program_index, NULL, std::vector<llvm::Value*>(), "foreach__programIndex");
+
+      std::vector<llvm::Value*> ptr_arrayidx_indices;
+      ptr_arrayidx_indices.push_back(LLVMInt32(0));
+      ptr_arrayidx_indices.push_back(laneIdx);
+#if 1
+      llvm::Instruction* ptr_arrayidx = llvm::GetElementPtrInst::Create(globalDelta, ptr_arrayidx_indices, "arrayidx", ctx->GetCurrentBasicBlock());
+      llvm::LoadInst* int8_39 = new llvm::LoadInst(ptr_arrayidx, "", false, ctx->GetCurrentBasicBlock());
+      llvm::Value * int32_39 = ctx->ZExtInst(int8_39, LLVMTypes::Int32Type);
+
+      llvm::VectorType* VectorTy_2 = llvm::VectorType::get(llvm::IntegerType::get(*g->ctx, 32), 1);
+      llvm::UndefValue* const_packed_41 = llvm::UndefValue::get(VectorTy_2);
+
+      llvm::InsertElementInst* packed_43 = llvm::InsertElementInst::Create(
+  //        llvm::UndefValue(LLVMInt32Vector),
+          const_packed_41,
+          int32_39, LLVMInt32(0), "", ctx->GetCurrentBasicBlock());
+#endif
+
+
+      // Add the deltas to compute the varying counter values; store the
+      // result to memory and then return it directly as well.
+#if 0
+      llvm::Value *varyingCounter =
+          ctx->BinaryOperator(llvm::Instruction::Add, smearCounter,
+                              LLVMInt32Vector(delta), "iter_val");
+#else
+      llvm::Value *varyingCounter =
+          ctx->BinaryOperator(llvm::Instruction::Add, smearCounter,
+                              packed_43, "iter_val");
+#endif
+      ctx->StoreInst(varyingCounter, varyingCounterPtr);
+      return varyingCounter;
+    }
+#endif /* ISPC_NVPTX_ENABLED */
+
     // Smear the uniform counter value out to be varying
     llvm::Value *counter = ctx->LoadInst(uniformCounterPtr);
     llvm::Value *smearCounter = ctx->BroadcastValue(
@@ -1397,7 +1685,13 @@ ForeachStmt::EmitCode(FunctionEmitContext *ctx) const {
     std::vector<llvm::Value *> nExtras, alignedEnd, extrasMaskPtrs;
 
     std::vector<int> span(nDims, 0);
+#ifdef ISPC_NVPTX_ENABLED
+    const int vectorWidth = 
+      g->target->getISA() == Target::NVPTX ? 32 : g->target->getVectorWidth();
+    lGetSpans(nDims-1, nDims, vectorWidth, isTiled, &span[0]);
+#else /* ISPC_NVPTX_ENABLED */
     lGetSpans(nDims-1, nDims, g->target->getVectorWidth(), isTiled, &span[0]);
+#endif /* ISPC_NVPTX_ENABLED */
 
     for (int i = 0; i < nDims; ++i) {
         // Basic blocks that we'll fill in later with the looping logic for
@@ -1996,7 +2290,12 @@ ForeachActiveStmt::EmitCode(FunctionEmitContext *ctx) const {
         // math...)
 
         // Get the "program index" vector value
+#ifdef ISPC_NVPTX_ENABLED
+        llvm::Value *programIndex = g->target->getISA() == Target::NVPTX ?
+          ctx->ProgramIndexVectorPTX() : ctx->ProgramIndexVector();
+#else /* ISPC_NVPTX_ENABLED */
         llvm::Value *programIndex = ctx->ProgramIndexVector();
+#endif /* ISPC_NVPTX_ENABLED */
 
         // And smear the current lane out to a vector
         llvm::Value *firstSet32 =
@@ -2192,11 +2491,23 @@ ForeachUniqueStmt::EmitCode(FunctionEmitContext *ctx) const {
 
         // And load the corresponding element value from the temporary
         // memory storing the value of the varying expr.
-        llvm::Value *uniqueValuePtr =
+        llvm::Value *uniqueValue;
+#ifdef ISPC_NVPTX_ENABLED
+        if (g->target->getISA() == Target::NVPTX)
+        {
+          llvm::Value *firstSet32 = ctx->TruncInst(firstSet, LLVMTypes::Int32Type);
+          uniqueValue = ctx->Extract(exprValue, firstSet32);
+        }
+        else
+        {
+#endif /* ISPC_NVPTX_ENABLED */
+          llvm::Value *uniqueValuePtr =
             ctx->GetElementPtrInst(exprMem, LLVMInt64(0), firstSet, exprPtrType,
-                                   "unique_index_ptr");
-        llvm::Value *uniqueValue = ctx->LoadInst(uniqueValuePtr, "unique_value");
-
+                "unique_index_ptr");
+          uniqueValue = ctx->LoadInst(uniqueValuePtr, "unique_value");
+#ifdef ISPC_NVPTX_ENABLED
+        }
+#endif /* ISPC_NVPTX_ENABLED */
         // If it's a varying pointer type, need to convert from the int
         // type we store in the vector to the actual pointer type
         if (llvm::dyn_cast<llvm::PointerType>(symType) != NULL)
@@ -3103,7 +3414,12 @@ PrintStmt::EmitCode(FunctionEmitContext *ctx) const {
     }
 
     // Now we can emit code to call __do_print()
+#ifdef ISPC_NVPTX_ENABLED
+    llvm::Function *printFunc = g->target->getISA() != Target::NVPTX ?
+      m->module->getFunction("__do_print") : m->module->getFunction("__do_print_nvptx");
+#else /* ISPC_NVPTX_ENABLED */
     llvm::Function *printFunc = m->module->getFunction("__do_print");
+#endif /* ISPC_NVPTX_ENABLED */
     AssertPos(pos, printFunc);
 
     llvm::Value *mask = ctx->GetFullMask();

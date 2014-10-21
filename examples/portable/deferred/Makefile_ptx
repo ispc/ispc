@@ -1,0 +1,13 @@
+PROG=deferred_shading
+ISPC_SRC=kernels.ispc
+CU_SRC=kernels.cu
+CXX_SRC=common.cpp  main.cpp
+PTXCC_REGMAX=64
+
+NVVM_GPU=1
+#LLVM_GPU=1
+
+include ../common_ptx.mk
+
+
+

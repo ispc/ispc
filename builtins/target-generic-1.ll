@@ -42,6 +42,7 @@ packed_load_and_store()
 scans()
 int64minmax()
 aossoa()
+declare_nvptx()
 saturation_arithmetic_novec()
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

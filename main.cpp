@@ -321,6 +321,13 @@ int main(int Argc, char *Argv[]) {
     LLVMInitializeARMTargetMC();
 #endif
 
+#ifdef ISPC_NVPTX_ENABLED
+    LLVMInitializeNVPTXTargetInfo();
+    LLVMInitializeNVPTXTarget();
+    LLVMInitializeNVPTXAsmPrinter();
+    LLVMInitializeNVPTXTargetMC();
+#endif /* ISPC_NVPTX_ENABLED */
+
     char *file = NULL;
     const char *headerFileName = NULL;
     const char *outFileName = NULL;

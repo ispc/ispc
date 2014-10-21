@@ -25,7 +25,7 @@ export void f_fu(uniform float RET[], uniform float aFOO[], uniform float b) {
             }
         }
     }
-    
+   
     assert(programIndex < 80);
     RET[programIndex] = pts[programIndex].pts[programIndex % 3][programIndex % 4].z;
 }

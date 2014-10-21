@@ -226,7 +226,7 @@ def build_LLVM(version_LLVM, revision, folder, tarball, debug, selfbuild, extra,
         try_do_LLVM("configure release version for selfbuild ",
                     "../" + LLVM_SRC + "/configure --prefix=" + llvm_home + "/" +
                     LLVM_BIN_selfbuild + " --enable-optimized" +
-                    " --enable-targets=x86,x86_64" +
+                    " --enable-targets=x86,x86_64,nvptx" +
                     ((" --with-gcc-toolchain=" + gcc_toolchain_path) if gcc_toolchain_path != "" else "") +
                     mac_system_root,
                     from_validation)
@@ -244,7 +244,7 @@ def build_LLVM(version_LLVM, revision, folder, tarball, debug, selfbuild, extra,
             try_do_LLVM("configure release version ",
                     "../" + LLVM_SRC + "/configure --prefix=" + llvm_home + "/" +
                     LLVM_BIN + " --enable-optimized" + selfbuild_compiler +
-                    " --enable-targets=x86,x86_64" +
+                    " --enable-targets=x86,x86_64,nvptx" +
                     ((" --with-gcc-toolchain=" + gcc_toolchain_path) if gcc_toolchain_path != "" else "") +
                     mac_system_root,
                     from_validation)
@@ -257,7 +257,7 @@ def build_LLVM(version_LLVM, revision, folder, tarball, debug, selfbuild, extra,
         try_do_LLVM("configure debug version ",
                     "../" + LLVM_SRC + "/configure --prefix=" + llvm_home + "/" + LLVM_BIN +
                     " --enable-debug-runtime --enable-debug-symbols --enable-keep-symbols" + selfbuild_compiler +
-                    " --enable-targets=x86,x86_64" +
+                    " --enable-targets=x86,x86_64,nvptx" +
                     ((" --with-gcc-toolchain=" + gcc_toolchain_path) if gcc_toolchain_path != "" else "") +
                     mac_system_root,
                     from_validation)

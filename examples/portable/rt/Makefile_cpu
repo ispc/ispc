@@ -1,0 +1,8 @@
+
+EXAMPLE=rt
+CPP_SRC=rt.cpp
+ISPC_SRC=rt.ispc
+ISPC_IA_TARGETS=avx1-i32x8
+ISPC_ARM_TARGETS=neon
+
+include ../common_cpu.mk
