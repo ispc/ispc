@@ -136,6 +136,8 @@ typedef struct PRE_ALIGN(64) __vec16_f {
                         float v12, float v13, float v14, float v15) {
       v = _mm512_set_16to16_ps(v15, v14, v13, v12, v11, v10, v09, v08, v07, v06, v05, v04, v03, v02, v01, v00);
   }
+  FORCEINLINE const float& operator[](const int i) const {  return ((float*)this)[i]; }
+  FORCEINLINE       float& operator[](const int i)       {  return ((float*)this)[i]; }
   __m512 v;
 } POST_ALIGN(64) __vec16_f;
 
@@ -151,6 +153,8 @@ typedef struct PRE_ALIGN(64) __vec16_d {
       v1 = _mm512_set_8to8_pd(v15, v14, v13, v12, v11, v10, v09, v08);
       v2 = _mm512_set_8to8_pd(v07, v06, v05, v04, v03, v02, v01, v00);
   }
+  FORCEINLINE const double& operator[](const int i) const {  return ((double*)this)[i]; }
+  FORCEINLINE       double& operator[](const int i)       {  return ((double*)this)[i]; }
   __m512d v1;
   __m512d v2;
 } POST_ALIGN(64) __vec16_d;
@@ -168,6 +172,8 @@ typedef struct PRE_ALIGN(64) __vec16_i32 {
                           int32_t v12, int32_t v13, int32_t v14, int32_t v15) {
       v = _mm512_set_16to16_pi(v15, v14, v13, v12, v11, v10, v09, v08, v07, v06, v05, v04, v03, v02, v01, v00);
   }
+  FORCEINLINE const int32_t& operator[](const int i) const {  return ((int32_t*)this)[i]; }
+  FORCEINLINE       int32_t& operator[](const int i)       {  return ((int32_t*)this)[i]; }
   __m512i v;
 } POST_ALIGN(64) __vec16_i32;
 
@@ -195,6 +201,8 @@ typedef struct PRE_ALIGN(64) __vec16_i64 {
           _mm512_set_16to16_pi(15,13,11,9,7,5,3,1,14,12,10,8,6,4,2,0),
           v2);
   }
+  FORCEINLINE const int64_t& operator[](const int i) const {  return ((int64_t*)this)[i]; }
+  FORCEINLINE       int64_t& operator[](const int i)       {  return ((int64_t*)this)[i]; }
   __m512i v_hi;
   __m512i v_lo;
 } POST_ALIGN(64) __vec16_i64;
@@ -209,6 +217,8 @@ struct vec16 {
     v[8] = v8;        v[9] = v9;        v[10] = v10;      v[11] = v11;
     v[12] = v12;      v[13] = v13;      v[14] = v14;      v[15] = v15;
   }
+  FORCEINLINE const T& operator[](const int i) const { return data[i]; }
+  FORCEINLINE       T& operator[](const int i)       { return data[i]; }
   T v[16]; 
 };
 
@@ -665,9 +675,11 @@ template <int ALIGN> static FORCEINLINE __vec16_i32 __load(const __vec16_i32 *p)
 #endif
 }
 
+#if 0
 template <> FORCEINLINE __vec16_i32 __load<64>(const __vec16_i32 *p) {
   return _mm512_load_epi32(p);
 }
+#endif
 
 template <int ALIGN> static FORCEINLINE void __store(__vec16_i32 *p, __vec16_i32 v) {
 #ifdef ISPC_FORCE_ALIGNED_MEMORY
@@ -678,9 +690,11 @@ template <int ALIGN> static FORCEINLINE void __store(__vec16_i32 *p, __vec16_i32
 #endif
 }
 
+#if 0
 template <> FORCEINLINE void __store<64>(__vec16_i32 *p, __vec16_i32 v) {
   _mm512_store_epi32(p, v);
 }
+#endif
 
 ///////////////////////////////////////////////////////////////////////////
 // int64
@@ -902,6 +916,7 @@ template <int ALIGN> static FORCEINLINE __vec16_i64 __load(const __vec16_i64 *p)
   return ret;    
 }
 
+#if 0
 template <> FORCEINLINE __vec16_i64 __load<64>(const __vec16_i64 *p) {
   __m512i v2 = _mm512_load_epi32(p);
   __m512i v1 = _mm512_load_epi32(((uint8_t*)p)+64);
@@ -924,6 +939,7 @@ template <> FORCEINLINE __vec16_i64 __load<64>(const __vec16_i64 *p) {
 template <> FORCEINLINE __vec16_i64 __load<128>(const __vec16_i64 *p) {
   return __load<64>(p);
 }
+#endif
 
 template <int ALIGN> static FORCEINLINE void __store(__vec16_i64 *p, __vec16_i64 v) {
   __m512i v1;
@@ -945,7 +961,7 @@ template <int ALIGN> static FORCEINLINE void __store(__vec16_i64 *p, __vec16_i64
   _mm512_extpackstorelo_epi32((uint8_t*)p+64, v1, _MM_DOWNCONV_EPI32_NONE, _MM_HINT_NONE);
   _mm512_extpackstorehi_epi32((uint8_t*)p+128, v1, _MM_DOWNCONV_EPI32_NONE, _MM_HINT_NONE);
 }
-
+#if 0
 template <> FORCEINLINE void __store<64>(__vec16_i64 *p, __vec16_i64 v) {
   __m512i v1;
   __m512i v2;
@@ -968,7 +984,7 @@ template <> FORCEINLINE void __store<64>(__vec16_i64 *p, __vec16_i64 v) {
 template <> FORCEINLINE void __store<128>(__vec16_i64 *p, __vec16_i64 v) {
   __store<64>(p, v);
 }
-
+#endif
 
 /*! gather vector of 64-bit ints from addresses pointing to uniform ints 
 
@@ -1163,11 +1179,11 @@ template <int ALIGN> static FORCEINLINE __vec16_f __load(const __vec16_f *p) {
   return v;
 #endif
 }
-
+#if 0
 template <> FORCEINLINE __vec16_f __load<64>(const __vec16_f *p) {
   return _mm512_load_ps(p);
 }
-
+#endif
 template <int ALIGN> static FORCEINLINE void __store(__vec16_f *p, __vec16_f v) {
 #ifdef ISPC_FORCE_ALIGNED_MEMORY
   _mm512_store_ps(p, v);
@@ -1176,11 +1192,11 @@ template <int ALIGN> static FORCEINLINE void __store(__vec16_f *p, __vec16_f v) 
   _mm512_extpackstorehi_ps((uint8_t*)p+64, v, _MM_DOWNCONV_PS_NONE, _MM_HINT_NONE);
 #endif
 }
-
+#if 0
 template <> FORCEINLINE void __store<64>(__vec16_f *p, __vec16_f v) {
   _mm512_store_ps(p, v);
 }
-
+#endif
 
 ///////////////////////////////////////////////////////////////////////////
 // double
@@ -1396,7 +1412,7 @@ template <int ALIGN> static FORCEINLINE __vec16_d __load(const __vec16_d *p) {
   ret.v2 = _mm512_extloadunpackhi_pd(ret.v2, (uint8_t*)p+128, _MM_UPCONV_PD_NONE, _MM_HINT_NONE);
   return ret;
 }
-
+#if 0
 template <> FORCEINLINE __vec16_d __load<64>(const __vec16_d *p) {
   __vec16_d ret;
   ret.v1 = _mm512_load_pd(p);
@@ -1407,14 +1423,14 @@ template <> FORCEINLINE __vec16_d __load<64>(const __vec16_d *p) {
 template <> FORCEINLINE __vec16_d __load<128>(const __vec16_d *p) {
   return __load<64>(p);
 }
-
+#endif
 template <int ALIGN> static FORCEINLINE void __store(__vec16_d *p, __vec16_d v) {
   _mm512_extpackstorelo_pd(p, v.v1, _MM_DOWNCONV_PD_NONE, _MM_HINT_NONE);
   _mm512_extpackstorehi_pd((uint8_t*)p+64, v.v1, _MM_DOWNCONV_PD_NONE, _MM_HINT_NONE);
   _mm512_extpackstorelo_pd((uint8_t*)p+64, v.v2, _MM_DOWNCONV_PD_NONE, _MM_HINT_NONE);
   _mm512_extpackstorehi_pd((uint8_t*)p+128, v.v2, _MM_DOWNCONV_PD_NONE, _MM_HINT_NONE);
 }
-
+#if 0
 template <> FORCEINLINE void __store<64>(__vec16_d *p, __vec16_d v) {
   _mm512_store_pd(p, v.v1);
   _mm512_store_pd(((uint8_t*)p)+64, v.v2);
@@ -1423,7 +1439,7 @@ template <> FORCEINLINE void __store<64>(__vec16_d *p, __vec16_d v) {
 template <> FORCEINLINE void __store<128>(__vec16_d *p, __vec16_d v) {
   __store<64>(p, v);
 }
-
+#endif
 ///////////////////////////////////////////////////////////////////////////
 // casts
 ///////////////////////////////////////////////////////////////////////////
@@ -1737,7 +1753,7 @@ static FORCEINLINE int64_t __count_trailing_zeros_i64(const __vec1_i64 mask) {
 // reductions
 ///////////////////////////////////////////////////////////////////////////
 
-static FORCEINLINE int16_t __reduce_add_i8(__vec16_i8 v) {
+static FORCEINLINE int16_t __reduce_add_int8(__vec16_i8 v) {
   // TODO: improve this!
   int16_t ret = 0;
   for (int i = 0; i < 16; ++i)
@@ -1745,7 +1761,7 @@ static FORCEINLINE int16_t __reduce_add_i8(__vec16_i8 v) {
   return ret;
 }
 
-static FORCEINLINE int32_t __reduce_add_i16(__vec16_i16 v) {
+static FORCEINLINE int32_t __reduce_add_int16(__vec16_i16 v) {
   // TODO: improve this!
   int32_t ret = 0;
   for (int i = 0; i < 16; ++i)
@@ -1753,15 +1769,15 @@ static FORCEINLINE int32_t __reduce_add_i16(__vec16_i16 v) {
   return ret;
 }
 
-static FORCEINLINE uint32_t __reduce_add_i32(__vec16_i32 v) {
+static FORCEINLINE uint32_t __reduce_add_int32(__vec16_i32 v) {
   return _mm512_reduce_add_epi32(v);
 }
 
-static FORCEINLINE uint32_t __reduce_min_i32(__vec16_i32 v) {
+static FORCEINLINE uint32_t __reduce_min_int32(__vec16_i32 v) {
   return _mm512_reduce_min_epi32(v);
 }
 
-static FORCEINLINE uint32_t __reduce_max_i32(__vec16_i32 v) {
+static FORCEINLINE uint32_t __reduce_max_int32(__vec16_i32 v) {
   return _mm512_reduce_max_epi32(v);
 }
 
