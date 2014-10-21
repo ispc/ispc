@@ -675,9 +675,11 @@ template <int ALIGN> static FORCEINLINE __vec16_i32 __load(const __vec16_i32 *p)
 #endif
 }
 
+#if 0
 template <> FORCEINLINE __vec16_i32 __load<64>(const __vec16_i32 *p) {
   return _mm512_load_epi32(p);
 }
+#endif
 
 template <int ALIGN> static FORCEINLINE void __store(__vec16_i32 *p, __vec16_i32 v) {
 #ifdef ISPC_FORCE_ALIGNED_MEMORY
@@ -688,9 +690,11 @@ template <int ALIGN> static FORCEINLINE void __store(__vec16_i32 *p, __vec16_i32
 #endif
 }
 
+#if 0
 template <> FORCEINLINE void __store<64>(__vec16_i32 *p, __vec16_i32 v) {
   _mm512_store_epi32(p, v);
 }
+#endif
 
 ///////////////////////////////////////////////////////////////////////////
 // int64
@@ -912,6 +916,7 @@ template <int ALIGN> static FORCEINLINE __vec16_i64 __load(const __vec16_i64 *p)
   return ret;    
 }
 
+#if 0
 template <> FORCEINLINE __vec16_i64 __load<64>(const __vec16_i64 *p) {
   __m512i v2 = _mm512_load_epi32(p);
   __m512i v1 = _mm512_load_epi32(((uint8_t*)p)+64);
@@ -934,6 +939,7 @@ template <> FORCEINLINE __vec16_i64 __load<64>(const __vec16_i64 *p) {
 template <> FORCEINLINE __vec16_i64 __load<128>(const __vec16_i64 *p) {
   return __load<64>(p);
 }
+#endif
 
 template <int ALIGN> static FORCEINLINE void __store(__vec16_i64 *p, __vec16_i64 v) {
   __m512i v1;
@@ -955,7 +961,7 @@ template <int ALIGN> static FORCEINLINE void __store(__vec16_i64 *p, __vec16_i64
   _mm512_extpackstorelo_epi32((uint8_t*)p+64, v1, _MM_DOWNCONV_EPI32_NONE, _MM_HINT_NONE);
   _mm512_extpackstorehi_epi32((uint8_t*)p+128, v1, _MM_DOWNCONV_EPI32_NONE, _MM_HINT_NONE);
 }
-
+#if 0
 template <> FORCEINLINE void __store<64>(__vec16_i64 *p, __vec16_i64 v) {
   __m512i v1;
   __m512i v2;
@@ -978,7 +984,7 @@ template <> FORCEINLINE void __store<64>(__vec16_i64 *p, __vec16_i64 v) {
 template <> FORCEINLINE void __store<128>(__vec16_i64 *p, __vec16_i64 v) {
   __store<64>(p, v);
 }
-
+#endif
 
 /*! gather vector of 64-bit ints from addresses pointing to uniform ints 
 
@@ -1173,11 +1179,11 @@ template <int ALIGN> static FORCEINLINE __vec16_f __load(const __vec16_f *p) {
   return v;
 #endif
 }
-
+#if 0
 template <> FORCEINLINE __vec16_f __load<64>(const __vec16_f *p) {
   return _mm512_load_ps(p);
 }
-
+#endif
 template <int ALIGN> static FORCEINLINE void __store(__vec16_f *p, __vec16_f v) {
 #ifdef ISPC_FORCE_ALIGNED_MEMORY
   _mm512_store_ps(p, v);
@@ -1186,11 +1192,11 @@ template <int ALIGN> static FORCEINLINE void __store(__vec16_f *p, __vec16_f v) 
   _mm512_extpackstorehi_ps((uint8_t*)p+64, v, _MM_DOWNCONV_PS_NONE, _MM_HINT_NONE);
 #endif
 }
-
+#if 0
 template <> FORCEINLINE void __store<64>(__vec16_f *p, __vec16_f v) {
   _mm512_store_ps(p, v);
 }
-
+#endif
 
 ///////////////////////////////////////////////////////////////////////////
 // double
@@ -1406,7 +1412,7 @@ template <int ALIGN> static FORCEINLINE __vec16_d __load(const __vec16_d *p) {
   ret.v2 = _mm512_extloadunpackhi_pd(ret.v2, (uint8_t*)p+128, _MM_UPCONV_PD_NONE, _MM_HINT_NONE);
   return ret;
 }
-
+#if 0
 template <> FORCEINLINE __vec16_d __load<64>(const __vec16_d *p) {
   __vec16_d ret;
   ret.v1 = _mm512_load_pd(p);
@@ -1417,14 +1423,14 @@ template <> FORCEINLINE __vec16_d __load<64>(const __vec16_d *p) {
 template <> FORCEINLINE __vec16_d __load<128>(const __vec16_d *p) {
   return __load<64>(p);
 }
-
+#endif
 template <int ALIGN> static FORCEINLINE void __store(__vec16_d *p, __vec16_d v) {
   _mm512_extpackstorelo_pd(p, v.v1, _MM_DOWNCONV_PD_NONE, _MM_HINT_NONE);
   _mm512_extpackstorehi_pd((uint8_t*)p+64, v.v1, _MM_DOWNCONV_PD_NONE, _MM_HINT_NONE);
   _mm512_extpackstorelo_pd((uint8_t*)p+64, v.v2, _MM_DOWNCONV_PD_NONE, _MM_HINT_NONE);
   _mm512_extpackstorehi_pd((uint8_t*)p+128, v.v2, _MM_DOWNCONV_PD_NONE, _MM_HINT_NONE);
 }
-
+#if 0
 template <> FORCEINLINE void __store<64>(__vec16_d *p, __vec16_d v) {
   _mm512_store_pd(p, v.v1);
   _mm512_store_pd(((uint8_t*)p)+64, v.v2);
@@ -1433,7 +1439,7 @@ template <> FORCEINLINE void __store<64>(__vec16_d *p, __vec16_d v) {
 template <> FORCEINLINE void __store<128>(__vec16_d *p, __vec16_d v) {
   __store<64>(p, v);
 }
-
+#endif
 ///////////////////////////////////////////////////////////////////////////
 // casts
 ///////////////////////////////////////////////////////////////////////////
