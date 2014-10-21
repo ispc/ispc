@@ -727,7 +727,7 @@ def send_mail(body_header, msg):
 
     attach_mail_file(msg, alloy_build, "alloy_build.log", 100) # build.log is always being sent
     smtp_server = os.environ["SMTP_ISPC"]
-    msg['Subject'] = "ISPC test system results"
+    msg['Subject'] = options.notify_subject
     msg['From'] = "ISPC_test_system"
     msg['To'] = options.notify
     text = MIMEText(body, "", "KOI-8")
@@ -912,6 +912,8 @@ if __name__ == '__main__':
         help='number of performance runs for each test. Default: 5', default=5)
     run_group.add_option('--notify', dest='notify',
         help='email to sent results to', default="")
+    run_group.add_option('--notify-subject', dest='notify_subject',
+        help='set the subject of the notification email, the default is ISPC test system results', default="ISPC test system results")
     run_group.add_option('--update-errors', dest='update',
         help='rewrite fail_db.txt file according to received results (F or FP)', default="")
     run_group.add_option('--only-targets', dest='only_targets',
