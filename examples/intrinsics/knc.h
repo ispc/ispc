@@ -1747,7 +1747,7 @@ static FORCEINLINE int64_t __count_trailing_zeros_i64(const __vec1_i64 mask) {
 // reductions
 ///////////////////////////////////////////////////////////////////////////
 
-static FORCEINLINE int16_t __reduce_add_i8(__vec16_i8 v) {
+static FORCEINLINE int16_t __reduce_add_int8(__vec16_i8 v) {
   // TODO: improve this!
   int16_t ret = 0;
   for (int i = 0; i < 16; ++i)
@@ -1755,7 +1755,7 @@ static FORCEINLINE int16_t __reduce_add_i8(__vec16_i8 v) {
   return ret;
 }
 
-static FORCEINLINE int32_t __reduce_add_i16(__vec16_i16 v) {
+static FORCEINLINE int32_t __reduce_add_int16(__vec16_i16 v) {
   // TODO: improve this!
   int32_t ret = 0;
   for (int i = 0; i < 16; ++i)
@@ -1763,15 +1763,15 @@ static FORCEINLINE int32_t __reduce_add_i16(__vec16_i16 v) {
   return ret;
 }
 
-static FORCEINLINE uint32_t __reduce_add_i32(__vec16_i32 v) {
+static FORCEINLINE uint32_t __reduce_add_int32(__vec16_i32 v) {
   return _mm512_reduce_add_epi32(v);
 }
 
-static FORCEINLINE uint32_t __reduce_min_i32(__vec16_i32 v) {
+static FORCEINLINE uint32_t __reduce_min_int32(__vec16_i32 v) {
   return _mm512_reduce_min_epi32(v);
 }
 
-static FORCEINLINE uint32_t __reduce_max_i32(__vec16_i32 v) {
+static FORCEINLINE uint32_t __reduce_max_int32(__vec16_i32 v) {
   return _mm512_reduce_max_epi32(v);
 }
 
