@@ -28,6 +28,15 @@ void allocator(T **array) {
 
 }
 
+template <typename T>
+bool check_and_print (T a, T b, int err_counter) {
+    bool ret = (a != b);
+
+    if (ret && err_counter < 10) {
+        std::cout << "result: " << a << " expected: " << b << std::endl;
+
+    return ret;
+}
 /////////////////////////////////////////////////////////////////////////////////////////////
 /*
     int8_t copy_data[16];
