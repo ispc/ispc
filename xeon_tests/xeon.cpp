@@ -492,7 +492,6 @@ void reduce_min_int32  (int32_t *i32);
 void reduce_min_uint32 (uint32_t *ui32);
 void reduce_min_int64  (int64_t *i64);
 void reduce_min_uint64 (uint64_t *ui64);
-void reduce_min_i32  (int32_t *i32);
 
 void reduce_max_double (double  *d  );
 void reduce_max_float  (float   *f  );
@@ -500,7 +499,6 @@ void reduce_max_int32  (int32_t *i32);
 void reduce_max_uint32 (uint32_t *ui32);
 void reduce_max_int64  (int64_t *i64);
 void reduce_max_uint64 (uint64_t *ui64);
-void reduce_max_i32  (int32_t *i32);
 
 void popcnt_int32(uint32_t *ui32);
 void popcnt_int64(uint64_t *ui64);
@@ -1272,13 +1270,13 @@ int main () {
     
     reduce_min_double (d_32);
     reduce_min_float  (f_32);
-    reduce_min_i32    (i32);
+    reduce_min_int32  (i32);
     //reduce_min_uint32 (ui32);
     //reduce_min_int64  (i64);
     //reduce_min_uint64 (ui64);
     reduce_max_double (d_32);
     reduce_max_float  (f_32);
-    reduce_max_i32    (i32); 
+    reduce_max_int32  (i32); 
     //reduce_max_uint32 (ui32);
     //reduce_max_int64  (i64);
     //reduce_max_uint64 (ui64);

@@ -1,6 +1,7 @@
 // TODO: change input index in insert/extract
 #define __STDC_LIMIT_MACROS // enable intN_t limits from stdint.h
 #include <stdint.h>
+#include <limits>
 
 #include "knc.h"
 
@@ -28,13 +29,28 @@ void allocator(T **array) {
 
 }
 
+
 template <typename T>
 bool check_and_print (T a, T b, int err_counter) {
     bool ret = (a != b);
-
-    if (ret && err_counter < 10) {
+    if (ret && err_counter < 10)
         std::cout << "result: " << a << " expected: " << b << std::endl;
+    return ret;
+}
 
+template <>
+bool check_and_print <double>(double a, double b, int err_counter) {
+    bool ret = fabs(a - b) > std::numeric_limits<double>::epsilon() * fabs(a);
+    if (ret && err_counter < 10)
+        std::cout << "result: " << a << " expected: " << b << std::endl;
+    return ret;
+}
+
+template <>
+bool check_and_print <float>(float a, float b, int err_counter) {
+    bool ret = fabs(a - b) > std::numeric_limits<float>::epsilon() * fabs(a);
+    if (ret && err_counter < 10)
+        std::cout << "result: " << a << " expected: " << b << std::endl;
     return ret;
 }
 /////////////////////////////////////////////////////////////////////////////////////////////
@@ -88,7 +104,7 @@ void  FUNC_NAME##_##TYPE_MOD(TYPE *a, TYPE *b) {                                
     TYPE result = 0;                                                                        \
     for (uint32_t i = 0; i < 16; i++){                                                      \
         result = (TYPE) (a[i]) OP (TYPE) (b[i]);                                            \
-        if (__extract_element(output, i) != result)                                         \
+        if (check_and_print((TYPE)__extract_element(output, i), (TYPE)result, err_counter)) \
             err_counter++;                                                                  \
     }                                                                                       \
     if (err_counter != 0)                                                                   \
@@ -196,7 +212,8 @@ void  FUNC_NAME##_##TYPE_MOD##_uniform(TYPE *a, int32_t *b) {                   
         output = __##FUNC_NAME(input_a, copy_b[i]);                                         \
         for (uint32_t j = 0; j < 16; j++){                                                  \
             result = (TYPE) (a[j]) OP (b[i]);                                               \
-            if (__extract_element(output, j) != result)                                     \
+            if (check_and_print((TYPE)__extract_element(output, j), (TYPE)result,           \
+                                                                     err_counter))          \
                 err_counter++;                                                              \
         }                                                                                   \
     }                                                                                       \
@@ -241,9 +258,11 @@ void FUNC_NAME(TYPE *data) {                                                    
                                                                                             \
     int err_counter = 0;                                                                    \
     for (uint32_t i = 0; i < 16; i++){                                                      \
-        if (i % 2 == 0 && !__extract_element(output, i) != !(10 OP data[i]))                \
+        if (i % 2 == 0 && check_and_print(!__extract_element(output, i), !(10 OP data[i]),  \
+                                                                         err_counter))      \
             err_counter++;                                                                  \
-        if (i % 2 != 0 &&  !__extract_element(output, i) != !(data[i] OP data[i]))          \
+        if (i % 2 != 0 && check_and_print(!__extract_element(output, i),                    \
+                                          !(data[i] OP data[i]), err_counter))              \
             err_counter++;                                                                  \
     }                                                                                       \
     if (err_counter != 0)                                                                   \
@@ -282,9 +301,11 @@ void FUNC_NAME##_and_mask(TYPE *data, int *m) {                                 
                                                                                             \
     int err_counter = 0;                                                                    \
     for (uint32_t i = 0; i < 16; i++){                                                      \
-        if (m[i] != 0 && i % 2 == 0 && !__extract_element(output, i) != !(10 OP data[i]))   \
+        if (m[i] != 0 && i % 2 == 0 && check_and_print(!__extract_element(output, i),       \
+                                                       !(10 OP data[i]), err_counter))      \
             err_counter++;                                                                  \
-        if (m[i]!=0 && i % 2 != 0 && !__extract_element(output,i) != !(data[i] OP data[i])) \
+        if (m[i]!=0 && i % 2 != 0 && check_and_print(!__extract_element(output, i),         \
+                                                     !(data[i] OP data[i]), err_counter))   \
             err_counter++;                                                                  \
     }                                                                                       \
     if (err_counter != 0)                                                                   \
@@ -379,9 +400,9 @@ void FUNC_NAME(TYPE *data) {                                                    
                                                                                             \
     int err_counter = 0;                                                                    \
     for (uint32_t i = 0; i < 16; i++){                                                      \
-        if (output[i] != data[i])                                                           \
+        if (check_and_print(output[i], data[i], err_counter))                               \
             err_counter++;                                                                  \
-        if (copy_data[i] != data[i])                                                        \
+        if (check_and_print(copy_data[i], data[i], err_counter))                            \
             err_counter++;                                                                  \
     }                                                                                       \
     if (err_counter != 0)                                                                   \
@@ -416,7 +437,7 @@ void FUNC_NAME(TYPE *data) {                                                    
                                                                                             \
     int err_counter = 0;                                                                    \
     for (uint32_t i = 0; i < 16; i++){                                                      \
-        if (__extract_element(output, i) != data[i])                                        \
+        if (check_and_print(__extract_element(output, i), data[i], err_counter))            \
             err_counter++;                                                                  \
     }                                                                                       \
     if (err_counter != 0)                                                                   \
@@ -474,7 +495,7 @@ void FUNC_NAME(TYPE *data) {                                                    
                                                                                             \
     int err_counter = 0;                                                                    \
     for (uint32_t i = 0; i < 16; i++){                                                      \
-        if (__extract_element(output, i) != data[i])                                        \
+        if (check_and_print(__extract_element(output, i), data[i], err_counter))            \
             err_counter++;                                                                  \
     }                                                                                       \
     if (err_counter != 0)                                                                   \
@@ -513,7 +534,7 @@ void store_i64(int64_t *data) {
     
     int err_counter = 0; 
     for (uint32_t i = 0; i < 16; i++){ 
-        if (__extract_element(output, i) != data[i]) 
+        if (check_and_print(__extract_element(output, i), data[i], err_counter)) 
             err_counter++; 
     } 
     if (err_counter != 0) 
@@ -536,7 +557,7 @@ void FUNC_NAME(TYPE *data) {                                                    
     for (uint32_t i = 0; i < 16; i++) {                                                     \
         output = __##FUNC_NAME<VEC_TYPE>(copy_data[i]);                                     \
         for (uint32_t j = 0; j < 16; j++)                                                   \
-            if (__extract_element(output, j) != data[i])                                    \
+            if (check_and_print(__extract_element(output, j), data[i], err_counter))        \
                 err_counter++;                                                              \
     }                                                                                       \
     if (err_counter != 0)                                                                   \
@@ -553,7 +574,7 @@ SMEAR_TEST(int32_t, __vec16_i32, smear_i32   )
 SMEAR_TEST(int64_t, __vec16_i64, smear_i64   )
 
 /////////////////////////////////////////////////////////////////////////////////////////////
-#define SETZERO_TEST(VEC_TYPE, FUNC_NAME)                                                   \
+#define SETZERO_TEST(TYPE, VEC_TYPE, FUNC_NAME)                                             \
 void FUNC_NAME() {                                                                          \
     printf ("%-40s", #FUNC_NAME ":");                                                       \
                                                                                             \
@@ -562,7 +583,7 @@ void FUNC_NAME() {                                                              
                                                                                             \
     int err_counter = 0;                                                                    \
     for (uint32_t i = 0; i < 16; i++) {                                                     \
-        if (__extract_element(output, i) != 0)                                              \
+        if (check_and_print(__extract_element(output, i), (TYPE) 0, err_counter))           \
             err_counter++;                                                                  \
     }                                                                                       \
     if (err_counter != 0)                                                                   \
@@ -571,12 +592,12 @@ void FUNC_NAME() {                                                              
         printf(" no fails\n");                                                              \
 }
 
-SETZERO_TEST(__vec16_d  , setzero_double)
-SETZERO_TEST(__vec16_f  , setzero_float )
-//SETZERO_TEST(__vec16_i8 , setzero_i8    )
-//SETZERO_TEST(__vec16_i16, setzero_i16   )
-SETZERO_TEST(__vec16_i32, setzero_i32   )
-SETZERO_TEST(__vec16_i64, setzero_i64   )
+SETZERO_TEST(double , __vec16_d  , setzero_double)
+SETZERO_TEST(float  , __vec16_f  , setzero_float )
+//SETZERO_TEST(int8_t , __vec16_i8 , setzero_i8    )
+//SETZERO_TEST(int16_t, __vec16_i16, setzero_i16   )
+SETZERO_TEST(int32_t, __vec16_i32, setzero_i32   )
+SETZERO_TEST(int64_t, __vec16_i64, setzero_i64   )
 
 /////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -608,9 +629,11 @@ void FUNC_NAME(TYPE *data, int *m) {                                            
                                                                                             \
     int err_counter = 0;                                                                    \
     for (uint32_t i = 0; i < 16; i++){                                                      \
-        if (m[i] != 0 && __extract_element(output, i) != data[i])                           \
+        if (m[i] != 0 && check_and_print(__extract_element(output, i), data[i],             \
+                                         err_counter))                                      \
             err_counter++;                                                                  \
-        if (m[i] == 0 && __extract_element(output, i) != data[i] / 2)                       \
+        if (m[i] == 0 && check_and_print(__extract_element(output, i), data[i] / 2,         \
+                                        err_counter))                                       \
             err_counter++;                                                                  \
     }                                                                                       \
     if (err_counter != 0)                                                                   \
@@ -642,9 +665,11 @@ void FUNC_NAME##_cond(TYPE *data, int *m) {                                     
     for (uint32_t i = 0; i < 16; i++){                                                      \
         output = __select(copy_m[i], input1, input2);                                       \
         for (uint32_t j = 0; j < 16; j++){                                                  \
-            if (m[i] != 0 && __extract_element(output, j) != (TYPE)data[j])                 \
+            if (m[i] != 0 && check_and_print(__extract_element(output, j),                  \
+                                             (TYPE)data[j], err_counter))                   \
                 err_counter++;                                                              \
-            if (m[i] == 0 && __extract_element(output, j) != (TYPE)(data[j] * -1))          \
+            if (m[i] == 0 && check_and_print(__extract_element(output, j),                  \
+                                            (TYPE)(data[j] * -1), err_counter))             \
                 err_counter++;                                                              \
         }                                                                                   \
     }                                                                                       \
@@ -684,7 +709,7 @@ void FUNC_NAME(TYPE *data) {                                                    
         }                                                                                   \
         output = __##FUNC_NAME(input, -i);                                                  \
         for (int32_t j = 0; j < 16; j++){                                                   \
-        if (__extract_element(output, j) != data[(16 - i) % 16])                            \
+        if (check_and_print(__extract_element(output, j), data[(16 - i) % 16], err_counter))\
             err_counter++;                                                                  \
         }                                                                                   \
     }                                                                                       \
@@ -719,12 +744,14 @@ void FUNC_NAME(TYPE *data) {                                                    
     for (uint32_t i = 0; i < 16; i++){                                                      \
         output = __##FUNC_NAME(input, i);                                                   \
         for (uint32_t j = 0; j < 16; j++){                                                  \
-            if (__extract_element(output, j) != data[(j + i) % 16])                         \
+            if (check_and_print(__extract_element(output, j), data[(j + i) % 16],           \
+                                                              err_counter))                 \
                 err_counter++;                                                              \
         }                                                                                   \
         output = __##FUNC_NAME(input, -i);                                                  \
         for (uint32_t j = 0; j < 16; j++){                                                  \
-            if (__extract_element(output, j) != data[(j - i) % 16])                         \
+            if (check_and_print(__extract_element(output, j), data[(j - i) % 16],           \
+                                                              err_counter))                 \
                 err_counter++;                                                              \
         }                                                                                   \
     }                                                                                       \
@@ -759,17 +786,21 @@ void FUNC_NAME(TYPE *data) {                                                    
     for (uint32_t i = 0; i < 16; i++){                                                      \
         output = __##FUNC_NAME(input, i);                                                   \
         for (uint32_t j = 0; j < 16; j++) {                                                 \
-            if ((j + i >=16 || j + i < 0) && __extract_element(output, j) != 0)             \
+            if ((j + i >=16 || j + i < 0) && check_and_print(__extract_element(output, j),  \
+                                                            (TYPE) 0, err_counter))         \
                 err_counter++;                                                              \
-            if (j + i < 16 && __extract_element(output, j) != data[i + j])                  \
+            if (j + i < 16 && check_and_print(__extract_element(output, j),                 \
+                                             (TYPE) data[i + j], err_counter))              \
                 err_counter++;                                                              \
         }                                                                                   \
                                                                                             \
         output = __##FUNC_NAME(input, -i);                                                  \
         for (uint32_t j = 0; j < 16; j++) {                                                 \
-            if ((j - i >=16 || j - i < 0) && __extract_element(output, j) != 0)             \
+            if ((j - i >=16 || j - i < 0) && check_and_print(__extract_element(output, j),  \
+                                                             (TYPE) 0, err_counter))        \
                 err_counter++;                                                              \
-            if (j - i < 16 && __extract_element(output, j) != data[j - i])                  \
+            if (j - i < 16 && check_and_print(__extract_element(output, j),                 \
+                                             (TYPE) data[j - i], err_counter))              \
                 err_counter++;                                                              \
         }                                                                                   \
     }                                                                                       \
@@ -818,18 +849,22 @@ void FUNC_NAME(TYPE *data) {                                                    
                                                                                             \
     int err_counter = 0;                                                                    \
     for (uint32_t i = 0; i < 8; i++){                                                       \
-        if (i % 2 == 0 && __extract_element(output, i) != data[8 + i / 2])                  \
+        if (i % 2 == 0 && check_and_print(__extract_element(output, i),                     \
+                                          (TYPE)data[8 + i / 2], err_counter))              \
             err_counter++;                                                                  \
-        if(i % 2 != 0 && __extract_element(output, i) != data[12 + (i - 1) / 2])            \
+        if(i % 2 != 0 && check_and_print(__extract_element(output, i),                      \
+                                        (TYPE)data[12 + (i - 1) / 2], err_counter))         \
             err_counter++;                                                                  \
     }                                                                                       \
                                                                                             \
     for (uint32_t i = 8; i < 12; i++)                                                       \
-        if (__extract_element(output, i) != data[i - 8])                                    \
+        if (check_and_print(__extract_element(output, i), (TYPE) data[i - 8],               \
+                                                           err_counter))                    \
             err_counter++;                                                                  \
                                                                                             \
     for (uint32_t i = 12; i < 16; i++)                                                      \
-        if (__extract_element(output, i) != data[19 - i])                                   \
+        if (check_and_print(__extract_element(output, i), (TYPE) data[19 - i],              \
+                                                          err_counter))                     \
             err_counter++;                                                                  \
                                                                                             \
     if (err_counter != 0)                                                                   \
@@ -863,7 +898,7 @@ void FUNC_NAME(FROM *data) {                                                    
                                                                                             \
     int err_counter = 0;                                                                    \
     for (uint32_t i = 0; i < 16; i++){                                                      \
-        if (!(TO)__extract_element(output, i) != !(TO)data[i])                              \
+        if (check_and_print(!(TO)__extract_element(output, i), !(TO)data[i], err_counter))  \
             err_counter++;                                                                  \
     }                                                                                       \
     if (err_counter != 0)                                                                   \
@@ -973,7 +1008,8 @@ void FUNC_NAME(FROM *data) {                                                    
           (!isnan(__extract_element(output, i)) != !isnan(__extract_element(result, i))))   \
              err_counter++;                                                                 \
         if(!isnan(__extract_element(output, i)) && !isnan(__extract_element(result, i)) &&  \
-          (__extract_element(output, i) != __extract_element(result, i)))                   \
+          (check_and_print(__extract_element(output, i), __extract_element(result, i),      \
+                                                         err_counter)))                     \
              err_counter++;                                                                 \
     }                                                                                       \
     if (err_counter != 0)                                                                   \
@@ -1009,7 +1045,8 @@ void FUNC_NAME(FROM *data) {                                                    
         u.from = data[i];                                                                   \
         if ((isnan(output) || isnan(u.to)) && (!isnan(output) != !isnan(u.to)))             \
             err_counter++;                                                                  \
-        if (!isnan(output) && !isnan(u.to) && output != (TO) u.to)                          \
+        if (!isnan(output) && !isnan(u.to) &&                                               \
+            check_and_print(output, (TO) u.to, err_counter))                                \
             err_counter++;                                                                  \
     }                                                                                       \
     if (err_counter != 0)                                                                   \
@@ -1058,7 +1095,8 @@ void FUNC_NAME(TYPE *data, int *m) {                                            
                                                                                             \
     int err_counter = 0;                                                                    \
     for (uint32_t i = 0; i < 16; i++){                                                      \
-        if (m[i] != 0 && __extract_element(output, i) != data[i])                           \
+        if (m[i] != 0 &&                                                                    \
+            check_and_print(__extract_element(output, i), data[i], err_counter))            \
             err_counter++;                                                                  \
     }                                                                                       \
     if (err_counter != 0)                                                                   \
@@ -1117,7 +1155,8 @@ void FUNC_NAME(TYPE *data, int *m) {                                            
                                                                                             \
     int err_counter = 0;                                                                    \
     for (uint32_t i = 0; i < 16; i++){                                                      \
-        if (m[i] != 0 && __extract_element(output, i) != data[i])                           \
+        if (m[i] != 0 &&                                                                    \
+            check_and_print(__extract_element(output, i), data[i], err_counter))            \
             err_counter++;                                                                  \
     }                                                                                       \
                                                                                             \
@@ -1175,7 +1214,8 @@ void FUNC_NAME(TYPE *data, int *m) {                                            
     int err_counter = 0;                                                                    \
     for (uint32_t i = 0; i < 16; i++){                                                      \
         TYPE *p =  (TYPE*) __extract_element(ptrs, i);                                      \
-        if (m[i] != 0 && *p  != data[i])                                                    \
+        if (m[i] != 0 &&                                                                    \
+            check_and_print(*p, data[i], err_counter))                                      \
             err_counter++;                                                                  \
     }                                                                                       \
                                                                                             \
@@ -1233,7 +1273,8 @@ void FUNC_NAME(TYPE *data, int *m) {                                            
                                                                                             \
     int err_counter = 0;                                                                    \
     for (uint32_t i = 0; i < 16; i++){                                                      \
-        if (m[i] != 0 && *b[i] != data[i])                                                  \
+        if (m[i] != 0 &&                                                                    \
+            check_and_print(*b[i], data[i], err_counter))                                   \
             err_counter++;                                                                  \
     }                                                                                       \
                                                                                             \
@@ -1289,7 +1330,8 @@ void FUNC_NAME(TYPE *data, int *m) {                                            
                                                                                             \
     int err_counter = 0;                                                                    \
     for (uint32_t i = 0; i < 16; i++){                                                      \
-        if (m[i] != 0 && __extract_element(output, i) != data[i])                           \
+        if (m[i] != 0 &&                                                                    \
+            check_and_print(__extract_element(output, i), data[i], err_counter))            \
             err_counter++;                                                                  \
     }                                                                                       \
                                                                                             \
@@ -1333,7 +1375,8 @@ void FUNC_NAME(TYPE *data, int *m) {                                            
                                                                                             \
     int err_counter = 0;                                                                    \
     for (uint32_t i = 0; i < 16; i++){                                                      \
-        if (m[i] != 0 && ptrs[i] != data[i])                                                \
+                         /* Cause segfault on icpc -O2 and icpc -O3 */                      \
+        if (m[i] != 0 && check_and_print(ptrs[i], data[i], err_counter))                    \
             err_counter++;                                                                  \
     }                                                                                       \
                                                                                             \
@@ -1377,7 +1420,7 @@ void FUNC_NAME(TYPE *data) {                                                    
     for (uint32_t i = 0; i < 16; i++)                                                       \
         result += (TYPE) data[i];                                                           \
                                                                                             \
-    if ((TYPE) output != (TYPE) result)                                                     \
+    if (check_and_print((TYPE) output, (TYPE) result, 0))                                   \
         printf(" errors 1\n");                                                              \
     else                                                                                    \
         printf(" no fails\n");                                                              \
@@ -1405,7 +1448,7 @@ void FUNC_NAME(TYPE *data) {                                                    
                                                                                             \
     TYPE output;                                                                            \
     output = __##FUNC_NAME(input);                                                          \
-    if ((TYPE) output != (TYPE) data[RES_NUM])                                              \
+    if (check_and_print((TYPE) output, (TYPE) data[RES_NUM], 0))                            \
         printf(" errors 1\n");                                                              \
     else                                                                                    \
         printf(" no fails\n");                                                              \
@@ -1413,13 +1456,13 @@ void FUNC_NAME(TYPE *data) {                                                    
 
 REDUCE_MINMAX_TEST(double  , __vec16_d  , 1, reduce_min_double)
 REDUCE_MINMAX_TEST(float   , __vec16_f  , 1, reduce_min_float)
-REDUCE_MINMAX_TEST(int32_t , __vec16_i32, 1, reduce_min_i32)
+REDUCE_MINMAX_TEST(int32_t , __vec16_i32, 1, reduce_min_int32)
 //REDUCE_MINMAX_TEST(uint32_t, __vec16_i32, 1, reduce_min_uint32)
 //REDUCE_MINMAX_TEST(int64_t , __vec16_i64, 1, reduce_min_int64)
 //REDUCE_MINMAX_TEST(uint64_t, __vec16_i64, 1, reduce_min_uint64)
 REDUCE_MINMAX_TEST(double  , __vec16_d  , 0, reduce_max_double)
 REDUCE_MINMAX_TEST(float   , __vec16_f  , 0, reduce_max_float)
-REDUCE_MINMAX_TEST(int32_t , __vec16_i32, 0, reduce_max_i32)
+REDUCE_MINMAX_TEST(int32_t , __vec16_i32, 0, reduce_max_int32)
 //REDUCE_MINMAX_TEST(uint32_t, __vec16_i32, 0, reduce_max_uint32)
 //REDUCE_MINMAX_TEST(int64_t , __vec16_i64, 0, reduce_max_int64)
 //REDUCE_MINMAX_TEST(uint64_t, __vec16_i64, 0, reduce_max_uint64)
@@ -1441,7 +1484,7 @@ void FUNC_NAME(TYPE *data) {                                                    
         result = 0;                                                                         \
         for (result = 0; copy_data[i] != 0; result++)                                       \
              copy_data[i] &= copy_data[i] - 1;                                              \
-        if (output != result)                                                               \
+        if (check_and_print(output, result, err_counter))                                   \
             err_counter++;                                                                  \
     }                                                                                       \
     if (err_counter != 0)                                                                   \
@@ -1475,7 +1518,7 @@ void FUNC_NAME(TYPE *data) {                                                    
             }                                                                               \
         if (data[i] == 0)                                                                   \
             result = BIT_NUM;                                                               \
-        if (output != result)                                                               \
+        if (check_and_print(output, result, err_counter))                                   \
             err_counter++;                                                                  \
     }                                                                                       \
     if (err_counter != 0)                                                                   \
@@ -1509,7 +1552,7 @@ void FUNC_NAME(TYPE *data) {                                                    
             }                                                                               \
         if (data[i] == 0)                                                                   \
             result = 32;                                                                    \
-        if (output != result)                                                               \
+        if (check_and_print(output, result, err_counter))                                   \
             err_counter++;                                                                  \
     }                                                                                       \
     if (err_counter != 0)                                                                   \
@@ -1540,7 +1583,7 @@ void movmsk(int *m) {
     __vec16_i1 output;
     output = __movmsk(copy_mask);
 
-    if (output != mask)
+    if (check_and_print(output, mask, 0))
         printf(" error 1\n");
     else
         printf(" no fails\n");
