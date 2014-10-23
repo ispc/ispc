@@ -3,6 +3,29 @@
 
 #define __STDC_LIMIT_MACROS // enable intN_t limits from stdint.h
 #include <stdint.h>
+#include <limits>
+
+#include "knc.h"
+
+void test_gather_scatter();
+void test_masked_load_store();
+void test_insert_extract();
+void test_load_store();
+void test_smear();
+void test_setzero();
+void test_select();
+void test_broadcast();
+void test_rotate();
+void test_shift();
+void test_shuffle();
+void test_cast();
+void test_binary_op();
+void test_cmp();
+void test_cast_bits();
+void test_reduce();
+void test_popcnt();
+void test_count_zeros();
+void test_other();
 
 struct InputData {
     int      mask [16];
@@ -63,5 +86,54 @@ struct InputData {
    
     InputData(); 
 };
+
+template <typename T>
+void allocator(T **array) {
+    uint64_t seed = 123456789;
+    int m = 100;
+    int a = 1103515245;
+    int c = 12345;
+    T* tmp[4];
+    seed = (a * seed + c) % m;
+    void* tmp1 = (void*) malloc(seed);
+
+    for (int j = 0; j < 4; j++) {
+        for (int i = 4 * j; i < 4 * (j + 1); i++)
+            array[i] = (T*) malloc(sizeof(T));
+        seed = (a * seed + c) % m;
+        tmp[j] = (T*) malloc(seed * sizeof(T));
+    }
+
+    for (int j = 0; j < 4; j++)
+        free(tmp[j]);
+
+    free(tmp1);
+
+}
+
+
+template <typename T>
+bool check_and_print (T a, T b, int err_counter) {
+    bool ret = (a != b);
+    if (ret && err_counter < 10)
+        std::cout << "result: " << a << " expected: " << b << std::endl;
+    return ret;
+}
+
+template <>
+bool check_and_print <double>(double a, double b, int err_counter) {
+    bool ret = fabs(a - b) > std::numeric_limits<double>::epsilon() * fabs(a);
+    if (ret && err_counter < 10)
+        std::cout << "result: " << a << " expected: " << b << std::endl;
+    return ret;
+}
+
+template <>
+bool check_and_print <float>(float a, float b, int err_counter) {
+    bool ret = fabs(a - b) > std::numeric_limits<float>::epsilon() * fabs(a);
+    if (ret && err_counter < 10)
+        std::cout << "result: " << a << " expected: " << b << std::endl;
+    return ret;
+}
 
 #endif
