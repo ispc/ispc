@@ -883,7 +883,7 @@ AddBitcodeToModule(const unsigned char *bitcode, int length,
                                       &linkError))
             Error(SourcePos(), "Error linking stdlib bitcode: %s", linkError.c_str());
 #else // LLVM 3.6+
-            ))
+            )) {}
 #endif
         lSetInternalFunctions(module);
         if (symbolTable != NULL)
