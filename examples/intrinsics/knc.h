@@ -1642,29 +1642,17 @@ static FORCEINLINE int64_t __max_uniform_int64(int64_t a, int64_t b) { return (a
 static FORCEINLINE int64_t __min_uniform_uint64(uint64_t a, uint64_t b) { return (a<b) ? a : b; }
 static FORCEINLINE int64_t __max_uniform_uint64(uint64_t a, uint64_t b) { return (a>b) ? a : b; }
 
-static FORCEINLINE __vec16_f __max_varying_float(__vec16_f v1, __vec16_f v2) {
-  return _mm512_gmax_ps(v1, v2);
-}
+static FORCEINLINE __vec16_f __max_varying_float (__vec16_f v1, __vec16_f v2) { return _mm512_gmax_ps(v1, v2); }
+static FORCEINLINE __vec16_f __min_varying_float (__vec16_f v1, __vec16_f v2) { return _mm512_gmin_ps(v1, v2); }
+static FORCEINLINE __vec16_d __max_varying_double(__vec16_d v1, __vec16_d v2) { return __vec16_d(_mm512_gmax_pd(v1.v1, v2.v1), _mm512_gmax_pd(v1.v2,v2.v2)); }
+static FORCEINLINE __vec16_d __min_varying_double(__vec16_d v1, __vec16_d v2) { return __vec16_d(_mm512_gmin_pd(v1.v1, v2.v1), _mm512_gmin_pd(v1.v2,v2.v2)); }
 
-static FORCEINLINE __vec16_f __min_varying_float(__vec16_f v1, __vec16_f v2) {
-  return _mm512_gmin_ps(v1, v2);
-}
+static FORCEINLINE __vec16_i32 __max_varying_int32 (__vec16_i32 v1, __vec16_i32 v2) { return _mm512_max_epi32(v1, v2); }
+static FORCEINLINE __vec16_i32 __min_varying_int32 (__vec16_i32 v1, __vec16_i32 v2) { return _mm512_min_epi32(v1, v2); }
+static FORCEINLINE __vec16_i32 __max_varying_uint32(__vec16_i32 v1, __vec16_i32 v2) { return _mm512_max_epu32(v1, v2); }
+static FORCEINLINE __vec16_i32 __min_varying_uint32(__vec16_i32 v1, __vec16_i32 v2) { return _mm512_min_epu32(v1, v2); }
 
-static FORCEINLINE __vec16_i32 __max_varying_int32(__vec16_i32 v1, __vec16_i32 v2) {
-  return _mm512_max_epi32(v1, v2);
-}
 
-static FORCEINLINE __vec16_i32 __min_varying_int32(__vec16_i32 v1, __vec16_i32 v2) {
-  return _mm512_min_epi32(v1, v2);
-}
-
-static FORCEINLINE __vec16_i32 __max_varying_uint32(__vec16_i32 v1, __vec16_i32 v2) {
-  return _mm512_max_epu32(v1, v2);
-}
-
-static FORCEINLINE __vec16_i32 __min_varying_uint32(__vec16_i32 v1, __vec16_i32 v2) {
-  return _mm512_min_epu32(v1, v2);
-}
 
 // sqrt/rsqrt/rcp
 
