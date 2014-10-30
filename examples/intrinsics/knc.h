@@ -236,7 +236,6 @@ PRE_ALIGN(16) struct __vec16_i8   : public vec16<int8_t> {
 
 PRE_ALIGN(32) struct __vec16_i16  : public vec16<int16_t> { 
   FORCEINLINE __vec16_i16() { }
-  FORCEINLINE __vec16_i16(const __vec16_i16 &o);
   FORCEINLINE __vec16_i16& operator =(const __vec16_i16 &o);
   FORCEINLINE __vec16_i16(int16_t v0,  int16_t v1,  int16_t v2,  int16_t v3, 
                           int16_t v4,  int16_t v5,  int16_t v6,  int16_t v7,
@@ -279,6 +278,16 @@ inline std::ostream &operator<<(std::ostream &out, const __vec16_i8 &v)
     out << (i?",":"") << std::dec << std::setw(8) << (int)((unsigned char*)&v)[i] << std::dec;
   // out << (i?",":"") << std::hex << std::setw(8) << ((int*)&v)[i] << std::dec;
 
+  out << "]" << std::flush;
+  return out;
+}
+
+inline std::ostream &operator<<(std::ostream &out, const __vec16_d &v)
+{
+  out << "[";
+  for (int i=0;i<16;i++) {
+    out << (i?",":"") << (v[i]);
+  }  
   out << "]" << std::flush;
   return out;
 }
@@ -1506,23 +1515,147 @@ static FORCEINLINE __vec16_d __cast_sitofp(__vec16_d, __vec16_i32 val) {
   return ret;
 }
 
+static FORCEINLINE __vec16_f __cast_uitofp(__vec16_f, __vec16_i1 v) 
+{
+  const __m512 ret = _mm512_setzero_ps();
+  const __m512 one = _mm512_set1_ps(1.0);
+  return _mm512_mask_mov_ps(ret, v, one);
+}
+
 static FORCEINLINE __vec16_f __cast_uitofp(__vec16_f, const __vec16_i8 &v) {
-  return _mm512_extload_ps(v.v,_MM_UPCONV_PS_UINT8,_MM_BROADCAST32_NONE,_MM_HINT_NONE);
+  return _mm512_extload_ps(v.v, _MM_UPCONV_PS_UINT8, _MM_BROADCAST32_NONE, _MM_HINT_NONE);
+}
+
+static FORCEINLINE __vec16_f __cast_uitofp(__vec16_f, __vec16_i16 val) {
+  return _mm512_extload_ps(&val, _MM_UPCONV_PS_UINT16, _MM_BROADCAST_16X16, _MM_HINT_NONE);
 }
 
 static FORCEINLINE __vec16_f __cast_uitofp(__vec16_f, __vec16_i32 v) {
-  return _mm512_cvtfxpnt_round_adjustepu32_ps(v, _MM_FROUND_NO_EXC,_MM_EXPADJ_NONE); 
+  return _mm512_cvtfxpnt_round_adjustepu32_ps(v, _MM_FROUND_NO_EXC, _MM_EXPADJ_NONE); 
 }
 
-// float/double to signed int
+static FORCEINLINE __vec16_d __cast_uitofp(__vec16_d, __vec16_i8 val) 
+{
+  __vec16_i32 vi = _mm512_extload_epi32(&val, _MM_UPCONV_EPI32_UINT8, _MM_BROADCAST_16X16, _MM_HINT_NONE);
+  __vec16_d ret;
+  ret.v1 = _mm512_cvtepu32lo_pd(vi);
+  __vec16_i32 other8 = _mm512_permute4f128_epi32(vi, _MM_PERM_DCDC);
+  ret.v2 = _mm512_cvtepu32lo_pd(other8);
+  return ret;
+}
 
+static FORCEINLINE __vec16_d __cast_uitofp(__vec16_d, __vec16_i16 val) 
+{
+  __vec16_i32 vi = _mm512_extload_epi32(&val, _MM_UPCONV_EPI32_UINT16, _MM_BROADCAST_16X16, _MM_HINT_NONE);
+  __vec16_d ret;
+  ret.v1 = _mm512_cvtepu32lo_pd(vi);
+  __vec16_i32 other8 = _mm512_permute4f128_epi32(vi, _MM_PERM_DCDC);
+  ret.v2 = _mm512_cvtepu32lo_pd(other8);
+  return ret;
+}
+
+static FORCEINLINE __vec16_d __cast_uitofp(__vec16_d, __vec16_i32 val) 
+{
+  __vec16_d ret;
+  ret.v1 = _mm512_cvtepu32lo_pd(val);
+  __vec16_i32 other8 = _mm512_permute4f128_epi32(val, _MM_PERM_DCDC);
+  ret.v2 = _mm512_cvtepu32lo_pd(other8);
+  return ret;
+}
+
+
+
+
+
+// float/double to signed int
 static FORCEINLINE __vec16_i32 __cast_fptosi(__vec16_i32, __vec16_f val) {
   return _mm512_cvtfxpnt_round_adjustps_epi32(val, _MM_ROUND_MODE_TOWARD_ZERO, _MM_EXPADJ_NONE);
 }
 
+static FORCEINLINE __vec16_i8 __cast_fptosi(__vec16_i8, __vec16_f val) {
+  __vec16_i8 ret;
+  __vec16_i32 tmp = __cast_fptosi(__vec16_i32(), val);
+  _mm512_extstore_epi32(ret.v, tmp, _MM_DOWNCONV_EPI32_SINT8, _MM_HINT_NONE);
+  return ret;
+}
+
+static FORCEINLINE __vec16_i16 __cast_fptosi(__vec16_i16, __vec16_f val) {
+  __vec16_i16 ret;
+  __vec16_i32 tmp = __cast_fptosi(__vec16_i32(), val);
+  _mm512_extstore_epi32(ret.v, tmp, _MM_DOWNCONV_EPI32_SINT16, _MM_HINT_NONE);
+  return ret;
+}
+
+static FORCEINLINE __vec16_i32 __cast_fptosi(__vec16_i32, __vec16_d val) { 
+  __vec16_i32 tmp = _mm512_cvtfxpnt_roundpd_epi32lo(val.v2, _MM_ROUND_MODE_TOWARD_ZERO);
+  __vec16_i32 ret_hi8 = _mm512_permute4f128_epi32(tmp, _MM_PERM_BADC);
+  __vec16_i32 ret_lo8 = _mm512_cvtfxpnt_roundpd_epi32lo(val.v1, _MM_ROUND_MODE_TOWARD_ZERO);
+  return _mm512_xor_epi32(ret_lo8, ret_hi8);
+}
+
+static FORCEINLINE __vec16_i8 __cast_fptosi(__vec16_i8, __vec16_d val) {
+  __vec16_i8 ret;
+  __vec16_i32 tmp = __cast_fptosi(__vec16_i32(), val);
+  _mm512_extstore_epi32(ret.v, tmp, _MM_DOWNCONV_EPI32_SINT8, _MM_HINT_NONE);
+  return ret;
+}
+
+static FORCEINLINE __vec16_i16 __cast_fptosi(__vec16_i16, __vec16_d val) {
+  __vec16_i16 ret;
+  __vec16_i32 tmp = __cast_fptosi(__vec16_i32(), val);
+  _mm512_extstore_epi32(ret.v, tmp, _MM_DOWNCONV_EPI32_SINT16, _MM_HINT_NONE);
+  return ret;
+}
+
+
+
+
 static FORCEINLINE __vec16_i32 __cast_fptoui(__vec16_i32, __vec16_f val) {
   return _mm512_cvtfxpnt_round_adjustps_epu32(val, _MM_ROUND_MODE_TOWARD_ZERO, _MM_EXPADJ_NONE);
 }
+
+static FORCEINLINE __vec16_i8 __cast_fptoui(__vec16_i8, __vec16_f val) {
+  __vec16_i8 ret;
+  __vec16_i32 tmp = __cast_fptoui(__vec16_i32(), val);
+  _mm512_extstore_epi32(ret.v, tmp, _MM_DOWNCONV_EPI32_UINT8, _MM_HINT_NONE);
+  return ret;
+}
+
+static FORCEINLINE __vec16_i16 __cast_fptoui(__vec16_i16, __vec16_f val) {
+  __vec16_i16 ret;
+  __vec16_i32 tmp = __cast_fptoui(__vec16_i32(), val);
+  _mm512_extstore_epi32(ret.v, tmp, _MM_DOWNCONV_EPI32_UINT16, _MM_HINT_NONE);
+  return ret;
+}
+
+static FORCEINLINE __vec16_i32 __cast_fptoui(__vec16_i32, __vec16_d val) {
+  __vec16_i32 tmp = _mm512_cvtfxpnt_roundpd_epu32lo(val.v2, _MM_ROUND_MODE_TOWARD_ZERO);
+  __vec16_i32 ret_hi8 = _mm512_permute4f128_epi32(tmp, _MM_PERM_BADC);
+  __vec16_i32 ret_lo8 = _mm512_cvtfxpnt_roundpd_epu32lo(val.v1, _MM_ROUND_MODE_TOWARD_ZERO);
+  return _mm512_xor_epi32(ret_lo8, ret_hi8);
+}
+
+static FORCEINLINE __vec16_i8 __cast_fptoui(__vec16_i8, __vec16_d val) {
+  __vec16_i8 ret;
+  __vec16_i32 tmp = __cast_fptoui(__vec16_i32(), val);
+  _mm512_extstore_epi32(ret.v, tmp, _MM_DOWNCONV_EPI32_UINT8, _MM_HINT_NONE);
+  return ret;
+}
+
+static FORCEINLINE __vec16_i16 __cast_fptoui(__vec16_i16, __vec16_d val) {
+  __vec16_i16 ret;
+  __vec16_i32 tmp = __cast_fptoui(__vec16_i32(), val);
+  _mm512_extstore_epi32(ret.v, tmp, _MM_DOWNCONV_EPI32_UINT16, _MM_HINT_NONE);
+  return ret;
+}
+
+
+
+
+
+
+
+
 
 static FORCEINLINE __vec16_d __cast_fpext(__vec16_d, __vec16_f val) {
   __vec16_d ret;
@@ -1847,6 +1980,8 @@ static FORCEINLINE __vec16_d __masked_load_double(void *p, __vec16_i1 mask) {
 
 static FORCEINLINE void __masked_store_i8(void *p, const __vec16_i8 &val, __vec16_i1 mask) { 
   __vec16_i32 tmp = _mm512_extload_epi32(&val, _MM_UPCONV_EPI32_SINT8, _MM_BROADCAST32_NONE, _MM_HINT_NONE);
+  std::cout << (unsigned long long int)p << "\n";
+  exit(0);
   _mm512_mask_extstore_epi32(p, mask, tmp, _MM_DOWNCONV_EPI32_SINT8,_MM_HINT_NONE);
 }
 
