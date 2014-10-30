@@ -103,6 +103,9 @@
 #include <llvm/Analysis/Passes.h>
 #include <llvm/Support/raw_ostream.h>
 #include <llvm/Support/Dwarf.h>
+#if !defined(LLVM_3_2) && !defined(LLVM_3_5) && !defined(LLVM_3_4) && !defined(LLVM_3_5)
+  #include <llvm/IR/IntrinsicInst.h>
+#endif
 #ifdef ISPC_IS_LINUX
   #include <alloca.h>
 #elif defined(ISPC_IS_WINDOWS)

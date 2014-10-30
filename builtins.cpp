@@ -877,10 +877,14 @@ AddBitcodeToModule(const unsigned char *bitcode, int length,
         bcModule->setDataLayout(module->getDataLayout());
 
         std::string(linkError);
-        if (llvm::Linker::LinkModules(module, bcModule,
-                                      llvm::Linker::DestroySource,
+        if (llvm::Linker::LinkModules(module, bcModule
+#if defined(LLVM_3_2) || defined(LLVM_3_3) || defined(LLVM_3_4) || defined(LLVM_3_5) 
+                                      , llvm::Linker::DestroySource,
                                       &linkError))
             Error(SourcePos(), "Error linking stdlib bitcode: %s", linkError.c_str());
+#else // LLVM 3.6+
+            )) {}
+#endif
         lSetInternalFunctions(module);
         if (symbolTable != NULL)
             lAddModuleSymbols(module, symbolTable);
