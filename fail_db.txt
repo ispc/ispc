@@ -642,7 +642,6 @@
 ./tests/scatter-int16-1.ispc compfail  x86-64            knc   Linux LLVM 3.4   icpc15.0 -O2 *
 ./tests/scatter-int16.ispc compfail  x86-64            knc   Linux LLVM 3.4   icpc15.0 -O2 *
 ./tests/scatter-int8-1.ispc compfail  x86-64            knc   Linux LLVM 3.4   icpc15.0 -O2 *
-./tests/scatter-int8.ispc compfail  x86-64            knc   Linux LLVM 3.4   icpc15.0 -O2 *
 ./tests/shift-2.ispc compfail  x86-64            knc   Linux LLVM 3.4   icpc15.0 -O2 *
 ./tests/shuffle-3.ispc compfail  x86-64            knc   Linux LLVM 3.4   icpc15.0 -O2 *
 ./tests/shuffle-4.ispc compfail  x86-64            knc   Linux LLVM 3.4   icpc15.0 -O2 *
@@ -839,7 +838,6 @@
 ./tests/scatter-int16-1.ispc compfail  x86-64            knc   Linux LLVM 3.4   icpc15.0 -O0 *
 ./tests/scatter-int16.ispc compfail  x86-64            knc   Linux LLVM 3.4   icpc15.0 -O0 *
 ./tests/scatter-int8-1.ispc compfail  x86-64            knc   Linux LLVM 3.4   icpc15.0 -O0 *
-./tests/scatter-int8.ispc compfail  x86-64            knc   Linux LLVM 3.4   icpc15.0 -O0 *
 ./tests/shift-1.ispc compfail  x86-64            knc   Linux LLVM 3.4   icpc15.0 -O0 *
 ./tests/shift-2.ispc compfail  x86-64            knc   Linux LLVM 3.4   icpc15.0 -O0 *
 ./tests/shift-3.ispc compfail  x86-64            knc   Linux LLVM 3.4   icpc15.0 -O0 *
@@ -1017,7 +1015,6 @@
 ./tests/scatter-int16-1.ispc compfail  x86-64            knc   Linux LLVM 3.5   icpc15.0 -O2 *
 ./tests/scatter-int16.ispc compfail  x86-64            knc   Linux LLVM 3.5   icpc15.0 -O2 *
 ./tests/scatter-int8-1.ispc compfail  x86-64            knc   Linux LLVM 3.5   icpc15.0 -O2 *
-./tests/scatter-int8.ispc compfail  x86-64            knc   Linux LLVM 3.5   icpc15.0 -O2 *
 ./tests/shift-2.ispc compfail  x86-64            knc   Linux LLVM 3.5   icpc15.0 -O2 *
 ./tests/shuffle-3.ispc compfail  x86-64            knc   Linux LLVM 3.5   icpc15.0 -O2 *
 ./tests/shuffle-4.ispc compfail  x86-64            knc   Linux LLVM 3.5   icpc15.0 -O2 *
@@ -1217,7 +1214,6 @@
 ./tests/scatter-int16-1.ispc compfail  x86-64            knc   Linux LLVM 3.5   icpc15.0 -O0 *
 ./tests/scatter-int16.ispc compfail  x86-64            knc   Linux LLVM 3.5   icpc15.0 -O0 *
 ./tests/scatter-int8-1.ispc compfail  x86-64            knc   Linux LLVM 3.5   icpc15.0 -O0 *
-./tests/scatter-int8.ispc compfail  x86-64            knc   Linux LLVM 3.5   icpc15.0 -O0 *
 ./tests/shift-1.ispc compfail  x86-64            knc   Linux LLVM 3.5   icpc15.0 -O0 *
 ./tests/shift-2.ispc compfail  x86-64            knc   Linux LLVM 3.5   icpc15.0 -O0 *
 ./tests/shift-3.ispc compfail  x86-64            knc   Linux LLVM 3.5   icpc15.0 -O0 *
@@ -1395,7 +1391,6 @@
 ./tests/scatter-int16-1.ispc compfail  x86-64            knc   Linux LLVM 3.6   icpc15.0 -O2 *
 ./tests/scatter-int16.ispc compfail  x86-64            knc   Linux LLVM 3.6   icpc15.0 -O2 *
 ./tests/scatter-int8-1.ispc compfail  x86-64            knc   Linux LLVM 3.6   icpc15.0 -O2 *
-./tests/scatter-int8.ispc compfail  x86-64            knc   Linux LLVM 3.6   icpc15.0 -O2 *
 ./tests/shift-2.ispc compfail  x86-64            knc   Linux LLVM 3.6   icpc15.0 -O2 *
 ./tests/shuffle-3.ispc compfail  x86-64            knc   Linux LLVM 3.6   icpc15.0 -O2 *
 ./tests/shuffle-4.ispc compfail  x86-64            knc   Linux LLVM 3.6   icpc15.0 -O2 *
@@ -1595,7 +1590,6 @@
 ./tests/scatter-int16-1.ispc compfail  x86-64            knc   Linux LLVM 3.6   icpc15.0 -O0 *
 ./tests/scatter-int16.ispc compfail  x86-64            knc   Linux LLVM 3.6   icpc15.0 -O0 *
 ./tests/scatter-int8-1.ispc compfail  x86-64            knc   Linux LLVM 3.6   icpc15.0 -O0 *
-./tests/scatter-int8.ispc compfail  x86-64            knc   Linux LLVM 3.6   icpc15.0 -O0 *
 ./tests/shift-1.ispc compfail  x86-64            knc   Linux LLVM 3.6   icpc15.0 -O0 *
 ./tests/shift-2.ispc compfail  x86-64            knc   Linux LLVM 3.6   icpc15.0 -O0 *
 ./tests/shift-3.ispc compfail  x86-64            knc   Linux LLVM 3.6   icpc15.0 -O0 *

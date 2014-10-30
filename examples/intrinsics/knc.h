@@ -442,22 +442,20 @@ template <> FORCEINLINE __vec16_i1 __undef_i1<__vec16_i1>() {
 // int8
 ///////////////////////////////////////////////////////////////////////////
 
-/*
-
-   TODO
-
-*/
+template <class RetVecType> static RetVecType __setzero_i8();
+template <> FORCEINLINE __vec16_i8 __setzero_i8<__vec16_i8>() {
+      return __vec16_i8(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+}
 
 
 ///////////////////////////////////////////////////////////////////////////
 // int16
 ///////////////////////////////////////////////////////////////////////////
 
-/*
-
-   TODO
-
-*/
+template <class RetVecType> static RetVecType __setzero_i16();
+template <> FORCEINLINE __vec16_i16 __setzero_i16<__vec16_i16>() {
+      return __vec16_i16(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+}
 
 ///////////////////////////////////////////////////////////////////////////
 // int32
