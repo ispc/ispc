@@ -311,6 +311,18 @@ FORCEINLINE __vec16_i8& __vec16_i8::operator=(const __vec16_i8 &o)
   return *this;
 }
 
+FORCEINLINE __vec16_i16::__vec16_i16(const __vec16_i16 &o)
+{
+  for (int i=0;i<16;i++)
+    v[i] = o.v[i];
+}
+
+FORCEINLINE __vec16_i16& __vec16_i16::operator=(const __vec16_i16 &o)
+{
+  for (int i=0;i<16;i++)
+    v[i] = o.v[i];
+  return *this;
+}
 ///////////////////////////////////////////////////////////////////////////
 // mask ops
 ///////////////////////////////////////////////////////////////////////////
@@ -1887,6 +1899,13 @@ __scatter_base_offsets32_i8(uint8_t *b, uint32_t scale, __vec16_i32 offsets,
   _mm512_mask_i32extscatter_epi32(b, mask, offsets, tmp, 
       _MM_DOWNCONV_EPI32_SINT8, scale, 
       _MM_HINT_NONE);
+}
+
+template <int ALIGN> static FORCEINLINE __vec16_i16 __load(const __vec16_i16 *p) {
+  return *p;
+}
+template <int ALIGN> static FORCEINLINE void __store(__vec16_i16 *p, __vec16_i16 v) {
+  *p = v;
 }
 
 static FORCEINLINE void __masked_store_i32(void *p, __vec16_i32 val, __vec16_i1 mask) {
