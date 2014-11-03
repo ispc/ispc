@@ -1436,7 +1436,8 @@ lEmitStructDecl(const StructType *st, std::vector<const StructType *> *emittedSt
     for (int i = 0; i < st->GetElementCount(); ++i) {
         const Type *type = st->GetElementType(i)->GetAsNonConstType();
         std::string d = type->GetCDeclaration(st->GetElementName(i));
-        if (type->IsVaryingType()) {
+	// Don't expand struct members as their insides will be expanded.
+        if (type->IsVaryingType() && (CastType<StructType>(type) == NULL)) {
           fprintf(file, "    %s[%d];\n", d.c_str(), g->target->getVectorWidth());
         }
         else {
