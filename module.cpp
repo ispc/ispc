@@ -168,7 +168,11 @@ lStripUnusedDebugInfo(llvm::Module *module) {
     // loop over the compile units that contributed to the final module
     if (llvm::NamedMDNode *cuNodes = module->getNamedMetadata("llvm.dbg.cu")) {
         for (unsigned i = 0, ie = cuNodes->getNumOperands(); i != ie; ++i) {
+#if defined(LLVM_3_2) || defined(LLVM_3_3) || defined(LLVM_3_4) || defined(LLVM_3_5)
             llvm::MDNode *cuNode = cuNodes->getOperand(i);
+#else // LLVM 3.6+
+            llvm::MDNode *cuNode = llvm::cast<llvm::MDNode>(cuNodes->getOperand(i));
+#endif
             llvm::DICompileUnit cu(cuNode);
             llvm::DIArray subprograms = cu.getSubprograms();
             std::vector<llvm::Value *> usedSubprograms;
