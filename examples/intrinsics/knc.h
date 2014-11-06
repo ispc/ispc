@@ -466,6 +466,15 @@ static FORCEINLINE __vec16_i1 __not_equal_i8(__vec16_i8 a, __vec16_i8 b) {
     return _mm512_cmpneq_epi32_mask(tmp_a, tmp_b);
 }
 
+static FORCEINLINE __vec16_i8 __shuffle_i8(__vec16_i8 v, __vec16_i32 index) {
+    __vec16_i32 tmp_v = _mm512_extload_epi32(&v, _MM_UPCONV_EPI32_SINT8, _MM_BROADCAST32_NONE, _MM_HINT_NONE);
+    __vec16_i32 tmp   = _mm512_permutevar_epi32(tmp_v, index);
+    __vec16_i8 ret;
+    _mm512_extstore_epi32(&ret, tmp, _MM_DOWNCONV_EPI32_SINT8,_MM_HINT_NONE);
+    return ret;
+
+}
+
 template <class RetVecType> static RetVecType __smear_i8(int8_t i);
 template <> FORCEINLINE __vec16_i8 __smear_i8<__vec16_i8>(int8_t i) {
     __vec16_i32 tmp = _mm512_set1_epi32(i);
@@ -488,6 +497,15 @@ static FORCEINLINE __vec16_i1 __not_equal_i16(__vec16_i16 a, __vec16_i16 b) {
     __vec16_i32 tmp_a = _mm512_extload_epi32(&a, _MM_UPCONV_EPI32_SINT16, _MM_BROADCAST32_NONE, _MM_HINT_NONE);
     __vec16_i32 tmp_b = _mm512_extload_epi32(&b, _MM_UPCONV_EPI32_SINT16, _MM_BROADCAST32_NONE, _MM_HINT_NONE);
     return _mm512_cmpneq_epi32_mask(tmp_a, tmp_b);
+}
+
+static FORCEINLINE __vec16_i16 __shuffle_i16(__vec16_i16 v, __vec16_i32 index) {
+    __vec16_i32 tmp_v = _mm512_extload_epi32(&v, _MM_UPCONV_EPI32_SINT16, _MM_BROADCAST32_NONE, _MM_HINT_NONE);
+    __vec16_i32 tmp   = _mm512_permutevar_epi32(tmp_v, index);
+    __vec16_i16 ret;
+    _mm512_extstore_epi32(&ret, tmp, _MM_DOWNCONV_EPI32_SINT16,_MM_HINT_NONE);
+    return ret;
+
 }
 
 template <class RetVecType> static RetVecType __smear_i16(int16_t i);
@@ -1929,16 +1947,24 @@ static FORCEINLINE int32_t __reduce_add_int16(__vec16_i16 v) {
   return ret;
 }
 
-static FORCEINLINE uint32_t __reduce_add_int32(__vec16_i32 v) {
+static FORCEINLINE int32_t __reduce_add_int32(__vec16_i32 v) {
   return _mm512_reduce_add_epi32(v);
 }
 
-static FORCEINLINE uint32_t __reduce_min_int32(__vec16_i32 v) {
+static FORCEINLINE int32_t __reduce_min_int32(__vec16_i32 v) {
   return _mm512_reduce_min_epi32(v);
 }
 
-static FORCEINLINE uint32_t __reduce_max_int32(__vec16_i32 v) {
+static FORCEINLINE int32_t __reduce_max_int32(__vec16_i32 v) {
   return _mm512_reduce_max_epi32(v);
+}
+
+static FORCEINLINE uint32_t __reduce_min_uint32(__vec16_i32 v) {
+  return _mm512_reduce_min_epu32(v);
+}
+
+static FORCEINLINE uint32_t __reduce_max_uint32(__vec16_i32 v) {
+  return _mm512_reduce_max_epu32(v);
 }
 
 static FORCEINLINE float __reduce_add_float(__vec16_f v) {
