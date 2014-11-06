@@ -460,6 +460,14 @@ template <> FORCEINLINE __vec16_i8 __setzero_i8<__vec16_i8>() {
       return __vec16_i8(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
+template <class RetVecType> static RetVecType __smear_i8(int8_t i);
+template <> FORCEINLINE __vec16_i8 __smear_i8<__vec16_i8>(int8_t i) {
+    __vec16_i32 tmp = _mm512_set1_epi32(i);
+    __vec16_i8 ret;
+    _mm512_extstore_epi32(&ret, tmp, _MM_DOWNCONV_EPI32_SINT8,_MM_HINT_NONE);
+    return ret;
+}
+
 
 ///////////////////////////////////////////////////////////////////////////
 // int16
@@ -468,6 +476,14 @@ template <> FORCEINLINE __vec16_i8 __setzero_i8<__vec16_i8>() {
 template <class RetVecType> static RetVecType __setzero_i16();
 template <> FORCEINLINE __vec16_i16 __setzero_i16<__vec16_i16>() {
       return __vec16_i16(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+}
+
+template <class RetVecType> static RetVecType __smear_i16(int16_t i);
+template <> FORCEINLINE __vec16_i16 __smear_i16<__vec16_i16>(int16_t i) {
+    __vec16_i32 tmp = _mm512_set1_epi32(i);
+    __vec16_i16 ret;
+    _mm512_extstore_epi32(&ret, tmp, _MM_DOWNCONV_EPI32_SINT16,_MM_HINT_NONE);
+    return ret;
 }
 
 ///////////////////////////////////////////////////////////////////////////
