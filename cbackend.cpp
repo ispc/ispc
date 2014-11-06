@@ -152,7 +152,11 @@ namespace {
           incorporateValue(Aliasee);
       }
 
+#if defined(LLVM_3_2) || defined(LLVM_3_3) || defined(LLVM_3_4) || defined(LLVM_3_5)
       llvm::SmallVector<std::pair<unsigned, llvm::MDNode*>, 4> MDForInst;
+#else // LLVM 3.6+
+      llvm::SmallVector<std::pair<unsigned, llvm::Value*>, 4> MDForInst;
+#endif
 
       // Get types from functions.
       for (llvm::Module::const_iterator FI = M.begin(), E = M.end(); FI != E; ++FI) {
@@ -178,7 +182,11 @@ namespace {
             // Incorporate types hiding in metadata.
             I.getAllMetadataOtherThanDebugLoc(MDForInst);
             for (unsigned i = 0, e = MDForInst.size(); i != e; ++i)
+#if defined(LLVM_3_2) || defined(LLVM_3_3) || defined(LLVM_3_4) || defined(LLVM_3_5)
               incorporateMDNode(MDForInst[i].second);
+#else // LLVM 3.6+
+              incorporateMDNode(llvm::cast<llvm::MDNode>(MDForInst[i].second));
+#endif
             MDForInst.clear();
           }
       }
@@ -187,7 +195,11 @@ namespace {
            E = M.named_metadata_end(); I != E; ++I) {
         const llvm::NamedMDNode *NMD = I;
         for (unsigned i = 0, e = NMD->getNumOperands(); i != e; ++i)
+#if defined(LLVM_3_2) || defined(LLVM_3_3) || defined(LLVM_3_4) || defined(LLVM_3_5)
           incorporateMDNode(NMD->getOperand(i));
+#else // LLVM 3.6+
+          incorporateMDNode(llvm::cast<llvm::MDNode>(NMD->getOperand(i)));
+#endif
       }
     }
 
