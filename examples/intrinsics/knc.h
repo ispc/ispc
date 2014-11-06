@@ -460,6 +460,12 @@ template <> FORCEINLINE __vec16_i8 __setzero_i8<__vec16_i8>() {
       return __vec16_i8(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
+static FORCEINLINE __vec16_i1 __not_equal_i8(__vec16_i8 a, __vec16_i8 b) {
+    __vec16_i32 tmp_a = _mm512_extload_epi32(&a, _MM_UPCONV_EPI32_SINT8, _MM_BROADCAST32_NONE, _MM_HINT_NONE);
+    __vec16_i32 tmp_b = _mm512_extload_epi32(&b, _MM_UPCONV_EPI32_SINT8, _MM_BROADCAST32_NONE, _MM_HINT_NONE);    
+    return _mm512_cmpneq_epi32_mask(tmp_a, tmp_b);
+}
+
 template <class RetVecType> static RetVecType __smear_i8(int8_t i);
 template <> FORCEINLINE __vec16_i8 __smear_i8<__vec16_i8>(int8_t i) {
     __vec16_i32 tmp = _mm512_set1_epi32(i);
@@ -476,6 +482,12 @@ template <> FORCEINLINE __vec16_i8 __smear_i8<__vec16_i8>(int8_t i) {
 template <class RetVecType> static RetVecType __setzero_i16();
 template <> FORCEINLINE __vec16_i16 __setzero_i16<__vec16_i16>() {
       return __vec16_i16(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+}
+
+static FORCEINLINE __vec16_i1 __not_equal_i16(__vec16_i16 a, __vec16_i16 b) {
+    __vec16_i32 tmp_a = _mm512_extload_epi32(&a, _MM_UPCONV_EPI32_SINT16, _MM_BROADCAST32_NONE, _MM_HINT_NONE);
+    __vec16_i32 tmp_b = _mm512_extload_epi32(&b, _MM_UPCONV_EPI32_SINT16, _MM_BROADCAST32_NONE, _MM_HINT_NONE);
+    return _mm512_cmpneq_epi32_mask(tmp_a, tmp_b);
 }
 
 template <class RetVecType> static RetVecType __smear_i16(int16_t i);
