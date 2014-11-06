@@ -103,7 +103,7 @@
 #include <llvm/Analysis/Passes.h>
 #include <llvm/Support/raw_ostream.h>
 #include <llvm/Support/Dwarf.h>
-#if !defined(LLVM_3_2) && !defined(LLVM_3_5) && !defined(LLVM_3_4) && !defined(LLVM_3_5)
+#if !defined(LLVM_3_2) && !defined(LLVM_3_3) && !defined(LLVM_3_4) && !defined(LLVM_3_5)
   #include <llvm/IR/IntrinsicInst.h>
 #endif
 #ifdef ISPC_IS_LINUX
@@ -185,7 +185,11 @@ lCopyMetadata(llvm::Value *vto, const llvm::Instruction *from) {
     if (!to)
         return;
 
+#if defined(LLVM_3_2) || defined(LLVM_3_3) || defined(LLVM_3_4) || defined(LLVM_3_5)
     llvm::SmallVector<std::pair<unsigned int, llvm::MDNode *>, 8> metadata;
+#else // LLVM 3.6+
+    llvm::SmallVector<std::pair<unsigned int, llvm::Value *>, 8> metadata;
+#endif
     from->getAllMetadata(metadata);
     for (unsigned int i = 0; i < metadata.size(); ++i)
         to->setMetadata(metadata[i].first, metadata[i].second);
@@ -215,11 +219,19 @@ lCopyMetadata(llvm::Value *vto, const llvm::Instruction *from) {
 */
 static bool
 lGetSourcePosFromMetadata(const llvm::Instruction *inst, SourcePos *pos) {
+#if defined(LLVM_3_2) || defined(LLVM_3_3) || defined(LLVM_3_4) || defined(LLVM_3_5)    
     llvm::MDNode *filename = inst->getMetadata("filename");
     llvm::MDNode *first_line = inst->getMetadata("first_line");
     llvm::MDNode *first_column = inst->getMetadata("first_column");
     llvm::MDNode *last_line = inst->getMetadata("last_line");
     llvm::MDNode *last_column = inst->getMetadata("last_column");
+#else // LLVM 3.6+
+    llvm::MDNode *filename = inst->getMDNode("filename");
+    llvm::MDNode *first_line = inst->getMDNode("first_line");
+    llvm::MDNode *first_column = inst->getMDNode("first_column");
+    llvm::MDNode *last_line = inst->getMDNode("last_line");
+    llvm::MDNode *last_column = inst->getMDNode("last_column");
+#endif
     if (!filename || !first_line || !first_column || !last_line || !last_column)
         return false;
 
