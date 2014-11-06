@@ -917,6 +917,11 @@ template <int ALIGN> static FORCEINLINE __vec16_i64 __load(const __vec16_i64 *p)
   return ret;    
 }
 
+static FORCEINLINE __vec16_i64 __rotate_i64(__vec16_i64 v, int index) {
+    return __vec16_i64(__shuffle_i32(v.v_lo, index), __shuffle_i32(v.v_hi, index));
+}
+
+
 #if 0
 template <> FORCEINLINE __vec16_i64 __load<64>(const __vec16_i64 *p) {
   __m512i v2 = _mm512_load_epi32(p);
@@ -1725,6 +1730,14 @@ static FORCEINLINE __vec16_i1 __not_equal_i8(__vec16_i8 a, __vec16_i8 b) {
     return __not_equal_i32(tmp_a, tmp_b);
 }
 
+static FORCEINLINE __vec16_i8 __rotate_i8(__vec16_i8 v, int index) {
+    __vec16_i32 tmp_v = _mm512_extload_epi32(&v, _MM_UPCONV_EPI32_SINT8, _MM_BROADCAST32_NONE, _MM_HINT_NONE);
+    __vec16_i32 tmp   = __rotate_i32(tmp_v, index);
+    __vec16_i8 ret;
+    _mm512_extstore_epi32(&ret, tmp, _MM_DOWNCONV_EPI32_SINT8,_MM_HINT_NONE);
+    return ret;
+}
+
 static FORCEINLINE __vec16_i8 __shuffle_i8(__vec16_i8 v, __vec16_i32 index) {
     __vec16_i32 tmp_v = _mm512_extload_epi32(&v, _MM_UPCONV_EPI32_SINT8, _MM_BROADCAST32_NONE, _MM_HINT_NONE);
     __vec16_i32 tmp   = __shuffle_i32(tmp_v, index);
@@ -1757,13 +1770,20 @@ static FORCEINLINE __vec16_i1 __not_equal_i16(__vec16_i16 a, __vec16_i16 b) {
     return __not_equal_i32(tmp_a, tmp_b);
 }
 
+static FORCEINLINE __vec16_i16 __rotate_i16(__vec16_i16 v, int index) {
+    __vec16_i32 tmp_v = _mm512_extload_epi32(&v, _MM_UPCONV_EPI32_SINT16, _MM_BROADCAST32_NONE, _MM_HINT_NONE);
+    __vec16_i32 tmp   = __rotate_i32(tmp_v, index);
+    __vec16_i16 ret;
+    _mm512_extstore_epi32(&ret, tmp, _MM_DOWNCONV_EPI32_SINT16,_MM_HINT_NONE);
+    return ret;
+}
+
 static FORCEINLINE __vec16_i16 __shuffle_i16(__vec16_i16 v, __vec16_i32 index) {
     __vec16_i32 tmp_v = _mm512_extload_epi32(&v, _MM_UPCONV_EPI32_SINT16, _MM_BROADCAST32_NONE, _MM_HINT_NONE);
     __vec16_i32 tmp   = __shuffle_i32(tmp_v, index);
     __vec16_i16 ret;
     _mm512_extstore_epi32(&ret, tmp, _MM_DOWNCONV_EPI32_SINT16,_MM_HINT_NONE);
     return ret;
-
 }
 
 template <class RetVecType> static RetVecType __smear_i16(int16_t i);
