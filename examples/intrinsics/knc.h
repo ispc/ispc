@@ -236,6 +236,7 @@ PRE_ALIGN(16) struct __vec16_i8   : public vec16<int8_t> {
 
 PRE_ALIGN(32) struct __vec16_i16  : public vec16<int16_t> { 
   FORCEINLINE __vec16_i16() { }
+  FORCEINLINE __vec16_i16(const __vec16_i16 &o);
   FORCEINLINE __vec16_i16& operator =(const __vec16_i16 &o);
   FORCEINLINE __vec16_i16(int16_t v0,  int16_t v1,  int16_t v2,  int16_t v3, 
                           int16_t v4,  int16_t v5,  int16_t v6,  int16_t v7,
@@ -254,7 +255,7 @@ inline std::ostream &operator<<(std::ostream &out, const __m512i &v)
 {
   out << "[";
   for (int i=0;i<16;i++)  
-    out << (i?",":"") << std::dec << std::setw(8) << ((int*)&v)[i] << std::dec;
+    out << (i!=0?",":"") << std::dec << std::setw(8) << ((int*)&v)[i] << std::dec;
   // out << (i?",":"") << std::hex << std::setw(8) << ((int*)&v)[i] << std::dec;
 
   out << "]" << std::flush;
@@ -265,7 +266,7 @@ inline std::ostream &operator<<(std::ostream &out, const __m512 &v)
 {
   out << "[";
   for (int i=0;i<16;i++)  
-    out << (i?",":"") << ((float*)&v)[i];
+    out << (i!=0?",":"") << ((float*)&v)[i];
 
   out << "]" << std::flush;
   return out;
@@ -275,7 +276,7 @@ inline std::ostream &operator<<(std::ostream &out, const __vec16_i8 &v)
 {
   out << "[";
   for (int i=0;i<16;i++)  
-    out << (i?",":"") << std::dec << std::setw(8) << (int)((unsigned char*)&v)[i] << std::dec;
+    out << (i!=0?",":"") << std::dec << std::setw(8) << (int)((unsigned char*)&v)[i] << std::dec;
   // out << (i?",":"") << std::hex << std::setw(8) << ((int*)&v)[i] << std::dec;
 
   out << "]" << std::flush;
@@ -286,7 +287,7 @@ inline std::ostream &operator<<(std::ostream &out, const __vec16_d &v)
 {
   out << "[";
   for (int i=0;i<16;i++) {
-    out << (i?",":"") << (v[i]);
+    out << (i!=0?",":"") << (v[i]);
   }  
   out << "]" << std::flush;
   return out;
@@ -298,7 +299,7 @@ inline std::ostream &operator<<(std::ostream &out, const __vec16_i64 &v)
   uint32_t *ptr = (uint32_t*)&v;
   for (int i=0;i<16;i++) {
     uint64_t val = (uint64_t(ptr[i])<<32)+ptr[i+16];
-    out << (i?",":"") << ((int*)val);
+    out << (i!=0?",":"") << ((int*)val);
   }  
   out << "]" << std::flush;
   return out;
@@ -1977,9 +1978,7 @@ static FORCEINLINE __vec16_d __masked_load_double(void *p, __vec16_i1 mask) {
 }
 
 static FORCEINLINE void __masked_store_i8(void *p, const __vec16_i8 &val, __vec16_i1 mask) { 
-  __vec16_i32 tmp = _mm512_extload_epi32(&val, _MM_UPCONV_EPI32_SINT8, _MM_BROADCAST32_NONE, _MM_HINT_NONE);
-  std::cout << (unsigned long long int)p << "\n";
-  exit(0);
+  __vec16_i32 tmp = _mm512_extload_epi32(&val, _MM_UPCONV_EPI32_SINT8, _MM_BROADCAST32_NONE, _MM_HINT_NONE); 
   _mm512_mask_extstore_epi32(p, mask, tmp, _MM_DOWNCONV_EPI32_SINT8,_MM_HINT_NONE);
 }
 
@@ -2004,7 +2003,6 @@ __scatter_base_offsets32_i8(uint8_t *b, uint32_t scale, __vec16_i32 offsets,
 {
   __vec16_i32 tmp = _mm512_extload_epi32(&val,_MM_UPCONV_EPI32_SINT8, 
       _MM_BROADCAST32_NONE, _MM_HINT_NONE);
-  printf("__scatter_base_offsets32_i8\n");
   _mm512_mask_i32extscatter_epi32(b, mask, offsets, tmp, 
       _MM_DOWNCONV_EPI32_SINT8, scale, 
       _MM_HINT_NONE);
