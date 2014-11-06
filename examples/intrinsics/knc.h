@@ -2020,12 +2020,29 @@ __scatter_base_offsets32_i8(uint8_t *b, uint32_t scale, __vec16_i32 offsets,
       _MM_HINT_NONE);
 }
 
+
+static FORCEINLINE void __masked_store_i16(void *p, const __vec16_i16 &val, __vec16_i1 mask) {
+  __vec16_i32 tmp = _mm512_extload_epi32(&val, _MM_UPCONV_EPI32_SINT16, _MM_BROADCAST32_NONE, _MM_HINT_NONE);
+  _mm512_mask_extstore_epi32(p, mask, tmp, _MM_DOWNCONV_EPI32_SINT16,_MM_HINT_NONE);
+}
+
+static FORCEINLINE __vec16_i16 __masked_load_i16(void *p, __vec16_i1 mask) {
+  __vec16_i16 ret;
+  __vec16_i32 tmp = _mm512_mask_extload_epi32(_mm512_undefined_epi32(),mask,p,
+      _MM_UPCONV_EPI32_SINT16,
+      _MM_BROADCAST32_NONE, _MM_HINT_NONE);
+  _mm512_extstore_epi32(&ret, tmp, _MM_DOWNCONV_EPI32_SINT16,_MM_HINT_NONE);
+  return ret;
+}
+
 template <int ALIGN> static FORCEINLINE __vec16_i16 __load(const __vec16_i16 *p) {
   return *p;
 }
+
 template <int ALIGN> static FORCEINLINE void __store(__vec16_i16 *p, __vec16_i16 v) {
   *p = v;
 }
+
 
 static FORCEINLINE void __masked_store_i32(void *p, __vec16_i32 val, __vec16_i1 mask) {
 #ifdef ISPC_FORCE_ALIGNED_MEMORY
