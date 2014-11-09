@@ -201,8 +201,13 @@ typedef struct PRE_ALIGN(64) __vec16_i64 {
           _mm512_set_16to16_pi(15,13,11,9,7,5,3,1,14,12,10,8,6,4,2,0),
           v2);
   }
-  FORCEINLINE const int64_t& operator[](const int i) const {  return ((int64_t*)this)[i]; }
-  FORCEINLINE       int64_t& operator[](const int i)       {  return ((int64_t*)this)[i]; }
+  // TODO: The previous implementation was faulty as it assumed different data layout.
+  // Here integers in v_hi and v_lo are located not sequentually (like in vec16_d)
+  // but separately - the highest part in v_hi and the lowest in v_lo
+  //FORCEINLINE const int64_t& operator[](const int i) const {  
+  //    return ((uint64_t(((int32_t*)this)[i])<<32)+((int32_t*)this)[i+16]); }
+  //FORCEINLINE       int64_t& operator[](const int i)       {
+  //    return ((uint64_t(((int32_t*)this)[i])<<32)+((int32_t*)this)[i+16]); }
   __m512i v_hi;
   __m512i v_lo;
 } POST_ALIGN(64) __vec16_i64;
@@ -217,8 +222,8 @@ struct vec16 {
     v[8] = v8;        v[9] = v9;        v[10] = v10;      v[11] = v11;
     v[12] = v12;      v[13] = v13;      v[14] = v14;      v[15] = v15;
   }
-  FORCEINLINE const T& operator[](const int i) const { return data[i]; }
-  FORCEINLINE       T& operator[](const int i)       { return data[i]; }
+  FORCEINLINE const T& operator[](const int i) const { return v[i]; }
+  FORCEINLINE       T& operator[](const int i)       { return v[i]; }
   T v[16]; 
 };
 
@@ -451,6 +456,7 @@ template <> FORCEINLINE __vec16_i1 __undef_i1<__vec16_i1>() {
   return __vec16_i1();
 }
 
+
 ///////////////////////////////////////////////////////////////////////////
 // int32
 ///////////////////////////////////////////////////////////////////////////
@@ -651,8 +657,35 @@ static FORCEINLINE __vec16_i32 __broadcast_i32(__vec16_i32 v, int index) {
   return _mm512_set1_epi32(val);
 }
 
+static FORCEINLINE __vec16_i8 __cast_trunc(__vec16_i8, const __vec16_i16 i16) {
+  return __vec16_i8((uint8_t)i16[0],  (uint8_t)i16[1],  (uint8_t)i16[2],  (uint8_t)i16[3],
+                    (uint8_t)i16[4],  (uint8_t)i16[5],  (uint8_t)i16[6],  (uint8_t)i16[7],
+                    (uint8_t)i16[8],  (uint8_t)i16[9],  (uint8_t)i16[10], (uint8_t)i16[11],
+                    (uint8_t)i16[12], (uint8_t)i16[13], (uint8_t)i16[14], (uint8_t)i16[15]);
+}
+
+static FORCEINLINE __vec16_i16 __cast_trunc(__vec16_i16, const __vec16_i32 i32) {
+  __vec16_i16 ret;
+  _mm512_extstore_epi32(ret.v, i32, _MM_DOWNCONV_EPI32_UINT16, _MM_HINT_NONE);
+  return ret;
+}
+
+static FORCEINLINE __vec16_i8 __cast_trunc(__vec16_i8, const __vec16_i32 i32) {
+  __vec16_i8 ret;
+  _mm512_extstore_epi32(ret.v, i32, _MM_DOWNCONV_EPI32_UINT8, _MM_HINT_NONE);
+  return ret;
+}
+
 static FORCEINLINE __vec16_i32 __cast_trunc(__vec16_i32, const __vec16_i64 i64) {
   return __vec16_i32(i64.v_lo);
+}
+
+static FORCEINLINE __vec16_i16 __cast_trunc(__vec16_i16, const __vec16_i64 i64) {
+  return __cast_trunc(__vec16_i16(), i64.v_lo);
+}
+
+static FORCEINLINE __vec16_i8 __cast_trunc(__vec16_i8, const __vec16_i64 i64) {
+  return __cast_trunc(__vec16_i8(), i64.v_lo);
 }
 
 static FORCEINLINE __vec16_i32 __rotate_i32(__vec16_i32 v, int index) {
@@ -709,7 +742,7 @@ template <> FORCEINLINE void __store<64>(__vec16_i32 *p, __vec16_i32 v) {
 ///////////////////////////////////////////////////////////////////////////
 // int64
 ///////////////////////////////////////////////////////////////////////////
-  static FORCEINLINE 
+static FORCEINLINE 
 void __masked_store_i64(void *p, const __vec16_i64 &v, __vec16_i1 mask) 
 {
   __m512i v1;
@@ -1465,12 +1498,7 @@ template <> FORCEINLINE void __store<128>(__vec16_d *p, __vec16_d v) {
 
 static FORCEINLINE __vec16_i64 __cast_sext(const __vec16_i64 &, const __vec16_i32 &val)
 {
-  return __vec16_i64(val.v,_mm512_srai_epi32(val.v,31));
-}
-
-static FORCEINLINE __vec16_i64 __cast_zext(const __vec16_i64 &, const __vec16_i32 &val)
-{
-  return __vec16_i64(val.v, _mm512_setzero_epi32());
+  return __vec16_i64(val.v, _mm512_srai_epi32(val.v, 31));
 }
 
 static FORCEINLINE __vec16_i32 __cast_sext(const __vec16_i32 &, const __vec16_i1 &val)
@@ -1480,11 +1508,42 @@ static FORCEINLINE __vec16_i32 __cast_sext(const __vec16_i32 &, const __vec16_i1
   return _mm512_mask_mov_epi32(ret, val, one);
 }
 
+static FORCEINLINE __vec16_i16 __cast_zext(const __vec16_i16 &, const __vec16_i8 &val)
+{
+  return __vec16_i16(val[0], val[1], val[2],   val[3],  val[4],  val[5],  val[6],  val[7], 
+                     val[8], val[9], val[10],  val[11], val[12], val[13], val[14], val[15]);
+}
+
 static FORCEINLINE __vec16_i32 __cast_zext(const __vec16_i32 &, const __vec16_i1 &val)
 {
   __vec16_i32 ret = _mm512_setzero_epi32();
   __vec16_i32 one = _mm512_set1_epi32(1);
   return _mm512_mask_mov_epi32(ret, val, one);
+}
+
+static FORCEINLINE __vec16_i32 __cast_zext(const __vec16_i32 &, const __vec16_i8 &val)
+{
+  return _mm512_extload_epi32(&val, _MM_UPCONV_EPI32_UINT8, _MM_BROADCAST32_NONE, _MM_HINT_NONE);
+}
+
+static FORCEINLINE __vec16_i32 __cast_zext(const __vec16_i32 &, const __vec16_i16 &val)
+{
+  return _mm512_extload_epi32(&val, _MM_UPCONV_EPI32_UINT16, _MM_BROADCAST32_NONE, _MM_HINT_NONE);
+}
+
+static FORCEINLINE __vec16_i64 __cast_zext(const __vec16_i64 &, const __vec16_i8 &val)
+{
+  return __vec16_i64(__cast_zext(__vec16_i32(), val), _mm512_setzero_epi32());
+}
+
+static FORCEINLINE __vec16_i64 __cast_zext(const __vec16_i64 &, const __vec16_i16 &val)
+{
+  return __vec16_i64(__cast_zext(__vec16_i32(), val), _mm512_setzero_epi32());
+}
+
+static FORCEINLINE __vec16_i64 __cast_zext(const __vec16_i64 &, const __vec16_i32 &val)
+{
+  return __vec16_i64(val.v, _mm512_setzero_epi32());
 }
 
 static FORCEINLINE __vec16_f __cast_sitofp(__vec16_f, __vec16_i8 val) {
@@ -1728,14 +1787,84 @@ static FORCEINLINE __vec16_d __cast_bits(__vec16_d, __vec16_i64 val) {
   return ret;
 }
 
+
+///////////////////////////////////////////////////////////////////////////
+// templates for int8/16 operations
+///////////////////////////////////////////////////////////////////////////
+#define BINARY_OP(TYPE, NAME, OP)                                  \
+static FORCEINLINE TYPE NAME(TYPE a, TYPE b) {                     \
+  TYPE ret;                                                        \
+  for (int i = 0; i < 16; ++i)                                     \
+    ret[i] = a[i] OP b[i];                                         \
+  return ret;                                                      \
+}
+
+/* knc::macro::used */
+#define BINARY_OP_CAST(TYPE, CAST, NAME, OP)                       \
+static FORCEINLINE TYPE NAME(TYPE a, TYPE b) {                     \
+  TYPE ret;                                                        \
+  for (int i = 0; i < 16; ++i)                                     \
+    ret[i] = (CAST)(a[i]) OP (CAST)(b[i]);                         \
+  return ret;                                                      \
+}
+
+#define CMP_OP(TYPE, SUFFIX, CAST, NAME, OP)                       \
+static FORCEINLINE __vec16_i1 NAME##_##SUFFIX(TYPE a, TYPE b) {    \
+  __vec16_i1 ret;                                                  \
+  ret.v = 0;                                                       \
+  for (int i = 0; i < 16; ++i)                                     \
+    ret.v |= ((CAST)(a[i]) OP (CAST)(b[i])) << i;                  \
+  return ret;                                                      \
+}
+
+#define SHIFT_UNIFORM(TYPE, CAST, NAME, OP)                        \
+static FORCEINLINE TYPE NAME(TYPE a, int32_t b) {                  \
+  TYPE ret;                                                        \
+  for (int i = 0; i < 16; ++i)                                     \
+    ret[i] = (CAST)(a[i]) OP b;                                    \
+  return ret;                                                      \
+}
+
+
 ///////////////////////////////////////////////////////////////////////////
 // int8
 ///////////////////////////////////////////////////////////////////////////
-
 template <class RetVecType> static RetVecType __setzero_i8();
 template <> FORCEINLINE __vec16_i8 __setzero_i8<__vec16_i8>() {
       return __vec16_i8(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
+
+BINARY_OP(__vec16_i8, __add, +)
+BINARY_OP(__vec16_i8, __sub, -)
+BINARY_OP(__vec16_i8, __mul, *)
+
+BINARY_OP(__vec16_i8, __or, |)
+BINARY_OP(__vec16_i8, __and, &)
+BINARY_OP(__vec16_i8, __xor, ^)
+BINARY_OP(__vec16_i8, __shl, <<)
+
+BINARY_OP_CAST(__vec16_i8, uint8_t, __udiv, /)
+BINARY_OP_CAST(__vec16_i8, int8_t,  __sdiv, /)
+
+BINARY_OP_CAST(__vec16_i8, uint8_t, __urem, %)
+BINARY_OP_CAST(__vec16_i8, int8_t,  __srem, %)
+BINARY_OP_CAST(__vec16_i8, uint8_t, __lshr, >>)
+BINARY_OP_CAST(__vec16_i8, int8_t,  __ashr, >>)
+
+SHIFT_UNIFORM(__vec16_i8, uint8_t, __lshr, >>)
+SHIFT_UNIFORM(__vec16_i8, int8_t, __ashr, >>)
+SHIFT_UNIFORM(__vec16_i8, int8_t, __shl, <<)
+
+CMP_OP(__vec16_i8, i8, int8_t,  __equal, ==)
+CMP_OP(__vec16_i8, i8, uint8_t, __unsigned_less_equal, <=)
+CMP_OP(__vec16_i8, i8, int8_t,  __signed_less_equal, <=)
+CMP_OP(__vec16_i8, i8, uint8_t, __unsigned_greater_equal, >=)
+CMP_OP(__vec16_i8, i8, int8_t,  __signed_greater_equal, >=)
+CMP_OP(__vec16_i8, i8, uint8_t, __unsigned_less_than, <)
+CMP_OP(__vec16_i8, i8, int8_t,  __signed_less_than, <)
+CMP_OP(__vec16_i8, i8, uint8_t, __unsigned_greater_than, >)
+CMP_OP(__vec16_i8, i8, int8_t,  __signed_greater_than, >)
+
 
 static FORCEINLINE __vec16_i1 __not_equal_i8(__vec16_i8 a, __vec16_i8 b) {
     __vec16_i32 tmp_a = _mm512_extload_epi32(&a, _MM_UPCONV_EPI32_SINT8, _MM_BROADCAST32_NONE, _MM_HINT_NONE);
@@ -1780,10 +1909,44 @@ static FORCEINLINE __vec16_i8 __shuffle2_i8(__vec16_i8 v0, __vec16_i8 v1, __vec1
 // int16
 ///////////////////////////////////////////////////////////////////////////
 
+
 template <class RetVecType> static RetVecType __setzero_i16();
 template <> FORCEINLINE __vec16_i16 __setzero_i16<__vec16_i16>() {
       return __vec16_i16(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
+
+BINARY_OP(__vec16_i16, __add, +)
+BINARY_OP(__vec16_i16, __sub, -)
+BINARY_OP(__vec16_i16, __mul, *)
+
+BINARY_OP(__vec16_i16, __or, |)
+BINARY_OP(__vec16_i16, __and, &)
+BINARY_OP(__vec16_i16, __xor, ^)
+BINARY_OP(__vec16_i16, __shl, <<)
+
+BINARY_OP_CAST(__vec16_i16, uint16_t, __udiv, /)
+BINARY_OP_CAST(__vec16_i16, int16_t,  __sdiv, /)
+
+BINARY_OP_CAST(__vec16_i16, uint16_t, __urem, %)
+BINARY_OP_CAST(__vec16_i16, int16_t,  __srem, %)
+BINARY_OP_CAST(__vec16_i16, uint16_t, __lshr, >>)
+BINARY_OP_CAST(__vec16_i16, int16_t,  __ashr, >>)
+
+SHIFT_UNIFORM(__vec16_i16, uint16_t, __lshr, >>)
+SHIFT_UNIFORM(__vec16_i16, int16_t, __ashr, >>)
+SHIFT_UNIFORM(__vec16_i16, int16_t, __shl, <<)
+
+CMP_OP(__vec16_i16, i16, int16_t,  __equal, ==)
+CMP_OP(__vec16_i16, i16, uint16_t, __unsigned_less_equal, <=)
+CMP_OP(__vec16_i16, i16, int16_t,  __signed_less_equal, <=)
+CMP_OP(__vec16_i16, i16, uint16_t, __unsigned_greater_equal, >=)
+CMP_OP(__vec16_i16, i16, int16_t,  __signed_greater_equal, >=)
+CMP_OP(__vec16_i16, i16, uint16_t, __unsigned_less_than, <)
+CMP_OP(__vec16_i16, i16, int16_t,  __signed_less_than, <)
+CMP_OP(__vec16_i16, i16, uint16_t, __unsigned_greater_than, >)
+CMP_OP(__vec16_i16, i16, int16_t,  __signed_greater_than, >)
+
+
 
 static FORCEINLINE __vec16_i1 __not_equal_i16(__vec16_i16 a, __vec16_i16 b) {
     __vec16_i32 tmp_a = _mm512_extload_epi32(&a, _MM_UPCONV_EPI32_SINT16, _MM_BROADCAST32_NONE, _MM_HINT_NONE);
