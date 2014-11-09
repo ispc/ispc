@@ -116,8 +116,10 @@ typedef struct PRE_ALIGN(2) __vec16_i1
         ((v13 & 1) << 13) |
         ((v14 & 1) << 14) |
         ((v15 & 1) << 15));
-    }
-    __mmask16 v;
+  }
+  FORCEINLINE const uint8_t operator[](const int i) const {  return ((v >> i) & 1); }
+  FORCEINLINE       uint8_t operator[](const int i)       {  return ((v >> i) & 1); }
+  __mmask16 v;
 } POST_ALIGN(2) __vec16_i1;
 
 #else
@@ -134,7 +136,7 @@ typedef struct PRE_ALIGN(64) __vec16_f {
                         float v04, float v05, float v06, float v07,
                         float v08, float v09, float v10, float v11,
                         float v12, float v13, float v14, float v15) {
-      v = _mm512_set_16to16_ps(v15, v14, v13, v12, v11, v10, v09, v08, v07, v06, v05, v04, v03, v02, v01, v00);
+    v = _mm512_set_16to16_ps(v15, v14, v13, v12, v11, v10, v09, v08, v07, v06, v05, v04, v03, v02, v01, v00);
   }
   FORCEINLINE const float& operator[](const int i) const {  return ((float*)this)[i]; }
   FORCEINLINE       float& operator[](const int i)       {  return ((float*)this)[i]; }
@@ -150,8 +152,8 @@ typedef struct PRE_ALIGN(64) __vec16_d {
                         double v04, double v05, double v06, double v07,
                         double v08, double v09, double v10, double v11,
                         double v12, double v13, double v14, double v15) {
-      v1 = _mm512_set_8to8_pd(v15, v14, v13, v12, v11, v10, v09, v08);
-      v2 = _mm512_set_8to8_pd(v07, v06, v05, v04, v03, v02, v01, v00);
+    v1 = _mm512_set_8to8_pd(v15, v14, v13, v12, v11, v10, v09, v08);
+    v2 = _mm512_set_8to8_pd(v07, v06, v05, v04, v03, v02, v01, v00);
   }
   FORCEINLINE const double& operator[](const int i) const {  return ((double*)this)[i]; }
   FORCEINLINE       double& operator[](const int i)       {  return ((double*)this)[i]; }
@@ -170,7 +172,7 @@ typedef struct PRE_ALIGN(64) __vec16_i32 {
                           int32_t v04, int32_t v05, int32_t v06, int32_t v07,
                           int32_t v08, int32_t v09, int32_t v10, int32_t v11,
                           int32_t v12, int32_t v13, int32_t v14, int32_t v15) {
-      v = _mm512_set_16to16_pi(v15, v14, v13, v12, v11, v10, v09, v08, v07, v06, v05, v04, v03, v02, v01, v00);
+    v = _mm512_set_16to16_pi(v15, v14, v13, v12, v11, v10, v09, v08, v07, v06, v05, v04, v03, v02, v01, v00);
   }
   FORCEINLINE const int32_t& operator[](const int i) const {  return ((int32_t*)this)[i]; }
   FORCEINLINE       int32_t& operator[](const int i)       {  return ((int32_t*)this)[i]; }
@@ -186,28 +188,25 @@ typedef struct PRE_ALIGN(64) __vec16_i64 {
                           int64_t v04, int64_t v05, int64_t v06, int64_t v07,
                           int64_t v08, int64_t v09, int64_t v10, int64_t v11,
                           int64_t v12, int64_t v13, int64_t v14, int64_t v15) {
-      __m512i v1 = _mm512_set_8to8_epi64(v15, v14, v13, v12, v11, v10, v09, v08);
-      __m512i v2 = _mm512_set_8to8_epi64(v07, v06, v05, v04, v03, v02, v01, v00);
-      v_hi = _mm512_mask_permutevar_epi32(v_hi, 0xFF00, 
-                    _mm512_set_16to16_pi(15,13,11,9,7,5,3,1,14,12,10,8,6,4,2,0),
-                    v1);
-      v_hi = _mm512_mask_permutevar_epi32(v_hi, 0x00FF, 
-                    _mm512_set_16to16_pi(14,12,10,8,6,4,2,0,15,13,11,9,7,5,3,1),
-                    v2);
-      v_lo = _mm512_mask_permutevar_epi32(v_lo, 0xFF00,
-          _mm512_set_16to16_pi(14,12,10,8,6,4,2,0,15,13,11,9,7,5,3,1),
-          v1);
-      v_lo = _mm512_mask_permutevar_epi32(v_lo, 0x00FF,
-          _mm512_set_16to16_pi(15,13,11,9,7,5,3,1,14,12,10,8,6,4,2,0),
-          v2);
-  }
-  // TODO: The previous implementation was faulty as it assumed different data layout.
-  // Here integers in v_hi and v_lo are located not sequentually (like in vec16_d)
-  // but separately - the highest part in v_hi and the lowest in v_lo
-  //FORCEINLINE const int64_t& operator[](const int i) const {  
-  //    return ((uint64_t(((int32_t*)this)[i])<<32)+((int32_t*)this)[i+16]); }
-  //FORCEINLINE       int64_t& operator[](const int i)       {
-  //    return ((uint64_t(((int32_t*)this)[i])<<32)+((int32_t*)this)[i+16]); }
+    __m512i v1 = _mm512_set_8to8_epi64(v15, v14, v13, v12, v11, v10, v09, v08);
+    __m512i v2 = _mm512_set_8to8_epi64(v07, v06, v05, v04, v03, v02, v01, v00);
+    v_hi = _mm512_mask_permutevar_epi32(v_hi, 0xFF00, 
+                  _mm512_set_16to16_pi(15,13,11,9,7,5,3,1,14,12,10,8,6,4,2,0),
+                  v1);
+    v_hi = _mm512_mask_permutevar_epi32(v_hi, 0x00FF, 
+                  _mm512_set_16to16_pi(14,12,10,8,6,4,2,0,15,13,11,9,7,5,3,1),
+                  v2);
+    v_lo = _mm512_mask_permutevar_epi32(v_lo, 0xFF00,
+                  _mm512_set_16to16_pi(14,12,10,8,6,4,2,0,15,13,11,9,7,5,3,1),
+                  v1);
+    v_lo = _mm512_mask_permutevar_epi32(v_lo, 0x00FF,
+                  _mm512_set_16to16_pi(15,13,11,9,7,5,3,1,14,12,10,8,6,4,2,0),
+                  v2);
+  } 
+  FORCEINLINE const int64_t operator[](const int i) const {  
+      return ((uint64_t(((int32_t*)this)[i])<<32)+((int32_t*)this)[i+16]); }
+  FORCEINLINE       int64_t operator[](const int i)       {
+      return ((uint64_t(((int32_t*)this)[i])<<32)+((int32_t*)this)[i+16]); }
   __m512i v_hi;
   __m512i v_lo;
 } POST_ALIGN(64) __vec16_i64;
@@ -261,8 +260,6 @@ inline std::ostream &operator<<(std::ostream &out, const __m512i &v)
   out << "[";
   for (int i=0;i<16;i++)  
     out << (i!=0?",":"") << std::dec << std::setw(8) << ((int*)&v)[i] << std::dec;
-  // out << (i?",":"") << std::hex << std::setw(8) << ((int*)&v)[i] << std::dec;
-
   out << "]" << std::flush;
   return out;
 }
@@ -272,7 +269,15 @@ inline std::ostream &operator<<(std::ostream &out, const __m512 &v)
   out << "[";
   for (int i=0;i<16;i++)  
     out << (i!=0?",":"") << ((float*)&v)[i];
+  out << "]" << std::flush;
+  return out;
+}
 
+inline std::ostream &operator<<(std::ostream &out, const __vec16_i1 &v)
+{
+  out << "[";
+  for (int i=0;i<16;i++)  
+    out << (i!=0?",":"") << std::dec << std::setw(8) << (int)v[i] << std::dec;
   out << "]" << std::flush;
   return out;
 }
@@ -282,8 +287,15 @@ inline std::ostream &operator<<(std::ostream &out, const __vec16_i8 &v)
   out << "[";
   for (int i=0;i<16;i++)  
     out << (i!=0?",":"") << std::dec << std::setw(8) << (int)((unsigned char*)&v)[i] << std::dec;
-  // out << (i?",":"") << std::hex << std::setw(8) << ((int*)&v)[i] << std::dec;
+  out << "]" << std::flush;
+  return out;
+}
 
+inline std::ostream &operator<<(std::ostream &out, const __vec16_i16 &v)
+{
+  out << "[";
+  for (int i=0;i<16;i++)  
+    out << (i!=0?",":"") << std::dec << std::setw(8) << (int)((uint16_t*)&v)[i] << std::dec;
   out << "]" << std::flush;
   return out;
 }
@@ -1632,10 +1644,6 @@ static FORCEINLINE __vec16_d __cast_uitofp(__vec16_d, __vec16_i32 val)
   return ret;
 }
 
-
-
-
-
 // float/double to signed int
 static FORCEINLINE __vec16_i32 __cast_fptosi(__vec16_i32, __vec16_f val) {
   return _mm512_cvtfxpnt_round_adjustps_epi32(val, _MM_ROUND_MODE_TOWARD_ZERO, _MM_EXPADJ_NONE);
@@ -2256,8 +2264,21 @@ static FORCEINLINE __vec16_d __masked_load_double(void *p, __vec16_i1 mask) {
 }
 
 static FORCEINLINE void __masked_store_i8(void *p, const __vec16_i8 &val, __vec16_i1 mask) { 
-  __vec16_i32 tmp = _mm512_extload_epi32(&val, _MM_UPCONV_EPI32_SINT8, _MM_BROADCAST32_NONE, _MM_HINT_NONE); 
+  __vec16_i32 tmp = _mm512_extload_epi32(&val, _MM_UPCONV_EPI32_SINT8, _MM_BROADCAST32_NONE, _MM_HINT_NONE);
+#ifdef ISPC_FORCE_ALIGNED_MEMORY
   _mm512_mask_extstore_epi32(p, mask, tmp, _MM_DOWNCONV_EPI32_SINT8,_MM_HINT_NONE);
+#else
+  #if 0 // TODO: both implementations seem to work, need to test which one is faster
+  _mm512_mask_i32extscatter_epi32 (p, mask, __vec16_i32(0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15), tmp, _MM_DOWNCONV_EPI32_SINT8, sizeof(uint8_t), _MM_HINT_NONE);
+  #else
+  __vec16_i32 tmp_;
+  tmp_.v = _mm512_extloadunpacklo_epi32(tmp_.v, p, _MM_UPCONV_EPI32_SINT8, _MM_HINT_NONE);
+  tmp_.v = _mm512_extloadunpackhi_epi32(tmp_.v, (uint8_t*)p+64, _MM_UPCONV_EPI32_SINT8, _MM_HINT_NONE);
+  tmp_.v = _mm512_mask_mov_epi32(tmp_.v, mask, tmp.v);
+  _mm512_extpackstorelo_epi32(p, tmp_.v, _MM_DOWNCONV_EPI32_SINT8, _MM_HINT_NONE);
+  _mm512_extpackstorehi_epi32((uint8_t*)p+64, tmp_.v, _MM_DOWNCONV_EPI32_SINT8, _MM_HINT_NONE);
+  #endif // if 0
+#endif
 }
 
 static FORCEINLINE __vec16_i8 __masked_load_i8(void *p, __vec16_i1 mask) {
@@ -2289,7 +2310,20 @@ __scatter_base_offsets32_i8(uint8_t *b, uint32_t scale, __vec16_i32 offsets,
 
 static FORCEINLINE void __masked_store_i16(void *p, const __vec16_i16 &val, __vec16_i1 mask) {
   __vec16_i32 tmp = _mm512_extload_epi32(&val, _MM_UPCONV_EPI32_SINT16, _MM_BROADCAST32_NONE, _MM_HINT_NONE);
-  _mm512_mask_extstore_epi32(p, mask, tmp, _MM_DOWNCONV_EPI32_SINT16,_MM_HINT_NONE);
+#ifdef ISPC_FORCE_ALIGNED_MEMORY
+  _mm512_mask_extstore_epi32(p, mask, tmp, _MM_DOWNCONV_EPI32_SINT16, _MM_HINT_NONE);
+#else
+  #if 0 // TODO: both implementations seem to work, need to test which one is faster
+  _mm512_mask_i32extscatter_epi32 (p, mask, __vec16_i32(0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15), tmp, _MM_DOWNCONV_EPI32_SINT16, sizeof(uint16_t), _MM_HINT_NONE);
+  #else
+  __vec16_i32 tmp_;
+  tmp_.v = _mm512_extloadunpacklo_epi32(tmp_.v, p, _MM_UPCONV_EPI32_SINT16, _MM_HINT_NONE);
+  tmp_.v = _mm512_extloadunpackhi_epi32(tmp_.v, (uint8_t*)p+64, _MM_UPCONV_EPI32_SINT16, _MM_HINT_NONE);
+  tmp_.v = _mm512_mask_mov_epi32(tmp_.v, mask, tmp.v);
+  _mm512_extpackstorelo_epi32(p, tmp_.v, _MM_DOWNCONV_EPI32_SINT16, _MM_HINT_NONE);
+  _mm512_extpackstorehi_epi32((uint8_t*)p+64, tmp_.v, _MM_DOWNCONV_EPI32_SINT16, _MM_HINT_NONE);
+  #endif // if 0
+#endif
 }
 
 static FORCEINLINE __vec16_i16 __masked_load_i16(void *p, __vec16_i1 mask) {
