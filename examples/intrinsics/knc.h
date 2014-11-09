@@ -117,7 +117,7 @@ typedef struct PRE_ALIGN(2) __vec16_i1
         ((v14 & 1) << 14) |
         ((v15 & 1) << 15));
   }
-  FORCEINLINE const uint8_t operator[](const int i) const {  return ((v >> i) & 1); }
+  FORCEINLINE       uint8_t operator[](const int i) const {  return ((v >> i) & 1); }
   FORCEINLINE       uint8_t operator[](const int i)       {  return ((v >> i) & 1); }
   __mmask16 v;
 } POST_ALIGN(2) __vec16_i1;
@@ -203,7 +203,7 @@ typedef struct PRE_ALIGN(64) __vec16_i64 {
                   _mm512_set_16to16_pi(15,13,11,9,7,5,3,1,14,12,10,8,6,4,2,0),
                   v2);
   } 
-  FORCEINLINE const int64_t operator[](const int i) const {  
+  FORCEINLINE       int64_t operator[](const int i) const {
       return ((uint64_t(((int32_t*)this)[i])<<32)+((int32_t*)this)[i+16]); }
   FORCEINLINE       int64_t operator[](const int i)       {
       return ((uint64_t(((int32_t*)this)[i])<<32)+((int32_t*)this)[i+16]); }
@@ -2282,13 +2282,18 @@ static FORCEINLINE void __masked_store_i8(void *p, const __vec16_i8 &val, __vec1
 }
 
 static FORCEINLINE __vec16_i8 __masked_load_i8(void *p, __vec16_i1 mask) {
+#ifdef ISPC_FORCE_ALIGNED_MEMORY
+  __vec16_i32 tmp = _mm512_mask_extload_epi32(_mm512_undefined_epi32(), mask, p, _MM_UPCONV_EPI32_SINT8, _MM_BROADCAST32_NONE, _MM_HINT_NONE);
+#else
+  __vec16_i32 tmp;
+  tmp.v = _mm512_mask_extloadunpacklo_epi32(tmp.v, 0xFFFF, p, _MM_UPCONV_EPI32_SINT8, _MM_HINT_NONE);
+  tmp.v = _mm512_mask_extloadunpackhi_epi32(tmp.v, 0xFFFF, (uint8_t*)p+64, _MM_UPCONV_EPI32_SINT8, _MM_HINT_NONE);
+#endif
   __vec16_i8 ret;
-  __vec16_i32 tmp = _mm512_mask_extload_epi32(_mm512_undefined_epi32(),mask,p,
-      _MM_UPCONV_EPI32_SINT8, 
-      _MM_BROADCAST32_NONE, _MM_HINT_NONE);
-  _mm512_extstore_epi32(&ret, tmp, _MM_DOWNCONV_EPI32_SINT8,_MM_HINT_NONE);
+  _mm512_extstore_epi32(&ret, tmp, _MM_DOWNCONV_EPI32_SINT8, _MM_HINT_NONE);
   return ret;
 }
+
 template <int ALIGN> static FORCEINLINE __vec16_i8 __load(const __vec16_i8 *p) {
   return *p;
 }
@@ -2327,13 +2332,18 @@ static FORCEINLINE void __masked_store_i16(void *p, const __vec16_i16 &val, __ve
 }
 
 static FORCEINLINE __vec16_i16 __masked_load_i16(void *p, __vec16_i1 mask) {
+#ifdef ISPC_FORCE_ALIGNED_MEMORY
+  __vec16_i32 tmp = _mm512_mask_extload_epi32(_mm512_undefined_epi32(), mask, p, _MM_UPCONV_EPI32_SINT16, _MM_BROADCAST32_NONE, _MM_HINT_NONE);
+#else
+  __vec16_i32 tmp;
+  tmp.v = _mm512_mask_extloadunpacklo_epi32(tmp.v, 0xFFFF, p, _MM_UPCONV_EPI32_SINT16, _MM_HINT_NONE);
+  tmp.v = _mm512_mask_extloadunpackhi_epi32(tmp.v, 0xFFFF, (uint8_t*)p+64, _MM_UPCONV_EPI32_SINT16, _MM_HINT_NONE);
+#endif
   __vec16_i16 ret;
-  __vec16_i32 tmp = _mm512_mask_extload_epi32(_mm512_undefined_epi32(),mask,p,
-      _MM_UPCONV_EPI32_SINT16,
-      _MM_BROADCAST32_NONE, _MM_HINT_NONE);
-  _mm512_extstore_epi32(&ret, tmp, _MM_DOWNCONV_EPI32_SINT16,_MM_HINT_NONE);
+  _mm512_extstore_epi32(&ret, tmp, _MM_DOWNCONV_EPI32_SINT16, _MM_HINT_NONE);
   return ret;
 }
+
 
 template <int ALIGN> static FORCEINLINE __vec16_i16 __load(const __vec16_i16 *p) {
   return *p;
