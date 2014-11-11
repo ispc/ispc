@@ -452,25 +452,6 @@ template <> FORCEINLINE __vec16_i1 __undef_i1<__vec16_i1>() {
 }
 
 ///////////////////////////////////////////////////////////////////////////
-// int8
-///////////////////////////////////////////////////////////////////////////
-
-template <class RetVecType> static RetVecType __setzero_i8();
-template <> FORCEINLINE __vec16_i8 __setzero_i8<__vec16_i8>() {
-      return __vec16_i8(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-}
-
-
-///////////////////////////////////////////////////////////////////////////
-// int16
-///////////////////////////////////////////////////////////////////////////
-
-template <class RetVecType> static RetVecType __setzero_i16();
-template <> FORCEINLINE __vec16_i16 __setzero_i16<__vec16_i16>() {
-      return __vec16_i16(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-}
-
-///////////////////////////////////////////////////////////////////////////
 // int32
 ///////////////////////////////////////////////////////////////////////////
 
@@ -682,6 +663,15 @@ static FORCEINLINE __vec16_i32 __rotate_i32(__vec16_i32 v, int index) {
 
 static FORCEINLINE __vec16_i32 __shuffle_i32(__vec16_i32 v, __vec16_i32 index) {
   return _mm512_mask_permutevar_epi32(v, 0xffff, index, v);
+}
+
+static FORCEINLINE __vec16_i32 __shuffle2_i32(__vec16_i32 v0, __vec16_i32 v1, __vec16_i32 index) {
+    const __vec16_i1 mask = __signed_less_than_i32(index, __smear_i32<__vec16_i32>(0x10));
+    index = __and(index, __smear_i32<__vec16_i32>(0xF));
+    __vec16_i32 ret = __undef_i32<__vec16_i32>();
+    ret = _mm512_mask_permutevar_epi32(ret, mask, index, v0);
+    ret = _mm512_mask_permutevar_epi32(ret, __not(mask), index, v1);
+    return ret;
 }
 
 template <int ALIGN> static FORCEINLINE __vec16_i32 __load(const __vec16_i32 *p) {
@@ -910,6 +900,15 @@ template <> FORCEINLINE  __vec16_i64 __smear_i64<__vec16_i64>(const int64_t &l) 
   const int *i = (const int*)&l;
   return __vec16_i64(_mm512_set1_epi32(i[0]), _mm512_set1_epi32(i[1]));
 }
+
+static FORCEINLINE __vec16_i64 __rotate_i64(__vec16_i64 v, int index) {
+    return __vec16_i64(__shuffle_i32(v.v_lo, index), __shuffle_i32(v.v_hi, index));
+}
+
+static FORCEINLINE __vec16_i64 __shuffle2_i64(__vec16_i64 v0, __vec16_i64 v1, __vec16_i32 index) {
+     return __vec16_i64(__shuffle2_i32(v0.v_lo, v1.v_lo, index), __shuffle2_i32(v0.v_hi, v1.v_hi, index));
+}
+
 
 template <int ALIGN> static FORCEINLINE __vec16_i64 __load(const __vec16_i64 *p) {
   __vec16_i32 v1;
@@ -1730,6 +1729,102 @@ static FORCEINLINE __vec16_d __cast_bits(__vec16_d, __vec16_i64 val) {
 }
 
 ///////////////////////////////////////////////////////////////////////////
+// int8
+///////////////////////////////////////////////////////////////////////////
+
+template <class RetVecType> static RetVecType __setzero_i8();
+template <> FORCEINLINE __vec16_i8 __setzero_i8<__vec16_i8>() {
+      return __vec16_i8(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+}
+
+static FORCEINLINE __vec16_i1 __not_equal_i8(__vec16_i8 a, __vec16_i8 b) {
+    __vec16_i32 tmp_a = _mm512_extload_epi32(&a, _MM_UPCONV_EPI32_SINT8, _MM_BROADCAST32_NONE, _MM_HINT_NONE);
+    __vec16_i32 tmp_b = _mm512_extload_epi32(&b, _MM_UPCONV_EPI32_SINT8, _MM_BROADCAST32_NONE, _MM_HINT_NONE);
+    return __not_equal_i32(tmp_a, tmp_b);
+}
+
+static FORCEINLINE __vec16_i8 __rotate_i8(__vec16_i8 v, int index) {
+    __vec16_i32 tmp_v = _mm512_extload_epi32(&v, _MM_UPCONV_EPI32_SINT8, _MM_BROADCAST32_NONE, _MM_HINT_NONE);
+    __vec16_i32 tmp   = __rotate_i32(tmp_v, index);
+    __vec16_i8 ret;
+    _mm512_extstore_epi32(&ret, tmp, _MM_DOWNCONV_EPI32_SINT8,_MM_HINT_NONE);
+    return ret;
+}
+
+static FORCEINLINE __vec16_i8 __shuffle_i8(__vec16_i8 v, __vec16_i32 index) {
+    __vec16_i32 tmp_v = _mm512_extload_epi32(&v, _MM_UPCONV_EPI32_SINT8, _MM_BROADCAST32_NONE, _MM_HINT_NONE);
+    __vec16_i32 tmp   = __shuffle_i32(tmp_v, index);
+    __vec16_i8 ret;
+    _mm512_extstore_epi32(&ret, tmp, _MM_DOWNCONV_EPI32_SINT8,_MM_HINT_NONE);
+    return ret;
+
+}
+
+template <class RetVecType> static RetVecType __smear_i8(int8_t i);
+template <> FORCEINLINE __vec16_i8 __smear_i8<__vec16_i8>(int8_t i) {
+    __vec16_i32 tmp = __smear_i32<__vec16_i32>(i);
+    __vec16_i8 ret;
+    _mm512_extstore_epi32(&ret, tmp, _MM_DOWNCONV_EPI32_SINT8,_MM_HINT_NONE);
+    return ret;
+}
+
+static FORCEINLINE __vec16_i8 __shuffle2_i8(__vec16_i8 v0, __vec16_i8 v1, __vec16_i32 index) {
+    __vec16_i32 tmp_v0 = _mm512_extload_epi32(&v0, _MM_UPCONV_EPI32_SINT8, _MM_BROADCAST32_NONE, _MM_HINT_NONE);
+    __vec16_i32 tmp_v1 = _mm512_extload_epi32(&v1, _MM_UPCONV_EPI32_SINT8, _MM_BROADCAST32_NONE, _MM_HINT_NONE);
+    __vec16_i32 tmp   = __shuffle2_i32(tmp_v0, tmp_v1, index);
+    __vec16_i8 ret;
+    _mm512_extstore_epi32(&ret, tmp, _MM_DOWNCONV_EPI32_SINT8,_MM_HINT_NONE);
+    return ret;
+}
+///////////////////////////////////////////////////////////////////////////
+// int16
+///////////////////////////////////////////////////////////////////////////
+
+template <class RetVecType> static RetVecType __setzero_i16();
+template <> FORCEINLINE __vec16_i16 __setzero_i16<__vec16_i16>() {
+      return __vec16_i16(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+}
+
+static FORCEINLINE __vec16_i1 __not_equal_i16(__vec16_i16 a, __vec16_i16 b) {
+    __vec16_i32 tmp_a = _mm512_extload_epi32(&a, _MM_UPCONV_EPI32_SINT16, _MM_BROADCAST32_NONE, _MM_HINT_NONE);
+    __vec16_i32 tmp_b = _mm512_extload_epi32(&b, _MM_UPCONV_EPI32_SINT16, _MM_BROADCAST32_NONE, _MM_HINT_NONE);
+    return __not_equal_i32(tmp_a, tmp_b);
+}
+
+static FORCEINLINE __vec16_i16 __rotate_i16(__vec16_i16 v, int index) {
+    __vec16_i32 tmp_v = _mm512_extload_epi32(&v, _MM_UPCONV_EPI32_SINT16, _MM_BROADCAST32_NONE, _MM_HINT_NONE);
+    __vec16_i32 tmp   = __rotate_i32(tmp_v, index);
+    __vec16_i16 ret;
+    _mm512_extstore_epi32(&ret, tmp, _MM_DOWNCONV_EPI32_SINT16,_MM_HINT_NONE);
+    return ret;
+}
+
+static FORCEINLINE __vec16_i16 __shuffle_i16(__vec16_i16 v, __vec16_i32 index) {
+    __vec16_i32 tmp_v = _mm512_extload_epi32(&v, _MM_UPCONV_EPI32_SINT16, _MM_BROADCAST32_NONE, _MM_HINT_NONE);
+    __vec16_i32 tmp   = __shuffle_i32(tmp_v, index);
+    __vec16_i16 ret;
+    _mm512_extstore_epi32(&ret, tmp, _MM_DOWNCONV_EPI32_SINT16,_MM_HINT_NONE);
+    return ret;
+}
+
+template <class RetVecType> static RetVecType __smear_i16(int16_t i);
+template <> FORCEINLINE __vec16_i16 __smear_i16<__vec16_i16>(int16_t i) {
+    __vec16_i32 tmp = __smear_i32<__vec16_i32>(i);
+    __vec16_i16 ret;
+    _mm512_extstore_epi32(&ret, tmp, _MM_DOWNCONV_EPI32_SINT16,_MM_HINT_NONE);
+    return ret;
+}
+
+static FORCEINLINE __vec16_i16 __shuffle2_i16(__vec16_i16 v0, __vec16_i16 v1, __vec16_i32 index) {
+    __vec16_i32 tmp_v0 = _mm512_extload_epi32(&v0, _MM_UPCONV_EPI32_SINT16, _MM_BROADCAST32_NONE, _MM_HINT_NONE);
+    __vec16_i32 tmp_v1 = _mm512_extload_epi32(&v1, _MM_UPCONV_EPI32_SINT16, _MM_BROADCAST32_NONE, _MM_HINT_NONE);
+    __vec16_i32 tmp   = __shuffle2_i32(tmp_v0, tmp_v1, index);
+    __vec16_i16 ret;
+    _mm512_extstore_epi32(&ret, tmp, _MM_DOWNCONV_EPI32_SINT16,_MM_HINT_NONE);
+    return ret;
+}
+
+///////////////////////////////////////////////////////////////////////////
 // various math functions
 ///////////////////////////////////////////////////////////////////////////
 
@@ -1901,16 +1996,24 @@ static FORCEINLINE int32_t __reduce_add_int16(__vec16_i16 v) {
   return ret;
 }
 
-static FORCEINLINE uint32_t __reduce_add_int32(__vec16_i32 v) {
+static FORCEINLINE int32_t __reduce_add_int32(__vec16_i32 v) {
   return _mm512_reduce_add_epi32(v);
 }
 
-static FORCEINLINE uint32_t __reduce_min_int32(__vec16_i32 v) {
+static FORCEINLINE int32_t __reduce_min_int32(__vec16_i32 v) {
   return _mm512_reduce_min_epi32(v);
 }
 
-static FORCEINLINE uint32_t __reduce_max_int32(__vec16_i32 v) {
+static FORCEINLINE int32_t __reduce_max_int32(__vec16_i32 v) {
   return _mm512_reduce_max_epi32(v);
+}
+
+static FORCEINLINE uint32_t __reduce_min_uint32(__vec16_i32 v) {
+  return _mm512_reduce_min_epu32(v);
+}
+
+static FORCEINLINE uint32_t __reduce_max_uint32(__vec16_i32 v) {
+  return _mm512_reduce_max_epu32(v);
 }
 
 static FORCEINLINE float __reduce_add_float(__vec16_f v) {
@@ -2020,12 +2123,29 @@ __scatter_base_offsets32_i8(uint8_t *b, uint32_t scale, __vec16_i32 offsets,
       _MM_HINT_NONE);
 }
 
+
+static FORCEINLINE void __masked_store_i16(void *p, const __vec16_i16 &val, __vec16_i1 mask) {
+  __vec16_i32 tmp = _mm512_extload_epi32(&val, _MM_UPCONV_EPI32_SINT16, _MM_BROADCAST32_NONE, _MM_HINT_NONE);
+  _mm512_mask_extstore_epi32(p, mask, tmp, _MM_DOWNCONV_EPI32_SINT16,_MM_HINT_NONE);
+}
+
+static FORCEINLINE __vec16_i16 __masked_load_i16(void *p, __vec16_i1 mask) {
+  __vec16_i16 ret;
+  __vec16_i32 tmp = _mm512_mask_extload_epi32(_mm512_undefined_epi32(),mask,p,
+      _MM_UPCONV_EPI32_SINT16,
+      _MM_BROADCAST32_NONE, _MM_HINT_NONE);
+  _mm512_extstore_epi32(&ret, tmp, _MM_DOWNCONV_EPI32_SINT16,_MM_HINT_NONE);
+  return ret;
+}
+
 template <int ALIGN> static FORCEINLINE __vec16_i16 __load(const __vec16_i16 *p) {
   return *p;
 }
+
 template <int ALIGN> static FORCEINLINE void __store(__vec16_i16 *p, __vec16_i16 v) {
   *p = v;
 }
+
 
 static FORCEINLINE void __masked_store_i32(void *p, __vec16_i32 val, __vec16_i1 mask) {
 #ifdef ISPC_FORCE_ALIGNED_MEMORY
