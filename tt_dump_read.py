@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python2
 #
 #  Copyright (c) 2014, Intel Corporation 
 #  All rights reserved.
