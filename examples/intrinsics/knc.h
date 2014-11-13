@@ -685,20 +685,22 @@ static FORCEINLINE __vec16_i32 __broadcast_i32(__vec16_i32 v, int index) {
 }
 
 static FORCEINLINE __vec16_i8 __cast_trunc(__vec16_i8, const __vec16_i16 i16) {
-  return __vec16_i8((uint8_t)i16[0],  (uint8_t)i16[1],  (uint8_t)i16[2],  (uint8_t)i16[3],
-                    (uint8_t)i16[4],  (uint8_t)i16[5],  (uint8_t)i16[6],  (uint8_t)i16[7],
-                    (uint8_t)i16[8],  (uint8_t)i16[9],  (uint8_t)i16[10], (uint8_t)i16[11],
-                    (uint8_t)i16[12], (uint8_t)i16[13], (uint8_t)i16[14], (uint8_t)i16[15]);
+  return __vec16_i8((uint8_t)(i16[0]&255),  (uint8_t)(i16[1]&255),  (uint8_t)(i16[2]&255),  (uint8_t)(i16[3]&255),
+                    (uint8_t)(i16[4]&255),  (uint8_t)(i16[5]&255),  (uint8_t)(i16[6]&255),  (uint8_t)(i16[7]&255),
+                    (uint8_t)(i16[8]&255),  (uint8_t)(i16[9]&255),  (uint8_t)(i16[10]&255), (uint8_t)(i16[11]&255),
+                    (uint8_t)(i16[12]&255), (uint8_t)(i16[13]&255), (uint8_t)(i16[14]&255), (uint8_t)(i16[15]&255));
 }
 
 static FORCEINLINE __vec16_i16 __cast_trunc(__vec16_i16, const __vec16_i32 i32) {
   __vec16_i16 ret;
-  _mm512_extstore_epi32(ret.v, i32, _MM_DOWNCONV_EPI32_UINT16, _MM_HINT_NONE);
+  __vec16_i32 i32_trunk = _mm512_and_epi32(i32, __smear_i32<__vec16_i32>(65535));
+  _mm512_extstore_epi32(ret.v, i32_trunk, _MM_DOWNCONV_EPI32_UINT16, _MM_HINT_NONE);
   return ret;
 }
 
 static FORCEINLINE __vec16_i8 __cast_trunc(__vec16_i8, const __vec16_i32 i32) {
   __vec16_i8 ret;
+  __vec16_i32 i32_trunk = _mm512_and_epi32(i32, __smear_i32<__vec16_i32>(255));
   _mm512_extstore_epi32(ret.v, i32, _MM_DOWNCONV_EPI32_UINT8, _MM_HINT_NONE);
   return ret;
 }
@@ -1522,10 +1524,10 @@ template <> FORCEINLINE void __store<128>(__vec16_d *p, __vec16_d v) {
 ///////////////////////////////////////////////////////////////////////////
 // casts
 ///////////////////////////////////////////////////////////////////////////
-
-static FORCEINLINE __vec16_i64 __cast_sext(const __vec16_i64 &, const __vec16_i32 &val)
+static FORCEINLINE __vec16_i16 __cast_sext(const __vec16_i16 &, const __vec16_i1 &val)
 {
-  return __vec16_i64(val.v, _mm512_srai_epi32(val.v, 31));
+  return __vec16_i16(-val[0], -val[1], -val[2],   -val[3],  -val[4],  -val[5],  -val[6],  -val[7], 
+                     -val[8], -val[9], -val[10],  -val[11], -val[12], -val[13], -val[14], -val[15]);
 }
 
 static FORCEINLINE __vec16_i32 __cast_sext(const __vec16_i32 &, const __vec16_i1 &val)
@@ -1535,10 +1537,28 @@ static FORCEINLINE __vec16_i32 __cast_sext(const __vec16_i32 &, const __vec16_i1
   return _mm512_mask_mov_epi32(ret, val, one);
 }
 
-static FORCEINLINE __vec16_i16 __cast_zext(const __vec16_i16 &, const __vec16_i8 &val)
+static FORCEINLINE __vec16_i32 __cast_sext(const __vec16_i32 &, const __vec16_i16 &val)
+{
+  return _mm512_extload_epi32(&val, _MM_UPCONV_EPI32_SINT16, _MM_BROADCAST32_NONE, _MM_HINT_NONE);
+}
+
+static FORCEINLINE __vec16_i64 __cast_sext(const __vec16_i64 &, const __vec16_i32 &val)
+{
+  return __vec16_i64(val.v, _mm512_srai_epi32(val.v, 31));
+}
+
+static FORCEINLINE __vec16_i16 __cast_zext(const __vec16_i16 &, const __vec16_i1 &val)
 {
   return __vec16_i16(val[0], val[1], val[2],   val[3],  val[4],  val[5],  val[6],  val[7], 
                      val[8], val[9], val[10],  val[11], val[12], val[13], val[14], val[15]);
+}
+
+static FORCEINLINE __vec16_i16 __cast_zext(const __vec16_i16 &, const __vec16_i8 &val)
+{
+  return __vec16_i16((uint8_t)val[0],  (uint8_t)val[1],  (uint8_t)val[2],  (uint8_t)val[3],  
+                     (uint8_t)val[4],  (uint8_t)val[5],  (uint8_t)val[6],  (uint8_t)val[7], 
+                     (uint8_t)val[8],  (uint8_t)val[9],  (uint8_t)val[10], (uint8_t)val[11], 
+                     (uint8_t)val[12], (uint8_t)val[13], (uint8_t)val[14], (uint8_t)val[15]);
 }
 
 static FORCEINLINE __vec16_i32 __cast_zext(const __vec16_i32 &, const __vec16_i1 &val)
@@ -1814,40 +1834,50 @@ static FORCEINLINE __vec16_d __cast_bits(__vec16_d, __vec16_i64 val) {
 ///////////////////////////////////////////////////////////////////////////
 // templates for int8/16 operations
 ///////////////////////////////////////////////////////////////////////////
-#define BINARY_OP(TYPE, NAME, OP)                                  \
-static FORCEINLINE TYPE NAME(TYPE a, TYPE b) {                     \
-  TYPE ret;                                                        \
-  for (int i = 0; i < 16; ++i)                                     \
-    ret[i] = a[i] OP b[i];                                         \
-  return ret;                                                      \
+#define BINARY_OP(TYPE, NAME, OP)                                   \
+static FORCEINLINE TYPE NAME(TYPE a, TYPE b) {                      \
+  TYPE ret;                                                         \
+  for (int i = 0; i < 16; ++i)                                      \
+    ret[i] = a[i] OP b[i];                                          \
+  return ret;                                                       \
 }
 
 /* knc::macro::used */
-#define BINARY_OP_CAST(TYPE, CAST, NAME, OP)                       \
-static FORCEINLINE TYPE NAME(TYPE a, TYPE b) {                     \
-  TYPE ret;                                                        \
-  for (int i = 0; i < 16; ++i)                                     \
-    ret[i] = (CAST)(a[i]) OP (CAST)(b[i]);                         \
-  return ret;                                                      \
+#define BINARY_OP_CAST(TYPE, CAST, NAME, OP)                        \
+static FORCEINLINE TYPE NAME(TYPE a, TYPE b) {                      \
+  TYPE ret;                                                         \
+  for (int i = 0; i < 16; ++i)                                      \
+    ret[i] = (CAST)(a[i]) OP (CAST)(b[i]);                          \
+  return ret;                                                       \
 }
 
-#define CMP_OP(TYPE, SUFFIX, CAST, NAME, OP)                       \
-static FORCEINLINE __vec16_i1 NAME##_##SUFFIX(TYPE a, TYPE b) {    \
-  __vec16_i1 ret;                                                  \
-  ret.v = 0;                                                       \
-  for (int i = 0; i < 16; ++i)                                     \
-    ret.v |= ((CAST)(a[i]) OP (CAST)(b[i])) << i;                  \
-  return ret;                                                      \
+#define CMP_OP(TYPE, SUFFIX, CAST, NAME, OP)                        \
+static FORCEINLINE __vec16_i1 NAME##_##SUFFIX(TYPE a, TYPE b) {     \
+  __vec16_i1 ret;                                                   \
+  ret.v = 0;                                                        \
+  for (int i = 0; i < 16; ++i)                                      \
+    ret.v |= ((CAST)(a[i]) OP (CAST)(b[i])) << i;                   \
+  return ret;                                                       \
 }
 
-#define SHIFT_UNIFORM(TYPE, CAST, NAME, OP)                        \
-static FORCEINLINE TYPE NAME(TYPE a, int32_t b) {                  \
-  TYPE ret;                                                        \
-  for (int i = 0; i < 16; ++i)                                     \
-    ret[i] = (CAST)(a[i]) OP b;                                    \
-  return ret;                                                      \
+#define SHIFT_UNIFORM(TYPE, CAST, NAME, OP)                         \
+static FORCEINLINE TYPE NAME(TYPE a, int32_t b) {                   \
+  TYPE ret;                                                         \
+  for (int i = 0; i < 16; ++i)                                      \
+    ret[i] = (CAST)(a[i]) OP b;                                     \
+  return ret;                                                       \
 }
 
+#define SELECT(TYPE)                                                \
+static FORCEINLINE TYPE __select(__vec16_i1 mask, TYPE a, TYPE b) { \
+  TYPE ret;                                                         \
+  for (int i = 0; i < 16; ++i)                                      \
+    ret[i] = (mask.v & (1<<i)) ? a[i] : b[i];                       \
+  return ret;                                                       \
+}                                                                   \
+static FORCEINLINE TYPE __select(bool cond, TYPE a, TYPE b) {       \
+  return cond ? a : b;                                              \
+}
 
 ///////////////////////////////////////////////////////////////////////////
 // int8
@@ -1888,11 +1918,24 @@ CMP_OP(__vec16_i8, i8, int8_t,  __signed_less_than, <)
 CMP_OP(__vec16_i8, i8, uint8_t, __unsigned_greater_than, >)
 CMP_OP(__vec16_i8, i8, int8_t,  __signed_greater_than, >)
 
+SELECT(__vec16_i8)
 
 static FORCEINLINE __vec16_i1 __not_equal_i8(__vec16_i8 a, __vec16_i8 b) {
     __vec16_i32 tmp_a = _mm512_extload_epi32(&a, _MM_UPCONV_EPI32_SINT8, _MM_BROADCAST32_NONE, _MM_HINT_NONE);
     __vec16_i32 tmp_b = _mm512_extload_epi32(&b, _MM_UPCONV_EPI32_SINT8, _MM_BROADCAST32_NONE, _MM_HINT_NONE);
     return __not_equal_i32(tmp_a, tmp_b);
+}
+
+static FORCEINLINE __vec16_i1 __equal_i8_and_mask(const __vec16_i8 &a, const __vec16_i8 &b, __vec16_i1 m) {
+  __vec16_i32 tmp_a = _mm512_extload_epi32(&a, _MM_UPCONV_EPI32_SINT8, _MM_BROADCAST32_NONE, _MM_HINT_NONE);
+  __vec16_i32 tmp_b = _mm512_extload_epi32(&b, _MM_UPCONV_EPI32_SINT8, _MM_BROADCAST32_NONE, _MM_HINT_NONE);
+  return __equal_i32_and_mask(tmp_a, tmp_b, m);
+}
+
+static FORCEINLINE __vec16_i1 __not_equal_i8_and_mask(__vec16_i8 a, __vec16_i8 b, __vec16_i1 m) {
+  __vec16_i32 tmp_a = _mm512_extload_epi32(&a, _MM_UPCONV_EPI32_SINT8, _MM_BROADCAST32_NONE, _MM_HINT_NONE);
+  __vec16_i32 tmp_b = _mm512_extload_epi32(&b, _MM_UPCONV_EPI32_SINT8, _MM_BROADCAST32_NONE, _MM_HINT_NONE);
+  return __not_equal_i32_and_mask(tmp_a, tmp_b, m);
 }
 
 static FORCEINLINE __vec16_i8 __rotate_i8(__vec16_i8 v, int index) {
@@ -1969,45 +2012,57 @@ CMP_OP(__vec16_i16, i16, int16_t,  __signed_less_than, <)
 CMP_OP(__vec16_i16, i16, uint16_t, __unsigned_greater_than, >)
 CMP_OP(__vec16_i16, i16, int16_t,  __signed_greater_than, >)
 
-
+SELECT(__vec16_i16)
 
 static FORCEINLINE __vec16_i1 __not_equal_i16(__vec16_i16 a, __vec16_i16 b) {
-    __vec16_i32 tmp_a = _mm512_extload_epi32(&a, _MM_UPCONV_EPI32_SINT16, _MM_BROADCAST32_NONE, _MM_HINT_NONE);
-    __vec16_i32 tmp_b = _mm512_extload_epi32(&b, _MM_UPCONV_EPI32_SINT16, _MM_BROADCAST32_NONE, _MM_HINT_NONE);
-    return __not_equal_i32(tmp_a, tmp_b);
+  __vec16_i32 tmp_a = _mm512_extload_epi32(&a, _MM_UPCONV_EPI32_SINT16, _MM_BROADCAST32_NONE, _MM_HINT_NONE);
+  __vec16_i32 tmp_b = _mm512_extload_epi32(&b, _MM_UPCONV_EPI32_SINT16, _MM_BROADCAST32_NONE, _MM_HINT_NONE);
+  return __not_equal_i32(tmp_a, tmp_b);
+}
+
+static FORCEINLINE __vec16_i1 __equal_i16_and_mask(const __vec16_i16 &a, const __vec16_i16 &b, __vec16_i1 m) {
+  __vec16_i32 tmp_a = _mm512_extload_epi32(&a, _MM_UPCONV_EPI32_SINT16, _MM_BROADCAST32_NONE, _MM_HINT_NONE);
+  __vec16_i32 tmp_b = _mm512_extload_epi32(&b, _MM_UPCONV_EPI32_SINT16, _MM_BROADCAST32_NONE, _MM_HINT_NONE);
+  return __equal_i32_and_mask(tmp_a, tmp_b, m);
+}
+
+static FORCEINLINE __vec16_i1 __not_equal_i16_and_mask(__vec16_i16 a, __vec16_i16 b, __vec16_i1 m) {
+  __vec16_i32 tmp_a = _mm512_extload_epi32(&a, _MM_UPCONV_EPI32_SINT16, _MM_BROADCAST32_NONE, _MM_HINT_NONE);
+  __vec16_i32 tmp_b = _mm512_extload_epi32(&b, _MM_UPCONV_EPI32_SINT16, _MM_BROADCAST32_NONE, _MM_HINT_NONE);
+  return __not_equal_i32_and_mask(tmp_a, tmp_b, m);
 }
 
 static FORCEINLINE __vec16_i16 __rotate_i16(__vec16_i16 v, int index) {
-    __vec16_i32 tmp_v = _mm512_extload_epi32(&v, _MM_UPCONV_EPI32_SINT16, _MM_BROADCAST32_NONE, _MM_HINT_NONE);
-    __vec16_i32 tmp   = __rotate_i32(tmp_v, index);
-    __vec16_i16 ret;
-    _mm512_extstore_epi32(&ret, tmp, _MM_DOWNCONV_EPI32_SINT16,_MM_HINT_NONE);
-    return ret;
+  __vec16_i32 tmp_v = _mm512_extload_epi32(&v, _MM_UPCONV_EPI32_SINT16, _MM_BROADCAST32_NONE, _MM_HINT_NONE);
+  __vec16_i32 tmp   = __rotate_i32(tmp_v, index);
+  __vec16_i16 ret;
+  _mm512_extstore_epi32(&ret, tmp, _MM_DOWNCONV_EPI32_SINT16,_MM_HINT_NONE);
+  return ret;
 }
 
 static FORCEINLINE __vec16_i16 __shuffle_i16(__vec16_i16 v, __vec16_i32 index) {
-    __vec16_i32 tmp_v = _mm512_extload_epi32(&v, _MM_UPCONV_EPI32_SINT16, _MM_BROADCAST32_NONE, _MM_HINT_NONE);
-    __vec16_i32 tmp   = __shuffle_i32(tmp_v, index);
-    __vec16_i16 ret;
-    _mm512_extstore_epi32(&ret, tmp, _MM_DOWNCONV_EPI32_SINT16,_MM_HINT_NONE);
-    return ret;
+  __vec16_i32 tmp_v = _mm512_extload_epi32(&v, _MM_UPCONV_EPI32_SINT16, _MM_BROADCAST32_NONE, _MM_HINT_NONE);
+  __vec16_i32 tmp   = __shuffle_i32(tmp_v, index);
+  __vec16_i16 ret;
+  _mm512_extstore_epi32(&ret, tmp, _MM_DOWNCONV_EPI32_SINT16,_MM_HINT_NONE);
+  return ret;
 }
 
 template <class RetVecType> static RetVecType __smear_i16(int16_t i);
 template <> FORCEINLINE __vec16_i16 __smear_i16<__vec16_i16>(int16_t i) {
-    __vec16_i32 tmp = __smear_i32<__vec16_i32>(i);
-    __vec16_i16 ret;
-    _mm512_extstore_epi32(&ret, tmp, _MM_DOWNCONV_EPI32_SINT16,_MM_HINT_NONE);
-    return ret;
+  __vec16_i32 tmp = __smear_i32<__vec16_i32>(i);
+  __vec16_i16 ret;
+  _mm512_extstore_epi32(&ret, tmp, _MM_DOWNCONV_EPI32_SINT16,_MM_HINT_NONE);
+  return ret;
 }
 
 static FORCEINLINE __vec16_i16 __shuffle2_i16(__vec16_i16 v0, __vec16_i16 v1, __vec16_i32 index) {
-    __vec16_i32 tmp_v0 = _mm512_extload_epi32(&v0, _MM_UPCONV_EPI32_SINT16, _MM_BROADCAST32_NONE, _MM_HINT_NONE);
-    __vec16_i32 tmp_v1 = _mm512_extload_epi32(&v1, _MM_UPCONV_EPI32_SINT16, _MM_BROADCAST32_NONE, _MM_HINT_NONE);
-    __vec16_i32 tmp   = __shuffle2_i32(tmp_v0, tmp_v1, index);
-    __vec16_i16 ret;
-    _mm512_extstore_epi32(&ret, tmp, _MM_DOWNCONV_EPI32_SINT16,_MM_HINT_NONE);
-    return ret;
+  __vec16_i32 tmp_v0 = _mm512_extload_epi32(&v0, _MM_UPCONV_EPI32_SINT16, _MM_BROADCAST32_NONE, _MM_HINT_NONE);
+  __vec16_i32 tmp_v1 = _mm512_extload_epi32(&v1, _MM_UPCONV_EPI32_SINT16, _MM_BROADCAST32_NONE, _MM_HINT_NONE);
+  __vec16_i32 tmp   = __shuffle2_i32(tmp_v0, tmp_v1, index);
+  __vec16_i16 ret;
+  _mm512_extstore_epi32(&ret, tmp, _MM_DOWNCONV_EPI32_SINT16,_MM_HINT_NONE);
+  return ret;
 }
 
 ///////////////////////////////////////////////////////////////////////////
