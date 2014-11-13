@@ -211,19 +211,36 @@ typedef struct PRE_ALIGN(64) __vec16_i64 {
   __m512i v_lo;
 } POST_ALIGN(64) __vec16_i64;
 
+static __vec16_i64 zmm2hilo(const __m512i v1, const __m512i v2){
+  __vec16_i64 v;
+  v.v_hi = _mm512_mask_permutevar_epi32(_mm512_undefined_epi32(), 0xFF00,
+                  _mm512_set_16to16_pi(15,13,11,9,7,5,3,1,14,12,10,8,6,4,2,0),
+                  v2);
+  v.v_hi = _mm512_mask_permutevar_epi32(v.v_hi, 0x00FF,
+                  _mm512_set_16to16_pi(14,12,10,8,6,4,2,0,15,13,11,9,7,5,3,1),
+                  v1);
+  v.v_lo = _mm512_mask_permutevar_epi32(_mm512_undefined_epi32(), 0xFF00,
+                  _mm512_set_16to16_pi(14,12,10,8,6,4,2,0,15,13,11,9,7,5,3,1),
+                  v2);
+  v.v_lo = _mm512_mask_permutevar_epi32(v.v_lo, 0x00FF,
+                  _mm512_set_16to16_pi(15,13,11,9,7,5,3,1,14,12,10,8,6,4,2,0),
+                  v1);
+  return v;
+}
+
 static void hilo2zmm(const __vec16_i64 &v, __m512i &_v1, __m512i &_v2) {
-    _v2 = _mm512_mask_permutevar_epi32(_mm512_undefined_epi32(), 0xAAAA,
-        _mm512_set_16to16_pi(15,15,14,14,13,13,12,12,11,11,10,10,9,9,8,8),
-        v.v_hi);
-    _v2 = _mm512_mask_permutevar_epi32(_v2, 0x5555,
-        _mm512_set_16to16_pi(15,15,14,14,13,13,12,12,11,11,10,10,9,9,8,8),
-        v.v_lo);
-    _v1 = _mm512_mask_permutevar_epi32(_mm512_undefined_epi32(), 0xAAAA,
-        _mm512_set_16to16_pi(7,7,6,6,5,5,4,4,3,3,2,2,1,1,0,0),
-        v.v_hi);
-    _v1 = _mm512_mask_permutevar_epi32(_v1, 0x5555,
-        _mm512_set_16to16_pi(7,7,6,6,5,5,4,4,3,3,2,2,1,1,0,0),
-        v.v_lo);
+  _v2 = _mm512_mask_permutevar_epi32(_mm512_undefined_epi32(), 0xAAAA,
+               _mm512_set_16to16_pi(15,15,14,14,13,13,12,12,11,11,10,10,9,9,8,8),
+               v.v_hi);
+  _v2 = _mm512_mask_permutevar_epi32(_v2, 0x5555,
+               _mm512_set_16to16_pi(15,15,14,14,13,13,12,12,11,11,10,10,9,9,8,8),
+               v.v_lo);
+  _v1 = _mm512_mask_permutevar_epi32(_mm512_undefined_epi32(), 0xAAAA,
+               _mm512_set_16to16_pi(7,7,6,6,5,5,4,4,3,3,2,2,1,1,0,0),
+               v.v_hi);
+  _v1 = _mm512_mask_permutevar_epi32(_v1, 0x5555,
+               _mm512_set_16to16_pi(7,7,6,6,5,5,4,4,3,3,2,2,1,1,0,0),
+               v.v_lo);
 }
 
 template <typename T>
@@ -331,7 +348,7 @@ inline std::ostream &operator<<(std::ostream &out, const __vec16_i64 &v)
   uint32_t *ptr = (uint32_t*)&v;
   for (int i=0;i<16;i++) {
     uint64_t val = (uint64_t(ptr[i])<<32)+ptr[i+16];
-    out << (i!=0?",":"") << ((int*)val);
+    out << (i!=0?",":"") << std::dec << std::setw(8) << ((int)val) << std::dec;
   }  
   out << "]" << std::flush;
   return out;
@@ -948,7 +965,7 @@ static FORCEINLINE __vec16_i1 __not_equal_i64_and_mask(const __vec16_i64 &a, con
 }
 
 static FORCEINLINE __vec16_i64 __select(__vec16_i1 mask,
-    __vec16_i64 a, __vec16_i64 b) {
+  __vec16_i64 a, __vec16_i64 b) {
   __vec16_i64 ret;
   ret.v_hi = _mm512_mask_mov_epi32(b.v_hi, mask, a.v_hi);
   ret.v_lo = _mm512_mask_mov_epi32(b.v_lo, mask, a.v_lo);
@@ -962,11 +979,14 @@ template <> FORCEINLINE  __vec16_i64 __smear_i64<__vec16_i64>(const int64_t &l) 
 }
 
 static FORCEINLINE __vec16_i64 __rotate_i64(__vec16_i64 v, int index) {
-    return __vec16_i64(__shuffle_i32(v.v_lo, index), __shuffle_i32(v.v_hi, index));
+  __vec16_i32 idx = __smear_i32<__vec16_i32>(index);
+  __vec16_i32 shuffle = _mm512_and_epi32(_mm512_add_epi32(__ispc_stride1, idx),  __smear_i32<__vec16_i32>(0xf));
+  return __vec16_i64(_mm512_mask_permutevar_epi32(v.v_lo, 0xffff, shuffle, v.v_lo), 
+                     _mm512_mask_permutevar_epi32(v.v_hi, 0xffff, shuffle, v.v_hi));
 }
 
 static FORCEINLINE __vec16_i64 __shuffle2_i64(__vec16_i64 v0, __vec16_i64 v1, __vec16_i32 index) {
-     return __vec16_i64(__shuffle2_i32(v0.v_lo, v1.v_lo, index), __shuffle2_i32(v0.v_hi, v1.v_hi, index));
+  return __vec16_i64(__shuffle2_i32(v0.v_lo, v1.v_lo, index), __shuffle2_i32(v0.v_hi, v1.v_hi, index));
 }
 
 
@@ -1585,6 +1605,20 @@ static FORCEINLINE __vec16_f __cast_sitofp(__vec16_f, __vec16_i32 val) {
   return _mm512_cvtfxpnt_round_adjustepi32_ps(val, _MM_ROUND_MODE_NEAREST, _MM_EXPADJ_NONE); 
 }
 
+static FORCEINLINE __vec16_f __cast_sitofp(__vec16_f, __vec16_i64 val) {
+  __m512i tmp1;
+  __m512i tmp2;
+  hilo2zmm(val, tmp1, tmp2);
+  __vec16_f ret;
+  for (int i = 0; i < 8; i++) {
+    ((float*)&ret)[i] = (float)(((int64_t*)&tmp1)[i]);
+  }
+  for (int i = 0; i < 8; i++) {
+    ((float*)&ret)[i + 8] = (float)(((int64_t*)&tmp2)[i]);
+  }
+  return ret;
+}
+
 static FORCEINLINE __vec16_d __cast_sitofp(__vec16_d, __vec16_i8 val) {
   __vec16_i32 vi = _mm512_extload_epi32(&val, _MM_UPCONV_EPI32_SINT8, _MM_BROADCAST_16X16, _MM_HINT_NONE);
   __vec16_d ret;
@@ -1611,6 +1645,21 @@ static FORCEINLINE __vec16_d __cast_sitofp(__vec16_d, __vec16_i32 val) {
   return ret;
 }
 
+static FORCEINLINE __vec16_d __cast_sitofp(__vec16_d, __vec16_i64 val) {
+  __m512i tmp1;
+  __m512i tmp2;
+  hilo2zmm(val, tmp1, tmp2);
+  __vec16_d ret;
+  for (int i = 0; i < 8; i++) {
+    ((double*)&ret.v1)[i] = (double)(((int64_t*)&tmp1)[i]);
+  }
+  for (int i = 0; i < 8; i++) {
+    ((double*)&ret.v2)[i] = (double)(((int64_t*)&tmp2)[i]);
+  }
+  return ret;
+}
+
+
 static FORCEINLINE __vec16_f __cast_uitofp(__vec16_f, __vec16_i1 v) 
 {
   const __m512 ret = _mm512_setzero_ps();
@@ -1628,6 +1677,20 @@ static FORCEINLINE __vec16_f __cast_uitofp(__vec16_f, __vec16_i16 val) {
 
 static FORCEINLINE __vec16_f __cast_uitofp(__vec16_f, __vec16_i32 v) {
   return _mm512_cvtfxpnt_round_adjustepu32_ps(v, _MM_FROUND_NO_EXC, _MM_EXPADJ_NONE); 
+}
+
+static FORCEINLINE __vec16_f __cast_uitofp(__vec16_f, __vec16_i64 val) {
+  __m512i tmp1;
+  __m512i tmp2;
+  hilo2zmm(val, tmp1, tmp2);
+  __vec16_f ret;
+  for (int i = 0; i < 8; i++) {
+    ((float*)&ret)[i] = (float)(((uint64_t*)&tmp1)[i]);
+  }
+  for (int i = 0; i < 8; i++) {
+    ((float*)&ret)[i + 8] = (float)(((uint64_t*)&tmp2)[i]);
+  }
+  return ret;
 }
 
 static FORCEINLINE __vec16_d __cast_uitofp(__vec16_d, __vec16_i8 val) 
@@ -1659,6 +1722,22 @@ static FORCEINLINE __vec16_d __cast_uitofp(__vec16_d, __vec16_i32 val)
   return ret;
 }
 
+
+static FORCEINLINE __vec16_d __cast_uitofp(__vec16_d, __vec16_i64 val) {
+  __m512i tmp1;
+  __m512i tmp2;
+  hilo2zmm(val, tmp1, tmp2);
+  __vec16_d ret;
+  for (int i = 0; i < 8; i++) {
+    ((double*)&ret.v1)[i] = (double)(((uint64_t*)&tmp1)[i]);
+  }
+  for (int i = 0; i < 8; i++) {
+    ((double*)&ret.v2)[i] = (double)(((uint64_t*)&tmp2)[i]);
+  }
+  return ret;
+}
+
+
 // float/double to signed int
 static FORCEINLINE __vec16_i32 __cast_fptosi(__vec16_i32, __vec16_f val) {
   return _mm512_cvtfxpnt_round_adjustps_epi32(val, _MM_ROUND_MODE_TOWARD_ZERO, _MM_EXPADJ_NONE);
@@ -1676,6 +1755,18 @@ static FORCEINLINE __vec16_i16 __cast_fptosi(__vec16_i16, __vec16_f val) {
   __vec16_i32 tmp = __cast_fptosi(__vec16_i32(), val);
   _mm512_extstore_epi32(ret.v, tmp, _MM_DOWNCONV_EPI32_SINT16, _MM_HINT_NONE);
   return ret;
+}
+
+static FORCEINLINE __vec16_i64 __cast_fptosi(__vec16_i64, __vec16_f val) {
+  __m512i tmp1;
+  for (int i = 0; i < 8; i++) {
+    ((int64_t*)&tmp1)[i] = (int64_t)(((float*)&val)[i]);
+  }
+  __m512i tmp2;
+  for (int i = 0; i < 8; i++) {
+    ((int64_t*)&tmp2)[i] = (int64_t)(((float*)&val)[i + 8]);
+  }
+  return zmm2hilo(tmp1, tmp2);
 }
 
 static FORCEINLINE __vec16_i32 __cast_fptosi(__vec16_i32, __vec16_d val) { 
@@ -1699,7 +1790,17 @@ static FORCEINLINE __vec16_i16 __cast_fptosi(__vec16_i16, __vec16_d val) {
   return ret;
 }
 
-
+static FORCEINLINE __vec16_i64 __cast_fptosi(__vec16_i64, __vec16_d val) {
+  __m512i tmp1;
+  for (int i = 0; i < 8; i++) {
+    ((int64_t*)&tmp1)[i] = (int64_t)(((double*)&val.v1)[i]);
+  }
+  __m512i tmp2;
+  for (int i = 0; i < 8; i++) {
+    ((int64_t*)&tmp2)[i] = (int64_t)(((double*)&val.v2)[i]);
+  }
+  return zmm2hilo(tmp1, tmp2);
+}
 
 
 static FORCEINLINE __vec16_i32 __cast_fptoui(__vec16_i32, __vec16_f val) {
@@ -1718,6 +1819,18 @@ static FORCEINLINE __vec16_i16 __cast_fptoui(__vec16_i16, __vec16_f val) {
   __vec16_i32 tmp = __cast_fptoui(__vec16_i32(), val);
   _mm512_extstore_epi32(ret.v, tmp, _MM_DOWNCONV_EPI32_UINT16, _MM_HINT_NONE);
   return ret;
+}
+
+static FORCEINLINE __vec16_i64 __cast_fptoui(__vec16_i64, __vec16_f val) {
+  __m512i tmp1;
+  for (int i = 0; i < 8; i++) {
+    ((uint64_t*)&tmp1)[i] = (uint64_t)(((float*)&val)[i]);
+  }
+  __m512i tmp2;
+  for (int i = 0; i < 8; i++) {
+    ((uint64_t*)&tmp2)[i] = (uint64_t)(((float*)&val)[i + 8]);
+  }
+  return zmm2hilo(tmp1, tmp2);
 }
 
 static FORCEINLINE __vec16_i32 __cast_fptoui(__vec16_i32, __vec16_d val) {
@@ -1741,7 +1854,17 @@ static FORCEINLINE __vec16_i16 __cast_fptoui(__vec16_i16, __vec16_d val) {
   return ret;
 }
 
-
+static FORCEINLINE __vec16_i64 __cast_fptoui(__vec16_i64, __vec16_d val) {
+  __m512i tmp1;
+  for (int i = 0; i < 8; i++) {
+    ((uint64_t*)&tmp1)[i] = (uint64_t)(((double*)&val.v1)[i]);
+  }
+  __m512i tmp2;
+  for (int i = 0; i < 8; i++) {
+    ((uint64_t*)&tmp2)[i] = (uint64_t)(((double*)&val.v2)[i]);
+  }
+  return zmm2hilo(tmp1, tmp2);
+}
 
 
 
