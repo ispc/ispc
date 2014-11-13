@@ -211,6 +211,21 @@ typedef struct PRE_ALIGN(64) __vec16_i64 {
   __m512i v_lo;
 } POST_ALIGN(64) __vec16_i64;
 
+static void hilo2zmm(const __vec16_i64 &v, __m512i &_v1, __m512i &_v2) {
+    _v2 = _mm512_mask_permutevar_epi32(_mm512_undefined_epi32(), 0xAAAA,
+        _mm512_set_16to16_pi(15,15,14,14,13,13,12,12,11,11,10,10,9,9,8,8),
+        v.v_hi);
+    _v2 = _mm512_mask_permutevar_epi32(_v2, 0x5555,
+        _mm512_set_16to16_pi(15,15,14,14,13,13,12,12,11,11,10,10,9,9,8,8),
+        v.v_lo);
+    _v1 = _mm512_mask_permutevar_epi32(_mm512_undefined_epi32(), 0xAAAA,
+        _mm512_set_16to16_pi(7,7,6,6,5,5,4,4,3,3,2,2,1,1,0,0),
+        v.v_hi);
+    _v1 = _mm512_mask_permutevar_epi32(_v1, 0x5555,
+        _mm512_set_16to16_pi(7,7,6,6,5,5,4,4,3,3,2,2,1,1,0,0),
+        v.v_lo);
+}
+
 template <typename T>
 struct vec16 {
   FORCEINLINE vec16() { }
@@ -2214,6 +2229,51 @@ static FORCEINLINE uint32_t __reduce_min_uint32(__vec16_i32 v) {
 
 static FORCEINLINE uint32_t __reduce_max_uint32(__vec16_i32 v) {
   return _mm512_reduce_max_epu32(v);
+}
+
+static FORCEINLINE int64_t __reduce_add_int64(__vec16_i64 v) {
+  __m512i tmp1;
+  __m512i tmp2;
+  hilo2zmm(v, tmp1, tmp2);
+  int64_t res1 = _mm512_reduce_add_epi64(tmp1);
+  int64_t res2 = _mm512_reduce_add_epi64(tmp2);
+  return res1 + res2;
+}
+
+static FORCEINLINE int64_t __reduce_min_int64(__vec16_i64 v) {
+  __m512i tmp1;
+  __m512i tmp2;
+  hilo2zmm(v, tmp1, tmp2);
+  int64_t res1 = _mm512_reduce_min_epi64(tmp1);
+  int64_t res2 = _mm512_reduce_min_epi64(tmp2);
+  return (res1 < res2) ? res1 : res2;
+}
+
+static FORCEINLINE int64_t __reduce_max_int64(__vec16_i64 v) {
+  __m512i tmp1;
+  __m512i tmp2;
+  hilo2zmm(v, tmp1, tmp2);
+  int64_t res1 = _mm512_reduce_max_epi64(tmp1);
+  int64_t res2 = _mm512_reduce_max_epi64(tmp2);
+  return (res1 > res2) ? res1 : res2;
+}
+
+static FORCEINLINE uint64_t __reduce_min_uint64(__vec16_i64 v) {
+  __m512i tmp1;
+  __m512i tmp2;
+  hilo2zmm(v, tmp1, tmp2);
+  uint64_t res1 = _mm512_reduce_min_epu64(tmp1);
+  uint64_t res2 = _mm512_reduce_min_epu64(tmp2);
+  return (res1 < res2) ? res1 : res2;
+}
+
+static FORCEINLINE uint64_t __reduce_max_uint64(__vec16_i64 v) {
+  __m512i tmp1;
+  __m512i tmp2;
+  hilo2zmm(v, tmp1, tmp2);
+  uint64_t res1 = _mm512_reduce_max_epu64(tmp1);
+  uint64_t res2 = _mm512_reduce_max_epu64(tmp2);
+  return (res1 > res2) ? res1 : res2;
 }
 
 static FORCEINLINE float __reduce_add_float(__vec16_f v) {
