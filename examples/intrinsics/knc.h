@@ -1873,6 +1873,21 @@ CMP_OP(__vec16_i8, i8, int8_t,  __signed_less_than, <)
 CMP_OP(__vec16_i8, i8, uint8_t, __unsigned_greater_than, >)
 CMP_OP(__vec16_i8, i8, int8_t,  __signed_greater_than, >)
 
+static FORCEINLINE int8_t __extract_element(__vec16_i8 v, uint32_t index) {
+    return v[index];
+}
+
+static FORCEINLINE void __insert_element(__vec16_i8 *v, uint32_t index, int8_t val) {
+    ((int32_t *)v)[index] = val;
+}
+
+static FORCEINLINE __vec16_i8 __broadcast_i8(__vec16_i8 v, int index) {
+    int32_t val = __extract_element(v, index & 0xf);
+    __vec16_i32 tmp = _mm512_set1_epi32(val);
+    __vec16_i8 ret;
+    _mm512_extstore_epi32(&ret, tmp, _MM_DOWNCONV_EPI32_SINT8,_MM_HINT_NONE);
+    return ret;
+}
 
 static FORCEINLINE __vec16_i1 __not_equal_i8(__vec16_i8 a, __vec16_i8 b) {
     __vec16_i32 tmp_a = _mm512_extload_epi32(&a, _MM_UPCONV_EPI32_SINT8, _MM_BROADCAST32_NONE, _MM_HINT_NONE);
@@ -1954,7 +1969,21 @@ CMP_OP(__vec16_i16, i16, int16_t,  __signed_less_than, <)
 CMP_OP(__vec16_i16, i16, uint16_t, __unsigned_greater_than, >)
 CMP_OP(__vec16_i16, i16, int16_t,  __signed_greater_than, >)
 
+static FORCEINLINE int16_t __extract_element(__vec16_i16 v, uint32_t index) {
+    return v[index];
+}
 
+static FORCEINLINE void __insert_element(__vec16_i16 *v, uint32_t index, int16_t val) {
+    ((int16_t *)v)[index] = val;
+}
+
+static FORCEINLINE __vec16_i16 __broadcast_i16(__vec16_i16 v, int index) {
+    int32_t val = __extract_element(v, index & 0xf);
+    __vec16_i32 tmp = _mm512_set1_epi32(val);
+    __vec16_i16 ret;
+    _mm512_extstore_epi32(&ret, tmp, _MM_DOWNCONV_EPI32_SINT16,_MM_HINT_NONE);
+    return ret;
+}
 
 static FORCEINLINE __vec16_i1 __not_equal_i16(__vec16_i16 a, __vec16_i16 b) {
     __vec16_i32 tmp_a = _mm512_extload_epi32(&a, _MM_UPCONV_EPI32_SINT16, _MM_BROADCAST32_NONE, _MM_HINT_NONE);
@@ -2151,7 +2180,7 @@ static FORCEINLINE int64_t __count_trailing_zeros_i64(const __vec1_i64 mask) {
 // reductions
 ///////////////////////////////////////////////////////////////////////////
 
-static FORCEINLINE int16_t __reduce_add_int8(__vec16_i8 v) {
+static FORCEINLINE int8_t __reduce_add_int8(__vec16_i8 v) {
   // TODO: improve this!
   int16_t ret = 0;
   for (int i = 0; i < 16; ++i)
@@ -2159,7 +2188,7 @@ static FORCEINLINE int16_t __reduce_add_int8(__vec16_i8 v) {
   return ret;
 }
 
-static FORCEINLINE int32_t __reduce_add_int16(__vec16_i16 v) {
+static FORCEINLINE int16_t __reduce_add_int16(__vec16_i16 v) {
   // TODO: improve this!
   int32_t ret = 0;
   for (int i = 0; i < 16; ++i)
