@@ -348,7 +348,7 @@ inline std::ostream &operator<<(std::ostream &out, const __vec16_i64 &v)
   uint32_t *ptr = (uint32_t*)&v;
   for (int i=0;i<16;i++) {
     uint64_t val = (uint64_t(ptr[i])<<32)+ptr[i+16];
-    out << (i!=0?",":"") << std::dec << std::setw(8) << ((int)val) << std::dec;
+    out << (i!=0?",":"") << std::dec << std::setw(8) << ((int64_t)val) << std::dec;
   }  
   out << "]" << std::flush;
   return out;
@@ -1684,12 +1684,31 @@ static FORCEINLINE __vec16_f __cast_uitofp(__vec16_f, __vec16_i64 val) {
   __m512i tmp2;
   hilo2zmm(val, tmp1, tmp2);
   __vec16_f ret;
+  // Cycles don't work. I don't know why.
+  /*
   for (int i = 0; i < 8; i++) {
-    ((float*)&ret)[i] = (float)(((uint64_t*)&tmp1)[i]);
+    ((float*)&ret)[i] = ((float)(((uint64_t*)&tmp1)[i]));
   }
   for (int i = 0; i < 8; i++) {
-    ((float*)&ret)[i + 8] = (float)(((uint64_t*)&tmp2)[i]);
+    ((float*)&ret)[i + 8] = ((float)(((uint64_t*)&tmp2)[i]));
   }
+  */
+  ((float*)&ret)[0] = ((float)(((uint64_t*)&tmp1)[0]));
+  ((float*)&ret)[1] = ((float)(((uint64_t*)&tmp1)[1]));
+  ((float*)&ret)[2] = ((float)(((uint64_t*)&tmp1)[2]));
+  ((float*)&ret)[3] = ((float)(((uint64_t*)&tmp1)[3]));
+  ((float*)&ret)[4] = ((float)(((uint64_t*)&tmp1)[4]));
+  ((float*)&ret)[5] = ((float)(((uint64_t*)&tmp1)[5]));
+  ((float*)&ret)[6] = ((float)(((uint64_t*)&tmp1)[6]));
+  ((float*)&ret)[7] = ((float)(((uint64_t*)&tmp1)[7]));
+  ((float*)&ret)[8] = ((float)(((uint64_t*)&tmp2)[0]));
+  ((float*)&ret)[9] = ((float)(((uint64_t*)&tmp2)[1]));
+  ((float*)&ret)[10] = ((float)(((uint64_t*)&tmp2)[2]));
+  ((float*)&ret)[11] = ((float)(((uint64_t*)&tmp2)[3]));
+  ((float*)&ret)[12] = ((float)(((uint64_t*)&tmp2)[4]));
+  ((float*)&ret)[13] = ((float)(((uint64_t*)&tmp2)[5]));
+  ((float*)&ret)[14] = ((float)(((uint64_t*)&tmp2)[6]));
+  ((float*)&ret)[15] = ((float)(((uint64_t*)&tmp2)[7]));
   return ret;
 }
 
