@@ -540,7 +540,6 @@
 ./tests/exclusive-scan-add-10.ispc compfail  x86-64            knc   Linux LLVM 3.4   icpc15.0 -O2 *
 ./tests/exclusive-scan-add-8.ispc compfail  x86-64            knc   Linux LLVM 3.4   icpc15.0 -O2 *
 ./tests/exclusive-scan-add-9.ispc compfail  x86-64            knc   Linux LLVM 3.4   icpc15.0 -O2 *
-./tests/funcptr-uniform-10.ispc compfail  x86-64            knc   Linux LLVM 3.4   icpc15.0 -O2 *
 ./tests/funcptr-varying-7.ispc compfail  x86-64            knc   Linux LLVM 3.4   icpc15.0 -O2 *
 ./tests/funcptr-varying-8.ispc compfail  x86-64            knc   Linux LLVM 3.4   icpc15.0 -O2 *
 ./tests/gather-double-5.ispc compfail  x86-64            knc   Linux LLVM 3.4   icpc15.0 -O2 *
@@ -599,7 +598,6 @@
 ./tests/psubs_vi64.ispc compfail  x86-64            knc   Linux LLVM 3.4   icpc15.0 -O2 *
 ./tests/psubs_vi8.ispc compfail  x86-64            knc   Linux LLVM 3.4   icpc15.0 -O2 *
 ./tests/psubus_vi64.ispc compfail  x86-64            knc   Linux LLVM 3.4   icpc15.0 -O2 *
-./tests/ptr-15.ispc compfail  x86-64            knc   Linux LLVM 3.4   icpc15.0 -O2 *
 ./tests/ptr-22.ispc compfail  x86-64            knc   Linux LLVM 3.4   icpc15.0 -O2 *
 ./tests/ptr-24.ispc compfail  x86-64            knc   Linux LLVM 3.4   icpc15.0 -O2 *
 ./tests/ptr-25.ispc compfail  x86-64            knc   Linux LLVM 3.4   icpc15.0 -O2 *
@@ -627,8 +625,6 @@
 ./tests/shuffle2-3.ispc compfail  x86-64            knc   Linux LLVM 3.4   icpc15.0 -O2 *
 ./tests/shuffle2-4.ispc compfail  x86-64            knc   Linux LLVM 3.4   icpc15.0 -O2 *
 ./tests/shuffle2-5.ispc compfail  x86-64            knc   Linux LLVM 3.4   icpc15.0 -O2 *
-./tests/soa-16.ispc compfail  x86-64            knc   Linux LLVM 3.4   icpc15.0 -O2 *
-./tests/soa-17.ispc compfail  x86-64            knc   Linux LLVM 3.4   icpc15.0 -O2 *
 ./tests/soa-18.ispc compfail  x86-64            knc   Linux LLVM 3.4   icpc15.0 -O2 *
 ./tests/soa-22.ispc compfail  x86-64            knc   Linux LLVM 3.4   icpc15.0 -O2 *
 ./tests/struct-nested-5.ispc compfail  x86-64            knc   Linux LLVM 3.4   icpc15.0 -O2 *
@@ -683,10 +679,8 @@
 ./tests/exclusive-scan-and-1.ispc compfail  x86-64            knc   Linux LLVM 3.4   icpc15.0 -O0 *
 ./tests/exclusive-scan-and-2.ispc compfail  x86-64            knc   Linux LLVM 3.4   icpc15.0 -O0 *
 ./tests/exclusive-scan-or-1.ispc compfail  x86-64            knc   Linux LLVM 3.4   icpc15.0 -O0 *
-./tests/foreach-double-1.ispc compfail  x86-64            knc   Linux LLVM 3.4   icpc15.0 -O0 *
 ./tests/frexp-double-1.ispc compfail  x86-64            knc   Linux LLVM 3.4   icpc15.0 -O0 *
 ./tests/frexp-double.ispc compfail  x86-64            knc   Linux LLVM 3.4   icpc15.0 -O0 *
-./tests/funcptr-uniform-10.ispc compfail  x86-64            knc   Linux LLVM 3.4   icpc15.0 -O0 *
 ./tests/gather-double-5.ispc compfail  x86-64            knc   Linux LLVM 3.4   icpc15.0 -O0 *
 ./tests/gather-double-6.ispc compfail  x86-64            knc   Linux LLVM 3.4   icpc15.0 -O0 *
 ./tests/gather-double-7.ispc compfail  x86-64            knc   Linux LLVM 3.4   icpc15.0 -O0 *
@@ -757,7 +751,6 @@
 ./tests/psubus_vi16.ispc compfail  x86-64            knc   Linux LLVM 3.4   icpc15.0 -O0 *
 ./tests/psubus_vi64.ispc compfail  x86-64            knc   Linux LLVM 3.4   icpc15.0 -O0 *
 ./tests/psubus_vi8.ispc compfail  x86-64            knc   Linux LLVM 3.4   icpc15.0 -O0 *
-./tests/ptr-15.ispc compfail  x86-64            knc   Linux LLVM 3.4   icpc15.0 -O0 *
 ./tests/ptr-19.ispc compfail  x86-64            knc   Linux LLVM 3.4   icpc15.0 -O0 *
 ./tests/ptr-24.ispc compfail  x86-64            knc   Linux LLVM 3.4   icpc15.0 -O0 *
 ./tests/ptr-25.ispc compfail  x86-64            knc   Linux LLVM 3.4   icpc15.0 -O0 *
@@ -809,8 +802,6 @@
 ./tests/shuffle2-7.ispc compfail  x86-64            knc   Linux LLVM 3.4   icpc15.0 -O0 *
 ./tests/shuffle2-8.ispc compfail  x86-64            knc   Linux LLVM 3.4   icpc15.0 -O0 *
 ./tests/shuffle2-9.ispc compfail  x86-64            knc   Linux LLVM 3.4   icpc15.0 -O0 *
-./tests/soa-16.ispc compfail  x86-64            knc   Linux LLVM 3.4   icpc15.0 -O0 *
-./tests/soa-17.ispc compfail  x86-64            knc   Linux LLVM 3.4   icpc15.0 -O0 *
 ./tests/soa-18.ispc compfail  x86-64            knc   Linux LLVM 3.4   icpc15.0 -O0 *
 ./tests/soa-19.ispc compfail  x86-64            knc   Linux LLVM 3.4   icpc15.0 -O0 *
 ./tests/soa-22.ispc compfail  x86-64            knc   Linux LLVM 3.4   icpc15.0 -O0 *
@@ -854,7 +845,6 @@
 ./tests/exclusive-scan-add-10.ispc compfail  x86-64            knc   Linux LLVM 3.5   icpc15.0 -O2 *
 ./tests/exclusive-scan-add-8.ispc compfail  x86-64            knc   Linux LLVM 3.5   icpc15.0 -O2 *
 ./tests/exclusive-scan-add-9.ispc compfail  x86-64            knc   Linux LLVM 3.5   icpc15.0 -O2 *
-./tests/funcptr-uniform-10.ispc compfail  x86-64            knc   Linux LLVM 3.5   icpc15.0 -O2 *
 ./tests/funcptr-varying-7.ispc compfail  x86-64            knc   Linux LLVM 3.5   icpc15.0 -O2 *
 ./tests/funcptr-varying-8.ispc compfail  x86-64            knc   Linux LLVM 3.5   icpc15.0 -O2 *
 ./tests/gather-double-5.ispc compfail  x86-64            knc   Linux LLVM 3.5   icpc15.0 -O2 *
@@ -920,7 +910,6 @@
 ./tests/psubs_vi64.ispc compfail  x86-64            knc   Linux LLVM 3.5   icpc15.0 -O2 *
 ./tests/psubs_vi8.ispc compfail  x86-64            knc   Linux LLVM 3.5   icpc15.0 -O2 *
 ./tests/psubus_vi64.ispc compfail  x86-64            knc   Linux LLVM 3.5   icpc15.0 -O2 *
-./tests/ptr-15.ispc compfail  x86-64            knc   Linux LLVM 3.5   icpc15.0 -O2 *
 ./tests/ptr-22.ispc compfail  x86-64            knc   Linux LLVM 3.5   icpc15.0 -O2 *
 ./tests/ptr-24.ispc compfail  x86-64            knc   Linux LLVM 3.5   icpc15.0 -O2 *
 ./tests/ptr-25.ispc compfail  x86-64            knc   Linux LLVM 3.5   icpc15.0 -O2 *
@@ -948,8 +937,6 @@
 ./tests/shuffle2-3.ispc compfail  x86-64            knc   Linux LLVM 3.5   icpc15.0 -O2 *
 ./tests/shuffle2-4.ispc compfail  x86-64            knc   Linux LLVM 3.5   icpc15.0 -O2 *
 ./tests/shuffle2-5.ispc compfail  x86-64            knc   Linux LLVM 3.5   icpc15.0 -O2 *
-./tests/soa-16.ispc compfail  x86-64            knc   Linux LLVM 3.5   icpc15.0 -O2 *
-./tests/soa-17.ispc compfail  x86-64            knc   Linux LLVM 3.5   icpc15.0 -O2 *
 ./tests/soa-18.ispc compfail  x86-64            knc   Linux LLVM 3.5   icpc15.0 -O2 *
 ./tests/soa-22.ispc compfail  x86-64            knc   Linux LLVM 3.5   icpc15.0 -O2 *
 ./tests/struct-nested-5.ispc compfail  x86-64            knc   Linux LLVM 3.5   icpc15.0 -O2 *
@@ -1007,10 +994,8 @@
 ./tests/exclusive-scan-and-1.ispc compfail  x86-64            knc   Linux LLVM 3.5   icpc15.0 -O0 *
 ./tests/exclusive-scan-and-2.ispc compfail  x86-64            knc   Linux LLVM 3.5   icpc15.0 -O0 *
 ./tests/exclusive-scan-or-1.ispc compfail  x86-64            knc   Linux LLVM 3.5   icpc15.0 -O0 *
-./tests/foreach-double-1.ispc compfail  x86-64            knc   Linux LLVM 3.5   icpc15.0 -O0 *
 ./tests/frexp-double-1.ispc compfail  x86-64            knc   Linux LLVM 3.5   icpc15.0 -O0 *
 ./tests/frexp-double.ispc compfail  x86-64            knc   Linux LLVM 3.5   icpc15.0 -O0 *
-./tests/funcptr-uniform-10.ispc compfail  x86-64            knc   Linux LLVM 3.5   icpc15.0 -O0 *
 ./tests/gather-double-5.ispc compfail  x86-64            knc   Linux LLVM 3.5   icpc15.0 -O0 *
 ./tests/gather-double-6.ispc compfail  x86-64            knc   Linux LLVM 3.5   icpc15.0 -O0 *
 ./tests/gather-double-7.ispc compfail  x86-64            knc   Linux LLVM 3.5   icpc15.0 -O0 *
@@ -1081,7 +1066,6 @@
 ./tests/psubus_vi16.ispc compfail  x86-64            knc   Linux LLVM 3.5   icpc15.0 -O0 *
 ./tests/psubus_vi64.ispc compfail  x86-64            knc   Linux LLVM 3.5   icpc15.0 -O0 *
 ./tests/psubus_vi8.ispc compfail  x86-64            knc   Linux LLVM 3.5   icpc15.0 -O0 *
-./tests/ptr-15.ispc compfail  x86-64            knc   Linux LLVM 3.5   icpc15.0 -O0 *
 ./tests/ptr-19.ispc compfail  x86-64            knc   Linux LLVM 3.5   icpc15.0 -O0 *
 ./tests/ptr-24.ispc compfail  x86-64            knc   Linux LLVM 3.5   icpc15.0 -O0 *
 ./tests/ptr-25.ispc compfail  x86-64            knc   Linux LLVM 3.5   icpc15.0 -O0 *
@@ -1133,8 +1117,6 @@
 ./tests/shuffle2-7.ispc compfail  x86-64            knc   Linux LLVM 3.5   icpc15.0 -O0 *
 ./tests/shuffle2-8.ispc compfail  x86-64            knc   Linux LLVM 3.5   icpc15.0 -O0 *
 ./tests/shuffle2-9.ispc compfail  x86-64            knc   Linux LLVM 3.5   icpc15.0 -O0 *
-./tests/soa-16.ispc compfail  x86-64            knc   Linux LLVM 3.5   icpc15.0 -O0 *
-./tests/soa-17.ispc compfail  x86-64            knc   Linux LLVM 3.5   icpc15.0 -O0 *
 ./tests/soa-18.ispc compfail  x86-64            knc   Linux LLVM 3.5   icpc15.0 -O0 *
 ./tests/soa-19.ispc compfail  x86-64            knc   Linux LLVM 3.5   icpc15.0 -O0 *
 ./tests/soa-22.ispc compfail  x86-64            knc   Linux LLVM 3.5   icpc15.0 -O0 *
@@ -1178,7 +1160,6 @@
 ./tests/exclusive-scan-add-10.ispc compfail  x86-64            knc   Linux LLVM 3.6   icpc15.0 -O2 *
 ./tests/exclusive-scan-add-8.ispc compfail  x86-64            knc   Linux LLVM 3.6   icpc15.0 -O2 *
 ./tests/exclusive-scan-add-9.ispc compfail  x86-64            knc   Linux LLVM 3.6   icpc15.0 -O2 *
-./tests/funcptr-uniform-10.ispc compfail  x86-64            knc   Linux LLVM 3.6   icpc15.0 -O2 *
 ./tests/funcptr-varying-7.ispc compfail  x86-64            knc   Linux LLVM 3.6   icpc15.0 -O2 *
 ./tests/funcptr-varying-8.ispc compfail  x86-64            knc   Linux LLVM 3.6   icpc15.0 -O2 *
 ./tests/gather-double-5.ispc compfail  x86-64            knc   Linux LLVM 3.6   icpc15.0 -O2 *
@@ -1246,7 +1227,6 @@
 ./tests/psubus_vi16.ispc compfail  x86-64            knc   Linux LLVM 3.6   icpc15.0 -O2 *
 ./tests/psubus_vi64.ispc compfail  x86-64            knc   Linux LLVM 3.6   icpc15.0 -O2 *
 ./tests/psubus_vi8.ispc compfail  x86-64            knc   Linux LLVM 3.6   icpc15.0 -O2 *
-./tests/ptr-15.ispc compfail  x86-64            knc   Linux LLVM 3.6   icpc15.0 -O2 *
 ./tests/ptr-22.ispc compfail  x86-64            knc   Linux LLVM 3.6   icpc15.0 -O2 *
 ./tests/ptr-24.ispc compfail  x86-64            knc   Linux LLVM 3.6   icpc15.0 -O2 *
 ./tests/ptr-25.ispc compfail  x86-64            knc   Linux LLVM 3.6   icpc15.0 -O2 *
@@ -1274,8 +1254,6 @@
 ./tests/shuffle2-3.ispc compfail  x86-64            knc   Linux LLVM 3.6   icpc15.0 -O2 *
 ./tests/shuffle2-4.ispc compfail  x86-64            knc   Linux LLVM 3.6   icpc15.0 -O2 *
 ./tests/shuffle2-5.ispc compfail  x86-64            knc   Linux LLVM 3.6   icpc15.0 -O2 *
-./tests/soa-16.ispc compfail  x86-64            knc   Linux LLVM 3.6   icpc15.0 -O2 *
-./tests/soa-17.ispc compfail  x86-64            knc   Linux LLVM 3.6   icpc15.0 -O2 *
 ./tests/soa-18.ispc compfail  x86-64            knc   Linux LLVM 3.6   icpc15.0 -O2 *
 ./tests/soa-22.ispc compfail  x86-64            knc   Linux LLVM 3.6   icpc15.0 -O2 *
 ./tests/struct-nested-5.ispc compfail  x86-64            knc   Linux LLVM 3.6   icpc15.0 -O2 *
@@ -1333,10 +1311,8 @@
 ./tests/exclusive-scan-and-1.ispc compfail  x86-64            knc   Linux LLVM 3.6   icpc15.0 -O0 *
 ./tests/exclusive-scan-and-2.ispc compfail  x86-64            knc   Linux LLVM 3.6   icpc15.0 -O0 *
 ./tests/exclusive-scan-or-1.ispc compfail  x86-64            knc   Linux LLVM 3.6   icpc15.0 -O0 *
-./tests/foreach-double-1.ispc compfail  x86-64            knc   Linux LLVM 3.6   icpc15.0 -O0 *
 ./tests/frexp-double-1.ispc compfail  x86-64            knc   Linux LLVM 3.6   icpc15.0 -O0 *
 ./tests/frexp-double.ispc compfail  x86-64            knc   Linux LLVM 3.6   icpc15.0 -O0 *
-./tests/funcptr-uniform-10.ispc compfail  x86-64            knc   Linux LLVM 3.6   icpc15.0 -O0 *
 ./tests/gather-double-5.ispc compfail  x86-64            knc   Linux LLVM 3.6   icpc15.0 -O0 *
 ./tests/gather-double-6.ispc compfail  x86-64            knc   Linux LLVM 3.6   icpc15.0 -O0 *
 ./tests/gather-double-7.ispc compfail  x86-64            knc   Linux LLVM 3.6   icpc15.0 -O0 *
@@ -1407,7 +1383,6 @@
 ./tests/psubus_vi16.ispc compfail  x86-64            knc   Linux LLVM 3.6   icpc15.0 -O0 *
 ./tests/psubus_vi64.ispc compfail  x86-64            knc   Linux LLVM 3.6   icpc15.0 -O0 *
 ./tests/psubus_vi8.ispc compfail  x86-64            knc   Linux LLVM 3.6   icpc15.0 -O0 *
-./tests/ptr-15.ispc compfail  x86-64            knc   Linux LLVM 3.6   icpc15.0 -O0 *
 ./tests/ptr-19.ispc compfail  x86-64            knc   Linux LLVM 3.6   icpc15.0 -O0 *
 ./tests/ptr-24.ispc compfail  x86-64            knc   Linux LLVM 3.6   icpc15.0 -O0 *
 ./tests/ptr-25.ispc compfail  x86-64            knc   Linux LLVM 3.6   icpc15.0 -O0 *
@@ -1459,8 +1434,6 @@
 ./tests/shuffle2-7.ispc compfail  x86-64            knc   Linux LLVM 3.6   icpc15.0 -O0 *
 ./tests/shuffle2-8.ispc compfail  x86-64            knc   Linux LLVM 3.6   icpc15.0 -O0 *
 ./tests/shuffle2-9.ispc compfail  x86-64            knc   Linux LLVM 3.6   icpc15.0 -O0 *
-./tests/soa-16.ispc compfail  x86-64            knc   Linux LLVM 3.6   icpc15.0 -O0 *
-./tests/soa-17.ispc compfail  x86-64            knc   Linux LLVM 3.6   icpc15.0 -O0 *
 ./tests/soa-18.ispc compfail  x86-64            knc   Linux LLVM 3.6   icpc15.0 -O0 *
 ./tests/soa-19.ispc compfail  x86-64            knc   Linux LLVM 3.6   icpc15.0 -O0 *
 ./tests/soa-22.ispc compfail  x86-64            knc   Linux LLVM 3.6   icpc15.0 -O0 *
