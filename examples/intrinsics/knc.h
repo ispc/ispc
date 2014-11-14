@@ -702,10 +702,10 @@ static FORCEINLINE __vec16_i32 __broadcast_i32(__vec16_i32 v, int index) {
 }
 
 static FORCEINLINE __vec16_i8 __cast_trunc(__vec16_i8, const __vec16_i16 i16) {
-  return __vec16_i8((uint8_t)(i16[0]&255),  (uint8_t)(i16[1]&255),  (uint8_t)(i16[2]&255),  (uint8_t)(i16[3]&255),
-                    (uint8_t)(i16[4]&255),  (uint8_t)(i16[5]&255),  (uint8_t)(i16[6]&255),  (uint8_t)(i16[7]&255),
-                    (uint8_t)(i16[8]&255),  (uint8_t)(i16[9]&255),  (uint8_t)(i16[10]&255), (uint8_t)(i16[11]&255),
-                    (uint8_t)(i16[12]&255), (uint8_t)(i16[13]&255), (uint8_t)(i16[14]&255), (uint8_t)(i16[15]&255));
+  return __vec16_i8((uint8_t)i16[0],  (uint8_t)i16[1],  (uint8_t)i16[2],  (uint8_t)i16[3],
+                    (uint8_t)i16[4],  (uint8_t)i16[5],  (uint8_t)i16[6],  (uint8_t)i16[7],
+                    (uint8_t)i16[8],  (uint8_t)i16[9],  (uint8_t)i16[10], (uint8_t)i16[11],
+                    (uint8_t)i16[12], (uint8_t)i16[13], (uint8_t)i16[14], (uint8_t)i16[15]);
 }
 
 static FORCEINLINE __vec16_i16 __cast_trunc(__vec16_i16, const __vec16_i32 i32) {
