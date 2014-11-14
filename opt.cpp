@@ -1200,7 +1200,11 @@ InstructionSimplifyPass::simplifyBoolVec(llvm::Value *value) {
             zext->getOperand(0)->getType() == LLVMTypes::Int1VectorType)
             return zext->getOperand(0);
     }
-
+    /*
+      // This optimization has discernable benefit on the perf 
+      // suite on latest LLVM versions.
+      // On 3.4+ (maybe even older), it can result in illegal 
+      // operations, so it's being disabled.
     llvm::ICmpInst *icmp = llvm::dyn_cast<llvm::ICmpInst>(value);
     if (icmp != NULL) {
         // icmp(ne, {sext,zext}(foo), zeroinitializer) -> foo
@@ -1216,7 +1220,9 @@ InstructionSimplifyPass::simplifyBoolVec(llvm::Value *value) {
                     return zext->getOperand(0);
             }
         }
+
     }
+    */
     return NULL;
 }
 
