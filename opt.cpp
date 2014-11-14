@@ -185,11 +185,8 @@ lCopyMetadata(llvm::Value *vto, const llvm::Instruction *from) {
     if (!to)
         return;
 
-#if defined(LLVM_3_2) || defined(LLVM_3_3) || defined(LLVM_3_4) || defined(LLVM_3_5)
     llvm::SmallVector<std::pair<unsigned int, llvm::MDNode *>, 8> metadata;
-#else // LLVM 3.6+
-    llvm::SmallVector<std::pair<unsigned int, llvm::Value *>, 8> metadata;
-#endif
+
     from->getAllMetadata(metadata);
     for (unsigned int i = 0; i < metadata.size(); ++i)
         to->setMetadata(metadata[i].first, metadata[i].second);
@@ -219,19 +216,12 @@ lCopyMetadata(llvm::Value *vto, const llvm::Instruction *from) {
 */
 static bool
 lGetSourcePosFromMetadata(const llvm::Instruction *inst, SourcePos *pos) {
-#if defined(LLVM_3_2) || defined(LLVM_3_3) || defined(LLVM_3_4) || defined(LLVM_3_5)    
     llvm::MDNode *filename = inst->getMetadata("filename");
     llvm::MDNode *first_line = inst->getMetadata("first_line");
     llvm::MDNode *first_column = inst->getMetadata("first_column");
     llvm::MDNode *last_line = inst->getMetadata("last_line");
     llvm::MDNode *last_column = inst->getMetadata("last_column");
-#else // LLVM 3.6+
-    llvm::MDNode *filename = inst->getMDNode("filename");
-    llvm::MDNode *first_line = inst->getMDNode("first_line");
-    llvm::MDNode *first_column = inst->getMDNode("first_column");
-    llvm::MDNode *last_line = inst->getMDNode("last_line");
-    llvm::MDNode *last_column = inst->getMDNode("last_column");
-#endif
+
     if (!filename || !first_line || !first_column || !last_line || !last_column)
         return false;
 
@@ -1210,7 +1200,11 @@ InstructionSimplifyPass::simplifyBoolVec(llvm::Value *value) {
             zext->getOperand(0)->getType() == LLVMTypes::Int1VectorType)
             return zext->getOperand(0);
     }
-
+    /*
+      // This optimization has discernable benefit on the perf 
+      // suite on latest LLVM versions.
+      // On 3.4+ (maybe even older), it can result in illegal 
+      // operations, so it's being disabled.
     llvm::ICmpInst *icmp = llvm::dyn_cast<llvm::ICmpInst>(value);
     if (icmp != NULL) {
         // icmp(ne, {sext,zext}(foo), zeroinitializer) -> foo
@@ -1226,7 +1220,9 @@ InstructionSimplifyPass::simplifyBoolVec(llvm::Value *value) {
                     return zext->getOperand(0);
             }
         }
+
     }
+    */
     return NULL;
 }
 

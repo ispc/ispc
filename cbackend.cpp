@@ -152,11 +152,7 @@ namespace {
           incorporateValue(Aliasee);
       }
 
-#if defined(LLVM_3_2) || defined(LLVM_3_3) || defined(LLVM_3_4) || defined(LLVM_3_5)
       llvm::SmallVector<std::pair<unsigned, llvm::MDNode*>, 4> MDForInst;
-#else // LLVM 3.6+
-      llvm::SmallVector<std::pair<unsigned, llvm::Value*>, 4> MDForInst;
-#endif
 
       // Get types from functions.
       for (llvm::Module::const_iterator FI = M.begin(), E = M.end(); FI != E; ++FI) {
