@@ -921,18 +921,22 @@ lDefineConstantInt(const char *name, int val, llvm::Module *module,
         // FIXME? DWARF says that this (and programIndex below) should
         // have the DW_AT_artifical attribute.  It's not clear if this
         // matters for anything though.
-        llvm::DIGlobalVariable var =
+
 #if !defined(LLVM_3_2) && !defined(LLVM_3_3) && !defined(LLVM_3_4) && !defined(LLVM_3_5)// LLVM 3.6+
-            m->diBuilder->createGlobalVariable(file,
+        llvm::Constant *sym_const_storagePtr = llvm::dyn_cast<llvm::Constant>(sym->storagePtr);
+        Assert(sym_const_storagePtr);
+        llvm::DIGlobalVariable var = m->diBuilder->createGlobalVariable(
+                                               file,
                                                name,
                                                name,
                                                file,
                                                0 /* line */,
                                                diType,
                                                true /* static */,
-                                               sym->storagePtr);
+                                               sym_const_storagePtr);
 #else
-            m->diBuilder->createGlobalVariable(name,
+        llvm::DIGlobalVariable var = m->diBuilder->createGlobalVariable(
+                                               name,
                                                file,
                                                0 /* line */,
                                                diType,
@@ -992,18 +996,21 @@ lDefineProgramIndex(llvm::Module *module, SymbolTable *symbolTable) {
         llvm::DIFile file;
         llvm::DIType diType = sym->type->GetDIType(file);
         Assert(diType.Verify());
-        llvm::DIGlobalVariable var =
 #if !defined(LLVM_3_2) && !defined(LLVM_3_3) && !defined(LLVM_3_4) && !defined(LLVM_3_5)// LLVM 3.6+
-            m->diBuilder->createGlobalVariable(file,
+        llvm::Constant *sym_const_storagePtr = llvm::dyn_cast<llvm::Constant>(sym->storagePtr);
+        Assert(sym_const_storagePtr);
+        llvm::DIGlobalVariable var = m->diBuilder->createGlobalVariable(
+                                               file,
                                                sym->name.c_str(),
                                                sym->name.c_str(),
                                                file,
                                                0 /* line */,
                                                diType,
                                                false /* static */,
-                                               sym->storagePtr);
+                                               sym_const_storagePtr);
 #else
-            m->diBuilder->createGlobalVariable(sym->name.c_str(),
+        llvm::DIGlobalVariable var = m->diBuilder->createGlobalVariable(
+                                               sym->name.c_str(),
                                                file,
                                                0 /* line */,
                                                diType,
