@@ -607,18 +607,21 @@ Module::AddGlobalVariable(const std::string &name, const Type *type, Expr *initE
 
     if (diBuilder) {
         llvm::DIFile file = pos.GetDIFile();
-        llvm::DIGlobalVariable var =
 #if !defined(LLVM_3_2) && !defined(LLVM_3_3) && !defined(LLVM_3_4) && !defined(LLVM_3_5)// LLVM 3.6+
-            diBuilder->createGlobalVariable(file,
+        llvm::Constant *sym_const_storagePtr = llvm::dyn_cast<llvm::Constant>(sym->storagePtr);
+        Assert(sym_const_storagePtr);
+        llvm::DIGlobalVariable var = diBuilder->createGlobalVariable(
+                                            file,
                                             name,
                                             name,
                                             file,
                                             pos.first_line,
                                             sym->type->GetDIType(file),
                                             (sym->storageClass == SC_STATIC),
-                                            sym->storagePtr);
+                                            sym_const_storagePtr);
 #else
-            diBuilder->createGlobalVariable(name,
+        llvm::DIGlobalVariable var = diBuilder->createGlobalVariable(
+                                            name,
                                             file,
                                             pos.first_line,
                                             sym->type->GetDIType(file),
