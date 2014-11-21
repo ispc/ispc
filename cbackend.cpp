@@ -2762,14 +2762,22 @@ void CWriter::printContainedStructs(llvm::Type *Ty,
 
   if (llvm::StructType *ST = llvm::dyn_cast<llvm::StructType>(Ty)) {
     // Check to see if we have already printed this struct.
+#if !defined(LLVM_3_2) && !defined(LLVM_3_3) && !defined(LLVM_3_4) && !defined(LLVM_3_5) // LLVM 3.6+
+    if (!Printed.insert(Ty).second) return;
+#else
     if (!Printed.insert(Ty)) return;
+#endif
 
     // Print structure type out.
     printType(Out, ST, false, getStructName(ST), true);
     Out << ";\n\n";
   }
   if (llvm::ArrayType *AT = llvm::dyn_cast<llvm::ArrayType>(Ty)) {
+#if !defined(LLVM_3_2) && !defined(LLVM_3_3) && !defined(LLVM_3_4) && !defined(LLVM_3_5) // LLVM 3.6+
+      if (!Printed.insert(Ty).second) return;
+#else
       if (!Printed.insert(Ty)) return;
+#endif
 
       printType(Out, AT, false, getArrayName(AT), true);
       Out << ";\n\n";
@@ -2778,8 +2786,13 @@ void CWriter::printContainedStructs(llvm::Type *Ty,
 
 void CWriter::printContainedArrays(llvm::ArrayType *ATy,
                                    llvm::SmallPtrSet<llvm::Type *, 16> &Printed) {
+#if !defined(LLVM_3_2) && !defined(LLVM_3_3) && !defined(LLVM_3_4) && !defined(LLVM_3_5) // LLVM 3.6+
+  if (!Printed.insert(ATy).second)
+      return;
+#else
   if (!Printed.insert(ATy))
       return;
+#endif
 
   llvm::ArrayType *ChildTy = llvm::dyn_cast<llvm::ArrayType>(ATy->getElementType());
   if (ChildTy != NULL)
