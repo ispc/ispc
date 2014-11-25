@@ -109,10 +109,12 @@
 #if !defined(LLVM_3_2) && !defined(LLVM_3_3) && !defined(LLVM_3_4) // LLVM 3.5+
     #include <llvm/IR/Verifier.h>
     #include <llvm/IR/IRPrintingPasses.h>
+    #include <llvm/IR/InstIterator.h>
     #include <llvm/IR/CFG.h>
 #else
     #include <llvm/Analysis/Verifier.h>
     #include <llvm/Assembly/PrintModulePass.h>
+    #include <llvm/Support/InstIterator.h>
     #include <llvm/Support/CFG.h>
 #endif
 #include <clang/Frontend/CompilerInstance.h>
@@ -165,6 +167,44 @@ lStripUnusedDebugInfo(llvm::Module *module) {
     if (g->generateDebuggingSymbols == false)
         return;
 
+    std::set<llvm::Value *> SPall;
+
+    // OK, now we are to determine which functions actually survived the
+    // optimization. We will now read all IR instructions in the module.
+    //
+    // for every function in the module
+    for (llvm::Module::const_iterator
+             f = module->begin(), fe = module->end(); f != fe; ++f) {
+        /// for every instruction in the function
+        for (llvm::const_inst_iterator
+                 i = llvm::inst_begin(&(*f)),
+                 ie = llvm::inst_end(&(*f)); i != ie; ++i) {
+            const llvm::Instruction *inst = &(*i);
+            // get the instruction`s debugging metadata
+            llvm::MDNode *node = inst->getMetadata(llvm::LLVMContext::MD_dbg);
+            while (node) {
+                llvm::DILocation dloc(node);
+                // get the scope of the current instruction`s location
+                llvm::DIScope scope = dloc.getScope();
+                // node becomes NULL if this was the original location
+                node = dloc.getOrigLocation();
+                // now following a chain of nested scopes
+                while (!0) {
+                    if (scope.isLexicalBlockFile())
+                        scope = llvm::DILexicalBlockFile(scope).getScope();
+                    else if (scope.isLexicalBlock())
+                        scope = llvm::DILexicalBlock(scope).getContext();
+                    else if (scope.isNameSpace())
+                        scope = llvm::DINameSpace(scope).getContext();
+                    else break;
+                }
+                if (scope.isSubprogram()) {
+                    // good, the chain ended with a function; adding
+                    SPall.insert(scope);
+                }
+            }
+        }
+    }
     // loop over the compile units that contributed to the final module
     if (llvm::NamedMDNode *cuNodes = module->getNamedMetadata("llvm.dbg.cu")) {
         for (unsigned i = 0, ie = cuNodes->getNumOperands(); i != ie; ++i) {
@@ -175,30 +215,20 @@ lStripUnusedDebugInfo(llvm::Module *module) {
 #endif
             llvm::DICompileUnit cu(cuNode);
             llvm::DIArray subprograms = cu.getSubprograms();
-            std::vector<llvm::Value *> usedSubprograms;
 
             if (subprograms.getNumElements() == 0)
                 continue;
 
-            // And now loop over the subprograms inside each compile unit.
-            for (unsigned j = 0, je = subprograms.getNumElements(); j != je; ++j) {
-                llvm::MDNode *spNode =
-                    llvm::dyn_cast<llvm::MDNode>(subprograms->getOperand(j));
-                Assert(spNode != NULL);
-                llvm::DISubprogram sp(spNode);
+            std::set<llvm::Value *> SPset;
+            std::vector<llvm::Value *> usedSubprograms;
 
-                // Get the name of the subprogram.  Start with the mangled
-                // name; if that's empty then we have an export'ed
-                // function, so grab the unmangled name in that case.
-                std::string name = sp.getLinkageName();
-                if (name == "")
-                    name = sp.getName();
+            // determine what functions of those extracted belong to the unit
+            for (unsigned j = 0, je = subprograms.getNumElements(); j != je; ++j)
+                SPset.insert(subprograms->getOperand(j));
 
-                // Does the llvm::Function for this function survive in the
-                // module?
-                if (module->getFunction(name) != NULL)
-                    usedSubprograms.push_back(sp);
-            }
+            std::set_intersection(SPall.begin(), SPall.end(),
+                                  SPset.begin(), SPset.end(),
+                                  std::back_inserter(usedSubprograms));
 
             Debug(SourcePos(), "%d / %d functions left in module with debug "
                   "info.", (int)usedSubprograms.size(),
@@ -241,7 +271,7 @@ lStripUnusedDebugInfo(llvm::Module *module) {
             llvm::MDNode *replNode =
                 llvm::MDNode::get(*g->ctx, llvm::ArrayRef<llvm::Value *>(usedSubprogramsArray));
             cuNode->replaceOperandWith(12, replNode);
-#else // LLVM 3.3+
+#elif defined(LLVM_3_3) || defined(LLVM_3_4) || defined(LLVM_3_5)
             llvm::MDNode *nodeSPMDArray =
                 llvm::dyn_cast<llvm::MDNode>(cuNode->getOperand(9));
             Assert(nodeSPMDArray != NULL);
@@ -255,6 +285,16 @@ lStripUnusedDebugInfo(llvm::Module *module) {
             llvm::MDNode *replNode =
                 m->diBuilder->getOrCreateArray(llvm::ArrayRef<llvm::Value *>(usedSubprograms));
             cuNode->replaceOperandWith(9, replNode);
+#else // LLVM 3.6+
+            llvm::DIArray nodeSPs = cu.getSubprograms();
+            Assert(nodeSPs.getNumElements() == subprograms.getNumElements());
+            for (int i = 0; i < (int)nodeSPs.getNumElements(); ++i)
+                Assert(nodeSPs.getElement(i) == subprograms.getElement(i));
+
+            // And now we can go and stuff it into the unit with some
+            // confidence...
+            llvm::MDNode *replNode = llvm::MDNode::get(module->getContext(), usedSubprograms);
+            cu.replaceSubprograms(llvm::DIArray(replNode));
 #endif
         }
     }
@@ -270,12 +310,6 @@ lStripUnusedDebugInfo(llvm::Module *module) {
     }
     for (int i = 0; i < (int)toErase.size(); ++i)
         module->eraseNamedMetadata(toErase[i]);
-
-    // Wrap up by running the LLVM pass to remove anything left that's
-    // unused.
-    llvm::PassManager pm;
-    pm.add(llvm::createStripDeadDebugInfoPass());
-    pm.run(*module);
 }
 
 
@@ -405,6 +439,8 @@ Module::CompileFile() {
 
     ast->GenerateIR();
 
+    if (diBuilder)
+        diBuilder->finalize();
     if (errorCount == 0)
         Optimize(module, g->opt.level);
 
@@ -1033,11 +1069,8 @@ Module::AddExportedTypes(const std::vector<std::pair<const Type *,
 bool
 Module::writeOutput(OutputType outputType, const char *outFileName,
                     const char *includeFileName, DispatchHeaderInfo *DHI) {
-    if (diBuilder != NULL && (outputType != Header && outputType != Deps)) {
-        diBuilder->finalize();
-
+    if (diBuilder && (outputType != Header) && (outputType != Deps))
         lStripUnusedDebugInfo(module);
-    }
 
 #if !defined(LLVM_3_2) && !defined(LLVM_3_3) // LLVM 3.4+
     // In LLVM_3_4 after r195494 and r195504 revisions we should pass
