@@ -59,7 +59,9 @@
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Analysis/ConstantsScanner.h"
-#include "llvm/Analysis/FindUsedTypes.h"
+#if defined(LLVM_3_2) || defined(LLVM_3_3) || defined(LLVM_3_4) || defined(LLVM_3_5)
+  #include "llvm/Analysis/FindUsedTypes.h"
+#endif
 #include "llvm/Analysis/LoopInfo.h"
 #if !defined(LLVM_3_2) && !defined(LLVM_3_3) && !defined(LLVM_3_4)
     #include "llvm/IR/Verifier.h"
