@@ -2389,7 +2389,7 @@ static FORCEINLINE __vec16_i32 __min_varying_uint32(__vec16_i32 v1, __vec16_i32 
 static FORCEINLINE __vec16_i64 __max_varying_int64 (__vec16_i64 v1, __vec16_i64 v2) {
   __vec16_i64 ret;
   ret.v_hi = _mm512_max_epi32(v1.v_hi, v2.v_hi);
-  __vec16_i1 mask = _mm512_cmp_epi32_mask(ret.v_hi, v2.v_hi, _MM_CMPINT_EQ);
+  __vec16_i1 mask = _mm512_cmpeq_epi32_mask(ret.v_hi, v2.v_hi);
   ret.v_lo = _mm512_mask_max_epi32(v1.v_lo, mask, v1.v_lo, v2.v_lo);  
   return ret;
 }
@@ -2397,7 +2397,7 @@ static FORCEINLINE __vec16_i64 __max_varying_int64 (__vec16_i64 v1, __vec16_i64 
 static FORCEINLINE __vec16_i64 __min_varying_int64 (__vec16_i64 v1, __vec16_i64 v2) {
   __vec16_i64 ret;
   ret.v_hi = _mm512_min_epi32(v1.v_hi, v2.v_hi);
-  __vec16_i1 mask = _mm512_cmp_epi32_mask(ret.v_hi, v2.v_hi, _MM_CMPINT_EQ);
+  __vec16_i1 mask = _mm512_cmpeq_epi32_mask(ret.v_hi, v2.v_hi);
   ret.v_lo = _mm512_mask_min_epi32(v1.v_lo, mask, v1.v_lo, v2.v_lo);
   return ret;
 }
@@ -2405,7 +2405,7 @@ static FORCEINLINE __vec16_i64 __min_varying_int64 (__vec16_i64 v1, __vec16_i64 
 static FORCEINLINE __vec16_i64 __max_varying_uint64 (__vec16_i64 v1, __vec16_i64 v2) {
   __vec16_i64 ret;
   ret.v_hi = _mm512_max_epu32(v1.v_hi, v2.v_hi);
-  __vec16_i1 mask = _mm512_cmp_epu32_mask(ret.v_hi, v2.v_hi, _MM_CMPINT_EQ);
+  __vec16_i1 mask = _mm512_cmpeq_epi32_mask(ret.v_hi, v2.v_hi);
   ret.v_lo = _mm512_mask_max_epu32(v1.v_lo, mask, v1.v_lo, v2.v_lo);
   return ret;
 }
@@ -2413,7 +2413,7 @@ static FORCEINLINE __vec16_i64 __max_varying_uint64 (__vec16_i64 v1, __vec16_i64
 static FORCEINLINE __vec16_i64 __min_varying_uint64 (__vec16_i64 v1, __vec16_i64 v2) {
   __vec16_i64 ret;
   ret.v_hi = _mm512_min_epu32(v1.v_hi, v2.v_hi);
-  __vec16_i1 mask = _mm512_cmp_epu32_mask(ret.v_hi, v2.v_hi, _MM_CMPINT_EQ);
+  __vec16_i1 mask = _mm512_cmpeq_epi32_mask(ret.v_hi, v2.v_hi);
   ret.v_lo = _mm512_mask_min_epu32(v1.v_lo, mask, v1.v_lo, v2.v_lo);
   return ret;
 }
