@@ -1397,6 +1397,10 @@ static FORCEINLINE __vec16_d __div(__vec16_d a, __vec16_d b) {
   return ret;
 }
 
+static FORCEINLINE __vec16_d __sqrt_varying_double(__vec16_d v) {
+  return __vec16_d(_mm512_sqrt_pd(v.v1),_mm512_sqrt_pd(v.v2));
+}
+
 static FORCEINLINE __vec16_i1 __equal_double(__vec16_d a, __vec16_d b) {
   __vec16_i1 ret1;
   __vec16_i1 ret2;
