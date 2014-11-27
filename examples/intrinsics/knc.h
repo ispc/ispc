@@ -1325,6 +1325,17 @@ static FORCEINLINE __vec16_f __shuffle_float(__vec16_f v, __vec16_i32 index) {
   return _mm512_castsi512_ps(_mm512_mask_permutevar_epi32(_mm512_castps_si512(v), 0xffff, index, _mm512_castps_si512(v)));
 }
 
+static FORCEINLINE __vec16_f __shuffle2_float(__vec16_f v0, __vec16_f v1, __vec16_i32 index) {
+  __vec16_f ret;
+  for (int i = 0; i < 16; ++i){
+    if (__extract_element(index, i) < 16)
+      __insert_element(&ret, i, __extract_element(v0, __extract_element(index, i) & 0xF));
+    else
+      __insert_element(&ret, i, __extract_element(v1, __extract_element(index, i) & 0xF));
+  }
+  return ret;
+}
+
 template <int ALIGN> static FORCEINLINE __vec16_f __load(const __vec16_f *p) {
 #ifdef ISPC_FORCE_ALIGNED_MEMORY
   return _mm512_load_ps(p);
