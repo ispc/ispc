@@ -1550,6 +1550,17 @@ static FORCEINLINE __vec16_d __broadcast_double(__vec16_d v, int index) {
   return ret;
 }
 
+static FORCEINLINE __vec16_d __shuffle2_double(__vec16_d v0, __vec16_d v1, __vec16_i32 index) {
+  __vec16_d ret;
+  for (int i = 0; i < 16; ++i){
+    if (__extract_element(index, i) < 16)
+      __insert_element(&ret, i, __extract_element(v0, __extract_element(index, i) & 0xF));
+    else 
+      __insert_element(&ret, i, __extract_element(v1, __extract_element(index, i) & 0xF));
+  }
+  return ret;
+}
+
 template <int ALIGN> static FORCEINLINE __vec16_d __load(const __vec16_d *p) {
   __vec16_d ret;
   ret.v1 = _mm512_extloadunpacklo_pd(ret.v1, p, _MM_UPCONV_PD_NONE, _MM_HINT_NONE);
