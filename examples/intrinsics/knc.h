@@ -3104,21 +3104,21 @@ static FORCEINLINE int32_t __packed_store_active2(uint32_t *p, __vec16_i32 val, 
 // prefetch
 ///////////////////////////////////////////////////////////////////////////
 
-static FORCEINLINE void __prefetch_read_uniform_1(const char *p) {
-  _mm_prefetch(p, _MM_HINT_T0); // prefetch into L1$
+static FORCEINLINE void __prefetch_read_uniform_1(uint8_t *p) {
+  _mm_prefetch((const char*) p, _MM_HINT_T0); // prefetch into L1$
 }
 
-static FORCEINLINE void __prefetch_read_uniform_2(const char *p) {
-  _mm_prefetch(p, _MM_HINT_T1); // prefetch into L2$
+static FORCEINLINE void __prefetch_read_uniform_2(uint8_t *p) {
+  _mm_prefetch((const char*) p, _MM_HINT_T1); // prefetch into L2$
 }
 
-static FORCEINLINE void __prefetch_read_uniform_3(const char *p) {
+static FORCEINLINE void __prefetch_read_uniform_3(uint8_t *p) {
   // There is no L3$ on KNC, but we prefetch into L2$ instead.
-  _mm_prefetch(p, _MM_HINT_T1); // prefetch into L2$
+  _mm_prefetch((const char*) p, _MM_HINT_T1); // prefetch into L2$
 }
 
-static FORCEINLINE void __prefetch_read_uniform_nt(const char *p) {
-  _mm_prefetch(p, _MM_HINT_T2); // prefetch into L2$ with non-temporal hint
+static FORCEINLINE void __prefetch_read_uniform_nt(uint8_t *p) {
+  _mm_prefetch((const char*) p, _MM_HINT_T2); // prefetch into L2$ with non-temporal hint
   // _mm_prefetch(p, _MM_HINT_NTA); // prefetch into L1$ with non-temporal hint
 }
 
