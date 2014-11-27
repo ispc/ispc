@@ -2089,6 +2089,14 @@ static FORCEINLINE TYPE __select(bool cond, TYPE a, TYPE b) {       \
   return cond ? a : b;                                              \
 }
 
+#define REDUCE_ADD(TYPE, VTYPE, NAME)                               \
+static FORCEINLINE TYPE NAME(VTYPE v) {                             \
+  TYPE ret = v[0];                                                  \
+  for (int i = 1; i < 16; ++i)                                      \
+    ret = ret + v[i];                                               \
+  return ret;                                                       \
+}
+
 ///////////////////////////////////////////////////////////////////////////
 // int8
 ///////////////////////////////////////////////////////////////////////////
@@ -2463,21 +2471,8 @@ static FORCEINLINE int64_t __count_trailing_zeros_i64(const __vec1_i64 mask) {
 // reductions
 ///////////////////////////////////////////////////////////////////////////
 
-static FORCEINLINE int8_t __reduce_add_int8(__vec16_i8 v) {
-  // TODO: improve this!
-  int16_t ret = 0;
-  for (int i = 0; i < 16; ++i)
-    ret += v.v[i];
-  return ret;
-}
-
-static FORCEINLINE int16_t __reduce_add_int16(__vec16_i16 v) {
-  // TODO: improve this!
-  int32_t ret = 0;
-  for (int i = 0; i < 16; ++i)
-    ret += v.v[i];
-  return ret;
-}
+REDUCE_ADD   ( int16_t, __vec16_i8,  __reduce_add_int8)
+REDUCE_ADD   ( int32_t, __vec16_i16, __reduce_add_int16)
 
 static FORCEINLINE int32_t __reduce_add_int32(__vec16_i32 v) {
   return _mm512_reduce_add_epi32(v);
