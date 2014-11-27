@@ -754,6 +754,16 @@ static FORCEINLINE __vec16_i32 __shuffle2_i32(__vec16_i32 v0, __vec16_i32 v1, __
     return ret;
 }
 
+static FORCEINLINE __vec16_i32 __shift_i32(__vec16_i32 v, int index) {
+  __vec16_i32 mod_index = _mm512_add_epi32(__ispc_stride1, __smear_i32<__vec16_i32>(index));
+  __vec16_i1 mask_ge = _mm512_cmpge_epi32_mask (mod_index, __smear_i32<__vec16_i32>(0));
+  __vec16_i1 mask_le = _mm512_cmple_epi32_mask (mod_index, __smear_i32<__vec16_i32>(0xF));
+  __vec16_i1 mask = mask_ge & mask_le;
+  __vec16_i32 ret = __smear_i32<__vec16_i32>(0);
+  ret = _mm512_mask_permutevar_epi32(ret, mask, mod_index, v);
+  return ret;
+}
+
 template <int ALIGN> static FORCEINLINE __vec16_i32 __load(const __vec16_i32 *p) {
 #ifdef ISPC_FORCE_ALIGNED_MEMORY
   return _mm512_load_epi32(p);
