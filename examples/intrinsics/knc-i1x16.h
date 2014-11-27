@@ -39,6 +39,9 @@
 #include <immintrin.h>
 #include <zmmintrin.h>
 
+#include <iostream> // for operator<<(m512[i])
+#include <iomanip>  // for operator<<(m512[i])
+
 #ifdef _MSC_VER
 #define FORCEINLINE __forceinline
 #define PRE_ALIGN(x)  /*__declspec(align(x))*/
@@ -101,7 +104,8 @@ struct __vec16_i1
         ((v14 & 1) << 14) |
         ((v15 & 1) << 15));
   }
-
+  FORCEINLINE       uint8_t operator[](const int i) const {  return ((v >> i) & 1); }
+  FORCEINLINE       uint8_t operator[](const int i)       {  return ((v >> i) & 1); }
   FORCEINLINE operator __mmask16() const { return v; }
 };
 
@@ -291,6 +295,75 @@ PRE_ALIGN(32) struct __vec16_i16  : public vec16<int16_t> {
 } POST_ALIGN(32);
 
 static inline int32_t __extract_element(__vec16_i32, int);
+
+
+///////////////////////////////////////////////////////////////////////////
+// debugging helpers
+//
+inline std::ostream &operator<<(std::ostream &out, const __m512i &v)
+{
+  out << "[";
+  for (int i=0;i<16;i++)  
+    out << (i!=0?",":"") << std::dec << std::setw(8) << ((int*)&v)[i] << std::dec;
+  out << "]" << std::flush;
+  return out;
+}
+
+inline std::ostream &operator<<(std::ostream &out, const __m512 &v)
+{
+  out << "[";
+  for (int i=0;i<16;i++)  
+    out << (i!=0?",":"") << ((float*)&v)[i];
+  out << "]" << std::flush;
+  return out;
+}
+
+inline std::ostream &operator<<(std::ostream &out, const __vec16_i1 &v)
+{
+  out << "[";
+  for (int i=0;i<16;i++)  
+    out << (i!=0?",":"") << std::dec << std::setw(8) << (int)v[i] << std::dec;
+  out << "]" << std::flush;
+  return out;
+}
+
+inline std::ostream &operator<<(std::ostream &out, const __vec16_i8 &v)
+{
+  out << "[";
+  for (int i=0;i<16;i++)  
+    out << (i!=0?",":"") << std::dec << std::setw(8) << (int)((unsigned char*)&v)[i] << std::dec;
+  out << "]" << std::flush;
+  return out;
+}
+
+inline std::ostream &operator<<(std::ostream &out, const __vec16_i16 &v)
+{
+  out << "[";
+  for (int i=0;i<16;i++)  
+    out << (i!=0?",":"") << std::dec << std::setw(8) << (int)((uint16_t*)&v)[i] << std::dec;
+  out << "]" << std::flush;
+  return out;
+}
+
+inline std::ostream &operator<<(std::ostream &out, const __vec16_d &v)
+{
+  out << "[";
+  for (int i=0;i<16;i++) {
+    out << (i!=0?",":"") << (v[i]);
+  }  
+  out << "]" << std::flush;
+  return out;
+}
+
+inline std::ostream &operator<<(std::ostream &out, const __vec16_i64 &v)
+{
+  out << "[";
+  for (int i=0;i<16;i++) {
+    out << (i!=0?",":"") << (v[i]);
+  }  
+  out << "]" << std::flush;
+  return out;
+}
 
 
 ///////////////////////////////////////////////////////////////////////////
@@ -813,9 +886,10 @@ static FORCEINLINE void __abs_i32i64(__m512i &_hi, __m512i &_lo)
   _hi = _mm512_sbb_epi32    (hi, borrow, mask, &borrow);
 }
 static FORCEINLINE __vec16_i64 __mul(__vec16_i64 _a, __vec16_i64 _b) 
-{
+{ 
   __vec16_i64 a = _a.cvt2hilo();
   __vec16_i64 b = _b.cvt2hilo();
+
   /* sign = (a^b) >> 32, if sign == 0 then a*b >= 0, otherwise a*b < 0 */
   const __vec16_i1 sign = __not_equal_i32(__ashr(__xor(a.v_hi, b.v_hi), __ispc_thirty_two), __ispc_zero);
   __abs_i32i64(a.v_hi, a.v_lo);  /* abs(a) */
@@ -830,6 +904,7 @@ static FORCEINLINE __vec16_i64 __mul(__vec16_i64 _a, __vec16_i64 _b)
   const __vec16_i32 lo = lo_m1;
   const __vec16_i64 ret_abs = __vec16_i64(hi,lo).cvt2zmm();
   /* if sign != 0, means either a or b is negative, then negate the result */
+
   return __select(sign, __sub(__vec16_i64(__ispc_zero, __ispc_zero), ret_abs), ret_abs);
 }
 #endif  /* __ICC >= 1400 */
