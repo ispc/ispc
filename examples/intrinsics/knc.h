@@ -1028,6 +1028,67 @@ static FORCEINLINE __vec16_i1 __not_equal_i64_and_mask(const __vec16_i64 &a, con
 }
 
 
+static FORCEINLINE __vec16_i1 __unsigned_less_equal_i64(__vec16_i64 a, __vec16_i64 b) {
+  __vec16_i1 ret_hi = __unsigned_less_equal_i32(a.v_hi, b.v_hi);
+  __vec16_i1 ret_lo = __unsigned_less_equal_i32(a.v_lo, b.v_lo);
+  return ret_hi | ret_lo;
+}
+
+static FORCEINLINE __vec16_i1 __unsigned_less_equal_i64_and_mask(__vec16_i64 a, __vec16_i64 b, __vec16_i1 m) 
+{
+  __vec16_i1 ret_hi = __unsigned_less_equal_i32(a.v_hi, b.v_hi);
+  __vec16_i1 ret_lo = __unsigned_less_equal_i32(a.v_lo, b.v_lo);
+  return (ret_hi | ret_lo) & m;
+}
+
+static FORCEINLINE __vec16_i1 __unsigned_greater_equal_i64(__vec16_i64 a, __vec16_i64 b) {
+  __vec16_i1 ret_hi = __unsigned_greater_equal_i32(a.v_hi, b.v_hi);
+  __vec16_i1 ret_lo = __unsigned_greater_equal_i32(a.v_lo, b.v_lo);
+  return ret_hi | ret_lo;
+}
+
+static FORCEINLINE __vec16_i1 __unsigned_greater_equal_i64_and_mask(__vec16_i64 a, __vec16_i64 b, __vec16_i1 m)
+{
+  __vec16_i1 ret_hi = __unsigned_greater_equal_i32(a.v_hi, b.v_hi);
+  __vec16_i1 ret_lo = __unsigned_greater_equal_i32(a.v_lo, b.v_lo);
+  return (ret_hi | ret_lo) & m;
+}
+
+static FORCEINLINE __vec16_i1 __unsigned_less_than_i64(__vec16_i64 a, __vec16_i64 b) {
+  __vec16_i1 ret_hi = __unsigned_less_than_i32(a.v_hi, b.v_hi);
+  __vec16_i1 ret_lo = __unsigned_less_than_i32(a.v_lo, b.v_lo);
+  return ret_hi | ret_lo;
+}
+
+static FORCEINLINE __vec16_i1 __unsigned_less_than_i64_and_mask(__vec16_i64 a, __vec16_i64 b, __vec16_i1 m)
+{
+  __vec16_i1 ret_hi = __unsigned_less_than_i32(a.v_hi, b.v_hi);
+  __vec16_i1 ret_lo = __unsigned_less_than_i32(a.v_lo, b.v_lo);
+  return (ret_hi | ret_lo) & m;
+}
+
+static FORCEINLINE __vec16_i1 __unsigned_greater_than_i64(__vec16_i64 a, __vec16_i64 b) {
+  __vec16_i1 ret_hi = __unsigned_greater_than_i32(a.v_hi, b.v_hi);
+  __vec16_i1 ret_lo = __unsigned_greater_than_i32(a.v_lo, b.v_lo);
+  return ret_hi | ret_lo;
+}
+
+static FORCEINLINE __vec16_i1 __unsigned_greater_than_i64_and_mask(__vec16_i64 a, __vec16_i64 b, __vec16_i1 m)
+{
+  __vec16_i1 ret_hi = __unsigned_greater_than_i32(a.v_hi, b.v_hi);
+  __vec16_i1 ret_lo = __unsigned_greater_than_i32(a.v_lo, b.v_lo);
+  return (ret_hi | ret_lo) & m;
+}
+
+
+static FORCEINLINE __vec16_i64 __select(__vec16_i1 mask,
+  __vec16_i64 a, __vec16_i64 b) {
+  __vec16_i64 ret;
+  ret.v_hi = _mm512_mask_mov_epi32(b.v_hi, mask, a.v_hi);
+  ret.v_lo = _mm512_mask_mov_epi32(b.v_lo, mask, a.v_lo);
+  return ret;
+}
+
 
 template <class RetVecType> static RetVecType __smear_i64(const int64_t &l);
 template <> FORCEINLINE  __vec16_i64 __smear_i64<__vec16_i64>(const int64_t &l) {
