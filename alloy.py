@@ -236,14 +236,15 @@ def build_LLVM(version_LLVM, revision, folder, tarball, debug, selfbuild, extra,
                     "make install",
                     from_validation)
         os.chdir("../")
-        selfbuild_compiler = " CC="+llvm_home+ "/" + LLVM_BIN_selfbuild + "/bin/clang"
+        selfbuild_compiler = ("CC=" +llvm_home+ "/" + LLVM_BIN_selfbuild + "/bin/clang " +
+                              "CXX="+llvm_home+ "/" + LLVM_BIN_selfbuild + "/bin/clang++ ")
         print_debug("Now we have compiler for selfbuild: " + selfbuild_compiler + "\n", from_validation, alloy_build)
     os.chdir(LLVM_BUILD)
     if debug == False:
         if current_OS != "Windows":
             try_do_LLVM("configure release version ",
-                    "../" + LLVM_SRC + "/configure --prefix=" + llvm_home + "/" +
-                    LLVM_BIN + " --enable-optimized" + selfbuild_compiler +
+                    selfbuild_compiler + "../" + LLVM_SRC + "/configure --prefix=" + llvm_home + "/" +
+                    LLVM_BIN + " --enable-optimized" +
                     " --enable-targets=x86,x86_64,nvptx" +
                     ((" --with-gcc-toolchain=" + gcc_toolchain_path) if gcc_toolchain_path != "" else "") +
                     mac_system_root,
@@ -255,8 +256,8 @@ def build_LLVM(version_LLVM, revision, folder, tarball, debug, selfbuild, extra,
                     from_validation)
     else:
         try_do_LLVM("configure debug version ",
-                    "../" + LLVM_SRC + "/configure --prefix=" + llvm_home + "/" + LLVM_BIN +
-                    " --enable-debug-runtime --enable-debug-symbols --enable-keep-symbols" + selfbuild_compiler +
+                    selfbuild_compiler + "../" + LLVM_SRC + "/configure --prefix=" + llvm_home + "/" + LLVM_BIN +
+                    " --enable-debug-runtime --enable-debug-symbols --enable-keep-symbols" +
                     " --enable-targets=x86,x86_64,nvptx" +
                     ((" --with-gcc-toolchain=" + gcc_toolchain_path) if gcc_toolchain_path != "" else "") +
                     mac_system_root,
