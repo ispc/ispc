@@ -459,7 +459,7 @@ DebugPassManager::add(llvm::Pass * P, int stage = -1) {
             PM.add(CreateDebugPass(buf));
         }
 
-#if !defined(LLVM_3_2) && !defined(LLVM_3_3) // LLVM 3.4+
+#if defined(LLVM_3_4) || defined(LLVM_3_5) // only 3.4 and 3.5
         if (g->debugIR == number) {
             // adding generating of LLVM IR debug after optimization
             char buf[100];
