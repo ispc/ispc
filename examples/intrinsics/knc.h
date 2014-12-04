@@ -2672,6 +2672,30 @@ static FORCEINLINE int64_t __count_trailing_zeros_i64(const __vec1_i64 mask) {
   return _mm_tzcnt_64(mask);
 }
 
+static FORCEINLINE int32_t __count_leading_zeros_i32(__vec1_i32 mask) { 
+  uint32_t n = 0;
+  if (mask == 0) 
+    return 32;
+  while (1) {
+    if (mask < 0) break;
+      n ++;
+      mask <<= 1;
+  }
+  return n;
+}
+
+static FORCEINLINE int64_t __count_leading_zeros_i64(__vec1_i64 mask) {
+  uint32_t n = 0;
+  if (mask == 0)
+    return 64;
+  while (1) {
+    if (mask < 0) break;
+      n ++;
+      mask <<= 1;
+  }
+  return n;
+}
+
 ///////////////////////////////////////////////////////////////////////////
 // reductions
 ///////////////////////////////////////////////////////////////////////////
