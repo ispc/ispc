@@ -1121,15 +1121,6 @@ static FORCEINLINE __vec16_i1 __signed_greater_equal_i64_and_mask(__vec16_i64 a,
 }
 
 
-static FORCEINLINE __vec16_i64 __select(__vec16_i1 mask,
-  __vec16_i64 a, __vec16_i64 b) {
-  __vec16_i64 ret;
-  ret.v_hi = _mm512_mask_mov_epi32(b.v_hi, mask, a.v_hi);
-  ret.v_lo = _mm512_mask_mov_epi32(b.v_lo, mask, a.v_lo);
-  return ret;
-}
-
-
 template <class RetVecType> static RetVecType __smear_i64(const int64_t &l);
 template <> FORCEINLINE  __vec16_i64 __smear_i64<__vec16_i64>(const int64_t &l) {
   const int *i = (const int*)&l;
