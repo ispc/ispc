@@ -1905,7 +1905,7 @@ static FORCEINLINE __vec16_i64 __cast_zext(const __vec16_i64 &, const __vec16_i1
   __vec16_i32 ret_hi = _mm512_setzero_epi32();
   __vec16_i32 ret_lo = _mm512_setzero_epi32();
   __vec16_i32 one = _mm512_set1_epi32(1);
-  _mm512_mask_mov_epi32(ret_lo, val, one);
+  ret_lo = _mm512_mask_mov_epi32(ret_lo, val, one);
   return __vec16_i64 (ret_lo, ret_hi);
 }
 
