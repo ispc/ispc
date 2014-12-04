@@ -1458,6 +1458,108 @@ template <> FORCEINLINE void __store<64>(__vec16_f *p, __vec16_f v) {
 #endif
 
 ///////////////////////////////////////////////////////////////////////////
+// half<->float : this one passes the tests 
+// source : 
+// http://stackoverflow.com/questions/1659440/32-bit-to-16-bit-floating-point-conversion 
+///////////////////////////////////////////////////////////////////////////
+class Float16Compressor
+{
+  union Bits
+  {
+    float f;
+    int32_t si;
+    uint32_t ui;
+  };
+
+  static int const shift = 13;
+  static int const shiftSign = 16;
+
+  static int32_t const infN = 0x7F800000; // flt32 infinity
+  static int32_t const maxN = 0x477FE000; // max flt16 normal as a flt32
+  static int32_t const minN = 0x38800000; // min flt16 normal as a flt32
+  static int32_t const signN = 0x80000000; // flt32 sign bit
+
+  static int32_t const infC = infN >> shift;
+  static int32_t const nanN = (infC + 1) << shift; // minimum flt16 nan as a flt32
+  static int32_t const maxC = maxN >> shift;
+  static int32_t const minC = minN >> shift;
+  static int32_t const signC = signN >> shiftSign; // flt16 sign bit
+
+  static int32_t const mulN = 0x52000000; // (1 << 23) / minN
+  static int32_t const mulC = 0x33800000; // minN / (1 << (23 - shift))
+
+  static int32_t const subC = 0x003FF; // max flt32 subnormal down shifted
+  static int32_t const norC = 0x00400; // min flt32 normal down shifted
+
+  static int32_t const maxD = infC - maxC - 1;
+  static int32_t const minD = minC - subC - 1;
+
+  public:
+
+  static uint16_t compress(float value)
+  {
+    Bits v, s;
+    v.f = value;
+    uint32_t sign = v.si & signN;
+    v.si ^= sign;
+    sign >>= shiftSign; // logical shift
+    s.si = mulN;
+    s.si = s.f * v.f; // correct subnormals
+    v.si ^= (s.si ^ v.si) & -(minN > v.si);
+    v.si ^= (infN ^ v.si) & -((infN > v.si) & (v.si > maxN));
+    v.si ^= (nanN ^ v.si) & -((nanN > v.si) & (v.si > infN));
+    v.ui >>= shift; // logical shift
+    v.si ^= ((v.si - maxD) ^ v.si) & -(v.si > maxC);
+    v.si ^= ((v.si - minD) ^ v.si) & -(v.si > subC);
+    return v.ui | sign;
+  }
+
+  static float decompress(uint16_t value)
+  {
+    Bits v;
+    v.ui = value;
+    int32_t sign = v.si & signC;
+    v.si ^= sign;
+    sign <<= shiftSign;
+    v.si ^= ((v.si + minD) ^ v.si) & -(v.si > subC);
+    v.si ^= ((v.si + maxD) ^ v.si) & -(v.si > maxC);
+    Bits s;
+    s.si = mulC;
+    s.f *= v.si;
+    int32_t mask = -(norC > v.si);
+    v.si <<= shift;
+    v.si ^= (s.si ^ v.si) & mask;
+    v.si |= sign;
+    return v.f;
+  }
+};
+
+static FORCEINLINE float __half_to_float_uniform(int16_t h) 
+{
+  return Float16Compressor::decompress(h);
+}
+static FORCEINLINE __vec16_f __half_to_float_varying(__vec16_i16 v) 
+{
+  __vec16_f ret;
+  for (int i = 0; i < 16; ++i)
+    ret[i] = __half_to_float_uniform(v[i]);
+  return ret;
+}
+
+
+static FORCEINLINE int16_t __float_to_half_uniform(float f) 
+{
+  return Float16Compressor::compress(f);
+}
+static FORCEINLINE __vec16_i16 __float_to_half_varying(__vec16_f v) 
+{
+  __vec16_i16 ret;
+  for (int i = 0; i < 16; ++i)
+    ret[i] = __float_to_half_uniform(v[i]);
+  return ret;
+}
+
+///////////////////////////////////////////////////////////////////////////
 // double
 ///////////////////////////////////////////////////////////////////////////
 
@@ -1839,7 +1941,17 @@ static FORCEINLINE __vec16_f __cast_sitofp(__vec16_f, __vec16_i64 val) {
   __m512i tmp2;
   hilo2zmm(val, tmp1, tmp2);
   __vec16_f ret;
+
 /*
+  // Cycles don't work. It seems that it is icc bug.
+  for (int i = 0; i < 8; i++) {
+    ret[i] = (float)(((int64_t*)&tmp1)[i]);
+  }
+  for (int i = 0; i < 8; i++) {
+    ((float*)&ret)[i + 8] = (float)(((int64_t*)&tmp2)[i]);
+  }
+*/
+
   ret[0] = (float)(((int64_t*)&tmp1)[0]);
   ret[1] = (float)(((int64_t*)&tmp1)[1]);
   ret[2] = (float)(((int64_t*)&tmp1)[2]);
@@ -1857,28 +1969,7 @@ static FORCEINLINE __vec16_f __cast_sitofp(__vec16_f, __vec16_i64 val) {
   ret[13] = (float)(((int64_t*)&tmp2)[5]);
   ret[14] = (float)(((int64_t*)&tmp2)[6]);
   ret[15] = (float)(((int64_t*)&tmp2)[7]);
-*/
 
-  for (int i = 0; i < 8; i++) {
-    ret[i] = (float)(((int64_t*)&tmp1)[i]);
-//    std::cout << "" << std::endl;
-  }
-  for (int i = 0; i < 8; i++) {
-    ((float*)&ret)[i + 8] = (float)(((int64_t*)&tmp2)[i]);
-  }
-
-  for (int i = 0; i < 8; i++) {
-    int64_t t = ((int64_t*)&tmp1)[i];
-    printf("%d: %llx, %lld, %f\n", i, t, t, (float)t);
-  }
-  for (int i = 0; i < 8; i++) {
-    int64_t t = ((int64_t*)&tmp2)[i];
-    printf("%d: %llx, %lld, %f\n", i+8, t, t, (float)t);
-  }
-  for (int i = 0; i < 16; i++) {
-    float f = ((float*)&ret)[i];
-    printf("%d-float: %f\n", i, f);
-  }
   return ret;
 }
 
@@ -1947,7 +2038,7 @@ static FORCEINLINE __vec16_f __cast_uitofp(__vec16_f, __vec16_i64 val) {
   __m512i tmp2;
   hilo2zmm(val, tmp1, tmp2);
   __vec16_f ret;
-  // Cycles don't work. I don't know why.
+  // Cycles don't work. It seems that it is icc bug.
   /*
   for (int i = 0; i < 8; i++) {
     ((float*)&ret)[i] = ((float)(((uint64_t*)&tmp1)[i]));
