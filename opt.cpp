@@ -367,6 +367,8 @@ lGetMask(llvm::Value *factor, uint64_t *mask) {
                 llvm::dyn_cast<llvm::Constant>(cv->getOperand(i));
             if (c == NULL)
                 return false;
+            if (llvm::isa<llvm::ConstantExpr>(cv->getOperand(i)) )
+                return false; // We can not handle constant expressions here
             elements.push_back(c);
         }
         *mask = lConstElementsToMask(elements);
