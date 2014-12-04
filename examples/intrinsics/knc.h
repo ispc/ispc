@@ -1028,56 +1028,96 @@ static FORCEINLINE __vec16_i1 __not_equal_i64_and_mask(const __vec16_i64 &a, con
 }
 
 
-static FORCEINLINE __vec16_i1 __unsigned_less_equal_i64(__vec16_i64 a, __vec16_i64 b) {
-  __vec16_i1 ret_hi = __unsigned_less_equal_i32(a.v_hi, b.v_hi);
-  __vec16_i1 ret_lo = __unsigned_less_equal_i32(a.v_lo, b.v_lo);
-  return ret_hi | ret_lo;
-}
-
-static FORCEINLINE __vec16_i1 __unsigned_less_equal_i64_and_mask(__vec16_i64 a, __vec16_i64 b, __vec16_i1 m) 
-{
-  __vec16_i1 ret_hi = __unsigned_less_equal_i32(a.v_hi, b.v_hi);
-  __vec16_i1 ret_lo = __unsigned_less_equal_i32(a.v_lo, b.v_lo);
-  return (ret_hi | ret_lo) & m;
-}
-
-static FORCEINLINE __vec16_i1 __unsigned_greater_equal_i64(__vec16_i64 a, __vec16_i64 b) {
-  __vec16_i1 ret_hi = __unsigned_greater_equal_i32(a.v_hi, b.v_hi);
-  __vec16_i1 ret_lo = __unsigned_greater_equal_i32(a.v_lo, b.v_lo);
-  return ret_hi | ret_lo;
-}
-
-static FORCEINLINE __vec16_i1 __unsigned_greater_equal_i64_and_mask(__vec16_i64 a, __vec16_i64 b, __vec16_i1 m)
-{
-  __vec16_i1 ret_hi = __unsigned_greater_equal_i32(a.v_hi, b.v_hi);
-  __vec16_i1 ret_lo = __unsigned_greater_equal_i32(a.v_lo, b.v_lo);
-  return (ret_hi | ret_lo) & m;
-}
-
 static FORCEINLINE __vec16_i1 __unsigned_less_than_i64(__vec16_i64 a, __vec16_i64 b) {
-  __vec16_i1 ret_hi = __unsigned_less_than_i32(a.v_hi, b.v_hi);
-  __vec16_i1 ret_lo = __unsigned_less_than_i32(a.v_lo, b.v_lo);
+  __vec16_i1 ret_hi = _mm512_cmplt_epu32_mask(a.v_hi, b.v_hi);
+  __vec16_i1 hi_eq = _mm512_cmpeq_epu32_mask(a.v_hi, b.v_hi);
+  __vec16_i1 ret_lo = _mm512_mask_cmplt_epu32_mask(hi_eq, a.v_lo, b.v_lo);
   return ret_hi | ret_lo;
 }
 
 static FORCEINLINE __vec16_i1 __unsigned_less_than_i64_and_mask(__vec16_i64 a, __vec16_i64 b, __vec16_i1 m)
 {
-  __vec16_i1 ret_hi = __unsigned_less_than_i32(a.v_hi, b.v_hi);
-  __vec16_i1 ret_lo = __unsigned_less_than_i32(a.v_lo, b.v_lo);
-  return (ret_hi | ret_lo) & m;
+  return __unsigned_less_than_i64(a, b) & m;
 }
 
 static FORCEINLINE __vec16_i1 __unsigned_greater_than_i64(__vec16_i64 a, __vec16_i64 b) {
-  __vec16_i1 ret_hi = __unsigned_greater_than_i32(a.v_hi, b.v_hi);
-  __vec16_i1 ret_lo = __unsigned_greater_than_i32(a.v_lo, b.v_lo);
+  __vec16_i1 ret_hi = _mm512_cmpgt_epu32_mask(a.v_hi, b.v_hi);
+  __vec16_i1 hi_eq = _mm512_cmpeq_epu32_mask(a.v_hi, b.v_hi);
+  __vec16_i1 ret_lo = _mm512_mask_cmpgt_epu32_mask(hi_eq, a.v_lo, b.v_lo);
   return ret_hi | ret_lo;
 }
 
 static FORCEINLINE __vec16_i1 __unsigned_greater_than_i64_and_mask(__vec16_i64 a, __vec16_i64 b, __vec16_i1 m)
 {
-  __vec16_i1 ret_hi = __unsigned_greater_than_i32(a.v_hi, b.v_hi);
-  __vec16_i1 ret_lo = __unsigned_greater_than_i32(a.v_lo, b.v_lo);
-  return (ret_hi | ret_lo) & m;
+  return __unsigned_greater_than_i64(a, b) & m;
+}
+
+static FORCEINLINE __vec16_i1 __unsigned_less_equal_i64(__vec16_i64 a, __vec16_i64 b) {
+  __vec16_i1 ret_s_cmp = __unsigned_less_than_i64(a, b);
+  __vec16_i1 ret_equal = __equal_i64(a, b);
+  return ret_equal | ret_s_cmp;
+}
+
+static FORCEINLINE __vec16_i1 __unsigned_less_equal_i64_and_mask(__vec16_i64 a, __vec16_i64 b, __vec16_i1 m) 
+{
+  return __unsigned_less_equal_i64(a, b) & m;
+}
+
+static FORCEINLINE __vec16_i1 __unsigned_greater_equal_i64(__vec16_i64 a, __vec16_i64 b) {
+  __vec16_i1 ret_s_cmp = __unsigned_greater_than_i64(a, b);
+  __vec16_i1 ret_equal = __equal_i64(a, b);
+  return ret_equal | ret_s_cmp;
+}
+
+static FORCEINLINE __vec16_i1 __unsigned_greater_equal_i64_and_mask(__vec16_i64 a, __vec16_i64 b, __vec16_i1 m)
+{
+  return __unsigned_greater_equal_i64(a, b) & m;
+}
+
+static FORCEINLINE __vec16_i1 __signed_less_than_i64(__vec16_i64 a, __vec16_i64 b) {
+  __vec16_i1 ret_hi = _mm512_cmplt_epi32_mask(a.v_hi, b.v_hi);
+  __vec16_i1 hi_eq = _mm512_cmpeq_epi32_mask(a.v_hi, b.v_hi);
+  __vec16_i1 ret_lo = _mm512_mask_cmplt_epu32_mask(hi_eq, a.v_lo, b.v_lo);
+  return ret_hi | ret_lo; 
+}
+
+static FORCEINLINE __vec16_i1 __signed_less_than_i64_and_mask(__vec16_i64 a, __vec16_i64 b, __vec16_i1 m)
+{
+  return __signed_less_than_i64(a, b) & m;
+}
+
+static FORCEINLINE __vec16_i1 __signed_greater_than_i64(__vec16_i64 a, __vec16_i64 b) {
+  __vec16_i1 ret_hi = _mm512_cmpgt_epi32_mask(a.v_hi, b.v_hi);
+  __vec16_i1 hi_eq = _mm512_cmpeq_epi32_mask(a.v_hi, b.v_hi);
+  __vec16_i1 ret_lo = _mm512_mask_cmpgt_epu32_mask(hi_eq, a.v_lo, b.v_lo);
+  return ret_hi | ret_lo;
+}
+
+static FORCEINLINE __vec16_i1 __signed_greater_than_i64_and_mask(__vec16_i64 a, __vec16_i64 b, __vec16_i1 m)
+{
+  return __signed_greater_than_i64(a, b) & m;
+}
+
+static FORCEINLINE __vec16_i1 __signed_less_equal_i64(__vec16_i64 a, __vec16_i64 b) {
+  __vec16_i1 ret_s_cmp = __signed_less_than_i64(a, b);
+  __vec16_i1 ret_equal = __equal_i64(a, b);
+  return ret_equal | ret_s_cmp;
+}
+
+static FORCEINLINE __vec16_i1 __signed_less_equal_i64_and_mask(__vec16_i64 a, __vec16_i64 b, __vec16_i1 m)
+{
+  return __signed_less_equal_i64(a, b) & m;
+}
+
+static FORCEINLINE __vec16_i1 __signed_greater_equal_i64(__vec16_i64 a, __vec16_i64 b) {
+  __vec16_i1 ret_s_cmp = __signed_greater_than_i64(a, b);
+  __vec16_i1 ret_equal = __equal_i64(a, b);
+  return ret_equal | ret_s_cmp;
+}
+
+static FORCEINLINE __vec16_i1 __signed_greater_equal_i64_and_mask(__vec16_i64 a, __vec16_i64 b, __vec16_i1 m)
+{
+  return __signed_greater_equal_i64(a, b) & m;
 }
 
 
