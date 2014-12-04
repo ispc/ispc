@@ -1798,6 +1798,15 @@ static FORCEINLINE __vec16_i32 __cast_zext(const __vec16_i32 &, const __vec16_i1
   return _mm512_extload_epi32(&val, _MM_UPCONV_EPI32_UINT16, _MM_BROADCAST32_NONE, _MM_HINT_NONE);
 }
 
+static FORCEINLINE __vec16_i64 __cast_zext(const __vec16_i64 &, const __vec16_i1 &val)
+{  
+  __vec16_i32 ret_hi = _mm512_setzero_epi32();
+  __vec16_i32 ret_lo = _mm512_setzero_epi32();
+  __vec16_i32 one = _mm512_set1_epi32(1);
+  _mm512_mask_mov_epi32(ret_lo, val, one);
+  return __vec16_i64 (ret_lo, ret_hi);
+}
+
 static FORCEINLINE __vec16_i64 __cast_zext(const __vec16_i64 &, const __vec16_i8 &val)
 {
   return __vec16_i64(__cast_zext(__vec16_i32(), val), _mm512_setzero_epi32());
@@ -1830,11 +1839,45 @@ static FORCEINLINE __vec16_f __cast_sitofp(__vec16_f, __vec16_i64 val) {
   __m512i tmp2;
   hilo2zmm(val, tmp1, tmp2);
   __vec16_f ret;
+/*
+  ret[0] = (float)(((int64_t*)&tmp1)[0]);
+  ret[1] = (float)(((int64_t*)&tmp1)[1]);
+  ret[2] = (float)(((int64_t*)&tmp1)[2]);
+  ret[3] = (float)(((int64_t*)&tmp1)[3]);
+  ret[4] = (float)(((int64_t*)&tmp1)[4]);
+  ret[5] = (float)(((int64_t*)&tmp1)[5]);
+  ret[6] = (float)(((int64_t*)&tmp1)[6]);
+  ret[7] = (float)(((int64_t*)&tmp1)[7]);
+
+  ret[8] = (float)(((int64_t*)&tmp2)[0]);
+  ret[9] = (float)(((int64_t*)&tmp2)[1]);
+  ret[10] = (float)(((int64_t*)&tmp2)[2]);
+  ret[11] = (float)(((int64_t*)&tmp2)[3]);
+  ret[12] = (float)(((int64_t*)&tmp2)[4]);
+  ret[13] = (float)(((int64_t*)&tmp2)[5]);
+  ret[14] = (float)(((int64_t*)&tmp2)[6]);
+  ret[15] = (float)(((int64_t*)&tmp2)[7]);
+*/
+
   for (int i = 0; i < 8; i++) {
-    ((float*)&ret)[i] = (float)(((int64_t*)&tmp1)[i]);
+    ret[i] = (float)(((int64_t*)&tmp1)[i]);
+//    std::cout << "" << std::endl;
   }
   for (int i = 0; i < 8; i++) {
     ((float*)&ret)[i + 8] = (float)(((int64_t*)&tmp2)[i]);
+  }
+
+  for (int i = 0; i < 8; i++) {
+    int64_t t = ((int64_t*)&tmp1)[i];
+    printf("%d: %llx, %lld, %f\n", i, t, t, (float)t);
+  }
+  for (int i = 0; i < 8; i++) {
+    int64_t t = ((int64_t*)&tmp2)[i];
+    printf("%d: %llx, %lld, %f\n", i+8, t, t, (float)t);
+  }
+  for (int i = 0; i < 16; i++) {
+    float f = ((float*)&ret)[i];
+    printf("%d-float: %f\n", i, f);
   }
   return ret;
 }
