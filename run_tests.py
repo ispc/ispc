@@ -1,6 +1,6 @@
 #!/usr/bin/python
 #
-#  Copyright (c) 2013, Intel Corporation
+#  Copyright (c) 2013-2014, Intel Corporation
 #  All rights reserved.
 # 
 #  Redistribution and use in source and binary forms, with or without
@@ -349,8 +349,9 @@ def run_tasks_from_queue(queue, queue_ret, queue_error, queue_finish, total_test
     global is_generic_target
     is_generic_target = glob_var[4]
     global is_nvptx_target
+    is_nvptx_target = glob_var[5]
     global run_tests_log
-    run_tests_log = glob_var[5]    
+    run_tests_log = glob_var[6]
 
     if is_windows:
         tmpdir = "tmp%d" % os.getpid()
@@ -769,7 +770,7 @@ def run_tests(options1, args, print_version):
 
     start_time = time.time()
     # launch jobs to run tests
-    glob_var = [is_windows, options, s, ispc_exe, is_generic_target, run_tests_log]
+    glob_var = [is_windows, options, s, ispc_exe, is_generic_target, is_nvptx_target, run_tests_log]
     global task_threads
     task_threads = [0] * nthreads
     for x in range(nthreads):
