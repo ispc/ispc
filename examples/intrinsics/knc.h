@@ -38,11 +38,20 @@
 #include <unistd.h>
 #include <algorithm>
 
+#ifndef __INTEL_COMPILER
+#error "Only Intel(R) C++ Compiler is supported"
+#endif
+
 #include <immintrin.h>
 #include <zmmintrin.h>
 
 #include <iostream> // for operator<<(m512[i])
 #include <iomanip>  // for operator<<(m512[i])
+
+#if __INTEL_COMPILER < 1500
+#warning "Your compiler version is outdated which can reduce performance in some cases. Please, update your compiler!"
+#endif
+
 
 #if 0
   #define STRING(x) #x
@@ -3357,9 +3366,14 @@ static FORCEINLINE void __scatter64_i64(__vec16_i64 ptrs, __vec16_i64 val, __vec
   hilo2zmm(ptrs, first8ptrs.v, second8ptrs.v);
   __vec16_i32 first8vals, second8vals;
   hilo2zmm(val, first8vals.v, second8vals.v);
+
+#if __INTEL_COMPILER < 1500
+  #warning "__scatter64_i64 is not implemented!"
+#else
   _mm512_mask_i64extscatter_epi64 (0, mask, first8ptrs, first8vals, _MM_DOWNCONV_EPI64_NONE, 1, _MM_HINT_NONE);
   const __mmask8 mask8 = 0x00FF & (mask >> 8);
   _mm512_mask_i64extscatter_epi64 (0, mask8, second8ptrs, second8vals, _MM_DOWNCONV_EPI64_NONE, 1, _MM_HINT_NONE);
+#endif
 }
 
 
