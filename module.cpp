@@ -200,7 +200,11 @@ lStripUnusedDebugInfo(llvm::Module *module) {
                 }
                 if (scope.isSubprogram()) {
                     // good, the chain ended with a function; adding
+#if defined (LLVM_3_2) || defined (LLVM_3_3)|| defined (LLVM_3_4)|| defined (LLVM_3_5)
                     SPall.insert(scope);
+#else // LLVN 3.6++
+                    SPall.insert(llvm::cast<llvm::ValueAsMetadata>(scope.get())->getValue());
+#endif
                 }
             }
         }
@@ -224,7 +228,11 @@ lStripUnusedDebugInfo(llvm::Module *module) {
 
             // determine what functions of those extracted belong to the unit
             for (unsigned j = 0, je = subprograms.getNumElements(); j != je; ++j)
+#if defined(LLVM_3_2) || defined(LLVM_3_3) || defined(LLVM_3_4) || defined(LLVM_3_5)
                 SPset.insert(subprograms->getOperand(j));
+#else // LLVM 3.6+
+                SPset.insert(llvm::cast<llvm::ValueAsMetadata>((subprograms->getOperand(j)).get())->getValue());
+#endif
 
             std::set_intersection(SPall.begin(), SPall.end(),
                                   SPset.begin(), SPset.end(),
@@ -293,7 +301,10 @@ lStripUnusedDebugInfo(llvm::Module *module) {
 
             // And now we can go and stuff it into the unit with some
             // confidence...
-            llvm::MDNode *replNode = llvm::MDNode::get(module->getContext(), usedSubprograms);
+            std::vector<llvm::Metadata *> usedSubprograms_tmp;
+            for (int i = 0; i < usedSubprograms.size(); ++i)
+                usedSubprograms_tmp.at(i) = llvm::ValueAsMetadata::get(usedSubprograms.at(i));
+            llvm::MDNode *replNode = llvm::MDNode::get(module->getContext(), usedSubprograms_tmp);
             cu.replaceSubprograms(llvm::DIArray(replNode));
 #endif
         }

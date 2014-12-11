@@ -137,9 +137,17 @@ namespace {
     TypeFinder(std::vector<llvm::ArrayType*> &t)
       : ArrayTypes(t) {}
 
+#if defined (LLVM_3_2) || defined (LLVM_3_3)|| defined (LLVM_3_4)|| defined (LLVM_3_5)
     void run(const llvm::Module &M) {
+#else // LLVN 3.6++
+    void run(llvm::Module &M) {
+#endif
       // Get types from global variables.
+#if defined (LLVM_3_2) || defined (LLVM_3_3)|| defined (LLVM_3_4)|| defined (LLVM_3_5)
         for (llvm::Module::const_global_iterator I = M.global_begin(),
+#else // LLVN 3.6++
+        for (llvm::Module::global_iterator I = M.global_begin(),
+#endif
            E = M.global_end(); I != E; ++I) {
         incorporateType(I->getType());
         if (I->hasInitializer())
@@ -147,10 +155,18 @@ namespace {
       }
 
       // Get types from aliases.
+#if defined (LLVM_3_2) || defined (LLVM_3_3)|| defined (LLVM_3_4)|| defined (LLVM_3_5)
       for (llvm::Module::const_alias_iterator I = M.alias_begin(),
+#else // LLVN 3.6++
+      for (llvm::Module::alias_iterator I = M.alias_begin(),
+#endif
            E = M.alias_end(); I != E; ++I) {
         incorporateType(I->getType());
+#if defined (LLVM_3_2) || defined (LLVM_3_3)|| defined (LLVM_3_4)|| defined (LLVM_3_5)
         if (const llvm::Value *Aliasee = I->getAliasee())
+#else // LLVN 3.6++
+        if (llvm::Value *Aliasee = I->getAliasee())
+#endif
           incorporateValue(Aliasee);
       }
 
@@ -220,8 +236,13 @@ namespace {
     /// types hiding in constant expressions and other operands that won't be
     /// walked in other ways.  GlobalValues, basic blocks, instructions, and
     /// inst operands are all explicitly enumerated.
+#if defined (LLVM_3_2) || defined (LLVM_3_3)|| defined (LLVM_3_4)|| defined (LLVM_3_5)
     void incorporateValue(const llvm::Value *V) {
       if (const llvm::MDNode *M = llvm::dyn_cast<llvm::MDNode>(V))
+#else // LLVN 3.6++
+    void incorporateValue(llvm::Value *V) {
+      if (const llvm::MDNode *M = llvm::cast<llvm::MDNode>(llvm::ValueAsMetadata::get(V)))
+#endif
         return incorporateMDNode(M);
       if (!llvm::isa<llvm::Constant>(V) || llvm::isa<llvm::GlobalValue>(V)) return;
 
@@ -242,18 +263,31 @@ namespace {
     void incorporateMDNode(const llvm::MDNode *V) {
 
       // Already visited?
+#if defined (LLVM_3_2) || defined (LLVM_3_3)|| defined (LLVM_3_4)|| defined (LLVM_3_5)
       if (!VisitedConstants.insert(V).second)
+#else // LLVN 3.6++
+      if (!VisitedConstants.insert(llvm::cast<llvm::ValueAsMetadata>(V)->getValue()).second)
+#endif
         return;
 
       // Look in operands for types.
       for (unsigned i = 0, e = V->getNumOperands(); i != e; ++i)
-        if (llvm::Value *Op = V->getOperand(i))
+        if (llvm::Value *Op = 
+#if defined (LLVM_3_2) || defined (LLVM_3_3)|| defined (LLVM_3_4)|| defined (LLVM_3_5)
+                              V->getOperand(i))
+#else // LLVN 3.6++
+                              llvm::cast<llvm::ValueAsMetadata>((V->getOperand(i)).get())->getValue()) 
+#endif
           incorporateValue(Op);
     }
   };
 } // end anonymous namespace
 
+#if defined (LLVM_3_2) || defined (LLVM_3_3)|| defined (LLVM_3_4)|| defined (LLVM_3_5)
 static void findUsedArrayTypes(const llvm::Module *m, std::vector<llvm::ArrayType*> &t) {
+#else // LLVN 3.6++
+static void findUsedArrayTypes(llvm::Module *m, std::vector<llvm::ArrayType*> &t) {
+#endif
   TypeFinder(t).run(*m);
 }
 
@@ -276,7 +310,11 @@ namespace {
     llvm::IntrinsicLowering *IL;
     //llvm::Mangler *Mang;
     llvm::LoopInfo *LI;
+#if defined(LLVM_3_2) || defined(LLVM_3_3) || defined(LLVM_3_4) || defined(LLVM_3_5)
     const llvm::Module *TheModule;
+#else // LLVM 3.6++
+    llvm::Module *TheModule;
+#endif
     const llvm::MCAsmInfo* TAsm;
     const llvm::MCRegisterInfo *MRI;
     const llvm::MCObjectFileInfo *MOFI;
