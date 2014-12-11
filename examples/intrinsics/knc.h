@@ -38,11 +38,20 @@
 #include <unistd.h>
 #include <algorithm>
 
+#ifndef __INTEL_COMPILER
+#error "Only Intel(R) C++ Compiler is supported"
+#endif
+
 #include <immintrin.h>
 #include <zmmintrin.h>
 
 #include <iostream> // for operator<<(m512[i])
 #include <iomanip>  // for operator<<(m512[i])
+
+#if __INTEL_COMPILER < 1500
+#warning "Your compiler version is outdated which can reduce performance in some cases. Please, update your compiler!"
+#endif
+
 
 #if 0
   #define STRING(x) #x
@@ -2818,8 +2827,13 @@ static FORCEINLINE int64_t __reduce_add_int64(__vec16_i64 v) {
   __m512i tmp1;
   __m512i tmp2;
   hilo2zmm(v, tmp1, tmp2);
+#if __INTEL_COMPILER < 1500
+  int64_t res1 = _mm512_reduce_add_epi64((__m512)tmp1);
+  int64_t res2 = _mm512_reduce_add_epi64((__m512)tmp2);
+#else
   int64_t res1 = _mm512_reduce_add_epi64(tmp1);
   int64_t res2 = _mm512_reduce_add_epi64(tmp2);
+#endif
   return res1 + res2;
 }
 
@@ -2827,8 +2841,13 @@ static FORCEINLINE int64_t __reduce_min_int64(__vec16_i64 v) {
   __m512i tmp1;
   __m512i tmp2;
   hilo2zmm(v, tmp1, tmp2);
+#if __INTEL_COMPILER < 1500
+  int64_t res1 = _mm512_reduce_min_epi64((__m512)tmp1);
+  int64_t res2 = _mm512_reduce_min_epi64((__m512)tmp2);
+#else
   int64_t res1 = _mm512_reduce_min_epi64(tmp1);
   int64_t res2 = _mm512_reduce_min_epi64(tmp2);
+#endif
   return (res1 < res2) ? res1 : res2;
 }
 
@@ -2836,8 +2855,13 @@ static FORCEINLINE int64_t __reduce_max_int64(__vec16_i64 v) {
   __m512i tmp1;
   __m512i tmp2;
   hilo2zmm(v, tmp1, tmp2);
+#if __INTEL_COMPILER < 1500
+  int64_t res1 = _mm512_reduce_max_epi64((__m512)tmp1);
+  int64_t res2 = _mm512_reduce_max_epi64((__m512)tmp2);
+#else
   int64_t res1 = _mm512_reduce_max_epi64(tmp1);
   int64_t res2 = _mm512_reduce_max_epi64(tmp2);
+#endif
   return (res1 > res2) ? res1 : res2;
 }
 
@@ -2845,8 +2869,13 @@ static FORCEINLINE uint64_t __reduce_min_uint64(__vec16_i64 v) {
   __m512i tmp1;
   __m512i tmp2;
   hilo2zmm(v, tmp1, tmp2);
+#if __INTEL_COMPILER < 1500
+  uint64_t res1 = _mm512_reduce_min_epu64((__m512)tmp1);
+  uint64_t res2 = _mm512_reduce_min_epu64((__m512)tmp2);
+#else
   uint64_t res1 = _mm512_reduce_min_epu64(tmp1);
   uint64_t res2 = _mm512_reduce_min_epu64(tmp2);
+#endif
   return (res1 < res2) ? res1 : res2;
 }
 
@@ -2854,8 +2883,13 @@ static FORCEINLINE uint64_t __reduce_max_uint64(__vec16_i64 v) {
   __m512i tmp1;
   __m512i tmp2;
   hilo2zmm(v, tmp1, tmp2);
+#if __INTEL_COMPILER < 1500
+  uint64_t res1 = _mm512_reduce_max_epu64((__m512)tmp1);
+  uint64_t res2 = _mm512_reduce_max_epu64((__m512)tmp2);
+#else
   uint64_t res1 = _mm512_reduce_max_epu64(tmp1);
   uint64_t res2 = _mm512_reduce_max_epu64(tmp2);
+#endif
   return (res1 > res2) ? res1 : res2;
 }
 
@@ -3272,6 +3306,28 @@ static FORCEINLINE void __scatter_base_offsets64_i32(uint8_t *_base, uint32_t sc
   }
 }
 
+static FORCEINLINE void __scatter_base_offsets64_i64(uint8_t *_base, uint32_t scale, __vec16_i64 offsets,
+    __vec16_i64 value,
+    __vec16_i1 mask) { 
+
+  const __vec16_i32 signed_offsets = _mm512_add_epi32(offsets.v_lo, __smear_i32<__vec16_i32>((int32_t)INT_MIN));
+  __vec16_i1 still_to_do = mask;
+  while (still_to_do) {
+    int first_active_lane = _mm_tzcnt_32((int)still_to_do);
+    const uint &hi32 = ((uint*)&offsets.v_hi)[first_active_lane];
+    __vec16_i1 match = _mm512_mask_cmp_epi32_mask(mask,offsets.v_hi,
+        __smear_i32<__vec16_i32>((int32_t)hi32),
+        _MM_CMPINT_EQ);
+
+    void * base = (void*)((unsigned long)_base  + ((scale*(unsigned long)hi32) << 32) + scale*(unsigned long)(-(long)INT_MIN));  
+   
+    _mm512_mask_i32extscatter_epi32(base, match, signed_offsets, value.v_lo, _MM_DOWNCONV_EPI32_NONE, scale, _MM_HINT_NONE);
+    _mm512_mask_i32extscatter_epi32(base + sizeof(uint32_t), match, signed_offsets, value.v_hi, _MM_DOWNCONV_EPI32_NONE, scale, _MM_HINT_NONE);
+
+    still_to_do = _mm512_kxor(match,still_to_do);
+  }
+}
+
 static FORCEINLINE void // TODO
 __scatter_base_offsets64_i8(uint8_t *_base, uint32_t scale, __vec16_i64 offsets,
     __vec16_i8 value,
@@ -3353,6 +3409,10 @@ static FORCEINLINE void __scatter64_i32(__vec16_i64 ptrs, __vec16_i32 val, __vec
 */
 
 static FORCEINLINE void __scatter64_i64(__vec16_i64 ptrs, __vec16_i64 val, __vec16_i1 mask) {
+#if __INTEL_COMPILER < 1500
+  #warning "__scatter64_i64 is slow due to outdated compiler"
+  __scatter_base_offsets64_i64(0, 1, ptrs, val, mask);
+#else
   __vec16_i32 first8ptrs, second8ptrs;
   hilo2zmm(ptrs, first8ptrs.v, second8ptrs.v);
   __vec16_i32 first8vals, second8vals;
@@ -3360,6 +3420,7 @@ static FORCEINLINE void __scatter64_i64(__vec16_i64 ptrs, __vec16_i64 val, __vec
   _mm512_mask_i64extscatter_epi64 (0, mask, first8ptrs, first8vals, _MM_DOWNCONV_EPI64_NONE, 1, _MM_HINT_NONE);
   const __mmask8 mask8 = 0x00FF & (mask >> 8);
   _mm512_mask_i64extscatter_epi64 (0, mask8, second8ptrs, second8vals, _MM_DOWNCONV_EPI64_NONE, 1, _MM_HINT_NONE);
+#endif
 }
 
 
