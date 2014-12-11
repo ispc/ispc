@@ -905,6 +905,13 @@ Module::AddFunctionDeclaration(const std::string &name,
     llvm::Function *function =
         llvm::Function::Create(llvmFunctionType, linkage, functionName.c_str(),
                                module);
+    
+#ifdef ISPC_IS_WINDOWS
+    // Make export functions callable from DLLS.
+    if (functionType->isExported) {
+      function->setDLLStorageClass(llvm::GlobalValue::DLLExportStorageClass);
+    }
+#endif
 
     // Set function attributes: we never throw exceptions
     function->setDoesNotThrow();
