@@ -2823,62 +2823,75 @@ static FORCEINLINE uint32_t __reduce_max_uint32(__vec16_i32 v) {
   return _mm512_reduce_max_epu32(v);
 }
 
-
-#if __INTEL_COMPILER >= 1500
 static FORCEINLINE int64_t __reduce_add_int64(__vec16_i64 v) {
   __m512i tmp1;
   __m512i tmp2;
   hilo2zmm(v, tmp1, tmp2);
+#if __INTEL_COMPILER < 1500
+  int64_t res1 = _mm512_reduce_add_epi64((__m512)tmp1);
+  int64_t res2 = _mm512_reduce_add_epi64((__m512)tmp2);
+#else
   int64_t res1 = _mm512_reduce_add_epi64(tmp1);
   int64_t res2 = _mm512_reduce_add_epi64(tmp2);
+#endif
   return res1 + res2;
 }
-#endif
 
-
-#if __INTEL_COMPILER >= 1500
 static FORCEINLINE int64_t __reduce_min_int64(__vec16_i64 v) {
   __m512i tmp1;
   __m512i tmp2;
   hilo2zmm(v, tmp1, tmp2);
+#if __INTEL_COMPILER < 1500
+  int64_t res1 = _mm512_reduce_min_epi64((__m512)tmp1);
+  int64_t res2 = _mm512_reduce_min_epi64((__m512)tmp2);
+#else
   int64_t res1 = _mm512_reduce_min_epi64(tmp1);
   int64_t res2 = _mm512_reduce_min_epi64(tmp2);
+#endif
   return (res1 < res2) ? res1 : res2;
 }
-#endif
 
-#if __INTEL_COMPILER >= 1500
 static FORCEINLINE int64_t __reduce_max_int64(__vec16_i64 v) {
   __m512i tmp1;
   __m512i tmp2;
   hilo2zmm(v, tmp1, tmp2);
+#if __INTEL_COMPILER < 1500
+  int64_t res1 = _mm512_reduce_max_epi64((__m512)tmp1);
+  int64_t res2 = _mm512_reduce_max_epi64((__m512)tmp2);
+#else
   int64_t res1 = _mm512_reduce_max_epi64(tmp1);
   int64_t res2 = _mm512_reduce_max_epi64(tmp2);
+#endif
   return (res1 > res2) ? res1 : res2;
 }
-#endif
 
-#if __INTEL_COMPILER >= 1500
 static FORCEINLINE uint64_t __reduce_min_uint64(__vec16_i64 v) {
   __m512i tmp1;
   __m512i tmp2;
   hilo2zmm(v, tmp1, tmp2);
+#if __INTEL_COMPILER < 1500
+  uint64_t res1 = _mm512_reduce_min_epu64((__m512)tmp1);
+  uint64_t res2 = _mm512_reduce_min_epu64((__m512)tmp2);
+#else
   uint64_t res1 = _mm512_reduce_min_epu64(tmp1);
   uint64_t res2 = _mm512_reduce_min_epu64(tmp2);
+#endif
   return (res1 < res2) ? res1 : res2;
 }
-#endif
 
-#if __INTEL_COMPILER >= 1500
 static FORCEINLINE uint64_t __reduce_max_uint64(__vec16_i64 v) {
   __m512i tmp1;
   __m512i tmp2;
   hilo2zmm(v, tmp1, tmp2);
+#if __INTEL_COMPILER < 1500
+  uint64_t res1 = _mm512_reduce_max_epu64((__m512)tmp1);
+  uint64_t res2 = _mm512_reduce_max_epu64((__m512)tmp2);
+#else
   uint64_t res1 = _mm512_reduce_max_epu64(tmp1);
   uint64_t res2 = _mm512_reduce_max_epu64(tmp2);
+#endif
   return (res1 > res2) ? res1 : res2;
 }
-#endif
 
 static FORCEINLINE float __reduce_add_float(__vec16_f v) {
   return _mm512_reduce_add_ps(v);
