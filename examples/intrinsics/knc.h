@@ -3019,6 +3019,18 @@ __scatter_base_offsets32_i8(uint8_t *b, uint32_t scale, __vec16_i32 offsets,
 }
 
 
+static FORCEINLINE void
+__scatter_base_offsets32_i16(uint8_t *b, uint32_t scale, __vec16_i32 offsets,
+    __vec16_i16 val, __vec16_i1 mask)
+{
+  __vec16_i32 tmp = _mm512_extload_epi32(&val,_MM_UPCONV_EPI32_SINT16, 
+      _MM_BROADCAST32_NONE, _MM_HINT_NONE);
+  _mm512_mask_i32extscatter_epi32(b, mask, offsets, tmp, 
+      _MM_DOWNCONV_EPI32_SINT16, scale, 
+      _MM_HINT_NONE);
+}
+
+
 static FORCEINLINE void __masked_store_i16(void *p, const __vec16_i16 &val, __vec16_i1 mask) {
   __vec16_i32 tmp = _mm512_extload_epi32(&val, _MM_UPCONV_EPI32_SINT16, _MM_BROADCAST32_NONE, _MM_HINT_NONE);
 #ifdef ISPC_FORCE_ALIGNED_MEMORY
@@ -3481,20 +3493,10 @@ static FORCEINLINE void __scatter_base_offsets32_double(void *base, uint32_t sca
 static FORCEINLINE void __scatter64_float(__vec16_i64 ptrs, __vec16_f val, __vec16_i1 mask){
   __vec16_i32 first8ptrs, second8ptrs;
   hilo2zmm(ptrs, first8ptrs.v, second8ptrs.v);
-  _mm512_mask_i64scatter_pslo (0, mask, first8ptrs, val, 1); 
+  _mm512_mask_i64scatter_pslo (0, mask, first8ptrs, val, 1);
   const __mmask8 mask_hi = 0x00FF & (mask >> 8);
   _mm512_mask_i64scatter_pslo (0, mask_hi, second8ptrs, _mm512_permute4f128_ps(val.v, _MM_PERM_DCDC), 1);
 }
-/*
-static FORCEINLINE void __scatter64_double(__vec16_i64 ptrs, __vec16_d val, __vec16_i1 mask) {
-}
-
-static FORCEINLINE void __scatter64_i8(__vec16_i64 ptrs, __vec16_i8 val, __vec16_i1 mask) {
-}
-
-static FORCEINLINE void __scatter64_i16(__vec16_i64 ptrs, __vec16_i16 val, __vec16_i1 mask) {
-}
-*/
 
 static FORCEINLINE void __scatter64_i32(__vec16_i64 ptrs, __vec16_i32 val, __vec16_i1 mask) {
   __vec16_i32 first8ptrs, second8ptrs;
