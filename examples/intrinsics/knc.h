@@ -3478,12 +3478,12 @@ static FORCEINLINE void __scatter_base_offsets32_double(void *base, uint32_t sca
   _mm512_mask_i32loextscatter_pd(base, mask8, shuffled_offsets, val.v2, _MM_DOWNCONV_PD_NONE, scale, _MM_HINT_NONE);
 }
 
-static FORCEINLINE void __scatter64_float(__vec16_i64 ptrs, __vec16_f val, __vec16_i1 mask) {
+static FORCEINLINE void __scatter64_float(__vec16_i64 ptrs, __vec16_f val, __vec16_i1 mask){
   __vec16_i32 first8ptrs, second8ptrs;
   hilo2zmm(ptrs, first8ptrs.v, second8ptrs.v);
-  _mm512_mask_i64scatter_pslo (0, mask, first8ptrs, val, 1);
+  _mm512_mask_i64scatter_pslo (0, mask, first8ptrs, val, 1); 
   const __mmask8 mask_hi = 0x00FF & (mask >> 8);
-  _mm512_mask_i64scatter_pslo (0, mask_hi, second8ptrs, _mm512_permute4f128_ps(val.v, _MM_PERM_CDCD), 1);
+  _mm512_mask_i64scatter_pslo (0, mask_hi, second8ptrs, _mm512_permute4f128_ps(val.v, _MM_PERM_DCDC), 1);
 }
 /*
 static FORCEINLINE void __scatter64_double(__vec16_i64 ptrs, __vec16_d val, __vec16_i1 mask) {
@@ -3501,7 +3501,7 @@ static FORCEINLINE void __scatter64_i32(__vec16_i64 ptrs, __vec16_i32 val, __vec
   hilo2zmm(ptrs, first8ptrs.v, second8ptrs.v);
   _mm512_mask_i64scatter_epi32lo (0, mask, first8ptrs, val, 1);
   const __mmask8 mask_hi = 0x00FF & (mask >> 8);
-  _mm512_mask_i64scatter_epi32lo (0, mask_hi, second8ptrs, _mm512_permute4f128_epi32(val.v, _MM_PERM_CDCD), 1);
+  _mm512_mask_i64scatter_epi32lo (0, mask_hi, second8ptrs, _mm512_permute4f128_epi32(val.v, _MM_PERM_DCDC), 1);
 }
 
 static FORCEINLINE void __scatter64_i64(__vec16_i64 ptrs, __vec16_i64 val, __vec16_i1 mask) {
