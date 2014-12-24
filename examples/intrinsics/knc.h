@@ -3224,6 +3224,20 @@ __gather64_i32(__vec16_i64 addr, __vec16_i1 mask)
   return ret;
 }
 
+static FORCEINLINE __vec16_d
+__gather64_double(__vec16_i64 addr, __vec16_i1 mask) 
+{
+  __vec16_d ret;
+  
+  __vec16_i32 addr_lo, addr_hi;
+  hilo2zmm(addr, addr_lo.v, addr_hi.v);
+
+  ret.v1 = _mm512_i64extgather_pd (addr_lo, 0, _MM_UPCONV_PD_NONE, 1, _MM_HINT_NONE);
+  ret.v2 = _mm512_i64extgather_pd (addr_hi, 0, _MM_UPCONV_PD_NONE, 1, _MM_HINT_NONE);
+  return ret;
+}
+
+
 
 /*! gather with 64-bit offsets.
 
