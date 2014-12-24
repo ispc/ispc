@@ -3197,6 +3197,33 @@ __gather64_float(__vec16_i64 addr, __vec16_i1 mask)
   return ret;
 }
 
+static FORCEINLINE __vec16_i32
+__gather64_i32(__vec16_i64 addr, __vec16_i1 mask) 
+{
+  __vec16_i32 ret;
+
+  // There is no gather instruction with 64-bit offsets in KNC.
+  // We have to manually iterate over the upper 32 bits ;-)
+  __vec16_i1 still_to_do = mask;
+  const __vec16_i32 signed_offsets = _mm512_add_epi32(addr.v_lo, __smear_i32<__vec16_i32>((int32_t)INT_MIN));
+  while (still_to_do) {
+    int first_active_lane = _mm_tzcnt_32((int)still_to_do);
+    const uint &hi32 = ((uint*)&addr.v_hi)[first_active_lane];
+    __vec16_i1 match = _mm512_mask_cmp_epi32_mask(still_to_do, addr.v_hi,
+        __smear_i32<__vec16_i32>((int32_t)hi32),
+        _MM_CMPINT_EQ);
+
+    void * base = (void*)((((unsigned long)hi32) << 32) + (unsigned long)(-(long)INT_MIN));
+
+    ret.v = _mm512_mask_i32extgather_epi32(ret.v, match, signed_offsets, 
+        base, _MM_UPCONV_EPI32_NONE, 1,
+        _MM_HINT_NONE);
+    still_to_do = _mm512_kxor(match, still_to_do);
+  }
+
+  return ret;
+}
+
 
 /*! gather with 64-bit offsets.
 
@@ -3446,6 +3473,71 @@ static FORCEINLINE int32_t __packed_store_active2(uint32_t *p, __vec16_i32 val, 
 {
   return __packed_store_active(p, val, mask);
 }
+
+
+///////////////////////////////////////////////////////////////////////////
+// aos/soa
+///////////////////////////////////////////////////////////////////////////
+
+/*
+static FORCEINLINE void __soa_to_aos3_float(__vec16_f v0, __vec16_f v1, __vec16_f v2,
+                                            float *ptr) {
+    for (int i = 0; i < 16; ++i) {
+        *ptr++ = __extract_element(v0, i);
+        *ptr++ = __extract_element(v1, i);
+        *ptr++ = __extract_element(v2, i);
+    }
+}
+
+static FORCEINLINE void __aos_to_soa3_float(float *ptr, __vec16_f *out0, __vec16_f *out1,
+                                            __vec16_f *out2) {
+    for (int i = 0; i < 16; ++i) {
+        __insert_element(out0, i, *ptr++);
+        __insert_element(out1, i, *ptr++);
+        __insert_element(out2, i, *ptr++);
+    }
+}
+*/
+
+/*
+static FORCEINLINE void __soa_to_aos4_float(__vec16_f v0, __vec16_f v1, __vec16_f v2,
+                                            __vec16_f v3, float *ptr) {
+  // v0 = A1 ... A16, v1 = B1 ..., v3 = D1 ... D16
+  __vec16_f tmp00 = _mm512_mask_swizzle_ps (v0, 0x3333, v1, _MM_SWIZ_REG_CDAB); // A1A2B1B2 A5A6B5B6 ...
+  __vec16_f tmp01 = _mm512_mask_swizzle_ps (v0, 0xCCCC, v1, _MM_SWIZ_REG_CDAB); // B3B4A3A4 B7B8A7A8 ...
+  __vec16_f tmp02 = _mm512_mask_swizzle_ps (v2, 0x3333, v3, _MM_SWIZ_REG_CDAB); // C1C2D1D2 ...
+  __vec16_f tmp03 = _mm512_mask_swizzle_ps (v2, 0xCCCC, v3, _MM_SWIZ_REG_CDAB); // D3D4C3C4 ...
+
+  __vec16_f tmp10 = _mm512_mask_swizzle_ps (tmp00, 0x5555, tmp02, _MM_SWIZ_REG_BADC); // A1C1B1D1 A5C5B5D5 ...
+  __vec16_f tmp11 = _mm512_mask_swizzle_ps (tmp00, 0xAAAA, tmp02, _MM_SWIZ_REG_BADC); // C2A2D2B2 C6A6D6B6 ...
+  __vec16_f tmp12 = _mm512_mask_swizzle_ps (tmp01, 0x5555, tmp03, _MM_SWIZ_REG_BADC); // DBCA ...
+  __vec16_f tmp13 = _mm512_mask_swizzle_ps (tmp01, 0xAAAA, tmp03, _MM_SWIZ_REG_BADC); // BDAC ...
+
+
+
+
+
+
+    for (int i = 0; i < 16; ++i) {
+        *ptr++ = __extract_element(v0, i);
+        *ptr++ = __extract_element(v1, i);
+        *ptr++ = __extract_element(v2, i);
+        *ptr++ = __extract_element(v3, i);
+    }
+}
+*/
+
+/*
+static FORCEINLINE void __aos_to_soa4_float(float *ptr, __vec16_f *out0, __vec16_f *out1,
+                                            __vec16_f *out2, __vec16_f *out3) {
+    for (int i = 0; i < 16; ++i) {
+        __insert_element(out0, i, *ptr++);
+        __insert_element(out1, i, *ptr++);
+        __insert_element(out2, i, *ptr++);
+        __insert_element(out3, i, *ptr++);
+    }
+}
+*/
 
 ///////////////////////////////////////////////////////////////////////////
 // prefetch
