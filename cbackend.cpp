@@ -130,6 +130,9 @@ namespace {
     // To avoid walking constant expressions multiple times and other IR
     // objects, we keep several helper maps.
     llvm::DenseSet<const llvm::Value*> VisitedConstants;
+#if !defined (LLVM_3_2) && !defined (LLVM_3_3) && !defined (LLVM_3_4) && !defined (LLVM_3_5)// LLVN 3.6++
+    llvm::DenseSet<const llvm::MDNode*> VisitedConstantsInNodes;
+#endif
     llvm::DenseSet<llvm::Type*> VisitedTypes;
 
     std::vector<llvm::ArrayType*> &ArrayTypes;
@@ -266,7 +269,7 @@ namespace {
 #if defined (LLVM_3_2) || defined (LLVM_3_3)|| defined (LLVM_3_4)|| defined (LLVM_3_5)
       if (!VisitedConstants.insert(V).second)
 #else // LLVN 3.6++
-      if (!VisitedConstants.insert(llvm::cast<llvm::ValueAsMetadata>(V)->getValue()).second)
+      if (!VisitedConstantsInNodes.insert(V).second)
 #endif
         return;
 

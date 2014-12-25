@@ -166,9 +166,11 @@ static void
 lStripUnusedDebugInfo(llvm::Module *module) {
     if (g->generateDebuggingSymbols == false)
         return;
-
+#if defined (LLVM_3_2) || defined (LLVM_3_3)|| defined (LLVM_3_4)|| defined (LLVM_3_5)
     std::set<llvm::Value *> SPall;
-
+#else // LLVN 3.6++
+    std::set<llvm::Metadata *> SPall;
+#endif
     // OK, now we are to determine which functions actually survived the
     // optimization. We will now read all IR instructions in the module.
     //
@@ -200,11 +202,7 @@ lStripUnusedDebugInfo(llvm::Module *module) {
                 }
                 if (scope.isSubprogram()) {
                     // good, the chain ended with a function; adding
-#if defined (LLVM_3_2) || defined (LLVM_3_3)|| defined (LLVM_3_4)|| defined (LLVM_3_5)
                     SPall.insert(scope);
-#else // LLVN 3.6++
-                    SPall.insert(llvm::cast<llvm::ValueAsMetadata>(scope.get())->getValue());
-#endif
                 }
             }
         }
@@ -212,26 +210,27 @@ lStripUnusedDebugInfo(llvm::Module *module) {
     // loop over the compile units that contributed to the final module
     if (llvm::NamedMDNode *cuNodes = module->getNamedMetadata("llvm.dbg.cu")) {
         for (unsigned i = 0, ie = cuNodes->getNumOperands(); i != ie; ++i) {
-#if defined(LLVM_3_2) || defined(LLVM_3_3) || defined(LLVM_3_4) || defined(LLVM_3_5)
             llvm::MDNode *cuNode = cuNodes->getOperand(i);
-#else // LLVM 3.6+
-            llvm::MDNode *cuNode = llvm::cast<llvm::MDNode>(cuNodes->getOperand(i));
-#endif
             llvm::DICompileUnit cu(cuNode);
             llvm::DIArray subprograms = cu.getSubprograms();
 
             if (subprograms.getNumElements() == 0)
                 continue;
 
+#if defined(LLVM_3_2) || defined(LLVM_3_3) || defined(LLVM_3_4) || defined(LLVM_3_5)
             std::set<llvm::Value *> SPset;
             std::vector<llvm::Value *> usedSubprograms;
+#else // LLVM 3.6+
+            std::set<llvm::Metadata *> SPset;
+            std::vector<llvm::Metadata *> usedSubprograms;
+#endif
 
             // determine what functions of those extracted belong to the unit
             for (unsigned j = 0, je = subprograms.getNumElements(); j != je; ++j)
 #if defined(LLVM_3_2) || defined(LLVM_3_3) || defined(LLVM_3_4) || defined(LLVM_3_5)
                 SPset.insert(subprograms->getOperand(j));
 #else // LLVM 3.6+
-                SPset.insert(llvm::cast<llvm::ValueAsMetadata>((subprograms->getOperand(j)).get())->getValue());
+                SPset.insert(subprograms.getElement(j));
 #endif
 
             std::set_intersection(SPall.begin(), SPall.end(),
@@ -301,10 +300,8 @@ lStripUnusedDebugInfo(llvm::Module *module) {
 
             // And now we can go and stuff it into the unit with some
             // confidence...
-            std::vector<llvm::Metadata *> usedSubprograms_tmp;
-            for (int i = 0; i < usedSubprograms.size(); ++i)
-                usedSubprograms_tmp.at(i) = llvm::ValueAsMetadata::get(usedSubprograms.at(i));
-            llvm::MDNode *replNode = llvm::MDNode::get(module->getContext(), usedSubprograms_tmp);
+            llvm::MDNode *replNode = llvm::MDNode::get(module->getContext(), 
+                                                       llvm::ArrayRef<llvm::Metadata *>(usedSubprograms));
             cu.replaceSubprograms(llvm::DIArray(replNode));
 #endif
         }
