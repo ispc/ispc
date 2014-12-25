@@ -230,16 +230,35 @@ lGetSourcePosFromMetadata(const llvm::Instruction *inst, SourcePos *pos) {
     llvm::MDString *str = llvm::dyn_cast<llvm::MDString>(filename->getOperand(0));
     Assert(str);
     llvm::ConstantInt *first_lnum =
+#if defined (LLVM_3_2) || defined (LLVM_3_3)|| defined (LLVM_3_4)|| defined (LLVM_3_5)
         llvm::dyn_cast<llvm::ConstantInt>(first_line->getOperand(0));
+#else // LLVN 3.6++
+        llvm::mdconst::extract<llvm::ConstantInt>(first_line->getOperand(0));
+#endif
     Assert(first_lnum);
+
     llvm::ConstantInt *first_colnum =
+#if defined (LLVM_3_2) || defined (LLVM_3_3)|| defined (LLVM_3_4)|| defined (LLVM_3_5)
         llvm::dyn_cast<llvm::ConstantInt>(first_column->getOperand(0));
+#else // LLVN 3.6++
+        llvm::mdconst::extract<llvm::ConstantInt>(first_column->getOperand(0));
+#endif
     Assert(first_column);
+
     llvm::ConstantInt *last_lnum =
+#if defined (LLVM_3_2) || defined (LLVM_3_3)|| defined (LLVM_3_4)|| defined (LLVM_3_5)
         llvm::dyn_cast<llvm::ConstantInt>(last_line->getOperand(0));
+#else // LLVN 3.6++
+        llvm::mdconst::extract<llvm::ConstantInt>(last_line->getOperand(0));
+#endif
     Assert(last_lnum);
+
     llvm::ConstantInt *last_colnum =
+#if defined (LLVM_3_2) || defined (LLVM_3_3)|| defined (LLVM_3_4)|| defined (LLVM_3_5)
         llvm::dyn_cast<llvm::ConstantInt>(last_column->getOperand(0));
+#else // LLVN 3.6++
+        llvm::mdconst::extract<llvm::ConstantInt>(last_column->getOperand(0));
+#endif
     Assert(last_column);
 
     *pos = SourcePos(str->getString().data(), (int)first_lnum->getZExtValue(),

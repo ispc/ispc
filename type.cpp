@@ -91,13 +91,19 @@ lCreateDIArray(llvm::DIType eltType, int count) {
     }
 
     llvm::Value *sub = m->diBuilder->getOrCreateSubrange(lowerBound, upperBound);
-#else // LLVM 3.3+
+#elif defined (LLVM_3_3)|| defined (LLVM_3_4) || defined (LLVM_3_5)
     llvm::Value *sub = m->diBuilder->getOrCreateSubrange(0, count);
 #endif
+
+#if defined (LLVM_3_2) || defined (LLVM_3_3) || defined (LLVM_3_4) || defined (LLVM_3_5)
     std::vector<llvm::Value *> subs;
+#else // LLVM 3.6++
+    llvm::Metadata *sub = m->diBuilder->getOrCreateSubrange(0, count);
+    std::vector<llvm::Metadata *> subs;
+#endif
     subs.push_back(sub);
     llvm::DIArray subArray = m->diBuilder->getOrCreateArray(subs);
-
+    
     uint64_t size = eltType.getSizeInBits() * count;
     uint64_t align = eltType.getAlignInBits();
 
@@ -571,8 +577,10 @@ AtomicType::GetDIType(llvm::DIDescriptor scope) const {
         llvm::DIType unifType = GetAsUniformType()->GetDIType(scope);
 #ifdef LLVM_3_2
         llvm::Value *sub = m->diBuilder->getOrCreateSubrange(0, g->target->getVectorWidth()-1);
-#else // LLVM 3.3+
+#elif defined (LLVM_3_3)|| defined (LLVM_3_4) || defined (LLVM_3_5)
         llvm::Value *sub = m->diBuilder->getOrCreateSubrange(0, g->target->getVectorWidth());
+#else // LLVM 3.6++
+        llvm::Metadata *sub = m->diBuilder->getOrCreateSubrange(0, g->target->getVectorWidth());
 #endif
         llvm::DIArray subArray = m->diBuilder->getOrCreateArray(sub);
         uint64_t size =  unifType.getSizeInBits()  * g->target->getVectorWidth();
@@ -810,14 +818,21 @@ EnumType::LLVMType(llvm::LLVMContext *ctx) const {
 
 llvm::DIType
 EnumType::GetDIType(llvm::DIDescriptor scope) const {
+#if defined (LLVM_3_2) || defined (LLVM_3_3) || defined (LLVM_3_4) || defined (LLVM_3_5)
     std::vector<llvm::Value *> enumeratorDescriptors;
+#else // LLVM 3.6++
+    std::vector<llvm::Metadata *> enumeratorDescriptors;
+#endif
     for (unsigned int i = 0; i < enumerators.size(); ++i) {
         unsigned int enumeratorValue;
         Assert(enumerators[i]->constValue != NULL);
         int count = enumerators[i]->constValue->GetValues(&enumeratorValue);
         Assert(count == 1);
-
+#if defined (LLVM_3_2) || defined (LLVM_3_3) || defined (LLVM_3_4) || defined (LLVM_3_5)
         llvm::Value *descriptor =
+#else // LLVM 3.6++
+        llvm::Metadata *descriptor =
+#endif
             m->diBuilder->createEnumerator(enumerators[i]->name, enumeratorValue);
         enumeratorDescriptors.push_back(descriptor);
     }
@@ -840,8 +855,10 @@ EnumType::GetDIType(llvm::DIDescriptor scope) const {
     case Variability::Varying: {
 #ifdef LLVM_3_2
         llvm::Value *sub = m->diBuilder->getOrCreateSubrange(0, g->target->getVectorWidth()-1);
-#else // LLVM 3.3+
+#elif defined (LLVM_3_3)|| defined (LLVM_3_4) || defined (LLVM_3_5)        
         llvm::Value *sub = m->diBuilder->getOrCreateSubrange(0, g->target->getVectorWidth());
+#else // LLVM 3.6++
+        llvm::Metadata *sub = m->diBuilder->getOrCreateSubrange(0, g->target->getVectorWidth());
 #endif
         llvm::DIArray subArray = m->diBuilder->getOrCreateArray(sub);
         uint64_t size =  diType.getSizeInBits()  * g->target->getVectorWidth();
@@ -1733,8 +1750,10 @@ VectorType::GetDIType(llvm::DIDescriptor scope) const {
     llvm::DIType eltType = base->GetDIType(scope);
 #ifdef LLVM_3_2
     llvm::Value *sub = m->diBuilder->getOrCreateSubrange(0, numElements-1);
-#else // LLVM 3.3+
+#elif defined (LLVM_3_3)|| defined (LLVM_3_4) || defined (LLVM_3_5)
     llvm::Value *sub = m->diBuilder->getOrCreateSubrange(0, numElements);
+#else // LLVM 3.6++
+    llvm::Metadata *sub = m->diBuilder->getOrCreateSubrange(0, numElements);
 #endif
     llvm::DIArray subArray = m->diBuilder->getOrCreateArray(sub);
 
@@ -2156,8 +2175,11 @@ StructType::LLVMType(llvm::LLVMContext *ctx) const {
 llvm::DIType
 StructType::GetDIType(llvm::DIDescriptor scope) const {
     uint64_t currentSize = 0, align = 0;
-
+#if defined (LLVM_3_2) || defined (LLVM_3_3) || defined (LLVM_3_4) || defined (LLVM_3_5)
     std::vector<llvm::Value *> elementLLVMTypes;
+#else // LLVM 3.6++
+    std::vector<llvm::Metadata *> elementLLVMTypes;
+#endif
     // Walk through the elements of the struct; for each one figure out its
     // alignment and size, using that to figure out its offset w.r.t. the
     // start of the structure.
@@ -2975,8 +2997,11 @@ FunctionType::LLVMType(llvm::LLVMContext *ctx) const {
 
 llvm::DIType
 FunctionType::GetDIType(llvm::DIDescriptor scope) const {
+#if defined (LLVM_3_2) || defined (LLVM_3_3) || defined (LLVM_3_4) || defined (LLVM_3_5)
     std::vector<llvm::Value *> retArgTypes;
-
+#else // LLVM 3.6++
+    std::vector<llvm::Metadata *> retArgTypes;
+#endif
     retArgTypes.push_back(returnType->GetDIType(scope));
     for (int i = 0; i < GetNumParameters(); ++i) {
         const Type *t = GetParameterType(i);
@@ -2992,7 +3017,7 @@ FunctionType::GetDIType(llvm::DIDescriptor scope) const {
 
 #if !defined(LLVM_3_2) && !defined(LLVM_3_3) && !defined(LLVM_3_4) && !defined(LLVM_3_5) // LLVM 3.6+
     llvm::DITypeArray retArgTypesArray =
-        m->diBuilder->getOrCreateTypeArray(llvm::ArrayRef<llvm::Value *>(retArgTypes));
+        m->diBuilder->getOrCreateTypeArray(retArgTypes);
 #else
     llvm::DIArray retArgTypesArray =
         m->diBuilder->getOrCreateArray(llvm::ArrayRef<llvm::Value *>(retArgTypes));
