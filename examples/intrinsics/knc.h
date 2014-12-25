@@ -2971,6 +2971,12 @@ static FORCEINLINE __vec16_f __masked_load_float(void *p, __vec16_i1 mask) {
 #endif
 }
 
+static FORCEINLINE __vec16_i64 __masked_load_i64(void *p, __vec16_i1 mask) {
+  __vec16_i32 first8 = __masked_load_i32(p, mask);
+  __vec16_i32 second8 = __masked_load_i32(p + 64, mask);
+  return zmm2hilo(first8, second8);
+}
+
 static FORCEINLINE __vec16_d __masked_load_double(void *p, __vec16_i1 mask) {
 #ifdef ISPC_FORCE_ALIGNED_MEMORY
   __vec16_d ret;
