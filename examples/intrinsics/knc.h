@@ -966,7 +966,7 @@ static FORCEINLINE __vec16_i64 __shl(__vec16_i64 a, unsigned long long b) {
   __vec16_i32 hi;
   if (b <= 32) hi = _mm512_or_epi32(_mm512_slli_epi32(a.v_hi, b), _mm512_srli_epi32(a.v_lo, 32-b));
   else hi = _mm512_slli_epi32(a.v_lo, b - 32);
-  __vec16_i32 lo = _mm512_slli_epi32(a.v_lo, b);
+  __vec16_i32 lo = _mm512_slli_epi32(a.v_lo, b); 
   return __vec16_i64(lo, hi);
 }
 
@@ -986,9 +986,8 @@ static FORCEINLINE __vec16_i64 __lshr(__vec16_i64 a, __vec16_i64 b) {
 static FORCEINLINE __vec16_i64 __lshr(__vec16_i64 a, unsigned long long b) {
   /* this is a safety gate in case b-shift >= 32 */
   __vec16_i32 xfer;
-  if (32 < b) xfer = __lshr(a.v_hi, b-32);
+  if (32 <= b) xfer = __lshr(a.v_hi, b-32);
   else xfer = _mm512_and_epi32(_mm512_slli_epi32(__ispc_ffffffff, 32-b), _mm512_slli_epi32(a.v_hi, 32-b));
-
   __vec16_i32 hi = _mm512_srli_epi32(a.v_hi, b);
   __vec16_i32 lo = _mm512_or_epi32(xfer, _mm512_srli_epi32(a.v_lo, b));
   return __vec16_i64(lo, hi);
@@ -2292,6 +2291,9 @@ static FORCEINLINE __vec16_i32 __cast_bits(__vec16_i32, __vec16_f val) {
   return _mm512_castps_si512(val);
 }
 
+static FORCEINLINE __vec16_i32 __cast_bits(__vec16_i32, __vec16_i32 val) {
+  return val;
+}
 
 static FORCEINLINE __vec16_i64 __cast_bits(__vec16_i64, __vec16_d val) {
   __vec16_i64 ret;
