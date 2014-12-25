@@ -963,8 +963,9 @@ static FORCEINLINE __vec16_i64 __shl(__vec16_i64 a, __vec16_i64 b) {
 }
 
 static FORCEINLINE __vec16_i64 __shl(__vec16_i64 a, unsigned long long b) {
-  __vec16_i32 hi = _mm512_or_epi32(_mm512_slli_epi32(a.v_hi, b), 
-      _mm512_srli_epi32(a.v_lo, 32-b));
+  __vec16_i32 hi;
+  if (b <= 32) hi = _mm512_or_epi32(_mm512_slli_epi32(a.v_hi, b), _mm512_srli_epi32(a.v_lo, 32-b));
+  else hi = _mm512_slli_epi32(a.v_lo, b - 32);
   __vec16_i32 lo = _mm512_slli_epi32(a.v_lo, b);
   return __vec16_i64(lo, hi);
 }
@@ -1006,10 +1007,9 @@ static FORCEINLINE __vec16_i64 __ashr(__vec16_i64 a, __vec16_i64 b) {
 }
 
 static FORCEINLINE __vec16_i64 __ashr(__vec16_i64 a, unsigned long long b) {
-  __vec16_i32 xfer
-    = _mm512_slli_epi32(_mm512_and_epi32(a.v_hi, 
-          _mm512_set1_epi32((1<<b)-1)),
-        32-b);
+__vec16_i32 xfer;
+  if (b <= 32) xfer = _mm512_slli_epi32(_mm512_and_epi32(a.v_hi, _mm512_set1_epi32((1<<b)-1)), 32-b);
+  else  xfer = _mm512_srai_epi32(a.v_hi, b-32);
   __vec16_i32 hi = _mm512_srai_epi32(a.v_hi, b);
   __vec16_i32 lo = _mm512_or_epi32(xfer, _mm512_srli_epi32(a.v_lo, b));
   return __vec16_i64(lo, hi);
@@ -1867,10 +1867,26 @@ static FORCEINLINE __vec16_i32 __cast_sext(const __vec16_i32 &, const __vec16_i1
   return _mm512_extload_epi32(&val, _MM_UPCONV_EPI32_SINT16, _MM_BROADCAST32_NONE, _MM_HINT_NONE);
 }
 
+
+
+static FORCEINLINE __vec16_i64 __cast_sext(const __vec16_i64 &, const __vec16_i1 &val)
+{
+  __vec16_i32 ret = _mm512_mask_mov_epi32(_mm512_setzero_epi32(), val, _mm512_set1_epi32(-1));
+  return __vec16_i64(ret, ret);
+}
+
+static FORCEINLINE __vec16_i64 __cast_sext(const __vec16_i64 &, const __vec16_i8 &val)
+{
+  __vec16_i32 a = _mm512_extload_epi32(&val, _MM_UPCONV_EPI32_SINT8, _MM_BROADCAST32_NONE, _MM_HINT_NONE);
+  return __vec16_i64(a.v, _mm512_srai_epi32(a.v, 31));
+}
+
 static FORCEINLINE __vec16_i64 __cast_sext(const __vec16_i64 &, const __vec16_i32 &val)
 {
   return __vec16_i64(val.v, _mm512_srai_epi32(val.v, 31));
 }
+
+
 
 static FORCEINLINE __vec16_i8 __cast_zext(const __vec16_i8 &, const __vec16_i1 &val)
 {
