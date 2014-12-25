@@ -2784,6 +2784,10 @@ static FORCEINLINE int32_t __count_leading_zeros_i32(__vec1_i32 mask) {
   return n;
 }
 
+static FORCEINLINE void __insert_element(__vec1_i32 *v, int index, uint32_t val) { 
+    ((uint32_t *)v)[index] = val;                                        \
+}
+
 static FORCEINLINE int64_t __count_leading_zeros_i64(__vec1_i64 mask) {
   uint32_t n = 0;
   if (mask == 0)
