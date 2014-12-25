@@ -2333,6 +2333,9 @@ static FORCEINLINE __vec16_d __cast_bits(__vec16_d, __vec16_i64 val) {
   return ret;
 }
 
+static FORCEINLINE __vec16_i64 __cast_bits(__vec16_i64, __vec16_i64 val) {
+  return val;
+}
 
 ///////////////////////////////////////////////////////////////////////////
 // templates for int8/16 operations
