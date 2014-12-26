@@ -1,0 +1,15 @@
+knc.h
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+1. pmulus_vi64.ispc (-O2)
+The root of the broblem is in the code generator - it assumes __vec16_i64 stores its elements sequentually in memory,
+not high and low parts separately as we do. Consequently, this construction works incorrectly
+
+```
+__vec16_i64 (((uint64_t *)(&tmp__2_))[0], ((uint64_t *)(&tmp__2_))[0], ((uint64_t *)(&tmp__2_))[0], ((uint64_t
+*)(&tmp__2_))[0], ((uint64_t *)(&tmp__2_))[0], ((uint64_t *)(&tmp__2_))[0], ((uint64_t *)(&tmp__2_))[0], ((uint64_t
+*)(&tmp__2_))[0], ((uint64_t *)(&tmp__2_))[0], ((uint64_t *)(&tmp__2_))[0], ((uint64_t *)(&tmp__2_))[0], ((uint64_t
+*)(&tmp__2_))[0], ((uint64_t *)(&tmp__2_))[0], ((uint64_t *)(&tmp__2_))[0], ((uint64_t *)(&tmp__2_))[0], ((uint64_t
+*)(&tmp__2_))[0]
+```
+where 'tmp__2_' is of  __vec16_i64 data type.
