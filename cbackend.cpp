@@ -131,7 +131,7 @@ namespace {
     // objects, we keep several helper maps.
     llvm::DenseSet<const llvm::Value*> VisitedConstants;
 #if !defined (LLVM_3_2) && !defined (LLVM_3_3) && !defined (LLVM_3_4) && !defined (LLVM_3_5)// LLVN 3.6++
-    llvm::DenseSet<const llvm::MDNode*> VisitedConstantsInNodes;
+    llvm::DenseSet<const llvm::Metadata*> VisitedMDNodes;
 #endif
     llvm::DenseSet<llvm::Type*> VisitedTypes;
 
@@ -140,17 +140,9 @@ namespace {
     TypeFinder(std::vector<llvm::ArrayType*> &t)
       : ArrayTypes(t) {}
 
-#if defined (LLVM_3_2) || defined (LLVM_3_3)|| defined (LLVM_3_4)|| defined (LLVM_3_5)
     void run(const llvm::Module &M) {
-#else // LLVN 3.6++
-    void run(llvm::Module &M) {
-#endif
       // Get types from global variables.
-#if defined (LLVM_3_2) || defined (LLVM_3_3)|| defined (LLVM_3_4)|| defined (LLVM_3_5)
-        for (llvm::Module::const_global_iterator I = M.global_begin(),
-#else // LLVN 3.6++
-        for (llvm::Module::global_iterator I = M.global_begin(),
-#endif
+      for (llvm::Module::const_global_iterator I = M.global_begin(),
            E = M.global_end(); I != E; ++I) {
         incorporateType(I->getType());
         if (I->hasInitializer())
@@ -158,18 +150,10 @@ namespace {
       }
 
       // Get types from aliases.
-#if defined (LLVM_3_2) || defined (LLVM_3_3)|| defined (LLVM_3_4)|| defined (LLVM_3_5)
       for (llvm::Module::const_alias_iterator I = M.alias_begin(),
-#else // LLVN 3.6++
-      for (llvm::Module::alias_iterator I = M.alias_begin(),
-#endif
            E = M.alias_end(); I != E; ++I) {
         incorporateType(I->getType());
-#if defined (LLVM_3_2) || defined (LLVM_3_3)|| defined (LLVM_3_4)|| defined (LLVM_3_5)
         if (const llvm::Value *Aliasee = I->getAliasee())
-#else // LLVN 3.6++
-        if (llvm::Value *Aliasee = I->getAliasee())
-#endif
           incorporateValue(Aliasee);
       }
 
@@ -199,11 +183,8 @@ namespace {
             // Incorporate types hiding in metadata.
             I.getAllMetadataOtherThanDebugLoc(MDForInst);
             for (unsigned i = 0, e = MDForInst.size(); i != e; ++i)
-#if defined(LLVM_3_2) || defined(LLVM_3_3) || defined(LLVM_3_4) || defined(LLVM_3_5)
               incorporateMDNode(MDForInst[i].second);
-#else // LLVM 3.6+
-              incorporateMDNode(llvm::cast<llvm::MDNode>(MDForInst[i].second));
-#endif
+
             MDForInst.clear();
           }
       }
@@ -212,11 +193,7 @@ namespace {
            E = M.named_metadata_end(); I != E; ++I) {
         const llvm::NamedMDNode *NMD = I;
         for (unsigned i = 0, e = NMD->getNumOperands(); i != e; ++i)
-#if defined(LLVM_3_2) || defined(LLVM_3_3) || defined(LLVM_3_4) || defined(LLVM_3_5)
           incorporateMDNode(NMD->getOperand(i));
-#else // LLVM 3.6+
-          incorporateMDNode(llvm::cast<llvm::MDNode>(NMD->getOperand(i)));
-#endif
       }
     }
 
@@ -239,14 +216,18 @@ namespace {
     /// types hiding in constant expressions and other operands that won't be
     /// walked in other ways.  GlobalValues, basic blocks, instructions, and
     /// inst operands are all explicitly enumerated.
-#if defined (LLVM_3_2) || defined (LLVM_3_3)|| defined (LLVM_3_4)|| defined (LLVM_3_5)
     void incorporateValue(const llvm::Value *V) {
-      if (const llvm::MDNode *M = llvm::dyn_cast<llvm::MDNode>(V))
+#if defined (LLVM_3_2) || defined (LLVM_3_3)|| defined (LLVM_3_4)|| defined (LLVM_3_5)
+      if (const llvm::MDNode *M = llvm::dyn_cast<llvm::MDNode>(V)) {
+        incorporateMDNode(M);
+        return;
+      }
 #else // LLVN 3.6++
-    void incorporateValue(llvm::Value *V) {
-      if (const llvm::MDNode *M = llvm::cast<llvm::MDNode>(llvm::ValueAsMetadata::get(V)))
+      if (const llvm::MetadataAsValue *MV = llvm::dyn_cast<llvm::MetadataAsValue>(V)) {
+        incorporateMDNode(MV->getMetadata());
+        return;
+      }
 #endif
-        return incorporateMDNode(M);
       if (!llvm::isa<llvm::Constant>(V) || llvm::isa<llvm::GlobalValue>(V)) return;
 
       // Already visited?
@@ -263,34 +244,45 @@ namespace {
         incorporateValue(*I);
     }
 
+#if defined (LLVM_3_2) || defined (LLVM_3_3)|| defined (LLVM_3_4)|| defined (LLVM_3_5)
     void incorporateMDNode(const llvm::MDNode *V) {
 
       // Already visited?
-#if defined (LLVM_3_2) || defined (LLVM_3_3)|| defined (LLVM_3_4)|| defined (LLVM_3_5)
       if (!VisitedConstants.insert(V).second)
-#else // LLVN 3.6++
-      if (!VisitedConstantsInNodes.insert(V).second)
-#endif
         return;
 
       // Look in operands for types.
       for (unsigned i = 0, e = V->getNumOperands(); i != e; ++i)
-        if (llvm::Value *Op = 
-#if defined (LLVM_3_2) || defined (LLVM_3_3)|| defined (LLVM_3_4)|| defined (LLVM_3_5)
-                              V->getOperand(i))
-#else // LLVN 3.6++
-                              llvm::cast<llvm::ValueAsMetadata>((V->getOperand(i)).get())->getValue()) 
-#endif
+        if (llvm::Value *Op = V->getOperand(i))
           incorporateValue(Op);
     }
+#else // LLVM 3.6+
+    void incorporateMDNode(const llvm::Metadata *M) {
+
+      // Already visited?
+      if (!VisitedMDNodes.insert(M).second)
+        return;
+
+      if (const llvm::MDNode* N = llvm::dyn_cast<llvm::MDNode>(M)) {
+        // Look in operands for types.
+        for (unsigned i = 0, e = N->getNumOperands(); i != e; ++i)
+          if (const llvm::Metadata *O = N->getOperand(i))
+            incorporateMDNode(O);
+      } else if (llvm::isa<llvm::MDString>(M)) {
+        // Nothing to do with MDString.
+      } else if (const llvm::ValueAsMetadata* V = llvm::dyn_cast<llvm::ValueAsMetadata>(M)) {
+          incorporateValue(V->getValue());
+      } else {
+        // Some unknown Metadata subclass - has LLVM introduced something new?
+        llvm_unreachable("Unknown Metadata subclass");
+      }
+    }
+#endif
+
   };
 } // end anonymous namespace
 
-#if defined (LLVM_3_2) || defined (LLVM_3_3)|| defined (LLVM_3_4)|| defined (LLVM_3_5)
 static void findUsedArrayTypes(const llvm::Module *m, std::vector<llvm::ArrayType*> &t) {
-#else // LLVN 3.6++
-static void findUsedArrayTypes(llvm::Module *m, std::vector<llvm::ArrayType*> &t) {
-#endif
   TypeFinder(t).run(*m);
 }
 
@@ -313,11 +305,7 @@ namespace {
     llvm::IntrinsicLowering *IL;
     //llvm::Mangler *Mang;
     llvm::LoopInfo *LI;
-#if defined(LLVM_3_2) || defined(LLVM_3_3) || defined(LLVM_3_4) || defined(LLVM_3_5)
     const llvm::Module *TheModule;
-#else // LLVM 3.6++
-    llvm::Module *TheModule;
-#endif
     const llvm::MCAsmInfo* TAsm;
     const llvm::MCRegisterInfo *MRI;
     const llvm::MCObjectFileInfo *MOFI;
