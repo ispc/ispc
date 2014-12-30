@@ -3126,6 +3126,10 @@ Module::CompileAndOutput(const char *srcFile,
                                           outputType, outFileName);
         }
 
+        if (depsFileName != NULL)
+            if (!m->writeOutput(Module::Deps, depsFileName))
+                return 1;
+
         delete g->target;
         g->target = NULL;
 
