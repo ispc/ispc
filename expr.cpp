@@ -7741,6 +7741,19 @@ AddressOfExpr::GetType() const {
 }
 
 
+const Type *
+AddressOfExpr::GetLValueType() const {
+    if (!expr)
+        return NULL;
+
+    const Type *type = expr->GetType();
+    if (!type)
+        return NULL;
+
+    return PointerType::GetUniform(type);
+}
+
+
 Symbol *
 AddressOfExpr::GetBaseSymbol() const {
     return expr ? expr->GetBaseSymbol() : NULL;
