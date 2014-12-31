@@ -1,3 +1,22 @@
+=== v1.8.1 === (31 December 2014)
+
+A minor update of ``ispc`` with several important stability fixes, namely:
+
+* Auto-dispatch mechanism is fixed in pre-built Linux binaries (it used to
+  select too conservative target).
+
+* Compile crash with "-O2 -g" is fixed.
+
+Also KNC (Xeon Phi) support is further improved.
+
+The release includes experimental build for Sony PlayStation4 target (Windows
+cross compiler), as well NVPTX experimental support (64 bit Linux binaries
+only). Note that there might be NVPTX compilation fails with CUDA 7.0.
+
+Similar to 1.8.0 all binaries are based on LLVM 3.5. MacOS binaries are built
+for MacOS 10.9 Mavericks. Linux binaries are compatible with kernel 2.6.32
+(ok for RHEL6) and later.
+
 === v1.8.0 === (16 October 2014)
 
 A major new version of ISPC, which introduces experimental support for NVPTX
