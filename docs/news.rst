@@ -2,6 +2,15 @@
 ispc News
 =========
 
+ispc 1.8.1 is Released
+----------------------
+
+A minor update of ``ispc`` with several important stability fixes has been
+released. Problem with auto-dispatch on Linux is fixed (affects only pre-built
+binaries), the problem with -O2 -g is also fixed. There are several
+improvements in Xeon Phi support. Similar to 1.8.0 all binaries are based on
+LLVM 3.5.
+
 ispc 1.8.0 is Released
 ----------------------
 
