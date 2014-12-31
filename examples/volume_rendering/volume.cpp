@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2011, Intel Corporation
+  Copyright (c) 2011-2014, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -38,6 +38,7 @@
 #pragma warning (disable: 4305)
 #endif
 
+#include <cstdlib>
 #include <stdio.h>
 #include <algorithm>
 #include "../timing.h"
