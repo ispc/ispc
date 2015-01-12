@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2014, Intel Corporation
+  Copyright (c) 2010-2015, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -38,7 +38,7 @@
 #ifndef ISPC_H
 #define ISPC_H
 
-#define ISPC_VERSION "1.8.1"
+#define ISPC_VERSION "1.8.2dev"
 
 #if !defined(LLVM_3_2) && !defined(LLVM_3_3) && !defined(LLVM_3_4) && !defined(LLVM_3_5) && !defined(LLVM_3_6)
 #error "Only LLVM 3.2, 3.3, 3.4, 3.5 and the 3.6 development branch are supported"
