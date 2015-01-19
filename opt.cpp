@@ -86,7 +86,11 @@
     #include <llvm/DebugInfo.h>
 #endif
 #include <llvm/Analysis/ConstantFolding.h>
-#include <llvm/Target/TargetLibraryInfo.h>
+#if defined(LLVM_3_2) || defined(LLVM_3_3) || defined(LLVM_3_4) || defined(LLVM_3_5) || defined(LLVM_3_6)
+    #include <llvm/Target/TargetLibraryInfo.h>
+#else // LLVM 3.7+
+    #include <llvm/Analysis/TargetLibraryInfo.h>
+#endif
 #include <llvm/ADT/Triple.h>
 #include <llvm/ADT/SmallSet.h>
 #include <llvm/Transforms/Scalar.h>
@@ -503,7 +507,11 @@ Optimize(llvm::Module *module, int optLevel) {
 
     llvm::TargetLibraryInfo *targetLibraryInfo =
         new llvm::TargetLibraryInfo(llvm::Triple(module->getTargetTriple()));
+#if defined(LLVM_3_2) || defined(LLVM_3_3) || defined(LLVM_3_4) || defined(LLVM_3_5) || defined(LLVM_3_6)
     optPM.add(targetLibraryInfo);
+#else // LLVM 3.7+
+    optPM.add(new llvm::TargetLibraryInfoWrapperPass(*targetLibraryInfo));
+#endif
 
 #if defined(LLVM_3_2) || defined(LLVM_3_3) || defined(LLVM_3_4)
     optPM.add(new llvm::DataLayout(*g->target->getDataLayout()));
