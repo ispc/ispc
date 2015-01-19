@@ -343,7 +343,11 @@ namespace {
         OpaqueCounter(0), NextAnonValueNumber(0),
         includeName(incname ? incname : "generic_defs.h"),
         vectorWidth(vecwidth) {
+#if defined(LLVM_3_2) || defined(LLVM_3_3) || defined(LLVM_3_4) || defined(LLVM_3_5) || defined(LLVM_3_6)
       initializeLoopInfoPass(*llvm::PassRegistry::getPassRegistry());
+#else // LLVM 3.7+
+      initializeLoopInfoWrapperPassPass(*llvm::PassRegistry::getPassRegistry());
+#endif
       FPCounter = 0;
       VectorConstantIndex = 0;
     }
@@ -351,7 +355,11 @@ namespace {
     virtual const char *getPassName() const { return "C backend"; }
 
     void getAnalysisUsage(llvm::AnalysisUsage &AU) const {
+#if defined(LLVM_3_2) || defined(LLVM_3_3) || defined(LLVM_3_4) || defined(LLVM_3_5) || defined(LLVM_3_6)
       AU.addRequired<llvm::LoopInfo>();
+#else // LLVM 3.7+
+      AU.addRequired<llvm::LoopInfoWrapperPass>();
+#endif
       AU.setPreservesAll();
     }
 
@@ -363,7 +371,11 @@ namespace {
      if (F.hasAvailableExternallyLinkage())
        return false;
 
+#if defined(LLVM_3_2) || defined(LLVM_3_3) || defined(LLVM_3_4) || defined(LLVM_3_5) || defined(LLVM_3_6)
      LI = &getAnalysis<llvm::LoopInfo>();
+#else // LLVM 3.7+
+     LI = &getAnalysis<llvm::LoopInfoWrapperPass>().getLoopInfo();
+#endif
 
       // Get rid of intrinsics we can't handle.
       lowerIntrinsics(F);
