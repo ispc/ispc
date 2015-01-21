@@ -782,7 +782,7 @@ lSetInternalFunctions(llvm::Module *module) {
  */
 void
 AddBitcodeToModule(const unsigned char *bitcode, int length,
-                   llvm::Module *module, SymbolTable *symbolTable) {
+                   llvm::Module *module, SymbolTable *symbolTable, bool warn) {
     llvm::StringRef sb = llvm::StringRef((char *)bitcode, length);
 #if defined(LLVM_3_2) || defined(LLVM_3_3) || defined(LLVM_3_4) || defined(LLVM_3_5)
     llvm::MemoryBuffer *bcBuf = llvm::MemoryBuffer::getMemBuffer(sb);
@@ -852,7 +852,8 @@ AddBitcodeToModule(const unsigned char *bitcode, int length,
             // DataLayout or library DataLayout to be empty.
 #if !defined(LLVM_3_2) && !defined(LLVM_3_3) && !defined(LLVM_3_4) // LLVM 3.5+
             if (!VerifyDataLayoutCompatibility(module->getDataLayoutStr(),
-                                               bcModule->getDataLayoutStr())) {
+                                               bcModule->getDataLayoutStr())
+                && warn) {
               Warning(SourcePos(), "Module DataLayout is incompatible with "
                       "library DataLayout:\n"
                       "Module  DL: %s\n"
@@ -862,7 +863,8 @@ AddBitcodeToModule(const unsigned char *bitcode, int length,
             }
 #else
             if (!VerifyDataLayoutCompatibility(module->getDataLayout(),
-                                               bcModule->getDataLayout())) {
+                                               bcModule->getDataLayout())
+                && warn) {
               Warning(SourcePos(), "Module DataLayout is incompatible with "
                       "library DataLayout:\n"
                       "Module  DL: %s\n"
@@ -1026,19 +1028,30 @@ void
 DefineStdlib(SymbolTable *symbolTable, llvm::LLVMContext *ctx, llvm::Module *module,
              bool includeStdlibISPC) {
     bool runtime32 = g->target->is32Bit();
+    bool warn = g->target->getISA() != Target::GENERIC;
+
+#define EXPORT_MODULE_COND_WARN(export_module, warnings)        \
+    extern unsigned char export_module[];                       \
+    extern int export_module##_length;                          \
+    AddBitcodeToModule(export_module, export_module##_length,   \
+                       module, symbolTable, warnings);
 
 #define EXPORT_MODULE(export_module)                            \
     extern unsigned char export_module[];                       \
     extern int export_module##_length;                          \
     AddBitcodeToModule(export_module, export_module##_length,   \
-                       module, symbolTable);
+                       module, symbolTable, true);
 
-    // Add the definitions from the compiled builtins-c.c file
+    // Add the definitions from the compiled builtins.c file.
+    // When compiling for "generic" target family, data layout warnings for
+    // "builtins_bitcode_c" have to be switched off: its DL is incompatible
+    // with the DL of "generic". Anyway, AddBitcodeToModule() corrects this
+    // automatically if DLs differ (by copying module`s DL to export`s DL).
     if (runtime32) {
-        EXPORT_MODULE(builtins_bitcode_c_32);
+        EXPORT_MODULE_COND_WARN(builtins_bitcode_c_32, warn);
     }
     else {
-        EXPORT_MODULE(builtins_bitcode_c_64);
+        EXPORT_MODULE_COND_WARN(builtins_bitcode_c_64, warn);
     }
 
     // Next, add the target's custom implementations of the various needed

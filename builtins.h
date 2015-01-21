@@ -56,6 +56,7 @@ void DefineStdlib(SymbolTable *symbolTable, llvm::LLVMContext *ctx, llvm::Module
                   bool includeStdlib);
 
 void AddBitcodeToModule(const unsigned char *bitcode, int length,
-                        llvm::Module *module, SymbolTable *symbolTable = NULL);
+                        llvm::Module *module, SymbolTable *symbolTable = NULL,
+                        bool warn = true);
 
 #endif // ISPC_STDLIB_H
