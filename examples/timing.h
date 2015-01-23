@@ -58,7 +58,8 @@ __inline__ uint64_t rdtsc() {
 
 #ifdef WIN32
 #include <windows.h>
-double rtc();
+// This is just a stub, it's not used on Windows.
+double rtc() { return 0.0; };
 #define rdtsc __rdtsc
 #else // WIN32
 __inline__ uint64_t rdtsc() {
