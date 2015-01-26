@@ -35,6 +35,8 @@
 #define NOMINMAX
 #pragma warning (disable: 4244)
 #pragma warning (disable: 4305)
+// preventing MSVC fopen() deprecation complaints
+#define _CRT_SECURE_NO_DEPRECATE
 #endif
 
 #include <stdio.h>

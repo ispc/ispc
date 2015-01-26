@@ -58,8 +58,6 @@ __inline__ uint64_t rdtsc() {
 
 #ifdef WIN32
 #include <windows.h>
-// This is just a stub, it's not used on Windows.
-double rtc() { return 0.0; };
 #define rdtsc __rdtsc
 #else // WIN32
 __inline__ uint64_t rdtsc() {
@@ -97,7 +95,10 @@ static double  tstart, tend;
 static inline void reset_and_start_timer()
 {
     start = rdtsc();
+#ifndef WIN32
+    // Unused in Windows build, rtc() causing link errors
     tstart = rtc();
+#endif
 }
 
 /* Returns the number of millions of elapsed processor cycles since the
@@ -108,8 +109,11 @@ static inline double get_elapsed_mcycles()
     return (end-start) / (1024. * 1024.);
 }
 
+#ifndef WIN32
+// Unused in Windows build, rtc() causing link errors
 static inline double get_elapsed_msec()
 {
     tend = rtc();
     return (tend - tstart)*1e3;
 }
+#endif

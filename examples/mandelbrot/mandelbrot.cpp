@@ -99,7 +99,7 @@ int main(int argc, char *argv[]) {
     // time of three runs.
     //
     double minISPC = 1e30;
-    for (int i = 0; i < test_iterations[0]; ++i) {
+    for (unsigned int i = 0; i < test_iterations[0]; ++i) {
         reset_and_start_timer();
         mandelbrot_ispc(x0, y0, x1, y1, width, height, maxIterations, buf);
         double dt = get_elapsed_mcycles();
@@ -119,7 +119,7 @@ int main(int argc, char *argv[]) {
     // minimum time.
     //
     double minSerial = 1e30;
-    for (int i = 0; i < test_iterations[1]; ++i) {
+    for (unsigned int i = 0; i < test_iterations[1]; ++i) {
         reset_and_start_timer();
         mandelbrot_serial(x0, y0, x1, y1, width, height, maxIterations, buf);
         double dt = get_elapsed_mcycles();

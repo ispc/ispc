@@ -211,7 +211,7 @@ int main(int argc, char *argv[]) {
     // Run 3 iterations with ispc + 1 core, record the minimum time
     //
     double minTimeISPC = 1e30;
-    for (int i = 0; i < test_iterations[0]; ++i) {
+    for (uint i = 0; i < test_iterations[0]; ++i) {
         reset_and_start_timer();
         raytrace_ispc(width, height, baseWidth, baseHeight, raster2camera, 
                       camera2world, image, id, nodes, triangles);
@@ -231,7 +231,7 @@ int main(int argc, char *argv[]) {
     // Run 3 iterations with ispc + 1 core, record the minimum time
     //
     double minTimeISPCtasks = 1e30;
-    for (int i = 0; i < test_iterations[1]; ++i) {
+    for (uint i = 0; i < test_iterations[1]; ++i) {
         reset_and_start_timer();
         raytrace_ispc_tasks(width, height, baseWidth, baseHeight, raster2camera,
                             camera2world, image, id, nodes, triangles);
@@ -252,7 +252,7 @@ int main(int argc, char *argv[]) {
     // minimum time.
     //
     double minTimeSerial = 1e30;
-    for (int i = 0; i < test_iterations[2]; ++i) {
+    for (uint i = 0; i < test_iterations[2]; ++i) {
         reset_and_start_timer();
         raytrace_serial(width, height, baseWidth, baseHeight, raster2camera, 
                         camera2world, image, id, nodes, triangles);

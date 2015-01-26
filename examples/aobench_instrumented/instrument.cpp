@@ -34,6 +34,8 @@
 #include "instrument.h"
 #include <stdio.h>
 #include <assert.h>
+#include <iomanip>
+#include <sstream>
 #include <string>
 #include <map>
 
@@ -46,7 +48,7 @@ struct CallInfo {
 
 static std::map<std::string, CallInfo> callInfo;
 
-int countbits(int i) {
+int countbits(uint64_t i) {
     int ret = 0;
     while (i) {
         if (i & 0x1)
@@ -61,13 +63,12 @@ int countbits(int i) {
 // command-line flag is given while compiling.
 void
 ISPCInstrument(const char *fn, const char *note, int line, uint64_t mask) {
-    char sline[16];
-    sprintf(sline, "%04d", line);
-    std::string s = std::string(fn) + std::string("(") + std::string(sline) +
-        std::string(") - ") + std::string(note);
+    std::stringstream s;
+    s << fn << "(" << std::setfill('0') << std::setw(4) << line << ") - "
+      << note;
 
     // Find or create a CallInfo instance for this callsite.
-    CallInfo &ci = callInfo[s];
+    CallInfo &ci = callInfo[s.str()];
 
     // And update its statistics... 
     ++ci.count;
