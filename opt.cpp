@@ -505,12 +505,12 @@ Optimize(llvm::Module *module, int optLevel) {
     DebugPassManager optPM;
     optPM.add(llvm::createVerifierPass(),0);
 
+#if defined(LLVM_3_2) || defined(LLVM_3_3) || defined(LLVM_3_4) || defined(LLVM_3_5) || defined(LLVM_3_6)
     llvm::TargetLibraryInfo *targetLibraryInfo =
         new llvm::TargetLibraryInfo(llvm::Triple(module->getTargetTriple()));
-#if defined(LLVM_3_2) || defined(LLVM_3_3) || defined(LLVM_3_4) || defined(LLVM_3_5) || defined(LLVM_3_6)
     optPM.add(targetLibraryInfo);
 #else // LLVM 3.7+
-    optPM.add(new llvm::TargetLibraryInfoWrapperPass(*targetLibraryInfo));
+    optPM.add(new llvm::TargetLibraryInfoWrapperPass(llvm::Triple(module->getTargetTriple())));
 #endif
 
 #if defined(LLVM_3_2) || defined(LLVM_3_3) || defined(LLVM_3_4)
