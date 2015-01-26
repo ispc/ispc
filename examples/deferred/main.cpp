@@ -89,7 +89,7 @@ int main(int argc, char** argv) {
 
     int nframes = test_iterations[2];
     double ispcCycles = 1e30;
-    for (int i = 0; i < test_iterations[0]; ++i) {
+    for (unsigned int i = 0; i < test_iterations[0]; ++i) {
         framebuffer.clear();
         reset_and_start_timer();
         for (int j = 0; j < nframes; ++j)
@@ -123,7 +123,7 @@ int main(int argc, char** argv) {
 #endif // __cilk
 
     double serialCycles = 1e30;
-    for (int i = 0; i < test_iterations[1]; ++i) {
+    for (unsigned int i = 0; i < test_iterations[1]; ++i) {
         framebuffer.clear();
         reset_and_start_timer();
         for (int j = 0; j < nframes; ++j)

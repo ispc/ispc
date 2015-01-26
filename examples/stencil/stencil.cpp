@@ -102,7 +102,7 @@ int main(int argc, char *argv[]) {
     // the minimum time of three runs.
     //
     double minTimeISPC = 1e30;
-    for (int i = 0; i < test_iterations[0]; ++i) {
+    for (unsigned int i = 0; i < test_iterations[0]; ++i) {
         reset_and_start_timer();
         loop_stencil_ispc(0, 6, width, Nx - width, width, Ny - width,
                           width, Nz - width, Nx, Ny, Nz, coeff, vsq,
@@ -121,7 +121,7 @@ int main(int argc, char *argv[]) {
     // the minimum time of three runs.
     //
     double minTimeISPCTasks = 1e30;
-    for (int i = 0; i < test_iterations[1]; ++i) {
+    for (unsigned int i = 0; i < test_iterations[1]; ++i) {
         reset_and_start_timer();
         loop_stencil_ispc_tasks(0, 6, width, Nx - width, width, Ny - width,
                                 width, Nz - width, Nx, Ny, Nz, coeff, vsq,
@@ -140,7 +140,7 @@ int main(int argc, char *argv[]) {
     // minimum time.
     //
     double minTimeSerial = 1e30;
-    for (int i = 0; i < test_iterations[2]; ++i) {
+    for (unsigned int i = 0; i < test_iterations[2]; ++i) {
         reset_and_start_timer();
         loop_stencil_serial(0, 6, width, Nx-width, width, Ny - width,
                             width, Nz - width, Nx, Ny, Nz, coeff, vsq,

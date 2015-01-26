@@ -37,6 +37,8 @@
 #include <stdlib.h>
 #include <algorithm>
 #include <iostream>
+#include <string>
+#include <sstream>
 #include <cassert>
 #include <iomanip>
 #include "../timing.h"
@@ -61,9 +63,9 @@ static void progressBar(const int x, const int n, const int width = 50)
   bstr += "]";
 
   // print percentage 
-  char pstr0[32];
-  sprintf(pstr0, " %2d %c ", static_cast<int>(f*100.0),'%');
-  const std::string pstr(pstr0);
+  std::stringstream pstr0;
+  pstr0 << " " << static_cast<int>(f*100.0) << " % ";
+  const std::string pstr(pstr0.str());
   std::copy(pstr.begin(), pstr.end(), bstr.begin() + (width/2-2));
 
   std::cout << bstr;

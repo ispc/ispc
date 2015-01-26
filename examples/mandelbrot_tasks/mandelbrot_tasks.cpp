@@ -110,7 +110,7 @@ int main(int argc, char *argv[]) {
     // time of three runs.
     //
     double minISPC = 1e30;
-    for (int i = 0; i < test_iterations[0]; ++i) {
+    for (unsigned int i = 0; i < test_iterations[0]; ++i) {
         // Clear out the buffer
         for (unsigned int i = 0; i < width * height; ++i)
             buf[i] = 0;
@@ -130,7 +130,7 @@ int main(int argc, char *argv[]) {
     // minimum time.
     //
     double minSerial = 1e30;
-    for (int i = 0; i < test_iterations[1]; ++i) {
+    for (unsigned int i = 0; i < test_iterations[1]; ++i) {
         // Clear out the buffer
         for (unsigned int i = 0; i < width * height; ++i)
             buf[i] = 0;
