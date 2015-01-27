@@ -1216,6 +1216,7 @@ lFixAttributes(const vecString_t &src, vecString_t &dst)
   typedef std::map<std::string, std::string> attributeMap_t;
   attributeMap_t attributeMap;
 
+#ifdef ISPC_NVPTX_NVVM_OLD  /* guard for NVVM from CUDA TK < 7.0 */
   for (vecString_t::const_iterator it = src.begin();  it != src.end(); it++)
   {
     const vecString_t words = lSplitString(*it);
@@ -1232,9 +1233,12 @@ lFixAttributes(const vecString_t &src, vecString_t &dst)
       attributeMap[words[1]] = attributes;
     }
   }
+#endif
+
   for (vecString_t::const_iterator it = src.begin();  it != src.end(); it++)
   {
     vecString_t words = lSplitString(*it);
+    /* evghenii: is there a cleaner way to set target datalayout for ptx ? */
     if (words.size() > 1 && (words[0] == "target" && words[1] == "datalayout"))
     {
       std::string s = "target datalayout = ";
@@ -1248,9 +1252,10 @@ lFixAttributes(const vecString_t &src, vecString_t &dst)
       continue;
     std::string s;
     std::map<std::string, std::string> attributeSet;
-#if 1  /* this attributed cannot be used in function parametrers, so remove them */
-    attributeSet["readnone"]   = " ";
-    attributeSet["readonly"]   = " ";
+#ifdef ISPC_NVPTX_NVVM_OLD  /* guard for NVVM from CUDA TK < 7.0 */
+                            /* this attributed cannot be used in function parameters, so remove them */
+    attributeSet["readnone"]    = " ";
+    attributeSet["readonly"]    = " ";
     attributeSet["readnone,"]   = ",";
     attributeSet["readonly,"]   = ",";
 #endif
@@ -1264,8 +1269,8 @@ lFixAttributes(const vecString_t &src, vecString_t &dst)
       if ((*w)[0] == '#')
       {
         attributeMap_t::iterator m = attributeMap.find(*w);
-        assert (m != attributeMap.end());
-        *w = attributeMap[*w];
+        if (m != attributeMap.end())
+          *w = attributeMap[*w];
       }
       s += *w + " ";
     }
@@ -2857,8 +2862,10 @@ lCreateDispatchModule(std::map<std::string, FunctionTargetVariants> &functions) 
     return module;
 }
 
+
 #ifdef ISPC_NVPTX_ENABLED
-static std::string lCBEMangle(const std::string &S) {
+static std::string lCBEMangle(const std::string &S) 
+{
   std::string Result;
 
   for (unsigned i = 0, e = S.size(); i != e; ++i) {
