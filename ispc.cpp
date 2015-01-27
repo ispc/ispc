@@ -59,6 +59,9 @@
 #endif
 #if !defined(LLVM_3_2) && !defined(LLVM_3_3) && !defined(LLVM_3_4) && !defined(LLVM_3_5) // LLVM 3.6+
   #include <llvm/Target/TargetSubtargetInfo.h>
+  #if !defined(LLVM_3_6) // LLVM 3.7+
+    #include <llvm/Target/TargetLowering.h>
+  #endif
 #endif
 #if !defined(LLVM_3_2) && !defined(LLVM_3_3) && !defined(LLVM_3_4) // LLVM 3.5+
   #include <llvm/IR/DebugInfo.h>
@@ -685,10 +688,12 @@ Target::Target(const char *arch, const char *cpu, const char *isa, bool pic) :
         // 1. Get default data layout first
         std::string dl_string;
 
-#if !defined(LLVM_3_2) && !defined(LLVM_3_3) && !defined(LLVM_3_4) && !defined(LLVM_3_5) // LLVM 3.6+
-        dl_string = m_targetMachine->getSubtargetImpl()->getDataLayout()->getStringRepresentation();
-#else
+#if defined(LLVM_3_2) || defined(LLVM_3_3) || defined(LLVM_3_4) || defined(LLVM_3_5)
         dl_string = m_targetMachine->getDataLayout()->getStringRepresentation();
+#elif defined(LLVM_3_6)
+        dl_string = m_targetMachine->getSubtargetImpl()->getDataLayout()->getStringRepresentation();
+#else // LLVM 3.7+
+        dl_string = m_targetMachine->getSubtargetImpl()->getTargetLowering()->getDataLayout()->getStringRepresentation();
 #endif
         // 2. Adjust for generic
         if (m_isa == Target::GENERIC) {
