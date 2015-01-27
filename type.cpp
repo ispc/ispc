@@ -759,7 +759,8 @@ EnumType::Mangle() const {
     std::string ret;
     if (isConst) ret += "C";
     ret += variability.MangleString();
-    ret += std::string("enum[") + name + std::string("]");
+//    ret += std::string("enum[") + name + std::string("]");
+    ret += std::string("enum_5B_") + name + std::string("_5D_");
     return ret;
 }
 
@@ -1448,7 +1449,8 @@ ArrayType::Mangle() const {
         sprintf(buf, "%d", numElements);
     else
         buf[0] = '\0';
-    return s + "[" + buf + "]";
+//    return s + "[" + buf + "]";
+    return s + "_5B_" + buf + "_5D_";
 }
 
 
@@ -2123,12 +2125,14 @@ lMangleStruct(Variability variability, bool isConst, const std::string &name) {
     Assert(variability != Variability::Unbound);
 
     std::string ret;
-    ret += "s[";
+//    ret += "s[";
+    ret += "s_5B_";
     if (isConst)
         ret += "_c_";
     ret += variability.MangleString();
 
-    ret += name + std::string("]");
+//    ret += name + std::string("]");
+    ret += name + std::string("_5D_");
     return ret;
 }
 

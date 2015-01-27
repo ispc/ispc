@@ -75,7 +75,7 @@ ARM_ENABLED=0
 
 # Disable NVPTX by request
 # To enable: make NVPTX_ENABLED=1
-NVPTX_ENABLED=0
+NVPTX_ENABLED=1
 
 # Add llvm bin to the path so any scripts run will go to the right llvm-config
 LLVM_BIN= $(shell $(LLVM_CONFIG) --bindir)
