@@ -33,7 +33,7 @@
 all: ptxcc ptxgen
 
 CXX=clang++
-CXXFLAGS += -O3
+CXXFLAGS += -O3 --std=c++11
 CXXFLAGS += -I/opt/local/include
 
 LD=clang++
