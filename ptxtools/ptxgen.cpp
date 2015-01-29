@@ -159,24 +159,24 @@ static std::string generatePTX(
 
   /* Create the compiliation unit. */
   NVVMProg prog;
-  std::vector<const char*> options;
 
   /* Add libdevice. */
   try
   {
     const std::string &libDeviceName = getLibDeviceName(computeArch);
     addFileToProgram(libDeviceName, prog);
-
-    for (const auto &f : nvvmFiles)
-      addFileToProgram(f, prog);
-
-    for (const auto &o : nvvmOptions)
-      options.push_back(o.c_str());
   }
   catch (const std::exception &ex)
   {
     throw Exception(ex.what());
   }
+    
+  std::vector<const char*> options;
+  for (const auto &f : nvvmFiles)
+    addFileToProgram(f, prog);
+
+  for (const auto &o : nvvmOptions)
+    options.push_back(o.c_str());
  
   try 
   { 
@@ -199,8 +199,9 @@ static std::string generatePTX(
   }
   catch (const std::exception &ex)
   {
+    std::cerr << "NVVM exception: " << ex.what() <<  std::endl;
     printWarningsAndErrors(prog);
-    throw Exception(ex.what());
+    throw Exception("");
   }
 
   return ptxString;
