@@ -191,6 +191,11 @@ typedef enum {
     // Haswell. Supports AVX 2.
     CPU_Haswell,
 
+#if !defined(LLVM_3_2) && !defined(LLVM_3_3) && !defined(LLVM_3_4) && !defined(LLVM_3_5) // LLVM 3.6+
+    // Broadwell. Supports AVX 2 + ADX/RDSEED/SMAP.
+    CPU_Broadwell,
+#endif
+
 #if !defined(LLVM_3_2) && !defined(LLVM_3_3) // LLVM 3.4+
     // Late Atom-like design. Supports SSE 4.2 + POPCNT/LZCNT.
     CPU_Silvermont,
@@ -266,6 +271,10 @@ public:
         names[CPU_Haswell].push_back("core-avx2");
         names[CPU_Haswell].push_back("haswell");
 
+#if !defined(LLVM_3_2) && !defined(LLVM_3_3) && !defined(LLVM_3_4) && !defined(LLVM_3_5) // LLVM 3.6+
+        names[CPU_Broadwell].push_back("broadwell");
+#endif
+
 #ifdef ISPC_ARM_ENABLED
         names[CPU_CortexA15].push_back("cortex-a15");
 
@@ -284,10 +293,18 @@ public:
                                       CPU_Core2, CPU_Nehalem, CPU_Silvermont,
                                       CPU_None);
 #endif
+#if defined(LLVM_3_2) || defined(LLVM_3_3) || defined(LLVM_3_4) || defined(LLVM_3_5) // LLVM 3.6+
+        #define CPU_Broadwell CPU_Haswell
+#else
+        compat[CPU_Broadwell]   = Set(CPU_Generic, CPU_Bonnell, CPU_Penryn,
+                                      CPU_Core2, CPU_Nehalem, CPU_Silvermont,
+                                      CPU_SandyBridge, CPU_IvyBridge,
+                                      CPU_Haswell, CPU_Broadwell, CPU_None);
+#endif
         compat[CPU_Haswell]     = Set(CPU_Generic, CPU_Bonnell, CPU_Penryn,
                                       CPU_Core2, CPU_Nehalem, CPU_Silvermont,
                                       CPU_SandyBridge, CPU_IvyBridge,
-                                      CPU_Haswell, CPU_None);
+                                      CPU_Haswell, CPU_Broadwell, CPU_None);
         compat[CPU_IvyBridge]   = Set(CPU_Generic, CPU_Bonnell, CPU_Penryn,
                                       CPU_Core2, CPU_Nehalem, CPU_Silvermont,
                                       CPU_SandyBridge, CPU_IvyBridge,
@@ -429,6 +446,9 @@ Target::Target(const char *arch, const char *cpu, const char *isa, bool pic) :
                 break;
 #endif
 
+#if !defined(LLVM_3_2) && !defined(LLVM_3_3) && !defined(LLVM_3_4) && !defined(LLVM_3_5)
+            case CPU_Broadwell:
+#endif
             case CPU_Haswell:
                 isa = "avx2-i32x8";
                 break;
