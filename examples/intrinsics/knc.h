@@ -412,7 +412,7 @@ static FORCEINLINE bool __none(__vec16_i1 mask) {
 }
 
 static FORCEINLINE __vec16_i1 __equal_i1(__vec16_i1 a, __vec16_i1 b) {
-  return _mm512_knot( _mm512_kandn(a, b));
+  return _mm512_knot( _mm512_kxor(a, b));
 }
 
 static FORCEINLINE __vec16_i1 __and(__vec16_i1 a, __vec16_i1 b) {
