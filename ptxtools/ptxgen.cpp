@@ -159,6 +159,7 @@ static std::string generatePTX(
 
   /* Create the compiliation unit. */
   NVVMProg prog;
+  std::vector<const char*> options;
 
   /* Add libdevice. */
   try
@@ -169,10 +170,16 @@ static std::string generatePTX(
     for (const auto &f : nvvmFiles)
       addFileToProgram(f, prog);
 
-    std::vector<const char*> options;
     for (const auto &o : nvvmOptions)
       options.push_back(o.c_str());
-  
+  }
+  catch (const std::exception &ex)
+  {
+    throw Exception(ex.what());
+  }
+ 
+  try 
+  { 
     if (nvvmVerifyProgram(prog.get(), options.size(), &options[0]) != NVVM_SUCCESS) 
       throw Exception("Failed to verify the compilation unit.");
   
