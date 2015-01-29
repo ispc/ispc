@@ -3581,64 +3581,58 @@ static FORCEINLINE int32_t __packed_store_active2(uint32_t *p, __vec16_i32 val, 
 // aos/soa
 ///////////////////////////////////////////////////////////////////////////
 
-/*
+
 static FORCEINLINE void __soa_to_aos3_float(__vec16_f v0, __vec16_f v1, __vec16_f v2,
                                             float *ptr) {
-    for (int i = 0; i < 16; ++i) {
-        *ptr++ = __extract_element(v0, i);
-        *ptr++ = __extract_element(v1, i);
-        *ptr++ = __extract_element(v2, i);
-    }
+  _mm512_i32scatter_ps(ptr, __vec16_i32(0,12,24,36,48,60,72,84,96,108,120,132,144,156,168,180), v0, 1);
+  _mm512_i32scatter_ps(ptr+1, __vec16_i32(0,12,24,36,48,60,72,84,96,108,120,132,144,156,168,180), v1, 1);
+  _mm512_i32scatter_ps(ptr+2, __vec16_i32(0,12,24,36,48,60,72,84,96,108,120,132,144,156,168,180), v2, 1);
 }
 
 static FORCEINLINE void __aos_to_soa3_float(float *ptr, __vec16_f *out0, __vec16_f *out1,
                                             __vec16_f *out2) {
-    for (int i = 0; i < 16; ++i) {
-        __insert_element(out0, i, *ptr++);
-        __insert_element(out1, i, *ptr++);
-        __insert_element(out2, i, *ptr++);
-    }
+  *out0 = _mm512_i32gather_ps(__vec16_i32(0,12,24,36,48,60,72,84,96,108,120,132,144,156,168,180), ptr, 1);
+  *out1 = _mm512_i32gather_ps(__vec16_i32(0,12,24,36,48,60,72,84,96,108,120,132,144,156,168,180), ptr+1, 1);
+  *out2 = _mm512_i32gather_ps(__vec16_i32(0,12,24,36,48,60,72,84,96,108,120,132,144,156,168,180), ptr+2, 1);
 }
-
-
 
 static FORCEINLINE void __soa_to_aos4_float(__vec16_f v0, __vec16_f v1, __vec16_f v2,
                                             __vec16_f v3, float *ptr) {
+  /*
+  __vec16_f v0 (1,5, 9,13,17,21,25,29,33,37,41,45,49,53,57,61);
+  __vec16_f v1 (2,6,10,14,18,22,26,30,34,38,42,46,50,54,58,62);
+  __vec16_f v2 (3,7,11,15,19,23,27,31,35,39,44,47,51,55,59,63);
+  __vec16_f v3 (4,8,12,16,20,24,28,32,36,40,45,48,52,56,60,64);
+
+
   // v0 = A1 ... A16, v1 = B1 ..., v3 = D1 ... D16
-  //__vec16_f tmp00 = _mm512_mask_swizzle_ps (v0, 0x3333, v1, _MM_SWIZ_REG_CDAB); // A1A2B1B2 A5A6B5B6 ...
-  //__vec16_f tmp01 = _mm512_mask_swizzle_ps (v0, 0xCCCC, v1, _MM_SWIZ_REG_CDAB); // B3B4A3A4 B7B8A7A8 ...
-  //__vec16_f tmp02 = _mm512_mask_swizzle_ps (v2, 0x3333, v3, _MM_SWIZ_REG_CDAB); // C1C2D1D2 ...
-  //__vec16_f tmp03 = _mm512_mask_swizzle_ps (v2, 0xCCCC, v3, _MM_SWIZ_REG_CDAB); // D3D4C3C4 ...
+  __vec16_f tmp00 = _mm512_mask_swizzle_ps (v0, 0xCCCC, v1, _MM_SWIZ_REG_BADC); // A1A2B1B2 A5A6B5B6 ...
+  __vec16_f tmp01 = _mm512_mask_swizzle_ps (v0, 0x3333, v1, _MM_SWIZ_REG_BADC); // B3B4A3A4 B7B8A7A8 ...
+  __vec16_f tmp02 = _mm512_mask_swizzle_ps (v2, 0xCCCC, v3, _MM_SWIZ_REG_BADC); // C1C2D1D2 ...
+  __vec16_f tmp03 = _mm512_mask_swizzle_ps (v2, 0x3333, v3, _MM_SWIZ_REG_BADC); // D3D4C3C4 ...
 
-  //__vec16_f tmp10 = _mm512_mask_swizzle_ps (tmp00, 0x5555, tmp02, _MM_SWIZ_REG_BADC); // A1C1B1D1 A5C5B5D5 ...
-  //__vec16_f tmp11 = _mm512_mask_swizzle_ps (tmp00, 0xAAAA, tmp02, _MM_SWIZ_REG_BADC); // C2A2D2B2 C6A6D6B6 ...
-  //__vec16_f tmp12 = _mm512_mask_swizzle_ps (tmp01, 0x5555, tmp03, _MM_SWIZ_REG_BADC); // DBCA ...
-  //__vec16_f tmp13 = _mm512_mask_swizzle_ps (tmp01, 0xAAAA, tmp03, _MM_SWIZ_REG_BADC); // BDAC ...
-
-
-
+  __vec16_f tmp10 = _mm512_mask_swizzle_ps (tmp00, 0xAAAA, tmp02, _MM_SWIZ_REG_CDAB); // A1C1B1D1 A5C5B5D5 ...
+  __vec16_f tmp11 = _mm512_mask_swizzle_ps (tmp00, 0x5555, tmp02, _MM_SWIZ_REG_CDAB); // C2A2D2B2 C6A6D6B6 ...
+  __vec16_f tmp12 = _mm512_mask_swizzle_ps (tmp01, 0xAAAA, tmp03, _MM_SWIZ_REG_CDAB); // DBCA ...
+  __vec16_f tmp13 = _mm512_mask_swizzle_ps (tmp01, 0x5555, tmp03, _MM_SWIZ_REG_CDAB); // BDAC ...  
+  */
 
 
-
-    for (int i = 0; i < 16; ++i) {
-        *ptr++ = __extract_element(v0, i);
-        *ptr++ = __extract_element(v1, i);
-        *ptr++ = __extract_element(v2, i);
-        *ptr++ = __extract_element(v3, i);
-    }
+  _mm512_i32scatter_ps(ptr, __vec16_i32(0,16,32,48,64,80,96,112,128,144,160,176,192,208,224,240), v0, 1);
+  _mm512_i32scatter_ps(ptr+1, __vec16_i32(0,16,32,48,64,80,96,112,128,144,160,176,192,208,224,240), v1, 1);
+  _mm512_i32scatter_ps(ptr+2, __vec16_i32(0,16,32,48,64,80,96,112,128,144,160,176,192,208,224,240), v2, 1);
+  _mm512_i32scatter_ps(ptr+3, __vec16_i32(0,16,32,48,64,80,96,112,128,144,160,176,192,208,224,240), v3, 1);
 }
 
 
 static FORCEINLINE void __aos_to_soa4_float(float *ptr, __vec16_f *out0, __vec16_f *out1,
                                             __vec16_f *out2, __vec16_f *out3) {
-    for (int i = 0; i < 16; ++i) {
-        __insert_element(out0, i, *ptr++);
-        __insert_element(out1, i, *ptr++);
-        __insert_element(out2, i, *ptr++);
-        __insert_element(out3, i, *ptr++);
-    }
+  *out0 = _mm512_i32gather_ps(__vec16_i32(0,16,32,48,64,80,96,112,128,144,160,176,192,208,224,240), ptr, 1);
+  *out1 = _mm512_i32gather_ps(__vec16_i32(0,16,32,48,64,80,96,112,128,144,160,176,192,208,224,240), ptr+1, 1);
+  *out2 = _mm512_i32gather_ps(__vec16_i32(0,16,32,48,64,80,96,112,128,144,160,176,192,208,224,240), ptr+2, 1);
+  *out3 = _mm512_i32gather_ps(__vec16_i32(0,16,32,48,64,80,96,112,128,144,160,176,192,208,224,240), ptr+3, 1);
 }
-*/
+
 
 ///////////////////////////////////////////////////////////////////////////
 // prefetch
