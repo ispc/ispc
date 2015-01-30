@@ -402,9 +402,7 @@
 ./tests/atomics-6.ispc compfail  x86-64     generic-16   Linux LLVM 3.6 clang++3.4 -O0 *
 ./tests/atomics-uniform-8.ispc compfail  x86-64     generic-16   Linux LLVM 3.6 clang++3.4 -O0 *
 ./tests/atomics-uniform-9.ispc compfail  x86-64     generic-16   Linux LLVM 3.6 clang++3.4 -O0 *
-./tests/acos.ispc runfail  x86-64            knc   Linux LLVM 3.4   icpc15.0 -O2 *
 ./tests/acos.ispc runfail  x86-64            knc   Linux LLVM 3.4   icpc13.1 -O2 *
-./tests/asin.ispc runfail  x86-64            knc   Linux LLVM 3.4   icpc15.0 -O2 *
 ./tests/asin.ispc runfail  x86-64            knc   Linux LLVM 3.4   icpc13.1 -O2 *
 ./tests/gather-int8-2.ispc runfail  x86-64            knc   Linux LLVM 3.4   icpc15.0 -O2 *
 ./tests/gather-int8-2.ispc runfail  x86-64            knc   Linux LLVM 3.4   icpc13.1 -O2 *
@@ -456,9 +454,7 @@
 ./tests/soa-18.ispc compfail  x86-64            knc   Linux LLVM 3.4   icpc13.1 -O2 *
 ./tests/soa-22.ispc compfail  x86-64            knc   Linux LLVM 3.4   icpc13.1 -O2 *
 ./tests/struct-nested-5.ispc compfail  x86-64            knc   Linux LLVM 3.4   icpc13.1 -O2 *
-./tests/acos.ispc runfail  x86-64            knc   Linux LLVM 3.4   icpc15.0 -O0 *
 ./tests/acos.ispc runfail  x86-64            knc   Linux LLVM 3.4   icpc13.1 -O0 *
-./tests/asin.ispc runfail  x86-64            knc   Linux LLVM 3.4   icpc15.0 -O0 *
 ./tests/asin.ispc runfail  x86-64            knc   Linux LLVM 3.4   icpc13.1 -O0 *
 ./tests/funcptr-varying-6.ispc runfail  x86-64            knc   Linux LLVM 3.4   icpc15.0 -O0 *
 ./tests/funcptr-varying-6.ispc runfail  x86-64            knc   Linux LLVM 3.4   icpc13.1 -O0 *
@@ -550,9 +546,7 @@
 ./tests/soa-19.ispc compfail  x86-64            knc   Linux LLVM 3.4   icpc13.1 -O0 *
 ./tests/soa-22.ispc compfail  x86-64            knc   Linux LLVM 3.4   icpc13.1 -O0 *
 ./tests/struct-nested-5.ispc compfail  x86-64            knc   Linux LLVM 3.4   icpc13.1 -O0 *
-./tests/acos.ispc runfail  x86-64            knc   Linux LLVM 3.5   icpc15.0 -O2 *
 ./tests/acos.ispc runfail  x86-64            knc   Linux LLVM 3.5   icpc13.1 -O2 *
-./tests/asin.ispc runfail  x86-64            knc   Linux LLVM 3.5   icpc15.0 -O2 *
 ./tests/asin.ispc runfail  x86-64            knc   Linux LLVM 3.5   icpc13.1 -O2 *
 ./tests/gather-int8-2.ispc runfail  x86-64            knc   Linux LLVM 3.5   icpc15.0 -O2 *
 ./tests/gather-int8-2.ispc runfail  x86-64            knc   Linux LLVM 3.5   icpc13.1 -O2 *
@@ -629,9 +623,7 @@
 ./tests/soa-18.ispc compfail  x86-64            knc   Linux LLVM 3.5   icpc13.1 -O2 *
 ./tests/soa-22.ispc compfail  x86-64            knc   Linux LLVM 3.5   icpc13.1 -O2 *
 ./tests/struct-nested-5.ispc compfail  x86-64            knc   Linux LLVM 3.5   icpc13.1 -O2 *
-./tests/acos.ispc runfail  x86-64            knc   Linux LLVM 3.5   icpc15.0 -O0 *
 ./tests/acos.ispc runfail  x86-64            knc   Linux LLVM 3.5   icpc13.1 -O0 *
-./tests/asin.ispc runfail  x86-64            knc   Linux LLVM 3.5   icpc15.0 -O0 *
 ./tests/asin.ispc runfail  x86-64            knc   Linux LLVM 3.5   icpc13.1 -O0 *
 ./tests/funcptr-varying-6.ispc runfail  x86-64            knc   Linux LLVM 3.5   icpc15.0 -O0 *
 ./tests/funcptr-varying-6.ispc runfail  x86-64            knc   Linux LLVM 3.5   icpc13.1 -O0 *
@@ -729,9 +721,7 @@
 ./tests/soa-19.ispc compfail  x86-64            knc   Linux LLVM 3.5   icpc13.1 -O0 *
 ./tests/soa-22.ispc compfail  x86-64            knc   Linux LLVM 3.5   icpc13.1 -O0 *
 ./tests/struct-nested-5.ispc compfail  x86-64            knc   Linux LLVM 3.5   icpc13.1 -O0 *
-./tests/acos.ispc runfail  x86-64            knc   Linux LLVM 3.6   icpc15.0 -O2 *
 ./tests/acos.ispc runfail  x86-64            knc   Linux LLVM 3.6   icpc13.1 -O2 *
-./tests/asin.ispc runfail  x86-64            knc   Linux LLVM 3.6   icpc15.0 -O2 *
 ./tests/asin.ispc runfail  x86-64            knc   Linux LLVM 3.6   icpc13.1 -O2 *
 ./tests/gather-int8-2.ispc runfail  x86-64            knc   Linux LLVM 3.6   icpc15.0 -O2 *
 ./tests/gather-int8-2.ispc runfail  x86-64            knc   Linux LLVM 3.6   icpc13.1 -O2 *
@@ -808,9 +798,7 @@
 ./tests/soa-18.ispc compfail  x86-64            knc   Linux LLVM 3.6   icpc13.1 -O2 *
 ./tests/soa-22.ispc compfail  x86-64            knc   Linux LLVM 3.6   icpc13.1 -O2 *
 ./tests/struct-nested-5.ispc compfail  x86-64            knc   Linux LLVM 3.6   icpc13.1 -O2 *
-./tests/acos.ispc runfail  x86-64            knc   Linux LLVM 3.6   icpc15.0 -O0 *
 ./tests/acos.ispc runfail  x86-64            knc   Linux LLVM 3.6   icpc13.1 -O0 *
-./tests/asin.ispc runfail  x86-64            knc   Linux LLVM 3.6   icpc15.0 -O0 *
 ./tests/asin.ispc runfail  x86-64            knc   Linux LLVM 3.6   icpc13.1 -O0 *
 ./tests/funcptr-varying-6.ispc runfail  x86-64            knc   Linux LLVM 3.6   icpc15.0 -O0 *
 ./tests/funcptr-varying-6.ispc runfail  x86-64            knc   Linux LLVM 3.6   icpc13.1 -O0 *
@@ -1041,8 +1029,6 @@
 ./tests/exclusive-scan-add-5.ispc compfail  x86-64            knc   Linux LLVM 3.6   icpc15.0 -O2 *
 ./tests/exclusive-scan-add-6.ispc compfail  x86-64            knc   Linux LLVM 3.6   icpc15.0 -O2 *
 ./tests/exclusive-scan-add-7.ispc compfail  x86-64            knc   Linux LLVM 3.6   icpc15.0 -O2 *
-./tests/acos.ispc runfail  x86-64            knc   Linux LLVM 3.7   icpc15.0 -O2 *
-./tests/asin.ispc runfail  x86-64            knc   Linux LLVM 3.7   icpc15.0 -O2 *
 ./tests/funcptr-varying-7.ispc runfail  x86-64            knc   Linux LLVM 3.7   icpc15.0 -O2 *
 ./tests/funcptr-varying-8.ispc runfail  x86-64            knc   Linux LLVM 3.7   icpc15.0 -O2 *
 ./tests/gather-int8-2.ispc runfail  x86-64            knc   Linux LLVM 3.7   icpc15.0 -O2 *
@@ -1067,8 +1053,6 @@
 ./tests/pmulus_i64.ispc compfail  x86-64            knc   Linux LLVM 3.7   icpc15.0 -O2 *
 ./tests/pmulus_i8.ispc compfail  x86-64            knc   Linux LLVM 3.7   icpc15.0 -O2 *
 ./tests/ptr-assign-lhs-math-1.ispc compfail  x86-64            knc   Linux LLVM 3.7   icpc15.0 -O2 *
-./tests/acos.ispc runfail  x86-64            knc   Linux LLVM 3.7   icpc15.0 -O0 *
-./tests/asin.ispc runfail  x86-64            knc   Linux LLVM 3.7   icpc15.0 -O0 *
 ./tests/funcptr-varying-6.ispc runfail  x86-64            knc   Linux LLVM 3.7   icpc15.0 -O0 *
 ./tests/funcptr-varying-7.ispc runfail  x86-64            knc   Linux LLVM 3.7   icpc15.0 -O0 *
 ./tests/funcptr-varying-8.ispc runfail  x86-64            knc   Linux LLVM 3.7   icpc15.0 -O0 *
