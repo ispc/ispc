@@ -172,7 +172,7 @@ typedef enum {
     // Early Atom CPU. Supports SSSE3.
     CPU_Bonnell,
 
-    // Generic Core2-like. Supports SSE2. Isn`t quite compatible with Bonnell,
+    // Generic Core2-like. Supports SSSE3. Isn`t quite compatible with Bonnell,
     // but for ISPC the difference is negligible; ISPC doesn`t make use of it.
     CPU_Core2,
 
@@ -185,7 +185,7 @@ typedef enum {
     // Sandy Bridge. Supports AVX 1.
     CPU_SandyBridge,
 
-    // Ivy Bridge. Supports AVX 1.1 + RDRAND.
+    // Ivy Bridge. Supports AVX 1 + RDRAND.
     CPU_IvyBridge,
 
     // Haswell. Supports AVX 2.
