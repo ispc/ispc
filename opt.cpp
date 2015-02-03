@@ -528,8 +528,10 @@ Optimize(llvm::Module *module, int optLevel) {
 #ifdef LLVM_3_2
     optPM.add(new llvm::TargetTransformInfo(targetMachine->getScalarTargetTransformInfo(),
                                             targetMachine->getVectorTargetTransformInfo()));
-#else // LLVM 3.3+
+#elif defined(LLVM_3_3) || defined(LLVM_3_4) || defined(LLVM_3_5) || defined(LLVM_3_6) // LLVM 3.3 - 3.6
     targetMachine->addAnalysisPasses(optPM.getPM());
+#else // LLVM 3.7+
+    optPM.getPM().add(createTargetTransformInfoWrapperPass(targetMachine->getTargetIRAnalysis()));
 #endif
 
     optPM.add(llvm::createIndVarSimplifyPass());
