@@ -1006,8 +1006,8 @@ static FORCEINLINE __vec16_i64 __ashr(__vec16_i64 a, __vec16_i64 b) {
 }
 
 static FORCEINLINE __vec16_i64 __ashr(__vec16_i64 a, unsigned long long b) {
-__vec16_i32 xfer;
-  if (b <= 32) xfer = _mm512_slli_epi32(_mm512_and_epi32(a.v_hi, _mm512_set1_epi32((1<<b)-1)), 32-b);
+  __vec16_i32 xfer;
+  if (b < 32) xfer = _mm512_slli_epi32(_mm512_and_epi32(a.v_hi, _mm512_set1_epi32((1<<b)-1)), 32-b);
   else  xfer = _mm512_srai_epi32(a.v_hi, b-32);
   __vec16_i32 hi = _mm512_srai_epi32(a.v_hi, b);
   __vec16_i32 lo = _mm512_or_epi32(xfer, _mm512_srli_epi32(a.v_lo, b));
