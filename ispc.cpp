@@ -223,8 +223,8 @@ typedef enum {
 
 class AllCPUs {
 private:
-    std::vector<std::vector<std::string>> names;
-    std::vector<std::set<CPUtype>> compat;
+    std::vector<std::vector<std::string> > names;
+    std::vector<std::set<CPUtype> > compat;
 
     std::set<CPUtype> Set(CPUtype type, ...) {
         std::set<CPUtype> retn;
@@ -241,8 +241,8 @@ private:
 
 public:
     AllCPUs() {
-        names = std::vector<std::vector<std::string>>(sizeofCPUtype);
-        compat = std::vector<std::set<CPUtype>>(sizeofCPUtype);
+        names = std::vector<std::vector<std::string> >(sizeofCPUtype);
+        compat = std::vector<std::set<CPUtype> >(sizeofCPUtype);
 
 
         names[CPU_Generic].push_back("generic");
