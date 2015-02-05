@@ -41,6 +41,7 @@
 #include "llvmutil.h"
 #include <stdio.h>
 #include <sstream>
+#include <stdarg.h>     /* va_list, va_start, va_arg, va_end */
 #ifdef ISPC_IS_WINDOWS
   #include <windows.h>
   #include <direct.h>
