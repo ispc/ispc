@@ -4418,6 +4418,7 @@ void CWriter::visitShuffleVectorInst(llvm::ShuffleVectorInst &SVI) {
       }
       else {
         // Do an extractelement of this value from the appropriate input.
+        Out << " \n#if defined(KNC) \n";
         if (OpElts != 1) { // all __vec16_* have overloaded operator []
           Out << "(" << GetValueName(Op)
               << ")[" << SrcVal << "]";
@@ -4428,6 +4429,12 @@ void CWriter::visitShuffleVectorInst(llvm::ShuffleVectorInst &SVI) {
           Out << ")(&" << GetValueName(Op)
               << "))[" << SrcVal << "]";
         }
+        Out << " \n#else \n";
+        Out << "((";
+        printType(Out, llvm::PointerType::getUnqual(EltTy));
+        Out << ")(&" << GetValueName(Op)
+            << "))[" << SrcVal << "]";
+        Out << " \n#endif \n";        
       }
     }
   }
