@@ -504,9 +504,11 @@ namespace {
       if (llvm::isa<llvm::CmpInst>(I) && llvm::isa<llvm::VectorType>(I.getType()) == false)
         return true;
 
-      // This instruction returns a struct, which can not be inlined
+#if !defined(LLVM_3_2) && !defined(LLVM_3_3) && !defined(LLVM_3_4) // LLVM 3.5+
+      // This instruction returns a struct on LLVM older than 3.4, and can not be inlined
       if (llvm::isa<llvm::AtomicCmpXchgInst>(I))
         return false;
+#endif
 
       // Must be an expression, must be used exactly once.  If it is dead, we
       // emit it inline where it would go.
@@ -4508,16 +4510,21 @@ void CWriter::visitAtomicRMWInst(llvm::AtomicRMWInst &AI) {
 }
 
 void CWriter::visitAtomicCmpXchgInst(llvm::AtomicCmpXchgInst &ACXI) {
+    Out << "(";
+#if !defined(LLVM_3_2) && !defined(LLVM_3_3) && !defined(LLVM_3_4)
     printType(Out, ACXI.getType(), false);
     Out << "::init("; // LLVM cmpxchg returns a struct, so we need make an assighment properly
+#endif
     Out << "__atomic_cmpxchg(";
     writeOperand(ACXI.getPointerOperand());
     Out << ", ";
     writeOperand(ACXI.getCompareOperand());
     Out << ", ";
     writeOperand(ACXI.getNewValOperand());
-    Out << "), ";
-    Out << "true /* There is no way to learn the value of this bit inside ISPC, so making it constant */"; 
+    Out << ")";
+#if !defined(LLVM_3_2) && !defined(LLVM_3_3) && !defined(LLVM_3_4)
+    Out << ", true /* There is no way to learn the value of this bit inside ISPC, so making it constant */)";
+#endif
     Out << ")";
 }
 
