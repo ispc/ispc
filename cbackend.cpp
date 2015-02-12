@@ -501,8 +501,12 @@ namespace {
     static bool isInlinableInst(const llvm::Instruction &I) {
       // Always inline cmp instructions, even if they are shared by multiple
       // expressions.  GCC generates horrible code if we don't.
-        if (llvm::isa<llvm::CmpInst>(I) && llvm::isa<llvm::VectorType>(I.getType()) == false)
-          return true;
+      if (llvm::isa<llvm::CmpInst>(I) && llvm::isa<llvm::VectorType>(I.getType()) == false)
+        return true;
+
+      // This instruction returns a struct, which can not be inlined
+      if (llvm::isa<llvm::AtomicCmpXchgInst>(I))
+        return false;
 
       // Must be an expression, must be used exactly once.  If it is dead, we
       // emit it inline where it would go.
@@ -4504,14 +4508,17 @@ void CWriter::visitAtomicRMWInst(llvm::AtomicRMWInst &AI) {
 }
 
 void CWriter::visitAtomicCmpXchgInst(llvm::AtomicCmpXchgInst &ACXI) {
-    Out << "(";
+    printType(Out, ACXI.getType(), false);
+    Out << "::init("; // LLVM cmpxchg returns a struct, so we need make an assighment properly
     Out << "__atomic_cmpxchg(";
     writeOperand(ACXI.getPointerOperand());
     Out << ", ";
     writeOperand(ACXI.getCompareOperand());
     Out << ", ";
     writeOperand(ACXI.getNewValOperand());
-    Out << "))";
+    Out << "), ";
+    Out << "true"; // The result of the instruction is always success
+    Out << ")";
 }
 
 ///////////////////////////////////////////////////////////////////////////
