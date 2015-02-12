@@ -4517,7 +4517,7 @@ void CWriter::visitAtomicCmpXchgInst(llvm::AtomicCmpXchgInst &ACXI) {
     Out << ", ";
     writeOperand(ACXI.getNewValOperand());
     Out << "), ";
-    Out << "true"; // The result of the instruction is always success
+    Out << "true /* There is no way to learn the value of this bit inside ISPC, so making it constant */"; 
     Out << ")";
 }
 
