@@ -3628,6 +3628,11 @@ void CWriter::visitCastInst(llvm::CastInst &I) {
     return;
   }
 
+  if ((llvm::isa<llvm::VectorType>(DstTy)) && (!llvm::isa<llvm::VectorType>(SrcTy))) {
+    writeOperand(I.getOperand(0));
+    return;
+  }
+
   Out << '(';
   bool closeParen = printCast(I.getOpcode(), SrcTy, DstTy);
 
@@ -4704,54 +4709,6 @@ SmearCleanupPass::runOnBasicBlock(llvm::BasicBlock &bb) {
 
 
 ///////////////////////////////////////////////////////////////////////////
-// BitcastCleanupPass
-
-class BitcastCleanupPass : public llvm::BasicBlockPass {
-public:
-    BitcastCleanupPass()
-        : BasicBlockPass(ID) { }
-
-    const char *getPassName() const { return "Bitcast Cleanup Pass"; }
-    bool runOnBasicBlock(llvm::BasicBlock &BB);
-
-    static char ID;
-};
-
-char BitcastCleanupPass::ID = 0;
-
-bool
-BitcastCleanupPass::runOnBasicBlock(llvm::BasicBlock &bb) {
-    bool modifiedAny = false;
-
- restart:
-    for (llvm::BasicBlock::iterator iter = bb.begin(), e = bb.end(); iter != e; ++iter) {
-        llvm::BitCastInst *bc = llvm::dyn_cast<llvm::BitCastInst>(&*iter);
-        if (bc == NULL)
-            continue;
-
-        // We only care about bitcasts from integer types to vector types
-        if (!llvm::isa<llvm::VectorType>(bc->getType()))
-            continue;
-
-        llvm::Value *Op = bc->getOperand(0);
-        if (llvm::isa<llvm::VectorType>(Op->getType()))
-            continue;
-
-        llvm::BitCastInst *opBc = llvm::dyn_cast<llvm::BitCastInst>(Op);
-        if (opBc == NULL) Op->dump();
-        assert(opBc != NULL);
-
-        assert(llvm::isa<llvm::VectorType>(opBc->getOperand(0)->getType()));
-        llvm::Instruction *newBitCast = new llvm::BitCastInst(opBc->getOperand(0), bc->getType(),
-                                                  "replacement_bc", (llvm::Instruction *)NULL);
-        ReplaceInstWithInst(iter, newBitCast);
-        modifiedAny = true;
-        goto restart;
-    }
-    return modifiedAny;
-}
-
-///////////////////////////////////////////////////////////////////////////
 // AndCmpCleanupPass
 
 class AndCmpCleanupPass : public llvm::BasicBlockPass {
@@ -5059,7 +5016,6 @@ WriteCXXFile(llvm::Module *module, const char *fn, int vectorWidth,
     pm.add(llvm::createLowerInvokePass());
     pm.add(llvm::createCFGSimplificationPass());   // clean up after lower invoke.
     pm.add(new SmearCleanupPass(module, vectorWidth));
-    pm.add(new BitcastCleanupPass());
     pm.add(new AndCmpCleanupPass());
     pm.add(new MaskOpsCleanupPass(module));
     pm.add(llvm::createDeadCodeEliminationPass()); // clean up after smear pass
