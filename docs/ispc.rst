@@ -3609,7 +3609,7 @@ The corresponding inverse functions are also available:
 ::
 
    float asin(float x)
-   uniform float asin(uniformfloat x)
+   uniform float asin(uniform float x)
    float acos(float x)
    uniform float acos(uniform float x)
    float atan(float x)
