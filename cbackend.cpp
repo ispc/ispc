@@ -16,6 +16,8 @@
 #include "module.h"
 
 #include <stdio.h>
+#include <string.h>
+#include <sstream>
 
 #ifndef _MSC_VER
 #include <inttypes.h>
@@ -2459,6 +2461,7 @@ bool CWriter::doInitialization(llvm::Module &M) {
           break;
         case llvm::Intrinsic::uadd_with_overflow:
         case llvm::Intrinsic::sadd_with_overflow:
+        case llvm::Intrinsic::umul_with_overflow:
           intrinsicsToDefine.push_back(I);
           break;
       }
@@ -3767,6 +3770,34 @@ void CWriter::printIntrinsicDefinition(const llvm::Function &F, llvm::raw_ostrea
     Out << "  r.field0 = r.field1 ? 0 : a + b;\n";
     Out << "  return r;\n}\n";
     break;
+
+  case llvm::Intrinsic::umul_with_overflow:
+    Out << "static inline ";
+    printType(Out, retT);
+    Out << GetValueName(&F);
+    Out << "(";
+    printSimpleType(Out, elemT, false);
+    Out << "a,";
+    printSimpleType(Out, elemT, false);
+    Out << "b) {\n  ";
+
+    printType(Out, retT);
+    Out << "r;\n";
+        
+    unsigned NumBits = llvm::cast<llvm::IntegerType>(elemT)->getBitWidth();
+    std::stringstream  str_type;
+    if (NumBits <= 32) 
+      str_type << "uint" << 2 * NumBits << "_t";
+    else {
+      assert(NumBits <= 64 && "Bit widths > 128 not implemented yet");
+      str_type << "llvmUInt128";
+    }
+
+    Out << "  " << str_type.str() << " result = (" << str_type.str() << ") a * (" << str_type.str() << ") b;\n"; 
+    Out << "  r.field0 = result;\n";
+    Out << "  r.field1 = result >> " << NumBits << ";\n";
+    Out << "  return r;\n}\n";
+    break;
   }
 }
 
@@ -3804,6 +3835,7 @@ void CWriter::lowerIntrinsics(llvm::Function &F) {
           case llvm::Intrinsic::trap:
           case llvm::Intrinsic::objectsize:
           case llvm::Intrinsic::readcyclecounter:
+          case llvm::Intrinsic::umul_with_overflow:
               // We directly implement these intrinsics
             break;
           default:
@@ -4147,6 +4179,7 @@ bool CWriter::visitBuiltinCall(llvm::CallInst &I, llvm::Intrinsic::ID ID,
     return true;
   case llvm::Intrinsic::uadd_with_overflow:
   case llvm::Intrinsic::sadd_with_overflow:
+  case llvm::Intrinsic::umul_with_overflow:
     Out << GetValueName(I.getCalledFunction()) << "(";
     writeOperand(I.getArgOperand(0));
     Out << ", ";
