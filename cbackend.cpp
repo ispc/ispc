@@ -392,7 +392,7 @@ namespace {
       // Output all vector constants so they can be accessed with single
       // vector loads
       printVectorConstants(F);
-
+   
       printFunction(F);
       return false;
     }
@@ -748,10 +748,11 @@ CWriter::printSimpleType(llvm::raw_ostream &Out, llvm::Type *Ty, bool isSigned,
       return Out << (isSigned?"":"u") << "int32_t " << NameSoFar;
     else if (NumBits <= 64)
       return Out << (isSigned?"":"u") << "int64_t "<< NameSoFar;
-    else {
-      assert(NumBits <= 128 && "Bit widths > 128 not implemented yet");
+    else if (NumBits <= 128)
       return Out << (isSigned?"llvmInt128":"llvmUInt128") << " " << NameSoFar;
-    }
+    else
+      return Out << "iN<" << NumBits << "> " << NameSoFar;
+
   }
   case llvm::Type::FloatTyID:  return Out << "float "   << NameSoFar;
   case llvm::Type::DoubleTyID: return Out << "double "  << NameSoFar;
@@ -793,8 +794,8 @@ CWriter::printSimpleType(llvm::raw_ostream &Out, llvm::Type *Ty, bool isSigned,
             suffix = "i64";
             break;
         default:
-            llvm::report_fatal_error("Only integer types of size 8/16/32/64 are "
-                                     "supported by the C++ backend.");
+            suffix = "iN";
+            break;
         }
     }
 
@@ -1463,10 +1464,10 @@ void CWriter::printConstant(llvm::Constant *CPV, bool Static) {
       Out << (CI->getZExtValue() ? '1' : '0');
     else if (Ty == llvm::Type::getInt32Ty(CPV->getContext()))
       Out << CI->getZExtValue() << 'u';
-    else if (Ty->getPrimitiveSizeInBits() > 32) {
-      assert(Ty->getPrimitiveSizeInBits() == 64);
+    else if (Ty == llvm::Type::getInt64Ty(CPV->getContext()))
       Out << CI->getZExtValue() << "ull";
-    }
+    else if (Ty->getPrimitiveSizeInBits() > 64)
+      llvm::dyn_cast<llvm::Value>(CPV)->printAsOperand(Out, false);
     else {
       Out << "((";
       printSimpleType(Out, Ty, false) << ')';
@@ -1874,22 +1875,11 @@ std::string CWriter::GetValueName(const llvm::Value *Operand) {
 /// writeInstComputationInline - Emit the computation for the specified
 /// instruction inline, with no destination provided.
 void CWriter::writeInstComputationInline(llvm::Instruction &I) {
-  // We can't currently support integer types other than 1, 8, 16, 32, 64.
-  // Validate this.
-  llvm::Type *Ty = I.getType();
-  if (Ty->isIntegerTy() && (Ty!=llvm::Type::getInt1Ty(I.getContext()) &&
-                            Ty!=llvm::Type::getInt8Ty(I.getContext()) &&
-        Ty!=llvm::Type::getInt16Ty(I.getContext()) &&
-        Ty!=llvm::Type::getInt32Ty(I.getContext()) &&
-        Ty!=llvm::Type::getInt64Ty(I.getContext()))) {
-      llvm::report_fatal_error("The C backend does not currently support integer "
-                               "types of widths other than 1, 8, 16, 32, 64.\n"
-                               "This is being tracked as PR 4158.");
-  }
-
   // If this is a non-trivial bool computation, make sure to truncate down to
   // a 1 bit value.  This is important because we want "add i1 x, y" to return
   // "0" when x and y are true, not "2" for example.
+  Out << "\n/* Tree\n" << I << "\n*/";
+
   bool NeedBoolTrunc = false;
   if (I.getType() == llvm::Type::getInt1Ty(I.getContext()) &&
       !llvm::isa<llvm::ICmpInst>(I) && !llvm::isa<llvm::FCmpInst>(I))
@@ -2755,6 +2745,12 @@ void CWriter::printModuleTypes() {
 
   if (StructTypes.empty() && ArrayTypes.empty())
       return;
+
+  Out << "DEBUG_ME";
+  for (llvm::Module::const_global_iterator I = TheModule->global_begin(), E = TheModule->global_end();
+    I != E; ++I) {
+    Out << I << "^^^^^^^^^^^^^^^^^^^^^^^^^^\n";
+  }
 
   Out << "/* Structure and array forward declarations */\n";
 
@@ -4342,6 +4338,7 @@ void CWriter::writeMemoryAccess(llvm::Value *Operand, llvm::Type *OperandType,
 }
 
 void CWriter::visitLoadInst(llvm::LoadInst &I) {
+  Out << "\n/* Tree\n" << I << "\n*/";
   llvm::VectorType *VT = llvm::dyn_cast<llvm::VectorType>(I.getType());
   if (VT != NULL) {
       Out << "__load<" << I.getAlignment() << ">(";

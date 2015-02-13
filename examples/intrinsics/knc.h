@@ -33,6 +33,7 @@
 
 #include <limits.h> // INT_MIN
 #include <stdint.h>
+#include <stdlib.h>
 #include <math.h>
 #include <assert.h>
 #include <unistd.h>
@@ -93,6 +94,60 @@ typedef int32_t __vec1_i32;
 typedef int64_t __vec1_i64;
 
 struct __vec16_i32;
+
+template <int num_bits>
+struct iN {
+    int length;
+    int *num;
+
+    iN () {
+      length = num_bits / (sizeof (int) * 8);
+      num = (int*) calloc (length, sizeof (int));
+    }
+
+    iN (int val) {
+      length = num_bits / (sizeof (int) * 8);
+      num = (int*) calloc (length, sizeof (int));
+      num [0] = val;
+    }
+
+    ~iN () { length = 0; free(num); num = NULL;}
+/*
+    iN operator >> (const int rhs) {
+      iN res;
+      int cells = rhs / (sizeof(int) * 8);
+      for (int i = 0; i < (this->length - cells); i++)
+        res.num[i] = this->num[cells + i];
+      return res;
+    }
+*/
+    iN operator >> (const iN rhs) {
+      iN res;
+      int cells = rhs.num[0] / (sizeof(int) * 8);
+      for (int i = 0; i < (this->length - cells); i++)
+        res.num[i] = this->num[cells + i];
+      return res;
+    }
+/*
+    iN& operator= (iN rhs) {
+      iN swap;
+      for (int i = 0; i < length; i++) {
+        swap.num[i] = this->num[i];
+        this->num[i] = rhs.num[i];
+        rhs.num[i] = swap.num[i];
+      }
+      return *this;
+    }
+*/
+    operator uint32_t() { return this->num[0]; }
+};
+
+template <class T>
+T __cast_bits (T to, __vec16_i32 from) {
+  for (int i = 0; i < 16; i++)
+    to.num[i] = from[i] ;
+  return to;
+}
 
 #if 1
 /* (iw) actually, this *SHOULD* be the right implementation for a
