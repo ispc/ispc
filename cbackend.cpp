@@ -140,11 +140,14 @@ namespace {
     llvm::DenseSet<const llvm::Metadata*> VisitedMDNodes;
 #endif
     llvm::DenseSet<llvm::Type*> VisitedTypes;
-
     std::vector<llvm::ArrayType*> &ArrayTypes;
+    std::vector<llvm::IntegerType*> &IntegerTypes;
+    std::vector<bool> &IsVolatile;
+    std::vector<int> &Alignment;
   public:
-    TypeFinder(std::vector<llvm::ArrayType*> &t)
-      : ArrayTypes(t) {}
+    TypeFinder(std::vector<llvm::ArrayType*> &t, std::vector<llvm::IntegerType*> &i,
+              std::vector<bool> &v, std::vector<int> &a)
+      : ArrayTypes(t), IntegerTypes(i) , IsVolatile(v), Alignment(a){}
 
     void run(const llvm::Module &M) {
       // Get types from global variables.
@@ -182,6 +185,13 @@ namespace {
 
             // Incorporate the type of the instruction and all its operands.
             incorporateType(I.getType());
+            if (llvm::isa<llvm::LoadInst>(&I))
+              if (llvm::IntegerType *ITy = llvm::dyn_cast<llvm::IntegerType>(I.getType())) {
+                IntegerTypes.push_back(ITy);
+//                llvm::StoreInst St = llvm::dyn_cast<llvm::StoreInst>(I);
+//                IsVolatile.push_back(St.isVolatile());
+//                Alignment.push_back(St.getAlignment());
+              }
             for (llvm::User::const_op_iterator OI = I.op_begin(), OE = I.op_end();
                  OI != OE; ++OI)
               incorporateValue(*OI);
@@ -288,8 +298,9 @@ namespace {
   };
 } // end anonymous namespace
 
-static void findUsedArrayTypes(const llvm::Module *m, std::vector<llvm::ArrayType*> &t) {
-  TypeFinder(t).run(*m);
+static void findUsedArrayTypes(const llvm::Module *m, std::vector<llvm::ArrayType*> &t, std::vector<llvm::IntegerType*> &i,
+                               std::vector<bool> &IsVolatile, std::vector<int> &Alignment) {
+  TypeFinder(t, i, IsVolatile, Alignment).run(*m);
 }
 
 namespace {
@@ -2741,16 +2752,14 @@ void CWriter::printModuleTypes() {
 
   // Get all of the array types used in the module
   std::vector<llvm::ArrayType*> ArrayTypes;
-  findUsedArrayTypes(TheModule, ArrayTypes);
+  std::vector<llvm::IntegerType*> IntegerTypes;
+  std::vector<bool> IsVolatile;
+  std::vector<int>  Alignment;
+
+  findUsedArrayTypes(TheModule, ArrayTypes, IntegerTypes, IsVolatile, Alignment);
 
   if (StructTypes.empty() && ArrayTypes.empty())
       return;
-
-  Out << "DEBUG_ME";
-  for (llvm::Module::const_global_iterator I = TheModule->global_begin(), E = TheModule->global_end();
-    I != E; ++I) {
-    Out << I << "^^^^^^^^^^^^^^^^^^^^^^^^^^\n";
-  }
 
   Out << "/* Structure and array forward declarations */\n";
 
@@ -2775,6 +2784,12 @@ void CWriter::printModuleTypes() {
       std::string Name = getArrayName(AT);
       Out << "struct " << Name << ";\n";
   }
+  
+  for (unsigned i = 0, e = IntegerTypes.size(); i != e; ++i) {
+      llvm::IntegerType *IT = IntegerTypes[i];
+      Out << "bitwidth: " << IT->getIntegerBitWidth () << "|" << IsVolatile[i] << "|" << Alignment[i] << ";\n";
+  }
+
   Out << '\n';
 
   // Keep track of which types have been printed so far.
