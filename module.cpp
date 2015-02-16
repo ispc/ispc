@@ -1486,22 +1486,49 @@ lEmitStructDecl(const StructType *st, std::vector<const StructType *> *emittedSt
     fprintf(file, "#ifndef __ISPC_STRUCT_%s__\n",st->GetCStructName().c_str());
     fprintf(file, "#define __ISPC_STRUCT_%s__\n",st->GetCStructName().c_str());
 
-    fprintf(file, "struct %s", st->GetCStructName().c_str());
+    char sSOA[48];
+    bool pack, needsAlign = false;
+    llvm::Type *stype = st->LLVMType(g->ctx);
+    llvm::DataLayout *DL = g->target->getDataLayout();
+
+    if (!(pack = llvm::dyn_cast<llvm::StructType>(stype)->isPacked()))
+        for (int i = 0; !needsAlign && (i < st->GetElementCount()); ++i) {
+            const Type *ftype = st->GetElementType(i)->GetAsNonConstType();
+            needsAlign |= ftype->IsVaryingType()
+                       && (CastType<StructType>(ftype) == NULL);
+        }
     if (st->GetSOAWidth() > 0)
         // This has to match the naming scheme in
         // StructType::GetCDeclaration().
-        fprintf(file, "_SOA%d", st->GetSOAWidth());
-    fprintf(file, " {\n");
-
+        sprintf(sSOA, "_SOA%d", st->GetSOAWidth());
+    else
+        *sSOA = '\0';
+    if (!needsAlign)
+        fprintf(file, "%sstruct %s%s {\n", (pack)? "packed " : "",
+                      st->GetCStructName().c_str(), sSOA);
+    else {
+        unsigned uABI = DL->getABITypeAlignment(stype);
+        fprintf(file, "__ISPC_ALIGNED_STRUCT__(%u) %s%s {\n", uABI,
+                      st->GetCStructName().c_str(), sSOA);
+    }
     for (int i = 0; i < st->GetElementCount(); ++i) {
-        const Type *type = st->GetElementType(i)->GetAsNonConstType();
-        std::string d = type->GetCDeclaration(st->GetElementName(i));
-	// Don't expand struct members as their insides will be expanded.
-        if (type->IsVaryingType() && (CastType<StructType>(type) == NULL)) {
-          fprintf(file, "    %s[%d];\n", d.c_str(), g->target->getVectorWidth());
+        const Type *ftype = st->GetElementType(i)->GetAsNonConstType();
+        std::string d = ftype->GetCDeclaration(st->GetElementName(i));
+
+        fprintf(file, "    ");
+        if (needsAlign && ftype->IsVaryingType() &&
+           (CastType<StructType>(ftype) == NULL)) {
+            unsigned uABI = DL->getABITypeAlignment(ftype->LLVMType(g->ctx));
+            fprintf(file, "__ISPC_ALIGN__(%u) ", uABI);
+        }
+        // Don't expand arrays, pointers and struct members:
+        // their insides will be expanded automatically.
+        if (!ftype->IsArrayType() && !ftype->IsPointerType() &&
+            ftype->IsVaryingType() && (CastType<StructType>(ftype) == NULL)) {
+            fprintf(file, "%s[%d];\n", d.c_str(), g->target->getVectorWidth());
         }
         else {
-          fprintf(file, "    %s;\n", d.c_str());
+            fprintf(file, "%s;\n", d.c_str());
         }
     }
     fprintf(file, "};\n");
@@ -1515,8 +1542,22 @@ lEmitStructDecl(const StructType *st, std::vector<const StructType *> *emittedSt
 static void
 lEmitStructDecls(std::vector<const StructType *> &structTypes, FILE *file, bool emitUnifs=true) {
     std::vector<const StructType *> emittedStructs;
+
+    fprintf(file,
+            "\n#ifndef __ISPC_ALIGN__\n"
+            "#if defined(__clang__) || !defined(_MSC_VER)\n"
+            "// Clang, GCC, ICC\n"
+            "#define __ISPC_ALIGN__(s) __attribute__((aligned(s)))\n"
+            "#define __ISPC_ALIGNED_STRUCT__(s) struct __ISPC_ALIGN__(s)\n"
+            "#else\n"
+            "// Visual Studio\n"
+            "#define __ISPC_ALIGN__(s) __declspec(align(s))\n"
+            "#define __ISPC_ALIGNED_STRUCT__(s) __ISPC_ALIGN__(s) struct\n"
+            "#endif\n"
+            "#endif\n\n");
+
     for (unsigned int i = 0; i < structTypes.size(); ++i)
-      lEmitStructDecl(structTypes[i], &emittedStructs, file, emitUnifs);
+        lEmitStructDecl(structTypes[i], &emittedStructs, file, emitUnifs);
 }
 
 
