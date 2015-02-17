@@ -194,8 +194,8 @@ def run_test(testname):
 
         # We need to figure out the signature of the test
         # function that this test has.
-        sig2def = { "f_v(" : 0, "f_f(" : 1, "f_fu(" : 2, "f_fi(" : 3, 
-                    "f_du(" : 4, "f_duf(" : 5, "f_di(" : 6 }
+        sig2def = { "f_v(" : 0, "f_f(" : 1, "f_fu(" : 2, "f_fi(" : 3,
+                    "f_du(" : 4, "f_duf(" : 5, "f_di(" : 6, "f_sz" : 7 }
         file = open(filename, 'r')
         match = -1
         for line in file:
@@ -310,16 +310,16 @@ def run_test(testname):
                   ispc_cmd = ispc_exe_rel + " --woff %s -o %s -O3 --emit-asm --target=%s" % \
                          (filename4ptx, obj_name, options.target)
 
-
-             
-
         # compile the ispc code, make the executable, and run it...
+        ispc_cmd += " -h " + filename + ".h"
+        cc_cmd += " -DTEST_HEADER=<" + filename + ".h>"
         (compile_error, run_error) = run_cmds([ispc_cmd, cc_cmd], 
                                               options.wrapexe + " " + exe_name, \
                                               testname, should_fail)
 
         # clean up after running the test
         try:
+            os.unlink(filename + ".h")
             if not options.save_bin:
                 if not run_error:
                     os.unlink(exe_name)

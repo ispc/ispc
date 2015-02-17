@@ -51,6 +51,16 @@
 #include <malloc.h>
 #endif
 
+#if (TEST_SIG == 7)
+    #define varying_f_sz f_sz
+    #define v1_varying_f_sz f_sz
+    #define v2_varying_f_sz f_sz
+    #define v4_varying_f_sz f_sz
+    #define v8_varying_f_sz f_sz
+    #define v16_varying_f_sz f_sz
+    #include TEST_HEADER
+#endif
+
 extern "C" {
     extern int width();
     extern void f_v(float *result);
@@ -103,7 +113,7 @@ void *ISPCAlloc(void **handle, int64_t size, int32_t alignment) {
 
 
 #if defined(_WIN32) || defined(_WIN64)
-#define ALIGN
+#define ALIGN __declspec(align(64))
 #else
 #define ALIGN __attribute__((aligned(64)))
 #endif
@@ -112,11 +122,11 @@ int main(int argc, char *argv[]) {
     int w = width();
     assert(w <= 64);
 
-    float returned_result[64] ALIGN;
-    float vfloat[64] ALIGN;
-    double vdouble[64] ALIGN;
-    int vint[64] ALIGN;
-    int vint2[64] ALIGN;
+    ALIGN float returned_result[64];
+    ALIGN float vfloat[64];
+    ALIGN double vdouble[64];
+    ALIGN int vint[64];
+    ALIGN int vint2[64];
 
     for (int i = 0; i < 64; ++i) {
         returned_result[i] = -1e20;
@@ -142,6 +152,8 @@ int main(int argc, char *argv[]) {
     f_duf(returned_result, vdouble, 5.f);
 #elif (TEST_SIG == 6)
     f_di(returned_result, vdouble, vint2);
+#elif (TEST_SIG == 7)
+    *returned_result = sizeof(ispc::f_sz);
 #else
 #error "Unknown or unset TEST_SIG value"
 #endif
