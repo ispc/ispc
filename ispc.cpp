@@ -921,8 +921,11 @@ Target::Target(const char *arch, const char *cpu, const char *isa, bool pic) :
                     relocModel);
         Assert(m_targetMachine != NULL);
 
+#if defined(LLVM_3_2) || defined(LLVM_3_3) || defined(LLVM_3_4) || defined(LLVM_3_5) || defined(LLVM_3_6)
         m_targetMachine->setAsmVerbosityDefault(true);
-
+#else
+        m_targetMachine->Options.MCOptions.AsmVerbose = true;
+#endif
         // Initialize TargetData/DataLayout in 3 steps.
         // 1. Get default data layout first
         std::string dl_string;
