@@ -92,7 +92,11 @@
 #endif
 #endif /* ISPC_NVPTX_ENABLED */
 #endif
-#include <llvm/PassManager.h>
+#if defined(LLVM_3_2) || defined(LLVM_3_3) || defined(LLVM_3_4) || defined(LLVM_3_5) || defined(LLVM_3_6)
+  #include "llvm/PassManager.h"
+#else // LLVM 3.7+
+  #include "llvm/IR/LegacyPassManager.h"
+#endif
 #include <llvm/PassRegistry.h>
 #include <llvm/Transforms/IPO.h>
 #include <llvm/Support/FormattedStream.h>
@@ -1393,7 +1397,11 @@ Module::writeObjectFileOrAssembly(llvm::TargetMachine *targetMachine,
         return false;
     }
 
+#if defined(LLVM_3_2) || defined(LLVM_3_3) || defined(LLVM_3_4) || defined(LLVM_3_5) || defined(LLVM_3_6)
     llvm::PassManager pm;
+#else // LLVM 3.7+
+    llvm::legacy::PassManager pm;
+#endif
 #if defined(LLVM_3_2) || defined(LLVM_3_3) || defined(LLVM_3_4)
     pm.add(new llvm::DataLayout(*g->target->getDataLayout()));
 #elif defined(LLVM_3_5)
@@ -2895,7 +2903,12 @@ lCreateDispatchModule(std::map<std::string, FunctionTargetVariants> &functions) 
 
     // Do some rudimentary cleanup of the final result and make sure that
     // the module is all ok.
+
+#if defined(LLVM_3_2) || defined(LLVM_3_3) || defined(LLVM_3_4) || defined(LLVM_3_5) || defined(LLVM_3_6)
     llvm::PassManager optPM;
+#else // LLVM 3.7+
+    llvm::legacy::PassManager optPM;
+#endif
     optPM.add(llvm::createGlobalDCEPass());
     optPM.add(llvm::createVerifierPass());
     optPM.run(*module);

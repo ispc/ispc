@@ -51,7 +51,11 @@
   #include "llvm/IR/InlineAsm.h"
 #endif
 #include "llvm/Pass.h"
-#include "llvm/PassManager.h"
+#if defined(LLVM_3_2) || defined(LLVM_3_3) || defined(LLVM_3_4) || defined(LLVM_3_5) || defined(LLVM_3_6)
+  #include "llvm/PassManager.h"
+#else // LLVM 3.7+
+  #include "llvm/IR/LegacyPassManager.h"
+#endif
 #if defined(LLVM_3_2)
   #include "llvm/TypeFinder.h"
 #else // LLVM_3_3 +
@@ -5055,7 +5059,12 @@ MaskOpsCleanupPass::runOnBasicBlock(llvm::BasicBlock &bb) {
 bool
 WriteCXXFile(llvm::Module *module, const char *fn, int vectorWidth,
              const char *includeName) {
+
+#if defined(LLVM_3_2) || defined(LLVM_3_3) || defined(LLVM_3_4) || defined(LLVM_3_5) || defined(LLVM_3_6)
     llvm::PassManager pm;
+#else // LLVM 3.7+
+    llvm::legacy::PassManager pm;
+#endif
 #if 0
     if (const llvm::TargetData *td = targetMachine->getTargetData())
         pm.add(new llvm::TargetData(*td));
