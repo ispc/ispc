@@ -4625,7 +4625,7 @@ SmearCleanupPass::getInsertChainSmearValue(llvm::Instruction* inst) const {
     if (!insertInst) {
         return NULL;
     }
-
+  
     // We consider only chians of vectorWidth length.
     if (ChainLength(insertInst) != vectorWidth) {
         return NULL;
@@ -4669,14 +4669,18 @@ SmearCleanupPass::getShuffleSmearValue(llvm::Instruction* inst) const {
         return NULL;
     }
 
+    fprintf(stderr, "getShuffleSmearValue\n");
+    shuffleInst->dump();
+
     llvm::Constant* mask =
         llvm::dyn_cast<llvm::Constant>(shuffleInst->getOperand(2));
 
     // Check that the shuffle is a broadcast of the first element of the first vector,
-    // i.e. mask vector is all-zeros vector of expected size.
+    // i.e. mask vector is all-zeros vector of expected size.     
     if (!(mask &&
-          mask->isNullValue() &&
+         (mask->isNullValue() || (shuffleInst->getMask()->getSplatValue() != 0))&&
           llvm::dyn_cast<llvm::VectorType>(mask->getType())->getNumElements() == vectorWidth)) {
+        fprintf(stderr, "getShuffleSmearValue: mask\n");       
         return NULL;
     }
 
@@ -4685,13 +4689,40 @@ SmearCleanupPass::getShuffleSmearValue(llvm::Instruction* inst) const {
         llvm::dyn_cast<llvm::InsertElementInst>(shuffleInst->getOperand(0));
 
     // Check that it's an InsertElementInst that inserts a value to first element.
+    llvm::Value *result = shuffleInst->getOperand(0);
+
     if (!(insertInst &&
           llvm::isa<llvm::Constant>(insertInst->getOperand(2)) &&
           llvm::dyn_cast<llvm::Constant>(insertInst->getOperand(2))->isNullValue())) {
-        return NULL;
+        fprintf(stderr, "getShuffleSmearValue: inst\n");
+
+        llvm::Function *extractFunc = module->getFunction("__extract_element");
+       
+         if (extractFunc == NULL) {
+            // Declare the __extract_element function if needed; it takes a vector and 
+            // a scalar parameter and returns a scalar of the vector parameter type.
+            llvm::Constant *ef =
+                module->getOrInsertFunction("__extract_element", 
+                                            shuffleInst->getOperand(0)->getType()->getVectorElementType(), 
+                                            shuffleInst->getOperand(0)->getType(),
+                                            llvm::IntegerType::get(module->getContext(), 32), NULL);
+            fprintf(stderr, "getShuffleSmearValue: getOrInsertFunction\n");
+            extractFunc = llvm::dyn_cast<llvm::Function>(ef);
+            assert(extractFunc != NULL);
+            extractFunc->setDoesNotThrow();
+            extractFunc->setOnlyReadsMemory();
+        } 
+
+        if (extractFunc == NULL) {
+            fprintf(stderr, "getShuffleSmearValue: no function in module\n");
+            return NULL;
+        }
+        fprintf(stderr, "getShuffleSmearValue: function was found\n");
+        llvm::Instruction *extractCall = llvm::ExtractElementInst::Create(shuffleInst->getOperand(0), mask->getSplatValue(),  "__extract_element", inst);
+        return extractCall;
     }
 
-    llvm::Value *result = insertInst->getOperand(1);
+    result = insertInst->getOperand(1);
 
     return result;
 }
@@ -4710,11 +4741,15 @@ SmearCleanupPass::runOnBasicBlock(llvm::BasicBlock &bb) {
             continue;
         }
 
+        fprintf(stderr, "==========================================================\n");
+
         llvm::Type *smearType = smearValue->getType();
         const char *smearFuncName = lGetTypedFunc("smear", smearType, vectorWidth);
+        fprintf(stderr, "smearFuncName: %s | %d\n", smearFuncName, smearFuncName != NULL);        
         if (smearFuncName != NULL) {
             llvm::Function *smearFunc = module->getFunction(smearFuncName);
             if (smearFunc == NULL) {
+                fprintf(stderr, "Smear decl\n");
                 // Declare the smear function if needed; it takes a single
                 // scalar parameter and returns a vector of the same
                 // parameter type.
