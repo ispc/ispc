@@ -4689,6 +4689,11 @@ SmearCleanupPass::getShuffleSmearValue(llvm::Instruction* inst) const {
           llvm::isa<llvm::Constant>(insertInst->getOperand(2)) &&
           llvm::dyn_cast<llvm::Constant>(insertInst->getOperand(2))->isNullValue())) {
 
+        // We can't extract element from vec1
+        llvm::VectorType *operandVec = llvm::dyn_cast<llvm::VectorType>(shuffleInst->getOperand(0)->getType());
+        if (operandVec && operandVec->getNumElements() == 1)
+          return NULL;
+
         // Insert ExtractElementInstr to get value for smear        
 
         llvm::Function *extractFunc = module->getFunction("__extract_element");
