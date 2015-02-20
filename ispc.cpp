@@ -352,7 +352,7 @@ public:
         return CPUs.str();
     }
 
-    std::string GetDefaultNameFromType(CPUtype type) {
+    std::string &GetDefaultNameFromType(CPUtype type) {
         Assert((type > CPU_None) && (type < sizeofCPUtype));
         return names[type][0];
     }
