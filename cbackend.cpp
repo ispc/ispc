@@ -1898,7 +1898,7 @@ void CWriter::writeInstComputationInline(llvm::Instruction &I) {
   // If this is a non-trivial bool computation, make sure to truncate down to
   // a 1 bit value.  This is important because we want "add i1 x, y" to return
   // "0" when x and y are true, not "2" for example.
-  Out << "\n/* Tree\n" << I << "\n*/";
+//  Out << "\n/* Tree\n" << I << "\n*/";
 
   bool NeedBoolTrunc = false;
   if (I.getType() == llvm::Type::getInt1Ty(I.getContext()) &&
@@ -2795,8 +2795,14 @@ void CWriter::printModuleTypes() {
   }
   
   for (unsigned i = 0, e = IntegerTypes.size(); i != e; ++i) {
-      llvm::IntegerType *IT = IntegerTypes[i];
-      Out << "bitwidth: " << IT->getIntegerBitWidth () << "|" << IsVolatile[i] << "|" << Alignment[i] << ";\n";
+     llvm::IntegerType *IT = IntegerTypes[i];
+      if (IT->getIntegerBitWidth() <= 128 || Alignment[i] == 0)
+        continue;
+
+      Out << "typedef struct __attribute__ ((packed, aligned(" << Alignment[i] << "))) {\n  ";
+      printType(Out, IT, false, "data");
+      Out << ";\n";
+      Out << "} iN_" << IT->getIntegerBitWidth() << "_align_" << Alignment[i] << ";\n";
   }
 
   Out << '\n';
@@ -4337,21 +4343,26 @@ void CWriter::writeMemoryAccess(llvm::Value *Operand, llvm::Type *OperandType,
   bool IsUnaligned = Alignment &&
     Alignment < TD->getABITypeAlignment(OperandType);
 
+  llvm::IntegerType *ITy = llvm::dyn_cast<llvm::IntegerType>(OperandType);
   if (!IsUnaligned)
     Out << '*';
   if (IsVolatile || IsUnaligned) {
     Out << "((";
-    if (IsUnaligned)
-      Out << "struct __attribute__ ((packed, aligned(" << Alignment << "))) {";
-    printType(Out, OperandType, false, IsUnaligned ? "data" : "volatile*");
-    if (IsUnaligned) {
-      Out << "; } ";
-      if (IsVolatile) Out << "volatile ";
-      Out << "*";
+    if (IsUnaligned && ITy && (ITy->getBitWidth() > 128)) 
+      Out << "iN_" << ITy->getBitWidth() << "_align_" << Alignment << " *)";
+    else {
+      if (IsUnaligned)
+        Out << "struct __attribute__ ((packed, aligned(" << Alignment << "))) {";
+      printType(Out, OperandType, false, IsUnaligned ? "data" : "volatile*");
+      if (IsUnaligned) {
+        Out << "; } ";
+        if (IsVolatile) Out << "volatile ";
+        Out << "*";
+      }
+      Out << ")";
     }
-    Out << ")";
   }
-
+ 
   writeOperand(Operand);
 
   if (IsVolatile || IsUnaligned) {
@@ -4362,7 +4373,7 @@ void CWriter::writeMemoryAccess(llvm::Value *Operand, llvm::Type *OperandType,
 }
 
 void CWriter::visitLoadInst(llvm::LoadInst &I) {
-  Out << "\n/* Tree\n" << I << "\n*/";
+//  Out << "\n/* Tree\n" << I << "\n*/";
   llvm::VectorType *VT = llvm::dyn_cast<llvm::VectorType>(I.getType());
   if (VT != NULL) {
       Out << "__load<" << I.getAlignment() << ">(";
