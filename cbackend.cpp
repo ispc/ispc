@@ -4672,10 +4672,10 @@ SmearCleanupPass::getShuffleSmearValue(llvm::Instruction* inst) const {
     llvm::Constant* mask =
         llvm::dyn_cast<llvm::Constant>(shuffleInst->getOperand(2));
 
-    // Check that the shuffle is a broadcast of the first element of the first vector,
-    // i.e. mask vector is all-zeros vector of expected size.
+    // Check that the shuffle is a broadcast of the element of the first vector,
+    // i.e. mask vector is vector with equal elements of expected size.     
     if (!(mask &&
-          mask->isNullValue() &&
+         (mask->isNullValue() || (shuffleInst->getMask()->getSplatValue() != 0))&&
           llvm::dyn_cast<llvm::VectorType>(mask->getType())->getNumElements() == vectorWidth)) {
         return NULL;
     }
@@ -4688,7 +4688,37 @@ SmearCleanupPass::getShuffleSmearValue(llvm::Instruction* inst) const {
     if (!(insertInst &&
           llvm::isa<llvm::Constant>(insertInst->getOperand(2)) &&
           llvm::dyn_cast<llvm::Constant>(insertInst->getOperand(2))->isNullValue())) {
-        return NULL;
+
+        // We can't extract element from vec1
+        llvm::VectorType *operandVec = llvm::dyn_cast<llvm::VectorType>(shuffleInst->getOperand(0)->getType());
+        if (operandVec && operandVec->getNumElements() == 1)
+          return NULL;
+
+        // Insert ExtractElementInstr to get value for smear        
+
+        llvm::Function *extractFunc = module->getFunction("__extract_element");
+       
+         if (extractFunc == NULL) {
+            // Declare the __extract_element function if needed; it takes a vector and 
+            // a scalar parameter and returns a scalar of the vector parameter type.
+            llvm::Constant *ef =
+                module->getOrInsertFunction("__extract_element", 
+                                            shuffleInst->getOperand(0)->getType()->getVectorElementType(), 
+                                            shuffleInst->getOperand(0)->getType(),
+                                            llvm::IntegerType::get(module->getContext(), 32), NULL);
+            extractFunc = llvm::dyn_cast<llvm::Function>(ef);
+            assert(extractFunc != NULL);
+            extractFunc->setDoesNotThrow();
+            extractFunc->setOnlyReadsMemory();
+        } 
+
+        if (extractFunc == NULL) {
+            return NULL;
+        }
+        llvm::Instruction *extractCall = 
+              llvm::ExtractElementInst::Create(shuffleInst->getOperand(0), mask->getSplatValue(),  
+                                               "__extract_element", inst);
+        return extractCall;
     }
 
     llvm::Value *result = insertInst->getOperand(1);
