@@ -117,11 +117,13 @@ static std::vector<std::string> lSplitString(const std::string &s, char delim)
 static void lUsage(const int ret)
 {
   fprintf(stdout, "\nusage: ptxcc [options] file.ptx \n");
-  fprintf(stdout, "    [--help]\t\t\t\t This help\n");
-  fprintf(stdout, "    [--verbose]\t\t\t\t Be verbose\n");
-  fprintf(stdout, "    [--arch={%s}]\t\t\t GPU target architecture\n", "sm_35");
-  fprintf(stdout, "    [-o <name>]\t\t\t\t Output file name\n");
-  fprintf(stdout, "    [-Xnvcc=<arguments>]\t\t Arguments to pass through to \"nvcc\"\n");
+  fprintf(stdout, "    [--help]\t\t\t This help\n");
+  fprintf(stdout, "    [--verbose]\t\t\t Be verbose\n");
+  fprintf(stdout, "    [--arch=]\t\t\t GPU target architecture\n");
+  fprintf(stdout, "     \t\t\t\t   sm_35 - K20, K40, GK110 chip \n");
+  fprintf(stdout, "     \t\t\t\t   sm_37 - K80, GK210 chip \n");
+  fprintf(stdout, "    [-o <name>]\t\t\t Output file name\n");
+  fprintf(stdout, "    [-Xnvcc=<arguments>]\t Arguments to pass through to \"nvcc\"\n");
   fprintf(stdout, " \n");
   exit(ret);
 }
@@ -195,7 +197,7 @@ int main(int _argc, char * _argv[])
   for (int i= 0; i < (int)nvccArgumentList.size(); i++)
     fprintf(stderr, " arg= %d : %s \n", i, nvccArgumentList[i].c_str());
 #endif
-  assert(arch == std::string("sm_35"));
+  assert(arch == std::string("sm_35") || arch == std::string("sm_37"));
   if (filePTX.empty())
   {
     fprintf(stderr, "ptxcc fatal : No input file specified; use option --help for more information\n");

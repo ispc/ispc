@@ -3,6 +3,7 @@ ISPC_SRC=kernels.ispc
 CU_SRC=kernels.cu
 CXX_SRC=common.cpp  main.cpp
 PTXCC_REGMAX=64
+NVARCH=sm_35
 
 NVVM_GPU=1
 #LLVM_GPU=1
