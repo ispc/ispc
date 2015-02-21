@@ -1,21 +1,22 @@
 NVCC_SRC=../../util/nvcc_helpers.cu
 NVCC_OBJS=objs_ptx/nvcc_helpers_nvcc.o
+NVARCH ?= sm_35
 #
 CXX=g++ -ffast-math
 CXXFLAGS=-O3 -I$(CUDATK)/include -Iobjs_ptx/ -D_CUDA_ -I../../util -I../../
 #
 NVCC=nvcc
-NVCC_FLAGS+=-O3 -arch=sm_35 -D_CUDA_ -I../../util -Xptxas=-v -Iobjs_ptx/
+NVCC_FLAGS+=-O3 -arch=$(NVARCH) -D_CUDA_ -I../../util -Xptxas=-v -Iobjs_ptx/
 ifdef PTXCC_REGMAX
   NVCC_FLAGS += --maxrregcount=$(PTXCC_REGMAX)
 endif
 NVCC_FLAGS+=--use_fast_math
 #
 LD=nvcc
-LDFLAGS=-lcudart -lcudadevrt -arch=sm_35
+LDFLAGS=-lcudart -lcudadevrt -arch=$(NVARCH)
 #
-PTXCC=$(ISPC_HOME)/ptxtools/ptxcc
-PTXCC_FLAGS+= -Xptxas=-v
+PTXCC=$(ISPC_HOME)/ptxtools/ptxcc --arch=$(NVARCH)
+PTXCC_FLAGS+= -Xptxas=-v 
 ifdef PTXCC_REGMAX
   PTXCC_FLAGS += -maxrregcount=$(PTXCC_REGMAX)
 endif
@@ -41,13 +42,13 @@ CXX_SRC+=ispc_malloc.cpp
 CXX_OBJS+=objs_ptx/ispc_malloc_gcc.o
 
 PTXGEN = $(ISPC_HOME)/ptxtools/ptxgen
-PTXGEN += --use_fast_math
+PTXGEN += --use_fast_math --arch=$(NVARCH)
 
 #LLVM32=$(HOME)/usr/local/llvm/bin-3.2
 #LLVM32DIS=$(LLVM32)/bin/llvm-dis
 
 LLC=$(LLVM_ROOT)/bin/llc
-LLC_FLAGS=-march=nvptx64 -mcpu=sm_35
+LLC_FLAGS=-march=nvptx64 -mcpu=$(NVARCH)
 
 # .SUFFIXES: .bc .o .cu  .ll
 

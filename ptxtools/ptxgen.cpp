@@ -76,7 +76,7 @@ struct NVVMProg
   nvvmProgram get() const {return prog; }
 };
 
-static std::string getLibDeviceName(const int computeArch)
+static std::string getLibDeviceName(int computeArch)
 {
   const char *env = getenv("LIBNVVM_HOME");
 #ifdef LIBNVVM_HOME
@@ -97,6 +97,7 @@ static std::string getLibDeviceName(const int computeArch)
 
   /* Use libdevice for compute_20, if the target is not compute_20, compute_30,
    * or compute_35. */
+  if (computeArch == 37) computeArch = 35;
   const std::string libdevice = 
     std::string("/libdevice/libdevice.compute_") +
     lValueToString(computeArch)+ "." +
@@ -219,7 +220,9 @@ static void lUsage(const int ret)
   fprintf(stdout, "\nusage: ptxgen [options] file.[ll,bc] \n");
   fprintf(stdout, "    [--help]\t\t This help\n");
   fprintf(stdout, "    [--verbose]\t\t Be verbose\n");
-  fprintf(stdout, "    [--arch={%s}]\t GPU target architecture\n", "sm_35");
+  fprintf(stdout, "    [--arch=]\t\t GPU target architecture\n");
+  fprintf(stdout, "     \t\t\t    sm_35 - K20, K40, GK110 chip \n");
+  fprintf(stdout, "     \t\t\t    sm_37 - K80, GK210 chip \n");
   fprintf(stdout, "    [-o <name>]\t\t Output file name\n");
   fprintf(stdout, "    [-g]\t\t Enable generation of debuggin information \n");
   fprintf(stdout, "    [--opt=]\t\t Optimization parameters \n");
@@ -334,7 +337,10 @@ int main(int argc, char *argv[])
 #endif
 
   int computeArch = 35;
-  assert(_arch == std::string("sm_35"));
+  assert(_arch == std::string("sm_35") || _arch == std::string("sm_37"));
+
+  if (_arch == std::string("sm_37"))
+    computeArch = 37;
 
   if (_useFastMath)
   {
@@ -343,7 +349,7 @@ int main(int argc, char *argv[])
   }
 
   std::vector<std::string> nvvmOptions;
-  nvvmOptions.push_back("-arch=compute_35");
+  nvvmOptions.push_back("-arch=compute_"+std::to_string(computeArch));
   nvvmOptions.push_back("-ftz="       + lValueToString(_ftz));
   nvvmOptions.push_back("-prec-sqrt=" + lValueToString(_precSqrt));
   nvvmOptions.push_back("-prec-div="  + lValueToString(_precDiv));

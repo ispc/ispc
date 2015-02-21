@@ -33,7 +33,7 @@
 all: ptxcc ptxgen
 
 CXX=clang++
-CXXFLAGS += -O3 --std=c++11
+CXXFLAGS += -O3 --std=c++11 -Wno-deprecated-register
 CXXFLAGS += -I/opt/local/include
 
 LD=clang++

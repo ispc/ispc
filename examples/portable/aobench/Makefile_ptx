@@ -3,6 +3,9 @@ ISPC_SRC=ao.ispc
 CU_SRC=ao.cu
 CXX_SRC=ao.cpp 
 PTXCC_REGMAX=64
+NVARCH=sm_35
+#PTXCC_REGMAX=128
+#NVARCH=sm_37
 #ISPC_FLAGS= --opt=disable-uniform-control-flow
 
 #LLVM_GPU=1
