@@ -220,8 +220,8 @@ static void lUsage(const int ret)
   fprintf(stdout, "\nusage: ptxgen [options] file.[ll,bc] \n");
   fprintf(stdout, "    [--help]\t\t This help\n");
   fprintf(stdout, "    [--verbose]\t\t Be verbose\n");
-  fprintf(stdout, "    [--arch=]\t\t\t GPU target architectures:\n");
-  fprintf(stdout, "     \t\t\t\t   ");
+  fprintf(stdout, "    [--arch=]\t\t GPU target architectures:\n");
+  fprintf(stdout, "     \t\t\t   ");
   for (const auto& mode : GPUTargets::computeMode)
     fprintf(stdout, "%s ", mode.c_str());
   fprintf(stdout, "\n");
