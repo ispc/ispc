@@ -1,6 +1,6 @@
 // -*- mode: c++ -*-
 /*
-   Copyright (c) 2014, Evghenii Gaburov
+   Copyright (c) 2014-2015, Evghenii Gaburov
    All rights reserved.
 
    Redistribution and use in source and binary forms, with or without
@@ -43,6 +43,8 @@ met:
 #include <sstream>
 #include <string>
 #include <vector>
+#include <algorithm>
+#include "GPUTargets.h"
 
 #include <nvvm.h>
 #include <sys/stat.h>
@@ -51,9 +53,7 @@ met:
 template<typename T>
 static std::string lValueToString(const T& value)
 {
-  std::ostringstream oss;
-  oss << value;
-  return oss.str();
+  return std::to_string(value);
 }
 
 struct Exception : public std::exception
@@ -220,9 +220,11 @@ static void lUsage(const int ret)
   fprintf(stdout, "\nusage: ptxgen [options] file.[ll,bc] \n");
   fprintf(stdout, "    [--help]\t\t This help\n");
   fprintf(stdout, "    [--verbose]\t\t Be verbose\n");
-  fprintf(stdout, "    [--arch=]\t\t GPU target architecture\n");
-  fprintf(stdout, "     \t\t\t    sm_35 - K20, K40, GK110 chip \n");
-  fprintf(stdout, "     \t\t\t    sm_37 - K80, GK210 chip \n");
+  fprintf(stdout, "    [--arch=]\t\t\t GPU target architectures:\n");
+  fprintf(stdout, "     \t\t\t\t   ");
+  for (const auto& mode : GPUTargets::computeMode)
+    fprintf(stdout, "%s ", mode.c_str());
+  fprintf(stdout, "\n");
   fprintf(stdout, "    [-o <name>]\t\t Output file name\n");
   fprintf(stdout, "    [-g]\t\t Enable generation of debuggin information \n");
   fprintf(stdout, "    [--opt=]\t\t Optimization parameters \n");
@@ -255,7 +257,7 @@ int main(int argc, char *argv[])
   bool _useFastMath = false;
   bool _debug       = false;
   bool _verbose     = false;
-  std::string _arch = "sm_35";
+  std::string _arch = GPUTargets::computeMode.front();
   std::string fileIR, filePTX;
 
   for (int i = 1; i < argc; ++i) 
@@ -336,11 +338,11 @@ int main(int argc, char *argv[])
   fprintf(stderr, "use_fast_math= %s\n", _useFastMath ? "true" : "false");
 #endif
 
-  int computeArch = 35;
-  assert(_arch == std::string("sm_35") || _arch == std::string("sm_37"));
-
-  if (_arch == std::string("sm_37"))
-    computeArch = 37;
+  if (std::find(GPUTargets::computeMode.begin(), GPUTargets::computeMode.end(), _arch) == GPUTargets::computeMode.end())
+  {
+    fprintf(stderr, "ptxcc fatal : --arch=%s is not supported; use option --help for more information\n", _arch.c_str());
+    exit(1);
+  }
 
   if (_useFastMath)
   {
@@ -348,8 +350,14 @@ int main(int argc, char *argv[])
     _precSqrt = _precDiv = 0;
   }
 
+  /* replace "sm" with "compute" */
+  assert(_arch[0] == 's' && _arch[1] == 'm' && _arch[2] == '_');
+  const std::string _mode = std::string("compute_") + &_arch[3];
+  const int computeArch = atoi(&_arch[3]);
+
+
   std::vector<std::string> nvvmOptions;
-  nvvmOptions.push_back("-arch=compute_"+std::to_string(computeArch));
+  nvvmOptions.push_back("-arch="      + _mode);
   nvvmOptions.push_back("-ftz="       + lValueToString(_ftz));
   nvvmOptions.push_back("-prec-sqrt=" + lValueToString(_precSqrt));
   nvvmOptions.push_back("-prec-div="  + lValueToString(_precDiv));
