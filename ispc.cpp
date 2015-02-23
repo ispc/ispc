@@ -1075,6 +1075,7 @@ Globals::Globals() {
         FATAL("Current directory path too long!");
 #endif
     forceAlignment = -1;
+    dllExport = false;
 }
 
 ///////////////////////////////////////////////////////////////////////////

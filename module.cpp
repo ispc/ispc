@@ -916,7 +916,7 @@ Module::AddFunctionDeclaration(const std::string &name,
     
 #ifdef ISPC_IS_WINDOWS
     // Make export functions callable from DLLS.
-    if (functionType->isExported) {
+    if ((g->dllExport) && (storageClass != SC_STATIC)) {
       function->setDLLStorageClass(llvm::GlobalValue::DLLExportStorageClass);
     }
 #endif
