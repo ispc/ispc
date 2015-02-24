@@ -33,7 +33,7 @@
 all: ptxcc ptxgen
 
 CXX=clang++
-CXXFLAGS += -O3 --std=c++11
+CXXFLAGS += -O3 --std=c++11 -Wno-deprecated-register
 CXXFLAGS += -I/opt/local/include
 
 LD=clang++
@@ -77,5 +77,5 @@ ptxgen: ptxgen.cpp
 clean: 
 	/bin/rm -f ptxgen ptxcc $(OBJ) ptxgrammar.hh ptxgrammar.cc ptx.cc ptxgrammar.output
 
-$(OBJ):  ptxgrammar.cc ptx.cc PTXParser.h PTXLexer.h
+$(OBJ):  ptxgrammar.cc ptx.cc PTXParser.h PTXLexer.h GPUTargets.h
 

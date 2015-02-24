@@ -1,6 +1,6 @@
 // -*- mode: c++ -*-
 /*
-   Copyright (c) 2014, Evghenii Gaburov
+   Copyright (c) 2014-2015, Evghenii Gaburov
    All rights reserved.
 
    Redistribution and use in source and binary forms, with or without
@@ -43,6 +43,7 @@ met:
 #include <algorithm>
 #include <sys/time.h>
 #include "PTXParser.h"
+#include "GPUTargets.h"
 
 
 /*
@@ -117,11 +118,15 @@ static std::vector<std::string> lSplitString(const std::string &s, char delim)
 static void lUsage(const int ret)
 {
   fprintf(stdout, "\nusage: ptxcc [options] file.ptx \n");
-  fprintf(stdout, "    [--help]\t\t\t\t This help\n");
-  fprintf(stdout, "    [--verbose]\t\t\t\t Be verbose\n");
-  fprintf(stdout, "    [--arch={%s}]\t\t\t GPU target architecture\n", "sm_35");
-  fprintf(stdout, "    [-o <name>]\t\t\t\t Output file name\n");
-  fprintf(stdout, "    [-Xnvcc=<arguments>]\t\t Arguments to pass through to \"nvcc\"\n");
+  fprintf(stdout, "    [--help]\t\t\t This help\n");
+  fprintf(stdout, "    [--verbose]\t\t\t Be verbose\n");
+  fprintf(stdout, "    [--arch=]\t\t\t GPU target architectures:\n");
+  fprintf(stdout, "     \t\t\t\t   ");
+  for (const auto& mode : GPUTargets::computeMode)
+    fprintf(stdout, "%s ", mode);
+  fprintf(stdout, "\n");
+  fprintf(stdout, "    [-o <name>]\t\t\t Output file name\n");
+  fprintf(stdout, "    [-Xnvcc=<arguments>]\t Arguments to pass through to \"nvcc\"\n");
   fprintf(stdout, " \n");
   exit(ret);
 }
@@ -132,7 +137,7 @@ int main(int _argc, char * _argv[])
   char *argv[128];
   lGetAllArgs(_argc, _argv, argc, argv);
 
-  std::string arch="sm_35";
+  std::string arch = *GPUTargets::computeMode.begin();
   std::string filePTX;
   std::string fileOBJ;
   std::string extString = ".ptx";
@@ -195,7 +200,11 @@ int main(int _argc, char * _argv[])
   for (int i= 0; i < (int)nvccArgumentList.size(); i++)
     fprintf(stderr, " arg= %d : %s \n", i, nvccArgumentList[i].c_str());
 #endif
-  assert(arch == std::string("sm_35"));
+  if (std::find(GPUTargets::computeMode.begin(), GPUTargets::computeMode.end(), arch) == GPUTargets::computeMode.end())
+  {
+    fprintf(stderr, "ptxcc fatal : --arch=%s is not supported; use option --help for more information\n", arch.c_str());
+    exit(1);
+  }
   if (filePTX.empty())
   {
     fprintf(stderr, "ptxcc fatal : No input file specified; use option --help for more information\n");
