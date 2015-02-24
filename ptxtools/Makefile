@@ -77,5 +77,5 @@ ptxgen: ptxgen.cpp
 clean: 
 	/bin/rm -f ptxgen ptxcc $(OBJ) ptxgrammar.hh ptxgrammar.cc ptx.cc ptxgrammar.output
 
-$(OBJ):  ptxgrammar.cc ptx.cc PTXParser.h PTXLexer.h
+$(OBJ):  ptxgrammar.cc ptx.cc PTXParser.h PTXLexer.h GPUTargets.h
 
