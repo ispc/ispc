@@ -123,7 +123,7 @@ static void lUsage(const int ret)
   fprintf(stdout, "    [--arch=]\t\t\t GPU target architectures:\n");
   fprintf(stdout, "     \t\t\t\t   ");
   for (const auto& mode : GPUTargets::computeMode)
-    fprintf(stdout, "%s ", mode.c_str());
+    fprintf(stdout, "%s ", mode);
   fprintf(stdout, "\n");
   fprintf(stdout, "    [-o <name>]\t\t\t Output file name\n");
   fprintf(stdout, "    [-Xnvcc=<arguments>]\t Arguments to pass through to \"nvcc\"\n");
@@ -137,7 +137,7 @@ int main(int _argc, char * _argv[])
   char *argv[128];
   lGetAllArgs(_argc, _argv, argc, argv);
 
-  std::string arch = GPUTargets::computeMode.front();
+  std::string arch = *GPUTargets::computeMode.begin();
   std::string filePTX;
   std::string fileOBJ;
   std::string extString = ".ptx";

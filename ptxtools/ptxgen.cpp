@@ -223,7 +223,7 @@ static void lUsage(const int ret)
   fprintf(stdout, "    [--arch=]\t\t GPU target architectures:\n");
   fprintf(stdout, "     \t\t\t   ");
   for (const auto& mode : GPUTargets::computeMode)
-    fprintf(stdout, "%s ", mode.c_str());
+    fprintf(stdout, "%s ", mode);
   fprintf(stdout, "\n");
   fprintf(stdout, "    [-o <name>]\t\t Output file name\n");
   fprintf(stdout, "    [-g]\t\t Enable generation of debuggin information \n");
@@ -257,7 +257,7 @@ int main(int argc, char *argv[])
   bool _useFastMath = false;
   bool _debug       = false;
   bool _verbose     = false;
-  std::string _arch = GPUTargets::computeMode.front();
+  std::string _arch = *GPUTargets::computeMode.begin();
   std::string fileIR, filePTX;
 
   for (int i = 1; i < argc; ++i) 

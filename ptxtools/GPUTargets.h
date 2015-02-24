@@ -36,5 +36,5 @@ met:
 
 namespace GPUTargets
 {
-  static const std::vector<std::string> computeMode = {"sm_35", "sm_37"};
+  static const auto computeMode = {"sm_35", "sm_37"};
 }
