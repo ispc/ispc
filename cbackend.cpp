@@ -2329,10 +2329,10 @@ bool CWriter::doInitialization(llvm::Module &M) {
 
   Out << "\n/* Basic Library Function Declarations */\n";
   Out << "extern \"C\" {\n";
-  Out << "int puts(unsigned char *);\n";
-  Out << "unsigned int putchar(unsigned int);\n";
-  Out << "int fflush(void *);\n";
-  Out << "int printf(const unsigned char *, ...);\n";
+  Out << "int puts(const char *);\n";
+  Out << "int putchar(int);\n";
+  Out << "int fflush(FILE *);\n";
+  Out << "int printf(const char *, ...);\n";
   Out << "uint8_t *memcpy(uint8_t *, uint8_t *, uint64_t );\n";
   Out << "uint8_t *memset(uint8_t *, uint8_t, uint64_t );\n";
   Out << "void memset_pattern16(void *, const void *, uint64_t );\n";
@@ -2406,6 +2406,7 @@ bool CWriter::doInitialization(llvm::Module &M) {
         Out << "__thread ";
 
       printType(Out, I->getType()->getElementType(), false, GetValueName(I));
+      Out << "/*" << GetValueName(I) << "*/"; // DEBUG
 
       if (I->hasExternalWeakLinkage())
          Out << " __EXTERNAL_WEAK__";

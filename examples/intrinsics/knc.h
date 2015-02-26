@@ -76,10 +76,10 @@
 
 #define KNC 1
 extern "C" {
-  int printf(const unsigned char *, ...);
-  int puts(unsigned char *);
-  unsigned int putchar(unsigned int);
-  int fflush(void *);
+  int printf(const char *, ...);
+  int puts(const char *);
+  int putchar(int);
+  int fflush(FILE *);
   uint8_t *memcpy(uint8_t *, uint8_t *, uint64_t);
   uint8_t *memset(uint8_t *, uint8_t, uint64_t);
   void memset_pattern16(void *, const void *, uint64_t);
