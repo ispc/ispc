@@ -2333,6 +2333,8 @@ bool CWriter::doInitialization(llvm::Module &M) {
   Out << "int putchar(int);\n";
   Out << "int fflush(FILE *);\n";
   Out << "int printf(const char *, ...);\n";
+  Out << "int sprintf(const char *, FILE *);\n";
+  Out << "int fputs(const char *, ...);\n";
   Out << "uint8_t *memcpy(uint8_t *, uint8_t *, uint64_t );\n";
   Out << "uint8_t *memset(uint8_t *, uint8_t, uint64_t );\n";
   Out << "void memset_pattern16(void *, const void *, uint64_t );\n";
@@ -2476,9 +2478,9 @@ bool CWriter::doInitialization(llvm::Module &M) {
     if (I->getName() == "setjmp" || I->getName() == "abort" ||
         I->getName() == "longjmp" || I->getName() == "_setjmp" ||
         I->getName() == "memset" || I->getName() == "memset_pattern16" ||
-        I->getName() == "puts" ||
+        I->getName() == "puts" || I->getName() == "sprintf" ||
         I->getName() == "printf" || I->getName() == "putchar" ||
-        I->getName() == "fflush" ||
+        I->getName() == "fflush" || I->getName() == "fputs" ||
         // Memory allocation
         I->getName() == "malloc" ||
         I->getName() == "posix_memalign" ||
