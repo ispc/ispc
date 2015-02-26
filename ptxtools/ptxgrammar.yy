@@ -1,5 +1,5 @@
 /*
-   Copyright (c) 2014, Evghenii Gaburov
+   Copyright (c) 2014-2015, Evghenii Gaburov
    All rights reserved.
 
    Redistribution and use in source and binary forms, with or without
@@ -43,6 +43,8 @@ met:
 	#include <cstring>
   #include <sstream>
   #include <cstdio>
+  #include <algorithm>
+  #include "GPUTargets.h"
 
 	#define YYERROR_VERBOSE 1
 
@@ -116,7 +118,13 @@ header:
 version:
   TOKEN_VERSION TOKEN_FLOAT  { assert($2 >= 3.0); } ;//std::cerr << "Reading PTX version " << $2  << std::endl; };
 target:
-  TOKEN_TARGET TOKEN_STRING  { assert(std::string($2) == std::string("sm_35")); } //std::cerr << "Target " << $2  << std::endl; };
+  TOKEN_TARGET TOKEN_STRING  { 
+    if (std::find(GPUTargets::computeMode.begin(), GPUTargets::computeMode.end(), std::string($2)) == GPUTargets::computeMode.end())
+    {
+      fprintf(stderr, "ptxcc fatal : Found wrong Target=\"%s\" in ptx file\n", $2);
+      exit(-1);
+    }
+  }
 address_size:
   TOKEN_ADDRESS_SIZE TOKEN_INT  { assert($2 == 64); } //std::cerr << "Address_Size " << $2  << std::endl; };
 

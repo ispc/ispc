@@ -1385,6 +1385,10 @@ static FORCEINLINE __vec16_i1 __unordered_float(__vec16_f a, __vec16_f b) {
   return _mm512_cmpunord_ps_mask(a, b);
 }
 
+static FORCEINLINE __vec16_i1 __unordered_float_and_mask(__vec16_f a, __vec16_f b, __vec16_i1 mask) {
+  return _mm512_mask_cmpunord_ps_mask(mask, a, b);
+}
+
 static FORCEINLINE __vec16_f __select(__vec16_i1 mask, __vec16_f a, __vec16_f b) {
   return _mm512_mask_mov_ps(b, mask, a);
 }
@@ -1724,6 +1728,15 @@ static FORCEINLINE __vec16_i1 __unordered_double(__vec16_d a, __vec16_d b) {
   __vec16_i1 ret2;
   ret1 = _mm512_cmpunord_pd_mask(a.v1, b.v1);
   ret2 = _mm512_cmpunord_pd_mask(a.v2, b.v2);
+  return _mm512_kmovlhb(ret1, ret2);
+}
+
+static FORCEINLINE __vec16_i1 __unordered_double_and_mask(__vec16_d a, __vec16_d b, __vec16_i1 mask) {
+  __vec16_i1 ret1;
+  __vec16_i1 ret2;
+  __vec16_i1 tmp_m = mask;
+  ret1 = _mm512_mask_cmpunord_pd_mask(mask, a.v1, b.v1);
+  ret2 = _mm512_mask_cmpunord_pd_mask(_mm512_kswapb(tmp_m, tmp_m), a.v2, b.v2);
   return _mm512_kmovlhb(ret1, ret2);
 }
 

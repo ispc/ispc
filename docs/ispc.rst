@@ -3975,7 +3975,7 @@ instances are added together by the ``reduce_add()`` function.
     uniform int16 reduce_add(int8 x)
     uniform unsigned int16 reduce_add(unsigned int8 x)
     uniform int32 reduce_add(int16 x)
-    uniform unsigned int32 reduce_add(unsigned 16int x)
+    uniform unsigned int32 reduce_add(unsigned int16 x)
     uniform int64 reduce_add(int32 x)
     uniform unsigned int64 reduce_add(unsigned int32 x)
     uniform int64 reduce_add(int64 x)
