@@ -3301,8 +3301,13 @@ __gather64_double(__vec16_i64 addr, __vec16_i1 mask)
   __vec16_i32 addr_lo, addr_hi;
   hilo2zmm(addr, addr_lo.v, addr_hi.v);
 
+#if __INTEL_COMPILER < 1500
+  ret.v1 = (__m512d)_mm512_i64extgather_pd ((__m512)addr_lo.v, 0, _MM_UPCONV_PD_NONE, 1, _MM_HINT_NONE);
+  ret.v2 = (__m512d)_mm512_i64extgather_pd ((__m512)addr_hi.v, 0, _MM_UPCONV_PD_NONE, 1, _MM_HINT_NONE);
+#else
   ret.v1 = _mm512_i64extgather_pd (addr_lo, 0, _MM_UPCONV_PD_NONE, 1, _MM_HINT_NONE);
   ret.v2 = _mm512_i64extgather_pd (addr_hi, 0, _MM_UPCONV_PD_NONE, 1, _MM_HINT_NONE);
+#endif
   return ret;
 }
 
@@ -3535,19 +3540,29 @@ static FORCEINLINE void __scatter_base_offsets32_double(void *base, uint32_t sca
 }
 
 static FORCEINLINE void __scatter64_float(__vec16_i64 ptrs, __vec16_f val, __vec16_i1 mask){
+#if __INTEL_COMPILER < 1500
+  #warning "__scatter64_float is slow due to outdated compiler"
+  __scatter_base_offsets64_float(0, 1, ptrs, val, mask);
+#else
   __vec16_i32 first8ptrs, second8ptrs;
   hilo2zmm(ptrs, first8ptrs.v, second8ptrs.v);
   _mm512_mask_i64scatter_pslo (0, mask, first8ptrs, val, 1);
   const __mmask8 mask_hi = 0x00FF & (mask >> 8);
   _mm512_mask_i64scatter_pslo (0, mask_hi, second8ptrs, _mm512_permute4f128_ps(val.v, _MM_PERM_DCDC), 1);
+#endif
 }
 
 static FORCEINLINE void __scatter64_i32(__vec16_i64 ptrs, __vec16_i32 val, __vec16_i1 mask) {
+#if __INTEL_COMPILER < 1500
+  #warning "__scatter64_i32 is slow due to outdated compiler"
+  __scatter_base_offsets64_i32(0, 1, ptrs, val, mask);
+#else
   __vec16_i32 first8ptrs, second8ptrs;
   hilo2zmm(ptrs, first8ptrs.v, second8ptrs.v);
   _mm512_mask_i64scatter_epi32lo (0, mask, first8ptrs, val, 1);
   const __mmask8 mask_hi = 0x00FF & (mask >> 8);
   _mm512_mask_i64scatter_epi32lo (0, mask_hi, second8ptrs, _mm512_permute4f128_epi32(val.v, _MM_PERM_DCDC), 1);
+#endif
 }
 
 static FORCEINLINE void __scatter64_i64(__vec16_i64 ptrs, __vec16_i64 val, __vec16_i1 mask) {
