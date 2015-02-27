@@ -2301,6 +2301,7 @@ bool CWriter::doInitialization(llvm::Module &M) {
   Out << "#include <setjmp.h>\n";      // Unwind support
   Out << "#include <limits.h>\n";      // With overflow intrinsics support.
   Out << "#include <stdlib.h>\n";
+  Out << "#include <stdio.h>\n";
   Out << "#ifdef _MSC_VER\n";
   Out << "  #define NOMINMAX\n";
   Out << "  #include <windows.h>\n";
@@ -2329,12 +2330,6 @@ bool CWriter::doInitialization(llvm::Module &M) {
 
   Out << "\n/* Basic Library Function Declarations */\n";
   Out << "extern \"C\" {\n";
-  Out << "int puts(const char *);\n";
-  Out << "int putchar(int);\n";
-  Out << "int fflush(FILE *);\n";
-  Out << "int printf(const char *, ...);\n";
-  Out << "int sprintf(char *, const char *, ...);\n";
-  Out << "int fputs(const char *, FILE *);\n";
   Out << "uint8_t *memcpy(uint8_t *, uint8_t *, uint64_t );\n";
   Out << "uint8_t *memset(uint8_t *, uint8_t, uint64_t );\n";
   Out << "void memset_pattern16(void *, const void *, uint64_t );\n";
