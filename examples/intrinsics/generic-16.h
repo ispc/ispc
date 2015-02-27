@@ -977,6 +977,25 @@ CAST_BITS_SCALAR(int64_t, double)
 CAST_BITS_SCALAR(double, uint64_t)
 CAST_BITS_SCALAR(double, int64_t)
 
+#define CAST_BITS_TRIVIAL(TYPE)                  \
+static FORCEINLINE TYPE __cast_bits(TYPE, TYPE v) { return v; }
+
+CAST_BITS_TRIVIAL(float)
+CAST_BITS_TRIVIAL(double)
+CAST_BITS_TRIVIAL(int8_t)
+CAST_BITS_TRIVIAL(uint8_t)
+CAST_BITS_TRIVIAL(int16_t)
+CAST_BITS_TRIVIAL(uint16_t)
+CAST_BITS_TRIVIAL(int32_t)
+CAST_BITS_TRIVIAL(uint32_t)
+CAST_BITS_TRIVIAL(int64_t)
+CAST_BITS_TRIVIAL(uint64_t)
+CAST_BITS_TRIVIAL(__vec16_f)
+CAST_BITS_TRIVIAL(__vec16_d)
+CAST_BITS_TRIVIAL(__vec16_i8)
+CAST_BITS_TRIVIAL(__vec16_i16)
+CAST_BITS_TRIVIAL(__vec16_i32)
+CAST_BITS_TRIVIAL(__vec16_i64)
 ///////////////////////////////////////////////////////////////////////////
 // various math functions
 
