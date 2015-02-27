@@ -179,6 +179,7 @@ FORCEINLINE __vec4_i64::__vec4_i64(__vec4_d vd) {
     v[1] = _mm_castpd_si128(vd.v[1]);
 }
 
+
 ///////////////////////////////////////////////////////////////////////////
 // SSE helpers / utility functions
 

@@ -307,8 +307,9 @@ namespace {
   };
 } // end anonymous namespace
 
-static void findUsedArrayTypes(const llvm::Module *m, std::vector<llvm::ArrayType*> &t, std::vector<llvm::IntegerType*> &i,
-                               std::vector<bool> &IsVolatile, std::vector<int> &Alignment) {
+static void findUsedArrayAndLongIntTypes(const llvm::Module *m, std::vector<llvm::ArrayType*> &t, 
+                               std::vector<llvm::IntegerType*> &i, std::vector<bool> &IsVolatile, 
+                               std::vector<int> &Alignment) {
   TypeFinder(t, i, IsVolatile, Alignment).run(*m);
 }
 
@@ -2819,7 +2820,7 @@ void CWriter::printModuleTypes() {
   std::vector<bool> IsVolatile;
   std::vector<int>  Alignment;
 
-  findUsedArrayTypes(TheModule, ArrayTypes, IntegerTypes, IsVolatile, Alignment);
+  findUsedArrayAndLongIntTypes(TheModule, ArrayTypes, IntegerTypes, IsVolatile, Alignment);
 
   if (StructTypes.empty() && ArrayTypes.empty())
       return;
