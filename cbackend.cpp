@@ -2752,6 +2752,59 @@ void CWriter::printModuleTypes() {
   Out << "  double Double;\n";
   Out << "} llvmBitCastUnion;\n";
 
+  Out << "\n/* It is special class, designed for operations with long int.*/                           \n";
+  Out << "template <int num_bits>                                                                      \n";
+  Out << "struct iN {                                                                                  \n";
+  Out << "    int num[num_bits / (sizeof (int) * 8)];                                                  \n";
+  Out << "                                                                                             \n";
+  Out << "    iN () {}                                                                                 \n";
+  Out << "                                                                                             \n";
+  Out << "    iN (const char *val) {                                                                   \n";
+  Out << "      if (val == NULL)                                                                       \n";
+  Out << "        return;                                                                              \n";
+  Out << "      int length = num_bits / (sizeof (int) * 8);                                            \n";
+  Out << "      int val_len = 0;                                                                       \n";
+  Out << "      for (val_len = 0; val[val_len]; (val_len)++);                                          \n";
+  Out << "      for (int i = 0; (i < val_len && i < num_bits); i++)                                    \n";
+  Out << "        num[i / (sizeof (int) * 8)] = (num[i / (sizeof (int) * 8)] << 1) | (val[i] - '0');   \n";
+  Out << "    }                                                                                        \n";
+  Out << "                                                                                             \n";
+  Out << "    ~iN () {}                                                                                \n";
+  Out << "                                                                                             \n";
+  Out << "    iN operator >> (const iN rhs) {                                                          \n";
+  Out << "      iN res;                                                                                \n";
+  Out << "      int length = num_bits / (sizeof (int) * 8);                                            \n";
+  Out << "      int cells_shift = rhs.num[0] / (sizeof(int) * 8);                                      \n";
+  Out << "      int small_shift = rhs.num[0] % (sizeof(int) * 8);                                      \n";
+  Out << "      for (int i = 0; i < (length - cells_shift); i++)                                       \n";
+  Out << "        res.num[i] = this->num[cells_shift + i];                                             \n";
+  Out << "      for (int i = 0; i < length - 1; i++) {                                                 \n";
+  Out << "        res.num[i] = this->num[i] >> small_shift;                                            \n";
+  Out << "        res.num[i]  = ((this->num[i + 1] << ((sizeof(int) * 8) - small_shift))) | res.num[i];\n";
+  Out << "      }                                                                                      \n";
+  Out << "      res.num[length - 1] = res.num[length - 1] >> small_shift;                              \n";
+  Out << "      return res;                                                                            \n";
+  Out << "    }                                                                                        \n";
+  Out << "                                                                                             \n";
+  Out << "    iN operator & (iN rhs) {                                                                 \n";
+  Out << "      iN res;                                                                                \n";
+  Out << "      int length = num_bits / (sizeof (int) * 8);                                            \n";
+  Out << "      for (int i = 0; i < length; i++)                                                       \n";
+  Out << "        res.num[i] = (this->num[i]) & (rhs.num[i]);                                          \n";
+  Out << "      return res;                                                                            \n";
+  Out << "    }                                                                                        \n";
+  Out << "                                                                                             \n";
+  Out << "    operator uint32_t() { return this->num[0]; }                                             \n";
+  Out << "};                                                                                           \n";
+  Out << "                                                                                             \n";
+  Out << "template <class T>                                                                           \n";
+  Out << "T __cast_bits (T to, __vec" << vectorWidth << "_i32 from) {                                  \n";
+  Out << "  for (int i = 0; i < 16; i++)                                                               \n";
+  Out << "    to.num[i] = ((uint32_t*)(&from))[i];                                                     \n";
+  Out << "  return to;                                                                                 \n";
+  Out << "}                                                                                            \n";
+  Out << "\n";
+
   // Get all of the struct types used in the module.
   std::vector<llvm::StructType*> StructTypes;
   llvm::TypeFinder typeFinder;
@@ -2801,6 +2854,7 @@ void CWriter::printModuleTypes() {
         continue;
 
       Out << "typedef struct __attribute__ ((packed, aligned(" << Alignment[i] << "))) {\n  ";
+      IsVolatile[i] ? Out << "  volatile " : Out << "  ";
       printType(Out, IT, false, "data");
       Out << ";\n";
       Out << "} iN_" << IT->getIntegerBitWidth() << "_align_" << Alignment[i] << ";\n";

@@ -94,51 +94,6 @@ typedef int64_t __vec1_i64;
 
 struct __vec16_i32;
 
-template <int num_bits>
-struct iN {
-    int num[num_bits / (sizeof (int) * 8)];
-
-    iN () {}
-    
-    iN (const char *val) {
-      if (val == NULL)
-        return;
-      int length = num_bits / (sizeof (int) * 8);
-      int val_len = 0;
-      for (val_len = 0; val[val_len]; (val_len)++);
-      for (int i = 0; (i < val_len && i < num_bits); i++)
-        num[i / (sizeof (int) * 8)] = (num[i / (sizeof (int) * 8)] << 1) | (val[i] - '0');
-    }
-
-    ~iN () {}
-
-    iN operator >> (const iN rhs) {
-      iN res;
-      int length = num_bits / (sizeof (int) * 8);
-      int cells = rhs.num[0] / (sizeof(int) * 8);
-      for (int i = 0; i < (length - cells); i++)
-        res.num[i] = this->num[cells + i];
-      return res;
-    }
-
-    iN operator & (iN rhs) {
-      iN res;
-      int length = num_bits / (sizeof (int) * 8);
-      for (int i = 0; i < length; i++)
-        res.num[i] = (this->num[i]) & (rhs.num[i]);
-      return res;
-    }
-
-    operator uint32_t() { return this->num[0]; }
-};
-
-template <class T>
-T __cast_bits (T to, __vec16_i32 from) {
-  for (int i = 0; i < 16; i++)
-    to.num[i] = from[i] ;
-  return to;
-}
-
 #if 1
 /* (iw) actually, this *SHOULD* be the right implementation for a
 vec16_i1: this one is a class that can have a constructor (which
