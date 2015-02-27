@@ -412,7 +412,7 @@ namespace {
       // Output all vector constants so they can be accessed with single
       // vector loads
       printVectorConstants(F);
-   
+
       printFunction(F);
       return false;
     }
@@ -768,11 +768,8 @@ CWriter::printSimpleType(llvm::raw_ostream &Out, llvm::Type *Ty, bool isSigned,
       return Out << (isSigned?"":"u") << "int32_t " << NameSoFar;
     else if (NumBits <= 64)
       return Out << (isSigned?"":"u") << "int64_t "<< NameSoFar;
-    else if (NumBits <= 128)
-      return Out << (isSigned?"llvmInt128":"llvmUInt128") << " " << NameSoFar;
     else
       return Out << "iN<" << NumBits << "> " << NameSoFar;
-
   }
   case llvm::Type::FloatTyID:  return Out << "float "   << NameSoFar;
   case llvm::Type::DoubleTyID: return Out << "double "  << NameSoFar;
@@ -1904,8 +1901,6 @@ void CWriter::writeInstComputationInline(llvm::Instruction &I) {
   // If this is a non-trivial bool computation, make sure to truncate down to
   // a 1 bit value.  This is important because we want "add i1 x, y" to return
   // "0" when x and y are true, not "2" for example.
-//  Out << "\n/* Tree\n" << I << "\n*/";
-
   bool NeedBoolTrunc = false;
   if (I.getType() == llvm::Type::getInt1Ty(I.getContext()) &&
       !llvm::isa<llvm::ICmpInst>(I) && !llvm::isa<llvm::FCmpInst>(I))
@@ -2349,8 +2344,8 @@ bool CWriter::doInitialization(llvm::Module &M) {
   Out << "unsigned int putchar(unsigned int);\n";
   Out << "int fflush(void *);\n";
   Out << "int printf(const unsigned char *, ...);\n";
-//  Out << "uint8_t *memcpy(uint8_t *, uint8_t *, uint64_t );\n";
-//  Out << "uint8_t *memset(uint8_t *, uint8_t, uint64_t );\n";
+  Out << "uint8_t *memcpy(uint8_t *, uint8_t *, uint64_t );\n";
+  Out << "uint8_t *memset(uint8_t *, uint8_t, uint64_t );\n";
   Out << "void memset_pattern16(void *, const void *, uint64_t );\n";
   Out << "}\n\n";
 
@@ -2802,7 +2797,7 @@ void CWriter::printModuleTypes() {
   
   for (unsigned i = 0, e = IntegerTypes.size(); i != e; ++i) {
      llvm::IntegerType *IT = IntegerTypes[i];
-      if (IT->getIntegerBitWidth() <= 128 || Alignment[i] == 0)
+      if (IT->getIntegerBitWidth() <= 64 || Alignment[i] == 0)
         continue;
 
       Out << "typedef struct __attribute__ ((packed, aligned(" << Alignment[i] << "))) {\n  ";
@@ -4354,7 +4349,7 @@ void CWriter::writeMemoryAccess(llvm::Value *Operand, llvm::Type *OperandType,
     Out << '*';
   if (IsVolatile || IsUnaligned) {
     Out << "((";
-    if (IsUnaligned && ITy && (ITy->getBitWidth() > 128)) 
+    if (IsUnaligned && ITy && (ITy->getBitWidth() > 64)) 
       Out << "iN_" << ITy->getBitWidth() << "_align_" << Alignment << " *)";
     else {
       if (IsUnaligned)
@@ -4368,7 +4363,7 @@ void CWriter::writeMemoryAccess(llvm::Value *Operand, llvm::Type *OperandType,
       Out << ")";
     }
   }
- 
+
   writeOperand(Operand);
 
   if (IsVolatile || IsUnaligned) {
@@ -4379,7 +4374,6 @@ void CWriter::writeMemoryAccess(llvm::Value *Operand, llvm::Type *OperandType,
 }
 
 void CWriter::visitLoadInst(llvm::LoadInst &I) {
-//  Out << "\n/* Tree\n" << I << "\n*/";
   llvm::VectorType *VT = llvm::dyn_cast<llvm::VectorType>(I.getType());
   if (VT != NULL) {
       Out << "__load<" << I.getAlignment() << ">(";

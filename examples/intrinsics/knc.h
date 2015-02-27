@@ -32,9 +32,7 @@
 */
 
 #include <limits.h> // INT_MIN
-#include <cstring>
 #include <stdint.h>
-#include <stdlib.h>
 #include <math.h>
 #include <assert.h>
 #include <unistd.h>
@@ -82,9 +80,9 @@ extern "C" {
   int puts(unsigned char *);
   unsigned int putchar(unsigned int);
   int fflush(void *);
-//  uint8_t *memcpy(uint8_t *, uint8_t *, uint64_t);
-//  uint8_t *memset(uint8_t *, uint8_t, uint64_t);
-//  void memset_pattern16(void *, const void *, uint64_t);
+  uint8_t *memcpy(uint8_t *, uint8_t *, uint64_t);
+  uint8_t *memset(uint8_t *, uint8_t, uint64_t);
+  void memset_pattern16(void *, const void *, uint64_t);
 }
 
 typedef float   __vec1_f;
@@ -101,40 +99,19 @@ struct iN {
     int num[num_bits / (sizeof (int) * 8)];
 
     iN () {}
-
-    iN (int val) {
-      num [0] = val;
-    }
-
-    template<class T>
-    iN (T *val) {
-      int length = num_bits / (sizeof (int) * 8);
-      for (int i = 0; i < length; i++)
-        num[i] = val[i];
-    }
-
+    
     iN (const char *val) {
+      if (val == NULL)
+        return;
       int length = num_bits / (sizeof (int) * 8);
-      for (int i = 0; (i < strlen(val) && i < num_bits); i++)
+      int val_len = 0;
+      for (val_len = 0; val[val_len]; (val_len)++);
+      for (int i = 0; (i < val_len && i < num_bits); i++)
         num[i / (sizeof (int) * 8)] = (num[i / (sizeof (int) * 8)] << 1) | (val[i] - '0');
     }
-/*
-    iN (const iN &a) {
-      int length = num_bits / (sizeof (int) * 8);
-      for (int i = 0; i < length; i++)
-        num[i] = a.num[i];
-    }
-*/  
+
     ~iN () {}
-/*
-    iN operator >> (const int rhs) {
-      iN res;
-      int cells = rhs / (sizeof(int) * 8);
-      for (int i = 0; i < (this->length - cells); i++)
-        res.num[i] = this->num[cells + i];
-      return res;
-    }
-*/
+
     iN operator >> (const iN rhs) {
       iN res;
       int length = num_bits / (sizeof (int) * 8);
@@ -152,18 +129,6 @@ struct iN {
       return res;
     }
 
-/*
-    iN& operator = (iN rhs) {
-      iN swap;
-      int length = num_bits / (sizeof (int) * 8);
-      for (int i = 0; i < length; i++) {
-        swap.num[i] = this->num[i];
-        this->num[i] = rhs.num[i];
-        rhs.num[i] = swap.num[i];
-      }
-      return *this;
-    }
-*/
     operator uint32_t() { return this->num[0]; }
 };
 
