@@ -1488,7 +1488,10 @@ void CWriter::printConstant(llvm::Constant *CPV, bool Static) {
       Out << CI->getZExtValue() << "ull";
     else if (Ty->getPrimitiveSizeInBits() > 64) {
       Out << "\"";
-      llvm::dyn_cast<llvm::Value>(CPV)->printAsOperand(Out, false);
+      const uint64_t *Ptr64 = CPV->getUniqueInteger().getRawData();
+      for (int i = 0; i < Ty->getPrimitiveSizeInBits(); i++) {
+        Out << ((Ptr64[i / (sizeof (uint64_t) * 8)] >> (i % (sizeof (uint64_t) * 8))) & 1);
+      }
       Out << "\"";
     }
     else {

@@ -98,51 +98,34 @@ struct __vec16_i32;
 
 template <int num_bits>
 struct iN {
-    int length;
-    int *num;
+    int num[num_bits / (sizeof (int) * 8)];
 
-    iN () {
-      length = num_bits / (sizeof (int) * 8);
-      num = (int*) calloc (length, sizeof (int));
-    }
+    iN () {}
 
     iN (int val) {
-      length = num_bits / (sizeof (int) * 8);
-      num = (int*) calloc (length, sizeof (int));
       num [0] = val;
     }
 
-    iN (const char *val) {
-      char in[strlen(val)];
-      int n = strlen(val);
-      for (int i = 0; i < n; i++)
-        in[i] = val[i];
-
-      char out[num_bits];
-      int m = 0;
-      do {
-        out[m++] = '0' + (in[n - 1] - '0')%2;
-        div_2(in, n);
-      } while (zero(in, n) == 0);
-
-      for (int i = 0; i < m/2; ++i){
-        char buf = out[i];
-        out[i] = out[m - 1 - i];
-        out[m - 1 - i] = buf;
-      }
-      out[m++] = '\0';
-
-      length = num_bits / (sizeof (int) * 8);
-      num = (int*) calloc (length, sizeof (int));
-
-      for (int i = 0; i < strlen(out); i++)
-        num[i / (sizeof (int) * 8)] = (num[i / (sizeof (int) * 8)] << 1) | (out[i] - '0');
-      for (int i = strlen(out); i < num_bits; i++)
-        num[i / (sizeof (int) * 8)] = (num[i / (sizeof (int) * 8)] << 1);
+    template<class T>
+    iN (T *val) {
+      int length = num_bits / (sizeof (int) * 8);
+      for (int i = 0; i < length; i++)
+        num[i] = val[i];
     }
 
-
-    ~iN () { length = 0; free(num); num = NULL;}
+    iN (const char *val) {
+      int length = num_bits / (sizeof (int) * 8);
+      for (int i = 0; (i < strlen(val) && i < num_bits); i++)
+        num[i / (sizeof (int) * 8)] = (num[i / (sizeof (int) * 8)] << 1) | (val[i] - '0');
+    }
+/*
+    iN (const iN &a) {
+      int length = num_bits / (sizeof (int) * 8);
+      for (int i = 0; i < length; i++)
+        num[i] = a.num[i];
+    }
+*/  
+    ~iN () {}
 /*
     iN operator >> (const int rhs) {
       iN res;
@@ -154,23 +137,25 @@ struct iN {
 */
     iN operator >> (const iN rhs) {
       iN res;
+      int length = num_bits / (sizeof (int) * 8);
       int cells = rhs.num[0] / (sizeof(int) * 8);
-      for (int i = 0; i < (this->length - cells); i++)
+      for (int i = 0; i < (length - cells); i++)
         res.num[i] = this->num[cells + i];
       return res;
     }
 
-    iN operator & (const iN rhs) {
+    iN operator & (iN rhs) {
       iN res;
-      res.length = this->length;
-      for (int i = 0; i < this->length; i++)
+      int length = num_bits / (sizeof (int) * 8);
+      for (int i = 0; i < length; i++)
         res.num[i] = (this->num[i]) & (rhs.num[i]);
       return res;
     }
 
 /*
-    iN& operator= (iN rhs) {
+    iN& operator = (iN rhs) {
       iN swap;
+      int length = num_bits / (sizeof (int) * 8);
       for (int i = 0; i < length; i++) {
         swap.num[i] = this->num[i];
         this->num[i] = rhs.num[i];
@@ -180,30 +165,6 @@ struct iN {
     }
 */
     operator uint32_t() { return this->num[0]; }
-
-private:
-void div_2(char in[], int n){//деление числа на 2
-    
-    int p = 0;
-    for (int i = 0; i < n; ++i){
-        
-        int a = in[i] - '0' + p*10;
-        in[i] = a/2 + '0';
-        p = a%2;
-    }
-}
- 
-int zero(char in[], int n){//проверка на ноль
-    
-    int rez = 1;
-    for (int i = 0; i < n; ++i)
-        if (in[i] != '0'){
-            rez = 0;
-            break;
-        }
-    return rez;
-}
-
 };
 
 template <class T>
