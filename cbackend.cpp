@@ -2333,8 +2333,8 @@ bool CWriter::doInitialization(llvm::Module &M) {
   Out << "int putchar(int);\n";
   Out << "int fflush(FILE *);\n";
   Out << "int printf(const char *, ...);\n";
-  Out << "int sprintf(const char *, FILE *);\n";
-  Out << "int fputs(const char *, ...);\n";
+  Out << "int sprintf(char *, const char *, ...);\n";
+  Out << "int fputs(const char *, FILE *);\n";
   Out << "uint8_t *memcpy(uint8_t *, uint8_t *, uint64_t );\n";
   Out << "uint8_t *memset(uint8_t *, uint8_t, uint64_t );\n";
   Out << "void memset_pattern16(void *, const void *, uint64_t );\n";
@@ -4008,6 +4008,14 @@ void CWriter::visitCallInst(llvm::CallInst &I) {
         // uint8_t** is incompatible with void** without explicit cast.
         // Should be do this any other functions?
         Out << "(void **)";
+    }
+    else if ((ArgNo == 0 || ArgNo == 1) &&
+        Callee->getName() == "sprintf") {
+        Out << "(char *)";
+    }
+    else if (ArgNo == 0 &&
+        Callee->getName() == "fputs") {
+        Out << "(char *)";
     }
     else if (ArgNo < NumDeclaredParams &&
         (*AI)->getType() != FTy->getParamType(ArgNo)) {
