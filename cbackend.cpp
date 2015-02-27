@@ -4016,7 +4016,7 @@ void CWriter::visitCallInst(llvm::CallInst &I) {
     if (PrintedArg) Out << ", ";
     if (ArgNo == 0 && 
         Callee->getName() == "posix_memalign") {
-        // uint8_t** is incompatible with void** without explicit cast.
+        // uint8_t** is incompatible with void**/char* without explicit cast.
         // Should be do this any other functions?
         Out << "(void **)";
     }
@@ -4025,7 +4025,8 @@ void CWriter::visitCallInst(llvm::CallInst &I) {
         Out << "(char *)";
     }
     else if (ArgNo == 0 &&
-        Callee->getName() == "fputs") {
+        (Callee->getName() == "fputs" ||
+        Callee->getName() == "puts")){
         Out << "(char *)";
     }
     else if (ArgNo < NumDeclaredParams &&
