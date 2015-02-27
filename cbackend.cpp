@@ -2391,6 +2391,18 @@ bool CWriter::doInitialization(llvm::Module &M) {
     for (llvm::Module::global_iterator I = M.global_begin(), E = M.global_end();
          I != E; ++I) {
 
+      // There is a 'FILE'-like structure defined in llvm-IR which is used fo ISPC's print.
+      // Unfortunately, c++11 has problems linking fflush, fputs and other similar functions 
+      // defined with our 'FILE' type. Thus, when translating from IR we use normal FILE instead 
+      // of our custom one.
+      if (GetValueName(I) == "stdout") {
+        llvm::PointerType *PTy = llvm::cast<llvm::PointerType>(I->getType()->getElementType());
+        assert(PTy != NULL);
+        Out << "#define ";
+        printType(Out, PTy->getElementType());
+        Out << " FILE\n";
+      }
+
       if (I->hasExternalLinkage() || I->hasExternalWeakLinkage() ||
           I->hasCommonLinkage())
         Out << "extern ";
@@ -2406,9 +2418,8 @@ bool CWriter::doInitialization(llvm::Module &M) {
       // Thread Local Storage
       if (I->isThreadLocal())
         Out << "__thread ";
-
+      
       printType(Out, I->getType()->getElementType(), false, GetValueName(I));
-      Out << "/*" << GetValueName(I) << "*/"; // DEBUG
 
       if (I->hasExternalWeakLinkage())
          Out << " __EXTERNAL_WEAK__";
