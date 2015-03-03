@@ -2301,6 +2301,7 @@ bool CWriter::doInitialization(llvm::Module &M) {
   Out << "#include <setjmp.h>\n";      // Unwind support
   Out << "#include <limits.h>\n";      // With overflow intrinsics support.
   Out << "#include <stdlib.h>\n";
+  Out << "#include <stdio.h>\n";
   Out << "#ifdef _MSC_VER\n";
   Out << "  #define NOMINMAX\n";
   Out << "  #include <windows.h>\n";
@@ -2329,10 +2330,6 @@ bool CWriter::doInitialization(llvm::Module &M) {
 
   Out << "\n/* Basic Library Function Declarations */\n";
   Out << "extern \"C\" {\n";
-  Out << "int puts(unsigned char *);\n";
-  Out << "unsigned int putchar(unsigned int);\n";
-  Out << "int fflush(void *);\n";
-  Out << "int printf(const unsigned char *, ...);\n";
   Out << "uint8_t *memcpy(uint8_t *, uint8_t *, uint64_t );\n";
   Out << "uint8_t *memset(uint8_t *, uint8_t, uint64_t );\n";
   Out << "void memset_pattern16(void *, const void *, uint64_t );\n";
@@ -2389,6 +2386,18 @@ bool CWriter::doInitialization(llvm::Module &M) {
     for (llvm::Module::global_iterator I = M.global_begin(), E = M.global_end();
          I != E; ++I) {
 
+      // There is a 'FILE'-like structure defined in llvm-IR which is used fo ISPC's print.
+      // Unfortunately, c++11 has problems linking fflush, fputs and other similar functions 
+      // defined with our 'FILE' type. Thus, when translating from IR we use normal FILE instead 
+      // of our custom one.
+      if (GetValueName(I) == "stdout") {
+        llvm::PointerType *PTy = llvm::cast<llvm::PointerType>(I->getType()->getElementType());
+        assert(PTy != NULL);
+        Out << "#define ";
+        printType(Out, PTy->getElementType());
+        Out << " FILE\n";
+      }
+
       if (I->hasExternalLinkage() || I->hasExternalWeakLinkage() ||
           I->hasCommonLinkage())
         Out << "extern ";
@@ -2404,7 +2413,7 @@ bool CWriter::doInitialization(llvm::Module &M) {
       // Thread Local Storage
       if (I->isThreadLocal())
         Out << "__thread ";
-
+      
       printType(Out, I->getType()->getElementType(), false, GetValueName(I));
 
       if (I->hasExternalWeakLinkage())
@@ -2475,9 +2484,9 @@ bool CWriter::doInitialization(llvm::Module &M) {
     if (I->getName() == "setjmp" || I->getName() == "abort" ||
         I->getName() == "longjmp" || I->getName() == "_setjmp" ||
         I->getName() == "memset" || I->getName() == "memset_pattern16" ||
-        I->getName() == "puts" ||
+        I->getName() == "puts" || I->getName() == "sprintf" ||
         I->getName() == "printf" || I->getName() == "putchar" ||
-        I->getName() == "fflush" ||
+        I->getName() == "fflush" || I->getName() == "fputs" ||
         // Memory allocation
         I->getName() == "malloc" ||
         I->getName() == "posix_memalign" ||
@@ -4002,9 +4011,18 @@ void CWriter::visitCallInst(llvm::CallInst &I) {
     if (PrintedArg) Out << ", ";
     if (ArgNo == 0 && 
         Callee->getName() == "posix_memalign") {
-        // uint8_t** is incompatible with void** without explicit cast.
+        // uint8_t** is incompatible with void**/char* without explicit cast.
         // Should be do this any other functions?
         Out << "(void **)";
+    }
+    else if ((ArgNo == 0 || ArgNo == 1) &&
+        Callee->getName() == "sprintf") {
+        Out << "(char *)";
+    }
+    else if (ArgNo == 0 &&
+        (Callee->getName() == "fputs" ||
+        Callee->getName() == "puts")){
+        Out << "(char *)";
     }
     else if (ArgNo < NumDeclaredParams &&
         (*AI)->getType() != FTy->getParamType(ArgNo)) {

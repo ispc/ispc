@@ -45,6 +45,7 @@
 #include <immintrin.h>
 #include <zmmintrin.h>
 
+#include <stdio.h>  // printf
 #include <iostream> // for operator<<(m512[i])
 #include <iomanip>  // for operator<<(m512[i])
 
@@ -75,15 +76,6 @@
 #endif
 
 #define KNC 1
-extern "C" {
-  int printf(const unsigned char *, ...);
-  int puts(unsigned char *);
-  unsigned int putchar(unsigned int);
-  int fflush(void *);
-  uint8_t *memcpy(uint8_t *, uint8_t *, uint64_t);
-  uint8_t *memset(uint8_t *, uint8_t, uint64_t);
-  void memset_pattern16(void *, const void *, uint64_t);
-}
 
 typedef float   __vec1_f;
 typedef double  __vec1_d;
