@@ -477,6 +477,20 @@ lCheckAllOffSafety(ASTNode *node, void *data) {
         return false;
     }
 
+    /*
+      Don't allow turning if/else to straight-line-code if we 
+      assign to a uniform.
+    */
+    AssignExpr *ae;
+    if ((ae = dynamic_cast<AssignExpr *>(node)) != NULL) {
+      if (ae->GetType()) {
+        if (ae->GetType()->IsUniformType()) {
+          *okPtr = false;
+          return false;
+        }
+      }
+    }
+
     return true;
 }
 
