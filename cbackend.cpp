@@ -984,10 +984,34 @@ llvm::raw_ostream &CWriter::printType(llvm::raw_ostream &Out, llvm::Type *Ty,
 }
 
 void CWriter::printConstantArray(llvm::ConstantArray *CPA, bool Static) {
+  // vec16_i64 should be handled separately
+  llvm::VectorType *VTy = llvm::dyn_cast<llvm::VectorType>(CPA->getOperand(0)->getType());
+  if ((VTy != NULL) && (VTy->getElementType()->isIntegerTy()) && 
+    VTy->getElementType()->getPrimitiveSizeInBits() == 64) {
+    Out << "/* vec16_i64 should be loaded carefully on knc */";
+    Out << "\n#if defined(KNC)\n";
+    Out << "hilo2zmm";
+    Out << "\n#endif\n";
+  }
+  Out << "(";
   printConstant(llvm::cast<llvm::Constant>(CPA->getOperand(0)), Static);
+  Out << ")";
+
   for (unsigned i = 1, e = CPA->getNumOperands(); i != e; ++i) {
     Out << ", ";
+
+
+    llvm::VectorType *VTy = llvm::dyn_cast<llvm::VectorType>(CPA->getOperand(0)->getType());
+    if ((VTy != NULL) && (VTy->getElementType()->isIntegerTy()) && 
+      VTy->getElementType()->getPrimitiveSizeInBits() == 64) {
+      Out << "/* vec16_i64 should be loaded carefully on knc */";
+      Out << "\n#if defined(KNC) \n";
+      Out << "hilo2zmm";
+      Out << "\n#endif \n";
+    }
+    Out << "(";
     printConstant(llvm::cast<llvm::Constant>(CPA->getOperand(i)), Static);
+    Out << ")";
   }
 }
 
@@ -1566,7 +1590,7 @@ void CWriter::printConstant(llvm::Constant *CPV, bool Static) {
     else {
       // call init func of the struct it's wrapped in...
       printType(Out, CPV->getType());
-      Out << "::init(";
+      Out << "::init (";
     }
     if (llvm::ConstantArray *CA = llvm::dyn_cast<llvm::ConstantArray>(CPV)) {
       printConstantArray(CA, Static);
@@ -1897,7 +1921,7 @@ void CWriter::writeInstComputationInline(llvm::Instruction &I) {
 
   if (NeedBoolTrunc)
     Out << "((";
-
+  
   visit(I);
 
   if (NeedBoolTrunc)
@@ -2582,6 +2606,7 @@ bool CWriter::doInitialization(llvm::Module &M) {
 
         printType(Out, I->getType()->getElementType(), false,
                   GetValueName(I));
+
         if (I->hasLinkOnceLinkage())
           Out << " __attribute__((common))";
         else if (I->hasWeakLinkage())
@@ -2600,7 +2625,20 @@ bool CWriter::doInitialization(llvm::Module &M) {
         // FIXME common linkage should avoid this problem.
         if (!I->getInitializer()->isNullValue()) {
           Out << " = " ;
+
+          // vec16_i64 should be handled separately
+          llvm::VectorType *VTy = llvm::dyn_cast<llvm::VectorType>(I->getType()->getElementType());
+          if ((VTy != NULL) && (VTy->getElementType()->isIntegerTy()) && 
+            VTy->getElementType()->getPrimitiveSizeInBits() == 64) {
+            Out << "/* vec16_i64 should be loaded carefully on knc */\n";
+            Out << "\n#if defined(KNC) \n";
+            Out << "hilo2zmm";
+            Out << "\n#endif \n";
+          }
+
+          Out << "(";
           writeOperand(I->getInitializer(), false);
+          Out << ")";
         } else if (I->hasWeakLinkage()) {
           // We have to specify an initializer, but it doesn't have to be
           // complete.  If the value is an aggregate, print out { 0 }, and let

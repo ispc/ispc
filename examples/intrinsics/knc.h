@@ -220,7 +220,7 @@ typedef struct PRE_ALIGN(64) __vec16_i64 {
   __m512i v_lo;
 } POST_ALIGN(64) __vec16_i64;
 
-static __vec16_i64 zmm2hilo(const __m512i v1, const __m512i v2){
+FORCEINLINE __vec16_i64 zmm2hilo(const __m512i v1, const __m512i v2){
   __vec16_i64 v;
   v.v_hi = _mm512_mask_permutevar_epi32(_mm512_undefined_epi32(), 0xFF00,
                   _mm512_set_16to16_pi(15,13,11,9,7,5,3,1,14,12,10,8,6,4,2,0),
@@ -237,7 +237,7 @@ static __vec16_i64 zmm2hilo(const __m512i v1, const __m512i v2){
   return v;
 }
 
-static void hilo2zmm(const __vec16_i64 &v, __m512i &_v1, __m512i &_v2) {
+FORCEINLINE void hilo2zmm(const __vec16_i64 &v, __m512i &_v1, __m512i &_v2) {
   _v2 = _mm512_mask_permutevar_epi32(_mm512_undefined_epi32(), 0xAAAA,
                _mm512_set_16to16_pi(15,15,14,14,13,13,12,12,11,11,10,10,9,9,8,8),
                v.v_hi);
@@ -251,6 +251,13 @@ static void hilo2zmm(const __vec16_i64 &v, __m512i &_v1, __m512i &_v2) {
                _mm512_set_16to16_pi(7,7,6,6,5,5,4,4,3,3,2,2,1,1,0,0),
                v.v_lo);
 }
+
+FORCEINLINE __vec16_i64 hilo2zmm(const __vec16_i64 &v) {
+  __vec16_i64 ret;
+  hilo2zmm(v, ret.v_hi, ret.v_lo);
+  return ret;
+}
+
 
 template <typename T>
 struct vec16 {
