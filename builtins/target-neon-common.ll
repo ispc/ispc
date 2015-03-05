@@ -279,7 +279,7 @@ masked_store_float_double()
 
 define void @__masked_store_blend_i8(<WIDTH x i8>* nocapture %ptr, <WIDTH x i8> %new,
                                      <WIDTH x MASK> %mask) nounwind alwaysinline {
-  %old = load <WIDTH x i8> * %ptr
+  %old = load PTR_OP_ARGS(`<WIDTH x i8> ')  %ptr
   %mask1 = trunc <WIDTH x MASK> %mask to <WIDTH x i1>
   %result = select <WIDTH x i1> %mask1, <WIDTH x i8> %new, <WIDTH x i8> %old
   store <WIDTH x i8> %result, <WIDTH x i8> * %ptr
@@ -288,7 +288,7 @@ define void @__masked_store_blend_i8(<WIDTH x i8>* nocapture %ptr, <WIDTH x i8> 
 
 define void @__masked_store_blend_i16(<WIDTH x i16>* nocapture %ptr, <WIDTH x i16> %new, 
                                       <WIDTH x MASK> %mask) nounwind alwaysinline {
-  %old = load <WIDTH x i16> * %ptr
+  %old = load PTR_OP_ARGS(`<WIDTH x i16> ')  %ptr
   %mask1 = trunc <WIDTH x MASK> %mask to <WIDTH x i1>
   %result = select <WIDTH x i1> %mask1, <WIDTH x i16> %new, <WIDTH x i16> %old
   store <WIDTH x i16> %result, <WIDTH x i16> * %ptr
@@ -297,7 +297,7 @@ define void @__masked_store_blend_i16(<WIDTH x i16>* nocapture %ptr, <WIDTH x i1
 
 define void @__masked_store_blend_i32(<WIDTH x i32>* nocapture %ptr, <WIDTH x i32> %new, 
                                       <WIDTH x MASK> %mask) nounwind alwaysinline {
-  %old = load <WIDTH x i32> * %ptr
+  %old = load PTR_OP_ARGS(`<WIDTH x i32> ')  %ptr
   %mask1 = trunc <WIDTH x MASK> %mask to <WIDTH x i1>
   %result = select <WIDTH x i1> %mask1, <WIDTH x i32> %new, <WIDTH x i32> %old
   store <WIDTH x i32> %result, <WIDTH x i32> * %ptr
@@ -306,7 +306,7 @@ define void @__masked_store_blend_i32(<WIDTH x i32>* nocapture %ptr, <WIDTH x i3
 
 define void @__masked_store_blend_i64(<WIDTH x i64>* nocapture %ptr,
                             <WIDTH x i64> %new, <WIDTH x MASK> %mask) nounwind alwaysinline {
-  %old = load <WIDTH x i64> * %ptr
+  %old = load PTR_OP_ARGS(`<WIDTH x i64> ')  %ptr
   %mask1 = trunc <WIDTH x MASK> %mask to <WIDTH x i1>
   %result = select <WIDTH x i1> %mask1, <WIDTH x i64> %new, <WIDTH x i64> %old
   store <WIDTH x i64> %result, <WIDTH x i64> * %ptr

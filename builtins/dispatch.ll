@@ -104,6 +104,19 @@
 ;;         abort();
 ;; }
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;; LLVM has different IR for different versions since 3.7
+
+define(`PTR_OP_ARGS',
+  ifelse(LLVM_VERSION, LLVM_3_7,
+    ``$1 , $1 *'',
+    ``$1 *''
+  )
+)
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
 define i32 @__get_system_isa() nounwind uwtable {
 entry:
   %0 = tail call { i32, i32, i32, i32 } asm sideeffect "cpuid", "={ax},={bx},={cx},={dx},0,~{dirflag},~{fpsr},~{flags}"(i32 1) nounwind
@@ -160,7 +173,7 @@ declare void @abort() noreturn nounwind
 
 define void @__set_system_isa() {
 entry:
-  %bi = load i32* @__system_best_isa
+  %bi = load PTR_OP_ARGS(`i32 ')  @__system_best_isa
   %unset = icmp eq i32 %bi, -1
   br i1 %unset, label %set_system_isa, label %done
 

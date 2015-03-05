@@ -427,7 +427,7 @@ define <16 x i32> @__masked_load_i32(i8 *, <16 x i32> %mask) nounwind alwaysinli
   %val0 = call <8 x float> @llvm.x86.avx.maskload.ps.256(i8 * %0, <8 x float> %mask0)
   %mask1 = shufflevector <16 x float> %floatmask, <16 x float> undef,
      <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
-  %ptr1 = getelementptr i8 * %0, i32 32   ;; 8x4 bytes = 32
+  %ptr1 = getelementptr PTR_OP_ARGS(`i8') %0, i32 32    ;; 8x4 bytes = 32
   %val1 = call <8 x float> @llvm.x86.avx.maskload.ps.256(i8 * %ptr1, <8 x float> %mask1)
 
   %retval = shufflevector <8 x float> %val0, <8 x float> %val1,
@@ -454,11 +454,11 @@ define <16 x i64> @__masked_load_i64(i8 *, <16 x i32> %mask) nounwind alwaysinli
   %mask3d = bitcast <8 x i32> %mask3 to <4 x double>
 
   %val0d = call <4 x double> @llvm.x86.avx.maskload.pd.256(i8 * %0, <4 x double> %mask0d)
-  %ptr1 = getelementptr i8 * %0, i32 32
+  %ptr1 = getelementptr PTR_OP_ARGS(`i8') %0, i32 32
   %val1d = call <4 x double> @llvm.x86.avx.maskload.pd.256(i8 * %ptr1, <4 x double> %mask1d)
-  %ptr2 = getelementptr i8 * %0, i32 64
+  %ptr2 = getelementptr PTR_OP_ARGS(`i8') %0, i32 64
   %val2d = call <4 x double> @llvm.x86.avx.maskload.pd.256(i8 * %ptr2, <4 x double> %mask2d)
-  %ptr3 = getelementptr i8 * %0, i32 96
+  %ptr3 = getelementptr PTR_OP_ARGS(`i8') %0, i32 96
   %val3d = call <4 x double> @llvm.x86.avx.maskload.pd.256(i8 * %ptr3, <4 x double> %mask3d)
 
   %val01 = shufflevector <4 x double> %val0d, <4 x double> %val1d,
@@ -504,7 +504,7 @@ define void @__masked_store_i32(<16 x i32>* nocapture, <16 x i32>,
         <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
 
   call void @llvm.x86.avx.maskstore.ps.256(i8 * %ptr, <8 x float> %mask0, <8 x float> %val0)
-  %ptr1 = getelementptr i8 * %ptr, i32 32
+  %ptr1 = getelementptr PTR_OP_ARGS(`i8') %ptr, i32 32
   call void @llvm.x86.avx.maskstore.ps.256(i8 * %ptr1, <8 x float> %mask1, <8 x float> %val1)
 
   ret void
@@ -539,11 +539,11 @@ define void @__masked_store_i64(<16 x i64>* nocapture, <16 x i64>,
      <4 x i32> <i32 12, i32 13, i32 14, i32 15>
 
   call void @llvm.x86.avx.maskstore.pd.256(i8 * %ptr, <4 x double> %mask0d, <4 x double> %val0)
-  %ptr1 = getelementptr i8 * %ptr, i32 32
+  %ptr1 = getelementptr PTR_OP_ARGS(`i8') %ptr, i32 32
   call void @llvm.x86.avx.maskstore.pd.256(i8 * %ptr1, <4 x double> %mask1d, <4 x double> %val1)
-  %ptr2 = getelementptr i8 * %ptr, i32 64
+  %ptr2 = getelementptr PTR_OP_ARGS(`i8') %ptr, i32 64
   call void @llvm.x86.avx.maskstore.pd.256(i8 * %ptr2, <4 x double> %mask2d, <4 x double> %val2)
-  %ptr3 = getelementptr i8 * %ptr, i32 96
+  %ptr3 = getelementptr PTR_OP_ARGS(`i8') %ptr, i32 96
   call void @llvm.x86.avx.maskstore.pd.256(i8 * %ptr3, <4 x double> %mask3d, <4 x double> %val3)
 
   ret void
@@ -559,7 +559,7 @@ declare <8 x float> @llvm.x86.avx.blendv.ps.256(<8 x float>, <8 x float>,
 define void @__masked_store_blend_i32(<16 x i32>* nocapture, <16 x i32>, 
                                       <16 x i32>) nounwind alwaysinline {
   %maskAsFloat = bitcast <16 x i32> %2 to <16 x float>
-  %oldValue = load <16 x i32>* %0, align 4
+  %oldValue = load PTR_OP_ARGS(`<16 x i32>')  %0, align 4
   %oldAsFloat = bitcast <16 x i32> %oldValue to <16 x float>
   %newAsFloat = bitcast <16 x i32> %1 to <16 x float>
  
@@ -596,7 +596,7 @@ declare <4 x double> @llvm.x86.avx.blendv.pd.256(<4 x double>, <4 x double>,
 
 define void @__masked_store_blend_i64(<16 x i64>* nocapture %ptr, <16 x i64> %newi64, 
                                       <16 x i32> %mask) nounwind alwaysinline {
-  %oldValue = load <16 x i64>* %ptr, align 8
+  %oldValue = load PTR_OP_ARGS(`<16 x i64>')  %ptr, align 8
   %old = bitcast <16 x i64> %oldValue to <16 x double>
   %old0d = shufflevector <16 x double> %old, <16 x double> undef,
      <4 x i32> <i32 0, i32 1, i32 2, i32 3>

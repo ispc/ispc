@@ -576,7 +576,7 @@ masked_store_blend_8_16_by_8()
 
 define void @__masked_store_blend_i32(<8 x i32>* nocapture, <8 x i32>, 
                                       <8 x i32> %mask) nounwind alwaysinline {
-  %val = load <8 x i32> * %0, align 4
+  %val = load PTR_OP_ARGS(`<8 x i32> ')  %0, align 4
   %newval = call <8 x i32> @__vselect_i32(<8 x i32> %val, <8 x i32> %1, <8 x i32> %mask) 
   store <8 x i32> %newval, <8 x i32> * %0, align 4
   ret void
@@ -584,7 +584,7 @@ define void @__masked_store_blend_i32(<8 x i32>* nocapture, <8 x i32>,
 
 define void @__masked_store_blend_i64(<8 x i64>* nocapture %ptr, <8 x i64> %new,
                                       <8 x i32> %mask) nounwind alwaysinline {
-  %oldValue = load <8 x i64>* %ptr, align 8
+  %oldValue = load PTR_OP_ARGS(`<8 x i64>')  %ptr, align 8
 
   ; Do 8x64-bit blends by doing two <8 x i32> blends, where the <8 x i32> values
   ; are actually bitcast <2 x i64> values

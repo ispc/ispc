@@ -453,7 +453,7 @@ define void @__masked_store_blend_i32(<4 x i32>* nocapture, <4 x i32>,
                                       <4 x i64>) nounwind alwaysinline {
   %mask          = trunc   <4 x i64> %2 to <4 x i32>
   %mask_as_float = bitcast <4 x i32> %mask to <4 x float>
-  %oldValue      = load    <4 x i32>* %0, align 4
+  %oldValue      = load PTR_OP_ARGS(`   <4 x i32>')  %0, align 4
   %oldAsFloat    = bitcast <4 x i32> %oldValue to <4 x float>
   %newAsFloat    = bitcast <4 x i32> %1 to <4 x float>
   %blend         = call    <4 x float> @llvm.x86.sse41.blendvps(<4 x float> %oldAsFloat,
@@ -471,7 +471,7 @@ declare <4 x double> @llvm.x86.avx.blendv.pd.256(<4 x double>, <4 x double>,
 define void @__masked_store_blend_i64(<4 x i64>* nocapture , <4 x i64>,
                                       <4 x i64>) nounwind alwaysinline {
   %mask_as_double = bitcast <4 x i64>  %2 to <4 x double>
-  %oldValue       = load    <4 x i64>* %0, align 4
+  %oldValue       = load PTR_OP_ARGS(`   <4 x i64>')  %0, align 4
   %oldAsDouble    = bitcast <4 x i64>  %oldValue to <4 x double>
   %newAsDouble    = bitcast <4 x i64>  %1 to <4 x double>
   %blend          = call    <4 x double> @llvm.x86.avx.blendv.pd.256(<4 x double> %oldAsDouble,

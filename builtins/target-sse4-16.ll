@@ -390,7 +390,7 @@ define void @__masked_store_blend_i64(<8 x i64>* nocapture, <8 x i64>,
                                       <8 x MASK> %mask) nounwind
                                       alwaysinline {
   %mask_as_i1 = trunc <8 x MASK> %mask to <8 x i1>
-  %old = load <8 x i64>* %0, align 4
+  %old = load PTR_OP_ARGS(`<8 x i64>')  %0, align 4
   %blend = select <8 x i1> %mask_as_i1, <8 x i64> %1, <8 x i64> %old
   store <8 x i64> %blend, <8 x i64>* %0, align 4
   ret void
@@ -399,7 +399,7 @@ define void @__masked_store_blend_i64(<8 x i64>* nocapture, <8 x i64>,
 define void @__masked_store_blend_i32(<8 x i32>* nocapture, <8 x i32>, 
                                       <8 x MASK> %mask) nounwind alwaysinline {
   %mask_as_i1 = trunc <8 x MASK> %mask to <8 x i1>
-  %old = load <8 x i32>* %0, align 4
+  %old = load PTR_OP_ARGS(`<8 x i32>')  %0, align 4
   %blend = select <8 x i1> %mask_as_i1, <8 x i32> %1, <8 x i32> %old
   store <8 x i32> %blend, <8 x i32>* %0, align 4
   ret void
@@ -408,7 +408,7 @@ define void @__masked_store_blend_i32(<8 x i32>* nocapture, <8 x i32>,
 define void @__masked_store_blend_i16(<8 x i16>* nocapture, <8 x i16>,
                                      <8 x MASK> %mask) nounwind alwaysinline {
   %mask_as_i1 = trunc <8 x MASK> %mask to <8 x i1>
-  %old = load <8 x i16>* %0, align 4
+  %old = load PTR_OP_ARGS(`<8 x i16>')  %0, align 4
   %blend = select <8 x i1> %mask_as_i1, <8 x i16> %1, <8 x i16> %old
   store <8 x i16> %blend, <8 x i16>* %0, align 4
   ret void
@@ -417,7 +417,7 @@ define void @__masked_store_blend_i16(<8 x i16>* nocapture, <8 x i16>,
 define void @__masked_store_blend_i8(<8 x i8>* nocapture, <8 x i8>,
                                      <8 x MASK> %mask) nounwind alwaysinline {
   %mask_as_i1 = trunc <8 x MASK> %mask to <8 x i1>
-  %old = load <8 x i8>* %0, align 4
+  %old = load PTR_OP_ARGS(`<8 x i8>')  %0, align 4
   %blend = select <8 x i1> %mask_as_i1, <8 x i8> %1, <8 x i8> %old
   store <8 x i8> %blend, <8 x i8>* %0, align 4
   ret void
