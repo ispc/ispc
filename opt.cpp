@@ -528,11 +528,11 @@ Optimize(llvm::Module *module, int optLevel) {
     optPM.add(new llvm::DataLayout(*g->target->getDataLayout()));
 #elif defined(LLVM_3_5)
     optPM.add(new llvm::DataLayoutPass(*g->target->getDataLayout()));
-#else // LLVM 3.6+
+#elif defined(LLVM_3_6)
     llvm::DataLayoutPass *dlp= new llvm::DataLayoutPass();
     dlp->doInitialization(*module);
     optPM.add(dlp);
-#endif
+#endif // LLVM 3.7+ doesn't have DataLayoutPass anymore.
 
     llvm::TargetMachine *targetMachine = g->target->GetTargetMachine();
 
