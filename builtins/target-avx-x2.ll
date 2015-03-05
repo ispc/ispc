@@ -559,7 +559,7 @@ declare <8 x float> @llvm.x86.avx.blendv.ps.256(<8 x float>, <8 x float>,
 define void @__masked_store_blend_i32(<16 x i32>* nocapture, <16 x i32>, 
                                       <16 x i32>) nounwind alwaysinline {
   %maskAsFloat = bitcast <16 x i32> %2 to <16 x float>
-  %oldValue = load <16 x i32>* %0, align 4
+  %oldValue = load PTR_OP_ARGS(`<16 x i32>',` %0, align 4')
   %oldAsFloat = bitcast <16 x i32> %oldValue to <16 x float>
   %newAsFloat = bitcast <16 x i32> %1 to <16 x float>
  
@@ -596,7 +596,7 @@ declare <4 x double> @llvm.x86.avx.blendv.pd.256(<4 x double>, <4 x double>,
 
 define void @__masked_store_blend_i64(<16 x i64>* nocapture %ptr, <16 x i64> %newi64, 
                                       <16 x i32> %mask) nounwind alwaysinline {
-  %oldValue = load <16 x i64>* %ptr, align 8
+  %oldValue = load PTR_OP_ARGS(`<16 x i64>',` %ptr, align 8')
   %old = bitcast <16 x i64> %oldValue to <16 x double>
   %old0d = shufflevector <16 x double> %old, <16 x double> undef,
      <4 x i32> <i32 0, i32 1, i32 2, i32 3>

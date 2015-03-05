@@ -2142,7 +2142,7 @@ declare void @_aligned_free(i8 *)
 
 define noalias i8 * @__new_uniform_32rt(i64 %size) {
   %conv = trunc i64 %size to i32
-  %alignment = load i32* @memory_alignment
+  %alignment = load PTR_OP_ARGS(`i32',` @memory_alignment')
   %ptr = tail call i8* @_aligned_malloc(i32 %conv, i32 %alignment)
   ret i8* %ptr
 }
@@ -2151,7 +2151,7 @@ define <WIDTH x i64> @__new_varying32_32rt(<WIDTH x i32> %size, <WIDTH x MASK> %
   %ret = alloca <WIDTH x i64>
   store <WIDTH x i64> zeroinitializer, <WIDTH x i64> * %ret
   %ret64 = bitcast <WIDTH x i64> * %ret to i64 *
-  %alignment = load i32* @memory_alignment
+  %alignment = load PTR_OP_ARGS(`i32',` @memory_alignment')
 
   per_lane(WIDTH, <WIDTH x MASK> %mask, `
     %sz_LANE_ID = extractelement <WIDTH x i32> %size, i32 LANE
@@ -2160,7 +2160,7 @@ define <WIDTH x i64> @__new_varying32_32rt(<WIDTH x i32> %size, <WIDTH x MASK> %
     %store_LANE_ID = getelementptr PTR_OP_ARGS(`i64', `%ret64, i32 LANE')
     store i64 %ptr_int_LANE_ID, i64 * %store_LANE_ID')
 
-  %r = load <WIDTH x i64> * %ret
+  %r = load PTR_OP_ARGS(`<WIDTH x i64> ',` %ret')
   ret <WIDTH x i64> %r
 }
 
@@ -2195,7 +2195,7 @@ declare i8* @_aligned_malloc(i64, i64)
 declare void @_aligned_free(i8 *)
 
 define noalias i8 * @__new_uniform_64rt(i64 %size) {
-  %alignment = load i32* @memory_alignment
+  %alignment = load PTR_OP_ARGS(`i32',` @memory_alignment')
   %alignment64 = sext i32 %alignment to i64
   %ptr = tail call i8* @_aligned_malloc(i64 %size, i64 %alignment64)
   ret i8* %ptr
@@ -2205,7 +2205,7 @@ define <WIDTH x i64> @__new_varying32_64rt(<WIDTH x i32> %size, <WIDTH x MASK> %
   %ret = alloca <WIDTH x i64>
   store <WIDTH x i64> zeroinitializer, <WIDTH x i64> * %ret
   %ret64 = bitcast <WIDTH x i64> * %ret to i64 *
-  %alignment = load i32* @memory_alignment
+  %alignment = load PTR_OP_ARGS(`i32',` @memory_alignment')
   %alignment64 = sext i32 %alignment to i64
 
   per_lane(WIDTH, <WIDTH x MASK> %mask, `
@@ -2216,7 +2216,7 @@ define <WIDTH x i64> @__new_varying32_64rt(<WIDTH x i32> %size, <WIDTH x MASK> %
     %store_LANE_ID = getelementptr PTR_OP_ARGS(`i64', `%ret64, i32 LANE')
     store i64 %ptr_int_LANE_ID, i64 * %store_LANE_ID')
 
-  %r = load <WIDTH x i64> * %ret
+  %r = load PTR_OP_ARGS(`<WIDTH x i64> ',` %ret')
   ret <WIDTH x i64> %r
 }
 
@@ -2224,7 +2224,7 @@ define <WIDTH x i64> @__new_varying64_64rt(<WIDTH x i64> %size, <WIDTH x MASK> %
   %ret = alloca <WIDTH x i64>
   store <WIDTH x i64> zeroinitializer, <WIDTH x i64> * %ret
   %ret64 = bitcast <WIDTH x i64> * %ret to i64 *
-  %alignment = load i32* @memory_alignment
+  %alignment = load PTR_OP_ARGS(`i32',` @memory_alignment')
   %alignment64 = sext i32 %alignment to i64
 
   per_lane(WIDTH, <WIDTH x MASK> %mask, `
@@ -2234,7 +2234,7 @@ define <WIDTH x i64> @__new_varying64_64rt(<WIDTH x i64> %size, <WIDTH x MASK> %
     %store_LANE_ID = getelementptr PTR_OP_ARGS(`i64', `%ret64, i32 LANE')
     store i64 %ptr_int_LANE_ID, i64 * %store_LANE_ID')
 
-  %r = load <WIDTH x i64> * %ret
+  %r = load PTR_OP_ARGS(`<WIDTH x i64> ',` %ret')
   ret <WIDTH x i64> %r
 }
 
@@ -2437,7 +2437,7 @@ define <$1 x i64> @__$2_varying_$3(<$1 x i64>, <$1 x i64>) nounwind alwaysinline
   store i64 %v_`'i, i64 * %ptr_`'i
 ')                  
 
-  %ret = load <$1 x i64> * %rptr
+  %ret = load PTR_OP_ARGS(`<$1 x i64> ',` %rptr')
   ret <$1 x i64> %ret
 }
 ')
@@ -2483,7 +2483,7 @@ entry:
 
 load: 
   %ptr = bitcast i8 * %0 to <WIDTH x $1> *
-  %valall = load <WIDTH x $1> * %ptr, align $2
+  %valall = load PTR_OP_ARGS(`<WIDTH x $1> ',` %ptr, align $2')
   ret <WIDTH x $1> %valall
 
 loop:
@@ -2500,7 +2500,7 @@ load_lane:
   ; allocaed memory above
   %ptr32 = bitcast i8 * %0 to $1 *
   %lane_ptr = getelementptr PTR_OP_ARGS(`$1', `%ptr32, i32 %lane')
-  %val = load $1 * %lane_ptr
+  %val = load PTR_OP_ARGS(`$1 ',` %lane_ptr')
   %store_ptr = getelementptr PTR_OP_ARGS(`$1', `%retptr32, i32 %lane')
   store $1 %val, $1 * %store_ptr
   br label %lane_done
@@ -2511,7 +2511,7 @@ lane_done:
   br i1 %done, label %return, label %loop
 
 return:
-  %r = load <WIDTH x $1> * %retptr
+  %r = load PTR_OP_ARGS(`<WIDTH x $1> ',` %retptr')
   ret <WIDTH x $1> %r
 }
 ')
@@ -2535,7 +2535,7 @@ define void @__masked_store_$1(<WIDTH x $1>* nocapture, <WIDTH x $1>, <WIDTH x M
 define(`masked_store_blend_8_16_by_4', `
 define void @__masked_store_blend_i8(<4 x i8>* nocapture, <4 x i8>,
                                      <4 x i32>) nounwind alwaysinline {
-  %old = load <4 x i8> * %0, align 1
+  %old = load PTR_OP_ARGS(`<4 x i8> ',` %0, align 1')
   ifelse(LLVM_VERSION,LLVM_3_0,`
     %old32 = bitcast <4 x i8> %old to i32
     %new32 = bitcast <4 x i8> %1 to i32
@@ -2559,7 +2559,7 @@ define void @__masked_store_blend_i8(<4 x i8>* nocapture, <4 x i8>,
 
 define void @__masked_store_blend_i16(<4 x i16>* nocapture, <4 x i16>,
                                       <4 x i32>) nounwind alwaysinline {
-  %old = load <4 x i16> * %0, align 2
+  %old = load PTR_OP_ARGS(`<4 x i16> ',` %0, align 2')
   ifelse(LLVM_VERSION,LLVM_3_0,`
     %old64 = bitcast <4 x i16> %old to i64
     %new64 = bitcast <4 x i16> %1 to i64
@@ -2585,7 +2585,7 @@ define void @__masked_store_blend_i16(<4 x i16>* nocapture, <4 x i16>,
 define(`masked_store_blend_8_16_by_4_mask64', `
 define void @__masked_store_blend_i8(<4 x i8>* nocapture, <4 x i8>,
                                      <4 x i64>) nounwind alwaysinline {
-  %old = load <4 x i8> * %0, align 1
+  %old = load PTR_OP_ARGS(`<4 x i8> ',` %0, align 1')
   ifelse(LLVM_VERSION,LLVM_3_0,`
     %old32 = bitcast <4 x i8> %old to i32
     %new32 = bitcast <4 x i8> %1 to i32
@@ -2609,7 +2609,7 @@ define void @__masked_store_blend_i8(<4 x i8>* nocapture, <4 x i8>,
 
 define void @__masked_store_blend_i16(<4 x i16>* nocapture, <4 x i16>,
                                       <4 x i64>) nounwind alwaysinline {
-  %old = load <4 x i16> * %0, align 2
+  %old = load PTR_OP_ARGS(`<4 x i16> ',` %0, align 2')
   ifelse(LLVM_VERSION,LLVM_3_0,`
     %old64 = bitcast <4 x i16> %old to i64
     %new64 = bitcast <4 x i16> %1 to i64
@@ -2635,7 +2635,7 @@ define void @__masked_store_blend_i16(<4 x i16>* nocapture, <4 x i16>,
 define(`masked_store_blend_8_16_by_8', `
 define void @__masked_store_blend_i8(<8 x i8>* nocapture, <8 x i8>,
                                      <8 x i32>) nounwind alwaysinline {
-  %old = load <8 x i8> * %0, align 1
+  %old = load PTR_OP_ARGS(`<8 x i8> ',` %0, align 1')
   ifelse(LLVM_VERSION,LLVM_3_0,`
     %old64 = bitcast <8 x i8> %old to i64
     %new64 = bitcast <8 x i8> %1 to i64
@@ -2659,7 +2659,7 @@ define void @__masked_store_blend_i8(<8 x i8>* nocapture, <8 x i8>,
 
 define void @__masked_store_blend_i16(<8 x i16>* nocapture, <8 x i16>,
                                       <8 x i32>) nounwind alwaysinline {
-  %old = load <8 x i16> * %0, align 2
+  %old = load PTR_OP_ARGS(`<8 x i16> ',` %0, align 2')
   ifelse(LLVM_VERSION,LLVM_3_0,`
     %old128 = bitcast <8 x i16> %old to i128
     %new128 = bitcast <8 x i16> %1 to i128
@@ -2686,7 +2686,7 @@ define void @__masked_store_blend_i16(<8 x i16>* nocapture, <8 x i16>,
 define(`masked_store_blend_8_16_by_16', `
 define void @__masked_store_blend_i8(<16 x i8>* nocapture, <16 x i8>,
                                      <16 x i32>) nounwind alwaysinline {
-  %old = load <16 x i8> * %0, align 1
+  %old = load PTR_OP_ARGS(`<16 x i8> ',` %0, align 1')
   ifelse(LLVM_VERSION,LLVM_3_0,`
     %old128 = bitcast <16 x i8> %old to i128
     %new128 = bitcast <16 x i8> %1 to i128
@@ -2710,7 +2710,7 @@ define void @__masked_store_blend_i8(<16 x i8>* nocapture, <16 x i8>,
 
 define void @__masked_store_blend_i16(<16 x i16>* nocapture, <16 x i16>,
                                       <16 x i32>) nounwind alwaysinline {
-  %old = load <16 x i16> * %0, align 2
+  %old = load PTR_OP_ARGS(`<16 x i16> ',` %0, align 2')
   ifelse(LLVM_VERSION,LLVM_3_0,`
     %old256 = bitcast <16 x i16> %old to i256
     %new256 = bitcast <16 x i16> %1 to i256
@@ -2760,7 +2760,7 @@ entry:
 if.then:                                          ; preds = %entry
   %idxprom = ashr i64 %call, 32
   %arrayidx = getelementptr inbounds PTR_OP_ARGS(`i32', `startptr, i64 %idxprom')
-  %val = load i32* %arrayidx, align 4
+  %val = load PTR_OP_ARGS(`i32',` %arrayidx, align 4')
   %valvec = insertelement <1 x i32> undef, i32 %val, i32 0
   store <1 x i32> %valvec, <1 x i32>* %val_ptr, align 4
   br label %if.end
@@ -2849,7 +2849,7 @@ domixed:
   %castptr = bitcast <$1 x $2> * %ptr to <$1 x $4> *
   %castv = bitcast <$1 x $2> %v to <$1 x $4>
   call void @__masked_store_blend_i$6(<$1 x $4> * %castptr, <$1 x $4> %castv, <$1 x MASK> %mask)
-  %blendvec = load <$1 x $2> * %ptr
+  %blendvec = load PTR_OP_ARGS(`<$1 x $2> ',` %ptr')
   br label %check_neighbors
 
 check_neighbors:
@@ -2985,12 +2985,12 @@ define <WIDTH x $1> @__gather32_$1(<WIDTH x i32> %ptrs,
   per_lane(WIDTH, <WIDTH x MASK> %vecmask, `
   %iptr_LANE_ID = extractelement <WIDTH x i32> %ptrs, i32 LANE
   %ptr_LANE_ID = inttoptr i32 %iptr_LANE_ID to $1 *
-  %val_LANE_ID = load $1 * %ptr_LANE_ID
+  %val_LANE_ID = load PTR_OP_ARGS(`$1 ',` %ptr_LANE_ID')
   %store_ptr_LANE_ID = getelementptr PTR_OP_ARGS(`<WIDTH x $1>', `%ret_ptr, i32 0, i32 LANE')
   store $1 %val_LANE_ID, $1 * %store_ptr_LANE_ID
  ')
 
-  %ret = load <WIDTH x $1> * %ret_ptr
+  %ret = load PTR_OP_ARGS(`<WIDTH x $1> ',` %ret_ptr')
   ret <WIDTH x $1> %ret
 }
 
@@ -3001,12 +3001,12 @@ define <WIDTH x $1> @__gather64_$1(<WIDTH x i64> %ptrs,
   per_lane(WIDTH, <WIDTH x MASK> %vecmask, `
   %iptr_LANE_ID = extractelement <WIDTH x i64> %ptrs, i32 LANE
   %ptr_LANE_ID = inttoptr i64 %iptr_LANE_ID to $1 *
-  %val_LANE_ID = load $1 * %ptr_LANE_ID
+  %val_LANE_ID = load PTR_OP_ARGS(`$1 ',` %ptr_LANE_ID')
   %store_ptr_LANE_ID = getelementptr PTR_OP_ARGS(`<WIDTH x $1>', `%ret_ptr, i32 0, i32 LANE')
   store $1 %val_LANE_ID, $1 * %store_ptr_LANE_ID
  ')
 
-  %ret = load <WIDTH x $1> * %ret_ptr
+  %ret = load PTR_OP_ARGS(`<WIDTH x $1> ',` %ret_ptr')
   ret <WIDTH x $1> %ret
 }
 ')
@@ -3033,7 +3033,7 @@ define <WIDTH x $1> @__gather_elt32_$1(i8 * %ptr, <WIDTH x i32> %offsets, i32 %o
 
   ; load value and insert into returned value
   %ptrcast = bitcast i8 * %finalptr to $1 *
-  %val = load $1 *%ptrcast
+  %val = load PTR_OP_ARGS(`$1 ',`%ptrcast')
   %updatedret = insertelement <WIDTH x $1> %ret, $1 %val, i32 %lane
   ret <WIDTH x $1> %updatedret
 }
@@ -3054,7 +3054,7 @@ define <WIDTH x $1> @__gather_elt64_$1(i8 * %ptr, <WIDTH x i64> %offsets, i32 %o
 
   ; load value and insert into returned value
   %ptrcast = bitcast i8 * %finalptr to $1 *
-  %val = load $1 *%ptrcast
+  %val = load PTR_OP_ARGS(`$1 ',`%ptrcast')
   %updatedret = insertelement <WIDTH x $1> %ret, $1 %val, i32 %lane
   ret <WIDTH x $1> %updatedret
 }
@@ -3072,13 +3072,13 @@ define <WIDTH x $1> @__gather_factored_base_offsets32_$1(i8 * %ptr, <WIDTH x i32
   store <WIDTH x i32> zeroinitializer, <WIDTH x i32> * %offsetsPtr
   call void @__masked_store_blend_i32(<WIDTH x i32> * %offsetsPtr, <WIDTH x i32> %offsets, 
                                       <WIDTH x MASK> %vecmask)
-  %newOffsets = load <WIDTH x i32> * %offsetsPtr
+  %newOffsets = load PTR_OP_ARGS(`<WIDTH x i32> ',` %offsetsPtr')
 
   %deltaPtr = alloca <WIDTH x i32>
   store <WIDTH x i32> zeroinitializer, <WIDTH x i32> * %deltaPtr
   call void @__masked_store_blend_i32(<WIDTH x i32> * %deltaPtr, <WIDTH x i32> %offset_delta, 
                                       <WIDTH x MASK> %vecmask)
-  %newDelta = load <WIDTH x i32> * %deltaPtr
+  %newDelta = load PTR_OP_ARGS(`<WIDTH x i32> ',` %deltaPtr')
 
   %ret0 = call <WIDTH x $1> @__gather_elt32_$1(i8 * %ptr, <WIDTH x i32> %newOffsets,
                                             i32 %offset_scale, <WIDTH x i32> %newDelta,
@@ -3103,13 +3103,13 @@ define <WIDTH x $1> @__gather_factored_base_offsets64_$1(i8 * %ptr, <WIDTH x i64
   store <WIDTH x i64> zeroinitializer, <WIDTH x i64> * %offsetsPtr
   call void @__masked_store_blend_i64(<WIDTH x i64> * %offsetsPtr, <WIDTH x i64> %offsets, 
                                       <WIDTH x MASK> %vecmask)
-  %newOffsets = load <WIDTH x i64> * %offsetsPtr
+  %newOffsets = load PTR_OP_ARGS(`<WIDTH x i64> ',` %offsetsPtr')
 
   %deltaPtr = alloca <WIDTH x i64>
   store <WIDTH x i64> zeroinitializer, <WIDTH x i64> * %deltaPtr
   call void @__masked_store_blend_i64(<WIDTH x i64> * %deltaPtr, <WIDTH x i64> %offset_delta, 
                                       <WIDTH x MASK> %vecmask)
-  %newDelta = load <WIDTH x i64> * %deltaPtr
+  %newDelta = load PTR_OP_ARGS(`<WIDTH x i64> ',` %deltaPtr')
 
   %ret0 = call <WIDTH x $1> @__gather_elt64_$1(i8 * %ptr, <WIDTH x i64> %newOffsets,
                                             i32 %offset_scale, <WIDTH x i64> %newDelta,

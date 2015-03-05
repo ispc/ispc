@@ -487,7 +487,7 @@ declare <8 x float> @llvm.x86.avx.blendv.ps.256(<8 x float>, <8 x float>,
 define void @__masked_store_blend_i32(<8 x i32>* nocapture, <8 x i32>, 
                                       <8 x i32>) nounwind alwaysinline {
   %mask_as_float = bitcast <8 x i32> %2 to <8 x float>
-  %oldValue = load <8 x i32>* %0, align 4
+  %oldValue = load PTR_OP_ARGS(`<8 x i32>',` %0, align 4')
   %oldAsFloat = bitcast <8 x i32> %oldValue to <8 x float>
   %newAsFloat = bitcast <8 x i32> %1 to <8 x float>
   %blend = call <8 x float> @llvm.x86.avx.blendv.ps.256(<8 x float> %oldAsFloat,
@@ -501,7 +501,7 @@ define void @__masked_store_blend_i32(<8 x i32>* nocapture, <8 x i32>,
 
 define void @__masked_store_blend_i64(<8 x i64>* nocapture %ptr, <8 x i64> %new, 
                                       <8 x i32> %i32mask) nounwind alwaysinline {
-  %oldValue = load <8 x i64>* %ptr, align 8
+  %oldValue = load PTR_OP_ARGS(`<8 x i64>',` %ptr, align 8')
   %mask = bitcast <8 x i32> %i32mask to <8 x float>
 
   ; Do 4x64-bit blends by doing two <8 x i32> blends, where the <8 x i32> values

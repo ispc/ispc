@@ -471,7 +471,7 @@ define void @__masked_store_blend_i32(<8 x i32>* nocapture, <8 x i32>,
                 <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   %mask_b = shufflevector <8 x float> %mask_as_float, <8 x float> undef,
                 <4 x i32> <i32 4, i32 5, i32 6, i32 7>
-  %oldValue = load <8 x i32>* %0, align 4
+  %oldValue = load PTR_OP_ARGS(`<8 x i32>',` %0, align 4')
   %oldAsFloat = bitcast <8 x i32> %oldValue to <8 x float>
   %newAsFloat = bitcast <8 x i32> %1 to <8 x float>
   %old_a = shufflevector <8 x float> %oldAsFloat, <8 x float> undef,
@@ -500,7 +500,7 @@ define void @__masked_store_blend_i64(<8 x i64>* nocapture %ptr, <8 x i64> %new,
 
   %mask_as_float = bitcast <8 x i32> %mask to <8 x float>
 
-  %old = load <8 x i64>* %ptr, align 8
+  %old = load PTR_OP_ARGS(`<8 x i64>',` %ptr, align 8')
 
   ; set up the first two 64-bit values
   %old01 = shufflevector <8 x i64> %old, <8 x i64> undef, <2 x i32> <i32 0, i32 1>
