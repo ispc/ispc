@@ -110,8 +110,8 @@
 
 define(`PTR_OP_ARGS',
   ifelse(LLVM_VERSION, LLVM_3_7,
-    ``$1 , $1 * $2'',
-    ``$1 * $2''
+    ``$1 , $1 *'',
+    ``$1 *''
   )
 )
 
@@ -173,7 +173,7 @@ declare void @abort() noreturn nounwind
 
 define void @__set_system_isa() {
 entry:
-  %bi = load PTR_OP_ARGS(`i32 ',` @__system_best_isa')
+  %bi = load PTR_OP_ARGS(`i32 ')  @__system_best_isa
   %unset = icmp eq i32 %bi, -1
   br i1 %unset, label %set_system_isa, label %done
 

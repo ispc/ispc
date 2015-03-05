@@ -396,7 +396,7 @@ define void @__masked_store_blend_i64(<16 x i64>* nocapture, <16 x i64>,
                                       <16 x i8> %mask) nounwind
                                       alwaysinline {
   %mask_as_i1 = trunc <16 x MASK> %mask to <16 x i1>
-  %old = load PTR_OP_ARGS(`<16 x i64>',` %0, align 4')
+  %old = load PTR_OP_ARGS(`<16 x i64>')  %0, align 4
   %blend = select <16 x i1> %mask_as_i1, <16 x i64> %1, <16 x i64> %old
   store <16 x i64> %blend, <16 x i64>* %0, align 4
   ret void
@@ -405,7 +405,7 @@ define void @__masked_store_blend_i64(<16 x i64>* nocapture, <16 x i64>,
 define void @__masked_store_blend_i32(<16 x i32>* nocapture, <16 x i32>, 
                                       <16 x MASK> %mask) nounwind alwaysinline {
   %mask_as_i1 = trunc <16 x MASK> %mask to <16 x i1>
-  %old = load PTR_OP_ARGS(`<16 x i32>',` %0, align 4')
+  %old = load PTR_OP_ARGS(`<16 x i32>')  %0, align 4
   %blend = select <16 x i1> %mask_as_i1, <16 x i32> %1, <16 x i32> %old
   store <16 x i32> %blend, <16 x i32>* %0, align 4
   ret void
@@ -414,7 +414,7 @@ define void @__masked_store_blend_i32(<16 x i32>* nocapture, <16 x i32>,
 define void @__masked_store_blend_i16(<16 x i16>* nocapture, <16 x i16>,
                                      <16 x MASK> %mask) nounwind alwaysinline {
   %mask_as_i1 = trunc <16 x MASK> %mask to <16 x i1>
-  %old = load PTR_OP_ARGS(`<16 x i16>',` %0, align 4')
+  %old = load PTR_OP_ARGS(`<16 x i16>')  %0, align 4
   %blend = select <16 x i1> %mask_as_i1, <16 x i16> %1, <16 x i16> %old
   store <16 x i16> %blend, <16 x i16>* %0, align 4
   ret void
@@ -424,7 +424,7 @@ declare <16 x i8> @llvm.x86.sse41.pblendvb(<16 x i8>, <16 x i8>, <16 x i8>) noun
 
 define void @__masked_store_blend_i8(<16 x i8>* nocapture, <16 x i8>,
                                      <16 x MASK> %mask) nounwind alwaysinline {
-  %old = load PTR_OP_ARGS(`<16 x i8>',` %0, align 4')
+  %old = load PTR_OP_ARGS(`<16 x i8>')  %0, align 4
   %blend = call <16 x i8> @llvm.x86.sse41.pblendvb(<16 x i8> %old, <16 x i8> %1,
                                                    <16 x i8> %mask)
   store <16 x i8> %blend, <16 x i8>* %0, align 4

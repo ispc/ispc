@@ -399,7 +399,7 @@ reduce_equal(4)
 
 define void @__masked_store_blend_i32(<4 x i32>* nocapture, <4 x i32>, 
                                       <4 x i32> %mask) nounwind alwaysinline {
-  %val = load PTR_OP_ARGS(`<4 x i32> ',` %0, align 4')
+  %val = load PTR_OP_ARGS(`<4 x i32> ')  %0, align 4
   %newval = call <4 x i32> @__vselect_i32(<4 x i32> %val, <4 x i32> %1, <4 x i32> %mask) 
   store <4 x i32> %newval, <4 x i32> * %0, align 4
   ret void
@@ -407,7 +407,7 @@ define void @__masked_store_blend_i32(<4 x i32>* nocapture, <4 x i32>,
 
 define void @__masked_store_blend_i64(<4 x i64>* nocapture %ptr, <4 x i64> %new,
                                       <4 x i32> %mask) nounwind alwaysinline {
-  %oldValue = load PTR_OP_ARGS(`<4 x i64>',` %ptr, align 8')
+  %oldValue = load PTR_OP_ARGS(`<4 x i64>')  %ptr, align 8
 
   ; Do 4x64-bit blends by doing two <4 x i32> blends, where the <4 x i32> values
   ; are actually bitcast <2 x i64> values

@@ -433,7 +433,7 @@ declare <4 x float> @llvm.x86.sse41.blendvps(<4 x float>, <4 x float>,
 define void @__masked_store_blend_i32(<4 x i32>* nocapture, <4 x i32>, 
                                       <4 x i32> %mask) nounwind alwaysinline {
   %mask_as_float = bitcast <4 x i32> %mask to <4 x float>
-  %oldValue = load PTR_OP_ARGS(`<4 x i32>',` %0, align 4')
+  %oldValue = load PTR_OP_ARGS(`<4 x i32>')  %0, align 4
   %oldAsFloat = bitcast <4 x i32> %oldValue to <4 x float>
   %newAsFloat = bitcast <4 x i32> %1 to <4 x float>
   %blend = call <4 x float> @llvm.x86.sse41.blendvps(<4 x float> %oldAsFloat,
@@ -447,7 +447,7 @@ define void @__masked_store_blend_i32(<4 x i32>* nocapture, <4 x i32>,
 
 define void @__masked_store_blend_i64(<4 x i64>* nocapture %ptr, <4 x i64> %new,
                                       <4 x i32> %i32mask) nounwind alwaysinline {
-  %oldValue = load PTR_OP_ARGS(`<4 x i64>',` %ptr, align 8')
+  %oldValue = load PTR_OP_ARGS(`<4 x i64>')  %ptr, align 8
   %mask = bitcast <4 x i32> %i32mask to <4 x float>
 
   ; Do 4x64-bit blends by doing two <4 x i32> blends, where the <4 x i32> values
