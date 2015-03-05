@@ -2157,7 +2157,7 @@ define <WIDTH x i64> @__new_varying32_32rt(<WIDTH x i32> %size, <WIDTH x MASK> %
     %sz_LANE_ID = extractelement <WIDTH x i32> %size, i32 LANE
     %ptr_LANE_ID = call noalias i8 * @_aligned_malloc(i32 %sz_LANE_ID, i32 %alignment)
     %ptr_int_LANE_ID = ptrtoint i8 * %ptr_LANE_ID to i64
-    %store_LANE_ID = getelementptr i64 * %ret64, i32 LANE
+    %store_LANE_ID = getelementptr PTR_OP_ARGS(`i64', `%ret64, i32 LANE')
     store i64 %ptr_int_LANE_ID, i64 * %store_LANE_ID')
 
   %r = load <WIDTH x i64> * %ret
@@ -2213,7 +2213,7 @@ define <WIDTH x i64> @__new_varying32_64rt(<WIDTH x i32> %size, <WIDTH x MASK> %
     %sz64_LANE_ID = zext i32 %sz_LANE_ID to i64
     %ptr_LANE_ID = call noalias i8 * @_aligned_malloc(i64 %sz64_LANE_ID, i64 %alignment64)
     %ptr_int_LANE_ID = ptrtoint i8 * %ptr_LANE_ID to i64
-    %store_LANE_ID = getelementptr i64 * %ret64, i32 LANE
+    %store_LANE_ID = getelementptr PTR_OP_ARGS(`i64', `%ret64, i32 LANE')
     store i64 %ptr_int_LANE_ID, i64 * %store_LANE_ID')
 
   %r = load <WIDTH x i64> * %ret
@@ -2231,7 +2231,7 @@ define <WIDTH x i64> @__new_varying64_64rt(<WIDTH x i64> %size, <WIDTH x MASK> %
     %sz64_LANE_ID = extractelement <WIDTH x i64> %size, i32 LANE
     %ptr_LANE_ID = call noalias i8 * @_aligned_malloc(i64 %sz64_LANE_ID, i64 %alignment64)
     %ptr_int_LANE_ID = ptrtoint i8 * %ptr_LANE_ID to i64
-    %store_LANE_ID = getelementptr i64 * %ret64, i32 LANE
+    %store_LANE_ID = getelementptr PTR_OP_ARGS(`i64', `%ret64, i32 LANE')
     store i64 %ptr_int_LANE_ID, i64 * %store_LANE_ID')
 
   %r = load <WIDTH x i64> * %ret
@@ -2433,7 +2433,7 @@ define <$1 x i64> @__$2_varying_$3(<$1 x i64>, <$1 x i64>) nounwind alwaysinline
   %v1_`'i = extractelement <$1 x i64> %1, i32 i
   %c_`'i = icmp $4 i64 %v0_`'i, %v1_`'i
   %v_`'i = select i1 %c_`'i, i64 %v0_`'i, i64 %v1_`'i
-  %ptr_`'i = getelementptr i64 * %r64ptr, i32 i
+  %ptr_`'i = getelementptr PTR_OP_ARGS(`i64', `%r64ptr, i32 i')
   store i64 %v_`'i, i64 * %ptr_`'i
 ')                  
 
@@ -2499,9 +2499,9 @@ load_lane:
   ; yes!  do the load and store the result into the appropriate place in the
   ; allocaed memory above
   %ptr32 = bitcast i8 * %0 to $1 *
-  %lane_ptr = getelementptr $1 * %ptr32, i32 %lane
+  %lane_ptr = getelementptr PTR_OP_ARGS(`$1', `%ptr32, i32 %lane')
   %val = load $1 * %lane_ptr
-  %store_ptr = getelementptr $1 * %retptr32, i32 %lane
+  %store_ptr = getelementptr PTR_OP_ARGS(`$1', `%retptr32, i32 %lane')
   store $1 %val, $1 * %store_ptr
   br label %lane_done
 
@@ -2525,7 +2525,7 @@ return:
 define(`gen_masked_store', `
 define void @__masked_store_$1(<WIDTH x $1>* nocapture, <WIDTH x $1>, <WIDTH x MASK>) nounwind alwaysinline {
   per_lane(WIDTH, <WIDTH x MASK> %2, `
-      %ptr_LANE_ID = getelementptr <WIDTH x $1> * %0, i32 0, i32 LANE
+      %ptr_LANE_ID = getelementptr PTR_OP_ARGS(`<WIDTH x $1>', `%0, i32 0, i32 LANE')
       %storeval_LANE_ID = extractelement <WIDTH x $1> %1, i32 LANE
       store $1 %storeval_LANE_ID, $1 * %ptr_LANE_ID')
   ret void
@@ -2759,7 +2759,7 @@ entry:
 
 if.then:                                          ; preds = %entry
   %idxprom = ashr i64 %call, 32
-  %arrayidx = getelementptr inbounds i32* %startptr, i64 %idxprom
+  %arrayidx = getelementptr inbounds PTR_OP_ARGS(`i32', `startptr, i64 %idxprom')
   %val = load i32* %arrayidx, align 4
   %valvec = insertelement <1 x i32> undef, i32 %val, i32 0
   store <1 x i32> %valvec, <1 x i32>* %val_ptr, align 4
@@ -2780,7 +2780,7 @@ entry:
 
 if.then:                                          ; preds = %entry
   %idxprom = ashr i64 %call, 32
-  %arrayidx = getelementptr inbounds i32* %startptr, i64 %idxprom
+  %arrayidx = getelementptr inbounds PTR_OP_ARGS(`i32', `startptr, i64 %idxprom')
   %val = extractelement <1 x i32> %vals, i32 0
   store i32 %val, i32* %arrayidx, align 4
   br label %if.end
@@ -2986,7 +2986,7 @@ define <WIDTH x $1> @__gather32_$1(<WIDTH x i32> %ptrs,
   %iptr_LANE_ID = extractelement <WIDTH x i32> %ptrs, i32 LANE
   %ptr_LANE_ID = inttoptr i32 %iptr_LANE_ID to $1 *
   %val_LANE_ID = load $1 * %ptr_LANE_ID
-  %store_ptr_LANE_ID = getelementptr <WIDTH x $1> * %ret_ptr, i32 0, i32 LANE
+  %store_ptr_LANE_ID = getelementptr PTR_OP_ARGS(`<WIDTH x $1>', `%ret_ptr, i32 0, i32 LANE')
   store $1 %val_LANE_ID, $1 * %store_ptr_LANE_ID
  ')
 
@@ -3002,7 +3002,7 @@ define <WIDTH x $1> @__gather64_$1(<WIDTH x i64> %ptrs,
   %iptr_LANE_ID = extractelement <WIDTH x i64> %ptrs, i32 LANE
   %ptr_LANE_ID = inttoptr i64 %iptr_LANE_ID to $1 *
   %val_LANE_ID = load $1 * %ptr_LANE_ID
-  %store_ptr_LANE_ID = getelementptr <WIDTH x $1> * %ret_ptr, i32 0, i32 LANE
+  %store_ptr_LANE_ID = getelementptr PTR_OP_ARGS(`<WIDTH x $1>', `%ret_ptr, i32 0, i32 LANE')
   store $1 %val_LANE_ID, $1 * %store_ptr_LANE_ID
  ')
 
@@ -3025,11 +3025,11 @@ define <WIDTH x $1> @__gather_elt32_$1(i8 * %ptr, <WIDTH x i32> %offsets, i32 %o
   %offset64 = sext i32 %offset32 to i64
   %scale64 = sext i32 %offset_scale to i64
   %offset = mul i64 %offset64, %scale64
-  %ptroffset = getelementptr i8 * %ptr, i64 %offset
+  %ptroffset = getelementptr PTR_OP_ARGS(`i8', `%ptr, i64 %offset')
 
   %delta = extractelement <WIDTH x i32> %offset_delta, i32 %lane
   %delta64 = sext i32 %delta to i64
-  %finalptr = getelementptr i8 * %ptroffset, i64 %delta64
+  %finalptr = getelementptr PTR_OP_ARGS(`i8', `%ptroffset, i64 %delta64')
 
   ; load value and insert into returned value
   %ptrcast = bitcast i8 * %finalptr to $1 *
@@ -3047,10 +3047,10 @@ define <WIDTH x $1> @__gather_elt64_$1(i8 * %ptr, <WIDTH x i64> %offsets, i32 %o
   ; patterns that apply the free x86 2x/4x/8x scaling in addressing calculations
   %offset_scale64 = sext i32 %offset_scale to i64
   %offset = mul i64 %offset64, %offset_scale64
-  %ptroffset = getelementptr i8 * %ptr, i64 %offset
+  %ptroffset = getelementptr PTR_OP_ARGS(`i8', `%ptr, i64 %offset')
 
   %delta64 = extractelement <WIDTH x i64> %offset_delta, i32 %lane
-  %finalptr = getelementptr i8 * %ptroffset, i64 %delta64
+  %finalptr = getelementptr PTR_OP_ARGS(`i8', `%ptroffset, i64 %delta64')
 
   ; load value and insert into returned value
   %ptrcast = bitcast i8 * %finalptr to $1 *
@@ -3180,11 +3180,11 @@ define void @__scatter_elt32_$1(i8 * %ptr, <WIDTH x i32> %offsets, i32 %offset_s
   %offset64 = sext i32 %offset32 to i64
   %scale64 = sext i32 %offset_scale to i64
   %offset = mul i64 %offset64, %scale64
-  %ptroffset = getelementptr i8 * %ptr, i64 %offset
+  %ptroffset = getelementptr PTR_OP_ARGS(`i8', `%ptr, i64 %offset')
 
   %delta = extractelement <WIDTH x i32> %offset_delta, i32 %lane
   %delta64 = sext i32 %delta to i64
-  %finalptr = getelementptr i8 * %ptroffset, i64 %delta64
+  %finalptr = getelementptr PTR_OP_ARGS(`i8', `%ptroffset, i64 %delta64')
 
   %ptrcast = bitcast i8 * %finalptr to $1 *
   %storeval = extractelement <WIDTH x $1> %values, i32 %lane
@@ -3200,10 +3200,10 @@ define void @__scatter_elt64_$1(i8 * %ptr, <WIDTH x i64> %offsets, i32 %offset_s
   ; patterns that apply the free x86 2x/4x/8x scaling in addressing calculations
   %scale64 = sext i32 %offset_scale to i64
   %offset = mul i64 %offset64, %scale64
-  %ptroffset = getelementptr i8 * %ptr, i64 %offset
+  %ptroffset = getelementptr PTR_OP_ARGS(`i8', `%ptr, i64 %offset')
 
   %delta64 = extractelement <WIDTH x i64> %offset_delta, i32 %lane
-  %finalptr = getelementptr i8 * %ptroffset, i64 %delta64
+  %finalptr = getelementptr PTR_OP_ARGS(`i8', `%ptroffset, i64 %delta64')
 
   %ptrcast = bitcast i8 * %finalptr to $1 *
   %storeval = extractelement <WIDTH x $1> %values, i32 %lane
