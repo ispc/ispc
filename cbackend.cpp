@@ -292,6 +292,15 @@ static void findUsedArrayTypes(const llvm::Module *m, std::vector<llvm::ArrayTyp
   TypeFinder(t).run(*m);
 }
 
+
+static bool is_vec16_i64_ty(llvm::Type *Ty) {
+  llvm::VectorType *VTy = llvm::dyn_cast<llvm::VectorType>(Ty);
+  if ((VTy != NULL) && (VTy->getElementType()->isIntegerTy()) && 
+    VTy->getElementType()->getPrimitiveSizeInBits() == 64)
+    return true;
+  return false;
+}
+
 namespace {
   class CBEMCAsmInfo : public llvm::MCAsmInfo {
   public:
@@ -985,9 +994,8 @@ llvm::raw_ostream &CWriter::printType(llvm::raw_ostream &Out, llvm::Type *Ty,
 
 void CWriter::printConstantArray(llvm::ConstantArray *CPA, bool Static) {
   // vec16_i64 should be handled separately
-  llvm::VectorType *VTy = llvm::dyn_cast<llvm::VectorType>(CPA->getOperand(0)->getType());
-  if ((VTy != NULL) && (VTy->getElementType()->isIntegerTy()) && 
-    VTy->getElementType()->getPrimitiveSizeInBits() == 64) {
+  
+  if (is_vec16_i64_ty(CPA->getOperand(0)->getType())) {
     Out << "/* vec16_i64 should be loaded carefully on knc */";
     Out << "\n#if defined(KNC)\n";
     Out << "hilo2zmm";
@@ -1000,10 +1008,7 @@ void CWriter::printConstantArray(llvm::ConstantArray *CPA, bool Static) {
   for (unsigned i = 1, e = CPA->getNumOperands(); i != e; ++i) {
     Out << ", ";
 
-
-    llvm::VectorType *VTy = llvm::dyn_cast<llvm::VectorType>(CPA->getOperand(0)->getType());
-    if ((VTy != NULL) && (VTy->getElementType()->isIntegerTy()) && 
-      VTy->getElementType()->getPrimitiveSizeInBits() == 64) {
+    if (is_vec16_i64_ty(CPA->getOperand(i)->getType())) {
       Out << "/* vec16_i64 should be loaded carefully on knc */";
       Out << "\n#if defined(KNC) \n";
       Out << "hilo2zmm";
@@ -1921,7 +1926,7 @@ void CWriter::writeInstComputationInline(llvm::Instruction &I) {
 
   if (NeedBoolTrunc)
     Out << "((";
-  
+ 
   visit(I);
 
   if (NeedBoolTrunc)
@@ -2627,9 +2632,7 @@ bool CWriter::doInitialization(llvm::Module &M) {
           Out << " = " ;
 
           // vec16_i64 should be handled separately
-          llvm::VectorType *VTy = llvm::dyn_cast<llvm::VectorType>(I->getType()->getElementType());
-          if ((VTy != NULL) && (VTy->getElementType()->isIntegerTy()) && 
-            VTy->getElementType()->getPrimitiveSizeInBits() == 64) {
+          if (is_vec16_i64_ty(I->getType()->getElementType())) {
             Out << "/* vec16_i64 should be loaded carefully on knc */\n";
             Out << "\n#if defined(KNC) \n";
             Out << "hilo2zmm";
@@ -4001,6 +4004,28 @@ void CWriter::visitCallInst(llvm::CallInst &I) {
     if (Callee->getName() == "malloc" ||
         Callee->getName() == "_aligned_malloc")
         Out << "(uint8_t *)";
+
+    if (Callee->getName() == "__masked_store_i64") {
+        llvm::CallSite CS(&I);
+        llvm::CallSite::arg_iterator AI = CS.arg_begin();
+
+        if (is_vec16_i64_ty(llvm::cast<llvm::PointerType>((*AI)->getType())->getElementType())) {
+            Out << "/* Replacing store of vec16_i64 val into &vec16_i64 pointer with a simple copy */\n";
+            // If we are trying to get a pointer to from a vec16_i64 var
+            // It would be better to replace this instruction with a masked copy
+            if (llvm::isa<llvm::GetElementPtrInst>(*AI)) {
+                writeOperandDeref(*AI);
+                Out << " = __select(";
+                writeOperand(*(AI+2));
+                Out << ", ";
+                writeOperand(*(AI+1));
+                Out << ", ";
+                writeOperandDeref(*AI);
+                Out << ")";
+                return;
+            }
+        }
+    }
 
     if (NeedsCast) {
       // Ok, just cast the pointer type.
