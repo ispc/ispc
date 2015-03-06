@@ -1388,6 +1388,10 @@ static FORCEINLINE __vec16_i1 __ordered_float(__vec16_f a, __vec16_f b) {
   return _mm512_cmpord_ps_mask(a, b);
 }
 
+static FORCEINLINE __vec16_i1 __ordered_float_and_mask(__vec16_f a, __vec16_f b, __vec16_i1 mask) {
+  return _mm512_mask_cmpord_ps_mask(mask, a, b);
+}
+
 static FORCEINLINE __vec16_i1 __unordered_float(__vec16_f a, __vec16_f b) {
   return _mm512_cmpunord_ps_mask(a, b);
 }
