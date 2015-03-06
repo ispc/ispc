@@ -140,11 +140,14 @@ namespace {
     llvm::DenseSet<const llvm::Metadata*> VisitedMDNodes;
 #endif
     llvm::DenseSet<llvm::Type*> VisitedTypes;
-
     std::vector<llvm::ArrayType*> &ArrayTypes;
+    std::vector<llvm::IntegerType*> &IntegerTypes;
+    std::vector<bool> &IsVolatile;
+    std::vector<int> &Alignment;
   public:
-    TypeFinder(std::vector<llvm::ArrayType*> &t)
-      : ArrayTypes(t) {}
+    TypeFinder(std::vector<llvm::ArrayType*> &t, std::vector<llvm::IntegerType*> &i,
+              std::vector<bool> &v, std::vector<int> &a)
+      : ArrayTypes(t), IntegerTypes(i) , IsVolatile(v), Alignment(a){}
 
     void run(const llvm::Module &M) {
       // Get types from global variables.
@@ -182,6 +185,22 @@ namespace {
 
             // Incorporate the type of the instruction and all its operands.
             incorporateType(I.getType());
+            if (llvm::isa<llvm::StoreInst>(&I))
+              if (llvm::IntegerType *ITy = llvm::dyn_cast<llvm::IntegerType>(I.getType())) {
+                IntegerTypes.push_back(ITy);
+                const llvm::StoreInst *St = llvm::dyn_cast<llvm::StoreInst>(&I);
+                IsVolatile.push_back(St->isVolatile());
+                Alignment.push_back(St->getAlignment());
+              }
+
+            if (llvm::isa<llvm::LoadInst>(&I))
+              if (llvm::IntegerType *ITy = llvm::dyn_cast<llvm::IntegerType>(I.getType())) {
+                IntegerTypes.push_back(ITy);
+                const llvm::LoadInst *St = llvm::dyn_cast<llvm::LoadInst>(&I);
+                IsVolatile.push_back(St->isVolatile());
+                Alignment.push_back(St->getAlignment());
+              }
+
             for (llvm::User::const_op_iterator OI = I.op_begin(), OE = I.op_end();
                  OI != OE; ++OI)
               incorporateValue(*OI);
@@ -288,8 +307,10 @@ namespace {
   };
 } // end anonymous namespace
 
-static void findUsedArrayTypes(const llvm::Module *m, std::vector<llvm::ArrayType*> &t) {
-  TypeFinder(t).run(*m);
+static void findUsedArrayAndLongIntTypes(const llvm::Module *m, std::vector<llvm::ArrayType*> &t, 
+                               std::vector<llvm::IntegerType*> &i, std::vector<bool> &IsVolatile, 
+                               std::vector<int> &Alignment) {
+  TypeFinder(t, i, IsVolatile, Alignment).run(*m);
 }
 
 
@@ -757,10 +778,8 @@ CWriter::printSimpleType(llvm::raw_ostream &Out, llvm::Type *Ty, bool isSigned,
       return Out << (isSigned?"":"u") << "int32_t " << NameSoFar;
     else if (NumBits <= 64)
       return Out << (isSigned?"":"u") << "int64_t "<< NameSoFar;
-    else {
-      assert(NumBits <= 128 && "Bit widths > 128 not implemented yet");
-      return Out << (isSigned?"llvmInt128":"llvmUInt128") << " " << NameSoFar;
-    }
+    else
+      return Out << "iN<" << NumBits << "> " << NameSoFar;
   }
   case llvm::Type::FloatTyID:  return Out << "float "   << NameSoFar;
   case llvm::Type::DoubleTyID: return Out << "double "  << NameSoFar;
@@ -802,8 +821,8 @@ CWriter::printSimpleType(llvm::raw_ostream &Out, llvm::Type *Ty, bool isSigned,
             suffix = "i64";
             break;
         default:
-            llvm::report_fatal_error("Only integer types of size 8/16/32/64 are "
-                                     "supported by the C++ backend.");
+            suffix = "iN";
+            break;
         }
     }
 
@@ -1492,9 +1511,15 @@ void CWriter::printConstant(llvm::Constant *CPV, bool Static) {
       Out << (CI->getZExtValue() ? '1' : '0');
     else if (Ty == llvm::Type::getInt32Ty(CPV->getContext()))
       Out << CI->getZExtValue() << 'u';
-    else if (Ty->getPrimitiveSizeInBits() > 32) {
-      assert(Ty->getPrimitiveSizeInBits() == 64);
+    else if (Ty == llvm::Type::getInt64Ty(CPV->getContext()))
       Out << CI->getZExtValue() << "ull";
+    else if (Ty->getPrimitiveSizeInBits() > 64) {
+      Out << "\"";
+      const uint64_t *Ptr64 = CPV->getUniqueInteger().getRawData();
+      for (int i = 0; i < Ty->getPrimitiveSizeInBits(); i++) {
+        Out << ((Ptr64[i / (sizeof (uint64_t) * 8)] >> (i % (sizeof (uint64_t) * 8))) & 1);
+      }
+      Out << "\"";
     }
     else {
       Out << "((";
@@ -1903,19 +1928,6 @@ std::string CWriter::GetValueName(const llvm::Value *Operand) {
 /// writeInstComputationInline - Emit the computation for the specified
 /// instruction inline, with no destination provided.
 void CWriter::writeInstComputationInline(llvm::Instruction &I) {
-  // We can't currently support integer types other than 1, 8, 16, 32, 64.
-  // Validate this.
-  llvm::Type *Ty = I.getType();
-  if (Ty->isIntegerTy() && (Ty!=llvm::Type::getInt1Ty(I.getContext()) &&
-                            Ty!=llvm::Type::getInt8Ty(I.getContext()) &&
-        Ty!=llvm::Type::getInt16Ty(I.getContext()) &&
-        Ty!=llvm::Type::getInt32Ty(I.getContext()) &&
-        Ty!=llvm::Type::getInt64Ty(I.getContext()))) {
-      llvm::report_fatal_error("The C backend does not currently support integer "
-                               "types of widths other than 1, 8, 16, 32, 64.\n"
-                               "This is being tracked as PR 4158.");
-  }
-
   // If this is a non-trivial bool computation, make sure to truncate down to
   // a 1 bit value.  This is important because we want "add i1 x, y" to return
   // "0" when x and y are true, not "2" for example.
@@ -2782,6 +2794,72 @@ void CWriter::printModuleTypes() {
   Out << "  double Double;\n";
   Out << "} llvmBitCastUnion;\n";
 
+  Out << "\n/* This is special class, designed for operations with long int.*/                       \n";
+  Out << "template <int num_bits>                                                                    \n";
+  Out << "struct iN {                                                                                \n";
+  Out << "  int num[num_bits / (sizeof (int) * 8)];                                                  \n";
+  Out << "                                                                                           \n";
+  Out << "  iN () {}                                                                                 \n";
+  Out << "                                                                                           \n";
+  Out << "  iN (const char *val) {                                                                   \n";
+  Out << "    if (val == NULL)                                                                       \n";
+  Out << "      return;                                                                              \n";
+  Out << "    int length = num_bits / (sizeof (int) * 8);                                            \n";
+  Out << "    int val_len = 0;                                                                       \n";
+  Out << "    for (val_len = 0; val[val_len]; (val_len)++);                                          \n";
+  Out << "    for (int i = 0; (i < val_len && i < num_bits); i++)                                    \n";
+  Out << "      num[i / (sizeof (int) * 8)] = (num[i / (sizeof (int) * 8)] << 1) | (val[i] - '0');   \n";
+  Out << "  }                                                                                        \n";
+  Out << "                                                                                           \n";
+  Out << "  ~iN () {}                                                                                \n";
+  Out << "                                                                                           \n";
+  Out << "  iN operator >> (const iN rhs) {                                                          \n";
+  Out << "    iN res;                                                                                \n";
+  Out << "    int length = num_bits / (sizeof (int) * 8);                                            \n";
+  Out << "    int cells_shift = rhs.num[0] / (sizeof(int) * 8);                                      \n";
+  Out << "    int small_shift = rhs.num[0] % (sizeof(int) * 8);                                      \n";
+  Out << "    for (int i = 0; i < (length - cells_shift); i++)                                       \n";
+  Out << "      res.num[i] = this->num[cells_shift + i];                                             \n";
+  Out << "    for (int i = 0; i < length - 1; i++) {                                                 \n";
+  Out << "      res.num[i] = this->num[i] >> small_shift;                                            \n";
+  Out << "      res.num[i]  = ((this->num[i + 1] << ((sizeof(int) * 8) - small_shift))) | res.num[i];\n";
+  Out << "    }                                                                                      \n";
+  Out << "    res.num[length - 1] = res.num[length - 1] >> small_shift;                              \n";
+  Out << "    return res;                                                                            \n";
+  Out << "  }                                                                                        \n";
+  Out << "                                                                                           \n";
+  Out << "  iN operator & (iN rhs) {                                                                 \n";
+  Out << "    iN res;                                                                                \n";
+  Out << "    int length = num_bits / (sizeof (int) * 8);                                            \n";
+  Out << "    for (int i = 0; i < length; i++)                                                       \n";
+  Out << "      res.num[i] = (this->num[i]) & (rhs.num[i]);                                          \n";
+  Out << "    return res;                                                                            \n";
+  Out << "  }                                                                                        \n";
+  Out << "                                                                                           \n";
+  Out << "  operator uint32_t() { return this->num[0]; }                                             \n";
+  Out << "                                                                                           \n";
+  Out << "  template <class T>                                                                       \n";
+  Out << "  friend iN<num_bits> __cast_bits(iN<num_bits> to, T from) {                               \n";
+  Out << "    for (int i = 0; i <" << vectorWidth << "; i++)                                         \n";
+  Out << "      to.num[i] = ((int*)(&from))[i];                                                      \n";
+  Out << "    return to;                                                                             \n";
+  Out << "  }                                                                                        \n";
+  Out << "                                                                                           \n";
+  Out << "  template <class T>                                                                       \n";
+  Out << "  friend T __cast_bits(T to, iN<num_bits> from) {                                          \n";
+  Out << "    for (int i = 0; i <" << vectorWidth << "; i++)                                         \n";
+  Out << "      ((int*)(&to))[i] = from.num[i];                                                      \n";
+  Out << "    return to;                                                                             \n";
+  Out << "  }                                                                                        \n";
+  Out << "                                                                                           \n";
+  Out << "  template <int ALIGN, class T>                                                            \n";
+  Out << "  friend void __store(T *p, iN<num_bits> val) {                                            \n";
+  Out << "    for (int i = 0; i <" << vectorWidth << "; i++)                                         \n";
+  Out << "      ((int*)p)[i] = val.num[i];                                                           \n";
+  Out << "  }                                                                                        \n";
+  Out << "};                                                                                         \n";
+  Out << "\n";
+
   // Get all of the struct types used in the module.
   std::vector<llvm::StructType*> StructTypes;
   llvm::TypeFinder typeFinder;
@@ -2792,7 +2870,11 @@ void CWriter::printModuleTypes() {
 
   // Get all of the array types used in the module
   std::vector<llvm::ArrayType*> ArrayTypes;
-  findUsedArrayTypes(TheModule, ArrayTypes);
+  std::vector<llvm::IntegerType*> IntegerTypes;
+  std::vector<bool> IsVolatile;
+  std::vector<int>  Alignment;
+
+  findUsedArrayAndLongIntTypes(TheModule, ArrayTypes, IntegerTypes, IsVolatile, Alignment);
 
   if (StructTypes.empty() && ArrayTypes.empty())
       return;
@@ -2820,6 +2902,19 @@ void CWriter::printModuleTypes() {
       std::string Name = getArrayName(AT);
       Out << "struct " << Name << ";\n";
   }
+  
+  for (unsigned i = 0, e = IntegerTypes.size(); i != e; ++i) {
+     llvm::IntegerType *IT = IntegerTypes[i];
+      if (IT->getIntegerBitWidth() <= 64 || Alignment[i] == 0)
+        continue;
+
+      Out << "typedef struct __attribute__ ((packed, aligned(" << Alignment[i] << "))) {\n  ";
+      IsVolatile[i] ? Out << "  volatile " : Out << "  ";
+      printType(Out, IT, false, "data");
+      Out << ";\n";
+      Out << "} iN_" << IT->getIntegerBitWidth() << "_align_" << Alignment[i] << ";\n";
+  }
+
   Out << '\n';
 
   // Keep track of which types have been printed so far.
@@ -4380,19 +4475,24 @@ void CWriter::writeMemoryAccess(llvm::Value *Operand, llvm::Type *OperandType,
   bool IsUnaligned = Alignment &&
     Alignment < TD->getABITypeAlignment(OperandType);
 
+  llvm::IntegerType *ITy = llvm::dyn_cast<llvm::IntegerType>(OperandType);
   if (!IsUnaligned)
     Out << '*';
   if (IsVolatile || IsUnaligned) {
     Out << "((";
-    if (IsUnaligned)
-      Out << "struct __attribute__ ((packed, aligned(" << Alignment << "))) {";
-    printType(Out, OperandType, false, IsUnaligned ? "data" : "volatile*");
-    if (IsUnaligned) {
-      Out << "; } ";
-      if (IsVolatile) Out << "volatile ";
-      Out << "*";
+    if (IsUnaligned && ITy && (ITy->getBitWidth() > 64)) 
+      Out << "iN_" << ITy->getBitWidth() << "_align_" << Alignment << " *)";
+    else {
+      if (IsUnaligned)
+        Out << "struct __attribute__ ((packed, aligned(" << Alignment << "))) {";
+      printType(Out, OperandType, false, IsUnaligned ? "data" : "volatile*");
+      if (IsUnaligned) {
+        Out << "; } ";
+        if (IsVolatile) Out << "volatile ";
+        Out << "*";
+      }
+      Out << ")";
     }
-    Out << ")";
   }
 
   writeOperand(Operand);
