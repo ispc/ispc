@@ -153,7 +153,7 @@ devUsage(int ret) {
     lPrintVersion();
     printf("\nusage (developer options): ispc\n");
     printf("    [--debug]\t\t\t\tPrint information useful for debugging ispc\n");
-    printf("    [--dllexport]\t\t\tMake non-static functions DLL exported.  Windows only.");  
+    printf("    [--dllexport]\t\t\tMake non-static functions DLL exported.  Windows only.\n");  
     printf("    [--fuzz-test]\t\t\tRandomly perturb program input to test error conditions\n");
     printf("    [--fuzz-seed=<value>]\t\tSeed value for RNG for fuzz testing\n");
     printf("    [--opt=<option>]\t\t\tSet optimization option\n");
