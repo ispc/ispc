@@ -15,6 +15,7 @@
 #include "ispc.h"
 #include "module.h"
 
+#include <math.h>
 #include <stdio.h>
 #include <string.h>
 #include <sstream>
@@ -1566,7 +1567,7 @@ void CWriter::printConstant(llvm::Constant *CPV, bool Static) {
         V = Tmp.convertToDouble();
       }
 
-      if (llvm::IsNAN(V)) {
+      if (isnan(V)) {
         // The value is NaN
 
         // FIXME the actual NaN bits should be emitted.
@@ -1590,7 +1591,7 @@ void CWriter::printConstant(llvm::Constant *CPV, bool Static) {
         else
           Out << "LLVM_NAN" << (Val == QuietNaN ? "" : "S") << "(\""
               << Buffer << "\") /*nan*/ ";
-      } else if (llvm::IsInf(V)) {
+      } else if (isinf(V)) {
         // The value is Inf
         if (V < 0) Out << '-';
         Out << "LLVM_INF" <<
