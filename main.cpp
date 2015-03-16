@@ -122,7 +122,7 @@ usage(int ret) {
     printf("    [--nostdlib]\t\t\tDon't make the ispc standard library available\n");
     printf("    [--nocpp]\t\t\t\tDon't run the C preprocessor\n");
     printf("    [-o <name>/--outfile=<name>]\tOutput filename (may be \"-\" for standard output)\n");
-    printf("    [-O0/-O1]\t\t\t\tSet optimization level (-O1 is default)\n");
+    printf("    [-O0/-O(1/2/3)]\t\t\t\tSet optimization level (off or on). Optimizations are on by default.\n");
     printf("    [--opt=<option>]\t\t\tSet optimization option\n");
     printf("        disable-assertions\t\tRemove assertion statements from final code.\n");
     printf("        disable-fma\t\t\tDisable 'fused multiply-add' instructions (on targets that support them)\n");
