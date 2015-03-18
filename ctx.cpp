@@ -1582,7 +1582,12 @@ lGetStringAsValue(llvm::BasicBlock *bblock, const char *s) {
                                                  sConstant, var_name.c_str());
     llvm::Value *indices[2] = { LLVMInt32(0), LLVMInt32(0) };
     llvm::ArrayRef<llvm::Value *> arrayRef(&indices[0], &indices[2]);
+#if defined(LLVM_3_2) || defined(LLVM_3_3) || defined(LLVM_3_4) || defined(LLVM_3_5) || defined(LLVM_3_6)
     return llvm::GetElementPtrInst::Create(sPtr, arrayRef, "sptr", bblock);
+#else // LLVM 3.7++
+    return llvm::GetElementPtrInst::Create(PTYPE(sPtr),
+                                           sPtr, arrayRef, "sptr", bblock);
+#endif
 }
 
 
@@ -2346,9 +2351,16 @@ FunctionEmitContext::GetElementPtrInst(llvm::Value *basePtr, llvm::Value *index,
         // uniform, so just emit the regular LLVM GEP instruction
         llvm::Value *ind[1] = { index };
         llvm::ArrayRef<llvm::Value *> arrayRef(&ind[0], &ind[1]);
+#if defined(LLVM_3_2) || defined(LLVM_3_3) || defined(LLVM_3_4) || defined(LLVM_3_5) || defined(LLVM_3_6)
         llvm::Instruction *inst =
             llvm::GetElementPtrInst::Create(basePtr, arrayRef,
                                             name ? name : "gep", bblock);
+#else // LLVM 3.7++
+        llvm::Instruction *inst =
+            llvm::GetElementPtrInst::Create(PTYPE(basePtr),
+                                            basePtr, arrayRef,
+                                            name ? name : "gep", bblock);
+#endif
         AddDebugPos(inst);
         return inst;
     }
@@ -2406,9 +2418,16 @@ FunctionEmitContext::GetElementPtrInst(llvm::Value *basePtr, llvm::Value *index0
         // uniform, so just emit the regular LLVM GEP instruction
         llvm::Value *indices[2] = { index0, index1 };
         llvm::ArrayRef<llvm::Value *> arrayRef(&indices[0], &indices[2]);
+#if defined(LLVM_3_2) || defined(LLVM_3_3) || defined(LLVM_3_4) || defined(LLVM_3_5) || defined(LLVM_3_6)
         llvm::Instruction *inst =
             llvm::GetElementPtrInst::Create(basePtr, arrayRef,
                                             name ? name : "gep", bblock);
+#else // LLVM 3.7++
+        llvm::Instruction *inst =
+            llvm::GetElementPtrInst::Create(PTYPE(basePtr),
+                                            basePtr, arrayRef,
+                                            name ? name : "gep", bblock);
+#endif
         AddDebugPos(inst);
         return inst;
     }
@@ -2500,9 +2519,15 @@ FunctionEmitContext::AddElementOffset(llvm::Value *fullBasePtr, int elementNum,
         // If the pointer is uniform, we can use the regular LLVM GEP.
         llvm::Value *offsets[2] = { LLVMInt32(0), LLVMInt32(elementNum) };
         llvm::ArrayRef<llvm::Value *> arrayRef(&offsets[0], &offsets[2]);
+#if defined(LLVM_3_2) || defined(LLVM_3_3) || defined(LLVM_3_4) || defined(LLVM_3_5) || defined(LLVM_3_6)
         resultPtr =
             llvm::GetElementPtrInst::Create(basePtr, arrayRef,
                                             name ? name : "struct_offset", bblock);
+#else // LLVM 3.7++
+        resultPtr =
+            llvm::GetElementPtrInst::Create(PTYPE(basePtr), basePtr, arrayRef,
+                                            name ? name : "struct_offset", bblock);
+#endif
     }
     else {
         // Otherwise do the math to find the offset and add it to the given
