@@ -1191,10 +1191,16 @@ Target::SizeOf(llvm::Type *type,
         llvm::PointerType *ptrType = llvm::PointerType::get(type, 0);
         llvm::Value *voidPtr = llvm::ConstantPointerNull::get(ptrType);
         llvm::ArrayRef<llvm::Value *> arrayRef(&index[0], &index[1]);
+#if defined(LLVM_3_2) || defined(LLVM_3_3) || defined(LLVM_3_4) || defined(LLVM_3_5) || defined(LLVM_3_6)
         llvm::Instruction *gep =
             llvm::GetElementPtrInst::Create(voidPtr, arrayRef, "sizeof_gep",
                                             insertAtEnd);
-
+#else // LLVM 3.7++
+        llvm::Instruction *gep =
+            llvm::GetElementPtrInst::Create(PTYPE(voidPtr), voidPtr,
+                                            arrayRef, "sizeof_gep",
+                                            insertAtEnd);
+#endif
         if (m_is32Bit || g->opt.force32BitAddressing)
             return new llvm::PtrToIntInst(gep, LLVMTypes::Int32Type,
                                           "sizeof_int", insertAtEnd);
@@ -1223,10 +1229,16 @@ Target::StructOffset(llvm::Type *type, int element,
         llvm::PointerType *ptrType = llvm::PointerType::get(type, 0);
         llvm::Value *voidPtr = llvm::ConstantPointerNull::get(ptrType);
         llvm::ArrayRef<llvm::Value *> arrayRef(&indices[0], &indices[2]);
+#if defined(LLVM_3_2) || defined(LLVM_3_3) || defined(LLVM_3_4) || defined(LLVM_3_5) || defined(LLVM_3_6)
         llvm::Instruction *gep =
             llvm::GetElementPtrInst::Create(voidPtr, arrayRef, "offset_gep",
                                             insertAtEnd);
-
+#else // LLVM 3.7++
+        llvm::Instruction *gep =
+            llvm::GetElementPtrInst::Create(PTYPE(voidPtr), voidPtr,
+                                            arrayRef, "offset_gep",
+                                            insertAtEnd);
+#endif
         if (m_is32Bit || g->opt.force32BitAddressing)
             return new llvm::PtrToIntInst(gep, LLVMTypes::Int32Type,
                                           "offset_int", insertAtEnd);

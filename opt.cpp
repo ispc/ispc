@@ -330,8 +330,13 @@ lGEPInst(llvm::Value *ptr, llvm::Value *offset, const char *name,
          llvm::Instruction *insertBefore) {
     llvm::Value *index[1] = { offset };
     llvm::ArrayRef<llvm::Value *> arrayRef(&index[0], &index[1]);
+#if defined(LLVM_3_2) || defined(LLVM_3_3) || defined(LLVM_3_4) || defined(LLVM_3_5) || defined(LLVM_3_6)
     return llvm::GetElementPtrInst::Create(ptr, arrayRef, name,
                                            insertBefore);
+#else // LLVM 3.7++
+    return llvm::GetElementPtrInst::Create(PTYPE(ptr), ptr, arrayRef,
+                                           name, insertBefore);
+#endif
 }
 
 

@@ -50,6 +50,8 @@
   #include <llvm/IR/Constants.h>
 #endif
 
+#define PTYPE(p) (llvm::cast<llvm::SequentialType>((p)->getType()->getScalarType())->getElementType())
+
 namespace llvm {
     class PHINode;
     class InsertElementInst;
