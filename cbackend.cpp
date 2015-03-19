@@ -65,7 +65,11 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/Analysis/ConstantsScanner.h"
+#if defined(LLVM_3_2) || defined(LLVM_3_3) || defined(LLVM_3_4) || defined(LLVM_3_5) || defined(LLVM_3_6)
+  #include "llvm/Analysis/ConstantsScanner.h"
+#else
+  #include "ConstantsScanner.h"
+#endif
 #if defined(LLVM_3_2) || defined(LLVM_3_3) || defined(LLVM_3_4) || defined(LLVM_3_5)
   #include "llvm/Analysis/FindUsedTypes.h"
 #endif
