@@ -18,7 +18,11 @@
 #ifndef LLVM_ANALYSIS_CONSTANTSSCANNER_H
 #define LLVM_ANALYSIS_CONSTANTSSCANNER_H
 
-#include "llvm/IR/InstIterator.h"
+#if defined(LLVM_3_4)
+  #include "llvm/Support/InstIterator.h"
+#else
+  #include "llvm/IR/InstIterator.h"
+#endif
 
 namespace llvm {
 
