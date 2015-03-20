@@ -39,7 +39,7 @@
 #include <stdint.h>
 #include <limits>
 
-#include "../examples/intrinsics/knc.h"
+#include "knc.h"
 
 void test_gather_scatter();
 void test_masked_load_store();
