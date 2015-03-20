@@ -121,6 +121,8 @@ struct InputData {
     InputData(); 
 };
 
+int compare (const void *a, const void *b);
+
 template <typename T>
 void allocator(T **array) {
     uint64_t seed = 123456789;
@@ -137,6 +139,8 @@ void allocator(T **array) {
         seed = (a * seed + c) % m;
         tmp[j] = (T*) malloc(seed * sizeof(T));
     }
+
+    qsort((void*) array, 16, sizeof(T*), compare);
 
     for (int j = 0; j < 4; j++)
         free(tmp[j]);

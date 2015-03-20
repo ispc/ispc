@@ -2463,7 +2463,7 @@ static FORCEINLINE int8_t __extract_element(__vec16_i8 v, uint32_t index) {
 }
 
 static FORCEINLINE void __insert_element(__vec16_i8 *v, uint32_t index, int8_t val) {
-    ((int32_t *)v)[index] = val;
+    ((int8_t *)v)[index] = val;
 }
 
 static FORCEINLINE __vec16_i8 __broadcast_i8(__vec16_i8 v, int index) {

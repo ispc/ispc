@@ -205,3 +205,8 @@ InputData::InputData () {
         no_of_ui64 [i] = i + 1;
     }
 }
+
+int compare (const void *a, const void *b) {
+    return (*(int64_t*)a - *(int64_t*)b);
+}
+
