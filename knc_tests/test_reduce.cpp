@@ -1,54 +1,38 @@
+// Copyright (c) 2014-2015, Intel Corporation
+// All rights reserved.
+//
+// Redistribution and use in source and binary forms, with or without
+// modification, are permitted provided that the following conditions are met:
+//
+//     * Redistributions of source code must retain the above copyright
+//       notice, this list of conditions and the following disclaimer.
+//
+//     * Redistributions in binary form must reproduce the above copyright
+//       notice, this list of conditions and the following disclaimer in the
+//       documentation and/or other materials provided with the distribution.
+//
+//     * Neither the name of Intel Corporation nor the names of its
+//       contributors may be used to endorse or promote products derived from
+//       this software without specific prior written permission.
+//
+//
+// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+// AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+// IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+// ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
+// LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+// CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+// SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+// INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+// CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+// ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+// POSSIBILITY OF SUCH DAMAGE.
+//
+// ==========================================================
+// Author: Vsevolod Livinskiy
+// ==========================================================
+
 #include "knc_test_driver_core.h"
-
-void reduce_add_double(double  *d  );
-void reduce_add_float (float   *f  );
-void reduce_add_int8  (int8_t  *i8 );
-void reduce_add_int16 (int16_t *i16);
-void reduce_add_int32 (int32_t *i32);
-void reduce_add_int64 (int64_t *i64);
-
-
-void reduce_min_double (double  *d  );
-void reduce_min_float  (float   *f  );
-void reduce_min_int32  (int32_t *i32);
-void reduce_min_uint32 (uint32_t *ui32);
-void reduce_min_int64  (int64_t *i64);
-void reduce_min_uint64 (uint64_t *ui64);
-
-void reduce_max_double (double  *d  );
-void reduce_max_float  (float   *f  );
-void reduce_max_int32  (int32_t *i32);
-void reduce_max_uint32 (uint32_t *ui32);
-void reduce_max_int64  (int64_t *i64);
-void reduce_max_uint64 (uint64_t *ui64);
-
-/////////////////////////////////////////////////////////////////////////////////////////////
-
-void test_reduce() {
-    InputData inpData;
-
-    reduce_add_double(inpData.no_of_d_32);
-    reduce_add_float (inpData.no_of_f_32);
-    reduce_add_int8  (inpData.no_of_i8);
-    reduce_add_int16 (inpData.no_of_i16);
-    reduce_add_int32 (inpData.no_of_i32);
-    reduce_add_int64 (inpData.no_of_i64);
-
-
-    reduce_min_double (inpData.d_32);
-    reduce_min_float  (inpData.f_32);
-    reduce_min_int32  (inpData.i32);
-    reduce_min_uint32 (inpData.ui32);
-    reduce_min_int64  (inpData.i64);
-    reduce_min_uint64 (inpData.ui64);
-    reduce_max_double (inpData.d_32);
-    reduce_max_float  (inpData.f_32);
-    reduce_max_int32  (inpData.i32);
-    reduce_max_uint32 (inpData.ui32);
-    reduce_max_int64  (inpData.i64);
-    reduce_max_uint64 (inpData.ui64);
-
-}
 
 /////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -117,3 +101,32 @@ REDUCE_MINMAX_TEST(int32_t , __vec16_i32, 0, reduce_max_int32)
 REDUCE_MINMAX_TEST(uint32_t, __vec16_i32, 0, reduce_max_uint32)
 REDUCE_MINMAX_TEST(int64_t , __vec16_i64, 0, reduce_max_int64)
 REDUCE_MINMAX_TEST(uint64_t, __vec16_i64, 0, reduce_max_uint64)
+
+/////////////////////////////////////////////////////////////////////////////////////////////
+
+void test_reduce() {
+    InputData inpData;
+
+    reduce_add_double(inpData.no_of_d_32);
+    reduce_add_float (inpData.no_of_f_32);
+    reduce_add_int8  (inpData.no_of_i8);
+    reduce_add_int16 (inpData.no_of_i16);
+    reduce_add_int32 (inpData.no_of_i32);
+    reduce_add_int64 (inpData.no_of_i64);
+
+
+    reduce_min_double (inpData.d_32);
+    reduce_min_float  (inpData.f_32);
+    reduce_min_int32  (inpData.i32);
+    reduce_min_uint32 (inpData.ui32);
+    reduce_min_int64  (inpData.i64);
+    reduce_min_uint64 (inpData.ui64);
+    reduce_max_double (inpData.d_32);
+    reduce_max_float  (inpData.f_32);
+    reduce_max_int32  (inpData.i32);
+    reduce_max_uint32 (inpData.ui32);
+    reduce_max_int64  (inpData.i64);
+    reduce_max_uint64 (inpData.ui64);
+
+}
+

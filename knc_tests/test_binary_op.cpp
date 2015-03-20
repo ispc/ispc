@@ -1,178 +1,38 @@
+// Copyright (c) 2014-2015, Intel Corporation
+// All rights reserved.
+//
+// Redistribution and use in source and binary forms, with or without
+// modification, are permitted provided that the following conditions are met:
+//
+//     * Redistributions of source code must retain the above copyright
+//       notice, this list of conditions and the following disclaimer.
+//
+//     * Redistributions in binary form must reproduce the above copyright
+//       notice, this list of conditions and the following disclaimer in the
+//       documentation and/or other materials provided with the distribution.
+//
+//     * Neither the name of Intel Corporation nor the names of its
+//       contributors may be used to endorse or promote products derived from
+//       this software without specific prior written permission.
+//
+//
+// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+// AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+// IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+// ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
+// LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+// CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+// SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+// INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+// CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+// ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+// POSSIBILITY OF SUCH DAMAGE.
+//
+// ==========================================================
+// Author: Vsevolod Livinskiy
+// ==========================================================
+
 #include "knc_test_driver_core.h"
-
-void add_double(double  *d_1  , double  *d_2  );
-void add_float (float   *f_1  , float   *f_2  );
-void add_i8    (int8_t  *i8_1 , int8_t  *i8_2 );
-void add_i16   (int16_t *i16_1, int16_t *i16_2);
-void add_i32   (int32_t *i32_1, int32_t *i32_2);
-void add_i64   (int64_t *i64_1, int64_t *i64_2);
-
-void sub_double(double  *d_1  , double  *d_2  );
-void sub_float (float   *f_1  , float   *f_2  );
-void sub_i8    (int8_t  *i8_1 , int8_t  *i8_2 );
-void sub_i16   (int16_t *i16_1, int16_t *i16_2);
-void sub_i32   (int32_t *i32_1, int32_t *i32_2);
-void sub_i64   (int64_t *i64_1, int64_t *i64_2);
-
-void mul_double(double  *d_1  , double  *d_2  );
-void mul_float (float   *f_1  , float   *f_2  );
-void mul_i8    (int8_t  *i8_1 , int8_t  *i8_2 );
-void mul_i16   (int16_t *i16_1, int16_t *i16_2);
-void mul_i32   (int32_t *i32_1, int32_t *i32_2);
-void mul_i64   (int64_t *i64_1, int64_t *i64_2);
-
-void or_i8 (int8_t  *i8_1 , int8_t  *i8_2 );
-void or_i16(int16_t *i16_1, int16_t *i16_2);
-void or_i32(int32_t *i32_1, int32_t *i32_2);
-void or_i64(int64_t *i64_1, int64_t *i64_2);
-
-void and_i8 (int8_t  *i8_1 , int8_t  *i8_2 );
-void and_i16(int16_t *i16_1, int16_t *i16_2);
-void and_i32(int32_t *i32_1, int32_t *i32_2);
-void and_i64(int64_t *i64_1, int64_t *i64_2);
-
-void xor_i8 (int8_t  *i8_1 , int8_t  *i8_2 );
-void xor_i16(int16_t *i16_1, int16_t *i16_2);
-void xor_i32(int32_t *i32_1, int32_t *i32_2);
-void xor_i64(int64_t *i64_1, int64_t *i64_2);
-
-void shl_i8 (int8_t  *i8_1 , int8_t  *i8_2 );
-void shl_i16(int16_t *i16_1, int16_t *i16_2);
-void shl_i32(int32_t *i32_1, int32_t *i32_2);
-void shl_i64(int64_t *i64_1, int64_t *i64_2);
-
-void udiv_ui8 (uint8_t  *ui8_1 , uint8_t  *ui8_2 );
-void udiv_ui16(uint16_t *ui16_1, uint16_t *ui16_2);
-void udiv_ui32(uint32_t *ui32_1, uint32_t *ui32_2);
-void udiv_ui64(uint64_t *ui64_1, uint64_t *ui64_2);
-
-void sdiv_i8 (int8_t  *i8_1 , int8_t  *i8_2 );
-void sdiv_i16(int16_t *i16_1, int16_t *i16_2);
-void sdiv_i32(int32_t *i32_1, int32_t *i32_2);
-void sdiv_i64(int64_t *i64_1, int64_t *i64_2);
-
-void div_double(double *d_1, double *d_2);
-void div_float (float  *f_1, float  *f_2);
-
-void urem_ui8 (uint8_t  *ui8_1 , uint8_t  *ui8_2 );
-void urem_ui16(uint16_t *ui16_1, uint16_t *ui16_2);
-void urem_ui32(uint32_t *ui32_1, uint32_t *ui32_2);
-void urem_ui64(uint64_t *ui64_1, uint64_t *ui64_2);
-
-void srem_i8 (int8_t  *i8_1 , int8_t  *i8_2 );
-void srem_i16(int16_t *i16_1, int16_t *i16_2);
-void srem_i32(int32_t *i32_1, int32_t *i32_2);
-void srem_i64(int64_t *i64_1, int64_t *i64_2);
-
-void lshr_ui8 (uint8_t  *ui8_1 , uint8_t  *ui8_2 );
-void lshr_ui16(uint16_t *ui16_1, uint16_t *ui16_2);
-void lshr_ui32(uint32_t *ui32_1, uint32_t *ui32_2);
-void lshr_ui64(uint64_t *ui64_1, uint64_t *ui64_2);
-
-void ashr_i8 (int8_t  *i8_1 , int8_t  *i8_2 );
-void ashr_i16(int16_t *i16_1, int16_t *i16_2);
-void ashr_i32(int32_t *i32_1, int32_t *i32_2);
-void ashr_i64(int64_t *i64_1, int64_t *i64_2);
-
-void lshr_ui8_uniform (uint8_t  *ui8 , int32_t *i32);
-void lshr_ui16_uniform(uint16_t *ui16, int32_t *i32);
-void lshr_ui32_uniform(uint32_t *ui32, int32_t *i32);
-void lshr_ui64_uniform(uint64_t *ui64, int32_t *i32);
-
-void ashr_i8_uniform (int8_t  *i8 , int32_t *i32);
-void ashr_i16_uniform(int16_t *i16, int32_t *i32);
-void ashr_i32_uniform(int32_t *i32_1, int32_t *i32);
-void ashr_i64_uniform(int64_t *i64, int32_t *i32);
-
-/////////////////////////////////////////////////////////////////////////////////////////////
-
-void test_binary_op() {
-    InputData inpData;
-
-    add_double(inpData.no_of_d_32, inpData.no_of_d_32);
-    add_float (inpData.no_of_f_32, inpData.no_of_f_32);
-    add_i8    (inpData.no_of_i8  , inpData.no_of_i8);
-    add_i16   (inpData.no_of_i16 , inpData.no_of_i16);
-    add_i32   (inpData.no_of_i32 , inpData.no_of_i32);
-    add_i64   (inpData.no_of_i64 , inpData.no_of_i64);
-
-    sub_double(inpData.no_of_d_32, inpData.no_of_d_32);
-    sub_float (inpData.no_of_f_32, inpData.no_of_f_32);
-    sub_i8    (inpData.no_of_i8  , inpData.no_of_i8);
-    sub_i16   (inpData.no_of_i16 , inpData.no_of_i16);
-    sub_i32   (inpData.no_of_i32 , inpData.no_of_i32);
-    sub_i64   (inpData.no_of_i64 , inpData.no_of_i64);
-
-    mul_double(inpData.no_of_d_32, inpData.no_of_d_32);
-    mul_float (inpData.no_of_f_32, inpData.no_of_f_32);
-    mul_i8    (inpData.no_of_i8  , inpData.no_of_i8);
-    mul_i16   (inpData.no_of_i16 , inpData.no_of_i16);
-    mul_i32   (inpData.no_of_i32 , inpData.no_of_i32);
-    mul_i64   (inpData.no_of_i64 , inpData.no_of_i64);
-
-    or_i8 (inpData.no_of_i8  , inpData.no_of_i8);
-    or_i16(inpData.no_of_i16 , inpData.no_of_i16);
-    or_i32(inpData.no_of_i32 , inpData.no_of_i32);
-    or_i64(inpData.no_of_i64 , inpData.no_of_i64);
-
-    and_i8 (inpData.no_of_i8  , inpData.no_of_i8);
-    and_i16(inpData.no_of_i16 , inpData.no_of_i16);
-    and_i32(inpData.no_of_i32 , inpData.no_of_i32);
-    and_i64(inpData.no_of_i64 , inpData.no_of_i64);
-
-    xor_i8 (inpData.no_of_i8  , inpData.no_of_i8);
-    xor_i16(inpData.no_of_i16 , inpData.no_of_i16);
-    xor_i32(inpData.no_of_i32 , inpData.no_of_i32);
-    xor_i64(inpData.no_of_i64 , inpData.no_of_i64);
-
-    shl_i8 (inpData.no_of_i8  , inpData.no_of_i8);
-    shl_i16(inpData.no_of_i16 , inpData.no_of_i16);
-    shl_i32(inpData.no_of_i32 , inpData.no_of_i32);
-    shl_i64(inpData.no_of_i64 , inpData.no_of_i64);
-
-    udiv_ui8 (inpData.no_of_ui8  , inpData.no_of_ui8);
-    udiv_ui16(inpData.no_of_ui16 , inpData.no_of_ui16);
-    udiv_ui32(inpData.no_of_ui32 , inpData.no_of_ui32);
-    udiv_ui64(inpData.no_of_ui64 , inpData.no_of_ui64);
-
-    sdiv_i8 (inpData.no_of_i8  , inpData.no_of_i8);
-    sdiv_i16(inpData.no_of_i16 , inpData.no_of_i16);
-    sdiv_i32(inpData.no_of_i32 , inpData.no_of_i32);
-    sdiv_i64(inpData.no_of_i64 , inpData.no_of_i64);
-
-    div_double(inpData.no_of_d_32 , inpData.no_of_d_32);
-    div_float (inpData.no_of_f_32 , inpData.no_of_f_32);
-
-    urem_ui8 (inpData.no_of_ui8  , inpData.no_of_ui8);
-    urem_ui16(inpData.no_of_ui16 , inpData.no_of_ui16);
-    urem_ui32(inpData.no_of_ui32 , inpData.no_of_ui32);
-    //urem_ui64(inpData.no_of_ui64 , inpData.no_of_ui64);
-
-    srem_i8 (inpData.no_of_i8  , inpData.no_of_i8);
-    srem_i16(inpData.no_of_i16 , inpData.no_of_i16);
-    srem_i32(inpData.no_of_i32 , inpData.no_of_i32);
-    //srem_i64(inpData.no_of_i64 , inpData.no_of_i64);
-
-    lshr_ui8 (inpData.no_of_ui8  , inpData.no_of_ui8);
-    lshr_ui16(inpData.no_of_ui16 , inpData.no_of_ui16);
-    lshr_ui32(inpData.no_of_ui32 , inpData.no_of_ui32);
-    lshr_ui64(inpData.no_of_ui64 , inpData.no_of_ui64);
-
-    ashr_i8 (inpData.no_of_i8  , inpData.no_of_i8);
-    ashr_i16(inpData.no_of_i16 , inpData.no_of_i16);
-    ashr_i32(inpData.no_of_i32 , inpData.no_of_i32);
-    ashr_i64(inpData.no_of_i64 , inpData.no_of_i64);
-
-    lshr_ui8_uniform (inpData.no_of_ui8 , inpData.no_of_i32);
-    lshr_ui16_uniform(inpData.no_of_ui16, inpData.no_of_i32);
-    lshr_ui32_uniform(inpData.no_of_ui32, inpData.no_of_i32);
-    lshr_ui64_uniform(inpData.no_of_ui64, inpData.no_of_i32);
-
-    ashr_i8_uniform (inpData.no_of_i8 , inpData.no_of_i32);
-    ashr_i16_uniform(inpData.no_of_i16, inpData.no_of_i32);
-    ashr_i32_uniform(inpData.no_of_i32, inpData.no_of_i32);
-    ashr_i64_uniform(inpData.no_of_i64, inpData.no_of_i32);
-}
 
 /////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -327,3 +187,93 @@ SHIFT_UNIFORM_TEST(int8_t , __vec16_i8 , >>, ashr, i8)
 SHIFT_UNIFORM_TEST(int16_t, __vec16_i16, >>, ashr, i16)
 SHIFT_UNIFORM_TEST(int32_t, __vec16_i32, >>, ashr, i32)
 SHIFT_UNIFORM_TEST(int64_t, __vec16_i64, >>, ashr, i64)
+
+/////////////////////////////////////////////////////////////////////////////////////////////
+
+void test_binary_op() {
+    InputData inpData;
+
+    add_double(inpData.no_of_d_32, inpData.no_of_d_32);
+    add_float (inpData.no_of_f_32, inpData.no_of_f_32);
+    add_i8    (inpData.no_of_i8  , inpData.no_of_i8);
+    add_i16   (inpData.no_of_i16 , inpData.no_of_i16);
+    add_i32   (inpData.no_of_i32 , inpData.no_of_i32);
+    add_i64   (inpData.no_of_i64 , inpData.no_of_i64);
+
+    sub_double(inpData.no_of_d_32, inpData.no_of_d_32);
+    sub_float (inpData.no_of_f_32, inpData.no_of_f_32);
+    sub_i8    (inpData.no_of_i8  , inpData.no_of_i8);
+    sub_i16   (inpData.no_of_i16 , inpData.no_of_i16);
+    sub_i32   (inpData.no_of_i32 , inpData.no_of_i32);
+    sub_i64   (inpData.no_of_i64 , inpData.no_of_i64);
+
+    mul_double(inpData.no_of_d_32, inpData.no_of_d_32);
+    mul_float (inpData.no_of_f_32, inpData.no_of_f_32);
+    mul_i8    (inpData.no_of_i8  , inpData.no_of_i8);
+    mul_i16   (inpData.no_of_i16 , inpData.no_of_i16);
+    mul_i32   (inpData.no_of_i32 , inpData.no_of_i32);
+    mul_i64   (inpData.no_of_i64 , inpData.no_of_i64);
+
+    or_i8 (inpData.no_of_i8  , inpData.no_of_i8);
+    or_i16(inpData.no_of_i16 , inpData.no_of_i16);
+    or_i32(inpData.no_of_i32 , inpData.no_of_i32);
+    or_i64(inpData.no_of_i64 , inpData.no_of_i64);
+
+    and_i8 (inpData.no_of_i8  , inpData.no_of_i8);
+    and_i16(inpData.no_of_i16 , inpData.no_of_i16);
+    and_i32(inpData.no_of_i32 , inpData.no_of_i32);
+    and_i64(inpData.no_of_i64 , inpData.no_of_i64);
+
+    xor_i8 (inpData.no_of_i8  , inpData.no_of_i8);
+    xor_i16(inpData.no_of_i16 , inpData.no_of_i16);
+    xor_i32(inpData.no_of_i32 , inpData.no_of_i32);
+    xor_i64(inpData.no_of_i64 , inpData.no_of_i64);
+
+    shl_i8 (inpData.no_of_i8  , inpData.no_of_i8);
+    shl_i16(inpData.no_of_i16 , inpData.no_of_i16);
+    shl_i32(inpData.no_of_i32 , inpData.no_of_i32);
+    shl_i64(inpData.no_of_i64 , inpData.no_of_i64);
+
+    udiv_ui8 (inpData.no_of_ui8  , inpData.no_of_ui8);
+    udiv_ui16(inpData.no_of_ui16 , inpData.no_of_ui16);
+    udiv_ui32(inpData.no_of_ui32 , inpData.no_of_ui32);
+    udiv_ui64(inpData.no_of_ui64 , inpData.no_of_ui64);
+
+    sdiv_i8 (inpData.no_of_i8  , inpData.no_of_i8);
+    sdiv_i16(inpData.no_of_i16 , inpData.no_of_i16);
+    sdiv_i32(inpData.no_of_i32 , inpData.no_of_i32);
+    sdiv_i64(inpData.no_of_i64 , inpData.no_of_i64);
+
+    div_double(inpData.no_of_d_32 , inpData.no_of_d_32);
+    div_float (inpData.no_of_f_32 , inpData.no_of_f_32);
+
+    urem_ui8 (inpData.no_of_ui8  , inpData.no_of_ui8);
+    urem_ui16(inpData.no_of_ui16 , inpData.no_of_ui16);
+    urem_ui32(inpData.no_of_ui32 , inpData.no_of_ui32);
+    //urem_ui64(inpData.no_of_ui64 , inpData.no_of_ui64);
+
+    srem_i8 (inpData.no_of_i8  , inpData.no_of_i8);
+    srem_i16(inpData.no_of_i16 , inpData.no_of_i16);
+    srem_i32(inpData.no_of_i32 , inpData.no_of_i32);
+    //srem_i64(inpData.no_of_i64 , inpData.no_of_i64);
+
+    lshr_ui8 (inpData.no_of_ui8  , inpData.no_of_ui8);
+    lshr_ui16(inpData.no_of_ui16 , inpData.no_of_ui16);
+    lshr_ui32(inpData.no_of_ui32 , inpData.no_of_ui32);
+    lshr_ui64(inpData.no_of_ui64 , inpData.no_of_ui64);
+
+    ashr_i8 (inpData.no_of_i8  , inpData.no_of_i8);
+    ashr_i16(inpData.no_of_i16 , inpData.no_of_i16);
+    ashr_i32(inpData.no_of_i32 , inpData.no_of_i32);
+    ashr_i64(inpData.no_of_i64 , inpData.no_of_i64);
+
+    lshr_ui8_uniform (inpData.no_of_ui8 , inpData.no_of_i32);
+    lshr_ui16_uniform(inpData.no_of_ui16, inpData.no_of_i32);
+    lshr_ui32_uniform(inpData.no_of_ui32, inpData.no_of_i32);
+    lshr_ui64_uniform(inpData.no_of_ui64, inpData.no_of_i32);
+
+    ashr_i8_uniform (inpData.no_of_i8 , inpData.no_of_i32);
+    ashr_i16_uniform(inpData.no_of_i16, inpData.no_of_i32);
+    ashr_i32_uniform(inpData.no_of_i32, inpData.no_of_i32);
+    ashr_i64_uniform(inpData.no_of_i64, inpData.no_of_i32);
+}

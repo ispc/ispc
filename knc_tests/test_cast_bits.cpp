@@ -1,40 +1,38 @@
+// Copyright (c) 2014-2015, Intel Corporation
+// All rights reserved.
+//
+// Redistribution and use in source and binary forms, with or without
+// modification, are permitted provided that the following conditions are met:
+//
+//     * Redistributions of source code must retain the above copyright
+//       notice, this list of conditions and the following disclaimer.
+//
+//     * Redistributions in binary form must reproduce the above copyright
+//       notice, this list of conditions and the following disclaimer in the
+//       documentation and/or other materials provided with the distribution.
+//
+//     * Neither the name of Intel Corporation nor the names of its
+//       contributors may be used to endorse or promote products derived from
+//       this software without specific prior written permission.
+//
+//
+// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+// AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+// IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+// ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
+// LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+// CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+// SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+// INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+// CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+// ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+// POSSIBILITY OF SUCH DAMAGE.
+//
+// ==========================================================
+// Author: Vsevolod Livinskiy
+// ==========================================================
+
 #include "knc_test_driver_core.h"
-
-void cast_bits_scalar_ui32_f(float    *f_u32);
-void cast_bits_scalar_i32_f (float    *f_32);
-void cast_bits_scalar_f_ui32(uint32_t *ui32);
-void cast_bits_scalar_f_i32 (int32_t  *i32);
-void cast_bits_scalar_ui64_d(double   *d_u64);
-void cast_bits_scalar_i64_d (double   *d_64);
-void cast_bits_scalar_d_ui64(uint64_t *ui64);
-void cast_bits_scalar_d_i64 (int64_t  *i64);
-
-void cast_bits_f_i32(int32_t *i32);
-void cast_bits_i32_f(float   *f_32);
-void cast_bits_d_i64(int64_t *i64);
-void cast_bits_i64_d(double  *d_64);
-
-/////////////////////////////////////////////////////////////////////////////////////////////
-
-void test_cast_bits() {
-    InputData inpData;
-
-    //cast_bits_scalar_ui32_f(inpData.f_u32);
-    //cast_bits_scalar_i32_f (inpData.f_32);
-    //cast_bits_scalar_f_ui32(inpData.ui32);
-    //cast_bits_scalar_f_i32 (inpData.i32);
-    //cast_bits_scalar_ui64_d(inpData.d_u64);
-    //cast_bits_scalar_i64_d (inpData.d_64);
-    //cast_bits_scalar_d_ui64(inpData.ui64);
-    //cast_bits_scalar_d_i64 (inpData.i64);
-
-
-    cast_bits_f_i32(inpData.i32);
-    cast_bits_i32_f(inpData.f_32);
-    cast_bits_d_i64(inpData.i64);
-    cast_bits_i64_d(inpData.d_64);
-
-}
 
 /////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -123,4 +121,27 @@ CAST_BITS_TEST(float  , __vec16_f  , int32_t, __vec16_i32, cast_bits_f_i32)
 CAST_BITS_TEST(int32_t, __vec16_i32, float  , __vec16_f  , cast_bits_i32_f)
 CAST_BITS_TEST(double , __vec16_d  , int64_t, __vec16_i64, cast_bits_d_i64)
 CAST_BITS_TEST(int64_t, __vec16_i64, double , __vec16_d  , cast_bits_i64_d)
+
+/////////////////////////////////////////////////////////////////////////////////////////////
+
+void test_cast_bits() {
+    InputData inpData;
+
+    //cast_bits_scalar_ui32_f(inpData.f_u32);
+    //cast_bits_scalar_i32_f (inpData.f_32);
+    //cast_bits_scalar_f_ui32(inpData.ui32);
+    //cast_bits_scalar_f_i32 (inpData.i32);
+    //cast_bits_scalar_ui64_d(inpData.d_u64);
+    //cast_bits_scalar_i64_d (inpData.d_64);
+    //cast_bits_scalar_d_ui64(inpData.ui64);
+    //cast_bits_scalar_d_i64 (inpData.i64);
+
+
+    cast_bits_f_i32(inpData.i32);
+    cast_bits_i32_f(inpData.f_32);
+    cast_bits_d_i64(inpData.i64);
+    cast_bits_i64_d(inpData.d_64);
+
+}
+
 

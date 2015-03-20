@@ -1,128 +1,38 @@
+// Copyright (c) 2014-2015, Intel Corporation
+// All rights reserved.
+//
+// Redistribution and use in source and binary forms, with or without
+// modification, are permitted provided that the following conditions are met:
+//
+//     * Redistributions of source code must retain the above copyright
+//       notice, this list of conditions and the following disclaimer.
+//
+//     * Redistributions in binary form must reproduce the above copyright
+//       notice, this list of conditions and the following disclaimer in the
+//       documentation and/or other materials provided with the distribution.
+//
+//     * Neither the name of Intel Corporation nor the names of its
+//       contributors may be used to endorse or promote products derived from
+//       this software without specific prior written permission.
+//
+//
+// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+// AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+// IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+// ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
+// LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+// CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+// SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+// INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+// CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+// ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+// POSSIBILITY OF SUCH DAMAGE.
+//
+// ==========================================================
+// Author: Vsevolod Livinskiy
+// ==========================================================
+
 #include "knc_test_driver_core.h"
-
-void gather32_double(double  *d  , int *mask);
-void gather32_float (float   *f  , int *mask);
-void gather32_i8    (int8_t  *i8 , int *mask);
-void gather32_i16   (int16_t *i16, int *mask);
-void gather32_i32   (int32_t *i32, int *mask);
-void gather32_i64   (int64_t *i64, int *mask);
-
-void gather64_double(double  *d  , int *mask);
-void gather64_float (float   *f  , int *mask);
-void gather64_i8    (int8_t  *i8 , int *mask);
-void gather64_i16   (int16_t *i16, int *mask);
-void gather64_i32   (int32_t *i32, int *mask);
-void gather64_i64   (int64_t *i64, int *mask);
-
-
-void gather_base_offsets32_double(double  *d  , int *mask);
-void gather_base_offsets32_float (float   *f  , int *mask);
-void gather_base_offsets32_i8    (int8_t  *i8 , int *mask);
-void gather_base_offsets32_i16   (int16_t *i16, int *mask);
-void gather_base_offsets32_i32   (int32_t *i32, int *mask);
-void gather_base_offsets32_i64   (int64_t *i64, int *mask);
-
-void gather_base_offsets64_double(double  *d  , int *mask);
-void gather_base_offsets64_float (float   *f  , int *mask);
-void gather_base_offsets64_i8    (int8_t  *i8 , int *mask);
-void gather_base_offsets64_i16   (int16_t *i16, int *mask);
-void gather_base_offsets64_i32   (int32_t *i32, int *mask);
-void gather_base_offsets64_i64   (int64_t *i64, int *mask);
-
-
-void scatter32_double(double  *d  , int *mask);
-void scatter32_float (float   *f  , int *mask);
-void scatter32_i8    (int8_t  *i8 , int *mask);
-void scatter32_i16   (int16_t *i16, int *mask);
-void scatter32_i32   (int32_t *i32, int *mask);
-void scatter32_i64   (int64_t *i64, int *mask);
-
-void scatter64_double(double  *d  , int *mask);
-void scatter64_float (float   *f  , int *mask);
-void scatter64_i8    (int8_t  *i8 , int *mask);
-void scatter64_i16   (int16_t *i16, int *mask);
-void scatter64_i32   (int32_t *i32, int *mask);
-void scatter64_i64   (int64_t *i64, int *mask);
-
-
-void scatter_base_offsets32_double(double  *d  , int *mask);
-void scatter_base_offsets32_float (float   *f  , int *mask);
-void scatter_base_offsets32_i8    (int8_t  *i8 , int *mask);
-void scatter_base_offsets32_i16   (int16_t *i16, int *mask);
-void scatter_base_offsets32_i32   (int32_t *i32, int *mask);
-void scatter_base_offsets32_i64   (int64_t *i64, int *mask);
-
-void scatter_base_offsets64_double(double  *d  , int *mask);
-void scatter_base_offsets64_float (float   *f  , int *mask);
-void scatter_base_offsets64_i8    (int8_t  *i8 , int *mask);
-void scatter_base_offsets64_i16   (int16_t *i16, int *mask);
-void scatter_base_offsets64_i32   (int32_t *i32, int *mask);
-void scatter_base_offsets64_i64   (int64_t *i64, int *mask);
-
-/////////////////////////////////////////////////////////////////////////////////////////////
-
-void test_gather_scatter () {
-    InputData inpData;
-
-    //gather32_double(inpData.d_32, inpData.mask);
-    //gather32_float(inpData.f_32, inpData.mask);
-    //gather32_i8(inpData.i8, inpData.mask);
-    //gather32_i16(inpData.i16, inpData.mask);
-    //gather32_i32(inpData.i32, inpData.mask);
-    //gather32_i64(inpData.i64, inpData.mask);
-
-    gather64_double(inpData.d_64, inpData.mask);
-    gather64_float(inpData.f_64, inpData.mask);
-    gather64_i8(inpData.i8, inpData.mask);
-    gather64_i16(inpData.i16, inpData.mask);
-    gather64_i32(inpData.i32, inpData.mask);
-    gather64_i64(inpData.i64, inpData.mask);
-
-
-    gather_base_offsets32_double(inpData.d_32, inpData.mask);
-    gather_base_offsets32_float(inpData.f_32, inpData.mask);
-    gather_base_offsets32_i8(inpData.i8, inpData.mask);
-    gather_base_offsets32_i16(inpData.i16, inpData.mask);
-    gather_base_offsets32_i32(inpData.i32, inpData.mask);
-    gather_base_offsets32_i64(inpData.i64, inpData.mask);
-
-    //gather_base_offsets64_double(inpData.d_64, inpData.mask);
-    gather_base_offsets64_float(inpData.f_64, inpData.mask);
-    gather_base_offsets64_i8(inpData.i8, inpData.mask);
-    gather_base_offsets64_i16(inpData.i16, inpData.mask);
-    gather_base_offsets64_i32(inpData.i32, inpData.mask);
-    //gather_base_offsets64_i64(inpData.i64, inpData.mask);
-
-
-    //scatter32_double(inpData.d_32, inpData.mask);
-    //scatter32_float(inpData.f_32, inpData.mask);
-    //scatter32_i8(inpData.i8, inpData.mask);
-    //scatter32_i16(inpData.i16, inpData.mask);
-    //scatter32_i32(inpData.i32, inpData.mask);
-    //scatter32_i64(inpData.i64, inpData.mask);
-
-    //scatter64_double(inpData.d_64, inpData.mask);
-    scatter64_float(inpData.f_64, inpData.mask);
-    //scatter64_i8(inpData.i8, inpData.mask);
-    //scatter64_i16(inpData.i16, inpData.mask);
-    scatter64_i32(inpData.i32, inpData.mask);
-    scatter64_i64(inpData.i64, inpData.mask);
-
-
-    scatter_base_offsets32_double(inpData.d_32, inpData.mask);
-    scatter_base_offsets32_float(inpData.f_32, inpData.mask);
-    scatter_base_offsets32_i8(inpData.i8, inpData.mask);
-    scatter_base_offsets32_i16(inpData.i16, inpData.mask);
-    scatter_base_offsets32_i32(inpData.i32, inpData.mask);
-    scatter_base_offsets32_i64(inpData.i64, inpData.mask);
-
-    //scatter_base_offsets64_double(inpData.d_64, inpData.mask);
-    scatter_base_offsets64_float(inpData.f_64, inpData.mask);
-    scatter_base_offsets64_i8(inpData.i8, inpData.mask);
-    //scatter_base_offsets64_i16(inpData.i16, inpData.mask);
-    scatter_base_offsets64_i32(inpData.i32, inpData.mask);
-    scatter_base_offsets64_i64(inpData.i64, inpData.mask);
-}
 
 /////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -355,3 +265,69 @@ SCATTER_OFFSETS(int64_t, __vec16_i64, int8_t , __vec16_i8 , scatter_base_offsets
 //SCATTER_OFFSETS(int64_t, __vec16_i64, int16_t, __vec16_i16, scatter_base_offsets64_i16   )
 SCATTER_OFFSETS(int64_t, __vec16_i64, int32_t, __vec16_i32, scatter_base_offsets64_i32   )
 SCATTER_OFFSETS(int64_t, __vec16_i64, int64_t, __vec16_i64, scatter_base_offsets64_i64   )
+
+/////////////////////////////////////////////////////////////////////////////////////////////
+
+void test_gather_scatter () {
+    InputData inpData;
+
+    //gather32_double(inpData.d_32, inpData.mask);
+    //gather32_float(inpData.f_32, inpData.mask);
+    //gather32_i8(inpData.i8, inpData.mask);
+    //gather32_i16(inpData.i16, inpData.mask);
+    //gather32_i32(inpData.i32, inpData.mask);
+    //gather32_i64(inpData.i64, inpData.mask);
+
+    gather64_double(inpData.d_64, inpData.mask);
+    gather64_float(inpData.f_64, inpData.mask);
+    gather64_i8(inpData.i8, inpData.mask);
+    gather64_i16(inpData.i16, inpData.mask);
+    gather64_i32(inpData.i32, inpData.mask);
+    gather64_i64(inpData.i64, inpData.mask);
+
+
+    gather_base_offsets32_double(inpData.d_32, inpData.mask);
+    gather_base_offsets32_float(inpData.f_32, inpData.mask);
+    gather_base_offsets32_i8(inpData.i8, inpData.mask);
+    gather_base_offsets32_i16(inpData.i16, inpData.mask);
+    gather_base_offsets32_i32(inpData.i32, inpData.mask);
+    gather_base_offsets32_i64(inpData.i64, inpData.mask);
+
+    //gather_base_offsets64_double(inpData.d_64, inpData.mask);
+    gather_base_offsets64_float(inpData.f_64, inpData.mask);
+    gather_base_offsets64_i8(inpData.i8, inpData.mask);
+    gather_base_offsets64_i16(inpData.i16, inpData.mask);
+    gather_base_offsets64_i32(inpData.i32, inpData.mask);
+    //gather_base_offsets64_i64(inpData.i64, inpData.mask);
+
+
+    //scatter32_double(inpData.d_32, inpData.mask);
+    //scatter32_float(inpData.f_32, inpData.mask);
+    //scatter32_i8(inpData.i8, inpData.mask);
+    //scatter32_i16(inpData.i16, inpData.mask);
+    //scatter32_i32(inpData.i32, inpData.mask);
+    //scatter32_i64(inpData.i64, inpData.mask);
+
+    //scatter64_double(inpData.d_64, inpData.mask);
+    scatter64_float(inpData.f_64, inpData.mask);
+    //scatter64_i8(inpData.i8, inpData.mask);
+    //scatter64_i16(inpData.i16, inpData.mask);
+    scatter64_i32(inpData.i32, inpData.mask);
+    scatter64_i64(inpData.i64, inpData.mask);
+
+
+    scatter_base_offsets32_double(inpData.d_32, inpData.mask);
+    scatter_base_offsets32_float(inpData.f_32, inpData.mask);
+    scatter_base_offsets32_i8(inpData.i8, inpData.mask);
+    scatter_base_offsets32_i16(inpData.i16, inpData.mask);
+    scatter_base_offsets32_i32(inpData.i32, inpData.mask);
+    scatter_base_offsets32_i64(inpData.i64, inpData.mask);
+
+    //scatter_base_offsets64_double(inpData.d_64, inpData.mask);
+    scatter_base_offsets64_float(inpData.f_64, inpData.mask);
+    scatter_base_offsets64_i8(inpData.i8, inpData.mask);
+    //scatter_base_offsets64_i16(inpData.i16, inpData.mask);
+    scatter_base_offsets64_i32(inpData.i32, inpData.mask);
+    scatter_base_offsets64_i64(inpData.i64, inpData.mask);
+}
+

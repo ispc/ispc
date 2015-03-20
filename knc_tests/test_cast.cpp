@@ -1,154 +1,38 @@
+// Copyright (c) 2014-2015, Intel Corporation
+// All rights reserved.
+//
+// Redistribution and use in source and binary forms, with or without
+// modification, are permitted provided that the following conditions are met:
+//
+//     * Redistributions of source code must retain the above copyright
+//       notice, this list of conditions and the following disclaimer.
+//
+//     * Redistributions in binary form must reproduce the above copyright
+//       notice, this list of conditions and the following disclaimer in the
+//       documentation and/or other materials provided with the distribution.
+//
+//     * Neither the name of Intel Corporation nor the names of its
+//       contributors may be used to endorse or promote products derived from
+//       this software without specific prior written permission.
+//
+//
+// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+// AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+// IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+// ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
+// LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+// CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+// SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+// INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+// CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+// ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+// POSSIBILITY OF SUCH DAMAGE.
+//
+// ==========================================================
+// Author: Vsevolod Livinskiy
+// ==========================================================
+
 #include "knc_test_driver_core.h"
-
-void cast_i64_i32(int32_t *i32);
-void cast_i64_i16(int16_t *i16);
-void cast_i64_i8 (int8_t  *i8);
-void cast_i64_i1 (bool    *i1);
-void cast_i32_i16(int16_t *i16);
-void cast_i32_i8 (int8_t  *i8);
-void cast_i32_i1 (bool    *i1);
-void cast_i16_i8 (int8_t  *i8);
-void cast_i16_i1 (bool    *i1);
-void cast_i8_i1 (bool    *i1);
-
-void cast_ui64_ui32(uint32_t *ui32);
-void cast_ui64_ui16(uint16_t *ui16);
-void cast_ui64_ui8 (uint8_t  *ui8);
-void cast_ui64_ui1 (bool      *ui1);
-void cast_ui32_ui16(uint16_t *ui16);
-void cast_ui32_ui8 (uint8_t  *ui8);
-void cast_ui32_ui1 (bool      *ui1);
-void cast_ui16_ui8 (uint8_t  *ui8);
-void cast_ui16_ui1 (bool      *ui1);
-void cast_ui8_ui1 (bool      *ui1);
-
-void trunk_i32_i64(int64_t *i64);
-void trunk_i16_i64(int64_t *i64);
-void trunk_i8_i64 (int64_t *i64);
-void trunk_i16_i32(int32_t *i32);
-void trunk_i8_i32 (int32_t *i32);
-void trunk_i8_i16 (int16_t *i16);
-
-void cast_f_i8 (int8_t *i8);
-void cast_f_i16(int16_t *i16);
-void cast_f_i32(int32_t *i32);
-void cast_f_i64(int64_t *i64);
-void cast_d_i8 (int8_t *i8);
-void cast_d_i16(int16_t *i16);
-void cast_d_i32(int32_t *i32);
-void cast_d_i64(int64_t *i64);
-
-void cast_f_ui8 (uint8_t *ui8);
-void cast_f_ui16(uint16_t *ui16);
-void cast_f_ui32(uint32_t *ui32);
-void cast_f_ui64(uint64_t *ui64);
-void cast_d_ui8 (uint8_t *ui8);
-void cast_d_ui16(uint16_t *ui16);
-void cast_d_ui32(uint32_t *ui32);
-void cast_d_ui64(uint64_t *ui64);
-
-void cast_i8_f (float  *f_8);
-void cast_i16_f(float  *f_16);
-void cast_i32_f(float  *f_32);
-void cast_i64_f(float  *f_64);
-void cast_i8_d (double *d_8);
-void cast_i16_d(double *d_16);
-void cast_i32_d(double *d_32);
-void cast_i64_d(double *d_64);
-
-void cast_ui8_f (float  *f_u8);
-void cast_ui16_f(float  *f_u16);
-void cast_ui32_f(float  *f_u32);
-void cast_ui64_f(float  *f_u64);
-void cast_ui8_d (double *d_u8);
-void cast_ui16_d(double *d_u16);
-void cast_ui32_d(double *d_u32);
-void cast_ui64_d(double *d_u64);
-
-void cast_f_d(double *d);
-void cast_d_f(float  *f);
-
-/////////////////////////////////////////////////////////////////////////////////////////////
-
-void test_cast() {
-    InputData inpData;
-
-    cast_i64_i32(inpData.i32);
-    //cast_i64_i16(inpData.i16);
-    cast_i64_i8 (inpData.i8);
-    //cast_i64_i1 (inpData.i1);
-    cast_i32_i16(inpData.i16);
-    cast_i32_i8 (inpData.i8);
-    //cast_i32_i1 (inpData.i1);
-    cast_i16_i8 (inpData.i8);
-    //cast_i16_i1 (inpData.i1);
-    //cast_i8_i1  (inpData.i1);
-
-    cast_ui64_ui32(inpData.ui32);
-    cast_ui64_ui16(inpData.ui16);
-    cast_ui64_ui8 (inpData.ui8);
-    //cast_ui64_ui1 (inpData.i1);
-    cast_ui32_ui16(inpData.ui16);
-    cast_ui32_ui8 (inpData.ui8);
-    //cast_ui32_ui1 (inpData.i1);
-    cast_ui16_ui8 (inpData.ui8);
-    //cast_ui16_ui1 (inpData.i1);
-    //cast_ui8_ui1  (inpData.i1);
-
-    trunk_i32_i64(inpData.i64);
-    trunk_i16_i64(inpData.i64);
-    trunk_i8_i64 (inpData.i64);
-    trunk_i16_i32(inpData.i32);
-    trunk_i8_i32 (inpData.i32);
-    trunk_i8_i16 (inpData.i16);
-
-    cast_f_i8 (inpData.i8);
-    cast_f_i16(inpData.i16);
-    cast_f_i32(inpData.i32);
-    cast_f_i64(inpData.i64);
-    cast_d_i8 (inpData.i8);
-    cast_d_i16(inpData.i16);
-    cast_d_i32(inpData.i32);
-    cast_d_i64(inpData.i64);
-
-    cast_f_ui8 (inpData.ui8);
-    cast_f_ui16(inpData.ui16);
-    cast_f_ui32(inpData.ui32);
-    cast_f_ui64(inpData.ui64);
-    cast_d_ui8 (inpData.ui8);
-    cast_d_ui16(inpData.ui16);
-    cast_d_ui32(inpData.ui32);
-    cast_d_ui64(inpData.ui64);
-
-    cast_i8_f (inpData.f_8);
-    cast_i16_f(inpData.f_16);
-    cast_i32_f(inpData.f_32);
-    cast_i64_f(inpData.f_64);
-    cast_i8_d (inpData.d_8);
-    cast_i16_d(inpData.d_16);
-    cast_i32_d(inpData.d_32);
-    cast_i64_d(inpData.d_64);
-
-    cast_ui8_f (inpData.f_u8);
-    cast_ui16_f(inpData.f_u16);
-    cast_ui32_f(inpData.f_u32);
-    cast_ui64_f(inpData.f_u64);
-    cast_ui8_d (inpData.d_u8);
-    cast_ui16_d(inpData.d_u16);
-    cast_ui32_d(inpData.d_u32);
-    cast_ui64_d(inpData.d_u64);
-
-
-    cast_f_d(inpData.d_8);
-    cast_f_d(inpData.d_16);
-    cast_f_d(inpData.d_32);
-    cast_f_d(inpData.d_64);
-    cast_d_f(inpData.f_8);
-    cast_d_f(inpData.f_16);
-    cast_d_f(inpData.f_32);
-    cast_d_f(inpData.f_64);
-
-}
 
 /////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -245,4 +129,87 @@ CAST_TEST(uint64_t, __vec16_i64, double, __vec16_d, cast_ui64_d, __cast_fptoui)
 
 CAST_TEST(float , __vec16_f, double, __vec16_d, cast_f_d, __cast_fptrunc)
 CAST_TEST(double, __vec16_d, float , __vec16_f, cast_d_f, __cast_fpext)
+
+/////////////////////////////////////////////////////////////////////////////////////////////
+
+void test_cast() {
+    InputData inpData;
+
+    cast_i64_i32(inpData.i32);
+    //cast_i64_i16(inpData.i16);
+    cast_i64_i8 (inpData.i8);
+    //cast_i64_i1 (inpData.i1);
+    cast_i32_i16(inpData.i16);
+    cast_i32_i8 (inpData.i8);
+    //cast_i32_i1 (inpData.i1);
+    cast_i16_i8 (inpData.i8);
+    //cast_i16_i1 (inpData.i1);
+    //cast_i8_i1  (inpData.i1);
+
+    cast_ui64_ui32(inpData.ui32);
+    cast_ui64_ui16(inpData.ui16);
+    cast_ui64_ui8 (inpData.ui8);
+    //cast_ui64_ui1 (inpData.i1);
+    cast_ui32_ui16(inpData.ui16);
+    cast_ui32_ui8 (inpData.ui8);
+    //cast_ui32_ui1 (inpData.i1);
+    cast_ui16_ui8 (inpData.ui8);
+    //cast_ui16_ui1 (inpData.i1);
+    //cast_ui8_ui1  (inpData.i1);
+
+    trunk_i32_i64(inpData.i64);
+    trunk_i16_i64(inpData.i64);
+    trunk_i8_i64 (inpData.i64);
+    trunk_i16_i32(inpData.i32);
+    trunk_i8_i32 (inpData.i32);
+    trunk_i8_i16 (inpData.i16);
+
+    cast_f_i8 (inpData.i8);
+    cast_f_i16(inpData.i16);
+    cast_f_i32(inpData.i32);
+    cast_f_i64(inpData.i64);
+    cast_d_i8 (inpData.i8);
+    cast_d_i16(inpData.i16);
+    cast_d_i32(inpData.i32);
+    cast_d_i64(inpData.i64);
+
+    cast_f_ui8 (inpData.ui8);
+    cast_f_ui16(inpData.ui16);
+    cast_f_ui32(inpData.ui32);
+    cast_f_ui64(inpData.ui64);
+    cast_d_ui8 (inpData.ui8);
+    cast_d_ui16(inpData.ui16);
+    cast_d_ui32(inpData.ui32);
+    cast_d_ui64(inpData.ui64);
+
+    cast_i8_f (inpData.f_8);
+    cast_i16_f(inpData.f_16);
+    cast_i32_f(inpData.f_32);
+    cast_i64_f(inpData.f_64);
+    cast_i8_d (inpData.d_8);
+    cast_i16_d(inpData.d_16);
+    cast_i32_d(inpData.d_32);
+    cast_i64_d(inpData.d_64);
+
+    cast_ui8_f (inpData.f_u8);
+    cast_ui16_f(inpData.f_u16);
+    cast_ui32_f(inpData.f_u32);
+    cast_ui64_f(inpData.f_u64);
+    cast_ui8_d (inpData.d_u8);
+    cast_ui16_d(inpData.d_u16);
+    cast_ui32_d(inpData.d_u32);
+    cast_ui64_d(inpData.d_u64);
+
+
+    cast_f_d(inpData.d_8);
+    cast_f_d(inpData.d_16);
+    cast_f_d(inpData.d_32);
+    cast_f_d(inpData.d_64);
+    cast_d_f(inpData.f_8);
+    cast_d_f(inpData.f_16);
+    cast_d_f(inpData.f_32);
+    cast_d_f(inpData.f_64);
+
+}
+
 
