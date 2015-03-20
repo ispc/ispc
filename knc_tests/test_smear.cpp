@@ -14,8 +14,8 @@ void test_smear () {
 
     smear_double(inpData.d_32);
     smear_float(inpData.f_32);
-    //smear_i8(inpData.i8);
-    //smear_i16(inpData.i16);
+    smear_i8(inpData.i8);
+    smear_i16(inpData.i16);
     smear_i32(inpData.i32);
     smear_i64(inpData.i64);
 
@@ -47,8 +47,8 @@ void FUNC_NAME(TYPE *data) {                                                    
 
 SMEAR_TEST(double , __vec16_d  , smear_double)
 SMEAR_TEST(float  , __vec16_f  , smear_float )
-//SMEAR_TEST(int8_t , __vec16_i8 , smear_i8    )
-//SMEAR_TEST(int16_t, __vec16_i16, smear_i16   )
+SMEAR_TEST(int8_t , __vec16_i8 , smear_i8    )
+SMEAR_TEST(int16_t, __vec16_i16, smear_i16   )
 SMEAR_TEST(int32_t, __vec16_i32, smear_i32   )
 SMEAR_TEST(int64_t, __vec16_i64, smear_i64   )
 

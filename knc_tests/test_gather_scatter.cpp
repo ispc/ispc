@@ -71,25 +71,25 @@ void test_gather_scatter () {
     //gather32_i32(inpData.i32, inpData.mask);
     //gather32_i64(inpData.i64, inpData.mask);
 
-    //gather64_double(inpData.d_64, inpData.mask);
+    gather64_double(inpData.d_64, inpData.mask);
     gather64_float(inpData.f_64, inpData.mask);
-    //gather64_i8(inpData.i8, inpData.mask);
-    //gather64_i16(inpData.i16, inpData.mask);
-    //gather64_i32(inpData.i32, inpData.mask);
+    gather64_i8(inpData.i8, inpData.mask);
+    gather64_i16(inpData.i16, inpData.mask);
+    gather64_i32(inpData.i32, inpData.mask);
     gather64_i64(inpData.i64, inpData.mask);
 
 
     gather_base_offsets32_double(inpData.d_32, inpData.mask);
     gather_base_offsets32_float(inpData.f_32, inpData.mask);
-    //gather_base_offsets32_i8(inpData.i8, inpData.mask);
-    //gather_base_offsets32_i16(inpData.i16, inpData.mask);
+    gather_base_offsets32_i8(inpData.i8, inpData.mask);
+    gather_base_offsets32_i16(inpData.i16, inpData.mask);
     gather_base_offsets32_i32(inpData.i32, inpData.mask);
     gather_base_offsets32_i64(inpData.i64, inpData.mask);
 
     //gather_base_offsets64_double(inpData.d_64, inpData.mask);
     gather_base_offsets64_float(inpData.f_64, inpData.mask);
-    //gather_base_offsets64_i8(inpData.i8, inpData.mask);
-    //gather_base_offsets64_i16(inpData.i16, inpData.mask);
+    gather_base_offsets64_i8(inpData.i8, inpData.mask);
+    gather_base_offsets64_i16(inpData.i16, inpData.mask);
     gather_base_offsets64_i32(inpData.i32, inpData.mask);
     //gather_base_offsets64_i64(inpData.i64, inpData.mask);
 
@@ -102,26 +102,26 @@ void test_gather_scatter () {
     //scatter32_i64(inpData.i64, inpData.mask);
 
     //scatter64_double(inpData.d_64, inpData.mask);
-    //scatter64_float(inpData.f_64, inpData.mask);
+    scatter64_float(inpData.f_64, inpData.mask);
     //scatter64_i8(inpData.i8, inpData.mask);
     //scatter64_i16(inpData.i16, inpData.mask);
-    //scatter64_i32(inpData.i32, inpData.mask);
-    //scatter64_i64(inpData.i64, inpData.mask);
+    scatter64_i32(inpData.i32, inpData.mask);
+    scatter64_i64(inpData.i64, inpData.mask);
 
 
-    //scatter_base_offsets32_double(inpData.d_32, inpData.mask);
+    scatter_base_offsets32_double(inpData.d_32, inpData.mask);
     scatter_base_offsets32_float(inpData.f_32, inpData.mask);
-    //scatter_base_offsets32_i8(inpData.i8, inpData.mask);
-    //scatter_base_offsets32_i16(inpData.i16, inpData.mask);
+    scatter_base_offsets32_i8(inpData.i8, inpData.mask);
+    scatter_base_offsets32_i16(inpData.i16, inpData.mask);
     scatter_base_offsets32_i32(inpData.i32, inpData.mask);
-    //scatter_base_offsets32_i64(inpData.i64, inpData.mask);
+    scatter_base_offsets32_i64(inpData.i64, inpData.mask);
 
     //scatter_base_offsets64_double(inpData.d_64, inpData.mask);
     scatter_base_offsets64_float(inpData.f_64, inpData.mask);
-    //scatter_base_offsets64_i8(inpData.i8, inpData.mask);
+    scatter_base_offsets64_i8(inpData.i8, inpData.mask);
     //scatter_base_offsets64_i16(inpData.i16, inpData.mask);
     scatter_base_offsets64_i32(inpData.i32, inpData.mask);
-    //scatter_base_offsets64_i64(inpData.i64, inpData.mask);
+    scatter_base_offsets64_i64(inpData.i64, inpData.mask);
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////
@@ -175,11 +175,11 @@ void FUNC_NAME(TYPE *data, int *m) {                                            
 //GATHER(int32_t, __vec16_i32, int32_t, __vec16_i32, gather32_i32   )
 //GATHER(int32_t, __vec16_i32, int64_t, __vec16_i64, gather32_i64   )
 
-//GATHER(int64_t, __vec16_i64, double , __vec16_d  , gather64_double)
+GATHER(int64_t, __vec16_i64, double , __vec16_d  , gather64_double)
 GATHER(int64_t, __vec16_i64, float  , __vec16_f  , gather64_float )
-//GATHER(int64_t, __vec16_i64, int8_t , __vec16_i8 , gather64_i8    )
-//GATHER(int64_t, __vec16_i64, int16_t, __vec16_i16, gather64_i16   )
-//GATHER(int64_t, __vec16_i64, int32_t, __vec16_i32, gather64_i32   )
+GATHER(int64_t, __vec16_i64, int8_t , __vec16_i8 , gather64_i8    )
+GATHER(int64_t, __vec16_i64, int16_t, __vec16_i16, gather64_i16   )
+GATHER(int64_t, __vec16_i64, int32_t, __vec16_i32, gather64_i32   )
 GATHER(int64_t, __vec16_i64, int64_t, __vec16_i64, gather64_i64   )
 
 #define GATHER_OFFSETS(GATHER_SCALAR_TYPE, GATHER_VEC_TYPE, TYPE, VEC_TYPE, FUNC_NAME)      \
@@ -230,15 +230,15 @@ void FUNC_NAME(TYPE *data, int *m) {                                            
 
 GATHER_OFFSETS(int32_t, __vec16_i32, double , __vec16_d  , gather_base_offsets32_double)
 GATHER_OFFSETS(int32_t, __vec16_i32, float  , __vec16_f  , gather_base_offsets32_float )
-//GATHER_OFFSETS(int32_t, __vec16_i32, int8_t , __vec16_i8 , gather_base_offsets32_i8    )
-//GATHER_OFFSETS(int32_t, __vec16_i32, int16_t, __vec16_i16, gather_base_offsets32_i16   )
+GATHER_OFFSETS(int32_t, __vec16_i32, int8_t , __vec16_i8 , gather_base_offsets32_i8    )
+GATHER_OFFSETS(int32_t, __vec16_i32, int16_t, __vec16_i16, gather_base_offsets32_i16   )
 GATHER_OFFSETS(int32_t, __vec16_i32, int32_t, __vec16_i32, gather_base_offsets32_i32   )
 GATHER_OFFSETS(int32_t, __vec16_i32, int64_t, __vec16_i64, gather_base_offsets32_i64   )
 
 //GATHER_OFFSETS(int64_t, __vec16_i64, double , __vec16_d  , gather_base_offsets64_double)
 GATHER_OFFSETS(int64_t, __vec16_i64, float  , __vec16_f  , gather_base_offsets64_float )
-//GATHER_OFFSETS(int64_t, __vec16_i64, int8_t , __vec16_i8 , gather_base_offsets64_i8    )
-//GATHER_OFFSETS(int64_t, __vec16_i64, int16_t, __vec16_i16, gather_base_offsets64_i16   )
+GATHER_OFFSETS(int64_t, __vec16_i64, int8_t , __vec16_i8 , gather_base_offsets64_i8    )
+GATHER_OFFSETS(int64_t, __vec16_i64, int16_t, __vec16_i16, gather_base_offsets64_i16   )
 GATHER_OFFSETS(int64_t, __vec16_i64, int32_t, __vec16_i32, gather_base_offsets64_i32   )
 //GATHER_OFFSETS(int64_t, __vec16_i64, int64_t, __vec16_i64, gather_base_offsets64_i64   )
 
@@ -293,11 +293,11 @@ void FUNC_NAME(TYPE *data, int *m) {                                            
 //SCATTER(int32_t, __vec16_i32, int64_t, __vec16_i64, scatter32_i64   )
 
 //SCATTER(int64_t, __vec16_i64, double , __vec16_d  , scatter64_double)
-//SCATTER(int64_t, __vec16_i64, float  , __vec16_f  , scatter64_float )
+SCATTER(int64_t, __vec16_i64, float  , __vec16_f  , scatter64_float )
 //SCATTER(int64_t, __vec16_i64, int8_t , __vec16_i8 , scatter64_i8    )
 //SCATTER(int64_t, __vec16_i64, int16_t, __vec16_i16, scatter64_i16   )
-//SCATTER(int64_t, __vec16_i64, int32_t, __vec16_i32, scatter64_i32   )
-//SCATTER(int64_t, __vec16_i64, int64_t, __vec16_i64, scatter64_i64   )
+SCATTER(int64_t, __vec16_i64, int32_t, __vec16_i32, scatter64_i32   )
+SCATTER(int64_t, __vec16_i64, int64_t, __vec16_i64, scatter64_i64   )
 
 #define SCATTER_OFFSETS(SCATTER_SCALAR_TYPE, SCATTER_VEC_TYPE, TYPE, VEC_TYPE, FUNC_NAME)   \
 void FUNC_NAME(TYPE *data, int *m) {                                                        \
@@ -342,16 +342,16 @@ void FUNC_NAME(TYPE *data, int *m) {                                            
                                                                                             \
 }
 
-//SCATTER_OFFSETS(int32_t, __vec16_i32, double , __vec16_d  , scatter_base_offsets32_double)
+SCATTER_OFFSETS(int32_t, __vec16_i32, double , __vec16_d  , scatter_base_offsets32_double)
 SCATTER_OFFSETS(int32_t, __vec16_i32, float  , __vec16_f  , scatter_base_offsets32_float )
-//SCATTER_OFFSETS(int32_t, __vec16_i32, int8_t , __vec16_i8 , scatter_base_offsets32_i8    )
-//SCATTER_OFFSETS(int32_t, __vec16_i32, int16_t, __vec16_i16, scatter_base_offsets32_i16   )
+SCATTER_OFFSETS(int32_t, __vec16_i32, int8_t , __vec16_i8 , scatter_base_offsets32_i8    )
+SCATTER_OFFSETS(int32_t, __vec16_i32, int16_t, __vec16_i16, scatter_base_offsets32_i16   )
 SCATTER_OFFSETS(int32_t, __vec16_i32, int32_t, __vec16_i32, scatter_base_offsets32_i32   )
-//SCATTER_OFFSETS(int32_t, __vec16_i32, int64_t, __vec16_i64, scatter_base_offsets32_i64   )
+SCATTER_OFFSETS(int32_t, __vec16_i32, int64_t, __vec16_i64, scatter_base_offsets32_i64   )
 
 //SCATTER_OFFSETS(int64_t, __vec16_i64, double , __vec16_d  , scatter_base_offsets64_double)
 SCATTER_OFFSETS(int64_t, __vec16_i64, float  , __vec16_f  , scatter_base_offsets64_float )
-//SCATTER_OFFSETS(int64_t, __vec16_i64, int8_t , __vec16_i8 , scatter_base_offsets64_i8    )
+SCATTER_OFFSETS(int64_t, __vec16_i64, int8_t , __vec16_i8 , scatter_base_offsets64_i8    )
 //SCATTER_OFFSETS(int64_t, __vec16_i64, int16_t, __vec16_i16, scatter_base_offsets64_i16   )
 SCATTER_OFFSETS(int64_t, __vec16_i64, int32_t, __vec16_i32, scatter_base_offsets64_i32   )
-//SCATTER_OFFSETS(int64_t, __vec16_i64, int64_t, __vec16_i64, scatter_base_offsets64_i64   )
+SCATTER_OFFSETS(int64_t, __vec16_i64, int64_t, __vec16_i64, scatter_base_offsets64_i64   )

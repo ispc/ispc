@@ -14,8 +14,8 @@ void test_setzero() {
 
     setzero_double();
     setzero_float();
-    //setzero_i8();
-    //setzero_i16();
+    setzero_i8();
+    setzero_i16();
     setzero_i32();
     setzero_i64();
 
@@ -43,7 +43,7 @@ void FUNC_NAME() {                                                              
 
 SETZERO_TEST(double , __vec16_d  , setzero_double)
 SETZERO_TEST(float  , __vec16_f  , setzero_float )
-//SETZERO_TEST(int8_t , __vec16_i8 , setzero_i8    )
-//SETZERO_TEST(int16_t, __vec16_i16, setzero_i16   )
+SETZERO_TEST(int8_t , __vec16_i8 , setzero_i8    )
+SETZERO_TEST(int16_t, __vec16_i16, setzero_i16   )
 SETZERO_TEST(int32_t, __vec16_i32, setzero_i32   )
 SETZERO_TEST(int64_t, __vec16_i64, setzero_i64   )

@@ -16,7 +16,7 @@ void test_shift() {
     //shift_float(inpData.f_32);
     //shift_i8(inpData.i8);
     //shift_i16(inpData.i16);
-    //shift_i32(inpData.i32);
+    shift_i32(inpData.i32);
     //shift_i64(inpData.i64);
 
 }
@@ -68,6 +68,6 @@ void FUNC_NAME(TYPE *data) {                                                    
 //SHIFT_TEST(float  , __vec16_f  , shift_float )
 //SHIFT_TEST(int8_t , __vec16_i8 , shift_i8    )
 //SHIFT_TEST(int16_t, __vec16_i16, shift_i16   )
-//SHIFT_TEST(int32_t, __vec16_i32, shift_i32   )
+SHIFT_TEST(int32_t, __vec16_i32, shift_i32   )
 //SHIFT_TEST(int64_t, __vec16_i64, shift_i64   )
 

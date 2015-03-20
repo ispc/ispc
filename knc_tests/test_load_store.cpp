@@ -22,16 +22,16 @@ void test_load_store () {
 
     load_double(inpData.d_32);
     load_float(inpData.f_32);
-    //load_i8(inpData.i8);
-    //load_i16(inpData.i16);
+    load_i8(inpData.i8);
+    load_i16(inpData.i16);
     load_i32(inpData.i32);
     load_i64(inpData.i64);
 
 
     store_double(inpData.d_32);
     store_float(inpData.f_32);
-    //store_i8(inpData.i8);
-    //store_i16(inpData.i16);
+    store_i8(inpData.i8);
+    store_i16(inpData.i16);
     store_i32(inpData.i32);
     store_i64(inpData.i64);
 
@@ -67,8 +67,8 @@ void FUNC_NAME(TYPE *data) {                                                    
 
 LOAD(double , __vec16_d  , load_double, 128)
 LOAD(float  , __vec16_f  , load_float , 64)
-//LOAD(int8_t , __vec16_i8 , load_i8    , 16)
-//LOAD(int16_t, __vec16_i16, load_i16   , 32)
+LOAD(int8_t , __vec16_i8 , load_i8    , 16)
+LOAD(int16_t, __vec16_i16, load_i16   , 32)
 LOAD(int32_t, __vec16_i32, load_i32   , 64)
 
 void load_i64(int64_t *data) {
@@ -124,8 +124,8 @@ void FUNC_NAME(TYPE *data) {                                                    
 
 STORE(double , __vec16_d  , store_double, 128)
 STORE(float  , __vec16_f  , store_float , 64)
-//STORE(int8_t , __vec16_i8 , store_i8    , 16)
-//STORE(int16_t, __vec16_i16, store_i16   , 32)
+STORE(int8_t , __vec16_i8 , store_i8    , 16)
+STORE(int16_t, __vec16_i16, store_i16   , 32)
 STORE(int32_t, __vec16_i32, store_i32   , 64)
 
 void store_i64(int64_t *data) {

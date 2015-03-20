@@ -29,16 +29,16 @@ void test_masked_load_store() {
 
     masked_load_double(inpData.d_32, inpData.mask);
     masked_load_float(inpData.f_32, inpData.mask);
-    //masked_load_i8(inpData.i8, inpData.mask);
-    //masked_load_i16(inpData.i16, inpData.mask);
+    masked_load_i8(inpData.i8, inpData.mask);
+    masked_load_i16(inpData.i16, inpData.mask);
     masked_load_i32(inpData.i32, inpData.mask);
-    //masked_load_i64(inpData.i64, inpData.mask);
+    masked_load_i64(inpData.i64, inpData.mask);
 
 
     masked_store_double(inpData.d_32, inpData.mask);
     masked_store_float(inpData.f_32, inpData.mask);
-    //masked_store_i8(inpData.i8, inpData.mask);
-    //masked_store_i16(inpData.i16, inpData.mask);
+    masked_store_i8(inpData.i8, inpData.mask);
+    masked_store_i16(inpData.i16, inpData.mask);
     masked_store_i32(inpData.i32, inpData.mask);
     masked_store_i64(inpData.i64, inpData.mask);
 
@@ -92,10 +92,10 @@ void FUNC_NAME(TYPE *data, int *m) {                                            
 
 MASKED_LOAD(double , __vec16_d  , masked_load_double)
 MASKED_LOAD(float  , __vec16_f  , masked_load_float )
-//MASKED_LOAD(int8_t , __vec16_i8 , masked_load_i8    )
-//MASKED_LOAD(int16_t, __vec16_i16, masked_load_i16   )
+MASKED_LOAD(int8_t , __vec16_i8 , masked_load_i8    )
+MASKED_LOAD(int16_t, __vec16_i16, masked_load_i16   )
 MASKED_LOAD(int32_t, __vec16_i32, masked_load_i32   )
-//MASKED_LOAD(int64_t, __vec16_i64, masked_load_i64   )
+MASKED_LOAD(int64_t, __vec16_i64, masked_load_i64   )
 
 #define MASKED_STORE(TYPE, VEC_TYPE, FUNC_NAME)                                             \
 void FUNC_NAME(TYPE *data, int *m) {                                                        \
@@ -135,8 +135,8 @@ void FUNC_NAME(TYPE *data, int *m) {                                            
 
 MASKED_STORE(double , __vec16_d  , masked_store_double)
 MASKED_STORE(float  , __vec16_f  , masked_store_float )
-//MASKED_STORE(int8_t , __vec16_i8 , masked_store_i8    )
-//MASKED_STORE(int16_t, __vec16_i16, masked_store_i16   )
+MASKED_STORE(int8_t , __vec16_i8 , masked_store_i8    )
+MASKED_STORE(int16_t, __vec16_i16, masked_store_i16   )
 MASKED_STORE(int32_t, __vec16_i32, masked_store_i32   )
 MASKED_STORE(int64_t, __vec16_i64, masked_store_i64   )
 

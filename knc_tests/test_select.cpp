@@ -21,15 +21,15 @@ void test_select() {
 
     select_double(inpData.d_32, inpData.mask);
     select_float(inpData.f_32, inpData.mask);
-    //select_i8(inpData.i8, inpData.mask);
-    //select_i16(inpData.i16, inpData.mask);
+    select_i8(inpData.i8, inpData.mask);
+    select_i16(inpData.i16, inpData.mask);
     select_i32(inpData.i32, inpData.mask);
     select_i64(inpData.i64, inpData.mask);
 
     select_double_cond(inpData.d_32, inpData.mask);
     select_float_cond(inpData.f_32, inpData.mask);
-    //select_i8_cond(inpData.i8, inpData.mask);
-    //select_i16_cond(inpData.i16, inpData.mask);
+    select_i8_cond(inpData.i8, inpData.mask);
+    select_i16_cond(inpData.i16, inpData.mask);
     select_i32_cond(inpData.i32, inpData.mask);
     select_i64_cond(inpData.i64, inpData.mask);
 
@@ -65,10 +65,10 @@ void FUNC_NAME(TYPE *data, int *m) {                                            
                                                                                             \
     int err_counter = 0;                                                                    \
     for (uint32_t i = 0; i < 16; i++){                                                      \
-        if (m[i] != 0 && check_and_print(__extract_element(output, i), data[i],             \
+        if (m[i] != 0 && check_and_print(__extract_element(output, i), (TYPE) (data[i]),    \
                                          err_counter))                                      \
             err_counter++;                                                                  \
-        if (m[i] == 0 && check_and_print(__extract_element(output, i), data[i] / 2,         \
+        if (m[i] == 0 && check_and_print(__extract_element(output, i), (TYPE)(data[i] / 2), \
                                         err_counter))                                       \
             err_counter++;                                                                  \
     }                                                                                       \
@@ -102,7 +102,7 @@ void FUNC_NAME##_cond(TYPE *data, int *m) {                                     
         output = __select(copy_m[i], input1, input2);                                       \
         for (uint32_t j = 0; j < 16; j++){                                                  \
             if (m[i] != 0 && check_and_print(__extract_element(output, j),                  \
-                                             (TYPE)data[j], err_counter))                   \
+                                             (TYPE)(data[j]), err_counter))                 \
                 err_counter++;                                                              \
             if (m[i] == 0 && check_and_print(__extract_element(output, j),                  \
                                             (TYPE)(data[j] * -1), err_counter))             \
@@ -117,8 +117,8 @@ void FUNC_NAME##_cond(TYPE *data, int *m) {                                     
 
 SELECT_TEST(double , __vec16_d  , select_double)
 SELECT_TEST(float  , __vec16_f  , select_float )
-//SELECT_TEST(int8_t , __vec16_i8 , select_i8    )
-//SELECT_TEST(int16_t, __vec16_i16, select_i16   )
+SELECT_TEST(int8_t , __vec16_i8 , select_i8    )
+SELECT_TEST(int16_t, __vec16_i16, select_i16   )
 SELECT_TEST(int32_t, __vec16_i32, select_i32   )
 SELECT_TEST(int64_t, __vec16_i64, select_i64   )
 

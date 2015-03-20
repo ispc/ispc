@@ -14,8 +14,8 @@ void test_broadcast() {
 
     broadcast_double(inpData.d_32);
     broadcast_float(inpData.f_32);
-    //broadcast_i8(inpData.i8);
-    //broadcast_i16(inpData.i16);
+    broadcast_i8(inpData.i8);
+    broadcast_i16(inpData.i16);
     broadcast_i32(inpData.i32);
     //broadcast_i64(inpData.i64);
 
@@ -57,8 +57,7 @@ void FUNC_NAME(TYPE *data) {                                                    
 
 BROADCAST_TEST(double , __vec16_d  , broadcast_double)
 BROADCAST_TEST(float  , __vec16_f  , broadcast_float )
-//BROADCAST_TEST(int8_t , __vec16_i8 , broadcast_i8    )
-//BROADCAST_TEST(int16_t, __vec16_i16, broadcast_i16   )
+BROADCAST_TEST(int8_t , __vec16_i8 , broadcast_i8    )
+BROADCAST_TEST(int16_t, __vec16_i16, broadcast_i16   )
 BROADCAST_TEST(int32_t, __vec16_i32, broadcast_i32   )
 //BROADCAST_TEST(int64_t, __vec16_i64, broadcast_i64   )
-

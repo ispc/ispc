@@ -139,27 +139,27 @@ void test_cmp() {
 
     equal_double(inpData.d_32);
     equal_float (inpData.f_32);
-    //equal_i8    (inpData.i8);
-    //equal_i16   (inpData.i16);
+    equal_i8    (inpData.i8);
+    equal_i16   (inpData.i16);
     equal_i32   (inpData.i32);
     equal_i64   (inpData.i64);
 
     not_equal_double(inpData.d_32);
     not_equal_float (inpData.f_32);
-    //not_equal_i8    (inpData.i8);
-    //not_equal_i16   (inpData.i16);
+    not_equal_i8    (inpData.i8);
+    not_equal_i16   (inpData.i16);
     not_equal_i32   (inpData.i32);
     not_equal_i64   (inpData.i64);
 
     //unsigned_less_equal_i8  (inpData.ui8);
     //unsigned_less_equal_i16 (inpData.ui16);
     unsigned_less_equal_i32 (inpData.ui32);
-    //unsigned_less_equal_i64 (inpData.ui64);
+    unsigned_less_equal_i64 (inpData.ui64);
 
     //signed_less_equal_i8  (inpData.i8);
     //signed_less_equal_i16 (inpData.i16);
     signed_less_equal_i32 (inpData.i32);
-    //signed_less_equal_i64 (inpData.i64);
+    signed_less_equal_i64 (inpData.i64);
 
     less_equal_double(inpData.d_32);
     less_equal_float (inpData.f_32);
@@ -167,12 +167,12 @@ void test_cmp() {
     //unsigned_greater_equal_i8  (inpData.ui8);
     //unsigned_greater_equal_i16 (inpData.ui16);
     unsigned_greater_equal_i32 (inpData.ui32);
-    //unsigned_greater_equal_i64 (inpData.ui64);
+    unsigned_greater_equal_i64 (inpData.ui64);
 
     //signed_greater_equal_i8  (inpData.i8);
     //signed_greater_equal_i16 (inpData.i16);
     signed_greater_equal_i32 (inpData.i32);
-    //signed_greater_equal_i64 (inpData.i64);
+    signed_greater_equal_i64 (inpData.i64);
 
     greater_equal_double(inpData.d_32);
     greater_equal_float (inpData.f_32);
@@ -180,12 +180,12 @@ void test_cmp() {
     //unsigned_less_than_i8  (inpData.ui8);
     //unsigned_less_than_i16 (inpData.ui16);
     unsigned_less_than_i32 (inpData.ui32);
-    //unsigned_less_than_i64 (inpData.ui64);
+    unsigned_less_than_i64 (inpData.ui64);
 
- //signed_less_than_i8  (inpData.i8);
+    //signed_less_than_i8  (inpData.i8);
     //signed_less_than_i16 (inpData.i16);
     signed_less_than_i32 (inpData.i32);
-    //signed_less_than_i64 (inpData.i64);
+    signed_less_than_i64 (inpData.i64);
 
     less_than_double(inpData.d_32);
     less_than_float (inpData.f_32);
@@ -193,39 +193,39 @@ void test_cmp() {
     //unsigned_greater_than_i8  (inpData.ui8);
     //unsigned_greater_than_i16 (inpData.ui16);
     unsigned_greater_than_i32 (inpData.ui32);
-    //unsigned_greater_than_i64 (inpData.ui64);
+    unsigned_greater_than_i64 (inpData.ui64);
 
     //signed_greater_than_i8  (inpData.i8);
     //signed_greater_than_i16 (inpData.i16);
     signed_greater_than_i32 (inpData.i32);
-    //signed_greater_than_i64 (inpData.i64);
+    signed_greater_than_i64 (inpData.i64);
 
     greater_than_double(inpData.d_32);
     greater_than_float (inpData.f_32);
 
     equal_double_and_mask(inpData.d_32, inpData.mask);
     equal_float_and_mask (inpData.f_32, inpData.mask);
-    //equal_i8_and_mask    (inpData.i8, inpData.mask);
-    //equal_i16_and_mask   (inpData.i16, inpData.mask);
+    equal_i8_and_mask    (inpData.i8, inpData.mask);
+    equal_i16_and_mask   (inpData.i16, inpData.mask);
     equal_i32_and_mask   (inpData.i32, inpData.mask);
     equal_i64_and_mask   (inpData.i64, inpData.mask);
 
     not_equal_double_and_mask(inpData.d_32, inpData.mask);
     not_equal_float_and_mask (inpData.f_32, inpData.mask);
-    //not_equal_i8_and_mask    (inpData.i8, inpData.mask);
-    //not_equal_i16_and_mask   (inpData.i16, inpData.mask);
+    not_equal_i8_and_mask    (inpData.i8, inpData.mask);
+    not_equal_i16_and_mask   (inpData.i16, inpData.mask);
     not_equal_i32_and_mask   (inpData.i32, inpData.mask);
     not_equal_i64_and_mask   (inpData.i64, inpData.mask);
 
     //unsigned_less_equal_i8_and_mask  (inpData.ui8, inpData.mask);
     //unsigned_less_equal_i16_and_mask (inpData.ui16, inpData.mask);
     unsigned_less_equal_i32_and_mask (inpData.ui32, inpData.mask);
-    //unsigned_less_equal_i64_and_mask (inpData.ui64, inpData.mask);
+    unsigned_less_equal_i64_and_mask (inpData.ui64, inpData.mask);
 
     //signed_less_equal_i8_and_mask  (inpData.i8, inpData.mask);
     //signed_less_equal_i16_and_mask (inpData.i16, inpData.mask);
     signed_less_equal_i32_and_mask (inpData.i32, inpData.mask);
-    //signed_less_equal_i64_and_mask (inpData.i64, inpData.mask);
+    signed_less_equal_i64_and_mask (inpData.i64, inpData.mask);
 
     less_equal_double_and_mask(inpData.d_32, inpData.mask);
     less_equal_float_and_mask (inpData.f_32, inpData.mask);
@@ -233,12 +233,12 @@ void test_cmp() {
     //unsigned_greater_equal_i8_and_mask  (inpData.ui8, inpData.mask);
     //unsigned_greater_equal_i16_and_mask (inpData.ui16, inpData.mask);
     unsigned_greater_equal_i32_and_mask (inpData.ui32, inpData.mask);
-    //unsigned_greater_equal_i64_and_mask (inpData.ui64, inpData.mask);
+    unsigned_greater_equal_i64_and_mask (inpData.ui64, inpData.mask);
 
     //signed_greater_equal_i8_and_mask  (inpData.i8, inpData.mask);
     //signed_greater_equal_i16_and_mask (inpData.i16, inpData.mask);
     signed_greater_equal_i32_and_mask (inpData.i32, inpData.mask);
-    //signed_greater_equal_i64_and_mask (inpData.i64, inpData.mask);
+    signed_greater_equal_i64_and_mask (inpData.i64, inpData.mask);
 
     greater_equal_double_and_mask(inpData.d_32, inpData.mask);
     greater_equal_float_and_mask (inpData.f_32, inpData.mask);
@@ -246,12 +246,12 @@ void test_cmp() {
     //unsigned_less_than_i8_and_mask  (inpData.ui8, inpData.mask);
     //unsigned_less_than_i16_and_mask (inpData.ui16, inpData.mask);
     unsigned_less_than_i32_and_mask (inpData.ui32, inpData.mask);
-    //unsigned_less_than_i64_and_mask (inpData.ui64, inpData.mask);
+    unsigned_less_than_i64_and_mask (inpData.ui64, inpData.mask);
 
     //signed_less_than_i8_and_mask  (inpData.i8, inpData.mask);
     //signed_less_than_i16_and_mask (inpData.i16, inpData.mask);
     signed_less_than_i32_and_mask (inpData.i32, inpData.mask);
-    //signed_less_than_i64_and_mask (inpData.i64, inpData.mask);
+    signed_less_than_i64_and_mask (inpData.i64, inpData.mask);
 
     less_than_double_and_mask(inpData.d_32, inpData.mask);
     less_than_float_and_mask (inpData.f_32, inpData.mask);
@@ -259,12 +259,12 @@ void test_cmp() {
     //unsigned_greater_than_i8_and_mask  (inpData.ui8, inpData.mask);
     //unsigned_greater_than_i16_and_mask (inpData.ui16, inpData.mask);
     unsigned_greater_than_i32_and_mask (inpData.ui32, inpData.mask);
-    //unsigned_greater_than_i64_and_mask (inpData.ui64, inpData.mask);
+    unsigned_greater_than_i64_and_mask (inpData.ui64, inpData.mask);
 
     //signed_greater_than_i8_and_mask  (inpData.i8, inpData.mask);
     //signed_greater_than_i16_and_mask (inpData.i16, inpData.mask);
     signed_greater_than_i32_and_mask (inpData.i32, inpData.mask);
-    //signed_greater_than_i64_and_mask (inpData.i64, inpData.mask);
+    signed_greater_than_i64_and_mask (inpData.i64, inpData.mask);
 
     greater_than_double_and_mask(inpData.d_32, inpData.mask);
     greater_than_float_and_mask (inpData.f_32, inpData.mask);
@@ -354,27 +354,27 @@ void FUNC_NAME##_and_mask(TYPE *data, int *m) {                                 
 
 CMP(double , __vec16_d  , ==, equal_double)
 CMP(float  , __vec16_f  , ==, equal_float )
-//CMP(int8_t , __vec16_i8 , ==, equal_i8    )
-//CMP(int16_t, __vec16_i16, ==, equal_i16   )
+CMP(int8_t , __vec16_i8 , ==, equal_i8    )
+CMP(int16_t, __vec16_i16, ==, equal_i16   )
 CMP(int32_t, __vec16_i32, ==, equal_i32   )
 CMP(int64_t, __vec16_i64, ==, equal_i64   )
 
 CMP(double , __vec16_d  ,  !=, not_equal_double)
 CMP(float  , __vec16_f  ,  !=, not_equal_float )
-//CMP(int8_t , __vec16_i8 ,  !=, not_equal_i8    )
-//CMP(int16_t, __vec16_i16,  !=, not_equal_i16   )
+CMP(int8_t , __vec16_i8 ,  !=, not_equal_i8    )
+CMP(int16_t, __vec16_i16,  !=, not_equal_i16   )
 CMP(int32_t, __vec16_i32,  !=, not_equal_i32   )
 CMP(int64_t, __vec16_i64,  !=, not_equal_i64   )
 
 //CMP(uint8_t , __vec16_i8 ,  <=, unsigned_less_equal_i8 )
 //CMP(uint16_t, __vec16_i16,  <=, unsigned_less_equal_i16)
 CMP(uint32_t, __vec16_i32,  <=, unsigned_less_equal_i32)
-//CMP(uint64_t, __vec16_i64,  <=, unsigned_less_equal_i64)
+CMP(uint64_t, __vec16_i64,  <=, unsigned_less_equal_i64)
 
 //CMP(int8_t , __vec16_i8 ,  <=, signed_less_equal_i8 )
 //CMP(int16_t, __vec16_i16,  <=, signed_less_equal_i16)
 CMP(int32_t, __vec16_i32,  <=, signed_less_equal_i32)
-//CMP(int64_t, __vec16_i64,  <=, signed_less_equal_i64)
+CMP(int64_t, __vec16_i64,  <=, signed_less_equal_i64)
 
 CMP(double , __vec16_d  ,  <=, less_equal_double)
 CMP(float  , __vec16_f  ,  <=, less_equal_float )
@@ -382,12 +382,12 @@ CMP(float  , __vec16_f  ,  <=, less_equal_float )
 //CMP(uint8_t , __vec16_i8 ,  >=, unsigned_greater_equal_i8 )
 //CMP(uint16_t, __vec16_i16,  >=, unsigned_greater_equal_i16)
 CMP(uint32_t, __vec16_i32,  >=, unsigned_greater_equal_i32)
-//CMP(uint64_t, __vec16_i64,  >=, unsigned_greater_equal_i64)
+CMP(uint64_t, __vec16_i64,  >=, unsigned_greater_equal_i64)
 
 //CMP(int8_t , __vec16_i8 ,  >=, signed_greater_equal_i8 )
 //CMP(int16_t, __vec16_i16,  >=, signed_greater_equal_i16)
 CMP(int32_t, __vec16_i32,  >=, signed_greater_equal_i32)
-//CMP(int64_t, __vec16_i64,  >=, signed_greater_equal_i64)
+CMP(int64_t, __vec16_i64,  >=, signed_greater_equal_i64)
 
 CMP(double , __vec16_d  ,  >=, greater_equal_double)
 CMP(float  , __vec16_f  ,  >=, greater_equal_float )
@@ -395,12 +395,12 @@ CMP(float  , __vec16_f  ,  >=, greater_equal_float )
 //CMP(uint8_t , __vec16_i8 ,  <, unsigned_less_than_i8 )
 //CMP(uint16_t, __vec16_i16,  <, unsigned_less_than_i16)
 CMP(uint32_t, __vec16_i32,  <, unsigned_less_than_i32)
-//CMP(uint64_t, __vec16_i64,  <, unsigned_less_than_i64)
+CMP(uint64_t, __vec16_i64,  <, unsigned_less_than_i64)
 
 //CMP(int8_t , __vec16_i8 ,  <, signed_less_than_i8 )
 //CMP(int16_t, __vec16_i16,  <, signed_less_than_i16)
 CMP(int32_t, __vec16_i32,  <, signed_less_than_i32)
-//CMP(int64_t, __vec16_i64,  <, signed_less_than_i64)
+CMP(int64_t, __vec16_i64,  <, signed_less_than_i64)
 
 CMP(double , __vec16_d  ,  <, less_than_double)
 CMP(float  , __vec16_f  ,  <, less_than_float )
@@ -408,12 +408,12 @@ CMP(float  , __vec16_f  ,  <, less_than_float )
 //CMP(uint8_t , __vec16_i8 ,  >, unsigned_greater_than_i8 )
 //CMP(uint16_t, __vec16_i16,  >, unsigned_greater_than_i16)
 CMP(uint32_t, __vec16_i32,  >, unsigned_greater_than_i32)
-//CMP(uint64_t, __vec16_i64,  >, unsigned_greater_than_i64)
+CMP(uint64_t, __vec16_i64,  >, unsigned_greater_than_i64)
 
 //CMP(int8_t , __vec16_i8 ,  >, signed_greater_than_i8 )
 //CMP(int16_t, __vec16_i16,  >, signed_greater_than_i16)
 CMP(int32_t, __vec16_i32,  >, signed_greater_than_i32)
-//CMP(int64_t, __vec16_i64,  >, signed_greater_than_i64)
+CMP(int64_t, __vec16_i64,  >, signed_greater_than_i64)
 
 CMP(double , __vec16_d  ,  >, greater_than_double)
 CMP(float  , __vec16_f  ,  >, greater_than_float )

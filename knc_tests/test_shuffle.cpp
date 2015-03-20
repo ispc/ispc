@@ -13,9 +13,10 @@ void test_shuffle() {
 
     //shuffle_double(inpData.d_32);
     shuffle_float(inpData.f_32);
-    //shuffle_i8(inpData.i8);
-    //shuffle_i16(inpData.i16);
+    shuffle_i8(inpData.i8);
+    shuffle_i16(inpData.i16);
     shuffle_i32(inpData.i32);
+    //shuffle_i64(inpData.i64);    
 
 }
 
@@ -78,8 +79,7 @@ void FUNC_NAME(TYPE *data) {                                                    
 
 //SHUFFLE_TEST(double , __vec16_d  , shuffle_double)
 SHUFFLE_TEST(float  , __vec16_f  , shuffle_float )
-//SHUFFLE_TEST(int8_t , __vec16_i8 , shuffle_i8    )
-//SHUFFLE_TEST(int16_t, __vec16_i16, shuffle_i16   )
+SHUFFLE_TEST(int8_t , __vec16_i8 , shuffle_i8    )
+SHUFFLE_TEST(int16_t, __vec16_i16, shuffle_i16   )
 SHUFFLE_TEST(int32_t, __vec16_i32, shuffle_i32   )
 //SHUFFLE_TEST(int64_t, __vec16_i64, shuffle_i64   )
-

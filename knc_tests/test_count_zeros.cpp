@@ -14,8 +14,8 @@ void test_count_zeros() {
     count_trailing_zeros_i32(inpData.ui32);
     count_trailing_zeros_i64(inpData.ui64);
 
-    //count_leading_zeros_i32(inpData.ui32);
-    //count_leading_zeros_i64(inpData.ui64);
+    count_leading_zeros_i32(inpData.ui32);
+    count_leading_zeros_i64(inpData.ui64);
 
 }
 
@@ -84,6 +84,6 @@ void FUNC_NAME(TYPE *data) {                                                    
         printf(" no fails\n");                                                              \
 }
 
-//COUNT_LEADING_ZEROS(uint32_t, 32, count_leading_zeros_i32)
-//COUNT_LEADING_ZEROS(uint64_t, 64, count_leading_zeros_i64)
+COUNT_LEADING_ZEROS(uint32_t, 32, count_leading_zeros_i32)
+COUNT_LEADING_ZEROS(uint64_t, 64, count_leading_zeros_i64)
 

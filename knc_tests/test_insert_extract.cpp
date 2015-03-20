@@ -14,8 +14,8 @@ void test_insert_extract() {
 
     insert_extract_element_double(inpData.d_32);
     insert_extract_element_float(inpData.f_32);
-    //insert_extract_element_i8(inpData.i8);
-    //insert_extract_element_i16(inpData.i16);
+    insert_extract_element_i8(inpData.i8);
+    insert_extract_element_i16(inpData.i16);
     insert_extract_element_i32(inpData.i32);
     insert_extract_element_i64(inpData.i64);
 
@@ -54,7 +54,7 @@ void FUNC_NAME(TYPE *data) {                                                    
 
 INSERT_EXTRACT_ELEMENT(double , __vec16_d  , insert_extract_element_double)
 INSERT_EXTRACT_ELEMENT(float  , __vec16_f  , insert_extract_element_float )
-//INSERT_EXTRACT_ELEMENT(int8_t , __vec16_i8 , insert_extract_element_i8    )
-//INSERT_EXTRACT_ELEMENT(int16_t, __vec16_i16, insert_extract_element_i16   )
+INSERT_EXTRACT_ELEMENT(int8_t , __vec16_i8 , insert_extract_element_i8    )
+INSERT_EXTRACT_ELEMENT(int16_t, __vec16_i16, insert_extract_element_i16   )
 INSERT_EXTRACT_ELEMENT(int32_t, __vec16_i32, insert_extract_element_i32   )
 INSERT_EXTRACT_ELEMENT(int64_t, __vec16_i64, insert_extract_element_i64   )

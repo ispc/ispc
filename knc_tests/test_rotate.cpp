@@ -14,10 +14,10 @@ void test_rotate() {
 
     //rotate_double(inpData.d_32);
     //rotate_float(inpData.f_32);
-    //rotate_i8(inpData.i8);
-    //rotate_i16(inpData.i16);
+    rotate_i8(inpData.i8);
+    rotate_i16(inpData.i16);
     rotate_i32(inpData.i32);
-    //rotate_i64(inpData.i64);
+    rotate_i64(inpData.i64);
 
 }
 
@@ -59,8 +59,7 @@ void FUNC_NAME(TYPE *data) {                                                    
 
 //ROTATE_TEST(double , __vec16_d  , rotate_double)
 //ROTATE_TEST(float  , __vec16_f  , rotate_float )
-//ROTATE_TEST(int8_t , __vec16_i8 , rotate_i8    )
-//ROTATE_TEST(int16_t, __vec16_i16, rotate_i16   )
+ROTATE_TEST(int8_t , __vec16_i8 , rotate_i8    )
+ROTATE_TEST(int16_t, __vec16_i16, rotate_i16   )
 ROTATE_TEST(int32_t, __vec16_i32, rotate_i32   )
-//ROTATE_TEST(int64_t, __vec16_i64, rotate_i64   )
-
+ROTATE_TEST(int64_t, __vec16_i64, rotate_i64   )
