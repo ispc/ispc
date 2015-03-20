@@ -65,7 +65,11 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/Analysis/ConstantsScanner.h"
+#if defined(LLVM_3_4)
+  #include "llvm/Support/InstIterator.h"
+#else
+  #include "llvm/IR/InstIterator.h"
+#endif
 #if defined(LLVM_3_2) || defined(LLVM_3_3) || defined(LLVM_3_4) || defined(LLVM_3_5)
   #include "llvm/Analysis/FindUsedTypes.h"
 #endif
@@ -128,6 +132,72 @@
 #undef setjmp
 #define snprintf _snprintf
 #endif
+///////////////////////////////////////////////////////////////////////////////
+// This part of code was in LLVM's ConstantsScanner.h, 
+// but it was removed in revision #232397 
+
+namespace constant_scanner {
+class constant_iterator : public std::iterator<std::forward_iterator_tag,
+                                               const llvm::Constant, ptrdiff_t> {
+  llvm::const_inst_iterator InstI;                // Method instruction iterator
+  unsigned OpIdx;                           // Operand index
+
+  bool isAtConstant() const {
+    assert(!InstI.atEnd() && OpIdx < InstI->getNumOperands() &&
+           "isAtConstant called with invalid arguments!");
+    return llvm::isa<llvm::Constant>(InstI->getOperand(OpIdx));
+  }
+
+public:
+  constant_iterator(const llvm::Function *F) : InstI(llvm::inst_begin(F)), OpIdx(0) {
+    // Advance to first constant... if we are not already at constant or end
+    if (InstI != llvm::inst_end(F) &&                            // InstI is valid?
+        (InstI->getNumOperands() == 0 || !isAtConstant())) // Not at constant?
+      operator++();
+  }
+
+  constant_iterator(const llvm::Function *F, bool) // end ctor
+      : InstI(llvm::inst_end(F)),
+        OpIdx(0) {}
+
+  bool operator==(const constant_iterator &x) const {
+    return OpIdx == x.OpIdx && InstI == x.InstI;
+  }
+  bool operator!=(const constant_iterator &x) const { return !(*this == x); }
+
+  pointer operator*() const {
+    assert(isAtConstant() && "Dereferenced an iterator at the end!");
+    return llvm::cast<llvm::Constant>(InstI->getOperand(OpIdx));
+  }
+
+  constant_iterator &operator++() { // Preincrement implementation
+    ++OpIdx;
+    do {
+      unsigned NumOperands = InstI->getNumOperands();
+      while (OpIdx < NumOperands && !isAtConstant()) {
+        ++OpIdx;
+      }
+
+      if (OpIdx < NumOperands) return *this;  // Found a constant!
+      ++InstI;
+      OpIdx = 0;
+    } while (!InstI.atEnd());
+
+    return *this;  // At the end of the method
+  }
+};
+
+inline constant_iterator constant_begin(const llvm::Function *F) {
+  return constant_iterator(F);
+}
+
+inline constant_iterator constant_end(const llvm::Function *F) {
+  return constant_iterator(F, true);
+}
+
+}
+
+///////////////////////////////////////////////////////////////////////////////
 
 // FIXME:
 namespace {
@@ -2687,8 +2757,8 @@ void CWriter::printFloatingPointConstants(llvm::Function &F) {
   // the precision of the printed form, unless the printed form preserves
   // precision.
   //
-    for (llvm::constant_iterator I = constant_begin(&F), E = constant_end(&F);
-       I != E; ++I)
+  for (constant_scanner::constant_iterator I = constant_scanner::constant_begin(&F), 
+       E = constant_scanner::constant_end(&F); I != E; ++I)
     printFloatingPointConstants(*I);
 
   Out << '\n';
@@ -2754,8 +2824,8 @@ void CWriter::printFloatingPointConstants(const llvm::Constant *C) {
 // loads to get their values, rather than tediously inserting the
 // individual values into the vector.
 void CWriter::printVectorConstants(llvm::Function &F) {
-    for (llvm::constant_iterator I = constant_begin(&F), E = constant_end(&F);
-         I != E; ++I) {
+    for (constant_scanner::constant_iterator I = constant_scanner::constant_begin(&F), 
+         E = constant_scanner::constant_end(&F); I != E; ++I) {
         const llvm::ConstantDataVector *CDV = llvm::dyn_cast<llvm::ConstantDataVector>(*I);
         if (CDV == NULL)
             continue;
