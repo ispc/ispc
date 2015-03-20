@@ -1678,6 +1678,7 @@ lGetExportedTypes(const Type *type,
                   std::vector<const VectorType *> *exportedVectorTypes) {
     const ArrayType *arrayType = CastType<ArrayType>(type);
     const StructType *structType = CastType<StructType>(type);
+    const FunctionType *ftype = CastType<FunctionType>(type);
 
     if (CastType<ReferenceType>(type) != NULL)
         lGetExportedTypes(type->GetReferenceTarget(), exportedStructTypes,
@@ -1701,7 +1702,17 @@ lGetExportedTypes(const Type *type,
         lAddTypeIfNew(type, exportedEnumTypes);
     else if (CastType<VectorType>(type) != NULL)
         lAddTypeIfNew(type, exportedVectorTypes);
-    else
+    else if (ftype != NULL) {
+        // Handle Return Types
+        lGetExportedTypes(ftype->GetReturnType(), exportedStructTypes,
+                          exportedEnumTypes, exportedVectorTypes);
+
+        // And now the parameter types...
+        for (int j = 0; j < ftype->GetNumParameters(); ++j)
+            lGetExportedTypes(ftype->GetParameterType(j), exportedStructTypes,
+                              exportedEnumTypes, exportedVectorTypes);
+    }
+    else 
         Assert(CastType<AtomicType>(type) != NULL);
 }
 
