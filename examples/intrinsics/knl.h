@@ -1455,8 +1455,7 @@ template <int ALIGN> static FORCEINLINE void __store(__vec16_f *p, __vec16_f v) 
 #ifdef ISPC_FORCE_ALIGNED_MEMORY
   _mm512_store_ps(p, v);
 #else
-  _mm512_extpackstorelo_ps(p, v, _MM_DOWNCONV_PS_NONE, _MM_HINT_NONE);
-  _mm512_extpackstorehi_ps((uint8_t*)p+64, v, _MM_DOWNCONV_PS_NONE, _MM_HINT_NONE);
+  _mm512_storeu_ps(p, v);
 #endif
 }
 #if 0
@@ -3106,17 +3105,11 @@ static FORCEINLINE void __masked_store_i32(void *p, __vec16_i32 val, __vec16_i1 
 #endif
 }
 
-static FORCEINLINE void __masked_store_float(void *p, __vec16_f val,
-    __vec16_i1 mask) {
+static FORCEINLINE void __masked_store_float(void *p, __vec16_f val, __vec16_i1 mask) {
 #ifdef ISPC_FORCE_ALIGNED_MEMORY
   _mm512_mask_store_ps(p, mask, val.v);
 #else
-  __vec16_f tmp;
-  tmp.v = _mm512_extloadunpacklo_ps(tmp.v, p, _MM_UPCONV_PS_NONE, _MM_HINT_NONE);
-  tmp.v = _mm512_extloadunpackhi_ps(tmp.v, (uint8_t*)p+64, _MM_UPCONV_PS_NONE, _MM_HINT_NONE);
-  tmp.v = _mm512_mask_mov_ps(tmp.v, mask, val.v);
-  _mm512_extpackstorelo_ps(p, tmp.v, _MM_DOWNCONV_PS_NONE, _MM_HINT_NONE);
-  _mm512_extpackstorehi_ps((uint8_t*)p+64, tmp.v, _MM_DOWNCONV_PS_NONE, _MM_HINT_NONE);
+  _mm512_mask_storeu_ps(p, mask, val.v);
 #endif
 }
 
