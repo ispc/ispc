@@ -2144,7 +2144,7 @@ static FORCEINLINE __vec16_d __cast_uitofp(__vec16_d, __vec16_i64 val) {
 
 // float/double to signed int
 static FORCEINLINE __vec16_i32 __cast_fptosi(__vec16_i32, __vec16_f val) {
-  return _mm512_cvtfxpnt_round_adjustps_epi32(val, _MM_ROUND_MODE_TOWARD_ZERO, _MM_EXPADJ_NONE);
+  return _mm512_cvt_roundps_epi32(val, _MM_FROUND_TO_ZERO |_MM_FROUND_NO_EXC);
 }
 
 static FORCEINLINE __vec16_i8 __cast_fptosi(__vec16_i8, __vec16_f val) {
@@ -2208,7 +2208,7 @@ static FORCEINLINE __vec16_i64 __cast_fptosi(__vec16_i64, __vec16_d val) {
 
 
 static FORCEINLINE __vec16_i32 __cast_fptoui(__vec16_i32, __vec16_f val) {
-  return _mm512_cvtfxpnt_round_adjustps_epu32(val, _MM_ROUND_MODE_TOWARD_ZERO, _MM_EXPADJ_NONE);
+  return _mm512_cvt_roundps_epu32(val, _MM_FROUND_TO_ZERO |_MM_FROUND_NO_EXC);
 }
 
 static FORCEINLINE __vec16_i8 __cast_fptoui(__vec16_i8, __vec16_f val) {
