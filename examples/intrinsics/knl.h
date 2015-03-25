@@ -790,8 +790,7 @@ template <int ALIGN> static FORCEINLINE void __store(__vec16_i32 *p, __vec16_i32
 #ifdef ISPC_FORCE_ALIGNED_MEMORY
   _mm512_store_epi32(p, v);
 #else
-  _mm512_extpackstorelo_epi32(p, v, _MM_DOWNCONV_EPI32_NONE, _MM_HINT_NONE);
-  _mm512_extpackstorehi_epi32((uint8_t*)p+64, v, _MM_DOWNCONV_EPI32_NONE, _MM_HINT_NONE);
+  _mm512_mask_storeu_epi32(p, 0xFFFF, v);
 #endif
 }
 
@@ -1207,10 +1206,8 @@ template <int ALIGN> static FORCEINLINE void __store(__vec16_i64 *p, __vec16_i64
   v2 = _mm512_mask_permutevar_epi32(v2, 0x5555,
       _mm512_set_16to16_pi(7,7,6,6,5,5,4,4,3,3,2,2,1,1,0,0),
       v.v_lo);
-  _mm512_extpackstorelo_epi32(p, v2, _MM_DOWNCONV_EPI32_NONE, _MM_HINT_NONE);
-  _mm512_extpackstorehi_epi32((uint8_t*)p+64, v2, _MM_DOWNCONV_EPI32_NONE, _MM_HINT_NONE);
-  _mm512_extpackstorelo_epi32((uint8_t*)p+64, v1, _MM_DOWNCONV_EPI32_NONE, _MM_HINT_NONE);
-  _mm512_extpackstorehi_epi32((uint8_t*)p+128, v1, _MM_DOWNCONV_EPI32_NONE, _MM_HINT_NONE);
+  _mm512_mask_storeu_epi64(p, 0xFF, v2);
+  _mm512_mask_storeu_epi64((uint8_t*)p+64, 0xFF, v1);
 }
 #if 0
 template <> FORCEINLINE void __store<64>(__vec16_i64 *p, __vec16_i64 v) {
@@ -3085,12 +3082,7 @@ static FORCEINLINE void __masked_store_i32(void *p, __vec16_i32 val, __vec16_i1 
 #ifdef ISPC_FORCE_ALIGNED_MEMORY
   _mm512_mask_store_epi32(p, mask, val.v);
 #else
-  __vec16_i32 tmp;
-  tmp.v = _mm512_extloadunpacklo_epi32(tmp.v, p, _MM_UPCONV_EPI32_NONE, _MM_HINT_NONE);
-  tmp.v = _mm512_extloadunpackhi_epi32(tmp.v, (uint8_t*)p+64, _MM_UPCONV_EPI32_NONE, _MM_HINT_NONE);
-  tmp.v = _mm512_mask_mov_epi32(tmp.v, mask, val.v);
-  _mm512_extpackstorelo_epi32(p, tmp.v, _MM_DOWNCONV_EPI32_NONE, _MM_HINT_NONE);
-  _mm512_extpackstorehi_epi32((uint8_t*)p+64, tmp.v, _MM_DOWNCONV_EPI32_NONE, _MM_HINT_NONE);
+  _mm512_mask_storeu_epi32(p, mask, val.v);
 #endif
 }
 
@@ -3533,15 +3525,13 @@ static FORCEINLINE void __scatter64_i64(__vec16_i64 ptrs, __vec16_i64 val, __vec
 
 static FORCEINLINE int32_t __packed_load_active(uint32_t *p, __vec16_i32 *val, __vec16_i1 mask) {
   __vec16_i32 v = __load<64>(val);
-  v = _mm512_mask_extloadunpacklo_epi32(v, mask, p, _MM_UPCONV_EPI32_NONE, _MM_HINT_NONE);
-  v = _mm512_mask_extloadunpackhi_epi32(v, mask, (uint8_t*)p+64, _MM_UPCONV_EPI32_NONE, _MM_HINT_NONE);
+  v = _mm512_mask_loadu_epi32(v, mask, p);
   __store<64>(val, v);
   return _mm_countbits_32(uint32_t(mask));
 }
 
 static FORCEINLINE int32_t __packed_store_active(uint32_t *p, __vec16_i32 val, __vec16_i1 mask) {
-  _mm512_mask_extpackstorelo_epi32(p, mask, val, _MM_DOWNCONV_EPI32_NONE, _MM_HINT_NONE);
-  _mm512_mask_extpackstorehi_epi32((uint8_t*)p+64, mask, val, _MM_DOWNCONV_EPI32_NONE, _MM_HINT_NONE);
+  _mm512_mask_storeu_epi32(p, mask, val);
   return _mm_countbits_32(uint32_t(mask));
 }
 
