@@ -1808,10 +1808,8 @@ template <> FORCEINLINE __vec16_d __load<128>(const __vec16_d *p) {
 }
 #endif
 template <int ALIGN> static FORCEINLINE void __store(__vec16_d *p, __vec16_d v) {
-  _mm512_extpackstorelo_pd(p, v.v1, _MM_DOWNCONV_PD_NONE, _MM_HINT_NONE);
-  _mm512_extpackstorehi_pd((uint8_t*)p+64, v.v1, _MM_DOWNCONV_PD_NONE, _MM_HINT_NONE);
-  _mm512_extpackstorelo_pd((uint8_t*)p+64, v.v2, _MM_DOWNCONV_PD_NONE, _MM_HINT_NONE);
-  _mm512_extpackstorehi_pd((uint8_t*)p+128, v.v2, _MM_DOWNCONV_PD_NONE, _MM_HINT_NONE);
+  _mm512_storeu_pd(p, v.v1);
+  _mm512_storeu_pd((uint8_t*)p+64, v.v2);
 }
 #if 0
 template <> FORCEINLINE void __store<64>(__vec16_d *p, __vec16_d v) {
@@ -3110,17 +3108,8 @@ static FORCEINLINE void __masked_store_double(void *p, __vec16_d val,
   _mm512_mask_store_pd(p, mask, val.v1);
   _mm512_mask_store_pd((uint8_t*)p+64, (mask << 8), val.v2);
 #else
-  __vec16_d tmp;
-  tmp.v1 = _mm512_extloadunpacklo_pd(tmp.v1, p, _MM_UPCONV_PD_NONE, _MM_HINT_NONE);
-  tmp.v1 = _mm512_extloadunpackhi_pd(tmp.v1, (uint8_t*)p+64, _MM_UPCONV_PD_NONE, _MM_HINT_NONE);
-  tmp.v2 = _mm512_extloadunpacklo_pd(tmp.v2, (uint8_t*)p+64, _MM_UPCONV_PD_NONE, _MM_HINT_NONE);
-  tmp.v2 = _mm512_extloadunpackhi_pd(tmp.v2, (uint8_t*)p+128, _MM_UPCONV_PD_NONE, _MM_HINT_NONE);
-  tmp.v1 = _mm512_mask_mov_pd(tmp.v1, mask, val.v1);
-  tmp.v2 = _mm512_mask_mov_pd(tmp.v2, (mask << 8), val.v2);
-  _mm512_extpackstorelo_pd(p, tmp.v1, _MM_DOWNCONV_PD_NONE, _MM_HINT_NONE);
-  _mm512_extpackstorehi_pd((uint8_t*)p+64, tmp.v1, _MM_DOWNCONV_PD_NONE, _MM_HINT_NONE);
-  _mm512_extpackstorelo_pd((uint8_t*)p+64, tmp.v2, _MM_DOWNCONV_PD_NONE, _MM_HINT_NONE);
-  _mm512_extpackstorehi_pd((uint8_t*)p+128, tmp.v2, _MM_DOWNCONV_PD_NONE, _MM_HINT_NONE);
+  _mm512_mask_storeu_pd(p, mask, val.v1);
+  _mm512_mask_storeu_pd((uint8_t*)p+64, (mask << 8), val.v2);
 #endif
 }
 
