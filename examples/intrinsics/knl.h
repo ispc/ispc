@@ -691,9 +691,41 @@ static FORCEINLINE __vec16_i8 __cast_trunc(__vec16_i8, const __vec16_i64 i64) {
   return __cast_trunc(__vec16_i8(), i64.v_lo);//TODO
 }
 
+static FORCEINLINE __vec16_i32 unrolled_alignr_i32(__m512i &v1, __m512i &v2, int index) {
+  if (index == 0) return v2;
+  if (index == 1) return _mm512_alignr_epi32(v1, v2, 1);
+  if (index == 2) return _mm512_alignr_epi32(v1, v2, 2);
+  if (index == 3) return _mm512_alignr_epi32(v1, v2, 3);
+  if (index == 4) return _mm512_alignr_epi32(v1, v2, 4);
+  if (index == 5) return _mm512_alignr_epi32(v1, v2, 5);
+  if (index == 6) return _mm512_alignr_epi32(v1, v2, 6);
+  if (index == 7) return _mm512_alignr_epi32(v1, v2, 7);
+  if (index == 8) return _mm512_alignr_epi32(v1, v2, 8);
+  if (index == 9) return _mm512_alignr_epi32(v1, v2, 9);
+  if (index == 10) return _mm512_alignr_epi32(v1, v2, 10);
+  if (index == 11) return _mm512_alignr_epi32(v1, v2, 11);
+  if (index == 12) return _mm512_alignr_epi32(v1, v2, 12);
+  if (index == 13) return _mm512_alignr_epi32(v1, v2, 13);
+  if (index == 14) return _mm512_alignr_epi32(v1, v2, 14);
+  if (index == 15) return _mm512_alignr_epi32(v1, v2, 15);
+  if (index >= 16) return v1;
+};
+
+static FORCEINLINE __vec16_i32 unrolled_alignr_i64(__m512i &v1, __m512i &v2, int index) {
+  if (index == 0) return v2;
+  if (index == 1) return _mm512_alignr_epi64(v1, v2, 1);
+  if (index == 2) return _mm512_alignr_epi64(v1, v2, 2);
+  if (index == 3) return _mm512_alignr_epi64(v1, v2, 3);
+  if (index == 4) return _mm512_alignr_epi64(v1, v2, 4);
+  if (index == 5) return _mm512_alignr_epi64(v1, v2, 5);
+  if (index == 6) return _mm512_alignr_epi64(v1, v2, 6);
+  if (index == 7) return _mm512_alignr_epi64(v1, v2, 7);
+  if (index >= 8) return v1;
+};
+
 static FORCEINLINE __vec16_i32 __rotate_i32(__vec16_i32 v, int index) {
   index &= 0xFF;
-  return _mm512_alignr_epi32(v, v, index);
+  return unrolled_alignr_i32(v.v, v.v, index % 16);
 }
 
 static FORCEINLINE __vec16_i32 __shuffle_i32(__vec16_i32 v, __vec16_i32 index) {
@@ -711,7 +743,8 @@ static FORCEINLINE __vec16_i32 __shuffle2_i32(__vec16_i32 v0, __vec16_i32 v1, __
 
 static FORCEINLINE __vec16_i32 __shift_i32(__vec16_i32 v, int index) {
   index &= 0xFF;
-  return _mm512_alignr_epi32(_mm512_setzero_epi32(), v, index);
+  __m512i mmzero = _mm512_setzero_epi32();
+  return unrolled_alignr_i32(mmzero, v.v, index);
 }
 
 template <int ALIGN> static FORCEINLINE __vec16_i32 __load(const __vec16_i32 *p) {
@@ -1034,8 +1067,8 @@ static FORCEINLINE __vec16_i64 __rotate_i64(__vec16_i64 v, int index) {
         swap = false;
         index -= 8;
       }
-      __m512i v1 = _mm512_alignr_epi64(v.v_hi, v.v_lo, index);
-      __m512i v2 = _mm512_alignr_epi64(v.v_lo, v.v_hi, index);
+      __m512i v1 = unrolled_alignr_i64(v.v_hi, v.v_lo, index);
+      __m512i v2 = unrolled_alignr_i64(v.v_lo, v.v_hi, index);
       return (swap) ? __vec16_i64(v1, v2) : __vec16_i64(v2, v1);
     }
   }
