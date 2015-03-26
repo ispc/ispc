@@ -1985,9 +1985,11 @@ static FORCEINLINE __vec16_i64 __cast_fptosi(__vec16_i64, __vec16_f val) {
 }
 
 static FORCEINLINE __vec16_i32 __cast_fptosi(__vec16_i32, __vec16_d val) { 
-  __vec16_i32 tmp = _mm512_cvtfxpnt_roundpd_epi32lo(val.v_hi, _MM_ROUND_MODE_TOWARD_ZERO);
-  __vec16_i32 ret_hi8 = _mm512_permute4f128_epi32(tmp, _MM_PERM_BADC);
-  __vec16_i32 ret_lo8 = _mm512_cvtfxpnt_roundpd_epi32lo(val.v_lo, _MM_ROUND_MODE_TOWARD_ZERO);
+  __m256i tmp = _mm512_cvtpd_epi32(val.v_hi);
+  __vec16_i32 tmp1 = _mm512_castsi256_si512 (tmp);
+  __vec16_i32 ret_hi8 = _mm512_permute4f128_epi32(tmp1, _MM_PERM_BADC);
+  __m256i tmp2 = _mm512_cvtpd_epi32(val.v_lo);
+  __vec16_i32 ret_lo8 = _mm512_castsi256_si512 (tmp2);
   return _mm512_xor_epi32(ret_lo8, ret_hi8);
 }
 
@@ -2049,9 +2051,11 @@ static FORCEINLINE __vec16_i64 __cast_fptoui(__vec16_i64, __vec16_f val) {
 }
 
 static FORCEINLINE __vec16_i32 __cast_fptoui(__vec16_i32, __vec16_d val) {
-  __vec16_i32 tmp = _mm512_cvtfxpnt_roundpd_epu32lo(val.v_hi, _MM_ROUND_MODE_TOWARD_ZERO);
-  __vec16_i32 ret_hi8 = _mm512_permute4f128_epi32(tmp, _MM_PERM_BADC);
-  __vec16_i32 ret_lo8 = _mm512_cvtfxpnt_roundpd_epu32lo(val.v_lo, _MM_ROUND_MODE_TOWARD_ZERO);
+  __m256i tmp = _mm512_cvtpd_epu32(val.v_hi);
+  __vec16_i32 tmp1 = _mm512_castsi256_si512 (tmp);
+  __vec16_i32 ret_hi8 = _mm512_permute4f128_epi32(tmp1, _MM_PERM_BADC);
+  __m256i tmp2 = _mm512_cvtpd_epu32(val.v_lo);
+  __vec16_i32 ret_lo8 = _mm512_castsi256_si512 (tmp2);
   return _mm512_xor_epi32(ret_lo8, ret_hi8);
 }
 
@@ -2434,6 +2438,7 @@ static FORCEINLINE double __ceil_uniform_double(double v) {
 }
 
 static FORCEINLINE __vec16_f __round_varying_float(__vec16_f v) {
+  
   return _mm512_round_ps(v, _MM_ROUND_MODE_NEAREST, _MM_EXPADJ_NONE);
 }
 
