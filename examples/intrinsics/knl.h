@@ -666,7 +666,6 @@ static FORCEINLINE __vec16_i16 __cast_trunc(__vec16_i16, const __vec16_i32 i32) 
   __vec16_i16 ret;
   //__vec16_i32 i32_trunk = _mm512_and_epi32(i32, __smear_i32<__vec16_i32>(65535));
   //_mm512_extstore_epi32(ret.v, i32_trunk, _MM_DOWNCONV_EPI32_UINT16, _MM_HINT_NONE);
-
   _mm512_mask_cvtepi32_storeu_epi16(ret.v, 0xFFFF, i32);
   return ret;
 }
@@ -2744,17 +2743,14 @@ static FORCEINLINE __vec16_d __masked_load_double(void *p, __vec16_i1 mask) {
 }
 
 static FORCEINLINE void __masked_store_i8(void *p, const __vec16_i8 &val, __vec16_i1 mask) { 
-  __vec16_i32 tmp = _mm512_extload_epi32(&val, _MM_UPCONV_EPI32_SINT8, _MM_BROADCAST32_NONE, _MM_HINT_NONE);
+  __m128i val_t;
 #ifdef ISPC_FORCE_ALIGNED_MEMORY
-  _mm512_mask_extstore_epi32(p, mask, tmp, _MM_DOWNCONV_EPI32_SINT8,_MM_HINT_NONE);
+  val_t = _mm_load_si128((__m128i *)val.v);
 #else
-  __vec16_i32 tmp_;
-  tmp_.v = _mm512_extloadunpacklo_epi32(tmp_.v, p, _MM_UPCONV_EPI32_SINT8, _MM_HINT_NONE);
-  tmp_.v = _mm512_extloadunpackhi_epi32(tmp_.v, (uint8_t*)p+64, _MM_UPCONV_EPI32_SINT8, _MM_HINT_NONE);
-  tmp_.v = _mm512_mask_mov_epi32(tmp_.v, mask, tmp.v);
-  _mm512_extpackstorelo_epi32(p, tmp_.v, _MM_DOWNCONV_EPI32_SINT8, _MM_HINT_NONE);
-  _mm512_extpackstorehi_epi32((uint8_t*)p+64, tmp_.v, _MM_DOWNCONV_EPI32_SINT8, _MM_HINT_NONE);
+  val_t = _mm_loadu_si128((__m128i *)val.v);
 #endif
+  __vec16_i32 tmp = _mm512_cvtepi8_epi32(val_t);
+  _mm512_mask_cvtepi32_storeu_epi8(p, mask, tmp);
 }
 
 static FORCEINLINE __vec16_i8 __masked_load_i8(void *p, __vec16_i1 mask) {
@@ -2800,21 +2796,14 @@ static FORCEINLINE void __scatter_base_offsets32_i16(uint8_t *b, uint32_t scale,
 
 
 static FORCEINLINE void __masked_store_i16(void *p, const __vec16_i16 &val, __vec16_i1 mask) {
-  __vec16_i32 tmp = _mm512_extload_epi32(&val, _MM_UPCONV_EPI32_SINT16, _MM_BROADCAST32_NONE, _MM_HINT_NONE);
+  __m256i val_t;
 #ifdef ISPC_FORCE_ALIGNED_MEMORY
-  _mm512_mask_extstore_epi32(p, mask, tmp, _MM_DOWNCONV_EPI32_SINT16, _MM_HINT_NONE);
+  val_t = _mm256_load_si256((__m256i *)val.v);
 #else
-  #if 0 // TODO: both implementations seem to work, need to test which one is faster
-  _mm512_mask_i32extscatter_epi32 (p, mask, __vec16_i32(0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15), tmp, _MM_DOWNCONV_EPI32_SINT16, sizeof(uint16_t), _MM_HINT_NONE);
-  #else
-  __vec16_i32 tmp_;
-  tmp_.v = _mm512_extloadunpacklo_epi32(tmp_.v, p, _MM_UPCONV_EPI32_SINT16, _MM_HINT_NONE);
-  tmp_.v = _mm512_extloadunpackhi_epi32(tmp_.v, (uint8_t*)p+64, _MM_UPCONV_EPI32_SINT16, _MM_HINT_NONE);
-  tmp_.v = _mm512_mask_mov_epi32(tmp_.v, mask, tmp.v);
-  _mm512_extpackstorelo_epi32(p, tmp_.v, _MM_DOWNCONV_EPI32_SINT16, _MM_HINT_NONE);
-  _mm512_extpackstorehi_epi32((uint8_t*)p+64, tmp_.v, _MM_DOWNCONV_EPI32_SINT16, _MM_HINT_NONE);
-  #endif // if 0
+  val_t = _mm256_loadu_si256((__m256i *)val.v);
 #endif
+  __vec16_i32 tmp = _mm512_cvtepi16_epi32(val_t);
+  _mm512_mask_cvtepi32_storeu_epi16(p, mask, tmp);
 }
 
 static FORCEINLINE __vec16_i16 __masked_load_i16(void *p, __vec16_i1 mask) {
