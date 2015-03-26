@@ -2789,27 +2789,27 @@ template <int ALIGN> static FORCEINLINE void __store(__vec16_i8 *p, __vec16_i8 v
   *p = v;
 }
 
-static FORCEINLINE void
-__scatter_base_offsets32_i8(uint8_t *b, uint32_t scale, __vec16_i32 offsets,
+static FORCEINLINE void __scatter_base_offsets32_i8(uint8_t *b, uint32_t scale, __vec16_i32 offsets,
     __vec16_i8 val, __vec16_i1 mask)
 {
-  __vec16_i32 tmp = _mm512_extload_epi32(&val,_MM_UPCONV_EPI32_SINT8, 
-      _MM_BROADCAST32_NONE, _MM_HINT_NONE);
-  _mm512_mask_i32extscatter_epi32(b, mask, offsets, tmp, 
-      _MM_DOWNCONV_EPI32_SINT8, scale, 
-      _MM_HINT_NONE);
+  // TODO
+  for (int i = 0; i < 16; ++i)                                        
+    if ((mask & (1 << i)) != 0) {                                 
+      int8_t *ptr = (int8_t *)(_base + scale * offsets[i]);         
+      *ptr = val[i];                                            
+    }  
 }
 
 
-static FORCEINLINE void
-__scatter_base_offsets32_i16(uint8_t *b, uint32_t scale, __vec16_i32 offsets,
+static FORCEINLINE void __scatter_base_offsets32_i16(uint8_t *b, uint32_t scale, __vec16_i32 offsets,
     __vec16_i16 val, __vec16_i1 mask)
 {
-  __vec16_i32 tmp = _mm512_extload_epi32(&val,_MM_UPCONV_EPI32_SINT16, 
-      _MM_BROADCAST32_NONE, _MM_HINT_NONE);
-  _mm512_mask_i32extscatter_epi32(b, mask, offsets, tmp, 
-      _MM_DOWNCONV_EPI32_SINT16, scale, 
-      _MM_HINT_NONE);
+  // TODO
+  for (int i = 0; i < 16; ++i)                                        
+    if ((mask & (1 << i)) != 0) {                                 
+      int16_t *ptr = (int16_t *)(_base + scale * offsets[i]);         
+      *ptr = val[i];                                            
+    }  
 }
 
 
@@ -2900,28 +2900,27 @@ static FORCEINLINE void __masked_store_blend_float(void *p, __vec16_f val,
 
 static FORCEINLINE __vec16_i8
 __gather_base_offsets32_i8(uint8_t *base, uint32_t scale, __vec16_i32 offsets, 
-    __vec16_i1 mask) {
-  // (iw): need to temporarily store as int because gathers can only return ints.
-  __vec16_i32 tmp = _mm512_mask_i32extgather_epi32(_mm512_undefined_epi32(), mask, offsets, base, 
-      _MM_UPCONV_EPI32_SINT8, scale,
-      _MM_HINT_NONE);
-  // now, downconverting to chars into temporary char vector
-  __vec16_i8 ret;
-  _mm512_extstore_epi32(ret.v,tmp,_MM_DOWNCONV_EPI32_SINT8,_MM_HINT_NONE);
-  return ret;
+  // TODO
+  __vec16_i8 ret;                                                          
+  for (int i = 0; i < 16; ++i)                                        
+    if ((mask & (1 << i)) != 0) {                                 
+      int8_t *ptr = (int8_t *)(_base + scale * offsets[i]);         
+      ret[i] = *ptr;                                            
+    }                                                               
+  return ret;  
 }
 
 static FORCEINLINE __vec16_i16
 __gather_base_offsets32_i16(uint8_t *base, uint32_t scale, __vec16_i32 offsets, 
     __vec16_i1 mask) {
-  // (iw): need to temporarily store as int because gathers can only return ints.
-  __vec16_i32 tmp = _mm512_mask_i32extgather_epi32(_mm512_undefined_epi32(), mask, offsets, base, 
-      _MM_UPCONV_EPI32_SINT16, scale,
-      _MM_HINT_NONE);
-  // now, downconverting to chars into temporary char vector
-  __vec16_i16 ret;
-  _mm512_extstore_epi32(ret.v,tmp,_MM_DOWNCONV_EPI32_SINT16,_MM_HINT_NONE);
-  return ret;
+  // TODO
+  __vec16_i16 ret;                                                          
+  for (int i = 0; i < 16; ++i)                                        
+    if ((mask & (1 << i)) != 0) {                                 
+      int16_t *ptr = (int16_t *)(_base + scale * offsets[i]);         
+      ret[i] = *ptr;                                            
+    }                                                               
+  return ret;  
 }
 
 static FORCEINLINE __vec16_i32
