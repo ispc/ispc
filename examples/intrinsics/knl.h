@@ -665,28 +665,31 @@ static FORCEINLINE __vec16_i8 __cast_trunc(__vec16_i8, const __vec16_i16 i16) {
 
 static FORCEINLINE __vec16_i16 __cast_trunc(__vec16_i16, const __vec16_i32 i32) {
   __vec16_i16 ret;
-  __vec16_i32 i32_trunk = _mm512_and_epi32(i32, __smear_i32<__vec16_i32>(65535));
-  _mm512_extstore_epi32(ret.v, i32_trunk, _MM_DOWNCONV_EPI32_UINT16, _MM_HINT_NONE);
+  //__vec16_i32 i32_trunk = _mm512_and_epi32(i32, __smear_i32<__vec16_i32>(65535));
+  //_mm512_extstore_epi32(ret.v, i32_trunk, _MM_DOWNCONV_EPI32_UINT16, _MM_HINT_NONE);
+
+  _mm512_mask_cvtepi32_storeu_epi16(ret.v, 0xFFFF, i32);
   return ret;
 }
 
 static FORCEINLINE __vec16_i8 __cast_trunc(__vec16_i8, const __vec16_i32 i32) {
   __vec16_i8 ret;
-  __vec16_i32 i32_trunk = _mm512_and_epi32(i32, __smear_i32<__vec16_i32>(255));
-  _mm512_extstore_epi32(ret.v, i32, _MM_DOWNCONV_EPI32_UINT8, _MM_HINT_NONE);
+  //__vec16_i32 i32_trunk = _mm512_and_epi32(i32, __smear_i32<__vec16_i32>(255));
+  //_mm512_extstore_epi32(ret.v, i32, _MM_DOWNCONV_EPI32_UINT8, _MM_HINT_NONE);
+  _mm512_mask_cvtepi32_storeu_epi8(ret.v, 0xFFFF, i32);
   return ret;
 }
 
 static FORCEINLINE __vec16_i32 __cast_trunc(__vec16_i32, const __vec16_i64 i64) {
-  return __vec16_i32(i64.v_lo);
+  return __vec16_i32(i64.v_lo); //TODO
 }
 
 static FORCEINLINE __vec16_i16 __cast_trunc(__vec16_i16, const __vec16_i64 i64) {
-  return __cast_trunc(__vec16_i16(), i64.v_lo);
+  return __cast_trunc(__vec16_i16(), i64.v_lo);//TODO
 }
 
 static FORCEINLINE __vec16_i8 __cast_trunc(__vec16_i8, const __vec16_i64 i64) {
-  return __cast_trunc(__vec16_i8(), i64.v_lo);
+  return __cast_trunc(__vec16_i8(), i64.v_lo);//TODO
 }
 
 static FORCEINLINE __vec16_i32 __rotate_i32(__vec16_i32 v, int index) {
@@ -1714,8 +1717,6 @@ static FORCEINLINE __vec16_i64 __cast_sext(const __vec16_i64 &, const __vec16_i3
 {
   return __vec16_i64(val.v, _mm512_srai_epi32(val.v, 31));
 }
-
-
 
 static FORCEINLINE __vec16_i8 __cast_zext(const __vec16_i8 &, const __vec16_i1 &val)
 {
@@ -3001,61 +3002,35 @@ __gather_base_offsets64_float(uint8_t *_base, uint32_t scale, __vec16_i64 offset
 static FORCEINLINE __vec16_i8 __gather_base_offsets64_i8(uint8_t *_base, uint32_t scale, __vec16_i64 offsets,
     __vec16_i1 mask) 
 { 
-  const __vec16_i32 signed_offsets = _mm512_add_epi32(offsets.v_lo, __smear_i32<__vec16_i32>((int32_t)INT_MIN));
-  __vec16_i1 still_to_do = mask;
-  __vec16_i32 tmp;
-  while (still_to_do) {
-    int first_active_lane = _mm_tzcnt_32((int)still_to_do);
-    const uint &hi32 = ((uint*)&offsets.v_hi)[first_active_lane];
-    __vec16_i1 match = _mm512_mask_cmp_epi32_mask(mask,offsets.v_hi,
-        __smear_i32<__vec16_i32>((int32_t)hi32),
-        _MM_CMPINT_EQ);
-
-    void * base = (void*)((unsigned long)_base  +
-        ((scale*(unsigned long)hi32) << 32) + scale*(unsigned long)(-(long)INT_MIN));
-    tmp = _mm512_mask_i32extgather_epi32(tmp, match, signed_offsets, base,
-        _MM_UPCONV_EPI32_SINT8, scale,
-        _MM_HINT_NONE);
-    still_to_do = _mm512_kxor(match,still_to_do);
-  }
-  __vec16_i8 ret;
-  _mm512_extstore_epi32(ret.v,tmp,_MM_DOWNCONV_EPI32_SINT8,_MM_HINT_NONE);
-  return ret;
+  // TODO
+  __vec16_i8 ret;                                                          
+  for (int i = 0; i < 16; ++i)                                        
+    if ((mask & (1 << i)) != 0) {                                 
+      int8_t *ptr = (int8_t *)(_base + scale * offsets[i]);         
+      ret[i] = *ptr;                                            
+    }                                                               
+  return ret;  
 }
 
-static FORCEINLINE __vec16_i8
-__gather64_i8(__vec16_i64 addr, __vec16_i1 mask) 
+static FORCEINLINE __vec16_i8 __gather64_i8(__vec16_i64 addr, __vec16_i1 mask) 
 {
   return __gather_base_offsets64_i8(0, 1, addr, mask);
 }
 
 static FORCEINLINE __vec16_i16 __gather_base_offsets64_i16(uint8_t *_base, uint32_t scale, __vec16_i64 offsets,
     __vec16_i1 mask) 
-{ 
-  const __vec16_i32 signed_offsets = _mm512_add_epi32(offsets.v_lo, __smear_i32<__vec16_i32>((int32_t)INT_MIN));
-  __vec16_i1 still_to_do = mask;
-  __vec16_i32 tmp;
-  while (still_to_do) {
-    int first_active_lane = _mm_tzcnt_32((int)still_to_do);
-    const uint &hi32 = ((uint*)&offsets.v_hi)[first_active_lane];
-    __vec16_i1 match = _mm512_mask_cmp_epi32_mask(mask,offsets.v_hi,
-        __smear_i32<__vec16_i32>((int32_t)hi32),
-        _MM_CMPINT_EQ);
-
-    void * base = (void*)((unsigned long)_base  +
-        ((scale*(unsigned long)hi32) << 32) + scale*(unsigned long)(-(long)INT_MIN));
-    tmp = _mm512_mask_i32extgather_epi32(tmp, match, signed_offsets, base,
-        _MM_UPCONV_EPI32_SINT16, scale,
-        _MM_HINT_NONE);
-    still_to_do = _mm512_kxor(match,still_to_do);
-  }
-  __vec16_i16 ret;
-  _mm512_extstore_epi32(ret.v,tmp,_MM_DOWNCONV_EPI32_SINT16,_MM_HINT_NONE);
-  return ret;
+{
+  // TODO
+  __vec16_i16 ret;                                                          
+  for (int i = 0; i < 16; ++i)                                        
+    if ((mask & (1 << i)) != 0) {                                 
+      int16_t *ptr = (int16_t *)(_base + scale * offsets[i]);         
+      ret[i] = *ptr;                                            
+    }                                                               
+  return ret;  
 }
 
-static FORCEINLINE __vec16_i16
-__gather64_i16(__vec16_i64 addr, __vec16_i1 mask) 
+static FORCEINLINE __vec16_i16 __gather64_i16(__vec16_i64 addr, __vec16_i1 mask) 
 {
   return __gather_base_offsets64_i16(0, 1, addr, mask);
 }
@@ -3078,36 +3053,18 @@ static FORCEINLINE void __scatter_base_offsets64_i64(uint8_t *_base, uint32_t sc
   _mm512_mask_i64scatter_epi64(_base, mask.hi(), offsets.v_hi, value.v_hi, scale);
 }
 
-static FORCEINLINE void // TODO
-__scatter_base_offsets64_i8(uint8_t *_base, uint32_t scale, __vec16_i64 offsets,
-    __vec16_i8 value,
-    __vec16_i1 mask) { 
-  __vec16_i1 still_to_do = mask;
-
-  __vec16_i32 tmp = _mm512_extload_epi32(&value, _MM_UPCONV_EPI32_SINT8,
-      _MM_BROADCAST32_NONE, _MM_HINT_NONE);
-  // _mm512_mask_extstore_epi32(p, mask, tmp, _MM_DOWNCONV_EPI32_SINT8,_MM_HINT_NONE);
-
-  while (still_to_do) {
-    int first_active_lane = _mm_tzcnt_32((int)still_to_do);
-    const uint &hi32 = ((uint*)&offsets.v_hi)[first_active_lane];
-    __vec16_i1 match = _mm512_mask_cmp_epi32_mask(mask,offsets.v_hi,
-        __smear_i32<__vec16_i32>((int32_t)hi32),
-        _MM_CMPINT_EQ);
-
-    void * base = (void*)((unsigned long)_base  +
-        ((scale*(unsigned long)hi32) << 32));    
-    _mm512_mask_i32extscatter_epi32(base, match, offsets.v_lo, 
-        tmp,
-        _MM_DOWNCONV_EPI32_SINT8, scale,
-        _MM_HINT_NONE);
-    still_to_do = _mm512_kxor(match,still_to_do);
-  }
+static FORCEINLINE void __scatter_base_offsets64_i8(uint8_t *_base, uint32_t scale, __vec16_i64 offsets,
+                                                     __vec16_i8 value, __vec16_i1 mask) { 
+  // TODO
+  for (int i = 0; i < 16; ++i)                                        
+    if ((mask & (1 << i)) != 0) {                                 
+      int8_t *ptr = (int8_t *)(_base + scale * offsets[i]);         
+      *ptr = value[i];                                            
+    }  
 }
 
 
-static FORCEINLINE __vec16_i32
-__gather_base_offsets64_i32(uint8_t *_base, uint32_t scale, __vec16_i64 offsets,
+static FORCEINLINE __vec16_i32 __gather_base_offsets64_i32(uint8_t *_base, uint32_t scale, __vec16_i64 offsets,
     __vec16_i1 mask) 
 {
   __m256i lo = _mm512_mask_i64gather_epi32(_mm256_undefined_si256(), mask.lo(), 
