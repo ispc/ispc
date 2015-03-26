@@ -2432,8 +2432,7 @@ static FORCEINLINE double __ceil_uniform_double(double v) {
 }
 
 static FORCEINLINE __vec16_f __round_varying_float(__vec16_f v) {
-  
-  return _mm512_round_ps(v, _MM_ROUND_MODE_NEAREST, _MM_EXPADJ_NONE);
+  return _mm512_cvtepi32_ps(_mm512_cvtps_epi32(v)); 
 }
 
 static FORCEINLINE __vec16_f __floor_varying_float(__vec16_f v) {
