@@ -1743,7 +1743,7 @@ static void
 lPrintFunctionDeclarations(FILE *file, const std::vector<Symbol *> &funcs,
                            bool useExternC=1, bool rewriteForDispatch=false) {
   if (useExternC)
-    fprintf(file, "#if defined(__cplusplus) && !defined(__ISPC_NO_EXTERN_C)\nextern \"C\" {\n#endif // __cplusplus\n");
+    fprintf(file, "#if defined(__cplusplus) && (! defined(__ISPC_NO_EXTERN_C) || !__ISPC_NO_EXTERN_C )\nextern \"C\" {\n#endif // __cplusplus\n");
     // fprintf(file, "#ifdef __cplusplus\nextern \"C\" {\n#endif // __cplusplus\n");
   for (unsigned int i = 0; i < funcs.size(); ++i) {
     const FunctionType *ftype = CastType<FunctionType>(funcs[i]->type);
@@ -1759,7 +1759,7 @@ lPrintFunctionDeclarations(FILE *file, const std::vector<Symbol *> &funcs,
   }
   if (useExternC)
 
-    fprintf(file, "#if defined(__cplusplus) && !defined(__ISPC_NO_EXTERN_C)\n} /* end extern C */\n#endif // __cplusplus\n");
+    fprintf(file, "#if defined(__cplusplus) && (! defined(__ISPC_NO_EXTERN_C) || !__ISPC_NO_EXTERN_C )\n} /* end extern C */\n#endif // __cplusplus\n");
     // fprintf(file, "#ifdef __cplusplus\n} /* end extern C */\n#endif // __cplusplus\n");
 }
 
