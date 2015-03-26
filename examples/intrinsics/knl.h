@@ -50,7 +50,7 @@
 #include <iomanip>  // for operator<<(m512[i])
 
 #if __INTEL_COMPILER < 1500
-#warning "Your compiler version is outdated which can reduce performance in some cases. Please, update your compiler!"
+#warning "Only ICC 15.0 and older are supported. Please, update your compiler!"
 #endif
 
 
@@ -1780,16 +1780,16 @@ static FORCEINLINE __vec16_i64 __cast_zext(const __vec16_i64 &, const __vec16_i3
   return __vec16_i64(val.v, _mm512_setzero_epi32());
 }
 
+static FORCEINLINE __vec16_f __cast_sitofp(__vec16_f, __vec16_i32 val) {
+  return _mm512_cvtepi32_ps(val); 
+}
+
 static FORCEINLINE __vec16_f __cast_sitofp(__vec16_f, __vec16_i8 val) {
   return __cast_sitofp(__vec16_f(), __cast_sext(__vec16_i32(), val));
 }
 
 static FORCEINLINE __vec16_f __cast_sitofp(__vec16_f, __vec16_i16 val) {
   return __cast_sitofp(__vec16_f(), __cast_sext(__vec16_i32(), val));
-}
-
-static FORCEINLINE __vec16_f __cast_sitofp(__vec16_f, __vec16_i32 val) {
-  return _mm512_cvtepi32_ps(val); 
 }
 
 static FORCEINLINE __vec16_f __cast_sitofp(__vec16_f, __vec16_i64 val) {
@@ -1863,12 +1863,15 @@ static FORCEINLINE __vec16_d __cast_sitofp(__vec16_d, __vec16_i64 val) {
   return ret;
 }
 
-
 static FORCEINLINE __vec16_f __cast_uitofp(__vec16_f, __vec16_i1 v) 
 {
   const __m512 ret = _mm512_setzero_ps();
   const __m512 one = _mm512_set1_ps(1.0);
   return _mm512_mask_mov_ps(ret, v, one);
+}
+
+static FORCEINLINE __vec16_f __cast_uitofp(__vec16_f, __vec16_i32 v) {
+  return _mm512_cvtepu32_ps(v);
 }
 
 static FORCEINLINE __vec16_f __cast_uitofp(__vec16_f, const __vec16_i8 &v) {
@@ -1877,10 +1880,6 @@ static FORCEINLINE __vec16_f __cast_uitofp(__vec16_f, const __vec16_i8 &v) {
 
 static FORCEINLINE __vec16_f __cast_uitofp(__vec16_f, __vec16_i16 val) {
   return __cast_uitofp(__vec16_f(), __cast_zext(__vec16_i32(), val));
-}
-
-static FORCEINLINE __vec16_f __cast_uitofp(__vec16_f, __vec16_i32 v) {
-  return _mm512_cvtepu32_ps(v);
 }
 
 static FORCEINLINE __vec16_f __cast_uitofp(__vec16_f, __vec16_i64 val) {
