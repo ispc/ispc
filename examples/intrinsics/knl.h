@@ -3258,7 +3258,7 @@ PREFETCH_READ_VARYING(1, _MM_HINT_T0)
 PREFETCH_READ_VARYING(2, _MM_HINT_T1)
 // L3 prefetch is mapped to L2 cache
 PREFETCH_READ_VARYING(3, _MM_HINT_T1)
-PREFETCH_READ_VARYING(nt, _MM_HINT_T2)
+PREFETCH_READ_VARYING(nt, _MM_HINT_T1)
 
 ///////////////////////////////////////////////////////////////////////////
 // atomics
