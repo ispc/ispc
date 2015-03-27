@@ -170,7 +170,7 @@ def run_test(testname):
                 (filename, options.arch, "generic-16")
         else:
             ispc_cmd = ispc_exe_rel + " --werror --nowrap %s --arch=%s --target=%s" % \
-                (filename, options.arch, options.target)
+                (filename, options.arch, options.target) 
         (return_code, output) = run_command(ispc_cmd)
         got_error = (return_code != 0)
 
@@ -267,7 +267,7 @@ def run_test(testname):
                 if (options.target == "knc"):
                     cc_cmd = "%s -O2 -I. %s %s test_static.cpp -DTEST_SIG=%d %s -o %s" % \
                          (options.compiler_exe, gcc_arch, "-mmic", match, obj_name, exe_name)
-                if (options.target == "knl"):
+                elif (options.target == "knl"):
                     cc_cmd = "%s -O2 -I. %s %s test_static.cpp -DTEST_SIG=%d %s -o %s" % \
                          (options.compiler_exe, gcc_arch, "-xMIC-AVX512", match, obj_name, exe_name)
                 else:
@@ -291,7 +291,7 @@ def run_test(testname):
             if (options.target == "knc"):
                 ispc_cmd = ispc_exe_rel + " --woff %s -o %s --arch=%s --target=%s" % \
                            (filename, obj_name, options.arch, "generic-16")
-            if (options.target == "knl"):
+            elif (options.target == "knl"):
                 ispc_cmd = ispc_exe_rel + " --woff %s -o %s --arch=%s --target=%s" % \
                            (filename, obj_name, options.arch, "generic-16")
             else:
