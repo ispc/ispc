@@ -516,17 +516,17 @@ def validation_run(only, only_targets, reference_branch, number, notify, update,
         targets = []
         sde_targets = []
         dbg_begin = 0
-        dbg_total = 2
+        dbg_total = 1
 
 # parsing option only, update parameters of run
         if "-O2" in only:
             opts.append(False)
         if "-O0" in only:
             opts.append(True)
-        if "debug" in only and not ("nodebug" in only):
-            dbg_begin = 1
-        if "nodebug" in only and not ("debug" in only):
-            dbg_total = 1
+        if "debug" in only:
+            if not ("nodebug" in only):
+                dbg_begin = 1
+            dbg_total = 2
         if "x86" in only and not ("x86-64" in only):
             archs.append("x86")
         if "x86-64" in only:
@@ -946,7 +946,7 @@ if __name__ == '__main__':
         help='set types of tests. Possible values:\n' + 
             '-O0, -O2, x86, x86-64, stability (test only stability), performance (test only performance),\n' +
             'build (only build with different LLVM), 3.2, 3.3, 3.4, 3.5, 3.6, trunk, native (do not use SDE),\n' +
-            'current (do not rebuild ISPC), debug (only with debug info), nodebug (only without debug info).',
+            'current (do not rebuild ISPC), debug (only with debug info), nodebug (only without debug info, default).',
             default="")
     run_group.add_option('--perf_LLVM', dest='perf_llvm',
         help='compare LLVM 3.6 with "--compare-with", default trunk', default=False, action='store_true')
