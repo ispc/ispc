@@ -745,26 +745,6 @@ static FORCEINLINE __vec16_i8 __cast_trunc(__vec16_i8, const __vec16_i64 i64) {
   return __cast_trunc(__vec16_i8(), i64.v_lo);//TODO
 }
 
-static FORCEINLINE __vec16_i32 unrolled_alignr_i32(__m512i &v1, __m512i &v2, int index) {
-  if (index == 0) return v2;
-  if (index == 1) return _mm512_alignr_epi32(v1, v2, 1);
-  if (index == 2) return _mm512_alignr_epi32(v1, v2, 2);
-  if (index == 3) return _mm512_alignr_epi32(v1, v2, 3);
-  if (index == 4) return _mm512_alignr_epi32(v1, v2, 4);
-  if (index == 5) return _mm512_alignr_epi32(v1, v2, 5);
-  if (index == 6) return _mm512_alignr_epi32(v1, v2, 6);
-  if (index == 7) return _mm512_alignr_epi32(v1, v2, 7);
-  if (index == 8) return _mm512_alignr_epi32(v1, v2, 8);
-  if (index == 9) return _mm512_alignr_epi32(v1, v2, 9);
-  if (index == 10) return _mm512_alignr_epi32(v1, v2, 10);
-  if (index == 11) return _mm512_alignr_epi32(v1, v2, 11);
-  if (index == 12) return _mm512_alignr_epi32(v1, v2, 12);
-  if (index == 13) return _mm512_alignr_epi32(v1, v2, 13);
-  if (index == 14) return _mm512_alignr_epi32(v1, v2, 14);
-  if (index == 15) return _mm512_alignr_epi32(v1, v2, 15);
-  if (index >= 16) return v1;
-};
-
 static FORCEINLINE __vec16_i32 unrolled_alignr_i64(__m512i &v1, __m512i &v2, int index) {
   if (index == 0) return v2;
   if (index == 1) return _mm512_alignr_epi64(v1, v2, 1);
@@ -778,8 +758,9 @@ static FORCEINLINE __vec16_i32 unrolled_alignr_i64(__m512i &v1, __m512i &v2, int
 };
 
 static FORCEINLINE __vec16_i32 __rotate_i32(__vec16_i32 v, int index) {
-  index &= 0xFF;
-  return unrolled_alignr_i32(v.v, v.v, index % 16);
+  __vec16_i32 idx = __smear_i32<__vec16_i32>(index);
+  __vec16_i32 shuffle = _mm512_and_epi32(_mm512_add_epi32(__ispc_stride1, idx),  __smear_i32<__vec16_i32>(0xf));
+  return _mm512_mask_permutevar_epi32(v, 0xffff, shuffle, v);
 }
 
 static FORCEINLINE __vec16_i32 __shuffle_i32(__vec16_i32 v, __vec16_i32 index) {
@@ -796,9 +777,12 @@ static FORCEINLINE __vec16_i32 __shuffle2_i32(__vec16_i32 v0, __vec16_i32 v1, __
 }
 
 static FORCEINLINE __vec16_i32 __shift_i32(__vec16_i32 v, int index) {
-  index &= 0xFF;
-  __m512i mmzero = _mm512_setzero_epi32();
-  return unrolled_alignr_i32(mmzero, v.v, index);
+  __vec16_i32 mod_index = _mm512_add_epi32(__ispc_stride1, __smear_i32<__vec16_i32>(index));
+  __vec16_i1 mask_ge = _mm512_cmpge_epi32_mask (mod_index, __smear_i32<__vec16_i32>(0));
+  __vec16_i1 mask_le = _mm512_cmple_epi32_mask (mod_index, __smear_i32<__vec16_i32>(0xF));
+  __vec16_i1 mask = mask_ge & mask_le;
+  __vec16_i32 ret = __smear_i32<__vec16_i32>(0);
+  ret = _mm512_mask_permutevar_epi32(ret, mask, mod_index, v);
 }
 
 template <int ALIGN> static FORCEINLINE __vec16_i32 __load(const __vec16_i32 *p) {
@@ -2791,6 +2775,14 @@ static FORCEINLINE __vec16_i32 __masked_load_i32(void *p, __vec16_i1 mask) {
 #ifdef ISPC_FORCE_ALIGNED_MEMORY
   return _mm512_mask_load_epi32(_mm512_undefined_epi32(), mask, p);
 #else
+  printf("\n\n\n");
+  printf_v(mask);
+  for(int i=0; i <3; ++i) {
+    printf("%d ", ((uint32_t *)p)[i]);
+  }
+  printf("\n");
+  printf_v(_mm512_mask_loadu_epi32(_mm512_undefined_epi32(), mask, p));
+  printf("\n\n\n");
   return _mm512_mask_loadu_epi32(_mm512_undefined_epi32(), mask, p);
 #endif
 }
