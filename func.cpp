@@ -505,17 +505,6 @@ Function::GenerateIR() {
     }
 
     if (m->errorCount == 0) {
-
-#if !defined(LLVM_3_2) && !defined(LLVM_3_3) && !defined(LLVM_3_4) // LLVM 3.5+
-        if (llvm::verifyFunction(*function) == true) {
-#else
-        if (llvm::verifyFunction(*function, llvm::ReturnStatusAction) == true) {
-#endif
-            if (g->debugPrint)
-                function->dump();
-            FATAL("Function verificication failed");
-        }
-
         // If the function is 'export'-qualified, emit a second version of
         // it without a mask parameter and without name mangling so that
         // the application can call it
@@ -568,17 +557,6 @@ Function::GenerateIR() {
                     emitCode(&ec, appFunction, firstStmtPos);
                     if (m->errorCount == 0) {
                         sym->exportedFunction = appFunction;
-
-#if !defined(LLVM_3_2) && !defined(LLVM_3_3) && !defined(LLVM_3_4) // LLVM 3.5+
-                        if (llvm::verifyFunction(*appFunction) == true) {
-#else
-                        if (llvm::verifyFunction(*appFunction,
-                                                 llvm::ReturnStatusAction) == true) {
-#endif
-                            if (g->debugPrint)
-                                appFunction->dump();
-                            FATAL("Function verificication failed");
-                        }
                     }
 #ifdef ISPC_NVPTX_ENABLED
                     if (g->target->getISA() == Target::NVPTX)
