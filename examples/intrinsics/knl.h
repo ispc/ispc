@@ -734,11 +734,24 @@ static FORCEINLINE __vec16_i8 __cast_trunc(__vec16_i8, const __vec16_i32 i32) {
 }
 
 static FORCEINLINE __vec16_i32 __cast_trunc(__vec16_i32, const __vec16_i64 i64) {
-  return __vec16_i32(i64.v_lo); //TODO
+  __m256i tmp = _mm512_cvtepi64_epi32(i64.v_hi);
+  __vec16_i32 vec_tmp = _mm512_castsi256_si512 (tmp);
+  __vec16_i32 ret_hi8 = _mm512_permute4f128_epi32(vec_tmp, _MM_PERM_BADC);
+  tmp = _mm512_cvtepi64_epi32(i64.v_lo);
+  vec_tmp = _mm512_castsi256_si512 (tmp);
+  return _mm512_xor_epi32(vec_tmp, ret_hi8);
 }
 
 static FORCEINLINE __vec16_i16 __cast_trunc(__vec16_i16, const __vec16_i64 i64) {
-  return __cast_trunc(__vec16_i16(), i64.v_lo);//TODO
+  // TODO: untested
+  __m128i tmp = _mm512_cvtepi64_epi16(i64.v_hi);
+  __m256i vec_tmp_hi = _mm256_castsi128_si256(tmp);
+  tmp = _mm512_cvtepi64_epi16(i64.v_lo);
+  __m256i vec_tmp_lo = _mm256_castsi128_si256(tmp);
+  __m256i res = _mm256_permute2f128_si256(vec_tmp_hi, vec_tmp_lo, 0x20);
+  __vec16_i16 ret;
+  _mm256_storeu_si256((__m256i *)ret.v, res);
+  return ret;
 }
 
 static FORCEINLINE __vec16_i8 __cast_trunc(__vec16_i8, const __vec16_i64 i64) {
@@ -2303,7 +2316,7 @@ static FORCEINLINE int8_t __extract_element(__vec16_i8 v, uint32_t index) {
 }
 
 static FORCEINLINE void __insert_element(__vec16_i8 *v, uint32_t index, int8_t val) {
-  ((int32_t *)v)[index] = val;
+  ((int8_t *)v)[index] = val;
 }
 
 static FORCEINLINE __vec16_i8 __broadcast_i8(__vec16_i8 v, int index) {
