@@ -840,6 +840,7 @@ def Main():
             error("It's forbidden to run alloy two times in a second, logs are in ./logs", 1)
         os.rename(f_date, date_name)
         print_debug("Logs are in " + date_name + "\n", False, "")
+        exit(0)
 
 ###Main###
 from optparse import OptionParser
