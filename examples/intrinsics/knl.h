@@ -308,13 +308,68 @@ inline std::ostream &operator<<(std::ostream &out, const __vec16_i64 &v)
   out << "[";
   uint32_t *ptr = (uint32_t*)&v;
   for (int i=0;i<16;i++) {
-    uint64_t val = (uint64_t(ptr[i])<<32)+ptr[i+16];
-    out << (i!=0?",":"") << std::dec << std::setw(8) << ((uint64_t)val) << std::dec;
+    out << (i!=0?",":"") << std::dec << std::setw(8) << ((uint64_t)v[i]) << std::dec;
   }  
   out << "]" << std::flush;
   return out;
 }
 
+// C-style debugging helpers
+inline void printf_v(const __m512i &v)
+{
+  printf("[");
+  for (int i=0;i<16;i++)  
+    printf("%d  ", ((int*)&v)[i]); 
+  printf("]\n");
+}
+
+inline void printf_v(const __m512 &v)
+{
+  printf("[");
+  for (int i=0;i<16;i++)  
+    printf("%f  ", ((float*)&v)[i]); 
+  printf("]\n");
+}
+
+inline void printf_v(const __vec16_i1 &v)
+{
+  printf("[");
+  for (int i=0;i<16;i++)  
+    printf("%d  ", (int)v[i]); 
+  printf("]\n");
+}
+
+inline void printf_v(const __vec16_i8 &v)
+{
+  printf("[");
+  for (int i=0;i<16;i++)  
+    printf("%d  ", (int)((unsigned char*)&v)[i]); 
+  printf("]\n");
+}
+
+inline void printf_v(const __vec16_i16 &v)
+{
+  printf("[");
+  for (int i=0;i<16;i++)  
+    printf("%d  ", (int)((uint16_t*)&v)[i]); 
+  printf("]\n");
+}
+
+inline void printf_v(const __vec16_d &v)
+{
+  printf("[");
+  for (int i=0;i<16;i++)  
+    printf("%f  ", v[i]); 
+  printf("]\n");
+}
+
+inline void printf_v(const __vec16_i64 &v)
+{ 
+  printf("[");
+  for (int i=0;i<16;i++)  
+    printf("%llu  ", ((uint64_t)v[i])); 
+  printf("]\n");
+}
 ///////////////////////////////////////////////////////////////////////////
 // macros...
 
@@ -784,8 +839,8 @@ static FORCEINLINE __vec16_i64 __select(__vec16_i1 mask,
   ret.v_lo = _mm512_mask_blend_epi64(mask.lo(), b.v_lo, a.v_lo);
   ret.v_hi = _mm512_mask_blend_epi64(mask.hi(), b.v_hi, a.v_hi);
   // TODO: Check if this works better:
-  ret.v_lo = _mm512_mask_mov_epi32(b.v_lo, mask, a.v_lo);
-  ret.v_hi = _mm512_mask_mov_epi32(b.v_hi, mask, a.v_hi);
+  //ret.v_lo = _mm512_mask_mov_epi32(b.v_lo, mask, a.v_lo);
+  //ret.v_hi = _mm512_mask_mov_epi32(b.v_hi, mask, a.v_hi);
   return ret;
 }
 
@@ -831,6 +886,7 @@ static FORCEINLINE __vec16_i64 __sub(const __vec16_i64 &a, const __vec16_i64 &b)
 
 /*! 64x32 bit mul -- address computations often use a scale that we
   know is 32 bits; and 32x64 is faster than 64x64 */
+/*
 static FORCEINLINE __vec16_i64 __mul(const __vec16_i32 &a, const __vec16_i64 &b)
 {
   // TODO
@@ -838,7 +894,7 @@ static FORCEINLINE __vec16_i64 __mul(const __vec16_i32 &a, const __vec16_i64 &b)
       _mm512_add_epi32(_mm512_mullo_epi32(a.v, b.v_hi),
         _mm512_mulhi_epi32(a.v, b.v_lo)));
 }
-
+*/
 static FORCEINLINE void __abs_i32i64(__m512i &_hi, __m512i &_lo)
 {
   /*   abs(x) : 
@@ -1916,7 +1972,7 @@ static FORCEINLINE __vec16_f __cast_uitofp(__vec16_f, __vec16_i16 val) {
 
 static FORCEINLINE __vec16_f __cast_uitofp(__vec16_f, __vec16_i64 val) {
   __vec16_f ret;
-  // Cycles don't work. It seems that it is icc bug.
+  // Loops don't work. It seems that it is icc bug.
   /*
   for (int i = 0; i < 8; i++) {
     ((float*)&ret)[i] = ((float)(((uint64_t*)&tmp1)[i]));
@@ -1925,14 +1981,14 @@ static FORCEINLINE __vec16_f __cast_uitofp(__vec16_f, __vec16_i64 val) {
     ((float*)&ret)[i + 8] = ((float)(((uint64_t*)&tmp2)[i]));
   }
   */
-  ret[0] = ((float)(((uint64_t*)&val.v_lo)[0]));
+  ret[0] = ((float)(val[0]));
   ret[1] = ((float)(((uint64_t*)&val.v_lo)[1]));
   ret[2] = ((float)(((uint64_t*)&val.v_lo)[2]));
   ret[3] = ((float)(((uint64_t*)&val.v_lo)[3]));
   ret[4] = ((float)(((uint64_t*)&val.v_lo)[4]));
   ret[5] = ((float)(((uint64_t*)&val.v_lo)[5]));
   ret[6] = ((float)(((uint64_t*)&val.v_lo)[6]));
-  ret[7] = ((float)(((uint64_t*)&val.v_hi)[7]));
+  ret[7] = ((float)(((uint64_t*)&val.v_lo)[7]));
   ret[8] = ((float)(((uint64_t*)&val.v_hi)[0]));
   ret[9] = ((float)(((uint64_t*)&val.v_hi)[1]));
   ret[10] = ((float)(((uint64_t*)&val.v_hi)[2]));
@@ -1940,7 +1996,7 @@ static FORCEINLINE __vec16_f __cast_uitofp(__vec16_f, __vec16_i64 val) {
   ret[12] = ((float)(((uint64_t*)&val.v_hi)[4]));
   ret[13] = ((float)(((uint64_t*)&val.v_hi)[5]));
   ret[14] = ((float)(((uint64_t*)&val.v_hi)[6]));
-  ret[15] = ((float)(((uint64_t*)&val.v_hi)[7]));
+  ret[15] = ((float)(((uint64_t*)&val.v_hi)[7])); 
   return ret;
 }
 
