@@ -1100,6 +1100,12 @@ Module::writeOutput(OutputType outputType, const char *outFileName,
     }
 #endif
 
+    // SIC! (verifyModule() == TRUE) means "failed", see llvm-link code.
+    if ((outputType != Header) && (outputType != Deps)
+    &&  (outputType != HostStub) && (outputType != DevStub)
+    &&  module && llvm::verifyModule(*module))
+        FATAL("Resulting module verification failed!");
+
     // First, issue a warning if the output file suffix and the type of
     // file being created seem to mismatch.  This can help catch missing
     // command-line arguments specifying the output file type.
