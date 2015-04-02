@@ -1135,11 +1135,10 @@ static FORCEINLINE __vec16_i64 __shuffle2_i64(__vec16_i64 v0, __vec16_i64 v1, __
 
 template <int ALIGN> static FORCEINLINE __vec16_i64 __load(const __vec16_i64 *p) {
   __vec16_i64 v;
-  const uint8_t*ptr = (const uint8_t*)p;
+  const uint8_t *ptr = (const uint8_t *)p;
 
   v.v_lo = _mm512_loadu_si512(ptr);
   v.v_hi = _mm512_loadu_si512(ptr+64);
-
   return v;    
 }
 
@@ -1158,7 +1157,7 @@ template <> FORCEINLINE __vec16_i64 __load<128>(const __vec16_i64 *p) {
 
 template <int ALIGN> static FORCEINLINE void __store(__vec16_i64 *p, __vec16_i64 v) {
   _mm512_storeu_si512(p, v.v_lo);
-  _mm512_storeu_si512(p+64, v.v_hi);
+  _mm512_storeu_si512((uint8_t*)p+64, v.v_hi);
 }
 #if 0
 template <> FORCEINLINE void __store<64>(__vec16_i64 *p, __vec16_i64 v) {
@@ -2964,10 +2963,10 @@ static FORCEINLINE void __masked_store_blend_float(void *p, __vec16_f val,
 static FORCEINLINE __vec16_i8 __gather_base_offsets32_i8(uint8_t *base, uint32_t scale,
                                                  __vec16_i32 offsets, __vec16_i1 mask) {
   // TODO
-  __vec16_i8 ret;                                                          
+  __vec16_i8 ret;  
   for (int i = 0; i < 16; ++i)                                        
     if ((mask & (1 << i)) != 0) {                                 
-      int8_t *ptr = (int8_t *)(base + scale * offsets[i]);         
+      int8_t *ptr = (int8_t *)(base + scale * offsets[i]);
       ret[i] = *ptr;                                            
     }                                                               
   return ret;  
