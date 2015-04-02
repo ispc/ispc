@@ -1785,21 +1785,26 @@ static FORCEINLINE __vec16_i32 __cast_sext(const __vec16_i32 &, const __vec16_i1
   return _mm512_cvtepi16_epi32(val_t);
 }
 
+static FORCEINLINE __vec16_i64 __cast_sext(const __vec16_i64 &, const __vec16_i32 &val)
+{
+  // TODO: this probably shall be optimized
+  __vec16_i64 a;
+  a.v_lo = _mm512_cvtepi32_epi64(_mm512_castsi512_si256(val));
+  __vec16_i32 a_hi_32 = _mm512_permutevar_epi32(__vec16_i32(8, 9, 10, 11, 12, 13, 14, 15, 0, 1, 2, 3, 4, 5, 6, 7), val);
+  a.v_hi = _mm512_cvtepi32_epi64(_mm512_castsi512_si256(a_hi_32));
+  return a;
+}
+
 static FORCEINLINE __vec16_i64 __cast_sext(const __vec16_i64 &, const __vec16_i1 &val)
 {
-  __vec16_i32 ret = _mm512_mask_mov_epi32(_mm512_setzero_epi32(), val, _mm512_set1_epi32(-1));
-  return __vec16_i64(ret, ret);
+  __vec16_i32 a = _mm512_mask_mov_epi32(_mm512_setzero_epi32(), val, _mm512_set1_epi32(-1));
+  return __cast_sext(__vec16_i64(), a);
 }
 
 static FORCEINLINE __vec16_i64 __cast_sext(const __vec16_i64 &, const __vec16_i8 &val)
 {
   __vec16_i32 a = __cast_sext(__vec16_i32(), val);
-  return __vec16_i64(a.v, _mm512_srai_epi32(a.v, 31));
-}
-
-static FORCEINLINE __vec16_i64 __cast_sext(const __vec16_i64 &, const __vec16_i32 &val)
-{
-  return __vec16_i64(val.v, _mm512_srai_epi32(val.v, 31));
+  return __cast_sext(__vec16_i64(), a);
 }
 
 static FORCEINLINE __vec16_i8 __cast_zext(const __vec16_i8 &, const __vec16_i1 &val)
@@ -1841,28 +1846,31 @@ static FORCEINLINE __vec16_i32 __cast_zext(const __vec16_i32 &, const __vec16_i1
   return _mm512_cvtepu16_epi32(val_t);
 }
 
+static FORCEINLINE __vec16_i64 __cast_zext(const __vec16_i64 &, const __vec16_i32 &val)
+{
+  // TODO: this probably shall be optimized
+  __vec16_i64 a;
+  a.v_lo = _mm512_cvtepu32_epi64(_mm512_castsi512_si256(val));
+  __vec16_i32 a_hi_32 = _mm512_permutevar_epi32(__vec16_i32(8, 9, 10, 11, 12, 13, 14, 15, 0, 1, 2, 3, 4, 5, 6, 7), val);
+  a.v_hi = _mm512_cvtepu32_epi64(_mm512_castsi512_si256(a_hi_32));
+  return a;
+}
+
 static FORCEINLINE __vec16_i64 __cast_zext(const __vec16_i64 &, const __vec16_i1 &val)
 {  
-  __vec16_i32 ret_hi = _mm512_setzero_epi32();
-  __vec16_i32 ret_lo = _mm512_setzero_epi32();
-  __vec16_i32 one = _mm512_set1_epi32(1);
-  ret_lo = _mm512_mask_mov_epi32(ret_lo, val, one);
-  return __vec16_i64 (ret_lo, ret_hi);
+  __vec16_i32 ret = _mm512_setzero_epi32();
+  ret = _mm512_mask_mov_epi32(ret, val, _mm512_set1_epi32(1));
+  return __cast_zext(__vec16_i64(), ret);
 }
 
 static FORCEINLINE __vec16_i64 __cast_zext(const __vec16_i64 &, const __vec16_i8 &val)
 {
-  return __vec16_i64(__cast_zext(__vec16_i32(), val), _mm512_setzero_epi32());
+  return __cast_zext(__vec16_i64(), __cast_zext(__vec16_i32(), val));
 }
 
 static FORCEINLINE __vec16_i64 __cast_zext(const __vec16_i64 &, const __vec16_i16 &val)
 {
-  return __vec16_i64(__cast_zext(__vec16_i32(), val), _mm512_setzero_epi32());
-}
-
-static FORCEINLINE __vec16_i64 __cast_zext(const __vec16_i64 &, const __vec16_i32 &val)
-{
-  return __vec16_i64(val.v, _mm512_setzero_epi32());
+  return __cast_zext(__vec16_i64(), __cast_zext(__vec16_i32(), val));
 }
 
 static FORCEINLINE __vec16_f __cast_sitofp(__vec16_f, __vec16_i32 val) {
