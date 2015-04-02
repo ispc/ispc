@@ -591,6 +591,7 @@ def validation_run(only, only_targets, reference_branch, number, notify, update,
             LLVM = [newest_LLVM, "trunk"]
         gen_archs = ["x86-64"]
         knc_archs = ["x86-64"]
+        knl_archs = ["x86-64"]
         need_LLVM = check_LLVM(LLVM)
         for i in range(0,len(need_LLVM)):
             build_LLVM(need_LLVM[i], "", "", "", False, False, False, True, False, make, options.gcc_toolchain_path)
@@ -612,14 +613,16 @@ def validation_run(only, only_targets, reference_branch, number, notify, update,
                 # sometimes clang++ is not avaluable. if --ispc-build-compiler = gcc we will pass in g++ compiler
                 if options.ispc_build_compiler == "gcc":
                     stability.compiler_exe = "g++"
-                # but 'knc' target is supported only by icpc, so set explicitly
-                if "knc" in targets[j]:
+                # but 'knc/knl' target is supported only by icpc, so set explicitly
+                if ("knc" in targets[j]) or ("knl" in targets[j]):
                     stability.compiler_exe = "icpc"
                 # now set archs for targets
                 if "generic" in targets[j]:
                     arch = gen_archs
                 elif "knc" in targets[j]:
                     arch = knc_archs
+                elif "knl" in targets[j]:
+                    arch = knl_archs
                 else:
                     arch = archs
                 for i1 in range(0,len(arch)):
@@ -638,10 +641,16 @@ def validation_run(only, only_targets, reference_branch, number, notify, update,
             for j in range(0,len(sde_targets)):
                 stability.target = sde_targets[j][1]
                 stability.wrapexe = os.environ["SDE_HOME"] + "/sde " + sde_targets[j][0] + " -- "
-                for i1 in range(0,len(archs)):
+                if "knc" in stability.target:
+                    arch = knc_archs
+                elif "knl" in stability.target:
+                    arch = knl_archs
+                else:
+                    arch = archs
+                for i1 in range(0,len(arch)):
                     for i2 in range(0,len(opts)):
                         for i3 in range(dbg_begin,dbg_total):
-                            stability.arch = archs[i1]
+                            stability.arch = arch[i1]
                             stability.no_opt = opts[i2]
                             stability.ispc_flags = ispc_flags_tmp
                             if (i3 != 0):
