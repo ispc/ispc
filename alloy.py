@@ -434,7 +434,7 @@ def execute_stability(stability, R, print_version):
         str_time = " " + time + "\n"
     else:
         str_time = "\n"
-    print_debug(temp[4][1:-3] + str_fails + str_new_fails + str_new_passes + str_time, False, stability_log)
+    print_debug(temp[4][1:-3] + stability1.ispc_flags + str_fails + str_new_fails + str_new_passes + str_time, False, stability_log)
 
 
 '''
@@ -519,12 +519,18 @@ def validation_run(only, only_targets, reference_branch, number, notify, update,
         LLVM = []
         targets = []
         sde_targets = []
+        dbg_begin = 0
+        dbg_total = 1
 
 # parsing option only, update parameters of run
         if "-O2" in only:
             opts.append(False)
         if "-O0" in only:
             opts.append(True)
+        if "debug" in only:
+            if not ("nodebug" in only):
+                dbg_begin = 1
+            dbg_total = 2
         if "x86" in only and not ("x86-64" in only):
             archs.append("x86")
         if "x86-64" in only:
@@ -585,6 +591,7 @@ def validation_run(only, only_targets, reference_branch, number, notify, update,
             LLVM = [newest_LLVM, "trunk"]
         gen_archs = ["x86-64"]
         knc_archs = ["x86-64"]
+        knl_archs = ["x86-64"]
         need_LLVM = check_LLVM(LLVM)
         for i in range(0,len(need_LLVM)):
             build_LLVM(need_LLVM[i], "", "", "", False, False, False, True, False, make, options.gcc_toolchain_path)
@@ -593,6 +600,7 @@ def validation_run(only, only_targets, reference_branch, number, notify, update,
         R = [[[],[]],[[],[]],[[],[]],[[],[]]]
         print_debug("\n" + common.get_host_name() + "\n", False, stability_log)
         print_debug("\n_________________________STABILITY REPORT_________________________\n", False, stability_log)
+        ispc_flags_tmp = stability.ispc_flags
         for i in range(0,len(LLVM)):
             R_tmp = [[[],[]],[[],[]],[[],[]],[[],[]]]
             print_version = 2
@@ -605,34 +613,50 @@ def validation_run(only, only_targets, reference_branch, number, notify, update,
                 # sometimes clang++ is not avaluable. if --ispc-build-compiler = gcc we will pass in g++ compiler
                 if options.ispc_build_compiler == "gcc":
                     stability.compiler_exe = "g++"
-                # but 'knc' target is supported only by icpc, so set explicitly
-                if "knc" in targets[j]:
+                # but 'knc/knl' target is supported only by icpc, so set explicitly
+                if ("knc" in targets[j]) or ("knl" in targets[j]):
                     stability.compiler_exe = "icpc"
                 # now set archs for targets
                 if "generic" in targets[j]:
                     arch = gen_archs
                 elif "knc" in targets[j]:
                     arch = knc_archs
+                elif "knl" in targets[j]:
+                    arch = knl_archs
                 else:
                     arch = archs
                 for i1 in range(0,len(arch)):
                     for i2 in range(0,len(opts)):
-                        stability.arch = arch[i1]
-                        stability.no_opt = opts[i2]
-                        try:
-                            execute_stability(stability, R_tmp, print_version)
-                        except:
-                            print_debug("ERROR: Exception in execute_stability - maybe some test subprocess terminated before it should have\n", False, stability_log)
-                        print_version = 0
+                        for i3 in range(dbg_begin,dbg_total):
+                            stability.arch = arch[i1]
+                            stability.no_opt = opts[i2]
+                            stability.ispc_flags = ispc_flags_tmp
+                            if (i3 != 0):
+                                stability.ispc_flags += " -g"
+                            try:
+                                execute_stability(stability, R_tmp, print_version)
+                            except:
+                                print_debug("ERROR: Exception in execute_stability - maybe some test subprocess terminated before it should have\n", False, stability_log)
+                            print_version = 0
             for j in range(0,len(sde_targets)):
                 stability.target = sde_targets[j][1]
                 stability.wrapexe = os.environ["SDE_HOME"] + "/sde " + sde_targets[j][0] + " -- "
-                for i1 in range(0,len(archs)):
+                if "knc" in stability.target:
+                    arch = knc_archs
+                elif "knl" in stability.target:
+                    arch = knl_archs
+                else:
+                    arch = archs
+                for i1 in range(0,len(arch)):
                     for i2 in range(0,len(opts)):
-                        stability.arch = archs[i1]
-                        stability.no_opt = opts[i2]
-                        execute_stability(stability, R_tmp, print_version)
-                        print_version = 0            
+                        for i3 in range(dbg_begin,dbg_total):
+                            stability.arch = arch[i1]
+                            stability.no_opt = opts[i2]
+                            stability.ispc_flags = ispc_flags_tmp
+                            if (i3 != 0):
+                                stability.ispc_flags += " -g"
+                            execute_stability(stability, R_tmp, print_version)
+                            print_version = 0
             # Output testing results separate for each tested LLVM version
             R = concatenate_test_results(R, R_tmp)
             output_test_results(R_tmp)
@@ -784,7 +808,7 @@ def Main():
         if os.environ.get("SMTP_ISPC") == None:
             error("you have no SMTP_ISPC in your environment for option notify", 1)
     if options.only != "":
-        test_only_r = " 3.2 3.3 3.4 3.5 3.6 trunk current build stability performance x86 x86-64 -O0 -O2 native "
+        test_only_r = " 3.2 3.3 3.4 3.5 3.6 trunk current build stability performance x86 x86-64 -O0 -O2 native debug nodebug "
         test_only = options.only.split(" ")
         for iterator in test_only:
             if not (" " + iterator + " " in test_only_r):
@@ -829,6 +853,7 @@ def Main():
             error("It's forbidden to run alloy two times in a second, logs are in ./logs", 1)
         os.rename(f_date, date_name)
         print_debug("Logs are in " + date_name + "\n", False, "")
+        exit(0)
 
 ###Main###
 from optparse import OptionParser
@@ -933,8 +958,9 @@ if __name__ == '__main__':
         help='display time of testing', default=False, action='store_true')
     run_group.add_option('--only', dest='only',
         help='set types of tests. Possible values:\n' + 
-            '-O0, -O2, x86, x86-64, stability (test only stability), performance (test only performance)\n' +
-            'build (only build with different LLVM), 3.2, 3.3, 3.4, 3.5, 3.6, trunk, native (do not use SDE), current (do not rebuild ISPC).',
+            '-O0, -O2, x86, x86-64, stability (test only stability), performance (test only performance),\n' +
+            'build (only build with different LLVM), 3.2, 3.3, 3.4, 3.5, 3.6, trunk, native (do not use SDE),\n' +
+            'current (do not rebuild ISPC), debug (only with debug info), nodebug (only without debug info, default).',
             default="")
     run_group.add_option('--perf_LLVM', dest='perf_llvm',
         help='compare LLVM 3.6 with "--compare-with", default trunk', default=False, action='store_true')
