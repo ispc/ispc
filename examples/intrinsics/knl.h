@@ -796,6 +796,7 @@ static FORCEINLINE __vec16_i32 __shift_i32(__vec16_i32 v, int index) {
   __vec16_i1 mask = mask_ge & mask_le;
   __vec16_i32 ret = __smear_i32<__vec16_i32>(0);
   ret = _mm512_mask_permutevar_epi32(ret, mask, mod_index, v);
+  return ret; 
 }
 
 template <int ALIGN> static FORCEINLINE __vec16_i32 __load(const __vec16_i32 *p) {
@@ -1986,7 +1987,7 @@ static FORCEINLINE __vec16_f __cast_uitofp(__vec16_f, __vec16_i64 val) {
     ((float*)&ret)[i + 8] = ((float)(((uint64_t*)&tmp2)[i]));
   }
   */
-  ret[0] = ((float)(val[0]));
+  ret[0] = ((float)(((uint64_t*)&val.v_lo)[0]));
   ret[1] = ((float)(((uint64_t*)&val.v_lo)[1]));
   ret[2] = ((float)(((uint64_t*)&val.v_lo)[2]));
   ret[3] = ((float)(((uint64_t*)&val.v_lo)[3]));
@@ -2049,7 +2050,7 @@ static FORCEINLINE __vec16_d __cast_uitofp(__vec16_d, __vec16_i64 val) {
 
 // float/double to signed int
 static FORCEINLINE __vec16_i32 __cast_fptosi(__vec16_i32, __vec16_f val) {
-  return _mm512_cvtps_epi32(val);
+  return _mm512_cvt_roundps_epi32(val, (_MM_FROUND_TO_ZERO |_MM_FROUND_NO_EXC));
 }
 
 static FORCEINLINE __vec16_i8 __cast_fptosi(__vec16_i8, __vec16_f val) {
