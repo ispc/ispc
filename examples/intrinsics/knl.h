@@ -3070,11 +3070,10 @@ static FORCEINLINE __vec16_i8 __gather_base_offsets64_i8(uint8_t *_base, uint32_
 { 
   // TODO
   __vec16_i8 ret;                                                          
-  for (int i = 0; i < 16; ++i)                                        
-    if ((mask & (1 << i)) != 0) {                                 
-      int8_t *ptr = (int8_t *)(_base + scale * offsets[i]);         
-      ret[i] = *ptr;                                            
-    }                                                               
+  for (int i = 0; i < 16; ++i) {                                       
+    int8_t *ptr = (int8_t *)(_base + scale * offsets[i]);         
+    ret[i] = *ptr;                                            
+  }                                                               
   return ret;  
 }
 
@@ -3087,12 +3086,11 @@ static FORCEINLINE __vec16_i16 __gather_base_offsets64_i16(uint8_t *_base, uint3
     __vec16_i1 mask) 
 {
   // TODO
-  __vec16_i16 ret;                                                          
-  for (int i = 0; i < 16; ++i)                                        
-    if ((mask & (1 << i)) != 0) {                                 
-      int16_t *ptr = (int16_t *)(_base + scale * offsets[i]);         
-      ret[i] = *ptr;                                            
-    }                                                               
+  __vec16_i16 ret;                                                           
+  for (int i = 0; i < 16; i++) {                                 
+    int16_t *ptr = (int16_t *)(_base + scale * offsets[i]);         
+    ret.v[i] = *ptr;
+  }     
   return ret;  
 }
 
@@ -3124,7 +3122,7 @@ static FORCEINLINE void __scatter_base_offsets64_i8(uint8_t *_base, uint32_t sca
   // TODO
   for (int i = 0; i < 16; ++i)                                        
     if ((mask & (1 << i)) != 0) {                                 
-      int8_t *ptr = (int8_t *)(_base + scale * offsets[i]);         
+      int8_t *ptr = (int8_t *)(_base + scale * offsets[i]);
       *ptr = value[i];                                            
     }  
 }
@@ -3198,13 +3196,13 @@ static FORCEINLINE void __scatter64_i64(__vec16_i64 ptrs, __vec16_i64 val, __vec
 
 static FORCEINLINE int32_t __packed_load_active(uint32_t *p, __vec16_i32 *val, __vec16_i1 mask) {
   __vec16_i32 v = __load<64>(val);
-  v = _mm512_mask_loadu_epi32(v, mask, p);
+  v = _mm512_mask_expandloadu_epi32(v, mask, p);
   __store<64>(val, v);
   return _mm_countbits_32(uint32_t(mask));
 }
 
 static FORCEINLINE int32_t __packed_store_active(uint32_t *p, __vec16_i32 val, __vec16_i1 mask) {
-  _mm512_mask_storeu_epi32(p, mask, val);
+  _mm512_mask_compressstoreu_epi32(p, mask, val);
   return _mm_countbits_32(uint32_t(mask));
 }
 
