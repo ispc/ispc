@@ -293,8 +293,10 @@ def check_targets():
     AVX   = ["avx1-i32x4",  "avx1-i32x8",  "avx1-i32x16",  "avx1-i64x4"]
     AVX11 = ["avx1.1-i32x8","avx1.1-i32x16","avx1.1-i64x4"]
     AVX2  = ["avx2-i32x8",  "avx2-i32x16",  "avx2-i64x4"]
+    KNL   = ["knl"]
 
-    targets = [["AVX2", AVX2, False], ["AVX1.1", AVX11, False], ["AVX", AVX, False], ["SSE4", SSE4, False], ["SSE2", SSE2, False]]
+    targets = [["AVX2", AVX2, False], ["AVX1.1", AVX11, False], ["AVX", AVX, False], ["SSE4", SSE4, False], 
+               ["SSE2", SSE2, False], ["KNL", KNL, False]]
     f_lines = take_lines("check_isa.exe", "first")
     for i in range(0,5):
         if targets[i][0] in f_lines:
@@ -329,6 +331,8 @@ def check_targets():
     # here we have SDE
     f_lines = take_lines(sde_exists + " -help", "all")
     for i in range(0,len(f_lines)):
+        if targets[5][2] == False and "knl" in f_lines[i]:
+            answer_sde = answer_sde + [["-knl", "knl"]]
         if targets[3][2] == False and "wsm" in f_lines[i]:
             answer_sde = answer_sde + [["-wsm", "sse4-i32x4"], ["-wsm", "sse4-i32x8"], ["-wsm", "sse4-i16x8"], ["-wsm", "sse4-i8x16"]]
         if targets[2][2] == False and "snb" in f_lines[i]:
@@ -587,6 +591,7 @@ def validation_run(only, only_targets, reference_branch, number, notify, update,
             LLVM = [newest_LLVM, "trunk"]
         gen_archs = ["x86-64"]
         knc_archs = ["x86-64"]
+        knl_archs = ["x86-64"]
         need_LLVM = check_LLVM(LLVM)
         for i in range(0,len(need_LLVM)):
             build_LLVM(need_LLVM[i], "", "", "", False, False, False, True, False, make, options.gcc_toolchain_path)
@@ -608,14 +613,16 @@ def validation_run(only, only_targets, reference_branch, number, notify, update,
                 # sometimes clang++ is not avaluable. if --ispc-build-compiler = gcc we will pass in g++ compiler
                 if options.ispc_build_compiler == "gcc":
                     stability.compiler_exe = "g++"
-                # but 'knc' target is supported only by icpc, so set explicitly
-                if "knc" in targets[j]:
+                # but 'knc/knl' target is supported only by icpc, so set explicitly
+                if ("knc" in targets[j]) or ("knl" in targets[j]):
                     stability.compiler_exe = "icpc"
                 # now set archs for targets
                 if "generic" in targets[j]:
                     arch = gen_archs
                 elif "knc" in targets[j]:
                     arch = knc_archs
+                elif "knl" in targets[j]:
+                    arch = knl_archs
                 else:
                     arch = archs
                 for i1 in range(0,len(arch)):
@@ -634,10 +641,16 @@ def validation_run(only, only_targets, reference_branch, number, notify, update,
             for j in range(0,len(sde_targets)):
                 stability.target = sde_targets[j][1]
                 stability.wrapexe = os.environ["SDE_HOME"] + "/sde " + sde_targets[j][0] + " -- "
-                for i1 in range(0,len(archs)):
+                if "knc" in stability.target:
+                    arch = knc_archs
+                elif "knl" in stability.target:
+                    arch = knl_archs
+                else:
+                    arch = archs
+                for i1 in range(0,len(arch)):
                     for i2 in range(0,len(opts)):
                         for i3 in range(dbg_begin,dbg_total):
-                            stability.arch = archs[i1]
+                            stability.arch = arch[i1]
                             stability.no_opt = opts[i2]
                             stability.ispc_flags = ispc_flags_tmp
                             if (i3 != 0):
@@ -888,8 +901,8 @@ if __name__ == '__main__':
     "Try to build compiler with all LLVM\n\talloy.py -r --only=build\n" +
     "Performance validation run with 10 runs of each test and comparing to branch 'old'\n\talloy.py -r --only=performance --compare-with=old --number=10\n" +
     "Validation run. Update fail_db.txt with new fails, send results to my@my.com\n\talloy.py -r --update-errors=F --notify='my@my.com'\n" +
-    "Test KNC target (not tested when tested all supported targets, so should be set explicitly via --only-targets)\n\talloy.py -r --only='stability' --only-targets='knc'\n")
-
+    "Test KNC target (not tested when tested all supported targets, so should be set explicitly via --only-targets)\n\talloy.py -r --only='stability' --only-targets='knc'\n" +
+    "Test KNL target (requires sde)\n\talloy.py -r --only='stability' --only-targets='knl'\n")
 
     num_threads="%s" % multiprocessing.cpu_count()
     parser = MyParser(usage="Usage: alloy.py -r/-b [options]", epilog=examples)
