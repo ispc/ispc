@@ -49,7 +49,7 @@
 #include <iomanip>  // for operator<<(m512[i])
 
 #if __INTEL_COMPILER < 1500
-#warning "Only ICC 15.0 and older are supported. Please, update your compiler!"
+#error "Only ICC 15.0 and older are supported. Please, update your compiler!"
 #endif
 
 
@@ -3106,8 +3106,10 @@ static FORCEINLINE void __scatter_base_offsets64_float(uint8_t *_base, uint32_t 
 
 static FORCEINLINE void __scatter_base_offsets64_i32(uint8_t *_base, uint32_t scale, __vec16_i64 offsets,
                                                      __vec16_i32 value, __vec16_i1 mask) { 
-  _mm512_mask_i64scatter_epi32(_base, mask.lo(), offsets.v_lo, _mm512_extracti64x4_epi64(value, 0), scale);
-  _mm512_mask_i64scatter_epi32(_base, mask.hi(), offsets.v_hi, _mm512_extracti64x4_epi64(value, 1), scale);
+  __m256i value_lo = _mm512_extracti64x4_epi64(value.v, 0);
+  __m256i value_hi = _mm512_extracti64x4_epi64(value.v, 1);
+  _mm512_mask_i64scatter_epi32(_base, mask.lo(), offsets.v_lo, value_lo, scale);
+  _mm512_mask_i64scatter_epi32(_base, mask.hi(), offsets.v_hi, value_hi, scale);
 }
 
 static FORCEINLINE void __scatter_base_offsets64_i64(uint8_t *_base, uint32_t scale, __vec16_i64 offsets,
