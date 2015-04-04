@@ -916,7 +916,7 @@ to precisely define the language's behavior in specific situations.
 We will specify the notion of a *program counter* and how it is updated to
 step through the program, and an *execution mask* that indicates which
 program instances want to execute the instruction at the current program
-counter.  The program counter a single program counter shared by all of the
+counter.  The program counter is shared by all of the
 program instances in the gang; it points to a single instruction to be
 executed next.  The execution mask is a per-program-instance boolean value
 that indicates whether or not side effects from the current instruction
@@ -939,8 +939,8 @@ of an ``ispc`` function.
   mask will be set such that its value for a particular program instance is
   "on" if and only if the program instance wants to execute that statement.
 
-Note that these definition provide the compiler some latitude; for example,
-the program counter is allowed pass through a series of statements with the
+Note that these definitions provide the compiler some latitude; for example,
+the program counter is allowed to pass through a series of statements with the
 execution mask "all off" because doing so has no observable side-effects.
 
 Elsewhere, we will speak informally of the *control flow coherence* of a
