@@ -338,14 +338,23 @@ FunctionEmitContext::FunctionEmitContext(Function *func, Symbol *funSym,
         /* If debugging is enabled, tell the debug information emission
            code about this new function */
         diFile = funcStartPos.GetDIFile();
+
+#if defined(LLVM_3_2) || defined(LLVM_3_3) || defined(LLVM_3_4) || defined(LLVM_3_5) || defined(LLVM_3_6)
         AssertPos(currentPos, diFile.Verify());
+#else // LLVM 3.7
+    //comming soon
+#endif
 
 #if defined(LLVM_3_2) || defined(LLVM_3_3)
         llvm::DIScope scope = llvm::DIScope(m->diBuilder->getCU());
 #else // LLVM_3_4+
         llvm::DIScope scope = llvm::DIScope(m->diCompileUnit);
 #endif
+#if defined(LLVM_3_2) || defined(LLVM_3_3) || defined(LLVM_3_4) || defined(LLVM_3_5) || defined(LLVM_3_6)
         AssertPos(currentPos, scope.Verify());
+#else // LLVM 3.7
+    //comming soon
+#endif
 
         const FunctionType *functionType = function->GetType();
         llvm::DIType diSubprogramType;
@@ -353,7 +362,11 @@ FunctionEmitContext::FunctionEmitContext(Function *func, Symbol *funSym,
             AssertPos(currentPos, m->errorCount > 0);
         else {
             diSubprogramType = functionType->GetDIType(scope);
+#if defined(LLVM_3_2) || defined(LLVM_3_3) || defined(LLVM_3_4) || defined(LLVM_3_5) || defined(LLVM_3_6)
             AssertPos(currentPos, diSubprogramType.Verify());
+#else // LLVM 3.7
+    //comming soon
+#endif
         }
 
 #if !defined(LLVM_3_2) && !defined(LLVM_3_3)
@@ -381,7 +394,11 @@ FunctionEmitContext::FunctionEmitContext(Function *func, Symbol *funSym,
                                          firstLine,
                                          flags,
                                          isOptimized,        llvmFunction);
+#if defined(LLVM_3_2) || defined(LLVM_3_3) || defined(LLVM_3_4) || defined(LLVM_3_5) || defined(LLVM_3_6)
         AssertPos(currentPos, diSubprogram.Verify());
+#else // LLVM 3.7
+    //comming soon
+#endif
 
         /* And start a scope representing the initial function scope */
         StartScope();
@@ -1662,7 +1679,11 @@ FunctionEmitContext::StartScope() {
         // as the last argument
                                              currentPos.first_column);
 #endif // LLVM 3.2, 3.3, 3.4 and 3.6+
+#if defined(LLVM_3_2) || defined(LLVM_3_3) || defined(LLVM_3_4) || defined(LLVM_3_5) || defined(LLVM_3_6)
         AssertPos(currentPos, lexicalBlock.Verify());
+#else // LLVM 3.7
+    //comming soon
+#endif
         debugScopes.push_back(lexicalBlock);
     }
 }
@@ -1691,7 +1712,11 @@ FunctionEmitContext::EmitVariableDebugInfo(Symbol *sym) {
 
     llvm::DIScope scope = GetDIScope();
     llvm::DIType diType = sym->type->GetDIType(scope);
+#if defined(LLVM_3_2) || defined(LLVM_3_3) || defined(LLVM_3_4) || defined(LLVM_3_5) || defined(LLVM_3_6)
     AssertPos(currentPos, diType.Verify());
+#else // LLVM 3.7
+    //comming soon
+#endif
     llvm::DIVariable var =
         m->diBuilder->createLocalVariable(llvm::dwarf::DW_TAG_auto_variable,
                                           scope,
@@ -1700,7 +1725,11 @@ FunctionEmitContext::EmitVariableDebugInfo(Symbol *sym) {
                                           sym->pos.first_line,
                                           diType,
                                           true /* preserve through opts */);
+#if defined(LLVM_3_2) || defined(LLVM_3_3) || defined(LLVM_3_4) || defined(LLVM_3_5) || defined(LLVM_3_6)
     AssertPos(currentPos, var.Verify());
+#else // LLVM 3.7
+    //comming soon
+#endif
 #if !defined(LLVM_3_2) && !defined(LLVM_3_3) && !defined(LLVM_3_4) && !defined(LLVM_3_5)// LLVM 3.6+
     llvm::DIExpression E = m->diBuilder->createExpression();
     llvm::Instruction *declareInst =
@@ -1720,7 +1749,11 @@ FunctionEmitContext::EmitFunctionParameterDebugInfo(Symbol *sym, int argNum) {
 
     llvm::DIScope scope = diSubprogram;
     llvm::DIType diType = sym->type->GetDIType(scope);
+#if defined(LLVM_3_2) || defined(LLVM_3_3) || defined(LLVM_3_4) || defined(LLVM_3_5) || defined(LLVM_3_6)
     AssertPos(currentPos, diType.Verify());
+#else // LLVM 3.7
+    //comming soon
+#endif
     int flags = 0;
 
     llvm::DIVariable var =
@@ -1733,7 +1766,11 @@ FunctionEmitContext::EmitFunctionParameterDebugInfo(Symbol *sym, int argNum) {
                                           true /* preserve through opts */,
                                           flags,
                                           argNum+1);
+#if defined(LLVM_3_2) || defined(LLVM_3_3) || defined(LLVM_3_4) || defined(LLVM_3_5) || defined(LLVM_3_6)
     AssertPos(currentPos, var.Verify());
+#else // LLVM 3.7
+    //comming soon
+#endif
 #if !defined(LLVM_3_2) && !defined(LLVM_3_3) && !defined(LLVM_3_4) && !defined(LLVM_3_5)// LLVM 3.6+
     llvm::DIExpression E =  m->diBuilder->createExpression();
     llvm::Instruction *declareInst =

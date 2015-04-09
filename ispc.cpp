@@ -1352,7 +1352,11 @@ SourcePos::GetDIFile() const {
     std::string directory, filename;
     GetDirectoryAndFileName(g->currentDirectory, name, &directory, &filename);
     llvm::DIFile ret = m->diBuilder->createFile(filename, directory);
+#if defined(LLVM_3_2) || defined(LLVM_3_3) || defined(LLVM_3_4) || defined(LLVM_3_5) || defined(LLVM_3_6)
     Assert(ret.Verify());
+#else // LLVM 3.7+
+    //comming soon
+#endif
     return ret;
 }
 
