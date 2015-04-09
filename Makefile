@@ -127,7 +127,7 @@ ifeq (,$(filter $(LLVM_VERSION), LLVM_3_2 LLVM_3_3 LLVM_3_4))
     # This is here because llvm-config fails to report dependency on tinfo library in some case.
     # This is described in LLVM bug 16902.
     ifeq ($(ARCH_OS),Linux)
-        ifneq ($(shell ldconfig -p |grep -c option), 0)
+        ifneq ($(shell ldconfig -p |grep -c tinfo), 0)
             ISPC_LIBS += -ltinfo
 	endif
     endif
