@@ -928,7 +928,15 @@ lDefineConstantInt(const char *name, int val, llvm::Module *module,
         // have the DW_AT_artifical attribute.  It's not clear if this
         // matters for anything though.
 
-#if defined(LLVM_3_6)
+#if defined(LLVM_3_2) || defined(LLVM_3_3) || defined(LLVM_3_4) || defined(LLVM_3_5)
+        llvm::DIGlobalVariable var = m->diBuilder->createGlobalVariable(
+                                               name,
+                                               file,
+                                               0 /* line */,
+                                               diType,
+                                               true /* static */,
+                                               sym->storagePtr);
+#elif defined(LLVM_3_6)
         llvm::Constant *sym_const_storagePtr = llvm::dyn_cast<llvm::Constant>(sym->storagePtr);
         Assert(sym_const_storagePtr);
         llvm::DIGlobalVariable var = m->diBuilder->createGlobalVariable(
@@ -940,15 +948,7 @@ lDefineConstantInt(const char *name, int val, llvm::Module *module,
                                                diType,
                                                true /* static */,
                                                sym_const_storagePtr);
-#elif defined(LLVM_3_2) || defined(LLVM_3_3) || defined(LLVM_3_4) || defined(LLVM_3_5)
-        llvm::DIGlobalVariable var = m->diBuilder->createGlobalVariable(
-                                               name,
-                                               file,
-                                               0 /* line */,
-                                               diType,
-                                               true /* static */,
-                                               sym->storagePtr);
-#else
+#else // LLVM 3.7+
     llvm::Constant *sym_const_storagePtr = llvm::dyn_cast<llvm::Constant>(sym->storagePtr);
     Assert(sym_const_storagePtr);
     m->diBuilder->createGlobalVariable(

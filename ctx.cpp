@@ -341,7 +341,7 @@ FunctionEmitContext::FunctionEmitContext(Function *func, Symbol *funSym,
 
 #if defined(LLVM_3_2) || defined(LLVM_3_3) || defined(LLVM_3_4) || defined(LLVM_3_5) || defined(LLVM_3_6)
         AssertPos(currentPos, diFile.Verify());
-#else // LLVM 3.7
+#else // LLVM 3.7+
     //comming soon
 #endif
 
@@ -352,7 +352,7 @@ FunctionEmitContext::FunctionEmitContext(Function *func, Symbol *funSym,
 #endif
 #if defined(LLVM_3_2) || defined(LLVM_3_3) || defined(LLVM_3_4) || defined(LLVM_3_5) || defined(LLVM_3_6)
         AssertPos(currentPos, scope.Verify());
-#else // LLVM 3.7
+#else // LLVM 3.7+
     //comming soon
 #endif
 
@@ -364,17 +364,21 @@ FunctionEmitContext::FunctionEmitContext(Function *func, Symbol *funSym,
             diSubprogramType = functionType->GetDIType(scope);
 #if defined(LLVM_3_2) || defined(LLVM_3_3) || defined(LLVM_3_4) || defined(LLVM_3_5) || defined(LLVM_3_6)
             AssertPos(currentPos, diSubprogramType.Verify());
-#else // LLVM 3.7
+#else // LLVM 3.7+
     //comming soon
 #endif
         }
 
-#if !defined(LLVM_3_2) && !defined(LLVM_3_3)
+#if defined(LLVM_3_2) || defined(LLVM_3_3)
+        llvm::DIType diSubprogramType_n = diSubprogramType;
+#elif defined(LLVM_3_4) || defined(LLVM_3_5) || defined(LLVM_3_6)
         Assert(diSubprogramType.isCompositeType());
         llvm::DICompositeType diSubprogramType_n =
             static_cast<llvm::DICompositeType>(diSubprogramType);
-#else
-        llvm::DIType diSubprogramType_n = diSubprogramType;
+#else // LLVM 3.7+
+        Assert(llvm::isa<llvm::MDCompositeTypeBase>(diSubprogramType));
+        llvm::DICompositeType diSubprogramType_n =
+            llvm::cast<llvm::MDCompositeTypeBase>(diSubprogramType);
 #endif
 
         std::string mangledName = llvmFunction->getName();
@@ -396,7 +400,7 @@ FunctionEmitContext::FunctionEmitContext(Function *func, Symbol *funSym,
                                          isOptimized,        llvmFunction);
 #if defined(LLVM_3_2) || defined(LLVM_3_3) || defined(LLVM_3_4) || defined(LLVM_3_5) || defined(LLVM_3_6)
         AssertPos(currentPos, diSubprogram.Verify());
-#else // LLVM 3.7
+#else // LLVM 3.7+
     //comming soon
 #endif
 
@@ -1681,7 +1685,7 @@ FunctionEmitContext::StartScope() {
 #endif // LLVM 3.2, 3.3, 3.4 and 3.6+
 #if defined(LLVM_3_2) || defined(LLVM_3_3) || defined(LLVM_3_4) || defined(LLVM_3_5) || defined(LLVM_3_6)
         AssertPos(currentPos, lexicalBlock.Verify());
-#else // LLVM 3.7
+#else // LLVM 3.7+
     //comming soon
 #endif
         debugScopes.push_back(lexicalBlock);
@@ -1714,7 +1718,7 @@ FunctionEmitContext::EmitVariableDebugInfo(Symbol *sym) {
     llvm::DIType diType = sym->type->GetDIType(scope);
 #if defined(LLVM_3_2) || defined(LLVM_3_3) || defined(LLVM_3_4) || defined(LLVM_3_5) || defined(LLVM_3_6)
     AssertPos(currentPos, diType.Verify());
-#else // LLVM 3.7
+#else // LLVM 3.7+
     //comming soon
 #endif
     llvm::DIVariable var =
@@ -1727,7 +1731,7 @@ FunctionEmitContext::EmitVariableDebugInfo(Symbol *sym) {
                                           true /* preserve through opts */);
 #if defined(LLVM_3_2) || defined(LLVM_3_3) || defined(LLVM_3_4) || defined(LLVM_3_5) || defined(LLVM_3_6)
     AssertPos(currentPos, var.Verify());
-#else // LLVM 3.7
+#else // LLVM 3.7+
     //comming soon
 #endif
 #if !defined(LLVM_3_2) && !defined(LLVM_3_3) && !defined(LLVM_3_4) && !defined(LLVM_3_5)// LLVM 3.6+
@@ -1751,7 +1755,7 @@ FunctionEmitContext::EmitFunctionParameterDebugInfo(Symbol *sym, int argNum) {
     llvm::DIType diType = sym->type->GetDIType(scope);
 #if defined(LLVM_3_2) || defined(LLVM_3_3) || defined(LLVM_3_4) || defined(LLVM_3_5) || defined(LLVM_3_6)
     AssertPos(currentPos, diType.Verify());
-#else // LLVM 3.7
+#else // LLVM 3.7+
     //comming soon
 #endif
     int flags = 0;
@@ -1768,7 +1772,7 @@ FunctionEmitContext::EmitFunctionParameterDebugInfo(Symbol *sym, int argNum) {
                                           argNum+1);
 #if defined(LLVM_3_2) || defined(LLVM_3_3) || defined(LLVM_3_4) || defined(LLVM_3_5) || defined(LLVM_3_6)
     AssertPos(currentPos, var.Verify());
-#else // LLVM 3.7
+#else // LLVM 3.7+
     //comming soon
 #endif
 #if !defined(LLVM_3_2) && !defined(LLVM_3_3) && !defined(LLVM_3_4) && !defined(LLVM_3_5)// LLVM 3.6+
