@@ -189,22 +189,39 @@ lStripUnusedDebugInfo(llvm::Module *module) {
             // get the instruction`s debugging metadata
             llvm::MDNode *node = inst->getMetadata(llvm::LLVMContext::MD_dbg);
             while (node) {
+#if defined (LLVM_3_2) || defined (LLVM_3_3)|| defined (LLVM_3_4)|| defined (LLVM_3_5) || (LLVM_3_6)
                 llvm::DILocation dloc(node);
+#else // LLVM 3.7+
+                llvm::DILocation dloc(llvm::cast<llvm::MDLocation>(node));
+#endif
                 // get the scope of the current instruction`s location
                 llvm::DIScope scope = dloc.getScope();
                 // node becomes NULL if this was the original location
                 node = dloc.getOrigLocation();
                 // now following a chain of nested scopes
                 while (!0) {
+#if defined (LLVM_3_2) || defined (LLVM_3_3)|| defined (LLVM_3_4)|| defined (LLVM_3_5) || (LLVM_3_6)
                     if (scope.isLexicalBlockFile())
                         scope = llvm::DILexicalBlockFile(scope).getScope();
                     else if (scope.isLexicalBlock())
                         scope = llvm::DILexicalBlock(scope).getContext();
                     else if (scope.isNameSpace())
                         scope = llvm::DINameSpace(scope).getContext();
+#else // LLVM 3.7+
+                    if (llvm::isa<llvm::MDLexicalBlockFile>(scope))
+                        scope = llvm::DILexicalBlockFile(llvm::cast<llvm::MDLexicalBlockFile>(scope)).getContext();
+                    else if (llvm::isa<llvm::MDLexicalBlockBase>(scope))
+                        scope = llvm::DILexicalBlock(llvm::cast<llvm::MDLexicalBlockBase>(scope)).getContext();
+                    else if (llvm::isa<llvm::MDNamespace>(scope))
+                        scope = llvm::DINameSpace(llvm::cast<llvm::MDNamespace>(scope)).getContext();
+#endif
                     else break;
                 }
+#if defined (LLVM_3_2) || defined (LLVM_3_3)|| defined (LLVM_3_4)|| defined (LLVM_3_5) || (LLVM_3_6)
                 if (scope.isSubprogram()) {
+#else // LLVM 3.7+
+                if (llvm::isa<llvm::MDSubprogram>(scope)) {
+#endif
                     // good, the chain ended with a function; adding
                     SPall.insert(scope);
                 }
@@ -215,10 +232,18 @@ lStripUnusedDebugInfo(llvm::Module *module) {
     if (llvm::NamedMDNode *cuNodes = module->getNamedMetadata("llvm.dbg.cu")) {
         for (unsigned i = 0, ie = cuNodes->getNumOperands(); i != ie; ++i) {
             llvm::MDNode *cuNode = cuNodes->getOperand(i);
+#if defined (LLVM_3_2) || defined (LLVM_3_3)|| defined (LLVM_3_4)|| defined (LLVM_3_5) || (LLVM_3_6)
             llvm::DICompileUnit cu(cuNode);
+#else // LLVM 3.7+
+            llvm::DICompileUnit cu(llvm::cast<llvm::MDCompileUnit>(cuNode));
+#endif
             llvm::DIArray subprograms = cu.getSubprograms();
 
+#if defined (LLVM_3_2) || defined (LLVM_3_3)|| defined (LLVM_3_4)|| defined (LLVM_3_5) || (LLVM_3_6)
             if (subprograms.getNumElements() == 0)
+#else // LLVM 3.7+
+            if (subprograms.size() == 0)
+#endif
                 continue;
 
 #if defined(LLVM_3_2) || defined(LLVM_3_3) || defined(LLVM_3_4) || defined(LLVM_3_5)
@@ -230,11 +255,17 @@ lStripUnusedDebugInfo(llvm::Module *module) {
 #endif
 
             // determine what functions of those extracted belong to the unit
+#if defined (LLVM_3_2) || defined (LLVM_3_3)|| defined (LLVM_3_4)|| defined (LLVM_3_5) || (LLVM_3_6)
             for (unsigned j = 0, je = subprograms.getNumElements(); j != je; ++j)
+#else // LLVM 3.7+
+            for (unsigned j = 0, je = subprograms.size(); j != je; ++j)
+#endif
 #if defined(LLVM_3_2) || defined(LLVM_3_3) || defined(LLVM_3_4) || defined(LLVM_3_5)
                 SPset.insert(subprograms->getOperand(j));
-#else // LLVM 3.6+
+#elif defined(LLVM_3_6)
                 SPset.insert(subprograms.getElement(j));
+#else // LLVM 3.7+
+                SPset.insert(subprograms [j]);
 #endif
 
             std::set_intersection(SPall.begin(), SPall.end(),
@@ -243,7 +274,11 @@ lStripUnusedDebugInfo(llvm::Module *module) {
 
             Debug(SourcePos(), "%d / %d functions left in module with debug "
                   "info.", (int)usedSubprograms.size(),
+#if defined (LLVM_3_2) || defined (LLVM_3_3)|| defined (LLVM_3_4)|| defined (LLVM_3_5) || (LLVM_3_6)
                   (int)subprograms.getNumElements());
+#else // LLVM 3.7+
+                  (int)subprograms.size());
+#endif
 
             // We'd now like to replace the array of subprograms in the
             // compile unit with only the ones that actually have function
@@ -298,15 +333,25 @@ lStripUnusedDebugInfo(llvm::Module *module) {
             cuNode->replaceOperandWith(9, replNode);
 #else // LLVM 3.6+
             llvm::DIArray nodeSPs = cu.getSubprograms();
+#if defined(LLVM_3_6)
             Assert(nodeSPs.getNumElements() == subprograms.getNumElements());
             for (int i = 0; i < (int)nodeSPs.getNumElements(); ++i)
-                Assert(nodeSPs.getElement(i) == subprograms.getElement(i));
-
+                 Assert(nodeSPs.getElement(i) == subprograms.getElement(i));
+#else // LLVM 3.7+
+            Assert(nodeSPs.size() == subprograms.size());
+            for (int i = 0; i < (int)nodeSPs.size(); ++i)
+                 Assert(nodeSPs [i] == subprograms [i]);
+#endif
             // And now we can go and stuff it into the unit with some
             // confidence...
             llvm::MDNode *replNode = llvm::MDNode::get(module->getContext(), 
                                                        llvm::ArrayRef<llvm::Metadata *>(usedSubprograms));
+#if defined(LLVM_3_6)
             cu.replaceSubprograms(llvm::DIArray(replNode));
+#else // LLVM 3.7+
+            cu.replaceSubprograms(llvm::DIArray(llvm::cast<llvm::MDTuple>(replNode)));
+
+#endif
 #endif
         }
     }
@@ -655,7 +700,15 @@ Module::AddGlobalVariable(const std::string &name, const Type *type, Expr *initE
 
     if (diBuilder) {
         llvm::DIFile file = pos.GetDIFile();
-#if !defined(LLVM_3_2) && !defined(LLVM_3_3) && !defined(LLVM_3_4) && !defined(LLVM_3_5)// LLVM 3.6+
+#if defined(LLVM_3_2) || defined(LLVM_3_3) || defined(LLVM_3_4) || defined(LLVM_3_5)
+        llvm::DIGlobalVariable var = diBuilder->createGlobalVariable(
+                                            name,
+                                            file,
+                                            pos.first_line,
+                                            sym->type->GetDIType(file),
+                                            (sym->storageClass == SC_STATIC),
+                                            sym->storagePtr);
+#elif defined(LLVM_3_6)
         llvm::Constant *sym_const_storagePtr = llvm::dyn_cast<llvm::Constant>(sym->storagePtr);
         Assert(sym_const_storagePtr);
         llvm::DIGlobalVariable var = diBuilder->createGlobalVariable(
@@ -667,16 +720,24 @@ Module::AddGlobalVariable(const std::string &name, const Type *type, Expr *initE
                                             sym->type->GetDIType(file),
                                             (sym->storageClass == SC_STATIC),
                                             sym_const_storagePtr);
-#else
-        llvm::DIGlobalVariable var = diBuilder->createGlobalVariable(
+#else // LLVM 3.7+
+        llvm::Constant *sym_const_storagePtr = llvm::dyn_cast<llvm::Constant>(sym->storagePtr);
+        Assert(sym_const_storagePtr);
+        diBuilder->createGlobalVariable(
+                                            file,
+                                            name,
                                             name,
                                             file,
                                             pos.first_line,
                                             sym->type->GetDIType(file),
                                             (sym->storageClass == SC_STATIC),
-                                            sym->storagePtr);
+                                            sym_const_storagePtr);
 #endif
+#if defined(LLVM_3_2) || defined(LLVM_3_3) || defined(LLVM_3_4) || defined(LLVM_3_5) || defined(LLVM_3_6)
         Assert(var.Verify());
+#else // LLVM 3.7+
+    //comming soon
+#endif
     }
 }
 

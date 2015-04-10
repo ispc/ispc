@@ -919,12 +919,24 @@ lDefineConstantInt(const char *name, int val, llvm::Module *module,
     if (m->diBuilder != NULL) {
         llvm::DIFile file;
         llvm::DIType diType = sym->type->GetDIType(file);
+#if defined(LLVM_3_2) || defined(LLVM_3_3) || defined(LLVM_3_4) || defined(LLVM_3_5) || defined(LLVM_3_6)
         Assert(diType.Verify());
+#else // LLVM 3.7+
+    //comming soon
+#endif
         // FIXME? DWARF says that this (and programIndex below) should
         // have the DW_AT_artifical attribute.  It's not clear if this
         // matters for anything though.
 
-#if !defined(LLVM_3_2) && !defined(LLVM_3_3) && !defined(LLVM_3_4) && !defined(LLVM_3_5)// LLVM 3.6+
+#if defined(LLVM_3_2) || defined(LLVM_3_3) || defined(LLVM_3_4) || defined(LLVM_3_5)
+        llvm::DIGlobalVariable var = m->diBuilder->createGlobalVariable(
+                                               name,
+                                               file,
+                                               0 /* line */,
+                                               diType,
+                                               true /* static */,
+                                               sym->storagePtr);
+#elif defined(LLVM_3_6)
         llvm::Constant *sym_const_storagePtr = llvm::dyn_cast<llvm::Constant>(sym->storagePtr);
         Assert(sym_const_storagePtr);
         llvm::DIGlobalVariable var = m->diBuilder->createGlobalVariable(
@@ -936,16 +948,24 @@ lDefineConstantInt(const char *name, int val, llvm::Module *module,
                                                diType,
                                                true /* static */,
                                                sym_const_storagePtr);
-#else
-        llvm::DIGlobalVariable var = m->diBuilder->createGlobalVariable(
-                                               name,
-                                               file,
-                                               0 /* line */,
-                                               diType,
-                                               true /* static */,
-                                               sym->storagePtr);
+#else // LLVM 3.7+
+    llvm::Constant *sym_const_storagePtr = llvm::dyn_cast<llvm::Constant>(sym->storagePtr);
+    Assert(sym_const_storagePtr);
+    m->diBuilder->createGlobalVariable(
+              file,
+              name,
+              name,
+              file,
+              0 /* line */,
+              diType,
+              true /* static */,
+              sym_const_storagePtr);
 #endif
+#if defined(LLVM_3_2) || defined(LLVM_3_3) || defined(LLVM_3_4) || defined(LLVM_3_5) || defined(LLVM_3_6)
         Assert(var.Verify());
+#else // LLVM 3.7+
+    //comming soon
+#endif
     }
 }
 
@@ -997,8 +1017,12 @@ lDefineProgramIndex(llvm::Module *module, SymbolTable *symbolTable) {
     if (m->diBuilder != NULL) {
         llvm::DIFile file;
         llvm::DIType diType = sym->type->GetDIType(file);
+#if defined(LLVM_3_2) || defined(LLVM_3_3) || defined(LLVM_3_4) || defined(LLVM_3_5) || defined(LLVM_3_6)
         Assert(diType.Verify());
-#if !defined(LLVM_3_2) && !defined(LLVM_3_3) && !defined(LLVM_3_4) && !defined(LLVM_3_5)// LLVM 3.6+
+#else // LLVM 3.7+
+    //comming soon
+#endif
+#if defined(LLVM_3_6)// LLVM 3.6+
         llvm::Constant *sym_const_storagePtr = llvm::dyn_cast<llvm::Constant>(sym->storagePtr);
         Assert(sym_const_storagePtr);
         llvm::DIGlobalVariable var = m->diBuilder->createGlobalVariable(
@@ -1010,7 +1034,7 @@ lDefineProgramIndex(llvm::Module *module, SymbolTable *symbolTable) {
                                                diType,
                                                false /* static */,
                                                sym_const_storagePtr);
-#else
+#elif defined(LLVM_3_2) || defined(LLVM_3_3) || defined(LLVM_3_4) || defined(LLVM_3_5)
         llvm::DIGlobalVariable var = m->diBuilder->createGlobalVariable(
                                                sym->name.c_str(),
                                                file,
@@ -1018,8 +1042,24 @@ lDefineProgramIndex(llvm::Module *module, SymbolTable *symbolTable) {
                                                diType,
                                                false /* static */,
                                                sym->storagePtr);
+#else
+        llvm::Constant *sym_const_storagePtr = llvm::dyn_cast<llvm::Constant>(sym->storagePtr);
+        Assert(sym_const_storagePtr);
+        m->diBuilder->createGlobalVariable(
+                                               file,
+                                               sym->name.c_str(),
+                                               sym->name.c_str(),
+                                               file,
+                                               0 /* line */,
+                                               diType,
+                                               false /* static */,
+                                               sym_const_storagePtr);
 #endif    
+#if defined(LLVM_3_2) || defined(LLVM_3_3) || defined(LLVM_3_4) || defined(LLVM_3_5) || defined(LLVM_3_6)
         Assert(var.Verify());
+#else // LLVM 3.7+
+    //comming soon
+#endif
     }
 }
 
