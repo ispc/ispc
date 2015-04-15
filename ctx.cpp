@@ -1685,10 +1685,10 @@ FunctionEmitContext::StartScope() {
 #endif // LLVM 3.2, 3.3, 3.4 and 3.6+
 #if defined(LLVM_3_2) || defined(LLVM_3_3) || defined(LLVM_3_4) || defined(LLVM_3_5) || defined(LLVM_3_6)
         AssertPos(currentPos, lexicalBlock.Verify());
-#else // LLVM 3.7+
-    //comming soon
-#endif
         debugScopes.push_back(lexicalBlock);
+#else // LLVM 3.7+
+        debugScopes.push_back(llvm::cast<llvm::MDLexicalBlockBase>(lexicalBlock));
+#endif
     }
 }
 
