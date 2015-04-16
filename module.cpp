@@ -3234,23 +3234,16 @@ Module::CompileAndOutput(const char *srcFile,
             // we generate the dispatch module's functions...
         }
 
-        // Find the first non-NULL target machine from the targets we
-        // compiled to above.  We'll use this as the target machine for
-        // compiling the dispatch module--this is safe in that it is the
-        // least-common-denominator of all of the targets we compiled to.
-        llvm::TargetMachine *firstTargetMachine = NULL;
-        int i = 0;
-        const char *firstISA;
-        while (i < Target::NUM_ISAS && firstTargetMachine == NULL) {
-            firstISA = Target::ISAToTargetString((Target::ISA) i);
-            firstTargetMachine = targetMachines[i++];
-        }
-        Assert(firstTargetMachine != NULL);
+        // Dispatcher module has to be created on a generic target
+        const char *firstISA =
+            Target::ISAToTargetString(Target::ISA::GENERIC);
 
         g->target = new Target(arch, cpu, firstISA, generatePIC);
         if (!g->target->isValid()) {
             return 1;
         }
+        llvm::TargetMachine *firstTargetMachine =
+            g->target->GetTargetMachine();
 
         llvm::Module *dispatchModule =
             lCreateDispatchModule(exportedFunctions);
