@@ -189,37 +189,37 @@ lStripUnusedDebugInfo(llvm::Module *module) {
             // get the instruction`s debugging metadata
             llvm::MDNode *node = inst->getMetadata(llvm::LLVMContext::MD_dbg);
             while (node) {
+                // get the scope of the current instruction`s location
+                // node becomes NULL if this was the original location
 #if defined (LLVM_3_2) || defined (LLVM_3_3)|| defined (LLVM_3_4)|| defined (LLVM_3_5) || (LLVM_3_6)
                 llvm::DILocation dloc(node);
-#else // LLVM 3.7+
-                llvm::DILocation dloc(llvm::cast<llvm::MDLocation>(node));
-#endif
-                // get the scope of the current instruction`s location
                 llvm::DIScope scope = dloc.getScope();
-                // node becomes NULL if this was the original location
                 node = dloc.getOrigLocation();
                 // now following a chain of nested scopes
                 while (!0) {
-#if defined (LLVM_3_2) || defined (LLVM_3_3)|| defined (LLVM_3_4)|| defined (LLVM_3_5) || (LLVM_3_6)
                     if (scope.isLexicalBlockFile())
                         scope = llvm::DILexicalBlockFile(scope).getScope();
                     else if (scope.isLexicalBlock())
                         scope = llvm::DILexicalBlock(scope).getContext();
                     else if (scope.isNameSpace())
                         scope = llvm::DINameSpace(scope).getContext();
-#else // LLVM 3.7+
-                    if (llvm::isa<llvm::MDLexicalBlockFile>(scope))
-                        scope = llvm::DILexicalBlockFile(llvm::cast<llvm::MDLexicalBlockFile>(scope)).getContext();
-                    else if (llvm::isa<llvm::MDLexicalBlockBase>(scope))
-                        scope = llvm::DILexicalBlock(llvm::cast<llvm::MDLexicalBlockBase>(scope)).getContext();
-                    else if (llvm::isa<llvm::MDNamespace>(scope))
-                        scope = llvm::DINameSpace(llvm::cast<llvm::MDNamespace>(scope)).getContext();
-#endif
                     else break;
                 }
-#if defined (LLVM_3_2) || defined (LLVM_3_3)|| defined (LLVM_3_4)|| defined (LLVM_3_5) || (LLVM_3_6)
                 if (scope.isSubprogram()) {
 #else // LLVM 3.7+
+                llvm::DILocation dloc(llvm::cast<llvm::MDLocation>(node));
+                llvm::DIScope scope = dloc->getScope();
+                node = dloc->getInlinedAt();
+                // now following a chain of nested scopes
+                while (!0) {
+                    if (llvm::isa<llvm::MDLexicalBlockFile>(scope))
+                        scope = llvm::DILexicalBlockFile(llvm::cast<llvm::MDLexicalBlockFile>(scope))->getScope();
+                    else if (llvm::isa<llvm::MDLexicalBlockBase>(scope))
+                        scope = llvm::DILexicalBlock(llvm::cast<llvm::MDLexicalBlockBase>(scope))->getScope();
+                    else if (llvm::isa<llvm::MDNamespace>(scope))
+                        scope = llvm::DINameSpace(llvm::cast<llvm::MDNamespace>(scope))->getScope();
+                    else break;
+                }
                 if (llvm::isa<llvm::MDSubprogram>(scope)) {
 #endif
                     // good, the chain ended with a function; adding
@@ -333,25 +333,22 @@ lStripUnusedDebugInfo(llvm::Module *module) {
             cuNode->replaceOperandWith(9, replNode);
 #else // LLVM 3.6+
             llvm::DIArray nodeSPs = cu.getSubprograms();
-#if defined(LLVM_3_6)
+            // And now we can go and stuff it into the unit with some
+            // confidence...
+  #if defined(LLVM_3_6)
             Assert(nodeSPs.getNumElements() == subprograms.getNumElements());
             for (int i = 0; i < (int)nodeSPs.getNumElements(); ++i)
                  Assert(nodeSPs.getElement(i) == subprograms.getElement(i));
-#else // LLVM 3.7+
+            llvm::MDNode *replNode = llvm::MDNode::get(module->getContext(), 
+                                                       llvm::ArrayRef<llvm::Metadata *>(usedSubprograms));
+            cu.replaceSubprograms(llvm::DIArray(replNode));
+  #else // LLVM 3.7+
             Assert(nodeSPs.size() == subprograms.size());
             for (int i = 0; i < (int)nodeSPs.size(); ++i)
                  Assert(nodeSPs [i] == subprograms [i]);
-#endif
-            // And now we can go and stuff it into the unit with some
-            // confidence...
-            llvm::MDNode *replNode = llvm::MDNode::get(module->getContext(), 
-                                                       llvm::ArrayRef<llvm::Metadata *>(usedSubprograms));
-#if defined(LLVM_3_6)
-            cu.replaceSubprograms(llvm::DIArray(replNode));
-#else // LLVM 3.7+
-            cu.replaceSubprograms(llvm::DIArray(llvm::cast<llvm::MDTuple>(replNode)));
-
-#endif
+            cu.replaceSubprograms(llvm::MDTuple::get(cu->getContext(),
+                                                     llvm::ArrayRef<llvm::Metadata *>(usedSubprograms)));
+  #endif
 #endif
         }
     }
@@ -1479,8 +1476,11 @@ Module::writeObjectFileOrAssembly(llvm::TargetMachine *targetMachine,
     pm.add(dlp);
 #endif // LLVM 3.7+ doesn't have DataLayoutPass anymore.
 
+#if defined(LLVM_3_2) || defined(LLVM_3_3) || defined(LLVM_3_4) || defined(LLVM_3_5) || defined(LLVM_3_6)
     llvm::formatted_raw_ostream fos(of->os());
-
+#else // LLVM 3.7+
+    llvm::raw_fd_ostream &fos(of->os());
+#endif
     if (targetMachine->addPassesToEmitFile(pm, fos, fileType)) {
         fprintf(stderr, "Fatal error adding passes to emit object file!");
         exit(1);

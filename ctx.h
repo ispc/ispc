@@ -685,7 +685,11 @@ private:
 
     /** These correspond to the current set of nested scopes in the
         function. */
+#if defined(LLVM_3_2) || defined(LLVM_3_3) || defined(LLVM_3_4) || defined(LLVM_3_5) || defined(LLVM_3_6)
     std::vector<llvm::DILexicalBlock> debugScopes;
+#else // LLVM 3.7++
+    std::vector<llvm::DIScope> debugScopes;
+#endif
 
     /** True if a 'launch' statement has been encountered in the function. */
     bool launchedTasks;
