@@ -808,11 +808,11 @@ def Main():
         if os.environ.get("SMTP_ISPC") == None:
             error("you have no SMTP_ISPC in your environment for option notify", 1)
     if options.only != "":
-        test_only_r = " 3.2 3.3 3.4 3.5 3.6 trunk current build stability performance x86 x86-64 -O0 -O2 native debug nodebug "
+        test_only_r = " 3.2 3.3 3.4 3.5 3.6 trunk current build stability performance x86 x86-64 x86_64 -O0 -O2 native debug nodebug "
         test_only = options.only.split(" ")
         for iterator in test_only:
             if not (" " + iterator + " " in test_only_r):
-                error("unknow option for only: " + iterator, 1)
+                error("unknown option for only: " + iterator, 1)
     if current_OS == "Windows":
         if options.debug == True or options.selfbuild == True or options.tarball != "":
             error("Debug, selfbuild and tarball options are unsupported on windows", 1)
