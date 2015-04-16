@@ -245,6 +245,7 @@ public:
         names = std::vector<std::vector<std::string> >(sizeofCPUtype);
         compat = std::vector<std::set<CPUtype> >(sizeofCPUtype);
 
+        names[CPU_None].push_back("");
 
         names[CPU_Generic].push_back("generic");
 
@@ -353,7 +354,7 @@ public:
     }
 
     std::string &GetDefaultNameFromType(CPUtype type) {
-        Assert((type > CPU_None) && (type < sizeofCPUtype));
+        Assert((type >= CPU_None) && (type < sizeofCPUtype));
         return names[type][0];
     }
 
@@ -626,7 +627,7 @@ Target::Target(const char *arch, const char *cpu, const char *isa, bool pic) :
         this->m_hasHalf = true;
         this->m_hasTranscendentals = true;
         // It's set to false, because stdlib implementation of math functions
-        // is faster on MIC, than "native" implementation profided by the
+        // is faster on MIC, than "native" implementation provided by the
         // icc compiler.
         this->m_hasTrigonometry = false;
         this->m_hasGather = this->m_hasScatter = true;
