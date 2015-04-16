@@ -123,6 +123,22 @@ static bool __os_has_avx_support() {
     return (rEAX & 6) == 6;
 #endif // !defined(ISPC_IS_WINDOWS)
 }
+
+static bool __os_has_avx512_support() {
+#if defined(ISPC_IS_WINDOWS)
+    // Check if the OS saves the XMM, YMM and ZMM registers, i.e. it supports AVX2 and AVX512.
+    // See section 2.1 of software.intel.com/sites/default/files/managed/0d/53/319433-022.pdf
+    unsigned long long xcrFeatureMask = _xgetbv(_XCR_XFEATURE_ENABLED_MASK);
+    return (xcrFeatureMask & 0xE6) == 0xE6;
+#else // !defined(ISPC_IS_WINDOWS)
+    // Check xgetbv; this uses a .byte sequence instead of the instruction
+    // directly because older assemblers do not include support for xgetbv and
+    // there is no easy way to conditionally compile based on the assembler used.
+    int rEAX, rEDX;
+    __asm__ __volatile__ (".byte 0x0f, 0x01, 0xd0" : "=a" (rEAX), "=d" (rEDX) : "c" (0));
+    return (rEAX & 0xE6) == 0xE6;
+#endif // !defined(ISPC_IS_WINDOWS)
+}
 #endif // !__arm__
 
 static const char *
@@ -133,6 +149,32 @@ lGetSystemISA() {
     int info[4];
     __cpuid(info, 1);
 
+    int info2[4];
+    // Call cpuid with eax=7, ecx=0
+    __cpuidex(info2, 7, 0);
+
+    if ((info2[1] & (1 <<  5)) != 0 && // AVX2
+        (info2[1] & (1 << 16)) != 0 && // AVX512 F
+        __os_has_avx512_support()) {
+        // We need to verify that AVX2 is also available,
+        // as well as AVX512, because our targets are supposed
+        // to use both.
+
+        if ((info2[1] & (1 << 17)) != 0 && // AVX512 DQ
+            (info2[1] & (1 << 28)) != 0 && // AVX512 CDI
+            (info2[1] & (1 << 30)) != 0 && // AVX512 BW
+            (info2[1] & (1 << 31)) != 0) { // AVX512 VL
+            return "skx";
+        }
+        else if ((info2[1] & (1 << 26)) != 0 && // AVX512 PF
+                 (info2[1] & (1 << 27)) != 0 && // AVX512 ER
+                 (info2[1] & (1 << 28)) != 0) { // AVX512 CDI
+            return "knl";
+        }
+        // If it's unknown AVX512 target, fall through and use AVX2
+        // or whatever is available in the machine.
+    }
+
     if ((info[2] & (1 << 28)) != 0 &&
          __os_has_avx_support()) {  // AVX
         // AVX1 for sure....
@@ -140,9 +182,6 @@ lGetSystemISA() {
         if ((info[2] & (1 << 29)) != 0 &&  // F16C
             (info[2] & (1 << 30)) != 0) {  // RDRAND
             // So far, so good.  AVX2?
-            // Call cpuid with eax=7, ecx=0
-            int info2[4];
-            __cpuidex(info2, 7, 0);
             if ((info2[1] & (1 << 5)) != 0)
                 return "avx2-i32x8";
             else
@@ -764,7 +803,11 @@ Target::Target(const char *arch, const char *cpu, const char *isa, bool pic) :
         CPUfromISA = CPU_IvyBridge;
     }
     else if (!strcasecmp(isa, "avx2") ||
-             !strcasecmp(isa, "avx2-i32x8")) {
+             !strcasecmp(isa, "avx2-i32x8") ||
+             // TODO: enable knl and skx support
+             // They are downconverted to avx2 for code generation.
+             !strcasecmp(isa, "skx") ||
+             !strcasecmp(isa, "knl")) {
         this->m_isa = Target::AVX2;
         this->m_nativeVectorWidth = 8;
         this->m_nativeVectorAlignment = 32;
@@ -1091,6 +1134,10 @@ Target::ISAToString(ISA isa) {
         return "avx11";
     case Target::AVX2:
         return "avx2";
+    case Target::KNL:
+        return "knl";
+    case Target::SKX:
+        return "skx";
     case Target::GENERIC:
         return "generic";
 #ifdef ISPC_NVPTX_ENABLED
@@ -1133,6 +1180,12 @@ Target::ISAToTargetString(ISA isa) {
         return "avx1.1-i32x8";
     case Target::AVX2:
         return "avx2-i32x8";
+    // TODO: enable knl and skx support.
+    // They are downconverted to avx2 for code generation.
+    case Target::KNL:
+        return "avx2";
+    case Target::SKX:
+        return "avx2";
     case Target::GENERIC:
         return "generic-4";
 #ifdef ISPC_NVPTX_ENABLED

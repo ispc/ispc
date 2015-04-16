@@ -74,20 +74,54 @@
 ;;     return (rEAX & 6) == 6;
 ;; }
 ;; 
+;; static int __os_has_avx512_support() {
+;;     // Check if the OS saves the XMM, YMM and ZMM registers, i.e. it supports AVX2 and AVX512.
+;;     // See section 2.1 of software.intel.com/sites/default/files/managed/0d/53/319433-022.pdf
+;;     // Check xgetbv; this uses a .byte sequence instead of the instruction
+;;     // directly because older assemblers do not include support for xgetbv and
+;;     // there is no easy way to conditionally compile based on the assembler used.
+;;     int rEAX, rEDX;
+;;     __asm__ __volatile__ (".byte 0x0f, 0x01, 0xd0" : "=a" (rEAX), "=d" (rEDX) : "c" (0));
+;;     return (rEAX & 0xE6) == 0xE6;
+;; }
+;; 
 ;; int32_t __get_system_isa() {
 ;;     int info[4];
 ;;     __cpuid(info, 1);
 ;; 
+;;     // Call cpuid with eax=7, ecx=0
+;;     int info2[4];
+;;     __cpuid_count(info2, 7, 0);
+;; 
 ;;     // NOTE: the values returned below must be the same as the
 ;;     // corresponding enumerant values in Target::ISA.
+;;     if ((info2[1] & (1 <<  5)) != 0 && // AVX2
+;;         (info2[1] & (1 << 16)) != 0 && // AVX512 F
+;;         __os_has_avx512_support()) {
+;;         // We need to verify that AVX2 is also available,
+;;         // as well as AVX512, because our targets are supposed 
+;;         // to use both.
+;; 
+;;         if ((info2[1] & (1 << 17)) != 0 && // AVX512 DQ
+;;             (info2[1] & (1 << 28)) != 0 && // AVX512 CDI
+;;             (info2[1] & (1 << 30)) != 0 && // AVX512 BW
+;;             (info2[1] & (1 << 31)) != 0) { // AVX512 VL
+;;             return 6; // SKX
+;;         }
+;;         else if ((info2[1] & (1 << 26)) != 0 && // AVX512 PF
+;;                  (info2[1] & (1 << 27)) != 0 && // AVX512 ER
+;;                  (info2[1] & (1 << 28)) != 0) { // AVX512 CDI
+;;             return 5; // KNL
+;;         }
+;;         // If it's unknown AVX512 target, fall through and use AVX2
+;;         // or whatever is available in the machine.
+;;     }
+;; 
 ;;     if ((info[2] & (1 << 28)) != 0 &&
 ;;         __os_has_avx_support()) {
 ;;        if ((info[2] & (1 << 29)) != 0 &&  // F16C
 ;;            (info[2] & (1 << 30)) != 0) {  // RDRAND
 ;;            // So far, so good.  AVX2?
-;;            // Call cpuid with eax=7, ecx=0
-;;            int info2[4];
-;;            __cpuid_count(info2, 7, 0);
 ;;            if ((info2[1] & (1 << 5)) != 0)
 ;;                return 4;
 ;;            else
@@ -103,6 +137,7 @@
 ;;     else
 ;;         abort();
 ;; }
+
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -122,46 +157,68 @@ entry:
   %0 = tail call { i32, i32, i32, i32 } asm sideeffect "cpuid", "={ax},={bx},={cx},={dx},0,~{dirflag},~{fpsr},~{flags}"(i32 1) nounwind
   %asmresult5.i = extractvalue { i32, i32, i32, i32 } %0, 2
   %asmresult6.i = extractvalue { i32, i32, i32, i32 } %0, 3
-  %and = and i32 %asmresult5.i, 268435456
-  %cmp = icmp eq i32 %and, 0
-  br i1 %cmp, label %if.else14, label %land.lhs.true
+  %1 = tail call { i32, i32, i32, i32 } asm sideeffect "xchg$(l$)\09$(%$)ebx, $1\0A\09cpuid\0A\09xchg$(l$)\09$(%$)ebx, $1\0A\09", "={ax},=r,={cx},={dx},0,2,~{dirflag},~{fpsr},~{flags}"(i32 7, i32 0) nounwind
+  %asmresult4.i78 = extractvalue { i32, i32, i32, i32 } %1, 1
+  %2 = and i32 %asmresult4.i78, 65568
+  %3 = icmp eq i32 %2, 65568
+  br i1 %3, label %land.lhs.true5, label %if.end35
 
-land.lhs.true:                                    ; preds = %entry
-  %1 = tail call { i32, i32 } asm sideeffect ".byte 0x0f, 0x01, 0xd0", "={ax},={dx},{cx},~{dirflag},~{fpsr},~{flags}"(i32 0) nounwind
-  %asmresult.i25 = extractvalue { i32, i32 } %1, 0
-  %and.i = and i32 %asmresult.i25, 6
-  %cmp.i = icmp eq i32 %and.i, 6
-  br i1 %cmp.i, label %if.then, label %if.else14
+land.lhs.true5:                                   ; preds = %entry
+  %4 = tail call { i32, i32 } asm sideeffect ".byte 0x0f, 0x01, 0xd0", "={ax},={dx},{cx},~{dirflag},~{fpsr},~{flags}"(i32 0) nounwind
+  %asmresult.i81 = extractvalue { i32, i32 } %4, 0
+  %and.i = and i32 %asmresult.i81, 230
+  %cmp.i = icmp eq i32 %and.i, 230
+  br i1 %cmp.i, label %if.then, label %if.end35
 
-if.then:                                          ; preds = %land.lhs.true
-  %2 = and i32 %asmresult5.i, 1610612736
-  %3 = icmp eq i32 %2, 1610612736
-  br i1 %3, label %if.then8, label %return
+if.then:                                          ; preds = %land.lhs.true5
+  %5 = and i32 %asmresult4.i78, -805175296
+  %6 = icmp eq i32 %5, -805175296
+  br i1 %6, label %return, label %if.else
 
-if.then8:                                         ; preds = %if.then
-  %4 = tail call { i32, i32, i32, i32 } asm sideeffect "xchg$(l$)\09$(%$)ebx, $1\0A\09cpuid\0A\09xchg$(l$)\09$(%$)ebx, $1\0A\09", "={ax},=r,={cx},={dx},0,2,~{dirflag},~{fpsr},~{flags}"(i32 7, i32 0) nounwind
-  %asmresult4.i30 = extractvalue { i32, i32, i32, i32 } %4, 1
-  %and11 = lshr i32 %asmresult4.i30, 5
-  %5 = and i32 %and11, 1
-  %6 = add i32 %5, 3
+if.else:                                          ; preds = %if.then
+  %7 = and i32 %asmresult4.i78, 469762048
+  %8 = icmp eq i32 %7, 469762048
+  br i1 %8, label %return, label %if.end35
+
+if.end35:                                         ; preds = %if.else, %land.lhs.true5, %entry
+  %and37 = and i32 %asmresult5.i, 268435456
+  %cmp38 = icmp eq i32 %and37, 0
+  br i1 %cmp38, label %if.else57, label %land.lhs.true39
+
+land.lhs.true39:                                  ; preds = %if.end35
+  %9 = tail call { i32, i32 } asm sideeffect ".byte 0x0f, 0x01, 0xd0", "={ax},={dx},{cx},~{dirflag},~{fpsr},~{flags}"(i32 0) nounwind
+  %asmresult.i82 = extractvalue { i32, i32 } %9, 0
+  %and.i83 = and i32 %asmresult.i82, 6
+  %cmp.i84 = icmp eq i32 %and.i83, 6
+  br i1 %cmp.i84, label %if.then42, label %if.else57
+
+if.then42:                                        ; preds = %land.lhs.true39
+  %10 = and i32 %asmresult5.i, 1610612736
+  %11 = icmp eq i32 %10, 1610612736
+  br i1 %11, label %if.then50, label %return
+
+if.then50:                                        ; preds = %if.then42
+  %and = lshr i32 %asmresult4.i78, 5
+  %12 = and i32 %and, 1
+  %13 = add nuw nsw i32 %12, 3
   br label %return
 
-if.else14:                                        ; preds = %land.lhs.true, %entry
-  %and16 = and i32 %asmresult5.i, 524288
-  %cmp17 = icmp eq i32 %and16, 0
-  br i1 %cmp17, label %if.else19, label %return
+if.else57:                                        ; preds = %land.lhs.true39, %if.end35
+  %and59 = and i32 %asmresult5.i, 524288
+  %cmp60 = icmp eq i32 %and59, 0
+  br i1 %cmp60, label %if.else62, label %return
 
-if.else19:                                        ; preds = %if.else14
-  %and21 = and i32 %asmresult6.i, 67108864
-  %cmp22 = icmp eq i32 %and21, 0
-  br i1 %cmp22, label %if.else24, label %return
+if.else62:                                        ; preds = %if.else57
+  %and64 = and i32 %asmresult6.i, 67108864
+  %cmp65 = icmp eq i32 %and64, 0
+  br i1 %cmp65, label %if.else67, label %return
 
-if.else24:                                        ; preds = %if.else19
-  tail call void @abort() noreturn nounwind
+if.else67:                                        ; preds = %if.else62
+  tail call void @abort() #3
   unreachable
 
-return:                                           ; preds = %if.else19, %if.else14, %if.then8, %if.then
-  %retval.0 = phi i32 [ %6, %if.then8 ], [ 2, %if.then ], [ 1, %if.else14 ], [ 0, %if.else19 ]
+return:                                           ; preds = %if.else62, %if.else57, %if.then50, %if.then42, %if.else, %if.then
+  %retval.0 = phi i32 [ 6, %if.then ], [ 5, %if.else ], [ %13, %if.then50 ], [ 2, %if.then42 ], [ 1, %if.else57 ], [ 0, %if.else62 ]
   ret i32 %retval.0
 }
 
