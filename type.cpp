@@ -103,9 +103,14 @@ lCreateDIArray(llvm::DIType eltType, int count) {
 #endif
     subs.push_back(sub);
     llvm::DIArray subArray = m->diBuilder->getOrCreateArray(subs);
-    
+
+#if defined (LLVM_3_2) || defined (LLVM_3_3) || defined (LLVM_3_4) || defined (LLVM_3_5) || defined (LLVM_3_6)
     uint64_t size = eltType.getSizeInBits() * count;
     uint64_t align = eltType.getAlignInBits();
+#else // LLVM 3.7++
+    uint64_t size = eltType->getSizeInBits() * count;
+    uint64_t align = eltType->getAlignInBits();
+#endif
 
     return m->diBuilder->createArrayType(size, align, eltType, subArray);
 }
@@ -583,8 +588,13 @@ AtomicType::GetDIType(llvm::DIDescriptor scope) const {
         llvm::Metadata *sub = m->diBuilder->getOrCreateSubrange(0, g->target->getVectorWidth());
 #endif
         llvm::DIArray subArray = m->diBuilder->getOrCreateArray(sub);
+#if defined (LLVM_3_3)|| defined (LLVM_3_4) || defined (LLVM_3_5) || defined (LLVM_3_6)
         uint64_t size =  unifType.getSizeInBits()  * g->target->getVectorWidth();
         uint64_t align = unifType.getAlignInBits() * g->target->getVectorWidth();
+#else // LLVM 3.7++
+        uint64_t size =  unifType->getSizeInBits() * g->target->getVectorWidth();
+        uint64_t align = unifType->getAlignInBits()* g->target->getVectorWidth();
+#endif
         return m->diBuilder->createVectorType(size, align, unifType, subArray);
     }
     else {
@@ -862,8 +872,13 @@ EnumType::GetDIType(llvm::DIDescriptor scope) const {
         llvm::Metadata *sub = m->diBuilder->getOrCreateSubrange(0, g->target->getVectorWidth());
 #endif
         llvm::DIArray subArray = m->diBuilder->getOrCreateArray(sub);
+#if defined (LLVM_3_3)|| defined (LLVM_3_4) || defined (LLVM_3_5) || defined (LLVM_3_6)
         uint64_t size =  diType.getSizeInBits()  * g->target->getVectorWidth();
         uint64_t align = diType.getAlignInBits() * g->target->getVectorWidth();
+#else // LLVM 3.7++
+        uint64_t size =  diType->getSizeInBits() * g->target->getVectorWidth();
+        uint64_t align = diType->getAlignInBits()* g->target->getVectorWidth();
+#endif
         return m->diBuilder->createVectorType(size, align, diType, subArray);
     }
     case Variability::SOA: {
@@ -1759,12 +1774,17 @@ VectorType::GetDIType(llvm::DIDescriptor scope) const {
 #endif
     llvm::DIArray subArray = m->diBuilder->getOrCreateArray(sub);
 
-    uint64_t sizeBits = eltType.getSizeInBits() * numElements;
-
     // vectors of varying types are already naturally aligned to the
     // machine's vector width, but arrays of uniform types need to be
     // explicitly aligned to the machines natural vector alignment.
+#if defined (LLVM_3_3)|| defined (LLVM_3_4) || defined (LLVM_3_5) || defined (LLVM_3_6)
+    uint64_t sizeBits = eltType.getSizeInBits() * numElements;
     uint64_t align = eltType.getAlignInBits();
+#else // LLVM 3.7++
+    uint64_t sizeBits = eltType->getSizeInBits() * numElements;
+    uint64_t align = eltType->getAlignInBits();
+#endif
+
     if (IsUniformType())
         align = 4 * g->target->getNativeVectorWidth();
 
@@ -2189,8 +2209,13 @@ StructType::GetDIType(llvm::DIDescriptor scope) const {
     // start of the structure.
     for (unsigned int i = 0; i < elementTypes.size(); ++i) {
         llvm::DIType eltType = GetElementType(i)->GetDIType(scope);
+#if defined (LLVM_3_2) || defined (LLVM_3_3) || defined (LLVM_3_4) || defined (LLVM_3_5) || defined (LLVM_3_6)
         uint64_t eltAlign = eltType.getAlignInBits();
         uint64_t eltSize = eltType.getSizeInBits();
+#else // LLVM 3.7++
+        uint64_t eltAlign = eltType->getAlignInBits();
+        uint64_t eltSize = eltType->getSizeInBits();
+#endif
         Assert(eltAlign != 0);
 
         // The alignment for the entire structure is the maximum of the

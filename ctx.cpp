@@ -347,8 +347,10 @@ FunctionEmitContext::FunctionEmitContext(Function *func, Symbol *funSym,
 
 #if defined(LLVM_3_2) || defined(LLVM_3_3)
         llvm::DIScope scope = llvm::DIScope(m->diBuilder->getCU());
-#else // LLVM_3_4+
+#elif defined(LLVM_3_4) || defined(LLVM_3_5) || defined(LLVM_3_6)
         llvm::DIScope scope = llvm::DIScope(m->diCompileUnit);
+#else // LLVM 3.7+
+        llvm::DIScope scope = m->diCompileUnit;
 #endif
 #if defined(LLVM_3_2) || defined(LLVM_3_3) || defined(LLVM_3_4) || defined(LLVM_3_5) || defined(LLVM_3_6)
         AssertPos(currentPos, scope.Verify());
@@ -375,10 +377,12 @@ FunctionEmitContext::FunctionEmitContext(Function *func, Symbol *funSym,
         Assert(diSubprogramType.isCompositeType());
         llvm::DICompositeType diSubprogramType_n =
             static_cast<llvm::DICompositeType>(diSubprogramType);
+        int flags = llvm::DIDescriptor::FlagPrototyped;
 #else // LLVM 3.7+
         Assert(llvm::isa<llvm::MDCompositeTypeBase>(diSubprogramType));
         llvm::DICompositeType diSubprogramType_n =
             llvm::cast<llvm::MDCompositeTypeBase>(diSubprogramType);
+        int flags = llvm::DebugNode::FlagPrototyped;
 #endif
 
         std::string mangledName = llvmFunction->getName();
@@ -388,7 +392,6 @@ FunctionEmitContext::FunctionEmitContext(Function *func, Symbol *funSym,
         bool isStatic = (funSym->storageClass == SC_STATIC);
         bool isOptimized = (g->opt.level > 0);
         int firstLine = funcStartPos.first_line;
-        int flags =  (llvm::DIDescriptor::FlagPrototyped);
 
         diSubprogram =
             m->diBuilder->createFunction(diFile /* scope */, funSym->name,
@@ -1737,7 +1740,12 @@ FunctionEmitContext::EmitVariableDebugInfo(Symbol *sym) {
 #if !defined(LLVM_3_2) && !defined(LLVM_3_3) && !defined(LLVM_3_4) && !defined(LLVM_3_5)// LLVM 3.6+
     llvm::DIExpression E = m->diBuilder->createExpression();
     llvm::Instruction *declareInst =
-        m->diBuilder->insertDeclare(sym->storagePtr, var, E, bblock);
+        m->diBuilder->insertDeclare(sym->storagePtr, var, E,
+#if !defined(LLVM_3_6) // LLVM 3.7++
+                                    llvm::DebugLoc::get(sym->pos.first_line,
+                                                        sym->pos.first_column, scope),
+#endif
+                                    bblock);
 #else
     llvm::Instruction *declareInst =
         m->diBuilder->insertDeclare(sym->storagePtr, var, bblock);
@@ -1778,7 +1786,12 @@ FunctionEmitContext::EmitFunctionParameterDebugInfo(Symbol *sym, int argNum) {
 #if !defined(LLVM_3_2) && !defined(LLVM_3_3) && !defined(LLVM_3_4) && !defined(LLVM_3_5)// LLVM 3.6+
     llvm::DIExpression E =  m->diBuilder->createExpression();
     llvm::Instruction *declareInst =
-        m->diBuilder->insertDeclare(sym->storagePtr, var, E, bblock);
+        m->diBuilder->insertDeclare(sym->storagePtr, var, E,
+#if !defined(LLVM_3_6) // LLVM 3.7++
+                                    llvm::DebugLoc::get(sym->pos.first_line,
+                                                        sym->pos.first_column, scope),
+#endif
+                                    bblock);
 #else
     llvm::Instruction *declareInst =
         m->diBuilder->insertDeclare(sym->storagePtr, var, bblock);

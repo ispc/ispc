@@ -172,7 +172,7 @@ lStripUnusedDebugInfo(llvm::Module *module) {
         return;
 #if defined (LLVM_3_2) || defined (LLVM_3_3)|| defined (LLVM_3_4)|| defined (LLVM_3_5)
     std::set<llvm::Value *> SPall;
-#else // LLVN 3.6++
+#else // LLVM 3.6++
     std::set<llvm::Metadata *> SPall;
 #endif
     // OK, now we are to determine which functions actually survived the
@@ -232,14 +232,15 @@ lStripUnusedDebugInfo(llvm::Module *module) {
     if (llvm::NamedMDNode *cuNodes = module->getNamedMetadata("llvm.dbg.cu")) {
         for (unsigned i = 0, ie = cuNodes->getNumOperands(); i != ie; ++i) {
             llvm::MDNode *cuNode = cuNodes->getOperand(i);
-#if defined (LLVM_3_2) || defined (LLVM_3_3)|| defined (LLVM_3_4)|| defined (LLVM_3_5) || (LLVM_3_6)
+#if defined(LLVM_3_2) || defined(LLVM_3_3) || defined(LLVM_3_4) || defined(LLVM_3_5) || defined(LLVM_3_6)
             llvm::DICompileUnit cu(cuNode);
+            llvm::DIArray subprograms = cu.getSubprograms();
 #else // LLVM 3.7+
             llvm::DICompileUnit cu(llvm::cast<llvm::MDCompileUnit>(cuNode));
+            llvm::DIArray subprograms = cu->getSubprograms();
 #endif
-            llvm::DIArray subprograms = cu.getSubprograms();
 
-#if defined (LLVM_3_2) || defined (LLVM_3_3)|| defined (LLVM_3_4)|| defined (LLVM_3_5) || (LLVM_3_6)
+#if defined(LLVM_3_2) || defined(LLVM_3_3) || defined(LLVM_3_4) || defined(LLVM_3_5) || defined(LLVM_3_6)
             if (subprograms.getNumElements() == 0)
 #else // LLVM 3.7+
             if (subprograms.size() == 0)
@@ -255,7 +256,7 @@ lStripUnusedDebugInfo(llvm::Module *module) {
 #endif
 
             // determine what functions of those extracted belong to the unit
-#if defined (LLVM_3_2) || defined (LLVM_3_3)|| defined (LLVM_3_4)|| defined (LLVM_3_5) || (LLVM_3_6)
+#if defined(LLVM_3_2) || defined(LLVM_3_3) || defined(LLVM_3_4) || defined(LLVM_3_5) || defined(LLVM_3_6)
             for (unsigned j = 0, je = subprograms.getNumElements(); j != je; ++j)
 #else // LLVM 3.7+
             for (unsigned j = 0, je = subprograms.size(); j != je; ++j)
@@ -274,7 +275,7 @@ lStripUnusedDebugInfo(llvm::Module *module) {
 
             Debug(SourcePos(), "%d / %d functions left in module with debug "
                   "info.", (int)usedSubprograms.size(),
-#if defined (LLVM_3_2) || defined (LLVM_3_3)|| defined (LLVM_3_4)|| defined (LLVM_3_5) || (LLVM_3_6)
+#if defined(LLVM_3_2) || defined(LLVM_3_3) || defined(LLVM_3_4) || defined(LLVM_3_5) || defined(LLVM_3_6)
                   (int)subprograms.getNumElements());
 #else // LLVM 3.7+
                   (int)subprograms.size());
@@ -332,22 +333,27 @@ lStripUnusedDebugInfo(llvm::Module *module) {
                 m->diBuilder->getOrCreateArray(llvm::ArrayRef<llvm::Value *>(usedSubprograms));
             cuNode->replaceOperandWith(9, replNode);
 #else // LLVM 3.6+
-            llvm::DIArray nodeSPs = cu.getSubprograms();
-            // And now we can go and stuff it into the unit with some
-            // confidence...
   #if defined(LLVM_3_6)
+            llvm::DIArray nodeSPs = cu.getSubprograms();
             Assert(nodeSPs.getNumElements() == subprograms.getNumElements());
             for (int i = 0; i < (int)nodeSPs.getNumElements(); ++i)
                  Assert(nodeSPs.getElement(i) == subprograms.getElement(i));
+
+            // And now we can go and stuff it into the unit with some
+            // confidence...
             llvm::MDNode *replNode = llvm::MDNode::get(module->getContext(), 
                                                        llvm::ArrayRef<llvm::Metadata *>(usedSubprograms));
             cu.replaceSubprograms(llvm::DIArray(replNode));
   #else // LLVM 3.7+
+            llvm::DIArray nodeSPs = cu->getSubprograms();
             Assert(nodeSPs.size() == subprograms.size());
             for (int i = 0; i < (int)nodeSPs.size(); ++i)
                  Assert(nodeSPs [i] == subprograms [i]);
-            cu.replaceSubprograms(llvm::MDTuple::get(cu->getContext(),
-                                                     llvm::ArrayRef<llvm::Metadata *>(usedSubprograms)));
+
+            // And now we can go and stuff it into the unit with some
+            // confidence...
+            cu->replaceSubprograms(llvm::MDTuple::get(cu->getContext(),
+                                                      llvm::ArrayRef<llvm::Metadata *>(usedSubprograms)));
   #endif
 #endif
         }
