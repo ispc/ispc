@@ -49,6 +49,17 @@ define(`MASK_HIGH_BIT_ON',
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+;; LLVM has different IR for different versions since 3.7
+
+define(`PTR_OP_ARGS',
+  ifelse(LLVM_VERSION, LLVM_3_7,
+    ``$1 , $1 *'',
+    ``$1 *''
+  )
+)
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
 ;; vector deconstruction utilities
 ;; split 8-wide vector into 2 4-wide vectors
 ;;
@@ -2759,7 +2770,7 @@ entry:
 
 if.then:                                          ; preds = %entry
   %idxprom = ashr i64 %call, 32
-  %arrayidx = getelementptr inbounds PTR_OP_ARGS(`i32') startptr, i64 %idxprom
+  %arrayidx = getelementptr inbounds PTR_OP_ARGS(`i32') %startptr, i64 %idxprom
   %val = load PTR_OP_ARGS(`i32')  %arrayidx, align 4
   %valvec = insertelement <1 x i32> undef, i32 %val, i32 0
   store <1 x i32> %valvec, <1 x i32>* %val_ptr, align 4
@@ -2780,7 +2791,7 @@ entry:
 
 if.then:                                          ; preds = %entry
   %idxprom = ashr i64 %call, 32
-  %arrayidx = getelementptr inbounds PTR_OP_ARGS(`i32') startptr, i64 %idxprom
+  %arrayidx = getelementptr inbounds PTR_OP_ARGS(`i32') %startptr, i64 %idxprom
   %val = extractelement <1 x i32> %vals, i32 0
   store i32 %val, i32* %arrayidx, align 4
   br label %if.end
