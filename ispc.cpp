@@ -1010,12 +1010,6 @@ Target::SupportedArchs() {
 const char *
 Target::SupportedTargets() {
     return
-#ifdef ISPC_ARM_ENABLED
-        "neon-i8x16, neon-i16x8, neon-i32x4, "
-#endif
-#ifdef ISPC_NVPTX_ENABLED
-        "nvptx, "
-#endif
         "sse2-i32x4, sse2-i32x8, "
         "sse4-i32x4, sse4-i32x8, sse4-i16x8, sse4-i8x16, "
         "avx1-i32x4, "
@@ -1023,7 +1017,15 @@ Target::SupportedTargets() {
         "avx1.1-i32x8, avx1.1-i32x16, avx1.1-i64x4 "
         "avx2-i32x8, avx2-i32x16, avx2-i64x4, "
         "generic-x1, generic-x4, generic-x8, generic-x16, "
-        "generic-x32, generic-x64";
+        "generic-x32, generic-x64"
+#ifdef ISPC_ARM_ENABLED
+        ", neon-i8x16, neon-i16x8, neon-i32x4"
+#endif
+#ifdef ISPC_NVPTX_ENABLED
+        ", nvptx"
+#endif
+;
+
 }
 
 
