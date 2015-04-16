@@ -495,6 +495,10 @@ Target::Target(const char *arch, const char *cpu, const char *isa, bool pic) :
             arch = "x86-64";
     }
 
+    // Define arch alias
+    if (std::string(arch) == "x86_64")
+        arch = "x86-64";
+
     bool error = false;
 
     // Make sure the target architecture is a known one; print an error

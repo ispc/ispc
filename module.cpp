@@ -2869,7 +2869,7 @@ lCreateDispatchFunction(llvm::Module *module, llvm::Function *setISAFunc,
     // ISA and sets __system_best_isa, if it hasn't been set yet.
     llvm::CallInst::Create(setISAFunc, "", bblock);
 
-    // Now we can load the system's ISA enuemrant
+    // Now we can load the system's ISA enumerant
     llvm::Value *systemISA =
         new llvm::LoadInst(systemBestISAPtr, "system_isa", bblock);
 
