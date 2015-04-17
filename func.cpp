@@ -515,8 +515,14 @@ Function::GenerateIR() {
                 llvm::FunctionType *ftype = type->LLVMFunctionType(g->ctx, true);
                 llvm::GlobalValue::LinkageTypes linkage = llvm::GlobalValue::ExternalLinkage;
                 std::string functionName = sym->name;
-                if (g->mangleFunctionsWithTarget)
-                    functionName += std::string("_") + g->target->GetISAString();
+                if (g->mangleFunctionsWithTarget) {
+                    // If we treat knl as generic, we should have appropriate mangling
+                    if (g->target->getISA() == Target::GENERIC &&
+                        g->target->getTreatGenericAsKNL())
+                        functionName += std::string("_") + "knl_generic";
+                    else
+                        functionName += std::string("_") + g->target->GetISAString();
+                }
 #ifdef ISPC_NVPTX_ENABLED
                 if (g->target->getISA() == Target::NVPTX)
                 {
