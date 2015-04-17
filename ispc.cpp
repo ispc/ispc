@@ -416,12 +416,13 @@ public:
 };
 
 
-Target::Target(const char *arch, const char *cpu, const char *isa, bool pic) :
+Target::Target(const char *arch, const char *cpu, const char *isa, bool pic, bool genAsKNL) :
     m_target(NULL),
     m_targetMachine(NULL),
     m_dataLayout(NULL),
     m_valid(false),
     m_isa(SSE2),
+    m_treatGenericAsKNL(genAsKNL),
     m_arch(""),
     m_is32Bit(true),
     m_cpu(""),
@@ -660,8 +661,15 @@ Target::Target(const char *arch, const char *cpu, const char *isa, bool pic) :
         CPUfromISA = CPU_Generic;
     }
     else if (!strcasecmp(isa, "generic-16") ||
-             !strcasecmp(isa, "generic-x16")) {
+             !strcasecmp(isa, "generic-x16") ||
+             // We treat knl-generic-16 as generic-16, but with special name mangling
+             !strcasecmp(isa, "knl-generic-16") ||
+             !strcasecmp(isa, "knl-generic-x16")) {
         this->m_isa = Target::GENERIC;
+        if (!strcasecmp(isa, "knl-generic-16") ||
+            !strcasecmp(isa, "knl-generic-x16"))
+            // It is used for appropriate name mangling and dispatch function during multitarget compilation
+            this->m_treatGenericAsKNL = true;
         this->m_nativeVectorWidth = 16;
         this->m_nativeVectorAlignment = 64;
         this->m_vectorWidth = 16;
@@ -1065,7 +1073,7 @@ Target::SupportedTargets() {
         "avx1.1-i32x8, avx1.1-i32x16, avx1.1-i64x4 "
         "avx2-i32x8, avx2-i32x16, avx2-i64x4, "
         "generic-x1, generic-x4, generic-x8, generic-x16, "
-        "generic-x32, generic-x64"
+        "generic-x32, generic-x64, knl-generic-x16"
 #ifdef ISPC_ARM_ENABLED
         ", neon-i8x16, neon-i16x8, neon-i32x4"
 #endif
