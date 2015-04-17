@@ -975,8 +975,14 @@ Module::AddFunctionDeclaration(const std::string &name,
     std::string functionName = name;
     if (storageClass != SC_EXTERN_C) {
         functionName += functionType->Mangle();
-        if (g->mangleFunctionsWithTarget)
-            functionName += g->target->GetISAString();
+        // If we treat generic as smth, we should have appropriate mangling
+        if (g->mangleFunctionsWithTarget) {
+            if (g->target->getISA() == Target::GENERIC && 
+                !g->target->getTreatGenericAsSmth().empty())
+                functionName += g->target->getTreatGenericAsSmth();
+            else
+                functionName += g->target->GetISAString();
+        }
     }
     llvm::Function *function =
         llvm::Function::Create(llvmFunctionType, linkage, functionName.c_str(),
@@ -2569,7 +2575,7 @@ Module::execPreprocessor(const char *infilename, llvm::raw_string_ostream *ostre
 // "avx", return a string with the ISA name inserted before the original
 // filename's suffix, like "foo_avx.obj".
 static std::string
-lGetTargetFileName(const char *outFileName, const char *isaString) {
+lGetTargetFileName(const char *outFileName, const char *isaString, bool forceCXX) {
     char *targetOutFileName = new char[strlen(outFileName) + 16];
     if (strrchr(outFileName, '.') != NULL) {
         // Copy everything up to the last '.'
@@ -2581,8 +2587,11 @@ lGetTargetFileName(const char *outFileName, const char *isaString) {
         strcat(targetOutFileName, "_");
         strcat(targetOutFileName, isaString);
 
-        // And finish with the original file suffiz
-        strcat(targetOutFileName, strrchr(outFileName, '.'));
+        // And finish with the original file suffix if it is not *-generic target
+        if (!forceCXX)
+            strcat(targetOutFileName, strrchr(outFileName, '.'));
+        else
+            strcat(targetOutFileName, ".cpp");
     }
     else {
         // Can't find a '.' in the filename, so just append the ISA suffix
@@ -2590,6 +2599,10 @@ lGetTargetFileName(const char *outFileName, const char *isaString) {
         strcpy(targetOutFileName, outFileName);
         strcat(targetOutFileName, "_");
         strcat(targetOutFileName, isaString);
+        
+        // Append ".cpp" suffix to the original file if it is *-generic target
+        if (forceCXX)
+            strcat(targetOutFileName, ".cpp");
     }
     return targetOutFileName;
 }
@@ -2890,11 +2903,26 @@ lCreateDispatchFunction(llvm::Module *module, llvm::Function *setISAFunc,
             continue;
 
         // Emit code to see if the system can run the current candidate
-        // variant successfully--"is the system's ISA enuemrant value >=
+        // variant successfully--"is the system's ISA enumerant value >=
         // the enumerant value of the current candidate?"
+
+        // dispatchNum is needed to separate generic from *-generic target
+        int dispatchNum = i;
+        if ((Target::ISA)(i == Target::GENERIC) && 
+            !g->target->getTreatGenericAsSmth().empty()) {
+            if (g->target->getTreatGenericAsSmth() == "knl_generic")
+                dispatchNum = Target::KNL;
+            else if (g->target->getTreatGenericAsSmth() == "skx_generic")
+                dispatchNum = Target::SKX;
+            else {
+                Error(SourcePos(), "*-generic target can be called only with knl or skx");
+                exit(1);
+            }
+        }
+
         llvm::Value *ok =
             llvm::CmpInst::Create(llvm::Instruction::ICmp, llvm::CmpInst::ICMP_SGE,
-                                  systemISA, LLVMInt32(i), "isa_ok", bblock);
+                                  systemISA, LLVMInt32(dispatchNum), "isa_ok", bblock);
         llvm::BasicBlock *callBBlock =
             llvm::BasicBlock::Create(*g->ctx, "do_call", dispatchFunc);
         llvm::BasicBlock *nextBBlock =
@@ -3076,14 +3104,16 @@ Module::CompileAndOutput(const char *srcFile,
             }
 #endif /* ISPC_NVPTX_ENABLED */
             if (outputType == CXX) {
-                if (target == NULL || strncmp(target, "generic-", 8) != 0) {
+                if (target == NULL || strncmp(target, "generic-", 8) != 0 
+                    || strstr(target, "-generic-") == NULL) {
                     Error(SourcePos(), "When generating C++ output, one of the \"generic-*\" "
                           "targets must be used.");
                     return 1;
                 }
             }
             else if (outputType == Asm || outputType == Object) {
-                if (target != NULL && strncmp(target, "generic-", 8) == 0) {
+                if (target != NULL && 
+                   (strncmp(target, "generic-", 8) == 0 || strstr(target, "-generic-") != NULL)) {
                     Error(SourcePos(), "When using a \"generic-*\" compilation target, "
                           "%s output can not be used.",
                           (outputType == Asm) ? "assembly" : "object file");
@@ -3174,11 +3204,17 @@ Module::CompileAndOutput(const char *srcFile,
           DHI.EmitBackMatter = false;
         }
 
+        // Variable is needed later for approptiate dispatch function.
+        // It indicates if we have *-generic target. 
+        std::string treatGenericAsSmth = "";
 
         for (unsigned int i = 0; i < targets.size(); ++i) {
             g->target = new Target(arch, cpu, targets[i].c_str(), generatePIC);
             if (!g->target->isValid())
                 return 1;
+
+            if (!g->target->getTreatGenericAsSmth().empty())
+                treatGenericAsSmth = g->target->getTreatGenericAsSmth();
 
             // Issue an error if we've already compiled to a variant of
             // this target ISA.  (It doesn't make sense to compile to both
@@ -3200,11 +3236,21 @@ Module::CompileAndOutput(const char *srcFile,
                 lExtractAndRewriteGlobals(m->module, &globals[i]);
 
                 if (outFileName != NULL) {
-                    const char *isaName = g->target->GetISAString();
-                    std::string targetOutFileName =
-                        lGetTargetFileName(outFileName, isaName);
-                    if (!m->writeOutput(outputType, targetOutFileName.c_str()))
-                        return 1;
+                    std::string targetOutFileName;
+                    // We always generate cpp file for *-generic target during multitarget compilation
+                    if (g->target->getISA() == Target::GENERIC && 
+                        !g->target->getTreatGenericAsSmth().empty()) {
+                        targetOutFileName = lGetTargetFileName(outFileName, 
+                                                g->target->getTreatGenericAsSmth().c_str(), true);
+                        if (!m->writeOutput(CXX, targetOutFileName.c_str(), includeFileName))
+                            return 1;
+                    }
+                    else {
+                        const char *isaName = g->target->GetISAString();
+                        targetOutFileName = lGetTargetFileName(outFileName, isaName, false);
+                        if (!m->writeOutput(outputType, targetOutFileName.c_str()))
+                            return 1;
+                    }
                 }
             }
             errorCount += m->errorCount;
@@ -3217,9 +3263,14 @@ Module::CompileAndOutput(const char *srcFile,
                 DHI.EmitBackMatter = true;
               }
               
-              const char *isaName = g->target->GetISAString();
+              const char *isaName;
+              if (g->target->getISA() == Target::GENERIC &&
+                        !g->target->getTreatGenericAsSmth().empty())
+                  isaName = g->target->getTreatGenericAsSmth().c_str();
+              else 
+                  isaName = g->target->GetISAString();
               std::string targetHeaderFileName = 
-                lGetTargetFileName(headerFileName, isaName);
+                lGetTargetFileName(headerFileName, isaName, false);
               // write out a header w/o target name for the first target only
               if (!m->writeOutput(Module::Header, headerFileName, "", &DHI)) {
                 return 1;
@@ -3253,7 +3304,7 @@ Module::CompileAndOutput(const char *srcFile,
         }
         Assert(firstTargetMachine != NULL);
 
-        g->target = new Target(arch, cpu, firstISA, generatePIC);
+        g->target = new Target(arch, cpu, firstISA, generatePIC, treatGenericAsSmth);
         if (!g->target->isValid()) {
             return 1;
         }
