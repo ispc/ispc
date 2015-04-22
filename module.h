@@ -55,8 +55,6 @@ namespace llvm
 
 struct DispatchHeaderInfo;
 
-bool lRecursiveCheckValidParamType(const Type *t, bool vectorOk);
-
 class Module {
 public:
     /** The name of the source file being compiled should be passed as the
