@@ -1,7 +1,7 @@
 ;;
 ;; target-neon-common.ll
 ;;
-;;  Copyright(c) 2013 Google, Inc.
+;;  Copyright(c) 2013-2015 Google, Inc.
 ;;
 ;;  All rights reserved.
 ;;

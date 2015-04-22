@@ -2,7 +2,7 @@
 ;; target-neon-32.ll
 ;;
 ;;  Copyright(c) 2012-2013 Matt Pharr
-;;  Copyright(c) 2013 Google, Inc.
+;;  Copyright(c) 2013, 2015 Google, Inc.
 ;;
 ;;  All rights reserved.
 ;;
