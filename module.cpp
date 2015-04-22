@@ -756,8 +756,7 @@ Module::AddGlobalVariable(const std::string &name, const Type *type, Expr *initE
     This functions returns true and issues an error if are any illegal
     types are found and returns false otherwise.
 */
-static bool
-lRecursiveCheckValidParamType(const Type *t, bool vectorOk) {
+bool lRecursiveCheckValidParamType(const Type *t, bool vectorOk) {
     const StructType *st = CastType<StructType>(t);
     if (st != NULL) {
         for (int i = 0; i < st->GetElementCount(); ++i)
