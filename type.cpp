@@ -1847,26 +1847,24 @@ static std::map<std::string, llvm::StructType *> lStructTypeMap;
     different memory layouts...
  */
 static std::string
-lMangleStructName(const std::string &name, const Type *type,
-                  Variability variability) {
+lMangleStructName(const std::string &name, Variability variability) {
     char buf[32];
     std::string n;
 
-    // Encode vector width if required
-    if (!lRecursiveCheckValidParamType(type, false)) {
-        sprintf(buf, "v%d_", g->target->getVectorWidth());
-        n += buf;
-    }
+    // Encode vector width
+    sprintf(buf, "v%d", g->target->getVectorWidth());
+    n += buf;
+
     // Variability
     switch (variability.type) {
     case Variability::Uniform:
-        n += "uniform_";
+        n += "_uniform_";
         break;
     case Variability::Varying:
-        n += "varying_";
+        n += "_varying_";
         break;
     case Variability::SOA:
-        sprintf(buf, "soa%d_", variability.soaWidth);
+        sprintf(buf, "_soa%d_", variability.soaWidth);
         n += buf;
         break;
     default:
@@ -1907,7 +1905,7 @@ StructType::StructType(const std::string &n, const llvm::SmallVector<const Type 
         // If a non-opaque LLVM struct for this type has already been
         // created, we're done.  For an opaque struct type, we'll override
         // the old definition now that we have a full definition.
-        std::string mname = lMangleStructName(name, this, variability);
+        std::string mname = lMangleStructName(name, variability);
         if (lStructTypeMap.find(mname) != lStructTypeMap.end() &&
             lStructTypeMap[mname]->isOpaque() == false)
             return;
@@ -1954,7 +1952,7 @@ StructType::GetCStructName() const {
   // compatibility...
 
   if (variability == Variability::Varying) {
-    return lMangleStructName(name, this, variability);
+    return lMangleStructName(name, variability);
   }
   else {
     return GetStructName();
@@ -2189,7 +2187,7 @@ StructType::GetCDeclaration(const std::string &n) const {
 llvm::Type *
 StructType::LLVMType(llvm::LLVMContext *ctx) const {
     Assert(variability != Variability::Unbound);
-    std::string mname = lMangleStructName(name, this, variability);
+    std::string mname = lMangleStructName(name, variability);
     if (lStructTypeMap.find(mname) == lStructTypeMap.end()) {
         Assert(m->errorCount > 0);
         return NULL;
@@ -2343,7 +2341,7 @@ UndefinedStructType::UndefinedStructType(const std::string &n,
     Assert(name != "");
     if (variability != Variability::Unbound) {
         // Create a new opaque LLVM struct type for this struct name
-        std::string mname = lMangleStructName(name, this, variability);
+        std::string mname = lMangleStructName(name, variability);
         if (lStructTypeMap.find(mname) == lStructTypeMap.end())
             lStructTypeMap[mname] = llvm::StructType::create(*g->ctx, mname);
     }
@@ -2478,7 +2476,7 @@ UndefinedStructType::GetCDeclaration(const std::string &n) const {
 llvm::Type *
 UndefinedStructType::LLVMType(llvm::LLVMContext *ctx) const {
     Assert(variability != Variability::Unbound);
-    std::string mname = lMangleStructName(name, this, variability);
+    std::string mname = lMangleStructName(name, variability);
     if (lStructTypeMap.find(mname) == lStructTypeMap.end()) {
         Assert(m->errorCount > 0);
         return NULL;
