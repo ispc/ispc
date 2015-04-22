@@ -2833,11 +2833,9 @@ lCreateDispatchFunction(llvm::Module *module, llvm::Function *setISAFunc,
 
     for (int i = 0; i < Target::NUM_ISAS; ++i) {
         if (funcs.func[i] == NULL) {
-            targetFuncs[i] = NULL;
             ftypes[i] = NULL;
             continue;
         }
-
         // Grab the type of the function as well.  Note that the various
         // functions will have different types if they have arguments that
         // are pointers to structs, due to the fact that we mangle LLVM
@@ -2852,16 +2850,27 @@ lCreateDispatchFunction(llvm::Module *module, llvm::Function *setISAFunc,
         // by i8 *'s.
         //        if (ftype == NULL)
         ftypes[i] = funcs.func[i]->getFunctionType();
-
-        targetFuncs[i] =
-            llvm::Function::Create(ftypes[i], llvm::GlobalValue::ExternalLinkage,
-                                   funcs.func[i]->getName(), module);
     }
 
     // New helper function checks to see if we need to rewrite the
     // type for the dispatch function in case of pointers to varyings
     llvm::FunctionType *ftype = lGetVaryingDispatchType(funcs);
-    
+
+    // Now we insert type-punned declarations for dispatched functions.
+    // This is needed when compiling modules for a set of architectures
+    // with different vector lengths. Due to restrictions, the return
+    // type is the same across all architectures, however in different
+    // modules it may have dissimilar names. The loop below works this
+    // around.
+    for (int i = 0; i < Target::NUM_ISAS; ++i) {
+        if (funcs.func[i])
+            targetFuncs[i] =
+                llvm::Function::Create(ftype, llvm::GlobalValue::ExternalLinkage,
+                                       funcs.func[i]->getName(), module);
+        else
+            targetFuncs[i] = NULL;
+    }
+
     bool voidReturn = ftype->getReturnType()->isVoidTy();
 
     // Now we can emit the definition of the dispatch function..
@@ -2919,7 +2928,6 @@ lCreateDispatchFunction(llvm::Module *module, llvm::Function *setISAFunc,
                                                 "dpatch_arg_bitcast", callBBlock);
             args.push_back(argCast);
           }
-
         }
         if (voidReturn) {
             llvm::CallInst::Create(targetFuncs[i], args, "", callBBlock);
