@@ -54,6 +54,19 @@ __inline__ uint64_t rdtsc() {
   return (1000000ull * tv.tv_sec + tv.tv_usec) * 1000ull;
 }
 
+#include <sys/time.h>
+static inline double rtc(void)
+{
+  struct timeval Tvalue;
+  double etime;
+  struct timezone dummy;
+
+  gettimeofday(&Tvalue,&dummy);
+  etime =  (double) Tvalue.tv_sec +
+    1.e-6*((double) Tvalue.tv_usec);
+  return etime;
+}
+
 #else // __arm__
 
 #ifdef WIN32
