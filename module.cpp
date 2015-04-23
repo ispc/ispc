@@ -207,17 +207,17 @@ lStripUnusedDebugInfo(llvm::Module *module) {
                 }
                 if (scope.isSubprogram()) {
 #else // LLVM 3.7+
-                llvm::DILocation dloc(llvm::cast<llvm::MDLocation>(node));
-                llvm::DIScope scope = dloc->getScope();
+                llvm::MDLocation *dloc = llvm::cast<llvm::MDLocation>(node);
+                llvm::MDScope *scope = dloc->getScope();
                 node = dloc->getInlinedAt();
                 // now following a chain of nested scopes
                 while (!0) {
                     if (llvm::isa<llvm::MDLexicalBlockFile>(scope))
-                        scope = llvm::DILexicalBlockFile(llvm::cast<llvm::MDLexicalBlockFile>(scope))->getScope();
+                        scope = llvm::cast<llvm::MDLexicalBlockFile>(scope)->getScope();
                     else if (llvm::isa<llvm::MDLexicalBlockBase>(scope))
-                        scope = llvm::DILexicalBlock(llvm::cast<llvm::MDLexicalBlockBase>(scope))->getScope();
+                        scope = llvm::cast<llvm::MDLexicalBlockBase>(scope)->getScope();
                     else if (llvm::isa<llvm::MDNamespace>(scope))
-                        scope = llvm::DINameSpace(llvm::cast<llvm::MDNamespace>(scope))->getScope();
+                        scope = llvm::cast<llvm::MDNamespace>(scope)->getScope();
                     else break;
                 }
                 if (llvm::isa<llvm::MDSubprogram>(scope)) {
@@ -235,18 +235,14 @@ lStripUnusedDebugInfo(llvm::Module *module) {
 #if defined(LLVM_3_2) || defined(LLVM_3_3) || defined(LLVM_3_4) || defined(LLVM_3_5) || defined(LLVM_3_6)
             llvm::DICompileUnit cu(cuNode);
             llvm::DIArray subprograms = cu.getSubprograms();
+            if (subprograms.getNumElements() == 0) {
 #else // LLVM 3.7+
-            llvm::DICompileUnit cu(llvm::cast<llvm::MDCompileUnit>(cuNode));
-            llvm::DIArray subprograms = cu->getSubprograms();
-#endif
-
-#if defined(LLVM_3_2) || defined(LLVM_3_3) || defined(LLVM_3_4) || defined(LLVM_3_5) || defined(LLVM_3_6)
-            if (subprograms.getNumElements() == 0)
-#else // LLVM 3.7+
-            if (subprograms.size() == 0)
+            llvm::MDCompileUnit *cu = llvm::cast<llvm::MDCompileUnit>(cuNode);
+            llvm::MDSubprogramArray subprograms = cu->getSubprograms();
+            if (subprograms.size() == 0) {
 #endif
                 continue;
-
+            }
 #if defined(LLVM_3_2) || defined(LLVM_3_3) || defined(LLVM_3_4) || defined(LLVM_3_5)
             std::set<llvm::Value *> SPset;
             std::vector<llvm::Value *> usedSubprograms;
@@ -345,7 +341,7 @@ lStripUnusedDebugInfo(llvm::Module *module) {
                                                        llvm::ArrayRef<llvm::Metadata *>(usedSubprograms));
             cu.replaceSubprograms(llvm::DIArray(replNode));
   #else // LLVM 3.7+
-            llvm::DIArray nodeSPs = cu->getSubprograms();
+            llvm::MDSubprogramArray nodeSPs = cu->getSubprograms();
             Assert(nodeSPs.size() == subprograms.size());
             for (int i = 0; i < (int)nodeSPs.size(); ++i)
                  Assert(nodeSPs [i] == subprograms [i]);
@@ -702,8 +698,8 @@ Module::AddGlobalVariable(const std::string &name, const Type *type, Expr *initE
     }
 
     if (diBuilder) {
-        llvm::DIFile file = pos.GetDIFile();
 #if defined(LLVM_3_2) || defined(LLVM_3_3) || defined(LLVM_3_4) || defined(LLVM_3_5)
+        llvm::DIFile file = pos.GetDIFile();
         llvm::DIGlobalVariable var = diBuilder->createGlobalVariable(
                                             name,
                                             file,
@@ -712,6 +708,7 @@ Module::AddGlobalVariable(const std::string &name, const Type *type, Expr *initE
                                             (sym->storageClass == SC_STATIC),
                                             sym->storagePtr);
 #elif defined(LLVM_3_6)
+        llvm::DIFile file = pos.GetDIFile();
         llvm::Constant *sym_const_storagePtr = llvm::dyn_cast<llvm::Constant>(sym->storagePtr);
         Assert(sym_const_storagePtr);
         llvm::DIGlobalVariable var = diBuilder->createGlobalVariable(
@@ -724,6 +721,7 @@ Module::AddGlobalVariable(const std::string &name, const Type *type, Expr *initE
                                             (sym->storageClass == SC_STATIC),
                                             sym_const_storagePtr);
 #else // LLVM 3.7+
+        llvm::MDFile *file = pos.GetDIFile();
         llvm::Constant *sym_const_storagePtr = llvm::dyn_cast<llvm::Constant>(sym->storagePtr);
         Assert(sym_const_storagePtr);
         diBuilder->createGlobalVariable(

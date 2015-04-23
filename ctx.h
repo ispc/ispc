@@ -352,7 +352,11 @@ public:
         Instructions stored using Value pointers; the code here returns
         silently if it's not actually given an instruction. */
     void AddDebugPos(llvm::Value *instruction, const SourcePos *pos = NULL,
+#if defined(LLVM_3_2) || defined(LLVM_3_3) || defined(LLVM_3_4) || defined(LLVM_3_5) || defined(LLVM_3_6)
                      llvm::DIScope *scope = NULL);
+#else // LLVM 3.7++
+                     llvm::MDScope *scope = NULL);
+#endif
 
     /** Inform the debugging information generation code that a new scope
         is starting in the source program. */
@@ -364,7 +368,11 @@ public:
 
     /** Returns the llvm::DIScope corresponding to the current program
         scope. */
+#if defined(LLVM_3_2) || defined(LLVM_3_3) || defined(LLVM_3_4) || defined(LLVM_3_5) || defined(LLVM_3_6)
     llvm::DIScope GetDIScope() const;
+#else // LLVM 3.7++
+    llvm::MDScope *GetDIScope() const;
+#endif
 
     /** Emits debugging information for the variable represented by
         sym.  */
@@ -675,6 +683,7 @@ private:
         emitted. */
     std::vector<CFInfo *> controlFlowInfo;
 
+#if defined(LLVM_3_2) || defined(LLVM_3_3) || defined(LLVM_3_4) || defined(LLVM_3_5) || defined(LLVM_3_6)
     /** DIFile object corresponding to the source file where the current
         function was defined (used for debugging info). */
     llvm::DIFile diFile;
@@ -685,10 +694,19 @@ private:
 
     /** These correspond to the current set of nested scopes in the
         function. */
-#if defined(LLVM_3_2) || defined(LLVM_3_3) || defined(LLVM_3_4) || defined(LLVM_3_5) || defined(LLVM_3_6)
     std::vector<llvm::DILexicalBlock> debugScopes;
 #else // LLVM 3.7++
-    std::vector<llvm::DIScope> debugScopes;
+    /** MDFile object corresponding to the source file where the current
+        function was defined (used for debugging info). */
+    llvm::MDFile *diFile;
+
+    /** MDSubprogram corresponding to this function (used for debugging
+        info). */
+    llvm::MDSubprogram *diSubprogram;
+
+    /** These correspond to the current set of nested scopes in the
+        function. */
+    std::vector<llvm::MDScope *> debugScopes;
 #endif
 
     /** True if a 'launch' statement has been encountered in the function. */

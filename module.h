@@ -161,8 +161,10 @@ public:
     /** The diBuilder manages generating debugging information */
     llvm::DIBuilder *diBuilder;
 
-#if !defined(LLVM_3_2) && !defined(LLVM_3_3)
+#if defined(LLVM_3_4) || defined(LLVM_3_5) || defined(LLVM_3_6)
     llvm::DICompileUnit diCompileUnit;
+#elif !defined(LLVM_3_2) && !defined(LLVM_3_3) // LLVM 3.7++
+    llvm::MDCompileUnit *diCompileUnit;
 #endif // LLVM_3_4+
 
 private:

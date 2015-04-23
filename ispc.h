@@ -78,9 +78,6 @@ namespace llvm {
     class ConstantValue;
     class DataLayout;
     class DIBuilder;
-    class DIDescriptor;
-    class DIFile;
-    class DIType;
     class Function;
     class FunctionType;
     class LLVMContext;
@@ -89,6 +86,15 @@ namespace llvm {
     class TargetMachine;
     class Type;
     class Value;
+#if defined(LLVM_3_2) || defined(LLVM_3_3) || defined(LLVM_3_4) || defined(LLVM_3_5) || defined(LLVM_3_6)
+    class DIFile;
+    class DIType;
+    class DIDescriptor;
+#else // LLVM 3.7++
+    class MDFile;
+    class MDType;
+    class MDScope;
+#endif
 }
 
 
@@ -138,8 +144,13 @@ struct SourcePos {
     /** Prints the filename and line/column range to standard output. */
     void Print() const;
 
+#if defined(LLVM_3_2) || defined(LLVM_3_3) || defined(LLVM_3_4) || defined(LLVM_3_5) || defined(LLVM_3_6)
     /** Returns a LLVM DIFile object that represents the SourcePos's file */
     llvm::DIFile GetDIFile() const;
+#else
+    /** Returns a LLVM MDFile object that represents the SourcePos's file */
+    llvm::MDFile *GetDIFile() const;
+#endif
 
     bool operator==(const SourcePos &p2) const;
 };
