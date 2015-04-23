@@ -222,9 +222,15 @@ public:
     /** Returns the LLVM type corresponding to this ispc type */
     virtual llvm::Type *LLVMType(llvm::LLVMContext *ctx) const = 0;
 
+#if defined(LLVM_3_2) || defined(LLVM_3_3) || defined(LLVM_3_4) || defined(LLVM_3_5) || defined(LLVM_3_6)
     /** Returns the DIType (LLVM's debugging information structure),
         corresponding to this type. */
     virtual llvm::DIType GetDIType(llvm::DIDescriptor scope) const = 0;
+#else
+    /** Returns the MDType (LLVM's debugging information structure),
+        corresponding to this type. */
+    virtual llvm::MDType *GetDIType(llvm::MDScope *scope) const = 0;
+#endif
 
     /** Checks two types for equality.  Returns true if they are exactly
         the same, false otherwise. */
@@ -311,7 +317,11 @@ public:
     std::string GetCDeclaration(const std::string &name) const;
 
     llvm::Type *LLVMType(llvm::LLVMContext *ctx) const;
+#if defined(LLVM_3_2) || defined(LLVM_3_3) || defined(LLVM_3_4) || defined(LLVM_3_5) || defined(LLVM_3_6)
     llvm::DIType GetDIType(llvm::DIDescriptor scope) const;
+#else // LLVM 3.7++
+    llvm::MDType *GetDIType(llvm::MDScope *scope) const;
+#endif
 
     /** This enumerator records the basic types that AtomicTypes can be
         built from.  */
@@ -390,7 +400,11 @@ public:
     const std::string &GetEnumName() const { return name; }
 
     llvm::Type *LLVMType(llvm::LLVMContext *ctx) const;
+#if defined(LLVM_3_2) || defined(LLVM_3_3) || defined(LLVM_3_4) || defined(LLVM_3_5) || defined(LLVM_3_6)
     llvm::DIType GetDIType(llvm::DIDescriptor scope) const;
+#else // LLVM 3.7++
+    llvm::MDType *GetDIType(llvm::MDScope *scope) const;
+#endif
 
     /** Provides the enumerators defined in the enum definition. */
     void SetEnumerators(const std::vector<Symbol *> &enumerators);
@@ -471,7 +485,11 @@ public:
     std::string GetCDeclaration(const std::string &name) const;
 
     llvm::Type *LLVMType(llvm::LLVMContext *ctx) const;
+#if defined(LLVM_3_2) || defined(LLVM_3_3) || defined(LLVM_3_4) || defined(LLVM_3_5) || defined(LLVM_3_6)
     llvm::DIType GetDIType(llvm::DIDescriptor scope) const;
+#else // LLVM 3.7++
+    llvm::MDType *GetDIType(llvm::MDScope *scope) const;
+#endif
 
     static PointerType *Void;
 
@@ -573,7 +591,11 @@ public:
     std::string Mangle() const;
     std::string GetCDeclaration(const std::string &name) const;
 
+#if defined(LLVM_3_2) || defined(LLVM_3_3) || defined(LLVM_3_4) || defined(LLVM_3_5) || defined(LLVM_3_6)
     llvm::DIType GetDIType(llvm::DIDescriptor scope) const;
+#else // LLVM 3.7++
+    llvm::MDType *GetDIType(llvm::MDScope *scope) const;
+#endif
     llvm::ArrayType *LLVMType(llvm::LLVMContext *ctx) const;
 
     /** This method returns the total number of elements in the array,
@@ -641,7 +663,11 @@ public:
     std::string GetCDeclaration(const std::string &name) const;
 
     llvm::Type *LLVMType(llvm::LLVMContext *ctx) const;
+#if defined(LLVM_3_2) || defined(LLVM_3_3) || defined(LLVM_3_4) || defined(LLVM_3_5) || defined(LLVM_3_6)
     llvm::DIType GetDIType(llvm::DIDescriptor scope) const;
+#else // LLVM 3.7++
+    llvm::MDType *GetDIType(llvm::MDScope *scope) const;
+#endif
 
     int GetElementCount() const;
     const AtomicType *GetElementType() const;
@@ -692,7 +718,11 @@ public:
     std::string GetCDeclaration(const std::string &name) const;
 
     llvm::Type *LLVMType(llvm::LLVMContext *ctx) const;
+#if defined(LLVM_3_2) || defined(LLVM_3_3) || defined(LLVM_3_4) || defined(LLVM_3_5) || defined(LLVM_3_6)
     llvm::DIType GetDIType(llvm::DIDescriptor scope) const;
+#else // LLVM 3.7++
+    llvm::MDType *GetDIType(llvm::MDScope *scope) const;
+#endif
 
     /** Returns the type of the structure element with the given name (if any).
         Returns NULL if there is no such named element. */
@@ -780,7 +810,11 @@ public:
     std::string GetCDeclaration(const std::string &name) const;
 
     llvm::Type *LLVMType(llvm::LLVMContext *ctx) const;
+#if defined(LLVM_3_2) || defined(LLVM_3_3) || defined(LLVM_3_4) || defined(LLVM_3_5) || defined(LLVM_3_6)
     llvm::DIType GetDIType(llvm::DIDescriptor scope) const;
+#else // LLVM 3.7++
+    llvm::MDType *GetDIType(llvm::MDScope *scope) const;
+#endif
 
     /** Returns the name of the structure type.  (e.g. struct Foo -> "Foo".) */
     const std::string &GetStructName() const { return name; }
@@ -823,7 +857,11 @@ public:
     std::string GetCDeclaration(const std::string &name) const;
 
     llvm::Type *LLVMType(llvm::LLVMContext *ctx) const;
+#if defined(LLVM_3_2) || defined(LLVM_3_3) || defined(LLVM_3_4) || defined(LLVM_3_5) || defined(LLVM_3_6)
     llvm::DIType GetDIType(llvm::DIDescriptor scope) const;
+#else // LLVM 3.7++
+    llvm::MDType *GetDIType(llvm::MDScope *scope) const;
+#endif
 
 private:
     const Type * const targetType;
@@ -877,7 +915,11 @@ public:
     std::string GetCDeclarationForDispatch(const std::string &fname) const;
 
     llvm::Type *LLVMType(llvm::LLVMContext *ctx) const;
+#if defined(LLVM_3_2) || defined(LLVM_3_3) || defined(LLVM_3_4) || defined(LLVM_3_5) || defined(LLVM_3_6)
     llvm::DIType GetDIType(llvm::DIDescriptor scope) const;
+#else // LLVM 3.7++
+    llvm::MDType *GetDIType(llvm::MDScope *scope) const;
+#endif
 
     const Type *GetReturnType() const { return returnType; }
 

@@ -917,12 +917,16 @@ lDefineConstantInt(const char *name, int val, llvm::Module *module,
     symbolTable->AddVariable(sym);
 
     if (m->diBuilder != NULL) {
+#if defined(LLVM_3_2) || defined(LLVM_3_3) || defined(LLVM_3_4) || defined(LLVM_3_5) || defined(LLVM_3_6)
         llvm::DIFile file;
         llvm::DIType diType = sym->type->GetDIType(file);
-#if defined(LLVM_3_2) || defined(LLVM_3_3) || defined(LLVM_3_4) || defined(LLVM_3_5) || defined(LLVM_3_6)
         Assert(diType.Verify());
 #else // LLVM 3.7+
-    //comming soon
+        llvm::MDFile *file =
+            m->diBuilder->createFile(m->diCompileUnit->getFilename(),
+                                     m->diCompileUnit->getDirectory());
+        llvm::MDType *diType = sym->type->GetDIType(file);
+//        Assert(diType.Verify());
 #endif
         // FIXME? DWARF says that this (and programIndex below) should
         // have the DW_AT_artifical attribute.  It's not clear if this
@@ -1015,12 +1019,16 @@ lDefineProgramIndex(llvm::Module *module, SymbolTable *symbolTable) {
     symbolTable->AddVariable(sym);
 
     if (m->diBuilder != NULL) {
+#if defined(LLVM_3_2) || defined(LLVM_3_3) || defined(LLVM_3_4) || defined(LLVM_3_5) || defined(LLVM_3_6)
         llvm::DIFile file;
         llvm::DIType diType = sym->type->GetDIType(file);
-#if defined(LLVM_3_2) || defined(LLVM_3_3) || defined(LLVM_3_4) || defined(LLVM_3_5) || defined(LLVM_3_6)
         Assert(diType.Verify());
 #else // LLVM 3.7+
-    //comming soon
+        llvm::MDFile *file =
+            m->diBuilder->createFile(m->diCompileUnit->getFilename(),
+                                     m->diCompileUnit->getDirectory());
+        llvm::MDType *diType = sym->type->GetDIType(file);
+//        Assert(diType.Verify());
 #endif
 #if defined(LLVM_3_6)// LLVM 3.6+
         llvm::Constant *sym_const_storagePtr = llvm::dyn_cast<llvm::Constant>(sym->storagePtr);
