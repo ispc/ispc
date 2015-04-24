@@ -1276,10 +1276,11 @@ llvm::MDType *PointerType::GetDIType(llvm::MDScope *scope) const {
     case Variability::Varying: {
         // emit them as an array of pointers
 #if defined(LLVM_3_2) || defined(LLVM_3_3) || defined(LLVM_3_4) || defined(LLVM_3_5) || defined(LLVM_3_6)
+        llvm::DIType eltType =
 #else //LLVM 3.7++
         llvm::MDDerivedType *eltType =
-            m->diBuilder->createPointerType(diTargetType, bitsSize, ptrAlignBits);
 #endif
+            m->diBuilder->createPointerType(diTargetType, bitsSize, ptrAlignBits);
         return lCreateDIArray(eltType, g->target->getVectorWidth());
     }
     case Variability::SOA: {

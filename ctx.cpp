@@ -1667,7 +1667,13 @@ FunctionEmitContext::AddDebugPos(llvm::Value *value, const SourcePos *pos,
             // the standard library or the like; don't add debug positions
             // for those functions
             inst->setDebugLoc(llvm::DebugLoc::get(p.first_line, p.first_column,
-                                                  scope ? scope : GetDIScope()));
+                                                  scope ?
+#if defined(LLVM_3_2) || defined(LLVM_3_3) || defined(LLVM_3_4) || defined(LLVM_3_5) || defined(LLVM_3_6)
+                                                  *scope
+#else // LLVM 3.7++
+                                                  scope
+#endif
+                                                  : GetDIScope()));
     }
 }
 
