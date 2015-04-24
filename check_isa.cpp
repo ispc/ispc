@@ -109,7 +109,8 @@ lGetSystemISA() {
     // Call cpuid with eax=7, ecx=0
     __cpuidex(info2, 7, 0);
 
-    if ((info2[1] & (1 <<  5)) != 0 && // AVX2
+    if ((info[2] & (1 << 27)) != 0 &&  // OSXSAVE
+        (info2[1] & (1 <<  5)) != 0 && // AVX2
         (info2[1] & (1 << 16)) != 0 && // AVX512 F
         __os_has_avx512_support()) {
         // We need to verify that AVX2 is also available,
@@ -131,7 +132,8 @@ lGetSystemISA() {
         // or whatever is available in the machine.
     }
 
-    if ((info[2] & (1 << 28)) != 0 &&
+    if ((info[2] & (1 << 27)) != 0 && // OSXSAVE
+        (info[2] & (1 << 28)) != 0 &&
          __os_has_avx_support()) {  // AVX
         // AVX1 for sure....
         // Ivy Bridge?
