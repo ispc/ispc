@@ -95,7 +95,8 @@
 ;; 
 ;;     // NOTE: the values returned below must be the same as the
 ;;     // corresponding enumerant values in Target::ISA.
-;;     if ((info2[1] & (1 <<  5)) != 0 && // AVX2
+;;     if ((info[2] & (1 << 27)) != 0 &&  // OSXSAVE
+;;         (info2[1] & (1 <<  5)) != 0 && // AVX2
 ;;         (info2[1] & (1 << 16)) != 0 && // AVX512 F
 ;;         __os_has_avx512_support()) {
 ;;         // We need to verify that AVX2 is also available,
@@ -117,7 +118,8 @@
 ;;         // or whatever is available in the machine.
 ;;     }
 ;; 
-;;     if ((info[2] & (1 << 28)) != 0 &&
+;;     if ((info[2] & (1 << 27)) != 0 && // OSXSAVE
+;;         (info[2] & (1 << 28)) != 0 &&
 ;;         __os_has_avx_support()) {
 ;;        if ((info[2] & (1 << 29)) != 0 &&  // F16C
 ;;            (info[2] & (1 << 30)) != 0) {  // RDRAND
@@ -158,67 +160,72 @@ entry:
   %asmresult5.i = extractvalue { i32, i32, i32, i32 } %0, 2
   %asmresult6.i = extractvalue { i32, i32, i32, i32 } %0, 3
   %1 = tail call { i32, i32, i32, i32 } asm sideeffect "xchg$(l$)\09$(%$)ebx, $1\0A\09cpuid\0A\09xchg$(l$)\09$(%$)ebx, $1\0A\09", "={ax},=r,={cx},={dx},0,2,~{dirflag},~{fpsr},~{flags}"(i32 7, i32 0) nounwind
-  %asmresult4.i78 = extractvalue { i32, i32, i32, i32 } %1, 1
-  %2 = and i32 %asmresult4.i78, 65568
+  %asmresult4.i87 = extractvalue { i32, i32, i32, i32 } %1, 1
+  %and = and i32 %asmresult5.i, 134217728
+  %cmp = icmp eq i32 %and, 0
+  br i1 %cmp, label %if.else65, label %land.lhs.true
+
+land.lhs.true:                                    ; preds = %entry
+  %2 = and i32 %asmresult4.i87, 65568
   %3 = icmp eq i32 %2, 65568
-  br i1 %3, label %land.lhs.true5, label %if.end35
+  br i1 %3, label %land.lhs.true9, label %if.end39
 
-land.lhs.true5:                                   ; preds = %entry
+land.lhs.true9:                                   ; preds = %land.lhs.true
   %4 = tail call { i32, i32 } asm sideeffect ".byte 0x0f, 0x01, 0xd0", "={ax},={dx},{cx},~{dirflag},~{fpsr},~{flags}"(i32 0) nounwind
-  %asmresult.i81 = extractvalue { i32, i32 } %4, 0
-  %and.i = and i32 %asmresult.i81, 230
+  %asmresult.i90 = extractvalue { i32, i32 } %4, 0
+  %and.i = and i32 %asmresult.i90, 230
   %cmp.i = icmp eq i32 %and.i, 230
-  br i1 %cmp.i, label %if.then, label %if.end35
+  br i1 %cmp.i, label %if.then, label %if.end39
 
-if.then:                                          ; preds = %land.lhs.true5
-  %5 = and i32 %asmresult4.i78, -805175296
+if.then:                                          ; preds = %land.lhs.true9
+  %5 = and i32 %asmresult4.i87, -805175296
   %6 = icmp eq i32 %5, -805175296
   br i1 %6, label %return, label %if.else
 
 if.else:                                          ; preds = %if.then
-  %7 = and i32 %asmresult4.i78, 469762048
+  %7 = and i32 %asmresult4.i87, 469762048
   %8 = icmp eq i32 %7, 469762048
-  br i1 %8, label %return, label %if.end35
+  br i1 %8, label %return, label %if.end39
 
-if.end35:                                         ; preds = %if.else, %land.lhs.true5, %entry
-  %and37 = and i32 %asmresult5.i, 268435456
-  %cmp38 = icmp eq i32 %and37, 0
-  br i1 %cmp38, label %if.else57, label %land.lhs.true39
+if.end39:                                         ; preds = %if.else, %land.lhs.true9, %land.lhs.true
+  %9 = and i32 %asmresult5.i, 402653184
+  %10 = icmp eq i32 %9, 402653184
+  br i1 %10, label %land.lhs.true47, label %if.else65
 
-land.lhs.true39:                                  ; preds = %if.end35
-  %9 = tail call { i32, i32 } asm sideeffect ".byte 0x0f, 0x01, 0xd0", "={ax},={dx},{cx},~{dirflag},~{fpsr},~{flags}"(i32 0) nounwind
-  %asmresult.i82 = extractvalue { i32, i32 } %9, 0
-  %and.i83 = and i32 %asmresult.i82, 6
-  %cmp.i84 = icmp eq i32 %and.i83, 6
-  br i1 %cmp.i84, label %if.then42, label %if.else57
+land.lhs.true47:                                  ; preds = %if.end39
+  %11 = tail call { i32, i32 } asm sideeffect ".byte 0x0f, 0x01, 0xd0", "={ax},={dx},{cx},~{dirflag},~{fpsr},~{flags}"(i32 0) nounwind
+  %asmresult.i91 = extractvalue { i32, i32 } %11, 0
+  %and.i92 = and i32 %asmresult.i91, 6
+  %cmp.i93 = icmp eq i32 %and.i92, 6
+  br i1 %cmp.i93, label %if.then50, label %if.else65
 
-if.then42:                                        ; preds = %land.lhs.true39
-  %10 = and i32 %asmresult5.i, 1610612736
-  %11 = icmp eq i32 %10, 1610612736
-  br i1 %11, label %if.then50, label %return
+if.then50:                                        ; preds = %land.lhs.true47
+  %12 = and i32 %asmresult5.i, 1610612736
+  %13 = icmp eq i32 %12, 1610612736
+  br i1 %13, label %if.then58, label %return
 
-if.then50:                                        ; preds = %if.then42
-  %and = lshr i32 %asmresult4.i78, 5
-  %12 = and i32 %and, 1
-  %13 = add nuw nsw i32 %12, 3
+if.then58:                                        ; preds = %if.then50
+  %and60 = lshr i32 %asmresult4.i87, 5
+  %14 = and i32 %and60, 1
+  %15 = add i32 %14, 3
   br label %return
 
-if.else57:                                        ; preds = %land.lhs.true39, %if.end35
-  %and59 = and i32 %asmresult5.i, 524288
-  %cmp60 = icmp eq i32 %and59, 0
-  br i1 %cmp60, label %if.else62, label %return
+if.else65:                                        ; preds = %land.lhs.true47, %if.end39, %entry
+  %and67 = and i32 %asmresult5.i, 524288
+  %cmp68 = icmp eq i32 %and67, 0
+  br i1 %cmp68, label %if.else70, label %return
 
-if.else62:                                        ; preds = %if.else57
-  %and64 = and i32 %asmresult6.i, 67108864
-  %cmp65 = icmp eq i32 %and64, 0
-  br i1 %cmp65, label %if.else67, label %return
+if.else70:                                        ; preds = %if.else65
+  %and72 = and i32 %asmresult6.i, 67108864
+  %cmp73 = icmp eq i32 %and72, 0
+  br i1 %cmp73, label %if.else75, label %return
 
-if.else67:                                        ; preds = %if.else62
-  tail call void @abort() #3
+if.else75:                                        ; preds = %if.else70
+  tail call void @abort() noreturn nounwind
   unreachable
 
-return:                                           ; preds = %if.else62, %if.else57, %if.then50, %if.then42, %if.else, %if.then
-  %retval.0 = phi i32 [ 6, %if.then ], [ 5, %if.else ], [ %13, %if.then50 ], [ 2, %if.then42 ], [ 1, %if.else57 ], [ 0, %if.else62 ]
+return:                                           ; preds = %if.else70, %if.else65, %if.then58, %if.then50, %if.else, %if.then
+  %retval.0 = phi i32 [ 6, %if.then ], [ 5, %if.else ], [ %15, %if.then58 ], [ 2, %if.then50 ], [ 1, %if.else65 ], [ 0, %if.else70 ]
   ret i32 %retval.0
 }
 
