@@ -170,7 +170,7 @@ lGetSystemISA() {
         else if ((info2[1] & (1 << 26)) != 0 && // AVX512 PF
                  (info2[1] & (1 << 27)) != 0 && // AVX512 ER
                  (info2[1] & (1 << 28)) != 0) { // AVX512 CDI
-            return "knl";
+            return "knl-avx512";
         }
         // If it's unknown AVX512 target, fall through and use AVX2
         // or whatever is available in the machine.
@@ -236,6 +236,11 @@ typedef enum {
 #if !defined(LLVM_3_2) && !defined(LLVM_3_3) && !defined(LLVM_3_4) && !defined(LLVM_3_5) // LLVM 3.6+
     // Broadwell. Supports AVX 2 + ADX/RDSEED/SMAP.
     CPU_Broadwell,
+#endif
+
+#if !defined(LLVM_3_2) && !defined(LLVM_3_3) && !defined(LLVM_3_4) && !defined(LLVM_3_5) && !defined(LLVM_3_6)// LLVM 3.7+
+    // KNL. Supports AVX512.
+    CPU_KNL,
 #endif
 
 #if !defined(LLVM_3_2) && !defined(LLVM_3_3) // LLVM 3.4+
@@ -318,6 +323,10 @@ public:
         names[CPU_Broadwell].push_back("broadwell");
 #endif
 
+#if !defined(LLVM_3_2) && !defined(LLVM_3_3) && !defined(LLVM_3_4) && !defined(LLVM_3_5) && !defined(LLVM_3_6)// LLVM 3.7+
+         names[CPU_KNL].push_back("knl");
+#endif
+
 #ifdef ISPC_ARM_ENABLED
         names[CPU_CortexA15].push_back("cortex-a15");
 
@@ -336,6 +345,14 @@ public:
                                       CPU_Core2, CPU_Nehalem, CPU_Silvermont,
                                       CPU_None);
 #endif
+
+#if !defined(LLVM_3_2) && !defined(LLVM_3_3) && !defined(LLVM_3_4) && !defined(LLVM_3_5) && !defined(LLVM_3_6)// LLVM 3.7+
+      compat[CPU_KNL]           = Set(CPU_Generic, CPU_Bonnell, CPU_Penryn,
+                                      CPU_Core2, CPU_Nehalem, CPU_Silvermont,
+                                      CPU_SandyBridge, CPU_IvyBridge,
+                                      CPU_Haswell, CPU_Broadwell, CPU_None);
+#endif
+
 #if defined(LLVM_3_2) || defined(LLVM_3_3) || defined(LLVM_3_4) || defined(LLVM_3_5) // LLVM 3.6+
         #define CPU_Broadwell CPU_Haswell
 #else
@@ -487,6 +504,12 @@ Target::Target(const char *arch, const char *cpu, const char *isa, bool pic, boo
             case CPU_CortexA9:
             case CPU_CortexA15:
                 isa = "neon-i32x4";
+                break;
+#endif
+
+#if !defined(LLVM_3_2) && !defined(LLVM_3_3) && !defined(LLVM_3_4) && !defined(LLVM_3_5) && !defined(LLVM_3_6)// LLVM 3.7+
+            case CPU_KNL:
+                isa = "knl-avx512";
                 break;
 #endif
 
@@ -822,7 +845,7 @@ Target::Target(const char *arch, const char *cpu, const char *isa, bool pic, boo
              // TODO: enable knl and skx support
              // They are downconverted to avx2 for code generation.
              !strcasecmp(isa, "skx") ||
-             !strcasecmp(isa, "knl")) {
+             !strcasecmp(isa, "knl-avx512")) {
         this->m_isa = Target::AVX2;
         this->m_nativeVectorWidth = 8;
         this->m_nativeVectorAlignment = 32;
@@ -862,6 +885,27 @@ Target::Target(const char *arch, const char *cpu, const char *isa, bool pic, boo
         this->m_hasGather = true;
         CPUfromISA = CPU_Haswell;
     }
+#if !defined(LLVM_3_2) && !defined(LLVM_3_3) && !defined(LLVM_3_4) && !defined(LLVM_3_5) && !defined(LLVM_3_6)// LLVM 3.7+
+    else if (!strcasecmp(isa, "knl-avx512")) {
+        this->m_isa = Target::KNL_AVX512;
+        this->m_nativeVectorWidth = 16;
+        this->m_nativeVectorAlignment = 64;
+        // ?? this->m_dataTypeWidth = 32;
+        this->m_vectorWidth = 16;
+        this->m_maskingIsFree = true;
+        this->m_maskBitCount = 1;
+        this->m_hasHalf = true;
+        this->m_hasRand = true;
+        this->m_hasGather = this->m_hasScatter = true;
+        this->m_hasTranscendentals = true;
+        // For MIC it is set to true due to performance reasons. The option should be tested.
+        this->m_hasTrigonometry = true;
+        this->m_hasRsqrtd = this->m_hasRcpd = true;
+        this->m_hasVecPrefetch = true;
+        CPUfromISA = CPU_KNL;
+    }
+#endif
+
 #ifdef ISPC_ARM_ENABLED
     else if (!strcasecmp(isa, "neon-i8x16")) {
         this->m_isa = Target::NEON8;
@@ -1155,8 +1199,8 @@ Target::ISAToString(ISA isa) {
         return "avx11";
     case Target::AVX2:
         return "avx2";
-    case Target::KNL:
-        return "knl";
+    case Target::KNL_AVX512:
+        return "knl-avx512";
     case Target::SKX:
         return "skx";
     case Target::GENERIC:
@@ -1203,7 +1247,7 @@ Target::ISAToTargetString(ISA isa) {
         return "avx2-i32x8";
     // TODO: enable knl and skx support.
     // They are downconverted to avx2 for code generation.
-    case Target::KNL:
+    case Target::KNL_AVX512:
         return "avx2";
     case Target::SKX:
         return "avx2";

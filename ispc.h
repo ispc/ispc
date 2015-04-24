@@ -187,14 +187,14 @@ public:
         also that __best_available_isa() needs to be updated if ISAs are
         added or the enumerant values are reordered.  */
     enum ISA {
-        SSE2    = 0,
-        SSE4    = 1,
-        AVX     = 2,
-        AVX11   = 3,
-        AVX2    = 4,
-        KNL     = 5,
-        SKX     = 6,
-        GENERIC = 7,
+        SSE2           = 0,
+        SSE4           = 1,
+        AVX            = 2,
+        AVX11          = 3,
+        AVX2           = 4,
+        KNL_AVX512     = 5,
+        SKX            = 6,
+        GENERIC        = 7,
 #ifdef ISPC_NVPTX_ENABLED
         NVPTX,
 #endif
