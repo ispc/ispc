@@ -4030,6 +4030,7 @@ void CWriter::lowerIntrinsics(llvm::Function &F) {
       if (llvm::CallInst *CI = llvm::dyn_cast<llvm::CallInst>(I++))
         if (llvm::Function *F = CI->getCalledFunction())
           switch (F->getIntrinsicID()) {
+          // We directly implement these intrinsics
           case llvm::Intrinsic::not_intrinsic:
           case llvm::Intrinsic::vastart:
           case llvm::Intrinsic::vacopy:
@@ -4052,7 +4053,9 @@ void CWriter::lowerIntrinsics(llvm::Function &F) {
           case llvm::Intrinsic::objectsize:
           case llvm::Intrinsic::readcyclecounter:
           case llvm::Intrinsic::umul_with_overflow:
-              // We directly implement these intrinsics
+          // Or we just ignore them because of their uselessness in C++ source
+          case llvm::Intrinsic::dbg_value:
+          case llvm::Intrinsic::dbg_declare:
             break;
           default:
             // If this is an intrinsic that directly corresponds to a GCC
@@ -4290,6 +4293,10 @@ bool CWriter::visitBuiltinCall(llvm::CallInst &I, llvm::Intrinsic::ID ID,
     WroteCallee = true;
     return false;
   }
+  // Ignoring debug intrinsics
+  case llvm::Intrinsic::dbg_value:
+  case llvm::Intrinsic::dbg_declare:
+    return true;
   case llvm::Intrinsic::vastart:
     Out << "0; ";
 
