@@ -1461,7 +1461,7 @@ lEmitBinaryPointerArith(BinaryExpr::Op op, llvm::Value *value0,
         break;
     case BinaryExpr::Sub: {
         if (CastType<PointerType>(type1) != NULL) {
-            AssertPos(pos, Type::Equal(type0, type1));
+            AssertPos(pos, Type::EqualIgnoringConst(type0, type1));
 
             if (ptrType->IsSlice()) {
                 llvm::Value *p0 = ctx->ExtractInst(value0, 0);
