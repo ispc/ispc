@@ -3110,8 +3110,8 @@ Module::CompileAndOutput(const char *srcFile,
             }
 #endif /* ISPC_NVPTX_ENABLED */
             if (outputType == CXX) {
-                if (target == NULL || strncmp(target, "generic-", 8) != 0 
-                    || strstr(target, "-generic-") == NULL) {
+                if (target == NULL || (strncmp(target, "generic-", 8) != 0
+                    && strstr(target, "-generic-") == NULL)) {
                     Error(SourcePos(), "When generating C++ output, one of the \"generic-*\" "
                           "targets must be used.");
                     return 1;
