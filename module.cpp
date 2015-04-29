@@ -2840,28 +2840,6 @@ lCreateDispatchFunction(llvm::Module *module, llvm::Function *setISAFunc,
     // we'll start by generating an 'extern' declaration of each one that
     // we have in the current module so that we can then call out to that.
     llvm::Function *targetFuncs[Target::NUM_ISAS];
-    llvm::FunctionType *ftypes[Target::NUM_ISAS];
-
-    for (int i = 0; i < Target::NUM_ISAS; ++i) {
-        if (funcs.func[i] == NULL) {
-            ftypes[i] = NULL;
-            continue;
-        }
-        // Grab the type of the function as well.  Note that the various
-        // functions will have different types if they have arguments that
-        // are pointers to structs, due to the fact that we mangle LLVM
-        // struct type names with the target vector width.  However,
-        // because we only allow uniform stuff to pass through the
-        // export'ed function layer, they should all have the same memory
-        // layout, so this is benign..
-        // JCB nomosoa - not anymore...
-        // add a helper to see if this type has any varying thingies? 
-        // might be hard to detect....
-        // If so, return a new type with the pointers to those replaced
-        // by i8 *'s.
-        //        if (ftype == NULL)
-        ftypes[i] = funcs.func[i]->getFunctionType();
-    }
 
     // New helper function checks to see if we need to rewrite the
     // type for the dispatch function in case of pointers to varyings
