@@ -347,7 +347,7 @@ public:
 #endif
 
 #if !defined(LLVM_3_2) && !defined(LLVM_3_3) && !defined(LLVM_3_4) && !defined(LLVM_3_5) && !defined(LLVM_3_6)// LLVM 3.7+
-      compat[CPU_KNL]           = Set(CPU_Generic, CPU_Bonnell, CPU_Penryn,
+        compat[CPU_KNL]         = Set(CPU_Generic, CPU_Bonnell, CPU_Penryn,
                                       CPU_Core2, CPU_Nehalem, CPU_Silvermont,
                                       CPU_SandyBridge, CPU_IvyBridge,
                                       CPU_Haswell, CPU_Broadwell, CPU_None);
@@ -841,11 +841,7 @@ Target::Target(const char *arch, const char *cpu, const char *isa, bool pic, boo
         CPUfromISA = CPU_IvyBridge;
     }
     else if (!strcasecmp(isa, "avx2") ||
-             !strcasecmp(isa, "avx2-i32x8") ||
-             // TODO: enable knl and skx support
-             // They are downconverted to avx2 for code generation.
-             !strcasecmp(isa, "skx") ||
-             !strcasecmp(isa, "knl-avx512")) {
+             !strcasecmp(isa, "avx2-i32x8")) {
         this->m_isa = Target::AVX2;
         this->m_nativeVectorWidth = 8;
         this->m_nativeVectorAlignment = 32;
@@ -943,8 +939,7 @@ Target::Target(const char *arch, const char *cpu, const char *isa, bool pic, boo
     }
 #endif
 #ifdef ISPC_NVPTX_ENABLED
-    else if (!strcasecmp(isa, "nvptx")) 
-    {
+    else if (!strcasecmp(isa, "nvptx")) {
         this->m_isa = Target::NVPTX;
         this->m_cpu = "sm_35";
         this->m_nativeVectorWidth = 32;
@@ -1245,10 +1240,8 @@ Target::ISAToTargetString(ISA isa) {
         return "avx1.1-i32x8";
     case Target::AVX2:
         return "avx2-i32x8";
-    // TODO: enable knl and skx support.
-    // They are downconverted to avx2 for code generation.
     case Target::KNL_AVX512:
-        return "avx2";
+        return "knl-avx512";
     case Target::SKX:
         return "avx2";
     case Target::GENERIC:
