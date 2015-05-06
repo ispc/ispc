@@ -1126,7 +1126,9 @@ Target::SupportedTargets() {
         "avx2-i32x8, avx2-i32x16, avx2-i64x4, "
         "generic-x1, generic-x4, generic-x8, generic-x16, "
         "generic-x32, generic-x64, *-generic-x16, "
+#if !defined(LLVM_3_2) && !defined(LLVM_3_3) && !defined(LLVM_3_4) && !defined(LLVM_3_5) && !defined(LLVM_3_6)// LLVM 3.7+
         "knl-avx512"
+#endif
 #ifdef ISPC_ARM_ENABLED
         ", neon-i8x16, neon-i16x8, neon-i32x4"
 #endif
@@ -1195,8 +1197,10 @@ Target::ISAToString(ISA isa) {
         return "avx11";
     case Target::AVX2:
         return "avx2";
+#if !defined(LLVM_3_2) && !defined(LLVM_3_3) && !defined(LLVM_3_4) && !defined(LLVM_3_5) && !defined(LLVM_3_6)// LLVM 3.7+
     case Target::KNL_AVX512:
         return "knl-avx512";
+#endif
     case Target::SKX:
         return "skx";
     case Target::GENERIC:
@@ -1241,8 +1245,10 @@ Target::ISAToTargetString(ISA isa) {
         return "avx1.1-i32x8";
     case Target::AVX2:
         return "avx2-i32x8";
+#if !defined(LLVM_3_2) && !defined(LLVM_3_3) && !defined(LLVM_3_4) && !defined(LLVM_3_5) && !defined(LLVM_3_6)// LLVM 3.7+
     case Target::KNL_AVX512:
         return "knl-avx512";
+#endif
     case Target::SKX:
         return "avx2";
     case Target::GENERIC:
