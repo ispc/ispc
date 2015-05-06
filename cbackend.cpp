@@ -2864,8 +2864,8 @@ void CWriter::printModuleTypes() {
   Out << "  float Float;\n";
   Out << "  double Double;\n";
   Out << "} llvmBitCastUnion;\n";
-
   Out << "\n/* This is special class, designed for operations with long int.*/                       \n";
+  Out << "namespace {                                                                                \n";
   Out << "template <int num_bits>                                                                    \n";
   Out << "struct iN {                                                                                \n";
   Out << "  int num[num_bits / (sizeof (int) * 8)];                                                  \n";
@@ -2929,6 +2929,7 @@ void CWriter::printModuleTypes() {
   Out << "      ((int*)p)[i] = val.num[i];                                                           \n";
   Out << "  }                                                                                        \n";
   Out << "};                                                                                         \n";
+  Out << "};\n";
   Out << "\n";
 
   // Get all of the struct types used in the module.
@@ -2956,6 +2957,7 @@ void CWriter::printModuleTypes() {
 
   // If any of them are missing names, add a unique ID to UnnamedStructIDs.
   // Print out forward declarations for structure types.
+  Out << "namespace {\n";
   for (unsigned i = 0, e = StructTypes.size(); i != e; ++i) {
     llvm::StructType *ST = StructTypes[i];
 
@@ -2964,15 +2966,16 @@ void CWriter::printModuleTypes() {
 
     std::string Name = getStructName(ST);
 
-    Out << "struct " << Name << ";\n";
+    Out << "  struct " << Name << ";\n";
   }
 
   for (unsigned i = 0, e = ArrayTypes.size(); i != e; ++i) {
       llvm::ArrayType *AT = ArrayTypes[i];
       ArrayIDs[AT] = NextTypeID++;
       std::string Name = getArrayName(AT);
-      Out << "struct " << Name << ";\n";
+      Out << "  struct " << Name << ";\n";
   }
+  Out << "};\n";
   
   for (unsigned i = 0, e = IntegerTypes.size(); i != e; ++i) {
      llvm::IntegerType *IT = IntegerTypes[i];
@@ -2995,6 +2998,7 @@ void CWriter::printModuleTypes() {
   // printed in the correct order.
   //
   Out << "/* Structure and array contents */\n";
+  Out << "namespace {\n";
   for (unsigned i = 0, e = StructTypes.size(); i != e; ++i) {
     if (StructTypes[i]->isStructTy())
       // Only print out used types!
@@ -3004,6 +3008,7 @@ void CWriter::printModuleTypes() {
   for (unsigned i = 0, e = ArrayTypes.size(); i != e; ++i)
     printContainedArrays(ArrayTypes[i], StructArrayPrinted);
 
+  Out << "};\n";
   Out << '\n';
 }
 
