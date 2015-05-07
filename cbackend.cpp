@@ -2957,7 +2957,6 @@ void CWriter::printModuleTypes() {
 
   // If any of them are missing names, add a unique ID to UnnamedStructIDs.
   // Print out forward declarations for structure types.
-  Out << "namespace {\n";
   for (unsigned i = 0, e = StructTypes.size(); i != e; ++i) {
     llvm::StructType *ST = StructTypes[i];
 
@@ -2966,9 +2965,10 @@ void CWriter::printModuleTypes() {
 
     std::string Name = getStructName(ST);
 
-    Out << "  struct " << Name << ";\n";
+    Out << "struct " << Name << ";\n";
   }
 
+  Out << "namespace {\n";
   for (unsigned i = 0, e = ArrayTypes.size(); i != e; ++i) {
       llvm::ArrayType *AT = ArrayTypes[i];
       ArrayIDs[AT] = NextTypeID++;
@@ -2998,13 +2998,13 @@ void CWriter::printModuleTypes() {
   // printed in the correct order.
   //
   Out << "/* Structure and array contents */\n";
-  Out << "namespace {\n";
   for (unsigned i = 0, e = StructTypes.size(); i != e; ++i) {
     if (StructTypes[i]->isStructTy())
       // Only print out used types!
       printContainedStructs(StructTypes[i], StructArrayPrinted);
   }
 
+  Out << "namespace {\n";
   for (unsigned i = 0, e = ArrayTypes.size(); i != e; ++i)
     printContainedArrays(ArrayTypes[i], StructArrayPrinted);
 
@@ -3047,8 +3047,9 @@ void CWriter::printContainedStructs(llvm::Type *Ty,
       if (!Printed.insert(Ty)) return;
 #endif
 
+      Out << "namespace {\n";
       printType(Out, AT, false, getArrayName(AT), true);
-      Out << ";\n\n";
+      Out << ";\n}\n\n";
   }
 }
 
