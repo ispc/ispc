@@ -43,30 +43,6 @@ rdrand_definition()
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; broadcast/rotate/shuffle
 
-declare <WIDTH x float> @__smear_float(float) nounwind readnone
-declare <WIDTH x double> @__smear_double(double) nounwind readnone
-declare <WIDTH x i8> @__smear_i8(i8) nounwind readnone
-declare <WIDTH x i16> @__smear_i16(i16) nounwind readnone
-declare <WIDTH x i32> @__smear_i32(i32) nounwind readnone
-declare <WIDTH x i64> @__smear_i64(i64) nounwind readnone
-
-declare <WIDTH x float> @__setzero_float() nounwind readnone
-declare <WIDTH x double> @__setzero_double() nounwind readnone
-declare <WIDTH x i8> @__setzero_i8() nounwind readnone
-declare <WIDTH x i16> @__setzero_i16() nounwind readnone
-declare <WIDTH x i32> @__setzero_i32() nounwind readnone
-declare <WIDTH x i64> @__setzero_i64() nounwind readnone
-
-declare <WIDTH x float> @__undef_float() nounwind readnone
-declare <WIDTH x double> @__undef_double() nounwind readnone
-declare <WIDTH x i8> @__undef_i8() nounwind readnone
-declare <WIDTH x i16> @__undef_i16() nounwind readnone
-declare <WIDTH x i32> @__undef_i32() nounwind readnone
-declare <WIDTH x i64> @__undef_i64() nounwind readnone
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; shuffle
-
 define_shuffles()
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -214,28 +190,178 @@ declare i1 @__any(<WIDTH x i1>) nounwind readnone
 declare i1 @__all(<WIDTH x i1>) nounwind readnone 
 declare i1 @__none(<WIDTH x i1>) nounwind readnone 
 
-declare i16 @__reduce_add_int8(<WIDTH x i8>) nounwind readnone
-declare i32 @__reduce_add_int16(<WIDTH x i16>) nounwind readnone
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; horizontal int8/16 ops
 
-declare float @__reduce_add_float(<WIDTH x float>) nounwind readnone
-declare float @__reduce_min_float(<WIDTH x float>) nounwind readnone 
-declare float @__reduce_max_float(<WIDTH x float>) nounwind readnone 
+declare <2 x i64> @llvm.x86.sse2.psad.bw(<16 x i8>, <16 x i8>) nounwind readnone
 
-declare i64 @__reduce_add_int32(<WIDTH x i32>) nounwind readnone
-declare i32 @__reduce_min_int32(<WIDTH x i32>) nounwind readnone 
-declare i32 @__reduce_max_int32(<WIDTH x i32>) nounwind readnone 
-declare i32 @__reduce_min_uint32(<WIDTH x i32>) nounwind readnone 
-declare i32 @__reduce_max_uint32(<WIDTH x i32>) nounwind readnone 
+define i16 @__reduce_add_int8(<16 x i8>) nounwind readnone alwaysinline {
+  %rv = call <2 x i64> @llvm.x86.sse2.psad.bw(<16 x i8> %0,
+                                              <16 x i8> zeroinitializer)
+  %r0 = extractelement <2 x i64> %rv, i32 0
+  %r1 = extractelement <2 x i64> %rv, i32 1
+  %r = add i64 %r0, %r1
+  %r16 = trunc i64 %r to i16
+  ret i16 %r16
+}
 
-declare double @__reduce_add_double(<WIDTH x double>) nounwind readnone 
-declare double @__reduce_min_double(<WIDTH x double>) nounwind readnone 
-declare double @__reduce_max_double(<WIDTH x double>) nounwind readnone 
+define internal <16 x i16> @__add_varying_i16(<16 x i16>,
+                                  <16 x i16>) nounwind readnone alwaysinline {
+  %r = add <16 x i16> %0, %1
+  ret <16 x i16> %r
+}
 
-declare i64 @__reduce_add_int64(<WIDTH x i64>) nounwind readnone 
-declare i64 @__reduce_min_int64(<WIDTH x i64>) nounwind readnone 
-declare i64 @__reduce_max_int64(<WIDTH x i64>) nounwind readnone 
-declare i64 @__reduce_min_uint64(<WIDTH x i64>) nounwind readnone 
-declare i64 @__reduce_max_uint64(<WIDTH x i64>) nounwind readnone 
+define internal i16 @__add_uniform_i16(i16, i16) nounwind readnone alwaysinline {
+  %r = add i16 %0, %1
+  ret i16 %r
+}
+
+define i16 @__reduce_add_int16(<16 x i16>) nounwind readnone alwaysinline {
+  reduce16(i16, @__add_varying_i16, @__add_uniform_i16)
+}
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; horizontal float ops
+
+declare <8 x float> @llvm.x86.avx.hadd.ps.256(<8 x float>, <8 x float>) nounwind readnone
+
+define float @__reduce_add_float(<16 x float>) nounwind readonly alwaysinline {
+  %va = shufflevector <16 x float> %0, <16 x float> undef,
+          <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  %vb = shufflevector <16 x float> %0, <16 x float> undef,
+          <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+  %v1 = call <8 x float> @llvm.x86.avx.hadd.ps.256(<8 x float> %va, <8 x float> %vb)
+  %v2 = call <8 x float> @llvm.x86.avx.hadd.ps.256(<8 x float> %v1, <8 x float> %v1)
+  %v3 = call <8 x float> @llvm.x86.avx.hadd.ps.256(<8 x float> %v2, <8 x float> %v2)
+  %scalar1 = extractelement <8 x float> %v3, i32 0
+  %scalar2 = extractelement <8 x float> %v3, i32 4
+  %sum = fadd float %scalar1, %scalar2
+  ret float %sum
+}
+
+define float @__reduce_min_float(<16 x float>) nounwind readnone alwaysinline {
+  reduce16(float, @__min_varying_float, @__min_uniform_float)
+}
+
+define float @__reduce_max_float(<16 x float>) nounwind readnone alwaysinline {
+  reduce16(float, @__max_varying_float, @__max_uniform_float)
+}
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; horizontal int32 ops
+
+define internal <16 x i32> @__add_varying_int32(<16 x i32>,
+                                       <16 x i32>) nounwind readnone alwaysinline {
+  %s = add <16 x i32> %0, %1
+  ret <16 x i32> %s
+}
+
+define internal i32 @__add_uniform_int32(i32, i32) nounwind readnone alwaysinline {
+  %s = add i32 %0, %1
+  ret i32 %s
+}
+
+define i32 @__reduce_add_int32(<16 x i32>) nounwind readnone alwaysinline {
+  reduce16(i32, @__add_varying_int32, @__add_uniform_int32)
+}
+
+define i32 @__reduce_min_int32(<16 x i32>) nounwind readnone alwaysinline {
+  reduce16(i32, @__min_varying_int32, @__min_uniform_int32)
+}
+
+define i32 @__reduce_max_int32(<16 x i32>) nounwind readnone alwaysinline {
+  reduce16(i32, @__max_varying_int32, @__max_uniform_int32)
+}
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; horizontal uint32 ops
+
+define i32 @__reduce_min_uint32(<16 x i32>) nounwind readnone alwaysinline {
+  reduce16(i32, @__min_varying_uint32, @__min_uniform_uint32)
+}
+
+define i32 @__reduce_max_uint32(<16 x i32>) nounwind readnone alwaysinline {
+  reduce16(i32, @__max_varying_uint32, @__max_uniform_uint32)
+}
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; horizontal double ops
+
+declare <4 x double> @llvm.x86.avx.hadd.pd.256(<4 x double>, <4 x double>) nounwind readnone
+
+define double @__reduce_add_double(<16 x double>) nounwind readonly alwaysinline {
+  %va = shufflevector <16 x double> %0, <16 x double> undef,
+         <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %vb = shufflevector <16 x double> %0, <16 x double> undef,
+         <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+  %vc = shufflevector <16 x double> %0, <16 x double> undef,
+         <4 x i32> <i32 8, i32 9, i32 10, i32 11>
+  %vd = shufflevector <16 x double> %0, <16 x double> undef,
+         <4 x i32> <i32 12, i32 13, i32 14, i32 15>
+  %vab = fadd <4 x double> %va, %vb
+  %vcd = fadd <4 x double> %vc, %vd
+
+  %sum0 = call <4 x double> @llvm.x86.avx.hadd.pd.256(<4 x double> %vab, <4 x double> %vcd)
+  %sum1 = call <4 x double> @llvm.x86.avx.hadd.pd.256(<4 x double> %sum0, <4 x double> %sum0)
+  %final0 = extractelement <4 x double> %sum1, i32 0
+  %final1 = extractelement <4 x double> %sum1, i32 2
+  %sum = fadd double %final0, %final1
+  ret double %sum
+}
+
+define double @__reduce_min_double(<16 x double>) nounwind readnone alwaysinline {
+  reduce16(double, @__min_varying_double, @__min_uniform_double)
+}
+
+define double @__reduce_max_double(<16 x double>) nounwind readnone alwaysinline {
+  reduce16(double, @__max_varying_double, @__max_uniform_double)
+}
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; horizontal int64 ops
+
+define internal <16 x i64> @__add_varying_int64(<16 x i64>,
+                                                <16 x i64>) nounwind readnone alwaysinline {
+  %s = add <16 x i64> %0, %1
+  ret <16 x i64> %s
+}
+
+define internal i64 @__add_uniform_int64(i64, i64) nounwind readnone alwaysinline {
+  %s = add i64 %0, %1
+  ret i64 %s
+}
+
+define i64 @__reduce_add_int64(<16 x i64>) nounwind readnone alwaysinline {
+  reduce16(i64, @__add_varying_int64, @__add_uniform_int64)
+}
+
+
+define i64 @__reduce_min_int64(<16 x i64>) nounwind readnone alwaysinline {
+  reduce16(i64, @__min_varying_int64, @__min_uniform_int64)
+}
+
+
+define i64 @__reduce_max_int64(<16 x i64>) nounwind readnone alwaysinline {
+  reduce16(i64, @__max_varying_int64, @__max_uniform_int64)
+}
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; horizontal uint64 ops
+
+define i64 @__reduce_min_uint64(<16 x i64>) nounwind readnone alwaysinline {
+  reduce16(i64, @__min_varying_uint64, @__min_uniform_uint64)
+}
+
+
+define i64 @__reduce_max_uint64(<16 x i64>) nounwind readnone alwaysinline {
+  reduce16(i64, @__max_varying_uint64, @__max_uniform_uint64)
+}
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; unaligned loads/loads+broadcasts
