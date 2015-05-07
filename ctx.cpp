@@ -349,13 +349,13 @@ FunctionEmitContext::FunctionEmitContext(Function *func, Symbol *funSym,
 #elif defined(LLVM_3_4) || defined(LLVM_3_5) || defined(LLVM_3_6)
         llvm::DIScope scope = llvm::DIScope(m->diCompileUnit);
 #else // LLVM 3.7+
-        llvm::MDScope *scope = m->diCompileUnit;
+        llvm::DIScope *scope = m->diCompileUnit;
 #endif
 #if defined(LLVM_3_2) || defined(LLVM_3_3) || defined(LLVM_3_4) || defined(LLVM_3_5) || defined(LLVM_3_6)
         llvm::DIType diSubprogramType;
         AssertPos(currentPos, scope.Verify());
 #else // LLVM 3.7+
-        llvm::MDType *diSubprogramType = NULL;
+        llvm::DIType *diSubprogramType = NULL;
 #endif
 
         const FunctionType *functionType = function->GetType();
@@ -378,10 +378,10 @@ FunctionEmitContext::FunctionEmitContext(Function *func, Symbol *funSym,
             static_cast<llvm::DICompositeType>(diSubprogramType);
         int flags = llvm::DIDescriptor::FlagPrototyped;
 #else // LLVM 3.7+
-        Assert(llvm::isa<llvm::MDCompositeTypeBase>(diSubprogramType));
-        llvm::MDSubroutineType *diSubprogramType_n =
-            llvm::cast<llvm::MDSubroutineType>(getDICompositeType(diSubprogramType));
-        int flags = llvm::DebugNode::FlagPrototyped;
+        Assert(llvm::isa<llvm::DICompositeTypeBase>(diSubprogramType));
+        llvm::DISubroutineType *diSubprogramType_n =
+            llvm::cast<llvm::DISubroutineType>(getDICompositeType(diSubprogramType));
+        int flags = llvm::DINode::FlagPrototyped;
 #endif
 
         std::string mangledName = llvmFunction->getName();
@@ -1657,7 +1657,7 @@ FunctionEmitContext::AddDebugPos(llvm::Value *value, const SourcePos *pos,
 #if defined(LLVM_3_2) || defined(LLVM_3_3) || defined(LLVM_3_4) || defined(LLVM_3_5) || defined(LLVM_3_6)
                                  llvm::DIScope *scope) {
 #else // LLVM 3.7++
-                                 llvm::MDScope *scope) {
+                                 llvm::DIScope *scope) {
 #endif
     llvm::Instruction *inst = llvm::dyn_cast<llvm::Instruction>(value);
     if (inst != NULL && m->diBuilder) {
@@ -1685,8 +1685,8 @@ FunctionEmitContext::StartScope() {
         llvm::DIScope parentScope;
         llvm::DILexicalBlock lexicalBlock;
 #else // LLVM 3.7++
-        llvm::MDScope *parentScope;
-        llvm::MDLexicalBlock *lexicalBlock;
+        llvm::DIScope *parentScope;
+        llvm::DILexicalBlock *lexicalBlock;
 #endif
         if (debugScopes.size() > 0)
             parentScope = debugScopes.back();
@@ -1710,7 +1710,7 @@ FunctionEmitContext::StartScope() {
         AssertPos(currentPos, lexicalBlock.Verify());
         debugScopes.push_back(lexicalBlock);
 #else // LLVM 3.7+
-        debugScopes.push_back(llvm::cast<llvm::MDLexicalBlockBase>(lexicalBlock));
+        debugScopes.push_back(llvm::cast<llvm::DILexicalBlockBase>(lexicalBlock));
 #endif
     }
 }
@@ -1728,7 +1728,7 @@ FunctionEmitContext::EndScope() {
 #if defined(LLVM_3_2) || defined(LLVM_3_3) || defined(LLVM_3_4) || defined(LLVM_3_5) || defined(LLVM_3_6)
 llvm::DIScope
 #else // LLVM 3.7+
-llvm::MDScope*
+llvm::DIScope*
 #endif
 FunctionEmitContext::GetDIScope() const {
     AssertPos(currentPos, debugScopes.size() > 0);
@@ -1747,9 +1747,9 @@ FunctionEmitContext::EmitVariableDebugInfo(Symbol *sym) {
     AssertPos(currentPos, diType.Verify());
     llvm::DIVariable var =
 #else // LLVM 3.7+
-    llvm::MDScope *scope = GetDIScope();
-    llvm::MDType *diType = sym->type->GetDIType(scope);
-    llvm::MDLocalVariable *var =
+    llvm::DIScope *scope = GetDIScope();
+    llvm::DIType *diType = sym->type->GetDIType(scope);
+    llvm::DILocalVariable *var =
 #endif
         m->diBuilder->createLocalVariable(llvm::dwarf::DW_TAG_auto_variable,
                                           scope,
@@ -1791,9 +1791,9 @@ FunctionEmitContext::EmitFunctionParameterDebugInfo(Symbol *sym, int argNum) {
     AssertPos(currentPos, diType.Verify());
     llvm::DIVariable var =
 #else // LLVM 3.7+
-    llvm::MDScope *scope = diSubprogram;
-    llvm::MDType *diType = sym->type->GetDIType(scope);
-    llvm::MDLocalVariable *var =
+    llvm::DIScope *scope = diSubprogram;
+    llvm::DIType *diType = sym->type->GetDIType(scope);
+    llvm::DILocalVariable *var =
 #endif
         m->diBuilder->createLocalVariable(llvm::dwarf::DW_TAG_arg_variable,
                                           scope,
