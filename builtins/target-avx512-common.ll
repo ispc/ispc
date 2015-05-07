@@ -244,23 +244,30 @@ declare i64 @__reduce_max_uint64(<WIDTH x i64>) nounwind readnone
 declare <WIDTH x i8> @__masked_load_i8(i8 * nocapture, <WIDTH x i1> %mask) nounwind readonly
 declare <WIDTH x i16> @__masked_load_i16(i8 * nocapture, <WIDTH x i1> %mask) nounwind readonly
 declare <WIDTH x i32> @__masked_load_i32(i8 * nocapture, <WIDTH x i1> %mask) nounwind readonly
-declare <WIDTH x float> @__masked_load_float(i8 * nocapture, <WIDTH x i1> %mask) nounwind readonly
 declare <WIDTH x i64> @__masked_load_i64(i8 * nocapture, <WIDTH x i1> %mask) nounwind readonly
-declare <WIDTH x double> @__masked_load_double(i8 * nocapture, <WIDTH x i1> %mask) nounwind readonly
 
-declare void @__masked_store_i8(<WIDTH x i8>* nocapture, <WIDTH x i8>, 
-                                <WIDTH x i1>) nounwind 
-declare void @__masked_store_i16(<WIDTH x i16>* nocapture, <WIDTH x i16>, 
-                                 <WIDTH x i1>) nounwind 
-declare void @__masked_store_i32(<WIDTH x i32>* nocapture, <WIDTH x i32>, 
-                                 <WIDTH x i1>) nounwind 
-declare void @__masked_store_float(<WIDTH x float>* nocapture, <WIDTH x float>, 
-                                   <WIDTH x i1>) nounwind 
-declare void @__masked_store_i64(<WIDTH x i64>* nocapture, <WIDTH x i64>,
-                                 <WIDTH x i1> %mask) nounwind 
-declare void @__masked_store_double(<WIDTH x double>* nocapture, <WIDTH x double>,
-                                    <WIDTH x i1> %mask) nounwind 
+masked_load_float_double()
 
+gen_masked_store(i8)
+gen_masked_store(i16)
+gen_masked_store(i32)
+gen_masked_store(i64)
+
+define void @__masked_store_float(<WIDTH x float> * nocapture, <WIDTH x float>,
+                                  <WIDTH x MASK>) nounwind alwaysinline {
+  %ptr = bitcast <WIDTH x float> * %0 to <WIDTH x i32> *
+  %val = bitcast <WIDTH x float> %1 to <WIDTH x i32>
+  call void @__masked_store_i32(<WIDTH x i32> * %ptr, <WIDTH x i32> %val, <WIDTH x MASK> %2)
+  ret void
+}
+
+define void @__masked_store_double(<WIDTH x double> * nocapture, <WIDTH x double>,
+                                   <WIDTH x MASK>) nounwind alwaysinline {
+  %ptr = bitcast <WIDTH x double> * %0 to <WIDTH x i64> *
+  %val = bitcast <WIDTH x double> %1 to <WIDTH x i64>
+  call void @__masked_store_i64(<WIDTH x i64> * %ptr, <WIDTH x i64> %val, <WIDTH x MASK> %2)
+  ret void
+}
 
 define void @__masked_store_blend_i8(<WIDTH x i8>* nocapture, <WIDTH x i8>, 
                                      <WIDTH x i1>) nounwind alwaysinline {
