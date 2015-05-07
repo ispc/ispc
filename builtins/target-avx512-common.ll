@@ -155,6 +155,7 @@ define <16 x double> @__ceil_varying_double(<16 x double>) nounwind readonly alw
   round4to16double(%0, 10)
 }
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; min/max
 
 int64minmax()
@@ -274,26 +275,135 @@ define <16 x double> @__max_varying_double(<16 x double>, <16 x double>) nounwin
 }
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; sqrt/rsqrt/rcp
+;; rsqrt
 
-declare float @__rsqrt_uniform_float(float) nounwind readnone 
-declare float @__rcp_uniform_float(float) nounwind readnone 
-declare float @__sqrt_uniform_float(float) nounwind readnone 
-declare <WIDTH x float> @__rcp_varying_float(<WIDTH x float>) nounwind readnone 
-declare <WIDTH x float> @__rsqrt_varying_float(<WIDTH x float>) nounwind readnone 
+declare <4 x float> @llvm.x86.sse.rsqrt.ss(<4 x float>) nounwind readnone
 
-declare <WIDTH x float> @__sqrt_varying_float(<WIDTH x float>) nounwind readnone 
+define float @__rsqrt_uniform_float(float) nounwind readonly alwaysinline {
+  ;  uniform float is = extract(__rsqrt_u(v), 0);
+  %v = insertelement <4 x float> undef, float %0, i32 0
+  %vis = call <4 x float> @llvm.x86.sse.rsqrt.ss(<4 x float> %v)
+  %is = extractelement <4 x float> %vis, i32 0
 
-declare double @__sqrt_uniform_double(double) nounwind readnone
-declare <WIDTH x double> @__sqrt_varying_double(<WIDTH x double>) nounwind readnone
+  ; Newton-Raphson iteration to improve precision
+  ;  return 0.5 * is * (3. - (v * is) * is);
+  %v_is = fmul float %0, %is
+  %v_is_is = fmul float %v_is, %is
+  %three_sub = fsub float 3., %v_is_is
+  %is_mul = fmul float %is, %three_sub
+  %half_scale = fmul float 0.5, %is_mul
+  ret float %half_scale
+}
 
+declare <8 x float> @llvm.x86.avx.rsqrt.ps.256(<8 x float>) nounwind readnone
+
+define <16 x float> @__rsqrt_varying_float(<16 x float> %v) nounwind readonly alwaysinline {
+  ;  float is = __rsqrt_v(v);
+  unary8to16(is, float, @llvm.x86.avx.rsqrt.ps.256, %v)
+  ;  return 0.5 * is * (3. - (v * is) * is);
+  %v_is = fmul <16 x float> %v, %is
+  %v_is_is = fmul <16 x float> %v_is, %is
+  %three_sub = fsub <16 x float> <float 3., float 3., float 3., float 3.,
+                                  float 3., float 3., float 3., float 3.,
+                                  float 3., float 3., float 3., float 3.,
+                                  float 3., float 3., float 3., float 3.>, %v_is_is
+  %is_mul = fmul <16 x float> %is, %three_sub
+  %half_scale = fmul <16 x float> <float 0.5, float 0.5, float 0.5, float 0.5,
+                                   float 0.5, float 0.5, float 0.5, float 0.5,
+                                   float 0.5, float 0.5, float 0.5, float 0.5,
+                                   float 0.5, float 0.5, float 0.5, float 0.5>, %is_mul
+  ret <16 x float> %half_scale
+}
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; rcp
+
+declare <4 x float> @llvm.x86.sse.rcp.ss(<4 x float>) nounwind readnone
+
+define float @__rcp_uniform_float(float) nounwind readonly alwaysinline {
+  ; do the rcpss call
+  ;    uniform float iv = extract(__rcp_u(v), 0);
+  ;    return iv * (2. - v * iv);
+  %vecval = insertelement <4 x float> undef, float %0, i32 0
+  %call = call <4 x float> @llvm.x86.sse.rcp.ss(<4 x float> %vecval)
+  %scall = extractelement <4 x float> %call, i32 0
+
+  ; do one N-R iteration to improve precision, as above
+  %v_iv = fmul float %0, %scall
+  %two_minus = fsub float 2., %v_iv
+  %iv_mul = fmul float %scall, %two_minus
+  ret float %iv_mul
+}
+
+declare <8 x float> @llvm.x86.avx.rcp.ps.256(<8 x float>) nounwind readnone
+
+define <16 x float> @__rcp_varying_float(<16 x float>) nounwind readonly alwaysinline {
+  ;  float iv = __rcp_v(v);
+  ;  return iv * (2. - v * iv);
+
+  unary8to16(call, float, @llvm.x86.avx.rcp.ps.256, %0)
+  ; do one N-R iteration
+  %v_iv = fmul <16 x float> %0, %call
+  %two_minus = fsub <16 x float> <float 2., float 2., float 2., float 2.,
+                                  float 2., float 2., float 2., float 2.,
+                                  float 2., float 2., float 2., float 2.,
+                                  float 2., float 2., float 2., float 2.>, %v_iv
+  %iv_mul = fmul <16 x float> %call, %two_minus
+  ret <16 x float> %iv_mul
+}
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; sqrt
+
+declare <4 x float> @llvm.x86.sse.sqrt.ss(<4 x float>) nounwind readnone
+
+define float @__sqrt_uniform_float(float) nounwind readonly alwaysinline {
+  sse_unary_scalar(ret, 4, float, @llvm.x86.sse.sqrt.ss, %0)
+  ret float %ret
+}
+
+declare <8 x float> @llvm.x86.avx.sqrt.ps.256(<8 x float>) nounwind readnone
+
+define <16 x float> @__sqrt_varying_float(<16 x float>) nounwind readonly alwaysinline {
+  unary8to16(call, float, @llvm.x86.avx.sqrt.ps.256, %0)
+  ret <16 x float> %call
+}
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; double precision sqrt
+
+declare <2 x double> @llvm.x86.sse2.sqrt.sd(<2 x double>) nounwind readnone
+
+define double @__sqrt_uniform_double(double) nounwind alwaysinline {
+  sse_unary_scalar(ret, 2, double, @llvm.x86.sse2.sqrt.sd, %0)
+  ret double %ret
+}
+
+declare <4 x double> @llvm.x86.avx.sqrt.pd.256(<4 x double>) nounwind readnone
+
+define <16 x double> @__sqrt_varying_double(<16 x double>) nounwind alwaysinline {
+  unary4to16(ret, double, @llvm.x86.avx.sqrt.pd.256, %0)
+  ret <16 x double> %ret
+}
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; bit ops
 
-declare i32 @__popcnt_int32(i32) nounwind readnone
-declare i64 @__popcnt_int64(i64) nounwind readnone 
+declare i32 @llvm.ctpop.i32(i32) nounwind readnone
 
+define i32 @__popcnt_int32(i32) nounwind readonly alwaysinline {
+  %call = call i32 @llvm.ctpop.i32(i32 %0)
+  ret i32 %call
+}
+
+declare i64 @llvm.ctpop.i64(i64) nounwind readnone
+
+define i64 @__popcnt_int64(i64) nounwind readonly alwaysinline {
+  %call = call i64 @llvm.ctpop.i64(i64 %0)
+  ret i64 %call
+}
 ctlztz()
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; FIXME: need either to wire these up to the 8-wide SVML entrypoints,
 ; or, use the macro to call the 4-wide ones twice with our 8-wide
 ; vectors...
