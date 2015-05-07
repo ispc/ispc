@@ -185,10 +185,29 @@ svml_stubs(double,d,WIDTH)
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; reductions
 
-declare i64 @__movmsk(<WIDTH x i1>) nounwind readnone 
-declare i1 @__any(<WIDTH x i1>) nounwind readnone 
-declare i1 @__all(<WIDTH x i1>) nounwind readnone 
-declare i1 @__none(<WIDTH x i1>) nounwind readnone 
+define i64 @__movmsk(<WIDTH x i1>) nounwind readnone alwaysinline {
+  %intmask = bitcast <WIDTH x i1> %0 to i16
+  %res = zext i16 %intmask to i64
+  ret i64 %res
+}
+
+define i1 @__any(<WIDTH x i1>) nounwind readnone alwaysinline {
+  %intmask = bitcast <WIDTH x i1> %0 to i16
+  %res = icmp ne i16 %intmask, 0
+  ret i1 %res
+}
+
+define i1 @__all(<WIDTH x i1>) nounwind readnone alwaysinline {
+  %intmask = bitcast <WIDTH x i1> %0 to i16
+  %res = icmp eq i16 %intmask, 65535
+  ret i1 %res
+}
+
+define i1 @__none(<WIDTH x i1>) nounwind readnone alwaysinline {
+  %intmask = bitcast <WIDTH x i1> %0 to i16
+  %res = icmp eq i16 %intmask, 0
+  ret i1 %res
+}
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; horizontal int8/16 ops
