@@ -897,7 +897,7 @@ Target::Target(const char *arch, const char *cpu, const char *isa, bool pic, boo
         // For MIC it is set to true due to performance reasons. The option should be tested.
         this->m_hasTrigonometry = false;
         this->m_hasRsqrtd = this->m_hasRcpd = false;
-        this->m_hasVecPrefetch = true;
+        this->m_hasVecPrefetch = false;
         CPUfromISA = CPU_KNL;
     }
 #endif
