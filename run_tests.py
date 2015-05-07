@@ -555,7 +555,7 @@ def verify():
               "sse4-i8x16", "avx1-i32x4" "avx1-i32x8", "avx1-i32x16", "avx1-i64x4", "avx1.1-i32x8",
               "avx1.1-i32x16", "avx1.1-i64x4", "avx2-i32x8", "avx2-i32x16", "avx2-i64x4",
               "generic-1", "generic-4", "generic-8",
-              "generic-16", "generic-32", "generic-64", "knc", "knl"]]
+              "generic-16", "generic-32", "generic-64", "knc", "knl", "knl-avx512"]]
     for i in range (0,len(f_lines)):
         if f_lines[i][0] == "%":
             continue
@@ -692,6 +692,9 @@ def run_tests(options1, args, print_version):
     ispc_root = "."
 
     # checks the required environment otherwise prints an error message
+    if ((options.target == "knl-avx512") and (options.wrapexe == "")):
+        options.wrapexe = "sde -knl -- "        
+
     if (options.target == "knc"):
         options.wrapexe = "micnativeloadex"
         PATH_dir = string.split(os.getenv("PATH"), os.pathsep)

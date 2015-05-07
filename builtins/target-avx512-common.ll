@@ -119,12 +119,44 @@ declare double @__round_uniform_double(double) nounwind readnone
 declare double @__floor_uniform_double(double) nounwind readnone 
 declare double @__ceil_uniform_double(double) nounwind readnone 
 
-declare <WIDTH x float> @__round_varying_float(<WIDTH x float>) nounwind readnone 
-declare <WIDTH x float> @__floor_varying_float(<WIDTH x float>) nounwind readnone 
-declare <WIDTH x float> @__ceil_varying_float(<WIDTH x float>) nounwind readnone 
-declare <WIDTH x double> @__round_varying_double(<WIDTH x double>) nounwind readnone 
-declare <WIDTH x double> @__floor_varying_double(<WIDTH x double>) nounwind readnone 
-declare <WIDTH x double> @__ceil_varying_double(<WIDTH x double>) nounwind readnone 
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; rounding floats
+
+declare <8 x float> @llvm.x86.avx.round.ps.256(<8 x float>, i32) nounwind readnone
+define <16 x float> @__round_varying_float(<16 x float>) nounwind readonly alwaysinline {
+  ; roundps, round mode nearest 0b00 | don't signal precision exceptions 0b1000 = 8
+  round8to16(%0, 8)
+}
+
+define <16 x float> @__floor_varying_float(<16 x float>) nounwind readonly alwaysinline {
+  ; roundps, round down 0b01 | don't signal precision exceptions 0b1001 = 9
+  round8to16(%0, 9)
+}
+
+define <16 x float> @__ceil_varying_float(<16 x float>) nounwind readonly alwaysinline {
+  ; roundps, round up 0b10 | don't signal precision exceptions 0b1010 = 10
+  round8to16(%0, 10)
+}
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; rounding doubles
+
+declare <4 x double> @llvm.x86.avx.round.pd.256(<4 x double>, i32) nounwind readnone
+define <16 x double> @__round_varying_double(<16 x double>) nounwind readonly alwaysinline {
+  round4to16double(%0, 8)
+}
+
+define <16 x double> @__floor_varying_double(<16 x double>) nounwind readonly alwaysinline {
+  round4to16double(%0, 9)
+}
+
+define <16 x double> @__ceil_varying_double(<16 x double>) nounwind readonly alwaysinline {
+  round4to16double(%0, 10)
+}
+
+
+
 
 ;; min/max
 
