@@ -155,9 +155,6 @@ define <16 x double> @__ceil_varying_double(<16 x double>) nounwind readonly alw
   round4to16double(%0, 10)
 }
 
-
-
-
 ;; min/max
 
 int64minmax()
@@ -496,32 +493,45 @@ define void @__masked_store_blend_double(<WIDTH x double>* nocapture,
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; gather/scatter
 
-define(`gather_scatter', `
-declare <WIDTH x $1> @__gather_base_offsets32_$1(i8 * nocapture, i32, <WIDTH x i32>,
-                                                 <WIDTH x i1>) nounwind readonly 
-declare <WIDTH x $1> @__gather_base_offsets64_$1(i8 * nocapture, i32, <WIDTH x i64>,
-                                                  <WIDTH x i1>) nounwind readonly 
-declare <WIDTH x $1> @__gather32_$1(<WIDTH x i32>, 
-                                    <WIDTH x i1>) nounwind readonly 
-declare <WIDTH x $1> @__gather64_$1(<WIDTH x i64>, 
-                                    <WIDTH x i1>) nounwind readonly 
+define(`scatterbo32_64', `
+define void @__scatter_base_offsets32_$1(i8* %ptr, i32 %scale, <WIDTH x i32> %offsets,
+                                         <WIDTH x $1> %vals, <WIDTH x i1> %mask) nounwind {
+  call void @__scatter_factored_base_offsets32_$1(i8* %ptr, <16 x i32> %offsets,
+      i32 %scale, <16 x i32> zeroinitializer, <16 x $1> %vals, <WIDTH x i1> %mask)
+  ret void
+}
 
-declare void @__scatter_base_offsets32_$1(i8* nocapture, i32, <WIDTH x i32>,
-                                          <WIDTH x $1>, <WIDTH x i1>) nounwind 
-declare void @__scatter_base_offsets64_$1(i8* nocapture, i32, <WIDTH x i64>,
-                                          <WIDTH x $1>, <WIDTH x i1>) nounwind 
-declare void @__scatter32_$1(<WIDTH x i32>, <WIDTH x $1>,
-                             <WIDTH x i1>) nounwind 
-declare void @__scatter64_$1(<WIDTH x i64>, <WIDTH x $1>,
-                              <WIDTH x i1>) nounwind 
+define void @__scatter_base_offsets64_$1(i8* %ptr, i32 %scale, <WIDTH x i64> %offsets,
+                                         <WIDTH x $1> %vals, <WIDTH x i1> %mask) nounwind {
+  call void @__scatter_factored_base_offsets64_$1(i8* %ptr, <16 x i64> %offsets,
+      i32 %scale, <16 x i64> zeroinitializer, <16 x $1> %vals, <WIDTH x i1> %mask)
+  ret void
+} 
 ')
 
-gather_scatter(i8)
-gather_scatter(i16)
-gather_scatter(i32)
-gather_scatter(float)
-gather_scatter(i64)
-gather_scatter(double)
+
+gen_gather(i8)
+gen_gather(i16)
+gen_gather(i32)
+gen_gather(i64)
+gen_gather(float)
+gen_gather(double)
+
+scatterbo32_64(i8)
+scatterbo32_64(i16)
+scatterbo32_64(i32)
+scatterbo32_64(i64)
+scatterbo32_64(float)
+scatterbo32_64(double)
+
+gen_scatter(i8)
+gen_scatter(i16)
+gen_scatter(i32)
+gen_scatter(i64)
+gen_scatter(float)
+gen_scatter(double)
+
+
 
 packed_load_and_store()
 
