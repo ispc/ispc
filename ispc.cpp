@@ -893,10 +893,10 @@ Target::Target(const char *arch, const char *cpu, const char *isa, bool pic, boo
         this->m_hasHalf = true;
         this->m_hasRand = true;
         this->m_hasGather = this->m_hasScatter = true;
-        this->m_hasTranscendentals = true;
+        this->m_hasTranscendentals = false;
         // For MIC it is set to true due to performance reasons. The option should be tested.
-        this->m_hasTrigonometry = true;
-        this->m_hasRsqrtd = this->m_hasRcpd = true;
+        this->m_hasTrigonometry = false;
+        this->m_hasRsqrtd = this->m_hasRcpd = false;
         this->m_hasVecPrefetch = true;
         CPUfromISA = CPU_KNL;
     }

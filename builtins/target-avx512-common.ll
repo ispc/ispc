@@ -105,13 +105,25 @@ define i16 @__float_to_half_uniform(float %v) nounwind readnone {
 }
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; math
+;; fast math mode
+
+declare void @llvm.x86.sse.stmxcsr(i8 *) nounwind
+declare void @llvm.x86.sse.ldmxcsr(i8 *) nounwind
+
+define void @__fastmath() nounwind alwaysinline {
+  %ptr = alloca i32
+  %ptr8 = bitcast i32 * %ptr to i8 *
+  call void @llvm.x86.sse.stmxcsr(i8 * %ptr8)
+  %oldval = load PTR_OP_ARGS(`i32 ') %ptr
+
+  ; turn on DAZ (64)/FTZ (32768) -> 32832
+  %update = or i32 %oldval, 32832
+  store i32 %update, i32 *%ptr
+  call void @llvm.x86.sse.ldmxcsr(i8 * %ptr8)
+  ret void
+}
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; rounding floats
-
-declare void @__fastmath() nounwind 
-
 ;; round/floor/ceil
 
 declare <4 x float> @llvm.x86.sse41.round.ss(<4 x float>, <4 x float>, i32) nounwind readnone
@@ -815,5 +827,3 @@ declare_nvptx()
 rsqrtd_decl()
 rcpd_decl()
 
-transcendetals_decl()
-trigonometry_decl()
