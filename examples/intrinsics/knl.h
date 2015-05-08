@@ -689,11 +689,11 @@ template <> FORCEINLINE __vec16_i32 __smear_i32<__vec16_i32>(int32_t i) {
   return _mm512_set1_epi32(i);
 }
 
-static const __vec16_i32 __ispc_one = __smear_i32<__vec16_i32>(1);
-static const __vec16_i32 __ispc_zero = __smear_i32<__vec16_i32>(0);
-static const __vec16_i32 __ispc_thirty_two = __smear_i32<__vec16_i32>(32);
-static const __vec16_i32 __ispc_ffffffff = __smear_i32<__vec16_i32>(-1);
-static const __vec16_i32 __ispc_stride1(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15);
+#define __ispc_one (__smear_i32<__vec16_i32>(1))
+#define __ispc_zero (__smear_i32<__vec16_i32>(0))
+#define __ispc_thirty_two (__smear_i32<__vec16_i32>(32))
+#define __ispc_ffffffff (__smear_i32<__vec16_i32>(-1))
+#define __ispc_stride1 (__vec16_i32 (0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15))
 
 template <class RetVecType> static RetVecType __setzero_i32();
 template <> FORCEINLINE __vec16_i32 __setzero_i32<__vec16_i32>() {
