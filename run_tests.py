@@ -270,6 +270,9 @@ def run_test(testname):
                 elif (options.target == "knl"):
                     cc_cmd = "%s -O2 -I. %s %s test_static.cpp -DTEST_SIG=%d %s -o %s" % \
                          (options.compiler_exe, gcc_arch, "-xMIC-AVX512", match, obj_name, exe_name)
+                elif (options.target == "knl-avx512"):
+                     cc_cmd = "%s -O2 -I. %s %s test_static.cpp -DTEST_SIG=%d %s -o %s" % \
+                         (options.compiler_exe, gcc_arch, "-march=knl", match, obj_name, exe_name)
                 else:
                     cc_cmd = "%s -O2 -I. %s %s test_static.cpp -DTEST_SIG=%d %s -o %s" % \
                          (options.compiler_exe, gcc_arch, gcc_isa, match, obj_name, exe_name)                    
