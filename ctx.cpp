@@ -1601,7 +1601,7 @@ FunctionEmitContext::I1VecToBoolVec(llvm::Value *b) {
 
 static llvm::Value *
 lGetStringAsValue(llvm::BasicBlock *bblock, const char *s) {
-    llvm::Constant *sConstant = llvm::ConstantDataArray::getString(*g->ctx, s, false);
+    llvm::Constant *sConstant = llvm::ConstantDataArray::getString(*g->ctx, s, true);
     std::string var_name = "_";
     var_name = var_name + s;
     llvm::Value *sPtr = new llvm::GlobalVariable(*m->module, sConstant->getType(),
