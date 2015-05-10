@@ -3145,6 +3145,11 @@ Module::CompileAndOutput(const char *srcFile,
                   "an intermediate temporary file.");
             return 1;
         }
+        if (cpu != NULL) {
+            Error(SourcePos(), "Illegal to specify cpu type when compiling "
+                  "for multiple targets.");
+            return 1;
+        }
 
         // The user supplied multiple targets
         std::vector<std::string> targets = lExtractTargets(target);
