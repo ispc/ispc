@@ -546,8 +546,13 @@ Target::Target(const char *arch, const char *cpu, const char *isa, bool pic, boo
 
     // Make sure the target architecture is a known one; print an error
     // with the valid ones otherwise.
+#if !defined(LLVM_3_2) && !defined(LLVM_3_3) && !defined(LLVM_3_4) && !defined(LLVM_3_5) && !defined(LLVM_3_6) // 3.7 +
+    for (llvm::TargetRegistry::iterator iter = llvm::TargetRegistry::targets().begin();
+         iter != llvm::TargetRegistry::targets().end(); ++iter) {
+#else
     for (llvm::TargetRegistry::iterator iter = llvm::TargetRegistry::begin();
          iter != llvm::TargetRegistry::end(); ++iter) {
+#endif
         if (std::string(arch) == iter->getName()) {
             this->m_target = &*iter;
             break;
@@ -556,8 +561,13 @@ Target::Target(const char *arch, const char *cpu, const char *isa, bool pic, boo
     if (this->m_target == NULL) {
         fprintf(stderr, "Invalid architecture \"%s\"\nOptions: ", arch);
         llvm::TargetRegistry::iterator iter;
+#if !defined(LLVM_3_2) && !defined(LLVM_3_3) && !defined(LLVM_3_4) && !defined(LLVM_3_5) && !defined(LLVM_3_6) // 3.7 +
+        for (iter = llvm::TargetRegistry::targets().begin();
+             iter != llvm::TargetRegistry::targets().end(); ++iter)
+#else
         for (iter = llvm::TargetRegistry::begin();
              iter != llvm::TargetRegistry::end(); ++iter)
+#endif
             fprintf(stderr, "%s ", iter->getName());
         fprintf(stderr, "\n");
         error = true;
