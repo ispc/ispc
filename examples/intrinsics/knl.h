@@ -2536,6 +2536,24 @@ static FORCEINLINE __vec16_f __ceil_varying_float(__vec16_f v) {
   return _mm512_ceil_ps(v);
 }
 
+static FORCEINLINE __vec16_d __round_varying_double(__vec16_d v) {
+  __m512d tmp1 =_mm512_cvtepi32_pd(_mm512_cvtpd_epi32(v.v_lo));
+  __m512d tmp2 =_mm512_cvtepi32_pd(_mm512_cvtpd_epi32(v.v_hi));
+  return __vec16_d (tmp1, tmp2);
+}
+
+static FORCEINLINE __vec16_d __floor_varying_double(__vec16_d v) {
+  __m512d tmp1 = _mm512_floor_pd(v.v_lo);
+  __m512d tmp2 = _mm512_floor_pd(v.v_hi);
+  return __vec16_d (tmp1, tmp2);
+}
+
+static FORCEINLINE __vec16_d __ceil_varying_double(__vec16_d v) {
+  __m512d tmp1 = _mm512_ceil_pd(v.v_lo);
+  __m512d tmp2 = _mm512_ceil_pd(v.v_hi);
+  return __vec16_d (tmp1, tmp2);
+}
+
 // min/max
 
 static FORCEINLINE float __min_uniform_float(float a, float b) { return (a<b) ? a : b; }
