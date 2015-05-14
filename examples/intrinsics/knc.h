@@ -2675,6 +2675,27 @@ static FORCEINLINE __vec16_f __ceil_varying_float(__vec16_f v) {
   return _mm512_ceil_ps(v);
 }
 
+static FORCEINLINE __vec16_d __round_varying_double(__vec16_d v) {
+  double tmp [16];
+  for (int i = 0; i < 16; i++)
+    tmp [i] = round(v [i]);
+  return __vec16_d (tmp [8],  tmp [9],  tmp [10], tmp [11],
+                    tmp [12], tmp [13], tmp [14], tmp [15],
+                    tmp [0],  tmp [1],  tmp [2],  tmp [3],
+                    tmp [4],  tmp [5],  tmp [6],  tmp [7]);
+}
+
+static FORCEINLINE __vec16_d __floor_varying_double(__vec16_d v) {
+  __m512d tmp1 = _mm512_floor_pd(v.v1);
+  __m512d tmp2 = _mm512_floor_pd(v.v2);
+  return __vec16_d (tmp1, tmp2);
+}
+
+static FORCEINLINE __vec16_d __ceil_varying_double(__vec16_d v) {
+  __m512d tmp1 = _mm512_ceil_pd(v.v1);
+  __m512d tmp2 = _mm512_ceil_pd(v.v2);
+  return __vec16_d (tmp1, tmp2);
+}
 // min/max
 
 static FORCEINLINE float __min_uniform_float(float a, float b) { return (a<b) ? a : b; }
