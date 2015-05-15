@@ -806,9 +806,41 @@ gen_scatter(i64)
 gen_scatter(float)
 gen_scatter(double)
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; packed_load/store
 
+declare <16 x i32> @llvm.x86.avx512.mask.expand.load.d.512(i8* %addr, <16 x i32> %data, i16 %mask)
 
-packed_load_and_store()
+define i32 @__packed_load_active(i32 * %startptr, <16 x i32> * %val_ptr,
+                                 <16 x i1> %full_mask) nounwind alwaysinline {
+  %addr = bitcast i32* %startptr to i8*
+  %data = load PTR_OP_ARGS(`<16 x i32> ') %val_ptr
+  %mask = bitcast <16 x i1> %full_mask to i16
+  %store_val = call <16 x i32> @llvm.x86.avx512.mask.expand.load.d.512(i8* %addr, <16 x i32> %data, i16 %mask)
+  store <16 x i32> %store_val, <16 x i32> * %val_ptr
+  %mask_i32 = zext i16 %mask to i32
+  %res = call i32 @llvm.ctpop.i32(i32 %mask_i32)
+  ret i32 %res
+}
+
+declare void @llvm.x86.avx512.mask.compress.store.d.512(i8* %addr, <16 x i32> %data, i16 %mask)
+
+define i32 @__packed_store_active(i32 * %startptr, <16 x i32> %vals,
+                                   <16 x i1> %full_mask) nounwind alwaysinline {
+  %addr = bitcast i32* %startptr to i8*
+  %mask = bitcast <16 x i1> %full_mask to i16
+  call void @llvm.x86.avx512.mask.compress.store.d.512(i8* %addr, <16 x i32> %vals, i16 %mask)
+  %mask_i32 = zext i16 %mask to i32
+  %res = call i32 @llvm.ctpop.i32(i32 %mask_i32)
+  ret i32 %res
+}
+
+define i32 @__packed_store_active2(i32 * %startptr, <16 x i32> %vals,
+                                   <16 x i1> %full_mask) nounwind alwaysinline {
+  %res = call i32 @__packed_store_active(i32 * %startptr, <16 x i32> %vals,
+                                   <16 x i1> %full_mask)
+  ret i32 %res
+}
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; prefetch
