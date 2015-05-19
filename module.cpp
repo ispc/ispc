@@ -2679,95 +2679,6 @@ struct RewriteGlobalInfo {
     SourcePos pos;
 };
 
-// Grab all of the global value definitions from the module and change them
-// to be declarations; we'll emit a single definition of each global in the
-// final module used with the dispatch functions, so that we don't have
-// multiple definitions of them, one in each of the target-specific output
-// files.
-static void
-lExtractAndRewriteGlobals(llvm::Module *module,
-                          std::vector<RewriteGlobalInfo> *globals) {
-    llvm::Module::global_iterator iter;
-    for (iter = module->global_begin(); iter != module->global_end(); ++iter) {
-        llvm::GlobalVariable *gv = iter;
-        // Is it a global definition?
-        if (gv->getLinkage() == llvm::GlobalValue::ExternalLinkage &&
-            gv->hasInitializer()) {
-            // Turn this into an 'extern 'declaration by clearing its
-            // initializer.
-            llvm::Constant *init = gv->getInitializer();
-            gv->setInitializer(NULL);
-
-            Symbol *sym =
-                m->symbolTable->LookupVariable(gv->getName().str().c_str());
-            Assert(sym != NULL);
-            globals->push_back(RewriteGlobalInfo(gv, init, sym->pos));
-        }
-    }
-}
-
-
-// This function emits a global variable definition for each global that
-// was turned into a declaration in the target-specific output file.
-static void
-lAddExtractedGlobals(llvm::Module *module,
-                     std::vector<RewriteGlobalInfo> globals[Target::NUM_ISAS]) {
-    // Find the first element in the globals[] array that has values stored
-    // in it.  All elements of this array should either have empty vectors
-    // (if we didn't compile to the corresponding ISA or if there are no
-    // globals), or should have the same number of vector elements as the
-    // other non-empty vectors.
-    int firstActive = -1;
-    for (int i = 0; i < Target::NUM_ISAS; ++i)
-        if (globals[i].size() > 0) {
-            firstActive = i;
-            break;
-        }
-
-    if (firstActive == -1)
-        // no globals
-        return;
-
-    for (unsigned int i = 0; i < globals[firstActive].size(); ++i) {
-        RewriteGlobalInfo &rgi = globals[firstActive][i];
-        llvm::GlobalVariable *gv = rgi.gv;
-        llvm::Type *type = gv->getType()->getElementType();
-        llvm::Constant *initializer = rgi.init;
-
-        // Create a new global in the given model that matches the original
-        // global
-        llvm::GlobalVariable *newGlobal =
-            new llvm::GlobalVariable(*module, type, gv->isConstant(),
-                                     llvm::GlobalValue::ExternalLinkage,
-                                     initializer, gv->getName());
-        newGlobal->copyAttributesFrom(gv);
-
-        // For all of the other targets that we actually generated code
-        // for, make sure the global we just created is compatible with the
-        // global from the module for that target.
-        for (int j = firstActive + 1; j < Target::NUM_ISAS; ++j) {
-            if (globals[j].size() > 0) {
-                // There should be the same number of globals in the other
-                // vectors, in the same order.
-                Assert(globals[firstActive].size() == globals[j].size());
-                llvm::GlobalVariable *gv2 = globals[j][i].gv;
-                Assert(gv2->getName() == gv->getName());
-
-                // It is possible that the types may not match, though--for
-                // example, this happens with varying globals if we compile
-                // to different vector widths.
-                if (gv2->getType() != gv->getType())
-                    Warning(rgi.pos, "Mismatch in size/layout of global "
-                          "variable \"%s\" with different targets. "
-                          "Globals must not include \"varying\" types or arrays "
-                          "with size based on programCount when compiling to "
-                          "targets with differing vector widths.",
-                          gv->getName().str().c_str());
-            }
-        }
-    }
-}
-
 static llvm::FunctionType *
 lGetVaryingDispatchType(FunctionTargetVariants &funcs) {
   llvm::Type *ptrToInt8Ty = llvm::Type::getInt8PtrTy(*g->ctx);
@@ -2969,13 +2880,8 @@ lCreateDispatchFunction(llvm::Module *module, llvm::Function *setISAFunc,
     }
 }
 
-// Given a map that holds the mapping from each of the 'export'ed functions
-// in the ispc program to the target-specific variants of the function,
-// create a llvm::Module that has a dispatch function for each exported
-// function that checks the system's capabilities and picks the most
-// appropriate compiled variant of the function.
-static llvm::Module *
-lCreateDispatchModule(std::map<std::string, FunctionTargetVariants> &functions) {
+// Initialize a dispatch module
+static llvm::Module *lInitDispatchModule() {
     llvm::Module *module = new llvm::Module("dispatch_module", *g->ctx);
 
     // First, link in the definitions from the builtins-dispatch.ll file.
@@ -2983,7 +2889,17 @@ lCreateDispatchModule(std::map<std::string, FunctionTargetVariants> &functions) 
     extern int builtins_bitcode_dispatch_length;
     AddBitcodeToModule(builtins_bitcode_dispatch,
                        builtins_bitcode_dispatch_length, module);
+    return module;
+}
 
+// Complete the creation of a dispatch module.
+// Given a map that holds the mapping from each of the 'export'ed functions
+// in the ispc program to the target-specific variants of the function,
+// create a llvm::Module that has a dispatch function for each exported
+// function that checks the system's capabilities and picks the most
+// appropriate compiled variant of the function.
+static void lEmitDispatchModule(llvm::Module *module,
+                                std::map<std::string, FunctionTargetVariants> &functions) {
     // Get pointers to things we need below
     llvm::Function *setFunc = module->getFunction("__set_system_isa");
     Assert(setFunc != NULL);
@@ -2999,7 +2915,6 @@ lCreateDispatchModule(std::map<std::string, FunctionTargetVariants> &functions) 
 
     // Do some rudimentary cleanup of the final result and make sure that
     // the module is all ok.
-
 #if defined(LLVM_3_2) || defined(LLVM_3_3) || defined(LLVM_3_4) || defined(LLVM_3_5) || defined(LLVM_3_6)
     llvm::PassManager optPM;
 #else // LLVM 3.7+
@@ -3008,10 +2923,46 @@ lCreateDispatchModule(std::map<std::string, FunctionTargetVariants> &functions) 
     optPM.add(llvm::createGlobalDCEPass());
     optPM.add(llvm::createVerifierPass());
     optPM.run(*module);
-
-    return module;
 }
 
+// Grab all of the global value definitions from the module and change them
+// to be declarations; we'll emit a single definition of each global in the
+// final module used with the dispatch functions, so that we don't have
+// multiple definitions of them, one in each of the target-specific output
+// files.
+static void
+lExtractGlobals(llvm::Module *module, llvm::Module **mdisp) {
+    llvm::Module::global_iterator iter;
+
+    if (*mdisp)
+        return;
+
+    *mdisp = lInitDispatchModule();
+    for (iter = module->global_begin(); iter != module->global_end(); ++iter) {
+        llvm::GlobalVariable *gv = iter;
+        // Is it a global definition?
+        if (gv->getLinkage() == llvm::GlobalValue::ExternalLinkage &&
+            gv->hasInitializer()) {
+            // Turn this into an 'extern 'declaration by clearing its
+            // initializer.
+            llvm::Constant *init = gv->getInitializer();
+            gv->setInitializer(NULL);
+
+            llvm::Type *type = gv->getType()->getElementType();
+            Symbol *sym =
+                m->symbolTable->LookupVariable(gv->getName().str().c_str());
+            Assert(sym != NULL);
+
+            // Create a new global in the given model that matches the original
+            // global
+            llvm::GlobalVariable *newGlobal =
+                new llvm::GlobalVariable(**mdisp, type, gv->isConstant(),
+                                         llvm::GlobalValue::ExternalLinkage,
+                                         init, gv->getName());
+            newGlobal->copyAttributesFrom(gv);
+        }
+    }
+}
 
 #ifdef ISPC_NVPTX_ENABLED
 static std::string lCBEMangle(const std::string &S) 
@@ -3169,8 +3120,9 @@ Module::CompileAndOutput(const char *srcFile,
         for (int i = 0; i < Target::NUM_ISAS; ++i)
             targetMachines[i] = NULL;
 
+        llvm::Module *dispatchModule = NULL;
+
         std::map<std::string, FunctionTargetVariants> exportedFunctions;
-        std::vector<RewriteGlobalInfo> globals[Target::NUM_ISAS];
         int errorCount = 0;
         
         // Handle creating a "generic" header file for multiple targets
@@ -3221,8 +3173,7 @@ Module::CompileAndOutput(const char *srcFile,
                 // just compiled, for use in generating the dispatch function
                 // later.
                 lGetExportedFunctions(m->symbolTable, exportedFunctions);
-
-                lExtractAndRewriteGlobals(m->module, &globals[i]);
+                lExtractGlobals(m->module, &dispatchModule);
 
                 if (outFileName != NULL) {
                     std::string targetOutFileName;
@@ -3298,10 +3249,7 @@ Module::CompileAndOutput(const char *srcFile,
             return 1;
         }
 
-        llvm::Module *dispatchModule =
-            lCreateDispatchModule(exportedFunctions);
-
-        lAddExtractedGlobals(dispatchModule, globals);
+        lEmitDispatchModule(dispatchModule, exportedFunctions);
 
         if (outFileName != NULL) {
             if (outputType == Bitcode)
