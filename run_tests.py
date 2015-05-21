@@ -165,7 +165,7 @@ def run_test(testname):
         if (options.target == "knc"):
             ispc_cmd = ispc_exe_rel + " --werror --nowrap %s --arch=%s --target=%s" % \
                 (filename, options.arch, "generic-16")
-        elif (options.target == "knl"):
+        elif (options.target == "knl-generic"):
             ispc_cmd = ispc_exe_rel + " --werror --nowrap %s --arch=%s --target=%s" % \
                 (filename, options.arch, "generic-16")
         else:
@@ -267,7 +267,7 @@ def run_test(testname):
                 if (options.target == "knc"):
                     cc_cmd = "%s -O2 -I. %s %s test_static.cpp -DTEST_SIG=%d %s -o %s" % \
                          (options.compiler_exe, gcc_arch, "-mmic", match, obj_name, exe_name)
-                elif (options.target == "knl"):
+                elif (options.target == "knl-generic"):
                     cc_cmd = "%s -O2 -I. %s %s test_static.cpp -DTEST_SIG=%d %s -o %s" % \
                          (options.compiler_exe, gcc_arch, "-xMIC-AVX512", match, obj_name, exe_name)
                 elif (options.target == "knl-avx512"):
@@ -294,7 +294,7 @@ def run_test(testname):
             if (options.target == "knc"):
                 ispc_cmd = ispc_exe_rel + " --woff %s -o %s --arch=%s --target=%s" % \
                            (filename, obj_name, options.arch, "generic-16")
-            elif (options.target == "knl"):
+            elif (options.target == "knl-generic"):
                 ispc_cmd = ispc_exe_rel + " --woff %s -o %s --arch=%s --target=%s" % \
                            (filename, obj_name, options.arch, "generic-16")
             else:
@@ -558,7 +558,7 @@ def verify():
               "sse4-i8x16", "avx1-i32x4" "avx1-i32x8", "avx1-i32x16", "avx1-i64x4", "avx1.1-i32x8",
               "avx1.1-i32x16", "avx1.1-i64x4", "avx2-i32x8", "avx2-i32x16", "avx2-i64x4",
               "generic-1", "generic-4", "generic-8",
-              "generic-16", "generic-32", "generic-64", "knc", "knl", "knl-avx512"]]
+              "generic-16", "generic-32", "generic-64", "knc", "knl-generic", "knl-avx512"]]
     for i in range (0,len(f_lines)):
         if f_lines[i][0] == "%":
             continue
@@ -634,7 +634,7 @@ def run_tests(options1, args, print_version):
     global is_generic_target 
     is_generic_target = ((options.target.find("generic-") != -1 and
                      options.target != "generic-1" and options.target != "generic-x1") or 
-                     options.target == "knc" or options.target == "knl")
+                     options.target == "knc" or options.target == "knl-generic")
 
     global is_nvptx_target
     is_nvptx_target = (options.target.find("nvptx") != -1)
@@ -662,14 +662,16 @@ def run_tests(options1, args, print_version):
         elif options.target == "knc":
             error("No knc #include specified; using examples/intrinsics/knc.h\n", 2)
             options.include_file = "examples/intrinsics/knc.h"
-        elif options.target == "knl":
+        elif options.target == "knl-generic":
             error("No knl #include specified; using examples/intrinsics/knl.h\n", 2)
             options.include_file = "examples/intrinsics/knl.h"
  
     if options.compiler_exe == None:
         if (options.target == "knc"): 
             options.compiler_exe = "icpc"
-        elif (options.target == "knl"): 
+        elif (options.target == "knl-generic"): 
+            options.compiler_exe = "icpc"
+        elif (options.target == "knl-avx512"): 
             options.compiler_exe = "icpc"
         elif is_windows:
             options.compiler_exe = "cl.exe"
@@ -695,9 +697,6 @@ def run_tests(options1, args, print_version):
     ispc_root = "."
 
     # checks the required environment otherwise prints an error message
-    if ((options.target == "knl-avx512") and (options.wrapexe == "")):
-        options.wrapexe = "sde -knl -- "        
-
     if (options.target == "knc"):
         options.wrapexe = "micnativeloadex"
         PATH_dir = string.split(os.getenv("PATH"), os.pathsep)
@@ -913,7 +912,7 @@ if __name__ == "__main__":
                   help=('Set compilation target (sse2-i32x4, sse2-i32x8, sse4-i32x4, sse4-i32x8, ' +
                   'sse4-i16x8, sse4-i8x16, avx1-i32x8, avx1-i32x16, avx1.1-i32x8, avx1.1-i32x16, ' +
                   'avx2-i32x8, avx2-i32x16, generic-x1, generic-x4, generic-x8, generic-x16, ' + 
-                  'generic-x32, generic-x64, knc, knl)'), default="sse4")
+                  'generic-x32, generic-x64, knc, knl-generic)'), default="sse4")
     parser.add_option('-a', '--arch', dest='arch',
                   help='Set architecture (arm, x86, x86-64)',default="x86-64")
     parser.add_option("-c", "--compiler", dest="compiler_exe", help="C/C++ compiler binary to use to run tests",
@@ -939,5 +938,13 @@ if __name__ == "__main__":
     parser.add_option("--save-bin", dest='save_bin', help='compile and create bin, but don\'t execute it',
                   default=False, action="store_true")
     (options, args) = parser.parse_args()
+
+    # Untill we have the hardware to run testing on:
+    if ((options.target == "knl-generic") and (options.wrapexe == "")):
+        options.wrapexe = "sde -knl -- "        
+
+    if ((options.target == "knl-avx512") and (options.wrapexe == "")):
+        options.wrapexe = "sde -knl -- "        
+
     L = run_tests(options, args, 1)
     exit(0)
