@@ -153,6 +153,7 @@ devUsage(int ret) {
     lPrintVersion();
     printf("\nusage (developer options): ispc\n");
     printf("    [--debug]\t\t\t\tPrint information useful for debugging ispc\n");
+    printf("    [--print-target]\t\t\tPrint target's information\n");
     printf("    [--dllexport]\t\t\tMake non-static functions DLL exported.  Windows only.\n");  
     printf("    [--fuzz-test]\t\t\tRandomly perturb program input to test error conditions\n");
     printf("    [--fuzz-seed=<value>]\t\tSeed value for RNG for fuzz testing\n");
@@ -382,6 +383,8 @@ int main(int Argc, char *Argv[]) {
             g->debugPrint = true;
         else if (!strcmp(argv[i], "--dllexport"))
             g->dllExport = true;
+        else if (!strcmp(argv[i], "--print-target"))
+            g->printTarget = true;
         else if (!strcmp(argv[i], "--instrument"))
             g->emitInstrumentation = true;
         else if (!strcmp(argv[i], "-g")) {

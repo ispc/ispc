@@ -207,7 +207,7 @@ public:
     /** Initializes the given Target pointer for a target of the given
         name, if the name is a known target.  Returns true if the
         target was initialized and false if the name is unknown. */
-    Target(const char *arch, const char *cpu, const char *isa, bool pic, std::string genenricAsSmth = "");
+    Target(const char *arch, const char *cpu, const char *isa, bool pic, bool printTarget, std::string genenricAsSmth = "");
 
     /** Returns a comma-delimited string giving the names of the currently
         supported compilation targets. */
@@ -558,6 +558,9 @@ struct Globals {
     /** When \c true, voluminous debugging output will be printed during
         ispc's execution. */
     bool debugPrint;
+
+    /** When \c true, target ISA will be printed during ispc's execution. */
+    bool printTarget;
 
     /** Indicates which stages of optimization we want to dump. */
     std::set<int> debug_stages;
