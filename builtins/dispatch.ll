@@ -112,7 +112,7 @@
 ;;         else if ((info2[1] & (1 << 26)) != 0 && // AVX512 PF
 ;;                  (info2[1] & (1 << 27)) != 0 && // AVX512 ER
 ;;                  (info2[1] & (1 << 28)) != 0) { // AVX512 CDI
-;;             return 5; // KNL
+;;             return 5; // KNL_AVX512
 ;;         }
 ;;         // If it's unknown AVX512 target, fall through and use AVX2
 ;;         // or whatever is available in the machine.

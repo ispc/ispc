@@ -2896,7 +2896,7 @@ lCreateDispatchFunction(llvm::Module *module, llvm::Function *setISAFunc,
         if ((Target::ISA)(i == Target::GENERIC) && 
             !g->target->getTreatGenericAsSmth().empty()) {
             if (g->target->getTreatGenericAsSmth() == "knl_generic")
-                dispatchNum = Target::KNL;
+                dispatchNum = Target::KNL_AVX512;
             else if (g->target->getTreatGenericAsSmth() == "skx_generic")
                 dispatchNum = Target::SKX;
             else {

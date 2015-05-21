@@ -1328,6 +1328,21 @@ DefineStdlib(SymbolTable *symbolTable, llvm::LLVMContext *ctx, llvm::Module *mod
         }
         break;
     }
+    case Target::KNL_AVX512: {
+        switch (g->target->getVectorWidth()) {
+        case 16:
+            if (runtime32) {
+                EXPORT_MODULE(builtins_bitcode_knl_32bit);
+            }
+            else {
+                EXPORT_MODULE(builtins_bitcode_knl_64bit);
+            }
+            break;
+        default:
+            FATAL("logic error in DefineStdlib");
+        }
+        break;
+    }
     case Target::GENERIC: {
         switch (g->target->getVectorWidth()) {
         case 4:
