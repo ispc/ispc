@@ -1130,6 +1130,42 @@ ret <8 x double> %ret
 '
 )
 
+define(`round2to16double', `
+%v0 = shufflevector <16 x double> $1, <16 x double> undef, <2 x i32> <i32 0,  i32 1>
+%v1 = shufflevector <16 x double> $1, <16 x double> undef, <2 x i32> <i32 2,  i32 3>
+%v2 = shufflevector <16 x double> $1, <16 x double> undef, <2 x i32> <i32 4,  i32 5>
+%v3 = shufflevector <16 x double> $1, <16 x double> undef, <2 x i32> <i32 6,  i32 7>
+%v4 = shufflevector <16 x double> $1, <16 x double> undef, <2 x i32> <i32 8,  i32 9>
+%v5 = shufflevector <16 x double> $1, <16 x double> undef, <2 x i32> <i32 10, i32 11>
+%v6 = shufflevector <16 x double> $1, <16 x double> undef, <2 x i32> <i32 12, i32 13>
+%v7 = shufflevector <16 x double> $1, <16 x double> undef, <2 x i32> <i32 14, i32 15>
+%r0 = call <2 x double> @llvm.x86.sse41.round.pd(<2 x double> %v0, i32 $2)
+%r1 = call <2 x double> @llvm.x86.sse41.round.pd(<2 x double> %v1, i32 $2)
+%r2 = call <2 x double> @llvm.x86.sse41.round.pd(<2 x double> %v2, i32 $2)
+%r3 = call <2 x double> @llvm.x86.sse41.round.pd(<2 x double> %v3, i32 $2)
+%r4 = call <2 x double> @llvm.x86.sse41.round.pd(<2 x double> %v4, i32 $2)
+%r5 = call <2 x double> @llvm.x86.sse41.round.pd(<2 x double> %v5, i32 $2)
+%r6 = call <2 x double> @llvm.x86.sse41.round.pd(<2 x double> %v6, i32 $2)
+%r7 = call <2 x double> @llvm.x86.sse41.round.pd(<2 x double> %v7, i32 $2)
+%ret0 = shufflevector <2 x double> %r0, <2 x double> %r1,
+          <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+%ret1 = shufflevector <2 x double> %r2, <2 x double> %r3,
+          <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+%ret01 = shufflevector <4 x double> %ret0, <4 x double> %ret1,
+          <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+%ret2 = shufflevector <2 x double> %r4, <2 x double> %r5,
+          <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+%ret3 = shufflevector <2 x double> %r6, <2 x double> %r7,
+          <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+%ret23 = shufflevector <4 x double> %ret2, <4 x double> %ret3,
+          <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+%ret = shufflevector <8 x double> %ret01, <8 x double> %ret23,
+          <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7,
+                      i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+ret <16 x double> %ret
+'
+)
+
 define(`round4to16double', `
 %v0 = shufflevector <16 x double> $1, <16 x double> undef,
          <4 x i32> <i32 0, i32 1, i32 2, i32 3>

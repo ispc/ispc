@@ -143,21 +143,17 @@ define <16 x float> @__ceil_varying_float(<16 x float>) nounwind readonly always
 declare <2 x double> @llvm.x86.sse41.round.pd(<2 x double>, i32) nounwind readnone
 
 define <16 x double> @__round_varying_double(<16 x double>) nounwind readonly alwaysinline {
-;  XXXround2to4double(%0, 8)
-  ; FIXME: need round2to16double in util.m4...
-  ret <16 x double> undef  
+    round2to16double(%0, 8)
 }
 
 define <16 x double> @__floor_varying_double(<16 x double>) nounwind readonly alwaysinline {
   ; roundpd, round down 0b01 | don't signal precision exceptions 0b1001 = 9
-;  XXXround2to4double(%0, 9)
-  ret <16 x double> undef  
+    round2to16double(%0, 9)
 }
 
 define <16 x double> @__ceil_varying_double(<16 x double>) nounwind readonly alwaysinline {
   ; roundpd, round up 0b10 | don't signal precision exceptions 0b1010 = 10
-;  XXXround2to4double(%0, 10)
-  ret <16 x double> undef  
+    round2to16double(%0, 10)
 }
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
