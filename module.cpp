@@ -3055,7 +3055,7 @@ Module::CompileAndOutput(const char *srcFile,
 {
     if (target == NULL || strchr(target, ',') == NULL) {
         // We're only compiling to a single target
-        g->target = new Target(arch, cpu, target, generatePIC);
+        g->target = new Target(arch, cpu, target, generatePIC, g->printTarget);
         if (!g->target->isValid())
             return 1;
 
@@ -3198,7 +3198,7 @@ Module::CompileAndOutput(const char *srcFile,
         std::string treatGenericAsSmth = "";
 
         for (unsigned int i = 0; i < targets.size(); ++i) {
-            g->target = new Target(arch, cpu, targets[i].c_str(), generatePIC);
+            g->target = new Target(arch, cpu, targets[i].c_str(), generatePIC, g->printTarget);
             if (!g->target->isValid())
                 return 1;
 
@@ -3293,7 +3293,7 @@ Module::CompileAndOutput(const char *srcFile,
         }
         Assert(firstTargetMachine != NULL);
 
-        g->target = new Target(arch, cpu, firstISA, generatePIC, treatGenericAsSmth);
+        g->target = new Target(arch, cpu, firstISA, generatePIC, false, treatGenericAsSmth);
         if (!g->target->isValid()) {
             return 1;
         }

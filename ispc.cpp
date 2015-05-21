@@ -418,7 +418,7 @@ public:
 };
 
 
-Target::Target(const char *arch, const char *cpu, const char *isa, bool pic, std::string genericAsSmth) :
+Target::Target(const char *arch, const char *cpu, const char *isa, bool pic, bool printTarget, std::string genericAsSmth) :
     m_target(NULL),
     m_targetMachine(NULL),
     m_dataLayout(NULL),
@@ -1049,6 +1049,12 @@ Target::Target(const char *arch, const char *cpu, const char *isa, bool pic, std
 
     m_valid = !error;
 
+    if (printTarget) {
+        printf("Target Triple: %s\n", m_targetMachine->getTargetTriple().str().c_str());
+        printf("Target CPU: %s\n", m_targetMachine->getTargetCPU().str().c_str());
+        printf("Target Feature String: %s\n", m_targetMachine->getTargetFeatureString().str().c_str());
+    }
+
     return;
 }
 
@@ -1379,6 +1385,7 @@ Globals::Globals() {
     includeStdlib = true;
     runCPP = true;
     debugPrint = false;
+    printTarget = false;
     debugIR = -1;
     disableWarnings = false;
     warningsAsErrors = false;
