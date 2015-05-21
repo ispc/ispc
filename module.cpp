@@ -2665,20 +2665,6 @@ lGetExportedFunctions(SymbolTable *symbolTable,
     }
 }
 
-
-struct RewriteGlobalInfo {
-    RewriteGlobalInfo(llvm::GlobalVariable *g = NULL, llvm::Constant *i = NULL,
-                      SourcePos p = SourcePos()) {
-        gv = g;
-        init = i;
-        pos = p;
-    }
-
-    llvm::GlobalVariable *gv;
-    llvm::Constant *init;
-    SourcePos pos;
-};
-
 static llvm::FunctionType *
 lGetVaryingDispatchType(FunctionTargetVariants &funcs) {
   llvm::Type *ptrToInt8Ty = llvm::Type::getInt8PtrTy(*g->ctx);
@@ -2925,25 +2911,48 @@ static void lEmitDispatchModule(llvm::Module *module,
     optPM.run(*module);
 }
 
+// Determines if two types are compatible
+static bool lCompatibleTypes(llvm::Type *Ty1, llvm::Type *Ty2) {
+    while (Ty1->getTypeID() == Ty1->getTypeID())
+        switch (Ty1->getTypeID()) {
+            case llvm::ArrayType::ArrayTyID:
+                if (Ty1->getArrayNumElements() !=
+                    Ty2->getArrayNumElements())
+                    return false;
+                Ty1 = Ty1->getArrayElementType();
+                Ty2 = Ty2->getArrayElementType();
+                break;
+
+            case llvm::ArrayType::PointerTyID:
+                Ty1 = Ty1->getPointerElementType();
+                Ty2 = Ty2->getPointerElementType();
+                break;
+
+            case llvm::ArrayType::StructTyID:
+                return llvm::dyn_cast<llvm::StructType>(Ty1)->isLayoutIdentical(llvm::dyn_cast<llvm::StructType>(Ty2));
+
+            default:
+                // Pointers for compatible simple types are assumed equal
+                return Ty1 == Ty2;
+        }
+    return false;
+}
+
 // Grab all of the global value definitions from the module and change them
 // to be declarations; we'll emit a single definition of each global in the
 // final module used with the dispatch functions, so that we don't have
 // multiple definitions of them, one in each of the target-specific output
 // files.
 static void
-lExtractGlobals(llvm::Module *module, llvm::Module **mdisp) {
+lExtractOrCheckGlobals(llvm::Module *msrc, llvm::Module *mdst, bool check) {
     llvm::Module::global_iterator iter;
 
-    if (*mdisp)
-        return;
-
-    *mdisp = lInitDispatchModule();
-    for (iter = module->global_begin(); iter != module->global_end(); ++iter) {
+    for (iter = msrc->global_begin(); iter != msrc->global_end(); ++iter) {
         llvm::GlobalVariable *gv = iter;
         // Is it a global definition?
         if (gv->getLinkage() == llvm::GlobalValue::ExternalLinkage &&
             gv->hasInitializer()) {
-            // Turn this into an 'extern 'declaration by clearing its
+            // Turn this into an 'extern' declaration by clearing its
             // initializer.
             llvm::Constant *init = gv->getInitializer();
             gv->setInitializer(NULL);
@@ -2953,13 +2962,32 @@ lExtractGlobals(llvm::Module *module, llvm::Module **mdisp) {
                 m->symbolTable->LookupVariable(gv->getName().str().c_str());
             Assert(sym != NULL);
 
-            // Create a new global in the given model that matches the original
-            // global
-            llvm::GlobalVariable *newGlobal =
-                new llvm::GlobalVariable(**mdisp, type, gv->isConstant(),
-                                         llvm::GlobalValue::ExternalLinkage,
-                                         init, gv->getName());
-            newGlobal->copyAttributesFrom(gv);
+            // Check presence and compatibility for the current global
+            if (check) {
+                llvm::GlobalVariable *exist =
+                    mdst->getGlobalVariable(gv->getName());
+                Assert(exist != NULL);
+
+                // It is possible that the types may not match: for
+                // example, this happens with varying globals if we
+                // compile to different vector widths
+                if (!lCompatibleTypes(exist->getType(), gv->getType())) {
+                    Warning(sym->pos, "Mismatch in size/layout of global "
+                          "variable \"%s\" with different targets. "
+                          "Globals must not include \"varying\" types or arrays "
+                          "with size based on programCount when compiling to "
+                          "targets with differing vector widths.",
+                          gv->getName().str().c_str());
+                }
+            }
+            // Alternatively, create it anew and make it match the original
+            else {
+                llvm::GlobalVariable *newGlobal =
+                    new llvm::GlobalVariable(*mdst, type, gv->isConstant(),
+                                             llvm::GlobalValue::ExternalLinkage,
+                                             init, gv->getName());
+                newGlobal->copyAttributesFrom(gv);
+            }
         }
     }
 }
@@ -3169,11 +3197,17 @@ Module::CompileAndOutput(const char *srcFile,
 
             m = new Module(srcFile);
             if (m->CompileFile() == 0) {
+                // Create the dispatch module, unless already created;
+                // in the latter case, just do the checking
+                bool check = (dispatchModule != NULL);
+                if (!check)
+                    dispatchModule = lInitDispatchModule();
+                lExtractOrCheckGlobals(m->module, dispatchModule, check);
+
                 // Grab pointers to the exported functions from the module we
                 // just compiled, for use in generating the dispatch function
                 // later.
                 lGetExportedFunctions(m->symbolTable, exportedFunctions);
-                lExtractGlobals(m->module, &dispatchModule);
 
                 if (outFileName != NULL) {
                     std::string targetOutFileName;
