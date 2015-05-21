@@ -227,9 +227,9 @@ public:
         corresponding to this type. */
     virtual llvm::DIType GetDIType(llvm::DIDescriptor scope) const = 0;
 #else
-    /** Returns the MDType (LLVM's debugging information structure),
+    /** Returns the DIType (LLVM's debugging information structure),
         corresponding to this type. */
-    virtual llvm::MDType *GetDIType(llvm::MDScope *scope) const = 0;
+    virtual llvm::DIType *GetDIType(llvm::DIScope *scope) const = 0;
 #endif
 
     /** Checks two types for equality.  Returns true if they are exactly
@@ -320,7 +320,7 @@ public:
 #if defined(LLVM_3_2) || defined(LLVM_3_3) || defined(LLVM_3_4) || defined(LLVM_3_5) || defined(LLVM_3_6)
     llvm::DIType GetDIType(llvm::DIDescriptor scope) const;
 #else // LLVM 3.7++
-    llvm::MDType *GetDIType(llvm::MDScope *scope) const;
+    llvm::DIType *GetDIType(llvm::DIScope *scope) const;
 #endif
 
     /** This enumerator records the basic types that AtomicTypes can be
@@ -403,7 +403,7 @@ public:
 #if defined(LLVM_3_2) || defined(LLVM_3_3) || defined(LLVM_3_4) || defined(LLVM_3_5) || defined(LLVM_3_6)
     llvm::DIType GetDIType(llvm::DIDescriptor scope) const;
 #else // LLVM 3.7++
-    llvm::MDType *GetDIType(llvm::MDScope *scope) const;
+    llvm::DIType *GetDIType(llvm::DIScope *scope) const;
 #endif
 
     /** Provides the enumerators defined in the enum definition. */
@@ -488,7 +488,7 @@ public:
 #if defined(LLVM_3_2) || defined(LLVM_3_3) || defined(LLVM_3_4) || defined(LLVM_3_5) || defined(LLVM_3_6)
     llvm::DIType GetDIType(llvm::DIDescriptor scope) const;
 #else // LLVM 3.7++
-    llvm::MDType *GetDIType(llvm::MDScope *scope) const;
+    llvm::DIType *GetDIType(llvm::DIScope *scope) const;
 #endif
 
     static PointerType *Void;
@@ -594,7 +594,7 @@ public:
 #if defined(LLVM_3_2) || defined(LLVM_3_3) || defined(LLVM_3_4) || defined(LLVM_3_5) || defined(LLVM_3_6)
     llvm::DIType GetDIType(llvm::DIDescriptor scope) const;
 #else // LLVM 3.7++
-    llvm::MDType *GetDIType(llvm::MDScope *scope) const;
+    llvm::DIType *GetDIType(llvm::DIScope *scope) const;
 #endif
     llvm::ArrayType *LLVMType(llvm::LLVMContext *ctx) const;
 
@@ -666,7 +666,7 @@ public:
 #if defined(LLVM_3_2) || defined(LLVM_3_3) || defined(LLVM_3_4) || defined(LLVM_3_5) || defined(LLVM_3_6)
     llvm::DIType GetDIType(llvm::DIDescriptor scope) const;
 #else // LLVM 3.7++
-    llvm::MDType *GetDIType(llvm::MDScope *scope) const;
+    llvm::DIType *GetDIType(llvm::DIScope *scope) const;
 #endif
 
     int GetElementCount() const;
@@ -721,7 +721,7 @@ public:
 #if defined(LLVM_3_2) || defined(LLVM_3_3) || defined(LLVM_3_4) || defined(LLVM_3_5) || defined(LLVM_3_6)
     llvm::DIType GetDIType(llvm::DIDescriptor scope) const;
 #else // LLVM 3.7++
-    llvm::MDType *GetDIType(llvm::MDScope *scope) const;
+    llvm::DIType *GetDIType(llvm::DIScope *scope) const;
 #endif
 
     /** Returns the type of the structure element with the given name (if any).
@@ -813,7 +813,7 @@ public:
 #if defined(LLVM_3_2) || defined(LLVM_3_3) || defined(LLVM_3_4) || defined(LLVM_3_5) || defined(LLVM_3_6)
     llvm::DIType GetDIType(llvm::DIDescriptor scope) const;
 #else // LLVM 3.7++
-    llvm::MDType *GetDIType(llvm::MDScope *scope) const;
+    llvm::DIType *GetDIType(llvm::DIScope *scope) const;
 #endif
 
     /** Returns the name of the structure type.  (e.g. struct Foo -> "Foo".) */
@@ -860,7 +860,7 @@ public:
 #if defined(LLVM_3_2) || defined(LLVM_3_3) || defined(LLVM_3_4) || defined(LLVM_3_5) || defined(LLVM_3_6)
     llvm::DIType GetDIType(llvm::DIDescriptor scope) const;
 #else // LLVM 3.7++
-    llvm::MDType *GetDIType(llvm::MDScope *scope) const;
+    llvm::DIType *GetDIType(llvm::DIScope *scope) const;
 #endif
 
 private:
@@ -918,7 +918,7 @@ public:
 #if defined(LLVM_3_2) || defined(LLVM_3_3) || defined(LLVM_3_4) || defined(LLVM_3_5) || defined(LLVM_3_6)
     llvm::DIType GetDIType(llvm::DIDescriptor scope) const;
 #else // LLVM 3.7++
-    llvm::MDType *GetDIType(llvm::MDScope *scope) const;
+    llvm::DIType *GetDIType(llvm::DIScope *scope) const;
 #endif
 
     const Type *GetReturnType() const { return returnType; }

@@ -207,20 +207,20 @@ lStripUnusedDebugInfo(llvm::Module *module) {
                 }
                 if (scope.isSubprogram()) {
 #else // LLVM 3.7+
-                llvm::MDLocation *dloc = llvm::cast<llvm::MDLocation>(node);
-                llvm::MDScope *scope = dloc->getScope();
+                llvm::DILocation *dloc = llvm::cast<llvm::DILocation>(node);
+                llvm::DIScope *scope = dloc->getScope();
                 node = dloc->getInlinedAt();
                 // now following a chain of nested scopes
                 while (!0) {
-                    if (llvm::isa<llvm::MDLexicalBlockFile>(scope))
-                        scope = llvm::cast<llvm::MDLexicalBlockFile>(scope)->getScope();
-                    else if (llvm::isa<llvm::MDLexicalBlockBase>(scope))
-                        scope = llvm::cast<llvm::MDLexicalBlockBase>(scope)->getScope();
-                    else if (llvm::isa<llvm::MDNamespace>(scope))
-                        scope = llvm::cast<llvm::MDNamespace>(scope)->getScope();
+                    if (llvm::isa<llvm::DILexicalBlockFile>(scope))
+                        scope = llvm::cast<llvm::DILexicalBlockFile>(scope)->getScope();
+                    else if (llvm::isa<llvm::DILexicalBlockBase>(scope))
+                        scope = llvm::cast<llvm::DILexicalBlockBase>(scope)->getScope();
+                    else if (llvm::isa<llvm::DINamespace>(scope))
+                        scope = llvm::cast<llvm::DINamespace>(scope)->getScope();
                     else break;
                 }
-                if (llvm::isa<llvm::MDSubprogram>(scope)) {
+                if (llvm::isa<llvm::DISubprogram>(scope)) {
 #endif
                     // good, the chain ended with a function; adding
                     SPall.insert(scope);
@@ -237,8 +237,8 @@ lStripUnusedDebugInfo(llvm::Module *module) {
             llvm::DIArray subprograms = cu.getSubprograms();
             if (subprograms.getNumElements() == 0) {
 #else // LLVM 3.7+
-            llvm::MDCompileUnit *cu = llvm::cast<llvm::MDCompileUnit>(cuNode);
-            llvm::MDSubprogramArray subprograms = cu->getSubprograms();
+            llvm::DICompileUnit *cu = llvm::cast<llvm::DICompileUnit>(cuNode);
+            llvm::DISubprogramArray subprograms = cu->getSubprograms();
             if (subprograms.size() == 0) {
 #endif
                 continue;
@@ -341,7 +341,7 @@ lStripUnusedDebugInfo(llvm::Module *module) {
                                                        llvm::ArrayRef<llvm::Metadata *>(usedSubprograms));
             cu.replaceSubprograms(llvm::DIArray(replNode));
   #else // LLVM 3.7+
-            llvm::MDSubprogramArray nodeSPs = cu->getSubprograms();
+            llvm::DISubprogramArray nodeSPs = cu->getSubprograms();
             Assert(nodeSPs.size() == subprograms.size());
             for (int i = 0; i < (int)nodeSPs.size(); ++i)
                  Assert(nodeSPs [i] == subprograms [i]);
@@ -721,7 +721,7 @@ Module::AddGlobalVariable(const std::string &name, const Type *type, Expr *initE
                                             (sym->storageClass == SC_STATIC),
                                             sym_const_storagePtr);
 #else // LLVM 3.7+
-        llvm::MDFile *file = pos.GetDIFile();
+        llvm::DIFile *file = pos.GetDIFile();
         llvm::Constant *sym_const_storagePtr = llvm::dyn_cast<llvm::Constant>(sym->storagePtr);
         Assert(sym_const_storagePtr);
         diBuilder->createGlobalVariable(

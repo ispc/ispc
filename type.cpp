@@ -82,7 +82,7 @@ lShouldPrintName(const std::string &name) {
 #if defined (LLVM_3_2) || defined (LLVM_3_3) || defined (LLVM_3_4) || defined (LLVM_3_5) || defined (LLVM_3_6)
 static llvm::DIType lCreateDIArray(llvm::DIType eltType, int count) {
 #else // LLVM 3.7++
-static llvm::MDType *lCreateDIArray(llvm::MDType *eltType, int count) {
+static llvm::DIType *lCreateDIArray(llvm::DIType *eltType, int count) {
 #endif
 #ifdef LLVM_3_2
     int lowerBound = 0, upperBound = count-1;
@@ -111,7 +111,7 @@ static llvm::MDType *lCreateDIArray(llvm::MDType *eltType, int count) {
     uint64_t size = eltType.getSizeInBits() * count;
     uint64_t align = eltType.getAlignInBits();
 #else // LLVM 3.7++
-    llvm::DebugNodeArray subArray = m->diBuilder->getOrCreateArray(subs);
+    llvm::DINodeArray subArray = m->diBuilder->getOrCreateArray(subs);
     uint64_t size = eltType->getSizeInBits() * count;
     uint64_t align = eltType->getAlignInBits();
 #endif
@@ -528,7 +528,7 @@ AtomicType::LLVMType(llvm::LLVMContext *ctx) const {
 #if defined(LLVM_3_2) || defined(LLVM_3_3) || defined(LLVM_3_4) || defined(LLVM_3_5) || defined(LLVM_3_6)
 llvm::DIType AtomicType::GetDIType(llvm::DIDescriptor scope) const {
 #else //LLVM 3.7++
-llvm::MDType *AtomicType::GetDIType(llvm::MDScope *scope) const {
+llvm::DIType *AtomicType::GetDIType(llvm::DIScope *scope) const {
 #endif
     Assert(variability.type != Variability::Unbound);
 
@@ -607,8 +607,8 @@ llvm::MDType *AtomicType::GetDIType(llvm::MDScope *scope) const {
         uint64_t size =  unifType.getSizeInBits()  * g->target->getVectorWidth();
         uint64_t align = unifType.getAlignInBits() * g->target->getVectorWidth();
 #else // LLVM 3.7++
-        llvm::DebugNodeArray subArray = m->diBuilder->getOrCreateArray(sub);
-        llvm::MDType *unifType = GetAsUniformType()->GetDIType(scope);
+        llvm::DINodeArray subArray = m->diBuilder->getOrCreateArray(sub);
+        llvm::DIType *unifType = GetAsUniformType()->GetDIType(scope);
         uint64_t size =  unifType->getSizeInBits() * g->target->getVectorWidth();
         uint64_t align = unifType->getAlignInBits()* g->target->getVectorWidth();
 #endif
@@ -847,7 +847,7 @@ EnumType::LLVMType(llvm::LLVMContext *ctx) const {
 #if defined(LLVM_3_2) || defined(LLVM_3_3) || defined(LLVM_3_4) || defined(LLVM_3_5) || defined(LLVM_3_6)
 llvm::DIType EnumType::GetDIType(llvm::DIDescriptor scope) const {
 #else // LLVM 3.7++
-llvm::MDType *EnumType::GetDIType(llvm::MDScope *scope) const {
+llvm::DIType *EnumType::GetDIType(llvm::DIScope *scope) const {
 #endif
 
 #if defined (LLVM_3_2) || defined (LLVM_3_3) || defined (LLVM_3_4) || defined (LLVM_3_5)
@@ -878,10 +878,10 @@ llvm::MDType *EnumType::GetDIType(llvm::MDScope *scope) const {
                                             32 /* align in bits */,
                                             elementArray, llvm::DIType());
 #else // LLVM 3.7++
-    llvm::DebugNodeArray elementArray =
+    llvm::DINodeArray elementArray =
         m->diBuilder->getOrCreateArray(enumeratorDescriptors);
-    llvm::MDFile *diFile = pos.GetDIFile();
-    llvm::MDType *diType =
+    llvm::DIFile *diFile = pos.GetDIFile();
+    llvm::DIType *diType =
         m->diBuilder->createEnumerationType(diFile, name, diFile, pos.first_line,
                                             32 /* size in bits */,
                                             32 /* align in bits */,
@@ -903,7 +903,7 @@ llvm::MDType *EnumType::GetDIType(llvm::MDScope *scope) const {
         uint64_t size =  diType.getSizeInBits()  * g->target->getVectorWidth();
         uint64_t align = diType.getAlignInBits() * g->target->getVectorWidth();
 #else // LLVM 3.7++
-        llvm::DebugNodeArray subArray = m->diBuilder->getOrCreateArray(sub);
+        llvm::DINodeArray subArray = m->diBuilder->getOrCreateArray(sub);
         uint64_t size =  diType->getSizeInBits() * g->target->getVectorWidth();
         uint64_t align = diType->getAlignInBits()* g->target->getVectorWidth();
 #endif
@@ -1260,12 +1260,12 @@ llvm::DIType PointerType::GetDIType(llvm::DIDescriptor scope) const {
     }
     llvm::DIType diTargetType = baseType->GetDIType(scope);
 #else //LLVM 3.7++
-llvm::MDType *PointerType::GetDIType(llvm::MDScope *scope) const {
+llvm::DIType *PointerType::GetDIType(llvm::DIScope *scope) const {
     if (baseType == NULL) {
         Assert(m->errorCount > 0);
         return NULL;
     }
-    llvm::MDType *diTargetType = baseType->GetDIType(scope);
+    llvm::DIType *diTargetType = baseType->GetDIType(scope);
 #endif
     int bitsSize = g->target->is32Bit() ? 32 : 64;
     int ptrAlignBits = bitsSize;
@@ -1278,7 +1278,7 @@ llvm::MDType *PointerType::GetDIType(llvm::MDScope *scope) const {
 #if defined(LLVM_3_2) || defined(LLVM_3_3) || defined(LLVM_3_4) || defined(LLVM_3_5) || defined(LLVM_3_6)
         llvm::DIType eltType =
 #else //LLVM 3.7++
-        llvm::MDDerivedType *eltType =
+        llvm::DIDerivedType *eltType =
 #endif
             m->diBuilder->createPointerType(diTargetType, bitsSize, ptrAlignBits);
         return lCreateDIArray(eltType, g->target->getVectorWidth());
@@ -1575,12 +1575,12 @@ llvm::DIType ArrayType::GetDIType(llvm::DIDescriptor scope) const {
     }
     llvm::DIType eltType = child->GetDIType(scope);
 #else //LLVM 3.7++
-llvm::MDType *ArrayType::GetDIType(llvm::MDScope *scope) const {
+llvm::DIType *ArrayType::GetDIType(llvm::DIScope *scope) const {
     if (child == NULL) {
         Assert(m->errorCount > 0);
         return NULL;
     }
-    llvm::MDType *eltType = child->GetDIType(scope);
+    llvm::DIType *eltType = child->GetDIType(scope);
 #endif
     return lCreateDIArray(eltType, numElements);
 }
@@ -1820,8 +1820,8 @@ VectorType::LLVMType(llvm::LLVMContext *ctx) const {
 llvm::DIType VectorType::GetDIType(llvm::DIDescriptor scope) const {
     llvm::DIType eltType = base->GetDIType(scope);
 #else //LLVM 3.7++
-llvm::MDType *VectorType::GetDIType(llvm::MDScope *scope) const {
-    llvm::MDType *eltType = base->GetDIType(scope);
+llvm::DIType *VectorType::GetDIType(llvm::DIScope *scope) const {
+    llvm::DIType *eltType = base->GetDIType(scope);
 #endif
 #ifdef LLVM_3_2
     llvm::Value *sub = m->diBuilder->getOrCreateSubrange(0, numElements-1);
@@ -1839,7 +1839,7 @@ llvm::MDType *VectorType::GetDIType(llvm::MDScope *scope) const {
     uint64_t sizeBits = eltType.getSizeInBits() * numElements;
     uint64_t align = eltType.getAlignInBits();
 #else // LLVM 3.7++
-    llvm::DebugNodeArray subArray = m->diBuilder->getOrCreateArray(sub);
+    llvm::DINodeArray subArray = m->diBuilder->getOrCreateArray(sub);
     uint64_t sizeBits = eltType->getSizeInBits() * numElements;
     uint64_t align = eltType->getAlignInBits();
 #endif
@@ -2262,7 +2262,7 @@ StructType::LLVMType(llvm::LLVMContext *ctx) const {
 #if defined(LLVM_3_2) || defined(LLVM_3_3) || defined(LLVM_3_4) || defined(LLVM_3_5) || defined(LLVM_3_6)
 llvm::DIType StructType::GetDIType(llvm::DIDescriptor scope) const {
 #else //LLVM 3.7++
-llvm::MDType *StructType::GetDIType(llvm::MDScope *scope) const {
+llvm::DIType *StructType::GetDIType(llvm::DIScope *scope) const {
 #endif
     uint64_t currentSize = 0, align = 0;
 #if defined (LLVM_3_2) || defined (LLVM_3_3) || defined (LLVM_3_4) || defined (LLVM_3_5)
@@ -2279,7 +2279,7 @@ llvm::MDType *StructType::GetDIType(llvm::MDScope *scope) const {
         uint64_t eltAlign = eltType.getAlignInBits();
         uint64_t eltSize = eltType.getSizeInBits();
 #else // LLVM 3.7++
-        llvm::MDType *eltType = GetElementType(i)->GetDIType(scope);
+        llvm::DIType *eltType = GetElementType(i)->GetDIType(scope);
         uint64_t eltAlign = eltType->getAlignInBits();
         uint64_t eltSize = eltType->getSizeInBits();
 #endif
@@ -2300,8 +2300,8 @@ llvm::MDType *StructType::GetDIType(llvm::MDScope *scope) const {
         llvm::DIFile diFile = elementPositions[i].GetDIFile();
         llvm::DIType fieldType =
 #else // LLVM 3.7++
-        llvm::MDFile *diFile = elementPositions[i].GetDIFile();
-        llvm::MDDerivedType *fieldType =
+        llvm::DIFile *diFile = elementPositions[i].GetDIFile();
+        llvm::DIDerivedType *fieldType =
 #endif
             m->diBuilder->createMemberType(scope, elementNames[i], diFile,
                                            line, eltSize, eltAlign,
@@ -2320,8 +2320,8 @@ llvm::MDType *StructType::GetDIType(llvm::MDScope *scope) const {
     llvm::DIArray elements = m->diBuilder->getOrCreateArray(elementLLVMTypes);
     llvm::DIFile diFile = pos.GetDIFile();
 #else // LLVM 3.7++
-    llvm::DebugNodeArray elements = m->diBuilder->getOrCreateArray(elementLLVMTypes);
-    llvm::MDFile *diFile = pos.GetDIFile();
+    llvm::DINodeArray elements = m->diBuilder->getOrCreateArray(elementLLVMTypes);
+    llvm::DIFile *diFile = pos.GetDIFile();
 #endif
     return m->diBuilder->createStructType(
         diFile,
@@ -2569,9 +2569,9 @@ llvm::DIType UndefinedStructType::GetDIType(llvm::DIDescriptor scope) const {
     llvm::DIFile diFile = pos.GetDIFile();
     llvm::DIArray elements;
 #else //LLVM 3.7++
-llvm::MDType *UndefinedStructType::GetDIType(llvm::MDScope *scope) const {
-    llvm::MDFile *diFile = pos.GetDIFile();
-    llvm::DebugNodeArray elements;
+llvm::DIType *UndefinedStructType::GetDIType(llvm::DIScope *scope) const {
+    llvm::DIFile *diFile = pos.GetDIFile();
+    llvm::DINodeArray elements;
 #endif
     return m->diBuilder->createStructType(
         diFile,
@@ -2846,12 +2846,12 @@ llvm::DIType ReferenceType::GetDIType(llvm::DIDescriptor scope) const {
     }
     llvm::DIType diTargetType = targetType->GetDIType(scope);
 #else //LLVM 3.7++
-llvm::MDType *ReferenceType::GetDIType(llvm::MDScope *scope) const {
+llvm::DIType *ReferenceType::GetDIType(llvm::DIScope *scope) const {
     if (targetType == NULL) {
         Assert(m->errorCount > 0);
         return NULL;
     }
-    llvm::MDType *diTargetType = targetType->GetDIType(scope);
+    llvm::DIType *diTargetType = targetType->GetDIType(scope);
 #endif
     return m->diBuilder->createReferenceType(llvm::dwarf::DW_TAG_reference_type,
                                              diTargetType);
@@ -3120,7 +3120,7 @@ FunctionType::LLVMType(llvm::LLVMContext *ctx) const {
 #if defined(LLVM_3_2) || defined(LLVM_3_3) || defined(LLVM_3_4) || defined(LLVM_3_5) || defined(LLVM_3_6)
 llvm::DIType FunctionType::GetDIType(llvm::DIDescriptor scope) const {
 #else //LLVM 3.7++
-llvm::MDType *FunctionType::GetDIType(llvm::MDScope *scope) const {
+llvm::DIType *FunctionType::GetDIType(llvm::DIScope *scope) const {
 #endif
 
 #if defined (LLVM_3_2) || defined (LLVM_3_3) || defined (LLVM_3_4) || defined (LLVM_3_5)
@@ -3155,9 +3155,9 @@ llvm::MDType *FunctionType::GetDIType(llvm::MDScope *scope) const {
         // FIXME: DIFile
         m->diBuilder->createSubroutineType(llvm::DIFile(), retArgTypesArray);
 #else // LLVM 3.7++
-    llvm::MDTypeRefArray retArgTypesArray =
+    llvm::DITypeRefArray retArgTypesArray =
         m->diBuilder->getOrCreateTypeArray(retArgTypes);
-    llvm::MDType *diType =
+    llvm::DIType *diType =
         m->diBuilder->createSubroutineType(NULL, retArgTypesArray);
 #endif
     return diType;

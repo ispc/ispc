@@ -922,10 +922,10 @@ lDefineConstantInt(const char *name, int val, llvm::Module *module,
         llvm::DIType diType = sym->type->GetDIType(file);
         Assert(diType.Verify());
 #else // LLVM 3.7+
-        llvm::MDFile *file =
+        llvm::DIFile *file =
             m->diBuilder->createFile(m->diCompileUnit->getFilename(),
                                      m->diCompileUnit->getDirectory());
-        llvm::MDType *diType = sym->type->GetDIType(file);
+        llvm::DIType *diType = sym->type->GetDIType(file);
 //        Assert(diType.Verify());
 #endif
         // FIXME? DWARF says that this (and programIndex below) should
@@ -1024,10 +1024,10 @@ lDefineProgramIndex(llvm::Module *module, SymbolTable *symbolTable) {
         llvm::DIType diType = sym->type->GetDIType(file);
         Assert(diType.Verify());
 #else // LLVM 3.7+
-        llvm::MDFile *file =
+        llvm::DIFile *file =
             m->diBuilder->createFile(m->diCompileUnit->getFilename(),
                                      m->diCompileUnit->getDirectory());
-        llvm::MDType *diType = sym->type->GetDIType(file);
+        llvm::DIType *diType = sym->type->GetDIType(file);
 //        Assert(diType.Verify());
 #endif
 #if defined(LLVM_3_6)// LLVM 3.6+

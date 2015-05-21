@@ -355,7 +355,7 @@ public:
 #if defined(LLVM_3_2) || defined(LLVM_3_3) || defined(LLVM_3_4) || defined(LLVM_3_5) || defined(LLVM_3_6)
                      llvm::DIScope *scope = NULL);
 #else // LLVM 3.7++
-                     llvm::MDScope *scope = NULL);
+                     llvm::DIScope *scope = NULL);
 #endif
 
     /** Inform the debugging information generation code that a new scope
@@ -371,7 +371,7 @@ public:
 #if defined(LLVM_3_2) || defined(LLVM_3_3) || defined(LLVM_3_4) || defined(LLVM_3_5) || defined(LLVM_3_6)
     llvm::DIScope GetDIScope() const;
 #else // LLVM 3.7++
-    llvm::MDScope *GetDIScope() const;
+    llvm::DIScope *GetDIScope() const;
 #endif
 
     /** Emits debugging information for the variable represented by
@@ -696,17 +696,17 @@ private:
         function. */
     std::vector<llvm::DILexicalBlock> debugScopes;
 #else // LLVM 3.7++
-    /** MDFile object corresponding to the source file where the current
+    /** DIFile object corresponding to the source file where the current
         function was defined (used for debugging info). */
-    llvm::MDFile *diFile;
+    llvm::DIFile *diFile;
 
-    /** MDSubprogram corresponding to this function (used for debugging
+    /** DISubprogram corresponding to this function (used for debugging
         info). */
-    llvm::MDSubprogram *diSubprogram;
+    llvm::DISubprogram *diSubprogram;
 
     /** These correspond to the current set of nested scopes in the
         function. */
-    std::vector<llvm::MDScope *> debugScopes;
+    std::vector<llvm::DIScope *> debugScopes;
 #endif
 
     /** True if a 'launch' statement has been encountered in the function. */

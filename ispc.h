@@ -91,9 +91,9 @@ namespace llvm {
     class DIType;
     class DIDescriptor;
 #else // LLVM 3.7++
-    class MDFile;
-    class MDType;
-    class MDScope;
+    class DIFile;
+    class DIType;
+    class DIScope;
 #endif
 }
 
@@ -148,8 +148,8 @@ struct SourcePos {
     /** Returns a LLVM DIFile object that represents the SourcePos's file */
     llvm::DIFile GetDIFile() const;
 #else
-    /** Returns a LLVM MDFile object that represents the SourcePos's file */
-    llvm::MDFile *GetDIFile() const;
+    /** Returns a LLVM DIFile object that represents the SourcePos's file */
+    llvm::DIFile *GetDIFile() const;
 #endif
 
     bool operator==(const SourcePos &p2) const;
