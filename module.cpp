@@ -1486,6 +1486,7 @@ Module::writeObjectFileOrAssembly(llvm::TargetMachine *targetMachine,
     pm.add(dlp);
 #endif // LLVM 3.7+ doesn't have DataLayoutPass anymore.
 
+    {
 #if defined(LLVM_3_2) || defined(LLVM_3_3) || defined(LLVM_3_4) || defined(LLVM_3_5) || defined(LLVM_3_6)
     llvm::formatted_raw_ostream fos(of->os());
 #else // LLVM 3.7+
@@ -1501,6 +1502,9 @@ Module::writeObjectFileOrAssembly(llvm::TargetMachine *targetMachine,
 
     // Success; tell tool_output_file to keep the final output file.
     of->keep();
+    }
+
+    delete of;
 
     return true;
 }
