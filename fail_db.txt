@@ -152,9 +152,6 @@
 ./tests/ptr-15.ispc runfail  x86-64     generic-16   Linux LLVM 3.6 clang++3.4 -O0 *
 ./tests/ptr-19.ispc runfail  x86-64     generic-16   Linux LLVM 3.6 clang++3.4 -O0 *
 ./tests/test-143.ispc runfail  x86-64     generic-16   Linux LLVM 3.6 clang++3.4 -O0 *
-.\tests\foreach-double-1.ispc runfail     x86     avx2-i32x8 Windows LLVM 3.6         cl -O2 *
-.\tests\foreach-double-1.ispc runfail     x86    avx2-i32x16 Windows LLVM 3.6         cl -O2 *
-.\tests\foreach-double-1.ispc runfail     x86     avx2-i64x4 Windows LLVM 3.6         cl -O2 *
 ./tests/ptr-22.ispc runfail  x86-64      generic-4   Linux LLVM 3.6 clang++3.4 -O0 *
 ./tests/ptr-22.ispc runfail  x86-64     generic-16   Linux LLVM 3.6 clang++3.4 -O0 *
 ./tests/masked-scatter-struct.ispc runfail  x86-64      generic-4   Linux LLVM 3.7 clang++3.4 -O2 *
