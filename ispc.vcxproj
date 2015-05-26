@@ -36,6 +36,8 @@
     <ClCompile Include="$(Configuration)\gen-bitcode-avx2-x2-64bit.cpp" />
     <ClCompile Include="$(Configuration)\gen-bitcode-avx2-i64x4-32bit.cpp" />
     <ClCompile Include="$(Configuration)\gen-bitcode-avx2-i64x4-64bit.cpp" />
+    <ClCompile Include="$(Configuration)\gen-bitcode-knl-32bit.cpp" />
+    <ClCompile Include="$(Configuration)\gen-bitcode-knl-64bit.cpp" />
     <ClCompile Include="$(Configuration)\gen-bitcode-c-32.cpp" />
     <ClCompile Include="$(Configuration)\gen-bitcode-c-64.cpp" />
     <ClCompile Include="$(Configuration)\gen-bitcode-dispatch.cpp" />
@@ -276,6 +278,16 @@
       <Outputs>$(Configuration)/gen-bitcode-avx2-i64x4-32bit.cpp; $(Configuration)/gen-bitcode-avx2-i64x4-64bit.cpp</Outputs>
       <AdditionalInputs>builtins\util.m4;builtins\svml.m4;builtins\target-avx-common.ll;builtins\target-avx.ll;builtins\target-avx1-i64x4base.ll</AdditionalInputs>
       <Message>Building gen-bitcode-avx2-i64x4-32bit.cpp and gen-bitcode-avx2-i64x4-64bit.cpp</Message>
+    </CustomBuild>
+  </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="builtins\target-knl.ll">
+      <FileType>Document</FileType>
+      <Command>m4 -Ibuiltins/ -DLLVM_VERSION=%LLVM_VERSION% -DBUILD_OS=WINDOWS -DRUNTIME=32 builtins/target-knl.ll | python bitcode2cpp.py builtins\target-knl.ll 32bit &gt; $(Configuration)/gen-bitcode-knl-32bit.cpp;
+               m4 -Ibuiltins/ -DLLVM_VERSION=%LLVM_VERSION% -DBUILD_OS=WINDOWS -DRUNTIME=64 builtins/target-knl.ll | python bitcode2cpp.py builtins\target-knl.ll 64bit &gt; $(Configuration)/gen-bitcode-knl-64bit.cpp</Command>
+      <Outputs>$(Configuration)/gen-bitcode-knl-32bit.cpp; $(Configuration)/gen-bitcode-knl-64bit.cpp</Outputs>
+      <AdditionalInputs>builtins\util.m4;builtins\svml.m4;builtins\target-avx-common.ll;builtins\target-avx.ll</AdditionalInputs>
+      <Message>Building gen-bitcode-knl-32bit.cpp and gen-bitcode-knl-64bit.cpp</Message>
     </CustomBuild>
   </ItemGroup>
   <ItemGroup>
