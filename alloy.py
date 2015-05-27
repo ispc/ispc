@@ -65,6 +65,21 @@ def setting_paths(llvm, ispc, sde):
     if sde != "":
         os.environ["SDE_HOME"]=sde
 
+def get_sde():
+    sde_exe = ""
+    PATH_dir = string.split(os.getenv("PATH"), os.pathsep)
+    if current_OS == "Windows":
+        sde_n = "sde.exe"
+    else:
+        sde_n = "sde"
+    for counter in PATH_dir:
+        if os.path.exists(counter + os.sep + sde_n) and sde_exe == "":
+            sde_exe = counter + os.sep + sde_n
+    if os.environ.get("SDE_HOME") != None:
+        if os.path.exists(os.environ.get("SDE_HOME") + os.sep + sde_n):
+            sde_exe = os.environ.get("SDE_HOME") + os.sep + sde_n
+    return sde_exe
+
 def check_LLVM(which_LLVM):
     answer = []
     if which_LLVM[0] == " ":
@@ -110,7 +125,7 @@ def build_LLVM(version_LLVM, revision, folder, tarball, debug, selfbuild, extra,
     if  version_LLVM == "trunk":
         SVN_PATH="trunk"
     if  version_LLVM == "3.6":
-        SVN_PATH="tags/RELEASE_360/final"
+        SVN_PATH="tags/RELEASE_361/final"
         version_LLVM = "3_6"
     if  version_LLVM == "3.5":
         SVN_PATH="tags/RELEASE_351/final"
@@ -324,18 +339,7 @@ def check_targets():
     if current_OS != "Windows":
         answer_generic = ["generic-4", "generic-16", "generic-8", "generic-1", "generic-32", "generic-64"]
     # now check what targets we have with the help of SDE
-    sde_exists = ""
-    PATH_dir = string.split(os.getenv("PATH"), os.pathsep)
-    if current_OS == "Windows":
-        sde_n = "sde.exe"
-    else:
-        sde_n = "sde"
-    for counter in PATH_dir:
-        if os.path.exists(counter + os.sep + sde_n) and sde_exists == "":
-            sde_exists = counter + os.sep + sde_n
-    if os.environ.get("SDE_HOME") != None:
-        if os.path.exists(os.environ.get("SDE_HOME") + os.sep + sde_n):
-            sde_exists = os.environ.get("SDE_HOME") + os.sep + sde_n
+    sde_exists = get_sde()
     if sde_exists == "":
         error("you haven't got sde neither in SDE_HOME nor in your PATH.\n" + 
             "To test all platforms please set SDE_HOME to path containing SDE.\n" +
@@ -663,7 +667,7 @@ def validation_run(only, only_targets, reference_branch, number, notify, update,
                     print_debug("Warning: target " + stability.target + " is not supported in LLVM " + LLVM[i] + "\n", False, stability_log)
                     continue
 
-                stability.wrapexe = os.environ["SDE_HOME"] + "/sde " + sde_targets[j][0] + " -- "
+                stability.wrapexe = get_sde() + " " + sde_targets[j][0] + " -- "
                 if "knc" in stability.target:
                     arch = knc_archs
                 elif ("knl-generic" in stability.target) or ("knl-avx512" in stability.target):
