@@ -922,7 +922,7 @@ if __name__ == "__main__":
     parser.add_option('-v', '--verbose', dest='verbose', help='Enable verbose output',
                   default=False, action="store_true")
     parser.add_option('--wrap-exe', dest='wrapexe',
-                  help='Executable to wrap test runs with (e.g. "valgrind" or "sde --knl -- ")',
+                  help='Executable to wrap test runs with (e.g. "valgrind" or "sde -knl -- ")',
                   default="")
     parser.add_option('--time', dest='time', help='Enable time output',
                   default=False, action="store_true")
@@ -936,13 +936,6 @@ if __name__ == "__main__":
     parser.add_option("--save-bin", dest='save_bin', help='compile and create bin, but don\'t execute it',
                   default=False, action="store_true")
     (options, args) = parser.parse_args()
-
-    # Untill we have the hardware to run testing on:
-    if ((options.target == "knl-generic") and (options.wrapexe == "")):
-        options.wrapexe = "sde -knl -- "        
-
-    if ((options.target == "avx512knl-i32x16") and (options.wrapexe == "")):
-        options.wrapexe = "sde -knl -- "        
 
     L = run_tests(options, args, 1)
     exit(0)
