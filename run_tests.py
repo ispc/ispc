@@ -270,7 +270,7 @@ def run_test(testname):
                 elif (options.target == "knl-generic"):
                     cc_cmd = "%s -O2 -I. %s %s test_static.cpp -DTEST_SIG=%d %s -o %s" % \
                          (options.compiler_exe, gcc_arch, "-xMIC-AVX512", match, obj_name, exe_name)
-                elif (options.target == "knl-avx512"):
+                elif (options.target == "avx512knl-i32x16"):
                      cc_cmd = "%s -O2 -I. %s %s test_static.cpp -DTEST_SIG=%d %s -o %s" % \
                          (options.compiler_exe, gcc_arch, "-march=knl", match, obj_name, exe_name)
                 else:
@@ -558,7 +558,7 @@ def verify():
               "sse4-i8x16", "avx1-i32x4" "avx1-i32x8", "avx1-i32x16", "avx1-i64x4", "avx1.1-i32x8",
               "avx1.1-i32x16", "avx1.1-i64x4", "avx2-i32x8", "avx2-i32x16", "avx2-i64x4",
               "generic-1", "generic-4", "generic-8",
-              "generic-16", "generic-32", "generic-64", "knc", "knl-generic", "knl-avx512"]]
+              "generic-16", "generic-32", "generic-64", "knc", "knl-generic", "avx512knl-i32x16"]]
     for i in range (0,len(f_lines)):
         if f_lines[i][0] == "%":
             continue
@@ -671,7 +671,7 @@ def run_tests(options1, args, print_version):
             options.compiler_exe = "icpc"
         elif (options.target == "knl-generic"): 
             options.compiler_exe = "icpc"
-        elif (options.target == "knl-avx512"): 
+        elif (options.target == "avx512knl-i32x16"): 
             options.compiler_exe = "icpc"
         elif is_windows:
             options.compiler_exe = "cl.exe"
@@ -943,7 +943,7 @@ if __name__ == "__main__":
     if ((options.target == "knl-generic") and (options.wrapexe == "")):
         options.wrapexe = "sde -knl -- "        
 
-    if ((options.target == "knl-avx512") and (options.wrapexe == "")):
+    if ((options.target == "avx512knl-i32x16") and (options.wrapexe == "")):
         options.wrapexe = "sde -knl -- "        
 
     L = run_tests(options, args, 1)
