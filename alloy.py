@@ -636,7 +636,7 @@ def validation_run(only, only_targets, reference_branch, number, notify, update,
                 if options.ispc_build_compiler == "gcc":
                     stability.compiler_exe = "g++"
                 # but 'knc/knl' target is supported only by icpc, so set explicitly
-                if ("knc" in targets[j]) or ("knl-generic" in targets[j]) or ("avx512knl-i32x16" in targets[j]):
+                if ("knc" in targets[j]) or ("knl-generic" in targets[j]):
                     stability.compiler_exe = "icpc"
                 # now set archs for targets
                 if "generic" in targets[j]:

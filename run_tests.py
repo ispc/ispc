@@ -271,7 +271,7 @@ def run_test(testname):
                     cc_cmd = "%s -O2 -I. %s %s test_static.cpp -DTEST_SIG=%d %s -o %s" % \
                          (options.compiler_exe, gcc_arch, "-xMIC-AVX512", match, obj_name, exe_name)
                 elif (options.target == "avx512knl-i32x16"):
-                     cc_cmd = "%s -O2 -I. %s %s test_static.cpp -DTEST_SIG=%d %s -o %s" % \
+                    cc_cmd = "%s -O2 -I. %s %s test_static.cpp -DTEST_SIG=%d %s -o %s" % \
                          (options.compiler_exe, gcc_arch, "-march=knl", match, obj_name, exe_name)
                 else:
                     cc_cmd = "%s -O2 -I. %s %s test_static.cpp -DTEST_SIG=%d %s -o %s" % \
@@ -671,8 +671,6 @@ def run_tests(options1, args, print_version):
             options.compiler_exe = "icpc"
         elif (options.target == "knl-generic"): 
             options.compiler_exe = "icpc"
-        elif (options.target == "avx512knl-i32x16"): 
-            options.compiler_exe = "icpc"
         elif is_windows:
             options.compiler_exe = "cl.exe"
         else:
@@ -911,7 +909,7 @@ if __name__ == "__main__":
     parser.add_option('-t', '--target', dest='target',
                   help=('Set compilation target (sse2-i32x4, sse2-i32x8, sse4-i32x4, sse4-i32x8, ' +
                   'sse4-i16x8, sse4-i8x16, avx1-i32x8, avx1-i32x16, avx1.1-i32x8, avx1.1-i32x16, ' +
-                  'avx2-i32x8, avx2-i32x16, generic-x1, generic-x4, generic-x8, generic-x16, ' + 
+                  'avx2-i32x8, avx2-i32x16, avx512knl-i32x16, generic-x1, generic-x4, generic-x8, generic-x16, ' + 
                   'generic-x32, generic-x64, knc, knl-generic)'), default="sse4")
     parser.add_option('-a', '--arch', dest='arch',
                   help='Set architecture (arm, x86, x86-64)',default="x86-64")
@@ -924,8 +922,8 @@ if __name__ == "__main__":
     parser.add_option('-v', '--verbose', dest='verbose', help='Enable verbose output',
                   default=False, action="store_true")
     parser.add_option('--wrap-exe', dest='wrapexe',
-                  help='Executable to wrap test runs with (e.g. "valgrind")',
-                                    default="")
+                  help='Executable to wrap test runs with (e.g. "valgrind" or "sde --knl -- ")',
+                  default="")
     parser.add_option('--time', dest='time', help='Enable time output',
                   default=False, action="store_true")
     parser.add_option('--non-interactive', dest='non_interactive', help='Disable interactive status updates',
