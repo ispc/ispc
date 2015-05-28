@@ -170,7 +170,7 @@ lGetSystemISA() {
         else if ((info2[1] & (1 << 26)) != 0 && // AVX512 PF
                  (info2[1] & (1 << 27)) != 0 && // AVX512 ER
                  (info2[1] & (1 << 28)) != 0) { // AVX512 CDI
-            return "knl-avx512";
+            return "avx512knl-i32x16";
         }
         // If it's unknown AVX512 target, fall through and use AVX2
         // or whatever is available in the machine.
@@ -509,7 +509,7 @@ Target::Target(const char *arch, const char *cpu, const char *isa, bool pic, boo
 
 #if !defined(LLVM_3_2) && !defined(LLVM_3_3) && !defined(LLVM_3_4) && !defined(LLVM_3_5) && !defined(LLVM_3_6)// LLVM 3.7+
             case CPU_KNL:
-                isa = "knl-avx512";
+                isa = "avx512knl-i32x16";
                 break;
 #endif
 
@@ -892,7 +892,7 @@ Target::Target(const char *arch, const char *cpu, const char *isa, bool pic, boo
         CPUfromISA = CPU_Haswell;
     }
 #if !defined(LLVM_3_2) && !defined(LLVM_3_3) && !defined(LLVM_3_4) && !defined(LLVM_3_5) && !defined(LLVM_3_6)// LLVM 3.7+
-    else if (!strcasecmp(isa, "knl-avx512")) {
+    else if (!strcasecmp(isa, "avx512knl-i32x16")) {
         this->m_isa = Target::KNL_AVX512;
         this->m_nativeVectorWidth = 16;
         this->m_nativeVectorAlignment = 64;
@@ -1132,13 +1132,13 @@ Target::SupportedTargets() {
         "sse4-i32x4, sse4-i32x8, sse4-i16x8, sse4-i8x16, "
         "avx1-i32x4, "
         "avx1-i32x8, avx1-i32x16, avx1-i64x4, "
-        "avx1.1-i32x8, avx1.1-i32x16, avx1.1-i64x4 "
+        "avx1.1-i32x8, avx1.1-i32x16, avx1.1-i64x4, "
         "avx2-i32x8, avx2-i32x16, avx2-i64x4, "
-        "generic-x1, generic-x4, generic-x8, generic-x16, "
-        "generic-x32, generic-x64, *-generic-x16, "
 #if !defined(LLVM_3_2) && !defined(LLVM_3_3) && !defined(LLVM_3_4) && !defined(LLVM_3_5) && !defined(LLVM_3_6)// LLVM 3.7+
-        "knl-avx512"
+        "avx512knl-i32x16, "
 #endif
+        "generic-x1, generic-x4, generic-x8, generic-x16, "
+        "generic-x32, generic-x64, *-generic-x16"
 #ifdef ISPC_ARM_ENABLED
         ", neon-i8x16, neon-i16x8, neon-i32x4"
 #endif
@@ -1209,7 +1209,7 @@ Target::ISAToString(ISA isa) {
         return "avx2";
 #if !defined(LLVM_3_2) && !defined(LLVM_3_3) && !defined(LLVM_3_4) && !defined(LLVM_3_5) && !defined(LLVM_3_6)// LLVM 3.7+
     case Target::KNL_AVX512:
-        return "knl-avx512";
+        return "avx512knl-i32x16";
 #endif
     case Target::SKX:
         return "skx";
@@ -1257,7 +1257,7 @@ Target::ISAToTargetString(ISA isa) {
         return "avx2-i32x8";
 #if !defined(LLVM_3_2) && !defined(LLVM_3_3) && !defined(LLVM_3_4) && !defined(LLVM_3_5) && !defined(LLVM_3_6)// LLVM 3.7+
     case Target::KNL_AVX512:
-        return "knl-avx512";
+        return "avx512knl-i32x16";
 #endif
     case Target::SKX:
         return "avx2";

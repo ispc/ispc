@@ -270,8 +270,8 @@ def run_test(testname):
                 elif (options.target == "knl-generic"):
                     cc_cmd = "%s -O2 -I. %s %s test_static.cpp -DTEST_SIG=%d %s -o %s" % \
                          (options.compiler_exe, gcc_arch, "-xMIC-AVX512", match, obj_name, exe_name)
-                elif (options.target == "knl-avx512"):
-                     cc_cmd = "%s -O2 -I. %s %s test_static.cpp -DTEST_SIG=%d %s -o %s" % \
+                elif (options.target == "avx512knl-i32x16"):
+                    cc_cmd = "%s -O2 -I. %s %s test_static.cpp -DTEST_SIG=%d %s -o %s" % \
                          (options.compiler_exe, gcc_arch, "-march=knl", match, obj_name, exe_name)
                 else:
                     cc_cmd = "%s -O2 -I. %s %s test_static.cpp -DTEST_SIG=%d %s -o %s" % \
@@ -558,7 +558,7 @@ def verify():
               "sse4-i8x16", "avx1-i32x4" "avx1-i32x8", "avx1-i32x16", "avx1-i64x4", "avx1.1-i32x8",
               "avx1.1-i32x16", "avx1.1-i64x4", "avx2-i32x8", "avx2-i32x16", "avx2-i64x4",
               "generic-1", "generic-4", "generic-8",
-              "generic-16", "generic-32", "generic-64", "knc", "knl-generic", "knl-avx512"]]
+              "generic-16", "generic-32", "generic-64", "knc", "knl-generic", "avx512knl-i32x16"]]
     for i in range (0,len(f_lines)):
         if f_lines[i][0] == "%":
             continue
@@ -670,8 +670,6 @@ def run_tests(options1, args, print_version):
         if (options.target == "knc"): 
             options.compiler_exe = "icpc"
         elif (options.target == "knl-generic"): 
-            options.compiler_exe = "icpc"
-        elif (options.target == "knl-avx512"): 
             options.compiler_exe = "icpc"
         elif is_windows:
             options.compiler_exe = "cl.exe"
@@ -911,7 +909,7 @@ if __name__ == "__main__":
     parser.add_option('-t', '--target', dest='target',
                   help=('Set compilation target (sse2-i32x4, sse2-i32x8, sse4-i32x4, sse4-i32x8, ' +
                   'sse4-i16x8, sse4-i8x16, avx1-i32x8, avx1-i32x16, avx1.1-i32x8, avx1.1-i32x16, ' +
-                  'avx2-i32x8, avx2-i32x16, generic-x1, generic-x4, generic-x8, generic-x16, ' + 
+                  'avx2-i32x8, avx2-i32x16, avx512knl-i32x16, generic-x1, generic-x4, generic-x8, generic-x16, ' + 
                   'generic-x32, generic-x64, knc, knl-generic)'), default="sse4")
     parser.add_option('-a', '--arch', dest='arch',
                   help='Set architecture (arm, x86, x86-64)',default="x86-64")
@@ -924,8 +922,8 @@ if __name__ == "__main__":
     parser.add_option('-v', '--verbose', dest='verbose', help='Enable verbose output',
                   default=False, action="store_true")
     parser.add_option('--wrap-exe', dest='wrapexe',
-                  help='Executable to wrap test runs with (e.g. "valgrind")',
-                                    default="")
+                  help='Executable to wrap test runs with (e.g. "valgrind" or "sde -knl -- ")',
+                  default="")
     parser.add_option('--time', dest='time', help='Enable time output',
                   default=False, action="store_true")
     parser.add_option('--non-interactive', dest='non_interactive', help='Disable interactive status updates',
@@ -938,13 +936,6 @@ if __name__ == "__main__":
     parser.add_option("--save-bin", dest='save_bin', help='compile and create bin, but don\'t execute it',
                   default=False, action="store_true")
     (options, args) = parser.parse_args()
-
-    # Untill we have the hardware to run testing on:
-    if ((options.target == "knl-generic") and (options.wrapexe == "")):
-        options.wrapexe = "sde -knl -- "        
-
-    if ((options.target == "knl-avx512") and (options.wrapexe == "")):
-        options.wrapexe = "sde -knl -- "        
 
     L = run_tests(options, args, 1)
     exit(0)
