@@ -101,6 +101,9 @@ usage(int ret) {
     PrintWithWordBreaks(cpuHelp, 16, TerminalWidth(), stdout);
     printf("    [-D<foo>]\t\t\t\t#define given value when running preprocessor\n");
     printf("    [--dev-stub <filename>]\t\tEmit device-side offload stub functions to file\n");
+#ifdef ISPC_IS_WINDOWS
+    printf("    [--dllexport]\t\t\tMake non-static functions DLL exported.  Windows only.\n");
+#endif
     printf("    [--emit-asm]\t\t\tGenerate assembly language file as output\n");
     printf("    [--emit-c++]\t\t\tEmit a C++ source file as output\n");
     printf("    [--emit-llvm]\t\t\tEmit LLVM bitode file as output\n");
@@ -154,7 +157,6 @@ devUsage(int ret) {
     printf("\nusage (developer options): ispc\n");
     printf("    [--debug]\t\t\t\tPrint information useful for debugging ispc\n");
     printf("    [--print-target]\t\t\tPrint target's information\n");
-    printf("    [--dllexport]\t\t\tMake non-static functions DLL exported.  Windows only.\n");  
     printf("    [--fuzz-test]\t\t\tRandomly perturb program input to test error conditions\n");
     printf("    [--fuzz-seed=<value>]\t\tSeed value for RNG for fuzz testing\n");
     printf("    [--opt=<option>]\t\t\tSet optimization option\n");
@@ -381,8 +383,10 @@ int main(int Argc, char *Argv[]) {
         }
         else if (!strcmp(argv[i], "--debug"))
             g->debugPrint = true;
+#ifdef ISPC_IS_WINDOWS
         else if (!strcmp(argv[i], "--dllexport"))
             g->dllExport = true;
+#endif
         else if (!strcmp(argv[i], "--print-target"))
             g->printTarget = true;
         else if (!strcmp(argv[i], "--instrument"))
