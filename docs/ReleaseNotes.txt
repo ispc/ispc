@@ -1,3 +1,59 @@
+=== v1.8.2 === (29 May 2015)
+
+An ISPC update with several important stability fixes and an experimental
+AVX512 support.
+
+Current level of AVX512 support is targeting the new generation of Xeon Phi
+codename Knights Landing. It's implemented in two different ways: as generic and
+native target. Generic target is similar to KNC support and requires Intel C/C++
+Compiler (15.0 and newer) and is availiable in regular ISPC build, which is
+based on LLVM 3.6.1. For the native AVX512 target, we have a separate ISPC
+build, which is based on LLVM trunk (3.7). This build is less stable and has
+several known issues. Nevertheless, if you are interested in AVX512 support for
+your code, we encourage you to try it and report the bugs. We actively working
+with LLVM maintainers to fix all AVX512 bugs, so your feedback is important for
+us and will ensure that bugs affecting your code are fixed by LLVM 3.7 release.
+
+Other notable changes and fixes include:
+
+* Broadwell support via --cpu=broadwell.
+
+* Changed cpu naming to accept cpu codenames. Check help for more details.
+
+* --cpu switch disallowed in multi-target mode.
+
+* Alignment of structure fields (in generated header files) is changed to be
+  more consistent regardless used C/C++ compiler.
+
+* --dllexport switch is added on Windows to make non-static functions DLL
+  export.
+
+* --print-target switch is added to dump details of LLVM target machine.
+  This may help you to debug issues with code generation for incorrect target
+  (or more likely to ensure that code generation is done right).
+
+* A bug was fixed, which triggered uniform statements to be executed with
+  all-off mask under some circumstances.
+
+* The restriction for using some uniform types as return type in multi-target
+  mode with targets of different width was relaxed.
+
+Also, if you are using ISPC for code generation for current generation of
+Xeon Phi (Knights Corner), the following changes are for you:
+
+* A bunch of stability fixes for KNC.
+
+* A bug, which affects projects with multiple ISPC source files compiled with generic
+  target is fixed. As side effect, you may see multiple warnings about unused static
+  functions - you need to add "-wd177" switch to ICC compiling generic output files.
+
+The release includes LLVM 3.6.1 binaries for Linux, MacOS, Windows and Windows based
+cross-compiler for Sony PlayStation4. LLVM 3.5 based experimental Linux binary with
+NVPTX support (now supporting also K80).
+
+Native AVX512 support is available in the set of less stable LLVM 3.7 based binaries
+for Linux, MacOS and Windows.
+
 === v1.8.1 === (31 December 2014)
 
 A minor update of ``ispc`` with several important stability fixes, namely:
