@@ -6,7 +6,7 @@ AVX512 support.
 Current level of AVX512 support is targeting the new generation of Xeon Phi
 codename Knights Landing. It's implemented in two different ways: as generic and
 native target. Generic target is similar to KNC support and requires Intel C/C++
-Compiler (15.0 and newer) and is availiable in regular ISPC build, which is
+Compiler (15.0 and newer) and is available in regular ISPC build, which is
 based on LLVM 3.6.1. For the native AVX512 target, we have a separate ISPC
 build, which is based on LLVM trunk (3.7). This build is less stable and has
 several known issues. Nevertheless, if you are interested in AVX512 support for
