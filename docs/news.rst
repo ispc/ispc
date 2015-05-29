@@ -2,6 +2,17 @@
 ispc News
 =========
 
+ispc 1.8.2 is Released
+----------------------
+
+An update of ``ispc`` with several important stability fixes and an experimental
+AVX512 support has been released. Binaries are based on LLVM 3.6.1. Binaries with
+native AVX512 support are based on LLVM 3.7 (r238198).
+
+For more details, please check `Release Notes`_.
+
+.. _Release Notes: https://github.com/ispc/ispc/blob/master/docs/ReleaseNotes.txt
+
 ispc 1.8.1 is Released
 ----------------------
 

@@ -51,6 +51,7 @@ Contents:
   + `Updating ISPC Programs For Changes In ISPC 1.5.0`_
   + `Updating ISPC Programs For Changes In ISPC 1.6.0`_
   + `Updating ISPC Programs For Changes In ISPC 1.7.0`_
+  + `Updating ISPC Programs For Changes In ISPC 1.8.2`_
 
 * `Getting Started with ISPC`_
 
@@ -325,6 +326,16 @@ older versions:
 
 * get_ProgramCount() was moved from stdlib to examples/util/util.isph file. You
   need to include this file to be able to use this function.
+
+Updating ISPC Programs For Changes In ISPC 1.8.2
+------------------------------------------------
+
+The release doesn't contain language changes, which may affect compatibility with
+older versions. Though you may want be aware of the following:
+
+* Mangling of uniform types was changed to not include varying width, so now you
+  may use uniform structures and pointers to uniform types as return types in
+  export functions in multi-target compilation.
 
 
 Getting Started with ISPC
@@ -5120,7 +5131,7 @@ countries.
 
 * Other names and brands may be claimed as the property of others.
 
-Copyright(C) 2011-2014, Intel Corporation. All rights reserved.
+Copyright(C) 2011-2015, Intel Corporation. All rights reserved.
 
 
 Optimization Notice
