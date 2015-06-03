@@ -1020,13 +1020,14 @@ Target::Target(const char *arch, const char *cpu, const char *isa, bool pic, boo
 #endif
         if (g->opt.disableFMA == false)
             options.AllowFPOpFusion = llvm::FPOpFusion::Fast;
-
+#if defined(LLVM_3_2) || defined(LLVM_3_3) || defined(LLVM_3_4) || defined(LLVM_3_5) || defined(LLVM_3_6)
 #ifdef ISPC_IS_WINDOWS
         if (strcmp("x86", arch) == 0) {
             // Workaround for issue #503 (LLVM issue 14646).
             // It's Win32 specific.
             options.NoFramePointerElim = true;
         }
+#endif
 #endif
         m_targetMachine =
             m_target->createTargetMachine(triple, m_cpu, featuresString, options,
