@@ -4620,10 +4620,11 @@ IndexExpr::TypeCheck() {
         // 64-bit target with 64-bit addressing, convert the index to an int32
         // type.
         //    The range of varying index is limited to [0,2^31) as a result.
-        if (Type::EqualIgnoringConst(indexType->GetAsUniformType(),
-                                     AtomicType::UniformInt64) == false ||
-            g->target->is32Bit() ||
-            g->opt.force32BitAddressing) {
+        if (!(Type::EqualIgnoringConst(indexType->GetAsUniformType(),
+                                       AtomicType::UniformUInt64) ||
+              Type::EqualIgnoringConst(indexType->GetAsUniformType(),
+                                       AtomicType::UniformInt64)) ||
+              g->target->is32Bit() || g->opt.force32BitAddressing) {
             const Type *indexType = AtomicType::VaryingInt32;
             index = TypeConvertExpr(index, indexType, "array index");
             if (index == NULL)
