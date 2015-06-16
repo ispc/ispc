@@ -83,7 +83,7 @@ struct ForeachDimension;
 #include "util.h"
 
 #include <stdio.h>
-#if defined(LLVM_3_2)
+#if ISPC_LLVM_VERSION < ISPC_LLVM_3_3
   #include <llvm/Constants.h>
 #else
   #include <llvm/IR/Constants.h>

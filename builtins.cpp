@@ -47,10 +47,10 @@
 
 #include <math.h>
 #include <stdlib.h>
-#if defined(LLVM_3_2)
+#if ISPC_LLVM_VERSION < ISPC_LLVM_3_3
   #include <llvm/Attributes.h>
 #endif
-#if defined(LLVM_3_2)
+#if ISPC_LLVM_VERSION < ISPC_LLVM_3_3
   #include <llvm/LLVMContext.h>
   #include <llvm/Module.h>
   #include <llvm/Type.h>
@@ -66,7 +66,7 @@
   #include <llvm/IR/Intrinsics.h>
   #include <llvm/IR/DerivedTypes.h>
 #endif
-#if !defined(LLVM_3_2) && !defined(LLVM_3_3) && !defined(LLVM_3_4) // LLVM 3.5+
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_3_5
     #include <llvm/Linker/Linker.h>
 #else
     #include <llvm/Linker.h>
@@ -784,13 +784,13 @@ void
 AddBitcodeToModule(const unsigned char *bitcode, int length,
                    llvm::Module *module, SymbolTable *symbolTable, bool warn) {
     llvm::StringRef sb = llvm::StringRef((char *)bitcode, length);
-#if defined(LLVM_3_2) || defined(LLVM_3_3) || defined(LLVM_3_4) || defined(LLVM_3_5)
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_3_2 && ISPC_LLVM_VERSION < ISPC_LLVM_3_6
     llvm::MemoryBuffer *bcBuf = llvm::MemoryBuffer::getMemBuffer(sb);
 #else // LLVM 3.6+
     llvm::MemoryBufferRef bcBuf = llvm::MemoryBuffer::getMemBuffer(sb)->getMemBufferRef();
 #endif
 
-#if !defined(LLVM_3_2) && !defined(LLVM_3_3) && !defined(LLVM_3_4) // LLVM 3.5+
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_3_5
     llvm::ErrorOr<llvm::Module *> ModuleOrErr = llvm::parseBitcodeFile(bcBuf, *g->ctx);
     if (std::error_code EC = ModuleOrErr.getError())
         Error(SourcePos(), "Error parsing stdlib bitcode: %s", EC.message().c_str());
@@ -850,7 +850,7 @@ AddBitcodeToModule(const unsigned char *bitcode, int length,
             // architecture and investigate what happened.
             // Generally we allow library DataLayout to be subset of module
             // DataLayout or library DataLayout to be empty.
-#if !defined(LLVM_3_2) && !defined(LLVM_3_3) && !defined(LLVM_3_4) // LLVM 3.5+
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_3_5
             if (!VerifyDataLayoutCompatibility(module->getDataLayoutStr(),
                                                bcModule->getDataLayoutStr())
                 && warn) {
@@ -880,7 +880,7 @@ AddBitcodeToModule(const unsigned char *bitcode, int length,
 
         std::string(linkError);
         if (llvm::Linker::LinkModules(module, bcModule
-#if defined(LLVM_3_2) || defined(LLVM_3_3) || defined(LLVM_3_4) || defined(LLVM_3_5) 
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_3_2 && ISPC_LLVM_VERSION < ISPC_LLVM_3_6
                                       , llvm::Linker::DestroySource,
                                       &linkError))
             Error(SourcePos(), "Error linking stdlib bitcode: %s", linkError.c_str());
@@ -917,7 +917,7 @@ lDefineConstantInt(const char *name, int val, llvm::Module *module,
     symbolTable->AddVariable(sym);
 
     if (m->diBuilder != NULL) {
-#if defined(LLVM_3_2) || defined(LLVM_3_3) || defined(LLVM_3_4) || defined(LLVM_3_5) || defined(LLVM_3_6)
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_3_2 && ISPC_LLVM_VERSION < ISPC_LLVM_3_7
         llvm::DIFile file;
         llvm::DIType diType = sym->type->GetDIType(file);
         Assert(diType.Verify());
@@ -932,7 +932,7 @@ lDefineConstantInt(const char *name, int val, llvm::Module *module,
         // have the DW_AT_artifical attribute.  It's not clear if this
         // matters for anything though.
 
-#if defined(LLVM_3_2) || defined(LLVM_3_3) || defined(LLVM_3_4) || defined(LLVM_3_5)
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_3_2 && ISPC_LLVM_VERSION < ISPC_LLVM_3_6
         llvm::DIGlobalVariable var = m->diBuilder->createGlobalVariable(
                                                name,
                                                file,
@@ -940,7 +940,7 @@ lDefineConstantInt(const char *name, int val, llvm::Module *module,
                                                diType,
                                                true /* static */,
                                                sym->storagePtr);
-#elif defined(LLVM_3_6)
+#elif ISPC_LLVM_VERSION < ISPC_LLVM_3_7 /* i.e., 3.6 */
         llvm::Constant *sym_const_storagePtr = llvm::dyn_cast<llvm::Constant>(sym->storagePtr);
         Assert(sym_const_storagePtr);
         llvm::DIGlobalVariable var = m->diBuilder->createGlobalVariable(
@@ -965,10 +965,10 @@ lDefineConstantInt(const char *name, int val, llvm::Module *module,
               true /* static */,
               sym_const_storagePtr);
 #endif
-#if defined(LLVM_3_2) || defined(LLVM_3_3) || defined(LLVM_3_4) || defined(LLVM_3_5) || defined(LLVM_3_6)
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_3_2 && ISPC_LLVM_VERSION < ISPC_LLVM_3_7
         Assert(var.Verify());
 #else // LLVM 3.7+
-    //comming soon
+    //coming soon
 #endif
     }
 }
@@ -984,7 +984,7 @@ lDefineConstantIntFunc(const char *name, int val, llvm::Module *module,
 
     llvm::Function *func = module->getFunction(name);
     Assert(func != NULL); // it should be declared already...
-#if defined(LLVM_3_2)
+#if ISPC_LLVM_VERSION < ISPC_LLVM_3_3
     func->addFnAttr(llvm::Attributes::AlwaysInline);
 #else // LLVM 3.3+
     func->addFnAttr(llvm::Attribute::AlwaysInline);
@@ -1019,7 +1019,7 @@ lDefineProgramIndex(llvm::Module *module, SymbolTable *symbolTable) {
     symbolTable->AddVariable(sym);
 
     if (m->diBuilder != NULL) {
-#if defined(LLVM_3_2) || defined(LLVM_3_3) || defined(LLVM_3_4) || defined(LLVM_3_5) || defined(LLVM_3_6)
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_3_2 && ISPC_LLVM_VERSION < ISPC_LLVM_3_7
         llvm::DIFile file;
         llvm::DIType diType = sym->type->GetDIType(file);
         Assert(diType.Verify());
@@ -1030,10 +1030,13 @@ lDefineProgramIndex(llvm::Module *module, SymbolTable *symbolTable) {
         llvm::DIType *diType = sym->type->GetDIType(file);
 //        Assert(diType.Verify());
 #endif
-#if defined(LLVM_3_6)// LLVM 3.6+
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_3_6
         llvm::Constant *sym_const_storagePtr = llvm::dyn_cast<llvm::Constant>(sym->storagePtr);
         Assert(sym_const_storagePtr);
-        llvm::DIGlobalVariable var = m->diBuilder->createGlobalVariable(
+#if ISPC_LLVM_VERSION < ISPC_LLVM_3_7
+        llvm::DIGlobalVariable var =
+#endif
+                                     m->diBuilder->createGlobalVariable(
                                                file,
                                                sym->name.c_str(),
                                                sym->name.c_str(),
@@ -1042,7 +1045,7 @@ lDefineProgramIndex(llvm::Module *module, SymbolTable *symbolTable) {
                                                diType,
                                                false /* static */,
                                                sym_const_storagePtr);
-#elif defined(LLVM_3_2) || defined(LLVM_3_3) || defined(LLVM_3_4) || defined(LLVM_3_5)
+#elif ISPC_LLVM_VERSION >= ISPC_LLVM_3_2 /* && ISPC_LLVM_VERSION < ISPC_LLVM_3_6 */
         llvm::DIGlobalVariable var = m->diBuilder->createGlobalVariable(
                                                sym->name.c_str(),
                                                file,
@@ -1063,10 +1066,10 @@ lDefineProgramIndex(llvm::Module *module, SymbolTable *symbolTable) {
                                                false /* static */,
                                                sym_const_storagePtr);
 #endif    
-#if defined(LLVM_3_2) || defined(LLVM_3_3) || defined(LLVM_3_4) || defined(LLVM_3_5) || defined(LLVM_3_6)
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_3_2 && ISPC_LLVM_VERSION < ISPC_LLVM_3_7
         Assert(var.Verify());
 #else // LLVM 3.7+
-    //comming soon
+    //coming soon
 #endif
     }
 }

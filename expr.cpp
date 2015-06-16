@@ -56,7 +56,7 @@
 #include <list>
 #include <set>
 #include <stdio.h>
-#if defined(LLVM_3_2)
+#if ISPC_LLVM_VERSION == ISPC_LLVM_3_2
   #include <llvm/Module.h>
   #include <llvm/Type.h>
   #include <llvm/Instructions.h>
@@ -74,7 +74,7 @@
   #include <llvm/IR/CallingConv.h>
 #endif
 #include <llvm/ExecutionEngine/GenericValue.h>
-#if !defined(LLVM_3_2) && !defined(LLVM_3_3) && !defined(LLVM_3_4) // LLVM 3.5+
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_3_5 /* 3.5+ */
   #include <llvm/IR/InstIterator.h>
 #else
   #include <llvm/Support/InstIterator.h>

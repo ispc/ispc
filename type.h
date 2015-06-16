@@ -40,10 +40,10 @@
 
 #include "ispc.h"
 #include "util.h"
-#if defined(LLVM_3_2)
+#if ISPC_LLVM_VERSION < ISPC_LLVM_3_3
   #include <llvm/Type.h>
   #include <llvm/DerivedTypes.h>
-#else
+#else /* >= 3.3 */
   #include <llvm/IR/Type.h>
   #include <llvm/IR/DerivedTypes.h>
 #endif
@@ -222,7 +222,7 @@ public:
     /** Returns the LLVM type corresponding to this ispc type */
     virtual llvm::Type *LLVMType(llvm::LLVMContext *ctx) const = 0;
 
-#if defined(LLVM_3_2) || defined(LLVM_3_3) || defined(LLVM_3_4) || defined(LLVM_3_5) || defined(LLVM_3_6)
+#if ISPC_LLVM_VERSION < ISPC_LLVM_3_7
     /** Returns the DIType (LLVM's debugging information structure),
         corresponding to this type. */
     virtual llvm::DIType GetDIType(llvm::DIDescriptor scope) const = 0;
@@ -317,7 +317,7 @@ public:
     std::string GetCDeclaration(const std::string &name) const;
 
     llvm::Type *LLVMType(llvm::LLVMContext *ctx) const;
-#if defined(LLVM_3_2) || defined(LLVM_3_3) || defined(LLVM_3_4) || defined(LLVM_3_5) || defined(LLVM_3_6)
+#if ISPC_LLVM_VERSION < ISPC_LLVM_3_7
     llvm::DIType GetDIType(llvm::DIDescriptor scope) const;
 #else // LLVM 3.7++
     llvm::DIType *GetDIType(llvm::DIScope *scope) const;
@@ -400,7 +400,7 @@ public:
     const std::string &GetEnumName() const { return name; }
 
     llvm::Type *LLVMType(llvm::LLVMContext *ctx) const;
-#if defined(LLVM_3_2) || defined(LLVM_3_3) || defined(LLVM_3_4) || defined(LLVM_3_5) || defined(LLVM_3_6)
+#if ISPC_LLVM_VERSION < ISPC_LLVM_3_7
     llvm::DIType GetDIType(llvm::DIDescriptor scope) const;
 #else // LLVM 3.7++
     llvm::DIType *GetDIType(llvm::DIScope *scope) const;
@@ -485,7 +485,7 @@ public:
     std::string GetCDeclaration(const std::string &name) const;
 
     llvm::Type *LLVMType(llvm::LLVMContext *ctx) const;
-#if defined(LLVM_3_2) || defined(LLVM_3_3) || defined(LLVM_3_4) || defined(LLVM_3_5) || defined(LLVM_3_6)
+#if ISPC_LLVM_VERSION < ISPC_LLVM_3_7
     llvm::DIType GetDIType(llvm::DIDescriptor scope) const;
 #else // LLVM 3.7++
     llvm::DIType *GetDIType(llvm::DIScope *scope) const;
@@ -591,7 +591,7 @@ public:
     std::string Mangle() const;
     std::string GetCDeclaration(const std::string &name) const;
 
-#if defined(LLVM_3_2) || defined(LLVM_3_3) || defined(LLVM_3_4) || defined(LLVM_3_5) || defined(LLVM_3_6)
+#if ISPC_LLVM_VERSION < ISPC_LLVM_3_7
     llvm::DIType GetDIType(llvm::DIDescriptor scope) const;
 #else // LLVM 3.7++
     llvm::DIType *GetDIType(llvm::DIScope *scope) const;
@@ -663,7 +663,7 @@ public:
     std::string GetCDeclaration(const std::string &name) const;
 
     llvm::Type *LLVMType(llvm::LLVMContext *ctx) const;
-#if defined(LLVM_3_2) || defined(LLVM_3_3) || defined(LLVM_3_4) || defined(LLVM_3_5) || defined(LLVM_3_6)
+#if ISPC_LLVM_VERSION < ISPC_LLVM_3_7
     llvm::DIType GetDIType(llvm::DIDescriptor scope) const;
 #else // LLVM 3.7++
     llvm::DIType *GetDIType(llvm::DIScope *scope) const;
@@ -718,7 +718,7 @@ public:
     std::string GetCDeclaration(const std::string &name) const;
 
     llvm::Type *LLVMType(llvm::LLVMContext *ctx) const;
-#if defined(LLVM_3_2) || defined(LLVM_3_3) || defined(LLVM_3_4) || defined(LLVM_3_5) || defined(LLVM_3_6)
+#if ISPC_LLVM_VERSION < ISPC_LLVM_3_7
     llvm::DIType GetDIType(llvm::DIDescriptor scope) const;
 #else // LLVM 3.7++
     llvm::DIType *GetDIType(llvm::DIScope *scope) const;
@@ -810,7 +810,7 @@ public:
     std::string GetCDeclaration(const std::string &name) const;
 
     llvm::Type *LLVMType(llvm::LLVMContext *ctx) const;
-#if defined(LLVM_3_2) || defined(LLVM_3_3) || defined(LLVM_3_4) || defined(LLVM_3_5) || defined(LLVM_3_6)
+#if ISPC_LLVM_VERSION < ISPC_LLVM_3_7
     llvm::DIType GetDIType(llvm::DIDescriptor scope) const;
 #else // LLVM 3.7++
     llvm::DIType *GetDIType(llvm::DIScope *scope) const;
@@ -857,7 +857,7 @@ public:
     std::string GetCDeclaration(const std::string &name) const;
 
     llvm::Type *LLVMType(llvm::LLVMContext *ctx) const;
-#if defined(LLVM_3_2) || defined(LLVM_3_3) || defined(LLVM_3_4) || defined(LLVM_3_5) || defined(LLVM_3_6)
+#if ISPC_LLVM_VERSION < ISPC_LLVM_3_7
     llvm::DIType GetDIType(llvm::DIDescriptor scope) const;
 #else // LLVM 3.7++
     llvm::DIType *GetDIType(llvm::DIScope *scope) const;
@@ -915,7 +915,7 @@ public:
     std::string GetCDeclarationForDispatch(const std::string &fname) const;
 
     llvm::Type *LLVMType(llvm::LLVMContext *ctx) const;
-#if defined(LLVM_3_2) || defined(LLVM_3_3) || defined(LLVM_3_4) || defined(LLVM_3_5) || defined(LLVM_3_6)
+#if ISPC_LLVM_VERSION < ISPC_LLVM_3_7
     llvm::DIType GetDIType(llvm::DIDescriptor scope) const;
 #else // LLVM 3.7++
     llvm::DIType *GetDIType(llvm::DIScope *scope) const;
