@@ -74,7 +74,7 @@
   #include <llvm/IR/CallingConv.h>
 #endif
 #include <llvm/ExecutionEngine/GenericValue.h>
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_3_5 /* 3.5+ */
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_3_5 // LLVM 3.5+
   #include <llvm/IR/InstIterator.h>
 #else
   #include <llvm/Support/InstIterator.h>

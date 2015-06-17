@@ -65,7 +65,7 @@
 #include <set>
 #include <algorithm>
 
-#if ISPC_LLVM_VERSION < ISPC_LLVM_3_3
+#if ISPC_LLVM_VERSION == ISPC_LLVM_3_2
   #include <llvm/DataLayout.h>
 #else // LLVM 3.3+
   #include <llvm/IR/DataLayout.h>

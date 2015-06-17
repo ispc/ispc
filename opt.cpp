@@ -48,7 +48,7 @@
 #include <set>
 
 #include <llvm/Pass.h>
-#if ISPC_LLVM_VERSION < ISPC_LLVM_3_3
+#if ISPC_LLVM_VERSION == ISPC_LLVM_3_2
   #include <llvm/Module.h>
   #include <llvm/Instructions.h>
   #include <llvm/Intrinsics.h>
@@ -58,7 +58,7 @@
 #ifdef ISPC_NVPTX_ENABLED
   #include <llvm/InlineAsm.h>
 #endif /* ISPC_NVPTX_ENABLED */
-#else /* >= 3.3 */
+#else // LLVM 3.3+
   #include <llvm/IR/Module.h>
   #include <llvm/IR/Instructions.h>
   #include <llvm/IR/Intrinsics.h>
@@ -72,9 +72,9 @@
 #if ISPC_LLVM_VERSION >= ISPC_LLVM_3_4 // LLVM 3.4+
   #include <llvm/Transforms/Instrumentation.h>
 #endif
-#if ISPC_LLVM_VERSION < ISPC_LLVM_3_7
+#if ISPC_LLVM_VERSION <= ISPC_LLVM_3_6
   #include "llvm/PassManager.h"
-#else /* >= 3.7 */
+#else // LLVM 3.7+
   #include "llvm/IR/LegacyPassManager.h"
 #endif
 #include <llvm/PassRegistry.h>
@@ -83,16 +83,16 @@
     #include <llvm/IR/IRPrintingPasses.h>
     #include <llvm/IR/PatternMatch.h>
     #include <llvm/IR/DebugInfo.h>
-#else /* < 3.5 */
+#else // < 3.5
     #include <llvm/Analysis/Verifier.h>
     #include <llvm/Assembly/PrintModulePass.h>
     #include <llvm/Support/PatternMatch.h>
     #include <llvm/DebugInfo.h>
 #endif
 #include <llvm/Analysis/ConstantFolding.h>
-#if ISPC_LLVM_VERSION < ISPC_LLVM_3_7
+#if ISPC_LLVM_VERSION <= ISPC_LLVM_3_6
     #include <llvm/Target/TargetLibraryInfo.h>
-#else /* >= 3.7 */
+#else // LLVM 3.7+
     #include <llvm/Analysis/TargetLibraryInfo.h>
 #endif
 #include <llvm/ADT/Triple.h>
@@ -101,9 +101,9 @@
 #include <llvm/Transforms/IPO.h>
 #include <llvm/Transforms/Utils/BasicBlockUtils.h>
 #include <llvm/Target/TargetOptions.h>
-#if ISPC_LLVM_VERSION < ISPC_LLVM_3_3
+#if ISPC_LLVM_VERSION == ISPC_LLVM_3_2
   #include <llvm/DataLayout.h>
-#else /* LLVM 3.3+ */
+#else // LLVM 3.3+
   #include <llvm/IR/DataLayout.h>
   #include <llvm/Analysis/TargetTransformInfo.h>
 #endif
@@ -238,7 +238,7 @@ lGetSourcePosFromMetadata(const llvm::Instruction *inst, SourcePos *pos) {
     llvm::MDString *str = llvm::dyn_cast<llvm::MDString>(filename->getOperand(0));
     Assert(str);
     llvm::ConstantInt *first_lnum =
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_3_2 && ISPC_LLVM_VERSION < ISPC_LLVM_3_6
+#if ISPC_LLVM_VERSION <= ISPC_LLVM_3_5
         llvm::dyn_cast<llvm::ConstantInt>(first_line->getOperand(0));
 #else /* LLVN 3.6+ */
         llvm::mdconst::extract<llvm::ConstantInt>(first_line->getOperand(0));
@@ -246,7 +246,7 @@ lGetSourcePosFromMetadata(const llvm::Instruction *inst, SourcePos *pos) {
     Assert(first_lnum);
 
     llvm::ConstantInt *first_colnum =
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_3_2 && ISPC_LLVM_VERSION < ISPC_LLVM_3_6
+#if ISPC_LLVM_VERSION <= ISPC_LLVM_3_5
         llvm::dyn_cast<llvm::ConstantInt>(first_column->getOperand(0));
 #else /* LLVN 3.6+ */
         llvm::mdconst::extract<llvm::ConstantInt>(first_column->getOperand(0));
@@ -254,7 +254,7 @@ lGetSourcePosFromMetadata(const llvm::Instruction *inst, SourcePos *pos) {
     Assert(first_column);
 
     llvm::ConstantInt *last_lnum =
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_3_2 && ISPC_LLVM_VERSION < ISPC_LLVM_3_6
+#if ISPC_LLVM_VERSION <= ISPC_LLVM_3_5
         llvm::dyn_cast<llvm::ConstantInt>(last_line->getOperand(0));
 #else /* LLVN 3.6+ */
         llvm::mdconst::extract<llvm::ConstantInt>(last_line->getOperand(0));
@@ -262,7 +262,7 @@ lGetSourcePosFromMetadata(const llvm::Instruction *inst, SourcePos *pos) {
     Assert(last_lnum);
 
     llvm::ConstantInt *last_colnum =
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_3_2 && ISPC_LLVM_VERSION < ISPC_LLVM_3_6
+#if ISPC_LLVM_VERSION <= ISPC_LLVM_3_5
         llvm::dyn_cast<llvm::ConstantInt>(last_column->getOperand(0));
 #else /* LLVN 3.6+ */
         llvm::mdconst::extract<llvm::ConstantInt>(last_column->getOperand(0));
@@ -330,10 +330,10 @@ lGEPInst(llvm::Value *ptr, llvm::Value *offset, const char *name,
          llvm::Instruction *insertBefore) {
     llvm::Value *index[1] = { offset };
     llvm::ArrayRef<llvm::Value *> arrayRef(&index[0], &index[1]);
-#if ISPC_LLVM_VERSION < ISPC_LLVM_3_7
+#if ISPC_LLVM_VERSION <= ISPC_LLVM_3_6
     return llvm::GetElementPtrInst::Create(ptr, arrayRef, name,
                                            insertBefore);
-#else /* LLVM 3.7+ */
+#else // LLVM 3.7+
     return llvm::GetElementPtrInst::Create(PTYPE(ptr), ptr, arrayRef,
                                            name, insertBefore);
 #endif
@@ -466,13 +466,13 @@ public:
     DebugPassManager():number(0){}
     void add(llvm::Pass * P, int stage);
     bool run(llvm::Module& M) {return PM.run(M);}
-#if ISPC_LLVM_VERSION < ISPC_LLVM_3_7
+#if ISPC_LLVM_VERSION <= ISPC_LLVM_3_6
     llvm::PassManager& getPM() {return PM;}
 #else /* LLVM 3.7+ */
     llvm::legacy::PassManager& getPM() {return PM;}
 #endif
 private:
-#if ISPC_LLVM_VERSION < ISPC_LLVM_3_7
+#if ISPC_LLVM_VERSION <= ISPC_LLVM_3_6
     llvm::PassManager PM;
 #else /* LLVM 3.7+ */
     llvm::legacy::PassManager PM;
@@ -500,7 +500,7 @@ DebugPassManager::add(llvm::Pass * P, int stage = -1) {
             PM.add(CreateDebugPass(buf));
         }
 
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_3_4 && ISPC_LLVM_VERSION < ISPC_LLVM_3_6 // only 3.4 and 3.5
+#if ISPC_LLVM_VERSION == ISPC_LLVM_3_4 || ISPC_LLVM_VERSION == ISPC_LLVM_3_5 // only 3.4 and 3.5
         if (g->debugIR == number) {
             // adding generating of LLVM IR debug after optimization
             char buf[100];
@@ -521,19 +521,19 @@ Optimize(llvm::Module *module, int optLevel) {
     DebugPassManager optPM;
     optPM.add(llvm::createVerifierPass(),0);
 
-#if ISPC_LLVM_VERSION < ISPC_LLVM_3_7
+#if ISPC_LLVM_VERSION <= ISPC_LLVM_3_6
     llvm::TargetLibraryInfo *targetLibraryInfo =
         new llvm::TargetLibraryInfo(llvm::Triple(module->getTargetTriple()));
     optPM.add(targetLibraryInfo);
-#else /* LLVM 3.7+ */
+#else // LLVM 3.7+
     optPM.add(new llvm::TargetLibraryInfoWrapperPass(llvm::Triple(module->getTargetTriple())));
 #endif
 
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_3_2 && ISPC_LLVM_VERSION < ISPC_LLVM_3_5
+#if ISPC_LLVM_VERSION <= ISPC_LLVM_3_4
     optPM.add(new llvm::DataLayout(*g->target->getDataLayout()));
-#elif ISPC_LLVM_VERSION < ISPC_LLVM_3_6
+#elif ISPC_LLVM_VERSION == ISPC_LLVM_3_5
     optPM.add(new llvm::DataLayoutPass(*g->target->getDataLayout()));
-#elif ISPC_LLVM_VERSION < ISPC_LLVM_3_7
+#elif ISPC_LLVM_VERSION == ISPC_LLVM_3_6
     llvm::DataLayoutPass *dlp= new llvm::DataLayoutPass();
     dlp->doInitialization(*module);
     optPM.add(dlp);
@@ -541,12 +541,12 @@ Optimize(llvm::Module *module, int optLevel) {
 
     llvm::TargetMachine *targetMachine = g->target->GetTargetMachine();
 
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_3_2 && ISPC_LLVM_VERSION < ISPC_LLVM_3_3
+#if ISPC_LLVM_VERSION == ISPC_LLVM_3_2
     optPM.add(new llvm::TargetTransformInfo(targetMachine->getScalarTargetTransformInfo(),
                                             targetMachine->getVectorTargetTransformInfo()));
-#elif ISPC_LLVM_VERSION < ISPC_LLVM_3_7
+#elif ISPC_LLVM_VERSION <= ISPC_LLVM_3_6
     targetMachine->addAnalysisPasses(optPM.getPM());
-#else /* LLVM 3.7+ */
+#else // LLVM 3.7+
     optPM.getPM().add(createTargetTransformInfoWrapperPass(targetMachine->getTargetIRAnalysis()));
 #endif
 
@@ -660,7 +660,7 @@ Optimize(llvm::Module *module, int optLevel) {
         optPM.add(llvm::createCFGSimplificationPass());
 
         optPM.add(llvm::createArgumentPromotionPass());
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_3_2 && ISPC_LLVM_VERSION < ISPC_LLVM_3_4 
+#if ISPC_LLVM_VERSION <= ISPC_LLVM_3_3
         // Starting from 3.4 this functionality was moved to
         // InstructionCombiningPass. See r184459 for details.
         optPM.add(llvm::createSimplifyLibCallsPass(), 240);
@@ -810,7 +810,7 @@ Optimize(llvm::Module *module, int optLevel) {
           optPM.add(llvm::createCFGSimplificationPass());
 
           optPM.add(llvm::createArgumentPromotionPass());
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_3_2 && ISPC_LLVM_VERSION < ISPC_LLVM_3_4 
+#if ISPC_LLVM_VERSION <= ISPC_LLVM_3_3
           // Starting from 3.4 this functionality was moved to
           // InstructionCombiningPass. See r184459 for details.
           optPM.add(llvm::createSimplifyLibCallsPass());
@@ -4924,7 +4924,7 @@ PeepholePass::PeepholePass()
     : BasicBlockPass(ID) {
 }
 
-#if ISPC_LLVM_VERSION > ISPC_LLVM_3_2
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_3_3
 
 using namespace llvm::PatternMatch;
 
@@ -5258,7 +5258,7 @@ PeepholePass::runOnBasicBlock(llvm::BasicBlock &bb) {
         llvm::Instruction *inst = &*iter;
 
         llvm::Instruction *builtinCall = NULL;
-#if ISPC_LLVM_VERSION > ISPC_LLVM_3_2
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_3_3
         if (!builtinCall)
           builtinCall = lMatchAvgUpUInt8(inst);
         if (!builtinCall)

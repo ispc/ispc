@@ -48,7 +48,7 @@
 #include <stdio.h>
 #include <map>
 
-#if ISPC_LLVM_VERSION < ISPC_LLVM_3_3
+#if ISPC_LLVM_VERSION == ISPC_LLVM_3_2
   #include <llvm/Module.h>
   #include <llvm/Type.h>
   #include <llvm/Instructions.h>
@@ -190,7 +190,7 @@ static llvm::Value* lConvertToGenericPtr(FunctionEmitContext *ctx, llvm::Value *
     llvm::Function *func_warp_index    = m->module->getFunction("__warp_index");
     llvm::Value *warpId = ctx->CallInst(func_warp_index, NULL, std::vector<llvm::Value*>(),  "gep2gen_warp_index");
     llvm::Value *offset = ctx->BinaryOperator(llvm::Instruction::Mul, warpId, LLVMInt32(numEl), "gep2gen_offset");
-#if ISPC_LLVM_VERSION < ISPC_LLVM_3_7
+#if ISPC_LLVM_VERSION <= ISPC_LLVM_3_6
     value = llvm::GetElementPtrInst::Create(value, offset, "gep2gen_offset", ctx->GetCurrentBasicBlock());
 #else
     value = llvm::GetElementPtrInst::Create(NULL, value, offset, "gep2gen_offset", ctx->GetCurrentBasicBlock());
@@ -1539,7 +1539,7 @@ lUpdateVaryingCounter(int dim, int nDims, FunctionEmitContext *ctx,
       ptr_arrayidx_indices.push_back(LLVMInt32(0));
       ptr_arrayidx_indices.push_back(laneIdx);
 #if 1
-#if ISPC_LLVM_VERSION < ISPC_LLVM_3_7
+#if ISPC_LLVM_VERSION <= ISPC_LLVM_3_6
       llvm::Instruction* ptr_arrayidx = llvm::GetElementPtrInst::Create(globalDelta, ptr_arrayidx_indices, "arrayidx", ctx->GetCurrentBasicBlock());
 #else
       llvm::Instruction* ptr_arrayidx = llvm::GetElementPtrInst::Create(NULL, globalDelta, ptr_arrayidx_indices, "arrayidx", ctx->GetCurrentBasicBlock());

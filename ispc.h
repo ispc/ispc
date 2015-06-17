@@ -86,11 +86,11 @@ namespace llvm {
     class TargetMachine;
     class Type;
     class Value;
-#if ISPC_LLVM_VERSION < ISPC_LLVM_3_7
+#if ISPC_LLVM_VERSION <= ISPC_LLVM_3_6
     class DIFile;
     class DIType;
     class DIDescriptor;
-#else // LLVM 3.7++
+#else // LLVM 3.7+
     class DIFile;
     class DIType;
     class DIScope;
@@ -144,7 +144,7 @@ struct SourcePos {
     /** Prints the filename and line/column range to standard output. */
     void Print() const;
 
-#if ISPC_LLVM_VERSION < ISPC_LLVM_3_7
+#if ISPC_LLVM_VERSION <= ISPC_LLVM_3_6
     /** Returns a LLVM DIFile object that represents the SourcePos's file */
     llvm::DIFile GetDIFile() const;
 #else

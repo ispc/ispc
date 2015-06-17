@@ -338,7 +338,7 @@ public:
 #endif
 
 
-#if ISPC_LLVM_VERSION < ISPC_LLVM_3_4 // LLVM 3.2 or 3.3
+#if ISPC_LLVM_VERSION <= ISPC_LLVM_3_3 // LLVM 3.2 or 3.3
         #define CPU_Silvermont CPU_Nehalem
 #else /* LLVM 3.4+ */
         compat[CPU_Silvermont]  = Set(CPU_Generic, CPU_Bonnell, CPU_Penryn,
@@ -353,7 +353,7 @@ public:
                                       CPU_Haswell, CPU_Broadwell, CPU_None);
 #endif
 
-#if ISPC_LLVM_VERSION < ISPC_LLVM_3_6 // LLVM 3.2, 3.3, 3.4 or 3.5
+#if ISPC_LLVM_VERSION <= ISPC_LLVM_3_5 // LLVM 3.2, 3.3, 3.4 or 3.5
         #define CPU_Broadwell CPU_Haswell
 #else /* LLVM 3.6+ */
         compat[CPU_Broadwell]   = Set(CPU_Generic, CPU_Bonnell, CPU_Penryn,
@@ -446,7 +446,7 @@ Target::Target(const char *arch, const char *cpu, const char *isa, bool pic, boo
     m_is32Bit(true),
     m_cpu(""),
     m_attributes(""),
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_3_3 /* ! 3.2 */
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_3_3 
     m_tf_attributes(NULL),
 #endif
     m_nativeVectorWidth(-1),
@@ -1020,7 +1020,7 @@ Target::Target(const char *arch, const char *cpu, const char *isa, bool pic, boo
 #endif
         if (g->opt.disableFMA == false)
             options.AllowFPOpFusion = llvm::FPOpFusion::Fast;
-#if ISPC_LLVM_VERSION < ISPC_LLVM_3_7
+#if ISPC_LLVM_VERSION <= ISPC_LLVM_3_6
 #ifdef ISPC_IS_WINDOWS
         if (strcmp("x86", arch) == 0) {
             // Workaround for issue #503 (LLVM issue 14646).
@@ -1034,7 +1034,7 @@ Target::Target(const char *arch, const char *cpu, const char *isa, bool pic, boo
                     relocModel);
         Assert(m_targetMachine != NULL);
 
-#if ISPC_LLVM_VERSION < ISPC_LLVM_3_7
+#if ISPC_LLVM_VERSION <= ISPC_LLVM_3_6
         m_targetMachine->setAsmVerbosityDefault(true);
 #else /* LLVM 3.7+ */
         m_targetMachine->Options.MCOptions.AsmVerbose = true;
@@ -1324,7 +1324,7 @@ Target::SizeOf(llvm::Type *type,
         llvm::PointerType *ptrType = llvm::PointerType::get(type, 0);
         llvm::Value *voidPtr = llvm::ConstantPointerNull::get(ptrType);
         llvm::ArrayRef<llvm::Value *> arrayRef(&index[0], &index[1]);
-#if ISPC_LLVM_VERSION < ISPC_LLVM_3_7
+#if ISPC_LLVM_VERSION <= ISPC_LLVM_3_6
         llvm::Instruction *gep =
             llvm::GetElementPtrInst::Create(voidPtr, arrayRef, "sizeof_gep",
                                             insertAtEnd);
@@ -1362,7 +1362,7 @@ Target::StructOffset(llvm::Type *type, int element,
         llvm::PointerType *ptrType = llvm::PointerType::get(type, 0);
         llvm::Value *voidPtr = llvm::ConstantPointerNull::get(ptrType);
         llvm::ArrayRef<llvm::Value *> arrayRef(&indices[0], &indices[2]);
-#if ISPC_LLVM_VERSION < ISPC_LLVM_3_7
+#if ISPC_LLVM_VERSION <= ISPC_LLVM_3_6
         llvm::Instruction *gep =
             llvm::GetElementPtrInst::Create(voidPtr, arrayRef, "offset_gep",
                                             insertAtEnd);
@@ -1483,7 +1483,7 @@ SourcePos::SourcePos(const char *n, int fl, int fc, int ll, int lc) {
 }
 
 
-#if ISPC_LLVM_VERSION < ISPC_LLVM_3_7
+#if ISPC_LLVM_VERSION <= ISPC_LLVM_3_6
 llvm::DIFile
 #else /* LLVM 3.7+ */
 llvm::DIFile*
@@ -1492,7 +1492,7 @@ llvm::DIFile*
 SourcePos::GetDIFile() const {
     std::string directory, filename;
     GetDirectoryAndFileName(g->currentDirectory, name, &directory, &filename);
-#if ISPC_LLVM_VERSION < ISPC_LLVM_3_7
+#if ISPC_LLVM_VERSION <= ISPC_LLVM_3_6
     llvm::DIFile ret = m->diBuilder->createFile(filename, directory);
     Assert(ret.Verify());
 #else /* LLVM 3.7+ */

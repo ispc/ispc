@@ -40,17 +40,17 @@
 
 #include "ispc.h"
 #include <map>
-#if ISPC_LLVM_VERSION < ISPC_LLVM_3_3
+#if ISPC_LLVM_VERSION == ISPC_LLVM_3_2
   #include <llvm/InstrTypes.h>
   #include <llvm/Instructions.h>
-#else /* >= 3.3 */
+#else // 3.3+
   #include <llvm/IR/InstrTypes.h>
   #include <llvm/IR/Instructions.h>
 #endif
-#if ISPC_LLVM_VERSION < ISPC_LLVM_3_5
+#if ISPC_LLVM_VERSION <= ISPC_LLVM_3_4
   #include <llvm/DebugInfo.h>
   #include <llvm/DIBuilder.h>
-#else /* >= 3.5 */
+#else // 3.5+
   #include <llvm/IR/DebugInfo.h>
   #include <llvm/IR/DIBuilder.h>
 #endif
@@ -352,7 +352,7 @@ public:
         Instructions stored using Value pointers; the code here returns
         silently if it's not actually given an instruction. */
     void AddDebugPos(llvm::Value *instruction, const SourcePos *pos = NULL,
-#if ISPC_LLVM_VERSION < ISPC_LLVM_3_7
+#if ISPC_LLVM_VERSION <= ISPC_LLVM_3_6
                      llvm::DIScope *scope = NULL);
 #else /* LLVM 3.7+ */
                      llvm::DIScope *scope = NULL);
@@ -369,7 +369,7 @@ public:
 
     /** Returns the llvm::DIScope corresponding to the current program
         scope. */
-#if ISPC_LLVM_VERSION < ISPC_LLVM_3_7
+#if ISPC_LLVM_VERSION <= ISPC_LLVM_3_6
     llvm::DIScope GetDIScope() const;
 #else // LLVM 3.7++
     llvm::DIScope *GetDIScope() const;
@@ -684,7 +684,7 @@ private:
         emitted. */
     std::vector<CFInfo *> controlFlowInfo;
 
-#if ISPC_LLVM_VERSION < ISPC_LLVM_3_7
+#if ISPC_LLVM_VERSION <= ISPC_LLVM_3_6
     /** DIFile object corresponding to the source file where the current
         function was defined (used for debugging info). */
     llvm::DIFile diFile;

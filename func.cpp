@@ -46,7 +46,7 @@
 #include "util.h"
 #include <stdio.h>
 
-#if ISPC_LLVM_VERSION < ISPC_LLVM_3_3 /* 3.2 */
+#if ISPC_LLVM_VERSION == ISPC_LLVM_3_2 // 3.2
 #ifdef ISPC_NVPTX_ENABLED
   #include <llvm/Metadata.h>
 #endif /* ISPC_NVPTX_ENABLED */
@@ -67,9 +67,9 @@
   #include <llvm/IR/Intrinsics.h>
   #include <llvm/IR/DerivedTypes.h>
 #endif
-#if ISPC_LLVM_VERSION < ISPC_LLVM_3_7 /* < 3.6 */
+#if ISPC_LLVM_VERSION <= ISPC_LLVM_3_6
   #include "llvm/PassManager.h"
-#else /* LLVM 3.7+ */
+#else // LLVM 3.7+
   #include "llvm/IR/LegacyPassManager.h"
 #endif
 #include <llvm/PassRegistry.h>
@@ -78,7 +78,7 @@
 #include <llvm/Support/FileUtilities.h>
 #include <llvm/Target/TargetMachine.h>
 #include <llvm/Target/TargetOptions.h>
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_3_5 /* 3.5+ */
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_3_5 // LLVM 3.5+
     #include <llvm/IR/Verifier.h>
     #include <llvm/IR/IRPrintingPasses.h>
     #include <llvm/IR/CFG.h>
@@ -360,7 +360,7 @@ Function::emitCode(FunctionEmitContext *ctx, llvm::Function *function,
         {
           llvm::NamedMDNode* annotations =
             m->module->getOrInsertNamedMetadata("nvvm.annotations");
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_3_6 /* 3.6+ */
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_3_6 // LLVM 3.6+
           llvm::SmallVector<llvm::Metadata*, 3> av;
           av.push_back(llvm::ValueAsMetadata::get(function));
           av.push_back(llvm::MDString::get(*g->ctx, "kernel"));
@@ -392,9 +392,9 @@ Function::emitCode(FunctionEmitContext *ctx, llvm::Function *function,
         // isn't worth the code bloat / overhead.
         bool checkMask = (type->isTask == true) ||
             (
-#if ISPC_LLVM_VERSION < ISPC_LLVM_3_3 /* 3.2 */
+#if ISPC_LLVM_VERSION == ISPC_LLVM_3_2 // 3.2
               (function->getFnAttributes().hasAttribute(llvm::Attributes::AlwaysInline) == false)
-#else /* LLVM 3.3+ */
+#else // LLVM 3.3+
               (function->getAttributes().getFnAttributes().hasAttribute(llvm::AttributeSet::FunctionIndex, llvm::Attribute::AlwaysInline) == false)
 #endif
              &&
@@ -577,7 +577,7 @@ Function::GenerateIR() {
                     {
                       llvm::NamedMDNode* annotations =
                         m->module->getOrInsertNamedMetadata("nvvm.annotations");
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_3_6 /* 3.6+ */
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_3_6 // LLVM 3.6+
 
                       llvm::SmallVector<llvm::Metadata*, 3> av;
                       av.push_back(llvm::ValueAsMetadata::get(function));

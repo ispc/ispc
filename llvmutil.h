@@ -39,12 +39,12 @@
 #define ISPC_LLVMUTIL_H 1
 
 #include "ispc_version.h"
-#if ISPC_LLVM_VERSION < ISPC_LLVM_3_3
+#if ISPC_LLVM_VERSION == ISPC_LLVM_3_2
   #include <llvm/LLVMContext.h>
   #include <llvm/Type.h>
   #include <llvm/DerivedTypes.h>
   #include <llvm/Constants.h>
-#else /* >= 3.3 */
+#else // 3.3+
   #include <llvm/IR/LLVMContext.h>
   #include <llvm/IR/Type.h>
   #include <llvm/IR/DerivedTypes.h>
