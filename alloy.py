@@ -334,7 +334,7 @@ def check_targets():
             break
     # generate targets for KNC
     if  current_OS == "Linux":
-        answer_knc = ["knc"]
+        answer_knc = ["knc-generic"]
 
     if current_OS != "Windows":
         answer_generic = ["generic-4", "generic-16", "generic-8", "generic-1", "generic-32", "generic-64"]
@@ -565,9 +565,12 @@ def validation_run(only, only_targets, reference_branch, number, notify, update,
 
         if only_targets != "":
             only_targets += " "
-            only_targets = only_targets.replace("generic "," generic-4 generic-16 ")
             only_targets_t = only_targets.split(" ")
-
+            if "generic" in only_targets_t:
+                only_targets_t.append("generic-4")
+                only_targets_t.append("generic-16")
+            while "generic" in only_targets_t:
+                only_targets_t.remove("generic")
             
             for i in only_targets_t:
                 if i == "":
@@ -607,8 +610,6 @@ def validation_run(only, only_targets, reference_branch, number, notify, update,
         if len(LLVM) == 0:
             LLVM = [newest_LLVM, "trunk"]
         gen_archs = ["x86-64"]
-        knc_archs = ["x86-64"]
-        knl_archs = ["x86-64"]
         need_LLVM = check_LLVM(LLVM)
         for i in range(0,len(need_LLVM)):
             build_LLVM(need_LLVM[i], "", "", "", False, False, False, True, False, make, options.gcc_toolchain_path)
@@ -635,16 +636,12 @@ def validation_run(only, only_targets, reference_branch, number, notify, update,
                 # sometimes clang++ is not avaluable. if --ispc-build-compiler = gcc we will pass in g++ compiler
                 if options.ispc_build_compiler == "gcc":
                     stability.compiler_exe = "g++"
-                # but 'knc/knl' target is supported only by icpc, so set explicitly
-                if ("knc" in targets[j]) or ("knl-generic" in targets[j]):
+                # but 'knc/knl' generic target is supported only by icpc, so set explicitly
+                if ("knc-generic" in stability.target) or ("knl-generic" in stability.target):
                     stability.compiler_exe = "icpc"
                 # now set archs for targets
-                if "generic" in targets[j]:
+                if ("generic" in stability.target):
                     arch = gen_archs
-                elif "knc" in targets[j]:
-                    arch = knc_archs
-                elif ("knl-generic" in targets[j]) or ("avx512knl-i32x16" in targets[j]):
-                    arch = knl_archs
                 else:
                     arch = archs
                 for i1 in range(0,len(arch)):
@@ -666,12 +663,11 @@ def validation_run(only, only_targets, reference_branch, number, notify, update,
                 if (stability.target in unsupported_llvm_targets(LLVM[i])):
                     print_debug("Warning: target " + stability.target + " is not supported in LLVM " + LLVM[i] + "\n", False, stability_log)
                     continue
-
+                if ("knc-generic" in stability.target) or ("knl-generic" in stability.target):
+                    stability.compiler_exe = "icpc"
                 stability.wrapexe = get_sde() + " " + sde_targets[j][0] + " -- "
-                if "knc" in stability.target:
-                    arch = knc_archs
-                elif ("knl-generic" in stability.target) or ("avx512knl-i32x16" in stability.target):
-                    arch = knl_archs
+                if ("generic" in stability.target):
+                    arch = gen_archs
                 else:
                     arch = archs
                 for i1 in range(0,len(arch)):
@@ -928,7 +924,7 @@ if __name__ == '__main__':
     "Try to build compiler with all LLVM\n\talloy.py -r --only=build\n" +
     "Performance validation run with 10 runs of each test and comparing to branch 'old'\n\talloy.py -r --only=performance --compare-with=old --number=10\n" +
     "Validation run. Update fail_db.txt with new fails, send results to my@my.com\n\talloy.py -r --update-errors=F --notify='my@my.com'\n" +
-    "Test KNC target (not tested when tested all supported targets, so should be set explicitly via --only-targets)\n\talloy.py -r --only='stability' --only-targets='knc'\n" +
+    "Test KNC target (not tested when tested all supported targets, so should be set explicitly via --only-targets)\n\talloy.py -r --only='stability' --only-targets='knc-generic'\n" +
     "Test KNL target (requires sde)\n\talloy.py -r --only='stability' --only-targets='knl-generic avx512knl-i32x16'\n")
 
     num_threads="%s" % multiprocessing.cpu_count()
@@ -979,7 +975,7 @@ if __name__ == '__main__':
     run_group.add_option('--update-errors', dest='update',
         help='rewrite fail_db.txt file according to received results (F or FP)', default="")
     run_group.add_option('--only-targets', dest='only_targets',
-        help='set list of targets to test. Possible values - all subnames of targets, plus "knc" for "generic" ' +
+        help='set list of targets to test. Possible values - all subnames of targets, plus "knc-generic" for "generic" ' +
              'version of knc support, "knl-generic" or "avx512knl-i32x16" for "generic"/"native" knl support', default="")
     run_group.add_option('--time', dest='time',
         help='display time of testing', default=False, action='store_true')
