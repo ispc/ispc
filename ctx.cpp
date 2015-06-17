@@ -46,7 +46,7 @@
 #include "sym.h"
 #include <map>
 #include <llvm/Support/Dwarf.h>
-#if defined(LLVM_3_2)
+#if ISPC_LLVM_VERSION == ISPC_LLVM_3_2
   #include <llvm/Metadata.h>
   #include <llvm/Module.h>
   #include <llvm/Instructions.h>
@@ -337,25 +337,27 @@ FunctionEmitContext::FunctionEmitContext(Function *func, Symbol *funSym,
 
         /* If debugging is enabled, tell the debug information emission
            code about this new function */
-#if defined(LLVM_3_2) || defined(LLVM_3_3) || defined(LLVM_3_4) || defined(LLVM_3_5) || defined(LLVM_3_6)
+#if ISPC_LLVM_VERSION <= ISPC_LLVM_3_6 /* 3.2, 3.3, 3.4, 3.5, 3.6 */
         diFile = funcStartPos.GetDIFile();
         AssertPos(currentPos, diFile.Verify());
-#else // LLVM 3.7+
+#else /* LLVM 3.7+ */
         diFile = funcStartPos.GetDIFile();
 #endif
 
-#if defined(LLVM_3_2) || defined(LLVM_3_3)
+#if ISPC_LLVM_VERSION <= ISPC_LLVM_3_3 /* 3.2, 3.3 */
         llvm::DIScope scope = llvm::DIScope(m->diBuilder->getCU());
-#elif defined(LLVM_3_4) || defined(LLVM_3_5) || defined(LLVM_3_6)
+#elif ISPC_LLVM_VERSION <= ISPC_LLVM_3_6 /* 3.4, 3.5, 3.6 */
         llvm::DIScope scope = llvm::DIScope(m->diCompileUnit);
-#else // LLVM 3.7+
+#else /* LLVM 3.7+ */
         llvm::DIScope *scope = m->diCompileUnit;
+        //llvm::MDScope *scope = m->diCompileUnit;
 #endif
-#if defined(LLVM_3_2) || defined(LLVM_3_3) || defined(LLVM_3_4) || defined(LLVM_3_5) || defined(LLVM_3_6)
+#if ISPC_LLVM_VERSION <= ISPC_LLVM_3_6 /* 3.2, 3.3, 3.4, 3.5, 3.6 */
         llvm::DIType diSubprogramType;
         AssertPos(currentPos, scope.Verify());
-#else // LLVM 3.7+
+#else /* LLVM 3.7+ */
         llvm::DIType *diSubprogramType = NULL;
+        //llvm::MDType *diSubprogramType = NULL;
 #endif
 
         const FunctionType *functionType = function->GetType();
@@ -363,21 +365,22 @@ FunctionEmitContext::FunctionEmitContext(Function *func, Symbol *funSym,
             AssertPos(currentPos, m->errorCount > 0);
         else {
             diSubprogramType = functionType->GetDIType(scope);
-#if defined(LLVM_3_2) || defined(LLVM_3_3) || defined(LLVM_3_4) || defined(LLVM_3_5) || defined(LLVM_3_6)
+#if ISPC_LLVM_VERSION <= ISPC_LLVM_3_6 /* 3.2, 3.3, 3.4, 3.5, 3.6 */
             AssertPos(currentPos, diSubprogramType.Verify());
-#else // LLVM 3.7+
+#else /* LLVM 3.7+ */
     //comming soon
 #endif
         }
 
-#if defined(LLVM_3_2) || defined(LLVM_3_3)
+#if ISPC_LLVM_VERSION <= ISPC_LLVM_3_3 /* 3.2, 3.3 */
         llvm::DIType diSubprogramType_n = diSubprogramType;
-#elif defined(LLVM_3_4) || defined(LLVM_3_5) || defined(LLVM_3_6)
+        int flags = llvm::DIDescriptor::FlagPrototyped;
+#elif ISPC_LLVM_VERSION <= ISPC_LLVM_3_6 /* 3.4, 3.5, 3.6 */
         Assert(diSubprogramType.isCompositeType());
         llvm::DICompositeType diSubprogramType_n =
             static_cast<llvm::DICompositeType>(diSubprogramType);
         int flags = llvm::DIDescriptor::FlagPrototyped;
-#else // LLVM 3.7+
+#else /* LLVM 3.7+ */
         Assert(llvm::isa<llvm::DICompositeTypeBase>(diSubprogramType));
         llvm::DISubroutineType *diSubprogramType_n =
             llvm::cast<llvm::DISubroutineType>(getDICompositeType(diSubprogramType));
@@ -392,7 +395,7 @@ FunctionEmitContext::FunctionEmitContext(Function *func, Symbol *funSym,
         bool isOptimized = (g->opt.level > 0);
         int firstLine = funcStartPos.first_line;
 
-#if defined(LLVM_3_2) || defined(LLVM_3_3) || defined(LLVM_3_4) || defined(LLVM_3_5) || defined(LLVM_3_6)
+#if ISPC_LLVM_VERSION <= ISPC_LLVM_3_6 /* 3.2, 3.3, 3.4, 3.5, 3.6 */
         diSubprogram =
             m->diBuilder->createFunction(diFile /* scope */, funSym->name,
                                          mangledName,        diFile,
@@ -401,7 +404,7 @@ FunctionEmitContext::FunctionEmitContext(Function *func, Symbol *funSym,
                                          firstLine,          flags,
                                          isOptimized,        llvmFunction);
         AssertPos(currentPos, diSubprogram.Verify());
-#else // LLVM 3.7+
+#else /* LLVM 3.7+ */
         diSubprogram =
             m->diBuilder->createFunction(diFile /* scope */, funSym->name,
                                          mangledName,        diFile,
@@ -1610,9 +1613,9 @@ lGetStringAsValue(llvm::BasicBlock *bblock, const char *s) {
                                                  sConstant, var_name.c_str());
     llvm::Value *indices[2] = { LLVMInt32(0), LLVMInt32(0) };
     llvm::ArrayRef<llvm::Value *> arrayRef(&indices[0], &indices[2]);
-#if defined(LLVM_3_2) || defined(LLVM_3_3) || defined(LLVM_3_4) || defined(LLVM_3_5) || defined(LLVM_3_6)
+#if ISPC_LLVM_VERSION <= ISPC_LLVM_3_6 /* 3.2, 3.3, 3.4, 3.5, 3.6 */
     return llvm::GetElementPtrInst::Create(sPtr, arrayRef, "sptr", bblock);
-#else // LLVM 3.7++
+#else /* LLVM 3.7+ */
     return llvm::GetElementPtrInst::Create(PTYPE(sPtr),
                                            sPtr, arrayRef, "sptr", bblock);
 #endif
@@ -1654,10 +1657,11 @@ FunctionEmitContext::GetDebugPos() const {
 
 void
 FunctionEmitContext::AddDebugPos(llvm::Value *value, const SourcePos *pos,
-#if defined(LLVM_3_2) || defined(LLVM_3_3) || defined(LLVM_3_4) || defined(LLVM_3_5) || defined(LLVM_3_6)
+#if ISPC_LLVM_VERSION <= ISPC_LLVM_3_6 /* 3.2, 3.3, 3.4, 3.5, 3.6 */
                                  llvm::DIScope *scope) {
-#else // LLVM 3.7++
+#else /* LLVM 3.7+ */
                                  llvm::DIScope *scope) {
+                                 //llvm::MDScope *scope) {
 #endif
     llvm::Instruction *inst = llvm::dyn_cast<llvm::Instruction>(value);
     if (inst != NULL && m->diBuilder) {
@@ -1668,9 +1672,9 @@ FunctionEmitContext::AddDebugPos(llvm::Value *value, const SourcePos *pos,
             // for those functions
             inst->setDebugLoc(llvm::DebugLoc::get(p.first_line, p.first_column,
                                                   scope ?
-#if defined(LLVM_3_2) || defined(LLVM_3_3) || defined(LLVM_3_4) || defined(LLVM_3_5) || defined(LLVM_3_6)
+#if ISPC_LLVM_VERSION <= ISPC_LLVM_3_6 /* 3.2, 3.3, 3.4, 3.5, 3.6 */
                                                   *scope
-#else // LLVM 3.7++
+#else /* LLVM 3.7+ */
                                                   scope
 #endif
                                                   : GetDIScope()));
@@ -1681,12 +1685,14 @@ FunctionEmitContext::AddDebugPos(llvm::Value *value, const SourcePos *pos,
 void
 FunctionEmitContext::StartScope() {
     if (m->diBuilder != NULL) {
-#if defined(LLVM_3_2) || defined(LLVM_3_3) || defined(LLVM_3_4) || defined(LLVM_3_5) || defined(LLVM_3_6)
+#if ISPC_LLVM_VERSION <= ISPC_LLVM_3_6 /* 3.2, 3.3, 3.4, 3.5, 3.6 */
         llvm::DIScope parentScope;
         llvm::DILexicalBlock lexicalBlock;
-#else // LLVM 3.7++
+#else /* LLVM 3.7+ */
         llvm::DIScope *parentScope;
         llvm::DILexicalBlock *lexicalBlock;
+        //llvm::MDScope *parentScope;
+        //llvm::MDLexicalBlock *lexicalBlock;
 #endif
         if (debugScopes.size() > 0)
             parentScope = debugScopes.back();
@@ -1696,7 +1702,7 @@ FunctionEmitContext::StartScope() {
         lexicalBlock =
             m->diBuilder->createLexicalBlock(parentScope, diFile,
                                              currentPos.first_line,
-#if defined(LLVM_3_5)
+#if ISPC_LLVM_VERSION == ISPC_LLVM_3_5
         // Revision 202736 in LLVM adds support of DWARF discriminator
         // to the last argument and revision 202737 in clang adds 0
         // for the last argument by default.
@@ -1706,11 +1712,12 @@ FunctionEmitContext::StartScope() {
         // as the last argument
                                              currentPos.first_column);
 #endif // LLVM 3.2, 3.3, 3.4 and 3.6+
-#if defined(LLVM_3_2) || defined(LLVM_3_3) || defined(LLVM_3_4) || defined(LLVM_3_5) || defined(LLVM_3_6)
+#if ISPC_LLVM_VERSION <= ISPC_LLVM_3_6 /* 3.2, 3.3, 3.4, 3.5, 3.6 */
         AssertPos(currentPos, lexicalBlock.Verify());
         debugScopes.push_back(lexicalBlock);
-#else // LLVM 3.7+
+#else /* LLVM 3.7+ */
         debugScopes.push_back(llvm::cast<llvm::DILexicalBlockBase>(lexicalBlock));
+        //debugScopes.push_back(llvm::cast<llvm::MDLexicalBlockBase>(lexicalBlock));
 #endif
     }
 }
@@ -1725,10 +1732,11 @@ FunctionEmitContext::EndScope() {
 }
 
 
-#if defined(LLVM_3_2) || defined(LLVM_3_3) || defined(LLVM_3_4) || defined(LLVM_3_5) || defined(LLVM_3_6)
+#if ISPC_LLVM_VERSION <= ISPC_LLVM_3_6 /* 3.2, 3.3, 3.4, 3.5, 3.6 */
 llvm::DIScope
-#else // LLVM 3.7+
+#else /* LLVM 3.7+ */
 llvm::DIScope*
+//llvm::MDScope*
 #endif
 FunctionEmitContext::GetDIScope() const {
     AssertPos(currentPos, debugScopes.size() > 0);
@@ -1741,15 +1749,18 @@ FunctionEmitContext::EmitVariableDebugInfo(Symbol *sym) {
     if (m->diBuilder == NULL)
         return;
 
-#if defined(LLVM_3_2) || defined(LLVM_3_3) || defined(LLVM_3_4) || defined(LLVM_3_5) || defined(LLVM_3_6)
+#if ISPC_LLVM_VERSION <= ISPC_LLVM_3_6 /* 3.2, 3.3, 3.4, 3.5, 3.6 */
     llvm::DIScope scope = GetDIScope();
     llvm::DIType diType = sym->type->GetDIType(scope);
     AssertPos(currentPos, diType.Verify());
     llvm::DIVariable var =
-#else // LLVM 3.7+
+#else /* LLVM 3.7+ */
     llvm::DIScope *scope = GetDIScope();
     llvm::DIType *diType = sym->type->GetDIType(scope);
     llvm::DILocalVariable *var =
+    //llvm::MDScope *scope = GetDIScope();
+    //llvm::MDType *diType = sym->type->GetDIType(scope);
+    //llvm::MDLocalVariable *var =
 #endif
         m->diBuilder->createLocalVariable(llvm::dwarf::DW_TAG_auto_variable,
                                           scope,
@@ -1758,16 +1769,16 @@ FunctionEmitContext::EmitVariableDebugInfo(Symbol *sym) {
                                           sym->pos.first_line,
                                           diType,
                                           true /* preserve through opts */);
-#if defined(LLVM_3_2) || defined(LLVM_3_3) || defined(LLVM_3_4) || defined(LLVM_3_5) || defined(LLVM_3_6)
+#if ISPC_LLVM_VERSION <= ISPC_LLVM_3_6 /* 3.2, 3.3, 3.4, 3.5, 3.6 */
     AssertPos(currentPos, var.Verify());
     llvm::Instruction *declareInst =
         m->diBuilder->insertDeclare(sym->storagePtr, var,
-    #if defined(LLVM_3_6)
+    #if ISPC_LLVM_VERSION == ISPC_LLVM_3_6
                                     m->diBuilder->createExpression(),
     #endif
                                     bblock);
     AddDebugPos(declareInst, &sym->pos, &scope);
-#else // LLVM 3.7++
+#else /* LLVM 3.7+ */
     llvm::Instruction *declareInst =
         m->diBuilder->insertDeclare(sym->storagePtr, var,
                                     m->diBuilder->createExpression(),
@@ -1785,15 +1796,18 @@ FunctionEmitContext::EmitFunctionParameterDebugInfo(Symbol *sym, int argNum) {
         return;
 
     int flags = 0;
-#if defined(LLVM_3_2) || defined(LLVM_3_3) || defined(LLVM_3_4) || defined(LLVM_3_5) || defined(LLVM_3_6)
+#if ISPC_LLVM_VERSION <= ISPC_LLVM_3_6 /* 3.2, 3.3, 3.4, 3.5, 3.6 */
     llvm::DIScope scope = diSubprogram;
     llvm::DIType diType = sym->type->GetDIType(scope);
     AssertPos(currentPos, diType.Verify());
     llvm::DIVariable var =
-#else // LLVM 3.7+
+#else /* LLVM 3.7+ */
     llvm::DIScope *scope = diSubprogram;
     llvm::DIType *diType = sym->type->GetDIType(scope);
     llvm::DILocalVariable *var =
+    //llvm::MDScope *scope = diSubprogram;
+    //llvm::MDType *diType = sym->type->GetDIType(scope);
+    //llvm::MDLocalVariable *var =
 #endif
         m->diBuilder->createLocalVariable(llvm::dwarf::DW_TAG_arg_variable,
                                           scope,
@@ -1804,16 +1818,16 @@ FunctionEmitContext::EmitFunctionParameterDebugInfo(Symbol *sym, int argNum) {
                                           true /* preserve through opts */,
                                           flags,
                                           argNum + 1);
-#if defined(LLVM_3_2) || defined(LLVM_3_3) || defined(LLVM_3_4) || defined(LLVM_3_5) || defined(LLVM_3_6)
+#if ISPC_LLVM_VERSION <= ISPC_LLVM_3_6 /* 3.2, 3.3, 3.4, 3.5, 3.6 */
     AssertPos(currentPos, var.Verify());
     llvm::Instruction *declareInst =
         m->diBuilder->insertDeclare(sym->storagePtr, var,
-    #if defined(LLVM_3_6)
+    #if ISPC_LLVM_VERSION == ISPC_LLVM_3_6
                                     m->diBuilder->createExpression(),
     #endif
                                     bblock);
     AddDebugPos(declareInst, &sym->pos, &scope);
-#else // LLVM 3.7++
+#else /* LLVM 3.7+ */
     llvm::Instruction *declareInst =
         m->diBuilder->insertDeclare(sym->storagePtr, var,
                                     m->diBuilder->createExpression(),
@@ -2430,11 +2444,11 @@ FunctionEmitContext::GetElementPtrInst(llvm::Value *basePtr, llvm::Value *index,
         // uniform, so just emit the regular LLVM GEP instruction
         llvm::Value *ind[1] = { index };
         llvm::ArrayRef<llvm::Value *> arrayRef(&ind[0], &ind[1]);
-#if defined(LLVM_3_2) || defined(LLVM_3_3) || defined(LLVM_3_4) || defined(LLVM_3_5) || defined(LLVM_3_6)
+#if ISPC_LLVM_VERSION <= ISPC_LLVM_3_6 /* 3.2, 3.3, 3.4, 3.5, 3.6 */
         llvm::Instruction *inst =
             llvm::GetElementPtrInst::Create(basePtr, arrayRef,
                                             name ? name : "gep", bblock);
-#else // LLVM 3.7++
+#else /* LLVM 3.7+ */
         llvm::Instruction *inst =
             llvm::GetElementPtrInst::Create(PTYPE(basePtr),
                                             basePtr, arrayRef,
@@ -2497,11 +2511,11 @@ FunctionEmitContext::GetElementPtrInst(llvm::Value *basePtr, llvm::Value *index0
         // uniform, so just emit the regular LLVM GEP instruction
         llvm::Value *indices[2] = { index0, index1 };
         llvm::ArrayRef<llvm::Value *> arrayRef(&indices[0], &indices[2]);
-#if defined(LLVM_3_2) || defined(LLVM_3_3) || defined(LLVM_3_4) || defined(LLVM_3_5) || defined(LLVM_3_6)
+#if ISPC_LLVM_VERSION <= ISPC_LLVM_3_6 /* 3.2, 3.3, 3.4, 3.5, 3.6 */
         llvm::Instruction *inst =
             llvm::GetElementPtrInst::Create(basePtr, arrayRef,
                                             name ? name : "gep", bblock);
-#else // LLVM 3.7++
+#else /* LLVM 3.7+ */
         llvm::Instruction *inst =
             llvm::GetElementPtrInst::Create(PTYPE(basePtr),
                                             basePtr, arrayRef,
@@ -2598,11 +2612,11 @@ FunctionEmitContext::AddElementOffset(llvm::Value *fullBasePtr, int elementNum,
         // If the pointer is uniform, we can use the regular LLVM GEP.
         llvm::Value *offsets[2] = { LLVMInt32(0), LLVMInt32(elementNum) };
         llvm::ArrayRef<llvm::Value *> arrayRef(&offsets[0], &offsets[2]);
-#if defined(LLVM_3_2) || defined(LLVM_3_3) || defined(LLVM_3_4) || defined(LLVM_3_5) || defined(LLVM_3_6)
+#if ISPC_LLVM_VERSION <= ISPC_LLVM_3_6 /* 3.2, 3.3, 3.4, 3.5, 3.6 */
         resultPtr =
             llvm::GetElementPtrInst::Create(basePtr, arrayRef,
                                             name ? name : "struct_offset", bblock);
-#else // LLVM 3.7++
+#else /* LLVM 3.7+ */
         resultPtr =
             llvm::GetElementPtrInst::Create(PTYPE(basePtr), basePtr, arrayRef,
                                             name ? name : "struct_offset", bblock);
@@ -2909,41 +2923,41 @@ FunctionEmitContext::addGSMetadata(llvm::Value *v, SourcePos pos) {
     llvm::Instruction *inst = llvm::dyn_cast<llvm::Instruction>(v);
     if (inst == NULL)
         return;
-#if defined (LLVM_3_2) || defined (LLVM_3_3)|| defined (LLVM_3_4)|| defined (LLVM_3_5)
+#if ISPC_LLVM_VERSION <= ISPC_LLVM_3_5 /* 3.2, 3.3, 3.4, 3.5 */
     llvm::Value *str = llvm::MDString::get(*g->ctx, pos.name);
-#else // LLVN 3.6++
+#else /* LLVN 3.6+ */
     llvm::MDString *str = llvm::MDString::get(*g->ctx, pos.name);
 #endif
     llvm::MDNode *md = llvm::MDNode::get(*g->ctx, str);
     inst->setMetadata("filename", md);
 
-#if defined (LLVM_3_2) || defined (LLVM_3_3)|| defined (LLVM_3_4)|| defined (LLVM_3_5)
+#if ISPC_LLVM_VERSION <= ISPC_LLVM_3_5 /* 3.2, 3.3, 3.4, 3.5 */
     llvm::Value *first_line = LLVMInt32(pos.first_line);
-#else // LLVN 3.6++
+#else /* LLVN 3.6+ */
     llvm::Metadata *first_line = llvm::ConstantAsMetadata::get(LLVMInt32(pos.first_line));
 #endif
     md = llvm::MDNode::get(*g->ctx, first_line);
     inst->setMetadata("first_line", md);
 
-#if defined (LLVM_3_2) || defined (LLVM_3_3)|| defined (LLVM_3_4)|| defined (LLVM_3_5)
+#if ISPC_LLVM_VERSION <= ISPC_LLVM_3_5 /* 3.2, 3.3, 3.4, 3.5 */
     llvm::Value *first_column = LLVMInt32(pos.first_column);
-#else // LLVN 3.6++
+#else /* LLVN 3.6+ */
     llvm::Metadata *first_column = llvm::ConstantAsMetadata::get(LLVMInt32(pos.first_column));
 #endif
     md = llvm::MDNode::get(*g->ctx, first_column);
     inst->setMetadata("first_column", md);
 
-#if defined (LLVM_3_2) || defined (LLVM_3_3)|| defined (LLVM_3_4)|| defined (LLVM_3_5)
+#if ISPC_LLVM_VERSION <= ISPC_LLVM_3_5 /* 3.2, 3.3, 3.4, 3.5 */
     llvm::Value *last_line = LLVMInt32(pos.last_line);
-#else // LLVN 3.6++
+#else /* LLVN 3.6+ */
     llvm::Metadata *last_line = llvm::ConstantAsMetadata::get(LLVMInt32(pos.last_line));
 #endif
     md = llvm::MDNode::get(*g->ctx, last_line);
     inst->setMetadata("last_line", md);
 
-#if defined (LLVM_3_2) || defined (LLVM_3_3)|| defined (LLVM_3_4)|| defined (LLVM_3_5)
+#if ISPC_LLVM_VERSION <= ISPC_LLVM_3_5 /* 3.2, 3.3, 3.4, 3.5 */
     llvm::Value *last_column = LLVMInt32(pos.last_column);
-#else // LLVN 3.6++
+#else /* LLVN 3.6+ */
     llvm::Metadata *last_column = llvm::ConstantAsMetadata::get(LLVMInt32(pos.last_column));
 #endif
     md = llvm::MDNode::get(*g->ctx, last_column);
@@ -3577,7 +3591,7 @@ FunctionEmitContext::CallInst(llvm::Value *func, const FunctionType *funcType,
         // alias analysis.
         // TODO: what other attributes needs to be copied?
         // TODO: do the same for varing path.
-#if !defined (LLVM_3_2) // LLVM 3.3+
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_3_3 // LLVM 3.3+
         llvm::CallInst *cc = llvm::dyn_cast<llvm::CallInst>(ci);
         if (cc &&
             cc->getCalledFunction() &&

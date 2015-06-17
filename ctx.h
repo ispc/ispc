@@ -40,19 +40,19 @@
 
 #include "ispc.h"
 #include <map>
-#if defined(LLVM_3_2)
+#if ISPC_LLVM_VERSION == ISPC_LLVM_3_2
   #include <llvm/InstrTypes.h>
   #include <llvm/Instructions.h>
-#else
+#else // 3.3+
   #include <llvm/IR/InstrTypes.h>
   #include <llvm/IR/Instructions.h>
 #endif
-#if !defined(LLVM_3_2) && !defined(LLVM_3_3) && !defined(LLVM_3_4) // LLVM 3.5+
-  #include <llvm/IR/DebugInfo.h>
-  #include <llvm/IR/DIBuilder.h>
-#else
+#if ISPC_LLVM_VERSION <= ISPC_LLVM_3_4
   #include <llvm/DebugInfo.h>
   #include <llvm/DIBuilder.h>
+#else // 3.5+
+  #include <llvm/IR/DebugInfo.h>
+  #include <llvm/IR/DIBuilder.h>
 #endif
 
 struct CFInfo;
@@ -352,10 +352,11 @@ public:
         Instructions stored using Value pointers; the code here returns
         silently if it's not actually given an instruction. */
     void AddDebugPos(llvm::Value *instruction, const SourcePos *pos = NULL,
-#if defined(LLVM_3_2) || defined(LLVM_3_3) || defined(LLVM_3_4) || defined(LLVM_3_5) || defined(LLVM_3_6)
+#if ISPC_LLVM_VERSION <= ISPC_LLVM_3_6
                      llvm::DIScope *scope = NULL);
-#else // LLVM 3.7++
+#else /* LLVM 3.7+ */
                      llvm::DIScope *scope = NULL);
+                     //llvm::MDScope *scope = NULL );
 #endif
 
     /** Inform the debugging information generation code that a new scope
@@ -368,7 +369,7 @@ public:
 
     /** Returns the llvm::DIScope corresponding to the current program
         scope. */
-#if defined(LLVM_3_2) || defined(LLVM_3_3) || defined(LLVM_3_4) || defined(LLVM_3_5) || defined(LLVM_3_6)
+#if ISPC_LLVM_VERSION <= ISPC_LLVM_3_6
     llvm::DIScope GetDIScope() const;
 #else // LLVM 3.7++
     llvm::DIScope *GetDIScope() const;
@@ -683,7 +684,7 @@ private:
         emitted. */
     std::vector<CFInfo *> controlFlowInfo;
 
-#if defined(LLVM_3_2) || defined(LLVM_3_3) || defined(LLVM_3_4) || defined(LLVM_3_5) || defined(LLVM_3_6)
+#if ISPC_LLVM_VERSION <= ISPC_LLVM_3_6
     /** DIFile object corresponding to the source file where the current
         function was defined (used for debugging info). */
     llvm::DIFile diFile;

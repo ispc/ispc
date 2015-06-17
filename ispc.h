@@ -38,9 +38,9 @@
 #ifndef ISPC_H
 #define ISPC_H
 
-#define ISPC_VERSION "1.8.3dev"
+#include "ispc_version.h"
 
-#if !defined(LLVM_3_2) && !defined(LLVM_3_3) && !defined(LLVM_3_4) && !defined(LLVM_3_5) && !defined(LLVM_3_6) && !defined(LLVM_3_7)
+#if ISPC_LLVM_VERSION < OLDEST_SUPPORTED_LLVM || ISPC_LLVM_VERSION > LATEST_SUPPORTED_LLVM
 #error "Only LLVM 3.2, 3.3, 3.4, 3.5, 3.6 and 3.7 development branch are supported"
 #endif
 
@@ -86,11 +86,11 @@ namespace llvm {
     class TargetMachine;
     class Type;
     class Value;
-#if defined(LLVM_3_2) || defined(LLVM_3_3) || defined(LLVM_3_4) || defined(LLVM_3_5) || defined(LLVM_3_6)
+#if ISPC_LLVM_VERSION <= ISPC_LLVM_3_6
     class DIFile;
     class DIType;
     class DIDescriptor;
-#else // LLVM 3.7++
+#else // LLVM 3.7+
     class DIFile;
     class DIType;
     class DIScope;
@@ -144,7 +144,7 @@ struct SourcePos {
     /** Prints the filename and line/column range to standard output. */
     void Print() const;
 
-#if defined(LLVM_3_2) || defined(LLVM_3_3) || defined(LLVM_3_4) || defined(LLVM_3_5) || defined(LLVM_3_6)
+#if ISPC_LLVM_VERSION <= ISPC_LLVM_3_6
     /** Returns a LLVM DIFile object that represents the SourcePos's file */
     llvm::DIFile GetDIFile() const;
 #else
@@ -259,7 +259,7 @@ public:
 
     // Note the same name of method for 3.1 and 3.2+, this allows
     // to reduce number ifdefs on client side.
-    llvm::DataLayout *getDataLayout() const {return m_dataLayout;}
+    const llvm::DataLayout *getDataLayout() const {return m_dataLayout;}
 
     /** Reports if Target object has valid state. */
     bool isValid() const {return m_valid;}
@@ -344,7 +344,7 @@ private:
     /** Target-specific attribute string to pass along to the LLVM backend */
     std::string m_attributes;
 
-#if !defined(LLVM_3_2)
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_3_3
     /** Target-specific LLVM attribute, which has to be attached to every
         function to ensure that it is generated for correct target architecture.
         This is requirement was introduced in LLVM 3.3 */

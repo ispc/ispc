@@ -41,10 +41,9 @@
 
 #include "ispc.h"
 #include "ast.h"
-#if defined(LLVM_3_4)
+#if ISPC_LLVM_VERSION == ISPC_LLVM_3_4
   #include <llvm/DebugInfo.h>
-#endif
-#if !defined(LLVM_3_2) && !defined(LLVM_3_3) && !defined(LLVM_3_4) // LLVM 3.5+
+#elif ISPC_LLVM_VERSION >= ISPC_LLVM_3_5
   #include <llvm/IR/DebugInfo.h>
 #endif
 
@@ -161,10 +160,10 @@ public:
     /** The diBuilder manages generating debugging information */
     llvm::DIBuilder *diBuilder;
 
-#if defined(LLVM_3_4) || defined(LLVM_3_5) || defined(LLVM_3_6)
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_3_4 && ISPC_LLVM_VERSION <= ISPC_LLVM_3_6
     llvm::DICompileUnit diCompileUnit;
-#elif !defined(LLVM_3_2) && !defined(LLVM_3_3) // LLVM 3.7++
-    llvm::DICompileUnit *diCompileUnit;
+#elif ISPC_LLVM_VERSION >= ISPC_LLVM_3_7
+    llvm::DICompileUnit* diCompileUnit;
 #endif // LLVM_3_4+
 
 private:

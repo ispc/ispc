@@ -46,7 +46,7 @@
 #include "util.h"
 #include <stdio.h>
 
-#if defined(LLVM_3_2)
+#if ISPC_LLVM_VERSION == ISPC_LLVM_3_2 // 3.2
 #ifdef ISPC_NVPTX_ENABLED
   #include <llvm/Metadata.h>
 #endif /* ISPC_NVPTX_ENABLED */
@@ -67,7 +67,7 @@
   #include <llvm/IR/Intrinsics.h>
   #include <llvm/IR/DerivedTypes.h>
 #endif
-#if defined(LLVM_3_2) || defined(LLVM_3_3) || defined(LLVM_3_4) || defined(LLVM_3_5) || defined(LLVM_3_6)
+#if ISPC_LLVM_VERSION <= ISPC_LLVM_3_6
   #include "llvm/PassManager.h"
 #else // LLVM 3.7+
   #include "llvm/IR/LegacyPassManager.h"
@@ -78,7 +78,7 @@
 #include <llvm/Support/FileUtilities.h>
 #include <llvm/Target/TargetMachine.h>
 #include <llvm/Target/TargetOptions.h>
-#if !defined(LLVM_3_2) && !defined(LLVM_3_3) && !defined(LLVM_3_4) // LLVM 3.5+
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_3_5 // LLVM 3.5+
     #include <llvm/IR/Verifier.h>
     #include <llvm/IR/IRPrintingPasses.h>
     #include <llvm/IR/CFG.h>
@@ -360,11 +360,19 @@ Function::emitCode(FunctionEmitContext *ctx, llvm::Function *function,
         {
           llvm::NamedMDNode* annotations =
             m->module->getOrInsertNamedMetadata("nvvm.annotations");
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_3_6 // LLVM 3.6+
+          llvm::SmallVector<llvm::Metadata*, 3> av;
+          av.push_back(llvm::ValueAsMetadata::get(function));
+          av.push_back(llvm::MDString::get(*g->ctx, "kernel"));
+          av.push_back(llvm::ConstantAsMetadata::get(LLVMInt32(1)));
+          annotations->addOperand(llvm::MDNode::get(*g->ctx, llvm::ArrayRef<llvm::Metadata*>(av)));
+#else
           llvm::SmallVector<llvm::Value*, 3> av;
           av.push_back(function);
           av.push_back(llvm::MDString::get(*g->ctx, "kernel"));
           av.push_back(LLVMInt32(1));
           annotations->addOperand(llvm::MDNode::get(*g->ctx, av));
+#endif
         }
 #endif /* ISPC_NVPTX_ENABLED */
     }
@@ -384,7 +392,7 @@ Function::emitCode(FunctionEmitContext *ctx, llvm::Function *function,
         // isn't worth the code bloat / overhead.
         bool checkMask = (type->isTask == true) ||
             (
-#if defined(LLVM_3_2)
+#if ISPC_LLVM_VERSION == ISPC_LLVM_3_2 // 3.2
               (function->getFnAttributes().hasAttribute(llvm::Attributes::AlwaysInline) == false)
 #else // LLVM 3.3+
               (function->getAttributes().getFnAttributes().hasAttribute(llvm::AttributeSet::FunctionIndex, llvm::Attribute::AlwaysInline) == false)
@@ -569,11 +577,21 @@ Function::GenerateIR() {
                     {
                       llvm::NamedMDNode* annotations =
                         m->module->getOrInsertNamedMetadata("nvvm.annotations");
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_3_6 // LLVM 3.6+
+
+                      llvm::SmallVector<llvm::Metadata*, 3> av;
+                      av.push_back(llvm::ValueAsMetadata::get(function));
+                      av.push_back(llvm::MDString::get(*g->ctx, "kernel"));
+                      av.push_back(llvm::ConstantAsMetadata::get(llvm::ConstantInt::get(llvm::IntegerType::get(*g->ctx,32), 1)));
+                      annotations->addOperand(llvm::MDNode::get(*g->ctx, llvm::ArrayRef<llvm::Metadata*>(av))); 
+#else
                       llvm::SmallVector<llvm::Value*, 3> av;
-                      av.push_back(appFunction);
+                      av.push_back(function);
                       av.push_back(llvm::MDString::get(*g->ctx, "kernel"));
                       av.push_back(llvm::ConstantInt::get(llvm::IntegerType::get(*g->ctx,32), 1));
-                      annotations->addOperand(llvm::MDNode::get(*g->ctx, av)); 
+                      annotations->addOperand(llvm::MDNode::get(*g->ctx, av));
+#endif
+
                     }
 #endif /* ISPC_NVPTX_ENABLED */
                 }
