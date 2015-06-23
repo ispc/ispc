@@ -631,7 +631,9 @@ def validation_run(only, only_targets, reference_branch, number, notify, update,
                     print_debug("Warning: target " + stability.target + " is not supported in LLVM " + LLVM[i] + "\n", False, stability_log)
                     continue
 
+                # *always* specify default values for global variables on each loop iteration
                 stability.wrapexe = ""
+                stability.compiler_exe = ""
                 # choosing right compiler for a given target
                 # sometimes clang++ is not avaluable. if --ispc-build-compiler = gcc we will pass in g++ compiler
                 if options.ispc_build_compiler == "gcc":
