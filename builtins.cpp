@@ -788,13 +788,19 @@ AddBitcodeToModule(const unsigned char *bitcode, int length,
     llvm::MemoryBufferRef bcBuf = llvm::MemoryBuffer::getMemBuffer(sb)->getMemBufferRef();
 #endif
 
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_3_5
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_3_7 // LLVM 3.7+
+    llvm::ErrorOr<std::unique_ptr<llvm::Module>> ModuleOrErr = llvm::parseBitcodeFile(bcBuf, *g->ctx);
+    if (std::error_code EC = ModuleOrErr.getError())
+        Error(SourcePos(), "Error parsing stdlib bitcode: %s", EC.message().c_str());
+    else {
+        llvm::Module *bcModule = ModuleOrErr.get().release();
+#elif ISPC_LLVM_VERSION == ISPC_LLVM_3_5 || ISPC_LLVM_VERSION == ISPC_LLVM_3_6
     llvm::ErrorOr<llvm::Module *> ModuleOrErr = llvm::parseBitcodeFile(bcBuf, *g->ctx);
     if (std::error_code EC = ModuleOrErr.getError())
         Error(SourcePos(), "Error parsing stdlib bitcode: %s", EC.message().c_str());
     else {
         llvm::Module *bcModule = ModuleOrErr.get();
-#else
+#else // LLVM 3.2 - 3.4
     std::string bcErr;
     llvm::Module *bcModule = llvm::ParseBitcodeFile(bcBuf, *g->ctx, &bcErr);
     if (!bcModule)
