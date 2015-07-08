@@ -402,30 +402,34 @@ define i32 @__max_uniform_uint32(i32, i32) nounwind readonly alwaysinline {
   ret i32 %ret
 }
 
-declare <8 x i32> @llvm.x86.avx2.pmins.d(<8 x i32>, <8 x i32>) nounwind readonly
-declare <8 x i32> @llvm.x86.avx2.pmaxs.d(<8 x i32>, <8 x i32>) nounwind readonly
+declare <16 x i32> @llvm.x86.avx512.mask.pmins.d.512(<16 x i32>, <16 x i32>, <16 x i32>, i16)
+declare <16 x i32> @llvm.x86.avx512.mask.pmaxs.d.512(<16 x i32>, <16 x i32>, <16 x i32>, i16)
 
 define <16 x i32> @__min_varying_int32(<16 x i32>, <16 x i32>) nounwind readonly alwaysinline {
-  binary8to16(m, i32, @llvm.x86.avx2.pmins.d, %0, %1)
-  ret <16 x i32> %m
+  %ret = call <16 x i32> @llvm.x86.avx512.mask.pmins.d.512(<16 x i32> %0, <16 x i32> %1, 
+                                                            <16 x i32> zeroinitializer, i16 -1)
+  ret <16 x i32> %ret
 }
 
 define <16 x i32> @__max_varying_int32(<16 x i32>, <16 x i32>) nounwind readonly alwaysinline {
-  binary8to16(m, i32, @llvm.x86.avx2.pmaxs.d, %0, %1)
-  ret <16 x i32> %m
+  %ret = call <16 x i32> @llvm.x86.avx512.mask.pmaxs.d.512(<16 x i32> %0, <16 x i32> %1,
+                                                                  <16 x i32> zeroinitializer, i16 -1)
+  ret <16 x i32> %ret
 }
 
-declare <8 x i32> @llvm.x86.avx2.pminu.d(<8 x i32>, <8 x i32>) nounwind readonly
-declare <8 x i32> @llvm.x86.avx2.pmaxu.d(<8 x i32>, <8 x i32>) nounwind readonly
+declare <16 x i32> @llvm.x86.avx512.mask.pminu.d.512(<16 x i32>, <16 x i32>, <16 x i32>, i16)
+declare <16 x i32> @llvm.x86.avx512.mask.pmaxu.d.512(<16 x i32>, <16 x i32>, <16 x i32>, i16)
 
 define <16 x i32> @__min_varying_uint32(<16 x i32>, <16 x i32>) nounwind readonly alwaysinline {
-  binary8to16(m, i32, @llvm.x86.avx2.pminu.d, %0, %1)
-  ret <16 x i32> %m
+  %ret = call <16 x i32> @llvm.x86.avx512.mask.pminu.d.512(<16 x i32> %0, <16 x i32> %1,
+                                                           <16 x i32> zeroinitializer, i16 -1)
+  ret <16 x i32> %ret
 }
 
 define <16 x i32> @__max_varying_uint32(<16 x i32>, <16 x i32>) nounwind readonly alwaysinline {
-  binary8to16(m, i32, @llvm.x86.avx2.pmaxu.d, %0, %1)
-  ret <16 x i32> %m
+  %ret = call <16 x i32> @llvm.x86.avx512.mask.pmaxu.d.512(<16 x i32> %0, <16 x i32> %1,
+                                                           <16 x i32> zeroinitializer, i16 -1)
+  ret <16 x i32> %ret
 }
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -443,17 +447,47 @@ define double @__max_uniform_double(double, double) nounwind readnone alwaysinli
   ret double %ret
 }
 
-declare <4 x double> @llvm.x86.avx.max.pd.256(<4 x double>, <4 x double>) nounwind readnone
-declare <4 x double> @llvm.x86.avx.min.pd.256(<4 x double>, <4 x double>) nounwind readnone
+declare <8 x double> @llvm.x86.avx512.mask.min.pd.512(<8 x double>, <8 x double>,
+                    <8 x double>, i8, i32)
+declare <8 x double> @llvm.x86.avx512.mask.max.pd.512(<8 x double>, <8 x double>,
+                    <8 x double>, i8, i32)
 
 define <16 x double> @__min_varying_double(<16 x double>, <16 x double>) nounwind readnone alwaysinline {
-  binary4to16(ret, double, @llvm.x86.avx.min.pd.256, %0, %1)
-  ret <16 x double> %ret
+  %a_0 = shufflevector <16 x double> %0, <16 x double> undef,
+                       <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  %a_1 = shufflevector <16 x double> %1, <16 x double> undef,
+                       <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  %res_a = call <8 x double> @llvm.x86.avx512.mask.min.pd.512(<8 x double> %a_0, <8 x double> %a_1,
+                <8 x double> zeroinitializer, i8 -1, i32 4)
+  %b_0 = shufflevector <16 x double> %0, <16 x double> undef,
+                       <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+  %b_1 = shufflevector <16 x double> %1, <16 x double> undef,
+                       <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+  %res_b = call <8 x double> @llvm.x86.avx512.mask.min.pd.512(<8 x double> %b_0, <8 x double> %b_1,
+                <8 x double> zeroinitializer, i8 -1, i32 4)
+  %res = shufflevector <8 x double> %res_a, <8 x double> %res_b,
+                       <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7,
+                                   i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+  ret <16 x double> %res                       
 }
 
 define <16 x double> @__max_varying_double(<16 x double>, <16 x double>) nounwind readnone alwaysinline {
-  binary4to16(ret, double, @llvm.x86.avx.max.pd.256, %0, %1)
-  ret <16 x double> %ret
+  %a_0 = shufflevector <16 x double> %0, <16 x double> undef,
+                       <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  %a_1 = shufflevector <16 x double> %1, <16 x double> undef,
+                       <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  %res_a = call <8 x double> @llvm.x86.avx512.mask.max.pd.512(<8 x double> %a_0, <8 x double> %a_1,
+                <8 x double> zeroinitializer, i8 -1, i32 4)
+  %b_0 = shufflevector <16 x double> %0, <16 x double> undef,
+                       <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+  %b_1 = shufflevector <16 x double> %1, <16 x double> undef,
+                       <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+  %res_b = call <8 x double> @llvm.x86.avx512.mask.max.pd.512(<8 x double> %b_0, <8 x double> %b_1,
+                <8 x double> zeroinitializer, i8 -1, i32 4)
+  %res = shufflevector <8 x double> %res_a, <8 x double> %res_b,
+                       <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7,
+                                   i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+  ret <16 x double> %res
 }
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
