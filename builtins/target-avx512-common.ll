@@ -511,24 +511,11 @@ define float @__rsqrt_uniform_float(float) nounwind readonly alwaysinline {
   ret float %half_scale
 }
 
-declare <8 x float> @llvm.x86.avx.rsqrt.ps.256(<8 x float>) nounwind readnone
+declare <16 x float> @llvm.x86.avx512.rsqrt28.ps(<16 x float>, <16 x float>, i16, i32) nounwind readnone
 
 define <16 x float> @__rsqrt_varying_float(<16 x float> %v) nounwind readonly alwaysinline {
-  ;  float is = __rsqrt_v(v);
-  unary8to16(is, float, @llvm.x86.avx.rsqrt.ps.256, %v)
-  ;  return 0.5 * is * (3. - (v * is) * is);
-  %v_is = fmul <16 x float> %v, %is
-  %v_is_is = fmul <16 x float> %v_is, %is
-  %three_sub = fsub <16 x float> <float 3., float 3., float 3., float 3.,
-                                  float 3., float 3., float 3., float 3.,
-                                  float 3., float 3., float 3., float 3.,
-                                  float 3., float 3., float 3., float 3.>, %v_is_is
-  %is_mul = fmul <16 x float> %is, %three_sub
-  %half_scale = fmul <16 x float> <float 0.5, float 0.5, float 0.5, float 0.5,
-                                   float 0.5, float 0.5, float 0.5, float 0.5,
-                                   float 0.5, float 0.5, float 0.5, float 0.5,
-                                   float 0.5, float 0.5, float 0.5, float 0.5>, %is_mul
-  ret <16 x float> %half_scale
+  %res = call <16 x float> @llvm.x86.avx512.rsqrt28.ps(<16 x float> %v, <16 x float> undef, i16 -1, i32 8)
+  ret <16 x float> %res  
 }
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -551,21 +538,11 @@ define float @__rcp_uniform_float(float) nounwind readonly alwaysinline {
   ret float %iv_mul
 }
 
-declare <8 x float> @llvm.x86.avx.rcp.ps.256(<8 x float>) nounwind readnone
+declare <16 x float> @llvm.x86.avx512.rcp28.ps(<16 x float>, <16 x float>, i16, i32) nounwind readnone
 
 define <16 x float> @__rcp_varying_float(<16 x float>) nounwind readonly alwaysinline {
-  ;  float iv = __rcp_v(v);
-  ;  return iv * (2. - v * iv);
-
-  unary8to16(call, float, @llvm.x86.avx.rcp.ps.256, %0)
-  ; do one N-R iteration
-  %v_iv = fmul <16 x float> %0, %call
-  %two_minus = fsub <16 x float> <float 2., float 2., float 2., float 2.,
-                                  float 2., float 2., float 2., float 2.,
-                                  float 2., float 2., float 2., float 2.,
-                                  float 2., float 2., float 2., float 2.>, %v_iv
-  %iv_mul = fmul <16 x float> %call, %two_minus
-  ret <16 x float> %iv_mul
+  %res = call <16 x float> @llvm.x86.avx512.rcp28.ps(<16 x float> %0, <16 x float> undef, i16 -1, i32 8)
+  ret <16 x float> %res
 }
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -578,11 +555,11 @@ define float @__sqrt_uniform_float(float) nounwind readonly alwaysinline {
   ret float %ret
 }
 
-declare <8 x float> @llvm.x86.avx.sqrt.ps.256(<8 x float>) nounwind readnone
+declare <16 x float> @llvm.x86.avx512.mask.sqrt.ps.512(<16 x float>, <16 x float>, i16, i32) nounwind readnone
 
 define <16 x float> @__sqrt_varying_float(<16 x float>) nounwind readonly alwaysinline {
-  unary8to16(call, float, @llvm.x86.avx.sqrt.ps.256, %0)
-  ret <16 x float> %call
+  %res = call <16 x float> @llvm.x86.avx512.mask.sqrt.ps.512(<16 x float> %0, <16 x float> zeroinitializer, i16 -1, i32 4)
+  ret <16 x float> %res
 }
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -595,11 +572,19 @@ define double @__sqrt_uniform_double(double) nounwind alwaysinline {
   ret double %ret
 }
 
-declare <4 x double> @llvm.x86.avx.sqrt.pd.256(<4 x double>) nounwind readnone
+declare <8 x double> @llvm.x86.avx512.mask.sqrt.pd.512(<8 x double>, <8 x double>, i8, i32) nounwind readnone
 
 define <16 x double> @__sqrt_varying_double(<16 x double>) nounwind alwaysinline {
-  unary4to16(ret, double, @llvm.x86.avx.sqrt.pd.256, %0)
-  ret <16 x double> %ret
+  %v0 = shufflevector <16 x double> %0, <16 x double> undef, 
+                      <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  %v1 = shufflevector <16 x double> %0, <16 x double> undef, 
+                      <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+  %r0 = call <8 x double> @llvm.x86.avx512.mask.sqrt.pd.512(<8 x double> %v0,  <8 x double> zeroinitializer, i8 -1, i32 4)
+  %r1 = call <8 x double> @llvm.x86.avx512.mask.sqrt.pd.512(<8 x double> %v1,  <8 x double> zeroinitializer, i8 -1, i32 4)
+  %res = shufflevector <8 x double> %r0, <8 x double> %r1, 
+                       <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7,
+                                   i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+  ret <16 x double> %res
 }
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; bit ops
