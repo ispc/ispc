@@ -1462,7 +1462,11 @@ Module::writeObjectFileOrAssembly(llvm::TargetMachine *targetMachine,
     std::error_code error;
 #endif
 
+#if ISPC_LLVM_VERSION <= ISPC_LLVM_3_6
     llvm::tool_output_file *of = new llvm::tool_output_file(outFileName, error, flags);
+#else // LLVM 3.7+
+    std::unique_ptr<llvm::tool_output_file> of (new llvm::tool_output_file(outFileName, error, flags));
+#endif
 
 #if ISPC_LLVM_VERSION <= ISPC_LLVM_3_5
     if (error.size()) {
@@ -1506,9 +1510,9 @@ Module::writeObjectFileOrAssembly(llvm::TargetMachine *targetMachine,
     // Success; tell tool_output_file to keep the final output file.
     of->keep();
     }
-
+#if ISPC_LLVM_VERSION <= ISPC_LLVM_3_6
     delete of;
-
+#endif // LLVM 3.7+
     return true;
 }
 
