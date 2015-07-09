@@ -811,12 +811,34 @@ define i64 @__reduce_max_uint64(<16 x i64>) nounwind readnone alwaysinline {
 
 masked_load(i8,  1)
 masked_load(i16, 2)
-masked_load(i32, 4)
-masked_load(i64, 8)
+
+declare <16 x i32> @llvm.x86.avx512.mask.loadu.d.512(i8*, <16 x i32>, i16)
+define <16 x i32> @__masked_load_i32(i8 * %ptr, <16 x i1> %mask) nounwind alwaysinline {
+  %mask_i16 = bitcast <16 x i1> %mask to i16
+  %res = call <16 x i32> @llvm.x86.avx512.mask.loadu.d.512(i8* %ptr, <16 x i32> zeroinitializer, i16 %mask_i16)
+  ret <16 x i32> %res
+}
+
+declare <8 x i64> @llvm.x86.avx512.mask.loadu.q.512(i8*, <8 x i64>, i8)
+define <16 x i64> @__masked_load_i64(i8 * %ptr, <16 x i1> %mask) nounwind alwaysinline {
+  %mask_i16 = bitcast <16 x i1> %mask to i16
+  %mask_lo_i8 = trunc i16 %mask_i16 to i8
+  %mask_hi = shufflevector <16 x i1> %mask, <16 x i1> undef,
+                           <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+  %mask_hi_i8 = bitcast <8 x i1> %mask_hi to i8
+  %r0 = call <8 x i64> @llvm.x86.avx512.mask.loadu.q.512(i8* %ptr, <8 x i64> zeroinitializer, i8 %mask_hi_i8)
+  %ptr_d = bitcast i8* %ptr to <16 x i64>*
+  %ptr_lo = getelementptr <16 x i64>, <16 x i64>* %ptr_d, i32 8
+  %ptr_lo_i8 = bitcast <16 x i64>* %ptr_lo to i8*
+  %r1 = call <8 x i64> @llvm.x86.avx512.mask.loadu.q.512(i8* %ptr_lo_i8, <8 x i64> zeroinitializer, i8 %mask_lo_i8)
+  %res = shufflevector <8 x i64> %r0, <8 x i64> %r1,
+                       <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7,
+                                   i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+  ret <16 x i64> %res
+}
 
 
 declare <16 x float> @llvm.x86.avx512.mask.loadu.ps.512(i8*, <16 x float>, i16)
-
 define <16 x float> @__masked_load_float(i8 * %ptr, <16 x i1> %mask) readonly alwaysinline {
   %mask_i16 = bitcast <16 x i1> %mask to i16
   %res = call <16 x float> @llvm.x86.avx512.mask.loadu.ps.512(i8* %ptr, <16 x float> zeroinitializer, i16 %mask_i16)
@@ -825,7 +847,6 @@ define <16 x float> @__masked_load_float(i8 * %ptr, <16 x i1> %mask) readonly al
 
 
 declare <8 x double> @llvm.x86.avx512.mask.loadu.pd.512(i8*, <8 x double>, i8)
-
 define <16 x double> @__masked_load_double(i8 * %ptr, <16 x i1> %mask) readonly alwaysinline {
   %mask_i16 = bitcast <16 x i1> %mask to i16
   %mask_lo_i8 = trunc i16 %mask_i16 to i8
@@ -846,22 +867,64 @@ define <16 x double> @__masked_load_double(i8 * %ptr, <16 x i1> %mask) readonly 
 
 gen_masked_store(i8) ; llvm.x86.sse2.storeu.dq
 gen_masked_store(i16)
-gen_masked_store(i32)
-gen_masked_store(i64)
 
-define void @__masked_store_float(<WIDTH x float> * nocapture, <WIDTH x float>,
-                                  <WIDTH x MASK>) nounwind alwaysinline {
-  %ptr = bitcast <WIDTH x float> * %0 to <WIDTH x i32> *
-  %val = bitcast <WIDTH x float> %1 to <WIDTH x i32>
-  call void @__masked_store_i32(<WIDTH x i32> * %ptr, <WIDTH x i32> %val, <WIDTH x MASK> %2)
+declare void @llvm.x86.avx512.mask.storeu.d.512(i8*, <16 x i32>, i16)
+define void @__masked_store_i32(<16 x i32>* nocapture, <16 x i32> %v, <16 x i1> %mask) nounwind alwaysinline {
+  %mask_i16 = bitcast <16 x i1> %mask to i16
+  %ptr_i8 = bitcast <16 x i32>* %0 to i8*
+  call void @llvm.x86.avx512.mask.storeu.d.512(i8* %ptr_i8, <16 x i32> %v, i16 %mask_i16)
   ret void
 }
 
-define void @__masked_store_double(<WIDTH x double> * nocapture, <WIDTH x double>,
-                                   <WIDTH x MASK>) nounwind alwaysinline {
-  %ptr = bitcast <WIDTH x double> * %0 to <WIDTH x i64> *
-  %val = bitcast <WIDTH x double> %1 to <WIDTH x i64>
-  call void @__masked_store_i64(<WIDTH x i64> * %ptr, <WIDTH x i64> %val, <WIDTH x MASK> %2)
+declare void @llvm.x86.avx512.mask.storeu.q.512(i8*, <8 x i64>, i8)
+define void @__masked_store_i64(<16 x i64>* nocapture, <16 x i64> %v, <16 x i1> %mask) nounwind alwaysinline {
+  %mask_i16 = bitcast <16 x i1> %mask to i16
+  %mask_lo_i8 = trunc i16 %mask_i16 to i8
+  %mask_hi = shufflevector <16 x i1> %mask, <16 x i1> undef,
+                           <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+  %mask_hi_i8 = bitcast <8 x i1> %mask_hi to i8
+
+  %ptr_i8 = bitcast <16 x i64>* %0 to i8*
+  %ptr_lo = getelementptr <16 x i64>, <16 x i64>* %0, i32 8
+  %ptr_lo_i8 = bitcast <16 x i64>* %ptr_lo to i8*
+
+  %v_lo = shufflevector <16 x i64> %v, <16 x i64> undef,
+                        <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  %v_hi = shufflevector <16 x i64> %v, <16 x i64> undef,
+                        <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+
+  call void @llvm.x86.avx512.mask.storeu.q.512(i8* %ptr_i8, <8 x i64> %v_hi, i8 %mask_hi_i8)
+  call void @llvm.x86.avx512.mask.storeu.q.512(i8* %ptr_lo_i8, <8 x i64> %v_lo, i8 %mask_lo_i8)
+  ret void
+}
+
+declare void @llvm.x86.avx512.mask.storeu.ps.512(i8*, <16 x float>, i16 )
+define void @__masked_store_float(<16 x float>* nocapture, <16 x float> %v, <16 x i1> %mask) nounwind alwaysinline {
+  %mask_i16 = bitcast <16 x i1> %mask to i16
+  %ptr_i8 = bitcast <16 x float>* %0 to i8*
+  call void @llvm.x86.avx512.mask.storeu.ps.512(i8* %ptr_i8, <16 x float> %v, i16 %mask_i16)
+  ret void
+}
+
+declare void @llvm.x86.avx512.mask.storeu.pd.512(i8*, <8 x double>, i8)
+define void @__masked_store_double(<16 x double>* nocapture, <16 x double> %v, <16 x i1> %mask) nounwind alwaysinline {
+  %mask_i16 = bitcast <16 x i1> %mask to i16
+  %mask_lo_i8 = trunc i16 %mask_i16 to i8
+  %mask_hi = shufflevector <16 x i1> %mask, <16 x i1> undef,
+                           <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+  %mask_hi_i8 = bitcast <8 x i1> %mask_hi to i8
+
+  %ptr_i8 = bitcast <16 x double>* %0 to i8*
+  %ptr_lo = getelementptr <16 x double>, <16 x double>* %0, i32 8
+  %ptr_lo_i8 = bitcast <16 x double>* %ptr_lo to i8*
+
+  %v_lo = shufflevector <16 x double> %v, <16 x double> undef,
+                        <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  %v_hi = shufflevector <16 x double> %v, <16 x double> undef,
+                        <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+
+  call void @llvm.x86.avx512.mask.storeu.pd.512(i8* %ptr_i8, <8 x double> %v_hi, i8 %mask_hi_i8)
+  call void @llvm.x86.avx512.mask.storeu.pd.512(i8* %ptr_lo_i8, <8 x double> %v_lo, i8 %mask_lo_i8)
   ret void
 }
 
