@@ -499,7 +499,7 @@ Function::GenerateIR() {
     // non-StmtList statment...
     SourcePos firstStmtPos = sym->pos;
     if (code) {
-        StmtList *sl = dynamic_cast<StmtList *>(code);
+        StmtList *sl = llvm::dyn_cast<StmtList>(code);
         if (sl && sl->stmts.size() > 0 && sl->stmts[0] != NULL)
             firstStmtPos = sl->stmts[0]->pos;
         else

@@ -178,7 +178,7 @@ lIsAllIntZeros(Expr *expr) {
     if (type == NULL || type->IsIntType() == false)
         return false;
 
-    ConstExpr *ce = dynamic_cast<ConstExpr *>(expr);
+    ConstExpr *ce = llvm::dyn_cast<ConstExpr>(expr);
     if (ce == NULL)
         return false;
 
@@ -355,7 +355,7 @@ lDoTypeConv(const Type *fromType, const Type *toType, Expr **expr,
         }
         else if (PointerType::IsVoidPointer(fromPointerType) &&
                  expr != NULL &&
-                 dynamic_cast<NullPointerExpr *>(*expr) != NULL) {
+                 llvm::dyn_cast<NullPointerExpr>(*expr) != NULL) {
             // and a NULL convert to any other pointer type
             goto typecast_ok;
         }
@@ -617,7 +617,7 @@ PossiblyResolveFunctionOverloads(Expr *expr, const Type *type) {
     const FunctionType *funcType = NULL;
     if (CastType<PointerType>(type) != NULL &&
         (funcType = CastType<FunctionType>(type->GetBaseType())) &&
-        (fse = dynamic_cast<FunctionSymbolExpr *>(expr)) != NULL) {
+        (fse = llvm::dyn_cast<FunctionSymbolExpr>(expr)) != NULL) {
         // We're initializing a function pointer with a function symbol,
         // which in turn may represent an overloaded function.  So we need
         // to try to resolve the overload based on the type of the symbol
@@ -684,7 +684,7 @@ InitSymbol(llvm::Value *ptr, const Type *symType, Expr *initExpr,
     // If the initializer is a straight up expression that isn't an
     // ExprList, then we'll see if we can type convert it to the type of
     // the variable.
-    if (dynamic_cast<ExprList *>(initExpr) == NULL) {
+    if (llvm::dyn_cast<ExprList>(initExpr) == NULL) {
         if (PossiblyResolveFunctionOverloads(initExpr, symType) == false)
             return;
         initExpr = TypeConvertExpr(initExpr, symType, "initializer");
@@ -703,7 +703,7 @@ InitSymbol(llvm::Value *ptr, const Type *symType, Expr *initExpr,
     // expressions if they have a single element (except for SOA types,
     // which are handled below).
     if (symType->IsSOAType() == false && Type::IsBasicType(symType)) {
-        ExprList *elist = dynamic_cast<ExprList *>(initExpr);
+        ExprList *elist = llvm::dyn_cast<ExprList>(initExpr);
         if (elist != NULL) {
             if (elist->exprs.size() == 1)
                 InitSymbol(ptr, symType, elist->exprs[0], ctx, pos);
@@ -755,7 +755,7 @@ InitSymbol(llvm::Value *ptr, const Type *symType, Expr *initExpr,
         // an initializer list may be provided (float foo[3] = { 1,2,3 }),
         // in which case the elements are initialized with the
         // corresponding values.
-        ExprList *exprList = dynamic_cast<ExprList *>(initExpr);
+        ExprList *exprList = llvm::dyn_cast<ExprList>(initExpr);
         if (exprList != NULL) {
             // The { ... } case; make sure we have the no more expressions
             // in the ExprList as we have struct members
@@ -1108,7 +1108,7 @@ lEmitNegate(Expr *arg, SourcePos pos, FunctionEmitContext *ctx) {
 
 
 UnaryExpr::UnaryExpr(Op o, Expr *e, SourcePos p)
-  : Expr(p), op(o) {
+  : Expr(p, UnaryExprID), op(o) {
     expr = e;
 }
 
@@ -1184,7 +1184,7 @@ lOptimizeBitNot(ConstExpr *constExpr, const Type *type, SourcePos pos) {
 
 Expr *
 UnaryExpr::Optimize() {
-    ConstExpr *constExpr = dynamic_cast<ConstExpr *>(expr);
+    ConstExpr *constExpr = llvm::dyn_cast<ConstExpr>(expr);
     // If the operand isn't a constant, then we can't do any optimization
     // here...
     if (constExpr == NULL)
@@ -1359,7 +1359,7 @@ UnaryExpr::TypeCheck() {
 
 int
 UnaryExpr::EstimateCost() const {
-    if (dynamic_cast<ConstExpr *>(expr) != NULL)
+    if (llvm::dyn_cast<ConstExpr>(expr) != NULL)
         return 0;
 
     return COST_SIMPLE_ARITH_LOGIC_OP;
@@ -1666,7 +1666,7 @@ lEmitBinaryCmp(BinaryExpr::Op op, llvm::Value *e0Val, llvm::Value *e1Val,
 
 
 BinaryExpr::BinaryExpr(Op o, Expr *a, Expr *b, SourcePos p)
-    : Expr(p), op(o) {
+    : Expr(p, BinaryExprID), op(o) {
     arg0 = a;
     arg1 = b;
 }
@@ -1990,7 +1990,7 @@ lIsDifficultShiftAmount(Expr *expr) {
     if (expr->GetType()->IsVaryingType() == false)
         return false;
 
-    ConstExpr *ce = dynamic_cast<ConstExpr *>(expr);
+    ConstExpr *ce = llvm::dyn_cast<ConstExpr>(expr);
     if (ce) {
         // If the shift is by a constant amount, *and* it's the same amount
         // in all vector lanes, we're in good shape.
@@ -2002,7 +2002,7 @@ lIsDifficultShiftAmount(Expr *expr) {
         return false;
     }
 
-    TypeCastExpr *tce = dynamic_cast<TypeCastExpr *>(expr);
+    TypeCastExpr *tce = llvm::dyn_cast<TypeCastExpr>(expr);
     if (tce && tce->expr) {
         // Finally, if the shift amount is given by a uniform value that's
         // been smeared out into a varying, we have the same shift for all
@@ -2330,7 +2330,7 @@ lCanImproveVectorDivide(Expr *arg0, Expr *arg1, int *divisor) {
 
     // The divisor must be the same compile-time constant value for all of
     // the vector lanes.
-    ConstExpr *ce = dynamic_cast<ConstExpr *>(arg1);
+    ConstExpr *ce = llvm::dyn_cast<ConstExpr>(arg1);
     if (!ce)
         return false;
     int64_t div[ISPC_MAX_NVEC];
@@ -2357,8 +2357,8 @@ BinaryExpr::Optimize() {
     if (arg0 == NULL || arg1 == NULL)
         return NULL;
 
-    ConstExpr *constArg0 = dynamic_cast<ConstExpr *>(arg0);
-    ConstExpr *constArg1 = dynamic_cast<ConstExpr *>(arg1);
+    ConstExpr *constArg0 = llvm::dyn_cast<ConstExpr>(arg0);
+    ConstExpr *constArg1 = llvm::dyn_cast<ConstExpr>(arg1);
 
     if (g->opt.fastMath) {
         // optimizations related to division by floats..
@@ -2823,8 +2823,8 @@ BinaryExpr::GetLValueType() const {
 
 int
 BinaryExpr::EstimateCost() const {
-    if (dynamic_cast<ConstExpr *>(arg0) != NULL &&
-        dynamic_cast<ConstExpr *>(arg1) != NULL)
+    if (llvm::dyn_cast<ConstExpr>(arg0) != NULL &&
+        llvm::dyn_cast<ConstExpr>(arg1) != NULL)
         return 0;
 
     return (op == Div || op == Mod) ? COST_COMPLEX_ARITH_OP :
@@ -2945,7 +2945,7 @@ lEmitOpAssign(AssignExpr::Op op, Expr *arg0, Expr *arg1, const Type *type,
 
 
 AssignExpr::AssignExpr(AssignExpr::Op o, Expr *a, Expr *b, SourcePos p)
-    : Expr(p), op(o) {
+    : Expr(p, AssignExprID), op(o) {
     lvalue = a;
     rvalue = b;
 }
@@ -3170,7 +3170,7 @@ AssignExpr::Print() const {
 // SelectExpr
 
 SelectExpr::SelectExpr(Expr *t, Expr *e1, Expr *e2, SourcePos p)
-    : Expr(p) {
+    : Expr(p, SelectExprID) {
     test = t;
     expr1 = e1;
     expr2 = e2;
@@ -3404,7 +3404,7 @@ SelectExpr::Optimize() {
     if (test == NULL || expr1 == NULL || expr2 == NULL)
         return NULL;
 
-    ConstExpr *constTest = dynamic_cast<ConstExpr *>(test);
+    ConstExpr *constTest = llvm::dyn_cast<ConstExpr>(test);
     if (constTest == NULL)
         return this;
 
@@ -3431,8 +3431,8 @@ SelectExpr::Optimize() {
         // Last chance: see if the two expressions are constants; if so,
         // then we can do an element-wise selection based on the constant
         // condition..
-        ConstExpr *constExpr1 = dynamic_cast<ConstExpr *>(expr1);
-        ConstExpr *constExpr2 = dynamic_cast<ConstExpr *>(expr2);
+        ConstExpr *constExpr1 = llvm::dyn_cast<ConstExpr>(expr1);
+        ConstExpr *constExpr2 = llvm::dyn_cast<ConstExpr>(expr2);
         if (constExpr1 == NULL || constExpr2 == NULL)
             return this;
 
@@ -3555,7 +3555,7 @@ SelectExpr::Print() const {
 
 FunctionCallExpr::FunctionCallExpr(Expr *f, ExprList *a, SourcePos p,
                                    bool il, Expr *lce[3])
-    : Expr(p), isLaunch(il) {
+    : Expr(p, FunctionCallExprID), isLaunch(il) {
     func = f;
     args = a;
     if (lce != NULL)
@@ -3728,8 +3728,8 @@ bool FullResolveOverloads(Expr * func, ExprList * args,
         if (t == NULL)
             return false;
         argTypes->push_back(t);
-        argCouldBeNULL->push_back(lIsAllIntZeros(expr) || dynamic_cast<NullPointerExpr *>(expr));
-        argIsConstant->push_back(dynamic_cast<ConstExpr *>(expr) || dynamic_cast<NullPointerExpr *>(expr));
+        argCouldBeNULL->push_back(lIsAllIntZeros(expr) || llvm::dyn_cast<NullPointerExpr>(expr));
+        argIsConstant->push_back(llvm::dyn_cast<ConstExpr>(expr) || llvm::dyn_cast<NullPointerExpr>(expr));
     }
     return true;
 }
@@ -3740,7 +3740,7 @@ FunctionCallExpr::GetType() const {
     std::vector<const Type *> argTypes;
     std::vector<bool> argCouldBeNULL, argIsConstant;
     if (FullResolveOverloads(func, args, &argTypes, &argCouldBeNULL, &argIsConstant) == true) {
-        FunctionSymbolExpr *fse = dynamic_cast<FunctionSymbolExpr *>(func);
+        FunctionSymbolExpr *fse = llvm::dyn_cast<FunctionSymbolExpr>(func);
         if (fse != NULL) {
             fse->ResolveOverloads(args->pos, argTypes, &argCouldBeNULL, &argIsConstant);
         }
@@ -3785,7 +3785,7 @@ FunctionCallExpr::TypeCheck() {
         return NULL;
     }
 
-    FunctionSymbolExpr *fse = dynamic_cast<FunctionSymbolExpr *>(func);
+    FunctionSymbolExpr *fse = llvm::dyn_cast<FunctionSymbolExpr>(func);
     if (fse != NULL) {
         // Regular function call
         if (fse->ResolveOverloads(args->pos, argTypes, &argCouldBeNULL,
@@ -4012,7 +4012,7 @@ ExprList::GetConstant(const Type *type) const {
         const Type *elementType = collectionType->GetElementType(i);
 
         Expr *expr = exprs[i];
-        if (dynamic_cast<ExprList *>(expr) == NULL) {
+        if (llvm::dyn_cast<ExprList>(expr) == NULL) {
             // If there's a simple type conversion from the type of this
             // expression to the type we need, then let the regular type
             // conversion machinery handle it.
@@ -4121,7 +4121,7 @@ ExprList::Print() const {
 // IndexExpr
 
 IndexExpr::IndexExpr(Expr *a, Expr *i, SourcePos p)
-    : Expr(p) {
+    : Expr(p, IndexExprID) {
     baseExpr = a;
     index = i;
     type = lvalueType = NULL;
@@ -4294,8 +4294,8 @@ IndexExpr::GetValue(FunctionEmitContext *ctx) const {
     }
     else {
         Symbol *baseSym = GetBaseSymbol();
-        if (dynamic_cast<FunctionCallExpr *>(baseExpr) == NULL && 
-            dynamic_cast<BinaryExpr *>(baseExpr) == NULL) {
+        if (llvm::dyn_cast<FunctionCallExpr>(baseExpr) == NULL && 
+            llvm::dyn_cast<BinaryExpr>(baseExpr) == NULL) {
           // Don't check if we're doing a function call or pointer arith
             AssertPos(pos, baseSym != NULL);
         }
@@ -4404,7 +4404,7 @@ lCheckIndicesVersusBounds(const Type *baseExprType, Expr *index) {
     if (soaWidth > 0)
         nElements *= soaWidth;
 
-    ConstExpr *ce = dynamic_cast<ConstExpr *>(index);
+    ConstExpr *ce = llvm::dyn_cast<ConstExpr>(index);
     if (ce == NULL)
         return;
 
@@ -4737,7 +4737,7 @@ private:
 
 StructMemberExpr::StructMemberExpr(Expr *e, const char *id, SourcePos p,
                                    SourcePos idpos, bool derefLValue)
-    : MemberExpr(e, id, p, idpos, derefLValue) {
+    : MemberExpr(e, id, p, idpos, derefLValue, StructMemberExprID) {
 }
 
 
@@ -4908,7 +4908,7 @@ private:
 
 VectorMemberExpr::VectorMemberExpr(Expr *e, const char *id, SourcePos p,
                                    SourcePos idpos, bool derefLValue)
-    : MemberExpr(e, id, p, idpos, derefLValue) {
+    : MemberExpr(e, id, p, idpos, derefLValue, VectorMemberExprID) {
     const Type *exprType = e->GetType();
     exprVectorType = CastType<VectorType>(exprType);
     if (exprVectorType == NULL) {
@@ -5166,8 +5166,8 @@ MemberExpr::create(Expr *e, const char *id, SourcePos p, SourcePos idpos,
 
 
 MemberExpr::MemberExpr(Expr *e, const char *id, SourcePos p, SourcePos idpos,
-                       bool derefLValue)
-    : Expr(p), identifierPos(idpos) {
+                       bool derefLValue, unsigned scid)
+    : Expr(p, scid), identifierPos(idpos) {
     expr = e;
     identifier = id;
     dereferenceExpr = derefLValue;
@@ -5340,7 +5340,7 @@ MemberExpr::getCandidateNearMatches() const {
 // ConstExpr
 
 ConstExpr::ConstExpr(const Type *t, int8_t i, SourcePos p)
-  : Expr(p) {
+  : Expr(p, ConstExprID) {
     type = t;
     type = type->GetAsConstType();
     AssertPos(pos, Type::Equal(type, AtomicType::UniformInt8->GetAsConstType()));
@@ -5349,7 +5349,7 @@ ConstExpr::ConstExpr(const Type *t, int8_t i, SourcePos p)
 
 
 ConstExpr::ConstExpr(const Type *t, int8_t *i, SourcePos p)
-  : Expr(p) {
+  : Expr(p, ConstExprID) {
     type = t;
     type = type->GetAsConstType();
     AssertPos(pos, Type::Equal(type, AtomicType::UniformInt8->GetAsConstType()) ||
@@ -5360,7 +5360,7 @@ ConstExpr::ConstExpr(const Type *t, int8_t *i, SourcePos p)
 
 
 ConstExpr::ConstExpr(const Type *t, uint8_t u, SourcePos p)
-  : Expr(p) {
+  : Expr(p, ConstExprID) {
     type = t;
     type = type->GetAsConstType();
     AssertPos(pos, Type::Equal(type, AtomicType::UniformUInt8->GetAsConstType()));
@@ -5369,7 +5369,7 @@ ConstExpr::ConstExpr(const Type *t, uint8_t u, SourcePos p)
 
 
 ConstExpr::ConstExpr(const Type *t, uint8_t *u, SourcePos p)
-  : Expr(p) {
+  : Expr(p, ConstExprID) {
     type = t;
     type = type->GetAsConstType();
     AssertPos(pos, Type::Equal(type, AtomicType::UniformUInt8->GetAsConstType()) ||
@@ -5380,7 +5380,7 @@ ConstExpr::ConstExpr(const Type *t, uint8_t *u, SourcePos p)
 
 
 ConstExpr::ConstExpr(const Type *t, int16_t i, SourcePos p)
-  : Expr(p) {
+  : Expr(p, ConstExprID) {
     type = t;
     type = type->GetAsConstType();
     AssertPos(pos, Type::Equal(type, AtomicType::UniformInt16->GetAsConstType()));
@@ -5389,7 +5389,7 @@ ConstExpr::ConstExpr(const Type *t, int16_t i, SourcePos p)
 
 
 ConstExpr::ConstExpr(const Type *t, int16_t *i, SourcePos p)
-  : Expr(p) {
+  : Expr(p, ConstExprID) {
     type = t;
     type = type->GetAsConstType();
     AssertPos(pos, Type::Equal(type, AtomicType::UniformInt16->GetAsConstType()) ||
@@ -5400,7 +5400,7 @@ ConstExpr::ConstExpr(const Type *t, int16_t *i, SourcePos p)
 
 
 ConstExpr::ConstExpr(const Type *t, uint16_t u, SourcePos p)
-  : Expr(p) {
+  : Expr(p, ConstExprID) {
     type = t;
     type = type->GetAsConstType();
     AssertPos(pos, Type::Equal(type, AtomicType::UniformUInt16->GetAsConstType()));
@@ -5409,7 +5409,7 @@ ConstExpr::ConstExpr(const Type *t, uint16_t u, SourcePos p)
 
 
 ConstExpr::ConstExpr(const Type *t, uint16_t *u, SourcePos p)
-  : Expr(p) {
+  : Expr(p, ConstExprID) {
     type = t;
     type = type->GetAsConstType();
     AssertPos(pos, Type::Equal(type, AtomicType::UniformUInt16->GetAsConstType()) ||
@@ -5420,7 +5420,7 @@ ConstExpr::ConstExpr(const Type *t, uint16_t *u, SourcePos p)
 
 
 ConstExpr::ConstExpr(const Type *t, int32_t i, SourcePos p)
-  : Expr(p) {
+  : Expr(p, ConstExprID) {
     type = t;
     type = type->GetAsConstType();
     AssertPos(pos, Type::Equal(type, AtomicType::UniformInt32->GetAsConstType()));
@@ -5429,7 +5429,7 @@ ConstExpr::ConstExpr(const Type *t, int32_t i, SourcePos p)
 
 
 ConstExpr::ConstExpr(const Type *t, int32_t *i, SourcePos p)
-  : Expr(p) {
+  : Expr(p, ConstExprID) {
     type = t;
     type = type->GetAsConstType();
     AssertPos(pos, Type::Equal(type, AtomicType::UniformInt32->GetAsConstType()) ||
@@ -5440,7 +5440,7 @@ ConstExpr::ConstExpr(const Type *t, int32_t *i, SourcePos p)
 
 
 ConstExpr::ConstExpr(const Type *t, uint32_t u, SourcePos p)
-  : Expr(p) {
+  : Expr(p, ConstExprID) {
     type = t;
     type = type->GetAsConstType();
     AssertPos(pos, Type::Equal(type, AtomicType::UniformUInt32->GetAsConstType()) ||
@@ -5451,7 +5451,7 @@ ConstExpr::ConstExpr(const Type *t, uint32_t u, SourcePos p)
 
 
 ConstExpr::ConstExpr(const Type *t, uint32_t *u, SourcePos p)
-  : Expr(p) {
+  : Expr(p, ConstExprID) {
     type = t;
     type = type->GetAsConstType();
     AssertPos(pos, Type::Equal(type, AtomicType::UniformUInt32->GetAsConstType()) ||
@@ -5463,7 +5463,7 @@ ConstExpr::ConstExpr(const Type *t, uint32_t *u, SourcePos p)
 
 
 ConstExpr::ConstExpr(const Type *t, float f, SourcePos p)
-    : Expr(p) {
+    : Expr(p, ConstExprID) {
     type = t;
     type = type->GetAsConstType();
     AssertPos(pos, Type::Equal(type, AtomicType::UniformFloat->GetAsConstType()));
@@ -5472,7 +5472,7 @@ ConstExpr::ConstExpr(const Type *t, float f, SourcePos p)
 
 
 ConstExpr::ConstExpr(const Type *t, float *f, SourcePos p)
-  : Expr(p) {
+  : Expr(p, ConstExprID) {
     type = t;
     type = type->GetAsConstType();
     AssertPos(pos, Type::Equal(type, AtomicType::UniformFloat->GetAsConstType()) ||
@@ -5483,7 +5483,7 @@ ConstExpr::ConstExpr(const Type *t, float *f, SourcePos p)
 
 
 ConstExpr::ConstExpr(const Type *t, int64_t i, SourcePos p)
-  : Expr(p) {
+  : Expr(p, ConstExprID) {
     type = t;
     type = type->GetAsConstType();
     AssertPos(pos, Type::Equal(type, AtomicType::UniformInt64->GetAsConstType()));
@@ -5492,7 +5492,7 @@ ConstExpr::ConstExpr(const Type *t, int64_t i, SourcePos p)
 
 
 ConstExpr::ConstExpr(const Type *t, int64_t *i, SourcePos p)
-  : Expr(p) {
+  : Expr(p, ConstExprID) {
     type = t;
     type = type->GetAsConstType();
     AssertPos(pos, Type::Equal(type, AtomicType::UniformInt64->GetAsConstType()) ||
@@ -5503,7 +5503,7 @@ ConstExpr::ConstExpr(const Type *t, int64_t *i, SourcePos p)
 
 
 ConstExpr::ConstExpr(const Type *t, uint64_t u, SourcePos p)
-  : Expr(p) {
+  : Expr(p, ConstExprID) {
     type = t;
     type = type->GetAsConstType();
     AssertPos(pos, Type::Equal(type, AtomicType::UniformUInt64->GetAsConstType()));
@@ -5512,7 +5512,7 @@ ConstExpr::ConstExpr(const Type *t, uint64_t u, SourcePos p)
 
 
 ConstExpr::ConstExpr(const Type *t, uint64_t *u, SourcePos p)
-  : Expr(p) {
+  : Expr(p, ConstExprID) {
     type = t;
     type = type->GetAsConstType();
     AssertPos(pos, Type::Equal(type, AtomicType::UniformUInt64->GetAsConstType()) ||
@@ -5523,7 +5523,7 @@ ConstExpr::ConstExpr(const Type *t, uint64_t *u, SourcePos p)
 
 
 ConstExpr::ConstExpr(const Type *t, double f, SourcePos p)
-    : Expr(p) {
+    : Expr(p, ConstExprID) {
     type = t;
     type = type->GetAsConstType();
     AssertPos(pos, Type::Equal(type, AtomicType::UniformDouble->GetAsConstType()));
@@ -5532,7 +5532,7 @@ ConstExpr::ConstExpr(const Type *t, double f, SourcePos p)
 
 
 ConstExpr::ConstExpr(const Type *t, double *f, SourcePos p)
-  : Expr(p) {
+  : Expr(p, ConstExprID) {
     type = t;
     type = type->GetAsConstType();
     AssertPos(pos, Type::Equal(type, AtomicType::UniformDouble->GetAsConstType()) ||
@@ -5543,7 +5543,7 @@ ConstExpr::ConstExpr(const Type *t, double *f, SourcePos p)
 
 
 ConstExpr::ConstExpr(const Type *t, bool b, SourcePos p)
-  : Expr(p) {
+  : Expr(p, ConstExprID) {
     type = t;
     type = type->GetAsConstType();
     AssertPos(pos, Type::Equal(type, AtomicType::UniformBool->GetAsConstType()));
@@ -5552,7 +5552,7 @@ ConstExpr::ConstExpr(const Type *t, bool b, SourcePos p)
 
 
 ConstExpr::ConstExpr(const Type *t, bool *b, SourcePos p)
-  : Expr(p) {
+  : Expr(p, ConstExprID) {
     type = t;
     type = type->GetAsConstType();
     AssertPos(pos, Type::Equal(type, AtomicType::UniformBool->GetAsConstType()) ||
@@ -5563,7 +5563,7 @@ ConstExpr::ConstExpr(const Type *t, bool *b, SourcePos p)
 
 
 ConstExpr::ConstExpr(ConstExpr *old, double *v)
-    : Expr(old->pos) {
+    : Expr(old->pos, ConstExprID) {
     type = old->type;
 
     AtomicType::BasicType basicType = getBasicType();
@@ -5617,7 +5617,7 @@ ConstExpr::ConstExpr(ConstExpr *old, double *v)
 
 
 ConstExpr::ConstExpr(ConstExpr *old, SourcePos p)
-    : Expr(p) {
+    : Expr(p, ConstExprID) {
     type = old->type;
 
     AtomicType::BasicType basicType = getBasicType();
@@ -6223,7 +6223,7 @@ ConstExpr::Print() const {
 // TypeCastExpr
 
 TypeCastExpr::TypeCastExpr(const Type *t, Expr *e, SourcePos p)
-  : Expr(p) {
+  : Expr(p, TypeCastExprID) {
     type = t;
     expr = e;
 }
@@ -7229,7 +7229,7 @@ TypeCastExpr::TypeCheck() {
 
 Expr *
 TypeCastExpr::Optimize() {
-    ConstExpr *constExpr = dynamic_cast<ConstExpr *>(expr);
+    ConstExpr *constExpr = llvm::dyn_cast<ConstExpr>(expr);
     if (constExpr == NULL)
         // We can't do anything if this isn't a const expr
         return this;
@@ -7315,7 +7315,7 @@ TypeCastExpr::Optimize() {
 
 int
 TypeCastExpr::EstimateCost() const {
-    if (dynamic_cast<ConstExpr *>(expr) != NULL)
+    if (llvm::dyn_cast<ConstExpr>(expr) != NULL)
         return 0;
 
     // FIXME: return COST_TYPECAST_COMPLEX when appropriate
@@ -7392,7 +7392,7 @@ TypeCastExpr::GetConstant(const Type *constType) const {
 // ReferenceExpr
 
 ReferenceExpr::ReferenceExpr(Expr *e, SourcePos p)
-    : Expr(p) {
+    : Expr(p, ReferenceExprID) {
     expr = e;
 }
 
@@ -7500,8 +7500,8 @@ ReferenceExpr::Print() const {
 ///////////////////////////////////////////////////////////////////////////
 // DerefExpr
 
-DerefExpr::DerefExpr(Expr *e, SourcePos p)
-    : Expr(p) {
+DerefExpr::DerefExpr(Expr *e, SourcePos p, unsigned scid)
+    : Expr(p, scid) {
     expr = e;
 }
 
@@ -7563,7 +7563,7 @@ DerefExpr::Optimize() {
 // PtrDerefExpr
 
 PtrDerefExpr::PtrDerefExpr(Expr *e, SourcePos p)
-    : DerefExpr(e, p) {
+    : DerefExpr(e, p, PtrDerefExprID) {
 }
 
 
@@ -7641,7 +7641,7 @@ PtrDerefExpr::Print() const {
 // RefDerefExpr
 
 RefDerefExpr::RefDerefExpr(Expr *e, SourcePos p)
-    : DerefExpr(e, p) {
+    : DerefExpr(e, p, RefDerefExprID) {
 }
 
 
@@ -7700,7 +7700,7 @@ RefDerefExpr::Print() const {
 // AddressOfExpr
 
 AddressOfExpr::AddressOfExpr(Expr *e, SourcePos p)
-    : Expr(p), expr(e) {
+    : Expr(p, AddressOfExprID), expr(e) {
 }
 
 
@@ -7832,12 +7832,12 @@ AddressOfExpr::GetConstant(const Type *type) const {
 // SizeOfExpr
 
 SizeOfExpr::SizeOfExpr(Expr *e, SourcePos p)
-    : Expr(p), expr(e), type(NULL) {
+    : Expr(p, SizeOfExprID), expr(e), type(NULL) {
 }
 
 
 SizeOfExpr::SizeOfExpr(const Type *t, SourcePos p)
-    : Expr(p), expr(NULL), type(t) {
+    : Expr(p, SizeOfExprID), expr(NULL), type(t) {
     type = type->ResolveUnboundVariability(Variability::Varying);
 }
 
@@ -7914,7 +7914,7 @@ SizeOfExpr::EstimateCost() const {
 // SymbolExpr
 
 SymbolExpr::SymbolExpr(Symbol *s, SourcePos p)
-  : Expr(p) {
+  : Expr(p, SymbolExprID) {
     symbol = s;
 }
 
@@ -8008,7 +8008,7 @@ SymbolExpr::Print() const {
 FunctionSymbolExpr::FunctionSymbolExpr(const char *n,
                                        const std::vector<Symbol *> &candidates,
                                        SourcePos p)
-  : Expr(p) {
+  : Expr(p, FunctionSymbolExprID) {
     name = n;
     candidateFunctions = candidates;
     matchingFunc = (candidates.size() == 1) ? candidates[0] : NULL;
@@ -8555,7 +8555,7 @@ NullPointerExpr::EstimateCost() const {
 
 NewExpr::NewExpr(int typeQual, const Type *t, Expr *init, Expr *count,
                  SourcePos tqPos, SourcePos p)
-    : Expr(p) {
+    : Expr(p, NewExprID) {
     allocType = t;
 
     initExpr = init;

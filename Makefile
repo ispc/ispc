@@ -169,7 +169,7 @@ CXXFLAGS=$(OPT) $(LLVM_CXXFLAGS) -I. -Iobjs/ -I$(CLANG_INCLUDE)  \
 
 # if( !($(LLVM_VERSION) == LLVM_3_2 || $(LLVM_VERSION) == LLVM_3_3 || $(LLVM_VERSION) == LLVM_3_4))
 ifeq (,$(filter $(LLVM_VERSION), LLVM_3_2 LLVM_3_3 LLVM_3_4))
-	CXXFLAGS+=-std=c++11 -Wno-c99-extensions -Wno-deprecated-register
+	CXXFLAGS+=-std=c++11 -Wno-c99-extensions -Wno-deprecated-register -fno-rtti
 endif
 ifneq ($(ARM_ENABLED), 0)
     CXXFLAGS+=-DISPC_ARM_ENABLED
@@ -194,7 +194,7 @@ YACC=bison -d -v -t
 
 ###########################################################################
 
-CXX_SRC=ast.cpp builtins.cpp cbackend.cpp ctx.cpp decl.cpp expr.cpp func.cpp \
+CXX_SRC=ast.cpp builtins.cpp cbackend.cpp ctx.cpp decl.cpp expr.cpp func.cpp test_class_of.cpp \
 	ispc.cpp llvmutil.cpp main.cpp module.cpp opt.cpp stmt.cpp sym.cpp \
 	type.cpp util.cpp
 HEADERS=ast.h builtins.h ctx.h decl.h expr.h func.h ispc.h llvmutil.h module.h \
@@ -262,6 +262,8 @@ doxygen:
 ispc: print_llvm_src dirs $(OBJS)
 	@echo Creating ispc executable
 	@$(CXX) $(OPT) $(LDFLAGS) -o $@ $(OBJS) $(ISPC_LIBS)
+	@echo Creating test_class_of executable
+	@$(CXX) $(OPT) $(LDFLAGS) -o tcexe $(OBJS) $(ISPC_LIBS)
 
 # Use clang as a default compiler, instead of gcc
 # This is default now.

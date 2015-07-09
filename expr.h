@@ -47,7 +47,7 @@
  */
 class Expr : public ASTNode {
 public:
-    Expr(SourcePos p) : ASTNode(p) { }
+    Expr(SourcePos p, unsigned scid) : ASTNode(p, scid) { }
 
     /** This is the main method for Expr implementations to implement.  It
         should call methods in the FunctionEmitContext to emit LLVM IR
@@ -322,7 +322,7 @@ public:
     const SourcePos identifierPos;
 
     MemberExpr(Expr *expr, const char *identifier, SourcePos pos,
-               SourcePos identifierPos, bool derefLValue);
+               SourcePos identifierPos, bool derefLValue, unsigned scid);
 
     /** Indicates whether the expression should be dereferenced before the
         member is found.  (i.e. this is true if the MemberExpr was a '->'
@@ -498,7 +498,7 @@ public:
     PtrDerefExpr and RefDerefExpr. */
 class DerefExpr : public Expr {
 public:
-    DerefExpr(Expr *e, SourcePos p);
+    DerefExpr(Expr *e, SourcePos p, unsigned scid = DerefExprID);
 
     llvm::Value *GetValue(FunctionEmitContext *ctx) const;
     llvm::Value *GetLValue(FunctionEmitContext *ctx) const;

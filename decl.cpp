@@ -519,9 +519,9 @@ Declarator::InitFromType(const Type *baseType, DeclSpecs *ds) {
                     decl->initExpr = TypeCheck(decl->initExpr);
                     decl->initExpr = Optimize(decl->initExpr);
                     if (decl->initExpr != NULL) {
-                        init = dynamic_cast<ConstExpr *>(decl->initExpr);
+                        init = llvm::dyn_cast<ConstExpr>(decl->initExpr);
                         if (init == NULL)
-                            init = dynamic_cast<NullPointerExpr *>(decl->initExpr);
+                            init = llvm::dyn_cast<NullPointerExpr>(decl->initExpr);
                         if (init == NULL)
                             Error(decl->initExpr->pos, "Default value for parameter "
                                   "\"%s\" must be a compile-time constant.",

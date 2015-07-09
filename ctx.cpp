@@ -1241,7 +1241,7 @@ FunctionEmitContext::EnableGatherScatterWarnings() {
 
 bool
 FunctionEmitContext::initLabelBBlocks(ASTNode *node, void *data) {
-    LabeledStmt *ls = dynamic_cast<LabeledStmt *>(node);
+    LabeledStmt *ls = llvm::dyn_cast<LabeledStmt>(node);
     if (ls == NULL)
         return true;
 

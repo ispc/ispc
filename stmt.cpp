@@ -295,7 +295,7 @@ DeclStmt::EmitCode(FunctionEmitContext *ctx) const {
                 // FIXME: we only need this for function pointers; it was
                 // already done for atomic types and enums in
                 // DeclStmt::TypeCheck()...
-                if (dynamic_cast<ExprList *>(initExpr) == NULL) {
+                if (llvm::dyn_cast<ExprList>(initExpr) == NULL) {
                     initExpr = TypeConvertExpr(initExpr, sym->type,
                                                "initializer");
                     // FIXME: and this is only needed to re-establish
@@ -436,7 +436,7 @@ Stmt *
 DeclStmt::Optimize() {
     for (unsigned int i = 0; i < vars.size(); ++i) {
         Expr *init = vars[i].init;
-        if (init != NULL && dynamic_cast<ExprList *>(init) == NULL) {
+        if (init != NULL && llvm::dyn_cast<ExprList>(init) == NULL) {
             // If the variable is const-qualified, after we've optimized
             // the initializer expression, see if we have a ConstExpr.  If
             // so, save it in Symbol::constValue where it can be used in
@@ -455,7 +455,7 @@ DeclStmt::Optimize() {
             Symbol *sym = vars[i].sym;
             if (sym->type && sym->type->IsConstType() &&
                 Type::Equal(init->GetType(), sym->type))
-                sym->constValue = dynamic_cast<ConstExpr *>(init);
+                sym->constValue = llvm::dyn_cast<ConstExpr>(init);
         }
     }
     return this;
@@ -483,7 +483,7 @@ DeclStmt::TypeCheck() {
             // If it's an expr list with an atomic type, we'll later issue
             // an error.  Need to leave vars[i].init as is in that case so
             // it is in fact caught later, though.
-            if (dynamic_cast<ExprList *>(vars[i].init) == NULL) {
+            if (llvm::dyn_cast<ExprList>(vars[i].init) == NULL) {
                 vars[i].init = TypeConvertExpr(vars[i].init, type,
                                                "initializer");
                 if (vars[i].init == NULL)
@@ -534,11 +534,11 @@ lEmitIfStatements(FunctionEmitContext *ctx, Stmt *stmts, const char *trueOrFalse
     if (!stmts)
         return;
 
-    if (dynamic_cast<StmtList *>(stmts) == NULL)
+    if (llvm::dyn_cast<StmtList>(stmts) == NULL)
         ctx->StartScope();
     ctx->AddInstrumentationPoint(trueOrFalse);
     stmts->EmitCode(ctx);
-    if (dynamic_cast<const StmtList *>(stmts) == NULL)
+    if (llvm::dyn_cast<const StmtList>(stmts) == NULL)
         ctx->EndScope();
 }
 
@@ -549,18 +549,18 @@ lEmitIfStatements(FunctionEmitContext *ctx, Stmt *stmts, const char *trueOrFalse
 static bool
 lCanApplyBreakOptimization(Stmt *trueStmts, Stmt *falseStmts) {
     if (falseStmts != NULL) {
-        if (StmtList *sl = dynamic_cast<StmtList *>(falseStmts)) {
+        if (StmtList *sl = llvm::dyn_cast<StmtList>(falseStmts)) {
             return (sl->stmts.size() == 0);
         }
         else
             return false;
     }
 
-    if (dynamic_cast<BreakStmt *>(trueStmts))
+    if (llvm::dyn_cast<BreakStmt>(trueStmts))
         return true;
-    else if (StmtList *sl = dynamic_cast<StmtList *>(trueStmts))
+    else if (StmtList *sl = llvm::dyn_cast<StmtList>(trueStmts))
         return (sl->stmts.size() == 1 &&
-                dynamic_cast<BreakStmt *>(sl->stmts[0]) != NULL);
+                llvm::dyn_cast<BreakStmt>(sl->stmts[0]) != NULL);
     else
         return false;
 }
@@ -949,7 +949,7 @@ struct VaryingBCCheckInfo {
 static bool
 lIsVaryingFor(ASTNode *node) {
     IfStmt *ifStmt;
-    if ((ifStmt = dynamic_cast<IfStmt *>(node)) != NULL &&
+    if ((ifStmt = llvm::dyn_cast<IfStmt>(node)) != NULL &&
         ifStmt->test != NULL) {
         const Type *type = ifStmt->test->GetType();
         return (type != NULL && type->IsVaryingType());
@@ -967,8 +967,8 @@ lVaryingBCPreFunc(ASTNode *node, void *d) {
 
     // We found a break or continue statement; if we're under varying
     // control flow, then bingo.
-    if ((dynamic_cast<BreakStmt *>(node) != NULL ||
-         dynamic_cast<ContinueStmt *>(node) != NULL) &&
+    if ((llvm::dyn_cast<BreakStmt>(node) != NULL ||
+         llvm::dyn_cast<ContinueStmt>(node) != NULL) &&
         info->varyingControlFlowDepth > 0) {
         info->foundVaryingBreakOrContinue = true;
         return false;
@@ -979,9 +979,9 @@ lVaryingBCPreFunc(ASTNode *node, void *d) {
     if (lIsVaryingFor(node))
         ++info->varyingControlFlowDepth;
 
-    if (dynamic_cast<ForStmt *>(node) != NULL ||
-        dynamic_cast<DoStmt *>(node) != NULL ||
-        dynamic_cast<ForeachStmt *>(node) != NULL)
+    if (llvm::dyn_cast<ForStmt>(node) != NULL ||
+        llvm::dyn_cast<DoStmt>(node) != NULL ||
+        llvm::dyn_cast<ForeachStmt>(node) != NULL)
         // Don't recurse into these guys, since we don't care about varying
         // breaks or continues within them...
         return false;
@@ -1052,7 +1052,7 @@ void DoStmt::EmitCode(FunctionEmitContext *ctx) const {
     // scope around the statements in the list.  So if the body is just a
     // single statement (and thus not a statement list), we need a new
     // scope, but we don't want two scopes in the StmtList case.
-    if (!dynamic_cast<StmtList *>(bodyStmts))
+    if (!llvm::dyn_cast<StmtList>(bodyStmts))
         ctx->StartScope();
 
     ctx->AddInstrumentationPoint("do loop body");
@@ -1094,7 +1094,7 @@ void DoStmt::EmitCode(FunctionEmitContext *ctx) const {
             ctx->BranchInst(btest);
     }
     // End the scope we started above, if needed.
-    if (!dynamic_cast<StmtList *>(bodyStmts))
+    if (!llvm::dyn_cast<StmtList>(bodyStmts))
         ctx->EndScope();
 
     // Now emit code for the loop test.
@@ -1219,7 +1219,7 @@ ForStmt::EmitCode(FunctionEmitContext *ctx) const {
     // it and then jump into the loop test code.  (Also start a new scope
     // since the initiailizer may be a declaration statement).
     if (init) {
-        AssertPos(pos, dynamic_cast<StmtList *>(init) == NULL);
+        AssertPos(pos, llvm::dyn_cast<StmtList>(init) == NULL);
         ctx->StartScope();
         init->EmitCode(ctx);
     }
@@ -1261,7 +1261,7 @@ ForStmt::EmitCode(FunctionEmitContext *ctx) const {
     ctx->SetCurrentBasicBlock(bloop);
     ctx->SetBlockEntryMask(ctx->GetFullMask());
     ctx->AddInstrumentationPoint("for loop body");
-    if (!dynamic_cast<StmtList *>(stmts))
+    if (!llvm::dyn_cast<StmtList>(stmts))
         ctx->StartScope();
 
     if (doCoherentCheck && !uniformTest) {
@@ -1306,7 +1306,7 @@ ForStmt::EmitCode(FunctionEmitContext *ctx) const {
         if (ctx->GetCurrentBasicBlock())
             ctx->BranchInst(bstep);
     }
-    if (!dynamic_cast<StmtList *>(stmts))
+    if (!llvm::dyn_cast<StmtList>(stmts))
         ctx->EndScope();
 
     // Emit code for the loop step.  First, restore the lane mask of any
@@ -2794,13 +2794,13 @@ struct SwitchVisitInfo {
 
 static bool
 lSwitchASTPreVisit(ASTNode *node, void *d) {
-    if (dynamic_cast<SwitchStmt *>(node) != NULL)
+    if (llvm::dyn_cast<SwitchStmt>(node) != NULL)
         // don't continue recursively into a nested switch--we only want
         // our own case and default statements!
         return false;
 
-    CaseStmt *cs = dynamic_cast<CaseStmt *>(node);
-    DefaultStmt *ds = dynamic_cast<DefaultStmt *>(node);
+    CaseStmt *cs = llvm::dyn_cast<CaseStmt>(node);
+    DefaultStmt *ds = llvm::dyn_cast<DefaultStmt>(node);
 
     SwitchVisitInfo *svi = (SwitchVisitInfo *)d;
     llvm::BasicBlock *bb = NULL;
@@ -3383,7 +3383,7 @@ PrintStmt::EmitCode(FunctionEmitContext *ctx) const {
         // Get the values passed to the print() statement evaluated and
         // stored in memory so that we set up the array of pointers to them
         // for the 5th __do_print() argument
-        ExprList *elist = dynamic_cast<ExprList *>(values);
+        ExprList *elist = llvm::dyn_cast<ExprList>(values);
         int nArgs = elist ? elist->exprs.size() : 1;
 
         // Allocate space for the array of pointers to values to be printed
