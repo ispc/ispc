@@ -82,7 +82,7 @@ Stmt::Optimize() {
 // ExprStmt
 
 ExprStmt::ExprStmt(Expr *e, SourcePos p)
-  : Stmt(p) {
+  : Stmt(p, ExprStmtID) {
     expr = e;
 }
 
@@ -126,7 +126,7 @@ ExprStmt::EstimateCost() const {
 // DeclStmt
 
 DeclStmt::DeclStmt(const std::vector<VariableDeclaration> &v, SourcePos p)
-    : Stmt(p), vars(v) {
+    : Stmt(p, DeclStmtID), vars(v) {
 }
 
 
@@ -523,7 +523,7 @@ DeclStmt::EstimateCost() const {
 // IfStmt
 
 IfStmt::IfStmt(Expr *t, Stmt *ts, Stmt *fs, bool checkCoherence, SourcePos p)
-    : Stmt(p), test(t), trueStmts(ts), falseStmts(fs),
+    : Stmt(p, IfStmtID), test(t), trueStmts(ts), falseStmts(fs),
       doAllCheck(checkCoherence &&
                  !g->opt.disableCoherentControlFlow) {
 }
@@ -1017,7 +1017,7 @@ lHasVaryingBreakOrContinue(Stmt *stmt) {
 
 
 DoStmt::DoStmt(Expr *t, Stmt *s, bool cc, SourcePos p)
-    : Stmt(p), testExpr(t), bodyStmts(s),
+    : Stmt(p, DoStmtID), testExpr(t), bodyStmts(s),
       doCoherentCheck(cc && !g->opt.disableCoherentControlFlow) {
 }
 
@@ -1193,7 +1193,7 @@ DoStmt::Print(int indent) const {
 // ForStmt
 
 ForStmt::ForStmt(Stmt *i, Expr *t, Stmt *s, Stmt *st, bool cc, SourcePos p)
-    : Stmt(p), init(i), test(t), step(s), stmts(st),
+    : Stmt(p, ForStmtID), init(i), test(t), step(s), stmts(st),
       doCoherentCheck(cc && !g->opt.disableCoherentControlFlow) {
 }
 
@@ -1387,7 +1387,7 @@ ForStmt::Print(int indent) const {
 // BreakStmt
 
 BreakStmt::BreakStmt(SourcePos p)
-    : Stmt(p) {
+    : Stmt(p, BreakStmtID) {
 }
 
 
@@ -1425,7 +1425,7 @@ BreakStmt::Print(int indent) const {
 // ContinueStmt
 
 ContinueStmt::ContinueStmt(SourcePos p)
-    : Stmt(p) {
+    : Stmt(p, ContinueStmtID) {
 }
 
 
@@ -1466,7 +1466,7 @@ ForeachStmt::ForeachStmt(const std::vector<Symbol *> &lvs,
                          const std::vector<Expr *> &se,
                          const std::vector<Expr *> &ee,
                          Stmt *s, bool t, SourcePos pos)
-    : Stmt(pos), dimVariables(lvs), startExprs(se), endExprs(ee), isTiled(t),
+    : Stmt(pos, ForeachStmtID), dimVariables(lvs), startExprs(se), endExprs(ee), isTiled(t),
       stmts(s) {
 }
 
@@ -2223,7 +2223,7 @@ ForeachStmt::Print(int indent) const {
 // ForeachActiveStmt
 
 ForeachActiveStmt::ForeachActiveStmt(Symbol *s, Stmt *st, SourcePos pos)
-    : Stmt(pos) {
+    : Stmt(pos, ForeachActiveStmtID) {
     sym = s;
     stmts = st;
 }
@@ -2410,7 +2410,7 @@ ForeachActiveStmt::EstimateCost() const {
 
 ForeachUniqueStmt::ForeachUniqueStmt(const char *iterName, Expr *e,
                                      Stmt *s, SourcePos pos)
-    : Stmt(pos) {
+    : Stmt(pos, ForeachUniqueStmtID) {
     sym = m->symbolTable->LookupVariable(iterName);
     expr = e;
     stmts = s;
@@ -2678,7 +2678,7 @@ lCheckMask(Stmt *stmts) {
 
 
 CaseStmt::CaseStmt(int v, Stmt *s, SourcePos pos)
-    : Stmt(pos), value(v) {
+    : Stmt(pos, CaseStmtID), value(v) {
     stmts = s;
 }
 
@@ -2716,7 +2716,7 @@ CaseStmt::EstimateCost() const {
 // DefaultStmt
 
 DefaultStmt::DefaultStmt(Stmt *s, SourcePos pos)
-    : Stmt(pos) {
+    : Stmt(pos, DefaultStmtID) {
     stmts = s;
 }
 
@@ -2754,7 +2754,7 @@ DefaultStmt::EstimateCost() const {
 // SwitchStmt
 
 SwitchStmt::SwitchStmt(Expr *e, Stmt *s, SourcePos pos)
-    : Stmt(pos) {
+    : Stmt(pos, SwitchStmtID) {
     expr = e;
     stmts = s;
 }
@@ -2954,7 +2954,7 @@ SwitchStmt::EstimateCost() const {
 // UnmaskedStmt
 
 UnmaskedStmt::UnmaskedStmt(Stmt *s, SourcePos pos)
-    : Stmt(pos) {
+    : Stmt(pos, UnmaskedStmtID) {
     stmts = s;
 }
 
@@ -3008,7 +3008,7 @@ UnmaskedStmt::EstimateCost() const {
 // ReturnStmt
 
 ReturnStmt::ReturnStmt(Expr *e, SourcePos p)
-    : Stmt(p), expr(e) {
+    : Stmt(p, ReturnStmtID), expr(e) {
 }
 
 
@@ -3075,7 +3075,7 @@ ReturnStmt::Print(int indent) const {
 // GotoStmt
 
 GotoStmt::GotoStmt(const char *l, SourcePos gotoPos, SourcePos ip)
-    : Stmt(gotoPos) {
+    : Stmt(gotoPos, GotoStmtID) {
     label = l;
     identifierPos = ip;
 }
@@ -3151,7 +3151,7 @@ GotoStmt::EstimateCost() const {
 // LabeledStmt
 
 LabeledStmt::LabeledStmt(const char *n, Stmt *s, SourcePos p)
-    : Stmt(p) {
+    : Stmt(p, LabeledStmtID) {
     name = n;
     stmt = s;
 }
@@ -3253,7 +3253,7 @@ StmtList::Print(int indent) const {
 // PrintStmt
 
 PrintStmt::PrintStmt(const std::string &f, Expr *v, SourcePos p)
-    : Stmt(p), format(f), values(v) {
+    : Stmt(p, PrintStmtID), format(f), values(v) {
 }
 
 /* Because the pointers to values that are passed to __do_print() are all
@@ -3463,7 +3463,7 @@ PrintStmt::EstimateCost() const {
 // AssertStmt
 
 AssertStmt::AssertStmt(const std::string &msg, Expr *e, SourcePos p)
-    : Stmt(p), message(msg), expr(e) {
+    : Stmt(p, AssertStmtID), message(msg), expr(e) {
 }
 
 
@@ -3542,7 +3542,7 @@ AssertStmt::EstimateCost() const {
 // DeleteStmt
 
 DeleteStmt::DeleteStmt(Expr *e, SourcePos p)
-    : Stmt(p) {
+    : Stmt(p, DeleteStmtID) {
     expr = e;
 }
 

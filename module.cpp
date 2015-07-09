@@ -1905,8 +1905,7 @@ std::string emitOffloadParamStruct(const std::string &paramStructName,
       if (!orgParamType->IsConstType()) {
         Error(sym->pos,"When emitting offload-stubs, \"export\"ed functions cannot have non-const reference-type parameters.\n");
       }
-      const ReferenceType *refType
-        = llvm::dyn_cast<const ReferenceType>(orgParamType);
+      const ReferenceType *refType = static_cast<const ReferenceType *>(orgParamType);
       paramType = refType->GetReferenceTarget()->GetAsNonConstType();
     } else {
       paramType = orgParamType->GetAsNonConstType();
@@ -2024,8 +2023,7 @@ Module::writeDevStub(const char *fn)
         if (!orgParamType->IsConstType()) {
           Error(sym->pos,"When emitting offload-stubs, \"export\"ed functions cannot have non-const reference-type parameters.\n");
         }
-        const ReferenceType *refType
-          = llvm::dyn_cast<const ReferenceType>(orgParamType);
+        const ReferenceType *refType = static_cast<const ReferenceType *>(orgParamType);
         paramType = refType->GetReferenceTarget()->GetAsNonConstType();
       } else {
         paramType = orgParamType->GetAsNonConstType();

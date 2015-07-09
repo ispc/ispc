@@ -79,8 +79,51 @@ public:
     /** An enumeration for keeping track of the concrete subclass of Value 
         that is actually instantiated.*/
     enum ASTNodeTy {
-        ExprID,
-        StmtID
+        /* For classes inherited from Expr */
+        AddressOfExprID,
+        AssignExprID,
+        BinaryExprID,
+        ConstExprID,
+        DerefExprID,
+        PtrDerefExprID,
+        RefDerefExprID,
+        ExprListID,
+        FunctionCallExprID,
+        FunctionSymbolExprID,
+        IndexExprID,
+        StructMemberExprID,
+        VectorMemberExprID,
+        NewExprID,
+        NullPointerExprID,
+        ReferenceExprID,
+        SelectExprID,
+        SizeOfExprID,
+        SymbolExprID,
+        SyncExprID,
+        TypeCastExprID,
+        UnaryExprID,
+        /* For classes inherited from Stmt */
+        AssertStmtID,
+        BreakStmtID,
+        CaseStmtID,
+        ContinueStmtID,
+        DeclStmtID,
+        DefaultStmtID,
+        DeleteStmtID,
+        DoStmtID,
+        ExprStmtID,
+        ForeachActiveStmtID,
+        ForeachStmtID,
+        ForeachUniqueStmtID,
+        ForStmtID,
+        GotoStmtID,
+        IfStmtID,
+        LabeledStmtID,
+        PrintStmtID,
+        ReturnStmtID,
+        StmtListID,
+        SwitchStmtID,
+        UnmaskedStmtID
     };
    
     /** Return an ID for the concrete type of this object. This is used to
@@ -92,6 +135,9 @@ public:
 
     static inline bool classof(ASTNode const*) { return true; }
 };
+
+
+
 
 class AST {
 public:

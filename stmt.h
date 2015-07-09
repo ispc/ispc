@@ -48,7 +48,7 @@
  */
 class Stmt : public ASTNode {
 public:
-    Stmt(SourcePos p) : ASTNode(p) { }
+    Stmt(SourcePos p, unsigned scid) : ASTNode(p, scid) { }
 
     /** Emit LLVM IR for the statement, using the FunctionEmitContext to create the
         necessary instructions.
@@ -411,7 +411,7 @@ public:
  */
 class StmtList : public Stmt {
 public:
-    StmtList(SourcePos p) : Stmt(p) { }
+    StmtList(SourcePos p) : Stmt(p, StmtListID) { }
 
     void EmitCode(FunctionEmitContext *ctx) const;
     void Print(int indent) const;

@@ -227,8 +227,8 @@ public:
  */
 class ExprList : public Expr {
 public:
-    ExprList(SourcePos p) : Expr(p) { }
-    ExprList(Expr *e, SourcePos p) : Expr(p) { exprs.push_back(e); }
+    ExprList(SourcePos p) : Expr(p, ExprListID) { }
+    ExprList(Expr *e, SourcePos p) : Expr(p, ExprListID) { exprs.push_back(e); }
 
     llvm::Value *GetValue(FunctionEmitContext *ctx) const;
     const Type *GetType() const;
@@ -658,7 +658,7 @@ private:
     proceeding). */
 class SyncExpr : public Expr {
 public:
-    SyncExpr(SourcePos p) : Expr(p) { }
+    SyncExpr(SourcePos p) : Expr(p, SyncExprID) { }
 
     llvm::Value *GetValue(FunctionEmitContext *ctx) const;
     const Type *GetType() const;
@@ -672,7 +672,7 @@ public:
 /** @brief An expression that represents a NULL pointer. */
 class NullPointerExpr : public Expr {
 public:
-    NullPointerExpr(SourcePos p) : Expr(p) { }
+    NullPointerExpr(SourcePos p) : Expr(p, NullPointerExprID) { }
 
     llvm::Value *GetValue(FunctionEmitContext *ctx) const;
     const Type *GetType() const;
