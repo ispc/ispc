@@ -196,7 +196,7 @@ YACC=bison -d -v -t
 
 CXX_SRC=ast.cpp builtins.cpp cbackend.cpp ctx.cpp decl.cpp expr.cpp func.cpp \
 	ispc.cpp llvmutil.cpp main.cpp module.cpp opt.cpp stmt.cpp sym.cpp \
-	type.cpp util.cpp test_class_of.cpp
+	type.cpp util.cpp
 HEADERS=ast.h builtins.h ctx.h decl.h expr.h func.h ispc.h llvmutil.h module.h \
 	opt.h stmt.h sym.h type.h util.h
 TARGETS=avx2-i64x4 avx11-i64x4 avx1-i64x4 avx1 avx1-x2 avx11 avx11-x2 avx2 avx2-x2 \
@@ -261,11 +261,7 @@ doxygen:
 
 ispc: print_llvm_src dirs $(OBJS)
 	@echo Creating ispc executable
-	@$(CXX) $(OPT) $(LDFLAGS) -o $@ $(filter-out objs/test_class_of.o, $(OBJS)) $(ISPC_LIBS)
-
-tcof: print_llvm_src dirs $(OBJS)
-	@echo Creating test_class_of executable
-	@$(CXX) $(OPT) $(LDFLAGS) -o tcof $(filter-out objs/main.o, $(OBJS)) $(ISPC_LIBS)
+	@$(CXX) $(OPT) $(LDFLAGS) -o $@ $(OBJS) $(ISPC_LIBS)
 
 # Use clang as a default compiler, instead of gcc
 # This is default now.

@@ -50,6 +50,11 @@ class Stmt : public ASTNode {
 public:
     Stmt(SourcePos p, unsigned scid) : ASTNode(p, scid) { }
 
+    static inline bool classof(Stmt const*) { return true; }
+    static inline bool classof(ASTNode const* N) {
+        return N->getValueID() > MaxExprID;
+    }
+
     /** Emit LLVM IR for the statement, using the FunctionEmitContext to create the
         necessary instructions.
      */
@@ -72,6 +77,11 @@ public:
 class ExprStmt : public Stmt {
 public:
     ExprStmt(Expr *expr, SourcePos pos);
+
+    static inline bool classof(ExprStmt const*) { return true; }
+    static inline bool classof(ASTNode const* N) {
+        return N->getValueID() == ExprStmtID;
+    }
 
     void EmitCode(FunctionEmitContext *ctx) const;
     void Print(int indent) const;
@@ -97,6 +107,11 @@ class DeclStmt : public Stmt {
 public:
     DeclStmt(const std::vector<VariableDeclaration> &v, SourcePos pos);
 
+    static inline bool classof(DeclStmt const*) { return true; }
+    static inline bool classof(ASTNode const* N) {
+        return N->getValueID() == DeclStmtID;
+    }
+
     void EmitCode(FunctionEmitContext *ctx) const;
     void Print(int indent) const;
 
@@ -114,6 +129,11 @@ class IfStmt : public Stmt {
 public:
     IfStmt(Expr *testExpr, Stmt *trueStmts, Stmt *falseStmts,
            bool doAllCheck, SourcePos pos);
+
+    static inline bool classof(IfStmt const*) { return true; }
+    static inline bool classof(ASTNode const* N) {
+        return N->getValueID() == IfStmtID;
+    }
 
     void EmitCode(FunctionEmitContext *ctx) const;
     void Print(int indent) const;
@@ -155,6 +175,11 @@ public:
     DoStmt(Expr *testExpr, Stmt *bodyStmts, bool doCoherentCheck,
            SourcePos pos);
 
+    static inline bool classof(DoStmt const*) { return true; }
+    static inline bool classof(ASTNode const* N) {
+        return N->getValueID() == DoStmtID;
+    }
+
     void EmitCode(FunctionEmitContext *ctx) const;
     void Print(int indent) const;
 
@@ -174,6 +199,11 @@ class ForStmt : public Stmt {
 public:
     ForStmt(Stmt *initializer, Expr *testExpr, Stmt *stepStatements,
             Stmt *bodyStatements, bool doCoherentCheck, SourcePos pos);
+
+    static inline bool classof(ForStmt const*) { return true; }
+    static inline bool classof(ASTNode const* N) {
+        return N->getValueID() == ForStmtID;
+    }
 
     void EmitCode(FunctionEmitContext *ctx) const;
     void Print(int indent) const;
@@ -201,6 +231,11 @@ class BreakStmt : public Stmt {
 public:
     BreakStmt(SourcePos pos);
 
+    static inline bool classof(BreakStmt const*) { return true; }
+    static inline bool classof(ASTNode const* N) {
+        return N->getValueID() == BreakStmtID;
+    }
+
     void EmitCode(FunctionEmitContext *ctx) const;
     void Print(int indent) const;
 
@@ -214,6 +249,11 @@ public:
 class ContinueStmt : public Stmt {
 public:
     ContinueStmt(SourcePos pos);
+
+    static inline bool classof(ContinueStmt const*) { return true; }
+    static inline bool classof(ASTNode const* N) {
+        return N->getValueID() == ContinueStmtID;
+    }
 
     void EmitCode(FunctionEmitContext *ctx) const;
     void Print(int indent) const;
@@ -231,6 +271,11 @@ public:
                 const std::vector<Expr *> &startExprs,
                 const std::vector<Expr *> &endExprs,
                 Stmt *bodyStatements, bool tiled, SourcePos pos);
+
+    static inline bool classof(ForeachStmt const*) { return true; }
+    static inline bool classof(ASTNode const* N) {
+        return N->getValueID() == ForeachStmtID;
+    }
 
     void EmitCode(FunctionEmitContext *ctx) const;
     void Print(int indent) const;
@@ -252,6 +297,11 @@ class ForeachActiveStmt : public Stmt {
 public:
     ForeachActiveStmt(Symbol *iterSym, Stmt *stmts, SourcePos pos);
 
+    static inline bool classof(ForeachActiveStmt const*) { return true; }
+    static inline bool classof(ASTNode const* N) {
+        return N->getValueID() == ForeachActiveStmtID;
+    }
+
     void EmitCode(FunctionEmitContext *ctx) const;
     void Print(int indent) const;
 
@@ -271,6 +321,11 @@ public:
     ForeachUniqueStmt(const char *iterName, Expr *expr, Stmt *stmts,
                       SourcePos pos);
 
+    static inline bool classof(ForeachUniqueStmt const*) { return true; }
+    static inline bool classof(ASTNode const* N) {
+        return N->getValueID() == ForeachUniqueStmtID;
+    }
+
     void EmitCode(FunctionEmitContext *ctx) const;
     void Print(int indent) const;
 
@@ -289,6 +344,11 @@ class UnmaskedStmt : public Stmt {
 public:
     UnmaskedStmt(Stmt *stmt, SourcePos pos);
 
+    static inline bool classof(UnmaskedStmt const*) { return true; }
+    static inline bool classof(ASTNode const* N) {
+        return N->getValueID() == UnmaskedStmtID;
+    }
+
     void EmitCode(FunctionEmitContext *ctx) const;
     void Print(int indent) const;
 
@@ -306,6 +366,11 @@ class ReturnStmt : public Stmt {
 public:
     ReturnStmt(Expr *e, SourcePos p);
 
+    static inline bool classof(ReturnStmt const*) { return true; }
+    static inline bool classof(ASTNode const* N) {
+        return N->getValueID() == ReturnStmtID;
+    }
+
     void EmitCode(FunctionEmitContext *ctx) const;
     void Print(int indent) const;
 
@@ -322,6 +387,11 @@ public:
 class CaseStmt : public Stmt {
 public:
     CaseStmt(int value, Stmt *stmt, SourcePos pos);
+
+    static inline bool classof(CaseStmt const*) { return true; }
+    static inline bool classof(ASTNode const* N) {
+        return N->getValueID() == CaseStmtID;
+    }
 
     void EmitCode(FunctionEmitContext *ctx) const;
     void Print(int indent) const;
@@ -341,6 +411,11 @@ class DefaultStmt : public Stmt {
 public:
     DefaultStmt(Stmt *stmt, SourcePos pos);
 
+    static inline bool classof(DefaultStmt const*) { return true; }
+    static inline bool classof(ASTNode const* N) {
+        return N->getValueID() == DefaultStmtID;
+    }
+
     void EmitCode(FunctionEmitContext *ctx) const;
     void Print(int indent) const;
 
@@ -355,6 +430,11 @@ public:
 class SwitchStmt : public Stmt {
 public:
     SwitchStmt(Expr *expr, Stmt *stmts, SourcePos pos);
+
+    static inline bool classof(SwitchStmt const*) { return true; }
+    static inline bool classof(ASTNode const* N) {
+        return N->getValueID() == SwitchStmtID;
+    }
 
     void EmitCode(FunctionEmitContext *ctx) const;
     void Print(int indent) const;
@@ -373,6 +453,11 @@ public:
 class GotoStmt : public Stmt {
 public:
     GotoStmt(const char *label, SourcePos gotoPos, SourcePos idPos);
+
+    static inline bool classof(GotoStmt const*) { return true; }
+    static inline bool classof(ASTNode const* N) {
+        return N->getValueID() == GotoStmtID;
+    }
 
     void EmitCode(FunctionEmitContext *ctx) const;
     void Print(int indent) const;
@@ -393,6 +478,11 @@ class LabeledStmt : public Stmt {
 public:
     LabeledStmt(const char *label, Stmt *stmt, SourcePos p);
 
+    static inline bool classof(LabeledStmt const*) { return true; }
+    static inline bool classof(ASTNode const* N) {
+        return N->getValueID() == LabeledStmtID;
+    }
+
     void EmitCode(FunctionEmitContext *ctx) const;
     void Print(int indent) const;
 
@@ -412,6 +502,11 @@ public:
 class StmtList : public Stmt {
 public:
     StmtList(SourcePos p) : Stmt(p, StmtListID) { }
+
+    static inline bool classof(StmtList const*) { return true; }
+    static inline bool classof(ASTNode const* N) {
+        return N->getValueID() == StmtListID;
+    }
 
     void EmitCode(FunctionEmitContext *ctx) const;
     void Print(int indent) const;
@@ -437,6 +532,11 @@ public:
 class PrintStmt : public Stmt {
 public:
     PrintStmt(const std::string &f, Expr *v, SourcePos p);
+
+    static inline bool classof(PrintStmt const*) { return true; }
+    static inline bool classof(ASTNode const* N) {
+        return N->getValueID() == PrintStmtID;
+    }
 
     void EmitCode(FunctionEmitContext *ctx) const;
     void Print(int indent) const;
@@ -464,6 +564,11 @@ class AssertStmt : public Stmt {
 public:
     AssertStmt(const std::string &msg, Expr *e, SourcePos p);
 
+    static inline bool classof(AssertStmt const*) { return true; }
+    static inline bool classof(ASTNode const* N) {
+        return N->getValueID() == AssertStmtID;
+    }
+
     void EmitCode(FunctionEmitContext *ctx) const;
     void Print(int indent) const;
 
@@ -482,6 +587,11 @@ public:
 class DeleteStmt : public Stmt {
 public:
     DeleteStmt(Expr *e, SourcePos p);
+
+    static inline bool classof(DeleteStmt const*) { return true; }
+    static inline bool classof(ASTNode const* N) {
+        return N->getValueID() == DeleteStmtID;
+    }
 
     void EmitCode(FunctionEmitContext *ctx) const;
     void Print(int indent) const;

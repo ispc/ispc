@@ -102,6 +102,8 @@ public:
         SyncExprID,
         TypeCastExprID,
         UnaryExprID,
+        /* This is a convenience separator to shorten classof implementations */
+        MaxExprID,
         /* For classes inherited from Stmt */
         AssertStmtID,
         BreakStmtID,

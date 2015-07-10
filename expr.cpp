@@ -1112,7 +1112,6 @@ UnaryExpr::UnaryExpr(Op o, Expr *e, SourcePos p)
     expr = e;
 }
 
-
 llvm::Value *
 UnaryExpr::GetValue(FunctionEmitContext *ctx) const {
     if (expr == NULL)
@@ -4725,6 +4724,11 @@ public:
     StructMemberExpr(Expr *e, const char *id, SourcePos p,
                      SourcePos idpos, bool derefLValue);
 
+    static inline bool classof(StructMemberExpr const*) { return true; }
+    static inline bool classof(ASTNode const* N) {
+        return N->getValueID() == StructMemberExprID;
+    }
+
     const Type *GetType() const;
     const Type *GetLValueType() const;
     int getElementNumber() const;
@@ -4891,6 +4895,11 @@ class VectorMemberExpr : public MemberExpr
 public:
     VectorMemberExpr(Expr *e, const char *id, SourcePos p,
                      SourcePos idpos, bool derefLValue);
+
+    static inline bool classof(VectorMemberExpr const*) { return true; }
+    static inline bool classof(ASTNode const* N) {
+        return N->getValueID() == VectorMemberExprID;
+    }
 
     llvm::Value *GetValue(FunctionEmitContext* ctx) const;
     llvm::Value *GetLValue(FunctionEmitContext* ctx) const;
