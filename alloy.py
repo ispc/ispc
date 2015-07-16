@@ -128,7 +128,7 @@ def build_LLVM(version_LLVM, revision, folder, tarball, debug, selfbuild, extra,
         SVN_PATH="branches/release_37"
         version_LLVM = "3_7"
     if  version_LLVM == "3.6":
-        SVN_PATH="tags/RELEASE_361/final"
+        SVN_PATH="tags/RELEASE_362/final"
         version_LLVM = "3_6"
     if  version_LLVM == "3.5":
         SVN_PATH="tags/RELEASE_351/final"
