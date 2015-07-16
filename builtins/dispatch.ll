@@ -148,6 +148,8 @@
 define(`PTR_OP_ARGS',
   ifelse(LLVM_VERSION, LLVM_3_7,
     ``$1 , $1 *'',
+         LLVM_VERSION, LLVM_3_8,
+    ``$1 , $1 *'',
     ``$1 *''
   )
 )

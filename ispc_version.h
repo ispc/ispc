@@ -49,9 +49,10 @@
 #define ISPC_LLVM_3_5 30500
 #define ISPC_LLVM_3_6 30600
 #define ISPC_LLVM_3_7 30700
+#define ISPC_LLVM_3_8 30800
 
 #define OLDEST_SUPPORTED_LLVM ISPC_LLVM_3_2
-#define LATEST_SUPPORTED_LLVM ISPC_LLVM_3_7
+#define LATEST_SUPPORTED_LLVM ISPC_LLVM_3_8
 
 #ifdef __ispc__xstr
 #undef __ispc__xstr
