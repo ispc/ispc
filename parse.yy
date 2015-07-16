@@ -480,7 +480,7 @@ argument_expression_list
     : assignment_expression      { $$ = new ExprList($1, @1); }
     | argument_expression_list ',' assignment_expression
       {
-          ExprList *argList = dynamic_cast<ExprList *>($1);
+          ExprList *argList = llvm::dyn_cast<ExprList>($1);
           if (argList == NULL) {
               AssertPos(@1, m->errorCount > 0);
               argList = new ExprList(@3);
@@ -2422,7 +2422,7 @@ lFinalizeEnumeratorSymbols(std::vector<Symbol *> &enums,
             Expr *castExpr = new TypeCastExpr(enumType, enums[i]->constValue,
                                               enums[i]->pos);
             castExpr = Optimize(castExpr);
-            enums[i]->constValue = dynamic_cast<ConstExpr *>(castExpr);
+            enums[i]->constValue = llvm::dyn_cast<ConstExpr>(castExpr);
             AssertPos(enums[i]->pos, enums[i]->constValue != NULL);
         }
         else {

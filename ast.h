@@ -48,8 +48,9 @@
     (Expr) and statements (Stmt) inherit from this class.
 */
 class ASTNode {
+    const unsigned char SubclassID;   // Subclass identifier (for isa/dyn_cast)
 public:
-    ASTNode(SourcePos p) : pos(p) { }
+    ASTNode(SourcePos p, unsigned scid) : SubclassID(scid), pos(p) { }
     virtual ~ASTNode();
 
     /** The Optimize() method should perform any appropriate early-stage
@@ -74,12 +75,72 @@ public:
     /** All AST nodes must track the file position where they are
         defined. */
     SourcePos pos;
+   
+    /** An enumeration for keeping track of the concrete subclass of Value 
+        that is actually instantiated.*/
+    enum ASTNodeTy {
+        /* For classes inherited from Expr */
+        AddressOfExprID,
+        AssignExprID,
+        BinaryExprID,
+        ConstExprID,
+        DerefExprID,
+        PtrDerefExprID,
+        RefDerefExprID,
+        ExprListID,
+        FunctionCallExprID,
+        FunctionSymbolExprID,
+        IndexExprID,
+        StructMemberExprID,
+        VectorMemberExprID,
+        NewExprID,
+        NullPointerExprID,
+        ReferenceExprID,
+        SelectExprID,
+        SizeOfExprID,
+        SymbolExprID,
+        SyncExprID,
+        TypeCastExprID,
+        UnaryExprID,
+        /* This is a convenience separator to shorten classof implementations */
+        MaxExprID,
+        /* For classes inherited from Stmt */
+        AssertStmtID,
+        BreakStmtID,
+        CaseStmtID,
+        ContinueStmtID,
+        DeclStmtID,
+        DefaultStmtID,
+        DeleteStmtID,
+        DoStmtID,
+        ExprStmtID,
+        ForeachActiveStmtID,
+        ForeachStmtID,
+        ForeachUniqueStmtID,
+        ForStmtID,
+        GotoStmtID,
+        IfStmtID,
+        LabeledStmtID,
+        PrintStmtID,
+        ReturnStmtID,
+        StmtListID,
+        SwitchStmtID,
+        UnmaskedStmtID
+    };
+   
+    /** Return an ID for the concrete type of this object. This is used to
+        implement the classof checks.  This should not be used for any 
+        other purpose, as the values may change as ISPC evolves */
+    unsigned getValueID() const {
+        return SubclassID;
+    }
+
+    static inline bool classof(ASTNode const*) { return true; }
 };
 
 
-/** Simple representation of the abstract syntax trees for all of the
-    functions declared in a compilation unit.
- */
+
+
 class AST {
 public:
     /** Add the AST for a function described by the given declaration

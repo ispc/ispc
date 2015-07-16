@@ -608,7 +608,7 @@ Module::AddGlobalVariable(const std::string &name, const Type *type, Expr *initE
                 // the same type as the global.  (But not if it's an
                 // ExprList; they don't have types per se / can't type
                 // convert themselves anyway.)
-                if (dynamic_cast<ExprList *>(initExpr) == NULL)
+                if (llvm::dyn_cast<ExprList>(initExpr) == NULL)
                     initExpr = TypeConvertExpr(initExpr, type, "initializer");
 
                 if (initExpr != NULL) {
@@ -620,11 +620,11 @@ Module::AddGlobalVariable(const std::string &name, const Type *type, Expr *initE
                     if (llvmInitializer != NULL) {
                         if (type->IsConstType())
                             // Try to get a ConstExpr associated with
-                            // the symbol.  This dynamic_cast can
+                            // the symbol.  This llvm::dyn_cast can
                             // validly fail, for example for types like
                             // StructTypes where a ConstExpr can't
                             // represent their values.
-                            constValue = dynamic_cast<ConstExpr *>(initExpr);
+                            constValue = llvm::dyn_cast<ConstExpr>(initExpr);
                     }
                     else
                         Error(initExpr->pos, "Initializer for global variable \"%s\" "
@@ -1462,7 +1462,11 @@ Module::writeObjectFileOrAssembly(llvm::TargetMachine *targetMachine,
     std::error_code error;
 #endif
 
+#if ISPC_LLVM_VERSION <= ISPC_LLVM_3_6
     llvm::tool_output_file *of = new llvm::tool_output_file(outFileName, error, flags);
+#else // LLVM 3.7+
+    std::unique_ptr<llvm::tool_output_file> of (new llvm::tool_output_file(outFileName, error, flags));
+#endif
 
 #if ISPC_LLVM_VERSION <= ISPC_LLVM_3_5
     if (error.size()) {
@@ -1506,9 +1510,9 @@ Module::writeObjectFileOrAssembly(llvm::TargetMachine *targetMachine,
     // Success; tell tool_output_file to keep the final output file.
     of->keep();
     }
-
+#if ISPC_LLVM_VERSION <= ISPC_LLVM_3_6
     delete of;
-
+#endif // LLVM 3.7+
     return true;
 }
 
@@ -1905,8 +1909,7 @@ std::string emitOffloadParamStruct(const std::string &paramStructName,
       if (!orgParamType->IsConstType()) {
         Error(sym->pos,"When emitting offload-stubs, \"export\"ed functions cannot have non-const reference-type parameters.\n");
       }
-      const ReferenceType *refType
-        = dynamic_cast<const ReferenceType*>(orgParamType);
+      const ReferenceType *refType = static_cast<const ReferenceType *>(orgParamType);
       paramType = refType->GetReferenceTarget()->GetAsNonConstType();
     } else {
       paramType = orgParamType->GetAsNonConstType();
@@ -2024,8 +2027,7 @@ Module::writeDevStub(const char *fn)
         if (!orgParamType->IsConstType()) {
           Error(sym->pos,"When emitting offload-stubs, \"export\"ed functions cannot have non-const reference-type parameters.\n");
         }
-        const ReferenceType *refType
-          = dynamic_cast<const ReferenceType*>(orgParamType);
+        const ReferenceType *refType = static_cast<const ReferenceType *>(orgParamType);
         paramType = refType->GetReferenceTarget()->GetAsNonConstType();
       } else {
         paramType = orgParamType->GetAsNonConstType();

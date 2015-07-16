@@ -499,7 +499,7 @@ Function::GenerateIR() {
     // non-StmtList statment...
     SourcePos firstStmtPos = sym->pos;
     if (code) {
-        StmtList *sl = dynamic_cast<StmtList *>(code);
+        StmtList *sl = llvm::dyn_cast<StmtList>(code);
         if (sl && sl->stmts.size() > 0 && sl->stmts[0] != NULL)
             firstStmtPos = sl->stmts[0]->pos;
         else
@@ -580,13 +580,13 @@ Function::GenerateIR() {
 #if ISPC_LLVM_VERSION >= ISPC_LLVM_3_6 // LLVM 3.6+
 
                       llvm::SmallVector<llvm::Metadata*, 3> av;
-                      av.push_back(llvm::ValueAsMetadata::get(function));
+                      av.push_back(llvm::ValueAsMetadata::get(appFunction));
                       av.push_back(llvm::MDString::get(*g->ctx, "kernel"));
                       av.push_back(llvm::ConstantAsMetadata::get(llvm::ConstantInt::get(llvm::IntegerType::get(*g->ctx,32), 1)));
                       annotations->addOperand(llvm::MDNode::get(*g->ctx, llvm::ArrayRef<llvm::Metadata*>(av))); 
 #else
                       llvm::SmallVector<llvm::Value*, 3> av;
-                      av.push_back(function);
+                      av.push_back(appFunction);
                       av.push_back(llvm::MDString::get(*g->ctx, "kernel"));
                       av.push_back(llvm::ConstantInt::get(llvm::IntegerType::get(*g->ctx,32), 1));
                       annotations->addOperand(llvm::MDNode::get(*g->ctx, av));

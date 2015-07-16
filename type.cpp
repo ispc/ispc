@@ -1603,7 +1603,7 @@ ArrayType::SizeUnsizedArrays(const Type *type, Expr *initExpr) {
     if (at == NULL)
         return type;
 
-    ExprList *exprList = dynamic_cast<ExprList *>(initExpr);
+    ExprList *exprList = llvm::dyn_cast_or_null<ExprList>(initExpr);
     if (exprList == NULL || exprList->exprs.size() == 0)
         return type;
 
@@ -1618,7 +1618,7 @@ ArrayType::SizeUnsizedArrays(const Type *type, Expr *initExpr) {
     // now.  Otherwise we'll use the first one to size the next dimension
     // (after checking below that it has the same length as all of the
     // other ones.
-    ExprList *nextList = dynamic_cast<ExprList *>(exprList->exprs[0]);
+    ExprList *nextList = llvm::dyn_cast_or_null<ExprList>(exprList->exprs[0]);
     if (nextList == NULL)
         return type;
 
@@ -1638,7 +1638,7 @@ ArrayType::SizeUnsizedArrays(const Type *type, Expr *initExpr) {
                 continue;
             }
 
-            ExprList *el = dynamic_cast<ExprList *>(exprList->exprs[i]);
+            ExprList *el = llvm::dyn_cast_or_null<ExprList>(exprList->exprs[i]);
             if (el == NULL || el->exprs.size() != nextSize) {
                 Error(Union(exprList->exprs[0]->pos, exprList->exprs[i]->pos),
                       "Inconsistent initializer expression list lengths "

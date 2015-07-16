@@ -3785,11 +3785,6 @@ void CWriter::visitFCmpInst(llvm::FCmpInst &I) {
     return;
   }
 
-  // Note that we always generate calls to the ordered functions here,
-  // since the regular C++ comparison ops should give us what we
-  // originally wanted when we generated the unordered ones from the
-  // ispc source.
-
   if (isVector) {
       Out << lPredicateToString(I.getPredicate());
       Out << "_";
@@ -3803,12 +3798,12 @@ void CWriter::visitFCmpInst(llvm::FCmpInst &I) {
   case llvm::FCmpInst::FCMP_ORD: op = "ord"; break;
   case llvm::FCmpInst::FCMP_UNO: op = "uno"; break;
 
-  case llvm::FCmpInst::FCMP_UEQ: op = "oeq"; break;
-  case llvm::FCmpInst::FCMP_UNE: op = "one"; break;
-  case llvm::FCmpInst::FCMP_ULT: op = "olt"; break;
-  case llvm::FCmpInst::FCMP_ULE: op = "ole"; break;
-  case llvm::FCmpInst::FCMP_UGT: op = "ogt"; break;
-  case llvm::FCmpInst::FCMP_UGE: op = "oge"; break;
+  case llvm::FCmpInst::FCMP_UEQ: op = "ueq"; break;
+  case llvm::FCmpInst::FCMP_UNE: op = "une"; break;
+  case llvm::FCmpInst::FCMP_ULT: op = "ult"; break;
+  case llvm::FCmpInst::FCMP_ULE: op = "ule"; break;
+  case llvm::FCmpInst::FCMP_UGT: op = "ugt"; break;
+  case llvm::FCmpInst::FCMP_UGE: op = "uge"; break;
 
   case llvm::FCmpInst::FCMP_OEQ: op = "oeq"; break;
   case llvm::FCmpInst::FCMP_ONE: op = "one"; break;
