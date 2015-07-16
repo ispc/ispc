@@ -828,7 +828,7 @@ define <16 x i64> @__masked_load_i64(i8 * %ptr, <16 x i1> %mask) nounwind always
   %mask_hi_i8 = bitcast <8 x i1> %mask_hi to i8
   
   %ptr_d = bitcast i8* %ptr to <16 x i64>*
-  %ptr_hi = getelementptr <16 x i64>, <16 x i64>* %ptr_d, i32 0, i32 8
+  %ptr_hi = getelementptr PTR_OP_ARGS(`<16 x i64>') %ptr_d, i32 0, i32 8
   %ptr_hi_i8 = bitcast i64* %ptr_hi to i8*
 
   %r0 = call <8 x i64> @llvm.x86.avx512.mask.loadu.q.512(i8* %ptr, <8 x i64> zeroinitializer, i8 %mask_lo_i8)
@@ -857,7 +857,7 @@ define <16 x double> @__masked_load_double(i8 * %ptr, <16 x i1> %mask) readonly 
   %mask_hi_i8 = bitcast <8 x i1> %mask_hi to i8
 
   %ptr_d = bitcast i8* %ptr to <16 x double>*
-  %ptr_hi = getelementptr <16 x double>, <16 x double>* %ptr_d, i32 0, i32 8
+  %ptr_hi = getelementptr PTR_OP_ARGS(`<16 x double>') %ptr_d, i32 0, i32 8
   %ptr_hi_i8 = bitcast double* %ptr_hi to i8*
 
   %r0 = call <8 x double> @llvm.x86.avx512.mask.loadu.pd.512(i8* %ptr, <8 x double> zeroinitializer, i8 %mask_lo_i8)
@@ -890,7 +890,7 @@ define void @__masked_store_i64(<16 x i64>* nocapture, <16 x i64> %v, <16 x i1> 
   %mask_hi_i8 = bitcast <8 x i1> %mask_hi to i8
 
   %ptr_i8 = bitcast <16 x i64>* %0 to i8*
-  %ptr_lo = getelementptr <16 x i64>, <16 x i64>* %0, i32 0, i32 8
+  %ptr_lo = getelementptr PTR_OP_ARGS(`<16 x i64>') %0, i32 0, i32 8
   %ptr_lo_i8 = bitcast i64* %ptr_lo to i8*
 
   %v_lo = shufflevector <16 x i64> %v, <16 x i64> undef,
@@ -920,7 +920,7 @@ define void @__masked_store_double(<16 x double>* nocapture, <16 x double> %v, <
   %mask_hi_i8 = bitcast <8 x i1> %mask_hi to i8
 
   %ptr_i8 = bitcast <16 x double>* %0 to i8*
-  %ptr_lo = getelementptr <16 x double>, <16 x double>* %0, i32 0, i32 8
+  %ptr_lo = getelementptr PTR_OP_ARGS(`<16 x double>') %0, i32 0, i32 8
   %ptr_lo_i8 = bitcast double* %ptr_lo to i8*
 
   %v_lo = shufflevector <16 x double> %v, <16 x double> undef,
