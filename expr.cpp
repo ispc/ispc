@@ -7229,10 +7229,11 @@ TypeCastExpr::TypeCheck() {
 
     // And otherwise see if it's one of the conversions allowed to happen
     // implicitly.
-    if (CanConvertTypes(fromType, toType, "type cast expression", pos) == false)
+    Expr *e =  TypeConvertExpr(expr, toType, "type cast expression");
+    if (e == NULL)
         return NULL;
-
-    return this;
+    else
+        return e;
 }
 
 
