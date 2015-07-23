@@ -3810,22 +3810,14 @@ static inline double sin(double x) {
     }
 }
 __declspec(safe)
-static inline double asin(double x) {
+static inline uniform double asin(uniform double x) {
     if (__have_native_trigonometry)
     {
-      return __asin_varying_double(x);
+      return __asin_uniform_double(x);
     }
-    else if (__math_lib == __math_lib_svml)
+    else 
     {
-      return __svml_asind(x);
-    }
-    else {
-        double ret;
-        foreach_active (i) {
-            uniform double r = __stdlib_asin(extract(x, i));
-            ret = insert(ret, i, r);
-        }
-        return ret;
+      return __stdlib_asin(x);
     }
 }
 
