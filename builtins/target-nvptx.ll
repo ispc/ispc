@@ -834,6 +834,12 @@ include(`svml.m4')
 svml_stubs(float,f,WIDTH)
 svml_stubs(double,d,WIDTH)
 
+;; acml is not support in PTX, will generate linking error
+
+include(`acml.m4')
+acml_stubs(float,f,WIDTH)
+acml_stubs(double,d,WIDTH)
+
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; reductions

@@ -313,15 +313,15 @@ objs/lex.o: objs/lex.cpp $(HEADERS) objs/parse.cc
 	@echo Compiling $<
 	@$(CXX) $(CXXFLAGS) -o $@ -c $<
 
-objs/builtins-dispatch.cpp: builtins/dispatch.ll builtins/util.m4 builtins/util-nvptx.m4 builtins/svml.m4 $(wildcard builtins/*common.ll)
+objs/builtins-dispatch.cpp: builtins/dispatch.ll builtins/util.m4 builtins/util-nvptx.m4 builtins/svml.m4 builtins/acml.m4 $(wildcard builtins/*common.ll)
 	@echo Creating C++ source from builtins definition file $<
 	@m4 -Ibuiltins/ -DLLVM_VERSION=$(LLVM_VERSION) -DBUILD_OS=UNIX $< | python bitcode2cpp.py $< > $@
 
-objs/builtins-%-32bit.cpp: builtins/%.ll builtins/util.m4 builtins/util-nvptx.m4 builtins/svml.m4 $(wildcard builtins/*common.ll)
+objs/builtins-%-32bit.cpp: builtins/%.ll builtins/util.m4 builtins/util-nvptx.m4 builtins/svml.m4 builtins/acml.m4 $(wildcard builtins/*common.ll)
 	@echo Creating C++ source from builtins definition file $< \(32 bit version\)
 	@m4 -Ibuiltins/ -DLLVM_VERSION=$(LLVM_VERSION) -DBUILD_OS=UNIX -DRUNTIME=32 $< | python bitcode2cpp.py $< 32bit > $@
 
-objs/builtins-%-64bit.cpp: builtins/%.ll builtins/util.m4 builtins/util-nvptx.m4 builtins/svml.m4 $(wildcard builtins/*common.ll)
+objs/builtins-%-64bit.cpp: builtins/%.ll builtins/util.m4 builtins/util-nvptx.m4 builtins/svml.m4 builtins/acml.m4 $(wildcard builtins/*common.ll)
 	@echo Creating C++ source from builtins definition file $< \(64 bit version\)
 	@m4 -Ibuiltins/ -DLLVM_VERSION=$(LLVM_VERSION) -DBUILD_OS=UNIX -DRUNTIME=64 $< | python bitcode2cpp.py $< 64bit > $@
 

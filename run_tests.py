@@ -265,7 +265,7 @@ def run_test(testname):
                     gcc_isa = '-mmic'
 
                 if (options.target == "knc-generic"):
-                    cc_cmd = "%s -O2 -I. %s %s test_static.cpp -DTEST_SIG=%d %s -o %s" % \
+                    cc_cmd = "%s %s -O2 -I. %s %s test_static.cpp -DTEST_SIG=%d %s -o %s" % \
                          (options.compiler_exe, gcc_arch, "-mmic", match, obj_name, exe_name)
                 elif (options.target == "knl-generic"):
                     cc_cmd = "%s -O2 -I. %s %s test_static.cpp -DTEST_SIG=%d %s -o %s" % \
@@ -274,8 +274,8 @@ def run_test(testname):
                     cc_cmd = "%s -O2 -I. %s %s test_static.cpp -DTEST_SIG=%d %s -o %s" % \
                          (options.compiler_exe, gcc_arch, "-march=knl", match, obj_name, exe_name)
                 else:
-                    cc_cmd = "%s -O2 -I. %s %s test_static.cpp -DTEST_SIG=%d %s -o %s" % \
-                         (options.compiler_exe, gcc_arch, gcc_isa, match, obj_name, exe_name)                    
+                    cc_cmd = "%s -O2 -I. %s %s test_static.cpp -DTEST_SIG=%d %s -o %s %s" % \
+                         (options.compiler_exe, gcc_arch, gcc_isa, match, obj_name, exe_name, options.compiler_flags)               
 
                 if platform.system() == 'Darwin':
                     cc_cmd += ' -Wl,-no_pie'
@@ -915,6 +915,8 @@ if __name__ == "__main__":
                   help='Set architecture (arm, x86, x86-64)',default="x86-64")
     parser.add_option("-c", "--compiler", dest="compiler_exe", help="C/C++ compiler binary to use to run tests",
                   default=None)
+    parser.add_option("-F", "--compiler-flags", dest="compiler_flags", help="C/C++ compiler flags to use to run tests",
+                  default="")
     parser.add_option('-o', '--no-opt', dest='no_opt', help='Disable optimization',
                   default=False, action="store_true")
     parser.add_option('-j', '--jobs', dest='num_jobs', help='Maximum number of jobs to run in parallel',

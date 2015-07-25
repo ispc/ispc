@@ -115,6 +115,19 @@ svml_define_x(float,f4,4,f,8)
 svml_declare(double,2,2)
 svml_define_x(double,2,2,d,8)
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; acml stuff
+
+include(`acml.m4')
+acml_dispatch()
+;; single precision
+;;acml_declare(float,f4,4)
+acml_define_x(float,f4,4,f,8)
+
+;; double precision
+;;acml_declare(double,2,2)
+acml_define_x(double,2,2,d,8)
+
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; float min/max

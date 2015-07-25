@@ -148,6 +148,20 @@ svml_declare(double,4,4)
 svml_define_x(double,4,4,d,16)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; avml
+
+include(`acml.m4')
+acml_dispatch()
+;; single precision
+;;acml_declare(float,f8,8)
+acml_define_x(float,f8,8,f,16)
+
+;; double precision
+;;acml_declare(double,4,4)
+acml_define_x(double,4,4,d,16)
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; float min/max
 
 declare <8 x float> @llvm.x86.avx.max.ps.256(<8 x float>, <8 x float>) nounwind readnone

@@ -544,7 +544,7 @@ struct Globals {
 
     /** There are a number of math libraries that can be used for
         transcendentals and the like during program compilation. */
-    enum MathLib { Math_ISPC, Math_ISPCFast, Math_SVML, Math_System };
+    enum MathLib { Math_ISPC, Math_ISPCFast, Math_SVML, Math_ACML, Math_System };
     MathLib mathLib;
 
     /** Records whether the ispc standard library should be made available

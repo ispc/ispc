@@ -2386,6 +2386,9 @@ static inline float sin(float x_full) {
     else if (__math_lib == __math_lib_svml) {
       return __svml_sinf(x_full);
     }
+    else if (__math_lib == __math_lib_acml) {
+      return __acml_sinf(x_full);
+    }
     else if (__math_lib == __math_lib_system) {
         float ret;
         foreach_active (i) {
@@ -2450,7 +2453,8 @@ static inline uniform float sin(uniform float x_full) {
       return __sin_uniform_float(x_full);
     }
     else if (__math_lib == __math_lib_system ||
-        __math_lib == __math_lib_svml) {
+        __math_lib == __math_lib_svml ||
+        __math_lib == __math_lib_acml) {
         return __stdlib_sinf(x_full);
     }
     else if (__math_lib == __math_lib_ispc ||
@@ -2527,6 +2531,11 @@ static inline float asin(float x0) {
     else if (__math_lib == __math_lib_svml) {
         return __svml_asinf(x0);
     }
+#if 0  /* evghenii: is not working with ACML, can't figure out why yet */
+    else if (__math_lib == __math_lib_acml) {
+        return __acml_asinf(x0);
+    }
+#endif
     else if (__math_lib == __math_lib_system) {
         float ret;
         foreach_active (i) {
@@ -2535,7 +2544,7 @@ static inline float asin(float x0) {
         }
         return ret;
     }
-    else if (__math_lib == __math_lib_ispc)
+    else if (__math_lib == __math_lib_ispc || __math_lib == __math_lib_acml)
     {
         // sollya
         // fpminimax(((asin(x)-pi/2)/-sqrt(1-x)), [|0,1,2,3,4,5,6,7,8,9,10|],
@@ -2590,7 +2599,8 @@ static inline uniform float asin(uniform float x0) {
       return __asin_uniform_float(x0);
     }
     else if (__math_lib == __math_lib_svml ||
-        __math_lib == __math_lib_system) {
+        __math_lib == __math_lib_system ||
+        __math_lib == __math_lib_acml) {
         return __stdlib_asinf(x0);
     }
     else if (__math_lib == __math_lib_ispc)
@@ -2643,8 +2653,11 @@ static inline float cos(float x_full) {
     {
       return __cos_varying_float(x_full);
     }
-    if (__math_lib == __math_lib_svml) {
+    else if (__math_lib == __math_lib_svml) {
         return __svml_cosf(x_full);
+    }
+    else if (__math_lib == __math_lib_acml) {
+        return __acml_cosf(x_full);
     }
     else if (__math_lib == __math_lib_system) {
         float ret;
@@ -2709,7 +2722,8 @@ static inline uniform float cos(uniform float x_full) {
       return __cos_uniform_float(x_full);
     }
     else if (__math_lib == __math_lib_system ||
-        __math_lib == __math_lib_svml) {
+        __math_lib == __math_lib_svml ||
+        __math_lib == __math_lib_acml) {
         return __stdlib_cosf(x_full);
     }
     else if (__math_lib == __math_lib_ispc ||
@@ -2812,8 +2826,11 @@ static inline void sincos(float x_full, varying float * uniform sin_result,
     {
       __sincos_varying_float(x_full,sin_result,cos_result);
     }
-    if (__math_lib == __math_lib_svml) {
+    else if (__math_lib == __math_lib_svml) {
         __svml_sincosf(x_full, sin_result, cos_result);
+    }
+    else if (__math_lib == __math_lib_acml) {
+        __acml_sincosf(x_full, sin_result, cos_result);
     }
     else if (__math_lib == __math_lib_system) {
         foreach_active (i) {
@@ -2886,8 +2903,9 @@ static inline void sincos(uniform float x_full, uniform float * uniform sin_resu
     {
       __sincos_uniform_float(x_full, sin_result, cos_result);
     }
-    if (__math_lib == __math_lib_system ||
-        __math_lib == __math_lib_svml) {
+    else if (__math_lib == __math_lib_system ||
+        __math_lib == __math_lib_svml || 
+        __math_lib == __math_lib_acml) {
         __stdlib_sincosf(x_full, sin_result, cos_result);
     }
     else if (__math_lib == __math_lib_ispc ||
@@ -2954,6 +2972,9 @@ static inline float tan(float x_full) {
     }
     else if (__math_lib == __math_lib_svml) {
         return __svml_tanf(x_full);
+    }
+    else if (__math_lib == __math_lib_acml) {
+        return __acml_tanf(x_full);
     }
     else if (__math_lib == __math_lib_system) {
         float ret;
@@ -3036,7 +3057,8 @@ static inline uniform float tan(uniform float x_full) {
       return __tan_uniform_float(x_full);
     }
     else if (__math_lib == __math_lib_system ||
-        __math_lib == __math_lib_svml) {
+        __math_lib == __math_lib_svml ||
+        __math_lib == __math_lib_acml) {
         return __stdlib_tanf(x_full);
     }
     else if (__math_lib == __math_lib_ispc ||
@@ -3114,6 +3136,9 @@ static inline float atan(float x_full) {
     else if (__math_lib == __math_lib_svml) {
         return __svml_atanf(x_full);
     }
+    else if (__math_lib == __math_lib_acml) {
+        return __acml_atanf(x_full);
+    }
     else if (__math_lib == __math_lib_system) {
         float ret;
         foreach_active (i) {
@@ -3167,7 +3192,8 @@ static inline uniform float atan(uniform float x_full) {
       return __atan_uniform_float(x_full);
     }
     else if (__math_lib == __math_lib_system ||
-        __math_lib == __math_lib_svml) {
+        __math_lib == __math_lib_svml || 
+        __math_lib == __math_lib_acml) {
         return __stdlib_atanf(x_full);
     }
     else if (__math_lib == __math_lib_ispc ||
@@ -3217,6 +3243,9 @@ static inline float atan2(float y, float x) {
     else if (__math_lib == __math_lib_svml) {
         return __svml_atan2f(y, x);
     }
+    else if (__math_lib == __math_lib_acml) {
+        return __acml_atan2f(y, x);
+    }
     else if (__math_lib == __math_lib_system) {
         float ret;
         foreach_active (i) {
@@ -3258,7 +3287,8 @@ static inline uniform float atan2(uniform float y, uniform float x) {
       return __atan2_uniform_float(y,x);
     }
     else if (__math_lib == __math_lib_system ||
-        __math_lib == __math_lib_svml) {
+        __math_lib == __math_lib_svml ||
+        __math_lib == __math_lib_acml) {
         return __stdlib_atan2f(y, x);
     }
     else if (__math_lib == __math_lib_ispc ||
@@ -3283,6 +3313,9 @@ static inline float exp(float x_full) {
     }
     else if (__math_lib == __math_lib_svml) {
         return __svml_expf(x_full);
+    }
+    else if (__math_lib == __math_lib_acml) {
+        return __acml_expf(x_full);
     }
     else if (__math_lib == __math_lib_system) {
         float ret;
@@ -3364,7 +3397,8 @@ static inline uniform float exp(uniform float x_full) {
         return __exp_uniform_float(x_full);
     }
     else if (__math_lib == __math_lib_system ||
-        __math_lib == __math_lib_svml) {
+        __math_lib == __math_lib_svml || 
+        __math_lib == __math_lib_acml) {
         return __stdlib_expf(x_full);
     }
     else if (__math_lib == __math_lib_ispc_fast) {
@@ -3491,6 +3525,9 @@ static inline float log(float x_full) {
     else if (__math_lib == __math_lib_svml) {
         return __svml_logf(x_full);
     }
+    else if (__math_lib == __math_lib_acml) {
+        return __acml_logf(x_full);
+    }
     else if (__math_lib == __math_lib_system) {
         float ret;
         foreach_active (i) {
@@ -3580,7 +3617,8 @@ static inline uniform float log(uniform float x_full) {
         return __log_uniform_float(x_full);
     }
     else if (__math_lib == __math_lib_system ||
-        __math_lib == __math_lib_svml) {
+        __math_lib == __math_lib_svml ||
+        __math_lib == __math_lib_acml) {
         return __stdlib_logf(x_full);
     }
     else if (__math_lib == __math_lib_ispc_fast) {
@@ -3666,6 +3704,9 @@ static inline float pow(float a, float b) {
     else if (__math_lib == __math_lib_svml) {
         return __svml_powf(a, b);
     }
+    else if (__math_lib == __math_lib_acml) {
+        return __acml_powf(a, b);
+    }
     else if (__math_lib == __math_lib_system) {
         float ret;
         foreach_active (i) {
@@ -3686,7 +3727,8 @@ static inline uniform float pow(uniform float a, uniform float b) {
         return __pow_uniform_float(a, b);
     }
     if (__math_lib == __math_lib_system ||
-        __math_lib == __math_lib_svml) {
+        __math_lib == __math_lib_svml ||
+        __math_lib == __math_lib_acml) {
         return __stdlib_powf(a, b);
     }
     else if (__math_lib == __math_lib_ispc ||
@@ -3800,6 +3842,10 @@ static inline double sin(double x) {
     {
       return __svml_sind(x);
     }
+    else if (__math_lib == __math_lib_acml)
+    {
+      return __acml_sind(x);
+    }
     else {
         double ret;
         foreach_active (i) {
@@ -3841,6 +3887,10 @@ static inline double asin(const double x) {
     {
       return __svml_asind(x);
     }
+    else if (__math_lib == __math_lib_acml)
+    {
+      return __acml_asind(x);
+    }
     else {
         double ret;
         foreach_active (i) {
@@ -3857,9 +3907,13 @@ static inline double cos(const double x) {
     {
       return __cos_varying_double(x);
     }
-    if (__math_lib == __math_lib_svml)
+    else if (__math_lib == __math_lib_svml)
     {
       return __svml_cosd(x);
+    }
+    else if (__math_lib == __math_lib_acml)
+    {
+      return __acml_cosd(x);
     }
     else {
         double ret;
@@ -3888,9 +3942,13 @@ static inline void sincos(double x, varying double * uniform sin_result,
     {
       __sincos_varying_double(x,sin_result,cos_result);
     }
-    if (__math_lib == __math_lib_svml)
+    else if (__math_lib == __math_lib_svml)
     {
       __svml_sincosd(x, sin_result, cos_result);
+    }
+    else if (__math_lib == __math_lib_acml)
+    {
+      __acml_sincosd(x, sin_result, cos_result);
     }
     else {
         foreach_active (i) {
@@ -3922,6 +3980,10 @@ static inline double tan(double x) {
     else if (__math_lib == __math_lib_svml)
     {
       return __svml_tand(x);
+    }
+    else if (__math_lib == __math_lib_acml)
+    {
+      return __acml_tand(x);
     }
     else {
         double ret;
@@ -3979,6 +4041,10 @@ static inline double atan2(double y, double x) {
     {
       return __svml_atan2d(y,x);
     }
+    else if (__math_lib == __math_lib_acml)
+    {
+      return __acml_atan2d(y,x);
+    }
     else {
         double ret;
         foreach_active (i) {
@@ -4008,6 +4074,10 @@ static inline double exp(double x) {
     {
         return __svml_expd(x);
     }
+    else if (__math_lib == __math_lib_acml)
+    {
+        return __acml_expd(x);
+    }
     else {
         double ret;
         foreach_active (i) {
@@ -4036,6 +4106,10 @@ static inline double log(double x) {
     {
         return __svml_logd(x);
     }
+    else if (__math_lib == __math_lib_acml)
+    {
+        return __acml_logd(x);
+    }
     else {
         double ret;
         foreach_active (i) {
@@ -4063,6 +4137,10 @@ static inline double pow(double a, double b) {
     else if (__math_lib == __math_lib_svml)
     {
         return __svml_powd(a,b);
+    }
+    else if (__math_lib == __math_lib_acml)
+    {
+        return __acml_powd(a,b);
     }
     else {
         double ret;

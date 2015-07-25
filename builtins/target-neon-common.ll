@@ -321,6 +321,10 @@ include(`svml.m4')
 svml_stubs(float,f,WIDTH)
 svml_stubs(double,d,WIDTH)
 
+include(`acml.m4')
+acml_stubs(float,f,WIDTH)
+acml_stubs(double,d,WIDTH)
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; gather
 
