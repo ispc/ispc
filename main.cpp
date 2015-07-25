@@ -106,6 +106,7 @@ usage(int ret) {
     printf("        default\t\t\t\tUse ispc's built-in math functions\n");
     printf("        fast\t\t\t\tUse high-performance but lower-accuracy math functions\n");
     printf("        svml\t\t\t\tUse the Intel(r) SVML math libraries\n");
+    printf("        acml\t\t\t\tUse the AMD Core Math Libary\n");
     printf("        system\t\t\t\tUse the system's math library (*may be quite slow*)\n");
     printf("    [-MMM <filename>\t\t\t\tWrite #include dependencies to given file.\n");
     printf("    [--nostdlib]\t\t\tDon't make the ispc standard library available\n");
@@ -418,6 +419,8 @@ int main(int Argc, char *Argv[]) {
                 g->mathLib = Globals::Math_ISPCFast;
             else if (!strcmp(lib, "svml"))
                 g->mathLib = Globals::Math_SVML;
+            else if (!strcmp(lib, "acml"))
+                g->mathLib = Globals::Math_ACML;
             else if (!strcmp(lib, "system"))
                 g->mathLib = Globals::Math_System;
             else {

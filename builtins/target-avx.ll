@@ -190,6 +190,17 @@ svml_define(float,f8,8,f)
 svml_declare(double,4,4)
 svml_define_x(double,4,4,d,8)
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; acml
+
+include(`acml.m4')
+;; single precision
+acml_declare(float,f8,8)
+acml_define(float,f8,8,f)
+
+;; double precision
+acml_declare(double,4,4)
+acml_define_x(double,4,4,d,8)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; mask handling

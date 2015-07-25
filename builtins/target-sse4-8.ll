@@ -224,6 +224,13 @@ svml_stubs(float,f,WIDTH)
 svml_stubs(double,d,WIDTH)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; acml
+
+include(`acml.m4')
+acml_stubs(float,f,WIDTH)
+acml_stubs(double,d,WIDTH)
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; horizontal ops / reductions
 
 declare i32 @llvm.x86.sse2.pmovmskb.128(<16 x i8>) nounwind readnone
