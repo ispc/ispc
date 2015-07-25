@@ -2531,9 +2531,11 @@ static inline float asin(float x0) {
     else if (__math_lib == __math_lib_svml) {
         return __svml_asinf(x0);
     }
+#if 0  /* evghenii: is not working with ACML, can't figure out why yet */
     else if (__math_lib == __math_lib_acml) {
         return __acml_asinf(x0);
     }
+#endif
     else if (__math_lib == __math_lib_system) {
         float ret;
         foreach_active (i) {
@@ -2542,7 +2544,7 @@ static inline float asin(float x0) {
         }
         return ret;
     }
-    else if (__math_lib == __math_lib_ispc)
+    else if (__math_lib == __math_lib_ispc || __math_lib == __math_lib_acml)
     {
         // sollya
         // fpminimax(((asin(x)-pi/2)/-sqrt(1-x)), [|0,1,2,3,4,5,6,7,8,9,10|],
