@@ -3479,6 +3479,10 @@ for this argument.
 * ``svml``: use Intel "Short Vector Math Library".  Use
   ``icpc`` to link your final executable so that the appropriate libraries
   are linked.
+* ``acml``: use "AMD Core Math Libary" (AMD LibM).  Use ``-lamdlibm`` to link
+  your final executable so that the library is linked. This
+  library can be download from `AMD webpage
+  <http://developer.amd.com/tools-and-sdks/cpu-development/libm/>`_.
 * ``system``: use the system's math library.  On many systems, these
   functions are more accurate than both of ``ispc``'s implementations.
   Using these functions may be quite
