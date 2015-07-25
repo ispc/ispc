@@ -56,16 +56,16 @@ define(`acml_stubs',`
 ;;      double:  "2"(sse)  "4"(avx)   "8"(avx512)
 ;; $3 - vector width
 define(`acml_declare',`
-  declare <$3 x $1> @__acml_sin$2(<$3 x $1>) nounwind readnone
-  declare <$3 x $1> @__acml_asin$2(<$3 x $1>) nounwind readnone
-  declare <$3 x $1> @__acml_cos$2(<$3 x $1>) nounwind readnone
-  declare void @__acml_sincos$2(<$3 x $1>,  <$3 x $1> *, <$3 x $1>*) nounwind readnone
-  declare <$3 x $1> @__acml_tan$2(<$3 x $1>) nounwind readnone
-  declare <$3 x $1> @__acml_atan$2(<$3 x $1>) nounwind readnone
-  declare <$3 x $1> @__acml_atan2$2(<$3 x $1>, <$3 x $1>) nounwind readnone
-  declare <$3 x $1> @__acml_exp$2(<$3 x $1>) nounwind readnone
-  declare <$3 x $1> @__acml_log$2(<$3 x $1>) nounwind readnone
-  declare <$3 x $1> @__acml_pow$2(<$3 x $1>, <$3 x $1>) nounwind readnone
+  declare <$3 x $1> @___acml_sin$2(<$3 x $1>) nounwind readnone
+  declare <$3 x $1> @___acml_asin$2(<$3 x $1>) nounwind readnone
+  declare <$3 x $1> @___acml_cos$2(<$3 x $1>) nounwind readnone
+  declare void @___acml_sincos$2(<$3 x $1>,  <$3 x $1> *, <$3 x $1>*) nounwind readnone
+  declare <$3 x $1> @___acml_tan$2(<$3 x $1>) nounwind readnone
+  declare <$3 x $1> @___acml_atan$2(<$3 x $1>) nounwind readnone
+  declare <$3 x $1> @___acml_atan2$2(<$3 x $1>, <$3 x $1>) nounwind readnone
+  declare <$3 x $1> @___acml_exp$2(<$3 x $1>) nounwind readnone
+  declare <$3 x $1> @___acml_log$2(<$3 x $1>) nounwind readnone
+  declare <$3 x $1> @___acml_pow$2(<$3 x $1>, <$3 x $1>) nounwind readnone
 ');
 
 ;; defintition of __acml_* internal functions
@@ -77,51 +77,51 @@ define(`acml_declare',`
 ;; $4 - acml internal function suffix ("f" for float, "d" for double)
 define(`acml_define',`
   define <$3 x $1> @__acml_sin$4(<$3 x $1>) nounwind readnone alwaysinline {
-    %ret = call <$3 x $1> @__acml_sin$2(<$3 x $1> %0)
+    %ret = call <$3 x $1> @___acml_sin$2(<$3 x $1> %0)
     ret <$3 x $1> %ret
   }
   define <$3 x $1> @__acml_asin$4(<$3 x $1>) nounwind readnone alwaysinline {
-    %ret = call <$3 x $1> @__acml_asin$2(<$3 x $1> %0)
+    %ret = call <$3 x $1> @___acml_asin$2(<$3 x $1> %0)
     ret <$3 x $1> %ret
   }
 
   define <$3 x $1> @__acml_cos$4(<$3 x $1>) nounwind readnone alwaysinline {
-    %ret = call <$3 x $1> @__acml_cos$2(<$3 x $1> %0)
+    %ret = call <$3 x $1> @___acml_cos$2(<$3 x $1> %0)
     ret <$3 x $1> %ret
   }
 
   define void @__acml_sincos$4(<$3 x $1>, <$3 x $1> *, <$3 x $1> *) nounwind readnone alwaysinline {
-    call void @__acml_sincos$2(<$3 x $1> %0, <$3 x $1> * %1, <$3 x $1> * %2)
+    call void @___acml_sincos$2(<$3 x $1> %0, <$3 x $1> * %1, <$3 x $1> * %2)
     ret void
   }
 
   define <$3 x $1> @__acml_tan$4(<$3 x $1>) nounwind readnone alwaysinline {
-    %ret = call <$3 x $1> @__acml_tan$2(<$3 x $1> %0)
+    %ret = call <$3 x $1> @___acml_tan$2(<$3 x $1> %0)
     ret <$3 x $1> %ret
   }
 
   define <$3 x $1> @__acml_atan$4(<$3 x $1>) nounwind readnone alwaysinline {
-    %ret = call <$3 x $1> @__acml_atan$2(<$3 x $1> %0)
+    %ret = call <$3 x $1> @___acml_atan$2(<$3 x $1> %0)
     ret <$3 x $1> %ret
   }
 
   define <$3 x $1> @__acml_atan2$4(<$3 x $1>, <$3 x $1>) nounwind readnone alwaysinline {
-    %ret = call <$3 x $1> @__acml_atan2$2(<$3 x $1> %0, <$3 x $1> %1)
+    %ret = call <$3 x $1> @___acml_atan2$2(<$3 x $1> %0, <$3 x $1> %1)
     ret <$3 x $1> %ret
   }
 
   define <$3 x $1> @__acml_exp$4(<$3 x $1>) nounwind readnone alwaysinline {
-    %ret = call <$3 x $1> @__acml_exp$2(<$3 x $1> %0)
+    %ret = call <$3 x $1> @___acml_exp$2(<$3 x $1> %0)
     ret <$3 x $1> %ret
   }
 
   define <$3 x $1> @__acml_log$4(<$3 x $1>) nounwind readnone alwaysinline {
-    %ret = call <$3 x $1> @__acml_log$2(<$3 x $1> %0)
+    %ret = call <$3 x $1> @___acml_log$2(<$3 x $1> %0)
     ret <$3 x $1> %ret
   }
 
   define <$3 x $1> @__acml_pow$4(<$3 x $1>, <$3 x $1>) nounwind readnone alwaysinline {
-    %ret = call <$3 x $1> @__acml_pow$2(<$3 x $1> %0, <$3 x $1> %1)
+    %ret = call <$3 x $1> @___acml_pow$2(<$3 x $1> %0, <$3 x $1> %1)
     ret <$3 x $1> %ret
   }
 ')
@@ -168,20 +168,20 @@ define(`acml_define',`
 ;;}
 define(`acml_define_x',`
   define <$5 x $1> @__acml_sin$4(<$5 x $1>) nounwind readnone alwaysinline {
-    unary$3to$5(ret, $1, @__acml_sin$2, %0)
+    unary$3to$5(ret, $1, @___acml_sin$2, %0)
     ret <$5 x $1> %ret
   }
   define <$5 x $1> @__acml_asin$4(<$5 x $1>) nounwind readnone alwaysinline {
-    unary$3to$5(ret, $1, @__acml_asin$2, %0)
+    unary$3to$5(ret, $1, @___acml_asin$2, %0)
     ret <$5 x $1> %ret
   }
   define <$5 x $1> @__acml_cos$4(<$5 x $1>) nounwind readnone alwaysinline {
-    unary$3to$5(ret, $1, @__acml_cos$2, %0)
+    unary$3to$5(ret, $1, @___acml_cos$2, %0)
     ret <$5 x $1> %ret
   }
   define void @__acml_sincos$4(<$5 x $1>,<$5 x $1>*,<$5 x $1>*) nounwind readnone alwaysinline 
   {
-;;    call void @__acml_sincos$2(<$5 x $1> %0, <$5 x $1> * %1, <$5 x $1> * %2)
+;;    call void @___acml_sincos$2(<$5 x $1> %0, <$5 x $1> * %1, <$5 x $1> * %2)
     %s = call <$5 x $1> @__acml_sin$4(<$5 x $1> %0)
     %c = call <$5 x $1> @__acml_cos$4(<$5 x $1> %0)
     store <$5 x $1> %s, <$5 x $1> * %1
@@ -189,27 +189,27 @@ define(`acml_define_x',`
     ret void
   }
   define <$5 x $1> @__acml_tan$4(<$5 x $1>) nounwind readnone alwaysinline {
-    unary$3to$5(ret, $1, @__acml_tan$2, %0)
+    unary$3to$5(ret, $1, @___acml_tan$2, %0)
     ret <$5 x $1> %ret
   }
   define <$5 x $1> @__acml_atan$4(<$5 x $1>) nounwind readnone alwaysinline {
-    unary$3to$5(ret, $1, @__acml_atan$2, %0)
+    unary$3to$5(ret, $1, @___acml_atan$2, %0)
     ret <$5 x $1> %ret
   }
   define <$5 x $1> @__acml_atan2$4(<$5 x $1>,<$5 x $1>) nounwind readnone alwaysinline {
-    binary$3to$5(ret, $1, @__acml_atan2$2, %0, %1)
+    binary$3to$5(ret, $1, @___acml_atan2$2, %0, %1)
     ret <$5 x $1> %ret
   }
   define <$5 x $1> @__acml_exp$4(<$5 x $1>) nounwind readnone alwaysinline {
-    unary$3to$5(ret, $1, @__acml_exp$2, %0)
+    unary$3to$5(ret, $1, @___acml_exp$2, %0)
     ret <$5 x $1> %ret
   }
   define <$5 x $1> @__acml_log$4(<$5 x $1>) nounwind readnone alwaysinline {
-    unary$3to$5(ret, $1, @__acml_log$2, %0)
+    unary$3to$5(ret, $1, @___acml_log$2, %0)
     ret <$5 x $1> %ret
   }
   define <$5 x $1> @__acml_pow$4(<$5 x $1>,<$5 x $1>) nounwind readnone alwaysinline {
-    binary$3to$5(ret, $1, @__acml_pow$2, %0, %1)
+    binary$3to$5(ret, $1, @___acml_pow$2, %0, %1)
     ret <$5 x $1> %ret
   }
 ')
