@@ -1,5 +1,6 @@
 #include "amdlibm.h"
 #include <immintrin.h>
+#include <cmath>
 /*
  
  * single precision:
@@ -51,9 +52,6 @@ extern "C"
   };
 
 
-  // Source: https://github.com/searchivarius/BlogCode/tree/master/2014/5/14
-#define MM_EXTRACT_DOUBLE(v,i) _mm_cvtsd_f64(_mm_shuffle_pd(v, v, _MM_SHUFFLE2(0, i)))
-#define MM_EXTRACT_FLOAT(v,i)  _mm_cvtss_f32(_mm_shuffle_ps(v, v, _MM_SHUFFLE(0, 0, 0, i)))
 
   // single precision implementation
 
@@ -68,58 +66,38 @@ extern "C"
 
   __m128 __acml_asinf4(__m128 x)
   {
-    const float x0 = MM_EXTRACT_FLOAT(x,0);
-    const float x1 = MM_EXTRACT_FLOAT(x,1);
-    const float x2 = MM_EXTRACT_FLOAT(x,2);
-    const float x3 = MM_EXTRACT_FLOAT(x,3);
-    v4f res;
-    res.x = amd_asinf(x0);
-    res.y = amd_asinf(x1);
-    res.x = amd_asinf(x2);
-    res.w = amd_asinf(x3);
+    v4f in{x}, res;
+    res.x = amd_asinf(in.x);
+    res.y = amd_asinf(in.y);
+    res.x = amd_asinf(in.z);
+    res.w = amd_asinf(in.w);
     return res.vec;
   }
   __m128 __acml_acosf4(__m128 x)
   {
-    const float x0 = MM_EXTRACT_FLOAT(x,0);
-    const float x1 = MM_EXTRACT_FLOAT(x,1);
-    const float x2 = MM_EXTRACT_FLOAT(x,2);
-    const float x3 = MM_EXTRACT_FLOAT(x,3);
-    v4f res;
-    res.x = amd_acosf(x0);
-    res.y = amd_acosf(x1);
-    res.x = amd_acosf(x2);
-    res.w = amd_acosf(x3);
+    v4f in{x}, res;
+    res.x = amd_acosf(in.x);
+    res.y = amd_acosf(in.y);
+    res.x = amd_acosf(in.z);
+    res.w = amd_acosf(in.w);
     return res.vec;
   }
   __m128 __acml_atanf4(__m128 x)
   {
-    const float x0 = MM_EXTRACT_FLOAT(x,0);
-    const float x1 = MM_EXTRACT_FLOAT(x,1);
-    const float x2 = MM_EXTRACT_FLOAT(x,2);
-    const float x3 = MM_EXTRACT_FLOAT(x,3);
-    v4f res;
-    res.x = amd_atanf(x0);
-    res.y = amd_atanf(x1);
-    res.x = amd_atanf(x2);
-    res.w = amd_atanf(x3);
+    v4f in{x}, res;
+    res.x = amd_atanf(in.x);
+    res.y = amd_atanf(in.y);
+    res.x = amd_atanf(in.z);
+    res.w = amd_atanf(in.w);
     return res.vec;
   }
   __m128 __acml_atan2f4(__m128 x, __m128 y)
   {
-    v4f res;
-    const double x0 = MM_EXTRACT_FLOAT(x,0);
-    const double y0 = MM_EXTRACT_FLOAT(y,0);
-    res.x = amd_atan2f(x0,y0);
-    const double x1 = MM_EXTRACT_FLOAT(x,1);
-    const double y1 = MM_EXTRACT_FLOAT(y,1);
-    res.y = amd_atan2f(x0,y0);
-    const double x2 = MM_EXTRACT_FLOAT(x,2);
-    const double y2 = MM_EXTRACT_FLOAT(y,2);
-    res.z = amd_atan2f(x0,y0);
-    const double x3 = MM_EXTRACT_FLOAT(x,3);
-    const double y3 = MM_EXTRACT_FLOAT(y,3);
-    res.w = amd_atan2f(x0,y0);
+    v4f in0{x}, in1{y}, res;
+    res.x = amd_atan2f(in0.x,in1.x);
+    res.y = amd_atan2f(in0.y,in1.y);
+    res.z = amd_atan2f(in0.z,in1.z);
+    res.w = amd_atan2f(in0.w,in1.w);
     return res.vec;
   }
   
@@ -136,44 +114,32 @@ extern "C"
 
   __m128d __acml_asin2(__m128d x)
   {
-    const double x0 = MM_EXTRACT_DOUBLE(x,0);
-    const double x1 = MM_EXTRACT_DOUBLE(x,1);
-    v2d res;
-    res.x = amd_asin(x0);
-    res.y = amd_asin(x1);
+    v2d in{x}, res;
+    res.x = amd_asin(in.x);
+    res.y = amd_asin(in.y);
     return res.vec;
   }
   __m128d __acml_acos2(__m128d x)
   {
-    const double x0 = MM_EXTRACT_DOUBLE(x,0);
-    const double x1 = MM_EXTRACT_DOUBLE(x,1);
-    v2d res;
-    res.x = amd_acos(x0);
-    res.y = amd_acos(x1);
+    v2d in{x}, res;
+    res.x = amd_acos(in.x);
+    res.y = amd_acos(in.y);
     return res.vec;
   }
   __m128d __acml_atan2(__m128d x)
   {
-    const double x0 = MM_EXTRACT_DOUBLE(x,0);
-    const double x1 = MM_EXTRACT_DOUBLE(x,1);
-    v2d res;
-    res.x = amd_atan(x0);
-    res.y = amd_atan(x1);
+    v2d in{x}, res;
+    res.x = amd_atan(in.x);
+    res.y = amd_atan(in.y);
     return res.vec;
   }
   __m128d __acml_atan22(__m128d x, __m128d y)
   {
-    v2d res;
-    const double x0 = MM_EXTRACT_DOUBLE(x,0);
-    const double y0 = MM_EXTRACT_DOUBLE(y,0);
-    res.x = amd_atan2(x0,y0);
-    const double x1 = MM_EXTRACT_DOUBLE(x,1);
-    const double y1 = MM_EXTRACT_DOUBLE(y,1);
-    res.y = amd_atan2(x1,y1);
+    v2d in0{x},in1{y},res;
+    res.x = amd_atan2(in0.x,in1.x);
+    res.y = amd_atan2(in0.y,in1.y);
     return res.vec;
   }
-#undef MM_EXTRACT_DOUBLE
-#undef MM_EXTRACT_SINGLE
 }
 
 /* AVX */
