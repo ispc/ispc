@@ -276,7 +276,6 @@ def run_test(testname):
                 else:
                     cc_cmd = "%s  %s -O2 -I. %s %s test_static.cpp -DTEST_SIG=%d %s -o %s" % \
                          (options.compiler_exe, options.compiler_flags, gcc_arch, gcc_isa, match, obj_name, exe_name)                    
-                    print cc_cmd
 
                 if platform.system() == 'Darwin':
                     cc_cmd += ' -Wl,-no_pie'
