@@ -247,7 +247,7 @@ __m256d __acml_##op1(__m256d x, __m256d y) { \
 
 GENCALL(sin4,sin2)
 GENCALL(cos4,cos2)
-GENCALL(tand,tan2)
+GENCALL(tan4,tan2)
 GENCALL(asin4,asin2)
 GENCALL(acos4,acos2)
 GENCALL(atan4,atan2)
