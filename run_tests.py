@@ -274,8 +274,8 @@ def run_test(testname):
                     cc_cmd = "%s -O2 -I. %s %s test_static.cpp -DTEST_SIG=%d %s -o %s" % \
                          (options.compiler_exe, gcc_arch, "-march=knl", match, obj_name, exe_name)
                 else:
-                    cc_cmd = "%s  %s -O2 -I. %s %s test_static.cpp -DTEST_SIG=%d %s -o %s" % \
-                         (options.compiler_exe, options.compiler_flags, gcc_arch, gcc_isa, match, obj_name, exe_name)                    
+                    cc_cmd = "%s -O2 -I. %s %s test_static.cpp -DTEST_SIG=%d %s -o %s %s" % \
+                         (options.compiler_exe, gcc_arch, gcc_isa, match, obj_name, exe_name, options.compiler_flags)               
 
                 if platform.system() == 'Darwin':
                     cc_cmd += ' -Wl,-no_pie'

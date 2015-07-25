@@ -151,12 +151,13 @@ svml_define_x(double,4,4,d,16)
 ;; avml
 
 include(`acml.m4')
+acml_dispatch()
 ;; single precision
-acml_declare(float,f8,8)
+;;acml_declare(float,f8,8)
 acml_define_x(float,f8,8,f,16)
 
 ;; double precision
-acml_declare(double,4,4)
+;;acml_declare(double,4,4)
 acml_define_x(double,4,4,d,16)
 
 

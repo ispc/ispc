@@ -168,12 +168,13 @@ svml_define(double,4,4,d)
 ;; acml
 
 include(`acml.m4')
+acml_dispatch()
 ;; single precision
-acml_declare(float,f4,4)
+;;acml_declare(float,f4,4)
 acml_define(float,f4,4,f)
 
 ;; double precision
-acml_declare(double,4,4)
+;;acml_declare(double,4,4)
 acml_define(double,4,4,d)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

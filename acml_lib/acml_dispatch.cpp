@@ -1,6 +1,8 @@
 #include "amdlibm.h"
 #include <immintrin.h>
 #include <cmath>
+
+#define INLINE __attribute__((always_inline))
 /*
  
  * single precision:
