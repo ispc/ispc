@@ -995,7 +995,162 @@ define void @__scatter_base_offsets64_$1(i8* %ptr, i32 %scale, <WIDTH x i64> %of
 
 gen_gather(i8)
 gen_gather(i16)
-gen_gather(i32)
+
+;; Define the utility function to do the gather operation for a single element
+;; of the type
+define <WIDTH x i32> @__gather_elt32_i32(i8 * %ptr, <WIDTH x i32> %offsets, i32 %offset_scale,
+                                    <WIDTH x i32> %offset_delta, <WIDTH x i32> %ret,
+                                    i32 %lane) nounwind readonly alwaysinline {
+  ; compute address for this one from the base
+  %offset32 = extractelement <WIDTH x i32> %offsets, i32 %lane
+  ; the order and details of the next 4 lines are important--they match LLVMs 
+  ; patterns that apply the free x86 2x/4x/8x scaling in addressing calculations
+  %offset64 = sext i32 %offset32 to i64
+  %scale64 = sext i32 %offset_scale to i64
+  %offset = mul i64 %offset64, %scale64
+  %ptroffset = getelementptr PTR_OP_ARGS(`i8') %ptr, i64 %offset
+
+  %delta = extractelement <WIDTH x i32> %offset_delta, i32 %lane
+  %delta64 = sext i32 %delta to i64
+  %finalptr = getelementptr PTR_OP_ARGS(`i8') %ptroffset, i64 %delta64
+
+  ; load value and insert into returned value
+  %ptrcast = bitcast i8 * %finalptr to i32 *
+  %val = load PTR_OP_ARGS(`i32 ') %ptrcast
+  %updatedret = insertelement <WIDTH x i32> %ret, i32 %val, i32 %lane
+  ret <WIDTH x i32> %updatedret
+}
+
+define <WIDTH x i32> @__gather_elt64_i32(i8 * %ptr, <WIDTH x i64> %offsets, i32 %offset_scale,
+                                    <WIDTH x i64> %offset_delta, <WIDTH x i32> %ret,
+                                    i32 %lane) nounwind readonly alwaysinline {
+  ; compute address for this one from the base
+  %offset64 = extractelement <WIDTH x i64> %offsets, i32 %lane
+  ; the order and details of the next 4 lines are important--they match LLVMs 
+  ; patterns that apply the free x86 2x/4x/8x scaling in addressing calculations
+  %offset_scale64 = sext i32 %offset_scale to i64
+  %offset = mul i64 %offset64, %offset_scale64
+  %ptroffset = getelementptr PTR_OP_ARGS(`i8') %ptr, i64 %offset
+
+  %delta64 = extractelement <WIDTH x i64> %offset_delta, i32 %lane
+  %finalptr = getelementptr PTR_OP_ARGS(`i8') %ptroffset, i64 %delta64
+
+  ; load value and insert into returned value
+  %ptrcast = bitcast i8 * %finalptr to i32 *
+  %val = load PTR_OP_ARGS(`i32 ') %ptrcast
+  %updatedret = insertelement <WIDTH x i32> %ret, i32 %val, i32 %lane
+  ret <WIDTH x i32> %updatedret
+}
+
+declare <16 x i32> @llvm.x86.avx512.gather.dpi.512(<16 x i32>, i8*, <16 x i32>, i16, i32)
+define <WIDTH x i32> @__gather_factored_base_offsets32_i32(i8 * %ptr, <WIDTH x i32> %offsets, i32 %offset_scale,
+                                             <WIDTH x i32> %offset_delta,
+                                             <WIDTH x MASK> %vecmask) nounwind readonly alwaysinline {
+  %mask = bitcast <16 x i1> %vecmask to i16
+  %scaleVecPtr = alloca <16 x i32> 
+  store <16 x i32> zeroinitializer , <16 x i32> * %scaleVecPtr
+  %scaleVecZero = load PTR_OP_ARGS(`<16 x i32>') %scaleVecPtr
+  %scaleVec1 = insertelement <16 x i32> %scaleVecZero, i32 %offset_scale, i32 0
+  %scaleVec = shufflevector <16 x i32> %scaleVec1, <16 x i32> undef, <16 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0>
+  %offsetsScaled = mul <16 x i32> %offsets, %scaleVec
+  %offsetFinal = add <16 x i32> %offsetsScaled, %offset_delta
+  %res = call <16 x i32> @llvm.x86.avx512.gather.dpi.512(<16 x i32> zeroinitializer, i8* %ptr, <16 x i32>%offsetFinal, i16 %mask, i32 1)
+  ret <16 x i32> %res
+}
+declare <8 x i32> @llvm.x86.avx512.gather.qpi.512 (<8 x i32>, i8*, <8 x i64>, i8, i32)
+define <WIDTH x i32> @__gather_factored_base_offsets64_i32(i8 * %ptr, <WIDTH x i64> %offsets, i32 %offset_scale,
+                                             <WIDTH x i64> %offset_delta,
+                                             <WIDTH x MASK> %vecmask) nounwind readonly alwaysinline {
+  %extVecMask = zext <16 x i1> %vecmask to <16 x i32>
+  %maskVec1 = shufflevector <16 x i32> %extVecMask, <16 x i32> undef, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  %maskVec2 = shufflevector <16 x i32> %extVecMask, <16 x i32> undef, <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15> 
+  %maskVec1Small = trunc <8 x i32> %maskVec1 to <8 x i1>
+  %maskVec2Small = trunc <8 x i32> %maskVec2 to <8 x i1>
+  %mask1 = bitcast <8 x i1> %maskVec1Small to i8
+  %mask2 = bitcast <8 x i1> %maskVec2Small to i8 
+  %scaleVecPtr = alloca <16 x i32> 
+  store <16 x i32> zeroinitializer , <16 x i32> * %scaleVecPtr
+  %scaleVecZero = load PTR_OP_ARGS(`<16 x i32>') %scaleVecPtr
+  %scaleVec0 = insertelement <16 x i32> %scaleVecZero, i32 %offset_scale, i32 0
+  %scaleVec = shufflevector <16 x i32> %scaleVec0, <16 x i32> undef, <16 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0,i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0>  
+  %scaleVec_64 = zext <16 x i32> %scaleVec to <16 x i64>
+  %offsetsScaled = mul <16 x i64> %offsets, %scaleVec_64
+  %offsetsFinal = add <16 x i64> %offsetsScaled, %offset_delta
+  %ext = bitcast <16 x i64> %offsetsFinal to <32 x i32>
+  %reduced1 = shufflevector <32 x i32> %ext, <32 x i32> undef, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15> 
+  %offsetsFinal1 = bitcast <16 x i32> %reduced1 to <8 x i64>
+  %reduced2 = shufflevector <32 x i32> %ext, <32 x i32> undef, <16 x i32> <i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31> 
+  %offsetsFinal2 = bitcast <16 x i32> %reduced2 to <8 x i64>
+  %res1 = call <8 x i32> @llvm.x86.avx512.gather.qpi.512(<8 x i32> zeroinitializer, i8* %ptr, <8 x i64> %offsetsFinal1, i8 %mask1, i32 1)
+  %res2 = call <8 x i32> @llvm.x86.avx512.gather.qpi.512(<8 x i32> zeroinitializer, i8* %ptr, <8 x i64> %offsetsFinal2, i8 %mask2, i32 1)
+  %res = shufflevector <8 x i32> %res1, <8 x i32> %res2, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+  ret <16 x i32> %res
+}
+; fully general 32-bit gather, takes array of pointers encoded as vector of i32s
+define <WIDTH x i32> @__gather32_i32(<WIDTH x i32> %ptrs, 
+                                   <WIDTH x MASK> %vecmask) nounwind readonly alwaysinline {
+  %mask = bitcast <16 x i1> %vecmask to  i16
+  %ret = call <16 x i32> @llvm.x86.avx512.gather.dpi.512(<16 x i32> zeroinitializer, i8* zeroinitializer, <16 x i32>%ptrs, i16 %mask, i32 1)
+  ret <WIDTH x i32> %ret
+}
+
+; fully general 64-bit gather, takes array of pointers encoded as vector of i32s
+define <WIDTH x i32> @__gather64_i32(<WIDTH x i64> %ptrs, 
+                                   <WIDTH x MASK> %vecmask) nounwind readonly alwaysinline {
+  %extVecMask = zext <16 x i1> %vecmask to <16 x i32>
+  %maskVec1 = shufflevector <16 x i32> %extVecMask, <16 x i32> undef, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  %maskVec2 = shufflevector <16 x i32> %extVecMask, <16 x i32> undef, <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15> 
+  %maskVec1Small = trunc <8 x i32> %maskVec1 to <8 x i1>
+  %maskVec2Small = trunc <8 x i32> %maskVec2 to <8 x i1>
+  %mask1 = bitcast <8 x i1> %maskVec1Small to i8
+  %mask2 = bitcast <8 x i1> %maskVec2Small to i8   
+  %ext = bitcast <16 x i64> %ptrs to <32 x i32>
+  %reduced1 = shufflevector <32 x i32> %ext, <32 x i32> undef, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15> 
+  %offsetsFinal1 = bitcast <16 x i32> %reduced1 to <8 x i64>
+  %reduced2 = shufflevector <32 x i32> %ext, <32 x i32> undef, <16 x i32> <i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31> 
+  %offsetsFinal2 = bitcast <16 x i32> %reduced2 to <8 x i64>
+  %res1 = call <8 x i32> @llvm.x86.avx512.gather.qpi.512(<8 x i32> zeroinitializer, i8* zeroinitializer, <8 x i64> %offsetsFinal1, i8 %mask1, i32 1)
+  %res2 = call <8 x i32> @llvm.x86.avx512.gather.qpi.512(<8 x i32> zeroinitializer, i8* zeroinitializer, <8 x i64> %offsetsFinal2, i8 %mask2, i32 1)
+  %res = shufflevector <8 x i32> %res1, <8 x i32> %res2, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+  ret <16 x i32> %res
+}
+
+
+
+define <16 x i32> @__gather_base_offsets32_i32(i8 * %ptr, i32 %offset_scale, <WIDTH x i32> %offsets, <WIDTH x MASK> %vecmask) nounwind readonly alwaysinline {
+  %src = alloca <16 x i32>
+  store <16 x i32> zeroinitializer, <16 x i32> * %src
+  %vecSrc = load <16 x i32>, <16 x i32> * %src
+  %scalarMask = bitcast <16 x i1> %vecmask to i16
+  %res =  call <16 x i32> @llvm.x86.avx512.gather.dpi.512 (<16 x i32> %vecSrc, i8* %ptr, <16 x i32> %offsets, i16
+  %scalarMask, i32 %offset_scale)
+  ret <16 x i32> %res
+}
+
+define <16 x i32> @__gather_base_offsets64_i32(i8 * %ptr, i32 %offset_scale, <WIDTH x i64> %offsets, <16 x i1> %vecmask) nounwind readonly alwaysinline {
+  %src1 = alloca <8 x i32>
+  %src2 = alloca <8 x i32>
+  store <8 x i32> zeroinitializer, <8 x i32> * %src1
+  store <8 x i32> zeroinitializer, <8 x i32> * %src2
+  %vecSrc1 = load <8 x i32>, <8 x i32> * %src1
+  %vecSrc2 = load <8 x i32>, <8 x i32> * %src2
+  %scalarMask = bitcast <16 x i1> %vecmask to i16 
+  %scalarMask1 = trunc i16 %scalarMask to i8 
+  %scalarMask2Tmp = lshr i16 %scalarMask, 8
+  %scalarMask2 = trunc i16  %scalarMask2Tmp to i8 
+   
+  %ext = bitcast <16 x i64> %offsets to <32 x i32>
+  %reduced1 = shufflevector <32 x i32> %ext, <32 x i32> undef, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15> 
+  %offsets1 = bitcast <16 x i32> %reduced1 to <8 x i64>
+  %reduced2 = shufflevector <32 x i32> %ext, <32 x i32> undef, <16 x i32> <i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31> 
+  %offsets2 = bitcast <16 x i32> %reduced2 to <8 x i64>
+  %res1 = call <8 x i32> @llvm.x86.avx512.gather.qpi.512 (<8 x i32> %vecSrc1, i8* %ptr, <8 x i64> %offsets1, i8 %scalarMask1, i32 %offset_scale)
+  %res2 = call <8 x i32> @llvm.x86.avx512.gather.qpi.512 (<8 x i32> %vecSrc1, i8* %ptr, <8 x i64> %offsets1, i8 %scalarMask1, i32 %offset_scale)
+  %res = shufflevector <8 x i32> %res1, <8 x i32> %res2 , <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15> 
+  ret <16 x i32> %res
+}
+
+
 gen_gather(i64)
 gen_gather(float)
 gen_gather(double)
