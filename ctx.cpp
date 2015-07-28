@@ -380,11 +380,22 @@ FunctionEmitContext::FunctionEmitContext(Function *func, Symbol *funSym,
         llvm::DICompositeType diSubprogramType_n =
             static_cast<llvm::DICompositeType>(diSubprogramType);
         int flags = llvm::DIDescriptor::FlagPrototyped;
-#else /* LLVM 3.7+ */
+#elif ISPC_LLVM_VERSION == ISPC_LLVM_3_7 /* LLVM 3.7 */
         Assert(llvm::isa<llvm::DICompositeTypeBase>(diSubprogramType));
         llvm::DISubroutineType *diSubprogramType_n =
             llvm::cast<llvm::DISubroutineType>(getDICompositeType(diSubprogramType));
         int flags = llvm::DINode::FlagPrototyped;
+#else /* LLVM 3.8+ */
+        Assert(llvm::isa<llvm::DICompositeType>(diSubprogramType));
+        llvm::DICompositeType *C = llvm::dyn_cast_or_null<llvm::DICompositeType>(diSubprogramType);
+        if (!C){
+            llvm::DITypeIdentifierMap EmptyMap;
+            C = llvm::dyn_cast_or_null<llvm::DICompositeType>(llvm::dyn_cast_or_null<llvm::DIDerivedType>(diSubprogramType)->getBaseType().resolve(EmptyMap));
+        }   //restored function getDICompositeType() from 3.7 which absents in 3.8
+        llvm::DISubroutineType *diSubprogramType_n =
+            llvm::cast<llvm::DISubroutineType>(C);
+        int flags = llvm::DINode::FlagPrototyped;
+
 #endif
 
         std::string mangledName = llvmFunction->getName();

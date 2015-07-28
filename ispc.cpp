@@ -1044,7 +1044,9 @@ Target::Target(const char *arch, const char *cpu, const char *isa, bool pic, boo
         std::string dl_string;
 #if ISPC_LLVM_VERSION == ISPC_LLVM_3_6
         dl_string = m_targetMachine->getSubtargetImpl()->getDataLayout()->getStringRepresentation();
-#else // LLVM 3.5- or LLVM 3.7+
+#elif ISPC_LLVM_VERSION >= ISPC_LLVM_3_8 // LLVM 3.8+
+        dl_string = m_targetMachine->createDataLayout().getStringRepresentation();
+#else // LLVM 3.5- or LLVM 3.7
         dl_string = m_targetMachine->getDataLayout()->getStringRepresentation();
 #endif
         // 2. Adjust for generic
