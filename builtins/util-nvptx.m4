@@ -2288,7 +2288,7 @@ m4exit(`1')
 
 declare float @sinf(float) nounwind readnone
 declare float @cosf(float) nounwind readnone
-declare void @sincosf(float, float *, float *) nounwind readnone
+declare void @sincosf(float, float *, float *) nounwind 
 declare float @asinf(float) nounwind readnone
 declare float @acosf(float) nounwind readnone
 declare float @tanf(float) nounwind readnone
@@ -2308,7 +2308,7 @@ define float @__stdlib_cosf(float) nounwind readnone alwaysinline {
   ret float %r
 }
 
-define void @__stdlib_sincosf(float, float *, float *) nounwind readnone alwaysinline {
+define void @__stdlib_sincosf(float, float *, float *) nounwind alwaysinline {
   call void @sincosf(float %0, float *%1, float *%2)
   ret void
 }
@@ -2356,7 +2356,7 @@ define float @__stdlib_powf(float, float) nounwind readnone alwaysinline {
 declare double @sin(double) nounwind readnone
 declare double @asin(double) nounwind readnone
 declare double @cos(double) nounwind readnone
-declare void @sincos(double, double *, double *) nounwind readnone
+declare void @sincos(double, double *, double *) nounwind 
 declare double @tan(double) nounwind readnone
 declare double @atan(double) nounwind readnone
 declare double @atan2(double, double) nounwind readnone
@@ -2379,7 +2379,7 @@ define double @__stdlib_cos(double) nounwind readnone alwaysinline {
   ret double %r
 }
 
-define void @__stdlib_sincos(double, double *, double *) nounwind readnone alwaysinline {
+define void @__stdlib_sincos(double, double *, double *) nounwind alwaysinline {
   call void @sincos(double %0, double *%1, double *%2)
   ret void
 }

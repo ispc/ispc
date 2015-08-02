@@ -40,7 +40,7 @@ define(`svml_stubs',`
   declare <$3 x $1> @__svml_sin$2(<$3 x $1>) nounwind readnone alwaysinline
   declare <$3 x $1> @__svml_asin$2(<$3 x $1>) nounwind readnone alwaysinline 
   declare <$3 x $1> @__svml_cos$2(<$3 x $1>) nounwind readnone alwaysinline 
-  declare void @__svml_sincos$2(<$3 x $1>, <$3 x $1> *, <$3 x $1> *) nounwind readnone alwaysinline 
+  declare void @__svml_sincos$2(<$3 x $1>, <$3 x $1> *, <$3 x $1> *) nounwind alwaysinline 
   declare <$3 x $1> @__svml_tan$2(<$3 x $1>) nounwind readnone alwaysinline 
   declare <$3 x $1> @__svml_atan$2(<$3 x $1>) nounwind readnone alwaysinline 
   declare <$3 x $1> @__svml_atan2$2(<$3 x $1>, <$3 x $1>) nounwind readnone alwaysinline 
@@ -90,7 +90,7 @@ define(`svml_define',`
     ret <$3 x $1> %ret
   }
 
-  define void @__svml_sincos$4(<$3 x $1>, <$3 x $1> *, <$3 x $1> *) nounwind readnone alwaysinline {
+  define void @__svml_sincos$4(<$3 x $1>, <$3 x $1> *, <$3 x $1> *) nounwind alwaysinline {
     %s = call <$3 x $1> @__svml_sincos$2(<$3 x $1> * %2, <$3 x $1> %0)
     store <$3 x $1> %s, <$3 x $1> * %1
     ret void
@@ -140,7 +140,7 @@ define(`svml_define',`
 
 ;; *todo*: in sincos call use __svml_sincos[f][2,4,8,16] call, e.g.
 ;;define void @__svml_sincosf(<8 x float>, <8 x float> *,
-;;                                    <8 x float> *) nounwind readnone alwaysinline {
+;;                                    <8 x float> *) nounwind alwaysinline {
 ;;  ; call svml_sincosf4 two times with the two 4-wide sub-vectors
 ;;  %a = shufflevector <8 x float> %0, <8 x float> undef,
 ;;         <4 x i32> <i32 0, i32 1, i32 2, i32 3>
@@ -180,7 +180,7 @@ define(`svml_define_x',`
     unary$3to$5(ret, $1, @__svml_cos$2, %0)
     ret <$5 x $1> %ret
   }
-  define void @__svml_sincos$4(<$5 x $1>,<$5 x $1>*,<$5 x $1>*) nounwind readnone alwaysinline 
+  define void @__svml_sincos$4(<$5 x $1>,<$5 x $1>*,<$5 x $1>*) nounwind alwaysinline 
   {
     %s = call <$5 x $1> @__svml_sin$4(<$5 x $1> %0)
     %c = call <$5 x $1> @__svml_cos$4(<$5 x $1> %0)
