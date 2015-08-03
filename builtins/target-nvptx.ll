@@ -2364,8 +2364,8 @@ transcendentals1(__nv_acos,  double, __acos)
 transcendentals1(__nv_atan,  double, __atan)
 transcendentals2(__nv_atan2, double, __atan2)
 
-declare void @__sincos_uniform_float(float, float*, float*) nounwind readnone
-declare void @__sincos_varying_float(<WIDTH x float>, <WIDTH x float>*, <WIDTH x float>*) nounwind readnone
-declare void @__sincos_uniform_double(double, double*, double*) nounwind readnone
-declare void @__sincos_varying_double(<WIDTH x double>, <WIDTH x double>*, <WIDTH x double>*) nounwind readnone
+declare void @__sincos_uniform_float(float, float*, float*) nounwind 
+declare void @__sincos_varying_float(<WIDTH x float>, <WIDTH x float>*, <WIDTH x float>*) nounwind 
+declare void @__sincos_uniform_double(double, double*, double*) nounwind 
+declare void @__sincos_varying_double(<WIDTH x double>, <WIDTH x double>*, <WIDTH x double>*) nounwind 
 

@@ -3719,7 +3719,7 @@ define i64 @__clock() nounwind {
 
 declare float @sinf(float) nounwind readnone
 declare float @cosf(float) nounwind readnone
-declare void @sincosf(float, float *, float *) nounwind readnone
+declare void @sincosf(float, float *, float *) nounwind 
 declare float @asinf(float) nounwind readnone
 declare float @acosf(float) nounwind readnone
 declare float @tanf(float) nounwind readnone
@@ -3739,7 +3739,7 @@ define float @__stdlib_cosf(float) nounwind readnone alwaysinline {
   ret float %r
 }
 
-define void @__stdlib_sincosf(float, float *, float *) nounwind readnone alwaysinline {
+define void @__stdlib_sincosf(float, float *, float *) nounwind alwaysinline {
   call void @sincosf(float %0, float *%1, float *%2)
   ret void
 }
@@ -3787,7 +3787,7 @@ define float @__stdlib_powf(float, float) nounwind readnone alwaysinline {
 declare double @sin(double) nounwind readnone
 declare double @asin(double) nounwind readnone
 declare double @cos(double) nounwind readnone
-declare void @sincos(double, double *, double *) nounwind readnone
+declare void @sincos(double, double *, double *) nounwind 
 declare double @tan(double) nounwind readnone
 declare double @atan(double) nounwind readnone
 declare double @atan2(double, double) nounwind readnone
@@ -3810,7 +3810,7 @@ define double @__stdlib_cos(double) nounwind readnone alwaysinline {
   ret double %r
 }
 
-define void @__stdlib_sincos(double, double *, double *) nounwind readnone alwaysinline {
+define void @__stdlib_sincos(double, double *, double *) nounwind alwaysinline {
   call void @sincos(double %0, double *%1, double *%2)
   ret void
 }
@@ -5103,7 +5103,7 @@ define(`trigonometry_decl',`
     declare <WIDTH x float> @__asin_varying_float(<WIDTH x float>) nounwind readnone
     declare <WIDTH x float> @__cos_varying_float(<WIDTH x float>) nounwind readnone
     declare <WIDTH x float> @__acos_varying_float(<WIDTH x float>) nounwind readnone
-    declare void @__sincos_varying_float(<WIDTH x float>, <WIDTH x float>*, <WIDTH x float>*) nounwind readnone
+    declare void @__sincos_varying_float(<WIDTH x float>, <WIDTH x float>*, <WIDTH x float>*) nounwind 
     declare <WIDTH x float> @__tan_varying_float(<WIDTH x float>) nounwind readnone
     declare <WIDTH x float> @__atan_varying_float(<WIDTH x float>) nounwind readnone
     declare <WIDTH x float> @__atan2_varying_float(<WIDTH x float>,<WIDTH x float>) nounwind readnone
@@ -5112,7 +5112,7 @@ define(`trigonometry_decl',`
     declare float @__asin_uniform_float(float) nounwind readnone
     declare float @__cos_uniform_float(float) nounwind readnone
     declare float @__acos_uniform_float(float) nounwind readnone
-    declare void @__sincos_uniform_float(float, float*, float*) nounwind readnone
+    declare void @__sincos_uniform_float(float, float*, float*) nounwind 
     declare float @__tan_uniform_float(float) nounwind readnone
     declare float @__atan_uniform_float(float) nounwind readnone
     declare float @__atan2_uniform_float(float,float) nounwind readnone
@@ -5121,7 +5121,7 @@ define(`trigonometry_decl',`
     declare <WIDTH x double> @__asin_varying_double(<WIDTH x double>) nounwind readnone
     declare <WIDTH x double> @__cos_varying_double(<WIDTH x double>) nounwind readnone
     declare <WIDTH x double> @__acos_varying_double(<WIDTH x double>) nounwind readnone
-    declare void @__sincos_varying_double(<WIDTH x double>, <WIDTH x double>*, <WIDTH x double>*) nounwind readnone
+    declare void @__sincos_varying_double(<WIDTH x double>, <WIDTH x double>*, <WIDTH x double>*) nounwind 
     declare <WIDTH x double> @__tan_varying_double(<WIDTH x double>) nounwind readnone
     declare <WIDTH x double> @__atan_varying_double(<WIDTH x double>) nounwind readnone
     declare <WIDTH x double> @__atan2_varying_double(<WIDTH x double>,<WIDTH x double>) nounwind readnone
@@ -5130,7 +5130,7 @@ define(`trigonometry_decl',`
     declare double @__asin_uniform_double(double) nounwind readnone
     declare double @__cos_uniform_double(double) nounwind readnone
     declare double @__acos_uniform_double(double) nounwind readnone
-    declare void @__sincos_uniform_double(double, double*, double*) nounwind readnone
+    declare void @__sincos_uniform_double(double, double*, double*) nounwind 
     declare double @__tan_uniform_double(double) nounwind readnone
     declare double @__atan_uniform_double(double) nounwind readnone
     declare double @__atan2_uniform_double(double,double) nounwind readnone
