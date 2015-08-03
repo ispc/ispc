@@ -1773,6 +1773,8 @@ FunctionEmitContext::EmitVariableDebugInfo(Symbol *sym) {
     //llvm::MDType *diType = sym->type->GetDIType(scope);
     //llvm::MDLocalVariable *var =
 #endif
+
+#if ISPC_LLVM_VERSION <= ISPC_LLVM_3_7 /* 3.2, 3.3, 3.4, 3.5, 3.6, 3.7*/
         m->diBuilder->createLocalVariable(llvm::dwarf::DW_TAG_auto_variable,
                                           scope,
                                           sym->name,
@@ -1780,6 +1782,16 @@ FunctionEmitContext::EmitVariableDebugInfo(Symbol *sym) {
                                           sym->pos.first_line,
                                           diType,
                                           true /* preserve through opts */);
+#else /* LLVM 3.8+ */
+         m->diBuilder->createAutoVariable(scope,
+                                          sym->name,
+                                          sym->pos.GetDIFile(),
+                                          sym->pos.first_line,
+                                          diType,
+                                          true /* preserve through opts */);
+#endif
+
+
 #if ISPC_LLVM_VERSION <= ISPC_LLVM_3_6 /* 3.2, 3.3, 3.4, 3.5, 3.6 */
     AssertPos(currentPos, var.Verify());
     llvm::Instruction *declareInst =
@@ -1820,6 +1832,8 @@ FunctionEmitContext::EmitFunctionParameterDebugInfo(Symbol *sym, int argNum) {
     //llvm::MDType *diType = sym->type->GetDIType(scope);
     //llvm::MDLocalVariable *var =
 #endif
+
+#if ISPC_LLVM_VERSION <= ISPC_LLVM_3_7 /* 3.2, 3.3, 3.4, 3.5, 3.6, 3.7 */
         m->diBuilder->createLocalVariable(llvm::dwarf::DW_TAG_arg_variable,
                                           scope,
                                           sym->name,
@@ -1829,6 +1843,17 @@ FunctionEmitContext::EmitFunctionParameterDebugInfo(Symbol *sym, int argNum) {
                                           true /* preserve through opts */,
                                           flags,
                                           argNum + 1);
+#else /* LLVM 3.8+ */
+        m->diBuilder->createParameterVariable(scope,
+                                          sym->name,
+                                          argNum + 1,
+                                          sym->pos.GetDIFile(),
+                                          sym->pos.first_line,
+                                          diType,
+                                          true /* preserve through opts */,
+                                          flags);
+#endif
+
 #if ISPC_LLVM_VERSION <= ISPC_LLVM_3_6 /* 3.2, 3.3, 3.4, 3.5, 3.6 */
     AssertPos(currentPos, var.Verify());
     llvm::Instruction *declareInst =
