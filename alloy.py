@@ -125,7 +125,7 @@ def build_LLVM(version_LLVM, revision, folder, tarball, debug, selfbuild, extra,
     if  version_LLVM == "trunk":
         SVN_PATH="trunk"
     if  version_LLVM == "3.7":
-        SVN_PATH="branches/release_37"
+        SVN_PATH="tags/RELEASE_370/rc2"
         version_LLVM = "3_7"
     if  version_LLVM == "3.6":
         SVN_PATH="tags/RELEASE_362/final"
@@ -671,6 +671,10 @@ def validation_run(only, only_targets, reference_branch, number, notify, update,
                 if (stability.target in unsupported_llvm_targets(LLVM[i])):
                     print_debug("Warning: target " + stability.target + " is not supported in LLVM " + LLVM[i] + "\n", False, stability_log)
                     continue
+                # *always* specify default values for global variables on each loop iteration
+                stability.wrapexe = ""
+                stability.compiler_exe = None
+
                 if ("knc-generic" in stability.target) or ("knl-generic" in stability.target):
                     stability.compiler_exe = "icpc"
                 stability.wrapexe = get_sde() + " " + sde_targets[j][0] + " -- "
