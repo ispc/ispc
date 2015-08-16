@@ -110,6 +110,7 @@
 #include <llvm/Target/TargetMachine.h>
 #if ISPC_LLVM_VERSION >= ISPC_LLVM_3_8 // LLVM 3.8+
   #include <llvm/Analysis/BasicAliasAnalysis.h>
+  #include "llvm/Analysis/TypeBasedAliasAnalysis.h"
 #endif
 #include <llvm/Analysis/Passes.h>
 #include <llvm/Support/raw_ostream.h>
