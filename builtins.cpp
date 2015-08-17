@@ -1332,6 +1332,7 @@ DefineStdlib(SymbolTable *symbolTable, llvm::LLVMContext *ctx, llvm::Module *mod
         }
         break;
     }
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_3_7 // LLVM 3.7+
     case Target::KNL_AVX512: {
         switch (g->target->getVectorWidth()) {
         case 16:
@@ -1347,6 +1348,7 @@ DefineStdlib(SymbolTable *symbolTable, llvm::LLVMContext *ctx, llvm::Module *mod
         }
         break;
     }
+#endif
     case Target::GENERIC: {
         switch (g->target->getVectorWidth()) {
         case 4:
