@@ -30,5 +30,13 @@
 ;;   SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.  
 
 define(`WIDTH',`16')
-include(`target-avx512-common.ll')
+
+
+ifelse(LLVM_VERSION, LLVM_3_7,
+    `include(`target-avx512-common.ll')',
+         LLVM_VERSION, LLVM_3_8,
+    `include(`target-avx512-common.ll')'
+  )
+
+
 ;;saturation_arithmetic_novec()
