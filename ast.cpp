@@ -420,6 +420,13 @@ lCheckAllOffSafety(ASTNode *node, void *data) {
         return false;
     }
 
+    if (llvm::dyn_cast<BinaryExpr>(node) != NULL) {
+        BinaryExpr* binaryExpr = llvm::dyn_cast<BinaryExpr>(node);
+        if (binaryExpr->op == BinaryExpr::Mod || binaryExpr->op == BinaryExpr::Div) {
+            *okPtr = false;
+            return false;
+        }
+    }
     IndexExpr *ie;
     if ((ie = llvm::dyn_cast<IndexExpr>(node)) != NULL && ie->baseExpr != NULL) {
         const Type *type = ie->baseExpr->GetType();
