@@ -585,7 +585,9 @@ Optimize(llvm::Module *module, int optLevel) {
         llvm::initializeScalarOpts(*registry);
         llvm::initializeIPO(*registry);
         llvm::initializeAnalysis(*registry);
+#if ISPC_LLVM_VERSION <= ISPC_LLVM_3_7
         llvm::initializeIPA(*registry);
+#endif
         llvm::initializeTransformUtils(*registry);
         llvm::initializeInstCombine(*registry);
         llvm::initializeInstrumentation(*registry);
