@@ -102,6 +102,7 @@ usage(int ret) {
     printf("    [-h <name>/--header-outfile=<name>]\tOutput filename for header\n");
     printf("    [-I <path>]\t\t\t\tAdd <path> to #include file search path\n");
     printf("    [--instrument]\t\t\tEmit instrumentation to gather performance data\n");
+    printf("    [--safe-mask-div]\t\t\tDivision operations with partial mask will be safe, may cause a performance reduction \n");
     printf("    [--math-lib=<option>]\t\tSelect math library\n");
     printf("        default\t\t\t\tUse ispc's built-in math functions\n");
     printf("        fast\t\t\t\tUse high-performance but lower-accuracy math functions\n");
@@ -376,6 +377,8 @@ int main(int Argc, char *Argv[]) {
             g->printTarget = true;
         else if (!strcmp(argv[i], "--instrument"))
             g->emitInstrumentation = true;
+        else if (!strcmp(argv[i], "--safe-mask-div"))
+            g->safeMaskDivision = true;
         else if (!strcmp(argv[i], "-g")) {
             g->generateDebuggingSymbols = true;
         }

@@ -1451,6 +1451,7 @@ Globals::Globals() {
     enableFuzzTest = false;
     fuzzTestSeed = -1;
     mangleFunctionsWithTarget = false;
+    safeMaskDivision = false;
 
     ctx = new llvm::LLVMContext;
 

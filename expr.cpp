@@ -1584,6 +1584,16 @@ lEmitBinaryArith(BinaryExpr::Op op, llvm::Value *value0, llvm::Value *value1,
             if (type0->IsVaryingType() && !isFloatOp)
                 PerformanceWarning(pos, "Division with varying integer types is "
                                    "very inefficient.");
+            //We don't want to div by zero when we caclulate varying values.
+            //For this reason we put values of One at the places where the calculated value is not important according to
+            //internal mask:
+            if (g->safeMaskDivision && type1->IsVaryingType()) {
+                llvm::Value* internalMask = ctx->GetInternalMask();
+                llvm::Value* ptrForOnesValue = ctx->AllocaInst(value1->getType());
+                ctx->StoreInst(llvm::Constant::getAllOnesValue(type1->LLVMType(g->ctx)), ptrForOnesValue);
+                ctx->StoreInst(value1, ptrForOnesValue, internalMask, type1, PointerType::GetUniform(type1) );
+                value1 = ctx->LoadInst(ptrForOnesValue);
+            }
             inst = isFloatOp ? llvm::Instruction::FDiv :
                 (isUnsignedOp ? llvm::Instruction::UDiv : llvm::Instruction::SDiv);
             break;
@@ -1592,6 +1602,14 @@ lEmitBinaryArith(BinaryExpr::Op op, llvm::Value *value0, llvm::Value *value1,
             if (type0->IsVaryingType() && !isFloatOp)
                 PerformanceWarning(pos, "Modulus operator with varying types is "
                                    "very inefficient.");
+            //The same reason as in the case of division.
+            if (g->safeMaskDivision && type1->IsVaryingType()) {
+                llvm::Value* internalMask = ctx->GetInternalMask();
+                llvm::Value* ptrForOnesValue = ctx->AllocaInst(value1->getType());
+                ctx->StoreInst(llvm::Constant::getAllOnesValue(type1->LLVMType(g->ctx)), ptrForOnesValue);
+                ctx->StoreInst(value1, ptrForOnesValue, internalMask, type1, PointerType::GetUniform(type1) );
+                value1 = ctx->LoadInst(ptrForOnesValue);
+            }
             inst = isFloatOp ? llvm::Instruction::FRem :
                 (isUnsignedOp ? llvm::Instruction::URem : llvm::Instruction::SRem);
             break;

@@ -636,6 +636,11 @@ struct Globals {
 
     /** When true, flag non-static functions with dllexport attribute on Windows. */
     bool dllExport;
+
+    /** If enabled, the division operations with partial mask will be safe.
+        Otherwise, these operations may cause floating point exceptions because of
+        division by zero, in this case mask applies after calculating. */
+    bool safeMaskDivision;
 };
 
 enum {
