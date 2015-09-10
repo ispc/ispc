@@ -604,8 +604,13 @@ Optimize(llvm::Module *module, int optLevel) {
         // so we explicitly enable them here.
         // Need to keep sync with future LLVM change
         // An alternative is to call populateFunctionPassManager()
+#if ISPC_LLVM_VERSION <= ISPC_LLVM_3_7
         optPM.add(llvm::createTypeBasedAliasAnalysisPass(), 190);
         optPM.add(llvm::createBasicAliasAnalysisPass());
+#else
+        optPM.add(llvm::createTypeBasedAAWrapperPass(), 190);
+        optPM.add(llvm::createBasicAAWrapperPass());
+#endif
         optPM.add(llvm::createCFGSimplificationPass());
         // Here clang has an experimental pass SROAPass instead of
         // ScalarReplAggregatesPass. We should add it in the future.
