@@ -1344,10 +1344,7 @@ Target::SizeOf(llvm::Type *type,
                                           "sizeof_int", insertAtEnd);
     }
 
-    uint64_t bitSize = getDataLayout()->getTypeSizeInBits(type);
-
-    Assert((bitSize % 8) == 0);
-    uint64_t byteSize = bitSize / 8;
+    uint64_t byteSize = getDataLayout()->getTypeStoreSize(type);
     if (m_is32Bit || g->opt.force32BitAddressing)
         return LLVMInt32((int32_t)byteSize);
     else
