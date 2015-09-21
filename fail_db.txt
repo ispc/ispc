@@ -163,9 +163,7 @@
 ./tests/masked-scatter-struct.ispc runfail  x86-64      generic-4   Linux LLVM 3.7 clang++3.4 -O2 *
 ./tests/masked-scatter-struct.ispc runfail  x86-64      generic-4   Linux LLVM 3.8 clang++3.4 -O2 *
 ./tests/short-vec-8.ispc compfail  x86-64      generic-4   Linux LLVM 3.7 clang++3.4 -O2 *
-./tests/half-1.ispc runfail  x86-64      generic-4   Linux LLVM 3.7 clang++3.4 -O0 *
 ./tests/short-vec-8.ispc compfail  x86-64      generic-4   Linux LLVM 3.7 clang++3.4 -O0 *
-./tests/half-1.ispc runfail  x86-64     generic-16   Linux LLVM 3.7 clang++3.4 -O0 *
 
 % [AVX-512]: These are yet untracked
 ./tests/reduce-max-int64.ispc compfail     x86 avx512knl-i32x16   Linux LLVM 3.7   icpc15.0 -O0 *
@@ -257,99 +255,31 @@
 ./tests/pmulus_vi64.ispc compfail     x86 avx512knl-i32x16   Linux LLVM 3.8   clang++3.4 -O2 *
 % End of avx-512 untracked
 
-% Tracked in https://llvm.org/bugs/show_bug.cgi?id=24433 (supposedly)
-./tests/scatter-struct-with-array-member.ispc compfail     x86 avx512knl-i32x16   Linux LLVM 3.8   icpc15.0 -O0 *
-./tests/scatter-struct-with-array-member.ispc compfail     x86 avx512knl-i32x16   Linux LLVM 3.8   icpc15.0 -O2 *
-./tests/scatter-struct-with-array-member.ispc compfail     x86-64 avx512knl-i32x16   Linux LLVM 3.8   icpc15.0 -O0 *
-./tests/scatter-struct-with-array-member.ispc compfail     x86-64 avx512knl-i32x16   Linux LLVM 3.8   icpc15.0 -O2 *
-./tests/soa-15.ispc compfail     x86 avx512knl-i32x16   Linux LLVM 3.8   icpc15.0 -O0 *
-./tests/soa-15.ispc compfail     x86 avx512knl-i32x16   Linux LLVM 3.8   icpc15.0 -O2 *
-./tests/soa-15.ispc compfail     x86-64 avx512knl-i32x16   Linux LLVM 3.8   icpc15.0 -O0 *
-./tests/soa-15.ispc compfail     x86-64 avx512knl-i32x16   Linux LLVM 3.8   icpc15.0 -O2 *
-./tests/soa-16.ispc compfail     x86 avx512knl-i32x16   Linux LLVM 3.8   icpc15.0 -O0 *
-./tests/soa-16.ispc compfail     x86 avx512knl-i32x16   Linux LLVM 3.8   icpc15.0 -O2 *
-./tests/soa-16.ispc compfail     x86-64 avx512knl-i32x16   Linux LLVM 3.8   icpc15.0 -O0 *
-./tests/soa-16.ispc compfail     x86-64 avx512knl-i32x16   Linux LLVM 3.8   icpc15.0 -O2 *
-./tests/soa-17.ispc compfail     x86 avx512knl-i32x16   Linux LLVM 3.8   icpc15.0 -O0 *
-./tests/soa-17.ispc compfail     x86 avx512knl-i32x16   Linux LLVM 3.8   icpc15.0 -O2 *
-./tests/soa-17.ispc compfail     x86-64 avx512knl-i32x16   Linux LLVM 3.8   icpc15.0 -O0 *
-./tests/soa-17.ispc compfail     x86-64 avx512knl-i32x16   Linux LLVM 3.8   icpc15.0 -O2 *
-./tests/soa-24.ispc compfail     x86 avx512knl-i32x16   Linux LLVM 3.8   icpc15.0 -O0 *
-./tests/soa-24.ispc compfail     x86 avx512knl-i32x16   Linux LLVM 3.8   icpc15.0 -O2 *
-./tests/soa-24.ispc compfail     x86-64 avx512knl-i32x16   Linux LLVM 3.8   icpc15.0 -O0 *
-./tests/soa-24.ispc compfail     x86-64 avx512knl-i32x16   Linux LLVM 3.8   icpc15.0 -O2 *
-./tests/soa-25.ispc compfail     x86 avx512knl-i32x16   Linux LLVM 3.8   icpc15.0 -O0 *
-./tests/soa-25.ispc compfail     x86 avx512knl-i32x16   Linux LLVM 3.8   icpc15.0 -O2 *
-./tests/soa-25.ispc compfail     x86-64 avx512knl-i32x16   Linux LLVM 3.8   icpc15.0 -O0 *
-./tests/soa-25.ispc compfail     x86-64 avx512knl-i32x16   Linux LLVM 3.8   icpc15.0 -O2 *
-./tests/test-57.ispc compfail     x86 avx512knl-i32x16   Linux LLVM 3.8   icpc15.0 -O0 *
-./tests/test-57.ispc compfail     x86 avx512knl-i32x16   Linux LLVM 3.8   icpc15.0 -O2 *
-./tests/test-57.ispc compfail     x86-64 avx512knl-i32x16   Linux LLVM 3.8   icpc15.0 -O0 *
-./tests/test-57.ispc compfail     x86-64 avx512knl-i32x16   Linux LLVM 3.8   icpc15.0 -O2 *
-
-./tests/scatter-struct-with-array-member.ispc compfail     x86 avx512knl-i32x16   Linux LLVM 3.8   clang++3.4 -O0 *
-./tests/scatter-struct-with-array-member.ispc compfail     x86 avx512knl-i32x16   Linux LLVM 3.8   clang++3.4 -O2 *
-./tests/scatter-struct-with-array-member.ispc compfail     x86-64 avx512knl-i32x16   Linux LLVM 3.8   clang++3.4 -O0 *
-./tests/scatter-struct-with-array-member.ispc compfail     x86-64 avx512knl-i32x16   Linux LLVM 3.8   clang++3.4 -O2 *
-./tests/soa-15.ispc compfail     x86 avx512knl-i32x16   Linux LLVM 3.8   clang++3.4 -O0 *
-./tests/soa-15.ispc compfail     x86 avx512knl-i32x16   Linux LLVM 3.8   clang++3.4 -O2 *
-./tests/soa-15.ispc compfail     x86-64 avx512knl-i32x16   Linux LLVM 3.8   clang++3.4 -O0 *
-./tests/soa-15.ispc compfail     x86-64 avx512knl-i32x16   Linux LLVM 3.8   clang++3.4 -O2 *
-./tests/soa-16.ispc compfail     x86 avx512knl-i32x16   Linux LLVM 3.8   clang++3.4 -O0 *
-./tests/soa-16.ispc compfail     x86 avx512knl-i32x16   Linux LLVM 3.8   clang++3.4 -O2 *
-./tests/soa-16.ispc compfail     x86-64 avx512knl-i32x16   Linux LLVM 3.8   clang++3.4 -O0 *
-./tests/soa-16.ispc compfail     x86-64 avx512knl-i32x16   Linux LLVM 3.8   clang++3.4 -O2 *
-./tests/soa-17.ispc compfail     x86 avx512knl-i32x16   Linux LLVM 3.8   clang++3.4 -O0 *
-./tests/soa-17.ispc compfail     x86 avx512knl-i32x16   Linux LLVM 3.8   clang++3.4 -O2 *
-./tests/soa-17.ispc compfail     x86-64 avx512knl-i32x16   Linux LLVM 3.8   clang++3.4 -O0 *
-./tests/soa-17.ispc compfail     x86-64 avx512knl-i32x16   Linux LLVM 3.8   clang++3.4 -O2 *
-./tests/soa-24.ispc compfail     x86 avx512knl-i32x16   Linux LLVM 3.8   clang++3.4 -O0 *
-./tests/soa-24.ispc compfail     x86 avx512knl-i32x16   Linux LLVM 3.8   clang++3.4 -O2 *
-./tests/soa-24.ispc compfail     x86-64 avx512knl-i32x16   Linux LLVM 3.8   clang++3.4 -O0 *
-./tests/soa-24.ispc compfail     x86-64 avx512knl-i32x16   Linux LLVM 3.8   clang++3.4 -O2 *
-./tests/soa-25.ispc compfail     x86 avx512knl-i32x16   Linux LLVM 3.8   clang++3.4 -O0 *
-./tests/soa-25.ispc compfail     x86 avx512knl-i32x16   Linux LLVM 3.8   clang++3.4 -O2 *
-./tests/soa-25.ispc compfail     x86-64 avx512knl-i32x16   Linux LLVM 3.8   clang++3.4 -O0 *
-./tests/soa-25.ispc compfail     x86-64 avx512knl-i32x16   Linux LLVM 3.8   clang++3.4 -O2 *
-./tests/test-57.ispc compfail     x86 avx512knl-i32x16   Linux LLVM 3.8   clang++3.4 -O0 *
-./tests/test-57.ispc compfail     x86 avx512knl-i32x16   Linux LLVM 3.8   clang++3.4 -O2 *
-./tests/test-57.ispc compfail     x86-64 avx512knl-i32x16   Linux LLVM 3.8   clang++3.4 -O0 *
-./tests/test-57.ispc compfail     x86-64 avx512knl-i32x16   Linux LLVM 3.8   clang++3.4 -O2 *
-% End of tracked in https://llvm.org/bugs/show_bug.cgi?id=24433
-
 % Tracked in https://llvm.org/bugs/show_bug.cgi?id=23484 (anonymous namespace bug)
 ./tests/pointer-decl-craziness-1.ispc compfail     x86-64      generic-4   Linux LLVM 3.4 clang++3.4 -O0 *
 ./tests/pointer-decl-craziness-1.ispc compfail     x86-64      generic-4   Linux LLVM 3.4 clang++3.4 -O2 *
 ./tests/pointer-decl-craziness-1.ispc compfail     x86-64     generic-16   Linux LLVM 3.4 clang++3.4 -O0 *
-./tests/pointer-decl-craziness-1.ispc compfail     x86-64     generic-16   Linux LLVM 3.4 clang++3.4 -O2 *
 ./tests/pointer-decl-craziness-3.ispc compfail     x86-64      generic-4   Linux LLVM 3.4 clang++3.4 -O0 *
 ./tests/pointer-decl-craziness-3.ispc compfail     x86-64      generic-4   Linux LLVM 3.4 clang++3.4 -O2 *
 ./tests/pointer-decl-craziness-3.ispc compfail     x86-64     generic-16   Linux LLVM 3.4 clang++3.4 -O0 *
-./tests/pointer-decl-craziness-3.ispc compfail     x86-64     generic-16   Linux LLVM 3.4 clang++3.4 -O2 *
 ./tests/pointer-decl-craziness.ispc compfail     x86-64      generic-4   Linux LLVM 3.4 clang++3.4 -O0 *
 ./tests/pointer-decl-craziness.ispc compfail     x86-64      generic-4   Linux LLVM 3.4 clang++3.4 -O2 *
 ./tests/pointer-decl-craziness.ispc compfail     x86-64     generic-16   Linux LLVM 3.4 clang++3.4 -O0 *
-./tests/pointer-decl-craziness.ispc compfail     x86-64     generic-16   Linux LLVM 3.4 clang++3.4 -O2 *
 ./tests/ptr-23.ispc compfail     x86-64      generic-4   Linux LLVM 3.4 clang++3.4 -O0 *
 ./tests/ptr-23.ispc compfail     x86-64      generic-4   Linux LLVM 3.4 clang++3.4 -O2 *
 ./tests/ptr-23.ispc compfail     x86-64     generic-16   Linux LLVM 3.4 clang++3.4 -O0 *
-./tests/ptr-23.ispc compfail     x86-64     generic-16   Linux LLVM 3.4 clang++3.4 -O2 *
 ./tests/ref-6.ispc compfail     x86-64      generic-4   Linux LLVM 3.4 clang++3.4 -O0 *
 ./tests/ref-6.ispc compfail     x86-64      generic-4   Linux LLVM 3.4 clang++3.4 -O2 *
 ./tests/ref-6.ispc compfail     x86-64     generic-16   Linux LLVM 3.4 clang++3.4 -O0 *
-./tests/ref-6.ispc compfail     x86-64     generic-16   Linux LLVM 3.4 clang++3.4 -O2 *
 ./tests/scatter-vector.ispc compfail     x86-64      generic-4   Linux LLVM 3.4 clang++3.4 -O0 *
 ./tests/scatter-vector.ispc compfail     x86-64      generic-4   Linux LLVM 3.4 clang++3.4 -O2 *
 ./tests/scatter-vector.ispc compfail     x86-64     generic-16   Linux LLVM 3.4 clang++3.4 -O0 *
-./tests/scatter-vector.ispc compfail     x86-64     generic-16   Linux LLVM 3.4 clang++3.4 -O2 *
 ./tests/short-vec-6.ispc compfail     x86-64      generic-4   Linux LLVM 3.4 clang++3.4 -O0 *
 ./tests/short-vec-6.ispc compfail     x86-64      generic-4   Linux LLVM 3.4 clang++3.4 -O2 *
 ./tests/short-vec-6.ispc compfail     x86-64     generic-16   Linux LLVM 3.4 clang++3.4 -O0 *
-./tests/short-vec-6.ispc compfail     x86-64     generic-16   Linux LLVM 3.4 clang++3.4 -O2 *
 ./tests/short-vec-7.ispc compfail     x86-64      generic-4   Linux LLVM 3.4 clang++3.4 -O0 *
 ./tests/short-vec-7.ispc compfail     x86-64      generic-4   Linux LLVM 3.4 clang++3.4 -O2 *
 ./tests/short-vec-7.ispc compfail     x86-64     generic-16   Linux LLVM 3.4 clang++3.4 -O0 *
-./tests/short-vec-7.ispc compfail     x86-64     generic-16   Linux LLVM 3.4 clang++3.4 -O2 *
 ./tests/pointer-decl-craziness-1.ispc compfail     x86-64      generic-4   Linux LLVM 3.5 clang++3.4 -O0 *
 ./tests/pointer-decl-craziness-1.ispc compfail     x86-64      generic-4   Linux LLVM 3.5 clang++3.4 -O2 *
 ./tests/pointer-decl-craziness-1.ispc compfail     x86-64     generic-16   Linux LLVM 3.5 clang++3.4 -O0 *
