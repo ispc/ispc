@@ -4185,28 +4185,30 @@ void CWriter::visitCallInst(llvm::CallInst &I) {
     if (Callee->getName() == "malloc" ||
         Callee->getName() == "_aligned_malloc")
         Out << "(uint8_t *)";
+  
+    // This 'if' will fix 'soa-18.ispc' test (fails with optimizations off)
+    // Yet the way the case is fixed is quite dirty and leads to many other fails
 
-    if (Callee->getName() == "__masked_store_i64") {
-        llvm::CallSite CS(&I);
-        llvm::CallSite::arg_iterator AI = CS.arg_begin();
-
-        if (is_vec16_i64_ty(llvm::cast<llvm::PointerType>((*AI)->getType())->getElementType())) {
-            Out << "/* Replacing store of vec16_i64 val into &vec16_i64 pointer with a simple copy */\n";
-            // If we are trying to get a pointer to from a vec16_i64 var
-            // It would be better to replace this instruction with a masked copy
-            if (llvm::isa<llvm::GetElementPtrInst>(*AI)) {
-                writeOperandDeref(*AI);
-                Out << " = __select(";
-                writeOperand(*(AI+2));
-                Out << ", ";
-                writeOperand(*(AI+1));
-                Out << ", ";
-                writeOperandDeref(*AI);
-                Out << ")";
-                return;
-            }
-        }
-    }
+    //if (Callee->getName() == "__masked_store_i64") {
+    //    llvm::CallSite CS(&I);
+    //    llvm::CallSite::arg_iterator AI = CS.arg_begin();
+    //    if (is_vec16_i64_ty(llvm::cast<llvm::PointerType>((*AI)->getType())->getElementType())) {
+    //        Out << "/* Replacing store of vec16_i64 val into &vec16_i64 pointer with a simple copy */\n";
+    //        // If we are trying to get a pointer to from a vec16_i64 var
+    //        // It would be better to replace this instruction with a masked copy
+    //        if (llvm::isa<llvm::GetElementPtrInst>(*AI)) {
+    //            writeOperandDeref(*AI);
+    //            Out << " = __select(";
+    //            writeOperand(*(AI+2));
+    //            Out << ", ";
+    //            writeOperand(*(AI+1));
+    //            Out << ", ";
+    //            writeOperandDeref(*AI);
+    //            Out << ")";
+    //            return;
+    //        }
+    //    }
+    //}
 
     if (NeedsCast) {
       // Ok, just cast the pointer type.
