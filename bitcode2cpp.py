@@ -1,7 +1,6 @@
 #!/usr/bin/python
 
 import sys
-import string
 import re
 import subprocess
 import platform
@@ -22,7 +21,7 @@ target = re.sub("\.c$", "", target)
 target = re.sub("-", "_", target)
 
 llvm_as="llvm-as"
-if platform.system() == 'Windows' or string.find(platform.system(), "CYGWIN_NT") != -1:
+if platform.system() == 'Windows' or platform.system().find("CYGWIN_NT") != -1:
     llvm_as = os.getenv("LLVM_INSTALL_DIR").replace("\\", "/") + "/bin/" + llvm_as
 
 try:
