@@ -3158,11 +3158,16 @@ llvm::DIType *FunctionType::GetDIType(llvm::DIScope *scope) const {
     llvm::DIType diType =
         // FIXME: DIFile
         m->diBuilder->createSubroutineType(llvm::DIFile(), retArgTypesArray);
-#else // LLVM 3.7+
+#elif ISPC_LLVM_VERSION == ISPC_LLVM_3_7 // LLVM 3.7
     llvm::DITypeRefArray retArgTypesArray =
         m->diBuilder->getOrCreateTypeArray(retArgTypes);
     llvm::DIType *diType =
         m->diBuilder->createSubroutineType(NULL, retArgTypesArray);
+#else // LLVM 3.8+
+    llvm::DITypeRefArray retArgTypesArray =
+        m->diBuilder->getOrCreateTypeArray(retArgTypes);
+    llvm::DIType *diType =
+        m->diBuilder->createSubroutineType(retArgTypesArray);
 #endif
     return diType;
 }
