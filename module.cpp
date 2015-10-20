@@ -2879,6 +2879,11 @@ lCreateDispatchFunction(llvm::Module *module, llvm::Function *setISAFunc,
 static llvm::Module *lInitDispatchModule() {
     llvm::Module *module = new llvm::Module("dispatch_module", *g->ctx);
 
+    module->setTargetTriple(g->target->GetTripleString());
+
+    // DataLayout information supposed to be managed in single place in Target class.
+    module->setDataLayout(g->target->getDataLayout()->getStringRepresentation());
+
     // First, link in the definitions from the builtins-dispatch.ll file.
     extern unsigned char builtins_bitcode_dispatch[];
     extern int builtins_bitcode_dispatch_length;
