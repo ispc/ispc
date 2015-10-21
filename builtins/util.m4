@@ -60,6 +60,23 @@ define(`PTR_OP_ARGS',
   )
 )
 
+;; x86 mask load/stores have different mask type since 3.8
+
+define(`MdORi64',
+  ifelse(LLVM_VERSION, LLVM_3_8,
+    ``i64'',
+    ``double''
+  )
+)
+
+define(`MfORi32',
+  ifelse(LLVM_VERSION, LLVM_3_8,
+    ``i32'',
+    ``float''
+  )
+)
+
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ;; vector convertation utilities
