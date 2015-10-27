@@ -1261,7 +1261,7 @@ ForStmt::EmitCode(FunctionEmitContext *ctx) const {
     ctx->SetCurrentBasicBlock(bloop);
     ctx->SetBlockEntryMask(ctx->GetFullMask());
     ctx->AddInstrumentationPoint("for loop body");
-    if (!llvm::dyn_cast<StmtList>(stmts))
+    if (!llvm::dyn_cast_or_null<StmtList>(stmts))
         ctx->StartScope();
 
     if (doCoherentCheck && !uniformTest) {
@@ -1306,7 +1306,7 @@ ForStmt::EmitCode(FunctionEmitContext *ctx) const {
         if (ctx->GetCurrentBasicBlock())
             ctx->BranchInst(bstep);
     }
-    if (!llvm::dyn_cast<StmtList>(stmts))
+    if (!llvm::dyn_cast_or_null<StmtList>(stmts))
         ctx->EndScope();
 
     // Emit code for the loop step.  First, restore the lane mask of any
