@@ -612,9 +612,7 @@ Optimize(llvm::Module *module, int optLevel) {
         optPM.add(llvm::createBasicAAWrapperPass());
 #endif
         optPM.add(llvm::createCFGSimplificationPass());
-        // Here clang has an experimental pass SROAPass instead of
-        // ScalarReplAggregatesPass. We should add it in the future.
-        optPM.add(llvm::createScalarReplAggregatesPass());
+        optPM.add(llvm::createSROAPass());
         optPM.add(llvm::createEarlyCSEPass());
         optPM.add(llvm::createLowerExpectIntrinsicPass());
 
