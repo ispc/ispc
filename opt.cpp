@@ -692,7 +692,7 @@ Optimize(llvm::Module *module, int optLevel) {
         optPM.add(llvm::createScalarReplAggregatesPass(sr_threshold));
 #else
         optPM.add(llvm::createSROAPass());
-#endif        
+#endif
         optPM.add(llvm::createInstructionCombiningPass());
         optPM.add(llvm::createTailCallEliminationPass());
 
@@ -741,10 +741,10 @@ Optimize(llvm::Module *module, int optLevel) {
         optPM.add(llvm::createFunctionInliningPass());
         optPM.add(llvm::createArgumentPromotionPass());
 #if ISPC_LLVM_VERSION <= ISPC_LLVM_3_6
-        optPM.add(llvm::createScalarReplAggregatesPass(sr_threshold));
+        optPM.add(llvm::createScalarReplAggregatesPass(sr_threshold, false));
 #else
         optPM.add(llvm::createSROAPass());
-#endif        
+#endif
         optPM.add(llvm::createInstructionCombiningPass());
         optPM.add(CreateInstructionSimplifyPass());
         optPM.add(llvm::createCFGSimplificationPass());
@@ -799,10 +799,10 @@ Optimize(llvm::Module *module, int optLevel) {
           // Here clang has an experimental pass SROAPass instead of
           // ScalarReplAggregatesPass. We should add it in the future.
 #if ISPC_LLVM_VERSION <= ISPC_LLVM_3_6
-          optPM.add(llvm::createScalarReplAggregatesPass(sr_threshold));
+          optPM.add(llvm::createScalarReplAggregatesPass());
 #else
           optPM.add(llvm::createSROAPass());
-#endif          
+#endif
           optPM.add(llvm::createEarlyCSEPass());
           optPM.add(llvm::createLowerExpectIntrinsicPass());
           optPM.add(llvm::createTypeBasedAliasAnalysisPass());
