@@ -409,7 +409,7 @@ FunctionEmitContext::FunctionEmitContext(Function *func, Symbol *funSym,
                                          firstLine,          flags,
                                          isOptimized,        llvmFunction);
         AssertPos(currentPos, diSubprogram.Verify());
-#else /* LLVM 3.7+ */
+#elif ISPC_LLVM_VERSION == ISPC_LLVM_3_7 /* LLVM 3.7 */
         diSubprogram =
             m->diBuilder->createFunction(diFile /* scope */, funSym->name,
                                          mangledName,        diFile,
@@ -417,6 +417,14 @@ FunctionEmitContext::FunctionEmitContext(Function *func, Symbol *funSym,
                                          isStatic,           true, /* is defn */
                                          firstLine,          flags,
                                          isOptimized,        llvmFunction);
+#else /* LLVM 3.8+ */
+        diSubprogram =
+            m->diBuilder->createFunction(diFile /* scope */, funSym->name,
+                                         mangledName,        diFile,
+                                         firstLine,          diSubprogramType_n,
+                                         isStatic,           true, /* is defn */
+                                         firstLine,          flags,
+                                         isOptimized);
 #endif
 
         /* And start a scope representing the initial function scope */

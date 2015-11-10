@@ -286,7 +286,11 @@ namespace {
 
       for (llvm::Module::const_named_metadata_iterator I = M.named_metadata_begin(),
            E = M.named_metadata_end(); I != E; ++I) {
+#if ISPC_LLVM_VERSION <= ISPC_LLVM_3_7 /* 3.2, 3.3, 3.4, 3.5, 3.6, 3.7 */
         const llvm::NamedMDNode *NMD = I;
+#else /* LLVM 3.8+ */
+        const llvm::NamedMDNode *NMD = &*I;
+#endif
         for (unsigned i = 0, e = NMD->getNumOperands(); i != e; ++i)
           incorporateMDNode(NMD->getOperand(i));
       }
@@ -2403,13 +2407,17 @@ bool CWriter::doInitialization(llvm::Module &M) {
   std::set<llvm::Function*> StaticCtors, StaticDtors;
   for (llvm::Module::global_iterator I = M.global_begin(), E = M.global_end();
        I != E; ++I) {
+#if ISPC_LLVM_VERSION <= ISPC_LLVM_3_7 /* 3.2, 3.3, 3.4, 3.5, 3.6, 3.7 */
     switch (getGlobalVariableClass(I)) {
+#else /* LLVM 3.8+ */
+    switch (getGlobalVariableClass(&*I)) {
+#endif
     default: break;
     case GlobalCtors:
-      FindStaticTors(I, StaticCtors);
+      FindStaticTors(&*I, StaticCtors);
       break;
     case GlobalDtors:
-      FindStaticTors(I, StaticDtors);
+      FindStaticTors(&*I, StaticDtors);
       break;
     }
   }
@@ -2528,7 +2536,7 @@ bool CWriter::doInitialization(llvm::Module &M) {
       if (I->isThreadLocal())
         Out << "__thread ";
 
-      printType(Out, I->getType()->getElementType(), false, GetValueName(I));
+      printType(Out, I->getType()->getElementType(), false, GetValueName(&*I));
 
       if (I->hasExternalWeakLinkage())
          Out << " __EXTERNAL_WEAK__";
@@ -2543,7 +2551,7 @@ bool CWriter::doInitialization(llvm::Module &M) {
          I != E; ++I)
       if (!I->isDeclaration()) {
         // Ignore special globals, such as debug info.
-        if (getGlobalVariableClass(I))
+        if (getGlobalVariableClass(&*I))
           continue;
 
         if (I->hasLocalLinkage())
@@ -2556,7 +2564,7 @@ bool CWriter::doInitialization(llvm::Module &M) {
           Out << "__thread ";
 
         printType(Out, I->getType()->getElementType(), false,
-                  GetValueName(I));
+                  GetValueName(&*I));
 
         if (I->hasLinkOnceLinkage())
           Out << " __attribute__((common))";
@@ -2589,7 +2597,11 @@ bool CWriter::doInitialization(llvm::Module &M) {
         case llvm::Intrinsic::uadd_with_overflow:
         case llvm::Intrinsic::sadd_with_overflow:
         case llvm::Intrinsic::umul_with_overflow:
+#if ISPC_LLVM_VERSION <= ISPC_LLVM_3_7 /* 3.2, 3.3, 3.4, 3.5, 3.6, 3.7 */
           intrinsicsToDefine.push_back(I);
+#else /* LLVM 3.8+ */
+          intrinsicsToDefine.push_back(&*I);
+#endif
           break;
       }
       continue;
@@ -2617,14 +2629,24 @@ bool CWriter::doInitialization(llvm::Module &M) {
 
     if (I->hasExternalWeakLinkage())
       Out << "extern ";
+#if ISPC_LLVM_VERSION <= ISPC_LLVM_3_7 /* 3.2, 3.3, 3.4, 3.5, 3.6, 3.7 */
     printFunctionSignature(I, true);
+#else /* LLVM 3.8+ */
+    printFunctionSignature(&*I, true);
+#endif
     if (I->hasWeakLinkage() || I->hasLinkOnceLinkage())
       Out << " __ATTRIBUTE_WEAK__";
     if (I->hasExternalWeakLinkage())
       Out << " __EXTERNAL_WEAK__";
+#if ISPC_LLVM_VERSION <= ISPC_LLVM_3_7 /* 3.2, 3.3, 3.4, 3.5, 3.6, 3.7 */
     if (StaticCtors.count(I))
       Out << " __ATTRIBUTE_CTOR__";
     if (StaticDtors.count(I))
+#else /* LLVM 3.8+ */
+    if (StaticCtors.count(&*I))
+      Out << " __ATTRIBUTE_CTOR__";
+    if (StaticDtors.count(&*I))
+#endif
       Out << " __ATTRIBUTE_DTOR__";
     if (I->hasHiddenVisibility())
       Out << " __HIDDEN__";
@@ -2687,7 +2709,11 @@ bool CWriter::doInitialization(llvm::Module &M) {
          I != E; ++I)
       if (!I->isDeclaration()) {
         // Ignore special globals, such as debug info.
+#if ISPC_LLVM_VERSION <= ISPC_LLVM_3_7 /* 3.2, 3.3, 3.4, 3.5, 3.6, 3.7 */
         if (getGlobalVariableClass(I))
+#else /* LLVM 3.8+ */
+        if (getGlobalVariableClass(&*I))
+#endif
           continue;
 
         if (I->hasLocalLinkage())
@@ -2704,7 +2730,11 @@ bool CWriter::doInitialization(llvm::Module &M) {
           Out << "__thread ";
 
         printType(Out, I->getType()->getElementType(), false,
+#if ISPC_LLVM_VERSION <= ISPC_LLVM_3_7 /* 3.2, 3.3, 3.4, 3.5, 3.6, 3.7 */
                   GetValueName(I));
+#else /* LLVM 3.8+ */
+                  GetValueName(&*I));
+#endif
 
         if (I->hasLinkOnceLinkage())
           Out << " __attribute__((common))";
@@ -3140,7 +3170,11 @@ void CWriter::printFunctionSignature(const llvm::Function *F, bool Prototype) {
       for (; I != E; ++I) {
         if (PrintedArg) FunctionInnards << ", ";
         if (I->hasName() || !Prototype)
+#if ISPC_LLVM_VERSION <= ISPC_LLVM_3_7 /* 3.2, 3.3, 3.4, 3.5, 3.6, 3.7 */
           ArgName = GetValueName(I);
+#else /* LLVM 3.8+ */
+          ArgName = GetValueName(&*I);
+#endif
         else
           ArgName = "";
         llvm::Type *ArgTy = I->getType();
@@ -3150,7 +3184,11 @@ void CWriter::printFunctionSignature(const llvm::Function *F, bool Prototype) {
             if (PAL.getParamAttributes(Idx).hasAttribute(llvm::AttributeSet::FunctionIndex, llvm::Attribute::ByVal)) {
 #endif
           ArgTy = llvm::cast<llvm::PointerType>(ArgTy)->getElementType();
+#if ISPC_LLVM_VERSION <= ISPC_LLVM_3_7 /* 3.2, 3.3, 3.4, 3.5, 3.6, 3.7 */
           ByValParams.insert(I);
+#else /* LLVM 3.8+ */
+          ByValParams.insert(&*I);
+#endif
         }
         printType(FunctionInnards, ArgTy,
 #if ISPC_LLVM_VERSION == ISPC_LLVM_3_2
@@ -3259,7 +3297,7 @@ void CWriter::printFunction(llvm::Function &F) {
 
     Out << "  ";
     printType(Out, F.arg_begin()->getType(), false,
-              GetValueName(F.arg_begin()));
+              GetValueName(&*(F.arg_begin())));
     Out << " = &StructReturn;\n";
   }
 
@@ -3304,11 +3342,11 @@ void CWriter::printFunction(llvm::Function &F) {
 
   // print the basic blocks
   for (llvm::Function::iterator BB = F.begin(), E = F.end(); BB != E; ++BB) {
-    if (llvm::Loop *L = LI->getLoopFor(BB)) {
+    if (llvm::Loop *L = LI->getLoopFor(&*BB)) {
       if (L->getHeader() == BB && L->getParentLoop() == 0)
         printLoop(L);
     } else {
-      printBasicBlock(BB);
+      printBasicBlock(&*BB);
     }
   }
 
@@ -3349,10 +3387,10 @@ void CWriter::printBasicBlock(llvm::BasicBlock *BB) {
   // Output all of the instructions in the basic block...
   for (llvm::BasicBlock::iterator II = BB->begin(), E = --BB->end(); II != E;
        ++II) {
-    if (!isInlinableInst(*II) && !isDirectAlloca(II)) {
+    if (!isInlinableInst(*II) && !isDirectAlloca(&*II)) {
       if (II->getType() != llvm::Type::getVoidTy(BB->getContext()) &&
           !isInlineAsm(*II))
-        outputLValue(II);
+        outputLValue(&*II);
       else
         Out << "  ";
       writeInstComputationInline(*II);
@@ -3456,12 +3494,20 @@ void CWriter::printPHICopiesForSuccessor (llvm::BasicBlock *CurBlock,
                                           llvm::BasicBlock *Successor,
                                           unsigned Indent) {
   for (llvm::BasicBlock::iterator I = Successor->begin(); llvm::isa<llvm::PHINode>(I); ++I) {
+#if ISPC_LLVM_VERSION <= ISPC_LLVM_3_7 /* 3.2, 3.3, 3.4, 3.5, 3.6, 3.7 */
     llvm::PHINode *PN = llvm::cast<llvm::PHINode>(I);
+#else /* LLVM 3.8+ */
+    llvm::PHINode *PN = llvm::cast<llvm::PHINode>(&*I);
+#endif
     // Now we have to do the printing.
     llvm::Value *IV = PN->getIncomingValueForBlock(CurBlock);
     if (!llvm::isa<llvm::UndefValue>(IV)) {
       Out << std::string(Indent, ' ');
+#if ISPC_LLVM_VERSION <= ISPC_LLVM_3_7 /* 3.2, 3.3, 3.4, 3.5, 3.6, 3.7 */
       Out << "  " << GetValueName(I) << "__PHI = ";
+#else /* LLVM 3.8+ */
+      Out << "  " << GetValueName(&*I) << "__PHI = ";
+#endif
       writeOperand(IV);
       Out << ";   /* for PHI node */\n";
     }
@@ -4089,14 +4135,18 @@ void CWriter::lowerIntrinsics(llvm::Function &F) {
             llvm::Instruction *Before = 0;
             if (CI != &BB->front())
 #if ISPC_LLVM_VERSION >= ISPC_LLVM_3_5 // LLVM 3.5+
-              Before = std::prev(llvm::BasicBlock::iterator(CI));
+              Before = &*std::prev(llvm::BasicBlock::iterator(CI));
 #else
               Before = prior(llvm::BasicBlock::iterator(CI));
 #endif
 
             IL->LowerIntrinsicCall(CI);
             if (Before) {        // Move iterator to instruction after call
+#if ISPC_LLVM_VERSION <= ISPC_LLVM_3_7 /* 3.2, 3.3, 3.4, 3.5, 3.6, 3.7 */
               I = Before; ++I;
+#else /* LLVM 3.8+ */
+              I = Before->getIterator(); ++I;
+#endif
             } else {
               I = BB->begin();
             }
@@ -4321,7 +4371,7 @@ bool CWriter::visitBuiltinCall(llvm::CallInst &I, llvm::Intrinsic::ID ID,
     if (I.getParent()->getParent()->arg_empty())
       Out << "vararg_dummy_arg";
     else
-      writeOperand(--I.getParent()->getParent()->arg_end());
+      writeOperand(&*(--I.getParent()->getParent()->arg_end()));
     Out << ')';
     return true;
   case llvm::Intrinsic::vaend:
@@ -5000,8 +5050,8 @@ SmearCleanupPass::runOnBasicBlock(llvm::BasicBlock &bb) {
     for (llvm::BasicBlock::iterator iter = bb.begin(), e = bb.end(); iter != e; ++iter) {
         llvm::Value *smearValue = NULL;
 
-        if (!(smearValue = getInsertChainSmearValue(iter)) &&
-            !(smearValue = getShuffleSmearValue(iter))) {
+        if (!(smearValue = getInsertChainSmearValue(&*iter)) &&
+            !(smearValue = getShuffleSmearValue(&*iter))) {
             continue;
         }
 
@@ -5029,7 +5079,7 @@ SmearCleanupPass::runOnBasicBlock(llvm::BasicBlock &bb) {
                 llvm::CallInst::Create(smearFunc, argArray, LLVMGetName(smearValue, "_smear"),
                                  (llvm::Instruction *)NULL);
 
-            ReplaceInstWithInst(iter, smearCall);
+            ReplaceInstWithInst(&*iter, smearCall);
 
             modifiedAny = true;
             goto restart;
@@ -5128,7 +5178,7 @@ AndCmpCleanupPass::runOnBasicBlock(llvm::BasicBlock &bb) {
                                        (llvm::Instruction *)NULL);
 
             // And replace the original AND instruction with it.
-            llvm::ReplaceInstWithInst(iter, cmpCall);
+            llvm::ReplaceInstWithInst(&*iter, cmpCall);
 
             modifiedAny = true;
             goto restart;
@@ -5270,7 +5320,7 @@ MaskOpsCleanupPass::runOnBasicBlock(llvm::BasicBlock &bb) {
                 llvm::ArrayRef<llvm::Value *> arg(val);
                 llvm::CallInst *notCall = llvm::CallInst::Create(notFunc, arg,
                                                      bop->getName());
-                ReplaceInstWithInst(iter, notCall);
+                ReplaceInstWithInst(&*iter, notCall);
                 modifiedAny = true;
                 goto restart;
             }
@@ -5292,7 +5342,7 @@ MaskOpsCleanupPass::runOnBasicBlock(llvm::BasicBlock &bb) {
                     llvm::CallInst *andNotCall =
                         llvm::CallInst::Create(andNotFuncs[i], argsRef, bop->getName());
 
-                    ReplaceInstWithInst(iter, andNotCall);
+                    ReplaceInstWithInst(&*iter, andNotCall);
                     modifiedAny = true;
                     goto restart;
                 }
