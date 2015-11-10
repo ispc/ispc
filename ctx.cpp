@@ -386,14 +386,8 @@ FunctionEmitContext::FunctionEmitContext(Function *func, Symbol *funSym,
             llvm::cast<llvm::DISubroutineType>(getDICompositeType(diSubprogramType));
         int flags = llvm::DINode::FlagPrototyped;
 #else /* LLVM 3.8+ */
-        Assert(llvm::isa<llvm::DICompositeType>(diSubprogramType));
-        llvm::DICompositeType *C = llvm::dyn_cast_or_null<llvm::DICompositeType>(diSubprogramType);
-        if (!C){
-            llvm::DITypeIdentifierMap EmptyMap;
-            C = llvm::dyn_cast_or_null<llvm::DICompositeType>(llvm::dyn_cast_or_null<llvm::DIDerivedType>(diSubprogramType)->getBaseType().resolve(EmptyMap));
-        }   //restored function getDICompositeType() from 3.7 which absents in 3.8
-        llvm::DISubroutineType *diSubprogramType_n =
-            llvm::cast<llvm::DISubroutineType>(C);
+        Assert(llvm::isa<llvm::DISubroutineType>(diSubprogramType));
+        llvm::DISubroutineType *diSubprogramType_n = llvm::cast<llvm::DISubroutineType>(diSubprogramType);
         int flags = llvm::DINode::FlagPrototyped;
 
 #endif
