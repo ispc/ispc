@@ -262,6 +262,7 @@ Function::emitCode(FunctionEmitContext *ctx, llvm::Function *function,
         // pointer to the structure that holds all of the arguments, the
         // thread index, and the thread count variables.
         llvm::Function::arg_iterator argIter = function->arg_begin();
+#if ISPC_LLVM_VERSION <= ISPC_LLVM_3_7 /* 3.2, 3.3, 3.4, 3.5, 3.6, 3.7 */
         llvm::Value *structParamPtr = argIter++;
         llvm::Value *threadIndex = argIter++;
         llvm::Value *threadCount = argIter++;
@@ -273,7 +274,19 @@ Function::emitCode(FunctionEmitContext *ctx, llvm::Function *function,
         llvm::Value *taskCount0 = argIter++;
         llvm::Value *taskCount1 = argIter++;
         llvm::Value *taskCount2 = argIter++;
-
+#else /* LLVM 3.8+ */
+        llvm::Value *structParamPtr = &*(argIter++);
+        llvm::Value *threadIndex = &*(argIter++);
+        llvm::Value *threadCount = &*(argIter++);
+        llvm::Value *taskIndex = &*(argIter++);
+        llvm::Value *taskCount = &*(argIter++);
+        llvm::Value *taskIndex0 = &*(argIter++);
+        llvm::Value *taskIndex1 = &*(argIter++);
+        llvm::Value *taskIndex2 = &*(argIter++);
+        llvm::Value *taskCount0 = &*(argIter++);
+        llvm::Value *taskCount1 = &*(argIter++);
+        llvm::Value *taskCount2 = &*(argIter++);
+#endif
         // Copy the function parameter values from the structure into local
         // storage
         for (unsigned int i = 0; i < args.size(); ++i)
@@ -333,7 +346,11 @@ Function::emitCode(FunctionEmitContext *ctx, llvm::Function *function,
             // Allocate stack storage for the parameter and emit code
             // to store the its value there.
             sym->storagePtr = ctx->AllocaInst(argIter->getType(), sym->name.c_str());
+#if ISPC_LLVM_VERSION <= ISPC_LLVM_3_7 /* 3.2, 3.3, 3.4, 3.5, 3.6, 3.7 */
             ctx->StoreInst(argIter, sym->storagePtr);
+#else /* LLVM 3.8+ */
+            ctx->StoreInst(&*argIter, sym->storagePtr);
+#endif
             ctx->EmitFunctionParameterDebugInfo(sym, i);
         }
 
@@ -352,7 +369,11 @@ Function::emitCode(FunctionEmitContext *ctx, llvm::Function *function,
             // Otherwise use the mask to set the entry mask value
             argIter->setName("__mask");
             Assert(argIter->getType() == LLVMTypes::MaskType);
+#if ISPC_LLVM_VERSION <= ISPC_LLVM_3_7 /* 3.2, 3.3, 3.4, 3.5, 3.6, 3.7 */
             ctx->SetFunctionMask(argIter);
+#else /* LLVM 3.8+ */
+            ctx->SetFunctionMask(&*argIter);
+#endif
             Assert(++argIter == function->arg_end());
         }
 #ifdef ISPC_NVPTX_ENABLED

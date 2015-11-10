@@ -1601,7 +1601,12 @@ lExtractFirstVectorElement(llvm::Value *v,
         //
         // The insertion point for the new phi node also has to be the
         // start of the bblock of the original phi node.
+
+#if ISPC_LLVM_VERSION <= ISPC_LLVM_3_7 /* 3.2, 3.3, 3.4, 3.5, 3.6, 3.7 */
         llvm::Instruction *phiInsertPos = phi->getParent()->begin();
+#else /* LLVM 3.8+ */
+        llvm::Instruction *phiInsertPos = &*(phi->getParent()->begin());
+#endif
         llvm::PHINode *scalarPhi =
             llvm::PHINode::Create(vt->getElementType(),
                                   phi->getNumIncomingValues(),

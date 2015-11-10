@@ -364,7 +364,7 @@ lStripUnusedDebugInfo(llvm::Module *module) {
     llvm::Module::named_metadata_iterator iter = module->named_metadata_begin();
     for (; iter != module->named_metadata_end(); ++iter) {
         if (!strncmp(iter->getName().str().c_str(), "llvm.dbg.lv", 11))
-            toErase.push_back(iter);
+            toErase.push_back(&*iter);
     }
     for (int i = 0; i < (int)toErase.size(); ++i)
         module->eraseNamedMetadata(toErase[i]);
@@ -2830,11 +2830,11 @@ lCreateDispatchFunction(llvm::Module *module, llvm::Function *setISAFunc,
           // Check to see if we rewrote any types in the dispatch function.
           // If so, create bitcasts for the appropriate pointer types.
           if (argIter->getType() == targsIter->getType()) {
-            args.push_back(argIter);
+            args.push_back(&*argIter);
           }
           else {
             llvm::CastInst *argCast = 
-              llvm::CastInst::CreatePointerCast(argIter, targsIter->getType(),
+              llvm::CastInst::CreatePointerCast(&*argIter, targsIter->getType(),
                                                 "dpatch_arg_bitcast", callBBlock);
             args.push_back(argCast);
           }
@@ -2962,7 +2962,7 @@ lExtractOrCheckGlobals(llvm::Module *msrc, llvm::Module *mdst, bool check) {
     llvm::Module::global_iterator iter;
 
     for (iter = msrc->global_begin(); iter != msrc->global_end(); ++iter) {
-        llvm::GlobalVariable *gv = iter;
+        llvm::GlobalVariable *gv = &*iter;
         // Is it a global definition?
         if (gv->getLinkage() == llvm::GlobalValue::ExternalLinkage &&
             gv->hasInitializer()) {
