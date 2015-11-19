@@ -893,19 +893,6 @@ static FORCEINLINE __vec16_i64 __mul(const __vec16_i32 &a, const __vec16_i64 &b)
         _mm512_mulhi_epi32(a.v, b.v_lo)));
 }
 */
-static FORCEINLINE void __abs_i32i64(__m512i &_hi, __m512i &_lo)
-{
-  /*   abs(x) : 
-   * mask  = x >> 64; // sign bits
-   * abs(x) = (x^mask) - mask
-   */ 
-  const __vec16_i32 mask = __ashr(_hi, __ispc_thirty_two);
-  __vec16_i32 hi = __xor(_hi, mask);
-  __vec16_i32 lo = __xor(_lo, mask);
-  __mmask16 borrow = 0;
-  _lo = _mm512_subsetb_epi32(lo, mask, &borrow);
-  _hi = _mm512_sbb_epi32    (hi, borrow, mask, &borrow);
-}
 
 static FORCEINLINE __vec16_i64 __mul(__vec16_i64 a, __vec16_i64 b)
 {
