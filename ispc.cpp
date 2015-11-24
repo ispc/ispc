@@ -478,6 +478,10 @@ Target::Target(const char *arch, const char *cpu, const char *isa, bool pic, boo
         }
     }
 
+    if (!strcasecmp(isa, "host")) {
+        isa = lGetSystemISA();
+    }
+
     if (isa == NULL) {
         // If a CPU was specified explicitly, try to pick the best
         // possible ISA based on that.
@@ -1130,7 +1134,7 @@ Target::SupportedArchs() {
 const char *
 Target::SupportedTargets() {
     return
-        "sse2-i32x4, sse2-i32x8, "
+        "host, sse2-i32x4, sse2-i32x8, "
         "sse4-i32x4, sse4-i32x8, sse4-i16x8, sse4-i8x16, "
         "avx1-i32x4, "
         "avx1-i32x8, avx1-i32x16, avx1-i64x4, "
