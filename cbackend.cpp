@@ -4100,6 +4100,7 @@ void CWriter::lowerIntrinsics(llvm::Function &F) {
           case llvm::Intrinsic::memset:
           case llvm::Intrinsic::prefetch:
           case llvm::Intrinsic::powi:
+          case llvm::Intrinsic::fabs:
           case llvm::Intrinsic::x86_sse_cmp_ss:
           case llvm::Intrinsic::x86_sse_cmp_ps:
           case llvm::Intrinsic::x86_sse2_cmp_sd:
@@ -4407,6 +4408,11 @@ bool CWriter::visitBuiltinCall(llvm::CallInst &I, llvm::Intrinsic::ID ID,
     writeOperand(I.getArgOperand(0));
     Out << ", ";
     writeOperand(I.getArgOperand(1));
+    Out << ')';
+    return true;
+  case llvm::Intrinsic::fabs:
+    Out << "__builtin_fabs(";
+    writeOperand(I.getArgOperand(0));
     Out << ')';
     return true;
   case llvm::Intrinsic::setjmp:
