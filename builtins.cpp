@@ -891,7 +891,11 @@ AddBitcodeToModule(const unsigned char *bitcode, int length,
         bcModule->setDataLayout(module->getDataLayout());
 
         std::string(linkError);
+#if ISPC_LLVM_VERSION <= ISPC_LLVM_3_7
         if (llvm::Linker::LinkModules(module, bcModule
+#else // LLVM 3.8+
+        if (llvm::Linker::linkModules(*module, *bcModule
+#endif
 #if ISPC_LLVM_VERSION <= ISPC_LLVM_3_5
                                       , llvm::Linker::DestroySource,
                                       &linkError))
