@@ -478,10 +478,6 @@ Target::Target(const char *arch, const char *cpu, const char *isa, bool pic, boo
         }
     }
 
-    if (!strcasecmp(isa, "host")) {
-        isa = lGetSystemISA();
-    }
-
     if (isa == NULL) {
         // If a CPU was specified explicitly, try to pick the best
         // possible ISA based on that.
@@ -549,6 +545,10 @@ Target::Target(const char *arch, const char *cpu, const char *isa, bool pic, boo
             Warning(SourcePos(), "No --target specified on command-line."
                     " Using ISA \"%s\" based on specified CPU \"%s\".",
                     isa, cpu);
+    }
+
+    if (!strcasecmp(isa, "host")) {
+        isa = lGetSystemISA();
     }
 
     if (arch == NULL) {
