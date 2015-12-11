@@ -891,18 +891,19 @@ AddBitcodeToModule(const unsigned char *bitcode, int length,
         bcModule->setDataLayout(module->getDataLayout());
 
         std::string(linkError);
-#if ISPC_LLVM_VERSION <= ISPC_LLVM_3_7
-        if (llvm::Linker::LinkModules(module, bcModule
-#else // LLVM 3.8+
-        if (llvm::Linker::linkModules(*module, *bcModule
-#endif
-#if ISPC_LLVM_VERSION <= ISPC_LLVM_3_5
-                                      , llvm::Linker::DestroySource,
+
+#if ISPC_LLVM_VERSION <= ISPC_LLVM_3_5 // 3.2-3.5
+        if (llvm::Linker::LinkModules(module, bcModule,
+                                      llvm::Linker::DestroySource,
                                       &linkError))
             Error(SourcePos(), "Error linking stdlib bitcode: %s", linkError.c_str());
-#else // LLVM 3.6+
-            )) {}
+#elif ISPC_LLVM_VERSION <= ISPC_LLVM_3_7 // 3.6-3.7
+        llvm::Linker::LinkModules(module, bcModule);
+#else // LLVM 3.8+
+        // TODO: Pass diagnostic function for proper error reporting.
+        llvm::Linker::linkModules(*module, *bcModule, nullptr);
 #endif
+
         lSetInternalFunctions(module);
         if (symbolTable != NULL)
             lAddModuleSymbols(module, symbolTable);
