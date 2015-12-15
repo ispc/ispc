@@ -35,7 +35,7 @@
 #include <stdint.h>
 #include <math.h>
 #include <assert.h>
-#include <unistd.h>
+//#include <unistd.h>
 #include <algorithm>
 
 #ifndef __INTEL_COMPILER
