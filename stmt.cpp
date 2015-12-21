@@ -2972,6 +2972,12 @@ UnmaskedStmt::EmitCode(FunctionEmitContext *ctx) const {
 
     stmts->EmitCode(ctx);
 
+
+    // Do not restore old mask if our basic block is over. This happends if we emit code
+    // for something like 'unmasked{return;}', for example.
+    if (ctx->GetCurrentBasicBlock() == NULL)
+        return;
+
     ctx->SetInternalMask(oldInternalMask);
     ctx->SetFunctionMask(oldFunctionMask);
 }
