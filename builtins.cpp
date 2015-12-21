@@ -901,7 +901,8 @@ AddBitcodeToModule(const unsigned char *bitcode, int length,
         llvm::Linker::LinkModules(module, bcModule);
 #else // LLVM 3.8+
         // TODO: Pass diagnostic function for proper error reporting.
-        llvm::Linker::linkModules(*module, *bcModule, nullptr);
+        std::unique_ptr<llvm::Module> M(bcModule);
+        llvm::Linker::linkModules(*module, std::move(M));
 #endif
 
         lSetInternalFunctions(module);
