@@ -890,9 +890,9 @@ AddBitcodeToModule(const unsigned char *bitcode, int length,
         bcModule->setTargetTriple(mTriple.str());
         bcModule->setDataLayout(module->getDataLayout());
 
+#if ISPC_LLVM_VERSION <= ISPC_LLVM_3_5 // 3.2-3.5
         std::string(linkError);
 
-#if ISPC_LLVM_VERSION <= ISPC_LLVM_3_5 // 3.2-3.5
         if (llvm::Linker::LinkModules(module, bcModule,
                                       llvm::Linker::DestroySource,
                                       &linkError))
@@ -900,9 +900,21 @@ AddBitcodeToModule(const unsigned char *bitcode, int length,
 #elif ISPC_LLVM_VERSION <= ISPC_LLVM_3_7 // 3.6-3.7
         llvm::Linker::LinkModules(module, bcModule);
 #else // LLVM 3.8+
-        // TODO: Pass diagnostic function for proper error reporting.
+        // A hack to move over declaration, which have no definition.
+        // New linker is kind of smart and think it knows better what to do, so
+        // it removes unused declarations without definitions.
+        // This trick should be legal, as both modules use the same LLVMContext.
+        for (llvm::Function& f : *bcModule) {
+          if (f.isDeclaration()) {
+            module->getOrInsertFunction(f.getName(), f.getFunctionType(),
+                f.getAttributes());
+          }
+        }
+
         std::unique_ptr<llvm::Module> M(bcModule);
-        llvm::Linker::linkModules(*module, std::move(M));
+        if (llvm::Linker::linkModules(*module, std::move(M))) {
+            Error(SourcePos(), "Error linking stdlib bitcode.");
+        }
 #endif
 
         lSetInternalFunctions(module);
