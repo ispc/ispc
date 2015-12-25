@@ -906,6 +906,9 @@ AddBitcodeToModule(const unsigned char *bitcode, int length,
         // This trick should be legal, as both modules use the same LLVMContext.
         for (llvm::Function& f : *bcModule) {
           if (f.isDeclaration()) {
+            // Declarations with uses will be moved by Linker.
+            if (f.getNumUses() > 0)
+              continue;
             module->getOrInsertFunction(f.getName(), f.getFunctionType(),
                 f.getAttributes());
           }
