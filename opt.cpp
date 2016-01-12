@@ -672,7 +672,12 @@ Optimize(llvm::Module *module, int optLevel) {
         optPM.add(llvm::createInstructionCombiningPass());
         optPM.add(llvm::createCFGSimplificationPass());
         optPM.add(llvm::createPruneEHPass());
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_3_8 // 3.8+
+        optPM.add(llvm::createPostOrderFunctionAttrsPass());
+        optPM.add(llvm::createReversePostOrderFunctionAttrsPass());
+#else // 3.7 and earlier
         optPM.add(llvm::createFunctionAttrsPass());
+#endif
         optPM.add(llvm::createFunctionInliningPass());
         optPM.add(llvm::createConstantPropagationPass());
         optPM.add(llvm::createDeadInstEliminationPass());
