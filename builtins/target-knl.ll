@@ -35,6 +35,8 @@ define(`WIDTH',`16')
 ifelse(LLVM_VERSION, LLVM_3_7,
     `include(`target-avx512-common.ll')',
          LLVM_VERSION, LLVM_3_8,
+    `include(`target-avx512-common.ll')',
+         LLVM_VERSION, LLVM_3_9,
     `include(`target-avx512-common.ll')'
   )
 
