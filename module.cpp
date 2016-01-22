@@ -495,6 +495,12 @@ Module::CompileFile() {
         fclose(f);
     }
 
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_3_7 // LLVM 3.7+
+    if (g->NoOmitFramePointer)
+        for (llvm::Function& f : *module)
+            f.addFnAttr("no-frame-pointer-elim", "true");
+#endif
+
     ast->GenerateIR();
 
     if (diBuilder)
