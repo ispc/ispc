@@ -562,6 +562,9 @@ struct Globals {
     /** When \c true, target ISA will be printed during ispc's execution. */
     bool printTarget;
 
+    /** When \c true, LLVM won't omit frame pointer. */
+    bool NoOmitFramePointer;
+
     /** Indicates which stages of optimization we want to dump. */
     std::set<int> debug_stages;
 

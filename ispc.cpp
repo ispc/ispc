@@ -1025,6 +1025,8 @@ Target::Target(const char *arch, const char *cpu, const char *isa, bool pic, boo
         if (g->opt.disableFMA == false)
             options.AllowFPOpFusion = llvm::FPOpFusion::Fast;
 #if ISPC_LLVM_VERSION <= ISPC_LLVM_3_6
+        if (g->NoOmitFramePointer)
+            options.NoFramePointerElim = true;
 #ifdef ISPC_IS_WINDOWS
         if (strcmp("x86", arch) == 0) {
             // Workaround for issue #503 (LLVM issue 14646).
@@ -1443,6 +1445,7 @@ Globals::Globals() {
     runCPP = true;
     debugPrint = false;
     printTarget = false;
+    NoOmitFramePointer = false;
     debugIR = -1;
     disableWarnings = false;
     warningsAsErrors = false;
