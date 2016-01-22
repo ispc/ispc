@@ -3379,6 +3379,43 @@ __gather_base_offsets64_float(uint8_t *_base, uint32_t scale, __vec16_i64 offset
   return ret;
 }
 
+static FORCEINLINE __vec16_d
+__gather_base_offsets64_double(uint8_t *_base, uint32_t scale, __vec16_i64 offsets,
+    __vec16_i1 mask) {
+
+  const __vec16_i32 signed_offsets = _mm512_add_epi32(offsets.v_lo, __smear_i32<__vec16_i32>((int32_t)INT_MIN));
+  const __m512i shuffled_signed_offsets = _mm512_permute4f128_epi32(signed_offsets.v, _MM_PERM_DCDC);
+
+  // There is no gather instruction with 64-bit offsets in KNC.
+  // We have to manually iterate over the upper 32 bits ;-)
+  __vec16_i1 still_to_do = mask;
+  __vec16_d ret;
+  while (still_to_do) {
+    int first_active_lane = _mm_tzcnt_32((int)still_to_do);
+    const uint &hi32 = ((uint*)&offsets.v_hi)[first_active_lane];
+    __vec16_i1 match = _mm512_mask_cmp_epi32_mask(mask,offsets.v_hi,
+        __smear_i32<__vec16_i32>((int32_t)hi32),
+        _MM_CMPINT_EQ);
+    void * base = (void*)((unsigned long)_base  +
+        ((scale*(unsigned long)hi32) << 32) + scale*(unsigned long)(-(long)INT_MIN));
+
+    // Extracting double
+    ret.v1 = _mm512_mask_i32loextgather_pd(ret.v1, match, signed_offsets, base,
+        _MM_UPCONV_PD_NONE, scale,
+        _MM_HINT_NONE);
+
+    ret.v2 = _mm512_mask_i32loextgather_pd(ret.v2, match, shuffled_signed_offsets, base, 
+        _MM_UPCONV_PD_NONE, scale,
+        _MM_HINT_NONE); 
+    // --
+
+    // Updating mask
+    still_to_do = _mm512_kxor(match, still_to_do);
+  }
+
+  return ret;
+}
+
 static FORCEINLINE __vec16_i8 __gather_base_offsets64_i8(uint8_t *_base, uint32_t scale, __vec16_i64 offsets,
     __vec16_i1 mask) 
 { 
