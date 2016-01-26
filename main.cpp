@@ -108,6 +108,7 @@ usage(int ret) {
     printf("        svml\t\t\t\tUse the Intel(r) SVML math libraries\n");
     printf("        system\t\t\t\tUse the system's math library (*may be quite slow*)\n");
     printf("    [-MMM <filename>\t\t\t\tWrite #include dependencies to given file.\n");
+    printf("    [--no-omit-frame-pointer]\t\tDisable frame pointer omission. It may be useful for profiling\n");
     printf("    [--nostdlib]\t\t\tDon't make the ispc standard library available\n");
     printf("    [--nocpp]\t\t\t\tDon't run the C preprocessor\n");
     printf("    [-o <name>/--outfile=<name>]\tOutput filename (may be \"-\" for standard output)\n");
@@ -143,7 +144,6 @@ devUsage(int ret) {
     printf("\nusage (developer options): ispc\n");
     printf("    [--debug]\t\t\t\tPrint information useful for debugging ispc\n");
     printf("    [--print-target]\t\t\tPrint target's information\n");
-    printf("    [--no-omit-frame-pointer]\t\tDisable frame pointer omission. It may be useful for profiling\n");
     printf("    [--fuzz-test]\t\t\tRandomly perturb program input to test error conditions\n");
     printf("    [--fuzz-seed=<value>]\t\tSeed value for RNG for fuzz testing\n");
     printf("    [--opt=<option>]\t\t\tSet optimization option\n");
