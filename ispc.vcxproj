@@ -72,14 +72,14 @@
     <ClCompile Include="$(Configuration)\gen-stdlib-mask64.cpp" />
     <ClCompile Include="ispc.cpp" />
     <ClCompile Include="$(Configuration)\lex.cc">
-      <DisableSpecificWarnings>4146;4800;4996;4355;4624;4005;4003;4018</DisableSpecificWarnings>
+      <DisableSpecificWarnings>4146;4800;4996;4355;4624;4005;4003;4018;4141;4244</DisableSpecificWarnings>
     </ClCompile>
     <ClCompile Include="llvmutil.cpp" />
     <ClCompile Include="module.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="opt.cpp" />
     <ClCompile Include="$(Configuration)\parse.cc">
-      <DisableSpecificWarnings>4146;4800;4996;4355;4624;4005;4065</DisableSpecificWarnings>
+      <DisableSpecificWarnings>4146;4800;4996;4355;4624;4005;4065;4141;4244</DisableSpecificWarnings>
     </ClCompile>
     <CustomBuild Include="builtins\builtins.c">
       <Command>%LLVM_INSTALL_DIR%\bin\clang -m32 -emit-llvm builtins\builtins.c -c -o - | %LLVM_INSTALL_DIR%\bin\llvm-dis - | python bitcode2cpp.py c 32 &gt; $(Configuration)/gen-bitcode-c-32.cpp;
@@ -408,7 +408,7 @@
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>NOMINMAX;%LLVM_VERSION%</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>$(LLVM_INSTALL_DIR)\include;.;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <DisableSpecificWarnings>4146;4800;4996;4355;4624;4244</DisableSpecificWarnings>
+      <DisableSpecificWarnings>4146;4800;4996;4355;4624;4244;4141;4291;4018</DisableSpecificWarnings>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -429,7 +429,7 @@
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <PreprocessorDefinitions>NOMINMAX;%LLVM_VERSION%</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>$(LLVM_INSTALL_DIR)\include;.;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <DisableSpecificWarnings>4146;4800;4996;4355;4624;4244</DisableSpecificWarnings>
+      <DisableSpecificWarnings>4146;4800;4996;4355;4624;4244;4141;4291;4018</DisableSpecificWarnings>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
