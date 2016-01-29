@@ -247,45 +247,74 @@ def build_LLVM(version_LLVM, revision, folder, tarball, debug, selfbuild, extra,
         os.makedirs(LLVM_BUILD_selfbuild)
         os.makedirs(LLVM_BIN_selfbuild)
         os.chdir(LLVM_BUILD_selfbuild)
-        try_do_LLVM("configure release version for selfbuild ",
-                    "../" + LLVM_SRC + "/configure --prefix=" + llvm_home + "/" +
-                    LLVM_BIN_selfbuild + " --enable-optimized" +
-                    " --enable-targets=x86,x86_64,nvptx" +
-                    ((" --with-gcc-toolchain=" + gcc_toolchain_path) if gcc_toolchain_path != "" else "") +
-                    mac_system_root,
+        if  version_LLVM == "trunk":
+            try_do_LLVM("configure release version for selfbuild ",
+                    "cmake -G Unix\ Makefiles" + " -DCMAKE_EXPORT_COMPILE_COMMANDS=ON" +
+                    selfbuild_compiler +
+                    "  -DCMAKE_INSTALL_PREFIX=" + llvm_home + "/" + LLVM_BIN_selfbuild +
+                    "  -DCMAKE_BUILD_TYPE:STRING=Release" + " ../" + LLVM_SRC,
                     from_validation)
+        else:
+            try_do_LLVM("configure release version for selfbuild ",
+                        "../" + LLVM_SRC + "/configure --prefix=" + llvm_home + "/" +
+                        LLVM_BIN_selfbuild + " --enable-optimized" +
+                        " --enable-targets=x86,x86_64,nvptx" +
+                        ((" --with-gcc-toolchain=" + gcc_toolchain_path) if gcc_toolchain_path != "" else "") +
+                        mac_system_root,
+                        from_validation)
         try_do_LLVM("build release version for selfbuild ",
                     make, from_validation)
         try_do_LLVM("install release version for selfbuild ",
                     "make install",
                     from_validation)
         os.chdir("../")
-        selfbuild_compiler = ("CC=" +llvm_home+ "/" + LLVM_BIN_selfbuild + "/bin/clang " +
-                              "CXX="+llvm_home+ "/" + LLVM_BIN_selfbuild + "/bin/clang++ ")
+        if  version_LLVM == "trunk":
+            selfbuild_compiler = ("  -DCMAKE_C_COMPILER=" +llvm_home+ "/" + LLVM_BIN_selfbuild + "/bin/clang " +
+                                  "  -DCMAKE_CXX_COMPILER="+llvm_home+ "/" + LLVM_BIN_selfbuild + "/bin/clang++ ")
+        else:
+            selfbuild_compiler = ("CC=" +llvm_home+ "/" + LLVM_BIN_selfbuild + "/bin/clang " +
+                                  "CXX="+llvm_home+ "/" + LLVM_BIN_selfbuild + "/bin/clang++ ")
+
         print_debug("Now we have compiler for selfbuild: " + selfbuild_compiler + "\n", from_validation, alloy_build)
     os.chdir(LLVM_BUILD)
     if debug == False:
         if current_OS != "Windows":
-            try_do_LLVM("configure release version ",
-                    selfbuild_compiler + "../" + LLVM_SRC + "/configure --prefix=" + llvm_home + "/" +
-                    LLVM_BIN + " --enable-optimized" +
-                    " --enable-targets=x86,x86_64,nvptx" +
-                    ((" --with-gcc-toolchain=" + gcc_toolchain_path) if gcc_toolchain_path != "" else "") +
-                    mac_system_root,
-                    from_validation)
+            if  version_LLVM == "trunk":
+                try_do_LLVM("configure release version ",
+                        "cmake -G Unix\ Makefiles" + " -DCMAKE_EXPORT_COMPILE_COMMANDS=ON" +
+                        selfbuild_compiler +
+                        "  -DCMAKE_INSTALL_PREFIX=" + llvm_home + "/" + LLVM_BIN +
+                        "  -DCMAKE_BUILD_TYPE:STRING=Release" + " ../" + LLVM_SRC,
+                        from_validation)
+            else:
+                try_do_LLVM("configure release version ",
+                        selfbuild_compiler + "../" + LLVM_SRC + "/configure --prefix=" + llvm_home + "/" +
+                        LLVM_BIN + " --enable-optimized" +
+                        " --enable-targets=x86,x86_64,nvptx" +
+                        ((" --with-gcc-toolchain=" + gcc_toolchain_path) if gcc_toolchain_path != "" else "") +
+                        mac_system_root,
+                        from_validation)
         else:
             try_do_LLVM("configure release version ",
                     'cmake -G "Visual Studio 12" -DCMAKE_INSTALL_PREFIX="..\\'+ LLVM_BIN +
                     '" -DLLVM_LIT_TOOLS_DIR="C:\\gnuwin32\\bin" ..\\' + LLVM_SRC,
                     from_validation)
     else:
-        try_do_LLVM("configure debug version ",
-                    selfbuild_compiler + "../" + LLVM_SRC + "/configure --prefix=" + llvm_home + "/" + LLVM_BIN +
-                    " --enable-debug-runtime --enable-debug-symbols --enable-keep-symbols" +
-                    " --enable-targets=x86,x86_64,nvptx" +
-                    ((" --with-gcc-toolchain=" + gcc_toolchain_path) if gcc_toolchain_path != "" else "") +
-                    mac_system_root,
+        if  version_LLVM == "trunk":
+            try_do_LLVM("configure debug version ",
+                    "cmake -G Unix\ Makefiles" + " -DCMAKE_EXPORT_COMPILE_COMMANDS=ON" +
+                    selfbuild_compiler +
+                    "  -DCMAKE_INSTALL_PREFIX=" + llvm_home + "/" + LLVM_BIN +
+                    "  -DCMAKE_BUILD_TYPE:STRING=Debug" + " ../" + LLVM_SRC,
                     from_validation)
+        else:
+            try_do_LLVM("configure debug version ",
+                        selfbuild_compiler + "../" + LLVM_SRC + "/configure --prefix=" + llvm_home + "/" + LLVM_BIN +
+                        " --enable-debug-runtime --enable-debug-symbols --enable-keep-symbols" +
+                        " --enable-targets=x86,x86_64,nvptx" +
+                        ((" --with-gcc-toolchain=" + gcc_toolchain_path) if gcc_toolchain_path != "" else "") +
+                        mac_system_root,
+                        from_validation)
     # building llvm
     if current_OS != "Windows":
         try_do_LLVM("build LLVM ", make, from_validation)
