@@ -89,7 +89,8 @@ else
 endif
 ARCH_TYPE = $(shell arch)
 
-LLVM_CXXFLAGS=$(shell $(LLVM_CONFIG) --cppflags)
+DNDEBUG_FLAG=$(shell $(LLVM_CONFIG) --cxxflags | grep -o "\-DNDEBUG")
+LLVM_CXXFLAGS=$(shell $(LLVM_CONFIG) --cppflags) $(DNDEBUG_FLAG)
 LLVM_VERSION=LLVM_$(shell $(LLVM_CONFIG) --version | sed -e 's/svn//' -e 's/\./_/' -e 's/\..*//')
 LLVM_VERSION_DEF=-D$(LLVM_VERSION)
 
