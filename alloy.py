@@ -248,12 +248,15 @@ def build_LLVM(version_LLVM, revision, folder, tarball, debug, selfbuild, extra,
         os.makedirs(LLVM_BIN_selfbuild)
         os.chdir(LLVM_BUILD_selfbuild)
         if  version_LLVM == "trunk":
-            # TODO: gcc root, mac_root
+            # TODO: mac_root
             try_do_LLVM("configure release version for selfbuild ",
                     "cmake -G Unix\ Makefiles" + " -DCMAKE_EXPORT_COMPILE_COMMANDS=ON" +
                     "  -DCMAKE_INSTALL_PREFIX=" + llvm_home + "/" + LLVM_BIN_selfbuild +
                     "  -DCMAKE_BUILD_TYPE=Release" +
                     "  -DLLVM_ENABLE_ASSERTIONS=ON" +
+                    (("  -DGCC_INSTALL_PREFIX=" + gcc_toolchain_path) if gcc_toolchain_path != "" else "") +
+                    (("  -DCMAKE_C_COMPILER=" + gcc_toolchain_path+"/bin/gcc") if gcc_toolchain_path != "" else "") +
+                    (("  -DCMAKE_CXX_COMPILER=" + gcc_toolchain_path+"/bin/g++") if gcc_toolchain_path != "" else "") +
                     "  -DLLVM_TARGETS_TO_BUILD=NVPTX\;X86" +
                     " ../" + LLVM_SRC,
                     from_validation)
@@ -281,13 +284,16 @@ def build_LLVM(version_LLVM, revision, folder, tarball, debug, selfbuild, extra,
     if debug == False:
         if current_OS != "Windows":
             if  version_LLVM == "trunk":
-                # TODO: gcc root, mac_root
+                # TODO: mac_root
                 try_do_LLVM("configure release version ",
                         "cmake -G Unix\ Makefiles" + " -DCMAKE_EXPORT_COMPILE_COMMANDS=ON" +
                         selfbuild_compiler +
                         "  -DCMAKE_INSTALL_PREFIX=" + llvm_home + "/" + LLVM_BIN +
                         "  -DCMAKE_BUILD_TYPE=Release" +
                         "  -DLLVM_ENABLE_ASSERTIONS=ON" +
+                        (("  -DGCC_INSTALL_PREFIX=" + gcc_toolchain_path) if gcc_toolchain_path != "" else "") +
+                        (("  -DCMAKE_C_COMPILER=" + gcc_toolchain_path+"/bin/gcc") if gcc_toolchain_path != "" and selfbuild_compiler == "" else "") +
+                        (("  -DCMAKE_CXX_COMPILER=" + gcc_toolchain_path+"/bin/g++") if gcc_toolchain_path != "" and selfbuild_compiler == "" else "") +
                         "  -DLLVM_TARGETS_TO_BUILD=NVPTX\;X86" +
                         " ../" + LLVM_SRC,
                         from_validation)
@@ -306,13 +312,16 @@ def build_LLVM(version_LLVM, revision, folder, tarball, debug, selfbuild, extra,
                     from_validation)
     else:
         if  version_LLVM == "trunk":
-            # TODO: gcc root, mac_root
+            # TODO: mac_root
             try_do_LLVM("configure debug version ",
                     "cmake -G Unix\ Makefiles" + " -DCMAKE_EXPORT_COMPILE_COMMANDS=ON" +
                     selfbuild_compiler +
                     "  -DCMAKE_INSTALL_PREFIX=" + llvm_home + "/" + LLVM_BIN +
                     "  -DCMAKE_BUILD_TYPE=Debug" +
                     "  -DLLVM_ENABLE_ASSERTIONS=ON" +
+                    (("  -DGCC_INSTALL_PREFIX=" + gcc_toolchain_path) if gcc_toolchain_path != "" else "") +
+                    (("  -DCMAKE_C_COMPILER=" + gcc_toolchain_path+"/bin/gcc") if gcc_toolchain_path != "" and selfbuild_compiler == "" else "") +
+                    (("  -DCMAKE_CXX_COMPILER=" + gcc_toolchain_path+"/bin/g++") if gcc_toolchain_path != "" and selfbuild_compiler == "" else "") +
                     "  -DLLVM_TARGETS_TO_BUILD=NVPTX\;X86" +
                     " ../" + LLVM_SRC,
                     from_validation)
