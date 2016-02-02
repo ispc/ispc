@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2015, Intel Corporation
+  Copyright (c) 2010-2016, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -56,14 +56,28 @@
 #define BUILD_DATE __DATE__
 #endif
 #define BUILD_VERSION ""
+#if _MSC_VER >= 1900
+#define ISPC_VS_VERSION "Visual Studio 2015 and later"
+#else
+#define ISPC_VS_VERSION "Visual Studio 2013 and earlier"
+#endif
 #endif // ISPC_IS_WINDOWS
 
 static void
 lPrintVersion() {
-    printf("Intel(r) SPMD Program Compiler (ispc), %s (build %s @ %s, LLVM %s)\n",
-           ISPC_VERSION, BUILD_VERSION, BUILD_DATE,
-           ISPC_LLVM_VERSION_STRING
+#ifdef ISPC_IS_WINDOWS
+    printf("Intel(r) SPMD Program Compiler (ispc), %s (build date %s, LLVM %s)\n"
+		   "Supported Visual Studio versions: %s.\n",
+           ISPC_VERSION, BUILD_DATE,
+           ISPC_LLVM_VERSION_STRING,
+		   ISPC_VS_VERSION
            );
+#else
+	printf("Intel(r) SPMD Program Compiler (ispc), %s (build %s @ %s, LLVM %s)\n",
+		ISPC_VERSION, BUILD_VERSION, BUILD_DATE,
+		ISPC_LLVM_VERSION_STRING
+		);
+#endif
 }
 
 
