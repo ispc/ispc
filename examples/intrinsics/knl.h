@@ -3015,6 +3015,17 @@ __gather_base_offsets32_double(uint8_t *base, uint32_t scale, __vec16_i32 offset
   return ret;
 }
 
+static FORCEINLINE __vec16_d
+__gather_base_offsets64_double(uint8_t *base, uint32_t scale, __vec16_i64 offsets,
+    __vec16_i1 mask) {
+  __vec16_d ret;
+  ret.v_lo = _mm512_mask_i64gather_pd(_mm512_undefined_pd(), mask.lo(),
+                                    offsets.v_lo, base, scale);
+  ret.v_hi = _mm512_mask_i64gather_pd(_mm512_undefined_pd(), mask.hi(),
+                                    offsets.v_hi, base, scale);
+  return ret;
+}
+
 static FORCEINLINE __vec16_i32
 __gather64_i32(__vec16_i64 addr, __vec16_i1 mask) 
 {
@@ -3142,6 +3153,17 @@ static FORCEINLINE __vec16_i32 __gather_base_offsets64_i32(uint8_t *_base, uint3
   __m256i hi = _mm512_mask_i64gather_epi32(_mm256_undefined_si256(), mask.hi(), 
                                            offsets.v_hi, _base, scale);
   return _mm512_inserti64x4(_mm512_castsi256_si512(lo), hi, 1);
+}
+
+static FORCEINLINE __vec16_i64 __gather_base_offsets64_i64(uint8_t *_base, uint32_t scale, __vec16_i64 offsets,
+    __vec16_i1 mask)
+{
+    __vec16_i64 ret;
+  ret.v_lo = _mm512_mask_i64gather_epi64(_mm512_undefined_epi32(), mask.lo(),
+                                           offsets.v_lo, _base, scale);
+  ret.v_hi = _mm512_mask_i64gather_epi64(_mm512_undefined_epi32(), mask.hi(),
+                                           offsets.v_hi, _base, scale);
+  return ret;
 }
 
 // scatter
