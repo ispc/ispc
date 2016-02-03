@@ -224,46 +224,6 @@
 ./tests/pmulus_i64.ispc compfail     x86 avx512knl-i32x16   Linux LLVM 3.7   clang++3.4 -O2 *
 ./tests/pmulus_vi64.ispc compfail     x86 avx512knl-i32x16   Linux LLVM 3.7   clang++3.4 -O0 *
 ./tests/pmulus_vi64.ispc compfail     x86 avx512knl-i32x16   Linux LLVM 3.7   clang++3.4 -O2 *
-
-./tests/reduce-max-int64.ispc compfail     x86 avx512knl-i32x16   Linux LLVM 3.8   icpc15.0 -O0 *
-./tests/reduce-max-int64.ispc compfail     x86 avx512knl-i32x16   Linux LLVM 3.8   icpc15.0 -O2 *
-./tests/reduce-max-uint64.ispc compfail     x86 avx512knl-i32x16   Linux LLVM 3.8   icpc15.0 -O0 *
-./tests/reduce-max-uint64.ispc compfail     x86 avx512knl-i32x16   Linux LLVM 3.8   icpc15.0 -O2 *
-./tests/reduce-min-int64.ispc compfail     x86 avx512knl-i32x16   Linux LLVM 3.8   icpc15.0 -O0 *
-./tests/reduce-min-int64.ispc compfail     x86 avx512knl-i32x16   Linux LLVM 3.8   icpc15.0 -O2 *
-./tests/reduce-min-uint64.ispc compfail     x86 avx512knl-i32x16   Linux LLVM 3.8   icpc15.0 -O0 *
-./tests/reduce-min-uint64.ispc compfail     x86 avx512knl-i32x16   Linux LLVM 3.8   icpc15.0 -O2 *
-./tests/idiv.ispc compfail     x86 avx512knl-i32x16   Linux LLVM 3.8   icpc15.0 -O0 *
-./tests/idiv.ispc compfail     x86 avx512knl-i32x16   Linux LLVM 3.8   icpc15.0 -O2 *
-./tests/paddus_i64.ispc compfail     x86 avx512knl-i32x16   Linux LLVM 3.8   icpc15.0 -O0 *
-./tests/paddus_vi64.ispc compfail     x86 avx512knl-i32x16   Linux LLVM 3.8   icpc15.0 -O0 *
-./tests/pmuls_i64.ispc compfail     x86 avx512knl-i32x16   Linux LLVM 3.8   icpc15.0 -O0 *
-./tests/pmuls_i64.ispc compfail     x86 avx512knl-i32x16   Linux LLVM 3.8   icpc15.0 -O2 *
-./tests/pmuls_vi64.ispc compfail     x86 avx512knl-i32x16   Linux LLVM 3.8   icpc15.0 -O0 *
-./tests/pmuls_vi64.ispc compfail     x86 avx512knl-i32x16   Linux LLVM 3.8   icpc15.0 -O2 *
-./tests/pmulus_i64.ispc compfail     x86 avx512knl-i32x16   Linux LLVM 3.8   icpc15.0 -O0 *
-./tests/pmulus_vi64.ispc compfail     x86 avx512knl-i32x16   Linux LLVM 3.8   icpc15.0 -O0 *
-./tests/pmulus_vi64.ispc compfail     x86 avx512knl-i32x16   Linux LLVM 3.8   icpc15.0 -O2 *
-
-./tests/reduce-max-int64.ispc compfail     x86 avx512knl-i32x16   Linux LLVM 3.8   clang++3.4 -O0 *
-./tests/reduce-max-int64.ispc compfail     x86 avx512knl-i32x16   Linux LLVM 3.8   clang++3.4 -O2 *
-./tests/reduce-max-uint64.ispc compfail     x86 avx512knl-i32x16   Linux LLVM 3.8   clang++3.4 -O0 *
-./tests/reduce-max-uint64.ispc compfail     x86 avx512knl-i32x16   Linux LLVM 3.8   clang++3.4 -O2 *
-./tests/reduce-min-int64.ispc compfail     x86 avx512knl-i32x16   Linux LLVM 3.8   clang++3.4 -O0 *
-./tests/reduce-min-int64.ispc compfail     x86 avx512knl-i32x16   Linux LLVM 3.8   clang++3.4 -O2 *
-./tests/reduce-min-uint64.ispc compfail     x86 avx512knl-i32x16   Linux LLVM 3.8   clang++3.4 -O0 *
-./tests/reduce-min-uint64.ispc compfail     x86 avx512knl-i32x16   Linux LLVM 3.8   clang++3.4 -O2 *
-./tests/idiv.ispc compfail     x86 avx512knl-i32x16   Linux LLVM 3.8   clang++3.4 -O0 *
-./tests/idiv.ispc compfail     x86 avx512knl-i32x16   Linux LLVM 3.8   clang++3.4 -O2 *
-./tests/paddus_i64.ispc compfail     x86 avx512knl-i32x16   Linux LLVM 3.8   clang++3.4 -O0 *
-./tests/paddus_vi64.ispc compfail     x86 avx512knl-i32x16   Linux LLVM 3.8   clang++3.4 -O0 *
-./tests/pmuls_i64.ispc compfail     x86 avx512knl-i32x16   Linux LLVM 3.8   clang++3.4 -O0 *
-./tests/pmuls_i64.ispc compfail     x86 avx512knl-i32x16   Linux LLVM 3.8   clang++3.4 -O2 *
-./tests/pmuls_vi64.ispc compfail     x86 avx512knl-i32x16   Linux LLVM 3.8   clang++3.4 -O0 *
-./tests/pmuls_vi64.ispc compfail     x86 avx512knl-i32x16   Linux LLVM 3.8   clang++3.4 -O2 *
-./tests/pmulus_i64.ispc compfail     x86 avx512knl-i32x16   Linux LLVM 3.8   clang++3.4 -O0 *
-./tests/pmulus_vi64.ispc compfail     x86 avx512knl-i32x16   Linux LLVM 3.8   clang++3.4 -O0 *
-./tests/pmulus_vi64.ispc compfail     x86 avx512knl-i32x16   Linux LLVM 3.8   clang++3.4 -O2 *
 % End of avx-512 untracked
 
 % Tracked in https://llvm.org/bugs/show_bug.cgi?id=23484 (anonymous namespace bug)
@@ -420,25 +380,3 @@
 ./tests/short-vec-7.ispc compfail     x86-64     generic-16   Linux LLVM 3.8 clang++3.4 -O0 *
 ./tests/short-vec-7.ispc compfail     x86-64     generic-16   Linux LLVM 3.8 clang++3.4 -O2 *
 % End of anonymous namespace bug
-
-% Tracked in https://llvm.org/bugs/show_bug.cgi?id=26338 
-% /CodeGen/SelectionDAG/SelectionDAG.cpp:1110: llvm::SDValue llvm::SelectionDAG::getConsts()) + 1 < 2)
-./tests/gather-float-7.ispc compfail     x86-64 avx512knl-i32x16   Linux LLVM 3.8   clang++3.4 -O2 *
-./tests/gather-float-8.ispc compfail     x86-64 avx512knl-i32x16   Linux LLVM 3.8   clang++3.4 -O2 *
-./tests/gather-int32-7.ispc compfail     x86-64 avx512knl-i32x16   Linux LLVM 3.8   clang++3.4 -O2 *
-./tests/gather-int32-8.ispc compfail     x86-64 avx512knl-i32x16   Linux LLVM 3.8   clang++3.4 -O2 *
-./tests/psubus_i64.ispc compfail     x86 avx512knl-i32x16   Linux LLVM 3.8   clang++3.4 -O0 *
-./tests/psubus_vi64.ispc compfail     x86 avx512knl-i32x16   Linux LLVM 3.8   clang++3.4 -O0 *
-./tests/soa-14.ispc compfail     x86-64 avx512knl-i32x16   Linux LLVM 3.8   clang++3.4 -O2 *
-./tests/soa-27.ispc compfail     x86-64 avx512knl-i32x16   Linux LLVM 3.8   clang++3.4 -O2 *
-
-./tests/gather-float-7.ispc compfail     x86-64 avx512knl-i32x16   Linux LLVM 3.9   clang++3.4 -O2 *
-./tests/gather-float-8.ispc compfail     x86-64 avx512knl-i32x16   Linux LLVM 3.9   clang++3.4 -O2 *
-./tests/gather-int32-7.ispc compfail     x86-64 avx512knl-i32x16   Linux LLVM 3.9   clang++3.4 -O2 *
-./tests/gather-int32-8.ispc compfail     x86-64 avx512knl-i32x16   Linux LLVM 3.9   clang++3.4 -O2 *
-./tests/psubus_i64.ispc compfail     x86 avx512knl-i32x16   Linux LLVM 3.9   clang++3.4 -O0 *
-./tests/psubus_vi64.ispc compfail     x86 avx512knl-i32x16   Linux LLVM 3.9   clang++3.4 -O0 *
-./tests/soa-14.ispc compfail     x86-64 avx512knl-i32x16   Linux LLVM 3.9   clang++3.4 -O2 *
-./tests/soa-27.ispc compfail     x86-64 avx512knl-i32x16   Linux LLVM 3.9   clang++3.4 -O2 *
-% /CodeGen/SelectionDAG/SelectionDAG.cpp:1110: llvm::SDValue llvm::SelectionDAG::getConsts()) + 1 < 2)
-% Gather/Scatter bug
