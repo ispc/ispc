@@ -2805,7 +2805,8 @@ FunctionEmitContext::loadUniformFromSOA(llvm::Value *ptr, llvm::Value *mask,
 
 llvm::Value *
 FunctionEmitContext::LoadInst(llvm::Value *ptr, llvm::Value *mask,
-                              const Type *ptrRefType, const char *name) {
+                              const Type *ptrRefType, const char *name, 
+                              bool one_elem) {
     if (ptr == NULL) {
         AssertPos(currentPos, m->errorCount > 0);
         return NULL;
@@ -2861,7 +2862,33 @@ FunctionEmitContext::LoadInst(llvm::Value *ptr, llvm::Value *mask,
     else {
         // Otherwise we should have a varying ptr and it's time for a
         // gather.
-        return gather(ptr, ptrType, GetFullMask(), name);
+        llvm::Value *gather_result =  gather(ptr, ptrType, GetFullMask(), name);
+        if (!one_elem)
+            return gather_result;
+
+        // It is a kludge. When we dereference varying pointer to uniform struct
+        // with "bound uniform" member, we should return first unmasked member.
+        Warning(currentPos, "Dereferencing varying pointer to uniform struct with 'bound uniform' member,\n"
+                     " only one value will survive. Possible loss of data.");
+        // Call the target-dependent movmsk function to turn the vector mask
+        // into an i64 value
+        std::vector<Symbol *> mm;
+        m->symbolTable->LookupFunction("__movmsk", &mm);
+        if (g->target->getMaskBitCount() == 1)
+            AssertPos(currentPos, mm.size() == 1);
+        else
+            // There should be one with signed int signature, one unsigned int.
+            AssertPos(currentPos, mm.size() == 2);
+        // We can actually call either one, since both are i32s as far as
+        // LLVM's type system is concerned...
+        llvm::Function *fmm = mm[0]->function;
+        llvm::Value *int_mask =  CallInst(fmm, NULL, mask, LLVMGetName(mask, "_movmsk"));
+        std::vector<Symbol *> lz;
+        m->symbolTable->LookupFunction("__count_trailing_zeros_i64", &lz);
+        llvm::Function *flz = lz[0]->function;
+        llvm::Value *elem_idx = CallInst(flz, NULL, int_mask, LLVMGetName(mask, "_clz"));
+        llvm::Value *elem = llvm::ExtractElementInst::Create(gather_result, elem_idx, LLVMGetName(gather_result, "_umasked_elem"), bblock);
+        return elem;
     }
 }
 
@@ -2882,6 +2909,9 @@ FunctionEmitContext::gather(llvm::Value *ptr, const PointerType *ptrType,
         // result.
         llvm::Value *retValue = llvm::UndefValue::get(llvmReturnType);
 
+        const CollectionType *returnCollectionType =
+            CastType<CollectionType>(returnType->GetBaseType());
+
         for (int i = 0; i < collectionType->GetElementCount(); ++i) {
             const PointerType *eltPtrType;
             llvm::Value *eltPtr =
@@ -2889,8 +2919,12 @@ FunctionEmitContext::gather(llvm::Value *ptr, const PointerType *ptrType,
 
             eltPtr = addVaryingOffsetsIfNeeded(eltPtr, eltPtrType);
 
+            // It is a kludge. When we dereference varying pointer to uniform struct
+            // with "bound uniform" member, we should return first unmasked member.
+            int need_one_elem = CastType<StructType>(ptrType->GetBaseType()) &&
+                                returnCollectionType->GetElementType(i)->IsUniformType();
             // This in turn will be another gather
-            llvm::Value *eltValues = LoadInst(eltPtr, mask, eltPtrType, name);
+            llvm::Value *eltValues = LoadInst(eltPtr, mask, eltPtrType, name, need_one_elem);
 
             retValue = InsertInst(retValue, eltValues, i, "set_value");
         }
