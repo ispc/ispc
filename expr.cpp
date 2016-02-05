@@ -6786,7 +6786,8 @@ lUniformValueToVarying(FunctionEmitContext *ctx, llvm::Value *value,
 
         for (int i = 0; i < collectionType->GetElementCount(); ++i) {
             llvm::Value *v = ctx->ExtractInst(value, i, "get_element");
-            v = lUniformValueToVarying(ctx, v, collectionType->GetElementType(i));
+            if (collectionType->GetElementType(i)->IsVaryingType())
+                v = lUniformValueToVarying(ctx, v, collectionType->GetElementType(i));
             retValue = ctx->InsertInst(retValue, v, i, "set_element");
         }
         return retValue;
