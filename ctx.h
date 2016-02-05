@@ -481,7 +481,8 @@ public:
         pointer values given by the lvalue.  If the lvalue is not varying,
         then both the mask pointer and the type pointer may be NULL. */
     llvm::Value *LoadInst(llvm::Value *ptr, llvm::Value *mask,
-                          const Type *ptrType, const char *name = NULL);
+                          const Type *ptrType, const char *name = NULL, 
+                          bool one_elem = false);
 
     llvm::Value *LoadInst(llvm::Value *ptr, const char *name = NULL);
 
