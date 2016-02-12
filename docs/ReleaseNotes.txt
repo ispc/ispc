@@ -1,3 +1,24 @@
+=== v1.9.0 === (12 Feb 2016)
+
+An ISPC release with AVX512 (KNL flavor) support and a number of bug fixes,
+based on fresh LLVM 3.8 backend.
+
+For AVX512 two modes are supported - generic and native. For instructions on how
+to use them, please refer to the wiki. Going forward we assume that native mode
+is the primary way to get AVX512 support and that generic mode will be deprecated.
+If you observe significantly better performance in generic mode, please report
+it via github issues.
+
+Starting this release we are shipping two versions on Windows:
+(1) for VS2013 and earlier releases
+(2) for VS2015 and newer releases
+The reason for doing this is the redesigned C run-time library in VS.
+An implementation of "print" ISPC standard library function relies on C runtime
+library, which has changed. If you are not using "print" function in your code,
+you are safe to use either version.
+
+A new options was introduced to improve debugging: --no-omit-frame-pointer.
+
 === v1.8.2 === (29 May 2015)
 
 An ISPC update with several important stability fixes and an experimental

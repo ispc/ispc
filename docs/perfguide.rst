@@ -786,7 +786,7 @@ countries.
 
 * Other names and brands may be claimed as the property of others.
 
-Copyright(C) 2011, Intel Corporation. All rights reserved.
+Copyright(C) 2011-2016, Intel Corporation. All rights reserved.
 
 
 Optimization Notice
