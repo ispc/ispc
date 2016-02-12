@@ -2809,10 +2809,8 @@ lCreateDispatchFunction(llvm::Module *module, llvm::Function *setISAFunc,
             !g->target->getTreatGenericAsSmth().empty()) {
             if (g->target->getTreatGenericAsSmth() == "knl_generic")
                 dispatchNum = Target::KNL_AVX512;
-            else if (g->target->getTreatGenericAsSmth() == "skx_generic")
-                dispatchNum = Target::SKX;
             else {
-                Error(SourcePos(), "*-generic target can be called only with knl or skx");
+                Error(SourcePos(), "*-generic target can be called only with knl");
                 exit(1);
             }
         }

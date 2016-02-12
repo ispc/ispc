@@ -193,7 +193,7 @@ public:
         AVX11          = 3,
         AVX2           = 4,
         KNL_AVX512     = 5,
-        SKX            = 6,
+        SKX_AVX512     = 6,
         GENERIC        = 7,
 #ifdef ISPC_NVPTX_ENABLED
         NVPTX,

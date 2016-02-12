@@ -202,7 +202,7 @@ HEADERS=ast.h builtins.h ctx.h decl.h expr.h func.h ispc.h llvmutil.h module.h \
 	opt.h stmt.h sym.h type.h util.h
 TARGETS=avx2-i64x4 avx11-i64x4 avx1-i64x4 avx1 avx1-x2 avx11 avx11-x2 avx2 avx2-x2 \
 	sse2 sse2-x2 sse4-8 sse4-16 sse4 sse4-x2 \
-	generic-4 generic-8 generic-16 generic-32 generic-64 generic-1 knl
+	generic-4 generic-8 generic-16 generic-32 generic-64 generic-1 knl skx
 ifneq ($(ARM_ENABLED), 0)
     TARGETS+=neon-32 neon-16 neon-8
 endif
