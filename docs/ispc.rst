@@ -52,6 +52,7 @@ Contents:
   + `Updating ISPC Programs For Changes In ISPC 1.6.0`_
   + `Updating ISPC Programs For Changes In ISPC 1.7.0`_
   + `Updating ISPC Programs For Changes In ISPC 1.8.2`_
+  + `Updating ISPC Programs For Changes In ISPC 1.9.0`_
 
 * `Getting Started with ISPC`_
 
@@ -63,7 +64,8 @@ Contents:
   + `Basic Command-line Options`_
   + `Selecting The Compilation Target`_
   + `Generating Generic C++ Output`_
-  + `Compiling For The Intel®  Xeon Phi™ Architecture`_
+  + `Compiling For The Intel®  Xeon Phi™ Architecture (codename Knights Corner)`_
+  + `Compiling For The Intel®  Xeon Phi™ Architecture (codename Knights Landing)`_
   + `Selecting 32 or 64 Bit Addressing`_
   + `The Preprocessor`_
   + `Debugging`_
@@ -337,6 +339,12 @@ older versions. Though you may want be aware of the following:
   may use uniform structures and pointers to uniform types as return types in
   export functions in multi-target compilation.
 
+Updating ISPC Programs For Changes In ISPC 1.9.0
+------------------------------------------------
+
+The release doesn't contains language changes, which may affect compatibility with
+older versions. It introduces new AVX512 target: avx512knl-i32x16.
+
 
 Getting Started with ISPC
 =========================
@@ -563,16 +571,17 @@ a mask size of 32 bits, and a gang size of 16.
 
 The following target ISAs are supported:
 
-============ ==========================================
+============ =========================================================
 Target       Description
------------- ------------------------------------------
+------------ ---------------------------------------------------------
 avx, avx1    AVX (2010-2011 era Intel CPUs)
 avx1.1       AVX 1.1 (2012 era "Ivybridge" Intel CPUs)
 avx2         AVX 2 target (2013- Intel "Haswell" CPUs)
+avx512knl    AVX 512 target (Xeon Phi chips codename Knights Landing)
 neon         ARM NEON
 sse2         SSE2 (early 2000s era x86 CPUs)
 sse4         SSE4 (generally 2008-2010 Intel CPUs)
-============ ==========================================
+============ =========================================================
 
 Consult your CPU's manual for specifics on which vector instruction set it
 supports.
@@ -682,11 +691,12 @@ C++ file; this can be used to easily include specific implementations of
 the vector types and functions.
 
 
-Compiling For The Intel®  Xeon Phi™ Architecture
-----------------------------------------------------------
+Compiling For The Intel®  Xeon Phi™ Architecture (codename Knights Corner)
+--------------------------------------------------------------------------
 
 ``ispc`` has beta-level support for compiling for the many-core Intel®
-Xeon Phi™ architecture (formerly, "Many Integrated Cores" / MIC).
+Xeon Phi™ architecture (formerly, "Many Integrated Cores" / MIC, codename
+Knights Corner).
 This support is based on the "generic" C++ output, described in the previous
 section.
 
@@ -745,6 +755,22 @@ If you do use the current version of ``ispc`` on Intel Xeon Phi™,
 please let us know of any bugs or unexpected results.  (Also, any
 interesting results!).
 
+Compiling For The Intel®  Xeon Phi™ Architecture (codename Knights Landing)
+---------------------------------------------------------------------------
+
+``ispc`` starting from v1.9.0 has support for compiling for the second
+generation of Intel® Xeon Phi™ architecture (codename Knights Landing).
+Two compilation paths are supported - generic (similar to KNC support) and
+native.
+
+To compile using generic path, follow KNC instructions, but use knl.h, instead
+of knc.h and use -xMIC-AVX512 for ICPC instead of -mmic.
+
+To compile using native path, just set --target=avx512knl-i32x16.
+
+Going forward, generic path will be deprecated, so using native target is
+preferable way to get AVX512 support.
+
 Selecting 32 or 64 Bit Addressing
 ---------------------------------
 
@@ -781,7 +807,7 @@ preprocessor runs:
   * - ISPC
     - 1
     - Detecting that the ``ispc`` compiler is processing the file
-  * - ISPC_TARGET_{NEON_8,NEON_16,NEON_32,SSE2,SSE4,AVX,AVX11,AVX2,GENERIC}
+  * - ISPC_TARGET_{NEON_8,NEON_16,NEON_32,SSE2,SSE4,AVX,AVX11,AVX2,AVX512KNL,GENERIC}
     - 1
     - One of these will be set, depending on the compilation target.
   * - ISPC_POINTER_SIZE
@@ -5131,7 +5157,7 @@ countries.
 
 * Other names and brands may be claimed as the property of others.
 
-Copyright(C) 2011-2015, Intel Corporation. All rights reserved.
+Copyright(C) 2011-2016, Intel Corporation. All rights reserved.
 
 
 Optimization Notice

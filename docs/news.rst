@@ -2,6 +2,16 @@
 ispc News
 =========
 
+ispc 1.9.0 is Released
+----------------------
+
+An ``ispc`` release with AVX512 (KNL flavor) support and a number of bug fixes,
+based on fresh LLVM 3.8 backend.
+
+For more details, please check `Release Notes`_.
+
+.. _Release Notes: https://github.com/ispc/ispc/blob/master/docs/ReleaseNotes.txt
+
 ispc 1.8.2 is Released
 ----------------------
 
