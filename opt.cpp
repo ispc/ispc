@@ -112,6 +112,9 @@
   #include <llvm/Analysis/BasicAliasAnalysis.h>
   #include "llvm/Analysis/TypeBasedAliasAnalysis.h"
 #endif
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_3_9 // LLVM 3.9+
+  #include "llvm/Transforms/IPO/FunctionAttrs.h"
+#endif
 #include <llvm/Analysis/Passes.h>
 #include <llvm/Support/raw_ostream.h>
 #include <llvm/Support/Dwarf.h>
@@ -672,7 +675,10 @@ Optimize(llvm::Module *module, int optLevel) {
         optPM.add(llvm::createInstructionCombiningPass());
         optPM.add(llvm::createCFGSimplificationPass());
         optPM.add(llvm::createPruneEHPass());
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_3_8 // 3.8+
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_3_9 // 3.9+
+        optPM.add(llvm::createPostOrderFunctionAttrsLegacyPass());
+        optPM.add(llvm::createReversePostOrderFunctionAttrsPass());
+#elif ISPC_LLVM_VERSION == ISPC_LLVM_3_8 // 3.8
         optPM.add(llvm::createPostOrderFunctionAttrsPass());
         optPM.add(llvm::createReversePostOrderFunctionAttrsPass());
 #else // 3.7 and earlier
