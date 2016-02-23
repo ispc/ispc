@@ -1755,6 +1755,34 @@ define(`aossoa', `define void
   ret void
 }
 
+define void
+@__aos_to_soa4_double4(<4 x double> %v0, <4 x double> %v1, <4 x double> %v2,
+        <4 x double> %v3, <4 x double> * noalias %out0,
+        <4 x double> * noalias %out1, <4 x double> * noalias %out2,
+        <4 x double> * noalias %out3) nounwind alwaysinline {
+  %t0 = shufflevector <4 x double> %v2, <4 x double> %v3,  ; r2 r3 g2 g3
+          <4 x i32> <i32 0, i32 4, i32 1, i32 5>
+  %t1 = shufflevector <4 x double> %v2, <4 x double> %v3,  ; b2 b3 a2 a3
+          <4 x i32> <i32 2, i32 6, i32 3, i32 7>
+  %t2 = shufflevector <4 x double> %v0, <4 x double> %v1,  ; r0 r1 g0 g1
+          <4 x i32> <i32 0, i32 4, i32 1, i32 5>
+  %t3 = shufflevector <4 x double> %v0, <4 x double> %v1,  ; b0 b1 a0 a1
+          <4 x i32> <i32 2, i32 6, i32 3, i32 7>
+
+  %r0 = shufflevector <4 x double> %t2, <4 x double> %t0,  ; r0 r1 r2 r3
+          <4 x i32> <i32 0, i32 1, i32 4, i32 5>
+  store <4 x double> %r0, <4 x double> * %out0
+  %r1 = shufflevector <4 x double> %t2, <4 x double> %t0,  ; g0 g1 g2 g3
+          <4 x i32> <i32 2, i32 3, i32 6, i32 7>
+  store <4 x double> %r1, <4 x double> * %out1
+  %r2 = shufflevector <4 x double> %t3, <4 x double> %t1,  ; b0 b1 b2 b3
+          <4 x i32> <i32 0, i32 1, i32 4, i32 5>
+  store <4 x double> %r2, <4 x double> * %out2
+  %r3 = shufflevector <4 x double> %t3, <4 x double> %t1,  ; a0 a1 a2 a3
+          <4 x i32> <i32 2, i32 3, i32 6, i32 7>
+  store <4 x double> %r3, <4 x double> * %out3
+  ret void
+}
 
 ;; Do the reverse of __aos_to_soa4_float4--reorder <r0 r1 r2 r3> <g0 g1 g2 g3> ..
 ;; to <r0 g0 b0 a0> <r1 g1 b1 a1> ...
@@ -1887,6 +1915,54 @@ define void
   ret void
 }
 
+define void
+@__aos_to_soa4_double8(<8 x double> %v0, <8 x double> %v1, <8 x double> %v2,
+        <8 x double> %v3, <8 x double> * noalias %out0,
+        <8 x double> * noalias %out1, <8 x double> * noalias %out2,
+        <8 x double> * noalias %out3) nounwind alwaysinline {
+  ;; Split each 8-vector into 2 4-vectors
+  %v0a = shufflevector <8 x double> %v0, <8 x double> undef,
+         <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %v0b = shufflevector <8 x double> %v0, <8 x double> undef,
+         <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+  %v1a = shufflevector <8 x double> %v1, <8 x double> undef,
+         <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %v1b = shufflevector <8 x double> %v1, <8 x double> undef,
+         <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+  %v2a = shufflevector <8 x double> %v2, <8 x double> undef,
+         <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %v2b = shufflevector <8 x double> %v2, <8 x double> undef,
+         <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+  %v3a = shufflevector <8 x double> %v3, <8 x double> undef,
+         <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %v3b = shufflevector <8 x double> %v3, <8 x double> undef,
+         <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+
+  ;; Similarly for the output pointers
+  %out0a = bitcast <8 x double> * %out0 to <4 x double> *
+  %out0b = getelementptr PTR_OP_ARGS(`<4 x double>') %out0a, i32 1
+  %out1a = bitcast <8 x double> * %out1 to <4 x double> *
+  %out1b = getelementptr PTR_OP_ARGS(`<4 x double>') %out1a, i32 1
+  %out2a = bitcast <8 x double> * %out2 to <4 x double> *
+  %out2b = getelementptr PTR_OP_ARGS(`<4 x double>') %out2a, i32 1
+  %out3a = bitcast <8 x double> * %out3 to <4 x double> *
+  %out3b = getelementptr PTR_OP_ARGS(`<4 x double>') %out3a, i32 1
+
+  ;; Do the first part--given input vectors like
+  ;; <x0 y0 z0 x1 y1 z1 x2 y2> <z2 x3 y3 z3 x4 y4 z4 x5> <y5 z5 x6 y6 z6 x7 y7 z7>,
+  ;; pass 3 4-vectors <x0 y0 z0 x1> <y1 z1 x2 y2> <z2 z3 y3 z3> to the 4-vec
+  ;; version to compute the first 4 SOA values for the three output variables.
+  call void @__aos_to_soa4_double4(<4 x double> %v0a, <4 x double> %v0b,
+         <4 x double> %v1a, <4 x double> %v1b, <4 x double> * %out0a,
+         <4 x double> * %out1a, <4 x double> * %out2a, <4 x double> * %out3a)
+
+  ;; And similarly pass <x4 y4 z4 x5> <y5 z5 x6 y6> <z6 x7 y7 z7> to the 4-wide
+  ;; version to compute the second 4 SOA values for the three outputs
+  call void @__aos_to_soa4_double4(<4 x double> %v2a, <4 x double> %v2b,
+         <4 x double> %v3a, <4 x double> %v3b, <4 x double> * %out0b,
+         <4 x double> * %out1b, <4 x double> * %out2b, <4 x double> * %out3b)
+  ret void
+}
 
 define void
 @__soa_to_aos4_float8(<8 x float> %v0, <8 x float> %v1, <8 x float> %v2,
@@ -2076,6 +2152,75 @@ define void
   ret void
 }
 
+define void
+@__aos_to_soa4_double16(<16 x double> %v0, <16 x double> %v1, <16 x double> %v2,
+        <16 x double> %v3, <16 x double> * noalias %out0,
+        <16 x double> * noalias %out1, <16 x double> * noalias %out2,
+        <16 x double> * noalias %out3) nounwind alwaysinline {
+  %v0a = shufflevector <16 x double> %v0, <16 x double> undef,
+         <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %v0b = shufflevector <16 x double> %v0, <16 x double> undef,
+         <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+  %v0c = shufflevector <16 x double> %v0, <16 x double> undef,
+         <4 x i32> <i32 8, i32 9, i32 10, i32 11>
+  %v0d = shufflevector <16 x double> %v0, <16 x double> undef,
+         <4 x i32> <i32 12, i32 13, i32 14, i32 15>
+  %v1a = shufflevector <16 x double> %v1, <16 x double> undef,
+         <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %v1b = shufflevector <16 x double> %v1, <16 x double> undef,
+         <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+  %v1c = shufflevector <16 x double> %v1, <16 x double> undef,
+         <4 x i32> <i32 8, i32 9, i32 10, i32 11>
+  %v1d = shufflevector <16 x double> %v1, <16 x double> undef,
+         <4 x i32> <i32 12, i32 13, i32 14, i32 15>
+  %v2a = shufflevector <16 x double> %v2, <16 x double> undef,
+         <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %v2b = shufflevector <16 x double> %v2, <16 x double> undef,
+         <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+  %v2c = shufflevector <16 x double> %v2, <16 x double> undef,
+         <4 x i32> <i32 8, i32 9, i32 10, i32 11>
+  %v2d = shufflevector <16 x double> %v2, <16 x double> undef,
+         <4 x i32> <i32 12, i32 13, i32 14, i32 15>
+  %v3a = shufflevector <16 x double> %v3, <16 x double> undef,
+         <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %v3b = shufflevector <16 x double> %v3, <16 x double> undef,
+         <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+  %v3c = shufflevector <16 x double> %v3, <16 x double> undef,
+         <4 x i32> <i32 8, i32 9, i32 10, i32 11>
+  %v3d = shufflevector <16 x double> %v3, <16 x double> undef,
+         <4 x i32> <i32 12, i32 13, i32 14, i32 15>
+
+  %out0a = bitcast <16 x double> * %out0 to <4 x double> *
+  %out0b = getelementptr PTR_OP_ARGS(`<4 x double>') %out0a, i32 1
+  %out0c = getelementptr PTR_OP_ARGS(`<4 x double>') %out0a, i32 2
+  %out0d = getelementptr PTR_OP_ARGS(`<4 x double>') %out0a, i32 3
+  %out1a = bitcast <16 x double> * %out1 to <4 x double> *
+  %out1b = getelementptr PTR_OP_ARGS(`<4 x double>') %out1a, i32 1
+  %out1c = getelementptr PTR_OP_ARGS(`<4 x double>') %out1a, i32 2
+  %out1d = getelementptr PTR_OP_ARGS(`<4 x double>') %out1a, i32 3
+  %out2a = bitcast <16 x double> * %out2 to <4 x double> *
+  %out2b = getelementptr PTR_OP_ARGS(`<4 x double>') %out2a, i32 1
+  %out2c = getelementptr PTR_OP_ARGS(`<4 x double>') %out2a, i32 2
+  %out2d = getelementptr PTR_OP_ARGS(`<4 x double>') %out2a, i32 3
+  %out3a = bitcast <16 x double> * %out3 to <4 x double> *
+  %out3b = getelementptr PTR_OP_ARGS(`<4 x double>') %out3a, i32 1
+  %out3c = getelementptr PTR_OP_ARGS(`<4 x double>') %out3a, i32 2
+  %out3d = getelementptr PTR_OP_ARGS(`<4 x double>') %out3a, i32 3
+
+  call void @__aos_to_soa4_double4(<4 x double> %v0a, <4 x double> %v0b,
+         <4 x double> %v0c, <4 x double> %v0d, <4 x double> * %out0a,
+         <4 x double> * %out1a, <4 x double> * %out2a, <4 x double> * %out3a)
+  call void @__aos_to_soa4_double4(<4 x double> %v1a, <4 x double> %v1b,
+         <4 x double> %v1c, <4 x double> %v1d, <4 x double> * %out0b,
+         <4 x double> * %out1b, <4 x double> * %out2b, <4 x double> * %out3b)
+  call void @__aos_to_soa4_double4(<4 x double> %v2a, <4 x double> %v2b,
+         <4 x double> %v2c, <4 x double> %v2d, <4 x double> * %out0c,
+         <4 x double> * %out1c, <4 x double> * %out2c, <4 x double> * %out3c)
+  call void @__aos_to_soa4_double4(<4 x double> %v3a, <4 x double> %v3b,
+         <4 x double> %v3c, <4 x double> %v3d, <4 x double> * %out0d,
+         <4 x double> * %out1d, <4 x double> * %out2d, <4 x double> * %out3d)
+  ret void
+}
 
 define void
 @__soa_to_aos4_float16(<16 x float> %v0, <16 x float> %v1, <16 x float> %v2,
@@ -2284,6 +2429,24 @@ define void
   ret void
 }
 
+define void
+@__aos_to_soa4_double(double * noalias %p,
+        <WIDTH x double> * noalias %out0, <WIDTH x double> * noalias %out1,
+        <WIDTH x double> * noalias %out2, <WIDTH x double> * noalias %out3)
+        nounwind alwaysinline {
+  %p0 = bitcast double * %p to <WIDTH x double> *
+  %v0 = load PTR_OP_ARGS(`<WIDTH x double> ')  %p0, align 4
+  %p1 = getelementptr PTR_OP_ARGS(`<WIDTH x double>') %p0, i32 1
+  %v1 = load PTR_OP_ARGS(`<WIDTH x double> ')  %p1, align 4
+  %p2 = getelementptr PTR_OP_ARGS(`<WIDTH x double>') %p0, i32 2
+  %v2 = load PTR_OP_ARGS(`<WIDTH x double> ')  %p2, align 4
+  %p3 = getelementptr PTR_OP_ARGS(`<WIDTH x double>') %p0, i32 3
+  %v3 = load PTR_OP_ARGS(`<WIDTH x double> ')  %p3, align 4
+  call void @__aos_to_soa4_double`'WIDTH (<WIDTH x double> %v0, <WIDTH x double> %v1,
+         <WIDTH x double> %v2, <WIDTH x double> %v3, <WIDTH x double> * %out0,
+         <WIDTH x double> * %out1, <WIDTH x double> * %out2, <WIDTH x double> * %out3)
+  ret void
+}
 
 define void
 @__soa_to_aos4_float(<WIDTH x float> %v0, <WIDTH x float> %v1, <WIDTH x float> %v2,
