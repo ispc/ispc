@@ -343,12 +343,12 @@ def build_LLVM(version_LLVM, revision, folder, tarball, debug, selfbuild, extra,
 
 
 def unsupported_llvm_targets(LLVM_VERSION):
-    prohibited_list = {"3.2":["avx512knl-i32x16"],
-                       "3.3":["avx512knl-i32x16"],
-                       "3.4":["avx512knl-i32x16"],
-                       "3.5":["avx512knl-i32x16"],
-                       "3.6":["avx512knl-i32x16"],
-                       "3.7":[],
+    prohibited_list = {"3.2":["avx512knl-i32x16", "avx512skx-i32x16"],
+                       "3.3":["avx512knl-i32x16", "avx512skx-i32x16"],
+                       "3.4":["avx512knl-i32x16", "avx512skx-i32x16"],
+                       "3.5":["avx512knl-i32x16", "avx512skx-i32x16"],
+                       "3.6":["avx512knl-i32x16", "avx512skx-i32x16"],
+                       "3.7":["avx512skx-i32x16"],
                        "3.8":[],
                        "3.9":[],
                        "trunk":[]}   
@@ -379,7 +379,7 @@ def check_targets():
     KNL   = ["knl-generic", "avx512knl-i32x16"]
 
     targets = [["AVX2", AVX2, False], ["AVX1.1", AVX11, False], ["AVX", AVX, False], ["SSE4", SSE4, False], 
-               ["SSE2", SSE2, False], ["KNL", KNL, False]]
+               ["SSE2", SSE2, False], ["KNL", KNL, False], ["SKX", SKX, False]]
     f_lines = take_lines("check_isa.exe", "first")
     for i in range(0,5):
         if targets[i][0] in f_lines:
@@ -403,6 +403,8 @@ def check_targets():
     # here we have SDE
     f_lines = take_lines(sde_exists + " -help", "all")
     for i in range(0,len(f_lines)):
+        if targets[6][2] == False and "skx" in f_lines[i]:
+            answer_sde = answer_sde + ["-skx", "avx512skx-i32x16"]
         if targets[5][2] == False and "knl" in f_lines[i]:
             answer_sde = answer_sde + [["-knl", "knl-generic"], ["-knl", "avx512knl-i32x16"]]
         if targets[3][2] == False and "wsm" in f_lines[i]:

@@ -511,13 +511,6 @@ define float @__rsqrt_uniform_float(float) nounwind readonly alwaysinline {
   ret float %half_scale
 }
 
-declare <16 x float> @llvm.x86.avx512.rsqrt28.ps(<16 x float>, <16 x float>, i16, i32) nounwind readnone
-
-define <16 x float> @__rsqrt_varying_float(<16 x float> %v) nounwind readonly alwaysinline {
-  %res = call <16 x float> @llvm.x86.avx512.rsqrt28.ps(<16 x float> %v, <16 x float> undef, i16 -1, i32 8)
-  ret <16 x float> %res  
-}
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; rcp
 
@@ -536,13 +529,6 @@ define float @__rcp_uniform_float(float) nounwind readonly alwaysinline {
   %two_minus = fsub float 2., %v_iv
   %iv_mul = fmul float %scall, %two_minus
   ret float %iv_mul
-}
-
-declare <16 x float> @llvm.x86.avx512.rcp28.ps(<16 x float>, <16 x float>, i16, i32) nounwind readnone
-
-define <16 x float> @__rcp_varying_float(<16 x float>) nounwind readonly alwaysinline {
-  %res = call <16 x float> @llvm.x86.avx512.rcp28.ps(<16 x float> %0, <16 x float> undef, i16 -1, i32 8)
-  ret <16 x float> %res
 }
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
