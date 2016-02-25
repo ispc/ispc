@@ -377,6 +377,7 @@ def check_targets():
     AVX11 = ["avx1.1-i32x8","avx1.1-i32x16","avx1.1-i64x4"]
     AVX2  = ["avx2-i32x8",  "avx2-i32x16",  "avx2-i64x4"]
     KNL   = ["knl-generic", "avx512knl-i32x16"]
+    SKX   = ["avx512skx-i32x16"]
 
     targets = [["AVX2", AVX2, False], ["AVX1.1", AVX11, False], ["AVX", AVX, False], ["SSE4", SSE4, False], 
                ["SSE2", SSE2, False], ["KNL", KNL, False], ["SKX", SKX, False]]
