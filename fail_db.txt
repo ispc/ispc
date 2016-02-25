@@ -121,6 +121,8 @@
 ./tests/test-143.ispc runfail  x86-64     generic-16   Linux LLVM 3.7 clang++3.4 -O0 *
 ./tests/test-143.ispc runfail  x86-64     generic-16   Linux LLVM 3.8 clang++3.4 -O2 *
 ./tests/test-143.ispc runfail  x86-64     generic-16   Linux LLVM 3.8 clang++3.4 -O0 *
+./tests/test-143.ispc runfail  x86-64     generic-16   Linux LLVM 3.9 clang++3.4 -O2 *
+./tests/test-143.ispc runfail  x86-64     generic-16   Linux LLVM 3.9 clang++3.4 -O0 *
 ./tests/masked-scatter-struct.ispc runfail  x86-64      generic-4   Linux LLVM 3.5 clang++3.4 -O2 *
 ./tests/short-vec-8.ispc compfail  x86-64      generic-4   Linux LLVM 3.5 clang++3.4 -O2 *
 ./tests/ptr-15.ispc runfail  x86-64      generic-4   Linux LLVM 3.3 clang++3.4 -O0 *
@@ -135,6 +137,8 @@
 ./tests/ptr-15.ispc runfail  x86-64     generic-16   Linux LLVM 3.7 clang++3.4 -O0 *
 ./tests/ptr-15.ispc runfail  x86-64      generic-4   Linux LLVM 3.8 clang++3.4 -O0 *
 ./tests/ptr-15.ispc runfail  x86-64     generic-16   Linux LLVM 3.8 clang++3.4 -O0 *
+./tests/ptr-15.ispc runfail  x86-64      generic-4   Linux LLVM 3.9 clang++3.4 -O0 *
+./tests/ptr-15.ispc runfail  x86-64     generic-16   Linux LLVM 3.9 clang++3.4 -O0 *
 ./tests/short-vec-8.ispc compfail  x86-64      generic-4   Linux LLVM 3.5 clang++3.4 -O0 *
 .\tests\foreach-double-1.ispc runfail     x86     avx2-i32x8 Windows LLVM 3.5         cl -O2 *
 .\tests\foreach-double-1.ispc runfail     x86    avx2-i32x16 Windows LLVM 3.5         cl -O2 *
@@ -151,6 +155,8 @@
 ./tests/ptr-22.ispc runfail  x86-64     generic-16   Linux LLVM 3.7 clang++3.4 -O0 *
 ./tests/ptr-22.ispc runfail  x86-64      generic-4   Linux LLVM 3.8 clang++3.4 -O0 *
 ./tests/ptr-22.ispc runfail  x86-64     generic-16   Linux LLVM 3.8 clang++3.4 -O0 *
+./tests/ptr-22.ispc runfail  x86-64      generic-4   Linux LLVM 3.9 clang++3.4 -O0 *
+./tests/ptr-22.ispc runfail  x86-64     generic-16   Linux LLVM 3.9 clang++3.4 -O0 *
 ./tests/masked-scatter-struct.ispc runfail  x86-64      generic-4   Linux LLVM 3.6 clang++3.4 -O2 *
 ./tests/short-vec-8.ispc compfail  x86-64      generic-4   Linux LLVM 3.6 clang++3.4 -O2 *
 ./tests/short-vec-8.ispc compfail  x86-64      generic-4   Linux LLVM 3.6 clang++3.4 -O0 *
@@ -160,10 +166,15 @@
 ./tests/ptr-19.ispc runfail  x86-64     generic-16   Linux LLVM 3.6 clang++3.4 -O0 *
 ./tests/ptr-19.ispc runfail  x86-64     generic-16   Linux LLVM 3.7 clang++3.4 -O0 *
 ./tests/ptr-19.ispc runfail  x86-64     generic-16   Linux LLVM 3.8 clang++3.4 -O0 *
+./tests/ptr-19.ispc runfail  x86-64     generic-16   Linux LLVM 3.9 clang++3.4 -O0 *
 ./tests/masked-scatter-struct.ispc runfail  x86-64      generic-4   Linux LLVM 3.7 clang++3.4 -O2 *
 ./tests/masked-scatter-struct.ispc runfail  x86-64      generic-4   Linux LLVM 3.8 clang++3.4 -O2 *
 ./tests/short-vec-8.ispc compfail  x86-64      generic-4   Linux LLVM 3.7 clang++3.4 -O2 *
 ./tests/short-vec-8.ispc compfail  x86-64      generic-4   Linux LLVM 3.7 clang++3.4 -O0 *
+./tests/short-vec-8.ispc compfail  x86-64      generic-4   Linux LLVM 3.8 clang++3.4 -O2 *
+./tests/short-vec-8.ispc compfail  x86-64      generic-4   Linux LLVM 3.8 clang++3.4 -O0 *
+./tests/short-vec-8.ispc compfail  x86-64      generic-4   Linux LLVM 3.9 clang++3.4 -O2 *
+./tests/short-vec-8.ispc compfail  x86-64      generic-4   Linux LLVM 3.9 clang++3.4 -O0 *
 
 % [KNC-generic]: vec16-i64 memory layout bugs. Need to rewrite knc.h to fix that
 ./tests/soa-18.ispc runfail  x86-64 knc-generic   Linux LLVM 3.4   icpc13.1 -O0 *
@@ -379,4 +390,36 @@
 ./tests/short-vec-7.ispc compfail     x86-64      generic-4   Linux LLVM 3.8 clang++3.4 -O2 *
 ./tests/short-vec-7.ispc compfail     x86-64     generic-16   Linux LLVM 3.8 clang++3.4 -O0 *
 ./tests/short-vec-7.ispc compfail     x86-64     generic-16   Linux LLVM 3.8 clang++3.4 -O2 *
+./tests/pointer-decl-craziness-1.ispc compfail     x86-64      generic-4   Linux LLVM 3.9 clang++3.4 -O0 *
+./tests/pointer-decl-craziness-1.ispc compfail     x86-64      generic-4   Linux LLVM 3.9 clang++3.4 -O2 *
+./tests/pointer-decl-craziness-1.ispc compfail     x86-64     generic-16   Linux LLVM 3.9 clang++3.4 -O0 *
+./tests/pointer-decl-craziness-1.ispc compfail     x86-64     generic-16   Linux LLVM 3.9 clang++3.4 -O2 *
+./tests/pointer-decl-craziness-3.ispc compfail     x86-64      generic-4   Linux LLVM 3.9 clang++3.4 -O0 *
+./tests/pointer-decl-craziness-3.ispc compfail     x86-64      generic-4   Linux LLVM 3.9 clang++3.4 -O2 *
+./tests/pointer-decl-craziness-3.ispc compfail     x86-64     generic-16   Linux LLVM 3.9 clang++3.4 -O0 *
+./tests/pointer-decl-craziness-3.ispc compfail     x86-64     generic-16   Linux LLVM 3.9 clang++3.4 -O2 *
+./tests/pointer-decl-craziness.ispc compfail     x86-64      generic-4   Linux LLVM 3.9 clang++3.4 -O0 *
+./tests/pointer-decl-craziness.ispc compfail     x86-64      generic-4   Linux LLVM 3.9 clang++3.4 -O2 *
+./tests/pointer-decl-craziness.ispc compfail     x86-64     generic-16   Linux LLVM 3.9 clang++3.4 -O0 *
+./tests/pointer-decl-craziness.ispc compfail     x86-64     generic-16   Linux LLVM 3.9 clang++3.4 -O2 *
+./tests/ptr-23.ispc compfail     x86-64      generic-4   Linux LLVM 3.9 clang++3.4 -O0 *
+./tests/ptr-23.ispc compfail     x86-64      generic-4   Linux LLVM 3.9 clang++3.4 -O2 *
+./tests/ptr-23.ispc compfail     x86-64     generic-16   Linux LLVM 3.9 clang++3.4 -O0 *
+./tests/ptr-23.ispc compfail     x86-64     generic-16   Linux LLVM 3.9 clang++3.4 -O2 *
+./tests/ref-6.ispc compfail     x86-64      generic-4   Linux LLVM 3.9 clang++3.4 -O0 *
+./tests/ref-6.ispc compfail     x86-64      generic-4   Linux LLVM 3.9 clang++3.4 -O2 *
+./tests/ref-6.ispc compfail     x86-64     generic-16   Linux LLVM 3.9 clang++3.4 -O0 *
+./tests/ref-6.ispc compfail     x86-64     generic-16   Linux LLVM 3.9 clang++3.4 -O2 *
+./tests/scatter-vector.ispc compfail     x86-64      generic-4   Linux LLVM 3.9 clang++3.4 -O0 *
+./tests/scatter-vector.ispc compfail     x86-64      generic-4   Linux LLVM 3.9 clang++3.4 -O2 *
+./tests/scatter-vector.ispc compfail     x86-64     generic-16   Linux LLVM 3.9 clang++3.4 -O0 *
+./tests/scatter-vector.ispc compfail     x86-64     generic-16   Linux LLVM 3.9 clang++3.4 -O2 *
+./tests/short-vec-6.ispc compfail     x86-64      generic-4   Linux LLVM 3.9 clang++3.4 -O0 *
+./tests/short-vec-6.ispc compfail     x86-64      generic-4   Linux LLVM 3.9 clang++3.4 -O2 *
+./tests/short-vec-6.ispc compfail     x86-64     generic-16   Linux LLVM 3.9 clang++3.4 -O0 *
+./tests/short-vec-6.ispc compfail     x86-64     generic-16   Linux LLVM 3.9 clang++3.4 -O2 *
+./tests/short-vec-7.ispc compfail     x86-64      generic-4   Linux LLVM 3.9 clang++3.4 -O0 *
+./tests/short-vec-7.ispc compfail     x86-64      generic-4   Linux LLVM 3.9 clang++3.4 -O2 *
+./tests/short-vec-7.ispc compfail     x86-64     generic-16   Linux LLVM 3.9 clang++3.4 -O0 *
+./tests/short-vec-7.ispc compfail     x86-64     generic-16   Linux LLVM 3.9 clang++3.4 -O2 *
 % End of anonymous namespace bug
