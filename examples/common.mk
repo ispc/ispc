@@ -35,6 +35,12 @@ ifeq ($(ARCH),x86)
     ifneq (,$(findstring avx2,$(ISPC_IA_TARGETS)))
       ISPC_OBJS+=$(addprefix objs/, $(ISPC_SRC:.ispc=)_ispc_avx2.o)
     endif
+    ifneq (,$(findstring avx512knl,$(ISPC_IA_TARGETS)))
+      ISPC_OBJS+=$(addprefix objs/, $(ISPC_SRC:.ispc=)_ispc_avx512knl.o)
+    endif
+    ifneq (,$(findstring avx512skx,$(ISPC_IA_TARGETS)))
+      ISPC_OBJS+=$(addprefix objs/, $(ISPC_SRC:.ispc=)_ispc_avx512skx.o)
+    endif
   endif
   ISPC_TARGETS=$(ISPC_IA_TARGETS)
   ARCH_BIT:=$(shell getconf LONG_BIT)
@@ -86,7 +92,7 @@ objs/%.o: ../%.cpp dirs
 
 objs/$(EXAMPLE).o: objs/$(EXAMPLE)_ispc.h dirs
 
-objs/%_ispc.h objs/%_ispc.o objs/%_ispc_sse2.o objs/%_ispc_sse4.o objs/%_ispc_avx.o objs/%_ispc_avx11.o objs/%_ispc_avx2.o: %.ispc dirs
+objs/%_ispc.h objs/%_ispc.o objs/%_ispc_sse2.o objs/%_ispc_sse4.o objs/%_ispc_avx.o objs/%_ispc_avx11.o objs/%_ispc_avx2.o objs/%_ispc_avx512knl.o objs/%_ispc_avx512skx.o : %.ispc dirs
 	$(ISPC) $(ISPC_FLAGS) --target=$(ISPC_TARGETS) $< -o objs/$*_ispc.o -h objs/$*_ispc.h
 
 objs/$(ISPC_SRC:.ispc=)_sse4.cpp: $(ISPC_SRC)
