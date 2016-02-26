@@ -1266,7 +1266,7 @@ packed_store_active(uniform int a[], int vals) {
     return __packed_store_active(a, vals, (IntMaskType)__mask);
 }
 
-static inline uniform int 
+static inline uniform int
 packed_store_active(bool active, uniform int a[], int vals) {
     return __packed_store_active(a, vals, (IntMaskType)(-(int)active));
 }
@@ -1276,6 +1276,128 @@ packed_store_active2(uniform int a[], int vals) {
     return __packed_store_active2(a, vals, (IntMaskType)__mask);
 }
 
+///////////////////////////////////////////////////////////////////////////
+// streaming store
+
+static inline void
+streaming_store(uniform unsigned int8 a[],
+                   unsigned int8 vals) {
+    __streaming_store_varying_i8(a, vals);
+}
+
+static inline void
+streaming_store(uniform int8 a[],
+                   int8 vals) {
+    __streaming_store_varying_i8(a, vals);
+}
+
+static inline void
+streaming_store(uniform unsigned int16 a[],
+                   unsigned int16 vals) {
+    __streaming_store_varying_i16(a, vals);
+}
+
+static inline void
+streaming_store(uniform int16 a[],
+                   int16 vals) {
+    __streaming_store_varying_i16(a, vals);
+}
+
+static inline void
+streaming_store(uniform unsigned int a[],
+                   unsigned int vals) {
+    __streaming_store_varying_i32(a, vals);
+}
+
+static inline void
+streaming_store(uniform int a[],
+                   int vals) {
+    __streaming_store_varying_i32(a, vals);
+}
+
+static inline void
+streaming_store(uniform unsigned int64 a[],
+                   unsigned int64 vals) {
+    __streaming_store_varying_i64(a, vals);
+}
+
+static inline void
+streaming_store(uniform int64 a[],
+                   int64 vals) {
+    __streaming_store_varying_i64(a, vals);
+}
+
+static inline void
+streaming_store(uniform float a[],
+                   float vals) {
+    __streaming_store_varying_float(a, vals);
+}
+
+static inline void
+streaming_store(uniform double a[],
+                   double vals) {
+    __streaming_store_varying_double(a, vals);
+}
+
+static inline void
+streaming_store(uniform unsigned int8 a[],
+                   uniform unsigned int8 vals) {
+    __streaming_store_uniform_i8(a, vals);
+}
+
+static inline void
+streaming_store(uniform int8 a[],
+                   uniform int8 vals) {
+    __streaming_store_uniform_i8(a, vals);
+}
+
+static inline void
+streaming_store(uniform unsigned int16 a[],
+                   uniform unsigned int16 vals) {
+    __streaming_store_uniform_i16(a, vals);
+}
+
+static inline void
+streaming_store(uniform int16 a[],
+                   uniform int16 vals) {
+    __streaming_store_uniform_i16(a, vals);
+}
+
+static inline void
+streaming_store(uniform unsigned int a[],
+                   uniform unsigned int vals) {
+    __streaming_store_uniform_i32(a, vals);
+}
+
+static inline void
+streaming_store(uniform int a[],
+                   uniform int vals) {
+    __streaming_store_uniform_i32(a, vals);
+}
+
+static inline void
+streaming_store(uniform unsigned int64 a[],
+                   uniform unsigned int64 vals) {
+    __streaming_store_uniform_i64(a, vals);
+}
+
+static inline void
+streaming_store(uniform int64 a[],
+                   uniform int64 vals) {
+    __streaming_store_uniform_i64(a, vals);
+}
+
+static inline void
+streaming_store(uniform float a[],
+                   uniform float vals) {
+    __streaming_store_uniform_float(a, vals);
+}
+
+static inline void
+streaming_store(uniform double a[],
+                   uniform double vals) {
+    __streaming_store_uniform_double(a, vals);
+}
 
 ///////////////////////////////////////////////////////////////////////////
 // System information

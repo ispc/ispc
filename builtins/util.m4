@@ -4097,6 +4097,54 @@ return:
 ')
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; streaming stores
+
+define(`gen_streaming_stores_varying_by_type', `
+define void @__streaming_store_varying_$1($1* nocapture, <WIDTH x $1>) nounwind alwaysinline {
+  %ptr = bitcast $1* %0 to <WIDTH x $1>*
+  store <WIDTH x $1> %1, <WIDTH x $1>* %ptr , !nontemporal !1
+  ret void
+}
+')
+
+define(`gen_streaming_stores_uniform_by_type', `
+define void @__streaming_store_uniform_$1($1* nocapture, $1) nounwind alwaysinline {
+  store $1 %1, $1 * %0 , !nontemporal !1
+  ret void
+}
+')
+
+define(`gen_streaming_stores_metadata', `
+!1 = !{i32 1}
+')
+
+define(`gen_streaming_stores_varying', `
+gen_streaming_stores_varying_by_type(float)
+gen_streaming_stores_varying_by_type(double)
+gen_streaming_stores_varying_by_type(i8)
+gen_streaming_stores_varying_by_type(i16)
+gen_streaming_stores_varying_by_type(i32)
+gen_streaming_stores_varying_by_type(i64)
+')
+
+define(`gen_streaming_stores_uniform', `
+gen_streaming_stores_uniform_by_type(float)
+gen_streaming_stores_uniform_by_type(double)
+gen_streaming_stores_uniform_by_type(i8)
+gen_streaming_stores_uniform_by_type(i16)
+gen_streaming_stores_uniform_by_type(i32)
+gen_streaming_stores_uniform_by_type(i64)
+')
+
+define(`gen_streaming_stores', `
+gen_streaming_stores_varying()
+gen_streaming_stores_uniform()
+gen_streaming_stores_metadata()
+')
+
+gen_streaming_stores()
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; masked store
 ;; emit code to do masked store as a set of per-lane scalar stores
 ;; parameters:
