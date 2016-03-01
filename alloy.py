@@ -405,7 +405,7 @@ def check_targets():
     f_lines = take_lines(sde_exists + " -help", "all")
     for i in range(0,len(f_lines)):
         if targets[6][2] == False and "skx" in f_lines[i]:
-            answer_sde = answer_sde + ["-skx", "avx512skx-i32x16"]
+            answer_sde = answer_sde + [["-skx", "avx512skx-i32x16"]]
         if targets[5][2] == False and "knl" in f_lines[i]:
             answer_sde = answer_sde + [["-knl", "knl-generic"], ["-knl", "avx512knl-i32x16"]]
         if targets[3][2] == False and "wsm" in f_lines[i]:
