@@ -31,7 +31,6 @@
 
 define(`WIDTH',`16')
 
-
 ifelse(LLVM_VERSION, LLVM_3_7,
     `include(`target-avx512-common.ll')',
          LLVM_VERSION, LLVM_3_8,
@@ -41,23 +40,27 @@ ifelse(LLVM_VERSION, LLVM_3_7,
   )
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; rcp
+;; rcp, rsqrt
 
+define(`rcp_rsqrt_varying_float_knl',`
 declare <16 x float> @llvm.x86.avx512.rcp28.ps(<16 x float>, <16 x float>, i16, i32) nounwind readnone
-
 define <16 x float> @__rcp_varying_float(<16 x float>) nounwind readonly alwaysinline {
   %res = call <16 x float> @llvm.x86.avx512.rcp28.ps(<16 x float> %0, <16 x float> undef, i16 -1, i32 8)
   ret <16 x float> %res
 }
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; rsqrt
-
 declare <16 x float> @llvm.x86.avx512.rsqrt28.ps(<16 x float>, <16 x float>, i16, i32) nounwind readnone
-
 define <16 x float> @__rsqrt_varying_float(<16 x float> %v) nounwind readonly alwaysinline {
   %res = call <16 x float> @llvm.x86.avx512.rsqrt28.ps(<16 x float> %v, <16 x float> undef, i16 -1, i32 8)
   ret <16 x float> %res
 }
+')
+
+ifelse(LLVM_VERSION, LLVM_3_7,
+    rcp_rsqrt_varying_float_knl(),
+         LLVM_VERSION, LLVM_3_8,
+    rcp_rsqrt_varying_float_knl(),
+         LLVM_VERSION, LLVM_3_9,
+    rcp_rsqrt_varying_float_knl()
+  )
 
 ;;saturation_arithmetic_novec()
