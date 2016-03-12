@@ -114,6 +114,7 @@
 #endif
 #if ISPC_LLVM_VERSION >= ISPC_LLVM_3_9 // LLVM 3.9+
   #include "llvm/Transforms/IPO/FunctionAttrs.h"
+  #include "llvm/Transforms/Scalar/GVN.h"
 #endif
 #include <llvm/Analysis/Passes.h>
 #include <llvm/Support/raw_ostream.h>
