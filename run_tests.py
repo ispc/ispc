@@ -251,6 +251,19 @@ def run_test(testname):
                         gcc_arch = '-m32'
                     else:
                         gcc_arch = '-m64'
+                # Detect compiler version:
+                if is_windows == False:
+                    temp1 = common.take_lines(options.compiler_exe + " --version", "first")
+                    temp2 = re.search("[0-9]*\.[0-9]*\.[0-9]", temp1)
+                    if temp2 == None:
+                        temp3 = re.search("[0-9]*\.[0-9]*", temp1)
+                    else:
+                        temp3 = re.search("[0-9]*\.[0-9]*", temp2.group())
+                    compiler_version = options.compiler_exe + temp3.group()
+                else:
+                    compiler_version = "cl"
+                skx_compilers = ["clang++3.6", "clang++3.7", "clang++3.8", "clang++3.9", "cl"]
+                ###
 
                 gcc_isa=""
                 if options.target == 'generic-4':
@@ -273,7 +286,7 @@ def run_test(testname):
                 elif (options.target == "avx512knl-i32x16" and options.compiler_exe == "clang++"):
                     cc_cmd = "%s -O2 -I. %s %s test_static.cpp -DTEST_SIG=%d %s -o %s" % \
                          (options.compiler_exe, gcc_arch, "-march=knl", match, obj_name, exe_name)
-                elif (options.target == "avx512skx-i32x16" and options.compiler_exe == "clang++"):
+                elif (options.target == "avx512skx-i32x16" and compiler_version in skx_compilers):
                     cc_cmd = "%s -O2 -I. %s %s test_static.cpp -DTEST_SIG=%d %s -o %s" % \
                          (options.compiler_exe, gcc_arch, "-march=skx", match, obj_name, exe_name)
                 else:
