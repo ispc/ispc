@@ -1,7 +1,7 @@
 " Vim syntax file
 " Language:	ISPC
 " Maintainer:	Andreas Wendleder <andreas.wendleder@gmail.com>
-" Last Change:	2011 Aug 3
+" Last Change:	2016 Mar 24
 
 " Quit when a syntax file was already loaded
 if exists("b:current_syntax")
