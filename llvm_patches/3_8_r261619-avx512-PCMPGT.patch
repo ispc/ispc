@@ -1,0 +1,54 @@
+diff -ruN lib/Target/X86/X86InstrInfo.td lib/Target/X86/X86InstrInfo.td
+--- lib/Target/X86/X86InstrInfo.td	2016-03-04 12:36:50.461576093 +0300
++++ lib/Target/X86/X86InstrInfo.td	2016-03-04 12:38:58.747585762 +0300
+@@ -728,6 +728,8 @@
+ 
+ //===----------------------------------------------------------------------===//
+ // X86 Instruction Predicate Definitions.
++def TruePredicate : Predicate<"true">;
++
+ def HasCMov      : Predicate<"Subtarget->hasCMov()">;
+ def NoCMov       : Predicate<"!Subtarget->hasCMov()">;
+ 
+diff -ruN lib/Target/X86/X86InstrSSE.td lib/Target/X86/X86InstrSSE.td
+--- lib/Target/X86/X86InstrSSE.td	2016-03-04 12:36:50.472576094 +0300
++++ lib/Target/X86/X86InstrSSE.td	2016-03-04 12:41:38.419597797 +0300
+@@ -4273,17 +4273,17 @@
+ //===---------------------------------------------------------------------===//
+ 
+ defm PCMPEQB : PDI_binop_all<0x74, "pcmpeqb", X86pcmpeq, v16i8, v32i8,
+-                             SSE_INTALU_ITINS_P, 1, NoVLX_Or_NoBWI>;
++                             SSE_INTALU_ITINS_P, 1, TruePredicate>;
+ defm PCMPEQW : PDI_binop_all<0x75, "pcmpeqw", X86pcmpeq, v8i16, v16i16,
+-                             SSE_INTALU_ITINS_P, 1, NoVLX_Or_NoBWI>;
++                             SSE_INTALU_ITINS_P, 1, TruePredicate>;
+ defm PCMPEQD : PDI_binop_all<0x76, "pcmpeqd", X86pcmpeq, v4i32, v8i32,
+-                             SSE_INTALU_ITINS_P, 1, NoVLX>;
++                             SSE_INTALU_ITINS_P, 1, TruePredicate>;
+ defm PCMPGTB : PDI_binop_all<0x64, "pcmpgtb", X86pcmpgt, v16i8, v32i8,
+-                             SSE_INTALU_ITINS_P, 0, NoVLX_Or_NoBWI>;
++                             SSE_INTALU_ITINS_P, 0, TruePredicate>;
+ defm PCMPGTW : PDI_binop_all<0x65, "pcmpgtw", X86pcmpgt, v8i16, v16i16,
+-                             SSE_INTALU_ITINS_P, 0, NoVLX_Or_NoBWI>;
++                             SSE_INTALU_ITINS_P, 0, TruePredicate>;
+ defm PCMPGTD : PDI_binop_all<0x66, "pcmpgtd", X86pcmpgt, v4i32, v8i32,
+-                             SSE_INTALU_ITINS_P, 0, NoVLX>;
++                             SSE_INTALU_ITINS_P, 0, TruePredicate>;
+ 
+ //===---------------------------------------------------------------------===//
+ // SSE2 - Packed Integer Shuffle Instructions
+diff -ruN test/CodeGen/X86/avx-isa-check.ll test/CodeGen/X86/avx-isa-check.ll
+--- test/CodeGen/X86/avx-isa-check.ll	2016-03-04 12:36:45.218575698 +0300
++++ test/CodeGen/X86/avx-isa-check.ll	2016-03-04 12:44:06.705608973 +0300
+@@ -568,3 +568,11 @@
+   %shift = shl <8 x i16> %a, <i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3>
+   ret <8 x i16> %shift
+ }
++
++define <32 x i8> @test_cmpgtb(<32 x i8> %A) {
++; generate the follow code
++;   vpxor   %ymm1, %ymm1, %ymm1
++;  vpcmpgtb %ymm0, %ymm1, %ymm0
++  %B = ashr <32 x i8> %A, <i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7>
++  ret <32 x i8> %B
++}
