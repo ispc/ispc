@@ -241,13 +241,14 @@ def build_LLVM(version_LLVM, revision, folder, tarball, debug, selfbuild, extra,
     os.makedirs(LLVM_BUILD)
     os.makedirs(LLVM_BIN)
     selfbuild_compiler = ""
+    LLVM_configure_capable = ["3_2", "3_3", "3_4", "3_5", "3_6", "3_7"]
     if selfbuild:
         print_debug("Making selfbuild and use folders " + LLVM_BUILD_selfbuild + " and " +
             LLVM_BIN_selfbuild + "\n", from_validation, alloy_build)
         os.makedirs(LLVM_BUILD_selfbuild)
         os.makedirs(LLVM_BIN_selfbuild)
         os.chdir(LLVM_BUILD_selfbuild)
-        if  version_LLVM == "trunk":
+        if  version_LLVM not in LLVM_configure_capable:
             # TODO: mac_root
             try_do_LLVM("configure release version for selfbuild ",
                     "cmake -G Unix\ Makefiles" + " -DCMAKE_EXPORT_COMPILE_COMMANDS=ON" +
@@ -283,7 +284,7 @@ def build_LLVM(version_LLVM, revision, folder, tarball, debug, selfbuild, extra,
     os.chdir(LLVM_BUILD)
     if debug == False:
         if current_OS != "Windows":
-            if  version_LLVM == "trunk":
+            if  version_LLVM not in LLVM_configure_capable:
                 # TODO: mac_root
                 try_do_LLVM("configure release version ",
                         "cmake -G Unix\ Makefiles" + " -DCMAKE_EXPORT_COMPILE_COMMANDS=ON" +
@@ -311,7 +312,7 @@ def build_LLVM(version_LLVM, revision, folder, tarball, debug, selfbuild, extra,
                     '" -DLLVM_LIT_TOOLS_DIR="C:\\gnuwin32\\bin" ..\\' + LLVM_SRC,
                     from_validation)
     else:
-        if  version_LLVM == "trunk":
+        if  version_LLVM not in LLVM_configure_capable:
             # TODO: mac_root
             try_do_LLVM("configure debug version ",
                     "cmake -G Unix\ Makefiles" + " -DCMAKE_EXPORT_COMPILE_COMMANDS=ON" +
