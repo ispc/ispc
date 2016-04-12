@@ -1988,7 +1988,13 @@ ForeachStmt::EmitCode(FunctionEmitContext *ctx) const {
         }
 
         ctx->StoreInst(LLVMFalse, stepIndexAfterMaskedBodyPtr);
-        ctx->BranchInst(bbMaskedBody);
+
+        // check to see if counter != end, otherwise, the next step is not necessary
+        llvm::Value *counter = ctx->LoadInst(uniformCounterPtrs[nDims-1], "counter");
+        llvm::Value *atEnd =
+            ctx->CmpInst(llvm::Instruction::ICmp, llvm::CmpInst::ICMP_NE,
+                         counter, endVals[nDims-1], "at_end");
+        ctx->BranchInst(bbMaskedBody, bbReset[nDims-1], atEnd);
     }
 
     ///////////////////////////////////////////////////////////////////////////
