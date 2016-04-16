@@ -243,7 +243,7 @@ BUILTINS_OBJS_32=$(addprefix builtins-, $(notdir $(BUILTINS_SRC_TARGET:.ll=-32bi
 BUILTINS_OBJS_64=$(addprefix builtins-, $(notdir $(BUILTINS_SRC_TARGET:.ll=-64bit.o)))
 BUILTINS_OBJS=$(addprefix builtins-, $(notdir $(BUILTINS_SRC_COMMON:.ll=.o))) \
 	$(BUILTINS_OBJS_32) $(BUILTINS_OBJS_64) \
-	builtins-c-32.cpp builtins-c-64.cpp
+	builtins-c-32.o builtins-c-64.o
 BISON_SRC=parse.yy
 FLEX_SRC=lex.ll
 
