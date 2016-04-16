@@ -85,6 +85,10 @@ USE_CLANG=1
 # To perform debug build: make DEBUG_BUILD=1
 DEBUG_BUILD=0
 
+# Enable libispc by request
+# To enable: make LIBISPC_ENABLED=1
+LIBISPC_ENABLED=0
+
 # Add llvm bin to the path so any scripts run will go to the right llvm-config
 LLVM_BIN= $(shell $(LLVM_CONFIG) --bindir)
 export PATH:=$(LLVM_BIN):$(PATH)
@@ -173,6 +177,8 @@ ifeq ($(USE_CLANG), 0)
     CXX = g++
 endif
 
+AR=ar
+
 OPT=-O2
 CXXFLAGS=$(OPT) $(LLVM_CXXFLAGS) -I. -Iobjs/ -I$(CLANG_INCLUDE)  \
 	$(LLVM_VERSION_DEF) \
@@ -189,6 +195,9 @@ ifneq ($(ARM_ENABLED), 0)
 endif
 ifneq ($(NVPTX_ENABLED), 0)
     CXXFLAGS+=-DISPC_NVPTX_ENABLED
+endif
+ifneq ($(LIBISPC_ENABLED), 0)
+    CXXFLAGS+=-DISPC_LIBISPC_ENABLED
 endif
 
 LDFLAGS=
@@ -212,6 +221,7 @@ CORE_CXX_SRC=ast.cpp builtins.cpp cbackend.cpp ctx.cpp decl.cpp expr.cpp func.cp
 	type.cpp util.cpp \
     options.cpp
 ISPC_CXX_SRC=$(CORE_CXX_SRC) main.cpp
+LIBISPC_CXX_SRC=$(CORE_CXX_SRC)
 CXX_SRC=$(ISPC_CXX_SRC)
 HEADERS=ast.h builtins.h ctx.h decl.h expr.h func.h ispc.h llvmutil.h module.h \
 	opt.h stmt.h sym.h type.h util.h \
@@ -238,6 +248,10 @@ BISON_SRC=parse.yy
 FLEX_SRC=lex.ll
 
 ISPC_OBJS=$(addprefix objs/, $(ISPC_CXX_SRC:.cpp=.o) $(BUILTINS_OBJS) \
+       stdlib_mask1_ispc.o stdlib_mask8_ispc.o stdlib_mask16_ispc.o stdlib_mask32_ispc.o stdlib_mask64_ispc.o \
+	$(BISON_SRC:.yy=.o) $(FLEX_SRC:.ll=.o))
+
+LIBISPC_OBJS=$(addprefix objs/, $(LIBISPC_CXX_SRC:.cpp=.o) $(BUILTINS_OBJS) \
        stdlib_mask1_ispc.o stdlib_mask8_ispc.o stdlib_mask16_ispc.o stdlib_mask32_ispc.o stdlib_mask64_ispc.o \
 	$(BISON_SRC:.yy=.o) $(FLEX_SRC:.ll=.o))
 
@@ -270,7 +284,7 @@ print_llvm_src: llvm_check
 	@echo Using compiler to build: `$(CXX) --version | head -1`
 
 clean:
-	/bin/rm -rf objs ispc
+	/bin/rm -rf objs ispc libispc.a
 
 doxygen:
 	/bin/rm -rf docs/doxygen
@@ -279,6 +293,10 @@ doxygen:
 ispc: print_llvm_src dirs $(ISPC_OBJS)
 	@echo Creating ispc executable
 	@$(CXX) $(OPT) $(LDFLAGS) -o $@ $(ISPC_OBJS) $(ISPC_LIBS)
+
+libispc: print_llvm_src dirs $(LIBISPC_OBJS)
+	@echo Creating libispc
+	@$(AR) rs $@.a $(LIBISPC_OBJS)
 
 # Use clang as a default compiler, instead of gcc
 # This is default now.

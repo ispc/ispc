@@ -2,6 +2,7 @@
 *~
 depend
 ispc
+libispc.a
 ispc_test
 ispc_ref
 objs
