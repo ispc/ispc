@@ -142,7 +142,7 @@ public:
     SymbolTable *symbolTable;
 
     /** llvm Module object into which globals and functions are added. */
-    llvm::Module *module;
+    std::unique_ptr<llvm::Module> module;
 
     /** The diBuilder manages generating debugging information */
     llvm::DIBuilder *diBuilder;

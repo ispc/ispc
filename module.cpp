@@ -390,7 +390,7 @@ Module::Module(const char *fn) {
 
     lDeclareSizeAndPtrIntTypes(symbolTable);
 
-    module = new llvm::Module(filename ? filename : "<stdin>", *g->ctx);
+    module.reset(new llvm::Module(filename ? filename : "<stdin>", *g->ctx));
     module->setTargetTriple(g->target->GetTripleString());
 
     // DataLayout information supposed to be managed in single place in Target class.
@@ -456,7 +456,7 @@ Module::compile(std::unique_ptr<llvm::MemoryBuffer> srcbuf) {
     // function ends up calling into routines that expect the global
     // variable 'm' to be initialized and available (which it isn't until
     // the Module constructor returns...)
-    DefineStdlib(symbolTable, g->ctx, module, g->includeStdlib);
+    DefineStdlib(symbolTable, g->ctx, module.get(), g->includeStdlib);
 
     bool runPreprocessor = g->runCPP;
 
@@ -486,7 +486,7 @@ Module::compile(std::unique_ptr<llvm::MemoryBuffer> srcbuf) {
     if (diBuilder)
         diBuilder->finalize();
     if (errorCount == 0)
-        Optimize(module, g->opt.level);
+        Optimize(module.get(), g->opt.level);
 
     return errorCount;
 }
@@ -1001,7 +1001,7 @@ Module::AddFunctionDeclaration(const std::string &name,
     }
     llvm::Function *function =
         llvm::Function::Create(llvmFunctionType, linkage, functionName.c_str(),
-                               module);
+                               module.get());
 
 #ifdef ISPC_IS_WINDOWS
     // Make export functions callable from DLLS.
@@ -1174,7 +1174,7 @@ bool
 Module::writeOutput(OutputType outputType, const char *outFileName,
                     const char *includeFileName, DispatchHeaderInfo *DHI) {
     if (diBuilder && (outputType != Header) && (outputType != Deps))
-        lStripUnusedDebugInfo(module);
+        lStripUnusedDebugInfo(module.get());
 
 #if ISPC_LLVM_VERSION >= ISPC_LLVM_3_4 /* 3.4+ */
     // In LLVM_3_4 after r195494 and r195504 revisions we should pass
@@ -1274,7 +1274,7 @@ Module::writeOutput(OutputType outputType, const char *outFileName,
     else if (outputType == DevStub)
       return writeDevStub(outFileName);
     else if (outputType == Bitcode)
-        return writeBitcode(module, outFileName);
+        return writeBitcode(module.get(), outFileName);
     else if (outputType == CXX) {
         if (g->target->getISA() != Target::GENERIC) {
             Error(SourcePos(), "Only \"generic-*\" targets can be used with "
@@ -1283,7 +1283,7 @@ Module::writeOutput(OutputType outputType, const char *outFileName,
         }
         extern bool WriteCXXFile(llvm::Module *module, const char *fn,
                                  int vectorWidth, const char *includeName);
-        return WriteCXXFile(module, outFileName, g->target->getVectorWidth(),
+        return WriteCXXFile(module.get(), outFileName, g->target->getVectorWidth(),
                             includeFileName);
     }
     else
@@ -1445,7 +1445,7 @@ Module::writeBitcode(llvm::Module *module, const char *outFileName) {
 bool
 Module::writeObjectFileOrAssembly(OutputType outputType, const char *outFileName) {
     llvm::TargetMachine *targetMachine = g->target->GetTargetMachine();
-    return writeObjectFileOrAssembly(targetMachine, module, outputType,
+    return writeObjectFileOrAssembly(targetMachine, module.get(), outputType,
                                      outFileName);
 }
 
@@ -3228,7 +3228,7 @@ Module::CompileAndOutput(const char *srcFile,
                 bool check = (dispatchModule != NULL);
                 if (!check)
                     dispatchModule = lInitDispatchModule();
-                lExtractOrCheckGlobals(m->module, dispatchModule, check);
+                lExtractOrCheckGlobals(m->module.get(), dispatchModule, check);
 
                 // Grab pointers to the exported functions from the module we
                 // just compiled, for use in generating the dispatch function
