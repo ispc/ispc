@@ -51,6 +51,9 @@ namespace llvm
 {
     class raw_string_ostream;
     class MemoryBuffer;
+#ifdef ISPC_LIBISPC_ENABLED
+    class ExecutionEngine;
+#endif
 }
 
 struct DispatchHeaderInfo;
@@ -65,6 +68,14 @@ public:
         its global variables and functions to both the llvm::Module and
         SymbolTable.  Returns the number of errors during compilation.  */
     int CompileFile();
+
+#ifdef ISPC_LIBISPC_ENABLED
+    /** Compile JIT the src string. */
+    static int CompileAndJIT(const char* src);
+
+    /** Get the address of JIT function by name. */
+    static uint64_t GetFunctionAddress(const std::string& name);
+#endif
 
     /** Add a named type definition to the module. */
     void AddTypeDef(const std::string &name, const Type *type,
@@ -158,6 +169,10 @@ private:
     AST *ast;
 
     std::vector<std::pair<const Type *, SourcePos> > exportedTypes;
+
+#ifdef ISPC_LIBISPC_ENABLED
+    std::unique_ptr<llvm::ExecutionEngine> executionEngine;
+#endif
 
     /** Write the corresponding output type to the given file.  Returns
         true on success, false if there has been an error.  The given

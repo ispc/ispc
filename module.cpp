@@ -58,6 +58,10 @@
 #include <set>
 #include <sstream>
 #include <iostream>
+#ifdef ISPC_LIBISPC_ENABLED
+#include <llvm/ExecutionEngine/GenericValue.h>
+#include <llvm/ExecutionEngine/MCJIT.h>
+#endif /* ISPC_LIBISPC_ENABLED */
 #ifdef ISPC_NVPTX_ENABLED
 #include <map>
 #endif /* ISPC_NVPTX_ENABLED */
@@ -519,6 +523,37 @@ Module::CompileFile() {
         return compile(std::move(errorOrSrcbuf.get()));
     }
 }
+
+#ifdef ISPC_LIBISPC_ENABLED
+int Module::CompileAndJIT(const char* src) {
+    g->target = new Target(
+        g->archName,
+        g->cpuName,
+        g->targetName,
+        g->generatePIC,
+        g->printTarget);
+    if (!g->target->isValid())
+        return 1;
+
+    m = new Module("<JIT>");
+    std::unique_ptr<llvm::MemoryBuffer> srcbuf =
+        llvm::MemoryBuffer::getMemBuffer(src);
+
+    int ec = m->compile(std::move(srcbuf));
+
+    if (ec == 0) {
+        m->executionEngine.reset(
+            llvm::EngineBuilder(std::move(m->module)).create());
+        m->executionEngine->finalizeObject();
+    }
+
+    return ec;
+}
+
+uint64_t Module::GetFunctionAddress(const std::string& name) {
+    return m->executionEngine->getFunctionAddress(name);
+}
+#endif // ISPC_LIBISPC_ENABLED
 
 void
 Module::AddTypeDef(const std::string &name, const Type *type,
