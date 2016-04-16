@@ -50,6 +50,7 @@
 namespace llvm
 {
     class raw_string_ostream;
+    class MemoryBuffer;
 }
 
 struct DispatchHeaderInfo;
@@ -190,7 +191,8 @@ private:
                                           const char *outFileName);
     static bool writeBitcode(llvm::Module *module, const char *outFileName);
 
-    void execPreprocessor(const char *infilename, llvm::raw_string_ostream* ostream) const;
+    void execPreprocessor(llvm::MemoryBuffer* srcbuf,
+                          llvm::raw_string_ostream* ostream) const;
 };
 
 #endif // ISPC_MODULE_H

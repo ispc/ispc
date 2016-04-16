@@ -129,6 +129,8 @@
 #include <llvm/Support/raw_ostream.h>
 #include <llvm/Bitcode/ReaderWriter.h>
 
+#include <llvm/Support/MemoryBuffer.h>
+
 /*! list of files encountered by the parser. this allows emitting of
     the module file's dependencies via the -MMM option */
 std::set<std::string> registeredDependencies;
@@ -472,7 +474,15 @@ Module::CompileFile() {
 
         std::string buffer;
         llvm::raw_string_ostream os(buffer);
-        execPreprocessor((filename != NULL) ? filename : "-", &os);
+
+        llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> errorOrSrcbuf =
+            llvm::MemoryBuffer::getFile(filename);
+
+        Assert(!errorOrSrcbuf.getError());
+
+        std::unique_ptr<llvm::MemoryBuffer> srcbuf = std::move(errorOrSrcbuf.get());
+
+        execPreprocessor(srcbuf.release(), &os);
         YY_BUFFER_STATE strbuf = yy_scan_string(os.str().c_str());
         yyparse();
         yy_delete_buffer(strbuf);
@@ -2425,7 +2435,7 @@ Module::writeDispatchHeader(DispatchHeaderInfo *DHI) {
 }
 
 void
-Module::execPreprocessor(const char *infilename, llvm::raw_string_ostream *ostream) const
+Module::execPreprocessor(llvm::MemoryBuffer* srcbuf, llvm::raw_string_ostream *ostream) const
 {
     clang::CompilerInstance inst;
     inst.createFileManager();
@@ -2473,7 +2483,7 @@ Module::execPreprocessor(const char *infilename, llvm::raw_string_ostream *ostre
 
     inst.setTarget(target);
     inst.createSourceManager(inst.getFileManager());
-    clang::FrontendInputFile inputFile(infilename, clang::IK_None);
+    clang::FrontendInputFile inputFile(srcbuf, clang::IK_None);
     inst.InitializeSourceManager(inputFile);
 
     // Don't remove comments in the preprocessor, so that we can accurately
