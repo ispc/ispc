@@ -77,6 +77,10 @@ ARM_ENABLED=0
 # To enable: make NVPTX_ENABLED=1
 NVPTX_ENABLED=0
 
+# Use clang by default
+# To use gcc: make USE_CLANG=0
+USE_CLANG=1
+
 # Add llvm bin to the path so any scripts run will go to the right llvm-config
 LLVM_BIN= $(shell $(LLVM_CONFIG) --bindir)
 export PATH:=$(LLVM_BIN):$(PATH)
@@ -161,6 +165,10 @@ else
 endif
 
 CXX=clang++
+ifeq ($(USE_CLANG), 0)
+    CXX = g++
+endif
+
 OPT=-O2
 CXXFLAGS=$(OPT) $(LLVM_CXXFLAGS) -I. -Iobjs/ -I$(CLANG_INCLUDE)  \
 	$(LLVM_VERSION_DEF) \
@@ -272,10 +280,6 @@ ispc: print_llvm_src dirs $(ISPC_OBJS)
 # This is default now.
 clang: ispc
 clang: CXX=clang++
-
-# Use gcc as a default compiler
-gcc: ispc
-gcc: CXX=g++
 
 # Build ispc with address sanitizer instrumentation using clang compiler
 # Note that this is not portable build
