@@ -195,9 +195,11 @@ YACC=bison -d -v -t
 
 ###########################################################################
 
-CXX_SRC=ast.cpp builtins.cpp cbackend.cpp ctx.cpp decl.cpp expr.cpp func.cpp \
-	ispc.cpp llvmutil.cpp main.cpp module.cpp opt.cpp stmt.cpp sym.cpp \
+CORE_CXX_SRC=ast.cpp builtins.cpp cbackend.cpp ctx.cpp decl.cpp expr.cpp func.cpp \
+	ispc.cpp llvmutil.cpp module.cpp opt.cpp stmt.cpp sym.cpp \
 	type.cpp util.cpp
+ISPC_CXX_SRC=$(CORE_CXX_SRC) main.cpp
+CXX_SRC=$(ISPC_CXX_SRC)
 HEADERS=ast.h builtins.h ctx.h decl.h expr.h func.h ispc.h llvmutil.h module.h \
 	opt.h stmt.h sym.h type.h util.h
 TARGETS=avx2-i64x4 avx11-i64x4 avx1-i64x4 avx1 avx1-x2 avx11 avx11-x2 avx2 avx2-x2 \
@@ -221,7 +223,7 @@ BUILTINS_OBJS=$(addprefix builtins-, $(notdir $(BUILTINS_SRC_COMMON:.ll=.o))) \
 BISON_SRC=parse.yy
 FLEX_SRC=lex.ll
 
-OBJS=$(addprefix objs/, $(CXX_SRC:.cpp=.o) $(BUILTINS_OBJS) \
+ISPC_OBJS=$(addprefix objs/, $(ISPC_CXX_SRC:.cpp=.o) $(BUILTINS_OBJS) \
        stdlib_mask1_ispc.o stdlib_mask8_ispc.o stdlib_mask16_ispc.o stdlib_mask32_ispc.o stdlib_mask64_ispc.o \
 	$(BISON_SRC:.yy=.o) $(FLEX_SRC:.ll=.o))
 
@@ -260,9 +262,9 @@ doxygen:
 	/bin/rm -rf docs/doxygen
 	doxygen doxygen.cfg
 
-ispc: print_llvm_src dirs $(OBJS)
+ispc: print_llvm_src dirs $(ISPC_OBJS)
 	@echo Creating ispc executable
-	@$(CXX) $(OPT) $(LDFLAGS) -o $@ $(OBJS) $(ISPC_LIBS)
+	@$(CXX) $(OPT) $(LDFLAGS) -o $@ $(ISPC_OBJS) $(ISPC_LIBS)
 
 # Use clang as a default compiler, instead of gcc
 # This is default now.
