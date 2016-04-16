@@ -81,6 +81,10 @@ NVPTX_ENABLED=0
 # To use gcc: make USE_CLANG=0
 USE_CLANG=1
 
+# Perform release build by default
+# To perform debug build: make DEBUG_BUILD=1
+DEBUG_BUILD=0
+
 # Add llvm bin to the path so any scripts run will go to the right llvm-config
 LLVM_BIN= $(shell $(LLVM_CONFIG) --bindir)
 export PATH:=$(LLVM_BIN):$(PATH)
@@ -286,9 +290,9 @@ clang: CXX=clang++
 asan: clang
 asan: OPT+=-fsanitize=address
 
-# Do debug build, i.e. -O0 -g
-debug: ispc
-debug: OPT=-O0 -g
+ifeq ($(DEBUG_BUILD), 1)
+    OPT=-O0 -g
+endif
 
 objs/%.o: %.cpp
 	@echo Compiling $<
