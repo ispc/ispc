@@ -93,20 +93,6 @@ public:
     void AddExportedTypes(const std::vector<std::pair<const Type *,
                                                       SourcePos> > &types);
 
-    /** After a source file has been compiled, output can be generated in a
-        number of different formats. */
-    enum OutputType { Asm,      /** Generate text assembly language output */
-                      Bitcode,  /** Generate LLVM IR bitcode output */
-                      Object,   /** Generate a native object file */
-                      CXX,      /** Generate a C++ file */
-                      Header,   /** Generate a C/C++ header file with
-                                    declarations of 'export'ed functions, global
-                                    variables, and the types used by them. */
-                      Deps,     /** generate dependencies */
-                      DevStub,  /** generate device-side offload stubs */
-                      HostStub  /** generate host-side offload stubs */
-    };
-
     /** Compile the given source file, generating assembly, object file, or
         LLVM bitcode output, as well as (optionally) a header file with
         declarations of functions and types used in the ispc/application

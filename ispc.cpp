@@ -1524,6 +1524,22 @@ Globals::Globals() {
 #endif
     forceAlignment = -1;
     dllExport = false;
+
+    archName = NULL;
+    cpuName = NULL;
+    targetName = NULL;
+
+    fileName = NULL;
+    outFileName = NULL;
+    headerFileName = NULL;
+    includeFileName = NULL;
+    depsFileName = NULL;
+    devStubFileName = NULL;
+    hostStubFileName = NULL;
+
+    generatePIC = false;
+
+    outputType = Object;
 }
 
 ///////////////////////////////////////////////////////////////////////////

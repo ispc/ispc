@@ -3114,16 +3114,16 @@ Module::CompileAndOutput(const char *srcFile,
                 if (!m->writeOutput(outputType, outFileName, includeFileName))
                     return 1;
             if (headerFileName != NULL)
-                if (!m->writeOutput(Module::Header, headerFileName))
+                if (!m->writeOutput(Header, headerFileName))
                     return 1;
             if (depsFileName != NULL)
-              if (!m->writeOutput(Module::Deps,depsFileName))
+              if (!m->writeOutput(Deps,depsFileName))
                 return 1;
             if (hostStubFileName != NULL)
-              if (!m->writeOutput(Module::HostStub,hostStubFileName))
+              if (!m->writeOutput(HostStub,hostStubFileName))
                 return 1;
             if (devStubFileName != NULL)
-              if (!m->writeOutput(Module::DevStub,devStubFileName))
+              if (!m->writeOutput(DevStub,devStubFileName))
                 return 1;
         }
         else
@@ -3275,10 +3275,10 @@ Module::CompileAndOutput(const char *srcFile,
               std::string targetHeaderFileName = 
                 lGetTargetFileName(headerFileName, isaName, false);
               // write out a header w/o target name for the first target only
-              if (!m->writeOutput(Module::Header, headerFileName, "", &DHI)) {
+              if (!m->writeOutput(Header, headerFileName, "", &DHI)) {
                 return 1;
               }
-              if (!m->writeOutput(Module::Header, targetHeaderFileName.c_str())) {
+              if (!m->writeOutput(Header, targetHeaderFileName.c_str())) {
                 return 1;
               }
               if (i == targets.size()-1) {
@@ -3323,7 +3323,7 @@ Module::CompileAndOutput(const char *srcFile,
         }
 
         if (depsFileName != NULL)
-            if (!m->writeOutput(Module::Deps, depsFileName))
+            if (!m->writeOutput(Deps, depsFileName))
                 return 1;
 
         delete g->target;

@@ -526,6 +526,20 @@ struct Opt {
     bool disableCoalescing;
 };
 
+/** After a source file has been compiled, output can be generated in a
+    number of different formats. */
+enum OutputType { Asm,      /** Generate text assembly language output */
+                  Bitcode,  /** Generate LLVM IR bitcode output */
+                  Object,   /** Generate a native object file */
+                  CXX,      /** Generate a C++ file */
+                  Header,   /** Generate a C/C++ header file with
+                                declarations of 'export'ed functions, global
+                                variables, and the types used by them. */
+                  Deps,     /** generate dependencies */
+                  DevStub,  /** generate device-side offload stubs */
+                  HostStub  /** generate host-side offload stubs */
+};
+
 /** @brief This structure collects together a number of global variables.
 
     This structure collects a number of global variables that mostly
@@ -639,6 +653,30 @@ struct Globals {
 
     /** When true, flag non-static functions with dllexport attribute on Windows. */
     bool dllExport;
+    
+    const char* archName;
+
+    const char* cpuName;
+
+    const char* targetName;
+
+    const char* fileName;
+
+    const char* outFileName;
+
+    const char* headerFileName;
+
+    const char* includeFileName;
+
+    const char* depsFileName;
+
+    const char* devStubFileName;
+
+    const char* hostStubFileName;
+
+    bool generatePIC;
+
+    OutputType outputType;
 };
 
 enum {
