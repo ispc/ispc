@@ -193,6 +193,8 @@ private:
 
     void execPreprocessor(llvm::MemoryBuffer* srcbuf,
                           llvm::raw_string_ostream* ostream) const;
+
+    int compile(std::unique_ptr<llvm::MemoryBuffer> srcbuf);
 };
 
 #endif // ISPC_MODULE_H

@@ -448,7 +448,7 @@ extern YY_BUFFER_STATE yy_create_buffer(FILE *, int);
 extern void yy_delete_buffer(YY_BUFFER_STATE);
 
 int
-Module::CompileFile() {
+Module::compile(std::unique_ptr<llvm::MemoryBuffer> srcbuf) {
     extern void ParserInit();
     ParserInit();
 
@@ -461,26 +461,8 @@ Module::CompileFile() {
     bool runPreprocessor = g->runCPP;
 
     if (runPreprocessor) {
-        if (filename != NULL) {
-            // Try to open the file first, since otherwise we crash in the
-            // preprocessor if the file doesn't exist.
-            FILE *f = fopen(filename, "r");
-            if (!f) {
-                perror(filename);
-                return 1;
-            }
-            fclose(f);
-        }
-
         std::string buffer;
         llvm::raw_string_ostream os(buffer);
-
-        llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> errorOrSrcbuf =
-            llvm::MemoryBuffer::getFile(filename);
-
-        Assert(!errorOrSrcbuf.getError());
-
-        std::unique_ptr<llvm::MemoryBuffer> srcbuf = std::move(errorOrSrcbuf.get());
 
         execPreprocessor(srcbuf.release(), &os);
         YY_BUFFER_STATE strbuf = yy_scan_string(os.str().c_str());
@@ -488,21 +470,9 @@ Module::CompileFile() {
         yy_delete_buffer(strbuf);
     }
     else {
-        // No preprocessor, just open up the file if it's not stdin..
-        FILE* f = NULL;
-        if (filename == NULL)
-            f = stdin;
-        else {
-            f = fopen(filename, "r");
-            if (f == NULL) {
-                perror(filename);
-                return 1;
-            }
-        }
-        yyin = f;
-        yy_switch_to_buffer(yy_create_buffer(yyin, 4096));
+        YY_BUFFER_STATE strbuf = yy_scan_string(srcbuf->getBufferStart());
         yyparse();
-        fclose(f);
+        yy_delete_buffer(strbuf);
     }
 
 #if ISPC_LLVM_VERSION >= ISPC_LLVM_3_7 // LLVM 3.7+
@@ -521,6 +491,34 @@ Module::CompileFile() {
     return errorCount;
 }
 
+int
+Module::CompileFile() {
+    if (filename != NULL) {
+        // Try to open the file first, since otherwise we crash in the
+        // preprocessor if the file doesn't exist.
+        FILE *f = fopen(filename, "r");
+        if (!f) {
+            perror(filename);
+            return 1;
+        }
+        fclose(f);
+
+        llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> errorOrSrcbuf =
+            llvm::MemoryBuffer::getFile(filename);
+
+        Assert(!errorOrSrcbuf.getError());
+
+        return compile(std::move(errorOrSrcbuf.get()));
+    }
+    else {
+        llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> errorOrSrcbuf =
+            llvm::MemoryBuffer::getSTDIN();
+        
+        Assert(!errorOrSrcbuf.getError());
+
+        return compile(std::move(errorOrSrcbuf.get()));
+    }
+}
 
 void
 Module::AddTypeDef(const std::string &name, const Type *type,
