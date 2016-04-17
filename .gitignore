@@ -8,6 +8,7 @@ ispc_ref
 objs
 docs/doxygen
 docs/*.html
+test_jit
 tests*/*cpp
 tests*/*run
 logs/

@@ -325,6 +325,14 @@ def run_test(testname):
         (compile_error, run_error) = run_cmds([ispc_cmd, cc_cmd], 
                                               options.wrapexe + " " + exe_name, \
                                               testname, should_fail)
+        if options.testlibispc:
+            t = ispc_cmd.split()
+            t[0] = "./test_jit"
+            # Remove the input filename.
+            t[2] = ""
+            libispc_test_cmd = " ".join(t) + " " + testname
+            (libispc_test_ret, libispc_test_output) = run_command(libispc_test_cmd)
+            run_error = libispc_test_ret or run_error
 
         # clean up after running the test
         try:
@@ -898,6 +906,8 @@ error = common.error
 if __name__ == "__main__":
     parser = OptionParser()
     parser.add_option("-r", "--random-shuffle", dest="random", help="Randomly order tests",
+                  default=False, action="store_true")
+    parser.add_option("-l", "--libispc", dest="testlibispc", help="Test libispc",
                   default=False, action="store_true")
     parser.add_option("-g", "--generics-include", dest="include_file", help="Filename for header implementing functions for generics",
                   default=None)
