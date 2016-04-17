@@ -40,11 +40,13 @@ int main(int argc, char* argv[]) {
     }
     if (ret == 1) {
         printf("Failed to parse command line options.\n");
+        return 1;
     }
 
     int ec = Module::CompileAndJIT(src);
     if (ec != 0) {
         printf("Failed to compile JIT.\n");
+        return 1;
     }
 
     uint64_t addr = Module::GetFunctionAddress("vadd");
