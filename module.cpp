@@ -2220,9 +2220,9 @@ Module::writeHeader(const char *fn) {
 
     if (g->emitInstrumentation) {
         fprintf(f, "#define ISPC_INSTRUMENTATION 1\n");
-        fprintf(f, "extern \"C\" {\n");
+        fprintf(f, "#if defined(__cplusplus) && (! defined(__ISPC_NO_EXTERN_C) || !__ISPC_NO_EXTERN_C )\nextern \"C\" {\n#endif // __cplusplus\n");
         fprintf(f, "  void ISPCInstrument(const char *fn, const char *note, int line, uint64_t mask);\n");
-        fprintf(f, "}\n");
+        fprintf(f, "#if defined(__cplusplus) && (! defined(__ISPC_NO_EXTERN_C) || !__ISPC_NO_EXTERN_C )\n} /* end extern C */\n#endif // __cplusplus\n");
     }
 
     // end namespace
@@ -2333,9 +2333,9 @@ Module::writeDispatchHeader(DispatchHeaderInfo *DHI) {
 
       if (g->emitInstrumentation) {
         fprintf(f, "#define ISPC_INSTRUMENTATION 1\n");
-        fprintf(f, "extern \"C\" {\n");
+        fprintf(f, "#if defined(__cplusplus) && (! defined(__ISPC_NO_EXTERN_C) || !__ISPC_NO_EXTERN_C )\nextern \"C\" {\n#endif // __cplusplus\n");
         fprintf(f, "  void ISPCInstrument(const char *fn, const char *note, int line, uint64_t mask);\n");
-        fprintf(f, "}\n");
+        fprintf(f, "#if defined(__cplusplus) && (! defined(__ISPC_NO_EXTERN_C) || !__ISPC_NO_EXTERN_C )\n} /* end extern C */\n#endif // __cplusplus\n");
       }
 
       // end namespace
