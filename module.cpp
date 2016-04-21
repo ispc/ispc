@@ -543,7 +543,9 @@ int Module::CompileAndJIT(const char* src) {
 
     if (ec == 0) {
         m->executionEngine.reset(
-            llvm::EngineBuilder(std::move(m->module)).create());
+            llvm::EngineBuilder(std::move(m->module))
+                .setMCPU(g->cpuName)
+                .create());
         m->executionEngine->finalizeObject();
     }
 
