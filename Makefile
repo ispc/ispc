@@ -284,7 +284,7 @@ print_llvm_src: llvm_check
 	@echo Using compiler to build: `$(CXX) --version | head -1`
 
 clean:
-	/bin/rm -rf objs ispc libispc.a
+	/bin/rm -rf objs ispc libispc.a test_jit
 
 doxygen:
 	/bin/rm -rf docs/doxygen
@@ -297,6 +297,10 @@ ispc: print_llvm_src dirs $(ISPC_OBJS)
 libispc: print_llvm_src dirs $(LIBISPC_OBJS)
 	@echo Creating libispc
 	@$(AR) rs $@.a $(LIBISPC_OBJS)
+
+libispctest: test_jit.cpp
+	@echo Creating JIT test executable
+	@$(CXX) -otest_jit $(CXXFLAGS) $(LDFLAGS) $< -L. -lispc $(ISPC_LIBS)
 
 # Use clang as a default compiler, instead of gcc
 # This is default now.
