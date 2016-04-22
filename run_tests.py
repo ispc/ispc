@@ -326,13 +326,30 @@ def run_test(testname):
                                               options.wrapexe + " " + exe_name, \
                                               testname, should_fail)
         if options.testlibispc:
-            t = ispc_cmd.split()
-            t[0] = "./test_jit"
-            # Remove the input filename.
-            t[2] = ""
-            libispc_test_cmd = " ".join(t) + " " + testname
-            (libispc_test_ret, libispc_test_output) = run_command(libispc_test_cmd)
-            run_error = libispc_test_ret or run_error
+            omit_list = [
+                # Ignore tests with fz function signature
+                './tests/align1.ispc',
+                './tests/align2.ispc',
+                # Ignore tests have external functions
+                './tests/launch-1.ispc',
+                './tests/launch-2.ispc',
+                './tests/launch-3.ispc',
+                './tests/launch-4.ispc',
+                './tests/launch-5.ispc',
+                './tests/launch-6.ispc',
+                './tests/launch-7.ispc',
+                './tests/launch-8.ispc',
+                './tests/launch-9.ispc',
+                './tests/uniform-1.ispc'
+            ]
+            if not testname in omit_list:
+                t = ispc_cmd.split()
+                t[0] = "./test_jit"
+                # Remove the input filename.
+                t[2] = ""
+                libispc_test_cmd = " ".join(t) + " " + testname
+                (libispc_test_ret, libispc_test_output) = run_command(libispc_test_cmd)
+                run_error = libispc_test_ret or run_error
 
         # clean up after running the test
         try:
