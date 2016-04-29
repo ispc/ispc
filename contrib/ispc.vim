@@ -13,11 +13,11 @@ runtime! syntax/c.vim
 unlet b:current_syntax
 
 " New keywords
-syn keyword	ispcStatement	cbreak ccontinue creturn launch print reference soa sync task
+syn keyword	ispcStatement	cbreak ccontinue creturn launch print reference soa sync
 syn keyword	ispcConditional	cif
 syn keyword	ispcRepeat	cdo cfor cwhile foreach foreach_tiled foreach_unique foreach_active
 syn keyword	ispcBuiltin	programCount programIndex taskCount taskIndex taskIndex0 taskIndex1 taskIndex2
-syn keyword	ispcType	export uniform varying int8 int16 int32 int64
+syn keyword	ispcType	export uniform varying int8 int16 int32 int64 task
 syn keyword	ispcOperator	operator
 
 "double precision floating point number, with dot, optional exponent
