@@ -1,7 +1,7 @@
 " Vim syntax file
 " Language:	ISPC
 " Maintainer:	Andreas Wendleder <andreas.wendleder@gmail.com>
-" Last Change:	2016 Mar 24
+" Last Change:	2016 Apr 29
 
 " Quit when a syntax file was already loaded
 if exists("b:current_syntax")
@@ -16,7 +16,7 @@ unlet b:current_syntax
 syn keyword	ispcStatement	cbreak ccontinue creturn launch print reference soa sync task
 syn keyword	ispcConditional	cif
 syn keyword	ispcRepeat	cdo cfor cwhile foreach foreach_tiled foreach_unique foreach_active
-syn keyword	ispcBuiltin	programCount programIndex	
+syn keyword	ispcBuiltin	programCount programIndex taskCount taskIndex taskIndex0 taskIndex1 taskIndex2
 syn keyword	ispcType	export uniform varying int8 int16 int32 int64
 syn keyword	ispcOperator	operator
 
