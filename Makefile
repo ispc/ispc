@@ -45,15 +45,15 @@ Location of LLVM files in your PATH is different than path in LLVM_HOME \n
 variable (or LLVM_HOME is not set). The most likely this means that you are \n
 using default LLVM installation on your system, which is very bad sign. \n
 Note, that ISPC uses LLVM optimizer and is highly dependent on it. We recommend \n
-using *patched* version of LLVM 3.4 or 3.5. Patches are availible in \n
+using *patched* version of LLVM 3.8. Patches are availible in \n
 llvm_patches folder. You can build LLVM manually, or run our scripts, which \n
 will do all the work for you. Do the following: \n
 1. Create a folder, where LLVM will reside and set LLVM_HOME variable to its \n
   path. \n
 2. Set ISPC_HOME variable to your ISPC location (probably current folder).
 3. Run alloy.py tool to checkout and build LLVM: \n
-  alloy.py -b --version=3.5 \n
-4. Add $$LLVM_HOME/bin-3.5/bin path to your PATH. \n
+  alloy.py -b --version=3.8 \n
+4. Add $$LLVM_HOME/bin-3.8/bin path to your PATH. \n
 ==============================================================================
 endef
 
