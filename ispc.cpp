@@ -287,14 +287,14 @@ private:
     std::vector<std::vector<std::string> > names;
     std::vector<std::set<CPUtype> > compat;
 
-    std::set<CPUtype> Set(CPUtype type, ...) {
+    std::set<CPUtype> Set(int type, ...) {
         std::set<CPUtype> retn;
         va_list args;
 
-        retn.insert(type);
+        retn.insert((CPUtype)type);
         va_start(args, type);
-        while ((type = (CPUtype)va_arg(args, int)) != CPU_None)
-            retn.insert(type);
+        while ((type = va_arg(args, int)) != CPU_None)
+            retn.insert((CPUtype)type);
         va_end(args);
 
         return retn;
