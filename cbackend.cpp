@@ -2337,7 +2337,7 @@ static SpecialGlobalClass getGlobalVariableClass(const llvm::GlobalVariable *GV)
 
   // Otherwise, if it is other metadata, don't print it.  This catches things
   // like debug information.
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_3_5 /* LLVM 3.5+ */
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_3_5 && ISPC_LLVM_VERSION <= ISPC_LLVM_3_8 /* LLVM 3.5-3.8 */
   // Here we compare char *
   if (!strcmp(GV->getSection(), "llvm.metadata"))
 #else
