@@ -167,6 +167,11 @@ lDeclareSizeAndPtrIntTypes(SymbolTable *symbolTable) {
  */
 static void
 lStripUnusedDebugInfo(llvm::Module *module) {
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_3_9
+    // In LLVM 3.9 Global DCE is much more efficient than the LLVM 3.8's one.
+    // So, the fruitfulness of this function is negligible.
+    return;
+#else
     if (g->generateDebuggingSymbols == false)
         return;
 #if ISPC_LLVM_VERSION <= ISPC_LLVM_3_5 // <= 3.5
@@ -368,6 +373,7 @@ lStripUnusedDebugInfo(llvm::Module *module) {
     }
     for (int i = 0; i < (int)toErase.size(); ++i)
         module->eraseNamedMetadata(toErase[i]);
+#endif
 }
 
 
