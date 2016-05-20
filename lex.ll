@@ -637,14 +637,14 @@ lParseInteger(bool dotdotdot) {
             // No u or l suffix
             // If we're compiling to an 8-bit mask target and the constant
             // fits into 8 bits, return an 8-bit int.
-            if (g->target->getMaskBitCount() == 8) {
+            if (g->target->getDataTypeWidth() == 8) {
                 if (yylval.intVal <= 0x7fULL)
                     return TOKEN_INT8_CONSTANT;
                 else if (yylval.intVal <= 0xffULL)
                     return TOKEN_UINT8_CONSTANT;
             }
             // And similarly for 16-bit masks and constants
-            if (g->target->getMaskBitCount() == 16) {
+            if (g->target->getDataTypeWidth() == 16) {
                 if (yylval.intVal <= 0x7fffULL)
                     return TOKEN_INT16_CONSTANT;
                 else if (yylval.intVal <= 0xffffULL)
