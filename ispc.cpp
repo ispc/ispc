@@ -1063,8 +1063,15 @@ Target::Target(const char *arch, const char *cpu, const char *isa, bool pic, boo
         // Create TargetMachine
         std::string triple = GetTripleString();
 
+#if ISPC_LLVM_VERSION <= ISPC_LLVM_3_8
         llvm::Reloc::Model relocModel = m_generatePIC ? llvm::Reloc::PIC_ :
             llvm::Reloc::Default;
+#else
+        llvm::Optional<llvm::Reloc::Model> relocModel;
+        if (m_generatePIC) {
+          relocModel = llvm::Reloc::PIC_;
+        }
+#endif
         std::string featuresString = m_attributes;
         llvm::TargetOptions options;
 #ifdef ISPC_ARM_ENABLED
