@@ -425,6 +425,7 @@ FunctionEmitContext::FunctionEmitContext(Function *func, Symbol *funSym,
                                          isStatic,           true, /* is defn */
                                          firstLine,          flags,
                                          isOptimized);
+        llvmFunction->setSubprogram(diSubprogram);
 #endif
 
         /* And start a scope representing the initial function scope */
