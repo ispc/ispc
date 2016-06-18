@@ -47,6 +47,7 @@
     - Cilk Plus (ISPC_USE_CILK)
     - TBB (ISPC_USE_TBB_TASK_GROUP, ISPC_USE_TBB_PARALLEL_FOR)
     - OpenMP (ISPC_USE_OMP)
+    - HPX (ISPC_USE_HPX)
 
   The task system implementation can be selected at compile time, by defining 
   the appropriate preprocessor symbol on the command line (for e.g.: -D ISPC_USE_TBB).
@@ -69,13 +70,20 @@
   the machine, but less so when there are other tasks that need running on the machine.
 
 #define ISPC_USE_CREW
+#define ISPC_USE_HPX
+  The HPX model requires the HPX runtime environment to be set up. This can be
+  done manually, e.g. with hpx::init, or by including hpx/hpx_main.hpp which
+  uses the main() function as entry point and sets up the runtime system.
+  Number of threads can be specified as commandline parameter with
+  --hpx:threads, use "all" to spawn one thread per processing unit.
 
 */
 
 #if !(defined ISPC_USE_CONCRT          || defined ISPC_USE_GCD              || \
       defined ISPC_USE_PTHREADS        || defined ISPC_USE_PTHREADS_FULLY_SUBSCRIBED || \
       defined ISPC_USE_TBB_TASK_GROUP  || defined ISPC_USE_TBB_PARALLEL_FOR || \
-      defined ISPC_USE_OMP             || defined ISPC_USE_CILK             )
+      defined ISPC_USE_OMP             || defined ISPC_USE_CILK             || \
+      defined ISPC_USE_HPX)
 
     // If no task model chosen from the compiler cmdline, pick a reasonable default
     #if defined(_WIN32) || defined(_WIN64)
@@ -157,6 +165,10 @@
 #ifdef ISPC_USE_OMP
   #include <omp.h>
 #endif // ISPC_USE_OMP
+#ifdef ISPC_USE_HPX
+#include <hpx/include/async.hpp>
+#include <hpx/lcos/wait_all.hpp>
+#endif // ISPC_USE_HPX
 #ifdef ISPC_IS_LINUX
   #include <malloc.h>
 #endif // ISPC_IS_LINUX
@@ -504,6 +516,20 @@ private:
 };
 
 #endif // ISPC_USE_TBB_TASK_GROUP
+
+#ifdef ISPC_USE_HPX
+
+class TaskGroup : public TaskGroupBase {
+public:
+    void Launch(int baseIndex, int count);
+    void Sync();
+private:
+    std::vector<hpx::future<void>> futures;
+};
+
+#endif // ISPC_USE_HPX
+
+///////////////////////////////////////////////////////////////////////////
 
 ///////////////////////////////////////////////////////////////////////////
 // Grand Central Dispatch
@@ -1048,6 +1074,33 @@ TaskGroup::Sync() {
 
 #endif // ISPC_USE_TBB_TASK_GROUP
 
+///////////////////////////////////////////////////////////////////////////
+// ISPC_USE_HPX
+
+#ifdef ISPC_USE_HPX
+
+static void
+InitTaskSystem() {
+}
+
+inline void
+TaskGroup::Launch(int baseIndex, int count) {
+    for (int i = 0; i < count; ++i) {
+        TaskInfo *ti = GetTaskInfo(baseIndex + i);
+        int threadIndex = i;
+        int threadCount = count;
+        futures.push_back(hpx::async(ti->func, ti->data, threadIndex, threadCount, ti->taskIndex, ti->taskCount(),
+            ti->taskIndex0(), ti->taskIndex1(), ti->taskIndex2(),
+            ti->taskCount0(), ti->taskCount1(), ti->taskCount2()));
+    }
+}
+
+inline void
+TaskGroup::Sync() {
+    hpx::wait_all(futures);
+    futures.clear();
+}
+#endif
 ///////////////////////////////////////////////////////////////////////////
 
 #ifndef ISPC_USE_PTHREADS_FULLY_SUBSCRIBED
