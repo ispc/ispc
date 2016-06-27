@@ -38,6 +38,8 @@
     <ClCompile Include="$(Configuration)\gen-bitcode-avx2-i64x4-64bit.cpp" />
     <ClCompile Include="$(Configuration)\gen-bitcode-knl-32bit.cpp" />
     <ClCompile Include="$(Configuration)\gen-bitcode-knl-64bit.cpp" />
+    <ClCompile Include="$(Configuration)\gen-bitcode-skx-32bit.cpp" />
+    <ClCompile Include="$(Configuration)\gen-bitcode-skx-64bit.cpp" />
     <ClCompile Include="$(Configuration)\gen-bitcode-c-32.cpp" />
     <ClCompile Include="$(Configuration)\gen-bitcode-c-64.cpp" />
     <ClCompile Include="$(Configuration)\gen-bitcode-dispatch.cpp" />
@@ -53,6 +55,12 @@
     <ClCompile Include="$(Configuration)\gen-bitcode-generic-32-64bit.cpp" />
     <ClCompile Include="$(Configuration)\gen-bitcode-generic-64-32bit.cpp" />
     <ClCompile Include="$(Configuration)\gen-bitcode-generic-64-64bit.cpp" />
+    <ClCompile Include="$(Configuration)\gen-bitcode-neon-8-32bit.cpp" />
+    <ClCompile Include="$(Configuration)\gen-bitcode-neon-8-64bit.cpp" />
+    <ClCompile Include="$(Configuration)\gen-bitcode-neon-16-32bit.cpp" />
+    <ClCompile Include="$(Configuration)\gen-bitcode-neon-16-64bit.cpp" />
+    <ClCompile Include="$(Configuration)\gen-bitcode-neon-32-32bit.cpp" />
+    <ClCompile Include="$(Configuration)\gen-bitcode-neon-32-64bit.cpp" />
     <ClCompile Include="$(Configuration)\gen-bitcode-sse2-32bit.cpp" />
     <ClCompile Include="$(Configuration)\gen-bitcode-sse2-64bit.cpp" />
     <ClCompile Include="$(Configuration)\gen-bitcode-sse2-x2-32bit.cpp" />
@@ -292,6 +300,16 @@
     </CustomBuild>
   </ItemGroup>
   <ItemGroup>
+    <CustomBuild Include="builtins\target-skx.ll">
+      <FileType>Document</FileType>
+      <Command>m4 -Ibuiltins/ -DLLVM_VERSION=%LLVM_VERSION% -DBUILD_OS=WINDOWS -DRUNTIME=32 builtins/target-skx.ll | python bitcode2cpp.py builtins\target-skx.ll 32bit &gt; $(Configuration)/gen-bitcode-skx-32bit.cpp;
+               m4 -Ibuiltins/ -DLLVM_VERSION=%LLVM_VERSION% -DBUILD_OS=WINDOWS -DRUNTIME=64 builtins/target-skx.ll | python bitcode2cpp.py builtins\target-skx.ll 64bit &gt; $(Configuration)/gen-bitcode-skx-64bit.cpp</Command>
+      <Outputs>$(Configuration)/gen-bitcode-skx-32bit.cpp; $(Configuration)/gen-bitcode-skx-64bit.cpp</Outputs>
+      <AdditionalInputs>builtins\util.m4;builtins\svml.m4;builtins\target-avx-common.ll;builtins\target-avx.ll</AdditionalInputs>
+      <Message>Building gen-bitcode-skx-32bit.cpp and gen-bitcode-skx-64bit.cpp</Message>
+    </CustomBuild>
+  </ItemGroup>
+  <ItemGroup>
     <CustomBuild Include="builtins\target-generic-1.ll">
       <FileType>Document</FileType>
       <Command>m4 -Ibuiltins/ -DLLVM_VERSION=%LLVM_VERSION% -DBUILD_OS=WINDOWS -DRUNTIME=32 builtins/target-generic-1.ll | python bitcode2cpp.py builtins\target-generic-1.ll 32bit &gt; $(Configuration)/gen-bitcode-generic-1-32bit.cpp;
@@ -352,6 +370,36 @@
     </CustomBuild>
   </ItemGroup>
   <ItemGroup>
+    <CustomBuild Include="builtins\target-neon-8.ll">
+      <FileType>Document</FileType>
+      <Command>m4 -Ibuiltins/ -DLLVM_VERSION=%LLVM_VERSION% -DBUILD_OS=WINDOWS -DRUNTIME=32 builtins/target-neon-8.ll | python bitcode2cpp.py builtins\target-neon-8.ll 32bit &gt; $(Configuration)/gen-bitcode-neon-8-32bit.cpp;
+               m4 -Ibuiltins/ -DLLVM_VERSION=%LLVM_VERSION% -DBUILD_OS=WINDOWS -DRUNTIME=64 builtins/target-neon-8.ll | python bitcode2cpp.py builtins\target-neon-8.ll 64bit &gt; $(Configuration)/gen-bitcode-neon-8-64bit.cpp</Command>
+      <Outputs>$(Configuration)/gen-bitcode-neon-8-32bit.cpp; $(Configuration)/gen-bitcode-neon-8-64bit.cpp</Outputs>
+      <AdditionalInputs>builtins\util.m4;builtins\svml.m4;builtins\target-generic-common.ll</AdditionalInputs>
+      <Message>Building gen-bitcode-neon-8-32bit.cpp and gen-bitcode-neon-8-64bit.cpp</Message>
+    </CustomBuild>
+  </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="builtins\target-neon-16.ll">
+      <FileType>Document</FileType>
+      <Command>m4 -Ibuiltins/ -DLLVM_VERSION=%LLVM_VERSION% -DBUILD_OS=WINDOWS -DRUNTIME=32 builtins/target-neon-16.ll | python bitcode2cpp.py builtins\target-neon-16.ll 32bit &gt; $(Configuration)/gen-bitcode-neon-16-32bit.cpp;
+               m4 -Ibuiltins/ -DLLVM_VERSION=%LLVM_VERSION% -DBUILD_OS=WINDOWS -DRUNTIME=64 builtins/target-neon-16.ll | python bitcode2cpp.py builtins\target-neon-16.ll 64bit &gt; $(Configuration)/gen-bitcode-neon-16-64bit.cpp</Command>
+      <Outputs>$(Configuration)/gen-bitcode-neon-16-32bit.cpp; $(Configuration)/gen-bitcode-neon-16-64bit.cpp</Outputs>
+      <AdditionalInputs>builtins\util.m4;builtins\svml.m4;builtins\target-generic-common.ll</AdditionalInputs>
+      <Message>Building gen-bitcode-neon-16-32bit.cpp and gen-bitcode-neon-16-64bit.cpp</Message>
+    </CustomBuild>
+  </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="builtins\target-neon-32.ll">
+      <FileType>Document</FileType>
+      <Command>m4 -Ibuiltins/ -DLLVM_VERSION=%LLVM_VERSION% -DBUILD_OS=WINDOWS -DRUNTIME=32 builtins/target-neon-32.ll | python bitcode2cpp.py builtins\target-neon-32.ll 32bit &gt; $(Configuration)/gen-bitcode-neon-32-32bit.cpp;
+               m4 -Ibuiltins/ -DLLVM_VERSION=%LLVM_VERSION% -DBUILD_OS=WINDOWS -DRUNTIME=64 builtins/target-neon-32.ll | python bitcode2cpp.py builtins\target-neon-32.ll 64bit &gt; $(Configuration)/gen-bitcode-neon-32-64bit.cpp</Command>
+      <Outputs>$(Configuration)/gen-bitcode-neon-32-32bit.cpp; $(Configuration)/gen-bitcode-neon-32-64bit.cpp</Outputs>
+      <AdditionalInputs>builtins\util.m4;builtins\svml.m4;builtins\target-generic-common.ll</AdditionalInputs>
+      <Message>Building gen-bitcode-neon-32-32bit.cpp and gen-bitcode-neon-32-64bit.cpp</Message>
+    </CustomBuild>
+  </ItemGroup>
+  <ItemGroup>
     <CustomBuild Include="lex.ll">
       <FileType>Document</FileType>
       <Command>flex -t lex.ll &gt; $(Configuration)\lex.cc</Command>
@@ -377,14 +425,14 @@
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
     <CharacterSet>Unicode</CharacterSet>
-    <PlatformToolset>v120</PlatformToolset>
+    <PlatformToolset>v140</PlatformToolset>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
     <WholeProgramOptimization>false</WholeProgramOptimization>
     <CharacterSet>Unicode</CharacterSet>
-    <PlatformToolset>v120</PlatformToolset>
+    <PlatformToolset>v140</PlatformToolset>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <ImportGroup Label="ExtensionSettings">
@@ -407,7 +455,7 @@
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
-      <PreprocessorDefinitions>NOMINMAX;%LLVM_VERSION%</PreprocessorDefinitions>
+      <PreprocessorDefinitions>NOMINMAX;%LLVM_VERSION%;ISPC_ARM_ENABLED</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>$(LLVM_INSTALL_DIR)\include;.;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <DisableSpecificWarnings>4146;4800;4996;4355;4624;4244;4141;4291;4018</DisableSpecificWarnings>
     </ClCompile>
@@ -415,7 +463,7 @@
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalLibraryDirectories>$(LLVM_INSTALL_DIR)\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>clangFrontend.lib;clangDriver.lib;clangSerialization.lib;clangParse.lib;clangSema.lib;clangAnalysis.lib;clangEdit.lib;clangAST.lib;clangLex.lib;clangBasic.lib;LLVMAnalysis.lib;LLVMAsmParser.lib;LLVMAsmPrinter.lib;LLVMBitReader.lib;LLVMBitWriter.lib;LLVMCodeGen.lib;LLVMCore.lib;LLVMExecutionEngine.lib;LLVMInstCombine.lib;LLVMInstrumentation.lib;LLVMLinker.lib;LLVMMC.lib;LLVMMCParser.lib;LLVMObject.lib;LLVMScalarOpts.lib;LLVMSelectionDAG.lib;LLVMSupport.lib;LLVMTarget.lib;LLVMTransformUtils.lib;LLVMX86ASMPrinter.lib;LLVMX86ASMParser.lib;LLVMX86Utils.lib;LLVMX86CodeGen.lib;LLVMX86Desc.lib;LLVMX86Disassembler.lib;LLVMX86Info.lib;LLVMipo.lib;shlwapi.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>clangFrontend.lib;clangDriver.lib;clangSerialization.lib;clangParse.lib;clangSema.lib;clangAnalysis.lib;clangEdit.lib;clangAST.lib;clangLex.lib;clangBasic.lib;LLVMAnalysis.lib;LLVMAsmParser.lib;LLVMAsmPrinter.lib;LLVMBitReader.lib;LLVMBitWriter.lib;LLVMCodeGen.lib;LLVMCore.lib;LLVMExecutionEngine.lib;LLVMInstCombine.lib;LLVMInstrumentation.lib;LLVMLinker.lib;LLVMMC.lib;LLVMMCParser.lib;LLVMObject.lib;LLVMScalarOpts.lib;LLVMSelectionDAG.lib;LLVMSupport.lib;LLVMTarget.lib;LLVMTransformUtils.lib;LLVMX86ASMPrinter.lib;LLVMX86ASMParser.lib;LLVMX86Utils.lib;LLVMX86CodeGen.lib;LLVMX86Desc.lib;LLVMX86Disassembler.lib;LLVMX86Info.lib;LLVMARMAsmParser.lib;LLVMARMAsmPrinter.lib;LLVMARMCodeGen.lib;LLVMARMDesc.lib;LLVMARMDisassembler.lib;LLVMARMInfo.lib;LLVMipo.lib;shlwapi.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalDependencies Condition="'$(LLVM_VERSION)'=='LLVM_3_2'OR'$(LLVM_VERSION)'=='LLVM_3_3'OR'$(LLVM_VERSION)'=='LLVM_3_4'OR'$(LLVM_VERSION)'=='LLVM_3_5'OR'$(LLVM_VERSION)'=='LLVM_3_6'OR'$(LLVM_VERSION)'=='LLVM_3_7'">LLVMipa.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalDependencies Condition="'$(LLVM_VERSION)'!='LLVM_3_2'AND'$(LLVM_VERSION)'!='LLVM_3_3'AND'$(LLVM_VERSION)'!='LLVM_3_4'AND'$(LLVM_VERSION)'!='LLVM_3_5'AND'$(LLVM_VERSION)'!='LLVM_3_6'AND'$(LLVM_VERSION)'!='LLVM_3_7'">LLVMIRReader.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalDependencies Condition="'$(LLVM_VERSION)'!='LLVM_3_2'AND'$(LLVM_VERSION)'!='LLVM_3_3'AND'$(LLVM_VERSION)'!='LLVM_3_4'AND'$(LLVM_VERSION)'!='LLVM_3_5'">LLVMProfileData.lib;%(AdditionalDependencies)</AdditionalDependencies>
@@ -430,7 +478,7 @@
       <Optimization>MaxSpeed</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
-      <PreprocessorDefinitions>NOMINMAX;%LLVM_VERSION%;NDEBUG</PreprocessorDefinitions>
+      <PreprocessorDefinitions>NOMINMAX;%LLVM_VERSION%;NDEBUG;ISPC_ARM_ENABLED</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>$(LLVM_INSTALL_DIR)\include;.;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <DisableSpecificWarnings>4146;4800;4996;4355;4624;4244;4141;4291;4018</DisableSpecificWarnings>
     </ClCompile>
@@ -440,7 +488,7 @@
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <AdditionalLibraryDirectories>$(LLVM_INSTALL_DIR)\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>clangFrontend.lib;clangDriver.lib;clangSerialization.lib;clangParse.lib;clangSema.lib;clangAnalysis.lib;clangEdit.lib;clangAST.lib;clangLex.lib;clangBasic.lib;LLVMAnalysis.lib;LLVMAsmParser.lib;LLVMAsmPrinter.lib;LLVMBitReader.lib;LLVMBitWriter.lib;LLVMCodeGen.lib;LLVMCore.lib;LLVMExecutionEngine.lib;LLVMInstCombine.lib;LLVMInstrumentation.lib;LLVMLinker.lib;LLVMMC.lib;LLVMMCParser.lib;LLVMObject.lib;LLVMScalarOpts.lib;LLVMSelectionDAG.lib;LLVMSupport.lib;LLVMTarget.lib;LLVMTransformUtils.lib;LLVMX86ASMPrinter.lib;LLVMX86ASMParser.lib;LLVMX86Utils.lib;LLVMX86CodeGen.lib;LLVMX86Desc.lib;LLVMX86Disassembler.lib;LLVMX86Info.lib;LLVMipo.lib;shlwapi.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>clangFrontend.lib;clangDriver.lib;clangSerialization.lib;clangParse.lib;clangSema.lib;clangAnalysis.lib;clangEdit.lib;clangAST.lib;clangLex.lib;clangBasic.lib;LLVMAnalysis.lib;LLVMAsmParser.lib;LLVMAsmPrinter.lib;LLVMBitReader.lib;LLVMBitWriter.lib;LLVMCodeGen.lib;LLVMCore.lib;LLVMExecutionEngine.lib;LLVMInstCombine.lib;LLVMInstrumentation.lib;LLVMLinker.lib;LLVMMC.lib;LLVMMCParser.lib;LLVMObject.lib;LLVMScalarOpts.lib;LLVMSelectionDAG.lib;LLVMSupport.lib;LLVMTarget.lib;LLVMTransformUtils.lib;LLVMX86ASMPrinter.lib;LLVMX86ASMParser.lib;LLVMX86Utils.lib;LLVMX86CodeGen.lib;LLVMX86Desc.lib;LLVMX86Disassembler.lib;LLVMX86Info.lib;LLVMARMAsmParser.lib;LLVMARMAsmPrinter.lib;LLVMARMCodeGen.lib;LLVMARMDesc.lib;LLVMARMDisassembler.lib;LLVMARMInfo.lib;LLVMipo.lib;shlwapi.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalDependencies Condition="'$(LLVM_VERSION)'=='LLVM_3_2'OR'$(LLVM_VERSION)'=='LLVM_3_3'OR'$(LLVM_VERSION)'=='LLVM_3_4'OR'$(LLVM_VERSION)'=='LLVM_3_5'OR'$(LLVM_VERSION)'=='LLVM_3_6'OR'$(LLVM_VERSION)'=='LLVM_3_7'">LLVMipa.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalDependencies Condition="'$(LLVM_VERSION)'!='LLVM_3_2'AND'$(LLVM_VERSION)'!='LLVM_3_3'AND'$(LLVM_VERSION)'!='LLVM_3_4'AND'$(LLVM_VERSION)'!='LLVM_3_5'AND'$(LLVM_VERSION)'!='LLVM_3_6'AND'$(LLVM_VERSION)'!='LLVM_3_7'">LLVMIRReader.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalDependencies Condition="'$(LLVM_VERSION)'!='LLVM_3_2'AND'$(LLVM_VERSION)'!='LLVM_3_3'AND'$(LLVM_VERSION)'!='LLVM_3_4'AND'$(LLVM_VERSION)'!='LLVM_3_5'">LLVMProfileData.lib;%(AdditionalDependencies)</AdditionalDependencies>

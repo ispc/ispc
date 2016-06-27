@@ -599,6 +599,17 @@ int main(int Argc, char *Argv[]) {
         }
     }
 
+#ifdef ISPC_IS_WINDOWS
+    if (Module::Object == ot) {
+        if (strstr(arch, "arm") || strstr(target, "neon")) {
+            fprintf(stderr, "FATAL: --emit-obj with --arch=arm on Microsoft Windows currently "
+                    "produces broken object files. Use --emit-asm and separately compile using "
+                    "a cross compiling ARM assembler instead.\n");
+            return 1;
+        }
+    }
+#endif
+
     if (g->enableFuzzTest) {
         if (g->fuzzTestSeed == -1) {
 #ifdef ISPC_IS_WINDOWS
