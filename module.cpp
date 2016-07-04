@@ -427,8 +427,8 @@ Module::Module(const char *fn) {
                     ISPC_VERSION, __DATE__);
 #endif
 #if ISPC_LLVM_VERSION >= ISPC_LLVM_3_4 // LLVM 3.4+
-            diCompileUnit = 
-#endif // LLVM_3_4+            
+            diCompileUnit =
+#endif // LLVM_3_4+
             diBuilder->createCompileUnit(llvm::dwarf::DW_LANG_C99,  /* lang */
                                          name,  /* filename */
                                          directory, /* directory */
