@@ -1102,10 +1102,13 @@ Target::Target(const char *arch, const char *cpu, const char *isa, bool pic, boo
 #else /* LLVM 3.7+ */
         m_targetMachine->Options.MCOptions.AsmVerbose = true;
 #endif
+
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_3_5
         // Change default version of generated DWARF.
         if (g->generateDWARFVersion != 0) {
             m_targetMachine->Options.MCOptions.DwarfVersion = g->generateDWARFVersion;
         }
+#endif
 
         // Initialize TargetData/DataLayout in 3 steps.
         // 1. Get default data layout first
@@ -1522,7 +1525,9 @@ Globals::Globals() {
     emitPerfWarnings = true;
     emitInstrumentation = false;
     generateDebuggingSymbols = false;
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_3_5
     generateDWARFVersion = 0;
+#endif
     enableFuzzTest = false;
     fuzzTestSeed = -1;
     mangleFunctionsWithTarget = false;

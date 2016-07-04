@@ -104,7 +104,9 @@ usage(int ret) {
 #ifdef ISPC_IS_WINDOWS
     printf("    [--dllexport]\t\t\tMake non-static functions DLL exported.  Windows only.\n");
 #endif
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_3_5
     printf("    [--dwarf-version={2,3,4}]\t\tGenerate source-level debug information with given DWARF version (triggers -g)\n");
+#endif
     printf("    [--emit-asm]\t\t\tGenerate assembly language file as output\n");
     printf("    [--emit-c++]\t\t\tEmit a C++ source file as output\n");
     printf("    [--emit-llvm]\t\t\tEmit LLVM bitode file as output\n");
@@ -388,6 +390,7 @@ int main(int Argc, char *Argv[]) {
         else if (!strcmp(argv[i], "--dllexport"))
             g->dllExport = true;
 #endif
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_3_5
         else if (!strncmp(argv[i], "--dwarf-version=", 16)) {
             int val = atoi(argv[i] + 16);
             if (2 <= val && val <=4) {
@@ -398,7 +401,9 @@ int main(int Argc, char *Argv[]) {
                         "only 2, 3 and 4 are allowed.\n", argv[i]+16);
                 usage(1);
             }
-        } else if (!strcmp(argv[i], "--print-target"))
+        }
+#endif
+        else if (!strcmp(argv[i], "--print-target"))
             g->printTarget = true;
         else if (!strcmp(argv[i], "--no-omit-frame-pointer"))
             g->NoOmitFramePointer = true;
