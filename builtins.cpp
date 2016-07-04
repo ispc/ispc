@@ -445,6 +445,8 @@ lSetInternalFunctions(llvm::Module *module) {
         "__broadcast_i32",
         "__broadcast_i64",
         "__broadcast_i8",
+        "__cast_mask_to_i1",
+        "__cast_mask_to_i16",
         "__ceil_uniform_double",
         "__ceil_uniform_float",
         "__ceil_varying_double",
@@ -482,6 +484,8 @@ lSetInternalFunctions(llvm::Module *module) {
         "__extract_float",
         "__extract_double",
 //#endif /* ISPC_NVPTX_ENABLED */
+        "__extract_mask_low",
+        "__extract_mask_hi",
         "__fastmath",
         "__float_to_half_uniform",
         "__float_to_half_varying",
