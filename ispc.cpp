@@ -1102,6 +1102,11 @@ Target::Target(const char *arch, const char *cpu, const char *isa, bool pic, boo
 #else /* LLVM 3.7+ */
         m_targetMachine->Options.MCOptions.AsmVerbose = true;
 #endif
+        // Change default version of generated DWARF.
+        if (g->generateDWARFVersion != 0) {
+            m_targetMachine->Options.MCOptions.DwarfVersion = g->generateDWARFVersion;
+        }
+
         // Initialize TargetData/DataLayout in 3 steps.
         // 1. Get default data layout first
         std::string dl_string;
@@ -1206,7 +1211,7 @@ Target::SupportedTargets() {
         "avx512skx-i32x16, "
 #endif
         "generic-x1, generic-x4, generic-x8, generic-x16, "
-        "generic-x32, generic-x64, *-generic-x16, "
+        "generic-x32, generic-x64, *-generic-x16"
 #ifdef ISPC_ARM_ENABLED
         ", neon-i8x16, neon-i16x8, neon-i32x4"
 #endif
@@ -1517,6 +1522,7 @@ Globals::Globals() {
     emitPerfWarnings = true;
     emitInstrumentation = false;
     generateDebuggingSymbols = false;
+    generateDWARFVersion = 0;
     enableFuzzTest = false;
     fuzzTestSeed = -1;
     mangleFunctionsWithTarget = false;

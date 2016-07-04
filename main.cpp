@@ -104,12 +104,13 @@ usage(int ret) {
 #ifdef ISPC_IS_WINDOWS
     printf("    [--dllexport]\t\t\tMake non-static functions DLL exported.  Windows only.\n");
 #endif
+    printf("    [--dwarf-version={2,3,4}]\t\tGenerate source-level debug information with given DWARF version (triggers -g)\n");
     printf("    [--emit-asm]\t\t\tGenerate assembly language file as output\n");
     printf("    [--emit-c++]\t\t\tEmit a C++ source file as output\n");
     printf("    [--emit-llvm]\t\t\tEmit LLVM bitode file as output\n");
     printf("    [--emit-obj]\t\t\tGenerate object file file as output (default)\n");
     printf("    [--force-alignment=<value>]\t\tForce alignment in memory allocations routine to be <value>\n");
-    printf("    [-g]\t\t\t\tGenerate debugging information\n");
+    printf("    [-g]\t\t\t\tGenerate source-level debug information\n");
     printf("    [--help]\t\t\t\tPrint help\n");
     printf("    [--help-dev]\t\t\tPrint help for developer options\n");
     printf("    [--host-stub <filename>]\t\tEmit host-side offload stub functions to file\n");
@@ -121,12 +122,12 @@ usage(int ret) {
     printf("        fast\t\t\t\tUse high-performance but lower-accuracy math functions\n");
     printf("        svml\t\t\t\tUse the Intel(r) SVML math libraries\n");
     printf("        system\t\t\t\tUse the system's math library (*may be quite slow*)\n");
-    printf("    [-MMM <filename>\t\t\t\tWrite #include dependencies to given file.\n");
+    printf("    [-MMM <filename>\t\t\tWrite #include dependencies to given file.\n");
     printf("    [--no-omit-frame-pointer]\t\tDisable frame pointer omission. It may be useful for profiling\n");
     printf("    [--nostdlib]\t\t\tDon't make the ispc standard library available\n");
     printf("    [--nocpp]\t\t\t\tDon't run the C preprocessor\n");
     printf("    [-o <name>/--outfile=<name>]\tOutput filename (may be \"-\" for standard output)\n");
-    printf("    [-O0/-O(1/2/3)]\t\t\t\tSet optimization level (off or on). Optimizations are on by default.\n");
+    printf("    [-O0/-O(1/2/3)]\t\t\tSet optimization level (off or on). Optimizations are on by default.\n");
     printf("    [--opt=<option>]\t\t\tSet optimization option\n");
     printf("        disable-assertions\t\tRemove assertion statements from final code.\n");
     printf("        disable-fma\t\t\tDisable 'fused multiply-add' instructions (on targets that support them)\n");
@@ -387,7 +388,17 @@ int main(int Argc, char *Argv[]) {
         else if (!strcmp(argv[i], "--dllexport"))
             g->dllExport = true;
 #endif
-        else if (!strcmp(argv[i], "--print-target"))
+        else if (!strncmp(argv[i], "--dwarf-version=", 16)) {
+            int val = atoi(argv[i] + 16);
+            if (2 <= val && val <=4) {
+                g->generateDebuggingSymbols = true;
+                g->generateDWARFVersion=val;
+            } else {
+                fprintf(stderr, "Invalid value for DWARF version: \"%s\" -- "
+                        "only 2, 3 and 4 are allowed.\n", argv[i]+16);
+                usage(1);
+            }
+        } else if (!strcmp(argv[i], "--print-target"))
             g->printTarget = true;
         else if (!strcmp(argv[i], "--no-omit-frame-pointer"))
             g->NoOmitFramePointer = true;

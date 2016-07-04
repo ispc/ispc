@@ -606,6 +606,14 @@ struct Globals {
         program in its output. */
     bool generateDebuggingSymbols;
 
+    /** Require generation of DWARF of certain version (2, 3, 4). For
+        default version, this field is set to 0. */
+    // Hint: to verify dwarf version in the object file, run on Linux:
+    // readelf --debug-dump=info object.o | grep -A 2 'Compilation Unit @'
+    // on Mac:
+    // xcrun dwarfdump -r0 object.o
+    int generateDWARFVersion;
+
     /** If true, function names are mangled by appending the target ISA and
         vector width to them. */
     bool mangleFunctionsWithTarget;
