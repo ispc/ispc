@@ -612,7 +612,9 @@ struct Globals {
     // readelf --debug-dump=info object.o | grep -A 2 'Compilation Unit @'
     // on Mac:
     // xcrun dwarfdump -r0 object.o
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_3_5
     int generateDWARFVersion;
+#endif
 
     /** If true, function names are mangled by appending the target ISA and
         vector width to them. */
