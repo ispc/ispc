@@ -53,6 +53,7 @@ Contents:
   + `Updating ISPC Programs For Changes In ISPC 1.7.0`_
   + `Updating ISPC Programs For Changes In ISPC 1.8.2`_
   + `Updating ISPC Programs For Changes In ISPC 1.9.0`_
+  + `Updating ISPC Programs For Changes In ISPC 1.9.1`_
 
 * `Getting Started with ISPC`_
 
@@ -345,6 +346,12 @@ Updating ISPC Programs For Changes In ISPC 1.9.0
 The release doesn't contains language changes, which may affect compatibility with
 older versions. It introduces new AVX512 target: avx512knl-i32x16.
 
+Updating ISPC Programs For Changes In ISPC 1.9.1
+------------------------------------------------
+
+The release doesn't contains language changes, which may affect compatibility with
+older versions. It introduces new AVX512 target: avx512skx-i32x16.
+
 
 Getting Started with ISPC
 =========================
@@ -578,6 +585,7 @@ avx, avx1    AVX (2010-2011 era Intel CPUs)
 avx1.1       AVX 1.1 (2012 era "Ivybridge" Intel CPUs)
 avx2         AVX 2 target (2013- Intel "Haswell" CPUs)
 avx512knl    AVX 512 target (Xeon Phi chips codename Knights Landing)
+avx512skx    AVX 512 target (future Xeon CPUs)
 neon         ARM NEON
 sse2         SSE2 (early 2000s era x86 CPUs)
 sse4         SSE4 (generally 2008-2010 Intel CPUs)
@@ -807,7 +815,7 @@ preprocessor runs:
   * - ISPC
     - 1
     - Detecting that the ``ispc`` compiler is processing the file
-  * - ISPC_TARGET_{NEON_8,NEON_16,NEON_32,SSE2,SSE4,AVX,AVX11,AVX2,AVX512KNL,GENERIC}
+  * - ISPC_TARGET_{NEON_8, NEON_16, NEON_32, SSE2, SSE4, AVX, AVX11, AVX2, AVX512KNL, AVX512SKX, GENERIC}
     - 1
     - One of these will be set, depending on the compilation target.
   * - ISPC_POINTER_SIZE

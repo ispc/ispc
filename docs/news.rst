@@ -2,6 +2,16 @@
 ispc News
 =========
 
+ispc 1.9.1 is Released
+----------------------
+
+An ``ispc`` release with new native AVX512 target for future Xeon CPUs and
+improvements for debugging. Release is based on patched version LLVM 3.8 backend.
+
+For more details, please check `Release Notes`_.
+
+.. _Release Notes: https://github.com/ispc/ispc/blob/master/docs/ReleaseNotes.txt
+
 ispc 1.9.0 is Released
 ----------------------
 
