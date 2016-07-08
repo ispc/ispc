@@ -1,3 +1,11 @@
+=== v1.9.1 === (8 July 2016)
+
+An ISPC update with new native AVX512 target for future Xeon CPUs and
+improvements for debugging, including new switch --dwarf-version to support
+debugging on old systems.
+
+The release is based on patched version LLVM 3.8.
+
 === v1.9.0 === (12 Feb 2016)
 
 An ISPC release with AVX512 (KNL flavor) support and a number of bug fixes,
