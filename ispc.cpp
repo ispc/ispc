@@ -1287,8 +1287,10 @@ Target::ISAToString(ISA isa) {
     case Target::KNL_AVX512:
         return "avx512knl";
 #endif
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_3_8 // LLVM 3.8+
     case Target::SKX_AVX512:
         return "avx512skx";
+#endif
     case Target::GENERIC:
         return "generic";
 #ifdef ISPC_NVPTX_ENABLED
