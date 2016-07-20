@@ -54,9 +54,11 @@ define(`MASK_HIGH_BIT_ON',
 define(`PTR_OP_ARGS',
   ifelse(LLVM_VERSION, LLVM_3_7,
     ``$1 , $1 *'',
-  ifelse(LLVM_VERSION, LLVM_3_8,
+         LLVM_VERSION, LLVM_3_8,
     ``$1 , $1 *'',
-  ifelse(LLVM_VERSION, LLVM_3_9,
+         LLVM_VERSION, LLVM_3_9,
+    ``$1 , $1 *'',
+         LLVM_VERSION, LLVM_4_0,
     ``$1 , $1 *'',
     ``$1 *''
   )
