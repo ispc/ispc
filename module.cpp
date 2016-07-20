@@ -124,6 +124,7 @@
 #include <clang/Frontend/TextDiagnosticPrinter.h>
 #include <clang/Frontend/Utils.h>
 #include <clang/Basic/TargetInfo.h>
+#include <clang/Lex/PreprocessorOptions.h>
 #include <llvm/Support/ToolOutputFile.h>
 #include <llvm/Support/Host.h>
 #include <llvm/Support/raw_ostream.h>

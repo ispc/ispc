@@ -35,6 +35,8 @@ define(`WIDTH',`16')
 ifelse(LLVM_VERSION, LLVM_3_8,
     `include(`target-avx512-common.ll')',
          LLVM_VERSION, LLVM_3_9,
+    `include(`target-avx512-common.ll')',
+         LLVM_VERSION, LLVM_4_0,
     `include(`target-avx512-common.ll')'
   )
 
@@ -80,6 +82,8 @@ define <16 x float> @__rsqrt_varying_float(<16 x float> %v) nounwind readonly al
 ifelse(LLVM_VERSION, LLVM_3_8,
     rcp_rsqrt_varying_float_skx(),
          LLVM_VERSION, LLVM_3_9,
+    rcp_rsqrt_varying_float_skx(),
+         LLVM_VERSION, LLVM_4_0,
     rcp_rsqrt_varying_float_skx()
   )
 
