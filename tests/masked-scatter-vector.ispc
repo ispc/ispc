@@ -5,8 +5,8 @@ typedef int<3> int3;
 
 export void f_fu(uniform float ret[], uniform float aa[], uniform float b) {
     float a = aa[programIndex];
-    uniform int3 array[programCount];
-    for (uniform int i = 0; i < programCount + 5 - b; ++i) {
+    uniform int3 array[programCount+1];
+    for (uniform int i = 0; i < programCount + 6 - b; ++i) {
         for (uniform int j = 0; j < 3; ++j)
             array[i][j] = i+100*j;
     }
