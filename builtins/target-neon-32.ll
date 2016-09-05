@@ -43,12 +43,12 @@ include(`target-neon-common.ll')
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; half conversion routines
 
-define <4 x float> @__half_to_float_varying(<4 x i16> %v) nounwind readnone {
+define <4 x float> @__half_to_float_varying(<4 x i16> %v) nounwind readnone alwaysinline {
   %r = call <4 x float> @llvm.arm.neon.vcvthf2fp(<4 x i16> %v)
   ret <4 x float> %r
 }
 
-define <4 x i16> @__float_to_half_varying(<4 x float> %v) nounwind readnone {
+define <4 x i16> @__float_to_half_varying(<4 x float> %v) nounwind readnone alwaysinline {
   %r = call <4 x i16> @llvm.arm.neon.vcvtfp2hf(<4 x float> %v)
   ret <4 x i16> %r
 }
@@ -106,13 +106,13 @@ declare <4 x float> @llvm.arm.neon.vmins.v4f32(<4 x float>, <4 x float>) nounwin
 declare <4 x float> @llvm.arm.neon.vmaxs.v4f32(<4 x float>, <4 x float>) nounwind readnone
 
 define <WIDTH x float> @__max_varying_float(<WIDTH x float>,
-                                            <WIDTH x float>) nounwind readnone {
+                                            <WIDTH x float>) nounwind readnone alwaysinline {
   %r = call <4 x float> @llvm.arm.neon.vmaxs.v4f32(<4 x float> %0, <4 x float> %1)
   ret <WIDTH x float> %r
 }
 
 define <WIDTH x float> @__min_varying_float(<WIDTH x float>,
-                                            <WIDTH x float>) nounwind readnone {
+                                            <WIDTH x float>) nounwind readnone alwaysinline {
   %r = call <4 x float> @llvm.arm.neon.vmins.v4f32(<4 x float> %0, <4 x float> %1)
   ret <WIDTH x float> %r
 }
@@ -122,22 +122,22 @@ declare <4 x i32> @llvm.arm.neon.vminu.v4i32(<4 x i32>, <4 x i32>) nounwind read
 declare <4 x i32> @llvm.arm.neon.vmaxs.v4i32(<4 x i32>, <4 x i32>) nounwind readnone
 declare <4 x i32> @llvm.arm.neon.vmaxu.v4i32(<4 x i32>, <4 x i32>) nounwind readnone
 
-define <WIDTH x i32> @__min_varying_int32(<WIDTH x i32>, <WIDTH x i32>) nounwind readnone {
+define <WIDTH x i32> @__min_varying_int32(<WIDTH x i32>, <WIDTH x i32>) nounwind readnone alwaysinline {
   %r = call <4 x i32> @llvm.arm.neon.vmins.v4i32(<4 x i32> %0, <4 x i32> %1)
   ret <4 x i32> %r
 }
 
-define <WIDTH x i32> @__max_varying_int32(<WIDTH x i32>, <WIDTH x i32>) nounwind readnone {
+define <WIDTH x i32> @__max_varying_int32(<WIDTH x i32>, <WIDTH x i32>) nounwind readnone alwaysinline {
   %r = call <4 x i32> @llvm.arm.neon.vmaxs.v4i32(<4 x i32> %0, <4 x i32> %1)
   ret <4 x i32> %r
 }
 
-define <WIDTH x i32> @__min_varying_uint32(<WIDTH x i32>, <WIDTH x i32>) nounwind readnone {
+define <WIDTH x i32> @__min_varying_uint32(<WIDTH x i32>, <WIDTH x i32>) nounwind readnone alwaysinline {
   %r = call <4 x i32> @llvm.arm.neon.vminu.v4i32(<4 x i32> %0, <4 x i32> %1)
   ret <4 x i32> %r
 }
 
-define <WIDTH x i32> @__max_varying_uint32(<WIDTH x i32>, <WIDTH x i32>) nounwind readnone {
+define <WIDTH x i32> @__max_varying_uint32(<WIDTH x i32>, <WIDTH x i32>) nounwind readnone alwaysinline {
   %r = call <4 x i32> @llvm.arm.neon.vmaxu.v4i32(<4 x i32> %0, <4 x i32> %1)
   ret <4 x i32> %r
 }
@@ -147,7 +147,7 @@ define <WIDTH x i32> @__max_varying_uint32(<WIDTH x i32>, <WIDTH x i32>) nounwin
 declare <4 x float> @llvm.arm.neon.vrecpe.v4f32(<4 x float>) nounwind readnone
 declare <4 x float> @llvm.arm.neon.vrecps.v4f32(<4 x float>, <4 x float>) nounwind readnone
 
-define <WIDTH x float> @__rcp_varying_float(<WIDTH x float> %d) nounwind readnone {
+define <WIDTH x float> @__rcp_varying_float(<WIDTH x float> %d) nounwind readnone alwaysinline {
   %x0 = call <4 x float> @llvm.arm.neon.vrecpe.v4f32(<4 x float> %d)
   %x0_nr = call <4 x float> @llvm.arm.neon.vrecps.v4f32(<4 x float> %d, <4 x float> %x0)
   %x1 = fmul <4 x float> %x0, %x0_nr
@@ -159,7 +159,7 @@ define <WIDTH x float> @__rcp_varying_float(<WIDTH x float> %d) nounwind readnon
 declare <4 x float> @llvm.arm.neon.vrsqrte.v4f32(<4 x float>) nounwind readnone
 declare <4 x float> @llvm.arm.neon.vrsqrts.v4f32(<4 x float>, <4 x float>) nounwind readnone
 
-define <WIDTH x float> @__rsqrt_varying_float(<WIDTH x float> %d) nounwind readnone {
+define <WIDTH x float> @__rsqrt_varying_float(<WIDTH x float> %d) nounwind readnone alwaysinline {
   %x0 = call <4 x float> @llvm.arm.neon.vrsqrte.v4f32(<4 x float> %d)
   %x0_2 = fmul <4 x float> %x0, %x0
   %x0_nr = call <4 x float> @llvm.arm.neon.vrsqrts.v4f32(<4 x float> %d, <4 x float> %x0_2)
@@ -170,7 +170,7 @@ define <WIDTH x float> @__rsqrt_varying_float(<WIDTH x float> %d) nounwind readn
   ret <4 x float> %x2
 }
 
-define float @__rsqrt_uniform_float(float) nounwind readnone {
+define float @__rsqrt_uniform_float(float) nounwind readnone alwaysinline {
   %v1 = bitcast float %0 to <1 x float>
   %vs = shufflevector <1 x float> %v1, <1 x float> undef,
           <4 x i32> <i32 0, i32 undef, i32 undef, i32 undef>
@@ -179,7 +179,7 @@ define float @__rsqrt_uniform_float(float) nounwind readnone {
   ret float %r
 }
 
-define float @__rcp_uniform_float(float) nounwind readnone {
+define float @__rcp_uniform_float(float) nounwind readnone alwaysinline {
   %v1 = bitcast float %0 to <1 x float>
   %vs = shufflevector <1 x float> %v1, <1 x float> undef,
           <4 x i32> <i32 0, i32 undef, i32 undef, i32 undef>
@@ -190,7 +190,7 @@ define float @__rcp_uniform_float(float) nounwind readnone {
 
 declare <4 x float> @llvm.sqrt.v4f32(<4 x float>)
 
-define <WIDTH x float> @__sqrt_varying_float(<WIDTH x float>) nounwind readnone {
+define <WIDTH x float> @__sqrt_varying_float(<WIDTH x float>) nounwind readnone alwaysinline {
   %result = call <4 x float> @llvm.sqrt.v4f32(<4 x float> %0)
 ;; this returns nan for v=0, which is undesirable..
 ;;  %rsqrt = call <WIDTH x float> @__rsqrt_varying_float(<WIDTH x float> %0)
@@ -200,7 +200,7 @@ define <WIDTH x float> @__sqrt_varying_float(<WIDTH x float>) nounwind readnone 
 
 declare <4 x double> @llvm.sqrt.v4f64(<4 x double>)
 
-define <WIDTH x double> @__sqrt_varying_double(<WIDTH x double>) nounwind readnone {
+define <WIDTH x double> @__sqrt_varying_double(<WIDTH x double>) nounwind readnone alwaysinline {
   %r = call <4 x double> @llvm.sqrt.v4f64(<4 x double> %0)
   ret <4 x double> %r
 }
@@ -208,7 +208,7 @@ define <WIDTH x double> @__sqrt_varying_double(<WIDTH x double>) nounwind readno
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; reductions
 
-define i64 @__movmsk(<4 x MASK>) nounwind readnone {
+define i64 @__movmsk(<4 x MASK>) nounwind readnone alwaysinline {
   %and_mask = and <4 x MASK> %0, <MASK 1, MASK 2, MASK 4, MASK 8>
   %v01 = shufflevector <4 x i32> %and_mask, <4 x i32> undef, <2 x i32> <i32 0, i32 1>
   %v23 = shufflevector <4 x i32> %and_mask, <4 x i32> undef, <2 x i32> <i32 2, i32 3>
@@ -264,42 +264,42 @@ define(`neon_reduce', `
 
 declare <2 x float> @llvm.arm.neon.vpadd.v2f32(<2 x float>, <2 x float>) nounwind readnone
 
-define internal float @add_f32(float, float) {
+define internal float @add_f32(float, float) nounwind readnone alwaysinline {
   %r = fadd float %0, %1
   ret float %r
 }
 
-define float @__reduce_add_float(<4 x float>) nounwind readnone {
+define float @__reduce_add_float(<4 x float>) nounwind readnone alwaysinline {
   neon_reduce(float, @llvm.arm.neon.vpadd.v2f32, @add_f32)
 }
 
 declare <2 x float> @llvm.arm.neon.vpmins.v2f32(<2 x float>, <2 x float>) nounwind readnone
 
-define internal float @min_f32(float, float) {
+define internal float @min_f32(float, float) nounwind readnone alwaysinline {
   %cmp = fcmp olt float %0, %1
   %r = select i1 %cmp, float %0, float %1
   ret float %r
 }
 
-define float @__reduce_min_float(<4 x float>) nounwind readnone {
+define float @__reduce_min_float(<4 x float>) nounwind readnone alwaysinline {
   neon_reduce(float, @llvm.arm.neon.vpmins.v2f32, @min_f32)
 }
 
 declare <2 x float> @llvm.arm.neon.vpmaxs.v2f32(<2 x float>, <2 x float>) nounwind readnone
 
-define internal float @max_f32(float, float) {
+define internal float @max_f32(float, float) nounwind readnone alwaysinline {
   %cmp = fcmp ugt float %0, %1
   %r = select i1 %cmp, float %0, float %1
   ret float %r
 }
 
-define float @__reduce_max_float(<4 x float>) nounwind readnone {
+define float @__reduce_max_float(<4 x float>) nounwind readnone alwaysinline {
   neon_reduce(float, @llvm.arm.neon.vpmaxs.v2f32, @max_f32)
 }
 
 declare <4 x i16> @llvm.arm.neon.vpaddls.v4i16.v8i8(<8 x i8>) nounwind readnone
 
-define i16 @__reduce_add_int8(<WIDTH x i8>) nounwind readnone {
+define i16 @__reduce_add_int8(<WIDTH x i8>) nounwind readnone alwaysinline {
   %v8 = shufflevector <4 x i8> %0, <4 x i8> zeroinitializer,
            <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 4, i32 4, i32 4>
   %a16 = call <4 x i16> @llvm.arm.neon.vpaddls.v4i16.v8i8(<8 x i8> %v8)
@@ -313,7 +313,7 @@ define i16 @__reduce_add_int8(<WIDTH x i8>) nounwind readnone {
 
 declare <2 x i32> @llvm.arm.neon.vpaddlu.v2i32.v4i16(<4 x i16>) nounwind readnone
 
-define i32 @__reduce_add_int16(<WIDTH x i16>) nounwind readnone {
+define i32 @__reduce_add_int16(<WIDTH x i16>) nounwind readnone alwaysinline {
   %a32 = call <2 x i32> @llvm.arm.neon.vpaddlu.v2i32.v4i16(<4 x i16> %0)
   %a0 = extractelement <2 x i32> %a32, i32 0
   %a1 = extractelement <2 x i32> %a32, i32 1
@@ -323,7 +323,7 @@ define i32 @__reduce_add_int16(<WIDTH x i16>) nounwind readnone {
 
 declare <2 x i64> @llvm.arm.neon.vpaddlu.v2i64.v4i32(<4 x i32>) nounwind readnone
 
-define i64 @__reduce_add_int32(<WIDTH x i32>) nounwind readnone {
+define i64 @__reduce_add_int32(<WIDTH x i32>) nounwind readnone alwaysinline {
   %a64 = call <2 x i64> @llvm.arm.neon.vpaddlu.v2i64.v4i32(<4 x i32> %0)
   %a0 = extractelement <2 x i64> %a64, i32 0
   %a1 = extractelement <2 x i64> %a64, i32 1
@@ -333,53 +333,53 @@ define i64 @__reduce_add_int32(<WIDTH x i32>) nounwind readnone {
 
 declare <2 x i32> @llvm.arm.neon.vpmins.v2i32(<2 x i32>, <2 x i32>) nounwind readnone
 
-define internal i32 @min_si32(i32, i32) {
+define internal i32 @min_si32(i32, i32) nounwind readnone alwaysinline {
   %cmp = icmp slt i32 %0, %1
   %r = select i1 %cmp, i32 %0, i32 %1
   ret i32 %r
 }
 
-define i32 @__reduce_min_int32(<4 x i32>) nounwind readnone {
+define i32 @__reduce_min_int32(<4 x i32>) nounwind readnone alwaysinline {
   neon_reduce(i32, @llvm.arm.neon.vpmins.v2i32, @min_si32)
 }
 
 declare <2 x i32> @llvm.arm.neon.vpmaxs.v2i32(<2 x i32>, <2 x i32>) nounwind readnone
 
-define internal i32 @max_si32(i32, i32) {
+define internal i32 @max_si32(i32, i32) nounwind readnone alwaysinline {
   %cmp = icmp sgt i32 %0, %1
   %r = select i1 %cmp, i32 %0, i32 %1
   ret i32 %r
 }
 
-define i32 @__reduce_max_int32(<4 x i32>) nounwind readnone {
+define i32 @__reduce_max_int32(<4 x i32>) nounwind readnone alwaysinline {
   neon_reduce(i32, @llvm.arm.neon.vpmaxs.v2i32, @max_si32)
 }
 
 declare <2 x i32> @llvm.arm.neon.vpminu.v2i32(<2 x i32>, <2 x i32>) nounwind readnone
 
-define internal i32 @min_ui32(i32, i32) {
+define internal i32 @min_ui32(i32, i32) nounwind readnone alwaysinline {
   %cmp = icmp ult i32 %0, %1
   %r = select i1 %cmp, i32 %0, i32 %1
   ret i32 %r
 }
 
-define i32 @__reduce_min_uint32(<4 x i32>) nounwind readnone {
+define i32 @__reduce_min_uint32(<4 x i32>) nounwind readnone alwaysinline {
   neon_reduce(i32, @llvm.arm.neon.vpmins.v2i32, @min_ui32)
 }
 
 declare <2 x i32> @llvm.arm.neon.vpmaxu.v2i32(<2 x i32>, <2 x i32>) nounwind readnone
 
-define internal i32 @max_ui32(i32, i32) {
+define internal i32 @max_ui32(i32, i32) nounwind readnone alwaysinline {
   %cmp = icmp ugt i32 %0, %1
   %r = select i1 %cmp, i32 %0, i32 %1
   ret i32 %r
 }
 
-define i32 @__reduce_max_uint32(<4 x i32>) nounwind readnone {
+define i32 @__reduce_max_uint32(<4 x i32>) nounwind readnone alwaysinline {
   neon_reduce(i32, @llvm.arm.neon.vpmaxs.v2i32, @max_ui32)
 }
 
-define double @__reduce_add_double(<4 x double>) nounwind readnone {
+define double @__reduce_add_double(<4 x double>) nounwind readnone alwaysinline {
   %v0 = shufflevector <4 x double> %0, <4 x double> undef,
                       <2 x i32> <i32 0, i32 1>
   %v1 = shufflevector <4 x double> %0, <4 x double> undef,
@@ -391,15 +391,15 @@ define double @__reduce_add_double(<4 x double>) nounwind readnone {
   ret double %m
 }
 
-define double @__reduce_min_double(<4 x double>) nounwind readnone {
+define double @__reduce_min_double(<4 x double>) nounwind readnone alwaysinline {
   reduce4(double, @__min_varying_double, @__min_uniform_double)
 }
 
-define double @__reduce_max_double(<4 x double>) nounwind readnone {
+define double @__reduce_max_double(<4 x double>) nounwind readnone alwaysinline {
   reduce4(double, @__max_varying_double, @__max_uniform_double)
 }
 
-define i64 @__reduce_add_int64(<4 x i64>) nounwind readnone {
+define i64 @__reduce_add_int64(<4 x i64>) nounwind readnone alwaysinline {
   %v0 = shufflevector <4 x i64> %0, <4 x i64> undef,
                       <2 x i32> <i32 0, i32 1>
   %v1 = shufflevector <4 x i64> %0, <4 x i64> undef,
@@ -411,19 +411,19 @@ define i64 @__reduce_add_int64(<4 x i64>) nounwind readnone {
   ret i64 %m
 }
 
-define i64 @__reduce_min_int64(<4 x i64>) nounwind readnone {
+define i64 @__reduce_min_int64(<4 x i64>) nounwind readnone alwaysinline {
   reduce4(i64, @__min_varying_int64, @__min_uniform_int64)
 }
 
-define i64 @__reduce_max_int64(<4 x i64>) nounwind readnone {
+define i64 @__reduce_max_int64(<4 x i64>) nounwind readnone alwaysinline {
   reduce4(i64, @__max_varying_int64, @__max_uniform_int64)
 }
 
-define i64 @__reduce_min_uint64(<4 x i64>) nounwind readnone {
+define i64 @__reduce_min_uint64(<4 x i64>) nounwind readnone alwaysinline {
   reduce4(i64, @__min_varying_uint64, @__min_uniform_uint64)
 }
 
-define i64 @__reduce_max_uint64(<4 x i64>) nounwind readnone {
+define i64 @__reduce_max_uint64(<4 x i64>) nounwind readnone alwaysinline {
   reduce4(i64, @__max_varying_uint64, @__max_uniform_uint64)
 }
 
@@ -432,56 +432,56 @@ define i64 @__reduce_max_uint64(<4 x i64>) nounwind readnone {
 
 declare <4 x i8> @llvm.arm.neon.vrhaddu.v4i8(<4 x i8>, <4 x i8>) nounwind readnone
 
-define <4 x i8> @__avg_up_uint8(<4 x i8>, <4 x i8>) nounwind readnone {
+define <4 x i8> @__avg_up_uint8(<4 x i8>, <4 x i8>) nounwind readnone alwaysinline {
   %r = call <4 x i8> @llvm.arm.neon.vrhaddu.v4i8(<4 x i8> %0, <4 x i8> %1)
   ret <4 x i8> %r
 }
 
 declare <4 x i8> @llvm.arm.neon.vrhadds.v4i8(<4 x i8>, <4 x i8>) nounwind readnone
 
-define <4 x i8> @__avg_up_int8(<4 x i8>, <4 x i8>) nounwind readnone {
+define <4 x i8> @__avg_up_int8(<4 x i8>, <4 x i8>) nounwind readnone alwaysinline {
   %r = call <4 x i8> @llvm.arm.neon.vrhadds.v4i8(<4 x i8> %0, <4 x i8> %1)
   ret <4 x i8> %r
 }
 
 declare <4 x i8> @llvm.arm.neon.vhaddu.v4i8(<4 x i8>, <4 x i8>) nounwind readnone
 
-define <4 x i8> @__avg_down_uint8(<4 x i8>, <4 x i8>) nounwind readnone {
+define <4 x i8> @__avg_down_uint8(<4 x i8>, <4 x i8>) nounwind readnone alwaysinline {
   %r = call <4 x i8> @llvm.arm.neon.vhaddu.v4i8(<4 x i8> %0, <4 x i8> %1)
   ret <4 x i8> %r
 }
 
 declare <4 x i8> @llvm.arm.neon.vhadds.v4i8(<4 x i8>, <4 x i8>) nounwind readnone
 
-define <4 x i8> @__avg_down_int8(<4 x i8>, <4 x i8>) nounwind readnone {
+define <4 x i8> @__avg_down_int8(<4 x i8>, <4 x i8>) nounwind readnone alwaysinline {
   %r = call <4 x i8> @llvm.arm.neon.vhadds.v4i8(<4 x i8> %0, <4 x i8> %1)
   ret <4 x i8> %r
 }
 
 declare <4 x i16> @llvm.arm.neon.vrhaddu.v4i16(<4 x i16>, <4 x i16>) nounwind readnone
 
-define <4 x i16> @__avg_up_uint16(<4 x i16>, <4 x i16>) nounwind readnone {
+define <4 x i16> @__avg_up_uint16(<4 x i16>, <4 x i16>) nounwind readnone alwaysinline {
   %r = call <4 x i16> @llvm.arm.neon.vrhaddu.v4i16(<4 x i16> %0, <4 x i16> %1)
   ret <4 x i16> %r
 }
 
 declare <4 x i16> @llvm.arm.neon.vrhadds.v4i16(<4 x i16>, <4 x i16>) nounwind readnone
 
-define <4 x i16> @__avg_up_int16(<4 x i16>, <4 x i16>) nounwind readnone {
+define <4 x i16> @__avg_up_int16(<4 x i16>, <4 x i16>) nounwind readnone alwaysinline {
   %r = call <4 x i16> @llvm.arm.neon.vrhadds.v4i16(<4 x i16> %0, <4 x i16> %1)
   ret <4 x i16> %r
 }
 
 declare <4 x i16> @llvm.arm.neon.vhaddu.v4i16(<4 x i16>, <4 x i16>) nounwind readnone
 
-define <4 x i16> @__avg_down_uint16(<4 x i16>, <4 x i16>) nounwind readnone {
+define <4 x i16> @__avg_down_uint16(<4 x i16>, <4 x i16>) nounwind readnone alwaysinline {
   %r = call <4 x i16> @llvm.arm.neon.vhaddu.v4i16(<4 x i16> %0, <4 x i16> %1)
   ret <4 x i16> %r
 }
 
 declare <4 x i16> @llvm.arm.neon.vhadds.v4i16(<4 x i16>, <4 x i16>) nounwind readnone
 
-define <4 x i16> @__avg_down_int16(<4 x i16>, <4 x i16>) nounwind readnone {
+define <4 x i16> @__avg_down_int16(<4 x i16>, <4 x i16>) nounwind readnone alwaysinline {
   %r = call <4 x i16> @llvm.arm.neon.vhadds.v4i16(<4 x i16> %0, <4 x i16> %1)
   ret <4 x i16> %r
 }

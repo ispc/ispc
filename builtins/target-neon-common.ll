@@ -49,7 +49,7 @@ ctlztz()
 declare <4 x i16> @llvm.arm.neon.vcvtfp2hf(<4 x float>) nounwind readnone
 declare <4 x float> @llvm.arm.neon.vcvthf2fp(<4 x i16>) nounwind readnone
 
-define float @__half_to_float_uniform(i16 %v) nounwind readnone {
+define float @__half_to_float_uniform(i16 %v) nounwind readnone alwaysinline {
   %v1 = bitcast i16 %v to <1 x i16>
   %vec = shufflevector <1 x i16> %v1, <1 x i16> undef, 
            <4 x i32> <i32 0, i32 0, i32 0, i32 0>
@@ -58,7 +58,7 @@ define float @__half_to_float_uniform(i16 %v) nounwind readnone {
   ret float %r
 }
 
-define i16 @__float_to_half_uniform(float %v) nounwind readnone {
+define i16 @__float_to_half_uniform(float %v) nounwind readnone alwaysinline {
   %v1 = bitcast float %v to <1 x float>
   %vec = shufflevector <1 x float> %v1, <1 x float> undef, 
            <4 x i32> <i32 0, i32 0, i32 0, i32 0>
@@ -70,7 +70,14 @@ define i16 @__float_to_half_uniform(float %v) nounwind readnone {
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; math
 
-define void @__fastmath() nounwind {
+declare i32 @llvm.arm.get.fpscr() nounwind
+declare void @llvm.arm.set.fpscr(i32) nounwind
+
+define void @__fastmath() nounwind alwaysinline {
+  %x = call i32 @llvm.arm.get.fpscr()
+  ; Turn on FTZ (bit 24) and default NaN (bit 25)
+  %y = or i32 %x, 50331648
+  call void @llvm.arm.set.fpscr(i32 %y)
   ret void
 }
 
@@ -120,111 +127,111 @@ declare double @__ceil_uniform_double(double) nounwind readnone
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; min/max
 
-define float @__max_uniform_float(float, float) nounwind readnone {
+define float @__max_uniform_float(float, float) nounwind readnone alwaysinline {
   %cmp = fcmp ugt float %0, %1
   %r = select i1 %cmp, float %0, float %1
   ret float %r
 }
 
-define float @__min_uniform_float(float, float) nounwind readnone {
+define float @__min_uniform_float(float, float) nounwind readnone alwaysinline {
   %cmp = fcmp ult float %0, %1
   %r = select i1 %cmp, float %0, float %1
   ret float %r
 }
 
-define i32 @__min_uniform_int32(i32, i32) nounwind readnone {
+define i32 @__min_uniform_int32(i32, i32) nounwind readnone alwaysinline {
   %cmp = icmp slt i32 %0, %1
   %r = select i1 %cmp, i32 %0, i32 %1
   ret i32 %r
 }
 
-define i32 @__max_uniform_int32(i32, i32) nounwind readnone {
+define i32 @__max_uniform_int32(i32, i32) nounwind readnone alwaysinline {
   %cmp = icmp sgt i32 %0, %1
   %r = select i1 %cmp, i32 %0, i32 %1
   ret i32 %r
 }
 
-define i32 @__min_uniform_uint32(i32, i32) nounwind readnone {
+define i32 @__min_uniform_uint32(i32, i32) nounwind readnone alwaysinline {
   %cmp = icmp ult i32 %0, %1
   %r = select i1 %cmp, i32 %0, i32 %1
   ret i32 %r
 }
 
-define i32 @__max_uniform_uint32(i32, i32) nounwind readnone {
+define i32 @__max_uniform_uint32(i32, i32) nounwind readnone alwaysinline {
   %cmp = icmp ugt i32 %0, %1
   %r = select i1 %cmp, i32 %0, i32 %1
   ret i32 %r
 }
 
-define i64 @__min_uniform_int64(i64, i64) nounwind readnone {
+define i64 @__min_uniform_int64(i64, i64) nounwind readnone alwaysinline {
   %cmp = icmp slt i64 %0, %1
   %r = select i1 %cmp, i64 %0, i64 %1
   ret i64 %r
 }
 
-define i64 @__max_uniform_int64(i64, i64) nounwind readnone {
+define i64 @__max_uniform_int64(i64, i64) nounwind readnone alwaysinline {
   %cmp = icmp sgt i64 %0, %1
   %r = select i1 %cmp, i64 %0, i64 %1
   ret i64 %r
 }
 
-define i64 @__min_uniform_uint64(i64, i64) nounwind readnone {
+define i64 @__min_uniform_uint64(i64, i64) nounwind readnone alwaysinline {
   %cmp = icmp ult i64 %0, %1
   %r = select i1 %cmp, i64 %0, i64 %1
   ret i64 %r
 }
 
-define i64 @__max_uniform_uint64(i64, i64) nounwind readnone {
+define i64 @__max_uniform_uint64(i64, i64) nounwind readnone alwaysinline {
   %cmp = icmp ugt i64 %0, %1
   %r = select i1 %cmp, i64 %0, i64 %1
   ret i64 %r
 }
 
-define double @__min_uniform_double(double, double) nounwind readnone {
+define double @__min_uniform_double(double, double) nounwind readnone alwaysinline {
   %cmp = fcmp olt double %0, %1
   %r = select i1 %cmp, double %0, double %1
   ret double %r
 }
 
-define double @__max_uniform_double(double, double) nounwind readnone {
+define double @__max_uniform_double(double, double) nounwind readnone alwaysinline {
   %cmp = fcmp ogt double %0, %1
   %r = select i1 %cmp, double %0, double %1
   ret double %r
 }
 
-define <WIDTH x i64> @__min_varying_int64(<WIDTH x i64>, <WIDTH x i64>) nounwind readnone {
+define <WIDTH x i64> @__min_varying_int64(<WIDTH x i64>, <WIDTH x i64>) nounwind readnone alwaysinline {
   %m = icmp slt <WIDTH x i64> %0, %1
   %r = select <WIDTH x i1> %m, <WIDTH x i64> %0, <WIDTH x i64> %1
   ret <WIDTH x i64> %r
 }
 
-define <WIDTH x i64> @__max_varying_int64(<WIDTH x i64>, <WIDTH x i64>) nounwind readnone {
+define <WIDTH x i64> @__max_varying_int64(<WIDTH x i64>, <WIDTH x i64>) nounwind readnone alwaysinline {
   %m = icmp sgt <WIDTH x i64> %0, %1
   %r = select <WIDTH x i1> %m, <WIDTH x i64> %0, <WIDTH x i64> %1
   ret <WIDTH x i64> %r
 }
 
-define <WIDTH x i64> @__min_varying_uint64(<WIDTH x i64>, <WIDTH x i64>) nounwind readnone {
+define <WIDTH x i64> @__min_varying_uint64(<WIDTH x i64>, <WIDTH x i64>) nounwind readnone alwaysinline {
   %m = icmp ult <WIDTH x i64> %0, %1
   %r = select <WIDTH x i1> %m, <WIDTH x i64> %0, <WIDTH x i64> %1
   ret <WIDTH x i64> %r
 }
 
-define <WIDTH x i64> @__max_varying_uint64(<WIDTH x i64>, <WIDTH x i64>) nounwind readnone {
+define <WIDTH x i64> @__max_varying_uint64(<WIDTH x i64>, <WIDTH x i64>) nounwind readnone alwaysinline {
   %m = icmp ugt <WIDTH x i64> %0, %1
   %r = select <WIDTH x i1> %m, <WIDTH x i64> %0, <WIDTH x i64> %1
   ret <WIDTH x i64> %r
 }
 
 define <WIDTH x double> @__min_varying_double(<WIDTH x double>,
-                                              <WIDTH x double>) nounwind readnone {
+                                              <WIDTH x double>) nounwind readnone alwaysinline {
   %m = fcmp olt <WIDTH x double> %0, %1
   %r = select <WIDTH x i1> %m, <WIDTH x double> %0, <WIDTH x double> %1
   ret <WIDTH x double> %r
 }
 
 define <WIDTH x double> @__max_varying_double(<WIDTH x double>,
-                                              <WIDTH x double>) nounwind readnone {
+                                              <WIDTH x double>) nounwind readnone alwaysinline {
   %m = fcmp ogt <WIDTH x double> %0, %1
   %r = select <WIDTH x i1> %m, <WIDTH x double> %0, <WIDTH x double> %1
   ret <WIDTH x double> %r
@@ -234,14 +241,14 @@ define <WIDTH x double> @__max_varying_double(<WIDTH x double>,
 
 declare float @llvm.sqrt.f32(float)
 
-define float @__sqrt_uniform_float(float) nounwind readnone {
+define float @__sqrt_uniform_float(float) nounwind readnone alwaysinline {
   %r = call float @llvm.sqrt.f32(float %0)
   ret float %r
 }
 
 declare double @llvm.sqrt.f64(double)
 
-define double @__sqrt_uniform_double(double) nounwind readnone {
+define double @__sqrt_uniform_double(double) nounwind readnone alwaysinline {
   %r = call double @llvm.sqrt.f64(double %0)
   ret double %r
 }
@@ -251,12 +258,12 @@ define double @__sqrt_uniform_double(double) nounwind readnone {
 declare i32 @llvm.ctpop.i32(i32) nounwind readnone
 declare i64 @llvm.ctpop.i64(i64) nounwind readnone
 
-define i32 @__popcnt_int32(i32) nounwind readnone {
+define i32 @__popcnt_int32(i32) nounwind readnone alwaysinline {
   %v = call i32 @llvm.ctpop.i32(i32 %0)
   ret i32 %v
 }
 
-define i64 @__popcnt_int64(i64) nounwind readnone {
+define i64 @__popcnt_int64(i64) nounwind readnone alwaysinline {
   %v = call i64 @llvm.ctpop.i64(i64 %0)
   ret i64 %v
 }
