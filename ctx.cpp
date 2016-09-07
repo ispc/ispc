@@ -385,10 +385,14 @@ FunctionEmitContext::FunctionEmitContext(Function *func, Symbol *funSym,
         llvm::DISubroutineType *diSubprogramType_n =
             llvm::cast<llvm::DISubroutineType>(getDICompositeType(diSubprogramType));
         int flags = llvm::DINode::FlagPrototyped;
-#else /* LLVM 3.8+ */
+#elif ISPC_LLVM_VERSION == ISPC_LLVM_3_8 || ISPC_LLVM_VERSION == ISPC_LLVM_3_9 /* LLVM 3.8, 3.9 */
         Assert(llvm::isa<llvm::DISubroutineType>(diSubprogramType));
         llvm::DISubroutineType *diSubprogramType_n = llvm::cast<llvm::DISubroutineType>(diSubprogramType);
         int flags = llvm::DINode::FlagPrototyped;
+#else /* LLVM 4.0+ */
+        Assert(llvm::isa<llvm::DISubroutineType>(diSubprogramType));
+        llvm::DISubroutineType *diSubprogramType_n = llvm::cast<llvm::DISubroutineType>(diSubprogramType);
+        llvm::DINode::DIFlags flags = llvm::DINode::FlagPrototyped;
 
 #endif
 
@@ -417,7 +421,16 @@ FunctionEmitContext::FunctionEmitContext(Function *func, Symbol *funSym,
                                          isStatic,           true, /* is defn */
                                          firstLine,          flags,
                                          isOptimized,        llvmFunction);
-#else /* LLVM 3.8+ */
+#elif ISPC_LLVM_VERSION == ISPC_LLVM_3_8 || ISPC_LLVM_VERSION == ISPC_LLVM_3_9 /* LLVM 3.8, 3.9 */
+        diSubprogram =
+            m->diBuilder->createFunction(diFile /* scope */, funSym->name,
+                                         mangledName,        diFile,
+                                         firstLine,          diSubprogramType_n,
+                                         isStatic,           true, /* is defn */
+                                         firstLine,          flags,
+                                         isOptimized);
+        llvmFunction->setSubprogram(diSubprogram);
+#else /* LLVM 4.0+ */
         diSubprogram =
             m->diBuilder->createFunction(diFile /* scope */, funSym->name,
                                          mangledName,        diFile,
@@ -1821,7 +1834,11 @@ FunctionEmitContext::EmitFunctionParameterDebugInfo(Symbol *sym, int argNum) {
     if (m->diBuilder == NULL)
         return;
 
+#if ISPC_LLVM_VERSION <= ISPC_LLVM_3_9
     int flags = 0;
+#else // LLVM 4.0+
+    llvm::DINode::DIFlags flags = llvm::DINode::FlagZero;
+#endif
 #if ISPC_LLVM_VERSION <= ISPC_LLVM_3_6 /* 3.2, 3.3, 3.4, 3.5, 3.6 */
     llvm::DIScope scope = diSubprogram;
     llvm::DIType diType = sym->type->GetDIType(scope);
