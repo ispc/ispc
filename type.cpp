@@ -2307,9 +2307,15 @@ llvm::DIType *StructType::GetDIType(llvm::DIScope *scope) const {
         llvm::DIFile *diFile = elementPositions[i].GetDIFile();
         llvm::DIDerivedType *fieldType =
 #endif
+#if ISPC_LLVM_VERSION <= ISPC_LLVM_3_9
             m->diBuilder->createMemberType(scope, elementNames[i], diFile,
                                            line, eltSize, eltAlign,
                                            currentSize, 0, eltType);
+#else // LLVM 4.0+
+            m->diBuilder->createMemberType(scope, elementNames[i], diFile,
+                                           line, eltSize, eltAlign,
+                                           currentSize, llvm::DINode::FlagZero, eltType);
+#endif
         elementLLVMTypes.push_back(fieldType);
 
         currentSize += eltSize;
@@ -2334,7 +2340,11 @@ llvm::DIType *StructType::GetDIType(llvm::DIScope *scope) const {
         pos.first_line, // Line number
         currentSize,    // Size in bits
         align,          // Alignment in bits
+#if ISPC_LLVM_VERSION <= ISPC_LLVM_3_9
         0,              // Flags
+#else // LLVM 4.0+
+        llvm::DINode::FlagZero, // Flags
+#endif
 #if ISPC_LLVM_VERSION >= ISPC_LLVM_3_3 && ISPC_LLVM_VERSION <= ISPC_LLVM_3_6
         llvm::DIType(), // DerivedFrom
 #elif ISPC_LLVM_VERSION >= ISPC_LLVM_3_7 // LLVM 3.7++
@@ -2584,7 +2594,11 @@ llvm::DIType *UndefinedStructType::GetDIType(llvm::DIScope *scope) const {
         pos.first_line, // Line number
         0,              // Size
         0,              // Align
+#if ISPC_LLVM_VERSION <= ISPC_LLVM_3_9
         0,              // Flags
+#else // LLVM 4.0+
+        llvm::DINode::FlagZero, // Flags
+#endif
 #if ISPC_LLVM_VERSION >= ISPC_LLVM_3_3 && ISPC_LLVM_VERSION <= ISPC_LLVM_3_6
         llvm::DIType(), // DerivedFrom
 #elif ISPC_LLVM_VERSION >= ISPC_LLVM_3_7 // LLVM 3.7+
