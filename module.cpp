@@ -735,7 +735,7 @@ Module::AddGlobalVariable(const std::string &name, const Type *type, Expr *initE
                                             sym->type->GetDIType(file),
                                             (sym->storageClass == SC_STATIC),
                                             sym_const_storagePtr);
-#else // LLVM 3.7+
+#elif ISPC_LLVM_VERSION >= ISPC_LLVM_3_7 && ISPC_LLVM_VERSION <= ISPC_LLVM_3_9 // LLVM 3.7 - 3.9
         llvm::DIFile *file = pos.GetDIFile();
         //llvm::MDFile *file = pos.GetDIFile();
         llvm::Constant *sym_const_storagePtr = llvm::dyn_cast<llvm::Constant>(sym->storagePtr);
@@ -749,6 +749,20 @@ Module::AddGlobalVariable(const std::string &name, const Type *type, Expr *initE
                                             sym->type->GetDIType(file),
                                             (sym->storageClass == SC_STATIC),
                                             sym_const_storagePtr);
+#else // LLVM 4.0+
+        llvm::DIFile *file = pos.GetDIFile();
+        //llvm::MDFile *file = pos.GetDIFile();
+        llvm::GlobalVariable *sym_GV_storagePtr = llvm::dyn_cast<llvm::GlobalVariable>(sym->storagePtr);
+        Assert(sym_GV_storagePtr);
+        llvm::DIGlobalVariable *var = diBuilder->createGlobalVariable(
+                                            file,
+                                            name,
+                                            name,
+                                            file,
+                                            pos.first_line,
+                                            sym->type->GetDIType(file),
+                                            (sym->storageClass == SC_STATIC));
+        sym_GV_storagePtr->addDebugInfo(var);
 #endif
 #if ISPC_LLVM_VERSION <= ISPC_LLVM_3_6
         Assert(var.Verify());
