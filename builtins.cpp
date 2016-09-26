@@ -989,7 +989,7 @@ lDefineConstantInt(const char *name, int val, llvm::Module *module,
                                                diType,
                                                true /* static */,
                                                sym_const_storagePtr);
-#else // LLVM 3.7+
+#elif ISPC_LLVM_VERSION >= ISPC_LLVM_3_7 && ISPC_LLVM_VERSION <= ISPC_LLVM_3_9 // LLVM 3.7 - 3.9
     llvm::Constant *sym_const_storagePtr = llvm::dyn_cast<llvm::Constant>(sym->storagePtr);
     Assert(sym_const_storagePtr);
     m->diBuilder->createGlobalVariable(
@@ -1001,6 +1001,17 @@ lDefineConstantInt(const char *name, int val, llvm::Module *module,
               diType,
               true /* static */,
               sym_const_storagePtr);
+#else // LLVM 4.0+
+        llvm::GlobalVariable *sym_GV_storagePtr = llvm::dyn_cast<llvm::GlobalVariable>(sym->storagePtr);
+        llvm::DIGlobalVariable *var = m->diBuilder->createGlobalVariable(
+                                              file,
+                                              name,
+                                              name,
+                                              file,
+                                              0 /* line */,
+                                              diType,
+                                              true /* static */);
+        sym_GV_storagePtr->addDebugInfo(var);
 #endif
 #if ISPC_LLVM_VERSION <= ISPC_LLVM_3_6
         Assert(var.Verify());
@@ -1087,7 +1098,7 @@ lDefineProgramIndex(llvm::Module *module, SymbolTable *symbolTable) {
                                                diType,
                                                false /* static */,
                                                sym->storagePtr);
-#else // LLVM 3.7+
+#elif ISPC_LLVM_VERSION >= ISPC_LLVM_3_7 && ISPC_LLVM_VERSION <= ISPC_LLVM_3_9 // LLVM 3.7 - 3.9
         llvm::Constant *sym_const_storagePtr = llvm::dyn_cast<llvm::Constant>(sym->storagePtr);
         Assert(sym_const_storagePtr);
         m->diBuilder->createGlobalVariable(
@@ -1099,7 +1110,18 @@ lDefineProgramIndex(llvm::Module *module, SymbolTable *symbolTable) {
                                                diType,
                                                false /* static */,
                                                sym_const_storagePtr);
-#endif       
+#else // LLVM 4.0+
+        llvm::GlobalVariable *sym_GV_storagePtr = llvm::dyn_cast<llvm::GlobalVariable>(sym->storagePtr);
+        llvm::DIGlobalVariable *var = m->diBuilder->createGlobalVariable(
+                                              file,
+                                              sym->name.c_str(),
+                                              sym->name.c_str(),
+                                              file,
+                                              0 /* line */,
+                                              diType,
+                                              false /* static */);
+        sym_GV_storagePtr->addDebugInfo(var);
+#endif
 #if ISPC_LLVM_VERSION <= ISPC_LLVM_3_6
         Assert(var.Verify());
 #else // LLVM 3.7+
