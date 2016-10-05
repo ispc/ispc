@@ -462,7 +462,11 @@ namespace {
       VectorConstantIndex = 0;
     }
 
+#if ISPC_LLVM_VERSION <= ISPC_LLVM_3_9 // <= 3.9
     virtual const char *getPassName() const { return "C backend"; }
+#else // LLVM 4.0+
+    virtual llvm::StringRef getPassName() const { return "C backend"; }
+#endif
 
     void getAnalysisUsage(llvm::AnalysisUsage &AU) const {
 #if ISPC_LLVM_VERSION <= ISPC_LLVM_3_6 // <= 3.6
@@ -4901,7 +4905,11 @@ public:
     SmearCleanupPass(llvm::Module *m, int width)
         : BasicBlockPass(ID) { module = m; vectorWidth = width; }
 
+#if ISPC_LLVM_VERSION <= ISPC_LLVM_3_9 // <= 3.9
     const char *getPassName() const { return "Smear Cleanup Pass"; }
+#else // LLVM 4.0+
+    llvm::StringRef getPassName() const { return "Smear Cleanup Pass"; }
+#endif
     bool runOnBasicBlock(llvm::BasicBlock &BB);
 
     static char ID;
@@ -5109,7 +5117,11 @@ public:
     AndCmpCleanupPass()
         : BasicBlockPass(ID) { }
 
+#if ISPC_LLVM_VERSION <= ISPC_LLVM_3_9 // <= 3.9
     const char *getPassName() const { return "AndCmp Cleanup Pass"; }
+#else // LLVM 4.0+
+    llvm::StringRef getPassName() const { return "AndCmp Cleanup Pass"; }
+#endif
     bool runOnBasicBlock(llvm::BasicBlock &BB);
 
     static char ID;
@@ -5251,7 +5263,11 @@ public:
 #endif
     }
 
+#if ISPC_LLVM_VERSION <= ISPC_LLVM_3_9 // <= 3.9
     const char *getPassName() const { return "MaskOps Cleanup Pass"; }
+#else // LLVM 4.0+
+    llvm::StringRef getPassName() const { return "MaskOps Cleanup Pass"; }
+#endif
     bool runOnBasicBlock(llvm::BasicBlock &BB);
 
 private:
