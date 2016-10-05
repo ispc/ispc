@@ -503,8 +503,13 @@ DebugPassManager::add(llvm::Pass * P, int stage = -1) {
         if (g->debug_stages.find(number) != g->debug_stages.end()) {
             // adding dump of LLVM IR after optimization
             char buf[100];
+#if ISPC_LLVM_VERSION <= ISPC_LLVM_3_9
             sprintf(buf, "\n\n*****LLVM IR after phase %d: %s*****\n\n",
                 number, P->getPassName());
+#else // LLVM 4.0+
+            sprintf(buf, "\n\n*****LLVM IR after phase %d: %s*****\n\n",
+                number, P->getPassName().data());
+#endif
             PM.add(CreateDebugPass(buf));
         }
 
@@ -943,7 +948,11 @@ class IntrinsicsOpt : public llvm::BasicBlockPass {
 public:
     IntrinsicsOpt() : BasicBlockPass(ID) {};
 
+#if ISPC_LLVM_VERSION <= ISPC_LLVM_3_9
     const char *getPassName() const { return "Intrinsics Cleanup Optimization"; }
+#else // LLVM 4.0+
+    llvm::StringRef getPassName() const { return "Intrinsics Cleanup Optimization"; }
+#endif
     bool runOnBasicBlock(llvm::BasicBlock &BB);
 
     static char ID;
@@ -1257,7 +1266,11 @@ public:
     InstructionSimplifyPass()
         : BasicBlockPass(ID) { }
 
+#if ISPC_LLVM_VERSION <= ISPC_LLVM_3_9
     const char *getPassName() const { return "Vector Select Optimization"; }
+#else // LLVM 4.0+
+    llvm::StringRef getPassName() const { return "Vector Select Optimization"; }
+#endif
     bool runOnBasicBlock(llvm::BasicBlock &BB);
 
     static char ID;
@@ -1426,7 +1439,11 @@ public:
     static char ID;
     ImproveMemoryOpsPass() : BasicBlockPass(ID) { }
 
+#if ISPC_LLVM_VERSION <= ISPC_LLVM_3_9
     const char *getPassName() const { return "Improve Memory Ops"; }
+#else // LLVM 4.0+
+    llvm::StringRef getPassName() const { return "Improve Memory Ops"; }
+#endif
     bool runOnBasicBlock(llvm::BasicBlock &BB);
 };
 
@@ -3278,7 +3295,11 @@ public:
     static char ID;
     GatherCoalescePass() : BasicBlockPass(ID) { }
 
+#if ISPC_LLVM_VERSION <= ISPC_LLVM_3_9
     const char *getPassName() const { return "Gather Coalescing"; }
+#else // LLVM 4.0+
+    llvm::StringRef getPassName() const { return "Gather Coalescing"; }
+#endif
     bool runOnBasicBlock(llvm::BasicBlock &BB);
 };
 
@@ -4336,7 +4357,11 @@ public:
     static char ID;
     ReplacePseudoMemoryOpsPass() : BasicBlockPass(ID) { }
 
+#if ISPC_LLVM_VERSION <= ISPC_LLVM_3_9
     const char *getPassName() const { return "Replace Pseudo Memory Ops"; }
+#else // LLVM 4.0+
+    llvm::StringRef getPassName() const { return "Replace Pseudo Memory Ops"; }
+#endif
     bool runOnBasicBlock(llvm::BasicBlock &BB);
 };
 
@@ -4705,7 +4730,11 @@ public:
         isLastTry = last;
     }
 
+#if ISPC_LLVM_VERSION <= ISPC_LLVM_3_9
     const char *getPassName() const { return "Resolve \"is compile time constant\""; }
+#else // LLVM 4.0+
+    llvm::StringRef getPassName() const { return "Resolve \"is compile time constant\""; }
+#endif
     bool runOnBasicBlock(llvm::BasicBlock &BB);
 
     bool isLastTry;
@@ -4800,7 +4829,11 @@ public:
         sprintf(str_output, "%s", output);
     }
 
+#if ISPC_LLVM_VERSION <= ISPC_LLVM_3_9
     const char *getPassName() const { return "Dump LLVM IR"; }
+#else // LLVM 4.0+
+    llvm::StringRef getPassName() const { return "Dump LLVM IR"; }
+#endif
     bool runOnModule(llvm::Module &m);
 
 private:
@@ -4846,7 +4879,11 @@ public:
         AU.setPreservesCFG();
     }
 
+#if ISPC_LLVM_VERSION <= ISPC_LLVM_3_9
     const char *getPassName() const { return "Make internal funcs \"static\""; }
+#else // LLVM 4.0+
+    llvm::StringRef getPassName() const { return "Make internal funcs \"static\""; }
+#endif
     bool runOnModule(llvm::Module &m);
 };
 
@@ -4953,7 +4990,11 @@ class PeepholePass : public llvm::BasicBlockPass {
 public:
     PeepholePass();
 
+#if ISPC_LLVM_VERSION <= ISPC_LLVM_3_9
     const char *getPassName() const { return "Peephole Optimizations"; }
+#else // LLVM 4.0+
+    llvm::StringRef getPassName() const { return "Peephole Optimizations"; }
+#endif
     bool runOnBasicBlock(llvm::BasicBlock &BB);
 
     static char ID;
@@ -5354,7 +5395,11 @@ public:
     ReplaceStdlibShiftPass() : BasicBlockPass(ID) {
     }
 
+#if ISPC_LLVM_VERSION <= ISPC_LLVM_3_9
     const char *getPassName() const { return "Resolve \"replace extract insert chains\""; }
+#else // LLVM 4.0+
+    llvm::StringRef getPassName() const { return "Resolve \"replace extract insert chains\""; }
+#endif
     bool runOnBasicBlock(llvm::BasicBlock &BB);
 
 };
@@ -5453,7 +5498,11 @@ public:
     static char ID;
     FixBooleanSelectPass() :FunctionPass(ID) {}
 
+#if ISPC_LLVM_VERSION <= ISPC_LLVM_3_9
     const char *getPassName() const { return "Resolve \"replace extract insert chains\""; }
+#else // LLVM 4.0+
+    llvm::StringRef getPassName() const { return "Resolve \"replace extract insert chains\""; }
+#endif
     bool runOnFunction(llvm::Function &F);
 
 private:
