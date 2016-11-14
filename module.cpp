@@ -128,7 +128,11 @@
 #include <llvm/Support/ToolOutputFile.h>
 #include <llvm/Support/Host.h>
 #include <llvm/Support/raw_ostream.h>
-#include <llvm/Bitcode/ReaderWriter.h>
+#if ISPC_LLVM_VERSION <= ISPC_LLVM_3_9
+    #include <llvm/Bitcode/ReaderWriter.h>
+#else
+    #include <llvm/Bitcode/BitcodeWriter.h>
+#endif
 
 /*! list of files encountered by the parser. this allows emitting of
     the module file's dependencies via the -MMM option */
