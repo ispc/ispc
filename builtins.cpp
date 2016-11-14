@@ -72,7 +72,11 @@
 #include <llvm/Target/TargetMachine.h>
 #include <llvm/ADT/Triple.h>
 #include <llvm/Support/MemoryBuffer.h>
-#include <llvm/Bitcode/ReaderWriter.h>
+#if ISPC_LLVM_VERSION <= ISPC_LLVM_3_9
+    #include <llvm/Bitcode/ReaderWriter.h>
+#else
+    #include <llvm/Bitcode/BitcodeReader.h>
+#endif
 
 extern int yyparse();
 struct yy_buffer_state;
@@ -800,7 +804,13 @@ AddBitcodeToModule(const unsigned char *bitcode, int length,
     llvm::MemoryBufferRef bcBuf = llvm::MemoryBuffer::getMemBuffer(sb)->getMemBufferRef();
 #endif
 
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_3_7 // LLVM 3.7+
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_4_0 // LLVM 4.0+
+    llvm::Expected<std::unique_ptr<llvm::Module>> ModuleOrErr = llvm::parseBitcodeFile(bcBuf, *g->ctx);
+    if (!ModuleOrErr) {
+        Error(SourcePos(), "Error parsing stdlib bitcode: %s", toString(ModuleOrErr.takeError()).c_str());
+    } else {
+        llvm::Module *bcModule = ModuleOrErr.get().release();
+#elif ISPC_LLVM_VERSION >= ISPC_LLVM_3_7 // LLVM 3.7+
     llvm::ErrorOr<std::unique_ptr<llvm::Module>> ModuleOrErr = llvm::parseBitcodeFile(bcBuf, *g->ctx);
     if (std::error_code EC = ModuleOrErr.getError())
         Error(SourcePos(), "Error parsing stdlib bitcode: %s", EC.message().c_str());
