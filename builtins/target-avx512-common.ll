@@ -617,16 +617,16 @@ define i64 @__popcnt_int64(i64) nounwind readonly alwaysinline {
 }
 ctlztz()
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-; FIXME: need either to wire these up to the 8-wide SVML entrypoints,
-; or, use the macro to call the 4-wide ones twice with our 8-wide
-; vectors...
-
+;; TODO: should we use masked versions of SVML functions?
 ;; svml
 
 include(`svml.m4')
-svml_stubs(float,f,WIDTH)
-svml_stubs(double,d,WIDTH)
+svml_declare(float,f16,16)
+svml_define(float,f16,16,f)
+
+;; double precision
+svml_declare(double,8,8)
+svml_define_x(double,8,8,d,16)
 
 
 

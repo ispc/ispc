@@ -125,7 +125,7 @@ def build_LLVM(version_LLVM, revision, folder, tarball, debug, selfbuild, extra,
     if  version_LLVM == "trunk":
         SVN_PATH="trunk"
     if  version_LLVM == "3.9":
-        SVN_PATH="branches/release_39"
+        SVN_PATH="tags/RELEASE_390/final"
         version_LLVM = "3_9"
     if  version_LLVM == "3.8":
         SVN_PATH="tags/RELEASE_381/final"
@@ -176,7 +176,7 @@ def build_LLVM(version_LLVM, revision, folder, tarball, debug, selfbuild, extra,
             if os.path.exists(os.path.join(path, "xcrun")):
                 found_xcrun = True
         if found_xcrun:
-            mac_system_root = " --with-default-sysroot=`xcrun --show-sdk-path`"
+            mac_system_root = "`xcrun --show-sdk-path`"
         else:
             error("Can't find XCode (xcrun tool) - it's required on MacOS 10.9 and newer", 1)
 
@@ -252,7 +252,6 @@ def build_LLVM(version_LLVM, revision, folder, tarball, debug, selfbuild, extra,
         os.makedirs(LLVM_BIN_selfbuild)
         os.chdir(LLVM_BUILD_selfbuild)
         if  version_LLVM not in LLVM_configure_capable:
-            # TODO: mac_root
             try_do_LLVM("configure release version for selfbuild ",
                     "cmake -G Unix\ Makefiles" + " -DCMAKE_EXPORT_COMPILE_COMMANDS=ON" +
                     "  -DCMAKE_INSTALL_PREFIX=" + llvm_home + "/" + LLVM_BIN_selfbuild +
@@ -261,6 +260,7 @@ def build_LLVM(version_LLVM, revision, folder, tarball, debug, selfbuild, extra,
                     (("  -DGCC_INSTALL_PREFIX=" + gcc_toolchain_path) if gcc_toolchain_path != "" else "") +
                     (("  -DCMAKE_C_COMPILER=" + gcc_toolchain_path+"/bin/gcc") if gcc_toolchain_path != "" else "") +
                     (("  -DCMAKE_CXX_COMPILER=" + gcc_toolchain_path+"/bin/g++") if gcc_toolchain_path != "" else "") +
+                    (("  -DDEFAULT_SYSROOT=" + mac_system_root) if mac_system_root != "" else "") +
                     "  -DLLVM_TARGETS_TO_BUILD=NVPTX\;X86" +
                     " ../" + LLVM_SRC,
                     from_validation)
@@ -272,7 +272,7 @@ def build_LLVM(version_LLVM, revision, folder, tarball, debug, selfbuild, extra,
                         LLVM_BIN_selfbuild + " --enable-optimized" +
                         " --enable-targets=x86,x86_64,nvptx" +
                         ((" --with-gcc-toolchain=" + gcc_toolchain_path) if gcc_toolchain_path != "" else "") +
-                        mac_system_root,
+                        ((" --with-default-sysroot=" + mac_system_root) if mac_system_root != "" else ""),
                         from_validation)
             selfbuild_compiler = ("CC=" +llvm_home+ "/" + LLVM_BIN_selfbuild + "/bin/clang " +
                                   "CXX="+llvm_home+ "/" + LLVM_BIN_selfbuild + "/bin/clang++ ")
@@ -288,7 +288,6 @@ def build_LLVM(version_LLVM, revision, folder, tarball, debug, selfbuild, extra,
     if debug == False:
         if current_OS != "Windows":
             if  version_LLVM not in LLVM_configure_capable:
-                # TODO: mac_root
                 try_do_LLVM("configure release version ",
                         "cmake -G Unix\ Makefiles" + " -DCMAKE_EXPORT_COMPILE_COMMANDS=ON" +
                         selfbuild_compiler +
@@ -298,6 +297,7 @@ def build_LLVM(version_LLVM, revision, folder, tarball, debug, selfbuild, extra,
                         (("  -DGCC_INSTALL_PREFIX=" + gcc_toolchain_path) if gcc_toolchain_path != "" else "") +
                         (("  -DCMAKE_C_COMPILER=" + gcc_toolchain_path+"/bin/gcc") if gcc_toolchain_path != "" and selfbuild_compiler == "" else "") +
                         (("  -DCMAKE_CXX_COMPILER=" + gcc_toolchain_path+"/bin/g++") if gcc_toolchain_path != "" and selfbuild_compiler == "" else "") +
+                        (("  -DDEFAULT_SYSROOT=" + mac_system_root) if mac_system_root != "" else "") +
                         "  -DLLVM_TARGETS_TO_BUILD=NVPTX\;X86" +
                         " ../" + LLVM_SRC,
                         from_validation)
@@ -307,7 +307,7 @@ def build_LLVM(version_LLVM, revision, folder, tarball, debug, selfbuild, extra,
                         LLVM_BIN + " --enable-optimized" +
                         " --enable-targets=x86,x86_64,nvptx" +
                         ((" --with-gcc-toolchain=" + gcc_toolchain_path) if gcc_toolchain_path != "" else "") +
-                        mac_system_root,
+                        ((" --with-default-sysroot=" + mac_system_root) if mac_system_root != "" else ""),
                         from_validation)
         else:
             try_do_LLVM("configure release version ",
@@ -316,7 +316,6 @@ def build_LLVM(version_LLVM, revision, folder, tarball, debug, selfbuild, extra,
                     from_validation)
     else:
         if  version_LLVM not in LLVM_configure_capable:
-            # TODO: mac_root
             try_do_LLVM("configure debug version ",
                     "cmake -G Unix\ Makefiles" + " -DCMAKE_EXPORT_COMPILE_COMMANDS=ON" +
                     selfbuild_compiler +
@@ -326,6 +325,7 @@ def build_LLVM(version_LLVM, revision, folder, tarball, debug, selfbuild, extra,
                     (("  -DGCC_INSTALL_PREFIX=" + gcc_toolchain_path) if gcc_toolchain_path != "" else "") +
                     (("  -DCMAKE_C_COMPILER=" + gcc_toolchain_path+"/bin/gcc") if gcc_toolchain_path != "" and selfbuild_compiler == "" else "") +
                     (("  -DCMAKE_CXX_COMPILER=" + gcc_toolchain_path+"/bin/g++") if gcc_toolchain_path != "" and selfbuild_compiler == "" else "") +
+                    (("  -DDEFAULT_SYSROOT=" + mac_system_root) if mac_system_root != "" else "") +
                     "  -DLLVM_TARGETS_TO_BUILD=NVPTX\;X86" +
                     " ../" + LLVM_SRC,
                     from_validation)
@@ -335,7 +335,7 @@ def build_LLVM(version_LLVM, revision, folder, tarball, debug, selfbuild, extra,
                         " --enable-debug-runtime --enable-debug-symbols --enable-keep-symbols" +
                         " --enable-targets=x86,x86_64,nvptx" +
                         ((" --with-gcc-toolchain=" + gcc_toolchain_path) if gcc_toolchain_path != "" else "") +
-                        mac_system_root,
+                        ((" --with-default-sysroot=" + mac_system_root) if mac_system_root != "" else ""),
                         from_validation)
     # building llvm
     if current_OS != "Windows":
