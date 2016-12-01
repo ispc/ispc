@@ -33,6 +33,8 @@
 
 # // Author: Filippov Ilia
 
+import re
+
 def tail_and_save(file_in, file_out, tail = 100):    
     with open(file_in, 'r') as f_in:
         lines = f_in.readlines()[-tail:]
@@ -91,6 +93,7 @@ def check_LLVM(which_LLVM):
     return answer
 
 def try_do_LLVM(text, command, from_validation):
+    print_debug("Command line: "+command+"\n", True, alloy_build)
     if from_validation == True:
         text = text + "\n"
     print_debug("Trying to " + text, from_validation, alloy_build)
@@ -108,7 +111,74 @@ def try_do_LLVM(text, command, from_validation):
         error("can't " + text, 1)
     print_debug("DONE.\n", from_validation, alloy_build)
 
-def build_LLVM(version_LLVM, revision, folder, tarball, debug, selfbuild, extra, from_validation, force, make, gcc_toolchain_path):
+def checkout_LLVM(component, use_git, version_LLVM, revision, target_dir, from_validation):
+    # Identify the component
+    GIT_REPO_BASE="http://llvm.org/git/"
+    #GIT_REPO_BASE="https://github.com/llvm-mirror/"
+    if component == "llvm":
+        SVN_REPO="http://llvm.org/svn/llvm-project/llvm/"
+        GIT_REPO=GIT_REPO_BASE+"llvm.git"
+    elif component == "clang":
+        SVN_REPO="http://llvm.org/svn/llvm-project/cfe/"
+        GIT_REPO=GIT_REPO_BASE+"clang.git"
+    elif component == "libcxx":
+        SVN_REPO="http://llvm.org/svn/llvm-project/libcxx/"
+        GIT_REPO=GIT_REPO_BASE+"libcxx.git"
+    elif component == "clang-tools-extra":
+        SVN_REPO="http://llvm.org/svn/llvm-project/clang-tools-extra/"
+        GIT_REPO=GIT_REPO_BASE+"clang-tools-extra.git"
+    elif component == "compiler-rt":
+        SVN_REPO="http://llvm.org/svn/llvm-project/compiler-rt/"
+        GIT_REPO=GIT_REPO_BASE+"compiler-rt.git"
+    else:
+        error("Trying to checkout unidentified component: " + component, 1)
+
+    # Identify the version
+    if  version_LLVM == "trunk":
+        SVN_PATH="trunk"
+        GIT_BRANCH="master"
+    elif  version_LLVM == "3_9":
+        SVN_PATH="tags/RELEASE_390/final"
+        GIT_BRANCH="release_39"
+    elif  version_LLVM == "3_8":
+        SVN_PATH="tags/RELEASE_381/final"
+        GIT_BRANCH="release_38"
+    elif  version_LLVM == "3_7":
+        SVN_PATH="tags/RELEASE_370/final"
+        GIT_BRANCH="release_37"
+    elif  version_LLVM == "3_6":
+        SVN_PATH="tags/RELEASE_362/final"
+        GIT_BRANCH="release_36"
+    elif  version_LLVM == "3_5":
+        SVN_PATH="tags/RELEASE_351/final"
+        GIT_BRANCH="release_35"
+    elif  version_LLVM == "3_4":
+        SVN_PATH="tags/RELEASE_34/dot2-final"
+        GIT_BRANCH="release_34"
+    elif  version_LLVM == "3_3":
+        SVN_PATH="tags/RELEASE_33/final"
+        GIT_BRANCH="release_33"
+    elif  version_LLVM == "3_2":
+        SVN_PATH="tags/RELEASE_32/final"
+        GIT_BRANCH="release_32"
+    else:
+        error("Unsupported llvm version: " + version_LLVM, 1)
+
+    if use_git:
+        try_do_LLVM("clone "+component+" from "+GIT_REPO+" to "+target_dir+" ",
+                    "git clone "+GIT_REPO+" "+target_dir,
+                    from_validation)
+        if GIT_BRANCH != "master":
+            os.chdir(target_dir)
+            try_do_LLVM("switch to "+GIT_BRANCH+" branch ",
+                        "git checkout -b "+GIT_BRANCH+" remotes/origin/"+GIT_BRANCH, from_validation)
+            os.chdir("..")
+    else:
+        try_do_LLVM("load "+component+" from "+SVN_REPO+SVN_PATH+" ",
+                    "svn co "+revision+" "+SVN_REPO+SVN_PATH+" "+target_dir,
+                    from_validation)
+
+def build_LLVM(version_LLVM, revision, folder, tarball, debug, selfbuild, extra, from_validation, force, make, gcc_toolchain_path, use_git):
     print_debug("Building LLVM. Version: " + version_LLVM + ". ", from_validation, alloy_build)
     if revision != "":
         print_debug("Revision: " + revision + ".\n", from_validation, alloy_build)
@@ -119,35 +189,11 @@ def build_LLVM(version_LLVM, revision, folder, tarball, debug, selfbuild, extra,
     llvm_home = os.environ["LLVM_HOME"]
     
     make_sure_dir_exists(llvm_home)
+
+    version_LLVM = re.sub('\.', '_', version_LLVM)
     
     os.chdir(llvm_home)
     FOLDER_NAME=version_LLVM
-    if  version_LLVM == "trunk":
-        SVN_PATH="trunk"
-    if  version_LLVM == "3.9":
-        SVN_PATH="tags/RELEASE_390/final"
-        version_LLVM = "3_9"
-    if  version_LLVM == "3.8":
-        SVN_PATH="tags/RELEASE_381/final"
-        version_LLVM = "3_8"
-    if  version_LLVM == "3.7":
-        SVN_PATH="tags/RELEASE_370/final"
-        version_LLVM = "3_7"
-    if  version_LLVM == "3.6":
-        SVN_PATH="tags/RELEASE_362/final"
-        version_LLVM = "3_6"
-    if  version_LLVM == "3.5":
-        SVN_PATH="tags/RELEASE_351/final"
-        version_LLVM = "3_5"
-    if  version_LLVM == "3.4":
-        SVN_PATH="tags/RELEASE_34/dot2-final"
-        version_LLVM = "3_4"
-    if  version_LLVM == "3.3":
-        SVN_PATH="tags/RELEASE_33/final"
-        version_LLVM = "3_3"
-    if  version_LLVM == "3.2":
-        SVN_PATH="tags/RELEASE_32/final"
-        version_LLVM = "3_2"
     if revision != "":
         FOLDER_NAME = FOLDER_NAME + "_" + revision
         revision = "-" + revision
@@ -187,13 +233,9 @@ def build_LLVM(version_LLVM, revision, folder, tarball, debug, selfbuild, extra,
         llvm_home + "\n", from_validation, alloy_build)
     # load llvm
     if tarball == "":
-        try_do_LLVM("load LLVM from http://llvm.org/svn/llvm-project/llvm/" + SVN_PATH + " ",
-                    "svn co " + revision + " http://llvm.org/svn/llvm-project/llvm/" + SVN_PATH + " " + LLVM_SRC,
-                    from_validation)
+        checkout_LLVM("llvm", options.use_git, version_LLVM, revision, LLVM_SRC, from_validation)
         os.chdir(LLVM_SRC + "/tools")
-        try_do_LLVM("load clang from http://llvm.org/svn/llvm-project/cfe/" + SVN_PATH + " ",
-                    "svn co " + revision + " http://llvm.org/svn/llvm-project/cfe/" + SVN_PATH + " clang",
-                    from_validation)
+        checkout_LLVM("clang", options.use_git, version_LLVM, revision, "clang", from_validation)
         os.chdir("..")
         if current_OS == "MacOS" and int(current_OS_version.split(".")[0]) >= 13:
             # Starting with MacOS 10.9 Maverics, the system doesn't contain headers for standard C++ library and
@@ -205,19 +247,13 @@ def build_LLVM(version_LLVM, revision, folder, tarball, debug, selfbuild, extra,
             # to the linker explicitly (either through command line or environment variables). So we are not doing it
             # currently to make the build process easier.
             os.chdir("projects")
-            try_do_LLVM("load libcxx http://llvm.org/svn/llvm-project/libcxx/" + SVN_PATH + " ",
-                    "svn co " + revision + " http://llvm.org/svn/llvm-project/libcxx/" + SVN_PATH + " libcxx",
-                    from_validation)
+            checkout_LLVM("libcxx", options.use_git, version_LLVM, revision, "libcxx", from_validation)
             os.chdir("..")
         if extra == True:
             os.chdir("tools/clang/tools")
-            try_do_LLVM("load extra clang extra tools ",
-                    "svn co " + revision + " http://llvm.org/svn/llvm-project/clang-tools-extra/" + SVN_PATH + " extra",
-                    from_validation)
+            checkout_LLVM("clang-tools-extra", options.use_git, version_LLVM, revision, "extra", from_validation)
             os.chdir("../../../projects")
-            try_do_LLVM("load extra clang compiler-rt ",
-                    "svn co " + revision + " http://llvm.org/svn/llvm-project/compiler-rt/" + SVN_PATH + " compiler-rt",
-                    from_validation)
+            checkout_LLVM("compiler-rt", options.use_git, version_LLVM, revision, "compiler-rt", from_validation)
             os.chdir("..")
     else:
         tar = tarball.split(" ")
@@ -681,7 +717,7 @@ def validation_run(only, only_targets, reference_branch, number, notify, update,
         gen_archs = ["x86-64"]
         need_LLVM = check_LLVM(LLVM)
         for i in range(0,len(need_LLVM)):
-            build_LLVM(need_LLVM[i], "", "", "", False, False, False, True, False, make, options.gcc_toolchain_path)
+            build_LLVM(need_LLVM[i], "", "", "", False, False, False, True, False, make, options.gcc_toolchain_path, False)
 # begin validation run for stabitily
         common.remove_if_exists(stability.in_file)
         R = [[[],[]],[[],[]],[[],[]],[[],[]]]
@@ -795,7 +831,7 @@ def validation_run(only, only_targets, reference_branch, number, notify, update,
 # prepare newest LLVM
         need_LLVM = check_LLVM([newest_LLVM])
         if len(need_LLVM) != 0:
-            build_LLVM(need_LLVM[0], "", "", "", False, False, False, True, False, make, options.gcc_toolchain_path)
+            build_LLVM(need_LLVM[0], "", "", "", False, False, False, True, False, make, options.gcc_toolchain_path, options.use_git)
         if perf_llvm == False:
             # prepare reference point. build both test and reference compilers
             try_do_LLVM("apply git", "git branch", True)
@@ -935,11 +971,14 @@ def Main():
     if options.perf_llvm == True:
         if options.branch == "master":
             options.branch = "trunk"
+    if options.use_git and options.revision != "":
+        error("--revision is not supported with --git", 1)
+
     try:
         start_time = time.time()
         if options.build_llvm:
             build_LLVM(options.version, options.revision, options.folder, options.tarball,
-                    options.debug, options.selfbuild, options.extra, False, options.force, make, options.gcc_toolchain_path)
+                    options.debug, options.selfbuild, options.extra, False, options.force, make, options.gcc_toolchain_path, options.use_git)
         if options.validation_run:
             validation_run(options.only, options.only_targets, options.branch,
                     options.number_for_performance, options.notify, options.update, int(options.speed),
@@ -1025,7 +1064,7 @@ if __name__ == '__main__':
          'you have alternative gcc installation. Note that otherwise gcc from standard ' +
          'location will be used, not from your PATH', default="")
     llvm_group.add_option('--revision', dest='revision',
-        help='revision of llvm to build in format r172870', default="")
+        help='revision of llvm to build in format r172870 (not supported with --git)', default="")
     llvm_group.add_option('--debug', dest='debug',
         help='debug build of LLVM?', default=False, action="store_true")
     llvm_group.add_option('--folder', dest='folder',
@@ -1038,6 +1077,8 @@ if __name__ == '__main__':
         help='rebuild LLVM', default=False, action='store_true')
     llvm_group.add_option('--extra', dest='extra',
         help='load extra clang tools', default=False, action='store_true')
+    llvm_group.add_option('--git', dest='use_git',
+        help='use git llvm repository instead of svn', default=False, action='store_true')
     parser.add_option_group(llvm_group)
     # options for activity "validation run"
     run_group = OptionGroup(parser, "Options for validation run",
