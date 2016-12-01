@@ -541,6 +541,8 @@ llvm::DIType *AtomicType::GetDIType(llvm::DIScope *scope) const {
 #else //LLVM 3.7++
             return NULL;
 #endif
+
+#if ISPC_LLVM_VERSION <= ISPC_LLVM_3_9
         case TYPE_BOOL:
             return m->diBuilder->createBasicType("bool", 32 /* size */, 32 /* align */,
                                                  llvm::dwarf::DW_ATE_unsigned);
@@ -585,6 +587,53 @@ llvm::DIType *AtomicType::GetDIType(llvm::DIScope *scope) const {
             return m->diBuilder->createBasicType("uint64", 64 /* size */, 64 /* align */,
                                                  llvm::dwarf::DW_ATE_unsigned);
             break;
+#else // LLVM 4.0+
+        case TYPE_BOOL:
+            return m->diBuilder->createBasicType("bool", 32 /* size */,
+                                                 llvm::dwarf::DW_ATE_unsigned);
+            break;
+        case TYPE_INT8:
+            return m->diBuilder->createBasicType("int8", 8 /* size */,
+                                                 llvm::dwarf::DW_ATE_signed);
+            break;
+        case TYPE_UINT8:
+            return m->diBuilder->createBasicType("uint8", 8 /* size */,
+                                                 llvm::dwarf::DW_ATE_unsigned);
+            break;
+        case TYPE_INT16:
+            return m->diBuilder->createBasicType("int16", 16 /* size */,
+                                                 llvm::dwarf::DW_ATE_signed);
+            break;
+        case TYPE_UINT16:
+            return m->diBuilder->createBasicType("uint16", 16 /* size */,
+                                                 llvm::dwarf::DW_ATE_unsigned);
+            break;
+        case TYPE_INT32:
+            return m->diBuilder->createBasicType("int32", 32 /* size */,
+                                                 llvm::dwarf::DW_ATE_signed);
+            break;
+        case TYPE_UINT32:
+            return m->diBuilder->createBasicType("uint32", 32 /* size */,
+                                                 llvm::dwarf::DW_ATE_unsigned);
+            break;
+        case TYPE_FLOAT:
+            return m->diBuilder->createBasicType("float", 32 /* size */,
+                                                 llvm::dwarf::DW_ATE_float);
+            break;
+        case TYPE_DOUBLE:
+            return m->diBuilder->createBasicType("double", 64 /* size */,
+                                                 llvm::dwarf::DW_ATE_float);
+            break;
+        case TYPE_INT64:
+            return m->diBuilder->createBasicType("int64", 64 /* size */,
+                                                 llvm::dwarf::DW_ATE_signed);
+            break;
+        case TYPE_UINT64:
+            return m->diBuilder->createBasicType("uint64", 64 /* size */,
+                                                 llvm::dwarf::DW_ATE_unsigned);
+            break;
+#endif
+
         default:
             FATAL("unhandled basic type in AtomicType::GetDIType()");
 #if ISPC_LLVM_VERSION <= ISPC_LLVM_3_6
