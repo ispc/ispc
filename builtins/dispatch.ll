@@ -154,6 +154,8 @@ define(`PTR_OP_ARGS',
     ``$1 , $1 *'',
          LLVM_VERSION, LLVM_4_0,
     ``$1 , $1 *'',
+         LLVM_VERSION, LLVM_5_0,
+    ``$1 , $1 *'',
     ``$1 *''
   )
 )
