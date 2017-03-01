@@ -51,7 +51,11 @@
   #include <llvm/IR/Constants.h>
 #endif
 
+#if ISPC_LLVM_VERSION <= ISPC_LLVM_3_9
 #define PTYPE(p) (llvm::cast<llvm::SequentialType>((p)->getType()->getScalarType())->getElementType())
+#else // LLVM 4.0+
+#define PTYPE(p) (llvm::cast<llvm::PointerType>((p)->getType()->getScalarType())->getElementType())
+#endif
 
 namespace llvm {
     class PHINode;

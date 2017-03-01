@@ -431,9 +431,7 @@ Module::Module(const char *fn) {
             sprintf(producerString, "ispc version %s (built on %s)",
                     ISPC_VERSION, __DATE__);
 #endif
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_3_4 // LLVM 3.4+
-            diCompileUnit =
-#endif // LLVM_3_4+
+#if ISPC_LLVM_VERSION <= ISPC_LLVM_3_3
             diBuilder->createCompileUnit(llvm::dwarf::DW_LANG_C99,  /* lang */
                                          name,  /* filename */
                                          directory, /* directory */
@@ -441,6 +439,25 @@ Module::Module(const char *fn) {
                                          g->opt.level > 0 /* is optimized */,
                                          "-g", /* command line args */
                                          0 /* run time version */);
+#elif ISPC_LLVM_VERSION <= ISPC_LLVM_3_9 // LLVM 3.4-3.9
+            diCompileUnit =
+            diBuilder->createCompileUnit(llvm::dwarf::DW_LANG_C99,  /* lang */
+                                         name,  /* filename */
+                                         directory, /* directory */
+                                         producerString, /* producer */
+                                         g->opt.level > 0 /* is optimized */,
+                                         "-g", /* command line args */
+                                         0 /* run time version */);
+#elif ISPC_LLVM_VERSION >= ISPC_LLVM_4_0 // LLVM 4.0+
+            auto srcFile = diBuilder->createFile(name, directory);
+            diCompileUnit =
+            diBuilder->createCompileUnit(llvm::dwarf::DW_LANG_C99,  /* lang */
+                                         srcFile,  /* filename */
+                                         producerString, /* producer */
+                                         g->opt.level > 0 /* is optimized */,
+                                         "-g", /* command line args */
+                                         0 /* run time version */);
+#endif
         }
     }
     else
@@ -758,7 +775,7 @@ Module::AddGlobalVariable(const std::string &name, const Type *type, Expr *initE
         //llvm::MDFile *file = pos.GetDIFile();
         llvm::GlobalVariable *sym_GV_storagePtr = llvm::dyn_cast<llvm::GlobalVariable>(sym->storagePtr);
         Assert(sym_GV_storagePtr);
-        llvm::DIGlobalVariable *var = diBuilder->createGlobalVariable(
+        llvm::DIGlobalVariableExpression *var = diBuilder->createGlobalVariableExpression(
                                             file,
                                             name,
                                             name,

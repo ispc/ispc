@@ -1184,6 +1184,7 @@ void CWriter::printConstantDataSequential(llvm::ConstantDataSequential *CDS,
 
 static inline std::string ftostr(const llvm::APFloat& V) {
   std::string Buf;
+#if ISPC_LLVM_VERSION <= ISPC_LLVM_3_9
   if (&V.getSemantics() == &llvm::APFloat::IEEEdouble) {
     llvm::raw_string_ostream(Buf) << V.convertToDouble();
     return Buf;
@@ -1191,6 +1192,15 @@ static inline std::string ftostr(const llvm::APFloat& V) {
     llvm::raw_string_ostream(Buf) << (double)V.convertToFloat();
     return Buf;
   }
+#else // LLVM 4.0+
+  if (&V.getSemantics() == &llvm::APFloat::IEEEdouble()) {
+    llvm::raw_string_ostream(Buf) << V.convertToDouble();
+    return Buf;
+  } else if (&V.getSemantics() == &llvm::APFloat::IEEEsingle()) {
+    llvm::raw_string_ostream(Buf) << (double)V.convertToFloat();
+    return Buf;
+  }
+#endif
   return "<unknown format in ftostr>"; // error
 }
 
@@ -1210,7 +1220,11 @@ static bool isFPCSafeToPrint(const llvm::ConstantFP *CFP) {
     return false;
   llvm::APFloat APF = llvm::APFloat(CFP->getValueAPF());  // copy
   if (CFP->getType() == llvm::Type::getFloatTy(CFP->getContext()))
+#if ISPC_LLVM_VERSION <= ISPC_LLVM_3_9 // <= 3.9
     APF.convert(llvm::APFloat::IEEEdouble, llvm::APFloat::rmNearestTiesToEven, &ignored);
+#else // LLVM 4.0+
+    APF.convert(llvm::APFloat::IEEEdouble(), llvm::APFloat::rmNearestTiesToEven, &ignored);
+#endif
 #if HAVE_PRINTF_A && ENABLE_CBE_PRINTF_A
   char Buffer[100];
   sprintf(Buffer, "%a", APF.convertToDouble());
@@ -1641,7 +1655,11 @@ void CWriter::printConstant(llvm::Constant *CPV, bool Static) {
         // useful.
         llvm::APFloat Tmp = FPC->getValueAPF();
         bool LosesInfo;
+#if ISPC_LLVM_VERSION <= ISPC_LLVM_3_9 // <= 3.9
         Tmp.convert(llvm::APFloat::IEEEdouble, llvm::APFloat::rmTowardZero, &LosesInfo);
+#else // LLVM 4.0+
+        Tmp.convert(llvm::APFloat::IEEEdouble(), llvm::APFloat::rmTowardZero, &LosesInfo);
+#endif
         V = Tmp.convertToDouble();
       }
 
@@ -4556,7 +4574,11 @@ void CWriter::printGEPExpression(llvm::Value *Ptr, llvm::gep_type_iterator I,
   llvm::VectorType *LastIndexIsVector = 0;
   {
     for (llvm::gep_type_iterator TmpI = I; TmpI != E; ++TmpI)
+#if ISPC_LLVM_VERSION <= ISPC_LLVM_3_9
       LastIndexIsVector = llvm::dyn_cast<llvm::VectorType>(*TmpI);
+#else // LLVM 4.0+
+    LastIndexIsVector = llvm::dyn_cast<llvm::VectorType>(TmpI.getIndexedType());
+#endif
   }
 
   Out << "(";
@@ -4585,7 +4607,11 @@ void CWriter::printGEPExpression(llvm::Value *Ptr, llvm::gep_type_iterator I,
     // exposed, like a global, avoid emitting (&foo)[0], just emit foo instead.
     if (isAddressExposed(Ptr)) {
       writeOperandInternal(Ptr, Static);
+#if ISPC_LLVM_VERSION <= ISPC_LLVM_3_9
     } else if (I != E && (*I)->isStructTy()) {
+#else // LLVM 4.0+
+    } else if (I != E && I.isStruct()) {
+#endif
       // If we didn't already emit the first operand, see if we can print it as
       // P->f instead of "P[0].f"
       writeOperand(Ptr);
@@ -4600,13 +4626,18 @@ void CWriter::printGEPExpression(llvm::Value *Ptr, llvm::gep_type_iterator I,
   }
 
   for (; I != E; ++I) {
-    if ((*I)->isStructTy()) {
+#if ISPC_LLVM_VERSION <= ISPC_LLVM_3_9
+    llvm::Type *type = *I;
+#else // LLVM 4.0+
+    llvm::Type *type = I.getIndexedType();
+#endif
+    if (type->isStructTy()) {
       Out << ".field" << llvm::cast<llvm::ConstantInt>(I.getOperand())->getZExtValue();
-    } else if ((*I)->isArrayTy()) {
+    } else if (type->isArrayTy()) {
       Out << ".array[";
       writeOperandWithCast(I.getOperand(), llvm::Instruction::GetElementPtr);
       Out << ']';
-    } else if (!(*I)->isVectorTy()) {
+    } else if (!type->isVectorTy()) {
       Out << '[';
       writeOperandWithCast(I.getOperand(), llvm::Instruction::GetElementPtr);
       Out << ']';

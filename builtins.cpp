@@ -1013,7 +1013,7 @@ lDefineConstantInt(const char *name, int val, llvm::Module *module,
               sym_const_storagePtr);
 #else // LLVM 4.0+
         llvm::GlobalVariable *sym_GV_storagePtr = llvm::dyn_cast<llvm::GlobalVariable>(sym->storagePtr);
-        llvm::DIGlobalVariable *var = m->diBuilder->createGlobalVariable(
+        llvm::DIGlobalVariableExpression *var = m->diBuilder->createGlobalVariableExpression(
                                               file,
                                               name,
                                               name,
@@ -1122,7 +1122,7 @@ lDefineProgramIndex(llvm::Module *module, SymbolTable *symbolTable) {
                                                sym_const_storagePtr);
 #else // LLVM 4.0+
         llvm::GlobalVariable *sym_GV_storagePtr = llvm::dyn_cast<llvm::GlobalVariable>(sym->storagePtr);
-        llvm::DIGlobalVariable *var = m->diBuilder->createGlobalVariable(
+        llvm::DIGlobalVariableExpression *var = m->diBuilder->createGlobalVariableExpression(
                                               file,
                                               sym->name.c_str(),
                                               sym->name.c_str(),
