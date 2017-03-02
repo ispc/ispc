@@ -193,10 +193,10 @@ def build_LLVM(version_LLVM, revision, folder, tarball, debug, selfbuild, extra,
     
     make_sure_dir_exists(llvm_home)
 
+    FOLDER_NAME=version_LLVM
     version_LLVM = re.sub('\.', '_', version_LLVM)
     
     os.chdir(llvm_home)
-    FOLDER_NAME=version_LLVM
     if revision != "":
         FOLDER_NAME = FOLDER_NAME + "_" + revision
         revision = "-" + revision
