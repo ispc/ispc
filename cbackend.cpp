@@ -4399,7 +4399,11 @@ bool CWriter::visitBuiltinCall(llvm::CallInst &I, llvm::Intrinsic::ID ID,
     if (I.getParent()->getParent()->arg_empty())
       Out << "vararg_dummy_arg";
     else
+#if ISPC_LLVM_VERSION <= ISPC_LLVM_4_0
       writeOperand(&*(--I.getParent()->getParent()->arg_end()));
+#else // LLVM 5.0+
+      writeOperand(&*(I.getParent()->getParent()->arg_end()-1));
+#endif
     Out << ')';
     return true;
   case llvm::Intrinsic::vaend:
