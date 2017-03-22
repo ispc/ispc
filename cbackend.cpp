@@ -133,8 +133,8 @@
 #define snprintf _snprintf
 #endif
 ///////////////////////////////////////////////////////////////////////////////
-// This part of code was in LLVM's ConstantsScanner.h, 
-// but it was removed in revision #232397 
+// This part of code was in LLVM's ConstantsScanner.h,
+// but it was removed in revision #232397
 
 namespace constant_scanner {
 class constant_iterator : public std::iterator<std::forward_iterator_tag,
@@ -381,8 +381,8 @@ namespace {
   };
 } // end anonymous namespace
 
-static void findUsedArrayAndLongIntTypes(const llvm::Module *m, std::vector<llvm::ArrayType*> &t, 
-                               std::vector<llvm::IntegerType*> &i, std::vector<bool> &IsVolatile, 
+static void findUsedArrayAndLongIntTypes(const llvm::Module *m, std::vector<llvm::ArrayType*> &t,
+                               std::vector<llvm::IntegerType*> &i, std::vector<bool> &IsVolatile,
                                std::vector<int> &Alignment) {
   TypeFinder(t, i, IsVolatile, Alignment).run(*m);
 }
@@ -390,7 +390,7 @@ static void findUsedArrayAndLongIntTypes(const llvm::Module *m, std::vector<llvm
 
 static bool is_vec16_i64_ty(llvm::Type *Ty) {
   llvm::VectorType *VTy = llvm::dyn_cast<llvm::VectorType>(Ty);
-  if ((VTy != NULL) && (VTy->getElementType()->isIntegerTy()) && 
+  if ((VTy != NULL) && (VTy->getElementType()->isIntegerTy()) &&
     VTy->getElementType()->getPrimitiveSizeInBits() == 64)
     return true;
   return false;
@@ -1091,7 +1091,7 @@ llvm::raw_ostream &CWriter::printType(llvm::raw_ostream &Out, llvm::Type *Ty,
 
 void CWriter::printConstantArray(llvm::ConstantArray *CPA, bool Static) {
   // vec16_i64 should be handled separately
-  
+
   if (is_vec16_i64_ty(CPA->getOperand(0)->getType())) {
     Out << "/* vec16_i64 should be loaded carefully on knc */";
     Out << "\n#if defined(KNC)\n";
@@ -1841,11 +1841,11 @@ void CWriter::printConstant(llvm::Constant *CPV, bool Static) {
         // when generating code for knl-generic in multitarget mode.
         // Short vectors are mapped to "native" vectors and cause AVX-512 code
         // generation in static block initialization (__vec16_* in ::init function).
-        bool isGenericKNL = g->target->getISA() == Target::GENERIC && 
+        bool isGenericKNL = g->target->getISA() == Target::GENERIC &&
                                                    !g->target->getTreatGenericAsSmth().empty() &&
                                                    g->mangleFunctionsWithTarget;
-        if (isGenericKNL && CPV->getOperand(0)->getType()->isVectorTy()) 
-          llvm::report_fatal_error("knl-generic-* target doesn's support short vectors");  
+        if (isGenericKNL && CPV->getOperand(0)->getType()->isVectorTy())
+          llvm::report_fatal_error("knl-generic-* target doesn's support short vectors");
         Out << ' ';
         printConstant(llvm::cast<llvm::Constant>(CPV->getOperand(0)), Static);
         for (unsigned i = 1, e = CPV->getNumOperands(); i != e; ++i) {
@@ -2046,7 +2046,7 @@ void CWriter::writeInstComputationInline(llvm::Instruction &I) {
 
   if (NeedBoolTrunc)
     Out << "((";
- 
+
   visit(I);
 
   if (NeedBoolTrunc)
@@ -2820,7 +2820,7 @@ void CWriter::printFloatingPointConstants(llvm::Function &F) {
   // the precision of the printed form, unless the printed form preserves
   // precision.
   //
-  for (constant_scanner::constant_iterator I = constant_scanner::constant_begin(&F), 
+  for (constant_scanner::constant_iterator I = constant_scanner::constant_begin(&F),
        E = constant_scanner::constant_end(&F); I != E; ++I)
     printFloatingPointConstants(*I);
 
@@ -2887,7 +2887,7 @@ void CWriter::printFloatingPointConstants(const llvm::Constant *C) {
 // loads to get their values, rather than tediously inserting the
 // individual values into the vector.
 void CWriter::printVectorConstants(llvm::Function &F) {
-    for (constant_scanner::constant_iterator I = constant_scanner::constant_begin(&F), 
+    for (constant_scanner::constant_iterator I = constant_scanner::constant_begin(&F),
          E = constant_scanner::constant_end(&F); I != E; ++I) {
         const llvm::ConstantDataVector *CDV = llvm::dyn_cast<llvm::ConstantDataVector>(*I);
         if (CDV == NULL)
@@ -3039,7 +3039,7 @@ void CWriter::printModuleTypes() {
       Out << "  struct " << Name << ";\n";
   }
   Out << "};\n";
-  
+
   for (unsigned i = 0, e = IntegerTypes.size(); i != e; ++i) {
      llvm::IntegerType *IT = IntegerTypes[i];
       if (IT->getIntegerBitWidth() <= 64 || Alignment[i] == 0)
@@ -4083,17 +4083,17 @@ void CWriter::printIntrinsicDefinition(const llvm::Function &F, llvm::raw_ostrea
 
     printType(Out, retT);
     Out << "r;\n";
-        
+
     unsigned NumBits = llvm::cast<llvm::IntegerType>(elemT)->getBitWidth();
     std::stringstream  str_type;
-    if (NumBits <= 32) 
+    if (NumBits <= 32)
       str_type << "uint" << 2 * NumBits << "_t";
     else {
       assert(NumBits <= 64 && "Bit widths > 128 not implemented yet");
       str_type << "llvmUInt128";
     }
 
-    Out << "  " << str_type.str() << " result = (" << str_type.str() << ") a * (" << str_type.str() << ") b;\n"; 
+    Out << "  " << str_type.str() << " result = (" << str_type.str() << ") a * (" << str_type.str() << ") b;\n";
     Out << "  r.field0 = result;\n";
     Out << "  r.field1 = result >> " << NumBits << ";\n";
     Out << "  return r;\n}\n";
@@ -4263,7 +4263,7 @@ void CWriter::visitCallInst(llvm::CallInst &I) {
     if (Callee->getName() == "malloc" ||
         Callee->getName() == "_aligned_malloc")
         Out << "(uint8_t *)";
-  
+
     // This 'if' will fix 'soa-18.ispc' test (fails with optimizations off)
     // Yet the way the case is fixed is quite dirty and leads to many other fails
 
@@ -4324,7 +4324,7 @@ void CWriter::visitCallInst(llvm::CallInst &I) {
 
   for (; AI != AE; ++AI, ++ArgNo) {
     if (PrintedArg) Out << ", ";
-    if (ArgNo == 0 && 
+    if (ArgNo == 0 &&
         Callee->getName() == "posix_memalign") {
         // uint8_t** is incompatible with void** without explicit cast.
         // Should be do this any other functions?
@@ -4399,7 +4399,11 @@ bool CWriter::visitBuiltinCall(llvm::CallInst &I, llvm::Intrinsic::ID ID,
     if (I.getParent()->getParent()->arg_empty())
       Out << "vararg_dummy_arg";
     else
+#if ISPC_LLVM_VERSION <= ISPC_LLVM_4_0
       writeOperand(&*(--I.getParent()->getParent()->arg_end()));
+#else // LLVM 5.0+
+      writeOperand(&*(I.getParent()->getParent()->arg_end()-1));
+#endif
     Out << ')';
     return true;
   case llvm::Intrinsic::vaend:
@@ -4668,7 +4672,7 @@ void CWriter::writeMemoryAccess(llvm::Value *Operand, llvm::Type *OperandType,
     Out << '*';
   if (IsVolatile || IsUnaligned) {
     Out << "((";
-    if (IsUnaligned && ITy && (ITy->getBitWidth() > 64)) 
+    if (IsUnaligned && ITy && (ITy->getBitWidth() > 64))
       Out << "iN_" << ITy->getBitWidth() << "_align_" << Alignment << " *)";
     else {
       if (IsUnaligned)
@@ -4833,7 +4837,7 @@ void CWriter::visitShuffleVectorInst(llvm::ShuffleVectorInst &SVI) {
         printType(Out, llvm::PointerType::getUnqual(EltTy));
         Out << ")(&" << GetValueName(Op)
             << "))[" << SrcVal << "]";
-        Out << " \n#endif \n";        
+        Out << " \n#endif \n";
       }
     }
   }
@@ -5028,7 +5032,7 @@ SmearCleanupPass::getShuffleSmearValue(llvm::Instruction* inst) const {
         llvm::dyn_cast<llvm::Constant>(shuffleInst->getOperand(2));
 
     // Check that the shuffle is a broadcast of the element of the first vector,
-    // i.e. mask vector is vector with equal elements of expected size.     
+    // i.e. mask vector is vector with equal elements of expected size.
     if (!(mask &&
 #if ISPC_LLVM_VERSION == ISPC_LLVM_3_2
          (mask->isNullValue() || (shuffleInst->getMask()->getType()->isVectorTy() && llvm::dyn_cast<llvm::ConstantVector>(shuffleInst->getMask())->getSplatValue() != 0 ) ) &&
@@ -5053,34 +5057,34 @@ SmearCleanupPass::getShuffleSmearValue(llvm::Instruction* inst) const {
         if (operandVec && operandVec->getNumElements() == 1)
           return NULL;
 
-        // Insert ExtractElementInstr to get value for smear        
+        // Insert ExtractElementInstr to get value for smear
 
         llvm::Function *extractFunc = module->getFunction("__extract_element");
-       
+
          if (extractFunc == NULL) {
-            // Declare the __extract_element function if needed; it takes a vector and 
+            // Declare the __extract_element function if needed; it takes a vector and
             // a scalar parameter and returns a scalar of the vector parameter type.
             llvm::Constant *ef =
-                module->getOrInsertFunction("__extract_element", 
-                                            shuffleInst->getOperand(0)->getType()->getVectorElementType(), 
+                module->getOrInsertFunction("__extract_element",
+                                            shuffleInst->getOperand(0)->getType()->getVectorElementType(),
                                             shuffleInst->getOperand(0)->getType(),
                                             llvm::IntegerType::get(module->getContext(), 32), NULL);
             extractFunc = llvm::dyn_cast<llvm::Function>(ef);
             assert(extractFunc != NULL);
             extractFunc->setDoesNotThrow();
             extractFunc->setOnlyReadsMemory();
-        } 
+        }
 
         if (extractFunc == NULL) {
             return NULL;
         }
-        llvm::Instruction *extractCall = 
-              llvm::ExtractElementInst::Create(shuffleInst->getOperand(0), 
+        llvm::Instruction *extractCall =
+              llvm::ExtractElementInst::Create(shuffleInst->getOperand(0),
 #if ISPC_LLVM_VERSION == ISPC_LLVM_3_2
                          // mask is of VectorType
-                         llvm::dyn_cast<llvm::ConstantVector>(mask)->getSplatValue(),  
+                         llvm::dyn_cast<llvm::ConstantVector>(mask)->getSplatValue(),
 #else
-                         mask->getSplatValue(),  
+                         mask->getSplatValue(),
 #endif
                          "__extract_element", inst);
         return extractCall;
