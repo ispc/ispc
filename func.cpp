@@ -420,8 +420,10 @@ Function::emitCode(FunctionEmitContext *ctx, llvm::Function *function,
             (
 #if ISPC_LLVM_VERSION == ISPC_LLVM_3_2 // 3.2
               (function->getFnAttributes().hasAttribute(llvm::Attributes::AlwaysInline) == false)
-#else // LLVM 3.3+
+#elif ISPC_LLVM_VERSION <= ISPC_LLVM_4_0
               (function->getAttributes().getFnAttributes().hasAttribute(llvm::AttributeSet::FunctionIndex, llvm::Attribute::AlwaysInline) == false)
+#else // LLVM 5.0+
+              (function->getAttributes().getFnAttributes().hasAttribute(llvm::AttributeList::FunctionIndex, llvm::Attribute::AlwaysInline) == false)
 #endif
              &&
              costEstimate > CHECK_MASK_AT_FUNCTION_START_COST);
