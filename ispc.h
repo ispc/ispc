@@ -72,7 +72,11 @@
 
 // Forward declarations of a number of widely-used LLVM types
 namespace llvm {
+#if ISPC_LLVM_VERSION <= ISPC_LLVM_4_0
     class AttributeSet;
+#else // LLVM 5.0+
+    class AttributeList;
+#endif
     class BasicBlock;
     class Constant;
     class ConstantValue;
@@ -86,13 +90,11 @@ namespace llvm {
     class TargetMachine;
     class Type;
     class Value;
-#if ISPC_LLVM_VERSION <= ISPC_LLVM_3_6
     class DIFile;
     class DIType;
+#if ISPC_LLVM_VERSION <= ISPC_LLVM_3_6
     class DIDescriptor;
 #else // LLVM 3.7+
-    class DIFile;
-    class DIType;
     class DIScope;
 #endif
 }
@@ -348,7 +350,11 @@ private:
     /** Target-specific LLVM attribute, which has to be attached to every
         function to ensure that it is generated for correct target architecture.
         This is requirement was introduced in LLVM 3.3 */
+#if ISPC_LLVM_VERSION <= ISPC_LLVM_4_0
     llvm::AttributeSet* m_tf_attributes;
+#else // LLVM 5.0+
+    llvm::AttributeList* m_tf_attributes;
+#endif
 #endif
 
     /** Native vector width of the vector instruction set.  Note that this

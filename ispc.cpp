@@ -1158,11 +1158,19 @@ Target::Target(const char *arch, const char *cpu, const char *isa, bool pic, boo
 #endif
             attrBuilder.addAttribute("target-cpu", this->m_cpu);
             attrBuilder.addAttribute("target-features", this->m_attributes);
+#if ISPC_LLVM_VERSION <= ISPC_LLVM_4_0
             this->m_tf_attributes = new llvm::AttributeSet(
                 llvm::AttributeSet::get(
                     *g->ctx,
                     llvm::AttributeSet::FunctionIndex,
                     attrBuilder));
+#else // LLVM 5.0+
+            this->m_tf_attributes = new llvm::AttributeList(
+                llvm::AttributeList::get(
+                    *g->ctx,
+                    llvm::AttributeList::FunctionIndex,
+                    attrBuilder));
+#endif
         }
 #endif
 
@@ -1477,7 +1485,11 @@ Target::StructOffset(llvm::Type *type, int element,
 void Target::markFuncWithTargetAttr(llvm::Function* func) {
 #if ISPC_LLVM_VERSION >= ISPC_LLVM_3_3
     if (m_tf_attributes) {
+#if ISPC_LLVM_VERSION <= ISPC_LLVM_4_0
         func->addAttributes(llvm::AttributeSet::FunctionIndex, *m_tf_attributes);
+#else // LLVM 5.0+
+        func->addAttributes(llvm::AttributeList::FunctionIndex, *m_tf_attributes);
+#endif
     }
 #endif
 }
