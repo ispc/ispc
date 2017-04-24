@@ -5097,10 +5097,17 @@ SmearCleanupPass::getShuffleSmearValue(llvm::Instruction* inst) const {
             // Declare the __extract_element function if needed; it takes a vector and
             // a scalar parameter and returns a scalar of the vector parameter type.
             llvm::Constant *ef =
+#if ISPC_LLVM_VERSION <= ISPC_LLVM_4_0
                 module->getOrInsertFunction("__extract_element",
                                             shuffleInst->getOperand(0)->getType()->getVectorElementType(),
                                             shuffleInst->getOperand(0)->getType(),
                                             llvm::IntegerType::get(module->getContext(), 32), NULL);
+#else // LLVM 5.0+
+                module->getOrInsertFunction("__extract_element",
+                                            shuffleInst->getOperand(0)->getType()->getVectorElementType(),
+                                            shuffleInst->getOperand(0)->getType(),
+                                            llvm::IntegerType::get(module->getContext(), 32));
+#endif
             extractFunc = llvm::dyn_cast<llvm::Function>(ef);
             assert(extractFunc != NULL);
             extractFunc->setDoesNotThrow();
@@ -5150,8 +5157,13 @@ SmearCleanupPass::runOnBasicBlock(llvm::BasicBlock &bb) {
                 // scalar parameter and returns a vector of the same
                 // parameter type.
                 llvm::Constant *sf =
+#if ISPC_LLVM_VERSION <= ISPC_LLVM_4_0
                     module->getOrInsertFunction(smearFuncName, iter->getType(),
                                                 smearType, NULL);
+#else // LLVM 5.0+
+                    module->getOrInsertFunction(smearFuncName, iter->getType(),
+                                                smearType);
+#endif
                 smearFunc = llvm::dyn_cast<llvm::Function>(sf);
                 assert(smearFunc != NULL);
                 smearFunc->setDoesNotThrow();
@@ -5248,9 +5260,15 @@ AndCmpCleanupPass::runOnBasicBlock(llvm::BasicBlock &bb) {
                 // replacing and the third argument is the mask type.
                 llvm::Type *cmpOpType = opCmp->getOperand(0)->getType();
                 llvm::Constant *acf =
+#if ISPC_LLVM_VERSION <= ISPC_LLVM_4_0
                     m->module->getOrInsertFunction(funcName, LLVMTypes::MaskType,
                                                    cmpOpType, cmpOpType,
                                                    LLVMTypes::MaskType, NULL);
+#else // LLVM 5.0+
+                    m->module->getOrInsertFunction(funcName, LLVMTypes::MaskType,
+                                                   cmpOpType, cmpOpType,
+                                                   LLVMTypes::MaskType);
+#endif
                 andCmpFunc = llvm::dyn_cast<llvm::Function>(acf);
                 Assert(andCmpFunc != NULL);
                 andCmpFunc->setDoesNotThrow();
@@ -5296,7 +5314,11 @@ public:
         // Declare the __not, __and_not1, and __and_not2 functions that we
         // expect the target to end up providing.
         notFunc =
+#if ISPC_LLVM_VERSION <= ISPC_LLVM_4_0
             llvm::dyn_cast<llvm::Function>(m->getOrInsertFunction("__not", mt, mt, NULL));
+#else // LLVM 5.0+
+            llvm::dyn_cast<llvm::Function>(m->getOrInsertFunction("__not", mt, mt));
+#endif
         assert(notFunc != NULL);
 #if ISPC_LLVM_VERSION == ISPC_LLVM_3_2
         notFunc->addFnAttr(llvm::Attributes::NoUnwind);
@@ -5307,8 +5329,12 @@ public:
 #endif
 
         andNotFuncs[0] =
+#if ISPC_LLVM_VERSION <= ISPC_LLVM_4_0
             llvm::dyn_cast<llvm::Function>(m->getOrInsertFunction("__and_not1", mt, mt, mt,
                                                       NULL));
+#else // LLVM 5.0+
+            llvm::dyn_cast<llvm::Function>(m->getOrInsertFunction("__and_not1", mt, mt, mt));
+#endif
         assert(andNotFuncs[0] != NULL);
 #if ISPC_LLVM_VERSION == ISPC_LLVM_3_2
         andNotFuncs[0]->addFnAttr(llvm::Attributes::NoUnwind);
@@ -5318,8 +5344,12 @@ public:
         andNotFuncs[0]->addFnAttr(llvm::Attribute::ReadNone);
 #endif
         andNotFuncs[1] =
+#if ISPC_LLVM_VERSION <= ISPC_LLVM_4_0
             llvm::dyn_cast<llvm::Function>(m->getOrInsertFunction("__and_not2", mt, mt, mt,
                                                       NULL));
+#else // LLVM 5.0+
+            llvm::dyn_cast<llvm::Function>(m->getOrInsertFunction("__and_not2", mt, mt, mt));
+#endif
         assert(andNotFuncs[1] != NULL);
 #if ISPC_LLVM_VERSION == ISPC_LLVM_3_2
         andNotFuncs[1]->addFnAttr(llvm::Attributes::NoUnwind);

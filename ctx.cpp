@@ -314,8 +314,13 @@ FunctionEmitContext::FunctionEmitContext(Function *func, Symbol *funSym,
             char buf[256];
             sprintf(buf, "__off_all_on_mask_%s", g->target->GetISAString());
             llvm::Constant *offFunc =
+#if ISPC_LLVM_VERSION <= ISPC_LLVM_4_0
                 m->module->getOrInsertFunction(buf, LLVMTypes::VoidType,
                                                NULL);
+#else // LLVM 5.0+
+                m->module->getOrInsertFunction(buf, LLVMTypes::VoidType);
+#endif
+
             AssertPos(currentPos, llvm::isa<llvm::Function>(offFunc));
             llvm::BasicBlock *offBB =
                    llvm::BasicBlock::Create(*g->ctx, "entry",
@@ -3453,10 +3458,18 @@ FunctionEmitContext::MemcpyInst(llvm::Value *dest, llvm::Value *src,
         align = LLVMInt32(1);
 
     llvm::Constant *mcFunc =
+#if ISPC_LLVM_VERSION <= ISPC_LLVM_4_0
         m->module->getOrInsertFunction("llvm.memcpy.p0i8.p0i8.i64",
                                        LLVMTypes::VoidType, LLVMTypes::VoidPointerType,
                                        LLVMTypes::VoidPointerType, LLVMTypes::Int64Type,
                                        LLVMTypes::Int32Type, LLVMTypes::BoolType, NULL);
+#else // LLVM 5.0+
+        m->module->getOrInsertFunction("llvm.memcpy.p0i8.p0i8.i64",
+                                       LLVMTypes::VoidType, LLVMTypes::VoidPointerType,
+                                       LLVMTypes::VoidPointerType, LLVMTypes::Int64Type,
+                                       LLVMTypes::Int32Type, LLVMTypes::BoolType);
+#endif
+
     AssertPos(currentPos, mcFunc != NULL);
     AssertPos(currentPos, llvm::isa<llvm::Function>(mcFunc));
 
