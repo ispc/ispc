@@ -4384,7 +4384,11 @@ void CWriter::visitCallInst(llvm::CallInst &I) {
       Out << ')';
     }
     // Check if the argument is expected to be passed by value.
+#if ISPC_LLVM_VERSION <= ISPC_LLVM_4_0
     if (I.paramHasAttr(ArgNo+1,
+#else // LLVM 5.0+
+    if (I.paramHasAttr(ArgNo,
+#endif
 #if ISPC_LLVM_VERSION == ISPC_LLVM_3_2
                        llvm::Attributes::ByVal
 #else /* LLVM 3.3+ */
