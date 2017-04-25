@@ -3501,8 +3501,13 @@ void CWriter::visitSwitchInst(llvm::SwitchInst &SI) {
   Out << ";\n";
 
   for (llvm::SwitchInst::CaseIt i = SI.case_begin(), e = SI.case_end(); i != e; ++i) {
+#if ISPC_LLVM_VERSION <= ISPC_LLVM_4_0
     llvm::ConstantInt* CaseVal = i.getCaseValue();
     llvm::BasicBlock* Succ = i.getCaseSuccessor();
+#else // LLVM 5.0+
+    llvm::ConstantInt* CaseVal = i->getCaseValue();
+    llvm::BasicBlock* Succ = i->getCaseSuccessor();
+#endif
     Out << "  case ";
     writeOperand(CaseVal);
     Out << ":\n";
