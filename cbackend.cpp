@@ -4639,6 +4639,8 @@ void CWriter::printGEPExpression(llvm::Value *Ptr, llvm::gep_type_iterator I,
 
   Out << '&';
 
+  llvm::Type *ParentTy = Ptr->getType();
+
   // If the first index is 0 (very typical) we can do a number of
   // simplifications to clean up the code.
   llvm::Value *FirstOp = I.getOperand();
@@ -4646,7 +4648,8 @@ void CWriter::printGEPExpression(llvm::Value *Ptr, llvm::gep_type_iterator I,
     // First index isn't simple, print it the hard way.
     writeOperand(Ptr);
   } else {
-    ++I;  // Skip the zero index.
+    ParentTy = I.getIndexedType(); // Skip the zero index.
+    ++I;
 
     // Okay, emit the first operand. If Ptr is something that is already address
     // exposed, like a global, avoid emitting (&foo)[0], just emit foo instead.
@@ -4661,6 +4664,7 @@ void CWriter::printGEPExpression(llvm::Value *Ptr, llvm::gep_type_iterator I,
       // P->f instead of "P[0].f"
       writeOperand(Ptr);
       Out << "->field" << llvm::cast<llvm::ConstantInt>(I.getOperand())->getZExtValue();
+      ParentTy = I.getIndexedType();
       ++I;  // eat the struct index as well.
     } else {
       // Instead of emitting P[0][1], emit (*P)[1], which is more idiomatic.
@@ -4671,18 +4675,13 @@ void CWriter::printGEPExpression(llvm::Value *Ptr, llvm::gep_type_iterator I,
   }
 
   for (; I != E; ++I) {
-#if ISPC_LLVM_VERSION <= ISPC_LLVM_3_9
-    llvm::Type *type = *I;
-#else // LLVM 4.0+
-    llvm::Type *type = I.getIndexedType();
-#endif
-    if (type->isStructTy()) {
+    if (ParentTy->isStructTy()) {
       Out << ".field" << llvm::cast<llvm::ConstantInt>(I.getOperand())->getZExtValue();
-    } else if (type->isArrayTy()) {
+    } else if (ParentTy->isArrayTy()) {
       Out << ".array[";
       writeOperandWithCast(I.getOperand(), llvm::Instruction::GetElementPtr);
       Out << ']';
-    } else if (!type->isVectorTy()) {
+    } else if (!ParentTy->isVectorTy()) {
       Out << '[';
       writeOperandWithCast(I.getOperand(), llvm::Instruction::GetElementPtr);
       Out << ']';
@@ -4698,6 +4697,7 @@ void CWriter::printGEPExpression(llvm::Value *Ptr, llvm::gep_type_iterator I,
         Out << "))";
       }
     }
+    ParentTy = I.getIndexedType();
   }
   Out << ")";
 }
