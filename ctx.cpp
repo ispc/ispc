@@ -314,8 +314,13 @@ FunctionEmitContext::FunctionEmitContext(Function *func, Symbol *funSym,
             char buf[256];
             sprintf(buf, "__off_all_on_mask_%s", g->target->GetISAString());
             llvm::Constant *offFunc =
+#if ISPC_LLVM_VERSION <= ISPC_LLVM_4_0
                 m->module->getOrInsertFunction(buf, LLVMTypes::VoidType,
                                                NULL);
+#else // LLVM 5.0+
+                m->module->getOrInsertFunction(buf, LLVMTypes::VoidType);
+#endif
+
             AssertPos(currentPos, llvm::isa<llvm::Function>(offFunc));
             llvm::BasicBlock *offBB =
                    llvm::BasicBlock::Create(*g->ctx, "entry",
@@ -3070,12 +3075,23 @@ FunctionEmitContext::AllocaInst(llvm::Type *llvmType,
         // end of allocaBlock
         llvm::Instruction *retInst = allocaBlock->getTerminator();
         AssertPos(currentPos, retInst);
+#if ISPC_LLVM_VERSION <= ISPC_LLVM_4_0
         inst = new llvm::AllocaInst(llvmType, name ? name : "", retInst);
+#else // LLVM 5.0+
+        unsigned AS = llvmFunction->getParent()->getDataLayout().getAllocaAddrSpace();
+        inst = new llvm::AllocaInst(llvmType, AS, name ? name : "", retInst);
+#endif
     }
-    else
+    else {
         // Unless the caller overrode the default and wants it in the
         // current basic block
+#if ISPC_LLVM_VERSION <= ISPC_LLVM_4_0
         inst = new llvm::AllocaInst(llvmType, name ? name : "", bblock);
+#else // LLVM 5.0+
+        unsigned AS = llvmFunction->getParent()->getDataLayout().getAllocaAddrSpace();
+        inst = new llvm::AllocaInst(llvmType, AS, name ? name : "", bblock);
+#endif
+    }
 
     // If no alignment was specified but we have an array of a uniform
     // type, then align it to the native vector alignment; it's not
@@ -3453,10 +3469,18 @@ FunctionEmitContext::MemcpyInst(llvm::Value *dest, llvm::Value *src,
         align = LLVMInt32(1);
 
     llvm::Constant *mcFunc =
+#if ISPC_LLVM_VERSION <= ISPC_LLVM_4_0
         m->module->getOrInsertFunction("llvm.memcpy.p0i8.p0i8.i64",
                                        LLVMTypes::VoidType, LLVMTypes::VoidPointerType,
                                        LLVMTypes::VoidPointerType, LLVMTypes::Int64Type,
                                        LLVMTypes::Int32Type, LLVMTypes::BoolType, NULL);
+#else // LLVM 5.0+
+        m->module->getOrInsertFunction("llvm.memcpy.p0i8.p0i8.i64",
+                                       LLVMTypes::VoidType, LLVMTypes::VoidPointerType,
+                                       LLVMTypes::VoidPointerType, LLVMTypes::Int64Type,
+                                       LLVMTypes::Int32Type, LLVMTypes::BoolType);
+#endif
+
     AssertPos(currentPos, mcFunc != NULL);
     AssertPos(currentPos, llvm::isa<llvm::Function>(mcFunc));
 
