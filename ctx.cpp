@@ -3075,12 +3075,23 @@ FunctionEmitContext::AllocaInst(llvm::Type *llvmType,
         // end of allocaBlock
         llvm::Instruction *retInst = allocaBlock->getTerminator();
         AssertPos(currentPos, retInst);
+#if ISPC_LLVM_VERSION <= ISPC_LLVM_4_0
         inst = new llvm::AllocaInst(llvmType, name ? name : "", retInst);
+#else // LLVM 5.0+
+        unsigned AS = llvmFunction->getParent()->getDataLayout().getAllocaAddrSpace();
+        inst = new llvm::AllocaInst(llvmType, AS, name ? name : "", retInst);
+#endif
     }
-    else
+    else {
         // Unless the caller overrode the default and wants it in the
         // current basic block
+#if ISPC_LLVM_VERSION <= ISPC_LLVM_4_0
         inst = new llvm::AllocaInst(llvmType, name ? name : "", bblock);
+#else // LLVM 5.0+
+        unsigned AS = llvmFunction->getParent()->getDataLayout().getAllocaAddrSpace();
+        inst = new llvm::AllocaInst(llvmType, AS, name ? name : "", bblock);
+#endif
+    }
 
     // If no alignment was specified but we have an array of a uniform
     // type, then align it to the native vector alignment; it's not

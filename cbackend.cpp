@@ -814,7 +814,7 @@ void CWriter::printStructReturnPointerFunctionType(llvm::raw_ostream &Out,
 #elif ISPC_LLVM_VERSION <= ISPC_LLVM_4_0
         if (PAL.getParamAttributes(Idx).hasAttribute(llvm::AttributeSet::FunctionIndex, llvm::Attribute::ByVal)) {
 #else // LLVM 5.0+
-        if (PAL.getParamAttributes(Idx).hasAttribute(llvm::AttributeList::FunctionIndex, llvm::Attribute::ByVal)) {
+        if (PAL.getParamAttributes(Idx).hasAttribute(llvm::Attribute::ByVal)) {
 #endif
       assert(ArgTy->isPointerTy());
       ArgTy = llvm::cast<llvm::PointerType>(ArgTy)->getElementType();
@@ -825,7 +825,7 @@ void CWriter::printStructReturnPointerFunctionType(llvm::raw_ostream &Out,
 #elif ISPC_LLVM_VERSION <= ISPC_LLVM_4_0
               PAL.getParamAttributes(Idx).hasAttribute(llvm::AttributeSet::FunctionIndex, llvm::Attribute::SExt),
 #else // LLVM 5.0+
-              PAL.getParamAttributes(Idx).hasAttribute(llvm::AttributeList::FunctionIndex, llvm::Attribute::SExt),
+              PAL.getParamAttributes(Idx).hasAttribute(llvm::Attribute::SExt),
 #endif
               "");
     PrintedType = true;
@@ -844,7 +844,7 @@ void CWriter::printStructReturnPointerFunctionType(llvm::raw_ostream &Out,
 #elif ISPC_LLVM_VERSION <= ISPC_LLVM_4_0
             PAL.getParamAttributes(0).hasAttribute(llvm::AttributeSet::ReturnIndex, llvm::Attribute::SExt),
 #else // LLVM 5.0+
-            PAL.getParamAttributes(0).hasAttribute(llvm::AttributeList::ReturnIndex, llvm::Attribute::SExt),
+            PAL.getParamAttributes(0).hasAttribute(llvm::Attribute::SExt),
 #endif
             FunctionInnards.str());
 }
@@ -968,7 +968,7 @@ llvm::raw_ostream &CWriter::printType(llvm::raw_ostream &Out, llvm::Type *Ty,
 #elif ISPC_LLVM_VERSION <= ISPC_LLVM_4_0
           if (PAL.getParamAttributes(Idx).hasAttribute(llvm::AttributeSet::FunctionIndex, llvm::Attribute::ByVal)) {
 #else // LLVM 5.0+
-          if (PAL.getParamAttributes(Idx).hasAttribute(llvm::AttributeList::FunctionIndex, llvm::Attribute::ByVal)) {
+          if (PAL.getParamAttributes(Idx).hasAttribute(llvm::Attribute::ByVal)) {
 #endif
         assert(ArgTy->isPointerTy());
         ArgTy = llvm::cast<llvm::PointerType>(ArgTy)->getElementType();
@@ -981,7 +981,7 @@ llvm::raw_ostream &CWriter::printType(llvm::raw_ostream &Out, llvm::Type *Ty,
 #elif ISPC_LLVM_VERSION <= ISPC_LLVM_4_0
                 PAL.getParamAttributes(Idx).hasAttribute(llvm::AttributeSet::FunctionIndex, llvm::Attribute::SExt),
 #else // LLVM 5.0+
-                PAL.getParamAttributes(Idx).hasAttribute(llvm::AttributeList::FunctionIndex, llvm::Attribute::SExt),
+                PAL.getParamAttributes(Idx).hasAttribute(llvm::Attribute::SExt),
 #endif
                 "");
       ++Idx;
@@ -1000,7 +1000,7 @@ llvm::raw_ostream &CWriter::printType(llvm::raw_ostream &Out, llvm::Type *Ty,
 #elif ISPC_LLVM_VERSION <= ISPC_LLVM_4_0
               PAL.getParamAttributes(0).hasAttribute(llvm::AttributeSet::ReturnIndex, llvm::Attribute::SExt),
 #else // LLVM 5.0+
-              PAL.getParamAttributes(0).hasAttribute(llvm::AttributeList::ReturnIndex, llvm::Attribute::SExt),
+              PAL.getParamAttributes(0).hasAttribute(llvm::Attribute::SExt),
 #endif
               FunctionInnards.str());
     return Out;
@@ -3227,7 +3227,7 @@ void CWriter::printFunctionSignature(const llvm::Function *F, bool Prototype) {
 #elif ISPC_LLVM_VERSION <= ISPC_LLVM_4_0
             if (PAL.getParamAttributes(Idx).hasAttribute(llvm::AttributeSet::FunctionIndex, llvm::Attribute::ByVal)) {
 #else // LLVM 5.0+
-            if (PAL.getParamAttributes(Idx).hasAttribute(llvm::AttributeList::FunctionIndex, llvm::Attribute::ByVal)) {
+            if (PAL.getParamAttributes(Idx).hasAttribute(llvm::Attribute::ByVal)) {
 #endif
           ArgTy = llvm::cast<llvm::PointerType>(ArgTy)->getElementType();
 #if ISPC_LLVM_VERSION <= ISPC_LLVM_3_7 /* 3.2, 3.3, 3.4, 3.5, 3.6, 3.7 */
@@ -3242,7 +3242,7 @@ void CWriter::printFunctionSignature(const llvm::Function *F, bool Prototype) {
 #elif ISPC_LLVM_VERSION <= ISPC_LLVM_4_0
                   PAL.getParamAttributes(Idx).hasAttribute(llvm::AttributeSet::FunctionIndex, llvm::Attribute::SExt),
 #else // LLVM 5.0+
-                  PAL.getParamAttributes(Idx).hasAttribute(llvm::AttributeList::FunctionIndex, llvm::Attribute::SExt),
+                  PAL.getParamAttributes(Idx).hasAttribute(llvm::Attribute::SExt),
 #endif
                   ArgName);
         PrintedArg = true;
@@ -3270,7 +3270,7 @@ void CWriter::printFunctionSignature(const llvm::Function *F, bool Prototype) {
 #elif ISPC_LLVM_VERSION <= ISPC_LLVM_4_0
           if (PAL.getParamAttributes(Idx).hasAttribute(llvm::AttributeSet::FunctionIndex, llvm::Attribute::ByVal)) {
 #else // LLVM 5.0+
-          if (PAL.getParamAttributes(Idx).hasAttribute(llvm::AttributeList::FunctionIndex, llvm::Attribute::ByVal)) {
+          if (PAL.getParamAttributes(Idx).hasAttribute(llvm::Attribute::ByVal)) {
 #endif
         assert(ArgTy->isPointerTy());
         ArgTy = llvm::cast<llvm::PointerType>(ArgTy)->getElementType();
@@ -3281,7 +3281,7 @@ void CWriter::printFunctionSignature(const llvm::Function *F, bool Prototype) {
 #elif ISPC_LLVM_VERSION <= ISPC_LLVM_4_0
                 PAL.getParamAttributes(Idx).hasAttribute(llvm::AttributeSet::FunctionIndex, llvm::Attribute::SExt)
 #else // LLVM 5.0+
-                PAL.getParamAttributes(Idx).hasAttribute(llvm::AttributeList::FunctionIndex, llvm::Attribute::SExt)
+                PAL.getParamAttributes(Idx).hasAttribute(llvm::Attribute::SExt)
 #endif
                 );
       PrintedArg = true;
@@ -3320,7 +3320,7 @@ void CWriter::printFunctionSignature(const llvm::Function *F, bool Prototype) {
 #elif ISPC_LLVM_VERSION <= ISPC_LLVM_4_0
             PAL.getParamAttributes(0).hasAttribute(llvm::AttributeSet::ReturnIndex, llvm::Attribute::SExt),
 #else // LLVM 5.0+
-            PAL.getParamAttributes(0).hasAttribute(llvm::AttributeList::ReturnIndex, llvm::Attribute::SExt),
+            PAL.getParamAttributes(0).hasAttribute(llvm::Attribute::SExt),
 #endif
             FunctionInnards.str());
 }
@@ -4373,7 +4373,7 @@ void CWriter::visitCallInst(llvm::CallInst &I) {
 #elif ISPC_LLVM_VERSION <= ISPC_LLVM_4_0
                 PAL.getParamAttributes(ArgNo+1).hasAttribute(llvm::AttributeSet::FunctionIndex, llvm::Attribute::SExt)
 #else // LLVM 5.0+
-                PAL.getParamAttributes(ArgNo+1).hasAttribute(llvm::AttributeList::FunctionIndex, llvm::Attribute::SExt)
+                PAL.getParamAttributes(ArgNo+1).hasAttribute(llvm::Attribute::SExt)
 #endif
                 );
       Out << ')';
