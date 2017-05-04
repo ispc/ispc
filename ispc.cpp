@@ -1165,11 +1165,7 @@ Target::Target(const char *arch, const char *cpu, const char *isa, bool pic, boo
                     llvm::AttributeSet::FunctionIndex,
                     attrBuilder));
 #else // LLVM 5.0+
-            this->m_tf_attributes = new llvm::AttributeList(
-                llvm::AttributeList::get(
-                    *g->ctx,
-                    llvm::AttributeList::FunctionIndex,
-                    attrBuilder));
+            this->m_tf_attributes = new llvm::AttrBuilder(attrBuilder);
 #endif
         }
 #endif
