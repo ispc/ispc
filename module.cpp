@@ -1060,7 +1060,11 @@ Module::AddFunctionDeclaration(const std::string &name,
       if (g->target->getISA() != Target::NVPTX)
 #endif /* ISPC_NVPTX_ENABLED */
         // This also applies transitively to members I think?
+#if ISPC_LLVM_VERSION < ISPC_LLVM_5_0
         function->setDoesNotAlias(1);
+#else // LLVM 5.0+
+        function->addParamAttr(0, llvm::Attribute::NoAlias);
+#endif
 
     g->target->markFuncWithTargetAttr(function);
 
@@ -1124,9 +1128,13 @@ Module::AddFunctionDeclaration(const std::string &name,
 
              CastType<ReferenceType>(argType) != NULL)) {
 
+#if ISPC_LLVM_VERSION < ISPC_LLVM_5_0
             // NOTE: LLVM indexes function parameters starting from 1.
             // This is unintuitive.
             function->setDoesNotAlias(i+1);
+#else // LLVM 5.0+
+            function->addParamAttr(i, llvm::Attribute::NoAlias);
+#endif
 #if 0
             int align = 4 * RoundUpPow2(g->target->nativeVectorWidth);
             function->addAttribute(i+1, llvm::Attribute::constructAlignmentFromInt(align));
@@ -2515,7 +2523,11 @@ Module::execPreprocessor(const char *infilename, llvm::raw_string_ostream *ostre
 
     inst.setTarget(target);
     inst.createSourceManager(inst.getFileManager());
+#if ISPC_LLVM_VERSION < ISPC_LLVM_5_0
     clang::FrontendInputFile inputFile(infilename, clang::IK_None);
+#else // LLVM 5.0+
+    clang::FrontendInputFile inputFile(infilename, clang::InputKind::Unknown);
+#endif
     inst.InitializeSourceManager(inputFile);
 
     // Don't remove comments in the preprocessor, so that we can accurately

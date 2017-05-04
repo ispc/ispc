@@ -75,7 +75,7 @@ namespace llvm {
 #if ISPC_LLVM_VERSION <= ISPC_LLVM_4_0
     class AttributeSet;
 #else // LLVM 5.0+
-    class AttributeList;
+    class AttrBuilder;
 #endif
     class BasicBlock;
     class Constant;
@@ -353,7 +353,7 @@ private:
 #if ISPC_LLVM_VERSION <= ISPC_LLVM_4_0
     llvm::AttributeSet* m_tf_attributes;
 #else // LLVM 5.0+
-    llvm::AttributeList* m_tf_attributes;
+    llvm::AttrBuilder* m_tf_attributes;
 #endif
 #endif
 

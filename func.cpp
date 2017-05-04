@@ -578,6 +578,7 @@ Function::GenerateIR() {
                     llvm::Function::Create(ftype, linkage, functionName.c_str(), m->module);
                 appFunction->setDoesNotThrow();
 
+#if ISPC_LLVM_VERSION < ISPC_LLVM_5_0
                 // We should iterate from 1 because zero parameter is return.
                 // We should iterate till getNumParams instead of getNumParams+1 because new
                 // function is export function and doesn't contain the last parameter "mask".
@@ -586,6 +587,13 @@ Function::GenerateIR() {
                         appFunction->setDoesNotAlias(i);
                     }
                 }
+#else // LLVM 5.0+
+                for (int i = 0; i < function->getFunctionType()->getNumParams()-1; i++) {
+                    if (function->hasParamAttribute(i, llvm::Attribute::NoAlias)) {
+                        appFunction->addParamAttr(i, llvm::Attribute::NoAlias);
+                    }
+                }
+#endif
                 g->target->markFuncWithTargetAttr(appFunction);
 
                 if (appFunction->getName() != functionName) {

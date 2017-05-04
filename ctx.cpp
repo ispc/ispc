@@ -3705,12 +3705,19 @@ FunctionEmitContext::CallInst(llvm::Value *func, const FunctionType *funcType,
         // alias analysis.
         // TODO: what other attributes needs to be copied?
         // TODO: do the same for varing path.
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_3_3 // LLVM 3.3+
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_3_3 && ISPC_LLVM_VERSION < ISPC_LLVM_5_0 // LLVM 3.3-4.0
         llvm::CallInst *cc = llvm::dyn_cast<llvm::CallInst>(ci);
         if (cc &&
             cc->getCalledFunction() &&
             cc->getCalledFunction()->doesNotAlias(0)) {
             cc->addAttribute(0, llvm::Attribute::NoAlias);
+        }
+#else // LLVM 5.0+
+        llvm::CallInst *cc = llvm::dyn_cast<llvm::CallInst>(ci);
+        if (cc &&
+            cc->getCalledFunction() &&
+            cc->getCalledFunction()->returnDoesNotAlias()) {
+            cc->addAttribute(llvm::AttributeList::ReturnIndex, llvm::Attribute::NoAlias);
         }
 #endif
 
