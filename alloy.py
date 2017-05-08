@@ -350,7 +350,7 @@ def build_LLVM(version_LLVM, revision, folder, tarball, debug, selfbuild, extra,
                         from_validation)
         else:
             try_do_LLVM("configure release version ",
-                    'cmake -G "Visual Studio 12" -DCMAKE_INSTALL_PREFIX="..\\'+ LLVM_BIN +
+                    'cmake -G "Visual Studio 14" -DCMAKE_INSTALL_PREFIX="..\\'+ LLVM_BIN +
                     '" -DLLVM_LIT_TOOLS_DIR="C:\\gnuwin32\\bin" ..\\' + LLVM_SRC,
                     from_validation)
     else:
