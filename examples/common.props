@@ -156,6 +156,8 @@
     <Target_out Condition="($(Target_str.Contains(',')) And $(Target_str.Contains('avx1-')))">$(Target_out);$(IntDir)$(ISPC_file)_ispc_avx.obj</Target_out>
     <Target_out Condition="($(Target_str.Contains(',')) And $(Target_str.Contains('avx1.1')))">$(Target_out);$(IntDir)$(ISPC_file)_ispc_avx11.obj</Target_out>
     <Target_out Condition="($(Target_str.Contains(',')) And $(Target_str.Contains('avx2')))">$(Target_out);$(IntDir)$(ISPC_file)_ispc_avx2.obj</Target_out>
+    <Target_out Condition="($(Target_str.Contains(',')) And $(Target_str.Contains('avx512knl')))">$(Target_out);$(IntDir)$(ISPC_file)_ispc_avx512knl.obj</Target_out>
+    <Target_out Condition="($(Target_str.Contains(',')) And $(Target_str.Contains('avx512skx')))">$(Target_out);$(IntDir)$(ISPC_file)_ispc_avx512skx.obj</Target_out>
   </PropertyGroup>
   <ItemGroup>
     <CustomBuild Include='$(ISPC_file).ispc'>
