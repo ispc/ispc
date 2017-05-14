@@ -977,11 +977,9 @@ lDefineConstantInt(const char *name, int val, llvm::Module *module,
         llvm::DIType diType = sym->type->GetDIType(file);
         Assert(diType.Verify());
 #else // LLVM 3.7+
-        llvm::DIFile *file =
-            m->diBuilder->createFile(m->diCompileUnit->getFilename(),
-                                     m->diCompileUnit->getDirectory());
+        llvm::DIFile *file = m->diCompileUnit->getFile();
+        llvm::DICompileUnit *cu = m->diCompileUnit;
         llvm::DIType *diType = sym->type->GetDIType(file);
-//        Assert(diType.Verify());
 #endif
         // FIXME? DWARF says that this (and programIndex below) should
         // have the DW_AT_artifical attribute.  It's not clear if this
@@ -1011,7 +1009,7 @@ lDefineConstantInt(const char *name, int val, llvm::Module *module,
     llvm::Constant *sym_const_storagePtr = llvm::dyn_cast<llvm::Constant>(sym->storagePtr);
     Assert(sym_const_storagePtr);
     m->diBuilder->createGlobalVariable(
-              file,
+              cu,
               name,
               name,
               file,
@@ -1022,7 +1020,7 @@ lDefineConstantInt(const char *name, int val, llvm::Module *module,
 #else // LLVM 4.0+
         llvm::GlobalVariable *sym_GV_storagePtr = llvm::dyn_cast<llvm::GlobalVariable>(sym->storagePtr);
         llvm::DIGlobalVariableExpression *var = m->diBuilder->createGlobalVariableExpression(
-                                              file,
+                                              cu,
                                               name,
                                               name,
                                               file,
@@ -1099,11 +1097,9 @@ lDefineProgramIndex(llvm::Module *module, SymbolTable *symbolTable, std::vector<
         llvm::DIType diType = sym->type->GetDIType(file);
         Assert(diType.Verify());
 #else // LLVM 3.7+
-        llvm::DIFile *file =
-            m->diBuilder->createFile(m->diCompileUnit->getFilename(),
-                                     m->diCompileUnit->getDirectory());
+        llvm::DIFile *file = m->diCompileUnit->getFile();
+        llvm::DICompileUnit *cu = m->diCompileUnit;
         llvm::DIType *diType = sym->type->GetDIType(file);
-//        Assert(diType.Verify());
 #endif
 #if ISPC_LLVM_VERSION == ISPC_LLVM_3_6 // LLVM 3.6
         llvm::Constant *sym_const_storagePtr = llvm::dyn_cast<llvm::Constant>(sym->storagePtr);
@@ -1129,7 +1125,7 @@ lDefineProgramIndex(llvm::Module *module, SymbolTable *symbolTable, std::vector<
         llvm::Constant *sym_const_storagePtr = llvm::dyn_cast<llvm::Constant>(sym->storagePtr);
         Assert(sym_const_storagePtr);
         m->diBuilder->createGlobalVariable(
-                                               file,
+                                               cu,
                                                sym->name.c_str(),
                                                sym->name.c_str(),
                                                file,
@@ -1140,7 +1136,7 @@ lDefineProgramIndex(llvm::Module *module, SymbolTable *symbolTable, std::vector<
 #else // LLVM 4.0+
         llvm::GlobalVariable *sym_GV_storagePtr = llvm::dyn_cast<llvm::GlobalVariable>(sym->storagePtr);
         llvm::DIGlobalVariableExpression *var = m->diBuilder->createGlobalVariableExpression(
-                                              file,
+                                              cu,
                                               sym->name.c_str(),
                                               sym->name.c_str(),
                                               file,
