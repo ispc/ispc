@@ -6771,7 +6771,7 @@ lTypeConvAtomic(FunctionEmitContext *ctx, llvm::Value *exprVal,
  */
 static llvm::Value *
 lUniformValueToVarying(FunctionEmitContext *ctx, llvm::Value *value,
-                       const Type *type) {
+                       const Type *type, SourcePos pos) {
     // nothing to do if it's already varying
     if (type->IsVaryingType())
         return value;
@@ -6790,7 +6790,7 @@ lUniformValueToVarying(FunctionEmitContext *ctx, llvm::Value *value,
             llvm::Value *v = ctx->ExtractInst(value, i, "get_element");
             // If struct has "bound uniform" member, we don't need to cast it to varying
             if (!(structType != NULL && structType->GetElementType(i)->IsUniformType()))
-                v = lUniformValueToVarying(ctx, v, collectionType->GetElementType(i));
+                v = lUniformValueToVarying(ctx, v, collectionType->GetElementType(i), pos);
             retValue = ctx->InsertInst(retValue, v, i, "set_element");
         }
         return retValue;
@@ -6798,8 +6798,13 @@ lUniformValueToVarying(FunctionEmitContext *ctx, llvm::Value *value,
 
     // Otherwise we must have a uniform atomic or pointer type, so smear
     // its value across the vector lanes.
-    Assert(CastType<AtomicType>(type) != NULL ||
-           CastType<PointerType>(type) != NULL);
+    if (CastType<AtomicType>(type)) {
+        return lTypeConvAtomic(ctx, value,
+            CastType<AtomicType>(type->GetAsVaryingType()),
+            CastType<AtomicType>(type), pos);
+    }
+
+    Assert(CastType<PointerType>(type) != NULL);
     return ctx->SmearUniform(value);
 }
 
@@ -7005,7 +7010,7 @@ TypeCastExpr::GetValue(FunctionEmitContext *ctx) const {
         llvm::Value *origValue = expr->GetValue(ctx);
         if (!origValue)
             return NULL;
-        return lUniformValueToVarying(ctx, origValue, fromType);
+        return lUniformValueToVarying(ctx, origValue, fromType, pos);
     }
 
     const VectorType *toVector = CastType<VectorType>(toType);
