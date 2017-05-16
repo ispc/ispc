@@ -1471,6 +1471,15 @@ lCheckForActualPointer(llvm::Value *v) {
     else if (llvm::isa<llvm::PtrToIntInst>(v)) {
         return v;
     }
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_3_7
+    // This one is tricky, as it's heuristic tuned for LLVM 3.7+, which may
+    // optimize loading double* with consequent ptr2int to straight load of i64.
+    // This heuristic should be good enough to catch all the cases we should
+    // detect and nothing else.
+    else if (llvm::isa<llvm::LoadInst>(v)) {
+      return v;
+    }
+#endif
     else if (llvm::CastInst *ci = llvm::dyn_cast<llvm::CastInst>(v)) {
         llvm::Value *t = lCheckForActualPointer(ci->getOperand(0));
         if (t == NULL) {
@@ -2397,7 +2406,6 @@ lGSToGSBaseOffsets(llvm::CallInst *callInst) {
                g->target->hasScatter() ? "__pseudo_scatter_base_offsets32_double" :
                "__pseudo_scatter_factored_base_offsets32_double",
                false, false),
-        
         GSInfo("__pseudo_prefetch_read_varying_1",
                g->target->hasVecPrefetch() ? "__pseudo_prefetch_read_varying_1_native" : 
                "__prefetch_read_varying_1",
