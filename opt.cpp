@@ -4279,8 +4279,9 @@ GatherCoalescePass::runOnBasicBlock(llvm::BasicBlock &bb) {
                 continue;
 
             SourcePos fwdPos;
-            bool ok = lGetSourcePosFromMetadata(fwdCall, &fwdPos);
-            Assert(ok);
+            // TODO: need to redesign metadata attached to pseudo calls,
+            // LLVM drops metadata frequently and it results in bad disgnostics.
+            lGetSourcePosFromMetadata(fwdCall, &fwdPos);
 
             if (g->debugPrint) {
                 if (base != fwdCall->getArgOperand(0)) {
