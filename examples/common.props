@@ -84,7 +84,7 @@
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>$(TargetDir)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(IntDir)</AdditionalIncludeDirectories>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <FloatingPointModel>Fast</FloatingPointModel>
     </ClCompile>
@@ -100,7 +100,7 @@
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>$(TargetDir)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(IntDir)</AdditionalIncludeDirectories>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <FloatingPointModel>Fast</FloatingPointModel>
     </ClCompile>
@@ -118,7 +118,7 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <PreprocessorDefinitions>WIN32;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>$(TargetDir)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(IntDir)</AdditionalIncludeDirectories>
       <FloatingPointModel>Fast</FloatingPointModel>
     </ClCompile>
     <Link>
@@ -137,7 +137,7 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <PreprocessorDefinitions>WIN32;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>$(TargetDir)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(IntDir)</AdditionalIncludeDirectories>
       <FloatingPointModel>Fast</FloatingPointModel>
     </ClCompile>
     <Link>
@@ -150,22 +150,24 @@
   <PropertyGroup Label="User">
     <ISPC_compiler Condition=" '$(ISPC_compiler)' == '' ">ispc</ISPC_compiler>
     <Target_str Condition=" '$(Target_str)' == '' ">$(default_targets)</Target_str>
-    <Target_out>$(ISPC_file).obj</Target_out>
-    <Target_out Condition="($(Target_str.Contains(',')) And $(Target_str.Contains('sse2')))">$(Target_out);$(ISPC_file)_sse2.obj</Target_out>
-    <Target_out Condition="($(Target_str.Contains(',')) And $(Target_str.Contains('sse4')))">$(Target_out);$(ISPC_file)_sse4.obj</Target_out>
-    <Target_out Condition="($(Target_str.Contains(',')) And $(Target_str.Contains('avx1-')))">$(Target_out);$(ISPC_file)_avx.obj</Target_out>
-    <Target_out Condition="($(Target_str.Contains(',')) And $(Target_str.Contains('avx1.1')))">$(Target_out);$(ISPC_file)_avx11.obj</Target_out>
-    <Target_out Condition="($(Target_str.Contains(',')) And $(Target_str.Contains('avx2')))">$(Target_out);$(ISPC_file)_avx2.obj</Target_out>
+    <Target_out>$(IntDir)$(ISPC_file)_ispc.obj</Target_out>
+    <Target_out Condition="($(Target_str.Contains(',')) And $(Target_str.Contains('sse2')))">$(Target_out);$(IntDir)$(ISPC_file)_ispc_sse2.obj</Target_out>
+    <Target_out Condition="($(Target_str.Contains(',')) And $(Target_str.Contains('sse4')))">$(Target_out);$(IntDir)$(ISPC_file)_ispc_sse4.obj</Target_out>
+    <Target_out Condition="($(Target_str.Contains(',')) And $(Target_str.Contains('avx1-')))">$(Target_out);$(IntDir)$(ISPC_file)_ispc_avx.obj</Target_out>
+    <Target_out Condition="($(Target_str.Contains(',')) And $(Target_str.Contains('avx1.1')))">$(Target_out);$(IntDir)$(ISPC_file)_ispc_avx11.obj</Target_out>
+    <Target_out Condition="($(Target_str.Contains(',')) And $(Target_str.Contains('avx2')))">$(Target_out);$(IntDir)$(ISPC_file)_ispc_avx2.obj</Target_out>
+    <Target_out Condition="($(Target_str.Contains(',')) And $(Target_str.Contains('avx512knl')))">$(Target_out);$(IntDir)$(ISPC_file)_ispc_avx512knl.obj</Target_out>
+    <Target_out Condition="($(Target_str.Contains(',')) And $(Target_str.Contains('avx512skx')))">$(Target_out);$(IntDir)$(ISPC_file)_ispc_avx512skx.obj</Target_out>
   </PropertyGroup>
   <ItemGroup>
     <CustomBuild Include='$(ISPC_file).ispc'>
       <FileType>Document</FileType>
-      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(ISPC_compiler) -O0 %(Filename).ispc -o %(Filename).obj -h %(Filename)_ispc.h --arch=x86 --target=$(Target_str) -g $(flags)</Command>
-      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(ISPC_compiler) -O0 %(Filename).ispc -o %(Filename).obj -h %(Filename)_ispc.h --target=$(Target_str) -g $(flags)</Command>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(ISPC_compiler) -O0 %(Filename).ispc -o $(IntDir)%(Filename)_ispc.obj -h $(IntDir)%(Filename)_ispc.h --arch=x86 --target=$(Target_str) -g $(flags)</Command>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(ISPC_compiler) -O0 %(Filename).ispc -o $(IntDir)%(Filename)_ispc.obj -h $(IntDir)%(Filename)_ispc.h --target=$(Target_str) -g $(flags)</Command>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(Target_out)</Outputs>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(Target_out)</Outputs>
-      <Command Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(ISPC_compiler) -O2 %(Filename).ispc -o %(Filename).obj -h %(Filename)_ispc.h --arch=x86 --target=$(Target_str) $(flags)</Command>
-      <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(ISPC_compiler) -O2 %(Filename).ispc -o %(Filename).obj -h %(Filename)_ispc.h --target=$(Target_str) $(flags)</Command>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(ISPC_compiler) -O2 %(Filename).ispc -o $(IntDir)%(Filename)_ispc.obj -h $(IntDir)%(Filename)_ispc.h --arch=x86 --target=$(Target_str) $(flags)</Command>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(ISPC_compiler) -O2 %(Filename).ispc -o $(IntDir)%(Filename)_ispc.obj -h $(IntDir)%(Filename)_ispc.h --target=$(Target_str) $(flags)</Command>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(Target_out)</Outputs>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(Target_out)</Outputs>
     </CustomBuild>

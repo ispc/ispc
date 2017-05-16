@@ -355,14 +355,12 @@ FunctionEmitContext::FunctionEmitContext(Function *func, Symbol *funSym,
         llvm::DIScope scope = llvm::DIScope(m->diCompileUnit);
 #else /* LLVM 3.7+ */
         llvm::DIScope *scope = m->diCompileUnit;
-        //llvm::MDScope *scope = m->diCompileUnit;
 #endif
 #if ISPC_LLVM_VERSION <= ISPC_LLVM_3_6 /* 3.2, 3.3, 3.4, 3.5, 3.6 */
         llvm::DIType diSubprogramType;
         AssertPos(currentPos, scope.Verify());
 #else /* LLVM 3.7+ */
         llvm::DIType *diSubprogramType = NULL;
-        //llvm::MDType *diSubprogramType = NULL;
 #endif
 
         const FunctionType *functionType = function->GetType();
@@ -1689,12 +1687,7 @@ FunctionEmitContext::GetDebugPos() const {
 
 void
 FunctionEmitContext::AddDebugPos(llvm::Value *value, const SourcePos *pos,
-#if ISPC_LLVM_VERSION <= ISPC_LLVM_3_6 /* 3.2, 3.3, 3.4, 3.5, 3.6 */
                                  llvm::DIScope *scope) {
-#else /* LLVM 3.7+ */
-                                 llvm::DIScope *scope) {
-                                 //llvm::MDScope *scope) {
-#endif
     llvm::Instruction *inst = llvm::dyn_cast<llvm::Instruction>(value);
     if (inst != NULL && m->diBuilder) {
         SourcePos p = pos ? *pos : currentPos;
@@ -1723,8 +1716,6 @@ FunctionEmitContext::StartScope() {
 #else /* LLVM 3.7+ */
         llvm::DIScope *parentScope;
         llvm::DILexicalBlock *lexicalBlock;
-        //llvm::MDScope *parentScope;
-        //llvm::MDLexicalBlock *lexicalBlock;
 #endif
         if (debugScopes.size() > 0)
             parentScope = debugScopes.back();
@@ -1749,7 +1740,6 @@ FunctionEmitContext::StartScope() {
         debugScopes.push_back(lexicalBlock);
 #else /* LLVM 3.7+ */
         debugScopes.push_back(llvm::cast<llvm::DILexicalBlockBase>(lexicalBlock));
-        //debugScopes.push_back(llvm::cast<llvm::MDLexicalBlockBase>(lexicalBlock));
 #endif
     }
 }
@@ -1768,7 +1758,6 @@ FunctionEmitContext::EndScope() {
 llvm::DIScope
 #else /* LLVM 3.7+ */
 llvm::DIScope*
-//llvm::MDScope*
 #endif
 FunctionEmitContext::GetDIScope() const {
     AssertPos(currentPos, debugScopes.size() > 0);
@@ -1790,9 +1779,6 @@ FunctionEmitContext::EmitVariableDebugInfo(Symbol *sym) {
     llvm::DIScope *scope = GetDIScope();
     llvm::DIType *diType = sym->type->GetDIType(scope);
     llvm::DILocalVariable *var =
-    //llvm::MDScope *scope = GetDIScope();
-    //llvm::MDType *diType = sym->type->GetDIType(scope);
-    //llvm::MDLocalVariable *var =
 #endif
 
 #if ISPC_LLVM_VERSION <= ISPC_LLVM_3_7 /* 3.2, 3.3, 3.4, 3.5, 3.6, 3.7*/
@@ -1804,7 +1790,7 @@ FunctionEmitContext::EmitVariableDebugInfo(Symbol *sym) {
                                           diType,
                                           true /* preserve through opts */);
 #else /* LLVM 3.8+ */
-         m->diBuilder->createAutoVariable(scope,
+        m->diBuilder->createAutoVariable(scope,
                                           sym->name,
                                           sym->pos.GetDIFile(),
                                           sym->pos.first_line,
@@ -1853,9 +1839,6 @@ FunctionEmitContext::EmitFunctionParameterDebugInfo(Symbol *sym, int argNum) {
     llvm::DIScope *scope = diSubprogram;
     llvm::DIType *diType = sym->type->GetDIType(scope);
     llvm::DILocalVariable *var =
-    //llvm::MDScope *scope = diSubprogram;
-    //llvm::MDType *diType = sym->type->GetDIType(scope);
-    //llvm::MDLocalVariable *var =
 #endif
 
 #if ISPC_LLVM_VERSION <= ISPC_LLVM_3_7 /* 3.2, 3.3, 3.4, 3.5, 3.6, 3.7 */

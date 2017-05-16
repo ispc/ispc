@@ -659,8 +659,6 @@ llvm::DIType *AtomicType::GetDIType(llvm::DIScope *scope) const {
 #else // LLVM 3.7+
         llvm::DINodeArray subArray = m->diBuilder->getOrCreateArray(sub);
         llvm::DIType *unifType = GetAsUniformType()->GetDIType(scope);
-        //llvm::DebugNodeArray subArray = m->diBuilder->getOrCreateArray(sub);
-        //llvm::MDType *unifType = GetAsUniformType()->GetDIType(scope);
         uint64_t size =  unifType->getSizeInBits() * g->target->getVectorWidth();
         uint64_t align = unifType->getAlignInBits()* g->target->getVectorWidth();
 #endif

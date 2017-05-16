@@ -1536,7 +1536,7 @@ Globals::Globals() {
     emitInstrumentation = false;
     generateDebuggingSymbols = false;
 #if ISPC_LLVM_VERSION >= ISPC_LLVM_3_5
-    generateDWARFVersion = 0;
+    generateDWARFVersion = 3;
 #endif
     enableFuzzTest = false;
     fuzzTestSeed = -1;
@@ -1586,7 +1586,6 @@ SourcePos::GetDIFile() const {
     Assert(ret.Verify());
 #else /* LLVM 3.7+ */
     llvm::DIFile *ret = m->diBuilder->createFile(filename, directory);
-    //llvm::MDFile *ret = m->diBuilder->createFile(filename, directory);
 #endif
     return ret;
 }

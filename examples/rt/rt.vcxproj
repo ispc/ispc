@@ -23,7 +23,7 @@
     <Keyword>Win32Proj</Keyword>
     <RootNamespace>rt</RootNamespace>
     <ISPC_file>rt</ISPC_file>
-    <default_targets>sse2,sse4-x2,avx1-i32x8</default_targets>
+    <default_targets>sse2-i32x4,sse4-i32x8,avx1-i32x8,avx2-i32x8,avx512knl-i32x16,avx512skx-i32x16</default_targets>
   </PropertyGroup>
   <Import Project="..\common.props" />
   <ItemGroup>

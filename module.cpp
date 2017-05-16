@@ -406,6 +406,18 @@ Module::Module(const char *fn) {
     module->setDataLayout(g->target->getDataLayout()->getStringRepresentation());
 
     if (g->generateDebuggingSymbols) {
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_3_8
+        // TODO: what to do in case of cross-compilation?
+        // i.e. in case of PS4.
+#ifdef ISPC_IS_WINDOWS
+        // To enable debug information on Windows, we have to let llvm know, that
+        // debug information should be emitted in CodeView format.
+        module->addModuleFlag(llvm::Module::Warning, "CodeView", 1);
+#else
+        module->addModuleFlag(llvm::Module::Warning, "Dwarf Version",
+                                  g->generateDWARFVersion);
+#endif
+#endif
         diBuilder = new llvm::DIBuilder(*module);
 
         // Let the DIBuilder know that we're starting a new compilation
@@ -3224,7 +3236,7 @@ Module::CompileAndOutput(const char *srcFile,
 
         std::map<std::string, FunctionTargetVariants> exportedFunctions;
         int errorCount = 0;
-        
+ 
         // Handle creating a "generic" header file for multiple targets
         // that use exported varyings
         DispatchHeaderInfo DHI;
@@ -3298,7 +3310,10 @@ Module::CompileAndOutput(const char *srcFile,
                             return 1;
                     }
                 }
+            } else {
+              ++m->errorCount;
             }
+
             errorCount += m->errorCount;
             if (errorCount != 0) {
                 return 1;
@@ -3311,14 +3326,14 @@ Module::CompileAndOutput(const char *srcFile,
                 // only print backmatter on the last target.
                 DHI.EmitBackMatter = true;
               }
-              
+
               const char *isaName;
               if (g->target->getISA() == Target::GENERIC &&
                         !g->target->getTreatGenericAsSmth().empty())
                   isaName = g->target->getTreatGenericAsSmth().c_str();
-              else 
+              else
                   isaName = g->target->GetISAString();
-              std::string targetHeaderFileName = 
+              std::string targetHeaderFileName =
                 lGetTargetFileName(headerFileName, isaName, false);
               // write out a header w/o target name for the first target only
               if (!m->writeOutput(Module::Header, headerFileName, "", &DHI)) {

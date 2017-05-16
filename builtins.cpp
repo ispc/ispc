@@ -947,13 +947,14 @@ AddBitcodeToModule(const unsigned char *bitcode, int length,
  */
 static void
 lDefineConstantInt(const char *name, int val, llvm::Module *module,
-                   SymbolTable *symbolTable) {
+                   SymbolTable *symbolTable, std::vector<llvm::Constant*> &dbg_sym) {
     Symbol *sym =
         new Symbol(name, SourcePos(), AtomicType::UniformInt32->GetAsConstType(),
                    SC_STATIC);
     sym->constValue = new ConstExpr(sym->type, val, SourcePos());
     llvm::Type *ltype = LLVMTypes::Int32Type;
     llvm::Constant *linit = LLVMInt32(val);
+#if ISPC_LLVM_VERSION < ISPC_LLVM_3_6
     // Use WeakODRLinkage rather than InternalLinkage so that a definition
     // survives even if it's not used in the module, so that the symbol is
     // there in the debugger.
@@ -961,6 +962,13 @@ lDefineConstantInt(const char *name, int val, llvm::Module *module,
         llvm::GlobalValue::WeakODRLinkage : llvm::GlobalValue::InternalLinkage;
     sym->storagePtr = new llvm::GlobalVariable(*module, ltype, true, linkage,
                                                linit, name);
+#else // LLVM 3.6+
+    auto GV = new llvm::GlobalVariable(*module, ltype, true,
+                                       llvm::GlobalValue::InternalLinkage,
+                                       linit, name);
+    dbg_sym.push_back(GV);
+    sym->storagePtr = GV;
+#endif
     symbolTable->AddVariable(sym);
 
     if (m->diBuilder != NULL) {
@@ -969,11 +977,9 @@ lDefineConstantInt(const char *name, int val, llvm::Module *module,
         llvm::DIType diType = sym->type->GetDIType(file);
         Assert(diType.Verify());
 #else // LLVM 3.7+
-        llvm::DIFile *file =
-            m->diBuilder->createFile(m->diCompileUnit->getFilename(),
-                                     m->diCompileUnit->getDirectory());
+        llvm::DIFile *file = m->diCompileUnit->getFile();
+        llvm::DICompileUnit *cu = m->diCompileUnit;
         llvm::DIType *diType = sym->type->GetDIType(file);
-//        Assert(diType.Verify());
 #endif
         // FIXME? DWARF says that this (and programIndex below) should
         // have the DW_AT_artifical attribute.  It's not clear if this
@@ -1003,7 +1009,7 @@ lDefineConstantInt(const char *name, int val, llvm::Module *module,
     llvm::Constant *sym_const_storagePtr = llvm::dyn_cast<llvm::Constant>(sym->storagePtr);
     Assert(sym_const_storagePtr);
     m->diBuilder->createGlobalVariable(
-              file,
+              cu,
               name,
               name,
               file,
@@ -1014,7 +1020,7 @@ lDefineConstantInt(const char *name, int val, llvm::Module *module,
 #else // LLVM 4.0+
         llvm::GlobalVariable *sym_GV_storagePtr = llvm::dyn_cast<llvm::GlobalVariable>(sym->storagePtr);
         llvm::DIGlobalVariableExpression *var = m->diBuilder->createGlobalVariableExpression(
-                                              file,
+                                              cu,
                                               name,
                                               name,
                                               file,
@@ -1035,12 +1041,13 @@ lDefineConstantInt(const char *name, int val, llvm::Module *module,
 
 static void
 lDefineConstantIntFunc(const char *name, int val, llvm::Module *module,
-                       SymbolTable *symbolTable) {
+                       SymbolTable *symbolTable, std::vector<llvm::Constant*> &dbg_sym) {
     llvm::SmallVector<const Type *, 8> args;
     FunctionType *ft = new FunctionType(AtomicType::UniformInt32, args, SourcePos());
     Symbol *sym = new Symbol(name, SourcePos(), ft, SC_STATIC);
 
     llvm::Function *func = module->getFunction(name);
+    dbg_sym.push_back(func);
     Assert(func != NULL); // it should be declared already...
 #if ISPC_LLVM_VERSION == ISPC_LLVM_3_2
     func->addFnAttr(llvm::Attributes::AlwaysInline);
@@ -1057,7 +1064,7 @@ lDefineConstantIntFunc(const char *name, int val, llvm::Module *module,
 
 
 static void
-lDefineProgramIndex(llvm::Module *module, SymbolTable *symbolTable) {
+lDefineProgramIndex(llvm::Module *module, SymbolTable *symbolTable, std::vector<llvm::Constant*> &dbg_sym) {
     Symbol *sym =
         new Symbol("programIndex", SourcePos(),
                    AtomicType::VaryingInt32->GetAsConstType(), SC_STATIC);
@@ -1069,11 +1076,19 @@ lDefineProgramIndex(llvm::Module *module, SymbolTable *symbolTable) {
 
     llvm::Type *ltype = LLVMTypes::Int32VectorType;
     llvm::Constant *linit = LLVMInt32Vector(pi);
+#if ISPC_LLVM_VERSION < ISPC_LLVM_3_6
     // See comment in lDefineConstantInt() for why WeakODRLinkage is used here
     llvm::GlobalValue::LinkageTypes linkage = g->generateDebuggingSymbols ?
         llvm::GlobalValue::WeakODRLinkage : llvm::GlobalValue::InternalLinkage;
     sym->storagePtr = new llvm::GlobalVariable(*module, ltype, true, linkage,
                                                linit, sym->name.c_str());
+#else // LLVM 3.6+
+    auto GV = new llvm::GlobalVariable(*module, ltype, true,
+                                       llvm::GlobalValue::InternalLinkage,
+                                       linit, sym->name.c_str());
+    dbg_sym.push_back(GV);
+    sym->storagePtr = GV;
+#endif
     symbolTable->AddVariable(sym);
 
     if (m->diBuilder != NULL) {
@@ -1082,11 +1097,9 @@ lDefineProgramIndex(llvm::Module *module, SymbolTable *symbolTable) {
         llvm::DIType diType = sym->type->GetDIType(file);
         Assert(diType.Verify());
 #else // LLVM 3.7+
-        llvm::DIFile *file =
-            m->diBuilder->createFile(m->diCompileUnit->getFilename(),
-                                     m->diCompileUnit->getDirectory());
+        llvm::DIFile *file = m->diCompileUnit->getFile();
+        llvm::DICompileUnit *cu = m->diCompileUnit;
         llvm::DIType *diType = sym->type->GetDIType(file);
-//        Assert(diType.Verify());
 #endif
 #if ISPC_LLVM_VERSION == ISPC_LLVM_3_6 // LLVM 3.6
         llvm::Constant *sym_const_storagePtr = llvm::dyn_cast<llvm::Constant>(sym->storagePtr);
@@ -1112,7 +1125,7 @@ lDefineProgramIndex(llvm::Module *module, SymbolTable *symbolTable) {
         llvm::Constant *sym_const_storagePtr = llvm::dyn_cast<llvm::Constant>(sym->storagePtr);
         Assert(sym_const_storagePtr);
         m->diBuilder->createGlobalVariable(
-                                               file,
+                                               cu,
                                                sym->name.c_str(),
                                                sym->name.c_str(),
                                                file,
@@ -1123,7 +1136,7 @@ lDefineProgramIndex(llvm::Module *module, SymbolTable *symbolTable) {
 #else // LLVM 4.0+
         llvm::GlobalVariable *sym_GV_storagePtr = llvm::dyn_cast<llvm::GlobalVariable>(sym->storagePtr);
         llvm::DIGlobalVariableExpression *var = m->diBuilder->createGlobalVariableExpression(
-                                              file,
+                                              cu,
                                               sym->name.c_str(),
                                               sym->name.c_str(),
                                               file,
@@ -1140,10 +1153,33 @@ lDefineProgramIndex(llvm::Module *module, SymbolTable *symbolTable) {
     }
 }
 
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_3_6 // LLVM 3.6+
+static void emitLLVMUsed(llvm::Module& module, std::vector<llvm::Constant*> &list) {
+    // Convert list to what ConstantArray needs.
+    llvm::SmallVector<llvm::Constant*, 8> UsedArray;
+    UsedArray.reserve(list.size());
+    for (auto c : list) {
+        UsedArray.push_back(
+            llvm::ConstantExpr::getPointerBitCastOrAddrSpaceCast(
+                llvm::cast<llvm::Constant>(c), LLVMTypes::Int8PointerType));
+    }
+
+    llvm::ArrayType *ATy = llvm::ArrayType::get(LLVMTypes::Int8PointerType, UsedArray.size());
+
+    auto *GV = new llvm::GlobalVariable(module, ATy, false, llvm::GlobalValue::AppendingLinkage,
+                                        llvm::ConstantArray::get(ATy, UsedArray), "llvm.used");
+
+    GV->setSection("llvm.metadata");
+}
+#endif
 
 void
 DefineStdlib(SymbolTable *symbolTable, llvm::LLVMContext *ctx, llvm::Module *module,
              bool includeStdlibISPC) {
+    // debug_symbols are symbols that supposed to be preserved in debug information.
+    // They will be referenced in llvm.used intrinsic to prevent they removal from
+    // the object file.
+    std::vector<llvm::Constant*> debug_symbols;
     bool runtime32 = g->target->is32Bit();
     bool warn = g->target->getISA() != Target::GENERIC;
 
@@ -1175,7 +1211,7 @@ DefineStdlib(SymbolTable *symbolTable, llvm::LLVMContext *ctx, llvm::Module *mod
     // builtin functions (e.g. __masked_store_32(), etc).
     switch (g->target->getISA()) {
 #ifdef ISPC_NVPTX_ENABLED
-    case Target::NVPTX: 
+    case Target::NVPTX:
       {
         if (runtime32) {
             fprintf(stderr, "Unfortunatly 32bit targets are not supported at the moment .. \n");
@@ -1494,57 +1530,64 @@ DefineStdlib(SymbolTable *symbolTable, llvm::LLVMContext *ctx, llvm::Module *mod
 #ifdef ISPC_NVPTX_ENABLED
     if (g->target->getISA() == Target::NVPTX)
     {
-      lDefineConstantInt("programCount", 32, module, symbolTable);
+      lDefineConstantInt("programCount", 32, module, symbolTable, debug_symbols);
     }
     else
     {
 #endif /* ISPC_NVPTX_ENABLED */
-      lDefineConstantInt("programCount", g->target->getVectorWidth(), module, symbolTable);
+      lDefineConstantInt("programCount", g->target->getVectorWidth(), module, symbolTable, debug_symbols);
 #ifdef ISPC_NVPTX_ENABLED
     }
 #endif /* ISPC_NVPTX_ENABLED */
 
     // define the 'programIndex' builtin
-    lDefineProgramIndex(module, symbolTable);
+    lDefineProgramIndex(module, symbolTable, debug_symbols);
 
     // Define __math_lib stuff.  This is used by stdlib.ispc, for example, to
     // figure out which math routines to end up calling...
-    lDefineConstantInt("__math_lib", (int)g->mathLib, module, symbolTable);
+    lDefineConstantInt("__math_lib", (int)g->mathLib, module, symbolTable, debug_symbols);
     lDefineConstantInt("__math_lib_ispc", (int)Globals::Math_ISPC, module,
-                       symbolTable);
+                       symbolTable, debug_symbols);
     lDefineConstantInt("__math_lib_ispc_fast", (int)Globals::Math_ISPCFast,
-                       module, symbolTable);
+                       module, symbolTable, debug_symbols);
     lDefineConstantInt("__math_lib_svml", (int)Globals::Math_SVML, module,
-                       symbolTable);
+                       symbolTable, debug_symbols);
     lDefineConstantInt("__math_lib_system", (int)Globals::Math_System, module,
-                       symbolTable);
+                       symbolTable, debug_symbols);
     lDefineConstantIntFunc("__fast_masked_vload", (int)g->opt.fastMaskedVload,
-                           module, symbolTable);
+                           module, symbolTable, debug_symbols);
 
     lDefineConstantInt("__have_native_half", g->target->hasHalf(), module,
-                       symbolTable);
+                       symbolTable, debug_symbols);
     lDefineConstantInt("__have_native_rand", g->target->hasRand(), module,
-                       symbolTable);
+                       symbolTable, debug_symbols);
     lDefineConstantInt("__have_native_transcendentals", g->target->hasTranscendentals(),
-                       module, symbolTable);
+                       module, symbolTable, debug_symbols);
     lDefineConstantInt("__have_native_trigonometry", g->target->hasTrigonometry(),
-                       module, symbolTable);
+                       module, symbolTable, debug_symbols);
     lDefineConstantInt("__have_native_rsqrtd", g->target->hasRsqrtd(),
-                       module, symbolTable);
+                       module, symbolTable, debug_symbols);
     lDefineConstantInt("__have_native_rcpd", g->target->hasRcpd(),
-                       module, symbolTable);
+                       module, symbolTable, debug_symbols);
 
 #ifdef ISPC_NVPTX_ENABLED
     lDefineConstantInt("__is_nvptx_target", (int)(g->target->getISA() == Target::NVPTX),
-                       module, symbolTable);
+                       module, symbolTable, debug_symbols);
 #else
-    lDefineConstantInt("__is_nvptx_target", (int)0, module, symbolTable);
+    lDefineConstantInt("__is_nvptx_target", (int)0, module, symbolTable, debug_symbols);
 #endif /* ISPC_NVPTX_ENABLED */
 
     if (g->forceAlignment != -1) {
         llvm::GlobalVariable *alignment = module->getGlobalVariable("memory_alignment", true);
         alignment->setInitializer(LLVMInt32(g->forceAlignment));
     }
+
+    // LLVM 3.6 is only because it was not tested with earlier versions.
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_3_6 // LLVM 3.6+
+    if (g->generateDebuggingSymbols) {
+        emitLLVMUsed(*module, debug_symbols);
+    }
+#endif
 
     if (includeStdlibISPC) {
         // If the user wants the standard library to be included, parse the
