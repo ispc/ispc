@@ -46,6 +46,36 @@ def update_progress(fn, total_tests_arg, counter, max_test_length_arg):
         sys.stdout.write(progress_str)
         sys.stdout.flush()
 
+# This is workaround for missing timeout functionality in Python 2.7.
+class RunWithTimeout(object):
+    def __init__(self, cmd):
+        self.cmd = cmd
+        self.process = None
+        self.output = ""
+
+    def run(self, timeout):
+        def target():
+            try:
+                self.process = subprocess.Popen(self.cmd, stdin=None, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            except:
+                print_debug("ERROR: The child (%s) raised an exception: %s\n" % (cmd, sys.exc_info()[1]), s, run_tests_log)
+                raise
+
+            out = self.process.communicate()
+            self.output += out[0].decode("utf-8")
+            self.output += out[1].decode("utf-8")
+
+        thread = threading.Thread(target=target)
+        thread.start()
+
+        timeout_fail = False
+        thread.join(timeout)
+        if thread.is_alive():
+            timeout_fail = True
+            self.process.terminate()
+            thread.join()
+        return (self.process.returncode, self.output, timeout_fail)
+
 def run_command(cmd):
     if options.verbose:
         print_debug("Running: %s\n" % cmd, s, run_tests_log)
@@ -59,35 +89,26 @@ def run_command(cmd):
     lexer.whitespace_split = True
     lexer.escape = ''
     arg_list = list(lexer)
-    
-    try:
-        sp = subprocess.Popen(arg_list, stdin=None,
-                          stdout=subprocess.PIPE,
-                          stderr=subprocess.PIPE)
-    except: 
-        print_debug("ERROR: The child (%s) raised an exception: %s\n" % (cmd, sys.exc_info()[1]), s, run_tests_log)
-        raise
 
-    out = sp.communicate()
-    output = ""
-    output += out[0].decode("utf-8")
-    output += out[1].decode("utf-8")
+    run = RunWithTimeout(cmd=arg_list)
+    # Timeout is hardcode for now. 10 seconds is more that enough.
+    (ret_code, output, timeout) = run.run(10)
 
-    return (sp.returncode, output)
+    return (ret_code, output, timeout)
 
 # run the commands in cmd_list
 def run_cmds(compile_cmds, run_cmd, filename, expect_failure):
     for cmd in compile_cmds:
-        (return_code, output) = run_command(cmd)
+        (return_code, output, timeout) = run_command(cmd)
         compile_failed = (return_code != 0)
         if compile_failed:
-            print_debug("Compilation of test %s failed            \n" % filename, s, run_tests_log)
+            print_debug("Compilation of test %s failed %s           \n" % (filename, "due to TIMEOUT" if timeout else ""), s, run_tests_log)
             if output != "":
                 print_debug("%s" % output.encode("utf-8"), s, run_tests_log)
             return (1, 0)
     if not options.save_bin:
-        (return_code, output) = run_command(run_cmd)
-        run_failed = (return_code != 0)
+        (return_code, output, timeout) = run_command(run_cmd)
+        run_failed = (return_code != 0) or timeout
     else:
         run_failed = 0
     surprise = ((expect_failure and not run_failed) or
@@ -171,8 +192,8 @@ def run_test(testname):
         else:
             ispc_cmd = ispc_exe_rel + " --werror --nowrap %s --arch=%s --target=%s" % \
                 (filename, options.arch, options.target) 
-        (return_code, output) = run_command(ispc_cmd)
-        got_error = (return_code != 0)
+        (return_code, output, timeout) = run_command(ispc_cmd)
+        got_error = (return_code != 0) or timeout
 
         # figure out the error message we're expecting
         file = open(filename, 'r')
@@ -884,6 +905,7 @@ import re
 import signal
 import random
 import string
+import threading
 import subprocess
 import shlex
 import platform
