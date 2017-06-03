@@ -273,8 +273,8 @@ static void ao_scanlines(int y0, int y1, int w, int h, int nsubsamples,
                     float px = (x + (u / (float)nsubsamples) - (w / 2.0f)) / (w / 2.0f);
                     float py = -(y + (v / (float)nsubsamples) - (h / 2.0f)) / (h / 2.0f);
 
-					// Scale NDC based on width/height ratio, supporting non-square image output
-					px *= (float)w / (float)h;
+                    // Scale NDC based on width/height ratio, supporting non-square image output
+                    px *= (float)w / (float)h;
 
                     float ret = 0.f;
                     Ray ray;
