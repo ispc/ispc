@@ -73,9 +73,9 @@
   #include <llvm/DIBuilder.h>
 #endif
 #if ISPC_LLVM_VERSION >= ISPC_LLVM_5_0 // LLVM 5.0+
-    #include <llvm/BinaryFormat/Dwarf.h>
+  #include <llvm/BinaryFormat/Dwarf.h>
 #else // LLVM up to 4.x
-    #include <llvm/Support/Dwarf.h>
+  #include <llvm/Support/Dwarf.h>
 #endif
 #include <llvm/Target/TargetMachine.h>
 #include <llvm/Target/TargetOptions.h>
