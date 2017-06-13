@@ -57,7 +57,11 @@
   #include <llvm/DebugInfo.h>
   #include <llvm/DIBuilder.h>
 #endif
-#include <llvm/Support/Dwarf.h>
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_5_0 // LLVM 5.0+
+  #include <llvm/BinaryFormat/Dwarf.h>
+#else // LLVM up to 4.x
+  #include <llvm/Support/Dwarf.h>
+#endif
 
 
 /** Utility routine used in code that prints out declarations; returns true

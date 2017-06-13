@@ -118,7 +118,11 @@
 #endif
 #include <llvm/Analysis/Passes.h>
 #include <llvm/Support/raw_ostream.h>
-#include <llvm/Support/Dwarf.h>
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_5_0 // LLVM 5.0+
+  #include <llvm/BinaryFormat/Dwarf.h>
+#else // LLVM up to 4.x
+  #include <llvm/Support/Dwarf.h>
+#endif
 #if ISPC_LLVM_VERSION >= ISPC_LLVM_3_6
   #include <llvm/IR/IntrinsicInst.h>
 #endif
