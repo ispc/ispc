@@ -116,19 +116,19 @@ def checkout_LLVM(component, use_git, version_LLVM, revision, target_dir, from_v
     GIT_REPO_BASE="http://llvm.org/git/"
     #GIT_REPO_BASE="https://github.com/llvm-mirror/"
     if component == "llvm":
-        SVN_REPO="http://llvm.org/svn/llvm-project/llvm/"
+        SVN_REPO="https://llvm.org/svn/llvm-project/llvm/"
         GIT_REPO=GIT_REPO_BASE+"llvm.git"
     elif component == "clang":
-        SVN_REPO="http://llvm.org/svn/llvm-project/cfe/"
+        SVN_REPO="https://llvm.org/svn/llvm-project/cfe/"
         GIT_REPO=GIT_REPO_BASE+"clang.git"
     elif component == "libcxx":
-        SVN_REPO="http://llvm.org/svn/llvm-project/libcxx/"
+        SVN_REPO="https://llvm.org/svn/llvm-project/libcxx/"
         GIT_REPO=GIT_REPO_BASE+"libcxx.git"
     elif component == "clang-tools-extra":
-        SVN_REPO="http://llvm.org/svn/llvm-project/clang-tools-extra/"
+        SVN_REPO="https://llvm.org/svn/llvm-project/clang-tools-extra/"
         GIT_REPO=GIT_REPO_BASE+"clang-tools-extra.git"
     elif component == "compiler-rt":
-        SVN_REPO="http://llvm.org/svn/llvm-project/compiler-rt/"
+        SVN_REPO="https://llvm.org/svn/llvm-project/compiler-rt/"
         GIT_REPO=GIT_REPO_BASE+"compiler-rt.git"
     else:
         error("Trying to checkout unidentified component: " + component, 1)
