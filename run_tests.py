@@ -76,7 +76,8 @@ class RunWithTimeout(object):
             thread.join()
         return (self.process.returncode, self.output, timeout_fail)
 
-def run_command(cmd):
+# 120 is enough even for longest test under sde.
+def run_command(cmd, timeout=120):
     if options.verbose:
         print_debug("Running: %s\n" % cmd, s, run_tests_log)
 
@@ -91,15 +92,14 @@ def run_command(cmd):
     arg_list = list(lexer)
 
     run = RunWithTimeout(cmd=arg_list)
-    # Timeout is hardcode for now. 10 seconds is more that enough.
-    (ret_code, output, timeout) = run.run(10)
+    (ret_code, output, is_timeout) = run.run(timeout)
 
-    return (ret_code, output, timeout)
+    return (ret_code, output, is_timeout)
 
 # run the commands in cmd_list
 def run_cmds(compile_cmds, run_cmd, filename, expect_failure):
     for cmd in compile_cmds:
-        (return_code, output, timeout) = run_command(cmd)
+        (return_code, output, timeout) = run_command(cmd, 10)
         compile_failed = (return_code != 0)
         if compile_failed:
             print_debug("Compilation of test %s failed %s           \n" % (filename, "due to TIMEOUT" if timeout else ""), s, run_tests_log)
@@ -192,7 +192,7 @@ def run_test(testname):
         else:
             ispc_cmd = ispc_exe_rel + " --werror --nowrap %s --arch=%s --target=%s" % \
                 (filename, options.arch, options.target) 
-        (return_code, output, timeout) = run_command(ispc_cmd)
+        (return_code, output, timeout) = run_command(ispc_cmd, 10)
         got_error = (return_code != 0) or timeout
 
         # figure out the error message we're expecting
