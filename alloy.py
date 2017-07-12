@@ -295,6 +295,8 @@ def build_LLVM(version_LLVM, revision, folder, tarball, debug, selfbuild, extra,
                     "cmake -G Unix\ Makefiles" + " -DCMAKE_EXPORT_COMPILE_COMMANDS=ON" +
                     "  -DCMAKE_INSTALL_PREFIX=" + llvm_home + "/" + LLVM_BIN_selfbuild +
                     "  -DCMAKE_BUILD_TYPE=Release" +
+                    "  -DCMAKE_C_FLAGS=-DLLVM_ENABLE_DUMP" +
+                    "  -DCMAKE_CXX_FLAGS=-DLLVM_ENABLE_DUMP" +
                     "  -DLLVM_ENABLE_ASSERTIONS=ON" +
                     (("  -DGCC_INSTALL_PREFIX=" + gcc_toolchain_path) if gcc_toolchain_path != "" else "") +
                     (("  -DCMAKE_C_COMPILER=" + gcc_toolchain_path+"/bin/gcc") if gcc_toolchain_path != "" else "") +
@@ -332,6 +334,8 @@ def build_LLVM(version_LLVM, revision, folder, tarball, debug, selfbuild, extra,
                         selfbuild_compiler +
                         "  -DCMAKE_INSTALL_PREFIX=" + llvm_home + "/" + LLVM_BIN +
                         "  -DCMAKE_BUILD_TYPE=Release" +
+                        "  -DCMAKE_C_FLAGS=-DLLVM_ENABLE_DUMP" +
+                        "  -DCMAKE_CXX_FLAGS=-DLLVM_ENABLE_DUMP" +
                         "  -DLLVM_ENABLE_ASSERTIONS=ON" +
                         (("  -DGCC_INSTALL_PREFIX=" + gcc_toolchain_path) if gcc_toolchain_path != "" else "") +
                         (("  -DCMAKE_C_COMPILER=" + gcc_toolchain_path+"/bin/gcc") if gcc_toolchain_path != "" and selfbuild_compiler == "" else "") +
@@ -350,8 +354,13 @@ def build_LLVM(version_LLVM, revision, folder, tarball, debug, selfbuild, extra,
                         from_validation)
         else:
             try_do_LLVM("configure release version ",
-                    'cmake -G "Visual Studio 14" -DCMAKE_INSTALL_PREFIX="..\\'+ LLVM_BIN +
-                    '" -DLLVM_LIT_TOOLS_DIR="C:\\gnuwin32\\bin" ..\\' + LLVM_SRC,
+                    'cmake -G "Visual Studio 14" -DCMAKE_INSTALL_PREFIX="..\\'+ LLVM_BIN + '" ' +
+                    '  -DCMAKE_BUILD_TYPE=Release' +
+                    '  -DCMAKE_C_FLAGS=-DLLVM_ENABLE_DUMP' +
+                    '  -DCMAKE_CXX_FLAGS=-DLLVM_ENABLE_DUMP' +
+                    '  -DLLVM_ENABLE_ASSERTIONS=ON' +
+                    '  -DLLVM_TARGETS_TO_BUILD=X86' +
+                    '  -DLLVM_LIT_TOOLS_DIR="C:\\gnuwin32\\bin" ..\\' + LLVM_SRC,
                     from_validation)
     else:
         if  version_LLVM not in LLVM_configure_capable:
@@ -360,6 +369,8 @@ def build_LLVM(version_LLVM, revision, folder, tarball, debug, selfbuild, extra,
                     selfbuild_compiler +
                     "  -DCMAKE_INSTALL_PREFIX=" + llvm_home + "/" + LLVM_BIN +
                     "  -DCMAKE_BUILD_TYPE=Debug" +
+                    "  -DCMAKE_C_FLAGS=-DLLVM_ENABLE_DUMP" +
+                    "  -DCMAKE_CXX_FLAGS=-DLLVM_ENABLE_DUMP" +
                     "  -DLLVM_ENABLE_ASSERTIONS=ON" +
                     (("  -DGCC_INSTALL_PREFIX=" + gcc_toolchain_path) if gcc_toolchain_path != "" else "") +
                     (("  -DCMAKE_C_COMPILER=" + gcc_toolchain_path+"/bin/gcc") if gcc_toolchain_path != "" and selfbuild_compiler == "" else "") +
