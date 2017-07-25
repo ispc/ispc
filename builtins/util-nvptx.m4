@@ -1,4 +1,4 @@
-;;  Copyright (c) 2010-2016, Intel Corporation
+;;  Copyright (c) 2010-2017, Intel Corporation
 ;;  All rights reserved.
 ;;
 ;;  Redistribution and use in source and binary forms, with or without
@@ -61,6 +61,8 @@ define(`PTR_OP_ARGS',
          LLVM_VERSION, LLVM_4_0,
     ``$1 , $1 *'',
          LLVM_VERSION, LLVM_5_0,
+    ``$1 , $1 *'',
+         LLVM_VERSION, LLVM_6_0,
     ``$1 , $1 *'',
     ``$1 *''
   )
