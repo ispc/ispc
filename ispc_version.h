@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2015-2016, Intel Corporation
+  Copyright (c) 2015-2017, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -53,9 +53,10 @@
 #define ISPC_LLVM_3_9 30900
 #define ISPC_LLVM_4_0 40000
 #define ISPC_LLVM_5_0 50000
+#define ISPC_LLVM_6_0 60000
 
 #define OLDEST_SUPPORTED_LLVM ISPC_LLVM_3_2
-#define LATEST_SUPPORTED_LLVM ISPC_LLVM_5_0
+#define LATEST_SUPPORTED_LLVM ISPC_LLVM_6_0
 
 #ifdef __ispc__xstr
 #undef __ispc__xstr
