@@ -1789,6 +1789,16 @@ VectorType::ResolveUnboundVariability(Variability v) const {
 
 
 const VectorType *
+VectorType::GetAsUnsignedType() const {
+  if (base == NULL) {
+    Assert(m->errorCount > 0);
+    return NULL;
+  }
+  return new VectorType(base->GetAsUnsignedType(), numElements);
+}
+
+ 
+const VectorType *
 VectorType::GetAsConstType() const {
     return new VectorType(base->GetAsConstType(), numElements);
 }

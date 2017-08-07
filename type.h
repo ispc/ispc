@@ -655,6 +655,7 @@ public:
     const VectorType *GetAsSOAType(int width) const;
     const VectorType *ResolveUnboundVariability(Variability v) const;
 
+    const VectorType *GetAsUnsignedType() const;
     const VectorType *GetAsConstType() const;
     const VectorType *GetAsNonConstType() const;
 
