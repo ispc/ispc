@@ -162,11 +162,12 @@ endif
 
 CXX=clang++
 OPT=-O2
+WERROR=-Werror
 CXXFLAGS=$(OPT) $(LLVM_CXXFLAGS) -I. -Iobjs/ -I$(CLANG_INCLUDE)  \
 	$(LLVM_VERSION_DEF) \
 	-Wall \
 	-DBUILD_DATE="\"$(BUILD_DATE)\"" -DBUILD_VERSION="\"$(BUILD_VERSION)\"" \
-	-Wno-sign-compare -Wno-unused-function -Werror
+	-Wno-sign-compare -Wno-unused-function $(WERROR)
 
 # if( !($(LLVM_VERSION) == LLVM_3_2 || $(LLVM_VERSION) == LLVM_3_3 || $(LLVM_VERSION) == LLVM_3_4))
 ifeq (,$(filter $(LLVM_VERSION), LLVM_3_2 LLVM_3_3 LLVM_3_4))
