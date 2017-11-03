@@ -76,8 +76,8 @@ class RunWithTimeout(object):
             thread.join()
         return (self.process.returncode, self.output, timeout_fail)
 
-# 120 is enough even for longest test under sde.
-def run_command(cmd, timeout=120):
+# 240 is enough even for longest test under sde.
+def run_command(cmd, timeout=240):
     if options.verbose:
         print_debug("Running: %s\n" % cmd, s, run_tests_log)
 
