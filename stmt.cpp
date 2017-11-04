@@ -461,6 +461,44 @@ DeclStmt::Optimize() {
     return this;
 }
 
+// Do type conversion if needed and check for not initializing array with
+// another array (array assignment is not allowed).
+// Do that recursively to handle brace initialization, which may contain
+// another brace initialization.
+static
+bool checkInit(const Type *type, Expr *init) {
+    bool encounteredError = false;
+
+    // get the right type for stuff like const float foo = 2; so that
+    // the int->float type conversion is in there and we don't return
+    // an int as the constValue later...
+    if (CastType<AtomicType>(type) != NULL ||
+        CastType<EnumType>(type) != NULL) {
+        // If it's an expr list with an atomic type, we'll later issue
+        // an error.  Need to leave vars[i].init as is in that case so
+        // it is in fact caught later, though.
+        if (llvm::dyn_cast<ExprList>(init) == NULL) {
+            init = TypeConvertExpr(init, type, "initializer");
+            if (init == NULL)
+                encounteredError = true;
+        }
+    } else if (CastType<ArrayType>(type) != NULL &&
+        llvm::dyn_cast<ExprList>(init) == NULL) {
+        encounteredError = true;
+        Error(init->pos, "Array initializer must be an initializer list");
+    } else if (CastType<StructType>(type) != NULL &&
+        llvm::dyn_cast<ExprList>(init) != NULL) {
+        const StructType *st = CastType<StructType>(type);
+        ExprList *el = llvm::dyn_cast<ExprList>(init);
+        int elt_count = st->GetElementCount() < el->exprs.size() ?
+          st->GetElementCount() : el->exprs.size();
+        for (int i=0; i < elt_count; i++) {
+            encounteredError |= checkInit(st->GetElementType(i), el->exprs[i]);
+        }
+    }
+
+    return encounteredError;
+}
 
 Stmt *
 DeclStmt::TypeCheck() {
@@ -474,22 +512,8 @@ DeclStmt::TypeCheck() {
         if (vars[i].init == NULL)
             continue;
 
-        // get the right type for stuff like const float foo = 2; so that
-        // the int->float type conversion is in there and we don't return
-        // an int as the constValue later...
-        const Type *type = vars[i].sym->type;
-        if (CastType<AtomicType>(type) != NULL ||
-            CastType<EnumType>(type) != NULL) {
-            // If it's an expr list with an atomic type, we'll later issue
-            // an error.  Need to leave vars[i].init as is in that case so
-            // it is in fact caught later, though.
-            if (llvm::dyn_cast<ExprList>(vars[i].init) == NULL) {
-                vars[i].init = TypeConvertExpr(vars[i].init, type,
-                                               "initializer");
-                if (vars[i].init == NULL)
-                    encounteredError = true;
-            }
-        }
+        // Check an init.
+        encounteredError |= checkInit(vars[i].sym->type, vars[i].init);
     }
     return encounteredError ? NULL : this;
 }

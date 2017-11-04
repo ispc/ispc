@@ -935,11 +935,12 @@ llvm::DIType *EnumType::GetDIType(llvm::DIScope *scope) const {
     llvm::DINodeArray elementArray =
         m->diBuilder->getOrCreateArray(enumeratorDescriptors);
     llvm::DIFile *diFile = pos.GetDIFile();
+    llvm::DIType *underlyingType = AtomicType::UniformInt32->GetDIType(scope);
     llvm::DIType *diType =
         m->diBuilder->createEnumerationType(diFile, name, diFile, pos.first_line,
                                             32 /* size in bits */,
                                             32 /* align in bits */,
-                                            elementArray, NULL);
+                                            elementArray, underlyingType, name);
 #endif
     switch (variability.type) {
     case Variability::Uniform:
@@ -2324,6 +2325,9 @@ StructType::LLVMType(llvm::LLVMContext *ctx) const {
 }
 
 
+// Versioning of this function becomes really messy, so versioning the whole function.
+#if ISPC_LLVM_VERSION <= ISPC_LLVM_3_9
+
 #if ISPC_LLVM_VERSION <= ISPC_LLVM_3_6
 llvm::DIType StructType::GetDIType(llvm::DIDescriptor scope) const {
 #else //LLVM 3.7++
@@ -2343,7 +2347,7 @@ llvm::DIType *StructType::GetDIType(llvm::DIScope *scope) const {
         llvm::DIType eltType = GetElementType(i)->GetDIType(scope);
         uint64_t eltAlign = eltType.getAlignInBits();
         uint64_t eltSize = eltType.getSizeInBits();
-#else // LLVM 3.7++
+#else // LLVM 3.7+
         llvm::DIType *eltType = GetElementType(i)->GetDIType(scope);
         uint64_t eltAlign = eltType->getAlignInBits();
         uint64_t eltSize = eltType->getSizeInBits();
@@ -2368,15 +2372,9 @@ llvm::DIType *StructType::GetDIType(llvm::DIScope *scope) const {
         llvm::DIFile *diFile = elementPositions[i].GetDIFile();
         llvm::DIDerivedType *fieldType =
 #endif
-#if ISPC_LLVM_VERSION <= ISPC_LLVM_3_9
             m->diBuilder->createMemberType(scope, elementNames[i], diFile,
                                            line, eltSize, eltAlign,
                                            currentSize, 0, eltType);
-#else // LLVM 4.0+
-            m->diBuilder->createMemberType(scope, elementNames[i], diFile,
-                                           line, eltSize, eltAlign,
-                                           currentSize, llvm::DINode::FlagZero, eltType);
-#endif
         elementLLVMTypes.push_back(fieldType);
 
         currentSize += eltSize;
@@ -2401,11 +2399,7 @@ llvm::DIType *StructType::GetDIType(llvm::DIScope *scope) const {
         pos.first_line, // Line number
         currentSize,    // Size in bits
         align,          // Alignment in bits
-#if ISPC_LLVM_VERSION <= ISPC_LLVM_3_9
         0,              // Flags
-#else // LLVM 4.0+
-        llvm::DINode::FlagZero, // Flags
-#endif
 #if ISPC_LLVM_VERSION >= ISPC_LLVM_3_3 && ISPC_LLVM_VERSION <= ISPC_LLVM_3_6
         llvm::DIType(), // DerivedFrom
 #elif ISPC_LLVM_VERSION >= ISPC_LLVM_3_7 // LLVM 3.7++
@@ -2413,6 +2407,53 @@ llvm::DIType *StructType::GetDIType(llvm::DIScope *scope) const {
 #endif
         elements);
 }
+
+#else // LLVM 4.0+
+
+llvm::DIType *StructType::GetDIType(llvm::DIScope *scope) const {
+    llvm::Type *llvm_type = LLVMType(g->ctx);
+    auto& dataLayout = m->module->getDataLayout();
+    auto layout = dataLayout.getStructLayout(llvm::dyn_cast_or_null<llvm::StructType>(llvm_type));
+    std::vector<llvm::Metadata *> elementLLVMTypes;
+    // Walk through the elements of the struct; for each one figure out its
+    // alignment and size, using that to figure out its offset w.r.t. the
+    // start of the structure.
+    for (unsigned int i = 0; i < elementTypes.size(); ++i) {
+        llvm::DIType *eltType = GetElementType(i)->GetDIType(scope);
+        uint64_t eltSize = eltType->getSizeInBits();
+
+        auto llvmType = GetElementType(i)->LLVMType(g->ctx);
+        uint64_t eltAlign = dataLayout.getABITypeAlignment(llvmType) * 8;
+        Assert(eltAlign != 0);
+
+        auto eltOffset = layout->getElementOffsetInBits(i);
+
+        int line = elementPositions[i].first_line;
+        llvm::DIFile *diFile = elementPositions[i].GetDIFile();
+        llvm::DIDerivedType *fieldType =
+            m->diBuilder->createMemberType(scope, elementNames[i], diFile,
+                                           line, eltSize, eltAlign,
+                                           eltOffset, llvm::DINode::FlagZero, eltType);
+        elementLLVMTypes.push_back(fieldType);
+    }
+
+    llvm::DINodeArray elements = m->diBuilder->getOrCreateArray(elementLLVMTypes);
+    llvm::DIFile *diFile = pos.GetDIFile();
+    return m->diBuilder->createStructType(
+        diFile,
+        name,
+        diFile,
+        pos.first_line, // Line number
+        layout->getSizeInBits(), // Size in bits
+        layout->getAlignment() * 8,  // Alignment in bits
+        llvm::DINode::FlagZero, // Flags
+        NULL,
+        elements);
+}
+
+#endif
+
+
 
 
 const Type *

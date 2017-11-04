@@ -480,7 +480,7 @@ of that value across all of the active program instances.
     uniform float sum(const uniform float array[], uniform int count) {
         uniform float sum = 0;
         foreach (i = 0 ... count)
-            sum += reduce_add(array[i+programIndex]);
+            sum += reduce_add(array[i]);
         return sum;
     } 
 
@@ -507,7 +507,7 @@ values--very efficient code in the end.
     uniform float sum(const uniform float array[], uniform int count) {
         float sum = 0;
         foreach (i = 0 ... count)
-            sum += array[i+programIndex];
+            sum += array[i];
         return reduce_add(sum);
     } 
 
