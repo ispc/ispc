@@ -935,11 +935,12 @@ llvm::DIType *EnumType::GetDIType(llvm::DIScope *scope) const {
     llvm::DINodeArray elementArray =
         m->diBuilder->getOrCreateArray(enumeratorDescriptors);
     llvm::DIFile *diFile = pos.GetDIFile();
+    llvm::DIType *underlyingType = AtomicType::UniformInt32->GetDIType(scope);
     llvm::DIType *diType =
         m->diBuilder->createEnumerationType(diFile, name, diFile, pos.first_line,
                                             32 /* size in bits */,
                                             32 /* align in bits */,
-                                            elementArray, NULL);
+                                            elementArray, underlyingType, name);
 #endif
     switch (variability.type) {
     case Variability::Uniform:
