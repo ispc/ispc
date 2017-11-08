@@ -4394,10 +4394,11 @@ float_to_srgb8(float inval)
         0x70940818, 0x74a007bd, 0x787d076c, 0x7c330723,
     };
 
+    static const uniform unsigned int near_zero = 0x39000000;
     static const uniform unsigned int almost_one = 0x3f7fffff;
 
     // Clamp to [2^(-13), 1-eps]; these two values map to 0 and 1, respectively.
-    inval = max(inval, 0.0f);
+    inval = max(inval, floatbits(near_zero));
     inval = min(inval, floatbits(almost_one));
 
     // Do the table lookup and unpack bias, scale
@@ -4444,10 +4445,11 @@ float_to_srgb8(uniform float inval)
         0x70940818, 0x74a007bd, 0x787d076c, 0x7c330723,
     };
 
+    static const uniform unsigned int near_zero = 0x39000000;
     static const uniform unsigned int almost_one = 0x3f7fffff;
 
     // Clamp to [2^(-13), 1-eps]; these two values map to 0 and 1, respectively.
-    inval = max(inval, 0.0f);
+    inval = max(inval, floatbits(near_zero));
     inval = min(inval, floatbits(almost_one));
 
     // Do the table lookup and unpack bias, scale
