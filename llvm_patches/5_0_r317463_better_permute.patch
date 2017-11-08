@@ -1,8 +1,8 @@
 Index: lib/Target/X86/X86ISelLowering.cpp
 ===================================================================
---- lib/Target/X86/X86ISelLowering.cpp	(revision 317462)
-+++ lib/Target/X86/X86ISelLowering.cpp	(revision 317463)
-@@ -7713,6 +7713,111 @@
+--- lib/Target/X86/X86ISelLowering.cpp	(revision 317524)
++++ lib/Target/X86/X86ISelLowering.cpp	(working copy)
+@@ -7646,6 +7646,111 @@
    return SDValue();
  }
  
@@ -114,7 +114,7 @@ Index: lib/Target/X86/X86ISelLowering.cpp
  SDValue
  X86TargetLowering::LowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG) const {
    SDLoc dl(Op);
-@@ -7928,6 +8033,9 @@
+@@ -7813,6 +7918,9 @@
    if (IsAllConstants)
      return SDValue();
  
