@@ -5519,7 +5519,11 @@ WriteCXXFile(llvm::Module *module, const char *fn, int vectorWidth,
     std::error_code error;
 #endif
 
+#if ISPC_LLVM_VERSION <= ISPC_LLVM_5_0
     llvm::tool_output_file *of = new llvm::tool_output_file(fn, error, flags);
+#else // LLVM 6.0+
+    llvm::ToolOutputFile *of = new llvm::ToolOutputFile(fn, error, flags);
+#endif
 
 #if ISPC_LLVM_VERSION <= ISPC_LLVM_3_5 // 3.2, 3.3, 3.4, 3.5
     if (error.size()) {

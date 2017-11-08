@@ -184,6 +184,17 @@ def checkout_LLVM(component, use_git, version_LLVM, revision, target_dir, from_v
                     "svn co "+revision+" "+SVN_REPO+SVN_PATH+" "+target_dir,
                     from_validation)
 
+# ISPC uses LLVM dumps for debug output, so build correctly it requires these functions to be
+# present in LLVM libraries. In LLVM 5.0 they are not there by default and require explicit enabling.
+# In later version this functionality is triggered by enabling assertions.
+def get_llvm_enable_dump_switch(version_LLVM):
+    if version_LLVM in ["3_2", "3_3", "3_4", "3_5", "3_6", "3_7", "3_8", "3_9", "4_0"]:
+        return ""
+    elif version_LLVM == "5_0":
+        return " -DCMAKE_C_FLAGS=-DLLVM_ENABLE_DUMP -DCMAKE_CXX_FLAGS=-DLLVM_ENABLE_DUMP "
+    else:
+        return " -DLLVM_ENABLE_DUMP=ON "
+
 def build_LLVM(version_LLVM, revision, folder, tarball, debug, selfbuild, extra, from_validation, force, make, gcc_toolchain_path, use_git):
     print_debug("Building LLVM. Version: " + version_LLVM + ". ", from_validation, alloy_build)
     if revision != "":
@@ -218,10 +229,17 @@ def build_LLVM(version_LLVM, revision, folder, tarball, debug, selfbuild, extra,
     common.remove_if_exists(LLVM_BUILD)
     common.remove_if_exists(LLVM_BIN)
 
-    # Starting with MacOS 10.9 Maverics, we depend on XCode being installed, as it contains C and C++ library headers.
+    # Starting with MacOS 10.9 Maverics, we depend on Xcode being installed, as it contains C and C++ library headers.
     # sysroot trick below helps finding C headers. For C++ we just check out libc++ sources.
+    # Starting macOS 10.12 Sierra we rely on "Command Line Tools for Xcode" to be installed. They are required anyway,
+    # and bring C headers to the system. You can install it by running "xcode-select --install".
+    # Note that on Sierra there's an issue with using C headers from High Sierra SDK, which instantiates as compile error:
+    #     error: 'utimensat' is only available on macOS 10.13 or newer
+    # This is due to using SDK targeting OS, which is newer than current one.
     mac_system_root = ""
-    if current_OS == "MacOS" and int(current_OS_version.split(".")[0]) >= 13:
+    if current_OS == "MacOS" \
+        and int(current_OS_version.split(".")[0]) >= 13 \
+        and int(current_OS_version.split(".")[0]) < 16:
         search_path = string.split(os.environ["PATH"], os.pathsep)
         found_xcrun = False
         for path in search_path:
@@ -298,8 +316,7 @@ def build_LLVM(version_LLVM, revision, folder, tarball, debug, selfbuild, extra,
                     "cmake -G Unix\ Makefiles" + " -DCMAKE_EXPORT_COMPILE_COMMANDS=ON" +
                     "  -DCMAKE_INSTALL_PREFIX=" + llvm_home + "/" + LLVM_BIN_selfbuild +
                     "  -DCMAKE_BUILD_TYPE=Release" +
-                    "  -DCMAKE_C_FLAGS=-DLLVM_ENABLE_DUMP" +
-                    "  -DCMAKE_CXX_FLAGS=-DLLVM_ENABLE_DUMP" +
+                    get_llvm_enable_dump_switch(version_LLVM) +
                     "  -DLLVM_ENABLE_ASSERTIONS=ON" +
                     (("  -DGCC_INSTALL_PREFIX=" + gcc_toolchain_path) if gcc_toolchain_path != "" else "") +
                     (("  -DCMAKE_C_COMPILER=" + gcc_toolchain_path+"/bin/gcc") if gcc_toolchain_path != "" else "") +
@@ -337,8 +354,7 @@ def build_LLVM(version_LLVM, revision, folder, tarball, debug, selfbuild, extra,
                         selfbuild_compiler +
                         "  -DCMAKE_INSTALL_PREFIX=" + llvm_home + "/" + LLVM_BIN +
                         "  -DCMAKE_BUILD_TYPE=Release" +
-                        "  -DCMAKE_C_FLAGS=-DLLVM_ENABLE_DUMP" +
-                        "  -DCMAKE_CXX_FLAGS=-DLLVM_ENABLE_DUMP" +
+                        get_llvm_enable_dump_switch(version_LLVM) +
                         "  -DLLVM_ENABLE_ASSERTIONS=ON" +
                         (("  -DGCC_INSTALL_PREFIX=" + gcc_toolchain_path) if gcc_toolchain_path != "" else "") +
                         (("  -DCMAKE_C_COMPILER=" + gcc_toolchain_path+"/bin/gcc") if gcc_toolchain_path != "" and selfbuild_compiler == "" else "") +
@@ -359,8 +375,7 @@ def build_LLVM(version_LLVM, revision, folder, tarball, debug, selfbuild, extra,
             try_do_LLVM("configure release version ",
                     'cmake -G "Visual Studio 14" -DCMAKE_INSTALL_PREFIX="..\\'+ LLVM_BIN + '" ' +
                     '  -DCMAKE_BUILD_TYPE=Release' +
-                    '  -DCMAKE_C_FLAGS=-DLLVM_ENABLE_DUMP' +
-                    '  -DCMAKE_CXX_FLAGS=-DLLVM_ENABLE_DUMP' +
+                    get_llvm_enable_dump_switch(version_LLVM) +
                     '  -DLLVM_ENABLE_ASSERTIONS=ON' +
                     '  -DLLVM_TARGETS_TO_BUILD=X86' +
                     '  -DLLVM_LIT_TOOLS_DIR="C:\\gnuwin32\\bin" ..\\' + LLVM_SRC,
@@ -372,8 +387,7 @@ def build_LLVM(version_LLVM, revision, folder, tarball, debug, selfbuild, extra,
                     selfbuild_compiler +
                     "  -DCMAKE_INSTALL_PREFIX=" + llvm_home + "/" + LLVM_BIN +
                     "  -DCMAKE_BUILD_TYPE=Debug" +
-                    "  -DCMAKE_C_FLAGS=-DLLVM_ENABLE_DUMP" +
-                    "  -DCMAKE_CXX_FLAGS=-DLLVM_ENABLE_DUMP" +
+                    get_llvm_enable_dump_switch(version_LLVM) +
                     "  -DLLVM_ENABLE_ASSERTIONS=ON" +
                     (("  -DGCC_INSTALL_PREFIX=" + gcc_toolchain_path) if gcc_toolchain_path != "" else "") +
                     (("  -DCMAKE_C_COMPILER=" + gcc_toolchain_path+"/bin/gcc") if gcc_toolchain_path != "" and selfbuild_compiler == "" else "") +

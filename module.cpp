@@ -1532,8 +1532,10 @@ Module::writeObjectFileOrAssembly(llvm::TargetMachine *targetMachine,
 
 #if ISPC_LLVM_VERSION <= ISPC_LLVM_3_6
     llvm::tool_output_file *of = new llvm::tool_output_file(outFileName, error, flags);
-#else // LLVM 3.7+
+#elif ISPC_LLVM_VERSION <= ISPC_LLVM_5_0 // LLVM 3.7-5.0
     std::unique_ptr<llvm::tool_output_file> of (new llvm::tool_output_file(outFileName, error, flags));
+#else // LLVM 6.0+
+    std::unique_ptr<llvm::ToolOutputFile> of (new llvm::ToolOutputFile(outFileName, error, flags));
 #endif
 
 #if ISPC_LLVM_VERSION <= ISPC_LLVM_3_5
