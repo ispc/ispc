@@ -1,3 +1,19 @@
+=== v1.9.2 === (10 November 2017)
+
+An ISPC update, which brings out-of-the-box debug support on Windows,
+better performance of most of the targets and a bunch of stability
+and performance bug fixes.
+
+The release is based on patched LLVM 5.0 backend.
+
+Windows build is now supports only VS2015 and newer. If you are using earlier
+versions, the only known problem that you may encounter is a problem with
+"print" ISPC library function.
+
+AVX512 targets are the main beneficiaries of a newer LLVM backend and
+demonstrate the biggest performance improvements. SVML support is also
+now available on these targets (requires linking by ICC compiler).
+
 === v1.9.1 === (8 July 2016)
 
 An ISPC update with new native AVX512 target for future Xeon CPUs and
