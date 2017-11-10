@@ -2970,7 +2970,7 @@ is only visible in the file in which it was declared.
 
 ::
 
-    static void lerp(float t, float a, float b) {
+    static float lerp(float t, float a, float b) {
         return (1.-t)*a + t*b;
     }
 
@@ -5165,7 +5165,7 @@ countries.
 
 * Other names and brands may be claimed as the property of others.
 
-Copyright(C) 2011-2016, Intel Corporation. All rights reserved.
+Copyright(C) 2011-2017, Intel Corporation. All rights reserved.
 
 
 Optimization Notice
