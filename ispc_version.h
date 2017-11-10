@@ -38,7 +38,7 @@
 #ifndef ISPC_VERSION_H
 #define ISPC_VERSION_H
 
-#define ISPC_VERSION "1.9.2"
+#define ISPC_VERSION "1.9.3dev"
 #include "llvm/Config/llvm-config.h"
 
 #define ISPC_LLVM_VERSION ( LLVM_VERSION_MAJOR * 10000 + LLVM_VERSION_MINOR * 100 )
