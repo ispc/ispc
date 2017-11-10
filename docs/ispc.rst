@@ -54,6 +54,7 @@ Contents:
   + `Updating ISPC Programs For Changes In ISPC 1.8.2`_
   + `Updating ISPC Programs For Changes In ISPC 1.9.0`_
   + `Updating ISPC Programs For Changes In ISPC 1.9.1`_
+  + `Updating ISPC Programs For Changes In ISPC 1.9.2`_
 
 * `Getting Started with ISPC`_
 
@@ -351,6 +352,12 @@ Updating ISPC Programs For Changes In ISPC 1.9.1
 
 The release doesn't contains language changes, which may affect compatibility with
 older versions. It introduces new AVX512 target: avx512skx-i32x16.
+
+Updating ISPC Programs For Changes In ISPC 1.9.2
+------------------------------------------------
+
+The release doesn't contain language changes, which may affect compatibility with
+older versions.
 
 
 Getting Started with ISPC

@@ -2,6 +2,17 @@
 ispc News
 =========
 
+ispc 1.9.2 is Released
+----------------------
+
+An ``ispc`` release with out-of-the-box debug support on Windows and significant
+performance improvements on AVX512 targets. Release is based on patched version
+LLVM 5.0 backend.
+
+For more details, please check `Release Notes`_.
+
+.. _Release Notes: https://github.com/ispc/ispc/blob/master/docs/ReleaseNotes.txt
+
 ispc 1.9.1 is Released
 ----------------------
 
