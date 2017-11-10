@@ -1,6 +1,6 @@
 #!/bin/bash
 
-rst2html=rst2html.py
+rst2html=rst2html
 
 for i in ispc perfguide faq; do
     $rst2html --template=template.txt --link-stylesheet \
