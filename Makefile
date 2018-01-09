@@ -1,5 +1,5 @@
 #
-#  Copyright (c) 2010-2016, Intel Corporation
+#  Copyright (c) 2010-2018, Intel Corporation
 #  All rights reserved.
 #
 #  Redistribution and use in source and binary forms, with or without
@@ -50,7 +50,7 @@ llvm_patches folder. You can build LLVM manually, or run our scripts, which \n
 will do all the work for you. Do the following: \n
 1. Create a folder, where LLVM will reside and set LLVM_HOME variable to its \n
   path. \n
-2. Set ISPC_HOME variable to your ISPC location (probably current folder).
+2. Set ISPC_HOME variable to your ISPC location (probably current folder). \n
 3. Run alloy.py tool to checkout and build LLVM: \n
   alloy.py -b --version=3.8 \n
 4. Add $$LLVM_HOME/bin-3.8/bin path to your PATH. \n
