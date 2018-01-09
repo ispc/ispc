@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2017, Intel Corporation
+  Copyright (c) 2010-2018, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -41,7 +41,7 @@
 #include "ispc_version.h"
 
 #if ISPC_LLVM_VERSION < OLDEST_SUPPORTED_LLVM || ISPC_LLVM_VERSION > LATEST_SUPPORTED_LLVM
-#error "Only LLVM 3.2, 3.3, 3.4, 3.5, 3.6, 3.7, 3.8, 3.9, 4.0, 5.0 and 6.0 development branch are supported"
+#error "Only LLVM 3.2, 3.3, 3.4, 3.5, 3.6, 3.7, 3.8, 3.9, 4.0, 5.0, 6.0 and 7.0 development branch are supported"
 #endif
 
 #if defined(_WIN32) || defined(_WIN64)
