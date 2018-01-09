@@ -60,9 +60,14 @@
   #include <llvm/IR/Instructions.h>
 #endif
 #if ISPC_LLVM_VERSION >= ISPC_LLVM_3_6 // LLVM 3.6+
-  #include <llvm/Target/TargetSubtargetInfo.h>
-  #if ISPC_LLVM_VERSION >= ISPC_LLVM_3_7 // LLVM 3.7+
-    #include <llvm/Target/TargetLowering.h>
+  #if ISPC_LLVM_VERSION >= ISPC_LLVM_6_0
+    #include <llvm/CodeGen/TargetSubtargetInfo.h>
+    #include <llvm/CodeGen/TargetLowering.h>
+  #else
+    #include <llvm/Target/TargetSubtargetInfo.h>
+    #if ISPC_LLVM_VERSION >= ISPC_LLVM_3_7 // LLVM 3.7+
+      #include <llvm/Target/TargetLowering.h>
+    #endif
   #endif
 #endif
 #if ISPC_LLVM_VERSION >= ISPC_LLVM_3_5 // LLVM 3.5+
