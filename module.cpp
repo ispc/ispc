@@ -1490,7 +1490,11 @@ Module::writeBitcode(llvm::Module *module, const char *outFileName) {
     }
     else
 #endif /* ISPC_NVPTX_ENABLED */
+#if ISPC_LLVM_VERSION < ISPC_LLVM_7_0
       llvm::WriteBitcodeToFile(module, fos);
+#else
+      llvm::WriteBitcodeToFile(*module, fos);
+#endif
 
     return true;
 }
