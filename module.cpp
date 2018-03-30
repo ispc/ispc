@@ -2492,7 +2492,6 @@ void
 Module::execPreprocessor(const char *infilename, llvm::raw_string_ostream *ostream) const
 {
     clang::CompilerInstance inst;
-    inst.createFileManager();
 
     llvm::raw_fd_ostream stderrRaw(2, false);
 
@@ -2505,6 +2504,8 @@ Module::execPreprocessor(const char *infilename, llvm::raw_string_ostream *ostre
         new clang::DiagnosticsEngine(diagIDs, diagOptions, diagPrinter);
     
     inst.setDiagnostics(diagEngine);
+
+    inst.createFileManager();
 
 #if ISPC_LLVM_VERSION <= ISPC_LLVM_3_4 // 3.2, 3.3, 3.4
     clang::TargetOptions &options = inst.getTargetOpts();
