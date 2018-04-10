@@ -99,6 +99,9 @@
 #include <llvm/ADT/SmallSet.h>
 #include <llvm/Transforms/Scalar.h>
 #include <llvm/Transforms/IPO.h>
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_7_0
+  #include "llvm/Transforms/Utils.h"
+#endif
 #include <llvm/Transforms/Utils/BasicBlockUtils.h>
 #include <llvm/Target/TargetOptions.h>
 #if ISPC_LLVM_VERSION == ISPC_LLVM_3_2
