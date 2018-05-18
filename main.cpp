@@ -63,6 +63,8 @@
 #endif
 #endif // ISPC_IS_WINDOWS
 
+#define MAX_NUM_ARGS (128)
+
 static void
 lPrintVersion() {
 #ifdef ISPC_IS_WINDOWS
@@ -183,50 +185,157 @@ devUsage(int ret) {
     exit(ret);
 }
 
+/** Define an abstract base-class that implements the parsing of an character source and
+ *  the breaking of it into the individual arguments
+ */
+class ArgFactory {
+private:
+    char *AllocateString(std::string string)
+    {
+        int len = string.length();
+        char *ptr = new char[len+1];
+        strncpy(ptr, string.c_str(), len);
+        ptr[len] = '\0';
+        return ptr;
+    }
+
+    /** Method provided by the derived classes to retrieve the next character from the stream.
+     */
+    virtual char GetNextChar() = 0;
+public:
+    ArgFactory() {}
+
+    char *GetNextArg()
+    {
+       std::string arg;
+       char c = GetNextChar();
+
+       // First consume any white-space before the argument
+       while (isspace(c))
+           c = GetNextChar();
+
+       if (c == '\0')
+           // Reached the end so no more arguments
+           return NULL;
+
+       // c now has the first character of the next argument, so collect the rest
+       while (c != '\0' && !isspace(c)) {
+           arg += c;
+           c = GetNextChar();
+       }
+
+       return AllocateString(arg);
+    }
+};
+
+/** Define a class to break the contents of an open file into the individual arguments */
+class FileArgFactory : public ArgFactory {
+private:
+    FILE *InputFile;
+
+    virtual char GetNextChar()
+    {
+        int c = fgetc(InputFile);
+        if (c == EOF) {
+            return '\0';
+        }
+        else {
+            return c;
+        }
+    }
+public:
+    FileArgFactory(FILE *file)
+        : InputFile(file) {}
+};
+
+/** Define a class to break a NUL-terminated string into the individual arguments */
+class StringArgFactory : public ArgFactory {
+private:
+    const char *InputString;
+
+    virtual char GetNextChar()
+    {
+        char c = *InputString;
+
+        if (c != '\0')
+            ++InputString;
+
+        return c;
+    }
+public:
+    StringArgFactory(const char *string)
+        : InputString(string) {}
+};
+
+// Forward reference
+static void lAddSingleArg(char *arg, int &argc, char *argv[MAX_NUM_ARGS]);
+
+/** Add all args from a given factory to the argc/argv passed as parameters, which could
+ *  include recursing into another ArgFactory.
+ */
+static void lAddArgsFromFactory(ArgFactory &Args, int &argc, char *argv[MAX_NUM_ARGS])
+{
+    while (true) {
+        char *NextArg = Args.GetNextArg();
+        if (NextArg == NULL)
+            break;
+        lAddSingleArg(NextArg, argc, argv);
+    }
+}
+
+/** Parse an open file for arguments and add them to the argc/argv passed as parameters */
+static void lAddArgsFromFile(FILE *file, int &argc, char *argv[MAX_NUM_ARGS])
+{
+    lAddArgsFromFactory(FileArgFactory(file), argc, argv);
+}
+
+/** Parse a string for arguments and add them to the argc/argv passed as parameters */
+static void lAddArgsFromString(const char *string, int &argc, char *argv[MAX_NUM_ARGS])
+{
+    lAddArgsFromFactory(StringArgFactory(string), argc, argv);
+}
+
+/** Add a single argument to the argc/argv passed as parameters. If the argument is of the
+ *  form @<filename> and <filename> exists and is readable, the arguments in the file will be
+ *  inserted into argc/argv in place of the original argument.
+ */
+static void lAddSingleArg(char *arg, int &argc, char *argv[MAX_NUM_ARGS])
+{
+    if (arg[0] == '@') {
+        char *filename = &arg[1];
+        FILE *file = fopen(filename, "r");
+        if (file != NULL) {
+           lAddArgsFromFile(file, argc, argv);
+           fclose(file);
+           arg = NULL;
+        }
+    }
+    if (arg != NULL) {
+        if (argc >= MAX_NUM_ARGS) {
+            fprintf(stderr, "More than %d arguments have been specified - aborting\n", MAX_NUM_ARGS);
+            exit(EXIT_FAILURE);
+        }
+        // printf("Arg %d: %s\n", argc, arg);
+        argv[argc++] = arg;
+    }
+}
 
 /** We take arguments from both the command line as well as from the
-    ISPC_ARGS environment variable.  This function returns a new set of
-    arguments representing the ones from those two sources merged together.
-*/
-static void lGetAllArgs(int Argc, char *Argv[], int &argc, char *argv[128]) {
+ *  ISPC_ARGS environment variable - and each of these can include a file containing
+ *  additional arguments using @<filename>. This function returns a new set of
+ *  arguments representing the ones from all these sources merged together.
+ */
+static void lGetAllArgs(int Argc, char *Argv[], int &argc, char *argv[MAX_NUM_ARGS]) {
+    argc = 0;
+
     // Copy over the command line arguments (passed in)
     for (int i = 0; i < Argc; ++i)
-        argv[i] = Argv[i];
-    argc = Argc;
+       lAddSingleArg(Argv[i], argc, argv);
 
     // See if we have any set via the environment variable
     const char *env = getenv("ISPC_ARGS");
-    if (!env)
-        return;
-    while (true) {
-        // Look for the next space in the string, which delimits the end of
-        // the current argument
-        const char *end = strchr(env, ' ');
-        if (end == NULL)
-            end = env + strlen(env);
-        int len = end - env;
-
-        // Copy the argument into a newly allocated memory (so we can
-        // NUL-terminate it).
-        char *ptr = new char[len+1];
-        strncpy(ptr, env, len);
-        ptr[len] = '\0';
-
-        // Add it to the args array and get out of here
-        argv[argc++] = ptr;
-        if (*end == '\0')
-            break;
-
-        // Advance the starting pointer of the string to the next non-space
-        // character
-        env = end+1;
-        while (*env == ' ')
-            ++env;
-
-        // Hit the end of the string; get out of here
-        if (*env == '\0')
-            break;
-    }
+    if (env)
+        lAddArgsFromString(env, argc, argv);
 }
 
 
@@ -302,7 +411,7 @@ lParseInclude(const char *path) {
 
 int main(int Argc, char *Argv[]) {
     int argc;
-    char *argv[128];
+    char *argv[MAX_NUM_ARGS];
     lGetAllArgs(Argc, Argv, argc, argv);
 
     llvm::sys::AddSignalHandler(lSignal, NULL);
