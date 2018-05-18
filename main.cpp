@@ -286,13 +286,15 @@ static void lAddArgsFromFactory(ArgFactory &Args, int &argc, char *argv[MAX_NUM_
 /** Parse an open file for arguments and add them to the argc/argv passed as parameters */
 static void lAddArgsFromFile(FILE *file, int &argc, char *argv[MAX_NUM_ARGS])
 {
-    lAddArgsFromFactory(FileArgFactory(file), argc, argv);
+    FileArgFactory args(file);
+    lAddArgsFromFactory(args, argc, argv);
 }
 
 /** Parse a string for arguments and add them to the argc/argv passed as parameters */
 static void lAddArgsFromString(const char *string, int &argc, char *argv[MAX_NUM_ARGS])
 {
-    lAddArgsFromFactory(StringArgFactory(string), argc, argv);
+    StringArgFactory args(string);
+    lAddArgsFromFactory(args, argc, argv);
 }
 
 /** Add a single argument to the argc/argv passed as parameters. If the argument is of the
