@@ -867,6 +867,22 @@ to use the ``print`` statement for ``printf()`` style debugging.  (See
 call back to application code at particular points in the program, passing
 a set of variable values to be logged or otherwise analyzed from there.
 
+Other ways of passing arguments to ISPC
+---------------------------------------
+
+In addition to specifying arguments on the command line, if the ``ISPC_ARGS``
+environment variable has been set it is split into arguments and these arguments
+are appended to any provided on the command line.
+
+It is also possible to pass arguments to ``ispc`` in a file. If an argument has
+the form ``@<filename>``, where ``<filename>`` exists and is readable, it is
+replaced with the content of the file split into arguments. Note that it *is*
+allowed for a file to contain a further ``@<filename>`` argument.
+
+Where a file or environment varaible is split into arguments, this is done based on
+the arguments being separated by one or more whitespace characters, including tabs
+and newlines. There is no means of escaping or quoting a character to allow an
+argument to contain a whitespace character.
 
 The ISPC Parallel Execution Model
 =================================
