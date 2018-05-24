@@ -71,6 +71,7 @@ Contents:
   + `Selecting 32 or 64 Bit Addressing`_
   + `The Preprocessor`_
   + `Debugging`_
+  + `Other ways of passing arguments to ISPC`_
 
 * `The ISPC Parallel Execution Model`_
 
@@ -879,7 +880,7 @@ the form ``@<filename>``, where ``<filename>`` exists and is readable, it is
 replaced with the content of the file split into arguments. Note that it *is*
 allowed for a file to contain a further ``@<filename>`` argument.
 
-Where a file or environment varaible is split into arguments, this is done based on
+Where a file or environment variable is split into arguments, this is done based on
 the arguments being separated by one or more whitespace characters, including tabs
 and newlines. There is no means of escaping or quoting a character to allow an
 argument to contain a whitespace character.
