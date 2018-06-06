@@ -101,6 +101,7 @@
 #include <llvm/Transforms/IPO.h>
 #if ISPC_LLVM_VERSION >= ISPC_LLVM_7_0
   #include "llvm/Transforms/Utils.h"
+  #include "llvm/Transforms/InstCombine/InstCombine.h"
 #endif
 #include <llvm/Transforms/Utils/BasicBlockUtils.h>
 #include <llvm/Target/TargetOptions.h>

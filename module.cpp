@@ -1573,10 +1573,19 @@ Module::writeObjectFileOrAssembly(llvm::TargetMachine *targetMachine,
 #else // LLVM 3.7+
     llvm::raw_fd_ostream &fos(of->os());
 #endif
+#if ISPC_LLVM_VERSION <= ISPC_LLVM_6_0
     if (targetMachine->addPassesToEmitFile(pm, fos, fileType)) {
         fprintf(stderr, "Fatal error adding passes to emit object file!");
         exit(1);
     }
+#else // LLVM 7.0+
+    // Third parameter is for generation of .dwo file, which is separate DWARF
+    // file for ELF targets. We don't support it currently.
+    if (targetMachine->addPassesToEmitFile(pm, fos, nullptr, fileType)) {
+        fprintf(stderr, "Fatal error adding passes to emit object file!");
+        exit(1);
+    }
+#endif
 
     // Finally, run the passes to emit the object file/assembly
     pm.run(*module);
