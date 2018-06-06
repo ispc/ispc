@@ -3461,11 +3461,18 @@ FunctionEmitContext::MemcpyInst(llvm::Value *dest, llvm::Value *src,
                                        LLVMTypes::VoidType, LLVMTypes::VoidPointerType,
                                        LLVMTypes::VoidPointerType, LLVMTypes::Int64Type,
                                        LLVMTypes::Int32Type, LLVMTypes::BoolType, NULL);
-#else // LLVM 5.0+
+#elif ISPC_LLVM_VERSION <= ISPC_LLVM_6_0 // LLVM 5.0-6.0
         m->module->getOrInsertFunction("llvm.memcpy.p0i8.p0i8.i64",
                                        LLVMTypes::VoidType, LLVMTypes::VoidPointerType,
                                        LLVMTypes::VoidPointerType, LLVMTypes::Int64Type,
                                        LLVMTypes::Int32Type, LLVMTypes::BoolType);
+#else // LLVM 7.0+
+        // Now alignment goes as an attribute, not as a parameter.
+        // See LLVM r322965/r323597 for more details.
+        m->module->getOrInsertFunction("llvm.memcpy.p0i8.p0i8.i64",
+                                       LLVMTypes::VoidType, LLVMTypes::VoidPointerType,
+                                       LLVMTypes::VoidPointerType, LLVMTypes::Int64Type,
+                                       LLVMTypes::BoolType);
 #endif
 
     AssertPos(currentPos, mcFunc != NULL);
@@ -3475,7 +3482,10 @@ FunctionEmitContext::MemcpyInst(llvm::Value *dest, llvm::Value *src,
     args.push_back(dest);
     args.push_back(src);
     args.push_back(count);
+#if ISPC_LLVM_VERSION < ISPC_LLVM_7_0
+    // Don't bother about setting alignment for 7.0+, as this parameter is never really used by ISPC.
     args.push_back(align);
+#endif
     args.push_back(LLVMFalse); /* not volatile */
     CallInst(mcFunc, NULL, args, "");
 }
