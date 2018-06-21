@@ -1982,6 +1982,16 @@ lMangleStructName(const std::string &name, Variability variability) {
 
     // Encode vector width
     sprintf(buf, "v%d", g->target->getVectorWidth());
+
+    // Encode native vector width
+    // This additional information is needed to differentiate between structs
+    // for architectures with same vector width but different native vector
+    // width. Eg. sse4-i32x4 and avx1-i32x4. In such a case, we need to add
+    // the struct name to the map separately for both cases in order to account
+    // for cases involving uniform vector type element(s).
+    // This is needed due to padding of short vector, which depends on native
+    // vector width.
+    sprintf(buf + strlen(buf), "nv%d", g->target->getNativeVectorWidth());
     n += buf;
 
     // Variability
