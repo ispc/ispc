@@ -796,6 +796,18 @@ soa_to_aos4(float v0, float v1, float v2, float v3, uniform float a[]) {
 }
 
 static inline void
+aos_to_soa4(uniform double a[], varying double * uniform v0,
+            varying double * uniform v1, varying double * uniform v2,
+            varying double * uniform v3) {
+    __aos_to_soa4_double(a, v0, v1, v2, v3);
+}
+
+static inline void
+soa_to_aos4(double v0, double v1, double v2, double v3, uniform double a[]) {
+    __soa_to_aos4_double(v0, v1, v2, v3, a);
+}
+
+static inline void
 aos_to_soa3(uniform int32 a[], varying int32 * uniform v0,
             varying int32 * uniform v1, varying int32 * uniform v2) {
     aos_to_soa3((uniform float * uniform)a, (varying float * uniform)v0,
