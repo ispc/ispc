@@ -151,6 +151,7 @@ public:
                                 const char *headerFileName,
                                 const char *includeFileName,
                                 const char *depsFileName,
+                                const char *depsTargetName,
                                 const char *hostStubFileName,
                                 const char *devStubFileName);
 

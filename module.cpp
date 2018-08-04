@@ -2002,8 +2002,7 @@ Module::writeDeps(const char *fn, bool generateMakeRule, const char *tn) {
     for (std::set<std::string>::const_iterator it=registeredDependencies.begin();
          it != registeredDependencies.end();
          ++it) {
-      // As this is preprocessor output, these paths come escaped.
-      unescaped = *it;
+      unescaped = *it;  // As this is preprocessor output, paths come escaped.
       lUnescapeStringInPlace(unescaped);
       fprintf(file," %s \\\n",unescaped.c_str());
     }
@@ -3174,6 +3173,7 @@ Module::CompileAndOutput(const char *srcFile,
                          const char *headerFileName,
                          const char *includeFileName,
                          const char *depsFileName,
+                         const char *depsTargetName,
                          const char *hostStubFileName,
                          const char *devStubFileName)
 {
@@ -3237,7 +3237,9 @@ Module::CompileAndOutput(const char *srcFile,
                     return 1;
             if (depsFileName != NULL || (outputFlags & Module::OutputDepsToStdout)) {
               std::string targetName;
-              if (outFileName)
+			  if (depsTargetName)
+                targetName = depsTargetName;
+              else if (outFileName)
                 targetName = outFileName;
               else if (srcFile) {
                 targetName = srcFile;

@@ -129,6 +129,7 @@ usage(int ret) {
     printf("    [-MMM <filename>]\t\t\tWrite #include dependencies to given file.\n");
     printf("    [-M]\t\t\t\tOutput a rule suitable for `make' describing the dependencies of the main source file to stdout.\n");
     printf("    [-MF <filename>]\t\t\tWhen used with `-M', specifies a file to write the dependencies to.\n");
+	printf("    [-MT <filename>]\t\t\tWhen used with `-M', changes the target of the rule emitted by dependency generation.\n");
     printf("    [--no-omit-frame-pointer]\t\tDisable frame pointer omission. It may be useful for profiling\n");
     printf("    [--nostdlib]\t\t\tDon't make the ispc standard library available\n");
     printf("    [--nocpp]\t\t\t\tDon't run the C preprocessor\n");
@@ -456,6 +457,7 @@ int main(int Argc, char *Argv[]) {
     const char *outFileName = NULL;
     const char *includeFileName = NULL;
     const char *depsFileName = NULL;
+	const char *depsTargetName = NULL;
     const char *hostStubFileName = NULL;
     const char *devStubFileName = NULL;
     // Initiailize globals early so that we can set various option values
@@ -693,6 +695,14 @@ int main(int Argc, char *Argv[]) {
           }
           depsFileName = argv[i];
         }
+        else if (!strcmp(argv[i], "-MT")) {
+          depsTargetName = nullptr;
+          if (++i == argc) {
+              fprintf(stderr, "No target name specified after -MT option.\n");
+              usage(1);
+          }
+          depsTargetName = argv[i];
+        }
         else if (!strcmp(argv[i], "--dev-stub")) {
           if (++i == argc) {
             fprintf(stderr, "No output file name specified after --dev-stub option.\n");
@@ -762,7 +772,7 @@ int main(int Argc, char *Argv[]) {
     if (depsFileName != NULL)
       flags &= ~Module::OutputDepsToStdout;
 
-    if (depsFileName == NULL &&
+    if (depsFileName != NULL &&
         0 == (flags & (Module::GenerateFlatDeps | Module::GenerateMakeRuleForDeps))) {
       Warning(SourcePos(), "Dependency file name specified with -MF, but no "
               "mode specified; did you forget to specify -M or -MMM? "
@@ -771,7 +781,7 @@ int main(int Argc, char *Argv[]) {
     }
 
     if ((Module::GenerateFlatDeps | Module::GenerateMakeRuleForDeps) ==
-        flags & (Module::GenerateFlatDeps | Module::GenerateMakeRuleForDeps)) {
+        (flags & (Module::GenerateFlatDeps | Module::GenerateMakeRuleForDeps))) {
       Warning(SourcePos(), "Both -M and -MMM specified on the command line. "
         "-MMM takes precedence.");
       flags &= Module::GenerateMakeRuleForDeps;
@@ -792,6 +802,7 @@ int main(int Argc, char *Argv[]) {
                                     headerFileName,
                                     includeFileName,
                                     depsFileName,
+                                    depsTargetName,
                                     hostStubFileName,
                                     devStubFileName);
 }
