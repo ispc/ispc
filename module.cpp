@@ -1958,9 +1958,37 @@ lIsExternC(const Symbol *sym) {
 }
 
 
+static void
+lUnescapeStringInPlace(std::string& str) {
+    // There are many more escape sequences, but since this is a path,
+    // we can get away with only supporting the basic ones (i.e. no
+    // octal, hexadecimal or unicode values).
+    for (std::string::iterator it = str.begin(); it != str.end(); ++it) {
+      size_t pos = it - str.begin();
+      std::string::iterator next = it + 1;
+      if (*it == '\\' && next != str.end()) {
+        switch (*next) {
+#define UNESCAPE_SEQ(c, esc)  case c: *it = esc; str.erase(next); it = str.begin() + pos; break
+        UNESCAPE_SEQ('\'', '\'');
+        UNESCAPE_SEQ('?', '?');
+        UNESCAPE_SEQ('\\', '\\');
+        UNESCAPE_SEQ('a', '\a');
+        UNESCAPE_SEQ('b', '\b');
+        UNESCAPE_SEQ('f', '\f');
+        UNESCAPE_SEQ('n', '\n');
+        UNESCAPE_SEQ('r', '\r');
+        UNESCAPE_SEQ('t', '\t');
+        UNESCAPE_SEQ('v', '\v');
+#undef UNESCAPE_SEQ
+        }
+      }
+    }
+}
+
+
 bool
 Module::writeDeps(const char *fn, bool generateMakeRule, const char *tn) {
-  if (fn)	// We may be passed nullptr for stdout output.
+  if (fn)   // We may be passed nullptr for stdout output.
     std::cout << "writing dependencies to file " << fn << std::endl;
   FILE *file = fn ? fopen(fn,"w") : stdout;
   if (!file) {
@@ -1970,10 +1998,15 @@ Module::writeDeps(const char *fn, bool generateMakeRule, const char *tn) {
 
   if (generateMakeRule) {
     fprintf(file,"%s:", tn);
+    std::string unescaped;
     for (std::set<std::string>::const_iterator it=registeredDependencies.begin();
          it != registeredDependencies.end();
-         ++it)
-      fprintf(file," %s \\\n",it->c_str());
+         ++it) {
+      // As this is preprocessor output, these paths come escaped.
+      unescaped = *it;
+      lUnescapeStringInPlace(unescaped);
+      fprintf(file," %s \\\n",unescaped.c_str());
+    }
   } else {
     for (std::set<std::string>::const_iterator it=registeredDependencies.begin();
          it != registeredDependencies.end();
