@@ -1225,7 +1225,7 @@ Module::AddExportedTypes(const std::vector<std::pair<const Type *,
 
 
 bool
-Module::writeOutput(OutputType outputType, const char *outFileName,
+Module::writeOutput(OutputType outputType, OutputFlags flags, const char *outFileName,
                     const char *includeFileName, DispatchHeaderInfo *DHI) {
     if (diBuilder && (outputType != Header) && (outputType != Deps))
         lStripUnusedDebugInfo(module);
@@ -1245,74 +1245,77 @@ Module::writeOutput(OutputType outputType, const char *outFileName,
     &&  module && llvm::verifyModule(*module))
         FATAL("Resulting module verification failed!");
 
+    if (outFileName)
+    {
     // First, issue a warning if the output file suffix and the type of
     // file being created seem to mismatch.  This can help catch missing
     // command-line arguments specifying the output file type.
-    const char *suffix = strrchr(outFileName, '.');
-    if (suffix != NULL) {
-        ++suffix;
-        const char *fileType = NULL;
-        switch (outputType) {
-        case Asm:
+      const char *suffix = strrchr(outFileName, '.');
+      if (suffix != NULL) {
+          ++suffix;
+          const char *fileType = NULL;
+          switch (outputType) {
+          case Asm:
 #ifdef ISPC_NVPTX_ENABLED
-          if (g->target->getISA() == Target::NVPTX)
-          {
-            if (strcasecmp(suffix, "ptx"))
-                fileType = "assembly";
-          }
-          else
+            if (g->target->getISA() == Target::NVPTX)
+            {
+              if (strcasecmp(suffix, "ptx"))
+                  fileType = "assembly";
+            }
+            else
 #endif /* ISPC_NVPTX_ENABLED */
-            if (strcasecmp(suffix, "s"))
-                fileType = "assembly";
-            break;
-        case Bitcode:
+              if (strcasecmp(suffix, "s"))
+                  fileType = "assembly";
+              break;
+          case Bitcode:
 #ifdef ISPC_NVPTX_ENABLED
-          if (g->target->getISA() == Target::NVPTX)
-          {
-            if (strcasecmp(suffix, "ll"))
-                fileType = "LLVM assembly";
-          }
-          else
+            if (g->target->getISA() == Target::NVPTX)
+            {
+              if (strcasecmp(suffix, "ll"))
+                  fileType = "LLVM assembly";
+            }
+            else
 #endif /* ISPC_NVPTX_ENABLED */
-            if (strcasecmp(suffix, "bc"))
-                fileType = "LLVM bitcode";
+              if (strcasecmp(suffix, "bc"))
+                  fileType = "LLVM bitcode";
+              break;
+          case Object:
+              if (strcasecmp(suffix, "o") && strcasecmp(suffix, "obj"))
+                  fileType = "object";
+              break;
+          case CXX:
+              if (strcasecmp(suffix, "c") && strcasecmp(suffix, "cc") &&
+                  strcasecmp(suffix, "c++") && strcasecmp(suffix, "cxx") &&
+                  strcasecmp(suffix, "cpp"))
+                  fileType = "c++";
+              break;
+          case Header:
+              if (strcasecmp(suffix, "h") && strcasecmp(suffix, "hh") &&
+                  strcasecmp(suffix, "hpp"))
+                  fileType = "header";
+              break;
+          case Deps:
             break;
-        case Object:
-            if (strcasecmp(suffix, "o") && strcasecmp(suffix, "obj"))
-                fileType = "object";
-            break;
-        case CXX:
+          case DevStub:
             if (strcasecmp(suffix, "c") && strcasecmp(suffix, "cc") &&
                 strcasecmp(suffix, "c++") && strcasecmp(suffix, "cxx") &&
                 strcasecmp(suffix, "cpp"))
-                fileType = "c++";
-            break;
-        case Header:
-            if (strcasecmp(suffix, "h") && strcasecmp(suffix, "hh") &&
-                strcasecmp(suffix, "hpp"))
-                fileType = "header";
-            break;
-        case Deps:
-          break;
-        case DevStub:
-          if (strcasecmp(suffix, "c") && strcasecmp(suffix, "cc") &&
-              strcasecmp(suffix, "c++") && strcasecmp(suffix, "cxx") &&
-              strcasecmp(suffix, "cpp"))
-            fileType = "dev-side offload stub";
-            break;
-        case HostStub:
-          if (strcasecmp(suffix, "c") && strcasecmp(suffix, "cc") &&
-              strcasecmp(suffix, "c++") && strcasecmp(suffix, "cxx") &&
-              strcasecmp(suffix, "cpp"))
-            fileType = "host-side offload stub";
-            break;
-        default:
-          Assert(0 /* swtich case not handled */);
-          return 1;
-        }
-        if (fileType != NULL)
-            Warning(SourcePos(), "Emitting %s file, but filename \"%s\" "
-                    "has suffix \"%s\"?", fileType, outFileName, suffix);
+              fileType = "dev-side offload stub";
+              break;
+          case HostStub:
+            if (strcasecmp(suffix, "c") && strcasecmp(suffix, "cc") &&
+                strcasecmp(suffix, "c++") && strcasecmp(suffix, "cxx") &&
+                strcasecmp(suffix, "cpp"))
+              fileType = "host-side offload stub";
+              break;
+          default:
+            Assert(0 /* swtich case not handled */);
+            return 1;
+          }
+          if (fileType != NULL)
+              Warning(SourcePos(), "Emitting %s file, but filename \"%s\" "
+                      "has suffix \"%s\"?", fileType, outFileName, suffix);
+      }
     }
 
     if (outputType == Header) {
@@ -1322,7 +1325,7 @@ Module::writeOutput(OutputType outputType, const char *outFileName,
         return writeHeader(outFileName);
     }
     else if (outputType == Deps)
-      return writeDeps(outFileName);
+      return writeDeps(outFileName, 0 != (flags & GenerateMakeRuleForDeps), includeFileName);
     else if (outputType == HostStub)
       return writeHostStub(outFileName);
     else if (outputType == DevStub)
@@ -1956,18 +1959,27 @@ lIsExternC(const Symbol *sym) {
 
 
 bool
-Module::writeDeps(const char *fn) {
-  std::cout << "writing dependencies to file " << fn << std::endl;
-  FILE *file = fopen(fn,"w");
+Module::writeDeps(const char *fn, bool generateMakeRule, const char *tn) {
+  if (fn)	// We may be passed nullptr for stdout output.
+    std::cout << "writing dependencies to file " << fn << std::endl;
+  FILE *file = fn ? fopen(fn,"w") : stdout;
   if (!file) {
     perror("fopen");
     return false;
   }
 
-  for (std::set<std::string>::const_iterator it=registeredDependencies.begin();
-       it != registeredDependencies.end();
-       ++it)
-    fprintf(file,"%s\n",it->c_str());
+  if (generateMakeRule) {
+    fprintf(file,"%s:", tn);
+    for (std::set<std::string>::const_iterator it=registeredDependencies.begin();
+         it != registeredDependencies.end();
+         ++it)
+      fprintf(file," %s \\\n",it->c_str());
+  } else {
+    for (std::set<std::string>::const_iterator it=registeredDependencies.begin();
+         it != registeredDependencies.end();
+         ++it)
+      fprintf(file,"%s\n",it->c_str());
+  }
   return true;
 }
 
@@ -3123,7 +3135,7 @@ Module::CompileAndOutput(const char *srcFile,
                          const char *arch,
                          const char *cpu,
                          const char *target,
-                         bool generatePIC,
+                         OutputFlags outputFlags,
                          OutputType outputType,
                          const char *outFileName,
                          const char *headerFileName,
@@ -3134,7 +3146,7 @@ Module::CompileAndOutput(const char *srcFile,
 {
     if (target == NULL || strchr(target, ',') == NULL) {
         // We're only compiling to a single target
-        g->target = new Target(arch, cpu, target, generatePIC, g->printTarget);
+        g->target = new Target(arch, cpu, target, 0 != (outputFlags & GeneratePIC), g->printTarget);
         if (!g->target->isValid())
             return 1;
 
@@ -3185,19 +3197,31 @@ Module::CompileAndOutput(const char *srcFile,
             }
 
             if (outFileName != NULL)
-                if (!m->writeOutput(outputType, outFileName, includeFileName))
+                if (!m->writeOutput(outputType, outputFlags, outFileName, includeFileName))
                     return 1;
             if (headerFileName != NULL)
-                if (!m->writeOutput(Module::Header, headerFileName))
+                if (!m->writeOutput(Module::Header, outputFlags, headerFileName))
                     return 1;
-            if (depsFileName != NULL)
-              if (!m->writeOutput(Module::Deps,depsFileName))
+            if (depsFileName != NULL || (outputFlags & Module::OutputDepsToStdout)) {
+              std::string targetName;
+              if (outFileName)
+                targetName = outFileName;
+              else if (srcFile) {
+                targetName = srcFile;
+                size_t dot = targetName.find_last_of('.');
+                if (dot != std::string::npos)
+                  targetName.erase(dot, std::string::npos);
+                targetName.append(".o");
+              } else
+                targetName = "a.out";
+              if (!m->writeOutput(Module::Deps,outputFlags,depsFileName,targetName.c_str()))
                 return 1;
+            }
             if (hostStubFileName != NULL)
-              if (!m->writeOutput(Module::HostStub,hostStubFileName))
+              if (!m->writeOutput(Module::HostStub,outputFlags,hostStubFileName))
                 return 1;
             if (devStubFileName != NULL)
-              if (!m->writeOutput(Module::DevStub,devStubFileName))
+              if (!m->writeOutput(Module::DevStub,outputFlags,devStubFileName))
                 return 1;
         }
         else
@@ -3278,7 +3302,7 @@ Module::CompileAndOutput(const char *srcFile,
         std::string treatGenericAsSmth = "";
 
         for (unsigned int i = 0; i < targets.size(); ++i) {
-            g->target = new Target(arch, cpu, targets[i].c_str(), generatePIC, g->printTarget);
+            g->target = new Target(arch, cpu, targets[i].c_str(), 0 != (outputFlags & GeneratePIC), g->printTarget);
             if (!g->target->isValid())
                 return 1;
 
@@ -3316,13 +3340,13 @@ Module::CompileAndOutput(const char *srcFile,
                         !g->target->getTreatGenericAsSmth().empty()) {
                         targetOutFileName = lGetTargetFileName(outFileName,
                                                 g->target->getTreatGenericAsSmth().c_str(), true);
-                        if (!m->writeOutput(CXX, targetOutFileName.c_str(), includeFileName))
+                        if (!m->writeOutput(CXX, outputFlags, targetOutFileName.c_str(), includeFileName))
                             return 1;
                     }
                     else {
                         const char *isaName = g->target->GetISAString();
                         targetOutFileName = lGetTargetFileName(outFileName, isaName, false);
-                        if (!m->writeOutput(outputType, targetOutFileName.c_str()))
+                        if (!m->writeOutput(outputType, outputFlags, targetOutFileName.c_str()))
                             return 1;
                     }
                 }
@@ -3352,10 +3376,10 @@ Module::CompileAndOutput(const char *srcFile,
               std::string targetHeaderFileName =
                 lGetTargetFileName(headerFileName, isaName, false);
               // write out a header w/o target name for the first target only
-              if (!m->writeOutput(Module::Header, headerFileName, "", &DHI)) {
+              if (!m->writeOutput(Module::Header, outputFlags, headerFileName, "", &DHI)) {
                 return 1;
               }
-              if (!m->writeOutput(Module::Header, targetHeaderFileName.c_str())) {
+              if (!m->writeOutput(Module::Header, outputFlags, targetHeaderFileName.c_str())) {
                 return 1;
               }
               if (i == targets.size()-1) {
@@ -3384,7 +3408,7 @@ Module::CompileAndOutput(const char *srcFile,
         }
         Assert(firstTargetMachine != NULL);
 
-        g->target = new Target(arch, cpu, firstISA, generatePIC, false, treatGenericAsSmth);
+        g->target = new Target(arch, cpu, firstISA, 0 != (outputFlags & GeneratePIC), false, treatGenericAsSmth);
         if (!g->target->isValid()) {
             return 1;
         }
@@ -3400,7 +3424,7 @@ Module::CompileAndOutput(const char *srcFile,
         }
 
         if (depsFileName != NULL)
-            if (!m->writeOutput(Module::Deps, depsFileName))
+            if (!m->writeOutput(Module::Deps, outputFlags, depsFileName))
                 return 1;
 
         delete g->target;

@@ -126,7 +126,9 @@ usage(int ret) {
     printf("        fast\t\t\t\tUse high-performance but lower-accuracy math functions\n");
     printf("        svml\t\t\t\tUse the Intel(r) SVML math libraries\n");
     printf("        system\t\t\t\tUse the system's math library (*may be quite slow*)\n");
-    printf("    [-MMM <filename>\t\t\tWrite #include dependencies to given file.\n");
+    printf("    [-MMM <filename>]\t\t\tWrite #include dependencies to given file.\n");
+    printf("    [-M]\t\t\t\tOutput a rule suitable for `make' describing the dependencies of the main source file to stdout.\n");
+    printf("    [-MF <filename>]\t\t\tWhen used with `-M', specifies a file to write the dependencies to.\n");
     printf("    [--no-omit-frame-pointer]\t\tDisable frame pointer omission. It may be useful for profiling\n");
     printf("    [--nostdlib]\t\t\tDon't make the ispc standard library available\n");
     printf("    [--nocpp]\t\t\t\tDon't run the C preprocessor\n");
@@ -461,7 +463,7 @@ int main(int Argc, char *Argv[]) {
     g = new Globals;
 
     Module::OutputType ot = Module::Object;
-    bool generatePIC = false;
+    Module::OutputFlags flags = Module::NoFlags;
     const char *arch = NULL, *cpu = NULL, *target = NULL;
 
     for (int i = 1; i < argc; ++i) {
@@ -662,7 +664,7 @@ int main(int Argc, char *Argv[]) {
             g->runCPP = false;
 #ifndef ISPC_IS_WINDOWS
         else if (!strcmp(argv[i], "--pic"))
-            generatePIC = true;
+            flags |= Module::GeneratePIC;
         else if (!strcmp(argv[i], "--colored-output"))
             g->forceColoredOutput = true;
 #endif // !ISPC_IS_WINDOWS
@@ -676,6 +678,18 @@ int main(int Argc, char *Argv[]) {
           if (++i == argc) {
             fprintf(stderr, "No output file name specified after -MMM option.\n");
             usage(1);
+          }
+          depsFileName = argv[i];
+          flags |= Module::GenerateFlatDeps;
+        }
+        else if (!strcmp(argv[i], "-M")) {
+          flags |= Module::GenerateMakeRuleForDeps | Module::OutputDepsToStdout;
+        }
+        else if (!strcmp(argv[i], "-MF")) {
+          depsFileName = nullptr;
+          if (++i == argc) {
+              fprintf(stderr, "No output file name specified after -MF option.\n");
+              usage(1);
           }
           depsFileName = argv[i];
         }
@@ -745,16 +759,34 @@ int main(int Argc, char *Argv[]) {
 #endif
     }
 
+    if (depsFileName != NULL)
+      flags &= ~Module::OutputDepsToStdout;
+
+    if (depsFileName == NULL &&
+        0 == (flags & (Module::GenerateFlatDeps | Module::GenerateMakeRuleForDeps))) {
+      Warning(SourcePos(), "Dependency file name specified with -MF, but no "
+              "mode specified; did you forget to specify -M or -MMM? "
+              "No dependency output will be generated.");
+      depsFileName = NULL;
+    }
+
+    if ((Module::GenerateFlatDeps | Module::GenerateMakeRuleForDeps) ==
+        flags & (Module::GenerateFlatDeps | Module::GenerateMakeRuleForDeps)) {
+      Warning(SourcePos(), "Both -M and -MMM specified on the command line. "
+        "-MMM takes precedence.");
+      flags &= Module::GenerateMakeRuleForDeps;
+    }
+
     if (outFileName == NULL &&
         headerFileName == NULL &&
-        depsFileName == NULL &&
+        (depsFileName == NULL && 0 == (flags & Module::OutputDepsToStdout)) &&
         hostStubFileName == NULL &&
         devStubFileName == NULL)
       Warning(SourcePos(), "No output file or header file name specified. "
               "Program will be compiled and warnings/errors will "
               "be issued, but no output will be generated.");
 
-    return Module::CompileAndOutput(file, arch, cpu, target, generatePIC,
+    return Module::CompileAndOutput(file, arch, cpu, target, flags,
                                     ot,
                                     outFileName,
                                     headerFileName,
