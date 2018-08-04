@@ -1226,7 +1226,8 @@ Module::AddExportedTypes(const std::vector<std::pair<const Type *,
 
 bool
 Module::writeOutput(OutputType outputType, OutputFlags flags, const char *outFileName,
-                    const char *includeFileName, DispatchHeaderInfo *DHI) {
+                    const char *includeFileName, const char *sourceFileName,
+                    DispatchHeaderInfo *DHI) {
     if (diBuilder && (outputType != Header) && (outputType != Deps))
         lStripUnusedDebugInfo(module);
 
@@ -1325,7 +1326,7 @@ Module::writeOutput(OutputType outputType, OutputFlags flags, const char *outFil
         return writeHeader(outFileName);
     }
     else if (outputType == Deps)
-      return writeDeps(outFileName, 0 != (flags & GenerateMakeRuleForDeps), includeFileName);
+      return writeDeps(outFileName, 0 != (flags & GenerateMakeRuleForDeps), includeFileName, sourceFileName);
     else if (outputType == HostStub)
       return writeHostStub(outFileName);
     else if (outputType == DevStub)
@@ -1987,7 +1988,7 @@ lUnescapeStringInPlace(std::string& str) {
 
 
 bool
-Module::writeDeps(const char *fn, bool generateMakeRule, const char *tn) {
+Module::writeDeps(const char *fn, bool generateMakeRule, const char *tn, const char *sn) {
   if (fn)   // We may be passed nullptr for stdout output.
     std::cout << "writing dependencies to file " << fn << std::endl;
   FILE *file = fn ? fopen(fn,"w") : stdout;
@@ -1998,12 +1999,16 @@ Module::writeDeps(const char *fn, bool generateMakeRule, const char *tn) {
 
   if (generateMakeRule) {
     fprintf(file,"%s:", tn);
+    if (sn) // Rules always emit source first.
+      fprintf(file," %s \\\n",sn);
     std::string unescaped;
     for (std::set<std::string>::const_iterator it=registeredDependencies.begin();
          it != registeredDependencies.end();
          ++it) {
       unescaped = *it;  // As this is preprocessor output, paths come escaped.
       lUnescapeStringInPlace(unescaped);
+      if (sn && 0 == strcmp(sn, unescaped.c_str()))   // If source has been passed, it's already emitted.
+        continue;
       fprintf(file," %s \\\n",unescaped.c_str());
     }
   } else {
@@ -3249,7 +3254,7 @@ Module::CompileAndOutput(const char *srcFile,
                 targetName.append(".o");
               } else
                 targetName = "a.out";
-              if (!m->writeOutput(Module::Deps,outputFlags,depsFileName,targetName.c_str()))
+              if (!m->writeOutput(Module::Deps,outputFlags,depsFileName,targetName.c_str(),srcFile))
                 return 1;
             }
             if (hostStubFileName != NULL)
@@ -3411,7 +3416,7 @@ Module::CompileAndOutput(const char *srcFile,
               std::string targetHeaderFileName =
                 lGetTargetFileName(headerFileName, isaName, false);
               // write out a header w/o target name for the first target only
-              if (!m->writeOutput(Module::Header, outputFlags, headerFileName, "", &DHI)) {
+              if (!m->writeOutput(Module::Header, outputFlags, headerFileName, "", nullptr, &DHI)) {
                 return 1;
               }
               if (!m->writeOutput(Module::Header, outputFlags, targetHeaderFileName.c_str())) {

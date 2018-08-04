@@ -186,10 +186,11 @@ private:
         output. */
     bool writeOutput(OutputType ot, OutputFlags flags, const char *filename,
                      const char *includeFileName = NULL,
+                     const char *sourceFileName = NULL,
                      DispatchHeaderInfo *DHI = 0);
     bool writeHeader(const char *filename);
     bool writeDispatchHeader(DispatchHeaderInfo *DHI);
-    bool writeDeps(const char *filename, bool generateMakeRule, const char *targetName = NULL);
+    bool writeDeps(const char *filename, bool generateMakeRule, const char *targetName = NULL, const char *srcFilename = NULL);
     bool writeDevStub(const char *filename);
     bool writeHostStub(const char *filename);
     bool writeObjectFileOrAssembly(OutputType outputType, const char *filename);
