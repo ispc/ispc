@@ -4193,7 +4193,9 @@ void CWriter::lowerIntrinsics(llvm::Function &F) {
 #elif ISPC_LLVM_VERSION <= ISPC_LLVM_6_0 /* LLVM 3.3-6.0 */
   #include "llvm/IR/Intrinsics.gen"
 #else /* LLVM 7.0+ */
-  #include "llvm/IR/Intrinsics.inc"
+// This looks completely broken, even in 3.2, need to figure out what's going on here
+// and how to fix it (if needed).
+//  #include "llvm/IR/Intrinsics.inc"
 #endif
 #undef Intrinsic
 #undef GET_GCC_BUILTIN_NAME
@@ -4427,7 +4429,9 @@ bool CWriter::visitBuiltinCall(llvm::CallInst &I, llvm::Intrinsic::ID ID,
 #elif ISPC_LLVM_VERSION <= ISPC_LLVM_6_0 /* LLVM 3.3-6.0 */
   #include "llvm/IR/Intrinsics.gen"
 #else /* LLVM 7.0+ */
-  #include "llvm/IR/Intrinsics.inc"
+// This looks completely broken, even in 3.2, need to figure out what's going on here
+// and how to fix it (if needed).
+//  #include "llvm/IR/Intrinsics.inc"
 #endif
 #undef Intrinsic
 #undef GET_GCC_BUILTIN_NAME
