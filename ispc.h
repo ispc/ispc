@@ -41,7 +41,7 @@
 #include "ispc_version.h"
 
 #if ISPC_LLVM_VERSION < OLDEST_SUPPORTED_LLVM || ISPC_LLVM_VERSION > LATEST_SUPPORTED_LLVM
-#error "Only LLVM 3.2, 3.3, 3.4, 3.5, 3.6, 3.7, 3.8, 3.9, 4.0, 5.0, 6.0 and 7.0 development branch are supported"
+#error "Only LLVM 3.2, 3.3, 3.4, 3.5, 3.6, 3.7, 3.8, 3.9, 4.0, 5.0, 6.0, 7.0 and 8.0 development branch are supported"
 #endif
 
 #if defined(_WIN32) || defined(_WIN64)
@@ -268,7 +268,7 @@ public:
 
     ISA getISA() const {return m_isa;}
 
-    std::string getTreatGenericAsSmth() const {return m_treatGenericAsSmth;} 
+    std::string getTreatGenericAsSmth() const {return m_treatGenericAsSmth;}
 
     std::string getArch() const {return m_arch;}
 
@@ -299,11 +299,11 @@ public:
     bool hasScatter() const {return m_hasScatter;}
 
     bool hasTranscendentals() const {return m_hasTranscendentals;}
-    
+
     bool hasTrigonometry() const {return m_hasTrigonometry;}
-    
+
     bool hasRsqrtd() const {return m_hasRsqrtd;}
-    
+
     bool hasRcpd() const {return m_hasRcpd;}
 
     bool hasVecPrefetch() const {return m_hasVecPrefetch;}
@@ -408,13 +408,13 @@ private:
     /** Indicates whether the target has support for transcendentals (beyond
         sqrt, which we assume that all of them handle). */
     bool m_hasTranscendentals;
-    
+
     /** Indicates whether the target has ISA support for trigonometry */
     bool m_hasTrigonometry;
-    
+
     /** Indicates whether there is an ISA double precision rsqrt. */
     bool m_hasRsqrtd;
-    
+
     /** Indicates whether there is an ISA double precision rcp. */
     bool m_hasRcpd;
 
