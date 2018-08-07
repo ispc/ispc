@@ -1,6 +1,6 @@
 // -*- mode: c++ -*-
 /*
-  Copyright (c) 2010-2014, Intel Corporation
+  Copyright (c) 2010-2018, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -823,6 +823,57 @@ soa_to_aos4(int32 v0, int32 v1, int32 v2, int32 v3, uniform int32 a[]) {
                 (uniform float * uniform)a);
 }
 
+
+static inline void
+aos_to_soa3(uniform double a[], varying double * uniform v0,
+            varying double * uniform v1, varying double * uniform v2) {
+    __aos_to_soa3_double(a, v0, v1, v2);
+}
+
+static inline void
+soa_to_aos3(double v0, double v1, double v2, uniform double a[]) {
+    __soa_to_aos3_double(v0, v1, v2, a);
+}
+
+static inline void
+aos_to_soa4(uniform double a[], varying double * uniform v0,
+            varying double * uniform v1, varying double * uniform v2,
+            varying double * uniform v3) {
+    __aos_to_soa4_double(a, v0, v1, v2, v3);
+}
+
+static inline void
+soa_to_aos4(double v0, double v1, double v2, double v3, uniform double a[]) {
+    __soa_to_aos4_double(v0, v1, v2, v3, a);
+}
+
+static inline void
+aos_to_soa3(uniform int64 a[], varying int64 * uniform v0,
+            varying int64 * uniform v1, varying int64 * uniform v2) {
+    aos_to_soa3((uniform double * uniform)a, (varying double * uniform)v0,
+                (varying double * uniform)v1, (varying double * uniform)v2);
+}
+
+static inline void
+soa_to_aos3(int64 v0, int64 v1, int64 v2, uniform int64 a[]) {
+    soa_to_aos3(doublebits(v0), doublebits(v1), doublebits(v2),
+                (uniform double * uniform)a);
+}
+
+static inline void
+aos_to_soa4(uniform int64 a[], varying int64 * uniform v0,
+            varying int64 * uniform v1, varying int64 * uniform v2,
+            varying int64 * uniform v3) {
+    aos_to_soa4((uniform double * uniform)a, (varying double * uniform )v0,
+                (varying double * uniform)v1, (varying double * uniform)v2,
+                (varying double * uniform)v3);
+}
+
+static inline void
+soa_to_aos4(int64 v0, int64 v1, int64 v2, int64 v3, uniform int64 a[]) {
+    soa_to_aos4(doublebits(v0), doublebits(v1), doublebits(v2), doublebits(v3),
+                (uniform double * uniform)a);
+}
 ///////////////////////////////////////////////////////////////////////////
 // Prefetching
 

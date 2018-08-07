@@ -1,4 +1,4 @@
-;;  Copyright (c) 2012-2015, Intel Corporation
+;;  Copyright (c) 2012-2018, Intel Corporation
 ;;  All rights reserved.
 ;;
 ;;  Redistribution and use in source and binary forms, with or without
@@ -365,6 +365,52 @@ define(`unary1to1', `
 ')
 
 
+;; dummy 1 wide vector ops
+define  void
+@__aos_to_soa4_double1(<1 x double> %v0, <1 x double> %v1, <1 x double> %v2,
+        <1 x double> %v3, <1 x double> * noalias %out0,
+        <1 x double> * noalias %out1, <1 x double> * noalias %out2,
+        <1 x double> * noalias %out3) nounwind alwaysinline {
+
+  store <1 x double> %v0, <1 x double > * %out0
+  store <1 x double> %v1, <1 x double > * %out1
+  store <1 x double> %v2, <1 x double > * %out2
+  store <1 x double> %v3, <1 x double > * %out3
+
+  ret void
+}
+
+define  void
+@__soa_to_aos4_double1(<1 x double> %v0, <1 x double> %v1, <1 x double> %v2,
+        <1 x double> %v3, <1 x double> * noalias %out0,
+        <1 x double> * noalias %out1, <1 x double> * noalias %out2,
+        <1 x double> * noalias %out3) nounwind alwaysinline {
+  call void @__aos_to_soa4_double1(<1 x double> %v0, <1 x double> %v1,
+    <1 x double> %v2, <1 x double> %v3, <1 x double> * %out0,
+    <1 x double> * %out1, <1 x double> * %out2, <1 x double> * %out3)
+  ret void
+}
+
+define  void
+@__aos_to_soa3_double1(<1 x double> %v0, <1 x double> %v1,
+         <1 x double> %v2, <1 x double> * noalias %out0, <1 x double> * noalias %out1,
+         <1 x double> * noalias %out2) {
+  store <1 x double> %v0, <1 x double > * %out0
+  store <1 x double> %v1, <1 x double > * %out1
+  store <1 x double> %v2, <1 x double > * %out2
+
+  ret void
+}
+
+define  void
+@__soa_to_aos3_double1(<1 x double> %v0, <1 x double> %v1,
+         <1 x double> %v2, <1 x double> * noalias %out0, <1 x double> * noalias %out1,
+         <1 x double> * noalias %out2) {
+  call void @__aos_to_soa3_double1(<1 x double> %v0, <1 x double> %v1,
+         <1 x double> %v2, <1 x double> * %out0, <1 x double> * %out1,
+         <1 x double> * %out2)
+  ret void
+}
 
 ;; dummy 1 wide vector ops
 define  void
