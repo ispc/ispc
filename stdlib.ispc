@@ -480,7 +480,13 @@ static inline uniform bool all(bool v) {
 #if (ISPC_MASK_BITS == 1)
     return __all(v | !__mask);
 #else
-    return __all((UIntMaskType)__sext_varying_bool(v) | !__mask);
+    // !__mask returns a 'bool' type. But for the logic to work, we need to
+    // convert this to a 'UIntMaskType' type. For 'TRUE' bool, we can be
+    // certain that the LSB will be set to '1'. Therefore using
+    // '__sext_varying_bool(!__mask)' to convert '!__mask' to 'UIntMaskType'
+    // is the safest option to ensure all bits are set to '1' for 'TRUE' and
+    // '0' for 'False'.
+    return __all((UIntMaskType)__sext_varying_bool(v) | (UIntMaskType)__sext_varying_bool(!__mask));
 #endif
 }
 
