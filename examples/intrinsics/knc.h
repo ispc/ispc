@@ -1,5 +1,5 @@
 /**
-  Copyright (c) 2010-2015, Intel Corporation
+  Copyright (c) 2010-2018, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -3693,6 +3693,20 @@ static FORCEINLINE void __aos_to_soa3_float(float *ptr, __vec16_f *out0, __vec16
   *out2 = _mm512_i32gather_ps(__vec16_i32(0,12,24,36,48,60,72,84,96,108,120,132,144,156,168,180), ptr+2, 1);
 }
 
+static FORCEINLINE void __soa_to_aos3_double(__vec16_d v0, __vec16_d v1, __vec16_d v2,
+                                            double *ptr) {
+  _mm512_i32scatter_pd(ptr, __vec16_i32(0,12,24,36,48,60,72,84,96,108,120,132,144,156,168,180), v0, 1);
+  _mm512_i32scatter_pd(ptr+1, __vec16_i32(0,12,24,36,48,60,72,84,96,108,120,132,144,156,168,180), v1, 1);
+  _mm512_i32scatter_pd(ptr+2, __vec16_i32(0,12,24,36,48,60,72,84,96,108,120,132,144,156,168,180), v2, 1);
+}
+
+static FORCEINLINE void __aos_to_soa3_double(double *ptr, __vec16_d *out0, __vec16_d *out1,
+                                            __vec16_d *out2) {
+  *out0 = _mm512_i32gather_pd(__vec16_i32(0,12,24,36,48,60,72,84,96,108,120,132,144,156,168,180), ptr, 1);
+  *out1 = _mm512_i32gather_pd(__vec16_i32(0,12,24,36,48,60,72,84,96,108,120,132,144,156,168,180), ptr+1, 1);
+  *out2 = _mm512_i32gather_pd(__vec16_i32(0,12,24,36,48,60,72,84,96,108,120,132,144,156,168,180), ptr+2, 1);
+}
+
 static FORCEINLINE void __soa_to_aos4_float(__vec16_f v0, __vec16_f v1, __vec16_f v2,
                                             __vec16_f v3, float *ptr) {
   /*
@@ -3711,7 +3725,7 @@ static FORCEINLINE void __soa_to_aos4_float(__vec16_f v0, __vec16_f v1, __vec16_
   __vec16_f tmp10 = _mm512_mask_swizzle_ps (tmp00, 0xAAAA, tmp02, _MM_SWIZ_REG_CDAB); // A1C1B1D1 A5C5B5D5 ...
   __vec16_f tmp11 = _mm512_mask_swizzle_ps (tmp00, 0x5555, tmp02, _MM_SWIZ_REG_CDAB); // C2A2D2B2 C6A6D6B6 ...
   __vec16_f tmp12 = _mm512_mask_swizzle_ps (tmp01, 0xAAAA, tmp03, _MM_SWIZ_REG_CDAB); // DBCA ...
-  __vec16_f tmp13 = _mm512_mask_swizzle_ps (tmp01, 0x5555, tmp03, _MM_SWIZ_REG_CDAB); // BDAC ...  
+  __vec16_f tmp13 = _mm512_mask_swizzle_ps (tmp01, 0x5555, tmp03, _MM_SWIZ_REG_CDAB); // BDAC ...
   */
 
 
@@ -3728,6 +3742,25 @@ static FORCEINLINE void __aos_to_soa4_float(float *ptr, __vec16_f *out0, __vec16
   *out1 = _mm512_i32gather_ps(__vec16_i32(0,16,32,48,64,80,96,112,128,144,160,176,192,208,224,240), ptr+1, 1);
   *out2 = _mm512_i32gather_ps(__vec16_i32(0,16,32,48,64,80,96,112,128,144,160,176,192,208,224,240), ptr+2, 1);
   *out3 = _mm512_i32gather_ps(__vec16_i32(0,16,32,48,64,80,96,112,128,144,160,176,192,208,224,240), ptr+3, 1);
+}
+
+
+static FORCEINLINE void __soa_to_aos4_double(__vec16_d v0, __vec16_d v1, __vec16_d v2,
+                                            __vec16_d v3, double *ptr) {
+
+  _mm512_i32scatter_pd(ptr, __vec16_i32(0,16,32,48,64,80,96,112,128,144,160,176,192,208,224,240), v0, 1);
+  _mm512_i32scatter_pd(ptr+1, __vec16_i32(0,16,32,48,64,80,96,112,128,144,160,176,192,208,224,240), v1, 1);
+  _mm512_i32scatter_pd(ptr+2, __vec16_i32(0,16,32,48,64,80,96,112,128,144,160,176,192,208,224,240), v2, 1);
+  _mm512_i32scatter_pd(ptr+3, __vec16_i32(0,16,32,48,64,80,96,112,128,144,160,176,192,208,224,240), v3, 1);
+}
+
+
+static FORCEINLINE void __aos_to_soa4_double(double *ptr, __vec16_d *out0, __vec16_d *out1,
+                                            __vec16_d *out2, __vec16_d *out3) {
+  *out0 = _mm512_i32gather_pd(__vec16_i32(0,16,32,48,64,80,96,112,128,144,160,176,192,208,224,240), ptr, 1);
+  *out1 = _mm512_i32gather_pd(__vec16_i32(0,16,32,48,64,80,96,112,128,144,160,176,192,208,224,240), ptr+1, 1);
+  *out2 = _mm512_i32gather_pd(__vec16_i32(0,16,32,48,64,80,96,112,128,144,160,176,192,208,224,240), ptr+2, 1);
+  *out3 = _mm512_i32gather_pd(__vec16_i32(0,16,32,48,64,80,96,112,128,144,160,176,192,208,224,240), ptr+3, 1);
 }
 
 

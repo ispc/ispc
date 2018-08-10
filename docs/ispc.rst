@@ -4318,14 +4318,18 @@ the ``aos_to_soa3()`` standard library function could be used:
 
 This routine loads three times the gang size values from the given array
 starting at the given offset, returning three ``varying`` results.  There
-are both ``int32`` and ``float`` variants of this function:
+are ``int32``, ``int64``, ``float`` and ``double`` variants of this function:
 
 ::
 
-    void aos_to_soa3(uniform float a[], varying float * uniform v0, 
+    void aos_to_soa3(uniform float a[], varying float * uniform v0,
                      varying float * uniform v1, varying float * uniform v2)
     void aos_to_soa3(uniform int32 a[], varying int32 * uniform v0,
                      varying int32 * uniform v1, varying int32 * uniform v2)
+    void aos_to_soa3(uniform double a[], varying double * uniform v0,
+                     varying double * uniform v1, varying double * uniform v2)
+    void aos_to_soa3(uniform int64 a[], varying int64 * uniform v0,
+                     varying int64 * uniform v1, varying int64 * uniform v2)
 
 After computation is done, corresponding functions convert back from the
 SoA values in ``ispc`` ``varying`` variables and write the values back to
@@ -4344,6 +4348,8 @@ the given array, starting at the given offset.
 
     void soa_to_aos3(float v0, float v1, float v2, uniform float a[])
     void soa_to_aos3(int32 v0, int32 v1, int32 v2, uniform int32 a[])
+    void soa_to_aos3(double v0, double v1, double v2, uniform double a[])
+    void soa_to_aos3(int64 v0, int64 v1, int64 v2, uniform int64 a[])
 
 There are also variants of these functions that convert 4-wide values
 between AoS and SoA layouts.  In other words, ``aos_to_soa4()`` converts

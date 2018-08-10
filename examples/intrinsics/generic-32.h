@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2012, Intel Corporation
+  Copyright (c) 2010-2018, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -1589,6 +1589,23 @@ static FORCEINLINE void __aos_to_soa3_float(float *ptr, __vec32_f *out0, __vec32
     }
 }
 
+static FORCEINLINE void __soa_to_aos3_double(__vec32_d v0, __vec32_d v1, __vec32_d v2,
+                                            double *ptr) {
+    for (int i = 0; i < 32; ++i) {
+        *ptr++ = __extract_element(v0, i);
+        *ptr++ = __extract_element(v1, i);
+        *ptr++ = __extract_element(v2, i);
+    }
+}
+
+static FORCEINLINE void __aos_to_soa3_double(double *ptr, __vec32_d *out0, __vec32_d *out1,
+                                            __vec32_d *out2) {
+    for (int i = 0; i < 32; ++i) {
+        __insert_element(out0, i, *ptr++);
+        __insert_element(out1, i, *ptr++);
+        __insert_element(out2, i, *ptr++);
+    }
+}
 static FORCEINLINE void __soa_to_aos4_float(__vec32_f v0, __vec32_f v1, __vec32_f v2,
                                             __vec32_f v3, float *ptr) {
     for (int i = 0; i < 32; ++i) {
@@ -1601,6 +1618,26 @@ static FORCEINLINE void __soa_to_aos4_float(__vec32_f v0, __vec32_f v1, __vec32_
 
 static FORCEINLINE void __aos_to_soa4_float(float *ptr, __vec32_f *out0, __vec32_f *out1,
                                             __vec32_f *out2, __vec32_f *out3) {
+    for (int i = 0; i < 32; ++i) {
+        __insert_element(out0, i, *ptr++);
+        __insert_element(out1, i, *ptr++);
+        __insert_element(out2, i, *ptr++);
+        __insert_element(out3, i, *ptr++);
+    }
+}
+
+static FORCEINLINE void __soa_to_aos4_double(__vec32_d v0, __vec32_d v1, __vec32_d v2,
+                                            __vec32_d v3, double *ptr) {
+    for (int i = 0; i < 32; ++i) {
+        *ptr++ = __extract_element(v0, i);
+        *ptr++ = __extract_element(v1, i);
+        *ptr++ = __extract_element(v2, i);
+        *ptr++ = __extract_element(v3, i);
+    }
+}
+
+static FORCEINLINE void __aos_to_soa4_double(double *ptr, __vec32_d *out0, __vec32_d *out1,
+                                            __vec32_d *out2, __vec32_d *out3) {
     for (int i = 0; i < 32; ++i) {
         __insert_element(out0, i, *ptr++);
         __insert_element(out1, i, *ptr++);

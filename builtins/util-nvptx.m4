@@ -940,8 +940,8 @@ define void @__prefetch_read_uniform_nt(i8 *) alwaysinline {
 define(`aossoa', `
 declare void
 @__aos_to_soa4_float4(<4 x float> %v0, <4 x float> %v1, <4 x float> %v2,
-        <4 x float> %v3, <4 x float> * noalias %out0, 
-        <4 x float> * noalias %out1, <4 x float> * noalias %out2, 
+        <4 x float> %v3, <4 x float> * noalias %out0,
+        <4 x float> * noalias %out1, <4 x float> * noalias %out2,
         <4 x float> * noalias %out3) nounwind alwaysinline ;
 
 ;; Do the reverse of __aos_to_soa4_float4--reorder <r0 r1 r2 r3> <g0 g1 g2 g3> ..
@@ -951,9 +951,27 @@ declare void
 
 declare void
 @__soa_to_aos4_float4(<4 x float> %v0, <4 x float> %v1, <4 x float> %v2,
-        <4 x float> %v3, <4 x float> * noalias %out0, 
-        <4 x float> * noalias %out1, <4 x float> * noalias %out2, 
+        <4 x float> %v3, <4 x float> * noalias %out0,
+        <4 x float> * noalias %out1, <4 x float> * noalias %out2,
         <4 x float> * noalias %out3) nounwind alwaysinline;
+
+declare void
+@__aos_to_soa4_double4(<4 x double> %v0, <4 x double> %v1, <4 x double> %v2,
+        <4 x double> %v3, <4 x double> * noalias %out0,
+        <4 x double> * noalias %out1, <4 x double> * noalias %out2,
+        <4 x double> * noalias %out3) nounwind alwaysinline ;
+
+;; Do the reverse of __aos_to_soa4_double4--reorder <r0 r1 r2 r3> <g0 g1 g2 g3> ..
+;; to <r0 g0 b0 a0> <r1 g1 b1 a1> ...
+;; This is the exact same set of operations that __soa_to_soa4_double4 does
+;; (a 4x4 transpose), so just call that...
+
+declare void
+@__soa_to_aos4_double4(<4 x double> %v0, <4 x double> %v1, <4 x double> %v2,
+        <4 x double> %v3, <4 x double> * noalias %out0,
+        <4 x double> * noalias %out1, <4 x double> * noalias %out2,
+        <4 x double> * noalias %out3) nounwind alwaysinline;
+
 
 ;; Convert 3-wide AOS values to SOA--specifically, given 3 4-vectors
 ;; <x0 y0 z0 x1> <y1 z1 x2 y2> <z2 x3 y3 z3>, transpose to
@@ -962,7 +980,7 @@ declare void
 declare void
 @__aos_to_soa3_float4(<4 x float> %v0, <4 x float> %v1, <4 x float> %v2,
         <4 x float> * noalias %out0, <4 x float> * noalias %out1,
-        <4 x float> * noalias %out2) nounwind alwaysinline 
+        <4 x float> * noalias %out2) nounwind alwaysinline
 ;; The inverse of __aos_to_soa3_float4: convert 3 4-vectors
 ;; <x0 x1 x2 x3> <y0 y1 y2 y3> <z0 z1 z2 z3> to
 ;; <x0 y0 z0 x1> <y1 z1 x2 y2> <z2 x3 y3 z3>.
@@ -970,22 +988,36 @@ declare void
 declare void
 @__soa_to_aos3_float4(<4 x float> %v0, <4 x float> %v1, <4 x float> %v2,
         <4 x float> * noalias %out0, <4 x float> * noalias %out1,
-        <4 x float> * noalias %out2) nounwind alwaysinline 
+        <4 x float> * noalias %out2) nounwind alwaysinline
+
+declare void
+@__aos_to_soa3_double4(<4 x double> %v0, <4 x double> %v1, <4 x double> %v2,
+        <4 x double> * noalias %out0, <4 x double> * noalias %out1,
+        <4 x double> * noalias %out2) nounwind alwaysinline
+;; The inverse of __aos_to_soa3_double4: convert 3 4-vectors
+;; <x0 x1 x2 x3> <y0 y1 y2 y3> <z0 z1 z2 z3> to
+;; <x0 y0 z0 x1> <y1 z1 x2 y2> <z2 x3 y3 z3>.
+
+declare void
+@__soa_to_aos3_double4(<4 x double> %v0, <4 x double> %v1, <4 x double> %v2,
+        <4 x double> * noalias %out0, <4 x double> * noalias %out1,
+        <4 x double> * noalias %out2) nounwind alwaysinline
+
 ;; 8-wide
 ;; These functions implement the 8-wide variants of the AOS/SOA conversion
 ;; routines above.  These implementations are all built on top of the 4-wide
 ;; vector versions.
- 
+
 declare void
 @__aos_to_soa4_float8(<8 x float> %v0, <8 x float> %v1, <8 x float> %v2,
-        <8 x float> %v3, <8 x float> * noalias %out0, 
-        <8 x float> * noalias %out1, <8 x float> * noalias %out2, 
-        <8 x float> * noalias %out3) nounwind alwaysinline 
+        <8 x float> %v3, <8 x float> * noalias %out0,
+        <8 x float> * noalias %out1, <8 x float> * noalias %out2,
+        <8 x float> * noalias %out3) nounwind alwaysinline
 
 declare void
 @__soa_to_aos4_float8(<8 x float> %v0, <8 x float> %v1, <8 x float> %v2,
-        <8 x float> %v3, <8 x float> * noalias %out0, 
-        <8 x float> * noalias %out1, <8 x float> * noalias %out2, 
+        <8 x float> %v3, <8 x float> * noalias %out0,
+        <8 x float> * noalias %out1, <8 x float> * noalias %out2,
         <8 x float> * noalias %out3) nounwind alwaysinline
 
 declare void
@@ -999,20 +1031,56 @@ declare void
         <8 x float> * noalias %out0, <8 x float> * noalias %out1,
         <8 x float> * noalias %out2) nounwind alwaysinline ;
 
+declare void
+@__aos_to_soa4_double8(<8 x double> %v0, <8 x double> %v1, <8 x double> %v2,
+        <8 x double> %v3, <8 x double> * noalias %out0,
+        <8 x double> * noalias %out1, <8 x double> * noalias %out2,
+        <8 x double> * noalias %out3) nounwind alwaysinline
+
+declare void
+@__soa_to_aos4_double8(<8 x double> %v0, <8 x double> %v1, <8 x double> %v2,
+        <8 x double> %v3, <8 x double> * noalias %out0,
+        <8 x double> * noalias %out1, <8 x double> * noalias %out2,
+        <8 x double> * noalias %out3) nounwind alwaysinline
+
+        declare void
+@__aos_to_soa3_double8(<8 x double> %v0, <8 x double> %v1, <8 x double> %v2,
+        <8 x double> * noalias %out0, <8 x double> * noalias %out1,
+        <8 x double> * noalias %out2) nounwind alwaysinline ;
+
+
+declare void
+@__soa_to_aos3_double8(<8 x double> %v0, <8 x double> %v1, <8 x double> %v2,
+        <8 x double> * noalias %out0, <8 x double> * noalias %out1,
+        <8 x double> * noalias %out2) nounwind alwaysinline ;
+
 ;; 16-wide
 
 declare void
 @__aos_to_soa4_float16(<16 x float> %v0, <16 x float> %v1, <16 x float> %v2,
-        <16 x float> %v3, <16 x float> * noalias %out0, 
-        <16 x float> * noalias %out1, <16 x float> * noalias %out2, 
+        <16 x float> %v3, <16 x float> * noalias %out0,
+        <16 x float> * noalias %out1, <16 x float> * noalias %out2,
         <16 x float> * noalias %out3) nounwind alwaysinline ;
 
 
 declare void
 @__soa_to_aos4_float16(<16 x float> %v0, <16 x float> %v1, <16 x float> %v2,
-        <16 x float> %v3, <16 x float> * noalias %out0, 
-        <16 x float> * noalias %out1, <16 x float> * noalias %out2, 
+        <16 x float> %v3, <16 x float> * noalias %out0,
+        <16 x float> * noalias %out1, <16 x float> * noalias %out2,
         <16 x float> * noalias %out3) nounwind alwaysinline ;
+
+        declare void
+@__aos_to_soa4_double16(<16 x double> %v0, <16 x double> %v1, <16 x double> %v2,
+        <16 x double> %v3, <16 x double> * noalias %out0,
+        <16 x double> * noalias %out1, <16 x double> * noalias %out2,
+        <16 x double> * noalias %out3) nounwind alwaysinline ;
+
+
+declare void
+@__soa_to_aos4_double16(<16 x double> %v0, <16 x double> %v1, <16 x double> %v2,
+        <16 x double> %v3, <16 x double> * noalias %out0,
+        <16 x double> * noalias %out1, <16 x double> * noalias %out2,
+        <16 x double> * noalias %out3) nounwind alwaysinline ;
 
 declare void
 @__aos_to_soa3_float16(<16 x float> %v0, <16 x float> %v1, <16 x float> %v2,
@@ -1024,6 +1092,15 @@ declare void
         <16 x float> * noalias %out0, <16 x float> * noalias %out1,
         <16 x float> * noalias %out2) nounwind alwaysinline ;
 
+declare void
+@__aos_to_soa3_double16(<16 x double> %v0, <16 x double> %v1, <16 x double> %v2,
+        <16 x double> * noalias %out0, <16 x double> * noalias %out1,
+        <16 x double> * noalias %out2) nounwind alwaysinline ;
+
+declare void
+@__soa_to_aos3_double16(<16 x double> %v0, <16 x double> %v1, <16 x double> %v2,
+        <16 x double> * noalias %out0, <16 x double> * noalias %out1,
+        <16 x flodoubleat> * noalias %out2) nounwind alwaysinline ;
 ;; versions to be called from stdlib
 
 declare void
@@ -1037,6 +1114,16 @@ declare void
 @__soa_to_aos4_float(<WIDTH x float> %v0, <WIDTH x float> %v1, <WIDTH x float> %v2,
              <WIDTH x float> %v3, float * noalias %p) nounwind alwaysinline ;
 
+declare void
+@__aos_to_soa4_double(double * noalias %p,
+        <WIDTH x double> * noalias %out0, <WIDTH x double> * noalias %out1,
+        <WIDTH x double> * noalias %out2, <WIDTH x double> * noalias %out3)
+        nounwind alwaysinline ;
+
+
+declare void
+@__soa_to_aos4_double(<WIDTH x double> %v0, <WIDTH x double> %v1, <WIDTH x double> %v2,
+             <WIDTH x double> %v3, double * noalias %p) nounwind alwaysinline ;
 
 declare void
 @__aos_to_soa3_float(float * noalias %p,
@@ -1047,6 +1134,16 @@ declare void
 declare void
 @__soa_to_aos3_float(<WIDTH x float> %v0, <WIDTH x float> %v1, <WIDTH x float> %v2,
                      float * noalias %p) nounwind alwaysinline ;
+
+declare void
+@__aos_to_soa3_double(double * noalias %p,
+        <WIDTH x double> * noalias %out0, <WIDTH x double> * noalias %out1,
+        <WIDTH x double> * noalias %out2) nounwind alwaysinline ;
+
+
+declare void
+@__soa_to_aos3_double(<WIDTH x double> %v0, <WIDTH x double> %v1, <WIDTH x double> %v2,
+                     double * noalias %p) nounwind alwaysinline ;
 ')
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

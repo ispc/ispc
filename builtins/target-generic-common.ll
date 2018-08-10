@@ -1,4 +1,4 @@
-;;  Copyright (c) 2010-2015, Intel Corporation
+;;  Copyright (c) 2010-2018, Intel Corporation
 ;;  All rights reserved.
 ;;
 ;;  Redistribution and use in source and binary forms, with or without
@@ -124,6 +124,18 @@ declare void @__aos_to_soa4_float(float * noalias %p, <WIDTH x float> * noalias 
                                   <WIDTH x float> * noalias %out1,
                                   <WIDTH x float> * noalias %out2,
                                   <WIDTH x float> * noalias %out3) nounwind
+declare void @__soa_to_aos3_double(<WIDTH x double> %v0, <WIDTH x double> %v1,
+                                  <WIDTH x double> %v2, double * noalias %p) nounwind
+declare void @__aos_to_soa3_double(double * noalias %p, <WIDTH x double> * noalias %out0,
+                                  <WIDTH x double> * noalias %out1,
+                                  <WIDTH x double> * noalias %out2) nounwind
+declare void @__soa_to_aos4_double(<WIDTH x double> %v0, <WIDTH x double> %v1,
+                                  <WIDTH x double> %v2, <WIDTH x double> %v3,
+                                  double * noalias %p) nounwind
+declare void @__aos_to_soa4_double(double * noalias %p, <WIDTH x double> * noalias %out0,
+                                  <WIDTH x double> * noalias %out1,
+                                  <WIDTH x double> * noalias %out2,
+                                  <WIDTH x double> * noalias %out3) nounwind
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; half conversion routines

@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2015, Intel Corporation
+  Copyright (c) 2010-2018, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -351,6 +351,12 @@ lSetInternalFunctions(llvm::Module *module) {
         "__add_varying_int64",
         "__all",
         "__any",
+        "__aos_to_soa3_double",
+        "__aos_to_soa3_double1",
+        "__aos_to_soa3_double16",
+        "__aos_to_soa3_double4",
+        "__aos_to_soa3_double8",
+        "__aos_to_soa3_int64",
         "__aos_to_soa3_float",
 //#ifdef ISPC_NVPTX_ENABLED
         "__aos_to_soa3_float1",
@@ -359,6 +365,12 @@ lSetInternalFunctions(llvm::Module *module) {
         "__aos_to_soa3_float4",
         "__aos_to_soa3_float8",
         "__aos_to_soa3_int32",
+        "__aos_to_soa4_double",
+        "__aos_to_soa4_double1",
+        "__aos_to_soa4_double16",
+        "__aos_to_soa4_double4",
+        "__aos_to_soa4_double8",
+        "__aos_to_soa4_int64",
         "__aos_to_soa4_float",
 //#ifdef ISPC_NVPTX_ENABLED
         "__aos_to_soa4_float1",
@@ -641,6 +653,11 @@ lSetInternalFunctions(llvm::Module *module) {
         "__shuffle_i32",
         "__shuffle_i64",
         "__shuffle_i8",
+        "__soa_to_aos3_double",
+        "__soa_to_aos3_double16",
+        "__soa_to_aos3_double4",
+        "__soa_to_aos3_double8",
+        "__soa_to_aos3_int64",
         "__soa_to_aos3_float",
         "__soa_to_aos3_float16",
         "__soa_to_aos3_float4",
@@ -648,9 +665,16 @@ lSetInternalFunctions(llvm::Module *module) {
         "__soa_to_aos3_int32",
         "__soa_to_aos4_float",
 //#ifdef ISPC_NVPTX_ENABLED
+        "__soa_to_aos3_double1",
         "__soa_to_aos3_float1",
         "__soa_to_aos4_float1",
+        "__soa_to_aos4_double1",
 //#endif /* ISPC_NVPTX_ENABLED */
+        "__soa_to_aos4_double16",
+        "__soa_to_aos4_double4",
+        "__soa_to_aos4_double8",
+        "__soa_to_aos4_double",
+        "__soa_to_aos4_int64",
         "__soa_to_aos4_float16",
         "__soa_to_aos4_float4",
         "__soa_to_aos4_float8",
