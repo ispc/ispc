@@ -47,7 +47,7 @@ remarkable `LLVM Compiler Infrastructure <http://llvm.org>`_ for back-end
 code generation and optimization and is `hosted on
 github <http://github.com/ispc/ispc/>`_. It supports Windows, Mac, and
 Linux, with both x86 and x86-64 targets.  It currently supports the SSE2,
-SSE4, AVX1, and AVX2 instruction sets.
+SSE4, AVX, AVX2, and AVX512 instruction sets.
 
 Features
 --------
@@ -69,16 +69,14 @@ Features
     with application data structures.
             
   * Portability across over a decade of CPU
-    generations: ``ispc`` has targets for SSE2, SSE4, AVX
-    (and soon, AVX2).
+    generations: ``ispc`` has targets for SSE2, SSE4, AVX, AVX2, and AVX512.
 
   * Portability across operating systems: Microsoft
     Windows, Mac OS X, and Linux are all supported
     by ``ispc``.
 
   * Debugging with standard tools: ``ispc``
-    programs can be debugged with standard debuggers (OS X and
-    Linux only).
+    programs can be debugged with standard debuggers.
 
 Additional Resources
 --------------------

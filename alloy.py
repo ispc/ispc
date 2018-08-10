@@ -187,7 +187,7 @@ def checkout_LLVM(component, use_git, version_LLVM, revision, target_dir, from_v
             os.chdir("..")
     else:
         try_do_LLVM("load "+component+" from "+SVN_REPO+SVN_PATH+" ",
-                    "svn co "+revision+" "+SVN_REPO+SVN_PATH+" "+target_dir,
+                    "svn co --non-interactive "+revision+" "+SVN_REPO+SVN_PATH+" "+target_dir,
                     from_validation)
 
 # ISPC uses LLVM dumps for debug output, so build correctly it requires these functions to be
