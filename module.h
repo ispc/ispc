@@ -208,7 +208,7 @@ inline Module::OutputFlags& operator|=(Module::OutputFlags& lhs, const __underly
 inline Module::OutputFlags& operator&=(Module::OutputFlags& lhs, const __underlying_type(Module::OutputFlags) rhs) {
   return lhs = (Module::OutputFlags)((__underlying_type(Module::OutputFlags))lhs & rhs);
 }
-inline constexpr Module::OutputFlags operator|(const Module::OutputFlags lhs, const __underlying_type(Module::OutputFlags) rhs) {
+inline Module::OutputFlags operator|(const Module::OutputFlags lhs, const Module::OutputFlags rhs) {
   return (Module::OutputFlags)((__underlying_type(Module::OutputFlags))lhs | rhs);
 }
 
