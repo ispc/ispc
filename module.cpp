@@ -3242,7 +3242,7 @@ Module::CompileAndOutput(const char *srcFile,
                     return 1;
             if (depsFileName != NULL || (outputFlags & Module::OutputDepsToStdout)) {
               std::string targetName;
-			  if (depsTargetName)
+              if (depsTargetName)
                 targetName = depsTargetName;
               else if (outFileName)
                 targetName = outFileName;
