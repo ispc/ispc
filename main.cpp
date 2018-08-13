@@ -129,7 +129,7 @@ usage(int ret) {
     printf("    [-MMM <filename>]\t\t\tWrite #include dependencies to given file.\n");
     printf("    [-M]\t\t\t\tOutput a rule suitable for `make' describing the dependencies of the main source file to stdout.\n");
     printf("    [-MF <filename>]\t\t\tWhen used with `-M', specifies a file to write the dependencies to.\n");
-	printf("    [-MT <filename>]\t\t\tWhen used with `-M', changes the target of the rule emitted by dependency generation.\n");
+    printf("    [-MT <filename>]\t\t\tWhen used with `-M', changes the target of the rule emitted by dependency generation.\n");
     printf("    [--no-omit-frame-pointer]\t\tDisable frame pointer omission. It may be useful for profiling\n");
     printf("    [--nostdlib]\t\t\tDon't make the ispc standard library available\n");
     printf("    [--nocpp]\t\t\t\tDon't run the C preprocessor\n");
@@ -457,7 +457,7 @@ int main(int Argc, char *Argv[]) {
     const char *outFileName = NULL;
     const char *includeFileName = NULL;
     const char *depsFileName = NULL;
-	const char *depsTargetName = NULL;
+    const char *depsTargetName = NULL;
     const char *hostStubFileName = NULL;
     const char *devStubFileName = NULL;
     // Initiailize globals early so that we can set various option values
