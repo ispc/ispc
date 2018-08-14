@@ -106,6 +106,13 @@ public:
                       HostStub  /** generate host-side offload stubs */
     };
 
+    enum OutputFlags { NoFlags = 0,
+                       GeneratePIC = 0x1,
+                       GenerateFlatDeps = 0x2,         /** Dependencies will be output as a flat list. */
+                       GenerateMakeRuleForDeps = 0x4,  /** Dependencies will be output in a make rule format instead of a flat list. */
+                       OutputDepsToStdout = 0x8,       /** Dependency information will be output to stdout instead of file. */
+    };
+
     /** Compile the given source file, generating assembly, object file, or
         LLVM bitcode output, as well as (optionally) a header file with
         declarations of functions and types used in the ispc/application
@@ -138,12 +145,13 @@ public:
      */
     static int CompileAndOutput(const char *srcFile, const char *arch,
                                 const char *cpu, const char *targets,
-                                bool generatePIC,
+                                OutputFlags outputFlags,
                                 OutputType outputType,
                                 const char *outFileName,
                                 const char *headerFileName,
                                 const char *includeFileName,
                                 const char *depsFileName,
+                                const char *depsTargetName,
                                 const char *hostStubFileName,
                                 const char *devStubFileName);
 
@@ -176,12 +184,13 @@ private:
         true on success, false if there has been an error.  The given
         filename may be NULL, indicating that output should go to standard
         output. */
-    bool writeOutput(OutputType ot, const char *filename,
+    bool writeOutput(OutputType ot, OutputFlags flags, const char *filename,
                      const char *includeFileName = NULL,
+                     const char *sourceFileName = NULL,
                      DispatchHeaderInfo *DHI = 0);
     bool writeHeader(const char *filename);
     bool writeDispatchHeader(DispatchHeaderInfo *DHI);
-    bool writeDeps(const char *filename);
+    bool writeDeps(const char *filename, bool generateMakeRule, const char *targetName = NULL, const char *srcFilename = NULL);
     bool writeDevStub(const char *filename);
     bool writeHostStub(const char *filename);
     bool writeObjectFileOrAssembly(OutputType outputType, const char *filename);
@@ -192,5 +201,15 @@ private:
 
     void execPreprocessor(const char *infilename, llvm::raw_string_ostream* ostream) const;
 };
+
+inline Module::OutputFlags& operator|=(Module::OutputFlags& lhs, const __underlying_type(Module::OutputFlags) rhs) {
+  return lhs = (Module::OutputFlags)((__underlying_type(Module::OutputFlags))lhs | rhs);
+}
+inline Module::OutputFlags& operator&=(Module::OutputFlags& lhs, const __underlying_type(Module::OutputFlags) rhs) {
+  return lhs = (Module::OutputFlags)((__underlying_type(Module::OutputFlags))lhs & rhs);
+}
+inline Module::OutputFlags operator|(const Module::OutputFlags lhs, const Module::OutputFlags rhs) {
+  return (Module::OutputFlags)((__underlying_type(Module::OutputFlags))lhs | rhs);
+}
 
 #endif // ISPC_MODULE_H
