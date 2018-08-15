@@ -540,7 +540,14 @@ lDoTypeConv(const Type *fromType, const Type *toType, Expr **expr,
 
     // enum -> atomic (integer, generally...) is always ok
     if (fromEnumType != NULL) {
-        AssertPos(pos, toAtomicType != NULL || toVectorType != NULL);
+        // Cannot convert to anything other than atomic
+        if (toAtomicType == NULL && toVectorType == NULL) {
+             if (!failureOk)
+                 Error(pos, "Type conversion from \"%s\" to \"%s\" for %s is not "
+                         "possible.", fromType->GetString().c_str(),
+                         toType->GetString().c_str(), errorMsgBase);
+             return false;
+        }
         goto typecast_ok;
     }
 
