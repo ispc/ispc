@@ -1076,7 +1076,7 @@ void DoStmt::EmitCode(FunctionEmitContext *ctx) const {
     // scope around the statements in the list.  So if the body is just a
     // single statement (and thus not a statement list), we need a new
     // scope, but we don't want two scopes in the StmtList case.
-    if (!llvm::dyn_cast<StmtList>(bodyStmts))
+    if (!bodyStmts || !llvm::dyn_cast<StmtList>(bodyStmts))
         ctx->StartScope();
 
     ctx->AddInstrumentationPoint("do loop body");
@@ -1118,7 +1118,7 @@ void DoStmt::EmitCode(FunctionEmitContext *ctx) const {
             ctx->BranchInst(btest);
     }
     // End the scope we started above, if needed.
-    if (!llvm::dyn_cast<StmtList>(bodyStmts))
+    if (!bodyStmts || !llvm::dyn_cast<StmtList>(bodyStmts))
         ctx->EndScope();
 
     // Now emit code for the loop test.
