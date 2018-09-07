@@ -4515,15 +4515,14 @@ define double @__stdlib_pow(double, double) nounwind readnone alwaysinline {
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; atomics and memory barriers
 
-declare void @llvm.memory.barrier(i1 %loadload, i1 %loadstore, i1 %storeload,
-                                  i1 %storestore, i1 %device)
-
 define void @__memory_barrier() nounwind readnone alwaysinline {
   ;; see http://llvm.org/bugs/show_bug.cgi?id=2829.  It seems like we
   ;; only get an MFENCE on x86 if "device" is true, but IMHO we should
   ;; in the case where the first 4 args are true but it is false.
-  ;;  So we just always set that to true...
-  call void @llvm.memory.barrier(i1 true, i1 true, i1 true, i1 true, i1 true)
+  ;; So we just always set that to true...
+  ;; LLVM.MEMORY.BARRIER was deprecated from version 3.0
+  ;; Replacing it with relevant instruction
+  fence seq_cst
   ret void
 }
 
