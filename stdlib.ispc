@@ -1323,7 +1323,7 @@ packed_store_active(uniform int a[], int vals) {
     return __packed_store_active(a, vals, (IntMaskType)__mask);
 }
 
-static inline uniform int 
+static inline uniform int
 packed_store_active(bool active, uniform int a[], int vals) {
     return __packed_store_active(a, vals, (IntMaskType)(-(int)active));
 }
@@ -1333,6 +1333,211 @@ packed_store_active2(uniform int a[], int vals) {
     return __packed_store_active2(a, vals, (IntMaskType)__mask);
 }
 
+///////////////////////////////////////////////////////////////////////////
+// streaming store
+
+__declspec(safe,cost1)
+static inline void streaming_store(uniform unsigned int8 a[], unsigned int8 vals) {
+    __streaming_store_varying_i8(a, vals);
+}
+
+__declspec(safe,cost1)
+static inline void streaming_store(uniform int8 a[], int8 vals) {
+    __streaming_store_varying_i8(a, vals);
+}
+
+__declspec(safe,cost1)
+static inline void streaming_store(uniform unsigned int16 a[], unsigned int16 vals) {
+    __streaming_store_varying_i16(a, vals);
+}
+
+__declspec(safe,cost1)
+static inline void streaming_store(uniform int16 a[], int16 vals) {
+    __streaming_store_varying_i16(a, vals);
+}
+
+__declspec(safe,cost1)
+static inline void streaming_store(uniform unsigned int a[], unsigned int vals) {
+    __streaming_store_varying_i32(a, vals);
+}
+
+__declspec(safe,cost1)
+static inline void streaming_store(uniform int a[], int vals) {
+    __streaming_store_varying_i32(a, vals);
+}
+
+__declspec(safe,cost1)
+static inline void streaming_store(uniform unsigned int64 a[], unsigned int64 vals) {
+    __streaming_store_varying_i64(a, vals);
+}
+
+__declspec(safe,cost1)
+static inline void streaming_store(uniform int64 a[], int64 vals) {
+    __streaming_store_varying_i64(a, vals);
+}
+
+__declspec(safe,cost1)
+static inline void streaming_store(uniform float a[], float vals) {
+    __streaming_store_varying_float(a, vals);
+}
+
+__declspec(safe,cost1)
+static inline void streaming_store(uniform double a[], double vals) {
+    __streaming_store_varying_double(a, vals);
+}
+
+__declspec(safe,cost1)
+static inline void streaming_store(uniform unsigned int8 a[], uniform unsigned int8 vals) {
+    __streaming_store_uniform_i8(a, vals);
+}
+
+__declspec(safe,cost1)
+static inline void streaming_store(uniform int8 a[], uniform int8 vals) {
+    __streaming_store_uniform_i8(a, vals);
+}
+
+__declspec(safe,cost1)
+static inline void streaming_store(uniform unsigned int16 a[], uniform unsigned int16 vals) {
+    __streaming_store_uniform_i16(a, vals);
+}
+
+__declspec(safe,cost1)
+static inline void streaming_store(uniform int16 a[], uniform int16 vals) {
+    __streaming_store_uniform_i16(a, vals);
+}
+
+__declspec(safe,cost1)
+static inline void streaming_store(uniform unsigned int a[], uniform unsigned int vals) {
+    __streaming_store_uniform_i32(a, vals);
+}
+
+__declspec(safe,cost1)
+static inline void streaming_store(uniform int a[], uniform int vals) {
+    __streaming_store_uniform_i32(a, vals);
+}
+
+__declspec(safe,cost1)
+static inline void streaming_store(uniform unsigned int64 a[], uniform unsigned int64 vals) {
+    __streaming_store_uniform_i64(a, vals);
+}
+
+__declspec(safe,cost1)
+static inline void streaming_store(uniform int64 a[], uniform int64 vals) {
+    __streaming_store_uniform_i64(a, vals);
+}
+
+__declspec(safe,cost1)
+static inline void streaming_store(uniform float a[], uniform float vals) {
+    __streaming_store_uniform_float(a, vals);
+}
+
+__declspec(safe,cost1)
+static inline void streaming_store(uniform double a[], uniform double vals) {
+    __streaming_store_uniform_double(a, vals);
+}
+
+///////////////////////////////////////////////////////////////////////////
+// streaming load
+
+__declspec(safe,cost1)
+static inline varying unsigned int8 streaming_load(uniform unsigned int8 a[]) {
+    return (unsigned int8)__streaming_load_varying_i8(a);
+}
+
+__declspec(safe,cost1)
+static inline varying int8 streaming_load(uniform int8 a[]) {
+    return __streaming_load_varying_i8(a);
+}
+
+__declspec(safe,cost1)
+static inline uniform unsigned int8 streaming_load_uniform(uniform unsigned int8 a[]) {
+    return (unsigned int8)__streaming_load_uniform_i8(a);
+}
+
+__declspec(safe,cost1)
+static inline uniform int8 streaming_load_uniform(uniform int8 a[]) {
+    return __streaming_load_uniform_i8(a);
+}
+
+__declspec(safe,cost1)
+static inline varying unsigned int16 streaming_load(uniform unsigned int16 a[]) {
+    return (unsigned int16)__streaming_load_varying_i16(a);
+}
+
+__declspec(safe,cost1)
+static inline varying int16 streaming_load(uniform int16 a[]) {
+    return __streaming_load_varying_i16(a);
+}
+
+__declspec(safe,cost1)
+static inline uniform unsigned int16 streaming_load_uniform(uniform unsigned int16 a[]) {
+    return (unsigned int16)__streaming_load_uniform_i16(a);
+}
+
+__declspec(safe,cost1)
+static inline uniform int16 streaming_load_uniform(uniform int16 a[]) {
+    return __streaming_load_uniform_i16(a);
+}
+
+__declspec(safe,cost1)
+static inline varying unsigned int streaming_load(uniform unsigned int a[]) {
+    return (unsigned int)__streaming_load_varying_i32(a);
+}
+
+__declspec(safe,cost1)
+static inline varying int streaming_load(uniform int a[]) {
+    return __streaming_load_varying_i32(a);
+}
+
+__declspec(safe,cost1)
+static inline uniform unsigned int streaming_load_uniform(uniform unsigned int a[]) {
+    return (unsigned int)__streaming_load_uniform_i32(a);
+}
+
+__declspec(safe,cost1)
+static inline uniform int streaming_load_uniform(uniform int a[]) {
+    return __streaming_load_uniform_i32(a);
+}
+
+__declspec(safe,cost1)
+static inline varying unsigned int64 streaming_load(uniform unsigned int64 a[]) {
+    return (unsigned int64)__streaming_load_varying_i64(a);
+}
+
+__declspec(safe,cost1)
+static inline varying int64 streaming_load(uniform int64 a[]) {
+    return __streaming_load_varying_i64(a);
+}
+
+__declspec(safe,cost1)
+static inline uniform unsigned int64 streaming_load_uniform(uniform unsigned int64 a[]) {
+    return (unsigned int64)__streaming_load_uniform_i64(a);
+}
+
+__declspec(safe,cost1)
+static inline uniform int64 streaming_load_uniform(uniform int64 a[]) {
+    return __streaming_load_uniform_i64(a);
+}
+
+__declspec(safe,cost1)
+static inline varying float streaming_load(uniform float a[]) {
+    return __streaming_load_varying_float(a);
+}
+
+__declspec(safe,cost1)
+static inline uniform float streaming_load_uniform(uniform float a[]) {
+    return __streaming_load_uniform_float(a);
+}
+
+__declspec(safe,cost1)
+static inline varying double streaming_load(uniform double a[]) {
+    return __streaming_load_varying_double(a);
+}
+
+__declspec(safe,cost1)
+static inline uniform double streaming_load_uniform(uniform double a[]) {
+    return __streaming_load_uniform_double(a);
+}
 
 ///////////////////////////////////////////////////////////////////////////
 // System information
