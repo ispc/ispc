@@ -60,6 +60,7 @@
 #include <stdio.h>
 #include <vector>
 #include <set>
+#include <map>
 #include <string>
 
 /** @def ISPC_MAX_NVEC maximum vector size of any of the compliation
@@ -655,6 +656,9 @@ struct Globals {
 
     /** When true, flag non-static functions with dllexport attribute on Windows. */
     bool dllExport;
+
+    /** Lines for which warnings are turned off. */
+    std::map<std::pair<int, std::string>, bool> turnOffWarnings;
 };
 
 enum {

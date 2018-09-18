@@ -46,6 +46,7 @@ static uint64_t lParseBinary(const char *ptr, SourcePos pos, char **endPtr);
 static int lParseInteger(bool dotdotdot);
 static void lCComment(SourcePos *);
 static void lCppComment(SourcePos *);
+static void lPragmaIgnoreWarning(SourcePos *);
 static void lHandleCppHash(SourcePos *);
 static void lStringConst(YYSTYPE *, SourcePos *);
 static double lParseHexFloat(const char *ptr);
@@ -355,6 +356,7 @@ ZO_SWIZZLE ([01]+[w-z]+)+|([01]+[rgba]+)+|([01]+[uv]+)+
 %%
 "/*"            { lCComment(&yylloc); }
 "//"            { lCppComment(&yylloc); }
+"#pragma ignore warning" { lPragmaIgnoreWarning(&yylloc); }
 
 __assert { RT; return TOKEN_ASSERT; }
 bool { RT; return TOKEN_BOOL; }
@@ -682,6 +684,66 @@ lCComment(SourcePos *pos) {
         prev = c;
     }
     Error(*pos, "unterminated comment");
+}
+
+/** Handle pragma directive to ignore warning.
+ */
+static void
+lPragmaIgnoreWarning(SourcePos *pos) {
+    char c;
+    std::string userReq;
+    bool perfWarningOnly = false;
+    do {
+        c = yyinput();
+        ++pos->last_column;
+    } while (c == ' ');
+    if (c == '\n') {
+        pos->last_column = 1;
+        pos->last_line++;
+        std::pair<int, std::string> key = std::pair<int, std::string>(pos->last_line, pos->name);
+        g->turnOffWarnings[key] = perfWarningOnly;
+        return;
+    }
+    else if (c == '(') {
+        do {
+            c = yyinput();
+            ++pos->last_column;
+        } while (c == ' ');
+        while (c != 0 && c != '\n' && c != ' ' && c != ')') {
+            userReq += c;
+            c = yyinput();
+            ++pos->last_column;
+        }
+        if ((c == ' ') || (c == ')')) {
+            while (c == ' ') {
+                c = yyinput();
+                ++pos->last_column;
+            }
+            if (c == ')') {
+                do {
+                    c = yyinput();
+                    ++pos->last_column;
+                } while (c == ' ');
+                if (c == '\n') {
+                    pos->last_column = 1;
+                    pos->last_line++;
+                    if (userReq.compare("perf") == 0) {
+                        perfWarningOnly = true;
+                        std::pair<int, std::string> key = std::pair<int, std::string>(pos->last_line, pos->name);
+                        g->turnOffWarnings[key] = perfWarningOnly;
+                        return;
+                    }
+                    else if (userReq.compare("all") == 0) {
+                        std::pair<int, std::string> key = std::pair<int, std::string>(pos->last_line, pos->name);
+                        g->turnOffWarnings[key] = perfWarningOnly;
+                        return;
+                    }
+                }
+            }
+        }
+        else if (c == '\n') pos->last_line++;;
+    }
+    Error(*pos, "Undefined #pragma");
 }
 
 /** Handle a C++-style comment--eat everything up until the end of the line.
