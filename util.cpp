@@ -411,6 +411,11 @@ Warning(SourcePos p, const char *fmt, ...) {
     if (g->warningsAsErrors && m != NULL)
         ++m->errorCount;
 
+     std::map<std::pair<int, std::string>, bool>::iterator turnOffWarnings_it =
+        g->turnOffWarnings.find(std::pair<int, std::string>(p.last_line, std::string(p.name)));
+    if ((turnOffWarnings_it != g->turnOffWarnings.end()) && (turnOffWarnings_it->second == false))
+        return;
+
     if (g->disableWarnings || g->quiet)
         return;
 
@@ -426,6 +431,11 @@ void
 PerformanceWarning(SourcePos p, const char *fmt, ...) {
     if (!g->emitPerfWarnings || strcmp(p.name, "stdlib.ispc") == 0 ||
         g->quiet)
+        return;
+
+    std::map<std::pair<int, std::string>, bool>::iterator turnOffWarnings_it =
+        g->turnOffWarnings.find(std::pair<int, std::string>(p.last_line, p.name));
+    if (turnOffWarnings_it != g->turnOffWarnings.end())
         return;
 
     va_list args;

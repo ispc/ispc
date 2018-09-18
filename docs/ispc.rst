@@ -839,6 +839,21 @@ preprocessor runs:
     - 3.1415926535
     - Mathematics
 
+``ispc`` also provides ``#pragma ignore warning`` directives to ignore compiler warnings for individual lines.
+
+.. list-table:: ``#pragma ignore warning`` directives and their functions:
+
+  * - ``#pragma`` name
+    - Use
+  * - ``#pragma ignore warning(all)``
+    - Turns off all ``ispc`` compiler warnings including performance warnings for the following line of code.
+  * - ``#pragma ignore warning(perf)``
+    - Turns off only performance warnings for the following line of code.
+  * - ``#pragma ignore warning``
+    - Turns off all ``ispc`` compiler warnings including performance warnings for the following line of code.
+
+When using ``#pragma ignore warning`` before a call to a macro, it suppresses warnings from the expanded macro code.
+
 Debugging
 ---------
 
