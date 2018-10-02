@@ -5266,7 +5266,7 @@ define <WIDTH x $1> @__gather32_$1(<WIDTH x i32> %ptrs,
   ret <WIDTH x $1> %ret
 }
 
-; fully general 64-bit gather, takes array of pointers encoded as vector of i32s
+; fully general 64-bit gather, takes array of pointers encoded as vector of i64s
 define <WIDTH x $1> @__gather64_$1(<WIDTH x i64> %ptrs, 
                                    <WIDTH x MASK> %vecmask) nounwind readonly alwaysinline {
   %ret_ptr = alloca <WIDTH x $1>
