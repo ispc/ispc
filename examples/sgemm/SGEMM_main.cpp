@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2011, Intel Corporation
+  Copyright (c) 2018, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -113,12 +113,12 @@ bool Validate_result(float matrixC[], float matrixValid[], unsigned int M, unsig
 
 typedef void (*SGEMMFuncPtr)(void);
 typedef void(*SGEMMFuncPtr_SingleThreaded)(float matrixA[], float matrixB[], float matrixC[], unsigned int M, unsigned int N, unsigned int K);
-typedef void(*SGEMMFuncPtr_MultiThreaded)(float matrixA[], float matrixB[], float matrixC[], unsigned int M, unsigned int N, unsigned int K, unsigned int numIterations);
+typedef void(*SGEMMFuncPtr_MultiThreaded)(float matrixA[], float matrixB[], float matrixC[], unsigned int M, unsigned int N, unsigned int K);
 
 void Test_SGEMM(SGEMMFuncPtr SGEMMFunc, char* pcFuncName,
                 float matrixA[], float matrixB[], float matrixC[],
                 unsigned int M, unsigned int N, unsigned int K,
-                unsigned int numTasks, unsigned int numIterations,
+                bool tasks, unsigned int numIterations,
                 float matrixValid[]) {
     double totalWallTime;
     float avgTime;
@@ -128,7 +128,7 @@ void Test_SGEMM(SGEMMFuncPtr SGEMMFunc, char* pcFuncName,
 
     float fFlopsPerGEMM = (M*N*K) + (M*N*(K-1)); // Total = MNK mults + MN(K-1) adds.
 
-    if (1 == numTasks) {
+    if (tasks == false) {
         // type cast
         SGEMMFuncPtr_SingleThreaded SGEMMFunc_ST = (SGEMMFuncPtr_SingleThreaded)SGEMMFunc;
 
@@ -143,7 +143,7 @@ void Test_SGEMM(SGEMMFuncPtr SGEMMFunc, char* pcFuncName,
 
         reset_and_start_timer();
         for (i = 0; i < numIterations; i++)
-            SGEMMFunc_MT(matrixA, matrixB, matrixC, M, N, K, numTasks);
+            SGEMMFunc_MT(matrixA, matrixB, matrixC, M, N, K);
         totalWallTime = get_elapsed_msec();
     }
 
@@ -164,30 +164,29 @@ int main() {
     float* matrixB; matrixB = (float*)malloc(N*K * sizeof(float)); init_matrix_rand(matrixB, N, K, 10.0f);
     float* matrixC; matrixC = (float*)malloc(M*K * sizeof(float)); init_matrix_rand(matrixC, M, K, 0.0f);
     float* matrixValid; matrixValid = (float*)malloc(M*K * sizeof(float));
-    unsigned int numTasks;
+    bool tasks = false;
 
     // Generate a validation matrix using CPU code:
     SGEMM_CPU_validation(matrixA, matrixB, matrixValid, M, N, K);
 
-    numTasks = 1;
-    Test_SGEMM((SGEMMFuncPtr)SGEMM_naive, (char *)"SGEMM_naive", matrixA, matrixB, matrixC, M, N, K, numTasks, ITERATIONS, matrixValid);
-    Test_SGEMM((SGEMMFuncPtr)SGEMM_tileShuffle, (char *)"SGEMM_tileShuffle", matrixA, matrixB, matrixC, M, N, K, numTasks, ITERATIONS, matrixValid);
-    Test_SGEMM((SGEMMFuncPtr)SGEMM_tileReduceAdd, (char *)"SGEMM_tileReduceAdd", matrixA, matrixB, matrixC, M, N, K, numTasks, ITERATIONS, matrixValid);
-    Test_SGEMM((SGEMMFuncPtr)SGEMM_tileAtomicAdd, (char *)"SGEMM_tileAtomicAdd", matrixA, matrixB, matrixC, M, N, K, numTasks, ITERATIONS, matrixValid);
-    Test_SGEMM((SGEMMFuncPtr)SGEMM_tileNoSIMDIntrin, (char *)"SGEMM_tileNoSIMDIntrin", matrixA, matrixB, matrixC, M, N, K, numTasks, ITERATIONS, matrixValid);
-    Test_SGEMM((SGEMMFuncPtr)SGEMM_tileBlockNoSIMDIntrin, (char *)"SGEMM_tileBlockNoSIMDIntrin", matrixA, matrixB, matrixC, M, N, K, numTasks, ITERATIONS, matrixValid);
-    Test_SGEMM((SGEMMFuncPtr)SGEMM_tileBlockNoSIMDIntrin_2, (char *)"SGEMM_tileBlockNoSIMDIntrin_2", matrixA, matrixB, matrixC, M, N, K, numTasks, ITERATIONS, matrixValid);
+    Test_SGEMM((SGEMMFuncPtr)SGEMM_naive, (char *)"SGEMM_naive", matrixA, matrixB, matrixC, M, N, K, tasks, ITERATIONS, matrixValid);
+    Test_SGEMM((SGEMMFuncPtr)SGEMM_tileShuffle, (char *)"SGEMM_tileShuffle", matrixA, matrixB, matrixC, M, N, K, tasks, ITERATIONS, matrixValid);
+    Test_SGEMM((SGEMMFuncPtr)SGEMM_tileReduceAdd, (char *)"SGEMM_tileReduceAdd", matrixA, matrixB, matrixC, M, N, K, tasks, ITERATIONS, matrixValid);
+    Test_SGEMM((SGEMMFuncPtr)SGEMM_tileAtomicAdd, (char *)"SGEMM_tileAtomicAdd", matrixA, matrixB, matrixC, M, N, K, tasks, ITERATIONS, matrixValid);
+    Test_SGEMM((SGEMMFuncPtr)SGEMM_tileNoSIMDIntrin, (char *)"SGEMM_tileNoSIMDIntrin", matrixA, matrixB, matrixC, M, N, K, tasks, ITERATIONS, matrixValid);
+    Test_SGEMM((SGEMMFuncPtr)SGEMM_tileBlockNoSIMDIntrin, (char *)"SGEMM_tileBlockNoSIMDIntrin", matrixA, matrixB, matrixC, M, N, K, tasks, ITERATIONS, matrixValid);
+    Test_SGEMM((SGEMMFuncPtr)SGEMM_tileBlockNoSIMDIntrin_2, (char *)"SGEMM_tileBlockNoSIMDIntrin_2", matrixA, matrixB, matrixC, M, N, K, tasks, ITERATIONS, matrixValid);
 
     printf("\n");
 
-    numTasks = 64;
-    Test_SGEMM((SGEMMFuncPtr)SGEMM_naive_withTasks, (char *)"SGEMM_naive_withTasks", matrixA, matrixB, matrixC, M, N, K, numTasks, ITERATIONS, matrixValid);
-    Test_SGEMM((SGEMMFuncPtr)SGEMM_tileShuffle_withTasks, (char *)"SGEMM_tileShuffle_withTasks", matrixA, matrixB, matrixC, M, N, K, numTasks, ITERATIONS, matrixValid);
-    Test_SGEMM((SGEMMFuncPtr)SGEMM_tileReduceAdd_withTasks, (char *)"SGEMM_tileReduceAdd_withTasks", matrixA, matrixB, matrixC, M, N, K, numTasks, ITERATIONS, matrixValid);
-    Test_SGEMM((SGEMMFuncPtr)SGEMM_tileAtomicAdd_withTasks, (char *)"SGEMM_tileAtomicAdd_withTasks", matrixA, matrixB, matrixC, M, N, K, numTasks, ITERATIONS, matrixValid);
-    Test_SGEMM((SGEMMFuncPtr)SGEMM_tileNoSIMDIntrin_withTasks, (char *)"SGEMM_tileNoSIMDIntrin_withTasks", matrixA, matrixB, matrixC, M, N, K, numTasks, ITERATIONS, matrixValid);
-    Test_SGEMM((SGEMMFuncPtr)SGEMM_tileBlockNoSIMDIntrin_withTasks, (char *)"SGEMM_tileBlockNoSIMDIntrin_withTasks", matrixA, matrixB, matrixC, M, N, K, numTasks, ITERATIONS, matrixValid);
-    Test_SGEMM((SGEMMFuncPtr)SGEMM_tileBlockNoSIMDIntrin_2_withTasks, (char *)"SGEMM_tileBlockNoSIMDIntrin_2_withTasks", matrixA, matrixB, matrixC, M, N, K, numTasks, ITERATIONS, matrixValid);
+    tasks = true;
+    Test_SGEMM((SGEMMFuncPtr)SGEMM_naive_withTasks, (char *)"SGEMM_naive_withTasks", matrixA, matrixB, matrixC, M, N, K, tasks, ITERATIONS, matrixValid);
+    Test_SGEMM((SGEMMFuncPtr)SGEMM_tileShuffle_withTasks, (char *)"SGEMM_tileShuffle_withTasks", matrixA, matrixB, matrixC, M, N, K, tasks, ITERATIONS, matrixValid);
+    Test_SGEMM((SGEMMFuncPtr)SGEMM_tileReduceAdd_withTasks, (char *)"SGEMM_tileReduceAdd_withTasks", matrixA, matrixB, matrixC, M, N, K, tasks, ITERATIONS, matrixValid);
+    Test_SGEMM((SGEMMFuncPtr)SGEMM_tileAtomicAdd_withTasks, (char *)"SGEMM_tileAtomicAdd_withTasks", matrixA, matrixB, matrixC, M, N, K, tasks, ITERATIONS, matrixValid);
+    Test_SGEMM((SGEMMFuncPtr)SGEMM_tileNoSIMDIntrin_withTasks, (char *)"SGEMM_tileNoSIMDIntrin_withTasks", matrixA, matrixB, matrixC, M, N, K, tasks, ITERATIONS, matrixValid);
+    Test_SGEMM((SGEMMFuncPtr)SGEMM_tileBlockNoSIMDIntrin_withTasks, (char *)"SGEMM_tileBlockNoSIMDIntrin_withTasks", matrixA, matrixB, matrixC, M, N, K, tasks, ITERATIONS, matrixValid);
+    Test_SGEMM((SGEMMFuncPtr)SGEMM_tileBlockNoSIMDIntrin_2_withTasks, (char *)"SGEMM_tileBlockNoSIMDIntrin_2_withTasks", matrixA, matrixB, matrixC, M, N, K, tasks, ITERATIONS, matrixValid);
 
     free(matrixA); free(matrixB); free(matrixC); free(matrixValid);
     return 0;

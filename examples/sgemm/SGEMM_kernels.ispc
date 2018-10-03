@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2011, Intel Corporation
+  Copyright (c) 2018, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -84,7 +84,8 @@ static task void SGEMM_naive_task(uniform float matrixA[], uniform float matrixB
 }
 
 export void SGEMM_naive_withTasks(uniform float matA[], uniform float matB[], uniform float matC[],
-                                    uniform int M, uniform int N, uniform int K, uniform int numTasks) {
+                                    uniform int M, uniform int N, uniform int K) {
+    uniform int numTasks = num_cores ();
     launch[numTasks] SGEMM_naive_task(matA, matB, matC, M, N, K);
 }
 
@@ -155,7 +156,8 @@ static task void SGEMM_tileShuffle_task(uniform float matrixA[], uniform float m
 
 
 export void SGEMM_tileShuffle_withTasks(uniform float matA[], uniform float matB[], uniform float matC[],
-    uniform int M, uniform int N, uniform int K, uniform int numTasks) {
+    uniform int M, uniform int N, uniform int K) {
+    uniform int numTasks = num_cores ();
     launch[numTasks] SGEMM_tileShuffle_task(matA, matB, matC, M, N, K);
 }
 
@@ -231,7 +233,8 @@ static task void SGEMM_tileReduceAdd_task(uniform float matrixA[], uniform float
 }
 
 export void SGEMM_tileReduceAdd_withTasks(uniform float matA[], uniform float matB[], uniform float matC[],
-    uniform int M, uniform int N, uniform int K, uniform int numTasks) {
+    uniform int M, uniform int N, uniform int K) {
+    uniform int numTasks = num_cores ();
     launch[numTasks] SGEMM_tileReduceAdd_task(matA, matB, matC, M, N, K);
 }
 
@@ -309,7 +312,8 @@ task void SGEMM_tileAtomicAdd_task(uniform float matrixA[], uniform float matrix
 }
 
 export void SGEMM_tileAtomicAdd_withTasks(uniform float matA[], uniform float matB[], uniform float matC[],
-    uniform int M, uniform int N, uniform int K, uniform int numTasks) {
+    uniform int M, uniform int N, uniform int K) {
+    uniform int numTasks = num_cores ();
     launch[numTasks] SGEMM_tileAtomicAdd_task(matA, matB, matC, M, N, K);
 }
 
@@ -399,7 +403,8 @@ static task void SGEMM_tileNoSIMDIntrin_task(uniform float matrixA[], uniform fl
 }
 
 export void SGEMM_tileNoSIMDIntrin_withTasks(uniform float matA[], uniform float matB[], uniform float matC[],
-    uniform int M, uniform int N, uniform int K, uniform int numTasks) {
+    uniform int M, uniform int N, uniform int K) {
+    uniform int numTasks = num_cores ();
     launch[numTasks] SGEMM_tileNoSIMDIntrin_task(matA, matB, matC, M, N, K);
 }
 
@@ -499,7 +504,8 @@ task void SGEMM_tileBlockNoSIMDIntrin_task(uniform float matrixA[], uniform floa
 }
 
 export void SGEMM_tileBlockNoSIMDIntrin_withTasks(uniform float matA[], uniform float matB[], uniform float matC[],
-    uniform int M, uniform int N, uniform int K, uniform int numTasks) {
+    uniform int M, uniform int N, uniform int K) {
+    uniform int numTasks = num_cores ();
     launch[numTasks] SGEMM_tileBlockNoSIMDIntrin_task(matA, matB, matC, M, N, K);
 }
 
@@ -603,6 +609,7 @@ task void SGEMM_tileBlockNoSIMDIntrin_2_task(uniform float matrixA[], uniform fl
 }
 
 export void SGEMM_tileBlockNoSIMDIntrin_2_withTasks(uniform float matA[], uniform float matB[], uniform float matC[],
-    uniform int M, uniform int N, uniform int K, uniform int numTasks) {
+    uniform int M, uniform int N, uniform int K) {
+    uniform int numTasks = num_cores ();
     launch[numTasks] SGEMM_tileBlockNoSIMDIntrin_2_task(matA, matB, matC, M, N, K);
 }
