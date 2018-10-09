@@ -94,7 +94,7 @@ LLVM_CXXFLAGS=$(shell $(LLVM_CONFIG) --cppflags) $(DNDEBUG_FLAG)
 LLVM_VERSION=LLVM_$(shell $(LLVM_CONFIG) --version | sed -e 's/svn//' -e 's/\./_/' -e 's/\..*//')
 LLVM_VERSION_DEF=-D$(LLVM_VERSION)
 
-LLVM_COMPONENTS = engine ipo bitreader bitwriter instrumentation linker 
+LLVM_COMPONENTS = engine ipo bitreader bitwriter instrumentation linker
 # Component "option" was introduced in 3.3 and starting with 3.4 it is required for the link step.
 # We check if it's available before adding it (to not break 3.2 and earlier).
 ifeq ($(shell $(LLVM_CONFIG) --components |grep -c option), 1)
@@ -105,7 +105,7 @@ ifneq ($(ARM_ENABLED), 0)
 endif
 ifneq ($(NVPTX_ENABLED), 0)
     LLVM_COMPONENTS+=nvptx
-endif	
+endif
 LLVM_LIBS=$(shell $(LLVM_CONFIG) --libs $(LLVM_COMPONENTS))
 
 CLANG=clang
@@ -121,7 +121,7 @@ ifeq ($(LLVM_VERSION),LLVM_3_4)
     ISPC_LIBS += -lcurses
 endif
 
-# There is no logical OR in GNU make. 
+# There is no logical OR in GNU make.
 # This 'ifneq' acts like if( !($(LLVM_VERSION) == LLVM_3_2 || $(LLVM_VERSION) == LLVM_3_3 || $(LLVM_VERSION) == LLVM_3_4))
 ifeq (,$(filter $(LLVM_VERSION), LLVM_3_2 LLVM_3_3 LLVM_3_4))
     ISPC_LIBS += -lcurses -lz
@@ -160,10 +160,11 @@ else
     BUILD_VERSION:=$(GIT_REVISION)
 endif
 
+SRC_DIR=src
 CXX=clang++
 OPT=-O2
 WERROR=-Werror
-CXXFLAGS=$(OPT) $(LLVM_CXXFLAGS) -I. -Iobjs/ -I$(CLANG_INCLUDE)  \
+CXXFLAGS=$(OPT) $(LLVM_CXXFLAGS) -I. -I${SRC_DIR}/ -Iobjs/ -I$(CLANG_INCLUDE)  \
 	$(LLVM_VERSION_DEF) \
 	-Wall \
 	-DBUILD_DATE="\"$(BUILD_DATE)\"" -DBUILD_VERSION="\"$(BUILD_VERSION)\"" \
@@ -199,8 +200,7 @@ YACC=bison -d -v -t
 CXX_SRC=ast.cpp builtins.cpp cbackend.cpp ctx.cpp decl.cpp expr.cpp func.cpp \
 	ispc.cpp llvmutil.cpp main.cpp module.cpp opt.cpp stmt.cpp sym.cpp \
 	type.cpp util.cpp
-HEADERS=ast.h builtins.h ctx.h decl.h expr.h func.h ispc.h llvmutil.h module.h \
-	opt.h stmt.h sym.h type.h util.h
+HEADERS=$(wildcard $(SRC_DIR)/*.h)
 TARGETS=avx2-i64x4 avx11-i64x4 avx1-i64x4 avx1 avx1-x2 avx11 avx11-x2 avx2 avx2-x2 \
 	sse2 sse2-x2 sse4-8 sse4-16 sse4 sse4-x2 \
 	generic-4 generic-8 generic-16 generic-32 generic-64 generic-1 knl skx
@@ -283,15 +283,15 @@ asan: OPT+=-fsanitize=address
 debug: ispc
 debug: OPT=-O0 -g
 
-objs/%.o: %.cpp
+objs/%.o: ${SRC_DIR}/%.cpp
 	@echo Compiling $<
 	@$(CXX) $(CXXFLAGS) -o $@ -c $<
 
-objs/cbackend.o: cbackend.cpp
+objs/cbackend.o: ${SRC_DIR}/cbackend.cpp
 	@echo Compiling $<
 	@$(CXX) -fno-rtti -fno-exceptions $(CXXFLAGS) -o $@ -c $<
 
-objs/opt.o: opt.cpp
+objs/opt.o: ${SRC_DIR}/opt.cpp
 	@echo Compiling $<
 	@$(CXX) -fno-rtti $(CXXFLAGS) -o $@ -c $<
 
@@ -307,7 +307,7 @@ objs/parse.o: objs/parse.cc $(HEADERS)
 	@echo Compiling $<
 	@$(CXX) $(CXXFLAGS) -o $@ -c $<
 
-objs/lex.cpp: lex.ll 
+objs/lex.cpp: lex.ll
 	@echo Running flex on $<
 	@$(LEX) -o $@ $<
 

@@ -11,13 +11,13 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="ast.cpp" />
-    <ClCompile Include="builtins.cpp" />
-    <ClCompile Include="cbackend.cpp" />
-    <ClCompile Include="ctx.cpp" />
-    <ClCompile Include="decl.cpp" />
-    <ClCompile Include="expr.cpp" />
-    <ClCompile Include="func.cpp" />
+    <ClCompile Include="src\ast.cpp" />
+    <ClCompile Include="src\builtins.cpp" />
+    <ClCompile Include="src\cbackend.cpp" />
+    <ClCompile Include="src\ctx.cpp" />
+    <ClCompile Include="src\decl.cpp" />
+    <ClCompile Include="src\expr.cpp" />
+    <ClCompile Include="src\func.cpp" />
     <ClCompile Include="$(Configuration)\gen-bitcode-avx1-32bit.cpp" />
     <ClCompile Include="$(Configuration)\gen-bitcode-avx1-64bit.cpp" />
     <ClCompile Include="$(Configuration)\gen-bitcode-avx1-x2-32bit.cpp" />
@@ -72,14 +72,14 @@
     <ClCompile Include="$(Configuration)\gen-stdlib-mask16.cpp" />
     <ClCompile Include="$(Configuration)\gen-stdlib-mask32.cpp" />
     <ClCompile Include="$(Configuration)\gen-stdlib-mask64.cpp" />
-    <ClCompile Include="ispc.cpp" />
+    <ClCompile Include="src\ispc.cpp" />
     <ClCompile Include="$(Configuration)\lex.cc">
       <DisableSpecificWarnings>4146;4800;4996;4355;4624;4005;4003;4018;4141;4244</DisableSpecificWarnings>
     </ClCompile>
-    <ClCompile Include="llvmutil.cpp" />
-    <ClCompile Include="module.cpp" />
-    <ClCompile Include="main.cpp" />
-    <ClCompile Include="opt.cpp" />
+    <ClCompile Include="src\llvmutil.cpp" />
+    <ClCompile Include="src\module.cpp" />
+    <ClCompile Include="src\main.cpp" />
+    <ClCompile Include="src\opt.cpp" />
     <ClCompile Include="$(Configuration)\parse.cc">
       <DisableSpecificWarnings>4146;4800;4996;4355;4624;4005;4065;4141;4244</DisableSpecificWarnings>
     </ClCompile>
@@ -89,27 +89,27 @@
       <Message>Building builtins.c</Message>
       <Outputs>$(Configuration)/gen-bitcode-c-32.cpp;$(Configuration)/gen-bitcode-c-64.cpp</Outputs>
     </CustomBuild>
-    <ClCompile Include="stmt.cpp" />
-    <ClCompile Include="sym.cpp" />
-    <ClCompile Include="type.cpp" />
-    <ClCompile Include="util.cpp" />
+    <ClCompile Include="src\stmt.cpp" />
+    <ClCompile Include="src\sym.cpp" />
+    <ClCompile Include="src\type.cpp" />
+    <ClCompile Include="src\util.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="ast.h" />
-    <ClInclude Include="builtins.h" />
-    <ClInclude Include="ctx.h" />
-    <ClInclude Include="decl.h" />
-    <ClInclude Include="expr.h" />
-    <ClInclude Include="func.h" />
-    <ClInclude Include="ispc.h" />
-    <ClInclude Include="ispc_version.h" />
-    <ClInclude Include="llvmutil.h" />
-    <ClInclude Include="module.h" />
-    <ClInclude Include="opt.h" />
-    <ClInclude Include="stmt.h" />
-    <ClInclude Include="sym.h" />
-    <ClInclude Include="type.h" />
-    <ClInclude Include="util.h" />
+    <ClInclude Include="src\ast.h" />
+    <ClInclude Include="src\builtins.h" />
+    <ClInclude Include="src\ctx.h" />
+    <ClInclude Include="src\decl.h" />
+    <ClInclude Include="src\expr.h" />
+    <ClInclude Include="src\func.h" />
+    <ClInclude Include="src\ispc.h" />
+    <ClInclude Include="src\ispc_version.h" />
+    <ClInclude Include="src\llvmutil.h" />
+    <ClInclude Include="src\module.h" />
+    <ClInclude Include="src\opt.h" />
+    <ClInclude Include="src\stmt.h" />
+    <ClInclude Include="src\sym.h" />
+    <ClInclude Include="src\type.h" />
+    <ClInclude Include="src\util.h" />
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="stdlib.ispc">
@@ -420,7 +420,7 @@
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>NOMINMAX;%LLVM_VERSION%</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>$(LLVM_INSTALL_DIR)\include;.;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(LLVM_INSTALL_DIR)\include;$(ProjectDir)\src;.;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <DisableSpecificWarnings>4146;4800;4996;4355;4624;4244;4141;4291;4018</DisableSpecificWarnings>
     </ClCompile>
     <Link>
@@ -446,7 +446,7 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <PreprocessorDefinitions>NOMINMAX;%LLVM_VERSION%;NDEBUG</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>$(LLVM_INSTALL_DIR)\include;.;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(LLVM_INSTALL_DIR)\include;$(ProjectDir)\src;.;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <DisableSpecificWarnings>4146;4800;4996;4355;4624;4244;4141;4291;4018</DisableSpecificWarnings>
     </ClCompile>
     <Link>
