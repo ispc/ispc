@@ -34,6 +34,7 @@
 // Various ISPC SGEMM kernel and task/kernel implementations
 // Junkins, September 2018
 
+// TILE_SIZE is set inorder to fit into SIMD registers for re-use.
 #define TILE_SIZE 32
 
 // Naive implementation. The outer foreach achieves some parallelism.
@@ -405,6 +406,7 @@ export void SGEMM_tileNoSIMDIntrin_withTasks(uniform float matA[], uniform float
 
 // This version is modified version of 'SGEMM_tileNoSIMDIntrin'.
 // The tile used to read/write values for re-use is a 2D block of height 2 instead of a n array of same width.
+// Value is set inorder to fit into SIMD registers for re-use.
 #define TILE_HEIGHT 2
 #define TILE_WIDTH 32
 export void SGEMM_tileBlockNoSIMDIntrin(uniform float matrixA[], uniform float matrixB[], uniform float matrixC[],
