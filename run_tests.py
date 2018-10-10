@@ -1,24 +1,24 @@
 #!/usr/bin/python
 #
-#  Copyright (c) 2013-2015, Intel Corporation
+#  Copyright (c) 2013-2018, Intel Corporation
 #  All rights reserved.
-# 
+#
 #  Redistribution and use in source and binary forms, with or without
 #  modification, are permitted provided that the following conditions are
 #  met:
-# 
+#
 #    * Redistributions of source code must retain the above copyright
 #      notice, this list of conditions and the following disclaimer.
-# 
+#
 #    * Redistributions in binary form must reproduce the above copyright
 #      notice, this list of conditions and the following disclaimer in the
 #      documentation and/or other materials provided with the distribution.
-# 
+#
 #    * Neither the name of Intel Corporation nor the names of its
 #      contributors may be used to endorse or promote products derived from
 #      this software without specific prior written permission.
-# 
-# 
+#
+#
 #   THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS
 #   IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
 #   TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A
@@ -191,7 +191,7 @@ def run_test(testname):
                 (filename, options.arch, "generic-16")
         else:
             ispc_cmd = ispc_exe_rel + " --werror --nowrap %s --arch=%s --target=%s" % \
-                (filename, options.arch, options.target) 
+                (filename, options.arch, options.target)
         (return_code, output, timeout) = run_command(ispc_cmd, 10)
         got_error = (return_code != 0) or timeout
 
@@ -293,7 +293,7 @@ def run_test(testname):
                          (options.compiler_exe, gcc_arch, "-xMIC-AVX512", match, obj_name, exe_name)
                 else:
                     cc_cmd = "%s -O2 -I. %s %s test_static.cpp -DTEST_SIG=%d %s -o %s" % \
-                         (options.compiler_exe, gcc_arch, gcc_isa, match, obj_name, exe_name)                    
+                         (options.compiler_exe, gcc_arch, gcc_isa, match, obj_name, exe_name)
 
                 if platform.system() == 'Darwin':
                     cc_cmd += ' -Wl,-no_pie'
@@ -320,7 +320,7 @@ def run_test(testname):
                            (filename, obj_name, options.arch, options.target)
 
             if options.no_opt:
-                ispc_cmd += " -O0" 
+                ispc_cmd += " -O0"
             if is_generic_target:
                 ispc_cmd += " --emit-c++ --c++-include-file=%s" % add_prefix(options.include_file)
 
@@ -343,7 +343,7 @@ def run_test(testname):
         # compile the ispc code, make the executable, and run it...
         ispc_cmd += " -h " + filename + ".h"
         cc_cmd += " -DTEST_HEADER=<" + filename + ".h>"
-        (compile_error, run_error) = run_cmds([ispc_cmd, cc_cmd], 
+        (compile_error, run_error) = run_cmds([ispc_cmd, cc_cmd],
                                               options.wrapexe + " " + exe_name, \
                                               testname, should_fail)
 
@@ -560,7 +560,7 @@ def file_check(compfails, runfails):
         print_debug("NEW PASSES after COMPFAILS:\n", s, run_tests_log)
         for i in range (0,len(new_passes_compfails)):
             print_debug("\t" + new_passes_compfails[i] + "\n", s, run_tests_log)
-    
+
     if options.update != "":
         output = open(test_states, 'w')
         output.writelines(new_f_lines)
@@ -597,7 +597,7 @@ def run_tests(options1, args, print_version):
     options = options1
     global s
     s = options.silent
-    
+
     # prepare run_tests_log and fail_db file
     global run_tests_log
     if options.in_file:
@@ -615,45 +615,46 @@ def run_tests(options1, args, print_version):
     # disable fancy error/warning printing with ANSI colors, so grepping for error
     # messages doesn't get confused
     os.environ["TERM"] = "dumb"
- 
+
     # This script is affected by http://bugs.python.org/issue5261 on OSX 10.5 Leopard
     # git history has a workaround for that issue.
-    global is_windows 
+    global is_windows
     is_windows = (platform.system() == 'Windows' or
                 'CYGWIN_NT' in platform.system())
- 
+
     if options.target == 'neon':
         options.arch = 'arm'
     if options.target == "nvptx":
         options.arch = "nvptx64"
- 
-    # use relative path to not depend on host directory, which may possibly
-    # have white spaces and unicode characters.
+
     global ispc_exe
     ispc_exe = ""
-    if not is_windows:
-        if os.environ.get("ISPC_HOME") != None:
-            if os.path.exists(os.environ["ISPC_HOME"] + os.sep + "ispc"):
-                ispc_exe = os.environ["ISPC_HOME"] + os.sep + "ispc"
-            else:
-                PATH_dir = string.split(os.getenv("PATH"), os.pathsep)
-                for counter in PATH_dir:
-                    if os.path.exists(counter + os.sep + "ispc"):
-                        ispc_exe = counter + os.sep + "ispc"
-    else:
-        if os.path.exists(".\\Release\\ispc.exe"):
-            ispc_exe = ".\\Release\\ispc.exe"
-        else:
-            error("You don't have ispc.exe compiler in .\\Release.\n", 1)
+    ispc_ext=""
+    if is_windows:
+        ispc_ext = ".exe"
+    if os.environ.get("ISPC_HOME") != None:
+        if os.path.exists(os.environ["ISPC_HOME"] + os.sep + "ispc" + ispc_ext):
+            ispc_exe = os.environ["ISPC_HOME"] + os.sep + "ispc" + ispc_ext
+    PATH_dir = string.split(os.getenv("PATH"), os.pathsep)
+    for counter in PATH_dir:
+        if ispc_exe == "":
+            if os.path.exists(counter + os.sep + "ispc" + ispc_ext):
+                ispc_exe = counter + os.sep + "ispc" + ispc_ext
     # checks the required ispc compiler otherwise prints an error message
     if ispc_exe == "":
         error("ISPC compiler not found.\nAdded path to ispc compiler to your PATH variable or ISPC_HOME variable\n", 1)
     print_debug("Testing ispc: " + ispc_exe + "\n", s, run_tests_log)
+    # On Windows use relative path to not depend on host directory, which may possibly
+    # have white spaces and unicode characters.
+    if is_windows:
+        common_prefix = os.path.commonprefix([ispc_exe, os.getcwd()])
+        ispc_exe = os.path.relpath(ispc_exe, os.getcwd())
+
     ispc_exe += " " + options.ispc_flags
 
-    global is_generic_target 
+    global is_generic_target
     is_generic_target = ((options.target.find("generic-") != -1 and
-                     options.target != "generic-1" and options.target != "generic-x1") or 
+                     options.target != "generic-1" and options.target != "generic-x1") or
                      options.target == "knc-generic" or options.target == "knl-generic")
 
     global is_nvptx_target
@@ -685,11 +686,11 @@ def run_tests(options1, args, print_version):
         elif options.target == "knl-generic":
             error("No knl #include specified; using examples/intrinsics/knl.h\n", 2)
             options.include_file = "examples/intrinsics/knl.h"
- 
+
     if options.compiler_exe == None:
-        if (options.target == "knc-generic"): 
+        if (options.target == "knc-generic"):
             options.compiler_exe = "icpc"
-        elif (options.target == "knl-generic"): 
+        elif (options.target == "knl-generic"):
             options.compiler_exe = "icpc"
         elif is_windows:
             options.compiler_exe = "cl.exe"
@@ -697,21 +698,21 @@ def run_tests(options1, args, print_version):
             options.compiler_exe = "clang++"
 
     # checks the required compiler otherwise prints an error message
-    PATH_dir = string.split(os.getenv("PATH"), os.pathsep) 
+    PATH_dir = string.split(os.getenv("PATH"), os.pathsep)
     compiler_exists = False
- 
+
     for counter in PATH_dir:
         if os.path.exists(counter + os.sep + options.compiler_exe):
             compiler_exists = True
             break
- 
+
     if not compiler_exists:
         error("missing the required compiler: %s \n" % options.compiler_exe, 1)
 
     # print compilers versions
     if print_version > 0:
         common.print_version(ispc_exe, "", options.compiler_exe, False, run_tests_log, is_windows)
- 
+
     ispc_root = "."
 
     # checks the required environment otherwise prints an error message
@@ -726,7 +727,7 @@ def run_tests(options1, args, print_version):
 
         if not wrapexe_exists:
             error("missing the required launcher: %s \nAdd it to your $PATH\n" % options.wrapexe, 1)
-        
+
         if platform.system() == 'Windows' or 'CYGWIN_NT' in platform.system():
             OS = "Windows"
         else:
@@ -751,26 +752,26 @@ def run_tests(options1, args, print_version):
                 argfiles += glob.glob(f)
         else:
             argfiles = args
-        
+
         files = [ ]
         for f in argfiles:
             if os.path.splitext(string.lower(f))[1] != ".ispc":
                 error("Ignoring file %s, which doesn't have an .ispc extension.\n" % f, 2)
             else:
                 files += [ f ]
- 
+
     # max_test_length is used to issue exact number of whitespace characters when
     # updating status. Otherwise update causes new lines standard 80 char terminal
     # on both Linux and Windows.
     max_test_length = 0
     for f in files:
         max_test_length = max(max_test_length, len(f))
- 
+
     # randomly shuffle the tests if asked to do so
     if (options.random):
         random.seed()
         random.shuffle(files)
- 
+
     # counter
     total_tests = len(files)
 
@@ -855,7 +856,7 @@ def run_tests(options1, args, print_version):
         for fname in run_succeed_files:
             common.ex_state.add_to_tt(fname, options.arch, opt, options.target, 0, 0)
             common.ex_state.add_to_rinf(options.arch, opt, options.target, 1, 0, 0, 0)
-    
+
     except:
         print_debug("Exception in ex_state. Skipping...", s, run_tests_log)
 
@@ -931,7 +932,7 @@ if __name__ == "__main__":
     parser.add_option('-t', '--target', dest='target',
                   help=('Set compilation target (sse2-i32x4, sse2-i32x8, sse4-i32x4, sse4-i32x8, ' +
                   'sse4-i16x8, sse4-i8x16, avx1-i32x8, avx1-i32x16, avx1.1-i32x8, avx1.1-i32x16, ' +
-                  'avx2-i32x8, avx2-i32x16, avx512knl-i32x16, generic-x1, generic-x4, generic-x8, generic-x16, ' + 
+                  'avx2-i32x8, avx2-i32x16, avx512knl-i32x16, generic-x1, generic-x4, generic-x8, generic-x16, ' +
                   'generic-x32, generic-x64, knc-generic, knl-generic)'), default="sse4")
     parser.add_option('-a', '--arch', dest='arch',
                   help='Set architecture (arm, x86, x86-64)',default="x86-64")
