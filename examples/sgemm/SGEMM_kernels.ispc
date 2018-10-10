@@ -85,7 +85,7 @@ static task void SGEMM_naive_task(uniform float matrixA[], uniform float matrixB
 
 export void SGEMM_naive_withTasks(uniform float matA[], uniform float matB[], uniform float matC[],
                                     uniform int M, uniform int N, uniform int K) {
-    uniform int numTasks = num_cores ();
+    uniform int numTasks = num_cores();
     launch[numTasks] SGEMM_naive_task(matA, matB, matC, M, N, K);
 }
 
@@ -118,7 +118,6 @@ export void SGEMM_tileShuffle(uniform float matrixA[], uniform float matrixB[], 
 }
 
 // Multiple task version of the above:
-// Additionally a prefetch is used to prefetch the matrix values into cache.
 static task void SGEMM_tileShuffle_task(uniform float matrixA[], uniform float matrixB[], uniform float matrixC[],
                                             uniform int M, uniform int N, uniform int K) {
     // Determine workset for this task instance:
@@ -128,11 +127,6 @@ static task void SGEMM_tileShuffle_task(uniform float matrixA[], uniform float m
 
     uniform int m, n, nn;
     varying float tileOfA, aValue, sum;
-
-    // Per thread optimizations, init lives here.
-    // Per task pre-fetching:
-    prefetch_nt (&matrixA[0]);
-    prefetch_nt (&matrixB[0]);
 
     // Now launch SPMD control flow over columns.
     foreach (k = uColStart ... uColEnd) {
@@ -157,7 +151,7 @@ static task void SGEMM_tileShuffle_task(uniform float matrixA[], uniform float m
 
 export void SGEMM_tileShuffle_withTasks(uniform float matA[], uniform float matB[], uniform float matC[],
     uniform int M, uniform int N, uniform int K) {
-    uniform int numTasks = num_cores ();
+    uniform int numTasks = num_cores();
     launch[numTasks] SGEMM_tileShuffle_task(matA, matB, matC, M, N, K);
 }
 
@@ -234,7 +228,7 @@ static task void SGEMM_tileReduceAdd_task(uniform float matrixA[], uniform float
 
 export void SGEMM_tileReduceAdd_withTasks(uniform float matA[], uniform float matB[], uniform float matC[],
     uniform int M, uniform int N, uniform int K) {
-    uniform int numTasks = num_cores ();
+    uniform int numTasks = num_cores();
     launch[numTasks] SGEMM_tileReduceAdd_task(matA, matB, matC, M, N, K);
 }
 
@@ -313,7 +307,7 @@ task void SGEMM_tileAtomicAdd_task(uniform float matrixA[], uniform float matrix
 
 export void SGEMM_tileAtomicAdd_withTasks(uniform float matA[], uniform float matB[], uniform float matC[],
     uniform int M, uniform int N, uniform int K) {
-    uniform int numTasks = num_cores ();
+    uniform int numTasks = num_cores();
     launch[numTasks] SGEMM_tileAtomicAdd_task(matA, matB, matC, M, N, K);
 }
 
@@ -404,7 +398,7 @@ static task void SGEMM_tileNoSIMDIntrin_task(uniform float matrixA[], uniform fl
 
 export void SGEMM_tileNoSIMDIntrin_withTasks(uniform float matA[], uniform float matB[], uniform float matC[],
     uniform int M, uniform int N, uniform int K) {
-    uniform int numTasks = num_cores ();
+    uniform int numTasks = num_cores();
     launch[numTasks] SGEMM_tileNoSIMDIntrin_task(matA, matB, matC, M, N, K);
 }
 
@@ -505,7 +499,7 @@ task void SGEMM_tileBlockNoSIMDIntrin_task(uniform float matrixA[], uniform floa
 
 export void SGEMM_tileBlockNoSIMDIntrin_withTasks(uniform float matA[], uniform float matB[], uniform float matC[],
     uniform int M, uniform int N, uniform int K) {
-    uniform int numTasks = num_cores ();
+    uniform int numTasks = num_cores();
     launch[numTasks] SGEMM_tileBlockNoSIMDIntrin_task(matA, matB, matC, M, N, K);
 }
 
@@ -586,7 +580,6 @@ task void SGEMM_tileBlockNoSIMDIntrin_2_task(uniform float matrixA[], uniform fl
                 oneAVal[0] = matrixA[mTimesNPlusN];
                 oneAVal[1] = matrixA[mPlusOneTimesNPlusN];
 
-                //prefetch_l1(&matrixB[n*K + k0]);
                 uniform unsigned int nTimesKPlusk0 = n*K + k0;
                 // SPMD iterate over the TILE dimension, but within for loop nest:
                 foreach (kt = 0 ... TILE_WIDTH) {
@@ -610,6 +603,6 @@ task void SGEMM_tileBlockNoSIMDIntrin_2_task(uniform float matrixA[], uniform fl
 
 export void SGEMM_tileBlockNoSIMDIntrin_2_withTasks(uniform float matA[], uniform float matB[], uniform float matC[],
     uniform int M, uniform int N, uniform int K) {
-    uniform int numTasks = num_cores ();
+    uniform int numTasks = num_cores();
     launch[numTasks] SGEMM_tileBlockNoSIMDIntrin_2_task(matA, matB, matC, M, N, K);
 }

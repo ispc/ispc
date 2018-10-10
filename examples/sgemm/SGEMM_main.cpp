@@ -154,12 +154,45 @@ void Test_SGEMM(SGEMMFuncPtr SGEMMFunc, char* pcFuncName,
     init_matrix(matrixC, M, K, 0.0f);
 }
 
-int main() {
-    // Bigger random number filled matrix test case:
-    #define ITERATIONS 500
-    #define M 256
-    #define N 256
-    #define K 256
+int main(int argc, char **argv) {
+    // Random number filled matrix test case:
+
+    // Default values for input parameters
+    int ITERATIONS = 500;
+    int M = 256;
+    int N = 64;
+    int K = 512;
+    printf ("\nUsage: sgemm (optional)[ispc iterations] (optional)[[Matrix A Rows] [Matrix A Columns/Matrix B Rows] [Matrix B Columns]]\n");
+    if (argc < 2) {
+        printf ("ispc iterations = %d[default],\t Matrix A Rows = %d[default],\t Matrix A Columns/Matrix B Rows = %d[default], Matrix B Columns = %d[default]\n", ITERATIONS, M, N, K);
+    }
+    else if (argc == 2){
+        ITERATIONS = atoi (argv[1]);
+        printf ("%s\n", argv[0]);
+        printf ("ispc iterations = %d,\t Matrix A Rows = %d[default],\t Matrix A Columns/Matrix B Rows = %d[default], Matrix B Columns = %d[default]\n", ITERATIONS, M, N, K);
+    }
+    else if (argc == 4){
+        M = atoi (argv[1]);
+        N = atoi (argv[2]);
+        K = atoi (argv[3]);
+        printf ("%s\n", argv[0]);
+        printf ("ispc iterations = %d[default],\t Matrix A Rows = %d,\t Matrix A Columns/Matrix B Rows = %d, Matrix B Columns = %d\n", ITERATIONS, M, N, K);
+    }
+    else if (argc == 5){
+        ITERATIONS = atoi (argv[1]);
+        M = atoi (argv[2]);
+        N = atoi (argv[3]);
+        K = atoi (argv[4]);
+        printf ("%s\n", argv[0]);
+        printf ("ispc iterations = %d,\t Matrix A Rows = %d,\t Matrix A Columns/Matrix B Rows = %d, Matrix B Columns = %d\n", ITERATIONS, M, N, K);
+    }
+    else {
+        printf ("%s\n", argv[0]);
+        printf ("\nInvalid number of inputs\n");
+        getchar();
+        exit(-1);
+    }
+
     float* matrixA; matrixA = (float*)malloc(M*N * sizeof(float)); init_matrix_rand(matrixA, M, N, 10.0f);
     float* matrixB; matrixB = (float*)malloc(N*K * sizeof(float)); init_matrix_rand(matrixB, N, K, 10.0f);
     float* matrixC; matrixC = (float*)malloc(M*K * sizeof(float)); init_matrix_rand(matrixC, M, K, 0.0f);
