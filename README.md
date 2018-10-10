@@ -1,4 +1,5 @@
-==============================
+[![Build Status](https://travis-ci.org/ispc/ispc.svg?branch=travis)](https://travis-ci.org/ispc/ispc)
+
 Intel(r) SPMD Program Compiler
 ==============================
 

@@ -1,0 +1,93 @@
+#  Copyright (c) 2018, Intel Corporation
+#  All rights reserved.
+#
+#  Redistribution and use in source and binary forms, with or without
+#  modification, are permitted provided that the following conditions are
+#  met:
+#
+#    * Redistributions of source code must retain the above copyright
+#      notice, this list of conditions and the following disclaimer.
+#
+#    * Redistributions in binary form must reproduce the above copyright
+#      notice, this list of conditions and the following disclaimer in the
+#      documentation and/or other materials provided with the distribution.
+#
+#    * Neither the name of Intel Corporation nor the names of its
+#      contributors may be used to endorse or promote products derived from
+#      this software without specific prior written permission.
+#
+#
+#   THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS
+#   IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
+#   TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A
+#   PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER
+#   OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+#   EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+#   PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+#   PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+#   LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+#   NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+#   SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+image: "Visual Studio 2017"
+
+clone_folder: "c:\\projects\\ispc"
+configuration: Release
+
+environment:
+  ISPC_HOME: "c:\\projects\\ispc"
+  LLVM_HOME: "c:\\projects\\llvm"
+  CHOCO_DIR: "%ProgramData%\\chocolatey\\lib"
+  matrix:
+    - DESC: "Build ispc with LLVM 4.0 VS2017"
+      LLVM_VERSION: 4.0
+      DOCKER_NAME: "ispc/test_repo:win_llvm40"
+    - DESC: "Build ispc with LLVM 5.0 VS2017"
+      LLVM_VERSION: 5.0
+      DOCKER_NAME: "ispc/test_repo:win_llvm50"
+    - DESC: "Build ispc with LLVM 6.0 VS2017"
+      LLVM_VERSION: 6.0
+      DOCKER_NAME: "ispc/test_repo:win_llvm60"
+    - DESC: "Build ispc with LLVM 7.0 VS2017"
+      LLVM_VERSION: 7.0
+      DOCKER_NAME: "ispc/test_repo:win_llvm70"
+
+install:
+  - cmd: |-
+        docker version
+        docker pull %DOCKER_NAME%
+        docker run -d %DOCKER_NAME%
+        docker ps --all  --format "{{.ID}}" --filter ancestor=%DOCKER_NAME% | head -1 > container_id.txt
+        SET /p CONTAINER=<container_id.txt
+        docker cp %CONTAINER%:%LLVM_HOME%\bin-%LLVM_VERSION% %LLVM_HOME%
+  - cinst cygwin
+  - cinst python2
+  - cinst winflexbison
+  - cd %CHOCO_DIR%\winflexbison\tools
+  - ren win_flex.exe flex.exe
+
+init:
+  - echo %APPVEYOR_BUILD_WORKER_IMAGE%
+  - if "%APPVEYOR_BUILD_WORKER_IMAGE%"=="Visual Studio 2017" ( set generator="Visual Studio 15" )
+  - if "%APPVEYOR_BUILD_WORKER_IMAGE%"=="Visual Studio 2015" ( set generator="Visual Studio 14" )
+  - echo %generator%
+
+before_build:
+- cmd: |-
+    SET PATH=%LLVM_HOME%\bin;%CHOCO_DIR%\winflexbison\tools;C:\cygwin64\bin;%PATH%
+    cd %ISPC_HOME%
+    mkdir build
+    cd build
+    cmake .. -G %generator% -DCMAKE_INSTALL_PREFIX=%ISPC_HOME%\Release
+
+build:
+  project: c:\\projects\\ispc\\build\\ispc.sln
+  verbosity: minimal
+
+after_build:
+  - msbuild INSTALL.vcxproj
+
+test_script:
+  - call "C:\Program Files (x86)\Microsoft Visual Studio\2017\Community\VC\Auxiliary\Build\vcvars32.bat"
+  - set PATH=%ISPC_HOME%\Release\bin;%PATH%
+  - cd %ISPC_HOME%
+  - python run_tests.py -a x86
