@@ -27,6 +27,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "perfbench", "perfbench\perf
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "sort", "sort\sort.vcxproj", "{6D3EF8C5-AE26-407B-9ECE-C27CB988D9C2}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "sgemm", "sgemm\sgemm.vcxproj", "{527949DD-BCB7-432B-94B4-FBBC06A0777A}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Win32 = Debug|Win32
@@ -139,6 +141,14 @@ Global
 		{6D3EF8C5-AE26-407B-9ECE-C27CB988D9C2}.Release|Win32.Build.0 = Release|Win32
 		{6D3EF8C5-AE26-407B-9ECE-C27CB988D9C2}.Release|x64.ActiveCfg = Release|x64
 		{6D3EF8C5-AE26-407B-9ECE-C27CB988D9C2}.Release|x64.Build.0 = Release|x64
+        {527949DD-BCB7-432B-94B4-FBBC06A0777A}.Debug|Win32.ActiveCfg = Debug|Win32
+		{527949DD-BCB7-432B-94B4-FBBC06A0777A}.Debug|Win32.Build.0 = Debug|Win32
+		{527949DD-BCB7-432B-94B4-FBBC06A0777A}.Debug|x64.ActiveCfg = Debug|x64
+		{527949DD-BCB7-432B-94B4-FBBC06A0777A}.Debug|x64.Build.0 = Debug|x64
+		{527949DD-BCB7-432B-94B4-FBBC06A0777A}.Release|Win32.ActiveCfg = Release|Win32
+		{527949DD-BCB7-432B-94B4-FBBC06A0777A}.Release|Win32.Build.0 = Release|Win32
+		{527949DD-BCB7-432B-94B4-FBBC06A0777A}.Release|x64.ActiveCfg = Release|x64
+		{527949DD-BCB7-432B-94B4-FBBC06A0777A}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
