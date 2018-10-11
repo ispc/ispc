@@ -3062,7 +3062,7 @@ static void lEmitDispatchModule(llvm::Module *module,
 
 // Determines if two types are compatible
 static bool lCompatibleTypes(llvm::Type *Ty1, llvm::Type *Ty2) {
-    while (Ty1->getTypeID() == Ty1->getTypeID())
+    while (Ty1->getTypeID() == Ty2->getTypeID())
         switch (Ty1->getTypeID()) {
             case llvm::ArrayType::ArrayTyID:
                 if (Ty1->getArrayNumElements() !=
