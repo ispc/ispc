@@ -78,7 +78,7 @@ extern "C" {
 }
 
 void ISPCLaunch(void **handle, void *f, void *d, int count0, int count1, int count2) {
-    *handle = (void *)0xdeadbeef;
+    *handle = (void *)(uintptr_t)0xdeadbeef;
     typedef void (*TaskFuncType)(void *, int, int, int, int, int, int, int, int, int, int);
     TaskFuncType func = (TaskFuncType)f;
     int count = count0*count1*count2, idx = 0;
@@ -93,7 +93,7 @@ void ISPCSync(void *) {
 
 
 void *ISPCAlloc(void **handle, int64_t size, int32_t alignment) {
-    *handle = (void *)0xdeadbeef;
+    *handle = (void *)(uintptr_t)0xdeadbeef;
     // and now, we leak...
 #ifdef ISPC_IS_WINDOWS
     return _aligned_malloc(size, alignment);
