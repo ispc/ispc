@@ -34,11 +34,56 @@
 // Simple harness for testing SGEMM implementations in ISPC
 // Junkins, September 2018
 
+/**
+
+Matrix layout, rows x col, row major storage:
+
+N                     K                     K
+---     ---           ---     ---           ---     ---
+|         |           |         |           |         |
+M  |         |   X     N |         |   =     M |         |
+|         |           |         |           |         |
+---     ---           ---     ---           ---     ---
+
+A        X            B        =            C
+**/
+
 #include "../timing.h"
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
+
+// OS Independent millisec wall timers
+#ifdef _WIN32
+#define WINDOWS
+#endif
+#ifdef _WIN64
+#define WINDOWS
+#endif
+#ifdef __linux__
+#define LINUX
+#endif
+
+#ifdef WINDOWS
+#define TIMER_DECLARE_AND_INIT()	\
+LARGE_INTEGER 	    beginClock, endClock, cpuClockFreq; \
+QueryPerformanceFrequency(&cpuClockFreq);
+
+#define TIMER_RESET_AND_START()	\
+QueryPerformanceCounter(&beginClock);
+
+#define TIMER_GET_ELAPSED_MSEC()	\
+(QueryPerformanceCounter(&endClock) & 0) + 	\
+(double(endClock.QuadPart - beginClock.QuadPart) * 1000.0f / cpuClockFreq.QuadPart)
+#else
+#define TIMER_DECLARE_AND_INIT()	
+#define TIMER_RESET_AND_START()		\
+reset_and_start_timer();			
+#define TIMER_GET_ELAPSED_MSEC()	\
+get_elapsed_msec();					
+#endif
+
 
 // Include the header file that the ispc compiler generates
 #include "SGEMM_kernels_ispc.h"
@@ -70,19 +115,7 @@ void print_matrix (char *pcName, float M[], unsigned int rows, unsigned int cols
     printf("\n");
 }
 
-/**
 
-Matrix layout, rows x col, row major storage:
-
-          N                     K                     K
-     ---     ---           ---     ---           ---     ---
-     |         |           |         |           |         |
-  M  |         |   X     N |         |   =     M |         |
-     |         |           |         |           |         |
-     ---     ---           ---     ---           ---     ---
-
-                  A        X            B        =            C
-**/
 
 void SGEMM_CPU_validation( float matrixA[],  float matrixB[],  float matrixC[],  unsigned int M,  unsigned int N,  unsigned int K) {
     for (unsigned int m = 0; m < M; m++)    {
@@ -125,26 +158,27 @@ void Test_SGEMM(SGEMMFuncPtr SGEMMFunc, char* pcFuncName,
     unsigned int i;
     bool bValid;
     char psValid[256];
+	TIMER_DECLARE_AND_INIT();
 
-    float fFlopsPerGEMM = (M*N*K) + (M*N*(K-1)); // Total = MNK mults + MN(K-1) adds.
+    float fFlopsPerGEMM = (float) (M*N*K) + (M*N*(K-1)); // Total = MNK mults + MN(K-1) adds.
 
     if (tasks == false) {
         // type cast
         SGEMMFuncPtr_SingleThreaded SGEMMFunc_ST = (SGEMMFuncPtr_SingleThreaded)SGEMMFunc;
 
-        reset_and_start_timer();
+		TIMER_RESET_AND_START();
         for (i = 0; i < numIterations; i++)
             SGEMMFunc_ST(matrixA, matrixB, matrixC, M, N, K);
-        totalWallTime = get_elapsed_msec();
+        totalWallTime = TIMER_GET_ELAPSED_MSEC();
     }
     else {
         // type cast
         SGEMMFuncPtr_MultiThreaded SGEMMFunc_MT = (SGEMMFuncPtr_MultiThreaded)SGEMMFunc;
 
-        reset_and_start_timer();
+		TIMER_RESET_AND_START();
         for (i = 0; i < numIterations; i++)
             SGEMMFunc_MT(matrixA, matrixB, matrixC, M, N, K);
-        totalWallTime = get_elapsed_msec();
+        totalWallTime = TIMER_GET_ELAPSED_MSEC();
     }
 
     avgTime = (float)totalWallTime / (float)numIterations;
@@ -162,21 +196,21 @@ int main(int argc, char **argv) {
     int M = 256;
     int N = 64;
     int K = 512;
-    printf ("\nUsage: sgemm (optional)[ispc iterations] (optional)[[Matrix A Rows] [Matrix A Columns/Matrix B Rows] [Matrix B Columns]]\n");
+    printf ("\nUsage: SGEMM (optional)[ispc iterations] (optional)[[Matrix A Rows] [Matrix A Columns/ matrix B Rows] [Matrix B Columns]]\n");
     if (argc < 2) {
-        printf ("ispc iterations = %d[default],\t Matrix A Rows = %d[default],\t Matrix A Columns/Matrix B Rows = %d[default], Matrix B Columns = %d[default]\n", ITERATIONS, M, N, K);
+        printf ("ispc iterations = %d[default],\t Matrix A Rows = %d[default],\t Matrix A Columns/ matrix B Rows = %d[default], Matrix B Columns = %d[default]\n", ITERATIONS, M, N, K);
     }
     else if (argc == 2){
         ITERATIONS = atoi (argv[1]);
         printf ("%s\n", argv[0]);
-        printf ("ispc iterations = %d,\t Matrix A Rows = %d[default],\t Matrix A Columns/Matrix B Rows = %d[default], Matrix B Columns = %d[default]\n", ITERATIONS, M, N, K);
+        printf ("ispc iterations = %d,\t Matrix A Rows = %d[default],\t Matrix A Columns/ matrix B Rows = %d[default], Matrix B Columns = %d[default]\n", ITERATIONS, M, N, K);
     }
     else if (argc == 4){
         M = atoi (argv[1]);
         N = atoi (argv[2]);
         K = atoi (argv[3]);
         printf ("%s\n", argv[0]);
-        printf ("ispc iterations = %d[default],\t Matrix A Rows = %d,\t Matrix A Columns/Matrix B Rows = %d, Matrix B Columns = %d\n", ITERATIONS, M, N, K);
+        printf ("ispc iterations = %d[default],\t Matrix A Rows = %d,\t Matrix A Columns/ matrix B Rows = %d, Matrix B Columns = %d\n", ITERATIONS, M, N, K);
     }
     else if (argc == 5){
         ITERATIONS = atoi (argv[1]);
@@ -184,7 +218,7 @@ int main(int argc, char **argv) {
         N = atoi (argv[3]);
         K = atoi (argv[4]);
         printf ("%s\n", argv[0]);
-        printf ("ispc iterations = %d,\t Matrix A Rows = %d,\t Matrix A Columns/Matrix B Rows = %d, Matrix B Columns = %d\n", ITERATIONS, M, N, K);
+        printf ("ispc iterations = %d,\t Matrix A Rows = %d,\t Matrix A Columns/ matrix B Rows = %d, Matrix B Columns = %d\n", ITERATIONS, M, N, K);
     }
     else {
         printf ("%s\n", argv[0]);
@@ -202,6 +236,7 @@ int main(int argc, char **argv) {
     // Generate a validation matrix using CPU code:
     SGEMM_CPU_validation(matrixA, matrixB, matrixValid, M, N, K);
 
+	// Single threaded test cases:
     Test_SGEMM((SGEMMFuncPtr)SGEMM_naive, (char *)"SGEMM_naive", matrixA, matrixB, matrixC, M, N, K, tasks, ITERATIONS, matrixValid);
     Test_SGEMM((SGEMMFuncPtr)SGEMM_tileShuffle, (char *)"SGEMM_tileShuffle", matrixA, matrixB, matrixC, M, N, K, tasks, ITERATIONS, matrixValid);
     Test_SGEMM((SGEMMFuncPtr)SGEMM_tileReduceAdd, (char *)"SGEMM_tileReduceAdd", matrixA, matrixB, matrixC, M, N, K, tasks, ITERATIONS, matrixValid);
@@ -209,9 +244,9 @@ int main(int argc, char **argv) {
     Test_SGEMM((SGEMMFuncPtr)SGEMM_tileNoSIMDIntrin, (char *)"SGEMM_tileNoSIMDIntrin", matrixA, matrixB, matrixC, M, N, K, tasks, ITERATIONS, matrixValid);
     Test_SGEMM((SGEMMFuncPtr)SGEMM_tileBlockNoSIMDIntrin, (char *)"SGEMM_tileBlockNoSIMDIntrin", matrixA, matrixB, matrixC, M, N, K, tasks, ITERATIONS, matrixValid);
     Test_SGEMM((SGEMMFuncPtr)SGEMM_tileBlockNoSIMDIntrin_2, (char *)"SGEMM_tileBlockNoSIMDIntrin_2", matrixA, matrixB, matrixC, M, N, K, tasks, ITERATIONS, matrixValid);
-
     printf("\n");
 
+	// Multi-threaded test cases:
     tasks = true;
     Test_SGEMM((SGEMMFuncPtr)SGEMM_naive_withTasks, (char *)"SGEMM_naive_withTasks", matrixA, matrixB, matrixC, M, N, K, tasks, ITERATIONS, matrixValid);
     Test_SGEMM((SGEMMFuncPtr)SGEMM_tileShuffle_withTasks, (char *)"SGEMM_tileShuffle_withTasks", matrixA, matrixB, matrixC, M, N, K, tasks, ITERATIONS, matrixValid);

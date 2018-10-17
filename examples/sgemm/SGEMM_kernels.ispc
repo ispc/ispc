@@ -34,7 +34,6 @@
 // Various ISPC SGEMM kernel and task/kernel implementations
 // Junkins, September 2018
 
-// TILE_SIZE is set inorder to fit into SIMD registers for re-use.
 #define TILE_SIZE 32
 
 // Naive implementation. The outer foreach achieves some parallelism.
@@ -86,7 +85,7 @@ static task void SGEMM_naive_task(uniform float matrixA[], uniform float matrixB
 
 export void SGEMM_naive_withTasks(uniform float matA[], uniform float matB[], uniform float matC[],
                                     uniform int M, uniform int N, uniform int K) {
-    uniform int numTasks = num_cores();
+    uniform int numTasks = num_cores() * 4;// Generate more tasks than threads, to enable some load balancing.
     launch[numTasks] SGEMM_naive_task(matA, matB, matC, M, N, K);
 }
 
@@ -152,7 +151,7 @@ static task void SGEMM_tileShuffle_task(uniform float matrixA[], uniform float m
 
 export void SGEMM_tileShuffle_withTasks(uniform float matA[], uniform float matB[], uniform float matC[],
     uniform int M, uniform int N, uniform int K) {
-    uniform int numTasks = num_cores();
+    uniform int numTasks = num_cores() * 4;// Generate more tasks than threads, to enable some load balancing.
     launch[numTasks] SGEMM_tileShuffle_task(matA, matB, matC, M, N, K);
 }
 
@@ -229,7 +228,7 @@ static task void SGEMM_tileReduceAdd_task(uniform float matrixA[], uniform float
 
 export void SGEMM_tileReduceAdd_withTasks(uniform float matA[], uniform float matB[], uniform float matC[],
     uniform int M, uniform int N, uniform int K) {
-    uniform int numTasks = num_cores();
+    uniform int numTasks = num_cores() * 4;// Generate more tasks than threads, to enable some load balancing.
     launch[numTasks] SGEMM_tileReduceAdd_task(matA, matB, matC, M, N, K);
 }
 
@@ -308,7 +307,7 @@ task void SGEMM_tileAtomicAdd_task(uniform float matrixA[], uniform float matrix
 
 export void SGEMM_tileAtomicAdd_withTasks(uniform float matA[], uniform float matB[], uniform float matC[],
     uniform int M, uniform int N, uniform int K) {
-    uniform int numTasks = num_cores();
+    uniform int numTasks = num_cores()*4;// Generate more tasks than threads, to enable some load balancing.
     launch[numTasks] SGEMM_tileAtomicAdd_task(matA, matB, matC, M, N, K);
 }
 
@@ -399,14 +398,13 @@ static task void SGEMM_tileNoSIMDIntrin_task(uniform float matrixA[], uniform fl
 
 export void SGEMM_tileNoSIMDIntrin_withTasks(uniform float matA[], uniform float matB[], uniform float matC[],
     uniform int M, uniform int N, uniform int K) {
-    uniform int numTasks = num_cores();
+    uniform int numTasks = num_cores()*4; // Generate more tasks than threads, to enable some load balancing.
     launch[numTasks] SGEMM_tileNoSIMDIntrin_task(matA, matB, matC, M, N, K);
 }
 
 
 // This version is modified version of 'SGEMM_tileNoSIMDIntrin'.
 // The tile used to read/write values for re-use is a 2D block of height 2 instead of a n array of same width.
-// Value is set inorder to fit into SIMD registers for re-use.
 #define TILE_HEIGHT 2
 #define TILE_WIDTH 32
 export void SGEMM_tileBlockNoSIMDIntrin(uniform float matrixA[], uniform float matrixB[], uniform float matrixC[],
@@ -501,7 +499,7 @@ task void SGEMM_tileBlockNoSIMDIntrin_task(uniform float matrixA[], uniform floa
 
 export void SGEMM_tileBlockNoSIMDIntrin_withTasks(uniform float matA[], uniform float matB[], uniform float matC[],
     uniform int M, uniform int N, uniform int K) {
-    uniform int numTasks = num_cores();
+    uniform int numTasks = num_cores()*4; // Generate more tasks than threads, to enable some load balancing.
     launch[numTasks] SGEMM_tileBlockNoSIMDIntrin_task(matA, matB, matC, M, N, K);
 }
 
@@ -605,6 +603,6 @@ task void SGEMM_tileBlockNoSIMDIntrin_2_task(uniform float matrixA[], uniform fl
 
 export void SGEMM_tileBlockNoSIMDIntrin_2_withTasks(uniform float matA[], uniform float matB[], uniform float matC[],
     uniform int M, uniform int N, uniform int K) {
-    uniform int numTasks = num_cores();
+    uniform int numTasks = num_cores()*4;// Generate more tasks than threads, to enable some load balancing.
     launch[numTasks] SGEMM_tileBlockNoSIMDIntrin_2_task(matA, matB, matC, M, N, K);
 }
