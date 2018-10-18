@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2014, Intel Corporation
+  Copyright (c) 2010-2018, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -429,7 +429,11 @@ Warning(SourcePos p, const char *fmt, ...) {
 
 void
 PerformanceWarning(SourcePos p, const char *fmt, ...) {
-    if (!g->emitPerfWarnings || strcmp(p.name, "stdlib.ispc") == 0 ||
+    std::string stdlibFile = "stdlib.ispc";
+    std::string sourcePosName = p.name;
+    if (!g->emitPerfWarnings ||
+        (sourcePosName.length() >= stdlibFile.length() &&
+        sourcePosName.compare(sourcePosName.length() - stdlibFile.length(), stdlibFile.length(), stdlibFile) == 0) ||
         g->quiet)
         return;
 
