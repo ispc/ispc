@@ -35,7 +35,6 @@
 // Junkins, September 2018
 
 /**
-
 Matrix layout, rows x col, row major storage:
 
 N                     K                     K
@@ -66,22 +65,23 @@ A        X            B        =            C
 #endif
 
 #ifdef WINDOWS
-#define TIMER_DECLARE_AND_INIT()	\
-LARGE_INTEGER 	    beginClock, endClock, cpuClockFreq; \
+#define TIMER_DECLARE_AND_INIT()    \
+LARGE_INTEGER       beginClock, endClock, cpuClockFreq; \
 QueryPerformanceFrequency(&cpuClockFreq);
 
-#define TIMER_RESET_AND_START()	\
+#define TIMER_RESET_AND_START() \
 QueryPerformanceCounter(&beginClock);
 
-#define TIMER_GET_ELAPSED_MSEC()	\
-(QueryPerformanceCounter(&endClock) & 0) + 	\
+#define TIMER_GET_ELAPSED_MSEC()    \
+(QueryPerformanceCounter(&endClock) & 0) +  \
+(QueryPerformanceFrequency(&cpuClockFreq) & 0) +\
 (double(endClock.QuadPart - beginClock.QuadPart) * 1000.0f / cpuClockFreq.QuadPart)
 #else
-#define TIMER_DECLARE_AND_INIT()	
-#define TIMER_RESET_AND_START()		\
-reset_and_start_timer();			
-#define TIMER_GET_ELAPSED_MSEC()	\
-get_elapsed_msec();					
+#define TIMER_DECLARE_AND_INIT()    
+#define TIMER_RESET_AND_START()     \
+reset_and_start_timer();            
+#define TIMER_GET_ELAPSED_MSEC()    \
+get_elapsed_msec();                 
 #endif
 
 
@@ -158,15 +158,16 @@ void Test_SGEMM(SGEMMFuncPtr SGEMMFunc, char* pcFuncName,
     unsigned int i;
     bool bValid;
     char psValid[256];
-	TIMER_DECLARE_AND_INIT();
+    TIMER_DECLARE_AND_INIT();
 
-    float fFlopsPerGEMM = (float) (M*N*K) + (M*N*(K-1)); // Total = MNK mults + MN(K-1) adds.
+    // Total = MNK mults + MN(K-1) adds.
+    float fFlopsPerGEMM = (float) (M*N*K) + (M*N*(K-1)); 
 
     if (tasks == false) {
         // type cast
         SGEMMFuncPtr_SingleThreaded SGEMMFunc_ST = (SGEMMFuncPtr_SingleThreaded)SGEMMFunc;
 
-		TIMER_RESET_AND_START();
+        TIMER_RESET_AND_START();
         for (i = 0; i < numIterations; i++)
             SGEMMFunc_ST(matrixA, matrixB, matrixC, M, N, K);
         totalWallTime = TIMER_GET_ELAPSED_MSEC();
@@ -175,7 +176,7 @@ void Test_SGEMM(SGEMMFuncPtr SGEMMFunc, char* pcFuncName,
         // type cast
         SGEMMFuncPtr_MultiThreaded SGEMMFunc_MT = (SGEMMFuncPtr_MultiThreaded)SGEMMFunc;
 
-		TIMER_RESET_AND_START();
+        TIMER_RESET_AND_START();
         for (i = 0; i < numIterations; i++)
             SGEMMFunc_MT(matrixA, matrixB, matrixC, M, N, K);
         totalWallTime = TIMER_GET_ELAPSED_MSEC();
@@ -236,7 +237,7 @@ int main(int argc, char **argv) {
     // Generate a validation matrix using CPU code:
     SGEMM_CPU_validation(matrixA, matrixB, matrixValid, M, N, K);
 
-	// Single threaded test cases:
+    // Single threaded test cases:
     Test_SGEMM((SGEMMFuncPtr)SGEMM_naive, (char *)"SGEMM_naive", matrixA, matrixB, matrixC, M, N, K, tasks, ITERATIONS, matrixValid);
     Test_SGEMM((SGEMMFuncPtr)SGEMM_tileShuffle, (char *)"SGEMM_tileShuffle", matrixA, matrixB, matrixC, M, N, K, tasks, ITERATIONS, matrixValid);
     Test_SGEMM((SGEMMFuncPtr)SGEMM_tileReduceAdd, (char *)"SGEMM_tileReduceAdd", matrixA, matrixB, matrixC, M, N, K, tasks, ITERATIONS, matrixValid);
@@ -246,7 +247,7 @@ int main(int argc, char **argv) {
     Test_SGEMM((SGEMMFuncPtr)SGEMM_tileBlockNoSIMDIntrin_2, (char *)"SGEMM_tileBlockNoSIMDIntrin_2", matrixA, matrixB, matrixC, M, N, K, tasks, ITERATIONS, matrixValid);
     printf("\n");
 
-	// Multi-threaded test cases:
+    // Multi-threaded test cases:
     tasks = true;
     Test_SGEMM((SGEMMFuncPtr)SGEMM_naive_withTasks, (char *)"SGEMM_naive_withTasks", matrixA, matrixB, matrixC, M, N, K, tasks, ITERATIONS, matrixValid);
     Test_SGEMM((SGEMMFuncPtr)SGEMM_tileShuffle_withTasks, (char *)"SGEMM_tileShuffle_withTasks", matrixA, matrixB, matrixC, M, N, K, tasks, ITERATIONS, matrixValid);
