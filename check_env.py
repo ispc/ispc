@@ -37,16 +37,17 @@ import common
 import sys
 import os
 import string
+from distutils.version import LooseVersion
 print_debug = common.print_debug
 error = common.error
 take_lines = common.take_lines
 
-exists = [False, False, False, False, False, False, False, False]
-names = ["m4", "bison", "flex", "sde", "ispc", "clang", "gcc", "icc"]
+exists = [False, False, False, False, False, False, False, False, False]
+names = ["m4", "bison", "flex", "sde", "ispc", "clang", "gcc", "icc", "cmake"]
 
 PATH_dir = string.split(os.getenv("PATH"), os.pathsep)
 for counter in PATH_dir:
-    for i in range(0,8):
+    for i in range(0,9):
         if os.path.exists(counter + os.sep + names[i]):
             exists[i] = True
 
@@ -76,6 +77,15 @@ for i in range(5,8):
         print_debug(take_lines(names[i] + " --version", "first"), False, "")
     else:
         error("you don't have " + names[i], 2)
+print_debug("\nCmake:\n", False, "")
+if exists[8]:
+    cmake_version = take_lines(names[8] + " --version", "first")[3]
+    if (LooseVersion(cmake_version) >= LooseVersion("3.8.0")):
+        print_debug(take_lines(names[8] + " --version", "first"), False, "")
+    else:
+        error("Cmake version is older then needed. Please install version 3.8 or newer", 2)
+else:
+    error("you don't have " + names[8], 2)
 
 print_debug("\n=== in ISPC specific environment variables: ===\n", False, "")
 if os.environ.get("LLVM_HOME") == None:

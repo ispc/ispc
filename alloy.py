@@ -499,21 +499,27 @@ def check_targets():
 
 def build_ispc(version_LLVM, make):
     current_path = os.getcwd()
-    os.chdir(os.environ["ISPC_HOME"])
+    ispc_home = os.environ["ISPC_HOME"]
+    os.chdir(ispc_home)
 
     make_ispc = "make " + options.ispc_build_compiler + " -j" + options.speed
+    ISPC_BUILD="build-" + version_LLVM
+    ISPC_BIN="bin-" + version_LLVM
+    if not os.path.exists(ISPC_BUILD):
+        os.makedirs(ISPC_BUILD)
+    if not os.path.exists(ISPC_BUILD):
+        os.makedirs(ISPC_BIN)
+    os.chdir(ISPC_BUILD)
 
     if current_OS != "Windows":
         p_temp = os.getenv("PATH")
         os.environ["PATH"] = os.environ["LLVM_HOME"] + "/bin-" + version_LLVM + "/bin:" + os.environ["PATH"]
-        try_do_LLVM("clean ISPC for building", "make clean", True)
-        
-        folder = os.environ["LLVM_HOME"]  + os.sep + "llvm-" 
+
+        folder = os.environ["LLVM_HOME"]  + os.sep + "llvm-"
         if options.folder == "":
             folder += version_LLVM
         if options.debug == True:
             folder +=  "dbg"
-      
 
         llvm_rev = ""
         # determine LLVM revision
@@ -524,7 +530,7 @@ def build_ispc(version_LLVM, make):
         for i in info_llvm:
             if len(i) > 0 and i.startswith("Last Changed Rev: "):
                 llvm_rev = str(i[len("Last Changed Rev: "):])
-        
+
         if llvm_rev != "":
             common.ex_state.switch_revision(llvm_rev)
             print_debug("\nBuilding ISPC with LLVM %s (%s):\n" \
@@ -534,43 +540,23 @@ def build_ispc(version_LLVM, make):
             raise
 
         try_do_LLVM("recognize LLVM revision", "svn info " + folder, True)
+        try_do_LLVM("configure ispc build", 'cmake -DCMAKE_INSTALL_PREFIX="..\\'+ ISPC_BIN + '" ' +
+                    '  -DCMAKE_BUILD_TYPE=Release' +
+                    '  -DCMAKE_CXX_COMPILER=clang++ ' +
+                        ispc_home, True)
         try_do_LLVM("build ISPC with LLVM version " + version_LLVM + " ", make_ispc, True)
+        try_do_LLVM("install ISPC ", "make install", True)
+        copyfile(os.path.join(ispc_home, ISPC_BIN, "bin", "ispc"), os.path.join(ispc_home, + "ispc"))
         os.environ["PATH"] = p_temp
     else:
-        p_temp = os.getenv("LLVM_INSTALL_DIR")
-        v_temp = os.getenv("LLVM_VERSION")
-        os.environ["LLVM_INSTALL_DIR"] = os.environ["LLVM_HOME"] + "\\bin-" + version_LLVM
-        if version_LLVM == "3.2":
-            temp = "3_2"
-        if version_LLVM == "3.3":
-            temp = "3_3"
-        if version_LLVM == "3.4":
-            temp = "3_4"
-        if version_LLVM == "3.5":
-            temp = "3_5"
-        if version_LLVM == "3.6":
-            temp = "3_6"
-        if version_LLVM == "3.7":
-            temp = "3_7"
-        if version_LLVM == "3.8":
-            temp = "3_8"
-        if version_LLVM == "3.9":
-            temp = "3_9"
-        if version_LLVM == "4.0":
-            temp = "4_0"
-        if version_LLVM == "5.0":
-            temp = "5_0"
-        if version_LLVM == "6.0":
-            temp = "6_0"
-        if version_LLVM == "7.0":
-            temp = "7_0"
-        if version_LLVM == "trunk":
-            temp = "8_0"
-        os.environ["LLVM_VERSION"] = "LLVM_" + temp
+        try_do_LLVM("configure ispc build", 'cmake -G "Visual Studio 14" -DCMAKE_INSTALL_PREFIX="..\\'+ ISPC_BIN + '" ' +
+                    '  -DCMAKE_BUILD_TYPE=Release ' +
+                        ispc_home, True)
         try_do_LLVM("clean ISPC for building", "msbuild ispc.vcxproj /t:clean", True)
         try_do_LLVM("build ISPC with LLVM version " + version_LLVM + " ", "msbuild ispc.vcxproj /V:m /p:Platform=Win32 /p:Configuration=Release /t:rebuild", True)
-        os.environ["LLVM_INSTALL_DIR"] = p_temp
-        os.environ["LLVM_VERSION"] = v_temp
+        try_do_LLVM("install ISPC  ", "msbuild INSTALL.vcxproj /p:Platform=Win32 /p:Configuration=Release", True)
+        copyfile(os.path.join(ispc_home, ISPC_BIN, "bin", "ispc.exe"), os.path.join(ispc_home, + "ispc.exe"))
+
     os.chdir(current_path)
 
 def execute_stability(stability, R, print_version):
@@ -897,8 +883,8 @@ def validation_run(only, only_targets, reference_branch, number, notify, update,
             if current_OS != "Windows":
                 os.rename("ispc", "ispc_ref")
             else:
-                common.remove_if_exists("Release\\ispc_ref.exe")
-                os.rename("Release\\ispc.exe", "Release\\ispc_ref.exe")
+                common.remove_if_exists("ispc_ref.exe")
+                os.rename("ispc.exe", "ispc_ref.exe")
             try_do_LLVM("checkout test branch " + current_branch + " ", "git checkout " + current_branch, True)
             if stashing:
                 try_do_LLVM("return current branch ", "git stash pop", True)
@@ -964,7 +950,6 @@ def Main():
             current_OS = "MacOS"
         else:
             current_OS = "Linux" 
-
     if (options.build_llvm == False and options.validation_run == False):
         parser.print_help()
         exit(0)
@@ -1058,6 +1043,7 @@ import copy
 import multiprocessing
 import subprocess
 import re
+from shutil import copyfile
 from email.MIMEMultipart import MIMEMultipart
 from email.MIMEBase import MIMEBase
 from email.mime.text import MIMEText
