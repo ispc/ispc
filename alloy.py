@@ -319,7 +319,7 @@ def build_LLVM(version_LLVM, revision, folder, tarball, debug, selfbuild, extra,
         os.chdir(LLVM_BUILD_selfbuild)
         if  version_LLVM not in LLVM_configure_capable:
             try_do_LLVM("configure release version for selfbuild ",
-                    "cmake -G Unix\ Makefiles" + " -DCMAKE_EXPORT_COMPILE_COMMANDS=ON" +
+                    "cmake -G " + "\"" + generator + "\"" + " -DCMAKE_EXPORT_COMPILE_COMMANDS=ON" +
                     "  -DCMAKE_INSTALL_PREFIX=" + llvm_home + "/" + LLVM_BIN_selfbuild +
                     "  -DCMAKE_BUILD_TYPE=Release" +
                     get_llvm_enable_dump_switch(version_LLVM) +
@@ -356,7 +356,7 @@ def build_LLVM(version_LLVM, revision, folder, tarball, debug, selfbuild, extra,
         if current_OS != "Windows":
             if  version_LLVM not in LLVM_configure_capable:
                 try_do_LLVM("configure release version ",
-                        "cmake -G Unix\ Makefiles" + " -DCMAKE_EXPORT_COMPILE_COMMANDS=ON" +
+                        "cmake -G " + "\"" + generator + "\"" + " -DCMAKE_EXPORT_COMPILE_COMMANDS=ON" +
                         selfbuild_compiler +
                         "  -DCMAKE_INSTALL_PREFIX=" + llvm_home + "/" + LLVM_BIN +
                         "  -DCMAKE_BUILD_TYPE=Release" +
@@ -379,7 +379,7 @@ def build_LLVM(version_LLVM, revision, folder, tarball, debug, selfbuild, extra,
                         from_validation)
         else:
             try_do_LLVM("configure release version ",
-                    'cmake -G "Visual Studio 14" -DCMAKE_INSTALL_PREFIX="..\\'+ LLVM_BIN + '" ' +
+                    'cmake -G ' + '\"' + generator + '\"' + ' -DCMAKE_INSTALL_PREFIX="..\\'+ LLVM_BIN + '" ' +
                     '  -DCMAKE_BUILD_TYPE=Release' +
                     get_llvm_enable_dump_switch(version_LLVM) +
                     '  -DLLVM_ENABLE_ASSERTIONS=ON' +
@@ -389,7 +389,7 @@ def build_LLVM(version_LLVM, revision, folder, tarball, debug, selfbuild, extra,
     else:
         if  version_LLVM not in LLVM_configure_capable:
             try_do_LLVM("configure debug version ",
-                    "cmake -G Unix\ Makefiles" + " -DCMAKE_EXPORT_COMPILE_COMMANDS=ON" +
+                    "cmake -G " + "\"" + generator + "\"" + " -DCMAKE_EXPORT_COMPILE_COMMANDS=ON" +
                     selfbuild_compiler +
                     "  -DCMAKE_INSTALL_PREFIX=" + llvm_home + "/" + LLVM_BIN +
                     "  -DCMAKE_BUILD_TYPE=Debug" +
@@ -549,7 +549,7 @@ def build_ispc(version_LLVM, make):
         copyfile(os.path.join(ispc_home, ISPC_BIN, "bin", "ispc"), os.path.join(ispc_home, + "ispc"))
         os.environ["PATH"] = p_temp
     else:
-        try_do_LLVM("configure ispc build", 'cmake -G "Visual Studio 14" -DCMAKE_INSTALL_PREFIX="..\\'+ ISPC_BIN + '" ' +
+        try_do_LLVM("configure ispc build", 'cmake -G ' + '\"' + generator + '\"' + ' -DCMAKE_INSTALL_PREFIX="..\\'+ ISPC_BIN + '" ' +
                     '  -DCMAKE_BUILD_TYPE=Release ' +
                         ispc_home, True)
         try_do_LLVM("clean ISPC for building", "msbuild ispc.vcxproj /t:clean", True)
@@ -1004,7 +1004,14 @@ def Main():
             options.branch = "trunk"
     if options.use_git and options.revision != "":
         error("--revision is not supported with --git", 1)
-
+    global generator
+    if options.generator:
+        generator = options.generator
+    else:
+        if current_OS == "Windows":
+            generator = "Visual Studio 14"
+        else:
+            generator = "Unix Makefiles"
     try:
         start_time = time.time()
         if options.build_llvm:
@@ -1138,6 +1145,8 @@ if __name__ == '__main__':
             default="")
     run_group.add_option('--perf_LLVM', dest='perf_llvm',
         help='compare LLVM 3.6 with "--compare-with", default trunk', default=False, action='store_true')
+    run_group.add_option('--generator', dest='generator',
+        help='specify cmake generator', default="")
     parser.add_option_group(run_group)
     # options for activity "setup PATHS"
     setup_group = OptionGroup(parser, "Options for setup",
