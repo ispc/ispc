@@ -36,10 +36,14 @@
 cmake_minimum_required(VERSION 3.8)
 
 set(PROJECT_NAME ispc)
-project(${PROJECT_NAME} CXX)
+project(${PROJECT_NAME})
 
 option(ARM_ENABLED "Enable ARM support OFF")
 option(NVPTX_ENABLED "Enable NVPTX support OFF")
+option(ISPC_INCLUDE_EXAMPLES "Generate build targets for the ISPC examples" ON)
+
+# Use solution folders.
+set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 
 set(OUTPUT_DEBUG Debug/bin)
 set(OUTPUT_RELEASE Release/bin)
@@ -126,7 +130,8 @@ generate_common_builtins(BUILTIN_CPP_FILES)
 generate_stdlib(STDLIB_FILES ${ISPC_MASKS})
 
 add_executable(${PROJECT_NAME} ${BUILTIN_FILES} ${BUILTIN_CPP_FILES}
-               ${STDLIB_FILES} ${BISON_CPP_OUTPUT} ${FLEX_OUTPUT})
+               ${STDLIB_FILES} ${BISON_CPP_OUTPUT} ${FLEX_OUTPUT}
+               ${CMAKE_CURRENT_SOURCE_DIR}/stdlib.ispc)
 
 target_sources(${PROJECT_NAME}
     PRIVATE
@@ -162,6 +167,10 @@ target_sources(${PROJECT_NAME}
         "src/util.cpp"
         "src/util.h"
 )
+# To show stdlib.ispc in VS solution:
+if (WIN32)
+    set_source_files_properties("${CMAKE_CURRENT_SOURCE_DIR}/stdlib.ispc" PROPERTIES HEADER_FILE_ONLY TRUE)
+endif()
 
 # Build definitions
 target_compile_definitions(${PROJECT_NAME} PRIVATE ${LLVM_VERSION})
@@ -240,3 +249,7 @@ else()
 endif()
 
 install (TARGETS ${PROJECT_NAME} DESTINATION bin)
+
+if (ISPC_INCLUDE_EXAMPLES)
+  add_subdirectory(examples)
+endif()
