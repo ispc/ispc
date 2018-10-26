@@ -683,7 +683,7 @@ Optimize(llvm::Module *module, int optLevel) {
 #ifdef ISPC_NVPTX_ENABLED
         if (g->target->getISA() != Target::NVPTX)
 #endif /* ISPC_NVPTX_ENABLED */
-          optPM.add(CreateReplaceStdlibShiftPass(),229);
+        optPM.add(CreateReplaceStdlibShiftPass(),229);
 
         optPM.add(llvm::createDeadArgEliminationPass(),230);
         optPM.add(llvm::createInstructionCombiningPass());
@@ -5429,12 +5429,12 @@ ReplaceStdlibShiftPass::runOnBasicBlock(llvm::BasicBlock &bb) {
     bool modifiedAny = false;
 
     llvm::Function *shifts[6];
-    shifts[0] = m->module->getFunction("__shift_i8");
-    shifts[1] = m->module->getFunction("__shift_i16");
-    shifts[2] = m->module->getFunction("__shift_i32");
-    shifts[3] = m->module->getFunction("__shift_i64");
-    shifts[4] = m->module->getFunction("__shift_float");
-    shifts[5] = m->module->getFunction("__shift_double");
+    shifts[0] = m->module->getFunction("shift___vytuni");
+    shifts[1] = m->module->getFunction("shift___vysuni");
+    shifts[2] = m->module->getFunction("shift___vyiuni");
+    shifts[3] = m->module->getFunction("shift___vyIuni");
+    shifts[4] = m->module->getFunction("shift___vyfuni");
+    shifts[5] = m->module->getFunction("shift___vyduni");
 
     for (llvm::BasicBlock::iterator iter = bb.begin(), e = bb.end(); iter != e; ++iter) {
         llvm::Instruction *inst = &*iter;
