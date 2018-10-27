@@ -5423,6 +5423,12 @@ public:
 
 char ReplaceStdlibShiftPass::ID = 0;
 
+// This pass replaces shift() with ShuffleVector when the offset is a constant.
+// rotate() which is similar in functionality has a slightly different
+// implementation. This is due to LLVM(createInstructionCombiningPass)
+// optimizing rotate() implementation better when similar implementations
+// are used for both. This is a hack to produce similarly optimized code for
+// shift.
 bool
 ReplaceStdlibShiftPass::runOnBasicBlock(llvm::BasicBlock &bb) {
     DEBUG_START_PASS("ReplaceStdlibShiftPass");
