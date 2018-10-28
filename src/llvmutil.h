@@ -57,6 +57,13 @@
 #define PTYPE(p) (llvm::cast<llvm::PointerType>((p)->getType()->getScalarType())->getElementType())
 #endif
 
+template<typename T> void inline llvm_dump(const T& v) {
+#if ISPC_LLVM_VERSION < ISPC_LLVM_5_0 || defined(LLVM_ENABLE_DUMP)
+    v.dump();
+#endif
+    (void)v;
+}
+
 namespace llvm {
     class PHINode;
     class InsertElementInst;

@@ -173,7 +173,7 @@ static llvm::Pass *CreatePromoteLocalToPrivatePass();
                   strlen(getenv("FUNC"))))) {                           \
         fprintf(stderr, "Start of " NAME "\n");                \
         fprintf(stderr, "---------------\n");                  \
-        bb.dump();                                             \
+        llvm_dump(bb);                                             \
         fprintf(stderr, "---------------\n\n");                \
     } else /* eat semicolon */
 
@@ -184,7 +184,7 @@ static llvm::Pass *CreatePromoteLocalToPrivatePass();
                   strlen(getenv("FUNC"))))) {                           \
         fprintf(stderr, "End of " NAME " %s\n", modifiedAny ? "** CHANGES **" : ""); \
         fprintf(stderr, "---------------\n");                  \
-        bb.dump();                                             \
+        llvm_dump(bb);                                             \
         fprintf(stderr, "---------------\n\n");                \
     } else /* eat semicolon */
 
@@ -433,7 +433,7 @@ lGetMask(llvm::Value *factor, uint64_t *mask) {
             llvm::TargetMachine *targetMachine = g->target->GetTargetMachine();
             const llvm::TargetData *td = targetMachine->getTargetData();
             llvm::Constant *c = llvm::ConstantFoldConstantExpression(ce, td);
-            c->dump();
+            llvm_dump(*c);
             factor = c;
         }
         // else we should be able to handle it above...
@@ -537,7 +537,7 @@ void
 Optimize(llvm::Module *module, int optLevel) {
     if (g->debugPrint) {
         printf("*** Code going into optimization ***\n");
-        module->dump();
+        llvm_dump(*module);
     }
     DebugPassManager optPM;
     optPM.add(llvm::createVerifierPass(),0);
@@ -932,7 +932,7 @@ Optimize(llvm::Module *module, int optLevel) {
 
     if (g->debugPrint) {
         printf("\n*****\nFINAL OUTPUT\n*****\n");
-        module->dump();
+        llvm_dump(*module);
     }
 
 }
@@ -2016,7 +2016,7 @@ lExtractOffsetVector248Scale(llvm::Value **vec) {
 static llvm::Value *
 lExtractUniforms(llvm::Value **vec, llvm::Instruction *insertBefore) {
     fprintf(stderr, " lextract: ");
-    (*vec)->dump();
+    llvm_dump(*(*vec));
     fprintf(stderr, "\n");
 
     if (llvm::isa<llvm::ConstantVector>(*vec) ||
@@ -2101,11 +2101,11 @@ lExtractUniformsFromOffset(llvm::Value **basePtr, llvm::Value **offsetVector,
                            llvm::Value *offsetScale,
                            llvm::Instruction *insertBefore) {
 #if 1
-    (*basePtr)->dump();
+    llvm_dump(*(*basePtr));
     printf("\n");
-    (*offsetVector)->dump();
+    llvm_dump(*(*offsetVector));
     printf("\n");
-    offsetScale->dump();
+    llvm_dump(*offsetScale);
     printf("-----\n");
 #endif
 
@@ -4863,7 +4863,7 @@ bool
 DebugPass::runOnModule(llvm::Module &module) {
     fprintf(stderr, "%s", str_output);
     fflush(stderr);
-    module.dump();
+    llvm_dump(module);
     return true;
 }
 

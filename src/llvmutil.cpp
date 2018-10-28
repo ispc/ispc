@@ -1177,11 +1177,11 @@ lVectorValuesAllEqual(llvm::Value *v, int vectorLength,
 
 #if 0
     fprintf(stderr, "all equal: ");
-    v->dump();
+    llvm_dump(*v);
     fprintf(stderr, "\n");
     llvm::Instruction *inst = llvm::dyn_cast<llvm::Instruction>(v);
     if (inst) {
-        inst->getParent()->dump();
+        llvm_dump(*inst->getParent());
         fprintf(stderr, "\n");
         fprintf(stderr, "\n");
     }
@@ -1469,11 +1469,11 @@ lVectorIsLinear(llvm::Value *v, int vectorLength, int stride,
 
 #if 0
     fprintf(stderr, "linear check: ");
-    v->dump();
+    llvm_dump(*v);
     fprintf(stderr, "\n");
     llvm::Instruction *inst = llvm::dyn_cast<llvm::Instruction>(v);
     if (inst) {
-        inst->getParent()->dump();
+        llvm_dump(*inst->getParent());
         fprintf(stderr, "\n");
         fprintf(stderr, "\n");
     }
@@ -1516,7 +1516,7 @@ lDumpValue(llvm::Value *v, std::set<llvm::Value *> &done) {
         return;
 
     fprintf(stderr, "  ");
-    v->dump();
+    llvm_dump(*v);
     done.insert(v);
 
     if (inst == NULL)
