@@ -129,6 +129,9 @@
 #include <llvm/Transforms/IPO.h>
 #include <llvm/Transforms/Utils/BasicBlockUtils.h>
 #include <llvm/Support/ToolOutputFile.h>
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_7_0
+    #include "llvm/IR/PatternMatch.h"
+#endif
 #include <algorithm>
 // Some ms header decided to define setjmp as _setjmp, undo this for this file.
 #ifdef _MSC_VER
@@ -138,7 +141,9 @@
 ///////////////////////////////////////////////////////////////////////////////
 // This part of code was in LLVM's ConstantsScanner.h,
 // but it was removed in revision #232397
-
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_7_0
+   using namespace llvm::PatternMatch; 
+#endif
 namespace constant_scanner {
 class constant_iterator : public std::iterator<std::forward_iterator_tag,
                                                const llvm::Constant, ptrdiff_t> {
@@ -3706,15 +3711,31 @@ void CWriter::visitBinaryOperator(llvm::Instruction &I) {
 
   // If this is a negation operation, print it out as such.  For FP, we don't
   // want to print "-0.0 - X".
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_7_0 // LLVM 7.0+
+  llvm::Value *X;
+  if (match(&I, m_Neg(m_Value(X)))) {
+    Out << "-(";
+    writeOperand(X);
+    Out << ")";
+  }
+  else if (match(&I, m_FNeg(m_Value(X)))) {
+    Out << "-(";
+    writeOperand(X);
+    Out << ")";
+  }
+#else
   if (llvm::BinaryOperator::isNeg(&I)) {
     Out << "-(";
     writeOperand(llvm::BinaryOperator::getNegArgument(llvm::cast<llvm::BinaryOperator>(&I)));
     Out << ")";
-  } else if (llvm::BinaryOperator::isFNeg(&I)) {
+  }
+  else if (llvm::BinaryOperator::isFNeg(&I)) {	
     Out << "-(";
     writeOperand(llvm::BinaryOperator::getFNegArgument(llvm::cast<llvm::BinaryOperator>(&I)));
     Out << ")";
-  } else if (I.getOpcode() == llvm::Instruction::FRem) {
+  }
+#endif
+  else if (I.getOpcode() == llvm::Instruction::FRem) {
     // Output a call to fmod/fmodf instead of emitting a%b
     if (I.getType() == llvm::Type::getFloatTy(I.getContext()))
       Out << "fmodf(";
