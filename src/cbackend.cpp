@@ -129,7 +129,7 @@
 #include <llvm/Transforms/IPO.h>
 #include <llvm/Transforms/Utils/BasicBlockUtils.h>
 #include <llvm/Support/ToolOutputFile.h>
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_7_0
+#if ISPC_LLVM_VERSION > ISPC_LLVM_7_0
     #include "llvm/IR/PatternMatch.h"
 #endif
 #include <algorithm>
@@ -141,9 +141,6 @@
 ///////////////////////////////////////////////////////////////////////////////
 // This part of code was in LLVM's ConstantsScanner.h,
 // but it was removed in revision #232397
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_7_0
-   using namespace llvm::PatternMatch; 
-#endif
 namespace constant_scanner {
 class constant_iterator : public std::iterator<std::forward_iterator_tag,
                                                const llvm::Constant, ptrdiff_t> {
@@ -638,7 +635,7 @@ namespace {
 
       // Must be an expression, must be used exactly once.  If it is dead, we
       // emit it inline where it would go.
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_7_0 // 7.0+      
+#if ISPC_LLVM_VERSION > ISPC_LLVM_7_0 // 7.0+      
       if (I.getType() == llvm::Type::getVoidTy(I.getContext()) || !I.hasOneUse() ||
         I.isTerminator() || llvm::isa<llvm::CallInst>(I) || llvm::isa<llvm::PHINode>(I) ||
         llvm::isa<llvm::LoadInst>(I) || llvm::isa<llvm::VAArgInst>(I) || llvm::isa<llvm::InsertElementInst>(I) ||
@@ -3718,14 +3715,14 @@ void CWriter::visitBinaryOperator(llvm::Instruction &I) {
 
   // If this is a negation operation, print it out as such.  For FP, we don't
   // want to print "-0.0 - X".
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_7_0 // LLVM 7.0+
+#if ISPC_LLVM_VERSION > ISPC_LLVM_7_0 // LLVM 7.0+
   llvm::Value *X;
-  if (match(&I, m_Neg(m_Value(X)))) {
+  if (match(&I, m_Neg(llvm::PatternMatch::m_Value(X)))) {
     Out << "-(";
     writeOperand(X);
     Out << ")";
   }
-  else if (match(&I, m_FNeg(m_Value(X)))) {
+  else if (match(&I, m_FNeg(llvm::PatternMatch::m_Value(X)))) {
     Out << "-(";
     writeOperand(X);
     Out << ")";
