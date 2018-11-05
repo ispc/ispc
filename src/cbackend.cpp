@@ -635,17 +635,15 @@ namespace {
 
       // Must be an expression, must be used exactly once.  If it is dead, we
       // emit it inline where it would go.
-#if ISPC_LLVM_VERSION > ISPC_LLVM_7_0 // 8.0+      
       if (I.getType() == llvm::Type::getVoidTy(I.getContext()) || !I.hasOneUse() ||
-        I.isTerminator() || llvm::isa<llvm::CallInst>(I) || llvm::isa<llvm::PHINode>(I) ||
-        llvm::isa<llvm::LoadInst>(I) || llvm::isa<llvm::VAArgInst>(I) || llvm::isa<llvm::InsertElementInst>(I) ||
-        llvm::isa<llvm::InsertValueInst>(I) || llvm::isa<llvm::ExtractValueInst>(I) || llvm::isa<llvm::SelectInst>(I))
+#if ISPC_LLVM_VERSION > ISPC_LLVM_7_0 // 8.0+
+        I.isTerminator()
 #else
-      if (I.getType() == llvm::Type::getVoidTy(I.getContext()) || !I.hasOneUse() ||
-        llvm::isa<llvm::TerminatorInst>(I) || llvm::isa<llvm::CallInst>(I) || llvm::isa<llvm::PHINode>(I) ||
+        llvm::isa<llvm::TerminatorInst>(I)
+#endif
+        || llvm::isa<llvm::CallInst>(I) || llvm::isa<llvm::PHINode>(I) ||
         llvm::isa<llvm::LoadInst>(I) || llvm::isa<llvm::VAArgInst>(I) || llvm::isa<llvm::InsertElementInst>(I) ||
         llvm::isa<llvm::InsertValueInst>(I) || llvm::isa<llvm::ExtractValueInst>(I) || llvm::isa<llvm::SelectInst>(I))
-#endif
         // Don't inline a load across a store or other bad things!
         return false;
 
