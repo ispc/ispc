@@ -635,7 +635,7 @@ namespace {
 
       // Must be an expression, must be used exactly once.  If it is dead, we
       // emit it inline where it would go.
-#if ISPC_LLVM_VERSION > ISPC_LLVM_7_0 // 7.0+      
+#if ISPC_LLVM_VERSION > ISPC_LLVM_7_0 // 8.0+      
       if (I.getType() == llvm::Type::getVoidTy(I.getContext()) || !I.hasOneUse() ||
         I.isTerminator() || llvm::isa<llvm::CallInst>(I) || llvm::isa<llvm::PHINode>(I) ||
         llvm::isa<llvm::LoadInst>(I) || llvm::isa<llvm::VAArgInst>(I) || llvm::isa<llvm::InsertElementInst>(I) ||
@@ -3715,7 +3715,7 @@ void CWriter::visitBinaryOperator(llvm::Instruction &I) {
 
   // If this is a negation operation, print it out as such.  For FP, we don't
   // want to print "-0.0 - X".
-#if ISPC_LLVM_VERSION > ISPC_LLVM_7_0 // LLVM 7.0+
+#if ISPC_LLVM_VERSION > ISPC_LLVM_7_0 // LLVM 8.0+
   llvm::Value *X;
   if (match(&I, m_Neg(llvm::PatternMatch::m_Value(X)))) {
     Out << "-(";
