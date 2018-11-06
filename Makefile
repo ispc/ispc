@@ -255,7 +255,7 @@ print_llvm_src: llvm_check
 	@echo Using compiler to build: `$(CXX) --version | head -1`
 
 clean:
-	/bin/rm -rf objs ispc
+	/bin/rm -rf objs ispc depend
 
 doxygen:
 	/bin/rm -rf docs/doxygen
