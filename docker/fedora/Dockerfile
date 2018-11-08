@@ -6,15 +6,20 @@ MAINTAINER Dmitry Babokin <dmitry.y.babokin@intel.com>
 
 # Packages required to build ISPC and Clang.
 # RUN echo "proxy=http://proxy.yourcompany.com:888" >> /etc/dnf/dnf.conf
-RUN dnf install -y vim cmake gcc gcc-c++ git subversion python m4 bison flex patch make ncurses-devel zlib-devel glibc-devel.x86_64 glibc-devel.i686 && \
+RUN dnf install -y vim wget yum-utils gcc gcc-c++ git subversion python m4 bison flex patch make ncurses-devel zlib-devel glibc-devel.x86_64 glibc-devel.i686 && \
     dnf clean -y all
 
 # These packages are required if you need to link IPSC with -static.
 RUN dnf install -y ncurses-static libstdc++-static zlib-static glibc-static && \
     dnf clean -y all
 
+# Download and install required version of cmake (3.8) for ISPC build
+RUN wget https://cmake.org/files/v3.8/cmake-3.8.0-Linux-x86_64.sh && mkdir /opt/cmake && sh cmake-3.8.0-Linux-x86_64.sh --prefix=/opt/cmake --skip-license && \
+    ln -s /opt/cmake/bin/cmake /usr/local/bin/cmake && rm cmake-3.8.0-Linux-x86_64.sh
+
 # If you are behind a proxy, you need to configure git and svn.
 #RUN git config --global --add http.proxy http://proxy.yourcompany.com:888
+
 # Initialize svn configs
 #RUN svn --version --quiet
 #RUN echo "http-proxy-host=proxy.yourcompany.com" >> ~/.subversion/servers
@@ -37,14 +42,25 @@ ENV LLVM_HOME=/usr/local/src/llvm
 
 WORKDIR /usr/local/src/ispc
 
-# Build Clang 5.0 with all required patches.
+# Build Clang with all required patches.
+# Pass required LLVM_VERSION with --build-arg LLVM_VERSION=<version>.
+# By default 5.0 is used.
 # Note self-build options, it's required to build clang and ispc with the same compiler,
 # i.e. if clang was built by gcc, you may need to use gcc to build ispc (i.e. run "make gcc"),
 # or better do clang selfbuild and use it for ispc build as well (i.e. just "make").
 # "rm" are just to keep docker image small.
-RUN ./alloy.py -b --version=5.0 --selfbuild && \
-    rm -rf $LLVM_HOME/build-5.0 $LLVM_HOME/llvm-5.0 $LLVM_HOME/bin-5.0_temp $LLVM_HOME/build-5.0_temp
+ARG LLVM_VERSION=5.0
+RUN ./alloy.py -b --version=$LLVM_VERSION --selfbuild --git && \
+    rm -rf $LLVM_HOME/build-$LLVM_VERSION $LLVM_HOME/llvm-$LLVM_VERSION $LLVM_HOME/bin-$LLVM_VERSION_temp $LLVM_HOME/build-$LLVM_VERSION_temp
 
-ENV PATH=$LLVM_HOME/bin-5.0/bin:$PATH
+ENV PATH=$LLVM_HOME/bin-$LLVM_VERSION/bin:$PATH
 
-RUN make -j8
+# Configure ISPC build
+RUN mkdir build_$LLVM_VERSION
+WORKDIR build_$LLVM_VERSION
+RUN cmake ../ -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_INSTALL_PREFIX=/usr/local/src/ispc/bin-$LLVM_VERSION
+
+# Build ISPC
+RUN make ispc -j8 && make install
+WORKDIR ../
+RUN rm -rf build_$LLVM_VERSION

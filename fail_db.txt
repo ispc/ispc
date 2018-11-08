@@ -423,3 +423,13 @@
 ./tests/short-vec-7.ispc compfail     x86-64     generic-16   Linux LLVM 3.9 clang++3.4 -O0 *
 ./tests/short-vec-7.ispc compfail     x86-64     generic-16   Linux LLVM 3.9 clang++3.4 -O2 *
 % End of anonymous namespace bug
+./tests/align1.ispc compfail  x86-64           sse4   Linux LLVM 7.0 clang++7.0 -O2 *
+./tests/align2.ispc compfail  x86-64           sse4   Linux LLVM 7.0 clang++7.0 -O2 *
+./tests/align1.ispc compfail  x86-64           sse4   Linux LLVM 6.0 clang++6.0 -O2 *
+./tests/align2.ispc compfail  x86-64           sse4   Linux LLVM 6.0 clang++6.0 -O2 *
+./tests/align1.ispc compfail  x86-64           sse4   Linux LLVM 5.0 clang++5.0 -O2 *
+./tests/align2.ispc compfail  x86-64           sse4   Linux LLVM 5.0 clang++5.0 -O2 *
+./tests/align1.ispc compfail  x86-64           sse4   Linux LLVM 4.0 clang++4.0 -O2 *
+./tests/align2.ispc compfail  x86-64           sse4   Linux LLVM 4.0 clang++4.0 -O2 *
+./tests/align1.ispc compfail  x86-64           sse4   Linux LLVM 3.8 clang++3.8 -O2 *
+./tests/align2.ispc compfail  x86-64           sse4   Linux LLVM 3.8 clang++3.8 -O2 *
