@@ -540,11 +540,13 @@ def file_check(compfails, runfails):
                         new_f_lines.remove(f_lines[j])
     if len(new_runfails) != 0:
         print_debug("NEW RUNFAILS:\n", s, run_tests_log)
+        exit_code = 1
         for i in range (0,len(new_runfails)):
             new_f_lines.append(new_runfails[i] + " runfail " + new_line)
             print_debug("\t" + new_runfails[i] + "\n", s, run_tests_log)
     if len(new_compfails) != 0:
         print_debug("NEW COMPFAILS:\n", s, run_tests_log)
+        exit_code = 1
         for i in range (0,len(new_compfails)):
             new_f_lines.append(new_compfails[i] + " compfail " + new_line)
             print_debug("\t" + new_compfails[i] + "\n", s, run_tests_log)
@@ -916,6 +918,7 @@ import time
 import common
 print_debug = common.print_debug
 error = common.error
+exit_code = 0
 
 if __name__ == "__main__":
     parser = OptionParser()
@@ -957,4 +960,4 @@ if __name__ == "__main__":
     (options, args) = parser.parse_args()
 
     L = run_tests(options, args, 1)
-    exit(0)
+    exit(exit_code)
