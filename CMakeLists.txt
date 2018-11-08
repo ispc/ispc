@@ -251,5 +251,5 @@ endif()
 install (TARGETS ${PROJECT_NAME} DESTINATION bin)
 
 if (ISPC_INCLUDE_EXAMPLES)
-  add_subdirectory(examples)
+    add_subdirectory(examples)
 endif()
