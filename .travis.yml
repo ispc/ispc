@@ -1,0 +1,106 @@
+#  Copyright (c) 2018, Intel Corporation
+#  All rights reserved.
+#
+#  Redistribution and use in source and binary forms, with or without
+#  modification, are permitted provided that the following conditions are
+#  met:
+#
+#    * Redistributions of source code must retain the above copyright
+#      notice, this list of conditions and the following disclaimer.
+#
+#    * Redistributions in binary form must reproduce the above copyright
+#      notice, this list of conditions and the following disclaimer in the
+#      documentation and/or other materials provided with the distribution.
+#
+#    * Neither the name of Intel Corporation nor the names of its
+#      contributors may be used to endorse or promote products derived from
+#      this software without specific prior written permission.
+#
+#
+#   THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS
+#   IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
+#   TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A
+#   PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER
+#   OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+#   EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+#   PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+#   PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+#   LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+#   NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+#   SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+#   Author: Dmitry Babokin
+
+
+# "minimal" instead of "cpp", because of https://github.com/travis-ci/travis-ci/issues/8363
+# Otherwise during python invocation PATH is prepended by /usr/bin and it yields wrong llvm-as.
+language: minimal
+sudo: required
+services:
+    - docker
+
+# Some magic is here. Docker is used to load pre-built LLVM as part of custom built image.
+# Custom built LLVM is required because
+#   (1) we need a patched version of LLVM for some of LLVM versions for performance and
+#       stability reasons,
+#   (2) it must be a dump-enabled LLVM build (release version without assertions and without
+#       stripping off dump() function), this affects LLVM 5.0 and later versions,
+#   (3) same compiler needs to be used for building LLVM and ISPC, otherwise there might be
+#       ABI incompatibilities causing link errors and runtime segfaults,
+#   (4) to have flexibility of testing with a range of LLVM versions that we need.
+env:
+  global:
+    - DOCKER_REPO_PATH=ispc/test_repo
+    - LLVM_HOME=/usr/local/src/llvm
+    - ISPC_HOME=$TRAVIS_BUILD_DIR
+matrix:
+  include:
+    - env: LLVM_VERSION=3.8 OS=Ubuntu14.04
+      before_install:
+      - sudo apt-get install -y libc6-dev-i386
+      - docker pull $DOCKER_REPO_PATH:ubuntu_llvm38
+      - docker run $DOCKER_REPO_PATH:ubuntu_llvm38
+      - export CONTAINER=`docker ps --all |head -2 |tail -1 |awk '//{print $1}'`
+      - sudo docker cp $CONTAINER:$LLVM_HOME /usr/local/src
+      - export PATH=$LLVM_HOME/bin-3.8/bin:$PATH
+    - env: LLVM_VERSION=4.0 OS=Ubuntu14.04
+      before_install:
+      - sudo apt-get install -y libc6-dev-i386
+      - docker pull $DOCKER_REPO_PATH:ubuntu_llvm40
+      - docker run $DOCKER_REPO_PATH:ubuntu_llvm40
+      - export CONTAINER=`docker ps --all |head -2 |tail -1 |awk '//{print $1}'`
+      - sudo docker cp $CONTAINER:$LLVM_HOME /usr/local/src
+      - export PATH=$LLVM_HOME/bin-4.0/bin:$PATH
+    - env: LLVM_VERSION=5.0 OS=Ubuntu14.04
+      before_install:
+      - sudo apt-get install -y libc6-dev-i386
+      - docker pull $DOCKER_REPO_PATH:ubuntu_llvm50
+      - docker run $DOCKER_REPO_PATH:ubuntu_llvm50
+      - export CONTAINER=`docker ps --all |head -2 |tail -1 |awk '//{print $1}'`
+      - sudo docker cp $CONTAINER:$LLVM_HOME /usr/local/src
+      - export PATH=$LLVM_HOME/bin-5.0/bin:$PATH
+    - env: LLVM_VERSION=6.0 OS=Ubuntu14.04
+      before_install:
+      - sudo apt-get install -y libc6-dev-i386
+      - docker pull $DOCKER_REPO_PATH:ubuntu_llvm60
+      - docker run $DOCKER_REPO_PATH:ubuntu_llvm60
+      - export CONTAINER=`docker ps --all |head -2 |tail -1 |awk '//{print $1}'`
+      - sudo docker cp $CONTAINER:$LLVM_HOME /usr/local/src
+      - export PATH=$LLVM_HOME/bin-6.0/bin:$PATH
+    - env: LLVM_VERSION=7.0 OS=Ubuntu14.04
+      before_install:
+      - sudo apt-get install -y libc6-dev-i386
+      - docker pull $DOCKER_REPO_PATH:ubuntu_llvm70
+      - docker run $DOCKER_REPO_PATH:ubuntu_llvm70
+      - export CONTAINER=`docker ps --all |head -2 |tail -1 |awk '//{print $1}'`
+      - sudo docker cp $CONTAINER:$LLVM_HOME /usr/local/src
+      - export PATH=$LLVM_HOME/bin-7.0/bin:$PATH
+
+script:
+    - mkdir build_$LLVM_VERSION && cd build_$LLVM_VERSION
+    - cmake -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_INSTALL_PREFIX=$TRAVIS_BUILD_DIR ../
+    - make ispc -j4 && make install
+      # We need to have ispc binary in ISPC_HOME to run the tests
+    - cp $ISPC_HOME/bin/ispc $ISPC_HOME && cd $ISPC_HOME
+    - ./check_env.py
+      # This runs sse4-i32x4 target, we need to enable more advanced targets.
+    - ./run_tests.py
