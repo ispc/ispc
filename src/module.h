@@ -106,7 +106,7 @@ public:
                       HostStub  /** generate host-side offload stubs */
     };
 
-    enum OutputFlags { NoFlags = 0,
+    enum OutputFlags : int { NoFlags = 0,
                        GeneratePIC = 0x1,
                        GenerateFlatDeps = 0x2,         /** Dependencies will be output as a flat list. */
                        GenerateMakeRuleForDeps = 0x4,  /** Dependencies will be output in a make rule format instead of a flat list. */
