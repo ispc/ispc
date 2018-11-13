@@ -33,12 +33,12 @@
 #
 # ispc ADDISPCTest.cmake
 #
-function(add_ispc_test)
+function(add_ispc_example)
     set(options USE_COMMON_SETTINGS)
-    set(oneValueArgs NAME ISPC_SRC_NAME)
-    set(multiValueArgs ISPC_IA_TARGETS ISPC_ARM_TARGETS ISPC_FLAGS TARGET_SOURCES LIBRARIES)
-    cmake_parse_arguments("test" "${options}" "${oneValueArgs}" "${multiValueArgs}" ${ARGN} )
-    if (ISPC_INCLUDE_EXAMPLES)
+    set(oneValueArgs NAME ISPC_SRC_NAME DATA_DIR)
+    set(multiValueArgs ISPC_IA_TARGETS ISPC_ARM_TARGETS ISPC_FLAGS TARGET_SOURCES LIBRARIES DATA_FILES)
+    cmake_parse_arguments("example" "${options}" "${oneValueArgs}" "${multiValueArgs}" ${ARGN} )
+
         set(ISPC_KNOWN_TARGETS "sse2" "sse4" "avx1-" "avx1.1" "avx2" "avx512knl" "avx512skx")
         set(ISPC_HEADER_NAME "${CMAKE_CURRENT_BINARY_DIR}/${ISPC_SRC_NAME}_ispc.h")
         set(ISPC_OBJ_NAME "${CMAKE_CURRENT_BINARY_DIR}/${ISPC_SRC_NAME}_ispc${CMAKE_CXX_OUTPUT_EXTENSION}")
@@ -64,11 +64,11 @@ function(add_ispc_test)
 
         # Collect list of expected outputs
         list(APPEND ISPC_BUILD_OUTPUT ${ISPC_HEADER_NAME} ${ISPC_OBJ_NAME})
-        if (test_USE_COMMON_SETTINGS)
+        if (example_USE_COMMON_SETTINGS)
             if ("${ARCH}" STREQUAL "x86")
-                set(ISPC_TARGETS ${test_ISPC_IA_TARGETS})
+                set(ISPC_TARGETS ${example_ISPC_IA_TARGETS})
                 foreach (ispc_target ${ISPC_KNOWN_TARGETS})
-                    string(FIND ${test_ISPC_IA_TARGETS} ${ispc_target} FOUND_TARGET)
+                    string(FIND ${example_ISPC_IA_TARGETS} ${ispc_target} FOUND_TARGET)
                     if (${FOUND_TARGET} GREATER -1)
                         set(OUTPUT_TARGET ${ispc_target})
                         if (${ispc_target} STREQUAL "avx1-")
@@ -81,16 +81,16 @@ function(add_ispc_test)
                     endif()
                 endforeach()
             elseif ("${ARCH}" STREQUAL "arm")
-                set(ISPC_TARGETS ${test_ISPC_ARM_TARGETS})
+                set(ISPC_TARGETS ${example_ISPC_ARM_TARGETS})
             else()
                 message(FATAL_ERROR "Unknown architecture ${ARCH}")
             endif()
         else()
-            set(ISPC_TARGETS ${test_ISPC_IA_TARGETS})
+            set(ISPC_TARGETS ${example_ISPC_IA_TARGETS})
         endif()
         # ISPC command
         add_custom_command(OUTPUT ${ISPC_BUILD_OUTPUT}
-            COMMAND $<TARGET_FILE:ispc> ${CMAKE_CURRENT_SOURCE_DIR}/${ISPC_SRC_NAME}.ispc ${test_ISPC_FLAGS} --target=${ISPC_TARGETS} --arch=${ISPC_ARCH}
+            COMMAND ${ISPC_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/${ISPC_SRC_NAME}.ispc ${example_ISPC_FLAGS} --target=${ISPC_TARGETS} --arch=${ISPC_ARCH}
                                         -h ${ISPC_HEADER_NAME} -o ${ISPC_OBJ_NAME}
             VERBATIM
             DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/${ISPC_SRC_NAME}.ispc")
@@ -100,34 +100,47 @@ function(add_ispc_test)
             set_source_files_properties("${CMAKE_CURRENT_SOURCE_DIR}/${ISPC_SRC_NAME}.ispc" PROPERTIES HEADER_FILE_ONLY TRUE)
         endif()
 
-        add_executable(${test_NAME} ${ISPC_BUILD_OUTPUT} "${CMAKE_CURRENT_SOURCE_DIR}/${ISPC_SRC_NAME}.ispc")
-        target_sources(${test_NAME} PRIVATE ${test_TARGET_SOURCES})
-        target_include_directories(${test_NAME} PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
+        add_executable(${example_NAME} ${ISPC_BUILD_OUTPUT} "${CMAKE_CURRENT_SOURCE_DIR}/${ISPC_SRC_NAME}.ispc")
+        target_sources(${example_NAME} PRIVATE ${example_TARGET_SOURCES})
+        target_include_directories(${example_NAME} PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
         # Compile options
         if (UNIX)
             if (${ARCH_BIT} EQUAL 32)
-                target_compile_options(${test_NAME} PRIVATE -m32)
+                target_compile_options(${example_NAME} PRIVATE -m32)
             else()
-                target_compile_options(${test_NAME} PRIVATE -m64)
+                target_compile_options(${example_NAME} PRIVATE -m64)
             endif()
         else()
-            target_compile_options(${test_NAME} PRIVATE /fp:fast /Oi)
+            target_compile_options(${example_NAME} PRIVATE /fp:fast /Oi)
         endif()
 
         # Common settings
-        if (test_USE_COMMON_SETTINGS)
-            target_sources(${test_NAME} PRIVATE ${CMAKE_SOURCE_DIR}/examples/tasksys.cpp)
+        if (example_USE_COMMON_SETTINGS)
+            target_sources(${example_NAME} PRIVATE ${EXAMPLES_ROOT}/tasksys.cpp)
+            target_sources(${example_NAME} PRIVATE ${EXAMPLES_ROOT}/timing.h)
             if (UNIX)
-                target_compile_options(${test_NAME} PRIVATE -O2)
-                target_link_libraries(${test_NAME} pthread m stdc++)
+                target_compile_options(${example_NAME} PRIVATE -O2)
+                target_link_libraries(${example_NAME} pthread m stdc++)
             endif()
         endif()
 
         # Link libraries
-        if (test_LIBRARIES)
-            target_link_libraries(${test_NAME} ${test_LIBRARIES})
+        if (example_LIBRARIES)
+            target_link_libraries(${example_NAME} ${example_LIBRARIES})
         endif()
 
-        set_target_properties(${test_NAME} PROPERTIES FOLDER "Examples")
-    endif()
+        set_target_properties(${example_NAME} PROPERTIES FOLDER "Examples")
+
+        # Install example
+        install(TARGETS ${example_NAME} RUNTIME DESTINATION examples/${example_NAME})
+        if (example_DATA_FILES)
+            install(FILES ${example_DATA_FILES}
+                    DESTINATION examples/${example_NAME})
+        endif()
+
+        if (example_DATA_DIR)
+            install(DIRECTORY ${example_DATA_DIR}
+                    DESTINATION examples/${example_NAME})
+        endif()
+
 endfunction()

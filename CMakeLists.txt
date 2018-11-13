@@ -36,6 +36,7 @@
 cmake_minimum_required(VERSION 3.8)
 
 set(PROJECT_NAME ispc)
+set(ISPC_BUILD TRUE)
 project(${PROJECT_NAME})
 
 option(ARM_ENABLED "Enable ARM support OFF")

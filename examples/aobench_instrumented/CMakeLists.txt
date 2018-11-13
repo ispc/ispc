@@ -37,7 +37,8 @@ set (ISPC_SRC_NAME "ao_instrumented")
 set (TARGET_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/ao.cpp
                     ${CMAKE_CURRENT_SOURCE_DIR}/instrument.cpp
                     ${CMAKE_CURRENT_SOURCE_DIR}/instrument.h
-                    ${CMAKE_SOURCE_DIR}/examples/tasksys.cpp)
+                    ${EXAMPLES_ROOT}/timing.h
+                    ${EXAMPLES_ROOT}/tasksys.cpp)
 set (ISPC_FLAGS -O2 --instrument)
 set (ISPC_IA_TARGETS "sse2")
 if (WIN32)
@@ -45,7 +46,7 @@ if (WIN32)
 else()
     set (LIBRARIES pthread m)
 endif()
-add_ispc_test(NAME "aobench_instrumented"
+add_ispc_example(NAME "aobench_instrumented"
               ISPC_SRC_NAME ${ISPC_SRC_NAME}
               ISPC_IA_TARGETS ${ISPC_IA_TARGETS}
               ISPC_FLAGS ${ISPC_FLAGS}

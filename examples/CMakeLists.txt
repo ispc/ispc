@@ -33,8 +33,23 @@
 #
 # ispc examples CMakeLists.txt
 #
+cmake_minimum_required(VERSION 3.8)
 
-include(${CMAKE_SOURCE_DIR}/cmake/AddISPCTest.cmake)
+set (PROJECT_NAME ispc_examples)
+project(${PROJECT_NAME})
+
+include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/AddISPCExample.cmake)
+
+if (ISPC_BUILD)
+    set (ISPC_EXECUTABLE $<TARGET_FILE:ispc>)
+    set (EXAMPLES_ROOT ${CMAKE_SOURCE_DIR}/examples)
+else()
+    find_program (ISPC_EXECUTABLE ispc)
+    if (NOT ISPC_EXECUTABLE)
+        message(FATAL_ERROR "Failed to find ispc" )
+    endif()
+    set (EXAMPLES_ROOT ${CMAKE_CURRENT_SOURCE_DIR})
+endif()
 
 add_subdirectory(aobench)
 add_subdirectory(aobench_instrumented)

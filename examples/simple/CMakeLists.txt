@@ -37,7 +37,7 @@ set (ISPC_SRC_NAME "simple")
 set (TARGET_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/simple.cpp)
 set (ISPC_FLAGS -O2)
 set (ISPC_IA_TARGETS "sse2")
-add_ispc_test(NAME "simple" ISPC_SRC_NAME ${ISPC_SRC_NAME}
+add_ispc_example(NAME "simple" ISPC_SRC_NAME ${ISPC_SRC_NAME}
               ISPC_IA_TARGETS ${ISPC_IA_TARGETS}
               ISPC_FLAGS ${ISPC_FLAGS}
               TARGET_SOURCES ${TARGET_SOURCES})
