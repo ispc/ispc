@@ -466,7 +466,7 @@ int main(int Argc, char *Argv[]) {
 
     Module::OutputType ot = Module::Object;
     Module::OutputFlags flags = Module::NoFlags;
-    const char *arch = NULL, *cpu = NULL, *target = NULL;
+    const char *arch = NULL, *cpu = NULL, *target = NULL, *intelAsmSyntax = NULL;
 
     for (int i = 1; i < argc; ++i) {
         if (!strcmp(argv[i], "--help"))
@@ -489,6 +489,12 @@ int main(int Argc, char *Argv[]) {
         }
         else if (!strncmp(argv[i], "--arch=", 7))
             arch = argv[i] + 7;
+        else if (!strncmp(argv[i], "--x86-asm-syntax=", 17)) {
+            intelAsmSyntax = argv[i] + 17;
+            if (!((std::string(intelAsmSyntax) == "intel") || (std::string(intelAsmSyntax) == "att")))
+                 fprintf(stderr, "Invalid value for --x86-asm-syntax: \"%s\" -- "
+                        "only intel and att are allowed.\n", argv[i]+17);
+        }
         else if (!strncmp(argv[i], "--cpu=", 6))
             cpu = argv[i] + 6;
         else if (!strcmp(argv[i], "--fast-math")) {
@@ -795,6 +801,19 @@ int main(int Argc, char *Argv[]) {
       Warning(SourcePos(), "No output file or header file name specified. "
               "Program will be compiled and warnings/errors will "
               "be issued, but no output will be generated.");
+    if((ot ==  Module::Asm) && (intelAsmSyntax != NULL)) {
+        auto Args = llvm::make_unique<const char*[]>(3);
+        Args[0] = "ispc (LLVM option parsing)";
+        Args[2] = nullptr;
+        if (std::string(intelAsmSyntax) == "intel") {
+            Args[1] = "--x86-asm-syntax=intel";
+            llvm::cl::ParseCommandLineOptions(2, Args.get());
+        }
+        else if (std::string(intelAsmSyntax) == "att") {
+            Args[1] = "--x86-asm-syntax=att";
+            llvm::cl::ParseCommandLineOptions(2, Args.get());
+        }
+    }
 
     return Module::CompileAndOutput(file, arch, cpu, target, flags,
                                     ot,
