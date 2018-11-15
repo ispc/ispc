@@ -110,6 +110,9 @@ usage(int ret) {
     printf("    [--dwarf-version={2,3,4}]\t\tGenerate source-level debug information with given DWARF version (triggers -g)\n");
 #endif
     printf("    [--emit-asm]\t\t\tGenerate assembly language file as output\n");
+    printf("    [--x86-asm-syntax=<option>]\t\tSelect style of code if generating assembly\n");
+    printf("        intel\t\t\t\tEmit Intel-style assembly\n");
+    printf("        att\t\t\t\tEmit AT&T-style assembly\n");
     printf("    [--emit-c++]\t\t\tEmit a C++ source file as output\n");
     printf("    [--emit-llvm]\t\t\tEmit LLVM bitode file as output\n");
     printf("    [--emit-obj]\t\t\tGenerate object file file as output (default)\n");
