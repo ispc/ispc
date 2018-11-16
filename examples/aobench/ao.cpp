@@ -28,7 +28,7 @@
    PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
    LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
    NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
-   SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.  
+   SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
 #ifdef _MSC_VER
@@ -143,9 +143,9 @@ int main(int argc, char **argv)
     }
 
     // Report results and save image
-    printf("[aobench ispc]:\t\t\t[%.3f] million cycles (%d x %d image)\n", 
+    printf("[aobench ispc]:\t\t\t[%.3f] million cycles (%d x %d image)\n",
            minTimeISPC, width, height);
-    savePPM("ao-ispc.ppm", width, height); 
+    savePPM("ao-ispc.ppm", width, height);
 
     //
     // Run the ispc + tasks path, test_iterations times, and report the
@@ -164,9 +164,9 @@ int main(int argc, char **argv)
     }
 
     // Report results and save image
-    printf("[aobench ispc + tasks]:\t\t[%.3f] million cycles (%d x %d image)\n", 
+    printf("[aobench ispc + tasks]:\t\t[%.3f] million cycles (%d x %d image)\n",
            minTimeISPCTasks, width, height);
-    savePPM("ao-ispc-tasks.ppm", width, height); 
+    savePPM("ao-ispc-tasks.ppm", width, height);
 
     //
     // Run the serial path, again test_iteration times, and report the
@@ -183,11 +183,11 @@ int main(int argc, char **argv)
     }
 
     // Report more results, save another image...
-    printf("[aobench serial]:\t\t[%.3f] million cycles (%d x %d image)\n", minTimeSerial, 
+    printf("[aobench serial]:\t\t[%.3f] million cycles (%d x %d image)\n", minTimeSerial,
            width, height);
-    printf("\t\t\t\t(%.2fx speedup from ISPC, %.2fx speedup from ISPC + tasks)\n", 
+    printf("\t\t\t\t(%.2fx speedup from ISPC, %.2fx speedup from ISPC + tasks)\n",
            minTimeSerial / minTimeISPC, minTimeSerial / minTimeISPCTasks);
-    savePPM("ao-serial.ppm", width, height); 
-        
+    savePPM("ao-serial.ppm", width, height);
+
     return 0;
 }

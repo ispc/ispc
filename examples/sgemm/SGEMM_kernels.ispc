@@ -505,7 +505,7 @@ task void SGEMM_tileBlockNoSIMDIntrin_task(uniform float matrixA[], uniform floa
 export void SGEMM_tileBlockNoSIMDIntrin_withTasks(uniform float matA[], uniform float matB[], uniform float matC[],
     uniform int M, uniform int N, uniform int K) {
     // Generate more tasks than threads, to enable some load balancing:
-    uniform int numTasks = num_cores()*4; 
+    uniform int numTasks = num_cores()*4;
     launch[numTasks] SGEMM_tileBlockNoSIMDIntrin_task(matA, matB, matC, M, N, K);
 }
 

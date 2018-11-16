@@ -28,7 +28,7 @@
    PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
    LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
    NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
-   SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.  
+   SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
 #ifdef _MSC_VER
@@ -117,7 +117,7 @@ int main(int argc, char** argv) {
         printf("@time of serial run:\t\t\t[%.3f] million cycles\n", mcycles);
         dynamicCilkCycles = std::min(dynamicCilkCycles, mcycles);
     }
-    printf("[ispc + Cilk dynamic]:\t\t[%.3f] million cycles to render image\n", 
+    printf("[ispc + Cilk dynamic]:\t\t[%.3f] million cycles to render image\n",
            dynamicCilkCycles);
     WriteFrame("deferred-ispc-dynamic.ppm", input, framebuffer);
 #endif // __cilk
@@ -132,12 +132,12 @@ int main(int argc, char** argv) {
         printf("@time of serial run:\t\t\t[%.3f] million cycles\n", mcycles);
         serialCycles = std::min(serialCycles, mcycles);
     }
-    printf("[C++ serial dynamic, 1 core]:\t[%.3f] million cycles to render image\n", 
+    printf("[C++ serial dynamic, 1 core]:\t[%.3f] million cycles to render image\n",
            serialCycles);
     WriteFrame("deferred-serial-dynamic.ppm", input, framebuffer);
 
 #ifdef __cilk
-    printf("\t\t\t\t(%.2fx speedup from static ISPC, %.2fx from Cilk+ISPC)\n", 
+    printf("\t\t\t\t(%.2fx speedup from static ISPC, %.2fx from Cilk+ISPC)\n",
            serialCycles/ispcCycles, serialCycles/dynamicCilkCycles);
 #else
     printf("\t\t\t\t(%.2fx speedup from ISPC + tasks)\n", serialCycles/ispcCycles);

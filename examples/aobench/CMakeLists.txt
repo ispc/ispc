@@ -41,5 +41,5 @@ set (ISPC_ARM_TARGETS "neon" CACHE STRING "ISPC ARM targets")
 add_ispc_example(NAME "aobench" ISPC_SRC_NAME ${ISPC_SRC_NAME}
               ISPC_IA_TARGETS ${ISPC_IA_TARGETS}
               ISPC_ARM_TARGETS ${ISPC_ARM_TARGETS}
-              TARGET_SOURCES ${TARGET_SOURCES} 
+              TARGET_SOURCES ${TARGET_SOURCES}
               USE_COMMON_SETTINGS)

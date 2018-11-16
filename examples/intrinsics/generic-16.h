@@ -77,7 +77,7 @@ struct __vec16_i1 {
              ((v14 & 1) << 14) |
              ((v15 & 1) << 15));
     }
-             
+
     uint16_t v;
 };
 
@@ -92,69 +92,69 @@ struct vec16 {
         v[8] = v8;        v[9] = v9;        v[10] = v10;      v[11] = v11;
         v[12] = v12;      v[13] = v13;      v[14] = v14;      v[15] = v15;
     }
-    T v[16]; 
+    T v[16];
 };
 
-PRE_ALIGN(64) struct __vec16_f : public vec16<float> { 
+PRE_ALIGN(64) struct __vec16_f : public vec16<float> {
     __vec16_f() { }
-    __vec16_f(float v0, float v1, float v2, float v3, 
+    __vec16_f(float v0, float v1, float v2, float v3,
               float v4, float v5, float v6, float v7,
-              float v8, float v9, float v10, float v11, 
-              float v12, float v13, float v14, float v15) 
+              float v8, float v9, float v10, float v11,
+              float v12, float v13, float v14, float v15)
         : vec16<float>(v0, v1, v2, v3, v4, v5, v6, v7,
                        v8, v9, v10, v11, v12, v13, v14, v15) { }
 
 } POST_ALIGN(64);
 
-PRE_ALIGN(128) struct __vec16_d : public vec16<double> { 
+PRE_ALIGN(128) struct __vec16_d : public vec16<double> {
     __vec16_d() { }
-    __vec16_d(double v0, double v1, double v2, double v3, 
+    __vec16_d(double v0, double v1, double v2, double v3,
               double v4, double v5, double v6, double v7,
-              double v8, double v9, double v10, double v11, 
-              double v12, double v13, double v14, double v15) 
+              double v8, double v9, double v10, double v11,
+              double v12, double v13, double v14, double v15)
         : vec16<double>(v0, v1, v2, v3, v4, v5, v6, v7,
                         v8, v9, v10, v11, v12, v13, v14, v15) { }
 
 } POST_ALIGN(128);
 
-PRE_ALIGN(16) struct __vec16_i8   : public vec16<int8_t> { 
+PRE_ALIGN(16) struct __vec16_i8   : public vec16<int8_t> {
     __vec16_i8() { }
-    __vec16_i8(int8_t v0, int8_t v1, int8_t v2, int8_t v3, 
+    __vec16_i8(int8_t v0, int8_t v1, int8_t v2, int8_t v3,
                int8_t v4, int8_t v5, int8_t v6, int8_t v7,
-               int8_t v8, int8_t v9, int8_t v10, int8_t v11, 
-               int8_t v12, int8_t v13, int8_t v14, int8_t v15) 
+               int8_t v8, int8_t v9, int8_t v10, int8_t v11,
+               int8_t v12, int8_t v13, int8_t v14, int8_t v15)
         : vec16<int8_t>(v0, v1, v2, v3, v4, v5, v6, v7,
                         v8, v9, v10, v11, v12, v13, v14, v15) { }
 } POST_ALIGN(16);
 
-PRE_ALIGN(32) struct __vec16_i16  : public vec16<int16_t> { 
+PRE_ALIGN(32) struct __vec16_i16  : public vec16<int16_t> {
     __vec16_i16() { }
-    __vec16_i16(int16_t v0, int16_t v1, int16_t v2, int16_t v3, 
+    __vec16_i16(int16_t v0, int16_t v1, int16_t v2, int16_t v3,
                 int16_t v4, int16_t v5, int16_t v6, int16_t v7,
-                int16_t v8, int16_t v9, int16_t v10, int16_t v11, 
-                int16_t v12, int16_t v13, int16_t v14, int16_t v15) 
+                int16_t v8, int16_t v9, int16_t v10, int16_t v11,
+                int16_t v12, int16_t v13, int16_t v14, int16_t v15)
         : vec16<int16_t>(v0, v1, v2, v3, v4, v5, v6, v7,
                          v8, v9, v10, v11, v12, v13, v14, v15) { }
 } POST_ALIGN(32);
 
-PRE_ALIGN(64) struct __vec16_i32  : public vec16<int32_t> { 
+PRE_ALIGN(64) struct __vec16_i32  : public vec16<int32_t> {
     __vec16_i32() { }
-    __vec16_i32(int32_t v0, int32_t v1, int32_t v2, int32_t v3, 
+    __vec16_i32(int32_t v0, int32_t v1, int32_t v2, int32_t v3,
                 int32_t v4, int32_t v5, int32_t v6, int32_t v7,
-                int32_t v8, int32_t v9, int32_t v10, int32_t v11, 
-                int32_t v12, int32_t v13, int32_t v14, int32_t v15) 
+                int32_t v8, int32_t v9, int32_t v10, int32_t v11,
+                int32_t v12, int32_t v13, int32_t v14, int32_t v15)
         : vec16<int32_t>(v0, v1, v2, v3, v4, v5, v6, v7,
                          v8, v9, v10, v11, v12, v13, v14, v15) { }
 } POST_ALIGN(64);
 
 static inline int32_t __extract_element(__vec16_i32, int);
 
-PRE_ALIGN(128) struct __vec16_i64  : public vec16<int64_t> { 
+PRE_ALIGN(128) struct __vec16_i64  : public vec16<int64_t> {
     __vec16_i64() { }
-    __vec16_i64(int64_t v0, int64_t v1, int64_t v2, int64_t v3, 
+    __vec16_i64(int64_t v0, int64_t v1, int64_t v2, int64_t v3,
                 int64_t v4, int64_t v5, int64_t v6, int64_t v7,
-                int64_t v8, int64_t v9, int64_t v10, int64_t v11, 
-                int64_t v12, int64_t v13, int64_t v14, int64_t v15) 
+                int64_t v8, int64_t v9, int64_t v10, int64_t v11,
+                int64_t v12, int64_t v13, int64_t v14, int64_t v15)
         : vec16<int64_t>(v0, v1, v2, v3, v4, v5, v6, v7,
                          v8, v9, v10, v11, v12, v13, v14, v15) { }
 } POST_ALIGN(128);
@@ -408,7 +408,7 @@ static FORCEINLINE __vec16_i1 __and_not2(__vec16_i1 a, __vec16_i1 b) {
     return r;
 }
 
-static FORCEINLINE __vec16_i1 __select(__vec16_i1 mask, __vec16_i1 a, 
+static FORCEINLINE __vec16_i1 __select(__vec16_i1 mask, __vec16_i1 a,
                                        __vec16_i1 b) {
     __vec16_i1 r;
     r.v = (a.v & mask.v) | (b.v & ~mask.v);
@@ -423,7 +423,7 @@ static FORCEINLINE bool __extract_element(__vec16_i1 vec, int index) {
     return (vec.v & (1 << index)) ? true : false;
 }
 
-static FORCEINLINE void __insert_element(__vec16_i1 *vec, int index, 
+static FORCEINLINE void __insert_element(__vec16_i1 *vec, int index,
                                          bool val) {
     if (val == false)
         vec->v &= ~(1 << index);
@@ -445,13 +445,13 @@ template <int ALIGN> static FORCEINLINE void __store(__vec16_i1 *p, __vec16_i1 v
 
 template <class RetVecType> __vec16_i1 __smear_i1(int i);
 template <> FORCEINLINE __vec16_i1 __smear_i1<__vec16_i1>(int v) {
-    return __vec16_i1(v, v, v, v, v, v, v, v, 
+    return __vec16_i1(v, v, v, v, v, v, v, v,
                       v, v, v, v, v, v, v, v);
 }
 
 template <class RetVecType> __vec16_i1 __setzero_i1();
 template <> FORCEINLINE __vec16_i1 __setzero_i1<__vec16_i1>() {
-    return __vec16_i1(0, 0, 0, 0, 0, 0, 0, 0, 
+    return __vec16_i1(0, 0, 0, 0, 0, 0, 0, 0,
                       0, 0, 0, 0, 0, 0, 0, 0);
 }
 
@@ -746,12 +746,12 @@ static FORCEINLINE int16_t __float_to_half_uniform(float f) {
     fint ^= sign;
 
     int32_t f32infty = 255 << 23;
-    o = (fint > f32infty) ? 0x7e00 : 0x7c00; 
+    o = (fint > f32infty) ? 0x7e00 : 0x7c00;
 
     // (De)normalized number or zero
     // update fint unconditionally to save the blending; we don't need it
     // anymore for the Inf/NaN case anyway.
-    const uint32_t round_mask = ~0xfffu; 
+    const uint32_t round_mask = ~0xfffu;
     const int32_t magic = 15 << 23;
     const int32_t f16infty = 31 << 23;
 
@@ -1350,7 +1350,7 @@ static FORCEINLINE VTYPE FUNC(unsigned char *b, uint32_t scale,         \
         }                                                               \
     return ret;                                                         \
 }
-    
+
 
 GATHER_BASE_OFFSETS(__vec16_i8,  int8_t,  __vec16_i32, __gather_base_offsets32_i8)
 GATHER_BASE_OFFSETS(__vec16_i8,  int8_t,  __vec16_i64, __gather_base_offsets64_i8)
@@ -1402,7 +1402,7 @@ static FORCEINLINE void FUNC(unsigned char *b, uint32_t scale,          \
             *ptr = val.v[i];                                            \
         }                                                               \
 }
-    
+
 
 SCATTER_BASE_OFFSETS(__vec16_i8,  int8_t,  __vec16_i32, __scatter_base_offsets32_i8)
 SCATTER_BASE_OFFSETS(__vec16_i8,  int8_t,  __vec16_i64, __scatter_base_offsets64_i8)
@@ -1445,7 +1445,7 @@ SCATTER_GENERAL(__vec16_d,   double,  __vec16_i64, __scatter64_double)
 
 static FORCEINLINE int32_t __packed_load_active(int32_t *ptr, __vec16_i32 *val,
                                                 __vec16_i1 mask) {
-    int count = 0; 
+    int count = 0;
     for (int i = 0; i < 16; ++i) {
         if ((mask.v & (1 << i)) != 0) {
             val->v[i] = *ptr++;
@@ -1458,7 +1458,7 @@ static FORCEINLINE int32_t __packed_load_active(int32_t *ptr, __vec16_i32 *val,
 
 static FORCEINLINE int32_t __packed_store_active(int32_t *ptr, __vec16_i32 val,
                                                  __vec16_i1 mask) {
-    int count = 0; 
+    int count = 0;
     for (int i = 0; i < 16; ++i) {
         if ((mask.v & (1 << i)) != 0) {
             *ptr++ = val.v[i];
@@ -1489,7 +1489,7 @@ static FORCEINLINE int32_t __packed_load_active(uint32_t *ptr,
 }
 
 
-static FORCEINLINE int32_t __packed_store_active(uint32_t *ptr, 
+static FORCEINLINE int32_t __packed_store_active(uint32_t *ptr,
                                                  __vec16_i32 val,
                                                  __vec16_i1 mask) {
     return __packed_store_active((int32_t *)ptr, val, mask);

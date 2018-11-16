@@ -16,7 +16,7 @@ LD=nvcc
 LDFLAGS=-lcudart -lcudadevrt -arch=$(NVARCH)
 #
 PTXCC=$(ISPC_HOME)/ptxtools/ptxcc --arch=$(NVARCH)
-PTXCC_FLAGS+= -Xptxas=-v 
+PTXCC_FLAGS+= -Xptxas=-v
 ifdef PTXCC_REGMAX
   PTXCC_FLAGS += -maxrregcount=$(PTXCC_REGMAX)
 endif
@@ -53,7 +53,7 @@ LLC_FLAGS=-march=nvptx64 -mcpu=$(NVARCH)
 # .SUFFIXES: .bc .o .cu  .ll
 
 ifdef LLVM_GPU
-  OBJSptx_llvm=$(ISPC_LLVM_OBJS) $(CXX_OBJS) $(NVCC_OBJS) 
+  OBJSptx_llvm=$(ISPC_LLVM_OBJS) $(CXX_OBJS) $(NVCC_OBJS)
   PROGptx_llvm=$(PROG)_llvm_ptx
 else
   ISPC_LLVM_PTX=
@@ -83,7 +83,7 @@ dirs:
 
 objs_ptx/%.cpp objs_ptx/%.o objs_ptx/%.h: dirs
 
-clean: 
+clean:
 	/bin/rm -rf $(PROGptx_nvvm) $(PROGptx_llvm) $(PROGcu) objs_ptx
 
 # generate binaries
@@ -97,23 +97,23 @@ $(PROGcu): $(OBJScu)
 # compile C++ code
 objs_ptx/%_gcc.o: %.cpp $(ISPC_HEADERS)
 	$(CXX) $(CXXFLAGS)  -o $@ -c $<
-objs_ptx/%_gcc.o: ../../util/%.cpp 
+objs_ptx/%_gcc.o: ../../util/%.cpp
 	$(CXX) $(CXXFLAGS)  -o $@ -c $<
 
 # CUDA helpers
 objs_ptx/%_cu.o: %.cu $(ISPC_HEADERS)
 	$(NVCC) $(NVCC_FLAGS)  -o $@ -dc $<
 
-# compile CUDA code 
+# compile CUDA code
 objs_ptx/%_nvcc.o: ../../util/%.cu
 	$(NVCC) $(NVCC_FLAGS) -o $@ -c $<
-objs_ptx/%_nvcc.o: %.cu 
+objs_ptx/%_nvcc.o: %.cu
 	$(NVCC) $(NVCC_FLAGS) -o $@ -c $<
 
 # compile ISPC to LLVM BC
-#objs_ptx/%_ispc.h objs_ptx/%_ispc.bc: %.ispc 
+#objs_ptx/%_ispc.h objs_ptx/%_ispc.bc: %.ispc
 #	$(ISPC) $(ISPC_FLAGS) --emit-llvm -h objs_ptx/$*_ispc.h -o objs_ptx/$*_ispc.bc $<
-objs_ptx/%_ispc.h objs_ptx/%_ispc.ll: %.ispc 
+objs_ptx/%_ispc.h objs_ptx/%_ispc.ll: %.ispc
 	$(ISPC) $(ISPC_FLAGS) --emit-llvm -h objs_ptx/$*_ispc.h -o objs_ptx/$*_ispc.ll $<
 
 # generate PTX from LLVM BC
@@ -132,6 +132,6 @@ objs_ptx/%_ispc.o: objs_ptx/%_ispc.ptx
 	$(PTXCC) $< -Xnvcc="$(PTXCC_FLAGS)" -o $@
 
 
-	 
+
 
 

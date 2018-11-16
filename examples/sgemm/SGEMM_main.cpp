@@ -77,11 +77,11 @@ QueryPerformanceCounter(&beginClock);
 (QueryPerformanceFrequency(&cpuClockFreq) & 0) +\
 (double(endClock.QuadPart - beginClock.QuadPart) * 1000.0f / cpuClockFreq.QuadPart)
 #else
-#define TIMER_DECLARE_AND_INIT()    
+#define TIMER_DECLARE_AND_INIT()
 #define TIMER_RESET_AND_START()     \
-reset_and_start_timer();            
+reset_and_start_timer();
 #define TIMER_GET_ELAPSED_MSEC()    \
-get_elapsed_msec();                 
+get_elapsed_msec();
 #endif
 
 
@@ -161,7 +161,7 @@ void Test_SGEMM(SGEMMFuncPtr SGEMMFunc, char* pcFuncName,
     TIMER_DECLARE_AND_INIT();
 
     // Total = MNK mults + MN(K-1) adds.
-    float fFlopsPerGEMM = (float) (M*N*K) + (M*N*(K-1)); 
+    float fFlopsPerGEMM = (float) (M*N*K) + (M*N*(K-1));
 
     if (tasks == false) {
         // type cast

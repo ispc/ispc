@@ -28,7 +28,7 @@
    PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
    LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
    NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
-   SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.  
+   SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
 #ifdef _MSC_VER
@@ -64,7 +64,7 @@ lInitData(float *ptr, int count) {
         ptr[i] = float(i) / (1024.f * 1024.f);
 }
 
-static PerfTest tests[] = { 
+static PerfTest tests[] = {
     { xyzSumAOS, "serial", ispc::xyzSumAOS, "ispc", "AOS vector element sum (with coalescing)" },
     { xyzSumAOS, "serial", ispc::xyzSumAOSStdlib, "ispc", "AOS vector element sum (stdlib swizzle)" },
     { xyzSumAOS, "serial", ispc::xyzSumAOSNoCoalesce, "ispc", "AOS vector element sum (no coalescing)" },

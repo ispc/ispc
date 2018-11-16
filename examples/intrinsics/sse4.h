@@ -119,7 +119,7 @@ struct __vec4_i32 {
     FORCEINLINE __vec4_i32(const __vec4_i32 &other) : v(other.v) {}
     FORCEINLINE __vec4_i32& operator =(const __vec4_i32 &o) { v=o.v; return *this; }
     FORCEINLINE operator __m128() const { return _mm_castsi128_ps(v); }
-    
+
     __m128i v;
 };
 
@@ -2454,7 +2454,7 @@ static FORCEINLINE __vec4_d __rcp_varying_double(__vec4_d x) {
     y = __add(y, __mul(y, __sub(__smear_double<__vec4_d>(2.0), __mul(x, y))));
     return y;
 }
-static FORCEINLINE double __rcp_uniform_double(double v) 
+static FORCEINLINE double __rcp_uniform_double(double v)
 {
   return __extract_element(__rcp_varying_double(__smear_double<__vec4_d>(v)),0);
 }
@@ -2482,7 +2482,7 @@ static FORCEINLINE __vec4_d __rsqrt_varying_double(__vec4_d x) {
     y = __add(y, __mul(y, __sub(__smear_double<__vec4_d>(0.5), __mul(xh, __mul(y,y)))));
     return y;
 }
-static FORCEINLINE double __rsqrt_uniform_double(double v) 
+static FORCEINLINE double __rsqrt_uniform_double(double v)
 {
   return __extract_element(__rsqrt_varying_double(__smear_double<__vec4_d>(v)),0);
 }

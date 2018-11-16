@@ -8,7 +8,7 @@
  *
  */
 
-/* knc-i1x8unsafe_fast.h fails: 
+/* knc-i1x8unsafe_fast.h fails:
  * ----------------------------
 1 / 1206 tests FAILED compilation:
 	./tests/ptr-assign-lhs-math-1.ispc
@@ -48,7 +48,7 @@
 	./tests/vector-varying-scatter.ispc
 */
 
-/* knc-i1x8.h fails: 
+/* knc-i1x8.h fails:
  * ----------------------------
 1 / 1206 tests FAILED compilation:
 	./tests/ptr-assign-lhs-math-1.ispc
@@ -58,7 +58,7 @@
 	./tests/half.ispc
 */
 
-/* knc-i1x8.h fails: 
+/* knc-i1x8.h fails:
  * ----------------------------
 1 / 1206 tests FAILED compilation:
         ./tests/ptr-assign-lhs-math-1.ispc
@@ -69,7 +69,7 @@
         ./tests/test-141.ispc
 */
 
-/* generic-16.h fails: (from these knc-i1x8.h & knc-i1x16.h are derived 
+/* generic-16.h fails: (from these knc-i1x8.h & knc-i1x16.h are derived
  * ----------------------------
 1 / 1206 tests FAILED compilation:
         ./tests/ptr-assign-lhs-math-1.ispc

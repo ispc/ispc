@@ -28,7 +28,7 @@
    PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
    LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
    NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
-   SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.  
+   SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
 
@@ -39,7 +39,7 @@
 #include "../timing.h"
 
 
-int main (int argc, char **argv) 
+int main (int argc, char **argv)
 {
     if (argc < 4) {
         printf("usage: %s <input-matrix> <input-rhs> <output-file>\n", argv[0]);
@@ -50,7 +50,7 @@ int main (int argc, char **argv)
 
     DEBUG_PRINT("Loading A...\n");
     Matrix *A = CRSMatrix::matrix_from_mtf(argv[1]);
-    if (A == NULL) 
+    if (A == NULL)
         return -1;
     DEBUG_PRINT("... size: %lu\n", A->cols());
 

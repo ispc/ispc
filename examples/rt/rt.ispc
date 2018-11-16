@@ -28,7 +28,7 @@
    PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
    LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
    NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
-   SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.  
+   SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
 #define bool int
@@ -71,7 +71,7 @@ static inline float Dot(const float3 a, const float3 b) {
 }
 
 
-static void generateRay(uniform const float raster2camera[4][4], 
+static void generateRay(uniform const float raster2camera[4][4],
                         uniform const float camera2world[4][4],
                         float x, float y, Ray &ray) {
     ray.mint = 0.f;
@@ -88,11 +88,11 @@ static void generateRay(uniform const float raster2camera[4][4],
     camy /= camw;
     camz /= camw;
 
-    ray.dir.x = camera2world[0][0] * camx + camera2world[0][1] * camy + 
+    ray.dir.x = camera2world[0][0] * camx + camera2world[0][1] * camy +
         camera2world[0][2] * camz;
-    ray.dir.y = camera2world[1][0] * camx + camera2world[1][1] * camy + 
+    ray.dir.y = camera2world[1][0] * camx + camera2world[1][1] * camy +
         camera2world[1][2] * camz;
-    ray.dir.z = camera2world[2][0] * camx + camera2world[2][1] * camy + 
+    ray.dir.z = camera2world[2][0] * camx + camera2world[2][1] * camy +
         camera2world[2][2] * camz;
 
     ray.origin.x = camera2world[0][3] / camera2world[3][3];
@@ -107,7 +107,7 @@ static void generateRay(uniform const float raster2camera[4][4],
 }
 
 
-static bool BBoxIntersect(const uniform float bounds[2][3], 
+static bool BBoxIntersect(const uniform float bounds[2][3],
                           const Ray &ray) {
     uniform float3 bounds0 = { bounds[0][0], bounds[0][1], bounds[0][2] };
     uniform float3 bounds1 = { bounds[1][0], bounds[1][1], bounds[1][2] };
@@ -140,7 +140,7 @@ static bool BBoxIntersect(const uniform float bounds[2][3],
     }
     t0 = max(tNear.z, t0);
     t1 = min(tFar.z, t1);
-    
+
     return (t0 <= t1);
 }
 
@@ -186,7 +186,7 @@ static bool TriIntersect(const uniform Triangle &tri, Ray &ray) {
 }
 
 
-bool BVHIntersect(const uniform LinearBVHNode nodes[], 
+bool BVHIntersect(const uniform LinearBVHNode nodes[],
                   const uniform Triangle tris[], Ray &r) {
     Ray ray = r;
     bool hit = false;
@@ -206,7 +206,7 @@ bool BVHIntersect(const uniform LinearBVHNode nodes[],
                     if (TriIntersect(tris[primitivesOffset+i], ray))
                         hit = true;
                 }
-                if (todoOffset == 0) 
+                if (todoOffset == 0)
                     break;
                 nodeNum = todo[--todoOffset];
             }
@@ -236,10 +236,10 @@ bool BVHIntersect(const uniform LinearBVHNode nodes[],
 
 
 static void raytrace_tile(uniform int x0, uniform int x1,
-                          uniform int y0, uniform int y1, 
+                          uniform int y0, uniform int y1,
                           uniform int width, uniform int height,
                           uniform int baseWidth, uniform int baseHeight,
-                          const uniform float raster2camera[4][4], 
+                          const uniform float raster2camera[4][4],
                           const uniform float camera2world[4][4],
                           uniform float image[], uniform int id[],
                           const uniform LinearBVHNode nodes[],
@@ -262,7 +262,7 @@ static void raytrace_tile(uniform int x0, uniform int x1,
 
 export void raytrace_ispc(uniform int width, uniform int height,
                           uniform int baseWidth, uniform int baseHeight,
-                          const uniform float raster2camera[4][4], 
+                          const uniform float raster2camera[4][4],
                           const uniform float camera2world[4][4],
                           uniform float image[], uniform int id[],
                           const uniform LinearBVHNode nodes[],
@@ -275,7 +275,7 @@ export void raytrace_ispc(uniform int width, uniform int height,
 
 task void raytrace_tile_task(uniform int width, uniform int height,
                              uniform int baseWidth, uniform int baseHeight,
-                             const uniform float raster2camera[4][4], 
+                             const uniform float raster2camera[4][4],
                              const uniform float camera2world[4][4],
                              uniform float image[], uniform int id[],
                              const uniform LinearBVHNode nodes[],
@@ -286,8 +286,8 @@ task void raytrace_tile_task(uniform int width, uniform int height,
     uniform int x1 = min(x0 + dx, width);
     uniform int y0 = (taskIndex / xBuckets) * dy;
     uniform int y1 = min(y0 + dy, height);
-                             
-    raytrace_tile(x0, x1, y0, y1, width, height, baseWidth, baseHeight, 
+
+    raytrace_tile(x0, x1, y0, y1, width, height, baseWidth, baseHeight,
                   raster2camera, camera2world, image,
                   id, nodes, triangles);
 }
@@ -295,7 +295,7 @@ task void raytrace_tile_task(uniform int width, uniform int height,
 
 export void raytrace_ispc_tasks(uniform int width, uniform int height,
                                 uniform int baseWidth, uniform int baseHeight,
-                                const uniform float raster2camera[4][4], 
+                                const uniform float raster2camera[4][4],
                                 const uniform float camera2world[4][4],
                                 uniform float image[], uniform int id[],
                                 const uniform LinearBVHNode nodes[],
@@ -304,8 +304,8 @@ export void raytrace_ispc_tasks(uniform int width, uniform int height,
     uniform int xBuckets = (width + (dx-1)) / dx;
     uniform int yBuckets = (height + (dy-1)) / dy;
     uniform int nTasks = xBuckets * yBuckets;
-    launch[nTasks] raytrace_tile_task(width, height, baseWidth, baseHeight, 
-                                      raster2camera, camera2world, 
+    launch[nTasks] raytrace_tile_task(width, height, baseWidth, baseHeight,
+                                      raster2camera, camera2world,
                                       image, id, nodes, triangles);
 }
 

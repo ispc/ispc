@@ -28,7 +28,7 @@
    PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
    LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
    NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
-   SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.  
+   SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
 
@@ -56,7 +56,7 @@ stencil_step(uniform int x0, uniform int x1,
                        A_cur(0, +3, 0) + A_cur(0, -3, 0) +
                        A_cur(0, 0, +3) + A_cur(0, 0, -3));
 
-        A_next(0, 0, 0) = 2 * A_cur(0, 0, 0) - A_next(0, 0, 0) + 
+        A_next(0, 0, 0) = 2 * A_cur(0, 0, 0) - A_next(0, 0, 0) +
             vsq[index] * div;
     }
 }
@@ -75,12 +75,12 @@ stencil_step_task(uniform int x0, uniform int x1,
 
 
 export void
-loop_stencil_ispc_tasks(uniform int t0, uniform int t1, 
+loop_stencil_ispc_tasks(uniform int t0, uniform int t1,
                         uniform int x0, uniform int x1,
                         uniform int y0, uniform int y1,
                         uniform int z0, uniform int z1,
                         uniform int Nx, uniform int Ny, uniform int Nz,
-                        uniform const float coef[4], 
+                        uniform const float coef[4],
                         uniform const float vsq[],
                         uniform float Aeven[], uniform float Aodd[])
 {
@@ -88,10 +88,10 @@ loop_stencil_ispc_tasks(uniform int t0, uniform int t1,
         // Parallelize across cores as well: each task will work on a slice
         // of 1 in the z extent of the volume.
         if ((t & 1) == 0)
-            launch[z1-z0] stencil_step_task(x0, x1, y0, y1, z0, Nx, Ny, Nz, 
+            launch[z1-z0] stencil_step_task(x0, x1, y0, y1, z0, Nx, Ny, Nz,
                                             coef, vsq, Aeven, Aodd);
         else
-            launch[z1-z0] stencil_step_task(x0, x1, y0, y1, z0, Nx, Ny, Nz, 
+            launch[z1-z0] stencil_step_task(x0, x1, y0, y1, z0, Nx, Ny, Nz,
                                             coef, vsq, Aodd, Aeven);
 
         // We need to wait for all of the launched tasks to finish before
@@ -102,21 +102,21 @@ loop_stencil_ispc_tasks(uniform int t0, uniform int t1,
 
 
 export void
-loop_stencil_ispc(uniform int t0, uniform int t1, 
+loop_stencil_ispc(uniform int t0, uniform int t1,
                   uniform int x0, uniform int x1,
                   uniform int y0, uniform int y1,
                   uniform int z0, uniform int z1,
                   uniform int Nx, uniform int Ny, uniform int Nz,
-                  uniform const float coef[4], 
+                  uniform const float coef[4],
                   uniform const float vsq[],
                   uniform float Aeven[], uniform float Aodd[])
 {
     for (uniform int t = t0; t < t1; ++t) {
         if ((t & 1) == 0)
-            stencil_step(x0, x1, y0, y1, z0, z1, Nx, Ny, Nz, coef, vsq, 
+            stencil_step(x0, x1, y0, y1, z0, z1, Nx, Ny, Nz, coef, vsq,
                          Aeven, Aodd);
         else
-            stencil_step(x0, x1, y0, y1, z0, z1, Nx, Ny, Nz, coef, vsq, 
+            stencil_step(x0, x1, y0, y1, z0, z1, Nx, Ny, Nz, coef, vsq,
                          Aodd, Aeven);
     }
 }

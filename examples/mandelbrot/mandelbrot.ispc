@@ -28,7 +28,7 @@
    PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
    LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
    NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
-   SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.  
+   SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
 static inline int mandel(float c_re, float c_im, int count) {
@@ -49,9 +49,9 @@ static inline int mandel(float c_re, float c_im, int count) {
     return i;
 }
 
-export void mandelbrot_ispc(uniform float x0, uniform float y0, 
+export void mandelbrot_ispc(uniform float x0, uniform float y0,
                             uniform float x1, uniform float y1,
-                            uniform int width, uniform int height, 
+                            uniform int width, uniform int height,
                             uniform int maxIterations,
                             uniform int output[])
 {

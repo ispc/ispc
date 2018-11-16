@@ -29,7 +29,7 @@
    PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
    LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
    NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
-   SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.  
+   SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 /*
   Based on Syoyo Fujita's aobench: http://code.google.com/p/aobench
@@ -59,21 +59,21 @@ static inline double drand48() {
 #endif // _MSC_VER
 
 #ifdef _MSC_VER
-__declspec(align(16)) 
+__declspec(align(16))
 #endif
 struct vec {
     vec() { x=y=z=pad=0.; }
     vec(float xx, float yy, float zz) { x = xx; y = yy; z = zz; }
 
     vec operator*(float f) const { return vec(x*f, y*f, z*f); }
-    vec operator+(const vec &f2) const { 
-        return vec(x+f2.x, y+f2.y, z+f2.z); 
+    vec operator+(const vec &f2) const {
+        return vec(x+f2.x, y+f2.y, z+f2.z);
     }
-    vec operator-(const vec &f2) const { 
-        return vec(x-f2.x, y-f2.y, z-f2.z); 
+    vec operator-(const vec &f2) const {
+        return vec(x-f2.x, y-f2.y, z-f2.z);
     }
-    vec operator*(const vec &f2) const { 
-        return vec(x*f2.x, y*f2.y, z*f2.z); 
+    vec operator*(const vec &f2) const {
+        return vec(x*f2.x, y*f2.y, z*f2.z);
     }
     float x, y, z;
     float pad;
@@ -96,7 +96,7 @@ struct Isect {
     float      t;
     vec        p;
     vec        n;
-    int        hit; 
+    int        hit;
 };
 
 struct Sphere {
@@ -135,12 +135,12 @@ static inline void vnormalize(vec &v) {
 
 
 static inline void
-ray_plane_intersect(Isect &isect, Ray &ray, 
+ray_plane_intersect(Isect &isect, Ray &ray,
                     Plane &plane) {
     float d = -dot(plane.p, plane.n);
     float v = dot(ray.dir, plane.n);
 
-    if (fabsf(v) < 1.0e-17f) 
+    if (fabsf(v) < 1.0e-17f)
         return;
     else {
         float t = -(dot(ray.org, plane.n) + d) / v;
@@ -156,7 +156,7 @@ ray_plane_intersect(Isect &isect, Ray &ray,
 
 
 static inline void
-ray_sphere_intersect(Isect &isect, Ray &ray, 
+ray_sphere_intersect(Isect &isect, Ray &ray,
                      Sphere &sphere) {
     vec rs = ray.org - sphere.center;
 
@@ -202,7 +202,7 @@ orthoBasis(vec basis[3], const vec &n) {
 
 
 static float
-ambient_occlusion(Isect &isect, Plane &plane, 
+ambient_occlusion(Isect &isect, Plane &plane,
                   Sphere spheres[3]) {
     float eps = 0.0001f;
     vec p, n;
@@ -240,8 +240,8 @@ ambient_occlusion(Isect &isect, Plane &plane,
             occIsect.hit = 0;
 
             for (int snum = 0; snum < 3; ++snum)
-                ray_sphere_intersect(occIsect, ray, spheres[snum]); 
-            ray_plane_intersect (occIsect, ray, plane); 
+                ray_sphere_intersect(occIsect, ray, spheres[snum]);
+            ray_plane_intersect (occIsect, ray, plane);
 
             if (occIsect.hit) occlusion += 1.f;
         }
@@ -264,7 +264,7 @@ static void ao_scanlines(int y0, int y1, int w, int h, int nsubsamples,
         { vec(1.0f, 0.0f, -2.2f), 0.5f } };
 
     srand48(y0);
-    
+
     for (int y = y0; y < y1; ++y) {
         for (int x = 0; x < w; ++x)  {
             int offset = 3 * (y * w + x);
@@ -312,7 +312,7 @@ static void ao_scanlines(int y0, int y1, int w, int h, int nsubsamples,
 }
 
 
-void ao_serial(int w, int h, int nsubsamples, 
+void ao_serial(int w, int h, int nsubsamples,
                float image[]) {
     ao_scanlines(0, h, w, h, nsubsamples, image);
 }

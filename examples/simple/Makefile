@@ -18,7 +18,7 @@ clean:
 simple: dirs  objs/simple.o objs/simple_ispc.o
 	$(CXX) $(CXXFLAGS) -o $@ objs/simple.o objs/simple_ispc.o
 
-objs/simple.o: simple.cpp objs/simple_ispc.h 
+objs/simple.o: simple.cpp objs/simple_ispc.h
 	$(CXX) $(CXXFLAGS) -c -o $@ $<
 
 objs/%_ispc.h objs/%_ispc.o: %.ispc

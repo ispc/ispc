@@ -28,7 +28,7 @@
    PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
    LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
    NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
-   SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.  
+   SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
 export void xyzSumAOS(uniform float array[], uniform int count,
@@ -193,7 +193,7 @@ export void normalizeAOSNoCoalesce(uniform float array[], uniform int count,
         float z = array[3*i+2+zeros];
 
         float l2 = x*x + y*y + z*z;
-        
+
         array[3*i] /= l2;
         array[3*i+1] /= l2;
         array[3*i+2] /= l2;
@@ -208,7 +208,7 @@ export void normalizeSOA(uniform float array[], uniform int count,
         float z = array[3*i+2];
 
         float l2 = x*x + y*y + z*z;
-        
+
         array[3*i] /= l2;
         array[3*i+1] /= l2;
         array[3*i+2] /= l2;

@@ -28,7 +28,7 @@
    PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
    LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
    NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
-   SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.  
+   SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
 
@@ -56,11 +56,11 @@ class Vector {
     static Vector *vector_from_mtf(char *path);
     void to_mtf (char *path);
 
-    Vector(size_t size, bool alloc_mem=true) 
+    Vector(size_t size, bool alloc_mem=true)
         {
             shared_ptr = false;
             _size      = size;
-			
+
             if (alloc_mem)
                 entries = (double *) malloc(sizeof(double) * _size);
             else {
@@ -69,7 +69,7 @@ class Vector {
             }
         }
 
-    Vector(size_t size, double *content, bool share_ptr=false) 
+    Vector(size_t size, double *content, bool share_ptr=false)
         {
             _size = size;
             if (share_ptr) {
@@ -85,19 +85,19 @@ class Vector {
 
     ~Vector() { if (!shared_ptr) free(entries); }
 
-    const double & operator [] (size_t index) const 
-    { 
-        ASSERT(index < _size); 
-        return *(entries + index); 
-    }
-
-    double &operator [] (size_t index) 
+    const double & operator [] (size_t index) const
     {
         ASSERT(index < _size);
         return *(entries + index);
     }
 
-    bool operator == (const Vector &v) const 
+    double &operator [] (size_t index)
+    {
+        ASSERT(index < _size);
+        return *(entries + index);
+    }
+
+    bool operator == (const Vector &v) const
     {
         if (v.size() != _size)
             return false;
@@ -111,27 +111,27 @@ class Vector {
 
     size_t size() const {return _size; }
 
-    double dot (const Vector &b) const 
+    double dot (const Vector &b) const
     {
         ASSERT(b.size() == this->size());
         return ispc::vector_dot(entries, b.entries, size());
     }
 
-    double dot (const double * const b) const 
+    double dot (const double * const b) const
     {
         return ispc::vector_dot(entries, b, size());
     }
 
-    void zero () 
+    void zero ()
     {
-        ispc::zero(entries, size()); 
+        ispc::zero(entries, size());
     }
 
     double norm () const { return sqrtf(dot(entries)); }
 
     void normalize () { this->divide(this->norm()); }
 
-    void add (const Vector &a) 
+    void add (const Vector &a)
     {
         ASSERT(size() == a.size());
         ispc::vector_add(entries, a.entries, size());
@@ -143,12 +143,12 @@ class Vector {
         ispc::vector_sub(entries, s.entries, size());
     }
 
-    void multiply (double scalar) 
+    void multiply (double scalar)
     {
         ispc::vector_mult(entries, scalar, size());
     }
 
-    void divide (double scalar) 
+    void divide (double scalar)
     {
         ispc::vector_div(entries, scalar, size());
     }
@@ -181,12 +181,12 @@ class Vector {
 \**************************************************************/
 class Matrix {
     friend class Vector;
-	
+
  public:
-    Matrix(size_t size_r, size_t size_c) 
-        { 
-            num_rows = size_r; 
-            num_cols = size_c; 
+    Matrix(size_t size_r, size_t size_c)
+        {
+            num_rows = size_r;
+            num_cols = size_c;
         }
     ~Matrix(){}
 
@@ -204,11 +204,11 @@ class Matrix {
 /**************************************************************\
 | DenseMatrix class
 \**************************************************************/
-class DenseMatrix : public Matrix { 
+class DenseMatrix : public Matrix {
     friend class Vector;
 
  public:
- DenseMatrix(size_t size_r, size_t size_c) : Matrix(size_r, size_c) 
+ DenseMatrix(size_t size_r, size_t size_c) : Matrix(size_r, size_c)
         {
             entries = (double *) malloc(size_r * size_c * sizeof(double));
         }
@@ -228,7 +228,7 @@ class DenseMatrix : public Matrix {
 
     const double &operator () (unsigned int r, unsigned int c) const
     {
-        return *(entries + r * num_cols + c);			
+        return *(entries + r * num_cols + c);
     }
 
     const Vector *row(size_t row) const;
@@ -237,7 +237,7 @@ class DenseMatrix : public Matrix {
 
     virtual void zero() { ispc::zero(entries, rows() * cols()); }
 
-    void copy (const DenseMatrix &other) 
+    void copy (const DenseMatrix &other)
     {
         ASSERT(rows() == other.rows());
         ASSERT(cols() == other.cols());
@@ -252,10 +252,10 @@ class DenseMatrix : public Matrix {
 /**************************************************************\
 | CSRMatrix (compressed row storage, a sparse matrix format)
 \**************************************************************/
-class CRSMatrix : public Matrix { 
+class CRSMatrix : public Matrix {
  public:
     CRSMatrix (size_t size_r, size_t size_c, size_t nonzeroes) :
-    Matrix(size_r, size_c) 
+    Matrix(size_r, size_c)
         {
             _nonzeroes = nonzeroes;
             entries.resize(nonzeroes);

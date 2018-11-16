@@ -28,7 +28,7 @@
    PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
    LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
    NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
-   SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.  
+   SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
 #ifdef _MSC_VER
@@ -51,7 +51,7 @@ using namespace ispc;
 extern void loop_stencil_serial(int t0, int t1, int x0, int x1,
                                 int y0, int y1, int z0, int z1,
                                 int Nx, int Ny, int Nz,
-                                const float coef[5], 
+                                const float coef[5],
                                 const float vsq[],
                                 float Aeven[], float Aodd[]);
 
@@ -94,7 +94,7 @@ int main(int argc, char *argv[]) {
     Aispc[1] = new float [Nx * Ny * Nz];
     float *vsq = new float [Nx * Ny * Nz];
 
-    float coeff[4] = { 0.5, -.25, .125, -.0625 }; 
+    float coeff[4] = { 0.5, -.25, .125, -.0625 };
 
     InitData(Nx, Ny, Nz, Aispc, vsq);
     //
@@ -135,7 +135,7 @@ int main(int argc, char *argv[]) {
 
     InitData(Nx, Ny, Nz, Aserial, vsq);
 
-    // 
+    //
     // And run the serial implementation 3 times, again reporting the
     // minimum time.
     //
@@ -152,7 +152,7 @@ int main(int argc, char *argv[]) {
 
     printf("[stencil serial]:\t\t[%.3f] million cycles\n", minTimeSerial);
 
-    printf("\t\t\t\t(%.2fx speedup from ISPC, %.2fx speedup from ISPC + tasks)\n", 
+    printf("\t\t\t\t(%.2fx speedup from ISPC, %.2fx speedup from ISPC + tasks)\n",
            minTimeSerial / minTimeISPC, minTimeSerial / minTimeISPCTasks);
 
     // Check for agreement

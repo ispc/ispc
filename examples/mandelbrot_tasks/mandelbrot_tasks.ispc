@@ -28,7 +28,7 @@
    PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
    LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
    NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
-   SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.  
+   SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
 //#define _3D_TASKING //uncomment for using "3d tasking" model. This can influence performance.
@@ -56,9 +56,9 @@ mandel(float c_re, float c_im, int count) {
 /* Task to compute the Mandelbrot iterations for a single scanline.
  */
 task void
-mandelbrot_scanline(uniform float x0, uniform float dx, 
+mandelbrot_scanline(uniform float x0, uniform float dx,
                     uniform float y0, uniform float dy,
-                    uniform int width, uniform int height, 
+                    uniform int width, uniform int height,
 #ifdef _3D_TASKING
                     uniform int xspan, uniform int yspan,
 #else
@@ -88,15 +88,15 @@ mandelbrot_scanline(uniform float x0, uniform float dx,
 
 
 export void
-mandelbrot_ispc(uniform float x0, uniform float y0, 
+mandelbrot_ispc(uniform float x0, uniform float y0,
                 uniform float x1, uniform float y1,
-                uniform int width, uniform int height, 
+                uniform int width, uniform int height,
                 uniform int maxIterations, uniform int output[]) {
     uniform float dx = (x1 - x0) / width;
     uniform float dy = (y1 - y0) / height;
 #ifdef _3D_TASKING
     const uniform int xspan = max(32, programCount*2);  /* make sure it is big enough to avoid false-sharing */
-    const uniform int yspan = 16; 
+    const uniform int yspan = 16;
 
     launch [width/xspan, height/yspan]
     mandelbrot_scanline(x0, dx, y0, dy, width, height, xspan, yspan,
