@@ -28,7 +28,7 @@
    PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
    LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
    NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
-   SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.  
+   SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
 
@@ -58,7 +58,7 @@ stencil_step(int x0, int x1,
                                        A_cur(0, +3, 0) + A_cur(0, -3, 0) +
                                        A_cur(0, 0, +3) + A_cur(0, 0, -3));
 
-                A_next(0, 0, 0) = 2 * A_cur(0, 0, 0) - A_next(0, 0, 0) + 
+                A_next(0, 0, 0) = 2 * A_cur(0, 0, 0) - A_next(0, 0, 0) +
                     vsq[index] * div;
             }
         }
@@ -66,21 +66,21 @@ stencil_step(int x0, int x1,
 }
 
 
-void loop_stencil_serial(int t0, int t1, 
+void loop_stencil_serial(int t0, int t1,
                          int x0, int x1,
                          int y0, int y1,
                          int z0, int z1,
                          int Nx, int Ny, int Nz,
-                         const float coef[4], 
+                         const float coef[4],
                          const float vsq[],
                          float Aeven[], float Aodd[])
 {
     for (int t = t0; t < t1; ++t) {
         if ((t & 1) == 0)
-            stencil_step(x0, x1, y0, y1, z0, z1, Nx, Ny, Nz, coef, vsq, 
+            stencil_step(x0, x1, y0, y1, z0, z1, Nx, Ny, Nz, coef, vsq,
                          Aeven, Aodd);
         else
-            stencil_step(x0, x1, y0, y1, z0, z1, Nx, Ny, Nz, coef, vsq, 
+            stencil_step(x0, x1, y0, y1, z0, z1, Nx, Ny, Nz, coef, vsq,
                          Aodd, Aeven);
     }
 }

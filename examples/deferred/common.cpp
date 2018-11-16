@@ -28,7 +28,7 @@
    PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
    LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
    NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
-   SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.  
+   SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
 #ifdef _MSC_VER
@@ -133,13 +133,13 @@ CreateInputDataFromFile(const char *path) {
     }
 
     // Load data chunk and update pointers
-    input->chunk = (uint8_t *)lAlignedMalloc(input->header.inputDataChunkSize, 
+    input->chunk = (uint8_t *)lAlignedMalloc(input->header.inputDataChunkSize,
                                              ALIGNMENT_BYTES);
     if (fread(input->chunk, input->header.inputDataChunkSize, 1, in) != 1) {
         fprintf(stderr, "Preumature EOF reading file \"%s\"\n", path);
         return NULL;
     }
-    
+
     input->arrays.zBuffer =
         (float *)&input->chunk[input->header.inputDataArrayOffsets[idaZBuffer]];
     input->arrays.normalEncoded_x =
@@ -187,21 +187,21 @@ void WriteFrame(const char *filename, const InputData *input,
                 const Framebuffer &framebuffer) {
     // Deswizzle and copy to RGBA output
     // Doesn't need to be fast... only happens once
-    size_t imageBytes = 3 * input->header.framebufferWidth * 
+    size_t imageBytes = 3 * input->header.framebufferWidth *
         input->header.framebufferHeight;
     uint8_t* framebufferAOS = (uint8_t *)lAlignedMalloc(imageBytes, ALIGNMENT_BYTES);
     memset(framebufferAOS, 0, imageBytes);
 
-    for (int i = 0; i < input->header.framebufferWidth * 
+    for (int i = 0; i < input->header.framebufferWidth *
                         input->header.framebufferHeight; ++i) {
         framebufferAOS[3 * i + 0] = framebuffer.r[i];
         framebufferAOS[3 * i + 1] = framebuffer.g[i];
         framebufferAOS[3 * i + 2] = framebuffer.b[i];
     }
-    
+
     // Write out simple PPM file
     FILE *out = fopen(filename, "wb");
-    fprintf(out, "P6 %d %d 255\n", input->header.framebufferWidth, 
+    fprintf(out, "P6 %d %d 255\n", input->header.framebufferWidth,
             input->header.framebufferHeight);
     fwrite(framebufferAOS, imageBytes, 1, out);
     fclose(out);

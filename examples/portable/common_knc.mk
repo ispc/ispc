@@ -30,10 +30,10 @@ dirs:
 
 objs_knc/%.cpp objs_knc/%.o objs_knc/%.h: dirs
 
-clean: 
+clean:
 	/bin/rm -rf $(PROG) objs_knc
 
-$(PROG): $(ISPC_OBJ) $(CXX_OBJ) 
+$(PROG): $(ISPC_OBJ) $(CXX_OBJ)
 	$(LD) -o $@ $^ $(LDFLAGS)
 
 objs_knc/%.o: %.cpp
@@ -47,6 +47,6 @@ objs_knc/%.o: ../../util/%.cpp
 	$(CXX) $(CXXFLAGS)  -o $@ -c $<
 
 objs_knc/%_ispc.o: %.ispc
-	$(ISPC) $(ISPC_FLAGS) --emit-c++ -o objs_knc/$*_ispc_zmm.cpp -h objs_knc/$*_ispc.h $< 
+	$(ISPC) $(ISPC_FLAGS) --emit-c++ -o objs_knc/$*_ispc_zmm.cpp -h objs_knc/$*_ispc.h $<
 	$(CXX) $(CXXFLAGS) -o $@ objs_knc/$*_ispc_zmm.cpp  -c
 

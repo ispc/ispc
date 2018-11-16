@@ -28,7 +28,7 @@
    PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
    LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
    NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
-   SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.  
+   SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
 #ifdef _MSC_VER
@@ -43,21 +43,21 @@
 
 // Just enough of a float3 class to do what we need in this file.
 #ifdef _MSC_VER
-__declspec(align(16)) 
+__declspec(align(16))
 #endif
 struct float3 {
     float3() { }
     float3(float xx, float yy, float zz) { x = xx; y = yy; z = zz; }
 
     float3 operator*(float f) const { return float3(x*f, y*f, z*f); }
-    float3 operator-(const float3 &f2) const { 
-        return float3(x-f2.x, y-f2.y, z-f2.z); 
+    float3 operator-(const float3 &f2) const {
+        return float3(x-f2.x, y-f2.y, z-f2.z);
     }
-    float3 operator*(const float3 &f2) const { 
-        return float3(x*f2.x, y*f2.y, z*f2.z); 
+    float3 operator*(const float3 &f2) const {
+        return float3(x*f2.x, y*f2.y, z*f2.z);
     }
     float x, y, z;
-    float pad;  // match padding/alignment of ispc version 
+    float pad;  // match padding/alignment of ispc version
 }
 #ifndef _MSC_VER
 __attribute__ ((aligned(16)))
@@ -106,7 +106,7 @@ inline float Dot(const float3 &a, const float3 &b) {
 }
 
 
-static void generateRay(const float raster2camera[4][4], 
+static void generateRay(const float raster2camera[4][4],
                         const float camera2world[4][4],
                         float x, float y, Ray &ray) {
     ray.mint = 0.f;
@@ -144,7 +144,7 @@ static void generateRay(const float raster2camera[4][4],
 }
 
 
-static inline bool BBoxIntersect(const float bounds[2][3], 
+static inline bool BBoxIntersect(const float bounds[2][3],
                                  const Ray &ray) {
     float3 bounds0(bounds[0][0], bounds[0][1], bounds[0][2]);
     float3 bounds1(bounds[1][0], bounds[1][1], bounds[1][2]);
@@ -175,7 +175,7 @@ static inline bool BBoxIntersect(const float bounds[2][3],
     }
     t0 = std::max(tNear.z, t0);
     t1 = std::min(tFar.z, t1);
-    
+
     return (t0 <= t1);
 }
 
@@ -218,7 +218,7 @@ inline bool TriIntersect(const Triangle &tri, Ray &ray) {
 }
 
 
-bool BVHIntersect(const LinearBVHNode nodes[], const Triangle tris[], 
+bool BVHIntersect(const LinearBVHNode nodes[], const Triangle tris[],
                   Ray &r) {
     Ray ray = r;
     bool hit = false;
@@ -238,7 +238,7 @@ bool BVHIntersect(const LinearBVHNode nodes[], const Triangle tris[],
                     if (TriIntersect(tris[primitivesOffset+i], ray))
                         hit = true;
                 }
-                if (todoOffset == 0) 
+                if (todoOffset == 0)
                     break;
                 nodeNum = todo[--todoOffset];
             }
@@ -268,7 +268,7 @@ bool BVHIntersect(const LinearBVHNode nodes[], const Triangle tris[],
 
 
 void raytrace_serial(int width, int height, int baseWidth, int baseHeight,
-                     const float raster2camera[4][4], 
+                     const float raster2camera[4][4],
                      const float camera2world[4][4],
                      float image[],
                      int id[],

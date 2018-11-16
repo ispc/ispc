@@ -28,7 +28,7 @@
    PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
    LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
    NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
-   SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.  
+   SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
 #ifdef _MSC_VER
@@ -52,7 +52,7 @@ using namespace ispc;
 typedef unsigned int uint;
 
 extern void raytrace_serial(int width, int height, int baseWidth, int baseHeight,
-                            const float raster2camera[4][4], 
+                            const float raster2camera[4][4],
                             const float camera2world[4][4], float image[],
                             int id[], const LinearBVHNode nodes[],
                             const Triangle triangles[]);
@@ -89,7 +89,7 @@ static void writeImage(int *idImage, float *depthImage, int width, int height,
             fputc(g, f);
             fputc(b, f);
         }
-    }            
+    }
     fclose(f);
     printf("Wrote image file %s\n", filename);
 }
@@ -122,7 +122,7 @@ int main(int argc, char *argv[]) {
     if (fread(&(var), sizeof(var), n, f) != (unsigned int)n) {  \
         fprintf(stderr, "Unexpected EOF reading scene file\n"); \
         return 1;                                               \
-    } else /* eat ; */                                                     
+    } else /* eat ; */
 
     //
     // Read the camera specification information from the camera file
@@ -147,7 +147,7 @@ int main(int argc, char *argv[]) {
     READ(raster2camera[0][0], 16);
 
     //
-    // Read in the serialized BVH 
+    // Read in the serialized BVH
     //
     sprintf(fnbuf, "%s.bvh", filename);
     f = fopen(fnbuf, "rb");
@@ -180,7 +180,7 @@ int main(int argc, char *argv[]) {
         READ(nodes[i].pad, 1);
     }
 
-    // And then read the triangles 
+    // And then read the triangles
     uint nTris;
     READ(nTris, 1);
     Triangle *triangles = new Triangle[nTris];
@@ -213,13 +213,13 @@ int main(int argc, char *argv[]) {
     double minTimeISPC = 1e30;
     for (uint i = 0; i < test_iterations[0]; ++i) {
         reset_and_start_timer();
-        raytrace_ispc(width, height, baseWidth, baseHeight, raster2camera, 
+        raytrace_ispc(width, height, baseWidth, baseHeight, raster2camera,
                       camera2world, image, id, nodes, triangles);
         double dt = get_elapsed_mcycles();
         printf("@time of ISPC run:\t\t\t[%.3f] million cycles\n", dt);
         minTimeISPC = std::min(dt, minTimeISPC);
     }
-    printf("[rt ispc, 1 core]:\t\t[%.3f] million cycles for %d x %d image\n", 
+    printf("[rt ispc, 1 core]:\t\t[%.3f] million cycles for %d x %d image\n",
            minTimeISPC, width, height);
 
     writeImage(id, image, width, height, "rt-ispc-1core.ppm");
@@ -239,7 +239,7 @@ int main(int argc, char *argv[]) {
         printf("@time of ISPC + TASKS run:\t\t\t[%.3f] million cycles\n", dt);
         minTimeISPCtasks = std::min(dt, minTimeISPCtasks);
     }
-    printf("[rt ispc + tasks]:\t\t[%.3f] million cycles for %d x %d image\n", 
+    printf("[rt ispc + tasks]:\t\t[%.3f] million cycles for %d x %d image\n",
            minTimeISPCtasks, width, height);
 
     writeImage(id, image, width, height, "rt-ispc-tasks.ppm");
@@ -254,15 +254,15 @@ int main(int argc, char *argv[]) {
     double minTimeSerial = 1e30;
     for (uint i = 0; i < test_iterations[2]; ++i) {
         reset_and_start_timer();
-        raytrace_serial(width, height, baseWidth, baseHeight, raster2camera, 
+        raytrace_serial(width, height, baseWidth, baseHeight, raster2camera,
                         camera2world, image, id, nodes, triangles);
         double dt = get_elapsed_mcycles();
         printf("@time of serial run:\t\t\t[%.3f] million cycles\n", dt);
         minTimeSerial = std::min(dt, minTimeSerial);
     }
-    printf("[rt serial]:\t\t\t[%.3f] million cycles for %d x %d image\n", 
+    printf("[rt serial]:\t\t\t[%.3f] million cycles for %d x %d image\n",
            minTimeSerial, width, height);
-    printf("\t\t\t\t(%.2fx speedup from ISPC, %.2fx speedup from ISPC + tasks)\n", 
+    printf("\t\t\t\t(%.2fx speedup from ISPC, %.2fx speedup from ISPC + tasks)\n",
            minTimeSerial / minTimeISPC, minTimeSerial / minTimeISPCtasks);
 
     writeImage(id, image, width, height, "rt-serial.ppm");

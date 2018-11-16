@@ -28,7 +28,7 @@
    PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
    LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
    NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
-   SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.  
+   SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
 /*
@@ -49,7 +49,7 @@
     - OpenMP (ISPC_USE_OMP)
     - HPX (ISPC_USE_HPX)
 
-  The task system implementation can be selected at compile time, by defining 
+  The task system implementation can be selected at compile time, by defining
   the appropriate preprocessor symbol on the command line (for e.g.: -D ISPC_USE_TBB).
   Not all combinations of platform and task system are meaningful.
   If no task system is requested, a reasonable default task system for the platform
@@ -66,7 +66,7 @@
 
   The ISPC_USE_PTHREADS_FULLY_SUBSCRIBED model essentially takes over the machine
   by assigning one pthread to each hyper-thread, and then uses spinlocks and atomics
-  for task management.  This model is useful for KNC where tasks can take over 
+  for task management.  This model is useful for KNC where tasks can take over
   the machine, but less so when there are other tasks that need running on the machine.
 
 #define ISPC_USE_CREW
@@ -111,7 +111,7 @@
 #endif
 
 
-#define DBG(x) 
+#define DBG(x)
 
 #ifdef ISPC_IS_WINDOWS
   #define NOMINMAX
@@ -199,15 +199,15 @@ struct TaskInfo {
     event taskEvent;
 #endif
     int taskCount() const { return taskCount3d[0]*taskCount3d[1]*taskCount3d[2]; }
-    int taskIndex0() const 
+    int taskIndex0() const
     {
       return taskIndex % taskCount3d[0];
     }
-    int taskIndex1() const 
+    int taskIndex1() const
     {
       return ( taskIndex / taskCount3d[0] ) % taskCount3d[1];
     }
-    int taskIndex2() const 
+    int taskIndex2() const
     {
       return taskIndex / ( taskCount3d[0]*taskCount3d[1] );
     }
@@ -222,7 +222,7 @@ __attribute__((aligned(32)));
 ;
 
 // ispc expects these functions to have C linkage / not be mangled
-extern "C" { 
+extern "C" {
     void ISPCLaunch(void **handlePtr, void *f, void *data, int countx, int county, int countz);
     void *ISPCAlloc(void **handlePtr, int64_t size, int32_t alignment);
     void ISPCSync(void *handle);
@@ -281,10 +281,10 @@ private:
 };
 
 
-inline TaskGroupBase::TaskGroupBase() { 
-    nextTaskInfoIndex = 0; 
+inline TaskGroupBase::TaskGroupBase() {
+    nextTaskInfoIndex = 0;
 
-    curMemBuffer = 0; 
+    curMemBuffer = 0;
     curMemBufferOffset = 0;
     memBuffers[0] = mem;
     memBufferSize[0] = sizeof(mem) / sizeof(mem[0]);
@@ -308,8 +308,8 @@ inline TaskGroupBase::~TaskGroupBase() {
 
 inline void
 TaskGroupBase::Reset() {
-    nextTaskInfoIndex = 0; 
-    curMemBuffer = 0; 
+    nextTaskInfoIndex = 0;
+    curMemBuffer = 0;
     curMemBufferOffset = 0;
 }
 
@@ -390,7 +390,7 @@ lAtomicCompareAndSwapPointer(void **v, void *newValue, void *oldValue) {
 #endif // ISPC_IS_WINDOWS
 }
 
-static int32_t 
+static int32_t
 lAtomicCompareAndSwap32(volatile int32_t *v, int32_t newValue, int32_t oldValue) {
 #ifdef ISPC_IS_WINDOWS
     return InterlockedCompareExchange((volatile LONG *)v, newValue, oldValue);
@@ -401,7 +401,7 @@ lAtomicCompareAndSwap32(volatile int32_t *v, int32_t newValue, int32_t oldValue)
 #endif // ISPC_IS_WINDOWS
 }
 
-static inline int32_t 
+static inline int32_t
 lAtomicAdd(volatile int32_t *v, int32_t delta) {
 #ifdef ISPC_IS_WINDOWS
     return InterlockedExchangeAdd((volatile LONG *)v, delta)+delta;
@@ -570,7 +570,7 @@ lRunTask(void *ti) {
     int threadCount = 1;
 
     // Actually run the task
-    taskInfo->func(taskInfo->data, threadIndex, threadCount, 
+    taskInfo->func(taskInfo->data, threadIndex, threadCount,
                    taskInfo->taskIndex, taskInfo->taskCount(),
             taskInfo->taskIndex0(), taskInfo->taskIndex1(), taskInfo->taskIndex2(),
             taskInfo->taskCount0(), taskInfo->taskCount1(), taskInfo->taskCount2());
@@ -607,8 +607,8 @@ InitTaskSystem() {
 static void __cdecl
 lRunTask(LPVOID param) {
     TaskInfo *ti = (TaskInfo *)param;
-    
-    // Actually run the task. 
+
+    // Actually run the task.
     // FIXME: like the GCD implementation for OS X, this is passing bogus
     // values for the threadIndex and threadCount builtins, which in turn
     // will cause bugs in code that uses those.
@@ -705,7 +705,7 @@ lTaskEntry(void *arg) {
             activeTaskGroups.pop_back();
             tg->inActiveList = false;
         }
-    
+
         if ((err = pthread_mutex_unlock(&taskSysMutex)) != 0) {
             fprintf(stderr, "Error from pthread_mutex_unlock: %s\n", strerror(err));
             exit(1);
@@ -852,7 +852,7 @@ TaskGroup::Sync() {
         // All of the tasks in this group aren't finished yet.  We'll try
         // to help out here since we don't have anything else to do...
 
-        DBG(fprintf(stderr, "while syncing %p - %d unfinished\n", tg, 
+        DBG(fprintf(stderr, "while syncing %p - %d unfinished\n", tg,
                     numUnfinishedTasks));
 
         //
@@ -917,7 +917,7 @@ TaskGroup::Sync() {
                 runtg->inActiveList = false;
             }
             myTask = runtg->GetTaskInfo(taskNumber);
-            DBG(fprintf(stderr, "running task %d from other group %p in sync\n", 
+            DBG(fprintf(stderr, "running task %d from other group %p in sync\n",
                         taskNumber, runtg));
         }
 
@@ -925,7 +925,7 @@ TaskGroup::Sync() {
             fprintf(stderr, "Error from pthread_mutex_unlock: %s\n", strerror(err));
             exit(1);
         }
-    
+
         //
         // Do work for _myTask_
         //
@@ -960,7 +960,7 @@ TaskGroup::Launch(int baseIndex, int count) {
     cilk_for(int i = 0; i < count; i++) {
         TaskInfo *ti = GetTaskInfo(baseIndex + i);
 
-        // Actually run the task. 
+        // Actually run the task.
         // Cilk does not expose the task -> thread mapping so we pretend it's 1:1
         ti->func(ti->data, ti->taskIndex, ti->taskCount(),
             ti->taskIndex0(), ti->taskIndex1(), ti->taskIndex2(),
@@ -992,11 +992,11 @@ TaskGroup::Launch(int baseIndex, int count) {
     const int threadCount = omp_get_num_threads();
 
 #pragma omp for schedule(runtime)
-    for(int i = 0; i < count; i++) 
+    for(int i = 0; i < count; i++)
     {
         TaskInfo *ti = GetTaskInfo(baseIndex + i);
 
-        // Actually run the task. 
+        // Actually run the task.
         ti->func(ti->data, threadIndex, threadCount, ti->taskIndex, ti->taskCount(),
             ti->taskIndex0(), ti->taskIndex1(), ti->taskIndex2(),
             ti->taskCount0(), ti->taskCount1(), ti->taskCount2());
@@ -1026,7 +1026,7 @@ TaskGroup::Launch(int baseIndex, int count) {
     tbb::parallel_for(0, count, [=](int i) {
         TaskInfo *ti = GetTaskInfo(baseIndex + i);
 
-        // Actually run the task. 
+        // Actually run the task.
         // TBB does not expose the task -> thread mapping so we pretend it's 1:1
         int threadIndex = ti->taskIndex;
         int threadCount = ti->taskCount();
@@ -1338,7 +1338,7 @@ public:
 };
 
 
-void TaskSys::threadFct() 
+void TaskSys::threadFct()
 {
     int myIndex = 0; //lAtomicAdd(&threadIdx,1);
     while (1) {
@@ -1375,7 +1375,7 @@ void *_threadFct(void *data) {
 }
 
 
-void TaskSys::createThreads() 
+void TaskSys::createThreads()
 {
     init();
     int reserved = 4;
@@ -1410,7 +1410,7 @@ int TaskSys::numThreadsRunning = 0;
 
 ///////////////////////////////////////////////////////////////////////////
 
-void ISPCLaunch(void **taskGroupPtr, void *func, void *data, int count) 
+void ISPCLaunch(void **taskGroupPtr, void *func, void *data, int count)
 {
     Task *ti = *(Task**)taskGroupPtr;
     ti->func = (TaskFuncType)func;
@@ -1420,14 +1420,14 @@ void ISPCLaunch(void **taskGroupPtr, void *func, void *data, int count)
     TaskSys::global->schedule(ti);
 }
 
-void ISPCSync(void *h) 
+void ISPCSync(void *h)
 {
-    Task *task = (Task *)h; 
+    Task *task = (Task *)h;
     assert(task);
     TaskSys::global->sync(task);
 }
 
-void *ISPCAlloc(void **taskGroupPtr, int64_t size, int32_t alignment) 
+void *ISPCAlloc(void **taskGroupPtr, int64_t size, int32_t alignment)
 {
     TaskSys::init();
     Task *task = TaskSys::global->allocOne();

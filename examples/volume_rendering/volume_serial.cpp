@@ -28,7 +28,7 @@
    PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
    LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
    NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
-   SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.  
+   SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
 #include <assert.h>
@@ -41,23 +41,23 @@ struct float3 {
     float3(float xx, float yy, float zz) { x = xx; y = yy; z = zz; }
 
     float3 operator*(float f) const { return float3(x*f, y*f, z*f); }
-    float3 operator-(const float3 &f2) const { 
-        return float3(x-f2.x, y-f2.y, z-f2.z); 
+    float3 operator-(const float3 &f2) const {
+        return float3(x-f2.x, y-f2.y, z-f2.z);
     }
-    float3 operator*(const float3 &f2) const { 
-        return float3(x*f2.x, y*f2.y, z*f2.z); 
+    float3 operator*(const float3 &f2) const {
+        return float3(x*f2.x, y*f2.y, z*f2.z);
     }
-    float3 operator+(const float3 &f2) const { 
-        return float3(x+f2.x, y+f2.y, z+f2.z); 
+    float3 operator+(const float3 &f2) const {
+        return float3(x+f2.x, y+f2.y, z+f2.z);
     }
-    float3 operator/(const float3 &f2) const { 
-        return float3(x/f2.x, y/f2.y, z/f2.z); 
+    float3 operator/(const float3 &f2) const {
+        return float3(x/f2.x, y/f2.y, z/f2.z);
     }
     float operator[](int i) const { return (&x)[i]; }
     float &operator[](int i) { return (&x)[i]; }
 
     float x, y, z;
-    float pad;  // match padding/alignment of ispc version 
+    float pad;  // match padding/alignment of ispc version
 }
 #ifndef _MSC_VER
 __attribute__ ((aligned(16)))
@@ -128,7 +128,7 @@ IntersectP(const Ray &ray, float3 pMin, float3 pMax, float *hit0, float *hit1) {
     }
     t0 = std::max(tNear.z, t0);
     t1 = std::min(tFar.z, t1);
-    
+
     if (t0 <= t1) {
         *hit0 = t0;
         *hit1 = t1;
@@ -164,9 +164,9 @@ static inline float3 Offset(float3 p, float3 pMin, float3 pMax) {
 }
 
 
-static inline float Density(float3 Pobj, float3 pMin, float3 pMax, 
+static inline float Density(float3 Pobj, float3 pMin, float3 pMax,
                             float density[], int nVoxels[3]) {
-    if (!Inside(Pobj, pMin, pMax)) 
+    if (!Inside(Pobj, pMin, pMax))
         return 0;
     // Compute voxel coordinates and offsets for _Pobj_
     float3 vox = Offset(Pobj, pMin, pMax);
@@ -177,13 +177,13 @@ static inline float Density(float3 Pobj, float3 pMin, float3 pMax,
     float dx = vox.x - vx, dy = vox.y - vy, dz = vox.z - vz;
 
     // Trilinearly interpolate density values to compute local density
-    float d00 = Lerp(dx, D(vx, vy, vz, nVoxels, density),     
+    float d00 = Lerp(dx, D(vx, vy, vz, nVoxels, density),
                          D(vx+1, vy, vz, nVoxels, density));
-    float d10 = Lerp(dx, D(vx, vy+1, vz, nVoxels, density),   
+    float d10 = Lerp(dx, D(vx, vy+1, vz, nVoxels, density),
                          D(vx+1, vy+1, vz, nVoxels, density));
-    float d01 = Lerp(dx, D(vx, vy, vz+1, nVoxels, density),   
+    float d01 = Lerp(dx, D(vx, vy, vz+1, nVoxels, density),
                          D(vx+1, vy, vz+1, nVoxels, density));
-    float d11 = Lerp(dx, D(vx, vy+1, vz+1, nVoxels, density), 
+    float d11 = Lerp(dx, D(vx, vy+1, vz+1, nVoxels, density),
                          D(vx+1, vy+1, vz+1, nVoxels, density));
     float d0 = Lerp(dy, d00, d10);
     float d1 = Lerp(dy, d01, d11);
@@ -233,7 +233,7 @@ distanceSquared(float3 a, float3 b) {
 }
 
 
-static float 
+static float
 raymarch(float density[], int nVoxels[3], const Ray &ray) {
     float rayT0, rayT1;
     float3 pMin(.3f, -.2f, .3f), pMax(1.8f, 2.3f, 1.8f);
@@ -270,7 +270,7 @@ raymarch(float density[], int nVoxels[3], const Ray &ray) {
             break;
 
         // direct lighting
-        float Li = lightIntensity / distanceSquared(lightPos, pos) * 
+        float Li = lightIntensity / distanceSquared(lightPos, pos) *
             transmittance(lightPos, pos, pMin, pMax, sigma_a + sigma_s,
                           density, nVoxels);
         L += stepDist * atten * d * sigma_s * (Li + Le);
@@ -289,7 +289,7 @@ raymarch(float density[], int nVoxels[3], const Ray &ray) {
 
 void
 volume_serial(float density[], int nVoxels[3], const float raster2camera[4][4],
-              const float camera2world[4][4], 
+              const float camera2world[4][4],
               int width, int height, float image[]) {
     int offset = 0;
     for (int y = 0; y < height; ++y) {

@@ -28,7 +28,7 @@
    PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
    LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
    NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
-   SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.  
+   SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
 #ifdef __cilk
@@ -104,7 +104,7 @@ public:
     {
         mNumTilesX = gBufferWidth / mTileWidth;
         mNumTilesY = gBufferHeight / mTileHeight;
-        
+
         // Allocate arrays
         mMinZArrays = (float **)lAlignedMalloc(sizeof(float *) * mLevels, 16);
         mMaxZArrays = (float **)lAlignedMalloc(sizeof(float *) * mLevels, 16);
@@ -155,7 +155,7 @@ public:
                     float minZ = mMinZArrays[srcLevel][(srcY) * srcTilesX + (srcX)];
                     float maxZ = mMaxZArrays[srcLevel][(srcY) * srcTilesX + (srcX)];
                     if (srcX + 1 < srcTilesX) {
-                        minZ = std::min(minZ, mMinZArrays[srcLevel][(srcY) * srcTilesX + 
+                        minZ = std::min(minZ, mMinZArrays[srcLevel][(srcY) * srcTilesX +
                                                                     (srcX + 1)]);
                         maxZ = std::max(maxZ, mMaxZArrays[srcLevel][(srcY) * srcTilesX +
                                                                     (srcX + 1)]);
@@ -185,7 +185,7 @@ public:
             lAlignedFree(mMaxZArrays[i]);
         }
         lAlignedFree(mMinZArrays);
-        lAlignedFree(mMaxZArrays); 
+        lAlignedFree(mMaxZArrays);
     }
 
     int Levels() const { return mLevels; }
@@ -219,19 +219,19 @@ private:
 static MinMaxZTreeCilk *gMinMaxZTreeCilk = 0;
 
 void InitDynamicCilk(InputData *input) {
-    gMinMaxZTreeCilk = 
+    gMinMaxZTreeCilk =
         new MinMaxZTreeCilk(MIN_TILE_WIDTH, MIN_TILE_HEIGHT, DYNAMIC_TREE_LEVELS,
-                            input->header.framebufferWidth, 
+                            input->header.framebufferWidth,
                             input->header.framebufferHeight);
 }
 
 
 static void
-ShadeDynamicTileRecurse(InputData *input, int level, int tileX, int tileY, 
-                        int *lightIndices, int numLights, 
+ShadeDynamicTileRecurse(InputData *input, int level, int tileX, int tileY,
+                        int *lightIndices, int numLights,
                         Framebuffer *framebuffer) {
     const MinMaxZTreeCilk *minMaxZTree = gMinMaxZTreeCilk;
-    
+
     // If we few enough lights or this is the base case (last level), shade
     // this full tile directly
     if (level == 0 || numLights < DYNAMIC_MIN_LIGHTS_TO_SUBDIVIDE) {
@@ -241,19 +241,19 @@ ShadeDynamicTileRecurse(InputData *input, int level, int tileX, int tileY,
         int startY = tileY * height;
         int endX = std::min(input->header.framebufferWidth, startX + width);
         int endY = std::min(input->header.framebufferHeight, startY + height);
-        
+
         // Skip entirely offscreen tiles
         if (endX > startX && endY > startY) {
             ispc::ShadeTile(
                 startX, endX, startY, endY,
                 input->header.framebufferWidth, input->header.framebufferHeight,
                 &input->arrays,
-                input->header.cameraProj[0][0], input->header.cameraProj[1][1], 
+                input->header.cameraProj[0][0], input->header.cameraProj[1][1],
                 input->header.cameraProj[2][2], input->header.cameraProj[3][2],
-                lightIndices, numLights, VISUALIZE_LIGHT_COUNT, 
+                lightIndices, numLights, VISUALIZE_LIGHT_COUNT,
                 framebuffer->r, framebuffer->g, framebuffer->b);
         }
-    } 
+    }
     else {
         // Otherwise, subdivide and 4-way recurse using X and Y splitting planes
         // Move down a level in the tree
@@ -276,9 +276,9 @@ ShadeDynamicTileRecurse(InputData *input, int level, int tileX, int tileY,
 
         // NOTE: Order is 00, 10, 01, 11
         // Set defaults up to cull all lights if the tile doesn't exist (offscreen)
-        float minZ[4] = {input->header.cameraFar, input->header.cameraFar, 
+        float minZ[4] = {input->header.cameraFar, input->header.cameraFar,
                          input->header.cameraFar, input->header.cameraFar};
-        float maxZ[4] = {input->header.cameraNear, input->header.cameraNear, 
+        float maxZ[4] = {input->header.cameraNear, input->header.cameraNear,
                          input->header.cameraNear, input->header.cameraNear};
 
         minZ[0] = minMaxZTree->MinZ(level, tileX, tileY);
@@ -298,7 +298,7 @@ ShadeDynamicTileRecurse(InputData *input, int level, int tileX, int tileY,
 
         // Cull lights into subtile lists
 #ifdef ISPC_IS_WINDOWS
-        __declspec(align(ALIGNMENT_BYTES)) 
+        __declspec(align(ALIGNMENT_BYTES))
 #endif
             int subtileLightIndices[4][MAX_LIGHTS]
 #ifndef ISPC_IS_WINDOWS
@@ -307,15 +307,15 @@ ShadeDynamicTileRecurse(InputData *input, int level, int tileX, int tileY,
 ;
         int subtileNumLights[4];
         ispc::SplitTileMinMax(midX, midY, minZ, maxZ,
-            input->header.framebufferWidth, input->header.framebufferHeight, 
+            input->header.framebufferWidth, input->header.framebufferHeight,
             input->header.cameraProj[0][0], input->header.cameraProj[1][1],
-            lightIndices, numLights, input->arrays.lightPositionView_x, 
-            input->arrays.lightPositionView_y, input->arrays.lightPositionView_z, 
+            lightIndices, numLights, input->arrays.lightPositionView_x,
+            input->arrays.lightPositionView_y, input->arrays.lightPositionView_z,
             input->arrays.lightAttenuationEnd,
             subtileLightIndices[0], MAX_LIGHTS, subtileNumLights);
-        
+
         // Recurse into subtiles
-        _Cilk_spawn ShadeDynamicTileRecurse(input, level, tileX    , tileY, 
+        _Cilk_spawn ShadeDynamicTileRecurse(input, level, tileX    , tileY,
                                             subtileLightIndices[0], subtileNumLights[0],
                                             framebuffer);
         _Cilk_spawn ShadeDynamicTileRecurse(input, level, tileX + 1, tileY,
@@ -349,7 +349,7 @@ ShadeDynamicTile(InputData *input, int level, int tileX, int tileY,
 
     // This is a root tile, so first do a full 6-plane cull
 #ifdef ISPC_IS_WINDOWS
-    __declspec(align(ALIGNMENT_BYTES)) 
+    __declspec(align(ALIGNMENT_BYTES))
 #endif
         int lightIndices[MAX_LIGHTS]
 #ifndef ISPC_IS_WINDOWS
@@ -360,12 +360,12 @@ ShadeDynamicTile(InputData *input, int level, int tileX, int tileY,
         startX, endX, startY, endY,    minZ, maxZ,
         input->header.framebufferWidth, input->header.framebufferHeight,
         input->header.cameraProj[0][0], input->header.cameraProj[1][1],
-        MAX_LIGHTS, input->arrays.lightPositionView_x, 
-        input->arrays.lightPositionView_y, input->arrays.lightPositionView_z, 
+        MAX_LIGHTS, input->arrays.lightPositionView_x,
+        input->arrays.lightPositionView_y, input->arrays.lightPositionView_z,
         input->arrays.lightAttenuationEnd, lightIndices);
 
     // Now kick off the recursive process for this tile
-    ShadeDynamicTileRecurse(input, level, tileX, tileY, lightIndices, 
+    ShadeDynamicTileRecurse(input, level, tileX, tileY, lightIndices,
                             numLights, framebuffer);
 }
 
@@ -374,10 +374,10 @@ void
 DispatchDynamicCilk(InputData *input, Framebuffer *framebuffer)
 {
     MinMaxZTreeCilk *minMaxZTree = gMinMaxZTreeCilk;
-        
+
     // Update min/max Z tree
     minMaxZTree->Update(input->arrays.zBuffer, input->header.framebufferWidth,
-        input->header.cameraProj[2][2], input->header.cameraProj[3][2], 
+        input->header.cameraProj[2][2], input->header.cameraProj[3][2],
         input->header.cameraNear, input->header.cameraFar);
 
     // Launch the "root" tiles.  Ideally these should at least fill the

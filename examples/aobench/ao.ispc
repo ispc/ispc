@@ -29,7 +29,7 @@
    PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
    LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
    NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
-   SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.  
+   SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 /*
   Based on Syoyo Fujita's aobench: http://code.google.com/p/aobench
@@ -44,7 +44,7 @@ struct Isect {
     float      t;
     vec        p;
     vec        n;
-    int        hit; 
+    int        hit;
 };
 
 struct Sphere {
@@ -86,7 +86,7 @@ ray_plane_intersect(Isect &isect, Ray &ray, uniform Plane &plane) {
     float d = -dot(plane.p, plane.n);
     float v = dot(ray.dir, plane.n);
 
-    cif (abs(v) < 1.0e-17) 
+    cif (abs(v) < 1.0e-17)
         return;
     else {
         float t = -(dot(ray.org, plane.n) + d) / v;
@@ -185,8 +185,8 @@ ambient_occlusion(Isect &isect, uniform Plane &plane, uniform Sphere spheres[3],
             occIsect.hit = 0;
 
             for (uniform int snum = 0; snum < 3; ++snum)
-                ray_sphere_intersect(occIsect, ray, spheres[snum]); 
-            ray_plane_intersect (occIsect, ray, plane); 
+                ray_sphere_intersect(occIsect, ray, spheres[snum]);
+            ray_plane_intersect (occIsect, ray, plane);
 
             if (occIsect.hit) occlusion += 1.0;
         }
@@ -200,8 +200,8 @@ ambient_occlusion(Isect &isect, uniform Plane &plane, uniform Sphere spheres[3],
 /* Compute the image for the scanlines from [y0,y1), for an overall image
    of width w and height h.
  */
-static void ao_scanlines(uniform int y0, uniform int y1, uniform int w, 
-                         uniform int h,  uniform int nsubsamples, 
+static void ao_scanlines(uniform int y0, uniform int y1, uniform int w,
+                         uniform int h,  uniform int nsubsamples,
                          uniform float image[]) {
     static uniform Plane plane = { { 0.0f, -0.5f, 0.0f }, { 0.f, 1.f, 0.f } };
     static uniform Sphere spheres[3] = {
@@ -213,7 +213,7 @@ static void ao_scanlines(uniform int y0, uniform int y1, uniform int w,
     seed_rng(&rngstate, programIndex + (y0 << (programIndex & 15)));
     float invSamples = 1.f / nsubsamples;
 
-    foreach_tiled(y = y0 ... y1, x = 0 ... w, 
+    foreach_tiled(y = y0 ... y1, x = 0 ... w,
                   u = 0 ... nsubsamples, v = 0 ... nsubsamples) {
         float du = (float)u * invSamples, dv = (float)v * invSamples;
 
@@ -258,19 +258,19 @@ static void ao_scanlines(uniform int y0, uniform int y1, uniform int w,
 }
 
 
-export void ao_ispc(uniform int w, uniform int h, uniform int nsubsamples, 
+export void ao_ispc(uniform int w, uniform int h, uniform int nsubsamples,
                     uniform float image[]) {
     ao_scanlines(0, h, w, h, nsubsamples, image);
 }
 
 
-static void task ao_task(uniform int width, uniform int height, 
+static void task ao_task(uniform int width, uniform int height,
                          uniform int nsubsamples, uniform float image[]) {
     ao_scanlines(taskIndex, taskIndex+1, width, height, nsubsamples, image);
 }
 
 
-export void ao_ispc_tasks(uniform int w, uniform int h, uniform int nsubsamples, 
+export void ao_ispc_tasks(uniform int w, uniform int h, uniform int nsubsamples,
                           uniform float image[]) {
     launch[h] ao_task(w, h, nsubsamples, image);
 }

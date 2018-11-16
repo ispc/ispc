@@ -28,7 +28,7 @@
    PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
    LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
    NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
-   SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.  
+   SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
 #include "instrument.h"
@@ -70,7 +70,7 @@ ISPCInstrument(const char *fn, const char *note, int line, uint64_t mask) {
     // Find or create a CallInfo instance for this callsite.
     CallInfo &ci = callInfo[s.str()];
 
-    // And update its statistics... 
+    // And update its statistics...
     ++ci.count;
     if (mask == 0)
         ++ci.allOff;

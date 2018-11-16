@@ -28,7 +28,7 @@
    PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
    LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
    NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
-   SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.  
+   SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
 #include "deferred.h"
@@ -143,7 +143,7 @@ ComputeZBoundsRow(int tileY, int tileWidth, int tileHeight,
         float minZ, maxZ;
         ComputeZBounds(tileX * tileWidth, tileX * tileWidth + tileWidth,
                        tileY * tileHeight, tileY * tileHeight + tileHeight,
-                       zBuffer, gBufferWidth, cameraProj_33, cameraProj_43, 
+                       zBuffer, gBufferWidth, cameraProj_33, cameraProj_43,
                        cameraNear, cameraFar, &minZ, &maxZ);
         minZArray[tileX] = minZ;
         maxZArray[tileX] = maxZ;
@@ -163,7 +163,7 @@ public:
     {
         mNumTilesX = gBufferWidth / mTileWidth;
         mNumTilesY = gBufferHeight / mTileHeight;
-        
+
         // Allocate arrays
         mMinZArrays = (float **)lAlignedMalloc(sizeof(float *) * mLevels, 16);
         mMaxZArrays = (float **)lAlignedMalloc(sizeof(float *) * mLevels, 16);
@@ -209,7 +209,7 @@ public:
                     float minZ = mMinZArrays[srcLevel][(srcY) * srcTilesX + (srcX)];
                     float maxZ = mMaxZArrays[srcLevel][(srcY) * srcTilesX + (srcX)];
                     if (srcX + 1 < srcTilesX) {
-                        minZ = std::min(minZ, mMinZArrays[srcLevel][(srcY) * srcTilesX + 
+                        minZ = std::min(minZ, mMinZArrays[srcLevel][(srcY) * srcTilesX +
                                                                     (srcX + 1)]);
                         maxZ = std::max(maxZ, mMaxZArrays[srcLevel][(srcY) * srcTilesX +
                                                                     (srcX + 1)]);
@@ -239,7 +239,7 @@ public:
             lAlignedFree(mMaxZArrays[i]);
         }
         lAlignedFree(mMinZArrays);
-        lAlignedFree(mMaxZArrays); 
+        lAlignedFree(mMaxZArrays);
     }
 
     int Levels() const { return mLevels; }
@@ -273,9 +273,9 @@ private:
 static MinMaxZTree *gMinMaxZTree = 0;
 
 void InitDynamicC(InputData *input) {
-    gMinMaxZTree = 
+    gMinMaxZTree =
         new MinMaxZTree(MIN_TILE_WIDTH, MIN_TILE_HEIGHT, DYNAMIC_TREE_LEVELS,
-                        input->header.framebufferWidth, 
+                        input->header.framebufferWidth,
                         input->header.framebufferHeight);
 }
 
@@ -307,7 +307,7 @@ SplitTileMinMax(
 {
     float gBufferScale_x = 0.5f * (float)gBufferWidth;
     float gBufferScale_y = 0.5f * (float)gBufferHeight;
-        
+
     float frustumPlanes_xy[2] = { -(cameraProj_11 * gBufferScale_x),
                                    (cameraProj_22 * gBufferScale_y) };
     float frustumPlanes_z[2] = { tileMidX - gBufferScale_x,
@@ -315,7 +315,7 @@ SplitTileMinMax(
 
     for (int i = 0; i < 2; ++i) {
         // Normalize
-        float norm = 1.f / sqrtf(frustumPlanes_xy[i] * frustumPlanes_xy[i] + 
+        float norm = 1.f / sqrtf(frustumPlanes_xy[i] * frustumPlanes_xy[i] +
                                  frustumPlanes_z[i] * frustumPlanes_z[i]);
         frustumPlanes_xy[i] *= norm;
         frustumPlanes_z[i] *= norm;
@@ -336,23 +336,23 @@ SplitTileMinMax(
         float light_positionView_z = light_positionView_z_array[lightIndex];
         float light_attenuationEnd = light_attenuationEnd_array[lightIndex];
         float light_attenuationEndNeg = -light_attenuationEnd;
-        
+
         // Test lights again against subtile z bounds
         bool inFrustum[4];
         inFrustum[0] = (light_positionView_z - subtileMinZ[0] >= light_attenuationEndNeg) &&
             (subtileMaxZ[0] - light_positionView_z >= light_attenuationEndNeg);
-        inFrustum[1] = (light_positionView_z - subtileMinZ[1] >= light_attenuationEndNeg) && 
+        inFrustum[1] = (light_positionView_z - subtileMinZ[1] >= light_attenuationEndNeg) &&
             (subtileMaxZ[1] - light_positionView_z >= light_attenuationEndNeg);
-        inFrustum[2] = (light_positionView_z - subtileMinZ[2] >= light_attenuationEndNeg) && 
+        inFrustum[2] = (light_positionView_z - subtileMinZ[2] >= light_attenuationEndNeg) &&
             (subtileMaxZ[2] - light_positionView_z >= light_attenuationEndNeg);
-        inFrustum[3] = (light_positionView_z - subtileMinZ[3] >= light_attenuationEndNeg) && 
+        inFrustum[3] = (light_positionView_z - subtileMinZ[3] >= light_attenuationEndNeg) &&
             (subtileMaxZ[3] - light_positionView_z >= light_attenuationEndNeg);
 
-        float dx = light_positionView_z * frustumPlanes_z[0] + 
+        float dx = light_positionView_z * frustumPlanes_z[0] +
             light_positionView_x * frustumPlanes_xy[0];
         float dy = light_positionView_z * frustumPlanes_z[1] +
             light_positionView_y * frustumPlanes_xy[1];
-        
+
         if (fabsf(dx) > light_attenuationEnd) {
             bool positiveX = dx > 0.0f;
             inFrustum[0] = inFrustum[0] &&  positiveX;    // 00 subtile
@@ -419,13 +419,13 @@ half_to_float_fast(uint16_t h) {
     uint32_t hm = h & (int32_t)0x03FFu;  // Pick off mantissa bits
 
     // sign
-    uint32_t xs = ((uint32_t) hs) << 16; 
+    uint32_t xs = ((uint32_t) hs) << 16;
     // Exponent: unbias the halfp, then bias the single
-    int32_t xes = ((int32_t) (he >> 10)) - 15 + 127; 
+    int32_t xes = ((int32_t) (he >> 10)) - 15 + 127;
     // Exponent
     uint32_t xe = (uint32_t) (xes << 23);
     // Mantissa
-    uint32_t xm = ((uint32_t) hm) << 13; 
+    uint32_t xm = ((uint32_t) hm) << 13;
 
     uint32_t bits = (xs | xe | xm);
     float *fp = reinterpret_cast<float *>(&bits);
@@ -466,13 +466,13 @@ ShadeTileC(
     } else {
         float twoOverGBufferWidth = 2.0f / gBufferWidth;
         float twoOverGBufferHeight = 2.0f / gBufferHeight;
-        
+
         for (int32_t y = tileStartY; y < tileEndY; ++y) {
             float positionScreen_y = -(((0.5f + y) * twoOverGBufferHeight) - 1.f);
 
             for (int32_t x = tileStartX; x < tileEndX; ++x) {
                 int32_t gBufferOffset = y * gBufferWidth + x;
-                
+
                 // Reconstruct position and (negative) view vector from G-buffer
                 float surface_positionView_x, surface_positionView_y, surface_positionView_z;
                 float Vneg_x, Vneg_y, Vneg_z;
@@ -481,70 +481,70 @@ ShadeTileC(
 
                 // Compute screen/clip-space position
                 // NOTE: Mind DX11 viewport transform and pixel center!
-                float positionScreen_x = (0.5f + (float)(x)) * 
+                float positionScreen_x = (0.5f + (float)(x)) *
                     twoOverGBufferWidth - 1.0f;
 
                 // Unproject depth buffer Z value into view space
                 surface_positionView_z = cameraProj_43 / (z - cameraProj_33);
-                surface_positionView_x = positionScreen_x * surface_positionView_z / 
+                surface_positionView_x = positionScreen_x * surface_positionView_z /
                     cameraProj_11;
-                surface_positionView_y = positionScreen_y * surface_positionView_z / 
+                surface_positionView_y = positionScreen_y * surface_positionView_z /
                     cameraProj_22;
-                
+
                 // We actually end up with a vector pointing *at* the
                 // surface (i.e. the negative view vector)
-                normalize3(surface_positionView_x, surface_positionView_y, 
+                normalize3(surface_positionView_x, surface_positionView_y,
                            surface_positionView_z, Vneg_x, Vneg_y, Vneg_z);
 
                 // Reconstruct normal from G-buffer
                 float surface_normal_x, surface_normal_y, surface_normal_z;
                 float normal_x = half_to_float_fast(inputData.normalEncoded_x[gBufferOffset]);
                 float normal_y = half_to_float_fast(inputData.normalEncoded_y[gBufferOffset]);
-                    
+
                 float f = (normal_x - normal_x * normal_x) + (normal_y - normal_y * normal_y);
                 float m = sqrtf(4.0f * f - 1.0f);
-                    
+
                 surface_normal_x = m * (4.0f * normal_x - 2.0f);
                 surface_normal_y = m * (4.0f * normal_y - 2.0f);
                 surface_normal_z = 3.0f - 8.0f * f;
 
                 // Load other G-buffer parameters
-                float surface_specularAmount = 
+                float surface_specularAmount =
                     half_to_float_fast(inputData.specularAmount[gBufferOffset]);
-                float surface_specularPower  = 
+                float surface_specularPower  =
                     half_to_float_fast(inputData.specularPower[gBufferOffset]);
                 float surface_albedo_x = Unorm8ToFloat32(inputData.albedo_x[gBufferOffset]);
                 float surface_albedo_y = Unorm8ToFloat32(inputData.albedo_y[gBufferOffset]);
                 float surface_albedo_z = Unorm8ToFloat32(inputData.albedo_z[gBufferOffset]);
-                
+
                 float lit_x = 0.0f;
                 float lit_y = 0.0f;
                 float lit_z = 0.0f;
-                for (int32_t tileLightIndex = 0; tileLightIndex < tileNumLights; 
+                for (int32_t tileLightIndex = 0; tileLightIndex < tileNumLights;
                      ++tileLightIndex) {
                     int32_t lightIndex = tileLightIndices[tileLightIndex];
-                                        
+
                     // Gather light data relevant to initial culling
-                    float light_positionView_x = 
+                    float light_positionView_x =
                         inputData.lightPositionView_x[lightIndex];
-                    float light_positionView_y = 
+                    float light_positionView_y =
                         inputData.lightPositionView_y[lightIndex];
-                    float light_positionView_z = 
+                    float light_positionView_z =
                         inputData.lightPositionView_z[lightIndex];
-                    float light_attenuationEnd = 
+                    float light_attenuationEnd =
                         inputData.lightAttenuationEnd[lightIndex];
-                    
+
                     // Compute light vector
                     float L_x = light_positionView_x - surface_positionView_x;
                     float L_y = light_positionView_y - surface_positionView_y;
                     float L_z = light_positionView_z - surface_positionView_z;
 
                     float distanceToLight2 = dot3(L_x, L_y, L_z, L_x, L_y, L_z);
-                    
+
                     // Clip at end of attenuation
                     float light_attenutaionEnd2 = light_attenuationEnd * light_attenuationEnd;
 
-                    if (distanceToLight2 < light_attenutaionEnd2) {                    
+                    if (distanceToLight2 < light_attenutaionEnd2) {
                         float distanceToLight = sqrtf(distanceToLight2);
 
                         float distanceToLightRcp = 1.f / distanceToLight;
@@ -553,12 +553,12 @@ ShadeTileC(
                         L_z *= distanceToLightRcp;
 
                         // Start computing brdf
-                        float NdotL = dot3(surface_normal_x, surface_normal_y, 
+                        float NdotL = dot3(surface_normal_x, surface_normal_y,
                                            surface_normal_z, L_x, L_y, L_z);
-                    
+
                         // Clip back facing
                         if (NdotL > 0.0f) {
-                            float light_attenuationBegin = 
+                            float light_attenuationBegin =
                                 inputData.lightAttenuationBegin[lightIndex];
 
                             // Light distance attenuation (linstep)
@@ -570,19 +570,19 @@ ShadeTileC(
                             float H_y = (L_y - Vneg_y);
                             float H_z = (L_z - Vneg_z);
                             normalize3(H_x, H_y, H_z, H_x, H_y, H_z);
-                    
-                            float NdotH = dot3(surface_normal_x, surface_normal_y, 
+
+                            float NdotH = dot3(surface_normal_x, surface_normal_y,
                                                surface_normal_z, H_x, H_y, H_z);
                             NdotH = std::max(NdotH, 0.0f);
 
                             float specular = powf(NdotH, surface_specularPower);
-                            float specularNorm = (surface_specularPower + 2.0f) * 
+                            float specularNorm = (surface_specularPower + 2.0f) *
                                 (1.0f / 8.0f);
-                            float specularContrib = surface_specularAmount * 
+                            float specularContrib = surface_specularAmount *
                                 specularNorm * specular;
 
                             float k = attenuation * NdotL * (1.0f + specularContrib);
-                    
+
                             float light_color_x = inputData.lightColor_x[lightIndex];
                             float light_color_y = inputData.lightColor_y[lightIndex];
                             float light_color_z = inputData.lightColor_z[lightIndex];
@@ -603,7 +603,7 @@ ShadeTileC(
                 lit_x = powf(std::min(std::max(lit_x, 0.0f), 1.0f), gamma);
                 lit_y = powf(std::min(std::max(lit_y, 0.0f), 1.0f), gamma);
                 lit_z = powf(std::min(std::max(lit_z, 0.0f), 1.0f), gamma);
-                
+
                 framebuffer_r[gBufferOffset] = Float32ToUnorm8(lit_x);
                 framebuffer_g[gBufferOffset] = Float32ToUnorm8(lit_y);
                 framebuffer_b[gBufferOffset] = Float32ToUnorm8(lit_z);
@@ -614,11 +614,11 @@ ShadeTileC(
 
 
 void
-ShadeDynamicTileRecurse(InputData *input, int level, int tileX, int tileY, 
-                        int *lightIndices, int numLights, 
+ShadeDynamicTileRecurse(InputData *input, int level, int tileX, int tileY,
+                        int *lightIndices, int numLights,
                         Framebuffer *framebuffer) {
     const MinMaxZTree *minMaxZTree = gMinMaxZTree;
-    
+
     // If we few enough lights or this is the base case (last level), shade
     // this full tile directly
     if (level == 0 || numLights < DYNAMIC_MIN_LIGHTS_TO_SUBDIVIDE) {
@@ -628,18 +628,18 @@ ShadeDynamicTileRecurse(InputData *input, int level, int tileX, int tileY,
         int startY = tileY * height;
         int endX = std::min(input->header.framebufferWidth, startX + width);
         int endY = std::min(input->header.framebufferHeight, startY + height);
-        
+
         // Skip entirely offscreen tiles
         if (endX > startX && endY > startY) {
             ShadeTileC(startX, endX, startY, endY,
                        input->header.framebufferWidth, input->header.framebufferHeight,
                        input->arrays,
-                       input->header.cameraProj[0][0], input->header.cameraProj[1][1], 
+                       input->header.cameraProj[0][0], input->header.cameraProj[1][1],
                        input->header.cameraProj[2][2], input->header.cameraProj[3][2],
-                       lightIndices, numLights, VISUALIZE_LIGHT_COUNT, 
+                       lightIndices, numLights, VISUALIZE_LIGHT_COUNT,
                        framebuffer->r, framebuffer->g, framebuffer->b);
         }
-    } 
+    }
     else {
         // Otherwise, subdivide and 4-way recurse using X and Y splitting planes
         // Move down a level in the tree
@@ -662,9 +662,9 @@ ShadeDynamicTileRecurse(InputData *input, int level, int tileX, int tileY,
 
         // NOTE: Order is 00, 10, 01, 11
         // Set defaults up to cull all lights if the tile doesn't exist (offscreen)
-        float minZ[4] = {input->header.cameraFar, input->header.cameraFar, 
+        float minZ[4] = {input->header.cameraFar, input->header.cameraFar,
                          input->header.cameraFar, input->header.cameraFar};
-        float maxZ[4] = {input->header.cameraNear, input->header.cameraNear, 
+        float maxZ[4] = {input->header.cameraNear, input->header.cameraNear,
                          input->header.cameraNear, input->header.cameraNear};
 
         minZ[0] = minMaxZTree->MinZ(level, tileX, tileY);
@@ -684,7 +684,7 @@ ShadeDynamicTileRecurse(InputData *input, int level, int tileX, int tileY,
 
         // Cull lights into subtile lists
 #ifdef ISPC_IS_WINDOWS
-        __declspec(align(ALIGNMENT_BYTES)) 
+        __declspec(align(ALIGNMENT_BYTES))
 #endif
             int subtileLightIndices[4][MAX_LIGHTS]
 #ifndef ISPC_IS_WINDOWS
@@ -693,15 +693,15 @@ ShadeDynamicTileRecurse(InputData *input, int level, int tileX, int tileY,
 ;
         int subtileNumLights[4];
         SplitTileMinMax(midX, midY, minZ, maxZ,
-            input->header.framebufferWidth, input->header.framebufferHeight, 
+            input->header.framebufferWidth, input->header.framebufferHeight,
             input->header.cameraProj[0][0], input->header.cameraProj[1][1],
-            lightIndices, numLights, input->arrays.lightPositionView_x, 
-            input->arrays.lightPositionView_y, input->arrays.lightPositionView_z, 
+            lightIndices, numLights, input->arrays.lightPositionView_x,
+            input->arrays.lightPositionView_y, input->arrays.lightPositionView_z,
             input->arrays.lightAttenuationEnd,
             subtileLightIndices[0], MAX_LIGHTS, subtileNumLights);
-        
+
         // Recurse into subtiles
-        ShadeDynamicTileRecurse(input, level, tileX    , tileY, 
+        ShadeDynamicTileRecurse(input, level, tileX    , tileY,
                                 subtileLightIndices[0], subtileNumLights[0],
                                 framebuffer);
         ShadeDynamicTileRecurse(input, level, tileX + 1, tileY,
@@ -740,7 +740,7 @@ IntersectLightsWithTileMinMax(
 {
     float gBufferScale_x = 0.5f * (float)gBufferWidth;
     float gBufferScale_y = 0.5f * (float)gBufferHeight;
-        
+
     float frustumPlanes_xy[4];
     float frustumPlanes_z[4];
 
@@ -749,14 +749,14 @@ IntersectLightsWithTileMinMax(
                                     (cameraProj_11 * gBufferScale_x),
                                     (cameraProj_22 * gBufferScale_y),
                                     -(cameraProj_22 * gBufferScale_y) };
-    
+
     float frustumPlanes_z_v[4] = {  tileEndX - gBufferScale_x,
                                     -tileStartX + gBufferScale_x,
                                     tileEndY - gBufferScale_y,
                                     -tileStartY + gBufferScale_y };
 
     for (int i = 0; i < 4; ++i) {
-        float norm = 1.f / sqrtf(frustumPlanes_xy_v[i] * frustumPlanes_xy_v[i] + 
+        float norm = 1.f / sqrtf(frustumPlanes_xy_v[i] * frustumPlanes_xy_v[i] +
                                  frustumPlanes_z_v[i] * frustumPlanes_z_v[i]);
         frustumPlanes_xy_v[i] *= norm;
         frustumPlanes_z_v[i] *= norm;
@@ -777,29 +777,29 @@ IntersectLightsWithTileMinMax(
 
         d = maxZ - light_positionView_z;
         inFrustum = inFrustum && (d >= light_attenuationEndNeg);
-        
-        if (!inFrustum) 
+
+        if (!inFrustum)
             continue;
 
         float light_positionView_x = light_positionView_x_array[lightIndex];
         float light_positionView_y = light_positionView_y_array[lightIndex];
 
-        d = light_positionView_z * frustumPlanes_z[0] + 
+        d = light_positionView_z * frustumPlanes_z[0] +
             light_positionView_x * frustumPlanes_xy[0];
         inFrustum = inFrustum && (d >= light_attenuationEndNeg);
 
-        d = light_positionView_z * frustumPlanes_z[1] + 
+        d = light_positionView_z * frustumPlanes_z[1] +
             light_positionView_x * frustumPlanes_xy[1];
         inFrustum = inFrustum && (d >= light_attenuationEndNeg);
 
-        d = light_positionView_z * frustumPlanes_z[2] + 
+        d = light_positionView_z * frustumPlanes_z[2] +
             light_positionView_y * frustumPlanes_xy[2];
         inFrustum = inFrustum && (d >= light_attenuationEndNeg);
 
-        d = light_positionView_z * frustumPlanes_z[3] + 
+        d = light_positionView_z * frustumPlanes_z[3] +
             light_positionView_y * frustumPlanes_xy[3];
         inFrustum = inFrustum && (d >= light_attenuationEndNeg);
-        
+
         // Pack and store intersecting lights
         if (inFrustum)
             tileLightIndices[tileNumLights++] = lightIndex;
@@ -827,7 +827,7 @@ ShadeDynamicTile(InputData *input, int level, int tileX, int tileY,
 
     // This is a root tile, so first do a full 6-plane cull
 #ifdef ISPC_IS_WINDOWS
-    __declspec(align(ALIGNMENT_BYTES)) 
+    __declspec(align(ALIGNMENT_BYTES))
 #endif
         int lightIndices[MAX_LIGHTS]
 #ifndef ISPC_IS_WINDOWS
@@ -838,12 +838,12 @@ ShadeDynamicTile(InputData *input, int level, int tileX, int tileY,
         startX, endX, startY, endY,    minZ, maxZ,
         input->header.framebufferWidth, input->header.framebufferHeight,
         input->header.cameraProj[0][0], input->header.cameraProj[1][1],
-        MAX_LIGHTS, input->arrays.lightPositionView_x, 
-        input->arrays.lightPositionView_y, input->arrays.lightPositionView_z, 
+        MAX_LIGHTS, input->arrays.lightPositionView_x,
+        input->arrays.lightPositionView_y, input->arrays.lightPositionView_z,
         input->arrays.lightAttenuationEnd, lightIndices);
 
     // Now kick off the recursive process for this tile
-    ShadeDynamicTileRecurse(input, level, tileX, tileY, lightIndices, 
+    ShadeDynamicTileRecurse(input, level, tileX, tileY, lightIndices,
                             numLights, framebuffer);
 }
 
@@ -852,10 +852,10 @@ void
 DispatchDynamicC(InputData *input, Framebuffer *framebuffer)
 {
     MinMaxZTree *minMaxZTree = gMinMaxZTree;
-        
+
     // Update min/max Z tree
     minMaxZTree->Update(input->arrays.zBuffer, input->header.framebufferWidth,
-        input->header.cameraProj[2][2], input->header.cameraProj[3][2], 
+        input->header.cameraProj[2][2], input->header.cameraProj[3][2],
         input->header.cameraNear, input->header.cameraFar);
 
     int rootLevel = minMaxZTree->Levels() - 1;

@@ -28,7 +28,7 @@
    PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
    LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
    NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
-   SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.  
+   SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
 
@@ -49,7 +49,7 @@
  * x.  This "solve" ignores the rows, columns of R that are greater than the
  * dimensions of x.
  */
-void upper_triangular_right_solve (const DenseMatrix &R, const Vector &b, Vector &x) 
+void upper_triangular_right_solve (const DenseMatrix &R, const Vector &b, Vector &x)
 {
     // Dimensionality check
     ASSERT(R.rows() >= b.size());
@@ -75,7 +75,7 @@ void upper_triangular_right_solve (const DenseMatrix &R, const Vector &b, Vector
  * factored Hessenburg matrix.  Note that the previous Givens rotations should be
  * applied to this column before creating a new rotation.
  */
-void create_rotation (const DenseMatrix &H, size_t col, Vector &Cn, Vector &Sn) 
+void create_rotation (const DenseMatrix &H, size_t col, Vector &Cn, Vector &Sn)
 {
     double a = H(col,     col);
     double b = H(col + 1, col);
@@ -84,7 +84,7 @@ void create_rotation (const DenseMatrix &H, size_t col, Vector &Cn, Vector &Sn)
     if (b == 0) {
         Cn[col] = copysign(1, a);
         Sn[col] = 0;
-    } 
+    }
     else if (a == 0) {
         Cn[col] = 0;
         Sn[col] = copysign(1, b);
@@ -96,12 +96,12 @@ void create_rotation (const DenseMatrix &H, size_t col, Vector &Cn, Vector &Sn)
     }
 }
 
-/* Applies the 'col'th Givens rotation stored in vectors Sn and Cn to the 'col'th 
+/* Applies the 'col'th Givens rotation stored in vectors Sn and Cn to the 'col'th
  * column of the DenseMatrix M.  (Previous columns don't need the rotation applied b/c
  * presumeably, the first col-1 columns are already upper triangular, and so their
  * entries in the col and col+1 rows are 0.)
  */
-void apply_rotation (DenseMatrix &H, size_t col, Vector &Cn, Vector &Sn) 
+void apply_rotation (DenseMatrix &H, size_t col, Vector &Cn, Vector &Sn)
 {
     double c = Cn[col];
     double s = Sn[col];
@@ -112,7 +112,7 @@ void apply_rotation (DenseMatrix &H, size_t col, Vector &Cn, Vector &Sn)
 
 /* Applies the 'col'th Givens rotation to the vector.
  */
-void apply_rotation (Vector &v, size_t col, Vector &Cn, Vector &Sn) 
+void apply_rotation (Vector &v, size_t col, Vector &Cn, Vector &Sn)
 {
     double a = v[col];
     double b = v[col + 1];
@@ -127,7 +127,7 @@ void apply_rotation (Vector &v, size_t col, Vector &Cn, Vector &Sn)
 /* Applies the first 'col' Givens rotations to the newly-created column
  * of H.  (Leaves other columns alone.)
  */
-void update_column (DenseMatrix &H, size_t col, Vector &Cn, Vector &Sn) 
+void update_column (DenseMatrix &H, size_t col, Vector &Cn, Vector &Sn)
 {
     for (int i = 0; i < col; i++) {
         double c    = Cn[i];
@@ -153,7 +153,7 @@ void update_qr_decomp (DenseMatrix &H, Vector &s, size_t col, Vector &Cn, Vector
     apply_rotation( s, col, Cn, Sn);
 }
 
-void gmres (const Matrix &A, const Vector &b, Vector &x, int num_iters, double max_err)  
+void gmres (const Matrix &A, const Vector &b, Vector &x, int num_iters, double max_err)
 {
     DEBUG_PRINT("gmres starting!\n");
     x.zero();
@@ -184,13 +184,13 @@ void gmres (const Matrix &A, const Vector &b, Vector &x, int num_iters, double m
     Vector temp(A.rows(), false);
     double rel_err;
 
-    while (iter < num_iters) 
+    while (iter < num_iters)
     {
         // w = Aqi
         Qstar.row(iter, temp);
         A.multiply(temp, w);
 
-        // construct ith column of H, i+1th row of Qstar:        
+        // construct ith column of H, i+1th row of Qstar:
         for (int row = 0; row <= iter; row++) {
             Qstar.row(row, temp);
             H(row, iter) = temp.dot(w);

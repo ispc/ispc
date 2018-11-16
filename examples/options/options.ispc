@@ -29,7 +29,7 @@
    PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
    LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
    NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
-   SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.  
+   SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
 #include "options_defs.h"
@@ -57,7 +57,7 @@ CND(float X) {
 
 task void
 bs_task(uniform float Sa[], uniform float Xa[], uniform float Ta[],
-        uniform float ra[], uniform float va[], 
+        uniform float ra[], uniform float va[],
         uniform float result[], uniform int count) {
     uniform int first = taskIndex * (count/taskCount);
     uniform int last = min(count, (int)((taskIndex+1) * (count/taskCount)));
@@ -74,7 +74,7 @@ bs_task(uniform float Sa[], uniform float Xa[], uniform float Ta[],
 
 export void
 black_scholes_ispc_tasks(uniform float Sa[], uniform float Xa[], uniform float Ta[],
-                         uniform float ra[], uniform float va[], 
+                         uniform float ra[], uniform float va[],
                          uniform float result[], uniform int count) {
     uniform int nTasks = max((int)64, (int)count/16384);
     launch[nTasks] bs_task(Sa, Xa, Ta, ra, va, result, count);
@@ -83,7 +83,7 @@ black_scholes_ispc_tasks(uniform float Sa[], uniform float Xa[], uniform float T
 
 export void
 black_scholes_ispc(uniform float Sa[], uniform float Xa[], uniform float Ta[],
-                   uniform float ra[], uniform float va[], 
+                   uniform float ra[], uniform float va[],
                    uniform float result[], uniform int count) {
     foreach (i = 0 ... count) {
         float S = Sa[i], X = Xa[i], T = Ta[i], r = ra[i], v = va[i];
@@ -119,8 +119,8 @@ binomial_put(float S, float X, float T, float r, float v) {
 
 
 export void
-binomial_put_ispc(uniform float Sa[], uniform float Xa[], uniform float Ta[], 
-                  uniform float ra[], uniform float va[], 
+binomial_put_ispc(uniform float Sa[], uniform float Xa[], uniform float Ta[],
+                  uniform float ra[], uniform float va[],
                   uniform float result[], uniform int count) {
     foreach (i = 0 ... count) {
         float S = Sa[i], X = Xa[i], T = Ta[i], r = ra[i], v = va[i];
@@ -130,9 +130,9 @@ binomial_put_ispc(uniform float Sa[], uniform float Xa[], uniform float Ta[],
 
 
 task void
-binomial_task(uniform float Sa[], uniform float Xa[], 
-              uniform float Ta[], uniform float ra[], 
-              uniform float va[], uniform float result[], 
+binomial_task(uniform float Sa[], uniform float Xa[],
+              uniform float Ta[], uniform float ra[],
+              uniform float va[], uniform float result[],
               uniform int count) {
     uniform int first = taskIndex * (count/taskCount);
     uniform int last = min(count, (int)((taskIndex+1) * (count/taskCount)));
@@ -145,9 +145,9 @@ binomial_task(uniform float Sa[], uniform float Xa[],
 
 
 export void
-binomial_put_ispc_tasks(uniform float Sa[], uniform float Xa[], 
-                        uniform float Ta[], uniform float ra[], 
-                        uniform float va[], uniform float result[], 
+binomial_put_ispc_tasks(uniform float Sa[], uniform float Xa[],
+                        uniform float Ta[], uniform float ra[],
+                        uniform float va[], uniform float result[],
                         uniform int count) {
     uniform int nTasks = max((int)64, (int)count/16384);
     launch[nTasks] binomial_task(Sa, Xa, Ta, ra, va, result, count);

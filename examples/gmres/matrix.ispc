@@ -28,7 +28,7 @@
    PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
    LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
    NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
-   SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.  
+   SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
 
@@ -46,17 +46,17 @@ export void zero (uniform double data[],
 /**************************************************************\
 | Vector helpers
 \**************************************************************/
-export void vector_add (uniform double a[], 
-                        const uniform double b[], 
-                        const uniform int size) 
+export void vector_add (uniform double a[],
+                        const uniform double b[],
+                        const uniform int size)
 {
     foreach (i = 0 ... size)
         a[i] += b[i];
 }
 
-export void vector_sub (uniform double a[], 
-                        const uniform double b[], 
-                        const uniform int size) 
+export void vector_sub (uniform double a[],
+                        const uniform double b[],
+                        const uniform int size)
 {
     foreach (i = 0 ... size)
         a[i] -= b[i];
@@ -107,7 +107,7 @@ export void sparse_multiply (const uniform double entries[],
                              const uniform int cols,
                              const uniform int nonzeroes,
                              const uniform double v[],
-                             uniform double r[]) 
+                             uniform double r[])
 {
     foreach (row = 0 ... rows) {
         int row_offset = row_offsets[row];

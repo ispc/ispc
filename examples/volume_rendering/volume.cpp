@@ -28,7 +28,7 @@
    PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
    LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
    NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
-   SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.  
+   SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
 #ifdef _MSC_VER
@@ -45,9 +45,9 @@
 #include "volume_ispc.h"
 using namespace ispc;
 
-extern void volume_serial(float density[], int nVoxels[3], 
+extern void volume_serial(float density[], int nVoxels[3],
                           const float raster2camera[4][4],
-                          const float camera2world[4][4], 
+                          const float camera2world[4][4],
                           int width, int height, float image[]);
 
 /* Write a PPM image file with the image */
@@ -200,7 +200,7 @@ int main(int argc, char *argv[]) {
     for (int i = 0; i < width * height; ++i)
         image[i] = 0.;
 
-    // 
+    //
     // And run the serial implementation 3 times, again reporting the
     // minimum time.
     //
@@ -217,7 +217,7 @@ int main(int argc, char *argv[]) {
     printf("[volume serial]:\t\t[%.3f] million cycles\n", minSerial);
     writePPM(image, width, height, "volume-serial.ppm");
 
-    printf("\t\t\t\t(%.2fx speedup from ISPC, %.2fx speedup from ISPC + tasks)\n", 
+    printf("\t\t\t\t(%.2fx speedup from ISPC, %.2fx speedup from ISPC + tasks)\n",
            minSerial/minISPC, minSerial / minISPCtasks);
 
     return 0;

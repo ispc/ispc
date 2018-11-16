@@ -55,7 +55,7 @@ static void progressBar(const int x, const int n, const int width = 50)
     bstr += i < w ? '=' : ' ';
   bstr += "]";
 
-  // print percentage 
+  // print percentage
   char pstr0[32];
   sprintf(pstr0, " %2d %c ", static_cast<int>(f*100.0),'%');
   const std::string pstr(pstr0);

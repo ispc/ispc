@@ -67,7 +67,7 @@ This directory includes three implementations of the algorithm:
   regular C++ code.
 - If the Cilk extensions are available in your compiler, an ispc
   implementation that uses Cilk will also be built.
-  (See http://software.intel.com/en-us/articles/intel-cilk-plus/).  Like 
+  (See http://software.intel.com/en-us/articles/intel-cilk-plus/).  Like
   the "best practices" serial implementation, this version does dynamic
   tile partitioning for better load balancing and then uses ispc for the
   light culling and shading.

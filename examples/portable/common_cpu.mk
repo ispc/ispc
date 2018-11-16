@@ -5,7 +5,7 @@ TASK_OBJ=objs/omp_tasksys.o objs/ispc_malloc.o
 
 CXX=clang++
 CXX=icc -openmp
-CXXFLAGS+=-Iobjs/ -O2 -I../../ -I../../util 
+CXXFLAGS+=-Iobjs/ -O2 -I../../ -I../../util
 CXXFLAGS+=-DISPC_USE_OMP
 CC=clang
 CC=icc -openmp
