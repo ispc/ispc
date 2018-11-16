@@ -87,12 +87,14 @@ normalize3(float x, float y, float z, float &ox, float &oy, float &oz) {
 
 static inline float
 Unorm8ToFloat32(unsigned int8 u) {
+    #pragma ignore warning(perf)
     return (float)u * (1.0f / 255.0f);
 }
 
 
 static inline unsigned int8
 Float32ToUnorm8(float f) {
+    #pragma ignore warning(perf)
     return (unsigned int8)(f * 255.0f);
 }
 
@@ -608,9 +610,13 @@ SplitTileMinMax(
     foreach (i = 0 ... numLights) {
         int32 lightIndex = lightIndices[i];
 
+        #pragma ignore warning(perf)
         float light_positionView_x = light_positionView_x_array[lightIndex];
+        #pragma ignore warning(perf)
         float light_positionView_y = light_positionView_y_array[lightIndex];
+        #pragma ignore warning(perf)
         float light_positionView_z = light_positionView_z_array[lightIndex];
+        #pragma ignore warning(perf)
         float light_attenuationEnd = light_attenuationEnd_array[lightIndex];
         float light_attenuationEndNeg = -light_attenuationEnd;
 

@@ -254,7 +254,9 @@ static void raytrace_tile(uniform int x0, uniform int x1,
         BVHIntersect(nodes, triangles, ray);
 
         int offset = y * width + x;
+        #pragma ignore warning(perf)
         image[offset] = ray.maxt;
+        #pragma ignore warning(perf)
         id[offset] = ray.hitId;
     }
 }

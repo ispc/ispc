@@ -114,8 +114,10 @@ export void sparse_multiply (const uniform double entries[],
         int next_offset = ((row + 1 == rows) ? nonzeroes : row_offsets[row+1]);
 
         double sum = 0;
-        for (int j = row_offset; j < next_offset; j++)
+        for (int j = row_offset; j < next_offset; j++) {
+            #pragma ignore warning(perf)
             sum += v[columns[j]] * entries[j];
+        }
         r[row] = sum;
     }
 }

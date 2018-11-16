@@ -81,6 +81,7 @@ inline int Floor2Int(float val) {
 
 
 inline float Grad(int x, int y, int z, float dx, float dy, float dz) {
+    #pragma ignore warning(perf)
     int h = NoisePerm[NoisePerm[NoisePerm[x]+y]+z];
     h &= 15;
     float u = h<8 || h==12 || h==13 ? dx : dy;
