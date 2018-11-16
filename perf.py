@@ -2,23 +2,23 @@
 #
 #  Copyright (c) 2013, Intel Corporation
 #  All rights reserved.
-# 
+#
 #  Redistribution and use in source and binary forms, with or without
 #  modification, are permitted provided that the following conditions are
 #  met:
-# 
+#
 #    * Redistributions of source code must retain the above copyright
 #      notice, this list of conditions and the following disclaimer.
-# 
+#
 #    * Redistributions in binary form must reproduce the above copyright
 #      notice, this list of conditions and the following disclaimer in the
 #      documentation and/or other materials provided with the distribution.
-# 
+#
 #    * Neither the name of Intel Corporation nor the names of its
 #      contributors may be used to endorse or promote products derived from
 #      this software without specific prior written permission.
-# 
-# 
+#
+#
 #   THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS
 #   IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
 #   TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A
@@ -39,32 +39,18 @@ def print_file(line):
         output.writelines(line)
         output.close()
 
-def build_test(commands):
-    os.system(commands[4])
-    test = os.system(commands[1])
-    if is_windows:
-        common.remove_if_exists(".\\X64\\Release1")
-        if (test == 0):
-            os.rename(".\\X64\\Release", ".\\X64\\Release1")
-    if options.ref:
-        ref = os.system(commands[3])
-    return (options.ref and ref) or test
-
 def execute_test(commands):
     r = 0
-    common.remove_if_exists(perf_temp+"_test") 
+    common.remove_if_exists(perf_temp+"_test")
     common.remove_if_exists(perf_temp+"_ref")
     for k in range(int(options.number)):
         r = r + os.system(commands[0])
         if options.ref:
-            r = r + os.system(commands[2])
+            r = r + os.system(commands[1])
     return r
 
 #gathers all tests results and made an item test from answer structure
 def run_test(commands, c1, c2, test, test_ref, b_serial):
-    if build_test(commands) != 0:
-        error("Compilation fails of test %s\n" % test[0], 0)
-        return
     if execute_test(commands) != 0:
         error("Execution fails of test %s\n" % test[0], 0)
         return
@@ -199,7 +185,7 @@ def geomean(par):
 def print_answer(answer, target_number):
     filelist = []
     print_debug("--------------------------------------------------------------------------\n", s, perf_log)
-    print_debug("test name:\t    ISPC speedup: ISPC + tasks speedup: | " + 
+    print_debug("test name:\t    ISPC speedup: ISPC + tasks speedup: | " +
         "    ISPC time:    ISPC + tasks time:  serial:\n", s, perf_log)
     if target_number > 1:
         if options.output == "":
@@ -318,7 +304,7 @@ def compare(A, B):
 
 def perf(options1, args):
     global options
-    options = options1  
+    options = options1
     global s
     s = options.silent
 
@@ -397,14 +383,9 @@ def perf(options1, args):
     if options.ref != "":
         options.ref = True
     if os.environ.get("ISPC_HOME") != None:
-        if is_windows == False:
-            if os.path.exists(os.environ["ISPC_HOME"] + os.sep + ispc_test):
-                ispc_test_exists = True
-                ispc_test = os.environ["ISPC_HOME"] + os.sep + ispc_test
-        else:
-            if os.path.exists(os.environ["ISPC_HOME"] + "\\Release\\" + ispc_test):
-                ispc_test_exists = True
-                ispc_test = os.environ["ISPC_HOME"] + "\\Release\\" + ispc_test
+        if os.path.exists(os.environ["ISPC_HOME"] + os.sep + ispc_test):
+            ispc_test_exists = True
+            ispc_test = os.environ["ISPC_HOME"] + os.sep + ispc_test
     for counter in PATH_dir:
         if ispc_test_exists == False:
             if os.path.exists(counter + os.sep + ispc_test):
@@ -414,6 +395,7 @@ def perf(options1, args):
             ref_compiler_exists = True
         if os.path.exists(counter + os.sep + ispc_ref):
             ispc_ref_exists = True
+            ispc_ref = counter + os.sep + ispc_ref
     if not ispc_test_exists:
         error("ISPC compiler not found.\nAdded path to ispc compiler to your PATH variable or ISPC_HOME variable\n", 1)
     if not ref_compiler_exists:
@@ -438,67 +420,105 @@ def perf(options1, args):
             lines.append(f_lines[i])
     length = len(lines)
     # end of preparations
- 
+
     print_debug("Okey go go go!\n\n", s, perf_log)
     # report command line
     if __name__ == "__main__":
         print_debug("Command line: %s\n" % " ".join(map(str, sys.argv)), s, perf_log)
     # report used ispc
     print_debug("Testing ispc: " + ispc_test + "\n", s, perf_log)
- 
-    #print compilers versions   
-    common.print_version(ispc_test, ispc_ref, ref_compiler, False, perf_log, is_windows) 
+
+    #print compilers versions
+    common.print_version(ispc_test, ispc_ref, ref_compiler, False, perf_log, is_windows)
 
     # begin
     i = 0
     answer = []
     answer_ref = []
-
     # loop for all tests
+    perf_targets = [""]
+    target_number = 1
+    target_str_temp = ""
+    if options.perf_target != "":
+        perf_targets = options.perf_target.split(',')
+        target_str_temp = " -DISPC_IA_TARGETS="
+        target_number = len(perf_targets)
+    # Generate build targets for tests
+    if options.generator:
+        generator = options.generator
+    else:
+        if is_windows == True:
+            generator = "Visual Studio 14 Win64"
+        else:
+            generator = "Unix Makefiles"
+    examples_folder_ref = "examples_ref"
+    examples_folder_test = "examples_test"
+    install_prefix = "install"
+    cmake_command = "cmake -G " + "\"" + generator + "\"" + " -DCMAKE_INSTALL_PREFIX=" + install_prefix + " " + pwd + "examples"
+    if is_windows == False:
+        cmake_command += " -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_C_COMPILER=clang"
+    for target_i in range(target_number):
+        cur_target = perf_targets[target_i]
+        target_str = target_str_temp + cur_target
+        if options.ref:
+            build_folder = examples_folder_ref + os.sep + cur_target
+            if os.path.exists(build_folder):
+                shutil.rmtree(build_folder)
+            os.makedirs(build_folder)
+            cmake_command_ref = "cd " + build_folder + " && " + cmake_command + \
+                                " -DISPC_EXECUTABLE=" + ispc_ref + target_str + " >> " + build_log
+            os.system(cmake_command_ref)
+            # Build and install tests for reference compiler
+            if is_windows == False:
+                bu_command_ref = "cd " + build_folder + " && make install >> "+ build_log+" 2>> "+ build_log
+            else:
+                bu_command_ref = "msbuild " + build_folder + os.sep + "INSTALL.vcxproj /V:m /p:Configuration=Release /t:rebuild >> " + build_log
+            os.system(bu_command_ref)
+        build_folder = examples_folder_test + os.sep + cur_target
+        if os.path.exists(build_folder):
+            shutil.rmtree(build_folder)
+        os.makedirs(build_folder)
+        cmake_command_test = "cd " + build_folder + " && " + cmake_command + \
+                             " -DISPC_EXECUTABLE=" + ispc_test + target_str + " >> " + build_log
+        os.system(cmake_command_test)
+        # Build and install tests for test compiler
+        if is_windows == False:
+            bu_command_test = "cd " + build_folder + " && make install >> "+ build_log+" 2>> "+ build_log
+        else:
+            bu_command_test = "msbuild " + build_folder + os.sep + "INSTALL.vcxproj /V:m /p:Configuration=Release /t:rebuild >> " + build_log
+        os.system(bu_command_test)
+    # Run tests
     while i < length-2:
         # we read name of test
         print_debug("%s" % lines[i], s, perf_log)
         # read location of test
         folder = lines[i+1]
         folder = folder[:-1]
-        folder = os.path.normpath(options.path + os.sep + "examples" + os.sep + folder)
-        # check that test exists
-        if os.path.exists(folder) == False:
-            error("Can't find test %s. Your path is: \"%s\".\nChange current location to ISPC_HOME or set path to ISPC_HOME in --path.\n" %
-                 (lines[i][:-1], options.path), 1)
-        os.chdir(folder)
+        example = folder
         # read parameters of test
         command = lines[i+2]
         command = command[:-1]
-        # handle conditional target argument
-        target_str_temp = ""
-	target_out_temp = ""
-        perf_targets = [""]
-        target_number = 1
-        if options.perf_target != "":
-            perf_targets = options.perf_target.split(',')
-            target_str_temp = " ISPC_IA_TARGETS="
-	    target_out_temp = " /p:Target_str="
-            target_number = len(perf_targets)
         temp = 0
+        # execute test for each target
         for target_i in range(target_number):
             test = [lines[i][:-1],[],[],[],[],[]]
             test_ref = [lines[i][:-1],[],[],[],[],[]]
-            target_str = target_str_temp + perf_targets[target_i]
-	    Target_out = target_out_temp + perf_targets[target_i]
+            cur_target = perf_targets[target_i]
+            folder = os.path.normpath(options.path + os.sep + examples_folder_test + os.sep + cur_target + \
+                                      os.sep + install_prefix + os.sep + "examples" + os.sep + example)
+            folder_ref = os.path.normpath(options.path + os.sep + examples_folder_ref + os.sep + cur_target + \
+                                          os.sep + install_prefix + os.sep + "examples" + os.sep + example)
+            # check that test exists
+            if os.path.exists(folder) == False:
+                error("Can't find test %s. Your path is: \"%s\".\nChange current location to ISPC_HOME or set path to ISPC_HOME in --path.\n" %
+                 (lines[i][:-1], options.path), 1)
             if is_windows == False:
-                ex_command_ref = "./ref " + command + " >> " + perf_temp + "_ref"
-                ex_command = "./test " + command + " >> " + perf_temp + "_test"
-                bu_command_ref = "make CXX="+ref_compiler+" CC="+refc_compiler+ " EXAMPLE=ref ISPC="+ispc_ref+target_str+" >> "+build_log+" 2>> "+build_log
-                bu_command = "make CXX="+ref_compiler+" CC="+refc_compiler+ " EXAMPLE=test ISPC="+ispc_test+target_str+" >> "+build_log+" 2>> "+build_log
-                re_command = "make clean >> "+build_log
+                ex_command_ref = "cd "+ folder_ref + " && ./" + example + " " + command + " >> " + perf_temp + "_ref"
+                ex_command = "cd "+ folder + " && ./" + example + " " + command + " >> " + perf_temp + "_test"
             else:
-                ex_command_ref = "x64\\Release\\ref.exe " + command + " >> " + perf_temp + "_ref"
-                ex_command = "x64\\Release1\\test.exe " + command + " >> " + perf_temp + "_test"
-		bu_command_ref = "msbuild /V:m /p:Platform=x64 /p:Configuration=Release /p:TargetDir=.\ /p:TargetName=ref /p:ISPC_compiler=ispc_ref " + Target_out + " /t:rebuild >> " + build_log
-                bu_command = "msbuild /V:m /p:Platform=x64 /p:Configuration=Release /p:TargetDir=.\ /p:TargetName=test /p:ISPC_compiler=ispc " + Target_out + " /t:rebuild >> " + build_log
-                re_command = "msbuild /t:clean >> " + build_log
-            commands = [ex_command, bu_command, ex_command_ref, bu_command_ref, re_command]
+                ex_command_ref = "cd "+ folder_ref + " && " + example + ".exe " + command + " >> " + perf_temp + "_ref"
+                ex_command = "cd "+ folder + " && " + example + ".exe " + command + " >> " + perf_temp + "_test"
+            commands = [ex_command, ex_command_ref]
             # parsing config parameters
             next_line = lines[i+3]
             if next_line[0] == "!": # we should take only one part of test output
@@ -520,7 +540,6 @@ def perf(options1, args):
                 answer_ref.append(test_ref)
         i = i + temp
         # preparing next loop iteration
-        os.chdir(pwd1)
         i+=4
 
     # delete temp file
@@ -538,7 +557,7 @@ def perf(options1, args):
         # print perf report
         compare(A,B)
 
- 
+
 
 ###Main###
 from optparse import OptionParser
@@ -549,10 +568,12 @@ import time
 import glob
 import string
 import platform
+import shutil
 # our functions
 import common
 print_debug = common.print_debug
 error = common.error
+
 
 if __name__ == "__main__":
     # parsing options
@@ -575,5 +596,7 @@ if __name__ == "__main__":
         help='file to save perf output', default="")
     parser.add_option('-t', '--target', dest='perf_target',
         help='set ispc target for building benchmarks (both test and ref)', default="")
+    parser.add_option('-g', '--generator', dest='generator',
+        help='cmake generator')
     (options, args) = parser.parse_args()
     perf(options, args)
