@@ -237,7 +237,7 @@ raymarch(uniform float density[], uniform int nVoxels[3], Ray ray) {
         // terminate once attenuation is high
         float atten = exp(-tau);
         if (atten < .005)
-            cbreak;
+            break;
 
         // direct lighting
         float Li = lightIntensity / distanceSquared(lightPos, pos) *
