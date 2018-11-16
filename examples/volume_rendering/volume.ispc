@@ -120,6 +120,7 @@ static inline float D(int x, int y, int z, uniform int nVoxels[3],
     y = clamp(y, 0, nVoxels[1]-1);
     z = clamp(z, 0, nVoxels[2]-1);
 
+    #pragma ignore warning(perf)
     return density[z*nVoxels[0]*nVoxels[1] + y*nVoxels[0] + x];
 }
 
@@ -291,6 +292,7 @@ volume_tile(uniform int x0, uniform int y0, uniform int x1,
                 // And raymarch through the volume to compute the pixel's
                 // value
                 int offset = yo * width + xo;
+                #pragma ignore warning(perf)
                 image[offset] = raymarch(density, nVoxels, ray);
             }
         }

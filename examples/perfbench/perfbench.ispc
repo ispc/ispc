@@ -35,8 +35,11 @@ export void xyzSumAOS(uniform float array[], uniform int count,
                       uniform float zeros[], uniform float result[]) {
     float xsum = 0, ysum = 0, zsum = 0;
     foreach (i = 0 ... count/3) {
+        #pragma ignore warning(perf)
         float x = array[3*i];
+        #pragma ignore warning(perf)
         float y = array[3*i+1];
+        #pragma ignore warning(perf)
         float z = array[3*i+2];
 
         xsum += x;
@@ -69,8 +72,11 @@ export void xyzSumAOSNoCoalesce(uniform float array[], uniform int count,
     int zeros = zerosArray[programIndex];
     float xsum = 0, ysum = 0, zsum = 0;
     foreach (i = 0 ... count/3) {
+        #pragma ignore warning(perf)
         float x = array[3*i+zeros];
+        #pragma ignore warning(perf)
         float y = array[3*i+1+zeros];
+        #pragma ignore warning(perf)
         float z = array[3*i+2+zeros];
 
         xsum += x;
@@ -154,8 +160,10 @@ export void gathers(uniform float array[], uniform int count,
                     uniform float zeros[], uniform float result[]) {
     float sum = 0;
     int zero = zeros[programIndex];
-    foreach (i = 0 ... count)
+    foreach (i = 0 ... count) {
+        #pragma ignore warning(perf)
         sum += array[i + zero];
+    }
     result[0] = reduce_add(sum);
 }
 
@@ -163,8 +171,10 @@ export void gathers(uniform float array[], uniform int count,
 export void loads(uniform float array[], uniform int count,
                   uniform float zeros[], uniform float result[]) {
     float sum = 0;
-    foreach (i = 0 ... count)
+    foreach (i = 0 ... count) {
+        #pragma ignore warning(perf)
         sum += array[i];
+    }
     result[0] = reduce_add(sum);
 }
 
@@ -172,8 +182,10 @@ export void loads(uniform float array[], uniform int count,
 export void scatters(uniform float array[], uniform int count,
                      uniform float zeros[], uniform float result[]) {
     int zero = zeros[programIndex];
-    foreach (i = 0 ... count)
+    foreach (i = 0 ... count) {
+        #pragma ignore warning(perf)
         array[i + zero] = zero;
+    }
 }
 
 
@@ -188,14 +200,20 @@ export void normalizeAOSNoCoalesce(uniform float array[], uniform int count,
                                    uniform float zeroArray[]) {
     float zeros = zeroArray[programIndex];
     foreach (i = 0 ... count/3) {
+        #pragma ignore warning(perf)
         float x = array[3*i+zeros];
+        #pragma ignore warning(perf)
         float y = array[3*i+1+zeros];
+        #pragma ignore warning(perf)
         float z = array[3*i+2+zeros];
 
         float l2 = x*x + y*y + z*z;
 
+        #pragma ignore warning(perf)
         array[3*i] /= l2;
+        #pragma ignore warning(perf)
         array[3*i+1] /= l2;
+        #pragma ignore warning(perf)
         array[3*i+2] /= l2;
     }
 }
@@ -203,14 +221,20 @@ export void normalizeAOSNoCoalesce(uniform float array[], uniform int count,
 export void normalizeSOA(uniform float array[], uniform int count,
                          uniform float zeros[]) {
     foreach (i = 0 ... count/3) {
+        #pragma ignore warning(perf)
         float x = array[3*i];
+        #pragma ignore warning(perf)
         float y = array[3*i+1];
+        #pragma ignore warning(perf)
         float z = array[3*i+2];
 
         float l2 = x*x + y*y + z*z;
 
+        #pragma ignore warning(perf)
         array[3*i] /= l2;
+        #pragma ignore warning(perf)
         array[3*i+1] /= l2;
+        #pragma ignore warning(perf)
         array[3*i+2] /= l2;
     }
 }
