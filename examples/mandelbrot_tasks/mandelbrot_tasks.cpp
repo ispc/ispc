@@ -60,7 +60,7 @@ writePPM(int *buf, int width, int height, const char *fn) {
     for (int i = 0; i < width*height; ++i) {
         // Map the iteration count to colors by just alternating between
         // two greys.
-        char c = (buf[i] & 0x1) ? 240 : 20;
+        char c = (buf[i] & 0x1) ? (char)240 : 20;
         for (int j = 0; j < 3; ++j)
             fputc(c, fp);
     }

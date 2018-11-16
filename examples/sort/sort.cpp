@@ -135,7 +135,7 @@ int main (int argc, char *argv[])
 
   printf("\t\t\t\t(%.2fx speedup from ISPC, %.2fx speedup from ISPC + tasks)\n", tSerial/tISPC1, tSerial/tISPC2);
 
-  delete code;
-  delete order;
+  delete[] code;
+  delete[] order;
   return 0;
 }
