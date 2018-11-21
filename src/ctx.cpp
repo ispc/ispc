@@ -437,7 +437,7 @@ FunctionEmitContext::FunctionEmitContext(Function *func, Symbol *funSym,
                                          firstLine,          flags,
                                          isOptimized);
         llvmFunction->setSubprogram(diSubprogram);
-#else /* LLVM 4.0+ */
+#elif ISPC_LLVM_VERSION >= ISPC_LLVM_4_0 && ISPC_LLVM_VERSION <= ISPC_LLVM_7_0 /* LLVM 4.0 to 7.0 */
         diSubprogram =
             m->diBuilder->createFunction(diFile /* scope */, funSym->name,
                                          mangledName,        diFile,
@@ -445,6 +445,21 @@ FunctionEmitContext::FunctionEmitContext(Function *func, Symbol *funSym,
                                          isStatic,           true, /* is defn */
                                          firstLine,          flags,
                                          isOptimized);
+        llvmFunction->setSubprogram(diSubprogram);
+#else /* LLVM 8.0+ */
+        /* isDefinition is always set to 'true' */
+        llvm::DISubprogram::DISPFlags SPFlags = llvm::DISubprogram::SPFlagDefinition;
+        if(isOptimized)
+            SPFlags |= llvm::DISubprogram::SPFlagOptimized;
+        if(isStatic)
+            SPFlags |= llvm::DISubprogram::SPFlagLocalToUnit;
+
+        diSubprogram =
+            m->diBuilder->createFunction(diFile /* scope */, funSym->name,
+                                         mangledName,        diFile,
+                                         firstLine,          diSubprogramType_n,
+                                         firstLine,          flags,
+                                         SPFlags);
         llvmFunction->setSubprogram(diSubprogram);
 #endif
 
