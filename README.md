@@ -5,8 +5,9 @@ Intel(r) SPMD Program Compiler
 ==============================
 
 ``ispc`` is a compiler for a variant of the C programming language, with
-extensions for `single program, multiple data
-<http://en.wikipedia.org/wiki/SPMD>`_ programming.  Under the SPMD model,
+extensions for
+[single program, multiple data](http://en.wikipedia.org/wiki/SPMD)
+programming.  Under the SPMD model,
 the programmer writes a program that generally appears to be a regular
 serial program, though the execution model is actually that a number of
 *program instances* execute in parallel on the hardware.
@@ -45,9 +46,9 @@ There are a few key principles in the design of ``ispc``:
     copying or reformatting.
 
 ``ispc`` is an open source compiler with the BSD license.  It uses the
-remarkable `LLVM Compiler Infrastructure <http://llvm.org>`_ for back-end
-code generation and optimization and is `hosted on
-github <http://github.com/ispc/ispc/>`_. It supports Windows, Mac, and
+remarkable [LLVM Compiler Infrastructure](http://llvm.org) for back-end
+code generation and optimization and is [hosted on
+github](http://github.com/ispc/ispc). It supports Windows, Mac, and
 Linux, with both x86 and x86-64 targets.  It currently supports the SSE2,
 SSE4, AVX, AVX2, and AVX512 instruction sets.
 
@@ -84,7 +85,7 @@ Additional Resources
 --------------------
 
 Prebuilt ``ispc`` binaries for Windows, OS X and Linux can be downloaded
-from the `ispc downloads page <http://ispc.github.com/downloads.html>`_.
+from the [ispc downloads page](http://ispc.github.com/downloads.html).
 See also additional
-`documentation <http://ispc.github.com/documentation.html>`_ and additional
-`performance information <http://ispc.github.com/perf.html>`_.
+[documentation](http://ispc.github.com/documentation.html) and additional
+[performance information](http://ispc.github.com/perf.html).
