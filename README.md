@@ -1,4 +1,5 @@
-[![Build Status](https://travis-ci.org/ispc/ispc.svg?branch=travis)](https://travis-ci.org/ispc/ispc)
+[![TravisCI build status (Linux)](https://travis-ci.org/ispc/ispc.svg?branch=travis)](https://travis-ci.org/ispc/ispc)
+[![Appveyor build status (Windows)](https://ci.appveyor.com/api/projects/status/xfllw9vkp3lj4l0v/branch/master?svg=true)](https://ci.appveyor.com/project/ispc/ispc/branch/master)
 
 Intel(r) SPMD Program Compiler
 ==============================
