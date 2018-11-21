@@ -449,9 +449,9 @@ FunctionEmitContext::FunctionEmitContext(Function *func, Symbol *funSym,
 #else /* LLVM 8.0+ */
         /* isDefinition is always set to 'true' */
         llvm::DISubprogram::DISPFlags SPFlags = llvm::DISubprogram::SPFlagDefinition;
-        if(isOptimized)
+        if (isOptimized)
             SPFlags |= llvm::DISubprogram::SPFlagOptimized;
-        if(isStatic)
+        if (isStatic)
             SPFlags |= llvm::DISubprogram::SPFlagLocalToUnit;
 
         diSubprogram =

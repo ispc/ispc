@@ -223,11 +223,10 @@ typedef enum {
     // 'Generic' CPU without any hardware SIMD capabilities.
     CPU_Generic = 1,
 
-    // Pentium4. Supports SSE2. This is the default clang target.
-    // Even though Pentium4 hardware supports SSE3 as well, the clang
-    // Pentium4 target has only FeatureSSE2 enabled. This should be compatible
-    // with all other modern x86 hardware.
-    CPU_Pentium4,
+    // A generic 64-bit specific x86 processor model which tries to be good
+    // for modern chips without enabling instruction set encodings past the
+    // basic SSE2 and 64-bit ones
+    CPU_x86_64,
 
     // Early Atom CPU. Supports SSSE3.
     CPU_Bonnell,
@@ -327,7 +326,7 @@ public:
 
         names[CPU_Generic].push_back("generic");
 
-        names[CPU_Pentium4].push_back("pentium4");
+        names[CPU_x86_64].push_back("x86-64");
 
         names[CPU_Bonnell].push_back("atom");
         names[CPU_Bonnell].push_back("bonnell");
@@ -379,20 +378,20 @@ public:
 #if ISPC_LLVM_VERSION <= ISPC_LLVM_3_3 // LLVM 3.2 or 3.3
         #define CPU_Silvermont CPU_Nehalem
 #else /* LLVM 3.4+ */
-        compat[CPU_Silvermont]  = Set(CPU_Generic, CPU_Pentium4, CPU_Bonnell, CPU_Penryn,
+        compat[CPU_Silvermont]  = Set(CPU_Generic, CPU_x86_64, CPU_Bonnell, CPU_Penryn,
                                       CPU_Core2, CPU_Nehalem, CPU_Silvermont,
                                       CPU_None);
 #endif
 
 #if ISPC_LLVM_VERSION >= ISPC_LLVM_3_7 // LLVM 3.7+
-        compat[CPU_KNL]         = Set(CPU_KNL, CPU_Generic, CPU_Pentium4, CPU_Bonnell, CPU_Penryn,
+        compat[CPU_KNL]         = Set(CPU_KNL, CPU_Generic, CPU_x86_64, CPU_Bonnell, CPU_Penryn,
                                       CPU_Core2, CPU_Nehalem, CPU_Silvermont,
                                       CPU_SandyBridge, CPU_IvyBridge,
                                       CPU_Haswell, CPU_Broadwell, CPU_None);
 #endif
 
 #if ISPC_LLVM_VERSION >= ISPC_LLVM_3_8 // LLVM 3.8+
-        compat[CPU_SKX]         = Set(CPU_SKX, CPU_Pentium4, CPU_Bonnell, CPU_Penryn,
+        compat[CPU_SKX]         = Set(CPU_SKX, CPU_x86_64, CPU_Bonnell, CPU_Penryn,
                                       CPU_Core2, CPU_Nehalem, CPU_Silvermont,
                                       CPU_SandyBridge, CPU_IvyBridge,
                                       CPU_Haswell, CPU_Broadwell, CPU_None);
@@ -401,35 +400,35 @@ public:
 #if ISPC_LLVM_VERSION <= ISPC_LLVM_3_5 // LLVM 3.2, 3.3, 3.4 or 3.5
         #define CPU_Broadwell CPU_Haswell
 #else /* LLVM 3.6+ */
-        compat[CPU_Broadwell]   = Set(CPU_Generic, CPU_Pentium4, CPU_Bonnell, CPU_Penryn,
+        compat[CPU_Broadwell]   = Set(CPU_Generic, CPU_x86_64, CPU_Bonnell, CPU_Penryn,
                                       CPU_Core2, CPU_Nehalem, CPU_Silvermont,
                                       CPU_SandyBridge, CPU_IvyBridge,
                                       CPU_Haswell, CPU_Broadwell, CPU_None);
 #endif
-        compat[CPU_Haswell]     = Set(CPU_Generic, CPU_Pentium4, CPU_Bonnell, CPU_Penryn,
+        compat[CPU_Haswell]     = Set(CPU_Generic, CPU_x86_64, CPU_Bonnell, CPU_Penryn,
                                       CPU_Core2, CPU_Nehalem, CPU_Silvermont,
                                       CPU_SandyBridge, CPU_IvyBridge,
                                       CPU_Haswell, CPU_Broadwell, CPU_None);
-        compat[CPU_IvyBridge]   = Set(CPU_Generic, CPU_Pentium4, CPU_Bonnell, CPU_Penryn,
+        compat[CPU_IvyBridge]   = Set(CPU_Generic, CPU_x86_64, CPU_Bonnell, CPU_Penryn,
                                       CPU_Core2, CPU_Nehalem, CPU_Silvermont,
                                       CPU_SandyBridge, CPU_IvyBridge,
                                       CPU_None);
-        compat[CPU_SandyBridge] = Set(CPU_Generic, CPU_Pentium4, CPU_Bonnell, CPU_Penryn,
+        compat[CPU_SandyBridge] = Set(CPU_Generic, CPU_x86_64, CPU_Bonnell, CPU_Penryn,
                                       CPU_Core2, CPU_Nehalem, CPU_Silvermont,
                                       CPU_SandyBridge, CPU_None);
-        compat[CPU_Nehalem]     = Set(CPU_Generic, CPU_Pentium4, CPU_Bonnell, CPU_Penryn,
+        compat[CPU_Nehalem]     = Set(CPU_Generic, CPU_x86_64, CPU_Bonnell, CPU_Penryn,
                                       CPU_Core2, CPU_Nehalem, CPU_Silvermont,
                                       CPU_None);
-        compat[CPU_Penryn]      = Set(CPU_Generic, CPU_Pentium4, CPU_Bonnell, CPU_Penryn,
+        compat[CPU_Penryn]      = Set(CPU_Generic, CPU_x86_64, CPU_Bonnell, CPU_Penryn,
                                       CPU_Core2, CPU_Nehalem, CPU_Silvermont,
                                       CPU_None);
-        compat[CPU_Core2]       = Set(CPU_Generic, CPU_Pentium4, CPU_Bonnell, CPU_Core2,
+        compat[CPU_Core2]       = Set(CPU_Generic, CPU_x86_64, CPU_Bonnell, CPU_Core2,
                                       CPU_None);
-        compat[CPU_Bonnell]     = Set(CPU_Generic, CPU_Pentium4, CPU_Bonnell, CPU_Core2,
+        compat[CPU_Bonnell]     = Set(CPU_Generic, CPU_x86_64, CPU_Bonnell, CPU_Core2,
                                       CPU_None);
         compat[CPU_Generic]     = Set(CPU_Generic, CPU_None);
 
-        compat[CPU_Pentium4]     = Set(CPU_Generic, CPU_Pentium4, CPU_None);
+        compat[CPU_x86_64]     = Set(CPU_Generic, CPU_x86_64, CPU_None);
 
 #ifdef ISPC_ARM_ENABLED
         compat[CPU_CortexA15]   = Set(CPU_Generic, CPU_CortexA9, CPU_CortexA15,
@@ -666,7 +665,7 @@ Target::Target(const char *arch, const char *cpu, const char *isa, bool pic, boo
         this->m_vectorWidth = 4;
         this->m_maskingIsFree = false;
         this->m_maskBitCount = 32;
-        CPUfromISA = CPU_Pentium4;
+        CPUfromISA = CPU_x86_64;
     }
     else if (!strcasecmp(isa, "sse2-x2") ||
              !strcasecmp(isa, "sse2-i32x8")) {
