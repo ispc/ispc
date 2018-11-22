@@ -1,6 +1,6 @@
 #!/usr/bin/python
 #
-#  Copyright (c) 2013, Intel Corporation
+#  Copyright (c) 2013-2018, Intel Corporation
 #  All rights reserved.
 #
 #  Redistribution and use in source and binary forms, with or without
@@ -393,9 +393,10 @@ def perf(options1, args):
                 ispc_test = counter + os.sep + ispc_test
         if os.path.exists(counter + os.sep + ref_compiler):
             ref_compiler_exists = True
-        if os.path.exists(counter + os.sep + ispc_ref):
-            ispc_ref_exists = True
-            ispc_ref = counter + os.sep + ispc_ref
+        if ispc_ref != "":
+            if os.path.exists(counter + os.sep + ispc_ref):
+                ispc_ref_exists = True
+                ispc_ref = counter + os.sep + ispc_ref
     if not ispc_test_exists:
         error("ISPC compiler not found.\nAdded path to ispc compiler to your PATH variable or ISPC_HOME variable\n", 1)
     if not ref_compiler_exists:

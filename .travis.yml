@@ -99,9 +99,11 @@ script:
     - mkdir build_$LLVM_VERSION && cd build_$LLVM_VERSION
     - cmake -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_INSTALL_PREFIX=$TRAVIS_BUILD_DIR ../
       # Build ispc and examples
-    - make all -j4 && make install
+    - make ispc -j4
       # We need to have ispc binary in ISPC_HOME to run the tests
-    - cp $ISPC_HOME/bin/ispc $ISPC_HOME && cd $ISPC_HOME
+    - cp $ISPC_HOME/build_$LLVM_VERSION/ispc $ISPC_HOME && cd $ISPC_HOME
     - ./check_env.py
-      # This runs sse4-i32x4 target, we need to enable more advanced targets.
-    - ./run_tests.py
+      # Run examples
+    - ./perf.py -n 1
+      # Run tests for latest LLVM version
+    - if [ "$LLVM_VERSION" == "7.0" ]; then ./run_tests.py; fi
