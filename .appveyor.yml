@@ -80,14 +80,12 @@ before_build:
     cmake .. -G %generator% -DCMAKE_INSTALL_PREFIX=%ISPC_HOME%\Release
 
 build:
-  project: c:\\projects\\ispc\\build\\ispc.sln
+  project: c:\\projects\\ispc\\build\\ispc.vcxproj
   verbosity: minimal
-
-after_build:
-  - msbuild INSTALL.vcxproj
 
 test_script:
   - call "C:\Program Files (x86)\Microsoft Visual Studio\2017\Community\VC\Auxiliary\Build\vcvars32.bat"
-  - set PATH=%ISPC_HOME%\Release\bin;%PATH%
+  - set PATH=%ISPC_HOME%\build\Release;%PATH%
   - cd %ISPC_HOME%
-  - python run_tests.py -a x86
+  - python perf.py -n 1 -g "Visual Studio 15 Win64"
+  - if "%LLVM_VERSION%"=="7.0" ( python run_tests.py -a x86 )
