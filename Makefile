@@ -39,6 +39,13 @@ define newline
 
 endef
 
+define DEPRECATION_MESSAGE
+ ============================== !!! WARNING !!! =============================== \n
+Makefile is DEPRECATED and will be removed in a future. \n
+Please generate build targets using cmake. \n
+==============================================================================
+endef
+
 define WARNING_BODY
  ============================== !!! WARNING !!! =============================== \n
 Location of LLVM files in your PATH is different than path in LLVM_HOME \n
@@ -254,6 +261,9 @@ print_llvm_src: llvm_check
 	@echo Using LLVM `llvm-config --version` from `llvm-config --libdir`
 	@echo Using compiler to build: `$(CXX) --version | head -1`
 
+print_deprecation_msg:
+	@echo -e '$(subst $(newline), ,$(DEPRECATION_MESSAGE))'
+
 clean:
 	/bin/rm -rf objs ispc depend
 
@@ -261,7 +271,7 @@ doxygen:
 	/bin/rm -rf docs/doxygen
 	doxygen doxygen.cfg
 
-ispc: print_llvm_src dirs $(OBJS)
+ispc: print_deprecation_msg print_llvm_src dirs $(OBJS)
 	@echo Creating ispc executable
 	@$(CXX) $(OPT) $(LDFLAGS) -o $@ $(OBJS) $(ISPC_LIBS)
 
