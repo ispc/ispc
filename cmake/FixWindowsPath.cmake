@@ -40,17 +40,18 @@ if (WIN32)
             message(WARNING "Failed to find cygpath" )
         endif()
     # To avoid cygwin warnings about dos-style path during VS build
-    function (win_path_to_cygwin inPath outPath)
+    function (win_path_to_cygwin inPath execPath outPath)
         set(cygwinPath ${inPath})
-        if (${CMAKE_GENERATOR} MATCHES "Visual Studio*")
-            execute_process(
-                COMMAND ${CYGPATH_EXECUTABLE} -u ${inPath}
-                OUTPUT_VARIABLE cygwinPath
-            )
-            string(STRIP "${cygwinPath}" cygwinPath)
+        # Need to update path only if tool was installed as cygwin package
+        if (${execPath} MATCHES ".*cygwin.*")
+            if (${CMAKE_GENERATOR} MATCHES "Visual Studio*")
+                execute_process(
+                    COMMAND ${CYGPATH_EXECUTABLE} -u ${inPath}
+                    OUTPUT_VARIABLE cygwinPath
+                )
+                string(STRIP "${cygwinPath}" cygwinPath)
+            endif()
         endif()
-        if(EXISTS ${cygwinPath})
-            set(${outPath} ${cygwinPath} PARENT_SCOPE)
-        endif()
+        set(${outPath} ${cygwinPath} PARENT_SCOPE)
     endfunction()
 endif()

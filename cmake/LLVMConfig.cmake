@@ -69,6 +69,13 @@ find_program(LLVM_AS_EXECUTABLE NAMES llvm-as
     endif()
     message(STATUS "LLVM_AS_EXECUTABLE: ${LLVM_AS_EXECUTABLE}")
 
+find_program(FILE_CHECK_EXECUTABLE NAMES FileCheck
+    PATHS ${LLVM_TOOLS_BINARY_DIR} PATH_SUFFIXES bin NO_DEFAULT_PATH)
+    if (NOT FILE_CHECK_EXECUTABLE)
+        message(FATAL_ERROR "Failed to find FileCheck" )
+    endif()
+    message(STATUS "FILE_CHECK_EXECUTABLE: ${FILE_CHECK_EXECUTABLE}")
+
 function(str_to_list inStr outStr)
     string(REPLACE " " ";" tmpOutput "${inStr}")
     set(${outStr} ${tmpOutput} PARENT_SCOPE)

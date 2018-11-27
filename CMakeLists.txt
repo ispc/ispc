@@ -42,12 +42,14 @@ project(${PROJECT_NAME})
 option(ARM_ENABLED "Enable ARM support OFF")
 option(NVPTX_ENABLED "Enable NVPTX support OFF")
 option(ISPC_INCLUDE_EXAMPLES "Generate build targets for the ISPC examples" ON)
+option(ISPC_INCLUDE_TESTS "Generate build targets for the ISPC tests." ON)
 
 # Use solution folders.
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 
 set(OUTPUT_DEBUG Debug/bin)
 set(OUTPUT_RELEASE Release/bin)
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/bin )
 
 if(NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE "Release")
@@ -64,10 +66,6 @@ find_package(PythonInterp 2.7 REQUIRED)
     if (NOT PYTHONINTERP_FOUND)
         message(FATAL_ERROR "Python interpreter is not found")
     endif()
-    if (WIN32)
-        # For correct VS project the path should be in quotes
-        set(PYTHON_EXECUTABLE \"${PYTHON_EXECUTABLE}\")
-    endif()
 
 find_package(BISON 2.4 REQUIRED)
     if (BISON_FOUND)
@@ -76,7 +74,7 @@ find_package(BISON 2.4 REQUIRED)
         set(BISON_OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_CFG_INTDIR}/parse.hh
                          ${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_CFG_INTDIR}/parse.output)
         if (WIN32)
-            win_path_to_cygwin(${BISON_INPUT} BISON_INPUT)
+            win_path_to_cygwin(${BISON_INPUT} ${BISON_EXECUTABLE} BISON_INPUT)
         endif()
         add_custom_command (
             OUTPUT ${BISON_CPP_OUTPUT} ${BISON_OUTPUT}
@@ -92,7 +90,7 @@ find_package(FLEX 2.5 REQUIRED)
         set(FLEX_INPUT  ${CMAKE_CURRENT_SOURCE_DIR}/lex.ll)
         set(FLEX_OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_CFG_INTDIR}/lex.cpp)
         if (WIN32)
-            win_path_to_cygwin(${FLEX_INPUT} FLEX_INPUT)
+            win_path_to_cygwin(${FLEX_INPUT} ${FLEX_EXECUTABLE} FLEX_INPUT)
         endif()
         add_custom_command(
             OUTPUT ${FLEX_OUTPUT}
@@ -249,8 +247,11 @@ else()
     endif()
 endif()
 
-install (TARGETS ${PROJECT_NAME} DESTINATION bin)
-
 if (ISPC_INCLUDE_EXAMPLES)
     add_subdirectory(examples)
 endif()
+if (ISPC_INCLUDE_TESTS)
+    add_subdirectory(tests)
+endif()
+
+install (TARGETS ${PROJECT_NAME} DESTINATION bin)
