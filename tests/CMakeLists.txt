@@ -31,26 +31,22 @@
 #   SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #
-# ispc Stdlib.cmake
+# tests CMakeLists.txt
 #
-function(create_stdlib mask outputPath)
-    set(output ${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_CFG_INTDIR}/stdlib_mask${mask}_ispc.cpp)
-    add_custom_command(
-        OUTPUT ${output}
-        COMMAND ${CLANG_EXECUTABLE} -E -x c -DISPC_MASK_BITS=${mask} -DISPC=1 -DPI=3.14159265358979
-            ${CMAKE_CURRENT_SOURCE_DIR}/stdlib.ispc
-            | \"${PYTHON_EXECUTABLE}\" ${CMAKE_CURRENT_SOURCE_DIR}/stdlib2cpp.py mask${mask}
-            > ${output}
-        DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/stdlib.ispc
+set(LIT_COMMAND "${PYTHON_EXECUTABLE};${CMAKE_SOURCE_DIR}/utils/lit/lit.py")
+# User can specify additional lit arguments with -DLIT_ARGS
+# Path to ispc
+list(APPEND LIT_ARGS "--path=${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/${CMAKE_CFG_INTDIR}")
+# Path to LLVM utils
+list(APPEND LIT_ARGS "--path=${LLVM_TOOLS_BINARY_DIR}")
+# Path to llvm lit tests
+list(APPEND LIT_ARGS "${CMAKE_CURRENT_SOURCE_DIR}/lit-tests")
+# Path to tests execution directory
+list(APPEND LIT_ARGS "-Dispc_test_exec_root=${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/${CMAKE_CFG_INTDIR}/tests")
+add_custom_target(check-all DEPENDS ispc FileCheck
+    COMMAND ${LIT_COMMAND} ${LIT_ARGS}
+    COMMENT "Running lit tests"
+    USES_TERMINAL
     )
-    set(${outputPath} ${output} PARENT_SCOPE)
-    set_source_files_properties(${outputPath} PROPERTIES GENERATED true)
-endfunction()
-
-function(generate_stdlib resultList)
-    foreach (m ${ARGN})
-        create_stdlib(${m} outputPath)
-        list(APPEND tmpList "${outputPath}")
-    endforeach()
-    set(${resultList} ${tmpList} PARENT_SCOPE)
-endfunction()
+set_target_properties(check-all PROPERTIES EXCLUDE_FROM_DEFAULT_BUILD ON)
+set_target_properties(check-all PROPERTIES FOLDER "Tests")
