@@ -44,6 +44,10 @@ option(NVPTX_ENABLED "Enable NVPTX support OFF")
 option(ISPC_INCLUDE_EXAMPLES "Generate build targets for the ISPC examples" ON)
 option(ISPC_INCLUDE_TESTS "Generate build targets for the ISPC tests." ON)
 
+if (UNIX)
+    option(ISPC_STATIC_STDCXX_LINK "Link statically with libstdc++ and libgcc" OFF)
+endif()
+
 # Use solution folders.
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 
@@ -219,6 +223,10 @@ if (WIN32)
     if (NOT CMAKE_BUILD_TYPE STREQUAL "DEBUG" )
         set_target_properties(${PROJECT_NAME} PROPERTIES LINK_FLAGS "/OPT:REF /OPT:ICF")
     endif()
+endif()
+
+if (ISPC_STATIC_STDCXX_LINK)
+    set_target_properties(${PROJECT_NAME} PROPERTIES LINK_FLAGS "-static-libgcc -static-libstdc++")
 endif()
 
 # Link against Clang libraries
