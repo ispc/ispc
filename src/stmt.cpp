@@ -466,7 +466,7 @@ DeclStmt::Optimize() {
 // Do that recursively to handle brace initialization, which may contain
 // another brace initialization.
 static
-bool checkInit(const Type *type, Expr *init) {
+bool checkInit(const Type *type, Expr **init) {
     bool encounteredError = false;
 
     // get the right type for stuff like const float foo = 2; so that
@@ -477,23 +477,23 @@ bool checkInit(const Type *type, Expr *init) {
         // If it's an expr list with an atomic type, we'll later issue
         // an error.  Need to leave vars[i].init as is in that case so
         // it is in fact caught later, though.
-        if (llvm::dyn_cast<ExprList>(init) == NULL) {
-            init = TypeConvertExpr(init, type, "initializer");
-            if (init == NULL)
+        if (llvm::dyn_cast<ExprList>(*init) == NULL) {
+            *init = TypeConvertExpr(*init, type, "initializer");
+            if (*init == NULL)
                 encounteredError = true;
         }
     } else if (CastType<ArrayType>(type) != NULL &&
-        llvm::dyn_cast<ExprList>(init) == NULL) {
+        llvm::dyn_cast<ExprList>(*init) == NULL) {
         encounteredError = true;
-        Error(init->pos, "Array initializer must be an initializer list");
+        Error((*init)->pos, "Array initializer must be an initializer list");
     } else if (CastType<StructType>(type) != NULL &&
-        llvm::dyn_cast<ExprList>(init) != NULL) {
+        llvm::dyn_cast<ExprList>(*init) != NULL) {
         const StructType *st = CastType<StructType>(type);
-        ExprList *el = llvm::dyn_cast<ExprList>(init);
+        ExprList *el = llvm::dyn_cast<ExprList>(*init);
         int elt_count = st->GetElementCount() < el->exprs.size() ?
           st->GetElementCount() : el->exprs.size();
         for (int i=0; i < elt_count; i++) {
-            encounteredError |= checkInit(st->GetElementType(i), el->exprs[i]);
+            encounteredError |= checkInit(st->GetElementType(i), &(el->exprs[i]));
         }
     }
 
@@ -513,7 +513,7 @@ DeclStmt::TypeCheck() {
             continue;
 
         // Check an init.
-        encounteredError |= checkInit(vars[i].sym->type, vars[i].init);
+        encounteredError |= checkInit(vars[i].sym->type, &(vars[i].init));
     }
     return encounteredError ? NULL : this;
 }
