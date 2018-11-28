@@ -461,6 +461,7 @@ def sigint(signum, frame):
 
 
 def file_check(compfails, runfails):
+    global exit_code
     errors = len(compfails) + len(runfails)
     new_compfails = []
     new_runfails = []
