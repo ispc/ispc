@@ -324,6 +324,7 @@ def build_LLVM(version_LLVM, revision, folder, tarball, debug, selfbuild, extra,
                     "  -DCMAKE_BUILD_TYPE=Release" +
                     get_llvm_enable_dump_switch(version_LLVM) +
                     "  -DLLVM_ENABLE_ASSERTIONS=ON" +
+                    "  -DLLVM_INSTALL_UTILS=ON" +
                     (("  -DGCC_INSTALL_PREFIX=" + gcc_toolchain_path) if gcc_toolchain_path != "" else "") +
                     (("  -DCMAKE_C_COMPILER=" + gcc_toolchain_path+"/bin/gcc") if gcc_toolchain_path != "" else "") +
                     (("  -DCMAKE_CXX_COMPILER=" + gcc_toolchain_path+"/bin/g++") if gcc_toolchain_path != "" else "") +
@@ -362,6 +363,7 @@ def build_LLVM(version_LLVM, revision, folder, tarball, debug, selfbuild, extra,
                         "  -DCMAKE_BUILD_TYPE=Release" +
                         get_llvm_enable_dump_switch(version_LLVM) +
                         "  -DLLVM_ENABLE_ASSERTIONS=ON" +
+                        "  -DLLVM_INSTALL_UTILS=ON" +
                         (("  -DGCC_INSTALL_PREFIX=" + gcc_toolchain_path) if gcc_toolchain_path != "" else "") +
                         (("  -DCMAKE_C_COMPILER=" + gcc_toolchain_path+"/bin/gcc") if gcc_toolchain_path != "" and selfbuild_compiler == "" else "") +
                         (("  -DCMAKE_CXX_COMPILER=" + gcc_toolchain_path+"/bin/g++") if gcc_toolchain_path != "" and selfbuild_compiler == "" else "") +
@@ -383,6 +385,7 @@ def build_LLVM(version_LLVM, revision, folder, tarball, debug, selfbuild, extra,
                     '  -DCMAKE_BUILD_TYPE=Release' +
                     get_llvm_enable_dump_switch(version_LLVM) +
                     '  -DLLVM_ENABLE_ASSERTIONS=ON' +
+                    '  -DLLVM_INSTALL_UTILS=ON' +
                     '  -DLLVM_TARGETS_TO_BUILD=X86' +
                     '  -DLLVM_LIT_TOOLS_DIR="C:\\gnuwin32\\bin" ..\\' + LLVM_SRC,
                     from_validation)
@@ -395,6 +398,7 @@ def build_LLVM(version_LLVM, revision, folder, tarball, debug, selfbuild, extra,
                     "  -DCMAKE_BUILD_TYPE=Debug" +
                     get_llvm_enable_dump_switch(version_LLVM) +
                     "  -DLLVM_ENABLE_ASSERTIONS=ON" +
+                    "  -DLLVM_INSTALL_UTILS=ON" +
                     (("  -DGCC_INSTALL_PREFIX=" + gcc_toolchain_path) if gcc_toolchain_path != "" else "") +
                     (("  -DCMAKE_C_COMPILER=" + gcc_toolchain_path+"/bin/gcc") if gcc_toolchain_path != "" and selfbuild_compiler == "" else "") +
                     (("  -DCMAKE_CXX_COMPILER=" + gcc_toolchain_path+"/bin/g++") if gcc_toolchain_path != "" and selfbuild_compiler == "" else "") +
