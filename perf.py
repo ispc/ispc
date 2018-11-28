@@ -53,6 +53,8 @@ def execute_test(commands):
 def run_test(commands, c1, c2, test, test_ref, b_serial):
     if execute_test(commands) != 0:
         error("Execution fails of test %s\n" % test[0], 0)
+        global exit_code
+        exit_code = 1
         return
     print_debug("TEST COMPILER:\n", s, perf_log)
     analyse_test(c1, c2, test, b_serial, perf_temp+"_test")
@@ -468,26 +470,30 @@ def perf(options1, args):
             os.makedirs(build_folder)
             cmake_command_ref = "cd " + build_folder + " && " + cmake_command + \
                                 " -DISPC_EXECUTABLE=" + ispc_ref + target_str + " >> " + build_log
-            os.system(cmake_command_ref)
+            if os.system(cmake_command_ref) != 0:
+                error("Cmake command failed with reference compiler %s\n" % ispc_ref, 1)
             # Build and install tests for reference compiler
             if is_windows == False:
                 bu_command_ref = "cd " + build_folder + " && make install >> "+ build_log+" 2>> "+ build_log
             else:
                 bu_command_ref = "msbuild " + build_folder + os.sep + "INSTALL.vcxproj /V:m /p:Configuration=Release /t:rebuild >> " + build_log
-            os.system(bu_command_ref)
+            if os.system(bu_command_ref) != 0:
+                error("Build failed with reference compiler %s\n" % ispc_ref, 1)
         build_folder = examples_folder_test + os.sep + cur_target
         if os.path.exists(build_folder):
             shutil.rmtree(build_folder)
         os.makedirs(build_folder)
         cmake_command_test = "cd " + build_folder + " && " + cmake_command + \
                              " -DISPC_EXECUTABLE=" + ispc_test + target_str + " >> " + build_log
-        os.system(cmake_command_test)
+        if os.system(cmake_command_test) != 0:
+            error("Cmake command failed with test compiler %s\n" % ispc_test, 1)
         # Build and install tests for test compiler
         if is_windows == False:
             bu_command_test = "cd " + build_folder + " && make install >> "+ build_log+" 2>> "+ build_log
         else:
             bu_command_test = "msbuild " + build_folder + os.sep + "INSTALL.vcxproj /V:m /p:Configuration=Release /t:rebuild >> " + build_log
-        os.system(bu_command_test)
+        if os.system(bu_command_test) != 0:
+            error("Build failed with test compiler %s\n" % ispc_test, 1)
     # Run tests
     while i < length-2:
         # we read name of test
@@ -574,7 +580,7 @@ import shutil
 import common
 print_debug = common.print_debug
 error = common.error
-
+exit_code = 0
 
 if __name__ == "__main__":
     # parsing options
@@ -601,3 +607,4 @@ if __name__ == "__main__":
         help='cmake generator')
     (options, args) = parser.parse_args()
     perf(options, args)
+    exit(exit_code)
