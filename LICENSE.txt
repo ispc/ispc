@@ -71,13 +71,20 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 ---------------------------------------------------------------------------
 
+The following piece of code is incorporated to ISPC repository from LLVM
+software. It has alternate copyright and it is distributed under license
+listed below in this section:
+Program             Directory
+-------             ---------
+lit                 utils/lit
+
 Binary distributions of ISPC are linked with the LLVM libraries, which are
 covered by the following license:
 
 University of Illinois/NCSA
 Open Source License
 
-Copyright (c) 2003-2014 University of Illinois at Urbana-Champaign.
+Copyright (c) 2003-2018 University of Illinois at Urbana-Champaign.
 All rights reserved.
 
 Developed by:
