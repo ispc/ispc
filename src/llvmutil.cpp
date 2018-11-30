@@ -1315,7 +1315,7 @@ lCheckShlForLinear(llvm::Value *op0, llvm::Value *op1, int vectorLength,
     // If (1 << the splat value) doesn't evenly divide the stride we're
     // looking for, there's no way that we can get the linear sequence
     // we're looking or.
-    int64_t equivalentMul = (1 << splat->getSExtValue());
+    int64_t equivalentMul = (1LL << splat->getSExtValue());
     if (equivalentMul > stride || (stride % equivalentMul) != 0)
         return false;
 
