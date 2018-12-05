@@ -32,6 +32,9 @@
 */
 
 
+#ifdef _MSC_VER
+#define _CRT_SECURE_NO_WARNINGS
+#endif
 /**************************************************************\
 | Includes
 \**************************************************************/
@@ -102,12 +105,8 @@ CRSMatrix *CRSMatrix::matrix_from_mtf (char *path) {
     MM_typecode matcode;
 
     int m, n, nz;
-#ifdef _MSC_VER
-    errno_t err;
-    if((err = fopen_s(&f, path, "r")) != 0)
-#else
+
     if ((f = fopen(path, "r")) == NULL)
-#endif
         ERR_OUT("Error: %s does not name a valid/readable file.\n", path);
 
     if (mm_read_banner(f, &matcode) != 0)
@@ -132,11 +131,7 @@ CRSMatrix *CRSMatrix::matrix_from_mtf (char *path) {
     entries.resize(nz);
 
     for (int i = 0; i < nz; i++) {
-#ifdef _MSC_VER
-        fscanf_s(f, "%d %d %lg\n", &entries[i].row, &entries[i].col, &entries[i].val);
-#else
         fscanf(f, "%d %d %lg\n", &entries[i].row, &entries[i].col, &entries[i].val);
-#endif
         // Adjust from 1-based to 0-based
         entries[i].row--;
         entries[i].col--;
@@ -162,12 +157,7 @@ Vector *Vector::vector_from_mtf (char *path) {
 
     int m, n, nz;
 
-#ifdef _MSC_VER
-    errno_t err;
-    if((err = fopen_s(&f, path, "r")) != 0)
-#else
     if ((f = fopen(path, "r")) == NULL)
-#endif
         ERR_OUT("Error: %s does not name a valid/readable file.\n", path);
 
     if (mm_read_banner(f, &matcode) != 0)
@@ -191,11 +181,7 @@ Vector *Vector::vector_from_mtf (char *path) {
     if (mm_is_dense(matcode)) {
         double val;
         for (int i = 0; i < m; i++) {
-#ifdef _MSC_VER
-            fscanf_s(f, "%lg\n", &val);
-#else
             fscanf(f, "%lg\n", &val);
-#endif
             (*x)[i] = val;
         }
     }
@@ -205,11 +191,7 @@ Vector *Vector::vector_from_mtf (char *path) {
         int row;
         int col;
         for (int i = 0; i < nz; i++) {
-#ifdef _MSC_VER
-            fscanf_s(f, "%d %d %lg\n", &row, &col, &val);
-#else
             fscanf(f, "%d %d %lg\n", &row, &col, &val);
-#endif
             (*x)[row-1] = val;
         }
     }
@@ -228,12 +210,7 @@ void Vector::to_mtf (char *path) {
     mm_set_dense(&matcode);
     mm_set_general(&matcode);
 
-#ifdef _MSC_VER
-    errno_t err;
-    if((err = fopen_s(&f, path, "w")) != 0)
-#else
     if ((f = fopen(path, "w")) == NULL)
-#endif
         ERR("Error: cannot open/write to %s\n", path);
 
     mm_write_banner(f, matcode);
