@@ -47,6 +47,8 @@ M  |         |   X     N |         |   =     M |         |
 A        X            B        =            C
 **/
 
+
+
 #include "../timing.h"
 
 #include <stdio.h>
@@ -184,7 +186,11 @@ void Test_SGEMM(SGEMMFuncPtr SGEMMFunc, char* pcFuncName,
 
     avgTime = (float)totalWallTime / (float)numIterations;
     bValid = Validate_result(matrixC, matrixValid, M, K);
+#ifdef _MSC_VER
+    if (bValid) sprintf_s(psValid, sizeof(psValid), "valid"); else sprintf_s(psValid, sizeof(psValid), "ERROR");
+#else
     if (bValid) sprintf(psValid, "valid"); else sprintf(psValid, "ERROR");
+#endif
     printf("%40s %10.4f millisecs %10.4f GFLOPs Validation: %s.\n", pcFuncName, avgTime, (fFlopsPerGEMM / (avgTime / 1000.0f)) / 1000000000.0f, psValid);
     init_matrix(matrixC, M, K, 0.0f);
 }

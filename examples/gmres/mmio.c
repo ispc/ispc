@@ -7,6 +7,7 @@
 */
 
 
+
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -40,8 +41,13 @@ int mm_read_banner(FILE *f, MM_typecode *matcode)
     if (fgets(line, MM_MAX_LINE_LENGTH, f) == NULL)
         return MM_PREMATURE_EOF;
 
+#ifdef _MSC_VER
+    if (sscanf_s(line, "%s %s %s %s %s", banner, sizeof(banner), mtx, sizeof(mtx), crd, sizeof(crd),
+                data_type, sizeof(data_type), storage_scheme, sizeof(storage_scheme)) != 5)
+#else
     if (sscanf(line, "%s %s %s %s %s", banner, mtx, crd, data_type,
         storage_scheme) != 5)
+#endif
         return MM_PREMATURE_EOF;
 
     for (p=mtx; *p!='\0'; *p=tolower(*p),p++);  /* convert to lower case */
@@ -133,13 +139,21 @@ int mm_read_mtx_crd_size(FILE *f, int *M, int *N, int *nz )
     }while (line[0] == '%');
 
     /* line[] is either blank or has M,N, nz */
+#ifdef _MSC_VER
+    if (sscanf_s(line, "%d %d %d", M, N, nz) == 3)
+#else
     if (sscanf(line, "%d %d %d", M, N, nz) == 3)
+#endif
         return 0;
 
     else
     do
     {
+#ifdef _MSC_VER
+        num_items_read = fscanf_s(f, "%d %d %d", M, N, nz);
+#else
         num_items_read = fscanf(f, "%d %d %d", M, N, nz);
+#endif
         if (num_items_read == EOF) return MM_PREMATURE_EOF;
     }
     while (num_items_read != 3);
@@ -163,13 +177,21 @@ int mm_read_mtx_array_size(FILE *f, int *M, int *N)
     }while (line[0] == '%');
 
     /* line[] is either blank or has M,N, nz */
+#ifdef _MSC_VER
+    if (sscanf_s(line, "%d %d", M, N) == 2)
+#else
     if (sscanf(line, "%d %d", M, N) == 2)
+#endif
         return 0;
 
     else /* we have a blank line */
     do
     {
+#ifdef _MSC_VER
+        num_items_read = fscanf_s(f, "%d %d", M, N);
+#else
         num_items_read = fscanf(f, "%d %d", M, N);
+#endif
         if (num_items_read == EOF) return MM_PREMATURE_EOF;
     }
     while (num_items_read != 2);
@@ -200,15 +222,29 @@ int mm_read_mtx_crd_data(FILE *f, int M, int N, int nz, int I[], int J[],
     if (mm_is_complex(matcode))
     {
         for (i=0; i<nz; i++)
+        {
+#ifdef _MSC_VER
+            if (fscanf_s(f, "%d %d %lg %lg", &I[i], &J[i], &val[2*i], &val[2*i+1])
+                != 4)
+#else
             if (fscanf(f, "%d %d %lg %lg", &I[i], &J[i], &val[2*i], &val[2*i+1])
-                != 4) return MM_PREMATURE_EOF;
+                != 4)
+#endif
+                return MM_PREMATURE_EOF;
+        }
     }
     else if (mm_is_real(matcode))
     {
         for (i=0; i<nz; i++)
         {
+#ifdef _MSC_VER
+            if (fscanf_s(f, "%d %d %lg\n", &I[i], &J[i], &val[i])
+                != 3)
+#else
             if (fscanf(f, "%d %d %lg\n", &I[i], &J[i], &val[i])
-                != 3) return MM_PREMATURE_EOF;
+                != 3)
+#endif
+                return MM_PREMATURE_EOF;
 
         }
     }
@@ -216,8 +252,14 @@ int mm_read_mtx_crd_data(FILE *f, int M, int N, int nz, int I[], int J[],
     else if (mm_is_pattern(matcode))
     {
         for (i=0; i<nz; i++)
+#ifdef _MSC_VER
+            if (fscanf_s(f, "%d %d", &I[i], &J[i])
+                != 2)
+#else
             if (fscanf(f, "%d %d", &I[i], &J[i])
-                != 2) return MM_PREMATURE_EOF;
+                != 2)
+#endif
+                return MM_PREMATURE_EOF;
     }
     else
         return MM_UNSUPPORTED_TYPE;
@@ -231,19 +273,35 @@ int mm_read_mtx_crd_entry(FILE *f, int *I, int *J,
 {
     if (mm_is_complex(matcode))
     {
+#ifdef _MSC_VER
+            if (fscanf_s(f, "%d %d %lg %lg", I, J, real, imag)
+                != 4)
+#else
             if (fscanf(f, "%d %d %lg %lg", I, J, real, imag)
-                != 4) return MM_PREMATURE_EOF;
+                != 4)
+#endif
+                return MM_PREMATURE_EOF;
     }
     else if (mm_is_real(matcode))
     {
+#ifdef _MSC_VER
+            if (fscanf_s(f, "%d %d %lg\n", I, J, real)
+                != 3)
+#else
             if (fscanf(f, "%d %d %lg\n", I, J, real)
-                != 3) return MM_PREMATURE_EOF;
+                != 3)
+#endif
+                return MM_PREMATURE_EOF;
 
     }
 
     else if (mm_is_pattern(matcode))
     {
+#ifdef _MSC_VER
+            if (fscanf_s(f, "%d %d", I, J) != 2) return MM_PREMATURE_EOF;
+#else
             if (fscanf(f, "%d %d", I, J) != 2) return MM_PREMATURE_EOF;
+#endif
     }
     else
         return MM_UNSUPPORTED_TYPE;
@@ -269,8 +327,15 @@ int mm_read_mtx_crd(char *fname, int *M, int *N, int *nz, int **I, int **J,
 
     if (strcmp(fname, "stdin") == 0) f=stdin;
     else
-    if ((f = fopen(fname, "r")) == NULL)
-        return MM_COULD_NOT_READ_FILE;
+    {
+#ifdef _MSC_VER
+        errno_t err;
+        if((err = fopen_s(&f, fname, "r")) != 0)
+#else
+        if ((f = fopen(fname, "r")) == NULL)
+#endif
+            return MM_COULD_NOT_READ_FILE;
+    }
 
 
     if ((ret_code = mm_read_banner(f, matcode)) != 0)
@@ -336,8 +401,15 @@ int mm_write_mtx_crd(char fname[], int M, int N, int nz, int I[], int J[],
     if (strcmp(fname, "stdout") == 0)
         f = stdout;
     else
-    if ((f = fopen(fname, "w")) == NULL)
-        return MM_COULD_NOT_WRITE_FILE;
+    {
+#ifdef _MSC_VER
+        errno_t err;
+        if((err = fopen_s(&f, fname, "w")) != 0)
+#else
+        if ((f = fopen(fname, "w")) == NULL)
+#endif
+            return MM_COULD_NOT_WRITE_FILE;
+    }
 
     /* print banner followed by typecode */
     fprintf(f, "%s ", MatrixMarketBanner);
@@ -378,9 +450,14 @@ int mm_write_mtx_crd(char fname[], int M, int N, int nz, int I[], int J[],
 */
 char *mm_strdup(const char *s)
 {
-	int len = strlen(s);
-	char *s2 = (char *) malloc((len+1)*sizeof(char));
-	return strcpy(s2, s);
+    int len = strlen(s);
+    char *s2 = (char *) malloc((len+1)*sizeof(char));
+#ifdef _MSC_VER
+    strcpy_s(s2, len+1, s);
+    return s2;
+#else
+    return strcpy(s2, s);
+#endif
 }
 
 char  *mm_typecode_to_str(MM_typecode matcode)
@@ -435,8 +512,11 @@ char  *mm_typecode_to_str(MM_typecode matcode)
         types[3] = MM_SKEW_STR;
     else
         return NULL;
-
+#ifdef _MSC_VER
+    sprintf_s(buffer, sizeof(buffer), "%s %s %s %s", types[0], types[1], types[2], types[3]);
+#else
     sprintf(buffer,"%s %s %s %s", types[0], types[1], types[2], types[3]);
+#endif
     return mm_strdup(buffer);
 
 }

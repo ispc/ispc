@@ -61,8 +61,9 @@ int main (int argc, char **argv)
 
     Vector x(A->cols());
     DEBUG_PRINT("Beginning gmres...\n");
+    reset_and_start_timer();
     gmres(*A, *b, x, A->cols() / 2, .01);
-
+    gmres_cycles = get_elapsed_mcycles();
     // Write result out to file
     x.to_mtf(argv[argc-1]);
 
