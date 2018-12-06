@@ -102,7 +102,7 @@ class Vector {
         if (v.size() != _size)
             return false;
 
-        for (int i = 0; i < _size; i++)
+        for (size_t i = 0; i < _size; i++)
             if (entries[i] != v[i])
                 return false;
 
@@ -127,7 +127,7 @@ class Vector {
         ispc::zero(entries, size());
     }
 
-    double norm () const { return sqrtf(dot(entries)); }
+    double norm () const { return sqrt(dot(entries)); }
 
     void normalize () { this->divide(this->norm()); }
 

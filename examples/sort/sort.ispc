@@ -61,6 +61,7 @@ task void histogram (uniform int span, uniform int n, uniform int64 code[], unif
     {
       unsigned int8 *c = (unsigned int8*) &code[k];
 
+      #pragma ignore warning(perf)
       g[c[pass]] ++;
     }
   }

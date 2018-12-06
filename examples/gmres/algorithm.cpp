@@ -129,7 +129,7 @@ void apply_rotation (Vector &v, size_t col, Vector &Cn, Vector &Sn)
  */
 void update_column (DenseMatrix &H, size_t col, Vector &Cn, Vector &Sn)
 {
-    for (int i = 0; i < col; i++) {
+    for (size_t i = 0; i < col; i++) {
         double c    = Cn[i];
         double s    = Sn[i];
         double t    = c * H(i,col) - s * H(i+1,col);
@@ -221,7 +221,7 @@ void gmres (const Matrix &A, const Vector &b, Vector &x, int num_iters, double m
 
     // We've reached an acceptable solution (?):
 
-    DEBUG_PRINT("gmres completed in %d iterations (rel. resid. %f, max %f)\n", num_iters, rel_err, max_err);
+    DEBUG_PRINT("gmres completed in %d iterations (rel. resid. %f, max %f)\n", iter, rel_err, max_err);
     Vector y(iter+1);
     upper_triangular_right_solve(H, G, y);
     for (int i = 0; i < iter + 1; i++) {

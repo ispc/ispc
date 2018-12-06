@@ -32,6 +32,9 @@
 */
 
 
+#ifdef _MSC_VER
+#define _CRT_SECURE_NO_WARNINGS
+#endif
 /**************************************************************\
 | Includes
 \**************************************************************/
@@ -51,7 +54,7 @@ void DenseMatrix::multiply (const Vector &v, Vector &r) const
     ASSERT(v.size() == cols());
     ASSERT(r.size() == rows());
 
-    for (int i = 0; i < rows(); i++)
+    for (size_t i = 0; i < rows(); i++)
         r[i] = v.dot(entries + i * num_cols);
 }
 
@@ -212,7 +215,7 @@ void Vector::to_mtf (char *path) {
 
     mm_write_banner(f, matcode);
     mm_write_mtx_array_size(f, size(), 1);
-    for (int i = 0; i < size(); i++)
+    for (size_t i = 0; i < size(); i++)
         fprintf(f, "%lg\n", entries[i]);
 
     fclose(f);
@@ -223,7 +226,7 @@ void CRSMatrix::multiply (const Vector &v, Vector &r) const
     ASSERT(v.size() == cols());
     ASSERT(r.size() == rows());
 
-    for (int row = 0; row < rows(); row++)
+    for (size_t row = 0; row < rows(); row++)
     {
         int row_offset = row_offsets[row];
         int next_offset = ((row + 1 == rows()) ? _nonzeroes : row_offsets[row + 1]);

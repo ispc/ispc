@@ -47,6 +47,10 @@ M  |         |   X     N |         |   =     M |         |
 A        X            B        =            C
 **/
 
+#ifdef _MSC_VER
+#define _CRT_SECURE_NO_WARNINGS
+#endif
+
 #include "../timing.h"
 
 #include <stdio.h>
