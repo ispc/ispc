@@ -4329,7 +4329,7 @@ the ``aos_to_soa3()`` standard library function could be used:
     extern uniform float pos[];
     uniform int base = ...;
     float x, y, z;
-    aos_to_soa3(&pos[base], x, y, z);
+    aos_to_soa3(&pos[base], &x, &y, &z);
 
 This routine loads three times the gang size values from the given array
 starting at the given offset, returning three ``varying`` results.  There
@@ -4355,7 +4355,7 @@ the given array, starting at the given offset.
     extern uniform float pos[];
     uniform int base = ...;
     float x, y, z;
-    aos_to_soa3(&pos[base], x, y, z);
+    aos_to_soa3(&pos[base], &x, &y, &z);
     // do computation with x, y, z
     soa_to_aos3(x, y, z, &pos[base]);
 
