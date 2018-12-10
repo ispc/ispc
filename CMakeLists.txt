@@ -39,13 +39,14 @@ set(PROJECT_NAME ispc)
 set(ISPC_BUILD TRUE)
 project(${PROJECT_NAME})
 
-option(ARM_ENABLED "Enable ARM support OFF")
-option(NVPTX_ENABLED "Enable NVPTX support OFF")
+option(ARM_ENABLED "Enable ARM support" OFF)
+option(NVPTX_ENABLED "Enable NVPTX support" OFF)
 option(ISPC_INCLUDE_EXAMPLES "Generate build targets for the ISPC examples" ON)
 option(ISPC_INCLUDE_TESTS "Generate build targets for the ISPC tests." ON)
 
 if (UNIX)
     option(ISPC_STATIC_STDCXX_LINK "Link statically with libstdc++ and libgcc" OFF)
+    option(ISPC_USE_ASAN "Build ispc with address sanitizer instrumentation using clang compiler" OFF)
 endif()
 
 # Use solution folders.
@@ -215,6 +216,9 @@ if (${LLVM_VERSION_NUMBER} VERSION_GREATER "3.4.0")
     if (UNIX)
         set_target_properties(${PROJECT_NAME} PROPERTIES CXX_EXTENSIONS OFF)
         target_compile_options(${PROJECT_NAME} PRIVATE -Wno-c99-extensions -Wno-deprecated-register -fno-rtti)
+        if (ISPC_USE_ASAN)
+            target_compile_options(${PROJECT_NAME} PRIVATE -fsanitize=address)
+        endif()
     endif()
 endif()
 
@@ -227,6 +231,10 @@ endif()
 
 if (ISPC_STATIC_STDCXX_LINK)
     set_target_properties(${PROJECT_NAME} PROPERTIES LINK_FLAGS "-static-libgcc -static-libstdc++")
+endif()
+
+if (ISPC_USE_ASAN)
+    set_target_properties(${PROJECT_NAME} PROPERTIES LINK_FLAGS "-fsanitize=address")
 endif()
 
 # Link against Clang libraries
