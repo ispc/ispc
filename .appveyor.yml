@@ -77,7 +77,7 @@ before_build:
     cd %ISPC_HOME%
     mkdir build
     cd build
-    cmake .. -G %generator% -DCMAKE_INSTALL_PREFIX=%ISPC_HOME%\Release
+    cmake .. -G %generator% -DCMAKE_INSTALL_PREFIX=%ISPC_HOME%\%configuration%
 
 build:
   project: c:\\projects\\ispc\\build\\ispc.vcxproj
@@ -85,7 +85,11 @@ build:
 
 test_script:
   - call "C:\Program Files (x86)\Microsoft Visual Studio\2017\Community\VC\Auxiliary\Build\vcvars32.bat"
-  - set PATH=%ISPC_HOME%\build\bin\Release;%PATH%
+  - set PATH=%ISPC_HOME%\build\bin\%configuration%;%PATH%
   - cd %ISPC_HOME%
   - python perf.py -n 1 -g "Visual Studio 15 Win64"
   - if "%LLVM_VERSION%"=="7.0" ( python run_tests.py -a x86 )
+
+artifacts:
+  - path: build\bin\%configuration%\ispc.exe
+    name: ispc

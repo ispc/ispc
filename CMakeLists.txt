@@ -43,6 +43,7 @@ option(ARM_ENABLED "Enable ARM support" OFF)
 option(NVPTX_ENABLED "Enable NVPTX support" OFF)
 option(ISPC_INCLUDE_EXAMPLES "Generate build targets for the ISPC examples" ON)
 option(ISPC_INCLUDE_TESTS "Generate build targets for the ISPC tests." ON)
+option(ISPC_PREPARE_PACKAGE "Generate build targets for ispc package" OFF)
 
 if (UNIX)
     option(ISPC_STATIC_STDCXX_LINK "Link statically with libstdc++ and libgcc" OFF)
@@ -263,11 +264,51 @@ else()
     endif()
 endif()
 
-if (ISPC_INCLUDE_EXAMPLES)
+if (ISPC_INCLUDE_EXAMPLES AND NOT ISPC_PREPARE_PACKAGE)
     add_subdirectory(examples)
 endif()
-if (ISPC_INCLUDE_TESTS)
+
+if (ISPC_INCLUDE_TESTS AND NOT ISPC_PREPARE_PACKAGE)
     add_subdirectory(tests)
 endif()
 
+# Install
 install (TARGETS ${PROJECT_NAME} DESTINATION bin)
+if (ISPC_PREPARE_PACKAGE)
+    install (DIRECTORY "${PROJECT_SOURCE_DIR}/examples/" DESTINATION examples)
+    install (DIRECTORY "${PROJECT_SOURCE_DIR}/contrib/" DESTINATION contrib)
+    install (FILES "${PROJECT_SOURCE_DIR}/LICENSE.txt" DESTINATION .)
+    install (FILES "${PROJECT_SOURCE_DIR}/docs/ReleaseNotes.txt" DESTINATION .)
+    include(ExternalProject)
+    ExternalProject_Add(ispc_web
+      GIT_REPOSITORY    https://github.com/ispc/ispc.github.com.git
+      PREFIX ispc_web
+      SOURCE_DIR ispc_web/repo
+      CONFIGURE_COMMAND cmake -E echo "Skipping configure step."
+      BUILD_COMMAND cmake -E echo "Skipping build step."
+      INSTALL_COMMAND cmake -E echo "Skipping install step."
+    )
+    ExternalProject_Get_Property(ispc_web SOURCE_DIR)
+    set(ISPC_WEB_SOURCE_DIR "${SOURCE_DIR}")
+    set(ISPC_DOCS  ${ISPC_WEB_SOURCE_DIR}/faq.html
+                   ${ISPC_WEB_SOURCE_DIR}/ispc.html
+                   ${ISPC_WEB_SOURCE_DIR}/perfguide.html)
+
+    install(FILES ${ISPC_DOCS} DESTINATION .)
+    install(DIRECTORY "${ISPC_WEB_SOURCE_DIR}/css" DESTINATION css)
+
+    # CPack configuration
+    if (WIN32)
+        set(CPACK_GENERATOR "ZIP")
+    else()
+        set(CPACK_GENERATOR "TGZ")
+    endif()
+    set(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_CURRENT_SOURCE_DIR}/LICENSE.txt")
+    # Get ispc version
+    file(READ "${CMAKE_CURRENT_SOURCE_DIR}/src/ispc_version.h" ispc_ver)
+    string(REGEX MATCH "ISPC_VERSION \"([0-9]*)\.([0-9]*)\.([0-9]*)" _ ${ispc_ver})
+    set(CPACK_PACKAGE_VERSION_MAJOR ${CMAKE_MATCH_1})
+    set(CPACK_PACKAGE_VERSION_MINOR ${CMAKE_MATCH_2})
+    set(CPACK_PACKAGE_VERSION_PATCH ${CMAKE_MATCH_3})
+    include(CPack)
+endif()
