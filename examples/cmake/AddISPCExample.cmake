@@ -135,15 +135,18 @@ function(add_ispc_example)
     set_target_properties(${example_NAME} PROPERTIES FOLDER "Examples")
 
     # Install example
-    install(TARGETS ${example_NAME} RUNTIME DESTINATION examples/${example_NAME})
-    if (example_DATA_FILES)
-        install(FILES ${example_DATA_FILES}
-                DESTINATION examples/${example_NAME})
-    endif()
+    # We do not need to include examples binaries to the package
+    if (NOT ISPC_PREPARE_PACKAGE)
+        install(TARGETS ${example_NAME} RUNTIME DESTINATION examples/${example_NAME})
+        if (example_DATA_FILES)
+            install(FILES ${example_DATA_FILES}
+                    DESTINATION examples/${example_NAME})
+        endif()
 
-    if (example_DATA_DIR)
-        install(DIRECTORY ${example_DATA_DIR}
-                DESTINATION examples/${example_NAME})
+        if (example_DATA_DIR)
+            install(DIRECTORY ${example_DATA_DIR}
+                    DESTINATION examples/${example_NAME})
+        endif()
     endif()
 
 endfunction()
