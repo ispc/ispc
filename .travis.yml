@@ -101,7 +101,7 @@ script:
       # Build ispc and examples
     - make ispc -j4
       # We need to have ispc binary in ISPC_HOME to run the tests
-    - cp $ISPC_HOME/build_$LLVM_VERSION/ispc $ISPC_HOME && cd $ISPC_HOME
+    - cp $ISPC_HOME/build_$LLVM_VERSION/bin/ispc $ISPC_HOME && cd $ISPC_HOME
     - ./check_env.py
       # Run examples
     - ./perf.py -n 1

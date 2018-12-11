@@ -85,7 +85,7 @@ build:
 
 test_script:
   - call "C:\Program Files (x86)\Microsoft Visual Studio\2017\Community\VC\Auxiliary\Build\vcvars32.bat"
-  - set PATH=%ISPC_HOME%\build\Release;%PATH%
+  - set PATH=%ISPC_HOME%\build\bin\Release;%PATH%
   - cd %ISPC_HOME%
   - python perf.py -n 1 -g "Visual Studio 15 Win64"
   - if "%LLVM_VERSION%"=="7.0" ( python run_tests.py -a x86 )
