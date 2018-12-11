@@ -1220,16 +1220,24 @@ PointerType::GetCDeclaration(const std::string &name) const {
         return "";
     }
 
-    std::string ret = baseType->GetCDeclaration("");
-    
     bool baseIsBasicVarying = (IsBasicType(baseType)) && (baseType->IsVaryingType());
-    
-    if (baseIsBasicVarying) ret += std::string("(");
-    ret += std::string(" *");
-    if (isConst) ret += " const";
-    ret += std::string(" ");
-    ret += name;
-    if (baseIsBasicVarying) ret += std::string(")");
+    bool baseIsFunction = (CastType<FunctionType>(baseType) != NULL);
+
+    std::string tempName;
+    if (baseIsBasicVarying || baseIsFunction) tempName += std::string("(");
+    tempName += std::string(" *");
+    if (isConst) tempName += " const";
+    tempName += std::string(" ");
+    tempName += name;
+    if (baseIsBasicVarying || baseIsFunction) tempName += std::string(")");
+
+    std::string ret;
+    if(!baseIsFunction) {
+        ret = baseType->GetCDeclaration("");
+        ret += tempName;
+    }
+    else
+        ret += baseType->GetCDeclaration(tempName);;
 
     if (variability == Variability::SOA) {
         char buf[32];
