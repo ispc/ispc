@@ -433,3 +433,15 @@
 ./tests/align2.ispc compfail  x86-64           sse4   Linux LLVM 4.0 clang++4.0 -O2 *
 ./tests/align1.ispc compfail  x86-64           sse4   Linux LLVM 3.8 clang++3.8 -O2 *
 ./tests/align2.ispc compfail  x86-64           sse4   Linux LLVM 3.8 clang++3.8 -O2 *
+.\tests\align1.ispc compfail     x86           sse4 Windows LLVM 7.0         cl -O2 *
+.\tests\align2.ispc compfail     x86           sse4 Windows LLVM 7.0         cl -O2 *
+.\tests\transcendentals-10-0.ispc compfail     x86           sse4 Windows LLVM 7.0         cl -O2 *
+.\tests\align1.ispc compfail     x86           sse4 Windows LLVM 6.0         cl -O2 *
+.\tests\align2.ispc compfail     x86           sse4 Windows LLVM 6.0         cl -O2 *
+.\tests\transcendentals-10-0.ispc compfail     x86           sse4 Windows LLVM 6.0         cl -O2 *
+.\tests\align1.ispc compfail     x86           sse4 Windows LLVM 5.0         cl -O2 *
+.\tests\align2.ispc compfail     x86           sse4 Windows LLVM 5.0         cl -O2 *
+.\tests\transcendentals-10-0.ispc compfail     x86           sse4 Windows LLVM 5.0         cl -O2 *
+.\tests\align1.ispc compfail     x86           sse4 Windows LLVM 4.0         cl -O2 *
+.\tests\align2.ispc compfail     x86           sse4 Windows LLVM 4.0         cl -O2 *
+.\tests\transcendentals-10-0.ispc compfail     x86           sse4 Windows LLVM 4.0         cl -O2 *
