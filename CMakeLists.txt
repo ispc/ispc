@@ -47,6 +47,11 @@ option(ISPC_PREPARE_PACKAGE "Generate build targets for ispc package" OFF)
 
 if (UNIX)
     option(ISPC_STATIC_STDCXX_LINK "Link statically with libstdc++ and libgcc" OFF)
+    if (ISPC_PREPARE_PACKAGE)
+        option(ISPC_STATIC_LINK "Link statically" ON)
+    else()
+        option(ISPC_STATIC_LINK "Link statically" OFF)
+    endif()
     option(ISPC_USE_ASAN "Build ispc with address sanitizer instrumentation using clang compiler" OFF)
 endif()
 
@@ -232,6 +237,10 @@ endif()
 
 if (ISPC_STATIC_STDCXX_LINK)
     set_target_properties(${PROJECT_NAME} PROPERTIES LINK_FLAGS "-static-libgcc -static-libstdc++")
+endif()
+
+if (ISPC_STATIC_LINK)
+    set_target_properties(${PROJECT_NAME} PROPERTIES LINK_FLAGS "-static")
 endif()
 
 if (ISPC_USE_ASAN)
