@@ -273,6 +273,14 @@ else()
     endif()
 endif()
 
+# Build target for utility checking host ISA
+if (NOT ISPC_PREPARE_PACKAGE)
+    add_executable(check_isa "")
+    target_sources(check_isa PRIVATE check_isa.cpp)
+    set_target_properties(check_isa PROPERTIES FOLDER "Utils")
+    install (TARGETS check_isa DESTINATION bin)
+endif()
+
 if (ISPC_INCLUDE_EXAMPLES AND NOT ISPC_PREPARE_PACKAGE)
     add_subdirectory(examples)
 endif()
