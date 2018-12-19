@@ -83,10 +83,14 @@ build:
   project: c:\\projects\\ispc\\build\\ispc.vcxproj
   verbosity: minimal
 
-test_script:
+after_build:
   - call "C:\Program Files (x86)\Microsoft Visual Studio\2017\Community\VC\Auxiliary\Build\vcvars32.bat"
+  - msbuild c:\\projects\\ispc\\build\\check_isa.vcxproj /t:Rebuild
+
+test_script:
   - set PATH=%ISPC_HOME%\build\bin\%configuration%;%PATH%
   - cd %ISPC_HOME%
+  - check_isa.exe
   - python perf.py -n 1 -g "Visual Studio 15 Win64"
   - if "%LLVM_VERSION%"=="7.0" ( python run_tests.py -a x86 )
 

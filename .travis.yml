@@ -98,10 +98,11 @@ matrix:
 script:
     - mkdir build_$LLVM_VERSION && cd build_$LLVM_VERSION
     - cmake -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_INSTALL_PREFIX=$TRAVIS_BUILD_DIR ../
-      # Build ispc and examples
-    - make ispc -j4
-      # We need to have ispc binary in ISPC_HOME to run the tests
-    - cp $ISPC_HOME/build_$LLVM_VERSION/bin/ispc $ISPC_HOME && cd $ISPC_HOME
+      # Build ispc and check_isa utility
+    - make ispc check_isa -j4
+      # Add ispc to the PATH
+    - export PATH=$ISPC_HOME/build_$LLVM_VERSION/bin:$PATH && cd $ISPC_HOME
+    - check_isa
     - ./check_env.py
       # Run examples
     - ./perf.py -n 1
