@@ -43,6 +43,7 @@ option(ARM_ENABLED "Enable ARM support" OFF)
 option(NVPTX_ENABLED "Enable NVPTX support" OFF)
 option(ISPC_INCLUDE_EXAMPLES "Generate build targets for the ISPC examples" ON)
 option(ISPC_INCLUDE_TESTS "Generate build targets for the ISPC tests." ON)
+option(ISPC_INCLUDE_UTILS "Generate build targets for the utils." ON)
 option(ISPC_PREPARE_PACKAGE "Generate build targets for ispc package" OFF)
 
 if (UNIX)
@@ -274,11 +275,13 @@ else()
 endif()
 
 # Build target for utility checking host ISA
-if (NOT ISPC_PREPARE_PACKAGE)
+if (ISPC_INCLUDE_UTILS)
     add_executable(check_isa "")
     target_sources(check_isa PRIVATE check_isa.cpp)
     set_target_properties(check_isa PROPERTIES FOLDER "Utils")
-    install (TARGETS check_isa DESTINATION bin)
+    if (NOT ISPC_PREPARE_PACKAGE)
+        install (TARGETS check_isa DESTINATION bin)
+    endif()
 endif()
 
 if (ISPC_INCLUDE_EXAMPLES AND NOT ISPC_PREPARE_PACKAGE)

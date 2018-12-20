@@ -77,15 +77,14 @@ before_build:
     cd %ISPC_HOME%
     mkdir build
     cd build
-    cmake .. -G %generator% -DCMAKE_INSTALL_PREFIX=%ISPC_HOME%\%configuration%
+    cmake .. -G %generator% -DCMAKE_INSTALL_PREFIX=%ISPC_HOME%\%configuration% -DISPC_PREPARE_PACKAGE=ON
 
 build:
-  project: c:\\projects\\ispc\\build\\ispc.vcxproj
+  project: c:\\projects\\ispc\\build\\PACKAGE.vcxproj
   verbosity: minimal
 
 after_build:
   - call "C:\Program Files (x86)\Microsoft Visual Studio\2017\Community\VC\Auxiliary\Build\vcvars32.bat"
-  - msbuild c:\\projects\\ispc\\build\\check_isa.vcxproj /t:Rebuild
 
 test_script:
   - set PATH=%ISPC_HOME%\build\bin\%configuration%;%PATH%
@@ -95,5 +94,5 @@ test_script:
   - if "%LLVM_VERSION%"=="7.0" ( python run_tests.py -a x86 )
 
 artifacts:
-  - path: build\bin\%configuration%\ispc.exe
+  - path: build\ispc-*.zip
     name: ispc
