@@ -1,3 +1,5 @@
+# This is the fix for issue 1362. This ia a port of llvm commit- r347287.
+# This removes unnecessary multiplies.
 diff --git a/lib/CodeGen/SelectionDAG/SelectionDAGBuilder.cpp b/lib/CodeGen/SelectionDAG/SelectionDAGBuilder.cpp
 index ebe1725..0aa21d0 100644
 --- lib/CodeGen/SelectionDAG/SelectionDAGBuilder.cpp
