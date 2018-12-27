@@ -1236,9 +1236,9 @@ PointerType::GetCDeclaration(const std::string &name) const {
         ret = baseType->GetCDeclaration("");
         ret += tempName;
     }
-    else
-        ret += baseType->GetCDeclaration(tempName);;
-
+    else {
+        ret += baseType->GetCDeclaration(tempName);
+    }
     if (variability == Variability::SOA) {
         char buf[32];
         sprintf(buf, "[%d]", variability.soaWidth);
