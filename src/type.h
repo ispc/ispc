@@ -679,6 +679,7 @@ private:
     /** Number of elements in the vector */
     const int numElements;
 
+public:
     /** Returns the number of elements stored in memory for the vector.
         For uniform vectors, this is rounded up so that the number of
         elements evenly divides the target's native vector width. */

@@ -62,6 +62,7 @@
 #else // LLVM up to 4.x
   #include <llvm/Support/Dwarf.h>
 #endif
+#include <llvm/Support/MathExtras.h>
 
 
 /** Utility routine used in code that prints out declarations; returns true
@@ -1806,7 +1807,7 @@ VectorType::GetAsUnsignedType() const {
   return new VectorType(base->GetAsUnsignedType(), numElements);
 }
 
- 
+
 const VectorType *
 VectorType::GetAsConstType() const {
     return new VectorType(base->GetAsConstType(), numElements);
@@ -1870,11 +1871,11 @@ VectorType::LLVMType(llvm::LLVMContext *ctx) const {
         return NULL;
 
     if (base->IsUniformType())
-        // vectors of uniform types are laid out across LLVM vectors, with
-        // the llvm vector size set to be a multiple of the machine's
-        // natural vector size (e.g. 4 on SSE).  This is a roundabout way
-        // of ensuring that LLVM lays them out into machine vector
-        // registers so that e.g. if we want to add two uniform 4 float
+        // Vectors of uniform types are laid out across LLVM vectors, with
+        // the llvm vector size set to be a power of 2 bits in size but not less then 128 bit.
+        // This is a roundabout way of ensuring that LLVM lays
+        // them out into machine vector registers for the specified target
+        // so that e.g. if we want to add two uniform 4 float
         // vectors, that is turned into a single addps on SSE.
         return llvm::VectorType::get(bt, getVectorMemoryCount());
     else if (base->IsVaryingType())
@@ -1918,8 +1919,10 @@ llvm::DIType *VectorType::GetDIType(llvm::DIScope *scope) const {
     uint64_t align = eltType->getAlignInBits();
 #endif
 
-    if (IsUniformType())
-        align = 4 * g->target->getNativeVectorWidth();
+    if (IsUniformType()) {
+        llvm::Type *ty = this->LLVMType(g->ctx);
+        align = g->target->getDataLayout()->getABITypeAlignment(ty);
+    }
 
     if (IsUniformType() || IsVaryingType())
         return m->diBuilder->createVectorType(sizeBits, align, eltType, subArray);
@@ -1943,17 +1946,22 @@ VectorType::getVectorMemoryCount() const {
     if (base->IsVaryingType())
         return numElements;
     else if (base->IsUniformType()) {
-        int nativeWidth = g->target->getNativeVectorWidth();
-        if (Type::Equal(base->GetAsUniformType(), AtomicType::UniformInt64) ||
-            Type::Equal(base->GetAsUniformType(), AtomicType::UniformUInt64) ||
-            Type::Equal(base->GetAsUniformType(), AtomicType::UniformDouble))
-            // target.getNativeVectorWidth() should be in terms of 32-bit
-            // values, so for the 64-bit guys, it takes half as many of
-            // them to fill the native width
-            nativeWidth /= 2;
-        // and now round up the element count to be a multiple of
-        // nativeWidth
-        return (numElements + (nativeWidth - 1)) & ~(nativeWidth-1);
+        if (g->target->getDataTypeWidth() == -1) {
+          // For generic targets and NVPTX just return correct result,
+          // we don't care about optimizations in this case.
+          // Should we just assume data type width equal to 32?
+            return numElements;
+        }
+        // Round up the element count to power of 2 bits in size but not less then 128 bit in total vector size
+        // where one element size is data type width in bits.
+        // This strategy was chosen by the following reasons:
+        // 1. We need to return the same number of vector elements regardless the element size for correct work of the language.
+        // 2. Using next power of two, but not less than 128 bit in total vector size ensures that machine vector registers
+        // are used. It generally leads to better performance. This strategy also matches OpenCL short vectors.
+        // 3. Using data type width of the target to determine element size makes optimization trade off.
+        int nextPow2 = llvm::NextPowerOf2(numElements-1);
+        return (nextPow2 * g->target->getDataTypeWidth() < 128) ? (128 / g->target->getDataTypeWidth())
+                                                                : nextPow2;
     }
     else if (base->IsSOAType()) {
         FATAL("VectorType SOA getVectorMemoryCount");
@@ -1991,15 +1999,6 @@ lMangleStructName(const std::string &name, Variability variability) {
     // Encode vector width
     sprintf(buf, "v%d", g->target->getVectorWidth());
 
-    // Encode native vector width
-    // This additional information is needed to differentiate between structs
-    // for architectures with same vector width but different native vector
-    // width. Eg. sse4-i32x4 and avx1-i32x4. In such a case, we need to add
-    // the struct name to the map separately for both cases in order to account
-    // for cases involving uniform vector type element(s).
-    // This is needed due to padding of short vector, which depends on native
-    // vector width.
-    sprintf(buf + strlen(buf), "nv%d", g->target->getNativeVectorWidth());
     n += buf;
 
     // Variability
@@ -2093,7 +2092,7 @@ StructType::StructType(const std::string &n, const llvm::SmallVector<const Type 
     }
 }
 
-const std::string 
+const std::string
 StructType::GetCStructName() const {
   // only return mangled name for varying structs for backwards
   // compatibility...
@@ -3193,7 +3192,7 @@ FunctionType::GetCDeclaration(const std::string &fname) const {
             CastType<ArrayType>(pt->GetBaseType()) != NULL) {
             type = new ArrayType(pt->GetBaseType(), 0);
         }
-        
+
         if (paramNames[i] != "")
           ret += type->GetCDeclaration(paramNames[i]);
         else
@@ -3224,11 +3223,11 @@ FunctionType::GetCDeclarationForDispatch(const std::string &fname) const {
             CastType<ArrayType>(pt->GetBaseType()) != NULL) {
             type = new ArrayType(pt->GetBaseType(), 0);
         }
-        
+
         // Change pointers to varying thingies to void *
         if (pt != NULL && pt->GetBaseType()->IsVaryingType()) {
           PointerType *t = PointerType::Void;
-          
+
           if (paramNames[i] != "")
             ret += t->GetCDeclaration(paramNames[i]);
           else
@@ -3360,10 +3359,10 @@ FunctionType::LLVMFunctionType(llvm::LLVMContext *ctx, bool removeMask) const {
         llvmArgTypes.push_back(LLVMTypes::MaskType);
 
     std::vector<llvm::Type *> callTypes;
-    if (isTask 
+    if (isTask
 #ifdef ISPC_NVPTX_ENABLED
       && (g->target->getISA() != Target::NVPTX)
-#endif 
+#endif
       ){
         // Tasks take three arguments: a pointer to a struct that holds the
         // actual task arguments, the thread index, and the total number of

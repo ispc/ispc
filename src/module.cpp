@@ -1795,8 +1795,6 @@ lEmitVectorTypedefs(const std::vector<const VectorType *> &types, FILE *file) {
     fprintf(file, "// Vector types with external visibility from ispc code\n");
     fprintf(file, "///////////////////////////////////////////////////////////////////////////\n\n");
 
-    int align = g->target->getNativeVectorWidth() * 4;
-
     for (unsigned int i = 0; i < types.size(); ++i) {
         std::string baseDecl;
         const VectorType *vt = types[i]->GetAsNonConstType();
@@ -1808,6 +1806,8 @@ lEmitVectorTypedefs(const std::vector<const VectorType *> &types, FILE *file) {
 
         int size = vt->GetElementCount();
 
+        llvm::Type *ty = vt->LLVMType(g->ctx);
+        int align = g->target->getDataLayout()->getABITypeAlignment(ty);
         baseDecl = vt->GetBaseType()->GetCDeclaration("");
         fprintf(file, "#ifndef __ISPC_VECTOR_%s%d__\n",baseDecl.c_str(), size);
         fprintf(file, "#define __ISPC_VECTOR_%s%d__\n",baseDecl.c_str(), size);
