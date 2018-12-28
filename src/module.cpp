@@ -905,7 +905,7 @@ lCheckForStructParameters(const FunctionType *ftype, SourcePos pos) {
     for (int i = 0; i < ftype->GetNumParameters(); ++i) {
         const Type *type = ftype->GetParameterType(i);
         if (CastType<StructType>(type) != NULL) {
-            Error(pos, "Passing structs to/from application functions by value"
+            Error(pos, "Passing structs to/from application functions by value "
                 "is currently not supported. Use a reference, a const reference, "
                 "a pointer, or a const pointer to the struct instead.");
             return;
