@@ -370,7 +370,7 @@ private:
         --opt=force-aligned-memory is used. */
     int m_nativeVectorAlignment;
 
-    /** Data type with in bits. Typically it's 32, but could be 8, 16 or 64.
+    /** Data type width in bits. Typically it's 32, but could be 8, 16 or 64.
         For generic it's -1, which means undefined. */
     int m_dataTypeWidth;
 

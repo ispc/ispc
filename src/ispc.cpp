@@ -952,7 +952,7 @@ Target::Target(const char *arch, const char *cpu, const char *isa, bool pic, boo
         this->m_isa = Target::KNL_AVX512;
         this->m_nativeVectorWidth = 16;
         this->m_nativeVectorAlignment = 64;
-        // ?? this->m_dataTypeWidth = 32;
+        this->m_dataTypeWidth = 32;
         this->m_vectorWidth = 16;
         this->m_maskingIsFree = true;
         this->m_maskBitCount = 8;
@@ -972,7 +972,7 @@ Target::Target(const char *arch, const char *cpu, const char *isa, bool pic, boo
         this->m_isa = Target::SKX_AVX512;
         this->m_nativeVectorWidth = 16;
         this->m_nativeVectorAlignment = 64;
-        // ?? this->m_dataTypeWidth = 32;
+        this->m_dataTypeWidth = 32;
         this->m_vectorWidth = 16;
         this->m_maskingIsFree = true;
         this->m_maskBitCount = 8;

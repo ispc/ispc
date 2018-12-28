@@ -4079,20 +4079,10 @@ ExprList::GetConstant(const Type *type) const {
             AssertPos(pos, lvt != NULL);
 
             // Uniform short vectors are stored as vectors of length
-            // rounded up to the native vector width.  So we add additional
-            // undef values here until we get the right size.
-            int vectorWidth = g->target->getNativeVectorWidth();
+            // rounded up to a power of 2 bits in size but not less then 128 bit.
+            // So we add additional undef values here until we get the right size.
             const VectorType *vt = CastType<VectorType>(type);
-            const AtomicType *bt = vt->GetElementType();
-
-            if (Type::Equal(bt->GetAsUniformType(), AtomicType::UniformInt64) ||
-                Type::Equal(bt->GetAsUniformType(), AtomicType::UniformUInt64) ||
-                Type::Equal(bt->GetAsUniformType(), AtomicType::UniformDouble)) {
-                // target.nativeVectorWidth should be in terms of 32-bit
-                // values, so for the 64-bit guys, it takes half as many of
-                // them to fill the native width
-                vectorWidth /= 2;
-            }
+            int vectorWidth = vt->getVectorMemoryCount();
 
             while ((cv.size() % vectorWidth) != 0) {
                 cv.push_back(llvm::UndefValue::get(lvt->getElementType()));
