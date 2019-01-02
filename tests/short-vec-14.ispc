@@ -9,8 +9,10 @@ export void f_fu(uniform float RET[], uniform float aFOO[], uniform float b) {
     index = min(index, 3);
 
     x = (x < y) ? x : y;
-    if (programIndex < 4)
+    if (programIndex < 4) {
+        #pragma ignore warning
         RET[programIndex] = x[programIndex];
+    }
 
 /*CO    return c[0] ? 1 : 0;*/
 /*CO    x = b;*/

@@ -7,6 +7,7 @@ export void f_v(uniform float RET[]) {
     RET[programIndex] = 0;
     if (programIndex < 5) {
         uniform int64<5> z = c ? x : y;
+        #pragma ignore warning
         RET[programIndex] = z[programIndex];
     }
 }

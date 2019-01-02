@@ -8,8 +8,10 @@ bool ok(double x, double ref) { return (abs(x - ref) < 1e-6) || abs((x-ref)/ref)
 export void f_v(uniform float RET[]) {
     uniform float vals_f[8] = { 0, 1, 0.5, -1, -.87, -.25, 1e-3, -.99999999 };
     uniform float r_f[8];
-    foreach (i = 0 ... 8)   //testing varying float
+    foreach (i = 0 ... 8) {  //testing varying float
+        #pragma ignore warning(perf)
         r_f[i] = sin(asin(vals_f[i%8]));
+    }
 
     int errors = 0;
     for (uniform int i = 0; i < 8; ++i) {
@@ -29,8 +31,10 @@ export void f_v(uniform float RET[]) {
     }
     uniform double vals_d[8] = { 0, 1, 0.5, -1, -.87, -.25, 1e-3, -.99999999 };
     uniform double r_d[8];
-    foreach (i = 0 ... 8)
+    foreach (i = 0 ... 8) {
+        #pragma ignore warning(perf)
         r_d[i] = sin(asin(vals_d[i%8]));    //testing varying double
+    }
 
     for (uniform int i = 0; i < 8; ++i) {
         if (ok(r_d[i], vals_d[i%8]) == false) {

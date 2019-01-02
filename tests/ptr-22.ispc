@@ -8,7 +8,9 @@ struct Foo {
 
 void update(varying Foo * varying fp) {
     ++fp;
+    #pragma ignore warning(perf)
     fp->a -= 1;
+    #pragma ignore warning(perf)
     fp->b = 1;
 }
 

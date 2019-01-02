@@ -17,6 +17,7 @@ export void f_fu(uniform float RET[], uniform float aFOO[], uniform float b) {
     assert(8+programCount < 88);
     pts[8+programIndex] = pv;
 
+    #pragma ignore warning(perf)
     RET[programIndex] = pts[6+programIndex].x;
 }
 

@@ -10,13 +10,16 @@ export void f_fu(uniform float ret[], uniform float aa[], uniform float b) {
         foo[i].x = i;
         foo[i].y = -1234 + i;
     }
+    #pragma ignore warning(perf)
     varying Foo fv = foo[a];
     fv.x += 1000;
 //CO    print("fv.x = %\n", fv.x);
 //CO    print("foo[a] = %\n", foo[a].x);
+    #pragma ignore warning(perf)
     foo[a] = fv;
 //CO    print("after assign foo[a] = %\n", foo[a].x);
 
+    #pragma ignore warning(perf)
     ret[programIndex] = foo[programIndex].x;
 //CO    print("% - %\n", programIndex, ret[programIndex]);
 }

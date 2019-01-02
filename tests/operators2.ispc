@@ -39,6 +39,7 @@ export void f_f(uniform float RET[], uniform float aFOO[]) {
         off = 1;
     else
         off = 0;
+    #pragma ignore warning(perf)
     if (T % 2)
         d = a + b;
     else

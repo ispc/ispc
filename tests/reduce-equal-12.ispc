@@ -2,6 +2,7 @@
 export uniform int width() { return programCount; }
 
 export void f_fu(uniform float RET[], uniform float aFOO[], uniform float b) {
+    #pragma ignore warning(perf)
     int a = 10 + aFOO[programIndex/2];
     RET[programIndex] = 1;
     uniform int sameVal;

@@ -17,10 +17,15 @@ export void f_fu(uniform float RET[], uniform float aFOO[], uniform float b) {
             x[i][j] = 2+b-5;
 
     // all are 2 except (4,2) = 0, (4,...) = 1, (4,programCount-1)=2
-    if (a == 3.)
+    if (a == 3.) {
+        #pragma ignore warning(perf)
         x[b-1][a-1] = 0;
-    else
+    }
+    else {
+        #pragma ignore warning(perf)
         x[b-1][a-1] = 1;
+    }
+    #pragma ignore warning(perf)
     RET[programIndex] = x[4][a];
 
 #ifdef _SHMALLOC

@@ -4,8 +4,10 @@ export uniform int width() { return programCount; }
 
 
 export void f_fu(uniform float RET[], uniform float aFOO[], uniform float b) {
+    #pragma ignore warning(perf)
     float v = aFOO[programIndex & 0x3];
     uniform float m;
+    #pragma ignore warning(perf)
     unsigned int64 iv = (unsigned int)v;
     m = reduce_add(iv);
     RET[programIndex] = m;

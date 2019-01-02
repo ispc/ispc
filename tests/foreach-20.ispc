@@ -9,6 +9,7 @@ export void f_f(uniform float RET[], uniform float aFOO[]) {
         RET[i] = 0;
 
     foreach (i = 0 ... programCount) {
+        #pragma ignore warning(perf)
         if (i % 2)
             continue;
         RET[i] = 1;

@@ -6,7 +6,7 @@ export void f_v(uniform float RET[]) {
 int i=0, j=0;
 while (i++ < 10) {
   ++j;
-  if (i >= 5) cbreak;
+  if (i >= 5) break;
   ++j;}
 RET[programIndex] = (float)j; }
 

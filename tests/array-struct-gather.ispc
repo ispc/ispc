@@ -14,10 +14,14 @@ export void f_fu(uniform float RET[], uniform float aFOO[], uniform float b) {
     for (i = 0; i < programCount+1; ++i)
         foo.x[i] = i;
 
-    if ((int)a & 1)
-        { RET[programIndex] = foo.x[a-1]; return; }
-    else 
-        { RET[programIndex] = foo.x[a]; return; }
+    if ((int)a & 1) { 
+        #pragma ignore warning(perf)
+        RET[programIndex] = foo.x[a-1]; return;
+    }
+    else {
+        #pragma ignore warning(perf)
+        RET[programIndex] = foo.x[a]; return;
+    }
 }
 
 

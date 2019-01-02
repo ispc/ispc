@@ -6,6 +6,7 @@ export uniform int width() { return programCount; }
 struct Foo { float f; };
 
 void f(Foo foo[], float a) {
+    #pragma ignore warning(perf)
     ++foo[a].f;
 }
 
@@ -15,6 +16,7 @@ export void f_fu(uniform float RET[], uniform float aFOO[], uniform float b) {
     for (uniform int i = 0; i < programCount+5; ++i)
         foo[i].f = a;
     f(foo, a);
+    #pragma ignore warning(perf)
     RET[programIndex] = foo[a].f;
 }
 

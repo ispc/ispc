@@ -8,6 +8,7 @@ task void x(float f) {
     uniform int j;
     uniform int i = taskIndex;
     array[i] = i / 10000.;
+    #pragma ignore warning
     cfor (j = 0; j < 10000; ++j)
         array[i] = sin(array[i]);
     if (array[i] < .02)

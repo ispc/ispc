@@ -9,10 +9,10 @@ export void f_f(uniform float RET[], uniform float aFOO[]) {
     float r = 0;
     for (i = 0; i < a+1; ++i) {
         if (i == 1)
-            ccontinue;
+            continue;
         for (j = 0; j < a; ++j) {
             if (a == 2)
-                ccontinue;
+                continue;
         }
         ++r;
     }

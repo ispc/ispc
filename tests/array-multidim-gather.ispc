@@ -11,6 +11,7 @@ export void f_fu(uniform float RET[], uniform float aFOO[], uniform float b) {
             x[i][j] = 3*i+j;
 
     a = clamp(a-2., 0., 2.);
+    #pragma ignore warning(perf)
     RET[programIndex] = x[a][a];
 }
 

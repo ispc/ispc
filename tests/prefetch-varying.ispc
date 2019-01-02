@@ -13,6 +13,7 @@ export void f_f(uniform float RET[], uniform float aFOO[]) {
  prefetch_l2(ptr);
  prefetch_l3(ptr);
  prefetch_nt(ptr);
+ #pragma ignore warning(perf)
  int g = *ptr;
  RET[programIndex] = g;
 }

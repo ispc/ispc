@@ -10,6 +10,7 @@ export void f_f(uniform float RET[], uniform float aFOO[]) {
         a[i] = aFOO[i];
     
     float *ptr = (aFOO[0] == 1234) ? (float * varying)gptr : (a + programIndex);
+    #pragma ignore warning(perf)
     int g = *ptr; 
     RET[programIndex] = g; 
 }

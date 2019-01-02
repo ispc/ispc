@@ -25,8 +25,10 @@ export void f_f(uniform float RET[], uniform float fFOO[]) {
     int x = 2;
     // Line 29 would have resulted in a performance and a compiler warning.
     // The '#pragma ignore warning(perf)' directive ignores ONLY performance warning.
-    #pragma ignore warning(perf)
-    a[programIndex + 1] = fill(b, (int8)x / (programIndex-1));
+    if(programIndex + 1 < programCount) {
+        #pragma ignore warning
+        a[programIndex + 1] = fill(b, (int8)x / (programIndex-1));
+    }
 
     // Line 34 would have resulted in a performance warning when the macro 'foo' gets expanded.
     // The '#pragma ignore warning(perf)' directive ignores the performance warning from the expanded macro.

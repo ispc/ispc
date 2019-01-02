@@ -11,6 +11,7 @@ export void f_f(uniform float RET[], uniform float aFOO[]) {
             a[i][j] = 0;
 
     foreach_tiled (i = 0 ... NA, j = 0 ... NB) {
+        #pragma ignore warning(perf)
         a[i][j] += 1;
     }
 

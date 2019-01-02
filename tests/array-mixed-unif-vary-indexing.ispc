@@ -11,7 +11,9 @@ export void f_fu(uniform float RET[], uniform float aFOO[], uniform float b) {
             x[i][j] = 2+b-5;
 
     a = min(a,46.f);
+    #pragma ignore warning(perf)
     x[a][b-1] = 0;
+    #pragma ignore warning(perf)
     RET[programIndex] = x[2][a];
 }
 

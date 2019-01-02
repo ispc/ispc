@@ -8,6 +8,7 @@ struct Foo {
 };
 
 float func(Foo foo[], int offset) {
+    #pragma ignore warning(perf)
     return foo[offset].f;
 }
 

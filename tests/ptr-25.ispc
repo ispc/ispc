@@ -2,6 +2,7 @@
 export uniform int width() { return programCount; }
 
 void update(varying float<2> * vp) {
+    #pragma ignore warning(perf)
     vp->y = 0;
 }
 
@@ -16,6 +17,7 @@ export void f_f(uniform float RET[], uniform float aFOO[]) {
     update(&v[programIndex]);
 //CO    for (uniform int i = 0; i < programCount; ++i) 
 //CO        print("%: % %\n", i, v[i].x, v[i].y);
+    #pragma ignore warning(perf)
     RET[programIndex] = v[programIndex].x;
 }
 

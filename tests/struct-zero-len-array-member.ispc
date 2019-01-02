@@ -16,6 +16,7 @@ export void f_f(uniform float RET[], uniform float aFOO[]) {
         ptr->a[i] = i;
     ptr->x = aFOO[programIndex]; 
 
+    #pragma ignore warning(perf)
     RET[programIndex] = ptr->a[1+programIndex]; 
 }
 

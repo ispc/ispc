@@ -25,6 +25,7 @@ export void f_fu(uniform float RET[], uniform float aFOO[], uniform float b) {
     float v = aFOO[programIndex];
     uniform Ray rays[programCount+1];
     init(rays, programCount+1, v);
+    #pragma ignore warning(perf)
     Ray rg = rays[v];
     zero_dx(rg);
     RET[programIndex] = rg.o.z + rg.d.x;

@@ -12,7 +12,7 @@ export void f_fu(uniform float RET[], uniform float aFOO[], uniform float b) {
             if (r == b) 
                 r += 10;
             ++r;
-            if (r == 2) cbreak;
+            if (r == 2) break;
         }
     }
     RET[programIndex] = r;

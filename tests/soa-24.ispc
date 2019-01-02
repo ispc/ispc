@@ -19,6 +19,7 @@ export void f_fu(uniform float RET[], uniform float aFOO[], uniform float b) {
         pts[i].z = i;
     }
 
+    #pragma ignore warning(perf)
     pts[programIndex+2].vec.z *= -1;    
     assert(programIndex < 80);
     float<3> vl = pts[programIndex].vec;

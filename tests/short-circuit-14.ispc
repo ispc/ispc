@@ -9,6 +9,7 @@ int crash() {
 
 float foo(uniform float a[]) {
     int index = (programIndex & 1);
+    #pragma ignore warning(perf)
     if (a[index] == 2 && crash())
         return 1234;
     else

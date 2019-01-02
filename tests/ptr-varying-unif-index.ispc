@@ -5,6 +5,7 @@ export uniform int width() { return programCount; }
 export void f_f(uniform float RET[], uniform float aFOO[]) {
     uniform float buf[programCount];
     uniform float * varying ptr = &buf[programCount - 1 - programIndex];
+    #pragma ignore warning(perf)
     ptr[0] = programIndex;
     RET[programIndex] = buf[programIndex];
 }

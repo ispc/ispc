@@ -3,6 +3,7 @@ export uniform int width() { return programCount; }
 
 
 export void f_fu(uniform float RET[], uniform float aFOO[], uniform float b) {
+    #pragma ignore warning(perf)
     float a = aFOO[programIndex&3];
     float i, j;
     for (i = 0; i < b; ++i) {
@@ -19,9 +20,13 @@ export void f_fu(uniform float RET[], uniform float aFOO[], uniform float b) {
 export void result(uniform float RET[]) {
   for (int i = 0; i < programCount; i += 4)
   {
+    #pragma ignore warning
     RET[i+0] = 1;
+    #pragma ignore warning
     RET[i+1] = 3;
+    #pragma ignore warning
     RET[i+2] = 3;
+    #pragma ignore warning
     RET[i+3] = 29;
   }
 }

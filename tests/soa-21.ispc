@@ -25,6 +25,7 @@ export void f_fu(uniform float RET[], uniform float aFOO[], uniform float b) {
     
     assert(7+programCount < 88);
     soa<8> Foo * ptr = &pts[7+programIndex];
+    #pragma ignore warning(perf)
     RET[programIndex] = ptr->pts[3].z;
 }
 
