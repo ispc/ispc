@@ -5,8 +5,10 @@ export void f_fu(uniform float RET[], uniform float aFOO[], uniform float b) {
 
     RET[programIndex] = 0;
     uniform float<3> z = x+b;
-    if (programIndex < 3)
+    if (programIndex < 3) {
+        #pragma ignore warning
         RET[programIndex] = z[programIndex];
+    }
 
 /*CO    return x[y];*/
 

@@ -12,6 +12,7 @@ extern void aa(Foo * uniform f);
 extern void bb(Foo f[]);
 
 void set(Foo f[], int offset, Foo val) {
+    #pragma ignore warning(perf)
     f[offset] = val;
 }
 
@@ -27,6 +28,7 @@ export void f_f(uniform float RET[], uniform float aFOO[]) {
     Foo x = { 3*a, -1, 4*a };
     set(foo, a-1, x);
 
+    #pragma ignore warning(perf)
     RET[programIndex] = foo[programIndex].f; 
 }
 

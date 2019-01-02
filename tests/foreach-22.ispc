@@ -11,10 +11,11 @@ export void f_f(uniform float RET[], uniform float aFOO[]) {
 
     foreach (i = 0 ... 21) {
         if (i < 4)
-            ccontinue;
+            continue;
         x[i] = 1;
     }
 
+    #pragma ignore warning(perf)
     RET[programIndex] = x[min(programIndex, 20)];
 }
 

@@ -8,6 +8,7 @@ export void f_fu(uniform float RET[], uniform float aFOO[], uniform float b) {
     for (uniform int i = 0; i < programCount+1; ++i) {
         buf[i] = i+a;
     }
+    #pragma ignore warning(perf)
     RET[programIndex] = buf[a];
     delete buf;
 }

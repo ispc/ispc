@@ -9,8 +9,10 @@ export void f_f(uniform float RET[], uniform float aFOO[]) {
         a[i] = aFOO[i];
     
     int g = 0;
-    if (programIndex < 2)
-        g = a[programIndex+zero]; 
+    if (programIndex < 2) {
+        #pragma ignore warning(perf)
+        g = a[programIndex+zero];
+    }
     RET[programIndex] = g; 
 }
 

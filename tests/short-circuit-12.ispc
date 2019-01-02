@@ -5,6 +5,7 @@ uniform int * uniform ptr;
 
 float foo(uniform float a[]) {
     int index = (programIndex & 1) * 10000;
+    #pragma ignore warning(perf)
     if (a[programIndex] < 10000 && a[index] == 1)
         return 1;
     else

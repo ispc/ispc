@@ -15,6 +15,7 @@ export void f_f(uniform float RET[], uniform float aFOO[]) {
     }
 
     varying Ray *rp = &r[programIndex/2];
+    #pragma ignore warning(perf)
     RET[programIndex] = rp->v.z; 
 }
 

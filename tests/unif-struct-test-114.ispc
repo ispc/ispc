@@ -15,6 +15,7 @@ export void f_fi(uniform float RET[], uniform float a[], uniform int bFOO[]) {
         myFoo[i].f = 17+2*i;
     }
     assert(b/2 < 256);
+    #pragma ignore warning(perf)
     RET[programIndex] = myFoo[b/2].f;
 }
 

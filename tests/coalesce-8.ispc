@@ -8,6 +8,7 @@ export void f_f(uniform float RET[], uniform float aFOO[]) {
 
     int index = (programIndex < 4) ? (programIndex & 1) :
         (programIndex / 4);
+    #pragma ignore warning(perf)
     float a = buf[index];
 
     RET[programIndex] = a;

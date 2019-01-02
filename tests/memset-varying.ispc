@@ -11,6 +11,7 @@ export void f_f(uniform float RET[], uniform float aFOO[]) {
         memset(buf, 0x01, 1024*(programIndex+1)*sizeof(uniform int32));
     }
 
+    #pragma ignore warning(perf)
     int v = buf[0];
     int expected = (programIndex & 1) ? 0xffffffff : 0x01010101;
     RET[programIndex] = (v == expected);

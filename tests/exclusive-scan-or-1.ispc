@@ -9,5 +9,6 @@ export void f_f(uniform float RET[], uniform float aFOO[]) {
 
 
 export void result(uniform float RET[]) {
+    #pragma ignore warning(perf)
     RET[programIndex] = (1ul << (min(programIndex, 31))) - 1;
 }

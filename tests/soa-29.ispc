@@ -17,6 +17,7 @@ export void f_fu(uniform float RET[], uniform float aFOO[], uniform float b) {
     uniform Point up = pts[4];
 
     assert(2*programIndex < 160);
+    #pragma ignore warning(perf)
     RET[programIndex] = pts[2*programIndex].x;
 }
 

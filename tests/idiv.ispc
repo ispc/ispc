@@ -7,8 +7,10 @@ export void f_f(uniform float RET[], uniform float aFOO[]) {
 
   for (unsigned int8 num = 0; num < 255; ++num) {
     for (uniform unsigned int8 div = 2; div < 255; ++div) {
+      #pragma ignore warning(perf)
       if (__fast_idiv(num, div) != num/div) {
         ++errorCount;
+        #pragma ignore warning(perf)
         print("error %/% = %, got %\n", num, div, num/div, __fast_idiv(num,div));
         if (errorCount > 32) break;
       }
@@ -17,8 +19,10 @@ export void f_f(uniform float RET[], uniform float aFOO[]) {
 
   for (int8 num = 0; num < 127; ++num) {
     for (uniform int8 div = 2; div < 127; ++div) {
+      #pragma ignore warning(perf)
       if (__fast_idiv(num, div) != num/div) {
         ++errorCount;
+        #pragma ignore warning(perf)
         print("error %/% = %, got %\n", num, div, num/div, __fast_idiv(num,div));
         if (errorCount > 64) break;
       }
@@ -27,8 +31,10 @@ export void f_f(uniform float RET[], uniform float aFOO[]) {
 
   for (int16 num = 0; num < 32767; ++num) {
     for (uniform int16 div = 2; div < 256; ++div) {
+      #pragma ignore warning(perf)
       if (__fast_idiv(num, div) != num/div) {
         ++errorCount;
+        #pragma ignore warning(perf)
         print("error %/% = %, got %\n", num, div, num/div, __fast_idiv(num,div));
         if (errorCount > 96) break;
       }
@@ -37,8 +43,10 @@ export void f_f(uniform float RET[], uniform float aFOO[]) {
 
   for (unsigned int16 num = 0; num < 0xffff; ++num) {
     for (uniform unsigned int16 div = 2; div < 256; ++div) {
+      #pragma ignore warning(perf)
       if (__fast_idiv(num, div) != num/div) {
         ++errorCount;
+        #pragma ignore warning(perf)
         print("error %/% = %, got %\n", num, div, num/div, __fast_idiv(num,div));
         if (errorCount > 128) break;
       }
@@ -51,8 +59,10 @@ export void f_f(uniform float RET[], uniform float aFOO[]) {
   for (uniform int i = 0; i < 64k; ++i) {
     unsigned int32 num = random(&state);
     for (uniform unsigned int32 div = 2; div < 256; ++div) {
+      #pragma ignore warning(perf)
       if (__fast_idiv(num, div) != num/div) {
         ++errorCount;
+        #pragma ignore warning(perf)
         print("ui32 error %/% = %, got %\n", num, div, num/div, __fast_idiv(num,div));
         if (errorCount > 160) break;
       }
@@ -64,8 +74,10 @@ export void f_f(uniform float RET[], uniform float aFOO[]) {
     if (num < 0)
       continue;
     for (uniform int32 div = 2; div < 256; ++div) {
+      #pragma ignore warning(perf)
       if (__fast_idiv(num, div) != num/div) {
         ++errorCount;
+        #pragma ignore warning(perf)
         print("si32 error %/% = %, got %\n", num, div, num/div, __fast_idiv(num,div));
         if (errorCount > 192) break;
       }

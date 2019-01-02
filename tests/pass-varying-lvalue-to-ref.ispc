@@ -1,6 +1,7 @@
 
 export uniform int width() { return programCount; }
 
+#pragma ignore warning(perf)
 void inc(uniform float * varying v) { ++(*v); }
 
 export void f_fu(uniform float ret[], uniform float aa[], uniform float b) {

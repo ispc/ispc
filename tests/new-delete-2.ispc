@@ -6,6 +6,7 @@ export void f_fu(uniform float RET[], uniform float aFOO[], uniform float b) {
     uniform float * uniform buf = uniform new uniform float[programCount];
     for (uniform int i = 0; i < programCount; ++i)
         buf[i] = i;
+    #pragma ignore warning(perf)
     RET[programIndex] = buf[a-1];
     delete buf;
 }

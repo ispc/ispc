@@ -5,7 +5,7 @@ export uniform int width() { return programCount; }
 export void f_v(uniform float RET[]) {
 int i;
 cfor (i = 0; i < 10; ++i) {
-  if (i == 5) cbreak;
+  if (i == 5) break;
 }
 RET[programIndex] = (float)i; }
 

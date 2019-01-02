@@ -10,7 +10,7 @@ export void f_f(uniform float RET[], uniform float aFOO[]) {
     for (i = 0; i < a; ++i) {
         cif (i != 0) {
             cif (a != 2)
-                ccontinue;
+                continue;
             r = 10;
         }
         ++r;

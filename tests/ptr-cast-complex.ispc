@@ -10,6 +10,7 @@ export void f_f(uniform float RET[], uniform float aFOO[]) {
     }
 
     uniform int (* varying y)[10] = x;
+    #pragma ignore warning(perf)
     RET[programIndex] = y[1][programIndex % 5];
 }
 

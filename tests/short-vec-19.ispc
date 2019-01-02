@@ -8,8 +8,10 @@ export void f_fu(uniform float RET[], uniform float aFOO[], uniform float b) {
 
     inc(&x[1]);
     RET[programIndex] = 0;
-    if (programIndex < 4)
+    if (programIndex < 4) {
+        #pragma ignore warning
         RET[programIndex] = x[1][programIndex];
+    }
 }
 
 export void result(uniform float RET[]) {

@@ -15,6 +15,7 @@ static void p(uniform float *uniform ptr) {
 }
 
 export void f_fu(uniform float RET[], uniform float aFOO[], uniform float b) {
+    #pragma ignore warning(perf)
     soa<4> Point pts[30];
     for (uniform int i = 0; i < 120; ++i) {
         pts[i].x = b*i;
@@ -28,10 +29,12 @@ export void f_fu(uniform float RET[], uniform float aFOO[], uniform float b) {
     a *= -1;
     Point vp = { a, { 2*a, 3*a, 4*a }, {5*a} };
     assert(programCount+2 < 120);
+    #pragma ignore warning(perf)
     pts[2+programIndex] = vp;
 
 //CO    p((uniform float * uniform)&pts[0]);
 
+    #pragma ignore warning(perf)
     RET[programIndex] = pts[programIndex].y[2];
 }
 

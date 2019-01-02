@@ -8,6 +8,7 @@ export void f_fu(uniform float RET[], uniform float aFOO[], uniform float b) {
     uniform float x[programCount+5];
     for (uniform int i = 0; i < programCount+5; ++i)
         x[i] = 0.;
+    #pragma ignore warning(perf)
     x[a] = 2;
     RET[programIndex] = x[4] + x[0] + x[5];
 }

@@ -4,6 +4,7 @@ export uniform int width() { return programCount; }
 
 export void f_v(uniform float RET[]) {
     unsigned int x = 0xffff0f0f;
+    #pragma ignore warning(perf)
     RET[programIndex] = ~x;
 }
 

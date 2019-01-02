@@ -13,7 +13,9 @@ export void f_fu(uniform float RET[], uniform float aFOO[], uniform float b) {
         foo[i].f = a;
         ind[i] = i+1;
     }
+    #pragma ignore warning(perf) 
     ++foo[a].f;
+    #pragma ignore warning(perf)
     RET[programIndex] = foo[ind[programIndex]].f;
 }
 

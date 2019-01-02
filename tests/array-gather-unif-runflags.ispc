@@ -12,8 +12,10 @@ export void f_fu(uniform float RET[], uniform float aFOO[], uniform float b) {
     if (a == 3) a = 0;
     a *= 10000000;
     float ret = 1234;
-    if (a < 5)
+    if (a < 5) {
+        #pragma ignore warning(perf)
         ret = x[a];
+    }
     RET[programIndex] = ret;
 }
 

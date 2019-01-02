@@ -7,7 +7,7 @@ export void f_fu(uniform float RET[], uniform float aFOO[], uniform float b) {
     uniform float i;
     for (i = 0; i < b; ++i) {
         ++a;
-        if (i+2 == b) cbreak;
+        if (i+2 == b) break;
     }
     RET[programIndex] = a;
 }

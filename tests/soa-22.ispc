@@ -19,14 +19,18 @@ export void f_fu(uniform float RET[], uniform float aFOO[], uniform float b) {
         for (uniform int j = 0; j < 3; ++j) {
             pts[i].pts[j] = new uniform Point[4];
             for (uniform int k = 0; k < 4; ++k) {
+                #pragma ignore warning(perf)
                 pts[i].pts[j][k].x = 100*i+10*j+k;
+                #pragma ignore warning(perf)
                 pts[i].pts[j][k].y = -1234;
+                #pragma ignore warning(perf)
                 pts[i].pts[j][k].z = -(100*i+10*j+k);
             }
         }
     }
    
     assert(programIndex < 80);
+    #pragma ignore warning(perf)
     RET[programIndex] = pts[programIndex].pts[programIndex % 3][programIndex % 4].z;
 }
 

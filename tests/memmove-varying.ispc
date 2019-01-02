@@ -4,12 +4,15 @@ export uniform int width() { return programCount; }
 export void f_f(uniform float RET[], uniform float aFOO[]) {
     int32 *buf = new int32[1024];
 
-    for (uniform int i = 0; i < 1024; ++i)
+    for (uniform int i = 0; i < 1024; ++i) {
+        #pragma ignore warning(perf)
         buf[i] = programIndex * 10000 + i;
+    }
 
     if (programIndex == 2)
         memmove(buf, buf+programCount/2, programCount*sizeof(uniform int));
 
+    #pragma ignore warning(perf)
     RET[programIndex] = buf[0];
 }
 

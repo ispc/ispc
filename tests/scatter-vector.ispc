@@ -11,6 +11,7 @@ struct Foo {
 typedef float<3> float3;
 
 void set(uniform float3 f[], int offset, float3 val) {
+    #pragma ignore warning(perf)
     f[offset] = val;
 }
 
@@ -27,6 +28,7 @@ export void f_f(uniform float RET[], uniform float aFOO[]) {
     float3 bar = { programIndex, 2*programIndex, 3*programIndex };
     set(foo, a-1, bar);
 
+    #pragma ignore warning(perf)
     RET[programIndex] = foo[programIndex].z; 
 }
 

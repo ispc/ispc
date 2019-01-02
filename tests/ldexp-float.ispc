@@ -11,6 +11,7 @@ export void f_f(uniform float RET[], uniform float aFOO[]) {
 
 export void result(uniform float RET[]) {
     int pi = programIndex % 28;
+    #pragma ignore warning(perf)
     RET[programIndex] = (1ul << (pi + 2));
     if (programIndex & 1)
         RET[programIndex] = -RET[programIndex];

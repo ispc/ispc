@@ -25,6 +25,7 @@ task void x(const uniform float farray[]) {
     const uniform int i2 = taskIndex2;
     const uniform int i  = taskIndex;
     array[i2][i1][i0] = i / 10000.;
+    #pragma ignore warning
     cfor (j = 0; j < 10000; ++j)
         array[i2][i1][i0] = sin(array[i2][i1][i0]);
     if (array[i2][i1][i0] < .02)

@@ -6,8 +6,10 @@ uniform unsigned int32 s = 0;
 export void f_f(uniform float RET[], uniform float aFOO[]) {
     float a = aFOO[programIndex]; 
     float b = 0;
-    if (programIndex & 1)
+    if (programIndex & 1) { 
+        #pragma ignore warning(perf)
         b = atomic_add_local(&s, programIndex);
+    }
     RET[programIndex] = s;
 }
 

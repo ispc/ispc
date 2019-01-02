@@ -7,6 +7,7 @@ export uniform int width() { return programCount; }
 void update(uniform float val[], const uniform float a[]) {
     foreach (i = 0 ... programCount+3) {
         int ic = min(i, programCount-1);
+        #pragma ignore warning(perf)
         val[i] += a[ic] - 1 + i-ic;
     }
 }

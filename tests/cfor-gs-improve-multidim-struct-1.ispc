@@ -15,8 +15,11 @@ export void f_fu(uniform float RET[], uniform float aFOO[], uniform float b) {
     uniform Foo * uniform f = uniform new uniform Foo[5];
 #define _UNMALLOC
 #endif
+    #pragma ignore warning
     cfor (uniform int i = 0; i < 5; ++i)
+        #pragma ignore warning
         cfor (uniform int j = 0; j < 32; ++j)
+            #pragma ignore warning
             cfor (uniform int k = 0; k < 32; ++k)
                 f[i].udx[j][k] = 1000*i+100*j+k;
 

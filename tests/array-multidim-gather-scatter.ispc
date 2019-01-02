@@ -10,8 +10,11 @@ export void f_fu(uniform float RET[], uniform float aFOO[], uniform float b) {
             x[i][j] = b;
 
     uniform int index[4] = { 0, 1, 2, 4 };
+    #pragma ignore warning(perf)
     float v = index[programIndex & 0x3];
+    #pragma ignore warning(perf)
     x[min(a,39.f)][v] = 0;
+    #pragma ignore warning(perf)
     RET[programIndex] = x[v+1][v];
 }
 

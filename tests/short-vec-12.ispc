@@ -8,6 +8,7 @@ export void f_fu(uniform float RET[], uniform float aFOO[], uniform float b) {
     int index = aFOO[programIndex];
     index = min(index, 3);
 
+    #pragma ignore warning(perf)
     RET[programIndex] = x[index];
 
 

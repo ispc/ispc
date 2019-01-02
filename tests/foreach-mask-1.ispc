@@ -12,6 +12,7 @@ export void f_f(uniform float RET[], uniform float aFOO[]) {
     if ((int)aFOO[programIndex] & 1)
         foreach (i = 0 ... programCount+3) {
             int ic = min(i, programCount-1);
+            #pragma ignore warning(perf)
             val[i] += aFOO[ic] - 1 + i-ic;
         }
 

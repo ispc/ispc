@@ -7,6 +7,7 @@ export void f_f(uniform float RET[], uniform float aFOO[]) {
         buf[i] = i;
     
     assert(programIndex <= 64);
+    #pragma ignore warning(perf)
     RET[programIndex] = buf[64-programIndex];
 }
 

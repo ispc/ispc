@@ -6,6 +6,7 @@ export uniform int width() { return programCount; }
 export void f_fu(uniform float RET[], uniform float aFOO[], uniform float b) {
     float v = aFOO[programIndex];
     uniform float m;
+    #pragma ignore warning(perf)
     unsigned int64 iv = (unsigned int)v;
     if (iv & 1)
         m = reduce_add(iv);

@@ -3,6 +3,7 @@ export uniform int width() { return programCount; }
 
 
 export void f_f(uniform float RET[], uniform float aFOO[]) {
+    #pragma ignore warning(perf)
     float x = aFOO[programIndex&0x3]; 
     float d, ix; 
     ix = rcp(x);

@@ -4,6 +4,7 @@ export uniform int width() { return programCount; }
 
 
 int foo(uniform int x[2][10]) {
+    #pragma ignore warning(perf)
     return x[1][programIndex % 5];
 }
 

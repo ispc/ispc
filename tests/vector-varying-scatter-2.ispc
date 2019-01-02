@@ -4,11 +4,14 @@ export uniform int width() { return programCount; }
 export void f_f(uniform float RET[], uniform float aFOO[]) {
     float aa = aFOO[programIndex]; 
     float<4> a = { -1, -2, -3, -4 };
-    if (programIndex < 4)
+    if (programIndex < 4) {
+        #pragma ignore warning
         a[3-programIndex] = aa;
+    }
 //CO    print("%\n%\n%\n%\n", a[0], a[1], a[2], a[3]);
     int i = clamp(3-programIndex, 0, 3);
 //CO    print("%\n%\n", i, a[i]);
+    #pragma ignore warning(perf)
     RET[programIndex] = a[i];
 }
 

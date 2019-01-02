@@ -19,6 +19,7 @@ export void f_fu(uniform float RET[], uniform float aFOO[], uniform float b) {
     pts[8+programIndex].y = pv.y;
     pts[8+programIndex].z = pv.z;
 
+    #pragma ignore warning(perf)
     RET[programIndex] = pts[6+programIndex].x;
 }
 

@@ -26,7 +26,8 @@ soa<8> Point * uniform aossoa(uniform Point aospts[], uniform int count) {
 //CO        ret[i].y = gp.y;
 //CO        ret[i].z = gp.z;
 //CO        print("%: % % %\n", i, gp.x, gp.y, gp.z);
-        ret[i] = aospts[i];
+            #pragma ignore warning(perf)
+            ret[i] = aospts[i];
     }
 
 //CO    p((uniform float * uniform)aospts);
@@ -42,13 +43,17 @@ export void f_fu(uniform float RET[], uniform float aFOO[], uniform float b) {
 
     uniform Point pts[programCount+4]; 
     foreach (i = 0 ... programCount+4) {
+        #pragma ignore warning(perf)
         pts[i].x = b*i;
+        #pragma ignore warning(perf)
         pts[i].y = 2*b*i;
+        #pragma ignore warning(perf)
         pts[i].z = 3*b*i;
     }
 
     soa<8> Point * uniform soaPts = aossoa(pts, programCount+4);
 
+    #pragma ignore warning(perf)
     RET[programIndex] = soaPts[programIndex+3].z;
 }
 

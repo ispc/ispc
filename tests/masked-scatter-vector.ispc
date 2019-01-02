@@ -11,9 +11,12 @@ export void f_fu(uniform float ret[], uniform float aa[], uniform float b) {
             array[i][j] = i+100*j;
     }
 
+    #pragma ignore warning(perf)
     varying int3 vv = array[a];
     ++vv.y;
+    #pragma ignore warning(perf)
     array[a] = vv;
+    #pragma ignore warning(perf)
     ret[programIndex] = array[programIndex].y;
 }
 

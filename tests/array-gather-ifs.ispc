@@ -11,10 +11,14 @@ export void f_fu(uniform float RET[], uniform float aFOO[], uniform float b) {
         x[i] = i;
 
     float ret;
-    if ((int)a & 1)
+    if ((int)a & 1) {
+        #pragma ignore warning(perf)
         ret = x[a-1];
-    else 
+    }
+    else {
+        #pragma ignore warning(perf) 
         ret = x[a];
+    }
     RET[programIndex] = ret;
 }
 
