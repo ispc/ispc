@@ -408,13 +408,14 @@ Debug(SourcePos p, const char *fmt, ...) {
 
 void
 Warning(SourcePos p, const char *fmt, ...) {
-    if (g->warningsAsErrors && m != NULL)
-        ++m->errorCount;
 
-     std::map<std::pair<int, std::string>, bool>::iterator turnOffWarnings_it =
+    std::map<std::pair<int, std::string>, bool>::iterator turnOffWarnings_it =
         g->turnOffWarnings.find(std::pair<int, std::string>(p.last_line, std::string(p.name)));
     if ((turnOffWarnings_it != g->turnOffWarnings.end()) && (turnOffWarnings_it->second == false))
         return;
+
+    if (g->warningsAsErrors && m != NULL)
+        ++m->errorCount;
 
     if (g->disableWarnings || g->quiet)
         return;
@@ -441,6 +442,9 @@ PerformanceWarning(SourcePos p, const char *fmt, ...) {
         g->turnOffWarnings.find(std::pair<int, std::string>(p.last_line, p.name));
     if (turnOffWarnings_it != g->turnOffWarnings.end())
         return;
+
+    if (g->warningsAsErrors && m != NULL)
+        ++m->errorCount;
 
     va_list args;
     va_start(args, fmt);
