@@ -7,6 +7,7 @@ export void f_fu(uniform float RET[], uniform float aFOO[], uniform float b) {
     RET[programIndex] = 0;
     if (programIndex < 5) {
         uniform float<5> z = c ? x : y;
+        // TODO: we need to optimize ispc to not throw out-of-bound warning here.
         #pragma ignore warning
         RET[programIndex] = z[programIndex];
     }
