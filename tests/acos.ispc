@@ -8,6 +8,7 @@ export void f_v(uniform float RET[]) {
     uniform float vals[8] = { 0, 1, 0.5, -1, -.87, -.25, 1e-3, -.99999999 };
     uniform float r[8];
     foreach (i = 0 ... 8) {
+        // TODO: Possible optimization opportunity.
         #pragma ignore warning(perf)
         r[i] = cos(acos(vals[i % 8]));
     }
