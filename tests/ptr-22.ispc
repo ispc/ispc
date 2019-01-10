@@ -10,7 +10,9 @@ void update(varying Foo * varying fp) {
     ++fp;
     #pragma ignore warning(perf)
     fp->a -= 1;
-    #pragma ignore warning(perf)
+    // Revisit: this should be no different from writing to any uniform
+    // variable. So, writing to same location warning might be not needed
+    #pragma ignore warning
     fp->b = 1;
 }
 
