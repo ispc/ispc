@@ -1027,7 +1027,7 @@ bool
 IntrinsicsOpt::runOnBasicBlock(llvm::BasicBlock &bb) {
     DEBUG_START_PASS("IntrinsicsOpt");
 
-    // We can’t initialize mask/blend function vector during pass initialization,
+    // We can't initialize mask/blend function vector during pass initialization,
     // as they may be optimized out by the time the pass is invoked.
 
     // All of the mask instructions we may encounter.  Note that even if
@@ -1605,6 +1605,16 @@ lGetBasePtrAndOffsets(llvm::Value *ptrs, llvm::Value **offsets,
         LLVMDumpValue(ptrs);
     }
 
+    bool broadcast_detected = false;
+    // Looking for %gep_offset = shufflevector <8 x i64> %0, <8 x i64> undef, <8 x i32> zeroinitializer
+    llvm::ShuffleVectorInst *shuffle = llvm::dyn_cast<llvm::ShuffleVectorInst>(ptrs);
+    if (shuffle != NULL) {
+        //TODO: check more carefully that broadcast is detected
+        llvm::Value *indices = shuffle->getOperand(2);
+        if (llvm::isa<llvm::ConstantAggregateZero>(indices)) {
+            broadcast_detected = true;
+        }
+    }
     llvm::Value *base = lGetBasePointer(ptrs, insertBefore);
     if (base != NULL) {
         // We have a straight up varying pointer with no indexing that's
@@ -1613,6 +1623,34 @@ lGetBasePtrAndOffsets(llvm::Value *ptrs, llvm::Value **offsets,
             *offsets = LLVMInt32Vector(0);
         else
             *offsets = LLVMInt64Vector((int64_t)0);
+
+        if (broadcast_detected){
+            llvm::Value *op = shuffle->getOperand(0);
+            llvm::BinaryOperator * bop_var = llvm::dyn_cast<llvm::BinaryOperator>(op);
+            if (bop_var != NULL && bop_var->getOpcode() == llvm::Instruction::Add) {
+                // We expect here ConstantVector as
+                // <i64 4, i64 undef, i64 undef, i64 undef, i64 undef, i64 undef, i64 undef, i64 undef>
+                llvm::ConstantVector *cv = llvm::dyn_cast<llvm::ConstantVector>(bop_var->getOperand(1));
+                int size = cv->getType()->getVectorNumElements();
+                int32_t zeroMask[size];
+                for (int i = 0; i<size; i++) {
+                    zeroMask[i] = 0;
+                }
+                llvm::InsertElementInst *ie = llvm::dyn_cast<llvm::InsertElementInst>(bop_var->getOperand(0));
+                if (ie != NULL) {
+                    llvm::Value *base_ptr = bop_var->getOperand(0);
+                    llvm::Value *shuffle_ptr = LLVMShuffleVectors(base_ptr, llvm::UndefValue::get(base_ptr->getType()),
+                            zeroMask, size, bop_var);
+                    bop_var->replaceUsesOfWith(ie, shuffle_ptr);
+                }
+                // Broadcast ConstantVector
+                llvm::Value *shuffle_offset = LLVMShuffleVectors(cv, llvm::UndefValue::get(cv->getType()),
+                        zeroMask, size, bop_var);
+                bop_var->replaceUsesOfWith(cv, shuffle_offset);
+                *offsets = llvm::BinaryOperator::Create(llvm::Instruction::Add, *offsets,
+                        shuffle_offset, "new_offsets", insertBefore);
+            }
+        }
         return base;
     }
 
@@ -1637,7 +1675,6 @@ lGetBasePtrAndOffsets(llvm::Value *ptrs, llvm::Value **offsets,
             return base;
         }
     }
-
     llvm::ConstantVector *cv = llvm::dyn_cast<llvm::ConstantVector>(ptrs);
     if (cv != NULL) {
         // Indexing into global arrays can lead to this form, with
