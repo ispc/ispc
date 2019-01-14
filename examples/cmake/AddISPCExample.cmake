@@ -133,6 +133,10 @@ function(add_ispc_example)
     endif()
 
     set_target_properties(${example_NAME} PROPERTIES FOLDER "Examples")
+    if(MSVC)
+        # Group ISPC files inside Visual Studio
+        source_group("ISPC" FILES "${CMAKE_CURRENT_SOURCE_DIR}/${ISPC_SRC_NAME}.ispc")
+    endif()
 
     # Install example
     # We do not need to include examples binaries to the package
