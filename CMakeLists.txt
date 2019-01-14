@@ -81,7 +81,7 @@ find_package(PythonInterp 2.7 REQUIRED)
 
 find_package(BISON 2.4 REQUIRED)
     if (BISON_FOUND)
-        set(BISON_INPUT ${CMAKE_CURRENT_SOURCE_DIR}/parse.yy)
+        set(BISON_INPUT ${CMAKE_CURRENT_SOURCE_DIR}/src/parse.yy)
         set(BISON_CPP_OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_CFG_INTDIR}/parse.cc)
         set(BISON_OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_CFG_INTDIR}/parse.hh
                          ${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_CFG_INTDIR}/parse.output)
@@ -99,7 +99,7 @@ find_package(BISON 2.4 REQUIRED)
 
 find_package(FLEX 2.5 REQUIRED)
     if (FLEX_FOUND)
-        set(FLEX_INPUT  ${CMAKE_CURRENT_SOURCE_DIR}/lex.ll)
+        set(FLEX_INPUT  ${CMAKE_CURRENT_SOURCE_DIR}/src/lex.ll)
         set(FLEX_OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_CFG_INTDIR}/lex.cpp)
         if (WIN32)
             win_path_to_cygwin(${FLEX_INPUT} ${FLEX_EXECUTABLE} FLEX_INPUT)
