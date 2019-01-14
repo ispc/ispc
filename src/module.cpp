@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2016, Intel Corporation
+  Copyright (c) 2010-2018, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -1296,18 +1296,18 @@ Module::writeOutput(OutputType outputType, OutputFlags flags, const char *outFil
                   fileType = "header";
               break;
           case Deps:
-            break;
+              break;
           case DevStub:
-            if (strcasecmp(suffix, "c") && strcasecmp(suffix, "cc") &&
-                strcasecmp(suffix, "c++") && strcasecmp(suffix, "cxx") &&
-                strcasecmp(suffix, "cpp"))
-              fileType = "dev-side offload stub";
+              if (strcasecmp(suffix, "c") && strcasecmp(suffix, "cc") &&
+                  strcasecmp(suffix, "c++") && strcasecmp(suffix, "cxx") &&
+                  strcasecmp(suffix, "cpp"))
+                  fileType = "dev-side offload stub";
               break;
           case HostStub:
-            if (strcasecmp(suffix, "c") && strcasecmp(suffix, "cc") &&
-                strcasecmp(suffix, "c++") && strcasecmp(suffix, "cxx") &&
-                strcasecmp(suffix, "cpp"))
-              fileType = "host-side offload stub";
+              if (strcasecmp(suffix, "c") && strcasecmp(suffix, "cc") &&
+                  strcasecmp(suffix, "c++") && strcasecmp(suffix, "cxx") &&
+                  strcasecmp(suffix, "cpp"))
+                  fileType = "host-side offload stub";
               break;
           default:
             Assert(0 /* swtich case not handled */);
