@@ -36,7 +36,7 @@ configuration: Release
 environment:
   ISPC_HOME: "c:\\projects\\ispc"
   LLVM_HOME: "c:\\projects\\llvm"
-  CHOCO_DIR: "%ProgramData%\\chocolatey\\lib"
+  CHOCO_DIR: "%ProgramData%\\chocolatey"
   matrix:
     - DESC: "Build ispc with LLVM 4.0 VS2017"
       LLVM_VERSION: 4.0
@@ -51,19 +51,25 @@ environment:
       LLVM_VERSION: 7.0
       DOCKER_NAME: "ispc/test_repo:win_llvm70"
 
+cache:
+  - C:\ProgramData\chocolatey\bin -> appveyor.yml
+  - C:\ProgramData\chocolatey\lib -> appveyor.yml
+  - C:\projects\llvm -> appveyor.yml
+
 install:
-  - cmd: |-
-        docker version
-        docker pull %DOCKER_NAME%
-        docker run -d %DOCKER_NAME%
-        docker ps --all  --format "{{.ID}}" --filter ancestor=%DOCKER_NAME% | head -1 > container_id.txt
-        SET /p CONTAINER=<container_id.txt
-        docker cp %CONTAINER%:%LLVM_HOME%\bin-%LLVM_VERSION% %LLVM_HOME%
   - cinst cygwin
   - cinst python2
   - cinst winflexbison
-  - cd %CHOCO_DIR%\winflexbison\tools
-  - ren win_flex.exe flex.exe
+  - cmd: |-
+        set FLEX_PATH=%CHOCO_DIR%\lib\winflexbison\tools
+        if exist "%FLEX_PATH%\win_flex.exe" ( cd %FLEX_PATH% && ren win_flex.exe flex.exe )
+  - cmd: |-
+        if exist "%LLVM_HOME%\bin\" set NONEEDLLVM=rem
+        %NONEEDLLVM% docker pull %DOCKER_NAME%
+        %NONEEDLLVM% docker run -d %DOCKER_NAME%
+        %NONEEDLLVM% docker ps --all  --format "{{.ID}}" --filter ancestor=%DOCKER_NAME% | head -1 > container_id.txt
+        %NONEEDLLVM% set /p CONTAINER=<container_id.txt
+        %NONEEDLLVM% docker cp %CONTAINER%:%LLVM_HOME%\bin-%LLVM_VERSION% %LLVM_HOME%
 
 init:
   - echo %APPVEYOR_BUILD_WORKER_IMAGE%
@@ -73,10 +79,8 @@ init:
 
 before_build:
 - cmd: |-
-    SET PATH=%LLVM_HOME%\bin;%CHOCO_DIR%\winflexbison\tools;C:\cygwin64\bin;%PATH%
-    cd %ISPC_HOME%
-    mkdir build
-    cd build
+    set PATH=%LLVM_HOME%\bin;%CHOCO_DIR%\lib\winflexbison\tools;C:\cygwin64\bin;%PATH%
+    cd %ISPC_HOME% && mkdir build && cd build
     cmake .. -G %generator% -DCMAKE_INSTALL_PREFIX=%ISPC_HOME%\%configuration% -DISPC_PREPARE_PACKAGE=ON
 
 build:
