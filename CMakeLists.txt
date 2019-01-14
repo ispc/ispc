@@ -35,6 +35,11 @@
 #
 cmake_minimum_required(VERSION 3.8)
 
+if (UNIX)
+    set(CMAKE_C_COMPILER "clang")
+    set(CMAKE_CXX_COMPILER "clang++")
+endif()
+
 set(PROJECT_NAME ispc)
 set(ISPC_BUILD TRUE)
 project(${PROJECT_NAME})

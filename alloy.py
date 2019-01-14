@@ -546,7 +546,6 @@ def build_ispc(version_LLVM, make):
         try_do_LLVM("recognize LLVM revision", "svn info " + folder, True)
         try_do_LLVM("configure ispc build", 'cmake -DCMAKE_INSTALL_PREFIX="..\\'+ ISPC_BIN + '" ' +
                     '  -DCMAKE_BUILD_TYPE=Release' +
-                    '  -DCMAKE_CXX_COMPILER=clang++ ' +
                         ispc_home, True)
         try_do_LLVM("build ISPC with LLVM version " + version_LLVM + " ", make_ispc, True)
         try_do_LLVM("install ISPC ", "make install", True)
