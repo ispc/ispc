@@ -273,17 +273,21 @@ extern bool LLVMExtractVectorInts(llvm::Value *v, int64_t ret[], int *nElts);
     value, it doesn't try to extract element values into the returned
     array.
 
-    This also handles common broadcast pattern:
-       %broadcast_init.0 = insertelement <4 x i32> undef, i32 %val, i32 0
-       %broadcast.1 = shufflevector <4 x i32> %smear.0, <4 x i32> undef,
+    This also handles one of two common broadcast patterns:
+    1.   %broadcast_init.0 = insertelement <4 x i32> undef, i32 %val, i32 0
+         %broadcast.1 = shufflevector <4 x i32> %smear.0, <4 x i32> undef,
                                                   <4 x i32> zeroinitializer
+    2.   %gep_ptr2int_broadcast_init = insertelement <8 x i64> undef, i64 %gep_ptr2int, i32 0
+         %0 = add <8 x i64> %gep_ptr2int_broadcast_init,
+                  <i64 4, i64 undef, i64 undef, i64 undef, i64 undef, i64 undef, i64 undef, i64 undef>
+         %gep_offset = shufflevector <8 x i64> %0, <8 x i64> undef, <8 x i32> zeroinitializer
     Function returns:
     Compare all elements and return one of them if all are equal, otherwise NULL.
     If compare argument is false, don't do compare and return first element instead.
     If undef argument is true, ignore undef elements (but all undef yields NULL anyway).
  */
 extern llvm::Value * LLVMFlattenInsertChain (llvm::Value *inst, int vectorWidth,
-    bool compare = true, bool undef = true);
+    bool compare = true, bool undef = true, bool broadcast = false);
 
 /** This is a utility routine for debugging that dumps out the given LLVM
     value as well as (recursively) all of the other values that it depends
