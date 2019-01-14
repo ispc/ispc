@@ -666,10 +666,32 @@ lGetIntValue(llvm::Value *offset) {
     return intOffset->getSExtValue();
 }
 
+/**  Recognizes constant vector with undef operands except the first one:
+ *   <i64 4, i64 undef, i64 undef, i64 undef, i64 undef, i64 undef, i64 undef, i64 undef>
+ */
+static bool
+lFirstElementConstVector(llvm::Value* v) {
+    llvm::ConstantVector *cv = llvm::dyn_cast<llvm::ConstantVector>(v);
+    if (cv != NULL) {
+        llvm::Constant *c =
+              llvm::dyn_cast<llvm::Constant>(cv->getOperand(0));
+        if (c == NULL) {
+            return false;
+        }
+
+        for (int i = 1; i < (int)cv->getNumOperands(); ++i) {
+             if (!llvm::isa<llvm::UndefValue>(cv->getOperand(i))) {
+                 return false;
+             }
+        }
+        return true;
+    }
+    return false;
+}
 
 llvm::Value *
 LLVMFlattenInsertChain(llvm::Value *inst, int vectorWidth,
-                       bool compare, bool undef) {
+                       bool compare, bool undef, bool broadcast) {
     llvm::Value ** elements = new llvm::Value*[vectorWidth];
     for (int i = 0; i < vectorWidth; ++i) {
         elements[i] = NULL;
@@ -771,7 +793,8 @@ LLVMFlattenInsertChain(llvm::Value *inst, int vectorWidth,
     //                                              <4 x i32> zeroinitializer
     // Or:
     //   %gep_ptr2int_broadcast_init = insertelement <8 x i64> undef, i64 %gep_ptr2int, i32 0
-    //   %0 = add <8 x i64> %gep_ptr2int_broadcast_init, <i64 4, i64 undef, i64 undef, i64 undef, i64 undef, i64 undef, i64 undef, i64 undef>
+    //   %0 = add <8 x i64> %gep_ptr2int_broadcast_init,
+    //              <i64 4, i64 undef, i64 undef, i64 undef, i64 undef, i64 undef, i64 undef, i64 undef>
     //   %gep_offset = shufflevector <8 x i64> %0, <8 x i64> undef, <8 x i32> zeroinitializer
     else if (llvm::ShuffleVectorInst *shuf =
         llvm::dyn_cast<llvm::ShuffleVectorInst>(inst)) {
@@ -779,15 +802,13 @@ LLVMFlattenInsertChain(llvm::Value *inst, int vectorWidth,
         if (llvm::isa<llvm::ConstantAggregateZero>(indices)) {
             llvm::Value *op = shuf->getOperand(0);
             llvm::InsertElementInst *ie = llvm::dyn_cast<llvm::InsertElementInst>(op);
-            if (ie == NULL) {
+            if (ie == NULL && broadcast) {
                 // Trying to recognize 2nd pattern
-                llvm::Value *indices = shuf->getOperand(2);
-                if (!llvm::isa<llvm::ConstantAggregateZero>(indices)) {
-                    return NULL;
-                }
                 llvm::BinaryOperator * bop = llvm::dyn_cast<llvm::BinaryOperator>(op);
                 if (bop != NULL && bop->getOpcode() == llvm::Instruction::Add) {
-                    ie = llvm::dyn_cast<llvm::InsertElementInst>(bop->getOperand(0));
+                    if (lFirstElementConstVector(bop->getOperand(1))) {
+                        ie = llvm::dyn_cast<llvm::InsertElementInst>(bop->getOperand(0));
+                    }
                 }
             }
             if (ie != NULL &&
@@ -802,8 +823,6 @@ LLVMFlattenInsertChain(llvm::Value *inst, int vectorWidth,
     }
     return NULL;
 }
-
-
 
 bool
 LLVMExtractVectorInts(llvm::Value *v, int64_t ret[], int *nElts) {
@@ -1741,4 +1760,3 @@ LLVMGetName(const char *op, llvm::Value *v1, llvm::Value *v2) {
     r += v2->getName().str();
     return strdup(r.c_str());
 }
-

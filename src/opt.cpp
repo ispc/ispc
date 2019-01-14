@@ -1514,11 +1514,11 @@ lCheckForActualPointer(llvm::Value *v) {
     pointer value; otherwise it returns NULL.
  */
 static llvm::Value *
-lGetBasePointer(llvm::Value *v, llvm::Instruction *insertBefore) {
+lGetBasePointer(llvm::Value *v, llvm::Instruction *insertBefore, bool broadcast_detected) {
     if (llvm::isa<llvm::InsertElementInst>(v) ||
         llvm::isa<llvm::ShuffleVectorInst>(v)) {
         llvm::Value *element = LLVMFlattenInsertChain
-            (v, g->target->getVectorWidth(), true, false);
+            (v, g->target->getVectorWidth(), true, false, broadcast_detected);
         // TODO: it's probably ok to allow undefined elements and return
         // the base pointer if all of the other elements have the same
         // value.
@@ -1541,7 +1541,7 @@ lGetBasePointer(llvm::Value *v, llvm::Instruction *insertBefore) {
     // It is a little bit tricky to use operations with pointers, casted to int with another bit size
     // but sometimes it is useful, so we handle this case here.
     else if (llvm::CastInst *ci = llvm::dyn_cast<llvm::CastInst>(v)) {
-        llvm::Value *t = lGetBasePointer(ci->getOperand(0), insertBefore);
+        llvm::Value *t = lGetBasePointer(ci->getOperand(0), insertBefore, broadcast_detected);
         if (t == NULL) {
             return NULL;
         }
@@ -1609,13 +1609,13 @@ lGetBasePtrAndOffsets(llvm::Value *ptrs, llvm::Value **offsets,
     // Looking for %gep_offset = shufflevector <8 x i64> %0, <8 x i64> undef, <8 x i32> zeroinitializer
     llvm::ShuffleVectorInst *shuffle = llvm::dyn_cast<llvm::ShuffleVectorInst>(ptrs);
     if (shuffle != NULL) {
-        //TODO: check more carefully that broadcast is detected
         llvm::Value *indices = shuffle->getOperand(2);
-        if (llvm::isa<llvm::ConstantAggregateZero>(indices)) {
+        llvm::Value *vec = shuffle->getOperand(1);
+        if (lIsUndef(vec) && llvm::isa<llvm::ConstantAggregateZero>(indices)) {
             broadcast_detected = true;
         }
     }
-    llvm::Value *base = lGetBasePointer(ptrs, insertBefore);
+    llvm::Value *base = lGetBasePointer(ptrs, insertBefore, broadcast_detected);
     if (base != NULL) {
         // We have a straight up varying pointer with no indexing that's
         // actually all the same value.
@@ -1631,24 +1631,16 @@ lGetBasePtrAndOffsets(llvm::Value *ptrs, llvm::Value **offsets,
                 // We expect here ConstantVector as
                 // <i64 4, i64 undef, i64 undef, i64 undef, i64 undef, i64 undef, i64 undef, i64 undef>
                 llvm::ConstantVector *cv = llvm::dyn_cast<llvm::ConstantVector>(bop_var->getOperand(1));
-                int size = cv->getType()->getVectorNumElements();
-                int32_t zeroMask[size];
-                for (int i = 0; i<size; i++) {
-                    zeroMask[i] = 0;
+                if (cv!= NULL) {
+                    llvm::Value *zeroMask = llvm::ConstantVector::getSplat(
+                            cv->getType()->getVectorNumElements(),
+                            llvm::Constant::getNullValue(llvm::Type::getInt32Ty(*g->ctx)));
+                    // Create offset
+                    llvm::Value *shuffle_offset = new llvm::ShuffleVectorInst(cv, llvm::UndefValue::get(cv->getType()),
+                            zeroMask, "shuffle", bop_var);
+                    *offsets = llvm::BinaryOperator::Create(llvm::Instruction::Add, *offsets,
+                            shuffle_offset, "new_offsets", insertBefore);
                 }
-                llvm::InsertElementInst *ie = llvm::dyn_cast<llvm::InsertElementInst>(bop_var->getOperand(0));
-                if (ie != NULL) {
-                    llvm::Value *base_ptr = bop_var->getOperand(0);
-                    llvm::Value *shuffle_ptr = LLVMShuffleVectors(base_ptr, llvm::UndefValue::get(base_ptr->getType()),
-                            zeroMask, size, bop_var);
-                    bop_var->replaceUsesOfWith(ie, shuffle_ptr);
-                }
-                // Broadcast ConstantVector
-                llvm::Value *shuffle_offset = LLVMShuffleVectors(cv, llvm::UndefValue::get(cv->getType()),
-                        zeroMask, size, bop_var);
-                bop_var->replaceUsesOfWith(cv, shuffle_offset);
-                *offsets = llvm::BinaryOperator::Create(llvm::Instruction::Add, *offsets,
-                        shuffle_offset, "new_offsets", insertBefore);
             }
         }
         return base;
@@ -5802,4 +5794,3 @@ CreatePromoteLocalToPrivatePass() {
 
 
 #endif /* ISPC_NVPTX_ENABLED */
-
