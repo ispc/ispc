@@ -309,7 +309,7 @@ objs/%.o: objs/%.cpp
 	@echo Compiling $<
 	@$(CXX) $(CXXFLAGS) -o $@ -c $<
 
-objs/parse.cc: parse.yy
+objs/parse.cc: $(SRC_DIR)/parse.yy
 	@echo Running bison on $<
 	@$(YACC) -o $@ $<
 
@@ -317,7 +317,7 @@ objs/parse.o: objs/parse.cc $(HEADERS)
 	@echo Compiling $<
 	@$(CXX) $(CXXFLAGS) -o $@ -c $<
 
-objs/lex.cpp: lex.ll
+objs/lex.cpp: $(SRC_DIR)/lex.ll
 	@echo Running flex on $<
 	@$(LEX) -o $@ $<
 
