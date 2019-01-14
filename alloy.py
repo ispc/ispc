@@ -438,11 +438,16 @@ def unsupported_llvm_targets(LLVM_VERSION):
     return prohibited_list[LLVM_VERSION]
 
 
+# Split targets into categories: native, generic, knc, sde.
+# native - native targets run natively on current hardware.
+# generic - hardware agnostic generic target.
+# knc - knc target. This one is special, as it requires additional steps to run.
+# sde - native target, which need to be emulated on current hardware.
 def check_targets():
-    answer = []
-    answer_generic = []
-    answer_knc = []
-    answer_sde = []
+    result = []
+    result_generic = []
+    result_knc = []
+    result_sde = []
     # check what native targets do we have
     if current_OS != "Windows":
         if options.ispc_build_compiler == "clang":
@@ -468,38 +473,38 @@ def check_targets():
     for i in range(0,5):
         if targets[i][0] in f_lines:
             for j in range(i,5):
-                answer = targets[j][1] + answer
+                result = targets[j][1] + result
                 targets[j][2] = True
             break
     # generate targets for KNC
     if  current_OS == "Linux":
-        answer_knc = ["knc-generic"]
+        result_knc = ["knc-generic"]
 
     if current_OS != "Windows":
-        answer_generic = ["generic-4", "generic-16", "generic-8", "generic-1", "generic-32", "generic-64"]
+        result_generic = ["generic-4", "generic-16", "generic-8", "generic-1", "generic-32", "generic-64"]
     # now check what targets we have with the help of SDE
     sde_exists = get_sde()
     if sde_exists == "":
         error("you haven't got sde neither in SDE_HOME nor in your PATH.\n" + 
             "To test all platforms please set SDE_HOME to path containing SDE.\n" +
             "Please refer to http://www.intel.com/software/sde for SDE download information.", 2)
-        return [answer, answer_generic, answer_sde, answer_knc]
+        return [result, result_generic, result_sde, result_knc]
     # here we have SDE
     f_lines = take_lines(sde_exists + " -help", "all")
     for i in range(0,len(f_lines)):
         if targets[6][2] == False and "skx" in f_lines[i]:
-            answer_sde = answer_sde + [["-skx", "avx512skx-i32x16"]]
+            result_sde = result_sde + [["-skx", "avx512skx-i32x16"]]
         if targets[5][2] == False and "knl" in f_lines[i]:
-            answer_sde = answer_sde + [["-knl", "avx512knl-i32x16"]]
+            result_sde = result_sde + [["-knl", "avx512knl-i32x16"]]
         if targets[3][2] == False and "wsm" in f_lines[i]:
-            answer_sde = answer_sde + [["-wsm", "sse4-i32x4"], ["-wsm", "sse4-i32x8"], ["-wsm", "sse4-i16x8"], ["-wsm", "sse4-i8x16"]]
+            result_sde = result_sde + [["-wsm", "sse4-i32x4"], ["-wsm", "sse4-i32x8"], ["-wsm", "sse4-i16x8"], ["-wsm", "sse4-i8x16"]]
         if targets[2][2] == False and "snb" in f_lines[i]:
-            answer_sde = answer_sde + [["-snb", "avx1-i32x4"], ["-snb", "avx1-i32x8"], ["-snb", "avx1-i32x16"], ["-snb", "avx1-i64x4"]]
+            result_sde = result_sde + [["-snb", "avx1-i32x4"], ["-snb", "avx1-i32x8"], ["-snb", "avx1-i32x16"], ["-snb", "avx1-i64x4"]]
         if targets[1][2] == False and "ivb" in f_lines[i]:
-            answer_sde = answer_sde + [["-ivb", "avx1.1-i32x8"], ["-ivb", "avx1.1-i32x16"], ["-ivb", "avx1.1-i64x4"]]
+            result_sde = result_sde + [["-ivb", "avx1.1-i32x8"], ["-ivb", "avx1.1-i32x16"], ["-ivb", "avx1.1-i64x4"]]
         if targets[0][2] == False and "hsw" in f_lines[i]:
-            answer_sde = answer_sde + [["-hsw", "avx2-i32x8"], ["-hsw", "avx2-i32x16"], ["-hsw", "avx2-i64x4"]]
-    return [answer, answer_generic, answer_sde, answer_knc]
+            result_sde = result_sde + [["-hsw", "avx2-i32x8"], ["-hsw", "avx2-i32x16"], ["-hsw", "avx2-i64x4"]]
+    return [result, result_generic, result_sde, result_knc]
 
 def build_ispc(version_LLVM, make):
     current_path = os.getcwd()
