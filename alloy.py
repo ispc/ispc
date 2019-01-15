@@ -456,51 +456,66 @@ def check_targets():
     else:
         try_do_LLVM("build check_ISA", "cl check_isa.cpp", True)
 
-    SSE2  = ["sse2-i32x4",  "sse2-i32x8"]
-    SSE4  = ["sse4-i32x4",  "sse4-i32x8",   "sse4-i16x8", "sse4-i8x16"]
-    AVX   = ["avx1-i32x4",  "avx1-i32x8",  "avx1-i32x16",  "avx1-i64x4"]
-    AVX11 = ["avx1.1-i32x8","avx1.1-i32x16","avx1.1-i64x4"]
-    AVX2  = ["avx2-i32x8",  "avx2-i32x16",  "avx2-i64x4"]
-    KNL   = ["avx512knl-i32x16"]
-    SKX   = ["avx512skx-i32x16"]
+    # Dictionary mapping hardware architecture to its targets.
+    # The value in the dictionary is:
+    # [
+    #   list of targets corresponding to this architecture,
+    #   list of other architecture executable on this hardware,
+    #   flag for sde to emulate this platform,
+    #   flag is this is supported on current platform
+    # ]
+    target_dict = {
+      "SSE2":   [["sse2-i32x4",  "sse2-i32x8"],
+                 ["SSE2"], "-p4", False],
+      "SSE4":   [["sse4-i32x4",  "sse4-i32x8",   "sse4-i16x8", "sse4-i8x16"],
+                 ["SSE2", "SSE4"], "-wsm", False],
+      "AVX":    [["avx1-i32x4",  "avx1-i32x8",  "avx1-i32x16",  "avx1-i64x4"],
+                 ["SSE2", "SSE4", "AVX"], "-snb", False],
+      "AVX1.1": [["avx1.1-i32x8","avx1.1-i32x16","avx1.1-i64x4"],
+                 ["SSE2", "SSE4", "AVX", "AVX1.1"], "-ivb", False],
+      "AVX2":   [["avx2-i32x8",  "avx2-i32x16",  "avx2-i64x4"],
+                 ["SSE2", "SSE4", "AVX", "AVX1.1", "AVX2"], "-hsw", False],
+      "KNL":    [["avx512knl-i32x16"],
+                 ["SSE2", "SSE4", "AVX", "AVX1.1", "AVX2", "KNL"], "-knl", False],
+      "SKX":    [["avx512skx-i32x16"],
+                 ["SSE2", "SSE4", "AVX", "AVX1.1", "AVX2", "SKX"], "-skx", False]
+    }
 
-    targets = [["AVX2", AVX2, False], ["AVX1.1", AVX11, False], ["AVX", AVX, False], ["SSE4", SSE4, False], 
-               ["SSE2", SSE2, False], ["KNL", KNL, False], ["SKX", SKX, False]]
-    f_lines = take_lines("check_isa.exe", "first")
-    for i in range(0,5):
-        if targets[i][0] in f_lines:
-            for j in range(i,5):
-                result = targets[j][1] + result
-                targets[j][2] = True
-            break
+    hw_arch = take_lines("check_isa.exe", "first").split()[1]
+
+    if not (hw_arch in target_dict):
+        error("Architecture " + hw_arch + " was not recognized", 1)
+
+    # Mark all compatible architecutres in the dictionary.
+    for compatible_arch in target_dict[hw_arch][1]:
+        target_dict[compatible_arch][3] = True
+
+    # Now initialize result and result_sde.
+    for key in target_dict:
+        item = target_dict[key]
+        targets = item[0]
+        if item[3]:
+            # Supported natively
+            result = result + targets
+        else:
+            # Supported through SDE
+            for target in targets:
+                result_sde = result_sde + [[item[2], target]]
+
     # generate targets for KNC
     if  current_OS == "Linux":
         result_knc = ["knc-generic"]
 
     if current_OS != "Windows":
         result_generic = ["generic-4", "generic-16", "generic-8", "generic-1", "generic-32", "generic-64"]
+
     # now check what targets we have with the help of SDE
     sde_exists = get_sde()
     if sde_exists == "":
         error("you haven't got sde neither in SDE_HOME nor in your PATH.\n" + 
             "To test all platforms please set SDE_HOME to path containing SDE.\n" +
             "Please refer to http://www.intel.com/software/sde for SDE download information.", 2)
-        return [result, result_generic, result_sde, result_knc]
-    # here we have SDE
-    f_lines = take_lines(sde_exists + " -help", "all")
-    for i in range(0,len(f_lines)):
-        if targets[6][2] == False and "skx" in f_lines[i]:
-            result_sde = result_sde + [["-skx", "avx512skx-i32x16"]]
-        if targets[5][2] == False and "knl" in f_lines[i]:
-            result_sde = result_sde + [["-knl", "avx512knl-i32x16"]]
-        if targets[3][2] == False and "wsm" in f_lines[i]:
-            result_sde = result_sde + [["-wsm", "sse4-i32x4"], ["-wsm", "sse4-i32x8"], ["-wsm", "sse4-i16x8"], ["-wsm", "sse4-i8x16"]]
-        if targets[2][2] == False and "snb" in f_lines[i]:
-            result_sde = result_sde + [["-snb", "avx1-i32x4"], ["-snb", "avx1-i32x8"], ["-snb", "avx1-i32x16"], ["-snb", "avx1-i64x4"]]
-        if targets[1][2] == False and "ivb" in f_lines[i]:
-            result_sde = result_sde + [["-ivb", "avx1.1-i32x8"], ["-ivb", "avx1.1-i32x16"], ["-ivb", "avx1.1-i64x4"]]
-        if targets[0][2] == False and "hsw" in f_lines[i]:
-            result_sde = result_sde + [["-hsw", "avx2-i32x8"], ["-hsw", "avx2-i32x16"], ["-hsw", "avx2-i64x4"]]
+
     return [result, result_generic, result_sde, result_knc]
 
 def build_ispc(version_LLVM, make):
