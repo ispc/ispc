@@ -486,7 +486,7 @@ def file_check(compfails, runfails):
         opt = "-O2"
 # Detect LLVM version
     temp1 = common.take_lines(ispc_exe + " --version", "first")
-    llvm_version = temp1[-10:-2]
+    llvm_version = temp1[-12:-4]
 # Detect compiler version
     if is_windows == False:
         temp1 = common.take_lines(options.compiler_exe + " --version", "first")
@@ -498,13 +498,15 @@ def file_check(compfails, runfails):
         compiler_version = options.compiler_exe + temp3.group()
     else:
         compiler_version = "cl"
-    possible_compilers = ["clang++3.3", "clang++3.4", "cl"]
+    possible_compilers=set()
+    for x in f_lines:
+        if x.startswith("."):
+            possible_compilers.add(x.split(' ')[-3])
     if not compiler_version in possible_compilers:
         error("\n**********\nWe don't have history of fails for compiler " +
                 compiler_version +
                 "\nAll fails will be new!!!\n**********", 2)
     new_line = " "+options.arch.rjust(6)+" "+options.target.rjust(14)+" "+OS.rjust(7)+" "+llvm_version+" "+compiler_version.rjust(10)+" "+opt+" *\n"
-
     new_compfails = compfails[:]
     new_runfails = runfails[:]
     new_f_lines = f_lines[:]
