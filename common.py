@@ -121,7 +121,7 @@ def print_debug(line, silent, filename):
 # type 1 for error in environment
 # type 2 for warning
 # type 3 for error of compiler or test which isn't the goal of script 
-def error(line, error_type):
+def error(line, error_type = 1):
     line = line + "\n"
     if error_type == 1:
         sys.stderr.write("Fatal error: " + line)
