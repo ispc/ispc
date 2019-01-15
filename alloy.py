@@ -429,13 +429,10 @@ def unsupported_llvm_targets(LLVM_VERSION):
                        "3.4":["avx512knl-i32x16", "avx512skx-i32x16"],
                        "3.5":["avx512knl-i32x16", "avx512skx-i32x16"],
                        "3.6":["avx512knl-i32x16", "avx512skx-i32x16"],
-                       "3.7":["avx512skx-i32x16"],
-                       "3.8":[],
-                       "3.9":[],
-                       "4.0":[],
-                       "5.0":[],
-                       "trunk":[]}   
-    return prohibited_list[LLVM_VERSION]
+                       "3.7":["avx512skx-i32x16"]}
+    if LLVM_VERSION in prohibited_list:
+        return prohibited_list[LLVM_VERSION]
+    return []
 
 
 # Split targets into categories: native, generic, knc, sde.
