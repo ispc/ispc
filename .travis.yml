@@ -88,7 +88,7 @@ matrix:
       - export PATH=$LLVM_HOME/bin-6.0/bin:$PATH
     - env: LLVM_VERSION=7.0 OS=Ubuntu14.04
       before_install:
-      - sudo apt-get install -y libc6-dev-i386
+      - sudo apt-get install -y libc6-dev-i386 g++-multilib lib32stdc++6
       - docker pull $DOCKER_REPO_PATH:llvm70
       - docker run $DOCKER_REPO_PATH:llvm70
       - export CONTAINER=`docker ps --all |head -2 |tail -1 |awk '//{print $1}'`
@@ -107,4 +107,4 @@ script:
       # Run examples
     - ./perf.py -n 1
       # Run tests for latest LLVM version
-    - if [ "$LLVM_VERSION" == "7.0" ]; then ./run_tests.py; fi
+    - if [ "$LLVM_VERSION" == "7.0" ]; then ./run_tests.py; ./run_tests.py -a x86; fi
