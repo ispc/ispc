@@ -95,7 +95,6 @@ test_script:
   - cd %ISPC_HOME%
   - check_isa.exe
   - python perf.py -n 1 -g "Visual Studio 15 Win64"
-  - if "%LLVM_VERSION%"=="7.0" ( python run_tests.py -a x86 )
 
 artifacts:
   - path: build\ispc-*.zip
