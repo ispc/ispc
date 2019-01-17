@@ -283,11 +283,14 @@ extern bool LLVMExtractVectorInts(llvm::Value *v, int64_t ret[], int *nElts);
          %gep_offset = shufflevector <8 x i64> %0, <8 x i64> undef, <8 x i32> zeroinitializer
     Function returns:
     Compare all elements and return one of them if all are equal, otherwise NULL.
+    If searchFirstUndef argument is true, look for the vector with the first not-undef element, like:
+         <i64 4, i64 undef, i64 undef, i64 undef, i64 undef, i64 undef, i64 undef, i64 undef>
     If compare argument is false, don't do compare and return first element instead.
     If undef argument is true, ignore undef elements (but all undef yields NULL anyway).
+
  */
 extern llvm::Value * LLVMFlattenInsertChain (llvm::Value *inst, int vectorWidth,
-    bool compare = true, bool undef = true, bool broadcast = false);
+    bool compare = true, bool undef = true, bool searchFirstUndef = false);
 
 /** This is a utility routine for debugging that dumps out the given LLVM
     value as well as (recursively) all of the other values that it depends

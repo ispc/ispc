@@ -670,7 +670,7 @@ lGetIntValue(llvm::Value *offset) {
  *   <i64 4, i64 undef, i64 undef, i64 undef, i64 undef, i64 undef, i64 undef, i64 undef>
  */
 static bool
-lFirstElementConstVector(llvm::Value* v) {
+lIsFirstElementConstVector(llvm::Value* v) {
     llvm::ConstantVector *cv = llvm::dyn_cast<llvm::ConstantVector>(v);
     if (cv != NULL) {
         llvm::Constant *c =
@@ -691,7 +691,7 @@ lFirstElementConstVector(llvm::Value* v) {
 
 llvm::Value *
 LLVMFlattenInsertChain(llvm::Value *inst, int vectorWidth,
-                       bool compare, bool undef, bool broadcast) {
+                       bool compare, bool undef, bool searchFirstUndef) {
     llvm::Value ** elements = new llvm::Value*[vectorWidth];
     for (int i = 0; i < vectorWidth; ++i) {
         elements[i] = NULL;
@@ -802,11 +802,11 @@ LLVMFlattenInsertChain(llvm::Value *inst, int vectorWidth,
         if (llvm::isa<llvm::ConstantAggregateZero>(indices)) {
             llvm::Value *op = shuf->getOperand(0);
             llvm::InsertElementInst *ie = llvm::dyn_cast<llvm::InsertElementInst>(op);
-            if (ie == NULL && broadcast) {
+            if (ie == NULL && searchFirstUndef) {
                 // Trying to recognize 2nd pattern
                 llvm::BinaryOperator * bop = llvm::dyn_cast<llvm::BinaryOperator>(op);
                 if (bop != NULL && bop->getOpcode() == llvm::Instruction::Add) {
-                    if (lFirstElementConstVector(bop->getOperand(1))) {
+                    if (lIsFirstElementConstVector(bop->getOperand(1))) {
                         ie = llvm::dyn_cast<llvm::InsertElementInst>(bop->getOperand(0));
                     }
                 }
