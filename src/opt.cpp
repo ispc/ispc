@@ -1510,15 +1510,18 @@ lCheckForActualPointer(llvm::Value *v) {
 
 /** Given a llvm::Value representing a varying pointer, this function
     checks to see if all of the elements of the vector have the same value
-    (i.e. there's a common base pointer).  If so, it returns the common
-    pointer value; otherwise it returns NULL.
+    (i.e. there's a common base pointer). If broadcast has been already detected
+    it checks that the first element of the vector is not undef. If one of the conditions
+    is true, it returns the common pointer value; otherwise it returns NULL.
  */
 static llvm::Value *
-lGetBasePointer(llvm::Value *v, llvm::Instruction *insertBefore, bool broadcast_detected) {
+lGetBasePointer(llvm::Value *v, llvm::Instruction *insertBefore, bool broadcastDetected) {
     if (llvm::isa<llvm::InsertElementInst>(v) ||
         llvm::isa<llvm::ShuffleVectorInst>(v)) {
+        // If we have already detected broadcast we want to look for
+        // the vector with the first not-undef element
         llvm::Value *element = LLVMFlattenInsertChain
-            (v, g->target->getVectorWidth(), true, false, broadcast_detected);
+            (v, g->target->getVectorWidth(), true, false, broadcastDetected);
         // TODO: it's probably ok to allow undefined elements and return
         // the base pointer if all of the other elements have the same
         // value.
@@ -1541,7 +1544,7 @@ lGetBasePointer(llvm::Value *v, llvm::Instruction *insertBefore, bool broadcast_
     // It is a little bit tricky to use operations with pointers, casted to int with another bit size
     // but sometimes it is useful, so we handle this case here.
     else if (llvm::CastInst *ci = llvm::dyn_cast<llvm::CastInst>(v)) {
-        llvm::Value *t = lGetBasePointer(ci->getOperand(0), insertBefore, broadcast_detected);
+        llvm::Value *t = lGetBasePointer(ci->getOperand(0), insertBefore, broadcastDetected);
         if (t == NULL) {
             return NULL;
         }
@@ -1605,17 +1608,17 @@ lGetBasePtrAndOffsets(llvm::Value *ptrs, llvm::Value **offsets,
         LLVMDumpValue(ptrs);
     }
 
-    bool broadcast_detected = false;
+    bool broadcastDetected = false;
     // Looking for %gep_offset = shufflevector <8 x i64> %0, <8 x i64> undef, <8 x i32> zeroinitializer
     llvm::ShuffleVectorInst *shuffle = llvm::dyn_cast<llvm::ShuffleVectorInst>(ptrs);
     if (shuffle != NULL) {
         llvm::Value *indices = shuffle->getOperand(2);
         llvm::Value *vec = shuffle->getOperand(1);
         if (lIsUndef(vec) && llvm::isa<llvm::ConstantAggregateZero>(indices)) {
-            broadcast_detected = true;
+            broadcastDetected = true;
         }
     }
-    llvm::Value *base = lGetBasePointer(ptrs, insertBefore, broadcast_detected);
+    llvm::Value *base = lGetBasePointer(ptrs, insertBefore, broadcastDetected);
     if (base != NULL) {
         // We have a straight up varying pointer with no indexing that's
         // actually all the same value.
@@ -1624,7 +1627,7 @@ lGetBasePtrAndOffsets(llvm::Value *ptrs, llvm::Value **offsets,
         else
             *offsets = LLVMInt64Vector((int64_t)0);
 
-        if (broadcast_detected){
+        if (broadcastDetected){
             llvm::Value *op = shuffle->getOperand(0);
             llvm::BinaryOperator * bop_var = llvm::dyn_cast<llvm::BinaryOperator>(op);
             if (bop_var != NULL && bop_var->getOpcode() == llvm::Instruction::Add) {
