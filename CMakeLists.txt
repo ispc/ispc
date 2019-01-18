@@ -296,7 +296,7 @@ if (ISPC_INCLUDE_EXAMPLES AND NOT ISPC_PREPARE_PACKAGE)
     add_subdirectory(examples)
 endif()
 
-if (ISPC_INCLUDE_TESTS AND NOT ISPC_PREPARE_PACKAGE)
+if (ISPC_INCLUDE_TESTS)
     add_subdirectory(tests)
 endif()
 
