@@ -79,7 +79,7 @@ init:
 
 before_build:
 - cmd: |-
-    set PATH=%LLVM_HOME%\bin;%CHOCO_DIR%\lib\winflexbison\tools;C:\cygwin64\bin;%PATH%
+    set PATH=%LLVM_HOME%\bin;C:\Python27\;C:\Python27\Scripts;%CHOCO_DIR%\lib\winflexbison\tools;C:\cygwin64\bin;%PATH%
     cd %ISPC_HOME% && mkdir build && cd build
     cmake .. -G %generator% -DCMAKE_INSTALL_PREFIX=%ISPC_HOME%\%configuration% -DISPC_PREPARE_PACKAGE=ON
 
@@ -91,6 +91,7 @@ after_build:
   - call "C:\Program Files (x86)\Microsoft Visual Studio\2017\Community\VC\Auxiliary\Build\vcvars32.bat"
 
 test_script:
+  - msbuild c:\\projects\\ispc\\build\\tests\\check-all.vcxproj /t:Build
   - set PATH=%ISPC_HOME%\build\bin\%configuration%;%PATH%
   - cd %ISPC_HOME%
   - check_isa.exe
