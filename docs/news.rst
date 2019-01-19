@@ -2,6 +2,18 @@
 ispc News
 =========
 
+ispc 1.10.0 is Released
+-----------------------
+
+An ``ispc`` release with support for streaming stores/loads, 64 bit wide types
+in aos_to_soa/soa_to_aos intrinsics, and a pragma to suppress warnings.
+
+The release is based on a patched LLVM 5.0.2 backend.
+
+For more details, please check `Release Notes`_.
+
+.. _Release Notes: https://github.com/ispc/ispc/blob/master/docs/ReleaseNotes.txt
+
 ispc 1.9.2 is Released
 ----------------------
 
