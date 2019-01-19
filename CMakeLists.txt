@@ -53,7 +53,7 @@ option(ISPC_PREPARE_PACKAGE "Generate build targets for ispc package" OFF)
 
 if (UNIX)
     option(ISPC_STATIC_STDCXX_LINK "Link statically with libstdc++ and libgcc" OFF)
-    if (ISPC_PREPARE_PACKAGE)
+    if (ISPC_PREPARE_PACKAGE AND (NOT APPLE))
         option(ISPC_STATIC_LINK "Link statically" ON)
     else()
         option(ISPC_STATIC_LINK "Link statically" OFF)
