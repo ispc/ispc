@@ -55,6 +55,7 @@ Contents:
   + `Updating ISPC Programs For Changes In ISPC 1.9.0`_
   + `Updating ISPC Programs For Changes In ISPC 1.9.1`_
   + `Updating ISPC Programs For Changes In ISPC 1.9.2`_
+  + `Updating ISPC Programs For Changes In ISPC 1.10.0`_
 
 * `Getting Started with ISPC`_
 
@@ -360,6 +361,17 @@ Updating ISPC Programs For Changes In ISPC 1.9.2
 
 The release doesn't contain language changes, which may affect compatibility with
 older versions.
+
+Updating ISPC Programs For Changes In ISPC 1.10.0
+-------------------------------------------------
+
+The release has several new language features, which do not affect compatibility.
+Namely, new streaming stores, aos_to_soa/soa_to_aos instrinsics for 64 bit types,
+and a "#pragma ignore".
+
+One change that potentially may affect compatibility - changed size of short vector
+types. If you use short vector types for data passed between C/C++ and ISPC, you
+may want to pay attention to it.
 
 
 Getting Started with ISPC
