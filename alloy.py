@@ -33,6 +33,7 @@
 
 # // Author: Filippov Ilia
 
+from collections import OrderedDict
 import re
 
 def tail_and_save(file_in, file_out, tail = 100):    
@@ -467,22 +468,22 @@ def check_targets():
     #   flag for sde to emulate this platform,
     #   flag is this is supported on current platform
     # ]
-    target_dict = {
-      "SSE2":   [["sse2-i32x4",  "sse2-i32x8"],
-                 ["SSE2"], "-p4", False],
-      "SSE4":   [["sse4-i32x4",  "sse4-i32x8",   "sse4-i16x8", "sse4-i8x16"],
-                 ["SSE2", "SSE4"], "-wsm", False],
-      "AVX":    [["avx1-i32x4",  "avx1-i32x8",  "avx1-i32x16",  "avx1-i64x4"],
-                 ["SSE2", "SSE4", "AVX"], "-snb", False],
-      "AVX1.1": [["avx1.1-i32x8","avx1.1-i32x16","avx1.1-i64x4"],
-                 ["SSE2", "SSE4", "AVX", "AVX1.1"], "-ivb", False],
-      "AVX2":   [["avx2-i32x8",  "avx2-i32x16",  "avx2-i64x4"],
-                 ["SSE2", "SSE4", "AVX", "AVX1.1", "AVX2"], "-hsw", False],
-      "KNL":    [["avx512knl-i32x16"],
-                 ["SSE2", "SSE4", "AVX", "AVX1.1", "AVX2", "KNL"], "-knl", False],
-      "SKX":    [["avx512skx-i32x16"],
-                 ["SSE2", "SSE4", "AVX", "AVX1.1", "AVX2", "SKX"], "-skx", False]
-    }
+    target_dict = OrderedDict([
+      ("SSE2",   [["sse2-i32x4",  "sse2-i32x8"],
+                 ["SSE2"], "-p4", False]),
+      ("SSE4",   [["sse4-i32x4",  "sse4-i32x8",   "sse4-i16x8", "sse4-i8x16"],
+                 ["SSE2", "SSE4"], "-wsm", False]),
+      ("AVX",    [["avx1-i32x4",  "avx1-i32x8",  "avx1-i32x16",  "avx1-i64x4"],
+                 ["SSE2", "SSE4", "AVX"], "-snb", False]),
+      ("AVX1.1", [["avx1.1-i32x8","avx1.1-i32x16","avx1.1-i64x4"],
+                 ["SSE2", "SSE4", "AVX", "AVX1.1"], "-ivb", False]),
+      ("AVX2",   [["avx2-i32x8",  "avx2-i32x16",  "avx2-i64x4"],
+                 ["SSE2", "SSE4", "AVX", "AVX1.1", "AVX2"], "-hsw", False]),
+      ("KNL",    [["avx512knl-i32x16"],
+                 ["SSE2", "SSE4", "AVX", "AVX1.1", "AVX2", "KNL"], "-knl", False]),
+      ("SKX",    [["avx512skx-i32x16"],
+                 ["SSE2", "SSE4", "AVX", "AVX1.1", "AVX2", "SKX"], "-skx", False])
+    ])
 
     hw_arch = take_lines("check_isa.exe", "first").split()[1]
 
