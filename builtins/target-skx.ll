@@ -45,6 +45,8 @@ ifelse(LLVM_VERSION, LLVM_3_8,
          LLVM_VERSION, LLVM_7_0,
     `include(`target-avx512-common.ll')',
          LLVM_VERSION, LLVM_8_0,
+    `include(`target-avx512-common.ll')',
+         LLVM_VERSION, LLVM_9_0,
     `include(`target-avx512-common.ll')'
   )
 
@@ -100,6 +102,8 @@ ifelse(LLVM_VERSION, LLVM_3_8,
          LLVM_VERSION, LLVM_7_0,
     rcp_rsqrt_varying_float_skx(),
          LLVM_VERSION, LLVM_8_0,
+    rcp_rsqrt_varying_float_skx(),
+         LLVM_VERSION, LLVM_9_0,
     rcp_rsqrt_varying_float_skx()
   )
 
