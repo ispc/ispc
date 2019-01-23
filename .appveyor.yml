@@ -38,9 +38,6 @@ environment:
   LLVM_HOME: "c:\\projects\\llvm"
   CHOCO_DIR: "%ProgramData%\\chocolatey"
   matrix:
-    - DESC: "Build ispc with LLVM 4.0 VS2017"
-      LLVM_VERSION: 4.0
-      DOCKER_NAME: "ispc/test_repo:win_llvm40"
     - DESC: "Build ispc with LLVM 5.0 VS2017"
       LLVM_VERSION: 5.0
       DOCKER_NAME: "ispc/test_repo:win_llvm50"
@@ -50,6 +47,9 @@ environment:
     - DESC: "Build ispc with LLVM 7.0 VS2017"
       LLVM_VERSION: 7.0
       DOCKER_NAME: "ispc/test_repo:win_llvm70"
+    - DESC: "Build ispc with LLVM 7.0 VS2017"
+      LLVM_VERSION: 8.0
+      DOCKER_NAME: "ispc/test_repo:win_llvm80"
 
 cache:
   - C:\ProgramData\chocolatey\bin -> appveyor.yml
