@@ -1,5 +1,5 @@
 #
-#  Copyright (c) 2018, Intel Corporation
+#  Copyright (c) 2018-2019, Intel Corporation
 #  All rights reserved.
 #
 #  Redistribution and use in source and binary forms, with or without
@@ -328,8 +328,14 @@ if (ISPC_PREPARE_PACKAGE)
     # CPack configuration
     if (WIN32)
         set(CPACK_GENERATOR "ZIP")
+        set(ISPC_SYSTEM_NAME "windows")
     else()
         set(CPACK_GENERATOR "TGZ")
+        if (APPLE)
+            set(ISPC_SYSTEM_NAME "macOS")
+        else()
+            set(ISPC_SYSTEM_NAME "linux")
+        endif()
     endif()
     set(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_CURRENT_SOURCE_DIR}/LICENSE.txt")
     # Get ispc version
@@ -338,5 +344,10 @@ if (ISPC_PREPARE_PACKAGE)
     set(CPACK_PACKAGE_VERSION_MAJOR ${CMAKE_MATCH_1})
     set(CPACK_PACKAGE_VERSION_MINOR ${CMAKE_MATCH_2})
     set(CPACK_PACKAGE_VERSION_PATCH ${CMAKE_MATCH_3})
+    string(CONCAT CPACK_PACKAGE_FILE_NAME "${PROJECT_NAME}"
+                             "-v${CPACK_PACKAGE_VERSION_MAJOR}"
+                             ".${CPACK_PACKAGE_VERSION_MINOR}"
+                             ".${CPACK_PACKAGE_VERSION_PATCH}"
+                             "-${ISPC_SYSTEM_NAME}")
     include(CPack)
 endif()
