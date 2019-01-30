@@ -44,53 +44,51 @@
 #endif // ISPC_IS_WINDOWS
 
 #include <assert.h>
-#include <string.h>
-#include <stdio.h>
 #include <stdint.h>
+#include <stdio.h>
+#include <string.h>
 #ifdef ISPC_IS_LINUX
 #include <malloc.h>
 #endif
 
 #if (TEST_SIG == 7)
-    #define varying_f_sz f_sz
-    #define v1_varying_f_sz f_sz
-    #define v2_varying_f_sz f_sz
-    #define v4_varying_f_sz f_sz
-    #define v8_varying_f_sz f_sz
-    #define v16_varying_f_sz f_sz
-    #include TEST_HEADER
+#define varying_f_sz f_sz
+#define v1_varying_f_sz f_sz
+#define v2_varying_f_sz f_sz
+#define v4_varying_f_sz f_sz
+#define v8_varying_f_sz f_sz
+#define v16_varying_f_sz f_sz
+#include TEST_HEADER
 #endif
 
 extern "C" {
-    extern int width();
-    extern void f_v(float *result);
-    extern void f_f(float *result, float *a);
-    extern void f_fu(float *result, float *a, float b);
-    extern void f_fi(float *result, float *a, int *b);
-    extern void f_du(float *result, double *a, double b);
-    extern void f_duf(float *result, double *a, float b);
-    extern void f_di(float *result, double *a, int *b);
-    extern void result(float *val);
+extern int width();
+extern void f_v(float *result);
+extern void f_f(float *result, float *a);
+extern void f_fu(float *result, float *a, float b);
+extern void f_fi(float *result, float *a, int *b);
+extern void f_du(float *result, double *a, double b);
+extern void f_duf(float *result, double *a, float b);
+extern void f_di(float *result, double *a, int *b);
+extern void result(float *val);
 
-    void ISPCLaunch(void **handlePtr, void *f, void *d, int,int,int);
-    void ISPCSync(void *handle);
-    void *ISPCAlloc(void **handlePtr, int64_t size, int32_t alignment);
+void ISPCLaunch(void **handlePtr, void *f, void *d, int, int, int);
+void ISPCSync(void *handle);
+void *ISPCAlloc(void **handlePtr, int64_t size, int32_t alignment);
 }
 
 void ISPCLaunch(void **handle, void *f, void *d, int count0, int count1, int count2) {
     *handle = (void *)(uintptr_t)0xdeadbeef;
     typedef void (*TaskFuncType)(void *, int, int, int, int, int, int, int, int, int, int);
     TaskFuncType func = (TaskFuncType)f;
-    int count = count0*count1*count2, idx = 0;
+    int count = count0 * count1 * count2, idx = 0;
     for (int k = 0; k < count2; ++k)
-      for (int j = 0; j < count1; ++j)
-        for (int i = 0; i < count0; ++i)
-        func(d, 0, 1, idx++, count, i,j,k,count0,count1,count2);
+        for (int j = 0; j < count1; ++j)
+            for (int i = 0; i < count0; ++i)
+                func(d, 0, 1, idx++, count, i, j, k, count0, count1, count2);
 }
 
-void ISPCSync(void *) {
-}
-
+void ISPCSync(void *) {}
 
 void *ISPCAlloc(void **handle, int64_t size, int32_t alignment) {
     *handle = (void *)(uintptr_t)0xdeadbeef;
@@ -102,15 +100,13 @@ void *ISPCAlloc(void **handle, int64_t size, int32_t alignment) {
     return memalign(alignment, size);
 #endif
 #ifdef ISPC_IS_APPLE
-    void *mem = malloc(size + (alignment-1) + sizeof(void*));
-    char *amem = ((char*)mem) + sizeof(void*);
-    amem = amem + uint32_t(alignment - (reinterpret_cast<uint64_t>(amem) &
-                                        (alignment - 1)));
-    ((void**)amem)[-1] = mem;
+    void *mem = malloc(size + (alignment - 1) + sizeof(void *));
+    char *amem = ((char *)mem) + sizeof(void *);
+    amem = amem + uint32_t(alignment - (reinterpret_cast<uint64_t>(amem) & (alignment - 1)));
+    ((void **)amem)[-1] = mem;
     return amem;
 #endif
 }
-
 
 #if defined(_WIN32) || defined(_WIN64)
 #define ALIGN __declspec(align(64))
@@ -130,10 +126,10 @@ int main(int argc, char *argv[]) {
 
     for (int i = 0; i < 64; ++i) {
         returned_result[i] = -1e20;
-        vfloat[i] = i+1;
-        vdouble[i] = i+1;
-        vint[i] = 2*(i+1);
-        vint2[i] = i+5;
+        vfloat[i] = i + 1;
+        vdouble[i] = i + 1;
+        vint[i] = 2 * (i + 1);
+        vint2[i] = i + 5;
     }
 
     float b = 5.;
@@ -159,7 +155,7 @@ int main(int argc, char *argv[]) {
 #endif
 
     float expected_result[64];
-    memset(expected_result, 0, 64*sizeof(float));
+    memset(expected_result, 0, 64 * sizeof(float));
     result(expected_result);
 
     int errors = 0;
@@ -169,9 +165,8 @@ int main(int argc, char *argv[]) {
             // bingo, failed
             return 1;
 #else
-            printf("%s: value %d disagrees: returned %f [%a], expected %f [%a]\n",
-                   argv[0], i, returned_result[i], returned_result[i],
-                   expected_result[i], expected_result[i]);
+            printf("%s: value %d disagrees: returned %f [%a], expected %f [%a]\n", argv[0], i, returned_result[i],
+                   returned_result[i], expected_result[i], expected_result[i]);
             ++errors;
 #endif // EXPECT_FAILURE
         }

@@ -37,7 +37,7 @@
 #include <stdint.h>
 
 extern "C" {
-    void ISPCInstrument(const char *fn, const char *note, int line, uint64_t mask);
+void ISPCInstrument(const char *fn, const char *note, int line, uint64_t mask);
 }
 
 void ISPCPrintInstrument();

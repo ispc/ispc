@@ -34,7 +34,6 @@ met:
  SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-namespace GPUTargets
-{
-  static const auto computeMode = {"sm_35", "sm_37"};
+namespace GPUTargets {
+static const auto computeMode = {"sm_35", "sm_37"};
 }

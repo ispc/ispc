@@ -55,12 +55,11 @@ inline uint32_t RoundUpPow2(uint32_t v) {
     v |= v >> 4;
     v |= v >> 8;
     v |= v >> 16;
-    return v+1;
+    return v + 1;
 }
 
 #ifdef __GNUG__
-#define PRINTF_FUNC __attribute__ \
-    ((__format__ (__printf__, 2, 3)))
+#define PRINTF_FUNC __attribute__((__format__(__printf__, 2, 3)))
 #else
 #define PRINTF_FUNC
 #endif // __GNUG__
@@ -68,7 +67,7 @@ inline uint32_t RoundUpPow2(uint32_t v) {
 // for cross-platform compatibility
 #ifdef ISPC_IS_WINDOWS
 int vasprintf(char **sptr, const char *fmt, va_list argv);
-int  asprintf(char **sptr, const char *fmt, ...);
+int asprintf(char **sptr, const char *fmt, ...);
 #endif
 
 /** Prints a debugging message.  These messages are only printed if
@@ -128,8 +127,7 @@ void FatalError(const char *file, int line, const char *message);
                    to str2, or maxDist+1 if it's not psosible to do so
                    in fewer than maxDist steps
 */
-int StringEditDistance(const std::string &str1, const std::string &str2,
-                       int maxDist);
+int StringEditDistance(const std::string &str1, const std::string &str2, int maxDist);
 
 /** Given a string and a set of candidate strings, returns the set of
     candidates that are "close" to the given string, where distance is
@@ -137,15 +135,13 @@ int StringEditDistance(const std::string &str1, const std::string &str2,
     between the two.  An empty vector may be returned if none of the
     options is close to \c str.
  */
-std::vector<std::string> MatchStrings(const std::string &str,
-                                      const std::vector<std::string> &options);
+std::vector<std::string> MatchStrings(const std::string &str, const std::vector<std::string> &options);
 
 /** Given the current working directory and a filename relative to that
     directory, this function returns the final directory that the resulting
     file is in and the base name of the file itself. */
-void GetDirectoryAndFileName(const std::string &currentDir,
-                             const std::string &relativeName,
-                             std::string *directory, std::string *filename);
+void GetDirectoryAndFileName(const std::string &currentDir, const std::string &relativeName, std::string *directory,
+                             std::string *filename);
 
 /** Verification routine, which ensures that DataLayout of the module being
     compiled is compatible with DataLayout of the library. At the moment we
@@ -153,14 +149,12 @@ void GetDirectoryAndFileName(const std::string &currentDir,
     extra floating point and vector types to be defined for module) or
     empty library DataLayout.
  */
-bool VerifyDataLayoutCompatibility(const std::string &module_dl,
-                                   const std::string &lib_dl);
+bool VerifyDataLayoutCompatibility(const std::string &module_dl, const std::string &lib_dl);
 
 /** Print the given string to the given FILE, assuming the given output
     column width.  Break words as needed to avoid words spilling past the
     last column.  */
-void PrintWithWordBreaks(const char *buf, int indent, int columnWidth,
-                         FILE *out);
+void PrintWithWordBreaks(const char *buf, int indent, int columnWidth, FILE *out);
 
 /** Returns the width of the terminal where the compiler is running.
     Finding this out may fail in a variety of reasonable situations (piping

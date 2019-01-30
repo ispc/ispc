@@ -38,8 +38,8 @@
 #ifndef ISPC_STMT_H
 #define ISPC_STMT_H 1
 
-#include "ispc.h"
 #include "ast.h"
+#include "ispc.h"
 
 /** @brief Interface class for statements in the ispc language.
 
@@ -47,13 +47,11 @@
     statements in the language must implement.
  */
 class Stmt : public ASTNode {
-public:
-    Stmt(SourcePos p, unsigned scid) : ASTNode(p, scid) { }
+  public:
+    Stmt(SourcePos p, unsigned scid) : ASTNode(p, scid) {}
 
-    static inline bool classof(Stmt const*) { return true; }
-    static inline bool classof(ASTNode const* N) {
-        return N->getValueID() > MaxExprID;
-    }
+    static inline bool classof(Stmt const *) { return true; }
+    static inline bool classof(ASTNode const *N) { return N->getValueID() > MaxExprID; }
 
     /** Emit LLVM IR for the statement, using the FunctionEmitContext to create the
         necessary instructions.
@@ -72,16 +70,13 @@ public:
     virtual Stmt *TypeCheck() = 0;
 };
 
-
 /** @brief Statement representing a single expression */
 class ExprStmt : public Stmt {
-public:
+  public:
     ExprStmt(Expr *expr, SourcePos pos);
 
-    static inline bool classof(ExprStmt const*) { return true; }
-    static inline bool classof(ASTNode const* N) {
-        return N->getValueID() == ExprStmtID;
-    }
+    static inline bool classof(ExprStmt const *) { return true; }
+    static inline bool classof(ASTNode const *N) { return N->getValueID() == ExprStmtID; }
 
     void EmitCode(FunctionEmitContext *ctx) const;
     void Print(int indent) const;
@@ -92,10 +87,10 @@ public:
     Expr *expr;
 };
 
-
 struct VariableDeclaration {
     VariableDeclaration(Symbol *s = NULL, Expr *i = NULL) {
-        sym = s; init = i;
+        sym = s;
+        init = i;
     }
     Symbol *sym;
     Expr *init;
@@ -104,13 +99,11 @@ struct VariableDeclaration {
 /** @brief Statement representing a single declaration (which in turn may declare
     a number of variables. */
 class DeclStmt : public Stmt {
-public:
+  public:
     DeclStmt(const std::vector<VariableDeclaration> &v, SourcePos pos);
 
-    static inline bool classof(DeclStmt const*) { return true; }
-    static inline bool classof(ASTNode const* N) {
-        return N->getValueID() == DeclStmtID;
-    }
+    static inline bool classof(DeclStmt const *) { return true; }
+    static inline bool classof(ASTNode const *N) { return N->getValueID() == DeclStmtID; }
 
     void EmitCode(FunctionEmitContext *ctx) const;
     void Print(int indent) const;
@@ -122,18 +115,14 @@ public:
     std::vector<VariableDeclaration> vars;
 };
 
-
 /** @brief Statement representing a single if statement, possibly with an
     else clause. */
 class IfStmt : public Stmt {
-public:
-    IfStmt(Expr *testExpr, Stmt *trueStmts, Stmt *falseStmts,
-           bool doAllCheck, SourcePos pos);
+  public:
+    IfStmt(Expr *testExpr, Stmt *trueStmts, Stmt *falseStmts, bool doAllCheck, SourcePos pos);
 
-    static inline bool classof(IfStmt const*) { return true; }
-    static inline bool classof(ASTNode const* N) {
-        return N->getValueID() == IfStmtID;
-    }
+    static inline bool classof(IfStmt const *) { return true; }
+    static inline bool classof(ASTNode const *N) { return N->getValueID() == IfStmtID; }
 
     void EmitCode(FunctionEmitContext *ctx) const;
     void Print(int indent) const;
@@ -150,35 +139,29 @@ public:
     /** Statements to run if the 'if' test returns a false value */
     Stmt *falseStmts;
 
-private:
+  private:
     /** This value records if this was a 'coherent' if statement in the
         source and thus, if the emitted code should check to see if all
         active program instances want to follow just one of the 'true' or
         'false' blocks. */
     const bool doAllCheck;
 
-    void emitMaskedTrueAndFalse(FunctionEmitContext *ctx, llvm::Value *oldMask,
-                                llvm::Value *test) const;
+    void emitMaskedTrueAndFalse(FunctionEmitContext *ctx, llvm::Value *oldMask, llvm::Value *test) const;
     void emitVaryingIf(FunctionEmitContext *ctx, llvm::Value *test) const;
-    void emitMaskAllOn(FunctionEmitContext *ctx,
-                       llvm::Value *test, llvm::BasicBlock *bDone) const;
-    void emitMaskMixed(FunctionEmitContext *ctx, llvm::Value *oldMask,
-                       llvm::Value *test, llvm::BasicBlock *bDone) const;
+    void emitMaskAllOn(FunctionEmitContext *ctx, llvm::Value *test, llvm::BasicBlock *bDone) const;
+    void emitMaskMixed(FunctionEmitContext *ctx, llvm::Value *oldMask, llvm::Value *test,
+                       llvm::BasicBlock *bDone) const;
 };
-
 
 /** @brief Statement implementation representing a 'do' statement in the
     program.
  */
 class DoStmt : public Stmt {
-public:
-    DoStmt(Expr *testExpr, Stmt *bodyStmts, bool doCoherentCheck,
-           SourcePos pos);
+  public:
+    DoStmt(Expr *testExpr, Stmt *bodyStmts, bool doCoherentCheck, SourcePos pos);
 
-    static inline bool classof(DoStmt const*) { return true; }
-    static inline bool classof(ASTNode const* N) {
-        return N->getValueID() == DoStmtID;
-    }
+    static inline bool classof(DoStmt const *) { return true; }
+    static inline bool classof(ASTNode const *N) { return N->getValueID() == DoStmtID; }
 
     void EmitCode(FunctionEmitContext *ctx) const;
     void Print(int indent) const;
@@ -191,19 +174,16 @@ public:
     const bool doCoherentCheck;
 };
 
-
 /** @brief Statement implementation for 'for' loops (as well as for 'while'
     loops).
  */
 class ForStmt : public Stmt {
-public:
-    ForStmt(Stmt *initializer, Expr *testExpr, Stmt *stepStatements,
-            Stmt *bodyStatements, bool doCoherentCheck, SourcePos pos);
+  public:
+    ForStmt(Stmt *initializer, Expr *testExpr, Stmt *stepStatements, Stmt *bodyStatements, bool doCoherentCheck,
+            SourcePos pos);
 
-    static inline bool classof(ForStmt const*) { return true; }
-    static inline bool classof(ASTNode const* N) {
-        return N->getValueID() == ForStmtID;
-    }
+    static inline bool classof(ForStmt const *) { return true; }
+    static inline bool classof(ASTNode const *N) { return N->getValueID() == ForStmtID; }
 
     void EmitCode(FunctionEmitContext *ctx) const;
     void Print(int indent) const;
@@ -224,17 +204,14 @@ public:
     const bool doCoherentCheck;
 };
 
-
 /** @brief Statement implementation for a break statement in the
     program. */
 class BreakStmt : public Stmt {
-public:
+  public:
     BreakStmt(SourcePos pos);
 
-    static inline bool classof(BreakStmt const*) { return true; }
-    static inline bool classof(ASTNode const* N) {
-        return N->getValueID() == BreakStmtID;
-    }
+    static inline bool classof(BreakStmt const *) { return true; }
+    static inline bool classof(ASTNode const *N) { return N->getValueID() == BreakStmtID; }
 
     void EmitCode(FunctionEmitContext *ctx) const;
     void Print(int indent) const;
@@ -242,18 +219,15 @@ public:
     Stmt *TypeCheck();
     int EstimateCost() const;
 };
-
 
 /** @brief Statement implementation for a continue statement in the
     program. */
 class ContinueStmt : public Stmt {
-public:
+  public:
     ContinueStmt(SourcePos pos);
 
-    static inline bool classof(ContinueStmt const*) { return true; }
-    static inline bool classof(ASTNode const* N) {
-        return N->getValueID() == ContinueStmtID;
-    }
+    static inline bool classof(ContinueStmt const *) { return true; }
+    static inline bool classof(ASTNode const *N) { return N->getValueID() == ContinueStmtID; }
 
     void EmitCode(FunctionEmitContext *ctx) const;
     void Print(int indent) const;
@@ -262,20 +236,15 @@ public:
     int EstimateCost() const;
 };
 
-
 /** @brief Statement implementation for parallel 'foreach' loops.
  */
 class ForeachStmt : public Stmt {
-public:
-    ForeachStmt(const std::vector<Symbol *> &loopVars,
-                const std::vector<Expr *> &startExprs,
-                const std::vector<Expr *> &endExprs,
-                Stmt *bodyStatements, bool tiled, SourcePos pos);
+  public:
+    ForeachStmt(const std::vector<Symbol *> &loopVars, const std::vector<Expr *> &startExprs,
+                const std::vector<Expr *> &endExprs, Stmt *bodyStatements, bool tiled, SourcePos pos);
 
-    static inline bool classof(ForeachStmt const*) { return true; }
-    static inline bool classof(ASTNode const* N) {
-        return N->getValueID() == ForeachStmtID;
-    }
+    static inline bool classof(ForeachStmt const *) { return true; }
+    static inline bool classof(ASTNode const *N) { return N->getValueID() == ForeachStmtID; }
 
     void EmitCode(FunctionEmitContext *ctx) const;
     void Print(int indent) const;
@@ -290,17 +259,14 @@ public:
     Stmt *stmts;
 };
 
-
 /** Iteration over each executing program instance.
  */
 class ForeachActiveStmt : public Stmt {
-public:
+  public:
     ForeachActiveStmt(Symbol *iterSym, Stmt *stmts, SourcePos pos);
 
-    static inline bool classof(ForeachActiveStmt const*) { return true; }
-    static inline bool classof(ASTNode const* N) {
-        return N->getValueID() == ForeachActiveStmtID;
-    }
+    static inline bool classof(ForeachActiveStmt const *) { return true; }
+    static inline bool classof(ASTNode const *N) { return N->getValueID() == ForeachActiveStmtID; }
 
     void EmitCode(FunctionEmitContext *ctx) const;
     void Print(int indent) const;
@@ -311,20 +277,16 @@ public:
     Symbol *sym;
     Stmt *stmts;
 };
-
 
 /** Parallel iteration over each unique value in the given (varying)
     expression.
  */
 class ForeachUniqueStmt : public Stmt {
-public:
-    ForeachUniqueStmt(const char *iterName, Expr *expr, Stmt *stmts,
-                      SourcePos pos);
+  public:
+    ForeachUniqueStmt(const char *iterName, Expr *expr, Stmt *stmts, SourcePos pos);
 
-    static inline bool classof(ForeachUniqueStmt const*) { return true; }
-    static inline bool classof(ASTNode const* N) {
-        return N->getValueID() == ForeachUniqueStmtID;
-    }
+    static inline bool classof(ForeachUniqueStmt const *) { return true; }
+    static inline bool classof(ASTNode const *N) { return N->getValueID() == ForeachUniqueStmtID; }
 
     void EmitCode(FunctionEmitContext *ctx) const;
     void Print(int indent) const;
@@ -337,17 +299,14 @@ public:
     Stmt *stmts;
 };
 
-
 /**
  */
 class UnmaskedStmt : public Stmt {
-public:
+  public:
     UnmaskedStmt(Stmt *stmt, SourcePos pos);
 
-    static inline bool classof(UnmaskedStmt const*) { return true; }
-    static inline bool classof(ASTNode const* N) {
-        return N->getValueID() == UnmaskedStmtID;
-    }
+    static inline bool classof(UnmaskedStmt const *) { return true; }
+    static inline bool classof(ASTNode const *N) { return N->getValueID() == UnmaskedStmtID; }
 
     void EmitCode(FunctionEmitContext *ctx) const;
     void Print(int indent) const;
@@ -358,18 +317,14 @@ public:
     Stmt *stmts;
 };
 
-
-
 /** @brief Statement implementation for a 'return' statement in the
     program. */
 class ReturnStmt : public Stmt {
-public:
+  public:
     ReturnStmt(Expr *e, SourcePos p);
 
-    static inline bool classof(ReturnStmt const*) { return true; }
-    static inline bool classof(ASTNode const* N) {
-        return N->getValueID() == ReturnStmtID;
-    }
+    static inline bool classof(ReturnStmt const *) { return true; }
+    static inline bool classof(ASTNode const *N) { return N->getValueID() == ReturnStmtID; }
 
     void EmitCode(FunctionEmitContext *ctx) const;
     void Print(int indent) const;
@@ -380,18 +335,15 @@ public:
     Expr *expr;
 };
 
-
 /** Statement corresponding to a "case" label in the program.  In addition
     to the value associated with the "case", this statement also stores the
     statements following it. */
 class CaseStmt : public Stmt {
-public:
+  public:
     CaseStmt(int value, Stmt *stmt, SourcePos pos);
 
-    static inline bool classof(CaseStmt const*) { return true; }
-    static inline bool classof(ASTNode const* N) {
-        return N->getValueID() == CaseStmtID;
-    }
+    static inline bool classof(CaseStmt const *) { return true; }
+    static inline bool classof(ASTNode const *N) { return N->getValueID() == CaseStmtID; }
 
     void EmitCode(FunctionEmitContext *ctx) const;
     void Print(int indent) const;
@@ -404,17 +356,14 @@ public:
     Stmt *stmts;
 };
 
-
 /** Statement for a "default" label (as would be found inside a "switch"
     statement). */
 class DefaultStmt : public Stmt {
-public:
+  public:
     DefaultStmt(Stmt *stmt, SourcePos pos);
 
-    static inline bool classof(DefaultStmt const*) { return true; }
-    static inline bool classof(ASTNode const* N) {
-        return N->getValueID() == DefaultStmtID;
-    }
+    static inline bool classof(DefaultStmt const *) { return true; }
+    static inline bool classof(ASTNode const *N) { return N->getValueID() == DefaultStmtID; }
 
     void EmitCode(FunctionEmitContext *ctx) const;
     void Print(int indent) const;
@@ -425,16 +374,13 @@ public:
     Stmt *stmts;
 };
 
-
 /** A "switch" statement in the program. */
 class SwitchStmt : public Stmt {
-public:
+  public:
     SwitchStmt(Expr *expr, Stmt *stmts, SourcePos pos);
 
-    static inline bool classof(SwitchStmt const*) { return true; }
-    static inline bool classof(ASTNode const* N) {
-        return N->getValueID() == SwitchStmtID;
-    }
+    static inline bool classof(SwitchStmt const *) { return true; }
+    static inline bool classof(ASTNode const *N) { return N->getValueID() == SwitchStmtID; }
 
     void EmitCode(FunctionEmitContext *ctx) const;
     void Print(int indent) const;
@@ -448,16 +394,13 @@ public:
     Stmt *stmts;
 };
 
-
 /** A "goto" in an ispc program. */
 class GotoStmt : public Stmt {
-public:
+  public:
     GotoStmt(const char *label, SourcePos gotoPos, SourcePos idPos);
 
-    static inline bool classof(GotoStmt const*) { return true; }
-    static inline bool classof(ASTNode const* N) {
-        return N->getValueID() == GotoStmtID;
-    }
+    static inline bool classof(GotoStmt const *) { return true; }
+    static inline bool classof(ASTNode const *N) { return N->getValueID() == GotoStmtID; }
 
     void EmitCode(FunctionEmitContext *ctx) const;
     void Print(int indent) const;
@@ -471,17 +414,14 @@ public:
     SourcePos identifierPos;
 };
 
-
 /** Statement corresponding to a label (as would be used as a goto target)
     in the program. */
 class LabeledStmt : public Stmt {
-public:
+  public:
     LabeledStmt(const char *label, Stmt *stmt, SourcePos p);
 
-    static inline bool classof(LabeledStmt const*) { return true; }
-    static inline bool classof(ASTNode const* N) {
-        return N->getValueID() == LabeledStmtID;
-    }
+    static inline bool classof(LabeledStmt const *) { return true; }
+    static inline bool classof(ASTNode const *N) { return N->getValueID() == LabeledStmtID; }
 
     void EmitCode(FunctionEmitContext *ctx) const;
     void Print(int indent) const;
@@ -496,17 +436,14 @@ public:
     Stmt *stmt;
 };
 
-
 /** @brief Representation of a list of statements in the program.
  */
 class StmtList : public Stmt {
-public:
-    StmtList(SourcePos p) : Stmt(p, StmtListID) { }
+  public:
+    StmtList(SourcePos p) : Stmt(p, StmtListID) {}
 
-    static inline bool classof(StmtList const*) { return true; }
-    static inline bool classof(ASTNode const* N) {
-        return N->getValueID() == StmtListID;
-    }
+    static inline bool classof(StmtList const *) { return true; }
+    static inline bool classof(ASTNode const *N) { return N->getValueID() == StmtListID; }
 
     void EmitCode(FunctionEmitContext *ctx) const;
     void Print(int indent) const;
@@ -514,11 +451,13 @@ public:
     Stmt *TypeCheck();
     int EstimateCost() const;
 
-    void Add(Stmt *s) { if (s) stmts.push_back(s); }
+    void Add(Stmt *s) {
+        if (s)
+            stmts.push_back(s);
+    }
 
     std::vector<Stmt *> stmts;
 };
-
 
 /** @brief Representation of a print() statement in the program.
 
@@ -530,13 +469,11 @@ public:
     statement lets us work around both of those ugly little issues...
   */
 class PrintStmt : public Stmt {
-public:
+  public:
     PrintStmt(const std::string &f, Expr *v, SourcePos p);
 
-    static inline bool classof(PrintStmt const*) { return true; }
-    static inline bool classof(ASTNode const* N) {
-        return N->getValueID() == PrintStmtID;
-    }
+    static inline bool classof(PrintStmt const *) { return true; }
+    static inline bool classof(ASTNode const *N) { return N->getValueID() == PrintStmtID; }
 
     void EmitCode(FunctionEmitContext *ctx) const;
     void Print(int indent) const;
@@ -551,7 +488,6 @@ public:
     Expr *values;
 };
 
-
 /** @brief Representation of an assert statement in the program.
 
     Like print() above, since we don't have strings as first-class types in
@@ -561,13 +497,11 @@ public:
     assert triggers if it's true for any of the program instances.
 */
 class AssertStmt : public Stmt {
-public:
+  public:
     AssertStmt(const std::string &msg, Expr *e, SourcePos p);
 
-    static inline bool classof(AssertStmt const*) { return true; }
-    static inline bool classof(ASTNode const* N) {
-        return N->getValueID() == AssertStmtID;
-    }
+    static inline bool classof(AssertStmt const *) { return true; }
+    static inline bool classof(ASTNode const *N) { return N->getValueID() == AssertStmtID; }
 
     void EmitCode(FunctionEmitContext *ctx) const;
     void Print(int indent) const;
@@ -581,17 +515,14 @@ public:
     Expr *expr;
 };
 
-
 /** Representation of a delete statement in the program.
-*/
+ */
 class DeleteStmt : public Stmt {
-public:
+  public:
     DeleteStmt(Expr *e, SourcePos p);
 
-    static inline bool classof(DeleteStmt const*) { return true; }
-    static inline bool classof(ASTNode const* N) {
-        return N->getValueID() == DeleteStmtID;
-    }
+    static inline bool classof(DeleteStmt const *) { return true; }
+    static inline bool classof(ASTNode const *N) { return N->getValueID() == DeleteStmtID; }
 
     void EmitCode(FunctionEmitContext *ctx) const;
     void Print(int indent) const;
@@ -603,7 +534,6 @@ public:
     Expr *expr;
 };
 
-extern Stmt *CreateForeachActiveStmt(Symbol *iterSym, Stmt *stmts,
-                                     SourcePos pos);
+extern Stmt *CreateForeachActiveStmt(Symbol *iterSym, Stmt *stmts, SourcePos pos);
 
 #endif // ISPC_STMT_H

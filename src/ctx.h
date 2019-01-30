@@ -41,18 +41,18 @@
 #include "ispc.h"
 #include <map>
 #if ISPC_LLVM_VERSION == ISPC_LLVM_3_2
-  #include <llvm/InstrTypes.h>
-  #include <llvm/Instructions.h>
+#include <llvm/InstrTypes.h>
+#include <llvm/Instructions.h>
 #else // 3.3+
-  #include <llvm/IR/InstrTypes.h>
-  #include <llvm/IR/Instructions.h>
+#include <llvm/IR/InstrTypes.h>
+#include <llvm/IR/Instructions.h>
 #endif
 #if ISPC_LLVM_VERSION <= ISPC_LLVM_3_4
-  #include <llvm/DebugInfo.h>
-  #include <llvm/DIBuilder.h>
+#include <llvm/DIBuilder.h>
+#include <llvm/DebugInfo.h>
 #else // 3.5+
-  #include <llvm/IR/DebugInfo.h>
-  #include <llvm/IR/DIBuilder.h>
+#include <llvm/IR/DIBuilder.h>
+#include <llvm/IR/DebugInfo.h>
 #endif
 
 struct CFInfo;
@@ -66,7 +66,7 @@ struct CFInfo;
     of helper routines that are useful for code that emits IR.
  */
 class FunctionEmitContext {
-public:
+  public:
     /** Create a new FunctionEmitContext.
         @param function     The Function object representing the function
         @param funSym       Symbol that corresponds to the function
@@ -75,9 +75,7 @@ public:
         @param firstStmtPos Source file position of the first statement in the
                             function
      */
-    FunctionEmitContext(Function *function, Symbol *funSym,
-                        llvm::Function *llvmFunction,
-                        SourcePos firstStmtPos);
+    FunctionEmitContext(Function *function, Symbol *funSym, llvm::Function *llvmFunction, SourcePos firstStmtPos);
     ~FunctionEmitContext();
 
     /** Returns the Function * corresponding to the function that we're
@@ -159,8 +157,7 @@ public:
         'continue' statements should jump to (if all running lanes want to
         break or continue), uniformControlFlow indicates whether the loop
         condition is 'uniform'. */
-    void StartLoop(llvm::BasicBlock *breakTarget, llvm::BasicBlock *continueTarget,
-                   bool uniformControlFlow);
+    void StartLoop(llvm::BasicBlock *breakTarget, llvm::BasicBlock *continueTarget, bool uniformControlFlow);
 
     /** Informs FunctionEmitContext of the value of the mask at the start
         of a loop body or switch statement. */
@@ -195,10 +192,10 @@ public:
         'continue' statement when going through the loop body in the
         previous iteration. */
     void RestoreContinuedLanes();
-    
-    /** This method is called by code emitting IR for a loop.  It clears 
+
+    /** This method is called by code emitting IR for a loop.  It clears
         any lanes that contained a break since the mask has been updated to take
-        them into account.  This is necessary as all the bail out checks for 
+        them into account.  This is necessary as all the bail out checks for
         breaks are meant to only deal with lanes breaking on the current iteration.
      */
     void ClearBreakLanes();
@@ -227,7 +224,7 @@ public:
                             last label.)
     */
     void SwitchInst(llvm::Value *expr, llvm::BasicBlock *defaultBlock,
-                    const std::vector<std::pair<int, llvm::BasicBlock *> > &caseBlocks,
+                    const std::vector<std::pair<int, llvm::BasicBlock *>> &caseBlocks,
                     const std::map<llvm::BasicBlock *, llvm::BasicBlock *> &nextBlocks);
 
     /** Generates code for a "default" label after a "switch" statement.
@@ -309,10 +306,10 @@ public:
     llvm::Value *ProgramIndexVectorPTX(bool is32bits = true);
 
     /** Issues a call to __insert_int8/int16/int32/int64/float/double */
-    llvm::Value* Insert(llvm::Value *vector, llvm::Value *lane, llvm::Value *scalar);
+    llvm::Value *Insert(llvm::Value *vector, llvm::Value *lane, llvm::Value *scalar);
     /** Issues a call to __extract_int8/int16/int32/int64/float/double */
-    llvm::Value* Extract(llvm::Value *vector, llvm::Value *lane);
-#endif 
+    llvm::Value *Extract(llvm::Value *vector, llvm::Value *lane);
+#endif
 
     /** Given a string, create an anonymous global variable to hold its
         value and return the pointer to the string. */
@@ -356,7 +353,7 @@ public:
                      llvm::DIScope *scope = NULL);
 #else /* LLVM 3.7+ */
                      llvm::DIScope *scope = NULL);
-                     //llvm::MDScope *scope = NULL );
+    // llvm::MDScope *scope = NULL );
 #endif
 
     /** Inform the debugging information generation code that a new scope
@@ -404,8 +401,7 @@ public:
         llvm::Values corresponding to VectorTypes are given as operands,
         this also handles applying the given operation to the vector
         elements. */
-    llvm::Value *BinaryOperator(llvm::Instruction::BinaryOps inst,
-                                llvm::Value *v0, llvm::Value *v1,
+    llvm::Value *BinaryOperator(llvm::Instruction::BinaryOps inst, llvm::Value *v0, llvm::Value *v1,
                                 const char *name = NULL);
 
     /** Emit the "not" operator.  Like BinaryOperator(), this also handles
@@ -415,32 +411,24 @@ public:
     /** Emit a comparison instruction.  If the operands are VectorTypes,
         then a value for the corresponding boolean VectorType is
         returned. */
-    llvm::Value *CmpInst(llvm::Instruction::OtherOps inst,
-                         llvm::CmpInst::Predicate pred,
-                         llvm::Value *v0, llvm::Value *v1, const char *name = NULL);
+    llvm::Value *CmpInst(llvm::Instruction::OtherOps inst, llvm::CmpInst::Predicate pred, llvm::Value *v0,
+                         llvm::Value *v1, const char *name = NULL);
 
     /** Given a scalar value, return a vector of the same type (or an
         array, for pointer types). */
     llvm::Value *SmearUniform(llvm::Value *value, const char *name = NULL);
 
-    llvm::Value *BitCastInst(llvm::Value *value, llvm::Type *type,
-                             const char *name = NULL);
+    llvm::Value *BitCastInst(llvm::Value *value, llvm::Type *type, const char *name = NULL);
     llvm::Value *PtrToIntInst(llvm::Value *value, const char *name = NULL);
-    llvm::Value *PtrToIntInst(llvm::Value *value, llvm::Type *type,
-                              const char *name = NULL);
-    llvm::Value *IntToPtrInst(llvm::Value *value, llvm::Type *type,
-                              const char *name = NULL);
+    llvm::Value *PtrToIntInst(llvm::Value *value, llvm::Type *type, const char *name = NULL);
+    llvm::Value *IntToPtrInst(llvm::Value *value, llvm::Type *type, const char *name = NULL);
 
-    llvm::Instruction *TruncInst(llvm::Value *value, llvm::Type *type,
-                                 const char *name = NULL);
-    llvm::Instruction *CastInst(llvm::Instruction::CastOps op, llvm::Value *value,
-                                llvm::Type *type, const char *name = NULL);
-    llvm::Instruction *FPCastInst(llvm::Value *value, llvm::Type *type,
-                                  const char *name = NULL);
-    llvm::Instruction *SExtInst(llvm::Value *value, llvm::Type *type,
+    llvm::Instruction *TruncInst(llvm::Value *value, llvm::Type *type, const char *name = NULL);
+    llvm::Instruction *CastInst(llvm::Instruction::CastOps op, llvm::Value *value, llvm::Type *type,
                                 const char *name = NULL);
-    llvm::Instruction *ZExtInst(llvm::Value *value, llvm::Type *type,
-                                const char *name = NULL);
+    llvm::Instruction *FPCastInst(llvm::Value *value, llvm::Type *type, const char *name = NULL);
+    llvm::Instruction *SExtInst(llvm::Value *value, llvm::Type *type, const char *name = NULL);
+    llvm::Instruction *ZExtInst(llvm::Value *value, llvm::Type *type, const char *name = NULL);
 
     /** Given two integer-typed values (but possibly one vector and the
         other not, and or of possibly-different bit-widths), update their
@@ -459,10 +447,9 @@ public:
         on the target), since LLVM doesn't currently support vectors of
         pointers.  The underlying type of the base pointer must be provided
         via the ptrType parameter */
-    llvm::Value *GetElementPtrInst(llvm::Value *basePtr, llvm::Value *index,
-                                   const Type *ptrType, const char *name = NULL);
-    llvm::Value *GetElementPtrInst(llvm::Value *basePtr, llvm::Value *index0,
-                                   llvm::Value *index1, const Type *ptrType,
+    llvm::Value *GetElementPtrInst(llvm::Value *basePtr, llvm::Value *index, const Type *ptrType,
+                                   const char *name = NULL);
+    llvm::Value *GetElementPtrInst(llvm::Value *basePtr, llvm::Value *index0, llvm::Value *index1, const Type *ptrType,
                                    const char *name = NULL);
 
     /** This method returns a new pointer that represents offsetting the
@@ -471,8 +458,7 @@ public:
         pointer must be a pointer to a structure type.  The ptrType gives
         the type of the pointer, though it may be NULL if the base pointer
         is uniform. */
-    llvm::Value *AddElementOffset(llvm::Value *basePtr, int elementNum,
-                                  const Type *ptrType, const char *name = NULL,
+    llvm::Value *AddElementOffset(llvm::Value *basePtr, int elementNum, const Type *ptrType, const char *name = NULL,
                                   const PointerType **resultPtrType = NULL);
 
     /** Load from the memory location(s) given by lvalue, using the given
@@ -480,8 +466,7 @@ public:
         a gather from the multiple memory locations given by the array of
         pointer values given by the lvalue.  If the lvalue is not varying,
         then both the mask pointer and the type pointer may be NULL. */
-    llvm::Value *LoadInst(llvm::Value *ptr, llvm::Value *mask,
-                          const Type *ptrType, const char *name = NULL, 
+    llvm::Value *LoadInst(llvm::Value *ptr, llvm::Value *mask, const Type *ptrType, const char *name = NULL,
                           bool one_elem = false);
 
     llvm::Value *LoadInst(llvm::Value *ptr, const char *name = NULL);
@@ -492,9 +477,7 @@ public:
         instruction is added at the start of the function in the entry
         basic block; if it should be added to the current basic block, then
         the atEntryBlock parameter should be false. */
-    llvm::Value *AllocaInst(llvm::Type *llvmType,
-                            const char *name = NULL, int align = 0,
-                            bool atEntryBlock = true);
+    llvm::Value *AllocaInst(llvm::Type *llvmType, const char *name = NULL, int align = 0, bool atEntryBlock = true);
 
     /** Standard store instruction; for this variant, the lvalue must be a
         single pointer, not a varying lvalue. */
@@ -504,19 +487,16 @@ public:
         this corresponds to a scatter.  Whether the lvalue is uniform of
         varying, the given storeMask is used to mask the stores so that
         they only execute for the active program instances. */
-    void StoreInst(llvm::Value *value, llvm::Value *ptr,
-                   llvm::Value *storeMask, const Type *valueType,
+    void StoreInst(llvm::Value *value, llvm::Value *ptr, llvm::Value *storeMask, const Type *valueType,
                    const Type *ptrType);
 
     /** Copy count bytes of memory from the location pointed to by src to
         the location pointed to by dest.  (src and dest must not be
         overlapping.) */
-    void MemcpyInst(llvm::Value *dest, llvm::Value *src, llvm::Value *count,
-                    llvm::Value *align = NULL);
+    void MemcpyInst(llvm::Value *dest, llvm::Value *src, llvm::Value *count, llvm::Value *align = NULL);
 
     void BranchInst(llvm::BasicBlock *block);
-    void BranchInst(llvm::BasicBlock *trueBlock, llvm::BasicBlock *falseBlock,
-                    llvm::Value *test);
+    void BranchInst(llvm::BasicBlock *trueBlock, llvm::BasicBlock *falseBlock, llvm::Value *test);
 
     /** This convenience method maps to an llvm::ExtractElementInst if the
         given value is a llvm::VectorType, and to an llvm::ExtractValueInst
@@ -526,55 +506,45 @@ public:
     /** This convenience method maps to an llvm::InsertElementInst if the
         given value is a llvm::VectorType, and to an llvm::InsertValueInst
         otherwise. */
-    llvm::Value *InsertInst(llvm::Value *v, llvm::Value *eltVal, int elt,
-                            const char *name = NULL);
+    llvm::Value *InsertInst(llvm::Value *v, llvm::Value *eltVal, int elt, const char *name = NULL);
 
     /** This convenience method maps to an llvm::ShuffleVectorInst. */
-    llvm::Value *ShuffleInst(llvm::Value *v1, llvm::Value *v2, llvm::Value *mask,
-                            const char *name = NULL);
+    llvm::Value *ShuffleInst(llvm::Value *v1, llvm::Value *v2, llvm::Value *mask, const char *name = NULL);
 
     /** This convenience method to generate broadcast pattern. It takes a value
         and a vector type. Type of the value must match element type of the
         vector. */
-    llvm::Value *BroadcastValue(llvm::Value *v, llvm::Type *vecType,
-                                const char *name = NULL);
+    llvm::Value *BroadcastValue(llvm::Value *v, llvm::Type *vecType, const char *name = NULL);
 
-    llvm::PHINode *PhiNode(llvm::Type *type, int count,
-                           const char *name = NULL);
-    llvm::Instruction *SelectInst(llvm::Value *test, llvm::Value *val0,
-                                  llvm::Value *val1, const char *name = NULL);
+    llvm::PHINode *PhiNode(llvm::Type *type, int count, const char *name = NULL);
+    llvm::Instruction *SelectInst(llvm::Value *test, llvm::Value *val0, llvm::Value *val1, const char *name = NULL);
 
     /** Emits IR to do a function call with the given arguments.  If the
         function type is a varying function pointer type, its full type
         must be provided in funcType.  funcType can be NULL if func is a
         uniform function pointer. */
-    llvm::Value *CallInst(llvm::Value *func, const FunctionType *funcType,
-                          const std::vector<llvm::Value *> &args,
+    llvm::Value *CallInst(llvm::Value *func, const FunctionType *funcType, const std::vector<llvm::Value *> &args,
                           const char *name = NULL);
 
     /** This is a convenience method that issues a call instruction to a
         function that takes just a single argument. */
-    llvm::Value *CallInst(llvm::Value *func, const FunctionType *funcType,
-                          llvm::Value *arg, const char *name = NULL);
+    llvm::Value *CallInst(llvm::Value *func, const FunctionType *funcType, llvm::Value *arg, const char *name = NULL);
 
     /** This is a convenience method that issues a call instruction to a
         function that takes two arguments. */
-    llvm::Value *CallInst(llvm::Value *func, const FunctionType *funcType,
-                          llvm::Value *arg0, llvm::Value *arg1,
+    llvm::Value *CallInst(llvm::Value *func, const FunctionType *funcType, llvm::Value *arg0, llvm::Value *arg1,
                           const char *name = NULL);
 
     /** Launch an asynchronous task to run the given function, passing it
         he given argument values. */
-    llvm::Value *LaunchInst(llvm::Value *callee,
-                            std::vector<llvm::Value *> &argVals,
-                            llvm::Value *launchCount[3]);
+    llvm::Value *LaunchInst(llvm::Value *callee, std::vector<llvm::Value *> &argVals, llvm::Value *launchCount[3]);
 
     void SyncInst();
 
     llvm::Instruction *ReturnInst();
     /** @} */
 
-private:
+  private:
     /** Pointer to the Function for which we're currently generating code. */
     Function *function;
 
@@ -649,7 +619,7 @@ private:
 
     /** Map from case label numbers to the basic block that will hold code
         for that case. */
-    const std::vector<std::pair<int, llvm::BasicBlock *> > *caseBlocks;
+    const std::vector<std::pair<int, llvm::BasicBlock *>> *caseBlocks;
 
     /** The basic block of code to run for the "default" label in the
         switch statement. */
@@ -733,8 +703,7 @@ private:
     void jumpIfAllLoopLanesAreDone(llvm::BasicBlock *target);
     llvm::Value *emitGatherCallback(llvm::Value *lvalue, llvm::Value *retPtr);
 
-    llvm::Value *applyVaryingGEP(llvm::Value *basePtr, llvm::Value *index,
-                                 const Type *ptrType);
+    llvm::Value *applyVaryingGEP(llvm::Value *basePtr, llvm::Value *index, const Type *ptrType);
 
     void restoreMaskGivenReturns(llvm::Value *oldMask);
     void addSwitchMaskCheck(llvm::Value *mask);
@@ -743,18 +712,13 @@ private:
 
     CFInfo *popCFState();
 
-    void scatter(llvm::Value *value, llvm::Value *ptr, const Type *valueType,
-                 const Type *ptrType, llvm::Value *mask);
-    void maskedStore(llvm::Value *value, llvm::Value *ptr, const Type *ptrType,
-                     llvm::Value *mask);
-    void storeUniformToSOA(llvm::Value *value, llvm::Value *ptr,
-                           llvm::Value *mask, const Type *valueType,
+    void scatter(llvm::Value *value, llvm::Value *ptr, const Type *valueType, const Type *ptrType, llvm::Value *mask);
+    void maskedStore(llvm::Value *value, llvm::Value *ptr, const Type *ptrType, llvm::Value *mask);
+    void storeUniformToSOA(llvm::Value *value, llvm::Value *ptr, llvm::Value *mask, const Type *valueType,
                            const PointerType *ptrType);
-    llvm::Value *loadUniformFromSOA(llvm::Value *ptr, llvm::Value *mask,
-                                    const PointerType *ptrType, const char *name);
+    llvm::Value *loadUniformFromSOA(llvm::Value *ptr, llvm::Value *mask, const PointerType *ptrType, const char *name);
 
-    llvm::Value *gather(llvm::Value *ptr, const PointerType *ptrType,
-                        llvm::Value *mask, const char *name);
+    llvm::Value *gather(llvm::Value *ptr, const PointerType *ptrType, llvm::Value *mask, const char *name);
 
     llvm::Value *addVaryingOffsetsIfNeeded(llvm::Value *ptr, const Type *ptrType);
 };

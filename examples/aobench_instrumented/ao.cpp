@@ -33,59 +33,55 @@
 
 #ifdef _MSC_VER
 #define NOMINMAX
-#pragma warning (disable: 4244)
-#pragma warning (disable: 4305)
+#pragma warning(disable : 4244)
+#pragma warning(disable : 4305)
 // preventing MSVC fopen() deprecation complaints
 #define _CRT_SECURE_NO_DEPRECATE
 #endif
 
+#include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <assert.h>
 #ifdef __linux__
 #include <malloc.h>
 #endif
-#include <math.h>
-#include <map>
-#include <string>
 #include <algorithm>
+#include <map>
+#include <math.h>
+#include <string>
 #include <sys/types.h>
 
 #include "ao_instrumented_ispc.h"
 using namespace ispc;
 
-#include "instrument.h"
 #include "../timing.h"
+#include "instrument.h"
 
-#define NSUBSAMPLES        2
+#define NSUBSAMPLES 2
 
 static unsigned int test_iterations;
 static unsigned int width, height;
 static unsigned char *img;
 static float *fimg;
 
-
-static unsigned char
-clamp(float f)
-{
+static unsigned char clamp(float f) {
     int i = (int)(f * 255.5);
 
-    if (i < 0) i = 0;
-    if (i > 255) i = 255;
+    if (i < 0)
+        i = 0;
+    if (i > 255)
+        i = 255;
 
     return (unsigned char)i;
 }
 
-
-static void
-savePPM(const char *fname, int w, int h)
-{
+static void savePPM(const char *fname, int w, int h) {
     for (int y = 0; y < h; y++) {
-        for (int x = 0; x < w; x++)  {
-            img[3 * (y * w + x) + 0] = clamp(fimg[3 *(y * w + x) + 0]);
-            img[3 * (y * w + x) + 1] = clamp(fimg[3 *(y * w + x) + 1]);
-            img[3 * (y * w + x) + 2] = clamp(fimg[3 *(y * w + x) + 2]);
+        for (int x = 0; x < w; x++) {
+            img[3 * (y * w + x) + 0] = clamp(fimg[3 * (y * w + x) + 0]);
+            img[3 * (y * w + x) + 1] = clamp(fimg[3 * (y * w + x) + 1]);
+            img[3 * (y * w + x) + 2] = clamp(fimg[3 * (y * w + x) + 2]);
         }
     }
 
@@ -103,20 +99,16 @@ savePPM(const char *fname, int w, int h)
     printf("Wrote image file %s\n", fname);
 }
 
-
-
-int main(int argc, char **argv)
-{
+int main(int argc, char **argv) {
     if (argc != 4) {
-        printf ("%s\n", argv[0]);
-        printf ("Usage: ao [num test iterations] [width] [height]\n");
+        printf("%s\n", argv[0]);
+        printf("Usage: ao [num test iterations] [width] [height]\n");
         getchar();
         exit(-1);
-    }
-    else {
+    } else {
         test_iterations = atoi(argv[1]);
-        width = atoi (argv[2]);
-        height = atoi (argv[3]);
+        width = atoi(argv[2]);
+        height = atoi(argv[3]);
     }
 
     // Allocate space for output images

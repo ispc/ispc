@@ -37,8 +37,6 @@
 //                                                                           //
 ///////////////////////////////////////////////////////////////////////////////
 
-
-
 #include <stdio.h>
 
 #if defined(_WIN32) || defined(_WIN64)
@@ -46,21 +44,19 @@
 #include <intrin.h>
 #endif
 
-#if !defined (__arm__)
+#if !defined(__arm__)
 #if !defined(ISPC_IS_WINDOWS)
 static void __cpuid(int info[4], int infoType) {
-    __asm__ __volatile__ ("cpuid"
-                          : "=a" (info[0]), "=b" (info[1]), "=c" (info[2]), "=d" (info[3])
-                          : "0" (infoType));
+    __asm__ __volatile__("cpuid" : "=a"(info[0]), "=b"(info[1]), "=c"(info[2]), "=d"(info[3]) : "0"(infoType));
 }
 
 /* Save %ebx in case it's the PIC register */
 static void __cpuidex(int info[4], int level, int count) {
-  __asm__ __volatile__ ("xchg{l}\t{%%}ebx, %1\n\t"
-                        "cpuid\n\t"
-                        "xchg{l}\t{%%}ebx, %1\n\t"
-                        : "=a" (info[0]), "=r" (info[1]), "=c" (info[2]), "=d" (info[3])
-                        : "0" (level), "2" (count));
+    __asm__ __volatile__("xchg{l}\t{%%}ebx, %1\n\t"
+                         "cpuid\n\t"
+                         "xchg{l}\t{%%}ebx, %1\n\t"
+                         : "=a"(info[0]), "=r"(info[1]), "=c"(info[2]), "=d"(info[3])
+                         : "0"(level), "2"(count));
 }
 #endif // !ISPC_IS_WINDOWS
 
@@ -69,12 +65,12 @@ static bool __os_has_avx_support() {
     // Check if the OS will save the YMM registers
     unsigned long long xcrFeatureMask = _xgetbv(_XCR_XFEATURE_ENABLED_MASK);
     return (xcrFeatureMask & 6) == 6;
-#else // !defined(ISPC_IS_WINDOWS)
+#else  // !defined(ISPC_IS_WINDOWS)
     // Check xgetbv; this uses a .byte sequence instead of the instruction
     // directly because older assemblers do not include support for xgetbv and
     // there is no easy way to conditionally compile based on the assembler used.
     int rEAX, rEDX;
-    __asm__ __volatile__ (".byte 0x0f, 0x01, 0xd0" : "=a" (rEAX), "=d" (rEDX) : "c" (0));
+    __asm__ __volatile__(".byte 0x0f, 0x01, 0xd0" : "=a"(rEAX), "=d"(rEDX) : "c"(0));
     return (rEAX & 6) == 6;
 #endif // !defined(ISPC_IS_WINDOWS)
 }
@@ -85,20 +81,18 @@ static bool __os_has_avx512_support() {
     // See section 2.1 of software.intel.com/sites/default/files/managed/0d/53/319433-022.pdf
     unsigned long long xcrFeatureMask = _xgetbv(_XCR_XFEATURE_ENABLED_MASK);
     return (xcrFeatureMask & 0xE6) == 0xE6;
-#else // !defined(ISPC_IS_WINDOWS)
+#else  // !defined(ISPC_IS_WINDOWS)
     // Check xgetbv; this uses a .byte sequence instead of the instruction
     // directly because older assemblers do not include support for xgetbv and
     // there is no easy way to conditionally compile based on the assembler used.
     int rEAX, rEDX;
-    __asm__ __volatile__ (".byte 0x0f, 0x01, 0xd0" : "=a" (rEAX), "=d" (rEDX) : "c" (0));
+    __asm__ __volatile__(".byte 0x0f, 0x01, 0xd0" : "=a"(rEAX), "=d"(rEDX) : "c"(0));
     return (rEAX & 0xE6) == 0xE6;
 #endif // !defined(ISPC_IS_WINDOWS)
 }
 #endif // !__arm__
 
-
-static const char *
-lGetSystemISA() {
+static const char *lGetSystemISA() {
 #ifdef __arm__
     return "ARM NEON";
 #else
@@ -110,11 +104,11 @@ lGetSystemISA() {
     __cpuidex(info2, 7, 0);
 
     if ((info[2] & (1 << 27)) != 0 &&  // OSXSAVE
-        (info2[1] & (1 <<  5)) != 0 && // AVX2
+        (info2[1] & (1 << 5)) != 0 &&  // AVX2
         (info2[1] & (1 << 16)) != 0 && // AVX512 F
         __os_has_avx512_support()) {
         // We need to verify that AVX2 is also available,
-        // as well as AVX512, because our targets are supposed 
+        // as well as AVX512, because our targets are supposed
         // to use both.
 
         if ((info2[1] & (1 << 17)) != 0 && // AVX512 DQ
@@ -122,48 +116,42 @@ lGetSystemISA() {
             (info2[1] & (1 << 30)) != 0 && // AVX512 BW
             (info2[1] & (1 << 31)) != 0) { // AVX512 VL
             return "SKX";
-        }
-        else if ((info2[1] & (1 << 26)) != 0 && // AVX512 PF
-                 (info2[1] & (1 << 27)) != 0 && // AVX512 ER
-                 (info2[1] & (1 << 28)) != 0) { // AVX512 CDI
+        } else if ((info2[1] & (1 << 26)) != 0 && // AVX512 PF
+                   (info2[1] & (1 << 27)) != 0 && // AVX512 ER
+                   (info2[1] & (1 << 28)) != 0) { // AVX512 CDI
             return "KNL";
         }
         // If it's unknown AVX512 target, fall through and use AVX2
         // or whatever is available in the machine.
     }
 
-    if ((info[2] & (1 << 27)) != 0 && // OSXSAVE
-        (info[2] & (1 << 28)) != 0 &&
-         __os_has_avx_support()) {  // AVX
+    if ((info[2] & (1 << 27)) != 0 &&                           // OSXSAVE
+        (info[2] & (1 << 28)) != 0 && __os_has_avx_support()) { // AVX
         // AVX1 for sure....
         // Ivy Bridge?
-        if ((info[2] & (1 << 29)) != 0 &&  // F16C
-            (info[2] & (1 << 30)) != 0) {  // RDRAND
+        if ((info[2] & (1 << 29)) != 0 && // F16C
+            (info[2] & (1 << 30)) != 0) { // RDRAND
             // So far, so good.  AVX2?
             if ((info2[1] & (1 << 5)) != 0) {
                 return "AVX2 (codename Haswell)";
-            }
-            else {
+            } else {
                 return "AVX1.1 (codename Ivy Bridge)";
             }
         }
         // Regular AVX
         return "AVX (codename Sandy Bridge)";
-    }
-    else if ((info[2] & (1 << 19)) != 0) {
+    } else if ((info[2] & (1 << 19)) != 0) {
         return "SSE4";
-    }
-    else if ((info[3] & (1 << 26)) != 0) {
+    } else if ((info[3] & (1 << 26)) != 0) {
         return "SSE2";
-    }
-    else {
+    } else {
         return "Error";
     }
 #endif
 }
 
-int main () {
-    const char* isa = lGetSystemISA();
+int main() {
+    const char *isa = lGetSystemISA();
     printf("ISA: %s\n", isa);
 
     return 0;

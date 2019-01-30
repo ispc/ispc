@@ -43,9 +43,7 @@
 ///////////////////////////////////////////////////////////////////////////
 // Symbol
 
-Symbol::Symbol(const std::string &n, SourcePos p, const Type *t,
-               StorageClass sc)
-  : pos(p), name(n) {
+Symbol::Symbol(const std::string &n, SourcePos p, const Type *t, StorageClass sc) : pos(p), name(n) {
     storagePtr = NULL;
     function = exportedFunction = NULL;
     type = t;
@@ -55,14 +53,10 @@ Symbol::Symbol(const std::string &n, SourcePos p, const Type *t,
     parentFunction = NULL;
 }
 
-
 ///////////////////////////////////////////////////////////////////////////
 // SymbolTable
 
-SymbolTable::SymbolTable() {
-    PushScope();
-}
-
+SymbolTable::SymbolTable() { PushScope(); }
 
 SymbolTable::~SymbolTable() {
     // Otherwise we have mismatched push/pop scopes
@@ -70,51 +64,40 @@ SymbolTable::~SymbolTable() {
     PopScope();
 }
 
-
-void
-SymbolTable::PushScope() {
+void SymbolTable::PushScope() {
     SymbolMapType *sm;
     if (freeSymbolMaps.size() > 0) {
         sm = freeSymbolMaps.back();
         freeSymbolMaps.pop_back();
         sm->erase(sm->begin(), sm->end());
-    }
-    else
+    } else
         sm = new SymbolMapType;
 
     variables.push_back(sm);
 }
 
-
-void
-SymbolTable::PopScope() {
+void SymbolTable::PopScope() {
     Assert(variables.size() > 1);
     freeSymbolMaps.push_back(variables.back());
     variables.pop_back();
 }
 
-
-bool
-SymbolTable::AddVariable(Symbol *symbol) {
+bool SymbolTable::AddVariable(Symbol *symbol) {
     Assert(symbol != NULL);
 
     // Check to see if a symbol of the same name has already been declared.
     for (int i = (int)variables.size() - 1; i >= 0; --i) {
         SymbolMapType &sm = *(variables[i]);
         if (sm.find(symbol->name) != sm.end()) {
-            if (i == (int)variables.size()-1) {
+            if (i == (int)variables.size() - 1) {
                 // If a symbol of the same name was declared in the
                 // same scope, it's an error.
-                Error(symbol->pos, "Ignoring redeclaration of symbol \"%s\".",
-                      symbol->name.c_str());
+                Error(symbol->pos, "Ignoring redeclaration of symbol \"%s\".", symbol->name.c_str());
                 return false;
-            }
-            else {
+            } else {
                 // Otherwise it's just shadowing something else, which
                 // is legal but dangerous..
-                Warning(symbol->pos,
-                        "Symbol \"%s\" shadows symbol declared in outer scope.",
-                        symbol->name.c_str());
+                Warning(symbol->pos, "Symbol \"%s\" shadows symbol declared in outer scope.", symbol->name.c_str());
                 (*variables.back())[symbol->name] = symbol;
                 return true;
             }
@@ -126,9 +109,7 @@ SymbolTable::AddVariable(Symbol *symbol) {
     return true;
 }
 
-
-Symbol *
-SymbolTable::LookupVariable(const char *name) {
+Symbol *SymbolTable::LookupVariable(const char *name) {
     // Note that we iterate through the variables vectors backwards, since
     // we want to search from the innermost scope to the outermost, so that
     // we get the right symbol if we have multiple variables in different
@@ -142,9 +123,7 @@ SymbolTable::LookupVariable(const char *name) {
     return NULL;
 }
 
-
-bool
-SymbolTable::AddFunction(Symbol *symbol) {
+bool SymbolTable::AddFunction(Symbol *symbol) {
     const FunctionType *ft = CastType<FunctionType>(symbol->type);
     Assert(ft != NULL);
     if (LookupFunction(symbol->name.c_str(), ft) != NULL)
@@ -157,9 +136,7 @@ SymbolTable::AddFunction(Symbol *symbol) {
     return true;
 }
 
-
-bool
-SymbolTable::LookupFunction(const char *name, std::vector<Symbol *> *matches) {
+bool SymbolTable::LookupFunction(const char *name, std::vector<Symbol *> *matches) {
     FunctionMapType::iterator iter = functions.find(name);
     if (iter != functions.end()) {
         if (matches == NULL)
@@ -173,9 +150,7 @@ SymbolTable::LookupFunction(const char *name, std::vector<Symbol *> *matches) {
     return matches ? (matches->size() > 0) : false;
 }
 
-
-Symbol *
-SymbolTable::LookupFunction(const char *name, const FunctionType *type) {
+Symbol *SymbolTable::LookupFunction(const char *name, const FunctionType *type) {
     FunctionMapType::iterator iter = functions.find(name);
     if (iter != functions.end()) {
         std::vector<Symbol *> funcs = iter->second;
@@ -187,9 +162,7 @@ SymbolTable::LookupFunction(const char *name, const FunctionType *type) {
     return NULL;
 }
 
-
-bool
-SymbolTable::AddType(const char *name, const Type *type, SourcePos pos) {
+bool SymbolTable::AddType(const char *name, const Type *type, SourcePos pos) {
     const Type *t = LookupType(name);
     if (t != NULL && CastType<UndefinedStructType>(t) == NULL) {
         // If we have a previous declaration of anything other than an
@@ -204,9 +177,7 @@ SymbolTable::AddType(const char *name, const Type *type, SourcePos pos) {
     return true;
 }
 
-
-const Type *
-SymbolTable::LookupType(const char *name) const {
+const Type *SymbolTable::LookupType(const char *name) const {
     // Again, search through the type maps backward to get scoping right.
     TypeMapType::const_iterator iter = types.find(name);
     if (iter != types.end())
@@ -214,8 +185,7 @@ SymbolTable::LookupType(const char *name) const {
     return NULL;
 }
 
-bool
-SymbolTable::ContainsType(const Type *type) const {
+bool SymbolTable::ContainsType(const Type *type) const {
     TypeMapType::const_iterator iter = types.begin();
     while (iter != types.end()) {
         if (iter->second == type) {
@@ -226,22 +196,21 @@ SymbolTable::ContainsType(const Type *type) const {
     return false;
 }
 
-std::vector<std::string>
-SymbolTable::ClosestVariableOrFunctionMatch(const char *str) const {
+std::vector<std::string> SymbolTable::ClosestVariableOrFunctionMatch(const char *str) const {
     // This is a little wasteful, but we'll look through all of the
     // variable and function symbols and compute the edit distance from the
     // given string to them.  If the edit distance is under maxDelta, then
     // it goes in the entry of the matches[] array corresponding to its
     // edit distance.
     const int maxDelta = 2;
-    std::vector<std::string> matches[maxDelta+1];
+    std::vector<std::string> matches[maxDelta + 1];
 
     for (int i = 0; i < (int)variables.size(); ++i) {
         const SymbolMapType &sv = *(variables[i]);
         SymbolMapType::const_iterator iter;
         for (iter = sv.begin(); iter != sv.end(); ++iter) {
             const Symbol *sym = iter->second;
-            int dist = StringEditDistance(str, sym->name, maxDelta+1);
+            int dist = StringEditDistance(str, sym->name, maxDelta + 1);
             if (dist <= maxDelta)
                 matches[dist].push_back(sym->name);
         }
@@ -249,7 +218,7 @@ SymbolTable::ClosestVariableOrFunctionMatch(const char *str) const {
 
     FunctionMapType::const_iterator iter;
     for (iter = functions.begin(); iter != functions.end(); ++iter) {
-        int dist = StringEditDistance(str, iter->first, maxDelta+1);
+        int dist = StringEditDistance(str, iter->first, maxDelta + 1);
         if (dist <= maxDelta)
             matches[dist].push_back(iter->first);
     }
@@ -264,27 +233,19 @@ SymbolTable::ClosestVariableOrFunctionMatch(const char *str) const {
     return std::vector<std::string>();
 }
 
+std::vector<std::string> SymbolTable::ClosestTypeMatch(const char *str) const { return closestTypeMatch(str, true); }
 
-std::vector<std::string>
-SymbolTable::ClosestTypeMatch(const char *str) const {
-    return closestTypeMatch(str, true);
-}
-
-
-std::vector<std::string>
-SymbolTable::ClosestEnumTypeMatch(const char *str) const {
+std::vector<std::string> SymbolTable::ClosestEnumTypeMatch(const char *str) const {
     return closestTypeMatch(str, false);
 }
 
-
-std::vector<std::string>
-SymbolTable::closestTypeMatch(const char *str, bool structsVsEnums) const {
+std::vector<std::string> SymbolTable::closestTypeMatch(const char *str, bool structsVsEnums) const {
     // This follows the same approach as ClosestVariableOrFunctionMatch()
     // above; compute all edit distances, keep the ones shorter than
     // maxDelta, return the first non-empty vector of one or more sets of
     // alternatives with minimal edit distance.
     const int maxDelta = 2;
-    std::vector<std::string> matches[maxDelta+1];
+    std::vector<std::string> matches[maxDelta + 1];
 
     TypeMapType::const_iterator iter;
     for (iter = types.begin(); iter != types.end(); ++iter) {
@@ -296,7 +257,7 @@ SymbolTable::closestTypeMatch(const char *str, bool structsVsEnums) const {
         else if (!isEnum && !structsVsEnums)
             continue;
 
-        int dist = StringEditDistance(str, iter->first, maxDelta+1);
+        int dist = StringEditDistance(str, iter->first, maxDelta + 1);
         if (dist <= maxDelta)
             matches[dist].push_back(iter->first);
     }
@@ -308,9 +269,7 @@ SymbolTable::closestTypeMatch(const char *str, bool structsVsEnums) const {
     return std::vector<std::string>();
 }
 
-
-void
-SymbolTable::Print() {
+void SymbolTable::Print() {
     int depth = 0;
     fprintf(stderr, "Variables:\n----------------\n");
     for (int i = 0; i < (int)variables.size(); ++i) {
@@ -319,8 +278,7 @@ SymbolTable::Print() {
         for (iter = sm.begin(); iter != sm.end(); ++iter) {
             fprintf(stderr, "%*c", depth, ' ');
             Symbol *sym = iter->second;
-            fprintf(stderr, "%s [%s]", sym->name.c_str(),
-                    sym->type->GetString().c_str());
+            fprintf(stderr, "%s [%s]", sym->name.c_str(), sym->type->GetString().c_str());
         }
         fprintf(stderr, "\n");
         depth += 4;
@@ -341,12 +299,10 @@ SymbolTable::Print() {
     TypeMapType::iterator siter = types.begin();
     while (siter != types.end()) {
         fprintf(stderr, "%*c", depth, ' ');
-        fprintf(stderr, "%s -> %s\n", siter->first.c_str(),
-                siter->second->GetString().c_str());
+        fprintf(stderr, "%s -> %s\n", siter->first.c_str(), siter->second->GetString().c_str());
         ++siter;
     }
 }
-
 
 inline int ispcRand() {
 #ifdef ISPC_IS_WINDOWS
@@ -356,9 +312,7 @@ inline int ispcRand() {
 #endif
 }
 
-
-Symbol *
-SymbolTable::RandomSymbol() {
+Symbol *SymbolTable::RandomSymbol() {
     int v = ispcRand() % variables.size();
     if (variables[v]->size() == 0)
         return NULL;
@@ -371,9 +325,7 @@ SymbolTable::RandomSymbol() {
     return iter->second;
 }
 
-
-const Type *
-SymbolTable::RandomType() {
+const Type *SymbolTable::RandomType() {
     int count = types.size();
     TypeMapType::iterator iter = types.begin();
     while (count-- > 0) {

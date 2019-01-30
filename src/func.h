@@ -42,7 +42,7 @@
 #include <vector>
 
 class Function {
-public:
+  public:
     Function(Symbol *sym, Stmt *code);
 
     const Type *GetReturnType() const;
@@ -51,16 +51,15 @@ public:
     /** Generate LLVM IR for the function into the current module. */
     void GenerateIR();
 
-private:
-    void emitCode(FunctionEmitContext *ctx, llvm::Function *function,
-                  SourcePos firstStmtPos);
+  private:
+    void emitCode(FunctionEmitContext *ctx, llvm::Function *function, SourcePos firstStmtPos);
 
     Symbol *sym;
     std::vector<Symbol *> args;
     Stmt *code;
     Symbol *maskSymbol;
     Symbol *threadIndexSym, *threadCountSym;
-    Symbol *taskIndexSym,   *taskCountSym;
+    Symbol *taskIndexSym, *taskCountSym;
     Symbol *taskIndexSym0, *taskCountSym0;
     Symbol *taskIndexSym1, *taskCountSym1;
     Symbol *taskIndexSym2, *taskCountSym2;

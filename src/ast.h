@@ -48,9 +48,9 @@
     (Expr) and statements (Stmt) inherit from this class.
 */
 class ASTNode {
-    const unsigned char SubclassID;   // Subclass identifier (for isa/dyn_cast)
-public:
-    ASTNode(SourcePos p, unsigned scid) : SubclassID(scid), pos(p) { }
+    const unsigned char SubclassID; // Subclass identifier (for isa/dyn_cast)
+  public:
+    ASTNode(SourcePos p, unsigned scid) : SubclassID(scid), pos(p) {}
     virtual ~ASTNode();
 
     /** The Optimize() method should perform any appropriate early-stage
@@ -75,8 +75,8 @@ public:
     /** All AST nodes must track the file position where they are
         defined. */
     SourcePos pos;
-   
-    /** An enumeration for keeping track of the concrete subclass of Value 
+
+    /** An enumeration for keeping track of the concrete subclass of Value
         that is actually instantiated.*/
     enum ASTNodeTy {
         /* For classes inherited from Expr */
@@ -127,22 +127,17 @@ public:
         SwitchStmtID,
         UnmaskedStmtID
     };
-   
-    /** Return an ID for the concrete type of this object. This is used to
-        implement the classof checks.  This should not be used for any 
-        other purpose, as the values may change as ISPC evolves */
-    unsigned getValueID() const {
-        return SubclassID;
-    }
 
-    static inline bool classof(ASTNode const*) { return true; }
+    /** Return an ID for the concrete type of this object. This is used to
+        implement the classof checks.  This should not be used for any
+        other purpose, as the values may change as ISPC evolves */
+    unsigned getValueID() const { return SubclassID; }
+
+    static inline bool classof(ASTNode const *) { return true; }
 };
 
-
-
-
 class AST {
-public:
+  public:
     /** Add the AST for a function described by the given declaration
         information and source code. */
     void AddFunction(Symbol *sym, Stmt *code);
@@ -151,20 +146,19 @@ public:
         module. */
     void GenerateIR();
 
-private:
+  private:
     std::vector<Function *> functions;
 };
-
 
 /** Callback function type for preorder traversial visiting function for
     the AST walk.
  */
-typedef bool (* ASTPreCallBackFunc)(ASTNode *node, void *data);
+typedef bool (*ASTPreCallBackFunc)(ASTNode *node, void *data);
 
 /** Callback function type for postorder traversial visiting function for
     the AST walk.
  */
-typedef ASTNode * (* ASTPostCallBackFunc)(ASTNode *node, void *data);
+typedef ASTNode *(*ASTPostCallBackFunc)(ASTNode *node, void *data);
 
 /** Walk (some portion of) an AST, starting from the given root node.  At
     each node, if preFunc is non-NULL, call it, passing the given void
@@ -173,8 +167,7 @@ typedef ASTNode * (* ASTPostCallBackFunc)(ASTNode *node, void *data);
     recursive calls to WalkAST() to process the node's children; after
     doing so, calls postFunc, at the node.  The return value from the
     postFunc call is ignored. */
-extern ASTNode *WalkAST(ASTNode *root, ASTPreCallBackFunc preFunc,
-                        ASTPostCallBackFunc postFunc, void *data);
+extern ASTNode *WalkAST(ASTNode *root, ASTPreCallBackFunc preFunc, ASTPostCallBackFunc postFunc, void *data);
 
 /** Perform simple optimizations on the AST or portion thereof passed to
     this function, returning the resulting AST. */

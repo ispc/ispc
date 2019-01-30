@@ -40,15 +40,15 @@
 
 #include "ispc_version.h"
 #if ISPC_LLVM_VERSION == ISPC_LLVM_3_2
-  #include <llvm/LLVMContext.h>
-  #include <llvm/Type.h>
-  #include <llvm/DerivedTypes.h>
-  #include <llvm/Constants.h>
+#include <llvm/Constants.h>
+#include <llvm/DerivedTypes.h>
+#include <llvm/LLVMContext.h>
+#include <llvm/Type.h>
 #else // 3.3+
-  #include <llvm/IR/LLVMContext.h>
-  #include <llvm/IR/Type.h>
-  #include <llvm/IR/DerivedTypes.h>
-  #include <llvm/IR/Constants.h>
+#include <llvm/IR/Constants.h>
+#include <llvm/IR/DerivedTypes.h>
+#include <llvm/IR/LLVMContext.h>
+#include <llvm/IR/Type.h>
 #endif
 
 #if ISPC_LLVM_VERSION <= ISPC_LLVM_3_9
@@ -58,10 +58,9 @@
 #endif
 
 namespace llvm {
-    class PHINode;
-    class InsertElementInst;
-}
-
+class PHINode;
+class InsertElementInst;
+} // namespace llvm
 
 /** This structure holds pointers to a variety of LLVM types; code
     elsewhere can use them from here, ratherthan needing to make more
@@ -118,7 +117,7 @@ extern llvm::Constant *LLVMTrue, *LLVMFalse;
     be called until the compilation target is known.
  */
 class Target;
-extern void InitLLVMUtil(llvm::LLVMContext *ctx, Target& target);
+extern void InitLLVMUtil(llvm::LLVMContext *ctx, Target &target);
 
 /** Returns an LLVM i8 constant of the given value */
 extern llvm::ConstantInt *LLVMInt8(int8_t i);
@@ -235,8 +234,7 @@ extern llvm::Constant *LLVMMaskAllOff;
 /** Tests to see if all of the elements of the vector in the 'v' parameter
     are equal.  Like lValuesAreEqual(), this is a conservative test and may
     return false for arrays where the values are actually all equal.  */
-extern bool LLVMVectorValuesAllEqual(llvm::Value *v,
-                                     llvm::Value **splat = NULL);
+extern bool LLVMVectorValuesAllEqual(llvm::Value *v, llvm::Value **splat = NULL);
 
 /** Given vector of integer-typed values, this function returns true if it
     can determine that the elements of the vector have a step of 'stride'
@@ -289,8 +287,8 @@ extern bool LLVMExtractVectorInts(llvm::Value *v, int64_t ret[], int *nElts);
     If undef argument is true, ignore undef elements (but all undef yields NULL anyway).
 
  */
-extern llvm::Value * LLVMFlattenInsertChain (llvm::Value *inst, int vectorWidth,
-    bool compare = true, bool undef = true, bool searchFirstUndef = false);
+extern llvm::Value *LLVMFlattenInsertChain(llvm::Value *inst, int vectorWidth, bool compare = true, bool undef = true,
+                                           bool searchFirstUndef = false);
 
 /** This is a utility routine for debugging that dumps out the given LLVM
     value as well as (recursively) all of the other values that it depends
@@ -310,15 +308,13 @@ extern llvm::Value *LLVMExtractFirstVectorElement(llvm::Value *v);
 /** This function takes two vectors, expected to be the same length, and
     returns a new vector of twice the length that represents concatenating
     the two of them. */
-extern llvm::Value *LLVMConcatVectors(llvm::Value *v1, llvm::Value *v2,
-                                      llvm::Instruction *insertBefore);
+extern llvm::Value *LLVMConcatVectors(llvm::Value *v1, llvm::Value *v2, llvm::Instruction *insertBefore);
 
 /** This is a utility function for vector shuffling; it takes two vectors
     v1 and v2, and a compile-time constant set of integer permutations in
     shuf[] and returns a new vector of length shufSize that represents the
     corresponding shufflevector operation. */
-extern llvm::Value *LLVMShuffleVectors(llvm::Value *v1, llvm::Value *v2,
-                                       int32_t shuf[], int shufSize,
+extern llvm::Value *LLVMShuffleVectors(llvm::Value *v1, llvm::Value *v2, int32_t shuf[], int shufSize,
                                        llvm::Instruction *insertBefore);
 
 /** Utility routines to concat strings with the names of existing values to

@@ -33,28 +33,25 @@
 
 #define NOMINMAX
 
+#include <algorithm>
+#include <cassert>
+#include <cmath>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
-#include <cassert>
-#include <cmath>
-#include <algorithm>
 using std::max;
 
+#include "ispc_malloc.h"
 #include "options_defs.h"
 #include "timing.h"
-#include "ispc_malloc.h"
 
 #include "options_ispc.h"
 using namespace ispc;
 
-static void usage() {
-    printf("usage: options [--count=<num options>]\n");
-}
-
+static void usage() { printf("usage: options [--count=<num options>]\n"); }
 
 int main(int argc, char *argv[]) {
-    int nOptions = 128*1024;
+    int nOptions = 128 * 1024;
 
     for (int i = 1; i < argc; ++i) {
         if (strncmp(argv[i], "--count=", 8) == 0) {
@@ -74,11 +71,11 @@ int main(int argc, char *argv[]) {
     float *result = new float[nOptions];
 
     for (int i = 0; i < nOptions; ++i) {
-        S[i] = 100;  // stock price
-        X[i] = 98;   // option strike price
-        T[i] = 2;    // time (years)
-        r[i] = .02;  // risk-free interest rate
-        v[i] = 5;    // volatility
+        S[i] = 100; // stock price
+        X[i] = 98;  // option strike price
+        T[i] = 2;   // time (years)
+        r[i] = .02; // risk-free interest rate
+        v[i] = 5;   // volatility
     }
 
     double sum;
@@ -95,9 +92,8 @@ int main(int argc, char *argv[]) {
     }
     sum = 0.;
     for (int i = 0; i < nOptions; ++i)
-      sum += result[i];
-    printf("[binomial ispc, tasks]:\t\t[%.3f] msec (avg %f)\n",
-           binomial_tasks, sum / nOptions);
+        sum += result[i];
+    printf("[binomial ispc, tasks]:\t\t[%.3f] msec (avg %f)\n", binomial_tasks, sum / nOptions);
 
     //
     // Black-Scholes options pricing model, ispc implementation, tasks
@@ -112,9 +108,7 @@ int main(int argc, char *argv[]) {
             sum += result[i];
         bs_ispc_tasks = std::min(bs_ispc_tasks, dt);
     }
-    printf("[black-scholes ispc, tasks]:\t[%.3f] msec (avg %f)\n",
-           bs_ispc_tasks, sum / nOptions);
-
+    printf("[black-scholes ispc, tasks]:\t[%.3f] msec (avg %f)\n", bs_ispc_tasks, sum / nOptions);
 
     return 0;
 }

@@ -31,12 +31,10 @@
    SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-
 #ifndef __DEBUG_H__
 #define __DEBUG_H__
 
 #include <cassert>
-
 
 /**************************************************************\
 | Macros
@@ -50,6 +48,5 @@
 #define ASSERT(expr)
 #define DEBUG_PRINT(...)
 #endif
-
 
 #endif

@@ -34,32 +34,28 @@
 #ifdef _MSC_VER
 #define _CRT_SECURE_NO_WARNINGS
 #define NOMINMAX
-#pragma warning (disable: 4244)
-#pragma warning (disable: 4305)
+#pragma warning(disable : 4244)
+#pragma warning(disable : 4305)
 #endif
 
-#include <stdio.h>
-#include <math.h>
-#include <algorithm>
-#include <assert.h>
-#include <string.h>
-#include <sys/types.h>
 #include "../timing.h"
 #include "rt_ispc.h"
+#include <algorithm>
+#include <assert.h>
+#include <math.h>
+#include <stdio.h>
+#include <string.h>
+#include <sys/types.h>
 
 using namespace ispc;
 
 typedef unsigned int uint;
 
-extern void raytrace_serial(int width, int height, int baseWidth, int baseHeight,
-                            const float raster2camera[4][4],
-                            const float camera2world[4][4], float image[],
-                            int id[], const LinearBVHNode nodes[],
+extern void raytrace_serial(int width, int height, int baseWidth, int baseHeight, const float raster2camera[4][4],
+                            const float camera2world[4][4], float image[], int id[], const LinearBVHNode nodes[],
                             const Triangle triangles[]);
 
-
-static void writeImage(int *idImage, float *depthImage, int width, int height,
-                       const char *filename) {
+static void writeImage(int *idImage, float *depthImage, int width, int height, const char *filename) {
     FILE *f = fopen(filename, "wb");
     if (!f) {
         perror(filename);
@@ -76,14 +72,14 @@ static void writeImage(int *idImage, float *depthImage, int width, int height,
 
             for (int i = 0; i < 8; ++i) {
                 // extract bit 3*i for red, 3*i+1 for green, 3*i+2 for blue
-                int rbit = (id & (1 << (3*i)))   >> (3*i);
-                int gbit = (id & (1 << (3*i+1))) >> (3*i+1);
-                int bbit = (id & (1 << (3*i+2))) >> (3*i+2);
+                int rbit = (id & (1 << (3 * i))) >> (3 * i);
+                int gbit = (id & (1 << (3 * i + 1))) >> (3 * i + 1);
+                int bbit = (id & (1 << (3 * i + 2))) >> (3 * i + 2);
                 // and then set the bits of the colors starting from the
                 // high bits...
-                r |= rbit << (7-i);
-                g |= gbit << (7-i);
-                b |= bbit << (7-i);
+                r |= rbit << (7 - i);
+                g |= gbit << (7 - i);
+                b |= bbit << (7 - i);
             }
             fputc(r, f);
             fputc(g, f);
@@ -94,18 +90,18 @@ static void writeImage(int *idImage, float *depthImage, int width, int height,
     printf("Wrote image file %s\n", filename);
 }
 
-
 static void usage() {
-    fprintf(stderr, "rt <scene name base> [--scale=<factor>] [ispc iterations] [tasks iterations] [serial iterations]\n");
+    fprintf(stderr,
+            "rt <scene name base> [--scale=<factor>] [ispc iterations] [tasks iterations] [serial iterations]\n");
     exit(1);
 }
-
 
 int main(int argc, char *argv[]) {
     static unsigned int test_iterations[] = {3, 7, 1};
     float scale = 1.f;
     const char *filename = NULL;
-    if (argc < 2) usage();
+    if (argc < 2)
+        usage();
     filename = argv[1];
     if (argc > 2) {
         if (strncmp(argv[2], "--scale=", 8) == 0) {
@@ -118,10 +114,10 @@ int main(int argc, char *argv[]) {
         }
     }
 
-#define READ(var, n)                                            \
-    if (fread(&(var), sizeof(var), n, f) != (unsigned int)n) {  \
-        fprintf(stderr, "Unexpected EOF reading scene file\n"); \
-        return 1;                                               \
+#define READ(var, n)                                                                                                   \
+    if (fread(&(var), sizeof(var), n, f) != (unsigned int)n) {                                                         \
+        fprintf(stderr, "Unexpected EOF reading scene file\n");                                                        \
+        return 1;                                                                                                      \
     } else /* eat ; */
 
     //
@@ -195,7 +191,7 @@ int main(int argc, char *argv[]) {
             triangles[i].p[j][2] = *vp++;
         }
         // And create an object id
-        triangles[i].id = i+1;
+        triangles[i].id = i + 1;
     }
     fclose(f);
 
@@ -204,8 +200,8 @@ int main(int argc, char *argv[]) {
 
     // allocate images; one to hold hit object ids, one to hold depth to
     // the first interseciton
-    int *id = new int[width*height];
-    float *image = new float[width*height];
+    int *id = new int[width * height];
+    float *image = new float[width * height];
 
     //
     // Run 3 iterations with ispc + 1 core, record the minimum time
@@ -213,19 +209,17 @@ int main(int argc, char *argv[]) {
     double minTimeISPC = 1e30;
     for (uint i = 0; i < test_iterations[0]; ++i) {
         reset_and_start_timer();
-        raytrace_ispc(width, height, baseWidth, baseHeight, raster2camera,
-                      camera2world, image, id, nodes, triangles);
+        raytrace_ispc(width, height, baseWidth, baseHeight, raster2camera, camera2world, image, id, nodes, triangles);
         double dt = get_elapsed_mcycles();
         printf("@time of ISPC run:\t\t\t[%.3f] million cycles\n", dt);
         minTimeISPC = std::min(dt, minTimeISPC);
     }
-    printf("[rt ispc, 1 core]:\t\t[%.3f] million cycles for %d x %d image\n",
-           minTimeISPC, width, height);
+    printf("[rt ispc, 1 core]:\t\t[%.3f] million cycles for %d x %d image\n", minTimeISPC, width, height);
 
     writeImage(id, image, width, height, "rt-ispc-1core.ppm");
 
-    memset(id, 0, width*height*sizeof(int));
-    memset(image, 0, width*height*sizeof(float));
+    memset(id, 0, width * height * sizeof(int));
+    memset(image, 0, width * height * sizeof(float));
 
     //
     // Run 3 iterations with ispc + 1 core, record the minimum time
@@ -233,19 +227,18 @@ int main(int argc, char *argv[]) {
     double minTimeISPCtasks = 1e30;
     for (uint i = 0; i < test_iterations[1]; ++i) {
         reset_and_start_timer();
-        raytrace_ispc_tasks(width, height, baseWidth, baseHeight, raster2camera,
-                            camera2world, image, id, nodes, triangles);
+        raytrace_ispc_tasks(width, height, baseWidth, baseHeight, raster2camera, camera2world, image, id, nodes,
+                            triangles);
         double dt = get_elapsed_mcycles();
         printf("@time of ISPC + TASKS run:\t\t\t[%.3f] million cycles\n", dt);
         minTimeISPCtasks = std::min(dt, minTimeISPCtasks);
     }
-    printf("[rt ispc + tasks]:\t\t[%.3f] million cycles for %d x %d image\n",
-           minTimeISPCtasks, width, height);
+    printf("[rt ispc + tasks]:\t\t[%.3f] million cycles for %d x %d image\n", minTimeISPCtasks, width, height);
 
     writeImage(id, image, width, height, "rt-ispc-tasks.ppm");
 
-    memset(id, 0, width*height*sizeof(int));
-    memset(image, 0, width*height*sizeof(float));
+    memset(id, 0, width * height * sizeof(int));
+    memset(image, 0, width * height * sizeof(float));
 
     //
     // And 3 iterations with the serial implementation, reporting the
@@ -254,16 +247,14 @@ int main(int argc, char *argv[]) {
     double minTimeSerial = 1e30;
     for (uint i = 0; i < test_iterations[2]; ++i) {
         reset_and_start_timer();
-        raytrace_serial(width, height, baseWidth, baseHeight, raster2camera,
-                        camera2world, image, id, nodes, triangles);
+        raytrace_serial(width, height, baseWidth, baseHeight, raster2camera, camera2world, image, id, nodes, triangles);
         double dt = get_elapsed_mcycles();
         printf("@time of serial run:\t\t\t[%.3f] million cycles\n", dt);
         minTimeSerial = std::min(dt, minTimeSerial);
     }
-    printf("[rt serial]:\t\t\t[%.3f] million cycles for %d x %d image\n",
-           minTimeSerial, width, height);
-    printf("\t\t\t\t(%.2fx speedup from ISPC, %.2fx speedup from ISPC + tasks)\n",
-           minTimeSerial / minTimeISPC, minTimeSerial / minTimeISPCtasks);
+    printf("[rt serial]:\t\t\t[%.3f] million cycles for %d x %d image\n", minTimeSerial, width, height);
+    printf("\t\t\t\t(%.2fx speedup from ISPC, %.2fx speedup from ISPC + tasks)\n", minTimeSerial / minTimeISPC,
+           minTimeSerial / minTimeISPCtasks);
 
     writeImage(id, image, width, height, "rt-serial.ppm");
 

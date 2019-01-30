@@ -34,28 +34,29 @@
 #ifdef _MSC_VER
 #define _CRT_SECURE_NO_WARNINGS
 #define NOMINMAX
-#pragma warning (disable: 4244)
-#pragma warning (disable: 4305)
+#pragma warning(disable : 4244)
+#pragma warning(disable : 4305)
 #endif
 
-#include <cstdio>
-#include <algorithm>
-#include "timing.h"
 #include "ispc_malloc.h"
+#include "timing.h"
 #include "volume_ispc.h"
+#include <algorithm>
+#include <cstdio>
 using namespace ispc;
 
 /* Write a PPM image file with the image */
-static void
-writePPM(float *buf, int width, int height, const char *fn) {
+static void writePPM(float *buf, int width, int height, const char *fn) {
     FILE *fp = fopen(fn, "wb");
     fprintf(fp, "P6\n");
     fprintf(fp, "%d %d\n", width, height);
     fprintf(fp, "255\n");
-    for (int i = 0; i < width*height; ++i) {
+    for (int i = 0; i < width * height; ++i) {
         float v = buf[i] * 255.f;
-        if (v < 0.f) v = 0.f;
-        else if (v > 255.f) v = 255.f;
+        if (v < 0.f)
+            v = 0.f;
+        else if (v > 255.f)
+            v = 255.f;
         unsigned char c = (unsigned char)v;
         for (int j = 0; j < 3; ++j)
             fputc(c, fp);
@@ -64,13 +65,10 @@ writePPM(float *buf, int width, int height, const char *fn) {
     printf("Wrote image file %s\n", fn);
 }
 
-
 /* Load image and viewing parameters from a camera data file.
    FIXME: we should add support to be able to specify viewing parameters
    in the program here directly. */
-static void
-loadCamera(const char *fn, int *width, int *height, float raster2camera[4][4],
-           float camera2world[4][4]) {
+static void loadCamera(const char *fn, int *width, int *height, float raster2camera[4][4], float camera2world[4][4]) {
     FILE *f = fopen(fn, "r");
     if (!f) {
         perror(fn);
@@ -100,12 +98,10 @@ loadCamera(const char *fn, int *width, int *height, float raster2camera[4][4],
     fclose(f);
 }
 
-
 /* Load a volume density file.  Expects the number of x, y, and z samples
    as the first three values (as integer strings), then x*y*z
    floating-point values (also as strings) to give the densities.  */
-static float *
-loadVolume(const char *fn, int n[3]) {
+static float *loadVolume(const char *fn, int n[3]) {
     FILE *f = fopen(fn, "r");
     if (!f) {
         perror(fn);
@@ -129,11 +125,11 @@ loadVolume(const char *fn, int n[3]) {
     return v;
 }
 
-
 int main(int argc, char *argv[]) {
     static unsigned int test_iterations[] = {3, 7, 1};
     if (argc < 3) {
-        fprintf(stderr, "usage: volume <camera.dat> <volume_density.vol> [ispc iterations] [tasks iterations] [serial iterations]\n");
+        fprintf(stderr, "usage: volume <camera.dat> <volume_density.vol> [ispc iterations] [tasks iterations] [serial "
+                        "iterations]\n");
         return 1;
     }
     if (argc == 6) {
@@ -147,13 +143,13 @@ int main(int argc, char *argv[]) {
     //
     int width, height;
 
-    float *camera2world_ispc = new float[4*4];
-    float *raster2camera_ispc = new float[4*4];
-    float (*camera2world )[4] = (float (*)[4])camera2world_ispc;
-    float (*raster2camera)[4] = (float (*)[4])raster2camera_ispc;
+    float *camera2world_ispc = new float[4 * 4];
+    float *raster2camera_ispc = new float[4 * 4];
+    float(*camera2world)[4] = (float(*)[4])camera2world_ispc;
+    float(*raster2camera)[4] = (float(*)[4])raster2camera_ispc;
 
     loadCamera(argv[1], &width, &height, raster2camera, camera2world);
-    float *image = new float[width*height];
+    float *image = new float[width * height];
 
     int *n = new int[3];
     float *density = loadVolume(argv[2], n);
@@ -169,8 +165,7 @@ int main(int argc, char *argv[]) {
     double minISPCtasks = 1e30;
     for (int i = 0; i < test_iterations[1]; ++i) {
         reset_and_start_timer();
-        volume_ispc_tasks(density, n, raster2camera, camera2world,
-                          width, height, image);
+        volume_ispc_tasks(density, n, raster2camera, camera2world, width, height, image);
         double dt = get_elapsed_msec();
         printf("@time of ISPC + TASKS run:\t\t\t[%.3f] msec\n", dt);
         minISPCtasks = std::min(minISPCtasks, dt);

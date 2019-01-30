@@ -65,16 +65,16 @@ class Declarator;
 /* Multiple qualifiers can be provided with types in declarations;
    therefore, they are set up so that they can be ANDed together into an
    int. */
-#define TYPEQUAL_NONE           0
-#define TYPEQUAL_CONST      (1<<0)
-#define TYPEQUAL_UNIFORM    (1<<1)
-#define TYPEQUAL_VARYING    (1<<2)
-#define TYPEQUAL_TASK       (1<<3)
-#define TYPEQUAL_SIGNED     (1<<4)
-#define TYPEQUAL_UNSIGNED   (1<<5)
-#define TYPEQUAL_INLINE     (1<<6)
-#define TYPEQUAL_EXPORT     (1<<7)
-#define TYPEQUAL_UNMASKED   (1<<8)
+#define TYPEQUAL_NONE 0
+#define TYPEQUAL_CONST (1 << 0)
+#define TYPEQUAL_UNIFORM (1 << 1)
+#define TYPEQUAL_VARYING (1 << 2)
+#define TYPEQUAL_TASK (1 << 3)
+#define TYPEQUAL_SIGNED (1 << 4)
+#define TYPEQUAL_UNSIGNED (1 << 5)
+#define TYPEQUAL_INLINE (1 << 6)
+#define TYPEQUAL_EXPORT (1 << 7)
+#define TYPEQUAL_UNMASKED (1 << 8)
 
 /** @brief Representation of the declaration specifiers in a declaration.
 
@@ -82,9 +82,8 @@ class Declarator;
     the (possibly multiple) variables in a declaration.
  */
 class DeclSpecs {
-public:
-    DeclSpecs(const Type *t = NULL, StorageClass sc = SC_NONE,
-              int tq = TYPEQUAL_NONE);
+  public:
+    DeclSpecs(const Type *t = NULL, StorageClass sc = SC_NONE, int tq = TYPEQUAL_NONE);
 
     void Print() const;
 
@@ -112,17 +111,10 @@ public:
      */
     int soaWidth;
 
-    std::vector<std::pair<std::string, SourcePos> > declSpecList;
+    std::vector<std::pair<std::string, SourcePos>> declSpecList;
 };
 
-
-enum DeclaratorKind {
-    DK_BASE,
-    DK_POINTER,
-    DK_REFERENCE,
-    DK_ARRAY,
-    DK_FUNCTION
-};
+enum DeclaratorKind { DK_BASE, DK_POINTER, DK_REFERENCE, DK_ARRAY, DK_FUNCTION };
 
 /** @brief Representation of the declaration of a single variable.
 
@@ -130,7 +122,7 @@ enum DeclaratorKind {
     everything we need for a full variable declaration.
  */
 class Declarator {
-public:
+  public:
     Declarator(DeclaratorKind dk, SourcePos p);
 
     /** Once a DeclSpecs instance is available, this method completes the
@@ -180,12 +172,11 @@ public:
     std::vector<Declaration *> functionParams;
 };
 
-
 /** @brief Representation of a full declaration of one or more variables,
     including the shared DeclSpecs as well as the per-variable Declarators.
  */
 class Declaration {
-public:
+  public:
     Declaration(DeclSpecs *ds, std::vector<Declarator *> *dlist = NULL);
     Declaration(DeclSpecs *ds, Declarator *d);
 
@@ -206,17 +197,14 @@ public:
     std::vector<Declarator *> declarators;
 };
 
-
 /** The parser creates instances of StructDeclaration for the members of
     structs as it's parsing their declarations. */
 struct StructDeclaration {
-    StructDeclaration(const Type *t, std::vector<Declarator *> *d)
-        : type(t), declarators(d) { }
+    StructDeclaration(const Type *t, std::vector<Declarator *> *d) : type(t), declarators(d) {}
 
     const Type *type;
     std::vector<Declarator *> *declarators;
 };
-
 
 /** Given a set of StructDeclaration instances, this returns the types of
     the elements of the corresponding struct and their names. */

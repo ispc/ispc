@@ -32,46 +32,39 @@ met:
  SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 /*
-   Based on GPU Ocelot PTX parser : https://code.google.com/p/gpuocelot/ 
+   Based on GPU Ocelot PTX parser : https://code.google.com/p/gpuocelot/
    */
 
 #pragma once
 
-#include <cstring>
 #include <cassert>
+#include <cstring>
 
-namespace parser
-{
-  class PTXLexer;
-  class PTXParser;
-}
+namespace parser {
+class PTXLexer;
+class PTXParser;
+} // namespace parser
 
 #include "ptxgrammar.hh"
 
-namespace parser
-{
-	/*!	\brief A wrapper around yyFlexLexer to allow for a local variable */
-	class PTXLexer : public ptxFlexLexer
-	{
-		public:
-			YYSTYPE*     yylval;
-			int          column;
-			int          nextColumn;
+namespace parser {
+/*!	\brief A wrapper around yyFlexLexer to allow for a local variable */
+class PTXLexer : public ptxFlexLexer {
+  public:
+    YYSTYPE *yylval;
+    int column;
+    int nextColumn;
 
-		public:
-			PTXLexer( std::istream* arg_yyin, 
-				std::ostream* arg_yyout ) :
-        yyFlexLexer( arg_yyin, arg_yyout ), yylval( 0 ), column( 0 ), 
-        nextColumn( 0 ) { }
-	
-			int yylex();
-      int yylexPosition()
-      {
+  public:
+    PTXLexer(std::istream *arg_yyin, std::ostream *arg_yyout)
+        : yyFlexLexer(arg_yyin, arg_yyout), yylval(0), column(0), nextColumn(0) {}
+
+    int yylex();
+    int yylexPosition() {
         int token = yylex();
         column = nextColumn;
-        nextColumn = column + strlen( YYText() );
+        nextColumn = column + strlen(YYText());
         return token;
-      }
-
-  };
-}
+    }
+};
+} // namespace parser

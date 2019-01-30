@@ -44,8 +44,8 @@
 #endif // ISPC_IS_WINDOWS
 
 #include <cassert>
-#include <cstring>
 #include <cstdio>
+#include <cstring>
 #include <stdint.h>
 #ifdef ISPC_IS_LINUX
 #include <malloc.h>
@@ -55,33 +55,33 @@
 
 #define N 32
 extern "C" {
-    int width() { return N; }
-    extern void f_v(float *result);
-    extern void f_f(float *result, float *a);
-    extern void f_fu(float *result, float *a, float b);
-    extern void f_fi(float *result, float *a, int *b);
-    extern void f_du(float *result, double *a, double b);
-    extern void f_duf(float *result, double *a, float b);
-    extern void f_di(float *result, double *a, int *b);
-    extern void result(float *val);
+int width() { return N; }
+extern void f_v(float *result);
+extern void f_f(float *result, float *a);
+extern void f_fu(float *result, float *a, float b);
+extern void f_fi(float *result, float *a, int *b);
+extern void f_du(float *result, double *a, double b);
+extern void f_duf(float *result, double *a, float b);
+extern void f_di(float *result, double *a, int *b);
+extern void result(float *val);
 }
 
 int main(int argc, char *argv[]) {
     int w = width();
     assert(w <= N);
 
-    float *returned_result = new float[N*4];
-    float *vfloat = new float[N*4];
-    double *vdouble = new double[N*4];
-    int *vint = new int[N*4];
-    int *vint2 = new int[N*4];
+    float *returned_result = new float[N * 4];
+    float *vfloat = new float[N * 4];
+    double *vdouble = new double[N * 4];
+    int *vint = new int[N * 4];
+    int *vint2 = new int[N * 4];
 
-    for (int i = 0; i < N*4; ++i) {
+    for (int i = 0; i < N * 4; ++i) {
         returned_result[i] = -1e20;
-        vfloat[i] = i+1;
-        vdouble[i] = i+1;
-        vint[i] = 2*(i+1);
-        vint2[i] = i+5;
+        vfloat[i] = i + 1;
+        vdouble[i] = i + 1;
+        vint[i] = 2 * (i + 1);
+        vint2[i] = i + 5;
     }
 
     float b = 5.;
@@ -105,20 +105,18 @@ int main(int argc, char *argv[]) {
 #endif
 
     float *expected_result = new float[N];
-    memset(expected_result, 0, N*sizeof(float));
+    memset(expected_result, 0, N * sizeof(float));
     result(expected_result);
 
     int errors = 0;
     for (int i = 0; i < w; ++i) {
-        if (returned_result[i] != expected_result[i])
-        {
+        if (returned_result[i] != expected_result[i]) {
 #ifdef EXPECT_FAILURE
             // bingo, failed
             return 1;
 #else
-            printf("%s: value %d disagrees: returned %f [%a], expected %f [%a]\n",
-                   argv[0], i, returned_result[i], returned_result[i],
-                   expected_result[i], expected_result[i]);
+            printf("%s: value %d disagrees: returned %f [%a], expected %f [%a]\n", argv[0], i, returned_result[i],
+                   returned_result[i], expected_result[i], expected_result[i]);
             ++errors;
 #endif // EXPECT_FAILURE
         }

@@ -40,33 +40,34 @@
 #define ISPC_IS_APPLE
 #endif
 
+#include <algorithm>
+#include <assert.h>
 #include <fcntl.h>
 #include <float.h>
 #include <math.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/types.h>
-#include <stdint.h>
-#include <algorithm>
-#include <assert.h>
 #include <vector>
 #ifdef ISPC_IS_WINDOWS
-  #define WIN32_LEAN_AND_MEAN
-  #include <windows.h>
+#define WIN32_LEAN_AND_MEAN
+#include <windows.h>
 #endif
+#include "../timing.h"
 #include "deferred.h"
 #include "kernels_ispc.h"
-#include "../timing.h"
 
 ///////////////////////////////////////////////////////////////////////////
 
-int main(int argc, char** argv) {
+int main(int argc, char **argv) {
     if (argc < 2) {
-        printf("usage: deferred_shading <input_file (e.g. data/pp1280x720.bin)> [tasks iterations] [serial iterations]\n");
+        printf(
+            "usage: deferred_shading <input_file (e.g. data/pp1280x720.bin)> [tasks iterations] [serial iterations]\n");
         return 1;
     }
-    static unsigned int test_iterations[] = {5, 3, 500}; //last value is for nframes, it is scale.
+    static unsigned int test_iterations[] = {5, 3, 500}; // last value is for nframes, it is scale.
     if (argc == 5) {
         for (int i = 0; i < 3; i++) {
             test_iterations[i] = atoi(argv[2 + i]);
@@ -79,8 +80,7 @@ int main(int argc, char** argv) {
         return 1;
     }
 
-    Framebuffer framebuffer(input->header.framebufferWidth,
-                            input->header.framebufferHeight);
+    Framebuffer framebuffer(input->header.framebufferWidth, input->header.framebufferHeight);
 
     InitDynamicC(input);
 #ifdef __cilk
@@ -93,16 +93,15 @@ int main(int argc, char** argv) {
         framebuffer.clear();
         reset_and_start_timer();
         for (int j = 0; j < nframes; ++j)
-            ispc::RenderStatic(input->header, input->arrays,
-                               VISUALIZE_LIGHT_COUNT,
-                               framebuffer.r, framebuffer.g, framebuffer.b);
+            ispc::RenderStatic(input->header, input->arrays, VISUALIZE_LIGHT_COUNT, framebuffer.r, framebuffer.g,
+                               framebuffer.b);
         double mcycles = get_elapsed_mcycles() / nframes;
         printf("@time of ISPC + TASKS run:\t\t\t[%.3f] million cycles\n", mcycles);
         ispcCycles = std::min(ispcCycles, mcycles);
     }
     printf("[ispc static + tasks]:\t\t[%.3f] million cycles to render "
-           "%d x %d image\n", ispcCycles,
-           input->header.framebufferWidth, input->header.framebufferHeight);
+           "%d x %d image\n",
+           ispcCycles, input->header.framebufferWidth, input->header.framebufferHeight);
     WriteFrame("deferred-ispc-static.ppm", input, framebuffer);
 
     nframes = 3;
@@ -117,8 +116,7 @@ int main(int argc, char** argv) {
         printf("@time of serial run:\t\t\t[%.3f] million cycles\n", mcycles);
         dynamicCilkCycles = std::min(dynamicCilkCycles, mcycles);
     }
-    printf("[ispc + Cilk dynamic]:\t\t[%.3f] million cycles to render image\n",
-           dynamicCilkCycles);
+    printf("[ispc + Cilk dynamic]:\t\t[%.3f] million cycles to render image\n", dynamicCilkCycles);
     WriteFrame("deferred-ispc-dynamic.ppm", input, framebuffer);
 #endif // __cilk
 
@@ -132,15 +130,14 @@ int main(int argc, char** argv) {
         printf("@time of serial run:\t\t\t[%.3f] million cycles\n", mcycles);
         serialCycles = std::min(serialCycles, mcycles);
     }
-    printf("[C++ serial dynamic, 1 core]:\t[%.3f] million cycles to render image\n",
-           serialCycles);
+    printf("[C++ serial dynamic, 1 core]:\t[%.3f] million cycles to render image\n", serialCycles);
     WriteFrame("deferred-serial-dynamic.ppm", input, framebuffer);
 
 #ifdef __cilk
-    printf("\t\t\t\t(%.2fx speedup from static ISPC, %.2fx from Cilk+ISPC)\n",
-           serialCycles/ispcCycles, serialCycles/dynamicCilkCycles);
+    printf("\t\t\t\t(%.2fx speedup from static ISPC, %.2fx from Cilk+ISPC)\n", serialCycles / ispcCycles,
+           serialCycles / dynamicCilkCycles);
 #else
-    printf("\t\t\t\t(%.2fx speedup from ISPC + tasks)\n", serialCycles/ispcCycles);
+    printf("\t\t\t\t(%.2fx speedup from ISPC + tasks)\n", serialCycles / ispcCycles);
 #endif // __cilk
 
     DeleteInputData(input);

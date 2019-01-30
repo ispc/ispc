@@ -31,7 +31,6 @@
    SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-
 #ifdef _MSC_VER
 #define _CRT_SECURE_NO_WARNINGS
 #endif
@@ -48,8 +47,7 @@ extern "C" {
 /**************************************************************\
 | DenseMatrix methods
 \**************************************************************/
-void DenseMatrix::multiply (const Vector &v, Vector &r) const
-{
+void DenseMatrix::multiply(const Vector &v, Vector &r) const {
     // Dimensionality check
     ASSERT(v.size() == cols());
     ASSERT(r.size() == rows());
@@ -58,30 +56,25 @@ void DenseMatrix::multiply (const Vector &v, Vector &r) const
         r[i] = v.dot(entries + i * num_cols);
 }
 
-const Vector *DenseMatrix::row (size_t row) const {
-    return new Vector(num_cols, entries + row * num_cols, true);
-}
+const Vector *DenseMatrix::row(size_t row) const { return new Vector(num_cols, entries + row * num_cols, true); }
 
-void DenseMatrix::row (size_t row, Vector &r) {
+void DenseMatrix::row(size_t row, Vector &r) {
     r.entries = entries + row * cols();
-    r._size   = cols();
+    r._size = cols();
 }
 
-void DenseMatrix::set_row(size_t row, const Vector &v)
-{
+void DenseMatrix::set_row(size_t row, const Vector &v) {
     ASSERT(v.size() == num_cols);
     memcpy(entries + row * num_cols, v.entries, num_cols * sizeof(double));
 }
 
-
 /**************************************************************\
 | CRSMatrix Methods
 \**************************************************************/
+#include <algorithm>
 #include <stdio.h>
 #include <stdlib.h>
 #include <vector>
-#include <algorithm>
-
 
 struct entry {
     int row;
@@ -98,9 +91,13 @@ bool compare_entries(struct entry i, struct entry j) {
     return i.col < j.col;
 }
 
-#define ERR_OUT(...) { fprintf(stderr, __VA_ARGS__); return NULL; }
+#define ERR_OUT(...)                                                                                                   \
+    {                                                                                                                  \
+        fprintf(stderr, __VA_ARGS__);                                                                                  \
+        return NULL;                                                                                                   \
+    }
 
-CRSMatrix *CRSMatrix::matrix_from_mtf (char *path) {
+CRSMatrix *CRSMatrix::matrix_from_mtf(char *path) {
     FILE *f;
     MM_typecode matcode;
 
@@ -151,7 +148,7 @@ CRSMatrix *CRSMatrix::matrix_from_mtf (char *path) {
     return M;
 }
 
-Vector *Vector::vector_from_mtf (char *path) {
+Vector *Vector::vector_from_mtf(char *path) {
     FILE *f;
     MM_typecode matcode;
 
@@ -184,23 +181,26 @@ Vector *Vector::vector_from_mtf (char *path) {
             fscanf(f, "%lg\n", &val);
             (*x)[i] = val;
         }
-    }
-    else {
+    } else {
         x->zero();
         double val;
         int row;
         int col;
         for (int i = 0; i < nz; i++) {
             fscanf(f, "%d %d %lg\n", &row, &col, &val);
-            (*x)[row-1] = val;
+            (*x)[row - 1] = val;
         }
     }
     return x;
 }
 
-#define ERR(...) { fprintf(stderr, __VA_ARGS__); exit(-1); }
+#define ERR(...)                                                                                                       \
+    {                                                                                                                  \
+        fprintf(stderr, __VA_ARGS__);                                                                                  \
+        exit(-1);                                                                                                      \
+    }
 
-void Vector::to_mtf (char *path) {
+void Vector::to_mtf(char *path) {
     FILE *f;
     MM_typecode matcode;
 
@@ -221,27 +221,23 @@ void Vector::to_mtf (char *path) {
     fclose(f);
 }
 
-void CRSMatrix::multiply (const Vector &v, Vector &r) const
-{
+void CRSMatrix::multiply(const Vector &v, Vector &r) const {
     ASSERT(v.size() == cols());
     ASSERT(r.size() == rows());
 
-    for (size_t row = 0; row < rows(); row++)
-    {
+    for (size_t row = 0; row < rows(); row++) {
         int row_offset = row_offsets[row];
         int next_offset = ((row + 1 == rows()) ? _nonzeroes : row_offsets[row + 1]);
 
         double sum = 0;
-        for (int i = row_offset; i < next_offset; i++)
-        {
+        for (int i = row_offset; i < next_offset; i++) {
             sum += v[columns[i]] * entries[i];
         }
         r[row] = sum;
     }
 }
 
-void CRSMatrix::zero ( )
-{
+void CRSMatrix::zero() {
     entries.clear();
     row_offsets.clear();
     columns.clear();
