@@ -86,22 +86,23 @@ int mm_is_valid(MM_typecode matcode);		/* too complex for a macro */
 #define MM_LINE_TOO_LONG		16
 #define MM_COULD_NOT_WRITE_FILE	17
 
-
+// clang-format off
 /******************** Matrix Market internal definitions ********************
 
-   MM_matrix_typecode: 4-character sequence
+    MM_matrix_typecode: 4-character sequence
 
-				    ojbect 		sparse/   	data        storage
-						  		dense     	type        scheme
+                        object      sparse/     data        storage
+                                    dense       type        scheme
 
-   string position:	 [0]        [1]			[2]         [3]
+    String position:    [0]         [1]         [2]         [3]
 
-   Matrix typecode:  M(atrix)  C(oord)		R(eal)   	G(eneral)
-						        A(array)	C(omplex)   H(ermitian)
-											P(attern)   S(ymmetric)
-								    		I(nteger)	K(kew)
+    Matrix typecode:    M(atrix)    C(oord)     R(eal)      G(eneral)
+                                    A(array)    C(omplex)   H(ermitian)
+                                                P(attern)   S(ymmetric)
+                                                I(nteger)   K(kew)
 
  ***********************************************************************/
+// clang-format on
 
 #define MM_MTX_STR		"matrix"
 #define MM_ARRAY_STR	"array"
