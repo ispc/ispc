@@ -340,6 +340,7 @@ lCheckModuleIntrinsics(llvm::Module *module) {
  */
 static void
 lSetInternalFunctions(llvm::Module *module) {
+// clang-format off
     const char *names[] = {
         "__add_float",
         "__add_int32",
@@ -821,7 +822,7 @@ lSetInternalFunctions(llvm::Module *module) {
 //#endif /* ISPC_NVPTX_ENABLED */
         "__vselect_i32"
     };
-
+// clang-format on
     int count = sizeof(names) / sizeof(names[0]);
     for (int i = 0; i < count; ++i) {
         llvm::Function *f = module->getFunction(names[i]);

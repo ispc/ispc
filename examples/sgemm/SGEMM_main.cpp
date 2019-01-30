@@ -34,18 +34,20 @@
 // Simple harness for testing SGEMM implementations in ISPC
 // Junkins, September 2018
 
+// clang-format off
 /**
 Matrix layout, rows x col, row major storage:
 
-N                     K                     K
----     ---           ---     ---           ---     ---
-|         |           |         |           |         |
+        N                     K                     K
+   ---     ---           ---     ---           ---     ---
+   |         |           |         |           |         |
 M  |         |   X     N |         |   =     M |         |
-|         |           |         |           |         |
----     ---           ---     ---           ---     ---
+   |         |           |         |           |         |
+   ---     ---           ---     ---           ---     ---
 
-A        X            B        =            C
+        A        X            B        =            C
 **/
+// clang-format on
 
 #ifdef _MSC_VER
 #define _CRT_SECURE_NO_WARNINGS
