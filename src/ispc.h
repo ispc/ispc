@@ -40,8 +40,10 @@
 
 #include "ispc_version.h"
 
-#if ISPC_LLVM_VERSION < OLDEST_SUPPORTED_LLVM || ISPC_LLVM_VERSION > LATEST_SUPPORTED_LLVM
-#error "Only LLVM 3.2, 3.3, 3.4, 3.5, 3.6, 3.7, 3.8, 3.9, 4.0, 5.0, 6.0, 7.0 and 8.0 development branch are supported"
+#if ISPC_LLVM_VERSION < OLDEST_SUPPORTED_LLVM ||                               \
+    ISPC_LLVM_VERSION > LATEST_SUPPORTED_LLVM
+#error                                                                         \
+    "Only LLVM 3.2 - 8.0 and 9.0 development branch are supported"
 #endif
 
 #if defined(_WIN32) || defined(_WIN64)
