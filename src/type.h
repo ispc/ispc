@@ -41,11 +41,11 @@
 #include "ispc.h"
 #include "util.h"
 #if ISPC_LLVM_VERSION == ISPC_LLVM_3_2
-  #include <llvm/Type.h>
-  #include <llvm/DerivedTypes.h>
+#include <llvm/DerivedTypes.h>
+#include <llvm/Type.h>
 #else // >= 3.3
-  #include <llvm/IR/Type.h>
-  #include <llvm/IR/DerivedTypes.h>
+#include <llvm/IR/DerivedTypes.h>
+#include <llvm/IR/Type.h>
 #endif
 #include <llvm/ADT/SmallVector.h>
 
@@ -58,14 +58,10 @@ class StructType;
 struct Variability {
     enum VarType { Unbound, Uniform, Varying, SOA };
 
-    Variability(VarType t = Unbound, int w = 0) : type(t), soaWidth(w) { }
+    Variability(VarType t = Unbound, int w = 0) : type(t), soaWidth(w) {}
 
-    bool operator==(const Variability &v) const {
-        return v.type == type && v.soaWidth == soaWidth;
-    }
-    bool operator!=(const Variability &v) const {
-        return v.type != type || v.soaWidth != soaWidth;
-    }
+    bool operator==(const Variability &v) const { return v.type == type && v.soaWidth == soaWidth; }
+    bool operator!=(const Variability &v) const { return v.type != type || v.soaWidth != soaWidth; }
 
     bool operator==(const VarType &t) const { return type == t; }
     bool operator!=(const VarType &t) const { return type != t; }
@@ -77,21 +73,19 @@ struct Variability {
     int soaWidth;
 };
 
-
 /** Enumerant that records each of the types that inherit from the Type
     baseclass. */
 enum TypeId {
-  ATOMIC_TYPE,           // 0
-  ENUM_TYPE,             // 1
-  POINTER_TYPE,          // 2
-  ARRAY_TYPE,            // 3
-  VECTOR_TYPE,           // 4
-  STRUCT_TYPE,           // 5
-  UNDEFINED_STRUCT_TYPE, // 6
-  REFERENCE_TYPE,        // 7
-  FUNCTION_TYPE          // 8
+    ATOMIC_TYPE,           // 0
+    ENUM_TYPE,             // 1
+    POINTER_TYPE,          // 2
+    ARRAY_TYPE,            // 3
+    VECTOR_TYPE,           // 4
+    STRUCT_TYPE,           // 5
+    UNDEFINED_STRUCT_TYPE, // 6
+    REFERENCE_TYPE,        // 7
+    FUNCTION_TYPE          // 8
 };
-
 
 /** @brief Interface class that defines the type abstraction.
 
@@ -99,7 +93,7 @@ enum TypeId {
     for all types in the language.
  */
 class Type {
-public:
+  public:
     /** Returns true if the underlying type is boolean.  In other words,
         this is true for individual bools and for short-vectors with
         underlying bool type, but not for arrays of bools. */
@@ -142,14 +136,10 @@ public:
     virtual Variability GetVariability() const = 0;
 
     /** Returns true if the underlying type is uniform */
-    bool IsUniformType() const {
-        return GetVariability() == Variability::Uniform;
-    }
+    bool IsUniformType() const { return GetVariability() == Variability::Uniform; }
 
     /** Returns true if the underlying type is varying */
-    bool IsVaryingType() const {
-        return GetVariability() == Variability::Varying;
-    }
+    bool IsVaryingType() const { return GetVariability() == Variability::Varying; }
 
     /** Returns true if the type is laid out in "structure of arrays"
         layout. */
@@ -161,9 +151,7 @@ public:
 
     /** Returns true if the underlying type's uniform/varying-ness is
         unbound. */
-    bool HasUnboundVariability() const {
-        return GetVariability() == Variability::Unbound;
-    }
+    bool HasUnboundVariability() const { return GetVariability() == Variability::Unbound; }
 
     /* Returns a type wherein any elements of the original type and
        contained types that have unbound variability have their variability
@@ -262,8 +250,7 @@ public:
         factored out and done separately in the cases when needed.
 
     */
-    static const Type *MoreGeneralType(const Type *type0, const Type *type1,
-                                       SourcePos pos, const char *reason,
+    static const Type *MoreGeneralType(const Type *type0, const Type *type1, SourcePos pos, const char *reason,
                                        bool forceVarying = false, int vecSize = 0);
 
     /** Returns true if the given type is an atomic, enum, or pointer type
@@ -276,10 +263,9 @@ public:
         using dynamic_cast. */
     const TypeId typeId;
 
-protected:
-    Type(TypeId id) : typeId(id) { }
+  protected:
+    Type(TypeId id) : typeId(id) {}
 };
-
 
 /** @brief AtomicType represents basic types like floats, ints, etc.
 
@@ -290,7 +276,7 @@ protected:
     not true for the other Type implementations.
  */
 class AtomicType : public Type {
-public:
+  public:
     Variability GetVariability() const;
 
     bool IsBoolType() const;
@@ -356,7 +342,7 @@ public:
     static const AtomicType *UniformDouble, *VaryingDouble;
     static const AtomicType *Void;
 
-private:
+  private:
     const Variability variability;
     const bool isConst;
     AtomicType(BasicType basicType, Variability v, bool isConst);
@@ -364,11 +350,10 @@ private:
     mutable const AtomicType *asOtherConstType, *asUniformType, *asVaryingType;
 };
 
-
 /** @brief Type implementation for enumerated types
  */
 class EnumType : public Type {
-public:
+  public:
     /** Constructor for anonymous enumerated types */
     EnumType(SourcePos pos);
     /** Constructor for named enumerated types */
@@ -415,13 +400,12 @@ public:
 
     const SourcePos pos;
 
-private:
+  private:
     const std::string name;
     Variability variability;
     bool isConst;
     std::vector<Symbol *> enumerators;
 };
-
 
 /** @brief Type implementation for pointers to other types
 
@@ -444,9 +428,8 @@ private:
       property; see discussion in comments in the StructMemberExpr class.
  */
 class PointerType : public Type {
-public:
-    PointerType(const Type *t, Variability v, bool isConst,
-                bool isSlice = false, bool frozen = false);
+  public:
+    PointerType(const Type *t, Variability v, bool isConst, bool isSlice = false, bool frozen = false);
 
     /** Helper method to return a uniform pointer to the given type. */
     static PointerType *GetUniform(const Type *t, bool isSlice = false);
@@ -493,13 +476,12 @@ public:
 
     static PointerType *Void;
 
-private:
+  private:
     const Variability variability;
     const bool isConst;
     const bool isSlice, isFrozen;
     const Type *baseType;
 };
-
 
 /** @brief Abstract base class for types that represent collections of
     other types.
@@ -508,7 +490,7 @@ private:
     VectorTypes all inherit from.
 */
 class CollectionType : public Type {
-public:
+  public:
     /** Returns the total number of elements in the collection. */
     virtual int GetElementCount() const = 0;
 
@@ -517,10 +499,9 @@ public:
      */
     virtual const Type *GetElementType(int index) const = 0;
 
-protected:
-    CollectionType(TypeId id) : Type(id) { }
+  protected:
+    CollectionType(TypeId id) : Type(id) {}
 };
-
 
 /** @brief Abstract base class for types that represent sequences
 
@@ -529,7 +510,7 @@ protected:
     and vectors).
  */
 class SequentialType : public CollectionType {
-public:
+  public:
     /** Returns the Type of the elements that the sequence stores; for
         SequentialTypes, all elements have the same type . */
     virtual const Type *GetElementType() const = 0;
@@ -541,10 +522,9 @@ public:
      */
     const Type *GetElementType(int index) const;
 
-protected:
-    SequentialType(TypeId id) : CollectionType(id) { }
+  protected:
+    SequentialType(TypeId id) : CollectionType(id) {}
 };
-
 
 /** @brief One-dimensional array type.
 
@@ -553,7 +533,7 @@ protected:
     turn hold ArrayTypes as their child types.)
 */
 class ArrayType : public SequentialType {
-public:
+  public:
     /** An ArrayType is created by providing the type of the elements that
         it stores, and the SOA width to use in laying out the array in
         memory.
@@ -617,13 +597,12 @@ public:
      */
     static const Type *SizeUnsizedArrays(const Type *type, Expr *initExpr);
 
-private:
+  private:
     /** Type of the elements of the array. */
-    const Type * const child;
+    const Type *const child;
     /** Number of elements in the array. */
     const int numElements;
 };
-
 
 /** @brief A (short) vector of atomic types.
 
@@ -637,7 +616,7 @@ private:
     this allows them to be packed 'horizontally' into vector registers.
  */
 class VectorType : public SequentialType {
-public:
+  public:
     VectorType(const AtomicType *base, int size);
 
     Variability GetVariability() const;
@@ -673,28 +652,26 @@ public:
     int GetElementCount() const;
     const AtomicType *GetElementType() const;
 
-private:
+  private:
     /** Base type that the vector holds elements of */
-    const AtomicType * const base;
+    const AtomicType *const base;
     /** Number of elements in the vector */
     const int numElements;
 
-public:
+  public:
     /** Returns the number of elements stored in memory for the vector.
         For uniform vectors, this is rounded up so that the number of
         elements evenly divides the target's native vector width. */
     int getVectorMemoryCount() const;
 };
 
-
 /** @brief Representation of a structure holding a number of members.
  */
 class StructType : public CollectionType {
-public:
+  public:
     StructType(const std::string &name, const llvm::SmallVector<const Type *, 8> &elts,
-               const llvm::SmallVector<std::string, 8> &eltNames,
-               const llvm::SmallVector<SourcePos, 8> &eltPositions, bool isConst,
-               Variability variability, SourcePos pos);
+               const llvm::SmallVector<std::string, 8> &eltNames, const llvm::SmallVector<SourcePos, 8> &eltPositions,
+               bool isConst, Variability variability, SourcePos pos);
 
     Variability GetVariability() const;
 
@@ -747,10 +724,10 @@ public:
     const SourcePos &GetElementPosition(int i) const { return elementPositions[i]; }
 
     /** Returns the name of the structure type.  (e.g. struct Foo -> "Foo".) */
-    const std::string &GetStructName() const  { return name; }
+    const std::string &GetStructName() const { return name; }
     const std::string GetCStructName() const;
 
-private:
+  private:
     static bool checkIfCanBeSOA(const StructType *st);
 
     /*const*/ std::string name;
@@ -778,16 +755,14 @@ private:
     mutable const StructType *oppositeConstStructType;
 };
 
-
 /** Type implementation representing a struct name that has been declared
     but where the struct members haven't been defined (i.e. "struct Foo;").
     This class doesn't do much besides serve as a placeholder that other
     code can use to detect the presence of such as truct.
  */
 class UndefinedStructType : public Type {
-public:
-    UndefinedStructType(const std::string &name, const Variability variability,
-                        bool isConst, SourcePos pos);
+  public:
+    UndefinedStructType(const std::string &name, const Variability variability, bool isConst, SourcePos pos);
 
     Variability GetVariability() const;
 
@@ -821,18 +796,17 @@ public:
     /** Returns the name of the structure type.  (e.g. struct Foo -> "Foo".) */
     const std::string &GetStructName() const { return name; }
 
-private:
+  private:
     const std::string name;
     const Variability variability;
     const bool isConst;
     const SourcePos pos;
 };
 
-
 /** @brief Type representing a reference to another (non-reference) type.
  */
 class ReferenceType : public Type {
-public:
+  public:
     ReferenceType(const Type *targetType);
 
     Variability GetVariability() const;
@@ -865,11 +839,10 @@ public:
     llvm::DIType *GetDIType(llvm::DIScope *scope) const;
 #endif
 
-private:
-    const Type * const targetType;
+  private:
+    const Type *const targetType;
     mutable const ReferenceType *asOtherConstType;
 };
-
 
 /** @brief Type representing a function (return type + argument types)
 
@@ -883,15 +856,12 @@ private:
     the other Type implementations inherit from.
  */
 class FunctionType : public Type {
-public:
-    FunctionType(const Type *returnType,
-                 const llvm::SmallVector<const Type *, 8> &argTypes, SourcePos pos);
-    FunctionType(const Type *returnType,
-                 const llvm::SmallVector<const Type *, 8> &argTypes,
-                 const llvm::SmallVector<std::string, 8> &argNames,
-                 const llvm::SmallVector<Expr *, 8> &argDefaults,
-                 const llvm::SmallVector<SourcePos, 8> &argPos,
-                 bool isTask, bool isExported, bool isExternC, bool isUnmasked);
+  public:
+    FunctionType(const Type *returnType, const llvm::SmallVector<const Type *, 8> &argTypes, SourcePos pos);
+    FunctionType(const Type *returnType, const llvm::SmallVector<const Type *, 8> &argTypes,
+                 const llvm::SmallVector<std::string, 8> &argNames, const llvm::SmallVector<Expr *, 8> &argDefaults,
+                 const llvm::SmallVector<SourcePos, 8> &argPos, bool isTask, bool isExported, bool isExternC,
+                 bool isUnmasked);
 
     Variability GetVariability() const;
 
@@ -931,12 +901,11 @@ public:
         function type.  The \c disableMask parameter indicates whether the
         llvm::FunctionType should have the trailing mask parameter, if
         present, removed from the return function signature. */
-    llvm::FunctionType *LLVMFunctionType(llvm::LLVMContext *ctx,
-                                         bool disableMask = false) const;
+    llvm::FunctionType *LLVMFunctionType(llvm::LLVMContext *ctx, bool disableMask = false) const;
 
     int GetNumParameters() const { return (int)paramTypes.size(); }
     const Type *GetParameterType(int i) const;
-    Expr * GetParameterDefault(int i) const;
+    Expr *GetParameterDefault(int i) const;
     const SourcePos &GetParameterSourcePos(int i) const;
     const std::string &GetParameterName(int i) const;
 
@@ -965,8 +934,8 @@ public:
         function estimate for the function. */
     int costOverride;
 
-private:
-    const Type * const returnType;
+  private:
+    const Type *const returnType;
 
     // The following four vectors should all have the same length (which is
     // in turn the length returned by GetNumParameters()).
@@ -982,119 +951,96 @@ private:
     const llvm::SmallVector<SourcePos, 8> paramPositions;
 };
 
-
 /* Efficient dynamic casting of Types.  First, we specify a default
    template function that returns NULL, indicating a failed cast, for
    arbitrary types. */
-template <typename T> inline const T *
-CastType(const Type *type) {
-    return NULL;
-}
-
+template <typename T> inline const T *CastType(const Type *type) { return NULL; }
 
 /* Now we have template specializaitons for the Types implemented in this
    file.  Each one checks the Type::typeId member and then performs the
    corresponding static cast if it's safe as per the typeId.
  */
-template <> inline const AtomicType *
-CastType(const Type *type) {
+template <> inline const AtomicType *CastType(const Type *type) {
     if (type != NULL && type->typeId == ATOMIC_TYPE)
         return (const AtomicType *)type;
     else
         return NULL;
 }
 
-template <> inline const EnumType *
-CastType(const Type *type) {
+template <> inline const EnumType *CastType(const Type *type) {
     if (type != NULL && type->typeId == ENUM_TYPE)
         return (const EnumType *)type;
     else
         return NULL;
 }
 
-template <> inline const PointerType *
-CastType(const Type *type) {
+template <> inline const PointerType *CastType(const Type *type) {
     if (type != NULL && type->typeId == POINTER_TYPE)
         return (const PointerType *)type;
     else
         return NULL;
 }
 
-template <> inline const ArrayType *
-CastType(const Type *type) {
+template <> inline const ArrayType *CastType(const Type *type) {
     if (type != NULL && type->typeId == ARRAY_TYPE)
         return (const ArrayType *)type;
     else
         return NULL;
 }
 
-template <> inline const VectorType *
-CastType(const Type *type) {
+template <> inline const VectorType *CastType(const Type *type) {
     if (type != NULL && type->typeId == VECTOR_TYPE)
         return (const VectorType *)type;
     else
         return NULL;
 }
 
-template <> inline const SequentialType *
-CastType(const Type *type) {
+template <> inline const SequentialType *CastType(const Type *type) {
     // Note that this function must be updated if other sequential type
     // implementations are added.
-    if (type != NULL &&
-        (type->typeId == ARRAY_TYPE || type->typeId == VECTOR_TYPE))
+    if (type != NULL && (type->typeId == ARRAY_TYPE || type->typeId == VECTOR_TYPE))
         return (const SequentialType *)type;
     else
         return NULL;
 }
 
-template <> inline const CollectionType *
-CastType(const Type *type) {
+template <> inline const CollectionType *CastType(const Type *type) {
     // Similarly a new collection type implementation requires updating
     // this function.
-    if (type != NULL &&
-        (type->typeId == ARRAY_TYPE || type->typeId == VECTOR_TYPE ||
-         type->typeId == STRUCT_TYPE))
+    if (type != NULL && (type->typeId == ARRAY_TYPE || type->typeId == VECTOR_TYPE || type->typeId == STRUCT_TYPE))
         return (const CollectionType *)type;
     else
         return NULL;
 }
 
-template <> inline const StructType *
-CastType(const Type *type) {
+template <> inline const StructType *CastType(const Type *type) {
     if (type != NULL && type->typeId == STRUCT_TYPE)
         return (const StructType *)type;
     else
         return NULL;
 }
 
-template <> inline const UndefinedStructType *
-CastType(const Type *type) {
+template <> inline const UndefinedStructType *CastType(const Type *type) {
     if (type != NULL && type->typeId == UNDEFINED_STRUCT_TYPE)
         return (const UndefinedStructType *)type;
     else
         return NULL;
 }
 
-template <> inline const ReferenceType *
-CastType(const Type *type) {
+template <> inline const ReferenceType *CastType(const Type *type) {
     if (type != NULL && type->typeId == REFERENCE_TYPE)
         return (const ReferenceType *)type;
     else
         return NULL;
 }
 
-template <> inline const FunctionType *
-CastType(const Type *type) {
+template <> inline const FunctionType *CastType(const Type *type) {
     if (type != NULL && type->typeId == FUNCTION_TYPE)
         return (const FunctionType *)type;
     else
         return NULL;
 }
 
-
-inline bool IsReferenceType(const Type *t) {
-    return CastType<ReferenceType>(t) != NULL;
-}
-
+inline bool IsReferenceType(const Type *t) { return CastType<ReferenceType>(t) != NULL; }
 
 #endif // ISPC_TYPE_H

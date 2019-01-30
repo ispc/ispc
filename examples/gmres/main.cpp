@@ -31,16 +31,13 @@
    SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-
-#include "matrix.h"
+#include "../timing.h"
 #include "algorithm.h"
+#include "matrix.h"
 #include "util.h"
 #include <cmath>
-#include "../timing.h"
 
-
-int main (int argc, char **argv)
-{
+int main(int argc, char **argv) {
     if (argc < 4) {
         printf("usage: %s <input-matrix> <input-rhs> <output-file>\n", argv[0]);
         return -1;
@@ -65,7 +62,7 @@ int main (int argc, char **argv)
     gmres(*A, *b, x, A->cols() / 2, .01);
     gmres_cycles = get_elapsed_mcycles();
     // Write result out to file
-    x.to_mtf(argv[argc-1]);
+    x.to_mtf(argv[argc - 1]);
 
     // Compute residual (double-check)
 #ifdef DEBUG

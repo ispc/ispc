@@ -31,15 +31,13 @@
    SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-
 #ifndef __UTIL_H__
 #define __UTIL_H__
 
-#include <stdio.h>
 #include "matrix.h"
+#include <stdio.h>
 
-
-inline void printMatrix (DenseMatrix &M, const char *name) {
+inline void printMatrix(DenseMatrix &M, const char *name) {
     printf("Matrix %s:\n", name);
     for (size_t row = 0; row < M.rows(); row++) {
         printf("row %2d: ", (int)row + 1);

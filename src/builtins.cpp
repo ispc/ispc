@@ -37,51 +37,50 @@
 */
 
 #include "builtins.h"
-#include "type.h"
-#include "util.h"
-#include "sym.h"
+#include "ctx.h"
 #include "expr.h"
 #include "llvmutil.h"
 #include "module.h"
-#include "ctx.h"
+#include "sym.h"
+#include "type.h"
+#include "util.h"
 
 #include <math.h>
 #include <stdlib.h>
 #if ISPC_LLVM_VERSION == ISPC_LLVM_3_2
-  #include <llvm/Attributes.h>
-  #include <llvm/LLVMContext.h>
-  #include <llvm/Module.h>
-  #include <llvm/Type.h>
-  #include <llvm/Instructions.h>
-  #include <llvm/Intrinsics.h>
-  #include <llvm/DerivedTypes.h>
+#include <llvm/Attributes.h>
+#include <llvm/DerivedTypes.h>
+#include <llvm/Instructions.h>
+#include <llvm/Intrinsics.h>
+#include <llvm/LLVMContext.h>
+#include <llvm/Module.h>
+#include <llvm/Type.h>
 #else
-  #include <llvm/IR/Attributes.h>
-  #include <llvm/IR/LLVMContext.h>
-  #include <llvm/IR/Module.h>
-  #include <llvm/IR/Type.h>
-  #include <llvm/IR/Instructions.h>
-  #include <llvm/IR/Intrinsics.h>
-  #include <llvm/IR/DerivedTypes.h>
+#include <llvm/IR/Attributes.h>
+#include <llvm/IR/DerivedTypes.h>
+#include <llvm/IR/Instructions.h>
+#include <llvm/IR/Intrinsics.h>
+#include <llvm/IR/LLVMContext.h>
+#include <llvm/IR/Module.h>
+#include <llvm/IR/Type.h>
 #endif
 #if ISPC_LLVM_VERSION >= ISPC_LLVM_3_5
-    #include <llvm/Linker/Linker.h>
+#include <llvm/Linker/Linker.h>
 #else
-    #include <llvm/Linker.h>
+#include <llvm/Linker.h>
 #endif
-#include <llvm/Target/TargetMachine.h>
 #include <llvm/ADT/Triple.h>
 #include <llvm/Support/MemoryBuffer.h>
+#include <llvm/Target/TargetMachine.h>
 #if ISPC_LLVM_VERSION <= ISPC_LLVM_3_9
-    #include <llvm/Bitcode/ReaderWriter.h>
+#include <llvm/Bitcode/ReaderWriter.h>
 #else
-    #include <llvm/Bitcode/BitcodeReader.h>
+#include <llvm/Bitcode/BitcodeReader.h>
 #endif
 
 extern int yyparse();
 struct yy_buffer_state;
 extern yy_buffer_state *yy_scan_string(const char *);
-
 
 /** Given an LLVM type, try to find the equivalent ispc type.  Note that
     this is an under-constrained problem due to LLVM's type representations
@@ -96,8 +95,7 @@ extern yy_buffer_state *yy_scan_string(const char *);
     or unsigned.
 
  */
-static const Type *
-lLLVMTypeToISPCType(const llvm::Type *t, bool intAsUnsigned) {
+static const Type *lLLVMTypeToISPCType(const llvm::Type *t, bool intAsUnsigned) {
     if (t == LLVMTypes::VoidType)
         return AtomicType::Void;
 
@@ -135,17 +133,13 @@ lLLVMTypeToISPCType(const llvm::Type *t, bool intAsUnsigned) {
 
     // pointers to uniform
     else if (t == LLVMTypes::Int8PointerType)
-        return PointerType::GetUniform(intAsUnsigned ? AtomicType::UniformUInt8 :
-                                       AtomicType::UniformInt8);
+        return PointerType::GetUniform(intAsUnsigned ? AtomicType::UniformUInt8 : AtomicType::UniformInt8);
     else if (t == LLVMTypes::Int16PointerType)
-        return PointerType::GetUniform(intAsUnsigned ? AtomicType::UniformUInt16 :
-                                       AtomicType::UniformInt16);
+        return PointerType::GetUniform(intAsUnsigned ? AtomicType::UniformUInt16 : AtomicType::UniformInt16);
     else if (t == LLVMTypes::Int32PointerType)
-        return PointerType::GetUniform(intAsUnsigned ? AtomicType::UniformUInt32 :
-                                       AtomicType::UniformInt32);
+        return PointerType::GetUniform(intAsUnsigned ? AtomicType::UniformUInt32 : AtomicType::UniformInt32);
     else if (t == LLVMTypes::Int64PointerType)
-        return PointerType::GetUniform(intAsUnsigned ? AtomicType::UniformUInt64 :
-                                       AtomicType::UniformInt64);
+        return PointerType::GetUniform(intAsUnsigned ? AtomicType::UniformUInt64 : AtomicType::UniformInt64);
     else if (t == LLVMTypes::FloatPointerType)
         return PointerType::GetUniform(AtomicType::UniformFloat);
     else if (t == LLVMTypes::DoublePointerType)
@@ -153,17 +147,13 @@ lLLVMTypeToISPCType(const llvm::Type *t, bool intAsUnsigned) {
 
     // pointers to varying
     else if (t == LLVMTypes::Int8VectorPointerType)
-        return PointerType::GetUniform(intAsUnsigned ? AtomicType::VaryingUInt8 :
-                                       AtomicType::VaryingInt8);
+        return PointerType::GetUniform(intAsUnsigned ? AtomicType::VaryingUInt8 : AtomicType::VaryingInt8);
     else if (t == LLVMTypes::Int16VectorPointerType)
-        return PointerType::GetUniform(intAsUnsigned ? AtomicType::VaryingUInt16 :
-                                       AtomicType::VaryingInt16);
+        return PointerType::GetUniform(intAsUnsigned ? AtomicType::VaryingUInt16 : AtomicType::VaryingInt16);
     else if (t == LLVMTypes::Int32VectorPointerType)
-        return PointerType::GetUniform(intAsUnsigned ? AtomicType::VaryingUInt32 :
-                                       AtomicType::VaryingInt32);
+        return PointerType::GetUniform(intAsUnsigned ? AtomicType::VaryingUInt32 : AtomicType::VaryingInt32);
     else if (t == LLVMTypes::Int64VectorPointerType)
-        return PointerType::GetUniform(intAsUnsigned ? AtomicType::VaryingUInt64 :
-                                       AtomicType::VaryingInt64);
+        return PointerType::GetUniform(intAsUnsigned ? AtomicType::VaryingUInt64 : AtomicType::VaryingInt64);
     else if (t == LLVMTypes::FloatVectorPointerType)
         return PointerType::GetUniform(AtomicType::VaryingFloat);
     else if (t == LLVMTypes::DoubleVectorPointerType)
@@ -172,32 +162,25 @@ lLLVMTypeToISPCType(const llvm::Type *t, bool intAsUnsigned) {
     return NULL;
 }
 
-
-static void
-lCreateSymbol(const std::string &name, const Type *returnType,
-              llvm::SmallVector<const Type *, 8> &argTypes,
-              const llvm::FunctionType *ftype, llvm::Function *func,
-              SymbolTable *symbolTable) {
+static void lCreateSymbol(const std::string &name, const Type *returnType, llvm::SmallVector<const Type *, 8> &argTypes,
+                          const llvm::FunctionType *ftype, llvm::Function *func, SymbolTable *symbolTable) {
     SourcePos noPos;
     noPos.name = "__stdlib";
 
     FunctionType *funcType = new FunctionType(returnType, argTypes, noPos);
 
-    Debug(noPos, "Created builtin symbol \"%s\" [%s]\n", name.c_str(),
-          funcType->GetString().c_str());
+    Debug(noPos, "Created builtin symbol \"%s\" [%s]\n", name.c_str(), funcType->GetString().c_str());
 
     Symbol *sym = new Symbol(name, noPos, funcType);
     sym->function = func;
     symbolTable->AddFunction(sym);
 }
 
-
 /** Given an LLVM function declaration, synthesize the equivalent ispc
     symbol for the function (if possible).  Returns true on success, false
     on failure.
  */
-static bool
-lCreateISPCSymbol(llvm::Function *func, SymbolTable *symbolTable) {
+static bool lCreateISPCSymbol(llvm::Function *func, SymbolTable *symbolTable) {
     SourcePos noPos;
     noPos.name = "__stdlib";
 
@@ -207,8 +190,7 @@ lCreateISPCSymbol(llvm::Function *func, SymbolTable *symbolTable) {
     if (name.size() < 3 || name[0] != '_' || name[1] != '_')
         return false;
 
-    Debug(SourcePos(), "Attempting to create ispc symbol for function \"%s\".",
-          name.c_str());
+    Debug(SourcePos(), "Attempting to create ispc symbol for function \"%s\".", name.c_str());
 
     // An unfortunate hack: we want this builtin function to have the
     // signature "int __sext_varying_bool(bool)", but the ispc function
@@ -235,11 +217,12 @@ lCreateISPCSymbol(llvm::Function *func, SymbolTable *symbolTable) {
     for (int i = 0; i < 2; ++i) {
         bool intAsUnsigned = (i == 1);
 
-        const Type *returnType = lLLVMTypeToISPCType(ftype->getReturnType(),
-                                                     intAsUnsigned);
+        const Type *returnType = lLLVMTypeToISPCType(ftype->getReturnType(), intAsUnsigned);
         if (returnType == NULL) {
-            Debug(SourcePos(), "Failed: return type not representable for "
-                  "builtin %s.", name.c_str());
+            Debug(SourcePos(),
+                  "Failed: return type not representable for "
+                  "builtin %s.",
+                  name.c_str());
             // return type not representable in ispc -> not callable from ispc
             return false;
         }
@@ -252,12 +235,13 @@ lCreateISPCSymbol(llvm::Function *func, SymbolTable *symbolTable) {
             const llvm::Type *llvmArgType = ftype->getParamType(j);
             const Type *type = lLLVMTypeToISPCType(llvmArgType, intAsUnsigned);
             if (type == NULL) {
-                Debug(SourcePos(), "Failed: type of parameter %d not "
-                      "representable for builtin %s", j, name.c_str());
+                Debug(SourcePos(),
+                      "Failed: type of parameter %d not "
+                      "representable for builtin %s",
+                      j, name.c_str());
                 return false;
             }
-            anyIntArgs |=
-                (Type::Equal(type, lLLVMTypeToISPCType(llvmArgType, !intAsUnsigned)) == false);
+            anyIntArgs |= (Type::Equal(type, lLLVMTypeToISPCType(llvmArgType, !intAsUnsigned)) == false);
             argTypes.push_back(type);
         }
 
@@ -270,12 +254,10 @@ lCreateISPCSymbol(llvm::Function *func, SymbolTable *symbolTable) {
     return true;
 }
 
-
 /** Given an LLVM module, create ispc symbols for the functions in the
     module.
  */
-static void
-lAddModuleSymbols(llvm::Module *module, SymbolTable *symbolTable) {
+static void lAddModuleSymbols(llvm::Module *module, SymbolTable *symbolTable) {
 #if 0
     // FIXME: handle globals?
     Assert(module->global_empty());
@@ -292,15 +274,13 @@ lAddModuleSymbols(llvm::Module *module, SymbolTable *symbolTable) {
     }
 }
 
-
 /** In many of the builtins-*.ll files, we have declarations of various LLVM
     intrinsics that are then used in the implementation of various target-
     specific functions.  This function loops over all of the intrinsic
     declarations and makes sure that the signature we have in our .ll file
     matches the signature of the actual intrinsic.
 */
-static void
-lCheckModuleIntrinsics(llvm::Module *module) {
+static void lCheckModuleIntrinsics(llvm::Module *module) {
     llvm::Module::iterator iter;
     for (iter = module->begin(); iter != module->end(); ++iter) {
 #if ISPC_LLVM_VERSION <= ISPC_LLVM_3_7 /* 3.2, 3.3, 3.4, 3.5, 3.6, 3.7 */
@@ -316,16 +296,15 @@ lCheckModuleIntrinsics(llvm::Module *module) {
         // check the llvm.x86.* intrinsics for now...
         if (!strncmp(funcName.c_str(), "llvm.x86.", 9)) {
             llvm::Intrinsic::ID id = (llvm::Intrinsic::ID)func->getIntrinsicID();
-            if (id == 0) fprintf(stderr, "FATAL: intrinsic is not found: %s  \n", funcName.c_str());
+            if (id == 0)
+                fprintf(stderr, "FATAL: intrinsic is not found: %s  \n", funcName.c_str());
             Assert(id != 0);
-            llvm::Type *intrinsicType =
-                llvm::Intrinsic::getType(*g->ctx, id);
+            llvm::Type *intrinsicType = llvm::Intrinsic::getType(*g->ctx, id);
             intrinsicType = llvm::PointerType::get(intrinsicType, 0);
             Assert(func->getType() == intrinsicType);
         }
     }
 }
-
 
 /** We'd like to have all of these functions declared as 'internal' in
     their respective bitcode files so that if they aren't needed by the
@@ -338,9 +317,8 @@ lCheckModuleIntrinsics(llvm::Module *module) {
     but instead mark them as internal after they've been linked in.  This
     is admittedly a kludge.
  */
-static void
-lSetInternalFunctions(llvm::Module *module) {
-// clang-format off
+static void lSetInternalFunctions(llvm::Module *module) {
+    // clang-format off
     const char *names[] = {
         "__add_float",
         "__add_int32",
@@ -822,7 +800,7 @@ lSetInternalFunctions(llvm::Module *module) {
 //#endif /* ISPC_NVPTX_ENABLED */
         "__vselect_i32"
     };
-// clang-format on
+    // clang-format on
     int count = sizeof(names) / sizeof(names[0]);
     for (int i = 0; i < count; ++i) {
         llvm::Function *f = module->getFunction(names[i]);
@@ -833,7 +811,6 @@ lSetInternalFunctions(llvm::Module *module) {
     }
 }
 
-
 /** This utility function takes serialized binary LLVM bitcode and adds its
     definitions to the given module.  Functions in the bitcode that can be
     mapped to ispc functions are also added to the symbol table.
@@ -843,9 +820,8 @@ lSetInternalFunctions(llvm::Module *module) {
     @param module      Module to link the bitcode into
     @param symbolTable Symbol table to add definitions to
  */
-void
-AddBitcodeToModule(const unsigned char *bitcode, int length,
-                   llvm::Module *module, SymbolTable *symbolTable, bool warn) {
+void AddBitcodeToModule(const unsigned char *bitcode, int length, llvm::Module *module, SymbolTable *symbolTable,
+                        bool warn) {
     llvm::StringRef sb = llvm::StringRef((char *)bitcode, length);
 #if ISPC_LLVM_VERSION <= ISPC_LLVM_3_5
     llvm::MemoryBuffer *bcBuf = llvm::MemoryBuffer::getMemBuffer(sb);
@@ -888,8 +864,7 @@ AddBitcodeToModule(const unsigned char *bitcode, int length,
         // linking together modules with incompatible target triples..
         llvm::Triple mTriple(m->module->getTargetTriple());
         llvm::Triple bcTriple(bcModule->getTargetTriple());
-        Debug(SourcePos(), "module triple: %s\nbitcode triple: %s\n",
-              mTriple.str().c_str(), bcTriple.str().c_str());
+        Debug(SourcePos(), "module triple: %s\nbitcode triple: %s\n", mTriple.str().c_str(), bcTriple.str().c_str());
 #if defined(ISPC_ARM_ENABLED) && !defined(__arm__)
         // FIXME: More ugly and dangerous stuff.  We really haven't set up
         // proper build and runtime infrastructure for ispc to do
@@ -906,49 +881,43 @@ AddBitcodeToModule(const unsigned char *bitcode, int length,
         // the values for an ARM target.  This maybe won't cause problems
         // in the generated code, since bulitins.c doesn't do anything too
         // complex w.r.t. struct layouts, etc.
-        if (g->target->getISA() != Target::NEON32 &&
-            g->target->getISA() != Target::NEON16 &&
+        if (g->target->getISA() != Target::NEON32 && g->target->getISA() != Target::NEON16 &&
             g->target->getISA() != Target::NEON8)
 #endif // !__arm__
 #ifdef ISPC_NVPTX_ENABLED
-        if (g->target->getISA() != Target::NVPTX)
+            if (g->target->getISA() != Target::NVPTX)
 #endif /* ISPC_NVPTX_ENABLED */
-        {
-            Assert(bcTriple.getArch() == llvm::Triple::UnknownArch ||
-                   mTriple.getArch() == bcTriple.getArch());
-            Assert(bcTriple.getVendor() == llvm::Triple::UnknownVendor ||
-                   mTriple.getVendor() == bcTriple.getVendor());
+            {
+                Assert(bcTriple.getArch() == llvm::Triple::UnknownArch || mTriple.getArch() == bcTriple.getArch());
+                Assert(bcTriple.getVendor() == llvm::Triple::UnknownVendor ||
+                       mTriple.getVendor() == bcTriple.getVendor());
 
-            // We unconditionally set module DataLayout to library, but we must
-            // ensure that library and module DataLayouts are compatible.
-            // If they are not, we should recompile the library for problematic
-            // architecture and investigate what happened.
-            // Generally we allow library DataLayout to be subset of module
-            // DataLayout or library DataLayout to be empty.
+                // We unconditionally set module DataLayout to library, but we must
+                // ensure that library and module DataLayouts are compatible.
+                // If they are not, we should recompile the library for problematic
+                // architecture and investigate what happened.
+                // Generally we allow library DataLayout to be subset of module
+                // DataLayout or library DataLayout to be empty.
 #if ISPC_LLVM_VERSION >= ISPC_LLVM_3_5
-            if (!VerifyDataLayoutCompatibility(module->getDataLayoutStr(),
-                                               bcModule->getDataLayoutStr())
-                && warn) {
-              Warning(SourcePos(), "Module DataLayout is incompatible with "
-                      "library DataLayout:\n"
-                      "Module  DL: %s\n"
-                      "Library DL: %s\n",
-                      module->getDataLayoutStr().c_str(),
-                      bcModule->getDataLayoutStr().c_str());
-            }
+                if (!VerifyDataLayoutCompatibility(module->getDataLayoutStr(), bcModule->getDataLayoutStr()) && warn) {
+                    Warning(SourcePos(),
+                            "Module DataLayout is incompatible with "
+                            "library DataLayout:\n"
+                            "Module  DL: %s\n"
+                            "Library DL: %s\n",
+                            module->getDataLayoutStr().c_str(), bcModule->getDataLayoutStr().c_str());
+                }
 #else
-            if (!VerifyDataLayoutCompatibility(module->getDataLayout(),
-                                               bcModule->getDataLayout())
-                && warn) {
-              Warning(SourcePos(), "Module DataLayout is incompatible with "
-                      "library DataLayout:\n"
-                      "Module  DL: %s\n"
-                      "Library DL: %s\n",
-                      module->getDataLayout().c_str(),
-                      bcModule->getDataLayout().c_str());
+            if (!VerifyDataLayoutCompatibility(module->getDataLayout(), bcModule->getDataLayout()) && warn) {
+                Warning(SourcePos(),
+                        "Module DataLayout is incompatible with "
+                        "library DataLayout:\n"
+                        "Module  DL: %s\n"
+                        "Library DL: %s\n",
+                        module->getDataLayout().c_str(), bcModule->getDataLayout().c_str());
             }
 #endif
-        }
+            }
 
         bcModule->setTargetTriple(mTriple.str());
         bcModule->setDataLayout(module->getDataLayout());
@@ -956,25 +925,22 @@ AddBitcodeToModule(const unsigned char *bitcode, int length,
 #if ISPC_LLVM_VERSION <= ISPC_LLVM_3_5 // 3.2-3.5
         std::string(linkError);
 
-        if (llvm::Linker::LinkModules(module, bcModule,
-                                      llvm::Linker::DestroySource,
-                                      &linkError))
+        if (llvm::Linker::LinkModules(module, bcModule, llvm::Linker::DestroySource, &linkError))
             Error(SourcePos(), "Error linking stdlib bitcode: %s", linkError.c_str());
 #elif ISPC_LLVM_VERSION <= ISPC_LLVM_3_7 // 3.6-3.7
         llvm::Linker::LinkModules(module, bcModule);
-#else // LLVM 3.8+
-        // A hack to move over declaration, which have no definition.
-        // New linker is kind of smart and think it knows better what to do, so
-        // it removes unused declarations without definitions.
-        // This trick should be legal, as both modules use the same LLVMContext.
-        for (llvm::Function& f : *bcModule) {
-          if (f.isDeclaration()) {
-            // Declarations with uses will be moved by Linker.
-            if (f.getNumUses() > 0)
-              continue;
-            module->getOrInsertFunction(f.getName(), f.getFunctionType(),
-                f.getAttributes());
-          }
+#else                                    // LLVM 3.8+
+                                         // A hack to move over declaration, which have no definition.
+                                         // New linker is kind of smart and think it knows better what to do, so
+                                         // it removes unused declarations without definitions.
+                                         // This trick should be legal, as both modules use the same LLVMContext.
+        for (llvm::Function &f : *bcModule) {
+            if (f.isDeclaration()) {
+                // Declarations with uses will be moved by Linker.
+                if (f.getNumUses() > 0)
+                    continue;
+                module->getOrInsertFunction(f.getName(), f.getFunctionType(), f.getAttributes());
+            }
         }
 
         std::unique_ptr<llvm::Module> M(bcModule);
@@ -990,16 +956,12 @@ AddBitcodeToModule(const unsigned char *bitcode, int length,
     }
 }
 
-
 /** Utility routine that defines a constant int32 with given value, adding
     the symbol to both the ispc symbol table and the given LLVM module.
  */
-static void
-lDefineConstantInt(const char *name, int val, llvm::Module *module,
-                   SymbolTable *symbolTable, std::vector<llvm::Constant*> &dbg_sym) {
-    Symbol *sym =
-        new Symbol(name, SourcePos(), AtomicType::UniformInt32->GetAsConstType(),
-                   SC_STATIC);
+static void lDefineConstantInt(const char *name, int val, llvm::Module *module, SymbolTable *symbolTable,
+                               std::vector<llvm::Constant *> &dbg_sym) {
+    Symbol *sym = new Symbol(name, SourcePos(), AtomicType::UniformInt32->GetAsConstType(), SC_STATIC);
     sym->constValue = new ConstExpr(sym->type, val, SourcePos());
     llvm::Type *ltype = LLVMTypes::Int32Type;
     llvm::Constant *linit = LLVMInt32(val);
@@ -1007,14 +969,11 @@ lDefineConstantInt(const char *name, int val, llvm::Module *module,
     // Use WeakODRLinkage rather than InternalLinkage so that a definition
     // survives even if it's not used in the module, so that the symbol is
     // there in the debugger.
-    llvm::GlobalValue::LinkageTypes linkage = g->generateDebuggingSymbols ?
-        llvm::GlobalValue::WeakODRLinkage : llvm::GlobalValue::InternalLinkage;
-    sym->storagePtr = new llvm::GlobalVariable(*module, ltype, true, linkage,
-                                               linit, name);
+    llvm::GlobalValue::LinkageTypes linkage =
+        g->generateDebuggingSymbols ? llvm::GlobalValue::WeakODRLinkage : llvm::GlobalValue::InternalLinkage;
+    sym->storagePtr = new llvm::GlobalVariable(*module, ltype, true, linkage, linit, name);
 #else // LLVM 3.6+
-    auto GV = new llvm::GlobalVariable(*module, ltype, true,
-                                       llvm::GlobalValue::InternalLinkage,
-                                       linit, name);
+    auto GV = new llvm::GlobalVariable(*module, ltype, true, llvm::GlobalValue::InternalLinkage, linit, name);
     dbg_sym.push_back(GV);
     sym->storagePtr = GV;
 #endif
@@ -1035,62 +994,34 @@ lDefineConstantInt(const char *name, int val, llvm::Module *module,
         // matters for anything though.
 
 #if ISPC_LLVM_VERSION <= ISPC_LLVM_3_5
-        llvm::DIGlobalVariable var = m->diBuilder->createGlobalVariable(
-                                               name,
-                                               file,
-                                               0 /* line */,
-                                               diType,
-                                               true /* static */,
-                                               sym->storagePtr);
-#elif ISPC_LLVM_VERSION == ISPC_LLVM_3_6 // LLVM 3.6
+        llvm::DIGlobalVariable var =
+            m->diBuilder->createGlobalVariable(name, file, 0 /* line */, diType, true /* static */, sym->storagePtr);
+#elif ISPC_LLVM_VERSION == ISPC_LLVM_3_6                                       // LLVM 3.6
         llvm::Constant *sym_const_storagePtr = llvm::dyn_cast<llvm::Constant>(sym->storagePtr);
         Assert(sym_const_storagePtr);
-        llvm::DIGlobalVariable var = m->diBuilder->createGlobalVariable(
-                                               file,
-                                               name,
-                                               name,
-                                               file,
-                                               0 /* line */,
-                                               diType,
-                                               true /* static */,
-                                               sym_const_storagePtr);
+        llvm::DIGlobalVariable var = m->diBuilder->createGlobalVariable(file, name, name, file, 0 /* line */, diType,
+                                                                        true /* static */, sym_const_storagePtr);
 #elif ISPC_LLVM_VERSION >= ISPC_LLVM_3_7 && ISPC_LLVM_VERSION <= ISPC_LLVM_3_9 // LLVM 3.7 - 3.9
-    llvm::Constant *sym_const_storagePtr = llvm::dyn_cast<llvm::Constant>(sym->storagePtr);
-    Assert(sym_const_storagePtr);
-    m->diBuilder->createGlobalVariable(
-              cu,
-              name,
-              name,
-              file,
-              0 /* line */,
-              diType,
-              true /* static */,
-              sym_const_storagePtr);
-#else // LLVM 4.0+
+        llvm::Constant *sym_const_storagePtr = llvm::dyn_cast<llvm::Constant>(sym->storagePtr);
+        Assert(sym_const_storagePtr);
+        m->diBuilder->createGlobalVariable(cu, name, name, file, 0 /* line */, diType, true /* static */,
+                                           sym_const_storagePtr);
+#else                                                                          // LLVM 4.0+
         llvm::GlobalVariable *sym_GV_storagePtr = llvm::dyn_cast<llvm::GlobalVariable>(sym->storagePtr);
-        llvm::DIGlobalVariableExpression *var = m->diBuilder->createGlobalVariableExpression(
-                                              cu,
-                                              name,
-                                              name,
-                                              file,
-                                              0 /* line */,
-                                              diType,
-                                              true /* static */);
+        llvm::DIGlobalVariableExpression *var =
+            m->diBuilder->createGlobalVariableExpression(cu, name, name, file, 0 /* line */, diType, true /* static */);
         sym_GV_storagePtr->addDebugInfo(var);
 #endif
 #if ISPC_LLVM_VERSION <= ISPC_LLVM_3_6
         Assert(var.Verify());
 #else // LLVM 3.7+
-    //coming soon
+      // coming soon
 #endif
     }
 }
 
-
-
-static void
-lDefineConstantIntFunc(const char *name, int val, llvm::Module *module,
-                       SymbolTable *symbolTable, std::vector<llvm::Constant*> &dbg_sym) {
+static void lDefineConstantIntFunc(const char *name, int val, llvm::Module *module, SymbolTable *symbolTable,
+                                   std::vector<llvm::Constant *> &dbg_sym) {
     llvm::SmallVector<const Type *, 8> args;
     FunctionType *ft = new FunctionType(AtomicType::UniformInt32, args, SourcePos());
     Symbol *sym = new Symbol(name, SourcePos(), ft, SC_STATIC);
@@ -1110,13 +1041,9 @@ lDefineConstantIntFunc(const char *name, int val, llvm::Module *module,
     symbolTable->AddVariable(sym);
 }
 
-
-
-static void
-lDefineProgramIndex(llvm::Module *module, SymbolTable *symbolTable, std::vector<llvm::Constant*> &dbg_sym) {
-    Symbol *sym =
-        new Symbol("programIndex", SourcePos(),
-                   AtomicType::VaryingInt32->GetAsConstType(), SC_STATIC);
+static void lDefineProgramIndex(llvm::Module *module, SymbolTable *symbolTable,
+                                std::vector<llvm::Constant *> &dbg_sym) {
+    Symbol *sym = new Symbol("programIndex", SourcePos(), AtomicType::VaryingInt32->GetAsConstType(), SC_STATIC);
 
     int pi[ISPC_MAX_NVEC];
     for (int i = 0; i < g->target->getVectorWidth(); ++i)
@@ -1127,14 +1054,12 @@ lDefineProgramIndex(llvm::Module *module, SymbolTable *symbolTable, std::vector<
     llvm::Constant *linit = LLVMInt32Vector(pi);
 #if ISPC_LLVM_VERSION < ISPC_LLVM_3_6
     // See comment in lDefineConstantInt() for why WeakODRLinkage is used here
-    llvm::GlobalValue::LinkageTypes linkage = g->generateDebuggingSymbols ?
-        llvm::GlobalValue::WeakODRLinkage : llvm::GlobalValue::InternalLinkage;
-    sym->storagePtr = new llvm::GlobalVariable(*module, ltype, true, linkage,
-                                               linit, sym->name.c_str());
+    llvm::GlobalValue::LinkageTypes linkage =
+        g->generateDebuggingSymbols ? llvm::GlobalValue::WeakODRLinkage : llvm::GlobalValue::InternalLinkage;
+    sym->storagePtr = new llvm::GlobalVariable(*module, ltype, true, linkage, linit, sym->name.c_str());
 #else // LLVM 3.6+
-    auto GV = new llvm::GlobalVariable(*module, ltype, true,
-                                       llvm::GlobalValue::InternalLinkage,
-                                       linit, sym->name.c_str());
+    auto GV =
+        new llvm::GlobalVariable(*module, ltype, true, llvm::GlobalValue::InternalLinkage, linit, sym->name.c_str());
     dbg_sym.push_back(GV);
     sym->storagePtr = GV;
 #endif
@@ -1153,64 +1078,39 @@ lDefineProgramIndex(llvm::Module *module, SymbolTable *symbolTable, std::vector<
 #if ISPC_LLVM_VERSION == ISPC_LLVM_3_6 // LLVM 3.6
         llvm::Constant *sym_const_storagePtr = llvm::dyn_cast<llvm::Constant>(sym->storagePtr);
         Assert(sym_const_storagePtr);
-        llvm::DIGlobalVariable var = m->diBuilder->createGlobalVariable(
-                                               file,
-                                               sym->name.c_str(),
-                                               sym->name.c_str(),
-                                               file,
-                                               0 /* line */,
-                                               diType,
-                                               false /* static */,
-                                               sym_const_storagePtr);
+        llvm::DIGlobalVariable var =
+            m->diBuilder->createGlobalVariable(file, sym->name.c_str(), sym->name.c_str(), file, 0 /* line */, diType,
+                                               false /* static */, sym_const_storagePtr);
 #elif ISPC_LLVM_VERSION <= ISPC_LLVM_3_5
-        llvm::DIGlobalVariable var = m->diBuilder->createGlobalVariable(
-                                               sym->name.c_str(),
-                                               file,
-                                               0 /* line */,
-                                               diType,
-                                               false /* static */,
-                                               sym->storagePtr);
+        llvm::DIGlobalVariable var = m->diBuilder->createGlobalVariable(sym->name.c_str(), file, 0 /* line */, diType,
+                                                                        false /* static */, sym->storagePtr);
 #elif ISPC_LLVM_VERSION >= ISPC_LLVM_3_7 && ISPC_LLVM_VERSION <= ISPC_LLVM_3_9 // LLVM 3.7 - 3.9
         llvm::Constant *sym_const_storagePtr = llvm::dyn_cast<llvm::Constant>(sym->storagePtr);
         Assert(sym_const_storagePtr);
-        m->diBuilder->createGlobalVariable(
-                                               cu,
-                                               sym->name.c_str(),
-                                               sym->name.c_str(),
-                                               file,
-                                               0 /* line */,
-                                               diType,
-                                               false /* static */,
-                                               sym_const_storagePtr);
-#else // LLVM 4.0+
+        m->diBuilder->createGlobalVariable(cu, sym->name.c_str(), sym->name.c_str(), file, 0 /* line */, diType,
+                                           false /* static */, sym_const_storagePtr);
+#else                                                                          // LLVM 4.0+
         llvm::GlobalVariable *sym_GV_storagePtr = llvm::dyn_cast<llvm::GlobalVariable>(sym->storagePtr);
         llvm::DIGlobalVariableExpression *var = m->diBuilder->createGlobalVariableExpression(
-                                              cu,
-                                              sym->name.c_str(),
-                                              sym->name.c_str(),
-                                              file,
-                                              0 /* line */,
-                                              diType,
-                                              false /* static */);
+            cu, sym->name.c_str(), sym->name.c_str(), file, 0 /* line */, diType, false /* static */);
         sym_GV_storagePtr->addDebugInfo(var);
 #endif
 #if ISPC_LLVM_VERSION <= ISPC_LLVM_3_6
         Assert(var.Verify());
 #else // LLVM 3.7+
-    //coming soon
+      // coming soon
 #endif
     }
 }
 
 #if ISPC_LLVM_VERSION >= ISPC_LLVM_3_6 // LLVM 3.6+
-static void emitLLVMUsed(llvm::Module& module, std::vector<llvm::Constant*> &list) {
+static void emitLLVMUsed(llvm::Module &module, std::vector<llvm::Constant *> &list) {
     // Convert list to what ConstantArray needs.
-    llvm::SmallVector<llvm::Constant*, 8> UsedArray;
+    llvm::SmallVector<llvm::Constant *, 8> UsedArray;
     UsedArray.reserve(list.size());
     for (auto c : list) {
-        UsedArray.push_back(
-            llvm::ConstantExpr::getPointerBitCastOrAddrSpaceCast(
-                llvm::cast<llvm::Constant>(c), LLVMTypes::Int8PointerType));
+        UsedArray.push_back(llvm::ConstantExpr::getPointerBitCastOrAddrSpaceCast(llvm::cast<llvm::Constant>(c),
+                                                                                 LLVMTypes::Int8PointerType));
     }
 
     llvm::ArrayType *ATy = llvm::ArrayType::get(LLVMTypes::Int8PointerType, UsedArray.size());
@@ -1222,27 +1122,23 @@ static void emitLLVMUsed(llvm::Module& module, std::vector<llvm::Constant*> &lis
 }
 #endif
 
-void
-DefineStdlib(SymbolTable *symbolTable, llvm::LLVMContext *ctx, llvm::Module *module,
-             bool includeStdlibISPC) {
+void DefineStdlib(SymbolTable *symbolTable, llvm::LLVMContext *ctx, llvm::Module *module, bool includeStdlibISPC) {
     // debug_symbols are symbols that supposed to be preserved in debug information.
     // They will be referenced in llvm.used intrinsic to prevent they removal from
     // the object file.
-    std::vector<llvm::Constant*> debug_symbols;
+    std::vector<llvm::Constant *> debug_symbols;
     bool runtime32 = g->target->is32Bit();
     bool warn = g->target->getISA() != Target::GENERIC;
 
-#define EXPORT_MODULE_COND_WARN(export_module, warnings)        \
-    extern unsigned char export_module[];                       \
-    extern int export_module##_length;                          \
-    AddBitcodeToModule(export_module, export_module##_length,   \
-                       module, symbolTable, warnings);
+#define EXPORT_MODULE_COND_WARN(export_module, warnings)                                                               \
+    extern unsigned char export_module[];                                                                              \
+    extern int export_module##_length;                                                                                 \
+    AddBitcodeToModule(export_module, export_module##_length, module, symbolTable, warnings);
 
-#define EXPORT_MODULE(export_module)                            \
-    extern unsigned char export_module[];                       \
-    extern int export_module##_length;                          \
-    AddBitcodeToModule(export_module, export_module##_length,   \
-                       module, symbolTable, true);
+#define EXPORT_MODULE(export_module)                                                                                   \
+    extern unsigned char export_module[];                                                                              \
+    extern int export_module##_length;                                                                                 \
+    AddBitcodeToModule(export_module, export_module##_length, module, symbolTable, true);
 
     // Add the definitions from the compiled builtins.c file.
     // When compiling for "generic" target family, data layout warnings for
@@ -1251,8 +1147,7 @@ DefineStdlib(SymbolTable *symbolTable, llvm::LLVMContext *ctx, llvm::Module *mod
     // automatically if DLs differ (by copying module`s DL to export`s DL).
     if (runtime32) {
         EXPORT_MODULE_COND_WARN(builtins_bitcode_c_32, warn);
-    }
-    else {
+    } else {
         EXPORT_MODULE_COND_WARN(builtins_bitcode_c_64, warn);
     }
 
@@ -1260,25 +1155,22 @@ DefineStdlib(SymbolTable *symbolTable, llvm::LLVMContext *ctx, llvm::Module *mod
     // builtin functions (e.g. __masked_store_32(), etc).
     switch (g->target->getISA()) {
 #ifdef ISPC_NVPTX_ENABLED
-    case Target::NVPTX:
-      {
+    case Target::NVPTX: {
         if (runtime32) {
             fprintf(stderr, "Unfortunatly 32bit targets are not supported at the moment .. \n");
             assert(0);
-        }
-        else {
+        } else {
             EXPORT_MODULE(builtins_bitcode_nvptx_64bit);
         }
         break;
-      };
+    };
 #endif /* ISPC_NVPTX_ENABLED */
 
 #ifdef ISPC_ARM_ENABLED
     case Target::NEON8: {
         if (runtime32) {
             EXPORT_MODULE(builtins_bitcode_neon_8_32bit);
-        }
-        else {
+        } else {
             EXPORT_MODULE(builtins_bitcode_neon_8_64bit);
         }
         break;
@@ -1286,8 +1178,7 @@ DefineStdlib(SymbolTable *symbolTable, llvm::LLVMContext *ctx, llvm::Module *mod
     case Target::NEON16: {
         if (runtime32) {
             EXPORT_MODULE(builtins_bitcode_neon_16_32bit);
-        }
-        else {
+        } else {
             EXPORT_MODULE(builtins_bitcode_neon_16_64bit);
         }
         break;
@@ -1295,8 +1186,7 @@ DefineStdlib(SymbolTable *symbolTable, llvm::LLVMContext *ctx, llvm::Module *mod
     case Target::NEON32: {
         if (runtime32) {
             EXPORT_MODULE(builtins_bitcode_neon_32_32bit);
-        }
-        else {
+        } else {
             EXPORT_MODULE(builtins_bitcode_neon_32_64bit);
         }
         break;
@@ -1307,16 +1197,14 @@ DefineStdlib(SymbolTable *symbolTable, llvm::LLVMContext *ctx, llvm::Module *mod
         case 4:
             if (runtime32) {
                 EXPORT_MODULE(builtins_bitcode_sse2_32bit);
-            }
-            else {
+            } else {
                 EXPORT_MODULE(builtins_bitcode_sse2_64bit);
             }
             break;
         case 8:
             if (runtime32) {
                 EXPORT_MODULE(builtins_bitcode_sse2_x2_32bit);
-            }
-            else {
+            } else {
                 EXPORT_MODULE(builtins_bitcode_sse2_x2_64bit);
             }
             break;
@@ -1330,8 +1218,7 @@ DefineStdlib(SymbolTable *symbolTable, llvm::LLVMContext *ctx, llvm::Module *mod
         case 4:
             if (runtime32) {
                 EXPORT_MODULE(builtins_bitcode_sse4_32bit);
-            }
-            else {
+            } else {
                 EXPORT_MODULE(builtins_bitcode_sse4_64bit);
             }
             break;
@@ -1339,17 +1226,14 @@ DefineStdlib(SymbolTable *symbolTable, llvm::LLVMContext *ctx, llvm::Module *mod
             if (runtime32) {
                 if (g->target->getMaskBitCount() == 16) {
                     EXPORT_MODULE(builtins_bitcode_sse4_16_32bit);
-                }
-                else {
+                } else {
                     Assert(g->target->getMaskBitCount() == 32);
                     EXPORT_MODULE(builtins_bitcode_sse4_x2_32bit);
                 }
-            }
-            else {
+            } else {
                 if (g->target->getMaskBitCount() == 16) {
                     EXPORT_MODULE(builtins_bitcode_sse4_16_64bit);
-                }
-                else {
+                } else {
                     Assert(g->target->getMaskBitCount() == 32);
                     EXPORT_MODULE(builtins_bitcode_sse4_x2_64bit);
                 }
@@ -1359,8 +1243,7 @@ DefineStdlib(SymbolTable *symbolTable, llvm::LLVMContext *ctx, llvm::Module *mod
             Assert(g->target->getMaskBitCount() == 8);
             if (runtime32) {
                 EXPORT_MODULE(builtins_bitcode_sse4_8_32bit);
-            }
-            else {
+            } else {
                 EXPORT_MODULE(builtins_bitcode_sse4_8_64bit);
             }
             break;
@@ -1384,15 +1267,13 @@ DefineStdlib(SymbolTable *symbolTable, llvm::LLVMContext *ctx, llvm::Module *mod
                 // enough at the moment.
                 if (runtime32) {
                     EXPORT_MODULE(builtins_bitcode_sse4_32bit);
-                }
-                else {
+                } else {
                     EXPORT_MODULE(builtins_bitcode_sse4_64bit);
                 }
             } else if (g->target->getDataTypeWidth() == 64) {
                 if (runtime32) {
                     EXPORT_MODULE(builtins_bitcode_avx1_i64x4_32bit);
-                }
-                else {
+                } else {
                     EXPORT_MODULE(builtins_bitcode_avx1_i64x4_64bit);
                 }
             } else {
@@ -1402,16 +1283,14 @@ DefineStdlib(SymbolTable *symbolTable, llvm::LLVMContext *ctx, llvm::Module *mod
         case 8:
             if (runtime32) {
                 EXPORT_MODULE(builtins_bitcode_avx1_32bit);
-            }
-            else {
+            } else {
                 EXPORT_MODULE(builtins_bitcode_avx1_64bit);
             }
             break;
         case 16:
             if (runtime32) {
                 EXPORT_MODULE(builtins_bitcode_avx1_x2_32bit);
-            }
-            else {
+            } else {
                 EXPORT_MODULE(builtins_bitcode_avx1_x2_64bit);
             }
             break;
@@ -1425,24 +1304,21 @@ DefineStdlib(SymbolTable *symbolTable, llvm::LLVMContext *ctx, llvm::Module *mod
         case 4:
             if (runtime32) {
                 EXPORT_MODULE(builtins_bitcode_avx11_i64x4_32bit);
-            }
-            else {
+            } else {
                 EXPORT_MODULE(builtins_bitcode_avx11_i64x4_64bit);
             }
             break;
         case 8:
             if (runtime32) {
                 EXPORT_MODULE(builtins_bitcode_avx11_32bit);
-            }
-            else {
+            } else {
                 EXPORT_MODULE(builtins_bitcode_avx11_64bit);
             }
             break;
         case 16:
             if (runtime32) {
                 EXPORT_MODULE(builtins_bitcode_avx11_x2_32bit);
-            }
-            else {
+            } else {
                 EXPORT_MODULE(builtins_bitcode_avx11_x2_64bit);
             }
             break;
@@ -1456,24 +1332,21 @@ DefineStdlib(SymbolTable *symbolTable, llvm::LLVMContext *ctx, llvm::Module *mod
         case 4:
             if (runtime32) {
                 EXPORT_MODULE(builtins_bitcode_avx2_i64x4_32bit);
-            }
-            else {
+            } else {
                 EXPORT_MODULE(builtins_bitcode_avx2_i64x4_64bit);
             }
             break;
         case 8:
             if (runtime32) {
                 EXPORT_MODULE(builtins_bitcode_avx2_32bit);
-            }
-            else {
+            } else {
                 EXPORT_MODULE(builtins_bitcode_avx2_64bit);
             }
             break;
         case 16:
             if (runtime32) {
                 EXPORT_MODULE(builtins_bitcode_avx2_x2_32bit);
-            }
-            else {
+            } else {
                 EXPORT_MODULE(builtins_bitcode_avx2_x2_64bit);
             }
             break;
@@ -1488,8 +1361,7 @@ DefineStdlib(SymbolTable *symbolTable, llvm::LLVMContext *ctx, llvm::Module *mod
         case 16:
             if (runtime32) {
                 EXPORT_MODULE(builtins_bitcode_knl_32bit);
-            }
-            else {
+            } else {
                 EXPORT_MODULE(builtins_bitcode_knl_64bit);
             }
             break;
@@ -1505,8 +1377,7 @@ DefineStdlib(SymbolTable *symbolTable, llvm::LLVMContext *ctx, llvm::Module *mod
         case 16:
             if (runtime32) {
                 EXPORT_MODULE(builtins_bitcode_skx_32bit);
-            }
-            else {
+            } else {
                 EXPORT_MODULE(builtins_bitcode_skx_64bit);
             }
             break;
@@ -1521,48 +1392,42 @@ DefineStdlib(SymbolTable *symbolTable, llvm::LLVMContext *ctx, llvm::Module *mod
         case 4:
             if (runtime32) {
                 EXPORT_MODULE(builtins_bitcode_generic_4_32bit);
-            }
-            else {
+            } else {
                 EXPORT_MODULE(builtins_bitcode_generic_4_64bit);
             }
             break;
         case 8:
             if (runtime32) {
                 EXPORT_MODULE(builtins_bitcode_generic_8_32bit);
-            }
-            else {
+            } else {
                 EXPORT_MODULE(builtins_bitcode_generic_8_64bit);
             }
             break;
         case 16:
             if (runtime32) {
                 EXPORT_MODULE(builtins_bitcode_generic_16_32bit);
-            }
-            else {
+            } else {
                 EXPORT_MODULE(builtins_bitcode_generic_16_64bit);
             }
             break;
         case 32:
             if (runtime32) {
                 EXPORT_MODULE(builtins_bitcode_generic_32_32bit);
-            }
-            else {
+            } else {
                 EXPORT_MODULE(builtins_bitcode_generic_32_64bit);
             }
             break;
         case 64:
             if (runtime32) {
                 EXPORT_MODULE(builtins_bitcode_generic_64_32bit);
-            }
-            else {
+            } else {
                 EXPORT_MODULE(builtins_bitcode_generic_64_64bit);
             }
             break;
         case 1:
             if (runtime32) {
                 EXPORT_MODULE(builtins_bitcode_generic_1_32bit);
-            }
-            else {
+            } else {
                 EXPORT_MODULE(builtins_bitcode_generic_1_64bit);
             }
             break;
@@ -1577,14 +1442,11 @@ DefineStdlib(SymbolTable *symbolTable, llvm::LLVMContext *ctx, llvm::Module *mod
 
     // define the 'programCount' builtin variable
 #ifdef ISPC_NVPTX_ENABLED
-    if (g->target->getISA() == Target::NVPTX)
-    {
-      lDefineConstantInt("programCount", 32, module, symbolTable, debug_symbols);
-    }
-    else
-    {
+    if (g->target->getISA() == Target::NVPTX) {
+        lDefineConstantInt("programCount", 32, module, symbolTable, debug_symbols);
+    } else {
 #endif /* ISPC_NVPTX_ENABLED */
-      lDefineConstantInt("programCount", g->target->getVectorWidth(), module, symbolTable, debug_symbols);
+        lDefineConstantInt("programCount", g->target->getVectorWidth(), module, symbolTable, debug_symbols);
 #ifdef ISPC_NVPTX_ENABLED
     }
 #endif /* ISPC_NVPTX_ENABLED */
@@ -1595,33 +1457,23 @@ DefineStdlib(SymbolTable *symbolTable, llvm::LLVMContext *ctx, llvm::Module *mod
     // Define __math_lib stuff.  This is used by stdlib.ispc, for example, to
     // figure out which math routines to end up calling...
     lDefineConstantInt("__math_lib", (int)g->mathLib, module, symbolTable, debug_symbols);
-    lDefineConstantInt("__math_lib_ispc", (int)Globals::Math_ISPC, module,
-                       symbolTable, debug_symbols);
-    lDefineConstantInt("__math_lib_ispc_fast", (int)Globals::Math_ISPCFast,
-                       module, symbolTable, debug_symbols);
-    lDefineConstantInt("__math_lib_svml", (int)Globals::Math_SVML, module,
-                       symbolTable, debug_symbols);
-    lDefineConstantInt("__math_lib_system", (int)Globals::Math_System, module,
-                       symbolTable, debug_symbols);
-    lDefineConstantIntFunc("__fast_masked_vload", (int)g->opt.fastMaskedVload,
-                           module, symbolTable, debug_symbols);
+    lDefineConstantInt("__math_lib_ispc", (int)Globals::Math_ISPC, module, symbolTable, debug_symbols);
+    lDefineConstantInt("__math_lib_ispc_fast", (int)Globals::Math_ISPCFast, module, symbolTable, debug_symbols);
+    lDefineConstantInt("__math_lib_svml", (int)Globals::Math_SVML, module, symbolTable, debug_symbols);
+    lDefineConstantInt("__math_lib_system", (int)Globals::Math_System, module, symbolTable, debug_symbols);
+    lDefineConstantIntFunc("__fast_masked_vload", (int)g->opt.fastMaskedVload, module, symbolTable, debug_symbols);
 
-    lDefineConstantInt("__have_native_half", g->target->hasHalf(), module,
-                       symbolTable, debug_symbols);
-    lDefineConstantInt("__have_native_rand", g->target->hasRand(), module,
-                       symbolTable, debug_symbols);
-    lDefineConstantInt("__have_native_transcendentals", g->target->hasTranscendentals(),
-                       module, symbolTable, debug_symbols);
-    lDefineConstantInt("__have_native_trigonometry", g->target->hasTrigonometry(),
-                       module, symbolTable, debug_symbols);
-    lDefineConstantInt("__have_native_rsqrtd", g->target->hasRsqrtd(),
-                       module, symbolTable, debug_symbols);
-    lDefineConstantInt("__have_native_rcpd", g->target->hasRcpd(),
-                       module, symbolTable, debug_symbols);
+    lDefineConstantInt("__have_native_half", g->target->hasHalf(), module, symbolTable, debug_symbols);
+    lDefineConstantInt("__have_native_rand", g->target->hasRand(), module, symbolTable, debug_symbols);
+    lDefineConstantInt("__have_native_transcendentals", g->target->hasTranscendentals(), module, symbolTable,
+                       debug_symbols);
+    lDefineConstantInt("__have_native_trigonometry", g->target->hasTrigonometry(), module, symbolTable, debug_symbols);
+    lDefineConstantInt("__have_native_rsqrtd", g->target->hasRsqrtd(), module, symbolTable, debug_symbols);
+    lDefineConstantInt("__have_native_rcpd", g->target->hasRcpd(), module, symbolTable, debug_symbols);
 
 #ifdef ISPC_NVPTX_ENABLED
-    lDefineConstantInt("__is_nvptx_target", (int)(g->target->getISA() == Target::NVPTX),
-                       module, symbolTable, debug_symbols);
+    lDefineConstantInt("__is_nvptx_target", (int)(g->target->getISA() == Target::NVPTX), module, symbolTable,
+                       debug_symbols);
 #else
     lDefineConstantInt("__is_nvptx_target", (int)0, module, symbolTable, debug_symbols);
 #endif /* ISPC_NVPTX_ENABLED */
@@ -1644,11 +1496,9 @@ DefineStdlib(SymbolTable *symbolTable, llvm::LLVMContext *ctx, llvm::Module *mod
         // definitions added.
         extern char stdlib_mask1_code[], stdlib_mask8_code[];
         extern char stdlib_mask16_code[], stdlib_mask32_code[], stdlib_mask64_code[];
-        if (g->target->getISA() == Target::GENERIC &&
-            g->target->getVectorWidth() == 1) { // 1 wide uses 32 stdlib
+        if (g->target->getISA() == Target::GENERIC && g->target->getVectorWidth() == 1) { // 1 wide uses 32 stdlib
             yy_scan_string(stdlib_mask32_code);
-        }
-        else {
+        } else {
             switch (g->target->getMaskBitCount()) {
             case 1:
                 yy_scan_string(stdlib_mask1_code);

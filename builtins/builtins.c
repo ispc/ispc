@@ -65,44 +65,44 @@
 #include <unistd.h>
 #endif // !_MSC_VER
 
+#include <stdarg.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <stdarg.h>
 #include <string.h>
 
 typedef int Bool;
 
 #define PRINT_BUF_SIZE 4096
 
-#define APPEND(str)                                        \
-    do {                                                   \
-        int offset = bufp - &printString[0];               \
-        *bufp = '\0';                                      \
-        strncat(bufp, str, PRINT_BUF_SIZE-offset);         \
-        bufp += strlen(str);                               \
-        if (bufp >= &printString[PRINT_BUF_SIZE])          \
-            goto done;                                     \
+#define APPEND(str)                                                                                                    \
+    do {                                                                                                               \
+        int offset = bufp - &printString[0];                                                                           \
+        *bufp = '\0';                                                                                                  \
+        strncat(bufp, str, PRINT_BUF_SIZE - offset);                                                                   \
+        bufp += strlen(str);                                                                                           \
+        if (bufp >= &printString[PRINT_BUF_SIZE])                                                                      \
+            goto done;                                                                                                 \
     } while (0) /* eat semicolon */
 
-
-#define PRINT_SCALAR(fmt, type)                  \
-    sprintf(tmpBuf, fmt, *((type *)ptr));        \
-    APPEND(tmpBuf);                              \
+#define PRINT_SCALAR(fmt, type)                                                                                        \
+    sprintf(tmpBuf, fmt, *((type *)ptr));                                                                              \
+    APPEND(tmpBuf);                                                                                                    \
     break
 
-#define PRINT_VECTOR(fmt, type)                                         \
-    *bufp++ = '[';                                                      \
-    if (bufp == &printString[PRINT_BUF_SIZE]) break;                    \
-    for (int i = 0; i < width; ++i) {                                   \
-        /* only print the value if the current lane is executing */     \
-        if (mask & (1ull<<i))                                           \
-            sprintf(tmpBuf, fmt, ((type *)ptr)[i]);                     \
-        else                                                            \
-            sprintf(tmpBuf, "((" fmt "))", ((type *)ptr)[i]);           \
-        APPEND(tmpBuf);                                                 \
-        *bufp++ = (i != width-1 ? ',' : ']');                           \
-    }                                                                   \
+#define PRINT_VECTOR(fmt, type)                                                                                        \
+    *bufp++ = '[';                                                                                                     \
+    if (bufp == &printString[PRINT_BUF_SIZE])                                                                          \
+        break;                                                                                                         \
+    for (int i = 0; i < width; ++i) {                                                                                  \
+        /* only print the value if the current lane is executing */                                                    \
+        if (mask & (1ull << i))                                                                                        \
+            sprintf(tmpBuf, fmt, ((type *)ptr)[i]);                                                                    \
+        else                                                                                                           \
+            sprintf(tmpBuf, "((" fmt "))", ((type *)ptr)[i]);                                                          \
+        APPEND(tmpBuf);                                                                                                \
+        *bufp++ = (i != width - 1 ? ',' : ']');                                                                        \
+    }                                                                                                                  \
     break
 
 /** This function is called by PrintStmt to do the work of printing values
@@ -116,9 +116,8 @@ typedef int Bool;
     @param mask    Current lane mask when the print statemnt is called
     @param args    Array of pointers to the values to be printed
  */
-void __do_print(const char *format, const char *types, int width, uint64_t mask,
-                void **args) {
-    char printString[PRINT_BUF_SIZE+1]; // +1 for trailing NUL
+void __do_print(const char *format, const char *types, int width, uint64_t mask, void **args) {
+    char printString[PRINT_BUF_SIZE + 1]; // +1 for trailing NUL
     char *bufp = &printString[0];
     char tmpBuf[256];
 
@@ -127,8 +126,7 @@ void __do_print(const char *format, const char *types, int width, uint64_t mask,
         // Format strings are just single percent signs.
         if (*format != '%') {
             *bufp++ = *format;
-        }
-        else {
+        } else {
             if (*types) {
                 void *ptr = args[argCount++];
                 // Based on the encoding in the types string, cast the
@@ -148,27 +146,40 @@ void __do_print(const char *format, const char *types, int width, uint64_t mask,
                         if (mask & (1ull << i)) {
                             sprintf(tmpBuf, "%s", ((Bool *)ptr)[i] ? "true" : "false");
                             APPEND(tmpBuf);
-                        }
-                        else
+                        } else
                             APPEND("_________");
-                        *bufp++ = (i != width-1) ? ',' : ']';
+                        *bufp++ = (i != width - 1) ? ',' : ']';
                     }
                     break;
                 }
-                case 'i': PRINT_SCALAR("%d", int);
-                case 'I': PRINT_VECTOR("%d", int);
-                case 'u': PRINT_SCALAR("%u", unsigned int);
-                case 'U': PRINT_VECTOR("%u", unsigned int);
-                case 'f': PRINT_SCALAR("%f", float);
-                case 'F': PRINT_VECTOR("%f", float);
-                case 'l': PRINT_SCALAR("%lld", long long);
-                case 'L': PRINT_VECTOR("%lld", long long);
-                case 'v': PRINT_SCALAR("%llu", unsigned long long);
-                case 'V': PRINT_VECTOR("%llu", unsigned long long);
-                case 'd': PRINT_SCALAR("%f", double);
-                case 'D': PRINT_VECTOR("%f", double);
-                case 'p': PRINT_SCALAR("%p", void *);
-                case 'P': PRINT_VECTOR("%p", void *);
+                case 'i':
+                    PRINT_SCALAR("%d", int);
+                case 'I':
+                    PRINT_VECTOR("%d", int);
+                case 'u':
+                    PRINT_SCALAR("%u", unsigned int);
+                case 'U':
+                    PRINT_VECTOR("%u", unsigned int);
+                case 'f':
+                    PRINT_SCALAR("%f", float);
+                case 'F':
+                    PRINT_VECTOR("%f", float);
+                case 'l':
+                    PRINT_SCALAR("%lld", long long);
+                case 'L':
+                    PRINT_VECTOR("%lld", long long);
+                case 'v':
+                    PRINT_SCALAR("%llu", unsigned long long);
+                case 'V':
+                    PRINT_VECTOR("%llu", unsigned long long);
+                case 'd':
+                    PRINT_SCALAR("%f", double);
+                case 'D':
+                    PRINT_VECTOR("%f", double);
+                case 'p':
+                    PRINT_SCALAR("%p", void *);
+                case 'P':
+                    PRINT_VECTOR("%p", void *);
                 default:
                     APPEND("UNKNOWN TYPE ");
                     *bufp++ = *types;
@@ -179,7 +190,7 @@ void __do_print(const char *format, const char *types, int width, uint64_t mask,
         ++format;
     }
 
- done:
+done:
     *bufp = '\0';
     fputs(printString, stdout);
     fflush(stdout);
@@ -187,8 +198,7 @@ void __do_print(const char *format, const char *types, int width, uint64_t mask,
 
 /* this is print for PTX target only */
 int __puts_nvptx(const char *);
-void __do_print_nvptx(const char *format, const char *types, int width, uint64_t mask,
-                void **args) {
+void __do_print_nvptx(const char *format, const char *types, int width, uint64_t mask, void **args) {
 #if 0
     char printString[PRINT_BUF_SIZE+1]; // +1 for trailing NUL
     char *bufp = &printString[0];
@@ -259,7 +269,6 @@ void __do_print_nvptx(const char *format, const char *types, int width, uint64_t
     __puts_nvptx("---nvptx printing is not support---\n");
 #endif
 }
-
 
 int __num_cores() {
 #if defined(_MSC_VER) || defined(__MINGW32__)

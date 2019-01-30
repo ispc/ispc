@@ -48,27 +48,27 @@
 #endif
 #include <stdio.h>
 
-#include <stdio.h>
 #include <ctype.h>
 #include <stdarg.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #ifdef ISPC_IS_WINDOWS
-#include <io.h>
 #include <direct.h>
+#include <io.h>
 #include <windows.h>
 #else
+#include <errno.h>
 #include <sys/ioctl.h>
 #include <unistd.h>
-#include <errno.h>
 #endif // ISPC_IS_WINDOWS
-#include <set>
 #include <algorithm>
+#include <set>
 
 #if ISPC_LLVM_VERSION == ISPC_LLVM_3_2
-  #include <llvm/DataLayout.h>
+#include <llvm/DataLayout.h>
 #else // LLVM 3.3+
-  #include <llvm/IR/DataLayout.h>
+#include <llvm/IR/DataLayout.h>
 #endif
 
 /** Returns the width of the terminal where the compiler is running.
@@ -77,16 +77,15 @@
     compiler under a debuffer; in this case, just return a reasonable
     default.
  */
-int
-TerminalWidth() {
+int TerminalWidth() {
     if (g->disableLineWrap)
-        return 1<<30;
+        return 1 << 30;
 
 #if defined(ISPC_IS_WINDOWS)
     HANDLE h = GetStdHandle(STD_OUTPUT_HANDLE);
     if (h == INVALID_HANDLE_VALUE || h == NULL)
         return 80;
-    CONSOLE_SCREEN_BUFFER_INFO bufferInfo = { {0} };
+    CONSOLE_SCREEN_BUFFER_INFO bufferInfo = {{0}};
     GetConsoleScreenBufferInfo(h, &bufferInfo);
     return bufferInfo.dwSize.X;
 #else
@@ -97,11 +96,8 @@ TerminalWidth() {
 #endif // ISPC_IS_WINDOWS
 }
 
-
-static bool
-lHaveANSIColors() {
-    static bool r = (getenv("TERM") != NULL &&
-                     strcmp(getenv("TERM"), "dumb") != 0);
+static bool lHaveANSIColors() {
+    static bool r = (getenv("TERM") != NULL && strcmp(getenv("TERM"), "dumb") != 0);
 #ifndef ISPC_IS_WINDOWS
     r &= isatty(2);
 #endif // !ISPC_IS_WINDOWS
@@ -109,36 +105,28 @@ lHaveANSIColors() {
     return r;
 }
 
-
-static const char *
-lStartBold() {
+static const char *lStartBold() {
     if (lHaveANSIColors())
         return "\033[1m";
     else
         return "";
 }
 
-
-static const char *
-lStartRed() {
+static const char *lStartRed() {
     if (lHaveANSIColors())
         return "\033[31m";
     else
         return "";
 }
 
-
-static const char *
-lStartBlue() {
+static const char *lStartBlue() {
     if (lHaveANSIColors())
         return "\033[34m";
     else
         return "";
 }
 
-
-static const char *
-lResetColor() {
+static const char *lResetColor() {
     if (lHaveANSIColors())
         return "\033[0m";
     else
@@ -148,8 +136,7 @@ lResetColor() {
 /** Given a pointer into a string, find the end of the current word and
     return a pointer to its last character.
 */
-static const char *
-lFindWordEnd(const char *buf) {
+static const char *lFindWordEnd(const char *buf) {
     while (*buf != '\0' && !isspace(*buf))
         ++buf;
     return buf;
@@ -160,8 +147,7 @@ lFindWordEnd(const char *buf) {
     corresponding to the provided SourcePos and underlines the range of the
     SourcePos with '^' symbols.
 */
-static void
-lPrintFileLineContext(SourcePos p) {
+static void lPrintFileLineContext(SourcePos p) {
     if (p.first_line == 0)
         return;
 
@@ -173,8 +159,7 @@ lPrintFileLineContext(SourcePos p) {
     while ((c = fgetc(f)) != EOF) {
         // Don't print more than three lines of context.  (More than that,
         // and we're probably doing the wrong thing...)
-        if (curLine >= std::max(p.first_line, p.last_line-2) &&
-            curLine <= p.last_line)
+        if (curLine >= std::max(p.first_line, p.last_line - 2) && curLine <= p.last_line)
             fputc(c, stderr);
         if (c == '\n')
             ++curLine;
@@ -195,13 +180,11 @@ lPrintFileLineContext(SourcePos p) {
     fclose(f);
 }
 
-
 /** Counts the number of characters into the buf at which the numColons
     colon character is found.  Skips over ANSI escape sequences and doesn't
     include their characters in the final count.
  */
-static int
-lFindIndent(int numColons, const char *buf) {
+static int lFindIndent(int numColons, const char *buf) {
     int indent = 0;
     while (*buf != '\0') {
         if (*buf == '\033') {
@@ -209,8 +192,7 @@ lFindIndent(int numColons, const char *buf) {
                 ++buf;
             if (*buf == 'm')
                 ++buf;
-        }
-        else {
+        } else {
             if (*buf == ':') {
                 if (--numColons == 0)
                     break;
@@ -222,12 +204,10 @@ lFindIndent(int numColons, const char *buf) {
     return indent + 2;
 }
 
-
 /** Print the given string to the given FILE, assuming the given output
     column width.  Break words as needed to avoid words spilling past the
     last column.  */
-void
-PrintWithWordBreaks(const char *buf, int indent, int columnWidth, FILE *out) {
+void PrintWithWordBreaks(const char *buf, int indent, int columnWidth, FILE *out) {
 #ifdef ISPC_IS_WINDOWS
     fputs(buf, out);
     fputs("\n", out);
@@ -249,8 +229,7 @@ PrintWithWordBreaks(const char *buf, int indent, int columnWidth, FILE *out) {
                 outStr.push_back(*msgPos++);
             } while (*msgPos != '\0' && *msgPos != 'm');
             continue;
-        }
-        else if (*msgPos == '\n') {
+        } else if (*msgPos == '\n') {
             // Handle newlines cleanly
             column = indent;
             outStr.push_back('\n');
@@ -294,23 +273,17 @@ PrintWithWordBreaks(const char *buf, int indent, int columnWidth, FILE *out) {
 #endif
 }
 
-
 #ifdef ISPC_IS_WINDOWS
 // we cover for the lack vasprintf and asprintf on windows (also covers mingw)
-int
-vasprintf(char **sptr, const char *fmt, va_list argv)
-{
+int vasprintf(char **sptr, const char *fmt, va_list argv) {
     int wanted = vsnprintf(*sptr = NULL, 0, fmt, argv);
-    if((wanted < 0) || ((*sptr = (char*)malloc( 1 + wanted )) == NULL))
+    if ((wanted < 0) || ((*sptr = (char *)malloc(1 + wanted)) == NULL))
         return -1;
 
     return vsprintf(*sptr, fmt, argv);
 }
 
-
-int
-asprintf(char **sptr, const char *fmt, ...)
-{
+int asprintf(char **sptr, const char *fmt, ...) {
     int retval;
     va_list argv;
     va_start(argv, fmt);
@@ -320,7 +293,6 @@ asprintf(char **sptr, const char *fmt, ...)
 }
 #endif
 
-
 /** Helper function for Error(), Warning(), etc.
 
     @param type   The type of message being printed (e.g. "Warning")
@@ -329,9 +301,7 @@ asprintf(char **sptr, const char *fmt, ...)
     @param fmt    printf()-style format string
     @param args   Arguments with values for format string % entries
 */
-static void
-lPrint(const char *type, bool isError, SourcePos p, const char *fmt,
-       va_list args) {
+static void lPrint(const char *type, bool isError, SourcePos p, const char *fmt, va_list args) {
     char *errorBuf, *formattedBuf;
     if (vasprintf(&errorBuf, fmt, args) == -1) {
         fprintf(stderr, "vasprintf() unable to allocate memory!\n");
@@ -341,21 +311,16 @@ lPrint(const char *type, bool isError, SourcePos p, const char *fmt,
     int indent = 0;
     if (p.first_line == 0) {
         // We don't have a valid SourcePos, so create a message without it
-        if (asprintf(&formattedBuf, "%s%s%s%s%s: %s%s", lStartBold(),
-                     isError ? lStartRed() : lStartBlue(), type,
-                     lResetColor(), lStartBold(), errorBuf,
-                     lResetColor()) == -1) {
+        if (asprintf(&formattedBuf, "%s%s%s%s%s: %s%s", lStartBold(), isError ? lStartRed() : lStartBlue(), type,
+                     lResetColor(), lStartBold(), errorBuf, lResetColor()) == -1) {
             fprintf(stderr, "asprintf() unable to allocate memory!\n");
             exit(1);
         }
         indent = lFindIndent(1, formattedBuf);
-    }
-    else {
+    } else {
         // Create an error message that includes the file and line number
-        if (asprintf(&formattedBuf, "%s%s:%d:%d: %s%s%s%s: %s%s",
-                     lStartBold(), p.name, p.first_line, p.first_column,
-                     isError ? lStartRed() : lStartBlue(), type,
-                     lResetColor(), lStartBold(), errorBuf,
+        if (asprintf(&formattedBuf, "%s%s:%d:%d: %s%s%s%s: %s%s", lStartBold(), p.name, p.first_line, p.first_column,
+                     isError ? lStartRed() : lStartBlue(), type, lResetColor(), lStartBold(), errorBuf,
                      lResetColor()) == -1) {
             fprintf(stderr, "asprintf() unable to allocate memory!\n");
             exit(1);
@@ -380,10 +345,9 @@ lPrint(const char *type, bool isError, SourcePos p, const char *fmt,
     free(formattedBuf);
 }
 
-
-void
-Error(SourcePos p, const char *fmt, ...) {
-    if (m != NULL) ++m->errorCount;
+void Error(SourcePos p, const char *fmt, ...) {
+    if (m != NULL)
+        ++m->errorCount;
     if (g->quiet)
         return;
 
@@ -393,9 +357,7 @@ Error(SourcePos p, const char *fmt, ...) {
     va_end(args);
 }
 
-
-void
-Debug(SourcePos p, const char *fmt, ...) {
+void Debug(SourcePos p, const char *fmt, ...) {
     if (!g->debugPrint || g->quiet)
         return;
 
@@ -405,9 +367,7 @@ Debug(SourcePos p, const char *fmt, ...) {
     va_end(args);
 }
 
-
-void
-Warning(SourcePos p, const char *fmt, ...) {
+void Warning(SourcePos p, const char *fmt, ...) {
 
     std::map<std::pair<int, std::string>, bool>::iterator turnOffWarnings_it =
         g->turnOffWarnings.find(std::pair<int, std::string>(p.last_line, std::string(p.name)));
@@ -422,19 +382,16 @@ Warning(SourcePos p, const char *fmt, ...) {
 
     va_list args;
     va_start(args, fmt);
-    lPrint(g->warningsAsErrors ? "Error" : "Warning", g->warningsAsErrors,
-           p, fmt, args);
+    lPrint(g->warningsAsErrors ? "Error" : "Warning", g->warningsAsErrors, p, fmt, args);
     va_end(args);
 }
 
-
-void
-PerformanceWarning(SourcePos p, const char *fmt, ...) {
+void PerformanceWarning(SourcePos p, const char *fmt, ...) {
     std::string stdlibFile = "stdlib.ispc";
     std::string sourcePosName = p.name;
     if (!g->emitPerfWarnings ||
         (sourcePosName.length() >= stdlibFile.length() &&
-        sourcePosName.compare(sourcePosName.length() - stdlibFile.length(), stdlibFile.length(), stdlibFile) == 0) ||
+         sourcePosName.compare(sourcePosName.length() - stdlibFile.length(), stdlibFile.length(), stdlibFile) == 0) ||
         g->quiet)
         return;
 
@@ -452,52 +409,42 @@ PerformanceWarning(SourcePos p, const char *fmt, ...) {
     va_end(args);
 }
 
-
-static void
-lPrintBugText() {
+static void lPrintBugText() {
     static bool printed = false;
     if (printed)
         return;
 
     printed = true;
     fprintf(stderr, "***\n"
-            "*** Please file a bug report at https://github.com/ispc/ispc/issues\n"
-            "*** (Including as much information as you can about how to "
-            "reproduce this error).\n"
-            "*** You have apparently encountered a bug in the compiler that we'd "
-            "like to fix!\n***\n");
+                    "*** Please file a bug report at https://github.com/ispc/ispc/issues\n"
+                    "*** (Including as much information as you can about how to "
+                    "reproduce this error).\n"
+                    "*** You have apparently encountered a bug in the compiler that we'd "
+                    "like to fix!\n***\n");
 }
 
-
-void
-FatalError(const char *file, int line, const char *message) {
+void FatalError(const char *file, int line, const char *message) {
     fprintf(stderr, "%s(%d): FATAL ERROR: %s\n", file, line, message);
     lPrintBugText();
     abort();
 }
 
-
-void
-DoAssert(const char *file, int line, const char *expr) {
+void DoAssert(const char *file, int line, const char *expr) {
     fprintf(stderr, "%s:%u: Assertion failed: \"%s\".\n", file, line, expr);
     lPrintBugText();
     abort();
 }
 
-
-void
-DoAssertPos(SourcePos pos, const char *file, int line, const char *expr) {
+void DoAssertPos(SourcePos pos, const char *file, int line, const char *expr) {
     Error(pos, "Assertion failed (%s:%u): \"%s\".", file, line, expr);
     lPrintBugText();
     abort();
 }
 
-
 ///////////////////////////////////////////////////////////////////////////
 
 // http://en.wikipedia.org/wiki/Levenshtein_distance
-int
-StringEditDistance(const std::string &str1, const std::string &str2, int maxDist) {
+int StringEditDistance(const std::string &str1, const std::string &str2, int maxDist) {
     // Small hack: don't return 0 if the strings are the same; if we've
     // gotten here, there's been a parsing error, and suggesting the same
     // string isn't going to actually help things.
@@ -507,8 +454,8 @@ StringEditDistance(const std::string &str1, const std::string &str2, int maxDist
     int n1 = (int)str1.size(), n2 = (int)str2.size();
     int nmax = std::max(n1, n2);
 
-    int *current =  (int *)alloca((nmax+1) * sizeof(int));
-    int *previous = (int *)alloca((nmax+1) * sizeof(int));
+    int *current = (int *)alloca((nmax + 1) * sizeof(int));
+    int *previous = (int *)alloca((nmax + 1) * sizeof(int));
 
     for (int i = 0; i <= n2; ++i)
         previous[i] = i;
@@ -518,8 +465,8 @@ StringEditDistance(const std::string &str1, const std::string &str2, int maxDist
         int rowBest = y;
 
         for (int x = 1; x <= n2; ++x) {
-            current[x] = std::min(previous[x-1] + (str1[y-1] == str2[x-1] ? 0 : 1),
-                                  std::min(current[x-1], previous[x])+1);
+            current[x] = std::min(previous[x - 1] + (str1[y - 1] == str2[x - 1] ? 0 : 1),
+                                  std::min(current[x - 1], previous[x]) + 1);
             rowBest = std::min(rowBest, current[x]);
         }
 
@@ -532,21 +479,19 @@ StringEditDistance(const std::string &str1, const std::string &str2, int maxDist
     return previous[n2];
 }
 
-
-std::vector<std::string>
-MatchStrings(const std::string &str, const std::vector<std::string> &options) {
+std::vector<std::string> MatchStrings(const std::string &str, const std::vector<std::string> &options) {
     if (str.size() == 0 || (str.size() == 1 && !isalpha(str[0])))
         // don't even try...
         return std::vector<std::string>();
 
     const int maxDelta = 2;
-    std::vector<std::string> matches[maxDelta+1];
+    std::vector<std::string> matches[maxDelta + 1];
 
     // For all of the options that are up to maxDelta edit distance, store
     // them in the element of matches[] that corresponds to their edit
     // distance.
     for (int i = 0; i < (int)options.size(); ++i) {
-        int dist = StringEditDistance(str, options[i], maxDelta+1);
+        int dist = StringEditDistance(str, options[i], maxDelta + 1);
         if (dist <= maxDelta)
             matches[dist].push_back(options[i]);
     }
@@ -560,15 +505,11 @@ MatchStrings(const std::string &str, const std::vector<std::string> &options) {
     return std::vector<std::string>();
 }
 
-
-void
-GetDirectoryAndFileName(const std::string &currentDirectory,
-                        const std::string &relativeName,
-                        std::string *directory, std::string *filename) {
+void GetDirectoryAndFileName(const std::string &currentDirectory, const std::string &relativeName,
+                             std::string *directory, std::string *filename) {
 #ifdef ISPC_IS_WINDOWS
     char path[MAX_PATH];
-    const char *combPath = PathCombine(path, currentDirectory.c_str(),
-                                       relativeName.c_str());
+    const char *combPath = PathCombine(path, currentDirectory.c_str(), relativeName.c_str());
     Assert(combPath != NULL);
     const char *filenamePtr = PathFindFileName(combPath);
     *filename = filenamePtr;
@@ -583,7 +524,7 @@ GetDirectoryAndFileName(const std::string &currentDirectory,
         fullPath = relativeName;
     else {
         fullPath = g->currentDirectory;
-        if (fullPath[fullPath.size()-1] != '/')
+        if (fullPath[fullPath.size() - 1] != '/')
             fullPath.push_back('/');
         fullPath += relativeName;
     }
@@ -607,7 +548,7 @@ static std::set<std::string> lGetStringArray(const std::string &str) {
     size_t pos_prev = 0, pos;
     do {
         pos = str.find('-', pos_prev);
-        std::string substr = str.substr(pos_prev, pos-pos_prev);
+        std::string substr = str.substr(pos_prev, pos - pos_prev);
         result.insert(substr);
         pos_prev = pos;
         pos_prev++;
@@ -616,10 +557,7 @@ static std::set<std::string> lGetStringArray(const std::string &str) {
     return result;
 }
 
-
-bool
-VerifyDataLayoutCompatibility(const std::string &module_dl,
-                              const std::string &lib_dl) {
+bool VerifyDataLayoutCompatibility(const std::string &module_dl, const std::string &lib_dl) {
     if (lib_dl.empty()) {
         // This is the case for most of library pre-compiled .ll files.
         return true;
@@ -645,14 +583,12 @@ VerifyDataLayoutCompatibility(const std::string &module_dl,
 
     // For each element in library data layout, find matching module element.
     // If no match is found, then we are in trouble and the library can't be used.
-    for (std::set<std::string>::iterator it = lib_dl_set.begin();
-         it != lib_dl_set.end(); ++it) {
+    for (std::set<std::string>::iterator it = lib_dl_set.begin(); it != lib_dl_set.end(); ++it) {
         // We use the simplest possible definition of "match", which is match exactly.
         // Ideally it should be relaxed and for triples [p|i|v|f|a|s]<size>:<abi>:<pref>
         // we should allow <pref> part (preferred alignment) to not match.
         // But this seems to have no practical value at this point.
-        std::set<std::string>::iterator module_match =
-            std::find(module_dl_set.begin(), module_dl_set.end(), *it);
+        std::set<std::string>::iterator module_match = std::find(module_dl_set.begin(), module_dl_set.end(), *it);
         if (module_match == module_dl_set.end()) {
             // No match for this piece of library DataLayout was found,
             // return false.
@@ -664,8 +600,7 @@ VerifyDataLayoutCompatibility(const std::string &module_dl,
 
     // We allow extra types to be defined in the Module, but we should check
     // that it's something that we expect. And we expect vectors and floats.
-    for (std::set<std::string>::iterator it = module_dl_set.begin();
-         it != module_dl_set.end(); ++it) {
+    for (std::set<std::string>::iterator it = module_dl_set.begin(); it != module_dl_set.end(); ++it) {
         if ((*it)[0] == 'v' || (*it)[0] == 'f') {
             continue;
         }
@@ -674,4 +609,3 @@ VerifyDataLayoutCompatibility(const std::string &module_dl,
 
     return true;
 }
-

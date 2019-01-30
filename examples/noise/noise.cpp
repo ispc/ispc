@@ -34,38 +34,37 @@
 #ifdef _MSC_VER
 #define _CRT_SECURE_NO_WARNINGS
 #define NOMINMAX
-#pragma warning (disable: 4244)
-#pragma warning (disable: 4305)
+#pragma warning(disable : 4244)
+#pragma warning(disable : 4305)
 #endif
 
-#include <cstdlib>
-#include <stdio.h>
-#include <algorithm>
 #include "../timing.h"
 #include "noise_ispc.h"
+#include <algorithm>
+#include <cstdlib>
+#include <stdio.h>
 #include <string.h>
 using namespace ispc;
 
-extern void noise_serial(float x0, float y0, float x1, float y1,
-                         int width, int height, float output[]);
+extern void noise_serial(float x0, float y0, float x1, float y1, int width, int height, float output[]);
 
 /* Write a PPM image file with the image */
-static void
-writePPM(float *buf, int width, int height, const char *fn) {
+static void writePPM(float *buf, int width, int height, const char *fn) {
     FILE *fp = fopen(fn, "wb");
     fprintf(fp, "P6\n");
     fprintf(fp, "%d %d\n", width, height);
     fprintf(fp, "255\n");
-    for (int i = 0; i < width*height; ++i) {
+    for (int i = 0; i < width * height; ++i) {
         float v = buf[i] * 255.f;
-        if (v < 0) v = 0;
-        if (v > 255) v = 255;
+        if (v < 0)
+            v = 0;
+        if (v > 255)
+            v = 255;
         for (int j = 0; j < 3; ++j)
             fputc((char)v, fp);
     }
     fclose(fp);
 }
-
 
 int main(int argc, char *argv[]) {
     static unsigned int test_iterations[] = {3, 1};
@@ -88,7 +87,7 @@ int main(int argc, char *argv[]) {
             test_iterations[i] = atoi(argv[argc - 2 + i]);
         }
     }
-    float *buf = new float[width*height];
+    float *buf = new float[width * height];
 
     //
     // Compute the image using the ispc implementation; report the minimum
@@ -126,7 +125,7 @@ int main(int argc, char *argv[]) {
     printf("[noise serial]:\t\t\t[%.3f] million cycles\n", minSerial);
     writePPM(buf, width, height, "noise-serial.ppm");
 
-    printf("\t\t\t\t(%.2fx speedup from ISPC)\n", minSerial/minISPC);
+    printf("\t\t\t\t(%.2fx speedup from ISPC)\n", minSerial / minISPC);
 
     return 0;
 }

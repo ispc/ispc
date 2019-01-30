@@ -41,7 +41,7 @@
 #define ISPC_VERSION "1.10.1dev"
 #include "llvm/Config/llvm-config.h"
 
-#define ISPC_LLVM_VERSION ( LLVM_VERSION_MAJOR * 10000 + LLVM_VERSION_MINOR * 100 )
+#define ISPC_LLVM_VERSION (LLVM_VERSION_MAJOR * 10000 + LLVM_VERSION_MINOR * 100)
 
 #define ISPC_LLVM_3_2 30200
 #define ISPC_LLVM_3_3 30300
@@ -67,7 +67,8 @@
 #define __ispc__xstr(s) __ispc__str(s)
 #define __ispc__str(s) #s
 
-#define ISPC_LLVM_VERSION_STRING __ispc__xstr(LLVM_VERSION_MAJOR) "." __ispc__xstr(LLVM_VERSION_MINOR) "." __ispc__xstr(LLVM_VERSION_PATCH)
+#define ISPC_LLVM_VERSION_STRING                                                                                       \
+    __ispc__xstr(LLVM_VERSION_MAJOR) "." __ispc__xstr(LLVM_VERSION_MINOR) "." __ispc__xstr(LLVM_VERSION_PATCH)
 
 #if ISPC_LLVM_VERSION < OLDEST_SUPPORTED_LLVM || ISPC_LLVM_VERSION > LATEST_SUPPORTED_LLVM
 #error "Unhandled LLVM version"

@@ -37,57 +37,49 @@
 
 #include "stmt.h"
 #include "ctx.h"
-#include "util.h"
 #include "expr.h"
-#include "type.h"
 #include "func.h"
-#include "sym.h"
-#include "module.h"
 #include "llvmutil.h"
+#include "module.h"
+#include "sym.h"
+#include "type.h"
+#include "util.h"
 
-#include <stdio.h>
 #include <map>
+#include <stdio.h>
 
 #if ISPC_LLVM_VERSION == ISPC_LLVM_3_2
-  #include <llvm/Module.h>
-  #include <llvm/Type.h>
-  #include <llvm/Instructions.h>
-  #include <llvm/Function.h>
-  #include <llvm/DerivedTypes.h>
-  #include <llvm/LLVMContext.h>
-  #include <llvm/Metadata.h>
-  #include <llvm/CallingConv.h>
+#include <llvm/CallingConv.h>
+#include <llvm/DerivedTypes.h>
+#include <llvm/Function.h>
+#include <llvm/Instructions.h>
+#include <llvm/LLVMContext.h>
+#include <llvm/Metadata.h>
+#include <llvm/Module.h>
+#include <llvm/Type.h>
 #else
-  #include <llvm/IR/Module.h>
-  #include <llvm/IR/Type.h>
-  #include <llvm/IR/Instructions.h>
-  #include <llvm/IR/Function.h>
-  #include <llvm/IR/DerivedTypes.h>
-  #include <llvm/IR/LLVMContext.h>
-  #include <llvm/IR/Metadata.h>
-  #include <llvm/IR/CallingConv.h>
+#include <llvm/IR/CallingConv.h>
+#include <llvm/IR/DerivedTypes.h>
+#include <llvm/IR/Function.h>
+#include <llvm/IR/Instructions.h>
+#include <llvm/IR/LLVMContext.h>
+#include <llvm/IR/Metadata.h>
+#include <llvm/IR/Module.h>
+#include <llvm/IR/Type.h>
 #endif
 #include <llvm/Support/raw_ostream.h>
 
 ///////////////////////////////////////////////////////////////////////////
 // Stmt
 
-Stmt *
-Stmt::Optimize() {
-    return this;
-}
-
+Stmt *Stmt::Optimize() { return this; }
 
 ///////////////////////////////////////////////////////////////////////////
 // ExprStmt
 
-ExprStmt::ExprStmt(Expr *e, SourcePos p)
-  : Stmt(p, ExprStmtID) {
-    expr = e;
-}
+ExprStmt::ExprStmt(Expr *e, SourcePos p) : Stmt(p, ExprStmtID) { expr = e; }
 
-void
-ExprStmt::EmitCode(FunctionEmitContext *ctx) const {
+void ExprStmt::EmitCode(FunctionEmitContext *ctx) const {
     if (!ctx->GetCurrentBasicBlock())
         return;
 
@@ -96,15 +88,9 @@ ExprStmt::EmitCode(FunctionEmitContext *ctx) const {
         expr->GetValue(ctx);
 }
 
+Stmt *ExprStmt::TypeCheck() { return this; }
 
-Stmt *
-ExprStmt::TypeCheck() {
-    return this;
-}
-
-
-void
-ExprStmt::Print(int indent) const {
+void ExprStmt::Print(int indent) const {
     if (!expr)
         return;
 
@@ -115,23 +101,14 @@ ExprStmt::Print(int indent) const {
     printf("\n");
 }
 
-
-int
-ExprStmt::EstimateCost() const {
-    return 0;
-}
-
+int ExprStmt::EstimateCost() const { return 0; }
 
 ///////////////////////////////////////////////////////////////////////////
 // DeclStmt
 
-DeclStmt::DeclStmt(const std::vector<VariableDeclaration> &v, SourcePos p)
-    : Stmt(p, DeclStmtID), vars(v) {
-}
+DeclStmt::DeclStmt(const std::vector<VariableDeclaration> &v, SourcePos p) : Stmt(p, DeclStmtID), vars(v) {}
 
-
-static bool
-lHasUnsizedArrays(const Type *type) {
+static bool lHasUnsizedArrays(const Type *type) {
     const ArrayType *at = CastType<ArrayType>(type);
     if (at == NULL)
         return false;
@@ -143,70 +120,69 @@ lHasUnsizedArrays(const Type *type) {
 }
 
 #ifdef ISPC_NVPTX_ENABLED
-static llvm::Value* lConvertToGenericPtr(FunctionEmitContext *ctx, llvm::Value *value, const SourcePos &currentPos, const bool variable = false)
-{
-  if (!value->getType()->isPointerTy() || g->target->getISA() != Target::NVPTX) 
-    return value;
-  llvm::PointerType *pt = llvm::dyn_cast<llvm::PointerType>(value->getType());
-  const int addressSpace = pt->getAddressSpace();
-  if (addressSpace != 3 && addressSpace != 4) 
-    return value;
+static llvm::Value *lConvertToGenericPtr(FunctionEmitContext *ctx, llvm::Value *value, const SourcePos &currentPos,
+                                         const bool variable = false) {
+    if (!value->getType()->isPointerTy() || g->target->getISA() != Target::NVPTX)
+        return value;
+    llvm::PointerType *pt = llvm::dyn_cast<llvm::PointerType>(value->getType());
+    const int addressSpace = pt->getAddressSpace();
+    if (addressSpace != 3 && addressSpace != 4)
+        return value;
 
-  llvm::Type *elTy = pt->getElementType();
+    llvm::Type *elTy = pt->getElementType();
 
-  /* convert elTy addrspace(3)* to i64* addrspace(3)* */
-  llvm::PointerType *Int64Ptr3 = llvm::PointerType::get(LLVMTypes::Int64Type, addressSpace);
-  value = ctx->BitCastInst(value, Int64Ptr3, "gep2gen_cast1");
+    /* convert elTy addrspace(3)* to i64* addrspace(3)* */
+    llvm::PointerType *Int64Ptr3 = llvm::PointerType::get(LLVMTypes::Int64Type, addressSpace);
+    value = ctx->BitCastInst(value, Int64Ptr3, "gep2gen_cast1");
 
-  /* convert i64* addrspace(3) to i64* */
-  llvm::Function *__cvt2gen = m->module->getFunction(
-      addressSpace == 3 ? (variable ? "__cvt_loc2gen_var" : "__cvt_loc2gen") : "__cvt_const2gen");
+    /* convert i64* addrspace(3) to i64* */
+    llvm::Function *__cvt2gen = m->module->getFunction(
+        addressSpace == 3 ? (variable ? "__cvt_loc2gen_var" : "__cvt_loc2gen") : "__cvt_const2gen");
 
-  std::vector<llvm::Value *> __cvt2gen_args;
-  __cvt2gen_args.push_back(value);
-  value = llvm::CallInst::Create(__cvt2gen, __cvt2gen_args, variable ? "gep2gen_cvt_var" : "gep2gen_cvt", ctx->GetCurrentBasicBlock());
+    std::vector<llvm::Value *> __cvt2gen_args;
+    __cvt2gen_args.push_back(value);
+    value = llvm::CallInst::Create(__cvt2gen, __cvt2gen_args, variable ? "gep2gen_cvt_var" : "gep2gen_cvt",
+                                   ctx->GetCurrentBasicBlock());
 
-  /* compute offset */
-  if (addressSpace == 3)
-  {
-    assert(elTy->isArrayTy());
-    const int numElTot = elTy->getArrayNumElements();
-    const int numEl    = numElTot/4;
+    /* compute offset */
+    if (addressSpace == 3) {
+        assert(elTy->isArrayTy());
+        const int numElTot = elTy->getArrayNumElements();
+        const int numEl = numElTot / 4;
 #if 0
     fprintf(stderr, " --- detected addrspace(3) sz= %d --- \n", numEl);
 #endif
-    llvm::ArrayType *arrTy = llvm::dyn_cast<llvm::ArrayType>(pt->getArrayElementType());
-    assert(arrTy != NULL);
-    llvm::Type *arrElTy = arrTy->getElementType();
+        llvm::ArrayType *arrTy = llvm::dyn_cast<llvm::ArrayType>(pt->getArrayElementType());
+        assert(arrTy != NULL);
+        llvm::Type *arrElTy = arrTy->getElementType();
 #if 0
     if (arrElTy->isArrayTy())
       Error(currentPos, "Currently \"nvptx\" target doesn't support array-of-array");
 #endif
 
-    /* convert i64* to errElTy* */
-    llvm::PointerType *arrElTyPt0 = llvm::PointerType::get(arrElTy, 0);
-    value  = ctx->BitCastInst(value, arrElTyPt0, "gep2gen_cast2");
+        /* convert i64* to errElTy* */
+        llvm::PointerType *arrElTyPt0 = llvm::PointerType::get(arrElTy, 0);
+        value = ctx->BitCastInst(value, arrElTyPt0, "gep2gen_cast2");
 
-    llvm::Function *func_warp_index    = m->module->getFunction("__warp_index");
-    llvm::Value *warpId = ctx->CallInst(func_warp_index, NULL, std::vector<llvm::Value*>(),  "gep2gen_warp_index");
-    llvm::Value *offset = ctx->BinaryOperator(llvm::Instruction::Mul, warpId, LLVMInt32(numEl), "gep2gen_offset");
+        llvm::Function *func_warp_index = m->module->getFunction("__warp_index");
+        llvm::Value *warpId = ctx->CallInst(func_warp_index, NULL, std::vector<llvm::Value *>(), "gep2gen_warp_index");
+        llvm::Value *offset = ctx->BinaryOperator(llvm::Instruction::Mul, warpId, LLVMInt32(numEl), "gep2gen_offset");
 #if ISPC_LLVM_VERSION <= ISPC_LLVM_3_6
-    value = llvm::GetElementPtrInst::Create(value, offset, "gep2gen_offset", ctx->GetCurrentBasicBlock());
+        value = llvm::GetElementPtrInst::Create(value, offset, "gep2gen_offset", ctx->GetCurrentBasicBlock());
 #else
-    value = llvm::GetElementPtrInst::Create(NULL, value, offset, "gep2gen_offset", ctx->GetCurrentBasicBlock());
+        value = llvm::GetElementPtrInst::Create(NULL, value, offset, "gep2gen_offset", ctx->GetCurrentBasicBlock());
 #endif
-  }
+    }
 
-  /* convert arrElTy* to elTy* */
-  llvm::PointerType *elTyPt0 = llvm::PointerType::get(elTy, 0);
-  value  = ctx->BitCastInst(value, elTyPt0, "gep2gen_cast3");
+    /* convert arrElTy* to elTy* */
+    llvm::PointerType *elTyPt0 = llvm::PointerType::get(elTy, 0);
+    value = ctx->BitCastInst(value, elTyPt0, "gep2gen_cast3");
 
-  return value;
+    return value;
 }
 #endif /* ISPC_NVPTX_ENABLED */
 
-void
-DeclStmt::EmitCode(FunctionEmitContext *ctx) const {
+void DeclStmt::EmitCode(FunctionEmitContext *ctx) const {
     if (!ctx->GetCurrentBasicBlock())
         return;
 
@@ -235,27 +211,33 @@ DeclStmt::EmitCode(FunctionEmitContext *ctx) const {
 
         if (lHasUnsizedArrays(sym->type)) {
             Error(pos, "Illegal to declare an unsized array variable without "
-                  "providing an initializer expression to set its size.");
+                       "providing an initializer expression to set its size.");
             continue;
         }
 
         // References must have initializer expressions as well.
         if (IsReferenceType(sym->type) == true) {
             if (initExpr == NULL) {
-                Error(sym->pos, "Must provide initializer for reference-type "
-                      "variable \"%s\".", sym->name.c_str());
+                Error(sym->pos,
+                      "Must provide initializer for reference-type "
+                      "variable \"%s\".",
+                      sym->name.c_str());
                 continue;
             }
             if (IsReferenceType(initExpr->GetType()) == false) {
                 const Type *initLVType = initExpr->GetLValueType();
                 if (initLVType == NULL) {
-                    Error(initExpr->pos, "Initializer for reference-type variable "
-                          "\"%s\" must have an lvalue type.", sym->name.c_str());
+                    Error(initExpr->pos,
+                          "Initializer for reference-type variable "
+                          "\"%s\" must have an lvalue type.",
+                          sym->name.c_str());
                     continue;
                 }
                 if (initLVType->IsUniformType() == false) {
-                    Error(initExpr->pos, "Initializer for reference-type variable "
-                          "\"%s\" must have a uniform lvalue type.", sym->name.c_str());
+                    Error(initExpr->pos,
+                          "Initializer for reference-type variable "
+                          "\"%s\" must have a uniform lvalue type.",
+                          sym->name.c_str());
                     continue;
                 }
             }
@@ -269,21 +251,26 @@ DeclStmt::EmitCode(FunctionEmitContext *ctx) const {
 
         if (sym->storageClass == SC_STATIC) {
 #ifdef ISPC_NVPTX_ENABLED
-            if (g->target->getISA() == Target::NVPTX && !sym->type->IsConstType())
-            {
-                Error(sym->pos, 
-                    "Non-constant static variable ""\"%s\" is not supported with ""\"nvptx\" target.",
-                    sym->name.c_str());
+            if (g->target->getISA() == Target::NVPTX && !sym->type->IsConstType()) {
+                Error(sym->pos,
+                      "Non-constant static variable "
+                      "\"%s\" is not supported with "
+                      "\"nvptx\" target.",
+                      sym->name.c_str());
                 return;
             }
             if (g->target->getISA() == Target::NVPTX && sym->type->IsVaryingType())
-                PerformanceWarning(sym->pos, 
-                    "\"const static varying\" variable ""\"%s\" is stored in __global address space with ""\"nvptx\" target.",
-                    sym->name.c_str());
+                PerformanceWarning(sym->pos,
+                                   "\"const static varying\" variable "
+                                   "\"%s\" is stored in __global address space with "
+                                   "\"nvptx\" target.",
+                                   sym->name.c_str());
             if (g->target->getISA() == Target::NVPTX && sym->type->IsUniformType())
-                PerformanceWarning(sym->pos, 
-                    "\"const static uniform\" variable ""\"%s\" is stored in __constant address space with ""\"nvptx\" target.",
-                    sym->name.c_str());
+                PerformanceWarning(sym->pos,
+                                   "\"const static uniform\" variable "
+                                   "\"%s\" is stored in __constant address space with "
+                                   "\"nvptx\" target.",
+                                   sym->name.c_str());
 #endif /* ISPC_NVPTX_ENABLED */
             // For static variables, we need a compile-time constant value
             // for its initializer; if there's no initializer, we use a
@@ -296,8 +283,7 @@ DeclStmt::EmitCode(FunctionEmitContext *ctx) const {
                 // already done for atomic types and enums in
                 // DeclStmt::TypeCheck()...
                 if (llvm::dyn_cast<ExprList>(initExpr) == NULL) {
-                    initExpr = TypeConvertExpr(initExpr, sym->type,
-                                               "initializer");
+                    initExpr = TypeConvertExpr(initExpr, sym->type, "initializer");
                     // FIXME: and this is only needed to re-establish
                     // constant-ness so that GetConstant below works for
                     // constant artithmetic expressions...
@@ -306,114 +292,97 @@ DeclStmt::EmitCode(FunctionEmitContext *ctx) const {
 
                 cinit = initExpr->GetConstant(sym->type);
                 if (cinit == NULL)
-                    Error(initExpr->pos, "Initializer for static variable "
-                          "\"%s\" must be a constant.", sym->name.c_str());
+                    Error(initExpr->pos,
+                          "Initializer for static variable "
+                          "\"%s\" must be a constant.",
+                          sym->name.c_str());
             }
             if (cinit == NULL)
                 cinit = llvm::Constant::getNullValue(llvmType);
 
-            // Allocate space for the static variable in global scope, so
-            // that it persists across function calls
+                // Allocate space for the static variable in global scope, so
+                // that it persists across function calls
 #ifdef ISPC_NVPTX_ENABLED
             int addressSpace = 0;
-            if (g->target->getISA() == Target::NVPTX &&
-                sym->type->IsConstType() &&
-                sym->type->IsUniformType())
-              addressSpace = 4;
-            sym->storagePtr =
-                new llvm::GlobalVariable(*m->module, llvmType,
-                                         sym->type->IsConstType(),
-                                         llvm::GlobalValue::InternalLinkage, cinit,
-                                         llvm::Twine("static.") +
-                                         llvm::Twine(sym->pos.first_line) +
-                                         llvm::Twine(".") + sym->name.c_str(),
-                                         NULL,
-                                         llvm::GlobalVariable::NotThreadLocal,
-                                         addressSpace);
+            if (g->target->getISA() == Target::NVPTX && sym->type->IsConstType() && sym->type->IsUniformType())
+                addressSpace = 4;
+            sym->storagePtr = new llvm::GlobalVariable(
+                *m->module, llvmType, sym->type->IsConstType(), llvm::GlobalValue::InternalLinkage, cinit,
+                llvm::Twine("static.") + llvm::Twine(sym->pos.first_line) + llvm::Twine(".") + sym->name.c_str(), NULL,
+                llvm::GlobalVariable::NotThreadLocal, addressSpace);
             sym->storagePtr = lConvertToGenericPtr(ctx, sym->storagePtr, sym->pos);
-#else /* ISPC_NVPTX_ENABLED */
-            sym->storagePtr =
-                new llvm::GlobalVariable(*m->module, llvmType,
-                                         sym->type->IsConstType(),
-                                         llvm::GlobalValue::InternalLinkage, cinit,
-                                         llvm::Twine("static.") +
-                                         llvm::Twine(sym->pos.first_line) +
-                                         llvm::Twine(".") + sym->name.c_str());
+#else  /* ISPC_NVPTX_ENABLED */
+            sym->storagePtr = new llvm::GlobalVariable(
+                *m->module, llvmType, sym->type->IsConstType(), llvm::GlobalValue::InternalLinkage, cinit,
+                llvm::Twine("static.") + llvm::Twine(sym->pos.first_line) + llvm::Twine(".") + sym->name.c_str());
 #endif /* ISPC_NVPTX_ENABLED */
             // Tell the FunctionEmitContext about the variable
             ctx->EmitVariableDebugInfo(sym);
         }
 #ifdef ISPC_NVPTX_ENABLED
         else if ((sym->type->IsUniformType() || sym->type->IsSOAType()) &&
-          /* NVPTX:
-           * only non-constant uniform data types are stored in shared memory 
-           * constant uniform are automatically promoted to varying 
-           */
-           !sym->type->IsConstType() &&
-#if 1     
-           sym->type->IsArrayType() &&
+                 /* NVPTX:
+                  * only non-constant uniform data types are stored in shared memory
+                  * constant uniform are automatically promoted to varying
+                  */
+                 !sym->type->IsConstType() &&
+#if 1
+                 sym->type->IsArrayType() &&
 #endif
-           g->target->getISA() == Target::NVPTX)
-          {
-              PerformanceWarning(sym->pos,
-                  "Non-constant \"uniform\" data types might be slow with \"nvptx\" target. "
-                  "Unless data sharing between program instances is desired, try \"const [static] uniform\", \"varying\" or \"uniform new uniform \"+\"delete\" if possible.");
+                 g->target->getISA() == Target::NVPTX) {
+            PerformanceWarning(sym->pos,
+                               "Non-constant \"uniform\" data types might be slow with \"nvptx\" target. "
+                               "Unless data sharing between program instances is desired, try \"const [static] "
+                               "uniform\", \"varying\" or \"uniform new uniform \"+\"delete\" if possible.");
 
-              /* with __shared__ memory everything must be an array */
-              int nel = 4;
-              ArrayType *nat;
-              bool variable = true;
-              if (sym->type->IsArrayType())
-              {
+            /* with __shared__ memory everything must be an array */
+            int nel = 4;
+            ArrayType *nat;
+            bool variable = true;
+            if (sym->type->IsArrayType()) {
                 const ArrayType *at = CastType<ArrayType>(sym->type);
                 /* we must scale # elements by 4, because a thread-block will run 4 warps
                  * or 128 threads.
                  * ***note-to-me***:please define these value (128threads/4warps)
                  * in nvptx-target definition
-                 * instead of compile-time constants 
+                 * instead of compile-time constants
                  */
                 nel *= at->GetElementCount();
                 if (sym->type->IsSOAType())
-                  nel *= sym->type->GetSOAWidth();
+                    nel *= sym->type->GetSOAWidth();
                 nat = new ArrayType(at->GetElementType(), nel);
                 variable = false;
-              }
-              else
+            } else
                 nat = new ArrayType(sym->type, nel);
 
-              llvm::Type *llvmTypeUn = nat->LLVMType(g->ctx);
-              llvm::Constant *cinit = llvm::UndefValue::get(llvmTypeUn);
+            llvm::Type *llvmTypeUn = nat->LLVMType(g->ctx);
+            llvm::Constant *cinit = llvm::UndefValue::get(llvmTypeUn);
 
-              sym->storagePtr =
-                new llvm::GlobalVariable(*m->module, llvmTypeUn,
-                    sym->type->IsConstType(),
-                    llvm::GlobalValue::InternalLinkage, 
-                    cinit,
-                    llvm::Twine("local_") + 
-                    llvm::Twine(sym->pos.first_line) +
-                    llvm::Twine("_") + sym->name.c_str(),
-                    NULL,
-                    llvm::GlobalVariable::NotThreadLocal,
-                    /*AddressSpace=*/3);
-              sym->storagePtr = lConvertToGenericPtr(ctx, sym->storagePtr, sym->pos, variable);
-              llvm::PointerType *ptrTy = llvm::PointerType::get(sym->type->LLVMType(g->ctx),0);
-              sym->storagePtr = ctx->BitCastInst(sym->storagePtr, ptrTy, "uniform_decl");
+            sym->storagePtr = new llvm::GlobalVariable(
+                *m->module, llvmTypeUn, sym->type->IsConstType(), llvm::GlobalValue::InternalLinkage, cinit,
+                llvm::Twine("local_") + llvm::Twine(sym->pos.first_line) + llvm::Twine("_") + sym->name.c_str(), NULL,
+                llvm::GlobalVariable::NotThreadLocal,
+                /*AddressSpace=*/3);
+            sym->storagePtr = lConvertToGenericPtr(ctx, sym->storagePtr, sym->pos, variable);
+            llvm::PointerType *ptrTy = llvm::PointerType::get(sym->type->LLVMType(g->ctx), 0);
+            sym->storagePtr = ctx->BitCastInst(sym->storagePtr, ptrTy, "uniform_decl");
 
-              // Tell the FunctionEmitContext about the variable; must do
-              // this before the initializer stuff.
-              ctx->EmitVariableDebugInfo(sym);
+            // Tell the FunctionEmitContext about the variable; must do
+            // this before the initializer stuff.
+            ctx->EmitVariableDebugInfo(sym);
 
-              if (initExpr == 0 && sym->type->IsConstType())
-                Error(sym->pos, "Missing initializer for const variable "
-                    "\"%s\".", sym->name.c_str());
+            if (initExpr == 0 && sym->type->IsConstType())
+                Error(sym->pos,
+                      "Missing initializer for const variable "
+                      "\"%s\".",
+                      sym->name.c_str());
 
-              // And then get it initialized...
-              sym->parentFunction = ctx->GetFunction();
-              InitSymbol(sym->storagePtr, sym->type, initExpr, ctx, sym->pos);
-          }
+            // And then get it initialized...
+            sym->parentFunction = ctx->GetFunction();
+            InitSymbol(sym->storagePtr, sym->type, initExpr, ctx, sym->pos);
+        }
 #endif /* ISPC_NVPTX_ENABLED */
-          else
-          {
+        else {
             // For non-static variables, allocate storage on the stack
             sym->storagePtr = ctx->AllocaInst(llvmType, sym->name.c_str());
 
@@ -421,8 +390,10 @@ DeclStmt::EmitCode(FunctionEmitContext *ctx) const {
             // this before the initializer stuff.
             ctx->EmitVariableDebugInfo(sym);
             if (initExpr == 0 && sym->type->IsConstType())
-              Error(sym->pos, "Missing initializer for const variable "
-                  "\"%s\".", sym->name.c_str());
+                Error(sym->pos,
+                      "Missing initializer for const variable "
+                      "\"%s\".",
+                      sym->name.c_str());
 
             // And then get it initialized...
             sym->parentFunction = ctx->GetFunction();
@@ -431,9 +402,7 @@ DeclStmt::EmitCode(FunctionEmitContext *ctx) const {
     }
 }
 
-
-Stmt *
-DeclStmt::Optimize() {
+Stmt *DeclStmt::Optimize() {
     for (unsigned int i = 0; i < vars.size(); ++i) {
         Expr *init = vars[i].init;
         if (init != NULL && llvm::dyn_cast<ExprList>(init) == NULL) {
@@ -453,8 +422,7 @@ DeclStmt::Optimize() {
             // computing array sizes from non-trivial expressions is
             // consequently limited.
             Symbol *sym = vars[i].sym;
-            if (sym->type && sym->type->IsConstType() &&
-                Type::Equal(init->GetType(), sym->type))
+            if (sym->type && sym->type->IsConstType() && Type::Equal(init->GetType(), sym->type))
                 sym->constValue = llvm::dyn_cast<ConstExpr>(init);
         }
     }
@@ -465,15 +433,13 @@ DeclStmt::Optimize() {
 // another array (array assignment is not allowed).
 // Do that recursively to handle brace initialization, which may contain
 // another brace initialization.
-static
-bool checkInit(const Type *type, Expr **init) {
+static bool checkInit(const Type *type, Expr **init) {
     bool encounteredError = false;
 
     // get the right type for stuff like const float foo = 2; so that
     // the int->float type conversion is in there and we don't return
     // an int as the constValue later...
-    if (CastType<AtomicType>(type) != NULL ||
-        CastType<EnumType>(type) != NULL) {
+    if (CastType<AtomicType>(type) != NULL || CastType<EnumType>(type) != NULL) {
         // If it's an expr list with an atomic type, we'll later issue
         // an error.  Need to leave vars[i].init as is in that case so
         // it is in fact caught later, though.
@@ -482,17 +448,14 @@ bool checkInit(const Type *type, Expr **init) {
             if (*init == NULL)
                 encounteredError = true;
         }
-    } else if (CastType<ArrayType>(type) != NULL &&
-        llvm::dyn_cast<ExprList>(*init) == NULL) {
+    } else if (CastType<ArrayType>(type) != NULL && llvm::dyn_cast<ExprList>(*init) == NULL) {
         encounteredError = true;
         Error((*init)->pos, "Array initializer must be an initializer list");
-    } else if (CastType<StructType>(type) != NULL &&
-        llvm::dyn_cast<ExprList>(*init) != NULL) {
+    } else if (CastType<StructType>(type) != NULL && llvm::dyn_cast<ExprList>(*init) != NULL) {
         const StructType *st = CastType<StructType>(type);
         ExprList *el = llvm::dyn_cast<ExprList>(*init);
-        int elt_count = st->GetElementCount() < el->exprs.size() ?
-          st->GetElementCount() : el->exprs.size();
-        for (int i=0; i < elt_count; i++) {
+        int elt_count = st->GetElementCount() < el->exprs.size() ? st->GetElementCount() : el->exprs.size();
+        for (int i = 0; i < elt_count; i++) {
             encounteredError |= checkInit(st->GetElementType(i), &(el->exprs[i]));
         }
     }
@@ -500,8 +463,7 @@ bool checkInit(const Type *type, Expr **init) {
     return encounteredError;
 }
 
-Stmt *
-DeclStmt::TypeCheck() {
+Stmt *DeclStmt::TypeCheck() {
     bool encounteredError = false;
     for (unsigned int i = 0; i < vars.size(); ++i) {
         if (vars[i].sym == NULL) {
@@ -518,14 +480,11 @@ DeclStmt::TypeCheck() {
     return encounteredError ? NULL : this;
 }
 
-
-void
-DeclStmt::Print(int indent) const {
+void DeclStmt::Print(int indent) const {
     printf("%*cDecl Stmt:", indent, ' ');
     pos.Print();
     for (unsigned int i = 0; i < vars.size(); ++i) {
-        printf("%*cVariable %s (%s)", indent+4, ' ',
-               vars[i].sym->name.c_str(),
+        printf("%*cVariable %s (%s)", indent + 4, ' ', vars[i].sym->name.c_str(),
                vars[i].sym->type->GetString().c_str());
         if (vars[i].init != NULL) {
             printf(" = ");
@@ -536,25 +495,16 @@ DeclStmt::Print(int indent) const {
     printf("\n");
 }
 
-
-int
-DeclStmt::EstimateCost() const {
-    return 0;
-}
-
+int DeclStmt::EstimateCost() const { return 0; }
 
 ///////////////////////////////////////////////////////////////////////////
 // IfStmt
 
 IfStmt::IfStmt(Expr *t, Stmt *ts, Stmt *fs, bool checkCoherence, SourcePos p)
     : Stmt(p, IfStmtID), test(t), trueStmts(ts), falseStmts(fs),
-      doAllCheck(checkCoherence &&
-                 !g->opt.disableCoherentControlFlow) {
-}
+      doAllCheck(checkCoherence && !g->opt.disableCoherentControlFlow) {}
 
-
-static void
-lEmitIfStatements(FunctionEmitContext *ctx, Stmt *stmts, const char *trueOrFalse) {
+static void lEmitIfStatements(FunctionEmitContext *ctx, Stmt *stmts, const char *trueOrFalse) {
     if (!stmts)
         return;
 
@@ -565,7 +515,6 @@ lEmitIfStatements(FunctionEmitContext *ctx, Stmt *stmts, const char *trueOrFalse
     if (llvm::dyn_cast<const StmtList>(stmts) == NULL)
         ctx->EndScope();
 }
-
 
 /** Returns true if the "true" block for the if statement consists of a
     single 'break' statement, and the "false" block is empty. */
@@ -590,8 +539,7 @@ lCanApplyBreakOptimization(Stmt *trueStmts, Stmt *falseStmts) {
 }
 */
 
-void
-IfStmt::EmitCode(FunctionEmitContext *ctx) const {
+void IfStmt::EmitCode(FunctionEmitContext *ctx) const {
     // First check all of the things that might happen due to errors
     // earlier in compilation and bail out if needed so that we don't
     // dereference NULL pointers in the below...
@@ -672,16 +620,12 @@ IfStmt::EmitCode(FunctionEmitContext *ctx) const {
         emitVaryingIf(ctx, testValue);
 }
 
-
-Stmt *
-IfStmt::TypeCheck() {
+Stmt *IfStmt::TypeCheck() {
     if (test != NULL) {
         const Type *testType = test->GetType();
         if (testType != NULL) {
-            bool isUniform = (testType->IsUniformType() &&
-                              !g->opt.disableUniformControlFlow);
-            test = TypeConvertExpr(test, isUniform ? AtomicType::UniformBool :
-                                                     AtomicType::VaryingBool,
+            bool isUniform = (testType->IsUniformType() && !g->opt.disableUniformControlFlow);
+            test = TypeConvertExpr(test, isUniform ? AtomicType::UniformBool : AtomicType::VaryingBool,
                                    "\"if\" statement test");
             if (test == NULL)
                 return NULL;
@@ -691,9 +635,7 @@ IfStmt::TypeCheck() {
     return this;
 }
 
-
-int
-IfStmt::EstimateCost() const {
+int IfStmt::EstimateCost() const {
     const Type *type;
     if (test == NULL || (type = test->GetType()) == NULL)
         return 0;
@@ -701,31 +643,26 @@ IfStmt::EstimateCost() const {
     return type->IsUniformType() ? COST_UNIFORM_IF : COST_VARYING_IF;
 }
 
-
-void
-IfStmt::Print(int indent) const {
+void IfStmt::Print(int indent) const {
     printf("%*cIf Stmt %s", indent, ' ', doAllCheck ? "DO ALL CHECK" : "");
     pos.Print();
-    printf("\n%*cTest: ", indent+4, ' ');
+    printf("\n%*cTest: ", indent + 4, ' ');
     test->Print();
     printf("\n");
     if (trueStmts) {
-        printf("%*cTrue:\n", indent+4, ' ');
-        trueStmts->Print(indent+8);
+        printf("%*cTrue:\n", indent + 4, ' ');
+        trueStmts->Print(indent + 8);
     }
     if (falseStmts) {
-        printf("%*cFalse:\n", indent+4, ' ');
-        falseStmts->Print(indent+8);
+        printf("%*cFalse:\n", indent + 4, ' ');
+        falseStmts->Print(indent + 8);
     }
 }
-
 
 /** Emit code to run both the true and false statements for the if test,
     with the mask set appropriately before running each one.
 */
-void
-IfStmt::emitMaskedTrueAndFalse(FunctionEmitContext *ctx, llvm::Value *oldMask,
-                               llvm::Value *test) const {
+void IfStmt::emitMaskedTrueAndFalse(FunctionEmitContext *ctx, llvm::Value *oldMask, llvm::Value *test) const {
     if (trueStmts) {
         ctx->SetInternalMaskAnd(oldMask, test);
         lEmitIfStatements(ctx, trueStmts, "if: expr mixed, true statements");
@@ -743,8 +680,7 @@ IfStmt::emitMaskedTrueAndFalse(FunctionEmitContext *ctx, llvm::Value *oldMask,
 /** Emit code for an if test that checks the mask and the test values and
     tries to be smart about jumping over code that doesn't need to be run.
  */
-void
-IfStmt::emitVaryingIf(FunctionEmitContext *ctx, llvm::Value *ltest) const {
+void IfStmt::emitVaryingIf(FunctionEmitContext *ctx, llvm::Value *ltest) const {
     llvm::Value *oldMask = ctx->GetInternalMask();
     if (doAllCheck) {
         // We can't tell if the mask going into the if is all on at the
@@ -770,8 +706,7 @@ IfStmt::emitVaryingIf(FunctionEmitContext *ctx, llvm::Value *ltest) const {
         // When done, set the current basic block to the block that the two
         // paths above jump to when they're done.
         ctx->SetCurrentBasicBlock(bDone);
-    }
-    else if (trueStmts != NULL || falseStmts != NULL) {
+    } else if (trueStmts != NULL || falseStmts != NULL) {
         // If there is nothing that is potentially unsafe to run with all
         // lanes off in the true and false statements and if the total
         // complexity of those two is relatively simple, then we'll go
@@ -791,26 +726,21 @@ IfStmt::emitVaryingIf(FunctionEmitContext *ctx, llvm::Value *ltest) const {
         //
         // where our use of blend for conditional assignments doesn't check
         // for the 'all lanes' off case.
-        int trueFalseCost = (::EstimateCost(trueStmts) +
-                             ::EstimateCost(falseStmts));
-        bool costIsAcceptable = (trueFalseCost <
-                                 PREDICATE_SAFE_IF_STATEMENT_COST);
+        int trueFalseCost = (::EstimateCost(trueStmts) + ::EstimateCost(falseStmts));
+        bool costIsAcceptable = (trueFalseCost < PREDICATE_SAFE_IF_STATEMENT_COST);
 
-        bool safeToRunWithAllLanesOff = (SafeToRunWithMaskAllOff(trueStmts) &&
-                                         SafeToRunWithMaskAllOff(falseStmts));
+        bool safeToRunWithAllLanesOff = (SafeToRunWithMaskAllOff(trueStmts) && SafeToRunWithMaskAllOff(falseStmts));
 
-        Debug(pos, "If statement: true cost %d (safe %d), false cost %d (safe %d).",
-              ::EstimateCost(trueStmts), (int)SafeToRunWithMaskAllOff(trueStmts),
-              ::EstimateCost(falseStmts), (int)SafeToRunWithMaskAllOff(falseStmts));
+        Debug(pos, "If statement: true cost %d (safe %d), false cost %d (safe %d).", ::EstimateCost(trueStmts),
+              (int)SafeToRunWithMaskAllOff(trueStmts), ::EstimateCost(falseStmts),
+              (int)SafeToRunWithMaskAllOff(falseStmts));
 
-        if (safeToRunWithAllLanesOff &&
-            (costIsAcceptable || g->opt.disableCoherentControlFlow)) {
+        if (safeToRunWithAllLanesOff && (costIsAcceptable || g->opt.disableCoherentControlFlow)) {
             ctx->StartVaryingIf(oldMask);
             emitMaskedTrueAndFalse(ctx, oldMask, ltest);
             AssertPos(pos, ctx->GetCurrentBasicBlock());
             ctx->EndIf();
-        }
-        else {
+        } else {
             llvm::BasicBlock *bDone = ctx->CreateBasicBlock("if_done");
             emitMaskMixed(ctx, oldMask, ltest, bDone);
             ctx->SetCurrentBasicBlock(bDone);
@@ -818,13 +748,10 @@ IfStmt::emitVaryingIf(FunctionEmitContext *ctx, llvm::Value *ltest) const {
     }
 }
 
-
 /** Emits code for 'if' tests under the case where we know that the program
     mask is all on going into the 'if'.
  */
-void
-IfStmt::emitMaskAllOn(FunctionEmitContext *ctx, llvm::Value *ltest,
-                      llvm::BasicBlock *bDone) const {
+void IfStmt::emitMaskAllOn(FunctionEmitContext *ctx, llvm::Value *ltest, llvm::BasicBlock *bDone) const {
     // We start by explicitly storing "all on" into the mask mask.  Note
     // that this doesn't change its actual value, but doing so lets the
     // compiler see what's going on so that subsequent optimizations for
@@ -888,13 +815,11 @@ IfStmt::emitMaskAllOn(FunctionEmitContext *ctx, llvm::Value *ltest,
     ctx->SetFunctionMask(oldFunctionMask);
 }
 
-
 /** Emit code for an 'if' test where the lane mask is known to be mixed
     on/off going into it.
  */
-void
-IfStmt::emitMaskMixed(FunctionEmitContext *ctx, llvm::Value *oldMask,
-                      llvm::Value *ltest, llvm::BasicBlock *bDone) const {
+void IfStmt::emitMaskMixed(FunctionEmitContext *ctx, llvm::Value *oldMask, llvm::Value *ltest,
+                           llvm::BasicBlock *bDone) const {
     ctx->StartVaryingIf(oldMask);
     llvm::BasicBlock *bNext = ctx->CreateBasicBlock("safe_if_after_true");
 
@@ -910,7 +835,7 @@ IfStmt::emitMaskMixed(FunctionEmitContext *ctx, llvm::Value *oldMask,
 #else
     llvm::Value *maskAnyTrueQ = ctx->Any(ctx->GetFullMask());
 #endif
-#else /* ISPC_NVPTX_ENABLED */
+#else  /* ISPC_NVPTX_ENABLED */
     llvm::Value *maskAnyTrueQ = ctx->Any(ctx->GetFullMask());
 #endif /* ISPC_NVPTX_ENABLED */
 
@@ -937,7 +862,7 @@ IfStmt::emitMaskMixed(FunctionEmitContext *ctx, llvm::Value *oldMask,
 #else
     llvm::Value *maskAnyFalseQ = ctx->Any(ctx->GetFullMask());
 #endif
-#else /* ISPC_NVPTX_ENABLED */
+#else  /* ISPC_NVPTX_ENABLED */
     llvm::Value *maskAnyFalseQ = ctx->Any(ctx->GetFullMask());
 #endif /* ISPC_NVPTX_ENABLED */
     ctx->BranchInst(bRunFalse, bDone, maskAnyFalseQ);
@@ -953,7 +878,6 @@ IfStmt::emitMaskMixed(FunctionEmitContext *ctx, llvm::Value *oldMask,
     ctx->EndIf();
 }
 
-
 ///////////////////////////////////////////////////////////////////////////
 // DoStmt
 
@@ -967,32 +891,25 @@ struct VaryingBCCheckInfo {
     bool foundVaryingBreakOrContinue;
 };
 
-
 /** Returns true if the given node is an 'if' statement where the test
     condition has varying type. */
-static bool
-lIsVaryingFor(ASTNode *node) {
+static bool lIsVaryingFor(ASTNode *node) {
     IfStmt *ifStmt;
-    if ((ifStmt = llvm::dyn_cast<IfStmt>(node)) != NULL &&
-        ifStmt->test != NULL) {
+    if ((ifStmt = llvm::dyn_cast<IfStmt>(node)) != NULL && ifStmt->test != NULL) {
         const Type *type = ifStmt->test->GetType();
         return (type != NULL && type->IsVaryingType());
-    }
-    else
+    } else
         return false;
 }
 
-
 /** Preorder callback function for checking for varying breaks or
     continues. */
-static bool
-lVaryingBCPreFunc(ASTNode *node, void *d) {
+static bool lVaryingBCPreFunc(ASTNode *node, void *d) {
     VaryingBCCheckInfo *info = (VaryingBCCheckInfo *)d;
 
     // We found a break or continue statement; if we're under varying
     // control flow, then bingo.
-    if ((llvm::dyn_cast<BreakStmt>(node) != NULL ||
-         llvm::dyn_cast<ContinueStmt>(node) != NULL) &&
+    if ((llvm::dyn_cast<BreakStmt>(node) != NULL || llvm::dyn_cast<ContinueStmt>(node) != NULL) &&
         info->varyingControlFlowDepth > 0) {
         info->foundVaryingBreakOrContinue = true;
         return false;
@@ -1003,8 +920,7 @@ lVaryingBCPreFunc(ASTNode *node, void *d) {
     if (lIsVaryingFor(node))
         ++info->varyingControlFlowDepth;
 
-    if (llvm::dyn_cast<ForStmt>(node) != NULL ||
-        llvm::dyn_cast<DoStmt>(node) != NULL ||
+    if (llvm::dyn_cast<ForStmt>(node) != NULL || llvm::dyn_cast<DoStmt>(node) != NULL ||
         llvm::dyn_cast<ForeachStmt>(node) != NULL)
         // Don't recurse into these guys, since we don't care about varying
         // breaks or continues within them...
@@ -1013,18 +929,15 @@ lVaryingBCPreFunc(ASTNode *node, void *d) {
         return true;
 }
 
-
 /** Postorder callback function for checking for varying breaks or
     continues; decrement the varying control flow depth after the node's
     children have been processed, if this is a varying if statement. */
-static ASTNode *
-lVaryingBCPostFunc(ASTNode *node, void *d) {
+static ASTNode *lVaryingBCPostFunc(ASTNode *node, void *d) {
     VaryingBCCheckInfo *info = (VaryingBCCheckInfo *)d;
     if (lIsVaryingFor(node))
         --info->varyingControlFlowDepth;
     return node;
 }
-
 
 /** Given a statment, walk through it to see if there is a 'break' or
     'continue' statement inside if its children, under varying control
@@ -1032,19 +945,14 @@ lVaryingBCPostFunc(ASTNode *node, void *d) {
     look like a 'uniform' loop needs to have code emitted to do all of the
     lane management stuff if this is the case.
  */
-static bool
-lHasVaryingBreakOrContinue(Stmt *stmt) {
+static bool lHasVaryingBreakOrContinue(Stmt *stmt) {
     VaryingBCCheckInfo info;
     WalkAST(stmt, lVaryingBCPreFunc, lVaryingBCPostFunc, &info);
     return info.foundVaryingBreakOrContinue;
 }
 
-
 DoStmt::DoStmt(Expr *t, Stmt *s, bool cc, SourcePos p)
-    : Stmt(p, DoStmtID), testExpr(t), bodyStmts(s),
-      doCoherentCheck(cc && !g->opt.disableCoherentControlFlow) {
-}
-
+    : Stmt(p, DoStmtID), testExpr(t), bodyStmts(s), doCoherentCheck(cc && !g->opt.disableCoherentControlFlow) {}
 
 void DoStmt::EmitCode(FunctionEmitContext *ctx) const {
     // Check for things that could be NULL due to earlier errors during
@@ -1057,7 +965,7 @@ void DoStmt::EmitCode(FunctionEmitContext *ctx) const {
     bool uniformTest = testExpr->GetType()->IsUniformType();
     if (uniformTest && doCoherentCheck)
         Warning(testExpr->pos, "Uniform condition supplied to \"cdo\" "
-                "statement.");
+                               "statement.");
 
     llvm::BasicBlock *bloop = ctx->CreateBasicBlock("do_loop");
     llvm::BasicBlock *bexit = ctx->CreateBasicBlock("do_exit");
@@ -1108,8 +1016,7 @@ void DoStmt::EmitCode(FunctionEmitContext *ctx) const {
             bodyStmts->EmitCode(ctx);
         AssertPos(pos, ctx->GetCurrentBasicBlock());
         ctx->BranchInst(btest);
-    }
-    else {
+    } else {
         // Otherwise just emit the code for the loop body.  The current
         // mask is good.
         if (bodyStmts)
@@ -1155,9 +1062,7 @@ void DoStmt::EmitCode(FunctionEmitContext *ctx) const {
     ctx->EndLoop();
 }
 
-
-Stmt *
-DoStmt::TypeCheck() {
+Stmt *DoStmt::TypeCheck() {
     const Type *testType;
     if (testExpr != NULL && (testType = testExpr->GetType()) != NULL) {
         // Should the test condition for the loop be uniform or varying?
@@ -1176,54 +1081,44 @@ DoStmt::TypeCheck() {
         //   loop includes masking stuff, so that we can track which lanes
         //   actually want to be running, accounting for breaks/continues.
         //
-        bool uniformTest = (testType->IsUniformType() &&
-                            !g->opt.disableUniformControlFlow &&
-                            !lHasVaryingBreakOrContinue(bodyStmts));
-        testExpr = TypeConvertExpr(testExpr, uniformTest ? AtomicType::UniformBool :
-                                                           AtomicType::VaryingBool,
+        bool uniformTest =
+            (testType->IsUniformType() && !g->opt.disableUniformControlFlow && !lHasVaryingBreakOrContinue(bodyStmts));
+        testExpr = TypeConvertExpr(testExpr, uniformTest ? AtomicType::UniformBool : AtomicType::VaryingBool,
                                    "\"do\" statement");
     }
 
     return this;
 }
 
-
-int
-DoStmt::EstimateCost() const {
-    bool uniformTest = testExpr ? testExpr->GetType()->IsUniformType() :
-        (!g->opt.disableUniformControlFlow &&
-         !lHasVaryingBreakOrContinue(bodyStmts));
+int DoStmt::EstimateCost() const {
+    bool uniformTest = testExpr ? testExpr->GetType()->IsUniformType()
+                                : (!g->opt.disableUniformControlFlow && !lHasVaryingBreakOrContinue(bodyStmts));
 
     return uniformTest ? COST_UNIFORM_LOOP : COST_VARYING_LOOP;
 }
 
-
-void
-DoStmt::Print(int indent) const {
+void DoStmt::Print(int indent) const {
     printf("%*cDo Stmt", indent, ' ');
     pos.Print();
     printf(":\n");
-    printf("%*cTest: ", indent+4, ' ');
-    if (testExpr) testExpr->Print();
+    printf("%*cTest: ", indent + 4, ' ');
+    if (testExpr)
+        testExpr->Print();
     printf("\n");
     if (bodyStmts) {
-        printf("%*cStmts:\n", indent+4, ' ');
-        bodyStmts->Print(indent+8);
+        printf("%*cStmts:\n", indent + 4, ' ');
+        bodyStmts->Print(indent + 8);
     }
 }
-
 
 ///////////////////////////////////////////////////////////////////////////
 // ForStmt
 
 ForStmt::ForStmt(Stmt *i, Expr *t, Stmt *s, Stmt *st, bool cc, SourcePos p)
     : Stmt(p, ForStmtID), init(i), test(t), step(s), stmts(st),
-      doCoherentCheck(cc && !g->opt.disableCoherentControlFlow) {
-}
+      doCoherentCheck(cc && !g->opt.disableCoherentControlFlow) {}
 
-
-void
-ForStmt::EmitCode(FunctionEmitContext *ctx) const {
+void ForStmt::EmitCode(FunctionEmitContext *ctx) const {
     if (!ctx->GetCurrentBasicBlock())
         return;
 
@@ -1232,9 +1127,8 @@ ForStmt::EmitCode(FunctionEmitContext *ctx) const {
     llvm::BasicBlock *bloop = ctx->CreateBasicBlock("for_loop");
     llvm::BasicBlock *bexit = ctx->CreateBasicBlock("for_exit");
 
-    bool uniformTest = test ? test->GetType()->IsUniformType() :
-        (!g->opt.disableUniformControlFlow &&
-         !lHasVaryingBreakOrContinue(stmts));
+    bool uniformTest = test ? test->GetType()->IsUniformType()
+                            : (!g->opt.disableUniformControlFlow && !lHasVaryingBreakOrContinue(stmts));
 
     ctx->StartLoop(bexit, bstep, uniformTest);
     ctx->SetDebugPos(pos);
@@ -1260,8 +1154,7 @@ ForStmt::EmitCode(FunctionEmitContext *ctx) const {
             ctx->EndLoop();
             return;
         }
-    }
-    else
+    } else
         ltest = uniformTest ? LLVMTrue : LLVMBoolVector(true);
 
     // Now use the test's value.  For a uniform loop, we can either jump to
@@ -1271,11 +1164,10 @@ ForStmt::EmitCode(FunctionEmitContext *ctx) const {
     if (uniformTest) {
         if (doCoherentCheck)
             Warning(test->pos, "Uniform condition supplied to cfor/cwhile "
-                    "statement.");
+                               "statement.");
         AssertPos(pos, ltest->getType() == LLVMTypes::BoolType);
         ctx->BranchInst(bloop, bexit, ltest);
-    }
-    else {
+    } else {
         llvm::Value *mask = ctx->GetInternalMask();
         ctx->SetInternalMaskAnd(mask, ltest);
         ctx->BranchIfMaskAny(bloop, bexit);
@@ -1319,8 +1211,7 @@ ForStmt::EmitCode(FunctionEmitContext *ctx) const {
         if (stmts)
             stmts->EmitCode(ctx);
         ctx->BranchInst(bstep);
-    }
-    else {
+    } else {
         // For both uniform loops and varying loops without the coherence
         // check, we know that at least one program instance wants to be
         // running the loop, so just emit code for the loop body and jump
@@ -1352,18 +1243,14 @@ ForStmt::EmitCode(FunctionEmitContext *ctx) const {
     ctx->EndLoop();
 }
 
-
-Stmt *
-ForStmt::TypeCheck() {
+Stmt *ForStmt::TypeCheck() {
     const Type *testType;
     if (test && (testType = test->GetType()) != NULL) {
         // See comments in DoStmt::TypeCheck() regarding
         // 'uniformTest' and the type conversion here.
-        bool uniformTest = (testType->IsUniformType() &&
-                            !g->opt.disableUniformControlFlow &&
-                            !lHasVaryingBreakOrContinue(stmts));
-        test = TypeConvertExpr(test, uniformTest ? AtomicType::UniformBool :
-                                                   AtomicType::VaryingBool,
+        bool uniformTest =
+            (testType->IsUniformType() && !g->opt.disableUniformControlFlow && !lHasVaryingBreakOrContinue(stmts));
+        test = TypeConvertExpr(test, uniformTest ? AtomicType::UniformBool : AtomicType::VaryingBool,
                                "\"for\"/\"while\" statement");
         if (test == NULL)
             return NULL;
@@ -1372,51 +1259,42 @@ ForStmt::TypeCheck() {
     return this;
 }
 
-
-int
-ForStmt::EstimateCost() const {
-    bool uniformTest = test ? test->GetType()->IsUniformType() :
-        (!g->opt.disableUniformControlFlow &&
-         !lHasVaryingBreakOrContinue(stmts));
+int ForStmt::EstimateCost() const {
+    bool uniformTest = test ? test->GetType()->IsUniformType()
+                            : (!g->opt.disableUniformControlFlow && !lHasVaryingBreakOrContinue(stmts));
 
     return uniformTest ? COST_UNIFORM_LOOP : COST_VARYING_LOOP;
 }
 
-
-void
-ForStmt::Print(int indent) const {
+void ForStmt::Print(int indent) const {
     printf("%*cFor Stmt", indent, ' ');
     pos.Print();
     printf("\n");
     if (init) {
-        printf("%*cInit:\n", indent+4, ' ');
-        init->Print(indent+8);
+        printf("%*cInit:\n", indent + 4, ' ');
+        init->Print(indent + 8);
     }
     if (test) {
-        printf("%*cTest: ", indent+4, ' ');
+        printf("%*cTest: ", indent + 4, ' ');
         test->Print();
         printf("\n");
     }
     if (step) {
-        printf("%*cStep:\n", indent+4, ' ');
-        step->Print(indent+8);
+        printf("%*cStep:\n", indent + 4, ' ');
+        step->Print(indent + 8);
     }
     if (stmts) {
-        printf("%*cStmts:\n", indent+4, ' ');
-        stmts->Print(indent+8);
+        printf("%*cStmts:\n", indent + 4, ' ');
+        stmts->Print(indent + 8);
     }
 }
 
 ///////////////////////////////////////////////////////////////////////////
 // BreakStmt
 
-BreakStmt::BreakStmt(SourcePos p)
-    : Stmt(p, BreakStmtID) {
-}
+BreakStmt::BreakStmt(SourcePos p) : Stmt(p, BreakStmtID) {}
 
-
-void
-BreakStmt::EmitCode(FunctionEmitContext *ctx) const {
+void BreakStmt::EmitCode(FunctionEmitContext *ctx) const {
     if (!ctx->GetCurrentBasicBlock())
         return;
 
@@ -1424,37 +1302,22 @@ BreakStmt::EmitCode(FunctionEmitContext *ctx) const {
     ctx->Break(true);
 }
 
+Stmt *BreakStmt::TypeCheck() { return this; }
 
-Stmt *
-BreakStmt::TypeCheck() {
-    return this;
-}
+int BreakStmt::EstimateCost() const { return COST_BREAK_CONTINUE; }
 
-
-int
-BreakStmt::EstimateCost() const {
-    return COST_BREAK_CONTINUE;
-}
-
-
-void
-BreakStmt::Print(int indent) const {
+void BreakStmt::Print(int indent) const {
     printf("%*cBreak Stmt", indent, ' ');
     pos.Print();
     printf("\n");
 }
 
-
 ///////////////////////////////////////////////////////////////////////////
 // ContinueStmt
 
-ContinueStmt::ContinueStmt(SourcePos p)
-    : Stmt(p, ContinueStmtID) {
-}
+ContinueStmt::ContinueStmt(SourcePos p) : Stmt(p, ContinueStmtID) {}
 
-
-void
-ContinueStmt::EmitCode(FunctionEmitContext *ctx) const {
+void ContinueStmt::EmitCode(FunctionEmitContext *ctx) const {
     if (!ctx->GetCurrentBasicBlock())
         return;
 
@@ -1462,145 +1325,119 @@ ContinueStmt::EmitCode(FunctionEmitContext *ctx) const {
     ctx->Continue(true);
 }
 
+Stmt *ContinueStmt::TypeCheck() { return this; }
 
-Stmt *
-ContinueStmt::TypeCheck() {
-    return this;
-}
+int ContinueStmt::EstimateCost() const { return COST_BREAK_CONTINUE; }
 
-
-int
-ContinueStmt::EstimateCost() const {
-    return COST_BREAK_CONTINUE;
-}
-
-
-void
-ContinueStmt::Print(int indent) const {
+void ContinueStmt::Print(int indent) const {
     printf("%*cContinue Stmt", indent, ' ');
     pos.Print();
     printf("\n");
 }
 
-
 ///////////////////////////////////////////////////////////////////////////
 // ForeachStmt
 
-ForeachStmt::ForeachStmt(const std::vector<Symbol *> &lvs,
-                         const std::vector<Expr *> &se,
-                         const std::vector<Expr *> &ee,
+ForeachStmt::ForeachStmt(const std::vector<Symbol *> &lvs, const std::vector<Expr *> &se, const std::vector<Expr *> &ee,
                          Stmt *s, bool t, SourcePos pos)
-    : Stmt(pos, ForeachStmtID), dimVariables(lvs), startExprs(se), endExprs(ee), isTiled(t),
-      stmts(s) {
-}
-
+    : Stmt(pos, ForeachStmtID), dimVariables(lvs), startExprs(se), endExprs(ee), isTiled(t), stmts(s) {}
 
 /* Given a uniform counter value in the memory location pointed to by
    uniformCounterPtr, compute the corresponding set of varying counter
    values for use within the loop body.
  */
-static llvm::Value *
-lUpdateVaryingCounter(int dim, int nDims, FunctionEmitContext *ctx,
-                      llvm::Value *uniformCounterPtr,
-                      llvm::Value *varyingCounterPtr,
-                      const std::vector<int> &spans) {
+static llvm::Value *lUpdateVaryingCounter(int dim, int nDims, FunctionEmitContext *ctx, llvm::Value *uniformCounterPtr,
+                                          llvm::Value *varyingCounterPtr, const std::vector<int> &spans) {
 #ifdef ISPC_NVPTX_ENABLED
-    if (g->target->getISA() == Target::NVPTX)
-    {
-      // Smear the uniform counter value out to be varying
-      llvm::Value *counter = ctx->LoadInst(uniformCounterPtr);
-      llvm::Value *smearCounter = ctx->BroadcastValue(
-          counter, LLVMTypes::Int32VectorType, "smear_counter");
+    if (g->target->getISA() == Target::NVPTX) {
+        // Smear the uniform counter value out to be varying
+        llvm::Value *counter = ctx->LoadInst(uniformCounterPtr);
+        llvm::Value *smearCounter = ctx->BroadcastValue(counter, LLVMTypes::Int32VectorType, "smear_counter");
 
-      // Figure out the offsets; this is a little bit tricky.  As an example,
-      // consider a 2D tiled foreach loop, where we're running 8-wide and
-      // where the inner dimension has a stride of 4 and the outer dimension
-      // has a stride of 2.  For the inner dimension, we want the offsets
-      // (0,1,2,3,0,1,2,3), and for the outer dimension we want
-      // (0,0,0,0,1,1,1,1).
-      int32_t delta[ISPC_MAX_NVEC];
-      const int vecWidth = 32; 
-      std::vector<llvm::Constant*> constDeltaList;
-      for (int i = 0; i < vecWidth; ++i) 
-      {
-        int d = i;
-        // First, account for the effect of any dimensions at deeper
-        // nesting levels than the current one.
-        int prevDimSpanCount = 1;
-        for (int j = dim; j < nDims-1; ++j)
-          prevDimSpanCount *= spans[j+1];
-        d /= prevDimSpanCount;
+        // Figure out the offsets; this is a little bit tricky.  As an example,
+        // consider a 2D tiled foreach loop, where we're running 8-wide and
+        // where the inner dimension has a stride of 4 and the outer dimension
+        // has a stride of 2.  For the inner dimension, we want the offsets
+        // (0,1,2,3,0,1,2,3), and for the outer dimension we want
+        // (0,0,0,0,1,1,1,1).
+        int32_t delta[ISPC_MAX_NVEC];
+        const int vecWidth = 32;
+        std::vector<llvm::Constant *> constDeltaList;
+        for (int i = 0; i < vecWidth; ++i) {
+            int d = i;
+            // First, account for the effect of any dimensions at deeper
+            // nesting levels than the current one.
+            int prevDimSpanCount = 1;
+            for (int j = dim; j < nDims - 1; ++j)
+                prevDimSpanCount *= spans[j + 1];
+            d /= prevDimSpanCount;
 
-        // And now with what's left, figure out our own offset
-        delta[i] = d % spans[dim];
-        constDeltaList.push_back(LLVMInt8(delta[i]));
-      }
+            // And now with what's left, figure out our own offset
+            delta[i] = d % spans[dim];
+            constDeltaList.push_back(LLVMInt8(delta[i]));
+        }
 
-      llvm::ArrayType* ArrayDelta = llvm::ArrayType::get(LLVMTypes::Int8Type, 32);
-  //    llvm::PointerType::get(ArrayDelta, 4); /* constant memory */
+        llvm::ArrayType *ArrayDelta = llvm::ArrayType::get(LLVMTypes::Int8Type, 32);
+        //    llvm::PointerType::get(ArrayDelta, 4); /* constant memory */
 
-
-      llvm::GlobalVariable* globalDelta = new llvm::GlobalVariable(
-          /*Module=*/*m->module,
-          /*Type=*/ArrayDelta,
-          /*isConstant=*/true,
-          /*Linkage=*/llvm::GlobalValue::PrivateLinkage,
-          /*Initializer=*/0, // has initializer, specified below
-          /*Name=*/"constDeltaForeach");
+        llvm::GlobalVariable *globalDelta = new llvm::GlobalVariable(
+            /*Module=*/*m->module,
+            /*Type=*/ArrayDelta,
+            /*isConstant=*/true,
+            /*Linkage=*/llvm::GlobalValue::PrivateLinkage,
+            /*Initializer=*/0, // has initializer, specified below
+            /*Name=*/"constDeltaForeach");
 #if 0
           /*ThreadLocalMode=*/llvm::GlobalVariable::NotThreadLocal,
           /*unsigned AddressSpace=*/4 /*constant*/);
 #endif
 
+        llvm::Constant *constDelta = llvm::ConstantArray::get(ArrayDelta, constDeltaList);
 
-      llvm::Constant* constDelta = llvm::ConstantArray::get(ArrayDelta, constDeltaList);
+        globalDelta->setInitializer(constDelta);
+        llvm::Function *func_program_index = m->module->getFunction("__program_index");
+        llvm::Value *laneIdx =
+            ctx->CallInst(func_program_index, NULL, std::vector<llvm::Value *>(), "foreach__programIndex");
 
-      globalDelta->setInitializer(constDelta);
-      llvm::Function *func_program_index = m->module->getFunction("__program_index");
-      llvm::Value *laneIdx = ctx->CallInst(func_program_index, NULL, std::vector<llvm::Value*>(), "foreach__programIndex");
-
-      std::vector<llvm::Value*> ptr_arrayidx_indices;
-      ptr_arrayidx_indices.push_back(LLVMInt32(0));
-      ptr_arrayidx_indices.push_back(laneIdx);
+        std::vector<llvm::Value *> ptr_arrayidx_indices;
+        ptr_arrayidx_indices.push_back(LLVMInt32(0));
+        ptr_arrayidx_indices.push_back(laneIdx);
 #if 1
 #if ISPC_LLVM_VERSION <= ISPC_LLVM_3_6
-      llvm::Instruction* ptr_arrayidx = llvm::GetElementPtrInst::Create(globalDelta, ptr_arrayidx_indices, "arrayidx", ctx->GetCurrentBasicBlock());
+        llvm::Instruction *ptr_arrayidx =
+            llvm::GetElementPtrInst::Create(globalDelta, ptr_arrayidx_indices, "arrayidx", ctx->GetCurrentBasicBlock());
 #else
-      llvm::Instruction* ptr_arrayidx = llvm::GetElementPtrInst::Create(NULL, globalDelta, ptr_arrayidx_indices, "arrayidx", ctx->GetCurrentBasicBlock());
+        llvm::Instruction *ptr_arrayidx = llvm::GetElementPtrInst::Create(NULL, globalDelta, ptr_arrayidx_indices,
+                                                                          "arrayidx", ctx->GetCurrentBasicBlock());
 #endif
-      llvm::LoadInst* int8_39 = new llvm::LoadInst(ptr_arrayidx, "", false, ctx->GetCurrentBasicBlock());
-      llvm::Value * int32_39 = ctx->ZExtInst(int8_39, LLVMTypes::Int32Type);
+        llvm::LoadInst *int8_39 = new llvm::LoadInst(ptr_arrayidx, "", false, ctx->GetCurrentBasicBlock());
+        llvm::Value *int32_39 = ctx->ZExtInst(int8_39, LLVMTypes::Int32Type);
 
-      llvm::VectorType* VectorTy_2 = llvm::VectorType::get(llvm::IntegerType::get(*g->ctx, 32), 1);
-      llvm::UndefValue* const_packed_41 = llvm::UndefValue::get(VectorTy_2);
+        llvm::VectorType *VectorTy_2 = llvm::VectorType::get(llvm::IntegerType::get(*g->ctx, 32), 1);
+        llvm::UndefValue *const_packed_41 = llvm::UndefValue::get(VectorTy_2);
 
-      llvm::InsertElementInst* packed_43 = llvm::InsertElementInst::Create(
-  //        llvm::UndefValue(LLVMInt32Vector),
-          const_packed_41,
-          int32_39, LLVMInt32(0), "", ctx->GetCurrentBasicBlock());
+        llvm::InsertElementInst *packed_43 = llvm::InsertElementInst::Create(
+            //        llvm::UndefValue(LLVMInt32Vector),
+            const_packed_41, int32_39, LLVMInt32(0), "", ctx->GetCurrentBasicBlock());
 #endif
 
-
-      // Add the deltas to compute the varying counter values; store the
-      // result to memory and then return it directly as well.
+        // Add the deltas to compute the varying counter values; store the
+        // result to memory and then return it directly as well.
 #if 0
       llvm::Value *varyingCounter =
           ctx->BinaryOperator(llvm::Instruction::Add, smearCounter,
                               LLVMInt32Vector(delta), "iter_val");
 #else
-      llvm::Value *varyingCounter =
-          ctx->BinaryOperator(llvm::Instruction::Add, smearCounter,
-                              packed_43, "iter_val");
+        llvm::Value *varyingCounter = ctx->BinaryOperator(llvm::Instruction::Add, smearCounter, packed_43, "iter_val");
 #endif
-      ctx->StoreInst(varyingCounter, varyingCounterPtr);
-      return varyingCounter;
+        ctx->StoreInst(varyingCounter, varyingCounterPtr);
+        return varyingCounter;
     }
 #endif /* ISPC_NVPTX_ENABLED */
 
     // Smear the uniform counter value out to be varying
     llvm::Value *counter = ctx->LoadInst(uniformCounterPtr);
-    llvm::Value *smearCounter = ctx->BroadcastValue(
-        counter, LLVMTypes::Int32VectorType, "smear_counter");
+    llvm::Value *smearCounter = ctx->BroadcastValue(counter, LLVMTypes::Int32VectorType, "smear_counter");
 
     // Figure out the offsets; this is a little bit tricky.  As an example,
     // consider a 2D tiled foreach loop, where we're running 8-wide and
@@ -1614,8 +1451,8 @@ lUpdateVaryingCounter(int dim, int nDims, FunctionEmitContext *ctx,
         // First, account for the effect of any dimensions at deeper
         // nesting levels than the current one.
         int prevDimSpanCount = 1;
-        for (int j = dim; j < nDims-1; ++j)
-            prevDimSpanCount *= spans[j+1];
+        for (int j = dim; j < nDims - 1; ++j)
+            prevDimSpanCount *= spans[j + 1];
         d /= prevDimSpanCount;
 
         // And now with what's left, figure out our own offset
@@ -1625,24 +1462,20 @@ lUpdateVaryingCounter(int dim, int nDims, FunctionEmitContext *ctx,
     // Add the deltas to compute the varying counter values; store the
     // result to memory and then return it directly as well.
     llvm::Value *varyingCounter =
-        ctx->BinaryOperator(llvm::Instruction::Add, smearCounter,
-                            LLVMInt32Vector(delta), "iter_val");
+        ctx->BinaryOperator(llvm::Instruction::Add, smearCounter, LLVMInt32Vector(delta), "iter_val");
     ctx->StoreInst(varyingCounter, varyingCounterPtr);
     return varyingCounter;
 }
 
-
 /** Returns the integer log2 of the given integer. */
-static int
-lLog2(int i) {
+static int lLog2(int i) {
     int ret = 0;
     while (i != 0) {
         ++ret;
         i >>= 1;
     }
-    return ret-1;
+    return ret - 1;
 }
-
 
 /* Figure out how many elements to process in each dimension for each time
    through a foreach loop.  The untiled case is easy; all of the outer
@@ -1653,8 +1486,7 @@ lLog2(int i) {
 
    This code works recursively from outer dimensions to inner dimensions.
  */
-static void
-lGetSpans(int dimsLeft, int nDims, int itemsLeft, bool isTiled, int *a) {
+static void lGetSpans(int dimsLeft, int nDims, int itemsLeft, bool isTiled, int *a) {
     if (dimsLeft == 0) {
         // Nothing left to do but give all of the remaining work to the
         // innermost domain.
@@ -1676,9 +1508,8 @@ lGetSpans(int dimsLeft, int nDims, int itemsLeft, bool isTiled, int *a) {
         // Otherwise give this dimension a span of two.
         *a = 2;
 
-    lGetSpans(dimsLeft-1, nDims, itemsLeft / *a, isTiled, a+1);
+    lGetSpans(dimsLeft - 1, nDims, itemsLeft / *a, isTiled, a + 1);
 }
-
 
 /* Emit code for a foreach statement.  We effectively emit code to run the
    set of n-dimensional nested loops corresponding to the dimensionality of
@@ -1686,8 +1517,7 @@ lGetSpans(int dimsLeft, int nDims, int itemsLeft, bool isTiled, int *a) {
    between the vector width we're compiling to and the number of elements
    to process.
  */
-void
-ForeachStmt::EmitCode(FunctionEmitContext *ctx) const {
+void ForeachStmt::EmitCode(FunctionEmitContext *ctx) const {
     if (ctx->GetCurrentBasicBlock() == NULL || stmts == NULL)
         return;
 
@@ -1705,8 +1535,7 @@ ForeachStmt::EmitCode(FunctionEmitContext *ctx) const {
     ctx->SetFunctionMask(LLVMMaskAllOn);
 
     // This should be caught during typechecking
-    AssertPos(pos, startExprs.size() == dimVariables.size() &&
-              endExprs.size() == dimVariables.size());
+    AssertPos(pos, startExprs.size() == dimVariables.size() && endExprs.size() == dimVariables.size());
     int nDims = (int)dimVariables.size();
 
     ///////////////////////////////////////////////////////////////////////
@@ -1718,18 +1547,17 @@ ForeachStmt::EmitCode(FunctionEmitContext *ctx) const {
 
     std::vector<int> span(nDims, 0);
 #ifdef ISPC_NVPTX_ENABLED
-    const int vectorWidth = 
-      g->target->getISA() == Target::NVPTX ? 32 : g->target->getVectorWidth();
-    lGetSpans(nDims-1, nDims, vectorWidth, isTiled, &span[0]);
-#else /* ISPC_NVPTX_ENABLED */
-    lGetSpans(nDims-1, nDims, g->target->getVectorWidth(), isTiled, &span[0]);
+    const int vectorWidth = g->target->getISA() == Target::NVPTX ? 32 : g->target->getVectorWidth();
+    lGetSpans(nDims - 1, nDims, vectorWidth, isTiled, &span[0]);
+#else  /* ISPC_NVPTX_ENABLED */
+    lGetSpans(nDims - 1, nDims, g->target->getVectorWidth(), isTiled, &span[0]);
 #endif /* ISPC_NVPTX_ENABLED */
 
     for (int i = 0; i < nDims; ++i) {
         // Basic blocks that we'll fill in later with the looping logic for
         // this dimension.
         bbReset.push_back(ctx->CreateBasicBlock("foreach_reset"));
-        if (i < nDims-1)
+        if (i < nDims - 1)
             // stepping for the innermost dimension is handled specially
             bbStep.push_back(ctx->CreateBasicBlock("foreach_step"));
         bbTest.push_back(ctx->CreateBasicBlock("foreach_test"));
@@ -1743,35 +1571,29 @@ ForeachStmt::EmitCode(FunctionEmitContext *ctx) const {
         endVals.push_back(ev);
 
         // nItems = endVal - startVal
-        llvm::Value *nItems =
-            ctx->BinaryOperator(llvm::Instruction::Sub, ev, sv, "nitems");
+        llvm::Value *nItems = ctx->BinaryOperator(llvm::Instruction::Sub, ev, sv, "nitems");
 
         // nExtras = nItems % (span for this dimension)
         // This gives us the number of extra elements we need to deal with
         // at the end of the loop for this dimension that don't fit cleanly
         // into a vector width.
-        nExtras.push_back(ctx->BinaryOperator(llvm::Instruction::SRem, nItems,
-                                              LLVMInt32(span[i]), "nextras"));
+        nExtras.push_back(ctx->BinaryOperator(llvm::Instruction::SRem, nItems, LLVMInt32(span[i]), "nextras"));
 
         // alignedEnd = endVal - nExtras
-        alignedEnd.push_back(ctx->BinaryOperator(llvm::Instruction::Sub, ev,
-                                                 nExtras[i], "aligned_end"));
+        alignedEnd.push_back(ctx->BinaryOperator(llvm::Instruction::Sub, ev, nExtras[i], "aligned_end"));
 
         ///////////////////////////////////////////////////////////////////////
         // Each dimension has a loop counter that is a uniform value that
         // goes from startVal to endVal, in steps of the span for this
         // dimension.  Its value is only used internally here for looping
         // logic and isn't directly available in the user's program code.
-        uniformCounterPtrs.push_back(ctx->AllocaInst(LLVMTypes::Int32Type,
-                                                     "counter"));
+        uniformCounterPtrs.push_back(ctx->AllocaInst(LLVMTypes::Int32Type, "counter"));
         ctx->StoreInst(startVals[i], uniformCounterPtrs[i]);
 
         // There is also a varying variable that holds the set of index
         // values for each dimension in the current loop iteration; this is
         // the value that is program-visible.
-        dimVariables[i]->storagePtr =
-            ctx->AllocaInst(LLVMTypes::Int32VectorType,
-                            dimVariables[i]->name.c_str());
+        dimVariables[i]->storagePtr = ctx->AllocaInst(LLVMTypes::Int32VectorType, dimVariables[i]->name.c_str());
         dimVariables[i]->parentFunction = ctx->GetFunction();
         ctx->EmitVariableDebugInfo(dimVariables[i]);
 
@@ -1799,7 +1621,7 @@ ForeachStmt::EmitCode(FunctionEmitContext *ctx) const {
         else {
             ctx->StoreInst(LLVMMaskAllOn, extrasMaskPtrs[i]);
             ctx->StoreInst(startVals[i], uniformCounterPtrs[i]);
-            ctx->BranchInst(bbStep[i-1]);
+            ctx->BranchInst(bbStep[i - 1]);
         }
     }
 
@@ -1809,12 +1631,11 @@ ForeachStmt::EmitCode(FunctionEmitContext *ctx) const {
     // just generate its value when we need it in the loop body.  Don't do
     // this for the innermost dimension, which has a more complex stepping
     // structure..
-    for (int i = 0; i < nDims-1; ++i) {
+    for (int i = 0; i < nDims - 1; ++i) {
         ctx->SetCurrentBasicBlock(bbStep[i]);
         llvm::Value *counter = ctx->LoadInst(uniformCounterPtrs[i]);
         llvm::Value *newCounter =
-            ctx->BinaryOperator(llvm::Instruction::Add, counter,
-                                LLVMInt32(span[i]), "new_counter");
+            ctx->BinaryOperator(llvm::Instruction::Add, counter, LLVMInt32(span[i]), "new_counter");
         ctx->StoreInst(newCounter, uniformCounterPtrs[i]);
         ctx->BranchInst(bbTest[i]);
     }
@@ -1822,55 +1643,42 @@ ForeachStmt::EmitCode(FunctionEmitContext *ctx) const {
     ///////////////////////////////////////////////////////////////////////////
     // foreach_test (for all dimensions other than the innermost...)
     std::vector<llvm::Value *> inExtras;
-    for (int i = 0; i < nDims-1; ++i) {
+    for (int i = 0; i < nDims - 1; ++i) {
         ctx->SetCurrentBasicBlock(bbTest[i]);
 
         llvm::Value *haveExtras =
-            ctx->CmpInst(llvm::Instruction::ICmp, llvm::CmpInst::ICMP_SGT,
-                         endVals[i], alignedEnd[i], "have_extras");
+            ctx->CmpInst(llvm::Instruction::ICmp, llvm::CmpInst::ICMP_SGT, endVals[i], alignedEnd[i], "have_extras");
 
         llvm::Value *counter = ctx->LoadInst(uniformCounterPtrs[i], "counter");
         llvm::Value *atAlignedEnd =
-            ctx->CmpInst(llvm::Instruction::ICmp, llvm::CmpInst::ICMP_EQ,
-                         counter, alignedEnd[i], "at_aligned_end");
-        llvm::Value *inEx =
-            ctx->BinaryOperator(llvm::Instruction::And, haveExtras,
-                                atAlignedEnd, "in_extras");
+            ctx->CmpInst(llvm::Instruction::ICmp, llvm::CmpInst::ICMP_EQ, counter, alignedEnd[i], "at_aligned_end");
+        llvm::Value *inEx = ctx->BinaryOperator(llvm::Instruction::And, haveExtras, atAlignedEnd, "in_extras");
 
         if (i == 0)
             inExtras.push_back(inEx);
         else
-            inExtras.push_back(ctx->BinaryOperator(llvm::Instruction::Or, inEx,
-                                                   inExtras[i-1], "in_extras_all"));
+            inExtras.push_back(ctx->BinaryOperator(llvm::Instruction::Or, inEx, inExtras[i - 1], "in_extras_all"));
 
         llvm::Value *varyingCounter =
-            lUpdateVaryingCounter(i, nDims, ctx, uniformCounterPtrs[i],
-                                  dimVariables[i]->storagePtr, span);
+            lUpdateVaryingCounter(i, nDims, ctx, uniformCounterPtrs[i], dimVariables[i]->storagePtr, span);
 
-        llvm::Value *smearEnd = ctx->BroadcastValue(
-            endVals[i], LLVMTypes::Int32VectorType, "smear_end");
+        llvm::Value *smearEnd = ctx->BroadcastValue(endVals[i], LLVMTypes::Int32VectorType, "smear_end");
 
         // Do a vector compare of its value to the end value to generate a
         // mask for this last bit of work.
-        llvm::Value *emask =
-            ctx->CmpInst(llvm::Instruction::ICmp, llvm::CmpInst::ICMP_SLT,
-                         varyingCounter, smearEnd);
+        llvm::Value *emask = ctx->CmpInst(llvm::Instruction::ICmp, llvm::CmpInst::ICMP_SLT, varyingCounter, smearEnd);
         emask = ctx->I1VecToBoolVec(emask);
 
         if (i == 0)
             ctx->StoreInst(emask, extrasMaskPtrs[i]);
         else {
-            llvm::Value *oldMask = ctx->LoadInst(extrasMaskPtrs[i-1]);
-            llvm::Value *newMask =
-                ctx->BinaryOperator(llvm::Instruction::And, oldMask, emask,
-                                    "extras_mask");
+            llvm::Value *oldMask = ctx->LoadInst(extrasMaskPtrs[i - 1]);
+            llvm::Value *newMask = ctx->BinaryOperator(llvm::Instruction::And, oldMask, emask, "extras_mask");
             ctx->StoreInst(newMask, extrasMaskPtrs[i]);
         }
 
-        llvm::Value *notAtEnd =
-            ctx->CmpInst(llvm::Instruction::ICmp, llvm::CmpInst::ICMP_SLT,
-                         counter, endVals[i]);
-        ctx->BranchInst(bbTest[i+1], bbReset[i], notAtEnd);
+        llvm::Value *notAtEnd = ctx->CmpInst(llvm::Instruction::ICmp, llvm::CmpInst::ICMP_SLT, counter, endVals[i]);
+        ctx->BranchInst(bbTest[i + 1], bbReset[i], notAtEnd);
     }
 
     ///////////////////////////////////////////////////////////////////////////
@@ -1906,15 +1714,12 @@ ForeachStmt::EmitCode(FunctionEmitContext *ctx) const {
     // whether any of the enclosing dimensions is partially active
     // (i.e. processing extra elements that don't exactly fit into a
     // vector).
-    llvm::BasicBlock *bbOuterInExtras =
-        ctx->CreateBasicBlock("outer_in_extras");
-    llvm::BasicBlock *bbOuterNotInExtras =
-        ctx->CreateBasicBlock("outer_not_in_extras");
+    llvm::BasicBlock *bbOuterInExtras = ctx->CreateBasicBlock("outer_in_extras");
+    llvm::BasicBlock *bbOuterNotInExtras = ctx->CreateBasicBlock("outer_not_in_extras");
 
-    ctx->SetCurrentBasicBlock(bbTest[nDims-1]);
+    ctx->SetCurrentBasicBlock(bbTest[nDims - 1]);
     if (inExtras.size())
-        ctx->BranchInst(bbOuterInExtras, bbOuterNotInExtras,
-                        inExtras.back());
+        ctx->BranchInst(bbOuterInExtras, bbOuterNotInExtras, inExtras.back());
     else
         // for a 1D iteration domain, we certainly don't have any enclosing
         // dimensions that are processing extra elements.
@@ -1932,21 +1737,19 @@ ForeachStmt::EmitCode(FunctionEmitContext *ctx) const {
     //   // set mask to outermask & (counter+programCounter < end)
     //   // run loop body with mask
     // }
-    llvm::BasicBlock *bbAllInnerPartialOuter =
-        ctx->CreateBasicBlock("all_inner_partial_outer");
-    llvm::BasicBlock *bbPartial =
-        ctx->CreateBasicBlock("both_partial");
-    ctx->SetCurrentBasicBlock(bbOuterInExtras); {
+    llvm::BasicBlock *bbAllInnerPartialOuter = ctx->CreateBasicBlock("all_inner_partial_outer");
+    llvm::BasicBlock *bbPartial = ctx->CreateBasicBlock("both_partial");
+    ctx->SetCurrentBasicBlock(bbOuterInExtras);
+    {
         // Update the varying counter value here, since all subsequent
         // blocks along this path need it.
-        lUpdateVaryingCounter(nDims-1, nDims, ctx, uniformCounterPtrs[nDims-1],
-                              dimVariables[nDims-1]->storagePtr, span);
+        lUpdateVaryingCounter(nDims - 1, nDims, ctx, uniformCounterPtrs[nDims - 1], dimVariables[nDims - 1]->storagePtr,
+                              span);
 
         // here we just check to see if counter < alignedEnd
-        llvm::Value *counter = ctx->LoadInst(uniformCounterPtrs[nDims-1], "counter");
-        llvm::Value *beforeAlignedEnd =
-            ctx->CmpInst(llvm::Instruction::ICmp, llvm::CmpInst::ICMP_SLT,
-                         counter, alignedEnd[nDims-1], "before_aligned_end");
+        llvm::Value *counter = ctx->LoadInst(uniformCounterPtrs[nDims - 1], "counter");
+        llvm::Value *beforeAlignedEnd = ctx->CmpInst(llvm::Instruction::ICmp, llvm::CmpInst::ICMP_SLT, counter,
+                                                     alignedEnd[nDims - 1], "before_aligned_end");
         ctx->BranchInst(bbAllInnerPartialOuter, bbPartial, beforeAlignedEnd);
     }
 
@@ -1965,20 +1768,20 @@ ForeachStmt::EmitCode(FunctionEmitContext *ctx) const {
     // dimension, in which case we're done with the innermost dimension and
     // should step the loop counter for the next enclosing dimension
     // instead.
-    llvm::Value *stepIndexAfterMaskedBodyPtr =
-        ctx->AllocaInst(LLVMTypes::BoolType, "step_index");
+    llvm::Value *stepIndexAfterMaskedBodyPtr = ctx->AllocaInst(LLVMTypes::BoolType, "step_index");
 
     ///////////////////////////////////////////////////////////////////////////
     // We're in the inner loop part where the only masking is due to outer
     // dimensions but the innermost dimension fits fully into a vector's
     // width.  Set the mask and jump to the masked loop body.
-    ctx->SetCurrentBasicBlock(bbAllInnerPartialOuter); {
+    ctx->SetCurrentBasicBlock(bbAllInnerPartialOuter);
+    {
         llvm::Value *mask;
         if (nDims == 1)
             // 1D loop; we shouldn't ever get here anyway
             mask = LLVMMaskAllOff;
         else
-            mask = ctx->LoadInst(extrasMaskPtrs[nDims-2]);
+            mask = ctx->LoadInst(extrasMaskPtrs[nDims - 2]);
 
         ctx->SetInternalMask(mask);
 
@@ -1989,36 +1792,29 @@ ForeachStmt::EmitCode(FunctionEmitContext *ctx) const {
     ///////////////////////////////////////////////////////////////////////////
     // We need to include the effect of the innermost dimension in the mask
     // for the final bits here
-    ctx->SetCurrentBasicBlock(bbPartial); {
-        llvm::Value *varyingCounter =
-            ctx->LoadInst(dimVariables[nDims-1]->storagePtr);
-        llvm::Value *smearEnd = ctx->BroadcastValue(
-            endVals[nDims-1], LLVMTypes::Int32VectorType, "smear_end");
+    ctx->SetCurrentBasicBlock(bbPartial);
+    {
+        llvm::Value *varyingCounter = ctx->LoadInst(dimVariables[nDims - 1]->storagePtr);
+        llvm::Value *smearEnd = ctx->BroadcastValue(endVals[nDims - 1], LLVMTypes::Int32VectorType, "smear_end");
 
-        llvm::Value *emask =
-            ctx->CmpInst(llvm::Instruction::ICmp, llvm::CmpInst::ICMP_SLT,
-                         varyingCounter, smearEnd);
+        llvm::Value *emask = ctx->CmpInst(llvm::Instruction::ICmp, llvm::CmpInst::ICMP_SLT, varyingCounter, smearEnd);
         emask = ctx->I1VecToBoolVec(emask);
 
         if (nDims == 1) {
             ctx->SetInternalMask(emask);
-        }
-        else {
-            llvm::Value *oldMask = ctx->LoadInst(extrasMaskPtrs[nDims-2]);
-            llvm::Value *newMask =
-                ctx->BinaryOperator(llvm::Instruction::And, oldMask, emask,
-                                    "extras_mask");
+        } else {
+            llvm::Value *oldMask = ctx->LoadInst(extrasMaskPtrs[nDims - 2]);
+            llvm::Value *newMask = ctx->BinaryOperator(llvm::Instruction::And, oldMask, emask, "extras_mask");
             ctx->SetInternalMask(newMask);
         }
 
         ctx->StoreInst(LLVMFalse, stepIndexAfterMaskedBodyPtr);
 
         // check to see if counter != end, otherwise, the next step is not necessary
-        llvm::Value *counter = ctx->LoadInst(uniformCounterPtrs[nDims-1], "counter");
+        llvm::Value *counter = ctx->LoadInst(uniformCounterPtrs[nDims - 1], "counter");
         llvm::Value *atEnd =
-            ctx->CmpInst(llvm::Instruction::ICmp, llvm::CmpInst::ICMP_NE,
-                         counter, endVals[nDims-1], "at_end");
-        ctx->BranchInst(bbMaskedBody, bbReset[nDims-1], atEnd);
+            ctx->CmpInst(llvm::Instruction::ICmp, llvm::CmpInst::ICMP_NE, counter, endVals[nDims - 1], "at_end");
+        ctx->BranchInst(bbMaskedBody, bbReset[nDims - 1], atEnd);
     }
 
     ///////////////////////////////////////////////////////////////////////////
@@ -2033,15 +1829,13 @@ ForeachStmt::EmitCode(FunctionEmitContext *ctx) const {
     //   // set mask to (counter+programCounter < end)
     //   // run loop body with mask
     // }
-    llvm::BasicBlock *bbPartialInnerAllOuter =
-        ctx->CreateBasicBlock("partial_inner_all_outer");
-    ctx->SetCurrentBasicBlock(bbOuterNotInExtras); {
-        llvm::Value *counter = ctx->LoadInst(uniformCounterPtrs[nDims-1], "counter");
-        llvm::Value *beforeAlignedEnd =
-            ctx->CmpInst(llvm::Instruction::ICmp, llvm::CmpInst::ICMP_SLT,
-                         counter, alignedEnd[nDims-1], "before_aligned_end");
-        ctx->BranchInst(bbFullBody, bbPartialInnerAllOuter,
-                        beforeAlignedEnd);
+    llvm::BasicBlock *bbPartialInnerAllOuter = ctx->CreateBasicBlock("partial_inner_all_outer");
+    ctx->SetCurrentBasicBlock(bbOuterNotInExtras);
+    {
+        llvm::Value *counter = ctx->LoadInst(uniformCounterPtrs[nDims - 1], "counter");
+        llvm::Value *beforeAlignedEnd = ctx->CmpInst(llvm::Instruction::ICmp, llvm::CmpInst::ICMP_SLT, counter,
+                                                     alignedEnd[nDims - 1], "before_aligned_end");
+        ctx->BranchInst(bbFullBody, bbPartialInnerAllOuter, beforeAlignedEnd);
     }
 
     ///////////////////////////////////////////////////////////////////////////
@@ -2050,26 +1844,26 @@ ForeachStmt::EmitCode(FunctionEmitContext *ctx) const {
     // on'.  This ends up being relatively straightforward: just update the
     // value of the varying loop counter and have the statements in the
     // loop body emit their code.
-    llvm::BasicBlock *bbFullBodyContinue =
-        ctx->CreateBasicBlock("foreach_full_continue");
-    ctx->SetCurrentBasicBlock(bbFullBody); {
+    llvm::BasicBlock *bbFullBodyContinue = ctx->CreateBasicBlock("foreach_full_continue");
+    ctx->SetCurrentBasicBlock(bbFullBody);
+    {
         ctx->SetInternalMask(LLVMMaskAllOn);
         ctx->SetBlockEntryMask(LLVMMaskAllOn);
-        lUpdateVaryingCounter(nDims-1, nDims, ctx, uniformCounterPtrs[nDims-1],
-                              dimVariables[nDims-1]->storagePtr, span);
+        lUpdateVaryingCounter(nDims - 1, nDims, ctx, uniformCounterPtrs[nDims - 1], dimVariables[nDims - 1]->storagePtr,
+                              span);
         ctx->SetContinueTarget(bbFullBodyContinue);
         ctx->AddInstrumentationPoint("foreach loop body (all on)");
         stmts->EmitCode(ctx);
         AssertPos(pos, ctx->GetCurrentBasicBlock() != NULL);
         ctx->BranchInst(bbFullBodyContinue);
     }
-    ctx->SetCurrentBasicBlock(bbFullBodyContinue); {
+    ctx->SetCurrentBasicBlock(bbFullBodyContinue);
+    {
         ctx->RestoreContinuedLanes();
-        llvm::Value *counter = ctx->LoadInst(uniformCounterPtrs[nDims-1]);
+        llvm::Value *counter = ctx->LoadInst(uniformCounterPtrs[nDims - 1]);
         llvm::Value *newCounter =
-            ctx->BinaryOperator(llvm::Instruction::Add, counter,
-                                LLVMInt32(span[nDims-1]), "new_counter");
-        ctx->StoreInst(newCounter, uniformCounterPtrs[nDims-1]);
+            ctx->BinaryOperator(llvm::Instruction::Add, counter, LLVMInt32(span[nDims - 1]), "new_counter");
+        ctx->StoreInst(newCounter, uniformCounterPtrs[nDims - 1]);
         ctx->BranchInst(bbOuterNotInExtras);
     }
 
@@ -2077,28 +1871,24 @@ ForeachStmt::EmitCode(FunctionEmitContext *ctx) const {
     // We're done running blocks with the mask all on; see if the counter is
     // less than the end value, in which case we need to run the body one
     // more time to get the extra bits.
-    llvm::BasicBlock *bbSetInnerMask =
-        ctx->CreateBasicBlock("partial_inner_only");
-    ctx->SetCurrentBasicBlock(bbPartialInnerAllOuter); {
-        llvm::Value *counter = ctx->LoadInst(uniformCounterPtrs[nDims-1], "counter");
-        llvm::Value *beforeFullEnd =
-            ctx->CmpInst(llvm::Instruction::ICmp, llvm::CmpInst::ICMP_SLT,
-                         counter, endVals[nDims-1], "before_full_end");
-        ctx->BranchInst(bbSetInnerMask, bbReset[nDims-1], beforeFullEnd);
+    llvm::BasicBlock *bbSetInnerMask = ctx->CreateBasicBlock("partial_inner_only");
+    ctx->SetCurrentBasicBlock(bbPartialInnerAllOuter);
+    {
+        llvm::Value *counter = ctx->LoadInst(uniformCounterPtrs[nDims - 1], "counter");
+        llvm::Value *beforeFullEnd = ctx->CmpInst(llvm::Instruction::ICmp, llvm::CmpInst::ICMP_SLT, counter,
+                                                  endVals[nDims - 1], "before_full_end");
+        ctx->BranchInst(bbSetInnerMask, bbReset[nDims - 1], beforeFullEnd);
     }
 
     ///////////////////////////////////////////////////////////////////////////
     // The outer dimensions are all on, so the mask is just given by the
     // mask for the innermost dimension
-    ctx->SetCurrentBasicBlock(bbSetInnerMask); {
-        llvm::Value *varyingCounter =
-            lUpdateVaryingCounter(nDims-1, nDims, ctx, uniformCounterPtrs[nDims-1],
-                                  dimVariables[nDims-1]->storagePtr, span);
-        llvm::Value *smearEnd = ctx->BroadcastValue(
-            endVals[nDims-1], LLVMTypes::Int32VectorType, "smear_end");
-        llvm::Value *emask =
-            ctx->CmpInst(llvm::Instruction::ICmp, llvm::CmpInst::ICMP_SLT,
-                         varyingCounter, smearEnd);
+    ctx->SetCurrentBasicBlock(bbSetInnerMask);
+    {
+        llvm::Value *varyingCounter = lUpdateVaryingCounter(nDims - 1, nDims, ctx, uniformCounterPtrs[nDims - 1],
+                                                            dimVariables[nDims - 1]->storagePtr, span);
+        llvm::Value *smearEnd = ctx->BroadcastValue(endVals[nDims - 1], LLVMTypes::Int32VectorType, "smear_end");
+        llvm::Value *emask = ctx->CmpInst(llvm::Instruction::ICmp, llvm::CmpInst::ICMP_SLT, varyingCounter, smearEnd);
         emask = ctx->I1VecToBoolVec(emask);
         ctx->SetInternalMask(emask);
         ctx->SetBlockEntryMask(emask);
@@ -2113,11 +1903,10 @@ ForeachStmt::EmitCode(FunctionEmitContext *ctx) const {
     // of the statements' code, since the code above is emitted with the
     // mask known to be all-on, which in turn leads to more efficient code
     // for that case.
-    llvm::BasicBlock *bbStepInnerIndex =
-        ctx->CreateBasicBlock("step_inner_index");
-    llvm::BasicBlock *bbMaskedBodyContinue =
-        ctx->CreateBasicBlock("foreach_masked_continue");
-    ctx->SetCurrentBasicBlock(bbMaskedBody); {
+    llvm::BasicBlock *bbStepInnerIndex = ctx->CreateBasicBlock("step_inner_index");
+    llvm::BasicBlock *bbMaskedBodyContinue = ctx->CreateBasicBlock("foreach_masked_continue");
+    ctx->SetCurrentBasicBlock(bbMaskedBody);
+    {
         ctx->AddInstrumentationPoint("foreach loop body (masked)");
         ctx->SetContinueTarget(bbMaskedBodyContinue);
         ctx->DisableGatherScatterWarnings();
@@ -2126,21 +1915,22 @@ ForeachStmt::EmitCode(FunctionEmitContext *ctx) const {
         ctx->EnableGatherScatterWarnings();
         ctx->BranchInst(bbMaskedBodyContinue);
     }
-    ctx->SetCurrentBasicBlock(bbMaskedBodyContinue); {
+    ctx->SetCurrentBasicBlock(bbMaskedBodyContinue);
+    {
         ctx->RestoreContinuedLanes();
         llvm::Value *stepIndex = ctx->LoadInst(stepIndexAfterMaskedBodyPtr);
-        ctx->BranchInst(bbStepInnerIndex, bbReset[nDims-1], stepIndex);
+        ctx->BranchInst(bbStepInnerIndex, bbReset[nDims - 1], stepIndex);
     }
 
     ///////////////////////////////////////////////////////////////////////////
     // step the innermost index, for the case where we're doing the
     // innermost for loop over full vectors.
-    ctx->SetCurrentBasicBlock(bbStepInnerIndex); {
-        llvm::Value *counter = ctx->LoadInst(uniformCounterPtrs[nDims-1]);
+    ctx->SetCurrentBasicBlock(bbStepInnerIndex);
+    {
+        llvm::Value *counter = ctx->LoadInst(uniformCounterPtrs[nDims - 1]);
         llvm::Value *newCounter =
-            ctx->BinaryOperator(llvm::Instruction::Add, counter,
-                                LLVMInt32(span[nDims-1]), "new_counter");
-        ctx->StoreInst(newCounter, uniformCounterPtrs[nDims-1]);
+            ctx->BinaryOperator(llvm::Instruction::Add, counter, LLVMInt32(span[nDims - 1]), "new_counter");
+        ctx->StoreInst(newCounter, uniformCounterPtrs[nDims - 1]);
         ctx->BranchInst(bbOuterInExtras);
     }
 
@@ -2155,68 +1945,62 @@ ForeachStmt::EmitCode(FunctionEmitContext *ctx) const {
     ctx->EndScope();
 }
 
-
-Stmt *
-ForeachStmt::TypeCheck() {
+Stmt *ForeachStmt::TypeCheck() {
     bool anyErrors = false;
     for (unsigned int i = 0; i < startExprs.size(); ++i) {
         if (startExprs[i] != NULL)
-            startExprs[i] = TypeConvertExpr(startExprs[i],
-                                            AtomicType::UniformInt32,
-                                            "foreach starting value");
+            startExprs[i] = TypeConvertExpr(startExprs[i], AtomicType::UniformInt32, "foreach starting value");
         anyErrors |= (startExprs[i] == NULL);
     }
     for (unsigned int i = 0; i < endExprs.size(); ++i) {
         if (endExprs[i] != NULL)
-            endExprs[i] = TypeConvertExpr(endExprs[i], AtomicType::UniformInt32,
-                                          "foreach ending value");
+            endExprs[i] = TypeConvertExpr(endExprs[i], AtomicType::UniformInt32, "foreach ending value");
         anyErrors |= (endExprs[i] == NULL);
     }
 
     if (startExprs.size() < dimVariables.size()) {
-        Error(pos, "Not enough initial values provided for \"foreach\" loop; "
-              "got %d, expected %d\n", (int)startExprs.size(), (int)dimVariables.size());
+        Error(pos,
+              "Not enough initial values provided for \"foreach\" loop; "
+              "got %d, expected %d\n",
+              (int)startExprs.size(), (int)dimVariables.size());
         anyErrors = true;
-    }
-    else if (startExprs.size() > dimVariables.size()) {
-        Error(pos, "Too many initial values provided for \"foreach\" loop; "
-              "got %d, expected %d\n", (int)startExprs.size(), (int)dimVariables.size());
+    } else if (startExprs.size() > dimVariables.size()) {
+        Error(pos,
+              "Too many initial values provided for \"foreach\" loop; "
+              "got %d, expected %d\n",
+              (int)startExprs.size(), (int)dimVariables.size());
         anyErrors = true;
     }
 
     if (endExprs.size() < dimVariables.size()) {
-        Error(pos, "Not enough initial values provided for \"foreach\" loop; "
-              "got %d, expected %d\n", (int)endExprs.size(), (int)dimVariables.size());
+        Error(pos,
+              "Not enough initial values provided for \"foreach\" loop; "
+              "got %d, expected %d\n",
+              (int)endExprs.size(), (int)dimVariables.size());
         anyErrors = true;
-    }
-    else if (endExprs.size() > dimVariables.size()) {
-        Error(pos, "Too many initial values provided for \"foreach\" loop; "
-              "got %d, expected %d\n", (int)endExprs.size(), (int)dimVariables.size());
+    } else if (endExprs.size() > dimVariables.size()) {
+        Error(pos,
+              "Too many initial values provided for \"foreach\" loop; "
+              "got %d, expected %d\n",
+              (int)endExprs.size(), (int)dimVariables.size());
         anyErrors = true;
     }
 
     return anyErrors ? NULL : this;
 }
 
+int ForeachStmt::EstimateCost() const { return dimVariables.size() * (COST_UNIFORM_LOOP + COST_SIMPLE_ARITH_LOGIC_OP); }
 
-int
-ForeachStmt::EstimateCost() const {
-    return dimVariables.size() * (COST_UNIFORM_LOOP + COST_SIMPLE_ARITH_LOGIC_OP);
-}
-
-
-void
-ForeachStmt::Print(int indent) const {
+void ForeachStmt::Print(int indent) const {
     printf("%*cForeach Stmt", indent, ' ');
     pos.Print();
     printf("\n");
 
     for (unsigned int i = 0; i < dimVariables.size(); ++i)
         if (dimVariables[i] != NULL)
-            printf("%*cVar %d: %s\n", indent+4, ' ', i,
-                   dimVariables[i]->name.c_str());
+            printf("%*cVar %d: %s\n", indent + 4, ' ', i, dimVariables[i]->name.c_str());
         else
-            printf("%*cVar %d: NULL\n", indent+4, ' ', i);
+            printf("%*cVar %d: NULL\n", indent + 4, ' ', i);
 
     printf("Start values:\n");
     for (unsigned int i = 0; i < startExprs.size(); ++i) {
@@ -2224,7 +2008,7 @@ ForeachStmt::Print(int indent) const {
             startExprs[i]->Print();
         else
             printf("NULL");
-        if (i != startExprs.size()-1)
+        if (i != startExprs.size() - 1)
             printf(", ");
         else
             printf("\n");
@@ -2236,31 +2020,27 @@ ForeachStmt::Print(int indent) const {
             endExprs[i]->Print();
         else
             printf("NULL");
-        if (i != endExprs.size()-1)
+        if (i != endExprs.size() - 1)
             printf(", ");
         else
             printf("\n");
     }
 
     if (stmts != NULL) {
-        printf("%*cStmts:\n", indent+4, ' ');
-        stmts->Print(indent+8);
+        printf("%*cStmts:\n", indent + 4, ' ');
+        stmts->Print(indent + 8);
     }
 }
-
 
 ///////////////////////////////////////////////////////////////////////////
 // ForeachActiveStmt
 
-ForeachActiveStmt::ForeachActiveStmt(Symbol *s, Stmt *st, SourcePos pos)
-    : Stmt(pos, ForeachActiveStmtID) {
+ForeachActiveStmt::ForeachActiveStmt(Symbol *s, Stmt *st, SourcePos pos) : Stmt(pos, ForeachActiveStmtID) {
     sym = s;
     stmts = st;
 }
 
-
-void
-ForeachActiveStmt::EmitCode(FunctionEmitContext *ctx) const {
+void ForeachActiveStmt::EmitCode(FunctionEmitContext *ctx) const {
     if (!ctx->GetCurrentBasicBlock())
         return;
 
@@ -2271,19 +2051,16 @@ ForeachActiveStmt::EmitCode(FunctionEmitContext *ctx) const {
         Assert(m->errorCount > 0);
         return;
     }
-    Assert(Type::Equal(sym->type,
-                       AtomicType::UniformInt64->GetAsConstType()));
+    Assert(Type::Equal(sym->type, AtomicType::UniformInt64->GetAsConstType()));
     sym->storagePtr = ctx->AllocaInst(LLVMTypes::Int64Type, sym->name.c_str());
 
     ctx->SetDebugPos(pos);
     ctx->EmitVariableDebugInfo(sym);
 
     // The various basic blocks that we'll need in the below
-    llvm::BasicBlock *bbFindNext =
-        ctx->CreateBasicBlock("foreach_active_find_next");
+    llvm::BasicBlock *bbFindNext = ctx->CreateBasicBlock("foreach_active_find_next");
     llvm::BasicBlock *bbBody = ctx->CreateBasicBlock("foreach_active_body");
-    llvm::BasicBlock *bbCheckForMore =
-        ctx->CreateBasicBlock("foreach_active_check_for_more");
+    llvm::BasicBlock *bbCheckForMore = ctx->CreateBasicBlock("foreach_active_check_for_more");
     llvm::BasicBlock *bbDone = ctx->CreateBasicBlock("foreach_active_done");
 
     // Save the old mask so that we can restore it at the end
@@ -2294,8 +2071,7 @@ ForeachActiveStmt::EmitCode(FunctionEmitContext *ctx) const {
     // the current execution mask (which should never be all off going in
     // to this)...
     llvm::Value *oldFullMask = ctx->GetFullMask();
-    llvm::Value *maskBitsPtr =
-        ctx->AllocaInst(LLVMTypes::Int64Type, "mask_bits");
+    llvm::Value *maskBitsPtr = ctx->AllocaInst(LLVMTypes::Int64Type, "mask_bits");
     llvm::Value *movmsk = ctx->LaneMask(oldFullMask);
     ctx->StoreInst(movmsk, maskBitsPtr);
 
@@ -2307,16 +2083,15 @@ ForeachActiveStmt::EmitCode(FunctionEmitContext *ctx) const {
     // Onward to find the first set of program instance to run the loop for
     ctx->BranchInst(bbFindNext);
 
-    ctx->SetCurrentBasicBlock(bbFindNext); {
+    ctx->SetCurrentBasicBlock(bbFindNext);
+    {
         // Load the bitmask of the lanes left to be processed
         llvm::Value *remainingBits = ctx->LoadInst(maskBitsPtr, "remaining_bits");
 
         // Find the index of the first set bit in the mask
-        llvm::Function *ctlzFunc =
-            m->module->getFunction("__count_trailing_zeros_i64");
+        llvm::Function *ctlzFunc = m->module->getFunction("__count_trailing_zeros_i64");
         Assert(ctlzFunc != NULL);
-        llvm::Value *firstSet = ctx->CallInst(ctlzFunc, NULL, remainingBits,
-                                              "first_set");
+        llvm::Value *firstSet = ctx->CallInst(ctlzFunc, NULL, remainingBits, "first_set");
 
         // Store that value into the storage allocated for the iteration
         // variable.
@@ -2329,42 +2104,38 @@ ForeachActiveStmt::EmitCode(FunctionEmitContext *ctx) const {
 
         // Get the "program index" vector value
 #ifdef ISPC_NVPTX_ENABLED
-        llvm::Value *programIndex = g->target->getISA() == Target::NVPTX ?
-          ctx->ProgramIndexVectorPTX() : ctx->ProgramIndexVector();
-#else /* ISPC_NVPTX_ENABLED */
+        llvm::Value *programIndex =
+            g->target->getISA() == Target::NVPTX ? ctx->ProgramIndexVectorPTX() : ctx->ProgramIndexVector();
+#else  /* ISPC_NVPTX_ENABLED */
         llvm::Value *programIndex = ctx->ProgramIndexVector();
 #endif /* ISPC_NVPTX_ENABLED */
 
         // And smear the current lane out to a vector
-        llvm::Value *firstSet32 =
-            ctx->TruncInst(firstSet, LLVMTypes::Int32Type, "first_set32");
+        llvm::Value *firstSet32 = ctx->TruncInst(firstSet, LLVMTypes::Int32Type, "first_set32");
         llvm::Value *firstSet32Smear = ctx->SmearUniform(firstSet32);
 
         // Now set the execution mask based on doing a vector compare of
         // these two
         llvm::Value *iterMask =
-            ctx->CmpInst(llvm::Instruction::ICmp, llvm::CmpInst::ICMP_EQ,
-                         firstSet32Smear, programIndex);
+            ctx->CmpInst(llvm::Instruction::ICmp, llvm::CmpInst::ICMP_EQ, firstSet32Smear, programIndex);
         iterMask = ctx->I1VecToBoolVec(iterMask);
 
         ctx->SetInternalMask(iterMask);
 
         // Also update the bitvector of lanes left to turn off the bit for
         // the lane we're about to run.
-        llvm::Value *setMask =
-            ctx->BinaryOperator(llvm::Instruction::Shl, LLVMInt64(1),
-                                firstSet, "set_mask");
+        llvm::Value *setMask = ctx->BinaryOperator(llvm::Instruction::Shl, LLVMInt64(1), firstSet, "set_mask");
         llvm::Value *notSetMask = ctx->NotOperator(setMask);
         llvm::Value *newRemaining =
-            ctx->BinaryOperator(llvm::Instruction::And, remainingBits,
-                                notSetMask, "new_remaining");
+            ctx->BinaryOperator(llvm::Instruction::And, remainingBits, notSetMask, "new_remaining");
         ctx->StoreInst(newRemaining, maskBitsPtr);
 
         // and onward to run the loop body...
         ctx->BranchInst(bbBody);
     }
 
-    ctx->SetCurrentBasicBlock(bbBody); {
+    ctx->SetCurrentBasicBlock(bbBody);
+    {
         ctx->SetBlockEntryMask(ctx->GetFullMask());
 
         // Run the code in the body of the loop.  This is easy now.
@@ -2375,16 +2146,16 @@ ForeachActiveStmt::EmitCode(FunctionEmitContext *ctx) const {
         ctx->BranchInst(bbCheckForMore);
     }
 
-    ctx->SetCurrentBasicBlock(bbCheckForMore); {
+    ctx->SetCurrentBasicBlock(bbCheckForMore);
+    {
         ctx->RestoreContinuedLanes();
         // At the end of the loop body (either due to running the
         // statements normally, or a continue statement in the middle of
         // the loop that jumps to the end, see if there are any lanes left
         // to be processed.
         llvm::Value *remainingBits = ctx->LoadInst(maskBitsPtr, "remaining_bits");
-        llvm::Value *nonZero =
-            ctx->CmpInst(llvm::Instruction::ICmp, llvm::CmpInst::ICMP_NE,
-                         remainingBits, LLVMInt64(0), "remaining_ne_zero");
+        llvm::Value *nonZero = ctx->CmpInst(llvm::Instruction::ICmp, llvm::CmpInst::ICMP_NE, remainingBits,
+                                            LLVMInt64(0), "remaining_ne_zero");
         ctx->BranchInst(bbFindNext, bbDone, nonZero);
     }
 
@@ -2394,61 +2165,48 @@ ForeachActiveStmt::EmitCode(FunctionEmitContext *ctx) const {
     ctx->EndScope();
 }
 
-
-void
-ForeachActiveStmt::Print(int indent) const {
+void ForeachActiveStmt::Print(int indent) const {
     printf("%*cForeach_active Stmt", indent, ' ');
     pos.Print();
     printf("\n");
 
-    printf("%*cIter symbol: ", indent+4, ' ');
+    printf("%*cIter symbol: ", indent + 4, ' ');
     if (sym != NULL) {
         printf("%s", sym->name.c_str());
         if (sym->type != NULL)
             printf(" %s", sym->type->GetString().c_str());
-    }
-    else
+    } else
         printf("NULL");
     printf("\n");
 
-    printf("%*cStmts:\n", indent+4, ' ');
+    printf("%*cStmts:\n", indent + 4, ' ');
     if (stmts != NULL)
-        stmts->Print(indent+8);
+        stmts->Print(indent + 8);
     else
         printf("NULL");
     printf("\n");
 }
 
-
-Stmt *
-ForeachActiveStmt::TypeCheck() {
+Stmt *ForeachActiveStmt::TypeCheck() {
     if (sym == NULL)
         return NULL;
 
     return this;
 }
 
-
-int
-ForeachActiveStmt::EstimateCost() const {
-    return COST_VARYING_LOOP;
-}
-
+int ForeachActiveStmt::EstimateCost() const { return COST_VARYING_LOOP; }
 
 ///////////////////////////////////////////////////////////////////////////
 // ForeachUniqueStmt
 
-ForeachUniqueStmt::ForeachUniqueStmt(const char *iterName, Expr *e,
-                                     Stmt *s, SourcePos pos)
+ForeachUniqueStmt::ForeachUniqueStmt(const char *iterName, Expr *e, Stmt *s, SourcePos pos)
     : Stmt(pos, ForeachUniqueStmtID) {
     sym = m->symbolTable->LookupVariable(iterName);
     expr = e;
     stmts = s;
 }
 
-
-void
-ForeachUniqueStmt::EmitCode(FunctionEmitContext *ctx) const {
+void ForeachUniqueStmt::EmitCode(FunctionEmitContext *ctx) const {
     if (!ctx->GetCurrentBasicBlock())
         return;
 
@@ -2501,10 +2259,8 @@ ForeachUniqueStmt::EmitCode(FunctionEmitContext *ctx) const {
     // of indexing over it with non-compile-time-constant indices.
     const Type *exprType;
     llvm::VectorType *llvmExprType;
-    if (exprValue == NULL ||
-        (exprType = expr->GetType()) == NULL ||
-        (llvmExprType =
-         llvm::dyn_cast<llvm::VectorType>(exprValue->getType())) == NULL) {
+    if (exprValue == NULL || (exprType = expr->GetType()) == NULL ||
+        (llvmExprType = llvm::dyn_cast<llvm::VectorType>(exprValue->getType())) == NULL) {
         Assert(m->errorCount > 0);
         return;
     }
@@ -2516,33 +2272,28 @@ ForeachUniqueStmt::EmitCode(FunctionEmitContext *ctx) const {
     // Onward to find the first set of lanes to run the loop for
     ctx->BranchInst(bbFindNext);
 
-    ctx->SetCurrentBasicBlock(bbFindNext); {
+    ctx->SetCurrentBasicBlock(bbFindNext);
+    {
         // Load the bitmask of the lanes left to be processed
         llvm::Value *remainingBits = ctx->LoadInst(maskBitsPtr, "remaining_bits");
 
         // Find the index of the first set bit in the mask
-        llvm::Function *ctlzFunc =
-            m->module->getFunction("__count_trailing_zeros_i64");
+        llvm::Function *ctlzFunc = m->module->getFunction("__count_trailing_zeros_i64");
         Assert(ctlzFunc != NULL);
-        llvm::Value *firstSet = ctx->CallInst(ctlzFunc, NULL, remainingBits,
-                                              "first_set");
+        llvm::Value *firstSet = ctx->CallInst(ctlzFunc, NULL, remainingBits, "first_set");
 
         // And load the corresponding element value from the temporary
         // memory storing the value of the varying expr.
         llvm::Value *uniqueValue;
 #ifdef ISPC_NVPTX_ENABLED
-        if (g->target->getISA() == Target::NVPTX)
-        {
-          llvm::Value *firstSet32 = ctx->TruncInst(firstSet, LLVMTypes::Int32Type);
-          uniqueValue = ctx->Extract(exprValue, firstSet32);
-        }
-        else
-        {
+        if (g->target->getISA() == Target::NVPTX) {
+            llvm::Value *firstSet32 = ctx->TruncInst(firstSet, LLVMTypes::Int32Type);
+            uniqueValue = ctx->Extract(exprValue, firstSet32);
+        } else {
 #endif /* ISPC_NVPTX_ENABLED */
-          llvm::Value *uniqueValuePtr =
-            ctx->GetElementPtrInst(exprMem, LLVMInt64(0), firstSet, exprPtrType,
-                "unique_index_ptr");
-          uniqueValue = ctx->LoadInst(uniqueValuePtr, "unique_value");
+            llvm::Value *uniqueValuePtr =
+                ctx->GetElementPtrInst(exprMem, LLVMInt64(0), firstSet, exprPtrType, "unique_index_ptr");
+            uniqueValue = ctx->LoadInst(uniqueValuePtr, "unique_value");
 #ifdef ISPC_NVPTX_ENABLED
         }
 #endif /* ISPC_NVPTX_ENABLED */
@@ -2563,18 +2314,15 @@ ForeachUniqueStmt::EmitCode(FunctionEmitContext *ctx) const {
         llvm::Value *uniqueSmear = ctx->SmearUniform(uniqueValue, "unique_smear");
         llvm::Value *matchingLanes = NULL;
         if (uniqueValue->getType()->isFloatingPointTy())
-            matchingLanes =
-                ctx->CmpInst(llvm::Instruction::FCmp, llvm::CmpInst::FCMP_OEQ,
-                             uniqueSmear, exprValue, "matching_lanes");
+            matchingLanes = ctx->CmpInst(llvm::Instruction::FCmp, llvm::CmpInst::FCMP_OEQ, uniqueSmear, exprValue,
+                                         "matching_lanes");
         else
             matchingLanes =
-                ctx->CmpInst(llvm::Instruction::ICmp, llvm::CmpInst::ICMP_EQ,
-                             uniqueSmear, exprValue, "matching_lanes");
+                ctx->CmpInst(llvm::Instruction::ICmp, llvm::CmpInst::ICMP_EQ, uniqueSmear, exprValue, "matching_lanes");
         matchingLanes = ctx->I1VecToBoolVec(matchingLanes);
 
         llvm::Value *loopMask =
-            ctx->BinaryOperator(llvm::Instruction::And, oldMask, matchingLanes,
-                                "foreach_unique_loop_mask");
+            ctx->BinaryOperator(llvm::Instruction::And, oldMask, matchingLanes, "foreach_unique_loop_mask");
         ctx->SetInternalMask(loopMask);
 
         // Also update the bitvector of lanes left to process in subsequent
@@ -2583,15 +2331,15 @@ ForeachUniqueStmt::EmitCode(FunctionEmitContext *ctx) const {
         llvm::Value *loopMaskMM = ctx->LaneMask(loopMask);
         llvm::Value *notLoopMaskMM = ctx->NotOperator(loopMaskMM);
         llvm::Value *newRemaining =
-            ctx->BinaryOperator(llvm::Instruction::And, remainingBits,
-                                notLoopMaskMM, "new_remaining");
+            ctx->BinaryOperator(llvm::Instruction::And, remainingBits, notLoopMaskMM, "new_remaining");
         ctx->StoreInst(newRemaining, maskBitsPtr);
 
         // and onward...
         ctx->BranchInst(bbBody);
     }
 
-    ctx->SetCurrentBasicBlock(bbBody); {
+    ctx->SetCurrentBasicBlock(bbBody);
+    {
         ctx->SetBlockEntryMask(ctx->GetFullMask());
         // Run the code in the body of the loop.  This is easy now.
         if (stmts)
@@ -2601,16 +2349,16 @@ ForeachUniqueStmt::EmitCode(FunctionEmitContext *ctx) const {
         ctx->BranchInst(bbCheckForMore);
     }
 
-    ctx->SetCurrentBasicBlock(bbCheckForMore); {
+    ctx->SetCurrentBasicBlock(bbCheckForMore);
+    {
         // At the end of the loop body (either due to running the
         // statements normally, or a continue statement in the middle of
         // the loop that jumps to the end, see if there are any lanes left
         // to be processed.
         ctx->RestoreContinuedLanes();
         llvm::Value *remainingBits = ctx->LoadInst(maskBitsPtr, "remaining_bits");
-        llvm::Value *nonZero =
-            ctx->CmpInst(llvm::Instruction::ICmp, llvm::CmpInst::ICMP_NE,
-                         remainingBits, LLVMInt64(0), "remaining_ne_zero");
+        llvm::Value *nonZero = ctx->CmpInst(llvm::Instruction::ICmp, llvm::CmpInst::ICMP_NE, remainingBits,
+                                            LLVMInt64(0), "remaining_ne_zero");
         ctx->BranchInst(bbFindNext, bbDone, nonZero);
     }
 
@@ -2620,54 +2368,51 @@ ForeachUniqueStmt::EmitCode(FunctionEmitContext *ctx) const {
     ctx->EndScope();
 }
 
-
-void
-ForeachUniqueStmt::Print(int indent) const {
+void ForeachUniqueStmt::Print(int indent) const {
     printf("%*cForeach_unique Stmt", indent, ' ');
     pos.Print();
     printf("\n");
 
-    printf("%*cIter symbol: ", indent+4, ' ');
+    printf("%*cIter symbol: ", indent + 4, ' ');
     if (sym != NULL) {
         printf("%s", sym->name.c_str());
         if (sym->type != NULL)
             printf(" %s", sym->type->GetString().c_str());
-    }
-    else
+    } else
         printf("NULL");
     printf("\n");
 
-    printf("%*cIter expr: ", indent+4, ' ');
+    printf("%*cIter expr: ", indent + 4, ' ');
     if (expr != NULL)
         expr->Print();
     else
         printf("NULL");
     printf("\n");
 
-    printf("%*cStmts:\n", indent+4, ' ');
+    printf("%*cStmts:\n", indent + 4, ' ');
     if (stmts != NULL)
-        stmts->Print(indent+8);
+        stmts->Print(indent + 8);
     else
         printf("NULL");
     printf("\n");
 }
 
-
-Stmt *
-ForeachUniqueStmt::TypeCheck() {
+Stmt *ForeachUniqueStmt::TypeCheck() {
     const Type *type;
     if (sym == NULL || expr == NULL || (type = expr->GetType()) == NULL)
         return NULL;
 
     if (type->IsVaryingType() == false) {
-        Error(expr->pos, "Iteration domain type in \"foreach_tiled\" loop "
+        Error(expr->pos,
+              "Iteration domain type in \"foreach_tiled\" loop "
               "must be \"varying\" type, not \"%s\".",
               type->GetString().c_str());
         return NULL;
     }
 
     if (Type::IsBasicType(type) == false) {
-        Error(expr->pos, "Iteration domain type in \"foreach_tiled\" loop "
+        Error(expr->pos,
+              "Iteration domain type in \"foreach_tiled\" loop "
               "must be an atomic, pointer, or enum type, not \"%s\".",
               type->GetString().c_str());
         return NULL;
@@ -2676,12 +2421,7 @@ ForeachUniqueStmt::TypeCheck() {
     return this;
 }
 
-
-int
-ForeachUniqueStmt::EstimateCost() const {
-    return COST_VARYING_LOOP;
-}
-
+int ForeachUniqueStmt::EstimateCost() const { return COST_VARYING_LOOP; }
 
 ///////////////////////////////////////////////////////////////////////////
 // CaseStmt
@@ -2691,8 +2431,7 @@ ForeachUniqueStmt::EstimateCost() const {
     "all off" immediately after the label, before executing the code for
     the statements.
  */
-static bool
-lCheckMask(Stmt *stmts) {
+static bool lCheckMask(Stmt *stmts) {
     if (stmts == NULL)
         return false;
 
@@ -2702,93 +2441,57 @@ lCheckMask(Stmt *stmts) {
     // The mask should be checked if the code following the
     // 'case'/'default' is relatively complex, or if it would be unsafe to
     // run that code with the execution mask all off.
-    return (cost > PREDICATE_SAFE_IF_STATEMENT_COST ||
-            safeToRunWithAllLanesOff == false);
+    return (cost > PREDICATE_SAFE_IF_STATEMENT_COST || safeToRunWithAllLanesOff == false);
 }
 
+CaseStmt::CaseStmt(int v, Stmt *s, SourcePos pos) : Stmt(pos, CaseStmtID), value(v) { stmts = s; }
 
-CaseStmt::CaseStmt(int v, Stmt *s, SourcePos pos)
-    : Stmt(pos, CaseStmtID), value(v) {
-    stmts = s;
-}
-
-
-void
-CaseStmt::EmitCode(FunctionEmitContext *ctx) const {
+void CaseStmt::EmitCode(FunctionEmitContext *ctx) const {
     ctx->EmitCaseLabel(value, lCheckMask(stmts), pos);
     if (stmts)
         stmts->EmitCode(ctx);
 }
 
-
-void
-CaseStmt::Print(int indent) const {
+void CaseStmt::Print(int indent) const {
     printf("%*cCase [%d] label", indent, ' ', value);
     pos.Print();
     printf("\n");
-    stmts->Print(indent+4);
+    stmts->Print(indent + 4);
 }
 
+Stmt *CaseStmt::TypeCheck() { return this; }
 
-Stmt *
-CaseStmt::TypeCheck() {
-    return this;
-}
-
-
-int
-CaseStmt::EstimateCost() const {
-    return 0;
-}
-
+int CaseStmt::EstimateCost() const { return 0; }
 
 ///////////////////////////////////////////////////////////////////////////
 // DefaultStmt
 
-DefaultStmt::DefaultStmt(Stmt *s, SourcePos pos)
-    : Stmt(pos, DefaultStmtID) {
-    stmts = s;
-}
+DefaultStmt::DefaultStmt(Stmt *s, SourcePos pos) : Stmt(pos, DefaultStmtID) { stmts = s; }
 
-
-void
-DefaultStmt::EmitCode(FunctionEmitContext *ctx) const {
+void DefaultStmt::EmitCode(FunctionEmitContext *ctx) const {
     ctx->EmitDefaultLabel(lCheckMask(stmts), pos);
     if (stmts)
         stmts->EmitCode(ctx);
 }
 
-
-void
-DefaultStmt::Print(int indent) const {
+void DefaultStmt::Print(int indent) const {
     printf("%*cDefault Stmt", indent, ' ');
     pos.Print();
     printf("\n");
-    stmts->Print(indent+4);
+    stmts->Print(indent + 4);
 }
 
+Stmt *DefaultStmt::TypeCheck() { return this; }
 
-Stmt *
-DefaultStmt::TypeCheck() {
-    return this;
-}
-
-
-int
-DefaultStmt::EstimateCost() const {
-    return 0;
-}
-
+int DefaultStmt::EstimateCost() const { return 0; }
 
 ///////////////////////////////////////////////////////////////////////////
 // SwitchStmt
 
-SwitchStmt::SwitchStmt(Expr *e, Stmt *s, SourcePos pos)
-    : Stmt(pos, SwitchStmtID) {
+SwitchStmt::SwitchStmt(Expr *e, Stmt *s, SourcePos pos) : Stmt(pos, SwitchStmtID) {
     expr = e;
     stmts = s;
 }
-
 
 /* An instance of this structure is carried along as we traverse the AST
    nodes for the statements after a "switch" statement.  We use this
@@ -2808,7 +2511,7 @@ struct SwitchVisitInfo {
 
     /* Map from integer values after "case" labels to the basic blocks that
        follow the corresponding "case" label. */
-    std::vector<std::pair<int, llvm::BasicBlock *> > caseBlocks;
+    std::vector<std::pair<int, llvm::BasicBlock *>> caseBlocks;
 
     /* For each basic block for a "case" label or a "default" label,
        nextBlock[block] stores the basic block pointer for the next
@@ -2821,9 +2524,7 @@ struct SwitchVisitInfo {
     llvm::BasicBlock *lastBlock;
 };
 
-
-static bool
-lSwitchASTPreVisit(ASTNode *node, void *d) {
+static bool lSwitchASTPreVisit(ASTNode *node, void *d) {
     if (llvm::dyn_cast<SwitchStmt>(node) != NULL)
         // don't continue recursively into a nested switch--we only want
         // our own case and default statements!
@@ -2851,14 +2552,12 @@ lSwitchASTPreVisit(ASTNode *node, void *d) {
         sprintf(buf, "case_%d", cs->value);
         bb = svi->ctx->CreateBasicBlock(buf);
         svi->caseBlocks.push_back(std::make_pair(cs->value, bb));
-    }
-    else if (ds != NULL) {
+    } else if (ds != NULL) {
         // And complain if we've seen another 'default' label..
         if (svi->defaultBlock != NULL) {
             Error(ds->pos, "Multiple \"default\" lables in switch statement.");
             return true;
-        }
-        else {
+        } else {
             // Otherwise create a basic block for the code following the
             // "default".
             bb = svi->ctx->CreateBasicBlock("default");
@@ -2877,9 +2576,7 @@ lSwitchASTPreVisit(ASTNode *node, void *d) {
     return true;
 }
 
-
-void
-SwitchStmt::EmitCode(FunctionEmitContext *ctx) const {
+void SwitchStmt::EmitCode(FunctionEmitContext *ctx) const {
     if (ctx->GetCurrentBasicBlock() == NULL)
         return;
 
@@ -2907,12 +2604,10 @@ SwitchStmt::EmitCode(FunctionEmitContext *ctx) const {
         return;
     }
 
-    bool isUniformCF = (type->IsUniformType() &&
-                        lHasVaryingBreakOrContinue(stmts) == false);
+    bool isUniformCF = (type->IsUniformType() && lHasVaryingBreakOrContinue(stmts) == false);
     ctx->StartSwitch(isUniformCF, bbDone);
     ctx->SetBlockEntryMask(ctx->GetFullMask());
-    ctx->SwitchInst(exprValue, svi.defaultBlock ? svi.defaultBlock : bbDone,
-                    svi.caseBlocks, svi.nextBlock);
+    ctx->SwitchInst(exprValue, svi.defaultBlock ? svi.defaultBlock : bbDone, svi.caseBlocks, svi.nextBlock);
 
     if (stmts != NULL)
         stmts->EmitCode(ctx);
@@ -2924,42 +2619,38 @@ SwitchStmt::EmitCode(FunctionEmitContext *ctx) const {
     ctx->EndSwitch();
 }
 
-
-void
-SwitchStmt::Print(int indent) const {
+void SwitchStmt::Print(int indent) const {
     printf("%*cSwitch Stmt", indent, ' ');
     pos.Print();
     printf("\n");
     printf("%*cexpr = ", indent, ' ');
     expr->Print();
     printf("\n");
-    stmts->Print(indent+4);
+    stmts->Print(indent + 4);
 }
 
-
-Stmt *
-SwitchStmt::TypeCheck() {
+Stmt *SwitchStmt::TypeCheck() {
     const Type *exprType;
-    if (expr == NULL ||
-        (exprType = expr->GetType()) == NULL) {
+    if (expr == NULL || (exprType = expr->GetType()) == NULL) {
         Assert(m->errorCount > 0);
         return NULL;
     }
 
     const Type *toType = NULL;
     exprType = exprType->GetAsConstType();
-    bool is64bit = (Type::EqualIgnoringConst(exprType->GetAsUniformType(),
-                                             AtomicType::UniformUInt64) ||
-                    Type::EqualIgnoringConst(exprType->GetAsUniformType(),
-                                             AtomicType::UniformInt64));
+    bool is64bit = (Type::EqualIgnoringConst(exprType->GetAsUniformType(), AtomicType::UniformUInt64) ||
+                    Type::EqualIgnoringConst(exprType->GetAsUniformType(), AtomicType::UniformInt64));
 
     if (exprType->IsUniformType()) {
-        if (is64bit) toType = AtomicType::UniformInt64;
-        else         toType = AtomicType::UniformInt32;
-    }
-    else {
-        if (is64bit) toType = AtomicType::VaryingInt64;
-        else         toType = AtomicType::VaryingInt32;
+        if (is64bit)
+            toType = AtomicType::UniformInt64;
+        else
+            toType = AtomicType::UniformInt32;
+    } else {
+        if (is64bit)
+            toType = AtomicType::VaryingInt64;
+        else
+            toType = AtomicType::VaryingInt32;
     }
 
     expr = TypeConvertExpr(expr, toType, "switch expression");
@@ -2969,9 +2660,7 @@ SwitchStmt::TypeCheck() {
     return this;
 }
 
-
-int
-SwitchStmt::EstimateCost() const {
+int SwitchStmt::EstimateCost() const {
     const Type *type = expr->GetType();
     if (type && type->IsVaryingType())
         return COST_VARYING_SWITCH;
@@ -2979,18 +2668,12 @@ SwitchStmt::EstimateCost() const {
         return COST_UNIFORM_SWITCH;
 }
 
-
 ///////////////////////////////////////////////////////////////////////////
 // UnmaskedStmt
 
-UnmaskedStmt::UnmaskedStmt(Stmt *s, SourcePos pos)
-    : Stmt(pos, UnmaskedStmtID) {
-    stmts = s;
-}
+UnmaskedStmt::UnmaskedStmt(Stmt *s, SourcePos pos) : Stmt(pos, UnmaskedStmtID) { stmts = s; }
 
-
-void
-UnmaskedStmt::EmitCode(FunctionEmitContext *ctx) const {
+void UnmaskedStmt::EmitCode(FunctionEmitContext *ctx) const {
     if (!ctx->GetCurrentBasicBlock() || !stmts)
         return;
 
@@ -3002,7 +2685,6 @@ UnmaskedStmt::EmitCode(FunctionEmitContext *ctx) const {
 
     stmts->EmitCode(ctx);
 
-
     // Do not restore old mask if our basic block is over. This happends if we emit code
     // for something like 'unmasked{return;}', for example.
     if (ctx->GetCurrentBasicBlock() == NULL)
@@ -3012,44 +2694,29 @@ UnmaskedStmt::EmitCode(FunctionEmitContext *ctx) const {
     ctx->SetFunctionMask(oldFunctionMask);
 }
 
-
-void
-UnmaskedStmt::Print(int indent) const {
+void UnmaskedStmt::Print(int indent) const {
     printf("%*cUnmasked Stmt", indent, ' ');
     pos.Print();
     printf("\n");
 
-    printf("%*cStmts:\n", indent+4, ' ');
+    printf("%*cStmts:\n", indent + 4, ' ');
     if (stmts != NULL)
-        stmts->Print(indent+8);
+        stmts->Print(indent + 8);
     else
         printf("NULL");
     printf("\n");
 }
 
+Stmt *UnmaskedStmt::TypeCheck() { return this; }
 
-Stmt *
-UnmaskedStmt::TypeCheck() {
-    return this;
-}
-
-
-int
-UnmaskedStmt::EstimateCost() const {
-    return COST_ASSIGN;
-}
-
+int UnmaskedStmt::EstimateCost() const { return COST_ASSIGN; }
 
 ///////////////////////////////////////////////////////////////////////////
 // ReturnStmt
 
-ReturnStmt::ReturnStmt(Expr *e, SourcePos p)
-    : Stmt(p, ReturnStmtID), expr(e) {
-}
+ReturnStmt::ReturnStmt(Expr *e, SourcePos p) : Stmt(p, ReturnStmtID), expr(e) {}
 
-
-void
-ReturnStmt::EmitCode(FunctionEmitContext *ctx) const {
+void ReturnStmt::EmitCode(FunctionEmitContext *ctx) const {
     if (!ctx->GetCurrentBasicBlock())
         return;
 
@@ -3062,17 +2729,17 @@ ReturnStmt::EmitCode(FunctionEmitContext *ctx) const {
     // that doesn't make sense
     const Function *func = ctx->GetFunction();
     const Type *returnType = func->GetReturnType();
-    if (IsReferenceType(returnType) == true &&
-        IsReferenceType(expr->GetType()) == false) {
+    if (IsReferenceType(returnType) == true && IsReferenceType(expr->GetType()) == false) {
         const Type *lvType = expr->GetLValueType();
         if (lvType == NULL) {
-            Error(expr->pos, "Illegal to return non-lvalue from function "
+            Error(expr->pos,
+                  "Illegal to return non-lvalue from function "
                   "returning reference type \"%s\".",
                   returnType->GetString().c_str());
             return;
-        }
-        else if (lvType->IsUniformType() == false) {
-            Error(expr->pos, "Illegal to return varying lvalue type from "
+        } else if (lvType->IsUniformType() == false) {
+            Error(expr->pos,
+                  "Illegal to return varying lvalue type from "
                   "function returning a reference type \"%s\".",
                   returnType->GetString().c_str());
             return;
@@ -3083,53 +2750,40 @@ ReturnStmt::EmitCode(FunctionEmitContext *ctx) const {
     ctx->CurrentLanesReturned(expr, true);
 }
 
+Stmt *ReturnStmt::TypeCheck() { return this; }
 
-Stmt *
-ReturnStmt::TypeCheck() {
-    return this;
-}
+int ReturnStmt::EstimateCost() const { return COST_RETURN; }
 
-
-int
-ReturnStmt::EstimateCost() const {
-    return COST_RETURN;
-}
-
-
-void
-ReturnStmt::Print(int indent) const {
+void ReturnStmt::Print(int indent) const {
     printf("%*cReturn Stmt", indent, ' ');
     pos.Print();
     if (expr)
         expr->Print();
-    else printf("(void)");
+    else
+        printf("(void)");
     printf("\n");
 }
-
 
 ///////////////////////////////////////////////////////////////////////////
 // GotoStmt
 
-GotoStmt::GotoStmt(const char *l, SourcePos gotoPos, SourcePos ip)
-    : Stmt(gotoPos, GotoStmtID) {
+GotoStmt::GotoStmt(const char *l, SourcePos gotoPos, SourcePos ip) : Stmt(gotoPos, GotoStmtID) {
     label = l;
     identifierPos = ip;
 }
 
-
-void
-GotoStmt::EmitCode(FunctionEmitContext *ctx) const {
+void GotoStmt::EmitCode(FunctionEmitContext *ctx) const {
     if (!ctx->GetCurrentBasicBlock())
         return;
 
     if (ctx->VaryingCFDepth() > 0) {
         Error(pos, "\"goto\" statements are only legal under \"uniform\" "
-              "control flow.");
+                   "control flow.");
         return;
     }
     if (ctx->InForeachLoop()) {
         Error(pos, "\"goto\" statements are currently illegal inside "
-              "\"foreach\" loops.");
+                   "\"foreach\" loops.");
         return;
     }
 
@@ -3139,17 +2793,15 @@ GotoStmt::EmitCode(FunctionEmitContext *ctx) const {
         std::vector<std::string> labels = ctx->GetLabels();
         std::vector<std::string> matches = MatchStrings(label, labels);
         std::string match_output;
-        if (! matches.empty()) {
+        if (!matches.empty()) {
             /* Print up to 5 matches. Don't want to spew too much */
             match_output += "\nDid you mean:";
-            for (unsigned int i=0; i<matches.size() && i<5; i++)
+            for (unsigned int i = 0; i < matches.size() && i < 5; i++)
                 match_output += "\n " + matches[i] + "?";
         }
 
         /* Label wasn't found. Emit an error */
-        Error(identifierPos,
-                "No label named \"%s\" found in current function.%s",
-              label.c_str(), match_output.c_str());
+        Error(identifierPos, "No label named \"%s\" found in current function.%s", label.c_str(), match_output.c_str());
 
         return;
     }
@@ -3158,43 +2810,23 @@ GotoStmt::EmitCode(FunctionEmitContext *ctx) const {
     ctx->SetCurrentBasicBlock(NULL);
 }
 
+void GotoStmt::Print(int indent) const { printf("%*cGoto label \"%s\"\n", indent, ' ', label.c_str()); }
 
-void
-GotoStmt::Print(int indent) const {
-    printf("%*cGoto label \"%s\"\n", indent, ' ', label.c_str());
-}
+Stmt *GotoStmt::Optimize() { return this; }
 
+Stmt *GotoStmt::TypeCheck() { return this; }
 
-Stmt *
-GotoStmt::Optimize() {
-    return this;
-}
-
-
-Stmt *
-GotoStmt::TypeCheck() {
-    return this;
-}
-
-
-int
-GotoStmt::EstimateCost() const {
-    return COST_GOTO;
-}
-
+int GotoStmt::EstimateCost() const { return COST_GOTO; }
 
 ///////////////////////////////////////////////////////////////////////////
 // LabeledStmt
 
-LabeledStmt::LabeledStmt(const char *n, Stmt *s, SourcePos p)
-    : Stmt(p, LabeledStmtID) {
+LabeledStmt::LabeledStmt(const char *n, Stmt *s, SourcePos p) : Stmt(p, LabeledStmtID) {
     name = n;
     stmt = s;
 }
 
-
-void
-LabeledStmt::EmitCode(FunctionEmitContext *ctx) const {
+void LabeledStmt::EmitCode(FunctionEmitContext *ctx) const {
     llvm::BasicBlock *bblock = ctx->GetLabeledBasicBlock(name);
     AssertPos(pos, bblock != NULL);
 
@@ -3211,23 +2843,15 @@ LabeledStmt::EmitCode(FunctionEmitContext *ctx) const {
         stmt->EmitCode(ctx);
 }
 
-
-void
-LabeledStmt::Print(int indent) const {
+void LabeledStmt::Print(int indent) const {
     printf("%*cLabel \"%s\"\n", indent, ' ', name.c_str());
     if (stmt != NULL)
         stmt->Print(indent);
 }
 
+Stmt *LabeledStmt::Optimize() { return this; }
 
-Stmt *
-LabeledStmt::Optimize() {
-    return this;
-}
-
-
-Stmt *
-LabeledStmt::TypeCheck() {
+Stmt *LabeledStmt::TypeCheck() {
     if (!isalpha(name[0]) || name[0] == '_') {
         Error(pos, "Label must start with either alphabetic character or '_'.");
         return NULL;
@@ -3241,18 +2865,12 @@ LabeledStmt::TypeCheck() {
     return this;
 }
 
-
-int
-LabeledStmt::EstimateCost() const {
-    return 0;
-}
-
+int LabeledStmt::EstimateCost() const { return 0; }
 
 ///////////////////////////////////////////////////////////////////////////
 // StmtList
 
-void
-StmtList::EmitCode(FunctionEmitContext *ctx) const {
+void StmtList::EmitCode(FunctionEmitContext *ctx) const {
     ctx->StartScope();
     ctx->SetDebugPos(pos);
     for (unsigned int i = 0; i < stmts.size(); ++i)
@@ -3261,36 +2879,23 @@ StmtList::EmitCode(FunctionEmitContext *ctx) const {
     ctx->EndScope();
 }
 
+Stmt *StmtList::TypeCheck() { return this; }
 
-Stmt *
-StmtList::TypeCheck() {
-    return this;
-}
+int StmtList::EstimateCost() const { return 0; }
 
-
-int
-StmtList::EstimateCost() const {
-    return 0;
-}
-
-
-void
-StmtList::Print(int indent) const {
+void StmtList::Print(int indent) const {
     printf("%*cStmt List", indent, ' ');
     pos.Print();
     printf(":\n");
     for (unsigned int i = 0; i < stmts.size(); ++i)
         if (stmts[i])
-            stmts[i]->Print(indent+4);
+            stmts[i]->Print(indent + 4);
 }
-
 
 ///////////////////////////////////////////////////////////////////////////
 // PrintStmt
 
-PrintStmt::PrintStmt(const std::string &f, Expr *v, SourcePos p)
-    : Stmt(p, PrintStmtID), format(f), values(v) {
-}
+PrintStmt::PrintStmt(const std::string &f, Expr *v, SourcePos p) : Stmt(p, PrintStmtID), format(f), values(v) {}
 
 /* Because the pointers to values that are passed to __do_print() are all
    void *s (and because ispc print() formatting strings statements don't
@@ -3299,38 +2904,49 @@ PrintStmt::PrintStmt(const std::string &f, Expr *v, SourcePos p)
    say, the encoding chosen here and the decoding code in __do_print() need
    to agree on the below!
  */
-static char
-lEncodeType(const Type *t) {
-    if (Type::Equal(t, AtomicType::UniformBool))   return 'b';
-    if (Type::Equal(t, AtomicType::VaryingBool))   return 'B';
-    if (Type::Equal(t, AtomicType::UniformInt32))  return 'i';
-    if (Type::Equal(t, AtomicType::VaryingInt32))  return 'I';
-    if (Type::Equal(t, AtomicType::UniformUInt32)) return 'u';
-    if (Type::Equal(t, AtomicType::VaryingUInt32)) return 'U';
-    if (Type::Equal(t, AtomicType::UniformFloat))  return 'f';
-    if (Type::Equal(t, AtomicType::VaryingFloat))  return 'F';
-    if (Type::Equal(t, AtomicType::UniformInt64))  return 'l';
-    if (Type::Equal(t, AtomicType::VaryingInt64))  return 'L';
-    if (Type::Equal(t, AtomicType::UniformUInt64)) return 'v';
-    if (Type::Equal(t, AtomicType::VaryingUInt64)) return 'V';
-    if (Type::Equal(t, AtomicType::UniformDouble)) return 'd';
-    if (Type::Equal(t, AtomicType::VaryingDouble)) return 'D';
+static char lEncodeType(const Type *t) {
+    if (Type::Equal(t, AtomicType::UniformBool))
+        return 'b';
+    if (Type::Equal(t, AtomicType::VaryingBool))
+        return 'B';
+    if (Type::Equal(t, AtomicType::UniformInt32))
+        return 'i';
+    if (Type::Equal(t, AtomicType::VaryingInt32))
+        return 'I';
+    if (Type::Equal(t, AtomicType::UniformUInt32))
+        return 'u';
+    if (Type::Equal(t, AtomicType::VaryingUInt32))
+        return 'U';
+    if (Type::Equal(t, AtomicType::UniformFloat))
+        return 'f';
+    if (Type::Equal(t, AtomicType::VaryingFloat))
+        return 'F';
+    if (Type::Equal(t, AtomicType::UniformInt64))
+        return 'l';
+    if (Type::Equal(t, AtomicType::VaryingInt64))
+        return 'L';
+    if (Type::Equal(t, AtomicType::UniformUInt64))
+        return 'v';
+    if (Type::Equal(t, AtomicType::VaryingUInt64))
+        return 'V';
+    if (Type::Equal(t, AtomicType::UniformDouble))
+        return 'd';
+    if (Type::Equal(t, AtomicType::VaryingDouble))
+        return 'D';
     if (CastType<PointerType>(t) != NULL) {
         if (t->IsUniformType())
             return 'p';
         else
             return 'P';
-    }
-    else return '\0';
+    } else
+        return '\0';
 }
-
 
 /** Given an Expr for a value to be printed, emit the code to evaluate the
     expression and store the result to alloca'd memory.  Update the
     argTypes string with the type encoding for this expression.
  */
-static llvm::Value *
-lProcessPrintArg(Expr *expr, FunctionEmitContext *ctx, std::string &argTypes) {
+static llvm::Value *lProcessPrintArg(Expr *expr, FunctionEmitContext *ctx, std::string &argTypes) {
     const Type *type = expr->GetType();
     if (type == NULL)
         return NULL;
@@ -3344,29 +2960,26 @@ lProcessPrintArg(Expr *expr, FunctionEmitContext *ctx, std::string &argTypes) {
 
     // Just int8 and int16 types to int32s...
     const Type *baseType = type->GetAsNonConstType()->GetAsUniformType();
-    if (Type::Equal(baseType, AtomicType::UniformInt8) ||
-        Type::Equal(baseType, AtomicType::UniformUInt8) ||
-        Type::Equal(baseType, AtomicType::UniformInt16) ||
-        Type::Equal(baseType, AtomicType::UniformUInt16)) {
-        expr = new TypeCastExpr(type->IsUniformType() ? AtomicType::UniformInt32 :
-                                                        AtomicType::VaryingInt32,
-                                expr, expr->pos);
+    if (Type::Equal(baseType, AtomicType::UniformInt8) || Type::Equal(baseType, AtomicType::UniformUInt8) ||
+        Type::Equal(baseType, AtomicType::UniformInt16) || Type::Equal(baseType, AtomicType::UniformUInt16)) {
+        expr = new TypeCastExpr(type->IsUniformType() ? AtomicType::UniformInt32 : AtomicType::VaryingInt32, expr,
+                                expr->pos);
         type = expr->GetType();
     }
 
     char t = lEncodeType(type->GetAsNonConstType());
     if (t == '\0') {
-        Error(expr->pos, "Only atomic types are allowed in print statements; "
-              "type \"%s\" is illegal.", type->GetString().c_str());
+        Error(expr->pos,
+              "Only atomic types are allowed in print statements; "
+              "type \"%s\" is illegal.",
+              type->GetString().c_str());
         return NULL;
-    }
-    else {
+    } else {
         if (Type::Equal(baseType, AtomicType::UniformBool)) {
-          // Blast bools to ints, but do it here to preserve encoding for 
-          // printing 'true' or 'false'
-            expr = new TypeCastExpr(type->IsUniformType() ? AtomicType::UniformInt32 :
-                                                            AtomicType::VaryingInt32,
-                                    expr, expr->pos);
+            // Blast bools to ints, but do it here to preserve encoding for
+            // printing 'true' or 'false'
+            expr = new TypeCastExpr(type->IsUniformType() ? AtomicType::UniformInt32 : AtomicType::VaryingInt32, expr,
+                                    expr->pos);
             type = expr->GetType();
         }
         argTypes.push_back(t);
@@ -3383,15 +2996,13 @@ lProcessPrintArg(Expr *expr, FunctionEmitContext *ctx, std::string &argTypes) {
     }
 }
 
-
 /* PrintStmt works closely with the __do_print() function implemented in
    the builtins-c.c file.  In particular, the EmitCode() method here needs to
    take the arguments passed to it from ispc and generate a valid call to
    __do_print() with the information that __do_print() then needs to do the
    actual printing work at runtime.
  */
-void
-PrintStmt::EmitCode(FunctionEmitContext *ctx) const {
+void PrintStmt::EmitCode(FunctionEmitContext *ctx) const {
     if (!ctx->GetCurrentBasicBlock())
         return;
 
@@ -3411,11 +3022,9 @@ PrintStmt::EmitCode(FunctionEmitContext *ctx) const {
     std::string argTypes;
 
     if (values == NULL) {
-        llvm::Type *ptrPtrType =
-            llvm::PointerType::get(LLVMTypes::VoidPointerType, 0);
+        llvm::Type *ptrPtrType = llvm::PointerType::get(LLVMTypes::VoidPointerType, 0);
         args[4] = llvm::Constant::getNullValue(ptrPtrType);
-    }
-    else {
+    } else {
         // Get the values passed to the print() statement evaluated and
         // stored in memory so that we set up the array of pointers to them
         // for the 5th __do_print() argument
@@ -3423,14 +3032,11 @@ PrintStmt::EmitCode(FunctionEmitContext *ctx) const {
         int nArgs = elist ? elist->exprs.size() : 1;
 
         // Allocate space for the array of pointers to values to be printed
-        llvm::Type *argPtrArrayType =
-            llvm::ArrayType::get(LLVMTypes::VoidPointerType, nArgs);
-        llvm::Value *argPtrArray = ctx->AllocaInst(argPtrArrayType,
-                                                   "print_arg_ptrs");
+        llvm::Type *argPtrArrayType = llvm::ArrayType::get(LLVMTypes::VoidPointerType, nArgs);
+        llvm::Value *argPtrArray = ctx->AllocaInst(argPtrArrayType, "print_arg_ptrs");
         // Store the array pointer as a void **, which is what __do_print()
         // expects
-        args[4] = ctx->BitCastInst(argPtrArray,
-                                   llvm::PointerType::get(LLVMTypes::VoidPointerType, 0));
+        args[4] = ctx->BitCastInst(argPtrArray, llvm::PointerType::get(LLVMTypes::VoidPointerType, 0));
 
         // Now, for each of the arguments, emit code to evaluate its value
         // and store the value into alloca'd storage.  Then store the
@@ -3447,8 +3053,7 @@ PrintStmt::EmitCode(FunctionEmitContext *ctx) const {
                 llvm::Value *arrayPtr = ctx->AddElementOffset(argPtrArray, i, NULL);
                 ctx->StoreInst(ptr, arrayPtr);
             }
-        }
-        else {
+        } else {
             llvm::Value *ptr = lProcessPrintArg(values, ctx, argTypes);
             if (!ptr)
                 return;
@@ -3459,9 +3064,9 @@ PrintStmt::EmitCode(FunctionEmitContext *ctx) const {
 
     // Now we can emit code to call __do_print()
 #ifdef ISPC_NVPTX_ENABLED
-    llvm::Function *printFunc = g->target->getISA() != Target::NVPTX ?
-      m->module->getFunction("__do_print") : m->module->getFunction("__do_print_nvptx");
-#else /* ISPC_NVPTX_ENABLED */
+    llvm::Function *printFunc = g->target->getISA() != Target::NVPTX ? m->module->getFunction("__do_print")
+                                                                     : m->module->getFunction("__do_print_nvptx");
+#else  /* ISPC_NVPTX_ENABLED */
     llvm::Function *printFunc = m->module->getFunction("__do_print");
 #endif /* ISPC_NVPTX_ENABLED */
     AssertPos(pos, printFunc);
@@ -3476,41 +3081,23 @@ PrintStmt::EmitCode(FunctionEmitContext *ctx) const {
     ctx->CallInst(printFunc, NULL, argVec, "");
 }
 
+void PrintStmt::Print(int indent) const { printf("%*cPrint Stmt (%s)", indent, ' ', format.c_str()); }
 
-void
-PrintStmt::Print(int indent) const {
-    printf("%*cPrint Stmt (%s)", indent, ' ', format.c_str());
-}
+Stmt *PrintStmt::TypeCheck() { return this; }
 
-
-Stmt *
-PrintStmt::TypeCheck() {
-    return this;
-}
-
-
-int
-PrintStmt::EstimateCost() const {
-    return COST_FUNCALL;
-}
-
+int PrintStmt::EstimateCost() const { return COST_FUNCALL; }
 
 ///////////////////////////////////////////////////////////////////////////
 // AssertStmt
 
-AssertStmt::AssertStmt(const std::string &msg, Expr *e, SourcePos p)
-    : Stmt(p, AssertStmtID), message(msg), expr(e) {
-}
+AssertStmt::AssertStmt(const std::string &msg, Expr *e, SourcePos p) : Stmt(p, AssertStmtID), message(msg), expr(e) {}
 
-
-void
-AssertStmt::EmitCode(FunctionEmitContext *ctx) const {
+void AssertStmt::EmitCode(FunctionEmitContext *ctx) const {
     if (!ctx->GetCurrentBasicBlock())
         return;
 
     const Type *type;
-    if (expr == NULL ||
-        (type = expr->GetType()) == NULL) {
+    if (expr == NULL || (type = expr->GetType()) == NULL) {
         AssertPos(pos, m->errorCount > 0);
         return;
     }
@@ -3519,16 +3106,14 @@ AssertStmt::EmitCode(FunctionEmitContext *ctx) const {
     // The actual functionality to do the check and then handle falure is
     // done via a builtin written in bitcode in builtins/util.m4.
     llvm::Function *assertFunc =
-        isUniform ? m->module->getFunction("__do_assert_uniform") :
-                    m->module->getFunction("__do_assert_varying");
+        isUniform ? m->module->getFunction("__do_assert_uniform") : m->module->getFunction("__do_assert_varying");
     AssertPos(pos, assertFunc != NULL);
 
     char *errorString;
-    if (asprintf(&errorString, "%s:%d:%d: Assertion failed: %s",
-                 pos.name, pos.first_line, pos.first_column,
+    if (asprintf(&errorString, "%s:%d:%d: Assertion failed: %s", pos.name, pos.first_line, pos.first_column,
                  message.c_str()) == -1) {
         Error(pos, "Fatal error when generating assert string: asprintf() "
-              "unable to allocate memory!");
+                   "unable to allocate memory!");
         return;
     }
 
@@ -3546,20 +3131,13 @@ AssertStmt::EmitCode(FunctionEmitContext *ctx) const {
     free(errorString);
 }
 
+void AssertStmt::Print(int indent) const { printf("%*cAssert Stmt (%s)", indent, ' ', message.c_str()); }
 
-void
-AssertStmt::Print(int indent) const {
-    printf("%*cAssert Stmt (%s)", indent, ' ', message.c_str());
-}
-
-
-Stmt *
-AssertStmt::TypeCheck() {
+Stmt *AssertStmt::TypeCheck() {
     const Type *type;
     if (expr && (type = expr->GetType()) != NULL) {
         bool isUniform = type->IsUniformType();
-        expr = TypeConvertExpr(expr, isUniform ? AtomicType::UniformBool :
-                                                 AtomicType::VaryingBool,
+        expr = TypeConvertExpr(expr, isUniform ? AtomicType::UniformBool : AtomicType::VaryingBool,
                                "\"assert\" statement");
         if (expr == NULL)
             return NULL;
@@ -3567,24 +3145,14 @@ AssertStmt::TypeCheck() {
     return this;
 }
 
-
-int
-AssertStmt::EstimateCost() const {
-    return COST_ASSERT;
-}
-
+int AssertStmt::EstimateCost() const { return COST_ASSERT; }
 
 ///////////////////////////////////////////////////////////////////////////
 // DeleteStmt
 
-DeleteStmt::DeleteStmt(Expr *e, SourcePos p)
-    : Stmt(p, DeleteStmtID) {
-    expr = e;
-}
+DeleteStmt::DeleteStmt(Expr *e, SourcePos p) : Stmt(p, DeleteStmtID) { expr = e; }
 
-
-void
-DeleteStmt::EmitCode(FunctionEmitContext *ctx) const {
+void DeleteStmt::EmitCode(FunctionEmitContext *ctx) const {
     if (!ctx->GetCurrentBasicBlock())
         return;
 
@@ -3607,8 +3175,7 @@ DeleteStmt::EmitCode(FunctionEmitContext *ctx) const {
         // For deletion of a uniform pointer, we just need to cast the
         // pointer type to a void pointer type, to match what
         // __delete_uniform() from the builtins expects.
-        exprValue = ctx->BitCastInst(exprValue, LLVMTypes::VoidPointerType,
-                                     "ptr_to_void");
+        exprValue = ctx->BitCastInst(exprValue, LLVMTypes::VoidPointerType, "ptr_to_void");
         llvm::Function *func;
         if (g->target->is32Bit()) {
             func = m->module->getFunction("__delete_uniform_32rt");
@@ -3618,8 +3185,7 @@ DeleteStmt::EmitCode(FunctionEmitContext *ctx) const {
         AssertPos(pos, func != NULL);
 
         ctx->CallInst(func, NULL, exprValue, "");
-    }
-    else {
+    } else {
         // Varying pointers are arrays of ints, and __delete_varying()
         // takes a vector of i64s (even for 32-bit targets).  Therefore, we
         // only need to extend to 64-bit values on 32-bit targets before
@@ -3632,36 +3198,24 @@ DeleteStmt::EmitCode(FunctionEmitContext *ctx) const {
         }
         AssertPos(pos, func != NULL);
         if (g->target->is32Bit())
-            exprValue = ctx->ZExtInst(exprValue, LLVMTypes::Int64VectorType,
-                                      "ptr_to_64");
+            exprValue = ctx->ZExtInst(exprValue, LLVMTypes::Int64VectorType, "ptr_to_64");
         ctx->CallInst(func, NULL, exprValue, "");
     }
 }
 
+void DeleteStmt::Print(int indent) const { printf("%*cDelete Stmt", indent, ' '); }
 
-void
-DeleteStmt::Print(int indent) const {
-    printf("%*cDelete Stmt", indent, ' ');
-}
-
-
-Stmt *
-DeleteStmt::TypeCheck() {
+Stmt *DeleteStmt::TypeCheck() {
     const Type *exprType;
     if (expr == NULL || ((exprType = expr->GetType()) == NULL))
         return NULL;
 
     if (CastType<PointerType>(exprType) == NULL) {
-        Error(pos, "Illegal to delete non-pointer type \"%s\".",
-              exprType->GetString().c_str());
+        Error(pos, "Illegal to delete non-pointer type \"%s\".", exprType->GetString().c_str());
         return NULL;
     }
 
     return this;
 }
 
-
-int
-DeleteStmt::EstimateCost() const {
-    return COST_DELETE;
-}
+int DeleteStmt::EstimateCost() const { return COST_DELETE; }

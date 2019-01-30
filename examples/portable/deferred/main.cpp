@@ -40,34 +40,35 @@
 #define ISPC_IS_APPLE
 #endif
 
-#include <fcntl.h>
+#include <algorithm>
+#include <cassert>
 #include <cfloat>
 #include <cmath>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
-#include <sys/types.h>
+#include <fcntl.h>
 #include <stdint.h>
-#include <algorithm>
-#include <cassert>
+#include <sys/types.h>
 #include <vector>
 #ifdef ISPC_IS_WINDOWS
-  #define WIN32_LEAN_AND_MEAN
-  #include <windows.h>
+#define WIN32_LEAN_AND_MEAN
+#include <windows.h>
 #endif
 #include "deferred.h"
+#include "ispc_malloc.h"
 #include "kernels_ispc.h"
 #include "timing.h"
-#include "ispc_malloc.h"
 
 ///////////////////////////////////////////////////////////////////////////
 
-int main(int argc, char** argv) {
+int main(int argc, char **argv) {
     if (argc < 2) {
-        printf("usage: deferred_shading <input_file (e.g. data/pp1280x720.bin)> [tasks iterations] [serial iterations]\n");
+        printf(
+            "usage: deferred_shading <input_file (e.g. data/pp1280x720.bin)> [tasks iterations] [serial iterations]\n");
         return 1;
     }
-    static unsigned int test_iterations[] = {5, 3, 500}; //last value is for nframes, it is scale.
+    static unsigned int test_iterations[] = {5, 3, 500}; // last value is for nframes, it is scale.
     if (argc == 5) {
         for (int i = 0; i < 3; i++) {
             test_iterations[i] = atoi(argv[2 + i]);
@@ -80,8 +81,7 @@ int main(int argc, char** argv) {
         return 1;
     }
 
-    Framebuffer framebuffer(input->header.framebufferWidth,
-                            input->header.framebufferHeight);
+    Framebuffer framebuffer(input->header.framebufferWidth, input->header.framebufferHeight);
 
     int nframes = test_iterations[2];
     double ispcCycles = 1e30;
@@ -89,16 +89,15 @@ int main(int argc, char** argv) {
         framebuffer.clear();
         reset_and_start_timer();
         for (int j = 0; j < nframes; ++j)
-            ispc::RenderStatic(&input->header, &input->arrays,
-                               VISUALIZE_LIGHT_COUNT,
-                               framebuffer.r, framebuffer.g, framebuffer.b);
+            ispc::RenderStatic(&input->header, &input->arrays, VISUALIZE_LIGHT_COUNT, framebuffer.r, framebuffer.g,
+                               framebuffer.b);
         double msec = get_elapsed_msec() / nframes;
-        printf("@time of ISPC + TASKS run:\t\t\t[%.3f] msec [%.3f fps]\n", msec, 1.0e3/msec);
+        printf("@time of ISPC + TASKS run:\t\t\t[%.3f] msec [%.3f fps]\n", msec, 1.0e3 / msec);
         ispcCycles = std::min(ispcCycles, msec);
     }
     printf("[ispc static + tasks]:\t\t[%.3f] msec to render "
-           "%d x %d image\n", ispcCycles,
-           input->header.framebufferWidth, input->header.framebufferHeight);
+           "%d x %d image\n",
+           ispcCycles, input->header.framebufferWidth, input->header.framebufferHeight);
     WriteFrame("deferred-ispc-static.ppm", input, framebuffer);
 
     DeleteInputData(input);

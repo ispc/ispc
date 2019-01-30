@@ -31,14 +31,12 @@
    SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-
 /*===========================================================================*\
 |* Includes
 \*===========================================================================*/
 #include "algorithm.h"
-#include "stdio.h"
 #include "debug.h"
-
+#include "stdio.h"
 
 /*===========================================================================*\
 |* GMRES
@@ -49,8 +47,7 @@
  * x.  This "solve" ignores the rows, columns of R that are greater than the
  * dimensions of x.
  */
-void upper_triangular_right_solve (const DenseMatrix &R, const Vector &b, Vector &x)
-{
+void upper_triangular_right_solve(const DenseMatrix &R, const Vector &b, Vector &x) {
     // Dimensionality check
     ASSERT(R.rows() >= b.size());
     ASSERT(R.cols() >= x.size());
@@ -75,24 +72,21 @@ void upper_triangular_right_solve (const DenseMatrix &R, const Vector &b, Vector
  * factored Hessenburg matrix.  Note that the previous Givens rotations should be
  * applied to this column before creating a new rotation.
  */
-void create_rotation (const DenseMatrix &H, size_t col, Vector &Cn, Vector &Sn)
-{
-    double a = H(col,     col);
+void create_rotation(const DenseMatrix &H, size_t col, Vector &Cn, Vector &Sn) {
+    double a = H(col, col);
     double b = H(col + 1, col);
     double r;
 
     if (b == 0) {
         Cn[col] = copysign(1, a);
         Sn[col] = 0;
-    }
-    else if (a == 0) {
+    } else if (a == 0) {
         Cn[col] = 0;
         Sn[col] = copysign(1, b);
-    }
-    else {
-        r       = sqrt(a*a + b*b);
+    } else {
+        r = sqrt(a * a + b * b);
         Sn[col] = -b / r;
-        Cn[col] =  a / r;
+        Cn[col] = a / r;
     }
 }
 
@@ -101,40 +95,37 @@ void create_rotation (const DenseMatrix &H, size_t col, Vector &Cn, Vector &Sn)
  * presumeably, the first col-1 columns are already upper triangular, and so their
  * entries in the col and col+1 rows are 0.)
  */
-void apply_rotation (DenseMatrix &H, size_t col, Vector &Cn, Vector &Sn)
-{
+void apply_rotation(DenseMatrix &H, size_t col, Vector &Cn, Vector &Sn) {
     double c = Cn[col];
     double s = Sn[col];
-    double tmp    = c * H(col, col) - s * H(col+1, col);
-    H(col+1, col) = s * H(col, col) + c * H(col+1, col);
-    H(col,   col) = tmp;
+    double tmp = c * H(col, col) - s * H(col + 1, col);
+    H(col + 1, col) = s * H(col, col) + c * H(col + 1, col);
+    H(col, col) = tmp;
 }
 
 /* Applies the 'col'th Givens rotation to the vector.
  */
-void apply_rotation (Vector &v, size_t col, Vector &Cn, Vector &Sn)
-{
+void apply_rotation(Vector &v, size_t col, Vector &Cn, Vector &Sn) {
     double a = v[col];
     double b = v[col + 1];
 
     double c = Cn[col];
     double s = Sn[col];
 
-    v[col]     = c * a - s * b;
+    v[col] = c * a - s * b;
     v[col + 1] = s * a + c * b;
 }
 
 /* Applies the first 'col' Givens rotations to the newly-created column
  * of H.  (Leaves other columns alone.)
  */
-void update_column (DenseMatrix &H, size_t col, Vector &Cn, Vector &Sn)
-{
+void update_column(DenseMatrix &H, size_t col, Vector &Cn, Vector &Sn) {
     for (size_t i = 0; i < col; i++) {
-        double c    = Cn[i];
-        double s    = Sn[i];
-        double t    = c * H(i,col) - s * H(i+1,col);
-        H(i+1, col) = s * H(i,col) + c * H(i+1,col);
-        H(i,   col) = t;
+        double c = Cn[i];
+        double s = Sn[i];
+        double t = c * H(i, col) - s * H(i + 1, col);
+        H(i + 1, col) = s * H(i, col) + c * H(i + 1, col);
+        H(i, col) = t;
     }
 }
 
@@ -145,16 +136,14 @@ void update_column (DenseMatrix &H, size_t col, Vector &Cn, Vector &Sn)
  * - applying the new Givens rotation to the column, and
  * - applying the new Givens rotation to the solution vector
  */
-void update_qr_decomp (DenseMatrix &H, Vector &s, size_t col, Vector &Cn, Vector &Sn)
-{
-    update_column(  H, col, Cn, Sn);
+void update_qr_decomp(DenseMatrix &H, Vector &s, size_t col, Vector &Cn, Vector &Sn) {
+    update_column(H, col, Cn, Sn);
     create_rotation(H, col, Cn, Sn);
-    apply_rotation( H, col, Cn, Sn);
-    apply_rotation( s, col, Cn, Sn);
+    apply_rotation(H, col, Cn, Sn);
+    apply_rotation(s, col, Cn, Sn);
 }
 
-void gmres (const Matrix &A, const Vector &b, Vector &x, int num_iters, double max_err)
-{
+void gmres(const Matrix &A, const Vector &b, Vector &x, int num_iters, double max_err) {
     DEBUG_PRINT("gmres starting!\n");
     x.zero();
 
@@ -167,7 +156,7 @@ void gmres (const Matrix &A, const Vector &b, Vector &x, int num_iters, double m
     Vector Cn(num_iters);
 
     // array for storing the rhs projected onto the hessenburg's column space
-    Vector G(num_iters+1);
+    Vector G(num_iters + 1);
     G.zero();
 
     double beta = b.norm();
@@ -184,8 +173,7 @@ void gmres (const Matrix &A, const Vector &b, Vector &x, int num_iters, double m
     Vector temp(A.rows(), false);
     double rel_err;
 
-    while (iter < num_iters)
-    {
+    while (iter < num_iters) {
         // w = Aqi
         Qstar.row(iter, temp);
         A.multiply(temp, w);
@@ -197,13 +185,13 @@ void gmres (const Matrix &A, const Vector &b, Vector &x, int num_iters, double m
             w.add_ax(-H(row, iter), temp);
         }
 
-        H(iter+1, iter) = w.norm();
-        w.divide(H(iter+1, iter));
-        Qstar.set_row(iter+1, w);
+        H(iter + 1, iter) = w.norm();
+        w.divide(H(iter + 1, iter));
+        Qstar.set_row(iter + 1, w);
 
-        update_qr_decomp (H, G, iter, Cn, Sn);
+        update_qr_decomp(H, G, iter, Cn, Sn);
 
-        rel_err = fabs(G[iter+1] / beta);
+        rel_err = fabs(G[iter + 1] / beta);
 
         if (rel_err < max_err)
             break;
@@ -222,7 +210,7 @@ void gmres (const Matrix &A, const Vector &b, Vector &x, int num_iters, double m
     // We've reached an acceptable solution (?):
 
     DEBUG_PRINT("gmres completed in %d iterations (rel. resid. %f, max %f)\n", iter, rel_err, max_err);
-    Vector y(iter+1);
+    Vector y(iter + 1);
     upper_triangular_right_solve(H, G, y);
     for (int i = 0; i < iter + 1; i++) {
         Qstar.row(i, temp);

@@ -38,19 +38,17 @@
 #ifdef _MSC_VER
 #define _CRT_SECURE_NO_WARNINGS
 #define NOMINMAX
-#pragma warning (disable: 4244)
-#pragma warning (disable: 4305)
+#pragma warning(disable : 4244)
+#pragma warning(disable : 4305)
 #endif
 
-#include <stdlib.h>
 #include <math.h>
+#include <stdlib.h>
 
 #ifdef _MSC_VER
 static long long drand48_x = 0x1234ABCD330E;
 
-static inline void srand48(int x) {
-    drand48_x = x ^ (x << 16);
-}
+static inline void srand48(int x) { drand48_x = x ^ (x << 16); }
 
 static inline double drand48() {
     drand48_x = drand48_x * 0x5DEECE66D + 0xB;
@@ -61,31 +59,28 @@ static inline double drand48() {
 #ifdef _MSC_VER
 __declspec(align(16))
 #endif
-struct vec {
-    vec() { x=y=z=pad=0.; }
-    vec(float xx, float yy, float zz) { x = xx; y = yy; z = zz; }
+    struct vec {
+    vec() { x = y = z = pad = 0.; }
+    vec(float xx, float yy, float zz) {
+        x = xx;
+        y = yy;
+        z = zz;
+    }
 
-    vec operator*(float f) const { return vec(x*f, y*f, z*f); }
-    vec operator+(const vec &f2) const {
-        return vec(x+f2.x, y+f2.y, z+f2.z);
-    }
-    vec operator-(const vec &f2) const {
-        return vec(x-f2.x, y-f2.y, z-f2.z);
-    }
-    vec operator*(const vec &f2) const {
-        return vec(x*f2.x, y*f2.y, z*f2.z);
-    }
+    vec operator*(float f) const { return vec(x * f, y * f, z * f); }
+    vec operator+(const vec &f2) const { return vec(x + f2.x, y + f2.y, z + f2.z); }
+    vec operator-(const vec &f2) const { return vec(x - f2.x, y - f2.y, z - f2.z); }
+    vec operator*(const vec &f2) const { return vec(x * f2.x, y * f2.y, z * f2.z); }
     float x, y, z;
     float pad;
 }
 #ifndef _MSC_VER
-__attribute__ ((aligned(16)))
+__attribute__((aligned(16)))
 #endif
 ;
-inline vec operator*(float f, const vec &v) { return vec(f*v.x, f*v.y, f*v.z); }
+inline vec operator*(float f, const vec &v) { return vec(f * v.x, f * v.y, f * v.z); }
 
-
-#define NAO_SAMPLES		8
+#define NAO_SAMPLES 8
 
 #ifdef M_PI
 #undef M_PI
@@ -93,21 +88,20 @@ inline vec operator*(float f, const vec &v) { return vec(f*v.x, f*v.y, f*v.z); }
 #define M_PI 3.1415926535f
 
 struct Isect {
-    float      t;
-    vec        p;
-    vec        n;
-    int        hit;
+    float t;
+    vec p;
+    vec n;
+    int hit;
 };
 
 struct Sphere {
-    vec        center;
-    float      radius;
-
+    vec center;
+    float radius;
 };
 
 struct Plane {
-    vec    p;
-    vec    n;
+    vec p;
+    vec n;
 };
 
 struct Ray {
@@ -115,9 +109,7 @@ struct Ray {
     vec dir;
 };
 
-static inline float dot(const vec &a, const vec &b) {
-    return a.x * b.x + a.y * b.y + a.z * b.z;
-}
+static inline float dot(const vec &a, const vec &b) { return a.x * b.x + a.y * b.y + a.z * b.z; }
 
 static inline vec vcross(const vec &v0, const vec &v1) {
     vec ret;
@@ -133,10 +125,7 @@ static inline void vnormalize(vec &v) {
     v = v * invlen;
 }
 
-
-static inline void
-ray_plane_intersect(Isect &isect, Ray &ray,
-                    Plane &plane) {
+static inline void ray_plane_intersect(Isect &isect, Ray &ray, Plane &plane) {
     float d = -dot(plane.p, plane.n);
     float v = dot(ray.dir, plane.n);
 
@@ -154,10 +143,7 @@ ray_plane_intersect(Isect &isect, Ray &ray,
     }
 }
 
-
-static inline void
-ray_sphere_intersect(Isect &isect, Ray &ray,
-                     Sphere &sphere) {
+static inline void ray_sphere_intersect(Isect &isect, Ray &ray, Sphere &sphere) {
     vec rs = ray.org - sphere.center;
 
     float B = dot(rs, ray.dir);
@@ -177,11 +163,11 @@ ray_sphere_intersect(Isect &isect, Ray &ray,
     }
 }
 
-
-static inline void
-orthoBasis(vec basis[3], const vec &n) {
+static inline void orthoBasis(vec basis[3], const vec &n) {
     basis[2] = n;
-    basis[1].x = 0.0; basis[1].y = 0.0; basis[1].z = 0.0;
+    basis[1].x = 0.0;
+    basis[1].y = 0.0;
+    basis[1].z = 0.0;
 
     if ((n.x < 0.6f) && (n.x > -0.6f)) {
         basis[1].x = 1.0;
@@ -200,10 +186,7 @@ orthoBasis(vec basis[3], const vec &n) {
     vnormalize(basis[1]);
 }
 
-
-static float
-ambient_occlusion(Isect &isect, Plane &plane,
-                  Sphere spheres[3]) {
+static float ambient_occlusion(Isect &isect, Plane &plane, Sphere spheres[3]) {
     float eps = 0.0001f;
     vec p, n;
     vec basis[3];
@@ -214,14 +197,14 @@ ambient_occlusion(Isect &isect, Plane &plane,
     orthoBasis(basis, isect.n);
 
     static const int ntheta = NAO_SAMPLES;
-    static const int nphi   = NAO_SAMPLES;
+    static const int nphi = NAO_SAMPLES;
     for (int j = 0; j < ntheta; j++) {
         for (int i = 0; i < nphi; i++) {
             Ray ray;
             Isect occIsect;
 
             float theta = sqrtf(drand48());
-            float phi   = 2.0f * M_PI * drand48();
+            float phi = 2.0f * M_PI * drand48();
             float x = cosf(phi) * theta;
             float y = sinf(phi) * theta;
             float z = sqrtf(1.0f - theta * theta);
@@ -236,14 +219,15 @@ ambient_occlusion(Isect &isect, Plane &plane,
             ray.dir.y = ry;
             ray.dir.z = rz;
 
-            occIsect.t   = 1.0e+17f;
+            occIsect.t = 1.0e+17f;
             occIsect.hit = 0;
 
             for (int snum = 0; snum < 3; ++snum)
                 ray_sphere_intersect(occIsect, ray, spheres[snum]);
-            ray_plane_intersect (occIsect, ray, plane);
+            ray_plane_intersect(occIsect, ray, plane);
 
-            if (occIsect.hit) occlusion += 1.f;
+            if (occIsect.hit)
+                occlusion += 1.f;
         }
     }
 
@@ -251,22 +235,18 @@ ambient_occlusion(Isect &isect, Plane &plane,
     return occlusion;
 }
 
-
 /* Compute the image for the scanlines from [y0,y1), for an overall image
    of width w and height h.
  */
-static void ao_scanlines(int y0, int y1, int w, int h, int nsubsamples,
-                         float image[]) {
-    static Plane plane = { vec(0.0f, -0.5f, 0.0f), vec(0.f, 1.f, 0.f) };
+static void ao_scanlines(int y0, int y1, int w, int h, int nsubsamples, float image[]) {
+    static Plane plane = {vec(0.0f, -0.5f, 0.0f), vec(0.f, 1.f, 0.f)};
     static Sphere spheres[3] = {
-        { vec(-2.0f, 0.0f, -3.5f), 0.5f },
-        { vec(-0.5f, 0.0f, -3.0f), 0.5f },
-        { vec(1.0f, 0.0f, -2.2f), 0.5f } };
+        {vec(-2.0f, 0.0f, -3.5f), 0.5f}, {vec(-0.5f, 0.0f, -3.0f), 0.5f}, {vec(1.0f, 0.0f, -2.2f), 0.5f}};
 
     srand48(y0);
 
     for (int y = y0; y < y1; ++y) {
-        for (int x = 0; x < w; ++x)  {
+        for (int x = 0; x < w; ++x) {
             int offset = 3 * (y * w + x);
             for (int u = 0; u < nsubsamples; ++u) {
                 for (int v = 0; v < nsubsamples; ++v) {
@@ -287,7 +267,7 @@ static void ao_scanlines(int y0, int y1, int w, int h, int nsubsamples,
                     ray.dir.z = -1.0f;
                     vnormalize(ray.dir);
 
-                    isect.t   = 1.0e+17f;
+                    isect.t = 1.0e+17f;
                     isect.hit = 0;
 
                     for (int snum = 0; snum < 3; ++snum)
@@ -298,21 +278,17 @@ static void ao_scanlines(int y0, int y1, int w, int h, int nsubsamples,
                         ret = ambient_occlusion(isect, plane, spheres);
 
                     // Update image for AO for this ray
-                    image[offset+0] += ret;
-                    image[offset+1] += ret;
-                    image[offset+2] += ret;
+                    image[offset + 0] += ret;
+                    image[offset + 1] += ret;
+                    image[offset + 2] += ret;
                 }
             }
             // Normalize image pixels by number of samples taken per pixel
-            image[offset+0] /= nsubsamples * nsubsamples;
-            image[offset+1] /= nsubsamples * nsubsamples;
-            image[offset+2] /= nsubsamples * nsubsamples;
+            image[offset + 0] /= nsubsamples * nsubsamples;
+            image[offset + 1] /= nsubsamples * nsubsamples;
+            image[offset + 2] /= nsubsamples * nsubsamples;
         }
     }
 }
 
-
-void ao_serial(int w, int h, int nsubsamples,
-               float image[]) {
-    ao_scanlines(0, h, w, h, nsubsamples, image);
-}
+void ao_serial(int w, int h, int nsubsamples, float image[]) { ao_scanlines(0, h, w, h, nsubsamples, image); }

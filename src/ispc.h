@@ -40,10 +40,8 @@
 
 #include "ispc_version.h"
 
-#if ISPC_LLVM_VERSION < OLDEST_SUPPORTED_LLVM ||                               \
-    ISPC_LLVM_VERSION > LATEST_SUPPORTED_LLVM
-#error                                                                         \
-    "Only LLVM 3.2 - 8.0 and 9.0 development branch are supported"
+#if ISPC_LLVM_VERSION < OLDEST_SUPPORTED_LLVM || ISPC_LLVM_VERSION > LATEST_SUPPORTED_LLVM
+#error "Only LLVM 3.2 - 8.0 and 9.0 development branch are supported"
 #endif
 
 #if defined(_WIN32) || defined(_WIN64)
@@ -57,13 +55,13 @@
 #define ISPC_IS_KNC
 #endif
 
-#include <stdint.h>
-#include <stdlib.h>
-#include <stdio.h>
-#include <vector>
-#include <set>
 #include <map>
+#include <set>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
 #include <string>
+#include <vector>
 
 /** @def ISPC_MAX_NVEC maximum vector size of any of the compliation
     targets.
@@ -76,32 +74,31 @@
 // Forward declarations of a number of widely-used LLVM types
 namespace llvm {
 #if ISPC_LLVM_VERSION <= ISPC_LLVM_4_0
-    class AttributeSet;
+class AttributeSet;
 #else // LLVM 5.0+
-    class AttrBuilder;
+class AttrBuilder;
 #endif
-    class BasicBlock;
-    class Constant;
-    class ConstantValue;
-    class DataLayout;
-    class DIBuilder;
-    class Function;
-    class FunctionType;
-    class LLVMContext;
-    class Module;
-    class Target;
-    class TargetMachine;
-    class Type;
-    class Value;
-    class DIFile;
-    class DIType;
+class BasicBlock;
+class Constant;
+class ConstantValue;
+class DataLayout;
+class DIBuilder;
+class Function;
+class FunctionType;
+class LLVMContext;
+class Module;
+class Target;
+class TargetMachine;
+class Type;
+class Value;
+class DIFile;
+class DIType;
 #if ISPC_LLVM_VERSION <= ISPC_LLVM_3_6
-    class DIDescriptor;
+class DIDescriptor;
 #else // LLVM 3.7+
-    class DIScope;
+class DIScope;
 #endif
-}
-
+} // namespace llvm
 
 class ArrayType;
 class AST;
@@ -120,14 +117,7 @@ class SymbolTable;
 class Type;
 struct VariableDeclaration;
 
-enum StorageClass {
-    SC_NONE,
-    SC_EXTERN,
-    SC_STATIC,
-    SC_TYPEDEF,
-    SC_EXTERN_C
-};
-
+enum StorageClass { SC_NONE, SC_EXTERN, SC_STATIC, SC_TYPEDEF, SC_EXTERN_C };
 
 /** @brief Representation of a range of positions in a source file.
 
@@ -137,8 +127,7 @@ enum StorageClass {
     lexing code).  Both lines and columns are counted starting from one.
  */
 struct SourcePos {
-    SourcePos(const char *n = NULL, int fl = 0, int fc = 0,
-              int ll = 0, int lc = 0);
+    SourcePos(const char *n = NULL, int fl = 0, int fc = 0, int ll = 0, int lc = 0);
 
     const char *name;
     int first_line;
@@ -160,31 +149,25 @@ struct SourcePos {
     bool operator==(const SourcePos &p2) const;
 };
 
-
 /** Returns a SourcePos that encompasses the extent of both of the given
     extents. */
 SourcePos Union(const SourcePos &p1, const SourcePos &p2);
-
-
 
 // Assert
 
 extern void DoAssert(const char *file, int line, const char *expr);
 extern void DoAssertPos(SourcePos pos, const char *file, int line, const char *expr);
 
-#define Assert(expr)                                            \
-    ((void)((expr) ? 0 : ((void)DoAssert (__FILE__, __LINE__, #expr), 0)))
+#define Assert(expr) ((void)((expr) ? 0 : ((void)DoAssert(__FILE__, __LINE__, #expr), 0)))
 
-#define AssertPos(pos, expr)                                     \
-    ((void)((expr) ? 0 : ((void)DoAssertPos (pos, __FILE__, __LINE__, #expr), 0)))
-
+#define AssertPos(pos, expr) ((void)((expr) ? 0 : ((void)DoAssertPos(pos, __FILE__, __LINE__, #expr), 0)))
 
 /** @brief Structure that defines a compilation target
 
     This structure defines a compilation target for the ispc compiler.
 */
 class Target {
-public:
+  public:
     /** Enumerator giving the instruction sets that the compiler can
         target.  These should be ordered from "worse" to "better" in that
         if a processor supports multiple target ISAs, then the most
@@ -192,19 +175,21 @@ public:
         also that __best_available_isa() needs to be updated if ISAs are
         added or the enumerant values are reordered.  */
     enum ISA {
-        SSE2           = 0,
-        SSE4           = 1,
-        AVX            = 2,
-        AVX11          = 3,
-        AVX2           = 4,
-        KNL_AVX512     = 5,
-        SKX_AVX512     = 6,
-        GENERIC        = 7,
+        SSE2 = 0,
+        SSE4 = 1,
+        AVX = 2,
+        AVX11 = 3,
+        AVX2 = 4,
+        KNL_AVX512 = 5,
+        SKX_AVX512 = 6,
+        GENERIC = 7,
 #ifdef ISPC_NVPTX_ENABLED
         NVPTX,
 #endif
 #ifdef ISPC_ARM_ENABLED
-        NEON32, NEON16, NEON8,
+        NEON32,
+        NEON16,
+        NEON8,
 #endif
         NUM_ISAS
     };
@@ -212,7 +197,8 @@ public:
     /** Initializes the given Target pointer for a target of the given
         name, if the name is a known target.  Returns true if the
         target was initialized and false if the name is unknown. */
-    Target(const char *arch, const char *cpu, const char *isa, bool pic, bool printTarget, std::string genenricAsSmth = "");
+    Target(const char *arch, const char *cpu, const char *isa, bool pic, bool printTarget,
+           std::string genenricAsSmth = "");
 
     /** Returns a comma-delimited string giving the names of the currently
         supported compilation targets. */
@@ -232,7 +218,7 @@ public:
 
     /** Returns the LLVM TargetMachine object corresponding to this
         target. */
-    llvm::TargetMachine *GetTargetMachine() const {return m_targetMachine;}
+    llvm::TargetMachine *GetTargetMachine() const { return m_targetMachine; }
 
     /** Convert ISA enum to string */
     static const char *ISAToString(Target::ISA isa);
@@ -248,71 +234,68 @@ public:
     const char *GetISATargetString() const;
 
     /** Returns the size of the given type */
-    llvm::Value *SizeOf(llvm::Type *type,
-                        llvm::BasicBlock *insertAtEnd);
+    llvm::Value *SizeOf(llvm::Type *type, llvm::BasicBlock *insertAtEnd);
 
     /** Given a structure type and an element number in the structure,
         returns a value corresponding to the number of bytes from the start
         of the structure where the element is located. */
-    llvm::Value *StructOffset(llvm::Type *type,
-                              int element, llvm::BasicBlock *insertAtEnd);
+    llvm::Value *StructOffset(llvm::Type *type, int element, llvm::BasicBlock *insertAtEnd);
 
     /** Mark LLVM function with target specific attribute, if required. */
-    void markFuncWithTargetAttr(llvm::Function* func);
+    void markFuncWithTargetAttr(llvm::Function *func);
 
-    const llvm::Target *getTarget() const {return m_target;}
+    const llvm::Target *getTarget() const { return m_target; }
 
     // Note the same name of method for 3.1 and 3.2+, this allows
     // to reduce number ifdefs on client side.
-    const llvm::DataLayout *getDataLayout() const {return m_dataLayout;}
+    const llvm::DataLayout *getDataLayout() const { return m_dataLayout; }
 
     /** Reports if Target object has valid state. */
-    bool isValid() const {return m_valid;}
+    bool isValid() const { return m_valid; }
 
-    ISA getISA() const {return m_isa;}
+    ISA getISA() const { return m_isa; }
 
-    std::string getTreatGenericAsSmth() const {return m_treatGenericAsSmth;}
+    std::string getTreatGenericAsSmth() const { return m_treatGenericAsSmth; }
 
-    std::string getArch() const {return m_arch;}
+    std::string getArch() const { return m_arch; }
 
-    bool is32Bit() const {return m_is32Bit;}
+    bool is32Bit() const { return m_is32Bit; }
 
-    std::string getCPU() const {return m_cpu;}
+    std::string getCPU() const { return m_cpu; }
 
-    int getNativeVectorWidth() const {return m_nativeVectorWidth;}
+    int getNativeVectorWidth() const { return m_nativeVectorWidth; }
 
-    int getNativeVectorAlignment() const {return m_nativeVectorAlignment;}
+    int getNativeVectorAlignment() const { return m_nativeVectorAlignment; }
 
-    int getDataTypeWidth() const {return m_dataTypeWidth;}
+    int getDataTypeWidth() const { return m_dataTypeWidth; }
 
-    int getVectorWidth() const {return m_vectorWidth;}
+    int getVectorWidth() const { return m_vectorWidth; }
 
-    bool getGeneratePIC() const {return m_generatePIC;}
+    bool getGeneratePIC() const { return m_generatePIC; }
 
-    bool getMaskingIsFree() const {return m_maskingIsFree;}
+    bool getMaskingIsFree() const { return m_maskingIsFree; }
 
-    int getMaskBitCount() const {return m_maskBitCount;}
+    int getMaskBitCount() const { return m_maskBitCount; }
 
-    bool hasHalf() const {return m_hasHalf;}
+    bool hasHalf() const { return m_hasHalf; }
 
-    bool hasRand() const {return m_hasRand;}
+    bool hasRand() const { return m_hasRand; }
 
-    bool hasGather() const {return m_hasGather;}
+    bool hasGather() const { return m_hasGather; }
 
-    bool hasScatter() const {return m_hasScatter;}
+    bool hasScatter() const { return m_hasScatter; }
 
-    bool hasTranscendentals() const {return m_hasTranscendentals;}
+    bool hasTranscendentals() const { return m_hasTranscendentals; }
 
-    bool hasTrigonometry() const {return m_hasTrigonometry;}
+    bool hasTrigonometry() const { return m_hasTrigonometry; }
 
-    bool hasRsqrtd() const {return m_hasRsqrtd;}
+    bool hasRsqrtd() const { return m_hasRsqrtd; }
 
-    bool hasRcpd() const {return m_hasRcpd;}
+    bool hasRcpd() const { return m_hasRcpd; }
 
-    bool hasVecPrefetch() const {return m_hasVecPrefetch;}
+    bool hasVecPrefetch() const { return m_hasVecPrefetch; }
 
-private:
-
+  private:
     /** llvm Target object representing this target. */
     const llvm::Target *m_target;
 
@@ -354,9 +337,9 @@ private:
         function to ensure that it is generated for correct target architecture.
         This is requirement was introduced in LLVM 3.3 */
 #if ISPC_LLVM_VERSION <= ISPC_LLVM_4_0
-    llvm::AttributeSet* m_tf_attributes;
+    llvm::AttributeSet *m_tf_attributes;
 #else // LLVM 5.0+
-    llvm::AttrBuilder* m_tf_attributes;
+    llvm::AttrBuilder *m_tf_attributes;
 #endif
 #endif
 
@@ -424,7 +407,6 @@ private:
     /** Indicates whether the target has hardware instruction for vector prefetch. */
     bool m_hasVecPrefetch;
 };
-
 
 /** @brief Structure that collects optimization options
 
@@ -549,7 +531,7 @@ struct Globals {
     /** Optimization option settings */
     Opt opt;
     /** Compilation target information */
-    Target* target;
+    Target *target;
 
     /** There are a number of math libraries that can be used for
         transcendentals and the like during program compilation. */

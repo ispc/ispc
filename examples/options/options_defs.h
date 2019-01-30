@@ -36,5 +36,4 @@
 
 #define BINOMIAL_NUM 64
 
-
 #endif // OPTIONS_DEFS_H

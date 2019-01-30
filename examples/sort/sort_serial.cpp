@@ -33,28 +33,28 @@
 
 /* Author: Tomasz Koziara */
 
-#include <vector>
 #include <algorithm>
 #include <utility>
+#include <vector>
 
-typedef std::pair<double,int> pair;
+typedef std::pair<double, int> pair;
 
-struct cmp
-{
-  bool operator() (const pair& a, const pair& b) { return a.first < b.first; }
+struct cmp {
+    bool operator()(const pair &a, const pair &b) { return a.first < b.first; }
 };
 
-void sort_serial (int n, unsigned int code[], int order[])
-{
-  std::vector<pair> pairs;
+void sort_serial(int n, unsigned int code[], int order[]) {
+    std::vector<pair> pairs;
 
-  pairs.reserve (n);
+    pairs.reserve(n);
 
-  for (int i = 0; i < n; i++) pairs.push_back (pair(code[i], i));
+    for (int i = 0; i < n; i++)
+        pairs.push_back(pair(code[i], i));
 
-  std::sort (pairs.begin(), pairs.end(), cmp());
+    std::sort(pairs.begin(), pairs.end(), cmp());
 
-  int *o = order;
+    int *o = order;
 
-  for (std::vector<pair>::const_iterator p = pairs.begin(); p != pairs.end(); ++p, ++o) *o = p->second;
+    for (std::vector<pair>::const_iterator p = pairs.begin(); p != pairs.end(); ++p, ++o)
+        *o = p->second;
 }

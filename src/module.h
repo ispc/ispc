@@ -39,23 +39,22 @@
 #ifndef ISPC_MODULE_H
 #define ISPC_MODULE_H 1
 
-#include "ispc.h"
 #include "ast.h"
+#include "ispc.h"
 #if ISPC_LLVM_VERSION == ISPC_LLVM_3_4
-  #include <llvm/DebugInfo.h>
+#include <llvm/DebugInfo.h>
 #elif ISPC_LLVM_VERSION >= ISPC_LLVM_3_5
-  #include <llvm/IR/DebugInfo.h>
+#include <llvm/IR/DebugInfo.h>
 #endif
 
-namespace llvm
-{
-    class raw_string_ostream;
+namespace llvm {
+class raw_string_ostream;
 }
 
 struct DispatchHeaderInfo;
 
 class Module {
-public:
+  public:
     /** The name of the source file being compiled should be passed as the
         module name. */
     Module(const char *filename);
@@ -66,51 +65,48 @@ public:
     int CompileFile();
 
     /** Add a named type definition to the module. */
-    void AddTypeDef(const std::string &name, const Type *type,
-                    SourcePos pos);
+    void AddTypeDef(const std::string &name, const Type *type, SourcePos pos);
 
     /** Add a new global variable corresponding to the given Symbol to the
         module.  If non-NULL, initExpr gives the initiailizer expression
         for the global's inital value. */
-    void AddGlobalVariable(const std::string &name, const Type *type,
-                           Expr *initExpr, bool isConst,
+    void AddGlobalVariable(const std::string &name, const Type *type, Expr *initExpr, bool isConst,
                            StorageClass storageClass, SourcePos pos);
 
     /** Add a declaration of the function defined by the given function
         symbol to the module. */
-    void AddFunctionDeclaration(const std::string &name,
-                                const FunctionType *ftype,
-                                StorageClass sc, bool isInline, SourcePos pos);
+    void AddFunctionDeclaration(const std::string &name, const FunctionType *ftype, StorageClass sc, bool isInline,
+                                SourcePos pos);
 
     /** Adds the function described by the declaration information and the
         provided statements to the module. */
-    void AddFunctionDefinition(const std::string &name,
-                               const FunctionType *ftype, Stmt *code);
+    void AddFunctionDefinition(const std::string &name, const FunctionType *ftype, Stmt *code);
 
     /** Adds the given type to the set of types that have their definitions
         included in automatically generated header files. */
-    void AddExportedTypes(const std::vector<std::pair<const Type *,
-                                                      SourcePos> > &types);
+    void AddExportedTypes(const std::vector<std::pair<const Type *, SourcePos>> &types);
 
     /** After a source file has been compiled, output can be generated in a
         number of different formats. */
-    enum OutputType { Asm,      /** Generate text assembly language output */
-                      Bitcode,  /** Generate LLVM IR bitcode output */
-                      Object,   /** Generate a native object file */
-                      CXX,      /** Generate a C++ file */
-                      Header,   /** Generate a C/C++ header file with
-                                    declarations of 'export'ed functions, global
-                                    variables, and the types used by them. */
-                      Deps,     /** generate dependencies */
-                      DevStub,  /** generate device-side offload stubs */
-                      HostStub  /** generate host-side offload stubs */
+    enum OutputType {
+        Asm,     /** Generate text assembly language output */
+        Bitcode, /** Generate LLVM IR bitcode output */
+        Object,  /** Generate a native object file */
+        CXX,     /** Generate a C++ file */
+        Header,  /** Generate a C/C++ header file with
+                     declarations of 'export'ed functions, global
+                     variables, and the types used by them. */
+        Deps,    /** generate dependencies */
+        DevStub, /** generate device-side offload stubs */
+        HostStub /** generate host-side offload stubs */
     };
 
-    enum OutputFlags : int { NoFlags = 0,
-                       GeneratePIC = 0x1,
-                       GenerateFlatDeps = 0x2,         /** Dependencies will be output as a flat list. */
-                       GenerateMakeRuleForDeps = 0x4,  /** Dependencies will be output in a make rule format instead of a flat list. */
-                       OutputDepsToStdout = 0x8,       /** Dependency information will be output to stdout instead of file. */
+    enum OutputFlags : int {
+        NoFlags = 0,
+        GeneratePIC = 0x1,
+        GenerateFlatDeps = 0x2,        /** Dependencies will be output as a flat list. */
+        GenerateMakeRuleForDeps = 0x4, /** Dependencies will be output in a make rule format instead of a flat list. */
+        OutputDepsToStdout = 0x8,      /** Dependency information will be output to stdout instead of file. */
     };
 
     /** Compile the given source file, generating assembly, object file, or
@@ -143,17 +139,10 @@ public:
         @return             Number of errors encountered when compiling
                             srcFile.
      */
-    static int CompileAndOutput(const char *srcFile, const char *arch,
-                                const char *cpu, const char *targets,
-                                OutputFlags outputFlags,
-                                OutputType outputType,
-                                const char *outFileName,
-                                const char *headerFileName,
-                                const char *includeFileName,
-                                const char *depsFileName,
-                                const char *depsTargetName,
-                                const char *hostStubFileName,
-                                const char *devStubFileName);
+    static int CompileAndOutput(const char *srcFile, const char *arch, const char *cpu, const char *targets,
+                                OutputFlags outputFlags, OutputType outputType, const char *outFileName,
+                                const char *headerFileName, const char *includeFileName, const char *depsFileName,
+                                const char *depsTargetName, const char *hostStubFileName, const char *devStubFileName);
 
     /** Total number of errors encountered during compilation. */
     int errorCount;
@@ -171,45 +160,43 @@ public:
 #if ISPC_LLVM_VERSION >= ISPC_LLVM_3_4 && ISPC_LLVM_VERSION <= ISPC_LLVM_3_6
     llvm::DICompileUnit diCompileUnit;
 #elif ISPC_LLVM_VERSION >= ISPC_LLVM_3_7
-    llvm::DICompileUnit* diCompileUnit;
+    llvm::DICompileUnit *diCompileUnit;
 #endif // LLVM_3_4+
 
-private:
+  private:
     const char *filename;
     AST *ast;
 
-    std::vector<std::pair<const Type *, SourcePos> > exportedTypes;
+    std::vector<std::pair<const Type *, SourcePos>> exportedTypes;
 
     /** Write the corresponding output type to the given file.  Returns
         true on success, false if there has been an error.  The given
         filename may be NULL, indicating that output should go to standard
         output. */
-    bool writeOutput(OutputType ot, OutputFlags flags, const char *filename,
-                     const char *includeFileName = NULL,
-                     const char *sourceFileName = NULL,
-                     DispatchHeaderInfo *DHI = 0);
+    bool writeOutput(OutputType ot, OutputFlags flags, const char *filename, const char *includeFileName = NULL,
+                     const char *sourceFileName = NULL, DispatchHeaderInfo *DHI = 0);
     bool writeHeader(const char *filename);
     bool writeDispatchHeader(DispatchHeaderInfo *DHI);
-    bool writeDeps(const char *filename, bool generateMakeRule, const char *targetName = NULL, const char *srcFilename = NULL);
+    bool writeDeps(const char *filename, bool generateMakeRule, const char *targetName = NULL,
+                   const char *srcFilename = NULL);
     bool writeDevStub(const char *filename);
     bool writeHostStub(const char *filename);
     bool writeObjectFileOrAssembly(OutputType outputType, const char *filename);
-    static bool writeObjectFileOrAssembly(llvm::TargetMachine *targetMachine,
-                                          llvm::Module *module, OutputType outputType,
-                                          const char *outFileName);
+    static bool writeObjectFileOrAssembly(llvm::TargetMachine *targetMachine, llvm::Module *module,
+                                          OutputType outputType, const char *outFileName);
     static bool writeBitcode(llvm::Module *module, const char *outFileName);
 
-    void execPreprocessor(const char *infilename, llvm::raw_string_ostream* ostream) const;
+    void execPreprocessor(const char *infilename, llvm::raw_string_ostream *ostream) const;
 };
 
-inline Module::OutputFlags& operator|=(Module::OutputFlags& lhs, const __underlying_type(Module::OutputFlags) rhs) {
-  return lhs = (Module::OutputFlags)((__underlying_type(Module::OutputFlags))lhs | rhs);
+inline Module::OutputFlags &operator|=(Module::OutputFlags &lhs, const __underlying_type(Module::OutputFlags) rhs) {
+    return lhs = (Module::OutputFlags)((__underlying_type(Module::OutputFlags))lhs | rhs);
 }
-inline Module::OutputFlags& operator&=(Module::OutputFlags& lhs, const __underlying_type(Module::OutputFlags) rhs) {
-  return lhs = (Module::OutputFlags)((__underlying_type(Module::OutputFlags))lhs & rhs);
+inline Module::OutputFlags &operator&=(Module::OutputFlags &lhs, const __underlying_type(Module::OutputFlags) rhs) {
+    return lhs = (Module::OutputFlags)((__underlying_type(Module::OutputFlags))lhs & rhs);
 }
 inline Module::OutputFlags operator|(const Module::OutputFlags lhs, const Module::OutputFlags rhs) {
-  return (Module::OutputFlags)((__underlying_type(Module::OutputFlags))lhs | rhs);
+    return (Module::OutputFlags)((__underlying_type(Module::OutputFlags))lhs | rhs);
 }
 
 #endif // ISPC_MODULE_H

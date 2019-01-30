@@ -62,8 +62,8 @@ enum InputDataArraysEnum {
 
 #ifndef ISPC
 
-#include <stdint.h>
 #include "kernels_ispc.h"
+#include <stdint.h>
 
 #define ALIGNMENT_BYTES 64
 
@@ -71,13 +71,11 @@ enum InputDataArraysEnum {
 
 #define VISUALIZE_LIGHT_COUNT 0
 
-struct InputData
-{
+struct InputData {
     ispc::InputHeader header;
     ispc::InputDataArrays arrays;
     uint8_t *chunk;
 };
-
 
 struct Framebuffer {
     Framebuffer(int width, int height);
@@ -87,17 +85,15 @@ struct Framebuffer {
 
     uint8_t *r, *g, *b;
 
-private:
+  private:
     int nPixels;
     Framebuffer(const Framebuffer &);
     Framebuffer &operator=(const Framebuffer *);
 };
 
-
 InputData *CreateInputDataFromFile(const char *path);
 void DeleteInputData(InputData *input);
-void WriteFrame(const char *filename, const InputData *input,
-                const Framebuffer &framebuffer);
+void WriteFrame(const char *filename, const InputData *input, const Framebuffer &framebuffer);
 void InitDynamicC(InputData *input);
 void InitDynamicCilk(InputData *input);
 void DispatchDynamicC(InputData *input, Framebuffer *framebuffer);

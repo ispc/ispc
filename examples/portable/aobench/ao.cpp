@@ -34,56 +34,52 @@
 #ifdef _MSC_VER
 #define _CRT_SECURE_NO_WARNINGS
 #define NOMINMAX
-#pragma warning (disable: 4244)
-#pragma warning (disable: 4305)
+#pragma warning(disable : 4244)
+#pragma warning(disable : 4305)
 #endif
 
+#include <cassert>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
-#include <cassert>
 #ifdef __linux__
 #include <malloc.h>
 #endif
-#include <math.h>
-#include <map>
-#include <string>
 #include <algorithm>
+#include <map>
+#include <math.h>
+#include <string>
 #include <sys/types.h>
 
 #include "ao_ispc.h"
 
-#include "timing.h"
 #include "ispc_malloc.h"
+#include "timing.h"
 
-#define NSUBSAMPLES        2
+#define NSUBSAMPLES 2
 
 static unsigned int test_iterations[] = {3, 7, 1};
 static unsigned int width, height;
 static unsigned char *img;
 static float *fimg;
 
-
-static unsigned char
-clamp(float f)
-{
+static unsigned char clamp(float f) {
     int i = (int)(f * 255.5);
 
-    if (i < 0) i = 0;
-    if (i > 255) i = 255;
+    if (i < 0)
+        i = 0;
+    if (i > 255)
+        i = 255;
 
     return (unsigned char)i;
 }
 
-
-static void
-savePPM(const char *fname, int w, int h)
-{
+static void savePPM(const char *fname, int w, int h) {
     for (int y = 0; y < h; y++) {
-        for (int x = 0; x < w; x++)  {
-            img[3 * (y * w + x) + 0] = clamp(fimg[3 *(y * w + x) + 0]);
-            img[3 * (y * w + x) + 1] = clamp(fimg[3 *(y * w + x) + 1]);
-            img[3 * (y * w + x) + 2] = clamp(fimg[3 *(y * w + x) + 2]);
+        for (int x = 0; x < w; x++) {
+            img[3 * (y * w + x) + 0] = clamp(fimg[3 * (y * w + x) + 0]);
+            img[3 * (y * w + x) + 1] = clamp(fimg[3 * (y * w + x) + 1]);
+            img[3 * (y * w + x) + 2] = clamp(fimg[3 * (y * w + x) + 2]);
         }
     }
 
@@ -101,23 +97,20 @@ savePPM(const char *fname, int w, int h)
     printf("Wrote image file %s\n", fname);
 }
 
-
-int main(int argc, char **argv)
-{
+int main(int argc, char **argv) {
     if (argc < 3) {
-        printf ("%s\n", argv[0]);
-        printf ("Usage: ao [width] [height] [ispc iterations] [tasks iterations] [serial iterations]\n");
+        printf("%s\n", argv[0]);
+        printf("Usage: ao [width] [height] [ispc iterations] [tasks iterations] [serial iterations]\n");
         getchar();
         exit(-1);
-    }
-    else {
+    } else {
         if (argc == 6) {
             for (int i = 0; i < 3; i++) {
                 test_iterations[i] = atoi(argv[3 + i]);
             }
         }
-        width = atoi (argv[1]);
-        height = atoi (argv[2]);
+        width = atoi(argv[1]);
+        height = atoi(argv[2]);
     }
 
     // Allocate space for output images
@@ -141,8 +134,7 @@ int main(int argc, char **argv)
     }
 
     // Report results and save image
-    printf("[aobench ispc + tasks]:\t\t[%.3f] msec (%d x %d image)\n",
-           minTimeISPCTasks, width, height);
+    printf("[aobench ispc + tasks]:\t\t[%.3f] msec (%d x %d image)\n", minTimeISPCTasks, width, height);
     savePPM("ao-ispc-tasks.ppm", width, height);
 
     delete img;

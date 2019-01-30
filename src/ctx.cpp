@@ -36,34 +36,34 @@
 */
 
 #include "ctx.h"
-#include "util.h"
+#include "expr.h"
 #include "func.h"
 #include "llvmutil.h"
-#include "type.h"
-#include "stmt.h"
-#include "expr.h"
 #include "module.h"
+#include "stmt.h"
 #include "sym.h"
+#include "type.h"
+#include "util.h"
 #include <map>
 #if ISPC_LLVM_VERSION >= ISPC_LLVM_5_0 // LLVM 5.0+
-  #include <llvm/BinaryFormat/Dwarf.h>
+#include <llvm/BinaryFormat/Dwarf.h>
 #else // LLVM up to 4.x
-  #include <llvm/Support/Dwarf.h>
+#include <llvm/Support/Dwarf.h>
 #endif
 #if ISPC_LLVM_VERSION == ISPC_LLVM_3_2
-  #include <llvm/Metadata.h>
-  #include <llvm/Module.h>
-  #include <llvm/Instructions.h>
-  #include <llvm/DerivedTypes.h>
+#include <llvm/DerivedTypes.h>
+#include <llvm/Instructions.h>
+#include <llvm/Metadata.h>
+#include <llvm/Module.h>
 #else
-  #include <llvm/IR/Metadata.h>
-  #include <llvm/IR/Module.h>
-  #include <llvm/IR/Instructions.h>
-  #include <llvm/IR/DerivedTypes.h>
+#include <llvm/IR/DerivedTypes.h>
+#include <llvm/IR/Instructions.h>
+#include <llvm/IR/Metadata.h>
+#include <llvm/IR/Module.h>
 #endif
 #ifdef ISPC_NVPTX_ENABLED
-#include <llvm/Support/raw_ostream.h>
 #include <llvm/Support/FormattedStream.h>
+#include <llvm/Support/raw_ostream.h>
 #endif /* ISPC_NVPTX_ENABLED */
 
 /** This is a small utility structure that records information related to one
@@ -77,41 +77,30 @@ struct CFInfo {
 
     /** Returns a new instance of the structure that represents entering a
         loop. */
-    static CFInfo *GetLoop(bool isUniform, llvm::BasicBlock *breakTarget,
-                           llvm::BasicBlock *continueTarget,
-                           llvm::Value *savedBreakLanesPtr,
-                           llvm::Value *savedContinueLanesPtr,
-                           llvm::Value *savedMask, llvm::Value *savedBlockEntryMask);
+    static CFInfo *GetLoop(bool isUniform, llvm::BasicBlock *breakTarget, llvm::BasicBlock *continueTarget,
+                           llvm::Value *savedBreakLanesPtr, llvm::Value *savedContinueLanesPtr, llvm::Value *savedMask,
+                           llvm::Value *savedBlockEntryMask);
 
-    static CFInfo *GetForeach(FunctionEmitContext::ForeachType ft,
-                              llvm::BasicBlock *breakTarget,
-                              llvm::BasicBlock *continueTarget,
-                              llvm::Value *savedBreakLanesPtr,
-                              llvm::Value *savedContinueLanesPtr,
-                              llvm::Value *savedMask, llvm::Value *savedBlockEntryMask);
+    static CFInfo *GetForeach(FunctionEmitContext::ForeachType ft, llvm::BasicBlock *breakTarget,
+                              llvm::BasicBlock *continueTarget, llvm::Value *savedBreakLanesPtr,
+                              llvm::Value *savedContinueLanesPtr, llvm::Value *savedMask,
+                              llvm::Value *savedBlockEntryMask);
 
-    static CFInfo *GetSwitch(bool isUniform, llvm::BasicBlock *breakTarget,
-                             llvm::BasicBlock *continueTarget,
-                             llvm::Value *savedBreakLanesPtr,
-                             llvm::Value *savedContinueLanesPtr,
-                             llvm::Value *savedMask, llvm::Value *savedBlockEntryMask,
-                             llvm::Value *switchExpr,
+    static CFInfo *GetSwitch(bool isUniform, llvm::BasicBlock *breakTarget, llvm::BasicBlock *continueTarget,
+                             llvm::Value *savedBreakLanesPtr, llvm::Value *savedContinueLanesPtr,
+                             llvm::Value *savedMask, llvm::Value *savedBlockEntryMask, llvm::Value *switchExpr,
                              llvm::BasicBlock *bbDefault,
-                             const std::vector<std::pair<int, llvm::BasicBlock *> > *bbCases,
-                             const std::map<llvm::BasicBlock *, llvm::BasicBlock *> *bbNext,
-                             bool scUniform);
+                             const std::vector<std::pair<int, llvm::BasicBlock *>> *bbCases,
+                             const std::map<llvm::BasicBlock *, llvm::BasicBlock *> *bbNext, bool scUniform);
 
     bool IsIf() { return type == If; }
     bool IsLoop() { return type == Loop; }
-    bool IsForeach() { return (type == ForeachRegular ||
-                               type == ForeachActive ||
-                               type == ForeachUnique); }
+    bool IsForeach() { return (type == ForeachRegular || type == ForeachActive || type == ForeachUnique); }
     bool IsSwitch() { return type == Switch; }
     bool IsVarying() { return !isUniform; }
     bool IsUniform() { return isUniform; }
 
-    enum CFType { If, Loop, ForeachRegular, ForeachActive, ForeachUnique,
-                  Switch };
+    enum CFType { If, Loop, ForeachRegular, ForeachActive, ForeachUnique, Switch };
     CFType type;
     bool isUniform;
     llvm::BasicBlock *savedBreakTarget, *savedContinueTarget;
@@ -119,11 +108,11 @@ struct CFInfo {
     llvm::Value *savedMask, *savedBlockEntryMask;
     llvm::Value *savedSwitchExpr;
     llvm::BasicBlock *savedDefaultBlock;
-    const std::vector<std::pair<int, llvm::BasicBlock *> > *savedCaseBlocks;
+    const std::vector<std::pair<int, llvm::BasicBlock *>> *savedCaseBlocks;
     const std::map<llvm::BasicBlock *, llvm::BasicBlock *> *savedNextBlocks;
     bool savedSwitchConditionWasUniform;
 
-private:
+  private:
     CFInfo(CFType t, bool uniformIf, llvm::Value *sm) {
         Assert(t == If);
         type = t;
@@ -136,12 +125,10 @@ private:
         savedCaseBlocks = NULL;
         savedNextBlocks = NULL;
     }
-    CFInfo(CFType t, bool iu, llvm::BasicBlock *bt, llvm::BasicBlock *ct,
-           llvm::Value *sb, llvm::Value *sc, llvm::Value *sm,
-           llvm::Value *lm, llvm::Value *sse = NULL, llvm::BasicBlock *bbd = NULL,
-           const std::vector<std::pair<int, llvm::BasicBlock *> > *bbc = NULL,
-           const std::map<llvm::BasicBlock *, llvm::BasicBlock *> *bbn = NULL,
-           bool scu = false) {
+    CFInfo(CFType t, bool iu, llvm::BasicBlock *bt, llvm::BasicBlock *ct, llvm::Value *sb, llvm::Value *sc,
+           llvm::Value *sm, llvm::Value *lm, llvm::Value *sse = NULL, llvm::BasicBlock *bbd = NULL,
+           const std::vector<std::pair<int, llvm::BasicBlock *>> *bbc = NULL,
+           const std::map<llvm::BasicBlock *, llvm::BasicBlock *> *bbn = NULL, bool scu = false) {
         Assert(t == Loop || t == Switch);
         type = t;
         isUniform = iu;
@@ -157,8 +144,7 @@ private:
         savedNextBlocks = bbn;
         savedSwitchConditionWasUniform = scu;
     }
-    CFInfo(CFType t, llvm::BasicBlock *bt, llvm::BasicBlock *ct,
-           llvm::Value *sb, llvm::Value *sc, llvm::Value *sm,
+    CFInfo(CFType t, llvm::BasicBlock *bt, llvm::BasicBlock *ct, llvm::Value *sb, llvm::Value *sc, llvm::Value *sm,
            llvm::Value *lm) {
         Assert(t == ForeachRegular || t == ForeachActive || t == ForeachUnique);
         type = t;
@@ -176,32 +162,18 @@ private:
     }
 };
 
+CFInfo *CFInfo::GetIf(bool isUniform, llvm::Value *savedMask) { return new CFInfo(If, isUniform, savedMask); }
 
-CFInfo *
-CFInfo::GetIf(bool isUniform, llvm::Value *savedMask) {
-    return new CFInfo(If, isUniform, savedMask);
-}
-
-
-CFInfo *
-CFInfo::GetLoop(bool isUniform, llvm::BasicBlock *breakTarget,
-                llvm::BasicBlock *continueTarget,
-                llvm::Value *savedBreakLanesPtr,
-                llvm::Value *savedContinueLanesPtr,
-                llvm::Value *savedMask, llvm::Value *savedBlockEntryMask) {
-    return new CFInfo(Loop, isUniform, breakTarget, continueTarget,
-                      savedBreakLanesPtr, savedContinueLanesPtr,
+CFInfo *CFInfo::GetLoop(bool isUniform, llvm::BasicBlock *breakTarget, llvm::BasicBlock *continueTarget,
+                        llvm::Value *savedBreakLanesPtr, llvm::Value *savedContinueLanesPtr, llvm::Value *savedMask,
+                        llvm::Value *savedBlockEntryMask) {
+    return new CFInfo(Loop, isUniform, breakTarget, continueTarget, savedBreakLanesPtr, savedContinueLanesPtr,
                       savedMask, savedBlockEntryMask);
 }
 
-
-CFInfo *
-CFInfo::GetForeach(FunctionEmitContext::ForeachType ft,
-                   llvm::BasicBlock *breakTarget,
-                   llvm::BasicBlock *continueTarget,
-                   llvm::Value *savedBreakLanesPtr,
-                   llvm::Value *savedContinueLanesPtr,
-                   llvm::Value *savedMask, llvm::Value *savedForeachMask) {
+CFInfo *CFInfo::GetForeach(FunctionEmitContext::ForeachType ft, llvm::BasicBlock *breakTarget,
+                           llvm::BasicBlock *continueTarget, llvm::Value *savedBreakLanesPtr,
+                           llvm::Value *savedContinueLanesPtr, llvm::Value *savedMask, llvm::Value *savedForeachMask) {
     CFType cfType;
     switch (ft) {
     case FunctionEmitContext::FOREACH_REGULAR:
@@ -218,33 +190,25 @@ CFInfo::GetForeach(FunctionEmitContext::ForeachType ft,
         return NULL;
     }
 
-    return new CFInfo(cfType, breakTarget, continueTarget,
-                      savedBreakLanesPtr, savedContinueLanesPtr,
-                      savedMask, savedForeachMask);
+    return new CFInfo(cfType, breakTarget, continueTarget, savedBreakLanesPtr, savedContinueLanesPtr, savedMask,
+                      savedForeachMask);
 }
 
-
-CFInfo *
-CFInfo::GetSwitch(bool isUniform, llvm::BasicBlock *breakTarget,
-                  llvm::BasicBlock *continueTarget,
-                  llvm::Value *savedBreakLanesPtr,
-                  llvm::Value *savedContinueLanesPtr, llvm::Value *savedMask,
-                  llvm::Value *savedBlockEntryMask, llvm::Value *savedSwitchExpr,
-                  llvm::BasicBlock *savedDefaultBlock,
-                  const std::vector<std::pair<int, llvm::BasicBlock *> > *savedCases,
-                  const std::map<llvm::BasicBlock *, llvm::BasicBlock *> *savedNext,
-                  bool savedSwitchConditionUniform) {
-    return new CFInfo(Switch, isUniform, breakTarget, continueTarget,
-                      savedBreakLanesPtr, savedContinueLanesPtr,
-                      savedMask, savedBlockEntryMask, savedSwitchExpr, savedDefaultBlock,
-                      savedCases, savedNext, savedSwitchConditionUniform);
+CFInfo *CFInfo::GetSwitch(bool isUniform, llvm::BasicBlock *breakTarget, llvm::BasicBlock *continueTarget,
+                          llvm::Value *savedBreakLanesPtr, llvm::Value *savedContinueLanesPtr, llvm::Value *savedMask,
+                          llvm::Value *savedBlockEntryMask, llvm::Value *savedSwitchExpr,
+                          llvm::BasicBlock *savedDefaultBlock,
+                          const std::vector<std::pair<int, llvm::BasicBlock *>> *savedCases,
+                          const std::map<llvm::BasicBlock *, llvm::BasicBlock *> *savedNext,
+                          bool savedSwitchConditionUniform) {
+    return new CFInfo(Switch, isUniform, breakTarget, continueTarget, savedBreakLanesPtr, savedContinueLanesPtr,
+                      savedMask, savedBlockEntryMask, savedSwitchExpr, savedDefaultBlock, savedCases, savedNext,
+                      savedSwitchConditionUniform);
 }
 
 ///////////////////////////////////////////////////////////////////////////
 
-FunctionEmitContext::FunctionEmitContext(Function *func, Symbol *funSym,
-                                         llvm::Function *lf,
-                                         SourcePos firstStmtPos) {
+FunctionEmitContext::FunctionEmitContext(Function *func, Symbol *funSym, llvm::Function *lf, SourcePos firstStmtPos) {
     function = func;
     llvmFunction = lf;
 
@@ -278,8 +242,7 @@ FunctionEmitContext::FunctionEmitContext(Function *func, Symbol *funSym,
 
     launchedTasks = false;
     launchGroupHandlePtr = AllocaInst(LLVMTypes::VoidPointerType, "launch_group_handle");
-    StoreInst(llvm::Constant::getNullValue(LLVMTypes::VoidPointerType),
-              launchGroupHandlePtr);
+    StoreInst(llvm::Constant::getNullValue(LLVMTypes::VoidPointerType), launchGroupHandlePtr);
 
     disableGSWarningCount = 0;
 
@@ -307,30 +270,24 @@ FunctionEmitContext::FunctionEmitContext(Function *func, Symbol *funSym,
         // __all_on_mask can't be guaranteed to be "all on", we emit a
         // dummy function that sets __all_on_mask be "all off".  (That
         // function is never actually called.)
-        llvm::Value *globalAllOnMaskPtr =
-            m->module->getNamedGlobal("__all_on_mask");
+        llvm::Value *globalAllOnMaskPtr = m->module->getNamedGlobal("__all_on_mask");
         if (globalAllOnMaskPtr == NULL) {
             globalAllOnMaskPtr =
-                new llvm::GlobalVariable(*m->module, LLVMTypes::MaskType, false,
-                                         llvm::GlobalValue::InternalLinkage,
+                new llvm::GlobalVariable(*m->module, LLVMTypes::MaskType, false, llvm::GlobalValue::InternalLinkage,
                                          LLVMMaskAllOn, "__all_on_mask");
 
             char buf[256];
             sprintf(buf, "__off_all_on_mask_%s", g->target->GetISAString());
             llvm::Constant *offFunc =
 #if ISPC_LLVM_VERSION <= ISPC_LLVM_4_0
-                m->module->getOrInsertFunction(buf, LLVMTypes::VoidType,
-                                               NULL);
+                m->module->getOrInsertFunction(buf, LLVMTypes::VoidType, NULL);
 #else // LLVM 5.0+
                 m->module->getOrInsertFunction(buf, LLVMTypes::VoidType);
 #endif
 
             AssertPos(currentPos, llvm::isa<llvm::Function>(offFunc));
-            llvm::BasicBlock *offBB =
-                   llvm::BasicBlock::Create(*g->ctx, "entry",
-                                            (llvm::Function *)offFunc, 0);
-            llvm::StoreInst *inst =
-                new llvm::StoreInst(LLVMMaskAllOff, globalAllOnMaskPtr, offBB);
+            llvm::BasicBlock *offBB = llvm::BasicBlock::Create(*g->ctx, "entry", (llvm::Function *)offFunc, 0);
+            llvm::StoreInst *inst = new llvm::StoreInst(LLVMMaskAllOff, globalAllOnMaskPtr, offBB);
             if (g->opt.forceAlignedMemory) {
                 inst->setAlignment(g->target->getNativeVectorAlignment());
             }
@@ -357,7 +314,7 @@ FunctionEmitContext::FunctionEmitContext(Function *func, Symbol *funSym,
         llvm::DIScope scope = llvm::DIScope(m->diBuilder->getCU());
 #elif ISPC_LLVM_VERSION <= ISPC_LLVM_3_6 /* 3.4, 3.5, 3.6 */
         llvm::DIScope scope = llvm::DIScope(m->diCompileUnit);
-#else /* LLVM 3.7+ */
+#else                                    /* LLVM 3.7+ */
         llvm::DIScope *scope = m->diCompileUnit;
 #endif
 #if ISPC_LLVM_VERSION <= ISPC_LLVM_3_6 /* 3.2, 3.3, 3.4, 3.5, 3.6 */
@@ -375,19 +332,18 @@ FunctionEmitContext::FunctionEmitContext(Function *func, Symbol *funSym,
 #if ISPC_LLVM_VERSION <= ISPC_LLVM_3_6 /* 3.2, 3.3, 3.4, 3.5, 3.6 */
             AssertPos(currentPos, diSubprogramType.Verify());
 #else /* LLVM 3.7+ */
-    //comming soon
+            // comming soon
 #endif
         }
 
 #if ISPC_LLVM_VERSION <= ISPC_LLVM_3_3 /* 3.2, 3.3 */
         llvm::DIType diSubprogramType_n = diSubprogramType;
         int flags = llvm::DIDescriptor::FlagPrototyped;
-#elif ISPC_LLVM_VERSION <= ISPC_LLVM_3_6 /* 3.4, 3.5, 3.6 */
+#elif ISPC_LLVM_VERSION <= ISPC_LLVM_3_6                                       /* 3.4, 3.5, 3.6 */
         Assert(diSubprogramType.isCompositeType());
-        llvm::DICompositeType diSubprogramType_n =
-            static_cast<llvm::DICompositeType>(diSubprogramType);
+        llvm::DICompositeType diSubprogramType_n = static_cast<llvm::DICompositeType>(diSubprogramType);
         int flags = llvm::DIDescriptor::FlagPrototyped;
-#elif ISPC_LLVM_VERSION == ISPC_LLVM_3_7 /* LLVM 3.7 */
+#elif ISPC_LLVM_VERSION == ISPC_LLVM_3_7                                       /* LLVM 3.7 */
         Assert(llvm::isa<llvm::DICompositeTypeBase>(diSubprogramType));
         llvm::DISubroutineType *diSubprogramType_n =
             llvm::cast<llvm::DISubroutineType>(getDICompositeType(diSubprogramType));
@@ -396,7 +352,7 @@ FunctionEmitContext::FunctionEmitContext(Function *func, Symbol *funSym,
         Assert(llvm::isa<llvm::DISubroutineType>(diSubprogramType));
         llvm::DISubroutineType *diSubprogramType_n = llvm::cast<llvm::DISubroutineType>(diSubprogramType);
         int flags = llvm::DINode::FlagPrototyped;
-#else /* LLVM 4.0+ */
+#else                                                                          /* LLVM 4.0+ */
         Assert(llvm::isa<llvm::DISubroutineType>(diSubprogramType));
         llvm::DISubroutineType *diSubprogramType_n = llvm::cast<llvm::DISubroutineType>(diSubprogramType);
         llvm::DINode::DIFlags flags = llvm::DINode::FlagPrototyped;
@@ -412,41 +368,25 @@ FunctionEmitContext::FunctionEmitContext(Function *func, Symbol *funSym,
         int firstLine = funcStartPos.first_line;
 
 #if ISPC_LLVM_VERSION <= ISPC_LLVM_3_6 /* 3.2, 3.3, 3.4, 3.5, 3.6 */
-        diSubprogram =
-            m->diBuilder->createFunction(diFile /* scope */, funSym->name,
-                                         mangledName,        diFile,
-                                         firstLine,          diSubprogramType_n,
-                                         isStatic,           true, /* is defn */
-                                         firstLine,          flags,
-                                         isOptimized,        llvmFunction);
+        diSubprogram = m->diBuilder->createFunction(diFile /* scope */, funSym->name, mangledName, diFile, firstLine,
+                                                    diSubprogramType_n, isStatic, true, /* is defn */
+                                                    firstLine, flags, isOptimized, llvmFunction);
         AssertPos(currentPos, diSubprogram.Verify());
-#elif ISPC_LLVM_VERSION == ISPC_LLVM_3_7 /* LLVM 3.7 */
-        diSubprogram =
-            m->diBuilder->createFunction(diFile /* scope */, funSym->name,
-                                         mangledName,        diFile,
-                                         firstLine,          diSubprogramType_n,
-                                         isStatic,           true, /* is defn */
-                                         firstLine,          flags,
-                                         isOptimized,        llvmFunction);
+#elif ISPC_LLVM_VERSION == ISPC_LLVM_3_7                                       /* LLVM 3.7 */
+        diSubprogram = m->diBuilder->createFunction(diFile /* scope */, funSym->name, mangledName, diFile, firstLine,
+                                                    diSubprogramType_n, isStatic, true, /* is defn */
+                                                    firstLine, flags, isOptimized, llvmFunction);
 #elif ISPC_LLVM_VERSION == ISPC_LLVM_3_8 || ISPC_LLVM_VERSION == ISPC_LLVM_3_9 /* LLVM 3.8, 3.9 */
-        diSubprogram =
-            m->diBuilder->createFunction(diFile /* scope */, funSym->name,
-                                         mangledName,        diFile,
-                                         firstLine,          diSubprogramType_n,
-                                         isStatic,           true, /* is defn */
-                                         firstLine,          flags,
-                                         isOptimized);
+        diSubprogram = m->diBuilder->createFunction(diFile /* scope */, funSym->name, mangledName, diFile, firstLine,
+                                                    diSubprogramType_n, isStatic, true, /* is defn */
+                                                    firstLine, flags, isOptimized);
         llvmFunction->setSubprogram(diSubprogram);
 #elif ISPC_LLVM_VERSION >= ISPC_LLVM_4_0 && ISPC_LLVM_VERSION <= ISPC_LLVM_7_0 /* LLVM 4.0 to 7.0 */
-        diSubprogram =
-            m->diBuilder->createFunction(diFile /* scope */, funSym->name,
-                                         mangledName,        diFile,
-                                         firstLine,          diSubprogramType_n,
-                                         isStatic,           true, /* is defn */
-                                         firstLine,          flags,
-                                         isOptimized);
+        diSubprogram = m->diBuilder->createFunction(diFile /* scope */, funSym->name, mangledName, diFile, firstLine,
+                                                    diSubprogramType_n, isStatic, true, /* is defn */
+                                                    firstLine, flags, isOptimized);
         llvmFunction->setSubprogram(diSubprogram);
-#else /* LLVM 8.0+ */
+#else                                                                          /* LLVM 8.0+ */
         /* isDefinition is always set to 'true' */
         llvm::DISubprogram::DISPFlags SPFlags = llvm::DISubprogram::SPFlagDefinition;
         if (isOptimized)
@@ -454,12 +394,8 @@ FunctionEmitContext::FunctionEmitContext(Function *func, Symbol *funSym,
         if (isStatic)
             SPFlags |= llvm::DISubprogram::SPFlagLocalToUnit;
 
-        diSubprogram =
-            m->diBuilder->createFunction(diFile /* scope */, funSym->name,
-                                         mangledName,        diFile,
-                                         firstLine,          diSubprogramType_n,
-                                         firstLine,          flags,
-                                         SPFlags);
+        diSubprogram = m->diBuilder->createFunction(diFile /* scope */, funSym->name, mangledName, diFile, firstLine,
+                                                    diSubprogramType_n, firstLine, flags, SPFlags);
         llvmFunction->setSubprogram(diSubprogram);
 #endif
 
@@ -468,98 +404,53 @@ FunctionEmitContext::FunctionEmitContext(Function *func, Symbol *funSym,
     }
 }
 
-
 FunctionEmitContext::~FunctionEmitContext() {
     AssertPos(currentPos, controlFlowInfo.size() == 0);
     AssertPos(currentPos, debugScopes.size() == (m->diBuilder ? 1 : 0));
 }
 
+const Function *FunctionEmitContext::GetFunction() const { return function; }
 
-const Function *
-FunctionEmitContext::GetFunction() const {
-    return function;
+llvm::BasicBlock *FunctionEmitContext::GetCurrentBasicBlock() { return bblock; }
+
+void FunctionEmitContext::SetCurrentBasicBlock(llvm::BasicBlock *bb) { bblock = bb; }
+
+llvm::Value *FunctionEmitContext::GetFunctionMask() { return functionMaskValue; }
+
+llvm::Value *FunctionEmitContext::GetInternalMask() { return LoadInst(internalMaskPointer, "load_mask"); }
+
+llvm::Value *FunctionEmitContext::GetFullMask() {
+    return BinaryOperator(llvm::Instruction::And, GetInternalMask(), functionMaskValue, "internal_mask&function_mask");
 }
 
+llvm::Value *FunctionEmitContext::GetFullMaskPointer() { return fullMaskPointer; }
 
-llvm::BasicBlock *
-FunctionEmitContext::GetCurrentBasicBlock() {
-    return bblock;
-}
-
-
-void
-FunctionEmitContext::SetCurrentBasicBlock(llvm::BasicBlock *bb) {
-    bblock = bb;
-}
-
-
-llvm::Value *
-FunctionEmitContext::GetFunctionMask() {
-    return functionMaskValue;
-}
-
-
-llvm::Value *
-FunctionEmitContext::GetInternalMask() {
-    return LoadInst(internalMaskPointer, "load_mask");
-}
-
-
-llvm::Value *
-FunctionEmitContext::GetFullMask() {
-    return BinaryOperator(llvm::Instruction::And, GetInternalMask(),
-                          functionMaskValue, "internal_mask&function_mask");
-}
-
-
-llvm::Value *
-FunctionEmitContext::GetFullMaskPointer() {
-    return fullMaskPointer;
-}
-
-
-void
-FunctionEmitContext::SetFunctionMask(llvm::Value *value) {
+void FunctionEmitContext::SetFunctionMask(llvm::Value *value) {
     functionMaskValue = value;
     if (bblock != NULL)
         StoreInst(GetFullMask(), fullMaskPointer);
 }
 
+void FunctionEmitContext::SetBlockEntryMask(llvm::Value *value) { blockEntryMask = value; }
 
-void
-FunctionEmitContext::SetBlockEntryMask(llvm::Value *value) {
-    blockEntryMask = value;
-}
-
-
-void
-FunctionEmitContext::SetInternalMask(llvm::Value *value) {
+void FunctionEmitContext::SetInternalMask(llvm::Value *value) {
     StoreInst(value, internalMaskPointer);
     // kludge so that __mask returns the right value in ispc code.
     StoreInst(GetFullMask(), fullMaskPointer);
 }
 
-
-void
-FunctionEmitContext::SetInternalMaskAnd(llvm::Value *oldMask, llvm::Value *test) {
-    llvm::Value *mask = BinaryOperator(llvm::Instruction::And, oldMask,
-                                       test, "oldMask&test");
+void FunctionEmitContext::SetInternalMaskAnd(llvm::Value *oldMask, llvm::Value *test) {
+    llvm::Value *mask = BinaryOperator(llvm::Instruction::And, oldMask, test, "oldMask&test");
     SetInternalMask(mask);
 }
 
-
-void
-FunctionEmitContext::SetInternalMaskAndNot(llvm::Value *oldMask, llvm::Value *test) {
-    llvm::Value *notTest = BinaryOperator(llvm::Instruction::Xor, test, LLVMMaskAllOn,
-                                          "~test");
-    llvm::Value *mask = BinaryOperator(llvm::Instruction::And, oldMask, notTest,
-                                       "oldMask&~test");
+void FunctionEmitContext::SetInternalMaskAndNot(llvm::Value *oldMask, llvm::Value *test) {
+    llvm::Value *notTest = BinaryOperator(llvm::Instruction::Xor, test, LLVMMaskAllOn, "~test");
+    llvm::Value *mask = BinaryOperator(llvm::Instruction::And, oldMask, notTest, "oldMask&~test");
     SetInternalMask(mask);
 }
 
-
-void
-FunctionEmitContext::BranchIfMaskAny(llvm::BasicBlock *btrue, llvm::BasicBlock *bfalse) {
+void FunctionEmitContext::BranchIfMaskAny(llvm::BasicBlock *btrue, llvm::BasicBlock *bfalse) {
     AssertPos(currentPos, bblock != NULL);
     llvm::Value *any = Any(GetFullMask());
     BranchInst(btrue, bfalse, any);
@@ -568,9 +459,7 @@ FunctionEmitContext::BranchIfMaskAny(llvm::BasicBlock *btrue, llvm::BasicBlock *
     bblock = NULL;
 }
 
-
-void
-FunctionEmitContext::BranchIfMaskAll(llvm::BasicBlock *btrue, llvm::BasicBlock *bfalse) {
+void FunctionEmitContext::BranchIfMaskAll(llvm::BasicBlock *btrue, llvm::BasicBlock *bfalse) {
     AssertPos(currentPos, bblock != NULL);
     llvm::Value *all = All(GetFullMask());
     BranchInst(btrue, bfalse, all);
@@ -579,9 +468,7 @@ FunctionEmitContext::BranchIfMaskAll(llvm::BasicBlock *btrue, llvm::BasicBlock *
     bblock = NULL;
 }
 
-
-void
-FunctionEmitContext::BranchIfMaskNone(llvm::BasicBlock *btrue, llvm::BasicBlock *bfalse) {
+void FunctionEmitContext::BranchIfMaskNone(llvm::BasicBlock *btrue, llvm::BasicBlock *bfalse) {
     AssertPos(currentPos, bblock != NULL);
     // switch sense of true/false bblocks
     BranchIfMaskAny(bfalse, btrue);
@@ -590,21 +477,13 @@ FunctionEmitContext::BranchIfMaskNone(llvm::BasicBlock *btrue, llvm::BasicBlock 
     bblock = NULL;
 }
 
+void FunctionEmitContext::StartUniformIf() { controlFlowInfo.push_back(CFInfo::GetIf(true, GetInternalMask())); }
 
-void
-FunctionEmitContext::StartUniformIf() {
-    controlFlowInfo.push_back(CFInfo::GetIf(true, GetInternalMask()));
-}
-
-
-void
-FunctionEmitContext::StartVaryingIf(llvm::Value *oldMask) {
+void FunctionEmitContext::StartVaryingIf(llvm::Value *oldMask) {
     controlFlowInfo.push_back(CFInfo::GetIf(false, oldMask));
 }
 
-
-void
-FunctionEmitContext::EndIf() {
+void FunctionEmitContext::EndIf() {
     CFInfo *ci = popCFState();
     // Make sure we match up with a Start{Uniform,Varying}If().
     AssertPos(currentPos, ci->IsIf());
@@ -649,32 +528,23 @@ FunctionEmitContext::EndIf() {
 
         if (breakLanesPtr != NULL) {
             llvm::Value *breakLanes = LoadInst(breakLanesPtr, "break_lanes");
-            bcLanes = BinaryOperator(llvm::Instruction::Or, bcLanes,
-                                     breakLanes, "|break_lanes");
+            bcLanes = BinaryOperator(llvm::Instruction::Or, bcLanes, breakLanes, "|break_lanes");
         }
 
-        llvm::Value *notBreakOrContinue = 
-            BinaryOperator(llvm::Instruction::Xor,
-                           bcLanes, LLVMMaskAllOn,
-                           "!(break|continue)_lanes");
+        llvm::Value *notBreakOrContinue =
+            BinaryOperator(llvm::Instruction::Xor, bcLanes, LLVMMaskAllOn, "!(break|continue)_lanes");
         llvm::Value *oldMask = GetInternalMask();
-        llvm::Value *newMask =
-            BinaryOperator(llvm::Instruction::And, oldMask,
-                           notBreakOrContinue, "new_mask");
+        llvm::Value *newMask = BinaryOperator(llvm::Instruction::And, oldMask, notBreakOrContinue, "new_mask");
         SetInternalMask(newMask);
     }
 }
 
-
-void
-FunctionEmitContext::StartLoop(llvm::BasicBlock *bt, llvm::BasicBlock *ct,
-                               bool uniformCF) {
+void FunctionEmitContext::StartLoop(llvm::BasicBlock *bt, llvm::BasicBlock *ct, bool uniformCF) {
     // Store the current values of various loop-related state so that we
     // can restore it when we exit this loop.
     llvm::Value *oldMask = GetInternalMask();
-    controlFlowInfo.push_back(CFInfo::GetLoop(uniformCF, breakTarget,
-                                              continueTarget, breakLanesPtr,
-                                              continueLanesPtr, oldMask, blockEntryMask));
+    controlFlowInfo.push_back(CFInfo::GetLoop(uniformCF, breakTarget, continueTarget, breakLanesPtr, continueLanesPtr,
+                                              oldMask, blockEntryMask));
     if (uniformCF)
         // If the loop has a uniform condition, we don't need to track
         // which lanes 'break' or 'continue'; all of the running ones go
@@ -694,9 +564,7 @@ FunctionEmitContext::StartLoop(llvm::BasicBlock *bt, llvm::BasicBlock *ct,
     blockEntryMask = NULL; // this better be set by the loop!
 }
 
-
-void
-FunctionEmitContext::EndLoop() {
+void FunctionEmitContext::EndLoop() {
     CFInfo *ci = popCFState();
     AssertPos(currentPos, ci->IsLoop());
 
@@ -709,15 +577,13 @@ FunctionEmitContext::EndLoop() {
         restoreMaskGivenReturns(ci->savedMask);
 }
 
-
-void
-FunctionEmitContext::StartForeach(ForeachType ft) {
+void FunctionEmitContext::StartForeach(ForeachType ft) {
     // Issue an error if we're in a nested foreach...
     if (ft == FOREACH_REGULAR) {
         for (int i = 0; i < (int)controlFlowInfo.size(); ++i) {
             if (controlFlowInfo[i]->type == CFInfo::ForeachRegular) {
                 Error(currentPos, "Nested \"foreach\" statements are currently "
-                      "illegal.");
+                                  "illegal.");
                 break;
                 // Don't return here, however, and in turn allow the caller to
                 // do the rest of its codegen and then call EndForeach()
@@ -730,9 +596,8 @@ FunctionEmitContext::StartForeach(ForeachType ft) {
     // Store the current values of various loop-related state so that we
     // can restore it when we exit this loop.
     llvm::Value *oldMask = GetInternalMask();
-    controlFlowInfo.push_back(CFInfo::GetForeach(ft, breakTarget, continueTarget,
-                                                 breakLanesPtr, continueLanesPtr,
-                                                 oldMask, blockEntryMask));
+    controlFlowInfo.push_back(
+        CFInfo::GetForeach(ft, breakTarget, continueTarget, breakLanesPtr, continueLanesPtr, oldMask, blockEntryMask));
     breakLanesPtr = NULL;
     breakTarget = NULL;
 
@@ -743,38 +608,28 @@ FunctionEmitContext::StartForeach(ForeachType ft) {
     blockEntryMask = NULL;
 }
 
-
-void
-FunctionEmitContext::EndForeach() {
+void FunctionEmitContext::EndForeach() {
     CFInfo *ci = popCFState();
     AssertPos(currentPos, ci->IsForeach());
 }
 
-
-void
-FunctionEmitContext::restoreMaskGivenReturns(llvm::Value *oldMask) {
+void FunctionEmitContext::restoreMaskGivenReturns(llvm::Value *oldMask) {
     if (!bblock)
         return;
 
     // Restore the mask to the given old mask, but leave off any lanes that
     // executed a return statement.
     // newMask = (oldMask & ~returnedLanes)
-    llvm::Value *returnedLanes = LoadInst(returnedLanesPtr,
-                                          "returned_lanes");
-    llvm::Value *notReturned = BinaryOperator(llvm::Instruction::Xor,
-                                              returnedLanes, LLVMMaskAllOn,
-                                              "~returned_lanes");
-    llvm::Value *newMask = BinaryOperator(llvm::Instruction::And,
-                                          oldMask, notReturned, "new_mask");
+    llvm::Value *returnedLanes = LoadInst(returnedLanesPtr, "returned_lanes");
+    llvm::Value *notReturned = BinaryOperator(llvm::Instruction::Xor, returnedLanes, LLVMMaskAllOn, "~returned_lanes");
+    llvm::Value *newMask = BinaryOperator(llvm::Instruction::And, oldMask, notReturned, "new_mask");
     SetInternalMask(newMask);
 }
-
 
 /** Returns "true" if the first enclosing non-if control flow expression is
     a "switch" statement.
 */
-bool
-FunctionEmitContext::inSwitchStatement() const {
+bool FunctionEmitContext::inSwitchStatement() const {
     // Go backwards through controlFlowInfo, since we add new nested scopes
     // to the back.
     int i = controlFlowInfo.size() - 1;
@@ -786,12 +641,10 @@ FunctionEmitContext::inSwitchStatement() const {
     return controlFlowInfo[i]->IsSwitch();
 }
 
-
-void
-FunctionEmitContext::Break(bool doCoherenceCheck) {
+void FunctionEmitContext::Break(bool doCoherenceCheck) {
     if (breakTarget == NULL) {
         Error(currentPos, "\"break\" statement is illegal outside of "
-              "for/while/do loops and \"switch\" statements.");
+                          "for/while/do loops and \"switch\" statements.");
         return;
     }
     AssertPos(currentPos, controlFlowInfo.size() > 0);
@@ -799,9 +652,7 @@ FunctionEmitContext::Break(bool doCoherenceCheck) {
     if (bblock == NULL)
         return;
 
-    if (inSwitchStatement() == true &&
-        switchConditionWasUniform == true &&
-        ifsInCFAllUniform(CFInfo::Switch)) {
+    if (inSwitchStatement() == true && switchConditionWasUniform == true && ifsInCFAllUniform(CFInfo::Switch)) {
         // We know that all program instances are executing the break, so
         // just jump to the block immediately after the switch.
         AssertPos(currentPos, breakTarget != NULL);
@@ -817,8 +668,7 @@ FunctionEmitContext::Break(bool doCoherenceCheck) {
         BranchInst(breakTarget);
         // Set bblock to NULL since the jump has terminated the basic block
         bblock = NULL;
-    }
-    else {
+    } else {
         // Varying switch, uniform switch where the 'break' is under
         // varying control flow, or a loop with varying 'if's above the
         // break.  In these cases, we need to update the mask of the lanes
@@ -827,10 +677,8 @@ FunctionEmitContext::Break(bool doCoherenceCheck) {
         AssertPos(currentPos, breakLanesPtr != NULL);
 
         llvm::Value *mask = GetInternalMask();
-        llvm::Value *breakMask = LoadInst(breakLanesPtr,
-                                          "break_mask");
-        llvm::Value *newMask = BinaryOperator(llvm::Instruction::Or,
-                                              mask, breakMask, "mask|break_mask");
+        llvm::Value *breakMask = LoadInst(breakLanesPtr, "break_mask");
+        llvm::Value *newMask = BinaryOperator(llvm::Instruction::Or, mask, breakMask, "mask|break_mask");
         StoreInst(newMask, breakLanesPtr);
 
         // Set the current mask to be all off, just in case there are any
@@ -856,9 +704,7 @@ FunctionEmitContext::Break(bool doCoherenceCheck) {
     }
 }
 
-
-static bool
-lEnclosingLoopIsForeachActive(const std::vector<CFInfo *> &controlFlowInfo) {
+static bool lEnclosingLoopIsForeachActive(const std::vector<CFInfo *> &controlFlowInfo) {
     for (int i = (int)controlFlowInfo.size() - 1; i >= 0; --i) {
         if (controlFlowInfo[i]->type == CFInfo::ForeachActive)
             return true;
@@ -866,18 +712,15 @@ lEnclosingLoopIsForeachActive(const std::vector<CFInfo *> &controlFlowInfo) {
     return false;
 }
 
-
-void
-FunctionEmitContext::Continue(bool doCoherenceCheck) {
+void FunctionEmitContext::Continue(bool doCoherenceCheck) {
     if (!continueTarget) {
         Error(currentPos, "\"continue\" statement illegal outside of "
-              "for/while/do/foreach loops.");
+                          "for/while/do/foreach loops.");
         return;
     }
     AssertPos(currentPos, controlFlowInfo.size() > 0);
 
-    if (ifsInCFAllUniform(CFInfo::Loop) ||
-        lEnclosingLoopIsForeachActive(controlFlowInfo)) {
+    if (ifsInCFAllUniform(CFInfo::Loop) || lEnclosingLoopIsForeachActive(controlFlowInfo)) {
         // Similarly to 'break' statements, we can immediately jump to the
         // continue target if we're only in 'uniform' control flow within
         // loop or if we can tell that the mask is all on.  Here, we can
@@ -887,17 +730,13 @@ FunctionEmitContext::Continue(bool doCoherenceCheck) {
         AddInstrumentationPoint("continue: uniform CF, jumped");
         BranchInst(continueTarget);
         bblock = NULL;
-    }
-    else {
+    } else {
         // Otherwise update the stored value of which lanes have 'continue'd.
         // continueLanes = continueLanes | mask
         AssertPos(currentPos, continueLanesPtr);
         llvm::Value *mask = GetInternalMask();
-        llvm::Value *continueMask =
-            LoadInst(continueLanesPtr, "continue_mask");
-        llvm::Value *newMask =
-            BinaryOperator(llvm::Instruction::Or, mask, continueMask,
-                           "mask|continueMask");
+        llvm::Value *continueMask = LoadInst(continueLanesPtr, "continue_mask");
+        llvm::Value *newMask = BinaryOperator(llvm::Instruction::Or, mask, continueMask, "mask|continueMask");
         StoreInst(newMask, continueLanesPtr);
 
         // And set the current mask to be all off in case there are any
@@ -912,13 +751,11 @@ FunctionEmitContext::Continue(bool doCoherenceCheck) {
     }
 }
 
-
 /** This function checks to see if all of the 'if' statements (if any)
     between the current scope and the first enclosing loop/switch of given
     control flow type have 'uniform' tests.
  */
-bool
-FunctionEmitContext::ifsInCFAllUniform(int type) const {
+bool FunctionEmitContext::ifsInCFAllUniform(int type) const {
     AssertPos(currentPos, controlFlowInfo.size() > 0);
     // Go backwards through controlFlowInfo, since we add new nested scopes
     // to the back.  Stop once we come to the first enclosing control flow
@@ -934,40 +771,28 @@ FunctionEmitContext::ifsInCFAllUniform(int type) const {
     return true;
 }
 
-
-void
-FunctionEmitContext::jumpIfAllLoopLanesAreDone(llvm::BasicBlock *target) {
+void FunctionEmitContext::jumpIfAllLoopLanesAreDone(llvm::BasicBlock *target) {
     llvm::Value *allDone = NULL;
 
     if (breakLanesPtr == NULL) {
-        llvm::Value *continued = LoadInst(continueLanesPtr,
-                                          "continue_lanes");
-        continued = BinaryOperator(llvm::Instruction::And,
-                                   continued, GetFunctionMask(),
-                                   "continued&func");
+        llvm::Value *continued = LoadInst(continueLanesPtr, "continue_lanes");
+        continued = BinaryOperator(llvm::Instruction::And, continued, GetFunctionMask(), "continued&func");
         allDone = MasksAllEqual(continued, blockEntryMask);
-    }
-    else {
+    } else {
         // Check to see if (returned lanes | continued lanes | break lanes) is
         // equal to the value of mask at the start of the loop iteration.  If
         // so, everyone is done and we can jump to the given target
-        llvm::Value *returned = LoadInst(returnedLanesPtr,
-                                         "returned_lanes");
+        llvm::Value *returned = LoadInst(returnedLanesPtr, "returned_lanes");
         llvm::Value *breaked = LoadInst(breakLanesPtr, "break_lanes");
-        llvm::Value *finishedLanes = BinaryOperator(llvm::Instruction::Or,
-                                                    returned, breaked,
-                                                    "returned|breaked");
+        llvm::Value *finishedLanes = BinaryOperator(llvm::Instruction::Or, returned, breaked, "returned|breaked");
         if (continueLanesPtr != NULL) {
             // It's NULL for "switch" statements...
-            llvm::Value *continued = LoadInst(continueLanesPtr,
-                                              "continue_lanes");
-            finishedLanes = BinaryOperator(llvm::Instruction::Or, finishedLanes,
-                                           continued, "returned|breaked|continued");
+            llvm::Value *continued = LoadInst(continueLanesPtr, "continue_lanes");
+            finishedLanes =
+                BinaryOperator(llvm::Instruction::Or, finishedLanes, continued, "returned|breaked|continued");
         }
-          
-        finishedLanes = BinaryOperator(llvm::Instruction::And,
-                                       finishedLanes, GetFunctionMask(),
-                                       "finished&func");
+
+        finishedLanes = BinaryOperator(llvm::Instruction::And, finishedLanes, GetFunctionMask(), "finished&func");
 
         // Do we match the mask at loop or switch statement entry?
         allDone = MasksAllEqual(finishedLanes, blockEntryMask);
@@ -989,44 +814,33 @@ FunctionEmitContext::jumpIfAllLoopLanesAreDone(llvm::BasicBlock *target) {
     AddInstrumentationPoint("break/continue: not all went");
 }
 
-
-void
-FunctionEmitContext::RestoreContinuedLanes() {
+void FunctionEmitContext::RestoreContinuedLanes() {
     if (continueLanesPtr == NULL)
         return;
 
     // mask = mask & continueFlags
     llvm::Value *mask = GetInternalMask();
-    llvm::Value *continueMask = LoadInst(continueLanesPtr,
-                                         "continue_mask");
-    llvm::Value *orMask = BinaryOperator(llvm::Instruction::Or,
-                                         mask, continueMask, "mask|continue_mask");
+    llvm::Value *continueMask = LoadInst(continueLanesPtr, "continue_mask");
+    llvm::Value *orMask = BinaryOperator(llvm::Instruction::Or, mask, continueMask, "mask|continue_mask");
     SetInternalMask(orMask);
 
     // continueLanes = 0
     StoreInst(LLVMMaskAllOff, continueLanesPtr);
 }
 
+void FunctionEmitContext::ClearBreakLanes() {
+    if (breakLanesPtr == NULL)
+        return;
 
-void
-FunctionEmitContext::ClearBreakLanes() {
-  if (breakLanesPtr == NULL)
-    return;
-
-  // breakLanes = 0
-  StoreInst(LLVMMaskAllOff, breakLanesPtr);
+    // breakLanes = 0
+    StoreInst(LLVMMaskAllOff, breakLanesPtr);
 }
 
-
-void
-FunctionEmitContext::StartSwitch(bool cfIsUniform, llvm::BasicBlock *bbBreak) {
+void FunctionEmitContext::StartSwitch(bool cfIsUniform, llvm::BasicBlock *bbBreak) {
     llvm::Value *oldMask = GetInternalMask();
-    controlFlowInfo.push_back(CFInfo::GetSwitch(cfIsUniform, breakTarget,
-                                                continueTarget, breakLanesPtr,
-                                                continueLanesPtr, oldMask,
-                                                blockEntryMask, switchExpr, defaultBlock,
-                                                caseBlocks, nextBlocks,
-                                                switchConditionWasUniform));
+    controlFlowInfo.push_back(CFInfo::GetSwitch(cfIsUniform, breakTarget, continueTarget, breakLanesPtr,
+                                                continueLanesPtr, oldMask, blockEntryMask, switchExpr, defaultBlock,
+                                                caseBlocks, nextBlocks, switchConditionWasUniform));
 
     breakLanesPtr = AllocaInst(LLVMTypes::MaskType, "break_lanes_memory");
     StoreInst(LLVMMaskAllOff, breakLanesPtr);
@@ -1043,9 +857,7 @@ FunctionEmitContext::StartSwitch(bool cfIsUniform, llvm::BasicBlock *bbBreak) {
     nextBlocks = NULL;
 }
 
-
-void
-FunctionEmitContext::EndSwitch() {
+void FunctionEmitContext::EndSwitch() {
     AssertPos(currentPos, bblock != NULL);
 
     CFInfo *ci = popCFState();
@@ -1053,12 +865,10 @@ FunctionEmitContext::EndSwitch() {
         restoreMaskGivenReturns(ci->savedMask);
 }
 
-
 /** Emit code to check for an "all off" mask before the code for a
     case or default label in a "switch" statement.
  */
-void
-FunctionEmitContext::addSwitchMaskCheck(llvm::Value *mask) {
+void FunctionEmitContext::addSwitchMaskCheck(llvm::Value *mask) {
     llvm::Value *allOff = None(mask);
     llvm::BasicBlock *bbSome = CreateBasicBlock("case_default_on");
 
@@ -1074,11 +884,9 @@ FunctionEmitContext::addSwitchMaskCheck(llvm::Value *mask) {
     SetCurrentBasicBlock(bbSome);
 }
 
-
 /** Returns the execution mask at entry to the first enclosing "switch"
     statement. */
-llvm::Value *
-FunctionEmitContext::getMaskAtSwitchEntry() {
+llvm::Value *FunctionEmitContext::getMaskAtSwitchEntry() {
     AssertPos(currentPos, controlFlowInfo.size() > 0);
     int i = controlFlowInfo.size() - 1;
     while (i >= 0 && controlFlowInfo[i]->type != CFInfo::Switch)
@@ -1087,12 +895,10 @@ FunctionEmitContext::getMaskAtSwitchEntry() {
     return controlFlowInfo[i]->savedMask;
 }
 
-
-void
-FunctionEmitContext::EmitDefaultLabel(bool checkMask, SourcePos pos) {
+void FunctionEmitContext::EmitDefaultLabel(bool checkMask, SourcePos pos) {
     if (inSwitchStatement() == false) {
         Error(pos, "\"default\" label illegal outside of \"switch\" "
-              "statement.");
+                   "statement.");
         return;
     }
 
@@ -1123,36 +929,32 @@ FunctionEmitContext::EmitDefaultLabel(bool checkMask, SourcePos pos) {
     llvm::Value *matchesDefault = getMaskAtSwitchEntry();
     for (int i = 0; i < (int)caseBlocks->size(); ++i) {
         int value = (*caseBlocks)[i].first;
-        llvm::Value *valueVec = (switchExpr->getType() == LLVMTypes::Int32VectorType) ?
-            LLVMInt32Vector(value) : LLVMInt64Vector(value);
+        llvm::Value *valueVec =
+            (switchExpr->getType() == LLVMTypes::Int32VectorType) ? LLVMInt32Vector(value) : LLVMInt64Vector(value);
         // TODO: for AVX2 at least, the following generates better code
         // than doing ICMP_NE and skipping the NotOperator() below; file a
         // LLVM bug?
         llvm::Value *matchesCaseValue =
-            CmpInst(llvm::Instruction::ICmp, llvm::CmpInst::ICMP_EQ, switchExpr,
-                    valueVec, "cmp_case_value");
+            CmpInst(llvm::Instruction::ICmp, llvm::CmpInst::ICMP_EQ, switchExpr, valueVec, "cmp_case_value");
         matchesCaseValue = I1VecToBoolVec(matchesCaseValue);
 
         llvm::Value *notMatchesCaseValue = NotOperator(matchesCaseValue);
-        matchesDefault = BinaryOperator(llvm::Instruction::And, matchesDefault,
-                                        notMatchesCaseValue, "default&~case_match");
+        matchesDefault =
+            BinaryOperator(llvm::Instruction::And, matchesDefault, notMatchesCaseValue, "default&~case_match");
     }
 
     // The mask may have some lanes on, which corresponds to the previous
     // label falling through; compute the updated mask by ANDing with the
     // current mask.
     llvm::Value *oldMask = GetInternalMask();
-    llvm::Value *newMask = BinaryOperator(llvm::Instruction::Or, oldMask,
-                                          matchesDefault, "old_mask|matches_default");
+    llvm::Value *newMask = BinaryOperator(llvm::Instruction::Or, oldMask, matchesDefault, "old_mask|matches_default");
     SetInternalMask(newMask);
 
     if (checkMask)
         addSwitchMaskCheck(newMask);
 }
 
-
-void
-FunctionEmitContext::EmitCaseLabel(int value, bool checkMask, SourcePos pos) {
+void FunctionEmitContext::EmitCaseLabel(int value, bool checkMask, SourcePos pos) {
     if (inSwitchStatement() == false) {
         Error(pos, "\"case\" label illegal outside of \"switch\" statement.");
         return;
@@ -1179,51 +981,43 @@ FunctionEmitContext::EmitCaseLabel(int value, bool checkMask, SourcePos pos) {
     // update the mask: first, get a mask that indicates which program
     // instances have a value for the switch expression that matches this
     // case statement.
-    llvm::Value *valueVec = (switchExpr->getType() == LLVMTypes::Int32VectorType) ?
-        LLVMInt32Vector(value) : LLVMInt64Vector(value);
+    llvm::Value *valueVec =
+        (switchExpr->getType() == LLVMTypes::Int32VectorType) ? LLVMInt32Vector(value) : LLVMInt64Vector(value);
     llvm::Value *matchesCaseValue =
-        CmpInst(llvm::Instruction::ICmp, llvm::CmpInst::ICMP_EQ, switchExpr,
-                valueVec, "cmp_case_value");
+        CmpInst(llvm::Instruction::ICmp, llvm::CmpInst::ICMP_EQ, switchExpr, valueVec, "cmp_case_value");
     matchesCaseValue = I1VecToBoolVec(matchesCaseValue);
 
     // If a lane was off going into the switch, we don't care if has a
     // value in the switch expression that happens to match this case.
     llvm::Value *entryMask = getMaskAtSwitchEntry();
-    matchesCaseValue = BinaryOperator(llvm::Instruction::And, entryMask,
-                                      matchesCaseValue, "entry_mask&case_match");
+    matchesCaseValue = BinaryOperator(llvm::Instruction::And, entryMask, matchesCaseValue, "entry_mask&case_match");
 
     // Take the surviving lanes and turn on the mask for them.
     llvm::Value *oldMask = GetInternalMask();
-    llvm::Value *newMask = BinaryOperator(llvm::Instruction::Or, oldMask,
-                                          matchesCaseValue, "mask|case_match");
+    llvm::Value *newMask = BinaryOperator(llvm::Instruction::Or, oldMask, matchesCaseValue, "mask|case_match");
     SetInternalMask(newMask);
 
     if (checkMask)
         addSwitchMaskCheck(newMask);
 }
 
-
-void
-FunctionEmitContext::SwitchInst(llvm::Value *expr, llvm::BasicBlock *bbDefault,
-                const std::vector<std::pair<int, llvm::BasicBlock *> > &bbCases,
-                const std::map<llvm::BasicBlock *, llvm::BasicBlock *> &bbNext) {
+void FunctionEmitContext::SwitchInst(llvm::Value *expr, llvm::BasicBlock *bbDefault,
+                                     const std::vector<std::pair<int, llvm::BasicBlock *>> &bbCases,
+                                     const std::map<llvm::BasicBlock *, llvm::BasicBlock *> &bbNext) {
     // The calling code should have called StartSwitch() before calling
     // SwitchInst().
-    AssertPos(currentPos, controlFlowInfo.size() &&
-           controlFlowInfo.back()->IsSwitch());
+    AssertPos(currentPos, controlFlowInfo.size() && controlFlowInfo.back()->IsSwitch());
 
     switchExpr = expr;
     defaultBlock = bbDefault;
-    caseBlocks = new std::vector<std::pair<int, llvm::BasicBlock *> >(bbCases);
+    caseBlocks = new std::vector<std::pair<int, llvm::BasicBlock *>>(bbCases);
     nextBlocks = new std::map<llvm::BasicBlock *, llvm::BasicBlock *>(bbNext);
-    switchConditionWasUniform =
-        (llvm::isa<llvm::VectorType>(expr->getType()) == false);
+    switchConditionWasUniform = (llvm::isa<llvm::VectorType>(expr->getType()) == false);
 
     if (switchConditionWasUniform == true) {
         // For a uniform switch condition, just wire things up to the LLVM
         // switch instruction.
-        llvm::SwitchInst *s = llvm::SwitchInst::Create(expr, bbDefault,
-                                                       bbCases.size(), bblock);
+        llvm::SwitchInst *s = llvm::SwitchInst::Create(expr, bbDefault, bbCases.size(), bblock);
         for (int i = 0; i < (int)bbCases.size(); ++i) {
             if (expr->getType() == LLVMTypes::Int32Type)
                 s->addCase(LLVMInt32(bbCases[i].first), bbCases[i].second);
@@ -1236,8 +1030,7 @@ FunctionEmitContext::SwitchInst(llvm::Value *expr, llvm::BasicBlock *bbDefault,
         AddDebugPos(s);
         // switch is a terminator
         bblock = NULL;
-    }
-    else {
+    } else {
         // For a varying switch, we first turn off all lanes of the mask
         SetInternalMask(LLVMMaskAllOff);
 
@@ -1255,9 +1048,7 @@ FunctionEmitContext::SwitchInst(llvm::Value *expr, llvm::BasicBlock *bbDefault,
     }
 }
 
-
-int
-FunctionEmitContext::VaryingCFDepth() const {
+int FunctionEmitContext::VaryingCFDepth() const {
     int sum = 0;
     for (unsigned int i = 0; i < controlFlowInfo.size(); ++i)
         if (controlFlowInfo[i]->IsVarying())
@@ -1265,31 +1056,18 @@ FunctionEmitContext::VaryingCFDepth() const {
     return sum;
 }
 
-
-bool
-FunctionEmitContext::InForeachLoop() const {
+bool FunctionEmitContext::InForeachLoop() const {
     for (unsigned int i = 0; i < controlFlowInfo.size(); ++i)
         if (controlFlowInfo[i]->IsForeach())
             return true;
     return false;
 }
 
+void FunctionEmitContext::DisableGatherScatterWarnings() { ++disableGSWarningCount; }
 
-void
-FunctionEmitContext::DisableGatherScatterWarnings() {
-    ++disableGSWarningCount;
-}
+void FunctionEmitContext::EnableGatherScatterWarnings() { --disableGSWarningCount; }
 
-
-void
-FunctionEmitContext::EnableGatherScatterWarnings() {
-    --disableGSWarningCount;
-}
-
-
-
-bool
-FunctionEmitContext::initLabelBBlocks(ASTNode *node, void *data) {
+bool FunctionEmitContext::initLabelBBlocks(ASTNode *node, void *data) {
     LabeledStmt *ls = llvm::dyn_cast<LabeledStmt>(node);
     if (ls == NULL)
         return true;
@@ -1297,8 +1075,7 @@ FunctionEmitContext::initLabelBBlocks(ASTNode *node, void *data) {
     FunctionEmitContext *ctx = (FunctionEmitContext *)data;
 
     if (ctx->labelMap.find(ls->name) != ctx->labelMap.end())
-        Error(ls->pos, "Multiple labels named \"%s\" in function.",
-              ls->name.c_str());
+        Error(ls->pos, "Multiple labels named \"%s\" in function.", ls->name.c_str());
     else {
         llvm::BasicBlock *bb = ctx->CreateBasicBlock(ls->name.c_str());
         ctx->labelMap[ls->name] = bb;
@@ -1306,48 +1083,40 @@ FunctionEmitContext::initLabelBBlocks(ASTNode *node, void *data) {
     return true;
 }
 
-
-void
-FunctionEmitContext::InitializeLabelMap(Stmt *code) {
+void FunctionEmitContext::InitializeLabelMap(Stmt *code) {
     labelMap.erase(labelMap.begin(), labelMap.end());
     WalkAST(code, initLabelBBlocks, NULL, this);
 }
 
-
-llvm::BasicBlock *
-FunctionEmitContext::GetLabeledBasicBlock(const std::string &label) {
+llvm::BasicBlock *FunctionEmitContext::GetLabeledBasicBlock(const std::string &label) {
     if (labelMap.find(label) != labelMap.end())
         return labelMap[label];
     else
         return NULL;
 }
 
-std::vector<std::string>
-FunctionEmitContext::GetLabels() {
+std::vector<std::string> FunctionEmitContext::GetLabels() {
     // Initialize vector to the right size
     std::vector<std::string> labels(labelMap.size());
 
     // Iterate through labelMap and grab only the keys
-    std::map<std::string, llvm::BasicBlock*>::iterator iter;
-    for (iter=labelMap.begin(); iter != labelMap.end(); iter++)
+    std::map<std::string, llvm::BasicBlock *>::iterator iter;
+    for (iter = labelMap.begin(); iter != labelMap.end(); iter++)
         labels.push_back(iter->first);
 
     return labels;
 }
 
-
-void
-FunctionEmitContext::CurrentLanesReturned(Expr *expr, bool doCoherenceCheck) {
+void FunctionEmitContext::CurrentLanesReturned(Expr *expr, bool doCoherenceCheck) {
     const Type *returnType = function->GetReturnType();
     if (returnType->IsVoidType()) {
         if (expr != NULL)
             Error(expr->pos, "Can't return non-void type \"%s\" from void function.",
                   expr->GetType()->GetString().c_str());
-    }
-    else {
+    } else {
         if (expr == NULL) {
             Error(funcStartPos, "Must provide return value for return "
-                  "statement for non-void function.");
+                                "statement for non-void function.");
             return;
         }
 
@@ -1355,16 +1124,15 @@ FunctionEmitContext::CurrentLanesReturned(Expr *expr, bool doCoherenceCheck) {
         if (expr != NULL) {
             llvm::Value *retVal = expr->GetValue(this);
             if (retVal != NULL) {
-                if (returnType->IsUniformType() ||
-                    CastType<ReferenceType>(returnType) != NULL)
+                if (returnType->IsUniformType() || CastType<ReferenceType>(returnType) != NULL)
                     StoreInst(retVal, returnValuePtr);
                 else {
                     // Use a masked store to store the value of the expression
                     // in the return value memory; this preserves the return
                     // values from other lanes that may have executed return
                     // statements previously.
-                    StoreInst(retVal, returnValuePtr, GetInternalMask(),
-                              returnType, PointerType::GetUniform(returnType));
+                    StoreInst(retVal, returnValuePtr, GetInternalMask(), returnType,
+                              PointerType::GetUniform(returnType));
                 }
             }
         }
@@ -1376,22 +1144,18 @@ FunctionEmitContext::CurrentLanesReturned(Expr *expr, bool doCoherenceCheck) {
         // so we can just emit a true return instruction
         AddInstrumentationPoint("return: uniform control flow");
         ReturnInst();
-    }
-    else {
+    } else {
         // Otherwise we update the returnedLanes value by ANDing it with
         // the current lane mask.
-        llvm::Value *oldReturnedLanes =
-            LoadInst(returnedLanesPtr, "old_returned_lanes");
+        llvm::Value *oldReturnedLanes = LoadInst(returnedLanesPtr, "old_returned_lanes");
         llvm::Value *newReturnedLanes =
-            BinaryOperator(llvm::Instruction::Or, oldReturnedLanes,
-                           GetFullMask(), "old_mask|returned_lanes");
+            BinaryOperator(llvm::Instruction::Or, oldReturnedLanes, GetFullMask(), "old_mask|returned_lanes");
 
         // For 'coherent' return statements, emit code to check if all
         // lanes have returned
         if (doCoherenceCheck) {
             // if newReturnedLanes == functionMaskValue, get out of here!
-            llvm::Value *cmp = MasksAllEqual(functionMaskValue,
-                                             newReturnedLanes);
+            llvm::Value *cmp = MasksAllEqual(functionMaskValue, newReturnedLanes);
             llvm::BasicBlock *bDoReturn = CreateBasicBlock("do_return");
             llvm::BasicBlock *bNoReturn = CreateBasicBlock("no_return");
             BranchInst(bDoReturn, bNoReturn, cmp);
@@ -1411,9 +1175,7 @@ FunctionEmitContext::CurrentLanesReturned(Expr *expr, bool doCoherenceCheck) {
     }
 }
 
-
-llvm::Value *
-FunctionEmitContext::Any(llvm::Value *mask) {
+llvm::Value *FunctionEmitContext::Any(llvm::Value *mask) {
     // Call the target-dependent any function to test that the mask is non-zero
     std::vector<Symbol *> mm;
     m->symbolTable->LookupFunction("__any", &mm);
@@ -1428,9 +1190,7 @@ FunctionEmitContext::Any(llvm::Value *mask) {
     return CallInst(fmm, NULL, mask, LLVMGetName(mask, "_any"));
 }
 
-
-llvm::Value *
-FunctionEmitContext::All(llvm::Value *mask) {
+llvm::Value *FunctionEmitContext::All(llvm::Value *mask) {
     // Call the target-dependent movmsk function to turn the vector mask
     // into an i64 value
     std::vector<Symbol *> mm;
@@ -1446,9 +1206,7 @@ FunctionEmitContext::All(llvm::Value *mask) {
     return CallInst(fmm, NULL, mask, LLVMGetName(mask, "_all"));
 }
 
-
-llvm::Value *
-FunctionEmitContext::None(llvm::Value *mask) {
+llvm::Value *FunctionEmitContext::None(llvm::Value *mask) {
     // Call the target-dependent movmsk function to turn the vector mask
     // into an i64 value
     std::vector<Symbol *> mm;
@@ -1464,11 +1222,9 @@ FunctionEmitContext::None(llvm::Value *mask) {
     return CallInst(fmm, NULL, mask, LLVMGetName(mask, "_none"));
 }
 
-
-llvm::Value *
-FunctionEmitContext::LaneMask(llvm::Value *v) {
+llvm::Value *FunctionEmitContext::LaneMask(llvm::Value *v) {
 #ifdef ISPC_NVPTX_ENABLED
-    /* this makes mandelbrot example slower with "nvptx" target. 
+    /* this makes mandelbrot example slower with "nvptx" target.
      * Needs further investigation. */
     const char *__movmsk = g->target->getISA() == Target::NVPTX ? "__movmsk_ptx" : "__movmsk";
 #else
@@ -1490,70 +1246,63 @@ FunctionEmitContext::LaneMask(llvm::Value *v) {
 }
 
 #ifdef ISPC_NVPTX_ENABLED
-bool lAppendInsertExtractName(llvm::Value *vector, std::string &funcName)
-{
-  llvm::Type *type = vector->getType();
-  if (type == LLVMTypes::Int8VectorType)
-    funcName += "_int8";
-  else if (type == LLVMTypes::Int16VectorType)
-    funcName += "_int16";
-  else if (type == LLVMTypes::Int32VectorType)
-    funcName += "_int32";
-  else if (type == LLVMTypes::Int64VectorType)
-    funcName += "_int64";
-  else if (type == LLVMTypes::FloatVectorType)
-    funcName += "_float";
-  else if (type == LLVMTypes::DoubleVectorType)
-    funcName += "_double";
-  else
-    return false;
-  return true;
+bool lAppendInsertExtractName(llvm::Value *vector, std::string &funcName) {
+    llvm::Type *type = vector->getType();
+    if (type == LLVMTypes::Int8VectorType)
+        funcName += "_int8";
+    else if (type == LLVMTypes::Int16VectorType)
+        funcName += "_int16";
+    else if (type == LLVMTypes::Int32VectorType)
+        funcName += "_int32";
+    else if (type == LLVMTypes::Int64VectorType)
+        funcName += "_int64";
+    else if (type == LLVMTypes::FloatVectorType)
+        funcName += "_float";
+    else if (type == LLVMTypes::DoubleVectorType)
+        funcName += "_double";
+    else
+        return false;
+    return true;
 }
 
-llvm::Value*
-FunctionEmitContext::Insert(llvm::Value *vector, llvm::Value *lane, llvm::Value *scalar)
-{
-  std::string funcName = "__insert";
-  assert(lAppendInsertExtractName(vector, funcName));
-  assert(lane->getType() == LLVMTypes::Int32Type);
-  
-  llvm::Function *func = m->module->getFunction(funcName.c_str());
-  assert(func != NULL);
-  std::vector<llvm::Value *> args;
-  args.push_back(vector);
-  args.push_back(lane);
-  args.push_back(scalar);
-  llvm::Value *ret = llvm::CallInst::Create(func, args, LLVMGetName(vector, funcName.c_str()), GetCurrentBasicBlock());
-  return ret;
+llvm::Value *FunctionEmitContext::Insert(llvm::Value *vector, llvm::Value *lane, llvm::Value *scalar) {
+    std::string funcName = "__insert";
+    assert(lAppendInsertExtractName(vector, funcName));
+    assert(lane->getType() == LLVMTypes::Int32Type);
+
+    llvm::Function *func = m->module->getFunction(funcName.c_str());
+    assert(func != NULL);
+    std::vector<llvm::Value *> args;
+    args.push_back(vector);
+    args.push_back(lane);
+    args.push_back(scalar);
+    llvm::Value *ret =
+        llvm::CallInst::Create(func, args, LLVMGetName(vector, funcName.c_str()), GetCurrentBasicBlock());
+    return ret;
 }
 
-llvm::Value*
-FunctionEmitContext::Extract(llvm::Value *vector, llvm::Value *lane)
-{
-  std::string funcName = "__extract";
-  assert(lAppendInsertExtractName(vector, funcName));
-  assert(lane->getType() == LLVMTypes::Int32Type);
-  
-  llvm::Function *func = m->module->getFunction(funcName.c_str());
-  assert(func != NULL);
-  std::vector<llvm::Value *> args;
-  args.push_back(vector);
-  args.push_back(lane);
-  llvm::Value *ret = llvm::CallInst::Create(func, args, LLVMGetName(vector, funcName.c_str()), GetCurrentBasicBlock());
-  return ret;
+llvm::Value *FunctionEmitContext::Extract(llvm::Value *vector, llvm::Value *lane) {
+    std::string funcName = "__extract";
+    assert(lAppendInsertExtractName(vector, funcName));
+    assert(lane->getType() == LLVMTypes::Int32Type);
+
+    llvm::Function *func = m->module->getFunction(funcName.c_str());
+    assert(func != NULL);
+    std::vector<llvm::Value *> args;
+    args.push_back(vector);
+    args.push_back(lane);
+    llvm::Value *ret =
+        llvm::CallInst::Create(func, args, LLVMGetName(vector, funcName.c_str()), GetCurrentBasicBlock());
+    return ret;
 }
 #endif /* ISPC_NVPTX_ENABLED */
 
-
-llvm::Value *
-FunctionEmitContext::MasksAllEqual(llvm::Value *v1, llvm::Value *v2) {
+llvm::Value *FunctionEmitContext::MasksAllEqual(llvm::Value *v1, llvm::Value *v2) {
 #ifdef ISPC_NVPTX_ENABLED
-    if (g->target->getISA() == Target::NVPTX)
-    {
-      // Compare the two masks to get a vector of i1s
-      llvm::Value *cmp = CmpInst(llvm::Instruction::ICmp, llvm::CmpInst::ICMP_EQ,
-          v1, v2, "v1==v2");
-      return ExtractInst(cmp, 0);  /* this works without calling All(..) in PTX. Why ?!? */
+    if (g->target->getISA() == Target::NVPTX) {
+        // Compare the two masks to get a vector of i1s
+        llvm::Value *cmp = CmpInst(llvm::Instruction::ICmp, llvm::CmpInst::ICMP_EQ, v1, v2, "v1==v2");
+        return ExtractInst(cmp, 0); /* this works without calling All(..) in PTX. Why ?!? */
     }
 #endif /* ISPC_NVPTX_ENABLED */
 
@@ -1568,30 +1317,29 @@ FunctionEmitContext::MasksAllEqual(llvm::Value *v1, llvm::Value *v2) {
 #else
     llvm::Value *mm1 = LaneMask(v1);
     llvm::Value *mm2 = LaneMask(v2);
-    return CmpInst(llvm::Instruction::ICmp, llvm::CmpInst::ICMP_EQ, mm1, mm2,
-        LLVMGetName("equal", v1, v2));
+    return CmpInst(llvm::Instruction::ICmp, llvm::CmpInst::ICMP_EQ, mm1, mm2, LLVMGetName("equal", v1, v2));
 #endif
 }
 
-llvm::Value *
-FunctionEmitContext::ProgramIndexVector(bool is32bits) {
-    llvm::SmallVector<llvm::Constant*, 16> array;
-    for (int i = 0; i < g->target->getVectorWidth() ; ++i) {
-      llvm::Constant *C = is32bits ? LLVMInt32(i) : LLVMInt64(i);
-      array.push_back(C);
+llvm::Value *FunctionEmitContext::ProgramIndexVector(bool is32bits) {
+    llvm::SmallVector<llvm::Constant *, 16> array;
+    for (int i = 0; i < g->target->getVectorWidth(); ++i) {
+        llvm::Constant *C = is32bits ? LLVMInt32(i) : LLVMInt64(i);
+        array.push_back(C);
     }
 
-    llvm::Constant* index = llvm::ConstantVector::get(array);
+    llvm::Constant *index = llvm::ConstantVector::get(array);
 
     return index;
 }
 
 #ifdef ISPC_NVPTX_ENABLED
-llvm::Value *
-FunctionEmitContext::ProgramIndexVectorPTX(bool is32bits) {
-    llvm::Function *func_program_index  = m->module->getFunction("__program_index");
-    llvm::Value *__program_index    = CallInst(func_program_index, NULL, std::vector<llvm::Value*>(), "foreach__program_indexS");
-    llvm::Value *index = InsertInst(llvm::UndefValue::get(LLVMTypes::Int32VectorType), __program_index, 0, "foreach__program_indexV");
+llvm::Value *FunctionEmitContext::ProgramIndexVectorPTX(bool is32bits) {
+    llvm::Function *func_program_index = m->module->getFunction("__program_index");
+    llvm::Value *__program_index =
+        CallInst(func_program_index, NULL, std::vector<llvm::Value *>(), "foreach__program_indexS");
+    llvm::Value *index =
+        InsertInst(llvm::UndefValue::get(LLVMTypes::Int32VectorType), __program_index, 0, "foreach__program_indexV");
 #if 0
     if (!is32bits)
       index = ZExtInst(index, LLVMTypes::Int64VectandType);
@@ -1600,27 +1348,19 @@ FunctionEmitContext::ProgramIndexVectorPTX(bool is32bits) {
 }
 #endif /* ISPC_NVPTX_ENABLED */
 
-
-llvm::Value *
-FunctionEmitContext::GetStringPtr(const std::string &str) {
+llvm::Value *FunctionEmitContext::GetStringPtr(const std::string &str) {
     llvm::Constant *lstr = llvm::ConstantDataArray::getString(*g->ctx, str);
     llvm::GlobalValue::LinkageTypes linkage = llvm::GlobalValue::InternalLinkage;
-    llvm::Value *lstrPtr = new llvm::GlobalVariable(*m->module, lstr->getType(),
-                                                    true /*isConst*/,
-                                                    linkage, lstr, "__str");
-    return new llvm::BitCastInst(lstrPtr, LLVMTypes::VoidPointerType,
-                                 "str_void_ptr", bblock);
+    llvm::Value *lstrPtr =
+        new llvm::GlobalVariable(*m->module, lstr->getType(), true /*isConst*/, linkage, lstr, "__str");
+    return new llvm::BitCastInst(lstrPtr, LLVMTypes::VoidPointerType, "str_void_ptr", bblock);
 }
 
-
-llvm::BasicBlock *
-FunctionEmitContext::CreateBasicBlock(const char *name) {
+llvm::BasicBlock *FunctionEmitContext::CreateBasicBlock(const char *name) {
     return llvm::BasicBlock::Create(*g->ctx, name, llvmFunction);
 }
 
-
-llvm::Value *
-FunctionEmitContext::I1VecToBoolVec(llvm::Value *b) {
+llvm::Value *FunctionEmitContext::I1VecToBoolVec(llvm::Value *b) {
     if (b == NULL) {
         AssertPos(currentPos, m->errorCount > 0);
         return NULL;
@@ -1629,50 +1369,39 @@ FunctionEmitContext::I1VecToBoolVec(llvm::Value *b) {
     if (g->target->getMaskBitCount() == 1)
         return b;
 
-    llvm::ArrayType *at =
-        llvm::dyn_cast<llvm::ArrayType>(b->getType());
+    llvm::ArrayType *at = llvm::dyn_cast<llvm::ArrayType>(b->getType());
     if (at) {
         // If we're given an array of vectors of i1s, then do the
         // conversion for each of the elements
-        llvm::Type *boolArrayType =
-            llvm::ArrayType::get(LLVMTypes::BoolVectorType, at->getNumElements());
+        llvm::Type *boolArrayType = llvm::ArrayType::get(LLVMTypes::BoolVectorType, at->getNumElements());
         llvm::Value *ret = llvm::UndefValue::get(boolArrayType);
 
         for (unsigned int i = 0; i < at->getNumElements(); ++i) {
             llvm::Value *elt = ExtractInst(b, i);
-            llvm::Value *sext = SExtInst(elt, LLVMTypes::BoolVectorType,
-                                         LLVMGetName(elt, "_to_boolvec"));
+            llvm::Value *sext = SExtInst(elt, LLVMTypes::BoolVectorType, LLVMGetName(elt, "_to_boolvec"));
             ret = InsertInst(ret, sext, i);
         }
         return ret;
-    }
-    else
+    } else
         return SExtInst(b, LLVMTypes::BoolVectorType, LLVMGetName(b, "_to_boolvec"));
 }
 
-
-static llvm::Value *
-lGetStringAsValue(llvm::BasicBlock *bblock, const char *s) {
+static llvm::Value *lGetStringAsValue(llvm::BasicBlock *bblock, const char *s) {
     llvm::Constant *sConstant = llvm::ConstantDataArray::getString(*g->ctx, s, true);
     std::string var_name = "_";
     var_name = var_name + s;
-    llvm::Value *sPtr = new llvm::GlobalVariable(*m->module, sConstant->getType(),
-                                                 true /* const */,
-                                                 llvm::GlobalValue::InternalLinkage,
-                                                 sConstant, var_name.c_str());
-    llvm::Value *indices[2] = { LLVMInt32(0), LLVMInt32(0) };
+    llvm::Value *sPtr = new llvm::GlobalVariable(*m->module, sConstant->getType(), true /* const */,
+                                                 llvm::GlobalValue::InternalLinkage, sConstant, var_name.c_str());
+    llvm::Value *indices[2] = {LLVMInt32(0), LLVMInt32(0)};
     llvm::ArrayRef<llvm::Value *> arrayRef(&indices[0], &indices[2]);
 #if ISPC_LLVM_VERSION <= ISPC_LLVM_3_6 /* 3.2, 3.3, 3.4, 3.5, 3.6 */
     return llvm::GetElementPtrInst::Create(sPtr, arrayRef, "sptr", bblock);
 #else /* LLVM 3.7+ */
-    return llvm::GetElementPtrInst::Create(PTYPE(sPtr),
-                                           sPtr, arrayRef, "sptr", bblock);
+    return llvm::GetElementPtrInst::Create(PTYPE(sPtr), sPtr, arrayRef, "sptr", bblock);
 #endif
 }
 
-
-void
-FunctionEmitContext::AddInstrumentationPoint(const char *note) {
+void FunctionEmitContext::AddInstrumentationPoint(const char *note) {
     AssertPos(currentPos, note != NULL);
     if (!g->emitInstrumentation)
         return;
@@ -1691,22 +1420,11 @@ FunctionEmitContext::AddInstrumentationPoint(const char *note) {
     CallInst(finst, NULL, args, "");
 }
 
+void FunctionEmitContext::SetDebugPos(SourcePos pos) { currentPos = pos; }
 
-void
-FunctionEmitContext::SetDebugPos(SourcePos pos) {
-    currentPos = pos;
-}
+SourcePos FunctionEmitContext::GetDebugPos() const { return currentPos; }
 
-
-SourcePos
-FunctionEmitContext::GetDebugPos() const {
-    return currentPos;
-}
-
-
-void
-FunctionEmitContext::AddDebugPos(llvm::Value *value, const SourcePos *pos,
-                                 llvm::DIScope *scope) {
+void FunctionEmitContext::AddDebugPos(llvm::Value *value, const SourcePos *pos, llvm::DIScope *scope) {
     llvm::Instruction *inst = llvm::dyn_cast<llvm::Instruction>(value);
     if (inst != NULL && m->diBuilder) {
         SourcePos p = pos ? *pos : currentPos;
@@ -1717,17 +1435,15 @@ FunctionEmitContext::AddDebugPos(llvm::Value *value, const SourcePos *pos,
             inst->setDebugLoc(llvm::DebugLoc::get(p.first_line, p.first_column,
                                                   scope ?
 #if ISPC_LLVM_VERSION <= ISPC_LLVM_3_6 /* 3.2, 3.3, 3.4, 3.5, 3.6 */
-                                                  *scope
+                                                        *scope
 #else /* LLVM 3.7+ */
-                                                  scope
+                                                        scope
 #endif
-                                                  : GetDIScope()));
+                                                        : GetDIScope()));
     }
 }
 
-
-void
-FunctionEmitContext::StartScope() {
+void FunctionEmitContext::StartScope() {
     if (m->diBuilder != NULL) {
 #if ISPC_LLVM_VERSION <= ISPC_LLVM_3_6 /* 3.2, 3.3, 3.4, 3.5, 3.6 */
         llvm::DIScope parentScope;
@@ -1741,19 +1457,17 @@ FunctionEmitContext::StartScope() {
         else
             parentScope = diSubprogram;
 
-        lexicalBlock =
-            m->diBuilder->createLexicalBlock(parentScope, diFile,
-                                             currentPos.first_line,
+        lexicalBlock = m->diBuilder->createLexicalBlock(parentScope, diFile, currentPos.first_line,
 #if ISPC_LLVM_VERSION == ISPC_LLVM_3_5
-        // Revision 202736 in LLVM adds support of DWARF discriminator
-        // to the last argument and revision 202737 in clang adds 0
-        // for the last argument by default.
-                                             currentPos.first_column, 0);
+                                                        // Revision 202736 in LLVM adds support of DWARF discriminator
+                                                        // to the last argument and revision 202737 in clang adds 0
+                                                        // for the last argument by default.
+                                                        currentPos.first_column, 0);
 #else
-        // Revision 216239 in LLVM removes support of DWARF discriminator
-        // as the last argument
-                                             currentPos.first_column);
-#endif // LLVM 3.2, 3.3, 3.4 and 3.6+
+                                                        // Revision 216239 in LLVM removes support of DWARF
+                                                        // discriminator as the last argument
+                                                        currentPos.first_column);
+#endif                                 // LLVM 3.2, 3.3, 3.4 and 3.6+
 #if ISPC_LLVM_VERSION <= ISPC_LLVM_3_6 /* 3.2, 3.3, 3.4, 3.5, 3.6 */
         AssertPos(currentPos, lexicalBlock.Verify());
         debugScopes.push_back(lexicalBlock);
@@ -1763,29 +1477,24 @@ FunctionEmitContext::StartScope() {
     }
 }
 
-
-void
-FunctionEmitContext::EndScope() {
+void FunctionEmitContext::EndScope() {
     if (m->diBuilder != NULL) {
         AssertPos(currentPos, debugScopes.size() > 0);
         debugScopes.pop_back();
     }
 }
 
-
 #if ISPC_LLVM_VERSION <= ISPC_LLVM_3_6 /* 3.2, 3.3, 3.4, 3.5, 3.6 */
 llvm::DIScope
 #else /* LLVM 3.7+ */
-llvm::DIScope*
+llvm::DIScope *
 #endif
 FunctionEmitContext::GetDIScope() const {
     AssertPos(currentPos, debugScopes.size() > 0);
     return debugScopes.back();
 }
 
-
-void
-FunctionEmitContext::EmitVariableDebugInfo(Symbol *sym) {
+void FunctionEmitContext::EmitVariableDebugInfo(Symbol *sym) {
     if (m->diBuilder == NULL)
         return;
 
@@ -1801,46 +1510,30 @@ FunctionEmitContext::EmitVariableDebugInfo(Symbol *sym) {
 #endif
 
 #if ISPC_LLVM_VERSION <= ISPC_LLVM_3_7 /* 3.2, 3.3, 3.4, 3.5, 3.6, 3.7*/
-        m->diBuilder->createLocalVariable(llvm::dwarf::DW_TAG_auto_variable,
-                                          scope,
-                                          sym->name,
-                                          sym->pos.GetDIFile(),
-                                          sym->pos.first_line,
-                                          diType,
-                                          true /* preserve through opts */);
+        m->diBuilder->createLocalVariable(llvm::dwarf::DW_TAG_auto_variable, scope, sym->name, sym->pos.GetDIFile(),
+                                          sym->pos.first_line, diType, true /* preserve through opts */);
 #else /* LLVM 3.8+ */
-        m->diBuilder->createAutoVariable(scope,
-                                          sym->name,
-                                          sym->pos.GetDIFile(),
-                                          sym->pos.first_line,
-                                          diType,
-                                          true /* preserve through opts */);
+        m->diBuilder->createAutoVariable(scope, sym->name, sym->pos.GetDIFile(), sym->pos.first_line, diType,
+                                         true /* preserve through opts */);
 #endif
-
 
 #if ISPC_LLVM_VERSION <= ISPC_LLVM_3_6 /* 3.2, 3.3, 3.4, 3.5, 3.6 */
     AssertPos(currentPos, var.Verify());
-    llvm::Instruction *declareInst =
-        m->diBuilder->insertDeclare(sym->storagePtr, var,
-    #if ISPC_LLVM_VERSION == ISPC_LLVM_3_6
-                                    m->diBuilder->createExpression(),
-    #endif
-                                    bblock);
+    llvm::Instruction *declareInst = m->diBuilder->insertDeclare(sym->storagePtr, var,
+#if ISPC_LLVM_VERSION == ISPC_LLVM_3_6
+                                                                 m->diBuilder->createExpression(),
+#endif
+                                                                 bblock);
     AddDebugPos(declareInst, &sym->pos, &scope);
 #else /* LLVM 3.7+ */
     llvm::Instruction *declareInst =
-        m->diBuilder->insertDeclare(sym->storagePtr, var,
-                                    m->diBuilder->createExpression(),
-                                    llvm::DebugLoc::get(sym->pos.first_line,
-                                                        sym->pos.first_column, scope),
-                                    bblock);
+        m->diBuilder->insertDeclare(sym->storagePtr, var, m->diBuilder->createExpression(),
+                                    llvm::DebugLoc::get(sym->pos.first_line, sym->pos.first_column, scope), bblock);
     AddDebugPos(declareInst, &sym->pos, scope);
 #endif
 }
 
-
-void
-FunctionEmitContext::EmitFunctionParameterDebugInfo(Symbol *sym, int argNum) {
+void FunctionEmitContext::EmitFunctionParameterDebugInfo(Symbol *sym, int argNum) {
     if (m->diBuilder == NULL)
         return;
 
@@ -1861,74 +1554,50 @@ FunctionEmitContext::EmitFunctionParameterDebugInfo(Symbol *sym, int argNum) {
 #endif
 
 #if ISPC_LLVM_VERSION <= ISPC_LLVM_3_7 /* 3.2, 3.3, 3.4, 3.5, 3.6, 3.7 */
-        m->diBuilder->createLocalVariable(llvm::dwarf::DW_TAG_arg_variable,
-                                          scope,
-                                          sym->name,
-                                          sym->pos.GetDIFile(),
-                                          sym->pos.first_line,
-                                          diType,
-                                          true /* preserve through opts */,
-                                          flags,
+        m->diBuilder->createLocalVariable(llvm::dwarf::DW_TAG_arg_variable, scope, sym->name, sym->pos.GetDIFile(),
+                                          sym->pos.first_line, diType, true /* preserve through opts */, flags,
                                           argNum + 1);
 #else /* LLVM 3.8+ */
-        m->diBuilder->createParameterVariable(scope,
-                                          sym->name,
-                                          argNum + 1,
-                                          sym->pos.GetDIFile(),
-                                          sym->pos.first_line,
-                                          diType,
-                                          true /* preserve through opts */,
-                                          flags);
+        m->diBuilder->createParameterVariable(scope, sym->name, argNum + 1, sym->pos.GetDIFile(), sym->pos.first_line,
+                                              diType, true /* preserve through opts */, flags);
 #endif
 
 #if ISPC_LLVM_VERSION <= ISPC_LLVM_3_6 /* 3.2, 3.3, 3.4, 3.5, 3.6 */
     AssertPos(currentPos, var.Verify());
-    llvm::Instruction *declareInst =
-        m->diBuilder->insertDeclare(sym->storagePtr, var,
-    #if ISPC_LLVM_VERSION == ISPC_LLVM_3_6
-                                    m->diBuilder->createExpression(),
-    #endif
-                                    bblock);
+    llvm::Instruction *declareInst = m->diBuilder->insertDeclare(sym->storagePtr, var,
+#if ISPC_LLVM_VERSION == ISPC_LLVM_3_6
+                                                                 m->diBuilder->createExpression(),
+#endif
+                                                                 bblock);
     AddDebugPos(declareInst, &sym->pos, &scope);
 #else /* LLVM 3.7+ */
     llvm::Instruction *declareInst =
-        m->diBuilder->insertDeclare(sym->storagePtr, var,
-                                    m->diBuilder->createExpression(),
-                                    llvm::DebugLoc::get(sym->pos.first_line,
-                                                        sym->pos.first_column, scope),
-                                    bblock);
+        m->diBuilder->insertDeclare(sym->storagePtr, var, m->diBuilder->createExpression(),
+                                    llvm::DebugLoc::get(sym->pos.first_line, sym->pos.first_column, scope), bblock);
     AddDebugPos(declareInst, &sym->pos, scope);
 #endif
 }
-
 
 /** If the given type is an array of vector types, then it's the
     representation of an ispc VectorType with varying elements.  If it is
     one of these, return the array size (i.e. the VectorType's size).
     Otherwise return zero.
  */
-static int
-lArrayVectorWidth(llvm::Type *t) {
-    llvm::ArrayType *arrayType =
-        llvm::dyn_cast<llvm::ArrayType>(t);
+static int lArrayVectorWidth(llvm::Type *t) {
+    llvm::ArrayType *arrayType = llvm::dyn_cast<llvm::ArrayType>(t);
     if (arrayType == NULL)
         return 0;
 
     // We shouldn't be seeing arrays of anything but vectors being passed
     // to things like FunctionEmitContext::BinaryOperator() as operands.
-    llvm::VectorType *vectorElementType =
-        llvm::dyn_cast<llvm::VectorType>(arrayType->getElementType());
-    Assert((vectorElementType != NULL &&
-            (int)vectorElementType->getNumElements() == g->target->getVectorWidth()));
+    llvm::VectorType *vectorElementType = llvm::dyn_cast<llvm::VectorType>(arrayType->getElementType());
+    Assert((vectorElementType != NULL && (int)vectorElementType->getNumElements() == g->target->getVectorWidth()));
 
     return (int)arrayType->getNumElements();
 }
 
-
-llvm::Value *
-FunctionEmitContext::BinaryOperator(llvm::Instruction::BinaryOps inst,
-                                    llvm::Value *v0, llvm::Value *v1,
-                                    const char *name) {
+llvm::Value *FunctionEmitContext::BinaryOperator(llvm::Instruction::BinaryOps inst, llvm::Value *v0, llvm::Value *v1,
+                                                 const char *name) {
     if (v0 == NULL || v1 == NULL) {
         AssertPos(currentPos, m->errorCount > 0);
         return NULL;
@@ -1938,12 +1607,10 @@ FunctionEmitContext::BinaryOperator(llvm::Instruction::BinaryOps inst,
     llvm::Type *type = v0->getType();
     int arraySize = lArrayVectorWidth(type);
     if (arraySize == 0) {
-        llvm::Instruction *bop =
-            llvm::BinaryOperator::Create(inst, v0, v1, name ? name : "", bblock);
+        llvm::Instruction *bop = llvm::BinaryOperator::Create(inst, v0, v1, name ? name : "", bblock);
         AddDebugPos(bop);
         return bop;
-    }
-    else {
+    } else {
         // If this is an ispc VectorType, apply the binary operator to each
         // of the elements of the array (which in turn should be either
         // scalar types or llvm::VectorTypes.)
@@ -1958,9 +1625,7 @@ FunctionEmitContext::BinaryOperator(llvm::Instruction::BinaryOps inst,
     }
 }
 
-
-llvm::Value *
-FunctionEmitContext::NotOperator(llvm::Value *v, const char *name) {
+llvm::Value *FunctionEmitContext::NotOperator(llvm::Value *v, const char *name) {
     if (v == NULL) {
         AssertPos(currentPos, m->errorCount > 0);
         return NULL;
@@ -1972,17 +1637,14 @@ FunctionEmitContext::NotOperator(llvm::Value *v, const char *name) {
     llvm::Type *type = v->getType();
     int arraySize = lArrayVectorWidth(type);
     if (arraySize == 0) {
-        llvm::Instruction *binst =
-            llvm::BinaryOperator::CreateNot(v, name ? name : "not", bblock);
+        llvm::Instruction *binst = llvm::BinaryOperator::CreateNot(v, name ? name : "not", bblock);
         AddDebugPos(binst);
         return binst;
-    }
-    else {
+    } else {
         llvm::Value *ret = llvm::UndefValue::get(type);
         for (int i = 0; i < arraySize; ++i) {
             llvm::Value *a = ExtractInst(v, i);
-            llvm::Value *op =
-                llvm::BinaryOperator::CreateNot(a, name ? name : "not", bblock);
+            llvm::Value *op = llvm::BinaryOperator::CreateNot(a, name ? name : "not", bblock);
             AddDebugPos(op);
             ret = InsertInst(ret, op, i);
         }
@@ -1990,32 +1652,23 @@ FunctionEmitContext::NotOperator(llvm::Value *v, const char *name) {
     }
 }
 
-
 // Given the llvm Type that represents an ispc VectorType, return an
 // equally-shaped type with boolean elements.  (This is the type that will
 // be returned from CmpInst with ispc VectorTypes).
-static llvm::Type *
-lGetMatchingBoolVectorType(llvm::Type *type) {
-    llvm::ArrayType *arrayType =
-        llvm::dyn_cast<llvm::ArrayType>(type);
+static llvm::Type *lGetMatchingBoolVectorType(llvm::Type *type) {
+    llvm::ArrayType *arrayType = llvm::dyn_cast<llvm::ArrayType>(type);
     Assert(arrayType != NULL);
 
-    llvm::VectorType *vectorElementType =
-        llvm::dyn_cast<llvm::VectorType>(arrayType->getElementType());
+    llvm::VectorType *vectorElementType = llvm::dyn_cast<llvm::VectorType>(arrayType->getElementType());
     Assert(vectorElementType != NULL);
     Assert((int)vectorElementType->getNumElements() == g->target->getVectorWidth());
 
-    llvm::Type *base =
-        llvm::VectorType::get(LLVMTypes::BoolType, g->target->getVectorWidth());
+    llvm::Type *base = llvm::VectorType::get(LLVMTypes::BoolType, g->target->getVectorWidth());
     return llvm::ArrayType::get(base, arrayType->getNumElements());
 }
 
-
-llvm::Value *
-FunctionEmitContext::CmpInst(llvm::Instruction::OtherOps inst,
-                             llvm::CmpInst::Predicate pred,
-                             llvm::Value *v0, llvm::Value *v1,
-                             const char *name) {
+llvm::Value *FunctionEmitContext::CmpInst(llvm::Instruction::OtherOps inst, llvm::CmpInst::Predicate pred,
+                                          llvm::Value *v0, llvm::Value *v1, const char *name) {
     if (v0 == NULL || v1 == NULL) {
         AssertPos(currentPos, m->errorCount > 0);
         return NULL;
@@ -2025,13 +1678,10 @@ FunctionEmitContext::CmpInst(llvm::Instruction::OtherOps inst,
     llvm::Type *type = v0->getType();
     int arraySize = lArrayVectorWidth(type);
     if (arraySize == 0) {
-        llvm::Instruction *ci =
-            llvm::CmpInst::Create(inst, pred, v0, v1, name ? name : "cmp",
-                                  bblock);
+        llvm::Instruction *ci = llvm::CmpInst::Create(inst, pred, v0, v1, name ? name : "cmp", bblock);
         AddDebugPos(ci);
         return ci;
-    }
-    else {
+    } else {
         llvm::Type *boolType = lGetMatchingBoolVectorType(type);
         llvm::Value *ret = llvm::UndefValue::get(boolType);
         for (int i = 0; i < arraySize; ++i) {
@@ -2044,9 +1694,7 @@ FunctionEmitContext::CmpInst(llvm::Instruction::OtherOps inst,
     }
 }
 
-
-llvm::Value *
-FunctionEmitContext::SmearUniform(llvm::Value *value, const char *name) {
+llvm::Value *FunctionEmitContext::SmearUniform(llvm::Value *value, const char *name) {
     if (value == NULL) {
         AssertPos(currentPos, m->errorCount > 0);
         return NULL;
@@ -2056,14 +1704,12 @@ FunctionEmitContext::SmearUniform(llvm::Value *value, const char *name) {
     llvm::Type *eltType = value->getType();
     llvm::Type *vecType = NULL;
 
-    llvm::PointerType *pt =
-        llvm::dyn_cast<llvm::PointerType>(eltType);
+    llvm::PointerType *pt = llvm::dyn_cast<llvm::PointerType>(eltType);
     if (pt != NULL) {
         // Varying pointers are represented as vectors of i32/i64s
         vecType = LLVMTypes::VoidPointerVectorType;
         value = PtrToIntInst(value);
-    }
-    else {
+    } else {
         // All other varying types are represented as vectors of the
         // underlying type.
         vecType = llvm::VectorType::get(eltType, g->target->getVectorWidth());
@@ -2071,9 +1717,7 @@ FunctionEmitContext::SmearUniform(llvm::Value *value, const char *name) {
 
     // Check for a constant case.
     if (llvm::Constant *const_val = llvm::dyn_cast<llvm::Constant>(value)) {
-        ret = llvm::ConstantVector::getSplat(
-            g->target->getVectorWidth(),
-            const_val);
+        ret = llvm::ConstantVector::getSplat(g->target->getVectorWidth(), const_val);
         return ret;
     }
 
@@ -2082,10 +1726,7 @@ FunctionEmitContext::SmearUniform(llvm::Value *value, const char *name) {
     return ret;
 }
 
-
-llvm::Value *
-FunctionEmitContext::BitCastInst(llvm::Value *value, llvm::Type *type,
-                                 const char *name) {
+llvm::Value *FunctionEmitContext::BitCastInst(llvm::Value *value, llvm::Type *type, const char *name) {
     if (value == NULL) {
         AssertPos(currentPos, m->errorCount > 0);
         return NULL;
@@ -2099,9 +1740,7 @@ FunctionEmitContext::BitCastInst(llvm::Value *value, llvm::Type *type,
     return inst;
 }
 
-
-llvm::Value *
-FunctionEmitContext::PtrToIntInst(llvm::Value *value, const char *name) {
+llvm::Value *FunctionEmitContext::PtrToIntInst(llvm::Value *value, const char *name) {
     if (value == NULL) {
         AssertPos(currentPos, m->errorCount > 0);
         return NULL;
@@ -2119,10 +1758,7 @@ FunctionEmitContext::PtrToIntInst(llvm::Value *value, const char *name) {
     return inst;
 }
 
-
-llvm::Value *
-FunctionEmitContext::PtrToIntInst(llvm::Value *value, llvm::Type *toType,
-                                  const char *name) {
+llvm::Value *FunctionEmitContext::PtrToIntInst(llvm::Value *value, llvm::Type *toType, const char *name) {
     if (value == NULL) {
         AssertPos(currentPos, m->errorCount > 0);
         return NULL;
@@ -2140,8 +1776,7 @@ FunctionEmitContext::PtrToIntInst(llvm::Value *value, llvm::Type *toType,
         else if (fromType->getScalarSizeInBits() > toType->getScalarSizeInBits())
             return TruncInst(value, toType, name);
         else {
-            AssertPos(currentPos, fromType->getScalarSizeInBits() <
-                   toType->getScalarSizeInBits());
+            AssertPos(currentPos, fromType->getScalarSizeInBits() < toType->getScalarSizeInBits());
             return ZExtInst(value, toType, name);
         }
     }
@@ -2151,10 +1786,7 @@ FunctionEmitContext::PtrToIntInst(llvm::Value *value, llvm::Type *toType,
     return inst;
 }
 
-
-llvm::Value *
-FunctionEmitContext::IntToPtrInst(llvm::Value *value, llvm::Type *toType,
-                                  const char *name) {
+llvm::Value *FunctionEmitContext::IntToPtrInst(llvm::Value *value, llvm::Type *toType, const char *name) {
     if (value == NULL) {
         AssertPos(currentPos, m->errorCount > 0);
         return NULL;
@@ -2172,22 +1804,17 @@ FunctionEmitContext::IntToPtrInst(llvm::Value *value, llvm::Type *toType,
         else if (fromType->getScalarSizeInBits() > toType->getScalarSizeInBits())
             return TruncInst(value, toType, name);
         else {
-            AssertPos(currentPos, fromType->getScalarSizeInBits() <
-                   toType->getScalarSizeInBits());
+            AssertPos(currentPos, fromType->getScalarSizeInBits() < toType->getScalarSizeInBits());
             return ZExtInst(value, toType, name);
         }
     }
 
-    llvm::Instruction *inst = new llvm::IntToPtrInst(value, toType, name,
-                                                     bblock);
+    llvm::Instruction *inst = new llvm::IntToPtrInst(value, toType, name, bblock);
     AddDebugPos(inst);
     return inst;
 }
 
-
-llvm::Instruction *
-FunctionEmitContext::TruncInst(llvm::Value *value, llvm::Type *type,
-                               const char *name) {
+llvm::Instruction *FunctionEmitContext::TruncInst(llvm::Value *value, llvm::Type *type, const char *name) {
     if (value == NULL) {
         AssertPos(currentPos, m->errorCount > 0);
         return NULL;
@@ -2203,10 +1830,8 @@ FunctionEmitContext::TruncInst(llvm::Value *value, llvm::Type *type,
     return inst;
 }
 
-
-llvm::Instruction *
-FunctionEmitContext::CastInst(llvm::Instruction::CastOps op, llvm::Value *value,
-                              llvm::Type *type, const char *name) {
+llvm::Instruction *FunctionEmitContext::CastInst(llvm::Instruction::CastOps op, llvm::Value *value, llvm::Type *type,
+                                                 const char *name) {
     if (value == NULL) {
         AssertPos(currentPos, m->errorCount > 0);
         return NULL;
@@ -2217,16 +1842,12 @@ FunctionEmitContext::CastInst(llvm::Instruction::CastOps op, llvm::Value *value,
 
     // TODO: we should probably handle the array case as in
     // e.g. BitCastInst(), but we don't currently need that functionality
-    llvm::Instruction *inst = llvm::CastInst::Create(op, value, type, name,
-                                                     bblock);
+    llvm::Instruction *inst = llvm::CastInst::Create(op, value, type, name, bblock);
     AddDebugPos(inst);
     return inst;
 }
 
-
-llvm::Instruction *
-FunctionEmitContext::FPCastInst(llvm::Value *value, llvm::Type *type,
-                                const char *name) {
+llvm::Instruction *FunctionEmitContext::FPCastInst(llvm::Value *value, llvm::Type *type, const char *name) {
     if (value == NULL) {
         AssertPos(currentPos, m->errorCount > 0);
         return NULL;
@@ -2242,10 +1863,7 @@ FunctionEmitContext::FPCastInst(llvm::Value *value, llvm::Type *type,
     return inst;
 }
 
-
-llvm::Instruction *
-FunctionEmitContext::SExtInst(llvm::Value *value, llvm::Type *type,
-                              const char *name) {
+llvm::Instruction *FunctionEmitContext::SExtInst(llvm::Value *value, llvm::Type *type, const char *name) {
     if (value == NULL) {
         AssertPos(currentPos, m->errorCount > 0);
         return NULL;
@@ -2261,10 +1879,7 @@ FunctionEmitContext::SExtInst(llvm::Value *value, llvm::Type *type,
     return inst;
 }
 
-
-llvm::Instruction *
-FunctionEmitContext::ZExtInst(llvm::Value *value, llvm::Type *type,
-                              const char *name) {
+llvm::Instruction *FunctionEmitContext::ZExtInst(llvm::Value *value, llvm::Type *type, const char *name) {
     if (value == NULL) {
         AssertPos(currentPos, m->errorCount > 0);
         return NULL;
@@ -2280,32 +1895,26 @@ FunctionEmitContext::ZExtInst(llvm::Value *value, llvm::Type *type,
     return inst;
 }
 
-
 /** Utility routine used by the GetElementPtrInst() methods; given a
     pointer to some type (either uniform or varying) and an index (also
     either uniform or varying), this returns the new pointer (varying if
     appropriate) given by offsetting the base pointer by the index times
     the size of the object that the pointer points to.
  */
-llvm::Value *
-FunctionEmitContext::applyVaryingGEP(llvm::Value *basePtr, llvm::Value *index,
-                                     const Type *ptrType) {
+llvm::Value *FunctionEmitContext::applyVaryingGEP(llvm::Value *basePtr, llvm::Value *index, const Type *ptrType) {
     // Find the scale factor for the index (i.e. the size of the object
     // that the pointer(s) point(s) to.
     const Type *scaleType = ptrType->GetBaseType();
     llvm::Value *scale = g->target->SizeOf(scaleType->LLVMType(g->ctx), bblock);
 
-    bool indexIsVarying =
-        llvm::isa<llvm::VectorType>(index->getType());
+    bool indexIsVarying = llvm::isa<llvm::VectorType>(index->getType());
     llvm::Value *offset = NULL;
     if (indexIsVarying == false) {
         // Truncate or sign extend the index as appropriate to a 32 or
         // 64-bit type.
-        if ((g->target->is32Bit() || g->opt.force32BitAddressing) &&
-            index->getType() == LLVMTypes::Int64Type)
+        if ((g->target->is32Bit() || g->opt.force32BitAddressing) && index->getType() == LLVMTypes::Int64Type)
             index = TruncInst(index, LLVMTypes::Int32Type);
-        else if ((!g->target->is32Bit() && !g->opt.force32BitAddressing) &&
-                 index->getType() == LLVMTypes::Int32Type)
+        else if ((!g->target->is32Bit() && !g->opt.force32BitAddressing) && index->getType() == LLVMTypes::Int32Type)
             index = SExtInst(index, LLVMTypes::Int64Type);
 
         // do a scalar multiply to get the offset as index * scale and then
@@ -2314,12 +1923,10 @@ FunctionEmitContext::applyVaryingGEP(llvm::Value *basePtr, llvm::Value *index,
         // multiplying.
         offset = BinaryOperator(llvm::Instruction::Mul, scale, index);
         offset = SmearUniform(offset);
-    }
-    else {
+    } else {
         // Similarly, truncate or sign extend the index to be a 32 or 64
         // bit vector type
-        if ((g->target->is32Bit() || g->opt.force32BitAddressing) &&
-            index->getType() == LLVMTypes::Int64VectorType)
+        if ((g->target->is32Bit() || g->opt.force32BitAddressing) && index->getType() == LLVMTypes::Int64VectorType)
             index = TruncInst(index, LLVMTypes::Int32VectorType);
         else if ((!g->target->is32Bit() && !g->opt.force32BitAddressing) &&
                  index->getType() == LLVMTypes::Int32VectorType)
@@ -2328,63 +1935,50 @@ FunctionEmitContext::applyVaryingGEP(llvm::Value *basePtr, llvm::Value *index,
         scale = SmearUniform(scale);
 
         // offset = index * scale
-        offset = BinaryOperator(llvm::Instruction::Mul, scale, index,
-                                LLVMGetName("mul", scale, index));
+        offset = BinaryOperator(llvm::Instruction::Mul, scale, index, LLVMGetName("mul", scale, index));
     }
 
     // For 64-bit targets, if we've been doing our offset calculations in
     // 32 bits, we still have to convert to a 64-bit value before we
     // actually add the offset to the pointer.
     if (g->target->is32Bit() == false && g->opt.force32BitAddressing == true)
-        offset = SExtInst(offset, LLVMTypes::Int64VectorType,
-                          LLVMGetName(offset, "_to_64"));
+        offset = SExtInst(offset, LLVMTypes::Int64VectorType, LLVMGetName(offset, "_to_64"));
 
     // Smear out the pointer to be varying; either the base pointer or the
     // index must be varying for this method to be called.
-    bool baseIsUniform =
-        (llvm::isa<llvm::PointerType>(basePtr->getType()));
+    bool baseIsUniform = (llvm::isa<llvm::PointerType>(basePtr->getType()));
     AssertPos(currentPos, baseIsUniform == false || indexIsVarying == true);
     llvm::Value *varyingPtr = baseIsUniform ? SmearUniform(basePtr) : basePtr;
 
     // newPtr = ptr + offset
-    return BinaryOperator(llvm::Instruction::Add, varyingPtr, offset,
-                          LLVMGetName(basePtr, "_offset"));
+    return BinaryOperator(llvm::Instruction::Add, varyingPtr, offset, LLVMGetName(basePtr, "_offset"));
 }
 
-
-void
-FunctionEmitContext::MatchIntegerTypes(llvm::Value **v0, llvm::Value **v1) {
+void FunctionEmitContext::MatchIntegerTypes(llvm::Value **v0, llvm::Value **v1) {
     llvm::Type *type0 = (*v0)->getType();
     llvm::Type *type1 = (*v1)->getType();
 
     // First, promote to a vector type if one of the two values is a vector
     // type
-    if (llvm::isa<llvm::VectorType>(type0) &&
-        !llvm::isa<llvm::VectorType>(type1)) {
+    if (llvm::isa<llvm::VectorType>(type0) && !llvm::isa<llvm::VectorType>(type1)) {
         *v1 = SmearUniform(*v1, "smear_v1");
         type1 = (*v1)->getType();
     }
-    if (!llvm::isa<llvm::VectorType>(type0) &&
-        llvm::isa<llvm::VectorType>(type1)) {
+    if (!llvm::isa<llvm::VectorType>(type0) && llvm::isa<llvm::VectorType>(type1)) {
         *v0 = SmearUniform(*v0, "smear_v0");
         type0 = (*v0)->getType();
     }
 
     // And then update to match bit widths
-    if (type0 == LLVMTypes::Int32Type &&
-        type1 == LLVMTypes::Int64Type)
+    if (type0 == LLVMTypes::Int32Type && type1 == LLVMTypes::Int64Type)
         *v0 = SExtInst(*v0, LLVMTypes::Int64Type);
-    else if (type1 == LLVMTypes::Int32Type &&
-             type0 == LLVMTypes::Int64Type)
+    else if (type1 == LLVMTypes::Int32Type && type0 == LLVMTypes::Int64Type)
         *v1 = SExtInst(*v1, LLVMTypes::Int64Type);
-    else if (type0 == LLVMTypes::Int32VectorType &&
-        type1 == LLVMTypes::Int64VectorType)
+    else if (type0 == LLVMTypes::Int32VectorType && type1 == LLVMTypes::Int64VectorType)
         *v0 = SExtInst(*v0, LLVMTypes::Int64VectorType);
-    else if (type1 == LLVMTypes::Int32VectorType &&
-             type0 == LLVMTypes::Int64VectorType)
+    else if (type1 == LLVMTypes::Int32VectorType && type0 == LLVMTypes::Int64VectorType)
         *v1 = SExtInst(*v1, LLVMTypes::Int64VectorType);
 }
-
 
 /** Given an integer index in indexValue that's indexing into an array of
     soa<> structures with given soaWidth, compute the two sub-indices we
@@ -2393,10 +1987,8 @@ FunctionEmitContext::MatchIntegerTypes(llvm::Value **v0, llvm::Value **v1) {
     subIndices[0] = (indexValue >> log(soaWidth))
     subIndices[1] = (indexValue & (soaWidth-1))
  */
-static llvm::Value *
-lComputeSliceIndex(FunctionEmitContext *ctx, int soaWidth,
-                   llvm::Value *indexValue, llvm::Value *ptrSliceOffset,
-                   llvm::Value **newSliceOffset) {
+static llvm::Value *lComputeSliceIndex(FunctionEmitContext *ctx, int soaWidth, llvm::Value *indexValue,
+                                       llvm::Value *ptrSliceOffset, llvm::Value **newSliceOffset) {
     // Compute the log2 of the soaWidth.
     Assert(soaWidth > 0);
     int logWidth = 0, sw = soaWidth;
@@ -2410,15 +2002,12 @@ lComputeSliceIndex(FunctionEmitContext *ctx, int soaWidth,
 
     llvm::Type *indexType = indexValue->getType();
     llvm::Value *shift = LLVMIntAsType(logWidth, indexType);
-    llvm::Value *mask = LLVMIntAsType(soaWidth-1, indexType);
+    llvm::Value *mask = LLVMIntAsType(soaWidth - 1, indexType);
 
-    llvm::Value *indexSum =
-        ctx->BinaryOperator(llvm::Instruction::Add, indexValue, ptrSliceOffset,
-                            "index_sum");
+    llvm::Value *indexSum = ctx->BinaryOperator(llvm::Instruction::Add, indexValue, ptrSliceOffset, "index_sum");
 
     // minor index = (index & (soaWidth - 1))
-    *newSliceOffset = ctx->BinaryOperator(llvm::Instruction::And, indexSum,
-                                          mask, "slice_index_minor");
+    *newSliceOffset = ctx->BinaryOperator(llvm::Instruction::And, indexSum, mask, "slice_index_minor");
     // slice offsets are always 32 bits...
     if ((*newSliceOffset)->getType() == LLVMTypes::Int64Type)
         *newSliceOffset = ctx->TruncInst(*newSliceOffset, LLVMTypes::Int32Type);
@@ -2426,21 +2015,17 @@ lComputeSliceIndex(FunctionEmitContext *ctx, int soaWidth,
         *newSliceOffset = ctx->TruncInst(*newSliceOffset, LLVMTypes::Int32VectorType);
 
     // major index = (index >> logWidth)
-    return ctx->BinaryOperator(llvm::Instruction::AShr, indexSum,
-                               shift, "slice_index_major");
+    return ctx->BinaryOperator(llvm::Instruction::AShr, indexSum, shift, "slice_index_major");
 }
 
-
-llvm::Value *
-FunctionEmitContext::MakeSlicePointer(llvm::Value *ptr, llvm::Value *offset) {
+llvm::Value *FunctionEmitContext::MakeSlicePointer(llvm::Value *ptr, llvm::Value *offset) {
     // Create a small struct where the first element is the type of the
     // given pointer and the second element is the type of the offset
     // value.
     std::vector<llvm::Type *> eltTypes;
     eltTypes.push_back(ptr->getType());
     eltTypes.push_back(offset->getType());
-    llvm::StructType *st =
-        llvm::StructType::get(*g->ctx, eltTypes);
+    llvm::StructType *st = llvm::StructType::get(*g->ctx, eltTypes);
 
     llvm::Value *ret = llvm::UndefValue::get(st);
     ret = InsertInst(ret, ptr, 0, LLVMGetName(ret, "_slice_ptr"));
@@ -2448,10 +2033,8 @@ FunctionEmitContext::MakeSlicePointer(llvm::Value *ptr, llvm::Value *offset) {
     return ret;
 }
 
-
-llvm::Value *
-FunctionEmitContext::GetElementPtrInst(llvm::Value *basePtr, llvm::Value *index,
-                                       const Type *ptrRefType, const char *name) {
+llvm::Value *FunctionEmitContext::GetElementPtrInst(llvm::Value *basePtr, llvm::Value *index, const Type *ptrRefType,
+                                                    const char *name) {
     if (basePtr == NULL || index == NULL) {
         AssertPos(currentPos, m->errorCount > 0);
         return NULL;
@@ -2478,15 +2061,13 @@ FunctionEmitContext::GetElementPtrInst(llvm::Value *basePtr, llvm::Value *index,
             // the soa<> structs with.
             llvm::Value *newSliceOffset;
             int soaWidth = ptrType->GetBaseType()->GetSOAWidth();
-            index = lComputeSliceIndex(this, soaWidth, index,
-                                       ptrSliceOffset, &newSliceOffset);
+            index = lComputeSliceIndex(this, soaWidth, index, ptrSliceOffset, &newSliceOffset);
             ptrSliceOffset = newSliceOffset;
         }
 
         // Handle the indexing into the soa<> structs with the major
         // component of the index through a recursive call
-        llvm::Value *p = GetElementPtrInst(ExtractInst(basePtr, 0), index,
-                                           ptrType->GetAsNonSlice(), name);
+        llvm::Value *p = GetElementPtrInst(ExtractInst(basePtr, 0), index, ptrType->GetAsNonSlice(), name);
 
         // And mash the results together for the return value
         return MakeSlicePointer(p, ptrSliceOffset);
@@ -2499,36 +2080,27 @@ FunctionEmitContext::GetElementPtrInst(llvm::Value *basePtr, llvm::Value *index,
     else if (ptrType->IsVaryingType())
         AssertPos(currentPos, llvm::isa<llvm::VectorType>(basePtr->getType()));
 
-    bool indexIsVaryingType =
-        llvm::isa<llvm::VectorType>(index->getType());
+    bool indexIsVaryingType = llvm::isa<llvm::VectorType>(index->getType());
 
     if (indexIsVaryingType == false && ptrType->IsUniformType() == true) {
         // The easy case: both the base pointer and the indices are
         // uniform, so just emit the regular LLVM GEP instruction
-        llvm::Value *ind[1] = { index };
+        llvm::Value *ind[1] = {index};
         llvm::ArrayRef<llvm::Value *> arrayRef(&ind[0], &ind[1]);
 #if ISPC_LLVM_VERSION <= ISPC_LLVM_3_6 /* 3.2, 3.3, 3.4, 3.5, 3.6 */
-        llvm::Instruction *inst =
-            llvm::GetElementPtrInst::Create(basePtr, arrayRef,
-                                            name ? name : "gep", bblock);
+        llvm::Instruction *inst = llvm::GetElementPtrInst::Create(basePtr, arrayRef, name ? name : "gep", bblock);
 #else /* LLVM 3.7+ */
         llvm::Instruction *inst =
-            llvm::GetElementPtrInst::Create(PTYPE(basePtr),
-                                            basePtr, arrayRef,
-                                            name ? name : "gep", bblock);
+            llvm::GetElementPtrInst::Create(PTYPE(basePtr), basePtr, arrayRef, name ? name : "gep", bblock);
 #endif
         AddDebugPos(inst);
         return inst;
-    }
-    else
+    } else
         return applyVaryingGEP(basePtr, index, ptrType);
 }
 
-
-llvm::Value *
-FunctionEmitContext::GetElementPtrInst(llvm::Value *basePtr, llvm::Value *index0,
-                                       llvm::Value *index1, const Type *ptrRefType,
-                                       const char *name) {
+llvm::Value *FunctionEmitContext::GetElementPtrInst(llvm::Value *basePtr, llvm::Value *index0, llvm::Value *index1,
+                                                    const Type *ptrRefType, const char *name) {
     if (basePtr == NULL || index0 == NULL || index1 == NULL) {
         AssertPos(currentPos, m->errorCount > 0);
         return NULL;
@@ -2552,42 +2124,31 @@ FunctionEmitContext::GetElementPtrInst(llvm::Value *basePtr, llvm::Value *index0
         if (ptrType->IsFrozenSlice() == false) {
             llvm::Value *newSliceOffset;
             int soaWidth = ptrType->GetBaseType()->GetSOAWidth();
-            index1 = lComputeSliceIndex(this, soaWidth, index1,
-                                        ptrSliceOffset, &newSliceOffset);
+            index1 = lComputeSliceIndex(this, soaWidth, index1, ptrSliceOffset, &newSliceOffset);
             ptrSliceOffset = newSliceOffset;
         }
 
-        llvm::Value *p = GetElementPtrInst(ExtractInst(basePtr, 0), index0,
-                                           index1, ptrType->GetAsNonSlice(),
-                                           name);
+        llvm::Value *p = GetElementPtrInst(ExtractInst(basePtr, 0), index0, index1, ptrType->GetAsNonSlice(), name);
         return MakeSlicePointer(p, ptrSliceOffset);
     }
 
-    bool index0IsVaryingType =
-        llvm::isa<llvm::VectorType>(index0->getType());
-    bool index1IsVaryingType =
-        llvm::isa<llvm::VectorType>(index1->getType());
+    bool index0IsVaryingType = llvm::isa<llvm::VectorType>(index0->getType());
+    bool index1IsVaryingType = llvm::isa<llvm::VectorType>(index1->getType());
 
-    if (index0IsVaryingType == false && index1IsVaryingType == false &&
-        ptrType->IsUniformType() == true) {
+    if (index0IsVaryingType == false && index1IsVaryingType == false && ptrType->IsUniformType() == true) {
         // The easy case: both the base pointer and the indices are
         // uniform, so just emit the regular LLVM GEP instruction
-        llvm::Value *indices[2] = { index0, index1 };
+        llvm::Value *indices[2] = {index0, index1};
         llvm::ArrayRef<llvm::Value *> arrayRef(&indices[0], &indices[2]);
 #if ISPC_LLVM_VERSION <= ISPC_LLVM_3_6 /* 3.2, 3.3, 3.4, 3.5, 3.6 */
-        llvm::Instruction *inst =
-            llvm::GetElementPtrInst::Create(basePtr, arrayRef,
-                                            name ? name : "gep", bblock);
+        llvm::Instruction *inst = llvm::GetElementPtrInst::Create(basePtr, arrayRef, name ? name : "gep", bblock);
 #else /* LLVM 3.7+ */
         llvm::Instruction *inst =
-            llvm::GetElementPtrInst::Create(PTYPE(basePtr),
-                                            basePtr, arrayRef,
-                                            name ? name : "gep", bblock);
+            llvm::GetElementPtrInst::Create(PTYPE(basePtr), basePtr, arrayRef, name ? name : "gep", bblock);
 #endif
         AddDebugPos(inst);
         return inst;
-    }
-    else {
+    } else {
         // Handle the first dimension with index0
         llvm::Value *ptr0 = GetElementPtrInst(basePtr, index0, ptrType);
 
@@ -2597,30 +2158,23 @@ FunctionEmitContext::GetElementPtrInst(llvm::Value *basePtr, llvm::Value *index0
         const SequentialType *st = CastType<SequentialType>(baseType);
         AssertPos(currentPos, st != NULL);
 
-        bool ptr0IsUniform =
-            llvm::isa<llvm::PointerType>(ptr0->getType());
+        bool ptr0IsUniform = llvm::isa<llvm::PointerType>(ptr0->getType());
         const Type *ptr0BaseType = st->GetElementType();
-        const Type *ptr0Type = ptr0IsUniform ?
-            PointerType::GetUniform(ptr0BaseType) :
-            PointerType::GetVarying(ptr0BaseType);
+        const Type *ptr0Type =
+            ptr0IsUniform ? PointerType::GetUniform(ptr0BaseType) : PointerType::GetVarying(ptr0BaseType);
 
         return applyVaryingGEP(ptr0, index1, ptr0Type);
     }
 }
 
-
-llvm::Value *
-FunctionEmitContext::AddElementOffset(llvm::Value *fullBasePtr, int elementNum,
-                                      const Type *ptrRefType, const char *name,
-                                      const PointerType **resultPtrType) {
+llvm::Value *FunctionEmitContext::AddElementOffset(llvm::Value *fullBasePtr, int elementNum, const Type *ptrRefType,
+                                                   const char *name, const PointerType **resultPtrType) {
     if (resultPtrType != NULL)
         AssertPos(currentPos, ptrRefType != NULL);
 
-    llvm::PointerType *llvmPtrType =
-        llvm::dyn_cast<llvm::PointerType>(fullBasePtr->getType());
+    llvm::PointerType *llvmPtrType = llvm::dyn_cast<llvm::PointerType>(fullBasePtr->getType());
     if (llvmPtrType != NULL) {
-        llvm::StructType *llvmStructType =
-            llvm::dyn_cast<llvm::StructType>(llvmPtrType->getElementType());
+        llvm::StructType *llvmStructType = llvm::dyn_cast<llvm::StructType>(llvmPtrType->getElementType());
         if (llvmStructType != NULL && llvmStructType->isSized() == false) {
             AssertPos(currentPos, m->errorCount > 0);
             return NULL;
@@ -2643,8 +2197,7 @@ FunctionEmitContext::AddElementOffset(llvm::Value *fullBasePtr, int elementNum,
     // we have a slice pointer instead of looking at ptrType; this is also
     // unfortunate...
     llvm::Value *basePtr = fullBasePtr;
-    bool baseIsSlicePtr =
-        llvm::isa<llvm::StructType>(fullBasePtr->getType());
+    bool baseIsSlicePtr = llvm::isa<llvm::StructType>(fullBasePtr->getType());
     const PointerType *rpt;
     if (baseIsSlicePtr) {
         AssertPos(currentPos, ptrType != NULL);
@@ -2661,31 +2214,24 @@ FunctionEmitContext::AddElementOffset(llvm::Value *fullBasePtr, int elementNum,
     // want it.
     if (resultPtrType != NULL) {
         AssertPos(currentPos, ptrType != NULL);
-        const CollectionType *ct =
-            CastType<CollectionType>(ptrType->GetBaseType());
+        const CollectionType *ct = CastType<CollectionType>(ptrType->GetBaseType());
         AssertPos(currentPos, ct != NULL);
-        *resultPtrType = new PointerType(ct->GetElementType(elementNum),
-                                         ptrType->GetVariability(),
-                                         ptrType->IsConstType(),
-                                         ptrType->IsSlice());
+        *resultPtrType = new PointerType(ct->GetElementType(elementNum), ptrType->GetVariability(),
+                                         ptrType->IsConstType(), ptrType->IsSlice());
     }
 
     llvm::Value *resultPtr = NULL;
     if (ptrType == NULL || ptrType->IsUniformType()) {
         // If the pointer is uniform, we can use the regular LLVM GEP.
-        llvm::Value *offsets[2] = { LLVMInt32(0), LLVMInt32(elementNum) };
+        llvm::Value *offsets[2] = {LLVMInt32(0), LLVMInt32(elementNum)};
         llvm::ArrayRef<llvm::Value *> arrayRef(&offsets[0], &offsets[2]);
 #if ISPC_LLVM_VERSION <= ISPC_LLVM_3_6 /* 3.2, 3.3, 3.4, 3.5, 3.6 */
-        resultPtr =
-            llvm::GetElementPtrInst::Create(basePtr, arrayRef,
-                                            name ? name : "struct_offset", bblock);
+        resultPtr = llvm::GetElementPtrInst::Create(basePtr, arrayRef, name ? name : "struct_offset", bblock);
 #else /* LLVM 3.7+ */
         resultPtr =
-            llvm::GetElementPtrInst::Create(PTYPE(basePtr), basePtr, arrayRef,
-                                            name ? name : "struct_offset", bblock);
+            llvm::GetElementPtrInst::Create(PTYPE(basePtr), basePtr, arrayRef, name ? name : "struct_offset", bblock);
 #endif
-    }
-    else {
+    } else {
         // Otherwise do the math to find the offset and add it to the given
         // varying pointers
         const StructType *st = CastType<StructType>(ptrType->GetBaseType());
@@ -2693,19 +2239,16 @@ FunctionEmitContext::AddElementOffset(llvm::Value *fullBasePtr, int elementNum,
         if (st != NULL)
             // If the pointer is to a structure, Target::StructOffset() gives
             // us the offset in bytes to the given element of the structure
-            offset = g->target->StructOffset(st->LLVMType(g->ctx), elementNum,
-                                            bblock);
+            offset = g->target->StructOffset(st->LLVMType(g->ctx), elementNum, bblock);
         else {
             // Otherwise we should have a vector or array here and the offset
             // is given by the element number times the size of the element
             // type of the vector.
-            const SequentialType *st =
-                CastType<SequentialType>(ptrType->GetBaseType());
+            const SequentialType *st = CastType<SequentialType>(ptrType->GetBaseType());
             AssertPos(currentPos, st != NULL);
-            llvm::Value *size =
-                g->target->SizeOf(st->GetElementType()->LLVMType(g->ctx), bblock);
-            llvm::Value *scale = (g->target->is32Bit() || g->opt.force32BitAddressing) ?
-                LLVMInt32(elementNum) : LLVMInt64(elementNum);
+            llvm::Value *size = g->target->SizeOf(st->GetElementType()->LLVMType(g->ctx), bblock);
+            llvm::Value *scale =
+                (g->target->is32Bit() || g->opt.force32BitAddressing) ? LLVMInt32(elementNum) : LLVMInt64(elementNum);
             offset = BinaryOperator(llvm::Instruction::Mul, size, scale);
         }
 
@@ -2717,8 +2260,7 @@ FunctionEmitContext::AddElementOffset(llvm::Value *fullBasePtr, int elementNum,
             // we add the offset to the varying pointers.
             offset = SExtInst(offset, LLVMTypes::Int64VectorType, "offset_to_64");
 
-        resultPtr = BinaryOperator(llvm::Instruction::Add, basePtr, offset,
-                                   "struct_ptr_offset");
+        resultPtr = BinaryOperator(llvm::Instruction::Add, basePtr, offset, "struct_ptr_offset");
     }
 
     // Finally, if had a slice pointer going in, mash back together with
@@ -2729,16 +2271,13 @@ FunctionEmitContext::AddElementOffset(llvm::Value *fullBasePtr, int elementNum,
         return resultPtr;
 }
 
-
-llvm::Value *
-FunctionEmitContext::LoadInst(llvm::Value *ptr, const char *name) {
+llvm::Value *FunctionEmitContext::LoadInst(llvm::Value *ptr, const char *name) {
     if (ptr == NULL) {
         AssertPos(currentPos, m->errorCount > 0);
         return NULL;
     }
 
-    llvm::PointerType *pt =
-        llvm::dyn_cast<llvm::PointerType>(ptr->getType());
+    llvm::PointerType *pt = llvm::dyn_cast<llvm::PointerType>(ptr->getType());
     AssertPos(currentPos, pt != NULL);
 
     if (name == NULL)
@@ -2746,8 +2285,7 @@ FunctionEmitContext::LoadInst(llvm::Value *ptr, const char *name) {
 
     llvm::LoadInst *inst = new llvm::LoadInst(ptr, name, bblock);
 
-    if (g->opt.forceAlignedMemory &&
-        llvm::dyn_cast<llvm::VectorType>(pt->getElementType())) {
+    if (g->opt.forceAlignedMemory && llvm::dyn_cast<llvm::VectorType>(pt->getElementType())) {
         inst->setAlignment(g->target->getNativeVectorAlignment());
     }
 
@@ -2755,14 +2293,11 @@ FunctionEmitContext::LoadInst(llvm::Value *ptr, const char *name) {
     return inst;
 }
 
-
 /** Given a slice pointer to soa'd data that is a basic type (atomic,
     pointer, or enum type), use the slice offset to compute pointer(s) to
     the appropriate individual data element(s).
  */
-static llvm::Value *
-lFinalSliceOffset(FunctionEmitContext *ctx, llvm::Value *ptr,
-                  const PointerType **ptrType) {
+static llvm::Value *lFinalSliceOffset(FunctionEmitContext *ctx, llvm::Value *ptr, const PointerType **ptrType) {
     Assert(CastType<PointerType>(*ptrType) != NULL);
 
     llvm::Value *slicePtr = ctx->ExtractInst(ptr, 0, LLVMGetName(ptr, "_ptr"));
@@ -2776,9 +2311,8 @@ lFinalSliceOffset(FunctionEmitContext *ctx, llvm::Value *ptr,
     // The final pointer type is a uniform or varying pointer to the
     // underlying uniform type, depending on whether the given pointer is
     // uniform or varying.
-    *ptrType = (*ptrType)->IsUniformType() ?
-        PointerType::GetUniform(unifBaseType) :
-        PointerType::GetVarying(unifBaseType);
+    *ptrType =
+        (*ptrType)->IsUniformType() ? PointerType::GetUniform(unifBaseType) : PointerType::GetVarying(unifBaseType);
 
     // For uniform pointers, bitcast to a pointer to the uniform element
     // type, so that the GEP below does the desired indexing
@@ -2786,18 +2320,14 @@ lFinalSliceOffset(FunctionEmitContext *ctx, llvm::Value *ptr,
         slicePtr = ctx->BitCastInst(slicePtr, (*ptrType)->LLVMType(g->ctx));
 
     // And finally index based on the slice offset
-    return ctx->GetElementPtrInst(slicePtr, sliceOffset, *ptrType,
-                                  LLVMGetName(slicePtr, "_final_gep"));
+    return ctx->GetElementPtrInst(slicePtr, sliceOffset, *ptrType, LLVMGetName(slicePtr, "_final_gep"));
 }
-
 
 /** Utility routine that loads from a uniform pointer to soa<> data,
     returning a regular uniform (non-SOA result).
  */
-llvm::Value *
-FunctionEmitContext::loadUniformFromSOA(llvm::Value *ptr, llvm::Value *mask,
-                                        const PointerType *ptrType,
-                                        const char *name) {
+llvm::Value *FunctionEmitContext::loadUniformFromSOA(llvm::Value *ptr, llvm::Value *mask, const PointerType *ptrType,
+                                                     const char *name) {
     const Type *unifType = ptrType->GetBaseType()->GetAsUniformType();
 
     const CollectionType *ct = CastType<CollectionType>(ptrType->GetBaseType());
@@ -2810,15 +2340,13 @@ FunctionEmitContext::loadUniformFromSOA(llvm::Value *ptr, llvm::Value *mask,
 
         for (int i = 0; i < ct->GetElementCount(); ++i) {
             const PointerType *eltPtrType;
-            llvm::Value *eltPtr = AddElementOffset(ptr, i, ptrType,
-                                                   "elt_offset", &eltPtrType);
+            llvm::Value *eltPtr = AddElementOffset(ptr, i, ptrType, "elt_offset", &eltPtrType);
             llvm::Value *eltValue = LoadInst(eltPtr, mask, eltPtrType, name);
             retValue = InsertInst(retValue, eltValue, i, "set_value");
         }
 
         return retValue;
-    }
-    else {
+    } else {
         // Otherwise we've made our way to a slice pointer to a basic type;
         // we need to apply the slice offset into this terminal SOA array
         // and then perform the final load
@@ -2827,11 +2355,8 @@ FunctionEmitContext::loadUniformFromSOA(llvm::Value *ptr, llvm::Value *mask,
     }
 }
 
-
-llvm::Value *
-FunctionEmitContext::LoadInst(llvm::Value *ptr, llvm::Value *mask,
-                              const Type *ptrRefType, const char *name, 
-                              bool one_elem) {
+llvm::Value *FunctionEmitContext::LoadInst(llvm::Value *ptr, llvm::Value *mask, const Type *ptrRefType,
+                                           const char *name, bool one_elem) {
     if (ptr == NULL) {
         AssertPos(currentPos, m->errorCount > 0);
         return NULL;
@@ -2859,8 +2384,7 @@ FunctionEmitContext::LoadInst(llvm::Value *ptr, llvm::Value *mask,
     if (ptrType->IsUniformType()) {
         if (ptrType->IsSlice()) {
             return loadUniformFromSOA(ptr, mask, ptrType, name);
-        }
-        else {
+        } else {
             // FIXME: same issue as above load inst regarding alignment...
             //
             // If the ptr is a straight up regular pointer, then just issue
@@ -2869,32 +2393,28 @@ FunctionEmitContext::LoadInst(llvm::Value *ptr, llvm::Value *mask,
             // atomic types, we need to make sure that the compiler emits
             // unaligned vector loads, so we specify a reduced alignment here.
             int align = 0;
-            const AtomicType *atomicType =
-                CastType<AtomicType>(ptrType->GetBaseType());
+            const AtomicType *atomicType = CastType<AtomicType>(ptrType->GetBaseType());
             if (atomicType != NULL && atomicType->IsVaryingType())
                 // We actually just want to align to the vector element
                 // alignment, but can't easily get that here, so just tell LLVM
                 // it's totally unaligned.  (This shouldn't make any difference
                 // vs the proper alignment in practice.)
                 align = 1;
-            llvm::Instruction *inst = new llvm::LoadInst(ptr, name,
-                                                         false /* not volatile */,
-                                                         align, bblock);
+            llvm::Instruction *inst = new llvm::LoadInst(ptr, name, false /* not volatile */, align, bblock);
             AddDebugPos(inst);
             return inst;
         }
-    }
-    else {
+    } else {
         // Otherwise we should have a varying ptr and it's time for a
         // gather.
-        llvm::Value *gather_result =  gather(ptr, ptrType, GetFullMask(), name);
+        llvm::Value *gather_result = gather(ptr, ptrType, GetFullMask(), name);
         if (!one_elem)
             return gather_result;
 
         // It is a kludge. When we dereference varying pointer to uniform struct
         // with "bound uniform" member, we should return first unmasked member.
         Warning(currentPos, "Dereferencing varying pointer to uniform struct with 'bound uniform' member,\n"
-                     " only one value will survive. Possible loss of data.");
+                            " only one value will survive. Possible loss of data.");
         // Call the target-dependent movmsk function to turn the vector mask
         // into an i64 value
         std::vector<Symbol *> mm;
@@ -2907,40 +2427,36 @@ FunctionEmitContext::LoadInst(llvm::Value *ptr, llvm::Value *mask,
         // We can actually call either one, since both are i32s as far as
         // LLVM's type system is concerned...
         llvm::Function *fmm = mm[0]->function;
-        llvm::Value *int_mask =  CallInst(fmm, NULL, mask, LLVMGetName(mask, "_movmsk"));
+        llvm::Value *int_mask = CallInst(fmm, NULL, mask, LLVMGetName(mask, "_movmsk"));
         std::vector<Symbol *> lz;
         m->symbolTable->LookupFunction("__count_trailing_zeros_i64", &lz);
         llvm::Function *flz = lz[0]->function;
         llvm::Value *elem_idx = CallInst(flz, NULL, int_mask, LLVMGetName(mask, "_clz"));
-        llvm::Value *elem = llvm::ExtractElementInst::Create(gather_result, elem_idx, LLVMGetName(gather_result, "_umasked_elem"), bblock);
+        llvm::Value *elem = llvm::ExtractElementInst::Create(gather_result, elem_idx,
+                                                             LLVMGetName(gather_result, "_umasked_elem"), bblock);
         return elem;
     }
 }
 
-
-llvm::Value *
-FunctionEmitContext::gather(llvm::Value *ptr, const PointerType *ptrType,
-                            llvm::Value *mask, const char *name) {
+llvm::Value *FunctionEmitContext::gather(llvm::Value *ptr, const PointerType *ptrType, llvm::Value *mask,
+                                         const char *name) {
     // We should have a varying pointer if we get here...
     AssertPos(currentPos, ptrType->IsVaryingType());
 
     const Type *returnType = ptrType->GetBaseType()->GetAsVaryingType();
     llvm::Type *llvmReturnType = returnType->LLVMType(g->ctx);
 
-    const CollectionType *collectionType =
-        CastType<CollectionType>(ptrType->GetBaseType());
+    const CollectionType *collectionType = CastType<CollectionType>(ptrType->GetBaseType());
     if (collectionType != NULL) {
         // For collections, recursively gather element wise to find the
         // result.
         llvm::Value *retValue = llvm::UndefValue::get(llvmReturnType);
 
-        const CollectionType *returnCollectionType =
-            CastType<CollectionType>(returnType->GetBaseType());
+        const CollectionType *returnCollectionType = CastType<CollectionType>(returnType->GetBaseType());
 
         for (int i = 0; i < collectionType->GetElementCount(); ++i) {
             const PointerType *eltPtrType;
-            llvm::Value *eltPtr =
-                AddElementOffset(ptr, i, ptrType, "gather_elt_ptr", &eltPtrType);
+            llvm::Value *eltPtr = AddElementOffset(ptr, i, ptrType, "gather_elt_ptr", &eltPtrType);
 
             eltPtr = addVaryingOffsetsIfNeeded(eltPtr, eltPtrType);
 
@@ -2954,8 +2470,7 @@ FunctionEmitContext::gather(llvm::Value *ptr, const PointerType *ptrType,
             retValue = InsertInst(retValue, eltValues, i, "set_value");
         }
         return retValue;
-    }
-    else if (ptrType->IsSlice()) {
+    } else if (ptrType->IsSlice()) {
         // If we have a slice pointer, we need to add the final slice
         // offset here right before issuing the actual gather
         //
@@ -2973,27 +2488,20 @@ FunctionEmitContext::gather(llvm::Value *ptr, const PointerType *ptrType,
     const PointerType *pt = CastType<PointerType>(returnType);
     const char *funcName = NULL;
     if (pt != NULL)
-        funcName = g->target->is32Bit() ? "__pseudo_gather32_i32" :
-            "__pseudo_gather64_i64";
+        funcName = g->target->is32Bit() ? "__pseudo_gather32_i32" : "__pseudo_gather64_i64";
     else if (llvmReturnType == LLVMTypes::DoubleVectorType)
-        funcName = g->target->is32Bit() ? "__pseudo_gather32_double" :
-            "__pseudo_gather64_double";
+        funcName = g->target->is32Bit() ? "__pseudo_gather32_double" : "__pseudo_gather64_double";
     else if (llvmReturnType == LLVMTypes::Int64VectorType)
-        funcName = g->target->is32Bit() ? "__pseudo_gather32_i64" :
-            "__pseudo_gather64_i64";
+        funcName = g->target->is32Bit() ? "__pseudo_gather32_i64" : "__pseudo_gather64_i64";
     else if (llvmReturnType == LLVMTypes::FloatVectorType)
-        funcName = g->target->is32Bit() ? "__pseudo_gather32_float" :
-            "__pseudo_gather64_float";
+        funcName = g->target->is32Bit() ? "__pseudo_gather32_float" : "__pseudo_gather64_float";
     else if (llvmReturnType == LLVMTypes::Int32VectorType)
-        funcName = g->target->is32Bit() ? "__pseudo_gather32_i32" :
-            "__pseudo_gather64_i32";
+        funcName = g->target->is32Bit() ? "__pseudo_gather32_i32" : "__pseudo_gather64_i32";
     else if (llvmReturnType == LLVMTypes::Int16VectorType)
-        funcName = g->target->is32Bit() ? "__pseudo_gather32_i16" :
-            "__pseudo_gather64_i16";
+        funcName = g->target->is32Bit() ? "__pseudo_gather32_i16" : "__pseudo_gather64_i16";
     else {
         AssertPos(currentPos, llvmReturnType == LLVMTypes::Int8VectorType);
-        funcName = g->target->is32Bit() ? "__pseudo_gather32_i8" :
-            "__pseudo_gather64_i8";
+        funcName = g->target->is32Bit() ? "__pseudo_gather32_i8" : "__pseudo_gather64_i8";
     }
 
     llvm::Function *gatherFunc = m->module->getFunction(funcName);
@@ -3010,13 +2518,11 @@ FunctionEmitContext::gather(llvm::Value *ptr, const PointerType *ptrType,
     return gatherCall;
 }
 
-
 /** Add metadata to the given instruction to encode the current source file
     position.  This data is used in the lGetSourcePosFromMetadata()
     function in opt.cpp.
 */
-void
-FunctionEmitContext::addGSMetadata(llvm::Value *v, SourcePos pos) {
+void FunctionEmitContext::addGSMetadata(llvm::Value *v, SourcePos pos) {
     llvm::Instruction *inst = llvm::dyn_cast<llvm::Instruction>(v);
     if (inst == NULL)
         return;
@@ -3061,11 +2567,7 @@ FunctionEmitContext::addGSMetadata(llvm::Value *v, SourcePos pos) {
     inst->setMetadata("last_column", md);
 }
 
-
-llvm::Value *
-FunctionEmitContext::AllocaInst(llvm::Type *llvmType,
-                                const char *name, int align,
-                                bool atEntryBlock) {
+llvm::Value *FunctionEmitContext::AllocaInst(llvm::Type *llvmType, const char *name, int align, bool atEntryBlock) {
     if (llvmType == NULL) {
         AssertPos(currentPos, m->errorCount > 0);
         return NULL;
@@ -3083,8 +2585,7 @@ FunctionEmitContext::AllocaInst(llvm::Type *llvmType,
         unsigned AS = llvmFunction->getParent()->getDataLayout().getAllocaAddrSpace();
         inst = new llvm::AllocaInst(llvmType, AS, name ? name : "", retInst);
 #endif
-    }
-    else {
+    } else {
         // Unless the caller overrode the default and wants it in the
         // current basic block
 #if ISPC_LLVM_VERSION <= ISPC_LLVM_4_0
@@ -3100,10 +2601,8 @@ FunctionEmitContext::AllocaInst(llvm::Type *llvmType,
     // unlikely that this array will be loaded into varying variables with
     // what will be aligned accesses if the uniform -> varying load is done
     // in regular chunks.
-    llvm::ArrayType *arrayType =
-        llvm::dyn_cast<llvm::ArrayType>(llvmType);
-    if (align == 0 && arrayType != NULL &&
-        !llvm::isa<llvm::VectorType>(arrayType->getElementType()))
+    llvm::ArrayType *arrayType = llvm::dyn_cast<llvm::ArrayType>(llvmType);
+    if (align == 0 && arrayType != NULL && !llvm::isa<llvm::VectorType>(arrayType->getElementType()))
         align = g->target->getNativeVectorAlignment();
 
     if (align != 0)
@@ -3112,16 +2611,13 @@ FunctionEmitContext::AllocaInst(llvm::Type *llvmType,
     return inst;
 }
 
-
 /** Code to store the given varying value to the given location, only
     storing the elements that correspond to active program instances as
     given by the provided storeMask value.  Note that the lvalue is only a
     single pointer, not a varying lvalue of one pointer per program
     instance (that case is handled by scatters).
  */
-void
-FunctionEmitContext::maskedStore(llvm::Value *value, llvm::Value *ptr,
-                                 const Type *ptrType, llvm::Value *mask) {
+void FunctionEmitContext::maskedStore(llvm::Value *value, llvm::Value *ptr, const Type *ptrType, llvm::Value *mask) {
     if (value == NULL || ptr == NULL) {
         AssertPos(currentPos, m->errorCount > 0);
         return;
@@ -3143,8 +2639,7 @@ FunctionEmitContext::maskedStore(llvm::Value *value, llvm::Value *ptr,
                 continue;
             }
             llvm::Value *eltValue = ExtractInst(value, i, "value_member");
-            llvm::Value *eltPtr =
-                AddElementOffset(ptr, i, ptrType, "struct_ptr_ptr");
+            llvm::Value *eltPtr = AddElementOffset(ptr, i, ptrType, "struct_ptr_ptr");
             const Type *eltPtrType = PointerType::GetUniform(eltType);
             StoreInst(eltValue, eltPtr, mask, eltType, eltPtrType);
         }
@@ -3170,8 +2665,7 @@ FunctionEmitContext::maskedStore(llvm::Value *value, llvm::Value *ptr,
             // store that.
             llvm::Value *v0 = ExtractInst(value, 0);
             llvm::Value *p0 = AddElementOffset(ptr, 0, ptrType);
-            maskedStore(v0, p0, PointerType::GetUniform(pt->GetAsNonSlice()),
-                        mask);
+            maskedStore(v0, p0, PointerType::GetUniform(pt->GetAsNonSlice()), mask);
 
             // And then do same for the integer offset
             llvm::Value *v1 = ExtractInst(value, 1);
@@ -3186,36 +2680,25 @@ FunctionEmitContext::maskedStore(llvm::Value *value, llvm::Value *ptr,
             maskedStoreFunc = m->module->getFunction("__pseudo_masked_store_i32");
         else
             maskedStoreFunc = m->module->getFunction("__pseudo_masked_store_i64");
-    }
-    else if (llvmValueType == LLVMTypes::Int1VectorType) {
-        llvm::Value *notMask = BinaryOperator(llvm::Instruction::Xor, mask,
-                                              LLVMMaskAllOn, "~mask");
+    } else if (llvmValueType == LLVMTypes::Int1VectorType) {
+        llvm::Value *notMask = BinaryOperator(llvm::Instruction::Xor, mask, LLVMMaskAllOn, "~mask");
         llvm::Value *old = LoadInst(ptr);
-        llvm::Value *maskedOld = BinaryOperator(llvm::Instruction::And, old,
-                                                notMask, "old&~mask");
-        llvm::Value *maskedNew = BinaryOperator(llvm::Instruction::And, value,
-                                                mask, "new&mask");
-        llvm::Value *final = BinaryOperator(llvm::Instruction::Or, maskedOld,
-                                            maskedNew, "old_new_result");
+        llvm::Value *maskedOld = BinaryOperator(llvm::Instruction::And, old, notMask, "old&~mask");
+        llvm::Value *maskedNew = BinaryOperator(llvm::Instruction::And, value, mask, "new&mask");
+        llvm::Value *final = BinaryOperator(llvm::Instruction::Or, maskedOld, maskedNew, "old_new_result");
         StoreInst(final, ptr);
         return;
-    }
-    else if (llvmValueType == LLVMTypes::DoubleVectorType) {
+    } else if (llvmValueType == LLVMTypes::DoubleVectorType) {
         maskedStoreFunc = m->module->getFunction("__pseudo_masked_store_double");
-    }
-    else if (llvmValueType == LLVMTypes::Int64VectorType) {
+    } else if (llvmValueType == LLVMTypes::Int64VectorType) {
         maskedStoreFunc = m->module->getFunction("__pseudo_masked_store_i64");
-    }
-    else if (llvmValueType == LLVMTypes::FloatVectorType) {
+    } else if (llvmValueType == LLVMTypes::FloatVectorType) {
         maskedStoreFunc = m->module->getFunction("__pseudo_masked_store_float");
-    }
-    else if (llvmValueType == LLVMTypes::Int32VectorType) {
+    } else if (llvmValueType == LLVMTypes::Int32VectorType) {
         maskedStoreFunc = m->module->getFunction("__pseudo_masked_store_i32");
-    }
-    else if (llvmValueType == LLVMTypes::Int16VectorType) {
+    } else if (llvmValueType == LLVMTypes::Int16VectorType) {
         maskedStoreFunc = m->module->getFunction("__pseudo_masked_store_i16");
-    }
-    else if (llvmValueType == LLVMTypes::Int8VectorType) {
+    } else if (llvmValueType == LLVMTypes::Int8VectorType) {
         maskedStoreFunc = m->module->getFunction("__pseudo_masked_store_i8");
     }
     AssertPos(currentPos, maskedStoreFunc != NULL);
@@ -3227,24 +2710,19 @@ FunctionEmitContext::maskedStore(llvm::Value *value, llvm::Value *ptr,
     CallInst(maskedStoreFunc, NULL, args);
 }
 
-
-
 /** Scatter the given varying value to the locations given by the varying
     lvalue (which should be an array of pointers with size equal to the
     target's vector width.  We want to store each rvalue element at the
     corresponding pointer's location, *if* the mask for the corresponding
     program instance are on.  If they're off, don't do anything.
 */
-void
-FunctionEmitContext::scatter(llvm::Value *value, llvm::Value *ptr,
-                             const Type *valueType, const Type *origPt,
-                             llvm::Value *mask) {
+void FunctionEmitContext::scatter(llvm::Value *value, llvm::Value *ptr, const Type *valueType, const Type *origPt,
+                                  llvm::Value *mask) {
     const PointerType *ptrType = CastType<PointerType>(origPt);
     AssertPos(currentPos, ptrType != NULL);
     AssertPos(currentPos, ptrType->IsVaryingType());
 
-    const CollectionType *srcCollectionType =
-        CastType<CollectionType>(valueType);
+    const CollectionType *srcCollectionType = CastType<CollectionType>(valueType);
     if (srcCollectionType != NULL) {
         // We're scattering a collection type--we need to keep track of the
         // source type (the type of the data values to be stored) and the
@@ -3254,8 +2732,7 @@ FunctionEmitContext::scatter(llvm::Value *value, llvm::Value *ptr,
         // from a varying struct to an array of uniform instances of the
         // same struct type, versus scattering into an array of varying
         // instances of the struct type, etc.
-        const CollectionType *dstCollectionType =
-            CastType<CollectionType>(ptrType->GetBaseType());
+        const CollectionType *dstCollectionType = CastType<CollectionType>(ptrType->GetBaseType());
         AssertPos(currentPos, dstCollectionType != NULL);
 
         // Scatter the collection elements individually
@@ -3293,8 +2770,7 @@ FunctionEmitContext::scatter(llvm::Value *value, llvm::Value *ptr,
             scatter(eltValue, eltPtr, srcEltType, dstEltPtrType, mask);
         }
         return;
-    }
-    else if (ptrType->IsSlice()) {
+    } else if (ptrType->IsSlice()) {
         // As with gather, we need to add the final slice offset finally
         // once we get to a terminal SOA array of basic types..
         ptr = lFinalSliceOffset(this, ptr, &ptrType);
@@ -3303,40 +2779,25 @@ FunctionEmitContext::scatter(llvm::Value *value, llvm::Value *ptr,
     const PointerType *pt = CastType<PointerType>(valueType);
 
     // And everything should be a pointer or atomic (or enum) from here on out...
-    AssertPos(currentPos, 
-              pt != NULL 
-              || CastType<AtomicType>(valueType) != NULL
-              || CastType<EnumType>(valueType) != NULL);
+    AssertPos(currentPos,
+              pt != NULL || CastType<AtomicType>(valueType) != NULL || CastType<EnumType>(valueType) != NULL);
 
     llvm::Type *type = value->getType();
     const char *funcName = NULL;
     if (pt != NULL) {
-        funcName = g->target->is32Bit() ? "__pseudo_scatter32_i32" :
-            "__pseudo_scatter64_i64";
-    }
-    else if (type == LLVMTypes::DoubleVectorType) {
-        funcName = g->target->is32Bit() ? "__pseudo_scatter32_double" :
-            "__pseudo_scatter64_double";
-    }
-    else if (type == LLVMTypes::Int64VectorType) {
-        funcName = g->target->is32Bit() ? "__pseudo_scatter32_i64" :
-            "__pseudo_scatter64_i64";
-    }
-    else if (type == LLVMTypes::FloatVectorType) {
-        funcName = g->target->is32Bit() ? "__pseudo_scatter32_float" :
-            "__pseudo_scatter64_float";
-    }
-    else if (type == LLVMTypes::Int32VectorType) {
-        funcName = g->target->is32Bit() ? "__pseudo_scatter32_i32" :
-            "__pseudo_scatter64_i32";
-    }
-    else if (type == LLVMTypes::Int16VectorType) {
-        funcName = g->target->is32Bit() ? "__pseudo_scatter32_i16" :
-            "__pseudo_scatter64_i16";
-    }
-    else if (type == LLVMTypes::Int8VectorType) {
-        funcName = g->target->is32Bit() ? "__pseudo_scatter32_i8" :
-            "__pseudo_scatter64_i8";
+        funcName = g->target->is32Bit() ? "__pseudo_scatter32_i32" : "__pseudo_scatter64_i64";
+    } else if (type == LLVMTypes::DoubleVectorType) {
+        funcName = g->target->is32Bit() ? "__pseudo_scatter32_double" : "__pseudo_scatter64_double";
+    } else if (type == LLVMTypes::Int64VectorType) {
+        funcName = g->target->is32Bit() ? "__pseudo_scatter32_i64" : "__pseudo_scatter64_i64";
+    } else if (type == LLVMTypes::FloatVectorType) {
+        funcName = g->target->is32Bit() ? "__pseudo_scatter32_float" : "__pseudo_scatter64_float";
+    } else if (type == LLVMTypes::Int32VectorType) {
+        funcName = g->target->is32Bit() ? "__pseudo_scatter32_i32" : "__pseudo_scatter64_i32";
+    } else if (type == LLVMTypes::Int16VectorType) {
+        funcName = g->target->is32Bit() ? "__pseudo_scatter32_i16" : "__pseudo_scatter64_i16";
+    } else if (type == LLVMTypes::Int8VectorType) {
+        funcName = g->target->is32Bit() ? "__pseudo_scatter32_i8" : "__pseudo_scatter64_i8";
     }
 
     llvm::Function *scatterFunc = m->module->getFunction(funcName);
@@ -3354,34 +2815,27 @@ FunctionEmitContext::scatter(llvm::Value *value, llvm::Value *ptr,
         addGSMetadata(inst, currentPos);
 }
 
-
-void
-FunctionEmitContext::StoreInst(llvm::Value *value, llvm::Value *ptr) {
+void FunctionEmitContext::StoreInst(llvm::Value *value, llvm::Value *ptr) {
     if (value == NULL || ptr == NULL) {
         // may happen due to error elsewhere
         AssertPos(currentPos, m->errorCount > 0);
         return;
     }
 
-    llvm::PointerType *pt =
-        llvm::dyn_cast<llvm::PointerType>(ptr->getType());
+    llvm::PointerType *pt = llvm::dyn_cast<llvm::PointerType>(ptr->getType());
     AssertPos(currentPos, pt != NULL);
 
     llvm::StoreInst *inst = new llvm::StoreInst(value, ptr, bblock);
 
-    if (g->opt.forceAlignedMemory &&
-        llvm::dyn_cast<llvm::VectorType>(pt->getElementType())) {
+    if (g->opt.forceAlignedMemory && llvm::dyn_cast<llvm::VectorType>(pt->getElementType())) {
         inst->setAlignment(g->target->getNativeVectorAlignment());
     }
 
     AddDebugPos(inst);
 }
 
-
-void
-FunctionEmitContext::StoreInst(llvm::Value *value, llvm::Value *ptr,
-                               llvm::Value *mask, const Type *valueType,
-                               const Type *ptrRefType) {
+void FunctionEmitContext::StoreInst(llvm::Value *value, llvm::Value *ptr, llvm::Value *mask, const Type *valueType,
+                                    const Type *ptrRefType) {
     if (value == NULL || ptr == NULL) {
         // may happen due to error elsewhere
         AssertPos(currentPos, m->errorCount > 0);
@@ -3416,8 +2870,7 @@ FunctionEmitContext::StoreInst(llvm::Value *value, llvm::Value *ptr,
             StoreInst(value, ptr);
         else
             maskedStore(value, ptr, ptrType, mask);
-    }
-    else {
+    } else {
         AssertPos(currentPos, ptrType->IsVaryingType());
         // We have a varying ptr (an array of pointers), so it's time to
         // scatter
@@ -3425,15 +2878,11 @@ FunctionEmitContext::StoreInst(llvm::Value *value, llvm::Value *ptr,
     }
 }
 
-
 /** Store a uniform type to SOA-laid-out memory.
  */
-void
-FunctionEmitContext::storeUniformToSOA(llvm::Value *value, llvm::Value *ptr,
-                                       llvm::Value *mask, const Type *valueType,
-                                       const PointerType *ptrType) {
-    AssertPos(currentPos, Type::EqualIgnoringConst(ptrType->GetBaseType()->GetAsUniformType(),
-                                    valueType));
+void FunctionEmitContext::storeUniformToSOA(llvm::Value *value, llvm::Value *ptr, llvm::Value *mask,
+                                            const Type *valueType, const PointerType *ptrType) {
+    AssertPos(currentPos, Type::EqualIgnoringConst(ptrType->GetBaseType()->GetAsUniformType(), valueType));
 
     const CollectionType *ct = CastType<CollectionType>(valueType);
     if (ct != NULL) {
@@ -3442,13 +2891,10 @@ FunctionEmitContext::storeUniformToSOA(llvm::Value *value, llvm::Value *ptr,
             llvm::Value *eltValue = ExtractInst(value, i);
             const Type *eltType = ct->GetElementType(i);
             const PointerType *dstEltPtrType;
-            llvm::Value *dstEltPtr =
-                AddElementOffset(ptr, i, ptrType, "slice_offset",
-                                 &dstEltPtrType);
+            llvm::Value *dstEltPtr = AddElementOffset(ptr, i, ptrType, "slice_offset", &dstEltPtrType);
             StoreInst(eltValue, dstEltPtr, mask, eltType, dstEltPtrType);
         }
-    }
-    else {
+    } else {
         // We're finally at a leaf SOA array; apply the slice offset and
         // then we can do a final regular store
         AssertPos(currentPos, Type::IsBasicType(valueType));
@@ -3457,10 +2903,7 @@ FunctionEmitContext::storeUniformToSOA(llvm::Value *value, llvm::Value *ptr,
     }
 }
 
-
-void
-FunctionEmitContext::MemcpyInst(llvm::Value *dest, llvm::Value *src,
-                                llvm::Value *count, llvm::Value *align) {
+void FunctionEmitContext::MemcpyInst(llvm::Value *dest, llvm::Value *src, llvm::Value *count, llvm::Value *align) {
     dest = BitCastInst(dest, LLVMTypes::VoidPointerType);
     src = BitCastInst(src, LLVMTypes::VoidPointerType);
     if (count->getType() != LLVMTypes::Int64Type) {
@@ -3472,22 +2915,18 @@ FunctionEmitContext::MemcpyInst(llvm::Value *dest, llvm::Value *src,
 
     llvm::Constant *mcFunc =
 #if ISPC_LLVM_VERSION <= ISPC_LLVM_4_0
-        m->module->getOrInsertFunction("llvm.memcpy.p0i8.p0i8.i64",
-                                       LLVMTypes::VoidType, LLVMTypes::VoidPointerType,
-                                       LLVMTypes::VoidPointerType, LLVMTypes::Int64Type,
-                                       LLVMTypes::Int32Type, LLVMTypes::BoolType, NULL);
+        m->module->getOrInsertFunction("llvm.memcpy.p0i8.p0i8.i64", LLVMTypes::VoidType, LLVMTypes::VoidPointerType,
+                                       LLVMTypes::VoidPointerType, LLVMTypes::Int64Type, LLVMTypes::Int32Type,
+                                       LLVMTypes::BoolType, NULL);
 #elif ISPC_LLVM_VERSION <= ISPC_LLVM_6_0 // LLVM 5.0-6.0
-        m->module->getOrInsertFunction("llvm.memcpy.p0i8.p0i8.i64",
-                                       LLVMTypes::VoidType, LLVMTypes::VoidPointerType,
-                                       LLVMTypes::VoidPointerType, LLVMTypes::Int64Type,
-                                       LLVMTypes::Int32Type, LLVMTypes::BoolType);
-#else // LLVM 7.0+
-        // Now alignment goes as an attribute, not as a parameter.
-        // See LLVM r322965/r323597 for more details.
-        m->module->getOrInsertFunction("llvm.memcpy.p0i8.p0i8.i64",
-                                       LLVMTypes::VoidType, LLVMTypes::VoidPointerType,
-                                       LLVMTypes::VoidPointerType, LLVMTypes::Int64Type,
+        m->module->getOrInsertFunction("llvm.memcpy.p0i8.p0i8.i64", LLVMTypes::VoidType, LLVMTypes::VoidPointerType,
+                                       LLVMTypes::VoidPointerType, LLVMTypes::Int64Type, LLVMTypes::Int32Type,
                                        LLVMTypes::BoolType);
+#else                                    // LLVM 7.0+
+                                         // Now alignment goes as an attribute, not as a parameter.
+                                         // See LLVM r322965/r323597 for more details.
+        m->module->getOrInsertFunction("llvm.memcpy.p0i8.p0i8.i64", LLVMTypes::VoidType, LLVMTypes::VoidPointerType,
+                                       LLVMTypes::VoidPointerType, LLVMTypes::Int64Type, LLVMTypes::BoolType);
 #endif
 
     AssertPos(currentPos, mcFunc != NULL);
@@ -3505,31 +2944,22 @@ FunctionEmitContext::MemcpyInst(llvm::Value *dest, llvm::Value *src,
     CallInst(mcFunc, NULL, args, "");
 }
 
-
-void
-FunctionEmitContext::BranchInst(llvm::BasicBlock *dest) {
+void FunctionEmitContext::BranchInst(llvm::BasicBlock *dest) {
     llvm::Instruction *b = llvm::BranchInst::Create(dest, bblock);
     AddDebugPos(b);
 }
 
-
-void
-FunctionEmitContext::BranchInst(llvm::BasicBlock *trueBlock,
-                                llvm::BasicBlock *falseBlock,
-                                llvm::Value *test) {
+void FunctionEmitContext::BranchInst(llvm::BasicBlock *trueBlock, llvm::BasicBlock *falseBlock, llvm::Value *test) {
     if (test == NULL) {
         AssertPos(currentPos, m->errorCount > 0);
         return;
     }
 
-    llvm::Instruction *b =
-        llvm::BranchInst::Create(trueBlock, falseBlock, test, bblock);
+    llvm::Instruction *b = llvm::BranchInst::Create(trueBlock, falseBlock, test, bblock);
     AddDebugPos(b);
 }
 
-
-llvm::Value *
-FunctionEmitContext::ExtractInst(llvm::Value *v, int elt, const char *name) {
+llvm::Value *FunctionEmitContext::ExtractInst(llvm::Value *v, int elt, const char *name) {
     if (v == NULL) {
         AssertPos(currentPos, m->errorCount > 0);
         return NULL;
@@ -3550,10 +2980,7 @@ FunctionEmitContext::ExtractInst(llvm::Value *v, int elt, const char *name) {
     return ei;
 }
 
-
-llvm::Value *
-FunctionEmitContext::InsertInst(llvm::Value *v, llvm::Value *eltVal, int elt,
-                                const char *name) {
+llvm::Value *FunctionEmitContext::InsertInst(llvm::Value *v, llvm::Value *eltVal, int elt, const char *name) {
     if (v == NULL || eltVal == NULL) {
         AssertPos(currentPos, m->errorCount > 0);
         return NULL;
@@ -3567,18 +2994,14 @@ FunctionEmitContext::InsertInst(llvm::Value *v, llvm::Value *eltVal, int elt,
 
     llvm::Instruction *ii = NULL;
     if (llvm::isa<llvm::VectorType>(v->getType()))
-        ii = llvm::InsertElementInst::Create(v, eltVal, LLVMInt32(elt),
-                                             name, bblock);
+        ii = llvm::InsertElementInst::Create(v, eltVal, LLVMInt32(elt), name, bblock);
     else
         ii = llvm::InsertValueInst::Create(v, eltVal, elt, name, bblock);
     AddDebugPos(ii);
     return ii;
 }
 
-
-llvm::Value *
-FunctionEmitContext::ShuffleInst(llvm::Value *v1, llvm::Value *v2, llvm::Value *mask,
-                                const char *name) {
+llvm::Value *FunctionEmitContext::ShuffleInst(llvm::Value *v1, llvm::Value *v2, llvm::Value *mask, const char *name) {
     if (v1 == NULL || v2 == NULL || mask == NULL) {
         AssertPos(currentPos, m->errorCount > 0);
         return NULL;
@@ -3596,10 +3019,7 @@ FunctionEmitContext::ShuffleInst(llvm::Value *v1, llvm::Value *v2, llvm::Value *
     return ii;
 }
 
-
-llvm::Value *
-FunctionEmitContext::BroadcastValue(llvm::Value *v, llvm::Type* vecType,
-                                    const char *name) {
+llvm::Value *FunctionEmitContext::BroadcastValue(llvm::Value *v, llvm::Type *vecType, const char *name) {
     if (v == NULL || vecType == NULL) {
         AssertPos(currentPos, m->errorCount > 0);
         return NULL;
@@ -3628,27 +3048,20 @@ FunctionEmitContext::BroadcastValue(llvm::Value *v, llvm::Type* vecType,
 
     // ShuffleVector
     llvm::Constant *zeroVec = llvm::ConstantVector::getSplat(
-        vecType->getVectorNumElements(),
-        llvm::Constant::getNullValue(llvm::Type::getInt32Ty(*g->ctx)));
+        vecType->getVectorNumElements(), llvm::Constant::getNullValue(llvm::Type::getInt32Ty(*g->ctx)));
     llvm::Value *ret = ShuffleInst(insert, undef2, zeroVec, name);
 
     return ret;
 }
 
-
-llvm::PHINode *
-FunctionEmitContext::PhiNode(llvm::Type *type, int count,
-                             const char *name) {
-    llvm::PHINode *pn = llvm::PHINode::Create(type, count,
-                                              name ? name : "phi", bblock);
+llvm::PHINode *FunctionEmitContext::PhiNode(llvm::Type *type, int count, const char *name) {
+    llvm::PHINode *pn = llvm::PHINode::Create(type, count, name ? name : "phi", bblock);
     AddDebugPos(pn);
     return pn;
 }
 
-
-llvm::Instruction *
-FunctionEmitContext::SelectInst(llvm::Value *test, llvm::Value *val0,
-                                llvm::Value *val1, const char *name) {
+llvm::Instruction *FunctionEmitContext::SelectInst(llvm::Value *test, llvm::Value *val0, llvm::Value *val1,
+                                                   const char *name) {
     if (test == NULL || val0 == NULL || val1 == NULL) {
         AssertPos(currentPos, m->errorCount > 0);
         return NULL;
@@ -3657,24 +3070,19 @@ FunctionEmitContext::SelectInst(llvm::Value *test, llvm::Value *val0,
     if (name == NULL)
         name = LLVMGetName(test, "_select");
 
-    llvm::Instruction *inst = llvm::SelectInst::Create(test, val0, val1, name,
-                                                       bblock);
+    llvm::Instruction *inst = llvm::SelectInst::Create(test, val0, val1, name, bblock);
     AddDebugPos(inst);
     return inst;
 }
 
-
 /** Given a value representing a function to be called or possibly-varying
     pointer to a function to be called, figure out how many arguments the
     function has. */
-static unsigned int
-lCalleeArgCount(llvm::Value *callee, const FunctionType *funcType) {
-    llvm::FunctionType *ft =
-        llvm::dyn_cast<llvm::FunctionType>(callee->getType());
+static unsigned int lCalleeArgCount(llvm::Value *callee, const FunctionType *funcType) {
+    llvm::FunctionType *ft = llvm::dyn_cast<llvm::FunctionType>(callee->getType());
 
     if (ft == NULL) {
-        llvm::PointerType *pt =
-            llvm::dyn_cast<llvm::PointerType>(callee->getType());
+        llvm::PointerType *pt = llvm::dyn_cast<llvm::PointerType>(callee->getType());
         if (pt == NULL) {
             // varying--in this case, it must be the version of the
             // function that takes a mask
@@ -3687,11 +3095,8 @@ lCalleeArgCount(llvm::Value *callee, const FunctionType *funcType) {
     return ft->getNumParams();
 }
 
-
-llvm::Value *
-FunctionEmitContext::CallInst(llvm::Value *func, const FunctionType *funcType,
-                              const std::vector<llvm::Value *> &args,
-                              const char *name) {
+llvm::Value *FunctionEmitContext::CallInst(llvm::Value *func, const FunctionType *funcType,
+                                           const std::vector<llvm::Value *> &args, const char *name) {
     if (func == NULL) {
         AssertPos(currentPos, m->errorCount > 0);
         return NULL;
@@ -3702,16 +3107,14 @@ FunctionEmitContext::CallInst(llvm::Value *func, const FunctionType *funcType,
     // isn't the case for things like intrinsics, builtins, and extern "C"
     // functions from the application.  Add the mask if it's needed.
     unsigned int calleeArgCount = lCalleeArgCount(func, funcType);
-    AssertPos(currentPos, argVals.size() + 1 == calleeArgCount ||
-           argVals.size() == calleeArgCount);
+    AssertPos(currentPos, argVals.size() + 1 == calleeArgCount || argVals.size() == calleeArgCount);
     if (argVals.size() + 1 == calleeArgCount)
         argVals.push_back(GetFullMask());
 
     if (llvm::isa<llvm::VectorType>(func->getType()) == false) {
         // Regular 'uniform' function call--just one function or function
         // pointer, so just emit the IR directly.
-        llvm::Instruction *ci =
-            llvm::CallInst::Create(func, argVals, name ? name : "", bblock);
+        llvm::Instruction *ci = llvm::CallInst::Create(func, argVals, name ? name : "", bblock);
 
         // Copy noalias attribute to call instruction, to enable better
         // alias analysis.
@@ -3719,24 +3122,19 @@ FunctionEmitContext::CallInst(llvm::Value *func, const FunctionType *funcType,
         // TODO: do the same for varing path.
 #if ISPC_LLVM_VERSION >= ISPC_LLVM_3_3 && ISPC_LLVM_VERSION < ISPC_LLVM_5_0 // LLVM 3.3-4.0
         llvm::CallInst *cc = llvm::dyn_cast<llvm::CallInst>(ci);
-        if (cc &&
-            cc->getCalledFunction() &&
-            cc->getCalledFunction()->doesNotAlias(0)) {
+        if (cc && cc->getCalledFunction() && cc->getCalledFunction()->doesNotAlias(0)) {
             cc->addAttribute(0, llvm::Attribute::NoAlias);
         }
 #else // LLVM 5.0+
         llvm::CallInst *cc = llvm::dyn_cast<llvm::CallInst>(ci);
-        if (cc &&
-            cc->getCalledFunction() &&
-            cc->getCalledFunction()->returnDoesNotAlias()) {
+        if (cc && cc->getCalledFunction() && cc->getCalledFunction()->returnDoesNotAlias()) {
             cc->addAttribute(llvm::AttributeList::ReturnIndex, llvm::Attribute::NoAlias);
         }
 #endif
 
         AddDebugPos(ci);
         return ci;
-    }
-    else {
+    } else {
         // Emit the code for a varying function call, where we have an
         // vector of function pointers, one for each program instance.  The
         // basic strategy is that we go through the function pointers, and
@@ -3774,7 +3172,8 @@ FunctionEmitContext::CallInst(llvm::Value *func, const FunctionType *funcType,
 
         // bbTest: are any lanes of the mask still on?  If so, jump to
         // bbCall
-        SetCurrentBasicBlock(bbTest); {
+        SetCurrentBasicBlock(bbTest);
+        {
             llvm::Value *maskLoad = LoadInst(maskPtr);
             llvm::Value *any = Any(maskLoad);
             BranchInst(bbCall, bbDone, any);
@@ -3782,23 +3181,19 @@ FunctionEmitContext::CallInst(llvm::Value *func, const FunctionType *funcType,
 
         // bbCall: this is the body of the loop that calls out to one of
         // the active function pointer values.
-        SetCurrentBasicBlock(bbCall); {
+        SetCurrentBasicBlock(bbCall);
+        {
             // Figure out the first lane that still needs its function
             // pointer to be called.
             llvm::Value *currentMask = LoadInst(maskPtr);
-            llvm::Function *cttz =
-                m->module->getFunction("__count_trailing_zeros_i64");
+            llvm::Function *cttz = m->module->getFunction("__count_trailing_zeros_i64");
             AssertPos(currentPos, cttz != NULL);
-            llvm::Value *firstLane64 = CallInst(cttz, NULL, LaneMask(currentMask),
-                                                "first_lane64");
-            llvm::Value *firstLane =
-                TruncInst(firstLane64, LLVMTypes::Int32Type, "first_lane32");
+            llvm::Value *firstLane64 = CallInst(cttz, NULL, LaneMask(currentMask), "first_lane64");
+            llvm::Value *firstLane = TruncInst(firstLane64, LLVMTypes::Int32Type, "first_lane32");
 
             // Get the pointer to the function we're going to call this
             // time through: ftpr = func[firstLane]
-            llvm::Value *fptr =
-                llvm::ExtractElementInst::Create(func, firstLane,
-                                                 "extract_fptr", bblock);
+            llvm::Value *fptr = llvm::ExtractElementInst::Create(func, firstLane, "extract_fptr", bblock);
 
             // Smear it out into an array of function pointers
             llvm::Value *fptrSmear = SmearUniform(fptr, "func_ptr");
@@ -3806,9 +3201,7 @@ FunctionEmitContext::CallInst(llvm::Value *func, const FunctionType *funcType,
             // fpOverlap = (fpSmearAsVec == fpOrigAsVec).  This gives us a
             // mask for the set of program instances that have the same
             // value for their function pointer.
-            llvm::Value *fpOverlap =
-                CmpInst(llvm::Instruction::ICmp, llvm::CmpInst::ICMP_EQ,
-                        fptrSmear, func);
+            llvm::Value *fpOverlap = CmpInst(llvm::Instruction::ICmp, llvm::CmpInst::ICMP_EQ, fptrSmear, func);
             fpOverlap = I1VecToBoolVec(fpOverlap);
 
             // Figure out the mask to use when calling the function
@@ -3816,9 +3209,7 @@ FunctionEmitContext::CallInst(llvm::Value *func, const FunctionType *funcType,
             // the case of any non-running program instances that happen to
             // have this function pointer value.
             // callMask = (currentMask & fpOverlap)
-            llvm::Value *callMask =
-                BinaryOperator(llvm::Instruction::And, currentMask, fpOverlap,
-                               "call_mask");
+            llvm::Value *callMask = BinaryOperator(llvm::Instruction::And, currentMask, fpOverlap, "call_mask");
 
             // Set the mask
             SetInternalMask(callMask);
@@ -3834,23 +3225,17 @@ FunctionEmitContext::CallInst(llvm::Value *func, const FunctionType *funcType,
 
             // Now, do a masked store into the memory allocated to
             // accumulate the result using the call mask.
-            if (callResult != NULL &&
-                callResult->getType() != LLVMTypes::VoidType) {
+            if (callResult != NULL && callResult->getType() != LLVMTypes::VoidType) {
                 AssertPos(currentPos, resultPtr != NULL);
-                StoreInst(callResult, resultPtr, callMask, returnType,
-                          PointerType::GetUniform(returnType));
-            }
-            else
+                StoreInst(callResult, resultPtr, callMask, returnType, PointerType::GetUniform(returnType));
+            } else
                 AssertPos(currentPos, resultPtr == NULL);
 
             // Update the mask to turn off the program instances for which
             // we just called the function.
             // currentMask = currentMask & ~callmask
-            llvm::Value *notCallMask =
-                BinaryOperator(llvm::Instruction::Xor, callMask, LLVMMaskAllOn,
-                               "~callMask");
-            currentMask = BinaryOperator(llvm::Instruction::And, currentMask,
-                                         notCallMask, "currentMask&~callMask");
+            llvm::Value *notCallMask = BinaryOperator(llvm::Instruction::Xor, callMask, LLVMMaskAllOn, "~callMask");
+            currentMask = BinaryOperator(llvm::Instruction::And, currentMask, notCallMask, "currentMask&~callMask");
             StoreInst(currentMask, maskPtr);
 
             // And go back to the test to see if we need to do another
@@ -3866,29 +3251,22 @@ FunctionEmitContext::CallInst(llvm::Value *func, const FunctionType *funcType,
     }
 }
 
-
-llvm::Value *
-FunctionEmitContext::CallInst(llvm::Value *func, const FunctionType *funcType,
-                              llvm::Value *arg, const char *name) {
+llvm::Value *FunctionEmitContext::CallInst(llvm::Value *func, const FunctionType *funcType, llvm::Value *arg,
+                                           const char *name) {
     std::vector<llvm::Value *> args;
     args.push_back(arg);
     return CallInst(func, funcType, args, name);
 }
 
-
-llvm::Value *
-FunctionEmitContext::CallInst(llvm::Value *func, const FunctionType *funcType,
-                              llvm::Value *arg0, llvm::Value *arg1,
-                              const char *name) {
+llvm::Value *FunctionEmitContext::CallInst(llvm::Value *func, const FunctionType *funcType, llvm::Value *arg0,
+                                           llvm::Value *arg1, const char *name) {
     std::vector<llvm::Value *> args;
     args.push_back(arg0);
     args.push_back(arg1);
     return CallInst(func, funcType, args, name);
 }
 
-
-llvm::Instruction *
-FunctionEmitContext::ReturnInst() {
+llvm::Instruction *FunctionEmitContext::ReturnInst() {
     if (launchedTasks)
         // Add a sync call at the end of any function that launched tasks
         SyncInst();
@@ -3899,8 +3277,7 @@ FunctionEmitContext::ReturnInst() {
         // location
         llvm::Value *retVal = LoadInst(returnValuePtr, "return_value");
         rinst = llvm::ReturnInst::Create(*g->ctx, retVal, bblock);
-    }
-    else {
+    } else {
         AssertPos(currentPos, function->GetReturnType()->IsVoidType());
         rinst = llvm::ReturnInst::Create(*g->ctx, bblock);
     }
@@ -3910,122 +3287,111 @@ FunctionEmitContext::ReturnInst() {
     return rinst;
 }
 
-
-llvm::Value *
-FunctionEmitContext::LaunchInst(llvm::Value *callee,
-                                std::vector<llvm::Value *> &argVals,
-                                llvm::Value *launchCount[3]){
+llvm::Value *FunctionEmitContext::LaunchInst(llvm::Value *callee, std::vector<llvm::Value *> &argVals,
+                                             llvm::Value *launchCount[3]) {
 #ifdef ISPC_NVPTX_ENABLED
-    if (g->target->getISA() == Target::NVPTX)
-    {
-      if (callee == NULL) {
-        AssertPos(currentPos, m->errorCount > 0);
-        return NULL;
-      }
-      launchedTasks = true;
+    if (g->target->getISA() == Target::NVPTX) {
+        if (callee == NULL) {
+            AssertPos(currentPos, m->errorCount > 0);
+            return NULL;
+        }
+        launchedTasks = true;
 
-      AssertPos(currentPos, llvm::isa<llvm::Function>(callee));
-      std::vector<llvm::Type*> argTypes;
+        AssertPos(currentPos, llvm::isa<llvm::Function>(callee));
+        std::vector<llvm::Type *> argTypes;
 
-      llvm::Function *F = llvm::dyn_cast<llvm::Function>(callee);
-      const unsigned int nArgs = F->arg_size();
-      llvm::Function::const_arg_iterator I = F->arg_begin(), E = F->arg_end();
-      for (; I != E; ++I) 
-        argTypes.push_back(I->getType());
-      llvm::Type *st = llvm::StructType::get(*g->ctx, argTypes);
-      llvm::StructType *argStructType = static_cast<llvm::StructType *>(st);
-      llvm::Value *structSize = g->target->SizeOf(argStructType, bblock);
-      if (structSize->getType() != LLVMTypes::Int64Type)
-        structSize = ZExtInst(structSize, LLVMTypes::Int64Type,
-            "struct_size_to_64");
+        llvm::Function *F = llvm::dyn_cast<llvm::Function>(callee);
+        const unsigned int nArgs = F->arg_size();
+        llvm::Function::const_arg_iterator I = F->arg_begin(), E = F->arg_end();
+        for (; I != E; ++I)
+            argTypes.push_back(I->getType());
+        llvm::Type *st = llvm::StructType::get(*g->ctx, argTypes);
+        llvm::StructType *argStructType = static_cast<llvm::StructType *>(st);
+        llvm::Value *structSize = g->target->SizeOf(argStructType, bblock);
+        if (structSize->getType() != LLVMTypes::Int64Type)
+            structSize = ZExtInst(structSize, LLVMTypes::Int64Type, "struct_size_to_64");
 
-      const int align = 8;
-      llvm::Function *falloc = m->module->getFunction("ISPCAlloc");
-      AssertPos(currentPos, falloc != NULL);
-      std::vector<llvm::Value *> allocArgs;
-      allocArgs.push_back(launchGroupHandlePtr);
-      allocArgs.push_back(structSize);
-      allocArgs.push_back(LLVMInt32(align));
-      llvm::Value *voidmem = CallInst(falloc, NULL, allocArgs, "args_ptr");
-      llvm::Value *voidi64 = PtrToIntInst(voidmem, "args_i64");
-      llvm::BasicBlock* if_true  = CreateBasicBlock("if_true");
-      llvm::BasicBlock* if_false = CreateBasicBlock("if_false");
+        const int align = 8;
+        llvm::Function *falloc = m->module->getFunction("ISPCAlloc");
+        AssertPos(currentPos, falloc != NULL);
+        std::vector<llvm::Value *> allocArgs;
+        allocArgs.push_back(launchGroupHandlePtr);
+        allocArgs.push_back(structSize);
+        allocArgs.push_back(LLVMInt32(align));
+        llvm::Value *voidmem = CallInst(falloc, NULL, allocArgs, "args_ptr");
+        llvm::Value *voidi64 = PtrToIntInst(voidmem, "args_i64");
+        llvm::BasicBlock *if_true = CreateBasicBlock("if_true");
+        llvm::BasicBlock *if_false = CreateBasicBlock("if_false");
 
-      /* check if the pointer returned by ISPCAlloc is not NULL 
-       * --------------
-       * this is a workaround for not checking the value of programIndex 
-       * because ISPCAlloc will return NULL pointer for all programIndex > 0
-       * of course, if ISPAlloc fails to get parameter buffer, the pointer for programIndex = 0
-       * will also be NULL
-       * This check must be added, and also rewrite the code to make it less opaque 
-       */
-      llvm::Value* cmp1 = CmpInst(llvm::Instruction::ICmp, llvm::CmpInst::ICMP_NE, voidi64, LLVMInt64(0), "cmp1");
-      BranchInst(if_true, if_false, cmp1);
+        /* check if the pointer returned by ISPCAlloc is not NULL
+         * --------------
+         * this is a workaround for not checking the value of programIndex
+         * because ISPCAlloc will return NULL pointer for all programIndex > 0
+         * of course, if ISPAlloc fails to get parameter buffer, the pointer for programIndex = 0
+         * will also be NULL
+         * This check must be added, and also rewrite the code to make it less opaque
+         */
+        llvm::Value *cmp1 = CmpInst(llvm::Instruction::ICmp, llvm::CmpInst::ICMP_NE, voidi64, LLVMInt64(0), "cmp1");
+        BranchInst(if_true, if_false, cmp1);
 
-      /**********************/
-      bblock = if_true;    
+        /**********************/
+        bblock = if_true;
 
-      // label_if_then block:
-      llvm::Type *pt = llvm::PointerType::getUnqual(st);
-      llvm::Value *argmem = BitCastInst(voidmem, pt);
-      for (unsigned int i = 0; i < argVals.size(); ++i) 
-      {
-        llvm::Value *ptr = AddElementOffset(argmem, i, NULL, "funarg");
-        // don't need to do masked store here, I think
-        StoreInst(argVals[i], ptr);
-      }
-      if (nArgs == argVals.size() + 1) {
-        // copy in the mask
-        llvm::Value *mask = GetFullMask();
-        llvm::Value *ptr = AddElementOffset(argmem, argVals.size(), NULL,
-            "funarg_mask");
-        StoreInst(mask, ptr);
-      }
-      BranchInst(if_false);
+        // label_if_then block:
+        llvm::Type *pt = llvm::PointerType::getUnqual(st);
+        llvm::Value *argmem = BitCastInst(voidmem, pt);
+        for (unsigned int i = 0; i < argVals.size(); ++i) {
+            llvm::Value *ptr = AddElementOffset(argmem, i, NULL, "funarg");
+            // don't need to do masked store here, I think
+            StoreInst(argVals[i], ptr);
+        }
+        if (nArgs == argVals.size() + 1) {
+            // copy in the mask
+            llvm::Value *mask = GetFullMask();
+            llvm::Value *ptr = AddElementOffset(argmem, argVals.size(), NULL, "funarg_mask");
+            StoreInst(mask, ptr);
+        }
+        BranchInst(if_false);
 
-      /**********************/
-      bblock = if_false;
+        /**********************/
+        bblock = if_false;
 
-      llvm::Value *fptr = BitCastInst(callee, LLVMTypes::VoidPointerType);
-      llvm::Function *flaunch = m->module->getFunction("ISPCLaunch");
-      AssertPos(currentPos, flaunch != NULL);
-      std::vector<llvm::Value *> args;
-      args.push_back(launchGroupHandlePtr);
-      args.push_back(fptr);
-      args.push_back(voidmem);
-      args.push_back(launchCount[0]);
-      args.push_back(launchCount[1]);
-      args.push_back(launchCount[2]);
-      llvm::Value *ret =  CallInst(flaunch, NULL, args, "");
-      return ret;
+        llvm::Value *fptr = BitCastInst(callee, LLVMTypes::VoidPointerType);
+        llvm::Function *flaunch = m->module->getFunction("ISPCLaunch");
+        AssertPos(currentPos, flaunch != NULL);
+        std::vector<llvm::Value *> args;
+        args.push_back(launchGroupHandlePtr);
+        args.push_back(fptr);
+        args.push_back(voidmem);
+        args.push_back(launchCount[0]);
+        args.push_back(launchCount[1]);
+        args.push_back(launchCount[2]);
+        llvm::Value *ret = CallInst(flaunch, NULL, args, "");
+        return ret;
     }
 #endif /* ISPC_NVPTX_ENABLED */
 
     if (callee == NULL) {
-      AssertPos(currentPos, m->errorCount > 0);
-      return NULL;
+        AssertPos(currentPos, m->errorCount > 0);
+        return NULL;
     }
 
     launchedTasks = true;
 
     AssertPos(currentPos, llvm::isa<llvm::Function>(callee));
-    llvm::Type *argType =
-      (llvm::dyn_cast<llvm::Function>(callee))->arg_begin()->getType();
+    llvm::Type *argType = (llvm::dyn_cast<llvm::Function>(callee))->arg_begin()->getType();
     AssertPos(currentPos, llvm::PointerType::classof(argType));
-    llvm::PointerType *pt =
-      llvm::dyn_cast<llvm::PointerType>(argType);
+    llvm::PointerType *pt = llvm::dyn_cast<llvm::PointerType>(argType);
     AssertPos(currentPos, llvm::StructType::classof(pt->getElementType()));
-    llvm::StructType *argStructType =
-      static_cast<llvm::StructType *>(pt->getElementType());
+    llvm::StructType *argStructType = static_cast<llvm::StructType *>(pt->getElementType());
 
     llvm::Function *falloc = m->module->getFunction("ISPCAlloc");
     AssertPos(currentPos, falloc != NULL);
     llvm::Value *structSize = g->target->SizeOf(argStructType, bblock);
     if (structSize->getType() != LLVMTypes::Int64Type)
-      // ISPCAlloc expects the size as an uint64_t, but on 32-bit
-      // targets, SizeOf returns a 32-bit value
-      structSize = ZExtInst(structSize, LLVMTypes::Int64Type,
-          "struct_size_to_64");
+        // ISPCAlloc expects the size as an uint64_t, but on 32-bit
+        // targets, SizeOf returns a 32-bit value
+        structSize = ZExtInst(structSize, LLVMTypes::Int64Type, "struct_size_to_64");
     int align = 4 * RoundUpPow2(g->target->getNativeVectorWidth());
 
     std::vector<llvm::Value *> allocArgs;
@@ -4038,17 +3404,16 @@ FunctionEmitContext::LaunchInst(llvm::Value *callee,
     // Copy the values of the parameters into the appropriate place in
     // the argument block
     for (unsigned int i = 0; i < argVals.size(); ++i) {
-      llvm::Value *ptr = AddElementOffset(argmem, i, NULL, "funarg");
-      // don't need to do masked store here, I think
-      StoreInst(argVals[i], ptr);
+        llvm::Value *ptr = AddElementOffset(argmem, i, NULL, "funarg");
+        // don't need to do masked store here, I think
+        StoreInst(argVals[i], ptr);
     }
 
     if (argStructType->getNumElements() == argVals.size() + 1) {
-      // copy in the mask
-      llvm::Value *mask = GetFullMask();
-      llvm::Value *ptr = AddElementOffset(argmem, argVals.size(), NULL,
-          "funarg_mask");
-      StoreInst(mask, ptr);
+        // copy in the mask
+        llvm::Value *mask = GetFullMask();
+        llvm::Value *ptr = AddElementOffset(argmem, argVals.size(), NULL, "funarg_mask");
+        StoreInst(mask, ptr);
     }
 
     // And emit the call to the user-supplied task launch function, passing
@@ -4067,30 +3432,23 @@ FunctionEmitContext::LaunchInst(llvm::Value *callee,
     return CallInst(flaunch, NULL, args, "");
 }
 
-
-void
-FunctionEmitContext::SyncInst() {
-#ifdef ISPC_NVPTX_ENABLED 
-    if (g->target->getISA() == Target::NVPTX)
-    {
-      llvm::Value *launchGroupHandle = LoadInst(launchGroupHandlePtr);
-      llvm::Value *nullPtrValue =
-        llvm::Constant::getNullValue(LLVMTypes::VoidPointerType);
-      llvm::Function *fsync = m->module->getFunction("ISPCSync");
-      if (fsync == NULL)
-        FATAL("Couldn't find ISPCSync declaration?!");
-      CallInst(fsync, NULL, launchGroupHandle, "");
-      StoreInst(nullPtrValue, launchGroupHandlePtr);
-      return;
+void FunctionEmitContext::SyncInst() {
+#ifdef ISPC_NVPTX_ENABLED
+    if (g->target->getISA() == Target::NVPTX) {
+        llvm::Value *launchGroupHandle = LoadInst(launchGroupHandlePtr);
+        llvm::Value *nullPtrValue = llvm::Constant::getNullValue(LLVMTypes::VoidPointerType);
+        llvm::Function *fsync = m->module->getFunction("ISPCSync");
+        if (fsync == NULL)
+            FATAL("Couldn't find ISPCSync declaration?!");
+        CallInst(fsync, NULL, launchGroupHandle, "");
+        StoreInst(nullPtrValue, launchGroupHandlePtr);
+        return;
     }
 #endif /* ISPC_NVPTX_ENABLED */
 
     llvm::Value *launchGroupHandle = LoadInst(launchGroupHandlePtr);
-    llvm::Value *nullPtrValue =
-        llvm::Constant::getNullValue(LLVMTypes::VoidPointerType);
-    llvm::Value *nonNull = CmpInst(llvm::Instruction::ICmp,
-                                   llvm::CmpInst::ICMP_NE,
-                                   launchGroupHandle, nullPtrValue);
+    llvm::Value *nullPtrValue = llvm::Constant::getNullValue(LLVMTypes::VoidPointerType);
+    llvm::Value *nonNull = CmpInst(llvm::Instruction::ICmp, llvm::CmpInst::ICMP_NE, launchGroupHandle, nullPtrValue);
     llvm::BasicBlock *bSync = CreateBasicBlock("call_sync");
     llvm::BasicBlock *bPostSync = CreateBasicBlock("post_sync");
     BranchInst(bSync, bPostSync, nonNull);
@@ -4110,16 +3468,13 @@ FunctionEmitContext::SyncInst() {
     SetCurrentBasicBlock(bPostSync);
 }
 
-
 /** When we gathering from or scattering to a varying atomic type, we need
     to add an appropriate offset to the final address for each lane right
     before we use it.  Given a varying pointer we're about to use and its
     type, this function determines whether these offsets are needed and
     returns an updated pointer that incorporates these offsets if needed.
  */
-llvm::Value *
-FunctionEmitContext::addVaryingOffsetsIfNeeded(llvm::Value *ptr,
-                                               const Type *ptrType) {
+llvm::Value *FunctionEmitContext::addVaryingOffsetsIfNeeded(llvm::Value *ptr, const Type *ptrType) {
     // This should only be called for varying pointers
     const PointerType *pt = CastType<PointerType>(ptrType);
     AssertPos(currentPos, pt && pt->IsVaryingType());
@@ -4132,8 +3487,7 @@ FunctionEmitContext::addVaryingOffsetsIfNeeded(llvm::Value *ptr,
         return ptr;
 
     // Find the size of a uniform element of the varying type
-    llvm::Type *llvmBaseUniformType =
-        baseType->GetAsUniformType()->LLVMType(g->ctx);
+    llvm::Type *llvmBaseUniformType = baseType->GetAsUniformType()->LLVMType(g->ctx);
     llvm::Value *unifSize = g->target->SizeOf(llvmBaseUniformType, bblock);
     unifSize = SmearUniform(unifSize);
 
@@ -4141,8 +3495,7 @@ FunctionEmitContext::addVaryingOffsetsIfNeeded(llvm::Value *ptr,
     bool is32bits = g->target->is32Bit() || g->opt.force32BitAddressing;
     llvm::Value *varyingOffsets = ProgramIndexVector(is32bits);
 
-    llvm::Value *offset = BinaryOperator(llvm::Instruction::Mul, unifSize,
-                                         varyingOffsets);
+    llvm::Value *offset = BinaryOperator(llvm::Instruction::Mul, unifSize, varyingOffsets);
 
     if (g->opt.force32BitAddressing == true && g->target->is32Bit() == false)
         // On 64-bit targets where we're doing 32-bit addressing
@@ -4153,9 +3506,7 @@ FunctionEmitContext::addVaryingOffsetsIfNeeded(llvm::Value *ptr,
     return BinaryOperator(llvm::Instruction::Add, ptr, offset);
 }
 
-
-CFInfo *
-FunctionEmitContext::popCFState() {
+CFInfo *FunctionEmitContext::popCFState() {
     AssertPos(currentPos, controlFlowInfo.size() > 0);
     CFInfo *ci = controlFlowInfo.back();
     controlFlowInfo.pop_back();
@@ -4171,15 +3522,13 @@ FunctionEmitContext::popCFState() {
         caseBlocks = ci->savedCaseBlocks;
         nextBlocks = ci->savedNextBlocks;
         switchConditionWasUniform = ci->savedSwitchConditionWasUniform;
-    }
-    else if (ci->IsLoop() || ci->IsForeach()) {
+    } else if (ci->IsLoop() || ci->IsForeach()) {
         breakTarget = ci->savedBreakTarget;
         continueTarget = ci->savedContinueTarget;
         breakLanesPtr = ci->savedBreakLanesPtr;
         continueLanesPtr = ci->savedContinueLanesPtr;
         blockEntryMask = ci->savedBlockEntryMask;
-    }
-    else {
+    } else {
         AssertPos(currentPos, ci->IsIf());
         // nothing to do
     }

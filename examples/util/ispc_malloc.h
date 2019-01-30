@@ -40,4 +40,4 @@ extern void ispcSetMallocHeapLimit(size_t value);
 extern void ispcSetStackLimit(size_t value);
 extern unsigned long long ispcGetMallocHeapLimit();
 extern unsigned long long ispcGetStackLimit();
-extern void * ispcMemcpy(void *dest,  void *src,  size_t num);
+extern void *ispcMemcpy(void *dest, void *src, size_t num);

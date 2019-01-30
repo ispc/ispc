@@ -40,8 +40,8 @@
 #ifndef ISPC_SYM_H
 #define ISPC_SYM_H
 
-#include "ispc.h"
 #include "decl.h"
+#include "ispc.h"
 #include <map>
 
 class StructType;
@@ -61,11 +61,10 @@ class ConstExpr;
  */
 
 class Symbol {
-public:
+  public:
     /** The Symbol constructor takes the name of the symbol, its
         position in a source file, and its type (if known). */
-    Symbol(const std::string &name, SourcePos pos, const Type *t = NULL,
-           StorageClass sc = SC_NONE);
+    Symbol(const std::string &name, SourcePos pos, const Type *t = NULL, StorageClass sc = SC_NONE);
 
     SourcePos pos;            /*!< Source file position where the symbol was defined */
     std::string name;         /*!< Symbol's name */
@@ -77,36 +76,35 @@ public:
                                    this stores the LLVM Function value for
                                    the symbol once it has been created. */
     llvm::Function *exportedFunction;
-                              /*!< For symbols that represent functions with
-                                   'export' qualifiers, this points to the LLVM
-                                   Function for the application-callable version
-                                   of the function. */
-    const Type *type;         /*!< The type of the symbol; if not set by the
-                                   constructor, this is set after the
-                                   declaration around the symbol has been parsed.  */
-    ConstExpr *constValue;    /*!< For symbols with const-qualified types, this may store
-                                   the symbol's compile-time constant value.  This value may
-                                   validly be NULL for a const-qualified type, however; for
-                                   example, the ConstExpr class can't currently represent
-                                   struct types.  For cases like these, ConstExpr is NULL,
-                                   though for all const symbols, the value pointed to by the
-                                   storagePtr member will be its constant value.  (This
-                                   messiness is due to needing an ispc ConstExpr for the early
-                                   constant folding optimizations). */
-    StorageClass storageClass;/*!< Records the storage class (if any) provided with the
-                                   symbol's declaration. */
-    int varyingCFDepth;       /*!< This member records the number of levels of nested 'varying'
-                                   control flow within which the symbol was declared.  Having
-                                   this value available makes it possible to avoid performing
-                                   masked stores when modifying the symbol's value when the
-                                   store is done at the same 'varying' control flow depth as
-                                   the one where the symbol was originally declared. */
+    /*!< For symbols that represent functions with
+         'export' qualifiers, this points to the LLVM
+         Function for the application-callable version
+         of the function. */
+    const Type *type;          /*!< The type of the symbol; if not set by the
+                                    constructor, this is set after the
+                                    declaration around the symbol has been parsed.  */
+    ConstExpr *constValue;     /*!< For symbols with const-qualified types, this may store
+                                    the symbol's compile-time constant value.  This value may
+                                    validly be NULL for a const-qualified type, however; for
+                                    example, the ConstExpr class can't currently represent
+                                    struct types.  For cases like these, ConstExpr is NULL,
+                                    though for all const symbols, the value pointed to by the
+                                    storagePtr member will be its constant value.  (This
+                                    messiness is due to needing an ispc ConstExpr for the early
+                                    constant folding optimizations). */
+    StorageClass storageClass; /*!< Records the storage class (if any) provided with the
+                                    symbol's declaration. */
+    int varyingCFDepth;        /*!< This member records the number of levels of nested 'varying'
+                                    control flow within which the symbol was declared.  Having
+                                    this value available makes it possible to avoid performing
+                                    masked stores when modifying the symbol's value when the
+                                    store is done at the same 'varying' control flow depth as
+                                    the one where the symbol was originally declared. */
     const Function *parentFunction;
-                              /*!< For symbols that are parameters to functions or are
-                                   variables declared inside functions, this gives the
-                                   function they're in. */
+    /*!< For symbols that are parameters to functions or are
+         variables declared inside functions, this gives the
+         function they're in. */
 };
-
 
 /** @brief Symbol table that holds all known symbols during parsing and compilation.
 
@@ -117,7 +115,7 @@ public:
  */
 
 class SymbolTable {
-public:
+  public:
     SymbolTable();
     ~SymbolTable();
 
@@ -165,8 +163,7 @@ public:
         be returned in the provided vector and it's up the the caller to
         resolve which one (if any) to use.  Returns true if any matches
         were found. */
-    bool LookupFunction(const char *name,
-                        std::vector<Symbol *> *matches = NULL);
+    bool LookupFunction(const char *name, std::vector<Symbol *> *matches = NULL);
 
     /** Looks for a function with the given name and type
         in the symbol table.
@@ -186,17 +183,13 @@ public:
         @param matches Pointer to a vector in which to return the matching
         symbols.
      */
-    template <typename Predicate>
-        void GetMatchingFunctions(Predicate pred,
-                                  std::vector<Symbol *> *matches) const;
+    template <typename Predicate> void GetMatchingFunctions(Predicate pred, std::vector<Symbol *> *matches) const;
 
     /** Returns all of the variable symbols in the symbol table that match
         the given predicate.  The predicate is defined as in the
         GetMatchingFunctions() method.
      */
-    template <typename Predicate>
-        void GetMatchingVariables(Predicate pred,
-                                  std::vector<Symbol *> *matches) const;
+    template <typename Predicate> void GetMatchingVariables(Predicate pred, std::vector<Symbol *> *matches) const;
 
     /** Adds the named type to the symbol table.  This is used for both
         struct definitions (where <tt>struct Foo</tt> causes type \c Foo to
@@ -219,12 +212,12 @@ public:
         @return Pointer to the Type, if found; otherwise NULL is returned.
     */
     const Type *LookupType(const char *name) const;
-    
+
     /** Look for a type given a pointer.
 
         @return True if found, False otherwise.
     */
-    bool ContainsType(const Type * type) const;
+    bool ContainsType(const Type *type) const;
 
     /** This method returns zero or more strings with the names of symbols
         in the symbol table that nearly (but not exactly) match the given
@@ -253,9 +246,8 @@ public:
     /** Returns a random type from the symbol table. */
     const Type *RandomType();
 
-private:
-    std::vector<std::string> closestTypeMatch(const char *str,
-                                              bool structsVsEnums) const;
+  private:
+    std::vector<std::string> closestTypeMatch(const char *str, bool structsVsEnums) const;
 
     /** This member variable holds one SymbolMap for each of the current
         active scopes as the program is being parsed.  New maps are added
@@ -273,7 +265,7 @@ private:
         namespace.)  A STL \c vector is used to store the function symbols
         for a given name since, due to function overloading, a name can
         have multiple function symbols associated with it. */
-    typedef std::map<std::string, std::vector<Symbol *> > FunctionMapType;
+    typedef std::map<std::string, std::vector<Symbol *>> FunctionMapType;
     FunctionMapType functions;
 
     /** Type definitions can't currently be scoped.
@@ -282,10 +274,8 @@ private:
     TypeMapType types;
 };
 
-
-template <typename Predicate> void
-SymbolTable::GetMatchingFunctions(Predicate pred,
-                                  std::vector<Symbol *> *matches) const {
+template <typename Predicate>
+void SymbolTable::GetMatchingFunctions(Predicate pred, std::vector<Symbol *> *matches) const {
     // Iterate through all function symbols and apply the given predicate.
     // If it returns true, add the Symbol * to the provided vector.
     FunctionMapType::const_iterator iter;
@@ -298,10 +288,8 @@ SymbolTable::GetMatchingFunctions(Predicate pred,
     }
 }
 
-
-template <typename Predicate> void
-SymbolTable::GetMatchingVariables(Predicate pred,
-                                  std::vector<Symbol *> *matches) const {
+template <typename Predicate>
+void SymbolTable::GetMatchingVariables(Predicate pred, std::vector<Symbol *> *matches) const {
     for (unsigned int i = 0; i < variables.size(); ++i) {
         SymbolMapType &sm = *(variables[i]);
         SymbolMapType::const_iterator iter;
