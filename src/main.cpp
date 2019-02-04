@@ -630,9 +630,11 @@ int main(int Argc, char *Argv[]) {
             includeFileName = argv[i] + strlen("--c++-include-file=");
         } else if (!strcmp(argv[i], "-O0")) {
             g->opt.level = 0;
+            g->codegenOptLevel = Globals::CodegenOptLevel::None;
         } else if (!strcmp(argv[i], "-O") || !strcmp(argv[i], "-O1") || !strcmp(argv[i], "-O2") ||
                    !strcmp(argv[i], "-O3")) {
             g->opt.level = 1;
+            g->codegenOptLevel = Globals::CodegenOptLevel::Aggressive;
         } else if (!strcmp(argv[i], "-"))
             ;
         else if (!strcmp(argv[i], "--nostdlib"))
