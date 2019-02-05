@@ -197,6 +197,9 @@ static const bool lIsTargetValidforArch(ISPCTarget target, Arch arch) {
     } else if (target == ISPCTarget::neon_i32x4 || target == ISPCTarget::neon_i32x8) {
         if (arch != Arch::arm && arch != Arch::aarch64)
             ret = false;
+    } else if (ISPCTargetIsGen(target)) {
+        if (arch != Arch::genx32)
+            ret = false;
     }
 
     return ret;
@@ -274,7 +277,9 @@ typedef enum {
     CPU_CortexA53,
     CPU_CortexA57,
 #endif
-
+#ifdef ISPC_GENX_ENABLED
+    CPU_GENX,
+#endif
     sizeofCPUtype
 } CPUtype;
 
@@ -351,6 +356,11 @@ class AllCPUs {
         names[CPU_CortexA57].push_back("cortex-a57");
 #endif
 
+#ifdef ISPC_GENX_ENABLED
+        // TODO_GEN: find out correct name for GEN target
+        names[CPU_GENX].push_back("SKL");
+#endif
+
         Assert(names.size() == sizeofCPUtype);
 
         compat[CPU_Silvermont] =
@@ -389,6 +399,10 @@ class AllCPUs {
         compat[CPU_CortexA35] = Set(CPU_CortexA35, CPU_None);
         compat[CPU_CortexA53] = Set(CPU_CortexA53, CPU_None);
         compat[CPU_CortexA57] = Set(CPU_CortexA57, CPU_None);
+#endif
+
+#ifdef ISPC_GENX_ENABLED
+        compat[CPU_GENX] = Set(CPU_GENX, CPU_None);
 #endif
     }
 
@@ -478,6 +492,12 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, bool pic, boo
             break;
 #endif
 
+#ifdef ISPC_GENX_ENABLED
+        case CPU_GENX:
+            m_ispc_target = ISPCTarget::genx_x16;
+            break;
+#endif
+
         case CPU_KNL:
             m_ispc_target = ISPCTarget::avx512knl_i32x16;
             break;
@@ -533,6 +553,11 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, bool pic, boo
 #else
             arch = Arch::aarch64;
 #endif
+        } else
+#endif
+#if ISPC_GENX_ENABLED
+        if (ISPCTargetIsGen(m_ispc_target)) {
+            arch = Arch::genx32;
         } else
 #endif
             arch = Arch::x86_64;
@@ -943,6 +968,26 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, bool pic, boo
         unsupported_target = true;
         break;
 #endif
+#ifdef ISPC_GENX_ENABLED
+    case ISPCTarget::genx_x16:
+        this->m_isa = Target::GENX;
+        this->m_nativeVectorWidth = 16;
+        this->m_nativeVectorAlignment = 64;
+        this->m_vectorWidth = 16;
+        this->m_dataTypeWidth = 32;
+        // this->m_hasHalf = true;
+        this->m_maskingIsFree = true;
+        this->m_maskBitCount = 1;
+        // this->m_hasTranscendentals = true;
+        // this->m_hasTrigonometry = true;
+        // this->m_hasGather = this->m_hasScatter = true;
+        CPUfromISA = CPU_GENX;
+        break;
+#else
+    case ISPCTarget::genx_x16:
+        unsupported_target = true;
+        break;
+#endif
     case ISPCTarget::none:
     case ISPCTarget::host:
     case ISPCTarget::error:
@@ -1055,6 +1100,11 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, bool pic, boo
         // 1. Get default data layout first
         std::string dl_string;
         dl_string = m_targetMachine->createDataLayout().getStringRepresentation();
+#ifdef ISPC_GENX_ENABLED
+        if (m_isa == Target::GENX) {
+            dl_string = "e-p:32:32-i64:64-n8:16:32";
+        }
+#endif
 
         // 2. Finally set member data
         m_dataLayout = new llvm::DataLayout(dl_string);
@@ -1107,6 +1157,8 @@ std::string Target::GetTripleString() const {
         } else if (m_arch == Arch::aarch64) {
             Error(SourcePos(), "Aarch64 is not supported on Windows.");
             exit(1);
+        } else if (m_arch == Arch::genx32) {
+            triple.setArchName("genx32");
         } else {
             Error(SourcePos(), "Unknown arch.");
             exit(1);
@@ -1126,13 +1178,15 @@ std::string Target::GetTripleString() const {
             triple.setArchName("armv7");
         } else if (m_arch == Arch::aarch64) {
             triple.setArchName("aarch64");
+        } else if (m_arch == Arch::genx32) {
+            triple.setArchName("genx32");
         } else {
             Error(SourcePos(), "Unknown arch.");
             exit(1);
         }
         triple.setVendor(llvm::Triple::VendorType::UnknownVendor);
         triple.setOS(llvm::Triple::OSType::Linux);
-        if (m_arch == Arch::x86 || m_arch == Arch::x86_64 || m_arch == Arch::aarch64) {
+        if (m_arch == Arch::x86 || m_arch == Arch::x86_64 || m_arch == Arch::aarch64 || m_arch == Arch::genx32) {
             triple.setEnvironment(llvm::Triple::EnvironmentType::GNU);
         } else if (m_arch == Arch::arm) {
             triple.setEnvironment(llvm::Triple::EnvironmentType::GNUEABIHF);
@@ -1248,6 +1302,10 @@ const char *Target::ISAToString(ISA isa) {
         return "avx512knl";
     case Target::SKX_AVX512:
         return "avx512skx";
+#ifdef ISPC_GENX_ENABLED
+    case Target::GENX:
+        return "genx";
+#endif
     default:
         FATAL("Unhandled target in ISAToString()");
     }
@@ -1268,6 +1326,10 @@ const char *Target::ISAToTargetString(ISA isa) {
 #ifdef ISPC_WASM_ENABLED
     case Target::WASM:
         return "wasm-i32x4";
+#endif
+#ifdef ISPC_GENX_ENABLED
+    case Target::GENX:
+        return "genx";
 #endif
     case Target::SSE2:
         return "sse2-i32x4";

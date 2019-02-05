@@ -173,6 +173,9 @@ class Target {
 #ifdef ISPC_WASM_ENABLED
         WASM,
 #endif
+#ifdef ISPC_GENX_ENABLED
+        GENX,
+#endif
         NUM_ISAS
     };
 
