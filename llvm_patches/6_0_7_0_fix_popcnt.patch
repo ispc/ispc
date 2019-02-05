@@ -5,26 +5,17 @@
 # stores, one with offset 0 and one with offset 16. The size of the
 # memory operand for both was 16. The scheduler correctly detected
 # the alias with the offset 0 store, but not the offset 16 store.
-Index: lib/CodeGen/SelectionDAG/DAGCombiner.cpp
+Index: llvm/trunk/lib/CodeGen/SelectionDAG/DAGCombiner.cpp
 ===================================================================
---- lib/CodeGen/SelectionDAG/DAGCombiner.cpp
-+++ lib/CodeGen/SelectionDAG/DAGCombiner.cpp
-@@ -15640,11 +15640,17 @@
-     Offset = DAG.getConstant(PtrOff, DL, PtrType);
-     MPI = OriginalLoad->getPointerInfo().getWithOffset(PtrOff);
-   } else {
-+    // We can't preserve pointer info, so don't do this transform if the the
-+    // access isn't in the default address space.
-+    if (OriginalLoad->getPointerInfo().getAddrSpace() != 0)
-+      return SDValue();
-     Offset = DAG.getZExtOrTrunc(EltNo, DL, PtrType);
+--- llvm/trunk/lib/CodeGen/SelectionDAG/DAGCombiner.cpp
++++ llvm/trunk/lib/CodeGen/SelectionDAG/DAGCombiner.cpp
+@@ -15656,7 +15656,9 @@
      Offset = DAG.getNode(
          ISD::MUL, DL, PtrType, Offset,
          DAG.getConstant(VecEltVT.getStoreSize(), DL, PtrType));
 -    MPI = OriginalLoad->getPointerInfo();
-+    // Discard the pointer info because the memory operand can't represent this
-+    // new access since the offset is variable.
-+    MPI = MachinePointerInfo();
++    // Discard the pointer info except the address space because the memory
++    // operand can't represent this new access since the offset is variable.
++    MPI = MachinePointerInfo(OriginalLoad->getPointerInfo().getAddrSpace());
    }
    NewPtr = DAG.getNode(ISD::ADD, DL, PtrType, NewPtr, Offset);
- 
