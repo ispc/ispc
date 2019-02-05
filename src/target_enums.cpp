@@ -53,6 +53,8 @@ Arch ParseArch(std::string arch) {
         return Arch::aarch64;
     } else if (arch == "wasm32") {
         return Arch::wasm32;
+    } else if (arch == "genx32") {
+        return Arch::genx32;
     }
     return Arch::error;
 }
@@ -71,6 +73,8 @@ std::string ArchToString(Arch arch) {
         return "aarch64";
     case Arch::wasm32:
         return "wasm32";
+    case Arch::genx32:
+        return "genx32";
     case Arch::error:
         return "error";
     default:
@@ -140,6 +144,8 @@ ISPCTarget ParseISPCTarget(std::string target) {
         return ISPCTarget::neon_i32x8;
     } else if (target == "wasm-i32x4") {
         return ISPCTarget::wasm_i32x4;
+    } else if (target == "genx") {
+        return ISPCTarget::genx_x16;
     }
 
     return ISPCTarget::error;
@@ -231,6 +237,8 @@ std::string ISPCTargetToString(ISPCTarget target) {
         return "neon-i32x8";
     case ISPCTarget::wasm_i32x4:
         return "wasm-i32x4";
+    case ISPCTarget::genx_x16:
+        return "genx";
     case ISPCTarget::none:
     case ISPCTarget::error:
         // Fall through
@@ -284,6 +292,15 @@ bool ISPCTargetIsNeon(ISPCTarget target) {
 bool ISPCTargetIsWasm(ISPCTarget target) {
     switch (target) {
     case ISPCTarget::wasm_i32x4:
+        return true;
+    default:
+        return false;
+    }
+}
+
+bool ISPCTargetIsGen(ISPCTarget target) {
+    switch (target) {
+    case ISPCTarget::genx_x16:
         return true;
     default:
         return false;

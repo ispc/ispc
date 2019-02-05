@@ -102,6 +102,7 @@
 #ifndef PRIu64
 #define PRIu64 "llu"
 #endif
+
 #ifndef ISPC_NO_DUMPS
 #include <llvm/Support/FileSystem.h>
 #include <llvm/Support/Regex.h>
@@ -476,6 +477,18 @@ void Optimize(llvm::Module *module, int optLevel) {
         optPM.add(CreateMakeInternalFuncsStaticPass());
         optPM.add(llvm::createCFGSimplificationPass());
         optPM.add(llvm::createGlobalDCEPass());
+#ifdef ISPC_GENX_ENABLED
+        if (g->target->getISA() == Target::GENX) {
+            optPM.add(llvm::createCMSimdCFLoweringPass());
+            optPM.add(llvm::createGenXPacketizePass());
+            optPM.add(llvm::createPromoteMemoryToRegisterPass());
+            optPM.add(llvm::createCMLowerLoadStorePass());
+            optPM.add(llvm::createCMImpParamPass());
+            optPM.add(llvm::createCMABIPass());
+            optPM.add(llvm::createCMKernelArgOffsetPass(32));
+            optPM.add(llvm::createGenXReduceIntSizePass());
+        }
+#endif
     } else {
         llvm::PassRegistry *registry = llvm::PassRegistry::getPassRegistry();
         llvm::initializeCore(*registry);
@@ -607,7 +620,18 @@ void Optimize(llvm::Module *module, int optLevel) {
         }
         optPM.add(CreateIntrinsicsOptPass(), 281);
         optPM.add(CreateInstructionSimplifyPass());
-
+#ifdef ISPC_GENX_ENABLED
+        if (g->target->getISA() == Target::GENX) {
+            optPM.add(llvm::createCMSimdCFLoweringPass());
+            optPM.add(llvm::createGenXPacketizePass());
+            optPM.add(llvm::createPromoteMemoryToRegisterPass());
+            optPM.add(llvm::createCMLowerLoadStorePass());
+            optPM.add(llvm::createCMImpParamPass());
+            optPM.add(llvm::createCMABIPass());
+            optPM.add(llvm::createCMKernelArgOffsetPass(32));
+            optPM.add(llvm::createGenXReduceIntSizePass());
+        }
+#endif
         optPM.add(llvm::createFunctionInliningPass());
         optPM.add(llvm::createArgumentPromotionPass());
 
@@ -2701,19 +2725,40 @@ static bool lImproveMaskedStore(llvm::CallInst *callInst) {
     } else if (maskStatus == MaskStatus::all_on) {
         // The mask is all on, so turn this into a regular store
         llvm::Type *rvalueType = rvalue->getType();
-        llvm::Type *ptrType = llvm::PointerType::get(rvalueType, 0);
+        llvm::Instruction *store;
+#ifdef ISPC_GENX_ENABLED
+        if (g->target->getISA() == Target::GENX) {
+            assert(isa<llvm::VectorType>(rvalue->getType()));
+            assert(llvm::isPowerOf2_32(rvalue->getType()->getVectorNumElements()));
+            assert(rvalue->getType()->getPrimitiveSizeInBits() / 8 <= 8 * OWORD);
+            llvm::Instruction *svm_st_bitcast =
+                new llvm::BitCastInst(lvalue, LLVMTypes::Int32PointerType, "svm_st_bitcast", callInst);
+            llvm::Instruction *svm_st_ptrtoint =
+                new llvm::PtrToIntInst(svm_st_bitcast, LLVMTypes::Int32Type, "svm_st_ptrtoint", callInst);
+            llvm::Instruction *svm_st_zext =
+                new llvm::ZExtInst(svm_st_ptrtoint, LLVMTypes::Int64Type, "svm_st_zext", callInst);
+            llvm::Type *argTypes[] = {rvalue->getType()};
 
-        lvalue = new llvm::BitCastInst(lvalue, ptrType, "lvalue_to_ptr_type", callInst);
-        lCopyMetadata(lvalue, callInst);
+            auto Fn = llvm::Intrinsic::getDeclaration(m->module, llvm::Intrinsic::genx_svm_block_st, argTypes);
+            store = lCallInst(Fn, svm_st_zext, rvalue, "", NULL);
+        } else {
+#endif
+            llvm::Type *ptrType = llvm::PointerType::get(rvalueType, 0);
+
+            lvalue = new llvm::BitCastInst(lvalue, ptrType, "lvalue_to_ptr_type", callInst);
+            lCopyMetadata(lvalue, callInst);
 #if ISPC_LLVM_VERSION <= ISPC_LLVM_9_0
-        llvm::Instruction *store =
-            new llvm::StoreInst(rvalue, lvalue, false /* not volatile */,
-                                g->opt.forceAlignedMemory ? g->target->getNativeVectorAlignment() : info->align);
+            store =
+                new llvm::StoreInst(rvalue, lvalue, false /* not volatile */,
+                                    g->opt.forceAlignedMemory ? g->target->getNativeVectorAlignment() : info->align);
 #else // LLVM 10.0+
-        llvm::Instruction *store = new llvm::StoreInst(
-            rvalue, lvalue, false /* not volatile */,
-            llvm::MaybeAlign(g->opt.forceAlignedMemory ? g->target->getNativeVectorAlignment() : info->align)
-                .valueOrOne());
+            store = new llvm::StoreInst(
+                rvalue, lvalue, false /* not volatile */,
+                llvm::MaybeAlign(g->opt.forceAlignedMemory ? g->target->getNativeVectorAlignment() : info->align)
+                    .valueOrOne());
+#endif
+#ifdef ISPC_GENX_ENABLED
+        }
 #endif
         lCopyMetadata(store, callInst);
         llvm::ReplaceInstWithInst(callInst, store);
@@ -2761,25 +2806,44 @@ static bool lImproveMaskedLoad(llvm::CallInst *callInst, llvm::BasicBlock::itera
         return true;
     } else if (maskStatus == MaskStatus::all_on) {
         // The mask is all on, so turn this into a regular load
-        llvm::Type *ptrType = llvm::PointerType::get(callInst->getType(), 0);
-        ptr = new llvm::BitCastInst(ptr, ptrType, "ptr_cast_for_load", callInst);
+        llvm::Instruction *load;
+#ifdef ISPC_GENX_ENABLED
+        if (g->target->getISA() == Target::GENX) {
+            llvm::Type *retType = callInst->getType();
+            assert(isa<llvm::VectorType>(retType));
+            assert(llvm::isPowerOf2_32(retType->getVectorNumElements()));
+            assert(retType->getPrimitiveSizeInBits() / 8 <= 8 * OWORD);
+            llvm::Value *svm_ld_ptrtoint =
+                new llvm::PtrToIntInst(ptr, LLVMTypes::Int32Type, "svm_ld_ptrtoint", callInst);
+            llvm::Value *svm_ld_zext =
+                new llvm::ZExtInst(svm_ld_ptrtoint, LLVMTypes::Int64Type, "svm_ld_zext", callInst);
+
+            auto Fn = llvm::Intrinsic::getDeclaration(m->module, llvm::Intrinsic::genx_svm_block_ld, retType);
+            load = llvm::CallInst::Create(Fn, svm_ld_zext, callInst->getName());
+        } else {
+#endif
+            llvm::Type *ptrType = llvm::PointerType::get(callInst->getType(), 0);
+            ptr = new llvm::BitCastInst(ptr, ptrType, "ptr_cast_for_load", callInst);
 #if ISPC_LLVM_VERSION <= ISPC_LLVM_9_0
-        llvm::Instruction *load = new llvm::LoadInst(
-            ptr, callInst->getName(), false /* not volatile */,
-            g->opt.forceAlignedMemory ? g->target->getNativeVectorAlignment() : info->align, (llvm::Instruction *)NULL);
+            load = new llvm::LoadInst(
+                ptr, callInst->getName(), false /* not volatile */,
+                g->opt.forceAlignedMemory ? g->target->getNativeVectorAlignment() : info->align, (llvm::Instruction *)NULL);
 #elif ISPC_LLVM_VERSION == ISPC_LLVM_10_0
-        llvm::Instruction *load = new llvm::LoadInst(
-            ptr, callInst->getName(), false /* not volatile */,
-            llvm::MaybeAlign(g->opt.forceAlignedMemory ? g->target->getNativeVectorAlignment() : info->align)
-                .valueOrOne(),
-            (llvm::Instruction *)NULL);
+            load = new llvm::LoadInst(
+                ptr, callInst->getName(), false /* not volatile */,
+                llvm::MaybeAlign(g->opt.forceAlignedMemory ? g->target->getNativeVectorAlignment() : info->align)
+                    .valueOrOne(),
+                (llvm::Instruction *)NULL);
 #else // LLVM 11.0+
-        llvm::Instruction *load = new llvm::LoadInst(
-            llvm::dyn_cast<llvm::PointerType>(ptr->getType())->getPointerElementType(), ptr, callInst->getName(),
-            false /* not volatile */,
-            llvm::MaybeAlign(g->opt.forceAlignedMemory ? g->target->getNativeVectorAlignment() : info->align)
-                .valueOrOne(),
-            (llvm::Instruction *)NULL);
+            load = new llvm::LoadInst(
+                llvm::dyn_cast<llvm::PointerType>(ptr->getType())->getPointerElementType(), ptr, callInst->getName(),
+                false /* not volatile */,
+                llvm::MaybeAlign(g->opt.forceAlignedMemory ? g->target->getNativeVectorAlignment() : info->align)
+                    .valueOrOne(),
+                (llvm::Instruction *)NULL);
+#endif
+#ifdef ISPC_GENX_ENABLED
+        }
 #endif
         lCopyMetadata(load, callInst);
         llvm::ReplaceInstWithInst(callInst, load);
