@@ -5,10 +5,10 @@
 # stores, one with offset 0 and one with offset 16. The size of the
 # memory operand for both was 16. The scheduler correctly detected
 # the alias with the offset 0 store, but not the offset 16 store.
-Index: llvm/trunk/lib/CodeGen/SelectionDAG/DAGCombiner.cpp
+Index: lib/CodeGen/SelectionDAG/DAGCombiner.cpp
 ===================================================================
---- llvm/trunk/lib/CodeGen/SelectionDAG/DAGCombiner.cpp
-+++ llvm/trunk/lib/CodeGen/SelectionDAG/DAGCombiner.cpp
+--- lib/CodeGen/SelectionDAG/DAGCombiner.cpp
++++ lib/CodeGen/SelectionDAG/DAGCombiner.cpp
 @@ -15656,7 +15656,9 @@
      Offset = DAG.getNode(
          ISD::MUL, DL, PtrType, Offset,
