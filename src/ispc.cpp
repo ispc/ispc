@@ -1408,7 +1408,8 @@ Opt::Opt() {
 
 Globals::Globals() {
     mathLib = Globals::Math_ISPC;
-
+    codegenOptLevel = Globals::Aggressive;
+    
     includeStdlib = true;
     runCPP = true;
     debugPrint = false;
