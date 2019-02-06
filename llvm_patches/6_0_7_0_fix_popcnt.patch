@@ -1,3 +1,5 @@
+# Original LLVM commit details :
+# Revision = r353124, Fix details = https://reviews.llvm.org/D57616
 # This patch is to fix popcnt-1.ispc tests for llvm 6.0 onwards.
 # Without this patch, the machine scheduler incorrectly calculates
 # dependencies between this load and other accesses.  In this case,
