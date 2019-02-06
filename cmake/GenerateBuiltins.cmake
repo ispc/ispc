@@ -46,21 +46,18 @@ elseif (UNIX)
 endif()
 
 function(ll_to_cpp llFileName bit resultFileName)
-    set(inputFilePath ${CMAKE_CURRENT_SOURCE_DIR}/builtins/${llFileName}.ll)
-    set(includePath ${CMAKE_CURRENT_SOURCE_DIR}/builtins)
-    if (WIN32)
-        win_path_to_cygwin(${inputFilePath} ${M4_EXECUTABLE} inputFilePath)
-        win_path_to_cygwin(${includePath} ${M4_EXECUTABLE} includePath)
-    endif()
+    set(inputFilePath builtins/${llFileName}.ll)
+    set(includePath builtins)
     if ("${bit}" STREQUAL "")
         set(output ${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_CFG_INTDIR}/builtins-${llFileName}.cpp)
         add_custom_command(
             OUTPUT ${output}
             COMMAND ${M4_EXECUTABLE} -I${includePath}
                 -DLLVM_VERSION=${LLVM_VERSION} -DBUILD_OS=${OS_NAME} ${inputFilePath}
-                | \"${PYTHON_EXECUTABLE}\" ${CMAKE_CURRENT_SOURCE_DIR}/bitcode2cpp.py ${inputFilePath} --llvm_as ${LLVM_AS_EXECUTABLE}
+                | \"${PYTHON_EXECUTABLE}\" bitcode2cpp.py ${inputFilePath} --llvm_as ${LLVM_AS_EXECUTABLE}
                 > ${output}
             DEPENDS ${inputFilePath}
+            WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
         )
     else ()
         set(output ${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_CFG_INTDIR}/builtins-${llFileName}-${bit}bit.cpp)
@@ -68,9 +65,10 @@ function(ll_to_cpp llFileName bit resultFileName)
             OUTPUT ${output}
             COMMAND ${M4_EXECUTABLE} -I${includePath}
                 -DLLVM_VERSION=${LLVM_VERSION} -DBUILD_OS=${OS_NAME} -DRUNTIME=${bit} ${inputFilePath}
-                | \"${PYTHON_EXECUTABLE}\" ${CMAKE_CURRENT_SOURCE_DIR}/bitcode2cpp.py ${inputFilePath} ${bit}bit --llvm_as ${LLVM_AS_EXECUTABLE}
+                | \"${PYTHON_EXECUTABLE}\" bitcode2cpp.py ${inputFilePath} ${bit}bit --llvm_as ${LLVM_AS_EXECUTABLE}
                 > ${output}
             DEPENDS ${inputFilePath}
+            WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
         )
     endif()
     set(${resultFileName} ${output} PARENT_SCOPE)
@@ -78,14 +76,15 @@ function(ll_to_cpp llFileName bit resultFileName)
 endfunction()
 
 function(builtin_to_cpp bit resultFileName)
-    set(inputFilePath ${CMAKE_CURRENT_SOURCE_DIR}/builtins/builtins.c)
+    set(inputFilePath builtins/builtins.c)
     set(output ${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_CFG_INTDIR}/builtins-c-${bit}.cpp)
     add_custom_command(
         OUTPUT ${output}
         COMMAND ${CLANG_EXECUTABLE} -m${bit} -emit-llvm -c ${inputFilePath} -o - | \"${LLVM_DIS_EXECUTABLE}\" -
-            | \"${PYTHON_EXECUTABLE}\" ${CMAKE_CURRENT_SOURCE_DIR}/bitcode2cpp.py c ${bit} --llvm_as ${LLVM_AS_EXECUTABLE}
+            | \"${PYTHON_EXECUTABLE}\" bitcode2cpp.py c ${bit} --llvm_as ${LLVM_AS_EXECUTABLE}
             > ${output}
         DEPENDS ${inputFilePath}
+        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
         )
     set(${resultFileName} ${output} PARENT_SCOPE)
     set_source_files_properties(${resultFileName} PROPERTIES GENERATED true)

@@ -86,35 +86,31 @@ find_package(PythonInterp 2.7 REQUIRED)
 
 find_package(BISON 2.4 REQUIRED)
     if (BISON_FOUND)
-        set(BISON_INPUT ${CMAKE_CURRENT_SOURCE_DIR}/src/parse.yy)
+        set(BISON_INPUT src/parse.yy)
         set(BISON_CPP_OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_CFG_INTDIR}/parse.cc)
         set(BISON_OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_CFG_INTDIR}/parse.hh
                          ${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_CFG_INTDIR}/parse.output)
-        if (WIN32)
-            win_path_to_cygwin(${BISON_INPUT} ${BISON_EXECUTABLE} BISON_INPUT)
-        endif()
         add_custom_command (
             OUTPUT ${BISON_CPP_OUTPUT} ${BISON_OUTPUT}
             COMMAND ${BISON_EXECUTABLE} -d -t -v
                 --output=${BISON_CPP_OUTPUT}
                 ${BISON_INPUT}
             COMMENT "Generating parse.cc"
+            WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
     )
     endif()
 
 find_package(FLEX 2.5 REQUIRED)
     if (FLEX_FOUND)
-        set(FLEX_INPUT  ${CMAKE_CURRENT_SOURCE_DIR}/src/lex.ll)
+        set(FLEX_INPUT  src/lex.ll)
         set(FLEX_OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_CFG_INTDIR}/lex.cpp)
-        if (WIN32)
-            win_path_to_cygwin(${FLEX_INPUT} ${FLEX_EXECUTABLE} FLEX_INPUT)
-        endif()
         add_custom_command(
             OUTPUT ${FLEX_OUTPUT}
             COMMAND ${FLEX_EXECUTABLE}
                 --outfile=${FLEX_OUTPUT}
                 ${FLEX_INPUT}
             COMMENT "Generating lex.cpp"
+            WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
         )
     endif()
 
