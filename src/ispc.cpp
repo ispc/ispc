@@ -93,10 +93,10 @@
 #include <llvm/IR/Attributes.h>
 #include <llvm/IR/DataLayout.h>
 #endif
+#include <llvm/Support/CodeGen.h>
 #include <llvm/Support/Host.h>
 #include <llvm/Support/TargetRegistry.h>
 #include <llvm/Support/TargetSelect.h>
-#include <llvm/Support/CodeGen.h>
 
 Globals *g;
 Module *m;
@@ -1028,13 +1028,13 @@ Target::Target(const char *arch, const char *cpu, const char *isa, bool pic, boo
         // ISPC O1,O2,O3,default -> Codegen O3
         llvm::CodeGenOpt::Level cOptLevel = llvm::CodeGenOpt::Level::Aggressive;
         switch (g->codegenOptLevel) {
-            case Globals::CodegenOptLevel::None:
-                cOptLevel = llvm::CodeGenOpt::Level::None;
-                break;
+        case Globals::CodegenOptLevel::None:
+            cOptLevel = llvm::CodeGenOpt::Level::None;
+            break;
 
-            case Globals::CodegenOptLevel::Aggressive:
-                cOptLevel = llvm::CodeGenOpt::Level::Aggressive;
-                break;
+        case Globals::CodegenOptLevel::Aggressive:
+            cOptLevel = llvm::CodeGenOpt::Level::Aggressive;
+            break;
         }
         m_targetMachine->setOptLevel(cOptLevel);
 
@@ -1409,7 +1409,7 @@ Opt::Opt() {
 Globals::Globals() {
     mathLib = Globals::Math_ISPC;
     codegenOptLevel = Globals::Aggressive;
-    
+
     includeStdlib = true;
     runCPP = true;
     debugPrint = false;
