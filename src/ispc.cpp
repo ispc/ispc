@@ -96,6 +96,7 @@
 #include <llvm/Support/Host.h>
 #include <llvm/Support/TargetRegistry.h>
 #include <llvm/Support/TargetSelect.h>
+#include <llvm/Support/CodeGen.h>
 
 Globals *g;
 Module *m;
@@ -1021,6 +1022,22 @@ Target::Target(const char *arch, const char *cpu, const char *isa, bool pic, boo
         m_targetMachine = m_target->createTargetMachine(triple, m_cpu, featuresString, options, relocModel);
         Assert(m_targetMachine != NULL);
 
+        // Set Optimization level for llvm codegen based on Optimization level
+        // requested by user via ISPC Optimization Flag. Mapping is :
+        // ISPC O0 -> Codegen O0
+        // ISPC O1,O2,O3,default -> Codegen O3
+        llvm::CodeGenOpt::Level cOptLevel = llvm::CodeGenOpt::Level::Aggressive;
+        switch (g->codegenOptLevel) {
+            case Globals::CodegenOptLevel::None:
+                cOptLevel = llvm::CodeGenOpt::Level::None;
+                break;
+
+            case Globals::CodegenOptLevel::Aggressive:
+                cOptLevel = llvm::CodeGenOpt::Level::Aggressive;
+                break;
+        }
+        m_targetMachine->setOptLevel(cOptLevel);
+
 #if ISPC_LLVM_VERSION <= ISPC_LLVM_3_6
         m_targetMachine->setAsmVerbosityDefault(true);
 #else /* LLVM 3.7+ */
@@ -1391,7 +1408,8 @@ Opt::Opt() {
 
 Globals::Globals() {
     mathLib = Globals::Math_ISPC;
-
+    codegenOptLevel = Globals::Aggressive;
+    
     includeStdlib = true;
     runCPP = true;
     debugPrint = false;

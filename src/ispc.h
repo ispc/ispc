@@ -538,6 +538,10 @@ struct Globals {
     enum MathLib { Math_ISPC, Math_ISPCFast, Math_SVML, Math_System };
     MathLib mathLib;
 
+    /** Optimization level to be specified while creating TargetMachine. */
+    enum CodegenOptLevel { None, Aggressive };
+    CodegenOptLevel codegenOptLevel;
+
     /** Records whether the ispc standard library should be made available
         to the program during compilations. (Default is true.) */
     bool includeStdlib;
