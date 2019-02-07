@@ -52,53 +52,40 @@ env:
     - DOCKER_REPO_PATH=ispc/ubuntu_14.04
     - LLVM_HOME=/usr/local/src/llvm
     - ISPC_HOME=$TRAVIS_BUILD_DIR
-matrix:
-  include:
-    - env: LLVM_VERSION=5.0 OS=Ubuntu14.04
-      before_install:
-      - sudo apt-get install -y libc6-dev-i386
-      - docker pull $DOCKER_REPO_PATH:llvm50
-      - docker run $DOCKER_REPO_PATH:llvm50
-      - export CONTAINER=`docker ps --all |head -2 |tail -1 |awk '//{print $1}'`
-      - sudo docker cp $CONTAINER:$LLVM_HOME /usr/local/src
-      - export PATH=$LLVM_HOME/bin-5.0/bin:$PATH
-    - env: LLVM_VERSION=6.0 OS=Ubuntu14.04
-      before_install:
-      - sudo apt-get install -y libc6-dev-i386
-      - docker pull $DOCKER_REPO_PATH:llvm60
-      - docker run $DOCKER_REPO_PATH:llvm60
-      - export CONTAINER=`docker ps --all |head -2 |tail -1 |awk '//{print $1}'`
-      - sudo docker cp $CONTAINER:$LLVM_HOME /usr/local/src
-      - export PATH=$LLVM_HOME/bin-6.0/bin:$PATH
-    - env: LLVM_VERSION=7.0 OS=Ubuntu14.04
-      before_install:
-      - sudo apt-get install -y libc6-dev-i386 g++-multilib lib32stdc++6
-      - docker pull $DOCKER_REPO_PATH:llvm70
-      - docker run $DOCKER_REPO_PATH:llvm70
-      - export CONTAINER=`docker ps --all |head -2 |tail -1 |awk '//{print $1}'`
-      - sudo docker cp $CONTAINER:$LLVM_HOME /usr/local/src
-      - export PATH=$LLVM_HOME/bin-7.0/bin:$PATH
-    - env: LLVM_VERSION=8.0 OS=Ubuntu14.04
-      before_install:
-      - sudo apt-get install -y libc6-dev-i386 g++-multilib lib32stdc++6
-      - docker pull $DOCKER_REPO_PATH:llvm80
-      - docker run $DOCKER_REPO_PATH:llvm80
-      - export CONTAINER=`docker ps --all |head -2 |tail -1 |awk '//{print $1}'`
-      - sudo docker cp $CONTAINER:$LLVM_HOME /usr/local/src
-      - export PATH=$LLVM_HOME/bin-8.0/bin:$PATH
+  matrix:
+    - LLVM_VERSION=8.0 OS=Ubuntu14.04 DOCKER_TAG=llvm80
+    - LLVM_VERSION=7.0 OS=Ubuntu14.04 DOCKER_TAG=llvm70
+    - LLVM_VERSION=6.0 OS=Ubuntu14.04 DOCKER_TAG=llvm60
+    - LLVM_VERSION=5.0 OS=Ubuntu14.04 DOCKER_TAG=llvm50
+
+before_install:
+  - sudo apt-get install -y libc6-dev-i386 g++-multilib lib32stdc++6
+  - docker pull "$DOCKER_REPO_PATH:$DOCKER_TAG"
+  - docker run "$DOCKER_REPO_PATH:$DOCKER_TAG"
+  - export CONTAINER=`docker ps --all |head -2 |tail -1 |awk '//{print $1}'`
+  - sudo docker cp $CONTAINER:$LLVM_HOME /usr/local/src
+  - export PATH=$LLVM_HOME/bin-$LLVM_VERSION/bin:$PATH
 
 script:
-      # Check formatting
-    - if [ "$LLVM_VERSION" == "8.0" ]; then ./check_format.sh; fi
-    - mkdir build_$LLVM_VERSION && cd build_$LLVM_VERSION
-    - cmake -DCMAKE_INSTALL_PREFIX=$TRAVIS_BUILD_DIR ../
-      # Build ispc and check_isa utility. Run lit tests.
-    - make ispc check_isa check-all -j4
-      # Add ispc to the PATH
-    - export PATH=$ISPC_HOME/build_$LLVM_VERSION/bin:$PATH && cd $ISPC_HOME
-    - check_isa
-    - ./check_env.py
-      # Run examples
-    - ./perf.py -n 1
-      # Run tests for latest LLVM version
-    - if [ "$LLVM_VERSION" == "8.0" ]; then ./run_tests.py; ./run_tests.py -a x86; fi
+  - mkdir build_$LLVM_VERSION && cd build_$LLVM_VERSION
+  - cmake -DCMAKE_INSTALL_PREFIX=$TRAVIS_BUILD_DIR ../
+    # Build ispc and check_isa utility. Run lit tests.
+  - make ispc check_isa check-all -j4
+    # Add ispc to the PATH
+  - export PATH=$ISPC_HOME/build_$LLVM_VERSION/bin:$PATH && cd $ISPC_HOME
+  - check_isa
+  - ./check_env.py
+    # Run examples
+  - ./perf.py -n 1
+    # Run tests for latest LLVM version
+  - if [ "$LLVM_VERSION" == "8.0" ]; then ./run_tests.py; ./run_tests.py -a x86; fi
+
+stages:
+  - check format
+  - test
+
+jobs:
+  include:
+    - stage: check format
+      script:
+        - cd $ISPC_HOME && ./check_format.sh
