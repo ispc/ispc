@@ -55,6 +55,7 @@
 #define ISPC_LLVM_5_0 50000
 #define ISPC_LLVM_6_0 60000
 #define ISPC_LLVM_7_0 70000
+#define ISPC_LLVM_7_1 70100
 #define ISPC_LLVM_8_0 80000
 #define ISPC_LLVM_9_0 90000
 
