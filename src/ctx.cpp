@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2015, Intel Corporation
+  Copyright (c) 2010-2019, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -381,7 +381,7 @@ FunctionEmitContext::FunctionEmitContext(Function *func, Symbol *funSym, llvm::F
                                                     diSubprogramType_n, isStatic, true, /* is defn */
                                                     firstLine, flags, isOptimized);
         llvmFunction->setSubprogram(diSubprogram);
-#elif ISPC_LLVM_VERSION >= ISPC_LLVM_4_0 && ISPC_LLVM_VERSION <= ISPC_LLVM_7_0 /* LLVM 4.0 to 7.0 */
+#elif ISPC_LLVM_VERSION >= ISPC_LLVM_4_0 && ISPC_LLVM_VERSION <= ISPC_LLVM_7_1 /* LLVM 4.0 to 7.1 */
         diSubprogram = m->diBuilder->createFunction(diFile /* scope */, funSym->name, mangledName, diFile, firstLine,
                                                     diSubprogramType_n, isStatic, true, /* is defn */
                                                     firstLine, flags, isOptimized);
