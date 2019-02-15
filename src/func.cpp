@@ -65,6 +65,10 @@
 #include <llvm/Target/TargetOptions.h>
 #include <llvm/Transforms/IPO.h>
 
+#ifdef ISPC_GENX_ENABLED
+#define GENX_WIDTH_GENERAL_REG 32
+#endif
+
 Function::Function(Symbol *s, Stmt *c) {
     sym = s;
     code = c;
@@ -406,6 +410,62 @@ void Function::emitCode(FunctionEmitContext *ctx, llvm::Function *function, Sour
         // return instruction.  Need to add a return instruction.
         ctx->ReturnInst();
     }
+#ifdef ISPC_GENX_ENABLED
+    if (g->target->getISA() == Target::GENX && (type->isExported)) {
+        // Emit metadata for GENX kernel
+        // Below is a prototype for emitting kernel metadata.
+
+        llvm::LLVMContext &fContext = function->getContext();
+        llvm::NamedMDNode *mdKernels = m->module->getOrInsertNamedMetadata("genx.kernels");
+
+        std::string AsmName =
+            (m->module->getName() + llvm::Twine('_') + llvm::Twine(mdKernels->getNumOperands()) + llvm::Twine(".asm"))
+                .str();
+
+        // Kernel arg kinds
+        llvm::Type *i32Type = llvm::Type::getInt32Ty(fContext);
+        llvm::SmallVector<llvm::Metadata *, 8> argKinds;
+        llvm::SmallVector<llvm::Metadata *, 8> argInOutKinds;
+        llvm::SmallVector<llvm::Metadata *, 8> argOffsets;
+        // In ISPC we need only AK_NORMAL and IK_NORMAL now, in future it can change.
+        enum { AK_NORMAL, AK_SAMPLER, AK_SURFACE, AK_VME };
+        enum { IK_NORMAL, IK_INPUT, IK_OUTPUT, IK_INPUT_OUTPUT };
+        unsigned int offset = 32;
+        for (int i = 0; i < args.size(); i++) {
+            const Type *T = args[i]->type;
+            argKinds.push_back(llvm::ValueAsMetadata::get(llvm::ConstantInt::get(i32Type, AK_NORMAL)));
+            argInOutKinds.push_back(llvm::ValueAsMetadata::get(llvm::ConstantInt::get(i32Type, IK_NORMAL)));
+
+            llvm::Type *type = T->LLVMType(&fContext);
+            unsigned bytes = type->getScalarSizeInBits() / 8;
+            if (bytes != 0) {
+                offset = llvm::alignTo(offset, bytes);
+            }
+
+            if (llvm::isa<llvm::VectorType>(type)) {
+                bytes = type->getPrimitiveSizeInBits() / 8;
+
+                if ((offset & (GENX_WIDTH_GENERAL_REG - 1)) + bytes > GENX_WIDTH_GENERAL_REG)
+                    // GRF align if arg would cross GRF boundary
+                    offset = llvm::alignTo(offset, GENX_WIDTH_GENERAL_REG);
+            }
+
+            argOffsets.push_back(llvm::ValueAsMetadata::get(llvm::ConstantInt::get(i32Type, offset)));
+
+            offset += bytes;
+        }
+
+        llvm::Metadata *mdArgs[] = {llvm::ValueAsMetadata::get(function),
+                                    llvm::MDString::get(fContext, sym->name),
+                                    llvm::MDString::get(fContext, AsmName),
+                                    llvm::MDNode::get(fContext, argKinds),
+                                    llvm::ValueAsMetadata::get(llvm::ConstantInt::getNullValue(i32Type)),
+                                    llvm::ValueAsMetadata::get(llvm::ConstantInt::getNullValue(i32Type)),
+                                    llvm::MDNode::get(fContext, argInOutKinds)};
+
+        mdKernels->addOperand(llvm::MDNode::get(fContext, mdArgs));
+    }
+#endif
 }
 
 void Function::GenerateIR() {
@@ -441,12 +501,23 @@ void Function::GenerateIR() {
         else
             firstStmtPos = code->pos;
     }
-
     // And we can now go ahead and emit the code
-    {
+#ifdef ISPC_GENX_ENABLED
+    if (g->target->getISA() == Target::GENX) {
+        // For GEN target we emit code only for unmasked version of a kernel.
+        // TODO_GEN: revise this when implementing subroutines calls.
+        const FunctionType *type = CastType<FunctionType>(sym->type);
+        if (type->isUnmasked) {
+            FunctionEmitContext ec(this, sym, function, firstStmtPos);
+            emitCode(&ec, function, firstStmtPos);
+        }
+    } else {
+#endif
         FunctionEmitContext ec(this, sym, function, firstStmtPos);
         emitCode(&ec, function, firstStmtPos);
+#ifdef ISPC_GENX_ENABLED
     }
+#endif
 
     if (m->errorCount == 0) {
         // If the function is 'export'-qualified, emit a second version of
@@ -465,6 +536,12 @@ void Function::GenerateIR() {
                 appFunction->setDoesNotThrow();
                 g->target->markFuncWithCallingConv(appFunction);
 
+#ifdef ISPC_GENX_ENABLED
+                // GenX kernel should have "dllexport"
+                if (g->target->getISA() == Target::GENX) {
+                    appFunction->setDLLStorageClass(llvm::GlobalValue::DLLExportStorageClass);
+                }
+#endif
                 for (int i = 0; i < function->getFunctionType()->getNumParams() - 1; i++) {
                     if (function->hasParamAttribute(i, llvm::Attribute::NoAlias)) {
                         appFunction->addParamAttr(i, llvm::Attribute::NoAlias);
