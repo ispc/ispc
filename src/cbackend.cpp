@@ -2485,7 +2485,12 @@ bool CWriter::doInitialization(llvm::Module &M) {
 
     TD = new llvm::DataLayout(&M);
     IL = new llvm::IntrinsicLowering(*TD);
+    // AddPrototypes was removed from LLVM 9.0.
+    // It looks like that usage of this method does not affect ISPC functionality
+    // so it is safe to just remove it for LLVM 9.0+ versions.
+#if ISPC_LLVM_VERSION <= ISPC_LLVM_8_0
     IL->AddPrototypes(M);
+#endif
 
 #if 0
   std::string Triple = TheModule->getTargetTriple();
@@ -5297,6 +5302,7 @@ llvm::Value *SmearCleanupPass::getShuffleSmearValue(llvm::Instruction *inst) con
         if (extractFunc == NULL) {
             // Declare the __extract_element function if needed; it takes a vector and
             // a scalar parameter and returns a scalar of the vector parameter type.
+#if ISPC_LLVM_VERSION <= ISPC_LLVM_8_0
             llvm::Constant *ef =
 #if ISPC_LLVM_VERSION <= ISPC_LLVM_4_0
                 module->getOrInsertFunction(
@@ -5308,6 +5314,12 @@ llvm::Value *SmearCleanupPass::getShuffleSmearValue(llvm::Instruction *inst) con
                     shuffleInst->getOperand(0)->getType(), llvm::IntegerType::get(module->getContext(), 32));
 #endif
             extractFunc = llvm::dyn_cast<llvm::Function>(ef);
+#else // LLVM 9.0+
+            llvm::FunctionCallee ef = module->getOrInsertFunction(
+                "__extract_element", shuffleInst->getOperand(0)->getType()->getVectorElementType(),
+                shuffleInst->getOperand(0)->getType(), llvm::IntegerType::get(module->getContext(), 32));
+            extractFunc = llvm::dyn_cast<llvm::Function>(ef.getCallee());
+#endif
             assert(extractFunc != NULL);
             extractFunc->setDoesNotThrow();
             extractFunc->setOnlyReadsMemory();
@@ -5352,13 +5364,18 @@ restart:
                 // Declare the smear function if needed; it takes a single
                 // scalar parameter and returns a vector of the same
                 // parameter type.
+#if ISPC_LLVM_VERSION <= ISPC_LLVM_8_0
                 llvm::Constant *sf =
 #if ISPC_LLVM_VERSION <= ISPC_LLVM_4_0
                     module->getOrInsertFunction(smearFuncName, iter->getType(), smearType, NULL);
-#else // LLVM 5.0+
+#else  // LLVM 5.0+
                     module->getOrInsertFunction(smearFuncName, iter->getType(), smearType);
-#endif
+#endif // LLVM 9.0+
                 smearFunc = llvm::dyn_cast<llvm::Function>(sf);
+#else
+                llvm::FunctionCallee sf = module->getOrInsertFunction(smearFuncName, iter->getType(), smearType);
+                smearFunc = llvm::dyn_cast<llvm::Function>(sf.getCallee());
+#endif
                 assert(smearFunc != NULL);
                 smearFunc->setDoesNotThrow();
                 smearFunc->setDoesNotAccessMemory();
@@ -5449,6 +5466,7 @@ restart:
                 // are the same as the two arguments to the compare we're
                 // replacing and the third argument is the mask type.
                 llvm::Type *cmpOpType = opCmp->getOperand(0)->getType();
+#if ISPC_LLVM_VERSION <= ISPC_LLVM_8_0
                 llvm::Constant *acf =
 #if ISPC_LLVM_VERSION <= ISPC_LLVM_4_0
                     m->module->getOrInsertFunction(funcName, LLVMTypes::MaskType, cmpOpType, cmpOpType,
@@ -5458,6 +5476,11 @@ restart:
                                                    LLVMTypes::MaskType);
 #endif
                 andCmpFunc = llvm::dyn_cast<llvm::Function>(acf);
+#else
+                llvm::FunctionCallee acf = m->module->getOrInsertFunction(funcName, LLVMTypes::MaskType, cmpOpType,
+                                                                          cmpOpType, LLVMTypes::MaskType);
+                andCmpFunc = llvm::dyn_cast<llvm::Function>(acf.getCallee());
+#endif
                 Assert(andCmpFunc != NULL);
                 andCmpFunc->setDoesNotThrow();
                 andCmpFunc->setDoesNotAccessMemory();
@@ -5500,8 +5523,10 @@ class MaskOpsCleanupPass : public llvm::BasicBlockPass {
         notFunc =
 #if ISPC_LLVM_VERSION <= ISPC_LLVM_4_0
             llvm::dyn_cast<llvm::Function>(m->getOrInsertFunction("__not", mt, mt, NULL));
-#else // LLVM 5.0+
+#elif ISPC_LLVM_VERSION <= ISPC_LLVM_8_0 // LLVM 5.0-LLVM 8.0
             llvm::dyn_cast<llvm::Function>(m->getOrInsertFunction("__not", mt, mt));
+#else                                    // LLVM 9.0+
+            llvm::dyn_cast<llvm::Function>(m->getOrInsertFunction("__not", mt, mt).getCallee());
 #endif
         assert(notFunc != NULL);
 #if ISPC_LLVM_VERSION == ISPC_LLVM_3_2
@@ -5515,8 +5540,10 @@ class MaskOpsCleanupPass : public llvm::BasicBlockPass {
         andNotFuncs[0] =
 #if ISPC_LLVM_VERSION <= ISPC_LLVM_4_0
             llvm::dyn_cast<llvm::Function>(m->getOrInsertFunction("__and_not1", mt, mt, mt, NULL));
-#else // LLVM 5.0+
+#elif ISPC_LLVM_VERSION <= ISPC_LLVM_8_0 // LLVM 5.0-LLVM 8.0
             llvm::dyn_cast<llvm::Function>(m->getOrInsertFunction("__and_not1", mt, mt, mt));
+#else                                    // LLVM 9.0+
+            llvm::dyn_cast<llvm::Function>(m->getOrInsertFunction("__and_not1", mt, mt, mt).getCallee());
 #endif
         assert(andNotFuncs[0] != NULL);
 #if ISPC_LLVM_VERSION == ISPC_LLVM_3_2
@@ -5529,8 +5556,10 @@ class MaskOpsCleanupPass : public llvm::BasicBlockPass {
         andNotFuncs[1] =
 #if ISPC_LLVM_VERSION <= ISPC_LLVM_4_0
             llvm::dyn_cast<llvm::Function>(m->getOrInsertFunction("__and_not2", mt, mt, mt, NULL));
-#else // LLVM 5.0+
+#elif ISPC_LLVM_VERSION <= ISPC_LLVM_8_0 // LLVM 5.0-LLVM 8.0
             llvm::dyn_cast<llvm::Function>(m->getOrInsertFunction("__and_not2", mt, mt, mt));
+#else                                    // LLVM 9.0+
+            llvm::dyn_cast<llvm::Function>(m->getOrInsertFunction("__and_not2", mt, mt, mt).getCallee());
 #endif
         assert(andNotFuncs[1] != NULL);
 #if ISPC_LLVM_VERSION == ISPC_LLVM_3_2
