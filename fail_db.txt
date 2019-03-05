@@ -443,37 +443,6 @@
 % LLVM 6.0 fails
 
 % LLVM 7.0 fails
-./tests/cfor-gs-double-improve-multidim-2.ispc runfail     x86     avx2-i32x8   Linux LLVM 7.0 clang++7.0 -O2 *
-./tests/cfor-gs-improve-multidim-2.ispc runfail     x86     avx2-i32x8   Linux LLVM 7.0 clang++7.0 -O2 *
-./tests/gs-double-improve-multidim-2.ispc runfail     x86     avx2-i32x8   Linux LLVM 7.0 clang++7.0 -O2 *
-./tests/gs-double-improve-unif.ispc runfail     x86     avx2-i32x8   Linux LLVM 7.0 clang++7.0 -O2 *
-./tests/gs-improve-multidim-2.ispc runfail     x86     avx2-i32x8   Linux LLVM 7.0 clang++7.0 -O2 *
-./tests/gs-improve-unif.ispc runfail     x86     avx2-i32x8   Linux LLVM 7.0 clang++7.0 -O2 *
-./tests/struct-test-118.ispc runfail     x86     avx2-i32x8   Linux LLVM 7.0 clang++7.0 -O2 *
-./tests/cfor-gs-double-improve-multidim-2.ispc runfail     x86    avx2-i32x16   Linux LLVM 7.0 clang++7.0 -O2 *
-./tests/cfor-gs-improve-multidim-2.ispc runfail     x86    avx2-i32x16   Linux LLVM 7.0 clang++7.0 -O2 *
-./tests/gs-double-improve-multidim-2.ispc runfail     x86    avx2-i32x16   Linux LLVM 7.0 clang++7.0 -O2 *
-./tests/gs-double-improve-unif.ispc runfail     x86    avx2-i32x16   Linux LLVM 7.0 clang++7.0 -O2 *
-./tests/gs-improve-multidim-2.ispc runfail     x86    avx2-i32x16   Linux LLVM 7.0 clang++7.0 -O2 *
-./tests/gs-improve-unif.ispc runfail     x86    avx2-i32x16   Linux LLVM 7.0 clang++7.0 -O2 *
-./tests/struct-test-118.ispc runfail     x86    avx2-i32x16   Linux LLVM 7.0 clang++7.0 -O2 *
-./tests/cfor-gs-double-improve-multidim-2.ispc runfail     x86     avx2-i64x4   Linux LLVM 7.0 clang++7.0 -O2 *
-./tests/cfor-gs-improve-multidim-2.ispc runfail     x86     avx2-i64x4   Linux LLVM 7.0 clang++7.0 -O2 *
-./tests/gs-double-improve-multidim-2.ispc runfail     x86     avx2-i64x4   Linux LLVM 7.0 clang++7.0 -O2 *
-./tests/gs-double-improve-unif.ispc runfail     x86     avx2-i64x4   Linux LLVM 7.0 clang++7.0 -O2 *
-./tests/gs-improve-multidim-2.ispc runfail     x86     avx2-i64x4   Linux LLVM 7.0 clang++7.0 -O2 *
-./tests/gs-improve-unif.ispc runfail     x86     avx2-i64x4   Linux LLVM 7.0 clang++7.0 -O2 *
-./tests/struct-test-118.ispc runfail     x86     avx2-i64x4   Linux LLVM 7.0 clang++7.0 -O2 *
-./tests/cfor-gs-improve-multidim-2.ispc runfail     x86 avx512knl-i32x16   Linux LLVM 7.0 clang++7.0 -O2 *
-./tests/gs-improve-multidim-2.ispc runfail     x86 avx512knl-i32x16   Linux LLVM 7.0 clang++7.0 -O2 *
-./tests/gs-improve-unif.ispc runfail     x86 avx512knl-i32x16   Linux LLVM 7.0 clang++7.0 -O2 *
-./tests/struct-test-118.ispc runfail     x86 avx512knl-i32x16   Linux LLVM 7.0 clang++7.0 -O2 *
-./tests/write-same-loc.ispc runfail     x86 avx512knl-i32x16   Linux LLVM 7.0 clang++7.0 -O2 *
-./tests/cfor-gs-improve-multidim-2.ispc runfail     x86 avx512skx-i32x16   Linux LLVM 7.0 clang++7.0 -O2 *
-./tests/gs-improve-multidim-2.ispc runfail     x86 avx512skx-i32x16   Linux LLVM 7.0 clang++7.0 -O2 *
-./tests/gs-improve-unif.ispc runfail     x86 avx512skx-i32x16   Linux LLVM 7.0 clang++7.0 -O2 *
-./tests/struct-test-118.ispc runfail     x86 avx512skx-i32x16   Linux LLVM 7.0 clang++7.0 -O2 *
-./tests/write-same-loc.ispc runfail     x86 avx512skx-i32x16   Linux LLVM 7.0 clang++7.0 -O2 *
 
 % LLVM 8.0 fails
 ./tests/pmuls-vi64.ispc compfail     x86    avx1-i32x16   Linux LLVM 8.0 clang++8.0 -O0 *
