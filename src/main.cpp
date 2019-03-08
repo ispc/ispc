@@ -131,7 +131,10 @@ static void usage(int ret) {
     printf("    [--nostdlib]\t\t\tDon't make the ispc standard library available\n");
     printf("    [--nocpp]\t\t\t\tDon't run the C preprocessor\n");
     printf("    [-o <name>/--outfile=<name>]\tOutput filename (may be \"-\" for standard output)\n");
-    printf("    [-O0/-O(1/2/3)]\t\t\tSet optimization level (off or on). Optimizations are on by default.\n");
+    printf("    [-O0/-O(1/2/3)]\t\t\tSet optimization level. Default behavior is to optimize for speed.\n");
+    printf("        -O0\t\t\t\tOptimizations disabled.\n");
+    printf("        -O1\t\t\t\tOptimization for size.\n");
+    printf("        -O2/O3\t\t\t\tOptimization for speed.\n");
     printf("    [--opt=<option>]\t\t\tSet optimization option\n");
     printf("        disable-assertions\t\tRemove assertion statements from final code.\n");
     printf("        disable-fma\t\t\tDisable 'fused multiply-add' instructions (on targets that support them)\n");
@@ -635,6 +638,8 @@ int main(int Argc, char *Argv[]) {
                    !strcmp(argv[i], "-O3")) {
             g->opt.level = 1;
             g->codegenOptLevel = Globals::CodegenOptLevel::Aggressive;
+            if (!strcmp(argv[i], "-O1"))
+                g->opt.disableCoherentControlFlow = true;
         } else if (!strcmp(argv[i], "-"))
             ;
         else if (!strcmp(argv[i], "--nostdlib"))
