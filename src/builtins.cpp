@@ -1374,6 +1374,13 @@ void DefineStdlib(SymbolTable *symbolTable, llvm::LLVMContext *ctx, llvm::Module
 #if ISPC_LLVM_VERSION >= ISPC_LLVM_3_8 // LLVM 3.8+
     case Target::SKX_AVX512: {
         switch (g->target->getVectorWidth()) {
+        case 8:
+            if (runtime32) {
+                EXPORT_MODULE(builtins_bitcode_skx_8_32bit);
+            } else {
+                EXPORT_MODULE(builtins_bitcode_skx_8_64bit);
+            }
+            break;
         case 16:
             if (runtime32) {
                 EXPORT_MODULE(builtins_bitcode_skx_32bit);

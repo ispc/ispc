@@ -900,6 +900,25 @@ Target::Target(const char *arch, const char *cpu, const char *isa, bool pic, boo
         this->m_hasVecPrefetch = false;
         CPUfromISA = CPU_SKX;
     }
+    else if (!strcasecmp(isa, "avx512skx-i32x8")) {
+        this->m_isa = Target::SKX_AVX512;
+        this->m_nativeVectorWidth = 16;
+        this->m_nativeVectorAlignment = 64;
+        this->m_dataTypeWidth = 32;
+        this->m_vectorWidth = 8;
+        this->m_maskingIsFree = true;
+        this->m_maskBitCount = 8;
+        this->m_hasHalf = true;
+        this->m_hasRand = true;
+        this->m_hasGather = this->m_hasScatter = true;
+        this->m_hasTranscendentals = false;
+        // For MIC it is set to true due to performance reasons. The option should be tested.
+        this->m_hasTrigonometry = false;
+        this->m_hasRsqrtd = this->m_hasRcpd = false;
+        this->m_hasVecPrefetch = false;
+        CPUfromISA = CPU_SKX;
+        g->disableZMMforavx512skx = true;
+    }
 #endif
 #ifdef ISPC_ARM_ENABLED
     else if (!strcasecmp(isa, "neon-i8x16")) {
@@ -1149,6 +1168,9 @@ const char *Target::SupportedTargets() {
 #endif
 #if ISPC_LLVM_VERSION >= ISPC_LLVM_3_8 // LLVM 3.8+
            "avx512skx-i32x16, "
+#endif
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_8_0 // LLVM 8.0+
+           "avx512skx-i32x8, "
 #endif
            "generic-x1, generic-x4, generic-x8, generic-x16, "
            "generic-x32, generic-x64, *-generic-x16"
@@ -1417,6 +1439,7 @@ Globals::Globals() {
     debugPrint = false;
     printTarget = false;
     NoOmitFramePointer = false;
+    disableZMMforavx512skx = false;
     debugIR = -1;
     disableWarnings = false;
     warningsAsErrors = false;

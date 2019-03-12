@@ -560,6 +560,9 @@ struct Globals {
     /** When \c true, LLVM won't omit frame pointer. */
     bool NoOmitFramePointer;
 
+    /** When \c true, LLVM won't omit frame pointer. */
+    bool disableZMMforavx512skx;
+
     /** Indicates which stages of optimization we want to dump. */
     std::set<int> debug_stages;
 
