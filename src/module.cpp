@@ -517,7 +517,10 @@ int Module::CompileFile() {
         for (llvm::Function &f : *module)
             f.addFnAttr("no-frame-pointer-elim", "true");
 #endif
-
+for (llvm::Function &f : *module) {
+f.addFnAttr("prefer-vector-width", "256");
+f.addFnAttr("min-legal-vector-width", "256");
+}
     ast->GenerateIR();
 
     if (diBuilder)

@@ -1099,6 +1099,8 @@ Target::Target(const char *arch, const char *cpu, const char *isa, bool pic, boo
 #endif
                 attrBuilder.addAttribute("target-cpu", this->m_cpu);
             attrBuilder.addAttribute("target-features", this->m_attributes);
+//attrBuilder.addAttribute("prefer-vector-width", "256");
+//attrBuilder.addAttribute("min-legal-vector-width", "0");
 #if ISPC_LLVM_VERSION <= ISPC_LLVM_4_0
             this->m_tf_attributes = new llvm::AttributeSet(
                 llvm::AttributeSet::get(*g->ctx, llvm::AttributeSet::FunctionIndex, attrBuilder));
