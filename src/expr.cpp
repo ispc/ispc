@@ -1073,6 +1073,14 @@ template <typename T> static Expr *lOptimizeBitNot(ConstExpr *constExpr, const T
     return new ConstExpr(type, v, pos);
 }
 
+template <typename T> static Expr *lOptimizeNegate(ConstExpr *constExpr, const Type *type, SourcePos pos) {
+    T v[ISPC_MAX_NVEC];
+    int count = constExpr->GetValues(v);
+    for (int i = 0; i < count; ++i)
+        v[i] = -v[i];
+    return new ConstExpr(type, v, pos);
+}
+
 Expr *UnaryExpr::Optimize() {
     ConstExpr *constExpr = llvm::dyn_cast<ConstExpr>(expr);
     // If the operand isn't a constant, then we can't do any optimization
@@ -1094,18 +1102,28 @@ Expr *UnaryExpr::Optimize() {
     case Negate: {
         if (Type::EqualIgnoringConst(type, AtomicType::UniformInt64) ||
             Type::EqualIgnoringConst(type, AtomicType::VaryingInt64)) {
-            int64_t v[ISPC_MAX_NVEC];
-            int count = constExpr->GetValues(v);
-            for (int i = 0; i < count; ++i)
-                v[i] = -v[i];
-            return new ConstExpr(type, v, pos);
+            return lOptimizeNegate<int64_t>(constExpr, type, pos);
         } else if (Type::EqualIgnoringConst(type, AtomicType::UniformUInt64) ||
                    Type::EqualIgnoringConst(type, AtomicType::VaryingUInt64)) {
-            uint64_t v[ISPC_MAX_NVEC];
-            int count = constExpr->GetValues(v);
-            for (int i = 0; i < count; ++i)
-                v[i] = -v[i];
-            return new ConstExpr(type, v, pos);
+            return lOptimizeNegate<uint64_t>(constExpr, type, pos);
+        } else if (Type::EqualIgnoringConst(type, AtomicType::UniformInt32) ||
+                   Type::EqualIgnoringConst(type, AtomicType::VaryingInt32)) {
+            return lOptimizeNegate<int32_t>(constExpr, type, pos);
+        } else if (Type::EqualIgnoringConst(type, AtomicType::UniformUInt32) ||
+                   Type::EqualIgnoringConst(type, AtomicType::VaryingUInt32)) {
+            return lOptimizeNegate<uint32_t>(constExpr, type, pos);
+        } else if (Type::EqualIgnoringConst(type, AtomicType::UniformInt16) ||
+                   Type::EqualIgnoringConst(type, AtomicType::VaryingInt16)) {
+            return lOptimizeNegate<int16_t>(constExpr, type, pos);
+        } else if (Type::EqualIgnoringConst(type, AtomicType::UniformUInt16) ||
+                   Type::EqualIgnoringConst(type, AtomicType::VaryingUInt32)) {
+            return lOptimizeNegate<uint16_t>(constExpr, type, pos);
+        } else if (Type::EqualIgnoringConst(type, AtomicType::UniformInt8) ||
+                   Type::EqualIgnoringConst(type, AtomicType::VaryingInt8)) {
+            return lOptimizeNegate<int8_t>(constExpr, type, pos);
+        } else if (Type::EqualIgnoringConst(type, AtomicType::UniformUInt8) ||
+                   Type::EqualIgnoringConst(type, AtomicType::VaryingUInt8)) {
+            return lOptimizeNegate<uint8_t>(constExpr, type, pos);
         } else {
             // For all the other types, it's safe to stuff whatever we have
             // into a double, do the negate as a double, and then return a
