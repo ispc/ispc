@@ -2,7 +2,7 @@
 export uniform int width() { return programCount; }
 
 export void f_fu(uniform float RET[], uniform float aFOO[], uniform float b) {
-    uniform int32 a_max = 0x7FFFFFFF, a_min = -0x80000000; // max and min signed int32
+    uniform int32 a_max = 0x7FFFFFFF, a_min = 0x80000000; // max and min signed int32
     if (programIndex % 3 == 0) {
         RET[programIndex] = saturating_div(a_max, (uniform int32) b);
     }
