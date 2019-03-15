@@ -909,6 +909,7 @@ llvm::raw_ostream &CWriter::printSimpleType(llvm::raw_ostream &Out, llvm::Type *
 #endif
         llvm_unreachable(0);
     }
+    return Out << "";
 }
 
 // Pass the Type* and the variable name and this prints out the variable
@@ -1082,6 +1083,7 @@ llvm::raw_ostream &CWriter::printType(llvm::raw_ostream &Out, llvm::Type *Ty, bo
     default:
         llvm_unreachable("Unhandled case in getTypeProps!");
     }
+    return Out << "";
 }
 
 void CWriter::printConstantArray(llvm::ConstantArray *CPA, bool Static) {
@@ -4194,7 +4196,7 @@ void CWriter::visitSelectInst(llvm::SelectInst &I) {
 // Returns the macro name or value of the max or min of an integer type
 // (as defined in limits.h).
 static void printLimitValue(llvm::IntegerType &Ty, bool isSigned, bool isMax, llvm::raw_ostream &Out) {
-    const char *type;
+    const char *type = "";
     const char *sprefix = "";
 
     unsigned NumBits = Ty.getBitWidth();

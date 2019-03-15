@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2014, Intel Corporation
+  Copyright (c) 2010-2019, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -1163,8 +1163,9 @@ void ForStmt::EmitCode(FunctionEmitContext *ctx) const {
     // any of the mask values are true.
     if (uniformTest) {
         if (doCoherentCheck)
-            Warning(test->pos, "Uniform condition supplied to cfor/cwhile "
-                               "statement.");
+            if (test)
+                Warning(test->pos, "Uniform condition supplied to cfor/cwhile "
+                                   "statement.");
         AssertPos(pos, ltest->getType() == LLVMTypes::BoolType);
         ctx->BranchInst(bloop, bexit, ltest);
     } else {

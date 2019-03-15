@@ -211,6 +211,7 @@ CFInfo *CFInfo::GetSwitch(bool isUniform, llvm::BasicBlock *breakTarget, llvm::B
 FunctionEmitContext::FunctionEmitContext(Function *func, Symbol *funSym, llvm::Function *lf, SourcePos firstStmtPos) {
     function = func;
     llvmFunction = lf;
+    switchConditionWasUniform = false;
 
     /* Create a new basic block to store all of the allocas */
     allocaBlock = llvm::BasicBlock::Create(*g->ctx, "allocas", llvmFunction, 0);
@@ -406,6 +407,9 @@ FunctionEmitContext::FunctionEmitContext(Function *func, Symbol *funSym, llvm::F
 
         /* And start a scope representing the initial function scope */
         StartScope();
+    } else {
+        diSubprogram = NULL;
+        diFile = NULL;
     }
 }
 
@@ -2051,8 +2055,8 @@ llvm::Value *FunctionEmitContext::GetElementPtrInst(llvm::Value *basePtr, llvm::
         ptrType = PointerType::GetUniform(ptrRefType->GetReferenceTarget());
     else {
         ptrType = CastType<PointerType>(ptrRefType);
-        AssertPos(currentPos, ptrType != NULL);
     }
+    AssertPos(currentPos, ptrType != NULL);
 
     if (ptrType->IsSlice()) {
         AssertPos(currentPos, llvm::isa<llvm::StructType>(basePtr->getType()));
