@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2011-2015, Intel Corporation
+  Copyright (c) 2011-2019, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -193,7 +193,7 @@ ASTNode *WalkAST(ASTNode *node, ASTPreCallBackFunc preFunc, ASTPostCallBackFunc 
             fce->func = (Expr *)WalkAST(fce->func, preFunc, postFunc, data);
             fce->args = (ExprList *)WalkAST(fce->args, preFunc, postFunc, data);
             for (int k = 0; k < 3; k++)
-                fce->launchCountExpr[0] = (Expr *)WalkAST(fce->launchCountExpr[0], preFunc, postFunc, data);
+                fce->launchCountExpr[k] = (Expr *)WalkAST(fce->launchCountExpr[k], preFunc, postFunc, data);
         } else if ((ie = llvm::dyn_cast<IndexExpr>(node)) != NULL) {
             ie->baseExpr = (Expr *)WalkAST(ie->baseExpr, preFunc, postFunc, data);
             ie->index = (Expr *)WalkAST(ie->index, preFunc, postFunc, data);

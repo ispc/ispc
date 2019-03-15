@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2018, Intel Corporation
+  Copyright (c) 2010-2019, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -334,8 +334,11 @@ static void lPrint(const char *type, bool isError, SourcePos p, const char *fmt,
     // exact same error message.  If so, return, so we don't redundantly
     // print it and annoy the user.
     static std::set<std::string> printed;
-    if (printed.find(formattedBuf) != printed.end())
+    if (printed.find(formattedBuf) != printed.end()) {
+        free(errorBuf);
+        free(formattedBuf);
         return;
+    }
     printed.insert(formattedBuf);
 
     PrintWithWordBreaks(formattedBuf, indent, TerminalWidth(), stderr);

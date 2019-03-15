@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2016, Intel Corporation
+  Copyright (c) 2010-2019, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -167,8 +167,9 @@ static llvm::Pass *CreatePromoteLocalToPrivatePass();
 #endif /* ISPC_NVPTX_ENABLED */
 
 #define DEBUG_START_PASS(NAME)                                                                                         \
-    if (g->debugPrint && (getenv("FUNC") == NULL || !strncmp(bb.getParent()->getName().str().c_str(), getenv("FUNC"),  \
-                                                             strlen(getenv("FUNC"))))) {                               \
+    if (g->debugPrint &&                                                                                               \
+        (getenv("FUNC") == NULL || getenv("FUNC") != NULL && !strncmp(bb.getParent()->getName().str().c_str(),         \
+                                                                      getenv("FUNC"), strlen(getenv("FUNC"))))) {      \
         fprintf(stderr, "Start of " NAME "\n");                                                                        \
         fprintf(stderr, "---------------\n");                                                                          \
         bb.dump();                                                                                                     \
@@ -176,8 +177,9 @@ static llvm::Pass *CreatePromoteLocalToPrivatePass();
     } else /* eat semicolon */
 
 #define DEBUG_END_PASS(NAME)                                                                                           \
-    if (g->debugPrint && (getenv("FUNC") == NULL || !strncmp(bb.getParent()->getName().str().c_str(), getenv("FUNC"),  \
-                                                             strlen(getenv("FUNC"))))) {                               \
+    if (g->debugPrint &&                                                                                               \
+        (getenv("FUNC") == NULL || getenv("FUNC") != NULL && !strncmp(bb.getParent()->getName().str().c_str(),         \
+                                                                      getenv("FUNC"), strlen(getenv("FUNC"))))) {      \
         fprintf(stderr, "End of " NAME " %s\n", modifiedAny ? "** CHANGES **" : "");                                   \
         fprintf(stderr, "---------------\n");                                                                          \
         bb.dump();                                                                                                     \
@@ -2315,7 +2317,8 @@ static bool lGSToGSBaseOffsets(llvm::CallInst *callInst) {
         // passed as a separate parameter to the gather/scatter functions,
         // which in turn allows their implementations to end up emitting
         // x86 instructions with constant offsets encoded in them.
-        llvm::Value *constOffset, *variableOffset;
+        llvm::Value *constOffset = NULL;
+        llvm::Value *variableOffset = NULL;
         lExtractConstantOffset(offsetVector, &constOffset, &variableOffset, callInst);
         if (constOffset == NULL)
             constOffset = LLVMIntAsType(0, offsetVector->getType());
@@ -2488,7 +2491,8 @@ static bool lGSBaseOffsetsGetMoreConst(llvm::CallInst *callInst) {
         return false;
 
     // Try to decompose the old variable offset
-    llvm::Value *constOffset, *variableOffset;
+    llvm::Value *constOffset = NULL;
+    llvm::Value *variableOffset = NULL;
     lExtractConstantOffset(origVariableOffset, &constOffset, &variableOffset, callInst);
 
     // No luck
@@ -3227,7 +3231,10 @@ static void lCoalescePerfInfo(const std::vector<llvm::CallInst *> &coalesceGroup
     std::map<int, int>::const_iterator iter = loadOpsCount.begin();
     while (iter != loadOpsCount.end()) {
         char buf[32];
-        sprintf(buf, "%d x %d-wide", iter->second, iter->first);
+        snprintf(buf, sizeof(buf), "%d x %d-wide", iter->second, iter->first);
+        if ((strlen(loadOpsInfo) + strlen(buf)) >= 512) {
+            break;
+        }
         strcat(loadOpsInfo, buf);
         ++iter;
         if (iter != loadOpsCount.end())
@@ -3368,7 +3375,8 @@ static llvm::Value *lApplyLoad1(llvm::Value *result, const CoalescedLoadOp &load
     elements that they apply to. */
 static llvm::Value *lApplyLoad2(llvm::Value *result, const CoalescedLoadOp &load, const int64_t offsets[4], bool set[4],
                                 llvm::Instruction *insertBefore) {
-    for (int elt = 0; elt < 4; ++elt) {
+    int elt = 0;
+    while (elt < 4) {
         // First, try to do a 64-bit-wide insert into the result vector.
         // We can do this when we're currently at an even element, when the
         // current and next element have consecutive values, and where the
@@ -3379,7 +3387,7 @@ static llvm::Value *lApplyLoad2(llvm::Value *result, const CoalescedLoadOp &load
                   "Load 2 @ %" PRId64 " matches for elements #%d,%d "
                   "(values %" PRId64 ",%" PRId64 ")",
                   load.start, elt, elt + 1, offsets[elt], offsets[elt + 1]);
-            Assert(set[elt] == false && set[elt + 1] == false);
+            Assert(set[elt] == false && ((elt < 3) && set[elt + 1] == false));
 
             // In this case, we bitcast from a 4xi32 to a 2xi64 vector
             llvm::Type *vec2x64Type = llvm::VectorType::get(LLVMTypes::Int64Type, 2);
@@ -3393,7 +3401,10 @@ static llvm::Value *lApplyLoad2(llvm::Value *result, const CoalescedLoadOp &load
             llvm::Type *vec4x32Type = llvm::VectorType::get(LLVMTypes::Int32Type, 4);
             result = new llvm::BitCastInst(result, vec4x32Type, "to4x32", insertBefore);
 
-            set[elt] = set[elt + 1] = true;
+            set[elt] = true;
+            if (elt < 3) {
+                set[elt + 1] = true;
+            }
             // Advance elt one extra time, since we just took care of two
             // elements
             ++elt;
@@ -3409,6 +3420,7 @@ static llvm::Value *lApplyLoad2(llvm::Value *result, const CoalescedLoadOp &load
             result = llvm::InsertElementInst::Create(result, toInsert, LLVMInt32(elt), "insert_load", insertBefore);
             set[elt] = true;
         }
+        ++elt;
     }
 
     return result;

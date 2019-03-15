@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2014, Intel Corporation
+  Copyright (c) 2010-2019, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -150,7 +150,8 @@ lMaybeIssuePrecisionWarning(const AtomicType *toAtomicType,
 ///////////////////////////////////////////////////////////////////////////
 
 static Expr *lArrayToPointer(Expr *expr) {
-    AssertPos(expr->pos, expr && CastType<ArrayType>(expr->GetType()));
+    Assert(expr != NULL);
+    AssertPos(expr->pos, CastType<ArrayType>(expr->GetType()));
 
     Expr *zero = new ConstExpr(AtomicType::UniformInt32, 0, expr->pos);
     Expr *index = new IndexExpr(expr, zero, expr->pos);
@@ -1372,7 +1373,7 @@ static llvm::Value *lEmitBinaryPointerArith(BinaryExpr::Op op, llvm::Value *valu
                                             const Type *type0, const Type *type1, FunctionEmitContext *ctx,
                                             SourcePos pos) {
     const PointerType *ptrType = CastType<PointerType>(type0);
-
+    AssertPos(pos, ptrType != NULL);
     switch (op) {
     case BinaryExpr::Add:
         // ptr + integer

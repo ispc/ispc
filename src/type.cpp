@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2015, Intel Corporation
+  Copyright (c) 2010-2019, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -134,7 +134,7 @@ std::string Variability::GetString() const {
     case SOA: {
         char buf[32];
         sprintf(buf, "soa<%d>", soaWidth);
-        return buf;
+        return std::string(buf);
     }
     case Unbound:
         return "/*unbound*/";
@@ -153,7 +153,7 @@ std::string Variability::MangleString() const {
     case SOA: {
         char buf[32];
         sprintf(buf, "soa<%d>", soaWidth);
-        return buf;
+        return std::string(buf);
     }
     case Unbound:
         FATAL("Unbound unexpected in Variability::MangleString()");
@@ -1333,7 +1333,7 @@ std::string ArrayType::Mangle() const {
     std::string s = child->Mangle();
     char buf[16];
     if (numElements > 0)
-        sprintf(buf, "%d", numElements);
+        snprintf(buf, sizeof(buf), "%d", numElements);
     else
         buf[0] = '\0';
     //    return s + "[" + buf + "]";
@@ -1520,21 +1520,21 @@ const VectorType *VectorType::GetAsNonConstType() const {
 std::string VectorType::GetString() const {
     std::string s = base->GetString();
     char buf[16];
-    sprintf(buf, "<%d>", numElements);
+    snprintf(buf, sizeof(buf), "<%d>", numElements);
     return s + std::string(buf);
 }
 
 std::string VectorType::Mangle() const {
     std::string s = base->Mangle();
     char buf[16];
-    sprintf(buf, "_3C_%d_3E_", numElements); // "<%d>"
+    snprintf(buf, sizeof(buf), "_3C_%d_3E_", numElements); // "<%d>"
     return s + std::string(buf);
 }
 
 std::string VectorType::GetCDeclaration(const std::string &name) const {
     std::string s = base->GetCDeclaration("");
     char buf[16];
-    sprintf(buf, "%d", numElements);
+    snprintf(buf, sizeof(buf), "%d", numElements);
     return s + std::string(buf) + "  " + name;
 }
 
@@ -1717,7 +1717,7 @@ StructType::StructType(const std::string &n, const llvm::SmallVector<const Type 
             char buf[16];
             static int count = 0;
             sprintf(buf, "$anon%d", count);
-            name = buf;
+            name = std::string(buf);
             ++count;
         }
 

@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2018, Intel Corporation
+  Copyright (c) 2010-2019, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -1864,6 +1864,7 @@ bool Module::writeDeps(const char *fn, bool generateMakeRule, const char *tn, co
              it != registeredDependencies.end(); ++it)
             fprintf(file, "%s\n", it->c_str());
     }
+    fclose(file);
     return true;
 }
 
