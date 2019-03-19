@@ -3199,11 +3199,12 @@ int Module::CompileAndOutput(const char *srcFile, const char *arch, const char *
         // least-common-denominator of all of the targets we compiled to.
         llvm::TargetMachine *firstTargetMachine = NULL;
         int i = 0;
-        const char *firstISA;
+        const char *firstISA = "";
         while (i < Target::NUM_ISAS && firstTargetMachine == NULL) {
             firstISA = Target::ISAToTargetString((Target::ISA)i);
             firstTargetMachine = targetMachines[i++];
         }
+        Assert(firstISA != "");
         Assert(firstTargetMachine != NULL);
 
         g->target = new Target(arch, cpu, firstISA, 0 != (outputFlags & GeneratePIC), false, treatGenericAsSmth);
