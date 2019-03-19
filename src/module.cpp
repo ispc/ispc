@@ -422,9 +422,10 @@ Module::Module(const char *fn) {
             GetDirectoryAndFileName(g->currentDirectory, filename, &directory, &name);
             char producerString[512];
 #if defined(BUILD_VERSION) && defined(BUILD_DATE)
-            sprintf(producerString, "ispc version %s (build %s on %s)", ISPC_VERSION, BUILD_VERSION, BUILD_DATE);
+            snprintf(producerString, sizeof(producerString), "ispc version %s (build %s on %s)", ISPC_VERSION,
+                     BUILD_VERSION, BUILD_DATE);
 #else
-            sprintf(producerString, "ispc version %s (built on %s)", ISPC_VERSION, __DATE__);
+            snprintf(producerString, sizeof(producerString), "ispc version %s (built on %s)", ISPC_VERSION, __DATE__);
 #endif
 #if ISPC_LLVM_VERSION <= ISPC_LLVM_3_3
             diBuilder->createCompileUnit(llvm::dwarf::DW_LANG_C99,                  /* lang */
@@ -1568,7 +1569,7 @@ static void lEmitStructDecl(const StructType *st, std::vector<const StructType *
     if (st->GetSOAWidth() > 0)
         // This has to match the naming scheme in
         // StructType::GetCDeclaration().
-        sprintf(sSOA, "_SOA%d", st->GetSOAWidth());
+        snprintf(sSOA, sizeof(sSOA), "_SOA%d", st->GetSOAWidth());
     else
         *sSOA = '\0';
     if (!needsAlign)
@@ -2458,7 +2459,7 @@ void Module::execPreprocessor(const char *infilename, llvm::raw_string_ostream *
 
     // Add #define for current compilation target
     char targetMacro[128];
-    sprintf(targetMacro, "ISPC_TARGET_%s", g->target->GetISAString());
+    snprintf(targetMacro, sizeof(targetMacro), "ISPC_TARGET_%s", g->target->GetISAString());
     char *p = targetMacro;
     while (*p) {
         *p = toupper(*p);
@@ -2537,7 +2538,8 @@ void Module::execPreprocessor(const char *infilename, llvm::raw_string_ostream *
 // "avx", return a string with the ISA name inserted before the original
 // filename's suffix, like "foo_avx.obj".
 static std::string lGetTargetFileName(const char *outFileName, const char *isaString, bool forceCXX) {
-    char *targetOutFileName = new char[strlen(outFileName) + 16];
+    int bufferSize = strlen(outFileName) + 16;
+    char *targetOutFileName = new char[bufferSize];
     if (strrchr(outFileName, '.') != NULL) {
         // Copy everything up to the last '.'
         int count = strrchr(outFileName, '.') - outFileName;
@@ -2545,24 +2547,25 @@ static std::string lGetTargetFileName(const char *outFileName, const char *isaSt
         targetOutFileName[count] = '\0';
 
         // Add the ISA name
-        strcat(targetOutFileName, "_");
-        strcat(targetOutFileName, isaString);
+        strncat(targetOutFileName, "_", bufferSize - strlen(targetOutFileName) - 1);
+        strncat(targetOutFileName, isaString, bufferSize - strlen(targetOutFileName) - 1);
 
         // And finish with the original file suffix if it is not *-generic target
         if (!forceCXX)
-            strcat(targetOutFileName, strrchr(outFileName, '.'));
+            strncat(targetOutFileName, strrchr(outFileName, '.'), bufferSize - strlen(targetOutFileName) - 1);
         else
-            strcat(targetOutFileName, ".cpp");
+            strncat(targetOutFileName, ".cpp", bufferSize - strlen(targetOutFileName) - 1);
     } else {
         // Can't find a '.' in the filename, so just append the ISA suffix
         // to what we weregiven
-        strcpy(targetOutFileName, outFileName);
-        strcat(targetOutFileName, "_");
-        strcat(targetOutFileName, isaString);
+        strncpy(targetOutFileName, outFileName, bufferSize - 1);
+        targetOutFileName[bufferSize - 1] = '\0';
+        strncat(targetOutFileName, "_", bufferSize - strlen(targetOutFileName) - 1);
+        strncat(targetOutFileName, isaString, bufferSize - strlen(targetOutFileName) - 1);
 
         // Append ".cpp" suffix to the original file if it is *-generic target
         if (forceCXX)
-            strcat(targetOutFileName, ".cpp");
+            strncat(targetOutFileName, ".cpp", bufferSize - strlen(targetOutFileName) - 1);
     }
     return targetOutFileName;
 }

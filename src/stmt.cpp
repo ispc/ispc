@@ -2550,7 +2550,7 @@ static bool lSwitchASTPreVisit(ASTNode *node, void *d) {
         // 'case' statement and record the mappign between the case label
         // value and the basic block
         char buf[32];
-        sprintf(buf, "case_%d", cs->value);
+        snprintf(buf, sizeof(buf), "case_%d", cs->value);
         bb = svi->ctx->CreateBasicBlock(buf);
         svi->caseBlocks.push_back(std::make_pair(cs->value, bb));
     } else if (ds != NULL) {

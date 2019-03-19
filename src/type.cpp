@@ -133,7 +133,7 @@ std::string Variability::GetString() const {
         return "varying";
     case SOA: {
         char buf[32];
-        sprintf(buf, "soa<%d>", soaWidth);
+        snprintf(buf, sizeof(buf), "soa<%d>", soaWidth);
         return std::string(buf);
     }
     case Unbound:
@@ -152,7 +152,7 @@ std::string Variability::MangleString() const {
         return "vy";
     case SOA: {
         char buf[32];
-        sprintf(buf, "soa<%d>", soaWidth);
+        snprintf(buf, sizeof(buf), "soa<%d>", soaWidth);
         return std::string(buf);
     }
     case Unbound:
@@ -473,7 +473,7 @@ std::string AtomicType::GetCDeclaration(const std::string &name) const {
 
     if (variability == Variability::SOA) {
         char buf[32];
-        sprintf(buf, "[%d]", variability.soaWidth);
+        snprintf(buf, sizeof(buf), "[%d]", variability.soaWidth);
         ret += buf;
     }
 
@@ -781,7 +781,7 @@ std::string EnumType::GetCDeclaration(const std::string &varName) const {
     if (variability == Variability::SOA || variability == Variability::Varying) {
         int vWidth = (variability == Variability::Varying) ? g->target->getVectorWidth() : variability.soaWidth;
         char buf[32];
-        sprintf(buf, "[%d]", vWidth);
+        snprintf(buf, sizeof(buf), "[%d]", vWidth);
         ret += buf;
     }
 
@@ -1067,13 +1067,13 @@ std::string PointerType::GetCDeclaration(const std::string &name) const {
     }
     if (variability == Variability::SOA) {
         char buf[32];
-        sprintf(buf, "[%d]", variability.soaWidth);
+        snprintf(buf, sizeof(buf), "[%d]", variability.soaWidth);
         ret += buf;
     }
     if (baseIsBasicVarying) {
         int vWidth = g->target->getVectorWidth();
         char buf[32];
-        sprintf(buf, "[%d]", vWidth);
+        snprintf(buf, sizeof(buf), "[%d]", vWidth);
         ret += buf;
     }
 
@@ -1316,7 +1316,7 @@ std::string ArrayType::GetString() const {
     while (at) {
         char buf[16];
         if (at->numElements > 0)
-            sprintf(buf, "%d", at->numElements);
+            snprintf(buf, sizeof(buf), "%d", at->numElements);
         else
             buf[0] = '\0';
         s += std::string("[") + std::string(buf) + std::string("]");
@@ -1357,7 +1357,7 @@ std::string ArrayType::GetCDeclaration(const std::string &name) const {
     while (at) {
         char buf[16];
         if (at->numElements > 0)
-            sprintf(buf, "%d", at->numElements);
+            snprintf(buf, sizeof(buf), "%d", at->numElements);
         else
             buf[0] = '\0';
         s += std::string("[") + std::string(buf) + std::string("]");
@@ -1366,13 +1366,13 @@ std::string ArrayType::GetCDeclaration(const std::string &name) const {
 
     if (soaWidth > 0) {
         char buf[16];
-        sprintf(buf, "[%d]", soaWidth);
+        snprintf(buf, sizeof(buf), "[%d]", soaWidth);
         s += buf;
     }
 
     if (vWidth > 0) {
         char buf[16];
-        sprintf(buf, "[%d]", vWidth);
+        snprintf(buf, sizeof(buf), "[%d]", vWidth);
         s += buf;
     }
 
@@ -1672,7 +1672,7 @@ static std::string lMangleStructName(const std::string &name, Variability variab
     std::string n;
 
     // Encode vector width
-    sprintf(buf, "v%d", g->target->getVectorWidth());
+    snprintf(buf, sizeof(buf), "v%d", g->target->getVectorWidth());
 
     n += buf;
 
@@ -1685,7 +1685,7 @@ static std::string lMangleStructName(const std::string &name, Variability variab
         n += "_varying_";
         break;
     case Variability::SOA:
-        sprintf(buf, "_soa%d_", variability.soaWidth);
+        snprintf(buf, sizeof(buf), "_soa%d_", variability.soaWidth);
         n += buf;
         break;
     default:
@@ -1716,7 +1716,7 @@ StructType::StructType(const std::string &n, const llvm::SmallVector<const Type 
         if (name == "" || name[0] == '$') {
             char buf[16];
             static int count = 0;
-            sprintf(buf, "$anon%d", count);
+            snprintf(buf, sizeof(buf), "$anon%d", count);
             name = std::string(buf);
             ++count;
         }
@@ -1930,7 +1930,7 @@ std::string StructType::GetCDeclaration(const std::string &n) const {
             char buf[32];
             // This has to match the naming scheme used in lEmitStructDecls()
             // in module.cpp
-            sprintf(buf, "_SOA%d", variability.soaWidth);
+            snprintf(buf, sizeof(buf), "_SOA%d", variability.soaWidth);
             ret += buf;
         }
     }
@@ -2728,7 +2728,7 @@ const std::string FunctionType::GetReturnTypeString() const {
         ret += "/*safe*/ ";
     if (costOverride > 0) {
         char buf[32];
-        sprintf(buf, "/*cost=%d*/ ", costOverride);
+        snprintf(buf, sizeof(buf), "/*cost=%d*/ ", costOverride);
         ret += buf;
     }
 

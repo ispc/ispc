@@ -90,7 +90,8 @@ static void usage(int ret) {
 #endif
     printf("    ");
     char cpuHelp[2048];
-    sprintf(cpuHelp, "[--cpu=<cpu>]\t\t\tSelect target CPU type\n<cpu>={%s}\n", Target::SupportedCPUs().c_str());
+    snprintf(cpuHelp, sizeof(cpuHelp), "[--cpu=<cpu>]\t\t\tSelect target CPU type\n<cpu>={%s}\n",
+             Target::SupportedCPUs().c_str());
     PrintWithWordBreaks(cpuHelp, 16, TerminalWidth(), stdout);
     printf("    [-D<foo>]\t\t\t\t#define given value when running preprocessor\n");
     printf("    [--dev-stub <filename>]\t\tEmit device-side offload stub functions to file\n");
@@ -148,10 +149,10 @@ static void usage(int ret) {
     printf("    [--quiet]\t\t\t\tSuppress all output\n");
     printf("    ");
     char targetHelp[2048];
-    sprintf(targetHelp,
-            "[--target=<t>]\t\t\tSelect target ISA and width.\n"
-            "<t>={%s}",
-            Target::SupportedTargets());
+    snprintf(targetHelp, sizeof(targetHelp),
+             "[--target=<t>]\t\t\tSelect target ISA and width.\n"
+             "<t>={%s}",
+             Target::SupportedTargets());
     PrintWithWordBreaks(targetHelp, 24, TerminalWidth(), stdout);
     printf("    [--version]\t\t\t\tPrint ispc version\n");
     printf("    [--werror]\t\t\t\tTreat warnings as errors\n");
@@ -357,6 +358,8 @@ static int ParsingPhaseName(char *stage) {
 
 static std::set<int> ParsingPhases(char *stages) {
     std::set<int> phases;
+    /* ensure the string is NUL terminated */
+    stages[sizeof(stages) - 1] = '\0';
     int begin = ParsingPhaseName(stages);
     int end = begin;
 

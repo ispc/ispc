@@ -999,7 +999,7 @@ llvm::raw_ostream &CWriter::printType(llvm::raw_ostream &Out, llvm::Type *Ty, bo
             for (llvm::StructType::element_iterator I = STy->element_begin(), E = STy->element_end(); I != E;
                  ++I, ++Idx) {
                 char buf[64];
-                sprintf(buf, "v%d", Idx);
+                snprintf(buf, sizeof(buf), "v%d", Idx);
                 printType(Out, *I, false, buf);
                 if (Idx + 1 < STy->getNumElements())
                     Out << ", ";
@@ -1054,7 +1054,7 @@ llvm::raw_ostream &CWriter::printType(llvm::raw_ostream &Out, llvm::Type *Ty, bo
         Out << "  static " << NameSoFar << " init(";
         for (unsigned Idx = 0; Idx < NumElements; ++Idx) {
             char buf[64];
-            sprintf(buf, "v%d", Idx);
+            snprintf(buf, sizeof(buf), "v%d", Idx);
             printType(Out, ATy->getElementType(), false, buf);
             if (Idx + 1 < NumElements)
                 Out << ", ";
@@ -1237,7 +1237,7 @@ static bool isFPCSafeToPrint(const llvm::ConstantFP *CFP) {
 #endif
 #if HAVE_PRINTF_A && ENABLE_CBE_PRINTF_A
     char Buffer[100];
-    sprintf(Buffer, "%a", APF.convertToDouble());
+    snprintf(Buffer, sizeof(Buffer), "%a", APF.convertToDouble());
     if (!strncmp(Buffer, "0x", 2) || !strncmp(Buffer, "-0x", 3) || !strncmp(Buffer, "+0x", 3))
         return APF.bitwiseIsEqual(llvm::APFloat(atof(Buffer)));
     return false;
@@ -1771,7 +1771,7 @@ void CWriter::printConstant(llvm::Constant *CPV, bool Static) {
                 char Buffer[100];
 
                 uint64_t ll = llvm::DoubleToBits(V);
-                sprintf(Buffer, "0x%" PRIx64, ll);
+                snprintf(Buffer, sizeof(Buffer), "0x%" PRIx64, ll);
 
                 std::string Num(&Buffer[0], &Buffer[6]);
                 unsigned long Val = strtoul(Num.c_str(), 0, 16);
@@ -1791,7 +1791,7 @@ void CWriter::printConstant(llvm::Constant *CPV, bool Static) {
 #if HAVE_PRINTF_A && ENABLE_CBE_PRINTF_A
                 // Print out the constant as a floating point number.
                 char Buffer[100];
-                sprintf(Buffer, "%a", V);
+                snprintf(Buffer, sizeof(Buffer), "%a", V);
                 Num = Buffer;
 #else
                 Num = ftostr(FPC->getValueAPF());
@@ -2106,7 +2106,7 @@ std::string CWriter::GetValueName(const llvm::Value *Operand) {
 
         if (!((ch >= 'a' && ch <= 'z') || (ch >= 'A' && ch <= 'Z') || (ch >= '0' && ch <= '9') || ch == '_')) {
             char buffer[5];
-            sprintf(buffer, "_%x_", ch);
+            snprintf(buffer, sizeof(buffer), "_%x_", ch);
             VarName += buffer;
         } else
             VarName += ch;

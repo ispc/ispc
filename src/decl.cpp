@@ -465,7 +465,7 @@ void Declarator::InitFromType(const Type *baseType, DeclSpecs *ds) {
             if (decl->name == "") {
                 // Give a name to any anonymous parameter declarations
                 char buf[32];
-                sprintf(buf, "__anon_parameter_%d", i);
+                snprintf(buf, sizeof(buf), "__anon_parameter_%d", i);
                 decl->name = buf;
             }
             decl->type = decl->type->ResolveUnboundVariability(Variability::Varying);
