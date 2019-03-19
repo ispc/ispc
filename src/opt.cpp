@@ -473,9 +473,9 @@ void DebugPassManager::add(llvm::Pass *P, int stage = -1) {
             // adding dump of LLVM IR after optimization
             char buf[100];
 #if ISPC_LLVM_VERSION <= ISPC_LLVM_3_9
-            sprintf(buf, "\n\n*****LLVM IR after phase %d: %s*****\n\n", number, P->getPassName());
+            snprintf(buf, sizeof(buf), "\n\n*****LLVM IR after phase %d: %s*****\n\n", number, P->getPassName());
 #else // LLVM 4.0+
-            sprintf(buf, "\n\n*****LLVM IR after phase %d: %s*****\n\n", number, P->getPassName().data());
+            snprintf(buf, sizeof(buf), "\n\n*****LLVM IR after phase %d: %s*****\n\n", number, P->getPassName().data());
 #endif
             PM.add(CreateDebugPass(buf));
         }
@@ -484,7 +484,7 @@ void DebugPassManager::add(llvm::Pass *P, int stage = -1) {
         if (g->debugIR == number) {
             // adding generating of LLVM IR debug after optimization
             char buf[100];
-            sprintf(buf, "Debug_IR_after_%d_phase.bc", number);
+            snprintf(buf, sizeof(buf), "Debug_IR_after_%d_phase.bc", number);
             PM.add(llvm::createDebugIRPass(true, true, ".", buf));
         }
 #endif
@@ -3203,21 +3203,21 @@ static void lCoalescePerfInfo(const std::vector<llvm::CallInst *> &coalesceGroup
     if (coalesceGroup.size() > 1) {
         const char *plural = (coalesceGroup.size() > 2) ? "s" : "";
         char otherBuf[32];
-        sprintf(otherBuf, "(other%s at line%s ", plural, plural);
-        strcat(otherPositions, otherBuf);
+        snprintf(otherBuf, sizeof(otherBuf), "(other%s at line%s ", plural, plural);
+        strncat(otherPositions, otherBuf, sizeof(otherPositions) - strlen(otherPositions) - 1);
 
         for (int i = 1; i < (int)coalesceGroup.size(); ++i) {
             SourcePos p;
             bool ok = lGetSourcePosFromMetadata(coalesceGroup[i], &p);
             if (ok) {
                 char buf[32];
-                sprintf(buf, "%d", p.first_line);
-                strcat(otherPositions, buf);
+                snprintf(buf, sizeof(buf), "%d", p.first_line);
+                strncat(otherPositions, buf, sizeof(otherPositions) - strlen(otherPositions) - 1);
                 if (i < (int)coalesceGroup.size() - 1)
-                    strcat(otherPositions, ", ");
+                    strncat(otherPositions, ", ", sizeof(otherPositions) - strlen(otherPositions) - 1);
             }
         }
-        strcat(otherPositions, ") ");
+        strncat(otherPositions, ") ", sizeof(otherPositions) - strlen(otherPositions) - 1);
     }
 
     // Count how many loads of each size there were.
@@ -3235,10 +3235,10 @@ static void lCoalescePerfInfo(const std::vector<llvm::CallInst *> &coalesceGroup
         if ((strlen(loadOpsInfo) + strlen(buf)) >= 512) {
             break;
         }
-        strcat(loadOpsInfo, buf);
+        strncat(loadOpsInfo, buf, sizeof(loadOpsInfo) - strlen(loadOpsInfo) - 1);
         ++iter;
         if (iter != loadOpsCount.end())
-            strcat(loadOpsInfo, ", ");
+            strncat(loadOpsInfo, ", ", sizeof(loadOpsInfo) - strlen(loadOpsInfo) - 1);
     }
 
     if (coalesceGroup.size() == 1)
@@ -4358,7 +4358,7 @@ static llvm::Pass *CreateIsCompileTimeConstantPass(bool isLastTry) { return new 
 class DebugPass : public llvm::ModulePass {
   public:
     static char ID;
-    DebugPass(char *output) : ModulePass(ID) { sprintf(str_output, "%s", output); }
+    DebugPass(char *output) : ModulePass(ID) { snprintf(str_output, sizeof(str_output), "%s", output); }
 
 #if ISPC_LLVM_VERSION <= ISPC_LLVM_3_9
     const char *getPassName() const { return "Dump LLVM IR"; }

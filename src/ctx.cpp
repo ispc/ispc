@@ -278,7 +278,7 @@ FunctionEmitContext::FunctionEmitContext(Function *func, Symbol *funSym, llvm::F
                                          LLVMMaskAllOn, "__all_on_mask");
 
             char buf[256];
-            sprintf(buf, "__off_all_on_mask_%s", g->target->GetISAString());
+            snprintf(buf, sizeof(buf), "__off_all_on_mask_%s", g->target->GetISAString());
 
 #if ISPC_LLVM_VERSION <= ISPC_LLVM_8_0
             llvm::Constant *offFunc =
@@ -2981,7 +2981,7 @@ llvm::Value *FunctionEmitContext::ExtractInst(llvm::Value *v, int elt, const cha
 
     if (name == NULL) {
         char buf[32];
-        sprintf(buf, "_extract_%d", elt);
+        snprintf(buf, sizeof(buf), "_extract_%d", elt);
         name = LLVMGetName(v, buf);
     }
 
@@ -3002,7 +3002,7 @@ llvm::Value *FunctionEmitContext::InsertInst(llvm::Value *v, llvm::Value *eltVal
 
     if (name == NULL) {
         char buf[32];
-        sprintf(buf, "_insert_%d", elt);
+        snprintf(buf, sizeof(buf), "_insert_%d", elt);
         name = LLVMGetName(v, buf);
     }
 
@@ -3023,7 +3023,7 @@ llvm::Value *FunctionEmitContext::ShuffleInst(llvm::Value *v1, llvm::Value *v2, 
 
     if (name == NULL) {
         char buf[32];
-        sprintf(buf, "_shuffle");
+        snprintf(buf, sizeof(buf), "_shuffle");
         name = LLVMGetName(v1, buf);
     }
 
@@ -3044,7 +3044,7 @@ llvm::Value *FunctionEmitContext::BroadcastValue(llvm::Value *v, llvm::Type *vec
 
     if (name == NULL) {
         char buf[32];
-        sprintf(buf, "_broadcast");
+        snprintf(buf, sizeof(buf), "_broadcast");
         name = LLVMGetName(v, buf);
     }
 
