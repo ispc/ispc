@@ -4592,9 +4592,13 @@ llvm::Value *VectorMemberExpr::GetValue(FunctionEmitContext *ctx) const {
         // to the same logic where it's used elsewhere
         llvm::Value *elementMask = ctx->GetFullMask();
 
-        const Type *elementPtrType = basePtrType->IsUniformType()
-                                         ? PointerType::GetUniform(exprVectorType->GetElementType())
-                                         : PointerType::GetVarying(exprVectorType->GetElementType());
+        const Type *elementPtrType = NULL;
+        if (CastType<ReferenceType>(basePtrType) != NULL)
+            elementPtrType = PointerType::GetUniform(basePtrType->GetReferenceTarget());
+        else
+            elementPtrType = basePtrType->IsUniformType()
+                ? PointerType::GetUniform(exprVectorType->GetElementType())
+                : PointerType::GetVarying(exprVectorType->GetElementType());
 
         ctx->SetDebugPos(pos);
         for (size_t i = 0; i < identifier.size(); ++i) {
