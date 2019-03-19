@@ -215,9 +215,14 @@ target_include_directories(${PROJECT_NAME} PRIVATE
 # Compile options
 if (UNIX)
     target_compile_options(${PROJECT_NAME} PRIVATE -Wall -Wno-sign-compare -Wno-unused-function -Werror ${LLVM_CPP_FLAGS})
+    # Security options
+    target_compile_options(${PROJECT_NAME} PRIVATE -fstack-protector -fdata-sections -ffunction-sections
+                           -Wformat -Wformat-security -fPIE -fPIC)
     set_source_files_properties("src/cbackend.cpp" PROPERTIES COMPILE_FLAGS "-fno-exceptions")
 else()
     target_compile_options(${PROJECT_NAME} PRIVATE /W3 /wd4146 /wd4800 /wd4996 /wd4355 /wd4624 /wd4244 /wd4141 /wd4291 /wd4018)
+    # Security options
+    target_compile_options(${PROJECT_NAME} PRIVATE /GS /DynamicBase)
     set_source_files_properties(${FLEX_OUTPUT} PROPERTIES COMPILE_FLAGS "/wd4005 /wd4003")
     set_source_files_properties(${BISON_OUTPUT} PROPERTIES COMPILE_FLAGS "/wd4005 /wd4065")
 endif()
@@ -238,6 +243,8 @@ if (WIN32)
     if (NOT CMAKE_BUILD_TYPE STREQUAL "DEBUG" )
         set_target_properties(${PROJECT_NAME} PROPERTIES LINK_FLAGS "/OPT:REF /OPT:ICF")
     endif()
+else()
+    set_target_properties(${PROJECT_NAME} PROPERTIES LINK_FLAGS "-z noexecstack -z relro -z now")
 endif()
 
 if (ISPC_STATIC_STDCXX_LINK)
