@@ -139,7 +139,7 @@ def checkout_LLVM(component, use_git, version_LLVM, revision, target_dir, from_v
         SVN_PATH="trunk"
         GIT_BRANCH="master"
     elif  version_LLVM == "8_0":
-        SVN_PATH="branches/release_80"
+        SVN_PATH="tags/RELEASE_800/final"
         GIT_BRANCH="release_80"
     elif  version_LLVM == "7_0":
         SVN_PATH="tags/RELEASE_701/final"
