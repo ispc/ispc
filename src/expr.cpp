@@ -4615,9 +4615,8 @@ llvm::Value *VectorMemberExpr::GetValue(FunctionEmitContext *ctx) const {
         if (CastType<ReferenceType>(basePtrType) != NULL)
             elementPtrType = PointerType::GetUniform(basePtrType->GetReferenceTarget());
         else
-            elementPtrType = basePtrType->IsUniformType()
-                ? PointerType::GetUniform(exprVectorType->GetElementType())
-                : PointerType::GetVarying(exprVectorType->GetElementType());
+            elementPtrType = basePtrType->IsUniformType() ? PointerType::GetUniform(exprVectorType->GetElementType())
+                                                          : PointerType::GetVarying(exprVectorType->GetElementType());
 
         ctx->SetDebugPos(pos);
         for (size_t i = 0; i < identifier.size(); ++i) {
