@@ -63,7 +63,7 @@
 #endif
 #endif // ISPC_IS_WINDOWS
 
-#define MAX_NUM_ARGS (128)
+#define MAX_NUM_ARGS (512)
 
 static void lPrintVersion() {
 #ifdef ISPC_IS_WINDOWS
