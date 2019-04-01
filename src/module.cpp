@@ -3207,7 +3207,7 @@ int Module::CompileAndOutput(const char *srcFile, const char *arch, const char *
             firstISA = Target::ISAToTargetString((Target::ISA)i);
             firstTargetMachine = targetMachines[i++];
         }
-        Assert(firstISA != "");
+        Assert(strcmp(firstISA, "") != 0);
         Assert(firstTargetMachine != NULL);
 
         g->target = new Target(arch, cpu, firstISA, 0 != (outputFlags & GeneratePIC), false, treatGenericAsSmth);

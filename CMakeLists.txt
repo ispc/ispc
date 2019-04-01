@@ -217,7 +217,7 @@ if (UNIX)
     target_compile_options(${PROJECT_NAME} PRIVATE -Wall -Wno-sign-compare -Wno-unused-function -Werror ${LLVM_CPP_FLAGS})
     # Security options
     target_compile_options(${PROJECT_NAME} PRIVATE -fstack-protector -fdata-sections -ffunction-sections
-                           -Wformat -Wformat-security -fPIE -fPIC)
+                           -Wformat -Wformat-security -fpie -fwrapv)
     set_source_files_properties("src/cbackend.cpp" PROPERTIES COMPILE_FLAGS "-fno-exceptions")
 else()
     target_compile_options(${PROJECT_NAME} PRIVATE /W3 /wd4146 /wd4800 /wd4996 /wd4355 /wd4624 /wd4244 /wd4141 /wd4291 /wd4018)
@@ -244,7 +244,7 @@ if (WIN32)
         set_target_properties(${PROJECT_NAME} PROPERTIES LINK_FLAGS "/OPT:REF /OPT:ICF")
     endif()
 else()
-    set_target_properties(${PROJECT_NAME} PROPERTIES LINK_FLAGS "-z noexecstack -z relro -z now")
+    set_target_properties(${PROJECT_NAME} PROPERTIES LINK_FLAGS "-z noexecstack -z relro -z now -Wl,--gc-sections")
 endif()
 
 if (ISPC_STATIC_STDCXX_LINK)
