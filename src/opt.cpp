@@ -168,8 +168,8 @@ static llvm::Pass *CreatePromoteLocalToPrivatePass();
 
 #define DEBUG_START_PASS(NAME)                                                                                         \
     if (g->debugPrint &&                                                                                               \
-        (getenv("FUNC") == NULL || getenv("FUNC") != NULL && !strncmp(bb.getParent()->getName().str().c_str(),         \
-                                                                      getenv("FUNC"), strlen(getenv("FUNC"))))) {      \
+        (getenv("FUNC") == NULL || (getenv("FUNC") != NULL && !strncmp(bb.getParent()->getName().str().c_str(),        \
+                                                                       getenv("FUNC"), strlen(getenv("FUNC")))))) {    \
         fprintf(stderr, "Start of " NAME "\n");                                                                        \
         fprintf(stderr, "---------------\n");                                                                          \
         bb.dump();                                                                                                     \
@@ -178,8 +178,8 @@ static llvm::Pass *CreatePromoteLocalToPrivatePass();
 
 #define DEBUG_END_PASS(NAME)                                                                                           \
     if (g->debugPrint &&                                                                                               \
-        (getenv("FUNC") == NULL || getenv("FUNC") != NULL && !strncmp(bb.getParent()->getName().str().c_str(),         \
-                                                                      getenv("FUNC"), strlen(getenv("FUNC"))))) {      \
+        (getenv("FUNC") == NULL || (getenv("FUNC") != NULL && !strncmp(bb.getParent()->getName().str().c_str(),        \
+                                                                       getenv("FUNC"), strlen(getenv("FUNC")))))) {    \
         fprintf(stderr, "End of " NAME " %s\n", modifiedAny ? "** CHANGES **" : "");                                   \
         fprintf(stderr, "---------------\n");                                                                          \
         bb.dump();                                                                                                     \

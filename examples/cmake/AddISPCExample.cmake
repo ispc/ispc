@@ -42,7 +42,7 @@ function(add_ispc_example)
     set(ISPC_KNOWN_TARGETS "sse2" "sse4" "avx1-" "avx1.1" "avx2" "avx512knl" "avx512skx")
     set(ISPC_HEADER_NAME "${CMAKE_CURRENT_BINARY_DIR}/${ISPC_SRC_NAME}_ispc.h")
     set(ISPC_OBJ_NAME "${CMAKE_CURRENT_BINARY_DIR}/${ISPC_SRC_NAME}_ispc${CMAKE_CXX_OUTPUT_EXTENSION}")
-
+    set(ISPC_FLAGS ${example_ISPC_FLAGS})
     if (UNIX)
         execute_process( COMMAND bash "-c" "uname -m | sed -e s/x86_64/x86/ -e s/i686/x86/ -e s/arm.*/arm/ -e s/sa110/arm/" OUTPUT_VARIABLE ARCH)
         string(STRIP ${ARCH} ARCH)
@@ -53,6 +53,7 @@ function(add_ispc_example)
         else()
             set(ISPC_ARCH "x86-64")
         endif()
+        list(APPEND ISPC_FLAGS --pic)
     else()
         set(ARCH "x86")
         if (CMAKE_SIZEOF_VOID_P EQUAL 8 )
@@ -93,8 +94,8 @@ function(add_ispc_example)
     endif()
     # ISPC command
     add_custom_command(OUTPUT ${ISPC_BUILD_OUTPUT}
-        COMMAND ${ISPC_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/${ISPC_SRC_NAME}.ispc ${example_ISPC_FLAGS} --target=${ISPC_TARGETS} --arch=${ISPC_ARCH}
-                                    -h ${ISPC_HEADER_NAME} -o ${ISPC_OBJ_NAME}
+        COMMAND ${ISPC_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/${ISPC_SRC_NAME}.ispc ${ISPC_FLAGS} --target=${ISPC_TARGETS} --arch=${ISPC_ARCH}
+                                   -h ${ISPC_HEADER_NAME} -o ${ISPC_OBJ_NAME}
         VERBATIM
         DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/${ISPC_SRC_NAME}.ispc")
 
@@ -113,6 +114,7 @@ function(add_ispc_example)
         else()
             target_compile_options(${example_NAME} PRIVATE -m64)
         endif()
+        target_compile_options(${example_NAME} PRIVATE -fpie)
     else()
         target_compile_options(${example_NAME} PRIVATE /fp:fast /Oi)
     endif()
