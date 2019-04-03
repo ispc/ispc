@@ -899,8 +899,7 @@ Target::Target(const char *arch, const char *cpu, const char *isa, bool pic, boo
         this->m_hasRsqrtd = this->m_hasRcpd = false;
         this->m_hasVecPrefetch = false;
         CPUfromISA = CPU_SKX;
-    }
-    else if (!strcasecmp(isa, "avx512skx-i32x8")) {
+    } else if (!strcasecmp(isa, "avx512skx-i32x8")) {
         this->m_isa = Target::SKX_AVX512;
         this->m_nativeVectorWidth = 16;
         this->m_nativeVectorAlignment = 64;
@@ -1118,8 +1117,6 @@ Target::Target(const char *arch, const char *cpu, const char *isa, bool pic, boo
 #endif
                 attrBuilder.addAttribute("target-cpu", this->m_cpu);
             attrBuilder.addAttribute("target-features", this->m_attributes);
-//attrBuilder.addAttribute("prefer-vector-width", "256");
-//attrBuilder.addAttribute("min-legal-vector-width", "0");
 #if ISPC_LLVM_VERSION <= ISPC_LLVM_4_0
             this->m_tf_attributes = new llvm::AttributeSet(
                 llvm::AttributeSet::get(*g->ctx, llvm::AttributeSet::FunctionIndex, attrBuilder));
