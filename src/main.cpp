@@ -519,6 +519,8 @@ int main(int Argc, char *Argv[]) {
             g->NoOmitFramePointer = true;
         else if (!strcmp(argv[i], "--instrument"))
             g->emitInstrumentation = true;
+        else if (!strcmp(argv[i], "--no-pragma-once"))
+            g->noPragmaOnce = true;
         else if (!strcmp(argv[i], "-g")) {
             g->generateDebuggingSymbols = true;
         } else if (!strcmp(argv[i], "--emit-asm"))
