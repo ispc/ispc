@@ -1150,7 +1150,10 @@ void ForStmt::EmitCode(FunctionEmitContext *ctx) const {
     if (test) {
         ltest = test->GetValue(ctx);
         if (!ltest) {
-            ctx->EndScope();
+            // We need to end scope only if we had initializer statement.
+            if (init) {
+                ctx->EndScope();
+            }
             ctx->EndLoop();
             return;
         }
