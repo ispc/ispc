@@ -597,6 +597,8 @@ struct Globals {
         manual.) */
     bool emitInstrumentation;
 
+    bool noPragmaOnce;
+
     /** Indicates whether ispc should generate debugging symbols for the
         program in its output. */
     bool generateDebuggingSymbols;

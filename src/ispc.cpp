@@ -1423,6 +1423,7 @@ Globals::Globals() {
     disableLineWrap = false;
     emitPerfWarnings = true;
     emitInstrumentation = false;
+    noPragmaOnce = false;
     generateDebuggingSymbols = false;
 #if ISPC_LLVM_VERSION >= ISPC_LLVM_3_5
     generateDWARFVersion = 3;

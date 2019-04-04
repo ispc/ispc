@@ -130,6 +130,7 @@ static void usage(int ret) {
            "generation.\n");
     printf("    [--no-omit-frame-pointer]\t\tDisable frame pointer omission. It may be useful for profiling\n");
     printf("    [--nostdlib]\t\t\tDon't make the ispc standard library available\n");
+    printf("    [--no-pragma-once]\t\t\tDon't use #pragma once in created headers\n");
     printf("    [--nocpp]\t\t\t\tDon't run the C preprocessor\n");
     printf("    [-o <name>/--outfile=<name>]\tOutput filename (may be \"-\" for standard output)\n");
     printf("    [-O0/-O(1/2/3)]\t\t\tSet optimization level. Default behavior is to optimize for speed.\n");
@@ -519,6 +520,8 @@ int main(int Argc, char *Argv[]) {
             g->NoOmitFramePointer = true;
         else if (!strcmp(argv[i], "--instrument"))
             g->emitInstrumentation = true;
+        else if (!strcmp(argv[i], "--no-pragma-once"))
+            g->noPragmaOnce = true;
         else if (!strcmp(argv[i], "-g")) {
             g->generateDebuggingSymbols = true;
         } else if (!strcmp(argv[i], "--emit-asm"))
