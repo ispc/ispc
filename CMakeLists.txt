@@ -243,7 +243,9 @@ if (WIN32)
     if (NOT CMAKE_BUILD_TYPE STREQUAL "DEBUG" )
         set_target_properties(${PROJECT_NAME} PROPERTIES LINK_FLAGS "/OPT:REF /OPT:ICF")
     endif()
+elseif (APPLE)
 else()
+    # Link options for security hardening.
     set_target_properties(${PROJECT_NAME} PROPERTIES LINK_FLAGS "-z noexecstack -z relro -z now -Wl,--gc-sections")
 endif()
 
