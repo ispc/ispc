@@ -332,6 +332,9 @@ class Target {
     /** Target-specific attribute string to pass along to the LLVM backend */
     std::string m_attributes;
 
+    /** Target-specific function attributes */
+    std::map<std::string, std::string> m_funcAttributes;
+
 #if ISPC_LLVM_VERSION >= ISPC_LLVM_3_3
     /** Target-specific LLVM attribute, which has to be attached to every
         function to ensure that it is generated for correct target architecture.
@@ -559,9 +562,6 @@ struct Globals {
 
     /** When \c true, LLVM won't omit frame pointer. */
     bool NoOmitFramePointer;
-
-    /** When \c true, LLVM won't omit frame pointer. */
-    bool disableZMMforavx512skx;
 
     /** Indicates which stages of optimization we want to dump. */
     std::set<int> debug_stages;

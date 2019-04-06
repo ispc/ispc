@@ -916,7 +916,8 @@ Target::Target(const char *arch, const char *cpu, const char *isa, bool pic, boo
         this->m_hasRsqrtd = this->m_hasRcpd = false;
         this->m_hasVecPrefetch = false;
         CPUfromISA = CPU_SKX;
-        g->disableZMMforavx512skx = true;
+        this->m_funcAttributes["prefer-vector-width"] = "256";
+        this->m_funcAttributes["min-legal-vector-width"] = "256";
     }
 #endif
 #ifdef ISPC_ARM_ENABLED
@@ -1107,23 +1108,15 @@ Target::Target(const char *arch, const char *cpu, const char *isa, bool pic, boo
 
         this->m_is32Bit = (getDataLayout()->getPointerSize() == 4);
 
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_3_3
-        // This is LLVM 3.3+ feature.
-        // Initialize target-specific "target-feature" attribute.
-        if (!m_attributes.empty()) {
-            llvm::AttrBuilder attrBuilder;
-#ifdef ISPC_NVPTX_ENABLED
-            if (m_isa != Target::NVPTX)
-#endif
-                attrBuilder.addAttribute("target-cpu", this->m_cpu);
-            attrBuilder.addAttribute("target-features", this->m_attributes);
+        // Adding function attribute to limit width to 256 for avx512skx-i32x8
+        llvm::AttrBuilder fattrBuilder;
+        for (auto const& f_attr : m_funcAttributes)
+                fattrBuilder.addAttribute(f_attr.first, f_attr.second);
 #if ISPC_LLVM_VERSION <= ISPC_LLVM_4_0
             this->m_tf_attributes = new llvm::AttributeSet(
-                llvm::AttributeSet::get(*g->ctx, llvm::AttributeSet::FunctionIndex, attrBuilder));
+                llvm::AttributeSet::get(*g->ctx, llvm::AttributeSet::FunctionIndex, fattrBuilder));
 #else // LLVM 5.0+
-            this->m_tf_attributes = new llvm::AttrBuilder(attrBuilder);
-#endif
-        }
+            this->m_tf_attributes = new llvm::AttrBuilder(fattrBuilder);
 #endif
 
         Assert(this->m_vectorWidth <= ISPC_MAX_NVEC);
@@ -1436,7 +1429,6 @@ Globals::Globals() {
     debugPrint = false;
     printTarget = false;
     NoOmitFramePointer = false;
-    disableZMMforavx512skx = false;
     debugIR = -1;
     disableWarnings = false;
     warningsAsErrors = false;

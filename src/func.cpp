@@ -237,10 +237,7 @@ void Function::emitCode(FunctionEmitContext *ctx, llvm::Function *function, Sour
         function->addFnAttr("no-frame-pointer-elim", "true");
 #endif
 #if ISPC_LLVM_VERSION >= ISPC_LLVM_8_0 // LLVM 8.0+
-    if (g->disableZMMforavx512skx) {
-        function->addFnAttr("prefer-vector-width", "256");
-        function->addFnAttr("min-legal-vector-width", "256");
-    }
+    g->target->markFuncWithTargetAttr(function);
 #endif
 #if 0
     llvm::BasicBlock *entryBBlock = ctx->GetCurrentBasicBlock();

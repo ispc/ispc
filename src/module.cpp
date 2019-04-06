@@ -518,11 +518,8 @@ int Module::CompileFile() {
             f.addFnAttr("no-frame-pointer-elim", "true");
 #endif
 #if ISPC_LLVM_VERSION >= ISPC_LLVM_8_0 // LLVM 8.0+
-    if (g->disableZMMforavx512skx)
-        for (llvm::Function &f : *module) {
-            f.addFnAttr("prefer-vector-width", "256");
-            f.addFnAttr("min-legal-vector-width", "256");
-        }
+    for (llvm::Function &f : *module)
+        g->target->markFuncWithTargetAttr(&f);
 #endif
     ast->GenerateIR();
 
