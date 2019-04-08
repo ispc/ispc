@@ -32,5 +32,3 @@ export void infoo(uniform double afoo1[], uniform double afoo2[], uniform double
 //; CHECK_ATTR_8: "prefer-vector-width"="256"
 //; CHECK_ATTR_8: "min-legal-vector-width"="256"
 //; CHECK_ATTR_8: "prefer-vector-width"="256"
-//; CHECK_ATTR_8: "min-legal-vector-width"="256"
-//; CHECK_ATTR_8: "prefer-vector-width"="256"

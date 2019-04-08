@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2016, Intel Corporation
+  Copyright (c) 2010-2019, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -1108,7 +1108,7 @@ Target::Target(const char *arch, const char *cpu, const char *isa, bool pic, boo
 
         this->m_is32Bit = (getDataLayout()->getPointerSize() == 4);
 
-        // Adding function attribute to limit width to 256 for avx512skx-i32x8
+        // TO-DO : Revisit addition of "target-features" and "target-cpu" for ARM support.
         llvm::AttrBuilder fattrBuilder;
         for (auto const &f_attr : m_funcAttributes)
             fattrBuilder.addAttribute(f_attr.first, f_attr.second);

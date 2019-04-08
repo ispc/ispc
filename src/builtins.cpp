@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2018, Intel Corporation
+  Copyright (c) 2010-2019, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -441,6 +441,7 @@ static void lSetInternalFunctions(llvm::Module *module) {
         "__broadcast_i64",
         "__broadcast_i8",
         "__cast_mask_to_i1",
+        "__cast_mask_to_i8",
         "__cast_mask_to_i16",
         "__ceil_uniform_double",
         "__ceil_uniform_float",
