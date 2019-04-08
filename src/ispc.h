@@ -333,7 +333,7 @@ class Target {
     std::string m_attributes;
 
     /** Target-specific function attributes */
-    std::map<std::string, std::string> m_funcAttributes;
+    std::vector<std::pair<std::string, std::string>> m_funcAttributes;
 
 #if ISPC_LLVM_VERSION >= ISPC_LLVM_3_3
     /** Target-specific LLVM attribute, which has to be attached to every

@@ -916,8 +916,8 @@ Target::Target(const char *arch, const char *cpu, const char *isa, bool pic, boo
         this->m_hasRsqrtd = this->m_hasRcpd = false;
         this->m_hasVecPrefetch = false;
         CPUfromISA = CPU_SKX;
-        this->m_funcAttributes["prefer-vector-width"] = "256";
-        this->m_funcAttributes["min-legal-vector-width"] = "256";
+        this->m_funcAttributes.push_back(std::make_pair("prefer-vector-width", "256"));
+        this->m_funcAttributes.push_back(std::make_pair("min-legal-vector-width", "256"));
     }
 #endif
 #ifdef ISPC_ARM_ENABLED
@@ -1110,13 +1110,13 @@ Target::Target(const char *arch, const char *cpu, const char *isa, bool pic, boo
 
         // Adding function attribute to limit width to 256 for avx512skx-i32x8
         llvm::AttrBuilder fattrBuilder;
-        for (auto const& f_attr : m_funcAttributes)
-                fattrBuilder.addAttribute(f_attr.first, f_attr.second);
+        for (auto const &f_attr : m_funcAttributes)
+            fattrBuilder.addAttribute(f_attr.first, f_attr.second);
 #if ISPC_LLVM_VERSION <= ISPC_LLVM_4_0
-            this->m_tf_attributes = new llvm::AttributeSet(
-                llvm::AttributeSet::get(*g->ctx, llvm::AttributeSet::FunctionIndex, fattrBuilder));
+        this->m_tf_attributes =
+            new llvm::AttributeSet(llvm::AttributeSet::get(*g->ctx, llvm::AttributeSet::FunctionIndex, fattrBuilder));
 #else // LLVM 5.0+
-            this->m_tf_attributes = new llvm::AttrBuilder(fattrBuilder);
+        this->m_tf_attributes = new llvm::AttrBuilder(fattrBuilder);
 #endif
 
         Assert(this->m_vectorWidth <= ISPC_MAX_NVEC);
