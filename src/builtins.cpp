@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2018, Intel Corporation
+  Copyright (c) 2010-2019, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -441,6 +441,7 @@ static void lSetInternalFunctions(llvm::Module *module) {
         "__broadcast_i64",
         "__broadcast_i8",
         "__cast_mask_to_i1",
+        "__cast_mask_to_i8",
         "__cast_mask_to_i16",
         "__ceil_uniform_double",
         "__ceil_uniform_float",
@@ -806,7 +807,8 @@ static void lSetInternalFunctions(llvm::Module *module) {
         llvm::Function *f = module->getFunction(names[i]);
         if (f != NULL && f->empty() == false) {
             f->setLinkage(llvm::GlobalValue::InternalLinkage);
-            g->target->markFuncWithTargetAttr(f);
+            // TO-DO : Revisit adding this back for ARM support.
+            // g->target->markFuncWithTargetAttr(f);
         }
     }
 }
@@ -1374,6 +1376,13 @@ void DefineStdlib(SymbolTable *symbolTable, llvm::LLVMContext *ctx, llvm::Module
 #if ISPC_LLVM_VERSION >= ISPC_LLVM_3_8 // LLVM 3.8+
     case Target::SKX_AVX512: {
         switch (g->target->getVectorWidth()) {
+        case 8:
+            if (runtime32) {
+                EXPORT_MODULE(builtins_bitcode_skx_8_32bit);
+            } else {
+                EXPORT_MODULE(builtins_bitcode_skx_8_64bit);
+            }
+            break;
         case 16:
             if (runtime32) {
                 EXPORT_MODULE(builtins_bitcode_skx_32bit);

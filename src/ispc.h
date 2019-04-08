@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2018, Intel Corporation
+  Copyright (c) 2010-2019, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -331,6 +331,9 @@ class Target {
 
     /** Target-specific attribute string to pass along to the LLVM backend */
     std::string m_attributes;
+
+    /** Target-specific function attributes */
+    std::vector<std::pair<std::string, std::string>> m_funcAttributes;
 
 #if ISPC_LLVM_VERSION >= ISPC_LLVM_3_3
     /** Target-specific LLVM attribute, which has to be attached to every

@@ -481,7 +481,7 @@ def check_targets():
                  ["SSE2", "SSE4", "AVX", "AVX1.1", "AVX2"], "-hsw", False]),
       ("KNL",    [["avx512knl-i32x16"],
                  ["SSE2", "SSE4", "AVX", "AVX1.1", "AVX2", "KNL"], "-knl", False]),
-      ("SKX",    [["avx512skx-i32x16"],
+      ("SKX",    [["avx512skx-i32x16", "avx512skx-i32x8"],
                  ["SSE2", "SSE4", "AVX", "AVX1.1", "AVX2", "SKX"], "-skx", False])
     ])
 

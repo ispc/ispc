@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2011-2016, Intel Corporation
+  Copyright (c) 2011-2019, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -236,7 +236,7 @@ void Function::emitCode(FunctionEmitContext *ctx, llvm::Function *function, Sour
     if (g->NoOmitFramePointer)
         function->addFnAttr("no-frame-pointer-elim", "true");
 #endif
-
+    g->target->markFuncWithTargetAttr(function);
 #if 0
     llvm::BasicBlock *entryBBlock = ctx->GetCurrentBasicBlock();
 #endif

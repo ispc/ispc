@@ -117,7 +117,7 @@ find_package(FLEX 2.5 REQUIRED)
 set (ISPC_MASKS 1 8 16 32 64)
 set (ISPC_TARGETS avx2-i64x4 avx11-i64x4 avx1-i64x4 avx1 avx1-x2 avx11 avx11-x2 avx2 avx2-x2
     sse2 sse2-x2 sse4-8 sse4-16 sse4 sse4-x2
-    generic-4 generic-8 generic-16 generic-32 generic-64 generic-1 knl skx)
+    generic-4 generic-8 generic-16 generic-32 generic-64 generic-1 knl skx skx-8)
 
 set(CLANG_LIBRARY_LIST clangFrontend clangDriver clangSerialization clangParse clangSema clangAnalysis clangAST clangBasic clangEdit clangLex)
 set(LLVM_COMPONENTS engine ipo bitreader bitwriter instrumentation linker)

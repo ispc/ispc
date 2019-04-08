@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2016, Intel Corporation
+  Copyright (c) 2010-2019, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -901,6 +901,28 @@ Target::Target(const char *arch, const char *cpu, const char *isa, bool pic, boo
         CPUfromISA = CPU_SKX;
     }
 #endif
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_8_0 // LLVM 8.0+
+    else if (!strcasecmp(isa, "avx512skx-i32x8")) {
+        this->m_isa = Target::SKX_AVX512;
+        this->m_nativeVectorWidth = 16;
+        this->m_nativeVectorAlignment = 64;
+        this->m_dataTypeWidth = 32;
+        this->m_vectorWidth = 8;
+        this->m_maskingIsFree = true;
+        this->m_maskBitCount = 8;
+        this->m_hasHalf = true;
+        this->m_hasRand = true;
+        this->m_hasGather = this->m_hasScatter = true;
+        this->m_hasTranscendentals = false;
+        // For MIC it is set to true due to performance reasons. The option should be tested.
+        this->m_hasTrigonometry = false;
+        this->m_hasRsqrtd = this->m_hasRcpd = false;
+        this->m_hasVecPrefetch = false;
+        CPUfromISA = CPU_SKX;
+        this->m_funcAttributes.push_back(std::make_pair("prefer-vector-width", "256"));
+        this->m_funcAttributes.push_back(std::make_pair("min-legal-vector-width", "256"));
+    }
+#endif
 #ifdef ISPC_ARM_ENABLED
     else if (!strcasecmp(isa, "neon-i8x16")) {
         this->m_isa = Target::NEON8;
@@ -1089,23 +1111,15 @@ Target::Target(const char *arch, const char *cpu, const char *isa, bool pic, boo
 
         this->m_is32Bit = (getDataLayout()->getPointerSize() == 4);
 
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_3_3
-        // This is LLVM 3.3+ feature.
-        // Initialize target-specific "target-feature" attribute.
-        if (!m_attributes.empty()) {
-            llvm::AttrBuilder attrBuilder;
-#ifdef ISPC_NVPTX_ENABLED
-            if (m_isa != Target::NVPTX)
-#endif
-                attrBuilder.addAttribute("target-cpu", this->m_cpu);
-            attrBuilder.addAttribute("target-features", this->m_attributes);
+        // TO-DO : Revisit addition of "target-features" and "target-cpu" for ARM support.
+        llvm::AttrBuilder fattrBuilder;
+        for (auto const &f_attr : m_funcAttributes)
+            fattrBuilder.addAttribute(f_attr.first, f_attr.second);
 #if ISPC_LLVM_VERSION <= ISPC_LLVM_4_0
-            this->m_tf_attributes = new llvm::AttributeSet(
-                llvm::AttributeSet::get(*g->ctx, llvm::AttributeSet::FunctionIndex, attrBuilder));
+        this->m_tf_attributes =
+            new llvm::AttributeSet(llvm::AttributeSet::get(*g->ctx, llvm::AttributeSet::FunctionIndex, fattrBuilder));
 #else // LLVM 5.0+
-            this->m_tf_attributes = new llvm::AttrBuilder(attrBuilder);
-#endif
-        }
+        this->m_tf_attributes = new llvm::AttrBuilder(fattrBuilder);
 #endif
 
         Assert(this->m_vectorWidth <= ISPC_MAX_NVEC);
@@ -1147,6 +1161,9 @@ const char *Target::SupportedTargets() {
 #endif
 #if ISPC_LLVM_VERSION >= ISPC_LLVM_3_8 // LLVM 3.8+
            "avx512skx-i32x16, "
+#endif
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_8_0 // LLVM 8.0+
+           "avx512skx-i32x8, "
 #endif
            "generic-x1, generic-x4, generic-x8, generic-x16, "
            "generic-x32, generic-x64, *-generic-x16"
