@@ -1,7 +1,11 @@
+// Case 1: Checks avx512skx-i32x16 assembly output for zmm registers.
 //; RUN: %{ispc} %s --target=avx512skx-i32x16 --emit-asm -o - | FileCheck %s -check-prefix=CHECK_ZMM_32x16
+// Case 2: Checks avx512skx-i32x8 assembly output to ensure there are no zmm registers.
 //; RUN: %{ispc} %s --target=avx512skx-i32x8 --emit-asm -o - | FileCheck %s --implicit-check-not "zmm"
+// Case 3: Checks avx512skx-i32x16 LLVM IR to ensure avx512skx-i32x8 func attributes are not present.
 //; RUN: %{ispc} %s --target=avx512skx-i32x16 --emit-llvm -o %t_8.bc
 //; RUN: llvm-dis %t_8.bc -o - | FileCheck %s --implicit-check-not ""min-legal-vector-width"="256"" --implicit-check-not ""prefer-vector-width"="256""
+// Case 4: Checks avx512skx-i32x8 LLVM IR to ensure avx512skx-i32x8 func attributes are present.
 //; RUN: %{ispc} %s --target=avx512skx-i32x8 --emit-llvm -o %t_8.bc
 //; RUN: llvm-dis %t_8.bc -o - | FileCheck %s -check-prefix=CHECK_ATTR_8
 
@@ -27,7 +31,9 @@ export void infoo(uniform double afoo1[], uniform double afoo2[], uniform double
 //; CHECK_ZMM_32x16: zmm
     afoo3[programIndex] = c;
 }
-
+// The avx512skx-i32x8 specific function attribute list will be present at 2 places.
+// Once where function attributes for exported functions are aggregated and
+// again where function attributes for non-exported functions are aggregated.
 //; CHECK_ATTR_8: "min-legal-vector-width"="256"
 //; CHECK_ATTR_8: "prefer-vector-width"="256"
 //; CHECK_ATTR_8: "min-legal-vector-width"="256"

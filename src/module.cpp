@@ -517,10 +517,8 @@ int Module::CompileFile() {
         for (llvm::Function &f : *module)
             f.addFnAttr("no-frame-pointer-elim", "true");
 #endif
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_8_0 // LLVM 8.0+
     for (llvm::Function &f : *module)
         g->target->markFuncWithTargetAttr(&f);
-#endif
     ast->GenerateIR();
 
     if (diBuilder)

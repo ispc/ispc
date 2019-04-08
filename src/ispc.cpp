@@ -899,7 +899,10 @@ Target::Target(const char *arch, const char *cpu, const char *isa, bool pic, boo
         this->m_hasRsqrtd = this->m_hasRcpd = false;
         this->m_hasVecPrefetch = false;
         CPUfromISA = CPU_SKX;
-    } else if (!strcasecmp(isa, "avx512skx-i32x8")) {
+    }
+#endif
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_8_0 // LLVM 8.0+
+    else if (!strcasecmp(isa, "avx512skx-i32x8")) {
         this->m_isa = Target::SKX_AVX512;
         this->m_nativeVectorWidth = 16;
         this->m_nativeVectorAlignment = 64;

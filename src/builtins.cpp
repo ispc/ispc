@@ -807,7 +807,8 @@ static void lSetInternalFunctions(llvm::Module *module) {
         llvm::Function *f = module->getFunction(names[i]);
         if (f != NULL && f->empty() == false) {
             f->setLinkage(llvm::GlobalValue::InternalLinkage);
-            g->target->markFuncWithTargetAttr(f);
+            // TO-DO : Revisit adding this back for ARM support.
+            // g->target->markFuncWithTargetAttr(f);
         }
     }
 }
