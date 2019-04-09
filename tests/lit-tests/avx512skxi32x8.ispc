@@ -8,7 +8,7 @@
 // Case 4: Checks avx512skx-i32x8 LLVM IR to ensure avx512skx-i32x8 func attributes are present.
 //; RUN: %{ispc} %s --target=avx512skx-i32x8 --emit-llvm -o %t_8.bc
 //; RUN: llvm-dis %t_8.bc -o - | FileCheck %s -check-prefix=CHECK_ATTR_8
-
+// REQUIRES: LLVM_8_0+
 
 double ret_round(double val)
 {
