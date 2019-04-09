@@ -943,99 +943,99 @@ static inline uniform bool or(uniform bool a, uniform bool b) {
 }
 
 __declspec(safe,cost1)
-static inline int8 select(bool c, int8 a, int8 b) {
-    return c ? a : b;
+static inline int8 select(bool cond, int8 t, int8 f) {
+    return cond ? t : f;
 }
 
 __declspec(safe,cost1)
-static inline int8 select(uniform bool c, int8 a, int8 b) {
-    return c ? a : b;
+static inline int8 select(uniform bool cond, int8 t, int8 f) {
+    return cond ? t : f;
 }
 
 __declspec(safe,cost1)
-static inline uniform int8 select(uniform bool c, uniform int8 a,
-                                  uniform int8 b) {
-    return c ? a : b;
+static inline uniform int8 select(uniform bool cond, uniform int8 t,
+                                  uniform int8 f) {
+    return cond ? t : f;
 }
 
 __declspec(safe,cost1)
-static inline int16 select(bool c, int16 a, int16 b) {
-    return c ? a : b;
+static inline int16 select(bool cond, int16 t, int16 f) {
+    return cond ? t : f;
 }
 
 __declspec(safe,cost1)
-static inline int16 select(uniform bool c, int16 a, int16 b) {
-    return c ? a : b;
+static inline int16 select(uniform bool cond, int16 t, int16 f) {
+    return cond ? t : f;
 }
 
 __declspec(safe,cost1)
-static inline uniform int16 select(uniform bool c, uniform int16 a,
-                                   uniform int16 b) {
-    return c ? a : b;
+static inline uniform int16 select(uniform bool cond, uniform int16 t,
+                                   uniform int16 f) {
+    return cond ? t : f;
 }
 
 __declspec(safe,cost1)
-static inline int32 select(bool c, int32 a, int32 b) {
-    return c ? a : b;
+static inline int32 select(bool cond, int32 t, int32 f) {
+    return cond ? t : f;
 }
 
 __declspec(safe,cost1)
-static inline int32 select(uniform bool c, int32 a, int32 b) {
-    return c ? a : b;
+static inline int32 select(uniform bool cond, int32 t, int32 f) {
+    return cond ? t : f;
 }
 
 __declspec(safe,cost1)
-static inline uniform int32 select(uniform bool c, uniform int32 a,
-                                   uniform int32 b) {
-    return c ? a : b;
+static inline uniform int32 select(uniform bool cond, uniform int32 t,
+                                   uniform int32 f) {
+    return cond ? t : f;
 }
 
 __declspec(safe,cost1)
-static inline int64 select(bool c, int64 a, int64 b) {
-    return c ? a : b;
+static inline int64 select(bool cond, int64 t, int64 f) {
+    return cond ? t : f;
 }
 
 __declspec(safe,cost1)
-static inline int64 select(uniform bool c, int64 a, int64 b) {
-    return c ? a : b;
+static inline int64 select(uniform bool cond, int64 t, int64 f) {
+    return cond ? t : f;
 }
 
 __declspec(safe,cost1)
-static inline uniform int64 select(uniform bool c, uniform int64 a,
-                                   uniform int64 b) {
-    return c ? a : b;
+static inline uniform int64 select(uniform bool cond, uniform int64 t,
+                                   uniform int64 f) {
+    return cond ? t : f;
 }
 
 __declspec(safe,cost1)
-static inline float select(bool c, float a, float b) {
-    return c ? a : b;
+static inline float select(bool cond, float t, float f) {
+    return cond ? t : f;
 }
 
 __declspec(safe,cost1)
-static inline float select(uniform bool c, float a, float b) {
-    return c ? a : b;
+static inline float select(uniform bool cond, float t, float f) {
+    return cond ? t : f;
 }
 
 __declspec(safe,cost1)
-static inline uniform float select(uniform bool c, uniform float a,
-                                   uniform float b) {
-    return c ? a : b;
+static inline uniform float select(uniform bool cond, uniform float t,
+                                   uniform float f) {
+    return cond ? t : f;
 }
 
 __declspec(safe,cost1)
-static inline double select(bool c, double a, double b) {
-    return c ? a : b;
+static inline double select(bool cond, double t, double f) {
+    return cond ? t : f;
 }
 
 __declspec(safe,cost1)
-static inline double select(uniform bool c, double a, double b) {
-    return c ? a : b;
+static inline double select(uniform bool cond, double t, double f) {
+    return cond ? t : f;
 }
 
 __declspec(safe,cost1)
-static inline uniform double select(uniform bool c, uniform double a,
-                                    uniform double b) {
-    return c ? a : b;
+static inline uniform double select(uniform bool cond, uniform double t,
+                                    uniform double f) {
+    return cond ? t : f;
 }
 
 ///////////////////////////////////////////////////////////////////////////

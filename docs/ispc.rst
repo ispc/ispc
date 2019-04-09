@@ -3463,14 +3463,14 @@ non-short-circuiting logical AND and OR operations.
     uniform bool or(uniform bool a, uniform bool b)
 
 And there are three variants of ``select()`` that select between two values
-based on a boolean condition.  These are the variants of ``select()`` for
-the ``int8`` type:
+based on a boolean condition.  If condition ``cond`` is true, ``t`` is selected,
+otherwise ``f``. These are the variants of ``select()`` for the ``int8`` type:
 
 ::
 
-    int8 select(bool v, int8 a, int8 b)
-    int8 select(uniform bool v, int8 a, int8 b)
-    uniform int8 select(uniform bool v, uniform int8 a, uniform int8 b)
+    int8 select(bool cond, int8 t, int8 f)
+    int8 select(uniform bool cond, int8 t, int8 f)
+    uniform int8 select(uniform bool cond, uniform int8 t, uniform int8 f)
 
 There are also variants for ``int16``, ``int32``, ``int64``, ``float``, and
 ``double`` types.
