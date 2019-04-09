@@ -43,6 +43,8 @@ list(APPEND LIT_ARGS "--path=${LLVM_TOOLS_BINARY_DIR}")
 list(APPEND LIT_ARGS "${CMAKE_CURRENT_SOURCE_DIR}/lit-tests")
 # Path to tests execution directory
 list(APPEND LIT_ARGS "-Dispc_test_exec_root=${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/${CMAKE_CFG_INTDIR}/tests")
+# LLVM version used to build ISPC
+list(APPEND LIT_ARGS "-Dispc_llvm_version_number=${LLVM_VERSION_NUMBER}")
 add_custom_target(check-all DEPENDS ispc
     COMMAND ${LIT_COMMAND} ${LIT_ARGS}
     COMMENT "Running lit tests"
