@@ -1,3 +1,19 @@
+=== v1.11.0 === (19 April 2019)
+
+An ISPC update with a bunch of new features and stability bug fixes based on a
+patched LLVM 8.0.0 backend.
+
+Notable new features are:
+- A new 256-bit AVX512 target (avx512skx-i32x8).
+- Modified -O1 switch to optimize for size.
+- “#pragma once” in auto-generated headers.
+- Better debugging support with -O0.
+
+Also we resumed support for PS4 build.
+
+To efficiently write ISPC programs you can now use the ISPC plug-in for VSCode:
+https://marketplace.visualstudio.com/items?itemName=intel-corporation.ispc
+
 === v1.10.0 === (18 January 2019)
 
 An ISPC update, which brings several new features, has a bunch of stability and

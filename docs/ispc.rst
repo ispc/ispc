@@ -56,6 +56,7 @@ Contents:
   + `Updating ISPC Programs For Changes In ISPC 1.9.1`_
   + `Updating ISPC Programs For Changes In ISPC 1.9.2`_
   + `Updating ISPC Programs For Changes In ISPC 1.10.0`_
+  + `Updating ISPC Programs For Changes In ISPC 1.11.0`_
 
 * `Getting Started with ISPC`_
 
@@ -372,6 +373,19 @@ and a "#pragma ignore".
 One change that potentially may affect compatibility - changed size of short vector
 types. If you use short vector types for data passed between C/C++ and ISPC, you
 may want to pay attention to it.
+
+Updating ISPC Programs For Changes In ISPC 1.11.0
+-------------------------------------------------
+
+This release redefined -O1 compiler option to optimize for size, so it may require
+adjusting your build system accordingly.
+
+Starting 1.11.0 version auto-generated headers use ``#pragma once``. In the unlikely
+case when your C/C++ compiler is not supporting that, please use ``--no-pragma-once``
+``ispc`` switch.
+
+This release also introduces new AVX512 target avx512skx-i32x8. It produces code,
+which doesn't use ZMM registers.
 
 
 Getting Started with ISPC
