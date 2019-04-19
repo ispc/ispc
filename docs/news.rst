@@ -2,6 +2,19 @@
 ispc News
 =========
 
+ispc 1.11.0 is Released
+-----------------------
+
+An ``ispc`` release with new 256-bit AVX512 target (avx512skx-i32x8), redefined
+-O1 switch optimizing for size, ``#pragma once`` in generated headers, and better
+debugging support with -O0.
+
+The release is based on a patched LLVM 8.0.0 backend.
+
+For more details, please check `Release Notes`_.
+
+.. _Release Notes: https://github.com/ispc/ispc/blob/master/docs/ReleaseNotes.txt
+
 ispc 1.10.0 is Released
 -----------------------
 
