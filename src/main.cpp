@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2016, Intel Corporation
+  Copyright (c) 2010-2019, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -73,6 +73,15 @@ static void lPrintVersion() {
 #else
     printf("Intel(r) SPMD Program Compiler (ispc), %s (build %s @ %s, LLVM %s)\n", ISPC_VERSION, BUILD_VERSION,
            BUILD_DATE, ISPC_LLVM_VERSION_STRING);
+#endif
+
+// The recommended way to build ISPC assumes custom LLVM build with a set of patches.
+// If the default LLVM distribution is used, then the resuling ISPC binary may contain
+// known and already fixed stability and performance problems.
+#ifdef ISPC_NO_DUMPS
+    printf("This version is likely linked against non-recommended LLVM binaries.\n"
+           "For best stability and performance please use official binary distribution from "
+           "http://ispc.github.io/downloads.html");
 #endif
 }
 
@@ -183,8 +192,10 @@ static void devUsage(int ret) {
     printf("        disable-uniform-control-flow\t\tDisable uniform control flow optimizations\n");
     printf("        disable-uniform-memory-optimizations\tDisable uniform-based coherent memory access\n");
     printf("    [--yydebug]\t\t\t\tPrint debugging information during parsing\n");
+#ifndef ISPC_NO_DUMPS
     printf("    [--debug-phase=<value>]\t\tSet optimization phases to dump. "
            "--debug-phase=first,210:220,300,305,310:last\n");
+#endif
 #if ISPC_LLVM_VERSION == ISPC_LLVM_3_4 || ISPC_LLVM_VERSION == ISPC_LLVM_3_5 // 3.4, 3.5
     printf("    [--debug-ir=<value>]\t\tSet optimization phase to generate debugIR after it\n");
 #endif
@@ -698,12 +709,15 @@ int main(int Argc, char *Argv[]) {
                 usage(1);
             }
             hostStubFileName = argv[i];
-        } else if (strncmp(argv[i], "--debug-phase=", 14) == 0) {
+        }
+#ifndef ISPC_NO_DUMPS
+        else if (strncmp(argv[i], "--debug-phase=", 14) == 0) {
             fprintf(stderr, "WARNING: Adding debug phases may change the way PassManager"
                             "handles the phases and it may possibly make some bugs go"
                             "away or introduce the new ones.\n");
             g->debug_stages = ParsingPhases(argv[i] + strlen("--debug-phase="));
         }
+#endif
 
 #if ISPC_LLVM_VERSION == ISPC_LLVM_3_4 || ISPC_LLVM_VERSION == ISPC_LLVM_3_5 // 3.4, 3.5
         else if (strncmp(argv[i], "--debug-ir=", 11) == 0) {

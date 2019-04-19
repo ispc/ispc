@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2015, Intel Corporation
+  Copyright (c) 2010-2019, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -293,7 +293,9 @@ extern llvm::Value *LLVMFlattenInsertChain(llvm::Value *inst, int vectorWidth, b
 /** This is a utility routine for debugging that dumps out the given LLVM
     value as well as (recursively) all of the other values that it depends
     on. */
+#ifndef ISPC_NO_DUMPS
 extern void LLVMDumpValue(llvm::Value *v);
+#endif
 
 /** Given a vector-typed value, this function returns the value of its
     first element.  Rather than just doing the straightforward thing of
