@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2013, Intel Corporation
+  Copyright (c) 2010-2019, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -1067,8 +1067,10 @@ bool LLVMVectorValuesAllEqual(llvm::Value *v, llvm::Value **splat) {
     bool equal = lVectorValuesAllEqual(v, vectorLength, seenPhis, splat);
 
     Debug(SourcePos(), "LLVMVectorValuesAllEqual(%s) -> %s.", v->getName().str().c_str(), equal ? "true" : "false");
+#ifndef ISPC_NO_DUMPS
     if (g->debugPrint)
         LLVMDumpValue(v);
+#endif
 
     return equal;
 }
@@ -1329,12 +1331,15 @@ bool LLVMVectorIsLinear(llvm::Value *v, int stride) {
     std::vector<llvm::PHINode *> seenPhis;
     bool linear = lVectorIsLinear(v, vectorLength, stride, seenPhis);
     Debug(SourcePos(), "LLVMVectorIsLinear(%s) -> %s.", v->getName().str().c_str(), linear ? "true" : "false");
+#ifndef ISPC_NO_DUMPS
     if (g->debugPrint)
         LLVMDumpValue(v);
+#endif
 
     return linear;
 }
 
+#ifndef ISPC_NO_DUMPS
 static void lDumpValue(llvm::Value *v, std::set<llvm::Value *> &done) {
     if (done.find(v) != done.end())
         return;
@@ -1359,6 +1364,7 @@ void LLVMDumpValue(llvm::Value *v) {
     lDumpValue(v, done);
     fprintf(stderr, "----\n");
 }
+#endif
 
 static llvm::Value *lExtractFirstVectorElement(llvm::Value *v, std::map<llvm::PHINode *, llvm::PHINode *> &phiMap) {
     llvm::VectorType *vt = llvm::dyn_cast<llvm::VectorType>(v->getType());

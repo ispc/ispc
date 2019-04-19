@@ -157,7 +157,9 @@ static llvm::Pass *CreateReplacePseudoMemoryOpsPass();
 static llvm::Pass *CreateIsCompileTimeConstantPass(bool isLastTry);
 static llvm::Pass *CreateMakeInternalFuncsStaticPass();
 
+#ifndef ISPC_NO_DUMPS
 static llvm::Pass *CreateDebugPass(char *output);
+#endif
 
 static llvm::Pass *CreateReplaceStdlibShiftPass();
 
@@ -166,6 +168,7 @@ static llvm::Pass *CreateFixBooleanSelectPass();
 static llvm::Pass *CreatePromoteLocalToPrivatePass();
 #endif /* ISPC_NVPTX_ENABLED */
 
+#ifndef ISPC_NO_DUMPS
 #define DEBUG_START_PASS(NAME)                                                                                         \
     if (g->debugPrint &&                                                                                               \
         (getenv("FUNC") == NULL || (getenv("FUNC") != NULL && !strncmp(bb.getParent()->getName().str().c_str(),        \
@@ -185,6 +188,10 @@ static llvm::Pass *CreatePromoteLocalToPrivatePass();
         bb.dump();                                                                                                     \
         fprintf(stderr, "---------------\n\n");                                                                        \
     } else /* eat semicolon */
+#else
+#define DEBUG_START_PASS(NAME)
+#define DEBUG_END_PASS(NAME)
+#endif
 
 ///////////////////////////////////////////////////////////////////////////
 
@@ -469,6 +476,7 @@ void DebugPassManager::add(llvm::Pass *P, int stage = -1) {
     if (g->off_stages.find(number) == g->off_stages.end()) {
         // adding optimization (not switched off)
         PM.add(P);
+#ifndef ISPC_NO_DUMPS
         if (g->debug_stages.find(number) != g->debug_stages.end()) {
             // adding dump of LLVM IR after optimization
             char buf[100];
@@ -479,6 +487,7 @@ void DebugPassManager::add(llvm::Pass *P, int stage = -1) {
 #endif
             PM.add(CreateDebugPass(buf));
         }
+#endif
 
 #if ISPC_LLVM_VERSION == ISPC_LLVM_3_4 || ISPC_LLVM_VERSION == ISPC_LLVM_3_5 // only 3.4 and 3.5
         if (g->debugIR == number) {
@@ -493,10 +502,12 @@ void DebugPassManager::add(llvm::Pass *P, int stage = -1) {
 ///////////////////////////////////////////////////////////////////////////
 
 void Optimize(llvm::Module *module, int optLevel) {
+#ifndef ISPC_NO_DUMPS
     if (g->debugPrint) {
         printf("*** Code going into optimization ***\n");
         module->dump();
     }
+#endif
     DebugPassManager optPM;
     optPM.add(llvm::createVerifierPass(), 0);
 
@@ -878,10 +889,12 @@ void Optimize(llvm::Module *module, int optLevel) {
     optPM.add(llvm::createVerifierPass(), LAST_OPT_NUMBER);
     optPM.run(*module);
 
+#ifndef ISPC_NO_DUMPS
     if (g->debugPrint) {
         printf("\n*****\nFINAL OUTPUT\n*****\n");
         module->dump();
     }
+#endif
 }
 
 ///////////////////////////////////////////////////////////////////////////
@@ -1460,10 +1473,12 @@ static llvm::Value *lExtractFromInserts(llvm::Value *v, unsigned int index) {
     *offsets with an int vector of the per-lane offsets
  */
 static llvm::Value *lGetBasePtrAndOffsets(llvm::Value *ptrs, llvm::Value **offsets, llvm::Instruction *insertBefore) {
+#ifndef ISPC_NO_DUMPS
     if (g->debugPrint) {
         fprintf(stderr, "lGetBasePtrAndOffsets\n");
         LLVMDumpValue(ptrs);
     }
+#endif
 
     bool broadcastDetected = false;
     // Looking for %gep_offset = shufflevector <8 x i64> %0, <8 x i64> undef, <8 x i32> zeroinitializer
@@ -3907,6 +3922,7 @@ restart:
             // LLVM drops metadata frequently and it results in bad disgnostics.
             lGetSourcePosFromMetadata(fwdCall, &fwdPos);
 
+#ifndef ISPC_NO_DUMPS
             if (g->debugPrint) {
                 if (base != fwdCall->getArgOperand(0)) {
                     Debug(fwdPos, "base pointers mismatch");
@@ -3929,6 +3945,7 @@ restart:
                     LLVMDumpValue(fwdCall->getArgOperand(4));
                 }
             }
+#endif
 
             if (base == fwdCall->getArgOperand(0) && variableOffsets == fwdCall->getArgOperand(1) &&
                 offsetScale == fwdCall->getArgOperand(2) && mask == fwdCall->getArgOperand(4)) {
@@ -4355,6 +4372,7 @@ static llvm::Pass *CreateIsCompileTimeConstantPass(bool isLastTry) { return new 
     we want to debug and print dump of LLVM IR in stderr. Also it
     prints name and number of previous optimization.
  */
+#ifndef ISPC_NO_DUMPS
 class DebugPass : public llvm::ModulePass {
   public:
     static char ID;
@@ -4381,6 +4399,7 @@ bool DebugPass::runOnModule(llvm::Module &module) {
 }
 
 static llvm::Pass *CreateDebugPass(char *output) { return new DebugPass(output); }
+#endif
 
 ///////////////////////////////////////////////////////////////////////////
 // MakeInternalFuncsStaticPass

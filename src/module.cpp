@@ -2451,8 +2451,10 @@ void Module::execPreprocessor(const char *infilename, llvm::raw_string_ostream *
     headerOpts.UseBuiltinIncludes = 0;
     headerOpts.UseStandardSystemIncludes = 0;
     headerOpts.UseStandardCXXIncludes = 0;
+#ifndef ISPC_NO_DUMPS
     if (g->debugPrint)
         headerOpts.Verbose = 1;
+#endif
     for (int i = 0; i < (int)g->includePath.size(); ++i) {
         headerOpts.AddPath(g->includePath[i], clang::frontend::Angled,
 #if ISPC_LLVM_VERSION == ISPC_LLVM_3_2

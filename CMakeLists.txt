@@ -50,6 +50,7 @@ option(ISPC_INCLUDE_EXAMPLES "Generate build targets for the ISPC examples" ON)
 option(ISPC_INCLUDE_TESTS "Generate build targets for the ISPC tests." ON)
 option(ISPC_INCLUDE_UTILS "Generate build targets for the utils." ON)
 option(ISPC_PREPARE_PACKAGE "Generate build targets for ispc package" OFF)
+option(ISPC_NO_DUMPS "Turn off functionality, which requires LLVM dump() functions" OFF)
 
 if (UNIX)
     option(ISPC_STATIC_STDCXX_LINK "Link statically with libstdc++ and libgcc" OFF)
@@ -205,6 +206,10 @@ if (ARM_ENABLED)
 endif()
 if (NVPTX_ENABLED)
     target_compile_definitions(${PROJECT_NAME} PRIVATE ISPC_NVPTX_ENABLED)
+endif()
+
+if (ISPC_NO_DUMPS)
+    target_compile_definitions(${PROJECT_NAME} PRIVATE ISPC_NO_DUMPS)
 endif()
 
 # Include directories
