@@ -37,17 +37,17 @@
 
 #include "util.h"
 #include "module.h"
-#ifdef ISPC_IS_WINDOWS
-#include <shlwapi.h>
-#ifdef __MINGW32__
-#include <malloc.h> // for alloca()
-#endif
-#else
+
+#ifdef ISPC_IS_LINUX
 #include <alloca.h>
 #include <unistd.h>
-#endif
-#include <stdio.h>
-
+#elif defined(ISPC_IS_WINDOWS)
+#include <shlwapi.h>
+#include <malloc.h>
+#ifndef __MINGW32__
+#define alloca _alloca
+#endif // __MINGW32__
+#endif // ISPC_IS_LINUX
 #include <ctype.h>
 #include <stdarg.h>
 #include <stdio.h>
