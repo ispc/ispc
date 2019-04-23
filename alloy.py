@@ -114,80 +114,74 @@ def try_do_LLVM(text, command, from_validation):
 
 def checkout_LLVM(component, use_git, version_LLVM, revision, target_dir, from_validation):
     # Identify the component
-    GIT_REPO_BASE="http://llvm.org/git/"
-    #GIT_REPO_BASE="https://github.com/llvm-mirror/"
+    GIT_REPO_BASE="https://github.com/llvm/llvm-project.git"
     if component == "llvm":
         SVN_REPO="https://llvm.org/svn/llvm-project/llvm/"
-        GIT_REPO=GIT_REPO_BASE+"llvm.git"
     elif component == "clang":
         SVN_REPO="https://llvm.org/svn/llvm-project/cfe/"
-        GIT_REPO=GIT_REPO_BASE+"clang.git"
     elif component == "libcxx":
         SVN_REPO="https://llvm.org/svn/llvm-project/libcxx/"
-        GIT_REPO=GIT_REPO_BASE+"libcxx.git"
     elif component == "clang-tools-extra":
         SVN_REPO="https://llvm.org/svn/llvm-project/clang-tools-extra/"
-        GIT_REPO=GIT_REPO_BASE+"clang-tools-extra.git"
     elif component == "compiler-rt":
         SVN_REPO="https://llvm.org/svn/llvm-project/compiler-rt/"
-        GIT_REPO=GIT_REPO_BASE+"compiler-rt.git"
     else:
         error("Trying to checkout unidentified component: " + component, 1)
 
     # Identify the version
     if  version_LLVM == "trunk":
         SVN_PATH="trunk"
-        GIT_BRANCH="master"
+        GIT_TAG="master"
     elif  version_LLVM == "8_0":
         SVN_PATH="tags/RELEASE_800/final"
-        GIT_BRANCH="release_80"
+        GIT_TAG="llvmorg-8.0.0"
     elif  version_LLVM == "7_0":
         SVN_PATH="tags/RELEASE_701/final"
-        GIT_BRANCH="release_70"
+        GIT_TAG="llvmorg-7.0.1"
     elif  version_LLVM == "6_0":
         SVN_PATH="tags/RELEASE_601/final"
-        GIT_BRANCH="release_60"
+        GIT_TAG="llvmorg-6.0.1"
     elif  version_LLVM == "5_0":
         SVN_PATH="tags/RELEASE_502/final"
-        GIT_BRANCH="release_50"
+        GIT_TAG="llvmorg-5.0.2"
     elif  version_LLVM == "4_0":
         SVN_PATH="tags/RELEASE_401/final"
-        GIT_BRANCH="release_40"
+        GIT_TAG="llvmorg-4.0.1"
     elif  version_LLVM == "3_9":
         SVN_PATH="tags/RELEASE_390/final"
-        GIT_BRANCH="release_39"
+        GIT_TAG="llvmorg-3.9.0"
     elif  version_LLVM == "3_8":
         SVN_PATH="tags/RELEASE_381/final"
-        GIT_BRANCH="release_38"
+        GIT_TAG="llvmorg-3.8.1"
     elif  version_LLVM == "3_7":
         SVN_PATH="tags/RELEASE_370/final"
-        GIT_BRANCH="release_37"
+        GIT_TAG="llvmorg-3.7.0"
     elif  version_LLVM == "3_6":
         SVN_PATH="tags/RELEASE_362/final"
-        GIT_BRANCH="release_36"
+        GIT_TAG="llvmorg-3.6.2"
     elif  version_LLVM == "3_5":
         SVN_PATH="tags/RELEASE_351/final"
-        GIT_BRANCH="release_35"
+        GIT_TAG="llvmorg-3.5.1"
     elif  version_LLVM == "3_4":
         SVN_PATH="tags/RELEASE_34/dot2-final"
-        GIT_BRANCH="release_34"
+        GIT_TAG="llvmorg-3.4.2"
     elif  version_LLVM == "3_3":
         SVN_PATH="tags/RELEASE_33/final"
-        GIT_BRANCH="release_33"
+        GIT_TAG="llvmorg-3.3.0"
     elif  version_LLVM == "3_2":
         SVN_PATH="tags/RELEASE_32/final"
-        GIT_BRANCH="release_32"
+        GIT_TAG="llvmorg-3.2.0"
     else:
         error("Unsupported llvm version: " + version_LLVM, 1)
 
     if use_git:
-        try_do_LLVM("clone "+component+" from "+GIT_REPO+" to "+target_dir+" ",
-                    "git clone "+GIT_REPO+" "+target_dir,
+        try_do_LLVM("clone "+component+" from "+GIT_REPO_BASE+" to "+target_dir+" ",
+                    "git clone "+GIT_REPO_BASE+" "+target_dir,
                     from_validation)
-        if GIT_BRANCH != "master":
+        if GIT_TAG != "master":
             os.chdir(target_dir)
-            try_do_LLVM("switch to "+GIT_BRANCH+" branch ",
-                        "git checkout -b "+GIT_BRANCH+" remotes/origin/"+GIT_BRANCH, from_validation)
+            try_do_LLVM("switch to "+GIT_TAG+" tag ",
+                        "git checkout -b "+GIT_TAG+" "+GIT_TAG, from_validation)
             os.chdir("..")
     else:
         try_do_LLVM("load "+component+" from "+SVN_REPO+SVN_PATH+" ",
@@ -266,11 +260,15 @@ def build_LLVM(version_LLVM, revision, folder, tarball, debug, selfbuild, extra,
     print_debug("Using folders: " + LLVM_SRC + " " + LLVM_BUILD + " " + LLVM_BIN + " in " + 
         llvm_home + "\n", from_validation, alloy_build)
     # load llvm
+    llvm_enable_projects = ""
     if tarball == "":
         checkout_LLVM("llvm", options.use_git, version_LLVM, revision, LLVM_SRC, from_validation)
-        os.chdir(LLVM_SRC + "/tools")
-        checkout_LLVM("clang", options.use_git, version_LLVM, revision, "clang", from_validation)
-        os.chdir("..")
+        if not options.use_git:
+            os.chdir(LLVM_SRC + "/tools")
+            checkout_LLVM("clang", options.use_git, version_LLVM, revision, "clang", from_validation)
+            os.chdir("..")
+        else:
+            llvm_enable_projects = "  -DLLVM_ENABLE_PROJECTS=\"clang"
         if current_OS == "MacOS" and int(current_OS_version.split(".")[0]) >= 13:
             # Starting with MacOS 10.9 Maverics, the system doesn't contain headers for standard C++ library and
             # the default library is libc++, bit libstdc++. The headers are part of XCode now. But we are checking out
@@ -280,15 +278,21 @@ def build_LLVM(version_LLVM, revision, folder, tarball, debug, selfbuild, extra,
             # Note, that we can also build a libc++ library, but it must be on system default location or should be passed
             # to the linker explicitly (either through command line or environment variables). So we are not doing it
             # currently to make the build process easier.
-            os.chdir("projects")
-            checkout_LLVM("libcxx", options.use_git, version_LLVM, revision, "libcxx", from_validation)
-            os.chdir("..")
+            if not options.use_git:
+                os.chdir("projects")
+                checkout_LLVM("libcxx", options.use_git, version_LLVM, revision, "libcxx", from_validation)
+                os.chdir("..")
+            else:
+                llvm_enable_projects +=";libcxx"
         if extra == True:
-            os.chdir("tools/clang/tools")
-            checkout_LLVM("clang-tools-extra", options.use_git, version_LLVM, revision, "extra", from_validation)
-            os.chdir("../../../projects")
-            checkout_LLVM("compiler-rt", options.use_git, version_LLVM, revision, "compiler-rt", from_validation)
-            os.chdir("..")
+            if not options.use_git:
+                os.chdir("tools/clang/tools")
+                checkout_LLVM("clang-tools-extra", options.use_git, version_LLVM, revision, "extra", from_validation)
+                os.chdir("../../../projects")
+                checkout_LLVM("compiler-rt", options.use_git, version_LLVM, revision, "compiler-rt", from_validation)
+                os.chdir("..")
+            else:
+                llvm_enable_projects +=";compiler-rt;clang-tools-extra"
     else:
         tar = tarball.split(" ")
         os.makedirs(LLVM_SRC) 
@@ -302,6 +306,9 @@ def build_LLVM(version_LLVM, revision, folder, tarball, debug, selfbuild, extra,
                     "tar -xvzf " + tar[1] + " --strip-components 1", from_validation)
         os.chdir("../../")
     # paching llvm
+    if options.use_git:
+        llvm_enable_projects += "\""
+        os.chdir(LLVM_SRC + "/llvm")
     patches = glob.glob(os.environ["ISPC_HOME"] + os.sep + "llvm_patches" + os.sep + "*.*")
     for patch in patches:
         if version_LLVM in os.path.basename(patch):
@@ -309,12 +316,17 @@ def build_LLVM(version_LLVM, revision, folder, tarball, debug, selfbuild, extra,
                 try_do_LLVM("patch LLVM with patch " + patch + " ", "patch -p0 < " + patch, from_validation)
             else:
                 try_do_LLVM("patch LLVM with patch " + patch + " ", "C:\\gnuwin32\\bin\\patch.exe -p0 < " + patch, from_validation)
+    if options.use_git:
+        os.chdir("../")
     os.chdir("../")
     # configuring llvm, build first part of selfbuild
     os.makedirs(LLVM_BUILD)
     os.makedirs(LLVM_BIN)
     selfbuild_compiler = ""
     LLVM_configure_capable = ["3_2", "3_3", "3_4", "3_5", "3_6", "3_7"]
+    cmakelists_path = LLVM_SRC
+    if options.use_git:
+        cmakelists_path += "/llvm"
     if selfbuild:
         print_debug("Making selfbuild and use folders " + LLVM_BUILD_selfbuild + " and " +
             LLVM_BIN_selfbuild + "\n", from_validation, alloy_build)
@@ -326,6 +338,7 @@ def build_LLVM(version_LLVM, revision, folder, tarball, debug, selfbuild, extra,
                     "cmake -G " + "\"" + generator + "\"" + " -DCMAKE_EXPORT_COMPILE_COMMANDS=ON" +
                     "  -DCMAKE_INSTALL_PREFIX=" + llvm_home + "/" + LLVM_BIN_selfbuild +
                     "  -DCMAKE_BUILD_TYPE=Release" +
+                    llvm_enable_projects +
                     get_llvm_enable_dump_switch(version_LLVM) +
                     "  -DLLVM_ENABLE_ASSERTIONS=ON" +
                     "  -DLLVM_INSTALL_UTILS=ON" +
@@ -334,7 +347,7 @@ def build_LLVM(version_LLVM, revision, folder, tarball, debug, selfbuild, extra,
                     (("  -DCMAKE_CXX_COMPILER=" + gcc_toolchain_path+"/bin/g++") if gcc_toolchain_path != "" else "") +
                     (("  -DDEFAULT_SYSROOT=" + mac_system_root) if mac_system_root != "" else "") +
                     "  -DLLVM_TARGETS_TO_BUILD=NVPTX\;X86" +
-                    " ../" + LLVM_SRC,
+                    " ../" + cmakelists_path,
                     from_validation)
             selfbuild_compiler = ("  -DCMAKE_C_COMPILER=" +llvm_home+ "/" + LLVM_BIN_selfbuild + "/bin/clang " +
                                   "  -DCMAKE_CXX_COMPILER="+llvm_home+ "/" + LLVM_BIN_selfbuild + "/bin/clang++ ")
@@ -365,6 +378,7 @@ def build_LLVM(version_LLVM, revision, folder, tarball, debug, selfbuild, extra,
                         selfbuild_compiler +
                         "  -DCMAKE_INSTALL_PREFIX=" + llvm_home + "/" + LLVM_BIN +
                         "  -DCMAKE_BUILD_TYPE=Release" +
+                        llvm_enable_projects +
                         get_llvm_enable_dump_switch(version_LLVM) +
                         "  -DLLVM_ENABLE_ASSERTIONS=ON" +
                         "  -DLLVM_INSTALL_UTILS=ON" +
@@ -373,7 +387,7 @@ def build_LLVM(version_LLVM, revision, folder, tarball, debug, selfbuild, extra,
                         (("  -DCMAKE_CXX_COMPILER=" + gcc_toolchain_path+"/bin/g++") if gcc_toolchain_path != "" and selfbuild_compiler == "" else "") +
                         (("  -DDEFAULT_SYSROOT=" + mac_system_root) if mac_system_root != "" else "") +
                         "  -DLLVM_TARGETS_TO_BUILD=NVPTX\;X86" +
-                        " ../" + LLVM_SRC,
+                        " ../" + cmakelists_path,
                         from_validation)
             else:
                 try_do_LLVM("configure release version ",
@@ -387,11 +401,12 @@ def build_LLVM(version_LLVM, revision, folder, tarball, debug, selfbuild, extra,
             try_do_LLVM("configure release version ",
                     'cmake -G ' + '\"' + generator + '\"' + ' -DCMAKE_INSTALL_PREFIX="..\\'+ LLVM_BIN + '" ' +
                     '  -DCMAKE_BUILD_TYPE=Release' +
+                    llvm_enable_projects +
                     get_llvm_enable_dump_switch(version_LLVM) +
                     '  -DLLVM_ENABLE_ASSERTIONS=ON' +
                     '  -DLLVM_INSTALL_UTILS=ON' +
                     '  -DLLVM_TARGETS_TO_BUILD=X86' +
-                    '  -DLLVM_LIT_TOOLS_DIR="C:\\gnuwin32\\bin" ..\\' + LLVM_SRC,
+                    '  -DLLVM_LIT_TOOLS_DIR="C:\\gnuwin32\\bin" ..\\' + cmakelists_path,
                     from_validation)
     else:
         if  version_LLVM not in LLVM_configure_capable:
@@ -400,6 +415,7 @@ def build_LLVM(version_LLVM, revision, folder, tarball, debug, selfbuild, extra,
                     selfbuild_compiler +
                     "  -DCMAKE_INSTALL_PREFIX=" + llvm_home + "/" + LLVM_BIN +
                     "  -DCMAKE_BUILD_TYPE=Debug" +
+                    llvm_enable_projects +
                     get_llvm_enable_dump_switch(version_LLVM) +
                     "  -DLLVM_ENABLE_ASSERTIONS=ON" +
                     "  -DLLVM_INSTALL_UTILS=ON" +
@@ -408,7 +424,7 @@ def build_LLVM(version_LLVM, revision, folder, tarball, debug, selfbuild, extra,
                     (("  -DCMAKE_CXX_COMPILER=" + gcc_toolchain_path+"/bin/g++") if gcc_toolchain_path != "" and selfbuild_compiler == "" else "") +
                     (("  -DDEFAULT_SYSROOT=" + mac_system_root) if mac_system_root != "" else "") +
                     "  -DLLVM_TARGETS_TO_BUILD=NVPTX\;X86" +
-                    " ../" + LLVM_SRC,
+                    " ../" + cmakelists_path,
                     from_validation)
         else:
             try_do_LLVM("configure debug version ",
