@@ -468,6 +468,7 @@ Target::Target(const char *arch, const char *cpu, const char *isa, bool pic, boo
       m_hasVecPrefetch(false) {
     CPUtype CPUID = CPU_None, CPUfromISA = CPU_None;
     AllCPUs a;
+    std::string featuresString;
 
     if (cpu) {
         CPUID = a.GetTypeFromName(cpu);
@@ -930,30 +931,33 @@ Target::Target(const char *arch, const char *cpu, const char *isa, bool pic, boo
         this->m_nativeVectorAlignment = 16;
         this->m_dataTypeWidth = 8;
         this->m_vectorWidth = 16;
-        this->m_attributes = "+neon,+fp16";
         this->m_hasHalf = true; // ??
         this->m_maskingIsFree = false;
         this->m_maskBitCount = 8;
+        this->m_funcAttributes.push_back(std::make_pair("target-features", "+neon,+fp16"));
+        featuresString = "+neon,+fp16";
     } else if (!strcasecmp(isa, "neon-i16x8")) {
         this->m_isa = Target::NEON16;
         this->m_nativeVectorWidth = 8;
         this->m_nativeVectorAlignment = 16;
         this->m_dataTypeWidth = 16;
         this->m_vectorWidth = 8;
-        this->m_attributes = "+neon,+fp16";
         this->m_hasHalf = true; // ??
         this->m_maskingIsFree = false;
         this->m_maskBitCount = 16;
+        this->m_funcAttributes.push_back(std::make_pair("target-features", "+neon,+fp16"));
+        featuresString = "+neon,+fp16";
     } else if (!strcasecmp(isa, "neon") || !strcasecmp(isa, "neon-i32x4")) {
         this->m_isa = Target::NEON32;
         this->m_nativeVectorWidth = 4;
         this->m_nativeVectorAlignment = 16;
         this->m_dataTypeWidth = 32;
         this->m_vectorWidth = 4;
-        this->m_attributes = "+neon,+fp16";
         this->m_hasHalf = true; // ??
         this->m_maskingIsFree = false;
         this->m_maskBitCount = 32;
+        this->m_funcAttributes.push_back(std::make_pair("target-features", "+neon,+fp16"));
+        featuresString = "+neon,+fp16";
     }
 #endif
 #ifdef ISPC_NVPTX_ENABLED
@@ -1022,7 +1026,6 @@ Target::Target(const char *arch, const char *cpu, const char *isa, bool pic, boo
             relocModel = llvm::Reloc::PIC_;
         }
 #endif
-        std::string featuresString = m_attributes;
         llvm::TargetOptions options;
 #ifdef ISPC_ARM_ENABLED
         if (m_isa == Target::NEON8 || m_isa == Target::NEON16 || m_isa == Target::NEON32)
@@ -1113,6 +1116,10 @@ Target::Target(const char *arch, const char *cpu, const char *isa, bool pic, boo
 
         // TO-DO : Revisit addition of "target-features" and "target-cpu" for ARM support.
         llvm::AttrBuilder fattrBuilder;
+#ifdef ISPC_ARM_ENABLED
+        if (m_isa == Target::NEON8 || m_isa == Target::NEON16 || m_isa == Target::NEON32)
+            fattrBuilder.addAttribute("target-cpu", this->m_cpu);
+#endif
         for (auto const &f_attr : m_funcAttributes)
             fattrBuilder.addAttribute(f_attr.first, f_attr.second);
 #if ISPC_LLVM_VERSION <= ISPC_LLVM_4_0
