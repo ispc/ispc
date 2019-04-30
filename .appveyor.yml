@@ -54,7 +54,7 @@ environment:
 cache:
   - C:\ProgramData\chocolatey\bin -> .appveyor.yml
   - C:\ProgramData\chocolatey\lib -> .appveyor.yml
-  - C:\projects\llvm -> .appveyor.yml, alloy.py
+  - C:\projects\llvm -> .appveyor-clean-cache.txt
 
 install:
   - cinst cygwin
