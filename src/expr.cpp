@@ -4604,7 +4604,7 @@ llvm::Value *VectorMemberExpr::GetValue(FunctionEmitContext *ctx) const {
             return NULL;
         }
 
-        // Allocate temporary memory to tore the result
+        // Allocate temporary memory to store the result
         llvm::Value *resultPtr = ctx->AllocaInst(memberType->LLVMType(g->ctx), "vector_tmp");
 
         // FIXME: we should be able to use the internal mask here according
@@ -6263,6 +6263,10 @@ static llvm::Value *lTypeConvAtomic(FunctionEmitContext *ctx, llvm::Value *exprV
     case AtomicType::TYPE_BOOL: {
         switch (fromType->basicType) {
         case AtomicType::TYPE_BOOL:
+            if (fromType->IsVaryingType() && LLVMTypes::BoolVectorType != LLVMTypes::Int1VectorType) {
+                // truncate bool vector values to i1s
+                exprVal = ctx->TruncInst(exprVal, LLVMTypes::Int1VectorType, cOpName);
+            }
             cast = exprVal;
             break;
         case AtomicType::TYPE_INT8:
@@ -6316,10 +6320,10 @@ static llvm::Value *lTypeConvAtomic(FunctionEmitContext *ctx, llvm::Value *exprV
                 // does for everyone else...
                 cast = ctx->SExtInst(cast, LLVMTypes::BoolVectorType->getElementType(), LLVMGetName(cast, "to_i_bool"));
             }
-        } else
+        } else {
             // fromType->IsVaryingType())
             cast = ctx->I1VecToBoolVec(cast);
-
+        }
         break;
     }
     default:
