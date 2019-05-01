@@ -4584,7 +4584,7 @@ llvm::Value *VectorMemberExpr::GetValue(FunctionEmitContext *ctx) const {
         for (size_t i = 0; i < identifier.size(); ++i) {
             int idx = lIdentifierToVectorElement(identifier[i]);
             if (idx == -1)
-                Error(pos, "Invalid swizzle charcter '%c' in swizzle \"%s\".", identifier[i], identifier.c_str());
+                Error(pos, "Invalid swizzle character '%c' in swizzle \"%s\".", identifier[i], identifier.c_str());
 
             indices.push_back(idx);
         }
@@ -4600,8 +4600,15 @@ llvm::Value *VectorMemberExpr::GetValue(FunctionEmitContext *ctx) const {
         }
 
         if (basePtr == NULL || basePtrType == NULL) {
-            AssertPos(pos, m->errorCount > 0);
-            return NULL;
+            // Check that expression on the left side is a rvalue expression
+            llvm::Value *exprValue = expr->GetValue(ctx);
+            basePtr = ctx->AllocaInst(expr->GetType()->LLVMType(g->ctx));
+            basePtrType = PointerType::GetUniform(exprVectorType);
+            if (basePtr == NULL || basePtrType == NULL) {
+                AssertPos(pos, m->errorCount > 0);
+                return NULL;
+            }
+            ctx->StoreInst(exprValue, basePtr);
         }
 
         // Allocate temporary memory to store the result
