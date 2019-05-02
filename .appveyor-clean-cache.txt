@@ -33,3 +33,4 @@ This is the file to explicitely trigger Appveyor cache invalidation caused
 by updates of docker files.
 
 04/25/2019: Updated dockers with LLVM ARM target
+05/01/2019: Updated dockers with LLVM AARCH64 target
