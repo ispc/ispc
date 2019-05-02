@@ -189,6 +189,9 @@ def run_test(testname):
         elif (options.target == "knl-generic"):
             ispc_cmd = ispc_exe_rel + " --werror --nowrap %s --arch=%s --target=%s" % \
                 (filename, options.arch, "generic-16")
+        elif (options.arch == "aarch64"):
+            ispc_cmd = ispc_exe_rel + " --werror --nowrap %s --arch=%s --cpu=cortex-a35 --target=%s" % \
+                (filename, options.arch, options.target)
         else:
             ispc_cmd = ispc_exe_rel + " --werror --nowrap %s --arch=%s --target=%s" % \
                 (filename, options.arch, options.target)
@@ -267,11 +270,12 @@ def run_test(testname):
 
                 if options.arch == 'arm':
                      gcc_arch = '--with-fpu=hardfp -marm -mfpu=neon -mfloat-abi=hard'
+                elif options.arch == 'x86':
+                    gcc_arch = '-m32'
+                elif options.arch == 'aarch64':
+                    gcc_arch = '-march=armv8-a -target aarch64-linux-gnueabi --static'
                 else:
-                    if options.arch == 'x86':
-                        gcc_arch = '-m32'
-                    else:
-                        gcc_arch = '-m64'
+                    gcc_arch = '-m64'
 
                 gcc_isa=""
                 if options.target == 'generic-4':
@@ -315,6 +319,9 @@ def run_test(testname):
             elif (options.target == "knl-generic"):
                 ispc_cmd = ispc_exe_rel + " --woff %s -o %s --arch=%s --target=%s" % \
                            (filename, obj_name, options.arch, "generic-16")
+            elif (options.arch == "aarch64"):
+                ispc_cmd = ispc_exe_rel + " --woff %s -o %s --arch=%s --cpu=cortex-a35" % \
+                           (filename, obj_name, options.arch)
             else:
                 ispc_cmd = ispc_exe_rel + " --woff %s -o %s --arch=%s --target=%s" % \
                            (filename, obj_name, options.arch, options.target)
@@ -938,7 +945,7 @@ if __name__ == "__main__":
                   'avx2-i32x8, avx2-i32x16, avx512knl-i32x16, generic-x1, generic-x4, generic-x8, generic-x16, ' +
                   'generic-x32, generic-x64, knc-generic, knl-generic)'), default="sse4")
     parser.add_option('-a', '--arch', dest='arch',
-                  help='Set architecture (arm, x86, x86-64)',default="x86-64")
+                  help='Set architecture (arm, aarch64, x86, x86-64)',default="x86-64")
     parser.add_option("-c", "--compiler", dest="compiler_exe", help="C/C++ compiler binary to use to run tests",
                   default=None)
     parser.add_option('-o', '--no-opt', dest='no_opt', help='Disable optimization',
