@@ -432,13 +432,20 @@ int main(int Argc, char *Argv[]) {
 #endif // !__ARM__
 
 #ifdef ISPC_ARM_ENABLED
-    // Generating ARM from x86 is more likely to be useful, though.
+    // Generating ARM and AARCH64 from x86 is more likely to be useful, though.
     LLVMInitializeARMTargetInfo();
     LLVMInitializeARMTarget();
     LLVMInitializeARMAsmPrinter();
     LLVMInitializeARMAsmParser();
     LLVMInitializeARMDisassembler();
     LLVMInitializeARMTargetMC();
+
+    LLVMInitializeAArch64TargetInfo();
+    LLVMInitializeAArch64Target();
+    LLVMInitializeAArch64AsmPrinter();
+    LLVMInitializeAArch64AsmParser();
+    LLVMInitializeAArch64Disassembler();
+    LLVMInitializeAArch64TargetMC();
 #endif
 
 #ifdef ISPC_NVPTX_ENABLED
