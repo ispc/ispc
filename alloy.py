@@ -1055,7 +1055,7 @@ def Main():
         generator = options.generator
     else:
         if current_OS == "Windows":
-            generator = "Visual Studio 14"
+            generator = "Visual Studio 15"
         else:
             generator = "Unix Makefiles"
     try:
