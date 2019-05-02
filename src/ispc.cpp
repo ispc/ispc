@@ -282,6 +282,9 @@ typedef enum {
 
     // ARM Cortex A9. Supports NEON VFPv3.
     CPU_CortexA9,
+
+    // ARM Cortex A35.
+    CPU_CortexA35,
 #endif
 
 #ifdef ISPC_NVPTX_ENABLED
@@ -361,6 +364,8 @@ class AllCPUs {
         names[CPU_CortexA15].push_back("cortex-a15");
 
         names[CPU_CortexA9].push_back("cortex-a9");
+
+        names[CPU_CortexA35].push_back("cortex-a35");
 #endif
 
 #ifdef ISPC_NVPTX_ENABLED
@@ -410,6 +415,7 @@ class AllCPUs {
 #ifdef ISPC_ARM_ENABLED
         compat[CPU_CortexA15] = Set(CPU_Generic, CPU_CortexA9, CPU_CortexA15, CPU_None);
         compat[CPU_CortexA9] = Set(CPU_Generic, CPU_CortexA9, CPU_None);
+        compat[CPU_CortexA35] = Set(CPU_Generic, CPU_CortexA35, CPU_None);
 #endif
 
 #ifdef ISPC_NVPTX_ENABLED
@@ -508,6 +514,7 @@ Target::Target(const char *arch, const char *cpu, const char *isa, bool pic, boo
 #ifdef ISPC_ARM_ENABLED
         case CPU_CortexA9:
         case CPU_CortexA15:
+        case CPU_CortexA35:
             isa = "neon-i32x4";
             break;
 #endif
@@ -934,8 +941,6 @@ Target::Target(const char *arch, const char *cpu, const char *isa, bool pic, boo
         this->m_hasHalf = true; // ??
         this->m_maskingIsFree = false;
         this->m_maskBitCount = 8;
-        this->m_funcAttributes.push_back(std::make_pair("target-features", "+neon,+fp16"));
-        featuresString = "+neon,+fp16";
     } else if (!strcasecmp(isa, "neon-i16x8")) {
         this->m_isa = Target::NEON16;
         this->m_nativeVectorWidth = 8;
@@ -945,8 +950,6 @@ Target::Target(const char *arch, const char *cpu, const char *isa, bool pic, boo
         this->m_hasHalf = true; // ??
         this->m_maskingIsFree = false;
         this->m_maskBitCount = 16;
-        this->m_funcAttributes.push_back(std::make_pair("target-features", "+neon,+fp16"));
-        featuresString = "+neon,+fp16";
     } else if (!strcasecmp(isa, "neon") || !strcasecmp(isa, "neon-i32x4")) {
         this->m_isa = Target::NEON32;
         this->m_nativeVectorWidth = 4;
@@ -956,8 +959,6 @@ Target::Target(const char *arch, const char *cpu, const char *isa, bool pic, boo
         this->m_hasHalf = true; // ??
         this->m_maskingIsFree = false;
         this->m_maskBitCount = 32;
-        this->m_funcAttributes.push_back(std::make_pair("target-features", "+neon,+fp16"));
-        featuresString = "+neon,+fp16";
     }
 #endif
 #ifdef ISPC_NVPTX_ENABLED
@@ -985,11 +986,9 @@ Target::Target(const char *arch, const char *cpu, const char *isa, bool pic, boo
     if ((CPUID == CPU_None) && !strncmp(isa, "neon", 4))
         CPUID = CPU_CortexA9;
 #endif
-
+    //TO-DO : Revisit cpu selection for cross-compilation
     if (CPUID == CPU_None) {
-#ifndef ISPC_ARM_ENABLED
         if (isa == NULL) {
-#endif
             std::string hostCPU = llvm::sys::getHostCPUName();
             if (hostCPU.size() > 0)
                 cpu = strdup(hostCPU.c_str());
@@ -997,11 +996,9 @@ Target::Target(const char *arch, const char *cpu, const char *isa, bool pic, boo
                 Warning(SourcePos(), "Unable to determine host CPU!\n");
                 cpu = a.GetDefaultNameFromType(CPU_Generic).c_str();
             }
-#ifndef ISPC_ARM_ENABLED
         } else {
             cpu = a.GetDefaultNameFromType(CPUfromISA).c_str();
         }
-#endif
     } else {
         if ((CPUfromISA != CPU_None) && !a.BackwardCompatible(CPUID, CPUfromISA)) {
             Error(SourcePos(),
@@ -1030,6 +1027,13 @@ Target::Target(const char *arch, const char *cpu, const char *isa, bool pic, boo
 #ifdef ISPC_ARM_ENABLED
         if (m_isa == Target::NEON8 || m_isa == Target::NEON16 || m_isa == Target::NEON32)
             options.FloatABIType = llvm::FloatABI::Hard;
+        if (strcmp("arm", arch) == 0) {
+            this->m_funcAttributes.push_back(std::make_pair("target-features", "+neon,+fp16"));
+            featuresString = "+neon,+fp16";
+        } else if (strcmp("aarch64", arch) == 0) {
+            this->m_funcAttributes.push_back(std::make_pair("target-features", "+neon"));
+            featuresString = "+neon";
+        }
 #endif
         if (g->opt.disableFMA == false)
             options.AllowFPOpFusion = llvm::FPOpFusion::Fast;
@@ -1151,7 +1155,7 @@ std::string Target::SupportedCPUs() {
 const char *Target::SupportedArchs() {
     return
 #ifdef ISPC_ARM_ENABLED
-        "arm, "
+        "arm, aarch64"
 #endif
         "x86, x86-64";
 }
@@ -1188,6 +1192,8 @@ std::string Target::GetTripleString() const {
 #ifdef ISPC_ARM_ENABLED
     if (m_arch == "arm") {
         triple.setTriple("armv7-eabi");
+    } else if (m_arch == "aarch64") {
+        triple.setTriple("aarch64-eabi");
     } else
 #endif
     {
