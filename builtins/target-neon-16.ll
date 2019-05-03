@@ -43,12 +43,12 @@ include(`target-neon-common.ll')
 ;; half conversion routines
 
 define <8 x float> @__half_to_float_varying(<8 x i16> %v) nounwind readnone alwaysinline {
-  unary4to8conv(r, i16, float, @llvm.arm.neon.vcvthf2fp, %v)
+  unary4to8conv(r, i16, float, @NEON_PREFIX.vcvthf2fp, %v)
   ret <8 x float> %r
 }
 
 define <8 x i16> @__float_to_half_varying(<8 x float> %v) nounwind readnone alwaysinline {
-  unary4to8conv(r, float, i16, @llvm.arm.neon.vcvtfp2hf, %v)
+  unary4to8conv(r, float, i16, @NEON_PREFIX.vcvtfp2hf, %v)
   ret <8 x i16> %r
 }
 

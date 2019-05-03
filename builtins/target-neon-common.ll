@@ -35,6 +35,120 @@
 
 target datalayout = "e-p:32:32:32-S32-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:32:64-f16:16:16-f32:32:32-f64:32:64-f128:128:128-v64:32:64-v128:32:128-a0:0:64-n32"
 
+
+define(`NEON_PREFIX',
+`ifelse(RUNTIME, `64', `llvm.aarch64.neon',
+        RUNTIME, `32', `llvm.arm.neon')')
+
+define(`NEON_PREFIX_FMIN',
+`ifelse(RUNTIME, `64', `llvm.aarch64.neon.fmin',
+        RUNTIME, `32', `llvm.arm.neon.vmins')')
+
+define(`NEON_PREFIX_IMINS',
+`ifelse(RUNTIME, `64', `llvm.aarch64.neon.smin',
+        RUNTIME, `32', `llvm.arm.neon.vmins')')
+
+define(`NEON_PREFIX_IMINU',
+`ifelse(RUNTIME, `64', `llvm.aarch64.neon.umin',
+        RUNTIME, `32', `llvm.arm.neon.vminu')')
+
+define(`NEON_PREFIX_PMINF',
+`ifelse(RUNTIME, `64', `llvm.aarch64.neon.fminp',
+        RUNTIME, `32', `llvm.arm.neon.vpmins')')
+
+define(`NEON_PREFIX_PMINS',
+`ifelse(RUNTIME, `64', `llvm.aarch64.neon.sminp',
+        RUNTIME, `32', `llvm.arm.neon.vpmins')')
+
+define(`NEON_PREFIX_PMINU',
+`ifelse(RUNTIME, `64', `llvm.aarch64.neon.uminp',
+        RUNTIME, `32', `llvm.arm.neon.vpminu')')
+
+define(`NEON_PREFIX_FMAX',
+`ifelse(RUNTIME, `64', `llvm.aarch64.neon.fmax',
+        RUNTIME, `32', `llvm.arm.neon.vmaxs')')
+
+define(`NEON_PREFIX_IMAXS',
+`ifelse(RUNTIME, `64', `llvm.aarch64.neon.smax',
+        RUNTIME, `32', `llvm.arm.neon.vmaxs')')
+
+define(`NEON_PREFIX_IMAXU',
+`ifelse(RUNTIME, `64', `llvm.aarch64.neon.umax',
+        RUNTIME, `32', `llvm.arm.neon.vmaxu')')
+
+define(`NEON_PREFIX_PMAXF',
+`ifelse(RUNTIME, `64', `llvm.aarch64.neon.fmaxp',
+        RUNTIME, `32', `llvm.arm.neon.vpmaxs')')
+
+define(`NEON_PREFIX_PMAXS',
+`ifelse(RUNTIME, `64', `llvm.aarch64.neon.smaxp',
+        RUNTIME, `32', `llvm.arm.neon.vpmaxs')')
+
+define(`NEON_PREFIX_PMAXU',
+`ifelse(RUNTIME, `64', `llvm.aarch64.neon.umaxp',
+        RUNTIME, `32', `llvm.arm.neon.vpmaxu')')
+
+define(`NEON_PREFIX_FPADD',
+`ifelse(RUNTIME, `64', `llvm.aarch64.neon.addp',
+        RUNTIME, `32', `llvm.arm.neon.vpadd')')
+
+define(`NEON_PREFIX_PADDLS',
+`ifelse(RUNTIME, `64', `llvm.aarch64.neon.saddlp',
+        RUNTIME, `32', `llvm.arm.neon.vpaddls')')
+
+define(`NEON_PREFIX_PADDLU',
+`ifelse(RUNTIME, `64', `llvm.aarch64.neon.uaddlp',
+        RUNTIME, `32', `llvm.arm.neon.vpaddlu')')
+
+define(`NEON_PREFIX_RHADDLS',
+`ifelse(RUNTIME, `64', `llvm.aarch64.neon.srhadd',
+        RUNTIME, `32', `llvm.arm.neon.vrhadds')')
+
+define(`NEON_PREFIX_RHADDLU',
+`ifelse(RUNTIME, `64', `llvm.aarch64.neon.urhadd',
+        RUNTIME, `32', `llvm.arm.neon.vrhaddu')')
+
+define(`NEON_PREFIX_HADDLS',
+`ifelse(RUNTIME, `64', `llvm.aarch64.neon.shadd',
+        RUNTIME, `32', `llvm.arm.neon.vhadds')')
+
+define(`NEON_PREFIX_HADDLU',
+`ifelse(RUNTIME, `64', `llvm.aarch64.neon.uhadd',
+        RUNTIME, `32', `llvm.arm.neon.vhaddu')')
+
+define(`NEON_PREFIX_QADDS',
+`ifelse(RUNTIME, `64', `llvm.aarch64.neon.sqadd',
+        RUNTIME, `32', `llvm.arm.neon.vqadds')')
+
+define(`NEON_PREFIX_QADDU',
+`ifelse(RUNTIME, `64', `llvm.aarch64.neon.uqadd',
+        RUNTIME, `32', `llvm.arm.neon.vqaddu')')
+
+define(`NEON_PREFIX_QSUBS',
+`ifelse(RUNTIME, `64', `llvm.aarch64.neon.sqsub',
+        RUNTIME, `32', `llvm.arm.neon.vqsubs')')
+
+define(`NEON_PREFIX_QSUBU',
+`ifelse(RUNTIME, `64', `llvm.aarch64.neon.uqsub',
+        RUNTIME, `32', `llvm.arm.neon.vqsubu')')
+
+define(`NEON_PREFIX_RECPEQ',
+`ifelse(RUNTIME, `64', `llvm.aarch64.neon.frecpe',
+        RUNTIME, `32', `llvm.arm.neon.vrecpe')')
+
+define(`NEON_PREFIX_RECPSQ',
+`ifelse(RUNTIME, `64', `llvm.aarch64.neon.frecps',
+        RUNTIME, `32', `llvm.arm.neon.vrecps')')
+
+define(`NEON_PREFIX_RSQRTEQ',
+`ifelse(RUNTIME, `64', `llvm.aarch64.neon.frsqrte',
+        RUNTIME, `32', `llvm.arm.neon.vrsqrte')')
+
+define(`NEON_PREFIX_RSQRTSQ',
+`ifelse(RUNTIME, `64', `llvm.aarch64.neon.frsqrts',
+        RUNTIME, `32', `llvm.arm.neon.vrsqrts')')
+
+
 stdlib_core()
 scans()
 reduce_equal(WIDTH)
@@ -46,14 +160,14 @@ ctlztz()
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; half conversion routines
 
-declare <4 x i16> @llvm.arm.neon.vcvtfp2hf(<4 x float>) nounwind readnone
-declare <4 x float> @llvm.arm.neon.vcvthf2fp(<4 x i16>) nounwind readnone
+declare <4 x i16> @NEON_PREFIX.vcvtfp2hf(<4 x float>) nounwind readnone
+declare <4 x float> @NEON_PREFIX.vcvthf2fp(<4 x i16>) nounwind readnone
 
 define float @__half_to_float_uniform(i16 %v) nounwind readnone alwaysinline {
   %v1 = bitcast i16 %v to <1 x i16>
   %vec = shufflevector <1 x i16> %v1, <1 x i16> undef, 
            <4 x i32> <i32 0, i32 0, i32 0, i32 0>
-  %h = call <4 x float> @llvm.arm.neon.vcvthf2fp(<4 x i16> %vec)
+  %h = call <4 x float> @NEON_PREFIX.vcvthf2fp(<4 x i16> %vec)
   %r = extractelement <4 x float> %h, i32 0
   ret float %r
 }
@@ -62,7 +176,7 @@ define i16 @__float_to_half_uniform(float %v) nounwind readnone alwaysinline {
   %v1 = bitcast float %v to <1 x float>
   %vec = shufflevector <1 x float> %v1, <1 x float> undef, 
            <4 x i32> <i32 0, i32 0, i32 0, i32 0>
-  %h = call <4 x i16> @llvm.arm.neon.vcvtfp2hf(<4 x float> %vec)
+  %h = call <4 x i16> @NEON_PREFIX.vcvtfp2hf(<4 x float> %vec)
   %r = extractelement <4 x i16> %h, i32 0
   ret i16 %r
 }
