@@ -104,7 +104,7 @@ Module *m;
 ///////////////////////////////////////////////////////////////////////////
 // Target
 
-#if !defined(ISPC_IS_WINDOWS) && !defined(__arm__)
+#if !defined(ISPC_IS_WINDOWS) && !defined(__arm__) && !defined(__aarch64__)
 static void __cpuid(int info[4], int infoType) {
     __asm__ __volatile__("cpuid" : "=a"(info[0]), "=b"(info[1]), "=c"(info[2]), "=d"(info[3]) : "0"(infoType));
 }
@@ -117,9 +117,9 @@ static void __cpuidex(int info[4], int level, int count) {
                          : "=a"(info[0]), "=r"(info[1]), "=c"(info[2]), "=d"(info[3])
                          : "0"(level), "2"(count));
 }
-#endif // !ISPC_IS_WINDOWS && !__ARM__
+#endif // !ISPC_IS_WINDOWS && !__ARM__ && !__AARCH64__
 
-#if !defined(__arm__)
+#if !defined(__arm__) && !defined(__aarch64__)
 static bool __os_has_avx_support() {
 #if defined(ISPC_IS_WINDOWS)
     // Check if the OS will save the YMM registers
@@ -150,10 +150,10 @@ static bool __os_has_avx512_support() {
     return (rEAX & 0xE6) == 0xE6;
 #endif // !defined(ISPC_IS_WINDOWS)
 }
-#endif // !__arm__
+#endif // !__arm__ && !__aarch64__
 
 static const char *lGetSystemISA() {
-#ifdef __arm__
+#if defined(__arm__) || defined(__aarch64__)
     return "neon-i32x4";
 #else
     int info[4];
@@ -208,6 +208,26 @@ static const char *lGetSystemISA() {
         exit(1);
     }
 #endif
+}
+
+static const bool lIsISAValidforArch(const char *isa, const char *arch) {
+    bool ret = true;
+    // If target name starts with sse or avx, has to be x86 or x86-64.
+    if (!strncmp(isa, "sse", 3) || !strncmp(isa, "avx", 3)) {
+        if ((strcasecmp(arch, "x86-64") != 0) && (strcasecmp(arch, "x86") != 0))
+            ret = false;
+    } else if (!strcasecmp(isa, "neon-i8x16") || !strcasecmp(isa, "neon-i16x8")) {
+        if (strcasecmp(arch, "arm"))
+            ret = false;
+    } else if (!strcasecmp(isa, "neon-i32x4") || !strcasecmp(isa, "neon")) {
+        if ((strcasecmp(arch, "arm") != 0) && (strcasecmp(arch, "aarch64") != 0))
+            ret = false;
+    } else if (!strcasecmp(isa, "nvptx")) {
+        if (strcasecmp(arch, "nvptx64"))
+            ret = false;
+    }
+
+    return ret;
 }
 
 typedef enum {
@@ -582,6 +602,9 @@ Target::Target(const char *arch, const char *cpu, const char *isa, bool pic, boo
         else
 #endif /* ISPC_NVPTX_ENABLED */
             arch = "x86-64";
+    } else if (!lIsISAValidforArch(isa, arch)) {
+        Error(SourcePos(), "arch = %s and target = %s is not a valid combination.\n", arch, isa);
+        return;
     }
 
     // Define arch alias
@@ -983,22 +1006,15 @@ Target::Target(const char *arch, const char *cpu, const char *isa, bool pic, boo
     }
 
 #if defined(ISPC_ARM_ENABLED) && !defined(__arm__)
-    if ((CPUID == CPU_None) && !strncmp(isa, "neon", 4))
+    if ((CPUID == CPU_None) && !strncmp(isa, "neon", 4) && !strncmp(arch, "arm", 3))
         CPUID = CPU_CortexA9;
 #endif
-    //TO-DO : Revisit cpu selection for cross-compilation
+#if defined(ISPC_ARM_ENABLED) && !defined(__aarch64__)
+    if ((CPUID == CPU_None) && !strncmp(isa, "neon", 4) && !strncmp(arch, "aarch64", 7))
+        CPUID = CPU_CortexA35;
+#endif
     if (CPUID == CPU_None) {
-        if (isa == NULL) {
-            std::string hostCPU = llvm::sys::getHostCPUName();
-            if (hostCPU.size() > 0)
-                cpu = strdup(hostCPU.c_str());
-            else {
-                Warning(SourcePos(), "Unable to determine host CPU!\n");
-                cpu = a.GetDefaultNameFromType(CPU_Generic).c_str();
-            }
-        } else {
-            cpu = a.GetDefaultNameFromType(CPUfromISA).c_str();
-        }
+        cpu = a.GetDefaultNameFromType(CPUfromISA).c_str();
     } else {
         if ((CPUfromISA != CPU_None) && !a.BackwardCompatible(CPUID, CPUfromISA)) {
             Error(SourcePos(),
