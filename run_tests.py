@@ -189,9 +189,6 @@ def run_test(testname):
         elif (options.target == "knl-generic"):
             ispc_cmd = ispc_exe_rel + " --werror --nowrap %s --arch=%s --target=%s" % \
                 (filename, options.arch, "generic-16")
-        elif (options.arch == "aarch64"):
-            ispc_cmd = ispc_exe_rel + " --werror --nowrap %s --arch=%s --cpu=cortex-a35 --target=%s" % \
-                (filename, options.arch, options.target)
         else:
             ispc_cmd = ispc_exe_rel + " --werror --nowrap %s --arch=%s --target=%s" % \
                 (filename, options.arch, options.target)
@@ -319,9 +316,6 @@ def run_test(testname):
             elif (options.target == "knl-generic"):
                 ispc_cmd = ispc_exe_rel + " --woff %s -o %s --arch=%s --target=%s" % \
                            (filename, obj_name, options.arch, "generic-16")
-            elif (options.arch == "aarch64"):
-                ispc_cmd = ispc_exe_rel + " --woff %s -o %s --arch=%s --cpu=cortex-a35" % \
-                           (filename, obj_name, options.arch)
             else:
                 ispc_cmd = ispc_exe_rel + " --woff %s -o %s --arch=%s --target=%s" % \
                            (filename, obj_name, options.arch, options.target)
@@ -633,7 +627,7 @@ def run_tests(options1, args, print_version):
                 'CYGWIN_NT' in platform.system())
 
     if options.target == 'neon':
-        options.arch = 'arm'
+        options.arch = 'aarch64'
     if options.target == "nvptx":
         options.arch = "nvptx64"
 
