@@ -419,6 +419,7 @@ int main(int Argc, char *Argv[]) {
     llvm::sys::AddSignalHandler(lSignal, NULL);
 
     // initialize available LLVM targets
+    // TO-DO : Revisit after experimenting on arm and aarch64 hardware.
 #ifndef __arm__
     // FIXME: LLVM build on ARM doesn't build the x86 targets by default.
     // It's not clear that anyone's going to want to generate x86 from an

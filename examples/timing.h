@@ -33,7 +33,7 @@
 
 #include <stdint.h>
 
-#ifdef __arm__
+#if defined(__arm__) || defined(__aarch64__)
 #include <sys/time.h>
 // There's no easy way to get a hardware clock counter on ARM, so instead
 // we'll pretend it's a 1GHz processor and then compute pretend cycles
@@ -65,7 +65,7 @@ static inline double rtc(void) {
     return etime;
 }
 
-#else // __arm__
+#else // __arm__ || __aarch64__
 
 #ifdef WIN32
 #include <windows.h>
@@ -94,7 +94,7 @@ static inline double rtc(void) {
 }
 
 #endif // !WIN32
-#endif // !__arm__
+#endif // !__arm__ && !__aarch64__
 
 static uint64_t start, end;
 static double tstart, tend;
