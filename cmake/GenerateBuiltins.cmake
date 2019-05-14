@@ -78,9 +78,13 @@ endfunction()
 function(builtin_to_cpp bit resultFileName)
     set(inputFilePath builtins/builtins.c)
     set(output ${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_CFG_INTDIR}/builtins-c-${bit}.cpp)
+    set(fpic) 
+    if (UNIX)
+        set(fpic -fPIC)
+    endif()
     add_custom_command(
         OUTPUT ${output}
-        COMMAND ${CLANG_EXECUTABLE} -m${bit} -emit-llvm -c ${inputFilePath} -o - | \"${LLVM_DIS_EXECUTABLE}\" -
+        COMMAND ${CLANG_EXECUTABLE} ${fpic} -m${bit} -emit-llvm -c ${inputFilePath} -o - | \"${LLVM_DIS_EXECUTABLE}\" -
             | \"${PYTHON_EXECUTABLE}\" bitcode2cpp.py c ${bit} --llvm_as ${LLVM_AS_EXECUTABLE}
             > ${output}
         DEPENDS ${inputFilePath}
