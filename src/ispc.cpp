@@ -219,7 +219,7 @@ static const bool lIsISAValidforArch(const char *isa, const char *arch) {
     } else if (!strcasecmp(isa, "neon-i8x16") || !strcasecmp(isa, "neon-i16x8")) {
         if (strcasecmp(arch, "arm"))
             ret = false;
-    } else if (!strcasecmp(isa, "neon-i32x4") || !strcasecmp(isa, "neon")) {
+    } else if (!strcasecmp(isa, "neon-i32x4") || !strcasecmp(isa, "neon-i32x8") || !strcasecmp(isa, "neon")) {
         if ((strcasecmp(arch, "arm") != 0) && (strcasecmp(arch, "aarch64") != 0))
             ret = false;
     } else if (!strcasecmp(isa, "nvptx")) {
@@ -982,6 +982,15 @@ Target::Target(const char *arch, const char *cpu, const char *isa, bool pic, boo
         this->m_hasHalf = true; // ??
         this->m_maskingIsFree = false;
         this->m_maskBitCount = 32;
+    } else if (!strcasecmp(isa, "neon-i32x8")) {
+        this->m_isa = Target::NEON32;
+        this->m_nativeVectorWidth = 4;
+        this->m_nativeVectorAlignment = 16;
+        this->m_dataTypeWidth = 32;
+        this->m_vectorWidth = 8;
+        this->m_hasHalf = true; // ??
+        this->m_maskingIsFree = false;
+        this->m_maskBitCount = 32;
     }
 #endif
 #ifdef ISPC_NVPTX_ENABLED
@@ -1195,7 +1204,7 @@ const char *Target::SupportedTargets() {
            "generic-x1, generic-x4, generic-x8, generic-x16, "
            "generic-x32, generic-x64, *-generic-x16"
 #ifdef ISPC_ARM_ENABLED
-           ", neon-i8x16, neon-i16x8, neon-i32x4"
+           ", neon-i8x16, neon-i16x8, neon-i32x4, neon-i32x8"
 #endif
 #ifdef ISPC_NVPTX_ENABLED
            ", nvptx"
