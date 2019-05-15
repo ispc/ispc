@@ -1186,10 +1186,23 @@ void DefineStdlib(SymbolTable *symbolTable, llvm::LLVMContext *ctx, llvm::Module
         break;
     }
     case Target::NEON32: {
-        if (runtime32) {
-            EXPORT_MODULE(builtins_bitcode_neon_32_32bit);
-        } else {
-            EXPORT_MODULE(builtins_bitcode_neon_32_64bit);
+        switch (g->target->getVectorWidth()) {
+        case 4:
+            if (runtime32) {
+                EXPORT_MODULE(builtins_bitcode_neon_32_32bit);
+            } else {
+                EXPORT_MODULE(builtins_bitcode_neon_32_64bit);
+            }
+            break;
+        case 8:
+            if (runtime32) {
+                EXPORT_MODULE(builtins_bitcode_neon_32_x2_32bit);
+            } else {
+                EXPORT_MODULE(builtins_bitcode_neon_32_x2_64bit);
+            }
+            break;
+        default:
+            FATAL("logic error in DefineStdlib");
         }
         break;
     }

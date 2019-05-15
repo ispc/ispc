@@ -129,7 +129,7 @@ endif()
 
 if (ARM_ENABLED)
     list(APPEND LLVM_COMPONENTS arm aarch64)
-    list(APPEND ISPC_TARGETS neon-32 neon-16 neon-8)
+    list(APPEND ISPC_TARGETS neon-32 neon-32-x2 neon-16 neon-8)
 endif()
 if (NVPTX_ENABLED)
     list(APPEND LLVM_COMPONENTS nvptx)
