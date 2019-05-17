@@ -2,6 +2,7 @@
 ;; target-neon-8.ll
 ;;
 ;;  Copyright(c) 2013-2015 Google, Inc.
+;;  Copyright(c) 2019 Intel
 ;;
 ;;  All rights reserved.
 ;;
@@ -175,6 +176,11 @@ define <WIDTH x float> @__rcp_varying_float(<WIDTH x float> %d) nounwind readnon
   ret <WIDTH x float> %x2
 }
 
+define <WIDTH x float> @__rcp_fast_varying_float(<WIDTH x float> %d) nounwind readnone alwaysinline {
+  unary4to16(ret, float, @llvm.arm.neon.vrecpe.v4f32, %d)
+  ret <WIDTH x float> %ret
+}
+
 declare <4 x float> @llvm.arm.neon.vrsqrte.v4f32(<4 x float>) nounwind readnone
 declare <4 x float> @llvm.arm.neon.vrsqrts.v4f32(<4 x float>, <4 x float>) nounwind readnone
 
@@ -189,6 +195,11 @@ define <WIDTH x float> @__rsqrt_varying_float(<WIDTH x float> %d) nounwind readn
   ret <WIDTH x float> %x2
 }
 
+define <WIDTH x float> @__rsqrt_fast_varying_float(<WIDTH x float> %d) nounwind readnone alwaysinline {
+  unary4to16(ret, float, @llvm.arm.neon.vrsqrte.v4f32, %d)
+  ret <WIDTH x float> %ret
+}
+
 define float @__rsqrt_uniform_float(float) nounwind readnone alwaysinline {
   %v1 = bitcast float %0 to <1 x float>
   %vs = shufflevector <1 x float> %v1, <1 x float> undef,
@@ -201,6 +212,18 @@ define float @__rsqrt_uniform_float(float) nounwind readnone alwaysinline {
   ret float %r
 }
 
+define float @__rsqrt_fast_uniform_float(float) nounwind readnone alwaysinline {
+  %v1 = bitcast float %0 to <1 x float>
+  %vs = shufflevector <1 x float> %v1, <1 x float> undef,
+          <16 x i32> <i32 0, i32 undef, i32 undef, i32 undef,
+                      i32 undef, i32 undef, i32 undef, i32 undef,
+                      i32 undef, i32 undef, i32 undef, i32 undef,
+                      i32 undef, i32 undef, i32 undef, i32 undef>
+  %vr = call <16 x float> @__rsqrt_fast_varying_float(<16 x float> %vs)
+  %r = extractelement <16 x float> %vr, i32 0
+  ret float %r
+}
+
 define float @__rcp_uniform_float(float) nounwind readnone alwaysinline {
   %v1 = bitcast float %0 to <1 x float>
   %vs = shufflevector <1 x float> %v1, <1 x float> undef,
@@ -209,6 +232,18 @@ define float @__rcp_uniform_float(float) nounwind readnone alwaysinline {
                       i32 undef, i32 undef, i32 undef, i32 undef,
                       i32 undef, i32 undef, i32 undef, i32 undef>
   %vr = call <16 x float> @__rcp_varying_float(<16 x float> %vs)
+  %r = extractelement <16 x float> %vr, i32 0
+  ret float %r
+}
+
+define float @__rcp_fast_uniform_float(float) nounwind readnone alwaysinline {
+  %v1 = bitcast float %0 to <1 x float>
+  %vs = shufflevector <1 x float> %v1, <1 x float> undef,
+          <16 x i32> <i32 0, i32 undef, i32 undef, i32 undef,
+                      i32 undef, i32 undef, i32 undef, i32 undef,
+                      i32 undef, i32 undef, i32 undef, i32 undef,
+                      i32 undef, i32 undef, i32 undef, i32 undef>
+  %vr = call <16 x float> @__rcp_fast_varying_float(<16 x float> %vs)
   %r = extractelement <16 x float> %vr, i32 0
   ret float %r
 }

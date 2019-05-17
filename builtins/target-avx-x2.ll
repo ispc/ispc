@@ -1,4 +1,4 @@
-;;  Copyright (c) 2010-2015, Intel Corporation
+;;  Copyright (c) 2010-2019, Intel Corporation
 ;;  All rights reserved.
 ;;
 ;;  Redistribution and use in source and binary forms, with or without
@@ -64,6 +64,11 @@ define <16 x float> @__rcp_varying_float(<16 x float>) nounwind readonly alwaysi
   ret <16 x float> %iv_mul
 }
 
+define <16 x float> @__rcp_fast_varying_float(<16 x float>) nounwind readonly alwaysinline {
+  unary8to16(ret, float, @llvm.x86.avx.rcp.ps.256, %0)
+  ret <16 x float> %ret
+}
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; rounding floats
 
@@ -123,6 +128,11 @@ define <16 x float> @__rsqrt_varying_float(<16 x float> %v) nounwind readonly al
                                    float 0.5, float 0.5, float 0.5, float 0.5,
                                    float 0.5, float 0.5, float 0.5, float 0.5>, %is_mul
   ret <16 x float> %half_scale
+}
+
+define <16 x float> @__rsqrt_fast_varying_float(<16 x float> %v) nounwind readonly alwaysinline {
+  unary8to16(ret, float, @llvm.x86.avx.rsqrt.ps.256, %v)
+  ret <16 x float> %ret
 }
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

@@ -1,6 +1,6 @@
 // -*- mode: c++ -*-
 /*
-  Copyright (c) 2010-2018, Intel Corporation
+  Copyright (c) 2010-2019, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -1701,6 +1701,16 @@ static inline uniform float rcp(uniform float v) {
     return __rcp_uniform_float(v);
 }
 
+__declspec(safe)
+static inline float rcp_fast(float v) {
+    return __rcp_fast_varying_float(v);
+}
+
+__declspec(safe)
+static inline uniform float rcp_fast(uniform float v) {
+    return __rcp_fast_uniform_float(v);
+}
+
 #define RCPD(QUAL) \
 __declspec(safe)  \
 static inline QUAL double __rcp_iterate_##QUAL##_double(QUAL double v, QUAL double iv) \
@@ -2590,6 +2600,16 @@ static inline float rsqrt(float v) {
 __declspec(safe)
 static inline uniform float rsqrt(uniform float v) {
     return __rsqrt_uniform_float(v);
+}
+
+__declspec(safe)
+static inline float rsqrt_fast(float v) {
+    return __rsqrt_fast_varying_float(v);
+}
+
+__declspec(safe)
+static inline uniform float rsqrt_fast(uniform float v) {
+    return __rsqrt_fast_uniform_float(v);
 }
 
 __declspec(safe)

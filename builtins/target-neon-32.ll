@@ -177,6 +177,11 @@ define <WIDTH x float> @__rcp_varying_float(<WIDTH x float> %d) nounwind readnon
   ret <4 x float> %x2
 }
 
+define <WIDTH x float> @__rcp_fast_varying_float(<WIDTH x float> %d) nounwind readnone alwaysinline {
+  %ret = call <4 x float> @NEON_PREFIX_RECPEQ.v4f32(<4 x float> %d)
+  ret <4 x float> %ret
+}
+
 declare <4 x float> @NEON_PREFIX_RSQRTEQ.v4f32(<4 x float>) nounwind readnone
 declare <4 x float> @NEON_PREFIX_RSQRTSQ.v4f32(<4 x float>, <4 x float>) nounwind readnone
 
@@ -200,11 +205,34 @@ define float @__rsqrt_uniform_float(float) nounwind readnone alwaysinline {
   ret float %r
 }
 
+define <WIDTH x float> @__rsqrt_fast_varying_float(<WIDTH x float> %d) nounwind readnone alwaysinline {
+  %ret = call <4 x float> @NEON_PREFIX_RSQRTEQ.v4f32(<4 x float> %d)
+  ret <4 x float> %ret
+}
+
+define float @__rsqrt_fast_uniform_float(float) nounwind readnone alwaysinline {
+  %v1 = bitcast float %0 to <1 x float>
+  %vs = shufflevector <1 x float> %v1, <1 x float> undef,
+          <4 x i32> <i32 0, i32 undef, i32 undef, i32 undef>
+  %vr = call <4 x float> @__rsqrt_fast_varying_float(<4 x float> %vs)
+  %r = extractelement <4 x float> %vr, i32 0
+  ret float %r
+}
+
 define float @__rcp_uniform_float(float) nounwind readnone alwaysinline {
   %v1 = bitcast float %0 to <1 x float>
   %vs = shufflevector <1 x float> %v1, <1 x float> undef,
           <4 x i32> <i32 0, i32 undef, i32 undef, i32 undef>
   %vr = call <4 x float> @__rcp_varying_float(<4 x float> %vs)
+  %r = extractelement <4 x float> %vr, i32 0
+  ret float %r
+}
+
+define float @__rcp_fast_uniform_float(float) nounwind readnone alwaysinline {
+  %v1 = bitcast float %0 to <1 x float>
+  %vs = shufflevector <1 x float> %v1, <1 x float> undef,
+          <4 x i32> <i32 0, i32 undef, i32 undef, i32 undef>
+  %vr = call <4 x float> @__rcp_fast_varying_float(<4 x float> %vs)
   %r = extractelement <4 x float> %vr, i32 0
   ret float %r
 }
