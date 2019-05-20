@@ -1540,7 +1540,7 @@ The following reserved words from C89 are also reserved in ``ispc``:
 
 ``bool``, ``delete``, ``export``, ``cdo``, ``cfor``, ``cif``, ``cwhile``,
 ``false``, ``foreach``, ``foreach_active``, ``foreach_tiled``,
-``foreach_unique``, ``in``, ``inline``, ``int8``, ``int16``, ``int32``,
+``foreach_unique``, ``in``, ``inline``, ``noinline``, ``int8``, ``int16``, ``int32``,
 ``int64``, ``launch``, ``new``, ``print``, ``soa``, ``sync``, ``task``,
 ``true``, ``uniform``, and ``varying``.
 
@@ -1656,7 +1656,7 @@ The following identifiers are reserved as language keywords: ``bool``,
 ``const``, ``continue``, ``default``, ``do``, ``double``, ``else``,
 ``enum``, ``export``, ``extern``, ``false``, ``float``, ``for``,
 ``foreach``, ``foreach_active``, ``foreach_tiled``, ``foreach_unique``,
-``goto``, ``if``, ``in``, ``inline``, ``int``, ``int8``, ``int16``,
+``goto``, ``if``, ``in``, ``inline``, ``noinline``, ``int``, ``int8``, ``int16``,
 ``int32``, ``int64``, ``launch``, ``NULL``, ``print``, ``return``,
 ``signed``, ``sizeof``, ``soa``, ``static``, ``struct``, ``switch``,
 ``sync``, ``task``, ``true``, ``typedef``, ``uniform``, ``union``,
@@ -3069,7 +3069,9 @@ Finally, any function defined with an ``inline`` qualifier will always be
 inlined by ``ispc``; ``inline`` is not a hint, but forces inlining.  The
 compiler will opportunistically inline short functions depending on their
 complexity, but any function that should always be inlined should have the
-``inline`` qualifier.
+``inline`` qualifier. Similarly, any function defined with a ``noinline``
+qualifier will never be inlined by ``ispc``. ``noinline`` and ``inline``
+cannot be used on the same function.
 
 
 Function Overloading

@@ -86,7 +86,7 @@ static int allTokens[] = {
   TOKEN_GE_OP, TOKEN_EQ_OP, TOKEN_NE_OP, TOKEN_AND_OP, TOKEN_OR_OP,
   TOKEN_MUL_ASSIGN, TOKEN_DIV_ASSIGN, TOKEN_MOD_ASSIGN, TOKEN_ADD_ASSIGN,
   TOKEN_SUB_ASSIGN, TOKEN_LEFT_ASSIGN, TOKEN_RIGHT_ASSIGN, TOKEN_AND_ASSIGN,
-  TOKEN_XOR_ASSIGN, TOKEN_OR_ASSIGN, TOKEN_PTR_OP,
+  TOKEN_XOR_ASSIGN, TOKEN_OR_ASSIGN, TOKEN_PTR_OP, TOKEN_NOINLINE,
   ';', '{', '}', ',', ':', '=', '(', ')', '[', ']', '.', '&', '!', '~', '-',
   '+', '*', '/', '%', '<', '>', '^', '|', '?',
 };
@@ -124,6 +124,7 @@ void ParserInit() {
     tokenToName[TOKEN_IF] = "if";
     tokenToName[TOKEN_IN] = "in";
     tokenToName[TOKEN_INLINE] = "inline";
+    tokenToName[TOKEN_NOINLINE] = "noinline";
     tokenToName[TOKEN_INT] = "int";
     tokenToName[TOKEN_INT8] = "int8";
     tokenToName[TOKEN_INT16] = "int16";
@@ -239,6 +240,7 @@ void ParserInit() {
     tokenNameRemap["TOKEN_IF"] = "\'if\'";
     tokenNameRemap["TOKEN_IN"] = "\'in\'";
     tokenNameRemap["TOKEN_INLINE"] = "\'inline\'";
+    tokenNameRemap["TOKEN_NOINLINE"] = "\'noinline\'";
     tokenNameRemap["TOKEN_INT"] = "\'int\'";
     tokenNameRemap["TOKEN_INT8"] = "\'int8\'";
     tokenNameRemap["TOKEN_INT16"] = "\'int16\'";
@@ -392,6 +394,7 @@ goto { RT; return TOKEN_GOTO; }
 if { RT; return TOKEN_IF; }
 in { RT; return TOKEN_IN; }
 inline { RT; return TOKEN_INLINE; }
+noinline { RT; return TOKEN_NOINLINE; }
 int { RT; return TOKEN_INT; }
 int8 { RT; return TOKEN_INT8; }
 int16 { RT; return TOKEN_INT16; }

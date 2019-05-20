@@ -75,6 +75,7 @@ class Declarator;
 #define TYPEQUAL_INLINE (1 << 6)
 #define TYPEQUAL_EXPORT (1 << 7)
 #define TYPEQUAL_UNMASKED (1 << 8)
+#define TYPEQUAL_NOINLINE (1 << 9)
 
 /** @brief Representation of the declaration specifiers in a declaration.
 
