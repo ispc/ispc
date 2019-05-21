@@ -668,7 +668,8 @@ void Declaration::DeclareFunctions() {
             continue;
 
         bool isInline = (declSpecs->typeQualifiers & TYPEQUAL_INLINE);
-        m->AddFunctionDeclaration(decl->name, ftype, decl->storageClass, isInline, decl->pos);
+        bool isNoInline = (declSpecs->typeQualifiers & TYPEQUAL_NOINLINE);
+        m->AddFunctionDeclaration(decl->name, ftype, decl->storageClass, isInline, isNoInline, decl->pos);
     }
 }
 

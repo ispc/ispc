@@ -76,7 +76,7 @@ class Module {
     /** Add a declaration of the function defined by the given function
         symbol to the module. */
     void AddFunctionDeclaration(const std::string &name, const FunctionType *ftype, StorageClass sc, bool isInline,
-                                SourcePos pos);
+                                bool isNoInline, SourcePos pos);
 
     /** Adds the function described by the declaration information and the
         provided statements to the module. */

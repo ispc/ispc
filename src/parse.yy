@@ -195,7 +195,7 @@ struct ForeachDimension {
 %token TOKEN_AND_ASSIGN TOKEN_OR_ASSIGN TOKEN_XOR_ASSIGN
 %token TOKEN_SIZEOF TOKEN_NEW TOKEN_DELETE TOKEN_IN
 
-%token TOKEN_EXTERN TOKEN_EXPORT TOKEN_STATIC TOKEN_INLINE TOKEN_TASK TOKEN_DECLSPEC
+%token TOKEN_EXTERN TOKEN_EXPORT TOKEN_STATIC TOKEN_INLINE TOKEN_NOINLINE TOKEN_TASK TOKEN_DECLSPEC
 %token TOKEN_UNIFORM TOKEN_VARYING TOKEN_TYPEDEF TOKEN_SOA TOKEN_UNMASKED
 %token TOKEN_CHAR TOKEN_INT TOKEN_SIGNED TOKEN_UNSIGNED TOKEN_FLOAT TOKEN_DOUBLE
 %token TOKEN_INT8 TOKEN_INT16 TOKEN_INT64 TOKEN_CONST TOKEN_VOID TOKEN_BOOL
@@ -1120,6 +1120,11 @@ specifier_qualifier_list
                       "function declarations.");
                 $$ = $2;
             }
+            else if ($1 == TYPEQUAL_NOINLINE) {
+                Error(@1, "\"noinline\" qualifier is illegal outside of "
+                      "function declarations.");
+                $$ = $2;
+            }
             else if ($1 == TYPEQUAL_TASK) {
                 Error(@1, "\"task\" qualifier is illegal outside of "
                       "function declarations.");
@@ -1270,6 +1275,7 @@ type_qualifier
     | TOKEN_UNMASKED   { $$ = TYPEQUAL_UNMASKED; }
     | TOKEN_EXPORT     { $$ = TYPEQUAL_EXPORT; }
     | TOKEN_INLINE     { $$ = TYPEQUAL_INLINE; }
+    | TOKEN_NOINLINE   { $$ = TYPEQUAL_NOINLINE; }
     | TOKEN_SIGNED     { $$ = TYPEQUAL_SIGNED; }
     | TOKEN_UNSIGNED   { $$ = TYPEQUAL_UNSIGNED; }
     ;
@@ -2173,8 +2179,9 @@ lAddDeclaration(DeclSpecs *ds, Declarator *decl) {
         const FunctionType *ft = CastType<FunctionType>(decl->type);
         if (ft != NULL) {
             bool isInline = (ds->typeQualifiers & TYPEQUAL_INLINE);
+            bool isNoInline = (ds->typeQualifiers & TYPEQUAL_NOINLINE);
             m->AddFunctionDeclaration(decl->name, ft, ds->storageClass,
-                                      isInline, decl->pos);
+                                      isInline, isNoInline, decl->pos);
         }
         else {
             bool isConst = (ds->typeQualifiers & TYPEQUAL_CONST) != 0;

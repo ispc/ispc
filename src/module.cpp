@@ -863,7 +863,7 @@ static void lCheckForStructParameters(const FunctionType *ftype, SourcePos pos) 
     false if any errors were encountered.
  */
 void Module::AddFunctionDeclaration(const std::string &name, const FunctionType *functionType,
-                                    StorageClass storageClass, bool isInline, SourcePos pos) {
+                                    StorageClass storageClass, bool isInline, bool isNoInline, SourcePos pos) {
     Assert(functionType != NULL);
 
     // If a global variable with the same name has already been declared
@@ -993,6 +993,10 @@ void Module::AddFunctionDeclaration(const std::string &name, const FunctionType 
     }
 #endif
 
+    if (isNoInline && isInline) {
+        Error(pos, "Illegal to use \"noinline\" and \"inline\" qualifiers together on function \"%s\".", name.c_str());
+        return;
+    }
     // Set function attributes: we never throw exceptions
     function->setDoesNotThrow();
     if (storageClass != SC_EXTERN_C && isInline)
@@ -1000,6 +1004,13 @@ void Module::AddFunctionDeclaration(const std::string &name, const FunctionType 
         function->addFnAttr(llvm::Attributes::AlwaysInline);
 #else // LLVM 3.3+
         function->addFnAttr(llvm::Attribute::AlwaysInline);
+#endif
+
+    if (isNoInline)
+#ifdef LLVM_3_2
+        function->addFnAttr(llvm::Attributes::NoInline);
+#else // LLVM 3.3+
+        function->addFnAttr(llvm::Attribute::NoInline);
 #endif
 
     if (functionType->isTask)
