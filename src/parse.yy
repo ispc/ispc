@@ -1121,7 +1121,7 @@ specifier_qualifier_list
                 $$ = $2;
             }
             else if ($1 == TYPEQUAL_NOINLINE) {
-                Error(@1, "\"inline\" qualifier is illegal outside of "
+                Error(@1, "\"noinline\" qualifier is illegal outside of "
                       "function declarations.");
                 $$ = $2;
             }

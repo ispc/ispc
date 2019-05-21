@@ -993,6 +993,10 @@ void Module::AddFunctionDeclaration(const std::string &name, const FunctionType 
     }
 #endif
 
+    if (isNoInline && isInline) {
+        Error(pos, "Illegal to use \"noinline\" and \"inline\" qualifiers together on function \"%s\".", name.c_str());
+        return;
+    }
     // Set function attributes: we never throw exceptions
     function->setDoesNotThrow();
     if (storageClass != SC_EXTERN_C && isInline)
