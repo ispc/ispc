@@ -1,4 +1,5 @@
 ;;  Copyright (c) 2013, 2015, Google, Inc.
+;;  Copyright(c) 2019 Intel
 ;;  All rights reserved.
 ;;
 ;;  Redistribution and use in source and binary forms, with or without
@@ -72,6 +73,11 @@ define <WIDTH x float> @__rcp_varying_float(<WIDTH x float>) nounwind readonly a
   ret <16 x float> %iv_mul
 }
 
+define <WIDTH x float> @__rcp_fast_varying_float(<WIDTH x float>) nounwind readonly alwaysinline {
+  unary4to16(ret, float, @llvm.x86.sse.rcp.ps, %0)
+  ret <16 x float> %ret
+}
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; rsqrt
 
@@ -94,6 +100,11 @@ define <16 x float> @__rsqrt_varying_float(<16 x float> %v) nounwind readonly al
                                    float 0.5, float 0.5, float 0.5, float 0.5,
                                    float 0.5, float 0.5, float 0.5, float 0.5>, %is_mul
   ret <16 x float> %half_scale
+}
+
+define <16 x float> @__rsqrt_fast_varying_float(<16 x float> %v) nounwind readonly alwaysinline {
+  unary4to16(ret, float, @llvm.x86.sse.rsqrt.ps, %v)
+  ret <16 x float> %ret
 }
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

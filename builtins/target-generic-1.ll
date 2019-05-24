@@ -1,4 +1,4 @@
-;;  Copyright (c) 2012-2018, Intel Corporation
+;;  Copyright (c) 2012-2019, Intel Corporation
 ;;  All rights reserved.
 ;;
 ;;  Redistribution and use in source and binary forms, with or without
@@ -696,6 +696,12 @@ define  <1 x float> @__rcp_varying_float(<1 x float>) nounwind readonly alwaysin
   ret <1 x float> %rv
 }
 
+define  <1 x float> @__rcp_fast_varying_float(<1 x float>) nounwind readonly alwaysinline {
+  %d = extractelement <1 x float> %0, i32 0
+  %r = fdiv float 1.,%d
+  %rv = insertelement <1 x float> undef, float %r, i32 0
+  ret <1 x float> %rv
+}
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; sqrt
@@ -723,6 +729,13 @@ define  <1 x float> @__rsqrt_varying_float(<1 x float> %v) nounwind readonly alw
   ;%is_mul = fmul <1 x float> %is, %three_sub
   ;%half_scale = fmul <1 x float> <float 0.5, float 0.5, float 0.5, float 0.5>, %is_mul
   ;ret <1 x float> %half_scale
+  %s = call <1 x float> @__sqrt_varying_float(<1 x float> %v)
+  %r = call <1 x float> @__rcp_varying_float(<1 x float> %s)
+  ret <1 x float> %r
+  
+}
+
+define  <1 x float> @__rsqrt_fast_varying_float(<1 x float> %v) nounwind readonly alwaysinline {
   %s = call <1 x float> @__sqrt_varying_float(<1 x float> %v)
   %r = call <1 x float> @__rcp_varying_float(<1 x float> %s)
   ret <1 x float> %r
@@ -924,6 +937,13 @@ define  float @__rcp_uniform_float(float) nounwind readonly alwaysinline {
   ret float %r
 }
 
+define  float @__rcp_fast_uniform_float(float) nounwind readonly alwaysinline {
+;    uniform float iv = extract(__rcp_u(v), 0);
+;    return iv;
+  %r = fdiv float 1.,%0
+  ret float %r
+}
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; rounding floats
 
@@ -1005,6 +1025,12 @@ define  double @__sqrt_uniform_double(double) nounwind readonly alwaysinline {
 
 
 define  float @__rsqrt_uniform_float(float) nounwind readonly alwaysinline {
+  %s = call float @__sqrt_uniform_float(float %0)
+  %r = call float @__rcp_uniform_float(float %s)
+  ret float %r
+}
+
+define  float @__rsqrt_fast_uniform_float(float) nounwind readonly alwaysinline {
   %s = call float @__sqrt_uniform_float(float %0)
   %r = call float @__rcp_uniform_float(float %s)
   ret float %r

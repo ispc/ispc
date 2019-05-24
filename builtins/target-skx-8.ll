@@ -52,6 +52,11 @@ define <8 x float> @__rcp_varying_float(<8 x float>) nounwind readonly alwaysinl
   %iv_mul = fmul <8 x float> %call`,'  %two_minus
   ret <8 x float> %iv_mul
 }
+define <8 x float> @__rcp_fast_varying_float(<8 x float>) nounwind readonly alwaysinline {
+  %ret = call <8 x float> @llvm.x86.avx512.rcp14.ps.256(<8 x float> %0, <8 x float> undef, i8 -1)
+  ret <8 x float> %ret
+}
+
 declare <8 x float> @llvm.x86.avx512.rsqrt14.ps.256(<8 x float>`,'  <8 x float>`,'  i8) nounwind readnone
 define <8 x float> @__rsqrt_varying_float(<8 x float> %v) nounwind readonly alwaysinline {
   %is = call <8 x float> @llvm.x86.avx512.rsqrt14.ps.256(<8 x float> %v`,'  <8 x float> undef`,'  i8 -1)
@@ -66,6 +71,10 @@ define <8 x float> @__rsqrt_varying_float(<8 x float> %v) nounwind readonly alwa
   %half_scale = fmul <8 x float> <float 0.5`,' float 0.5`,' float 0.5`,' float 0.5`,'
                                    float 0.5`,' float 0.5`,' float 0.5`,' float 0.5>`,' %is_mul
   ret <8 x float> %half_scale
+}
+define <8 x float> @__rsqrt_fast_varying_float(<8 x float> %v) nounwind readonly alwaysinline {
+  %ret = call <8 x float> @llvm.x86.avx512.rsqrt14.ps.256(<8 x float> %v`,'  <8 x float> undef`,'  i8 -1)
+  ret <8 x float> %ret
 }
 ')
 

@@ -1,4 +1,4 @@
-;;  Copyright (c) 2010-2015, Intel Corporation
+;;  Copyright (c) 2010-2019, Intel Corporation
 ;;  All rights reserved.
 ;;
 ;;  Redistribution and use in source and binary forms, with or without
@@ -135,6 +135,16 @@ define float @__rcp_uniform_float(float) nounwind readonly alwaysinline {
   ret float %iv_mul
 }
 
+define float @__rcp_fast_uniform_float(float) nounwind readonly alwaysinline {
+  ; do the rcpss call
+  ;    uniform float iv = extract(__rcp_u(v), 0);
+  ;    return iv;
+  %vecval = insertelement <4 x float> undef, float %0, i32 0
+  %call = call <4 x float> @llvm.x86.sse.rcp.ss(<4 x float> %vecval)
+  %scall = extractelement <4 x float> %call, i32 0
+  ret float %scall
+}
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; rsqrt
 
@@ -154,6 +164,14 @@ define float @__rsqrt_uniform_float(float) nounwind readonly alwaysinline {
   %is_mul = fmul float %is, %three_sub
   %half_scale = fmul float 0.5, %is_mul
   ret float %half_scale
+}
+
+define float @__rsqrt_fast_uniform_float(float) nounwind readonly alwaysinline {
+  ;  uniform float is = extract(__rsqrt_u(v), 0);
+  %v = insertelement <4 x float> undef, float %0, i32 0
+  %vis = call <4 x float> @llvm.x86.sse.rsqrt.ss(<4 x float> %v)
+  %is = extractelement <4 x float> %vis, i32 0
+  ret float %is
 }
 
 

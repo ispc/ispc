@@ -3623,6 +3623,14 @@ different on different architectures.
     float rcp(float v)
     uniform float rcp(uniform float v)
 
+ispc also provides a version of ``rcp()`` for float with less precision which doesn't
+use Newton-Raphson.
+
+::
+
+    float rcp_fast(float v)
+    uniform float rcp_fast(uniform float v)
+
 A standard set of minimum and maximum functions is available.  These
 functions also map to corresponding intrinsic functions.
 
@@ -3705,6 +3713,14 @@ architectures.
     uniform float sqrt(uniform float v)
     float rsqrt(float v)
     uniform float rsqrt(uniform float v)
+
+ispc also provides a version of ``rsqrt()`` for float with less precision which doesn't
+use Newton-Raphson.
+
+::
+
+    float rsqrt_fast(float v)
+    uniform float rsqrt_fast(uniform float v)
 
 ``ispc`` provides a standard variety of calls for trigonometric functions:
 

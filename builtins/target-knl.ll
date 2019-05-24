@@ -67,6 +67,17 @@ define <16 x float> @__rsqrt_varying_float(<16 x float> %v) nounwind readonly al
   %res = call <16 x float> @llvm.x86.avx512.rsqrt28.ps(<16 x float> %v, <16 x float> undef, i16 -1, i32 8)
   ret <16 x float> %res
 }
+
+declare <16 x float> @llvm.x86.avx512.rcp14.ps.512(<16 x float>, <16 x float>, i16) nounwind readnone
+define <16 x float> @__rcp_fast_varying_float(<16 x float>) nounwind readonly alwaysinline {
+  %res = call <16 x float> @llvm.x86.avx512.rcp14.ps.512(<16 x float> %0, <16 x float> undef, i16 -1)
+  ret <16 x float> %res
+}
+declare <16 x float> @llvm.x86.avx512.rsqrt14.ps.512(<16 x float>, <16 x float>, i16) nounwind readnone
+define <16 x float> @__rsqrt_fast_varying_float(<16 x float> %v) nounwind readonly alwaysinline {
+  %res = call <16 x float> @llvm.x86.avx512.rsqrt14.ps.512(<16 x float> %v, <16 x float> undef, i16 -1)
+  ret <16 x float> %res
+}
 ')
 
 ifelse(LLVM_VERSION, LLVM_3_7,

@@ -1,4 +1,4 @@
-;;  Copyright (c) 2010-2015, Intel Corporation
+;;  Copyright (c) 2010-2019, Intel Corporation
 ;;  All rights reserved.
 ;;
 ;;  Redistribution and use in source and binary forms, with or without
@@ -60,6 +60,11 @@ define <8 x float> @__rcp_varying_float(<8 x float>) nounwind readonly alwaysinl
   ret <8 x float> %iv_mul
 }
 
+define <8 x float> @__rcp_fast_varying_float(<8 x float>) nounwind readonly alwaysinline {
+  %ret = call <8 x float> @llvm.x86.avx.rcp.ps.256(<8 x float> %0)
+  ret <8 x float> %ret
+}
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; rsqrt
 
@@ -78,6 +83,11 @@ define <8 x float> @__rsqrt_varying_float(<8 x float> %v) nounwind readonly alwa
   %half_scale = fmul <8 x float> <float 0.5, float 0.5, float 0.5, float 0.5,
                                   float 0.5, float 0.5, float 0.5, float 0.5>, %is_mul
   ret <8 x float> %half_scale
+}
+
+define <8 x float> @__rsqrt_fast_varying_float(<8 x float> %v) nounwind readonly alwaysinline {
+  %ret = call <8 x float> @llvm.x86.avx.rsqrt.ps.256(<8 x float> %v)
+  ret <8 x float> %ret
 }
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

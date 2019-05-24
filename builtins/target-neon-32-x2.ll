@@ -154,6 +154,11 @@ define <8 x float> @__rcp_varying_float(<8 x float> %d) nounwind readnone always
   ret <8 x float> %x2
 }
 
+define <8 x float> @__rcp_fast_varying_float(<8 x float> %d) nounwind readnone alwaysinline {
+  unary4to8(ret, float, @NEON_PREFIX_RECPEQ.v4f32, %d)
+  ret <8 x float> %ret
+}
+
 declare <4 x float> @NEON_PREFIX_RSQRTEQ.v4f32(<4 x float>) nounwind readnone
 declare <4 x float> @NEON_PREFIX_RSQRTSQ.v4f32(<4 x float>, <4 x float>) nounwind readnone
 
@@ -166,6 +171,11 @@ define <8 x float> @__rsqrt_varying_float(<8 x float> %d) nounwind readnone alwa
   binary4to8(x1_nr, float, @NEON_PREFIX_RSQRTSQ.v4f32, %d, %x1_2)
   %x2 = fmul <8 x float> %x1, %x1_nr
   ret <8 x float> %x2
+}
+
+define <8 x float> @__rsqrt_fast_varying_float(<8 x float> %d) nounwind readnone alwaysinline {
+  unary4to8(ret, float, @NEON_PREFIX_RSQRTEQ.v4f32, %d)
+  ret <8 x float> %ret
 }
 
 define float @__rsqrt_uniform_float(float) nounwind readnone alwaysinline {
@@ -184,6 +194,20 @@ define float @__rcp_uniform_float(float) nounwind readnone alwaysinline {
           <8 x i32> <i32 0, i32 undef, i32 undef, i32 undef,
                       i32 undef, i32 undef, i32 undef, i32 undef>
   %vr = call <8 x float> @__rcp_varying_float(<8 x float> %vs)
+  %r = extractelement <8 x float> %vr, i32 0
+  ret float %r
+}
+
+define float @__rsqrt_fast_uniform_float(float) nounwind readnone alwaysinline {
+  %vs = insertelement <8 x float> undef, float %0, i32 0
+  %vr = call <8 x float> @__rsqrt_fast_varying_float(<8 x float> %vs)
+  %r = extractelement <8 x float> %vr, i32 0
+  ret float %r
+}
+
+define float @__rcp_fast_uniform_float(float) nounwind readnone alwaysinline {
+  %vs = insertelement <8 x float> undef, float %0, i32 0
+  %vr = call <8 x float> @__rcp_fast_varying_float(<8 x float> %vs)
   %r = extractelement <8 x float> %vr, i32 0
   ret float %r
 }

@@ -1,4 +1,4 @@
-;;  Copyright (c) 2010-2018, Intel Corporation
+;;  Copyright (c) 2010-2019, Intel Corporation
 ;;  All rights reserved.
 ;;
 ;;  Redistribution and use in source and binary forms, with or without
@@ -204,8 +204,12 @@ declare <WIDTH x double> @__max_varying_double(<WIDTH x double>,
 declare float @__rsqrt_uniform_float(float) nounwind readnone 
 declare float @__rcp_uniform_float(float) nounwind readnone 
 declare float @__sqrt_uniform_float(float) nounwind readnone 
+declare float @__rcp_fast_uniform_float(float) nounwind readnone 
+declare float @__rsqrt_fast_uniform_float(float) nounwind readnone 
 declare <WIDTH x float> @__rcp_varying_float(<WIDTH x float>) nounwind readnone 
 declare <WIDTH x float> @__rsqrt_varying_float(<WIDTH x float>) nounwind readnone 
+declare <WIDTH x float> @__rcp_fast_varying_float(<WIDTH x float>) nounwind readnone 
+declare <WIDTH x float> @__rsqrt_fast_varying_float(<WIDTH x float>) nounwind readnone
 
 declare <WIDTH x float> @__sqrt_varying_float(<WIDTH x float>) nounwind readnone 
 

@@ -1,4 +1,4 @@
-;;  Copyright (c) 2013-2015, Intel Corporation
+;;  Copyright (c) 2013-2019, Intel Corporation
 ;;  All rights reserved.
 ;;
 ;;  Redistribution and use in source and binary forms, with or without
@@ -60,6 +60,11 @@ define <4 x float> @__rcp_varying_float(<4 x float>) nounwind readonly alwaysinl
   %two_minus = fsub <4 x float> <float 2., float 2., float 2., float 2.>, %v_iv
   %iv_mul = fmul <4 x float> %call, %two_minus
   ret <4 x float> %iv_mul
+}
+
+define <4 x float> @__rcp_fast_varying_float(<4 x float>) nounwind readonly alwaysinline {
+  %ret = call <4 x float> @llvm.x86.sse.rcp.ps(<4 x float> %0)
+  ret <4 x float> %ret
 }
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -128,6 +133,11 @@ define <4 x float> @__rsqrt_varying_float(<4 x float> %v) nounwind readonly alwa
   %is_mul = fmul <4 x float> %is, %three_sub
   %half_scale = fmul <4 x float> <float 0.5, float 0.5, float 0.5, float 0.5>, %is_mul
   ret <4 x float> %half_scale
+}
+
+define <4 x float> @__rsqrt_fast_varying_float(<4 x float> %v) nounwind readonly alwaysinline {
+  %ret = call <4 x float> @llvm.x86.sse.rsqrt.ps(<4 x float> %v)
+  ret <4 x float> %ret
 }
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
