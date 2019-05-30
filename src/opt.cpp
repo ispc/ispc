@@ -479,6 +479,7 @@ void Optimize(llvm::Module *module, int optLevel) {
         optPM.add(llvm::createGlobalDCEPass());
 #ifdef ISPC_GENX_ENABLED
         if (g->target->getISA() == Target::GENX) {
+            optPM.add(llvm::createGenXLayoutBlocksPass());
             optPM.add(llvm::createCMSimdCFLoweringPass());
             optPM.add(llvm::createGenXPacketizePass());
             optPM.add(llvm::createPromoteMemoryToRegisterPass());
