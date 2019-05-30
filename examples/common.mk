@@ -14,7 +14,6 @@ ISPC_FLAGS+=-O2
 ISPC_HEADER=objs/$(ISPC_SRC:.ispc=_ispc.h)
 
 ARCH:=$(shell uname -m | sed -e s/x86_64/x86/ -e s/i686/x86/ -e s/arm.*/arm/ -e s/sa110/arm/)
-
 ifeq ($(ARCH),x86)
   ISPC_OBJS=$(addprefix objs/, $(ISPC_SRC:.ispc=)_ispc.o)
   COMMA=,

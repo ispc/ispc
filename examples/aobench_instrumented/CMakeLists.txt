@@ -41,6 +41,7 @@ set (TARGET_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/ao.cpp
                     ${EXAMPLES_ROOT}/tasksys.cpp)
 set (ISPC_FLAGS -O2 --instrument)
 set (ISPC_IA_TARGETS "sse2")
+set (ISPC_ARM_TARGETS "neon")
 if (WIN32)
     set (LIBRARIES)
 else()
@@ -49,6 +50,7 @@ endif()
 add_ispc_example(NAME "aobench_instrumented"
               ISPC_SRC_NAME ${ISPC_SRC_NAME}
               ISPC_IA_TARGETS ${ISPC_IA_TARGETS}
+              ISPC_ARM_TARGETS ${ISPC_ARM_TARGETS}
               ISPC_FLAGS ${ISPC_FLAGS}
               TARGET_SOURCES ${TARGET_SOURCES}
               LIBRARIES ${LIBRARIES})
