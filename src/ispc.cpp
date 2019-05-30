@@ -592,9 +592,13 @@ Target::Target(const char *arch, const char *cpu, const char *isa, bool pic, boo
 
     if (arch == NULL) {
 #ifdef ISPC_ARM_ENABLED
-        if (!strncmp(isa, "neon", 4))
+        if (!strncmp(isa, "neon", 4)) {
+#if defined(__arm__)
             arch = "arm";
-        else
+#else
+            arch = "aarch64";
+#endif
+        } else
 #endif
 #ifdef ISPC_NVPTX_ENABLED
             if (!strncmp(isa, "nvptx", 5))

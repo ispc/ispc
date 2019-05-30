@@ -127,6 +127,7 @@ if (${LLVM_VERSION_NUMBER} VERSION_GREATER "3.3.0")
     set(LLVM_COMPONENTS ${LLVM_COMPONENTS} option)
 endif()
 
+list(APPEND LLVM_COMPONENTS x86)
 if (ARM_ENABLED)
     list(APPEND LLVM_COMPONENTS arm aarch64)
     list(APPEND ISPC_TARGETS neon-32 neon-32-x2 neon-16 neon-8)
