@@ -67,7 +67,6 @@
 
 #ifdef ISPC_GENX_ENABLED
 #define GENX_WIDTH_GENERAL_REG 32
-#include "GenX.h"
 #endif
 
 Function::Function(Symbol *s, Stmt *c) {
@@ -413,10 +412,6 @@ void Function::emitCode(FunctionEmitContext *ctx, llvm::Function *function, Sour
     }
 #ifdef ISPC_GENX_ENABLED
     if (g->target->getISA() == Target::GENX) {
-        // We need to layout blocks for correct execution of CM passes.
-        // TODO: LayoutBlocks should be a part of CMSIMDCFLoweringPass
-        // to avoid dependency on GenX.h
-        llvm::genx::LayoutBlocks(*function);
         if (type->isExported) {
             // Emit metadata for GENX kernel
             // Below is a prototype for emitting kernel metadata.
