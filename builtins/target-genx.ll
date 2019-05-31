@@ -27,13 +27,21 @@
 ;;   PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
 ;;   LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
 ;;   NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
-;;   SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.  
+;;   SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 target datalayout = "e-p:32:32-i64:64-n8:16:32";
 
 define(`WIDTH',`16')
 define(`MASK',`i1')
 include(`util.m4')
+
+define(`GEN_SUFFIX',
+`ifelse($1, `i8', `v16i8',
+        $1, `i16', `v16i16',
+        $1, `i32', `v16i32',
+        $1, `float', `v16f32',
+        $1, `double', `v16f64',
+        $1, `i64', `v16i64')')
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -70,11 +78,13 @@ declare double @__ceil_uniform_double(double) nounwind readonly alwaysinline
 ;; rcp
 
 declare float @__rcp_uniform_float(float) nounwind readonly alwaysinline
+declare float @__rcp_fast_uniform_float(float) nounwind readonly alwaysinline
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; rsqrt
 
 declare float @__rsqrt_uniform_float(float) nounwind readonly alwaysinline
+declare float @__rsqrt_fast_uniform_float(float) nounwind readonly alwaysinline
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; sqrt
@@ -140,11 +150,13 @@ declare <WIDTH x i16> @__float_to_half_varying(<WIDTH x float> %v) nounwind read
 ;; rcp
 
 declare <WIDTH x float> @__rcp_varying_float(<WIDTH x float>) nounwind readonly alwaysinline
+declare <WIDTH x float> @__rcp_fast_varying_float(<WIDTH x float>) nounwind readonly alwaysinline
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; rsqrt
 
 declare <16 x float> @__rsqrt_varying_float(<16 x float> %v) nounwind readonly alwaysinline
+declare <16 x float> @__rsqrt_fast_varying_float(<16 x float> %v) nounwind readonly alwaysinline
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; sqrt
@@ -213,17 +225,16 @@ svml_stubs(double,d,WIDTH)
 ; horizontal ops / reductions
 
 declare i1 @llvm.genx.any.v16i1(<16 x MASK>)
-declare i1 @llvm.genx.simdcf.any.v16i1(<16 x MASK>)
 declare i1 @llvm.genx.all.v16i1(<16 x MASK>)
 
 define i64 @__movmsk(<16 x MASK>) nounwind readnone alwaysinline {
-  %v = call i1 @llvm.genx.simdcf.any.v16i1(<16 x MASK> %0)
+  %v = call i1 @llvm.genx.any.v16i1(<16 x MASK> %0)
   %zext = zext i1 %v to i64
   ret i64 %zext
 }
 
 define i1 @__any(<16 x MASK>) nounwind readnone alwaysinline {
-  %v = call i1 @llvm.genx.simdcf.any.v16i1(<16 x MASK> %0)
+  %v = call i1 @llvm.genx.any.v16i1(<16 x MASK> %0)
   ret i1 %v
 }
 
@@ -234,7 +245,8 @@ define i1 @__all(<16 x MASK>) nounwind readnone alwaysinline {
 
 define i1 @__none(<16 x MASK>) nounwind readnone alwaysinline {
   %v = call i1 @llvm.genx.all.v16i1(<16 x MASK> %0) nounwind readnone
-  ret i1 %v
+  %v_not = icmp eq i1 %v, 0
+  ret i1 %v_not
 }
 
 declare i16 @__reduce_add_int8(<16 x MASK>) nounwind readnone alwaysinline
@@ -363,73 +375,74 @@ reduce_equal(16)
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; masked store
 
-define void @__masked_store_blend_i64(<16 x i64>* nocapture, <16 x i64>,
+define(`genx_masked_store_blend', `
+declare void @llvm.genx.vstore.GEN_SUFFIX($1)(<16 x $1>, <16 x $1>*)
+declare <16 x $1> @llvm.genx.vload.GEN_SUFFIX($1)(<16 x $1>*)
+
+define void @__masked_store_blend_$1(<16 x $1>* nocapture, <16 x $1>,
                                       <16 x MASK> %mask) nounwind
                                       alwaysinline {
-  %old = load PTR_OP_ARGS(`<16 x i64>')  %0, align 4
-  %blend = select <16 x i1> %mask, <16 x i64> %1, <16 x i64> %old
-  store <16 x i64> %blend, <16 x i64>* %0, align 4
+  %old = call <16 x $1> @llvm.genx.vload.GEN_SUFFIX($1)(<16 x $1>* %0)
+  %blend = select <16 x i1> %mask, <16 x $1> %1, <16 x $1> %old
+  call void @llvm.genx.vstore.GEN_SUFFIX($1)(<16 x $1> %blend, <16 x $1>* %0)
   ret void
 }
-declare void @llvm.genx.vstore.v16i32(<16 x i32>, <16 x i32>*)
-declare <16 x i32> @llvm.genx.vload.v16i32(<16 x i32>*)
-define void @__masked_store_blend_i32(<16 x i32>* nocapture, <16 x i32>, 
-                                      <16 x MASK> %mask) nounwind alwaysinline {
-  %old = call <16 x i32> @llvm.genx.vload.v16i32(<16 x i32>* %0)
-  %blend = select <16 x i1> %mask, <16 x i32> %1, <16 x i32> %old
-  call void @llvm.genx.vstore.v16i32(<16 x i32> %blend, <16 x i32>* %0)
-  ret void
-}
+')
 
-define void @__masked_store_blend_i16(<16 x i16>* nocapture, <16 x i16>,
-                                     <16 x MASK> %mask) nounwind alwaysinline {
-  %old = load PTR_OP_ARGS(`<16 x i16>')  %0, align 4
-  %blend = select <16 x i1> %mask, <16 x i16> %1, <16 x i16> %old
-  store <16 x i16> %blend, <16 x i16>* %0, align 4
-  ret void
-}
+genx_masked_store_blend(i8)
+genx_masked_store_blend(i16)
+genx_masked_store_blend(i32)
+genx_masked_store_blend(float)
+genx_masked_store_blend(double)
+genx_masked_store_blend(i64)
 
-define void @__masked_store_blend_i8(<16 x i8>* nocapture, <16 x i8>,
-                                     <16 x MASK> %mask) nounwind alwaysinline {
-  %old = load PTR_OP_ARGS(`<16 x i8>')  %0, align 4
-  %blend = select <16 x i1> %mask, <16 x i8> %1, <16 x i8> %old
-  store <16 x i8> %blend, <16 x i8>* %0, align 4
-  ret void
-}
+;; llvm.genx.svm.block.st must be predicated with llvm.genx.simdcf.predicate
+;; but since CMSimdCFLowering pass is run before ISPC passes
+;; llvm.genx.simdcf.predicate will not be lowered.
+;; TODO_GEN: insert predication
 
-declare void @llvm.genx.svm.block.st.v16i32(i64, <16 x i32>)
-
-define void @__masked_store_i32(<WIDTH x i32>* nocapture, <WIDTH x i32>, <WIDTH x MASK>) nounwind alwaysinline {
-  %bitcast = bitcast <WIDTH x i32>* %0 to i32*
+define(`genx_masked_store', `
+declare void @llvm.genx.svm.block.st.GEN_SUFFIX($1)(i64, <WIDTH x $1>)
+define void @__masked_store_$1(<WIDTH x $1>* nocapture, <WIDTH x $1>, <WIDTH x MASK>) nounwind alwaysinline {
+  %bitcast = bitcast <WIDTH x $1>* %0 to i32*
   %ptrtoint = ptrtoint i32* %bitcast to i32
   %zext = zext i32 %ptrtoint to i64
-  call void @llvm.genx.svm.block.st.v16i32(i64 %zext, <WIDTH x i32> %1)
+  call void @llvm.genx.svm.block.st.GEN_SUFFIX($1)(i64 %zext, <WIDTH x $1> %1)
   ret void
 }
+')
 
-gen_masked_store(i8)
-gen_masked_store(i16)
-gen_masked_store(i64)
-
-masked_store_float_double()
+genx_masked_store(i8)
+genx_masked_store(i16)
+genx_masked_store(i32)
+genx_masked_store(float)
+genx_masked_store(double)
+genx_masked_store(i64)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; unaligned loads/loads+broadcasts
-declare <WIDTH x i32> @llvm.genx.svm.block.ld.v16i32(i64)
+;; llvm.genx.svm.block.ld must be predicated with llvm.genx.simdcf.predicate
+;; but since CMSimdCFLowering pass is run before ISPC passes
+;; llvm.genx.simdcf.predicate will not be lowered.
+;; TODO_GEN: insert predication
 
-define <WIDTH x i32> @__masked_load_i32(i8 *, <WIDTH x MASK> %mask) nounwind alwaysinline {
+define(`genx_masked_load', `
+declare <WIDTH x $1> @llvm.genx.svm.block.ld.GEN_SUFFIX($1)(i64)
+define <WIDTH x $1> @__masked_load_$1(i8 *, <WIDTH x MASK> %mask) nounwind alwaysinline {
   %bitcast = bitcast i8* %0 to i32*
   %ptrtoint = ptrtoint i32* %bitcast to i32
   %zext = zext i32 %ptrtoint to i64
-  %res = call <WIDTH x i32> @llvm.genx.svm.block.ld.v16i32(i64 %zext)
-  ret <WIDTH x i32> %res
+  %res = call <WIDTH x $1> @llvm.genx.svm.block.ld.GEN_SUFFIX($1)(i64 %zext)
+  ret <WIDTH x $1> %res
 }
+')
 
-masked_load(i8,  1)
-masked_load(i16, 2)
-masked_load(float, 4)
-masked_load(i64, 8)
-masked_load(double, 8)
+genx_masked_load(i8)
+genx_masked_load(i16)
+genx_masked_load(i32)
+genx_masked_load(float)
+genx_masked_load(double)
+genx_masked_load(i64)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; gather/scatter
