@@ -1184,7 +1184,7 @@ std::string Target::SupportedCPUs() {
 const char *Target::SupportedArchs() {
     return
 #ifdef ISPC_ARM_ENABLED
-        "arm, aarch64"
+        "arm, aarch64, "
 #endif
         "x86, x86-64";
 }
