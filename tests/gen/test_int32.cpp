@@ -1,8 +1,8 @@
 #include <string>
+#include <iostream>
 #include "cm_rt.h"
 #include "cm_rt_helpers.h"
 #include "isa_helpers.h"
-#include <iostream>
 using namespace std;
 
 int main(int argc, char *argv[]) {
