@@ -538,6 +538,17 @@ class FunctionEmitContext {
     void SyncInst();
 
     llvm::Instruction *ReturnInst();
+#ifdef ISPC_GENX_ENABLED
+    // GenX-specific functions
+    llvm::Value *GenXSimdCFAny(llvm::Value *value);
+    llvm::Value *GenXSimdCFPredicate(llvm::Value *values, llvm::Value *defaults = NULL);
+    llvm::Value *GenXSVMGather(llvm::Value *ptr, llvm::Type *ptrType);
+    llvm::Value *GenXSVMScatter(llvm::Value *ptr, llvm::Value *value, llvm::Type *ptrType);
+    llvm::Value *GenXSVMLoad(llvm::Value *ptr, llvm::Type *retType);
+    llvm::Value *GenXSVMStore(llvm::Value *ptr, llvm::Value *value);
+    llvm::Value *GenXLoad(llvm::Value *ptr);
+    llvm::Value *GenXStore(llvm::Value *ptr, llvm::Value *value);
+#endif
     /** @} */
 
   private:

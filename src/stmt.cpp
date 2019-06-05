@@ -388,6 +388,15 @@ void IfStmt::EmitCode(FunctionEmitContext *ctx) const {
     if (testValue == NULL)
         return;
 
+#ifdef ISPC_GENX_ENABLED
+    if (!isUniform && g->target->getISA() == Target::GENX) {
+        /* With "genx" target we generate uniform control flow but
+           emit varying using CM simdcf.any intrinsic.
+         */
+        isUniform = true;
+    }
+#endif
+
     if (isUniform) {
         ctx->StartUniformIf();
         if (doAllCheck)
@@ -399,10 +408,23 @@ void IfStmt::EmitCode(FunctionEmitContext *ctx) const {
         llvm::BasicBlock *bthen = ctx->CreateBasicBlock("if_then");
         llvm::BasicBlock *belse = ctx->CreateBasicBlock("if_else");
         llvm::BasicBlock *bexit = ctx->CreateBasicBlock("if_exit");
+        // TODO_GEN: CM requires a well-nested block-layout to work well.
+        // We need to try using CM's LayoutBlocks method instead moving blocks.
+        bthen->moveAfter(ctx->GetCurrentBasicBlock());
+        belse->moveAfter(bthen);
+        bexit->moveAfter(belse);
 
         // Jump to the appropriate basic block based on the value of
         // the 'if' test
-        ctx->BranchInst(bthen, belse, testValue);
+#ifdef ISPC_GENX_ENABLED
+        if (g->target->getISA() == Target::GENX && !testType->IsUniformType()) {
+            llvm::Value *mask = ctx->GetInternalMask();
+            llvm::Value *and_value = ctx->BinaryOperator(llvm::BinaryOperator::And, mask, testValue);
+            llvm::Value *v = ctx->GenXSimdCFAny(and_value);
+            ctx->BranchInst(bthen, belse, v);
+        } else
+#endif
+            ctx->BranchInst(bthen, belse, testValue);
 
         // Emit code for the 'true' case
         ctx->SetCurrentBasicBlock(bthen);
