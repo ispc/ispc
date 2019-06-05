@@ -52,7 +52,10 @@
 #include <llvm/IR/Instructions.h>
 #include <llvm/IR/Metadata.h>
 #include <llvm/IR/Module.h>
-
+#ifdef ISPC_GENX_ENABLED
+#include "llvm/IR/Intrinsics.h"
+#include "llvm/IR/IntrinsicsGenX.h"
+#endif
 /** This is a small utility structure that records information related to one
     level of nested control flow.  It's mostly used in correctly restoring
     the mask and other state as we exit control flow nesting levels.
@@ -1118,6 +1121,12 @@ void FunctionEmitContext::CurrentLanesReturned(Expr *expr, bool doCoherenceCheck
 
 llvm::Value *FunctionEmitContext::Any(llvm::Value *mask) {
     // Call the target-dependent any function to test that the mask is non-zero
+
+#ifdef ISPC_GENX_ENABLED
+    if (g->target->getISA() == Target::GENX) {
+        return GenXSimdCFAny(mask);
+    }
+#endif
     std::vector<Symbol *> mm;
     m->symbolTable->LookupFunction("__any", &mm);
     if (g->target->getMaskBitCount() == 1)
@@ -2078,22 +2087,30 @@ llvm::Value *FunctionEmitContext::LoadInst(llvm::Value *ptr, const Type *type, c
 
     llvm::PointerType *pt = llvm::dyn_cast<llvm::PointerType>(ptr->getType());
     AssertPos(currentPos, pt != NULL);
-
     if (name == NULL)
         name = LLVMGetName(ptr, "_load");
+    llvm::Value *inst;
+#ifdef ISPC_GENX_ENABLED
+    if (llvm::dyn_cast<llvm::VectorType>(pt->getElementType()) && g->target->getISA() == Target::GENX) {
+        inst = GenXLoad(ptr);
+    } else {
+#endif
 #if ISPC_LLVM_VERSION >= ISPC_LLVM_11_0
-    llvm::LoadInst *inst = new llvm::LoadInst(pt->getPointerElementType(), ptr, name, bblock);
+        llvm::LoadInst *loadInst = new llvm::LoadInst(pt->getPointerElementType(), ptr, name, bblock);
 #else
-    llvm::LoadInst *inst = new llvm::LoadInst(ptr, name, bblock);
+        llvm::LoadInst *loadInst = new llvm::LoadInst(ptr, name, bblock);
 #endif
-    if (g->opt.forceAlignedMemory && llvm::dyn_cast<llvm::VectorType>(pt->getElementType())) {
+        if (g->opt.forceAlignedMemory && llvm::dyn_cast<llvm::VectorType>(pt->getElementType())) {
 #if ISPC_LLVM_VERSION <= ISPC_LLVM_9_0
-        inst->setAlignment(g->target->getNativeVectorAlignment());
+            loadInst->setAlignment(g->target->getNativeVectorAlignment());
 #else // LLVM 10.0+
-        inst->setAlignment(llvm::MaybeAlign(g->target->getNativeVectorAlignment()).valueOrOne());
+            loadInst->setAlignment(llvm::MaybeAlign(g->target->getNativeVectorAlignment()).valueOrOne());
 #endif
+        }
+        inst = loadInst;
+#ifdef ISPC_GENX_ENABLED
     }
-
+#endif
     AddDebugPos(inst);
 
     llvm::Value *loadVal = inst;
@@ -2215,22 +2232,34 @@ llvm::Value *FunctionEmitContext::LoadInst(llvm::Value *ptr, llvm::Value *mask, 
             // unaligned vector loads, so we specify a reduced alignment here.
             int align = 0;
             const AtomicType *atomicType = CastType<AtomicType>(ptrType->GetBaseType());
+            llvm::Value *inst;
             if (atomicType != NULL && atomicType->IsVaryingType())
                 // We actually just want to align to the vector element
                 // alignment, but can't easily get that here, so just tell LLVM
                 // it's totally unaligned.  (This shouldn't make any difference
                 // vs the proper alignment in practice.)
                 align = 1;
+
+#ifdef ISPC_GENX_ENABLED
+            llvm::PointerType *pt = llvm::dyn_cast<llvm::PointerType>(ptr->getType());
+            if (pt != NULL && llvm::dyn_cast<llvm::VectorType>(pt->getElementType()) &&
+                g->target->getISA() == Target::GENX) {
+                inst = GenXLoad(ptr);
+            } else {
+#endif
 #if ISPC_LLVM_VERSION <= ISPC_LLVM_9_0
-            llvm::Instruction *inst = new llvm::LoadInst(ptr, name, false /* not volatile */, align, bblock);
+                inst = new llvm::LoadInst(ptr, name, false /* not volatile */, align, bblock);
 #elif ISPC_LLVM_VERSION == ISPC_LLVM_10_0
-            llvm::Instruction *inst =
-                new llvm::LoadInst(ptr, name, false /* not volatile */, llvm::MaybeAlign(align).valueOrOne(), bblock);
+                inst =
+                    new llvm::LoadInst(ptr, name, false /* not volatile */, llvm::MaybeAlign(align).valueOrOne(), bblock);
 #else // LLVM 11.0+
-            llvm::PointerType *ptr_type = llvm::dyn_cast<llvm::PointerType>(ptr->getType());
-            llvm::Instruction *inst =
-                new llvm::LoadInst(ptr_type->getPointerElementType(), ptr, name, false /* not volatile */,
-                                   llvm::MaybeAlign(align).valueOrOne(), bblock);
+                llvm::PointerType *ptr_type = llvm::dyn_cast<llvm::PointerType>(ptr->getType());
+                inst =
+                    new llvm::LoadInst(ptr_type->getPointerElementType(), ptr, name, false /* not volatile */,
+                                       llvm::MaybeAlign(align).valueOrOne(), bblock);
+#endif
+#ifdef ISPC_GENX_ENABLED
+            }
 #endif
             AddDebugPos(inst);
             llvm::Value *loadVal = inst;
@@ -2281,7 +2310,6 @@ llvm::Value *FunctionEmitContext::gather(llvm::Value *ptr, const PointerType *pt
 
     const Type *returnType = ptrType->GetBaseType()->GetAsVaryingType();
     llvm::Type *llvmReturnType = returnType->LLVMType(g->ctx);
-
     const CollectionType *collectionType = CastType<CollectionType>(ptrType->GetBaseType());
     if (collectionType != NULL) {
         // For collections, recursively gather element wise to find the
@@ -2318,7 +2346,10 @@ llvm::Value *FunctionEmitContext::gather(llvm::Value *ptr, const PointerType *pt
     // Otherwise we should just have a basic scalar or pointer type and we
     // can go and do the actual gather
     AddInstrumentationPoint("gather");
-
+#ifdef ISPC_GENX_ENABLED
+    if (g->target->getISA() == Target::GENX)
+        return GenXSVMGather(ptr, llvmReturnType);
+#endif
     // Figure out which gather function to call based on the size of
     // the elements.
     const PointerType *pt = CastType<PointerType>(returnType);
@@ -2345,7 +2376,6 @@ llvm::Value *FunctionEmitContext::gather(llvm::Value *ptr, const PointerType *pt
 
     llvm::Function *gatherFunc = m->module->getFunction(funcName);
     AssertPos(currentPos, gatherFunc != NULL);
-
     llvm::Value *gatherCall = CallInst(gatherFunc, NULL, ptr, mask, name);
 
     // Add metadata about the source file location so that the
@@ -2566,6 +2596,11 @@ void FunctionEmitContext::maskedStore(llvm::Value *value, llvm::Value *ptr, cons
     args.push_back(ptr);
     args.push_back(value);
     args.push_back(mask);
+#ifdef ISPC_GENX_ENABLED
+    if (g->target->getISA() == Target::GENX) {
+        llvm::Value *pred = GenXSimdCFPredicate(value);
+    }
+#endif
     CallInst(maskedStoreFunc, NULL, args);
 }
 
@@ -2580,7 +2615,6 @@ void FunctionEmitContext::scatter(llvm::Value *value, llvm::Value *ptr, const Ty
     const PointerType *ptrType = CastType<PointerType>(origPt);
     AssertPos(currentPos, ptrType != NULL);
     AssertPos(currentPos, ptrType->IsVaryingType());
-
     const CollectionType *srcCollectionType = CastType<CollectionType>(valueType);
     if (srcCollectionType != NULL) {
         // We're scattering a collection type--we need to keep track of the
@@ -2669,7 +2703,12 @@ void FunctionEmitContext::scatter(llvm::Value *value, llvm::Value *ptr, const Ty
     AssertPos(currentPos, scatterFunc != NULL);
 
     AddInstrumentationPoint("scatter");
-
+#ifdef ISPC_GENX_ENABLED
+    if (g->target->getISA() == Target::GENX) {
+        GenXSVMScatter(ptr, value, valueType->GetBaseType()->GetAsVaryingType()->LLVMType(g->ctx));
+        return;
+    }
+#endif
     std::vector<llvm::Value *> args;
     args.push_back(ptr);
     args.push_back(value);
@@ -2686,7 +2725,6 @@ void FunctionEmitContext::StoreInst(llvm::Value *value, llvm::Value *ptr, const 
         AssertPos(currentPos, m->errorCount > 0);
         return;
     }
-
     llvm::PointerType *pt = llvm::dyn_cast<llvm::PointerType>(ptr->getType());
     AssertPos(currentPos, pt != NULL);
 
@@ -2701,16 +2739,24 @@ void FunctionEmitContext::StoreInst(llvm::Value *value, llvm::Value *ptr, const 
         }
     }
 
-    llvm::StoreInst *inst = new llvm::StoreInst(value, ptr, bblock);
-
-    if (g->opt.forceAlignedMemory && llvm::dyn_cast<llvm::VectorType>(pt->getElementType())) {
-#if ISPC_LLVM_VERSION <= ISPC_LLVM_9_0
-        inst->setAlignment(g->target->getNativeVectorAlignment());
-#else // LLVM 10.0+
-        inst->setAlignment(llvm::MaybeAlign(g->target->getNativeVectorAlignment()).valueOrOne());
+    llvm::Value *inst;
+#ifdef ISPC_GENX_ENABLED
+    if (llvm::dyn_cast<llvm::VectorType>(pt->getElementType()) && g->target->getISA() == Target::GENX) {
+        inst = GenXStore(ptr, value);
+    } else {
 #endif
+        llvm::StoreInst *storeInst = new llvm::StoreInst(value, ptr, bblock);
+        if (g->opt.forceAlignedMemory && llvm::dyn_cast<llvm::VectorType>(pt->getElementType())) {
+#if ISPC_LLVM_VERSION <= ISPC_LLVM_9_0
+            storeInst->setAlignment(g->target->getNativeVectorAlignment());
+#else // LLVM 10.0+
+            storeInst->setAlignment(llvm::MaybeAlign(g->target->getNativeVectorAlignment()).valueOrOne());
+#endif
+        }
+        inst = storeInst;
+#ifdef ISPC_GENX_ENABLED
     }
-
+#endif
     AddDebugPos(inst);
 }
 
@@ -2748,8 +2794,9 @@ void FunctionEmitContext::StoreInst(llvm::Value *value, llvm::Value *ptr, llvm::
             // Otherwise it is a masked store unless we can determine that the
             // mask is all on...  (Unclear if this check is actually useful.)
             StoreInst(value, ptr, valueType);
-        else
+        else {
             maskedStore(value, ptr, ptrType, mask);
+        }
     } else {
         AssertPos(currentPos, ptrType->IsVaryingType());
         // We have a varying ptr (an array of pointers), so it's time to
@@ -3348,3 +3395,135 @@ CFInfo *FunctionEmitContext::popCFState() {
 
     return ci;
 }
+
+#ifdef ISPC_GENX_ENABLED
+// Compute the block size and the number of blocks for svm gather/scatter.
+//
+// Block_Size, 1, 4, 8
+// Num_Blocks, 1, 2, 4,
+//             8 only valid for 4 byte blocks and execution size 8.
+//
+static unsigned getBlockCount(llvm::Type *type) {
+    unsigned numBytes = type->getPrimitiveSizeInBits() / 8;
+    assert(numBytes <= 8 && "out of sync");
+
+    // If this is N = 2 byte data, use 2 blocks;
+    // otherwise, use 1 block of N bytes.
+    return (numBytes == 2) ? numBytes : 1U;
+}
+
+llvm::Value *FunctionEmitContext::GenXSVMGather(llvm::Value *ptr, llvm::Type *ptrType) {
+    AssertPos(currentPos, llvm::isa<llvm::VectorType>(ptrType));
+    unsigned nBits = m->module->getDataLayout().getPointerSizeInBits();
+    llvm::Value *addr = ptr;
+    if (nBits == 32)
+        addr = ZExtInst(addr, LLVMTypes::Int64VectorType);
+    llvm::Value *oldVal = llvm::UndefValue::get(ptrType);
+    llvm::Constant *predicate = llvm::ConstantVector::getSplat(
+        ptr->getType()->getVectorNumElements(), llvm::Constant::getAllOnesValue(llvm::Type::getInt1Ty(*g->ctx)));
+    unsigned numBlocks = getBlockCount(oldVal->getType());
+    unsigned numBlocksLog2 = llvm::Log2_32(numBlocks);
+    std::vector<llvm::Value *> args;
+    args.push_back(predicate);
+    args.push_back(LLVMInt32(numBlocksLog2));
+    args.push_back(addr);
+    args.push_back(oldVal);
+
+    // Overload with return type, predicate type and address vector type
+    llvm::Type *argTypes[] = {ptrType, args[0]->getType(), addr->getType()};
+
+    auto Fn = llvm::Intrinsic::getDeclaration(m->module, llvm::Intrinsic::genx_svm_gather, argTypes);
+    return CallInst(Fn, NULL, args, "");
+}
+
+llvm::Value *FunctionEmitContext::GenXSVMScatter(llvm::Value *ptr, llvm::Value *value, llvm::Type *valueType) {
+    AssertPos(currentPos, llvm::isa<llvm::VectorType>(value->getType()));
+    unsigned nBits = m->module->getDataLayout().getPointerSizeInBits();
+    llvm::Value *addr = ptr;
+    if (nBits == 32)
+        addr = ZExtInst(addr, LLVMTypes::Int64VectorType);
+    llvm::PointerType *pt = llvm::dyn_cast<llvm::PointerType>(ptr->getType());
+    if (pt != NULL) {
+        addr = PtrToIntInst(addr, pt->getElementType());
+    }
+    llvm::Constant *predicate = llvm::ConstantVector::getSplat(
+        addr->getType()->getVectorNumElements(), llvm::Constant::getAllOnesValue(llvm::Type::getInt1Ty(*g->ctx)));
+    unsigned numBlocks = getBlockCount(value->getType());
+    unsigned numBlocksLog2 = llvm::Log2_32(numBlocks);
+    std::vector<llvm::Value *> args;
+    args.push_back(predicate);
+    args.push_back(LLVMInt32(numBlocksLog2));
+    args.push_back(addr);
+    args.push_back(value);
+
+    // Overload with return type, predicate type and address vector type
+    llvm::Type *argTypes[] = {args[0]->getType(), addr->getType(), valueType};
+
+    auto Fn = llvm::Intrinsic::getDeclaration(m->module, llvm::Intrinsic::genx_svm_scatter, argTypes);
+    return CallInst(Fn, NULL, args, "");
+}
+
+llvm::Value *FunctionEmitContext::GenXSimdCFAny(llvm::Value *value) {
+    AssertPos(currentPos, llvm::isa<llvm::VectorType>(value->getType()));
+    auto Fn = llvm::Intrinsic::getDeclaration(m->module, llvm::Intrinsic::genx_simdcf_any, LLVMTypes::Int1VectorType);
+    return llvm::CallInst::Create(Fn, value, "", bblock);
+}
+
+llvm::Value *FunctionEmitContext::GenXSimdCFPredicate(llvm::Value *value, llvm::Value *defaults) {
+    AssertPos(currentPos, llvm::isa<llvm::VectorType>(value->getType()));
+    llvm::VectorType *vt = llvm::dyn_cast<llvm::VectorType>(value->getType());
+    if (defaults == NULL) {
+        defaults = llvm::ConstantVector::getSplat(value->getType()->getVectorNumElements(),
+                                                  llvm::Constant::getNullValue(vt->getElementType()));
+    }
+
+    llvm::Type *Tys[] = {value->getType()};
+    auto Fn = llvm::Intrinsic::getDeclaration(m->module, llvm::Intrinsic::genx_simdcf_predicate, value->getType());
+    std::vector<llvm::Value *> args;
+    args.push_back(value);
+    args.push_back(defaults);
+    return llvm::CallInst::Create(Fn, args, "", bblock);
+}
+
+llvm::Value *FunctionEmitContext::GenXSVMLoad(llvm::Value *ptr, llvm::Type *retType) {
+    AssertPos(currentPos, llvm::isa<llvm::VectorType>(retType));
+    Assert(llvm::isPowerOf2_32(retType->getVectorNumElements()));
+    llvm::Value *svm_ld_ptrtoint = PtrToIntInst(ptr, LLVMTypes::Int32Type, "svm_ld_ptrtoint");
+    llvm::Value *svm_ld_zext = ZExtInst(svm_ld_ptrtoint, LLVMTypes::Int64Type, "svm_ld_zext");
+
+    auto Fn = llvm::Intrinsic::getDeclaration(m->module, llvm::Intrinsic::genx_svm_block_ld, retType);
+    return CallInst(Fn, NULL, svm_ld_zext, "");
+}
+
+llvm::Value *FunctionEmitContext::GenXLoad(llvm::Value *ptr) {
+    unsigned ID = llvm::Intrinsic::genx_vload;
+    llvm::Type *argTypes[] = {ptr->getType()->getPointerElementType(), ptr->getType()};
+    auto Fn = llvm::Intrinsic::getDeclaration(m->module, llvm::Intrinsic::genx_vload, argTypes);
+    return CallInst(Fn, NULL, ptr, "");
+}
+
+llvm::Value *FunctionEmitContext::GenXSVMStore(llvm::Value *ptr, llvm::Value *value) {
+    AssertPos(currentPos, llvm::isa<llvm::VectorType>(value->getType()));
+    Assert(llvm::isPowerOf2_32(value->getType()->getVectorNumElements()));
+
+    llvm::Value *svm_st_bitcast = BitCastInst(ptr, LLVMTypes::Int32PointerType, "svm_st_bitcast");
+    llvm::Value *svm_st_ptrtoint = PtrToIntInst(svm_st_bitcast, LLVMTypes::Int32Type, "svm_st_ptrtoint");
+    llvm::Value *svm_st_zext = ZExtInst(svm_st_ptrtoint, LLVMTypes::Int64Type, "svm_st_zext");
+    llvm::Type *argTypes[] = {value->getType()};
+    std::vector<llvm::Value *> args;
+    args.push_back(svm_st_zext);
+    args.push_back(value);
+    auto Fn = llvm::Intrinsic::getDeclaration(m->module, llvm::Intrinsic::genx_svm_block_st, argTypes);
+    return CallInst(Fn, NULL, args, "");
+}
+
+llvm::Value *FunctionEmitContext::GenXStore(llvm::Value *ptr, llvm::Value *value) {
+    AssertPos(currentPos, llvm::isa<llvm::VectorType>(value->getType()));
+    llvm::Type *Tys[] = {value->getType(), ptr->getType()};
+    std::vector<llvm::Value *> args;
+    args.push_back(value);
+    args.push_back(ptr);
+    auto Fn = llvm::Intrinsic::getDeclaration(m->module, llvm::Intrinsic::genx_vstore, Tys);
+    return CallInst(Fn, NULL, args, "");
+}
+#endif
