@@ -75,7 +75,7 @@ Features
     generations: ``ispc`` has targets for SSE2, SSE4, AVX, AVX2, and AVX512.
 
   * Portability across operating systems: Microsoft
-    Windows, Mac OS X, and Linux are all supported
+    Windows, macOS, and Linux are all supported
     by ``ispc``.
 
   * Debugging with standard tools: ``ispc``
@@ -84,7 +84,7 @@ Features
 Additional Resources
 --------------------
 
-Prebuilt ``ispc`` binaries for Windows, OS X and Linux can be downloaded
+Prebuilt ``ispc`` binaries for Windows, macOS and Linux can be downloaded
 from the [ispc downloads page](http://ispc.github.com/downloads.html).
 See also additional
 [documentation](http://ispc.github.com/documentation.html) and additional

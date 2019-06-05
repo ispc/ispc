@@ -395,7 +395,7 @@ Installing ISPC
 ---------------
 
 The `ispc downloads web page`_ has prebuilt executables for Windows\*,
-Linux\* and Mac OS\* available for download.  Alternatively, you can
+Linux\* and macOS\* available for download.  Alternatively, you can
 download the source code from that page and build it yourself; see see the
 `ispc wiki`_ for instructions about building ``ispc`` from source.
 
@@ -447,7 +447,7 @@ program can then proceed, doing computation and control flow based on the
 values loaded.  The result from the running program instances is written to
 the ``vout`` array before the next iteration of the ``foreach`` loop runs.
 
-On Linux\* and Mac OS\*, the makefile in that directory compiles this program.
+On Linux\* and macOS\*, the makefile in that directory compiles this program.
 For Windows\*, open the ``examples/examples.sln`` file in Microsoft Visual
 C++ 2012\* to build this (and the other) examples.  In either case,
 build it now!  We'll walk through the details of the compilation steps in
@@ -2535,8 +2535,8 @@ In the above code, each program instance allocates its own ``count`` sized
 array of ``uniform int`` values, uses that memory, and then deallocates
 that memory.  Uses of ``new`` and ``delete`` in ``ispc`` programs are
 implemented as calls to C library's aligned memory allocation routines,
-which are platform dependent (``posix_memalign()`` and ``free()`` on Linux
-and Mac and ``_aligned_malloc()`` and ``_aligned_free()`` on Windows). So it's
+which are platform dependent (``posix_memalign()`` and ``free()`` on Linux\*
+and macOS\* and ``_aligned_malloc()`` and ``_aligned_free()`` on Windows\*). So it's
 advised to pair ISPC's ``new`` and ``delete`` with each other, but not with
 C/C++ memory management functions.
 
