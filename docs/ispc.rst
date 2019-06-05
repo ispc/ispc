@@ -554,10 +554,9 @@ Optimizations are on by default; they can be turned off with ``-O0``:
 
    ispc foo.ispc -o foo.obj -O0
 
-On Mac\* and Linux\*, there is basic support for generating debugging
-symbols; this is enabled with the ``-g`` command-line flag.  Using ``-g``
-causes optimizations to be disabled; to compile with debugging symbols and
-optimization, ``-O1`` should be provided as well as the ``-g`` flag.
+There is support for generating debugging symbols; this is enabled with the
+``-g`` command-line flag.  Using ``-g`` doesn't affect optimization level;
+to debug unoptimized code pass ``-O0`` flag.
 
 The ``-h`` flag can also be used to direct ``ispc`` to generate a C/C++
 header file that includes C/C++ declarations of the C-callable ``ispc``
@@ -884,9 +883,12 @@ When using ``#pragma ignore warning`` before a call to a macro, it suppresses wa
 Debugging
 ---------
 
-On Linux\* and Mac OS\*, the ``-g`` command-line flag can be supplied to
-the compiler, which causes it to generate debugging symbols.  Running
-``ispc`` programs in the debugger, setting breakpoints, printing out
+The ``-g`` command-line flag can be supplied to the compiler, which causes
+it to generate debugging symbols.  The debug info is emitted in DWARF format
+on Linux\* and macOS\*.  The version of the DWARF can be controlled by
+command-line switch ``--dwarf-version={2,3,4}``.  On Windows\* CodeView format
+is used (not PDB), it's natively supported by Microsoft Visual Studio\*.
+Running ``ispc`` programs in the debugger, setting breakpoints, printing out
 variables is just the same as debugging C/C++ programs.  Similarly, you can
 directly step up and down the call stack between ``ispc`` code and C/C++
 code.
@@ -894,8 +896,8 @@ code.
 One limitation of the current debugging support is that the debugger
 provides a window into an entire gang's worth of program instances, rather
 than just a single program instance.  (These concepts will be introduced
-shortly, in `Basic Concepts: Program Instances and Gangs of Program
-Instances`).  Thus, when a ``varying`` variable is printed, the values for
+shortly, in `Basic Concepts: Program Instances and Gangs of Program Instances`_
+). Thus, when a ``varying`` variable is printed, the values for
 each of the program instances are displayed.  Along similar lines, the path
 the debugger follows through program source code passes each statement that
 any program instance wants to execute (see `Control Flow Within A Gang`_
@@ -904,7 +906,7 @@ for more details on control flow in ``ispc``.)
 While debugging, a variable, ``__mask``, is available to provide the
 current program execution mask at the current point in the program
 
-Another option for debugging (and the only current option on Windows\*) is
+Another option for debugging is
 to use the ``print`` statement for ``printf()`` style debugging.  (See
 `Output Functions`_ for more information.)  You can also use the ability to
 call back to application code at particular points in the program, passing
