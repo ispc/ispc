@@ -67,6 +67,7 @@
 
 #ifdef ISPC_GENX_ENABLED
 #define GENX_WIDTH_GENERAL_REG 32
+#include "GenX.h"
 #endif
 
 Function::Function(Symbol *s, Stmt *c) {
@@ -411,59 +412,65 @@ void Function::emitCode(FunctionEmitContext *ctx, llvm::Function *function, Sour
         ctx->ReturnInst();
     }
 #ifdef ISPC_GENX_ENABLED
-    if (g->target->getISA() == Target::GENX && (type->isExported)) {
-        // Emit metadata for GENX kernel
-        // Below is a prototype for emitting kernel metadata.
+	if (g->target->getISA() == Target::GENX){
+		// We need to layout blocks for correct execution of CM passes.
+		// TODO: LayoutBlocks should be a part of CMSIMDCFLoweringPass 
+		// to avoid dependency on GenX.h
+		llvm::genx::LayoutBlocks(*function);
+		if (type->isExported) {
+			// Emit metadata for GENX kernel
+			// Below is a prototype for emitting kernel metadata.
 
-        llvm::LLVMContext &fContext = function->getContext();
-        llvm::NamedMDNode *mdKernels = m->module->getOrInsertNamedMetadata("genx.kernels");
+			llvm::LLVMContext &fContext = function->getContext();
+			llvm::NamedMDNode *mdKernels = m->module->getOrInsertNamedMetadata("genx.kernels");
 
-        std::string AsmName =
-            (m->module->getName() + llvm::Twine('_') + llvm::Twine(mdKernels->getNumOperands()) + llvm::Twine(".asm"))
-                .str();
+			std::string AsmName =
+				(m->module->getName() + llvm::Twine('_') + llvm::Twine(mdKernels->getNumOperands()) + llvm::Twine(".asm"))
+				.str();
 
-        // Kernel arg kinds
-        llvm::Type *i32Type = llvm::Type::getInt32Ty(fContext);
-        llvm::SmallVector<llvm::Metadata *, 8> argKinds;
-        llvm::SmallVector<llvm::Metadata *, 8> argInOutKinds;
-        llvm::SmallVector<llvm::Metadata *, 8> argOffsets;
-        // In ISPC we need only AK_NORMAL and IK_NORMAL now, in future it can change.
-        enum { AK_NORMAL, AK_SAMPLER, AK_SURFACE, AK_VME };
-        enum { IK_NORMAL, IK_INPUT, IK_OUTPUT, IK_INPUT_OUTPUT };
-        unsigned int offset = 32;
-        for (int i = 0; i < args.size(); i++) {
-            const Type *T = args[i]->type;
-            argKinds.push_back(llvm::ValueAsMetadata::get(llvm::ConstantInt::get(i32Type, AK_NORMAL)));
-            argInOutKinds.push_back(llvm::ValueAsMetadata::get(llvm::ConstantInt::get(i32Type, IK_NORMAL)));
+			// Kernel arg kinds
+			llvm::Type *i32Type = llvm::Type::getInt32Ty(fContext);
+			llvm::SmallVector<llvm::Metadata *, 8> argKinds;
+			llvm::SmallVector<llvm::Metadata *, 8> argInOutKinds;
+			llvm::SmallVector<llvm::Metadata *, 8> argOffsets;
+			// In ISPC we need only AK_NORMAL and IK_NORMAL now, in future it can change.
+			enum { AK_NORMAL, AK_SAMPLER, AK_SURFACE, AK_VME };
+			enum { IK_NORMAL, IK_INPUT, IK_OUTPUT, IK_INPUT_OUTPUT };
+			unsigned int offset = 32;
+			for (int i = 0; i < args.size(); i++) {
+				const Type *T = args[i]->type;
+				argKinds.push_back(llvm::ValueAsMetadata::get(llvm::ConstantInt::get(i32Type, AK_NORMAL)));
+				argInOutKinds.push_back(llvm::ValueAsMetadata::get(llvm::ConstantInt::get(i32Type, IK_NORMAL)));
 
-            llvm::Type *type = T->LLVMType(&fContext);
-            unsigned bytes = type->getScalarSizeInBits() / 8;
-            if (bytes != 0) {
-                offset = llvm::alignTo(offset, bytes);
-            }
+				llvm::Type *type = T->LLVMType(&fContext);
+				unsigned bytes = type->getScalarSizeInBits() / 8;
+				if (bytes != 0) {
+					offset = llvm::alignTo(offset, bytes);
+				}
 
-            if (llvm::isa<llvm::VectorType>(type)) {
-                bytes = type->getPrimitiveSizeInBits() / 8;
+				if (llvm::isa<llvm::VectorType>(type)) {
+					bytes = type->getPrimitiveSizeInBits() / 8;
 
-                if ((offset & (GENX_WIDTH_GENERAL_REG - 1)) + bytes > GENX_WIDTH_GENERAL_REG)
-                    // GRF align if arg would cross GRF boundary
-                    offset = llvm::alignTo(offset, GENX_WIDTH_GENERAL_REG);
-            }
+					if ((offset & (GENX_WIDTH_GENERAL_REG - 1)) + bytes > GENX_WIDTH_GENERAL_REG)
+						// GRF align if arg would cross GRF boundary
+						offset = llvm::alignTo(offset, GENX_WIDTH_GENERAL_REG);
+				}
 
-            argOffsets.push_back(llvm::ValueAsMetadata::get(llvm::ConstantInt::get(i32Type, offset)));
+				argOffsets.push_back(llvm::ValueAsMetadata::get(llvm::ConstantInt::get(i32Type, offset)));
 
-            offset += bytes;
-        }
+				offset += bytes;
+			}
 
-        llvm::Metadata *mdArgs[] = {llvm::ValueAsMetadata::get(function),
-                                    llvm::MDString::get(fContext, sym->name),
-                                    llvm::MDString::get(fContext, AsmName),
-                                    llvm::MDNode::get(fContext, argKinds),
-                                    llvm::ValueAsMetadata::get(llvm::ConstantInt::getNullValue(i32Type)),
-                                    llvm::ValueAsMetadata::get(llvm::ConstantInt::getNullValue(i32Type)),
-                                    llvm::MDNode::get(fContext, argInOutKinds)};
+			llvm::Metadata *mdArgs[] = { llvm::ValueAsMetadata::get(function),
+										llvm::MDString::get(fContext, sym->name),
+										llvm::MDString::get(fContext, AsmName),
+										llvm::MDNode::get(fContext, argKinds),
+										llvm::ValueAsMetadata::get(llvm::ConstantInt::getNullValue(i32Type)),
+										llvm::ValueAsMetadata::get(llvm::ConstantInt::getNullValue(i32Type)),
+										llvm::MDNode::get(fContext, argInOutKinds) };
 
-        mdKernels->addOperand(llvm::MDNode::get(fContext, mdArgs));
+			mdKernels->addOperand(llvm::MDNode::get(fContext, mdArgs));
+		}
     }
 #endif
 }

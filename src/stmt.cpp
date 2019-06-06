@@ -408,11 +408,6 @@ void IfStmt::EmitCode(FunctionEmitContext *ctx) const {
         llvm::BasicBlock *bthen = ctx->CreateBasicBlock("if_then");
         llvm::BasicBlock *belse = ctx->CreateBasicBlock("if_else");
         llvm::BasicBlock *bexit = ctx->CreateBasicBlock("if_exit");
-        // TODO_GEN: CM requires a well-nested block-layout to work well.
-        // We need to try using CM's LayoutBlocks method instead moving blocks.
-        bthen->moveAfter(ctx->GetCurrentBasicBlock());
-        belse->moveAfter(bthen);
-        bexit->moveAfter(belse);
 
         // Jump to the appropriate basic block based on the value of
         // the 'if' test
