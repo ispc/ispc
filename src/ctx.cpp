@@ -63,7 +63,7 @@
 struct CFInfo {
     /** Returns a new instance of the structure that represents entering an
         'if' statement */
-    static CFInfo *GetIf(bool isUniform, llvm::Value *savedMask);
+    static CFInfo *GetIf(bool isUniform, bool uniformEmu, llvm::Value *savedMask);
 
     /** Returns a new instance of the structure that represents entering a
         loop. */
@@ -93,6 +93,7 @@ struct CFInfo {
     enum CFType { If, Loop, ForeachRegular, ForeachActive, ForeachUnique, Switch };
     CFType type;
     bool isUniform;
+    bool isUniformEmulated;
     llvm::BasicBlock *savedBreakTarget, *savedContinueTarget;
     llvm::Value *savedBreakLanesPtr, *savedContinueLanesPtr;
     llvm::Value *savedMask, *savedBlockEntryMask;
@@ -103,10 +104,11 @@ struct CFInfo {
     bool savedSwitchConditionWasUniform;
 
   private:
-    CFInfo(CFType t, bool uniformIf, llvm::Value *sm) {
+    CFInfo(CFType t, bool uniformIf, bool uniformEmu, llvm::Value *sm) {
         Assert(t == If);
         type = t;
         isUniform = uniformIf;
+        isUniformEmulated = uniformEmu;
         savedBreakTarget = savedContinueTarget = NULL;
         savedBreakLanesPtr = savedContinueLanesPtr = NULL;
         savedMask = savedBlockEntryMask = sm;
@@ -154,7 +156,9 @@ struct CFInfo {
     }
 };
 
-CFInfo *CFInfo::GetIf(bool isUniform, llvm::Value *savedMask) { return new CFInfo(If, isUniform, savedMask); }
+CFInfo *CFInfo::GetIf(bool isUniform, bool uniformEmu, llvm::Value *savedMask) {
+    return new CFInfo(If, isUniform, uniformEmu, savedMask);
+}
 
 CFInfo *CFInfo::GetLoop(bool isUniform, llvm::BasicBlock *breakTarget, llvm::BasicBlock *continueTarget,
                         llvm::Value *savedBreakLanesPtr, llvm::Value *savedContinueLanesPtr, llvm::Value *savedMask,
@@ -421,10 +425,12 @@ void FunctionEmitContext::BranchIfMaskNone(llvm::BasicBlock *btrue, llvm::BasicB
     bblock = NULL;
 }
 
-void FunctionEmitContext::StartUniformIf() { controlFlowInfo.push_back(CFInfo::GetIf(true, GetInternalMask())); }
+void FunctionEmitContext::StartUniformIf(bool emulateUniform) {
+    controlFlowInfo.push_back(CFInfo::GetIf(true, emulateUniform, GetInternalMask()));
+}
 
 void FunctionEmitContext::StartVaryingIf(llvm::Value *oldMask) {
-    controlFlowInfo.push_back(CFInfo::GetIf(false, oldMask));
+    controlFlowInfo.push_back(CFInfo::GetIf(false, false, oldMask));
 }
 
 void FunctionEmitContext::EndIf() {
@@ -711,7 +717,6 @@ bool FunctionEmitContext::ifsInCFAllUniform(int type) const {
             return false;
         --i;
     }
-    AssertPos(currentPos, i >= 0); // else we didn't find the expected control flow type!
     return true;
 }
 
@@ -2870,7 +2875,6 @@ void FunctionEmitContext::BranchInst(llvm::BasicBlock *trueBlock, llvm::BasicBlo
         AssertPos(currentPos, m->errorCount > 0);
         return;
     }
-
     llvm::Instruction *b = llvm::BranchInst::Create(trueBlock, falseBlock, test, bblock);
     AddDebugPos(b);
 }
@@ -3412,6 +3416,20 @@ static unsigned getBlockCount(llvm::Type *type) {
     return (numBytes == 2) ? numBytes : 1U;
 }
 
+bool FunctionEmitContext::ifNotEmulatedUniformForGen() const {
+    AssertPos(currentPos, controlFlowInfo.size() > 0);
+    // Go backwards through controlFlowInfo, since we add new nested scopes
+    // to the back.
+    int i = controlFlowInfo.size() - 1;
+    while (i >= 0) {
+        if (controlFlowInfo[i]->isUniformEmulated == true)
+            // Found a scope due to an 'if' statement with a emulated uniform test
+            return true;
+        --i;
+    }
+    return false;
+}
+
 llvm::Value *FunctionEmitContext::GenXSVMGather(llvm::Value *ptr, llvm::Type *ptrType) {
     AssertPos(currentPos, llvm::isa<llvm::VectorType>(ptrType));
     unsigned nBits = m->module->getDataLayout().getPointerSizeInBits();
@@ -3465,6 +3483,8 @@ llvm::Value *FunctionEmitContext::GenXSVMScatter(llvm::Value *ptr, llvm::Value *
 
 llvm::Value *FunctionEmitContext::GenXSimdCFAny(llvm::Value *value) {
     AssertPos(currentPos, llvm::isa<llvm::VectorType>(value->getType()));
+    llvm::Value *mask = GetInternalMask();
+    value = BinaryOperator(llvm::BinaryOperator::And, mask, value);
     auto Fn = llvm::Intrinsic::getDeclaration(m->module, llvm::Intrinsic::genx_simdcf_any, LLVMTypes::Int1VectorType);
     return llvm::CallInst::Create(Fn, value, "", bblock);
 }
@@ -3525,5 +3545,18 @@ llvm::Value *FunctionEmitContext::GenXStore(llvm::Value *ptr, llvm::Value *value
     args.push_back(ptr);
     auto Fn = llvm::Intrinsic::getDeclaration(m->module, llvm::Intrinsic::genx_vstore, Tys);
     return CallInst(Fn, NULL, args, "");
+}
+
+llvm::Value *FunctionEmitContext::GenXPrepareVectorBranch(llvm::Value *value) {
+    llvm::Value *ret = value;
+    // If condition is varying we just insert simdcf.any intrinsic.
+    // If condition is a scalar we should change it to vector but only if we had
+    // varying condition which was emulated as uniform in external scopes.
+    if (!llvm::isa<llvm::VectorType>(value->getType())) {
+        if (!ifNotEmulatedUniformForGen())
+            return ret;
+        ret = BroadcastValue(value, LLVMTypes::Int1VectorType);
+    }
+    return GenXSimdCFAny(ret);
 }
 #endif
