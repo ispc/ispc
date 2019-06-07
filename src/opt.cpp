@@ -625,11 +625,30 @@ void Optimize(llvm::Module *module, int optLevel) {
             optPM.add(llvm::createCMSimdCFLoweringPass());
             optPM.add(llvm::createGenXPacketizePass());
             optPM.add(llvm::createPromoteMemoryToRegisterPass());
+            // Inline
+            optPM.add(llvm::createCorrelatedValuePropagationPass());
+            optPM.add(llvm::createGenXReduceIntSizePass());
+            optPM.add(llvm::createInstructionCombiningPass());
+            optPM.add(llvm::createGlobalDCEPass());
+            optPM.add(llvm::createInstructionCombiningPass());
+            // Unroll
+            optPM.add(llvm::createReassociatePass());
+            optPM.add(llvm::createLoopRotatePass());
+            optPM.add(llvm::createLICMPass());
+            optPM.add(llvm::createInstructionCombiningPass());
+            optPM.add(llvm::createIndVarSimplifyPass());
+            optPM.add(llvm::createLoopIdiomPass());
+            optPM.add(llvm::createLoopDeletionPass());
+            optPM.add(llvm::createSimpleLoopUnrollPass());
+            optPM.add(llvm::createInstructionCombiningPass());
+            // Simplify region accesses.
+            optPM.add(llvm::createGenXRegionCollapsingPass());
+            optPM.add(llvm::createEarlyCSEPass());
+            optPM.add(llvm::createDeadCodeEliminationPass());
             optPM.add(llvm::createCMLowerLoadStorePass());
             optPM.add(llvm::createCMImpParamPass());
             optPM.add(llvm::createCMABIPass());
             optPM.add(llvm::createCMKernelArgOffsetPass(32));
-            optPM.add(llvm::createGenXReduceIntSizePass());
         }
 #endif
         optPM.add(llvm::createFunctionInliningPass());
