@@ -131,8 +131,10 @@ class FunctionEmitContext {
         @{
     */
     /** Notifies the FunctionEmitContext that we're starting emission of an
-        'if' statement with a uniform test.  */
-    void StartUniformIf();
+        'if' statement with a uniform test. If we emulate uniform branch as
+        for GEN, emulateUniform must be true
+        */
+    void StartUniformIf(bool emulateUniform = false);
 
     /** Notifies the FunctionEmitContext that we're starting emission of an
         'if' statement with a varying test.  The value of the mask going
@@ -548,6 +550,11 @@ class FunctionEmitContext {
     llvm::Value *GenXSVMStore(llvm::Value *ptr, llvm::Value *value);
     llvm::Value *GenXLoad(llvm::Value *ptr);
     llvm::Value *GenXStore(llvm::Value *ptr, llvm::Value *value);
+    /*This function changes scalar condition to vector condition before branching if
+    emulated uniform condition was found in external scopes.
+    TODO: It should be the part of BranchInst but currently it has inserted
+    only to tested control flow constructions to avoid accidental errors*/
+    llvm::Value *GenXPrepareVectorBranch(llvm::Value *value);
 #endif
     /** @} */
 
@@ -696,6 +703,9 @@ class FunctionEmitContext {
     llvm::Value *pointerVectorToVoidPointers(llvm::Value *value);
     static void addGSMetadata(llvm::Value *inst, SourcePos pos);
     bool ifsInCFAllUniform(int cfType) const;
+#ifdef ISPC_GENX_ENABLED
+    bool ifNotEmulatedUniformForGen() const;
+#endif // ISPC_GENX_ENABLED
     void jumpIfAllLoopLanesAreDone(llvm::BasicBlock *target);
     llvm::Value *emitGatherCallback(llvm::Value *lvalue, llvm::Value *retPtr);
 
