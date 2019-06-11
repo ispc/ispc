@@ -2710,7 +2710,7 @@ void FunctionEmitContext::scatter(llvm::Value *value, llvm::Value *ptr, const Ty
     AddInstrumentationPoint("scatter");
 #ifdef ISPC_GENX_ENABLED
     if (g->target->getISA() == Target::GENX) {
-        GenXSVMScatter(ptr, value, valueType->GetBaseType()->GetAsVaryingType()->LLVMType(g->ctx));
+        GenXSVMScatter(ptr, value, ptrType->GetAsVaryingType()->LLVMType(g->ctx));
         return;
     }
 #endif
@@ -3454,7 +3454,7 @@ llvm::Value *FunctionEmitContext::GenXSVMGather(llvm::Value *ptr, llvm::Type *pt
     return CallInst(Fn, NULL, args, "");
 }
 
-llvm::Value *FunctionEmitContext::GenXSVMScatter(llvm::Value *ptr, llvm::Value *value, llvm::Type *valueType) {
+llvm::Value *FunctionEmitContext::GenXSVMScatter(llvm::Value *ptr, llvm::Value *value, llvm::Type *ptrType) {
     AssertPos(currentPos, llvm::isa<llvm::VectorType>(value->getType()));
     unsigned nBits = m->module->getDataLayout().getPointerSizeInBits();
     llvm::Value *addr = ptr;
@@ -3475,7 +3475,7 @@ llvm::Value *FunctionEmitContext::GenXSVMScatter(llvm::Value *ptr, llvm::Value *
     args.push_back(value);
 
     // Overload with return type, predicate type and address vector type
-    llvm::Type *argTypes[] = {args[0]->getType(), addr->getType(), valueType};
+    llvm::Type *argTypes[] = {args[0]->getType(), addr->getType(), ptrType};
 
     auto Fn = llvm::Intrinsic::getDeclaration(m->module, llvm::Intrinsic::genx_svm_scatter, argTypes);
     return CallInst(Fn, NULL, args, "");
