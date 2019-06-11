@@ -1,0 +1,77 @@
+% List of known fails.
+% The list is unordered and contains information about commonly used platforms / configurations.
+% Our goal is to maintain this list for Linux, macOS and Windows with reasonably new compilers.
+% Note, that it's important which C++ compiler was used.
+% Please also note that it's very important to have correctly built LLVM. There are a number of
+% LLVM bugs in released versions, that we have to workaround by applying patches (see llvm_patches
+% folder). The recommended way to build LLVM on Unix is to use "alloy.py".
+%
+./tests/short-vec-6.ispc runfail    xe64        gen9-x8 unspec   Linux LLVM 13.0 clang++13.0 O0 spv *
+./tests/short-vec-6.ispc runfail    xe64       gen9-x16 unspec   Linux LLVM 13.0 clang++13.0 O0 spv *
+./tests/int8-wrap.ispc runfail    xe64      xehpc-x16 pvc   Linux LLVM 13.0 clang++13.0 O2 spv *
+./tests/padds-i64.ispc runfail    xe64      xehpc-x16 pvc   Linux LLVM 13.0 clang++13.0 O2 spv *
+./tests/padds-vi64.ispc runfail    xe64      xehpc-x16 pvc   Linux LLVM 13.0 clang++13.0 O2 spv *
+./tests/paddus-i64.ispc runfail    xe64      xehpc-x16 pvc   Linux LLVM 13.0 clang++13.0 O2 spv *
+./tests/paddus-vi64.ispc runfail    xe64      xehpc-x16 pvc   Linux LLVM 13.0 clang++13.0 O2 spv *
+./tests/pmuls-i64.ispc runfail    xe64      xehpc-x16 pvc   Linux LLVM 13.0 clang++13.0 O2 spv *
+./tests/pmuls-vi64.ispc runfail    xe64      xehpc-x16 pvc   Linux LLVM 13.0 clang++13.0 O2 spv *
+./tests/pmulus-i64.ispc runfail    xe64      xehpc-x16 pvc   Linux LLVM 13.0 clang++13.0 O2 spv *
+./tests/pmulus-vi64.ispc runfail    xe64      xehpc-x16 pvc   Linux LLVM 13.0 clang++13.0 O2 spv *
+./tests/psubs-i64.ispc runfail    xe64      xehpc-x16 pvc   Linux LLVM 13.0 clang++13.0 O2 spv *
+./tests/psubs-vi64.ispc runfail    xe64      xehpc-x16 pvc   Linux LLVM 13.0 clang++13.0 O2 spv *
+./tests/int8-wrap.ispc runfail    xe64      xehpc-x32 pvc   Linux LLVM 13.0 clang++13.0 O2 spv *
+./tests/padds-i64.ispc runfail    xe64      xehpc-x32 pvc   Linux LLVM 13.0 clang++13.0 O2 spv *
+./tests/padds-vi64.ispc runfail    xe64      xehpc-x32 pvc   Linux LLVM 13.0 clang++13.0 O2 spv *
+./tests/paddus-i64.ispc runfail    xe64      xehpc-x32 pvc   Linux LLVM 13.0 clang++13.0 O2 spv *
+./tests/paddus-vi64.ispc runfail    xe64      xehpc-x32 pvc   Linux LLVM 13.0 clang++13.0 O2 spv *
+./tests/pmuls-i64.ispc runfail    xe64      xehpc-x32 pvc   Linux LLVM 13.0 clang++13.0 O2 spv *
+./tests/pmuls-vi64.ispc runfail    xe64      xehpc-x32 pvc   Linux LLVM 13.0 clang++13.0 O2 spv *
+./tests/pmulus-i64.ispc runfail    xe64      xehpc-x32 pvc   Linux LLVM 13.0 clang++13.0 O2 spv *
+./tests/pmulus-vi64.ispc runfail    xe64      xehpc-x32 pvc   Linux LLVM 13.0 clang++13.0 O2 spv *
+./tests/psubs-i64.ispc runfail    xe64      xehpc-x32 pvc   Linux LLVM 13.0 clang++13.0 O2 spv *
+./tests/psubs-vi64.ispc runfail    xe64      xehpc-x32 pvc   Linux LLVM 13.0 clang++13.0 O2 spv *
+./tests/int8-wrap.ispc runfail    xe64      xehpc-x32 pvc   Linux LLVM 14.0 clang++14.0 O2 spv *
+./tests/short-vec-6.ispc runfail    xe64        gen9-x8 unspec   Linux LLVM 14.0 clang++14.0 O0 spv *
+./tests/short-vec-6.ispc runfail    xe64       gen9-x16 unspec   Linux LLVM 14.0 clang++14.0 O0 spv *
+./tests/idiv-int16.ispc runfail    xe64       gen9-x8 unspec   Linux LLVM 15.0 clang++15.0 O2 spv *
+./tests/idiv-uint16.ispc runfail    xe64       gen9-x8 unspec   Linux LLVM 15.0 clang++15.0 O2 spv *
+./tests/idiv-int16.ispc runfail    xe64       gen9-x16 unspec   Linux LLVM 15.0 clang++15.0 O2 spv *
+./tests/idiv-uint16.ispc runfail    xe64       gen9-x16 unspec   Linux LLVM 15.0 clang++15.0 O2 spv *
+./tests/idiv-int32.ispc runfail    xe64       gen9-x8 unspec   Linux LLVM 15.0 clang++15.0 O2 spv *
+./tests/idiv-uint32.ispc runfail    xe64       gen9-x8 unspec   Linux LLVM 15.0 clang++15.0 O2 spv *
+./tests/idiv-int32.ispc runfail    xe64       gen9-x16 unspec   Linux LLVM 15.0 clang++15.0 O2 spv *
+./tests/idiv-uint32.ispc runfail    xe64       gen9-x16 unspec   Linux LLVM 15.0 clang++15.0 O2 spv *
+./tests/short-vec-6.ispc runfail    xe64        gen9-x8 unspec   Linux LLVM 15.0 clang++15.0 O0 spv *
+./tests/short-vec-6.ispc runfail    xe64       gen9-x16 unspec   Linux LLVM 15.0 clang++15.0 O0 spv *
+./tests/int8-wrap.ispc runfail    xe64      xehpc-x32 pvc   Linux LLVM 15.0 clang++15.0 O2 spv *
+./tests/short-vec-6.ispc runfail    xe64       xehpg-x8 dg2   Linux LLVM 15.0 clang++15.0 O0 spv *
+./tests/short-vec-6.ispc runfail    xe64      xehpg-x16 dg2   Linux LLVM 15.0 clang++15.0 O0 spv *
+./tests/ind-var-bounds-and-types.ispc runfail    xe64        xehpg-x8 dg2   Linux LLVM 15.0 clang++15.0 O0 spv *
+./tests/funcptr-null-1.ispc runfail    xe64        xehpg-x8 dg2   Linux LLVM 15.0 clang++15.0 O0 spv *
+./tests/funcptr-null-1.ispc runfail    xe64        xehpg-x16 dg2   Linux LLVM 15.0 clang++15.0 O0 spv *
+./tests/funcptr-uniform-5.ispc runfail    xe64        xehpg-x8 dg2   Linux LLVM 15.0 clang++15.0 O0 spv *
+./tests/funcptr-uniform-5.ispc runfail    xe64        xehpg-x16 dg2   Linux LLVM 15.0 clang++15.0 O0 spv *
+./tests/funcptr-uniform-6.ispc runfail    xe64        xehpg-x8 dg2   Linux LLVM 15.0 clang++15.0 O0 spv *
+./tests/funcptr-uniform-6.ispc runfail    xe64        xehpg-x16 dg2   Linux LLVM 15.0 clang++15.0 O0 spv *
+./tests/funcptr-varying-1.ispc runfail    xe64        xehpg-x8 dg2   Linux LLVM 15.0 clang++15.0 O0 spv *
+./tests/funcptr-varying-1.ispc runfail    xe64        xehpg-x16 dg2   Linux LLVM 15.0 clang++15.0 O0 spv *
+./tests/funcptr-varying-2.ispc runfail    xe64        xehpg-x8 dg2   Linux LLVM 15.0 clang++15.0 O0 spv *
+./tests/funcptr-varying-2.ispc runfail    xe64        xehpg-x16 dg2   Linux LLVM 15.0 clang++15.0 O0 spv *
+./tests/funcptr-varying-3.ispc runfail    xe64        xehpg-x8 dg2   Linux LLVM 15.0 clang++15.0 O0 spv *
+./tests/funcptr-varying-3.ispc runfail    xe64        xehpg-x16 dg2   Linux LLVM 15.0 clang++15.0 O0 spv *
+./tests/funcptr-varying-4.ispc runfail    xe64        xehpg-x8 dg2   Linux LLVM 15.0 clang++15.0 O0 spv *
+./tests/funcptr-varying-4.ispc runfail    xe64        xehpg-x16 dg2   Linux LLVM 15.0 clang++15.0 O0 spv *
+./tests/print_uniform-f16.ispc runfail    xe64       gen9-x8 unspec   Linux LLVM 15.0 clang++15.0 O2 spv *
+./tests/print_uniform-f32.ispc runfail    xe64       gen9-x8 unspec   Linux LLVM 15.0 clang++15.0 O2 spv *
+./tests/print_uniform-f64.ispc runfail    xe64       gen9-x8 unspec   Linux LLVM 15.0 clang++15.0 O2 spv *
+./tests/print_uniform-i16.ispc runfail    xe64       gen9-x8 unspec   Linux LLVM 15.0 clang++15.0 O2 spv *
+./tests/print_uniform-i32.ispc runfail    xe64       gen9-x8 unspec   Linux LLVM 15.0 clang++15.0 O2 spv *
+./tests/print_uniform-i64.ispc runfail    xe64       gen9-x8 unspec   Linux LLVM 15.0 clang++15.0 O2 spv *
+./tests/print_uniform-i8.ispc runfail    xe64       gen9-x8 unspec   Linux LLVM 15.0 clang++15.0 O2 spv *
+./tests/print_uniform-f16.ispc runfail    xe64       gen9-x16 unspec   Linux LLVM 15.0 clang++15.0 O2 spv *
+./tests/print_uniform-f32.ispc runfail    xe64       gen9-x16 unspec   Linux LLVM 15.0 clang++15.0 O2 spv *
+./tests/print_uniform-f64.ispc runfail    xe64       gen9-x16 unspec   Linux LLVM 15.0 clang++15.0 O2 spv *
+./tests/print_uniform-i16.ispc runfail    xe64       gen9-x16 unspec   Linux LLVM 15.0 clang++15.0 O2 spv *
+./tests/print_uniform-i32.ispc runfail    xe64       gen9-x16 unspec   Linux LLVM 15.0 clang++15.0 O2 spv *
+./tests/print_uniform-i64.ispc runfail    xe64       gen9-x16 unspec   Linux LLVM 15.0 clang++15.0 O2 spv *
+./tests/print_uniform-i8.ispc runfail    xe64       gen9-x16 unspec   Linux LLVM 15.0 clang++15.0 O2 spv *
