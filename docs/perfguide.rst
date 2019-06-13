@@ -83,8 +83,8 @@ data that didn't fully fill a gang.
             // do some computation on a[index]
         }
         // Now handle the ragged extra bits at the end
-        if (countBase < count) {
-            int index = countBase + programIndex;
+        int index = countBase + programIndex;
+        if (index < count) {
             // do some computation on a[index]
         }
     }
