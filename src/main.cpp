@@ -370,8 +370,8 @@ static int ParsingPhaseName(char *stage) {
 
 static std::set<int> ParsingPhases(char *stages) {
     std::set<int> phases;
-    /* ensure the string is NUL terminated */
-    stages[sizeof(stages) - 1] = '\0';
+    auto len = strnlen_s(stages, 100);
+    Assert(len && len < 100 && "phases string is too long!");
     int begin = ParsingPhaseName(stages);
     int end = begin;
 
