@@ -49,6 +49,7 @@
 #include <llvm/Support/Signals.h>
 #include <llvm/Support/TargetRegistry.h>
 #include <llvm/Support/TargetSelect.h>
+#include <llvm/Support/Debug.h>
 
 #ifdef ISPC_IS_WINDOWS
 #define strcasecmp stricmp
@@ -514,6 +515,8 @@ int main(int Argc, char *Argv[]) {
             usage(1);
         } else if (!strcmp(argv[i], "--debug"))
             g->debugPrint = true;
+	else if (!strcmp(argv[i], "--debug-llvm"))
+	    llvm::DebugFlag = true;
 #ifdef ISPC_IS_WINDOWS
         else if (!strcmp(argv[i], "--dllexport"))
             g->dllExport = true;
