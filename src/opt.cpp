@@ -491,7 +491,8 @@ void DebugPassManager::add(llvm::Pass *P, int stage = -1) {
 #if ISPC_LLVM_VERSION <= ISPC_LLVM_3_9
                 snprintf(buf, sizeof(buf), "\n\n*****LLVM IR after phase %d: %s*****\n\n", number, P->getPassName());
 #else // LLVM 4.0+
-                snprintf(buf, sizeof(buf), "\n\n*****LLVM IR after phase %d: %s*****\n\n", number, P->getPassName().data());
+                snprintf(buf, sizeof(buf), "\n\n*****LLVM IR after phase %d: %s*****\n\n", number,
+                         P->getPassName().data());
 #endif
                 PM.add(CreateDebugPass(buf));
             }
@@ -4420,7 +4421,7 @@ static llvm::Pass *CreateDebugPass(char *output) { return new DebugPass(output);
 class DebugPassFile : public llvm::ModulePass {
   public:
     static char ID;
-    DebugPassFile(int number, llvm::StringRef name) : ModulePass(ID), pnum(number), pname(name) { }
+    DebugPassFile(int number, llvm::StringRef name) : ModulePass(ID), pnum(number), pname(name) {}
 
 #if ISPC_LLVM_VERSION <= ISPC_LLVM_3_9
     const char *getPassName() const { return "Dump LLVM IR"; }
@@ -4431,7 +4432,7 @@ class DebugPassFile : public llvm::ModulePass {
     bool doInitialization(llvm::Module &m);
 
   private:
-    void run(llvm::Module& m, bool init);
+    void run(llvm::Module &m, bool init);
     int pnum;
     llvm::StringRef pname;
 };
@@ -4441,8 +4442,7 @@ char DebugPassFile::ID = 0;
 /**
  * Strips all non-alphanumeric characters from given string.
  */
-std::string sanitize(std::string in)
-{
+std::string sanitize(std::string in) {
     llvm::Regex r("[^[:alnum:]]");
     while (r.match(in))
         in = r.sub("", in);

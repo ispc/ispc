@@ -46,10 +46,10 @@
 #else
 #include <unistd.h>
 #endif // ISPC_IS_WINDOWS
+#include <llvm/Support/Debug.h>
 #include <llvm/Support/Signals.h>
 #include <llvm/Support/TargetRegistry.h>
 #include <llvm/Support/TargetSelect.h>
-#include <llvm/Support/Debug.h>
 
 #ifdef ISPC_IS_WINDOWS
 #define strcasecmp stricmp
@@ -729,8 +729,7 @@ int main(int Argc, char *Argv[]) {
                             "handles the phases and it may possibly make some bugs go"
                             "away or introduce the new ones.\n");
             g->debug_stages = ParsingPhases(argv[i] + strlen("--debug-phase="));
-        }
-        else if (strncmp(argv[i], "--dump-file", 11) == 0)
+        } else if (strncmp(argv[i], "--dump-file", 11) == 0)
             g->dumpFile = true;
 #endif
 
