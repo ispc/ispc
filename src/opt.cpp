@@ -4420,7 +4420,7 @@ static llvm::Pass *CreateDebugPass(char *output) { return new DebugPass(output);
 class DebugPassFile : public llvm::ModulePass {
   public:
     static char ID;
-	DebugPassFile(int number, llvm::StringRef name) : ModulePass(ID), pnum(number), pname(name) { }
+    DebugPassFile(int number, llvm::StringRef name) : ModulePass(ID), pnum(number), pname(name) { }
 
 #if ISPC_LLVM_VERSION <= ISPC_LLVM_3_9
     const char *getPassName() const { return "Dump LLVM IR"; }

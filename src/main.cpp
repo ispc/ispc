@@ -178,6 +178,7 @@ static void devUsage(int ret) {
     lPrintVersion();
     printf("\nusage (developer options): ispc\n");
     printf("    [--debug]\t\t\t\tPrint information useful for debugging ispc\n");
+    printf("    [--debug-llvm]\t\t\tEnable LLVM debugging information (dumps to stderr)\n");
     printf("    [--print-target]\t\t\tPrint target's information\n");
     printf("    [--fuzz-test]\t\t\tRandomly perturb program input to test error conditions\n");
     printf("    [--fuzz-seed=<value>]\t\tSeed value for RNG for fuzz testing\n");
@@ -196,6 +197,7 @@ static void devUsage(int ret) {
 #ifndef ISPC_NO_DUMPS
     printf("    [--debug-phase=<value>]\t\tSet optimization phases to dump. "
            "--debug-phase=first,210:220,300,305,310:last\n");
+    printf("    [--dump-file]\t\t\tDump module IR to file(s) in current directory\n");
 #endif
 #if ISPC_LLVM_VERSION == ISPC_LLVM_3_4 || ISPC_LLVM_VERSION == ISPC_LLVM_3_5 // 3.4, 3.5
     printf("    [--debug-ir=<value>]\t\tSet optimization phase to generate debugIR after it\n");
@@ -371,7 +373,7 @@ static int ParsingPhaseName(char *stage) {
 
 static std::set<int> ParsingPhases(char *stages) {
     std::set<int> phases;
-    auto len = strnlen_s(stages, 100);
+    auto len = strnlen(stages, 100);
     Assert(len && len < 100 && "phases string is too long!");
     int begin = ParsingPhaseName(stages);
     int end = begin;
@@ -515,8 +517,8 @@ int main(int Argc, char *Argv[]) {
             usage(1);
         } else if (!strcmp(argv[i], "--debug"))
             g->debugPrint = true;
-	else if (!strcmp(argv[i], "--debug-llvm"))
-	    llvm::DebugFlag = true;
+        else if (!strcmp(argv[i], "--debug-llvm"))
+            llvm::DebugFlag = true;
 #ifdef ISPC_IS_WINDOWS
         else if (!strcmp(argv[i], "--dllexport"))
             g->dllExport = true;
