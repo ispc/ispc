@@ -1472,6 +1472,7 @@ Globals::Globals() {
     includeStdlib = true;
     runCPP = true;
     debugPrint = false;
+    dumpFile = false;
     printTarget = false;
     NoOmitFramePointer = false;
     debugIR = -1;

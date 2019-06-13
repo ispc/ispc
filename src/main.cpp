@@ -725,6 +725,8 @@ int main(int Argc, char *Argv[]) {
                             "away or introduce the new ones.\n");
             g->debug_stages = ParsingPhases(argv[i] + strlen("--debug-phase="));
         }
+        else if (strncmp(argv[i], "--dump-file", 11) == 0)
+            g->dumpFile = true;
 #endif
 
 #if ISPC_LLVM_VERSION == ISPC_LLVM_3_4 || ISPC_LLVM_VERSION == ISPC_LLVM_3_5 // 3.4, 3.5
