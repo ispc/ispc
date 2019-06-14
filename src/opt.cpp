@@ -145,6 +145,10 @@
 #ifndef PRIu64
 #define PRIu64 "llu"
 #endif
+#ifndef ISPC_NO_DUMPS
+#include <llvm/Support/FileSystem.h>
+#include <llvm/Support/Regex.h>
+#endif
 
 static llvm::Pass *CreateIntrinsicsOptPass();
 static llvm::Pass *CreateInstructionSimplifyPass();
@@ -159,6 +163,7 @@ static llvm::Pass *CreateMakeInternalFuncsStaticPass();
 
 #ifndef ISPC_NO_DUMPS
 static llvm::Pass *CreateDebugPass(char *output);
+static llvm::Pass *CreateDebugPassFile(int number, llvm::StringRef name);
 #endif
 
 static llvm::Pass *CreateReplaceStdlibShiftPass();
@@ -479,13 +484,18 @@ void DebugPassManager::add(llvm::Pass *P, int stage = -1) {
 #ifndef ISPC_NO_DUMPS
         if (g->debug_stages.find(number) != g->debug_stages.end()) {
             // adding dump of LLVM IR after optimization
-            char buf[100];
+            if (g->dumpFile) {
+                PM.add(CreateDebugPassFile(number, P->getPassName()));
+            } else {
+                char buf[100];
 #if ISPC_LLVM_VERSION <= ISPC_LLVM_3_9
-            snprintf(buf, sizeof(buf), "\n\n*****LLVM IR after phase %d: %s*****\n\n", number, P->getPassName());
+                snprintf(buf, sizeof(buf), "\n\n*****LLVM IR after phase %d: %s*****\n\n", number, P->getPassName());
 #else // LLVM 4.0+
-            snprintf(buf, sizeof(buf), "\n\n*****LLVM IR after phase %d: %s*****\n\n", number, P->getPassName().data());
+                snprintf(buf, sizeof(buf), "\n\n*****LLVM IR after phase %d: %s*****\n\n", number,
+                         P->getPassName().data());
 #endif
-            PM.add(CreateDebugPass(buf));
+                PM.add(CreateDebugPass(buf));
+            }
         }
 #endif
 
@@ -4399,6 +4409,66 @@ bool DebugPass::runOnModule(llvm::Module &module) {
 }
 
 static llvm::Pass *CreateDebugPass(char *output) { return new DebugPass(output); }
+#endif
+
+//////////////////////////////////////////////////////////////////////////
+// DebugPassFile
+
+/** This pass is added in list of passes after optimizations which
+    we want to debug and print dump of LLVM IR to file.
+ */
+#ifndef ISPC_NO_DUMPS
+class DebugPassFile : public llvm::ModulePass {
+  public:
+    static char ID;
+    DebugPassFile(int number, llvm::StringRef name) : ModulePass(ID), pnum(number), pname(name) {}
+
+#if ISPC_LLVM_VERSION <= ISPC_LLVM_3_9
+    const char *getPassName() const { return "Dump LLVM IR"; }
+#else // LLVM 4.0+
+    llvm::StringRef getPassName() const { return "Dump LLVM IR"; }
+#endif
+    bool runOnModule(llvm::Module &m);
+    bool doInitialization(llvm::Module &m);
+
+  private:
+    void run(llvm::Module &m, bool init);
+    int pnum;
+    llvm::StringRef pname;
+};
+
+char DebugPassFile::ID = 0;
+
+/**
+ * Strips all non-alphanumeric characters from given string.
+ */
+std::string sanitize(std::string in) {
+    llvm::Regex r("[^[:alnum:]]");
+    while (r.match(in))
+        in = r.sub("", in);
+    return in;
+}
+
+void DebugPassFile::run(llvm::Module &module, bool init) {
+    std::error_code EC;
+    char fname[100];
+    snprintf(fname, sizeof(fname), "%s_%d_%s.ll", init ? "init" : "ir", pnum, sanitize(pname).c_str());
+    llvm::raw_fd_ostream OS(fname, EC, llvm::sys::fs::F_None);
+    Assert(!EC && "IR dump file creation failed!");
+    module.print(OS, 0);
+}
+
+bool DebugPassFile::runOnModule(llvm::Module &module) {
+    run(module, false);
+    return true;
+}
+
+bool DebugPassFile::doInitialization(llvm::Module &module) {
+    run(module, true);
+    return true;
+}
+
+static llvm::Pass *CreateDebugPassFile(int number, llvm::StringRef name) { return new DebugPassFile(number, name); }
 #endif
 
 ///////////////////////////////////////////////////////////////////////////

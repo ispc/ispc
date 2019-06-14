@@ -566,6 +566,9 @@ struct Globals {
     /** Indicates which stages of optimization we want to dump. */
     std::set<int> debug_stages;
 
+    /** Whether to dump IR to file. */
+    bool dumpFile;
+
     /** Indicates after which optimization we want to generate
         DebugIR information. */
     int debugIR;
