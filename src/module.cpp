@@ -1211,6 +1211,10 @@ bool Module::writeOutput(OutputType outputType, OutputFlags flags, const char *o
                     if (strcasecmp(suffix, "bc"))
                     fileType = "LLVM bitcode";
                 break;
+            case BitcodeText:
+                if (strcasecmp(suffix, "ll"))
+                    fileType = "LLVM assembly";
+                break;
             case Object:
                 if (strcasecmp(suffix, "o") && strcasecmp(suffix, "obj"))
                     fileType = "object";
@@ -1259,8 +1263,8 @@ bool Module::writeOutput(OutputType outputType, OutputFlags flags, const char *o
         return writeHostStub(outFileName);
     else if (outputType == DevStub)
         return writeDevStub(outFileName);
-    else if (outputType == Bitcode)
-        return writeBitcode(module, outFileName);
+    else if ((outputType == Bitcode) || (outputType == BitcodeText))
+        return writeBitcode(module, outFileName, outputType);
     else if (outputType == CXX) {
         if (g->target->getISA() != Target::GENERIC) {
             Error(SourcePos(), "Only \"generic-*\" targets can be used with "
@@ -1347,7 +1351,7 @@ static void lFixAttributes(const vecString_t &src, vecString_t &dst) {
 }
 #endif /* ISPC_NVPTX_ENABLED */
 
-bool Module::writeBitcode(llvm::Module *module, const char *outFileName) {
+bool Module::writeBitcode(llvm::Module *module, const char *outFileName, OutputType outputType) {
     // Get a file descriptor corresponding to where we want the output to
     // go.  If we open it, it'll be closed by the llvm::raw_fd_ostream
     // destructor.
@@ -1406,11 +1410,14 @@ bool Module::writeBitcode(llvm::Module *module, const char *outFileName) {
         }
     } else
 #endif /* ISPC_NVPTX_ENABLED */
+    if (outputType == Bitcode)
 #if ISPC_LLVM_VERSION < ISPC_LLVM_7_0
         llvm::WriteBitcodeToFile(module, fos);
 #else
     llvm::WriteBitcodeToFile(*module, fos);
 #endif
+    else if (outputType == BitcodeText)
+        module->print(fos, nullptr);
 
     return true;
 }
@@ -3241,8 +3248,8 @@ int Module::CompileAndOutput(const char *srcFile, const char *arch, const char *
         lEmitDispatchModule(dispatchModule, exportedFunctions);
 
         if (outFileName != NULL) {
-            if (outputType == Bitcode)
-                writeBitcode(dispatchModule, outFileName);
+            if ((outputType == Bitcode) || (outputType == BitcodeText))
+                writeBitcode(dispatchModule, outFileName, outputType);
             else
                 writeObjectFileOrAssembly(firstTargetMachine, dispatchModule, outputType, outFileName);
         }

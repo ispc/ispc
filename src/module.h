@@ -89,16 +89,17 @@ class Module {
     /** After a source file has been compiled, output can be generated in a
         number of different formats. */
     enum OutputType {
-        Asm,     /** Generate text assembly language output */
-        Bitcode, /** Generate LLVM IR bitcode output */
-        Object,  /** Generate a native object file */
-        CXX,     /** Generate a C++ file */
-        Header,  /** Generate a C/C++ header file with
-                     declarations of 'export'ed functions, global
-                     variables, and the types used by them. */
-        Deps,    /** generate dependencies */
-        DevStub, /** generate device-side offload stubs */
-        HostStub /** generate host-side offload stubs */
+        Asm,         /** Generate text assembly language output */
+        Bitcode,     /** Generate LLVM IR bitcode output */
+        BitcodeText, /** Generate LLVM IR Text output */
+        Object,      /** Generate a native object file */
+        CXX,         /** Generate a C++ file */
+        Header,      /** Generate a C/C++ header file with
+                         declarations of 'export'ed functions, global
+                         variables, and the types used by them. */
+        Deps,        /** generate dependencies */
+        DevStub,     /** generate device-side offload stubs */
+        HostStub     /** generate host-side offload stubs */
     };
 
     enum OutputFlags : int {
@@ -184,7 +185,7 @@ class Module {
     bool writeObjectFileOrAssembly(OutputType outputType, const char *filename);
     static bool writeObjectFileOrAssembly(llvm::TargetMachine *targetMachine, llvm::Module *module,
                                           OutputType outputType, const char *outFileName);
-    static bool writeBitcode(llvm::Module *module, const char *outFileName);
+    static bool writeBitcode(llvm::Module *module, const char *outFileName, OutputType outputType);
 
     void execPreprocessor(const char *infilename, llvm::raw_string_ostream *ostream) const;
 };

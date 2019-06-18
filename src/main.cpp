@@ -118,6 +118,7 @@ static void usage(int ret) {
     printf("        att\t\t\t\tEmit AT&T-style assembly\n");
     printf("    [--emit-c++]\t\t\tEmit a C++ source file as output\n");
     printf("    [--emit-llvm]\t\t\tEmit LLVM bitode file as output\n");
+    printf("    [--emit-llvm-text]\t\t\tEmit LLVM bitode file as output in textual form\n");
     printf("    [--emit-obj]\t\t\tGenerate object file file as output (default)\n");
     printf("    [--force-alignment=<value>]\t\tForce alignment in memory allocations routine to be <value>\n");
     printf("    [-g]\t\t\t\tGenerate source-level debug information\n");
@@ -554,6 +555,8 @@ int main(int Argc, char *Argv[]) {
             ot = Module::CXX;
         else if (!strcmp(argv[i], "--emit-llvm"))
             ot = Module::Bitcode;
+        else if (!strcmp(argv[i], "--emit-llvm-text"))
+            ot = Module::BitcodeText;
         else if (!strcmp(argv[i], "--emit-obj"))
             ot = Module::Object;
         else if (!strcmp(argv[i], "-I")) {
