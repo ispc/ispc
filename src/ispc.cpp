@@ -42,7 +42,7 @@
 #include <sstream>
 #include <stdarg.h> /* va_list, va_start, va_arg, va_end */
 #include <stdio.h>
-#ifdef ISPC_IS_WINDOWS
+#ifdef ISPC_HOST_IS_WINDOWS
 #include <direct.h>
 #include <windows.h>
 #define strcasecmp stricmp
@@ -104,7 +104,9 @@ Module *m;
 ///////////////////////////////////////////////////////////////////////////
 // Target
 
-#if !defined(ISPC_IS_WINDOWS) && !defined(__arm__) && !defined(__aarch64__)
+#if !defined(ISPC_HOST_IS_WINDOWS) && !defined(__arm__) && !defined(__aarch64__)
+// __cpuid() and __cpuidex() are defined on Windows in <intrin.h> for x86/x64.
+// On *nix they need to be defined manually through inline assembler.
 static void __cpuid(int info[4], int infoType) {
     __asm__ __volatile__("cpuid" : "=a"(info[0]), "=b"(info[1]), "=c"(info[2]), "=d"(info[3]) : "0"(infoType));
 }
@@ -117,38 +119,38 @@ static void __cpuidex(int info[4], int level, int count) {
                          : "=a"(info[0]), "=r"(info[1]), "=c"(info[2]), "=d"(info[3])
                          : "0"(level), "2"(count));
 }
-#endif // !ISPC_IS_WINDOWS && !__ARM__ && !__AARCH64__
+#endif // !ISPC_HOST_IS_WINDOWS && !__ARM__ && !__AARCH64__
 
 #if !defined(__arm__) && !defined(__aarch64__)
 static bool __os_has_avx_support() {
-#if defined(ISPC_IS_WINDOWS)
+#if defined(ISPC_HOST_IS_WINDOWS)
     // Check if the OS will save the YMM registers
     unsigned long long xcrFeatureMask = _xgetbv(_XCR_XFEATURE_ENABLED_MASK);
     return (xcrFeatureMask & 6) == 6;
-#else  // !defined(ISPC_IS_WINDOWS)
+#else  // !defined(ISPC_HOST_IS_WINDOWS)
     // Check xgetbv; this uses a .byte sequence instead of the instruction
     // directly because older assemblers do not include support for xgetbv and
     // there is no easy way to conditionally compile based on the assembler used.
     int rEAX, rEDX;
     __asm__ __volatile__(".byte 0x0f, 0x01, 0xd0" : "=a"(rEAX), "=d"(rEDX) : "c"(0));
     return (rEAX & 6) == 6;
-#endif // !defined(ISPC_IS_WINDOWS)
+#endif // !defined(ISPC_HOST_IS_WINDOWS)
 }
 
 static bool __os_has_avx512_support() {
-#if defined(ISPC_IS_WINDOWS)
+#if defined(ISPC_HOST_IS_WINDOWS)
     // Check if the OS saves the XMM, YMM and ZMM registers, i.e. it supports AVX2 and AVX512.
     // See section 2.1 of software.intel.com/sites/default/files/managed/0d/53/319433-022.pdf
     unsigned long long xcrFeatureMask = _xgetbv(_XCR_XFEATURE_ENABLED_MASK);
     return (xcrFeatureMask & 0xE6) == 0xE6;
-#else  // !defined(ISPC_IS_WINDOWS)
+#else  // !defined(ISPC_HOST_IS_WINDOWS)
     // Check xgetbv; this uses a .byte sequence instead of the instruction
     // directly because older assemblers do not include support for xgetbv and
     // there is no easy way to conditionally compile based on the assembler used.
     int rEAX, rEDX;
     __asm__ __volatile__(".byte 0x0f, 0x01, 0xd0" : "=a"(rEAX), "=d"(rEDX) : "c"(0));
     return (rEAX & 0xE6) == 0xE6;
-#endif // !defined(ISPC_IS_WINDOWS)
+#endif // !defined(ISPC_HOST_IS_WINDOWS)
 }
 #endif // !__arm__ && !__aarch64__
 
@@ -1077,7 +1079,7 @@ Target::Target(const char *arch, const char *cpu, const char *isa, bool pic, boo
 #if ISPC_LLVM_VERSION <= ISPC_LLVM_3_6
         if (g->NoOmitFramePointer)
             options.NoFramePointerElim = true;
-#ifdef ISPC_IS_WINDOWS
+#ifdef ISPC_HOST_IS_WINDOWS
         if (strcmp("x86", arch) == 0) {
             // Workaround for issue #503 (LLVM issue 14646).
             // It's Win32 specific.
@@ -1497,11 +1499,11 @@ Globals::Globals() {
 
     ctx = new llvm::LLVMContext;
 
-#ifdef ISPC_IS_WINDOWS
+#ifdef ISPC_HOST_IS_WINDOWS
     _getcwd(currentDirectory, sizeof(currentDirectory));
 #else
     if (getcwd(currentDirectory, sizeof(currentDirectory)) == NULL)
-        FATAL("Current directory path too long!");
+        FATAL("Current directory path is too long!");
 #endif
     forceAlignment = -1;
     dllExport = false;

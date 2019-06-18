@@ -130,14 +130,14 @@
 #if ISPC_LLVM_VERSION >= ISPC_LLVM_3_6
 #include <llvm/IR/IntrinsicInst.h>
 #endif
-#ifdef ISPC_IS_LINUX
+#ifdef ISPC_HOST_IS_LINUX
 #include <alloca.h>
-#elif defined(ISPC_IS_WINDOWS)
+#elif defined(ISPC_HOST_IS_WINDOWS)
 #include <malloc.h>
 #ifndef __MINGW32__
 #define alloca _alloca
 #endif
-#endif // ISPC_IS_WINDOWS
+#endif // ISPC_HOST_IS_WINDOWS
 
 #ifndef PRId64
 #define PRId64 "lld"

@@ -38,22 +38,22 @@
 #include "util.h"
 #include "module.h"
 
-#ifdef ISPC_IS_LINUX
+#ifdef ISPC_HOST_IS_LINUX
 #include <alloca.h>
 #include <unistd.h>
-#elif defined(ISPC_IS_WINDOWS)
-#include <shlwapi.h>
+#elif defined(ISPC_HOST_IS_WINDOWS)
 #include <malloc.h>
+#include <shlwapi.h>
 #ifndef __MINGW32__
 #define alloca _alloca
 #endif // __MINGW32__
-#endif // ISPC_IS_LINUX
+#endif // ISPC_HOST_IS_LINUX
 #include <ctype.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#ifdef ISPC_IS_WINDOWS
+#ifdef ISPC_HOST_IS_WINDOWS
 #include <direct.h>
 #include <io.h>
 #include <windows.h>
@@ -61,7 +61,7 @@
 #include <errno.h>
 #include <sys/ioctl.h>
 #include <unistd.h>
-#endif // ISPC_IS_WINDOWS
+#endif // ISPC_HOST_IS_WINDOWS
 #include <algorithm>
 #include <set>
 
@@ -81,7 +81,7 @@ int TerminalWidth() {
     if (g->disableLineWrap)
         return 1 << 30;
 
-#if defined(ISPC_IS_WINDOWS)
+#if defined(ISPC_HOST_IS_WINDOWS)
     HANDLE h = GetStdHandle(STD_OUTPUT_HANDLE);
     if (h == INVALID_HANDLE_VALUE || h == NULL)
         return 80;
@@ -93,14 +93,14 @@ int TerminalWidth() {
     if (ioctl(STDOUT_FILENO, TIOCGWINSZ, &w) < 0)
         return 80;
     return w.ws_col;
-#endif // ISPC_IS_WINDOWS
+#endif // ISPC_HOST_IS_WINDOWS
 }
 
 static bool lHaveANSIColors() {
     static bool r = (getenv("TERM") != NULL && strcmp(getenv("TERM"), "dumb") != 0);
-#ifndef ISPC_IS_WINDOWS
+#ifndef ISPC_HOST_IS_WINDOWS
     r &= isatty(2);
-#endif // !ISPC_IS_WINDOWS
+#endif // !ISPC_HOST_IS_WINDOWS
     r |= g->forceColoredOutput;
     return r;
 }
@@ -208,7 +208,7 @@ static int lFindIndent(int numColons, const char *buf) {
     column width.  Break words as needed to avoid words spilling past the
     last column.  */
 void PrintWithWordBreaks(const char *buf, int indent, int columnWidth, FILE *out) {
-#ifdef ISPC_IS_WINDOWS
+#ifdef ISPC_HOST_IS_WINDOWS
     fputs(buf, out);
     fputs("\n", out);
 #else
@@ -273,7 +273,7 @@ void PrintWithWordBreaks(const char *buf, int indent, int columnWidth, FILE *out
 #endif
 }
 
-#ifdef ISPC_IS_WINDOWS
+#ifdef ISPC_HOST_IS_WINDOWS
 // we cover for the lack vasprintf and asprintf on windows (also covers mingw)
 int vasprintf(char **sptr, const char *fmt, va_list argv) {
     int wanted = vsnprintf(*sptr = NULL, 0, fmt, argv);
@@ -512,7 +512,7 @@ std::vector<std::string> MatchStrings(const std::string &str, const std::vector<
 
 void GetDirectoryAndFileName(const std::string &currentDirectory, const std::string &relativeName,
                              std::string *directory, std::string *filename) {
-#ifdef ISPC_IS_WINDOWS
+#ifdef ISPC_HOST_IS_WINDOWS
     char path[MAX_PATH];
     const char *combPath = PathCombine(path, currentDirectory.c_str(), relativeName.c_str());
     Assert(combPath != NULL);
@@ -542,7 +542,7 @@ void GetDirectoryAndFileName(const std::string &currentDirectory, const std::str
     Assert(basenameStart[0] != '\0');
     *filename = basenameStart;
     *directory = std::string(fp, basenameStart - fp);
-#endif // ISPC_IS_WINDOWS
+#endif // ISPC_HOST_IS_WINDOWS
 }
 
 static std::set<std::string> lGetStringArray(const std::string &str) {

@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2013, Intel Corporation
+  Copyright (c) 2010-2019, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -305,7 +305,7 @@ void SymbolTable::Print() {
 }
 
 inline int ispcRand() {
-#ifdef ISPC_IS_WINDOWS
+#ifdef ISPC_HOST_IS_WINDOWS
     return rand();
 #else
     return lrand48();

@@ -41,17 +41,17 @@
 #include "util.h"
 #include <stdio.h>
 #include <stdlib.h>
-#ifdef ISPC_IS_WINDOWS
+#ifdef ISPC_HOST_IS_WINDOWS
 #include <time.h>
 #else
 #include <unistd.h>
-#endif // ISPC_IS_WINDOWS
+#endif // ISPC_HOST_IS_WINDOWS
 #include <llvm/Support/Debug.h>
 #include <llvm/Support/Signals.h>
 #include <llvm/Support/TargetRegistry.h>
 #include <llvm/Support/TargetSelect.h>
 
-#ifdef ISPC_IS_WINDOWS
+#ifdef ISPC_HOST_IS_WINDOWS
 #define strcasecmp stricmp
 #ifndef BUILD_DATE
 #define BUILD_DATE __DATE__
@@ -62,12 +62,12 @@
 #else
 #define ISPC_VS_VERSION "Visual Studio 2013 and earlier"
 #endif
-#endif // ISPC_IS_WINDOWS
+#endif // ISPC_HOST_IS_WINDOWS
 
 #define MAX_NUM_ARGS (512)
 
 static void lPrintVersion() {
-#ifdef ISPC_IS_WINDOWS
+#ifdef ISPC_HOST_IS_WINDOWS
     printf("Intel(r) SPMD Program Compiler (ispc), %s (build date %s, LLVM %s)\n"
            "Supported Visual Studio versions: %s.\n",
            ISPC_VERSION, BUILD_DATE, ISPC_LLVM_VERSION_STRING, ISPC_VS_VERSION);
@@ -95,7 +95,7 @@ static void usage(int ret) {
     printf("    [--arch={%s}]\t\tSelect target architecture\n", Target::SupportedArchs());
     printf("    [--c++-include-file=<name>]\t\tSpecify name of file to emit in #include statement in generated C++ "
            "code.\n");
-#ifndef ISPC_IS_WINDOWS
+#ifndef ISPC_HOST_IS_WINDOWS
     printf("    [--colored-output]\t\tAlways use terminal colors in error/warning messages.\n");
 #endif
     printf("    ");
@@ -394,7 +394,7 @@ static std::set<int> ParsingPhases(char *stages) {
 }
 
 static void lParseInclude(const char *path) {
-#ifdef ISPC_IS_WINDOWS
+#ifdef ISPC_HOST_IS_WINDOWS
     char delim = ';';
 #else
     char delim = ':';
@@ -769,7 +769,7 @@ int main(int Argc, char *Argv[]) {
 
     if (g->enableFuzzTest) {
         if (g->fuzzTestSeed == -1) {
-#ifdef ISPC_IS_WINDOWS
+#ifdef ISPC_HOST_IS_WINDOWS
             int seed = (unsigned)time(NULL);
 #else
             int seed = getpid();
@@ -777,7 +777,7 @@ int main(int Argc, char *Argv[]) {
             g->fuzzTestSeed = seed;
             Warning(SourcePos(), "Using seed %d for fuzz testing", g->fuzzTestSeed);
         }
-#ifdef ISPC_IS_WINDOWS
+#ifdef ISPC_HOST_IS_WINDOWS
         srand(g->fuzzTestSeed);
 #else
         srand48(g->fuzzTestSeed);

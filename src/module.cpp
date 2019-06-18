@@ -61,7 +61,7 @@
 #ifdef ISPC_NVPTX_ENABLED
 #include <map>
 #endif /* ISPC_NVPTX_ENABLED */
-#ifdef ISPC_IS_WINDOWS
+#ifdef ISPC_HOST_IS_WINDOWS
 #include <io.h>
 #include <windows.h>
 #define strcasecmp stricmp
@@ -1360,12 +1360,12 @@ bool Module::writeBitcode(llvm::Module *module, const char *outFileName, OutputT
         fd = 1; // stdout
     else {
         int flags = O_CREAT | O_WRONLY | O_TRUNC;
-#ifdef ISPC_IS_WINDOWS
+#ifdef ISPC_HOST_IS_WINDOWS
         flags |= O_BINARY;
         fd = _open(outFileName, flags, 0644);
 #else
         fd = open(outFileName, flags, 0644);
-#endif // ISPC_IS_WINDOWS
+#endif // ISPC_HOST_IS_WINDOWS
         if (fd == -1) {
             perror(outFileName);
             return false;
