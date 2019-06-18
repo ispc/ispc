@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2013, Intel Corporation
+  Copyright (c) 2010-2019, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -40,7 +40,7 @@
 #define ISPC_UTIL_H
 
 #include "ispc.h"
-#ifdef ISPC_IS_WINDOWS
+#ifdef ISPC_HOST_IS_WINDOWS
 #include <stdarg.h>
 #endif
 
@@ -65,7 +65,7 @@ inline uint32_t RoundUpPow2(uint32_t v) {
 #endif // __GNUG__
 
 // for cross-platform compatibility
-#ifdef ISPC_IS_WINDOWS
+#ifdef ISPC_HOST_IS_WINDOWS
 int vasprintf(char **sptr, const char *fmt, va_list argv);
 int asprintf(char **sptr, const char *fmt, ...);
 #endif

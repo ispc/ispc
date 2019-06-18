@@ -45,11 +45,13 @@
 #endif
 
 #if defined(_WIN32) || defined(_WIN64)
+// ISPC_IS_WINDOWS to be removed.
 #define ISPC_IS_WINDOWS
+#define ISPC_HOST_IS_WINDOWS
 #elif defined(__linux__)
-#define ISPC_IS_LINUX
+#define ISPC_HOST_IS_LINUX
 #elif defined(__APPLE__)
-#define ISPC_IS_APPLE
+#define ISPC_HOST_IS_APPLE
 #endif
 
 #include <map>

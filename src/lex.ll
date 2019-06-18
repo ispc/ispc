@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2012, Intel Corporation
+  Copyright (c) 2010-2019, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -57,11 +57,11 @@ extern void RegisterDependency(const std::string &fileName);
     yylloc.first_column = yylloc.last_column; \
     yylloc.last_column += yyleng;
 
-#ifdef ISPC_IS_WINDOWS
+#ifdef ISPC_HOST_IS_WINDOWS
 inline int isatty(int) { return 0; }
 #else
 #include <unistd.h>
-#endif // ISPC_IS_WINDOWS
+#endif // ISPC_HOST_IS_WINDOWS
 
 static int allTokens[] = {
   TOKEN_ASSERT, TOKEN_BOOL, TOKEN_BREAK, TOKEN_CASE,
@@ -305,7 +305,7 @@ void ParserInit() {
 
 
 inline int ispcRand() {
-#ifdef ISPC_IS_WINDOWS
+#ifdef ISPC_HOST_IS_WINDOWS
     return rand();
 #else
     return lrand48();
@@ -583,7 +583,7 @@ lParseInteger(bool dotdotdot) {
     if (yytext[0] == '0' && yytext[1] == 'b')
         yylval.intVal = lParseBinary(yytext+2, yylloc, &endPtr);
     else {
-#if defined(ISPC_IS_WINDOWS) && !defined(__MINGW32__)
+#if defined(ISPC_HOST_IS_WINDOWS) && !defined(__MINGW32__)
         yylval.intVal = _strtoui64(yytext, &endPtr, 0);
 #else
         // FIXME: should use strtouq and then issue an error if we can't
