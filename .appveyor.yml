@@ -28,75 +28,92 @@
 #   LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
 #   NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 #   SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-image: "Visual Studio 2017"
 
-clone_folder: "c:\\projects\\ispc"
 configuration: Release
 
 environment:
-  ISPC_HOME: "c:\\projects\\ispc"
-  LLVM_HOME: "c:\\projects\\llvm"
-  CHOCO_DIR: "%ProgramData%\\chocolatey"
   matrix:
-    - DESC: "Build ispc with LLVM 5.0 VS2017"
+    - APPVEYOR_BUILD_WORKER_IMAGE: Ubuntu1604
+      DESC: "Build ispc with LLVM 8.0 on Ubuntu"
+      LLVM_VERSION: 8.0
+      DOCKER_NAME: "ispc/test_repo:ubuntu_llvm80"
+    - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2017
+      DESC: "Build ispc with LLVM 5.0 VS2017"
       LLVM_VERSION: 5.0
       DOCKER_NAME: "ispc/test_repo:win_llvm50"
-    - DESC: "Build ispc with LLVM 6.0 VS2017"
+    - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2017
+      DESC: "Build ispc with LLVM 6.0 VS2017"
       LLVM_VERSION: 6.0
       DOCKER_NAME: "ispc/test_repo:win_llvm60"
-    - DESC: "Build ispc with LLVM 7.0 VS2017"
+    - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2017
+      DESC: "Build ispc with LLVM 7.0 VS2017"
       LLVM_VERSION: 7.0
       DOCKER_NAME: "ispc/test_repo:win_llvm70"
-    - DESC: "Build ispc with LLVM 8.0 VS2017"
+    - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2017
+      DESC: "Build ispc with LLVM 8.0 VS2017"
       LLVM_VERSION: 8.0
       DOCKER_NAME: "ispc/test_repo:win_llvm80"
 
+init:
+  - cmd: |-
+      set ISPC_HOME=%APPVEYOR_BUILD_FOLDER%
+      set LLVM_HOME=C:\projects\llvm
+      set CHOCO_DIR=%ProgramData%\chocolatey
+      if "%APPVEYOR_BUILD_WORKER_IMAGE%"=="Visual Studio 2017" ( set generator="Visual Studio 15" )
+      call "C:\Program Files (x86)\Microsoft Visual Studio\2017\Community\VC\Auxiliary\Build\vcvars32.bat"
+  - sh: |-
+      export ISPC_HOME=$APPVEYOR_BUILD_FOLDER
+      export LLVM_HOME=/usr/local/src/llvm
+
 cache:
-  - C:\ProgramData\chocolatey\bin -> .appveyor.yml
-  - C:\ProgramData\chocolatey\lib -> .appveyor.yml
-  - C:\projects\llvm -> .appveyor-clean-cache.txt
+  - '%CHOCO_DIR%\bin -> .appveyor.yml'
+  - '%CHOCO_DIR%\lib -> .appveyor.yml'
+  - '%LLVM_HOME% -> .appveyor-clean-cache.txt'
 
 install:
-  - cinst cygwin
-  - cinst python2
-  - cinst winflexbison
   - cmd: |-
-        set FLEX_PATH=%CHOCO_DIR%\lib\winflexbison\tools
-        if exist "%FLEX_PATH%\win_flex.exe" ( cd %FLEX_PATH% && ren win_flex.exe flex.exe )
-  - cmd: |-
-        if exist "%LLVM_HOME%\bin\" set NONEEDLLVM=rem
-        %NONEEDLLVM% docker pull %DOCKER_NAME%
-        %NONEEDLLVM% docker run -d %DOCKER_NAME%
-        %NONEEDLLVM% docker ps --all  --format "{{.ID}}" --filter ancestor=%DOCKER_NAME% | head -1 > container_id.txt
-        %NONEEDLLVM% set /p CONTAINER=<container_id.txt
-        %NONEEDLLVM% docker cp %CONTAINER%:%LLVM_HOME%\bin-%LLVM_VERSION% %LLVM_HOME%
-
-init:
-  - echo %APPVEYOR_BUILD_WORKER_IMAGE%
-  - if "%APPVEYOR_BUILD_WORKER_IMAGE%"=="Visual Studio 2017" ( set generator="Visual Studio 15" )
-  - if "%APPVEYOR_BUILD_WORKER_IMAGE%"=="Visual Studio 2015" ( set generator="Visual Studio 14" )
-  - echo %generator%
+      cinst python2 winflexbison
+      set FLEX_PATH=%CHOCO_DIR%\lib\winflexbison\tools
+      if exist "%FLEX_PATH%\win_flex.exe" ( cd %FLEX_PATH% && ren win_flex.exe flex.exe )
+      if exist "%LLVM_HOME%\bin\" set NONEEDLLVM=rem
+      %NONEEDLLVM% docker pull %DOCKER_NAME%
+      %NONEEDLLVM% docker run -d %DOCKER_NAME%
+      %NONEEDLLVM% docker ps --all  --format "{{.ID}}" --filter ancestor=%DOCKER_NAME% | head -1 > container_id.txt
+      %NONEEDLLVM% set /p CONTAINER=<container_id.txt
+      %NONEEDLLVM% docker cp %CONTAINER%:%LLVM_HOME%\bin-%LLVM_VERSION% %LLVM_HOME%
+      set PATH=%LLVM_HOME%\bin;C:\Python27\;C:\Python27\Scripts;%CHOCO_DIR%\lib\winflexbison\tools;%PATH%
+  - sh: |-
+      sudo apt-get install -y flex libc6-dev-i386 g++-multilib lib32stdc++6
+      if [ ! -d "$LLVM_HOME/bin-$LLVM_VERSION/bin" ]; then
+        docker pull "$DOCKER_NAME"
+        docker run "$DOCKER_NAME"
+        export CONTAINER=`docker ps --all |head -2 |tail -1 |awk '//{print $1}'`
+        sudo docker cp $CONTAINER:$LLVM_HOME $LLVM_HOME
+      fi
+      export PATH=$LLVM_HOME/bin-$LLVM_VERSION/bin:$PATH
 
 before_build:
-- cmd: |-
-    set PATH=%LLVM_HOME%\bin;C:\Python27\;C:\Python27\Scripts;%CHOCO_DIR%\lib\winflexbison\tools;C:\cygwin64\bin;%PATH%
-    cd %ISPC_HOME% && mkdir build && cd build
-    cmake .. -G %generator% -DCMAKE_INSTALL_PREFIX=%ISPC_HOME%\%configuration% -DISPC_PREPARE_PACKAGE=ON
+  - cmd: |-
+      cd %ISPC_HOME% && mkdir build && cd build
+      cmake .. -G %generator% -DCMAKE_INSTALL_PREFIX=%ISPC_HOME%\install -DISPC_PREPARE_PACKAGE=ON -DM4_EXECUTABLE=C:\cygwin64\bin\m4.exe
+  - sh: |-
+      cd $ISPC_HOME && mkdir build && cd build
+      cmake ../ -DISPC_PREPARE_PACKAGE=ON -DCMAKE_INSTALL_PREFIX=%ISPC_HOME%/install
 
-build:
-  project: c:\\projects\\ispc\\build\\PACKAGE.vcxproj
-  verbosity: minimal
-
-after_build:
-  - call "C:\Program Files (x86)\Microsoft Visual Studio\2017\Community\VC\Auxiliary\Build\vcvars32.bat"
+build_script:
+  - cmd: msbuild %ISPC_HOME%\build\PACKAGE.vcxproj
+  - sh: make package -j4
 
 test_script:
-  - msbuild c:\\projects\\ispc\\build\\tests\\check-all.vcxproj /t:Build
-  - set PATH=%ISPC_HOME%\build\bin\%configuration%;%PATH%
-  - cd %ISPC_HOME%
-  - check_isa.exe
-  - python perf.py -n 1 -g "Visual Studio 15 Win64"
+  - cmd: |-
+      msbuild c:\projects\ispc\build\tests\check-all.vcxproj /t:Build
+      set PATH=%ISPC_HOME%\build\bin\%configuration%;%PATH%
+      cd %ISPC_HOME%
+      check_isa.exe
+      python perf.py -n 1 -g "Visual Studio 15 Win64"
+# Run only lit testing here since we have full testing in Travis
+  - sh: make check-all
 
 artifacts:
-  - path: build\ispc-*.zip
+  - path: build/ispc-*
     name: ispc
