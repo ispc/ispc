@@ -663,6 +663,11 @@ void Module::AddFunctionDeclaration(const std::string &name, const FunctionType 
     llvm::GlobalValue::LinkageTypes linkage = (storageClass == SC_STATIC || isInline)
                                                   ? llvm::GlobalValue::InternalLinkage
                                                   : llvm::GlobalValue::ExternalLinkage;
+#ifdef ISPC_GENX_ENABLED
+    // For gen target all functions except genx kernel must be internal.
+    if (g->target->getISA() == Target::GENX && !functionType->isExported)
+        linkage = llvm::GlobalValue::InternalLinkage;
+#endif
 
     std::string functionName = name;
     if (storageClass != SC_EXTERN_C) {
