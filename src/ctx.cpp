@@ -2352,6 +2352,11 @@ llvm::Value *FunctionEmitContext::gather(llvm::Value *ptr, const PointerType *pt
     // can go and do the actual gather
     AddInstrumentationPoint("gather");
 #ifdef ISPC_GENX_ENABLED
+    // Currently we generate gather here directly because we
+    // would like to predicate this intrinsic in CMSimdCFLoweringPass
+    // TODO_GEN: use definitions from target files and optimize for load where possible,
+    // Take into account that genx gather intrinsic uses vector of pointers, not
+    // the base and offsets, opt passes must be adapted.
     if (g->target->getISA() == Target::GENX)
         return GenXSVMGather(ptr, llvmReturnType);
 #endif
@@ -2708,9 +2713,14 @@ void FunctionEmitContext::scatter(llvm::Value *value, llvm::Value *ptr, const Ty
     AssertPos(currentPos, scatterFunc != NULL);
 
     AddInstrumentationPoint("scatter");
+    // Currently we generate scatter here directly because we
+    // would like to predicate this intrinsic in CMSimdCFLoweringPass
+    // TODO: use definitions from target files and optimize for store where possible,
+    // Take into account that genx scatter intrinsic uses vector of pointers, not
+    // the base and offsets, opt passes must be adapted.
 #ifdef ISPC_GENX_ENABLED
     if (g->target->getISA() == Target::GENX) {
-        GenXSVMScatter(ptr, value, ptrType->GetAsVaryingType()->LLVMType(g->ctx));
+        GenXSVMScatter(ptr, value, valueType->LLVMType(g->ctx));
         return;
     }
 #endif
@@ -3433,12 +3443,11 @@ bool FunctionEmitContext::ifNotEmulatedUniformForGen() const {
 llvm::Value *FunctionEmitContext::GenXSVMGather(llvm::Value *ptr, llvm::Type *ptrType) {
     AssertPos(currentPos, llvm::isa<llvm::VectorType>(ptrType));
     unsigned nBits = m->module->getDataLayout().getPointerSizeInBits();
+    llvm::Value *predicate = GetInternalMask();
     llvm::Value *addr = ptr;
     if (nBits == 32)
         addr = ZExtInst(addr, LLVMTypes::Int64VectorType);
     llvm::Value *oldVal = llvm::UndefValue::get(ptrType);
-    llvm::Constant *predicate = llvm::ConstantVector::getSplat(
-        ptr->getType()->getVectorNumElements(), llvm::Constant::getAllOnesValue(llvm::Type::getInt1Ty(*g->ctx)));
     unsigned numBlocks = getBlockCount(oldVal->getType());
     unsigned numBlocksLog2 = llvm::Log2_32(numBlocks);
     std::vector<llvm::Value *> args;
@@ -3458,14 +3467,13 @@ llvm::Value *FunctionEmitContext::GenXSVMScatter(llvm::Value *ptr, llvm::Value *
     AssertPos(currentPos, llvm::isa<llvm::VectorType>(value->getType()));
     unsigned nBits = m->module->getDataLayout().getPointerSizeInBits();
     llvm::Value *addr = ptr;
+    llvm::Value *predicate = GetInternalMask();
     if (nBits == 32)
         addr = ZExtInst(addr, LLVMTypes::Int64VectorType);
     llvm::PointerType *pt = llvm::dyn_cast<llvm::PointerType>(ptr->getType());
     if (pt != NULL) {
         addr = PtrToIntInst(addr, pt->getElementType());
     }
-    llvm::Constant *predicate = llvm::ConstantVector::getSplat(
-        addr->getType()->getVectorNumElements(), llvm::Constant::getAllOnesValue(llvm::Type::getInt1Ty(*g->ctx)));
     unsigned numBlocks = getBlockCount(value->getType());
     unsigned numBlocksLog2 = llvm::Log2_32(numBlocks);
     std::vector<llvm::Value *> args;
@@ -3473,7 +3481,6 @@ llvm::Value *FunctionEmitContext::GenXSVMScatter(llvm::Value *ptr, llvm::Value *
     args.push_back(LLVMInt32(numBlocksLog2));
     args.push_back(addr);
     args.push_back(value);
-
     // Overload with return type, predicate type and address vector type
     llvm::Type *argTypes[] = {args[0]->getType(), addr->getType(), ptrType};
 

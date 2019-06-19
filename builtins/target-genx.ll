@@ -33,6 +33,8 @@ target datalayout = "e-p:32:32-i64:64-n8:16:32";
 
 define(`WIDTH',`16')
 define(`MASK',`i1')
+define(`HAVE_GATHER',`1')
+define(`HAVE_SCATTER',`1')
 include(`util.m4')
 
 define(`GEN_SUFFIX',
@@ -446,22 +448,75 @@ genx_masked_load(i64)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; gather/scatter
+;; TODO_GEN: add computation of the block size and the number of blocks for svm gather/scatter.
+define(`genx_gather', `
+declare <16 x $1> @llvm.genx.svm.gather.GEN_SUFFIX($1).v16i1.v16i64(<16 x i1>, i32, <16 x i64>, <16 x $1>)
+define <16 x $1>
+@__gather_base_offsets32_$1(i8 * %ptr, i32 %offset_scale, <16 x i32> %offsets, <WIDTH x MASK> %vecmask) nounwind readonly alwaysinline {
+  %offsets64 = zext <16 x i32> %offsets to <16 x i64>
+  %res = call <16 x $1> @llvm.genx.svm.gather.GEN_SUFFIX($1).v16i1.v16i64(<16 x i1> %vecmask, i32 0, <16 x i64> %offsets64, <16 x $1> undef)
+  ret <16 x $1> %res
+}
 
-; define these with the macros from stdlib.m4
+define <16 x $1>
+@__gather_base_offsets64_$1(i8 * %ptr, i32 %offset_scale, <16 x i64> %offsets, <WIDTH x MASK> %vecmask) nounwind readonly alwaysinline {
+  %res = call <16 x $1> @llvm.genx.svm.gather.GEN_SUFFIX($1).v16i1.v16i64(<16 x i1> %vecmask, i32 0, <16 x i64> %offsets, <16 x $1> undef)
+  ret <16 x $1> %res
+}
 
-gen_gather_factored(i8)
-gen_gather_factored(i16)
-gen_gather_factored(i32)
-gen_gather_factored(float)
-gen_gather_factored(i64)
-gen_gather_factored(double)
+define <16 x $1>
+@__gather32_$1(<16 x i32> %ptrs, <WIDTH x MASK> %vecmask) nounwind readonly alwaysinline {
+  %res = call <16 x $1> @__gather_base_offsets32_$1(i8 * zeroinitializer, i32 1, <16 x i32> %ptrs, <WIDTH x MASK> %vecmask)
+  ret <16 x $1> %res
+}
 
-gen_scatter(i8)
-gen_scatter(i16)
-gen_scatter(i32)
-gen_scatter(float)
-gen_scatter(i64)
-gen_scatter(double)
+define <16 x $1>
+@__gather64_$1(<16x i64> %ptrs, <WIDTH x MASK> %vecmask) nounwind readonly alwaysinline {
+  %res = call <16 x $1> @__gather_base_offsets64_$1(i8 * zeroinitializer, i32 1, <16 x i64> %ptrs, <WIDTH x MASK> %vecmask)
+  ret <16 x $1> %res
+}
+')
+genx_gather(i8)
+genx_gather(i16)
+genx_gather(i32)
+genx_gather(float)
+genx_gather(i64)
+genx_gather(double)
+
+define(`genx_scatter', `
+declare void @llvm.genx.svm.scatter.v16i1.v16i64.GEN_SUFFIX($1)(<16 x i1>, i32, <16 x i64>, <16 x $1>)
+define void
+@__scatter_base_offsets32_$1(i8* %ptr, i32 %offset_scale, <16 x i32> %offsets, <16 x $1> %vals, <WIDTH x MASK> %vecmask) nounwind {
+  %offsets64 = zext <16 x i32> %offsets to <16 x i64>
+  call void @llvm.genx.svm.scatter.v16i1.v16i64.GEN_SUFFIX($1)(<16 x i1> %vecmask, i32 0, <16 x i64> %offsets64, <16 x $1> %vals)
+  ret void
+}
+
+define void
+@__scatter_base_offsets64_$1(i8* %ptr, i32 %offset_scale, <16 x i64> %offsets, <16 x $1> %vals, <WIDTH x MASK> %vecmask) nounwind {
+   call void @llvm.genx.svm.scatter.v16i1.v16i64.GEN_SUFFIX($1)(<16 x i1> %vecmask, i32 0, <16 x i64> %offsets, <16 x $1> %vals)
+   ret void
+}
+
+define void
+@__scatter32_$1(<16 x i32> %ptrs, <16 x $1> %values, <WIDTH x MASK> %vecmask) nounwind alwaysinline {
+  call void @__scatter_base_offsets32_$1(i8 * zeroinitializer, i32 1, <16 x i32> %ptrs, <16 x $1> %values, <WIDTH x MASK> %vecmask)
+  ret void
+}
+
+define void
+@__scatter64_$1(<16 x i64> %ptrs, <16 x $1> %values, <WIDTH x MASK> %vecmask) nounwind alwaysinline {
+  call void @__scatter_base_offsets64_$1(i8 * zeroinitializer, i32 1, <16 x i64> %ptrs, <16 x $1> %values, <WIDTH x MASK> %vecmask)
+  ret void
+}
+')
+
+genx_scatter(i8)
+genx_scatter(i16)
+genx_scatter(i32)
+genx_scatter(float)
+genx_scatter(i64)
+genx_scatter(double)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; int8/int16 builtins
