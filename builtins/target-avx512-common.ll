@@ -1009,6 +1009,98 @@ define void @__masked_store_blend_double(<16 x double>* nocapture,
   ret void
 }
 
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; switch macro
+;; This is required to ensure that gather intrinsics are used with constant scale value.
+;; This particular implementation of the routine is used by avx512 targets only.
+;; $1: Return value
+;; $2: funcName
+;; $3: Width
+;; $4: scalar type of array
+;; $5: ptr
+;; $6: offset
+;; $7: scalar type of offset
+;; $8: vecMask
+;; $9: scalar type of vecMask
+;; $10: scale
+define(`convert_scale_to_const_gather', `
+
+
+ switch i32 %$10, label %default_$1 [ i32 1, label %on_one_$1
+                                      i32 2, label %on_two_$1
+                                      i32 4, label %on_four_$1
+                                      i32 8, label %on_eight_$1]
+
+on_one_$1:
+  %$1_1 = call <$3 x $4> @$2(<$3 x $4> undef, i8 * %$5, <$3 x $7> %$6, $9 %$8, i32 1)
+  br label %end_bb_$1
+
+on_two_$1:
+  %$1_2 = call <$3 x $4> @$2(<$3 x $4> undef, i8 * %$5, <$3 x $7> %$6, $9 %$8, i32 2)
+  br label %end_bb_$1
+
+on_four_$1:
+  %$1_4 = call <$3 x $4> @$2(<$3 x $4> undef, i8 * %$5, <$3 x $7> %$6, $9 %$8, i32 4)
+  br label %end_bb_$1
+
+on_eight_$1:
+  %$1_8 = call <$3 x $4> @$2(<$3 x $4> undef, i8 * %$5, <$3 x $7> %$6, $9 %$8, i32 8)
+  br label %end_bb_$1
+
+default_$1:
+  unreachable
+
+end_bb_$1:
+  %$1 = phi <$3 x $4> [ %$1_1, %on_one_$1 ], [ %$1_2, %on_two_$1 ], [ %$1_4, %on_four_$1 ], [ %$1_8, %on_eight_$1 ]
+'
+)
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; switch macro
+;; This is required to ensure that scatter intrinsics are used with constant scale value.
+;; This is used by avx512 targets only.
+;; $1: funcName
+;; $2: Width
+;; $3: Array
+;; $4: scalar type of array
+;; $5: ptr
+;; $6: offset
+;; $7: scalar type of offset
+;; $8: vecMask
+;; $9: scalar type of vecMask
+;; $10: scale
+define(`convert_scale_to_const_scatter', `
+
+
+ switch i32 %$10, label %default_$3 [ i32 1, label %on_one_$3
+                                      i32 2, label %on_two_$3
+                                      i32 4, label %on_four_$3
+                                      i32 8, label %on_eight_$3]
+
+on_one_$3:
+  call void @$1(i8* %$5, $9 %$8, <$2 x $7> %$6, <$2 x $4> %$3, i32 1)
+  br label %end_bb_$3
+
+on_two_$3:
+  call void @$1(i8* %$5, $9 %$8, <$2 x $7> %$6, <$2 x $4> %$3, i32 2)
+  br label %end_bb_$3
+
+on_four_$3:
+  call void @$1(i8* %$5, $9 %$8, <$2 x $7> %$6, <$2 x $4> %$3, i32 4)
+  br label %end_bb_$3
+
+on_eight_$3:
+  call void @$1(i8* %$5, $9 %$8, <$2 x $7> %$6, <$2 x $4> %$3, i32 8)
+  br label %end_bb_$3
+
+default_$3:
+  unreachable
+
+end_bb_$3:
+'
+)
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; gather/scatter
 
@@ -1023,7 +1115,7 @@ declare <16 x i32> @llvm.x86.avx512.gather.dpi.512(<16 x i32>, i8*, <16 x i32>, 
 define <16 x i32> 
 @__gather_base_offsets32_i32(i8 * %ptr, i32 %offset_scale, <16 x i32> %offsets, <WIDTH x MASK> %vecmask) nounwind readonly alwaysinline {
   %mask = call i16 @__cast_mask_to_i16 (<WIDTH x MASK> %vecmask)
-  %res =  call <16 x i32> @llvm.x86.avx512.gather.dpi.512 (<16 x i32> undef, i8* %ptr, <16 x i32> %offsets, i16 %mask, i32 %offset_scale)
+  convert_scale_to_const_gather(res, llvm.x86.avx512.gather.dpi.512, 16, i32, ptr, offsets, i32, mask, i16, offset_scale)
   ret <16 x i32> %res
 }
 
@@ -1036,8 +1128,8 @@ define <16 x i32>
   %scalarMask2 = trunc i16  %scalarMask2Tmp to i8 
   %offsets_lo = shufflevector <16 x i64> %offsets, <16 x i64> undef, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
   %offsets_hi = shufflevector <16 x i64> %offsets, <16 x i64> undef, <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15> 
-  %res1 = call <8 x i32> @llvm.x86.avx512.gather.qpi.512 (<8 x i32> undef, i8* %ptr, <8 x i64> %offsets_lo, i8 %scalarMask1, i32 %offset_scale)
-  %res2 = call <8 x i32> @llvm.x86.avx512.gather.qpi.512 (<8 x i32> undef, i8* %ptr, <8 x i64> %offsets_hi, i8 %scalarMask2, i32 %offset_scale)
+  convert_scale_to_const_gather(res1, llvm.x86.avx512.gather.qpi.512, 8, i32, ptr, offsets_lo, i64, scalarMask1, i8, offset_scale)
+  convert_scale_to_const_gather(res2, llvm.x86.avx512.gather.qpi.512, 8, i32, ptr, offsets_hi, i64, scalarMask2, i8, offset_scale)
   %res = shufflevector <8 x i32> %res1, <8 x i32> %res2 , <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15> 
   ret <16 x i32> %res
 }
@@ -1062,7 +1154,7 @@ declare <16 x float> @llvm.x86.avx512.gather.dps.512 (<16 x float>, i8*, <16 x i
 define <16 x float>
 @__gather_base_offsets32_float(i8 * %ptr, i32 %offset_scale, <16 x i32> %offsets, <WIDTH x MASK> %vecmask) nounwind readonly alwaysinline {
   %mask = call i16 @__cast_mask_to_i16 (<WIDTH x MASK> %vecmask)
-  %res = call <16 x float> @llvm.x86.avx512.gather.dps.512 (<16 x float> undef, i8* %ptr, <16 x i32>%offsets, i16 %mask, i32 %offset_scale)
+  convert_scale_to_const_gather(res, llvm.x86.avx512.gather.dps.512, 16,float, ptr, offsets, i32, mask, i16, offset_scale)
   ret <16 x float> %res
 }
 
@@ -1074,9 +1166,9 @@ define <16 x float>
   %mask_lo = trunc i16 %mask to i8 
   %mask_hi = trunc i16 %mask_shifted to i8 
   %offsets_lo = shufflevector <16 x i64> %offsets, <16 x i64> undef, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
-  %offsets_hi = shufflevector <16 x i64> %offsets, <16 x i64> undef, <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15> 
-  %res_lo = call <8 x float> @llvm.x86.avx512.gather.qps.512 (<8 x float> undef, i8* %ptr, <8 x i64> %offsets_lo, i8 %mask_lo, i32 %offset_scale)
-  %res_hi = call <8 x float> @llvm.x86.avx512.gather.qps.512 (<8 x float> undef, i8* %ptr, <8 x i64> %offsets_hi, i8 %mask_hi, i32 %offset_scale)
+  %offsets_hi = shufflevector <16 x i64> %offsets, <16 x i64> undef, <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+  convert_scale_to_const_gather(res_lo, llvm.x86.avx512.gather.qps.512, 8, float, ptr, offsets_lo, i64, mask_lo, i8, offset_scale)
+  convert_scale_to_const_gather(res_hi, llvm.x86.avx512.gather.qps.512, 8, float, ptr, offsets_hi, i64, mask_hi, i8, offset_scale)
   %res = shufflevector <8 x float> %res_lo, <8 x float> %res_hi, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15> 
   ret <16 x float> %res
 }
@@ -1126,7 +1218,8 @@ declare void @llvm.x86.avx512.scatter.dpi.512 (i8*, i16, <16 x i32>, <16 x i32>,
 define void 
 @__scatter_base_offsets32_i32(i8* %ptr, i32 %offset_scale, <16 x i32> %offsets, <16 x i32> %vals, <WIDTH x MASK> %vecmask) nounwind {
   %mask = call i16 @__cast_mask_to_i16 (<WIDTH x MASK> %vecmask)
-  call void @llvm.x86.avx512.scatter.dpi.512 (i8* %ptr, i16 %mask, <16 x i32> %offsets, <16 x i32> %vals, i32 %offset_scale)
+
+  convert_scale_to_const_scatter(llvm.x86.avx512.scatter.dpi.512, 16, vals, i32, ptr, offsets, i32, mask, i16, offset_scale);
   ret void
 }
 
@@ -1140,9 +1233,9 @@ define void
   %offsets_lo = shufflevector <16 x i64> %offsets, <16 x i64> undef, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
   %offsets_hi = shufflevector <16 x i64> %offsets, <16 x i64> undef, <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15> 
   %res_lo = shufflevector <16 x i32> %vals, <16 x i32> undef, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
-  %res_hi = shufflevector <16 x i32> %vals, <16 x i32> undef, <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15> 
-  call void @llvm.x86.avx512.scatter.qpi.512 (i8* %ptr, i8 %mask_lo, <8 x i64> %offsets_lo, <8 x i32> %res_lo, i32 %offset_scale)
-  call void @llvm.x86.avx512.scatter.qpi.512 (i8* %ptr, i8 %mask_hi, <8 x i64> %offsets_hi, <8 x i32> %res_hi, i32 %offset_scale)
+  %res_hi = shufflevector <16 x i32> %vals, <16 x i32> undef, <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+  convert_scale_to_const_scatter(llvm.x86.avx512.scatter.qpi.512, 8, res_lo, i32, ptr, offsets_lo, i64, mask_lo, i8, offset_scale);
+  convert_scale_to_const_scatter(llvm.x86.avx512.scatter.qpi.512, 8, res_hi, i32, ptr, offsets_hi, i64, mask_hi, i8, offset_scale);
   ret void
 } 
 
@@ -1167,7 +1260,7 @@ declare void @llvm.x86.avx512.scatter.dps.512 (i8*, i16, <16 x i32>, <16 x float
 define void 
 @__scatter_base_offsets32_float(i8* %ptr, i32 %offset_scale, <16 x i32> %offsets, <16 x float> %vals, <WIDTH x MASK> %vecmask) nounwind {
   %mask = call i16 @__cast_mask_to_i16 (<WIDTH x MASK> %vecmask)
-  call void @llvm.x86.avx512.scatter.dps.512 (i8* %ptr, i16 %mask, <16 x i32> %offsets, <16 x float> %vals, i32 %offset_scale)
+  convert_scale_to_const_scatter(llvm.x86.avx512.scatter.dps.512, 16, vals, float, ptr, offsets, i32, mask, i16, offset_scale);
   ret void
 }
 
@@ -1181,9 +1274,9 @@ define void
   %offsets_lo = shufflevector <16 x i64> %offsets, <16 x i64> undef, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
   %offsets_hi = shufflevector <16 x i64> %offsets, <16 x i64> undef, <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15> 
   %res_lo = shufflevector <16 x float> %vals, <16 x float> undef, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
-  %res_hi = shufflevector <16 x float> %vals, <16 x float> undef, <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15> 
-  call void @llvm.x86.avx512.scatter.qps.512 (i8* %ptr, i8 %mask_lo, <8 x i64> %offsets_lo, <8 x float> %res_lo, i32 %offset_scale)
-  call void @llvm.x86.avx512.scatter.qps.512 (i8* %ptr, i8 %mask_hi, <8 x i64> %offsets_hi, <8 x float> %res_hi, i32 %offset_scale)
+  %res_hi = shufflevector <16 x float> %vals, <16 x float> undef, <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+  convert_scale_to_const_scatter(llvm.x86.avx512.scatter.qps.512, 8, res_lo, float, ptr, offsets_lo, i64, mask_lo, i8, offset_scale);
+  convert_scale_to_const_scatter(llvm.x86.avx512.scatter.qps.512, 8, res_hi, float, ptr, offsets_hi, i64, mask_hi, i8, offset_scale);
   ret void
 } 
 
