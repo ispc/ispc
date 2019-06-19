@@ -2133,7 +2133,6 @@ static bool lGSToGSBaseOffsets(llvm::CallInst *callInst) {
     // __pseudo_*_base_offsets_* functions want.
     basePtr = new llvm::IntToPtrInst(basePtr, LLVMTypes::VoidPointerType, LLVMGetName(basePtr, "_2void"), callInst);
     lCopyMetadata(basePtr, callInst);
-
     llvm::Function *gatherScatterFunc = info->baseOffsetsFunc;
 
     if ((info->isGather == true && g->target->hasGather()) ||
@@ -2591,7 +2590,6 @@ static bool lGSToLoadStore(llvm::CallInst *callInst) {
         llvm::Value *offsetScale = callInst->getArgOperand(1);
         llvm::Value *offsets = callInst->getArgOperand(2);
         llvm::Value *offsetScaleVec = lGetOffsetScaleVec(offsetScale, offsets->getType());
-
         fullOffsets =
             llvm::BinaryOperator::Create(llvm::Instruction::Mul, offsetScaleVec, offsets, "scaled_offsets", callInst);
     }
@@ -2886,11 +2884,15 @@ restart:
         // next instruction.
         if (callInst == NULL || callInst->getCalledFunction() == NULL)
             continue;
-
-        if (lGSToGSBaseOffsets(callInst)) {
-            modifiedAny = true;
-            goto restart;
-        }
+#ifdef ISPC_GENX_ENABLED
+        // For Gen target We do not need to transform array of pointers to a single base pointer
+        // and an array of int32 offsets, gen intrinsics use array of pointers.
+        if (g->target->getISA() != Target::GENX)
+#endif
+            if (lGSToGSBaseOffsets(callInst)) {
+                modifiedAny = true;
+                goto restart;
+            }
         if (lGSBaseOffsetsGetMoreConst(callInst)) {
             modifiedAny = true;
             goto restart;
