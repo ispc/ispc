@@ -198,7 +198,7 @@ static const bool lIsTargetValidforArch(ISPCTarget target, Arch arch) {
         if (arch != Arch::arm && arch != Arch::aarch64)
             ret = false;
     } else if (ISPCTargetIsGen(target)) {
-        if (arch != Arch::genx32)
+        if (arch != Arch::genx32 && arch != Arch::genx64)
             ret = false;
     }
 
@@ -1100,11 +1100,6 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, bool pic, boo
         // 1. Get default data layout first
         std::string dl_string;
         dl_string = m_targetMachine->createDataLayout().getStringRepresentation();
-#ifdef ISPC_GENX_ENABLED
-        if (m_isa == Target::GENX) {
-            dl_string = "e-p:32:32-i64:64-n8:16:32";
-        }
-#endif
 
         // 2. Finally set member data
         m_dataLayout = new llvm::DataLayout(dl_string);
@@ -1159,6 +1154,8 @@ std::string Target::GetTripleString() const {
             exit(1);
         } else if (m_arch == Arch::genx32) {
             triple.setArchName("genx32");
+        } else if (m_arch == Arch::genx64) {
+            triple.setArchName("genx64");
         } else {
             Error(SourcePos(), "Unknown arch.");
             exit(1);
@@ -1180,13 +1177,16 @@ std::string Target::GetTripleString() const {
             triple.setArchName("aarch64");
         } else if (m_arch == Arch::genx32) {
             triple.setArchName("genx32");
+        } else if (m_arch == Arch::genx64) {
+            triple.setArchName("genx64");
         } else {
             Error(SourcePos(), "Unknown arch.");
             exit(1);
         }
         triple.setVendor(llvm::Triple::VendorType::UnknownVendor);
         triple.setOS(llvm::Triple::OSType::Linux);
-        if (m_arch == Arch::x86 || m_arch == Arch::x86_64 || m_arch == Arch::aarch64 || m_arch == Arch::genx32) {
+        if (m_arch == Arch::x86 || m_arch == Arch::x86_64 || m_arch == Arch::aarch64 || m_arch == Arch::genx32 ||
+            m_arch == Arch::genx64) {
             triple.setEnvironment(llvm::Triple::EnvironmentType::GNU);
         } else if (m_arch == Arch::arm) {
             triple.setEnvironment(llvm::Triple::EnvironmentType::GNUEABIHF);
