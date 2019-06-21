@@ -33,22 +33,7 @@ define(`MASK',`i8')
 define(`HAVE_GATHER',`1')
 define(`HAVE_SCATTER',`1')
 
-include(`util.m4')
-
-stdlib_core()
-scans()
-reduce_equal(WIDTH)
-rdrand_definition()
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; broadcast/rotate/shuffle
-
-define_shuffles()
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; aos/soa
-
-aossoa()
+include(`target-avx512-utils.ll')
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Stub for mask conversion. LLVM's intrinsics want i1 mask, but we use i8
@@ -107,123 +92,6 @@ define <16 x i16> @__float_to_half_varying(<16 x float> %v) nounwind readnone {
            <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7,
                        i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
   ret <16 x i16> %r
-}
-
-define float @__half_to_float_uniform(i16 %v) nounwind readnone {
-  %v1 = bitcast i16 %v to <1 x i16>
-  %vv = shufflevector <1 x i16> %v1, <1 x i16> undef,
-           <8 x i32> <i32 0, i32 undef, i32 undef, i32 undef,
-                      i32 undef, i32 undef, i32 undef, i32 undef>
-  %rv = call <8 x float> @llvm.x86.vcvtph2ps.256(<8 x i16> %vv)
-  %r = extractelement <8 x float> %rv, i32 0
-  ret float %r
-}
-
-define i16 @__float_to_half_uniform(float %v) nounwind readnone {
-  %v1 = bitcast float %v to <1 x float>
-  %vv = shufflevector <1 x float> %v1, <1 x float> undef,
-           <8 x i32> <i32 0, i32 undef, i32 undef, i32 undef,
-                      i32 undef, i32 undef, i32 undef, i32 undef>
-  ; round to nearest even
-  %rv = call <8 x i16> @llvm.x86.vcvtps2ph.256(<8 x float> %vv, i32 0)
-  %r = extractelement <8 x i16> %rv, i32 0
-  ret i16 %r
-}
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; fast math mode
-
-declare void @llvm.x86.sse.stmxcsr(i8 *) nounwind
-declare void @llvm.x86.sse.ldmxcsr(i8 *) nounwind
-
-define void @__fastmath() nounwind alwaysinline {
-  %ptr = alloca i32
-  %ptr8 = bitcast i32 * %ptr to i8 *
-  call void @llvm.x86.sse.stmxcsr(i8 * %ptr8)
-  %oldval = load PTR_OP_ARGS(`i32 ') %ptr
-
-  ; turn on DAZ (64)/FTZ (32768) -> 32832
-  %update = or i32 %oldval, 32832
-  store i32 %update, i32 *%ptr
-  call void @llvm.x86.sse.ldmxcsr(i8 * %ptr8)
-  ret void
-}
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; round/floor/ceil
-
-declare <4 x float> @llvm.x86.sse41.round.ss(<4 x float>, <4 x float>, i32) nounwind readnone
-
-define float @__round_uniform_float(float) nounwind readonly alwaysinline {
-  ; roundss, round mode nearest 0b00 | don't signal precision exceptions 0b1000 = 8
-  ; the roundss intrinsic is a total mess--docs say:
-  ;
-  ;  __m128 _mm_round_ss (__m128 a, __m128 b, const int c)
-  ;       
-  ;  b is a 128-bit parameter. The lowest 32 bits are the result of the rounding function
-  ;  on b0. The higher order 96 bits are copied directly from input parameter a. The
-  ;  return value is described by the following equations:
-  ;
-  ;  r0 = RND(b0)
-  ;  r1 = a1
-  ;  r2 = a2
-  ;  r3 = a3
-  ;
-  ;  It doesn't matter what we pass as a, since we only need the r0 value
-  ;  here.  So we pass the same register for both.  Further, only the 0th
-  ;  element of the b parameter matters
-  %xi = insertelement <4 x float> undef, float %0, i32 0
-  %xr = call <4 x float> @llvm.x86.sse41.round.ss(<4 x float> %xi, <4 x float> %xi, i32 8)
-  %rs = extractelement <4 x float> %xr, i32 0
-  ret float %rs
-}
-
-define float @__floor_uniform_float(float) nounwind readonly alwaysinline {
-  ; see above for round_ss instrinsic discussion...
-  %xi = insertelement <4 x float> undef, float %0, i32 0
-  ; roundps, round down 0b01 | don't signal precision exceptions 0b1001 = 9
-  %xr = call <4 x float> @llvm.x86.sse41.round.ss(<4 x float> %xi, <4 x float> %xi, i32 9)
-  %rs = extractelement <4 x float> %xr, i32 0
-  ret float %rs
-}
-
-define float @__ceil_uniform_float(float) nounwind readonly alwaysinline {
-  ; see above for round_ss instrinsic discussion...
-  %xi = insertelement <4 x float> undef, float %0, i32 0
-  ; roundps, round up 0b10 | don't signal precision exceptions 0b1010 = 10
-  %xr = call <4 x float> @llvm.x86.sse41.round.ss(<4 x float> %xi, <4 x float> %xi, i32 10)
-  %rs = extractelement <4 x float> %xr, i32 0
-  ret float %rs
-}
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; rounding doubles
-
-declare <2 x double> @llvm.x86.sse41.round.sd(<2 x double>, <2 x double>, i32) nounwind readnone
-
-define double @__round_uniform_double(double) nounwind readonly alwaysinline {
-  %xi = insertelement <2 x double> undef, double %0, i32 0
-  %xr = call <2 x double> @llvm.x86.sse41.round.sd(<2 x double> %xi, <2 x double> %xi, i32 8)
-  %rs = extractelement <2 x double> %xr, i32 0
-  ret double %rs
-}
-
-define double @__floor_uniform_double(double) nounwind readonly alwaysinline {
-  ; see above for round_ss instrinsic discussion...
-  %xi = insertelement <2 x double> undef, double %0, i32 0
-  ; roundsd, round down 0b01 | don't signal precision exceptions 0b1001 = 9
-  %xr = call <2 x double> @llvm.x86.sse41.round.sd(<2 x double> %xi, <2 x double> %xi, i32 9)
-  %rs = extractelement <2 x double> %xr, i32 0
-  ret double %rs
-}
-
-define double @__ceil_uniform_double(double) nounwind readonly alwaysinline {
-  ; see above for round_ss instrinsic discussion...
-  %xi = insertelement <2 x double> undef, double %0, i32 0
-  ; roundsd, round up 0b10 | don't signal precision exceptions 0b1010 = 10
-  %xr = call <2 x double> @llvm.x86.sse41.round.sd(<2 x double> %xi, <2 x double> %xi, i32 10)
-  %rs = extractelement <2 x double> %xr, i32 0
-  ret double %rs
 }
 
 
@@ -291,29 +159,6 @@ define <16 x double> @__ceil_varying_double(<16 x double>) nounwind readonly alw
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; int64/uint64 min/max
-define i64 @__max_uniform_int64(i64, i64) nounwind readonly alwaysinline {
-  %c = icmp sgt i64 %0, %1
-  %r = select i1 %c, i64 %0, i64 %1
-  ret i64 %r
-}
-
-define i64 @__max_uniform_uint64(i64, i64) nounwind readonly alwaysinline {
-  %c = icmp ugt i64 %0, %1
-  %r = select i1 %c, i64 %0, i64 %1
-  ret i64 %r
-}
-
-define i64 @__min_uniform_int64(i64, i64) nounwind readonly alwaysinline {
-  %c = icmp slt i64 %0, %1
-  %r = select i1 %c, i64 %0, i64 %1
-  ret i64 %r
-}
-
-define i64 @__min_uniform_uint64(i64, i64) nounwind readonly alwaysinline {
-  %c = icmp ult i64 %0, %1
-  %r = select i1 %c, i64 %0, i64 %1
-  ret i64 %r
-}
 
 declare <8 x i64> @llvm.x86.avx512.mask.pmaxs.q.512(<8 x i64>, <8 x i64>, <8 x i64>, i8)
 declare <8 x i64> @llvm.x86.avx512.mask.pmaxu.q.512(<8 x i64>, <8 x i64>, <8 x i64>, i8)
@@ -374,18 +219,6 @@ define <16 x i64> @__min_varying_uint64(<16 x i64>, <16 x i64>) nounwind readonl
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; float min/max
 
-define float @__max_uniform_float(float, float) nounwind readonly alwaysinline {
-  %cmp = fcmp ogt float %1, %0
-  %ret = select i1 %cmp, float %1, float %0
-  ret float %ret
-}
-
-define float @__min_uniform_float(float, float) nounwind readonly alwaysinline {
-  %cmp = fcmp ogt float %1, %0
-  %ret = select i1 %cmp, float %0, float %1
-  ret float %ret
-}
-
 declare <16 x float> @llvm.x86.avx512.mask.max.ps.512(<16 x float>, <16 x float>, <16 x float>, i16, i32)
 declare <16 x float> @llvm.x86.avx512.mask.min.ps.512(<16 x float>, <16 x float>, <16 x float>, i16, i32)
 
@@ -400,34 +233,7 @@ define <16 x float> @__min_varying_float(<16 x float>, <16 x float>) nounwind re
 }
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; int min/max
-
-define i32 @__min_uniform_int32(i32, i32) nounwind readonly alwaysinline {
-  %cmp = icmp sgt i32 %1, %0
-  %ret = select i1 %cmp, i32 %0, i32 %1
-  ret i32 %ret
-}
-
-define i32 @__max_uniform_int32(i32, i32) nounwind readonly alwaysinline {
-  %cmp = icmp sgt i32 %1, %0
-  %ret = select i1 %cmp, i32 %1, i32 %0
-  ret i32 %ret
-}
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; unsigned int min/max
-
-define i32 @__min_uniform_uint32(i32, i32) nounwind readonly alwaysinline {
-  %cmp = icmp ugt i32 %1, %0
-  %ret = select i1 %cmp, i32 %0, i32 %1
-  ret i32 %ret
-}
-
-define i32 @__max_uniform_uint32(i32, i32) nounwind readonly alwaysinline {
-  %cmp = icmp ugt i32 %1, %0
-  %ret = select i1 %cmp, i32 %1, i32 %0
-  ret i32 %ret
-}
 
 declare <16 x i32> @llvm.x86.avx512.mask.pmins.d.512(<16 x i32>, <16 x i32>, <16 x i32>, i16)
 declare <16 x i32> @llvm.x86.avx512.mask.pmaxs.d.512(<16 x i32>, <16 x i32>, <16 x i32>, i16)
@@ -461,18 +267,6 @@ define <16 x i32> @__max_varying_uint32(<16 x i32>, <16 x i32>) nounwind readonl
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; double precision min/max
-
-define double @__min_uniform_double(double, double) nounwind readnone alwaysinline {
-  %cmp = fcmp ogt double %1, %0
-  %ret = select i1 %cmp, double %0, double %1
-  ret double %ret
-}
-
-define double @__max_uniform_double(double, double) nounwind readnone alwaysinline {
-  %cmp = fcmp ogt double %1, %0
-  %ret = select i1 %cmp, double %1, double %0
-  ret double %ret
-}
 
 declare <8 x double> @llvm.x86.avx512.mask.min.pd.512(<8 x double>, <8 x double>,
                     <8 x double>, i8, i32)
@@ -518,73 +312,7 @@ define <16 x double> @__max_varying_double(<16 x double>, <16 x double>) nounwin
 }
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; rsqrt
-
-declare <4 x float> @llvm.x86.sse.rsqrt.ss(<4 x float>) nounwind readnone
-
-define float @__rsqrt_uniform_float(float) nounwind readonly alwaysinline {
-  ;  uniform float is = extract(__rsqrt_u(v), 0);
-  %v = insertelement <4 x float> undef, float %0, i32 0
-  %vis = call <4 x float> @llvm.x86.sse.rsqrt.ss(<4 x float> %v)
-  %is = extractelement <4 x float> %vis, i32 0
-
-  ; Newton-Raphson iteration to improve precision
-  ;  return 0.5 * is * (3. - (v * is) * is);
-  %v_is = fmul float %0, %is
-  %v_is_is = fmul float %v_is, %is
-  %three_sub = fsub float 3., %v_is_is
-  %is_mul = fmul float %is, %three_sub
-  %half_scale = fmul float 0.5, %is_mul
-  ret float %half_scale
-}
-
-define float @__rsqrt_fast_uniform_float(float) nounwind readonly alwaysinline {
-  ;  uniform float is = extract(__rsqrt_u(v), 0);
-  ;  return is;
-  %v = insertelement <4 x float> undef, float %0, i32 0
-  %vis = call <4 x float> @llvm.x86.sse.rsqrt.ss(<4 x float> %v)
-  %is = extractelement <4 x float> %vis, i32 0
-  ret float %is
-}
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; rcp
-
-declare <4 x float> @llvm.x86.sse.rcp.ss(<4 x float>) nounwind readnone
-
-define float @__rcp_uniform_float(float) nounwind readonly alwaysinline {
-  ; do the rcpss call
-  ;    uniform float iv = extract(__rcp_u(v), 0);
-  ;    return iv * (2. - v * iv);
-  %vecval = insertelement <4 x float> undef, float %0, i32 0
-  %call = call <4 x float> @llvm.x86.sse.rcp.ss(<4 x float> %vecval)
-  %scall = extractelement <4 x float> %call, i32 0
-
-  ; do one N-R iteration to improve precision, as above
-  %v_iv = fmul float %0, %scall
-  %two_minus = fsub float 2., %v_iv
-  %iv_mul = fmul float %scall, %two_minus
-  ret float %iv_mul
-}
-
-define float @__rcp_fast_uniform_float(float) nounwind readonly alwaysinline {
-  ;    uniform float iv = extract(__rcp_u(v), 0);
-  ;    return iv;
-  %vecval = insertelement <4 x float> undef, float %0, i32 0
-  %call = call <4 x float> @llvm.x86.sse.rcp.ss(<4 x float> %vecval)
-  %scall = extractelement <4 x float> %call, i32 0
-  ret float %scall
-}
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; sqrt
-
-declare <4 x float> @llvm.x86.sse.sqrt.ss(<4 x float>) nounwind readnone
-
-define float @__sqrt_uniform_float(float) nounwind readonly alwaysinline {
-  sse_unary_scalar(ret, 4, float, @llvm.x86.sse.sqrt.ss, %0)
-  ret float %ret
-}
 
 declare <16 x float> @llvm.x86.avx512.mask.sqrt.ps.512(<16 x float>, <16 x float>, i16, i32) nounwind readnone
 
@@ -617,23 +345,6 @@ define <16 x double> @__sqrt_varying_double(<16 x double>) nounwind alwaysinline
                                    i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
   ret <16 x double> %res
 }
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; bit ops
-
-declare i32 @llvm.ctpop.i32(i32) nounwind readnone
-
-define i32 @__popcnt_int32(i32) nounwind readonly alwaysinline {
-  %call = call i32 @llvm.ctpop.i32(i32 %0)
-  ret i32 %call
-}
-
-declare i64 @llvm.ctpop.i64(i64) nounwind readnone
-
-define i64 @__popcnt_int64(i64) nounwind readonly alwaysinline {
-  %call = call i64 @llvm.ctpop.i64(i64 %0)
-  ret i64 %call
-}
-ctlztz()
 
 ;; TODO: should we use masked versions of SVML functions?
 ;; svml
@@ -1008,98 +719,6 @@ define void @__masked_store_blend_double(<16 x double>* nocapture,
   store <16 x double> %v1, <16 x double> * %0
   ret void
 }
-
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; switch macro
-;; This is required to ensure that gather intrinsics are used with constant scale value.
-;; This particular implementation of the routine is used by avx512 targets only.
-;; $1: Return value
-;; $2: funcName
-;; $3: Width
-;; $4: scalar type of array
-;; $5: ptr
-;; $6: offset
-;; $7: scalar type of offset
-;; $8: vecMask
-;; $9: scalar type of vecMask
-;; $10: scale
-define(`convert_scale_to_const_gather', `
-
-
- switch i32 %$10, label %default_$1 [ i32 1, label %on_one_$1
-                                      i32 2, label %on_two_$1
-                                      i32 4, label %on_four_$1
-                                      i32 8, label %on_eight_$1]
-
-on_one_$1:
-  %$1_1 = call <$3 x $4> @$2(<$3 x $4> undef, i8 * %$5, <$3 x $7> %$6, $9 %$8, i32 1)
-  br label %end_bb_$1
-
-on_two_$1:
-  %$1_2 = call <$3 x $4> @$2(<$3 x $4> undef, i8 * %$5, <$3 x $7> %$6, $9 %$8, i32 2)
-  br label %end_bb_$1
-
-on_four_$1:
-  %$1_4 = call <$3 x $4> @$2(<$3 x $4> undef, i8 * %$5, <$3 x $7> %$6, $9 %$8, i32 4)
-  br label %end_bb_$1
-
-on_eight_$1:
-  %$1_8 = call <$3 x $4> @$2(<$3 x $4> undef, i8 * %$5, <$3 x $7> %$6, $9 %$8, i32 8)
-  br label %end_bb_$1
-
-default_$1:
-  unreachable
-
-end_bb_$1:
-  %$1 = phi <$3 x $4> [ %$1_1, %on_one_$1 ], [ %$1_2, %on_two_$1 ], [ %$1_4, %on_four_$1 ], [ %$1_8, %on_eight_$1 ]
-'
-)
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; switch macro
-;; This is required to ensure that scatter intrinsics are used with constant scale value.
-;; This is used by avx512 targets only.
-;; $1: funcName
-;; $2: Width
-;; $3: Array
-;; $4: scalar type of array
-;; $5: ptr
-;; $6: offset
-;; $7: scalar type of offset
-;; $8: vecMask
-;; $9: scalar type of vecMask
-;; $10: scale
-define(`convert_scale_to_const_scatter', `
-
-
- switch i32 %$10, label %default_$3 [ i32 1, label %on_one_$3
-                                      i32 2, label %on_two_$3
-                                      i32 4, label %on_four_$3
-                                      i32 8, label %on_eight_$3]
-
-on_one_$3:
-  call void @$1(i8* %$5, $9 %$8, <$2 x $7> %$6, <$2 x $4> %$3, i32 1)
-  br label %end_bb_$3
-
-on_two_$3:
-  call void @$1(i8* %$5, $9 %$8, <$2 x $7> %$6, <$2 x $4> %$3, i32 2)
-  br label %end_bb_$3
-
-on_four_$3:
-  call void @$1(i8* %$5, $9 %$8, <$2 x $7> %$6, <$2 x $4> %$3, i32 4)
-  br label %end_bb_$3
-
-on_eight_$3:
-  call void @$1(i8* %$5, $9 %$8, <$2 x $7> %$6, <$2 x $4> %$3, i32 8)
-  br label %end_bb_$3
-
-default_$3:
-  unreachable
-
-end_bb_$3:
-'
-)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; gather/scatter
