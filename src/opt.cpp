@@ -480,7 +480,7 @@ void Optimize(llvm::Module *module, int optLevel) {
 #ifdef ISPC_GENX_ENABLED
         if (g->target->getISA() == Target::GENX) {
             optPM.add(llvm::createGenXLayoutBlocksPass());
-            optPM.add(llvm::createCMSimdCFLoweringPass());
+            optPM.add(llvm::createISPCSimdCFLoweringPass());
             optPM.add(llvm::createGenXPacketizePass());
             optPM.add(llvm::createPromoteMemoryToRegisterPass());
             optPM.add(llvm::createCMLowerLoadStorePass());
@@ -624,7 +624,7 @@ void Optimize(llvm::Module *module, int optLevel) {
 #ifdef ISPC_GENX_ENABLED
         if (g->target->getISA() == Target::GENX) {
             optPM.add(llvm::createGenXLayoutBlocksPass());
-            optPM.add(llvm::createCMSimdCFLoweringPass());
+            optPM.add(llvm::createISPCSimdCFLoweringPass());
             optPM.add(llvm::createGenXPacketizePass());
             optPM.add(llvm::createPromoteMemoryToRegisterPass());
             // Inline
