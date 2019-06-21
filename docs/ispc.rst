@@ -548,6 +548,7 @@ To generate a text assembly file, pass ``--emit-asm``:
    ispc foo.ispc -o foo.asm --emit-asm
 
 To generate LLVM bitcode, use the ``--emit-llvm`` flag.
+To generate LLVM bitcode in textual form, use the ``--emit-llvm-text`` flag.
 
 Optimizations are on by default; they can be turned off with ``-O0``:
 
