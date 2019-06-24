@@ -355,10 +355,17 @@ if (ISPC_PREPARE_PACKAGE)
     set(CPACK_PACKAGE_VERSION_MAJOR ${CMAKE_MATCH_1})
     set(CPACK_PACKAGE_VERSION_MINOR ${CMAKE_MATCH_2})
     set(CPACK_PACKAGE_VERSION_PATCH ${CMAKE_MATCH_3})
-    string(CONCAT CPACK_PACKAGE_FILE_NAME "${PROJECT_NAME}"
+    if (${CPACK_PACKAGE_VERSION_PATCH} MATCHES ".*dev")
+        string(CONCAT CPACK_PACKAGE_FILE_NAME "${PROJECT_NAME}"
+                             "-trunk"
+                             "-${ISPC_SYSTEM_NAME}")
+    else()
+        string(CONCAT CPACK_PACKAGE_FILE_NAME "${PROJECT_NAME}"
                              "-v${CPACK_PACKAGE_VERSION_MAJOR}"
                              ".${CPACK_PACKAGE_VERSION_MINOR}"
                              ".${CPACK_PACKAGE_VERSION_PATCH}"
                              "-${ISPC_SYSTEM_NAME}")
+
+    endif()
     include(CPack)
 endif()
