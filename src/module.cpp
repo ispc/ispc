@@ -1410,11 +1410,11 @@ bool Module::writeBitcode(llvm::Module *module, const char *outFileName, OutputT
         }
     } else
 #endif /* ISPC_NVPTX_ENABLED */
-    if (outputType == Bitcode)
+        if (outputType == Bitcode)
 #if ISPC_LLVM_VERSION < ISPC_LLVM_7_0
         llvm::WriteBitcodeToFile(module, fos);
 #else
-    llvm::WriteBitcodeToFile(*module, fos);
+        llvm::WriteBitcodeToFile(*module, fos);
 #endif
     else if (outputType == BitcodeText)
         module->print(fos, nullptr);
@@ -2767,14 +2767,6 @@ static void lCreateDispatchFunction(llvm::Module *module, llvm::Function *setISA
 
         // dispatchNum is needed to separate generic from *-generic target
         int dispatchNum = i;
-        if ((Target::ISA)(i == Target::GENERIC) && !g->target->getTreatGenericAsSmth().empty()) {
-            if (g->target->getTreatGenericAsSmth() == "knl_generic")
-                dispatchNum = Target::KNL_AVX512;
-            else {
-                Error(SourcePos(), "*-generic target can be called only with knl");
-                exit(1);
-            }
-        }
 
         llvm::Value *ok = llvm::CmpInst::Create(llvm::Instruction::ICmp, llvm::CmpInst::ICMP_SGE, systemISA,
                                                 LLVMInt32(dispatchNum), "isa_ok", bblock);

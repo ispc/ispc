@@ -240,9 +240,8 @@ chaining the results of these calls together to perform the required
 computations.  It is then expected that the user will provide the
 implementation of these functions via a header file with ``inline``
 functions defined for each of these functions and then use a C++ compiler
-to generate a final object file.  (Examples of these headers include
-``examples/intrinsics/sse4.h`` and ``examples/intrinsics/knc.h`` in the
-``ispc`` distribution.)
+to generate a final object file.  (Example of this header is
+``examples/intrinsics/sse4.h`` in the ``ispc`` distribution.)
 
 If a target other than one of the "generic" ones is used with C++ output,
 then the compiler will transform certain operations into particular code
@@ -251,10 +250,9 @@ SSE targets that don't have hardware "gather" instructions will transform a
 gather into a sequence of scalar load instructions.  When this in turn is
 transformed to C++ code, the fact that the loads were originally a gather
 is lost, and the header file of function definitions wouldn't have a chance
-to map the "gather" to a target-specific operation, as the ``knc.h`` header
-does, for example.  Thus, the "generic" targets exist to provide basic
-targets of various vector widths, without imposing any limitations on the
-final target's capabilities.
+to map the "gather" to a target-specific operation. Thus, the "generic"
+targets exist to provide basic targets of various vector widths, without
+imposing any limitations on the final target's capabilities.
 
 Why won't the compiler generate an object file or assembly output with the "generic" targets?
 ---------------------------------------------------------------------------------------------
