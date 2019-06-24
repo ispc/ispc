@@ -214,8 +214,7 @@ inline void *TaskGroupBase::AllocMemory(int64_t size, int32_t alignment) {
 
 static inline void lMemFence() {
     // Windows atomic functions already contain the fence
-    // KNC doesn't need the memory barrier
-#if !defined ISPC_IS_KNC && !defined ISPC_IS_WINDOWS
+#if !defined ISPC_IS_WINDOWS
     __sync_synchronize();
 #endif
 }

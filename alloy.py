@@ -461,15 +461,13 @@ def unsupported_llvm_targets(LLVM_VERSION):
     return []
 
 
-# Split targets into categories: native, generic, knc, sde.
+# Split targets into categories: native, generic, sde.
 # native - native targets run natively on current hardware.
 # generic - hardware agnostic generic target.
-# knc - knc target. This one is special, as it requires additional steps to run.
 # sde - native target, which need to be emulated on current hardware.
 def check_targets():
     result = []
     result_generic = []
-    result_knc = []
     result_sde = []
     # check what native targets do we have
     if current_OS != "Windows":
@@ -528,10 +526,6 @@ def check_targets():
             for target in targets:
                 result_sde = result_sde + [[item[2], target]]
 
-    # generate targets for KNC
-    if  current_OS == "Linux":
-        result_knc = ["knc-generic"]
-
     if current_OS != "Windows":
         result_generic = ["generic-4", "generic-16", "generic-8", "generic-1", "generic-32", "generic-64"]
 
@@ -542,7 +536,7 @@ def check_targets():
             "To test all platforms please set SDE_HOME to path containing SDE.\n" +
             "Please refer to http://www.intel.com/software/sde for SDE download information.", 2)
 
-    return [result, result_generic, result_sde, result_knc]
+    return [result, result_generic, result_sde]
 
 def build_ispc(version_LLVM, make):
     current_path = os.getcwd()
@@ -712,7 +706,7 @@ def validation_run(only, only_targets, reference_branch, number, notify, update,
         stability.no_opt = False
         stability.wrapexe = ""
 # prepare parameters of run
-        [targets_t, targets_generic_t, sde_targets_t, targets_knc_t] = check_targets()
+        [targets_t, targets_generic_t, sde_targets_t] = check_targets()
         rebuild = True
         opts = []
         archs = []
@@ -771,10 +765,6 @@ def validation_run(only, only_targets, reference_branch, number, notify, update,
                     if i in sde_targets_t[j][1]:
                         sde_targets.append(sde_targets_t[j])
                         err = False
-                for j in range(0,len(targets_knc_t)):
-                    if i in targets_knc_t[j]:
-                        targets.append(targets_knc_t[j])
-                        err = False
                 if err == True:
                     error("You haven't sde for target " + i, 1)
         else:
@@ -821,9 +811,6 @@ def validation_run(only, only_targets, reference_branch, number, notify, update,
                 # sometimes clang++ is not avaluable. if --ispc-build-compiler = gcc we will pass in g++ compiler
                 if options.ispc_build_compiler == "gcc":
                     stability.compiler_exe = "g++"
-                # but 'knc/knl' generic target is supported only by icpc, so set explicitly
-                if ("knc-generic" in stability.target):
-                    stability.compiler_exe = "icpc"
                 # now set archs for targets
                 if ("generic" in stability.target):
                     arch = gen_archs
@@ -855,8 +842,6 @@ def validation_run(only, only_targets, reference_branch, number, notify, update,
                 # sometimes clang++ is not avaluable. if --ispc-build-compiler = gcc we will pass in g++ compiler
                 if options.ispc_build_compiler == "gcc":
                     stability.compiler_exe = "g++"
-                if ("knc-generic" in stability.target):
-                    stability.compiler_exe = "icpc"
                 stability.wrapexe = get_sde() + " " + sde_targets[j][0] + " -- "
                 if ("generic" in stability.target):
                     arch = gen_archs
@@ -1126,7 +1111,6 @@ if __name__ == '__main__':
     "Try to build compiler with all LLVM\n\talloy.py -r --only=build\n" +
     "Performance validation run with 10 runs of each test and comparing to branch 'old'\n\talloy.py -r --only=performance --compare-with=old --number=10\n" +
     "Validation run. Update fail_db.txt with new fails, send results to my@my.com\n\talloy.py -r --update-errors=F --notify='my@my.com'\n" +
-    "Test KNC target (not tested when tested all supported targets, so should be set explicitly via --only-targets)\n\talloy.py -r --only='stability' --only-targets='knc-generic'\n" +
     "Test KNL target (requires sde)\n\talloy.py -r --only='stability' --only-targets='avx512knl-i32x16'\n")
 
     num_threads="%s" % multiprocessing.cpu_count()
@@ -1179,8 +1163,7 @@ if __name__ == '__main__':
     run_group.add_option('--update-errors', dest='update',
         help='rewrite fail_db.txt file according to received results (F or FP)', default="")
     run_group.add_option('--only-targets', dest='only_targets',
-        help='set list of targets to test. Possible values - all subnames of targets, plus "knc-generic" for "generic" ' +
-             'version of knc support', default="")
+        help='set list of targets to test. Possible values - all subnames of targets', default="")
     run_group.add_option('--time', dest='time',
         help='display time of testing', default=False, action='store_true')
     run_group.add_option('--only', dest='only',

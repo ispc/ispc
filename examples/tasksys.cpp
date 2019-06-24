@@ -91,10 +91,6 @@
 #elif defined(__APPLE__)
 #define ISPC_USE_GCD
 #endif
-#if defined(__KNC__)
-#define ISPC_USE_PTHREADS
-#endif
-
 #endif // No task model specified on compiler cmdline
 
 #if defined(_WIN32) || defined(_WIN64)
@@ -103,9 +99,6 @@
 #define ISPC_IS_LINUX
 #elif defined(__APPLE__)
 #define ISPC_IS_APPLE
-#endif
-#if defined(__KNC__)
-#define ISPC_IS_KNC
 #endif
 
 #define DBG(x)
@@ -349,8 +342,7 @@ inline void *TaskGroupBase::AllocMemory(int64_t size, int32_t alignment) {
 
 static inline void lMemFence() {
     // Windows atomic functions already contain the fence
-    // KNC doesn't need the memory barrier
-#if !defined ISPC_IS_KNC && !defined ISPC_IS_WINDOWS
+#if !defined ISPC_IS_WINDOWS
     __sync_synchronize();
 #endif
 }
@@ -837,11 +829,7 @@ inline void TaskGroup::Sync() {
                 // be much better to put this thread to sleep on a
                 // condition variable that was signaled when the last task
                 // in this group was finished.
-#ifndef ISPC_IS_KNC
                 usleep(1);
-#else
-                _mm_delay_32(8);
-#endif
                 continue;
             }
 
@@ -1132,11 +1120,7 @@ struct Task {
                 run(next, 0);
         }
         while (numDone != taskCount) {
-#ifndef ISPC_IS_KNC
             usleep(1);
-#else
-            _mm_delay_32(8);
-#endif
         }
     }
 };
@@ -1227,11 +1211,7 @@ class TaskSys {
         task->wait();
         int liveIndex = task->liveIndex;
         while (taskQueue[liveIndex].locks > 1) {
-#ifndef ISPC_IS_KNC
             usleep(1);
-#else
-            _mm_delay_32(8);
-#endif
         }
         _mm_free(task->data);
         pthread_mutex_lock(&mutex);
@@ -1245,11 +1225,7 @@ void TaskSys::threadFct() {
     int myIndex = 0; // lAtomicAdd(&threadIdx,1);
     while (1) {
         while (!taskQueue[myIndex].active) {
-#ifndef ISPC_IS_KNC
             usleep(4);
-#else
-            _mm_delay_32(32);
-#endif
             continue;
         }
 

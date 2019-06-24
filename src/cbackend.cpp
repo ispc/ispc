@@ -1925,16 +1925,10 @@ void CWriter::printConstant(llvm::Constant *CPV, bool Static) {
                 // when generating code for knl-generic in multitarget mode.
                 // Short vectors are mapped to "native" vectors and cause AVX-512 code
                 // generation in static block initialization (__vec16_* in ::init function).
-                bool isGenericKNL = g->target->getISA() == Target::GENERIC &&
-                                    !g->target->getTreatGenericAsSmth().empty() && g->mangleFunctionsWithTarget;
-                if (isGenericKNL && CPV->getOperand(0)->getType()->isVectorTy())
-                    llvm::report_fatal_error("knl-generic-* target doesn's support short vectors");
                 Out << ' ';
                 printConstant(llvm::cast<llvm::Constant>(CPV->getOperand(0)), Static);
                 for (unsigned i = 1, e = CPV->getNumOperands(); i != e; ++i) {
                     Out << ", ";
-                    if (isGenericKNL && CPV->getOperand(i)->getType()->isVectorTy())
-                        llvm::report_fatal_error("knl-generic-* target doesn's support short vectors");
                     printConstant(llvm::cast<llvm::Constant>(CPV->getOperand(i)), Static);
                 }
             }
