@@ -606,9 +606,6 @@ Target::Target(const char *arch, const char *cpu, const char *isa, bool pic, boo
         else
 #endif /* ISPC_NVPTX_ENABLED */
             arch = "x86-64";
-    } else if (!lIsISAValidforArch(isa, arch)) {
-        Error(SourcePos(), "arch = %s and target = %s is not a valid combination.\n", arch, isa);
-        return;
     }
 
     // Define arch alias
@@ -644,6 +641,12 @@ Target::Target(const char *arch, const char *cpu, const char *isa, bool pic, boo
         error = true;
     } else {
         this->m_arch = arch;
+    }
+
+    // Ensure that we have a valid isa/arch combination.
+    if (!lIsISAValidforArch(isa, arch)) {
+        Error(SourcePos(), "arch = %s and target = %s is not a valid combination.\n", arch, isa);
+        return;
     }
 
     // Check default LLVM generated targets
