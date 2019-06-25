@@ -68,8 +68,6 @@ Contents:
   + `Basic Command-line Options`_
   + `Selecting The Compilation Target`_
   + `Generating Generic C++ Output`_
-  + `Compiling For The Intel®  Xeon Phi™ Architecture (codename Knights Corner)`_
-  + `Compiling For The Intel®  Xeon Phi™ Architecture (codename Knights Landing)`_
   + `Selecting 32 or 64 Bit Addressing`_
   + `The Preprocessor`_
   + `Debugging`_
