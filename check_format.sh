@@ -48,7 +48,8 @@ if ! [[ $CURRENT_VERSION =~ $VERSION_STRING ]] ; then
 fi
 
 LAST_REVISION=`git rev-parse HEAD`
-CHANGED_FILES=`git diff-tree --no-commit-id --name-only -r $LAST_REVISION | grep -E "\.(cpp|h|c)$"`
+# Get the list of changed files, ignore deleted
+CHANGED_FILES=`git diff-tree --no-commit-id --name-only -r $LAST_REVISION --diff-filter=RCMA | grep -E "\.(cpp|h|c)$"`
 for FILE in $CHANGED_FILES; do
     $CLANG_FORMAT $FILE | cmp  $FILE >/dev/null
     if [ $? -ne 0 ]; then
