@@ -466,6 +466,12 @@ void Optimize(llvm::Module *module, int optLevel) {
         // run absolutely no optimizations, since the front-end needs us to
         // take the various __pseudo_* functions it has emitted and turn
         // them into something that can actually execute.
+#ifdef ISPC_GENX_ENABLED
+        if (g->target->getISA() == Target::GENX) {
+            optPM.add(llvm::createGenXLayoutBlocksPass());
+            optPM.add(llvm::createISPCSimdCFLoweringPass());
+        }
+#endif
         optPM.add(CreateImproveMemoryOpsPass(), 100);
 
         if (g->opt.disableHandlePseudoMemoryOps == false)
@@ -479,8 +485,6 @@ void Optimize(llvm::Module *module, int optLevel) {
         optPM.add(llvm::createGlobalDCEPass());
 #ifdef ISPC_GENX_ENABLED
         if (g->target->getISA() == Target::GENX) {
-            optPM.add(llvm::createGenXLayoutBlocksPass());
-            optPM.add(llvm::createISPCSimdCFLoweringPass());
             optPM.add(llvm::createGenXPacketizePass());
             optPM.add(llvm::createPromoteMemoryToRegisterPass());
             optPM.add(llvm::createCMLowerLoadStorePass());
@@ -503,6 +507,12 @@ void Optimize(llvm::Module *module, int optLevel) {
 
         optPM.add(llvm::createGlobalDCEPass(), 185);
 
+#ifdef ISPC_GENX_ENABLED
+        if (g->target->getISA() == Target::GENX) {
+            optPM.add(llvm::createGenXLayoutBlocksPass());
+            optPM.add(llvm::createISPCSimdCFLoweringPass());
+        }
+#endif
         // Setup to use LLVM default AliasAnalysis
         // Ideally, we want call:
         //    llvm::PassManagerBuilder pm_Builder;
@@ -623,8 +633,6 @@ void Optimize(llvm::Module *module, int optLevel) {
         optPM.add(CreateInstructionSimplifyPass());
 #ifdef ISPC_GENX_ENABLED
         if (g->target->getISA() == Target::GENX) {
-            optPM.add(llvm::createGenXLayoutBlocksPass());
-            optPM.add(llvm::createISPCSimdCFLoweringPass());
             optPM.add(llvm::createGenXPacketizePass());
             optPM.add(llvm::createPromoteMemoryToRegisterPass());
             // Inline
