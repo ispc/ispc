@@ -2497,6 +2497,15 @@ void Module::execPreprocessor(const char *infilename, llvm::raw_string_ostream *
             *p = '_';
         ++p;
     }
+
+    // Add 'TARGET_WIDTH' macro to expose vector width to user.
+    std::string TARGET_WIDTH = "TARGET_WIDTH=" + std::to_string(g->target->getVectorWidth());
+    opts.addMacroDef(TARGET_WIDTH);
+
+    // Add 'TARGET_ELEMENT_WIDTH' macro to expose element width to user.
+    std::string TARGET_ELEMENT_WIDTH = "TARGET_ELEMENT_WIDTH=" + std::to_string(g->target->getDataTypeWidth() / 8);
+    opts.addMacroDef(TARGET_ELEMENT_WIDTH);
+
     opts.addMacroDef(targetMacro);
 
     if (g->target->is32Bit())
