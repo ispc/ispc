@@ -2602,15 +2602,16 @@ void FunctionEmitContext::maskedStore(llvm::Value *value, llvm::Value *ptr, cons
     }
     AssertPos(currentPos, maskedStoreFunc != NULL);
 
+#ifdef ISPC_GENX_ENABLED
+    if (g->target->getISA() == Target::GENX) {
+        mask = GenXSimdCFPredicate(mask);
+    }
+#endif
     std::vector<llvm::Value *> args;
     args.push_back(ptr);
     args.push_back(value);
     args.push_back(mask);
-#ifdef ISPC_GENX_ENABLED
-    if (g->target->getISA() == Target::GENX) {
-        llvm::Value *pred = GenXSimdCFPredicate(value);
-    }
-#endif
+
     CallInst(maskedStoreFunc, NULL, args);
 }
 
