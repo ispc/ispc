@@ -497,6 +497,14 @@ void Function::GenerateIR() {
         return;
     }
 
+    // If function is an 'extern C', it cannot be defined in ISPC.
+    const FunctionType *type = CastType<FunctionType>(sym->type);
+    Assert(type != NULL);
+    if (type->isExternC) {
+        Error(sym->pos, "\n\'extern \"C\"\' function \"%s\" cannot be defined in ISPC.", sym->name.c_str());
+        return;
+    }
+
     // Figure out a reasonable source file position for the start of the
     // function body.  If possible, get the position of the first actual
     // non-StmtList statment...
@@ -519,8 +527,6 @@ void Function::GenerateIR() {
         // If the function is 'export'-qualified, emit a second version of
         // it without a mask parameter and without name mangling so that
         // the application can call it
-        const FunctionType *type = CastType<FunctionType>(sym->type);
-        Assert(type != NULL);
         if (type->isExported) {
             if (!type->isTask) {
                 llvm::FunctionType *ftype = type->LLVMFunctionType(g->ctx, true);
