@@ -112,7 +112,11 @@ class TargetConfig(object):
     def __init__(self, arch, target):
         self.arch = arch
         self.target = target
+        self.genx = target.find("genx") != -1
         self.set_target()
+
+    def is_genx(self):
+        return self.genx
 
     # set arch/target
     def set_target(self):
@@ -201,12 +205,17 @@ def run_cmds(compile_cmds, run_cmd, filename, expect_failure, exe_wd="."):
         return Status.Success
 
 
-def add_prefix(path, host):
+def add_prefix(path, host, target):
     if host.is_windows():
     # On Windows we run tests in tmp dir, so the root is one level up.
         input_prefix = "..\\"
     else:
-        input_prefix = ""
+        # For Gen target we run tests in tmp dir since output file has
+        # the same name for all tests, so the root is one level up
+        if target.is_genx():
+            input_prefix = "../"
+        else:
+            input_prefix = ""
     path = input_prefix + path
     path = os.path.abspath(path)
     return path
@@ -229,7 +238,7 @@ def check_test(filename, host, target):
     else:
         oss = "unknown"
 
-    with open(add_prefix(filename, host)) as f:
+    with open(add_prefix(filename, host, target)) as f:
         b = f.read()
     for run in re.finditer('// *rule: run on .*', b):
         arch = re.match('.* arch=.*', run.group())
@@ -259,8 +268,8 @@ def run_test(testname, host, target):
     # testname is a path to the test from the root of ispc dir
     # filename is a path to the test from the current dir
     # ispc_exe_rel is a relative path to ispc
-    filename = add_prefix(testname, host)
-    ispc_exe_rel = add_prefix(host.ispc_cmd, host)
+    filename = add_prefix(testname, host, target)
+    ispc_exe_rel = add_prefix(host.ispc_cmd, host, target)
 
     # is this a test to make sure an error is issued?
     want_error = (filename.find("tests_errors") != -1)
@@ -340,8 +349,12 @@ def run_test(testname, host, target):
             error("unable to find function signature in test %s\n" % testname, 0)
             return Status.Compfail
         else:
+            genx_target = options.target
             if host.is_windows():
-                obj_name = "%s.obj" % os.path.basename(filename)
+                if target.is_genx():
+                    obj_name = "test_genx.spv"
+                else:
+                    obj_name = "%s.obj" % os.path.basename(filename)
 
                 if target.arch == "wasm32":
                     exe_name = "%s.js" % os.path.realpath(filename)
@@ -349,11 +362,17 @@ def run_test(testname, host, target):
                     exe_name = "%s.exe" % os.path.basename(filename)
 
                 cc_cmd = "%s /I. /Zi /nologo /DTEST_SIG=%d /DTEST_WIDTH=%d %s %s /Fe%s" % \
-                         (options.compiler_exe, match, width, add_prefix("test_static.cpp", host), obj_name, exe_name)
+                         (options.compiler_exe, match, width, add_prefix("test_static.cpp", host, target), obj_name, exe_name)
+                if target.is_genx():
+                    cc_cmd = "%s /I. /I%s\\include /nologo /DTEST_SIG=%d /DTEST_WIDTH=%d %s /Fe%s ze_loader.lib /link /LIBPATH:%s\\lib" % \
+                         (options.compiler_exe, options.l0loader, match, width, add_prefix("test_static_l0.cpp", host, target), exe_name, options.l0loader)
                 if should_fail:
                     cc_cmd += " /DEXPECT_FAILURE"
             else:
-                obj_name = "%s.o" % testname
+                if target.is_genx():
+                    obj_name = "test_genx.spv"
+                else:
+                    obj_name = "%s.o" % testname
 
                 if target.arch == "wasm32":
                     exe_name = "%s.js" % os.path.realpath(testname)
@@ -361,8 +380,8 @@ def run_test(testname, host, target):
                     exe_name = "%s.run" % testname
 
                 if target.arch == 'arm':
-                     gcc_arch = '--with-fpu=hardfp -marm -mfpu=neon -mfloat-abi=hard'
-                elif target.arch == 'x86' or target.arch == "wasm32":
+                    gcc_arch = '--with-fpu=hardfp -marm -mfpu=neon -mfloat-abi=hard'
+                elif target.arch == 'x86' or target.arch == "wasm32" or target.arch == 'genx32':
                     gcc_arch = '-m32'
                 elif target.arch == 'aarch64':
                     gcc_arch = '-march=armv8-a -target aarch64-linux-gnueabi --static'
@@ -377,8 +396,22 @@ def run_test(testname, host, target):
                 if should_fail:
                     cc_cmd += " -DEXPECT_FAILURE"
 
+                if target.is_genx():
+                    exe_name = "%s.run" % os.path.basename(testname)
+                    cc_cmd = "%s -O2 -I. -lze_loader \
+                            %s %s -DTEST_SIG=%d -DTEST_WIDTH=%d -o %s" % \
+                            (options.compiler_exe, gcc_arch, add_prefix("test_static_l0.cpp", host, target), match, width, exe_name)
+                    exe_name = "./" + exe_name
+
             ispc_cmd = ispc_exe_rel + " --woff %s -o %s --arch=%s --target=%s" % \
-                        (filename, obj_name, target.arch, target.target)
+                        (filename, obj_name, options.arch, genx_target if target.is_genx() else options.target)
+
+            if target.is_genx():
+                if options.arch == "genx32":
+                    ispc_cmd += " --addressing=32"
+                elif options.arch == "genx64":
+                    ispc_cmd += " --addressing=64"
+                ispc_cmd += " -DISPC_GENX_ENABLED --emit-spirv"
 
             if options.opt == 'O0':
                 ispc_cmd += " -O0"
@@ -431,7 +464,7 @@ def run_tasks_from_queue(queue, queue_ret, total_tests_arg, max_test_length_arg,
     global run_tests_log
     run_tests_log = glob_var[4]
 
-    if host.is_windows():
+    if host.is_windows() or target.is_genx():
         tmpdir = "tmp%d" % os.getpid()
         while os.access(tmpdir, os.F_OK):
             tmpdir = "%sx" % tmpdir
@@ -472,6 +505,13 @@ def run_tasks_from_queue(queue, queue_ret, total_tests_arg, max_test_length_arg,
             os.rmdir(tmpdir)
         except:
             None
+    else:
+        if target.is_genx():
+            try:
+                os.chdir("..")
+                os.rmdir(tmpdir)
+            except:
+                None
 
     # Task done for terminating `STOP`.
     queue.task_done()
@@ -706,7 +746,6 @@ def run_tests(options1, args, print_version):
     options = options1
     global s
     s = options.silent
-
     # prepare run_tests_log and fail_db file
     global run_tests_log
     if options.in_file:
@@ -862,7 +901,7 @@ if __name__ == "__main__":
     parser.add_option('-t', '--target', dest='target',
                   help=('Set compilation target. For example: sse4-i32x4, avx2-i32x8, avx512skx-i32x16, etc.'), default="sse4-i32x4")
     parser.add_option('-a', '--arch', dest='arch',
-                  help='Set architecture (arm, aarch64, x86, x86-64)',default="x86-64")
+                  help='Set architecture (arm, aarch64, x86, x86-64, genx32, genx64)', default="x86-64")
     parser.add_option("-c", "--compiler", dest="compiler_exe", help="C/C++ compiler binary to use to run tests",
                   default=None)
     parser.add_option('-o', '--opt', dest='opt', choices=['', 'O0', 'O1', 'O2'], help='Set optimization level passed to the compiler (O0, O1, O2).',
@@ -882,6 +921,7 @@ if __name__ == "__main__":
     parser.add_option('-s', "--silent", dest='silent', help='enable silent mode without any output', default=False,
                   action = "store_true")
     parser.add_option("--file", dest='in_file', help='file to save run_tests output', default="")
+    parser.add_option("--l0loader", dest='l0loader', help='Path to L0 loader', default="")
     parser.add_option("--verify", dest='verify', help='verify the file fail_db.txt', default=False, action="store_true")
     parser.add_option("--save-bin", dest='save_bin', help='compile and create bin, but don\'t execute it',
                   default=False, action="store_true")
