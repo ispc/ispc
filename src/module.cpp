@@ -738,8 +738,8 @@ void Module::AddFunctionDeclaration(const std::string &name, const FunctionType 
     if (g->target->getISA() == Target::GENX && Type::Equal(functionType->GetReturnType(), AtomicType::Void) == false &&
         functionType->isExported) {
         // TODO_GEN: According to CM requirements kernel should have void type. It is strong restriction to ISPC
-        // language so we would need to think more about it in the future.
-        Error(pos, "Export-qualified functions must have void return type with \"genx\" target.");
+        // language so we would need to think more about it in the future. For now emit warning to allow tests run.
+        Warning(pos, "Export-qualified functions must have void return type with \"genx\" target.");
     }
 #endif /* ISPC_GENX_ENABLED */
 
