@@ -866,6 +866,12 @@ preprocessor runs:
   * - PI
     - 3.1415926535
     - Mathematics
+  * - TARGET_WIDTH
+    - Vector width of the target, e.g., 8 for sse2-i32x8.
+    - Static varying initialization.
+  * - TARGET_ELEMENT_WIDTH
+    - Element width in bytes, e.g., 4 for i32.
+    - Static varying initialization.
 
 ``ispc`` also provides ``#pragma ignore warning`` directives to ignore compiler warnings for individual lines.
 
@@ -2431,6 +2437,21 @@ Variables can also be declared in ``for`` statement initializers:
 ::
 
     for (int i = 0; ...)
+
+Varying variables can be initialized with individual element values in braces.
+The number of values has to be equal to the target width. So, static varying
+initialization is not portable across targets with different widths unless
+guarded with ``#if TARGET_WIDTH``:
+
+::
+
+    #if TARGET_WIDTH == 4
+        varying int bar = { 1, 2, 3, 4 };
+    #elif TARGET_WIDTH == 8
+        varying int bar = { 1, 2, 3, 4, 5, 6, 7, 8 };
+    #elif TARGET_WIDTH == 16
+        ...
+    #endif
 
 Arrays can be initialized with individual element values in braces:
 

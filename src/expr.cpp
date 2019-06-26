@@ -649,15 +649,18 @@ void InitSymbol(llvm::Value *ptr, const Type *symType, Expr *initExpr, FunctionE
     if (symType->IsSOAType() == false && Type::IsBasicType(symType)) {
         ExprList *elist = llvm::dyn_cast<ExprList>(initExpr);
         if (elist != NULL) {
-            if (elist->exprs.size() == 1)
+            if (elist->exprs.size() == 1) {
                 InitSymbol(ptr, symType, elist->exprs[0], ctx, pos);
-            else
+                return;
+            } else if (symType->IsVaryingType() == false) {
                 Error(initExpr->pos,
                       "Expression list initializers with "
                       "multiple values can't be used with type \"%s\".",
                       symType->GetString().c_str());
-        }
-        return;
+                return;
+            }
+        } else
+            return;
     }
 
     const ReferenceType *rt = CastType<ReferenceType>(symType);
@@ -679,8 +682,14 @@ void InitSymbol(llvm::Value *ptr, const Type *symType, Expr *initExpr, FunctionE
     // Handle initiailizers for SOA types as well as for structs, arrays,
     // and vectors.
     const CollectionType *collectionType = CastType<CollectionType>(symType);
-    if (collectionType != NULL || symType->IsSOAType()) {
-        int nElements = collectionType ? collectionType->GetElementCount() : symType->GetSOAWidth();
+    if (collectionType != NULL || symType->IsSOAType() ||
+        (Type::IsBasicType(symType) && symType->IsVaryingType() == true)) {
+        // Make default value equivalent to number of elements for varying
+        int nElements = g->target->getVectorWidth();
+        if (collectionType)
+            nElements = collectionType->GetElementCount();
+        else if (symType->IsSOAType())
+            nElements = symType->GetSOAWidth();
 
         std::string name;
         if (CastType<StructType>(symType) != NULL)
@@ -689,7 +698,7 @@ void InitSymbol(llvm::Value *ptr, const Type *symType, Expr *initExpr, FunctionE
             name = "array";
         else if (CastType<VectorType>(symType) != NULL)
             name = "vector";
-        else if (symType->IsSOAType())
+        else if (symType->IsSOAType() || (Type::IsBasicType(symType) && symType->IsVaryingType() == true))
             name = symType->GetVariability().GetString();
         else
             FATAL("Unexpected CollectionType in InitSymbol()");
@@ -711,19 +720,21 @@ void InitSymbol(llvm::Value *ptr, const Type *symType, Expr *initExpr, FunctionE
                       "no more than %d values; %d provided.",
                       name.c_str(), symType->GetString().c_str(), nElements, nInits);
                 return;
+            } else if ((Type::IsBasicType(symType) && symType->IsVaryingType() == true) && (nInits < nElements)) {
+                Error(initExpr->pos,
+                      "Initializer for %s type \"%s\" requires "
+                      "%d values; %d provided.",
+                      name.c_str(), symType->GetString().c_str(), nElements, nInits);
+                return;
             }
 
             // Initialize each element with the corresponding value from
             // the ExprList
             for (int i = 0; i < nElements; ++i) {
-                // For SOA types, the element type is the uniform variant
+                // For SOA types and varying, the element type is the uniform variant
                 // of the underlying type
                 const Type *elementType =
                     collectionType ? collectionType->GetElementType(i) : symType->GetAsUniformType();
-                if (elementType == NULL) {
-                    AssertPos(pos, m->errorCount > 0);
-                    return;
-                }
 
                 llvm::Value *ep;
                 if (CastType<StructType>(symType) != NULL)
@@ -3672,13 +3683,18 @@ ExprList *ExprList::Optimize() { return this; }
 ExprList *ExprList::TypeCheck() { return this; }
 
 llvm::Constant *ExprList::GetConstant(const Type *type) const {
+    bool isVaryingInit = false;
     if (exprs.size() == 1 &&
         (CastType<AtomicType>(type) != NULL || CastType<EnumType>(type) != NULL || CastType<PointerType>(type) != NULL))
         return exprs[0]->GetConstant(type);
 
     const CollectionType *collectionType = CastType<CollectionType>(type);
-    if (collectionType == NULL)
-        return NULL;
+    if (collectionType == NULL) {
+        if (type->IsVaryingType() == true) {
+            isVaryingInit = true;
+        } else
+            return NULL;
+    }
 
     std::string name;
     if (CastType<StructType>(type) != NULL)
@@ -3687,14 +3703,24 @@ llvm::Constant *ExprList::GetConstant(const Type *type) const {
         name = "array";
     else if (CastType<VectorType>(type) != NULL)
         name = "vector";
+    else if (isVaryingInit == true)
+        name = "varying";
     else
         FATAL("Unexpected CollectionType in ExprList::GetConstant()");
 
-    if ((int)exprs.size() > collectionType->GetElementCount()) {
+    int elementCount = (isVaryingInit == true) ? g->target->getVectorWidth() : collectionType->GetElementCount();
+    if ((int)exprs.size() > elementCount) {
+        const Type *errType = (isVaryingInit == true) ? type : collectionType;
         Error(pos,
               "Initializer list for %s \"%s\" must have no more than %d "
               "elements (has %d).",
-              name.c_str(), collectionType->GetString().c_str(), collectionType->GetElementCount(), (int)exprs.size());
+              name.c_str(), errType->GetString().c_str(), elementCount, (int)exprs.size());
+        return NULL;
+    } else if ((isVaryingInit == true) && ((int)exprs.size() < elementCount)) {
+        Error(pos,
+              "Initializer list for %s \"%s\" must have %d "
+              "elements (has %d).",
+              name.c_str(), type->GetString().c_str(), elementCount, (int)exprs.size());
         return NULL;
     }
 
@@ -3702,9 +3728,11 @@ llvm::Constant *ExprList::GetConstant(const Type *type) const {
     for (unsigned int i = 0; i < exprs.size(); ++i) {
         if (exprs[i] == NULL)
             return NULL;
-        const Type *elementType = collectionType->GetElementType(i);
+        const Type *elementType =
+            (isVaryingInit == true) ? type->GetAsUniformType() : collectionType->GetElementType(i);
 
         Expr *expr = exprs[i];
+
         if (llvm::dyn_cast<ExprList>(expr) == NULL) {
             // If there's a simple type conversion from the type of this
             // expression to the type we need, then let the regular type
@@ -3727,21 +3755,22 @@ llvm::Constant *ExprList::GetConstant(const Type *type) const {
     }
 
     // If there are too few, then treat missing ones as if they were zero
-    for (int i = (int)exprs.size(); i < collectionType->GetElementCount(); ++i) {
-        const Type *elementType = collectionType->GetElementType(i);
-        if (elementType == NULL) {
-            AssertPos(pos, m->errorCount > 0);
-            return NULL;
-        }
+    if (isVaryingInit == false) {
+        for (int i = (int)exprs.size(); i < collectionType->GetElementCount(); ++i) {
+            const Type *elementType = collectionType->GetElementType(i);
+            if (elementType == NULL) {
+                AssertPos(pos, m->errorCount > 0);
+                return NULL;
+            }
+            llvm::Type *llvmType = elementType->LLVMType(g->ctx);
+            if (llvmType == NULL) {
+                AssertPos(pos, m->errorCount > 0);
+                return NULL;
+            }
 
-        llvm::Type *llvmType = elementType->LLVMType(g->ctx);
-        if (llvmType == NULL) {
-            AssertPos(pos, m->errorCount > 0);
-            return NULL;
+            llvm::Constant *c = llvm::Constant::getNullValue(llvmType);
+            cv.push_back(c);
         }
-
-        llvm::Constant *c = llvm::Constant::getNullValue(llvmType);
-        cv.push_back(c);
     }
 
     if (CastType<StructType>(type) != NULL) {
@@ -3753,7 +3782,18 @@ llvm::Constant *ExprList::GetConstant(const Type *type) const {
         llvm::ArrayType *lat = llvm::dyn_cast<llvm::ArrayType>(lt);
         if (lat != NULL)
             return llvm::ConstantArray::get(lat, cv);
-        else {
+        else if (type->IsVaryingType()) {
+            // uniform short vector type
+            llvm::VectorType *lvt = llvm::dyn_cast<llvm::VectorType>(lt);
+            AssertPos(pos, lvt != NULL);
+            int vectorWidth = g->target->getVectorWidth();
+
+            while ((cv.size() % vectorWidth) != 0) {
+                cv.push_back(llvm::UndefValue::get(lvt->getElementType()));
+            }
+
+            return llvm::ConstantVector::get(cv);
+        } else {
             // uniform short vector type
             AssertPos(pos, type->IsUniformType() && CastType<VectorType>(type) != NULL);
 

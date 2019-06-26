@@ -1410,11 +1410,11 @@ bool Module::writeBitcode(llvm::Module *module, const char *outFileName, OutputT
         }
     } else
 #endif /* ISPC_NVPTX_ENABLED */
-    if (outputType == Bitcode)
+        if (outputType == Bitcode)
 #if ISPC_LLVM_VERSION < ISPC_LLVM_7_0
         llvm::WriteBitcodeToFile(module, fos);
 #else
-    llvm::WriteBitcodeToFile(*module, fos);
+        llvm::WriteBitcodeToFile(*module, fos);
 #endif
     else if (outputType == BitcodeText)
         module->print(fos, nullptr);
@@ -2497,6 +2497,15 @@ void Module::execPreprocessor(const char *infilename, llvm::raw_string_ostream *
             *p = '_';
         ++p;
     }
+
+    // Add 'TARGET_WIDTH' macro to expose vector width to user.
+    std::string TARGET_WIDTH = "TARGET_WIDTH=" + std::to_string(g->target->getVectorWidth());
+    opts.addMacroDef(TARGET_WIDTH);
+
+    // Add 'TARGET_ELEMENT_WIDTH' macro to expose element width to user.
+    std::string TARGET_ELEMENT_WIDTH = "TARGET_ELEMENT_WIDTH=" + std::to_string(g->target->getDataTypeWidth() / 8);
+    opts.addMacroDef(TARGET_ELEMENT_WIDTH);
+
     opts.addMacroDef(targetMacro);
 
     if (g->target->is32Bit())
