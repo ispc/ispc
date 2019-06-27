@@ -87,7 +87,7 @@ Additional Resources
 Prebuilt ``ispc`` binaries for Windows, macOS and Linux can be downloaded
 from the [ispc downloads page](http://ispc.github.com/downloads.html).
 Latest ``ispc`` binaries corresponding to master branch can be downloaded
-from Appveyor for [Linux](https://ci.appveyor.com/api/projects/ispc/ispc/artifacts/build/ispc-trunk-linux.tar.gz?job=Environment%3A%20APPVEYOR_BUILD_WORKER_IMAGE%3DUbuntu1604%2C%20LLVM_VERSION%3Dlatest) and [Windows](https://ci.appveyor.com/api/projects/ispc/ispc/artifacts/build/ispc-trunk-windows.zip?Environment%3A%20APPVEYOR_BUILD_WORKER_IMAGE%3DVisual%20Studio%202017%2C%20LLVM_VERSION%3Dlatest)
+from Appveyor for [Linux](https://ci.appveyor.com/api/projects/ispc/ispc/artifacts/build%2Fispc-trunk-linux.tar.gz?job=Environment%3A%20APPVEYOR_BUILD_WORKER_IMAGE%3DUbuntu1604%2C%20LLVM_VERSION%3Dlatest) and [Windows](https://ci.appveyor.com/api/projects/ispc/ispc/artifacts/build%2Fispc-trunk-windows.zip?job=Environment%3A%20APPVEYOR_BUILD_WORKER_IMAGE%3DVisual%20Studio%202017%2C%20LLVM_VERSION%3Dlatest)
 See also additional
 [documentation](http://ispc.github.com/documentation.html) and additional
 [performance information](http://ispc.github.com/perf.html).
