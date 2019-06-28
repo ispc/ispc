@@ -749,6 +749,10 @@ void FunctionEmitContext::jumpIfAllLoopLanesAreDone(llvm::BasicBlock *target) {
 
     llvm::BasicBlock *bAll = CreateBasicBlock("all_continued_or_breaked");
     llvm::BasicBlock *bNotAll = CreateBasicBlock("not_all_continued_or_breaked");
+#ifdef ISPC_GENX_ENABLED
+    if (g->target->getISA() == Target::GENX)
+        allDone = GenXPrepareVectorBranch(allDone);
+#endif
     BranchInst(bAll, bNotAll, allDone);
 
     // If so, have an extra basic block along the way to add

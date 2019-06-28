@@ -1921,6 +1921,10 @@ void ForeachActiveStmt::EmitCode(FunctionEmitContext *ctx) const {
         llvm::Value *remainingBits = ctx->LoadInst(maskBitsPtr, NULL, "remaining_bits");
         llvm::Value *nonZero = ctx->CmpInst(llvm::Instruction::ICmp, llvm::CmpInst::ICMP_NE, remainingBits,
                                             LLVMInt64(0), "remaining_ne_zero");
+#ifdef ISPC_GENX_ENABLED
+        if (g->target->getISA() == Target::GENX)
+            nonZero = ctx->GenXPrepareVectorBranch(nonZero);
+#endif
         ctx->BranchInst(bbFindNext, bbDone, nonZero);
     }
 
@@ -2116,6 +2120,10 @@ void ForeachUniqueStmt::EmitCode(FunctionEmitContext *ctx) const {
         llvm::Value *remainingBits = ctx->LoadInst(maskBitsPtr, NULL, "remaining_bits");
         llvm::Value *nonZero = ctx->CmpInst(llvm::Instruction::ICmp, llvm::CmpInst::ICMP_NE, remainingBits,
                                             LLVMInt64(0), "remaining_ne_zero");
+#ifdef ISPC_GENX_ENABLED
+        if (g->target->getISA() == Target::GENX)
+            nonZero = ctx->GenXPrepareVectorBranch(nonZero);
+#endif
         ctx->BranchInst(bbFindNext, bbDone, nonZero);
     }
 
