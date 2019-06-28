@@ -35,7 +35,7 @@ define(`WIDTH',`16')
 define(`MASK',`i1')
 define(`HAVE_GATHER',`1')
 define(`HAVE_SCATTER',`1')
-include(`util.m4')
+include(`util-genx.m4')
 
 define(`GEN_SUFFIX',
 `ifelse($1, `i8', `v16i8',
