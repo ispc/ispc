@@ -196,6 +196,7 @@ done:
     fflush(stdout);
 }
 
+#ifdef ISPC_NVPTX_ENABLED
 /* this is print for PTX target only */
 int __puts_nvptx(const char *);
 void __do_print_nvptx(const char *format, const char *types, int width, uint64_t mask, void **args) {
@@ -269,6 +270,7 @@ void __do_print_nvptx(const char *format, const char *types, int width, uint64_t
     __puts_nvptx("---nvptx printing is not support---\n");
 #endif
 }
+#endif
 
 int __num_cores() {
 #if defined(_MSC_VER) || defined(__MINGW32__)
