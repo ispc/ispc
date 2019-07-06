@@ -4,6 +4,6 @@ noinline int bar(uniform int a[]) {
 }
 
 export  void foo(uniform int a[]) {
-// CHECK: callq	bar___un_3C_uni_3E
+// CHECK: callq	{{.?}}bar___un_3C_uni_3E
     a[programIndex] = bar(a);
 }
