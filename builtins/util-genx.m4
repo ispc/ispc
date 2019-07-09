@@ -1722,12 +1722,21 @@ define i64 @__count_trailing_zeros_i64(i64) nounwind readnone alwaysinline {
 }
 
 define i32 @__count_leading_zeros_i32(i32) nounwind readnone alwaysinline {
-  %c = call i32 @llvm.ctlz.i32(i32 %0)
+  %c = call i32 @llvm.genx.lzd.i32(i32 %0)
   ret i32 %c
 }
 
 define i64 @__count_leading_zeros_i64(i64) nounwind readnone alwaysinline {
-  %c = call i64 @llvm.ctlz.i64(i64 %0)
+  %hi.init = lshr i64 %0, 32
+  %hi = trunc i64 %hi.init to i32
+  %lz.hi = call i32 @llvm.genx.lzd.i32(i32 %hi)
+  %lo = trunc i64 %0 to i32
+  %lz.lo = call i32 @llvm.genx.lzd.i32(i32 %lo)
+  %use.lo.init = icmp eq i32 %lz.hi, 32
+  %use.lo = sext i1 %use.lo.init to i32
+  %lz.lo.and = and i32 %use.lo, %lz.lo
+  %c.32 = add i32 %lz.hi, %lz.lo.and
+  %c = sext i32 %c.32 to i64
   ret i64 %c
 }
 ')
@@ -5147,8 +5156,7 @@ done:
 define(`declare_count_zeros', `
 ifelse(count_zeros_are_defined, true, `',
 `
-declare i32 @llvm.ctlz.i32(i32)
-declare i64 @llvm.ctlz.i64(i64)
+declare i32 @llvm.genx.lzd.i32(i32)
 declare i32 @llvm.cttz.i32(i32)
 declare i64 @llvm.cttz.i64(i64)
 
