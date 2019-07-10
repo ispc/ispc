@@ -38,12 +38,22 @@ define(`HAVE_SCATTER',`1')
 include(`util-genx.m4')
 
 define(`GEN_SUFFIX',
-`ifelse($1, `i8', `v16i8',
+`ifelse($1, `i1', `v16i1',
+        $1, `i8', `v16i8',
         $1, `i16', `v16i16',
         $1, `i32', `v16i32',
         $1, `float', `v16f32',
         $1, `double', `v16f64',
         $1, `i64', `v16i64')')
+
+define(`SIZEOF',
+`ifelse($1, `i1', 1,
+        $1, `i8', 1,
+        $1, `i16', 2,
+        $1, `i32', 4,
+        $1, `float', 4,
+        $1, `double', 8,
+        $1, `i64', 8)')
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -658,15 +668,15 @@ reduce_equal(16)
 ;; masked store
 
 define(`genx_masked_store_blend', `
-declare void @llvm.genx.vstore.GEN_SUFFIX($1)(<16 x $1>, <16 x $1>*)
-declare <16 x $1> @llvm.genx.vload.GEN_SUFFIX($1)(<16 x $1>*)
+declare void @llvm.genx.vstore.GEN_SUFFIX($1)(<WIDTH x $1>, <WIDTH x $1>*)
+declare <WIDTH x $1> @llvm.genx.vload.GEN_SUFFIX($1)(<WIDTH x $1>*)
 
-define void @__masked_store_blend_$1(<16 x $1>* nocapture, <16 x $1>,
-                                      <16 x MASK> %mask) nounwind
+define void @__masked_store_blend_$1(<WIDTH x $1>* nocapture, <WIDTH x $1>,
+                                      <WIDTH x MASK> %mask) nounwind
                                       alwaysinline {
-  %old = call <16 x $1> @llvm.genx.vload.GEN_SUFFIX($1)(<16 x $1>* %0)
-  %blend = select <16 x i1> %mask, <16 x $1> %1, <16 x $1> %old
-  call void @llvm.genx.vstore.GEN_SUFFIX($1)(<16 x $1> %blend, <16 x $1>* %0)
+  %old = call <WIDTH x $1> @llvm.genx.vload.GEN_SUFFIX($1)(<WIDTH x $1>* %0)
+  %blend = select <WIDTH x MASK> %mask, <16 x $1> %1, <16 x $1> %old
+  call void @llvm.genx.vstore.GEN_SUFFIX($1)(<WIDTH x $1> %blend, <WIDTH x $1>* %0)
   ret void
 }
 ')
@@ -678,18 +688,19 @@ genx_masked_store_blend(float)
 genx_masked_store_blend(double)
 genx_masked_store_blend(i64)
 
-;; llvm.genx.svm.block.st must be predicated with llvm.genx.simdcf.predicate
-;; but since CMSimdCFLowering pass is run before ISPC passes
-;; llvm.genx.simdcf.predicate will not be lowered.
-;; TODO_GEN: insert predication
-
 define(`genx_masked_store', `
 declare void @llvm.genx.svm.block.st.GEN_SUFFIX($1)(i64, <WIDTH x $1>)
-define void @__masked_store_$1(<WIDTH x $1>* nocapture, <WIDTH x $1>, <WIDTH x MASK>) nounwind alwaysinline {
-  %bitcast = bitcast <WIDTH x $1>* %0 to i32*
-  %ptrtoint = ptrtoint i32* %bitcast to i32
-  %zext = zext i32 %ptrtoint to i64
-  call void @llvm.genx.svm.block.st.GEN_SUFFIX($1)(i64 %zext, <WIDTH x $1> %1)
+define void @__masked_store_$1(<WIDTH x $1>* nocapture, <WIDTH x $1>, <WIDTH x MASK> %mask) nounwind alwaysinline {
+  %ptr = bitcast <WIDTH x $1>* %0 to i8*
+  %broadcast_init = insertelement <WIDTH x i32> undef, i32 SIZEOF($1), i32 0
+  %shuffle = shufflevector <WIDTH x i32> %broadcast_init, <WIDTH x i32> undef, <WIDTH x i32> zeroinitializer
+  %offsets = mul <WIDTH x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>, %shuffle
+  call void @__scatter_base_offsets32_$1(i8* %ptr, i32 1, <WIDTH x i32> %offsets, <WIDTH x $1> %1, <WIDTH x MASK> %mask)
+  ret void
+}
+
+define void @__masked_store_private_$1(<WIDTH x $1>* nocapture, <WIDTH x $1>, <WIDTH x MASK> %mask) nounwind alwaysinline {
+  call void  @__masked_store_blend_$1(<WIDTH x $1>* %0, <WIDTH x $1> %1, <WIDTH x MASK> %mask)
   ret void
 }
 ')
@@ -701,21 +712,21 @@ genx_masked_store(float)
 genx_masked_store(double)
 genx_masked_store(i64)
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; unaligned loads/loads+broadcasts
-;; llvm.genx.svm.block.ld must be predicated with llvm.genx.simdcf.predicate
-;; but since CMSimdCFLowering pass is run before ISPC passes
-;; llvm.genx.simdcf.predicate will not be lowered.
-;; TODO_GEN: insert predication
-
 define(`genx_masked_load', `
 declare <WIDTH x $1> @llvm.genx.svm.block.ld.GEN_SUFFIX($1)(i64)
 define <WIDTH x $1> @__masked_load_$1(i8 *, <WIDTH x MASK> %mask) nounwind alwaysinline {
-  %bitcast = bitcast i8* %0 to i32*
-  %ptrtoint = ptrtoint i32* %bitcast to i32
-  %zext = zext i32 %ptrtoint to i64
-  %res = call <WIDTH x $1> @llvm.genx.svm.block.ld.GEN_SUFFIX($1)(i64 %zext)
+  %broadcast_init = insertelement <WIDTH x i32> undef, i32 SIZEOF($1), i32 0
+  %shuffle = shufflevector <WIDTH x i32> %broadcast_init, <WIDTH x i32> undef, <WIDTH x i32> zeroinitializer
+  %offsets = mul <WIDTH x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>, %shuffle
+  %res = call <WIDTH x $1> @__gather_base_offsets32_$1(i8 * %0, i32 1, <WIDTH x i32> %offsets, <WIDTH x MASK> %mask)
   ret <WIDTH x $1> %res
+}
+
+define <WIDTH x $1> @__masked_load_private_$1(i8 *, <WIDTH x MASK> %mask) nounwind alwaysinline {
+  %ptr_bitcast = bitcast i8* %0 to <WIDTH x $1>*
+  %res = call <WIDTH x $1> @llvm.genx.vload.GEN_SUFFIX($1)(<WIDTH x $1>* %ptr_bitcast)
+  %masked_res = select <WIDTH x MASK> %mask, <WIDTH x $1> %res, <WIDTH x $1> zeroinitializer
+  ret <WIDTH x $1> %masked_res
 }
 ')
 
@@ -730,30 +741,67 @@ genx_masked_load(i64)
 ;; gather/scatter
 ;; TODO_GEN: add computation of the block size and the number of blocks for svm gather/scatter.
 define(`genx_gather', `
-declare <16 x $1> @llvm.genx.svm.gather.GEN_SUFFIX($1).v16i1.v16i64(<16 x i1>, i32, <16 x i64>, <16 x $1>)
-define <16 x $1>
-@__gather_base_offsets32_$1(i8 * %ptr, i32 %offset_scale, <16 x i32> %offsets, <WIDTH x MASK> %vecmask) nounwind readonly alwaysinline {
-  %offsets64 = zext <16 x i32> %offsets to <16 x i64>
-  %res = call <16 x $1> @llvm.genx.svm.gather.GEN_SUFFIX($1).v16i1.v16i64(<16 x i1> %vecmask, i32 0, <16 x i64> %offsets64, <16 x $1> undef)
-  ret <16 x $1> %res
+declare <WIDTH x $1> @llvm.genx.svm.gather.GEN_SUFFIX($1).v16i1.v16i64(<WIDTH x MASK>, i32, <WIDTH x i64>, <WIDTH x $1>)
+declare <WIDTH x $1> @llvm.genx.gather.private.GEN_SUFFIX($1).v16i1.pi8.v16i32(<WIDTH x MASK>, i8*, <WIDTH x i32>, <WIDTH x $1>)
+
+define <WIDTH x $1>
+@__gather_base_offsets32_$1(i8 * %ptr, i32 %offset_scale, <WIDTH x i32> %offsets, <WIDTH x MASK> %vecmask) nounwind readonly alwaysinline {
+  %ptr_to_int = ptrtoint i8* %ptr to i32
+  %base = insertelement <WIDTH x i32> undef, i32 %ptr_to_int, i32 0
+  %shuffle = shufflevector <WIDTH x i32> %base, <WIDTH x i32> undef, <WIDTH x i32> zeroinitializer
+  %new_offsets = add <WIDTH x i32> %offsets, %shuffle
+  %res = call <WIDTH x $1> @__gather32_$1(<WIDTH x i32> %new_offsets, <WIDTH x MASK> %vecmask)
+  ret <WIDTH x $1> %res
 }
 
-define <16 x $1>
-@__gather_base_offsets64_$1(i8 * %ptr, i32 %offset_scale, <16 x i64> %offsets, <WIDTH x MASK> %vecmask) nounwind readonly alwaysinline {
-  %res = call <16 x $1> @llvm.genx.svm.gather.GEN_SUFFIX($1).v16i1.v16i64(<16 x i1> %vecmask, i32 0, <16 x i64> %offsets, <16 x $1> undef)
-  ret <16 x $1> %res
+define <WIDTH x $1>
+@__gather_base_offsets64_$1(i8 * %ptr, i32 %offset_scale, <WIDTH x i64> %offsets, <WIDTH x MASK> %vecmask) nounwind readonly alwaysinline {
+  %ptr_to_int = ptrtoint i8* %ptr to i64
+  %base = insertelement <WIDTH x i64> undef, i64 %ptr_to_int, i32 0
+  %shuffle = shufflevector <WIDTH x i64> %base, <WIDTH x i64> undef, <WIDTH x i32> zeroinitializer
+  %new_offsets = add <WIDTH x i64> %offsets, %shuffle
+  %res = call <WIDTH x $1> @__gather64_$1(<WIDTH x i64> %new_offsets, <WIDTH x MASK> %vecmask)
+  ret <WIDTH x $1> %res
 }
 
-define <16 x $1>
-@__gather32_$1(<16 x i32> %ptrs, <WIDTH x MASK> %vecmask) nounwind readonly alwaysinline {
-  %res = call <16 x $1> @__gather_base_offsets32_$1(i8 * zeroinitializer, i32 1, <16 x i32> %ptrs, <WIDTH x MASK> %vecmask)
-  ret <16 x $1> %res
+define <WIDTH x $1>
+@__gather_base_offsets32_private_$1(i8 * %ptr, i32 %offset_scale, <WIDTH x i32> %offsets, <WIDTH x MASK> %vecmask) nounwind readonly alwaysinline {
+  %res = call <WIDTH x $1> @llvm.genx.gather.private.GEN_SUFFIX($1).v16i1.pi8.v16i32(<WIDTH x MASK> %vecmask, i8* %ptr, <WIDTH x i32> %offsets, <WIDTH x $1> undef)
+  ret <WIDTH x $1> %res
 }
 
-define <16 x $1>
-@__gather64_$1(<16x i64> %ptrs, <WIDTH x MASK> %vecmask) nounwind readonly alwaysinline {
-  %res = call <16 x $1> @__gather_base_offsets64_$1(i8 * zeroinitializer, i32 1, <16 x i64> %ptrs, <WIDTH x MASK> %vecmask)
-  ret <16 x $1> %res
+define <WIDTH x $1>
+@__gather_base_offsets64_private_$1(i8 * %ptr, i32 %offset_scale, <WIDTH x i64> %offsets, <WIDTH x MASK> %vecmask) nounwind readonly alwaysinline {
+  %offsets32 = trunc <WIDTH x i64> %offsets to <WIDTH x i32>
+  %res = call <WIDTH x $1> @llvm.genx.gather.private.GEN_SUFFIX($1).v16i1.pi8.v16i32(<WIDTH x MASK> %vecmask, i8* %ptr, <WIDTH x i32> %offsets32, <WIDTH x $1> undef)
+  ret <WIDTH x $1> %res
+}
+
+define <WIDTH x $1>
+@__gather32_$1(<WIDTH x i32> %offsets, <WIDTH x MASK> %vecmask) nounwind readonly alwaysinline {
+  %offsets64 = zext <WIDTH x i32> %offsets to <WIDTH x i64>
+  %res = call <WIDTH x $1> @llvm.genx.svm.gather.GEN_SUFFIX($1).v16i1.v16i64(<16 x MASK> %vecmask, i32 0, <WIDTH x i64> %offsets64, <WIDTH x $1> undef)
+  ret <WIDTH x $1> %res
+}
+
+define <WIDTH x $1>
+@__gather64_$1(<WIDTH x i64> %offsets, <WIDTH x MASK> %vecmask) nounwind readonly alwaysinline {
+  %res = call <WIDTH x $1> @llvm.genx.svm.gather.GEN_SUFFIX($1).v16i1.v16i64(<WIDTH x MASK> %vecmask, i32 0, <WIDTH x i64> %offsets, <WIDTH x $1> undef)
+  ret <WIDTH x $1> %res
+}
+
+define <WIDTH x $1>
+@__gather32_private_$1(<WIDTH x i32> %offsets, <WIDTH x MASK> %vecmask) nounwind readonly alwaysinline {
+  ;; CM cannot process zeroinitializer as a base so we need to generate here llvm gather
+  %res = call <WIDTH x $1> @__gather_base_offsets32_private_$1(i8 * zeroinitializer, i32 0, <WIDTH x i32> %offsets, <WIDTH x MASK> %vecmask)
+  ret <WIDTH x $1> %res
+}
+
+define <WIDTH x $1>
+@__gather64_private_$1(<WIDTH x i64> %offsets, <WIDTH x MASK> %vecmask) nounwind readonly alwaysinline {
+  ;; CM cannot process zeroinitializer as a base so we need to generate here llvm gather
+  %res = call <WIDTH x $1> @__gather_base_offsets64_private_$1(i8 * zeroinitializer, i32 0, <WIDTH x i64> %offsets, <WIDTH x MASK> %vecmask)
+  ret <WIDTH x $1> %res
 }
 ')
 genx_gather(i8)
@@ -764,29 +812,66 @@ genx_gather(i64)
 genx_gather(double)
 
 define(`genx_scatter', `
-declare void @llvm.genx.svm.scatter.v16i1.v16i64.GEN_SUFFIX($1)(<16 x i1>, i32, <16 x i64>, <16 x $1>)
+declare void @llvm.genx.svm.scatter.v16i1.v16i64.GEN_SUFFIX($1)(<WIDTH x MASK>, i32, <WIDTH x i64>, <WIDTH x $1>)
+declare void @llvm.genx.scatter.private.v16i1.pi8.v16i32.GEN_SUFFIX($1)(<WIDTH x MASK>, i8*, <WIDTH x i32>, <WIDTH x $1>)
+
 define void
-@__scatter_base_offsets32_$1(i8* %ptr, i32 %offset_scale, <16 x i32> %offsets, <16 x $1> %vals, <WIDTH x MASK> %vecmask) nounwind {
-  %offsets64 = zext <16 x i32> %offsets to <16 x i64>
-  call void @llvm.genx.svm.scatter.v16i1.v16i64.GEN_SUFFIX($1)(<16 x i1> %vecmask, i32 0, <16 x i64> %offsets64, <16 x $1> %vals)
+@__scatter_base_offsets32_$1(i8* %ptr, i32 %offset_scale, <WIDTH x i32> %offsets, <WIDTH x $1> %vals, <WIDTH x MASK> %vecmask) nounwind {
+  %ptr_to_int = ptrtoint i8* %ptr to i32
+  %base = insertelement <WIDTH x i32> undef, i32 %ptr_to_int, i32 0
+  %shuffle = shufflevector <WIDTH x i32> %base, <WIDTH x i32> undef, <WIDTH x i32> zeroinitializer
+  %new_offsets = add <WIDTH x i32> %offsets, %shuffle
+  call void @__scatter32_$1(<WIDTH x i32> %new_offsets, <WIDTH x $1> %vals, <WIDTH x MASK> %vecmask)
   ret void
 }
 
 define void
-@__scatter_base_offsets64_$1(i8* %ptr, i32 %offset_scale, <16 x i64> %offsets, <16 x $1> %vals, <WIDTH x MASK> %vecmask) nounwind {
-   call void @llvm.genx.svm.scatter.v16i1.v16i64.GEN_SUFFIX($1)(<16 x i1> %vecmask, i32 0, <16 x i64> %offsets, <16 x $1> %vals)
+@__scatter_base_offsets64_$1(i8* %ptr, i32 %offset_scale, <WIDTH x i64> %offsets, <WIDTH x $1> %vals, <WIDTH x MASK> %vecmask) nounwind {
+  %ptr_to_int = ptrtoint i8* %ptr to i64
+  %base = insertelement <WIDTH x i64> undef, i64 %ptr_to_int, i32 0
+  %shuffle = shufflevector <WIDTH x i64> %base, <WIDTH x i64> undef, <WIDTH x i32> zeroinitializer
+  %new_offsets = add <WIDTH x i64> %offsets, %shuffle
+  call void @__scatter64_$1(<WIDTH x i64> %new_offsets, <WIDTH x $1> %vals, <WIDTH x MASK> %vecmask)
+  ret void
+}
+
+define void
+@__scatter_base_offsets32_private_$1(i8* %ptr, i32 %offset_scale, <WIDTH x i32> %offsets, <WIDTH x $1> %vals, <WIDTH x MASK> %vecmask) nounwind {
+  call void @llvm.genx.scatter.private.v16i1.pi8.v16i32.GEN_SUFFIX($1)(<WIDTH x MASK> %vecmask, i8* %ptr, <WIDTH x i32> %offsets, <WIDTH x $1> %vals)
+  ret void
+}
+
+define void
+@__scatter_base_offsets64_private_$1(i8* %ptr, i32 %offset_scale, <WIDTH x i64> %offsets, <WIDTH x $1> %vals, <WIDTH x MASK> %vecmask) nounwind {
+   %offsets32 = trunc <WIDTH x i64> %offsets to <WIDTH x i32>
+   call void @llvm.genx.scatter.private.v16i1.pi8.v16i32.GEN_SUFFIX($1)(<WIDTH x MASK> %vecmask, i8* %ptr, <WIDTH x i32> %offsets32, <WIDTH x $1> %vals)
    ret void
 }
 
 define void
-@__scatter32_$1(<16 x i32> %ptrs, <16 x $1> %values, <WIDTH x MASK> %vecmask) nounwind alwaysinline {
-  call void @__scatter_base_offsets32_$1(i8 * zeroinitializer, i32 1, <16 x i32> %ptrs, <16 x $1> %values, <WIDTH x MASK> %vecmask)
+@__scatter32_$1(<WIDTH x i32> %ptrs, <WIDTH x $1> %values, <WIDTH x MASK> %vecmask) nounwind alwaysinline {
+  %offsets64 = zext <WIDTH x i32> %ptrs to <WIDTH x i64>
+  call void @llvm.genx.svm.scatter.v16i1.v16i64.GEN_SUFFIX($1)(<WIDTH x MASK> %vecmask, i32 0, <WIDTH x i64> %offsets64, <WIDTH x $1> %values)
   ret void
 }
 
 define void
-@__scatter64_$1(<16 x i64> %ptrs, <16 x $1> %values, <WIDTH x MASK> %vecmask) nounwind alwaysinline {
-  call void @__scatter_base_offsets64_$1(i8 * zeroinitializer, i32 1, <16 x i64> %ptrs, <16 x $1> %values, <WIDTH x MASK> %vecmask)
+@__scatter64_$1(<WIDTH x i64> %ptrs, <WIDTH x $1> %values, <WIDTH x MASK> %vecmask) nounwind alwaysinline {
+  call void @llvm.genx.svm.scatter.v16i1.v16i64.GEN_SUFFIX($1)(<WIDTH x MASK> %vecmask, i32 0, <WIDTH x i64> %ptrs, <WIDTH x $1> %values)
+  ret void
+}
+
+define void
+@__scatter32_private_$1(<WIDTH x i32> %offsets, <WIDTH x $1> %values, <WIDTH x MASK> %vecmask) nounwind alwaysinline {
+  ;; CM cannot process zeroinitializer as a base so we need to generate here llvm scatter
+  call void @__scatter_base_offsets32_private_$1(i8* zeroinitializer, i32 1, <WIDTH x i32> %offsets, <WIDTH x $1> %values, <WIDTH x MASK> %vecmask)
+  ret void
+}
+
+define void
+@__scatter64_private_$1(<WIDTH x i64> %offsets, <WIDTH x $1> %values, <WIDTH x MASK> %vecmask) nounwind alwaysinline {
+  ;; CM cannot process zeroinitializer as a base so we need to generate here llvm scatter
+  call void @__scatter_base_offsets64_private_$1(i8* zeroinitializer, i32 1, <WIDTH x i64> %offsets, <WIDTH x $1> %values, <WIDTH x MASK> %vecmask)
   ret void
 }
 ')

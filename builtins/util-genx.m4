@@ -3010,63 +3010,6 @@ define void
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-define(`masked_load_float_double', `
-define <WIDTH x float> @__masked_load_float(i8 * %ptr,
-                                             <WIDTH x MASK> %mask) readonly alwaysinline {
-  %v32 = call <WIDTH x i32> @__masked_load_i32(i8 * %ptr, <WIDTH x MASK> %mask)
-  %vf = bitcast <WIDTH x i32> %v32 to <WIDTH x float>
-  ret <WIDTH x float> %vf
-}
-
-define <WIDTH x double> @__masked_load_double(i8 * %ptr,
-                                             <WIDTH x MASK> %mask) readonly alwaysinline {
-  %v64 = call <WIDTH x i64> @__masked_load_i64(i8 * %ptr, <WIDTH x MASK> %mask)
-  %vd = bitcast <WIDTH x i64> %v64 to <WIDTH x double>
-  ret <WIDTH x double> %vd
-}
-
-')
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-define(`masked_store_float_double', `
-define void @__masked_store_float(<WIDTH x float> * nocapture, <WIDTH x float>,
-                                  <WIDTH x MASK>) nounwind alwaysinline {
-  %ptr = bitcast <WIDTH x float> * %0 to <WIDTH x i32> *
-  %val = bitcast <WIDTH x float> %1 to <WIDTH x i32>
-  call void @__masked_store_i32(<WIDTH x i32> * %ptr, <WIDTH x i32> %val, <WIDTH x MASK> %2)
-  ret void
-}
-
-
-define void @__masked_store_double(<WIDTH x double> * nocapture, <WIDTH x double>,
-                                   <WIDTH x MASK>) nounwind alwaysinline {
-  %ptr = bitcast <WIDTH x double> * %0 to <WIDTH x i64> *
-  %val = bitcast <WIDTH x double> %1 to <WIDTH x i64>
-  call void @__masked_store_i64(<WIDTH x i64> * %ptr, <WIDTH x i64> %val, <WIDTH x MASK> %2)
-  ret void
-}
-
-define void @__masked_store_blend_float(<WIDTH x float> * nocapture, <WIDTH x float>,
-                                        <WIDTH x MASK>) nounwind alwaysinline {
-  %ptr = bitcast <WIDTH x float> * %0 to <WIDTH x i32> *
-  %val = bitcast <WIDTH x float> %1 to <WIDTH x i32>
-  call void @__masked_store_blend_i32(<WIDTH x i32> * %ptr, <WIDTH x i32> %val, <WIDTH x MASK> %2)
-  ret void
-}
-
-
-define void @__masked_store_blend_double(<WIDTH x double> * nocapture, <WIDTH x double>,
-                                         <WIDTH x MASK>) nounwind alwaysinline {
-  %ptr = bitcast <WIDTH x double> * %0 to <WIDTH x i64> *
-  %val = bitcast <WIDTH x double> %1 to <WIDTH x i64>
-  call void @__masked_store_blend_i64(<WIDTH x i64> * %ptr, <WIDTH x i64> %val, <WIDTH x MASK> %2)
-  ret void
-}
-')
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
 
 define(`stdlib_core', `
 
@@ -3407,6 +3350,20 @@ define void @__keep_funcs_live(i8 * %ptr, <WIDTH x i8> %v8, <WIDTH x i16> %v16,
   %mld = call <WIDTH x double> @__masked_load_double(i8 * %ptr, <WIDTH x MASK> %mask)
   call void @__usedouble(<WIDTH x double> %mld)
 
+  ;; loads
+  %prml8  = call <WIDTH x i8>  @__masked_load_private_i8(i8 * %ptr, <WIDTH x MASK> %mask)
+  call void @__use8(<WIDTH x i8> %prml8)
+  %prml16 = call <WIDTH x i16> @__masked_load_private_i16(i8 * %ptr, <WIDTH x MASK> %mask)
+  call void @__use16(<WIDTH x i16> %prml16)
+  %prml32 = call <WIDTH x i32> @__masked_load_private_i32(i8 * %ptr, <WIDTH x MASK> %mask)
+  call void @__use32(<WIDTH x i32> %prml32)
+  %prmlf = call <WIDTH x float> @__masked_load_private_float(i8 * %ptr, <WIDTH x MASK> %mask)
+  call void @__usefloat(<WIDTH x float> %prmlf)
+  %prml64 = call <WIDTH x i64> @__masked_load_private_i64(i8 * %ptr, <WIDTH x MASK> %mask)
+  call void @__use64(<WIDTH x i64> %prml64)
+  %prmld = call <WIDTH x double> @__masked_load_private_double(i8 * %ptr, <WIDTH x MASK> %mask)
+  call void @__usedouble(<WIDTH x double> %prmld)
+
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
   ;; stores
   %pv8 = bitcast i8 * %ptr to <WIDTH x i8> *
@@ -3436,6 +3393,13 @@ define void @__keep_funcs_live(i8 * %ptr, <WIDTH x i8> %v8, <WIDTH x i16> %v16,
   call void @__masked_store_float(<WIDTH x float> * %pvf, <WIDTH x float> %vf, <WIDTH x MASK> %mask)
   call void @__masked_store_i64(<WIDTH x i64> * %pv64, <WIDTH x i64> %v64, <WIDTH x MASK> %mask)
   call void @__masked_store_double(<WIDTH x double> * %pvd, <WIDTH x double> %vd, <WIDTH x MASK> %mask)
+
+  call void @__masked_store_private_i8(<WIDTH x i8> * %pv8, <WIDTH x i8> %v8, <WIDTH x MASK> %mask)
+  call void @__masked_store_private_i16(<WIDTH x i16> * %pv16, <WIDTH x i16> %v16, <WIDTH x MASK> %mask)
+  call void @__masked_store_private_i32(<WIDTH x i32> * %pv32, <WIDTH x i32> %v32, <WIDTH x MASK> %mask)
+  call void @__masked_store_private_float(<WIDTH x float> * %pvf, <WIDTH x float> %vf, <WIDTH x MASK> %mask)
+  call void @__masked_store_private_i64(<WIDTH x i64> * %pv64, <WIDTH x i64> %v64, <WIDTH x MASK> %mask)
+  call void @__masked_store_private_double(<WIDTH x double> * %pvd, <WIDTH x double> %vd, <WIDTH x MASK> %mask)
 
   call void @__masked_store_blend_i8(<WIDTH x i8> * %pv8, <WIDTH x i8> %v8,
                                      <WIDTH x MASK> %mask)

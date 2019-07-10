@@ -128,6 +128,10 @@ static llvm::Pass *CreateReplaceStdlibShiftPass();
 
 static llvm::Pass *CreateFixBooleanSelectPass();
 
+#ifdef ISPC_GENX_ENABLED
+static llvm::Pass *CreatePromoteToPrivateMemoryPass();
+#endif
+
 #ifndef ISPC_NO_DUMPS
 #define DEBUG_START_PASS(NAME)                                                                                         \
     if (g->debugPrint &&                                                                                               \
@@ -479,10 +483,6 @@ void Optimize(llvm::Module *module, int optLevel) {
 
         optPM.add(CreateIntrinsicsOptPass(), 102);
         optPM.add(CreateIsCompileTimeConstantPass(true));
-        optPM.add(llvm::createFunctionInliningPass());
-        optPM.add(CreateMakeInternalFuncsStaticPass());
-        optPM.add(llvm::createCFGSimplificationPass());
-        optPM.add(llvm::createGlobalDCEPass());
 #ifdef ISPC_GENX_ENABLED
         if (g->target->getISA() == Target::GENX) {
             optPM.add(llvm::createGenXPacketizePass());
@@ -492,8 +492,13 @@ void Optimize(llvm::Module *module, int optLevel) {
             optPM.add(llvm::createCMABIPass());
             optPM.add(llvm::createCMKernelArgOffsetPass(32));
             optPM.add(llvm::createGenXReduceIntSizePass());
+            optPM.add(CreatePromoteToPrivateMemoryPass());
         }
 #endif
+        optPM.add(llvm::createFunctionInliningPass());
+        optPM.add(CreateMakeInternalFuncsStaticPass());
+        optPM.add(llvm::createCFGSimplificationPass());
+        optPM.add(llvm::createGlobalDCEPass());
     } else {
         llvm::PassRegistry *registry = llvm::PassRegistry::getPassRegistry();
         llvm::initializeCore(*registry);
@@ -659,6 +664,7 @@ void Optimize(llvm::Module *module, int optLevel) {
             optPM.add(llvm::createCMImpParamPass());
             optPM.add(llvm::createCMABIPass());
             optPM.add(llvm::createCMKernelArgOffsetPass(32));
+            optPM.add(CreatePromoteToPrivateMemoryPass());
         }
 #endif
         optPM.add(llvm::createFunctionInliningPass());
@@ -703,6 +709,7 @@ void Optimize(llvm::Module *module, int optLevel) {
         optPM.add(llvm::createAggressiveDCEPass());
         optPM.add(llvm::createStripDeadPrototypesPass());
         optPM.add(CreateMakeInternalFuncsStaticPass());
+
         optPM.add(llvm::createGlobalDCEPass());
         optPM.add(llvm::createConstantMergePass());
 
@@ -2131,12 +2138,12 @@ static bool lGSToGSBaseOffsets(llvm::CallInst *callInst) {
     llvm::Value *basePtr = lGetBasePtrAndOffsets(ptrs, &offsetVector, callInst);
 
     if (basePtr == NULL || offsetVector == NULL ||
-        (info->isGather == false && info->isPrefetch == true && g->target->hasVecPrefetch() == false))
+        (info->isGather == false && info->isPrefetch == true && g->target->hasVecPrefetch() == false)) {
         // It's actually a fully general gather/scatter with a varying
         // set of base pointers, so leave it as is and continune onward
         // to the next instruction...
         return false;
-
+    }
     // Cast the base pointer to a void *, since that's what the
     // __pseudo_*_base_offsets_* functions want.
     basePtr = new llvm::IntToPtrInst(basePtr, LLVMTypes::VoidPointerType, LLVMGetName(basePtr, "_2void"), callInst);
@@ -2574,7 +2581,6 @@ static bool lGSToLoadStore(llvm::CallInst *callInst) {
     llvm::Value *fullOffsets = NULL;
     llvm::Value *storeValue = NULL;
     llvm::Value *mask = NULL;
-
     if ((gatherInfo != NULL && gatherInfo->isFactored) || (scatterInfo != NULL && scatterInfo->isFactored)) {
         llvm::Value *varyingOffsets = callInst->getArgOperand(1);
         llvm::Value *offsetScale = callInst->getArgOperand(2);
@@ -2754,7 +2760,7 @@ static bool lImproveMaskedStore(llvm::CallInst *callInst) {
         llvm::Type *rvalueType = rvalue->getType();
         llvm::Instruction *store;
 #ifdef ISPC_GENX_ENABLED
-        if (g->target->getISA() == Target::GENX) {
+        if (g->target->getISA() == Target::GENX && !IsStackAllocated(lvalue)) {
             assert(isa<llvm::VectorType>(rvalue->getType()));
             assert(llvm::isPowerOf2_32(rvalue->getType()->getVectorNumElements()));
             assert(rvalue->getType()->getPrimitiveSizeInBits() / 8 <= 8 * OWORD);
@@ -2835,7 +2841,7 @@ static bool lImproveMaskedLoad(llvm::CallInst *callInst, llvm::BasicBlock::itera
         // The mask is all on, so turn this into a regular load
         llvm::Instruction *load;
 #ifdef ISPC_GENX_ENABLED
-        if (g->target->getISA() == Target::GENX) {
+        if (g->target->getISA() == Target::GENX && !IsStackAllocated(ptr)) {
             llvm::Type *retType = callInst->getType();
             assert(isa<llvm::VectorType>(retType));
             assert(llvm::isPowerOf2_32(retType->getVectorNumElements()));
@@ -2892,15 +2898,10 @@ restart:
         // next instruction.
         if (callInst == NULL || callInst->getCalledFunction() == NULL)
             continue;
-#ifdef ISPC_GENX_ENABLED
-        // For Gen target We do not need to transform array of pointers to a single base pointer
-        // and an array of int32 offsets, gen intrinsics use array of pointers.
-        if (g->target->getISA() != Target::GENX)
-#endif
-            if (lGSToGSBaseOffsets(callInst)) {
-                modifiedAny = true;
-                goto restart;
-            }
+        if (lGSToGSBaseOffsets(callInst)) {
+            modifiedAny = true;
+            goto restart;
+        }
         if (lGSBaseOffsetsGetMoreConst(callInst)) {
             modifiedAny = true;
             goto restart;
@@ -4011,7 +4012,6 @@ static bool lReplacePseudoMaskedStore(llvm::CallInst *callInst) {
         LMSInfo("__pseudo_masked_store_float", "__masked_store_blend_float", "__masked_store_float"),
         LMSInfo("__pseudo_masked_store_i64", "__masked_store_blend_i64", "__masked_store_i64"),
         LMSInfo("__pseudo_masked_store_double", "__masked_store_blend_double", "__masked_store_double")};
-
     LMSInfo *info = NULL;
     for (unsigned int i = 0; i < sizeof(msInfo) / sizeof(msInfo[0]); ++i) {
         if (msInfo[i].pseudoFunc != NULL && callInst->getCalledFunction() == msInfo[i].pseudoFunc) {
@@ -4068,7 +4068,21 @@ static bool lReplacePseudoGS(llvm::CallInst *callInst) {
         LowerGSInfo("__pseudo_gather64_float", "__gather64_float", true, false),
         LowerGSInfo("__pseudo_gather64_i64", "__gather64_i64", true, false),
         LowerGSInfo("__pseudo_gather64_double", "__gather64_double", true, false),
+#ifdef ISPC_GENX_ENABLED
+        LowerGSInfo("__pseudo_gather32_i8_private", "__gather32_private_i8", true, false),
+        LowerGSInfo("__pseudo_gather32_i16_private", "__gather32_private_i16", true, false),
+        LowerGSInfo("__pseudo_gather32_i32_private", "__gather32_private_i32", true, false),
+        LowerGSInfo("__pseudo_gather32_float_private", "__gather32_private_float", true, false),
+        LowerGSInfo("__pseudo_gather32_i64_private", "__gather32_private_i64", true, false),
+        LowerGSInfo("__pseudo_gather32_double_private", "__gather32_private_double", true, false),
 
+        LowerGSInfo("__pseudo_gather64_i8_private", "__gather64_private_i8", true, false),
+        LowerGSInfo("__pseudo_gather64_i16_private", "__gather64_private_i16", true, false),
+        LowerGSInfo("__pseudo_gather64_i32_private", "__gather64_private_i32", true, false),
+        LowerGSInfo("__pseudo_gather64_float_private", "__gather64_private_float", true, false),
+        LowerGSInfo("__pseudo_gather64_i64_private", "__gather64_private_i64", true, false),
+        LowerGSInfo("__pseudo_gather64_double_private", "__gather64_private_double", true, false),
+#endif
         LowerGSInfo("__pseudo_gather_factored_base_offsets32_i8", "__gather_factored_base_offsets32_i8", true, false),
         LowerGSInfo("__pseudo_gather_factored_base_offsets32_i16", "__gather_factored_base_offsets32_i16", true, false),
         LowerGSInfo("__pseudo_gather_factored_base_offsets32_i32", "__gather_factored_base_offsets32_i32", true, false),
@@ -4114,6 +4128,22 @@ static bool lReplacePseudoGS(llvm::CallInst *callInst) {
         LowerGSInfo("__pseudo_scatter64_float", "__scatter64_float", false, false),
         LowerGSInfo("__pseudo_scatter64_i64", "__scatter64_i64", false, false),
         LowerGSInfo("__pseudo_scatter64_double", "__scatter64_double", false, false),
+
+#ifdef ISPC_GENX_ENABLED
+        LowerGSInfo("__pseudo_scatter32_i8_private", "__scatter32_private_i8", false, false),
+        LowerGSInfo("__pseudo_scatter32_i16_private", "__scatter32_private_i16", false, false),
+        LowerGSInfo("__pseudo_scatter32_i32_private", "__scatter32_private_i32", false, false),
+        LowerGSInfo("__pseudo_scatter32_float_private", "__scatter32_private_float", false, false),
+        LowerGSInfo("__pseudo_scatter32_i64_private", "__scatter32_private_i64", false, false),
+        LowerGSInfo("__pseudo_scatter32_double_private", "__scatter32_private_double", false, false),
+
+        LowerGSInfo("__pseudo_scatter64_i8_private", "__scatter64_private_i8", false, false),
+        LowerGSInfo("__pseudo_scatter64_i16_private", "__scatter64_private_i16", false, false),
+        LowerGSInfo("__pseudo_scatter64_i32_private", "__scatter64_private_i32", false, false),
+        LowerGSInfo("__pseudo_scatter64_float_private", "__scatter64_private_float", false, false),
+        LowerGSInfo("__pseudo_scatter64_i64_private", "__scatter64_private_i64", false, false),
+        LowerGSInfo("__pseudo_scatter64_double_private", "__scatter64_private_double", false, false),
+#endif
 
         LowerGSInfo("__pseudo_scatter_factored_base_offsets32_i8", "__scatter_factored_base_offsets32_i8", false,
                     false),
@@ -4188,6 +4218,7 @@ static bool lReplacePseudoGS(llvm::CallInst *callInst) {
     bool gotPosition = lGetSourcePosFromMetadata(callInst, &pos);
 
     callInst->setCalledFunction(info->actualFunc);
+    // Check for alloca and if not alloca - generate __gather and change arguments
     if (gotPosition && (g->target->getVectorWidth() > 1) && (g->opt.level > 0)) {
         if (info->isGather)
             PerformanceWarning(pos, "Gather required to load value.");
@@ -4581,6 +4612,68 @@ bool MakeInternalFuncsStaticPass::runOnModule(llvm::Module &module) {
         "__prefetch_read_varying_3",
         "__prefetch_read_varying_nt",
         "__keep_funcs_live",
+#ifdef ISPC_GENX_ENABLED
+        "__gather_base_offsets32_private_i8",
+        "__gather_base_offsets32_private_i16",
+        "__gather_base_offsets32_private_i32",
+        "__gather_base_offsets32_private_i64",
+        "__gather_base_offsets32_private_float",
+        "__gather_base_offsets32_private_double",
+        "__gather_base_offsets64_private_i8",
+        "__gather_base_offsets64_private_i16",
+        "__gather_base_offsets64_private_i32",
+        "__gather_base_offsets64_private_i64",
+        "__gather_base_offsets64_private_float",
+        "__gather_base_offsets64_private_double",
+        "__gather32_private_i8",
+        "__gather32_private_i16",
+        "__gather32_private_i32",
+        "__gather32_private_i64",
+        "__gather32_private_float",
+        "__gather32_private_double",
+        "__gather64_private_i8",
+        "__gather64_private_i16",
+        "__gather64_private_i32",
+        "__gather64_private_i64",
+        "__gather64_private_float",
+        "__gather64_private_double",
+        "__masked_load_private_i8",
+        "__masked_load_private_i16",
+        "__masked_load_private_i32",
+        "__masked_load_private_i64",
+        "__masked_load_private_float",
+        "__masked_load_private_double",
+        "__scatter32_private_i8",
+        "__scatter32_private_i16",
+        "__scatter32_private_i32",
+        "__scatter32_private_i64",
+        "__scatter32_private_float",
+        "__scatter32_private_double",
+        "__scatter64_private_i8",
+        "__scatter64_private_i16",
+        "__scatter64_private_i32",
+        "__scatter64_private_i64",
+        "__scatter64_private_float",
+        "__scatter64_private_double",
+        "__scatter_base_offsets32_private_i8",
+        "__scatter_base_offsets32_private_i16",
+        "__scatter_base_offsets32_private_i32",
+        "__scatter_base_offsets32_private_i64",
+        "__scatter_base_offsets32_private_float",
+        "__scatter_base_offsets32_private_double",
+        "__scatter_base_offsets64_private_i8",
+        "__scatter_base_offsets64_private_i16",
+        "__scatter_base_offsets64_private_i32",
+        "__scatter_base_offsets64_private_i64",
+        "__scatter_base_offsets64_private_float",
+        "__scatter_base_offsets64_private_double",
+        "__masked_store_private_i8",
+        "__masked_store_private_i16",
+        "__masked_store_private_i32",
+        "__masked_store_private_i64",
+        "__masked_store_private_float",
+        "__masked_store_private_double",
+#endif
     };
 
     bool modifiedAny = false;
@@ -5088,3 +5181,142 @@ bool FixBooleanSelectPass::runOnFunction(llvm::Function &F) {
 }
 
 static llvm::Pass *CreateFixBooleanSelectPass() { return new FixBooleanSelectPass(); }
+
+#ifdef ISPC_GENX_ENABLED
+///////////////////////////////////////////////////////////////////////////
+// PromoteToPrivateMemoryPass
+
+/** This pass checks if memory was allocated on stack and if yes,
+    replaces regular call with "private" call
+ */
+class PromoteToPrivateMemoryPass : public llvm::BasicBlockPass {
+  public:
+    static char ID;
+    PromoteToPrivateMemoryPass() : BasicBlockPass(ID) {}
+
+    llvm::StringRef getPassName() const { return "Promote to Private Memory"; }
+    bool runOnBasicBlock(llvm::BasicBlock &BB);
+};
+
+char PromoteToPrivateMemoryPass::ID = 0;
+
+static bool lPromoteToPrivateMemory(llvm::CallInst *callInst) {
+    struct MemInfo {
+        MemInfo(const char *oname, const char *pname) {
+            originalFunc = m->module->getFunction(oname);
+            privateFunc = m->module->getFunction(pname);
+            Assert(originalFunc != NULL && privateFunc != NULL);
+        }
+        llvm::Function *originalFunc;
+        llvm::Function *privateFunc;
+    };
+
+    MemInfo memInfo[] = {
+        MemInfo("__masked_store_i8", "__masked_store_private_i8"),
+        MemInfo("__masked_store_i16", "__masked_store_private_i16"),
+        MemInfo("__masked_store_i32", "__masked_store_private_i32"),
+        MemInfo("__masked_store_float", "__masked_store_private_float"),
+        MemInfo("__masked_store_i64", "__masked_store_private_i64"),
+        MemInfo("__masked_store_double", "__masked_store_private_double"),
+
+        MemInfo("__masked_load_i8", "__masked_load_private_i8"),
+        MemInfo("__masked_load_i16", "__masked_load_private_i16"),
+        MemInfo("__masked_load_i32", "__masked_load_private_i32"),
+        MemInfo("__masked_load_float", "__masked_load_private_float"),
+        MemInfo("__masked_load_i64", "__masked_load_private_i64"),
+        MemInfo("__masked_load_double", "__masked_load_private_double"),
+
+        MemInfo("__scatter32_i8", "__scatter32_private_i8"),
+        MemInfo("__scatter32_i16", "__scatter32_private_i16"),
+        MemInfo("__scatter32_i32", "__scatter32_private_i32"),
+        MemInfo("__scatter32_i64", "__scatter32_private_i64"),
+        MemInfo("__scatter32_float", "__scatter32_private_float"),
+        MemInfo("__scatter32_double", "__scatter32_private_double"),
+
+        MemInfo("__scatter64_i8", "__scatter64_private_i8"),
+        MemInfo("__scatter64_i16", "__scatter64_private_i16"),
+        MemInfo("__scatter64_i32", "__scatter64_private_i32"),
+        MemInfo("__scatter64_i64", "__scatter64_private_i64"),
+        MemInfo("__scatter64_float", "__scatter64_private_float"),
+        MemInfo("__scatter64_double", "__scatter64_private_double"),
+
+        MemInfo("__gather32_i8", "__gather32_private_i8"),
+        MemInfo("__gather32_i16", "__gather32_private_i16"),
+        MemInfo("__gather32_i32", "__gather32_private_i32"),
+        MemInfo("__gather32_i64", "__gather32_private_i64"),
+        MemInfo("__gather32_float", "__gather32_private_float"),
+        MemInfo("__gather32_double", "__gather32_private_double"),
+
+        MemInfo("__gather64_i8", "__gather64_private_i8"),
+        MemInfo("__gather64_i16", "__gather64_private_i16"),
+        MemInfo("__gather64_i32", "__gather64_private_i32"),
+        MemInfo("__gather64_i64", "__gather64_private_i64"),
+        MemInfo("__gather64_float", "__gather64_private_float"),
+        MemInfo("__gather64_double", "__gather64_private_double"),
+
+        MemInfo("__scatter_base_offsets32_i8", "__scatter_base_offsets32_private_i8"),
+        MemInfo("__scatter_base_offsets32_i16", "__scatter_base_offsets32_private_i16"),
+        MemInfo("__scatter_base_offsets32_i32", "__scatter_base_offsets32_private_i32"),
+        MemInfo("__scatter_base_offsets32_i64", "__scatter_base_offsets32_private_i64"),
+        MemInfo("__scatter_base_offsets32_float", "__scatter_base_offsets32_private_float"),
+        MemInfo("__scatter_base_offsets32_double", "__scatter_base_offsets32_private_double"),
+
+        MemInfo("__scatter_base_offsets64_i8", "__scatter_base_offsets64_private_i8"),
+        MemInfo("__scatter_base_offsets64_i16", "__scatter_base_offsets64_private_i16"),
+        MemInfo("__scatter_base_offsets64_i32", "__scatter_base_offsets64_private_i32"),
+        MemInfo("__scatter_base_offsets64_i64", "__scatter_base_offsets64_private_i64"),
+        MemInfo("__scatter_base_offsets64_float", "__scatter_base_offsets64_private_float"),
+        MemInfo("__scatter_base_offsets64_double", "__scatter_base_offsets64_private_double"),
+
+        MemInfo("__gather_base_offsets32_i8", "__gather_base_offsets32_private_i8"),
+        MemInfo("__gather_base_offsets32_i16", "__gather_base_offsets32_private_i16"),
+        MemInfo("__gather_base_offsets32_i32", "__gather_base_offsets32_private_i32"),
+        MemInfo("__gather_base_offsets32_i64", "__gather_base_offsets32_private_i64"),
+        MemInfo("__gather_base_offsets32_float", "__gather_base_offsets32_private_float"),
+        MemInfo("__gather_base_offsets32_double", "__gather_base_offsets32_private_double"),
+
+        MemInfo("__gather_base_offsets64_i8", "__gather_base_offsets64_private_i8"),
+        MemInfo("__gather_base_offsets64_i16", "__gather_base_offsets64_private_i16"),
+        MemInfo("__gather_base_offsets64_i32", "__gather_base_offsets64_private_i32"),
+        MemInfo("__gather_base_offsets64_i64", "__gather_base_offsets64_private_i64"),
+        MemInfo("__gather_base_offsets64_float", "__gather_base_offsets64_private_float"),
+        MemInfo("__gather_base_offsets64_double", "__gather_base_offsets64_private_double"),
+    };
+    MemInfo *info = NULL;
+    for (unsigned int i = 0; i < sizeof(memInfo) / sizeof(memInfo[0]); ++i) {
+        if (memInfo[i].originalFunc != NULL && callInst->getCalledFunction() == memInfo[i].originalFunc) {
+            info = &memInfo[i];
+            break;
+        }
+    }
+    if (info == NULL)
+        return false;
+    llvm::Value *ptr = callInst->getOperand(0);
+    if (IsStackAllocated(ptr)) {
+        callInst->setCalledFunction(info->privateFunc);
+    }
+    return true;
+}
+
+bool PromoteToPrivateMemoryPass::runOnBasicBlock(llvm::BasicBlock &bb) {
+    DEBUG_START_PASS("PromoteToPrivateMemoryPass");
+
+    bool modifiedAny = false;
+
+    for (llvm::BasicBlock::iterator iter = bb.begin(), e = bb.end(); iter != e; ++iter) {
+        llvm::CallInst *callInst = llvm::dyn_cast<llvm::CallInst>(&*iter);
+        if (callInst == NULL || callInst->getCalledFunction() == NULL)
+            continue;
+        if (lPromoteToPrivateMemory(callInst)) {
+            modifiedAny = true;
+        }
+    }
+
+    DEBUG_END_PASS("PromoteToPrivateMemoryPass");
+
+    return modifiedAny;
+}
+
+static llvm::Pass *CreatePromoteToPrivateMemoryPass() { return new PromoteToPrivateMemoryPass(); }
+
+#endif
