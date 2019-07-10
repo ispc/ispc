@@ -1326,7 +1326,6 @@ void FunctionEmitContext::StartScope() {
             parentScope = debugScopes.back();
         else
             parentScope = diSubprogram;
-
         lexicalBlock = m->diBuilder->createLexicalBlock(parentScope, diFile, currentPos.first_line,
                                                         // Revision 216239 in LLVM removes support of DWARF
                                                         // discriminator as the last argument
@@ -2355,15 +2354,6 @@ llvm::Value *FunctionEmitContext::gather(llvm::Value *ptr, const PointerType *pt
     // Otherwise we should just have a basic scalar or pointer type and we
     // can go and do the actual gather
     AddInstrumentationPoint("gather");
-#ifdef ISPC_GENX_ENABLED
-    // Currently we generate gather here directly because we
-    // would like to predicate this intrinsic in CMSimdCFLoweringPass
-    // TODO_GEN: use definitions from target files and optimize for load where possible,
-    // Take into account that genx gather intrinsic uses vector of pointers, not
-    // the base and offsets, opt passes must be adapted.
-    if (g->target->getISA() == Target::GENX)
-        return GenXSVMGather(ptr, llvmReturnType);
-#endif
     // Figure out which gather function to call based on the size of
     // the elements.
     const PointerType *pt = CastType<PointerType>(returnType);
@@ -2390,6 +2380,14 @@ llvm::Value *FunctionEmitContext::gather(llvm::Value *ptr, const PointerType *pt
 
     llvm::Function *gatherFunc = m->module->getFunction(funcName);
     AssertPos(currentPos, gatherFunc != NULL);
+#ifdef ISPC_GENX_ENABLED
+    if (g->target->getISA() == Target::GENX) {
+        // Predicate ISPC mask with gen execution mask so
+        // after CMSimdCFLoweringPass pseudo_gather will have correct masked value.
+        mask = GenXSimdCFPredicate(mask);
+    }
+#endif
+
     llvm::Value *gatherCall = CallInst(gatherFunc, NULL, ptr, mask, name);
 
     // Add metadata about the source file location so that the
@@ -2718,15 +2716,11 @@ void FunctionEmitContext::scatter(llvm::Value *value, llvm::Value *ptr, const Ty
     AssertPos(currentPos, scatterFunc != NULL);
 
     AddInstrumentationPoint("scatter");
-    // Currently we generate scatter here directly because we
-    // would like to predicate this intrinsic in CMSimdCFLoweringPass
-    // TODO: use definitions from target files and optimize for store where possible,
-    // Take into account that genx scatter intrinsic uses vector of pointers, not
-    // the base and offsets, opt passes must be adapted.
 #ifdef ISPC_GENX_ENABLED
     if (g->target->getISA() == Target::GENX) {
-        GenXSVMScatter(ptr, value, valueType->LLVMType(g->ctx));
-        return;
+        // Predicate ISPC mask with gen execution mask so
+        // after CMSimdCFLoweringPass pseudo_scatter will have correct masked value.
+        mask = GenXSimdCFPredicate(mask);
     }
 #endif
     std::vector<llvm::Value *> args;
