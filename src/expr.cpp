@@ -7067,6 +7067,9 @@ llvm::Value *DerefExpr::GetValue(FunctionEmitContext *ctx) const {
     if (lVaryingStructHasUniformMember(type, pos))
         return NULL;
 
+    // If dealing with 'varying * varying' add required offsets.
+    ptr = lAddVaryingOffsetsIfNeeded(ctx, ptr, type);
+
     Symbol *baseSym = expr->GetBaseSymbol();
     llvm::Value *mask = baseSym ? lMaskForSymbol(baseSym, ctx) : ctx->GetFullMask();
 
