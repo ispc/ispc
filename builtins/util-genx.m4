@@ -1712,12 +1712,52 @@ define(`ctlztz', `
 declare_count_zeros()
 
 define i32 @__count_trailing_zeros_i32(i32) nounwind readnone alwaysinline {
-  %c = call i32 @llvm.cttz.i32(i32 %0)
-  ret i32 %c
+  %masked.16 = and i32 %0, 65535
+  %cond.16 = icmp eq i32 %masked.16, 0
+  %var.16.next = lshr i32 %0, 16
+  %tz.16 = select i1 %cond.16, i32 16, i32 0
+  %var.16 = select i1 %cond.16, i32 %var.16.next, i32 %0
+  %masked.8 = and i32 %var.16, 255
+  %cond.8 = icmp eq i32 %masked.8, 0
+  %tz.8.next = add i32 %tz.16, 8
+  %var.8.next = lshr i32 %var.16, 8
+  %tz.8 = select i1 %cond.8, i32 %tz.8.next, i32 %tz.16
+  %var.8 = select i1 %cond.8, i32 %var.8.next, i32 %var.16
+  %masked.4 = and i32 %var.8, 15
+  %cond.4 = icmp eq i32 %masked.4, 0
+  %tz.4.next = add i32 %tz.8, 4
+  %var.4.next = lshr i32 %var.8, 4
+  %tz.4 = select i1 %cond.4, i32 %tz.4.next, i32 %tz.8
+  %var.4 = select i1 %cond.4, i32 %var.4.next, i32 %var.8
+  %masked.2 = and i32 %var.4, 3
+  %cond.2 = icmp eq i32 %masked.2, 0
+  %tz.2.next = add i32 %tz.4, 2
+  %var.2.next = lshr i32 %var.4, 2
+  %tz.2 = select i1 %cond.2, i32 %tz.2.next, i32 %tz.4
+  %var.2 = select i1 %cond.2, i32 %var.2.next, i32 %var.4
+  %masked.1 = and i32 %var.2, 1
+  %cond.1 = icmp eq i32 %masked.1, 0
+  %tz.1.next = add i32 %tz.2, 1
+  %var.1.next = lshr i32 %var.2, 1
+  %tz.1 = select i1 %cond.1, i32 %tz.1.next, i32 %tz.2
+  %var.1 = select i1 %cond.1, i32 %var.1.next, i32 %var.2
+  %masked.0 = and i32 %var.1, 1
+  %cond.0 = icmp eq i32 %masked.0, 0
+  %tz.0.next = add i32 %tz.1, 1
+  %tz.0 = select i1 %cond.0, i32 %tz.0.next, i32 %tz.1
+  ret i32 %tz.0
 }
 
 define i64 @__count_trailing_zeros_i64(i64) nounwind readnone alwaysinline {
-  %c = call i64 @llvm.cttz.i64(i64 %0)
+  %masked.32 = and i64 %0, 4294967295
+  %cond.32 = icmp eq i64 %masked.32, 0
+  %var.32.next = lshr i64 %0, 32
+  %tz.32 = select i1 %cond.32, i64 32, i64 0
+  %var.32 = select i1 %cond.32, i64 %var.32.next, i64 %0
+  %var.32.trunc = trunc i64 %var.32 to i32
+  %tz.rest = call i32 @__count_trailing_zeros_i32(i32 %var.32.trunc)
+  %tz.rest.zext = zext i32 %tz.rest to i64
+  %c = add i64 %tz.32, %tz.rest.zext
   ret i64 %c
 }
 
@@ -1732,11 +1772,10 @@ define i64 @__count_leading_zeros_i64(i64) nounwind readnone alwaysinline {
   %lz.hi = call i32 @llvm.genx.lzd.i32(i32 %hi)
   %lo = trunc i64 %0 to i32
   %lz.lo = call i32 @llvm.genx.lzd.i32(i32 %lo)
-  %use.lo.init = icmp eq i32 %lz.hi, 32
-  %use.lo = sext i1 %use.lo.init to i32
-  %lz.lo.and = and i32 %use.lo, %lz.lo
-  %c.32 = add i32 %lz.hi, %lz.lo.and
-  %c = sext i32 %c.32 to i64
+  %use.lo = icmp eq i32 %lz.hi, 32
+  %lz.lo.sel = select i1 %use.lo, i32 %lz.lo, i32 0
+  %c.32 = add i32 %lz.hi, %lz.lo.sel
+  %c = zext i32 %c.32 to i64
   ret i64 %c
 }
 ')
