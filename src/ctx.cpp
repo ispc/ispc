@@ -3556,7 +3556,17 @@ llvm::Value *FunctionEmitContext::GenXStore(llvm::Value *ptr, llvm::Value *value
     args.push_back(value);
     args.push_back(ptr);
     auto Fn = llvm::Intrinsic::getDeclaration(m->module, llvm::Intrinsic::genx_vstore, Tys);
-    return CallInst(Fn, NULL, args, "");
+    llvm::Value *IV = CallInst(Fn, NULL, args, "");
+    llvm::Instruction *I = llvm::dyn_cast<llvm::Instruction>(IV);
+    // Set ISPC-Uniform to exclude stores to uniform vectors from predication in SIMD CF Lowering.
+    // The assumption here is that ISPC generates stores for uniform vectors
+    // and scatters for non-uniform.
+    // FIXME: need to pass ISPC Type to assert it's IsUniformType
+    // Without information about whether type is uniform or not, this fix introduces more regressions
+    // than improvements. So I'm commenting it for now.
+    // llvm::MDNode *N = llvm::MDNode::get(*g->ctx, llvm::MDString::get(*g->ctx, "ISPC-Uniform"));
+    // I->setMetadata("ISPC-Uniform", N);
+    return IV;
 }
 
 llvm::Value *FunctionEmitContext::GenXPrepareVectorBranch(llvm::Value *value) {
