@@ -1578,6 +1578,46 @@ static inline bool isnan(double v) {
 }
 
 __declspec(safe,cost1)
+static inline int8 abs(int8 a) {
+    return a > 0 ? a : -a;
+}
+
+__declspec(safe,cost1)
+static inline uniform int8 abs(uniform int8 a) {
+    return a > 0 ? a : -a;
+}
+
+__declspec(safe,cost1)
+static inline int16 abs(int16 a) {
+    return a > 0 ? a : -a;
+}
+
+__declspec(safe,cost1)
+static inline uniform int16 abs(uniform int16 a) {
+    return a > 0 ? a : -a;
+}
+
+__declspec(safe,cost1)
+static inline int abs(int a) {
+    return a > 0 ? a : -a;
+}
+
+__declspec(safe,cost1)
+static inline uniform int abs(uniform int a) {
+    return a > 0 ? a : -a;
+}
+
+__declspec(safe,cost1)
+static inline int64 abs(int64 a) {
+    return a > 0 ? a : -a;
+}
+
+__declspec(safe,cost1)
+static inline uniform int64 abs(uniform int64 a) {
+    return a > 0 ? a : -a;
+}
+
+__declspec(safe,cost1)
 static inline float abs(float a) {
     // Floating-point hack: zeroing the high bit clears the sign
     unsigned int i = intbits(a);
