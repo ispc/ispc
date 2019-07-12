@@ -3575,6 +3575,16 @@ is on (i.e. the value is negative) and zero if it is off.
 
     float abs(float a)
     uniform float abs(uniform float a)
+    double abs(double a)
+    uniform double abs(uniform double a)
+    int8 abs(int8 a)
+    uniform int8 abs(uniform int8 a)
+    int16 abs(int16 a)
+    uniform int16 abs(uniform int16 a)
+    int abs(int a)
+    uniform int abs(uniform int a)
+    int64 abs(int64 a)
+    uniform int64 abs(uniform int64 a)
     unsigned int signbits(float x)
 
 Standard rounding functions are provided.  (On machines that support Intel®
