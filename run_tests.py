@@ -689,7 +689,7 @@ def check_compiler_exists(compiler_exe):
             return
     error("missing the required compiler: %s \n" % compiler_exe, 1)
 
-def print_result(status, results, s, run_tests_log):
+def print_result(status, results, s, run_tests_log, csv):
     title = StatusStr[status]
     file_list = [fname for fname, fstatus in results if status == fstatus]
     total_tests = len(results)
@@ -698,6 +698,7 @@ def print_result(status, results, s, run_tests_log):
         return
     for f in sorted(file_list):
         print_debug("\t%s\n" % f, s, run_tests_log)
+        print_debug("%s;%s\n" % (f, title), csv, csv) # dump result to csv if filename is non-empty
 
 def run_tests(options1, args, print_version):
     global options
@@ -804,7 +805,7 @@ def run_tests(options1, args, print_version):
     if options.non_interactive:
         print_debug(" Done %d / %d\n" % (finished_tests_counter.value, total_tests), s, run_tests_log)
     for status in Status:
-        print_result(status, results, s, run_tests_log)
+        print_result(status, results, s, run_tests_log, options.csv)
     fails = [status != Status.Compfail and status != Status.Runfail for _, status in results]
     if sum(fails) == 0:
         print_debug("No fails\n", s, run_tests_log)
@@ -875,6 +876,7 @@ if __name__ == "__main__":
     parser.add_option("--verify", dest='verify', help='verify the file fail_db.txt', default=False, action="store_true")
     parser.add_option("--save-bin", dest='save_bin', help='compile and create bin, but don\'t execute it',
                   default=False, action="store_true")
+    parser.add_option('--csv', dest="csv", help="file to save testing results", default="")
     (options, args) = parser.parse_args()
 
     L = run_tests(options, args, 1)

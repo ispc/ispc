@@ -571,6 +571,7 @@ def validation_run(only, only_targets, reference_branch, number, notify, update,
         stability.num_jobs = speed_number
         stability.verbose = False
         stability.time = time
+        stability.csv = ""
         stability.non_interactive = True
         stability.update = update
         stability.include_file = None
