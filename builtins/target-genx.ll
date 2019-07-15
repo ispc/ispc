@@ -61,20 +61,75 @@ rdrand_decls()
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; rounding floats
 
-declare float @__round_uniform_float(float) nounwind readonly alwaysinline
+declare <1 x float> @llvm.genx.rndd(<1 x float>)
+declare <1 x float> @llvm.genx.rndu(<1 x float>)
+declare <16 x float> @llvm.genx.rndu.GEN_SUFFIX(float)(<16 x float>)
+declare <16 x float> @llvm.genx.rndd.GEN_SUFFIX(float)(<16 x float>)
 
-declare float @__floor_uniform_float(float) nounwind readonly alwaysinline
 
-declare float @__ceil_uniform_float(float) nounwind readonly alwaysinline
+define float @__floor_uniform_float(float) nounwind readonly alwaysinline {
+    %res.i.i = insertelement <1 x float> undef, float %0, i32 0
+    %res.i = call <1 x float> @llvm.genx.rndd(<1 x float> %res.i.i)
+    %res = extractelement <1 x float> %res.i, i32 0
+    ret float %res
+}
+
+define float @__ceil_uniform_float(float) nounwind readonly alwaysinline {
+    %res.i.i = insertelement <1 x float> undef, float %0, i32 0
+    %res.i = call <1 x float> @llvm.genx.rndu(<1 x float> %res.i.i)
+    %res = extractelement <1 x float> %res.i, i32 0
+    ret float %res
+}
+
+define float @__round_uniform_float(float) nounwind readonly alwaysinline {
+  %float_to_int_bitcast.i.i.i.i = bitcast float %0 to i32
+  %bitop.i.i = and i32 %float_to_int_bitcast.i.i.i.i, -2147483648
+  %bitop.i = xor i32 %float_to_int_bitcast.i.i.i.i, %bitop.i.i
+  %int_to_float_bitcast.i.i40.i = bitcast i32 %bitop.i to float
+  %binop.i = fadd float %int_to_float_bitcast.i.i40.i, 8.388608e+06
+  %binop21.i = fadd float %binop.i, -8.388608e+06
+  %float_to_int_bitcast.i.i.i = bitcast float %binop21.i to i32
+  %bitop31.i = xor i32 %float_to_int_bitcast.i.i.i, %bitop.i.i
+  %int_to_float_bitcast.i.i.i = bitcast i32 %bitop31.i to float
+  ret float %int_to_float_bitcast.i.i.i
+}
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; rounding doubles
 
-declare double @__round_uniform_double(double) nounwind readonly alwaysinline
+define double @__round_uniform_double(double) nounwind readonly alwaysinline {
+  %float_to_int_bitcast.i.i.i.i = bitcast double %0 to i64
+  %bitop.i.i = and i64 %float_to_int_bitcast.i.i.i.i, -9223372036854775808
+  %bitop.i = xor i64 %float_to_int_bitcast.i.i.i.i, %bitop.i.i
+  %int_to_float_bitcast.i.i40.i = bitcast i64 %bitop.i to double
+  %binop.i = fadd double %int_to_float_bitcast.i.i40.i, 4.5036e+15
+  %binop21.i = fadd double %binop.i, -4.5036e+15
+  %float_to_int_bitcast.i.i.i = bitcast double %binop21.i to i64
+  %bitop31.i = xor i64 %float_to_int_bitcast.i.i.i, %bitop.i.i
+  %int_to_float_bitcast.i.i.i = bitcast i64 %bitop31.i to double
+  ret double %int_to_float_bitcast.i.i.i
+}
 
-declare double @__floor_uniform_double(double) nounwind readonly alwaysinline
+define double @__floor_uniform_double(double) nounwind readonly alwaysinline {
+  %calltmp.i = tail call double @__round_uniform_double(double %0) nounwind
+  %bincmp.i = fcmp ogt double %calltmp.i, %0
+  %val_to_boolvec32.i = sext i1 %bincmp.i to i64
+  %bitop.i = and i64 %val_to_boolvec32.i, -4616189618054758400
+  %int_to_float_bitcast.i.i.i = bitcast i64 %bitop.i to double
+  %binop.i = fadd double %calltmp.i, %int_to_float_bitcast.i.i.i
+  ret double %binop.i
+}
 
-declare double @__ceil_uniform_double(double) nounwind readonly alwaysinline
+define double @__ceil_uniform_double(double) nounwind readonly alwaysinline {
+  %calltmp.i = tail call double @__round_uniform_double(double %0) nounwind
+  %bincmp.i = fcmp olt double %calltmp.i, %0
+  %val_to_boolvec32.i = sext i1 %bincmp.i to i64
+  %bitop.i = and i64 %val_to_boolvec32.i, 4607182418800017408
+  %int_to_float_bitcast.i.i.i = bitcast i64 %bitop.i to double
+  %binop.i = fadd double %calltmp.i, %int_to_float_bitcast.i.i.i
+  ret double %binop.i
+}
+
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; rcp
@@ -173,20 +228,91 @@ declare <16 x double> @__sqrt_varying_double(<16 x double>) nounwind alwaysinlin
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; rounding floats
 
-declare <16 x float> @__round_varying_float(<16 x float>) nounwind readonly alwaysinline
+define <16 x float> @__round_varying_float(<16 x float>) nounwind readonly alwaysinline {
+  %float_to_int_bitcast.i.i.i.i = bitcast <16 x float> %0 to <16 x i32>
+  ; create vector of literals
+  %vec_lit.i = insertelement <1 x i32> undef, i32 -2147483648, i32 0
+  %vec_lit = shufflevector <1 x i32> %vec_lit.i, <1 x i32> undef, <16 x i32> zeroinitializer
+  %bitop.i.i = and <16 x i32> %float_to_int_bitcast.i.i.i.i, %vec_lit
+  %bitop.i = xor <16 x i32> %float_to_int_bitcast.i.i.i.i, %bitop.i.i
+  %int_to_float_bitcast.i.i40.i = bitcast <16 x i32> %bitop.i to <16 x float>
+  ; create vector of float literals
+  %vec_lit_pos.i = insertelement <1 x float> undef, float 8.388608e+06, i32 0
+  %vec_lit_pos = shufflevector <1 x float> %vec_lit_pos.i, <1 x float> undef, <16 x i32> zeroinitializer
+  ; create vector of float literals
+  %vec_lit_neg.i = insertelement <1 x float> undef, float -8.388608e+06, i32 0
+  %vec_lit_neg = shufflevector <1 x float> %vec_lit_neg.i, <1 x float> undef, <16 x i32> zeroinitializer
+  %binop.i = fadd <16 x float> %int_to_float_bitcast.i.i40.i, %vec_lit_pos
+  %binop21.i = fadd <16 x float> %binop.i, %vec_lit_neg
+  %float_to_int_bitcast.i.i.i = bitcast <16 x float> %binop21.i to <16 x i32>
+  %bitop31.i = xor <16 x i32> %float_to_int_bitcast.i.i.i, %bitop.i.i
+  %int_to_float_bitcast.i.i.i = bitcast <16 x i32> %bitop31.i to <16 x float>
+  ret <16 x float> %int_to_float_bitcast.i.i.i
+}
 
-declare <16 x float> @__floor_varying_float(<16 x float>) nounwind readonly alwaysinline
 
-declare <16 x float> @__ceil_varying_float(<16 x float>) nounwind readonly alwaysinline
+define <16 x float> @__floor_varying_float(<16 x float>) nounwind readonly alwaysinline {
+    %res = call <16 x float> @llvm.genx.rndd.GEN_SUFFIX(float)(<16 x float> %0)
+    ret <16 x float> %res
+}
+
+define <16 x float> @__ceil_varying_float(<16 x float>) nounwind readonly alwaysinline  {
+    %res = call <16 x float> @llvm.genx.rndu.GEN_SUFFIX(float)(<16 x float> %0)
+    ret <16 x float> %res
+}
+
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; rounding doubles
 
-declare <16 x double> @__round_varying_double(<16 x double>) nounwind readonly alwaysinline
+define <16 x double> @__round_varying_double(<16 x double>) nounwind readonly alwaysinline {
+  %float_to_int_bitcast.i.i.i.i = bitcast <16 x double> %0 to <16 x i64>
+  ; create vector of literals
+  %vec_lit.i = insertelement <1 x i64> undef, i64 -9223372036854775808, i32 0
+  %vec_lit = shufflevector <1 x i64> %vec_lit.i, <1 x i64> undef, <16 x i32> zeroinitializer
+  %bitop.i.i = and <16 x i64> %float_to_int_bitcast.i.i.i.i, %vec_lit
+  %bitop.i = xor <16 x i64> %float_to_int_bitcast.i.i.i.i, %bitop.i.i
+  %int_to_float_bitcast.i.i40.i = bitcast <16 x i64> %bitop.i to <16 x double>
+  ; create vector of float literals
+  %vec_lit_pos.i = insertelement <1 x double> undef, double 4.5036e+15, i32 0
+  %vec_lit_pos = shufflevector <1 x double> %vec_lit_pos.i, <1 x double> undef, <16 x i32> zeroinitializer
+  ; create vector of float literals
+  %vec_lit_neg.i = insertelement <1 x double> undef, double -4.5036e+15, i32 0
+  %vec_lit_neg = shufflevector <1 x double> %vec_lit_neg.i, <1 x double> undef, <16 x i32> zeroinitializer
+  %binop.i = fadd <16 x double> %int_to_float_bitcast.i.i40.i, %vec_lit_pos
+  %binop21.i = fadd <16 x double> %binop.i, %vec_lit_neg
+  %float_to_int_bitcast.i.i.i = bitcast <16 x double> %binop21.i to <16 x i64>
+  %bitop31.i = xor <16 x i64> %float_to_int_bitcast.i.i.i, %bitop.i.i
+  %int_to_float_bitcast.i.i.i = bitcast <16 x i64> %bitop31.i to <16 x double>
+  ret <16 x double> %int_to_float_bitcast.i.i.i
+}
 
-declare <16 x double> @__floor_varying_double(<16 x double>) nounwind readonly alwaysinline
+define <16 x double> @__floor_varying_double(<16 x double>) nounwind readonly alwaysinline {
+  %calltmp.i = tail call <16 x double> @__round_varying_double(<16 x double> %0) nounwind
+  %bincmp.i = fcmp ogt <16 x double> %calltmp.i, %0
+  %val_to_boolvec32.i = sext <16 x i1> %bincmp.i to <16 x i64>
+  ; create vector of literals
+  %vec_lit.i = insertelement <1 x i64> undef, i64 -4616189618054758400, i32 0
+  %vec_lit = shufflevector <1 x i64> %vec_lit.i, <1 x i64> undef, <16 x i32> zeroinitializer
+  %bitop.i = and <16 x i64> %val_to_boolvec32.i, %vec_lit
+  %int_to_float_bitcast.i.i.i = bitcast <16 x i64> %bitop.i to <16 x double>
+  %binop.i = fadd <16 x double> %calltmp.i, %int_to_float_bitcast.i.i.i
+  ret <16 x double> %binop.i
+}
 
-declare <16 x double> @__ceil_varying_double(<16 x double>) nounwind readonly alwaysinline
+define <16 x double> @__ceil_varying_double(<16 x double>) nounwind readonly alwaysinline {
+  %calltmp.i = tail call <16 x double> @__round_varying_double(<16 x double> %0) nounwind
+  %bincmp.i = fcmp olt <16 x double> %calltmp.i, %0
+  %val_to_boolvec32.i = sext <16 x i1> %bincmp.i to <16 x i64>
+  ; create vector of literals
+  %vec_lit.i = insertelement <1 x i64> undef, i64 4607182418800017408, i32 0
+  %vec_lit = shufflevector <1 x i64> %vec_lit.i, <1 x i64> undef, <16 x i32> zeroinitializer
+  %bitop.i = and <16 x i64> %val_to_boolvec32.i, %vec_lit
+  %int_to_float_bitcast.i.i.i = bitcast <16 x i64> %bitop.i to <16 x double>
+  %binop.i = fadd <16 x double> %calltmp.i, %int_to_float_bitcast.i.i.i
+  ret <16 x double> %binop.i
+}
+
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; float min/max
