@@ -801,13 +801,7 @@ genx_scatter(double)
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; int8/int16 builtins
 
-declare <16 x i8> @__avg_up_uint8(<16 x i8>, <16 x i8>) nounwind readnone
-
-declare <16 x i16> @__avg_up_uint16(<16 x i16>, <16 x i16>) nounwind readnone
-
-define_avg_up_int8()
-define_avg_up_int16()
-define_down_avgs()
+define_avgs()
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; reciprocals in double precision, if supported
