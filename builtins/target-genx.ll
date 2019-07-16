@@ -356,8 +356,8 @@ declare i1 @llvm.genx.any.v16i1(<16 x MASK>)
 declare i1 @llvm.genx.all.v16i1(<16 x MASK>)
 
 define i64 @__movmsk(<16 x MASK>) nounwind readnone alwaysinline {
-  %v = call i1 @llvm.genx.any.v16i1(<16 x MASK> %0)
-  %zext = zext i1 %v to i64
+  %v = bitcast <16 x MASK> %0 to i16
+  %zext = zext i16 %v to i64
   ret i64 %zext
 }
 
