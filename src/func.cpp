@@ -462,7 +462,9 @@ void Function::emitCode(FunctionEmitContext *ctx, llvm::Function *function, Sour
                                         llvm::MDNode::get(fContext, argKinds),
                                         llvm::ValueAsMetadata::get(llvm::ConstantInt::getNullValue(i32Type)),
                                         llvm::ValueAsMetadata::get(llvm::ConstantInt::getNullValue(i32Type)),
-                                        llvm::MDNode::get(fContext, argInOutKinds)};
+                                        llvm::MDNode::get(fContext, argInOutKinds),
+                                        llvm::ValueAsMetadata::get(llvm::ConstantInt::getNullValue(i32Type)),
+                                        llvm::ValueAsMetadata::get(llvm::ConstantInt::getNullValue(i32Type))};
 
             mdKernels->addOperand(llvm::MDNode::get(fContext, mdArgs));
         }
