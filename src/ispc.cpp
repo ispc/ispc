@@ -975,7 +975,7 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, bool pic, boo
         this->m_nativeVectorAlignment = 64;
         this->m_vectorWidth = 16;
         this->m_dataTypeWidth = 32;
-        // this->m_hasHalf = true;
+        this->m_hasHalf = true;
         this->m_maskingIsFree = true;
         this->m_maskBitCount = 1;
         // this->m_hasTranscendentals = true;
