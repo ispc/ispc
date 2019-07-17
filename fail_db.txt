@@ -410,6 +410,8 @@
 % End of anonymous namespace bug
 
 % Windows specific fails. transcendentals-10-0.ispc is not expected to work anywhere except Linux.
+.\tests\transcendentals-10-0.ispc compfail     x86           sse4 Windows LLVM 9.0         cl -O2 *
+.\tests\transcendentals-10-0.ispc compfail     x86           sse4 Windows LLVM 8.0         cl -O2 *
 .\tests\transcendentals-10-0.ispc compfail     x86           sse4 Windows LLVM 7.0         cl -O2 *
 .\tests\transcendentals-10-0.ispc compfail     x86           sse4 Windows LLVM 6.0         cl -O2 *
 .\tests\transcendentals-10-0.ispc compfail     x86           sse4 Windows LLVM 5.0         cl -O2 *
