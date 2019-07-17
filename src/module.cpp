@@ -2522,8 +2522,12 @@ void Module::execPreprocessor(const char *infilename, llvm::raw_string_ostream *
     if (g->opt.forceAlignedMemory)
         opts.addMacroDef("ISPC_FORCE_ALIGNED_MEMORY");
 
-    opts.addMacroDef("ISPC_MAJOR_VERSION=1");
-    opts.addMacroDef("ISPC_MINOR_VERSION=4");
+    constexpr int buf_size = 25;
+    char ispc_major[buf_size], ispc_minor[buf_size];
+    snprintf(ispc_major, buf_size, "ISPC_MAJOR_VERSION=%d", ISPC_VERSION_MAJOR);
+    snprintf(ispc_minor, buf_size, "ISPC_MINOR_VERSION=%d", ISPC_VERSION_MINOR);
+    opts.addMacroDef(ispc_major);
+    opts.addMacroDef(ispc_minor);
 
     if (g->includeStdlib) {
         if (g->opt.disableAsserts)
