@@ -525,6 +525,10 @@ def verify():
                 print_debug("error in line " + str(i) + "\n", False, run_tests_log)
                 break
 
+def print_result(title, file_list, total_tests, s, run_tests_log):
+    print_debug("%d / %d tests %s:\n" % (len(file_list), total_tests, title), s, run_tests_log)
+    for f in sorted(file_list):
+        print_debug("\t%s\n" % f, s, run_tests_log)
 
 def run_tests(options1, args, print_version):
     global options
@@ -763,21 +767,10 @@ def run_tests(options1, args, print_version):
 
     if options.non_interactive:
         print_debug(" Done %d / %d\n" % (finished_tests_counter.value, total_tests), s, run_tests_log)
-    if len(skip_files) > 0:
-        skip_files.sort()
-        print_debug("%d / %d tests SKIPPED:\n" % (len(skip_files), total_tests), s, run_tests_log)
-        for f in skip_files:
-            print_debug("\t%s\n" % f, s, run_tests_log)
-    if len(compile_error_files) > 0:
-        compile_error_files.sort()
-        print_debug("%d / %d tests FAILED compilation:\n" % (len(compile_error_files), total_tests), s, run_tests_log)
-        for f in compile_error_files:
-            print_debug("\t%s\n" % f, s, run_tests_log)
-    if len(run_error_files) > 0:
-        run_error_files.sort()
-        print_debug("%d / %d tests FAILED execution:\n" % (len(run_error_files), total_tests), s, run_tests_log)
-        for f in run_error_files:
-            print_debug("\t%s\n" % f, s, run_tests_log)
+    print_result("PASSED", run_succeed_files, total_tests, s, run_tests_log)
+    print_result("SKIPPED", skip_files, total_tests, s, run_tests_log)
+    print_result("FAILED compilation", compile_error_files, total_tests, s, run_tests_log)
+    print_result("FAILED execution", run_error_files, total_tests, s, run_tests_log)
     if len(compile_error_files) == 0 and len(run_error_files) == 0:
         print_debug("No fails\n", s, run_tests_log)
 
