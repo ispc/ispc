@@ -1349,10 +1349,20 @@ void DefineStdlib(SymbolTable *symbolTable, llvm::LLVMContext *ctx, llvm::Module
     case Target::AVX2: {
         switch (g->target->getVectorWidth()) {
         case 4:
-            if (runtime32) {
-                EXPORT_MODULE(builtins_bitcode_avx2_i64x4_32bit);
+            if (g->target->getDataTypeWidth() == 32) {
+                if (runtime32) {
+                    EXPORT_MODULE(builtins_bitcode_avx2_i32x4_32bit);
+                } else {
+                    EXPORT_MODULE(builtins_bitcode_avx2_i32x4_64bit);
+                }
+            } else if (g->target->getDataTypeWidth() == 64) {
+                if (runtime32) {
+                    EXPORT_MODULE(builtins_bitcode_avx2_i64x4_32bit);
+                } else {
+                    EXPORT_MODULE(builtins_bitcode_avx2_i64x4_64bit);
+                }
             } else {
-                EXPORT_MODULE(builtins_bitcode_avx2_i64x4_64bit);
+                FATAL("logic error in DefineStdlib");
             }
             break;
         case 8:

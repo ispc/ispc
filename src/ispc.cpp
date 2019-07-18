@@ -874,6 +874,18 @@ Target::Target(const char *arch, const char *cpu, const char *isa, bool pic, boo
         this->m_hasRand = true;
         this->m_hasGather = true;
         CPUfromISA = CPU_Haswell;
+    } else if (!strcasecmp(isa, "avx2-i32x4")) {
+        this->m_isa = Target::AVX2;
+        this->m_nativeVectorWidth = 8;
+        this->m_nativeVectorAlignment = 32;
+        this->m_dataTypeWidth = 32;
+        this->m_vectorWidth = 4;
+        this->m_maskingIsFree = false;
+        this->m_maskBitCount = 32;
+        this->m_hasHalf = true;
+        this->m_hasRand = true;
+        this->m_hasGather = true;
+        CPUfromISA = CPU_Haswell;
     } else if (!strcasecmp(isa, "avx2-x2") || !strcasecmp(isa, "avx2-i32x16")) {
         this->m_isa = Target::AVX2;
         this->m_nativeVectorWidth = 16;
@@ -1198,7 +1210,7 @@ const char *Target::SupportedTargets() {
            "avx1-i32x4, "
            "avx1-i32x8, avx1-i32x16, avx1-i64x4, "
            "avx1.1-i32x8, avx1.1-i32x16, avx1.1-i64x4, "
-           "avx2-i32x8, avx2-i32x16, avx2-i64x4, "
+           "avx2-i32x4, avx2-i32x8, avx2-i32x16, avx2-i64x4, "
 #if ISPC_LLVM_VERSION >= ISPC_LLVM_3_7 // LLVM 3.7+
            "avx512knl-i32x16, "
 #endif
