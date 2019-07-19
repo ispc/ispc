@@ -541,6 +541,7 @@ def file_check(compfails, runfails):
         output.close()
     return [new_runfails, new_compfails, new_passes_runfails, new_passes_compfails, new_line, errors]
 
+# TODO: This function is out of date, it needs update and test coverage.
 def verify():
     # Open file fail_db.txt
     f = open(test_states, 'r')
@@ -548,11 +549,13 @@ def verify():
     f.close()
     check = [["g++", "clang++", "cl"],["-O0", "-O2"],["x86","x86-64"],
              ["Linux","Windows","Mac"],["LLVM 3.2","LLVM 3.3","LLVM 3.4","LLVM 3.5","LLVM 3.6","LLVM trunk"],
-             ["sse2-i32x4", "sse2-i32x8", "sse4-i32x4", "sse4-i32x8", "sse4-i16x8",
-              "sse4-i8x16", "avx1-i32x4" "avx1-i32x8", "avx1-i32x16", "avx1-i64x4", "avx1.1-i32x8",
-              "avx1.1-i32x16", "avx1.1-i64x4", "avx2-i32x4", "avx2-i32x8", "avx2-i32x16", "avx2-i64x4",
+             ["sse2-i32x4", "sse2-i32x8",
+              "sse4-i32x4", "sse4-i32x8", "sse4-i16x8", "sse4-i8x16",
+              "avx1-i32x4", "avx1-i32x8", "avx1-i32x16", "avx1-i64x4",
+              "avx2-i32x4", "avx2-i32x8", "avx2-i32x16", "avx2-i64x4",
               "generic-1", "generic-4", "generic-8",
-              "generic-16", "generic-32", "generic-64", "avx512knl-i32x16"]]
+              "generic-16", "generic-32", "generic-64",
+              "avx512knl-i32x16", "avx512skx-i32x16", "avx512skx-i32x8"]]
     for i in range (0,len(f_lines)):
         if f_lines[i][0] == "%":
             continue
@@ -870,10 +873,7 @@ if __name__ == "__main__":
     parser.add_option("-f", "--ispc-flags", dest="ispc_flags", help="Additional flags for ispc (-g, -O1, ...)",
                   default="")
     parser.add_option('-t', '--target', dest='target',
-                  help=('Set compilation target (sse2-i32x4, sse2-i32x8, sse4-i32x4, sse4-i32x8, ' +
-                  'sse4-i16x8, sse4-i8x16, avx1-i32x8, avx1-i32x16, avx1.1-i32x8, avx1.1-i32x16, ' +
-                  'avx2-i32x8, avx2-i32x16, avx512knl-i32x16, generic-x1, generic-x4, generic-x8, generic-x16, ' +
-                  'generic-x32, generic-x64)'), default="sse4")
+                  help=('Set compilation target. For example: sse4-i32x4, avx2-i32x8, avx512skx-i32x16, etc.'), default="sse4-i32x4")
     parser.add_option('-a', '--arch', dest='arch',
                   help='Set architecture (arm, aarch64, x86, x86-64)',default="x86-64")
     parser.add_option("-c", "--compiler", dest="compiler_exe", help="C/C++ compiler binary to use to run tests",

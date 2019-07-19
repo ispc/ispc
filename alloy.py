@@ -495,14 +495,12 @@ def check_targets():
                  ["SSE2", "SSE4"], "-wsm", False]),
       ("AVX",    [["avx1-i32x4",  "avx1-i32x8",  "avx1-i32x16",  "avx1-i64x4"],
                  ["SSE2", "SSE4", "AVX"], "-snb", False]),
-      ("AVX1.1", [["avx1.1-i32x8","avx1.1-i32x16","avx1.1-i64x4"],
-                 ["SSE2", "SSE4", "AVX", "AVX1.1"], "-ivb", False]),
       ("AVX2",   [["avx2-i32x4", "avx2-i32x8",  "avx2-i32x16",  "avx2-i64x4"],
-                 ["SSE2", "SSE4", "AVX", "AVX1.1", "AVX2"], "-hsw", False]),
+                 ["SSE2", "SSE4", "AVX", "AVX2"], "-hsw", False]),
       ("KNL",    [["avx512knl-i32x16"],
-                 ["SSE2", "SSE4", "AVX", "AVX1.1", "AVX2", "KNL"], "-knl", False]),
+                 ["SSE2", "SSE4", "AVX", "AVX2", "KNL"], "-knl", False]),
       ("SKX",    [["avx512skx-i32x16", "avx512skx-i32x8"],
-                 ["SSE2", "SSE4", "AVX", "AVX1.1", "AVX2", "SKX"], "-skx", False])
+                 ["SSE2", "SSE4", "AVX", "AVX2", "SKX"], "-skx", False])
     ])
 
     hw_arch = take_lines("check_isa.exe", "first").split()[1]
