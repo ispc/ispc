@@ -30,14 +30,6 @@
 // RUN: llvm-dis %t.bc -o - | FileCheck %s
 // RUN: %{ispc}  %s --emit-asm -h %t.h --target=avx1-i32x4 -o - | FileCheck %s -check-prefix=CHECK_AVX
 
-// RUN: %{ispc}  %s --emit-llvm -h %t.h --target=avx1.1-i32x8 -o %t.bc
-// RUN: llvm-dis %t.bc -o - | FileCheck %s
-// RUN: %{ispc}  %s --emit-llvm -h %t.h --target=avx1.1-i32x16 -o %t.bc
-// RUN: llvm-dis %t.bc -o - | FileCheck %s
-// RUN: %{ispc}  %s --emit-llvm -h %t.h --target=avx1.1-i64x4 -o %t.bc
-// RUN: llvm-dis %t.bc -o - | FileCheck %s
-// RUN: %{ispc}  %s --emit-asm -h %t.h --target=avx1.1-i64x4 -o - | FileCheck %s -check-prefix=CHECK_AVX
-
 // RUN: %{ispc}  %s --emit-llvm -h %t.h --target=avx2-i32x8 -o %t.bc
 // RUN: llvm-dis %t.bc -o - | FileCheck %s
 // RUN: %{ispc}  %s --emit-llvm -h %t.h --target=avx2-i32x16 -o %t.bc

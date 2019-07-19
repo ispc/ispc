@@ -1,7 +1,6 @@
 // RUN: %{ispc} --target=sse2 -h %t.h %s
 // RUN: %{ispc} --target=sse4 -h %t.h %s
 // RUN: %{ispc} --target=avx1 -h %t.h %s
-// RUN: %{ispc} --target=avx1.1 -h %t.h %s
 // RUN: %{ispc} --target=avx2 -h %t.h %s
 // RUN: %{ispc} --target=avx512knl-i32x16 -h %t.h %s
 // RUN: %{ispc} --target=avx512skx-i32x16 -h %t.h %s

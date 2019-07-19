@@ -28,9 +28,6 @@ ifeq ($(ARCH),x86)
     ifneq (,$(findstring avx1-,$(ISPC_IA_TARGETS)))
       ISPC_OBJS+=$(addprefix objs/, $(ISPC_SRC:.ispc=)_ispc_avx.o)
     endif
-    ifneq (,$(findstring avx1.1,$(ISPC_IA_TARGETS)))
-      ISPC_OBJS+=$(addprefix objs/, $(ISPC_SRC:.ispc=)_ispc_avx11.o)
-    endif
     ifneq (,$(findstring avx2,$(ISPC_IA_TARGETS)))
       ISPC_OBJS+=$(addprefix objs/, $(ISPC_SRC:.ispc=)_ispc_avx2.o)
     endif
@@ -91,7 +88,7 @@ objs/%.o: ../%.cpp dirs
 
 objs/$(EXAMPLE).o: objs/$(EXAMPLE)_ispc.h dirs
 
-objs/%_ispc.h objs/%_ispc.o objs/%_ispc_sse2.o objs/%_ispc_sse4.o objs/%_ispc_avx.o objs/%_ispc_avx11.o objs/%_ispc_avx2.o objs/%_ispc_avx512knl.o objs/%_ispc_avx512skx.o : %.ispc dirs
+objs/%_ispc.h objs/%_ispc.o objs/%_ispc_sse2.o objs/%_ispc_sse4.o objs/%_ispc_avx.o objs/%_ispc_avx2.o objs/%_ispc_avx512knl.o objs/%_ispc_avx512skx.o : %.ispc dirs
 	$(ISPC) $(ISPC_FLAGS) --target=$(ISPC_TARGETS) $< -o objs/$*_ispc.o -h objs/$*_ispc.h
 
 objs/$(ISPC_SRC:.ispc=)_sse4.cpp: $(ISPC_SRC)

@@ -1,5 +1,5 @@
 #
-#  Copyright (c) 2018, Intel Corporation
+#  Copyright (c) 2018-2019, Intel Corporation
 #  All rights reserved.
 #
 #  Redistribution and use in source and binary forms, with or without
@@ -39,7 +39,7 @@ function(add_ispc_example)
     set(multiValueArgs ISPC_IA_TARGETS ISPC_ARM_TARGETS ISPC_FLAGS TARGET_SOURCES LIBRARIES DATA_FILES)
     cmake_parse_arguments("example" "${options}" "${oneValueArgs}" "${multiValueArgs}" ${ARGN} )
 
-    set(ISPC_KNOWN_TARGETS "sse2" "sse4" "avx1-" "avx1.1" "avx2" "avx512knl" "avx512skx" "neon")
+    set(ISPC_KNOWN_TARGETS "sse2" "sse4" "avx1-" "avx2" "avx512knl" "avx512skx" "neon")
     set(ISPC_HEADER_NAME "${CMAKE_CURRENT_BINARY_DIR}/${ISPC_SRC_NAME}_ispc.h")
     set(ISPC_OBJ_NAME "${CMAKE_CURRENT_BINARY_DIR}/${ISPC_SRC_NAME}_ispc${CMAKE_CXX_OUTPUT_EXTENSION}")
     set(ISPC_FLAGS ${example_ISPC_FLAGS})
@@ -82,8 +82,6 @@ function(add_ispc_example)
                         set(OUTPUT_TARGET ${ispc_target})
                         if (${ispc_target} STREQUAL "avx1-")
                             set(OUTPUT_TARGET "avx")
-                        elseif (${ispc_target} STREQUAL "avx1.1")
-                            set(OUTPUT_TARGET "avx11")
                         endif()
                         list(APPEND ISPC_BUILD_OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/${ISPC_SRC_NAME}_ispc_${OUTPUT_TARGET}.h"
                                     "${CMAKE_CURRENT_BINARY_DIR}/${ISPC_SRC_NAME}_ispc_${OUTPUT_TARGET}${CMAKE_CXX_OUTPUT_EXTENSION}")

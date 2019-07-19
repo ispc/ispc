@@ -1,7 +1,5 @@
 // RUN: %{ispc} %s --target=avx2 -O2 --opt=fast-math  -h %t.h --emit-asm -o - | FileCheck %s -check-prefix=CHECK_AVX
 // RUN: %{ispc} %s --target=avx1 -O2 --opt=fast-math  -h %t.h --emit-asm -o - | FileCheck %s -check-prefix=CHECK_AVX
-// RUN: %{ispc} %s --target=avx1.1 -O2 --opt=fast-math  -h %t.h --emit-asm -o - | FileCheck %s -check-prefix=CHECK_AVX
-// RUN: %{ispc} %s --target=avx1 -O2 --opt=fast-math  -h %t.h --emit-asm -o - | FileCheck %s -check-prefix=CHECK_AVX
 // RUN: %{ispc} %s --target=sse4 -O2 --opt=fast-math  -h %t.h --emit-asm -o - | FileCheck %s -check-prefix=CHECK_SSE
 // RUN: %{ispc} %s --target=sse2 -O2 --opt=fast-math  -h %t.h --emit-asm -o - | FileCheck %s -check-prefix=CHECK_SSE
 // REQUIRES: LLVM_8_0+
