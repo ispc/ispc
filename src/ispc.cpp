@@ -190,12 +190,9 @@ static const char *lGetSystemISA() {
         // AVX1 for sure....
         // Ivy Bridge?
         if ((info[2] & (1 << 29)) != 0 && // F16C
-            (info[2] & (1 << 30)) != 0) { // RDRAND
-            // So far, so good.  AVX2?
-            if ((info2[1] & (1 << 5)) != 0)
-                return "avx2-i32x8";
-            else
-                return "avx1.1-i32x8";
+            (info[2] & (1 << 30)) != 0 && // RDRAND
+            (info2[1] & (1 << 5)) != 0) { // AVX2.
+            return "avx2-i32x8";
         }
         // Regular AVX
         return "avx1-i32x8";
@@ -559,7 +556,8 @@ Target::Target(const char *arch, const char *cpu, const char *isa, bool pic, boo
             break;
 
         case CPU_IvyBridge:
-            isa = "avx1.1-i32x8";
+            // No specific target for IvyBridge anymore.
+            isa = "avx1-i32x8";
             break;
 
         case CPU_SandyBridge:
@@ -829,39 +827,6 @@ Target::Target(const char *arch, const char *cpu, const char *isa, bool pic, boo
         this->m_maskingIsFree = false;
         this->m_maskBitCount = 32;
         CPUfromISA = CPU_SandyBridge;
-    } else if (!strcasecmp(isa, "avx1.1") || !strcasecmp(isa, "avx1.1-i32x8")) {
-        this->m_isa = Target::AVX11;
-        this->m_nativeVectorWidth = 8;
-        this->m_nativeVectorAlignment = 32;
-        this->m_dataTypeWidth = 32;
-        this->m_vectorWidth = 8;
-        this->m_maskingIsFree = false;
-        this->m_maskBitCount = 32;
-        this->m_hasHalf = true;
-        this->m_hasRand = true;
-        CPUfromISA = CPU_IvyBridge;
-    } else if (!strcasecmp(isa, "avx1.1-x2") || !strcasecmp(isa, "avx1.1-i32x16")) {
-        this->m_isa = Target::AVX11;
-        this->m_nativeVectorWidth = 8;
-        this->m_nativeVectorAlignment = 32;
-        this->m_dataTypeWidth = 32;
-        this->m_vectorWidth = 16;
-        this->m_maskingIsFree = false;
-        this->m_maskBitCount = 32;
-        this->m_hasHalf = true;
-        this->m_hasRand = true;
-        CPUfromISA = CPU_IvyBridge;
-    } else if (!strcasecmp(isa, "avx1.1-i64x4")) {
-        this->m_isa = Target::AVX11;
-        this->m_nativeVectorWidth = 8; /* native vector width in terms of floats */
-        this->m_nativeVectorAlignment = 32;
-        this->m_dataTypeWidth = 64;
-        this->m_vectorWidth = 4;
-        this->m_maskingIsFree = false;
-        this->m_maskBitCount = 64;
-        this->m_hasHalf = true;
-        this->m_hasRand = true;
-        CPUfromISA = CPU_IvyBridge;
     } else if (!strcasecmp(isa, "avx2") || !strcasecmp(isa, "avx2-i32x8")) {
         this->m_isa = Target::AVX2;
         this->m_nativeVectorWidth = 8;
@@ -1209,7 +1174,6 @@ const char *Target::SupportedTargets() {
            "sse4-i32x4, sse4-i32x8, sse4-i16x8, sse4-i8x16, "
            "avx1-i32x4, "
            "avx1-i32x8, avx1-i32x16, avx1-i64x4, "
-           "avx1.1-i32x8, avx1.1-i32x16, avx1.1-i64x4, "
            "avx2-i32x4, avx2-i32x8, avx2-i32x16, avx2-i64x4, "
 #if ISPC_LLVM_VERSION >= ISPC_LLVM_3_7 // LLVM 3.7+
            "avx512knl-i32x16, "
@@ -1283,8 +1247,6 @@ const char *Target::ISAToString(ISA isa) {
         return "sse4";
     case Target::AVX:
         return "avx";
-    case Target::AVX11:
-        return "avx11";
     case Target::AVX2:
         return "avx2";
 #if ISPC_LLVM_VERSION >= ISPC_LLVM_3_7 // LLVM 3.7+
@@ -1310,7 +1272,7 @@ const char *Target::ISAToString(ISA isa) {
 const char *Target::GetISAString() const { return ISAToString(m_isa); }
 
 // This function returns string representation of default target corresponding
-// to ISA. I.e. for SSE4 it's sse4-i32x4, for AVX11 it's avx1.1-i32x8. This
+// to ISA. I.e. for SSE4 it's sse4-i32x4, for AVX2 it's avx2-i32x8. This
 // string may be used to initialize Target.
 const char *Target::ISAToTargetString(ISA isa) {
     switch (isa) {
@@ -1328,8 +1290,6 @@ const char *Target::ISAToTargetString(ISA isa) {
         return "sse4-i32x4";
     case Target::AVX:
         return "avx1-i32x8";
-    case Target::AVX11:
-        return "avx1.1-i32x8";
     case Target::AVX2:
         return "avx2-i32x8";
 #if ISPC_LLVM_VERSION >= ISPC_LLVM_3_7 // LLVM 3.7+

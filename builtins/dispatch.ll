@@ -100,7 +100,7 @@
 ;;         (info2[1] & (1 << 16)) != 0 && // AVX512 F
 ;;         __os_has_avx512_support()) {
 ;;         // We need to verify that AVX2 is also available,
-;;         // as well as AVX512, because our targets are supposed 
+;;         // as well as AVX512, because our targets are supposed
 ;;         // to use both.
 ;; 
 ;;         if ((info2[1] & (1 << 17)) != 0 && // AVX512 DQ
@@ -122,12 +122,9 @@
 ;;         (info[2] & (1 << 28)) != 0 &&
 ;;         __os_has_avx_support()) {
 ;;        if ((info[2] & (1 << 29)) != 0 &&  // F16C
-;;            (info[2] & (1 << 30)) != 0) {  // RDRAND
-;;            // So far, so good.  AVX2?
-;;            if ((info2[1] & (1 << 5)) != 0)
-;;                return 4;
-;;            else
-;;                return 3;
+;;            (info[2] & (1 << 30)) != 0 &&  // RDRAND
+;;            (info2[1] & (1 << 5)) != 0) {  // AVX2
+;;            return 4;
 ;;        }
 ;;        // Regular AVX
 ;;        return 2;
@@ -219,14 +216,12 @@ land.lhs.true47:                                  ; preds = %if.end39
 
 if.then50:                                        ; preds = %land.lhs.true47
   %12 = and i32 %asmresult5.i, 1610612736
-  %13 = icmp eq i32 %12, 1610612736
-  br i1 %13, label %if.then58, label %return
-
-if.then58:                                        ; preds = %if.then50
-  %and60 = lshr i32 %asmresult4.i87, 5
-  %14 = and i32 %and60, 1
-  %15 = add i32 %14, 3
-  br label %return
+  %13 = icmp ne i32 %12, 1610612736
+  %and60 = and i32 %asmresult4.i87, 32
+  %cmp61 = icmp eq i32 %and60, 0
+  %or.cond112 = or i1 %13, %cmp61
+  %spec.select = select i1 %or.cond112, i32 2, i32 4
+  ret i32 %spec.select
 
 if.else65:                                        ; preds = %land.lhs.true47, %if.end39, %entry
   %and67 = and i32 %asmresult5.i, 524288
@@ -242,8 +237,8 @@ if.else75:                                        ; preds = %if.else70
   tail call void @abort() noreturn nounwind
   unreachable
 
-return:                                           ; preds = %if.else70, %if.else65, %if.then58, %if.then50, %if.else, %if.then
-  %retval.0 = phi i32 [ 6, %if.then ], [ 5, %if.else ], [ %15, %if.then58 ], [ 2, %if.then50 ], [ 1, %if.else65 ], [ 0, %if.else70 ]
+return:                                          ; preds = %if.else, %if.else70, %if.else65, %if.then
+  %retval.0 = phi i32 [ 6, %if.then ], [ 5, %if.else ], [ 1, %if.else65 ], [ 0, %if.else70 ]
   ret i32 %retval.0
 }
 

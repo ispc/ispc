@@ -616,7 +616,6 @@ The following target ISAs are supported:
 Target       Description
 ------------ ---------------------------------------------------------
 avx, avx1    AVX (2010-2011 era Intel CPUs)
-avx1.1       AVX 1.1 (2012 era "Ivybridge" Intel CPUs)
 avx2         AVX 2 target (2013- Intel "Haswell" CPUs)
 avx512knl    AVX 512 target (Xeon Phi chips codename Knights Landing)
 avx512skx    AVX 512 target (future Xeon CPUs)
@@ -652,8 +651,6 @@ Target        Former Name
 ------------- -----------
 avx1-i32x8    avx, avx1
 avx1-i32x16   avx-x2
-avx1.1-i32x8  avx1.1
-avx1.1-i32x16 avx1.1-x2
 avx2-i32x8    avx2
 avx2-i32x16   avx2-x2
 neon-8        n/a
@@ -769,7 +766,7 @@ preprocessor runs:
   * - ISPC
     - 1
     - Detecting that the ``ispc`` compiler is processing the file
-  * - ISPC_TARGET_{NEON_8, NEON_16, NEON_32, SSE2, SSE4, AVX, AVX11, AVX2, AVX512KNL, AVX512SKX, GENERIC}
+  * - ISPC_TARGET_{NEON_8, NEON_16, NEON_32, SSE2, SSE4, AVX, AVX2, AVX512KNL, AVX512SKX, GENERIC}
     - 1
     - One of these will be set, depending on the compilation target.
   * - ISPC_POINTER_SIZE
@@ -3821,7 +3818,7 @@ In addition to the ``int32`` variants of ``rdrand()`` listed above, there
 are versions that return ``int16``, ``float``, and ``int64`` values as
 well.
 
-Note that when compiling to targets other than ``avx1.1`` and ``avx2``, the
+Note that when compiling to targets older than ``avx2``, the
 ``rdrand()`` functions always return ``false``.
 
 Output Functions

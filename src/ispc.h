@@ -175,7 +175,8 @@ class Target {
         SSE2 = 0,
         SSE4 = 1,
         AVX = 2,
-        AVX11 = 3,
+        // Not supported anymore. Use either AVX or AVX2.
+        // AVX11 = 3,
         AVX2 = 4,
         KNL_AVX512 = 5,
         SKX_AVX512 = 6,
@@ -226,7 +227,7 @@ class Target {
     /** Convert ISA enum to string */
     static const char *ISAToTargetString(Target::ISA isa);
 
-    /** Returns a string like "avx1.1-i32x8" encoding the target.
+    /** Returns a string like "avx2-i32x8" encoding the target.
         This may be used for Target initialization. */
     const char *GetISATargetString() const;
 
