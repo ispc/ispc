@@ -61,23 +61,19 @@ rdrand_decls()
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; rounding floats
 
-declare <1 x float> @llvm.genx.rndd(<1 x float>)
-declare <1 x float> @llvm.genx.rndu(<1 x float>)
+declare float @llvm.genx.rndd.f32(float)
+declare float @llvm.genx.rndu.f32(float)
 declare <16 x float> @llvm.genx.rndu.GEN_SUFFIX(float)(<16 x float>)
 declare <16 x float> @llvm.genx.rndd.GEN_SUFFIX(float)(<16 x float>)
 
 
 define float @__floor_uniform_float(float) nounwind readonly alwaysinline {
-    %res.i.i = insertelement <1 x float> undef, float %0, i32 0
-    %res.i = call <1 x float> @llvm.genx.rndd(<1 x float> %res.i.i)
-    %res = extractelement <1 x float> %res.i, i32 0
+    %res = call float @llvm.genx.rndd.f32(float %0)
     ret float %res
 }
 
 define float @__ceil_uniform_float(float) nounwind readonly alwaysinline {
-    %res.i.i = insertelement <1 x float> undef, float %0, i32 0
-    %res.i = call <1 x float> @llvm.genx.rndu(<1 x float> %res.i.i)
-    %res = extractelement <1 x float> %res.i, i32 0
+    %res = call float @llvm.genx.rndu.f32(float %0)
     ret float %res
 }
 
@@ -191,30 +187,70 @@ declare void @__fastmath() nounwind alwaysinline
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; float min/max
 
-declare float @__max_uniform_float(float, float) nounwind readonly alwaysinline
+declare i32 @llvm.genx.smin.i32.i32(i32, i32)
+declare i32 @llvm.genx.smax.i32.i32(i32, i32)
+declare i32 @llvm.genx.umin.i32.i32(i32, i32)
+declare i32 @llvm.genx.umax.i32.i32(i32, i32)
+declare float @llvm.genx.fmin.f32.f32(float, float)
+declare float @llvm.genx.fmax.f32.f32(float, float)
+declare <16 x i32> @llvm.genx.smin.GEN_SUFFIX(i32).GEN_SUFFIX(i32)(<16 x i32>, <16 x i32>)
+declare <16 x i32> @llvm.genx.smax.GEN_SUFFIX(i32).GEN_SUFFIX(i32)(<16 x i32>, <16 x i32>)
+declare <16 x i32> @llvm.genx.umin.GEN_SUFFIX(i32).GEN_SUFFIX(i32)(<16 x i32>, <16 x i32>)
+declare <16 x i32> @llvm.genx.umax.GEN_SUFFIX(i32).GEN_SUFFIX(i32)(<16 x i32>, <16 x i32>)
+declare <16 x float> @llvm.genx.fmin.GEN_SUFFIX(float).GEN_SUFFIX(float)(<16 x float>, <16 x float>)
+declare <16 x float> @llvm.genx.fmax.GEN_SUFFIX(float).GEN_SUFFIX(float)(<16 x float>, <16 x float>)
 
-declare float @__min_uniform_float(float, float) nounwind readonly alwaysinline
+
+define float @__max_uniform_float(float, float) nounwind readonly alwaysinline {
+    %res = call float @llvm.genx.fmax.f32.f32(float %0, float %1)
+    ret float %res
+}
+
+define float @__min_uniform_float(float, float) nounwind readonly alwaysinline {
+    %res = call float @llvm.genx.fmin.f32.f32(float %0, float %1)
+    ret float %res
+}
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; double precision min/max
 
-declare double @__min_uniform_double(double, double) nounwind readnone alwaysinline
+define double @__min_uniform_double(double, double) nounwind readnone alwaysinline {
+  %pred = fcmp olt double %0, %1
+  %res = select i1 %pred, double %0, double %1
+  ret double %res
+}
 
-declare double @__max_uniform_double(double, double) nounwind readnone alwaysinline
+define double @__max_uniform_double(double, double) nounwind readnone alwaysinline {
+  %pred = fcmp ogt double %0, %1
+  %res = select i1 %pred, double %0, double %1
+  ret double %res
+}
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; int min/max
 
-declare i32 @__min_uniform_int32(i32, i32) nounwind readonly alwaysinline
+define i32 @__min_uniform_int32(i32, i32) nounwind readonly alwaysinline {
+    %res = call i32 @llvm.genx.smin.i32.i32(i32 %0, i32 %1)
+    ret i32 %res
+}
 
-declare i32 @__max_uniform_int32(i32, i32) nounwind readonly alwaysinline
+define i32 @__max_uniform_int32(i32, i32) nounwind readonly alwaysinline {
+    %res = call i32 @llvm.genx.smax.i32.i32(i32 %0, i32 %1)
+    ret i32 %res
+}
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; unsigned int min/max
 
-declare i32 @__min_uniform_uint32(i32, i32) nounwind readonly alwaysinline
+define i32 @__min_uniform_uint32(i32, i32) nounwind readonly alwaysinline {
+    %res = call i32 @llvm.genx.umin.i32.i32(i32 %0, i32 %1)
+    ret i32 %res
+}
 
-declare i32 @__max_uniform_uint32(i32, i32) nounwind readonly alwaysinline
+define i32 @__max_uniform_uint32(i32, i32) nounwind readonly alwaysinline {
+    %res = call i32 @llvm.genx.umax.i32.i32(i32 %0, i32 %1)
+    ret i32 %res
+}
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; horizontal ops / reductions
@@ -376,30 +412,56 @@ define <16 x double> @__ceil_varying_double(<16 x double>) nounwind readonly alw
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; float min/max
 
-declare <16 x float> @__max_varying_float(<16 x float>, <16 x float>) nounwind readonly alwaysinline
+define <16 x float> @__max_varying_float(<16 x float>, <16 x float>) nounwind readonly alwaysinline {
+    %res = call <16 x float> @llvm.genx.fmax.GEN_SUFFIX(float).GEN_SUFFIX(float)(<16 x float> %0, <16 x float> %1)
+    ret <16 x float> %res
+}
 
-declare <16 x float> @__min_varying_float(<16 x float>, <16 x float>) nounwind readonly alwaysinline
+define <16 x float> @__min_varying_float(<16 x float>, <16 x float>) nounwind readonly alwaysinline {
+    %res = call <16 x float> @llvm.genx.fmin.GEN_SUFFIX(float).GEN_SUFFIX(float)(<16 x float> %0, <16 x float> %1)
+    ret <16 x float> %res
+}
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; int32 min/max
 
-declare <16 x i32> @__min_varying_int32(<16 x i32>, <16 x i32>) nounwind readonly alwaysinline
+define <16 x i32> @__min_varying_int32(<16 x i32>, <16 x i32>) nounwind readonly alwaysinline {
+    %res = call <16 x i32> @llvm.genx.smin.GEN_SUFFIX(i32).GEN_SUFFIX(i32)(<16 x i32> %0, <16 x i32> %1)
+    ret <16 x i32> %res
+}
 
-declare <16 x i32> @__max_varying_int32(<16 x i32>, <16 x i32>) nounwind readonly alwaysinline
+define <16 x i32> @__max_varying_int32(<16 x i32>, <16 x i32>) nounwind readonly alwaysinline {
+    %res = call <16 x i32> @llvm.genx.smax.GEN_SUFFIX(i32).GEN_SUFFIX(i32)(<16 x i32> %0, <16 x i32> %1)
+    ret <16 x i32> %res
+}
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; unsigned int min/max
 
-declare <16 x i32> @__min_varying_uint32(<16 x i32>, <16 x i32>) nounwind readonly alwaysinline
+define <16 x i32> @__min_varying_uint32(<16 x i32>, <16 x i32>) nounwind readonly alwaysinline {
+    %res = call <16 x i32> @llvm.genx.umin.GEN_SUFFIX(i32).GEN_SUFFIX(i32)(<16 x i32> %0, <16 x i32> %1)
+    ret <16 x i32> %res
+}
 
-declare <16 x i32> @__max_varying_uint32(<16 x i32>, <16 x i32>) nounwind readonly alwaysinline
+define <16 x i32> @__max_varying_uint32(<16 x i32>, <16 x i32>) nounwind readonly alwaysinline {
+    %res = call <16 x i32> @llvm.genx.umax.GEN_SUFFIX(i32).GEN_SUFFIX(i32)(<16 x i32> %0, <16 x i32> %1)
+    ret <16 x i32> %res
+}
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; double precision min/max
 
-declare <16 x double> @__min_varying_double(<16 x double>, <16 x double>) nounwind readnone
+define <16 x double> @__min_varying_double(<16 x double>, <16 x double>) nounwind readnone {
+  %pred = fcmp olt <16 x double> %0, %1
+  %res = select <16 x i1> %pred, <16 x double> %0, <16 x double> %1
+  ret <16 x double> %res
+}
 
-declare <16 x double> @__max_varying_double(<16 x double>, <16 x double>) nounwind readnone
+define <16 x double> @__max_varying_double(<16 x double>, <16 x double>) nounwind readnone {
+  %pred = fcmp ogt <16 x double> %0, %1
+  %res = select <16 x i1> %pred, <16 x double> %0, <16 x double> %1
+  ret <16 x double> %res
+}
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; svml
