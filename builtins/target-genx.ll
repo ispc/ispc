@@ -141,13 +141,18 @@ define double @__ceil_uniform_double(double) nounwind readonly alwaysinline {
 ;; rcp
 
 define float @__rcp_uniform_float(float) nounwind readonly alwaysinline {
-  %ret = fdiv float 1., %0
-  ret float %ret
+  %mid_res = fdiv float 1., %0
+  ;; do one N-R iteration to improve precision
+  ;; return (2. - v * r) * r;
+  %mult = fmul float %0, %mid_res
+  %two_minus = fsub float 2., %mult
+  %res = fmul float %mid_res, %two_minus
+  ret float %res
 }
 
 define float @__rcp_fast_uniform_float(float) nounwind readonly alwaysinline {
-  %ret = fdiv float 1., %0
-  ret float %ret
+  %res = fdiv float 1., %0
+  ret float %res
 }
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -158,17 +163,17 @@ define float @__rsqrt_uniform_float(float %v) nounwind readonly alwaysinline {
   %r = call float @llvm.genx.rsqrt.float.f32(float %v)
   ;; Newton-Raphson iteration to improve precision
   ;;  return 0.5 * r * (3. - (v * r) * r);
-  %v_is = fmul float %v, %r
-  %v_is_is = fmul float %v_is, %r
-  %three_sub = fsub float 3., %v_is_is
-  %is_mul = fmul float %r, %three_sub
-  %res = fmul float 0.5, %is_mul
+  %mult = fmul float %v, %r
+  %mult2 = fmul float %mult, %r
+  %three_sub = fsub float 3., %mult2
+  %mult3 = fmul float %r, %three_sub
+  %res = fmul float 0.5, %mult3
   ret float %res
 }
 
 define float @__rsqrt_fast_uniform_float(float) nounwind readonly alwaysinline {
-  %r = call float @llvm.genx.rsqrt.float.f32(float %0)
-  ret float %r
+  %res = call float @llvm.genx.rsqrt.float.f32(float %0)
+  ret float %res
 }
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -176,8 +181,8 @@ define float @__rsqrt_fast_uniform_float(float) nounwind readonly alwaysinline {
 
 declare float @llvm.genx.sqrt.f32(float)
 define float @__sqrt_uniform_float(float) nounwind readonly alwaysinline {
-  %r = call float @llvm.genx.sqrt.f32(float %0)
-  ret float %r
+  %res = call float @llvm.genx.sqrt.f32(float %0)
+  ret float %res
 }
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -185,8 +190,8 @@ define float @__sqrt_uniform_float(float) nounwind readonly alwaysinline {
 
 declare double @llvm.genx.ieee.sqrt.d64(double)
 define double @__sqrt_uniform_double(double) nounwind alwaysinline {
-  %r = call double @llvm.genx.ieee.sqrt.d64(double %0)
-  ret double %r
+  %res = call double @llvm.genx.ieee.sqrt.d64(double %0)
+  ret double %res
 }
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -315,52 +320,73 @@ define <WIDTH x i16> @__float_to_half_varying(<WIDTH x float> %v) nounwind readn
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; rcp
 
-declare <WIDTH x float> @__rcp_varying_float(<WIDTH x float>) nounwind readonly alwaysinline
-declare <WIDTH x float> @__rcp_fast_varying_float(<WIDTH x float>) nounwind readonly alwaysinline
+define <WIDTH x float> @__rcp_varying_float(<WIDTH x float>) nounwind readonly alwaysinline {
+  %r = fdiv <WIDTH x float> <float 1., float 1., float 1., float 1.,
+                             float 1., float 1., float 1., float 1.,
+                             float 1., float 1., float 1., float 1.,
+                             float 1., float 1., float 1., float 1.>, %0
+  ;; do one N-R iteration to improve precision
+  ;; return (2. - v * r) * r;
+  %mult = fmul <WIDTH x float> %0, %r
+  %two_minus = fsub <WIDTH x float> <float 2., float 2., float 2., float 2.,
+                                     float 2., float 2., float 2., float 2.,
+                                     float 2., float 2., float 2., float 2.,
+                                     float 2., float 2., float 2., float 2.>, %mult  
+  %res = fmul <WIDTH x float> %r, %two_minus
+  ret <WIDTH x float> %res
+}
+
+define <WIDTH x float> @__rcp_fast_varying_float(<WIDTH x float>) nounwind readonly alwaysinline {
+  %res = fdiv <WIDTH x float> <float 1., float 1., float 1., float 1.,
+                               float 1., float 1., float 1., float 1.,
+                               float 1., float 1., float 1., float 1.,
+                               float 1., float 1., float 1., float 1.>, %0
+  ret <WIDTH x float> %res
+}
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; rsqrt
 
 declare <16 x float> @llvm.genx.rsqrt.v16f32(<16 x float>)
-define <16 x float> @__rsqrt_varying_float(<16 x float> %v) nounwind readonly alwaysinline {
+define <WIDTH x float> @__rsqrt_varying_float(<WIDTH x float> %v) nounwind readonly alwaysinline {
   %r = call <16 x float> @llvm.genx.rsqrt.v16f32(<16 x float> %v)
   ;; Newton-Raphson iteration to improve precision
   ;;  return 0.5 * r * (3. - (v * r) * r);
-  %v_is = fmul <16 x float> %v, %r
-  %v_is_is = fmul <16 x float> %v_is, %r
-  %three_sub = fsub <16 x float> <float 3., float 3., float 3., float 3.,
-                                  float 3., float 3., float 3., float 3.,
-                                  float 3., float 3., float 3., float 3.,
-                                  float 3., float 3., float 3., float 3.>, %v_is_is
-  %is_mul = fmul <16 x float> %r, %three_sub
-  %res = fmul <16 x float> <float 0.5, float 0.5, float 0.5, float 0.5,
-                            float 0.5, float 0.5, float 0.5, float 0.5,
-                            float 0.5, float 0.5, float 0.5, float 0.5,
-                            float 0.5, float 0.5, float 0.5, float 0.5>, %is_mul
-  ret <16 x float> %res
+  %mult = fmul <WIDTH x float> %v, %r
+  %mult2 = fmul <WIDTH x float> %mult, %r
+  %three_sub = fsub <WIDTH x float> <float 3., float 3., float 3., float 3.,
+                                     float 3., float 3., float 3., float 3.,
+                                     float 3., float 3., float 3., float 3.,
+                                     float 3., float 3., float 3., float 3.>, %mult2
+  %mult3 = fmul <WIDTH x float> %r, %three_sub
+  %res = fmul <WIDTH x float> <float 0.5, float 0.5, float 0.5, float 0.5,
+                               float 0.5, float 0.5, float 0.5, float 0.5,
+                               float 0.5, float 0.5, float 0.5, float 0.5,
+                               float 0.5, float 0.5, float 0.5, float 0.5>, %mult3
+  ret <WIDTH x float> %res
 }
 
-define <16 x float> @__rsqrt_fast_varying_float(<16 x float>) nounwind readonly alwaysinline {
-  %r = call <16 x float> @llvm.genx.rsqrt.v16f32(<16 x float> %0)
-  ret <16 x float> %r
+define <WIDTH x float> @__rsqrt_fast_varying_float(<WIDTH x float>) nounwind readonly alwaysinline {
+  %res = call <16 x float> @llvm.genx.rsqrt.v16f32(<16 x float> %0)
+  ret <WIDTH x float> %res
 }
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; sqrt
 
 declare <16 x float> @llvm.genx.sqrt.v16f32(<16 x float>)
-define <16 x float> @__sqrt_varying_float(<16 x float>) nounwind readonly alwaysinline {
-  %r = call <16 x float> @llvm.genx.sqrt.v16f32(<16 x float> %0)
-  ret <16 x float> %r
+define <WIDTH x float> @__sqrt_varying_float(<WIDTH x float>) nounwind readonly alwaysinline {
+  %res = call <16 x float> @llvm.genx.sqrt.v16f32(<WIDTH x float> %0)
+  ret <WIDTH x float> %res
 }
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; double precision sqrt
 
 declare <16 x double> @llvm.genx.ieee.sqrt.v16d64(<16 x double>)
-define <16 x double> @__sqrt_varying_double(<16 x double>) nounwind alwaysinline {
-  %r = call <16 x double> @llvm.genx.ieee.sqrt.v16d64(<16 x double> %0)
-  ret <16 x double> %r
+define <WIDTH x double> @__sqrt_varying_double(<WIDTH x double>) nounwind alwaysinline {
+  %res = call <16 x double> @llvm.genx.ieee.sqrt.v16d64(<WIDTH x double> %0)
+  ret <WIDTH x double> %res
 }
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
