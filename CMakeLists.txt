@@ -80,8 +80,8 @@ include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/Git.cmake)
 include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/GenerateBuiltins.cmake)
 include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/Stdlib.cmake)
 
-find_package(PythonInterp 2.7 REQUIRED)
-    if (NOT PYTHONINTERP_FOUND)
+find_package(Python3 REQUIRED)
+    if (NOT Python3_Interpreter_FOUND)
         message(FATAL_ERROR "Python interpreter is not found")
     endif()
 

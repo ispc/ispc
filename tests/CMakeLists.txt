@@ -1,5 +1,5 @@
 #
-#  Copyright (c) 2018, Intel Corporation
+#  Copyright (c) 2018-2019, Intel Corporation
 #  All rights reserved.
 #
 #  Redistribution and use in source and binary forms, with or without
@@ -33,7 +33,7 @@
 #
 # tests CMakeLists.txt
 #
-set(LIT_COMMAND "${PYTHON_EXECUTABLE};${CMAKE_SOURCE_DIR}/utils/lit/lit.py")
+set(LIT_COMMAND "${Python3_EXECUTABLE};${CMAKE_SOURCE_DIR}/utils/lit/lit.py")
 # User can specify additional lit arguments with -DLIT_ARGS
 # Path to ispc
 list(APPEND LIT_ARGS "--path=${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/${CMAKE_CFG_INTDIR}")

@@ -1,5 +1,5 @@
 #
-#  Copyright (c) 2018, Intel Corporation
+#  Copyright (c) 2018-2019, Intel Corporation
 #  All rights reserved.
 #
 #  Redistribution and use in source and binary forms, with or without
@@ -38,7 +38,7 @@ function(create_stdlib mask outputPath)
     add_custom_command(
         OUTPUT ${output}
         COMMAND ${CLANG_EXECUTABLE} -E -x c -DISPC_MASK_BITS=${mask} -DISPC=1 -DPI=3.14159265358979
-            stdlib.ispc | \"${PYTHON_EXECUTABLE}\" stdlib2cpp.py mask${mask}
+            stdlib.ispc | \"${Python3_EXECUTABLE}\" stdlib2cpp.py mask${mask}
             > ${output}
         DEPENDS stdlib.ispc
         WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}

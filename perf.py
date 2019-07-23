@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python3
 #
 #  Copyright (c) 2013-2019, Intel Corporation
 #  All rights reserved.
@@ -361,7 +361,7 @@ def perf(options1, args):
     global ref_compiler
     global refc_compiler
     # check that required compilers exist
-    PATH_dir = string.split(os.getenv("PATH"), os.pathsep)
+    PATH_dir = os.environ["PATH"].split(os.pathsep)
     ispc_test_exists = False
     ispc_ref_exists = False
     ref_compiler_exists = False
@@ -574,7 +574,6 @@ import os
 import operator
 import time
 import glob
-import string
 import platform
 import shutil
 # our functions

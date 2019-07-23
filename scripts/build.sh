@@ -80,7 +80,7 @@ while [[ $1 = -?* ]]; do
 done
 
 # Check environment
-declare -a required=("python2" "cmake" "bison" "flex" "m4" "make")
+declare -a required=("python3" "cmake" "bison" "flex" "m4" "make")
 for i in "${required[@]}"
 do
    command -v $i >/dev/null 2>&1 || { echo >&2 "$i is required for the build but not found. Aborting."; exit 1; }
@@ -95,7 +95,7 @@ export ISPC_HOME=${ispc_home}
 export LLVM_VERSION=${llvm_version}
 
 # Run alloy.py to checkout, patch and build LLVM
-python2 ${ISPC_HOME}/alloy.py --version=${llvm_version} -b --selfbuild -j ${speed} --git && \
+python3 ${ISPC_HOME}/alloy.py --version=${llvm_version} -b --selfbuild -j ${speed} --git && \
     rm -rf ${LLVM_HOME}/build-${LLVM_VERSION} ${LLVM_HOME}/llvm-${LLVM_VERSION} ${LLVM_HOME}/bin-${LLVM_VERSION}_temp ${LLVM_HOME}/build-${LLVM_VERSION}_temp
 exitCode=$?; if [[ ${exitCode} != 0 ]]; then exit ${exitCode}; fi
 export PATH=${LLVM_HOME}/bin-${LLVM_VERSION}/bin:$PATH

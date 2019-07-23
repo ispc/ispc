@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python3
 #
 #  Copyright (c) 2013-2019, Intel Corporation
 #  All rights reserved.
@@ -70,7 +70,7 @@ def setting_paths(llvm, ispc, sde):
 
 def get_sde():
     sde_exe = ""
-    PATH_dir = string.split(os.getenv("PATH"), os.pathsep)
+    PATH_dir = os.environ["PATH"].split(os.pathsep)
     if current_OS == "Windows":
         sde_n = "sde.exe"
     else:
@@ -247,7 +247,7 @@ def build_LLVM(version_LLVM, revision, folder, tarball, debug, selfbuild, extra,
     if current_OS == "MacOS" \
         and int(current_OS_version.split(".")[0]) >= 13 \
         and int(current_OS_version.split(".")[0]) < 16:
-        search_path = string.split(os.environ["PATH"], os.pathsep)
+        search_path = os.environ["PATH"].split(os.pathsep)
         found_xcrun = False
         for path in search_path:
             if os.path.exists(os.path.join(path, "xcrun")):
@@ -1074,7 +1074,6 @@ import errno
 import operator
 import time
 import glob
-import string
 import platform
 import smtplib
 import datetime

@@ -1,6 +1,6 @@
-#!/usr/bin/python
+#!/usr/bin/env python3
 #
-#  Copyright (c) 2013, Intel Corporation 
+#  Copyright (c) 2013-2019, Intel Corporation 
 #  All rights reserved.
 # 
 #  Redistribution and use in source and binary forms, with or without
@@ -287,9 +287,9 @@ class RegressionInfo(object):
                 self.inc_dictionary(self.optfails, test_case.opt)
                 self.inc_dictionary(self.targetfails, test_case.target)
         
-        self.archs = self.archfailes.keys()
-        self.opts = self.optfails.keys()
-        self.targets = self.targetfails.keys()
+        self.archs = list(self.archfailes.keys())
+        self.opts = list(self.optfails.keys())
+        self.targets = list(self.targetfails.keys())
 
     def inc_dictionary(self, dictionary, key):
         if key not in dictionary:
@@ -358,11 +358,11 @@ class TestTable(object):
         """ Return a tuple of Test() objects containing TestCase() object which show regression along given revisions """
         revision_old, revision_new = (str(revision_old), str(revision_new))
         if revision_new not in self.table:
-            raise RuntimeError("This revision in not in the database: " + str(revision_new) + " (" + str(self.table.keys()) + ")")
+            raise RuntimeError("This revision in not in the database: " + str(revision_new) + " (" + str(list(self.table.keys())) + ")")
             return
 
         if revision_old not in self.table:
-            raise RuntimeError("This revision in not in the database: " + str(revision_old) + " (" + str(self.table.keys()) + ")")
+            raise RuntimeError("This revision in not in the database: " + str(revision_old) + " (" + str(list(self.table.keys())) + ")")
             return
 
         regressed = []
@@ -468,11 +468,11 @@ class ExecutionStateGatherer(object):
     def load_from_tt(self, tt):
         # TODO: fill in self.rinf field!
         self.tt = tt
-        REVISIONS = tt.table.keys()
+        REVISIONS = list(tt.table.keys())
         self.revision = ""
         if len(REVISIONS) != 0:
             self.revision = REVISIONS[0]
-        print "ESG: loaded from 'TestTable()' with revisions", REVISIONS
+        print("ESG: loaded from 'TestTable()' with revisions", REVISIONS)
 
     def dump(self, fname, obj):
         import pickle

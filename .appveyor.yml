@@ -64,7 +64,7 @@ cache:
 
 install:
   - cmd: |-
-      cinst python2 winflexbison
+      cinst python3 winflexbison
       set FLEX_PATH=%CHOCO_DIR%\lib\winflexbison\tools
       if exist "%FLEX_PATH%\win_flex.exe" ( cd %FLEX_PATH% && ren win_flex.exe flex.exe )
       if exist "%LLVM_HOME%\bin\" set NONEEDLLVM=rem
@@ -76,7 +76,7 @@ install:
       %NONEEDLLVM% docker ps --all  --format "{{.ID}}" --filter ancestor=%DOCKER_NAME% | head -1 > container_id.txt
       %NONEEDLLVM% set /p CONTAINER=<container_id.txt
       %NONEEDLLVM% docker cp %CONTAINER%:%LLVM_HOME%\bin-%LLVM_VERSION% %LLVM_HOME%
-      set PATH=%LLVM_HOME%\bin;C:\Python27\;C:\Python27\Scripts;%CHOCO_DIR%\lib\winflexbison\tools;%PATH%
+      set PATH=%LLVM_HOME%\bin;C:\Python37\;C:\Python37\Scripts;%CHOCO_DIR%\lib\winflexbison\tools;%PATH%
   - sh: |-
       sudo apt-get install -y flex libc6-dev-i386 g++-multilib lib32stdc++6
       if [ "$LLVM_VERSION" = "latest" ]; then 

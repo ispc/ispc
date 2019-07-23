@@ -1,5 +1,5 @@
 #
-#  Copyright (c) 2018, Intel Corporation
+#  Copyright (c) 2018-2019, Intel Corporation
 #  All rights reserved.
 #
 #  Redistribution and use in source and binary forms, with or without
@@ -54,7 +54,7 @@ function(ll_to_cpp llFileName bit resultFileName)
             OUTPUT ${output}
             COMMAND ${M4_EXECUTABLE} -I${includePath}
                 -DLLVM_VERSION=${LLVM_VERSION} -DBUILD_OS=${OS_NAME} ${inputFilePath}
-                | \"${PYTHON_EXECUTABLE}\" bitcode2cpp.py ${inputFilePath} --llvm_as ${LLVM_AS_EXECUTABLE}
+                | \"${Python3_EXECUTABLE}\" bitcode2cpp.py ${inputFilePath} --llvm_as ${LLVM_AS_EXECUTABLE}
                 > ${output}
             DEPENDS ${inputFilePath}
             WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
@@ -65,7 +65,7 @@ function(ll_to_cpp llFileName bit resultFileName)
             OUTPUT ${output}
             COMMAND ${M4_EXECUTABLE} -I${includePath}
                 -DLLVM_VERSION=${LLVM_VERSION} -DBUILD_OS=${OS_NAME} -DRUNTIME=${bit} ${inputFilePath}
-                | \"${PYTHON_EXECUTABLE}\" bitcode2cpp.py ${inputFilePath} ${bit} --llvm_as ${LLVM_AS_EXECUTABLE}
+                | \"${Python3_EXECUTABLE}\" bitcode2cpp.py ${inputFilePath} ${bit} --llvm_as ${LLVM_AS_EXECUTABLE}
                 > ${output}
             DEPENDS ${inputFilePath}
             WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
@@ -85,7 +85,7 @@ function(builtin_to_cpp bit resultFileName)
     add_custom_command(
         OUTPUT ${output}
         COMMAND ${CLANG_EXECUTABLE} ${fpic} -m${bit} -emit-llvm -c ${inputFilePath} -o - | \"${LLVM_DIS_EXECUTABLE}\" -
-            | \"${PYTHON_EXECUTABLE}\" bitcode2cpp.py c ${bit} --llvm_as ${LLVM_AS_EXECUTABLE}
+            | \"${Python3_EXECUTABLE}\" bitcode2cpp.py c ${bit} --llvm_as ${LLVM_AS_EXECUTABLE}
             > ${output}
         DEPENDS ${inputFilePath}
         WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}

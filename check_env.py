@@ -1,6 +1,6 @@
-#!/usr/bin/python
+#!/usr/bin/env python3
 #
-#  Copyright (c) 2013, Intel Corporation
+#  Copyright (c) 2013-2019, Intel Corporation
 #  All rights reserved.
 # 
 #  Redistribution and use in source and binary forms, with or without
@@ -36,7 +36,6 @@
 import common
 import sys
 import os
-import string
 from distutils.version import LooseVersion
 print_debug = common.print_debug
 error = common.error
@@ -45,7 +44,7 @@ take_lines = common.take_lines
 exists = [False, False, False, False, False, False, False, False, False]
 names = ["m4", "bison", "flex", "sde", "ispc", "clang", "gcc", "icc", "cmake"]
 
-PATH_dir = string.split(os.getenv("PATH"), os.pathsep)
+PATH_dir = os.environ["PATH"].split(os.pathsep)
 for counter in PATH_dir:
     for i in range(0,len(exists)):
         if os.path.exists(counter + os.sep + names[i]):

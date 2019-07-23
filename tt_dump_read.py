@@ -1,6 +1,6 @@
-#!/usr/bin/python
+#!/usr/bin/env python3
 #
-#  Copyright (c) 2014, Intel Corporation 
+#  Copyright (c) 2014-2019, Intel Corporation 
 #  All rights reserved.
 # 
 #  Redistribution and use in source and binary forms, with or without
@@ -49,14 +49,14 @@ def print_with_specific_results(tests, runfailed, compfailed):
     for test in tests:
         for test_case in test.test_cases:
             if test_case.result == TestResult(runfailed, compfailed):
-                print test.name.rjust(40) + repr(test_case).rjust(50)
+                print(test.name.rjust(40) + repr(test_case).rjust(50))
 
 
 
 def check_rev_in_tt(tt, rev, tt_location):
-    if not rev in tt.table.keys():
-        print "Unable to locate", rev, "in table", tt_location
-        print "Available LLVM revisions:", tt.table.keys()
+    if not rev in list(tt.table.keys()):
+        print("Unable to locate", rev, "in table", tt_location)
+        print("Available LLVM revisions:", list(tt.table.keys()))
         exit(0)
 
 
@@ -93,32 +93,32 @@ if __name__ == '__main__':
         exit(0)
     
     tt = read_test_table(options.load_tt)
-    print "Available LLVM revisions:", tt.table.keys()
+    print("Available LLVM revisions:", list(tt.table.keys()))
 
     if options.revision != None:
         check_rev_in_tt(tt, options.revision, options.load_tt)
         revisions = [options.revision]
     else:
-        revisions = tt.table.keys()
+        revisions = list(tt.table.keys())
 
 
     # print test cases
     if (options.succeed):
-        print "\n\n Succeed:"
+        print("\n\n Succeed:")
         for rev in revisions:
-            print "Revision %s" % (rev)
+            print("Revision %s" % (rev))
             print_with_specific_results(tt.table[rev], 0, 0)
 
     if (options.runfailed):
-        print "\n\n Runfailed:"
+        print("\n\n Runfailed:")
         for rev in revisions:
-            print "Revision %s" % (rev)
+            print("Revision %s" % (rev))
             print_with_specific_results(tt.table[rev], 1, 0)
 
     if (options.compfailed):
-        print "\n\n Compfailed:"
+        print("\n\n Compfailed:")
         for rev in revisions:
-            print "Revision %s" % (rev)
+            print("Revision %s" % (rev))
             print_with_specific_results(tt.table[rev], 0, 1)
             
      
@@ -126,12 +126,12 @@ if __name__ == '__main__':
     if options.regression != "":
         regr_revs = re.split('\ ', options.regression)
         if len(regr_revs) != 2:
-            print "Invalid input:", regr_revs
+            print("Invalid input:", regr_revs)
             exit(0)
 
         check_rev_in_tt(tt, regr_revs[0], options.load_tt)
         check_rev_in_tt(tt, regr_revs[1], options.load_tt)
 
-        print tt.regression(regr_revs[0], regr_revs[1])
+        print(tt.regression(regr_revs[0], regr_revs[1]))
 
 

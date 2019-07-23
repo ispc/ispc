@@ -1,6 +1,6 @@
-#!/usr/bin/python
+#!/usr/bin/env python3
 #
-#  Copyright (c) 2013-2018, Intel Corporation
+#  Copyright (c) 2013-2019, Intel Corporation
 #  All rights reserved.
 #
 #  Redistribution and use in source and binary forms, with or without
@@ -46,36 +46,6 @@ def update_progress(fn, total_tests_arg, counter, max_test_length_arg):
         sys.stdout.write(progress_str)
         sys.stdout.flush()
 
-# This is workaround for missing timeout functionality in Python 2.7.
-class RunWithTimeout(object):
-    def __init__(self, cmd):
-        self.cmd = cmd
-        self.process = None
-        self.output = ""
-
-    def run(self, timeout):
-        def target():
-            try:
-                self.process = subprocess.Popen(self.cmd, stdin=None, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-            except:
-                print_debug("ERROR: The child (%s) raised an exception: %s\n" % (cmd, sys.exc_info()[1]), s, run_tests_log)
-                raise
-
-            out = self.process.communicate()
-            self.output += out[0].decode("utf-8")
-            self.output += out[1].decode("utf-8")
-
-        thread = threading.Thread(target=target)
-        thread.start()
-
-        timeout_fail = False
-        thread.join(timeout)
-        if thread.is_alive():
-            timeout_fail = True
-            self.process.terminate()
-            thread.join()
-        return (self.process.returncode, self.output, timeout_fail)
-
 # 240 is enough even for longest test under sde.
 def run_command(cmd, timeout=600):
     if options.verbose:
@@ -91,10 +61,29 @@ def run_command(cmd, timeout=600):
     lexer.escape = ''
     arg_list = list(lexer)
 
-    run = RunWithTimeout(cmd=arg_list)
-    (ret_code, output, is_timeout) = run.run(timeout)
+    # prepare for OSError exceptions raised in the child process (re-raised in the parent)
+    try:
+        proc = subprocess.Popen(arg_list, stdin=None, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    except:
+        print_debug("ERROR: The child (%s) raised an exception: %s\n" % (arg_list, sys.exc_info()[1]), s, run_tests_log)
+        raise
 
-    return (ret_code, output, is_timeout)
+    is_timeout = False
+    # read data from stdout and stderr
+    try:
+        out = proc.communicate(timeout=timeout)
+    except subprocess.TimeoutExpired:
+        proc.kill()
+        out = proc.communicate()
+        is_timeout = True
+    except:
+        print_debug("ERROR: The child (%s) raised an exception: %s\n" % (arg_list, sys.exc_info()[1]), s, run_tests_log)
+        raise
+
+    output = ""
+    output += out[0].decode("utf-8")
+    output += out[1].decode("utf-8")
+    return (proc.returncode, output, is_timeout)
 
 # run the commands in cmd_list
 def run_cmds(compile_cmds, run_cmd, filename, expect_failure):
@@ -104,7 +93,7 @@ def run_cmds(compile_cmds, run_cmd, filename, expect_failure):
         if compile_failed:
             print_debug("Compilation of test %s failed %s           \n" % (filename, "due to TIMEOUT" if timeout else ""), s, run_tests_log)
             if output != "":
-                print_debug("%s" % output.encode("utf-8"), s, run_tests_log)
+                print_debug("%s" % output, s, run_tests_log)
             return (1, 0)
     if not options.save_bin:
         (return_code, output, timeout) = run_command(run_cmd)
@@ -117,8 +106,8 @@ def run_cmds(compile_cmds, run_cmd, filename, expect_failure):
         print_debug("Test %s %s (return code %d)            \n" % \
             (filename, "unexpectedly passed" if expect_failure else "failed",
              return_code), s, run_tests_log)
-    if output != "":
-        print_debug("%s\n" % output.encode("utf-8"), s, run_tests_log)
+    if output:
+        print_debug("%s\n" % output, s, run_tests_log)
     if surprise == True:
         return (0, 1)
     else:
@@ -148,7 +137,8 @@ def check_test(filename):
         oss = "windows"
     else:
         oss = "linux"
-    b = buffer(file(add_prefix(filename)).read());
+    with open(add_prefix(filename)) as f:
+        b = f.read()
     for run in re.finditer('// *rule: run on .*', b):
         arch = re.match('.* arch=.*', run.group())
         if arch != None:
@@ -301,7 +291,7 @@ def run_test(testname):
                 grep_cmd = "sed  's/export\ uniform\ int\ width/static uniform\ int\ width/g' %s > %s" % \
                     (filename, filename4ptx)
                 if options.verbose:
-                  print "Grepping: %s" % grep_cmd
+                  print("Grepping: %s" % grep_cmd)
                 sp = subprocess.Popen(grep_cmd, shell=True)
                 sp.communicate()
                 if is_nvptx_nvvm:
@@ -612,7 +602,7 @@ def run_tests(options1, args, print_version):
     if os.environ.get("ISPC_HOME") != None:
         if os.path.exists(os.environ["ISPC_HOME"] + os.sep + "ispc" + ispc_ext):
             ispc_exe = os.environ["ISPC_HOME"] + os.sep + "ispc" + ispc_ext
-    PATH_dir = string.split(os.getenv("PATH"), os.pathsep)
+    PATH_dir = os.environ["PATH"].split(os.pathsep)
     for counter in PATH_dir:
         if ispc_exe == "":
             if os.path.exists(counter + os.sep + "ispc" + ispc_ext):
@@ -664,7 +654,7 @@ def run_tests(options1, args, print_version):
             options.compiler_exe = "clang++"
 
     # checks the required compiler otherwise prints an error message
-    PATH_dir = string.split(os.getenv("PATH"), os.pathsep)
+    PATH_dir = os.environ["PATH"].split(os.pathsep)
     compiler_exists = False
 
     for counter in PATH_dir:
@@ -698,7 +688,7 @@ def run_tests(options1, args, print_version):
 
         files = [ ]
         for f in argfiles:
-            if os.path.splitext(string.lower(f))[1] != ".ispc":
+            if os.path.splitext(f.lower())[1] != ".ispc":
                 error("Ignoring file %s, which doesn't have an .ispc extension.\n" % f, 2)
             else:
                 files += [ f ]
@@ -850,7 +840,6 @@ import glob
 import re
 import signal
 import random
-import string
 import threading
 import subprocess
 import shlex
