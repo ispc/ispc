@@ -692,8 +692,11 @@ void Optimize(llvm::Module *module, int optLevel) {
         optPM.add(CreateIsCompileTimeConstantPass(true));
         optPM.add(CreateIntrinsicsOptPass());
         optPM.add(CreateInstructionSimplifyPass());
-
-        optPM.add(llvm::createMemCpyOptPass());
+        // Currently CM does not support memset/memcpy
+        // so this pass is temporary disabled for GEN.
+        if (g->target->getISA() != Target::GENX) {
+            optPM.add(llvm::createMemCpyOptPass());
+        }
         optPM.add(llvm::createSCCPPass());
         optPM.add(llvm::createInstructionCombiningPass());
         optPM.add(CreateInstructionSimplifyPass());
