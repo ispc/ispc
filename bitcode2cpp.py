@@ -40,7 +40,7 @@ name = target
 if args[0].runtime != '':
     name += "_" + args[0].runtime;
 width = 16;
-sys.stdout.write("unsigned char builtins_bitcode_" + name + "[] = {\n")
+sys.stdout.write("extern const unsigned char builtins_bitcode_" + name + "[] = {\n")
 
 data = as_out.stdout.read()
 for i in range(0, len(data), 1):

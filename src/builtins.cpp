@@ -1137,12 +1137,12 @@ void DefineStdlib(SymbolTable *symbolTable, llvm::LLVMContext *ctx, llvm::Module
     bool warn = g->target->getISA() != Target::GENERIC;
 
 #define EXPORT_MODULE_COND_WARN(export_module, warnings)                                                               \
-    extern unsigned char export_module[];                                                                              \
+    extern const unsigned char export_module[];                                                                        \
     extern int export_module##_length;                                                                                 \
     AddBitcodeToModule(export_module, export_module##_length, module, symbolTable, warnings);
 
 #define EXPORT_MODULE(export_module)                                                                                   \
-    extern unsigned char export_module[];                                                                              \
+    extern const unsigned char export_module[];                                                                        \
     extern int export_module##_length;                                                                                 \
     AddBitcodeToModule(export_module, export_module##_length, module, symbolTable, true);
 
@@ -1502,8 +1502,8 @@ void DefineStdlib(SymbolTable *symbolTable, llvm::LLVMContext *ctx, llvm::Module
         // If the user wants the standard library to be included, parse the
         // serialized version of the stdlib.ispc file to get its
         // definitions added.
-        extern char stdlib_mask1_code[], stdlib_mask8_code[];
-        extern char stdlib_mask16_code[], stdlib_mask32_code[], stdlib_mask64_code[];
+        extern const char stdlib_mask1_code[], stdlib_mask8_code[];
+        extern const char stdlib_mask16_code[], stdlib_mask32_code[], stdlib_mask64_code[];
         if (g->target->getISA() == Target::GENERIC && g->target->getVectorWidth() == 1) { // 1 wide uses 32 stdlib
             yy_scan_string(stdlib_mask32_code);
         } else {
