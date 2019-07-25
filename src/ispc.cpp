@@ -1225,6 +1225,15 @@ const char *Target::SupportedTargets() {
         ;
 }
 
+const char *Target::SupportedOSes() {
+    return
+#ifdef ISPC_HOST_IS_WINDOWS
+        // Windows target is supported only on Widows host
+        "windows, "
+#endif
+        "linux, macos, android, ios, ps4";
+}
+
 std::string Target::GetTripleString() const {
     llvm::Triple triple;
 #ifdef ISPC_ARM_ENABLED
@@ -1507,6 +1516,9 @@ Globals::Globals() {
 #endif
     forceAlignment = -1;
     dllExport = false;
+
+    // Target OS defaults to host OS.
+    target_os = GetHostOS();
 }
 
 ///////////////////////////////////////////////////////////////////////////
@@ -1564,4 +1576,37 @@ SourcePos Union(const SourcePos &p1, const SourcePos &p2) {
     ret.last_line = std::max(p1.last_line, p2.last_line);
     ret.last_column = std::max(p1.last_column, p2.last_column);
     return ret;
+}
+
+TargetOS StringToOS(std::string os) {
+#ifdef ISPC_HOST_IS_WINDOWS
+    // Windows target is supported only on Widows host
+    if (os == "windows") {
+        return OS_WINDOWS;
+    } else
+#endif
+        if (os == "linux") {
+        return OS_LINUX;
+    } else if (os == "macos") {
+        return OS_MAC;
+    } else if (os == "android") {
+        return OS_ANDROID;
+    } else if (os == "ios") {
+        return OS_IOS;
+    } else if (os == "ps4") {
+        return OS_PS4;
+    }
+    return OS_ERROR;
+}
+
+constexpr TargetOS GetHostOS() {
+#if defined(ISPC_HOST_IS_WINDOWS)
+    return OS_WINDOWS;
+#elif defined(ISPC_HOST_IS_LINUX)
+    return OS_LINUX;
+#elif defined(ISPC_HOST_IS_APPLE)
+    return OS_MAC;
+#else
+#error "Unknown OS"
+#endif
 }
