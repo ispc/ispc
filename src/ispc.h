@@ -118,6 +118,11 @@ struct VariableDeclaration;
 
 enum StorageClass { SC_NONE, SC_EXTERN, SC_STATIC, SC_TYPEDEF, SC_EXTERN_C };
 
+enum TargetOS { OS_WINDOWS, OS_LINUX, OS_MAC, OS_ANDROID, OS_IOS, OS_PS4, OS_ERROR };
+
+TargetOS StringToOS(std::string);
+constexpr TargetOS GetHostOS();
+
 /** @brief Representation of a range of positions in a source file.
 
     This class represents a range of characters in a source file
@@ -203,6 +208,10 @@ class Target {
     /** Returns a comma-delimited string giving the names of the currently
         supported compilation targets. */
     static const char *SupportedTargets();
+
+    /** Returns a comma-delimited string giving the names of the currently
+     *  supported target OSes */
+    static const char *SupportedOSes();
 
     /** Returns a comma-delimited string giving the names of the currently
         supported CPUs. */
@@ -535,6 +544,9 @@ struct Globals {
     Opt opt;
     /** Compilation target information */
     Target *target;
+
+    /** Target OS */
+    TargetOS target_os;
 
     /** There are a number of math libraries that can be used for
         transcendentals and the like during program compilation. */

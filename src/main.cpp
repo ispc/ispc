@@ -166,6 +166,10 @@ static void usage(int ret) {
              "<t>={%s}",
              Target::SupportedTargets());
     PrintWithWordBreaks(targetHelp, 24, TerminalWidth(), stdout);
+    printf("    ");
+    snprintf(targetHelp, sizeof(targetHelp), "[--target-os=<os>]\t\t\tSelect target OS. <os>={%s}",
+             Target::SupportedOSes());
+    PrintWithWordBreaks(targetHelp, 24, TerminalWidth(), stdout);
     printf("    [--version]\t\t\t\tPrint ispc version\n");
     printf("    [--werror]\t\t\t\tTreat warnings as errors\n");
     printf("    [--woff]\t\t\t\tDisable warnings\n");
@@ -584,9 +588,16 @@ int main(int Argc, char *Argv[]) {
                 usage(1);
             }
             target = argv[i];
-        } else if (!strncmp(argv[i], "--target=", 9))
+        } else if (!strncmp(argv[i], "--target=", 9)) {
             target = argv[i] + 9;
-        else if (!strncmp(argv[i], "--math-lib=", 11)) {
+        } else if (!strncmp(argv[i], "--target-os=", 12)) {
+            g->target_os = StringToOS(argv[i] + 12);
+            if (g->target_os == OS_ERROR) {
+                fprintf(stderr, "Unsupported value for --target-os, supported values are: %s\n",
+                        Target::SupportedOSes());
+                usage(1);
+            }
+        } else if (!strncmp(argv[i], "--math-lib=", 11)) {
             const char *lib = argv[i] + 11;
             if (!strcmp(lib, "default"))
                 g->mathLib = Globals::Math_ISPC;
