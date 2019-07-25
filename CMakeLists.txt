@@ -116,9 +116,15 @@ find_package(FLEX 2.5 REQUIRED)
     endif()
 
 set (ISPC_MASKS 1 8 16 32 64)
-set (ISPC_TARGETS avx2-i64x4 avx2-i32x4 avx1-i64x4 avx1 avx1-x2 avx2 avx2-x2
-    sse2 sse2-x2 sse4-8 sse4-16 sse4 sse4-x2
-    generic-4 generic-8 generic-16 generic-32 generic-64 generic-1 knl skx skx-8)
+set (ISPC_TARGETS
+        sse2-i32x4 sse2-i32x8
+        sse4-i32x4 sse4-i32x8 sse4-i8x16 sse4-i16x8
+        # Note here that avx1-i32x4 is aliased to sse4-i32x4 plus avx attribute.
+        avx1-i32x8 avx1-i32x16 avx1-i64x4
+        avx2-i32x4 avx2-i32x8 avx2-i32x16 avx2-i64x4
+        avx512knl-i32x16
+        avx512skx-i32x8 avx512skx-i32x16
+        generic-1 generic-4 generic-8 generic-16 generic-32 generic-64)
 
 set(CLANG_LIBRARY_LIST clangFrontend clangDriver clangSerialization clangParse clangSema clangAnalysis clangAST clangBasic clangEdit clangLex)
 set(LLVM_COMPONENTS engine ipo bitreader bitwriter instrumentation linker)
@@ -130,7 +136,7 @@ endif()
 list(APPEND LLVM_COMPONENTS x86)
 if (ARM_ENABLED)
     list(APPEND LLVM_COMPONENTS arm aarch64)
-    list(APPEND ISPC_TARGETS neon-32 neon-32-x2 neon-16 neon-8)
+    list(APPEND ISPC_TARGETS neon-i8x16 neon-i16x8 neon-i32x4 neon-i32x8)
 endif()
 if (NVPTX_ENABLED)
     list(APPEND LLVM_COMPONENTS nvptx)

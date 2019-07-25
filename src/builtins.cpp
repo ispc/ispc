@@ -1175,17 +1175,17 @@ void DefineStdlib(SymbolTable *symbolTable, llvm::LLVMContext *ctx, llvm::Module
 #ifdef ISPC_ARM_ENABLED
     case Target::NEON8: {
         if (runtime32) {
-            EXPORT_MODULE(builtins_bitcode_neon_8_32bit);
+            EXPORT_MODULE(builtins_bitcode_neon_i8x16_32bit);
         } else {
-            EXPORT_MODULE(builtins_bitcode_neon_8_64bit);
+            EXPORT_MODULE(builtins_bitcode_neon_i8x16_64bit);
         }
         break;
     }
     case Target::NEON16: {
         if (runtime32) {
-            EXPORT_MODULE(builtins_bitcode_neon_16_32bit);
+            EXPORT_MODULE(builtins_bitcode_neon_i16x8_32bit);
         } else {
-            EXPORT_MODULE(builtins_bitcode_neon_16_64bit);
+            EXPORT_MODULE(builtins_bitcode_neon_i16x8_64bit);
         }
         break;
     }
@@ -1193,16 +1193,16 @@ void DefineStdlib(SymbolTable *symbolTable, llvm::LLVMContext *ctx, llvm::Module
         switch (g->target->getVectorWidth()) {
         case 4:
             if (runtime32) {
-                EXPORT_MODULE(builtins_bitcode_neon_32_32bit);
+                EXPORT_MODULE(builtins_bitcode_neon_i32x4_32bit);
             } else {
-                EXPORT_MODULE(builtins_bitcode_neon_32_64bit);
+                EXPORT_MODULE(builtins_bitcode_neon_i32x4_64bit);
             }
             break;
         case 8:
             if (runtime32) {
-                EXPORT_MODULE(builtins_bitcode_neon_32_x2_32bit);
+                EXPORT_MODULE(builtins_bitcode_neon_i32x8_32bit);
             } else {
-                EXPORT_MODULE(builtins_bitcode_neon_32_x2_64bit);
+                EXPORT_MODULE(builtins_bitcode_neon_i32x8_64bit);
             }
             break;
         default:
@@ -1215,16 +1215,16 @@ void DefineStdlib(SymbolTable *symbolTable, llvm::LLVMContext *ctx, llvm::Module
         switch (g->target->getVectorWidth()) {
         case 4:
             if (runtime32) {
-                EXPORT_MODULE(builtins_bitcode_sse2_32bit);
+                EXPORT_MODULE(builtins_bitcode_sse2_i32x4_32bit);
             } else {
-                EXPORT_MODULE(builtins_bitcode_sse2_64bit);
+                EXPORT_MODULE(builtins_bitcode_sse2_i32x4_64bit);
             }
             break;
         case 8:
             if (runtime32) {
-                EXPORT_MODULE(builtins_bitcode_sse2_x2_32bit);
+                EXPORT_MODULE(builtins_bitcode_sse2_i32x8_32bit);
             } else {
-                EXPORT_MODULE(builtins_bitcode_sse2_x2_64bit);
+                EXPORT_MODULE(builtins_bitcode_sse2_i32x8_64bit);
             }
             break;
         default:
@@ -1236,34 +1236,34 @@ void DefineStdlib(SymbolTable *symbolTable, llvm::LLVMContext *ctx, llvm::Module
         switch (g->target->getVectorWidth()) {
         case 4:
             if (runtime32) {
-                EXPORT_MODULE(builtins_bitcode_sse4_32bit);
+                EXPORT_MODULE(builtins_bitcode_sse4_i32x4_32bit);
             } else {
-                EXPORT_MODULE(builtins_bitcode_sse4_64bit);
+                EXPORT_MODULE(builtins_bitcode_sse4_i32x4_64bit);
             }
             break;
         case 8:
             if (runtime32) {
                 if (g->target->getMaskBitCount() == 16) {
-                    EXPORT_MODULE(builtins_bitcode_sse4_16_32bit);
+                    EXPORT_MODULE(builtins_bitcode_sse4_i16x8_32bit);
                 } else {
                     Assert(g->target->getMaskBitCount() == 32);
-                    EXPORT_MODULE(builtins_bitcode_sse4_x2_32bit);
+                    EXPORT_MODULE(builtins_bitcode_sse4_i32x8_32bit);
                 }
             } else {
                 if (g->target->getMaskBitCount() == 16) {
-                    EXPORT_MODULE(builtins_bitcode_sse4_16_64bit);
+                    EXPORT_MODULE(builtins_bitcode_sse4_i16x8_64bit);
                 } else {
                     Assert(g->target->getMaskBitCount() == 32);
-                    EXPORT_MODULE(builtins_bitcode_sse4_x2_64bit);
+                    EXPORT_MODULE(builtins_bitcode_sse4_i32x8_64bit);
                 }
             }
             break;
         case 16:
             Assert(g->target->getMaskBitCount() == 8);
             if (runtime32) {
-                EXPORT_MODULE(builtins_bitcode_sse4_8_32bit);
+                EXPORT_MODULE(builtins_bitcode_sse4_i8x16_32bit);
             } else {
-                EXPORT_MODULE(builtins_bitcode_sse4_8_64bit);
+                EXPORT_MODULE(builtins_bitcode_sse4_i8x16_64bit);
             }
             break;
         default:
@@ -1285,9 +1285,9 @@ void DefineStdlib(SymbolTable *symbolTable, llvm::LLVMContext *ctx, llvm::Module
                 // intrinsics, so we assume the implementation to be good
                 // enough at the moment.
                 if (runtime32) {
-                    EXPORT_MODULE(builtins_bitcode_sse4_32bit);
+                    EXPORT_MODULE(builtins_bitcode_sse4_i32x4_32bit);
                 } else {
-                    EXPORT_MODULE(builtins_bitcode_sse4_64bit);
+                    EXPORT_MODULE(builtins_bitcode_sse4_i32x4_64bit);
                 }
             } else if (g->target->getDataTypeWidth() == 64) {
                 if (runtime32) {
@@ -1301,16 +1301,16 @@ void DefineStdlib(SymbolTable *symbolTable, llvm::LLVMContext *ctx, llvm::Module
             break;
         case 8:
             if (runtime32) {
-                EXPORT_MODULE(builtins_bitcode_avx1_32bit);
+                EXPORT_MODULE(builtins_bitcode_avx1_i32x8_32bit);
             } else {
-                EXPORT_MODULE(builtins_bitcode_avx1_64bit);
+                EXPORT_MODULE(builtins_bitcode_avx1_i32x8_64bit);
             }
             break;
         case 16:
             if (runtime32) {
-                EXPORT_MODULE(builtins_bitcode_avx1_x2_32bit);
+                EXPORT_MODULE(builtins_bitcode_avx1_i32x16_32bit);
             } else {
-                EXPORT_MODULE(builtins_bitcode_avx1_x2_64bit);
+                EXPORT_MODULE(builtins_bitcode_avx1_i32x16_64bit);
             }
             break;
         default:
@@ -1339,16 +1339,16 @@ void DefineStdlib(SymbolTable *symbolTable, llvm::LLVMContext *ctx, llvm::Module
             break;
         case 8:
             if (runtime32) {
-                EXPORT_MODULE(builtins_bitcode_avx2_32bit);
+                EXPORT_MODULE(builtins_bitcode_avx2_i32x8_32bit);
             } else {
-                EXPORT_MODULE(builtins_bitcode_avx2_64bit);
+                EXPORT_MODULE(builtins_bitcode_avx2_i32x8_64bit);
             }
             break;
         case 16:
             if (runtime32) {
-                EXPORT_MODULE(builtins_bitcode_avx2_x2_32bit);
+                EXPORT_MODULE(builtins_bitcode_avx2_i32x16_32bit);
             } else {
-                EXPORT_MODULE(builtins_bitcode_avx2_x2_64bit);
+                EXPORT_MODULE(builtins_bitcode_avx2_i32x16_64bit);
             }
             break;
         default:
@@ -1361,9 +1361,9 @@ void DefineStdlib(SymbolTable *symbolTable, llvm::LLVMContext *ctx, llvm::Module
         switch (g->target->getVectorWidth()) {
         case 16:
             if (runtime32) {
-                EXPORT_MODULE(builtins_bitcode_knl_32bit);
+                EXPORT_MODULE(builtins_bitcode_avx512knl_i32x16_32bit);
             } else {
-                EXPORT_MODULE(builtins_bitcode_knl_64bit);
+                EXPORT_MODULE(builtins_bitcode_avx512knl_i32x16_64bit);
             }
             break;
         default:
@@ -1377,16 +1377,16 @@ void DefineStdlib(SymbolTable *symbolTable, llvm::LLVMContext *ctx, llvm::Module
         switch (g->target->getVectorWidth()) {
         case 8:
             if (runtime32) {
-                EXPORT_MODULE(builtins_bitcode_skx_8_32bit);
+                EXPORT_MODULE(builtins_bitcode_avx512skx_i32x8_32bit);
             } else {
-                EXPORT_MODULE(builtins_bitcode_skx_8_64bit);
+                EXPORT_MODULE(builtins_bitcode_avx512skx_i32x8_64bit);
             }
             break;
         case 16:
             if (runtime32) {
-                EXPORT_MODULE(builtins_bitcode_skx_32bit);
+                EXPORT_MODULE(builtins_bitcode_avx512skx_i32x16_32bit);
             } else {
-                EXPORT_MODULE(builtins_bitcode_skx_64bit);
+                EXPORT_MODULE(builtins_bitcode_avx512skx_i32x16_64bit);
             }
             break;
         default:
