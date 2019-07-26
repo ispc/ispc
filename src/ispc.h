@@ -45,8 +45,6 @@
 #endif
 
 #if defined(_WIN32) || defined(_WIN64)
-// ISPC_IS_WINDOWS to be removed.
-#define ISPC_IS_WINDOWS
 #define ISPC_HOST_IS_WINDOWS
 #elif defined(__linux__)
 #define ISPC_HOST_IS_LINUX

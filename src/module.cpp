@@ -395,15 +395,13 @@ Module::Module(const char *fn) {
 
     if (g->generateDebuggingSymbols) {
 #if ISPC_LLVM_VERSION >= ISPC_LLVM_3_8
-        // TODO: what to do in case of cross-compilation?
-        // i.e. in case of PS4.
-#ifdef ISPC_IS_WINDOWS
         // To enable debug information on Windows, we have to let llvm know, that
         // debug information should be emitted in CodeView format.
-        module->addModuleFlag(llvm::Module::Warning, "CodeView", 1);
-#else
-        module->addModuleFlag(llvm::Module::Warning, "Dwarf Version", g->generateDWARFVersion);
-#endif
+        if (g->target_os == OS_WINDOWS) {
+            module->addModuleFlag(llvm::Module::Warning, "CodeView", 1);
+        } else {
+            module->addModuleFlag(llvm::Module::Warning, "Dwarf Version", g->generateDWARFVersion);
+        }
 #endif
         diBuilder = new llvm::DIBuilder(*module);
 
@@ -986,12 +984,12 @@ void Module::AddFunctionDeclaration(const std::string &name, const FunctionType 
     }
     llvm::Function *function = llvm::Function::Create(llvmFunctionType, linkage, functionName.c_str(), module);
 
-#ifdef ISPC_IS_WINDOWS
-    // Make export functions callable from DLLS.
-    if ((g->dllExport) && (storageClass != SC_STATIC)) {
-        function->setDLLStorageClass(llvm::GlobalValue::DLLExportStorageClass);
+    if (g->target_os == OS_WINDOWS) {
+        // Make export functions callable from DLLs.
+        if ((g->dllExport) && (storageClass != SC_STATIC)) {
+            function->setDLLStorageClass(llvm::GlobalValue::DLLExportStorageClass);
+        }
     }
-#endif
 
     if (isNoInline && isInline) {
         Error(pos, "Illegal to use \"noinline\" and \"inline\" qualifiers together on function \"%s\".", name.c_str());
