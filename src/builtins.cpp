@@ -1135,6 +1135,7 @@ void DefineStdlib(SymbolTable *symbolTable, llvm::LLVMContext *ctx, llvm::Module
     std::vector<llvm::Constant *> debug_symbols;
     bool runtime32 = g->target->is32Bit();
     bool warn = g->target->getISA() != Target::GENERIC;
+    bool target_is_windows = g->target_os == TargetOS::OS_WINDOWS;
 
 #define EXPORT_MODULE_COND_WARN(export_module, warnings)                                                               \
     extern const unsigned char export_module[];                                                                        \
@@ -1151,301 +1152,595 @@ void DefineStdlib(SymbolTable *symbolTable, llvm::LLVMContext *ctx, llvm::Module
     // "builtins_bitcode_c" have to be switched off: its DL is incompatible
     // with the DL of "generic". Anyway, AddBitcodeToModule() corrects this
     // automatically if DLs differ (by copying module`s DL to export`s DL).
-    if (runtime32) {
-        EXPORT_MODULE_COND_WARN(builtins_bitcode_c_32bit, warn);
+    if (target_is_windows) {
+#ifdef ISPC_HOST_IS_WINDOWS // supported only on Windows
+        if (runtime32) {
+            EXPORT_MODULE_COND_WARN(builtins_bitcode_win_c_32bit, warn);
+        } else {
+            EXPORT_MODULE_COND_WARN(builtins_bitcode_win_c_64bit, warn);
+        }
+#endif
     } else {
-        EXPORT_MODULE_COND_WARN(builtins_bitcode_c_64bit, warn);
+        if (runtime32) {
+            EXPORT_MODULE_COND_WARN(builtins_bitcode_unix_c_32bit, warn);
+        } else {
+            EXPORT_MODULE_COND_WARN(builtins_bitcode_unix_c_64bit, warn);
+        }
     }
+
+    // NVPTX target is depricated and will be removed soon.
+    /*
+    #ifdef ISPC_NVPTX_ENABLED
+        case Target::NVPTX: {
+            if (runtime32) {
+                fprintf(stderr, "Unfortunatly 32bit targets are not supported at the moment .. \n");
+                assert(0);
+            } else {
+                EXPORT_MODULE(builtins_bitcode_nvptx_64bit);
+            }
+            break;
+        };
+    #endif
+    */
 
     // Next, add the target's custom implementations of the various needed
     // builtin functions (e.g. __masked_store_32(), etc).
-    switch (g->target->getISA()) {
-#ifdef ISPC_NVPTX_ENABLED
-    case Target::NVPTX: {
-        if (runtime32) {
-            fprintf(stderr, "Unfortunatly 32bit targets are not supported at the moment .. \n");
-            assert(0);
-        } else {
-            EXPORT_MODULE(builtins_bitcode_nvptx_64bit);
-        }
-        break;
-    };
-#endif /* ISPC_NVPTX_ENABLED */
-
+    if (target_is_windows) {
+#ifdef ISPC_HOST_IS_WINDOWS // supported only on Windows
+        switch (g->target->getISA()) {
 #ifdef ISPC_ARM_ENABLED
-    case Target::NEON8: {
-        if (runtime32) {
-            EXPORT_MODULE(builtins_bitcode_neon_i8x16_32bit);
-        } else {
-            EXPORT_MODULE(builtins_bitcode_neon_i8x16_64bit);
-        }
-        break;
-    }
-    case Target::NEON16: {
-        if (runtime32) {
-            EXPORT_MODULE(builtins_bitcode_neon_i16x8_32bit);
-        } else {
-            EXPORT_MODULE(builtins_bitcode_neon_i16x8_64bit);
-        }
-        break;
-    }
-    case Target::NEON32: {
-        switch (g->target->getVectorWidth()) {
-        case 4:
+        case Target::NEON8: {
             if (runtime32) {
-                EXPORT_MODULE(builtins_bitcode_neon_i32x4_32bit);
+                EXPORT_MODULE(builtins_bitcode_win_neon_i8x16_32bit);
             } else {
-                EXPORT_MODULE(builtins_bitcode_neon_i32x4_64bit);
+                EXPORT_MODULE(builtins_bitcode_win_neon_i8x16_64bit);
             }
             break;
-        case 8:
+        }
+        case Target::NEON16: {
             if (runtime32) {
-                EXPORT_MODULE(builtins_bitcode_neon_i32x8_32bit);
+                EXPORT_MODULE(builtins_bitcode_win_neon_i16x8_32bit);
             } else {
-                EXPORT_MODULE(builtins_bitcode_neon_i32x8_64bit);
+                EXPORT_MODULE(builtins_bitcode_win_neon_i16x8_64bit);
             }
             break;
-        default:
-            FATAL("logic error in DefineStdlib");
         }
-        break;
-    }
+        case Target::NEON32: {
+            switch (g->target->getVectorWidth()) {
+            case 4:
+                if (runtime32) {
+                    EXPORT_MODULE(builtins_bitcode_win_neon_i32x4_32bit);
+                } else {
+                    EXPORT_MODULE(builtins_bitcode_win_neon_i32x4_64bit);
+                }
+                break;
+            case 8:
+                if (runtime32) {
+                    EXPORT_MODULE(builtins_bitcode_win_neon_i32x8_32bit);
+                } else {
+                    EXPORT_MODULE(builtins_bitcode_win_neon_i32x8_64bit);
+                }
+                break;
+            default:
+                FATAL("logic error in DefineStdlib");
+            }
+            break;
+        }
 #endif
-    case Target::SSE2: {
-        switch (g->target->getVectorWidth()) {
-        case 4:
-            if (runtime32) {
-                EXPORT_MODULE(builtins_bitcode_sse2_i32x4_32bit);
-            } else {
-                EXPORT_MODULE(builtins_bitcode_sse2_i32x4_64bit);
-            }
-            break;
-        case 8:
-            if (runtime32) {
-                EXPORT_MODULE(builtins_bitcode_sse2_i32x8_32bit);
-            } else {
-                EXPORT_MODULE(builtins_bitcode_sse2_i32x8_64bit);
-            }
-            break;
-        default:
-            FATAL("logic error in DefineStdlib");
-        }
-        break;
-    }
-    case Target::SSE4: {
-        switch (g->target->getVectorWidth()) {
-        case 4:
-            if (runtime32) {
-                EXPORT_MODULE(builtins_bitcode_sse4_i32x4_32bit);
-            } else {
-                EXPORT_MODULE(builtins_bitcode_sse4_i32x4_64bit);
-            }
-            break;
-        case 8:
-            if (runtime32) {
-                if (g->target->getMaskBitCount() == 16) {
-                    EXPORT_MODULE(builtins_bitcode_sse4_i16x8_32bit);
-                } else {
-                    Assert(g->target->getMaskBitCount() == 32);
-                    EXPORT_MODULE(builtins_bitcode_sse4_i32x8_32bit);
-                }
-            } else {
-                if (g->target->getMaskBitCount() == 16) {
-                    EXPORT_MODULE(builtins_bitcode_sse4_i16x8_64bit);
-                } else {
-                    Assert(g->target->getMaskBitCount() == 32);
-                    EXPORT_MODULE(builtins_bitcode_sse4_i32x8_64bit);
-                }
-            }
-            break;
-        case 16:
-            Assert(g->target->getMaskBitCount() == 8);
-            if (runtime32) {
-                EXPORT_MODULE(builtins_bitcode_sse4_i8x16_32bit);
-            } else {
-                EXPORT_MODULE(builtins_bitcode_sse4_i8x16_64bit);
-            }
-            break;
-        default:
-            FATAL("logic error in DefineStdlib");
-        }
-        break;
-    }
-    case Target::AVX: {
-        switch (g->target->getVectorWidth()) {
-        case 4:
-            if (g->target->getDataTypeWidth() == 32) {
-                // Note here that for avx1-i32x4 we are using bitcode file for
-                // sse4-i32x4. This is intentional and good enough.
-                // AVX target implies appropriate target-feature attrbute,
-                // which forces LLVM to generate AVX code, even for SSE4
-                // intrinsics. Except that the only "missing" feature in sse4
-                // target is implemenation of __masked_[store|load]_[i32|i64]
-                // using maskmov instruction. But it's not very popular
-                // intrinsics, so we assume the implementation to be good
-                // enough at the moment.
+        case Target::SSE2: {
+            switch (g->target->getVectorWidth()) {
+            case 4:
                 if (runtime32) {
-                    EXPORT_MODULE(builtins_bitcode_sse4_i32x4_32bit);
+                    EXPORT_MODULE(builtins_bitcode_win_sse2_i32x4_32bit);
                 } else {
-                    EXPORT_MODULE(builtins_bitcode_sse4_i32x4_64bit);
+                    EXPORT_MODULE(builtins_bitcode_win_sse2_i32x4_64bit);
                 }
-            } else if (g->target->getDataTypeWidth() == 64) {
+                break;
+            case 8:
                 if (runtime32) {
-                    EXPORT_MODULE(builtins_bitcode_avx1_i64x4_32bit);
+                    EXPORT_MODULE(builtins_bitcode_win_sse2_i32x8_32bit);
                 } else {
-                    EXPORT_MODULE(builtins_bitcode_avx1_i64x4_64bit);
+                    EXPORT_MODULE(builtins_bitcode_win_sse2_i32x8_64bit);
                 }
-            } else {
+                break;
+            default:
                 FATAL("logic error in DefineStdlib");
             }
             break;
-        case 8:
-            if (runtime32) {
-                EXPORT_MODULE(builtins_bitcode_avx1_i32x8_32bit);
-            } else {
-                EXPORT_MODULE(builtins_bitcode_avx1_i32x8_64bit);
-            }
-            break;
-        case 16:
-            if (runtime32) {
-                EXPORT_MODULE(builtins_bitcode_avx1_i32x16_32bit);
-            } else {
-                EXPORT_MODULE(builtins_bitcode_avx1_i32x16_64bit);
-            }
-            break;
-        default:
-            FATAL("logic error in DefineStdlib");
         }
-        break;
-    }
-    case Target::AVX2: {
-        switch (g->target->getVectorWidth()) {
-        case 4:
-            if (g->target->getDataTypeWidth() == 32) {
+        case Target::SSE4: {
+            switch (g->target->getVectorWidth()) {
+            case 4:
                 if (runtime32) {
-                    EXPORT_MODULE(builtins_bitcode_avx2_i32x4_32bit);
+                    EXPORT_MODULE(builtins_bitcode_win_sse4_i32x4_32bit);
                 } else {
-                    EXPORT_MODULE(builtins_bitcode_avx2_i32x4_64bit);
+                    EXPORT_MODULE(builtins_bitcode_win_sse4_i32x4_64bit);
                 }
-            } else if (g->target->getDataTypeWidth() == 64) {
+                break;
+            case 8:
                 if (runtime32) {
-                    EXPORT_MODULE(builtins_bitcode_avx2_i64x4_32bit);
+                    if (g->target->getMaskBitCount() == 16) {
+                        EXPORT_MODULE(builtins_bitcode_win_sse4_i16x8_32bit);
+                    } else {
+                        Assert(g->target->getMaskBitCount() == 32);
+                        EXPORT_MODULE(builtins_bitcode_win_sse4_i32x8_32bit);
+                    }
                 } else {
-                    EXPORT_MODULE(builtins_bitcode_avx2_i64x4_64bit);
+                    if (g->target->getMaskBitCount() == 16) {
+                        EXPORT_MODULE(builtins_bitcode_win_sse4_i16x8_64bit);
+                    } else {
+                        Assert(g->target->getMaskBitCount() == 32);
+                        EXPORT_MODULE(builtins_bitcode_win_sse4_i32x8_64bit);
+                    }
                 }
-            } else {
+                break;
+            case 16:
+                Assert(g->target->getMaskBitCount() == 8);
+                if (runtime32) {
+                    EXPORT_MODULE(builtins_bitcode_win_sse4_i8x16_32bit);
+                } else {
+                    EXPORT_MODULE(builtins_bitcode_win_sse4_i8x16_64bit);
+                }
+                break;
+            default:
                 FATAL("logic error in DefineStdlib");
             }
             break;
-        case 8:
-            if (runtime32) {
-                EXPORT_MODULE(builtins_bitcode_avx2_i32x8_32bit);
-            } else {
-                EXPORT_MODULE(builtins_bitcode_avx2_i32x8_64bit);
-            }
-            break;
-        case 16:
-            if (runtime32) {
-                EXPORT_MODULE(builtins_bitcode_avx2_i32x16_32bit);
-            } else {
-                EXPORT_MODULE(builtins_bitcode_avx2_i32x16_64bit);
-            }
-            break;
-        default:
-            FATAL("logic error in DefineStdlib");
         }
-        break;
-    }
+        case Target::AVX: {
+            switch (g->target->getVectorWidth()) {
+            case 4:
+                if (g->target->getDataTypeWidth() == 32) {
+                    // Note here that for avx1-i32x4 we are using bitcode file for
+                    // sse4-i32x4. This is intentional and good enough.
+                    // AVX target implies appropriate target-feature attrbute,
+                    // which forces LLVM to generate AVX code, even for SSE4
+                    // intrinsics. Except that the only "missing" feature in sse4
+                    // target is implemenation of __masked_[store|load]_[i32|i64]
+                    // using maskmov instruction. But it's not very popular
+                    // intrinsics, so we assume the implementation to be good
+                    // enough at the moment.
+                    if (runtime32) {
+                        EXPORT_MODULE(builtins_bitcode_win_sse4_i32x4_32bit);
+                    } else {
+                        EXPORT_MODULE(builtins_bitcode_win_sse4_i32x4_64bit);
+                    }
+                } else if (g->target->getDataTypeWidth() == 64) {
+                    if (runtime32) {
+                        EXPORT_MODULE(builtins_bitcode_win_avx1_i64x4_32bit);
+                    } else {
+                        EXPORT_MODULE(builtins_bitcode_win_avx1_i64x4_64bit);
+                    }
+                } else {
+                    FATAL("logic error in DefineStdlib");
+                }
+                break;
+            case 8:
+                if (runtime32) {
+                    EXPORT_MODULE(builtins_bitcode_win_avx1_i32x8_32bit);
+                } else {
+                    EXPORT_MODULE(builtins_bitcode_win_avx1_i32x8_64bit);
+                }
+                break;
+            case 16:
+                if (runtime32) {
+                    EXPORT_MODULE(builtins_bitcode_win_avx1_i32x16_32bit);
+                } else {
+                    EXPORT_MODULE(builtins_bitcode_win_avx1_i32x16_64bit);
+                }
+                break;
+            default:
+                FATAL("logic error in DefineStdlib");
+            }
+            break;
+        }
+        case Target::AVX2: {
+            switch (g->target->getVectorWidth()) {
+            case 4:
+                if (g->target->getDataTypeWidth() == 32) {
+                    if (runtime32) {
+                        EXPORT_MODULE(builtins_bitcode_win_avx2_i32x4_32bit);
+                    } else {
+                        EXPORT_MODULE(builtins_bitcode_win_avx2_i32x4_64bit);
+                    }
+                } else if (g->target->getDataTypeWidth() == 64) {
+                    if (runtime32) {
+                        EXPORT_MODULE(builtins_bitcode_win_avx2_i64x4_32bit);
+                    } else {
+                        EXPORT_MODULE(builtins_bitcode_win_avx2_i64x4_64bit);
+                    }
+                } else {
+                    FATAL("logic error in DefineStdlib");
+                }
+                break;
+            case 8:
+                if (runtime32) {
+                    EXPORT_MODULE(builtins_bitcode_win_avx2_i32x8_32bit);
+                } else {
+                    EXPORT_MODULE(builtins_bitcode_win_avx2_i32x8_64bit);
+                }
+                break;
+            case 16:
+                if (runtime32) {
+                    EXPORT_MODULE(builtins_bitcode_win_avx2_i32x16_32bit);
+                } else {
+                    EXPORT_MODULE(builtins_bitcode_win_avx2_i32x16_64bit);
+                }
+                break;
+            default:
+                FATAL("logic error in DefineStdlib");
+            }
+            break;
+        }
 #if ISPC_LLVM_VERSION >= ISPC_LLVM_3_7 // LLVM 3.7+
-    case Target::KNL_AVX512: {
-        switch (g->target->getVectorWidth()) {
-        case 16:
-            if (runtime32) {
-                EXPORT_MODULE(builtins_bitcode_avx512knl_i32x16_32bit);
-            } else {
-                EXPORT_MODULE(builtins_bitcode_avx512knl_i32x16_64bit);
+        case Target::KNL_AVX512: {
+            switch (g->target->getVectorWidth()) {
+            case 16:
+                if (runtime32) {
+                    EXPORT_MODULE(builtins_bitcode_win_avx512knl_i32x16_32bit);
+                } else {
+                    EXPORT_MODULE(builtins_bitcode_win_avx512knl_i32x16_64bit);
+                }
+                break;
+            default:
+                FATAL("logic error in DefineStdlib");
             }
             break;
-        default:
-            FATAL("logic error in DefineStdlib");
         }
-        break;
-    }
 #endif
 #if ISPC_LLVM_VERSION >= ISPC_LLVM_3_8 // LLVM 3.8+
-    case Target::SKX_AVX512: {
-        switch (g->target->getVectorWidth()) {
-        case 8:
-            if (runtime32) {
-                EXPORT_MODULE(builtins_bitcode_avx512skx_i32x8_32bit);
-            } else {
-                EXPORT_MODULE(builtins_bitcode_avx512skx_i32x8_64bit);
+        case Target::SKX_AVX512: {
+            switch (g->target->getVectorWidth()) {
+            case 8:
+                if (runtime32) {
+                    EXPORT_MODULE(builtins_bitcode_win_avx512skx_i32x8_32bit);
+                } else {
+                    EXPORT_MODULE(builtins_bitcode_win_avx512skx_i32x8_64bit);
+                }
+                break;
+            case 16:
+                if (runtime32) {
+                    EXPORT_MODULE(builtins_bitcode_win_avx512skx_i32x16_32bit);
+                } else {
+                    EXPORT_MODULE(builtins_bitcode_win_avx512skx_i32x16_64bit);
+                }
+                break;
+            default:
+                FATAL("logic error in DefineStdlib");
             }
             break;
-        case 16:
-            if (runtime32) {
-                EXPORT_MODULE(builtins_bitcode_avx512skx_i32x16_32bit);
-            } else {
-                EXPORT_MODULE(builtins_bitcode_avx512skx_i32x16_64bit);
-            }
-            break;
-        default:
-            FATAL("logic error in DefineStdlib");
         }
-        break;
-    }
 #endif
-    case Target::GENERIC: {
-        switch (g->target->getVectorWidth()) {
-        case 4:
-            if (runtime32) {
-                EXPORT_MODULE(builtins_bitcode_generic_4_32bit);
-            } else {
-                EXPORT_MODULE(builtins_bitcode_generic_4_64bit);
+        case Target::GENERIC: {
+            switch (g->target->getVectorWidth()) {
+            case 4:
+                if (runtime32) {
+                    EXPORT_MODULE(builtins_bitcode_win_generic_4_32bit);
+                } else {
+                    EXPORT_MODULE(builtins_bitcode_win_generic_4_64bit);
+                }
+                break;
+            case 8:
+                if (runtime32) {
+                    EXPORT_MODULE(builtins_bitcode_win_generic_8_32bit);
+                } else {
+                    EXPORT_MODULE(builtins_bitcode_win_generic_8_64bit);
+                }
+                break;
+            case 16:
+                if (runtime32) {
+                    EXPORT_MODULE(builtins_bitcode_win_generic_16_32bit);
+                } else {
+                    EXPORT_MODULE(builtins_bitcode_win_generic_16_64bit);
+                }
+                break;
+            case 32:
+                if (runtime32) {
+                    EXPORT_MODULE(builtins_bitcode_win_generic_32_32bit);
+                } else {
+                    EXPORT_MODULE(builtins_bitcode_win_generic_32_64bit);
+                }
+                break;
+            case 64:
+                if (runtime32) {
+                    EXPORT_MODULE(builtins_bitcode_win_generic_64_32bit);
+                } else {
+                    EXPORT_MODULE(builtins_bitcode_win_generic_64_64bit);
+                }
+                break;
+            case 1:
+                if (runtime32) {
+                    EXPORT_MODULE(builtins_bitcode_win_generic_1_32bit);
+                } else {
+                    EXPORT_MODULE(builtins_bitcode_win_generic_1_64bit);
+                }
+                break;
+            default:
+                FATAL("logic error in DefineStdlib");
             }
             break;
-        case 8:
-            if (runtime32) {
-                EXPORT_MODULE(builtins_bitcode_generic_8_32bit);
-            } else {
-                EXPORT_MODULE(builtins_bitcode_generic_8_64bit);
-            }
-            break;
-        case 16:
-            if (runtime32) {
-                EXPORT_MODULE(builtins_bitcode_generic_16_32bit);
-            } else {
-                EXPORT_MODULE(builtins_bitcode_generic_16_64bit);
-            }
-            break;
-        case 32:
-            if (runtime32) {
-                EXPORT_MODULE(builtins_bitcode_generic_32_32bit);
-            } else {
-                EXPORT_MODULE(builtins_bitcode_generic_32_64bit);
-            }
-            break;
-        case 64:
-            if (runtime32) {
-                EXPORT_MODULE(builtins_bitcode_generic_64_32bit);
-            } else {
-                EXPORT_MODULE(builtins_bitcode_generic_64_64bit);
-            }
-            break;
-        case 1:
-            if (runtime32) {
-                EXPORT_MODULE(builtins_bitcode_generic_1_32bit);
-            } else {
-                EXPORT_MODULE(builtins_bitcode_generic_1_64bit);
-            }
-            break;
-        default:
-            FATAL("logic error in DefineStdlib");
         }
-        break;
-    }
-    default:
-        FATAL("logic error");
+        default:
+            FATAL("logic error");
+        }
+#endif
+    } else {
+        switch (g->target->getISA()) {
+#ifdef ISPC_ARM_ENABLED
+        case Target::NEON8: {
+            if (runtime32) {
+                EXPORT_MODULE(builtins_bitcode_unix_neon_i8x16_32bit);
+            } else {
+                EXPORT_MODULE(builtins_bitcode_unix_neon_i8x16_64bit);
+            }
+            break;
+        }
+        case Target::NEON16: {
+            if (runtime32) {
+                EXPORT_MODULE(builtins_bitcode_unix_neon_i16x8_32bit);
+            } else {
+                EXPORT_MODULE(builtins_bitcode_unix_neon_i16x8_64bit);
+            }
+            break;
+        }
+        case Target::NEON32: {
+            switch (g->target->getVectorWidth()) {
+            case 4:
+                if (runtime32) {
+                    EXPORT_MODULE(builtins_bitcode_unix_neon_i32x4_32bit);
+                } else {
+                    EXPORT_MODULE(builtins_bitcode_unix_neon_i32x4_64bit);
+                }
+                break;
+            case 8:
+                if (runtime32) {
+                    EXPORT_MODULE(builtins_bitcode_unix_neon_i32x8_32bit);
+                } else {
+                    EXPORT_MODULE(builtins_bitcode_unix_neon_i32x8_64bit);
+                }
+                break;
+            default:
+                FATAL("logic error in DefineStdlib");
+            }
+            break;
+        }
+#endif
+        case Target::SSE2: {
+            switch (g->target->getVectorWidth()) {
+            case 4:
+                if (runtime32) {
+                    EXPORT_MODULE(builtins_bitcode_unix_sse2_i32x4_32bit);
+                } else {
+                    EXPORT_MODULE(builtins_bitcode_unix_sse2_i32x4_64bit);
+                }
+                break;
+            case 8:
+                if (runtime32) {
+                    EXPORT_MODULE(builtins_bitcode_unix_sse2_i32x8_32bit);
+                } else {
+                    EXPORT_MODULE(builtins_bitcode_unix_sse2_i32x8_64bit);
+                }
+                break;
+            default:
+                FATAL("logic error in DefineStdlib");
+            }
+            break;
+        }
+        case Target::SSE4: {
+            switch (g->target->getVectorWidth()) {
+            case 4:
+                if (runtime32) {
+                    EXPORT_MODULE(builtins_bitcode_unix_sse4_i32x4_32bit);
+                } else {
+                    EXPORT_MODULE(builtins_bitcode_unix_sse4_i32x4_64bit);
+                }
+                break;
+            case 8:
+                if (runtime32) {
+                    if (g->target->getMaskBitCount() == 16) {
+                        EXPORT_MODULE(builtins_bitcode_unix_sse4_i16x8_32bit);
+                    } else {
+                        Assert(g->target->getMaskBitCount() == 32);
+                        EXPORT_MODULE(builtins_bitcode_unix_sse4_i32x8_32bit);
+                    }
+                } else {
+                    if (g->target->getMaskBitCount() == 16) {
+                        EXPORT_MODULE(builtins_bitcode_unix_sse4_i16x8_64bit);
+                    } else {
+                        Assert(g->target->getMaskBitCount() == 32);
+                        EXPORT_MODULE(builtins_bitcode_unix_sse4_i32x8_64bit);
+                    }
+                }
+                break;
+            case 16:
+                Assert(g->target->getMaskBitCount() == 8);
+                if (runtime32) {
+                    EXPORT_MODULE(builtins_bitcode_unix_sse4_i8x16_32bit);
+                } else {
+                    EXPORT_MODULE(builtins_bitcode_unix_sse4_i8x16_64bit);
+                }
+                break;
+            default:
+                FATAL("logic error in DefineStdlib");
+            }
+            break;
+        }
+        case Target::AVX: {
+            switch (g->target->getVectorWidth()) {
+            case 4:
+                if (g->target->getDataTypeWidth() == 32) {
+                    // Note here that for avx1-i32x4 we are using bitcode file for
+                    // sse4-i32x4. This is intentional and good enough.
+                    // AVX target implies appropriate target-feature attrbute,
+                    // which forces LLVM to generate AVX code, even for SSE4
+                    // intrinsics. Except that the only "missing" feature in sse4
+                    // target is implemenation of __masked_[store|load]_[i32|i64]
+                    // using maskmov instruction. But it's not very popular
+                    // intrinsics, so we assume the implementation to be good
+                    // enough at the moment.
+                    if (runtime32) {
+                        EXPORT_MODULE(builtins_bitcode_unix_sse4_i32x4_32bit);
+                    } else {
+                        EXPORT_MODULE(builtins_bitcode_unix_sse4_i32x4_64bit);
+                    }
+                } else if (g->target->getDataTypeWidth() == 64) {
+                    if (runtime32) {
+                        EXPORT_MODULE(builtins_bitcode_unix_avx1_i64x4_32bit);
+                    } else {
+                        EXPORT_MODULE(builtins_bitcode_unix_avx1_i64x4_64bit);
+                    }
+                } else {
+                    FATAL("logic error in DefineStdlib");
+                }
+                break;
+            case 8:
+                if (runtime32) {
+                    EXPORT_MODULE(builtins_bitcode_unix_avx1_i32x8_32bit);
+                } else {
+                    EXPORT_MODULE(builtins_bitcode_unix_avx1_i32x8_64bit);
+                }
+                break;
+            case 16:
+                if (runtime32) {
+                    EXPORT_MODULE(builtins_bitcode_unix_avx1_i32x16_32bit);
+                } else {
+                    EXPORT_MODULE(builtins_bitcode_unix_avx1_i32x16_64bit);
+                }
+                break;
+            default:
+                FATAL("logic error in DefineStdlib");
+            }
+            break;
+        }
+        case Target::AVX2: {
+            switch (g->target->getVectorWidth()) {
+            case 4:
+                if (g->target->getDataTypeWidth() == 32) {
+                    if (runtime32) {
+                        EXPORT_MODULE(builtins_bitcode_unix_avx2_i32x4_32bit);
+                    } else {
+                        EXPORT_MODULE(builtins_bitcode_unix_avx2_i32x4_64bit);
+                    }
+                } else if (g->target->getDataTypeWidth() == 64) {
+                    if (runtime32) {
+                        EXPORT_MODULE(builtins_bitcode_unix_avx2_i64x4_32bit);
+                    } else {
+                        EXPORT_MODULE(builtins_bitcode_unix_avx2_i64x4_64bit);
+                    }
+                } else {
+                    FATAL("logic error in DefineStdlib");
+                }
+                break;
+            case 8:
+                if (runtime32) {
+                    EXPORT_MODULE(builtins_bitcode_unix_avx2_i32x8_32bit);
+                } else {
+                    EXPORT_MODULE(builtins_bitcode_unix_avx2_i32x8_64bit);
+                }
+                break;
+            case 16:
+                if (runtime32) {
+                    EXPORT_MODULE(builtins_bitcode_unix_avx2_i32x16_32bit);
+                } else {
+                    EXPORT_MODULE(builtins_bitcode_unix_avx2_i32x16_64bit);
+                }
+                break;
+            default:
+                FATAL("logic error in DefineStdlib");
+            }
+            break;
+        }
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_3_7 // LLVM 3.7+
+        case Target::KNL_AVX512: {
+            switch (g->target->getVectorWidth()) {
+            case 16:
+                if (runtime32) {
+                    EXPORT_MODULE(builtins_bitcode_unix_avx512knl_i32x16_32bit);
+                } else {
+                    EXPORT_MODULE(builtins_bitcode_unix_avx512knl_i32x16_64bit);
+                }
+                break;
+            default:
+                FATAL("logic error in DefineStdlib");
+            }
+            break;
+        }
+#endif
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_3_8 // LLVM 3.8+
+        case Target::SKX_AVX512: {
+            switch (g->target->getVectorWidth()) {
+            case 8:
+                if (runtime32) {
+                    EXPORT_MODULE(builtins_bitcode_unix_avx512skx_i32x8_32bit);
+                } else {
+                    EXPORT_MODULE(builtins_bitcode_unix_avx512skx_i32x8_64bit);
+                }
+                break;
+            case 16:
+                if (runtime32) {
+                    EXPORT_MODULE(builtins_bitcode_unix_avx512skx_i32x16_32bit);
+                } else {
+                    EXPORT_MODULE(builtins_bitcode_unix_avx512skx_i32x16_64bit);
+                }
+                break;
+            default:
+                FATAL("logic error in DefineStdlib");
+            }
+            break;
+        }
+#endif
+        case Target::GENERIC: {
+            switch (g->target->getVectorWidth()) {
+            case 4:
+                if (runtime32) {
+                    EXPORT_MODULE(builtins_bitcode_unix_generic_4_32bit);
+                } else {
+                    EXPORT_MODULE(builtins_bitcode_unix_generic_4_64bit);
+                }
+                break;
+            case 8:
+                if (runtime32) {
+                    EXPORT_MODULE(builtins_bitcode_unix_generic_8_32bit);
+                } else {
+                    EXPORT_MODULE(builtins_bitcode_unix_generic_8_64bit);
+                }
+                break;
+            case 16:
+                if (runtime32) {
+                    EXPORT_MODULE(builtins_bitcode_unix_generic_16_32bit);
+                } else {
+                    EXPORT_MODULE(builtins_bitcode_unix_generic_16_64bit);
+                }
+                break;
+            case 32:
+                if (runtime32) {
+                    EXPORT_MODULE(builtins_bitcode_unix_generic_32_32bit);
+                } else {
+                    EXPORT_MODULE(builtins_bitcode_unix_generic_32_64bit);
+                }
+                break;
+            case 64:
+                if (runtime32) {
+                    EXPORT_MODULE(builtins_bitcode_unix_generic_64_32bit);
+                } else {
+                    EXPORT_MODULE(builtins_bitcode_unix_generic_64_64bit);
+                }
+                break;
+            case 1:
+                if (runtime32) {
+                    EXPORT_MODULE(builtins_bitcode_unix_generic_1_32bit);
+                } else {
+                    EXPORT_MODULE(builtins_bitcode_unix_generic_1_64bit);
+                }
+                break;
+            default:
+                FATAL("logic error in DefineStdlib");
+            }
+            break;
+        }
+        default:
+            FATAL("logic error");
+        }
     }
 
     // define the 'programCount' builtin variable

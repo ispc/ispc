@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2013, Intel Corporation
+  Copyright (c) 2010-2019, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -62,7 +62,12 @@
 #endif
 
 #ifndef _MSC_VER
+// In unistd.h we need the definition of sysconf and _SC_NPROCESSORS_ONLN used as its arguments.
+// We should include unistd.h, but it doesn't really work well for cross compilation, as
+// requires us to carry around unistd.h, which is not available on Windows out of the box.
 #include <unistd.h>
+//#define _SC_NPROCESSORS_ONLN            58
+// long sysconf(int);
 #endif // !_MSC_VER
 
 #include <stdarg.h>

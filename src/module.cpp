@@ -2845,9 +2845,17 @@ static llvm::Module *lInitDispatchModule() {
     module->setDataLayout(g->target->getDataLayout()->getStringRepresentation());
 
     // First, link in the definitions from the builtins-dispatch.ll file.
-    extern const unsigned char builtins_bitcode_dispatch[];
-    extern int builtins_bitcode_dispatch_length;
-    AddBitcodeToModule(builtins_bitcode_dispatch, builtins_bitcode_dispatch_length, module);
+    if (g->target_os == TargetOS::OS_WINDOWS) {
+#ifdef ISPC_HOST_IS_WINDOWS // supported only on Windows
+        extern const unsigned char builtins_bitcode_win_dispatch[];
+        extern int builtins_bitcode_win_dispatch_length;
+        AddBitcodeToModule(builtins_bitcode_win_dispatch, builtins_bitcode_win_dispatch_length, module);
+#endif
+    } else {
+        extern const unsigned char builtins_bitcode_unix_dispatch[];
+        extern int builtins_bitcode_unix_dispatch_length;
+        AddBitcodeToModule(builtins_bitcode_unix_dispatch, builtins_bitcode_unix_dispatch_length, module);
+    }
     return module;
 }
 
