@@ -96,7 +96,7 @@ static void usage(int ret) {
     printf("    [--c++-include-file=<name>]\t\tSpecify name of file to emit in #include statement in generated C++ "
            "code.\n");
 #ifndef ISPC_HOST_IS_WINDOWS
-    printf("    [--colored-output]\t\tAlways use terminal colors in error/warning messages.\n");
+    printf("    [--colored-output]\t\tAlways use terminal colors in error/warning messages\n");
 #endif
     printf("    ");
     char cpuHelp[2048];
@@ -105,12 +105,10 @@ static void usage(int ret) {
     PrintWithWordBreaks(cpuHelp, 16, TerminalWidth(), stdout);
     printf("    [-D<foo>]\t\t\t\t#define given value when running preprocessor\n");
     printf("    [--dev-stub <filename>]\t\tEmit device-side offload stub functions to file\n");
-#ifdef ISPC_IS_WINDOWS
-    printf("    [--dllexport]\t\t\tMake non-static functions DLL exported.  Windows only.\n");
-#endif
+    printf("    [--dllexport]\t\t\tMake non-static functions DLL exported.  Windows target only\n");
 #if ISPC_LLVM_VERSION >= ISPC_LLVM_3_5
     printf("    [--dwarf-version={2,3,4}]\t\tGenerate source-level debug information with given DWARF version "
-           "(triggers -g)\n");
+           "(triggers -g).  Ignored for Windows target\n");
 #endif
     printf("    [--emit-asm]\t\t\tGenerate assembly language file as output\n");
     printf("    [--x86-asm-syntax=<option>]\t\tSelect style of code if generating assembly\n");
@@ -155,9 +153,7 @@ static void usage(int ret) {
     printf("        fast-masked-vload\t\tFaster masked vector loads on SSE (may go past end of array)\n");
     printf("        fast-math\t\t\tPerform non-IEEE-compliant optimizations of numeric expressions\n");
     printf("        force-aligned-memory\t\tAlways issue \"aligned\" vector load and store instructions\n");
-#ifndef ISPC_IS_WINDOWS
-    printf("    [--pic]\t\t\t\tGenerate position-independent code\n");
-#endif // !ISPC_IS_WINDOWS
+    printf("    [--pic]\t\t\t\tGenerate position-independent code.  Ignored for Windows target\n");
     printf("    [--quiet]\t\t\t\tSuppress all output\n");
     printf("    ");
     char targetHelp[2048];
@@ -167,7 +163,7 @@ static void usage(int ret) {
              Target::SupportedTargets());
     PrintWithWordBreaks(targetHelp, 24, TerminalWidth(), stdout);
     printf("    ");
-    snprintf(targetHelp, sizeof(targetHelp), "[--target-os=<os>]\t\t\tSelect target OS. <os>={%s}",
+    snprintf(targetHelp, sizeof(targetHelp), "[--target-os=<os>]\t\t\tSelect target OS.  <os>={%s}",
              Target::SupportedOSes());
     PrintWithWordBreaks(targetHelp, 24, TerminalWidth(), stdout);
     printf("    [--version]\t\t\t\tPrint ispc version\n");
@@ -530,10 +526,8 @@ int main(int Argc, char *Argv[]) {
             g->debugPrint = true;
         else if (!strcmp(argv[i], "--debug-llvm"))
             llvm::DebugFlag = true;
-#ifdef ISPC_IS_WINDOWS
         else if (!strcmp(argv[i], "--dllexport"))
             g->dllExport = true;
-#endif
 #if ISPC_LLVM_VERSION >= ISPC_LLVM_3_5
         else if (!strncmp(argv[i], "--dwarf-version=", 16)) {
             int val = atoi(argv[i] + 16);
@@ -696,12 +690,12 @@ int main(int Argc, char *Argv[]) {
             g->includeStdlib = false;
         else if (!strcmp(argv[i], "--nocpp"))
             g->runCPP = false;
-#ifndef ISPC_IS_WINDOWS
         else if (!strcmp(argv[i], "--pic"))
             flags |= Module::GeneratePIC;
+#ifndef ISPC_IS_HOST_WINDOWS
         else if (!strcmp(argv[i], "--colored-output"))
             g->forceColoredOutput = true;
-#endif // !ISPC_IS_WINDOWS
+#endif // !ISPC_IS_HOST_WINDOWS
         else if (!strcmp(argv[i], "--quiet"))
             g->quiet = true;
         else if (!strcmp(argv[i], "--yydebug")) {
@@ -818,6 +812,14 @@ int main(int Argc, char *Argv[]) {
         Warning(SourcePos(), "No output file or header file name specified. "
                              "Program will be compiled and warnings/errors will "
                              "be issued, but no output will be generated.");
+
+    if (g->target_os == OS_WINDOWS && (flags & Module::GeneratePIC) != 0) {
+        Warning(SourcePos(), "--pic switch for Windows target will be ignored.");
+    }
+
+    if (g->target_os != OS_WINDOWS && g->dllExport) {
+        Warning(SourcePos(), "--dllexport switch will be ignored, as the target OS is not Windows.");
+    }
 
     if ((ot == Module::Asm) && (intelAsmSyntax != NULL)) {
         std::vector<const char *> Args(3);

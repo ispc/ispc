@@ -100,8 +100,8 @@ static bool lHaveANSIColors() {
     static bool r = (getenv("TERM") != NULL && strcmp(getenv("TERM"), "dumb") != 0);
 #ifndef ISPC_HOST_IS_WINDOWS
     r &= isatty(2);
-#endif // !ISPC_HOST_IS_WINDOWS
     r |= g->forceColoredOutput;
+#endif // !ISPC_HOST_IS_WINDOWS
     return r;
 }
 
