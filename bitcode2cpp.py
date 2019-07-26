@@ -9,7 +9,8 @@ import argparse
 
 parser = argparse.ArgumentParser()
 parser.add_argument("src", help="Source file to process")
-parser.add_argument("runtime", help="Runtime", nargs='?', default='')
+parser.add_argument("--runtime", help="Runtime", nargs='?', default='')
+parser.add_argument("--os", help="Target OS", default='')
 parser.add_argument("--llvm_as", help="Path to LLVM assembler executable", dest="path_to_llvm_as")
 args = parser.parse_known_args()
 src = args[0].src
@@ -39,18 +40,30 @@ except IOError:
 name = target
 if args[0].runtime != '':
     name += "_" + args[0].runtime + "bit"
+
+if args[0].os == "UNIX":
+    target_os = "unix"
+elif args[0].os == "WINDOWS":
+    target_os = "win"
+else:
+    sys.stderr.write("Unknown argument for --os: " + args[0].os)
+    sys.exit(1)
+
 width = 16
-sys.stdout.write("extern const unsigned char builtins_bitcode_" + name + "[] = {\n")
+
+sys.stdout.write("extern const unsigned char builtins_bitcode_" + target_os + "_" + name + "[] = {\n")
 
 data = as_out.stdout.read()
 for i in range(0, len(data), 1):
-        sys.stdout.write("0x%0.2X, " % ord(data[i:i+1]))
+        sys.stdout.write("0x%0.2X," % ord(data[i:i+1]))
 
         if i%width == (width-1):
             sys.stdout.write("\n")
+        else:
+            sys.stdout.write(" ")
 
 sys.stdout.write("0x00 };\n\n")
-sys.stdout.write("int builtins_bitcode_" + name + "_length = " + str(len(data)) + ";\n")
+sys.stdout.write("int builtins_bitcode_" + target_os + "_" + name + "_length = " + str(len(data)) + ";\n")
 
 as_out.wait()
 
