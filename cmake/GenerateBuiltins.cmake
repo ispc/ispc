@@ -65,7 +65,7 @@ function(ll_to_cpp llFileName bit resultFileName)
             OUTPUT ${output}
             COMMAND ${M4_EXECUTABLE} -I${includePath}
                 -DLLVM_VERSION=${LLVM_VERSION} -DBUILD_OS=${OS_NAME} -DRUNTIME=${bit} ${inputFilePath}
-                | \"${PYTHON_EXECUTABLE}\" bitcode2cpp.py ${inputFilePath} ${bit}bit --llvm_as ${LLVM_AS_EXECUTABLE}
+                | \"${PYTHON_EXECUTABLE}\" bitcode2cpp.py ${inputFilePath} ${bit} --llvm_as ${LLVM_AS_EXECUTABLE}
                 > ${output}
             DEPENDS ${inputFilePath}
             WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
