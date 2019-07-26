@@ -1152,9 +1152,9 @@ void DefineStdlib(SymbolTable *symbolTable, llvm::LLVMContext *ctx, llvm::Module
     // with the DL of "generic". Anyway, AddBitcodeToModule() corrects this
     // automatically if DLs differ (by copying module`s DL to export`s DL).
     if (runtime32) {
-        EXPORT_MODULE_COND_WARN(builtins_bitcode_c_32, warn);
+        EXPORT_MODULE_COND_WARN(builtins_bitcode_c_32bit, warn);
     } else {
-        EXPORT_MODULE_COND_WARN(builtins_bitcode_c_64, warn);
+        EXPORT_MODULE_COND_WARN(builtins_bitcode_c_64bit, warn);
     }
 
     // Next, add the target's custom implementations of the various needed
