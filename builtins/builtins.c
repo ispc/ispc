@@ -66,7 +66,9 @@
 // We should include unistd.h, but it doesn't really work well for cross compilation, as
 // requires us to carry around unistd.h, which is not available on Windows out of the box.
 #include <unistd.h>
-//#define _SC_NPROCESSORS_ONLN            58
+
+// Just for the reference: these lines are eventually included from unistd.h
+// #define _SC_NPROCESSORS_ONLN 58
 // long sysconf(int);
 #endif // !_MSC_VER
 
