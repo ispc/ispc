@@ -1090,8 +1090,12 @@ void FunctionEmitContext::CurrentLanesReturned(Expr *expr, bool doCoherenceCheck
             }
         }
     }
-
+#ifdef ISPC_GENX_ENABLED
+    if (g->target->getISA() == Target::GENX && !ifNotEmulatedUniformForGen() && VaryingCFDepth() == 0 ||
+        g->target->getISA() != Target::GENX && VaryingCFDepth() == 0) {
+#else
     if (VaryingCFDepth() == 0) {
+#endif
         // If there is only uniform control flow between us and the
         // function entry, then it's guaranteed that all lanes are running,
         // so we can just emit a true return instruction
@@ -1111,6 +1115,11 @@ void FunctionEmitContext::CurrentLanesReturned(Expr *expr, bool doCoherenceCheck
             llvm::Value *cmp = MasksAllEqual(functionMaskValue, newReturnedLanes);
             llvm::BasicBlock *bDoReturn = CreateBasicBlock("do_return");
             llvm::BasicBlock *bNoReturn = CreateBasicBlock("no_return");
+#ifdef ISPC_GENX_ENABLED
+            if (g->target->getISA() == Target::GENX) {
+                cmp = GenXPrepareVectorBranch(cmp);
+            }
+#endif
             BranchInst(bDoReturn, bNoReturn, cmp);
 
             bblock = bDoReturn;
@@ -3426,15 +3435,16 @@ static unsigned getBlockCount(llvm::Type *type) {
 }
 
 bool FunctionEmitContext::ifNotEmulatedUniformForGen() const {
-    AssertPos(currentPos, controlFlowInfo.size() > 0);
     // Go backwards through controlFlowInfo, since we add new nested scopes
     // to the back.
-    int i = controlFlowInfo.size() - 1;
-    while (i >= 0) {
-        if (controlFlowInfo[i]->isUniformEmulated == true)
-            // Found a scope due to an 'if' statement with a emulated uniform test
-            return true;
-        --i;
+    if (controlFlowInfo.size() > 0) {
+        int i = controlFlowInfo.size() - 1;
+        while (i >= 0) {
+            if (controlFlowInfo[i]->isUniformEmulated == true)
+                // Found a scope due to an 'if' statement with a emulated uniform test
+                return true;
+            --i;
+        }
     }
     return false;
 }

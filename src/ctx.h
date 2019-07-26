@@ -555,6 +555,7 @@ class FunctionEmitContext {
     TODO: It should be the part of BranchInst but currently it has inserted
     only to tested control flow constructions to avoid accidental errors*/
     llvm::Value *GenXPrepareVectorBranch(llvm::Value *value);
+    bool ifNotEmulatedUniformForGen() const;
 #endif
     /** @} */
 
@@ -703,9 +704,6 @@ class FunctionEmitContext {
     llvm::Value *pointerVectorToVoidPointers(llvm::Value *value);
     static void addGSMetadata(llvm::Value *inst, SourcePos pos);
     bool ifsInCFAllUniform(int cfType) const;
-#ifdef ISPC_GENX_ENABLED
-    bool ifNotEmulatedUniformForGen() const;
-#endif // ISPC_GENX_ENABLED
     void jumpIfAllLoopLanesAreDone(llvm::BasicBlock *target);
     llvm::Value *emitGatherCallback(llvm::Value *lvalue, llvm::Value *retPtr);
 

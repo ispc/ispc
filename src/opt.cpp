@@ -107,6 +107,9 @@
 #include <llvm/Support/FileSystem.h>
 #include <llvm/Support/Regex.h>
 #endif
+#ifdef ISPC_GENX_ENABLED
+#include "llvm/Transforms/Utils/UnifyFunctionExitNodes.h"
+#endif
 
 static llvm::Pass *CreateIntrinsicsOptPass();
 static llvm::Pass *CreateInstructionSimplifyPass();
@@ -472,6 +475,7 @@ void Optimize(llvm::Module *module, int optLevel) {
         // them into something that can actually execute.
 #ifdef ISPC_GENX_ENABLED
         if (g->target->getISA() == Target::GENX) {
+            optPM.add(llvm::createUnifyFunctionExitNodesPass());
             optPM.add(llvm::createGenXLayoutBlocksPass());
             optPM.add(llvm::createISPCSimdCFLoweringPass());
         }
@@ -514,6 +518,7 @@ void Optimize(llvm::Module *module, int optLevel) {
 
 #ifdef ISPC_GENX_ENABLED
         if (g->target->getISA() == Target::GENX) {
+            optPM.add(llvm::createUnifyFunctionExitNodesPass());
             optPM.add(llvm::createGenXLayoutBlocksPass());
             optPM.add(llvm::createISPCSimdCFLoweringPass());
         }
