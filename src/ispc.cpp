@@ -1235,11 +1235,11 @@ const char *Target::ISAToString(ISA isa) {
     switch (isa) {
 #ifdef ISPC_ARM_ENABLED
     case Target::NEON8:
-        return "neon-8";
+        return "neon";
     case Target::NEON16:
-        return "neon-16";
+        return "neon";
     case Target::NEON32:
-        return "neon-32";
+        return "neon";
 #endif
     case Target::SSE2:
         return "sse2";
@@ -1278,11 +1278,11 @@ const char *Target::ISAToTargetString(ISA isa) {
     switch (isa) {
 #ifdef ISPC_ARM_ENABLED
     case Target::NEON8:
-        return "neon-8";
+        return "neon-i8x16";
     case Target::NEON16:
-        return "neon-16";
+        return "neon-i16x8";
     case Target::NEON32:
-        return "neon-32";
+        return "neon-i32x4";
 #endif
     case Target::SSE2:
         return "sse2-i32x4";
