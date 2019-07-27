@@ -274,6 +274,8 @@ class Target {
 
     bool hasVecPrefetch() const { return m_hasVecPrefetch; }
 
+    bool hasSatArith() const { return m_hasSaturatingArithmetic; }
+
   private:
     /** llvm Target object representing this target. */
     const llvm::Target *m_target;
@@ -376,6 +378,9 @@ class Target {
 
     /** Indicates whether the target has hardware instruction for vector prefetch. */
     bool m_hasVecPrefetch;
+
+    /** Indicates whether the target has special saturating arithmetic instructions. */
+    bool m_hasSaturatingArithmetic;
 };
 
 /** @brief Structure that collects optimization options

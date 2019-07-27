@@ -549,6 +549,20 @@ static void lSetInternalFunctions(llvm::Module *module) {
         "__rsqrt_varying_float",
         "__rsqrt_uniform_double",
         "__rsqrt_varying_double",
+        "__saturating_add_i8",
+        "__saturating_add_i16",
+        "__saturating_add_i32",
+        "__saturating_add_i64",
+        "__saturating_add_ui8",
+        "__saturating_add_ui16",
+        "__saturating_add_ui32",
+        "__saturating_add_ui64",
+        "__saturating_mul_i8",
+        "__saturating_mul_i16",
+        "__saturating_mul_i32",
+        "__saturating_mul_ui8",
+        "__saturating_mul_ui16",
+        "__saturating_mul_ui32",
         "__set_system_isa",
         "__sext_uniform_bool",
         "__sext_varying_bool",
@@ -959,6 +973,7 @@ void DefineStdlib(SymbolTable *symbolTable, llvm::LLVMContext *ctx, llvm::Module
     lDefineConstantInt("__have_native_trigonometry", g->target->hasTrigonometry(), module, symbolTable, debug_symbols);
     lDefineConstantInt("__have_native_rsqrtd", g->target->hasRsqrtd(), module, symbolTable, debug_symbols);
     lDefineConstantInt("__have_native_rcpd", g->target->hasRcpd(), module, symbolTable, debug_symbols);
+    lDefineConstantInt("__have_saturating_arithmetic", g->target->hasSatArith(), module, symbolTable, debug_symbols);
 
     if (g->forceAlignment != -1) {
         llvm::GlobalVariable *alignment = module->getGlobalVariable("memory_alignment", true);

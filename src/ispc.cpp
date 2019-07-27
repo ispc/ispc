@@ -450,7 +450,7 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, bool pic, boo
       m_nativeVectorWidth(-1), m_nativeVectorAlignment(-1), m_dataTypeWidth(-1), m_vectorWidth(-1), m_generatePIC(pic),
       m_maskingIsFree(false), m_maskBitCount(-1), m_hasHalf(false), m_hasRand(false), m_hasGather(false),
       m_hasScatter(false), m_hasTranscendentals(false), m_hasTrigonometry(false), m_hasRsqrtd(false), m_hasRcpd(false),
-      m_hasVecPrefetch(false) {
+      m_hasVecPrefetch(false), m_hasSaturatingArithmetic(false) {
     CPUtype CPUID = CPU_None, CPUfromISA = CPU_None;
     AllCPUs a;
     std::string featuresString;
@@ -978,6 +978,7 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, bool pic, boo
         this->m_hasHalf = true;
         this->m_maskingIsFree = true;
         this->m_maskBitCount = 1;
+        this->m_hasSaturatingArithmetic = true;
         // this->m_hasTranscendentals = true;
         // this->m_hasTrigonometry = true;
         this->m_hasGather = this->m_hasScatter = true;
