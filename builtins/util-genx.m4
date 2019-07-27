@@ -253,7 +253,7 @@ define(`convert32to16', `
 ;;saturation arithmetic
  
 define(`saturation_arithmetic',
-`ifelse(WIDTH,  `4', `saturation_arithmetic_vec4()', 
+`ifelse(WIDTH,  `4', `saturation_arithmetic_vec4()',
         WIDTH,  `8', `saturation_arithmetic_vec8()',
         WIDTH, `16', `saturation_arithmetic_vec16() ',
                      `errprint(`ERROR: saturation_arithmetic() macro called with unsupported width = 'WIDTH
@@ -281,7 +281,34 @@ ifelse(WIDTH,  `4', `<$1 $2, $1 $2, $1 $2, $1 $2>',
                        $1 $2, $1 $2, $1 $2, $1 $2, $1 $2, $1 $2, $1 $2, $1 $2,
                        $1 $2, $1 $2, $1 $2, $1 $2, $1 $2, $1 $2, $1 $2, $1 $2>',
                         `<$1 $2>')')
-                        
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Saturarion arithmetic, supported in visa
+
+define(`saturation_arithmetic_op', `
+declare <WIDTH x $1> @llvm.genx.ss$2.sat.$1(<WIDTH x $1>, <WIDTH x $1>)  nounwind readnone
+
+define <WIDTH x $1> @__saturating_$2_$1(<WIDTH x $1> %a, <WIDTH x $1> %b) nounwind alwaysinline {
+  %res = call <WIDTH x $1> @llvm.genx.ss$2.sat.$1(<WIDTH x $1> %a, <WIDTH x $1> %b)
+  ret <WIDTH x $1> %res
+}
+
+declare <WIDTH x $1> @llvm.genx.uu$2.sat.$1(<WIDTH x $1>, <WIDTH x $1>)  nounwind readnone
+
+define <WIDTH x $1> @__saturating_$2_u$1(<WIDTH x $1> %a, <WIDTH x $1> %b) nounwind alwaysinline {
+  %res = call <WIDTH x $1> @llvm.genx.uu$2.sat.$1(<WIDTH x $1> %a, <WIDTH x $1> %b)
+  ret <WIDTH x $1> %res
+}
+')
+
+saturation_arithmetic_op(i8, add)
+saturation_arithmetic_op(i16, add)
+saturation_arithmetic_op(i32, add)
+saturation_arithmetic_op(i64, add)
+saturation_arithmetic_op(i8, mul)
+saturation_arithmetic_op(i16, mul)
+saturation_arithmetic_op(i32, mul)
+
 ;; utility function used by saturation_arithmetic_novec below.  This shouldn't be called by
 ;; target .ll files directly.
 ;; $1: {add,sub} (used in constructing function names)

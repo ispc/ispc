@@ -219,6 +219,22 @@ ifelse(WIDTH,  `4', `<$1 $2, $1 $2, $1 $2, $1 $2>',
                        $1 $2, $1 $2, $1 $2, $1 $2, $1 $2, $1 $2, $1 $2, $1 $2>',
                         `<$1 $2>')')
                         
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Saturarion arithmetic, not supported here, needed for compatibility
+
+define(`saturation_arithmetic_op', `
+declare <WIDTH x $1> @__saturating_$2_$1(<WIDTH x $1> %a, <WIDTH x $1> %b) nounwind alwaysinline
+declare <WIDTH x $1> @__saturating_$2_u$1(<WIDTH x $1> %a, <WIDTH x $1> %b) nounwind alwaysinline
+')
+
+saturation_arithmetic_op(i8, add)
+saturation_arithmetic_op(i16, add)
+saturation_arithmetic_op(i32, add)
+saturation_arithmetic_op(i64, add)
+saturation_arithmetic_op(i8, mul)
+saturation_arithmetic_op(i16, mul)
+saturation_arithmetic_op(i32, mul)
+
 ;; utility function used by saturation_arithmetic_novec below.  This shouldn't be called by
 ;; target .ll files directly.
 ;; $1: {add,sub} (used in constructing function names)
