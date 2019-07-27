@@ -36,7 +36,7 @@
 import common
 import sys
 import os
-from distutils.version import LooseVersion
+from pkg_resources import parse_version
 print_debug = common.print_debug
 error = common.error
 take_lines = common.take_lines
@@ -79,7 +79,7 @@ for i in range(5,8):
 print_debug("\nCMake:\n", False, "")
 if exists[8]:
     cmake_version = take_lines(names[8] + " --version", "first")[3]
-    if (LooseVersion(cmake_version) >= LooseVersion("3.8.0")):
+    if (parse_version(cmake_version) >= parse_version("3.8.0")):
         print_debug(take_lines(names[8] + " --version", "first"), False, "")
     else:
         error("CMake version is older than needed. Please install version 3.8 or newer", 2)
