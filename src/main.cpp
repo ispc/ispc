@@ -496,9 +496,15 @@ int main(int Argc, char *Argv[]) {
                         argv[i] + 13);
                 usage(1);
             }
-        } else if (!strncmp(argv[i], "--arch=", 7))
+        } else if (!strncmp(argv[i], "--arch=", 7)) {
             arch = argv[i] + 7;
-        else if (!strncmp(argv[i], "--x86-asm-syntax=", 17)) {
+            // Define arch alias
+            // LLVM TargetRegistry uses "x86-64", while triple uses "x86_64".
+            // We support both as input and internally keep it as "x86-64".
+            if (std::string(arch) == "x86_64") {
+                arch = "x86-64";
+            }
+        } else if (!strncmp(argv[i], "--x86-asm-syntax=", 17)) {
             intelAsmSyntax = argv[i] + 17;
             if (!((std::string(intelAsmSyntax) == "intel") || (std::string(intelAsmSyntax) == "att"))) {
                 intelAsmSyntax = NULL;
