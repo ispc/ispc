@@ -197,7 +197,12 @@ define double @__sqrt_uniform_double(double) nounwind alwaysinline {
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; fast math mode
 
-declare void @__fastmath() nounwind alwaysinline
+;; In CPU fastmath set FTZ (flush-to-zero) and DAZ (denormals-are-zero)
+;; GenX CM have per kernel setting of CM_DENORM_RTZ (Set all denorms to zero) - applied as attribute to kernel function; enabled by default
+;; So in GenX fastmath enabled by default
+define void @__fastmath() nounwind alwaysinline {
+  ret void
+}
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; float min/max
@@ -321,26 +326,17 @@ define <WIDTH x i16> @__float_to_half_varying(<WIDTH x float> %v) nounwind readn
 ;; rcp
 
 define <WIDTH x float> @__rcp_varying_float(<WIDTH x float>) nounwind readonly alwaysinline {
-  %r = fdiv <WIDTH x float> <float 1., float 1., float 1., float 1.,
-                             float 1., float 1., float 1., float 1.,
-                             float 1., float 1., float 1., float 1.,
-                             float 1., float 1., float 1., float 1.>, %0
+  %r = fdiv <WIDTH x float> const_vector(float, 1.), %0
   ;; do one N-R iteration to improve precision
   ;; return (2. - v * r) * r;
   %mult = fmul <WIDTH x float> %0, %r
-  %two_minus = fsub <WIDTH x float> <float 2., float 2., float 2., float 2.,
-                                     float 2., float 2., float 2., float 2.,
-                                     float 2., float 2., float 2., float 2.,
-                                     float 2., float 2., float 2., float 2.>, %mult  
+  %two_minus = fsub <WIDTH x float> const_vector(float, 2.), %mult
   %res = fmul <WIDTH x float> %r, %two_minus
   ret <WIDTH x float> %res
 }
 
 define <WIDTH x float> @__rcp_fast_varying_float(<WIDTH x float>) nounwind readonly alwaysinline {
-  %res = fdiv <WIDTH x float> <float 1., float 1., float 1., float 1.,
-                               float 1., float 1., float 1., float 1.,
-                               float 1., float 1., float 1., float 1.,
-                               float 1., float 1., float 1., float 1.>, %0
+  %res = fdiv <WIDTH x float> const_vector(float, 1.), %0
   ret <WIDTH x float> %res
 }
 
@@ -354,15 +350,9 @@ define <WIDTH x float> @__rsqrt_varying_float(<WIDTH x float> %v) nounwind reado
   ;;  return 0.5 * r * (3. - (v * r) * r);
   %mult = fmul <WIDTH x float> %v, %r
   %mult2 = fmul <WIDTH x float> %mult, %r
-  %three_sub = fsub <WIDTH x float> <float 3., float 3., float 3., float 3.,
-                                     float 3., float 3., float 3., float 3.,
-                                     float 3., float 3., float 3., float 3.,
-                                     float 3., float 3., float 3., float 3.>, %mult2
+  %three_sub = fsub <WIDTH x float> const_vector(float, 3.), %mult2
   %mult3 = fmul <WIDTH x float> %r, %three_sub
-  %res = fmul <WIDTH x float> <float 0.5, float 0.5, float 0.5, float 0.5,
-                               float 0.5, float 0.5, float 0.5, float 0.5,
-                               float 0.5, float 0.5, float 0.5, float 0.5,
-                               float 0.5, float 0.5, float 0.5, float 0.5>, %mult3
+  %res = fmul <WIDTH x float> const_vector(float, 0.5), %mult3
   ret <WIDTH x float> %res
 }
 
