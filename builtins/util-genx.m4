@@ -4082,16 +4082,72 @@ define void @__memset64(i8 * %dst, i8 %val, i64 %len) alwaysinline {
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; assert
 
-declare i32 @puts(i8*)
-declare void @abort() noreturn
+declare <8 x i32> @llvm.genx.dword.atomic.add.v8i32.v8i1.v8i32(<8 x i1>, i32, <8 x i32>, <8 x i32>, <8 x i32>)
+declare void @llvm.genx.oword.st.v8i32(i32, i32, <8 x i32>)
+declare void @llvm.genx.oword.st.v128i8(i32, i32, <128 x i8>)
+declare i32 @llvm.genx.predefined.surface(i32)
+declare void @llvm.genx.raw.send.noresult.v32i16.v16i1.v32i16(i32, <16 x i1>, i32, i32, <32 x i16>)
+
+
+define void @__send_eot() {
+;; llvm.genx.raw.send.noresult : vISA RAW_SEND instruction with no result
+;;
+;; * arg0  i32 modifier whether it is send or sendc, constant
+;; * (exec_size inferred from predicate vector width, defaulting to 16
+;;          if predicate is i1)
+;; * arg1: i1/vXi1 predicate
+;; * arg2: i32 extended message descriptor, constant
+;; * (numsrc inferred from src size)
+;;       (numdst is 0)
+;; * arg3: i32 desc
+;; * arg4: src
+;;
+;; The SEND instruction has a field for the size of src. This is inferred by
+;; rounding the size of src up to the next whole GRF.
+;;
+;; The predicate must be constant i1 with value 1 for a message that is not
+;; predicatable. For a predicatable message, it must be a vector of i1 with
+;; width determining the execution size.
+;;
+;;arg2 (ExtMsge) :
+;; [31:12]   Extended Function Control
+;; [11]              CPS LOD Compensation, MBZ
+;; [10:6]    Extended Message Length
+;; [4]               Reserved [5] EOT
+;; [3:0]             Target Function ID
+;;
+;; 33554448 = 0b10000000000000000000010000
+  call void @llvm.genx.raw.send.noresult.v32i16.v16i1.v32i16(i32 0, <16 x i1>  <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>, i32 39, i32 33554448, <32 x i16> zeroinitializer)
+  ret void
+}
+
+define internal void @__do_print_cm(i8*) alwaysinline {
+;; predefined.surface return Value: surface index of the specified id
+;; id 2 is stdout
+  %buf = tail call i32 @llvm.genx.predefined.surface(i32 2)
+  %atomic_add = tail call <8 x i32> @llvm.genx.dword.atomic.add.v8i32.v8i1.v8i32(<8 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>, i32 %buf, <8 x i32> <i32 0, i32 4, i32 8,
+i32 12, i32 16, i32 20, i32 24, i32 28>, <8 x i32> <i32 192, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0>, <8 x i32> zeroinitializer)
+  %extract = extractelement <8 x i32> %atomic_add, i32 0
+  %lshr1 = lshr i32 %extract, 4
+  tail call void @llvm.genx.oword.st.v8i32(i32 %buf, i32 %lshr1, <8 x i32> <i32 5, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0>)
+  %add1 = add i32 %extract, 32
+  %lshr2 = lshr i32 %add1, 4
+  %strpointer = bitcast i8* %0 to <128 x i8>*
+  %str1 = load PTR_OP_ARGS(`<128 x i8> ')  %strpointer
+;; 128 is maximalsize for oword.st
+;; TODO: add strlen as function parameter and call @llvm.genx.oword.st.v128i8 in a loop
+  tail call void @llvm.genx.oword.st.v128i8(i32 %buf, i32 %lshr2, <128 x i8> %str1)
+  ret void
+}
+
 
 define void @__do_assert_uniform(i8 *%str, i1 %test, <WIDTH x MASK> %mask) {
   br i1 %test, label %ok, label %fail
 
 fail:
-  %call = call i32 @puts(i8* %str)
-  call void @abort() noreturn
-  unreachable
+  call void @__do_print_cm(i8* %str)
+  call void @__send_eot()
+  ret void
 
 ok:
   ret void
@@ -4108,9 +4164,9 @@ define void @__do_assert_varying(i8 *%str, <WIDTH x MASK> %test,
   br i1 %all_ok, label %ok, label %fail
 
 fail:
-  %call = call i32 @puts(i8* %str)
-  call void @abort() noreturn
-  unreachable
+  call void @__do_print_cm(i8* %str)
+  call void @__send_eot()
+  ret void
 
 ok:
   ret void
