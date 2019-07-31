@@ -150,7 +150,8 @@ class FunctionEmitContext {
         'continue' statements should jump to (if all running lanes want to
         break or continue), uniformControlFlow indicates whether the loop
         condition is 'uniform'. */
-    void StartLoop(llvm::BasicBlock *breakTarget, llvm::BasicBlock *continueTarget, bool uniformControlFlow);
+    void StartLoop(llvm::BasicBlock *breakTarget, llvm::BasicBlock *continueTarget, bool uniformControlFlow,
+                   bool isEmulatedUniform = false);
 
     /** Informs FunctionEmitContext of the value of the mask at the start
         of a loop body or switch statement. */
@@ -198,7 +199,7 @@ class FunctionEmitContext {
         and bbAfterSwitch gives the basic block immediately following the
         "switch" statement.  (For example, if the switch condition is
         uniform, we jump here upon executing a "break" statement.) */
-    void StartSwitch(bool isUniform, llvm::BasicBlock *bbAfterSwitch);
+    void StartSwitch(bool isUniform, llvm::BasicBlock *bbAfterSwitch, bool isEmulatedUniform = false);
     /** Indicates the end of code generation for a "switch" statement. */
     void EndSwitch();
 
@@ -551,9 +552,8 @@ class FunctionEmitContext {
     llvm::Value *GenXLoad(llvm::Value *ptr);
     llvm::Value *GenXStore(llvm::Value *ptr, llvm::Value *value);
     /*This function changes scalar condition to vector condition before branching if
-    emulated uniform condition was found in external scopes.
-    TODO: It should be the part of BranchInst but currently it has inserted
-    only to tested control flow constructions to avoid accidental errors*/
+    emulated uniform condition was found in external scopes and start SIMD control
+    flow with simdcf.any intrinsic*/
     llvm::Value *GenXPrepareVectorBranch(llvm::Value *value);
     bool ifNotEmulatedUniformForGen() const;
 #endif
