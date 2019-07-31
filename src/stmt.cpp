@@ -2872,7 +2872,7 @@ void AssertStmt::EmitCode(FunctionEmitContext *ctx) const {
     AssertPos(pos, assertFunc != NULL);
 
     char *errorString;
-    if (asprintf(&errorString, "%s:%d:%d: Assertion failed: %s", pos.name, pos.first_line, pos.first_column,
+    if (asprintf(&errorString, "%s:%d:%d: Assertion failed: %s \n", pos.name, pos.first_line, pos.first_column,
                  message.c_str()) == -1) {
         Error(pos, "Fatal error when generating assert string: asprintf() "
                    "unable to allocate memory!");
