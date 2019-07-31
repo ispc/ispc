@@ -63,12 +63,13 @@
 struct CFInfo {
     /** Returns a new instance of the structure that represents entering an
         'if' statement */
-    static CFInfo *GetIf(bool isUniform, bool uniformEmu, llvm::Value *savedMask);
+    static CFInfo *GetIf(bool isUniform, bool isUniformEmulated, llvm::Value *savedMask);
 
     /** Returns a new instance of the structure that represents entering a
         loop. */
-    static CFInfo *GetLoop(bool isUniform, llvm::BasicBlock *breakTarget, llvm::BasicBlock *continueTarget,
-                           llvm::Value *savedBreakLanesPtr, llvm::Value *savedContinueLanesPtr, llvm::Value *savedMask,
+    static CFInfo *GetLoop(bool isUniform, bool isUniformEmulated, llvm::BasicBlock *breakTarget,
+                           llvm::BasicBlock *continueTarget, llvm::Value *savedBreakLanesPtr,
+                           llvm::Value *savedContinueLanesPtr, llvm::Value *savedMask,
                            llvm::Value *savedBlockEntryMask);
 
     static CFInfo *GetForeach(FunctionEmitContext::ForeachType ft, llvm::BasicBlock *breakTarget,
@@ -76,10 +77,10 @@ struct CFInfo {
                               llvm::Value *savedContinueLanesPtr, llvm::Value *savedMask,
                               llvm::Value *savedBlockEntryMask);
 
-    static CFInfo *GetSwitch(bool isUniform, llvm::BasicBlock *breakTarget, llvm::BasicBlock *continueTarget,
-                             llvm::Value *savedBreakLanesPtr, llvm::Value *savedContinueLanesPtr,
-                             llvm::Value *savedMask, llvm::Value *savedBlockEntryMask, llvm::Value *switchExpr,
-                             llvm::BasicBlock *bbDefault,
+    static CFInfo *GetSwitch(bool isUniform, bool isUniformEmulated, llvm::BasicBlock *breakTarget,
+                             llvm::BasicBlock *continueTarget, llvm::Value *savedBreakLanesPtr,
+                             llvm::Value *savedContinueLanesPtr, llvm::Value *savedMask,
+                             llvm::Value *savedBlockEntryMask, llvm::Value *switchExpr, llvm::BasicBlock *bbDefault,
                              const std::vector<std::pair<int, llvm::BasicBlock *>> *bbCases,
                              const std::map<llvm::BasicBlock *, llvm::BasicBlock *> *bbNext, bool scUniform);
 
@@ -118,13 +119,14 @@ struct CFInfo {
         savedNextBlocks = NULL;
         savedSwitchConditionWasUniform = false;
     }
-    CFInfo(CFType t, bool iu, llvm::BasicBlock *bt, llvm::BasicBlock *ct, llvm::Value *sb, llvm::Value *sc,
-           llvm::Value *sm, llvm::Value *lm, llvm::Value *sse = NULL, llvm::BasicBlock *bbd = NULL,
+    CFInfo(CFType t, bool iu, bool uniformEmulated, llvm::BasicBlock *bt, llvm::BasicBlock *ct, llvm::Value *sb,
+           llvm::Value *sc, llvm::Value *sm, llvm::Value *lm, llvm::Value *sse = NULL, llvm::BasicBlock *bbd = NULL,
            const std::vector<std::pair<int, llvm::BasicBlock *>> *bbc = NULL,
            const std::map<llvm::BasicBlock *, llvm::BasicBlock *> *bbn = NULL, bool scu = false) {
         Assert(t == Loop || t == Switch);
         type = t;
         isUniform = iu;
+        isUniformEmulated = uniformEmulated;
         savedBreakTarget = bt;
         savedContinueTarget = ct;
         savedBreakLanesPtr = sb;
@@ -156,15 +158,15 @@ struct CFInfo {
     }
 };
 
-CFInfo *CFInfo::GetIf(bool isUniform, bool uniformEmu, llvm::Value *savedMask) {
-    return new CFInfo(If, isUniform, uniformEmu, savedMask);
+CFInfo *CFInfo::GetIf(bool isUniform, bool isUniformEmulated, llvm::Value *savedMask) {
+    return new CFInfo(If, isUniform, isUniformEmulated, savedMask);
 }
 
-CFInfo *CFInfo::GetLoop(bool isUniform, llvm::BasicBlock *breakTarget, llvm::BasicBlock *continueTarget,
-                        llvm::Value *savedBreakLanesPtr, llvm::Value *savedContinueLanesPtr, llvm::Value *savedMask,
-                        llvm::Value *savedBlockEntryMask) {
-    return new CFInfo(Loop, isUniform, breakTarget, continueTarget, savedBreakLanesPtr, savedContinueLanesPtr,
-                      savedMask, savedBlockEntryMask);
+CFInfo *CFInfo::GetLoop(bool isUniform, bool isUniformEmulated, llvm::BasicBlock *breakTarget,
+                        llvm::BasicBlock *continueTarget, llvm::Value *savedBreakLanesPtr,
+                        llvm::Value *savedContinueLanesPtr, llvm::Value *savedMask, llvm::Value *savedBlockEntryMask) {
+    return new CFInfo(Loop, isUniform, isUniformEmulated, breakTarget, continueTarget, savedBreakLanesPtr,
+                      savedContinueLanesPtr, savedMask, savedBlockEntryMask);
 }
 
 CFInfo *CFInfo::GetForeach(FunctionEmitContext::ForeachType ft, llvm::BasicBlock *breakTarget,
@@ -190,16 +192,16 @@ CFInfo *CFInfo::GetForeach(FunctionEmitContext::ForeachType ft, llvm::BasicBlock
                       savedForeachMask);
 }
 
-CFInfo *CFInfo::GetSwitch(bool isUniform, llvm::BasicBlock *breakTarget, llvm::BasicBlock *continueTarget,
-                          llvm::Value *savedBreakLanesPtr, llvm::Value *savedContinueLanesPtr, llvm::Value *savedMask,
-                          llvm::Value *savedBlockEntryMask, llvm::Value *savedSwitchExpr,
-                          llvm::BasicBlock *savedDefaultBlock,
+CFInfo *CFInfo::GetSwitch(bool isUniform, bool isUniformEmulated, llvm::BasicBlock *breakTarget,
+                          llvm::BasicBlock *continueTarget, llvm::Value *savedBreakLanesPtr,
+                          llvm::Value *savedContinueLanesPtr, llvm::Value *savedMask, llvm::Value *savedBlockEntryMask,
+                          llvm::Value *savedSwitchExpr, llvm::BasicBlock *savedDefaultBlock,
                           const std::vector<std::pair<int, llvm::BasicBlock *>> *savedCases,
                           const std::map<llvm::BasicBlock *, llvm::BasicBlock *> *savedNext,
                           bool savedSwitchConditionUniform) {
-    return new CFInfo(Switch, isUniform, breakTarget, continueTarget, savedBreakLanesPtr, savedContinueLanesPtr,
-                      savedMask, savedBlockEntryMask, savedSwitchExpr, savedDefaultBlock, savedCases, savedNext,
-                      savedSwitchConditionUniform);
+    return new CFInfo(Switch, isUniform, isUniformEmulated, breakTarget, continueTarget, savedBreakLanesPtr,
+                      savedContinueLanesPtr, savedMask, savedBlockEntryMask, savedSwitchExpr, savedDefaultBlock,
+                      savedCases, savedNext, savedSwitchConditionUniform);
 }
 
 ///////////////////////////////////////////////////////////////////////////
@@ -489,12 +491,13 @@ void FunctionEmitContext::EndIf() {
     }
 }
 
-void FunctionEmitContext::StartLoop(llvm::BasicBlock *bt, llvm::BasicBlock *ct, bool uniformCF) {
+void FunctionEmitContext::StartLoop(llvm::BasicBlock *bt, llvm::BasicBlock *ct, bool uniformCF,
+                                    bool isEmulatedUniform) {
     // Store the current values of various loop-related state so that we
     // can restore it when we exit this loop.
     llvm::Value *oldMask = GetInternalMask();
-    controlFlowInfo.push_back(CFInfo::GetLoop(uniformCF, breakTarget, continueTarget, breakLanesPtr, continueLanesPtr,
-                                              oldMask, blockEntryMask));
+    controlFlowInfo.push_back(CFInfo::GetLoop(uniformCF, isEmulatedUniform, breakTarget, continueTarget, breakLanesPtr,
+                                              continueLanesPtr, oldMask, blockEntryMask));
     if (uniformCF)
         // If the loop has a uniform condition, we don't need to track
         // which lanes 'break' or 'continue'; all of the running ones go
@@ -749,10 +752,7 @@ void FunctionEmitContext::jumpIfAllLoopLanesAreDone(llvm::BasicBlock *target) {
 
     llvm::BasicBlock *bAll = CreateBasicBlock("all_continued_or_breaked");
     llvm::BasicBlock *bNotAll = CreateBasicBlock("not_all_continued_or_breaked");
-#ifdef ISPC_GENX_ENABLED
-    if (g->target->getISA() == Target::GENX)
-        allDone = GenXPrepareVectorBranch(allDone);
-#endif
+
     BranchInst(bAll, bNotAll, allDone);
 
     // If so, have an extra basic block along the way to add
@@ -789,11 +789,11 @@ void FunctionEmitContext::ClearBreakLanes() {
     StoreInst(LLVMMaskAllOff, breakLanesPtr);
 }
 
-void FunctionEmitContext::StartSwitch(bool cfIsUniform, llvm::BasicBlock *bbBreak) {
+void FunctionEmitContext::StartSwitch(bool cfIsUniform, llvm::BasicBlock *bbBreak, bool isEmulatedUniform) {
     llvm::Value *oldMask = GetInternalMask();
-    controlFlowInfo.push_back(CFInfo::GetSwitch(cfIsUniform, breakTarget, continueTarget, breakLanesPtr,
-                                                continueLanesPtr, oldMask, blockEntryMask, switchExpr, defaultBlock,
-                                                caseBlocks, nextBlocks, switchConditionWasUniform));
+    controlFlowInfo.push_back(CFInfo::GetSwitch(cfIsUniform, isEmulatedUniform, breakTarget, continueTarget,
+                                                breakLanesPtr, continueLanesPtr, oldMask, blockEntryMask, switchExpr,
+                                                defaultBlock, caseBlocks, nextBlocks, switchConditionWasUniform));
 
     breakLanesPtr = AllocaInst(LLVMTypes::MaskType, "break_lanes_memory");
     StoreInst(LLVMMaskAllOff, breakLanesPtr);
@@ -1115,11 +1115,6 @@ void FunctionEmitContext::CurrentLanesReturned(Expr *expr, bool doCoherenceCheck
             llvm::Value *cmp = MasksAllEqual(functionMaskValue, newReturnedLanes);
             llvm::BasicBlock *bDoReturn = CreateBasicBlock("do_return");
             llvm::BasicBlock *bNoReturn = CreateBasicBlock("no_return");
-#ifdef ISPC_GENX_ENABLED
-            if (g->target->getISA() == Target::GENX) {
-                cmp = GenXPrepareVectorBranch(cmp);
-            }
-#endif
             BranchInst(bDoReturn, bNoReturn, cmp);
 
             bblock = bDoReturn;
@@ -1140,11 +1135,6 @@ void FunctionEmitContext::CurrentLanesReturned(Expr *expr, bool doCoherenceCheck
 llvm::Value *FunctionEmitContext::Any(llvm::Value *mask) {
     // Call the target-dependent any function to test that the mask is non-zero
 
-#ifdef ISPC_GENX_ENABLED
-    if (g->target->getISA() == Target::GENX) {
-        return GenXSimdCFAny(mask);
-    }
-#endif
     std::vector<Symbol *> mm;
     m->symbolTable->LookupFunction("__any", &mm);
     if (g->target->getMaskBitCount() == 1)
@@ -2893,6 +2883,10 @@ void FunctionEmitContext::BranchInst(llvm::BasicBlock *trueBlock, llvm::BasicBlo
         AssertPos(currentPos, m->errorCount > 0);
         return;
     }
+#ifdef ISPC_GENX_ENABLED
+    if (g->target->getISA() == Target::GENX)
+        test = GenXPrepareVectorBranch(test);
+#endif
     llvm::Instruction *b = llvm::BranchInst::Create(trueBlock, falseBlock, test, bblock);
     AddDebugPos(b);
 }

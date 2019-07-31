@@ -415,12 +415,8 @@ void IfStmt::EmitCode(FunctionEmitContext *ctx) const {
         llvm::BasicBlock *belse = ctx->CreateBasicBlock("if_else");
         llvm::BasicBlock *bexit = ctx->CreateBasicBlock("if_exit");
 
-// Jump to the appropriate basic block based on the value of
-// the 'if' test
-#ifdef ISPC_GENX_ENABLED
-        if (g->target->getISA() == Target::GENX)
-            testValue = ctx->GenXPrepareVectorBranch(testValue);
-#endif
+        // Jump to the appropriate basic block based on the value of
+        // the 'if' test
         ctx->BranchInst(bthen, belse, testValue);
 
         // Emit code for the 'true' case
@@ -791,7 +787,21 @@ void DoStmt::EmitCode(FunctionEmitContext *ctx) const {
     llvm::BasicBlock *bloop = ctx->CreateBasicBlock("do_loop");
     llvm::BasicBlock *bexit = ctx->CreateBasicBlock("do_exit");
     llvm::BasicBlock *btest = ctx->CreateBasicBlock("do_test");
-    ctx->StartLoop(bexit, btest, uniformTest);
+    bool emulateUniform = false;
+#ifdef ISPC_GENX_ENABLED
+    if (!uniformTest && g->target->getISA() == Target::GENX) {
+        /* With "genx" target we generate uniform control flow but
+           emit varying using CM simdcf.any intrinsic. We mark the scope as
+           emulateUniform = true to let nested scopes know that they should
+           generate vector conditions before branching.
+           This is needed because CM does not support scalar control flow inside
+           simd control flow.
+         */
+        uniformTest = true;
+        emulateUniform = true;
+    }
+#endif
+    ctx->StartLoop(bexit, btest, uniformTest, emulateUniform);
 
     // Start by jumping into the loop body
     ctx->BranchInst(bloop);
@@ -866,10 +876,6 @@ void DoStmt::EmitCode(FunctionEmitContext *ctx) const {
     if (uniformTest) {
         // For the uniform case, just jump to the top of the loop or the
         // exit basic block depending on the value of the test.
-#ifdef ISPC_GENX_ENABLED
-        if (g->target->getISA() == Target::GENX)
-            testValue = ctx->GenXPrepareVectorBranch(testValue);
-#endif
         ctx->BranchInst(bloop, bexit, testValue);
     } else {
         // For the varying case, update the mask based on the value of the
@@ -953,7 +959,21 @@ void ForStmt::EmitCode(FunctionEmitContext *ctx) const {
 
     bool uniformTest = test ? test->GetType()->IsUniformType()
                             : (!g->opt.disableUniformControlFlow && !lHasVaryingBreakOrContinue(stmts));
-    ctx->StartLoop(bexit, bstep, uniformTest);
+    bool emulateUniform = false;
+#ifdef ISPC_GENX_ENABLED
+    if (!uniformTest && g->target->getISA() == Target::GENX) {
+        /* With "genx" target we generate uniform control flow but
+           emit varying using CM simdcf.any intrinsic. We mark the scope as
+           emulateUniform = true to let nested scopes know that they should
+           generate vector conditions before branching.
+           This is needed because CM does not support scalar control flow inside
+           simd control flow.
+         */
+        uniformTest = true;
+        emulateUniform = true;
+    }
+#endif
+    ctx->StartLoop(bexit, bstep, uniformTest, emulateUniform);
     ctx->SetDebugPos(pos);
 
     // If we have an initiailizer statement, start by emitting the code for
@@ -968,6 +988,7 @@ void ForStmt::EmitCode(FunctionEmitContext *ctx) const {
 
     // Emit code to get the value of the loop test.  If no test expression
     // was provided, just go with a true value.
+
     ctx->SetCurrentBasicBlock(btest);
     llvm::Value *ltest = NULL;
     if (test) {
@@ -982,7 +1003,6 @@ void ForStmt::EmitCode(FunctionEmitContext *ctx) const {
         }
     } else
         ltest = uniformTest ? LLVMTrue : LLVMBoolVector(true);
-
     // Now use the test's value.  For a uniform loop, we can either jump to
     // the loop body or the loop exit, based on whether it's true or false.
     // For a non-uniform loop, we update the mask and jump into the loop if
@@ -992,10 +1012,9 @@ void ForStmt::EmitCode(FunctionEmitContext *ctx) const {
             if (test)
                 Warning(test->pos, "Uniform condition supplied to cfor/cwhile "
                                    "statement.");
-        AssertPos(pos, ltest->getType() == LLVMTypes::BoolType);
 #ifdef ISPC_GENX_ENABLED
-        if (g->target->getISA() == Target::GENX)
-            ltest = ctx->GenXPrepareVectorBranch(ltest);
+	if (g->target->getISA() != Target::GENX)
+         AssertPos(pos, ltest->getType() == LLVMTypes::BoolType);
 #endif
         ctx->BranchInst(bloop, bexit, ltest);
     } else {
@@ -1417,10 +1436,6 @@ void ForeachStmt::EmitCode(FunctionEmitContext *ctx) const {
         }
 
         llvm::Value *notAtEnd = ctx->CmpInst(llvm::Instruction::ICmp, llvm::CmpInst::ICMP_SLT, counter, endVals[i]);
-#ifdef ISPC_GENX_ENABLED
-        if (g->target->getISA() == Target::GENX)
-            notAtEnd = ctx->GenXPrepareVectorBranch(notAtEnd);
-#endif
         ctx->BranchInst(bbTest[i + 1], bbReset[i], notAtEnd);
     }
 
@@ -1462,10 +1477,6 @@ void ForeachStmt::EmitCode(FunctionEmitContext *ctx) const {
 
     ctx->SetCurrentBasicBlock(bbTest[nDims - 1]);
     if (inExtras.size()) {
-#ifdef ISPC_GENX_ENABLED
-        if (g->target->getISA() == Target::GENX)
-            inExtras.back() = ctx->GenXPrepareVectorBranch(inExtras.back());
-#endif
         ctx->BranchInst(bbOuterInExtras, bbOuterNotInExtras, inExtras.back());
     }
 
@@ -1499,10 +1510,6 @@ void ForeachStmt::EmitCode(FunctionEmitContext *ctx) const {
         llvm::Value *counter = ctx->LoadInst(uniformCounterPtrs[nDims - 1], NULL, "counter");
         llvm::Value *beforeAlignedEnd = ctx->CmpInst(llvm::Instruction::ICmp, llvm::CmpInst::ICMP_SLT, counter,
                                                      alignedEnd[nDims - 1], "before_aligned_end");
-#ifdef ISPC_GENX_ENABLED
-        if (g->target->getISA() == Target::GENX)
-            beforeAlignedEnd = ctx->GenXPrepareVectorBranch(beforeAlignedEnd);
-#endif
         ctx->BranchInst(bbAllInnerPartialOuter, bbPartial, beforeAlignedEnd);
     }
 
@@ -1568,10 +1575,6 @@ void ForeachStmt::EmitCode(FunctionEmitContext *ctx) const {
         llvm::Value *counter = ctx->LoadInst(uniformCounterPtrs[nDims - 1], NULL, "counter");
         llvm::Value *atEnd =
             ctx->CmpInst(llvm::Instruction::ICmp, llvm::CmpInst::ICMP_NE, counter, endVals[nDims - 1], "at_end");
-#ifdef ISPC_GENX_ENABLED
-        if (g->target->getISA() == Target::GENX)
-            atEnd = ctx->GenXPrepareVectorBranch(atEnd);
-#endif
         ctx->BranchInst(bbMaskedBody, bbReset[nDims - 1], atEnd);
     }
 
@@ -1593,10 +1596,6 @@ void ForeachStmt::EmitCode(FunctionEmitContext *ctx) const {
         llvm::Value *counter = ctx->LoadInst(uniformCounterPtrs[nDims - 1], NULL, "counter");
         llvm::Value *beforeAlignedEnd = ctx->CmpInst(llvm::Instruction::ICmp, llvm::CmpInst::ICMP_SLT, counter,
                                                      alignedEnd[nDims - 1], "before_aligned_end");
-#ifdef ISPC_GENX_ENABLED
-        if (g->target->getISA() == Target::GENX)
-            beforeAlignedEnd = ctx->GenXPrepareVectorBranch(beforeAlignedEnd);
-#endif
         ctx->BranchInst(bbFullBody, bbPartialInnerAllOuter, beforeAlignedEnd);
     }
 
@@ -1639,10 +1638,6 @@ void ForeachStmt::EmitCode(FunctionEmitContext *ctx) const {
         llvm::Value *counter = ctx->LoadInst(uniformCounterPtrs[nDims - 1], NULL, "counter");
         llvm::Value *beforeFullEnd = ctx->CmpInst(llvm::Instruction::ICmp, llvm::CmpInst::ICMP_SLT, counter,
                                                   endVals[nDims - 1], "before_full_end");
-#ifdef ISPC_GENX_ENABLED
-        if (g->target->getISA() == Target::GENX)
-            beforeFullEnd = ctx->GenXPrepareVectorBranch(beforeFullEnd);
-#endif
         ctx->BranchInst(bbSetInnerMask, bbReset[nDims - 1], beforeFullEnd);
     }
 
@@ -1685,10 +1680,6 @@ void ForeachStmt::EmitCode(FunctionEmitContext *ctx) const {
     {
         ctx->RestoreContinuedLanes();
         llvm::Value *stepIndex = ctx->LoadInst(stepIndexAfterMaskedBodyPtr);
-#ifdef ISPC_GENX_ENABLED
-        if (g->target->getISA() == Target::GENX)
-            stepIndex = ctx->GenXPrepareVectorBranch(stepIndex);
-#endif
         ctx->BranchInst(bbStepInnerIndex, bbReset[nDims - 1], stepIndex);
     }
 
@@ -1921,10 +1912,6 @@ void ForeachActiveStmt::EmitCode(FunctionEmitContext *ctx) const {
         llvm::Value *remainingBits = ctx->LoadInst(maskBitsPtr, NULL, "remaining_bits");
         llvm::Value *nonZero = ctx->CmpInst(llvm::Instruction::ICmp, llvm::CmpInst::ICMP_NE, remainingBits,
                                             LLVMInt64(0), "remaining_ne_zero");
-#ifdef ISPC_GENX_ENABLED
-        if (g->target->getISA() == Target::GENX)
-            nonZero = ctx->GenXPrepareVectorBranch(nonZero);
-#endif
         ctx->BranchInst(bbFindNext, bbDone, nonZero);
     }
 
@@ -2120,10 +2107,6 @@ void ForeachUniqueStmt::EmitCode(FunctionEmitContext *ctx) const {
         llvm::Value *remainingBits = ctx->LoadInst(maskBitsPtr, NULL, "remaining_bits");
         llvm::Value *nonZero = ctx->CmpInst(llvm::Instruction::ICmp, llvm::CmpInst::ICMP_NE, remainingBits,
                                             LLVMInt64(0), "remaining_ne_zero");
-#ifdef ISPC_GENX_ENABLED
-        if (g->target->getISA() == Target::GENX)
-            nonZero = ctx->GenXPrepareVectorBranch(nonZero);
-#endif
         ctx->BranchInst(bbFindNext, bbDone, nonZero);
     }
 
