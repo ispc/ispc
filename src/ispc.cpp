@@ -252,6 +252,9 @@ typedef enum {
     // Late Core2-like. Supports SSE 4.2 + POPCNT/LZCNT.
     CPU_Nehalem,
 
+    // CPU in PS4/Xbox One.
+    CPU_PS4,
+
     // Sandy Bridge. Supports AVX 1.
     CPU_SandyBridge,
 
@@ -361,6 +364,9 @@ class AllCPUs {
         names[CPU_Nehalem].push_back("corei7");
         names[CPU_Nehalem].push_back("nehalem");
 
+        names[CPU_PS4].push_back("ps4");
+        names[CPU_PS4].push_back("btver2");
+
         names[CPU_SandyBridge].push_back("corei7-avx");
         names[CPU_SandyBridge].push_back("sandybridge");
 
@@ -436,6 +442,8 @@ class AllCPUs {
                                     CPU_Silvermont, CPU_SandyBridge, CPU_IvyBridge, CPU_None);
         compat[CPU_SandyBridge] = Set(CPU_Generic, CPU_x86_64, CPU_Bonnell, CPU_Penryn, CPU_Core2, CPU_Nehalem,
                                       CPU_Silvermont, CPU_SandyBridge, CPU_None);
+        compat[CPU_PS4] = Set(CPU_Generic, CPU_Bonnell, CPU_Penryn, CPU_Core2, CPU_Nehalem, CPU_Silvermont,
+                              CPU_SandyBridge, CPU_PS4, CPU_None);
         compat[CPU_Nehalem] =
             Set(CPU_Generic, CPU_x86_64, CPU_Bonnell, CPU_Penryn, CPU_Core2, CPU_Nehalem, CPU_Silvermont, CPU_None);
         compat[CPU_Penryn] =
@@ -591,6 +599,10 @@ Target::Target(const char *arch, const char *cpu, const char *isa, bool pic, boo
         case CPU_Silvermont:
 #endif
             isa = "sse4-i32x4";
+            break;
+
+        case CPU_PS4:
+            isa = "avx1-i32x4";
             break;
 
         default:
