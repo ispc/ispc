@@ -285,6 +285,11 @@ typedef enum {
     CPU_SKX,
 #endif
 
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_8_0
+    // Icelake client
+    CPU_ICL,
+#endif
+
 #if ISPC_LLVM_VERSION >= ISPC_LLVM_3_4 // LLVM 3.4+
     // Late Atom-like design. Supports SSE 4.2 + POPCNT/LZCNT.
     CPU_Silvermont,
@@ -377,6 +382,11 @@ class AllCPUs {
         names[CPU_SKX].push_back("skx");
 #endif
 
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_8_0 // LLVM 8.0+
+        names[CPU_ICL].push_back("icl");
+        names[CPU_ICL].push_back("icelake-client");
+#endif
+
 #ifdef ISPC_ARM_ENABLED
         names[CPU_CortexA15].push_back("cortex-a15");
 
@@ -388,6 +398,7 @@ class AllCPUs {
 #ifdef ISPC_NVPTX_ENABLED
         names[CPU_SM35].push_back("sm_35");
 #endif
+        Assert(names.size() == sizeofCPUtype);
 
 #if ISPC_LLVM_VERSION <= ISPC_LLVM_3_3 // LLVM 3.2 or 3.3
 #define CPU_Silvermont CPU_Nehalem
@@ -404,6 +415,12 @@ class AllCPUs {
 #if ISPC_LLVM_VERSION >= ISPC_LLVM_3_8 // LLVM 3.8+
         compat[CPU_SKX] = Set(CPU_SKX, CPU_x86_64, CPU_Bonnell, CPU_Penryn, CPU_Core2, CPU_Nehalem, CPU_Silvermont,
                               CPU_SandyBridge, CPU_IvyBridge, CPU_Haswell, CPU_Broadwell, CPU_None);
+#endif
+
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_8_0 // LLVM 8.0+
+        compat[CPU_ICL] = Set(CPU_ICL, CPU_SKX, CPU_x86_64, CPU_Bonnell, CPU_Penryn, CPU_Core2, CPU_Nehalem,
+                              CPU_Silvermont, CPU_SandyBridge, CPU_IvyBridge, CPU_Haswell, CPU_Broadwell, CPU_None);
+        ;
 #endif
 
 #if ISPC_LLVM_VERSION <= ISPC_LLVM_3_5 // LLVM 3.2, 3.3, 3.4 or 3.5
@@ -542,6 +559,9 @@ Target::Target(const char *arch, const char *cpu, const char *isa, bool pic, boo
             break;
 #endif
 
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_8_0 // LLVM 8.0
+        case CPU_ICL:
+#endif
 #if ISPC_LLVM_VERSION >= ISPC_LLVM_3_8 // LLVM 3.8+
         case CPU_SKX:
             isa = "avx512skx-i32x16";
