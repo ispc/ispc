@@ -40,9 +40,9 @@ find_program(M4_EXECUTABLE m4)
     message(STATUS "M4 macro processor: " ${M4_EXECUTABLE})
 
 if (WIN32)
-    set(TARGET_OS_LIST "windows" "unix")
+    set(TARGET_OS_LIST_FOR_LL "windows" "unix")
 elseif (UNIX)
-    set(TARGET_OS_LIST "unix")
+    set(TARGET_OS_LIST_FOR_LL "unix")
 endif()
 
 function(ll_to_cpp llFileName bit os_name resultFileName)
@@ -79,27 +79,51 @@ endfunction()
 function(builtin_to_cpp bit os_name resultFileName)
     set(inputFilePath builtins/builtins.c)
     set(output ${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_CFG_INTDIR}/builtins-c-${bit}-${os_name}.cpp)
-    ## note, that clang will adjust target triple to make 32 bit when -m32 is passed.
+     ## note, that clang will adjust target triple to make 32 bit when -m32 is passed.
+    set(FAKE OFF)
     if (${os_name} STREQUAL "windows")
         set(target_flags --target="x86_64-pc-win32")
-    else()
+        set(FAKE ON)
+    elseif (${os_name} STREQUAL "linux")
         set(target_flags --target="x86_64-unknown-linux-gnu" -fPIC)
+    elseif (${os_name} STREQUAL "macos")
+        set(target_flags --target="x86_64-apple-macosx")
+    elseif (${os_name} STREQUAL "android")
+        set(target_flags --target="x86_64-unknown-linux-android" -fPIC)
+        set(FAKE ON)
+    elseif (${os_name} STREQUAL "ios")
+        set(target_flags --target="arm64-apple-ios")
+        set(FAKE ON)
+    elseif (${os_name} STREQUAL "ps4")
+        set(target_flags --target="x86_64-scei-ps4" -fPIC)
+        set(FAKE ON)
+    else()
+        message(FATAL_ERROR "Error")
     endif()
-    string(TOUPPER ${os_name} os_name_macro)
+    if (FAKE)
     add_custom_command(
         OUTPUT ${output}
-        COMMAND ${CLANG_EXECUTABLE} ${target_flags} -m${bit} -emit-llvm -c ${inputFilePath} -o - | \"${LLVM_DIS_EXECUTABLE}\" -
-            | \"${Python3_EXECUTABLE}\" bitcode2cpp.py c --runtime=${bit} --os=${os_name_macro} --llvm_as ${LLVM_AS_EXECUTABLE}
-            > ${output}
+        COMMAND ${Python3_EXECUTABLE} bitcode2cpp.py c --runtime=${bit} --os=${os_name} --fake --llvm_as ${LLVM_AS_EXECUTABLE}
+        > ${output}
         DEPENDS ${inputFilePath}
         WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
         )
+    else()
+    add_custom_command(
+        OUTPUT ${output}
+        COMMAND ${CLANG_EXECUTABLE} ${target_flags} -m${bit} -emit-llvm -c ${inputFilePath} -o - | \"${LLVM_DIS_EXECUTABLE}\" -
+            | \"${Python3_EXECUTABLE}\" bitcode2cpp.py c --runtime=${bit} --os=${os_name} --llvm_as ${LLVM_AS_EXECUTABLE}
+            > ${output}
+        DEPENDS ${inputFilePath}
+        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+    )
+    endif()
     set(${resultFileName} ${output} PARENT_SCOPE)
     set_source_files_properties(${resultFileName} PROPERTIES GENERATED true)
 endfunction()
 
 function (generate_target_builtins resultList)
-    foreach (os_name ${TARGET_OS_LIST})
+    foreach (os_name ${TARGET_OS_LIST_FOR_LL})
         ll_to_cpp(dispatch "" ${os_name} output${os_name})
         list(APPEND tmpList ${output${os_name}})
         if(MSVC)
@@ -109,7 +133,7 @@ function (generate_target_builtins resultList)
     endforeach()
     foreach (ispc_target ${ARGN})
         foreach (bit 32 64)
-            foreach (os_name ${TARGET_OS_LIST})
+            foreach (os_name ${TARGET_OS_LIST_FOR_LL})
                 ll_to_cpp(target-${ispc_target} ${bit} ${os_name} output${os_name}${bit})
                 list(APPEND tmpList ${output${os_name}${bit}})
                 if(MSVC)
@@ -124,7 +148,7 @@ endfunction()
 
 function (generate_common_builtins resultList)
     foreach (bit 32 64)
-        foreach (os_name ${TARGET_OS_LIST})
+        foreach (os_name "windows" "linux" "macos" "android" "ios" "ps4")
             builtin_to_cpp(${bit} ${os_name} res${bit}${os_name})
             list(APPEND tmpList ${res${bit}${os_name}} )
             if(MSVC)
