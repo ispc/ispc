@@ -1152,20 +1152,59 @@ void DefineStdlib(SymbolTable *symbolTable, llvm::LLVMContext *ctx, llvm::Module
     // "builtins_bitcode_c" have to be switched off: its DL is incompatible
     // with the DL of "generic". Anyway, AddBitcodeToModule() corrects this
     // automatically if DLs differ (by copying module`s DL to export`s DL).
-    if (target_is_windows) {
-#ifdef ISPC_HOST_IS_WINDOWS // supported only on Windows
+
+    // Unlike regular builtins and dispatch module, which don't care about mangling of external functions,
+    // so they only differentiate Windows/Unix and 32/64 bit, builtins-c need to take care about mangling.
+    // Hence, different version for all potentially supported OSes. Those that are not supported in current
+    // build are will have zero length.
+    switch (g->target_os) {
+    case TargetOS::OS_WINDOWS:
         if (runtime32) {
-            EXPORT_MODULE_COND_WARN(builtins_bitcode_win_c_32bit, warn);
+            EXPORT_MODULE_COND_WARN(builtins_bitcode_windows_c_32bit, warn);
         } else {
-            EXPORT_MODULE_COND_WARN(builtins_bitcode_win_c_64bit, warn);
+            EXPORT_MODULE_COND_WARN(builtins_bitcode_windows_c_64bit, warn);
         }
-#endif
-    } else {
+        break;
+    case TargetOS::OS_LINUX:
         if (runtime32) {
-            EXPORT_MODULE_COND_WARN(builtins_bitcode_unix_c_32bit, warn);
+            EXPORT_MODULE_COND_WARN(builtins_bitcode_linux_c_32bit, warn);
         } else {
-            EXPORT_MODULE_COND_WARN(builtins_bitcode_unix_c_64bit, warn);
+            EXPORT_MODULE_COND_WARN(builtins_bitcode_linux_c_64bit, warn);
         }
+        break;
+    case TargetOS::OS_MAC:
+        if (runtime32) {
+            Error(SourcePos(), "doesn't exist");
+            EXPORT_MODULE_COND_WARN(builtins_bitcode_macos_c_32bit, warn);
+        } else {
+            EXPORT_MODULE_COND_WARN(builtins_bitcode_macos_c_64bit, warn);
+        }
+        break;
+    case TargetOS::OS_ANDROID:
+        if (runtime32) {
+            EXPORT_MODULE_COND_WARN(builtins_bitcode_android_c_32bit, warn);
+        } else {
+            EXPORT_MODULE_COND_WARN(builtins_bitcode_android_c_64bit, warn);
+        }
+        break;
+    case TargetOS::OS_IOS:
+        if (runtime32) {
+            Error(SourcePos(), "doesn't exist");
+            EXPORT_MODULE_COND_WARN(builtins_bitcode_ios_c_32bit, warn);
+        } else {
+            EXPORT_MODULE_COND_WARN(builtins_bitcode_ios_c_64bit, warn);
+        }
+        break;
+    case TargetOS::OS_PS4:
+        if (runtime32) {
+            Error(SourcePos(), "doesn't exist");
+            EXPORT_MODULE_COND_WARN(builtins_bitcode_ps4_c_32bit, warn);
+        } else {
+            EXPORT_MODULE_COND_WARN(builtins_bitcode_ps4_c_64bit, warn);
+        }
+        break;
+    default:
+        Error(SourcePos(), "Unsupported OS\n");
     }
 
     // NVPTX target is depricated and will be removed soon.
