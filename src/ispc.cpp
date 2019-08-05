@@ -1236,34 +1236,90 @@ const char *Target::SupportedOSes() {
 
 std::string Target::GetTripleString() const {
     llvm::Triple triple;
-#ifdef ISPC_ARM_ENABLED
-    if (m_arch == "arm") {
-        triple.setTriple("armv7-eabi");
-    } else if (m_arch == "aarch64") {
-        triple.setTriple("aarch64-eabi");
-    } else
-#endif
-    {
-        // Start with the host triple as the default
-        triple.setTriple(llvm::sys::getDefaultTargetTriple());
-
-        // And override the arch in the host triple based on what the user
-        // specified.  Here we need to deal with the fact that LLVM uses one
-        // naming convention for targets TargetRegistry, but wants some
-        // slightly different ones for the triple.  TODO: is there a way to
-        // have it do this remapping, which would presumably be a bit less
-        // error prone?
-        if (m_arch == "x86")
+    switch (g->target_os) {
+    case OS_WINDOWS:
+        if (m_arch == "x86") {
             triple.setArchName("i386");
-        else if (m_arch == "x86-64")
+        } else if (m_arch == "x86-64") {
             triple.setArchName("x86_64");
-#ifdef ISPC_NVPTX_ENABLED
-        else if (m_arch == "nvptx64")
-            triple = llvm::Triple("nvptx64", "nvidia", "cuda");
-#endif /* ISPC_NVPTX_ENABLED */
-        else
-            triple.setArchName(m_arch);
+        } else if (m_arch == "arm") {
+            Error(SourcePos(), "Not supported.\n");
+        } else if (m_arch == "aarch64") {
+            triple.setArchName("Not supported.\n");
+        } else {
+            Error(SourcePos(), "Unknown arch.\n");
+        }
+        //"x86_64-pc-windows-msvc"
+        triple.setVendor(llvm::Triple::VendorType::PC);
+        triple.setOS(llvm::Triple::OSType::Win32);
+        triple.setEnvironment(llvm::Triple::EnvironmentType::MSVC);
+        break;
+    case OS_LINUX:
+        if (m_arch == "x86") {
+            triple.setArchName("i386");
+        } else if (m_arch == "x86-64") {
+            triple.setArchName("x86_64");
+        } else if (m_arch == "arm") {
+            triple.setArchName("armv7");
+        } else if (m_arch == "aarch64") {
+            triple.setArchName("aarch64");
+        } else {
+            Error(SourcePos(), "Unknown arch.\n");
+        }
+        triple.setVendor(llvm::Triple::VendorType::UnknownVendor);
+        triple.setOS(llvm::Triple::OSType::Linux);
+        triple.setEnvironment(llvm::Triple::EnvironmentType::GNU);
+        break;
+    case OS_MAC:
+        // asserts
+        if (m_arch != "x86-64") {
+            Error(SourcePos(), "macOS supports on x86_64 arch.\n");
+        }
+        triple.setArch(llvm::Triple::ArchType::x86_64);
+        triple.setVendor(llvm::Triple::VendorType::Apple);
+        triple.setOS(llvm::Triple::OSType::MacOSX);
+        break;
+    case OS_ANDROID:
+        if (m_arch == "x86") {
+            triple.setArchName("i386");
+        } else if (m_arch == "x86-64") {
+            triple.setArchName("x86_64");
+        } else if (m_arch == "arm") {
+            triple.setArchName("armv7");
+        } else if (m_arch == "aarch64") {
+            triple.setArchName("aarch64");
+        } else {
+            Error(SourcePos(), "Unknown arch.\n");
+        }
+        triple.setVendor(llvm::Triple::VendorType::UnknownVendor);
+        triple.setOS(llvm::Triple::OSType::Linux);
+        triple.setEnvironment(llvm::Triple::EnvironmentType::Android);
+        break;
+    case OS_IOS:
+        if (m_arch != "aarch64") {
+            Error(SourcePos(), "iOS supports only aarch64");
+        }
+        // Note, for iOS arch need to be set to "arm64", instead of "aarch64".
+        // Internet say this is for historical reasons.
+        // "arm64-apple-ios"
+        triple.setArchName("arm64");
+        triple.setVendor(llvm::Triple::VendorType::Apple);
+        triple.setOS(llvm::Triple::OSType::IOS);
+        break;
+    case OS_PS4:
+        if (m_arch != "x86-64") {
+            Error(SourcePos(), "PS4 supports only x86_64");
+        }
+        // "x86_64-scei-ps4"
+        triple.setArch(llvm::Triple::ArchType::x86_64);
+        triple.setVendor(llvm::Triple::VendorType::SCEI);
+        triple.setOS(llvm::Triple::OSType::PS4);
+        break;
+    default:
+        Error(SourcePos(), "Invalid target OS.");
+        exit(1);
     }
+
     return triple.str();
 }
 
