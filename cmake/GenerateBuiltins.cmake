@@ -76,47 +76,112 @@ function(ll_to_cpp llFileName bit os_name resultFileName)
     set_source_files_properties(${resultFileName} PROPERTIES GENERATED true)
 endfunction()
 
-function(builtin_to_cpp bit os_name resultFileName)
+function(builtin_to_cpp bit os_name arch resultFileName)
     set(inputFilePath builtins/builtins.c)
-    set(output ${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_CFG_INTDIR}/builtins-c-${bit}-${os_name}.cpp)
-     ## note, that clang will adjust target triple to make 32 bit when -m32 is passed.
     set(FAKE OFF)
-    if (${os_name} STREQUAL "windows")
-        set(target_flags --target="x86_64-pc-win32")
-        set(FAKE ON)
-    elseif (${os_name} STREQUAL "linux")
-        set(target_flags --target="x86_64-unknown-linux-gnu" -fPIC)
-    elseif (${os_name} STREQUAL "macos")
-        set(target_flags --target="x86_64-apple-macosx")
-    elseif (${os_name} STREQUAL "android")
-        set(target_flags --target="x86_64-unknown-linux-android" -fPIC)
-        set(FAKE ON)
-    elseif (${os_name} STREQUAL "ios")
-        set(target_flags --target="arm64-apple-ios")
-        set(FAKE ON)
-    elseif (${os_name} STREQUAL "ps4")
-        set(target_flags --target="x86_64-scei-ps4" -fPIC)
-        set(FAKE ON)
+    set(includePath "")
+    if ("${bit}" STREQUAL "32" AND ${arch} STREQUAL "x86")
+        set(target_arch "i386")
+    elseif ("${bit}" STREQUAL "64" AND ${arch} STREQUAL "x86")
+        set(target_arch "x86_64")
+    elseif ("${bit}" STREQUAL "32" AND ${arch} STREQUAL "arm")
+        set(target_arch "armv7")
+    elseif ("${bit}" STREQUAL "64" AND ${arch} STREQUAL "arm")
+        set(target_arch "aarch64")
     else()
         message(FATAL_ERROR "Error")
     endif()
-    if (FAKE)
-    add_custom_command(
-        OUTPUT ${output}
-        COMMAND ${Python3_EXECUTABLE} bitcode2cpp.py c --runtime=${bit} --os=${os_name} --fake --llvm_as ${LLVM_AS_EXECUTABLE}
-        > ${output}
-        DEPENDS ${inputFilePath}
-        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-        )
+
+    # Determine include path
+    if (WIN32)
+        if (${os_name} STREQUAL "windows")
+            set(includePath "")
+        else()
+            set(includePath -IC:/gnuwin32/include/glibc)
+        endif()
+    elseif (APPLE)
+        if (${os_name} STREQUAL "ios")
+            set(includePath -I/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS.sdk/usr/include/)
+        endif()
+        elseif ((${os_name} STREQUAL "android" OR ${os_name} STREQUAL "linux") AND ${arch} STREQUAL "arm")
+            set(includePath -I/nfs/site/home/aneshlya/ispc/gcc-arm-none-eabi-8-2019-q3-update/arm-none-eabi/include)
+        endif()
+    endif()
+
+    # Host to target OS constrains
+    if (WIN32)
+        if (${os_name} STREQUAL "ios")
+            set(FAKE ON)
+        endif()
+    elseif (APPLE)
+        if (${os_name} STREQUAL "windows")
+            set(FAKE ON)
+        elseif (${os_name} STREQUAL "ps4")
+            set(FAKE ON)
+        endif()
     else()
-    add_custom_command(
-        OUTPUT ${output}
-        COMMAND ${CLANG_EXECUTABLE} ${target_flags} -m${bit} -emit-llvm -c ${inputFilePath} -o - | \"${LLVM_DIS_EXECUTABLE}\" -
-            | \"${Python3_EXECUTABLE}\" bitcode2cpp.py c --runtime=${bit} --os=${os_name} --llvm_as ${LLVM_AS_EXECUTABLE}
+        if (${os_name} STREQUAL "windows")
+            set(FAKE ON)
+        elseif (${os_name} STREQUAL "ps4")
+            set(FAKE ON)
+        elseif (${os_name} STREQUAL "ios")
+            set(FAKE ON)
+        endif()
+    endif()
+
+    # OS to arch constrains
+    if (${os_name} STREQUAL "windows" AND ${arch} STREQUAL "arm")
+        set(FAKE ON)
+    endif()
+    if (${os_name} STREQUAL "macos" AND NOT ${target_arch} STREQUAL "x86_64")
+        set(FAKE ON)
+    endif()
+    if (${os_name} STREQUAL "ps4" AND NOT ${target_arch} STREQUAL "x86_64")
+        set(FAKE ON)
+    endif()
+    if (${os_name} STREQUAL "ios")
+        if (${target_arch} STREQUAL "aarch64")
+            set(target_arch "arm64")
+        else()
+            set(FAKE ON)
+        endif()
+    endif()
+
+    # Determine triple
+    if (${os_name} STREQUAL "windows")
+        set(target_flags --target=${target_arch}-pc-win32 ${includePath})
+    elseif (${os_name} STREQUAL "linux")
+        set(target_flags --target=${target_arch}-unknown-linux-gnu -fPIC ${includePath})
+    elseif (${os_name} STREQUAL "macos")
+        set(target_flags --target=${target_arch}-apple-macosx ${includePath})
+    elseif (${os_name} STREQUAL "android")
+        set(target_flags --target=${target_arch}-unknown-linux-android -fPIC ${includePath})
+    elseif (${os_name} STREQUAL "ios")
+        set(target_flags --target=${target_arch}-apple-ios ${includePath})
+    elseif (${os_name} STREQUAL "ps4")
+        set(target_flags --target=${target_arch}-scei-ps4 -fPIC ${includePath})
+    else()
+        message(FATAL_ERROR "Error")
+    endif()
+
+    set(output ${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_CFG_INTDIR}/builtins-c-${bit}-${os_name}-${target_arch}.cpp)
+    if (FAKE)
+        add_custom_command(
+            OUTPUT ${output}
+            COMMAND ${Python3_EXECUTABLE} bitcode2cpp.py c --runtime=${bit} --os=${os_name} --arch=${target_arch} --fake --llvm_as ${LLVM_AS_EXECUTABLE}
             > ${output}
-        DEPENDS ${inputFilePath}
-        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-    )
+            DEPENDS ${inputFilePath}
+            WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+            )
+    else()
+        add_custom_command(
+            OUTPUT ${output}
+            COMMAND ${CLANG_EXECUTABLE} ${target_flags} -m${bit} -emit-llvm -c ${inputFilePath} -o - | \"${LLVM_DIS_EXECUTABLE}\" -
+                | \"${Python3_EXECUTABLE}\" bitcode2cpp.py c --runtime=${bit} --os=${os_name} --arch=${target_arch} --llvm_as ${LLVM_AS_EXECUTABLE}
+                > ${output}
+            DEPENDS ${inputFilePath}
+            WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+            )
     endif()
     set(${resultFileName} ${output} PARENT_SCOPE)
     set_source_files_properties(${resultFileName} PROPERTIES GENERATED true)
@@ -149,12 +214,14 @@ endfunction()
 function (generate_common_builtins resultList)
     foreach (bit 32 64)
         foreach (os_name "windows" "linux" "macos" "android" "ios" "ps4")
-            builtin_to_cpp(${bit} ${os_name} res${bit}${os_name})
-            list(APPEND tmpList ${res${bit}${os_name}} )
-            if(MSVC)
-                # Group generated files inside Visual Studio
-                source_group("Generated Builtins" FILES ${res${bit}${os_name}})
-            endif()
+            foreach (arch "x86" "arm")
+                builtin_to_cpp(${bit} ${os_name} ${arch} res${bit}${os_name}${arch})
+                list(APPEND tmpList ${res${bit}${os_name}${arch}} )
+                if(MSVC)
+                    # Group generated files inside Visual Studio
+                    source_group("Generated Builtins" FILES ${res${bit}${os_name}${arch}})
+                endif()
+            endforeach()
         endforeach()
     endforeach()
     set(${resultList} ${tmpList} PARENT_SCOPE)
