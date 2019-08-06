@@ -11,6 +11,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument("src", help="Source file to process")
 parser.add_argument("--runtime", help="Runtime", nargs='?', default='')
 parser.add_argument("--os", help="Target OS", default='')
+parser.add_argument("--arch", help="Target architecture", default='')
 parser.add_argument("--fake", help="Produce empty array", dest='fake', action='store_true', default=False)
 parser.add_argument("--llvm_as", help="Path to LLVM assembler executable", dest="path_to_llvm_as")
 args = parser.parse_known_args()
@@ -55,9 +56,14 @@ else:
     sys.stderr.write("Unknown argument for --os: " + args[0].os)
     sys.exit(1)
 
+target_arch = ""
+if args[0].arch in ["i386", "x86_64", "armv7", "arm64", "aarch64"]:
+    target_arch = args[0].arch + "_"
+    
+
 width = 16
 
-sys.stdout.write("extern const unsigned char builtins_bitcode_" + target_os + "_" + name + "[] = {\n")
+sys.stdout.write("extern const unsigned char builtins_bitcode_" + target_os + "_" + target_arch + name + "[] = {\n")
 
 if args[0].fake:
     data = []
@@ -72,7 +78,7 @@ else:
             sys.stdout.write(" ")
 
 sys.stdout.write("0x00 };\n\n")
-sys.stdout.write("int builtins_bitcode_" + target_os + "_" + name + "_length = " + str(len(data)) + ";\n")
+sys.stdout.write("int builtins_bitcode_" + target_os + "_" + target_arch + name + "_length = " + str(len(data)) + ";\n")
 
 if not args[0].fake:
     as_out.wait()

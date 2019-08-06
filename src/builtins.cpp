@@ -892,7 +892,9 @@ void AddBitcodeToModule(const unsigned char *bitcode, int length, llvm::Module *
 #endif // !__arm__
 #ifdef ISPC_NVPTX_ENABLED
             if (g->target->getISA() != Target::NVPTX)
-#endif /* ISPC_NVPTX_ENABLED */
+#endif      /* ISPC_NVPTX_ENABLED */
+            // Disable this code for cross compilation
+#if 0
             {
                 Assert(bcTriple.getArch() == llvm::Triple::UnknownArch || mTriple.getArch() == bcTriple.getArch());
                 Assert(bcTriple.getVendor() == llvm::Triple::UnknownVendor ||
@@ -914,18 +916,18 @@ void AddBitcodeToModule(const unsigned char *bitcode, int length, llvm::Module *
                             module->getDataLayoutStr().c_str(), bcModule->getDataLayoutStr().c_str());
                 }
 #else
-            if (!VerifyDataLayoutCompatibility(module->getDataLayout(), bcModule->getDataLayout()) && warn) {
-                Warning(SourcePos(),
-                        "Module DataLayout is incompatible with "
-                        "library DataLayout:\n"
-                        "Module  DL: %s\n"
-                        "Library DL: %s\n",
-                        module->getDataLayout().c_str(), bcModule->getDataLayout().c_str());
-            }
+                if (!VerifyDataLayoutCompatibility(module->getDataLayout(), bcModule->getDataLayout()) && warn) {
+                    Warning(SourcePos(),
+                            "Module DataLayout is incompatible with "
+                            "library DataLayout:\n"
+                            "Module  DL: %s\n"
+                            "Library DL: %s\n",
+                            module->getDataLayout().c_str(), bcModule->getDataLayout().c_str());
+                }
 #endif
             }
-
-        bcModule->setTargetTriple(mTriple.str());
+#endif
+                bcModule->setTargetTriple(mTriple.str());
         bcModule->setDataLayout(module->getDataLayout());
 
 #if ISPC_LLVM_VERSION <= ISPC_LLVM_3_5 // 3.2-3.5
@@ -1160,47 +1162,67 @@ void DefineStdlib(SymbolTable *symbolTable, llvm::LLVMContext *ctx, llvm::Module
     switch (g->target_os) {
     case TargetOS::OS_WINDOWS:
         if (runtime32) {
-            EXPORT_MODULE_COND_WARN(builtins_bitcode_windows_c_32bit, warn);
+            EXPORT_MODULE_COND_WARN(builtins_bitcode_windows_i386_c_32bit, warn);
         } else {
-            EXPORT_MODULE_COND_WARN(builtins_bitcode_windows_c_64bit, warn);
+            EXPORT_MODULE_COND_WARN(builtins_bitcode_windows_x86_64_c_64bit, warn);
         }
         break;
     case TargetOS::OS_LINUX:
         if (runtime32) {
-            EXPORT_MODULE_COND_WARN(builtins_bitcode_linux_c_32bit, warn);
+            if (g->target->getArch() == "x86") {
+                EXPORT_MODULE_COND_WARN(builtins_bitcode_linux_i386_c_32bit, warn);
+            }
+            if (g->target->getArch() == "arm") {
+                EXPORT_MODULE_COND_WARN(builtins_bitcode_linux_armv7_c_32bit, warn);
+            }
         } else {
-            EXPORT_MODULE_COND_WARN(builtins_bitcode_linux_c_64bit, warn);
+            if (g->target->getArch() == "x86-64") {
+                EXPORT_MODULE_COND_WARN(builtins_bitcode_linux_x86_64_c_64bit, warn);
+            }
+            if (g->target->getArch() == "aarch64") {
+                EXPORT_MODULE_COND_WARN(builtins_bitcode_linux_aarch64_c_64bit, warn);
+            }
         }
         break;
     case TargetOS::OS_MAC:
         if (runtime32) {
             Error(SourcePos(), "doesn't exist");
-            EXPORT_MODULE_COND_WARN(builtins_bitcode_macos_c_32bit, warn);
+            EXPORT_MODULE_COND_WARN(builtins_bitcode_macos_i386_c_32bit, warn);
         } else {
-            EXPORT_MODULE_COND_WARN(builtins_bitcode_macos_c_64bit, warn);
+            EXPORT_MODULE_COND_WARN(builtins_bitcode_macos_x86_64_c_64bit, warn);
         }
         break;
     case TargetOS::OS_ANDROID:
         if (runtime32) {
-            EXPORT_MODULE_COND_WARN(builtins_bitcode_android_c_32bit, warn);
+            if (g->target->getArch() == "x86") {
+                EXPORT_MODULE_COND_WARN(builtins_bitcode_android_i386_c_32bit, warn);
+            }
+            if (g->target->getArch() == "arm") {
+                EXPORT_MODULE_COND_WARN(builtins_bitcode_android_armv7_c_32bit, warn);
+            }
         } else {
-            EXPORT_MODULE_COND_WARN(builtins_bitcode_android_c_64bit, warn);
+            if (g->target->getArch() == "x86-64") {
+                EXPORT_MODULE_COND_WARN(builtins_bitcode_android_x86_64_c_64bit, warn);
+            }
+            if (g->target->getArch() == "aarch64") {
+                EXPORT_MODULE_COND_WARN(builtins_bitcode_android_aarch64_c_64bit, warn);
+            }
         }
         break;
     case TargetOS::OS_IOS:
         if (runtime32) {
             Error(SourcePos(), "doesn't exist");
-            EXPORT_MODULE_COND_WARN(builtins_bitcode_ios_c_32bit, warn);
+            EXPORT_MODULE_COND_WARN(builtins_bitcode_ios_i386_c_32bit, warn);
         } else {
-            EXPORT_MODULE_COND_WARN(builtins_bitcode_ios_c_64bit, warn);
+            EXPORT_MODULE_COND_WARN(builtins_bitcode_ios_arm64_c_64bit, warn);
         }
         break;
     case TargetOS::OS_PS4:
         if (runtime32) {
             Error(SourcePos(), "doesn't exist");
-            EXPORT_MODULE_COND_WARN(builtins_bitcode_ps4_c_32bit, warn);
+            EXPORT_MODULE_COND_WARN(builtins_bitcode_ps4_i386_c_32bit, warn);
         } else {
-            EXPORT_MODULE_COND_WARN(builtins_bitcode_ps4_c_64bit, warn);
+            EXPORT_MODULE_COND_WARN(builtins_bitcode_ps4_x86_64_c_64bit, warn);
         }
         break;
     default:
