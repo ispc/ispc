@@ -3266,15 +3266,17 @@ static void lCoalescePerfInfo(const std::vector<llvm::CallInst *> &coalesceGroup
             strncat(loadOpsInfo, ", ", sizeof(loadOpsInfo) - strlen(loadOpsInfo) - 1);
     }
 
-    if (coalesceGroup.size() == 1)
-        PerformanceWarning(pos, "Coalesced gather into %d load%s (%s).", (int)loadOps.size(),
-                           (loadOps.size() > 1) ? "s" : "", loadOpsInfo);
-    else
-        PerformanceWarning(pos,
-                           "Coalesced %d gathers starting here %sinto %d "
-                           "load%s (%s).",
-                           (int)coalesceGroup.size(), otherPositions, (int)loadOps.size(),
-                           (loadOps.size() > 1) ? "s" : "", loadOpsInfo);
+    if (g->opt.level > 0) {
+        if (coalesceGroup.size() == 1)
+            PerformanceWarning(pos, "Coalesced gather into %d load%s (%s).", (int)loadOps.size(),
+                               (loadOps.size() > 1) ? "s" : "", loadOpsInfo);
+        else
+            PerformanceWarning(pos,
+                               "Coalesced %d gathers starting here %sinto %d "
+                               "load%s (%s).",
+                               (int)coalesceGroup.size(), otherPositions, (int)loadOps.size(),
+                               (loadOps.size() > 1) ? "s" : "", loadOpsInfo);
+    }
 }
 
 /** Utility routine that computes an offset from a base pointer and then
@@ -4242,7 +4244,7 @@ static bool lReplacePseudoGS(llvm::CallInst *callInst) {
     bool gotPosition = lGetSourcePosFromMetadata(callInst, &pos);
 
     callInst->setCalledFunction(info->actualFunc);
-    if (gotPosition && g->target->getVectorWidth() > 1) {
+    if (gotPosition && (g->target->getVectorWidth() > 1) && (g->opt.level > 0)) {
         if (info->isGather)
             PerformanceWarning(pos, "Gather required to load value.");
         else if (!info->isPrefetch)
@@ -5023,7 +5025,7 @@ bool ReplaceStdlibShiftPass::runOnBasicBlock(llvm::BasicBlock &bb) {
                         ci->replaceAllUsesWith(shuffle);
                         modifiedAny = true;
                         delete[] shuffleVals;
-                    } else {
+                    } else if (g->opt.level > 0) {
                         PerformanceWarning(SourcePos(), "Stdlib shift() called without constant shift amount.");
                     }
                 }
