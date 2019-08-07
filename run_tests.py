@@ -699,8 +699,6 @@ def run_tests(options1, args, print_version):
             common.remove_if_exists(run_tests_log)
     else:
         run_tests_log = ""
-    global test_states
-    test_states = "fail_db.txt"
     if options.verify:
         verify()
         return 0
@@ -848,6 +846,7 @@ import common
 print_debug = common.print_debug
 error = common.error
 exit_code = 0
+test_states = "fail_db.txt"
 
 if __name__ == "__main__":
     parser = OptionParser()
