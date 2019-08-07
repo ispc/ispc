@@ -525,6 +525,25 @@ def verify():
                 print_debug("error in line " + str(i) + "\n", False, run_tests_log)
                 break
 
+# set ispc exe using ISPC_HOME or PATH environment variables
+def set_ispc_exe():
+    ispc_exe = ""
+    ispc_ext = ""
+    if is_windows:
+        ispc_ext = ".exe"
+    if os.environ["ISPC_HOME"]:
+        if os.path.exists(os.environ["ISPC_HOME"] + os.sep + "ispc" + ispc_ext):
+            ispc_exe = os.environ["ISPC_HOME"] + os.sep + "ispc" + ispc_ext
+    PATH_dir = os.environ["PATH"].split(os.pathsep)
+    for counter in PATH_dir:
+        if ispc_exe == "":
+            if os.path.exists(counter + os.sep + "ispc" + ispc_ext):
+                ispc_exe = counter + os.sep + "ispc" + ispc_ext
+    # checks the required ispc compiler otherwise prints an error message
+    if ispc_exe == "":
+        error("ISPC compiler not found.\nAdded path to ispc compiler to your PATH variable or ISPC_HOME variable\n", 1)
+    return ispc_exe
+
 # set arch/target (and include_file for generic targets)
 def set_target(options):
     if options.target == 'neon':
@@ -624,21 +643,7 @@ def run_tests(options1, args, print_version):
     set_target(options)
 
     global ispc_exe
-    ispc_exe = ""
-    ispc_ext=""
-    if is_windows:
-        ispc_ext = ".exe"
-    if os.environ.get("ISPC_HOME") != None:
-        if os.path.exists(os.environ["ISPC_HOME"] + os.sep + "ispc" + ispc_ext):
-            ispc_exe = os.environ["ISPC_HOME"] + os.sep + "ispc" + ispc_ext
-    PATH_dir = os.environ["PATH"].split(os.pathsep)
-    for counter in PATH_dir:
-        if ispc_exe == "":
-            if os.path.exists(counter + os.sep + "ispc" + ispc_ext):
-                ispc_exe = counter + os.sep + "ispc" + ispc_ext
-    # checks the required ispc compiler otherwise prints an error message
-    if ispc_exe == "":
-        error("ISPC compiler not found.\nAdded path to ispc compiler to your PATH variable or ISPC_HOME variable\n", 1)
+    ispc_exe = set_ispc_exe()
     print_debug("Testing ispc: " + ispc_exe + "\n", s, run_tests_log)
     # On Windows use relative path to not depend on host directory, which may possibly
     # have white spaces and unicode characters.
