@@ -679,8 +679,7 @@ def run_tests(options1, args, print_version):
     run_error_files = [ ]
     skip_files = [ ]
 
-    nthreads = min(multiprocessing.cpu_count(), options.num_jobs)
-    nthreads = min(nthreads, len(files))
+    nthreads = min([multiprocessing.cpu_count(), options.num_jobs, len(files)])
     print_debug("Running %d jobs in parallel. Running %d tests.\n" % (nthreads, total_tests), s, run_tests_log)
 
     # put each of the test filenames into a queue
