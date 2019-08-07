@@ -1227,11 +1227,28 @@ const char *Target::SupportedTargets() {
 
 const char *Target::SupportedOSes() {
     return
-#ifdef ISPC_HOST_IS_WINDOWS
-        // Windows target is supported only on Widows host
+#if defined(ISPC_HOST_IS_WINDOWS)
+#if !defined(ISPC_WINDOWS_TARGET_OFF)
         "windows, "
 #endif
-        "linux, macos, android, ios, ps4";
+#if !defined(ISPC_PS4_TARGET_OFF)
+        "ps4, "
+#endif
+#elif defined(ISPC_HOST_IS_APPLE)
+#if !defined(ISPC_IOS_TARGET_OFF)
+        "ios, "
+#endif
+#endif
+#if !defined(ISPC_LINUX_TARGET_OFF)
+        "linux, "
+#endif
+#if !defined(ISPC_MACOS_TARGET_OFF)
+        "macos, "
+#endif
+#if !defined(ISPC_ANDROID_TARGET_OFF)
+        "android"
+#endif
+	;
 }
 
 std::string Target::GetTripleString() const {
@@ -1244,10 +1261,13 @@ std::string Target::GetTripleString() const {
             triple.setArchName("x86_64");
         } else if (m_arch == "arm") {
             Error(SourcePos(), "Not supported.\n");
+            exit(1);
         } else if (m_arch == "aarch64") {
-            triple.setArchName("Not supported.\n");
+            Error(SourcePos(), "Not supported.\n");
+            exit(1);
         } else {
             Error(SourcePos(), "Unknown arch.\n");
+            exit(1);
         }
         //"x86_64-pc-windows-msvc"
         triple.setVendor(llvm::Triple::VendorType::PC);
@@ -1265,6 +1285,7 @@ std::string Target::GetTripleString() const {
             triple.setArchName("aarch64");
         } else {
             Error(SourcePos(), "Unknown arch.\n");
+            exit(1);
         }
         triple.setVendor(llvm::Triple::VendorType::UnknownVendor);
         triple.setOS(llvm::Triple::OSType::Linux);
@@ -1274,6 +1295,7 @@ std::string Target::GetTripleString() const {
         // asserts
         if (m_arch != "x86-64") {
             Error(SourcePos(), "macOS supports on x86_64 arch.\n");
+            exit(1);
         }
         triple.setArch(llvm::Triple::ArchType::x86_64);
         triple.setVendor(llvm::Triple::VendorType::Apple);
@@ -1290,6 +1312,7 @@ std::string Target::GetTripleString() const {
             triple.setArchName("aarch64");
         } else {
             Error(SourcePos(), "Unknown arch.\n");
+            exit(1);
         }
         triple.setVendor(llvm::Triple::VendorType::UnknownVendor);
         triple.setOS(llvm::Triple::OSType::Linux);
@@ -1298,6 +1321,7 @@ std::string Target::GetTripleString() const {
     case OS_IOS:
         if (m_arch != "aarch64") {
             Error(SourcePos(), "iOS supports only aarch64");
+            exit(1);
         }
         // Note, for iOS arch need to be set to "arm64", instead of "aarch64".
         // Internet say this is for historical reasons.
@@ -1309,6 +1333,7 @@ std::string Target::GetTripleString() const {
     case OS_PS4:
         if (m_arch != "x86-64") {
             Error(SourcePos(), "PS4 supports only x86_64");
+            exit(1);
         }
         // "x86_64-scei-ps4"
         triple.setArch(llvm::Triple::ArchType::x86_64);
@@ -1635,13 +1660,13 @@ SourcePos Union(const SourcePos &p1, const SourcePos &p2) {
 }
 
 TargetOS StringToOS(std::string os) {
-#ifdef ISPC_HOST_IS_WINDOWS
-    // Windows target is supported only on Widows host
+    std::string supportedOses = Target::SupportedOSes();
+    if (supportedOses.find(os) == std::string::npos) {
+        return OS_ERROR;
+    }
     if (os == "windows") {
         return OS_WINDOWS;
-    } else
-#endif
-        if (os == "linux") {
+    } else if (os == "linux") {
         return OS_LINUX;
     } else if (os == "macos") {
         return OS_MAC;
@@ -1656,13 +1681,13 @@ TargetOS StringToOS(std::string os) {
 }
 
 constexpr TargetOS GetHostOS() {
-#if defined(ISPC_HOST_IS_WINDOWS)
+#if defined(ISPC_HOST_IS_WINDOWS) && !defined(ISPC_WINDOWS_TARGET_OFF)
     return OS_WINDOWS;
-#elif defined(ISPC_HOST_IS_LINUX)
+#elif defined(ISPC_HOST_IS_LINUX) && !defined(ISPC_LINUX_TARGET_OFF)
     return OS_LINUX;
-#elif defined(ISPC_HOST_IS_APPLE)
+#elif defined(ISPC_HOST_IS_APPLE) && !defined(ISPC_MACOS_TARGET_OFF)
     return OS_MAC;
 #else
-#error "Unknown OS"
+    return OS_ERROR;
 #endif
 }

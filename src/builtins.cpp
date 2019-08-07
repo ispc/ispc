@@ -1159,6 +1159,7 @@ void DefineStdlib(SymbolTable *symbolTable, llvm::LLVMContext *ctx, llvm::Module
     // so they only differentiate Windows/Unix and 32/64 bit, builtins-c need to take care about mangling.
     // Hence, different version for all potentially supported OSes. Those that are not supported in current
     // build are will have zero length.
+
     switch (g->target_os) {
     case TargetOS::OS_WINDOWS:
         if (runtime32) {
