@@ -525,6 +525,30 @@ def verify():
                 print_debug("error in line " + str(i) + "\n", False, run_tests_log)
                 break
 
+# returns the list of test files
+def get_test_files(args):
+    if len(args) == 0:
+        ispc_root = "."
+        files = glob.glob(ispc_root + os.sep + "tests" + os.sep + "*ispc") + \
+            glob.glob(ispc_root + os.sep + "tests_errors" + os.sep + "*ispc")
+    else:
+        if is_windows:
+            argfiles = [ ]
+            for f in args:
+                # we have to glob ourselves if this is being run under a DOS
+                # shell, as it passes wildcard as is.
+                argfiles += glob.glob(f)
+        else:
+            argfiles = args
+
+        files = [ ]
+        for f in argfiles:
+            if os.path.splitext(f.lower())[1] != ".ispc":
+                error("Ignoring file %s, which doesn't have an .ispc extension.\n" % f, 2)
+            else:
+                files += [ f ]
+    return files
+
 # checks the required compiler in PATH otherwise prints an error message
 def check_compiler_exists(compiler_exe):
     for path in os.environ["PATH"].split(os.pathsep):
@@ -633,29 +657,9 @@ def run_tests(options1, args, print_version):
     if print_version > 0:
         common.print_version(ispc_exe, "", options.compiler_exe, False, run_tests_log, is_windows)
 
-    ispc_root = "."
-
-    # if no specific test files are specified, run all of the tests in tests/,
-    # failing_tests/, and tests_errors/
-    if len(args) == 0:
-        files = glob.glob(ispc_root + os.sep + "tests" + os.sep + "*ispc") + \
-            glob.glob(ispc_root + os.sep + "tests_errors" + os.sep + "*ispc")
-    else:
-        if is_windows:
-            argfiles = [ ]
-            for f in args:
-                # we have to glob ourselves if this is being run under a DOS
-                # shell, as it passes wildcard as is.
-                argfiles += glob.glob(f)
-        else:
-            argfiles = args
-
-        files = [ ]
-        for f in argfiles:
-            if os.path.splitext(f.lower())[1] != ".ispc":
-                error("Ignoring file %s, which doesn't have an .ispc extension.\n" % f, 2)
-            else:
-                files += [ f ]
+    # if no specific test files are specified, run all of the tests in tests/
+    # and tests_errors/
+    files = get_test_files(args)
 
     # max_test_length is used to issue exact number of whitespace characters when
     # updating status. Otherwise update causes new lines standard 80 char terminal
