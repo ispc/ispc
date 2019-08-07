@@ -257,6 +257,26 @@ if (ISPC_NO_DUMPS)
     target_compile_definitions(${PROJECT_NAME} PRIVATE ISPC_NO_DUMPS)
 endif()
 
+# Compile definitions for cross compilation
+if (NOT ISPC_WINDOWS_TARGET)
+    target_compile_definitions(${PROJECT_NAME} PRIVATE ISPC_WINDOWS_TARGET_OFF)
+endif()
+if (NOT ISPC_LINUX_TARGET)
+    target_compile_definitions(${PROJECT_NAME} PRIVATE ISPC_LINUX_TARGET_OFF)
+endif()
+if (NOT ISPC_MACOS_TARGET)
+    target_compile_definitions(${PROJECT_NAME} PRIVATE ISPC_MACOS_TARGET_OFF)
+endif()
+if (NOT ISPC_IOS_TARGET)
+    target_compile_definitions(${PROJECT_NAME} PRIVATE ISPC_IOS_TARGET_OFF)
+endif()
+if (NOT ISPC_ANDROID_TARGET)
+    target_compile_definitions(${PROJECT_NAME} PRIVATE ISPC_ANDROID_TARGET_OFF)
+endif()
+if (NOT ISPC_PS4_TARGET)
+    target_compile_definitions(${PROJECT_NAME} PRIVATE ISPC_PS4_TARGET_OFF)
+endif()
+
 # Include directories
 target_include_directories(${PROJECT_NAME} PRIVATE
                            ${LLVM_INCLUDE_DIRS}
