@@ -55,6 +55,20 @@ class Host(object):
     def is_windows(self):
         return self.os == OS.Windows
 
+# The description of testing target configuration
+class TargetConfig(object):
+    def __init__(self, arch, target, include_file):
+        self.arch = arch
+        self.target = target
+        self.generic = target.find("generic-") != -1 and target != "generic-1" and target != "generic-x1"
+        self.include_file = include_file
+
+    def is_generic(self):
+        return self.generic
+
+    def get_target(self):
+        return self.target
+
 # test-running driver for ispc
 # utility routine to print an update on the number of tests that have been
 # finished.  Should be called with the lock held..
@@ -149,7 +163,7 @@ def add_prefix(path, host):
     return path
 
 # FIXME: needs documentation
-def check_test(filename, host):
+def check_test(filename, host, target):
     prev_arch = False
     prev_os = False
     done_arch = True
@@ -164,9 +178,9 @@ def check_test(filename, host):
     for run in re.finditer('// *rule: run on .*', b):
         arch = re.match('.* arch=.*', run.group())
         if arch != None:
-            if re.search(' arch='+options.arch+'$', arch.group()) != None:
+            if re.search(' arch='+target.arch+'$', arch.group()) != None:
                 prev_arch = True
-            if re.search(' arch='+options.arch+' ', arch.group()) != None:
+            if re.search(' arch='+target.arch+' ', arch.group()) != None:
                 prev_arch = True
             done_arch = prev_arch
         OS = re.match('.* OS=.*', run.group())
@@ -176,16 +190,16 @@ def check_test(filename, host):
             done_os = prev_os
     done = done_arch and done_os
     for skip in re.finditer('// *rule: skip on .*', b):
-        if re.search(' arch=' + options.arch + '$', skip.group())!=None:
+        if re.search(' arch=' + target.arch + '$', skip.group())!=None:
             done = False
-        if re.search(' arch=' + options.arch + ' ', skip.group())!=None:
+        if re.search(' arch=' + target.arch + ' ', skip.group())!=None:
             done = False
         if re.search(' OS=' + oss, skip.group())!=None:
             done = False
     return done
 
 
-def run_test(testname, host):
+def run_test(testname, host, target):
     # testname is a path to the test from the root of ispc dir
     # filename is a path to the test from the current dir
     # ispc_exe_rel is a relative path to ispc
@@ -196,7 +210,7 @@ def run_test(testname, host):
     want_error = (filename.find("tests_errors") != -1)
     if want_error == True:
         ispc_cmd = ispc_exe_rel + " --werror --nowrap %s --arch=%s --target=%s" % \
-            (filename, options.arch, options.target)
+            (filename, target.arch, target.target)
         (return_code, output, timeout) = run_command(ispc_cmd, 10)
         got_error = (return_code != 0) or timeout
 
@@ -242,9 +256,8 @@ def run_test(testname, host):
             error("unable to find function signature in test %s\n" % testname, 0)
             return (1, 0)
         else:
-            global is_generic_target
             if host.is_windows():
-                if is_generic_target:
+                if target.is_generic():
                     obj_name = "%s.cpp" % os.path.basename(filename)
                 else:
                     obj_name = "%s.obj" % os.path.basename(filename)
@@ -255,25 +268,25 @@ def run_test(testname, host):
                 if should_fail:
                     cc_cmd += " /DEXPECT_FAILURE"
             else:
-                if is_generic_target:
+                if target.is_generic():
                     obj_name = "%s.cpp" % testname
                 else:
                     obj_name = "%s.o" % testname
                 exe_name = "%s.run" % testname
 
-                if options.arch == 'arm':
+                if target.arch == 'arm':
                      gcc_arch = '--with-fpu=hardfp -marm -mfpu=neon -mfloat-abi=hard'
-                elif options.arch == 'x86':
+                elif target.arch == 'x86':
                     gcc_arch = '-m32'
-                elif options.arch == 'aarch64':
+                elif target.arch == 'aarch64':
                     gcc_arch = '-march=armv8-a -target aarch64-linux-gnueabi --static'
                 else:
                     gcc_arch = '-m64'
 
                 gcc_isa=""
-                if options.target == 'generic-4':
+                if target.target == 'generic-4':
                     gcc_isa = '-msse4.2'
-                if (options.target == 'generic-8'):
+                if target.target == 'generic-8':
                     gcc_isa = '-mavx'
 
                 cc_cmd = "%s -O2 -I. %s %s test_static.cpp -DTEST_SIG=%d %s -o %s" % \
@@ -285,12 +298,12 @@ def run_test(testname, host):
                     cc_cmd += " -DEXPECT_FAILURE"
 
             ispc_cmd = ispc_exe_rel + " --woff %s -o %s --arch=%s --target=%s" % \
-                        (filename, obj_name, options.arch, options.target)
+                        (filename, obj_name, target.arch, target.target)
 
             if options.no_opt:
                 ispc_cmd += " -O0"
-            if is_generic_target:
-                ispc_cmd += " --emit-c++ --c++-include-file=%s" % add_prefix(options.include_file, host)
+            if target.is_generic():
+                ispc_cmd += " --emit-c++ --c++-include-file=%s" % add_prefix(target.include_file, host)
 
         # compile the ispc code, make the executable, and run it...
         ispc_cmd += " -h " + filename + ".h"
@@ -327,8 +340,7 @@ def run_tasks_from_queue(queue, queue_ret, queue_error, queue_finish, total_test
     s = glob_var[2]
     global ispc_exe
     ispc_exe = glob_var[3]
-    global is_generic_target
-    is_generic_target = glob_var[4]
+    target = glob_var[4]
     global run_tests_log
     run_tests_log = glob_var[5]
 
@@ -351,9 +363,9 @@ def run_tasks_from_queue(queue, queue_ret, queue_error, queue_finish, total_test
     while True:
         if not queue.empty():
             filename = queue.get()
-            if check_test(filename, host):
+            if check_test(filename, host, target):
                 try:
-                    (compile_error, run_error) = run_test(filename, host)
+                    (compile_error, run_error) = run_test(filename, host, target)
                 except:
                     # This is in case the child has unexpectedly died or some other exception happened
                     # it`s not what we wanted, so we leave ERROR in queue_error
@@ -409,7 +421,7 @@ def sigint(signum, frame):
     sys.exit(1)
 
 
-def file_check(compfails, runfails):
+def file_check(compfails, runfails, host, target):
     global exit_code
     errors = len(compfails) + len(runfails)
     new_compfails = []
@@ -455,13 +467,13 @@ def file_check(compfails, runfails):
         error("\n**********\nWe don't have history of fails for compiler " +
                 compiler_version +
                 "\nAll fails will be new!!!\n**********", 2)
-    new_line = " "+options.arch.rjust(6)+" "+options.target.rjust(14)+" "+OS.rjust(7)+" "+llvm_version+" "+compiler_version.rjust(10)+" "+opt+" *\n"
+    new_line = " "+target.arch.rjust(6)+" "+target.target.rjust(14)+" "+OS.rjust(7)+" "+llvm_version+" "+compiler_version.rjust(10)+" "+opt+" *\n"
     new_compfails = compfails[:]
     new_runfails = runfails[:]
     new_f_lines = f_lines[:]
     for j in range(0, len(f_lines)):
-        if (((" "+options.arch+" ") in f_lines[j]) and
-           ((" "+options.target+" ") in f_lines[j]) and
+        if (((" "+target.arch+" ") in f_lines[j]) and
+           ((" "+target.target+" ") in f_lines[j]) and
            ((" "+OS+" ") in f_lines[j]) and
            ((" "+llvm_version+" ") in f_lines[j]) and
            ((" "+compiler_version+" ") in f_lines[j]) and
@@ -559,19 +571,19 @@ def populate_ex_state(options, total_tests, skip_files, compile_error_files,
         common.ex_state.add_to_rinf_testall(total_tests)
         for fname in skip_files:
             # We do not add skipped tests to test table as we do not know the test result
-            common.ex_state.add_to_rinf(options.arch, opt, options.target, 0, 0, 0, 1)
+            common.ex_state.add_to_rinf(target.arch, opt, target.target, 0, 0, 0, 1)
 
         for fname in compile_error_files:
-            common.ex_state.add_to_tt(fname, options.arch, opt, options.target, 0, 1)
-            common.ex_state.add_to_rinf(options.arch, opt, options.target, 0, 0, 1, 0)
+            common.ex_state.add_to_tt(fname, target.arch, opt, target.target, 0, 1)
+            common.ex_state.add_to_rinf(target.arch, opt, target.target, 0, 0, 1, 0)
 
         for fname in run_error_files:
-            common.ex_state.add_to_tt(fname, options.arch, opt, options.target, 1, 0)
-            common.ex_state.add_to_rinf(options.arch, opt, options.target, 0, 1, 0, 0)
+            common.ex_state.add_to_tt(fname, target.arch, opt, target.target, 1, 0)
+            common.ex_state.add_to_rinf(target.arch, opt, target.target, 0, 1, 0, 0)
 
         for fname in run_succeed_files:
-            common.ex_state.add_to_tt(fname, options.arch, opt, options.target, 0, 0)
-            common.ex_state.add_to_rinf(options.arch, opt, options.target, 1, 0, 0, 0)
+            common.ex_state.add_to_tt(fname, target.arch, opt, target.target, 0, 0)
+            common.ex_state.add_to_rinf(target.arch, opt, target.target, 1, 0, 0, 0)
 
     except:
         print_debug("Exception in ex_state. Skipping...", s, run_tests_log)
@@ -606,34 +618,30 @@ def set_compiler_exe(host, options):
     check_compiler_exists(options.compiler_exe)
 
 # set arch/target (and include_file for generic targets)
-def set_target(options):
-    if options.target == 'neon':
-        options.arch = 'aarch64'
+def set_target(target):
+    if target.target == 'neon':
+        target.arch = 'aarch64'
 
-    global is_generic_target
-    is_generic_target = ((options.target.find("generic-") != -1 and
-                     options.target != "generic-1" and options.target != "generic-x1"))
-
-    if is_generic_target and options.include_file == None:
-        if options.target == "generic-4" or options.target == "generic-x4":
+    if target.is_generic() and target.include_file == None:
+        if target.target == "generic-4" or target.target == "generic-x4":
             error("No generics #include specified; using examples/intrinsics/sse4.h\n", 2)
-            options.include_file = "examples/intrinsics/sse4.h"
-            options.target = "generic-4"
-        elif options.target == "generic-8" or options.target == "generic-x8":
+            target.include_file = "examples/intrinsics/sse4.h"
+            target.target = "generic-4"
+        elif target.target == "generic-8" or target.target == "generic-x8":
             error("No generics #include specified and no default available for \"generic-8\" target.\n", 1)
-            options.target = "generic-8"
-        elif options.target == "generic-16" or options.target == "generic-x16":
+            target.target = "generic-8"
+        elif target.target == "generic-16" or target.target == "generic-x16":
             error("No generics #include specified; using examples/intrinsics/generic-16.h\n", 2)
-            options.include_file = "examples/intrinsics/generic-16.h"
-            options.target = "generic-16"
-        elif options.target == "generic-32" or options.target == "generic-x32":
+            target.include_file = "examples/intrinsics/generic-16.h"
+            target.target = "generic-16"
+        elif target.target == "generic-32" or target.target == "generic-x32":
             error("No generics #include specified; using examples/intrinsics/generic-32.h\n", 2)
-            options.include_file = "examples/intrinsics/generic-32.h"
-            options.target = "generic-32"
-        elif options.target == "generic-64" or options.target == "generic-x64":
+            target.include_file = "examples/intrinsics/generic-32.h"
+            target.target = "generic-32"
+        elif target.target == "generic-64" or target.target == "generic-x64":
             error("No generics #include specified; using examples/intrinsics/generic-64.h\n", 2)
-            options.include_file = "examples/intrinsics/generic-64.h"
-            options.target = "generic-64"
+            target.include_file = "examples/intrinsics/generic-64.h"
+            target.target = "generic-64"
 
 # returns the list of test files
 def get_test_files(host, args):
@@ -696,8 +704,8 @@ def run_tests(options1, args, print_version):
     os.environ["TERM"] = "dumb"
 
     host = Host(platform.system())
-
-    set_target(options)
+    target = TargetConfig(options.arch, options.target, options.include_file)
+    target.set_target()
 
     global ispc_exe
     ispc_exe = set_ispc_exe(host)
@@ -766,7 +774,7 @@ def run_tests(options1, args, print_version):
 
     start_time = time.time()
     # launch jobs to run tests
-    glob_var = [host, options, s, ispc_exe, is_generic_target, run_tests_log]
+    glob_var = [host, options, s, ispc_exe, target, run_tests_log]
     # task_threads has to be global as it is used in sigint handler
     global task_threads
     task_threads = [0] * nthreads
@@ -810,7 +818,7 @@ def run_tests(options1, args, print_version):
         print_debug("No fails\n", s, run_tests_log)
 
     if len(args) == 0:
-        R = file_check(compile_error_files, run_error_files)
+        R = file_check(compile_error_files, run_error_files, host, target)
     else:
         error("don't check new fails for incomplete suite of tests", 2)
         R = 0
