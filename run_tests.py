@@ -525,6 +525,13 @@ def verify():
                 print_debug("error in line " + str(i) + "\n", False, run_tests_log)
                 break
 
+# checks the required compiler in PATH otherwise prints an error message
+def check_compiler_exists(compiler_exe):
+    for path in os.environ["PATH"].split(os.pathsep):
+        if os.path.exists(path + os.sep + compiler_exe):
+            return
+    error("missing the required compiler: %s \n" % compiler_exe, 1)
+
 def print_result(title, file_list, total_tests, s, run_tests_log):
     print_debug("%d / %d tests %s:\n" % (len(file_list), total_tests, title), s, run_tests_log)
     for f in sorted(file_list):
@@ -620,16 +627,7 @@ def run_tests(options1, args, print_version):
             options.compiler_exe = "clang++"
 
     # checks the required compiler otherwise prints an error message
-    PATH_dir = os.environ["PATH"].split(os.pathsep)
-    compiler_exists = False
-
-    for counter in PATH_dir:
-        if os.path.exists(counter + os.sep + options.compiler_exe):
-            compiler_exists = True
-            break
-
-    if not compiler_exists:
-        error("missing the required compiler: %s \n" % options.compiler_exe, 1)
+    check_compiler_exists(options.compiler_exe)
 
     # print compilers versions
     if print_version > 0:
