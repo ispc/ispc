@@ -544,6 +544,16 @@ def set_ispc_exe():
         error("ISPC compiler not found.\nAdded path to ispc compiler to your PATH variable or ISPC_HOME variable\n", 1)
     return ispc_exe
 
+# set compiler exe depending on the OS
+def set_compiler_exe(options):
+    if options.compiler_exe == None:
+        if is_windows:
+            options.compiler_exe = "cl.exe"
+        else:
+            options.compiler_exe = "clang++"
+    # checks the required compiler otherwise prints an error message
+    check_compiler_exists(options.compiler_exe)
+
 # set arch/target (and include_file for generic targets)
 def set_target(options):
     if options.target == 'neon':
@@ -653,14 +663,7 @@ def run_tests(options1, args, print_version):
 
     ispc_exe += " " + options.ispc_flags
 
-    if options.compiler_exe == None:
-        if is_windows:
-            options.compiler_exe = "cl.exe"
-        else:
-            options.compiler_exe = "clang++"
-
-    # checks the required compiler otherwise prints an error message
-    check_compiler_exists(options.compiler_exe)
+    set_compiler_exe(options)
 
     # print compilers versions
     if print_version > 0:
