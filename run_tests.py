@@ -525,6 +525,36 @@ def verify():
                 print_debug("error in line " + str(i) + "\n", False, run_tests_log)
                 break
 
+# set arch/target (and include_file for generic targets)
+def set_target(options):
+    if options.target == 'neon':
+        options.arch = 'aarch64'
+
+    global is_generic_target
+    is_generic_target = ((options.target.find("generic-") != -1 and
+                     options.target != "generic-1" and options.target != "generic-x1"))
+
+    if is_generic_target and options.include_file == None:
+        if options.target == "generic-4" or options.target == "generic-x4":
+            error("No generics #include specified; using examples/intrinsics/sse4.h\n", 2)
+            options.include_file = "examples/intrinsics/sse4.h"
+            options.target = "generic-4"
+        elif options.target == "generic-8" or options.target == "generic-x8":
+            error("No generics #include specified and no default available for \"generic-8\" target.\n", 1)
+            options.target = "generic-8"
+        elif options.target == "generic-16" or options.target == "generic-x16":
+            error("No generics #include specified; using examples/intrinsics/generic-16.h\n", 2)
+            options.include_file = "examples/intrinsics/generic-16.h"
+            options.target = "generic-16"
+        elif options.target == "generic-32" or options.target == "generic-x32":
+            error("No generics #include specified; using examples/intrinsics/generic-32.h\n", 2)
+            options.include_file = "examples/intrinsics/generic-32.h"
+            options.target = "generic-32"
+        elif options.target == "generic-64" or options.target == "generic-x64":
+            error("No generics #include specified; using examples/intrinsics/generic-64.h\n", 2)
+            options.include_file = "examples/intrinsics/generic-64.h"
+            options.target = "generic-64"
+
 # returns the list of test files
 def get_test_files(args):
     if len(args) == 0:
@@ -591,8 +621,7 @@ def run_tests(options1, args, print_version):
     is_windows = (platform.system() == 'Windows' or
                 'CYGWIN_NT' in platform.system())
 
-    if options.target == 'neon':
-        options.arch = 'aarch64'
+    set_target(options)
 
     global ispc_exe
     ispc_exe = ""
@@ -618,31 +647,6 @@ def run_tests(options1, args, print_version):
         ispc_exe = os.path.relpath(ispc_exe, os.getcwd())
 
     ispc_exe += " " + options.ispc_flags
-
-    global is_generic_target
-    is_generic_target = ((options.target.find("generic-") != -1 and
-                     options.target != "generic-1" and options.target != "generic-x1"))
-
-    if is_generic_target and options.include_file == None:
-        if options.target == "generic-4" or options.target == "generic-x4":
-            error("No generics #include specified; using examples/intrinsics/sse4.h\n", 2)
-            options.include_file = "examples/intrinsics/sse4.h"
-            options.target = "generic-4"
-        elif options.target == "generic-8" or options.target == "generic-x8":
-            error("No generics #include specified and no default available for \"generic-8\" target.\n", 1)
-            options.target = "generic-8"
-        elif options.target == "generic-16" or options.target == "generic-x16":
-            error("No generics #include specified; using examples/intrinsics/generic-16.h\n", 2)
-            options.include_file = "examples/intrinsics/generic-16.h"
-            options.target = "generic-16"
-        elif options.target == "generic-32" or options.target == "generic-x32":
-            error("No generics #include specified; using examples/intrinsics/generic-32.h\n", 2)
-            options.include_file = "examples/intrinsics/generic-32.h"
-            options.target = "generic-32"
-        elif options.target == "generic-64" or options.target == "generic-x64":
-            error("No generics #include specified; using examples/intrinsics/generic-64.h\n", 2)
-            options.include_file = "examples/intrinsics/generic-64.h"
-            options.target = "generic-64"
 
     if options.compiler_exe == None:
         if is_windows:
