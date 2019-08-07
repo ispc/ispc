@@ -31,6 +31,30 @@
 #   NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 #   SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+# Supported operating systems
+from enum import Enum, unique
+@unique
+class OS(Enum):
+    Unknown = 0
+    Windows = 1
+    Linux = 2
+    Mac = 3
+
+# The description of host testing system
+class Host(object):
+    def __init__(self, system):
+        if system == 'Windows' or 'CYGWIN_NT' in system:
+            self.os = OS.Windows
+        elif system == 'Darwin':
+            self.os = OS.Mac
+        elif system == 'Linux':
+            self.os = OS.Linux
+        else:
+            self.os = OS.Unknown
+
+    def is_windows(self):
+        return self.os == OS.Windows
+
 # test-running driver for ispc
 # utility routine to print an update on the number of tests that have been
 # finished.  Should be called with the lock held..
@@ -114,9 +138,8 @@ def run_cmds(compile_cmds, run_cmd, filename, expect_failure):
         return (0, 0)
 
 
-def add_prefix(path):
-    global is_windows
-    if is_windows:
+def add_prefix(path, host):
+    if host.is_windows():
     # On Windows we run tests in tmp dir, so the root is one level up.
         input_prefix = "..\\"
     else:
@@ -125,19 +148,18 @@ def add_prefix(path):
     path = os.path.abspath(path)
     return path
 
-
-def check_test(filename):
+# FIXME: needs documentation
+def check_test(filename, host):
     prev_arch = False
     prev_os = False
     done_arch = True
     done_os = True
     done = True
-    global is_windows
-    if is_windows:
+    if host.is_windows():
         oss = "windows"
     else:
-        oss = "linux"
-    with open(add_prefix(filename)) as f:
+        oss = "linux" # FIXME: what was the assumption here?
+    with open(add_prefix(filename, host)) as f:
         b = f.read()
     for run in re.finditer('// *rule: run on .*', b):
         arch = re.match('.* arch=.*', run.group())
@@ -163,12 +185,12 @@ def check_test(filename):
     return done
 
 
-def run_test(testname):
+def run_test(testname, host):
     # testname is a path to the test from the root of ispc dir
     # filename is a path to the test from the current dir
     # ispc_exe_rel is a relative path to ispc
-    filename = add_prefix(testname)
-    ispc_exe_rel = add_prefix(ispc_exe)
+    filename = add_prefix(testname, host)
+    ispc_exe_rel = add_prefix(ispc_exe, host)
 
     # is this a test to make sure an error is issued?
     want_error = (filename.find("tests_errors") != -1)
@@ -221,7 +243,7 @@ def run_test(testname):
             return (1, 0)
         else:
             global is_generic_target
-            if is_windows:
+            if host.is_windows():
                 if is_generic_target:
                     obj_name = "%s.cpp" % os.path.basename(filename)
                 else:
@@ -229,7 +251,7 @@ def run_test(testname):
                 exe_name = "%s.exe" % os.path.basename(filename)
 
                 cc_cmd = "%s /I. /Zi /nologo /DTEST_SIG=%d %s %s /Fe%s" % \
-                         (options.compiler_exe, match, add_prefix("test_static.cpp"), obj_name, exe_name)
+                         (options.compiler_exe, match, add_prefix("test_static.cpp", host), obj_name, exe_name)
                 if should_fail:
                     cc_cmd += " /DEXPECT_FAILURE"
             else:
@@ -268,7 +290,7 @@ def run_test(testname):
             if options.no_opt:
                 ispc_cmd += " -O0"
             if is_generic_target:
-                ispc_cmd += " --emit-c++ --c++-include-file=%s" % add_prefix(options.include_file)
+                ispc_cmd += " --emit-c++ --c++-include-file=%s" % add_prefix(options.include_file, host)
 
         # compile the ispc code, make the executable, and run it...
         ispc_cmd += " -h " + filename + ".h"
@@ -283,7 +305,7 @@ def run_test(testname):
             if not options.save_bin:
                 if not run_error:
                     os.unlink(exe_name)
-                    if is_windows:
+                    if host.is_windows():
                         basename = os.path.basename(filename)
                         os.unlink("%s.pdb" % basename)
                         os.unlink("%s.ilk" % basename)
@@ -298,8 +320,7 @@ def run_test(testname):
 # the system.
 def run_tasks_from_queue(queue, queue_ret, queue_error, queue_finish, total_tests_arg, max_test_length_arg, counter, mutex, glob_var):
     # This is needed on windows because windows doesn't copy globals from parent process while multiprocessing
-    global is_windows
-    is_windows = glob_var[0]
+    host = glob_var[0]
     global options
     options = glob_var[1]
     global s
@@ -311,7 +332,7 @@ def run_tasks_from_queue(queue, queue_ret, queue_error, queue_finish, total_test
     global run_tests_log
     run_tests_log = glob_var[5]
 
-    if is_windows:
+    if host.is_windows():
         tmpdir = "tmp%d" % os.getpid()
         while os.access(tmpdir, os.F_OK):
             tmpdir = "%sx" % tmpdir
@@ -330,9 +351,9 @@ def run_tasks_from_queue(queue, queue_ret, queue_error, queue_finish, total_test
     while True:
         if not queue.empty():
             filename = queue.get()
-            if check_test(filename):
+            if check_test(filename, host):
                 try:
-                    (compile_error, run_error) = run_test(filename)
+                    (compile_error, run_error) = run_test(filename, host)
                 except:
                     # This is in case the child has unexpectedly died or some other exception happened
                     # it`s not what we wanted, so we leave ERROR in queue_error
@@ -358,7 +379,7 @@ def run_tasks_from_queue(queue, queue_ret, queue_error, queue_finish, total_test
 
         else:
             queue_ret.put((compile_error_files, run_error_files, skip_files, run_succeed_files))
-            if is_windows:
+            if host.is_windows():
                 try:
                     os.remove("test_static.obj")
                     # vc*.pdb trick is in anticipaton of new versions of VS.
@@ -416,7 +437,7 @@ def file_check(compfails, runfails):
     temp1 = common.take_lines(ispc_exe + " --version", "first")
     llvm_version = temp1[-12:-4]
 # Detect compiler version
-    if is_windows == False:
+    if OS != "Windows":
         temp1 = common.take_lines(options.compiler_exe + " --version", "first")
         temp2 = re.search("[0-9]*\.[0-9]*\.[0-9]", temp1)
         if temp2 == None:
@@ -556,10 +577,10 @@ def populate_ex_state(options, total_tests, skip_files, compile_error_files,
         print_debug("Exception in ex_state. Skipping...", s, run_tests_log)
 
 # set ispc exe using ISPC_HOME or PATH environment variables
-def set_ispc_exe():
+def set_ispc_exe(host):
     ispc_exe = ""
     ispc_ext = ""
-    if is_windows:
+    if host.is_windows():
         ispc_ext = ".exe"
     if os.environ["ISPC_HOME"]:
         if os.path.exists(os.environ["ISPC_HOME"] + os.sep + "ispc" + ispc_ext):
@@ -575,9 +596,9 @@ def set_ispc_exe():
     return ispc_exe
 
 # set compiler exe depending on the OS
-def set_compiler_exe(options):
+def set_compiler_exe(host, options):
     if options.compiler_exe == None:
-        if is_windows:
+        if host.is_windows():
             options.compiler_exe = "cl.exe"
         else:
             options.compiler_exe = "clang++"
@@ -615,13 +636,13 @@ def set_target(options):
             options.target = "generic-64"
 
 # returns the list of test files
-def get_test_files(args):
+def get_test_files(host, args):
     if len(args) == 0:
         ispc_root = "."
         files = glob.glob(ispc_root + os.sep + "tests" + os.sep + "*ispc") + \
             glob.glob(ispc_root + os.sep + "tests_errors" + os.sep + "*ispc")
     else:
-        if is_windows:
+        if host.is_windows():
             argfiles = [ ]
             for f in args:
                 # we have to glob ourselves if this is being run under a DOS
@@ -674,34 +695,30 @@ def run_tests(options1, args, print_version):
     # messages doesn't get confused
     os.environ["TERM"] = "dumb"
 
-    # This script is affected by http://bugs.python.org/issue5261 on OSX 10.5 Leopard
-    # git history has a workaround for that issue.
-    global is_windows
-    is_windows = (platform.system() == 'Windows' or
-                'CYGWIN_NT' in platform.system())
+    host = Host(platform.system())
 
     set_target(options)
 
     global ispc_exe
-    ispc_exe = set_ispc_exe()
+    ispc_exe = set_ispc_exe(host)
     print_debug("Testing ispc: " + ispc_exe + "\n", s, run_tests_log)
     # On Windows use relative path to not depend on host directory, which may possibly
     # have white spaces and unicode characters.
-    if is_windows:
+    if host.is_windows():
         common_prefix = os.path.commonprefix([ispc_exe, os.getcwd()])
         ispc_exe = os.path.relpath(ispc_exe, os.getcwd())
 
     ispc_exe += " " + options.ispc_flags
 
-    set_compiler_exe(options)
+    set_compiler_exe(host, options)
 
     # print compilers versions
     if print_version > 0:
-        common.print_version(ispc_exe, "", options.compiler_exe, False, run_tests_log, is_windows)
+        common.print_version(ispc_exe, "", options.compiler_exe, False, run_tests_log, host.is_windows())
 
     # if no specific test files are specified, run all of the tests in tests/
     # and tests_errors/
-    files = get_test_files(args)
+    files = get_test_files(host, args)
 
     # max_test_length is used to issue exact number of whitespace characters when
     # updating status. Otherwise update causes new lines standard 80 char terminal
@@ -749,7 +766,7 @@ def run_tests(options1, args, print_version):
 
     start_time = time.time()
     # launch jobs to run tests
-    glob_var = [is_windows, options, s, ispc_exe, is_generic_target, run_tests_log]
+    glob_var = [host, options, s, ispc_exe, is_generic_target, run_tests_log]
     # task_threads has to be global as it is used in sigint handler
     global task_threads
     task_threads = [0] * nthreads
