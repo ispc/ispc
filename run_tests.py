@@ -42,7 +42,7 @@ class OS(Enum):
 
 # The description of host testing system
 class Host(object):
-    def __init__(self, system):
+    def set_os(self, system):
         if system == 'Windows' or 'CYGWIN_NT' in system:
             self.os = OS.Windows
         elif system == 'Darwin':
@@ -52,8 +52,35 @@ class Host(object):
         else:
             self.os = OS.Unknown
 
+    # set ispc exe using ISPC_HOME or PATH environment variables
+    def set_ispc_exe(self):
+        ispc_exe = ""
+        ispc_ext = ""
+        if self.is_windows():
+            ispc_ext = ".exe"
+        if os.environ["ISPC_HOME"]:
+            if os.path.exists(os.environ["ISPC_HOME"] + os.sep + "ispc" + ispc_ext):
+                ispc_exe = os.environ["ISPC_HOME"] + os.sep + "ispc" + ispc_ext
+        PATH_dir = os.environ["PATH"].split(os.pathsep)
+        for counter in PATH_dir:
+            if ispc_exe == "":
+                if os.path.exists(counter + os.sep + "ispc" + ispc_ext):
+                    ispc_exe = counter + os.sep + "ispc" + ispc_ext
+        # checks the required ispc compiler otherwise prints an error message
+        if ispc_exe == "":
+            error("ISPC compiler not found.\nAdded path to ispc compiler to your PATH variable or ISPC_HOME variable\n", 1)
+        # use relative path
+        self.ispc_exe = os.path.relpath(ispc_exe, os.getcwd())
+
+    def __init__(self, system):
+        self.set_os(system)
+        self.set_ispc_exe()
+
     def is_windows(self):
         return self.os == OS.Windows
+
+    def set_ispc_cmd(self, ispc_flags):
+        self.ispc_cmd = self.ispc_exe + " " + ispc_flags
 
 # The description of testing target configuration
 class TargetConfig(object):
@@ -204,7 +231,7 @@ def run_test(testname, host, target):
     # filename is a path to the test from the current dir
     # ispc_exe_rel is a relative path to ispc
     filename = add_prefix(testname, host)
-    ispc_exe_rel = add_prefix(ispc_exe, host)
+    ispc_exe_rel = add_prefix(host.ispc_cmd, host)
 
     # is this a test to make sure an error is issued?
     want_error = (filename.find("tests_errors") != -1)
@@ -338,11 +365,9 @@ def run_tasks_from_queue(queue, queue_ret, queue_error, queue_finish, total_test
     options = glob_var[1]
     global s
     s = glob_var[2]
-    global ispc_exe
-    ispc_exe = glob_var[3]
-    target = glob_var[4]
+    target = glob_var[3]
     global run_tests_log
-    run_tests_log = glob_var[5]
+    run_tests_log = glob_var[4]
 
     if host.is_windows():
         tmpdir = "tmp%d" % os.getpid()
@@ -446,7 +471,7 @@ def file_check(compfails, runfails, host, target):
     else:
         opt = "-O2"
 # Detect LLVM version
-    temp1 = common.take_lines(ispc_exe + " --version", "first")
+    temp1 = common.take_lines(host.ispc_exe + " --version", "first")
     llvm_version = temp1[-12:-4]
 # Detect compiler version
     if OS != "Windows":
@@ -588,25 +613,6 @@ def populate_ex_state(options, total_tests, skip_files, compile_error_files,
     except:
         print_debug("Exception in ex_state. Skipping...", s, run_tests_log)
 
-# set ispc exe using ISPC_HOME or PATH environment variables
-def set_ispc_exe(host):
-    ispc_exe = ""
-    ispc_ext = ""
-    if host.is_windows():
-        ispc_ext = ".exe"
-    if os.environ["ISPC_HOME"]:
-        if os.path.exists(os.environ["ISPC_HOME"] + os.sep + "ispc" + ispc_ext):
-            ispc_exe = os.environ["ISPC_HOME"] + os.sep + "ispc" + ispc_ext
-    PATH_dir = os.environ["PATH"].split(os.pathsep)
-    for counter in PATH_dir:
-        if ispc_exe == "":
-            if os.path.exists(counter + os.sep + "ispc" + ispc_ext):
-                ispc_exe = counter + os.sep + "ispc" + ispc_ext
-    # checks the required ispc compiler otherwise prints an error message
-    if ispc_exe == "":
-        error("ISPC compiler not found.\nAdded path to ispc compiler to your PATH variable or ISPC_HOME variable\n", 1)
-    return ispc_exe
-
 # set compiler exe depending on the OS
 def set_compiler_exe(host, options):
     if options.compiler_exe == None:
@@ -704,25 +710,18 @@ def run_tests(options1, args, print_version):
     os.environ["TERM"] = "dumb"
 
     host = Host(platform.system())
+    host.set_ispc_cmd(options.ispc_flags)
+
+    print_debug("Testing ispc: " + host.ispc_exe + "\n", s, run_tests_log)
+
     target = TargetConfig(options.arch, options.target, options.include_file)
     target.set_target()
-
-    global ispc_exe
-    ispc_exe = set_ispc_exe(host)
-    print_debug("Testing ispc: " + ispc_exe + "\n", s, run_tests_log)
-    # On Windows use relative path to not depend on host directory, which may possibly
-    # have white spaces and unicode characters.
-    if host.is_windows():
-        common_prefix = os.path.commonprefix([ispc_exe, os.getcwd()])
-        ispc_exe = os.path.relpath(ispc_exe, os.getcwd())
-
-    ispc_exe += " " + options.ispc_flags
 
     set_compiler_exe(host, options)
 
     # print compilers versions
     if print_version > 0:
-        common.print_version(ispc_exe, "", options.compiler_exe, False, run_tests_log, host.is_windows())
+        common.print_version(host.ispc_exe, "", options.compiler_exe, False, run_tests_log, host.is_windows())
 
     # if no specific test files are specified, run all of the tests in tests/
     # and tests_errors/
@@ -774,7 +773,7 @@ def run_tests(options1, args, print_version):
 
     start_time = time.time()
     # launch jobs to run tests
-    glob_var = [host, options, s, ispc_exe, target, run_tests_log]
+    glob_var = [host, options, s, target, run_tests_log]
     # task_threads has to be global as it is used in sigint handler
     global task_threads
     task_threads = [0] * nthreads
