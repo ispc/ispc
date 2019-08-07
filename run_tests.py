@@ -525,6 +525,36 @@ def verify():
                 print_debug("error in line " + str(i) + "\n", False, run_tests_log)
                 break
 
+# populate ex_state test table and run info with testing results
+def populate_ex_state(options, total_tests, skip_files, compile_error_files,
+                      run_error_files, run_succeed_files):
+    # Detect opt_set
+    if options.no_opt == True:
+        opt = "-O0"
+    else:
+        opt = "-O2"
+
+    try:
+        common.ex_state.add_to_rinf_testall(total_tests)
+        for fname in skip_files:
+            # We do not add skipped tests to test table as we do not know the test result
+            common.ex_state.add_to_rinf(options.arch, opt, options.target, 0, 0, 0, 1)
+
+        for fname in compile_error_files:
+            common.ex_state.add_to_tt(fname, options.arch, opt, options.target, 0, 1)
+            common.ex_state.add_to_rinf(options.arch, opt, options.target, 0, 0, 1, 0)
+
+        for fname in run_error_files:
+            common.ex_state.add_to_tt(fname, options.arch, opt, options.target, 1, 0)
+            common.ex_state.add_to_rinf(options.arch, opt, options.target, 0, 1, 0, 0)
+
+        for fname in run_succeed_files:
+            common.ex_state.add_to_tt(fname, options.arch, opt, options.target, 0, 0)
+            common.ex_state.add_to_rinf(options.arch, opt, options.target, 1, 0, 0, 0)
+
+    except:
+        print_debug("Exception in ex_state. Skipping...", s, run_tests_log)
+
 # set ispc exe using ISPC_HOME or PATH environment variables
 def set_ispc_exe():
     ispc_exe = ""
@@ -745,34 +775,9 @@ def run_tests(options1, args, print_version):
         skip_files += skip
         run_succeed_files += ss
 
-    # Detect opt_set
-    if options.no_opt == True:
-        opt = "-O0"
-    else:
-        opt = "-O2"
-
-    try:
-        common.ex_state.add_to_rinf_testall(total_tests)
-        for fname in skip_files:
-            # We do not add skipped tests to test table as we do not know the test result
-            common.ex_state.add_to_rinf(options.arch, opt, options.target, 0, 0, 0, 1)
-
-        for fname in compile_error_files:
-            common.ex_state.add_to_tt(fname, options.arch, opt, options.target, 0, 1)
-            common.ex_state.add_to_rinf(options.arch, opt, options.target, 0, 0, 1, 0)
-
-        for fname in run_error_files:
-            common.ex_state.add_to_tt(fname, options.arch, opt, options.target, 1, 0)
-            common.ex_state.add_to_rinf(options.arch, opt, options.target, 0, 1, 0, 0)
-
-        for fname in run_succeed_files:
-            common.ex_state.add_to_tt(fname, options.arch, opt, options.target, 0, 0)
-            common.ex_state.add_to_rinf(options.arch, opt, options.target, 1, 0, 0, 0)
-
-    except:
-        print_debug("Exception in ex_state. Skipping...", s, run_tests_log)
-
-
+    # populate ex_state test table and run info with testing results
+    populate_ex_state(options, total_tests, skip_files, compile_error_files,
+        run_error_files, run_succeed_files)
 
     # if all threads ended correctly, qerr is empty
     if not qerr.empty():
