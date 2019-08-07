@@ -705,17 +705,19 @@ def run_tests(options1, args, print_version):
     # we're interrupted
     signal.signal(signal.SIGINT, sigint)
 
-    finished_tests_counter = multiprocessing.Value(c_int)
-    finished_tests_counter_lock = multiprocessing.Lock()
+    finished_tests_counter = multiprocessing.Value('i') # 'i' is typecode of ctypes.c_int
+    # lock to protect counter increment and stdout printing
+    lock = multiprocessing.Lock()
 
     start_time = time.time()
     # launch jobs to run tests
     glob_var = [is_windows, options, s, ispc_exe, is_generic_target, run_tests_log]
+    # task_threads has to be global as it is used in sigint handler
     global task_threads
     task_threads = [0] * nthreads
     for x in range(nthreads):
         task_threads[x] = multiprocessing.Process(target=run_tasks_from_queue, args=(q, qret, qerr, qfin, total_tests,
-                max_test_length, finished_tests_counter, finished_tests_counter_lock, glob_var))
+                max_test_length, finished_tests_counter, lock, glob_var))
         task_threads[x].start()
 
     # wait for them all to finish and rid the queue of STOPs
@@ -791,7 +793,6 @@ def run_tests(options1, args, print_version):
 
 from optparse import OptionParser
 import multiprocessing
-from ctypes import c_int
 import os
 import sys
 import glob
