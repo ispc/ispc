@@ -664,9 +664,7 @@ def run_tests(options1, args, print_version):
     # max_test_length is used to issue exact number of whitespace characters when
     # updating status. Otherwise update causes new lines standard 80 char terminal
     # on both Linux and Windows.
-    max_test_length = 0
-    for f in files:
-        max_test_length = max(max_test_length, len(f))
+    max_test_length = max([len(f) for f in files])
 
     # randomly shuffle the tests if asked to do so
     if (options.random):
