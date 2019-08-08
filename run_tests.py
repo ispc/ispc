@@ -89,12 +89,36 @@ class TargetConfig(object):
         self.target = target
         self.generic = target.find("generic-") != -1 and target != "generic-1" and target != "generic-x1"
         self.include_file = include_file
+        self.set_target()
 
     def is_generic(self):
         return self.generic
 
-    def get_target(self):
-        return self.target
+    # set arch/target (and include_file for generic targets)
+    def set_target(self):
+        if self.target == 'neon':
+            self.arch = 'aarch64'
+
+        if self.is_generic() and self.include_file == None:
+            if self.target == "generic-4" or self.target == "generic-x4":
+                error("No generics #include specified; using examples/intrinsics/sse4.h\n", 2)
+                self.include_file = "examples/intrinsics/sse4.h"
+                self.target = "generic-4"
+            elif self.target == "generic-8" or self.target == "generic-x8":
+                error("No generics #include specified and no default available for \"generic-8\" target.\n", 1)
+                self.target = "generic-8"
+            elif self.target == "generic-16" or self.target == "generic-x16":
+                error("No generics #include specified; using examples/intrinsics/generic-16.h\n", 2)
+                self.include_file = "examples/intrinsics/generic-16.h"
+                self.target = "generic-16"
+            elif self.target == "generic-32" or self.target == "generic-x32":
+                error("No generics #include specified; using examples/intrinsics/generic-32.h\n", 2)
+                self.include_file = "examples/intrinsics/generic-32.h"
+                self.target = "generic-32"
+            elif self.target == "generic-64" or self.target == "generic-x64":
+                error("No generics #include specified; using examples/intrinsics/generic-64.h\n", 2)
+                self.include_file = "examples/intrinsics/generic-64.h"
+                self.target = "generic-64"
 
 # test-running driver for ispc
 # utility routine to print an update on the number of tests that have been
@@ -623,32 +647,6 @@ def set_compiler_exe(host, options):
     # checks the required compiler otherwise prints an error message
     check_compiler_exists(options.compiler_exe)
 
-# set arch/target (and include_file for generic targets)
-def set_target(target):
-    if target.target == 'neon':
-        target.arch = 'aarch64'
-
-    if target.is_generic() and target.include_file == None:
-        if target.target == "generic-4" or target.target == "generic-x4":
-            error("No generics #include specified; using examples/intrinsics/sse4.h\n", 2)
-            target.include_file = "examples/intrinsics/sse4.h"
-            target.target = "generic-4"
-        elif target.target == "generic-8" or target.target == "generic-x8":
-            error("No generics #include specified and no default available for \"generic-8\" target.\n", 1)
-            target.target = "generic-8"
-        elif target.target == "generic-16" or target.target == "generic-x16":
-            error("No generics #include specified; using examples/intrinsics/generic-16.h\n", 2)
-            target.include_file = "examples/intrinsics/generic-16.h"
-            target.target = "generic-16"
-        elif target.target == "generic-32" or target.target == "generic-x32":
-            error("No generics #include specified; using examples/intrinsics/generic-32.h\n", 2)
-            target.include_file = "examples/intrinsics/generic-32.h"
-            target.target = "generic-32"
-        elif target.target == "generic-64" or target.target == "generic-x64":
-            error("No generics #include specified; using examples/intrinsics/generic-64.h\n", 2)
-            target.include_file = "examples/intrinsics/generic-64.h"
-            target.target = "generic-64"
-
 # returns the list of test files
 def get_test_files(host, args):
     if len(args) == 0:
@@ -713,7 +711,6 @@ def run_tests(options1, args, print_version):
     print_debug("Testing ispc: " + host.ispc_exe + "\n", s, run_tests_log)
 
     target = TargetConfig(options.arch, options.target, options.include_file)
-    target.set_target()
 
     set_compiler_exe(host, options)
 
