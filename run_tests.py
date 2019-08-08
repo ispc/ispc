@@ -40,6 +40,19 @@ class OS(Enum):
     Linux = 2
     Mac = 3
 
+@unique
+class Status(Enum):
+    Success = 0
+    Compfail = 1
+    Runfail = 2
+    Skip = 3
+
+StatusStr = {Status.Success: "PASSED",
+             Status.Compfail: "FAILED compilation",
+             Status.Runfail: "FAILED execution",
+             Status.Skip: "SKIPPED",
+            }
+
 # The description of host testing system
 class Host(object):
     def set_os(self, system):
@@ -183,7 +196,7 @@ def run_cmds(compile_cmds, run_cmd, filename, expect_failure):
             print_debug("Compilation of test %s failed %s           \n" % (filename, "due to TIMEOUT" if timeout else ""), s, run_tests_log)
             if output != "":
                 print_debug("%s" % output, s, run_tests_log)
-            return (1, 0)
+            return Status.Compfail
     if not options.save_bin:
         (return_code, output, timeout) = run_command(run_cmd)
         run_failed = (return_code != 0) or timeout
@@ -198,9 +211,9 @@ def run_cmds(compile_cmds, run_cmd, filename, expect_failure):
     if output:
         print_debug("%s\n" % output, s, run_tests_log)
     if surprise == True:
-        return (0, 1)
+        return Status.Runfail
     else:
-        return (0, 0)
+        return Status.Success
 
 
 def add_prefix(path, host):
@@ -276,12 +289,12 @@ def run_test(testname, host, target):
         if re.search(firstline, output) == None:
             print_debug("Didn't see expected error message %s from test %s.\nActual output:\n%s\n" % \
                 (firstline, testname, output), s, run_tests_log)
-            return (1, 0)
+            return Status.Compfail
         elif got_error == False:
             print_debug("Unexpectedly no errors issued from test %s\n" % testname, s, run_tests_log)
-            return (1, 0)
+            return Status.Compfail
         else:
-            return (0, 0)
+            return Status.Success
     else:
         # do we expect this test to fail?
         should_fail = (testname.find("failing_") != -1)
@@ -305,7 +318,7 @@ def run_test(testname, host, target):
         file.close()
         if match == -1:
             error("unable to find function signature in test %s\n" % testname, 0)
-            return (1, 0)
+            return Status.Compfail
         else:
             if host.is_windows():
                 if target.is_generic():
@@ -359,15 +372,14 @@ def run_test(testname, host, target):
         # compile the ispc code, make the executable, and run it...
         ispc_cmd += " -h " + filename + ".h"
         cc_cmd += " -DTEST_HEADER=<" + filename + ".h>"
-        (compile_error, run_error) = run_cmds([ispc_cmd, cc_cmd],
-                                              options.wrapexe + " " + exe_name, \
-                                              testname, should_fail)
+        status = run_cmds([ispc_cmd, cc_cmd], options.wrapexe + " " + exe_name,
+                          testname, should_fail)
 
         # clean up after running the test
         try:
             os.unlink(filename + ".h")
             if not options.save_bin:
-                if not run_error:
+                if status != Status.Runfail:
                     os.unlink(exe_name)
                     if host.is_windows():
                         basename = os.path.basename(filename)
@@ -377,7 +389,7 @@ def run_test(testname, host, target):
         except:
             None
 
-        return (compile_error, run_error)
+        return status
 
 # pull tests to run from the given queue and run them.  Multiple copies of
 # this function will be running in parallel across all of the CPU cores of
@@ -404,17 +416,15 @@ def run_tasks_from_queue(queue, queue_ret, queue_error, queue_finish, total_test
 
     # by default, the thread is presumed to fail
     queue_error.put('ERROR')
-    compile_error_files = [ ]
-    run_succeed_files = [ ]
-    run_error_files = [ ]
-    skip_files = [ ]
+    results = []
 
     while True:
         if not queue.empty():
             filename = queue.get()
+            status = Status.Skip
             if check_test(filename, host, target):
                 try:
-                    (compile_error, run_error) = run_test(filename, host, target)
+                    status = run_test(filename, host, target)
                 except:
                     # This is in case the child has unexpectedly died or some other exception happened
                     # it`s not what we wanted, so we leave ERROR in queue_error
@@ -426,20 +436,13 @@ def run_tasks_from_queue(queue, queue_ret, queue_error, queue_finish, total_test
                     # exiting the loop, returning from the thread
                     break
 
-                if compile_error == 0 and run_error == 0:
-                    run_succeed_files += [ filename ]
-                if compile_error != 0:
-                    compile_error_files += [ filename ]
-                if run_error != 0:
-                    run_error_files += [ filename ]
-
                 with mutex:
                     update_progress(filename, total_tests_arg, counter, max_test_length_arg)
-            else:
-                skip_files += [ filename ]
+
+            results.append((filename, status))
 
         else:
-            queue_ret.put((compile_error_files, run_error_files, skip_files, run_succeed_files))
+            queue_ret.put(results)
             if host.is_windows():
                 try:
                     os.remove("test_static.obj")
@@ -470,8 +473,11 @@ def sigint(signum, frame):
     sys.exit(1)
 
 
-def file_check(compfails, runfails, host, target):
+def file_check(results, host, target):
     global exit_code
+    exit_code = 0
+    compfails = [fname for fname, status in results if status == Status.Compfail]
+    runfails = [fname for fname, status in results if status == Status.Runfail]
     errors = len(compfails) + len(runfails)
     new_compfails = []
     new_runfails = []
@@ -608,8 +614,7 @@ def verify():
                 break
 
 # populate ex_state test table and run info with testing results
-def populate_ex_state(options, total_tests, skip_files, compile_error_files,
-                      run_error_files, run_succeed_files):
+def populate_ex_state(options, total_tests, test_result):
     # Detect opt_set
     if options.no_opt == True:
         opt = "-O0"
@@ -618,21 +623,16 @@ def populate_ex_state(options, total_tests, skip_files, compile_error_files,
 
     try:
         common.ex_state.add_to_rinf_testall(total_tests)
-        for fname in skip_files:
+        for fname, status in test_result:
+            # one-hot encoding
+            succ = status == Status.Success
+            runf = status == Status.Runfail
+            comp = status == Status.Compfail
+            skip = status == Status.Skipped
             # We do not add skipped tests to test table as we do not know the test result
-            common.ex_state.add_to_rinf(target.arch, opt, target.target, 0, 0, 0, 1)
-
-        for fname in compile_error_files:
-            common.ex_state.add_to_tt(fname, target.arch, opt, target.target, 0, 1)
-            common.ex_state.add_to_rinf(target.arch, opt, target.target, 0, 0, 1, 0)
-
-        for fname in run_error_files:
-            common.ex_state.add_to_tt(fname, target.arch, opt, target.target, 1, 0)
-            common.ex_state.add_to_rinf(target.arch, opt, target.target, 0, 1, 0, 0)
-
-        for fname in run_succeed_files:
-            common.ex_state.add_to_tt(fname, target.arch, opt, target.target, 0, 0)
-            common.ex_state.add_to_rinf(target.arch, opt, target.target, 1, 0, 0, 0)
+            if status != Status.Skip:
+                common.ex_state.add_to_tt(fname, target.arch, opt, target.target, runf, comp)
+            common.ex_state.add_to_rinf(target.arch, opt, target.target, succ, runf, comp, skip)
 
     except:
         print_debug("Exception in ex_state. Skipping...", s, run_tests_log)
@@ -678,7 +678,10 @@ def check_compiler_exists(compiler_exe):
             return
     error("missing the required compiler: %s \n" % compiler_exe, 1)
 
-def print_result(title, file_list, total_tests, s, run_tests_log):
+def print_result(status, results, s, run_tests_log):
+    title = StatusStr[status]
+    file_list = [fname for fname, fstatus in results if status == fstatus]
+    total_tests = len(results)
     print_debug("%d / %d tests %s:\n" % (len(file_list), total_tests, title), s, run_tests_log)
     for f in sorted(file_list):
         print_debug("\t%s\n" % f, s, run_tests_log)
@@ -735,10 +738,7 @@ def run_tests(options1, args, print_version):
     # counter
     total_tests = len(files)
 
-    compile_error_files = [ ]
-    run_succeed_files = [ ]
-    run_error_files = [ ]
-    skip_files = [ ]
+    results = []
 
     nthreads = min([multiprocessing.cpu_count(), options.num_jobs, len(files)])
     print_debug("Running %d jobs in parallel. Running %d tests.\n" % (nthreads, total_tests), s, run_tests_log)
@@ -788,15 +788,10 @@ def run_tests(options1, args, print_version):
     elapsed_time = time.strftime('%Hh%Mm%Ssec.', time.gmtime(temp_time))
 
     while not qret.empty():
-        (c, r, skip, ss) = qret.get()
-        compile_error_files += c
-        run_error_files += r
-        skip_files += skip
-        run_succeed_files += ss
+        results += qret.get()
 
     # populate ex_state test table and run info with testing results
-    populate_ex_state(options, total_tests, skip_files, compile_error_files,
-        run_error_files, run_succeed_files)
+    populate_ex_state(options, total_tests, results)
 
     # if all threads ended correctly, qerr is empty
     if not qerr.empty():
@@ -804,15 +799,14 @@ def run_tests(options1, args, print_version):
 
     if options.non_interactive:
         print_debug(" Done %d / %d\n" % (finished_tests_counter.value, total_tests), s, run_tests_log)
-    print_result("PASSED", run_succeed_files, total_tests, s, run_tests_log)
-    print_result("SKIPPED", skip_files, total_tests, s, run_tests_log)
-    print_result("FAILED compilation", compile_error_files, total_tests, s, run_tests_log)
-    print_result("FAILED execution", run_error_files, total_tests, s, run_tests_log)
-    if len(compile_error_files) == 0 and len(run_error_files) == 0:
+    for status in Status:
+        print_result(status, results, s, run_tests_log)
+    fails = [status != Status.Compfail and status != Status.Runfail for _, status in results]
+    if sum(fails) == 0:
         print_debug("No fails\n", s, run_tests_log)
 
     if len(args) == 0:
-        R = file_check(compile_error_files, run_error_files, host, target)
+        R = file_check(results, host, target)
     else:
         error("don't check new fails for incomplete suite of tests", 2)
         R = 0
