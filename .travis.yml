@@ -69,7 +69,7 @@ before_install:
 
 script:
   - mkdir build_$LLVM_VERSION && cd build_$LLVM_VERSION
-  - cmake -DCMAKE_INSTALL_PREFIX=$TRAVIS_BUILD_DIR ../
+  - cmake -DCMAKE_INSTALL_PREFIX=$TRAVIS_BUILD_DIR ../ -DISPC_CROSS=OFF
     # Build ispc and check_isa utility. Run lit tests.
   - make ispc check_isa check-all -j4
     # Add ispc to the PATH

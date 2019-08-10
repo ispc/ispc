@@ -95,10 +95,10 @@ install:
 before_build:
   - cmd: |-
       cd %ISPC_HOME% && mkdir build && cd build
-      cmake .. -G %generator% -DCMAKE_INSTALL_PREFIX=%ISPC_HOME%\install -DISPC_PREPARE_PACKAGE=ON -DM4_EXECUTABLE=C:\cygwin64\bin\m4.exe
+      cmake .. -G %generator% -DCMAKE_INSTALL_PREFIX=%ISPC_HOME%\install -DISPC_PREPARE_PACKAGE=ON -DM4_EXECUTABLE=C:\cygwin64\bin\m4.exe -DISPC_CROSS=OFF
   - sh: |-
       cd $ISPC_HOME && mkdir build && cd build
-      cmake ../ -DISPC_PREPARE_PACKAGE=ON -DCMAKE_INSTALL_PREFIX=%ISPC_HOME%/install
+      cmake ../ -DISPC_PREPARE_PACKAGE=ON -DCMAKE_INSTALL_PREFIX=%ISPC_HOME%/install -DISPC_CROSS=OFF
 
 build_script:
   - cmd: msbuild %ISPC_HOME%\build\PACKAGE.vcxproj
