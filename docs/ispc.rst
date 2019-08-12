@@ -1640,15 +1640,15 @@ basic types:
 * ``bool``: boolean value; may be assigned ``true``, ``false``, or the
   value of a boolean expression.
 * ``int8``: 8-bit signed integer.
-* ``unsigned int8``: 8-bit unsigned integer.
+* ``unsigned int8``: 8-bit unsigned integer; may also be specified as ``uint8``.
 * ``int16``: 16-bit signed integer.
-* ``unsigned int16``: 16-bit unsigned integer.
+* ``unsigned int16``: 16-bit unsigned integer; may also be specified as ``uint16``.
 * ``int``: 32-bit signed integer; may also be specified as ``int32``.
 * ``unsigned int``: 32-bit unsigned integer; may also be specified as
-  ``unsigned int32``.
+  ``unsigned int32``, ``uint32`` or ``uint``.
 * ``float``: 32-bit floating point value
 * ``int64``: 64-bit signed integer.
-* ``unsigned int64``: 64-bit unsigned integer.
+* ``unsigned int64``: 64-bit unsigned integer; may also be specified as ``uint64``.
 * ``double``: 64-bit double-precision floating point value.
 
 There are also a few built-in types related to pointers and memory:
