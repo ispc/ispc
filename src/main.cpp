@@ -476,6 +476,11 @@ int main(int Argc, char *Argv[]) {
     Module::OutputFlags flags = Module::NoFlags;
     const char *arch = NULL, *cpu = NULL, *target = NULL, *intelAsmSyntax = NULL;
 
+    // Default settings for PS4
+    if (g->target_os == TargetOS::OS_PS4) {
+        flags |= Module::GeneratePIC;
+        cpu = "btver2";
+    }
     for (int i = 1; i < argc; ++i) {
         if (!strcmp(argv[i], "--help"))
             usage(0);
@@ -497,12 +502,15 @@ int main(int Argc, char *Argv[]) {
                 usage(1);
             }
         } else if (!strncmp(argv[i], "--arch=", 7)) {
-            arch = argv[i] + 7;
-            // Define arch alias
-            // LLVM TargetRegistry uses "x86-64", while triple uses "x86_64".
-            // We support both as input and internally keep it as "x86-64".
-            if (std::string(arch) == "x86_64") {
-                arch = "x86-64";
+            // Do not allow to set arch for PS4 target, it is pre-defined.
+            if (g->target_os != TargetOS::OS_PS4) {
+                arch = argv[i] + 7;
+                // Define arch alias
+                // LLVM TargetRegistry uses "x86-64", while triple uses "x86_64".
+                // We support both as input and internally keep it as "x86-64".
+                if (std::string(arch) == "x86_64") {
+                    arch = "x86-64";
+                }
             }
         } else if (!strncmp(argv[i], "--x86-asm-syntax=", 17)) {
             intelAsmSyntax = argv[i] + 17;
@@ -513,9 +521,12 @@ int main(int Argc, char *Argv[]) {
                         "only intel and att are allowed.\n",
                         argv[i] + 17);
             }
-        } else if (!strncmp(argv[i], "--cpu=", 6))
-            cpu = argv[i] + 6;
-        else if (!strcmp(argv[i], "--fast-math")) {
+        } else if (!strncmp(argv[i], "--cpu=", 6)) {
+            // Do not allow to set cpu for PS4 target, it is pre-defined.
+            if (g->target_os != TargetOS::OS_PS4) {
+                cpu = argv[i] + 6;
+            }
+        } else if (!strcmp(argv[i], "--fast-math")) {
             fprintf(stderr, "--fast-math option has been renamed to --opt=fast-math!\n");
             usage(1);
         } else if (!strcmp(argv[i], "--fast-masked-vload")) {
