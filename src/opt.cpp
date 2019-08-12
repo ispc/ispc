@@ -477,7 +477,11 @@ void Optimize(llvm::Module *module, int optLevel) {
         if (g->target->getISA() == Target::GENX) {
             optPM.add(llvm::createUnifyFunctionExitNodesPass());
             optPM.add(llvm::createGenXLayoutBlocksPass());
+            // FIXME: temporary solution
+            optPM.add(llvm::createDemoteRegisterToMemoryPass());
             optPM.add(llvm::createISPCSimdCFLoweringPass());
+            // FIXME: temporary solution
+            optPM.add(llvm::createPromoteMemoryToRegisterPass());
         }
 #endif
         optPM.add(CreateImproveMemoryOpsPass(), 100);
@@ -514,13 +518,17 @@ void Optimize(llvm::Module *module, int optLevel) {
         llvm::initializeInstrumentation(*registry);
         llvm::initializeTarget(*registry);
 
-        optPM.add(llvm::createGlobalDCEPass(), 185);
+        optPM.add(llvm::createGlobalDCEPass(), 184);
 
 #ifdef ISPC_GENX_ENABLED
         if (g->target->getISA() == Target::GENX) {
             optPM.add(llvm::createUnifyFunctionExitNodesPass());
             optPM.add(llvm::createGenXLayoutBlocksPass());
+            // FIXME: temporary solution
+            optPM.add(llvm::createDemoteRegisterToMemoryPass());
             optPM.add(llvm::createISPCSimdCFLoweringPass());
+            // FIXME: temporary solution
+            optPM.add(llvm::createPromoteMemoryToRegisterPass());
         }
 #endif
         // Setup to use LLVM default AliasAnalysis
