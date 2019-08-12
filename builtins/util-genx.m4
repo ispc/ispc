@@ -1316,6 +1316,7 @@ define <WIDTH x $1> @__broadcast_$1(<WIDTH x $1>, i32) nounwind readnone alwaysi
 }
 
 define <WIDTH x $1> @__rotate_$1(<WIDTH x $1>, i32) nounwind readnone alwaysinline {
+  %ptr = alloca <WIDTH x $1>, i32 2
   %isc = call i1 @__is_compile_time_constant_uniform_int32(i32 %1)
   br i1 %isc, label %is_const, label %not_const
 
@@ -1333,7 +1334,6 @@ forloop(i, 1, eval(WIDTH-1), `  %ret_`'i = insertelement <WIDTH x $1> %ret_`'eva
 
 not_const:
   ; store two instances of the vector into memory
-  %ptr = alloca <WIDTH x $1>, i32 2
   %ptr0 = getelementptr PTR_OP_ARGS(`<WIDTH x $1>') %ptr, i32 0
   store <WIDTH x $1> %0, <WIDTH x $1> * %ptr0
   %ptr1 = getelementptr PTR_OP_ARGS(`<WIDTH x $1>') %ptr, i32 1
@@ -1379,6 +1379,7 @@ forloop(i, 1, eval(WIDTH-1), `  %ret_`'i = insertelement <WIDTH x $1> %ret_`'eva
 }
 
 define <WIDTH x $1> @__shuffle2_$1(<WIDTH x $1>, <WIDTH x $1>, <WIDTH x i32>) nounwind readnone alwaysinline {
+  %ptr = alloca <eval(2*WIDTH) x $1>
   %v2 = shufflevector <WIDTH x $1> %0, <WIDTH x $1> %1, <eval(2*WIDTH) x i32> <
       forloop(i, 0, eval(2*WIDTH-2), `i32 i, ') i32 eval(2*WIDTH-1)
   >
@@ -1402,7 +1403,6 @@ forloop(i, 1, eval(WIDTH-1), `  %ret_`'i = insertelement <WIDTH x $1> %ret_`'eva
 not_const:
   ; otherwise store the two vectors onto the stack and then use the given
   ; permutation vector to get indices into that array...
-  %ptr = alloca <eval(2*WIDTH) x $1>
   store <eval(2*WIDTH) x $1> %v2, <eval(2*WIDTH) x $1> * %ptr
   %baseptr = bitcast <eval(2*WIDTH) x $1> * %ptr to $1 *
 
@@ -4787,6 +4787,7 @@ i64minmax(WIDTH,max,uint64,ugt)
 define(`masked_load', `
 define <WIDTH x $1> @__masked_load_$1(i8 *, <WIDTH x MASK> %mask) nounwind alwaysinline {
 entry:
+  %retptr = alloca <WIDTH x $1>
   %mm = call i64 @__movmsk(<WIDTH x MASK> %mask)
   
   ; if the first lane and the last lane are on, then it is safe to do a vector load
@@ -4803,7 +4804,6 @@ entry:
   %can_vload_maybe_fast = or i1 %fast_i1, %can_vload
 
   ; if we are not able to do a singe vload, we will accumulate lanes in this memory..
-  %retptr = alloca <WIDTH x $1>
   %retptr32 = bitcast <WIDTH x $1> * %retptr to $1 *
   br i1 %can_vload_maybe_fast, label %load, label %loop
 
@@ -5237,6 +5237,7 @@ declare_count_zeros()
 define i1 @__reduce_equal_$3(<$1 x $2> %v, $2 * %samevalue,
                              <$1 x MASK> %mask) nounwind alwaysinline {
 entry:
+   %ptr = alloca <$1 x $2>
    %mm = call i64 @__movmsk(<$1 x MASK> %mask)
    %allon = icmp eq i64 %mm, ALL_ON_MASK
    br i1 %allon, label %check_neighbors, label %domixed
@@ -5256,7 +5257,6 @@ domixed:
   ; from the first active lane for the inactive lanes.  Given that, we can
   ; just unconditionally check if the lanes are all equal in check_neighbors
   ; below without worrying about inactive lanes...
-  %ptr = alloca <$1 x $2>
   store <$1 x $2> %basesmear, <$1 x $2> * %ptr
   %castptr = bitcast <$1 x $2> * %ptr to <$1 x $4> *
   %castv = bitcast <$1 x $2> %v to <$1 x $4>
@@ -5541,12 +5541,12 @@ define <WIDTH x $1> @__gather_factored_base_offsets32_$1(i8 * %ptr, <WIDTH x i32
   ;
   ; Set the offset to zero for lanes that are off
   %offsetsPtr = alloca <WIDTH x i32>
+  %deltaPtr = alloca <WIDTH x i32>
   store <WIDTH x i32> zeroinitializer, <WIDTH x i32> * %offsetsPtr
   call void @__masked_store_blend_i32(<WIDTH x i32> * %offsetsPtr, <WIDTH x i32> %offsets, 
                                       <WIDTH x MASK> %vecmask)
   %newOffsets = load PTR_OP_ARGS(`<WIDTH x i32> ')  %offsetsPtr
 
-  %deltaPtr = alloca <WIDTH x i32>
   store <WIDTH x i32> zeroinitializer, <WIDTH x i32> * %deltaPtr
   call void @__masked_store_blend_i32(<WIDTH x i32> * %deltaPtr, <WIDTH x i32> %offset_delta, 
                                       <WIDTH x MASK> %vecmask)
@@ -5572,12 +5572,12 @@ define <WIDTH x $1> @__gather_factored_base_offsets64_$1(i8 * %ptr, <WIDTH x i64
   ;
   ; Set the offset to zero for lanes that are off
   %offsetsPtr = alloca <WIDTH x i64>
+  %deltaPtr = alloca <WIDTH x i64>
   store <WIDTH x i64> zeroinitializer, <WIDTH x i64> * %offsetsPtr
   call void @__masked_store_blend_i64(<WIDTH x i64> * %offsetsPtr, <WIDTH x i64> %offsets, 
                                       <WIDTH x MASK> %vecmask)
   %newOffsets = load PTR_OP_ARGS(`<WIDTH x i64> ')  %offsetsPtr
 
-  %deltaPtr = alloca <WIDTH x i64>
   store <WIDTH x i64> zeroinitializer, <WIDTH x i64> * %deltaPtr
   call void @__masked_store_blend_i64(<WIDTH x i64> * %deltaPtr, <WIDTH x i64> %offset_delta, 
                                       <WIDTH x MASK> %vecmask)
