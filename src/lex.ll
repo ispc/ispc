@@ -72,6 +72,7 @@ static int allTokens[] = {
   TOKEN_FOREACH, TOKEN_FOREACH_ACTIVE, TOKEN_FOREACH_TILED,
   TOKEN_FOREACH_UNIQUE, TOKEN_GOTO, TOKEN_IF, TOKEN_IN, TOKEN_INLINE,
   TOKEN_INT, TOKEN_INT8, TOKEN_INT16, TOKEN_INT, TOKEN_INT64, TOKEN_LAUNCH,
+  TOKEN_UINT, TOKEN_UINT8, TOKEN_UINT16, TOKEN_UINT64,
   TOKEN_NEW, TOKEN_NULL, TOKEN_PRINT, TOKEN_RETURN, TOKEN_SOA, TOKEN_SIGNED,
   TOKEN_SIZEOF, TOKEN_STATIC, TOKEN_STRUCT, TOKEN_SWITCH, TOKEN_SYNC,
   TOKEN_TASK, TOKEN_TRUE, TOKEN_TYPEDEF, TOKEN_UNIFORM, TOKEN_UNMASKED,
@@ -126,10 +127,14 @@ void ParserInit() {
     tokenToName[TOKEN_INLINE] = "inline";
     tokenToName[TOKEN_NOINLINE] = "noinline";
     tokenToName[TOKEN_INT] = "int";
+    tokenToName[TOKEN_UINT] = "uint";
     tokenToName[TOKEN_INT8] = "int8";
+    tokenToName[TOKEN_UINT8] = "uint8";
     tokenToName[TOKEN_INT16] = "int16";
+    tokenToName[TOKEN_UINT16] = "uint16";
     tokenToName[TOKEN_INT] = "int";
     tokenToName[TOKEN_INT64] = "int64";
+    tokenToName[TOKEN_UINT64] = "uint64";
     tokenToName[TOKEN_LAUNCH] = "launch";
     tokenToName[TOKEN_NEW] = "new";
     tokenToName[TOKEN_NULL] = "NULL";
@@ -242,10 +247,14 @@ void ParserInit() {
     tokenNameRemap["TOKEN_INLINE"] = "\'inline\'";
     tokenNameRemap["TOKEN_NOINLINE"] = "\'noinline\'";
     tokenNameRemap["TOKEN_INT"] = "\'int\'";
+    tokenNameRemap["TOKEN_UINT"] = "\'uint\'";
     tokenNameRemap["TOKEN_INT8"] = "\'int8\'";
+    tokenNameRemap["TOKEN_UINT8"] = "\'uint8\'";
     tokenNameRemap["TOKEN_INT16"] = "\'int16\'";
+    tokenNameRemap["TOKEN_UINT16"] = "\'uint16\'";
     tokenNameRemap["TOKEN_INT"] = "\'int\'";
     tokenNameRemap["TOKEN_INT64"] = "\'int64\'";
+    tokenNameRemap["TOKEN_UINT64"] = "\'uint64\'";
     tokenNameRemap["TOKEN_LAUNCH"] = "\'launch\'";
     tokenNameRemap["TOKEN_NEW"] = "\'new\'";
     tokenNameRemap["TOKEN_NULL"] = "\'NULL\'";
@@ -396,10 +405,15 @@ in { RT; return TOKEN_IN; }
 inline { RT; return TOKEN_INLINE; }
 noinline { RT; return TOKEN_NOINLINE; }
 int { RT; return TOKEN_INT; }
+uint { RT; return TOKEN_UINT; }
 int8 { RT; return TOKEN_INT8; }
+uint8 { RT; return TOKEN_UINT8; }
 int16 { RT; return TOKEN_INT16; }
+uint16 { RT; return TOKEN_UINT16; }
 int32 { RT; return TOKEN_INT; }
+uint32 { RT; return TOKEN_UINT; }
 int64 { RT; return TOKEN_INT64; }
+uint64 { RT; return TOKEN_UINT64; }
 launch { RT; return TOKEN_LAUNCH; }
 new { RT; return TOKEN_NEW; }
 NULL { RT; return TOKEN_NULL; }
