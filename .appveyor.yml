@@ -64,7 +64,7 @@ cache:
 
 install:
   - cmd: |-
-      cinst python3 winflexbison
+      cinst winflexbison
       set FLEX_PATH=%CHOCO_DIR%\lib\winflexbison\tools
       if exist "%FLEX_PATH%\win_flex.exe" ( cd %FLEX_PATH% && ren win_flex.exe flex.exe )
       if exist "%LLVM_HOME%\bin\" set NONEEDLLVM=rem
