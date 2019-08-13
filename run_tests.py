@@ -134,7 +134,6 @@ def update_progress(fn, total_tests_arg, counter, max_test_length_arg):
         sys.stdout.write(progress_str)
         sys.stdout.flush()
 
-# 240 is enough even for longest test under sde.
 def run_command(cmd, timeout=600, cwd="."):
     if options.verbose:
         print_debug("Running: %s\n" % cmd, s, run_tests_log)
@@ -176,7 +175,7 @@ def run_command(cmd, timeout=600, cwd="."):
 # run the commands in cmd_list
 def run_cmds(compile_cmds, run_cmd, filename, expect_failure, exe_wd="."):
     for cmd in compile_cmds:
-        (return_code, output, timeout) = run_command(cmd, 10)
+        (return_code, output, timeout) = run_command(cmd, options.test_time)
         compile_failed = (return_code != 0)
         if compile_failed:
             print_debug("Compilation of test %s failed %s           \n" % (filename, "due to TIMEOUT" if timeout else ""), s, run_tests_log)
@@ -184,7 +183,7 @@ def run_cmds(compile_cmds, run_cmd, filename, expect_failure, exe_wd="."):
                 print_debug("%s" % output, s, run_tests_log)
             return Status.Compfail
     if not options.save_bin:
-        (return_code, output, timeout) = run_command(run_cmd, cwd=exe_wd)
+        (return_code, output, timeout) = run_command(run_cmd, options.test_time, cwd=exe_wd)
         run_failed = (return_code != 0) or timeout
     else:
         run_failed = 0
@@ -268,7 +267,7 @@ def run_test(testname, host, target):
     if want_error == True:
         ispc_cmd = ispc_exe_rel + " --werror --nowrap %s --arch=%s --target=%s" % \
             (filename, target.arch, target.target)
-        (return_code, output, timeout) = run_command(ispc_cmd, 10)
+        (return_code, output, timeout) = run_command(ispc_cmd, options.test_time)
         got_error = (return_code != 0) or timeout
 
         # figure out the error message we're expecting
@@ -877,6 +876,7 @@ if __name__ == "__main__":
     parser.add_option("--save-bin", dest='save_bin', help='compile and create bin, but don\'t execute it',
                   default=False, action="store_true")
     parser.add_option('--csv', dest="csv", help="file to save testing results", default="")
+    parser.add_option('--test_time', dest="test_time", help="time needed for each test", default=600, type="int", action="store")
     (options, args) = parser.parse_args()
 
     L = run_tests(options, args, 1)
