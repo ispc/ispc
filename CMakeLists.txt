@@ -52,7 +52,7 @@ option(ISPC_INCLUDE_UTILS "Generate build targets for the utils." ON)
 option(ISPC_PREPARE_PACKAGE "Generate build targets for ispc package" OFF)
 option(ISPC_NO_DUMPS "Turn off functionality, which requires LLVM dump() functions" OFF)
 
-option(ISPC_CROSS "Build ISPC with cross compilation support" ON)
+option(ISPC_CROSS "Build ISPC with cross compilation support" OFF)
 # Default settings for cross compilation
 if (ISPC_CROSS)
     option(ISPC_WINDOWS_TARGET "Build ISPC with windows target support" ON)
