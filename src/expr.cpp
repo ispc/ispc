@@ -1014,8 +1014,7 @@ static llvm::Value *lEmitNegate(Expr *arg, SourcePos pos, FunctionEmitContext *c
     if (type->IsFloatType()) {
         llvm::Value *zero = llvm::ConstantFP::getZeroValueForNegation(type->LLVMType(g->ctx));
         return ctx->BinaryOperator(llvm::Instruction::FSub, zero, argVal, LLVMGetName(argVal, "_negate"));
-    }
-    else {
+    } else {
         llvm::Value *zero = lLLVMConstantValue(type, g->ctx, 0.);
         AssertPos(pos, type->IsIntType());
         return ctx->BinaryOperator(llvm::Instruction::Sub, zero, argVal, LLVMGetName(argVal, "_negate"));
