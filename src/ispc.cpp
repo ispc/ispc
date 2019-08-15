@@ -310,8 +310,10 @@ typedef enum {
     // ARM Cortex A9. Supports NEON VFPv3.
     CPU_CortexA9,
 
-    // ARM Cortex A35.
+    // ARM Cortex A35, A53, A57.
     CPU_CortexA35,
+    CPU_CortexA53,
+    CPU_CortexA57,
 #endif
 
 #ifdef ISPC_NVPTX_ENABLED
@@ -401,6 +403,10 @@ class AllCPUs {
         names[CPU_CortexA9].push_back("cortex-a9");
 
         names[CPU_CortexA35].push_back("cortex-a35");
+
+        names[CPU_CortexA53].push_back("cortex-a53");
+
+        names[CPU_CortexA57].push_back("cortex-a57");
 #endif
 
 #ifdef ISPC_NVPTX_ENABLED
@@ -460,6 +466,8 @@ class AllCPUs {
         compat[CPU_CortexA15] = Set(CPU_Generic, CPU_CortexA9, CPU_CortexA15, CPU_None);
         compat[CPU_CortexA9] = Set(CPU_Generic, CPU_CortexA9, CPU_None);
         compat[CPU_CortexA35] = Set(CPU_Generic, CPU_CortexA35, CPU_None);
+        compat[CPU_CortexA53] = Set(CPU_Generic, CPU_CortexA53, CPU_None);
+        compat[CPU_CortexA57] = Set(CPU_Generic, CPU_CortexA57, CPU_None);
 #endif
 
 #ifdef ISPC_NVPTX_ENABLED
@@ -559,6 +567,8 @@ Target::Target(const char *arch, const char *cpu, const char *isa, bool pic, boo
         case CPU_CortexA9:
         case CPU_CortexA15:
         case CPU_CortexA35:
+        case CPU_CortexA53:
+        case CPU_CortexA57:
             isa = "neon-i32x4";
             break;
 #endif
@@ -1248,7 +1258,7 @@ const char *Target::SupportedOSes() {
 #if !defined(ISPC_ANDROID_TARGET_OFF)
         "android"
 #endif
-	;
+        ;
 }
 
 std::string Target::GetTripleString() const {
