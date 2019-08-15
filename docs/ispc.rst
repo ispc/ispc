@@ -400,7 +400,7 @@ older versions:
   Note that KNL is still supported through avx512knl-i32x16.
 
 The release also introduces static initialization for varying variables, which
-should now affect compatibility.
+should not affect compatibility.
 
 This release introduces experimental cross OS compilation support and ARM/AARCH64
 support. It also contains a new 128-bit AVX2 target (avx2-i32x4) and a CPU
