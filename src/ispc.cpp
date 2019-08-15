@@ -683,7 +683,7 @@ Target::Target(const char *arch, const char *cpu, const char *isa, bool pic, boo
 
     // Ensure that we have a valid isa/arch combination.
     if (!lIsISAValidforArch(isa, arch)) {
-        Error(SourcePos(), "arch = %s and target = %s is not a valid combination.\n", arch, isa);
+        Error(SourcePos(), "arch = %s and target = %s is not a valid combination.", arch, isa);
         return;
     }
 
@@ -1052,7 +1052,7 @@ Target::Target(const char *arch, const char *cpu, const char *isa, bool pic, boo
         if ((CPUfromISA != CPU_None) && !a.BackwardCompatible(CPUID, CPUfromISA)) {
             Error(SourcePos(),
                   "The requested CPU is incompatible"
-                  " with the CPU %s needs: %s vs. %s!\n",
+                  " with the CPU %s needs: %s vs. %s!",
                   isa, cpu, a.GetDefaultNameFromType(CPUfromISA).c_str());
             return;
         }
@@ -1270,13 +1270,13 @@ std::string Target::GetTripleString() const {
         } else if (m_arch == "x86-64") {
             triple.setArchName("x86_64");
         } else if (m_arch == "arm") {
-            Error(SourcePos(), "Not supported.\n");
+            Error(SourcePos(), "Arm is not supported on Windows.");
             exit(1);
         } else if (m_arch == "aarch64") {
-            Error(SourcePos(), "Not supported.\n");
+            Error(SourcePos(), "Aarch64 is not supported on Windows.");
             exit(1);
         } else {
-            Error(SourcePos(), "Unknown arch.\n");
+            Error(SourcePos(), "Unknown arch.");
             exit(1);
         }
         //"x86_64-pc-windows-msvc"
@@ -1294,7 +1294,7 @@ std::string Target::GetTripleString() const {
         } else if (m_arch == "aarch64") {
             triple.setArchName("aarch64");
         } else {
-            Error(SourcePos(), "Unknown arch.\n");
+            Error(SourcePos(), "Unknown arch.");
             exit(1);
         }
         triple.setVendor(llvm::Triple::VendorType::UnknownVendor);
@@ -1304,7 +1304,7 @@ std::string Target::GetTripleString() const {
     case OS_MAC:
         // asserts
         if (m_arch != "x86-64") {
-            Error(SourcePos(), "macOS supports on x86_64 arch.\n");
+            Error(SourcePos(), "macOS target supports only x86_64.");
             exit(1);
         }
         triple.setArch(llvm::Triple::ArchType::x86_64);
@@ -1321,7 +1321,7 @@ std::string Target::GetTripleString() const {
         } else if (m_arch == "aarch64") {
             triple.setArchName("aarch64");
         } else {
-            Error(SourcePos(), "Unknown arch.\n");
+            Error(SourcePos(), "Unknown arch.");
             exit(1);
         }
         triple.setVendor(llvm::Triple::VendorType::UnknownVendor);
@@ -1330,7 +1330,7 @@ std::string Target::GetTripleString() const {
         break;
     case OS_IOS:
         if (m_arch != "aarch64") {
-            Error(SourcePos(), "iOS supports only aarch64");
+            Error(SourcePos(), "iOS target supports only aarch64.");
             exit(1);
         }
         // Note, for iOS arch need to be set to "arm64", instead of "aarch64".
@@ -1342,7 +1342,7 @@ std::string Target::GetTripleString() const {
         break;
     case OS_PS4:
         if (m_arch != "x86-64") {
-            Error(SourcePos(), "PS4 supports only x86_64");
+            Error(SourcePos(), "PS4 target supports only x86_64.");
             exit(1);
         }
         // "x86_64-scei-ps4"
