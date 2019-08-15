@@ -1,3 +1,32 @@
+=== v1.12.0 === (15 August 2019)
+
+This ISPC update includes experimental cross OS compilation support, ARM and AARCH64
+support and a bunch of language features and stability fixes.
+
+Here are the details:
+
+- ISPC is now a cross OS compiler - You can build ISPC programs for Windows, Linux,
+  macOS, iOS, Android and PS4 targets from Windows, Linux and macOS hosts.
+- ARM and AARCH64 support has been enabled for ISPC. ARM support currently exists for
+  neon-i32x4, neon-i8x16 and neon-i16x8 targets. AARCH64 is supported for neon-i32x4
+  as well as for a new "double-pumped" 8-wide target: neon-i32x8.
+- A new 128-bit AVX2 target (avx2-i32x4) was added.
+- Added a CPU definition for Ice Lake client CPUs (--cpu=icl). Note that there is no
+  special target for new instructions in Ice Lake flavor of AVX512 yet. For now, You
+  can use SKX targets (avx512skx-i32x8 and avx512skx-i32x16) with --cpu=icl.
+- Removed the generic targets for KNC and KNL, so ISPC does not have KNC support anymore.
+  KNL is still supported through native target (avx512knl-i32x16).
+- Removed AVX1.1 (IvyBridge) targets (use AVX1 targets instead).
+- Introduced new language features:
+    - 'noinline' function qualifier.
+    - 'rsqrt_fast()' and 'rcp_fast()' functions.
+    - Static initialization for varying.
+- A new command line option '--emit-llvm-text' was added to dump LLVM IR in text format.
+
+An ISPC top-of-trunk build is now available in the Compiler Explorer (https://godbolt.org)
+
+The release is based on a patched LLVM 8.0.0 backend.
+
 === v1.11.0 === (19 April 2019)
 
 An ISPC update with a bunch of new features and stability bug fixes based on a
@@ -380,12 +409,12 @@ A minor version update with a few important changes:
 * Performance improvements for Xeon Phi related to mask representation.
 
 Also LLVM 3.3 has been released and now it's the recommended version for building ISPC.
-Precompiled binaries are also built with LLVM 3.3. 
+Precompiled binaries are also built with LLVM 3.3.
 
 === v1.4.1 === (28 May 2013)
 
 A major new version of ispc has been released with stability and performance
-improvements on all supported platforms (Windows, Linux and MacOS). 
+improvements on all supported platforms (Windows, Linux and MacOS).
 This version supports LLVM 3.1, 3.2, 3.3 and 3.4. The released binaries are built with 3.2.
 
 New compiler features:
@@ -424,7 +453,7 @@ New targets:
   for more details on this support.
 
 * This release also has an "avx1.1" target, which provides support for the
-  new instructions in the Intel Ivy Bridge microarchitecutre. 
+  new instructions in the Intel Ivy Bridge microarchitecutre.
 
 New language features:
 
@@ -461,7 +490,7 @@ Other changes:
   matches standard IEEE floating-point behavior.)
 
 * The code generated for 'break' statements in "varying" loops has been
-  improved for some common cases. 
+  improved for some common cases.
 
 * Compile time and compiler memory use have both been improved,
   particularly for large input programs.
@@ -585,7 +614,7 @@ For more efficient access of data that is still in "array of structures"
 (AoS) format, ispc has a new "memory coalescing" optimization that
 automatically detects series of strided loads and/or gathers that can be
 transformed into a more efficient set of vector loads and shuffles.  A
-diagnostic is emitted when this optimization is successfully applied. 
+diagnostic is emitted when this optimization is successfully applied.
 
 Smaller changes in this release:
 
@@ -642,7 +671,7 @@ instruction set, due with Haswell-generation CPUs.  All tests and examples
 compile and execute correctly with AVX2.  (Thanks specifically to Craig
 Topper and Nadav Rotem for work on AVX2 support in LLVM, which made this
 possible.)
- 
+
 === v1.1.3 === (20 January 2012)
 
 With this release, the language now supports "switch" statements, with the
@@ -652,7 +681,7 @@ This release includes fixes for two important performance related issues:
 the quality of code generated for "foreach" statements has been
 substantially improved (https://github.com/ispc/ispc/issues/151), and a
 performance regression with code for "gathers" that was introduced in
-v1.1.2 has been fixed in this release. 
+v1.1.2 has been fixed in this release.
 
 A number of other small bugs were fixed in this release as well, including
 one where invalid memory would sometimes be incorrectly accessed
@@ -696,7 +725,7 @@ More informative and useful error messages are printed when function
 overload resolution fails.
 
 Masking is avoided in additional cases when the mask can be
-statically-determined to be all on. 
+statically-determined to be all on.
 
 A number of small bugs have been fixed:
 - Under some circumstances, incorrect masks were used when assigning a
@@ -751,7 +780,7 @@ between ispc and C/C++:
 http://ispc.github.com/ispc.html#relationship-to-the-c-programming-language.
 There is now a separate FAQ (http://ispc.github.com/faq.html), and a
 Performance Guide (http://ispc.github.com/perfguide.html).
- 
+
 === v1.0.12 === (20 October 2011)
 
 This release includes a new "double-pumped" 8-wide target for SSE2,
@@ -829,7 +858,7 @@ released 2.9 version of LLVM.)
 This release has no other significant changes beyond a number of small
 bugfixes (https://github.com/ispc/ispc/issues/100,
 https://github.com/ispc/ispc/issues/101, https://github.com/ispc/ispc/issues/103.)
- 
+
 === v1.0.8 === (19 September 2011)
 
 A number of improvements have been made to handling of 'if' statements in
@@ -975,7 +1004,7 @@ exchange.  There is also a facility for inserting memory fences.  See the
 "Atomic Operations and Memory Fences" section of the user's guide
 (http://ispc.github.com/ispc.html#atomic-operations-and-memory-fences) for
 more information.
- 
+
 There are now both 'signed' and 'unsigned' variants of the standard library
 functions like packed_load_active() that take references to arrays of
 signed int32s and unsigned int32s respectively.  (The

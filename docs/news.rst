@@ -2,6 +2,19 @@
 ispc News
 =========
 
+ispc 1.12.0 is Released
+-----------------------
+
+An ``ispc`` release with experimental cross OS compilation support, ARM/AARCH64
+support and a bunch of language features and stability fixes, It also contains
+a new 128-bit AVX2 target and a CPU definition for Ice Lake client.
+
+The release is based on a patched LLVM 8.0.0 backend.
+
+For more details, please check `Release Notes`_.
+
+.. _Release Notes: https://github.com/ispc/ispc/blob/master/docs/ReleaseNotes.txt
+
 ispc 1.11.0 is Released
 -----------------------
 
@@ -98,8 +111,8 @@ LLVM 3.4.
 ispc 1.6.0 is Released
 ----------------------
 
-A major update of ``ispc`` has been released. The main focus is on improved 
-performance and stability. Several new targets were added. There are also 
+A major update of ``ispc`` has been released. The main focus is on improved
+performance and stability. Several new targets were added. There are also
 a number of language and library extensions. Released binaries are based on
 patched LLVM 3.3 on Linux and MacOS and LLVM 3.4rc3 on Windows. Please refer
 to Release Notes for complete set of changes.
@@ -158,7 +171,7 @@ ispc 1.2.1 is Released
 
 This is a bugfix release, fixing approximately 20 bugs in the system and
 improving error handling and error reporting.  New functionality includes
-very efficient float/half conversion routines thanks to Fabian 
+very efficient float/half conversion routines thanks to Fabian
 Giesen.  See the `1.2.1 release notes`_ for details.
 
 .. _1.2.1 release notes: https://github.com/ispc/ispc/tree/master/docs/ReleaseNotes.txt
@@ -169,7 +182,7 @@ ispc 1.2.0 is Released
 A new major release was posted on March 20, 2012.  This release includes
 significant new functionality for cleanly handling "structure of arrays"
 (SoA) data layout and a new model for how uniform and varying are handled
-with structure types.  
+with structure types.
 
 Paper on ispc To Appear in InPar 2012
 -------------------------------------

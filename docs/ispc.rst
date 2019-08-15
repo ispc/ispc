@@ -57,6 +57,7 @@ Contents:
   + `Updating ISPC Programs For Changes In ISPC 1.9.2`_
   + `Updating ISPC Programs For Changes In ISPC 1.10.0`_
   + `Updating ISPC Programs For Changes In ISPC 1.11.0`_
+  + `Updating ISPC Programs For Changes In ISPC 1.12.0`_
 
 * `Getting Started with ISPC`_
 
@@ -385,6 +386,25 @@ case when your C/C++ compiler is not supporting that, please use ``--no-pragma-o
 This release also introduces new AVX512 target avx512skx-i32x8. It produces code,
 which doesn't use ZMM registers.
 
+Updating ISPC Programs For Changes In ISPC 1.12.0
+-------------------------------------------------
+
+This release contains the following changes that may affect compatibility with
+older versions:
+
+* 'noinline' keyword was added.
+
+* Standard library functions 'rsqrt_fast()' and 'rcp_fast()' were added.
+
+* AVX1.1 (IvyBridge) targets and generic KNC and KNL targets were removed. 
+  Note that KNL is still supported through avx512knl-i32x16.
+
+The release also introduces static initialization for varying variables, which
+should not affect compatibility.
+
+This release introduces experimental cross OS compilation support and ARM/AARCH64
+support. It also contains a new 128-bit AVX2 target (avx2-i32x4) and a CPU
+definition for Ice Lake client (--cpu=icl).
 
 Getting Started with ISPC
 =========================
@@ -579,13 +599,14 @@ Position-independent code (for use in shared libraries) is generated if the
 Selecting The Compilation Target
 --------------------------------
 
-There are three options that affect the compilation target: ``--arch``,
+There are four options that affect the compilation target: ``--arch``,
 which sets the target architecture, ``--cpu``, which sets the target CPU,
-and ``--target``, which sets the target instruction set.
+``--target``, which sets the target instruction set, and ``--target-os``,
+which sets the target operating system.
 
-If none of these options is specified, ``ispc`` generates code for the
-architecture of the system the compiler is running on (i.e. 64-bit x86-64
-(``--arch=x86-64``) on x86 systems and ARM NEON on ARM systems.
+If none of these options is specified, ``ispc`` generates code for the host
+OS and for the architecture of the system the compiler is running on (i.e.
+64-bit x86-64 (``--arch=x86-64``) on x86 systems and ARM NEON on ARM systems.
 
 To compile to a 32-bit x86 target, for example, supply ``--arch=x86`` on
 the command line:
@@ -605,7 +626,7 @@ on which you're running ``ispc`` is used to determine the target CPU.
 
    ispc foo.ispc -o foo.obj --cpu=corei7-avx
 
-Finally, ``--target`` selects the target instruction set.  The target
+Next, ``--target`` selects the target instruction set.  The target
 string is of the form ``[ISA]-i[mask size]x[gang size]``.  For example,
 ``--target=avx2-i32x16`` specifies a target with the AVX2 instruction set,
 a mask size of 32 bits, and a gang size of 16.
@@ -670,6 +691,20 @@ override this choice with the ``--target`` flag; for example, to select
 Intel® SSE2 with a 32-bit mask and 4 program instances in a gang, use
 ``--target=sse2-i32x4``.  (As with the other options in this section, see
 the output of ``ispc --help`` for a full list of supported targets.)
+
+Finally, ``--target-os`` selects the target operating system. Depending on
+your host ``ispc`` may support Windows, Linux, macOS, Android, iOS and PS4
+targets. Running ``ispc --help`` and looking at the output for the ``--target-os``
+option gives the list of supported targets. By default ``ispc`` produces the
+code for your host operating system.
+
+::
+
+   ispc foo.ispc -o foo.obj --target-os=android
+
+Note that cross OS compilation is in experimental stage. We encourage you to
+try it and send us a note with your experiences or to file a bug or feature
+requests with the ``ispc`` `bug tracker`_.
 
 Generating Generic C++ Output
 -----------------------------
