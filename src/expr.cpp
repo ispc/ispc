@@ -2793,7 +2793,6 @@ llvm::Value *AssignExpr::GetValue(FunctionEmitContext *ctx) const {
     const Type *type = NULL;
     if (lvalue == NULL || rvalue == NULL || (type = GetType()) == NULL)
         return NULL;
-
     ctx->SetDebugPos(pos);
 
     Symbol *baseSym = lvalue->GetBaseSymbol();
@@ -2960,7 +2959,6 @@ Expr *AssignExpr::TypeCheck() {
             return NULL;
         }
     }
-
     return this;
 }
 
@@ -3286,6 +3284,12 @@ Expr *SelectExpr::TypeCheck() {
     int testVecSize = CastType<VectorType>(testType) ? CastType<VectorType>(testType)->GetElementCount() : 0;
     const Type *promotedType = Type::MoreGeneralType(type1, type2, Union(expr1->pos, expr2->pos), "select expression",
                                                      testType->IsVaryingType(), testVecSize);
+
+    // If the promoted type is a ReferenceType, the expression type will be
+    // the reference target type since SelectExpr is always a rvalue.
+    if (CastType<ReferenceType>(promotedType) != NULL)
+        promotedType = promotedType->GetReferenceTarget();
+
     if (promotedType == NULL)
         return NULL;
 
