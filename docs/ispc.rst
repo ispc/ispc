@@ -389,15 +389,22 @@ which doesn't use ZMM registers.
 Updating ISPC Programs For Changes In ISPC 1.12.0
 -------------------------------------------------
 
-The release has several new language features, which do not affect compatibility.
-Namely, 'noinline' function qualifier, 'rsqrt_fast()' and 'rcp_fast()' functions
-and static initialization for varying.
+This release contains the following changes that may affect compatibility with
+older versions:
+
+* 'noinline' keyword was added.
+
+* Standard library functions 'rsqrt_fast()' and 'rcp_fast()' were added.
+
+* AVX1.1 (IvyBridge) targets and generic KNC and KNL targets were removed. 
+  Note that KNL is still supported through avx512knl-i32x16.
+
+The release also introduces static initialization for varying variables, which
+should now affect compatibility.
 
 This release introduces experimental cross OS compilation support and ARM/AARCH64
 support. It also contains a new 128-bit AVX2 target (avx2-i32x4) and a CPU
 definition for Ice Lake client (--cpu=icl).
-Removed AVX1.1 (IvyBridge) targets (use AVX1 targets instead) and the generic
-targets for KNC and KNL (KNL is still supported through avx512knl-i32x16).
 
 Getting Started with ISPC
 =========================
