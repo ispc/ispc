@@ -35,3 +35,4 @@ by updates of docker files.
 04/25/2019: Updated dockers with LLVM ARM target
 05/01/2019: Updated dockers with LLVM AARCH64 target
 06/07/2019: Updated LLVM 8.0 dockers after modyfing 8_0_r362675.patch
+08/16/2019: Updated dockers with tools for cross compilation
