@@ -286,7 +286,10 @@ def build_LLVM(version_LLVM, revision, folder, tarball, debug, selfbuild, extra,
                 checkout_LLVM("libcxx", options.use_git, version_LLVM, revision, "libcxx", from_validation)
                 os.chdir("..")
             else:
-                llvm_enable_projects +=";libcxx"
+                # We either need to explicitly opt-out from using libcxxabi from this repo, or build and use it,
+                # otherwise a build error will occure (attempt to use just built libcxxabi, which was not built).
+                # An option to build seems to be a better one.
+                llvm_enable_projects +=";libcxx;libcxxabi"
         if extra == True:
             if not options.use_git:
                 os.chdir("tools/clang/tools")
