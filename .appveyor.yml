@@ -38,13 +38,13 @@ environment:
     - APPVEYOR_BUILD_WORKER_IMAGE: Ubuntu1604
       LLVM_VERSION: latest
     - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2017
-      LLVM_VERSION: 5.0
-    - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2017
       LLVM_VERSION: 6.0
     - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2017
       LLVM_VERSION: 7.0
     - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2017
       LLVM_VERSION: latest
+    - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2017
+      LLVM_VERSION: 9.0
 
 init:
   - cmd: |-
