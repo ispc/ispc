@@ -41,11 +41,7 @@
 
 #include "ast.h"
 #include "ispc.h"
-#if ISPC_LLVM_VERSION == ISPC_LLVM_3_4
-#include <llvm/DebugInfo.h>
-#elif ISPC_LLVM_VERSION >= ISPC_LLVM_3_5
 #include <llvm/IR/DebugInfo.h>
-#endif
 
 namespace llvm {
 class raw_string_ostream;
@@ -158,11 +154,7 @@ class Module {
     /** The diBuilder manages generating debugging information */
     llvm::DIBuilder *diBuilder;
 
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_3_4 && ISPC_LLVM_VERSION <= ISPC_LLVM_3_6
-    llvm::DICompileUnit diCompileUnit;
-#elif ISPC_LLVM_VERSION >= ISPC_LLVM_3_7
     llvm::DICompileUnit *diCompileUnit;
-#endif // LLVM_3_4+
 
   private:
     const char *filename;

@@ -32,70 +32,38 @@
 
 #include "llvmutil.h"
 
-#if ISPC_LLVM_VERSION == ISPC_LLVM_3_2
-#include "llvm/CallingConv.h"
-#include "llvm/Constants.h"
-#include "llvm/DerivedTypes.h"
-#include "llvm/InlineAsm.h"
-#include "llvm/Instructions.h"
-#include "llvm/IntrinsicInst.h"
-#include "llvm/Intrinsics.h"
-#include "llvm/Module.h"
-#else // LLVM 3.3+
-#include "llvm/IR/CallingConv.h"
-#include "llvm/IR/Constants.h"
-#include "llvm/IR/DerivedTypes.h"
-#include "llvm/IR/InlineAsm.h"
-#include "llvm/IR/Instructions.h"
-#include "llvm/IR/IntrinsicInst.h"
-#include "llvm/IR/Intrinsics.h"
-#include "llvm/IR/Module.h"
-#endif
-#include "llvm/Pass.h"
-#if ISPC_LLVM_VERSION <= ISPC_LLVM_3_6 // <= 3.6
-#include "llvm/PassManager.h"
-#else // LLVM 3.7+
-#include "llvm/IR/LegacyPassManager.h"
-#endif
-#if ISPC_LLVM_VERSION == ISPC_LLVM_3_2
-#include "llvm/TypeFinder.h"
-#else // LLVM_3_3+
-#include "llvm/IR/TypeFinder.h"
-#endif
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringExtras.h"
-#if ISPC_LLVM_VERSION <= ISPC_LLVM_3_4 // 3.2, 3.3, 3.4
-#include "llvm/Support/InstIterator.h"
-#else // 3.5+
-#include "llvm/IR/InstIterator.h"
-#endif
-#if ISPC_LLVM_VERSION <= ISPC_LLVM_3_5
-#include "llvm/Analysis/FindUsedTypes.h"
-#endif
 #include "llvm/Analysis/LoopInfo.h"
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_3_5
-#include "llvm/IR/CFG.h"
-#include "llvm/IR/CallSite.h"
-#include "llvm/IR/GetElementPtrTypeIterator.h"
-#include "llvm/IR/Verifier.h"
-#include "llvm/Support/FileSystem.h"
-#include <llvm/IR/IRPrintingPasses.h>
-#else
-#include "llvm/Analysis/Verifier.h"
-#include "llvm/Support/CFG.h"
-#include "llvm/Support/CallSite.h"
-#include "llvm/Support/GetElementPtrTypeIterator.h"
-#include <llvm/Assembly/PrintModulePass.h>
-#endif
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/CodeGen/IntrinsicLowering.h"
 #include "llvm/CodeGen/Passes.h"
+#include "llvm/IR/CFG.h"
+#include "llvm/IR/CallSite.h"
+#include "llvm/IR/CallingConv.h"
+#include "llvm/IR/Constants.h"
+#include "llvm/IR/DerivedTypes.h"
+#include "llvm/IR/GetElementPtrTypeIterator.h"
+#include "llvm/IR/InlineAsm.h"
+#include "llvm/IR/InstIterator.h"
+#include "llvm/IR/Instructions.h"
+#include "llvm/IR/IntrinsicInst.h"
+#include "llvm/IR/Intrinsics.h"
+#include "llvm/IR/LegacyPassManager.h"
+#include "llvm/IR/Module.h"
+#include "llvm/IR/TypeFinder.h"
+#include "llvm/IR/Verifier.h"
+#include "llvm/Pass.h"
+#include "llvm/Support/FileSystem.h"
+#include <llvm/IR/IRPrintingPasses.h>
 //#include "llvm/Target/Mangler.h"
 #include "llvm/Transforms/Scalar.h"
 #if ISPC_LLVM_VERSION >= ISPC_LLVM_7_0
 #include "llvm/Transforms/Utils.h"
 #endif
+#include "llvm/IR/DataLayout.h"
+#include "llvm/IR/InstVisitor.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCInstrInfo.h"
@@ -103,28 +71,12 @@
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/MCSymbol.h"
-#if ISPC_LLVM_VERSION == ISPC_LLVM_3_2 // 3.2
-#include "llvm/DataLayout.h"
-#else // LLVM 3.3+
-#include "llvm/IR/DataLayout.h"
-#endif
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FormattedStream.h"
-#if ISPC_LLVM_VERSION == ISPC_LLVM_3_2 // 3.2
-#include "llvm/Support/InstVisitor.h"
-#elif ISPC_LLVM_VERSION <= ISPC_LLVM_3_4 // 3.3, 3.4
-#include "llvm/InstVisitor.h"
-#else // LLVM 3.5+
-#include "llvm/IR/InstVisitor.h"
-#endif
 #include "llvm/Support/Host.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/TargetRegistry.h"
 #include "llvm/Target/TargetMachine.h"
-
-#if ISPC_LLVM_VERSION <= ISPC_LLVM_3_4 // 3.2, 3.3, 3.4
-#include "llvm/Config/config.h"
-#endif
 
 #include <llvm/Support/ToolOutputFile.h>
 #include <llvm/Transforms/IPO.h>
@@ -203,9 +155,7 @@ class TypeFinder {
     // To avoid walking constant expressions multiple times and other IR
     // objects, we keep several helper maps.
     llvm::DenseSet<const llvm::Value *> VisitedConstants;
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_3_6 // LLVM 3.6+
     llvm::DenseSet<const llvm::Metadata *> VisitedMDNodes;
-#endif
     llvm::DenseSet<llvm::Type *> VisitedTypes;
     std::vector<llvm::ArrayType *> &ArrayTypes;
     std::vector<llvm::IntegerType *> &IntegerTypes;
@@ -280,11 +230,7 @@ class TypeFinder {
 
         for (llvm::Module::const_named_metadata_iterator I = M.named_metadata_begin(), E = M.named_metadata_end();
              I != E; ++I) {
-#if ISPC_LLVM_VERSION <= ISPC_LLVM_3_7 /* 3.2, 3.3, 3.4, 3.5, 3.6, 3.7 */
-            const llvm::NamedMDNode *NMD = I;
-#else /* LLVM 3.8+ */
             const llvm::NamedMDNode *NMD = &*I;
-#endif
             for (unsigned i = 0, e = NMD->getNumOperands(); i != e; ++i)
                 incorporateMDNode(NMD->getOperand(i));
         }
@@ -309,17 +255,10 @@ class TypeFinder {
     /// walked in other ways.  GlobalValues, basic blocks, instructions, and
     /// inst operands are all explicitly enumerated.
     void incorporateValue(const llvm::Value *V) {
-#if ISPC_LLVM_VERSION <= ISPC_LLVM_3_5 // 3.2, 3.3, 3.4, 3.5
-        if (const llvm::MDNode *M = llvm::dyn_cast<llvm::MDNode>(V)) {
-            incorporateMDNode(M);
-            return;
-        }
-#else /* LLVN 3.6+ */
         if (const llvm::MetadataAsValue *MV = llvm::dyn_cast<llvm::MetadataAsValue>(V)) {
             incorporateMDNode(MV->getMetadata());
             return;
         }
-#endif
         if (!llvm::isa<llvm::Constant>(V) || llvm::isa<llvm::GlobalValue>(V))
             return;
 
@@ -336,19 +275,6 @@ class TypeFinder {
             incorporateValue(*I);
     }
 
-#if ISPC_LLVM_VERSION <= ISPC_LLVM_3_5 // 3.2, 3.3, 3.4, 3.5
-    void incorporateMDNode(const llvm::MDNode *V) {
-
-        // Already visited?
-        if (!VisitedConstants.insert(V).second)
-            return;
-
-        // Look in operands for types.
-        for (unsigned i = 0, e = V->getNumOperands(); i != e; ++i)
-            if (llvm::Value *Op = V->getOperand(i))
-                incorporateValue(Op);
-    }
-#else // LLVM 3.6+
     void incorporateMDNode(const llvm::Metadata *M) {
 
         // Already visited?
@@ -369,7 +295,6 @@ class TypeFinder {
             llvm_unreachable("Unknown Metadata subclass");
         }
     }
-#endif
 };
 } // end anonymous namespace
 
@@ -390,13 +315,7 @@ static bool is_vec16_i64_ty(llvm::Type *Ty) {
 namespace {
 class CBEMCAsmInfo : public llvm::MCAsmInfo {
   public:
-    CBEMCAsmInfo() {
-
-#if ISPC_LLVM_VERSION <= ISPC_LLVM_3_4 // 3.2, 3.3, 3.4
-        GlobalPrefix = "";
-#endif
-        PrivateGlobalPrefix = "";
-    }
+    CBEMCAsmInfo() { PrivateGlobalPrefix = ""; }
 };
 
 /// CWriter - This class is the main chunk of code that converts an LLVM
@@ -441,27 +360,15 @@ class CWriter : public llvm::FunctionPass, public llvm::InstVisitor<CWriter> {
         : FunctionPass(ID), Out(o), IL(0), /* Mang(0), */ LI(0), TheModule(0), TAsm(0), MRI(0), MOFI(0), TCtx(0), TD(0),
           OpaqueCounter(0), NextAnonValueNumber(0), includeName(incname ? incname : "generic_defs.h"),
           vectorWidth(vecwidth) {
-#if ISPC_LLVM_VERSION <= ISPC_LLVM_3_6 // <= 3.6
-        initializeLoopInfoPass(*llvm::PassRegistry::getPassRegistry());
-#else // LLVM 3.7+
         initializeLoopInfoWrapperPassPass(*llvm::PassRegistry::getPassRegistry());
-#endif
         FPCounter = 0;
         VectorConstantIndex = 0;
     }
 
-#if ISPC_LLVM_VERSION <= ISPC_LLVM_3_9 // <= 3.9
-    virtual const char *getPassName() const { return "C backend"; }
-#else // LLVM 4.0+
     virtual llvm::StringRef getPassName() const { return "C backend"; }
-#endif
 
     void getAnalysisUsage(llvm::AnalysisUsage &AU) const {
-#if ISPC_LLVM_VERSION <= ISPC_LLVM_3_6 // <= 3.6
-        AU.addRequired<llvm::LoopInfo>();
-#else // LLVM 3.7+
         AU.addRequired<llvm::LoopInfoWrapperPass>();
-#endif
         AU.setPreservesAll();
     }
 
@@ -473,11 +380,7 @@ class CWriter : public llvm::FunctionPass, public llvm::InstVisitor<CWriter> {
         if (F.hasAvailableExternallyLinkage())
             return false;
 
-#if ISPC_LLVM_VERSION <= ISPC_LLVM_3_6 // <= 3.6
-        LI = &getAnalysis<llvm::LoopInfo>();
-#else // LLVM 3.7+
         LI = &getAnalysis<llvm::LoopInfoWrapperPass>().getLoopInfo();
-#endif
 
         // Get rid of intrinsics we can't handle.
         lowerIntrinsics(F);
@@ -513,25 +416,11 @@ class CWriter : public llvm::FunctionPass, public llvm::InstVisitor<CWriter> {
 
     llvm::raw_ostream &printType(llvm::raw_ostream &Out, llvm::Type *Ty, bool isSigned = false,
                                  const std::string &VariableName = "", bool IgnoreName = false,
-#if ISPC_LLVM_VERSION == ISPC_LLVM_3_2
-                                 const llvm::AttrListPtr &PAL = llvm::AttrListPtr()
-#elif ISPC_LLVM_VERSION <= ISPC_LLVM_4_0
-                                 const llvm::AttributeSet &PAL = llvm::AttributeSet()
-#else // LLVM 5.0+
-                                 const llvm::AttributeList &PAL = llvm::AttributeList()
-#endif
-    );
+                                 const llvm::AttributeList &PAL = llvm::AttributeList());
     llvm::raw_ostream &printSimpleType(llvm::raw_ostream &Out, llvm::Type *Ty, bool isSigned,
                                        const std::string &NameSoFar = "");
 
-    void printStructReturnPointerFunctionType(llvm::raw_ostream &Out,
-#if ISPC_LLVM_VERSION == ISPC_LLVM_3_2
-                                              const llvm::AttrListPtr &PAL,
-#elif ISPC_LLVM_VERSION <= ISPC_LLVM_4_0
-                                              const llvm::AttributeSet &PAL,
-#else // LLVM 5.0+
-                                              const llvm::AttributeList &PAL,
-#endif
+    void printStructReturnPointerFunctionType(llvm::raw_ostream &Out, const llvm::AttributeList &PAL,
                                               llvm::PointerType *Ty);
 
     std::string getStructName(llvm::StructType *ST);
@@ -606,11 +495,9 @@ class CWriter : public llvm::FunctionPass, public llvm::InstVisitor<CWriter> {
         if (llvm::isa<llvm::CmpInst>(I) && llvm::isa<llvm::VectorType>(I.getType()) == false)
             return true;
 
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_3_5 // 3.5+
         // This instruction returns a struct on LLVM older than 3.4, and can not be inlined
         if (llvm::isa<llvm::AtomicCmpXchgInst>(I))
             return false;
-#endif
 
         // Must be an expression, must be used exactly once.  If it is dead, we
         // emit it inline where it would go.
@@ -630,11 +517,7 @@ class CWriter : public llvm::FunctionPass, public llvm::InstVisitor<CWriter> {
         // Must not be used in inline asm, extractelement, or shufflevector.
         if (I.hasOneUse()) {
 
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_3_5 // 3.5+
             const llvm::Instruction &User = llvm::cast<llvm::Instruction>(*I.user_back());
-#else
-            const llvm::Instruction &User = llvm::cast<llvm::Instruction>(*I.use_back());
-#endif
             if (isInlineAsm(User) || llvm::isa<llvm::ExtractElementInst>(User) ||
                 llvm::isa<llvm::ShuffleVectorInst>(User) || llvm::isa<llvm::AtomicRMWInst>(User) ||
                 llvm::isa<llvm::AtomicCmpXchgInst>(User))
@@ -642,11 +525,7 @@ class CWriter : public llvm::FunctionPass, public llvm::InstVisitor<CWriter> {
         }
 
         // Only inline instruction it if it's use is in the same BB as the inst.
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_3_5 // 3.5+
         return I.getParent() == llvm::cast<llvm::Instruction>(I.user_back())->getParent();
-#else
-        return I.getParent() == llvm::cast<llvm::Instruction>(I.use_back())->getParent();
-#endif
     }
 
     // isDirectAlloca - Define fixed sized allocas in the entry block as direct
@@ -763,14 +642,7 @@ std::string CWriter::getArrayName(llvm::ArrayType *AT) { return "l_array_" + llv
 /// printStructReturnPointerFunctionType - This is like printType for a struct
 /// return type, except, instead of printing the type as void (*)(Struct*, ...)
 /// print it as "Struct (*)(...)", for struct return functions.
-void CWriter::printStructReturnPointerFunctionType(llvm::raw_ostream &Out,
-#if ISPC_LLVM_VERSION == ISPC_LLVM_3_2
-                                                   const llvm::AttrListPtr &PAL,
-#elif ISPC_LLVM_VERSION <= ISPC_LLVM_4_0
-                                                   const llvm::AttributeSet &PAL,
-#else // LLVM 5.0+
-                                                   const llvm::AttributeList &PAL,
-#endif
+void CWriter::printStructReturnPointerFunctionType(llvm::raw_ostream &Out, const llvm::AttributeList &PAL,
                                                    llvm::PointerType *TheTy) {
     llvm::FunctionType *FTy = llvm::cast<llvm::FunctionType>(TheTy->getElementType());
     std::string tstr;
@@ -785,25 +657,11 @@ void CWriter::printStructReturnPointerFunctionType(llvm::raw_ostream &Out,
         if (PrintedType)
             FunctionInnards << ", ";
         llvm::Type *ArgTy = *I;
-#if ISPC_LLVM_VERSION == ISPC_LLVM_3_2
-        if (PAL.getParamAttributes(Idx).hasAttribute(llvm::Attributes::ByVal)) {
-#elif ISPC_LLVM_VERSION <= ISPC_LLVM_4_0
-        if (PAL.getParamAttributes(Idx).hasAttribute(llvm::AttributeSet::FunctionIndex, llvm::Attribute::ByVal)) {
-#else // LLVM 5.0+
         if (PAL.getParamAttributes(Idx).hasAttribute(llvm::Attribute::ByVal)) {
-#endif
             assert(ArgTy->isPointerTy());
             ArgTy = llvm::cast<llvm::PointerType>(ArgTy)->getElementType();
         }
-        printType(FunctionInnards, ArgTy,
-#if ISPC_LLVM_VERSION == ISPC_LLVM_3_2
-                  PAL.getParamAttributes(Idx).hasAttribute(llvm::Attributes::SExt),
-#elif ISPC_LLVM_VERSION <= ISPC_LLVM_4_0
-                  PAL.getParamAttributes(Idx).hasAttribute(llvm::AttributeSet::FunctionIndex, llvm::Attribute::SExt),
-#else // LLVM 5.0+
-                  PAL.getParamAttributes(Idx).hasAttribute(llvm::Attribute::SExt),
-#endif
-                  "");
+        printType(FunctionInnards, ArgTy, PAL.getParamAttributes(Idx).hasAttribute(llvm::Attribute::SExt), "");
         PrintedType = true;
     }
     if (FTy->isVarArg()) {
@@ -814,15 +672,7 @@ void CWriter::printStructReturnPointerFunctionType(llvm::raw_ostream &Out,
         FunctionInnards << "void";
     }
     FunctionInnards << ')';
-    printType(Out, RetTy,
-#if ISPC_LLVM_VERSION == ISPC_LLVM_3_2
-              PAL.getParamAttributes(0).hasAttribute(llvm::Attributes::SExt),
-#elif ISPC_LLVM_VERSION <= ISPC_LLVM_4_0
-              PAL.getParamAttributes(0).hasAttribute(llvm::AttributeSet::ReturnIndex, llvm::Attribute::SExt),
-#else // LLVM 5.0+
-              PAL.getParamAttributes(0).hasAttribute(llvm::Attribute::SExt),
-#endif
-              FunctionInnards.str());
+    printType(Out, RetTy, PAL.getParamAttributes(0).hasAttribute(llvm::Attribute::SExt), FunctionInnards.str());
 }
 
 llvm::raw_ostream &CWriter::printSimpleType(llvm::raw_ostream &Out, llvm::Type *Ty, bool isSigned,
@@ -916,15 +766,7 @@ llvm::raw_ostream &CWriter::printSimpleType(llvm::raw_ostream &Out, llvm::Type *
 // declaration.
 //
 llvm::raw_ostream &CWriter::printType(llvm::raw_ostream &Out, llvm::Type *Ty, bool isSigned,
-                                      const std::string &NameSoFar, bool IgnoreName,
-#if ISPC_LLVM_VERSION == ISPC_LLVM_3_2
-                                      const llvm::AttrListPtr &PAL
-#elif ISPC_LLVM_VERSION <= ISPC_LLVM_4_0
-                                      const llvm::AttributeSet &PAL
-#else // LLVM 5.0+
-                                      const llvm::AttributeList &PAL
-#endif
-) {
+                                      const std::string &NameSoFar, bool IgnoreName, const llvm::AttributeList &PAL) {
 
     if (Ty->isFloatingPointTy() || Ty->isX86_MMXTy() || Ty->isIntegerTy() || Ty->isVectorTy() || Ty->isVoidTy()) {
         printSimpleType(Out, Ty, isSigned, NameSoFar);
@@ -940,28 +782,13 @@ llvm::raw_ostream &CWriter::printType(llvm::raw_ostream &Out, llvm::Type *Ty, bo
         unsigned Idx = 1;
         for (llvm::FunctionType::param_iterator I = FTy->param_begin(), E = FTy->param_end(); I != E; ++I) {
             llvm::Type *ArgTy = *I;
-#if ISPC_LLVM_VERSION == ISPC_LLVM_3_2
-            if (PAL.getParamAttributes(Idx).hasAttribute(llvm::Attributes::ByVal)) {
-#elif ISPC_LLVM_VERSION <= ISPC_LLVM_4_0
-            if (PAL.getParamAttributes(Idx).hasAttribute(llvm::AttributeSet::FunctionIndex, llvm::Attribute::ByVal)) {
-#else // LLVM 5.0+
             if (PAL.getParamAttributes(Idx).hasAttribute(llvm::Attribute::ByVal)) {
-#endif
                 assert(ArgTy->isPointerTy());
                 ArgTy = llvm::cast<llvm::PointerType>(ArgTy)->getElementType();
             }
             if (I != FTy->param_begin())
                 FunctionInnards << ", ";
-            printType(FunctionInnards, ArgTy,
-#if ISPC_LLVM_VERSION == ISPC_LLVM_3_2
-                      PAL.getParamAttributes(Idx).hasAttribute(llvm::Attributes::SExt),
-#elif ISPC_LLVM_VERSION <= ISPC_LLVM_4_0
-                      PAL.getParamAttributes(Idx).hasAttribute(llvm::AttributeSet::FunctionIndex,
-                                                               llvm::Attribute::SExt),
-#else // LLVM 5.0+
-                      PAL.getParamAttributes(Idx).hasAttribute(llvm::Attribute::SExt),
-#endif
-                      "");
+            printType(FunctionInnards, ArgTy, PAL.getParamAttributes(Idx).hasAttribute(llvm::Attribute::SExt), "");
             ++Idx;
         }
         if (FTy->isVarArg()) {
@@ -972,14 +799,7 @@ llvm::raw_ostream &CWriter::printType(llvm::raw_ostream &Out, llvm::Type *Ty, bo
             FunctionInnards << "void";
         }
         FunctionInnards << ')';
-        printType(Out, FTy->getReturnType(),
-#if ISPC_LLVM_VERSION == ISPC_LLVM_3_2
-                  PAL.getParamAttributes(0).hasAttribute(llvm::Attributes::SExt),
-#elif ISPC_LLVM_VERSION <= ISPC_LLVM_4_0
-                  PAL.getParamAttributes(0).hasAttribute(llvm::AttributeSet::ReturnIndex, llvm::Attribute::SExt),
-#else // LLVM 5.0+
-                  PAL.getParamAttributes(0).hasAttribute(llvm::Attribute::SExt),
-#endif
+        printType(Out, FTy->getReturnType(), PAL.getParamAttributes(0).hasAttribute(llvm::Attribute::SExt),
                   FunctionInnards.str());
         return Out;
     }
@@ -1194,15 +1014,6 @@ void CWriter::printConstantDataSequential(llvm::ConstantDataSequential *CDS, boo
 
 static inline std::string ftostr(const llvm::APFloat &V) {
     std::string Buf;
-#if ISPC_LLVM_VERSION <= ISPC_LLVM_3_9
-    if (&V.getSemantics() == &llvm::APFloat::IEEEdouble) {
-        llvm::raw_string_ostream(Buf) << V.convertToDouble();
-        return Buf;
-    } else if (&V.getSemantics() == &llvm::APFloat::IEEEsingle) {
-        llvm::raw_string_ostream(Buf) << (double)V.convertToFloat();
-        return Buf;
-    }
-#else // LLVM 4.0+
     if (&V.getSemantics() == &llvm::APFloat::IEEEdouble()) {
         llvm::raw_string_ostream(Buf) << V.convertToDouble();
         return Buf;
@@ -1210,7 +1021,6 @@ static inline std::string ftostr(const llvm::APFloat &V) {
         llvm::raw_string_ostream(Buf) << (double)V.convertToFloat();
         return Buf;
     }
-#endif
     return "<unknown format in ftostr>"; // error
 }
 
@@ -1230,11 +1040,7 @@ static bool isFPCSafeToPrint(const llvm::ConstantFP *CFP) {
         return false;
     llvm::APFloat APF = llvm::APFloat(CFP->getValueAPF()); // copy
     if (CFP->getType() == llvm::Type::getFloatTy(CFP->getContext()))
-#if ISPC_LLVM_VERSION <= ISPC_LLVM_3_9 // <= 3.9
-        APF.convert(llvm::APFloat::IEEEdouble, llvm::APFloat::rmNearestTiesToEven, &ignored);
-#else // LLVM 4.0+
         APF.convert(llvm::APFloat::IEEEdouble(), llvm::APFloat::rmNearestTiesToEven, &ignored);
-#endif
 #if HAVE_PRINTF_A && ENABLE_CBE_PRINTF_A
     char Buffer[100];
     snprintf(Buffer, sizeof(Buffer), "%a", APF.convertToDouble());
@@ -1750,11 +1556,7 @@ void CWriter::printConstant(llvm::Constant *CPV, bool Static) {
                 // useful.
                 llvm::APFloat Tmp = FPC->getValueAPF();
                 bool LosesInfo;
-#if ISPC_LLVM_VERSION <= ISPC_LLVM_3_9 // <= 3.9
-                Tmp.convert(llvm::APFloat::IEEEdouble, llvm::APFloat::rmTowardZero, &LosesInfo);
-#else // LLVM 4.0+
                 Tmp.convert(llvm::APFloat::IEEEdouble(), llvm::APFloat::rmTowardZero, &LosesInfo);
-#endif
                 V = Tmp.convertToDouble();
             }
 
@@ -2066,11 +1868,7 @@ std::string CWriter::GetValueName(const llvm::Value *Operand) {
 
     // Resolve potential alias.
     if (const llvm::GlobalAlias *GA = llvm::dyn_cast<llvm::GlobalAlias>(Operand)) {
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_3_5 /* LLVM 3.5+ */
         if (const llvm::Value *V = GA->getAliasee())
-#else /* <= LLVM 3.4 */
-        if (const llvm::Value *V = GA->resolveAliasedGlobal(false))
-#endif
             Operand = V;
     }
 
@@ -2437,13 +2235,8 @@ static SpecialGlobalClass getGlobalVariableClass(const llvm::GlobalVariable *GV)
 
     // Otherwise, if it is other metadata, don't print it.  This catches things
     // like debug information.
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_3_5 && ISPC_LLVM_VERSION <= ISPC_LLVM_3_8 /* LLVM 3.5-3.8 */
-    // Here we compare char *
-    if (!strcmp(GV->getSection(), "llvm.metadata"))
-#else
     // Here we compare strings
     if (GV->getSection() == "llvm.metadata")
-#endif
         return NotPrinted;
 
     return NotSpecial;
@@ -2499,22 +2292,14 @@ bool CWriter::doInitialization(llvm::Module &M) {
 #endif
     TAsm = new CBEMCAsmInfo();
     MRI = new llvm::MCRegisterInfo();
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_3_4 // LLVM 3.4+
     TCtx = new llvm::MCContext(TAsm, MRI, NULL);
-#else
-    TCtx = new llvm::MCContext(*TAsm, *MRI, NULL);
-#endif
     // Mang = new llvm::Mangler(*TCtx, *TD);
 
     // Keep track of which functions are static ctors/dtors so they can have
     // an attribute added to their prototypes.
     std::set<llvm::Function *> StaticCtors, StaticDtors;
     for (llvm::Module::global_iterator I = M.global_begin(), E = M.global_end(); I != E; ++I) {
-#if ISPC_LLVM_VERSION <= ISPC_LLVM_3_7 /* 3.2, 3.3, 3.4, 3.5, 3.6, 3.7 */
-        switch (getGlobalVariableClass(I)) {
-#else /* LLVM 3.8+ */
         switch (getGlobalVariableClass(&*I)) {
-#endif
         default:
             break;
         case GlobalCtors:
@@ -2624,11 +2409,7 @@ bool CWriter::doInitialization(llvm::Module &M) {
 
             if (I->hasExternalLinkage() || I->hasExternalWeakLinkage() || I->hasCommonLinkage())
                 Out << "extern ";
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_3_5 // LLVM 3.5+
             else if (I->hasDLLImportStorageClass())
-#else
-            else if (I->hasDLLImportLinkage())
-#endif
                 Out << "__declspec(dllimport) ";
             else
                 continue; // Internal Global
@@ -2696,11 +2477,7 @@ bool CWriter::doInitialization(llvm::Module &M) {
             case llvm::Intrinsic::uadd_with_overflow:
             case llvm::Intrinsic::sadd_with_overflow:
             case llvm::Intrinsic::umul_with_overflow:
-#if ISPC_LLVM_VERSION <= ISPC_LLVM_3_7 /* 3.2, 3.3, 3.4, 3.5, 3.6, 3.7 */
-                intrinsicsToDefine.push_back(I);
-#else /* LLVM 3.8+ */
                 intrinsicsToDefine.push_back(&*I);
-#endif
                 break;
             }
             continue;
@@ -2722,24 +2499,14 @@ bool CWriter::doInitialization(llvm::Module &M) {
 
         if (I->hasExternalWeakLinkage())
             Out << "extern ";
-#if ISPC_LLVM_VERSION <= ISPC_LLVM_3_7 /* 3.2, 3.3, 3.4, 3.5, 3.6, 3.7 */
-        printFunctionSignature(I, true);
-#else /* LLVM 3.8+ */
         printFunctionSignature(&*I, true);
-#endif
         if (I->hasWeakLinkage() || I->hasLinkOnceLinkage())
             Out << " __ATTRIBUTE_WEAK__";
         if (I->hasExternalWeakLinkage())
             Out << " __EXTERNAL_WEAK__";
-#if ISPC_LLVM_VERSION <= ISPC_LLVM_3_7 /* 3.2, 3.3, 3.4, 3.5, 3.6, 3.7 */
-        if (StaticCtors.count(I))
-            Out << " __ATTRIBUTE_CTOR__";
-        if (StaticDtors.count(I))
-#else /* LLVM 3.8+ */
         if (StaticCtors.count(&*I))
             Out << " __ATTRIBUTE_CTOR__";
         if (StaticDtors.count(&*I))
-#endif
             Out << " __ATTRIBUTE_DTOR__";
         if (I->hasHiddenVisibility())
             Out << " __HIDDEN__";
@@ -2801,36 +2568,20 @@ bool CWriter::doInitialization(llvm::Module &M) {
         for (llvm::Module::global_iterator I = M.global_begin(), E = M.global_end(); I != E; ++I)
             if (!I->isDeclaration()) {
                 // Ignore special globals, such as debug info.
-#if ISPC_LLVM_VERSION <= ISPC_LLVM_3_7 /* 3.2, 3.3, 3.4, 3.5, 3.6, 3.7 */
-                if (getGlobalVariableClass(I))
-#else /* LLVM 3.8+ */
                 if (getGlobalVariableClass(&*I))
-#endif
                     continue;
 
                 if (I->hasLocalLinkage())
                     Out << "static ";
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_3_5 // LLVM 3.5+
                 else if (I->hasDLLImportStorageClass())
                     Out << "__declspec(dllimport) ";
                 else if (I->hasDLLExportStorageClass())
                     Out << "__declspec(dllexport) ";
-#else
-                else if (I->hasDLLImportLinkage())
-                    Out << "__declspec(dllimport) ";
-                else if (I->hasDLLExportLinkage())
-                    Out << "__declspec(dllexport) ";
-#endif
                 // Thread Local Storage
                 if (I->isThreadLocal())
                     Out << "__thread ";
 
-                printType(Out, I->getType()->getElementType(), false,
-#if ISPC_LLVM_VERSION <= ISPC_LLVM_3_7 /* 3.2, 3.3, 3.4, 3.5, 3.6, 3.7 */
-                          GetValueName(I));
-#else /* LLVM 3.8+ */
-                          GetValueName(&*I));
-#endif
+                printType(Out, I->getType()->getElementType(), false, GetValueName(&*I));
 
                 if (I->hasLinkOnceLinkage())
                     Out << " __attribute__((common))";
@@ -3157,26 +2908,16 @@ void CWriter::printContainedStructs(llvm::Type *Ty, llvm::SmallPtrSet<llvm::Type
 
     if (llvm::StructType *ST = llvm::dyn_cast<llvm::StructType>(Ty)) {
         // Check to see if we have already printed this struct.
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_3_6 // LLVM 3.6+
         if (!Printed.insert(Ty).second)
             return;
-#else
-        if (!Printed.insert(Ty))
-            return;
-#endif
 
         // Print structure type out.
         printType(Out, ST, false, getStructName(ST), true);
         Out << ";\n\n";
     }
     if (llvm::ArrayType *AT = llvm::dyn_cast<llvm::ArrayType>(Ty)) {
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_3_6 // LLVM 3.6+
         if (!Printed.insert(Ty).second)
             return;
-#else
-        if (!Printed.insert(Ty))
-            return;
-#endif
 
         Out << "namespace {\n";
         printType(Out, AT, false, getArrayName(AT), true);
@@ -3185,13 +2926,8 @@ void CWriter::printContainedStructs(llvm::Type *Ty, llvm::SmallPtrSet<llvm::Type
 }
 
 void CWriter::printContainedArrays(llvm::ArrayType *ATy, llvm::SmallPtrSet<llvm::Type *, 16> &Printed) {
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_3_6 // LLVM 3.6+
     if (!Printed.insert(ATy).second)
         return;
-#else
-    if (!Printed.insert(ATy))
-        return;
-#endif
 
     llvm::ArrayType *ChildTy = llvm::dyn_cast<llvm::ArrayType>(ATy->getElementType());
     if (ChildTy != NULL)
@@ -3207,17 +2943,10 @@ void CWriter::printFunctionSignature(const llvm::Function *F, bool Prototype) {
 
     if (F->hasLocalLinkage())
         Out << "static ";
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_3_5 // LLVM 3.5+
     if (F->hasDLLImportStorageClass())
         Out << "__declspec(dllimport) ";
     if (F->hasDLLExportStorageClass())
         Out << "__declspec(dllexport) ";
-#else
-    if (F->hasDLLImportLinkage())
-        Out << "__declspec(dllimport) ";
-    if (F->hasDLLExportLinkage())
-        Out << "__declspec(dllexport) ";
-#endif
     switch (F->getCallingConv()) {
     case llvm::CallingConv::X86_StdCall:
         Out << "__attribute__((stdcall)) ";
@@ -3234,13 +2963,7 @@ void CWriter::printFunctionSignature(const llvm::Function *F, bool Prototype) {
 
     // Loop over the arguments, printing them...
     llvm::FunctionType *FT = llvm::cast<llvm::FunctionType>(F->getFunctionType());
-#if ISPC_LLVM_VERSION == ISPC_LLVM_3_2
-    const llvm::AttrListPtr &PAL = F->getAttributes();
-#elif ISPC_LLVM_VERSION <= ISPC_LLVM_4_0
-    const llvm::AttributeSet &PAL = F->getAttributes();
-#else // LLVM 5.0+
     const llvm::AttributeList &PAL = F->getAttributes();
-#endif
 
     std::string tstr;
     llvm::raw_string_ostream FunctionInnards(tstr);
@@ -3267,38 +2990,15 @@ void CWriter::printFunctionSignature(const llvm::Function *F, bool Prototype) {
                 if (PrintedArg)
                     FunctionInnards << ", ";
                 if (I->hasName() || !Prototype)
-#if ISPC_LLVM_VERSION <= ISPC_LLVM_3_7 /* 3.2, 3.3, 3.4, 3.5, 3.6, 3.7 */
-                    ArgName = GetValueName(I);
-#else /* LLVM 3.8+ */
                     ArgName = GetValueName(&*I);
-#endif
                 else
                     ArgName = "";
                 llvm::Type *ArgTy = I->getType();
-#if ISPC_LLVM_VERSION == ISPC_LLVM_3_2
-                if (PAL.getParamAttributes(Idx).hasAttribute(llvm::Attributes::ByVal)) {
-#elif ISPC_LLVM_VERSION <= ISPC_LLVM_4_0
-                if (PAL.getParamAttributes(Idx).hasAttribute(llvm::AttributeSet::FunctionIndex,
-                                                             llvm::Attribute::ByVal)) {
-#else // LLVM 5.0+
                 if (PAL.getParamAttributes(Idx).hasAttribute(llvm::Attribute::ByVal)) {
-#endif
                     ArgTy = llvm::cast<llvm::PointerType>(ArgTy)->getElementType();
-#if ISPC_LLVM_VERSION <= ISPC_LLVM_3_7 /* 3.2, 3.3, 3.4, 3.5, 3.6, 3.7 */
-                    ByValParams.insert(I);
-#else /* LLVM 3.8+ */
                     ByValParams.insert(&*I);
-#endif
                 }
-                printType(FunctionInnards, ArgTy,
-#if ISPC_LLVM_VERSION == ISPC_LLVM_3_2
-                          PAL.getParamAttributes(Idx).hasAttribute(llvm::Attributes::SExt),
-#elif ISPC_LLVM_VERSION <= ISPC_LLVM_4_0
-                          PAL.getParamAttributes(Idx).hasAttribute(llvm::AttributeSet::FunctionIndex,
-                                                                   llvm::Attribute::SExt),
-#else // LLVM 5.0+
-                          PAL.getParamAttributes(Idx).hasAttribute(llvm::Attribute::SExt),
-#endif
+                printType(FunctionInnards, ArgTy, PAL.getParamAttributes(Idx).hasAttribute(llvm::Attribute::SExt),
                           ArgName);
                 PrintedArg = true;
                 ++Idx;
@@ -3321,25 +3021,11 @@ void CWriter::printFunctionSignature(const llvm::Function *F, bool Prototype) {
             if (PrintedArg)
                 FunctionInnards << ", ";
             llvm::Type *ArgTy = *I;
-#if ISPC_LLVM_VERSION == ISPC_LLVM_3_2
-            if (PAL.getParamAttributes(Idx).hasAttribute(llvm::Attributes::ByVal)) {
-#elif ISPC_LLVM_VERSION <= ISPC_LLVM_4_0
-            if (PAL.getParamAttributes(Idx).hasAttribute(llvm::AttributeSet::FunctionIndex, llvm::Attribute::ByVal)) {
-#else // LLVM 5.0+
             if (PAL.getParamAttributes(Idx).hasAttribute(llvm::Attribute::ByVal)) {
-#endif
                 assert(ArgTy->isPointerTy());
                 ArgTy = llvm::cast<llvm::PointerType>(ArgTy)->getElementType();
             }
-            printType(FunctionInnards, ArgTy,
-#if ISPC_LLVM_VERSION == ISPC_LLVM_3_2
-                      PAL.getParamAttributes(Idx).hasAttribute(llvm::Attributes::SExt)
-#elif ISPC_LLVM_VERSION <= ISPC_LLVM_4_0
-                      PAL.getParamAttributes(Idx).hasAttribute(llvm::AttributeSet::FunctionIndex, llvm::Attribute::SExt)
-#else // LLVM 5.0+
-                      PAL.getParamAttributes(Idx).hasAttribute(llvm::Attribute::SExt)
-#endif
-            );
+            printType(FunctionInnards, ArgTy, PAL.getParamAttributes(Idx).hasAttribute(llvm::Attribute::SExt));
             PrintedArg = true;
             ++Idx;
         }
@@ -3370,15 +3056,7 @@ void CWriter::printFunctionSignature(const llvm::Function *F, bool Prototype) {
     }
 
     // Print out the return type and the signature built above.
-    printType(Out, RetTy,
-#if ISPC_LLVM_VERSION == ISPC_LLVM_3_2
-              PAL.getParamAttributes(0).hasAttribute(llvm::Attributes::SExt),
-#elif ISPC_LLVM_VERSION <= ISPC_LLVM_4_0
-              PAL.getParamAttributes(0).hasAttribute(llvm::AttributeSet::ReturnIndex, llvm::Attribute::SExt),
-#else // LLVM 5.0+
-              PAL.getParamAttributes(0).hasAttribute(llvm::Attribute::SExt),
-#endif
-              FunctionInnards.str());
+    printType(Out, RetTy, PAL.getParamAttributes(0).hasAttribute(llvm::Attribute::SExt), FunctionInnards.str());
 }
 
 static inline bool isFPIntBitCast(const llvm::Instruction &I) {
@@ -3447,11 +3125,7 @@ void CWriter::printFunction(llvm::Function &F) {
     // print the basic blocks
     for (llvm::Function::iterator BB = F.begin(), E = F.end(); BB != E; ++BB) {
         if (llvm::Loop *L = LI->getLoopFor(&*BB)) {
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_3_9 // LLVM 3.9+
             if (L->getHeader()->getIterator() == BB && L->getParentLoop() == 0)
-#else
-            if (L->getHeader() == BB && L->getParentLoop() == 0)
-#endif
                 printLoop(L);
         } else {
             printBasicBlock(&*BB);
@@ -3547,24 +3221,15 @@ void CWriter::visitSwitchInst(llvm::SwitchInst &SI) {
     Out << ";\n";
 
     for (llvm::SwitchInst::CaseIt i = SI.case_begin(), e = SI.case_end(); i != e; ++i) {
-#if ISPC_LLVM_VERSION <= ISPC_LLVM_4_0
-        llvm::ConstantInt *CaseVal = i.getCaseValue();
-        llvm::BasicBlock *Succ = i.getCaseSuccessor();
-#else // LLVM 5.0+
         llvm::ConstantInt *CaseVal = i->getCaseValue();
         llvm::BasicBlock *Succ = i->getCaseSuccessor();
-#endif
         Out << "  case ";
         writeOperand(CaseVal);
         Out << ":\n";
         printPHICopiesForSuccessor(SI.getParent(), Succ, 2);
         printBranchToBlock(SI.getParent(), Succ, 2);
 
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_3_5 // LLVM 3.5+
         if (llvm::Function::iterator(Succ) == std::next(llvm::Function::iterator(SI.getParent())))
-#else
-        if (llvm::Function::iterator(Succ) == llvm::next(llvm::Function::iterator(SI.getParent())))
-#endif
             Out << "    break;\n";
     }
 
@@ -3583,11 +3248,7 @@ bool CWriter::isGotoCodeNecessary(llvm::BasicBlock *From, llvm::BasicBlock *To) 
     /// FIXME: This should be reenabled, but loop reordering safe!!
     return true;
 
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_3_5 // LLVM 3.5+
     if (std::next(llvm::Function::iterator(From)) != llvm::Function::iterator(To))
-#else
-    if (llvm::next(llvm::Function::iterator(From)) != llvm::Function::iterator(To))
-#endif
         return true; // Not the direct successor, we need a goto.
 
     // llvm::isa<llvm::SwitchInst>(From->getTerminator())
@@ -3599,20 +3260,12 @@ bool CWriter::isGotoCodeNecessary(llvm::BasicBlock *From, llvm::BasicBlock *To) 
 
 void CWriter::printPHICopiesForSuccessor(llvm::BasicBlock *CurBlock, llvm::BasicBlock *Successor, unsigned Indent) {
     for (llvm::BasicBlock::iterator I = Successor->begin(); llvm::isa<llvm::PHINode>(I); ++I) {
-#if ISPC_LLVM_VERSION <= ISPC_LLVM_3_7 /* 3.2, 3.3, 3.4, 3.5, 3.6, 3.7 */
-        llvm::PHINode *PN = llvm::cast<llvm::PHINode>(I);
-#else /* LLVM 3.8+ */
         llvm::PHINode *PN = llvm::cast<llvm::PHINode>(&*I);
-#endif
         // Now we have to do the printing.
         llvm::Value *IV = PN->getIncomingValueForBlock(CurBlock);
         if (!llvm::isa<llvm::UndefValue>(IV)) {
             Out << std::string(Indent, ' ');
-#if ISPC_LLVM_VERSION <= ISPC_LLVM_3_7 /* 3.2, 3.3, 3.4, 3.5, 3.6, 3.7 */
-            Out << "  " << GetValueName(I) << "__PHI = ";
-#else /* LLVM 3.8+ */
             Out << "  " << GetValueName(&*I) << "__PHI = ";
-#endif
             writeOperand(IV);
             Out << ";   /* for PHI node */\n";
         }
@@ -4357,9 +4010,7 @@ void CWriter::lowerIntrinsics(llvm::Function &F) {
                         const char *BuiltinName = "";
 #define GET_GCC_BUILTIN_NAME
 #define Intrinsic llvm::Intrinsic
-#if ISPC_LLVM_VERSION == ISPC_LLVM_3_2
-#include "llvm/Intrinsics.gen"
-#elif ISPC_LLVM_VERSION <= ISPC_LLVM_6_0 /* LLVM 3.3-6.0 */
+#if ISPC_LLVM_VERSION == ISPC_LLVM_6_0 /* LLVM 6.0 */
 #include "llvm/IR/Intrinsics.gen"
 #else /* LLVM 7.0+ */
 // This looks completely broken, even in 3.2, need to figure out what's going on here
@@ -4375,21 +4026,12 @@ void CWriter::lowerIntrinsics(llvm::Function &F) {
                         // All other intrinsic calls we must lower.
                         llvm::Instruction *Before = 0;
                         if (CI != &BB->front())
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_3_5 // LLVM 3.5+
                             Before = &*std::prev(llvm::BasicBlock::iterator(CI));
-#else
-                            Before = prior(llvm::BasicBlock::iterator(CI));
-#endif
 
                         IL->LowerIntrinsicCall(CI);
-                        if (Before) {  // Move iterator to instruction after call
-#if ISPC_LLVM_VERSION <= ISPC_LLVM_3_7 /* 3.2, 3.3, 3.4, 3.5, 3.6, 3.7 */
-                            I = Before;
-                            ++I;
-#else /* LLVM 3.8+ */
+                        if (Before) { // Move iterator to instruction after call
                             I = Before->getIterator();
                             ++I;
-#endif
                         } else {
                             I = BB->begin();
                         }
@@ -4437,13 +4079,7 @@ void CWriter::visitCallInst(llvm::CallInst &I) {
 
     // If this is a call to a struct-return function, assign to the first
     // parameter instead of passing it to the call.
-#if ISPC_LLVM_VERSION == ISPC_LLVM_3_2
-    const llvm::AttrListPtr &PAL = I.getAttributes();
-#elif ISPC_LLVM_VERSION <= ISPC_LLVM_4_0
-    const llvm::AttributeSet &PAL = I.getAttributes();
-#else // LLVM 5.0+
     const llvm::AttributeList &PAL = I.getAttributes();
-#endif
 
     bool hasByVal = I.hasByValArgument();
     bool isStructRet = (I.getNumArgOperands() > 0) && I.hasStructRetAttr();
@@ -4550,29 +4186,11 @@ void CWriter::visitCallInst(llvm::CallInst &I) {
         } else if (ArgNo < NumDeclaredParams && (*AI)->getType() != FTy->getParamType(ArgNo)) {
             Out << '(';
             printType(Out, FTy->getParamType(ArgNo),
-#if ISPC_LLVM_VERSION == ISPC_LLVM_3_2
-                      PAL.getParamAttributes(ArgNo + 1).hasAttribute(llvm::Attributes::SExt)
-#elif ISPC_LLVM_VERSION <= ISPC_LLVM_4_0
-                      PAL.getParamAttributes(ArgNo + 1).hasAttribute(llvm::AttributeSet::FunctionIndex,
-                                                                     llvm::Attribute::SExt)
-#else // LLVM 5.0+
-                      PAL.getParamAttributes(ArgNo + 1).hasAttribute(llvm::Attribute::SExt)
-#endif
-            );
+                      PAL.getParamAttributes(ArgNo + 1).hasAttribute(llvm::Attribute::SExt));
             Out << ')';
         }
         // Check if the argument is expected to be passed by value.
-#if ISPC_LLVM_VERSION <= ISPC_LLVM_4_0
-        if (I.paramHasAttr(ArgNo + 1,
-#else // LLVM 5.0+
-        if (I.paramHasAttr(ArgNo,
-#endif
-#if ISPC_LLVM_VERSION == ISPC_LLVM_3_2
-                           llvm::Attributes::ByVal
-#else /* LLVM 3.3+ */
-                           llvm::Attribute::ByVal
-#endif
-                           )) {
+        if (I.paramHasAttr(ArgNo, llvm::Attribute::ByVal)) {
             writeOperandDeref(*AI);
         } else {
             writeOperand(*AI);
@@ -4593,9 +4211,7 @@ bool CWriter::visitBuiltinCall(llvm::CallInst &I, llvm::Intrinsic::ID ID, bool &
         const char *BuiltinName = "";
 #define GET_GCC_BUILTIN_NAME
 #define Intrinsic llvm::Intrinsic
-#if ISPC_LLVM_VERSION == ISPC_LLVM_3_2
-#include "llvm/Intrinsics.gen"
-#elif ISPC_LLVM_VERSION <= ISPC_LLVM_6_0 /* LLVM 3.3-6.0 */
+#if ISPC_LLVM_VERSION == ISPC_LLVM_6_0 /* LLVM 6.0 */
 #include "llvm/IR/Intrinsics.gen"
 #else /* LLVM 7.0+ */
 // This looks completely broken, even in 3.2, need to figure out what's going on here
@@ -4811,11 +4427,7 @@ void CWriter::printGEPExpression(llvm::Value *Ptr, llvm::gep_type_iterator I, ll
     llvm::VectorType *LastIndexIsVector = 0;
     {
         for (llvm::gep_type_iterator TmpI = I; TmpI != E; ++TmpI)
-#if ISPC_LLVM_VERSION <= ISPC_LLVM_3_9
-            LastIndexIsVector = llvm::dyn_cast<llvm::VectorType>(*TmpI);
-#else // LLVM 4.0+
             LastIndexIsVector = llvm::dyn_cast<llvm::VectorType>(TmpI.getIndexedType());
-#endif
     }
 
     Out << "(";
@@ -4847,11 +4459,7 @@ void CWriter::printGEPExpression(llvm::Value *Ptr, llvm::gep_type_iterator I, ll
         // exposed, like a global, avoid emitting (&foo)[0], just emit foo instead.
         if (isAddressExposed(Ptr)) {
             writeOperandInternal(Ptr, Static);
-#if ISPC_LLVM_VERSION <= ISPC_LLVM_3_9
-        } else if (I != E && (*I)->isStructTy()) {
-#else // LLVM 4.0+
         } else if (I != E && I.isStruct()) {
-#endif
             // If we didn't already emit the first operand, see if we can print it as
             // P->f instead of "P[0].f"
             writeOperand(Ptr);
@@ -5160,10 +4768,8 @@ void CWriter::visitAtomicRMWInst(llvm::AtomicRMWInst &AI) {
 
 void CWriter::visitAtomicCmpXchgInst(llvm::AtomicCmpXchgInst &ACXI) {
     Out << "(";
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_3_5 // LLVM 3.5+
     printType(Out, ACXI.getType(), false);
     Out << "::init("; // LLVM cmpxchg returns a struct, so we need make an assighment properly
-#endif
     Out << "__atomic_cmpxchg(";
     writeOperand(ACXI.getPointerOperand());
     Out << ", ";
@@ -5171,9 +4777,7 @@ void CWriter::visitAtomicCmpXchgInst(llvm::AtomicCmpXchgInst &ACXI) {
     Out << ", ";
     writeOperand(ACXI.getNewValOperand());
     Out << ")";
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_3_5 // LLVM 3.5+
     Out << ", true /* There is no way to learn the value of this bit inside ISPC, so making it constant */)";
-#endif
     Out << ")";
 }
 
@@ -5187,11 +4791,7 @@ class SmearCleanupPass : public llvm::BasicBlockPass {
         vectorWidth = width;
     }
 
-#if ISPC_LLVM_VERSION <= ISPC_LLVM_3_9 // <= 3.9
-    const char *getPassName() const { return "Smear Cleanup Pass"; }
-#else // LLVM 4.0+
     llvm::StringRef getPassName() const { return "Smear Cleanup Pass"; }
-#endif
     bool runOnBasicBlock(llvm::BasicBlock &BB);
 
     static char ID;
@@ -5268,14 +4868,7 @@ llvm::Value *SmearCleanupPass::getShuffleSmearValue(llvm::Instruction *inst) con
 
     // Check that the shuffle is a broadcast of the element of the first vector,
     // i.e. mask vector is vector with equal elements of expected size.
-    if (!(mask &&
-#if ISPC_LLVM_VERSION == ISPC_LLVM_3_2
-          (mask->isNullValue() ||
-           (shuffleInst->getMask()->getType()->isVectorTy() &&
-            llvm::dyn_cast<llvm::ConstantVector>(shuffleInst->getMask())->getSplatValue() != 0)) &&
-#else
-          (mask->isNullValue() || (shuffleInst->getMask()->getSplatValue() != 0)) &&
-#endif
+    if (!(mask && (mask->isNullValue() || (shuffleInst->getMask()->getSplatValue() != 0)) &&
           llvm::dyn_cast<llvm::VectorType>(mask->getType())->getNumElements() == vectorWidth)) {
         return NULL;
     }
@@ -5299,16 +4892,9 @@ llvm::Value *SmearCleanupPass::getShuffleSmearValue(llvm::Instruction *inst) con
             // Declare the __extract_element function if needed; it takes a vector and
             // a scalar parameter and returns a scalar of the vector parameter type.
 #if ISPC_LLVM_VERSION <= ISPC_LLVM_8_0
-            llvm::Constant *ef =
-#if ISPC_LLVM_VERSION <= ISPC_LLVM_4_0
-                module->getOrInsertFunction(
-                    "__extract_element", shuffleInst->getOperand(0)->getType()->getVectorElementType(),
-                    shuffleInst->getOperand(0)->getType(), llvm::IntegerType::get(module->getContext(), 32), NULL);
-#else // LLVM 5.0+
-                module->getOrInsertFunction(
-                    "__extract_element", shuffleInst->getOperand(0)->getType()->getVectorElementType(),
-                    shuffleInst->getOperand(0)->getType(), llvm::IntegerType::get(module->getContext(), 32));
-#endif
+            llvm::Constant *ef = module->getOrInsertFunction(
+                "__extract_element", shuffleInst->getOperand(0)->getType()->getVectorElementType(),
+                shuffleInst->getOperand(0)->getType(), llvm::IntegerType::get(module->getContext(), 32));
             extractFunc = llvm::dyn_cast<llvm::Function>(ef);
 #else // LLVM 9.0+
             llvm::FunctionCallee ef = module->getOrInsertFunction(
@@ -5324,15 +4910,8 @@ llvm::Value *SmearCleanupPass::getShuffleSmearValue(llvm::Instruction *inst) con
         if (extractFunc == NULL) {
             return NULL;
         }
-        llvm::Instruction *extractCall =
-            llvm::ExtractElementInst::Create(shuffleInst->getOperand(0),
-#if ISPC_LLVM_VERSION == ISPC_LLVM_3_2
-                                             // mask is of VectorType
-                                             llvm::dyn_cast<llvm::ConstantVector>(mask)->getSplatValue(),
-#else
-                                             mask->getSplatValue(),
-#endif
-                                             "__extract_element", inst);
+        llvm::Instruction *extractCall = llvm::ExtractElementInst::Create(
+            shuffleInst->getOperand(0), mask->getSplatValue(), "__extract_element", inst);
         return extractCall;
     }
 
@@ -5361,12 +4940,7 @@ restart:
                 // scalar parameter and returns a vector of the same
                 // parameter type.
 #if ISPC_LLVM_VERSION <= ISPC_LLVM_8_0
-                llvm::Constant *sf =
-#if ISPC_LLVM_VERSION <= ISPC_LLVM_4_0
-                    module->getOrInsertFunction(smearFuncName, iter->getType(), smearType, NULL);
-#else  // LLVM 5.0+
-                    module->getOrInsertFunction(smearFuncName, iter->getType(), smearType);
-#endif // LLVM 9.0+
+                llvm::Constant *sf = module->getOrInsertFunction(smearFuncName, iter->getType(), smearType);
                 smearFunc = llvm::dyn_cast<llvm::Function>(sf);
 #else
                 llvm::FunctionCallee sf = module->getOrInsertFunction(smearFuncName, iter->getType(), smearType);
@@ -5400,11 +4974,7 @@ class AndCmpCleanupPass : public llvm::BasicBlockPass {
   public:
     AndCmpCleanupPass() : BasicBlockPass(ID) {}
 
-#if ISPC_LLVM_VERSION <= ISPC_LLVM_3_9 // <= 3.9
-    const char *getPassName() const { return "AndCmp Cleanup Pass"; }
-#else // LLVM 4.0+
     llvm::StringRef getPassName() const { return "AndCmp Cleanup Pass"; }
-#endif
     bool runOnBasicBlock(llvm::BasicBlock &BB);
 
     static char ID;
@@ -5463,14 +5033,8 @@ restart:
                 // replacing and the third argument is the mask type.
                 llvm::Type *cmpOpType = opCmp->getOperand(0)->getType();
 #if ISPC_LLVM_VERSION <= ISPC_LLVM_8_0
-                llvm::Constant *acf =
-#if ISPC_LLVM_VERSION <= ISPC_LLVM_4_0
-                    m->module->getOrInsertFunction(funcName, LLVMTypes::MaskType, cmpOpType, cmpOpType,
-                                                   LLVMTypes::MaskType, NULL);
-#else // LLVM 5.0+
-                    m->module->getOrInsertFunction(funcName, LLVMTypes::MaskType, cmpOpType, cmpOpType,
-                                                   LLVMTypes::MaskType);
-#endif
+                llvm::Constant *acf = m->module->getOrInsertFunction(funcName, LLVMTypes::MaskType, cmpOpType,
+                                                                     cmpOpType, LLVMTypes::MaskType);
                 andCmpFunc = llvm::dyn_cast<llvm::Function>(acf);
 #else
                 llvm::FunctionCallee acf = m->module->getOrInsertFunction(funcName, LLVMTypes::MaskType, cmpOpType,
@@ -5517,61 +5081,36 @@ class MaskOpsCleanupPass : public llvm::BasicBlockPass {
         // Declare the __not, __and_not1, and __and_not2 functions that we
         // expect the target to end up providing.
         notFunc =
-#if ISPC_LLVM_VERSION <= ISPC_LLVM_4_0
-            llvm::dyn_cast<llvm::Function>(m->getOrInsertFunction("__not", mt, mt, NULL));
-#elif ISPC_LLVM_VERSION <= ISPC_LLVM_8_0 // LLVM 5.0-LLVM 8.0
+#if ISPC_LLVM_VERSION <= ISPC_LLVM_8_0
             llvm::dyn_cast<llvm::Function>(m->getOrInsertFunction("__not", mt, mt));
-#else                                    // LLVM 9.0+
+#else
             llvm::dyn_cast<llvm::Function>(m->getOrInsertFunction("__not", mt, mt).getCallee());
 #endif
         assert(notFunc != NULL);
-#if ISPC_LLVM_VERSION == ISPC_LLVM_3_2
-        notFunc->addFnAttr(llvm::Attributes::NoUnwind);
-        notFunc->addFnAttr(llvm::Attributes::ReadNone);
-#else /* LLVM 3.3+ */
         notFunc->addFnAttr(llvm::Attribute::NoUnwind);
         notFunc->addFnAttr(llvm::Attribute::ReadNone);
-#endif
 
         andNotFuncs[0] =
-#if ISPC_LLVM_VERSION <= ISPC_LLVM_4_0
-            llvm::dyn_cast<llvm::Function>(m->getOrInsertFunction("__and_not1", mt, mt, mt, NULL));
-#elif ISPC_LLVM_VERSION <= ISPC_LLVM_8_0 // LLVM 5.0-LLVM 8.0
+#if ISPC_LLVM_VERSION <= ISPC_LLVM_8_0
             llvm::dyn_cast<llvm::Function>(m->getOrInsertFunction("__and_not1", mt, mt, mt));
-#else                                    // LLVM 9.0+
+#else
             llvm::dyn_cast<llvm::Function>(m->getOrInsertFunction("__and_not1", mt, mt, mt).getCallee());
 #endif
         assert(andNotFuncs[0] != NULL);
-#if ISPC_LLVM_VERSION == ISPC_LLVM_3_2
-        andNotFuncs[0]->addFnAttr(llvm::Attributes::NoUnwind);
-        andNotFuncs[0]->addFnAttr(llvm::Attributes::ReadNone);
-#else /* LLVM 3.3+ */
         andNotFuncs[0]->addFnAttr(llvm::Attribute::NoUnwind);
         andNotFuncs[0]->addFnAttr(llvm::Attribute::ReadNone);
-#endif
         andNotFuncs[1] =
-#if ISPC_LLVM_VERSION <= ISPC_LLVM_4_0
-            llvm::dyn_cast<llvm::Function>(m->getOrInsertFunction("__and_not2", mt, mt, mt, NULL));
-#elif ISPC_LLVM_VERSION <= ISPC_LLVM_8_0 // LLVM 5.0-LLVM 8.0
+#if ISPC_LLVM_VERSION <= ISPC_LLVM_8_0
             llvm::dyn_cast<llvm::Function>(m->getOrInsertFunction("__and_not2", mt, mt, mt));
-#else                                    // LLVM 9.0+
+#else
             llvm::dyn_cast<llvm::Function>(m->getOrInsertFunction("__and_not2", mt, mt, mt).getCallee());
 #endif
         assert(andNotFuncs[1] != NULL);
-#if ISPC_LLVM_VERSION == ISPC_LLVM_3_2
-        andNotFuncs[1]->addFnAttr(llvm::Attributes::NoUnwind);
-        andNotFuncs[1]->addFnAttr(llvm::Attributes::ReadNone);
-#else /* LLVM 3.3+ */
         andNotFuncs[1]->addFnAttr(llvm::Attribute::NoUnwind);
         andNotFuncs[1]->addFnAttr(llvm::Attribute::ReadNone);
-#endif
     }
 
-#if ISPC_LLVM_VERSION <= ISPC_LLVM_3_9 // <= 3.9
-    const char *getPassName() const { return "MaskOps Cleanup Pass"; }
-#else // LLVM 4.0+
     llvm::StringRef getPassName() const { return "MaskOps Cleanup Pass"; }
-#endif
     bool runOnBasicBlock(llvm::BasicBlock &BB);
 
   private:
@@ -5678,11 +5217,7 @@ restart:
 
 bool WriteCXXFile(llvm::Module *module, const char *fn, int vectorWidth, const char *includeName) {
 
-#if ISPC_LLVM_VERSION <= ISPC_LLVM_3_6 // 3.2, 3.3, 3.4, 3.5, 3.6
-    llvm::PassManager pm;
-#else // LLVM 3.7+
     llvm::legacy::PassManager pm;
-#endif
 #if 0
     if (const llvm::TargetData *td = targetMachine->getTargetData())
         pm.add(new llvm::TargetData(*td));
@@ -5690,29 +5225,13 @@ bool WriteCXXFile(llvm::Module *module, const char *fn, int vectorWidth, const c
         pm.add(new llvm::TargetData(module));
 #endif
 
-#if ISPC_LLVM_VERSION <= ISPC_LLVM_3_3 // 3.2, 3.3
-    int flags = 0;
-#else // LLVM 3.4+
     llvm::sys::fs::OpenFlags flags = llvm::sys::fs::F_None;
-#endif
 
-#if ISPC_LLVM_VERSION <= ISPC_LLVM_3_5 // 3.2, 3.3, 3.4, 3.5
-    std::string error;
-#else // LLVM 3.6+
     std::error_code error;
-#endif
 
-#if ISPC_LLVM_VERSION <= ISPC_LLVM_5_0
-    llvm::tool_output_file *of = new llvm::tool_output_file(fn, error, flags);
-#else // LLVM 6.0+
     llvm::ToolOutputFile *of = new llvm::ToolOutputFile(fn, error, flags);
-#endif
 
-#if ISPC_LLVM_VERSION <= ISPC_LLVM_3_5 // 3.2, 3.3, 3.4, 3.5
-    if (error.size()) {
-#else // LLVM 3.6+
     if (error) {
-#endif
         fprintf(stderr, "Error opening output file \"%s\".\n", fn);
         return false;
     }
@@ -5728,10 +5247,6 @@ bool WriteCXXFile(llvm::Module *module, const char *fn, int vectorWidth, const c
     pm.add(llvm::createDeadCodeEliminationPass()); // clean up after smear pass
                                                    // CO    pm.add(llvm::createPrintModulePass(&fos));
     pm.add(new CWriter(fos, includeName, vectorWidth));
-#if ISPC_LLVM_VERSION == ISPC_LLVM_3_2
-    // This interface is depricated for 3.3+
-    pm.add(llvm::createGCInfoDeleter());
-#endif
     // CO    pm.add(llvm::createVerifierPass());
 
     pm.run(*module);

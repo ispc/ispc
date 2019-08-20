@@ -40,20 +40,11 @@
 
 #include "ispc.h"
 #include <map>
-#if ISPC_LLVM_VERSION == ISPC_LLVM_3_2
-#include <llvm/InstrTypes.h>
-#include <llvm/Instructions.h>
-#else // 3.3+
-#include <llvm/IR/InstrTypes.h>
-#include <llvm/IR/Instructions.h>
-#endif
-#if ISPC_LLVM_VERSION <= ISPC_LLVM_3_4
-#include <llvm/DIBuilder.h>
-#include <llvm/DebugInfo.h>
-#else // 3.5+
+
 #include <llvm/IR/DIBuilder.h>
 #include <llvm/IR/DebugInfo.h>
-#endif
+#include <llvm/IR/InstrTypes.h>
+#include <llvm/IR/Instructions.h>
 
 struct CFInfo;
 
@@ -348,13 +339,8 @@ class FunctionEmitContext {
         llvm::Instruction for convenience; in calling code we often have
         Instructions stored using Value pointers; the code here returns
         silently if it's not actually given an instruction. */
-    void AddDebugPos(llvm::Value *instruction, const SourcePos *pos = NULL,
-#if ISPC_LLVM_VERSION <= ISPC_LLVM_3_6
-                     llvm::DIScope *scope = NULL);
-#else /* LLVM 3.7+ */
-                     llvm::DIScope *scope = NULL);
+    void AddDebugPos(llvm::Value *instruction, const SourcePos *pos = NULL, llvm::DIScope *scope = NULL);
     // llvm::MDScope *scope = NULL );
-#endif
 
     /** Inform the debugging information generation code that a new scope
         is starting in the source program. */
@@ -366,11 +352,8 @@ class FunctionEmitContext {
 
     /** Returns the llvm::DIScope corresponding to the current program
         scope. */
-#if ISPC_LLVM_VERSION <= ISPC_LLVM_3_6
-    llvm::DIScope GetDIScope() const;
-#else // LLVM 3.7++
+
     llvm::DIScope *GetDIScope() const;
-#endif
 
     /** Emits debugging information for the variable represented by
         sym.  */
@@ -655,19 +638,6 @@ class FunctionEmitContext {
         emitted. */
     std::vector<CFInfo *> controlFlowInfo;
 
-#if ISPC_LLVM_VERSION <= ISPC_LLVM_3_6
-    /** DIFile object corresponding to the source file where the current
-        function was defined (used for debugging info). */
-    llvm::DIFile diFile;
-
-    /** DISubprogram corresponding to this function (used for debugging
-        info). */
-    llvm::DISubprogram diSubprogram;
-
-    /** These correspond to the current set of nested scopes in the
-        function. */
-    std::vector<llvm::DILexicalBlock> debugScopes;
-#else // LLVM 3.7++
     /** DIFile object corresponding to the source file where the current
         function was defined (used for debugging info). */
     llvm::DIFile *diFile;
@@ -679,7 +649,6 @@ class FunctionEmitContext {
     /** These correspond to the current set of nested scopes in the
         function. */
     std::vector<llvm::DIScope *> debugScopes;
-#endif
 
     /** True if a 'launch' statement has been encountered in the function. */
     bool launchedTasks;

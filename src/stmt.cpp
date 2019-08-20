@@ -48,16 +48,6 @@
 #include <map>
 #include <stdio.h>
 
-#if ISPC_LLVM_VERSION == ISPC_LLVM_3_2
-#include <llvm/CallingConv.h>
-#include <llvm/DerivedTypes.h>
-#include <llvm/Function.h>
-#include <llvm/Instructions.h>
-#include <llvm/LLVMContext.h>
-#include <llvm/Metadata.h>
-#include <llvm/Module.h>
-#include <llvm/Type.h>
-#else
 #include <llvm/IR/CallingConv.h>
 #include <llvm/IR/DerivedTypes.h>
 #include <llvm/IR/Function.h>
@@ -66,7 +56,6 @@
 #include <llvm/IR/Metadata.h>
 #include <llvm/IR/Module.h>
 #include <llvm/IR/Type.h>
-#endif
 #include <llvm/Support/raw_ostream.h>
 
 ///////////////////////////////////////////////////////////////////////////
@@ -167,11 +156,7 @@ static llvm::Value *lConvertToGenericPtr(FunctionEmitContext *ctx, llvm::Value *
         llvm::Function *func_warp_index = m->module->getFunction("__warp_index");
         llvm::Value *warpId = ctx->CallInst(func_warp_index, NULL, std::vector<llvm::Value *>(), "gep2gen_warp_index");
         llvm::Value *offset = ctx->BinaryOperator(llvm::Instruction::Mul, warpId, LLVMInt32(numEl), "gep2gen_offset");
-#if ISPC_LLVM_VERSION <= ISPC_LLVM_3_6
-        value = llvm::GetElementPtrInst::Create(value, offset, "gep2gen_offset", ctx->GetCurrentBasicBlock());
-#else
         value = llvm::GetElementPtrInst::Create(NULL, value, offset, "gep2gen_offset", ctx->GetCurrentBasicBlock());
-#endif
     }
 
     /* convert arrElTy* to elTy* */
@@ -1407,13 +1392,8 @@ static llvm::Value *lUpdateVaryingCounter(int dim, int nDims, FunctionEmitContex
         ptr_arrayidx_indices.push_back(LLVMInt32(0));
         ptr_arrayidx_indices.push_back(laneIdx);
 #if 1
-#if ISPC_LLVM_VERSION <= ISPC_LLVM_3_6
-        llvm::Instruction *ptr_arrayidx =
-            llvm::GetElementPtrInst::Create(globalDelta, ptr_arrayidx_indices, "arrayidx", ctx->GetCurrentBasicBlock());
-#else
         llvm::Instruction *ptr_arrayidx = llvm::GetElementPtrInst::Create(NULL, globalDelta, ptr_arrayidx_indices,
                                                                           "arrayidx", ctx->GetCurrentBasicBlock());
-#endif
         llvm::LoadInst *int8_39 = new llvm::LoadInst(ptr_arrayidx, "", false, ctx->GetCurrentBasicBlock());
         llvm::Value *int32_39 = ctx->ZExtInst(int8_39, LLVMTypes::Int32Type);
 

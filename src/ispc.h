@@ -41,7 +41,7 @@
 #include "ispc_version.h"
 
 #if ISPC_LLVM_VERSION < OLDEST_SUPPORTED_LLVM || ISPC_LLVM_VERSION > LATEST_SUPPORTED_LLVM
-#error "Only LLVM 3.2 - 8.0 and 9.0 development branch are supported"
+#error "Only LLVM 6.0 - 9.0 and 10.0 development branch are supported"
 #endif
 
 #if defined(_WIN32) || defined(_WIN64)
@@ -70,11 +70,8 @@
 
 // Forward declarations of a number of widely-used LLVM types
 namespace llvm {
-#if ISPC_LLVM_VERSION <= ISPC_LLVM_4_0
-class AttributeSet;
-#else // LLVM 5.0+
+
 class AttrBuilder;
-#endif
 class BasicBlock;
 class Constant;
 class ConstantValue;
@@ -90,11 +87,8 @@ class Type;
 class Value;
 class DIFile;
 class DIType;
-#if ISPC_LLVM_VERSION <= ISPC_LLVM_3_6
-class DIDescriptor;
-#else // LLVM 3.7+
+
 class DIScope;
-#endif
 } // namespace llvm
 
 class ArrayType;
@@ -140,13 +134,8 @@ struct SourcePos {
     /** Prints the filename and line/column range to standard output. */
     void Print() const;
 
-#if ISPC_LLVM_VERSION <= ISPC_LLVM_3_6
-    /** Returns a LLVM DIFile object that represents the SourcePos's file */
-    llvm::DIFile GetDIFile() const;
-#else
     /** Returns a LLVM DIFile object that represents the SourcePos's file */
     llvm::DIFile *GetDIFile() const;
-#endif
 
     bool operator==(const SourcePos &p2) const;
 };
@@ -342,16 +331,10 @@ class Target {
     /** Target-specific function attributes */
     std::vector<std::pair<std::string, std::string>> m_funcAttributes;
 
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_3_3
     /** Target-specific LLVM attribute, which has to be attached to every
         function to ensure that it is generated for correct target architecture.
         This is requirement was introduced in LLVM 3.3 */
-#if ISPC_LLVM_VERSION <= ISPC_LLVM_4_0
-    llvm::AttributeSet *m_tf_attributes;
-#else // LLVM 5.0+
     llvm::AttrBuilder *m_tf_attributes;
-#endif
-#endif
 
     /** Native vector width of the vector instruction set.  Note that this
         value is directly derived from the ISA being used (e.g. it's 4 for
@@ -625,9 +608,7 @@ struct Globals {
     // readelf --debug-dump=info object.o | grep -A 2 'Compilation Unit @'
     // on Mac:
     // xcrun dwarfdump -r0 object.o
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_3_5
     int generateDWARFVersion;
-#endif
 
     /** If true, function names are mangled by appending the target ISA and
         vector width to them. */

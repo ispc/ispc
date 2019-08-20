@@ -44,23 +44,13 @@
 #include "sym.h"
 #include "type.h"
 #include "util.h"
-#include <map>
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_5_0 // LLVM 5.0+
 #include <llvm/BinaryFormat/Dwarf.h>
-#else // LLVM up to 4.x
-#include <llvm/Support/Dwarf.h>
-#endif
-#if ISPC_LLVM_VERSION == ISPC_LLVM_3_2
-#include <llvm/DerivedTypes.h>
-#include <llvm/Instructions.h>
-#include <llvm/Metadata.h>
-#include <llvm/Module.h>
-#else
+#include <map>
+
 #include <llvm/IR/DerivedTypes.h>
 #include <llvm/IR/Instructions.h>
 #include <llvm/IR/Metadata.h>
 #include <llvm/IR/Module.h>
-#endif
 #ifdef ISPC_NVPTX_ENABLED
 #include <llvm/Support/FormattedStream.h>
 #include <llvm/Support/raw_ostream.h>
@@ -281,12 +271,7 @@ FunctionEmitContext::FunctionEmitContext(Function *func, Symbol *funSym, llvm::F
             snprintf(buf, sizeof(buf), "__off_all_on_mask_%s", g->target->GetISAString());
 
 #if ISPC_LLVM_VERSION <= ISPC_LLVM_8_0
-            llvm::Constant *offFunc =
-#if ISPC_LLVM_VERSION <= ISPC_LLVM_4_0
-                m->module->getOrInsertFunction(buf, LLVMTypes::VoidType, NULL);
-#else // LLVM 5.0+
-                m->module->getOrInsertFunction(buf, LLVMTypes::VoidType);
-#endif
+            llvm::Constant *offFunc = m->module->getOrInsertFunction(buf, LLVMTypes::VoidType);
 #else // LLVM 9.0+
             llvm::FunctionCallee offFuncCallee = m->module->getOrInsertFunction(buf, LLVMTypes::VoidType);
             llvm::Constant *offFunc = llvm::cast<llvm::Constant>(offFuncCallee.getCallee());
@@ -309,61 +294,25 @@ FunctionEmitContext::FunctionEmitContext(Function *func, Symbol *funSym, llvm::F
 
         /* If debugging is enabled, tell the debug information emission
            code about this new function */
-#if ISPC_LLVM_VERSION <= ISPC_LLVM_3_6 /* 3.2, 3.3, 3.4, 3.5, 3.6 */
         diFile = funcStartPos.GetDIFile();
-        AssertPos(currentPos, diFile.Verify());
-#else /* LLVM 3.7+ */
-        diFile = funcStartPos.GetDIFile();
-#endif
-
-#if ISPC_LLVM_VERSION <= ISPC_LLVM_3_3 /* 3.2, 3.3 */
-        llvm::DIScope scope = llvm::DIScope(m->diBuilder->getCU());
-#elif ISPC_LLVM_VERSION <= ISPC_LLVM_3_6 /* 3.4, 3.5, 3.6 */
-        llvm::DIScope scope = llvm::DIScope(m->diCompileUnit);
-#else                                    /* LLVM 3.7+ */
         llvm::DIScope *scope = m->diCompileUnit;
-#endif
-#if ISPC_LLVM_VERSION <= ISPC_LLVM_3_6 /* 3.2, 3.3, 3.4, 3.5, 3.6 */
-        llvm::DIType diSubprogramType;
-        AssertPos(currentPos, scope.Verify());
-#else /* LLVM 3.7+ */
         llvm::DIType *diSubprogramType = NULL;
-#endif
 
         const FunctionType *functionType = function->GetType();
         if (functionType == NULL)
             AssertPos(currentPos, m->errorCount > 0);
         else {
             diSubprogramType = functionType->GetDIType(scope);
-#if ISPC_LLVM_VERSION <= ISPC_LLVM_3_6 /* 3.2, 3.3, 3.4, 3.5, 3.6 */
-            AssertPos(currentPos, diSubprogramType.Verify());
-#else /* LLVM 3.7+ */
-            // comming soon
-#endif
+            /*#if ISPC_LLVM_VERSION <= ISPC_LLVM_3_6 // 3.2, 3.3, 3.4, 3.5, 3.6
+                        AssertPos(currentPos, diSubprogramType.Verify());
+            #else // LLVM 3.7+
+                        // comming soon
+            #endif*/
         }
-
-#if ISPC_LLVM_VERSION <= ISPC_LLVM_3_3 /* 3.2, 3.3 */
-        llvm::DIType diSubprogramType_n = diSubprogramType;
-        int flags = llvm::DIDescriptor::FlagPrototyped;
-#elif ISPC_LLVM_VERSION <= ISPC_LLVM_3_6                                       /* 3.4, 3.5, 3.6 */
-        Assert(diSubprogramType.isCompositeType());
-        llvm::DICompositeType diSubprogramType_n = static_cast<llvm::DICompositeType>(diSubprogramType);
-        int flags = llvm::DIDescriptor::FlagPrototyped;
-#elif ISPC_LLVM_VERSION == ISPC_LLVM_3_7                                       /* LLVM 3.7 */
-        Assert(llvm::isa<llvm::DICompositeTypeBase>(diSubprogramType));
-        llvm::DISubroutineType *diSubprogramType_n =
-            llvm::cast<llvm::DISubroutineType>(getDICompositeType(diSubprogramType));
-        int flags = llvm::DINode::FlagPrototyped;
-#elif ISPC_LLVM_VERSION == ISPC_LLVM_3_8 || ISPC_LLVM_VERSION == ISPC_LLVM_3_9 /* LLVM 3.8, 3.9 */
-        Assert(llvm::isa<llvm::DISubroutineType>(diSubprogramType));
-        llvm::DISubroutineType *diSubprogramType_n = llvm::cast<llvm::DISubroutineType>(diSubprogramType);
-        int flags = llvm::DINode::FlagPrototyped;
-#else                                                                          /* LLVM 4.0+ */
+        /* LLVM 4.0+ */
         Assert(llvm::isa<llvm::DISubroutineType>(diSubprogramType));
         llvm::DISubroutineType *diSubprogramType_n = llvm::cast<llvm::DISubroutineType>(diSubprogramType);
         llvm::DINode::DIFlags flags = llvm::DINode::FlagPrototyped;
-
-#endif
 
         std::string mangledName = llvmFunction->getName();
         if (mangledName == funSym->name)
@@ -373,26 +322,12 @@ FunctionEmitContext::FunctionEmitContext(Function *func, Symbol *funSym, llvm::F
         bool isOptimized = (g->opt.level > 0);
         int firstLine = funcStartPos.first_line;
 
-#if ISPC_LLVM_VERSION <= ISPC_LLVM_3_6 /* 3.2, 3.3, 3.4, 3.5, 3.6 */
-        diSubprogram = m->diBuilder->createFunction(diFile /* scope */, funSym->name, mangledName, diFile, firstLine,
-                                                    diSubprogramType_n, isStatic, true, /* is defn */
-                                                    firstLine, flags, isOptimized, llvmFunction);
-        AssertPos(currentPos, diSubprogram.Verify());
-#elif ISPC_LLVM_VERSION == ISPC_LLVM_3_7                                       /* LLVM 3.7 */
-        diSubprogram = m->diBuilder->createFunction(diFile /* scope */, funSym->name, mangledName, diFile, firstLine,
-                                                    diSubprogramType_n, isStatic, true, /* is defn */
-                                                    firstLine, flags, isOptimized, llvmFunction);
-#elif ISPC_LLVM_VERSION == ISPC_LLVM_3_8 || ISPC_LLVM_VERSION == ISPC_LLVM_3_9 /* LLVM 3.8, 3.9 */
+#if ISPC_LLVM_VERSION < ISPC_LLVM_8_0
         diSubprogram = m->diBuilder->createFunction(diFile /* scope */, funSym->name, mangledName, diFile, firstLine,
                                                     diSubprogramType_n, isStatic, true, /* is defn */
                                                     firstLine, flags, isOptimized);
         llvmFunction->setSubprogram(diSubprogram);
-#elif ISPC_LLVM_VERSION >= ISPC_LLVM_4_0 && ISPC_LLVM_VERSION <= ISPC_LLVM_7_1 /* LLVM 4.0 to 7.1 */
-        diSubprogram = m->diBuilder->createFunction(diFile /* scope */, funSym->name, mangledName, diFile, firstLine,
-                                                    diSubprogramType_n, isStatic, true, /* is defn */
-                                                    firstLine, flags, isOptimized);
-        llvmFunction->setSubprogram(diSubprogram);
-#else                                                                          /* LLVM 8.0+ */
+#else /* LLVM 8.0+ */
         /* isDefinition is always set to 'true' */
         llvm::DISubprogram::DISPFlags SPFlags = llvm::DISubprogram::SPFlagDefinition;
         if (isOptimized)
@@ -1403,11 +1338,7 @@ static llvm::Value *lGetStringAsValue(llvm::BasicBlock *bblock, const char *s) {
                                                  llvm::GlobalValue::InternalLinkage, sConstant, var_name.c_str());
     llvm::Value *indices[2] = {LLVMInt32(0), LLVMInt32(0)};
     llvm::ArrayRef<llvm::Value *> arrayRef(&indices[0], &indices[2]);
-#if ISPC_LLVM_VERSION <= ISPC_LLVM_3_6 /* 3.2, 3.3, 3.4, 3.5, 3.6 */
-    return llvm::GetElementPtrInst::Create(sPtr, arrayRef, "sptr", bblock);
-#else /* LLVM 3.7+ */
     return llvm::GetElementPtrInst::Create(PTYPE(sPtr), sPtr, arrayRef, "sptr", bblock);
-#endif
 }
 
 void FunctionEmitContext::AddInstrumentationPoint(const char *note) {
@@ -1441,48 +1372,24 @@ void FunctionEmitContext::AddDebugPos(llvm::Value *value, const SourcePos *pos, 
             // If first_line == 0, then we're in the middle of setting up
             // the standard library or the like; don't add debug positions
             // for those functions
-            inst->setDebugLoc(llvm::DebugLoc::get(p.first_line, p.first_column,
-                                                  scope ?
-#if ISPC_LLVM_VERSION <= ISPC_LLVM_3_6 /* 3.2, 3.3, 3.4, 3.5, 3.6 */
-                                                        *scope
-#else /* LLVM 3.7+ */
-                                                        scope
-#endif
-                                                        : GetDIScope()));
+            inst->setDebugLoc(llvm::DebugLoc::get(p.first_line, p.first_column, scope ? scope : GetDIScope()));
     }
 }
 
 void FunctionEmitContext::StartScope() {
     if (m->diBuilder != NULL) {
-#if ISPC_LLVM_VERSION <= ISPC_LLVM_3_6 /* 3.2, 3.3, 3.4, 3.5, 3.6 */
-        llvm::DIScope parentScope;
-        llvm::DILexicalBlock lexicalBlock;
-#else /* LLVM 3.7+ */
         llvm::DIScope *parentScope;
         llvm::DILexicalBlock *lexicalBlock;
-#endif
         if (debugScopes.size() > 0)
             parentScope = debugScopes.back();
         else
             parentScope = diSubprogram;
 
         lexicalBlock = m->diBuilder->createLexicalBlock(parentScope, diFile, currentPos.first_line,
-#if ISPC_LLVM_VERSION == ISPC_LLVM_3_5
-                                                        // Revision 202736 in LLVM adds support of DWARF discriminator
-                                                        // to the last argument and revision 202737 in clang adds 0
-                                                        // for the last argument by default.
-                                                        currentPos.first_column, 0);
-#else
                                                         // Revision 216239 in LLVM removes support of DWARF
                                                         // discriminator as the last argument
                                                         currentPos.first_column);
-#endif                                 // LLVM 3.2, 3.3, 3.4 and 3.6+
-#if ISPC_LLVM_VERSION <= ISPC_LLVM_3_6 /* 3.2, 3.3, 3.4, 3.5, 3.6 */
-        AssertPos(currentPos, lexicalBlock.Verify());
-        debugScopes.push_back(lexicalBlock);
-#else /* LLVM 3.7+ */
         debugScopes.push_back(llvm::cast<llvm::DILexicalBlockBase>(lexicalBlock));
-#endif
     }
 }
 
@@ -1493,12 +1400,7 @@ void FunctionEmitContext::EndScope() {
     }
 }
 
-#if ISPC_LLVM_VERSION <= ISPC_LLVM_3_6 /* 3.2, 3.3, 3.4, 3.5, 3.6 */
-llvm::DIScope
-#else /* LLVM 3.7+ */
-llvm::DIScope *
-#endif
-FunctionEmitContext::GetDIScope() const {
+llvm::DIScope *FunctionEmitContext::GetDIScope() const {
     AssertPos(currentPos, debugScopes.size() > 0);
     return debugScopes.back();
 }
@@ -1507,84 +1409,32 @@ void FunctionEmitContext::EmitVariableDebugInfo(Symbol *sym) {
     if (m->diBuilder == NULL)
         return;
 
-#if ISPC_LLVM_VERSION <= ISPC_LLVM_3_6 /* 3.2, 3.3, 3.4, 3.5, 3.6 */
-    llvm::DIScope scope = GetDIScope();
-    llvm::DIType diType = sym->type->GetDIType(scope);
-    AssertPos(currentPos, diType.Verify());
-    llvm::DIVariable var =
-#else /* LLVM 3.7+ */
     llvm::DIScope *scope = GetDIScope();
     llvm::DIType *diType = sym->type->GetDIType(scope);
-    llvm::DILocalVariable *var =
-#endif
+    llvm::DILocalVariable *var = m->diBuilder->createAutoVariable(
+        scope, sym->name, sym->pos.GetDIFile(), sym->pos.first_line, diType, true /* preserve through opts */);
 
-#if ISPC_LLVM_VERSION <= ISPC_LLVM_3_7 /* 3.2, 3.3, 3.4, 3.5, 3.6, 3.7*/
-        m->diBuilder->createLocalVariable(llvm::dwarf::DW_TAG_auto_variable, scope, sym->name, sym->pos.GetDIFile(),
-                                          sym->pos.first_line, diType, true /* preserve through opts */);
-#else /* LLVM 3.8+ */
-        m->diBuilder->createAutoVariable(scope, sym->name, sym->pos.GetDIFile(), sym->pos.first_line, diType,
-                                         true /* preserve through opts */);
-#endif
-
-#if ISPC_LLVM_VERSION <= ISPC_LLVM_3_6 /* 3.2, 3.3, 3.4, 3.5, 3.6 */
-    AssertPos(currentPos, var.Verify());
-    llvm::Instruction *declareInst = m->diBuilder->insertDeclare(sym->storagePtr, var,
-#if ISPC_LLVM_VERSION == ISPC_LLVM_3_6
-                                                                 m->diBuilder->createExpression(),
-#endif
-                                                                 bblock);
-    AddDebugPos(declareInst, &sym->pos, &scope);
-#else /* LLVM 3.7+ */
     llvm::Instruction *declareInst =
         m->diBuilder->insertDeclare(sym->storagePtr, var, m->diBuilder->createExpression(),
                                     llvm::DebugLoc::get(sym->pos.first_line, sym->pos.first_column, scope), bblock);
     AddDebugPos(declareInst, &sym->pos, scope);
-#endif
 }
 
 void FunctionEmitContext::EmitFunctionParameterDebugInfo(Symbol *sym, int argNum) {
     if (m->diBuilder == NULL)
         return;
 
-#if ISPC_LLVM_VERSION <= ISPC_LLVM_3_9
-    int flags = 0;
-#else // LLVM 4.0+
     llvm::DINode::DIFlags flags = llvm::DINode::FlagZero;
-#endif
-#if ISPC_LLVM_VERSION <= ISPC_LLVM_3_6 /* 3.2, 3.3, 3.4, 3.5, 3.6 */
-    llvm::DIScope scope = diSubprogram;
-    llvm::DIType diType = sym->type->GetDIType(scope);
-    AssertPos(currentPos, diType.Verify());
-    llvm::DIVariable var =
-#else /* LLVM 3.7+ */
     llvm::DIScope *scope = diSubprogram;
     llvm::DIType *diType = sym->type->GetDIType(scope);
     llvm::DILocalVariable *var =
-#endif
-
-#if ISPC_LLVM_VERSION <= ISPC_LLVM_3_7 /* 3.2, 3.3, 3.4, 3.5, 3.6, 3.7 */
-        m->diBuilder->createLocalVariable(llvm::dwarf::DW_TAG_arg_variable, scope, sym->name, sym->pos.GetDIFile(),
-                                          sym->pos.first_line, diType, true /* preserve through opts */, flags,
-                                          argNum + 1);
-#else /* LLVM 3.8+ */
         m->diBuilder->createParameterVariable(scope, sym->name, argNum + 1, sym->pos.GetDIFile(), sym->pos.first_line,
                                               diType, true /* preserve through opts */, flags);
-#endif
 
-#if ISPC_LLVM_VERSION <= ISPC_LLVM_3_6 /* 3.2, 3.3, 3.4, 3.5, 3.6 */
-    AssertPos(currentPos, var.Verify());
-    llvm::Instruction *declareInst = m->diBuilder->insertDeclare(sym->storagePtr, var,
-#if ISPC_LLVM_VERSION == ISPC_LLVM_3_6
-                                                                 m->diBuilder->createExpression(),
-#endif
-                                                                 bblock);
-    AddDebugPos(declareInst, &sym->pos, &scope);
-#else /* LLVM 3.7+ */
     llvm::Instruction *declareInst =
         m->diBuilder->insertDeclare(sym->storagePtr, var, m->diBuilder->createExpression(),
                                     llvm::DebugLoc::get(sym->pos.first_line, sym->pos.first_column, scope), bblock);
     AddDebugPos(declareInst, &sym->pos, scope);
-#endif
 }
 
 /** If the given type is an array of vector types, then it's the
@@ -2096,12 +1946,8 @@ llvm::Value *FunctionEmitContext::GetElementPtrInst(llvm::Value *basePtr, llvm::
         // uniform, so just emit the regular LLVM GEP instruction
         llvm::Value *ind[1] = {index};
         llvm::ArrayRef<llvm::Value *> arrayRef(&ind[0], &ind[1]);
-#if ISPC_LLVM_VERSION <= ISPC_LLVM_3_6 /* 3.2, 3.3, 3.4, 3.5, 3.6 */
-        llvm::Instruction *inst = llvm::GetElementPtrInst::Create(basePtr, arrayRef, name ? name : "gep", bblock);
-#else /* LLVM 3.7+ */
         llvm::Instruction *inst =
             llvm::GetElementPtrInst::Create(PTYPE(basePtr), basePtr, arrayRef, name ? name : "gep", bblock);
-#endif
         AddDebugPos(inst);
         return inst;
     } else
@@ -2149,12 +1995,8 @@ llvm::Value *FunctionEmitContext::GetElementPtrInst(llvm::Value *basePtr, llvm::
         // uniform, so just emit the regular LLVM GEP instruction
         llvm::Value *indices[2] = {index0, index1};
         llvm::ArrayRef<llvm::Value *> arrayRef(&indices[0], &indices[2]);
-#if ISPC_LLVM_VERSION <= ISPC_LLVM_3_6 /* 3.2, 3.3, 3.4, 3.5, 3.6 */
-        llvm::Instruction *inst = llvm::GetElementPtrInst::Create(basePtr, arrayRef, name ? name : "gep", bblock);
-#else /* LLVM 3.7+ */
         llvm::Instruction *inst =
             llvm::GetElementPtrInst::Create(PTYPE(basePtr), basePtr, arrayRef, name ? name : "gep", bblock);
-#endif
         AddDebugPos(inst);
         return inst;
     } else {
@@ -2234,12 +2076,8 @@ llvm::Value *FunctionEmitContext::AddElementOffset(llvm::Value *fullBasePtr, int
         // If the pointer is uniform, we can use the regular LLVM GEP.
         llvm::Value *offsets[2] = {LLVMInt32(0), LLVMInt32(elementNum)};
         llvm::ArrayRef<llvm::Value *> arrayRef(&offsets[0], &offsets[2]);
-#if ISPC_LLVM_VERSION <= ISPC_LLVM_3_6 /* 3.2, 3.3, 3.4, 3.5, 3.6 */
-        resultPtr = llvm::GetElementPtrInst::Create(basePtr, arrayRef, name ? name : "struct_offset", bblock);
-#else /* LLVM 3.7+ */
         resultPtr =
             llvm::GetElementPtrInst::Create(PTYPE(basePtr), basePtr, arrayRef, name ? name : "struct_offset", bblock);
-#endif
     } else {
         // Otherwise do the math to find the offset and add it to the given
         // varying pointers
@@ -2535,43 +2373,23 @@ void FunctionEmitContext::addGSMetadata(llvm::Value *v, SourcePos pos) {
     llvm::Instruction *inst = llvm::dyn_cast<llvm::Instruction>(v);
     if (inst == NULL)
         return;
-#if ISPC_LLVM_VERSION <= ISPC_LLVM_3_5 /* 3.2, 3.3, 3.4, 3.5 */
-    llvm::Value *str = llvm::MDString::get(*g->ctx, pos.name);
-#else /* LLVN 3.6+ */
     llvm::MDString *str = llvm::MDString::get(*g->ctx, pos.name);
-#endif
     llvm::MDNode *md = llvm::MDNode::get(*g->ctx, str);
     inst->setMetadata("filename", md);
 
-#if ISPC_LLVM_VERSION <= ISPC_LLVM_3_5 /* 3.2, 3.3, 3.4, 3.5 */
-    llvm::Value *first_line = LLVMInt32(pos.first_line);
-#else /* LLVN 3.6+ */
     llvm::Metadata *first_line = llvm::ConstantAsMetadata::get(LLVMInt32(pos.first_line));
-#endif
     md = llvm::MDNode::get(*g->ctx, first_line);
     inst->setMetadata("first_line", md);
 
-#if ISPC_LLVM_VERSION <= ISPC_LLVM_3_5 /* 3.2, 3.3, 3.4, 3.5 */
-    llvm::Value *first_column = LLVMInt32(pos.first_column);
-#else /* LLVN 3.6+ */
     llvm::Metadata *first_column = llvm::ConstantAsMetadata::get(LLVMInt32(pos.first_column));
-#endif
     md = llvm::MDNode::get(*g->ctx, first_column);
     inst->setMetadata("first_column", md);
 
-#if ISPC_LLVM_VERSION <= ISPC_LLVM_3_5 /* 3.2, 3.3, 3.4, 3.5 */
-    llvm::Value *last_line = LLVMInt32(pos.last_line);
-#else /* LLVN 3.6+ */
     llvm::Metadata *last_line = llvm::ConstantAsMetadata::get(LLVMInt32(pos.last_line));
-#endif
     md = llvm::MDNode::get(*g->ctx, last_line);
     inst->setMetadata("last_line", md);
 
-#if ISPC_LLVM_VERSION <= ISPC_LLVM_3_5 /* 3.2, 3.3, 3.4, 3.5 */
-    llvm::Value *last_column = LLVMInt32(pos.last_column);
-#else /* LLVN 3.6+ */
     llvm::Metadata *last_column = llvm::ConstantAsMetadata::get(LLVMInt32(pos.last_column));
-#endif
     md = llvm::MDNode::get(*g->ctx, last_column);
     inst->setMetadata("last_column", md);
 }
@@ -2588,21 +2406,13 @@ llvm::Value *FunctionEmitContext::AllocaInst(llvm::Type *llvmType, const char *n
         // end of allocaBlock
         llvm::Instruction *retInst = allocaBlock->getTerminator();
         AssertPos(currentPos, retInst);
-#if ISPC_LLVM_VERSION <= ISPC_LLVM_4_0
-        inst = new llvm::AllocaInst(llvmType, name ? name : "", retInst);
-#else // LLVM 5.0+
         unsigned AS = llvmFunction->getParent()->getDataLayout().getAllocaAddrSpace();
         inst = new llvm::AllocaInst(llvmType, AS, name ? name : "", retInst);
-#endif
     } else {
         // Unless the caller overrode the default and wants it in the
         // current basic block
-#if ISPC_LLVM_VERSION <= ISPC_LLVM_4_0
-        inst = new llvm::AllocaInst(llvmType, name ? name : "", bblock);
-#else // LLVM 5.0+
         unsigned AS = llvmFunction->getParent()->getDataLayout().getAllocaAddrSpace();
         inst = new llvm::AllocaInst(llvmType, AS, name ? name : "", bblock);
-#endif
     }
 
     // If no alignment was specified but we have an array of a uniform
@@ -2923,17 +2733,13 @@ void FunctionEmitContext::MemcpyInst(llvm::Value *dest, llvm::Value *src, llvm::
         align = LLVMInt32(1);
 #if ISPC_LLVM_VERSION <= ISPC_LLVM_8_0
     llvm::Constant *mcFunc =
-#if ISPC_LLVM_VERSION <= ISPC_LLVM_4_0
-        m->module->getOrInsertFunction("llvm.memcpy.p0i8.p0i8.i64", LLVMTypes::VoidType, LLVMTypes::VoidPointerType,
-                                       LLVMTypes::VoidPointerType, LLVMTypes::Int64Type, LLVMTypes::Int32Type,
-                                       LLVMTypes::BoolType, NULL);
-#elif ISPC_LLVM_VERSION <= ISPC_LLVM_6_0 // LLVM 5.0-6.0
+#if ISPC_LLVM_VERSION == ISPC_LLVM_6_0 // LLVM 6.0
         m->module->getOrInsertFunction("llvm.memcpy.p0i8.p0i8.i64", LLVMTypes::VoidType, LLVMTypes::VoidPointerType,
                                        LLVMTypes::VoidPointerType, LLVMTypes::Int64Type, LLVMTypes::Int32Type,
                                        LLVMTypes::BoolType);
-#else                                    // LLVM 7.0+
-                                         // Now alignment goes as an attribute, not as a parameter.
-                                         // See LLVM r322965/r323597 for more details.
+#else // LLVM 7.0+
+      // Now alignment goes as an attribute, not as a parameter.
+      // See LLVM r322965/r323597 for more details.
         m->module->getOrInsertFunction("llvm.memcpy.p0i8.p0i8.i64", LLVMTypes::VoidType, LLVMTypes::VoidPointerType,
                                        LLVMTypes::VoidPointerType, LLVMTypes::Int64Type, LLVMTypes::BoolType);
 #endif
@@ -3134,17 +2940,10 @@ llvm::Value *FunctionEmitContext::CallInst(llvm::Value *func, const FunctionType
         // alias analysis.
         // TODO: what other attributes needs to be copied?
         // TODO: do the same for varing path.
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_3_3 && ISPC_LLVM_VERSION < ISPC_LLVM_5_0 // LLVM 3.3-4.0
-        llvm::CallInst *cc = llvm::dyn_cast<llvm::CallInst>(ci);
-        if (cc && cc->getCalledFunction() && cc->getCalledFunction()->doesNotAlias(0)) {
-            cc->addAttribute(0, llvm::Attribute::NoAlias);
-        }
-#else // LLVM 5.0+
         llvm::CallInst *cc = llvm::dyn_cast<llvm::CallInst>(ci);
         if (cc && cc->getCalledFunction() && cc->getCalledFunction()->returnDoesNotAlias()) {
             cc->addAttribute(llvm::AttributeList::ReturnIndex, llvm::Attribute::NoAlias);
         }
-#endif
 
         AddDebugPos(ci);
         return ci;

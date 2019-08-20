@@ -38,13 +38,8 @@
 #include "llvmutil.h"
 #include "ispc.h"
 #include "type.h"
-#if ISPC_LLVM_VERSION == ISPC_LLVM_3_2
-#include <llvm/BasicBlock.h>
-#include <llvm/Instructions.h>
-#else
 #include <llvm/IR/BasicBlock.h>
 #include <llvm/IR/Instructions.h>
-#endif
 #include <map>
 #include <set>
 
@@ -1415,19 +1410,15 @@ static llvm::Value *lExtractFirstVectorElement(llvm::Value *v, std::map<llvm::PH
         if (phiMap.find(phi) != phiMap.end())
             return phiMap[phi];
 
-            // We need to create the new scalar PHI node immediately, though,
-            // and put it in the map<>, so that if we come back to this node
-            // via a recursive lExtractFirstVectorElement() call, then we can
-            // return the pointer and not get stuck in an infinite loop.
-            //
-            // The insertion point for the new phi node also has to be the
-            // start of the bblock of the original phi node.
+        // We need to create the new scalar PHI node immediately, though,
+        // and put it in the map<>, so that if we come back to this node
+        // via a recursive lExtractFirstVectorElement() call, then we can
+        // return the pointer and not get stuck in an infinite loop.
+        //
+        // The insertion point for the new phi node also has to be the
+        // start of the bblock of the original phi node.
 
-#if ISPC_LLVM_VERSION <= ISPC_LLVM_3_7 /* 3.2, 3.3, 3.4, 3.5, 3.6, 3.7 */
-        llvm::Instruction *phiInsertPos = phi->getParent()->begin();
-#else /* LLVM 3.8+ */
         llvm::Instruction *phiInsertPos = &*(phi->getParent()->begin());
-#endif
         llvm::PHINode *scalarPhi =
             llvm::PHINode::Create(vt->getElementType(), phi->getNumIncomingValues(), newName, phiInsertPos);
         phiMap[phi] = scalarPhi;

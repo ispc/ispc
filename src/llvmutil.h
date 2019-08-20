@@ -39,23 +39,13 @@
 #define ISPC_LLVMUTIL_H 1
 
 #include "ispc_version.h"
-#if ISPC_LLVM_VERSION == ISPC_LLVM_3_2
-#include <llvm/Constants.h>
-#include <llvm/DerivedTypes.h>
-#include <llvm/LLVMContext.h>
-#include <llvm/Type.h>
-#else // 3.3+
+
 #include <llvm/IR/Constants.h>
 #include <llvm/IR/DerivedTypes.h>
 #include <llvm/IR/LLVMContext.h>
 #include <llvm/IR/Type.h>
-#endif
 
-#if ISPC_LLVM_VERSION <= ISPC_LLVM_3_9
-#define PTYPE(p) (llvm::cast<llvm::SequentialType>((p)->getType()->getScalarType())->getElementType())
-#else // LLVM 4.0+
 #define PTYPE(p) (llvm::cast<llvm::PointerType>((p)->getType()->getScalarType())->getElementType())
-#endif
 
 namespace llvm {
 class PHINode;

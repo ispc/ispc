@@ -144,36 +144,6 @@ def checkout_LLVM(component, use_git, version_LLVM, revision, target_dir, from_v
     elif  version_LLVM == "6_0":
         SVN_PATH="tags/RELEASE_601/final"
         GIT_TAG="llvmorg-6.0.1"
-    elif  version_LLVM == "5_0":
-        SVN_PATH="tags/RELEASE_502/final"
-        GIT_TAG="llvmorg-5.0.2"
-    elif  version_LLVM == "4_0":
-        SVN_PATH="tags/RELEASE_401/final"
-        GIT_TAG="llvmorg-4.0.1"
-    elif  version_LLVM == "3_9":
-        SVN_PATH="tags/RELEASE_390/final"
-        GIT_TAG="llvmorg-3.9.0"
-    elif  version_LLVM == "3_8":
-        SVN_PATH="tags/RELEASE_381/final"
-        GIT_TAG="llvmorg-3.8.1"
-    elif  version_LLVM == "3_7":
-        SVN_PATH="tags/RELEASE_370/final"
-        GIT_TAG="llvmorg-3.7.0"
-    elif  version_LLVM == "3_6":
-        SVN_PATH="tags/RELEASE_362/final"
-        GIT_TAG="llvmorg-3.6.2"
-    elif  version_LLVM == "3_5":
-        SVN_PATH="tags/RELEASE_351/final"
-        GIT_TAG="llvmorg-3.5.1"
-    elif  version_LLVM == "3_4":
-        SVN_PATH="tags/RELEASE_34/dot2-final"
-        GIT_TAG="llvmorg-3.4.2"
-    elif  version_LLVM == "3_3":
-        SVN_PATH="tags/RELEASE_33/final"
-        GIT_TAG="llvmorg-3.3.0"
-    elif  version_LLVM == "3_2":
-        SVN_PATH="tags/RELEASE_32/final"
-        GIT_TAG="llvmorg-3.2.0"
     else:
         error("Unsupported llvm version: " + version_LLVM, 1)
 
@@ -195,12 +165,7 @@ def checkout_LLVM(component, use_git, version_LLVM, revision, target_dir, from_v
 # present in LLVM libraries. In LLVM 5.0 they are not there by default and require explicit enabling.
 # In later version this functionality is triggered by enabling assertions.
 def get_llvm_enable_dump_switch(version_LLVM):
-    if version_LLVM in ["3_2", "3_3", "3_4", "3_5", "3_6", "3_7", "3_8", "3_9", "4_0"]:
-        return ""
-    elif version_LLVM == "5_0":
-        return " -DCMAKE_C_FLAGS=-DLLVM_ENABLE_DUMP -DCMAKE_CXX_FLAGS=-DLLVM_ENABLE_DUMP "
-    else:
-        return " -DLLVM_ENABLE_DUMP=ON "
+    return " -DLLVM_ENABLE_DUMP=ON "
 
 def build_LLVM(version_LLVM, revision, folder, tarball, debug, selfbuild, extra, from_validation, force, make, gcc_toolchain_path, use_git):
     print_debug("Building LLVM. Version: " + version_LLVM + ". ", from_validation, alloy_build)
@@ -450,17 +415,7 @@ def build_LLVM(version_LLVM, revision, folder, tarball, debug, selfbuild, extra,
 
 
 def unsupported_llvm_targets(LLVM_VERSION):
-    prohibited_list = {"3.2":["avx512knl-i32x16", "avx512skx-i32x16", "avx512skx-i32x8"],
-                       "3.3":["avx512knl-i32x16", "avx512skx-i32x16", "avx512skx-i32x8"],
-                       "3.4":["avx512knl-i32x16", "avx512skx-i32x16", "avx512skx-i32x8"],
-                       "3.5":["avx512knl-i32x16", "avx512skx-i32x16", "avx512skx-i32x8"],
-                       "3.6":["avx512knl-i32x16", "avx512skx-i32x16", "avx512skx-i32x8"],
-                       "3.7":["avx512skx-i32x16", "avx512skx-i32x8"],
-                       "3.8":["avx512skx-i32x8"],
-                       "3.9":["avx512skx-i32x8"],
-                       "4.0":["avx512skx-i32x8"],
-                       "5.0":["avx512skx-i32x8"],
-                       "6.0":["avx512skx-i32x8"],
+    prohibited_list = {"6.0":["avx512skx-i32x8"],
                        "7.0":["avx512skx-i32x8"]}
     if LLVM_VERSION in prohibited_list:
         return prohibited_list[LLVM_VERSION]
@@ -735,7 +690,7 @@ def validation_run(only, only_targets, reference_branch, number, notify, update,
             archs.append("x86-64")
         if "native" in only:
             sde_targets_t = []
-        for i in ["3.2", "3.3", "3.4", "3.5", "3.6", "3.7", "3.8", "3.9", "4.0", "5.0", "6.0", "7.0", "8.0", "9.0", "trunk"]:
+        for i in ["6.0", "7.0", "8.0", "9.0", "trunk"]:
             if i in only:
                 LLVM.append(i)
         if "current" in only:
@@ -1011,7 +966,7 @@ def Main():
         if os.environ.get("SMTP_ISPC") == None:
             error("you have no SMTP_ISPC in your environment for option notify", 1)
     if options.only != "":
-        test_only_r = " 3.2 3.3 3.4 3.5 3.6 3.7 3.8 3.9 4.0 5.0 6.0 7.0 8.0 9.0 trunk current build stability performance x86 x86-64 x86_64 -O0 -O2 native debug nodebug "
+        test_only_r = " 6.0 7.0 8.0 9.0 trunk current build stability performance x86 x86-64 x86_64 -O0 -O2 native debug nodebug "
         test_only = options.only.split(" ")
         for iterator in test_only:
             if not (" " + iterator + " " in test_only_r):
@@ -1104,13 +1059,13 @@ if __name__ == '__main__':
             return self.epilog
     examples =  ("Examples:\n" +
     "Load and build LLVM from trunk\n\talloy.py -b\n" +
-    "Load and build LLVM 3.3. Rewrite LLVM folders\n\talloy.py -b --version=3.3 --force\n" +
+    "Load and build LLVM 8.0. Rewrite LLVM folders\n\talloy.py -b --version=8.0 --force\n" +
     "Untar files llvm.tgz clang.tgz, build LLVM from them in folder bin-from_tar\n\talloy.py -b --tarball='llvm.tgz clang.tgz' --folder=from_tar\n" +
     "Load LLVM from trunk, revision r172870. Build it. Do selfbuild\n\talloy.py -b --revision=r172870 --selfbuild\n" +
-    "Validation run with LLVM 3.3, trunk; x86, x86-64; -O2;\nall supported targets; performance\n\talloy.py -r\n" + 
+    "Validation run with LLVM trunk; x86, x86-64; -O2;\nall supported targets; performance\n\talloy.py -r\n" +
     "Validation run with all avx targets and sse4-i8x16 without performance\n\talloy.py -r --only=stability --only-targets='avx sse4-i8x16'\n" +
     "Validation run with avx2-i32x8, all sse4 and sse2 targets\nand all targets with i32x16\n\talloy.py -r --only-targets='avx2-i32x8 sse4 i32x16 sse2'\n" +
-    "Stability validation run with LLVM 3.2, 3.3; -O0; x86,\nupdate fail_db.txt with passes and fails\n\talloy.py -r --only='3.2 -O0 stability 3.3 x86' --update-errors=FP\n" +
+    "Stability validation run with LLVM 7.0, 8.0; -O0; x86,\nupdate fail_db.txt with passes and fails\n\talloy.py -r --only='7.0 -O0 stability 8.0 x86' --update-errors=FP\n" +
     "Try to build compiler with all LLVM\n\talloy.py -r --only=build\n" +
     "Performance validation run with 10 runs of each test and comparing to branch 'old'\n\talloy.py -r --only=performance --compare-with=old --number=10\n" +
     "Validation run. Update fail_db.txt with new fails, send results to my@my.com\n\talloy.py -r --update-errors=F --notify='my@my.com'\n" +
@@ -1130,7 +1085,7 @@ if __name__ == '__main__':
     llvm_group = OptionGroup(parser, "Options for building LLVM",
                     "These options must be used with -b option.")
     llvm_group.add_option('--version', dest='version',
-        help='version of llvm to build: 3.2 3.3 3.4 3.5 3.6 3.7 3.8 3.9 4.0 5.0 6.0 7.0 8.0 9.0 trunk. Default: trunk', default="trunk")
+        help='version of llvm to build: 6.0 7.0 8.0 9.0 trunk. Default: trunk', default="trunk")
     llvm_group.add_option('--with-gcc-toolchain', dest='gcc_toolchain_path',
          help='GCC install dir to use when building clang. It is important to set when ' +
          'you have alternative gcc installation. Note that otherwise gcc from standard ' +
@@ -1172,7 +1127,7 @@ if __name__ == '__main__':
     run_group.add_option('--only', dest='only',
         help='set types of tests. Possible values:\n' + 
             '-O0, -O2, x86, x86-64, stability (test only stability), performance (test only performance),\n' +
-            'build (only build with different LLVM), 3.2, 3.3, 3.4, 3.5, 3.6, 3.7, 3.8, 3.9, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, trunk, native (do not use SDE),\n' +
+            'build (only build with different LLVM), 6.0, 7.0, 8.0, 9.0, trunk, native (do not use SDE),\n' +
             'current (do not rebuild ISPC), debug (only with debug info), nodebug (only without debug info, default).',
             default="")
     run_group.add_option('--perf_LLVM', dest='perf_llvm',
