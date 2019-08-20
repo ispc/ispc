@@ -56,29 +56,16 @@
 #include <list>
 #include <set>
 #include <stdio.h>
-#if ISPC_LLVM_VERSION == ISPC_LLVM_3_2
-#include <llvm/CallingConv.h>
-#include <llvm/DerivedTypes.h>
-#include <llvm/Function.h>
-#include <llvm/Instructions.h>
-#include <llvm/LLVMContext.h>
-#include <llvm/Module.h>
-#include <llvm/Type.h>
-#else
+
+#include <llvm/ExecutionEngine/GenericValue.h>
 #include <llvm/IR/CallingConv.h>
 #include <llvm/IR/DerivedTypes.h>
 #include <llvm/IR/Function.h>
+#include <llvm/IR/InstIterator.h>
 #include <llvm/IR/Instructions.h>
 #include <llvm/IR/LLVMContext.h>
 #include <llvm/IR/Module.h>
 #include <llvm/IR/Type.h>
-#endif
-#include <llvm/ExecutionEngine/GenericValue.h>
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_3_5 // LLVM 3.5+
-#include <llvm/IR/InstIterator.h>
-#else
-#include <llvm/Support/InstIterator.h>
-#endif
 
 /////////////////////////////////////////////////////////////////////////////////////
 // Expr

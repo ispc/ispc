@@ -65,11 +65,7 @@
 #include <algorithm>
 #include <set>
 
-#if ISPC_LLVM_VERSION == ISPC_LLVM_3_2
-#include <llvm/DataLayout.h>
-#else // LLVM 3.3+
 #include <llvm/IR/DataLayout.h>
-#endif
 
 /** Returns the width of the terminal where the compiler is running.
     Finding this out may fail in a variety of reasonable situations (piping

@@ -66,17 +66,6 @@
 #include <windows.h>
 #define strcasecmp stricmp
 #endif
-#if ISPC_LLVM_VERSION == ISPC_LLVM_3_2
-#include <llvm/DerivedTypes.h>
-#include <llvm/Instructions.h>
-#include <llvm/Intrinsics.h>
-#include <llvm/LLVMContext.h>
-#include <llvm/Module.h>
-#include <llvm/Type.h>
-#ifdef ISPC_NVPTX_ENABLED
-#include "llvm/Assembly/AssemblyAnnotationWriter.h"
-#endif /* ISPC_NVPTX_ENABLED */
-#else
 #include <llvm/IR/DerivedTypes.h>
 #include <llvm/IR/Instructions.h>
 #include <llvm/IR/Intrinsics.h>
@@ -84,42 +73,21 @@
 #include <llvm/IR/Module.h>
 #include <llvm/IR/Type.h>
 #ifdef ISPC_NVPTX_ENABLED
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_3_5 /* 3.5+ */
 #include <llvm/IR/AssemblyAnnotationWriter.h>
-#else
-#include <llvm/Assembly/AssemblyAnnotationWriter.h>
-#endif
 #endif /* ISPC_NVPTX_ENABLED */
-#endif
-#if ISPC_LLVM_VERSION <= ISPC_LLVM_3_6
-#include "llvm/PassManager.h"
-#else // LLVM 3.7+
 #include "llvm/IR/LegacyPassManager.h"
-#endif
 #include <llvm/PassRegistry.h>
 #include <llvm/Support/FileUtilities.h>
 #include <llvm/Support/FormattedStream.h>
 #include <llvm/Target/TargetMachine.h>
 #include <llvm/Target/TargetOptions.h>
 #include <llvm/Transforms/IPO.h>
-#if ISPC_LLVM_VERSION == ISPC_LLVM_3_2
-#include <llvm/DataLayout.h>
-#include <llvm/TargetTransformInfo.h>
-#else // LLVM 3.3+
 #include <llvm/Analysis/TargetTransformInfo.h>
 #include <llvm/IR/DataLayout.h>
-#endif
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_3_5
 #include <llvm/IR/CFG.h>
 #include <llvm/IR/IRPrintingPasses.h>
 #include <llvm/IR/InstIterator.h>
 #include <llvm/IR/Verifier.h>
-#else
-#include <llvm/Analysis/Verifier.h>
-#include <llvm/Assembly/PrintModulePass.h>
-#include <llvm/Support/CFG.h>
-#include <llvm/Support/InstIterator.h>
-#endif
 #include <clang/Basic/TargetInfo.h>
 #include <clang/Frontend/CompilerInstance.h>
 #include <clang/Frontend/TextDiagnosticPrinter.h>
@@ -128,11 +96,7 @@
 #include <llvm/Support/Host.h>
 #include <llvm/Support/ToolOutputFile.h>
 #include <llvm/Support/raw_ostream.h>
-#if ISPC_LLVM_VERSION <= ISPC_LLVM_3_9
-#include <llvm/Bitcode/ReaderWriter.h>
-#else
 #include <llvm/Bitcode/BitcodeWriter.h>
-#endif
 
 /*! list of files encountered by the parser. this allows emitting of
     the module file's dependencies via the -MMM option */
@@ -166,208 +130,7 @@ static void lDeclareSizeAndPtrIntTypes(SymbolTable *symbolTable) {
     and tries to strip out all of this extra stuff.
  */
 static void lStripUnusedDebugInfo(llvm::Module *module) {
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_3_9
-    // In LLVM 3.9 Global DCE is much more efficient than the LLVM 3.8's one.
-    // So, the fruitfulness of this function is negligible.
     return;
-#else
-    if (g->generateDebuggingSymbols == false)
-        return;
-#if ISPC_LLVM_VERSION <= ISPC_LLVM_3_5 // <= 3.5
-    std::set<llvm::Value *> SPall;
-#else                                  // LLVM 3.6+
-    std::set<llvm::Metadata *> SPall;
-#endif
-    // OK, now we are to determine which functions actually survived the
-    // optimization. We will now read all IR instructions in the module.
-    //
-    // for every function in the module
-    for (llvm::Module::const_iterator f = module->begin(), fe = module->end(); f != fe; ++f) {
-        /// for every instruction in the function
-        for (llvm::const_inst_iterator i = llvm::inst_begin(&(*f)), ie = llvm::inst_end(&(*f)); i != ie; ++i) {
-            const llvm::Instruction *inst = &(*i);
-            // get the instruction`s debugging metadata
-            llvm::MDNode *node = inst->getMetadata(llvm::LLVMContext::MD_dbg);
-            while (node) {
-                // get the scope of the current instruction`s location
-                // node becomes NULL if this was the original location
-#if ISPC_LLVM_VERSION <= ISPC_LLVM_3_6 // <= 3.6
-                llvm::DILocation dloc(node);
-                llvm::DIScope scope = dloc.getScope();
-                node = dloc.getOrigLocation();
-                // now following a chain of nested scopes
-                while (!0) {
-                    if (scope.isLexicalBlockFile())
-                        scope = llvm::DILexicalBlockFile(scope).getScope();
-                    else if (scope.isLexicalBlock())
-                        scope = llvm::DILexicalBlock(scope).getContext();
-                    else if (scope.isNameSpace())
-                        scope = llvm::DINameSpace(scope).getContext();
-                    else
-                        break;
-                }
-                if (scope.isSubprogram()) {
-#else                                  // LLVM 3.7+
-                llvm::DILocation *dloc = llvm::cast<llvm::DILocation>(node);
-                llvm::DIScope *scope = dloc->getScope();
-                // llvm::MDLocation *dloc = llvm::cast<llvm::MDLocation>(node);
-                // llvm::MDScope *scope = dloc->getScope();
-                node = dloc->getInlinedAt();
-                // now following a chain of nested scopes
-                while (!0) {
-                    if (llvm::isa<llvm::DILexicalBlockFile>(scope))
-                        scope = llvm::cast<llvm::DILexicalBlockFile>(scope)->getScope();
-                    else if (llvm::isa<llvm::DILexicalBlockBase>(scope))
-                        scope = llvm::cast<llvm::DILexicalBlockBase>(scope)->getScope();
-                    else if (llvm::isa<llvm::DINamespace>(scope))
-                        scope = llvm::cast<llvm::DINamespace>(scope)->getScope();
-                    else
-                        break;
-                }
-                if (llvm::isa<llvm::DISubprogram>(scope)) {
-#endif
-                    // good, the chain ended with a function; adding
-                    SPall.insert(scope);
-                }
-            }
-        }
-    }
-    // loop over the compile units that contributed to the final module
-    if (llvm::NamedMDNode *cuNodes = module->getNamedMetadata("llvm.dbg.cu")) {
-        for (unsigned i = 0, ie = cuNodes->getNumOperands(); i != ie; ++i) {
-            llvm::MDNode *cuNode = cuNodes->getOperand(i);
-#if ISPC_LLVM_VERSION <= ISPC_LLVM_3_6
-            llvm::DICompileUnit cu(cuNode);
-            llvm::DIArray subprograms = cu.getSubprograms();
-            if (subprograms.getNumElements() == 0) {
-#else /* LLVM 3.7+ */
-            llvm::DICompileUnit *cu = llvm::cast<llvm::DICompileUnit>(cuNode);
-            llvm::DISubprogramArray subprograms = cu->getSubprograms();
-            // llvm::MDCompileUnit *cu = llvm::cast<llvm::MDCompileUnit>(cuNode);
-            // llvm::MDSubprogramArray subprograms = cu->getSubprograms();
-            if (subprograms.size() == 0) {
-#endif
-                continue;
-            }
-#if ISPC_LLVM_VERSION <= ISPC_LLVM_3_5
-            std::set<llvm::Value *> SPset;
-            std::vector<llvm::Value *> usedSubprograms;
-#else /* LLVM 3.6+ */
-            std::set<llvm::Metadata *> SPset;
-            std::vector<llvm::Metadata *> usedSubprograms;
-#endif
-
-            // determine what functions of those extracted belong to the unit
-#if ISPC_LLVM_VERSION <= ISPC_LLVM_3_6
-            for (unsigned j = 0, je = subprograms.getNumElements(); j != je; ++j)
-#else /* LLVM 3.7+ */
-            for (unsigned j = 0, je = subprograms.size(); j != je; ++j)
-#endif
-#if ISPC_LLVM_VERSION <= ISPC_LLVM_3_5
-                SPset.insert(subprograms->getOperand(j));
-#elif ISPC_LLVM_VERSION == ISPC_LLVM_3_6
-                SPset.insert(subprograms.getElement(j));
-#else // LLVM 3.7+
-    SPset.insert(subprograms[j]);
-#endif
-
-            std::set_intersection(SPall.begin(), SPall.end(), SPset.begin(), SPset.end(),
-                                  std::back_inserter(usedSubprograms));
-
-            Debug(SourcePos(),
-                  "%d / %d functions left in module with debug "
-                  "info.",
-                  (int)usedSubprograms.size(),
-#if ISPC_LLVM_VERSION <= ISPC_LLVM_3_6
-                  (int)subprograms.getNumElements());
-#else /* LLVM 3.7+ */
-                  (int)subprograms.size());
-#endif
-
-            // We'd now like to replace the array of subprograms in the
-            // compile unit with only the ones that actually have function
-            // definitions present.  Unfortunately, llvm::DICompileUnit
-            // doesn't provide a method to set the subprograms.  Therefore,
-            // we end up needing to directly stuff a new array into the
-            // appropriate slot (number 12) in the MDNode for the compile
-            // unit.
-            //
-            // Because this is all so hard-coded and would break if the
-            // debugging metadata organization on the LLVM side changed,
-            // here is a bunch of asserting to make sure that element 12 of
-            // the compile unit's MDNode has the subprograms array....
-            //
-            // Update: This is not an approved way of working with debug info
-            // metadata. It's not supposed to be deleted. But in out use-case
-            // it's quite useful thing, as we link in bunch of unnecessary
-            // stuff and remove it later on. Removing it is useful, as it
-            // reduces size of the binary significantly (manyfold for small
-            // programs).
-#if ISPC_LLVM_VERSION == ISPC_LLVM_3_2   // 3.2
-            llvm::MDNode *nodeSPMD = llvm::dyn_cast<llvm::MDNode>(cuNode->getOperand(12));
-            Assert(nodeSPMD != NULL);
-            llvm::MDNode *nodeSPMDArray = llvm::dyn_cast<llvm::MDNode>(nodeSPMD->getOperand(0));
-            llvm::DIArray nodeSPs(nodeSPMDArray);
-            Assert(nodeSPs.getNumElements() == subprograms.getNumElements());
-            for (int i = 0; i < (int)nodeSPs.getNumElements(); ++i)
-                Assert(nodeSPs.getElement(i) == subprograms.getElement(i));
-
-            // And now we can go and stuff it into the node with some
-            // confidence...
-            llvm::Value *usedSubprogramsArray =
-                m->diBuilder->getOrCreateArray(llvm::ArrayRef<llvm::Value *>(usedSubprograms));
-            llvm::MDNode *replNode = llvm::MDNode::get(*g->ctx, llvm::ArrayRef<llvm::Value *>(usedSubprogramsArray));
-            cuNode->replaceOperandWith(12, replNode);
-#elif ISPC_LLVM_VERSION <= ISPC_LLVM_3_5 // 3.3, 3.4, 3.5
-            llvm::MDNode *nodeSPMDArray = llvm::dyn_cast<llvm::MDNode>(cuNode->getOperand(9));
-            Assert(nodeSPMDArray != NULL);
-            llvm::DIArray nodeSPs(nodeSPMDArray);
-            Assert(nodeSPs.getNumElements() == subprograms.getNumElements());
-            for (int i = 0; i < (int)nodeSPs.getNumElements(); ++i)
-                Assert(nodeSPs.getElement(i) == subprograms.getElement(i));
-
-            // And now we can go and stuff it into the node with some
-            // confidence...
-            llvm::MDNode *replNode = m->diBuilder->getOrCreateArray(llvm::ArrayRef<llvm::Value *>(usedSubprograms));
-            cuNode->replaceOperandWith(9, replNode);
-#elif ISPC_LLVM_VERSION == ISPC_LLVM_3_6 // 3.6
-            llvm::DIArray nodeSPs = cu.getSubprograms();
-            Assert(nodeSPs.getNumElements() == subprograms.getNumElements());
-            for (int i = 0; i < (int)nodeSPs.getNumElements(); ++i)
-                 Assert(nodeSPs.getElement(i) == subprograms.getElement(i));
-
-            // And now we can go and stuff it into the unit with some
-            // confidence...
-            llvm::MDNode *replNode = llvm::MDNode::get(module->getContext(),
-                                                       llvm::ArrayRef<llvm::Metadata *>(usedSubprograms));
-            cu.replaceSubprograms(llvm::DIArray(replNode));
-#else                                    // LLVM 3.7+
-            llvm::DISubprogramArray nodeSPs = cu->getSubprograms();
-            //llvm::MDSubprogramArray nodeSPs = cu->getSubprograms();
-            Assert(nodeSPs.size() == subprograms.size());
-            for (int i = 0; i < (int)nodeSPs.size(); ++i)
-                 Assert(nodeSPs [i] == subprograms [i]);
-
-            // And now we can go and stuff it into the unit with some
-            // confidence...
-            cu->replaceSubprograms(llvm::MDTuple::get(cu->getContext(),
-                                                      llvm::ArrayRef<llvm::Metadata *>(usedSubprograms)));
-#endif
-        }
-    }
-
-    // Also, erase a bunch of named metadata detrius; for each function
-    // there is sometimes named metadata llvm.dbg.lv.{funcname} that
-    // doesn't seem to be otherwise needed.
-    std::vector<llvm::NamedMDNode *> toErase;
-    llvm::Module::named_metadata_iterator iter = module->named_metadata_begin();
-    for (; iter != module->named_metadata_end(); ++iter) {
-        if (!strncmp(iter->getName().str().c_str(), "llvm.dbg.lv", 11))
-            toErase.push_back(&*iter);
-    }
-    for (int i = 0; i < (int)toErase.size(); ++i)
-        module->eraseNamedMetadata(toErase[i]);
-#endif
 }
 
 ///////////////////////////////////////////////////////////////////////////
@@ -394,7 +157,6 @@ Module::Module(const char *fn) {
     module->setDataLayout(g->target->getDataLayout()->getStringRepresentation());
 
     if (g->generateDebuggingSymbols) {
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_3_8
         // To enable debug information on Windows, we have to let llvm know, that
         // debug information should be emitted in CodeView format.
         if (g->target_os == OS_WINDOWS) {
@@ -402,7 +164,6 @@ Module::Module(const char *fn) {
         } else {
             module->addModuleFlag(llvm::Module::Warning, "Dwarf Version", g->generateDWARFVersion);
         }
-#endif
         diBuilder = new llvm::DIBuilder(*module);
 
         // Let the DIBuilder know that we're starting a new compilation
@@ -425,22 +186,6 @@ Module::Module(const char *fn) {
 #else
             snprintf(producerString, sizeof(producerString), "ispc version %s (built on %s)", ISPC_VERSION, __DATE__);
 #endif
-#if ISPC_LLVM_VERSION <= ISPC_LLVM_3_3
-            diBuilder->createCompileUnit(llvm::dwarf::DW_LANG_C99,                  /* lang */
-                                         name,                                      /* filename */
-                                         directory,                                 /* directory */
-                                         producerString,                            /* producer */
-                                         g->opt.level > 0 /* is optimized */, "-g", /* command line args */
-                                         0 /* run time version */);
-#elif ISPC_LLVM_VERSION <= ISPC_LLVM_3_9 // LLVM 3.4-3.9
-            diCompileUnit =
-                diBuilder->createCompileUnit(llvm::dwarf::DW_LANG_C99,                  /* lang */
-                                             name,                                      /* filename */
-                                             directory,                                 /* directory */
-                                             producerString,                            /* producer */
-                                             g->opt.level > 0 /* is optimized */, "-g", /* command line args */
-                                             0 /* run time version */);
-#elif ISPC_LLVM_VERSION >= ISPC_LLVM_4_0 // LLVM 4.0+
             auto srcFile = diBuilder->createFile(name, directory);
             diCompileUnit =
                 diBuilder->createCompileUnit(llvm::dwarf::DW_LANG_C99,                  /* lang */
@@ -448,7 +193,6 @@ Module::Module(const char *fn) {
                                              producerString,                            /* producer */
                                              g->opt.level > 0 /* is optimized */, "-g", /* command line args */
                                              0 /* run time version */);
-#endif
         }
     } else
         diBuilder = NULL;
@@ -510,11 +254,9 @@ int Module::CompileFile() {
         fclose(f);
     }
 
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_3_7 // LLVM 3.7+
     if (g->NoOmitFramePointer)
         for (llvm::Function &f : *module)
             f.addFnAttr("no-frame-pointer-elim", "true");
-#endif
     for (llvm::Function &f : *module)
         g->target->markFuncWithTargetAttr(&f);
     ast->GenerateIR();
@@ -714,25 +456,6 @@ void Module::AddGlobalVariable(const std::string &name, const Type *type, Expr *
     }
 
     if (diBuilder) {
-#if ISPC_LLVM_VERSION <= ISPC_LLVM_3_5 // 3.2, 3.3, 3.4, 3.5
-        llvm::DIFile file = pos.GetDIFile();
-        llvm::DIGlobalVariable var = diBuilder->createGlobalVariable(
-            name, file, pos.first_line, sym->type->GetDIType(file), (sym->storageClass == SC_STATIC), sym->storagePtr);
-#elif ISPC_LLVM_VERSION == ISPC_LLVM_3_6                                       // 3.6
-        llvm::DIFile file = pos.GetDIFile();
-        llvm::Constant *sym_const_storagePtr = llvm::dyn_cast<llvm::Constant>(sym->storagePtr);
-        Assert(sym_const_storagePtr);
-        llvm::DIGlobalVariable var =
-            diBuilder->createGlobalVariable(file, name, name, file, pos.first_line, sym->type->GetDIType(file),
-                                            (sym->storageClass == SC_STATIC), sym_const_storagePtr);
-#elif ISPC_LLVM_VERSION >= ISPC_LLVM_3_7 && ISPC_LLVM_VERSION <= ISPC_LLVM_3_9 // LLVM 3.7 - 3.9
-        llvm::DIFile *file = pos.GetDIFile();
-        // llvm::MDFile *file = pos.GetDIFile();
-        llvm::Constant *sym_const_storagePtr = llvm::dyn_cast<llvm::Constant>(sym->storagePtr);
-        Assert(sym_const_storagePtr);
-        diBuilder->createGlobalVariable(file, name, name, file, pos.first_line, sym->type->GetDIType(file),
-                                        (sym->storageClass == SC_STATIC), sym_const_storagePtr);
-#else                                                                          // LLVM 4.0+
         llvm::DIFile *file = pos.GetDIFile();
         // llvm::MDFile *file = pos.GetDIFile();
         llvm::GlobalVariable *sym_GV_storagePtr = llvm::dyn_cast<llvm::GlobalVariable>(sym->storagePtr);
@@ -740,12 +463,11 @@ void Module::AddGlobalVariable(const std::string &name, const Type *type, Expr *
         llvm::DIGlobalVariableExpression *var = diBuilder->createGlobalVariableExpression(
             file, name, name, file, pos.first_line, sym->type->GetDIType(file), (sym->storageClass == SC_STATIC));
         sym_GV_storagePtr->addDebugInfo(var);
-#endif
-#if ISPC_LLVM_VERSION <= ISPC_LLVM_3_6
+/*#if ISPC_LLVM_VERSION <= ISPC_LLVM_3_6
         Assert(var.Verify());
 #else // LLVM 3.7+
       // comming soon
-#endif
+#endif*/
     }
 }
 
@@ -1017,11 +739,7 @@ void Module::AddFunctionDeclaration(const std::string &name, const FunctionType 
         if (g->target->getISA() != Target::NVPTX)
 #endif  /* ISPC_NVPTX_ENABLED */
         // This also applies transitively to members I think?
-#if ISPC_LLVM_VERSION < ISPC_LLVM_5_0
-            function->setDoesNotAlias(1);
-#else // LLVM 5.0+
         function->addParamAttr(0, llvm::Attribute::NoAlias);
-#endif
 
     g->target->markFuncWithTargetAttr(function);
 
@@ -1080,13 +798,7 @@ void Module::AddFunctionDeclaration(const std::string &name, const FunctionType 
 
                                       CastType<ReferenceType>(argType) != NULL)) {
 
-#if ISPC_LLVM_VERSION < ISPC_LLVM_5_0
-            // NOTE: LLVM indexes function parameters starting from 1.
-            // This is unintuitive.
-            function->setDoesNotAlias(i + 1);
-#else // LLVM 5.0+
             function->addParamAttr(i, llvm::Attribute::NoAlias);
-#endif
 #if 0
             int align = 4 * RoundUpPow2(g->target->nativeVectorWidth);
             function->addAttribute(i+1, llvm::Attribute::constructAlignmentFromInt(align));
@@ -1166,14 +878,12 @@ bool Module::writeOutput(OutputType outputType, OutputFlags flags, const char *o
     if (diBuilder && (outputType != Header) && (outputType != Deps))
         lStripUnusedDebugInfo(module);
 
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_3_4 /* 3.4+ */
     // In LLVM_3_4 after r195494 and r195504 revisions we should pass
     // "Debug Info Version" constant to the module. LLVM will ignore
     // our Debug Info metadata without it.
     if (g->generateDebuggingSymbols == true) {
         module->addModuleFlag(llvm::Module::Warning, "Debug Info Version", llvm::DEBUG_METADATA_VERSION);
     }
-#endif
 
     // SIC! (verifyModule() == TRUE) means "failed", see llvm-link code.
     if ((outputType != Header) && (outputType != Deps) && (outputType != HostStub) && (outputType != DevStub) &&
@@ -1384,11 +1094,7 @@ bool Module::writeBitcode(llvm::Module *module, const char *outFileName, OutputT
 
         std::string s;
         llvm::raw_string_ostream out(s);
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_3_5 /* 3.5+ */
         std::unique_ptr<llvm::AssemblyAnnotationWriter> Annotator;
-#else
-        llvm::OwningPtr<llvm::AssemblyAnnotationWriter> Annotator;
-#endif
         module->print(out, Annotator.get());
         std::istringstream iss(s);
 
@@ -1397,10 +1103,8 @@ bool Module::writeBitcode(llvm::Module *module, const char *outFileName, OutputT
             input.push_back(s);
         output = input;
 
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_3_3 /* 3.3+ */
         /* do not fix attributed with LLVM 3.2, everything is fine there */
         lFixAttributes(input, output);
-#endif
 
         for (vecString_t::iterator it = output.begin(); it != output.end(); it++) {
             *it += "\n";
@@ -1432,61 +1136,22 @@ bool Module::writeObjectFileOrAssembly(llvm::TargetMachine *targetMachine, llvm:
     llvm::TargetMachine::CodeGenFileType fileType =
         (outputType == Object) ? llvm::TargetMachine::CGFT_ObjectFile : llvm::TargetMachine::CGFT_AssemblyFile;
     bool binary = (fileType == llvm::TargetMachine::CGFT_ObjectFile);
-#if ISPC_LLVM_VERSION <= ISPC_LLVM_3_3 // 3.2, 3.3
-    unsigned int flags = binary ? llvm::raw_fd_ostream::F_Binary : 0;
-#elif ISPC_LLVM_VERSION == ISPC_LLVM_3_4 // 3.4
-    llvm::sys::fs::OpenFlags flags = binary ? llvm::sys::fs::F_Binary : llvm::sys::fs::F_None;
-#else                                    // LLVM 3.5+
     llvm::sys::fs::OpenFlags flags = binary ? llvm::sys::fs::F_None : llvm::sys::fs::F_Text;
 
-#endif
-
-#if ISPC_LLVM_VERSION <= ISPC_LLVM_3_5
-    std::string error;
-#else // LLVM 3.6+
     std::error_code error;
-#endif
 
-#if ISPC_LLVM_VERSION <= ISPC_LLVM_3_6
-    llvm::tool_output_file *of = new llvm::tool_output_file(outFileName, error, flags);
-#elif ISPC_LLVM_VERSION <= ISPC_LLVM_5_0 // LLVM 3.7-5.0
-    std::unique_ptr<llvm::tool_output_file> of(new llvm::tool_output_file(outFileName, error, flags));
-#else                                    // LLVM 6.0+
     std::unique_ptr<llvm::ToolOutputFile> of(new llvm::ToolOutputFile(outFileName, error, flags));
-#endif
 
-#if ISPC_LLVM_VERSION <= ISPC_LLVM_3_5
-    if (error.size()) {
-#else // LLVM 3.6+
     if (error) {
-#endif
-
         fprintf(stderr, "Error opening output file \"%s\".\n", outFileName);
         return false;
     }
 
-#if ISPC_LLVM_VERSION <= ISPC_LLVM_3_6
-    llvm::PassManager pm;
-#else // LLVM 3.7+
     llvm::legacy::PassManager pm;
-#endif
-#if ISPC_LLVM_VERSION <= ISPC_LLVM_3_4 // 3.2, 3.3, 3.4
-    pm.add(new llvm::DataLayout(*g->target->getDataLayout()));
-#elif ISPC_LLVM_VERSION == ISPC_LLVM_3_5 // 3.5
-    pm.add(new llvm::DataLayoutPass(*g->target->getDataLayout()));
-#elif ISPC_LLVM_VERSION == ISPC_LLVM_3_6 // 3.6
-llvm::DataLayoutPass *dlp = new llvm::DataLayoutPass();
-dlp->doInitialization(*module);
-pm.add(dlp);
-#endif                                   // LLVM 3.7+ doesn't have DataLayoutPass anymore.
 
     {
-#if ISPC_LLVM_VERSION <= ISPC_LLVM_3_6
-        llvm::formatted_raw_ostream fos(of->os());
-#else // LLVM 3.7+
         llvm::raw_fd_ostream &fos(of->os());
-#endif
-#if ISPC_LLVM_VERSION <= ISPC_LLVM_6_0
+#if ISPC_LLVM_VERSION == ISPC_LLVM_6_0
         if (targetMachine->addPassesToEmitFile(pm, fos, fileType)) {
             fprintf(stderr, "Fatal error adding passes to emit object file!");
             exit(1);
@@ -1506,9 +1171,6 @@ pm.add(dlp);
         // Success; tell tool_output_file to keep the final output file.
         of->keep();
     }
-#if ISPC_LLVM_VERSION <= ISPC_LLVM_3_6
-    delete of;
-#endif // LLVM 3.7+
     return true;
 }
 
@@ -2421,48 +2083,27 @@ void Module::execPreprocessor(const char *infilename, llvm::raw_string_ostream *
 
     inst.createFileManager();
 
-#if ISPC_LLVM_VERSION <= ISPC_LLVM_3_4 // 3.2, 3.3, 3.4
-    clang::TargetOptions &options = inst.getTargetOpts();
-#else // LLVM 3.5+
     const std::shared_ptr<clang::TargetOptions> &options = std::make_shared<clang::TargetOptions>(inst.getTargetOpts());
-#endif
 
     llvm::Triple triple(module->getTargetTriple());
     if (triple.getTriple().empty()) {
         triple.setTriple(llvm::sys::getDefaultTargetTriple());
     }
 
-#if ISPC_LLVM_VERSION <= ISPC_LLVM_3_4 // 3.2, 3.3, 3.4
-    options.Triple = triple.getTriple();
-#else // LLVM 3.5+
     options->Triple = triple.getTriple();
-#endif
 
-#if ISPC_LLVM_VERSION == ISPC_LLVM_3_2 // 3.2
     clang::TargetInfo *target = clang::TargetInfo::CreateTargetInfo(inst.getDiagnostics(), options);
-#elif ISPC_LLVM_VERSION <= ISPC_LLVM_3_4 // 3.3, 3.4
-    clang::TargetInfo *target = clang::TargetInfo::CreateTargetInfo(inst.getDiagnostics(), &options);
-#else                                    // LLVM 3.5+
-    clang::TargetInfo *target = clang::TargetInfo::CreateTargetInfo(inst.getDiagnostics(), options);
-#endif
-
     inst.setTarget(target);
     inst.createSourceManager(inst.getFileManager());
-#if ISPC_LLVM_VERSION < ISPC_LLVM_5_0
-    clang::FrontendInputFile inputFile(infilename, clang::IK_None);
-#else // LLVM 5.0+
+
     clang::FrontendInputFile inputFile(infilename, clang::InputKind::Unknown);
-#endif
     inst.InitializeSourceManager(inputFile);
 
     // Don't remove comments in the preprocessor, so that we can accurately
     // track the source file position by handling them ourselves.
     inst.getPreprocessorOutputOpts().ShowComments = 1;
 
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_3_3 // LLVM 3.3+
     inst.getPreprocessorOutputOpts().ShowCPP = 1;
-#endif
-
     clang::HeaderSearchOptions &headerOpts = inst.getHeaderSearchOpts();
     headerOpts.UseBuiltinIncludes = 0;
     headerOpts.UseStandardSystemIncludes = 0;
@@ -2473,9 +2114,6 @@ void Module::execPreprocessor(const char *infilename, llvm::raw_string_ostream *
 #endif
     for (int i = 0; i < (int)g->includePath.size(); ++i) {
         headerOpts.AddPath(g->includePath[i], clang::frontend::Angled,
-#if ISPC_LLVM_VERSION == ISPC_LLVM_3_2
-                           true /* is user supplied */,
-#endif
                            false /* not a framework */, true /* ignore sys root */);
     }
 
@@ -2564,11 +2202,7 @@ void Module::execPreprocessor(const char *infilename, llvm::raw_string_ostream *
 
     inst.getLangOpts().LineComment = 1;
 
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_3_5 /* 3.5+ */
     inst.createPreprocessor(clang::TU_Complete);
-#else
-    inst.createPreprocessor();
-#endif
 
     diagPrinter->BeginSourceFile(inst.getLangOpts(), &inst.getPreprocessor());
     clang::DoPrintPreprocessedInput(inst.getPreprocessor(), ostream, inst.getPreprocessorOutputOpts());
@@ -2879,11 +2513,7 @@ static void lEmitDispatchModule(llvm::Module *module, std::map<std::string, Func
 
         // Do some rudimentary cleanup of the final result and make sure that
         // the module is all ok.
-#if ISPC_LLVM_VERSION <= ISPC_LLVM_3_6
-    llvm::PassManager optPM;
-#else // LLVM 3.7+
     llvm::legacy::PassManager optPM;
-#endif
     optPM.add(llvm::createGlobalDCEPass());
     optPM.add(llvm::createVerifierPass());
     optPM.run(*module);

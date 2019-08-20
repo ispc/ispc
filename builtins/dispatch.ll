@@ -140,33 +140,8 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-;; LLVM has different IR for different versions since 3.7
-
 define(`PTR_OP_ARGS',
-  ifelse(LLVM_VERSION, LLVM_3_7,
-    ``$1 , $1 *'',
-         LLVM_VERSION, LLVM_3_8,
-    ``$1 , $1 *'',
-         LLVM_VERSION, LLVM_3_9,
-    ``$1 , $1 *'',
-         LLVM_VERSION, LLVM_4_0,
-    ``$1 , $1 *'',
-         LLVM_VERSION, LLVM_5_0,
-    ``$1 , $1 *'',
-         LLVM_VERSION, LLVM_6_0,
-    ``$1 , $1 *'',
-         LLVM_VERSION, LLVM_7_0,
-    ``$1 , $1 *'',
-         LLVM_VERSION, LLVM_7_1,
-    ``$1 , $1 *'',
-         LLVM_VERSION, LLVM_8_0,
-    ``$1 , $1 *'',
-         LLVM_VERSION, LLVM_9_0,
-    ``$1 , $1 *'',
-         LLVM_VERSION, LLVM_10_0,
-    ``$1 , $1 *'',
-    ``$1 *''
-  )
+  `$1 , $1 *'
 )
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

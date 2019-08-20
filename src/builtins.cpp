@@ -47,15 +47,9 @@
 
 #include <math.h>
 #include <stdlib.h>
-#if ISPC_LLVM_VERSION == ISPC_LLVM_3_2
-#include <llvm/Attributes.h>
-#include <llvm/DerivedTypes.h>
-#include <llvm/Instructions.h>
-#include <llvm/Intrinsics.h>
-#include <llvm/LLVMContext.h>
-#include <llvm/Module.h>
-#include <llvm/Type.h>
-#else
+
+#include <llvm/ADT/Triple.h>
+#include <llvm/Bitcode/BitcodeReader.h>
 #include <llvm/IR/Attributes.h>
 #include <llvm/IR/DerivedTypes.h>
 #include <llvm/IR/Instructions.h>
@@ -63,20 +57,9 @@
 #include <llvm/IR/LLVMContext.h>
 #include <llvm/IR/Module.h>
 #include <llvm/IR/Type.h>
-#endif
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_3_5
 #include <llvm/Linker/Linker.h>
-#else
-#include <llvm/Linker.h>
-#endif
-#include <llvm/ADT/Triple.h>
 #include <llvm/Support/MemoryBuffer.h>
 #include <llvm/Target/TargetMachine.h>
-#if ISPC_LLVM_VERSION <= ISPC_LLVM_3_9
-#include <llvm/Bitcode/ReaderWriter.h>
-#else
-#include <llvm/Bitcode/BitcodeReader.h>
-#endif
 
 extern int yyparse();
 struct yy_buffer_state;
@@ -265,11 +248,7 @@ static void lAddModuleSymbols(llvm::Module *module, SymbolTable *symbolTable) {
 
     llvm::Module::iterator iter;
     for (iter = module->begin(); iter != module->end(); ++iter) {
-#if ISPC_LLVM_VERSION <= ISPC_LLVM_3_7 /* 3.2, 3.3, 3.4, 3.5, 3.6, 3.7 */
-        llvm::Function *func = iter;
-#else /* LLVM 3.8+ */
         llvm::Function *func = &*iter;
-#endif
         lCreateISPCSymbol(func, symbolTable);
     }
 }
@@ -283,11 +262,7 @@ static void lAddModuleSymbols(llvm::Module *module, SymbolTable *symbolTable) {
 static void lCheckModuleIntrinsics(llvm::Module *module) {
     llvm::Module::iterator iter;
     for (iter = module->begin(); iter != module->end(); ++iter) {
-#if ISPC_LLVM_VERSION <= ISPC_LLVM_3_7 /* 3.2, 3.3, 3.4, 3.5, 3.6, 3.7 */
-        llvm::Function *func = iter;
-#else /* LLVM 3.8+ */
         llvm::Function *func = &*iter;
-#endif
         if (!func->isIntrinsic())
             continue;
 
@@ -829,37 +804,13 @@ static void lSetInternalFunctions(llvm::Module *module) {
 void AddBitcodeToModule(const unsigned char *bitcode, int length, llvm::Module *module, SymbolTable *symbolTable,
                         bool warn) {
     llvm::StringRef sb = llvm::StringRef((char *)bitcode, length);
-#if ISPC_LLVM_VERSION <= ISPC_LLVM_3_5
-    llvm::MemoryBuffer *bcBuf = llvm::MemoryBuffer::getMemBuffer(sb);
-#else // LLVM 3.6+
     llvm::MemoryBufferRef bcBuf = llvm::MemoryBuffer::getMemBuffer(sb)->getMemBufferRef();
-#endif
 
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_4_0 // LLVM 4.0+
     llvm::Expected<std::unique_ptr<llvm::Module>> ModuleOrErr = llvm::parseBitcodeFile(bcBuf, *g->ctx);
     if (!ModuleOrErr) {
         Error(SourcePos(), "Error parsing stdlib bitcode: %s", toString(ModuleOrErr.takeError()).c_str());
     } else {
         llvm::Module *bcModule = ModuleOrErr.get().release();
-#elif ISPC_LLVM_VERSION >= ISPC_LLVM_3_7 // LLVM 3.7+
-    llvm::ErrorOr<std::unique_ptr<llvm::Module>> ModuleOrErr = llvm::parseBitcodeFile(bcBuf, *g->ctx);
-    if (std::error_code EC = ModuleOrErr.getError())
-        Error(SourcePos(), "Error parsing stdlib bitcode: %s", EC.message().c_str());
-    else {
-        llvm::Module *bcModule = ModuleOrErr.get().release();
-#elif ISPC_LLVM_VERSION == ISPC_LLVM_3_5 || ISPC_LLVM_VERSION == ISPC_LLVM_3_6
-    llvm::ErrorOr<llvm::Module *> ModuleOrErr = llvm::parseBitcodeFile(bcBuf, *g->ctx);
-    if (std::error_code EC = ModuleOrErr.getError())
-        Error(SourcePos(), "Error parsing stdlib bitcode: %s", EC.message().c_str());
-    else {
-        llvm::Module *bcModule = ModuleOrErr.get();
-#else // LLVM 3.2 - 3.4
-    std::string bcErr;
-    llvm::Module *bcModule = llvm::ParseBitcodeFile(bcBuf, *g->ctx, &bcErr);
-    if (!bcModule)
-        Error(SourcePos(), "Error parsing stdlib bitcode: %s", bcErr.c_str());
-    else {
-#endif
         // FIXME: this feels like a bad idea, but the issue is that when we
         // set the llvm::Module's target triple in the ispc Module::Module
         // constructor, we start by calling llvm::sys::getHostTriple() (and
@@ -906,7 +857,6 @@ void AddBitcodeToModule(const unsigned char *bitcode, int length, llvm::Module *
                 // architecture and investigate what happened.
                 // Generally we allow library DataLayout to be subset of module
                 // DataLayout or library DataLayout to be empty.
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_3_5
                 if (!VerifyDataLayoutCompatibility(module->getDataLayoutStr(), bcModule->getDataLayoutStr()) && warn) {
                     Warning(SourcePos(),
                             "Module DataLayout is incompatible with "
@@ -915,33 +865,15 @@ void AddBitcodeToModule(const unsigned char *bitcode, int length, llvm::Module *
                             "Library DL: %s\n",
                             module->getDataLayoutStr().c_str(), bcModule->getDataLayoutStr().c_str());
                 }
-#else
-                if (!VerifyDataLayoutCompatibility(module->getDataLayout(), bcModule->getDataLayout()) && warn) {
-                    Warning(SourcePos(),
-                            "Module DataLayout is incompatible with "
-                            "library DataLayout:\n"
-                            "Module  DL: %s\n"
-                            "Library DL: %s\n",
-                            module->getDataLayout().c_str(), bcModule->getDataLayout().c_str());
-                }
-#endif
             }
 #endif
                 bcModule->setTargetTriple(mTriple.str());
         bcModule->setDataLayout(module->getDataLayout());
 
-#if ISPC_LLVM_VERSION <= ISPC_LLVM_3_5 // 3.2-3.5
-        std::string(linkError);
-
-        if (llvm::Linker::LinkModules(module, bcModule, llvm::Linker::DestroySource, &linkError))
-            Error(SourcePos(), "Error linking stdlib bitcode: %s", linkError.c_str());
-#elif ISPC_LLVM_VERSION <= ISPC_LLVM_3_7 // 3.6-3.7
-        llvm::Linker::LinkModules(module, bcModule);
-#else                                    // LLVM 3.8+
-                                         // A hack to move over declaration, which have no definition.
-                                         // New linker is kind of smart and think it knows better what to do, so
-                                         // it removes unused declarations without definitions.
-                                         // This trick should be legal, as both modules use the same LLVMContext.
+        // A hack to move over declaration, which have no definition.
+        // New linker is kind of smart and think it knows better what to do, so
+        // it removes unused declarations without definitions.
+        // This trick should be legal, as both modules use the same LLVMContext.
         for (llvm::Function &f : *bcModule) {
             if (f.isDeclaration()) {
                 // Declarations with uses will be moved by Linker.
@@ -955,7 +887,6 @@ void AddBitcodeToModule(const unsigned char *bitcode, int length, llvm::Module *
         if (llvm::Linker::linkModules(*module, std::move(M))) {
             Error(SourcePos(), "Error linking stdlib bitcode.");
         }
-#endif
 
         lSetInternalFunctions(module);
         if (symbolTable != NULL)
@@ -973,58 +904,27 @@ static void lDefineConstantInt(const char *name, int val, llvm::Module *module, 
     sym->constValue = new ConstExpr(sym->type, val, SourcePos());
     llvm::Type *ltype = LLVMTypes::Int32Type;
     llvm::Constant *linit = LLVMInt32(val);
-#if ISPC_LLVM_VERSION < ISPC_LLVM_3_6
-    // Use WeakODRLinkage rather than InternalLinkage so that a definition
-    // survives even if it's not used in the module, so that the symbol is
-    // there in the debugger.
-    llvm::GlobalValue::LinkageTypes linkage =
-        g->generateDebuggingSymbols ? llvm::GlobalValue::WeakODRLinkage : llvm::GlobalValue::InternalLinkage;
-    sym->storagePtr = new llvm::GlobalVariable(*module, ltype, true, linkage, linit, name);
-#else // LLVM 3.6+
     auto GV = new llvm::GlobalVariable(*module, ltype, true, llvm::GlobalValue::InternalLinkage, linit, name);
     dbg_sym.push_back(GV);
     sym->storagePtr = GV;
-#endif
     symbolTable->AddVariable(sym);
 
     if (m->diBuilder != NULL) {
-#if ISPC_LLVM_VERSION <= ISPC_LLVM_3_6
-        llvm::DIFile file;
-        llvm::DIType diType = sym->type->GetDIType(file);
-        Assert(diType.Verify());
-#else // LLVM 3.7+
         llvm::DIFile *file = m->diCompileUnit->getFile();
         llvm::DICompileUnit *cu = m->diCompileUnit;
         llvm::DIType *diType = sym->type->GetDIType(file);
-#endif
         // FIXME? DWARF says that this (and programIndex below) should
         // have the DW_AT_artifical attribute.  It's not clear if this
         // matters for anything though.
-
-#if ISPC_LLVM_VERSION <= ISPC_LLVM_3_5
-        llvm::DIGlobalVariable var =
-            m->diBuilder->createGlobalVariable(name, file, 0 /* line */, diType, true /* static */, sym->storagePtr);
-#elif ISPC_LLVM_VERSION == ISPC_LLVM_3_6                                       // LLVM 3.6
-        llvm::Constant *sym_const_storagePtr = llvm::dyn_cast<llvm::Constant>(sym->storagePtr);
-        Assert(sym_const_storagePtr);
-        llvm::DIGlobalVariable var = m->diBuilder->createGlobalVariable(file, name, name, file, 0 /* line */, diType,
-                                                                        true /* static */, sym_const_storagePtr);
-#elif ISPC_LLVM_VERSION >= ISPC_LLVM_3_7 && ISPC_LLVM_VERSION <= ISPC_LLVM_3_9 // LLVM 3.7 - 3.9
-        llvm::Constant *sym_const_storagePtr = llvm::dyn_cast<llvm::Constant>(sym->storagePtr);
-        Assert(sym_const_storagePtr);
-        m->diBuilder->createGlobalVariable(cu, name, name, file, 0 /* line */, diType, true /* static */,
-                                           sym_const_storagePtr);
-#else                                                                          // LLVM 4.0+
         llvm::GlobalVariable *sym_GV_storagePtr = llvm::dyn_cast<llvm::GlobalVariable>(sym->storagePtr);
         llvm::DIGlobalVariableExpression *var =
             m->diBuilder->createGlobalVariableExpression(cu, name, name, file, 0 /* line */, diType, true /* static */);
         sym_GV_storagePtr->addDebugInfo(var);
-#endif
-#if ISPC_LLVM_VERSION <= ISPC_LLVM_3_6
-        Assert(var.Verify());
-#else // LLVM 3.7+
-      // coming soon
-#endif
+        /*#if ISPC_LLVM_VERSION <= ISPC_LLVM_3_6
+                Assert(var.Verify());
+        #else // LLVM 3.7+
+              // coming soon
+        #endif*/
     }
 }
 
@@ -1037,11 +937,7 @@ static void lDefineConstantIntFunc(const char *name, int val, llvm::Module *modu
     llvm::Function *func = module->getFunction(name);
     dbg_sym.push_back(func);
     Assert(func != NULL); // it should be declared already...
-#if ISPC_LLVM_VERSION == ISPC_LLVM_3_2
-    func->addFnAttr(llvm::Attributes::AlwaysInline);
-#else // LLVM 3.3+
     func->addFnAttr(llvm::Attribute::AlwaysInline);
-#endif
     llvm::BasicBlock *bblock = llvm::BasicBlock::Create(*g->ctx, "entry", func, 0);
     llvm::ReturnInst::Create(*g->ctx, LLVMInt32(val), bblock);
 
@@ -1060,58 +956,29 @@ static void lDefineProgramIndex(llvm::Module *module, SymbolTable *symbolTable,
 
     llvm::Type *ltype = LLVMTypes::Int32VectorType;
     llvm::Constant *linit = LLVMInt32Vector(pi);
-#if ISPC_LLVM_VERSION < ISPC_LLVM_3_6
-    // See comment in lDefineConstantInt() for why WeakODRLinkage is used here
-    llvm::GlobalValue::LinkageTypes linkage =
-        g->generateDebuggingSymbols ? llvm::GlobalValue::WeakODRLinkage : llvm::GlobalValue::InternalLinkage;
-    sym->storagePtr = new llvm::GlobalVariable(*module, ltype, true, linkage, linit, sym->name.c_str());
-#else // LLVM 3.6+
+
     auto GV =
         new llvm::GlobalVariable(*module, ltype, true, llvm::GlobalValue::InternalLinkage, linit, sym->name.c_str());
     dbg_sym.push_back(GV);
     sym->storagePtr = GV;
-#endif
     symbolTable->AddVariable(sym);
 
     if (m->diBuilder != NULL) {
-#if ISPC_LLVM_VERSION <= ISPC_LLVM_3_6
-        llvm::DIFile file;
-        llvm::DIType diType = sym->type->GetDIType(file);
-        Assert(diType.Verify());
-#else // LLVM 3.7+
         llvm::DIFile *file = m->diCompileUnit->getFile();
         llvm::DICompileUnit *cu = m->diCompileUnit;
         llvm::DIType *diType = sym->type->GetDIType(file);
-#endif
-#if ISPC_LLVM_VERSION == ISPC_LLVM_3_6 // LLVM 3.6
-        llvm::Constant *sym_const_storagePtr = llvm::dyn_cast<llvm::Constant>(sym->storagePtr);
-        Assert(sym_const_storagePtr);
-        llvm::DIGlobalVariable var =
-            m->diBuilder->createGlobalVariable(file, sym->name.c_str(), sym->name.c_str(), file, 0 /* line */, diType,
-                                               false /* static */, sym_const_storagePtr);
-#elif ISPC_LLVM_VERSION <= ISPC_LLVM_3_5
-        llvm::DIGlobalVariable var = m->diBuilder->createGlobalVariable(sym->name.c_str(), file, 0 /* line */, diType,
-                                                                        false /* static */, sym->storagePtr);
-#elif ISPC_LLVM_VERSION >= ISPC_LLVM_3_7 && ISPC_LLVM_VERSION <= ISPC_LLVM_3_9 // LLVM 3.7 - 3.9
-        llvm::Constant *sym_const_storagePtr = llvm::dyn_cast<llvm::Constant>(sym->storagePtr);
-        Assert(sym_const_storagePtr);
-        m->diBuilder->createGlobalVariable(cu, sym->name.c_str(), sym->name.c_str(), file, 0 /* line */, diType,
-                                           false /* static */, sym_const_storagePtr);
-#else                                                                          // LLVM 4.0+
         llvm::GlobalVariable *sym_GV_storagePtr = llvm::dyn_cast<llvm::GlobalVariable>(sym->storagePtr);
         llvm::DIGlobalVariableExpression *var = m->diBuilder->createGlobalVariableExpression(
             cu, sym->name.c_str(), sym->name.c_str(), file, 0 /* line */, diType, false /* static */);
         sym_GV_storagePtr->addDebugInfo(var);
-#endif
-#if ISPC_LLVM_VERSION <= ISPC_LLVM_3_6
-        Assert(var.Verify());
-#else // LLVM 3.7+
-      // coming soon
-#endif
+        /*#if ISPC_LLVM_VERSION <= ISPC_LLVM_3_6
+                Assert(var.Verify());
+        #else // LLVM 3.7+
+              // coming soon
+        #endif*/
     }
 }
 
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_3_6 // LLVM 3.6+
 static void emitLLVMUsed(llvm::Module &module, std::vector<llvm::Constant *> &list) {
     // Convert list to what ConstantArray needs.
     llvm::SmallVector<llvm::Constant *, 8> UsedArray;
@@ -1128,7 +995,6 @@ static void emitLLVMUsed(llvm::Module &module, std::vector<llvm::Constant *> &li
 
     GV->setSection("llvm.metadata");
 }
-#endif
 
 void DefineStdlib(SymbolTable *symbolTable, llvm::LLVMContext *ctx, llvm::Module *module, bool includeStdlibISPC) {
     // debug_symbols are symbols that supposed to be preserved in debug information.
@@ -1434,7 +1300,6 @@ void DefineStdlib(SymbolTable *symbolTable, llvm::LLVMContext *ctx, llvm::Module
             }
             break;
         }
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_3_7 // LLVM 3.7+
         case Target::KNL_AVX512: {
             switch (g->target->getVectorWidth()) {
             case 16:
@@ -1449,8 +1314,6 @@ void DefineStdlib(SymbolTable *symbolTable, llvm::LLVMContext *ctx, llvm::Module
             }
             break;
         }
-#endif
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_3_8 // LLVM 3.8+
         case Target::SKX_AVX512: {
             switch (g->target->getVectorWidth()) {
             case 8:
@@ -1472,7 +1335,6 @@ void DefineStdlib(SymbolTable *symbolTable, llvm::LLVMContext *ctx, llvm::Module
             }
             break;
         }
-#endif
         case Target::GENERIC: {
             switch (g->target->getVectorWidth()) {
             case 4:
@@ -1712,7 +1574,6 @@ void DefineStdlib(SymbolTable *symbolTable, llvm::LLVMContext *ctx, llvm::Module
             }
             break;
         }
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_3_7 // LLVM 3.7+
         case Target::KNL_AVX512: {
             switch (g->target->getVectorWidth()) {
             case 16:
@@ -1727,8 +1588,6 @@ void DefineStdlib(SymbolTable *symbolTable, llvm::LLVMContext *ctx, llvm::Module
             }
             break;
         }
-#endif
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_3_8 // LLVM 3.8+
         case Target::SKX_AVX512: {
             switch (g->target->getVectorWidth()) {
             case 8:
@@ -1750,7 +1609,6 @@ void DefineStdlib(SymbolTable *symbolTable, llvm::LLVMContext *ctx, llvm::Module
             }
             break;
         }
-#endif
         case Target::GENERIC: {
             switch (g->target->getVectorWidth()) {
             case 4:
@@ -1849,11 +1707,9 @@ void DefineStdlib(SymbolTable *symbolTable, llvm::LLVMContext *ctx, llvm::Module
     }
 
     // LLVM 3.6 is only because it was not tested with earlier versions.
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_3_6 // LLVM 3.6+
     if (g->generateDebuggingSymbols) {
         emitLLVMUsed(*module, debug_symbols);
     }
-#endif
 
     if (includeStdlibISPC) {
         // If the user wants the standard library to be included, parse the

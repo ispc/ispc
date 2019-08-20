@@ -106,10 +106,8 @@ static void usage(int ret) {
     printf("    [-D<foo>]\t\t\t\t#define given value when running preprocessor\n");
     printf("    [--dev-stub <filename>]\t\tEmit device-side offload stub functions to file\n");
     printf("    [--dllexport]\t\t\tMake non-static functions DLL exported.  Windows target only\n");
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_3_5
     printf("    [--dwarf-version={2,3,4}]\t\tGenerate source-level debug information with given DWARF version "
            "(triggers -g).  Ignored for Windows target\n");
-#endif
     printf("    [--emit-asm]\t\t\tGenerate assembly language file as output\n");
     printf("    [--x86-asm-syntax=<option>]\t\tSelect style of code if generating assembly\n");
     printf("        intel\t\t\t\tEmit Intel-style assembly\n");
@@ -199,9 +197,6 @@ static void devUsage(int ret) {
     printf("    [--debug-phase=<value>]\t\tSet optimization phases to dump. "
            "--debug-phase=first,210:220,300,305,310:last\n");
     printf("    [--dump-file]\t\t\tDump module IR to file(s) in current directory\n");
-#endif
-#if ISPC_LLVM_VERSION == ISPC_LLVM_3_4 || ISPC_LLVM_VERSION == ISPC_LLVM_3_5 // 3.4, 3.5
-    printf("    [--debug-ir=<value>]\t\tSet optimization phase to generate debugIR after it\n");
 #endif
     printf("    [--off-phase=<value>]\t\tSwitch off optimization phases. --off-phase=first,210:220,300,305,310:last\n");
     exit(ret);
@@ -539,7 +534,6 @@ int main(int Argc, char *Argv[]) {
             llvm::DebugFlag = true;
         else if (!strcmp(argv[i], "--dllexport"))
             g->dllExport = true;
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_3_5
         else if (!strncmp(argv[i], "--dwarf-version=", 16)) {
             int val = atoi(argv[i] + 16);
             if (2 <= val && val <= 4) {
@@ -552,9 +546,7 @@ int main(int Argc, char *Argv[]) {
                         argv[i] + 16);
                 usage(1);
             }
-        }
-#endif
-        else if (!strcmp(argv[i], "--print-target"))
+        } else if (!strcmp(argv[i], "--print-target"))
             g->printTarget = true;
         else if (!strcmp(argv[i], "--no-omit-frame-pointer"))
             g->NoOmitFramePointer = true;
@@ -758,11 +750,6 @@ int main(int Argc, char *Argv[]) {
             g->dumpFile = true;
 #endif
 
-#if ISPC_LLVM_VERSION == ISPC_LLVM_3_4 || ISPC_LLVM_VERSION == ISPC_LLVM_3_5 // 3.4, 3.5
-        else if (strncmp(argv[i], "--debug-ir=", 11) == 0) {
-            g->debugIR = ParsingPhaseName(argv[i] + strlen("--debug-ir="));
-        }
-#endif
         else if (strncmp(argv[i], "--off-phase=", 12) == 0) {
             g->off_stages = ParsingPhases(argv[i] + strlen("--off-phase="));
         } else if (!strcmp(argv[i], "-v") || !strcmp(argv[i], "--version")) {

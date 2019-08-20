@@ -31,29 +31,7 @@
 
 define(`WIDTH',`16')
 
-ifelse(LLVM_VERSION, LLVM_3_7,
-    `include(`target-avx512-common.ll')',
-         LLVM_VERSION, LLVM_3_8,
-    `include(`target-avx512-common.ll')',
-         LLVM_VERSION, LLVM_3_9,
-    `include(`target-avx512-common.ll')',
-         LLVM_VERSION, LLVM_4_0,
-    `include(`target-avx512-common.ll')',
-         LLVM_VERSION, LLVM_5_0,
-    `include(`target-avx512-common.ll')',
-         LLVM_VERSION, LLVM_6_0,
-    `include(`target-avx512-common.ll')',
-         LLVM_VERSION, LLVM_7_0,
-    `include(`target-avx512-common.ll')',
-         LLVM_VERSION, LLVM_7_1,
-    `include(`target-avx512-common.ll')',
-         LLVM_VERSION, LLVM_8_0,
-    `include(`target-avx512-common.ll')',
-         LLVM_VERSION, LLVM_9_0,
-    `include(`target-avx512-common.ll')',
-         LLVM_VERSION, LLVM_10_0,
-    `include(`target-avx512-common.ll')'
-  )
+include(`target-avx512-common.ll')
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; rcp, rsqrt
@@ -82,28 +60,6 @@ define <16 x float> @__rsqrt_fast_varying_float(<16 x float> %v) nounwind readon
 }
 ')
 
-ifelse(LLVM_VERSION, LLVM_3_7,
-    rcp_rsqrt_varying_float_knl(),
-         LLVM_VERSION, LLVM_3_8,
-    rcp_rsqrt_varying_float_knl(),
-         LLVM_VERSION, LLVM_3_9,
-    rcp_rsqrt_varying_float_knl(),
-         LLVM_VERSION, LLVM_4_0,
-    rcp_rsqrt_varying_float_knl(),
-         LLVM_VERSION, LLVM_5_0,
-    rcp_rsqrt_varying_float_knl(),
-         LLVM_VERSION, LLVM_6_0,
-    rcp_rsqrt_varying_float_knl(),
-         LLVM_VERSION, LLVM_7_0,
-    rcp_rsqrt_varying_float_knl(),
-         LLVM_VERSION, LLVM_7_1,
-    rcp_rsqrt_varying_float_knl(),
-         LLVM_VERSION, LLVM_8_0,
-    rcp_rsqrt_varying_float_knl(),
-         LLVM_VERSION, LLVM_9_0,
-    rcp_rsqrt_varying_float_knl(),
-         LLVM_VERSION, LLVM_10_0,
-    rcp_rsqrt_varying_float_knl()
-  )
+rcp_rsqrt_varying_float_knl()
 
 ;;saturation_arithmetic_novec()
