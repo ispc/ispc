@@ -545,12 +545,6 @@ class FunctionEmitContext {
     // GenX-specific functions
     llvm::Value *GenXSimdCFAny(llvm::Value *value);
     llvm::Value *GenXSimdCFPredicate(llvm::Value *values, llvm::Value *defaults = NULL);
-    llvm::Value *GenXSVMGather(llvm::Value *ptr, llvm::Type *ptrType);
-    llvm::Value *GenXSVMScatter(llvm::Value *ptr, llvm::Value *value, llvm::Type *ptrType);
-    llvm::Value *GenXSVMLoad(llvm::Value *ptr, llvm::Type *retType);
-    llvm::Value *GenXSVMStore(llvm::Value *ptr, llvm::Value *value);
-    llvm::Value *GenXLoad(llvm::Value *ptr);
-    llvm::Value *GenXStore(llvm::Value *ptr, llvm::Value *value);
     /*This function changes scalar condition to vector condition before branching if
     emulated uniform condition was found in external scopes and start SIMD control
     flow with simdcf.any intrinsic*/
