@@ -1580,35 +1580,49 @@ const char *LLVMGetName(const char *op, llvm::Value *v1, llvm::Value *v2) {
 }
 
 #ifdef ISPC_GENX_ENABLED
-void lIsStackAllocated(llvm::Value *v, std::set<llvm::Value *> &done, bool &stackAlloc) {
+void lGetAddressSpace(llvm::Value *v, std::set<llvm::Value *> &done, AddressSpace &stackAlloc) {
     if (done.find(v) != done.end())
         return;
-
     llvm::Instruction *inst = llvm::dyn_cast<llvm::Instruction>(v);
+    if (inst == NULL) {
+        llvm::ConstantExpr *constExpr = llvm::dyn_cast<llvm::ConstantExpr>(v);
+        if (constExpr != NULL) {
+            inst = constExpr->getAsInstruction();
+        }
+    }
+
+    llvm::GlobalValue *gValue = llvm::dyn_cast<llvm::GlobalValue>(v);
+    if (gValue != NULL) {
+        stackAlloc = AddressSpace::Global;
+        return;
+    }
+
     if (done.size() > 0 && inst == NULL)
         return;
 
     done.insert(v);
 
-    if (inst == NULL)
-        return;
     llvm::AllocaInst *allocainst = llvm::dyn_cast<llvm::AllocaInst>(v);
     if (allocainst != NULL) {
-        stackAlloc = true;
+        stackAlloc = AddressSpace::Local;
+        return;
+    }
+
+    if (inst == NULL) {
         return;
     }
     for (unsigned i = 0; i < inst->getNumOperands(); ++i)
-        lIsStackAllocated(inst->getOperand(i), done, stackAlloc);
+        lGetAddressSpace(inst->getOperand(i), done, stackAlloc);
 }
 
 /** This routine attempts to determine if the given value is pointing to
     stack-allocated memory. The basic strategy is to traverse through the
     operands and see if the pointer originally comes from an AllocaInst.
 */
-bool IsStackAllocated(llvm::Value *v) {
+AddressSpace GetAddressSpace(llvm::Value *v) {
     std::set<llvm::Value *> done;
-    bool stackAlloc = false;
-    lIsStackAllocated(v, done, stackAlloc);
-    return stackAlloc;
+    AddressSpace addrSpace = AddressSpace::External;
+    lGetAddressSpace(v, done, addrSpace);
+    return addrSpace;
 }
 #endif

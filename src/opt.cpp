@@ -2766,7 +2766,7 @@ static bool lImproveMaskedStore(llvm::CallInst *callInst) {
         llvm::Type *rvalueType = rvalue->getType();
         llvm::Instruction *store;
 #ifdef ISPC_GENX_ENABLED
-        if (g->target->getISA() == Target::GENX && !IsStackAllocated(lvalue)) {
+        if (g->target->getISA() == Target::GENX && GetAddressSpace(lvalue) == AddressSpace::External) {
             assert(isa<llvm::VectorType>(rvalue->getType()));
             assert(llvm::isPowerOf2_32(rvalue->getType()->getVectorNumElements()));
             assert(rvalue->getType()->getPrimitiveSizeInBits() / 8 <= 8 * OWORD);
@@ -2847,7 +2847,7 @@ static bool lImproveMaskedLoad(llvm::CallInst *callInst, llvm::BasicBlock::itera
         // The mask is all on, so turn this into a regular load
         llvm::Instruction *load;
 #ifdef ISPC_GENX_ENABLED
-        if (g->target->getISA() == Target::GENX && !IsStackAllocated(ptr)) {
+        if (g->target->getISA() == Target::GENX && GetAddressSpace(ptr) == AddressSpace::External) {
             llvm::Type *retType = callInst->getType();
             assert(isa<llvm::VectorType>(retType));
             assert(llvm::isPowerOf2_32(retType->getVectorNumElements()));
@@ -5302,7 +5302,7 @@ static bool lPromoteToPrivateMemory(llvm::CallInst *callInst) {
     if (info == NULL)
         return false;
     llvm::Value *ptr = callInst->getOperand(0);
-    if (IsStackAllocated(ptr)) {
+    if (GetAddressSpace(ptr) != AddressSpace::External) {
         callInst->setCalledFunction(info->privateFunc);
     }
     return true;

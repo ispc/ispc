@@ -334,5 +334,7 @@ extern llvm::Value *LLVMShuffleVectors(llvm::Value *v1, llvm::Value *v2, int32_t
 extern const char *LLVMGetName(llvm::Value *v, const char *);
 extern const char *LLVMGetName(const char *op, llvm::Value *v1, llvm::Value *v2);
 #ifdef ISPC_GENX_ENABLED
-extern bool IsStackAllocated(llvm::Value *v);
+enum AddressSpace { Local, Global, External };
+
+extern AddressSpace GetAddressSpace(llvm::Value *v);
 #endif
