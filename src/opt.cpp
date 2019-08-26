@@ -585,7 +585,10 @@ void Optimize(llvm::Module *module, int optLevel) {
         optPM.add(llvm::createPruneEHPass());
         optPM.add(llvm::createPostOrderFunctionAttrsLegacyPass());
         optPM.add(llvm::createReversePostOrderFunctionAttrsPass());
-
+#ifdef ISPC_GENX_ENABLED
+        if (g->target->getISA() == Target::GENX)
+            optPM.add(CreatePromoteToPrivateMemoryPass());
+#endif
         optPM.add(llvm::createFunctionInliningPass());
         optPM.add(llvm::createConstantPropagationPass());
         optPM.add(llvm::createDeadInstEliminationPass());
@@ -619,7 +622,10 @@ void Optimize(llvm::Module *module, int optLevel) {
                 optPM.add(CreateGatherCoalescePass());
             }
         }
-
+#ifdef ISPC_GENX_ENABLED
+        if (g->target->getISA() == Target::GENX)
+            optPM.add(CreatePromoteToPrivateMemoryPass());
+#endif
         optPM.add(llvm::createFunctionInliningPass(), 265);
         optPM.add(llvm::createConstantPropagationPass());
         optPM.add(CreateIntrinsicsOptPass());
@@ -643,23 +649,11 @@ void Optimize(llvm::Module *module, int optLevel) {
         optPM.add(CreateInstructionSimplifyPass());
 #ifdef ISPC_GENX_ENABLED
         if (g->target->getISA() == Target::GENX) {
-            optPM.add(llvm::createGenXPacketizePass());
-            optPM.add(llvm::createPromoteMemoryToRegisterPass());
             // Inline
             optPM.add(llvm::createCorrelatedValuePropagationPass());
             optPM.add(llvm::createGenXReduceIntSizePass());
             optPM.add(llvm::createInstructionCombiningPass());
             optPM.add(llvm::createGlobalDCEPass());
-            optPM.add(llvm::createInstructionCombiningPass());
-            // Unroll
-            optPM.add(llvm::createReassociatePass());
-            optPM.add(llvm::createLoopRotatePass());
-            optPM.add(llvm::createLICMPass());
-            optPM.add(llvm::createInstructionCombiningPass());
-            optPM.add(llvm::createIndVarSimplifyPass());
-            optPM.add(llvm::createLoopIdiomPass());
-            optPM.add(llvm::createLoopDeletionPass());
-            optPM.add(llvm::createSimpleLoopUnrollPass());
             optPM.add(llvm::createInstructionCombiningPass());
             // Simplify region accesses.
             optPM.add(llvm::createGenXRegionCollapsingPass());
@@ -687,7 +681,11 @@ void Optimize(llvm::Module *module, int optLevel) {
         optPM.add(llvm::createInstructionCombiningPass());
         optPM.add(CreateInstructionSimplifyPass());
         optPM.add(llvm::createIndVarSimplifyPass());
-        optPM.add(llvm::createLoopIdiomPass());
+        // Currently CM does not support memset/memcpy
+        // so this pass is temporary disabled for GEN.
+        if (g->target->getISA() != Target::GENX) {
+            optPM.add(llvm::createLoopIdiomPass());
+        }
         optPM.add(llvm::createLoopDeletionPass());
         if (g->opt.unrollLoops) {
             optPM.add(llvm::createLoopUnrollPass(), 300);
@@ -2914,10 +2912,14 @@ restart:
             modifiedAny = true;
             goto restart;
         }
-        if (lGSToLoadStore(callInst)) {
-            modifiedAny = true;
-            goto restart;
-        }
+        // WIP for gen
+#ifdef ISPC_GENX_ENABLED
+        if (g->target->getISA() != Target::GENX)
+            if (lGSToLoadStore(callInst)) {
+                modifiedAny = true;
+                goto restart;
+            }
+#endif
         if (lImproveMaskedStore(callInst)) {
             modifiedAny = true;
             goto restart;

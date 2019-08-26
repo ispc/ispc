@@ -2094,30 +2094,24 @@ llvm::Value *FunctionEmitContext::LoadInst(llvm::Value *ptr, const Type *type, c
 
     llvm::PointerType *pt = llvm::dyn_cast<llvm::PointerType>(ptr->getType());
     AssertPos(currentPos, pt != NULL);
+
     if (name == NULL)
         name = LLVMGetName(ptr, "_load");
-    llvm::Value *inst;
-#ifdef ISPC_GENX_ENABLED
-    if (llvm::dyn_cast<llvm::VectorType>(pt->getElementType()) && g->target->getISA() == Target::GENX) {
-        inst = GenXLoad(ptr);
-    } else {
-#endif
+
 #if ISPC_LLVM_VERSION >= ISPC_LLVM_11_0
-        llvm::LoadInst *loadInst = new llvm::LoadInst(pt->getPointerElementType(), ptr, name, bblock);
+    llvm::LoadInst *inst = new llvm::LoadInst(pt->getPointerElementType(), ptr, name, bblock);
 #else
-        llvm::LoadInst *loadInst = new llvm::LoadInst(ptr, name, bblock);
+    llvm::LoadInst *inst = new llvm::LoadInst(ptr, name, bblock);
 #endif
-        if (g->opt.forceAlignedMemory && llvm::dyn_cast<llvm::VectorType>(pt->getElementType())) {
+
+    if (g->opt.forceAlignedMemory && llvm::dyn_cast<llvm::VectorType>(pt->getElementType())) {
 #if ISPC_LLVM_VERSION <= ISPC_LLVM_9_0
-            loadInst->setAlignment(g->target->getNativeVectorAlignment());
+        inst->setAlignment(g->target->getNativeVectorAlignment());
 #else // LLVM 10.0+
-            loadInst->setAlignment(llvm::MaybeAlign(g->target->getNativeVectorAlignment()).valueOrOne());
+        inst->setAlignment(llvm::MaybeAlign(g->target->getNativeVectorAlignment()).valueOrOne());
 #endif
-        }
-        inst = loadInst;
-#ifdef ISPC_GENX_ENABLED
     }
-#endif
+
     AddDebugPos(inst);
 
     llvm::Value *loadVal = inst;
@@ -2247,27 +2241,17 @@ llvm::Value *FunctionEmitContext::LoadInst(llvm::Value *ptr, llvm::Value *mask, 
                 // vs the proper alignment in practice.)
                 align = 1;
 
-#ifdef ISPC_GENX_ENABLED
-            llvm::PointerType *pt = llvm::dyn_cast<llvm::PointerType>(ptr->getType());
-            if (pt != NULL && llvm::dyn_cast<llvm::VectorType>(pt->getElementType()) &&
-                g->target->getISA() == Target::GENX) {
-                inst = GenXLoad(ptr);
-            } else {
-#endif
 #if ISPC_LLVM_VERSION <= ISPC_LLVM_9_0
-                inst = new llvm::LoadInst(ptr, name, false /* not volatile */, align, bblock);
+            inst = new llvm::LoadInst(ptr, name, false /* not volatile */, align, bblock);
 #elif ISPC_LLVM_VERSION == ISPC_LLVM_10_0
-                inst =
-                    new llvm::LoadInst(ptr, name, false /* not volatile */, llvm::MaybeAlign(align).valueOrOne(), bblock);
+            inst = new llvm::LoadInst(ptr, name, false /* not volatile */, llvm::MaybeAlign(align).valueOrOne(),
+                                      bblock);
 #else // LLVM 11.0+
-                llvm::PointerType *ptr_type = llvm::dyn_cast<llvm::PointerType>(ptr->getType());
-                inst =
-                    new llvm::LoadInst(ptr_type->getPointerElementType(), ptr, name, false /* not volatile */,
-                                       llvm::MaybeAlign(align).valueOrOne(), bblock);
+            llvm::PointerType *ptr_type = llvm::dyn_cast<llvm::PointerType>(ptr->getType());
+            inst = new llvm::LoadInst(ptr_type->getPointerElementType(), ptr, name, false /* not volatile */,
+                                      llvm::MaybeAlign(align).valueOrOne(), bblock);
 #endif
-#ifdef ISPC_GENX_ENABLED
-            }
-#endif
+
             AddDebugPos(inst);
             llvm::Value *loadVal = inst;
             // bool type is stored as i8. So, it requires some processing.
@@ -2738,6 +2722,7 @@ void FunctionEmitContext::StoreInst(llvm::Value *value, llvm::Value *ptr, const 
         AssertPos(currentPos, m->errorCount > 0);
         return;
     }
+
     llvm::PointerType *pt = llvm::dyn_cast<llvm::PointerType>(ptr->getType());
     AssertPos(currentPos, pt != NULL);
 
@@ -2752,24 +2737,23 @@ void FunctionEmitContext::StoreInst(llvm::Value *value, llvm::Value *ptr, const 
         }
     }
 
-    llvm::Value *inst;
-#ifdef ISPC_GENX_ENABLED
-    if (llvm::dyn_cast<llvm::VectorType>(pt->getElementType()) && g->target->getISA() == Target::GENX) {
-        inst = GenXStore(ptr, value);
-    } else {
-#endif
-        llvm::StoreInst *storeInst = new llvm::StoreInst(value, ptr, bblock);
-        if (g->opt.forceAlignedMemory && llvm::dyn_cast<llvm::VectorType>(pt->getElementType())) {
+    llvm::StoreInst *inst = new llvm::StoreInst(value, ptr, bblock);
+
+    if (g->opt.forceAlignedMemory && llvm::dyn_cast<llvm::VectorType>(pt->getElementType())) {
 #if ISPC_LLVM_VERSION <= ISPC_LLVM_9_0
-            storeInst->setAlignment(g->target->getNativeVectorAlignment());
+        inst->setAlignment(g->target->getNativeVectorAlignment());
 #else // LLVM 10.0+
-            storeInst->setAlignment(llvm::MaybeAlign(g->target->getNativeVectorAlignment()).valueOrOne());
+        inst->setAlignment(llvm::MaybeAlign(g->target->getNativeVectorAlignment()).valueOrOne());
 #endif
-        }
-        inst = storeInst;
-#ifdef ISPC_GENX_ENABLED
     }
-#endif
+    // Set ISPC-Uniform to exclude stores to uniform vectors from predication in SIMD CF Lowering.
+    // The assumption here is that ISPC generates stores for uniform vectors
+    // and scatters for non-uniform.
+    // FIXME: need to pass ISPC Type to assert it's IsUniformType
+    // Without information about whether type is uniform or not, this fix introduces more regressions
+    // than improvements. So I'm commenting it for now.
+    // llvm::MDNode *N = llvm::MDNode::get(*g->ctx, llvm::MDString::get(*g->ctx, "ISPC-Uniform"));
+    // I->setMetadata("ISPC-Uniform", N);
     AddDebugPos(inst);
 }
 
@@ -3413,21 +3397,6 @@ CFInfo *FunctionEmitContext::popCFState() {
 }
 
 #ifdef ISPC_GENX_ENABLED
-// Compute the block size and the number of blocks for svm gather/scatter.
-//
-// Block_Size, 1, 4, 8
-// Num_Blocks, 1, 2, 4,
-//             8 only valid for 4 byte blocks and execution size 8.
-//
-static unsigned getBlockCount(llvm::Type *type) {
-    unsigned numBytes = type->getPrimitiveSizeInBits() / 8;
-    assert(numBytes <= 8 && "out of sync");
-
-    // If this is N = 2 byte data, use 2 blocks;
-    // otherwise, use 1 block of N bytes.
-    return (numBytes == 2) ? numBytes : 1U;
-}
-
 bool FunctionEmitContext::ifNotEmulatedUniformForGen() const {
     // Go backwards through controlFlowInfo, since we add new nested scopes
     // to the back.
@@ -3441,54 +3410,6 @@ bool FunctionEmitContext::ifNotEmulatedUniformForGen() const {
         }
     }
     return false;
-}
-
-llvm::Value *FunctionEmitContext::GenXSVMGather(llvm::Value *ptr, llvm::Type *ptrType) {
-    AssertPos(currentPos, llvm::isa<llvm::VectorType>(ptrType));
-    unsigned nBits = m->module->getDataLayout().getPointerSizeInBits();
-    llvm::Value *predicate = GetInternalMask();
-    llvm::Value *addr = ptr;
-    if (nBits == 32)
-        addr = ZExtInst(addr, LLVMTypes::Int64VectorType);
-    llvm::Value *oldVal = llvm::UndefValue::get(ptrType);
-    unsigned numBlocks = getBlockCount(oldVal->getType());
-    unsigned numBlocksLog2 = llvm::Log2_32(numBlocks);
-    std::vector<llvm::Value *> args;
-    args.push_back(predicate);
-    args.push_back(LLVMInt32(numBlocksLog2));
-    args.push_back(addr);
-    args.push_back(oldVal);
-
-    // Overload with return type, predicate type and address vector type
-    llvm::Type *argTypes[] = {ptrType, args[0]->getType(), addr->getType()};
-
-    auto Fn = llvm::Intrinsic::getDeclaration(m->module, llvm::Intrinsic::genx_svm_gather, argTypes);
-    return CallInst(Fn, NULL, args, "");
-}
-
-llvm::Value *FunctionEmitContext::GenXSVMScatter(llvm::Value *ptr, llvm::Value *value, llvm::Type *ptrType) {
-    AssertPos(currentPos, llvm::isa<llvm::VectorType>(value->getType()));
-    unsigned nBits = m->module->getDataLayout().getPointerSizeInBits();
-    llvm::Value *addr = ptr;
-    llvm::Value *predicate = GetInternalMask();
-    if (nBits == 32)
-        addr = ZExtInst(addr, LLVMTypes::Int64VectorType);
-    llvm::PointerType *pt = llvm::dyn_cast<llvm::PointerType>(ptr->getType());
-    if (pt != NULL) {
-        addr = PtrToIntInst(addr, pt->getElementType());
-    }
-    unsigned numBlocks = getBlockCount(value->getType());
-    unsigned numBlocksLog2 = llvm::Log2_32(numBlocks);
-    std::vector<llvm::Value *> args;
-    args.push_back(predicate);
-    args.push_back(LLVMInt32(numBlocksLog2));
-    args.push_back(addr);
-    args.push_back(value);
-    // Overload with return type, predicate type and address vector type
-    llvm::Type *argTypes[] = {args[0]->getType(), addr->getType(), ptrType};
-
-    auto Fn = llvm::Intrinsic::getDeclaration(m->module, llvm::Intrinsic::genx_svm_scatter, argTypes);
-    return CallInst(Fn, NULL, args, "");
 }
 
 llvm::Value *FunctionEmitContext::GenXSimdCFAny(llvm::Value *value) {
@@ -3513,58 +3434,6 @@ llvm::Value *FunctionEmitContext::GenXSimdCFPredicate(llvm::Value *value, llvm::
     args.push_back(value);
     args.push_back(defaults);
     return llvm::CallInst::Create(Fn, args, "", bblock);
-}
-
-llvm::Value *FunctionEmitContext::GenXSVMLoad(llvm::Value *ptr, llvm::Type *retType) {
-    AssertPos(currentPos, llvm::isa<llvm::VectorType>(retType));
-    Assert(llvm::isPowerOf2_32(retType->getVectorNumElements()));
-    llvm::Value *svm_ld_ptrtoint = PtrToIntInst(ptr, LLVMTypes::Int32Type, "svm_ld_ptrtoint");
-    llvm::Value *svm_ld_zext = ZExtInst(svm_ld_ptrtoint, LLVMTypes::Int64Type, "svm_ld_zext");
-
-    auto Fn = llvm::Intrinsic::getDeclaration(m->module, llvm::Intrinsic::genx_svm_block_ld, retType);
-    return CallInst(Fn, NULL, svm_ld_zext, "");
-}
-
-llvm::Value *FunctionEmitContext::GenXLoad(llvm::Value *ptr) {
-    unsigned ID = llvm::Intrinsic::genx_vload;
-    llvm::Type *argTypes[] = {ptr->getType()->getPointerElementType(), ptr->getType()};
-    auto Fn = llvm::Intrinsic::getDeclaration(m->module, llvm::Intrinsic::genx_vload, argTypes);
-    return CallInst(Fn, NULL, ptr, "");
-}
-
-llvm::Value *FunctionEmitContext::GenXSVMStore(llvm::Value *ptr, llvm::Value *value) {
-    AssertPos(currentPos, llvm::isa<llvm::VectorType>(value->getType()));
-    Assert(llvm::isPowerOf2_32(value->getType()->getVectorNumElements()));
-
-    llvm::Value *svm_st_bitcast = BitCastInst(ptr, LLVMTypes::Int32PointerType, "svm_st_bitcast");
-    llvm::Value *svm_st_ptrtoint = PtrToIntInst(svm_st_bitcast, LLVMTypes::Int32Type, "svm_st_ptrtoint");
-    llvm::Value *svm_st_zext = ZExtInst(svm_st_ptrtoint, LLVMTypes::Int64Type, "svm_st_zext");
-    llvm::Type *argTypes[] = {value->getType()};
-    std::vector<llvm::Value *> args;
-    args.push_back(svm_st_zext);
-    args.push_back(value);
-    auto Fn = llvm::Intrinsic::getDeclaration(m->module, llvm::Intrinsic::genx_svm_block_st, argTypes);
-    return CallInst(Fn, NULL, args, "");
-}
-
-llvm::Value *FunctionEmitContext::GenXStore(llvm::Value *ptr, llvm::Value *value) {
-    AssertPos(currentPos, llvm::isa<llvm::VectorType>(value->getType()));
-    llvm::Type *Tys[] = {value->getType(), ptr->getType()};
-    std::vector<llvm::Value *> args;
-    args.push_back(value);
-    args.push_back(ptr);
-    auto Fn = llvm::Intrinsic::getDeclaration(m->module, llvm::Intrinsic::genx_vstore, Tys);
-    llvm::Value *IV = CallInst(Fn, NULL, args, "");
-    llvm::Instruction *I = llvm::dyn_cast<llvm::Instruction>(IV);
-    // Set ISPC-Uniform to exclude stores to uniform vectors from predication in SIMD CF Lowering.
-    // The assumption here is that ISPC generates stores for uniform vectors
-    // and scatters for non-uniform.
-    // FIXME: need to pass ISPC Type to assert it's IsUniformType
-    // Without information about whether type is uniform or not, this fix introduces more regressions
-    // than improvements. So I'm commenting it for now.
-    // llvm::MDNode *N = llvm::MDNode::get(*g->ctx, llvm::MDString::get(*g->ctx, "ISPC-Uniform"));
-    // I->setMetadata("ISPC-Uniform", N);
-    return IV;
 }
 
 llvm::Value *FunctionEmitContext::GenXPrepareVectorBranch(llvm::Value *value) {

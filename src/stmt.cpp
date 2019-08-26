@@ -1013,8 +1013,8 @@ void ForStmt::EmitCode(FunctionEmitContext *ctx) const {
                 Warning(test->pos, "Uniform condition supplied to cfor/cwhile "
                                    "statement.");
 #ifdef ISPC_GENX_ENABLED
-	if (g->target->getISA() != Target::GENX)
-         AssertPos(pos, ltest->getType() == LLVMTypes::BoolType);
+        if (g->target->getISA() != Target::GENX)
+            AssertPos(pos, ltest->getType() == LLVMTypes::BoolType);
 #endif
         ctx->BranchInst(bloop, bexit, ltest);
     } else {

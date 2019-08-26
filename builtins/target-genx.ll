@@ -690,9 +690,9 @@ declare <WIDTH x $1> @llvm.genx.vload.GEN_SUFFIX($1)(<WIDTH x $1>*)
 define void @__masked_store_blend_$1(<WIDTH x $1>* nocapture, <WIDTH x $1>,
                                       <WIDTH x MASK> %mask) nounwind
                                       alwaysinline {
-  %old = call <WIDTH x $1> @llvm.genx.vload.GEN_SUFFIX($1)(<WIDTH x $1>* %0)
+  %old = load <WIDTH x $1>, <WIDTH x $1>* %0
   %blend = select <WIDTH x MASK> %mask, <16 x $1> %1, <16 x $1> %old
-  call void @llvm.genx.vstore.GEN_SUFFIX($1)(<WIDTH x $1> %blend, <WIDTH x $1>* %0)
+  store <WIDTH x $1> %blend, <WIDTH x $1>* %0
   ret void
 }
 ')
@@ -716,7 +716,11 @@ define void @__masked_store_$1(<WIDTH x $1>* nocapture, <WIDTH x $1>, <WIDTH x M
 }
 
 define void @__masked_store_private_$1(<WIDTH x $1>* nocapture, <WIDTH x $1>, <WIDTH x MASK> %mask) nounwind alwaysinline {
-  call void  @__masked_store_blend_$1(<WIDTH x $1>* %0, <WIDTH x $1> %1, <WIDTH x MASK> %mask)
+  %ptr = bitcast <WIDTH x $1>* %0 to i8*
+  %broadcast_init = insertelement <WIDTH x i32> undef, i32 SIZEOF($1), i32 0
+  %shuffle = shufflevector <WIDTH x i32> %broadcast_init, <WIDTH x i32> undef, <WIDTH x i32> zeroinitializer
+  %offsets = mul <WIDTH x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>, %shuffle
+  call void @__scatter_base_offsets32_private_$1(i8* %ptr, i32 1, <WIDTH x i32> %offsets, <WIDTH x $1> %1, <WIDTH x MASK> %mask)
   ret void
 }
 ')
@@ -740,7 +744,7 @@ define <WIDTH x $1> @__masked_load_$1(i8 *, <WIDTH x MASK> %mask) nounwind alway
 
 define <WIDTH x $1> @__masked_load_private_$1(i8 *, <WIDTH x MASK> %mask) nounwind alwaysinline {
   %ptr_bitcast = bitcast i8* %0 to <WIDTH x $1>*
-  %res = call <WIDTH x $1> @llvm.genx.vload.GEN_SUFFIX($1)(<WIDTH x $1>* %ptr_bitcast)
+  %res = load <WIDTH x $1>, <WIDTH x $1>* %ptr_bitcast
   %masked_res = select <WIDTH x MASK> %mask, <WIDTH x $1> %res, <WIDTH x $1> zeroinitializer
   ret <WIDTH x $1> %masked_res
 }
