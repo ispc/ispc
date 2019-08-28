@@ -4469,11 +4469,21 @@ m4exit(`1')
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; read hw clock
 
-declare i64 @llvm.readcyclecounter()
+;; This intrinsic returns time stamp information as a vector of 4 32bit values:
+;; 1st and 2nd are the low and high bits of the 64bit timestamp,
+;; 3rd contain a bit that is set when a context switch occurs,
+;; and the 4th is unused.
+declare <4 x i32> @llvm.genx.timestamp.v4i32()
 
 define i64 @__clock() nounwind {
-  %r = call i64 @llvm.readcyclecounter()
-  ret i64 %r
+  %r = call <4 x i32> @llvm.genx.timestamp.v4i32()
+  %low = extractelement <4 x i32> %r, i32 0
+  %low64 = zext i32 %low to i64
+  %high = extractelement <4 x i32> %r, i32 1
+  %high64 = zext i32 %high to i64
+  %highshift = shl i64 %high64,32
+  %res = or i64 %highshift, %low64
+  ret i64 %res
 }
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
