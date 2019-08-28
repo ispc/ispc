@@ -1,5 +1,5 @@
 // Testing int8 implementation of varying * varying
-export void tests_int8(uniform float RET[]) {
+void tests_int8(uniform float RET[]) {
     varying int8 p_foo[programCount];
     for (uniform int i = 0; i < programCount; ++i) {
         p_foo[i] = i * programCount + programIndex  + 2;
@@ -20,7 +20,7 @@ export void tests_int8(uniform float RET[]) {
 }
 
 // Testing int16 implementation of varying * varying
-export void tests_int16(uniform float RET[]) {
+void tests_int16(uniform float RET[]) {
     varying int16 p_foo[programCount];
     for (uniform int i = 0; i < programCount; ++i) {
         p_foo[i] = i * programCount + programIndex  + 2;
@@ -41,7 +41,7 @@ export void tests_int16(uniform float RET[]) {
 }
 
 // Testing int32 implementation of varying * varying
-export void tests_int32(uniform float RET[]) {
+void tests_int32(uniform float RET[]) {
     varying int32 p_foo[programCount];
     for (uniform int i = 0; i < programCount; ++i) {
         p_foo[i] = i * programCount + programIndex  + 2;
@@ -63,7 +63,7 @@ export void tests_int32(uniform float RET[]) {
 }
 
 // Testing int64 implementation of varying * varying
-export void tests_int64(uniform float RET[]) {
+void tests_int64(uniform float RET[]) {
     varying int64 p_foo[programCount];
     for (uniform int i = 0; i < programCount; ++i) {
         p_foo[i] = i * programCount + programIndex  + 2;
@@ -84,7 +84,7 @@ export void tests_int64(uniform float RET[]) {
 }
 
 // Testing float implementation of varying * varying
-export void tests_float(uniform float RET[]) {
+void tests_float(uniform float RET[]) {
     varying float p_foo[programCount];
     for (uniform int i = 0; i < programCount; ++i) {
         p_foo[i] = i * programCount + programIndex  + 2;
@@ -105,7 +105,7 @@ export void tests_float(uniform float RET[]) {
 }
 
 // Testing double implementation of varying * varying
-export void tests_double(uniform float RET[]) {
+void tests_double(uniform float RET[]) {
     varying double p_foo[programCount];
     for (uniform int i = 0; i < programCount; ++i) {
         p_foo[i] = i * programCount + programIndex  + 2;
