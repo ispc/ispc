@@ -76,27 +76,27 @@
 #include <llvm/IR/AssemblyAnnotationWriter.h>
 #endif /* ISPC_NVPTX_ENABLED */
 #include "llvm/IR/LegacyPassManager.h"
-#include <llvm/PassRegistry.h>
-#include <llvm/Support/FileUtilities.h>
-#include <llvm/Support/FormattedStream.h>
-#include <llvm/Target/TargetMachine.h>
-#include <llvm/Target/TargetOptions.h>
-#include <llvm/Transforms/IPO.h>
-#include <llvm/Analysis/TargetTransformInfo.h>
-#include <llvm/IR/DataLayout.h>
-#include <llvm/IR/CFG.h>
-#include <llvm/IR/IRPrintingPasses.h>
-#include <llvm/IR/InstIterator.h>
-#include <llvm/IR/Verifier.h>
 #include <clang/Basic/TargetInfo.h>
 #include <clang/Frontend/CompilerInstance.h>
 #include <clang/Frontend/TextDiagnosticPrinter.h>
 #include <clang/Frontend/Utils.h>
 #include <clang/Lex/PreprocessorOptions.h>
+#include <llvm/Analysis/TargetTransformInfo.h>
+#include <llvm/Bitcode/BitcodeWriter.h>
+#include <llvm/IR/CFG.h>
+#include <llvm/IR/DataLayout.h>
+#include <llvm/IR/IRPrintingPasses.h>
+#include <llvm/IR/InstIterator.h>
+#include <llvm/IR/Verifier.h>
+#include <llvm/PassRegistry.h>
+#include <llvm/Support/FileUtilities.h>
+#include <llvm/Support/FormattedStream.h>
 #include <llvm/Support/Host.h>
 #include <llvm/Support/ToolOutputFile.h>
 #include <llvm/Support/raw_ostream.h>
-#include <llvm/Bitcode/BitcodeWriter.h>
+#include <llvm/Target/TargetMachine.h>
+#include <llvm/Target/TargetOptions.h>
+#include <llvm/Transforms/IPO.h>
 
 /*! list of files encountered by the parser. this allows emitting of
     the module file's dependencies via the -MMM option */
@@ -129,9 +129,7 @@ static void lDeclareSizeAndPtrIntTypes(SymbolTable *symbolTable) {
     functions that were inlined, etc.  This function takes a llvm::Module
     and tries to strip out all of this extra stuff.
  */
-static void lStripUnusedDebugInfo(llvm::Module *module) {
-    return;
-}
+static void lStripUnusedDebugInfo(llvm::Module *module) { return; }
 
 ///////////////////////////////////////////////////////////////////////////
 // Module
@@ -463,11 +461,11 @@ void Module::AddGlobalVariable(const std::string &name, const Type *type, Expr *
         llvm::DIGlobalVariableExpression *var = diBuilder->createGlobalVariableExpression(
             file, name, name, file, pos.first_line, sym->type->GetDIType(file), (sym->storageClass == SC_STATIC));
         sym_GV_storagePtr->addDebugInfo(var);
-/*#if ISPC_LLVM_VERSION <= ISPC_LLVM_3_6
-        Assert(var.Verify());
-#else // LLVM 3.7+
-      // comming soon
-#endif*/
+        /*#if ISPC_LLVM_VERSION <= ISPC_LLVM_3_6
+                Assert(var.Verify());
+        #else // LLVM 3.7+
+              // comming soon
+        #endif*/
     }
 }
 
@@ -737,9 +735,9 @@ void Module::AddFunctionDeclaration(const std::string &name, const FunctionType 
 #ifdef ISPC_NVPTX_ENABLED
         /* evghenii: fails function verification when "if" executed in nvptx target */
         if (g->target->getISA() != Target::NVPTX)
-#endif  /* ISPC_NVPTX_ENABLED */
-        // This also applies transitively to members I think?
-        function->addParamAttr(0, llvm::Attribute::NoAlias);
+#endif /* ISPC_NVPTX_ENABLED */
+            // This also applies transitively to members I think?
+            function->addParamAttr(0, llvm::Attribute::NoAlias);
 
     g->target->markFuncWithTargetAttr(function);
 
@@ -2113,8 +2111,8 @@ void Module::execPreprocessor(const char *infilename, llvm::raw_string_ostream *
         headerOpts.Verbose = 1;
 #endif
     for (int i = 0; i < (int)g->includePath.size(); ++i) {
-        headerOpts.AddPath(g->includePath[i], clang::frontend::Angled,
-                           false /* not a framework */, true /* ignore sys root */);
+        headerOpts.AddPath(g->includePath[i], clang::frontend::Angled, false /* not a framework */,
+                           true /* ignore sys root */);
     }
 
     clang::PreprocessorOptions &opts = inst.getPreprocessorOpts();
@@ -2511,8 +2509,8 @@ static void lEmitDispatchModule(llvm::Module *module, std::map<std::string, Func
     for (iter = functions.begin(); iter != functions.end(); ++iter)
         lCreateDispatchFunction(module, setFunc, systemBestISAPtr, iter->first, iter->second);
 
-        // Do some rudimentary cleanup of the final result and make sure that
-        // the module is all ok.
+    // Do some rudimentary cleanup of the final result and make sure that
+    // the module is all ok.
     llvm::legacy::PassManager optPM;
     optPM.add(llvm::createGlobalDCEPass());
     optPM.add(llvm::createVerifierPass());
