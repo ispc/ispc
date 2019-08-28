@@ -3037,8 +3037,19 @@ llvm::Value *FunctionEmitContext::CallInst(llvm::Value *func, const FunctionType
     // functions from the application.  Add the mask if it's needed.
     unsigned int calleeArgCount = lCalleeArgCount(func, funcType);
     AssertPos(currentPos, argVals.size() + 1 == calleeArgCount || argVals.size() == calleeArgCount);
-    if (argVals.size() + 1 == calleeArgCount)
-        argVals.push_back(GetFullMask());
+    if (argVals.size() + 1 == calleeArgCount) {
+        llvm::Value *mask = NULL;
+
+#ifdef ISPC_GENX_ENABLED
+        if (g->target->getISA() == Target::GENX)
+            // This will create mask according to current EM on SIMD CF Lowering.
+            // The result will be like       mask = select (EM, AllOn, AllFalse)
+            mask = GenXSimdCFPredicate(LLVMMaskAllOn);
+        else
+#endif
+            mask = GetFullMask();
+        argVals.push_back(mask);
+    }
 
     if (llvm::isa<llvm::VectorType>(func->getType()) == false) {
         // Regular 'uniform' function call--just one function or function
