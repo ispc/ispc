@@ -155,8 +155,12 @@ static void lPrintFileLineContext(SourcePos p) {
     while ((c = fgetc(f)) != EOF) {
         // Don't print more than three lines of context.  (More than that,
         // and we're probably doing the wrong thing...)
-        if (curLine >= std::max(p.first_line, p.last_line - 2) && curLine <= p.last_line)
+        if (curLine >= std::max(p.first_line, p.last_line - 2) && curLine <= p.last_line) {
+            if (c == '\t')
+                c = ' ';
+
             fputc(c, stderr);
+        }
         if (c == '\n')
             ++curLine;
         if (curLine > p.last_line)
