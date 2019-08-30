@@ -27,7 +27,7 @@
 ;;   PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
 ;;   LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
 ;;   NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
-;;   SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.  
+;;   SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 ;; This file provides a variety of macros used to generate LLVM bitcode
 ;; parametrized in various ways.  Implementations of the standard library
@@ -38,7 +38,7 @@
 
 ;; It is a bit of a pain to compute this in m4 for 32 and 64-wide targets...
 define(`ALL_ON_MASK',
-`ifelse(WIDTH, `64', `-1', 
+`ifelse(WIDTH, `64', `-1',
         WIDTH, `32', `4294967295',
                      `eval((1<<WIDTH)-1)')')
 
@@ -137,14 +137,14 @@ define(`MfORi32',
 
 define(`convert1to8', `
   $3 = shufflevector <1 x $1> $2, <1 x $1> undef,
-  <8 x i32> <i32 0, i32 undef, i32 undef, i32 undef, 
+  <8 x i32> <i32 0, i32 undef, i32 undef, i32 undef,
              i32 undef, i32 undef, i32 undef, i32 undef>
 ')
 
 
 define(`convert1to16', `
   $3 = shufflevector <1 x $1> $2, <1 x $1> undef,
-  <16 x i32> <i32 0, i32 undef, i32 undef, i32 undef, 
+  <16 x i32> <i32 0, i32 undef, i32 undef, i32 undef,
               i32 undef, i32 undef, i32 undef, i32 undef,
               i32 undef, i32 undef, i32 undef, i32 undef,
               i32 undef, i32 undef, i32 undef, i32 undef>
@@ -152,13 +152,13 @@ define(`convert1to16', `
 
 define(`convert4to8', `
   $3 = shufflevector <4 x $1> $2, <4 x $1> undef,
-  <8 x i32> <i32 0, i32 1, i32 2, i32 3, 
+  <8 x i32> <i32 0, i32 1, i32 2, i32 3,
              i32 undef, i32 undef, i32 undef, i32 undef>
 ')
 
 define(`convert4to16', `
   $3 = shufflevector <4 x $1> $2, <4 x $1> undef,
-  <16 x i32> <i32 0, i32 1, i32 2, i32 3, 
+  <16 x i32> <i32 0, i32 1, i32 2, i32 3,
               i32 undef, i32 undef, i32 undef, i32 undef,
               i32 undef, i32 undef, i32 undef, i32 undef,
               i32 undef, i32 undef, i32 undef, i32 undef>
@@ -173,7 +173,7 @@ define(`convert8to16', `
 
 define(`convert4to32', `
   $3 = shufflevector <4 x $1> $2, <4 x $1> undef,
-  <32 x i32> <i32 0, i32 1, i32 2, i32 3, 
+  <32 x i32> <i32 0, i32 1, i32 2, i32 3,
               i32 undef, i32 undef, i32 undef, i32 undef,
               i32 undef, i32 undef, i32 undef, i32 undef,
               i32 undef, i32 undef, i32 undef, i32 undef,
@@ -185,7 +185,7 @@ define(`convert4to32', `
 
 define(`convert8to32', `
   $3 = shufflevector <4 x $1> $2, <4 x $1> undef,
-  <32 x i32> <i32 0, i32 1, i32 2, i32 3, 
+  <32 x i32> <i32 0, i32 1, i32 2, i32 3,
               i32 4, i32 5, i32 6, i32 7,
               i32 undef, i32 undef, i32 undef, i32 undef,
               i32 undef, i32 undef, i32 undef, i32 undef,
@@ -197,10 +197,10 @@ define(`convert8to32', `
 
 define(`convert16to32', `
   $3 = shufflevector <4 x $1> $2, <4 x $1> undef,
-  <32 x i32> <i32  0, i32 1,  i32  2, i32  3, 
+  <32 x i32> <i32  0, i32 1,  i32  2, i32  3,
               i32  4, i32 5,  i32  6, i32  7,
               i32  8, i32 9,  i32 10, i32 11,
-              i32 12, i32 13, i32 14, i32 15 
+              i32 12, i32 13, i32 14, i32 15
               i32 undef, i32 undef, i32 undef, i32 undef,
               i32 undef, i32 undef, i32 undef, i32 undef,
               i32 undef, i32 undef, i32 undef, i32 undef,
@@ -251,7 +251,7 @@ define(`convert32to16', `
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;saturation arithmetic
- 
+
 define(`saturation_arithmetic',
 `ifelse(WIDTH,  `4', `saturation_arithmetic_vec4()',
         WIDTH,  `8', `saturation_arithmetic_vec8()',
@@ -264,7 +264,7 @@ define(`saturation_arithmetic',
 ;; create vector constant. Used by saturation_arithmetic_novec_universal below.
 
 define(`const_vector', `
-ifelse(WIDTH,  `4', `<$1 $2, $1 $2, $1 $2, $1 $2>', 
+ifelse(WIDTH,  `4', `<$1 $2, $1 $2, $1 $2, $1 $2>',
        WIDTH,  `8', `<$1 $2, $1 $2, $1 $2, $1 $2, $1 $2, $1 $2, $1 $2, $1 $2>',
        WIDTH, `16', `<$1 $2, $1 $2, $1 $2, $1 $2, $1 $2, $1 $2, $1 $2, $1 $2,
                       $1 $2, $1 $2, $1 $2, $1 $2, $1 $2, $1 $2, $1 $2, $1 $2>',
@@ -312,7 +312,7 @@ saturation_arithmetic_op(i32, mul)
 ;; utility function used by saturation_arithmetic_novec below.  This shouldn't be called by
 ;; target .ll files directly.
 ;; $1: {add,sub} (used in constructing function names)
-                        
+
 define(`saturation_arithmetic_novec_universal', `
 define <WIDTH x i8> @__p$1s_vi8(<WIDTH x i8>, <WIDTH x i8>) {
   %v0_i16 = sext <WIDTH x i8> %0 to <WIDTH x i16>
@@ -376,7 +376,7 @@ define(`saturation_arithmetic_vec4', `
 declare <16 x i8> @llvm.x86.sse2.padds.b(<16 x i8>, <16 x i8>) nounwind readnone
 define <4 x i8> @__padds_vi8(<4 x i8>, <4 x i8>) {
   convert4to16(i8, %0, %v0)
-  convert4to16(i8, %1, %v1)    
+  convert4to16(i8, %1, %v1)
   %r16 = call <16 x i8> @llvm.x86.sse2.padds.b(<16 x i8> %v0, <16 x i8> %v1)
   convert16to4(i8, %r16, %r)
   ret <4 x i8> %r
@@ -405,7 +405,7 @@ define <4 x i16> @__paddus_vi16(<4 x i16>, <4 x i16>) {
   convert4to8(i16, %0, %v0)
   convert4to8(i16, %1, %v1)
   %r16 = call <8 x i16> @llvm.x86.sse2.paddus.w(<8 x i16> %v0, <8 x i16> %v1)
-  convert8to4(i16, %r16, %r)  
+  convert8to4(i16, %r16, %r)
   ret <4 x i16> %r
 }
 
@@ -500,7 +500,7 @@ define <8 x i8> @__psubus_vi8(<8 x i8>, <8 x i8>) {
   convert8to16(i8, %1, %v1)
   %r16 = call <16 x i8> @llvm.x86.sse2.psubus.b(<16 x i8> %v0, <16 x i8> %v1)
   convert16to8(i8, %r16, %r)
-  ret <8 x i8> %r    
+  ret <8 x i8> %r
 }
 
 declare <8 x i16> @llvm.x86.sse2.psubus.w(<8 x i16>, <8 x i16>) nounwind readnone
@@ -533,7 +533,7 @@ define <16 x i8> @__paddus_vi8(<16 x i8> %a0, <16 x i8> %a1) {
 
 declare <8 x i16> @llvm.x86.sse2.paddus.w(<8 x i16>, <8 x i16>) nounwind readnone
 define <16 x i16> @__paddus_vi16(<16 x i16> %a0, <16 x i16> %a1) {
-  binary8to16(ret, i16, @llvm.x86.sse2.paddus.w, %a0, %a1)  
+  binary8to16(ret, i16, @llvm.x86.sse2.paddus.w, %a0, %a1)
   ret <16 x i16> %ret
 }
 
@@ -557,7 +557,7 @@ define <16 x i8> @__psubus_vi8(<16 x i8> %a0, <16 x i8> %a1) {
 
 declare <8 x i16> @llvm.x86.sse2.psubus.w(<8 x i16>, <8 x i16>) nounwind readnone
 define <16 x i16> @__psubus_vi16(<16 x i16> %a0, <16 x i16> %a1) {
-  binary8to16(ret, i16, @llvm.x86.sse2.psubus.w, %a0, %a1)  
+  binary8to16(ret, i16, @llvm.x86.sse2.psubus.w, %a0, %a1)
   ret <16 x i16> %ret
 }
 ')
@@ -639,7 +639,7 @@ define(`sse_unary_scalar', `
 ')
 
 ;; Similar to `sse_unary_scalar', this helper macro is for calling binary
-;; SSE instructions with scalar values, 
+;; SSE instructions with scalar values,
 ;; $1: name of variable to put the result in
 ;; $2: vector width of the target
 ;; $3: scalar type of the operand
@@ -654,51 +654,20 @@ define(`sse_binary_scalar', `
   %$1 = extractelement <$2 x $3> %$1_val, i32 0
 ')
 
-;; Do a reduction over a 4-wide vector
+;; Do a reduction over a 16-wide vector
 ;; $1: type of final scalar result
-;; $2: 4-wide function that takes 2 4-wide operands and returns the 
+;; $2: 16-wide function that takes 2 16-wide operands and returns the
 ;;     element-wise reduction
 ;; $3: scalar function that takes two scalar operands and returns
 ;;     the final reduction
-
-define(`reduce4', `
-  %v1 = shufflevector <4 x $1> %0, <4 x $1> undef,
-                      <4 x i32> <i32 2, i32 3, i32 undef, i32 undef>
-  %m1 = call <4 x $1> $2(<4 x $1> %v1, <4 x $1> %0)
-  %m1a = extractelement <4 x $1> %m1, i32 0
-  %m1b = extractelement <4 x $1> %m1, i32 1
-  %m = call $1 $3($1 %m1a, $1 %m1b)
-  ret $1 %m
-'
-)
-
-;; Similar to `reduce4', do a reduction over an 8-wide vector
-;; $1: type of final scalar result
-;; $2: 8-wide function that takes 2 8-wide operands and returns the 
-;;     element-wise reduction
-;; $3: scalar function that takes two scalar operands and returns
-;;     the final reduction
-
-define(`reduce8', `
-  %v1 = shufflevector <8 x $1> %0, <8 x $1> undef,
-        <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 undef, i32 undef, i32 undef, i32 undef>
-  %m1 = call <8 x $1> $2(<8 x $1> %v1, <8 x $1> %0)
-  %v2 = shufflevector <8 x $1> %m1, <8 x $1> undef,
-        <8 x i32> <i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
-  %m2 = call <8 x $1> $2(<8 x $1> %v2, <8 x $1> %m1)
-  %m2a = extractelement <8 x $1> %m2, i32 0
-  %m2b = extractelement <8 x $1> %m2, i32 1
-  %m = call $1 $3($1 %m2a, $1 %m2b)
-  ret $1 %m
-'
-)
+;; $4: input vector
 
 define(`reduce16', `
-  %v1 = shufflevector <16 x $1> %0, <16 x $1> undef,
+  %v1 = shufflevector <16 x $1> $4, <16 x $1> undef,
         <16 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15,
                     i32 undef, i32 undef, i32 undef, i32 undef,
                     i32 undef, i32 undef, i32 undef, i32 undef>
-  %m1 = call <16 x $1> $2(<16 x $1> %v1, <16 x $1> %0)
+  %m1 = call <16 x $1> $2(<16 x $1> %v1, <16 x $1> $4)
   %v2 = shufflevector <16 x $1> %m1, <16 x $1> undef,
         <16 x i32> <i32 4, i32 5, i32 6, i32 7,
                     i32 undef, i32 undef, i32 undef, i32 undef,
@@ -718,28 +687,6 @@ define(`reduce16', `
   ret $1 %m
 '
 )
-
-;; Do an reduction over an 8-wide vector, using a vector reduction function
-;; that only takes 4-wide vectors
-;; $1: type of final scalar result
-;; $2: 4-wide function that takes 2 4-wide operands and returns the 
-;;     element-wise reduction
-;; $3: scalar function that takes two scalar operands and returns
-;;     the final reduction
-
-define(`reduce8by4', `
-  v8tov4($1, %0, %v1, %v2)
-  %m1 = call <4 x $1> $2(<4 x $1> %v1, <4 x $1> %v2)
-  %v3 = shufflevector <4 x $1> %m1, <4 x $1> undef,
-        <4 x i32> <i32 2, i32 3, i32 undef, i32 undef>
-  %m2 = call <4 x $1> $2(<4 x $1> %v3, <4 x $1> %m1)
-  %m2a = extractelement <4 x $1> %m2, i32 0
-  %m2b = extractelement <4 x $1> %m2, i32 1
-  %m = call $1 $3($1 %m2a, $1 %m2b)
-  ret $1 %m
-'
-)
-
 
 ;; Apply a unary function to the 4-vector in %0, return the vector result.
 ;; $1: scalar type of result
@@ -802,7 +749,7 @@ define(`unary2to4', `
   %v$1_0 = call <2 x $2> $3(<2 x $2> %$1_0)
   %$1_1 = shufflevector <4 x $2> $4, <4 x $2> undef, <2 x i32> <i32 2, i32 3>
   %v$1_1 = call <2 x $2> $3(<2 x $2> %$1_1)
-  %$1 = shufflevector <2 x $2> %v$1_0, <2 x $2> %v$1_1, 
+  %$1 = shufflevector <2 x $2> %v$1_0, <2 x $2> %v$1_1,
            <4 x i32> <i32 0, i32 1, i32 2, i32 3>
 '
 )
@@ -822,12 +769,12 @@ define(`binary2to4', `
 %$1_1a = shufflevector <4 x $2> $4, <4 x $2> undef, <2 x i32> <i32 2, i32 3>
 %$1_1b = shufflevector <4 x $2> $5, <4 x $2> undef, <2 x i32> <i32 2, i32 3>
 %v$1_1 = call <2 x $2> $3(<2 x $2> %$1_1a, <2 x $2> %$1_1b)
-%$1 = shufflevector <2 x $2> %v$1_0, <2 x $2> %v$1_1, 
+%$1 = shufflevector <2 x $2> %v$1_0, <2 x $2> %v$1_1,
          <4 x i32> <i32 0, i32 1, i32 2, i32 3>
 '
 )
 
-;; Similar to `unary2to4', this maps a 4-wide unary function to an 8-wide 
+;; Similar to `unary2to4', this maps a 4-wide unary function to an 8-wide
 ;; vector operand
 ;; $1: name of variable into which the final result should go
 ;; $2: scalar type of the vector elements
@@ -839,7 +786,7 @@ define(`unary4to8', `
   %__v$1_0 = call <4 x $2> $3(<4 x $2> %__$1_0)
   %__$1_1 = shufflevector <8 x $2> $4, <8 x $2> undef, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
   %__v$1_1 = call <4 x $2> $3(<4 x $2> %__$1_1)
-  %$1 = shufflevector <4 x $2> %__v$1_0, <4 x $2> %__v$1_1, 
+  %$1 = shufflevector <4 x $2> %__v$1_0, <4 x $2> %__v$1_1,
            <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
 '
 )
@@ -855,7 +802,7 @@ define(`unary4to8conv', `
   %v$1_0 = call <4 x $3> $4(<4 x $2> %$1_0)
   %$1_1 = shufflevector <8 x $2> $5, <8 x $2> undef, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
   %v$1_1 = call <4 x $3> $4(<4 x $2> %$1_1)
-  %$1 = shufflevector <4 x $3> %v$1_0, <4 x $3> %v$1_1, 
+  %$1 = shufflevector <4 x $3> %v$1_0, <4 x $3> %v$1_1,
            <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
 '
 )
@@ -870,9 +817,9 @@ define(`unary4to16', `
   %__$1_3 = shufflevector <16 x $2> $4, <16 x $2> undef, <4 x i32> <i32 12, i32 13, i32 14, i32 15>
   %__v$1_3 = call <4 x $2> $3(<4 x $2> %__$1_3)
 
-  %__$1a = shufflevector <4 x $2> %__v$1_0, <4 x $2> %__v$1_1, 
+  %__$1a = shufflevector <4 x $2> %__v$1_0, <4 x $2> %__v$1_1,
            <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
-  %__$1b = shufflevector <4 x $2> %__v$1_2, <4 x $2> %__v$1_3, 
+  %__$1b = shufflevector <4 x $2> %__v$1_2, <4 x $2> %__v$1_3,
            <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
   %$1 = shufflevector <8 x $2> %__$1a, <8 x $2> %__$1b,
            <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7,
@@ -890,9 +837,9 @@ define(`unary4to16conv', `
   %$1_3 = shufflevector <16 x $2> $5, <16 x $2> undef, <4 x i32> <i32 12, i32 13, i32 14, i32 15>
   %v$1_3 = call <4 x $3> $4(<4 x $2> %$1_3)
 
-  %$1a = shufflevector <4 x $3> %v$1_0, <4 x $3> %v$1_1, 
+  %$1a = shufflevector <4 x $3> %v$1_0, <4 x $3> %v$1_1,
            <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
-  %$1b = shufflevector <4 x $3> %v$1_2, <4 x $3> %v$1_3, 
+  %$1b = shufflevector <4 x $3> %v$1_2, <4 x $3> %v$1_3,
            <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
   %$1 = shufflevector <8 x $3> %$1a, <8 x $3> %$1b,
            <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7,
@@ -913,7 +860,7 @@ define(`unary8to16', `
   %$1_1 = shufflevector <16 x $2> $4, <16 x $2> undef,
              <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
   %v$1_1 = call <8 x $2> $3(<8 x $2> %$1_1)
-  %$1 = shufflevector <8 x $2> %v$1_0, <8 x $2> %v$1_1, 
+  %$1 = shufflevector <8 x $2> %v$1_0, <8 x $2> %v$1_1,
            <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7,
                        i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
 '
@@ -934,7 +881,7 @@ define(`binary4to8', `
 %$1_1a = shufflevector <8 x $2> $4, <8 x $2> undef, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
 %$1_1b = shufflevector <8 x $2> $5, <8 x $2> undef, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
 %v$1_1 = call <4 x $2> $3(<4 x $2> %$1_1a, <4 x $2> %$1_1b)
-%$1 = shufflevector <4 x $2> %v$1_0, <4 x $2> %v$1_1, 
+%$1 = shufflevector <4 x $2> %v$1_0, <4 x $2> %v$1_1,
          <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
 '
 )
@@ -950,7 +897,7 @@ define(`binary8to16', `
 %$1_1b = shufflevector <16 x $2> $5, <16 x $2> undef,
           <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
 %v$1_1 = call <8 x $2> $3(<8 x $2> %$1_1a, <8 x $2> %$1_1b)
-%$1 = shufflevector <8 x $2> %v$1_0, <8 x $2> %v$1_1, 
+%$1 = shufflevector <8 x $2> %v$1_0, <8 x $2> %v$1_1,
          <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7,
                      i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
 '
@@ -961,19 +908,19 @@ define(`binary4to16', `
           <4 x i32> <i32 0, i32 1, i32 2, i32 3>
 %$1_0b = shufflevector <16 x $2> $5, <16 x $2> undef,
           <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-%r$1_0 = call <4 x $2> $3(<4 x $2> %$1_0a, <4 x $2> %$1_0b) 
+%r$1_0 = call <4 x $2> $3(<4 x $2> %$1_0a, <4 x $2> %$1_0b)
 
 %$1_1a = shufflevector <16 x $2> $4, <16 x $2> undef,
           <4 x i32> <i32 4, i32 5, i32 6, i32 7>
 %$1_1b = shufflevector <16 x $2> $5, <16 x $2> undef,
           <4 x i32> <i32 4, i32 5, i32 6, i32 7>
-%r$1_1 = call <4 x $2> $3(<4 x $2> %$1_1a, <4 x $2> %$1_1b) 
+%r$1_1 = call <4 x $2> $3(<4 x $2> %$1_1a, <4 x $2> %$1_1b)
 
 %$1_2a = shufflevector <16 x $2> $4, <16 x $2> undef,
           <4 x i32> <i32 8, i32 9, i32 10, i32 11>
 %$1_2b = shufflevector <16 x $2> $5, <16 x $2> undef,
           <4 x i32> <i32 8, i32 9, i32 10, i32 11>
-%r$1_2 = call <4 x $2> $3(<4 x $2> %$1_2a, <4 x $2> %$1_2b) 
+%r$1_2 = call <4 x $2> $3(<4 x $2> %$1_2a, <4 x $2> %$1_2b)
 
 %$1_3a = shufflevector <16 x $2> $4, <16 x $2> undef,
           <4 x i32> <i32 12, i32 13, i32 14, i32 15>
@@ -981,17 +928,17 @@ define(`binary4to16', `
           <4 x i32> <i32 12, i32 13, i32 14, i32 15>
 %r$1_3 = call <4 x $2> $3(<4 x $2> %$1_3a, <4 x $2> %$1_3b)
 
-%r$1_01 = shufflevector <4 x $2> %r$1_0, <4 x $2> %r$1_1, 
+%r$1_01 = shufflevector <4 x $2> %r$1_0, <4 x $2> %r$1_1,
           <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
-%r$1_23 = shufflevector <4 x $2> %r$1_2, <4 x $2> %r$1_3, 
+%r$1_23 = shufflevector <4 x $2> %r$1_2, <4 x $2> %r$1_3,
           <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
 
-%$1 = shufflevector <8 x $2> %r$1_01, <8 x $2> %r$1_23, 
+%$1 = shufflevector <8 x $2> %r$1_01, <8 x $2> %r$1_23,
           <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7,
                       i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
 ')
 
-;; Maps a 2-wide unary function to an 8-wide vector operand, returning an 
+;; Maps a 2-wide unary function to an 8-wide vector operand, returning an
 ;; 8-wide vector result
 ;; $1: name of variable into which the final result should go
 ;; $2: scalar type of the vector elements
@@ -1007,12 +954,12 @@ define(`unary2to8', `
   %v$1_2 = call <2 x $2> $3(<2 x $2> %$1_2)
   %$1_3 = shufflevector <8 x $2> $4, <8 x $2> undef, <2 x i32> <i32 6, i32 7>
   %v$1_3 = call <2 x $2> $3(<2 x $2> %$1_3)
-  %$1a = shufflevector <2 x $2> %v$1_0, <2 x $2> %v$1_1, 
+  %$1a = shufflevector <2 x $2> %v$1_0, <2 x $2> %v$1_1,
            <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-  %$1b = shufflevector <2 x $2> %v$1_2, <2 x $2> %v$1_3, 
+  %$1b = shufflevector <2 x $2> %v$1_2, <2 x $2> %v$1_3,
            <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   %$1 = shufflevector <4 x $2> %$1a, <4 x $2> %$1b,
-           <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>           
+           <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
 '
 )
 
@@ -1108,12 +1055,12 @@ define(`binary2to16', `
   %$1_7b = shufflevector <16 x $2> $5, <16 x $2> undef, <2 x i32> <i32 14, i32 15>
   %v$1_7 = call <2 x $2> $3(<2 x $2> %$1_7a, <2 x $2> %$1_7b)
 
-  %$1a = shufflevector <2 x $2> %v$1_0, <2 x $2> %v$1_1, 
+  %$1a = shufflevector <2 x $2> %v$1_0, <2 x $2> %v$1_1,
            <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-  %$1b = shufflevector <2 x $2> %v$1_2, <2 x $2> %v$1_3, 
+  %$1b = shufflevector <2 x $2> %v$1_2, <2 x $2> %v$1_3,
            <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   %$1ab = shufflevector <4 x $2> %$1a, <4 x $2> %$1b,
-           <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>           
+           <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
 
   %$1c = shufflevector <2 x $2> %v$1_4, <2 x $2> %v$1_5,
            <4 x i32> <i32 0, i32 1, i32 2, i32 3>
@@ -1134,14 +1081,14 @@ define(`binary2to16', `
 ;; $1: value to be rounded
 ;; $2: integer encoding of rounding mode
 ;; FIXME: this just has a ret statement at the end to return the result,
-;; which is inconsistent with the macros above 
+;; which is inconsistent with the macros above
 
 define(`round4to8', `
 %v0 = shufflevector <8 x float> $1, <8 x float> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
 %v1 = shufflevector <8 x float> $1, <8 x float> undef, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
 %r0 = call <4 x float> @llvm.x86.sse41.round.ps(<4 x float> %v0, i32 $2)
 %r1 = call <4 x float> @llvm.x86.sse41.round.ps(<4 x float> %v1, i32 $2)
-%ret = shufflevector <4 x float> %r0, <4 x float> %r1, 
+%ret = shufflevector <4 x float> %r0, <4 x float> %r1,
          <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
 ret <8 x float> %ret
 '
@@ -1174,7 +1121,7 @@ define(`round8to16', `
         <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
 %r0 = call <8 x float> @llvm.x86.avx.round.ps.256(<8 x float> %v0, i32 $2)
 %r1 = call <8 x float> @llvm.x86.avx.round.ps.256(<8 x float> %v1, i32 $2)
-%ret = shufflevector <8 x float> %r0, <8 x float> %r1, 
+%ret = shufflevector <8 x float> %r0, <8 x float> %r1,
          <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7,
                      i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
 ret <16 x float> %ret
@@ -1186,7 +1133,7 @@ define(`round4to8double', `
 %v1 = shufflevector <8 x double> $1, <8 x double> undef, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
 %r0 = call <4 x double> @llvm.x86.avx.round.pd.256(<4 x double> %v0, i32 $2)
 %r1 = call <4 x double> @llvm.x86.avx.round.pd.256(<4 x double> %v1, i32 $2)
-%ret = shufflevector <4 x double> %r0, <4 x double> %r1, 
+%ret = shufflevector <4 x double> %r0, <4 x double> %r1,
          <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
 ret <8 x double> %ret
 '
@@ -1199,7 +1146,7 @@ define(`round2to4double', `
 %v1 = shufflevector <4 x double> $1, <4 x double> undef, <2 x i32> <i32 2, i32 3>
 %r0 = call <2 x double> @llvm.x86.sse41.round.pd(<2 x double> %v0, i32 $2)
 %r1 = call <2 x double> @llvm.x86.sse41.round.pd(<2 x double> %v1, i32 $2)
-%ret = shufflevector <2 x double> %r0, <2 x double> %r1, 
+%ret = shufflevector <2 x double> %r0, <2 x double> %r1,
          <4 x i32> <i32 0, i32 1, i32 2, i32 3>
 ret <4 x double> %ret
 '
@@ -1214,9 +1161,9 @@ define(`round2to8double', `
 %r1 = call <2 x double> @llvm.x86.sse41.round.pd(<2 x double> %v1, i32 $2)
 %r2 = call <2 x double> @llvm.x86.sse41.round.pd(<2 x double> %v2, i32 $2)
 %r3 = call <2 x double> @llvm.x86.sse41.round.pd(<2 x double> %v3, i32 $2)
-%ret0 = shufflevector <2 x double> %r0, <2 x double> %r1, 
+%ret0 = shufflevector <2 x double> %r0, <2 x double> %r1,
           <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-%ret1 = shufflevector <2 x double> %r2, <2 x double> %r3, 
+%ret1 = shufflevector <2 x double> %r2, <2 x double> %r3,
           <4 x i32> <i32 0, i32 1, i32 2, i32 3>
 %ret = shufflevector <4 x double> %ret0, <4 x double> %ret1,
           <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
@@ -1273,9 +1220,9 @@ define(`round4to16double', `
 %r1 = call <4 x double> @llvm.x86.avx.round.pd.256(<4 x double> %v1, i32 $2)
 %r2 = call <4 x double> @llvm.x86.avx.round.pd.256(<4 x double> %v2, i32 $2)
 %r3 = call <4 x double> @llvm.x86.avx.round.pd.256(<4 x double> %v3, i32 $2)
-%ret0 = shufflevector <4 x double> %r0, <4 x double> %r1, 
+%ret0 = shufflevector <4 x double> %r0, <4 x double> %r1,
           <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
-%ret1 = shufflevector <4 x double> %r2, <4 x double> %r3, 
+%ret1 = shufflevector <4 x double> %r2, <4 x double> %r3,
           <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
 %ret = shufflevector <8 x double> %ret0, <8 x double> %ret1,
           <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7,
@@ -1311,7 +1258,7 @@ define(`shuffles', `
 define <WIDTH x $1> @__broadcast_$1(<WIDTH x $1>, i32) nounwind readnone alwaysinline {
   %v = extractelement <WIDTH x $1> %0, i32 %1
   %broadcast_init = insertelement <WIDTH x $1> undef, $1 %v, i32 0
-  %broadcast = shufflevector <WIDTH x $1> %broadcast_init, <WIDTH x $1> undef, <WIDTH x i32> zeroinitializer 
+  %broadcast = shufflevector <WIDTH x $1> %broadcast_init, <WIDTH x $1> undef, <WIDTH x i32> zeroinitializer
   ret <WIDTH x $1> %broadcast
 }
 
@@ -1322,7 +1269,7 @@ define <WIDTH x $1> @__rotate_$1(<WIDTH x $1>, i32) nounwind readnone alwaysinli
 
 is_const:
   ; though verbose, this turms into tight code if %1 is a constant
-forloop(i, 0, eval(WIDTH-1), `  
+forloop(i, 0, eval(WIDTH-1), `
   %delta_`'i = add i32 %1, i
   %delta_clamped_`'i = and i32 %delta_`'i, eval(WIDTH-1)
   %v_`'i = extractelement <WIDTH x $1> %0, i32 %delta_clamped_`'i')
@@ -1367,9 +1314,9 @@ define <WIDTH x $1> @__shift_$1(<WIDTH x $1>, i32) nounwind readnone alwaysinlin
 
 
 define <WIDTH x $1> @__shuffle_$1(<WIDTH x $1>, <WIDTH x i32>) nounwind readnone alwaysinline {
-forloop(i, 0, eval(WIDTH-1), `  
+forloop(i, 0, eval(WIDTH-1), `
   %index_`'i = extractelement <WIDTH x i32> %1, i32 i')
-forloop(i, 0, eval(WIDTH-1), `  
+forloop(i, 0, eval(WIDTH-1), `
   %v_`'i = extractelement <WIDTH x $1> %0, i32 %index_`'i')
 
   %ret_0 = insertelement <WIDTH x $1> undef, $1 %v_0, i32 0
@@ -1383,7 +1330,7 @@ define <WIDTH x $1> @__shuffle2_$1(<WIDTH x $1>, <WIDTH x $1>, <WIDTH x i32>) no
   %v2 = shufflevector <WIDTH x $1> %0, <WIDTH x $1> %1, <eval(2*WIDTH) x i32> <
       forloop(i, 0, eval(2*WIDTH-2), `i32 i, ') i32 eval(2*WIDTH-1)
   >
-forloop(i, 0, eval(WIDTH-1), `  
+forloop(i, 0, eval(WIDTH-1), `
   %index_`'i = extractelement <WIDTH x i32> %2, i32 i')
 
   %isc = call i1 @__is_compile_time_constant_varying_int32(<WIDTH x i32> %2)
@@ -1392,7 +1339,7 @@ forloop(i, 0, eval(WIDTH-1), `
 is_const:
   ; extract from the requested lanes and insert into the result; LLVM turns
   ; this into good code in the end
-forloop(i, 0, eval(WIDTH-1), `  
+forloop(i, 0, eval(WIDTH-1), `
   %v_`'i = extractelement <eval(2*WIDTH) x $1> %v2, i32 %index_`'i')
 
   %ret_0 = insertelement <WIDTH x $1> undef, $1 %v_0, i32 0
@@ -1410,7 +1357,7 @@ not_const:
   %val_0 = load PTR_OP_ARGS(`$1 ')  %ptr_0
   %result_0 = insertelement <WIDTH x $1> undef, $1 %val_0, i32 0
 
-forloop(i, 1, eval(WIDTH-1), `  
+forloop(i, 1, eval(WIDTH-1), `
   %ptr_`'i = getelementptr PTR_OP_ARGS(`$1') %baseptr, i32 %index_`'i
   %val_`'i = load PTR_OP_ARGS(`$1 ')  %ptr_`'i
   %result_`'i = insertelement <WIDTH x $1> %result_`'eval(i-1), $1 %val_`'i, i32 i
@@ -1575,7 +1522,7 @@ define <$1 x $3> @__atomic_$2_$4_global($3 * %ptr, <$1 x $3> %val,
   ; make the atomic call, passing it the final reduced value
   %final0 = atomicrmw $2 $3 * %ptr, $3 %red`'eval($1-1) seq_cst
 
-  ; now go back and compute the values to be returned for each program 
+  ; now go back and compute the values to be returned for each program
   ; instance--this just involves smearing the old value returned from the
   ; actual atomic call across the vector and applying the vector op to the
   ; %eltvec vector computed above..
@@ -1608,7 +1555,7 @@ define $3 @__atomic_$2_uniform_$4_global($3 * %ptr, $3 %val) nounwind alwaysinli
 }
 ')
 
-;; Macro to declare the function that implements the swap atomic.  
+;; Macro to declare the function that implements the swap atomic.
 ;; Takes three parameters:
 ;; $1: vector width of the target
 ;; $2: llvm type of the vector elements (e.g. i32)
@@ -1687,7 +1634,7 @@ define <$1 x $2> @__atomic_compare_exchange_$3_global($2* %ptr, <$1 x $2> %cmp,
 }
 
 define $2 @__atomic_compare_exchange_uniform_$3_global($2* %ptr, $2 %cmp,
-                                                       $2 %val) nounwind alwaysinline {                                                           
+                                                       $2 %val) nounwind alwaysinline {
   ;; 3.5 - trunk code is the same since m4 has no OR and AND operators
   ifelse(LLVM_VERSION,LLVM_3_5,`
    %r_t = cmpxchg $2 * %ptr, $2 %cmp, $2 %val seq_cst seq_cst
@@ -3075,7 +3022,7 @@ declare void @__pseudo_masked_store_double(<WIDTH x double> * nocapture, <WIDTH 
 ; Declare the pseudo-gather functions.  When the ispc front-end needs
 ; to perform a gather, it generates a call to one of these functions,
 ; which ideally have these signatures:
-;    
+;
 ; varying int8  __pseudo_gather_i8(varying int8 *, mask)
 ; varying int16 __pseudo_gather_i16(varying int16 *, mask)
 ; varying int32 __pseudo_gather_i32(varying int32 *, mask)
@@ -3101,7 +3048,7 @@ declare <WIDTH x float> @__pseudo_gather64_float(<WIDTH x i64>, <WIDTH x MASK>) 
 declare <WIDTH x i64> @__pseudo_gather64_i64(<WIDTH x i64>, <WIDTH x MASK>) nounwind readonly
 declare <WIDTH x double> @__pseudo_gather64_double(<WIDTH x i64>, <WIDTH x MASK>) nounwind readonly
 
-; The ImproveMemoryOps optimization pass finds these calls and then 
+; The ImproveMemoryOps optimization pass finds these calls and then
 ; tries to convert them to be calls to gather functions that take a uniform
 ; base pointer and then a varying integer offset, when possible.
 ;
@@ -3114,7 +3061,7 @@ declare <WIDTH x double> @__pseudo_gather64_double(<WIDTH x i64>, <WIDTH x MASK>
 ;
 ; varying int{8,16,32,float,64,double}
 ; __pseudo_gather_factored_base_offsets{32,64}_{i8,i16,i32,float,i64,double}(uniform int8 *base,
-;                                    int{32,64} offsets, uniform int32 offset_scale, 
+;                                    int{32,64} offsets, uniform int32 offset_scale,
 ;                                    int{32,64} offset_delta, mask)
 ;
 ; For targets with a gather instruction, it is better to just factor them into
@@ -3230,14 +3177,14 @@ declare void @__pseudo_scatter64_double(<WIDTH x i64>, <WIDTH x double>, <WIDTH 
 ; And the ImproveMemoryOps optimization pass also finds these and
 ; either transforms them to scatters like:
 ;
-; void __pseudo_scatter_factored_base_offsets{32,64}_i8(uniform int8 *base, 
-;             varying int32 offsets, uniform int32 offset_scale, 
+; void __pseudo_scatter_factored_base_offsets{32,64}_i8(uniform int8 *base,
+;             varying int32 offsets, uniform int32 offset_scale,
 ;             varying int{32,64} offset_delta, varying int8 values, mask)
 ; (and similarly for 16/32/64 bit values)
 ;
 ; Or, if the target has a native scatter instruction:
 ;
-; void __pseudo_scatter_base_offsets{32,64}_i8(uniform int8 *base, 
+; void __pseudo_scatter_base_offsets{32,64}_i8(uniform int8 *base,
 ;             uniform int32 offset_scale, varying int{32,64} offsets,
 ;             varying int8 values, mask)
 ; (and similarly for 16/32/64 bit values)
@@ -3520,7 +3467,7 @@ define void @__keep_funcs_live(i8 * %ptr, <WIDTH x i8> %v8, <WIDTH x i16> %v16,
                                                         <WIDTH x MASK> %mask)
   call void @__usedouble(<WIDTH x double> %g64_d)
 
-ifelse(HAVE_GATHER, `1', 
+ifelse(HAVE_GATHER, `1',
 `
   %nfpgbo32_8 = call <WIDTH x i8>
        @__pseudo_gather_base_offsets32_i8(i8 * %ptr, i32 0,
@@ -3921,7 +3868,7 @@ define i8 @__extract_int8(<WIDTH x i8>, i32) nounwind readnone alwaysinline {
   ret i8 %extract
 }
 
-define <WIDTH x i8> @__insert_int8(<WIDTH x i8>, i32, 
+define <WIDTH x i8> @__insert_int8(<WIDTH x i8>, i32,
                                    i8) nounwind readnone alwaysinline {
   %insert = insertelement <WIDTH x i8> %0, i8 %2, i32 %1
   ret <WIDTH x i8> %insert
@@ -3932,7 +3879,7 @@ define i16 @__extract_int16(<WIDTH x i16>, i32) nounwind readnone alwaysinline {
   ret i16 %extract
 }
 
-define <WIDTH x i16> @__insert_int16(<WIDTH x i16>, i32, 
+define <WIDTH x i16> @__insert_int16(<WIDTH x i16>, i32,
                                      i16) nounwind readnone alwaysinline {
   %insert = insertelement <WIDTH x i16> %0, i16 %2, i32 %1
   ret <WIDTH x i16> %insert
@@ -3943,7 +3890,7 @@ define i32 @__extract_int32(<WIDTH x i32>, i32) nounwind readnone alwaysinline {
   ret i32 %extract
 }
 
-define <WIDTH x i32> @__insert_int32(<WIDTH x i32>, i32, 
+define <WIDTH x i32> @__insert_int32(<WIDTH x i32>, i32,
                                      i32) nounwind readnone alwaysinline {
   %insert = insertelement <WIDTH x i32> %0, i32 %2, i32 %1
   ret <WIDTH x i32> %insert
@@ -3954,7 +3901,7 @@ define i64 @__extract_int64(<WIDTH x i64>, i32) nounwind readnone alwaysinline {
   ret i64 %extract
 }
 
-define <WIDTH x i64> @__insert_int64(<WIDTH x i64>, i32, 
+define <WIDTH x i64> @__insert_int64(<WIDTH x i64>, i32,
                                      i64) nounwind readnone alwaysinline {
   %insert = insertelement <WIDTH x i64> %0, i64 %2, i32 %1
   ret <WIDTH x i64> %insert
@@ -4187,7 +4134,7 @@ ifelse(WIDTH, 1, `define(`ALIGNMENT', `16')', `define(`ALIGNMENT', `eval(WIDTH*4
 
 @memory_alignment = internal constant i32 ALIGNMENT
 
-ifelse(BUILD_OS, `UNIX', 
+ifelse(BUILD_OS, `UNIX',
 `
 
 ifelse(RUNTIME, `32',
@@ -4489,13 +4436,13 @@ define i64 @__clock() nounwind {
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; stdlib transcendentals
 ;;
-;; These functions provide entrypoints that call out to the libm 
+;; These functions provide entrypoints that call out to the libm
 ;; implementations of the transcendental functions
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 declare float @sinf(float) nounwind readnone
 declare float @cosf(float) nounwind readnone
-declare void @sincosf(float, float *, float *) nounwind 
+declare void @sincosf(float, float *, float *) nounwind
 declare float @asinf(float) nounwind readnone
 declare float @acosf(float) nounwind readnone
 declare float @tanf(float) nounwind readnone
@@ -4563,7 +4510,7 @@ define float @__stdlib_powf(float, float) nounwind readnone alwaysinline {
 declare double @sin(double) nounwind readnone
 declare double @asin(double) nounwind readnone
 declare double @cos(double) nounwind readnone
-declare void @sincos(double, double *, double *) nounwind 
+declare void @sincos(double, double *, double *) nounwind
 declare double @tan(double) nounwind readnone
 declare double @atan(double) nounwind readnone
 declare double @atan2(double, double) nounwind readnone
@@ -4734,51 +4681,6 @@ define double @__atomic_compare_exchange_uniform_double_global(double * %ptr, do
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; 64-bit integer min and max functions
-
-;; utility function used by int64minmax below.  This shouldn't be called by
-;; target .ll files directly.
-;; $1: target vector width
-;; $2: {min,max} (used in constructing function names)
-;; $3: {int64,uint64} (used in constructing function names)
-;; $4: {slt,sgt} comparison operator to used
-
-define(`i64minmax', `
-define i64 @__$2_uniform_$3(i64, i64) nounwind alwaysinline readnone {
-  %c = icmp $4 i64 %0, %1
-  %r = select i1 %c, i64 %0, i64 %1
-  ret i64 %r
-}
-
-define <$1 x i64> @__$2_varying_$3(<$1 x i64>, <$1 x i64>) nounwind alwaysinline readnone {
-  %rptr = alloca <$1 x i64>
-  %r64ptr = bitcast <$1 x i64> * %rptr to i64 *
-
-  forloop(i, 0, eval($1-1), `
-  %v0_`'i = extractelement <$1 x i64> %0, i32 i
-  %v1_`'i = extractelement <$1 x i64> %1, i32 i
-  %c_`'i = icmp $4 i64 %v0_`'i, %v1_`'i
-  %v_`'i = select i1 %c_`'i, i64 %v0_`'i, i64 %v1_`'i
-  %ptr_`'i = getelementptr PTR_OP_ARGS(`i64') %r64ptr, i32 i
-  store i64 %v_`'i, i64 * %ptr_`'i
-')                  
-
-  %ret = load PTR_OP_ARGS(`<$1 x i64> ')  %rptr
-  ret <$1 x i64> %ret
-}
-')
-
-;; this is the function that target .ll files should call; it just takes the target
-;; vector width as a parameter
-
-define(`int64minmax', `
-i64minmax(WIDTH,min,int64,slt)
-i64minmax(WIDTH,max,int64,sgt)
-i64minmax(WIDTH,min,uint64,ult)
-i64minmax(WIDTH,max,uint64,ugt)
-')
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Emit general-purpose code to do a masked load for targets that dont have
 ;; an instruction to do that.  Parameters:
 ;; $1: element type for which to emit the function (i32, i64, ...) (and suffix for function name)
@@ -4789,7 +4691,7 @@ define <WIDTH x $1> @__masked_load_$1(i8 *, <WIDTH x MASK> %mask) nounwind alway
 entry:
   %retptr = alloca <WIDTH x $1>
   %mm = call i64 @__movmsk(<WIDTH x MASK> %mask)
-  
+
   ; if the first lane and the last lane are on, then it is safe to do a vector load
   ; of the whole thing--what the lanes in the middle want turns out to not matter...
   %mm_and_low = and i64 %mm, 1
@@ -4807,7 +4709,7 @@ entry:
   %retptr32 = bitcast <WIDTH x $1> * %retptr to $1 *
   br i1 %can_vload_maybe_fast, label %load, label %loop
 
-load: 
+load:
   %ptr = bitcast i8 * %0 to <WIDTH x $1> *
   %valall = load PTR_OP_ARGS(`<WIDTH x $1> ')  %ptr, align $2
   ret <WIDTH x $1> %valall
@@ -4953,10 +4855,10 @@ define(`masked_store_blend_8_16_by_4', `
 define void @__masked_store_blend_i8(<4 x i8>* nocapture, <4 x i8>,
                                      <4 x i32>) nounwind alwaysinline {
   %old = load PTR_OP_ARGS(`<4 x i8> ')  %0, align 1
-  
+
   %m = trunc <4 x i32> %2 to <4 x i1>
   %resultvec = select <4 x i1> %m, <4 x i8> %1, <4 x i8> %old
- 
+
   store <4 x i8> %resultvec, <4 x i8> * %0, align 1
   ret void
 }
@@ -4964,7 +4866,7 @@ define void @__masked_store_blend_i8(<4 x i8>* nocapture, <4 x i8>,
 define void @__masked_store_blend_i16(<4 x i16>* nocapture, <4 x i16>,
                                       <4 x i32>) nounwind alwaysinline {
   %old = load PTR_OP_ARGS(`<4 x i16> ')  %0, align 2
-  
+
   %m = trunc <4 x i32> %2 to <4 x i1>
   %resultvec = select <4 x i1> %m, <4 x i16> %1, <4 x i16> %old
 
@@ -4980,7 +4882,7 @@ define void @__masked_store_blend_i8(<4 x i8>* nocapture, <4 x i8>,
 
   %m = trunc <4 x i64> %2 to <4 x i1>
   %resultvec = select <4 x i1> %m, <4 x i8> %1, <4 x i8> %old
-  
+
   store <4 x i8> %resultvec, <4 x i8> * %0, align 1
   ret void
 }
@@ -4988,10 +4890,10 @@ define void @__masked_store_blend_i8(<4 x i8>* nocapture, <4 x i8>,
 define void @__masked_store_blend_i16(<4 x i16>* nocapture, <4 x i16>,
                                       <4 x i64>) nounwind alwaysinline {
   %old = load PTR_OP_ARGS(`<4 x i16> ')  %0, align 2
-  
+
   %m = trunc <4 x i64> %2 to <4 x i1>
   %resultvec = select <4 x i1> %m, <4 x i16> %1, <4 x i16> %old
-  
+
   store <4 x i16> %resultvec, <4 x i16> * %0, align 2
   ret void
 }
@@ -5001,10 +4903,10 @@ define(`masked_store_blend_8_16_by_8', `
 define void @__masked_store_blend_i8(<8 x i8>* nocapture, <8 x i8>,
                                      <8 x i32>) nounwind alwaysinline {
   %old = load PTR_OP_ARGS(`<8 x i8> ')  %0, align 1
-  
+
   %m = trunc <8 x i32> %2 to <8 x i1>
   %resultvec = select <8 x i1> %m, <8 x i8> %1, <8 x i8> %old
-  
+
   store <8 x i8> %resultvec, <8 x i8> * %0, align 1
   ret void
 }
@@ -5012,10 +4914,10 @@ define void @__masked_store_blend_i8(<8 x i8>* nocapture, <8 x i8>,
 define void @__masked_store_blend_i16(<8 x i16>* nocapture, <8 x i16>,
                                       <8 x i32>) nounwind alwaysinline {
   %old = load PTR_OP_ARGS(`<8 x i16> ')  %0, align 2
-  
+
   %m = trunc <8 x i32> %2 to <8 x i1>
   %resultvec = select <8 x i1> %m, <8 x i16> %1, <8 x i16> %old
-  
+
   store <8 x i16> %resultvec, <8 x i16> * %0, align 2
   ret void
 }
@@ -5050,7 +4952,7 @@ define void @__masked_store_blend_i16(<16 x i16>* nocapture, <16 x i16>,
 ;; packed load and store functions
 ;;
 ;; These define functions to emulate those nice packed load and packed store
-;; instructions.  For packed store, given a pointer to destination array and 
+;; instructions.  For packed store, given a pointer to destination array and
 ;; an offset into the array, for each lane where the mask is on, the
 ;; corresponding value for that lane is stored into packed locations in the
 ;; destination array.  For packed load, each lane that has an active mask
@@ -5092,7 +4994,7 @@ loop:
   ; is the current lane on?
   %and = and i64 %mask, %lanemask
   %do_load = icmp eq i64 %and, %lanemask
-  br i1 %do_load, label %load, label %loopend 
+  br i1 %do_load, label %load, label %loopend
 
 load:
   %loadptr = getelementptr PTR_OP_ARGS(`i32') %startptr, i32 %offset
@@ -5143,7 +5045,7 @@ loop:
   ; is the current lane on?
   %and = and i64 %mask, %lanemask
   %do_store = icmp eq i64 %and, %lanemask
-  br i1 %do_store, label %store, label %loopend 
+  br i1 %do_store, label %store, label %loopend
 
 store:
   %storeval = extractelement <WIDTH x i32> %vals, i32 %lane
@@ -5175,15 +5077,15 @@ entry:
 known_mask:
   %allon = icmp eq i64 %mask, ALL_ON_MASK
   br i1 %allon, label %all_on, label %unknown_mask
- 
+
 all_on:
   %vecptr = bitcast i32 *%startptr to <WIDTH x i32> *
   store <WIDTH x i32> %vals, <WIDTH x i32> * %vecptr, align 4
   ret MASK WIDTH
- 
+
 unknown_mask:
   br label %loop
- 
+
 loop:
   %offset = phi MASK [ 0, %unknown_mask ], [ %ch_offset, %loop ]
   %i = phi i32 [ 0, %unknown_mask ], [ %ch_i, %loop ]
@@ -5200,12 +5102,12 @@ ifelse(MASK, `i64',
 
   %mull_mask = extractelement <WIDTH x MASK> %full_mask, i32 %i
   %ch_offset = sub MASK %offset, %mull_mask
- 
+
   ; are we done yet?
   %ch_i = add i32 %i, 1
   %test = icmp ne i32 %ch_i, WIDTH
   br i1 %test, label %loop, label %done
- 
+
 done:
   ret MASK %ch_offset
 }
@@ -5267,7 +5169,7 @@ domixed:
 check_neighbors:
   %vec = phi <$1 x $2> [ %blendvec, %domixed ], [ %v, %entry ]
   ifelse($6, `32', `
-  ; For 32-bit elements, we rotate once and compare with the vector, which ends 
+  ; For 32-bit elements, we rotate once and compare with the vector, which ends
   ; up comparing each element to its neighbor on the right.  Then see if
   ; all of those values are true; if so, then all of the elements are equal..
   %castvec = bitcast <$1 x $2> %vec to <$1 x $4>
@@ -5403,16 +5305,16 @@ pl_known_mask:
 
 pl_all_on:
   ;; the mask is all on--just expand the code for each lane sequentially
-  forloop(i, 0, eval($1-1), 
+  forloop(i, 0, eval($1-1),
           `patsubst(`$3', `LANE', i)')
   br label %pl_done
 
 pl_unknown_mask:
   ;; we just run the general case, though we could
   ;; try to be smart and just emit the code based on what it actually is,
-  ;; for example by emitting the code straight-line without a loop and doing 
+  ;; for example by emitting the code straight-line without a loop and doing
   ;; the lane tests explicitly, leaving later optimization passes to eliminate
-  ;; the stuff that is definitely not needed.  Not clear if we will frequently 
+  ;; the stuff that is definitely not needed.  Not clear if we will frequently
   ;; encounter a mask that is known at compile-time but is not either all on or
   ;; all off...
   br label %pl_loop
@@ -5425,7 +5327,7 @@ pl_loop:
   ; is the current lane on?  if so, goto do work, otherwise to end of loop
   %pl_and = and i64 %pl_mask, %pl_lanemask
   %pl_doit = icmp eq i64 %pl_and, %pl_lanemask
-  br i1 %pl_doit, label %pl_dolane, label %pl_loopend 
+  br i1 %pl_doit, label %pl_dolane, label %pl_loopend
 
 pl_dolane:
   ;; If so, substitute in the code from the caller and replace the LANE
@@ -5451,7 +5353,7 @@ pl_done:
 
 define(`gen_gather_general', `
 ; fully general 32-bit gather, takes array of pointers encoded as vector of i32s
-define <WIDTH x $1> @__gather32_$1(<WIDTH x i32> %ptrs, 
+define <WIDTH x $1> @__gather32_$1(<WIDTH x i32> %ptrs,
                                    <WIDTH x MASK> %vecmask) nounwind readonly alwaysinline {
   %ret_ptr = alloca <WIDTH x $1>
   per_lane(WIDTH, <WIDTH x MASK> %vecmask, `
@@ -5467,7 +5369,7 @@ define <WIDTH x $1> @__gather32_$1(<WIDTH x i32> %ptrs,
 }
 
 ; fully general 64-bit gather, takes array of pointers encoded as vector of i64s
-define <WIDTH x $1> @__gather64_$1(<WIDTH x i64> %ptrs, 
+define <WIDTH x $1> @__gather64_$1(<WIDTH x i64> %ptrs,
                                    <WIDTH x MASK> %vecmask) nounwind readonly alwaysinline {
   %ret_ptr = alloca <WIDTH x $1>
   per_lane(WIDTH, <WIDTH x MASK> %vecmask, `
@@ -5492,7 +5394,7 @@ define <WIDTH x $1> @__gather_elt32_$1(i8 * %ptr, <WIDTH x i32> %offsets, i32 %o
                                     i32 %lane) nounwind readonly alwaysinline {
   ; compute address for this one from the base
   %offset32 = extractelement <WIDTH x i32> %offsets, i32 %lane
-  ; the order and details of the next 4 lines are important--they match LLVMs 
+  ; the order and details of the next 4 lines are important--they match LLVMs
   ; patterns that apply the free x86 2x/4x/8x scaling in addressing calculations
   %offset64 = sext i32 %offset32 to i64
   %scale64 = sext i32 %offset_scale to i64
@@ -5515,7 +5417,7 @@ define <WIDTH x $1> @__gather_elt64_$1(i8 * %ptr, <WIDTH x i64> %offsets, i32 %o
                                     i32 %lane) nounwind readonly alwaysinline {
   ; compute address for this one from the base
   %offset64 = extractelement <WIDTH x i64> %offsets, i32 %lane
-  ; the order and details of the next 4 lines are important--they match LLVMs 
+  ; the order and details of the next 4 lines are important--they match LLVMs
   ; patterns that apply the free x86 2x/4x/8x scaling in addressing calculations
   %offset_scale64 = sext i32 %offset_scale to i64
   %offset = mul i64 %offset64, %offset_scale64
@@ -5537,26 +5439,26 @@ define <WIDTH x $1> @__gather_factored_base_offsets32_$1(i8 * %ptr, <WIDTH x i32
                                              <WIDTH x MASK> %vecmask) nounwind readonly alwaysinline {
   ; We can be clever and avoid the per-lane stuff for gathers if we are willing
   ; to require that the 0th element of the array being gathered from is always
-  ; legal to read from (and we do indeed require that, given the benefits!) 
+  ; legal to read from (and we do indeed require that, given the benefits!)
   ;
   ; Set the offset to zero for lanes that are off
   %offsetsPtr = alloca <WIDTH x i32>
   %deltaPtr = alloca <WIDTH x i32>
   store <WIDTH x i32> zeroinitializer, <WIDTH x i32> * %offsetsPtr
-  call void @__masked_store_blend_i32(<WIDTH x i32> * %offsetsPtr, <WIDTH x i32> %offsets, 
+  call void @__masked_store_blend_i32(<WIDTH x i32> * %offsetsPtr, <WIDTH x i32> %offsets,
                                       <WIDTH x MASK> %vecmask)
   %newOffsets = load PTR_OP_ARGS(`<WIDTH x i32> ')  %offsetsPtr
 
   store <WIDTH x i32> zeroinitializer, <WIDTH x i32> * %deltaPtr
-  call void @__masked_store_blend_i32(<WIDTH x i32> * %deltaPtr, <WIDTH x i32> %offset_delta, 
+  call void @__masked_store_blend_i32(<WIDTH x i32> * %deltaPtr, <WIDTH x i32> %offset_delta,
                                       <WIDTH x MASK> %vecmask)
   %newDelta = load PTR_OP_ARGS(`<WIDTH x i32> ')  %deltaPtr
 
   %ret0 = call <WIDTH x $1> @__gather_elt32_$1(i8 * %ptr, <WIDTH x i32> %newOffsets,
                                             i32 %offset_scale, <WIDTH x i32> %newDelta,
                                             <WIDTH x $1> undef, i32 0)
-  forloop(lane, 1, eval(WIDTH-1), 
-          `patsubst(patsubst(`%retLANE = call <WIDTH x $1> @__gather_elt32_$1(i8 * %ptr, 
+  forloop(lane, 1, eval(WIDTH-1),
+          `patsubst(patsubst(`%retLANE = call <WIDTH x $1> @__gather_elt32_$1(i8 * %ptr,
                                 <WIDTH x i32> %newOffsets, i32 %offset_scale, <WIDTH x i32> %newDelta,
                                 <WIDTH x $1> %retPREV, i32 LANE)
                     ', `LANE', lane), `PREV', eval(lane-1))')
@@ -5568,26 +5470,26 @@ define <WIDTH x $1> @__gather_factored_base_offsets64_$1(i8 * %ptr, <WIDTH x i64
                                              <WIDTH x MASK> %vecmask) nounwind readonly alwaysinline {
   ; We can be clever and avoid the per-lane stuff for gathers if we are willing
   ; to require that the 0th element of the array being gathered from is always
-  ; legal to read from (and we do indeed require that, given the benefits!) 
+  ; legal to read from (and we do indeed require that, given the benefits!)
   ;
   ; Set the offset to zero for lanes that are off
   %offsetsPtr = alloca <WIDTH x i64>
   %deltaPtr = alloca <WIDTH x i64>
   store <WIDTH x i64> zeroinitializer, <WIDTH x i64> * %offsetsPtr
-  call void @__masked_store_blend_i64(<WIDTH x i64> * %offsetsPtr, <WIDTH x i64> %offsets, 
+  call void @__masked_store_blend_i64(<WIDTH x i64> * %offsetsPtr, <WIDTH x i64> %offsets,
                                       <WIDTH x MASK> %vecmask)
   %newOffsets = load PTR_OP_ARGS(`<WIDTH x i64> ')  %offsetsPtr
 
   store <WIDTH x i64> zeroinitializer, <WIDTH x i64> * %deltaPtr
-  call void @__masked_store_blend_i64(<WIDTH x i64> * %deltaPtr, <WIDTH x i64> %offset_delta, 
+  call void @__masked_store_blend_i64(<WIDTH x i64> * %deltaPtr, <WIDTH x i64> %offset_delta,
                                       <WIDTH x MASK> %vecmask)
   %newDelta = load PTR_OP_ARGS(`<WIDTH x i64> ')  %deltaPtr
 
   %ret0 = call <WIDTH x $1> @__gather_elt64_$1(i8 * %ptr, <WIDTH x i64> %newOffsets,
                                             i32 %offset_scale, <WIDTH x i64> %newDelta,
                                             <WIDTH x $1> undef, i32 0)
-  forloop(lane, 1, eval(WIDTH-1), 
-          `patsubst(patsubst(`%retLANE = call <WIDTH x $1> @__gather_elt64_$1(i8 * %ptr, 
+  forloop(lane, 1, eval(WIDTH-1),
+          `patsubst(patsubst(`%retLANE = call <WIDTH x $1> @__gather_elt64_$1(i8 * %ptr,
                                 <WIDTH x i64> %newOffsets, i32 %offset_scale, <WIDTH x i64> %newDelta,
                                 <WIDTH x $1> %retPREV, i32 LANE)
                     ', `LANE', lane), `PREV', eval(lane-1))')
@@ -5611,7 +5513,7 @@ define <WIDTH x $1>
   %smear_scale = shufflevector <1 x i32> %scale_vec, <1 x i32> undef,
      <WIDTH x i32> < forloop(i, 1, eval(WIDTH-1), `i32 0, ') i32 0 >
   %scaled_offsets = mul <WIDTH x i32> %smear_scale, %offsets
-  %v = call <WIDTH x $1> @__gather_factored_base_offsets32_$1(i8 * %ptr, <WIDTH x i32> %scaled_offsets, i32 1, 
+  %v = call <WIDTH x $1> @__gather_factored_base_offsets32_$1(i8 * %ptr, <WIDTH x i32> %scaled_offsets, i32 1,
                                                      <WIDTH x i32> zeroinitializer, <WIDTH x MASK> %vecmask)
   ret <WIDTH x $1> %v
 }
@@ -5647,7 +5549,7 @@ define void @__scatter_elt32_$1(i8 * %ptr, <WIDTH x i32> %offsets, i32 %offset_s
                                 <WIDTH x i32> %offset_delta, <WIDTH x $1> %values,
                                 i32 %lane) nounwind alwaysinline {
   %offset32 = extractelement <WIDTH x i32> %offsets, i32 %lane
-  ; the order and details of the next 4 lines are important--they match LLVMs 
+  ; the order and details of the next 4 lines are important--they match LLVMs
   ; patterns that apply the free x86 2x/4x/8x scaling in addressing calculations
   %offset64 = sext i32 %offset32 to i64
   %scale64 = sext i32 %offset_scale to i64
@@ -5668,7 +5570,7 @@ define void @__scatter_elt64_$1(i8 * %ptr, <WIDTH x i64> %offsets, i32 %offset_s
                                 <WIDTH x i64> %offset_delta, <WIDTH x $1> %values,
                                 i32 %lane) nounwind alwaysinline {
   %offset64 = extractelement <WIDTH x i64> %offsets, i32 %lane
-  ; the order and details of the next 4 lines are important--they match LLVMs 
+  ; the order and details of the next 4 lines are important--they match LLVMs
   ; patterns that apply the free x86 2x/4x/8x scaling in addressing calculations
   %scale64 = sext i32 %offset_scale to i64
   %offset = mul i64 %offset64, %scale64
@@ -5731,7 +5633,7 @@ define void @__scatter64_$1(<WIDTH x i64> %ptrs, <WIDTH x $1> %values,
 )
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; rdrand 
+;; rdrand
 
 define(`rdrand_decls', `
 declare i1 @__rdrand_i16(i16 * nocapture)
@@ -5969,7 +5871,7 @@ define(`trigonometry_decl',`
     declare <WIDTH x float> @__asin_varying_float(<WIDTH x float>) nounwind readnone
     declare <WIDTH x float> @__cos_varying_float(<WIDTH x float>) nounwind readnone
     declare <WIDTH x float> @__acos_varying_float(<WIDTH x float>) nounwind readnone
-    declare void @__sincos_varying_float(<WIDTH x float>, <WIDTH x float>*, <WIDTH x float>*) nounwind 
+    declare void @__sincos_varying_float(<WIDTH x float>, <WIDTH x float>*, <WIDTH x float>*) nounwind
     declare <WIDTH x float> @__tan_varying_float(<WIDTH x float>) nounwind readnone
     declare <WIDTH x float> @__atan_varying_float(<WIDTH x float>) nounwind readnone
     declare <WIDTH x float> @__atan2_varying_float(<WIDTH x float>,<WIDTH x float>) nounwind readnone
@@ -5978,7 +5880,7 @@ define(`trigonometry_decl',`
     declare float @__asin_uniform_float(float) nounwind readnone
     declare float @__cos_uniform_float(float) nounwind readnone
     declare float @__acos_uniform_float(float) nounwind readnone
-    declare void @__sincos_uniform_float(float, float*, float*) nounwind 
+    declare void @__sincos_uniform_float(float, float*, float*) nounwind
     declare float @__tan_uniform_float(float) nounwind readnone
     declare float @__atan_uniform_float(float) nounwind readnone
     declare float @__atan2_uniform_float(float,float) nounwind readnone
@@ -5987,7 +5889,7 @@ define(`trigonometry_decl',`
     declare <WIDTH x double> @__asin_varying_double(<WIDTH x double>) nounwind readnone
     declare <WIDTH x double> @__cos_varying_double(<WIDTH x double>) nounwind readnone
     declare <WIDTH x double> @__acos_varying_double(<WIDTH x double>) nounwind readnone
-    declare void @__sincos_varying_double(<WIDTH x double>, <WIDTH x double>*, <WIDTH x double>*) nounwind 
+    declare void @__sincos_varying_double(<WIDTH x double>, <WIDTH x double>*, <WIDTH x double>*) nounwind
     declare <WIDTH x double> @__tan_varying_double(<WIDTH x double>) nounwind readnone
     declare <WIDTH x double> @__atan_varying_double(<WIDTH x double>) nounwind readnone
     declare <WIDTH x double> @__atan2_varying_double(<WIDTH x double>,<WIDTH x double>) nounwind readnone
@@ -5996,7 +5898,7 @@ define(`trigonometry_decl',`
     declare double @__asin_uniform_double(double) nounwind readnone
     declare double @__cos_uniform_double(double) nounwind readnone
     declare double @__acos_uniform_double(double) nounwind readnone
-    declare void @__sincos_uniform_double(double, double*, double*) nounwind 
+    declare void @__sincos_uniform_double(double, double*, double*) nounwind
     declare double @__tan_uniform_double(double) nounwind readnone
     declare double @__atan_uniform_double(double) nounwind readnone
     declare double @__atan2_uniform_double(double,double) nounwind readnone
