@@ -549,7 +549,7 @@ class FunctionEmitContext {
     emulated uniform condition was found in external scopes and start SIMD control
     flow with simdcf.any intrinsic*/
     llvm::Value *GenXPrepareVectorBranch(llvm::Value *value);
-    bool ifNotEmulatedUniformForGen() const;
+    bool ifEmulatedUniformForGen() const;
 #endif
     /** @} */
 
