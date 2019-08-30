@@ -37,14 +37,17 @@ define(`HAVE_GATHER',`1')
 define(`HAVE_SCATTER',`1')
 include(`util-genx.m4')
 
-define(`GEN_SUFFIX',
-`ifelse($1, `i1', `v16i1',
-        $1, `i8', `v16i8',
-        $1, `i16', `v16i16',
-        $1, `i32', `v16i32',
-        $1, `float', `v16f32',
-        $1, `double', `v16f64',
-        $1, `i64', `v16i64')')
+define(`CONCAT',`$1$2')
+define(`GEN_TYPE',
+`ifelse($1, `i1', `i1',
+        $1, `i8', `i8',
+        $1, `i16', `i16',
+        $1, `i32', `i32',
+        $1, `float', `f32',
+        $1, `double', `f64',
+        $1, `i64', `i64')')
+
+define(`GEN_SUFFIX',`CONCAT(`v16', GEN_TYPE($1))')
 
 define(`SIZEOF',
 `ifelse($1, `i1', 1,
@@ -60,7 +63,6 @@ define(`SIZEOF',
 stdlib_core()
 packed_load_and_store()
 scans()
-int64minmax()
 saturation_arithmetic()
 ctlztz()
 define_prefetches()
@@ -205,33 +207,8 @@ define void @__fastmath() nounwind alwaysinline {
 }
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; float min/max
-
-declare i32 @llvm.genx.smin.i32.i32(i32, i32)
-declare i32 @llvm.genx.smax.i32.i32(i32, i32)
-declare i32 @llvm.genx.umin.i32.i32(i32, i32)
-declare i32 @llvm.genx.umax.i32.i32(i32, i32)
-declare float @llvm.genx.fmin.f32.f32(float, float)
-declare float @llvm.genx.fmax.f32.f32(float, float)
-declare <16 x i32> @llvm.genx.smin.GEN_SUFFIX(i32).GEN_SUFFIX(i32)(<16 x i32>, <16 x i32>)
-declare <16 x i32> @llvm.genx.smax.GEN_SUFFIX(i32).GEN_SUFFIX(i32)(<16 x i32>, <16 x i32>)
-declare <16 x i32> @llvm.genx.umin.GEN_SUFFIX(i32).GEN_SUFFIX(i32)(<16 x i32>, <16 x i32>)
-declare <16 x i32> @llvm.genx.umax.GEN_SUFFIX(i32).GEN_SUFFIX(i32)(<16 x i32>, <16 x i32>)
-declare <16 x float> @llvm.genx.fmin.GEN_SUFFIX(float).GEN_SUFFIX(float)(<16 x float>, <16 x float>)
-declare <16 x float> @llvm.genx.fmax.GEN_SUFFIX(float).GEN_SUFFIX(float)(<16 x float>, <16 x float>)
-
-
-define float @__max_uniform_float(float, float) nounwind readonly alwaysinline {
-    %res = call float @llvm.genx.fmax.f32.f32(float %0, float %1)
-    ret float %res
-}
-
-define float @__min_uniform_float(float, float) nounwind readonly alwaysinline {
-    %res = call float @llvm.genx.fmin.f32.f32(float %0, float %1)
-    ret float %res
-}
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; min/max
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; double precision min/max
 
 define double @__min_uniform_double(double, double) nounwind readnone alwaysinline {
@@ -246,31 +223,55 @@ define double @__max_uniform_double(double, double) nounwind readnone alwaysinli
   ret double %res
 }
 
+define <16 x double> @__min_varying_double(<16 x double>, <16 x double>) nounwind readnone {
+  %pred = fcmp olt <16 x double> %0, %1
+  %res = select <16 x i1> %pred, <16 x double> %0, <16 x double> %1
+  ret <16 x double> %res
+}
+
+define <16 x double> @__max_varying_double(<16 x double>, <16 x double>) nounwind readnone {
+  %pred = fcmp ogt <16 x double> %0, %1
+  %res = select <16 x i1> %pred, <16 x double> %0, <16 x double> %1
+  ret <16 x double> %res
+}
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; int min/max
+;; Generates max/min builtins for unfiorm and varying
+;; $1 LLVM IR type
+;; $2 gen intrinsic min name
+;; $3 gen intrinsic max name
+;; $4 type-based builtin suffix
+define(`genx_maxmin', `
+declare $1 @llvm.genx.$2.GEN_TYPE($1).GEN_TYPE($1)($1, $1)
+declare $1 @llvm.genx.$3.GEN_TYPE($1).GEN_TYPE($1)($1, $1)
+declare <WIDTH x $1> @llvm.genx.$2.GEN_SUFFIX($1).GEN_SUFFIX($1)(<WIDTH x $1>, <WIDTH x $1>)
+declare <WIDTH x $1> @llvm.genx.$3.GEN_SUFFIX($1).GEN_SUFFIX($1)(<WIDTH x $1>, <WIDTH x $1>)
 
-define i32 @__min_uniform_int32(i32, i32) nounwind readonly alwaysinline {
-    %res = call i32 @llvm.genx.smin.i32.i32(i32 %0, i32 %1)
-    ret i32 %res
+define $1 @__max_uniform_$4($1, $1) nounwind readonly alwaysinline {
+  %res = call $1 @llvm.genx.$3.GEN_TYPE($1).GEN_TYPE($1)($1 %0, $1 %1)
+  ret $1 %res
 }
 
-define i32 @__max_uniform_int32(i32, i32) nounwind readonly alwaysinline {
-    %res = call i32 @llvm.genx.smax.i32.i32(i32 %0, i32 %1)
-    ret i32 %res
+define $1 @__min_uniform_$4($1, $1) nounwind readonly alwaysinline {
+  %res = call $1 @llvm.genx.$2.GEN_TYPE($1).GEN_TYPE($1)($1 %0, $1 %1)
+  ret $1 %res
 }
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; unsigned int min/max
-
-define i32 @__min_uniform_uint32(i32, i32) nounwind readonly alwaysinline {
-    %res = call i32 @llvm.genx.umin.i32.i32(i32 %0, i32 %1)
-    ret i32 %res
+define <WIDTH x $1> @__max_varying_$4(<WIDTH x $1>, <WIDTH x $1>) nounwind readonly alwaysinline {
+  %res = call <WIDTH x $1> @llvm.genx.$3.GEN_SUFFIX($1).GEN_SUFFIX($1)(<WIDTH x $1> %0, <WIDTH x $1> %1)
+  ret <WIDTH x $1> %res
 }
 
-define i32 @__max_uniform_uint32(i32, i32) nounwind readonly alwaysinline {
-    %res = call i32 @llvm.genx.umax.i32.i32(i32 %0, i32 %1)
-    ret i32 %res
+define <WIDTH x $1> @__min_varying_$4(<WIDTH x $1>, <WIDTH x $1>) nounwind readonly alwaysinline {
+  %res = call <WIDTH x $1> @llvm.genx.$2.GEN_SUFFIX($1).GEN_SUFFIX($1)(<WIDTH x $1> %0, <WIDTH x $1> %1)
+  ret <WIDTH x $1> %res
 }
+')
+genx_maxmin(float, fmin, fmax, float)
+genx_maxmin(i32, smin, smax, int32)
+genx_maxmin(i64, smin, smax, int64)
+genx_maxmin(i32, umin, umax, uint32)
+genx_maxmin(i64, umin, umax, uint64)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; horizontal ops / reductions
@@ -415,7 +416,6 @@ define <16 x float> @__ceil_varying_float(<16 x float>) nounwind readonly always
     ret <16 x float> %res
 }
 
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; rounding doubles
 
@@ -467,61 +467,6 @@ define <16 x double> @__ceil_varying_double(<16 x double>) nounwind readonly alw
   ret <16 x double> %binop.i
 }
 
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; float min/max
-
-define <16 x float> @__max_varying_float(<16 x float>, <16 x float>) nounwind readonly alwaysinline {
-    %res = call <16 x float> @llvm.genx.fmax.GEN_SUFFIX(float).GEN_SUFFIX(float)(<16 x float> %0, <16 x float> %1)
-    ret <16 x float> %res
-}
-
-define <16 x float> @__min_varying_float(<16 x float>, <16 x float>) nounwind readonly alwaysinline {
-    %res = call <16 x float> @llvm.genx.fmin.GEN_SUFFIX(float).GEN_SUFFIX(float)(<16 x float> %0, <16 x float> %1)
-    ret <16 x float> %res
-}
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; int32 min/max
-
-define <16 x i32> @__min_varying_int32(<16 x i32>, <16 x i32>) nounwind readonly alwaysinline {
-    %res = call <16 x i32> @llvm.genx.smin.GEN_SUFFIX(i32).GEN_SUFFIX(i32)(<16 x i32> %0, <16 x i32> %1)
-    ret <16 x i32> %res
-}
-
-define <16 x i32> @__max_varying_int32(<16 x i32>, <16 x i32>) nounwind readonly alwaysinline {
-    %res = call <16 x i32> @llvm.genx.smax.GEN_SUFFIX(i32).GEN_SUFFIX(i32)(<16 x i32> %0, <16 x i32> %1)
-    ret <16 x i32> %res
-}
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-; unsigned int min/max
-
-define <16 x i32> @__min_varying_uint32(<16 x i32>, <16 x i32>) nounwind readonly alwaysinline {
-    %res = call <16 x i32> @llvm.genx.umin.GEN_SUFFIX(i32).GEN_SUFFIX(i32)(<16 x i32> %0, <16 x i32> %1)
-    ret <16 x i32> %res
-}
-
-define <16 x i32> @__max_varying_uint32(<16 x i32>, <16 x i32>) nounwind readonly alwaysinline {
-    %res = call <16 x i32> @llvm.genx.umax.GEN_SUFFIX(i32).GEN_SUFFIX(i32)(<16 x i32> %0, <16 x i32> %1)
-    ret <16 x i32> %res
-}
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; double precision min/max
-
-define <16 x double> @__min_varying_double(<16 x double>, <16 x double>) nounwind readnone {
-  %pred = fcmp olt <16 x double> %0, %1
-  %res = select <16 x i1> %pred, <16 x double> %0, <16 x double> %1
-  ret <16 x double> %res
-}
-
-define <16 x double> @__max_varying_double(<16 x double>, <16 x double>) nounwind readnone {
-  %pred = fcmp ogt <16 x double> %0, %1
-  %res = select <16 x i1> %pred, <16 x double> %0, <16 x double> %1
-  ret <16 x double> %res
-}
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; svml
 
@@ -532,153 +477,140 @@ svml_stubs(double,d,WIDTH)
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; horizontal ops / reductions
 
-declare i1 @llvm.genx.any.v16i1(<16 x MASK>)
-declare i1 @llvm.genx.all.v16i1(<16 x MASK>)
+declare i1 @llvm.genx.any.v16i1(<WIDTH x MASK>)
+declare i1 @llvm.genx.all.v16i1(<WIDTH x MASK>)
 
-define i64 @__movmsk(<16 x MASK>) nounwind readnone alwaysinline {
-  %v = bitcast <16 x MASK> %0 to i16
+define i64 @__movmsk(<WIDTH x MASK>) nounwind readnone alwaysinline {
+  %v = bitcast <WIDTH x MASK> %0 to i16
   %zext = zext i16 %v to i64
   ret i64 %zext
 }
 
-define i1 @__any(<16 x MASK>) nounwind readnone alwaysinline {
-  %v = call i1 @llvm.genx.any.v16i1(<16 x MASK> %0)
+define i1 @__any(<WIDTH x MASK>) nounwind readnone alwaysinline {
+  %v = call i1 @llvm.genx.any.GEN_SUFFIX(i1)(<WIDTH x MASK> %0)
   ret i1 %v
 }
 
-define i1 @__all(<16 x MASK>) nounwind readnone alwaysinline {
-  %v = call i1 @llvm.genx.all.v16i1(<16 x MASK> %0) nounwind readnone
+define i1 @__all(<WIDTH x MASK>) nounwind readnone alwaysinline {
+  %v = call i1 @llvm.genx.all.GEN_SUFFIX(i1)(<WIDTH x MASK> %0) nounwind readnone
   ret i1 %v
 }
 
-define i1 @__none(<16 x MASK>) nounwind readnone alwaysinline {
-  %v = call i1 @llvm.genx.all.v16i1(<16 x MASK> %0) nounwind readnone
+define i1 @__none(<WIDTH x MASK>) nounwind readnone alwaysinline {
+  %v = call i1 @llvm.genx.all.GEN_SUFFIX(i1)(<WIDTH x MASK> %0) nounwind readnone
   %v_not = icmp eq i1 %v, 0
   ret i1 %v_not
 }
 
-declare i16 @__reduce_add_int8(<16 x MASK>) nounwind readnone alwaysinline
-
-define internal <16 x i16> @__add_varying_i16(<16 x i16>,
-                                  <16 x i16>) nounwind readnone alwaysinline {
-  %r = add <16 x i16> %0, %1
-  ret <16 x i16> %r
+define(`genx_add', `
+define internal <WIDTH x $1> @__add_varying_$2(<WIDTH x $1>,
+                                  <WIDTH x $1>) nounwind readnone alwaysinline {
+  %r = add <WIDTH x $1> %0, %1
+  ret <WIDTH x $1> %r
 }
 
-define internal i16 @__add_uniform_i16(i16, i16) nounwind readnone alwaysinline {
-  %r = add i16 %0, %1
-  ret i16 %r
+define internal $1 @__add_uniform_$2($1, $1) nounwind readnone alwaysinline {
+  %r = add $1 %0, %1
+  ret $1 %r
+}
+')
+
+genx_add(i16, i16)
+genx_add(i32, int32)
+genx_add(i64, int64)
+
+define(`genx_fadd', `
+define internal <WIDTH x $1> @__fadd_varying_$1(<WIDTH x $1>,
+                                  <WIDTH x $1>) nounwind readnone alwaysinline {
+  %r = fadd <WIDTH x $1> %0, %1
+  ret <WIDTH x $1> %r
 }
 
-define i16 @__reduce_add_int16(<16 x i16>) nounwind readnone alwaysinline {
-  reduce16(i16, @__add_varying_i16, @__add_uniform_i16)
+define internal $1 @__fadd_uniform_$1($1, $1) nounwind readnone alwaysinline {
+  %r = fadd $1 %0, %1
+  ret $1 %r
+}
+')
+
+genx_fadd(float)
+genx_fadd(double)
+
+define i16 @__reduce_add_int8(<WIDTH x i8>) nounwind readnone alwaysinline {
+  %ext = zext <WIDTH x i8> %0 to <WIDTH x i16>
+  reduce16(i16, @__add_varying_i16, @__add_uniform_i16, %ext)
 }
 
-define internal <16 x float> @__add_varying_float(<16 x float>, <16 x float>) {
-  %r = fadd <16 x float> %0, %1
-  ret <16 x float> %r
+define i32 @__reduce_add_int16(<WIDTH x i16>) nounwind readnone alwaysinline {
+  %ext = zext <WIDTH x i16> %0 to <WIDTH x i32>
+  reduce16(i32, @__add_varying_int32, @__add_uniform_int32, %ext)
 }
 
-define internal float @__add_uniform_float(float, float) {
-  %r = fadd float %0, %1
-  ret float %r
+define i64 @__reduce_add_int32(<WIDTH x i32>) nounwind readnone {
+  %ext = zext <WIDTH x i32> %0 to <WIDTH x i64>
+  reduce16(i64, @__add_varying_int64, @__add_uniform_int64, %ext)
 }
 
-define float @__reduce_add_float(<16 x float>) nounwind readonly alwaysinline {
-  reduce16(float, @__add_varying_float, @__add_uniform_float)
+define float @__reduce_add_float(<WIDTH x float>) nounwind readonly alwaysinline {
+  reduce16(float, @__fadd_varying_float, @__fadd_uniform_float, %0)
 }
 
-define float @__reduce_min_float(<16 x float>) nounwind readnone {
-  reduce16(float, @__min_varying_float, @__min_uniform_float)
+define double @__reduce_add_double(<WIDTH x double>) nounwind readnone {
+  reduce16(double, @__fadd_varying_double, @__fadd_uniform_double, %0)
 }
 
-define float @__reduce_max_float(<16 x float>) nounwind readnone {
-  reduce16(float, @__max_varying_float, @__max_uniform_float)
+define i64 @__reduce_add_int64(<WIDTH x i64>) nounwind readnone {
+  reduce16(i64, @__add_varying_int64, @__add_uniform_int64, %0)
 }
 
-define internal <16 x i32> @__add_varying_int32(<16 x i32>, <16 x i32>) {
-  %r = add <16 x i32> %0, %1
-  ret <16 x i32> %r
+define i32 @__reduce_min_int32(<WIDTH x i32>) nounwind readnone {
+  reduce16(i32, @__min_varying_int32, @__min_uniform_int32, %0)
 }
 
-define internal i32 @__add_uniform_int32(i32, i32) {
-  %r = add i32 %0, %1
-  ret i32 %r
+define i32 @__reduce_max_int32(<WIDTH x i32>) nounwind readnone {
+  reduce16(i32, @__max_varying_int32, @__max_uniform_int32, %0)
 }
 
-define i32 @__reduce_add_int32(<16 x i32>) nounwind readnone {
-  reduce16(i32, @__add_varying_int32, @__add_uniform_int32)
+define i32 @__reduce_min_uint32(<WIDTH x i32>) nounwind readnone {
+  reduce16(i32, @__min_varying_uint32, @__min_uniform_uint32, %0)
 }
 
-define i32 @__reduce_min_int32(<16 x i32>) nounwind readnone {
-  reduce16(i32, @__min_varying_int32, @__min_uniform_int32)
+define i32 @__reduce_max_uint32(<WIDTH x i32>) nounwind readnone {
+  reduce16(i32, @__max_varying_uint32, @__max_uniform_uint32, %0)
 }
 
-define i32 @__reduce_max_int32(<16 x i32>) nounwind readnone {
-  reduce16(i32, @__max_varying_int32, @__max_uniform_int32)
+define float @__reduce_min_float(<WIDTH x float>) nounwind readnone {
+  reduce16(float, @__min_varying_float, @__min_uniform_float, %0)
 }
 
-define i32 @__reduce_min_uint32(<16 x i32>) nounwind readnone {
-  reduce16(i32, @__min_varying_uint32, @__min_uniform_uint32)
+define float @__reduce_max_float(<WIDTH x float>) nounwind readnone {
+  reduce16(float, @__max_varying_float, @__max_uniform_float, %0)
 }
 
-define i32 @__reduce_max_uint32(<16 x i32>) nounwind readnone {
-  reduce16(i32, @__max_varying_uint32, @__max_uniform_uint32)
+define double @__reduce_min_double(<WIDTH x double>) nounwind readnone {
+  reduce16(double, @__min_varying_double, @__min_uniform_double, %0)
 }
 
-define internal <16 x double> @__add_varying_double(<16 x double>, <16 x double>) {
-  %r = fadd <16 x double> %0, %1
-  ret <16 x double> %r
+define double @__reduce_max_double(<WIDTH x double>) nounwind readnone {
+  reduce16(double, @__max_varying_double, @__max_uniform_double, %0)
 }
 
-define internal double @__add_uniform_double(double, double) {
-  %r = fadd double %0, %1
-  ret double %r
+define i64 @__reduce_min_int64(<WIDTH x i64>) nounwind readnone {
+  reduce16(i64, @__min_varying_int64, @__min_uniform_int64, %0)
 }
 
-define double @__reduce_add_double(<16 x double>) nounwind readnone {
-  reduce16(double, @__add_varying_double, @__add_uniform_double)
+define i64 @__reduce_max_int64(<WIDTH x i64>) nounwind readnone {
+  reduce16(i64, @__max_varying_int64, @__max_uniform_int64, %0)
 }
 
-define double @__reduce_min_double(<16 x double>) nounwind readnone {
-  reduce16(double, @__min_varying_double, @__min_uniform_double)
+define i64 @__reduce_min_uint64(<WIDTH x i64>) nounwind readnone {
+  reduce16(i64, @__min_varying_uint64, @__min_uniform_uint64, %0)
 }
 
-define double @__reduce_max_double(<16 x double>) nounwind readnone {
-  reduce16(double, @__max_varying_double, @__max_uniform_double)
+define i64 @__reduce_max_uint64(<WIDTH x i64>) nounwind readnone {
+  reduce16(i64, @__max_varying_uint64, @__max_uniform_uint64, %0)
 }
 
-define internal <16 x i64> @__add_varying_int64(<16 x i64>, <16 x i64>) {
-  %r = add <16 x i64> %0, %1
-  ret <16 x i64> %r
-}
-
-define internal i64 @__add_uniform_int64(i64, i64) {
-  %r = add i64 %0, %1
-  ret i64 %r
-}
-
-define i64 @__reduce_add_int64(<16 x i64>) nounwind readnone {
-  reduce16(i64, @__add_varying_int64, @__add_uniform_int64)
-}
-
-define i64 @__reduce_min_int64(<16 x i64>) nounwind readnone {
-  reduce16(i64, @__min_varying_int64, @__min_uniform_int64)
-}
-
-define i64 @__reduce_max_int64(<16 x i64>) nounwind readnone {
-  reduce16(i64, @__max_varying_int64, @__max_uniform_int64)
-}
-
-define i64 @__reduce_min_uint64(<16 x i64>) nounwind readnone {
-  reduce16(i64, @__min_varying_uint64, @__min_uniform_uint64)
-}
-
-define i64 @__reduce_max_uint64(<16 x i64>) nounwind readnone {
-  reduce16(i64, @__max_varying_uint64, @__max_uniform_uint64)
-}
-
-reduce_equal(16)
+reduce_equal(WIDTH)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; masked store
