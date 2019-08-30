@@ -1091,7 +1091,7 @@ void FunctionEmitContext::CurrentLanesReturned(Expr *expr, bool doCoherenceCheck
         }
     }
 #ifdef ISPC_GENX_ENABLED
-    if (g->target->getISA() == Target::GENX && !ifNotEmulatedUniformForGen() && VaryingCFDepth() == 0 ||
+    if (g->target->getISA() == Target::GENX && !ifEmulatedUniformForGen() && VaryingCFDepth() == 0 ||
         g->target->getISA() != Target::GENX && VaryingCFDepth() == 0) {
 #else
     if (VaryingCFDepth() == 0) {
@@ -3408,7 +3408,7 @@ CFInfo *FunctionEmitContext::popCFState() {
 }
 
 #ifdef ISPC_GENX_ENABLED
-bool FunctionEmitContext::ifNotEmulatedUniformForGen() const {
+bool FunctionEmitContext::ifEmulatedUniformForGen() const {
     // Go backwards through controlFlowInfo, since we add new nested scopes
     // to the back.
     if (controlFlowInfo.size() > 0) {
@@ -3453,7 +3453,7 @@ llvm::Value *FunctionEmitContext::GenXPrepareVectorBranch(llvm::Value *value) {
     // If condition is a scalar we should change it to vector but only if we had
     // varying condition which was emulated as uniform in external scopes.
     if (!llvm::isa<llvm::VectorType>(value->getType())) {
-        if (!ifNotEmulatedUniformForGen())
+        if (!ifEmulatedUniformForGen())
             return ret;
         ret = BroadcastValue(value, LLVMTypes::Int1VectorType);
     }

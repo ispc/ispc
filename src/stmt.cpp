@@ -2524,7 +2524,11 @@ void GotoStmt::EmitCode(FunctionEmitContext *ctx) const {
     if (!ctx->GetCurrentBasicBlock())
         return;
 
+#ifdef ISPC_GENX_ENABLED
+    if (g->target->getISA() == Target::GENX && ctx->ifEmulatedUniformForGen() || ctx->VaryingCFDepth() > 0) {
+#else
     if (ctx->VaryingCFDepth() > 0) {
+#endif
         Error(pos, "\"goto\" statements are only legal under \"uniform\" "
                    "control flow.");
         return;
