@@ -222,18 +222,46 @@ ifelse(WIDTH,  `4', `<$1 $2, $1 $2, $1 $2, $1 $2>',
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Saturarion arithmetic, not supported here, needed for compatibility
 
-define(`saturation_arithmetic_op', `
-declare <WIDTH x $1> @__saturating_$2_$1(<WIDTH x $1> %a, <WIDTH x $1> %b) nounwind alwaysinline
-declare <WIDTH x $1> @__saturating_$2_u$1(<WIDTH x $1> %a, <WIDTH x $1> %b) nounwind alwaysinline
+define(`sat_arith_op_v', `
+declare <$3 x $1> @__p$2s_v$1(<$3 x $1>, <$3 x $1>)
+declare <$3 x $1> @__p$2us_v$1(<$3 x $1>, <$3 x $1>)
 ')
 
-saturation_arithmetic_op(i8, add)
-saturation_arithmetic_op(i16, add)
-saturation_arithmetic_op(i32, add)
-saturation_arithmetic_op(i64, add)
-saturation_arithmetic_op(i8, mul)
-saturation_arithmetic_op(i16, mul)
-saturation_arithmetic_op(i32, mul)
+define(`sat_arith_op_u', `
+declare $1 @__p$2s_u$1($1, $1) nounwind alwaysinline
+declare $1 @__p$2us_u$1($1, $1) nounwind alwaysinline
+')
+
+define(`saturation_arithmetic_higher', `
+sat_arith_op_v(i32, $1, WIDTH)
+sat_arith_op_v(i64, $1, WIDTH)
+
+sat_arith_op_u(i8,  $1)
+sat_arith_op_u(i16, $1)
+sat_arith_op_u(i32, $1)
+sat_arith_op_u(i64, $1)
+')
+
+define(`saturation_arithmetic_full', `
+sat_arith_op_v(i8,  $1, WIDTH)
+sat_arith_op_v(i16, $1, WIDTH)
+sat_arith_op_v(i32, $1, WIDTH)
+sat_arith_op_v(i64, $1, WIDTH)
+
+sat_arith_op_u(i8,  $1)
+sat_arith_op_u(i16, $1)
+sat_arith_op_u(i32, $1)
+sat_arith_op_u(i64, $1)
+')
+
+saturation_arithmetic_higher(add)
+saturation_arithmetic_higher(sub)
+
+saturation_arithmetic_full(mul)
+saturation_arithmetic_full(div)
+
+declare i64 @__abs_ui64(i64 %a)
+declare <WIDTH x i64> @__abs_vi64(<WIDTH x i64> %a)
 
 ;; utility function used by saturation_arithmetic_novec below.  This shouldn't be called by
 ;; target .ll files directly.
