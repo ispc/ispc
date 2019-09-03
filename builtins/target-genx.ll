@@ -63,7 +63,6 @@ define(`SIZEOF',
 stdlib_core()
 packed_load_and_store()
 scans()
-saturation_arithmetic()
 ctlztz()
 define_prefetches()
 define_shuffles()
