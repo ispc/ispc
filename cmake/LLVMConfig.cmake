@@ -1,5 +1,5 @@
 #
-#  Copyright (c) 2018, Intel Corporation
+#  Copyright (c) 2018-2020, Intel Corporation
 #  All rights reserved.
 #
 #  Redistribution and use in source and binary forms, with or without
@@ -96,6 +96,11 @@ function(run_llvm_config output_var)
     endif()
     set(${output_var} ${${output_var}} PARENT_SCOPE)
 endfunction()
+
+if (WIN32)
+  # For windows build - need catch CRT flags
+  include(${LLVM_DIR}/ChooseMSVCCRT.cmake)
+endif()
 
 run_llvm_config(LLVM_VERSION_NUMBER "--version")
 message(STATUS "Detected LLVM version: ${LLVM_VERSION_NUMBER}")
