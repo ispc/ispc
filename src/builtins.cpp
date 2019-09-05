@@ -404,6 +404,10 @@ static void lSetInternalFunctions(llvm::Module *module) {
         "__do_assert_uniform",
         "__do_assert_varying",
         "__do_print",
+#ifdef ISPC_GENX_ENABLED
+        "__do_print_cm",
+        "__send_eot",
+#endif
         "__doublebits_uniform_int64",
         "__doublebits_varying_int64",
         "__exclusive_scan_add_double",

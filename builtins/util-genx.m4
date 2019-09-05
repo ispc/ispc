@@ -4073,17 +4073,17 @@ define internal void @__do_print_cm(i8*) alwaysinline {
 ;; id 2 is stdout
   %buf = tail call i32 @llvm.genx.predefined.surface(i32 2)
   %atomic_add = tail call <8 x i32> @llvm.genx.dword.atomic.add.v8i32.v8i1.v8i32(<8 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>, i32 %buf, <8 x i32> <i32 0, i32 4, i32 8,
-i32 12, i32 16, i32 20, i32 24, i32 28>, <8 x i32> <i32 192, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0>, <8 x i32> zeroinitializer)
+i32 12, i32 16, i32 20, i32 24, i32 28>, <8 x i32> <i32 192, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0>, <8 x i32> zeroinitializer), !ISPC-Uniform !1
   %extract = extractelement <8 x i32> %atomic_add, i32 0
   %lshr1 = lshr i32 %extract, 4
-  tail call void @llvm.genx.oword.st.v8i32(i32 %buf, i32 %lshr1, <8 x i32> <i32 5, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0>)
+  tail call void @llvm.genx.oword.st.v8i32(i32 %buf, i32 %lshr1, <8 x i32> <i32 5, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0>), !ISPC-Uniform !1
   %add1 = add i32 %extract, 32
   %lshr2 = lshr i32 %add1, 4
   %strpointer = bitcast i8* %0 to <128 x i8>*
   %str1 = load PTR_OP_ARGS(`<128 x i8> ')  %strpointer
 ;; 128 is maximalsize for oword.st
 ;; TODO: add strlen as function parameter and call @llvm.genx.oword.st.v128i8 in a loop
-  tail call void @llvm.genx.oword.st.v128i8(i32 %buf, i32 %lshr2, <128 x i8> %str1)
+  tail call void @llvm.genx.oword.st.v128i8(i32 %buf, i32 %lshr2, <128 x i8> %str1), !ISPC-Uniform !1
   ret void
 }
 
