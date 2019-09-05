@@ -1831,7 +1831,14 @@ void ForeachActiveStmt::EmitCode(FunctionEmitContext *ctx) const {
     // to be processed by a pass through the loop body.  It starts out with
     // the current execution mask (which should never be all off going in
     // to this)...
-    llvm::Value *oldFullMask = ctx->GetFullMask();
+    llvm::Value *oldFullMask = NULL;
+#ifdef ISPC_GENX_ENABLED
+    if (g->target->getISA() == Target::GENX) {
+        // Current mask will be calculated according to EM mask
+        oldFullMask = ctx->GenXSimdCFPredicate(LLVMMaskAllOn);
+    } else
+#endif
+        oldFullMask = ctx->GetFullMask();
     llvm::Value *maskBitsPtr = ctx->AllocaInst(LLVMTypes::Int64Type, "mask_bits");
     llvm::Value *movmsk = ctx->LaneMask(oldFullMask);
     ctx->StoreInst(movmsk, maskBitsPtr);
@@ -1876,7 +1883,12 @@ void ForeachActiveStmt::EmitCode(FunctionEmitContext *ctx) const {
             ctx->CmpInst(llvm::Instruction::ICmp, llvm::CmpInst::ICMP_EQ, firstSet32Smear, programIndex);
         iterMask = ctx->I1VecToBoolVec(iterMask);
 
-        ctx->SetInternalMask(iterMask);
+#ifdef ISPC_GENX_ENABLED
+        // Don't need to change this mask in GENX: execution
+        // is performed according to GenX EM
+        if (g->target->getISA() != Target::GENX)
+#endif
+            ctx->SetInternalMask(iterMask);
 
         // Also update the bitvector of lanes left to turn off the bit for
         // the lane we're about to run.
@@ -1887,7 +1899,14 @@ void ForeachActiveStmt::EmitCode(FunctionEmitContext *ctx) const {
         ctx->StoreInst(newRemaining, maskBitsPtr);
 
         // and onward to run the loop body...
-        ctx->BranchInst(bbBody);
+#ifdef ISPC_GENX_ENABLED
+        // Set GenX EM through simdcf.goto
+        // The EM will be restored when CheckForMore is reached
+        if (g->target->getISA() == Target::GENX)
+            ctx->BranchInst(bbBody, bbCheckForMore, iterMask);
+        else
+#endif
+            ctx->BranchInst(bbBody);
     }
 
     ctx->SetCurrentBasicBlock(bbBody);
