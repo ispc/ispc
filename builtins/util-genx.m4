@@ -5798,14 +5798,6 @@ define(`declare_nvptx',
 declare i32 @__program_index()  nounwind readnone alwaysinline
 declare i32 @__program_count()  nounwind readnone alwaysinline
 declare i32 @__warp_index()  nounwind readnone alwaysinline
-declare i32 @__task_index0()  nounwind readnone alwaysinline
-declare i32 @__task_index1()  nounwind readnone alwaysinline
-declare i32 @__task_index2()  nounwind readnone alwaysinline
-declare i32 @__task_index()  nounwind readnone alwaysinline
-declare i32 @__task_count0()  nounwind readnone alwaysinline
-declare i32 @__task_count1()  nounwind readnone alwaysinline
-declare i32 @__task_count2()  nounwind readnone alwaysinline
-declare i32 @__task_count()  nounwind readnone alwaysinline
 declare i64* @__cvt_loc2gen(i64 addrspace(3)*) nounwind readnone alwaysinline
 declare i64* @__cvt_const2gen(i64 addrspace(4)*) nounwind readnone alwaysinline
 declare i64* @__cvt_loc2gen_var(i64 addrspace(3)*) nounwind readnone alwaysinline

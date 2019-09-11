@@ -303,7 +303,7 @@ def run_test(testname, host, target):
         # We need to figure out the signature of the test
         # function that this test has.
         sig2def = { "f_v(" : 0, "f_f(" : 1, "f_fu(" : 2, "f_fi(" : 3,
-                    "f_du(" : 4, "f_duf(" : 5, "f_di(" : 6, "f_sz" : 7 }
+                    "f_du(" : 4, "f_duf(" : 5, "f_di(" : 6, "f_sz" : 7, "f_t" : 8 }
         file = open(filename, 'r')
         match = -1
         for line in file:

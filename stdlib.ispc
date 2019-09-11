@@ -57,6 +57,20 @@
   #error Unknown value of ISPC_MASK_BITS
 #endif
 
+///////////////////////////////////////////////////////////////////////////
+// Gen specific primitives
+
+__declspec(safe,cost0) static inline uniform int __taskIndex0() { return __task_index0(); }
+__declspec(safe,cost0) static inline uniform int __taskIndex1() { return __task_index1(); }
+__declspec(safe,cost0) static inline uniform int __taskIndex2() { return __task_index2(); }
+__declspec(safe,cost0) static inline uniform int __taskIndex () { return __task_index (); }
+
+__declspec(safe,cost0) static inline uniform int __taskCount0() { return __task_count0(); }
+__declspec(safe,cost0) static inline uniform int __taskCount1() { return __task_count1(); }
+__declspec(safe,cost0) static inline uniform int __taskCount2() { return __task_count2(); }
+__declspec(safe,cost0) static inline uniform int __taskCount () { return __task_count (); }
+
+
 /* Limits of integral types. */
 #ifndef INT8_MAX
 #define INT8_MAX               (127)
