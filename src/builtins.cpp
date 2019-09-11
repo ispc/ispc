@@ -739,7 +739,16 @@ static void lSetInternalFunctions(llvm::Module *module) {
         "__vselect_i32",
         "ISPCAlloc",
         "ISPCLaunch",
-        "ISPCSync"
+        "ISPCSync",
+// ISPC_GENX_ENABLED
+        "__task_index0",
+        "__task_index1",
+        "__task_index2",
+        "__task_index",
+        "__task_count0",
+        "__task_count1",
+        "__task_count2",
+        "__task_count",
     };
     // clang-format on
     int count = sizeof(names) / sizeof(names[0]);

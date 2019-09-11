@@ -4175,6 +4175,8 @@ declare void @ISPCLaunch(i8**, i8*, i8*, i32, i32, i32) nounwind
 declare void @ISPCSync(i8*) nounwind
 declare void @ISPCInstrument(i8*, i8*, i32, i64) nounwind
 
+declare_gen()
+
 declare i1 @__is_compile_time_constant_mask(<WIDTH x MASK> %mask)
 declare i1 @__is_compile_time_constant_uniform_int32(i32)
 declare i1 @__is_compile_time_constant_varying_int32(<WIDTH x i32>)
@@ -6950,6 +6952,18 @@ declare <WIDTH x double> @__rsqrt_varying_double(<WIDTH x double>)
 define(`rcpd_decl', `
 declare  double @__rcp_uniform_double(double)
 declare <WIDTH x double> @__rcp_varying_double(<WIDTH x double>)
+')
+
+define(`declare_gen',
+`
+declare i32 @__task_index0()  nounwind readnone alwaysinline
+declare i32 @__task_index1()  nounwind readnone alwaysinline
+declare i32 @__task_index2()  nounwind readnone alwaysinline
+declare i32 @__task_index()  nounwind readnone alwaysinline
+declare i32 @__task_count0()  nounwind readnone alwaysinline
+declare i32 @__task_count1()  nounwind readnone alwaysinline
+declare i32 @__task_count2()  nounwind readnone alwaysinline
+declare i32 @__task_count()  nounwind readnone alwaysinline
 ')
 
 define(`global_atomic_varying',`
