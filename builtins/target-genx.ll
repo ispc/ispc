@@ -614,7 +614,7 @@ define i1 @__all(<WIDTH x MASK>) nounwind readnone alwaysinline {
 }
 
 define i1 @__none(<WIDTH x MASK>) nounwind readnone alwaysinline {
-  %v = call i1 @llvm.genx.all.GEN_SUFFIX(i1)(<WIDTH x MASK> %0) nounwind readnone
+  %v = call i1 @llvm.genx.any.GEN_SUFFIX(i1)(<WIDTH x MASK> %0) nounwind readnone
   %v_not = icmp eq i1 %v, 0
   ret i1 %v_not
 }
