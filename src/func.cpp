@@ -428,6 +428,8 @@ void Function::emitCode(FunctionEmitContext *ctx, llvm::Function *function, Sour
             llvm::SmallVector<llvm::Metadata *, 8> argKinds;
             llvm::SmallVector<llvm::Metadata *, 8> argInOutKinds;
             llvm::SmallVector<llvm::Metadata *, 8> argOffsets;
+            llvm::SmallVector<llvm::Metadata *, 8> argTypeDescs;
+
             // In ISPC we need only AK_NORMAL and IK_NORMAL now, in future it can change.
             enum { AK_NORMAL, AK_SAMPLER, AK_SURFACE, AK_VME };
             enum { IK_NORMAL, IK_INPUT, IK_OUTPUT, IK_INPUT_OUTPUT };
@@ -436,7 +438,7 @@ void Function::emitCode(FunctionEmitContext *ctx, llvm::Function *function, Sour
                 const Type *T = args[i]->type;
                 argKinds.push_back(llvm::ValueAsMetadata::get(llvm::ConstantInt::get(i32Type, AK_NORMAL)));
                 argInOutKinds.push_back(llvm::ValueAsMetadata::get(llvm::ConstantInt::get(i32Type, IK_NORMAL)));
-
+                argTypeDescs.push_back(llvm::MDString::get(fContext, llvm::StringRef("")));
                 llvm::Type *type = T->LLVMType(&fContext);
                 unsigned bytes = type->getScalarSizeInBits() / 8;
                 if (bytes != 0) {
@@ -463,8 +465,10 @@ void Function::emitCode(FunctionEmitContext *ctx, llvm::Function *function, Sour
                                         llvm::ValueAsMetadata::get(llvm::ConstantInt::getNullValue(i32Type)),
                                         llvm::ValueAsMetadata::get(llvm::ConstantInt::getNullValue(i32Type)),
                                         llvm::MDNode::get(fContext, argInOutKinds),
-                                        llvm::ValueAsMetadata::get(llvm::ConstantInt::getNullValue(i32Type)),
-                                        llvm::ValueAsMetadata::get(llvm::ConstantInt::getNullValue(i32Type))};
+                                        llvm::MDNode::get(fContext, argTypeDescs),
+                                        llvm::ValueAsMetadata::get(llvm::ConstantInt::getNullValue(i32Type))
+
+            };
 
             mdKernels->addOperand(llvm::MDNode::get(fContext, mdArgs));
         }
