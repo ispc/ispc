@@ -550,6 +550,9 @@ class FunctionEmitContext {
     flow with simdcf.any intrinsic*/
     llvm::Value *GenXPrepareVectorBranch(llvm::Value *value);
     bool ifEmulatedUniformForGen() const;
+    /*Add ISPC-Uniform metadata to llvm instruction. Instruction with
+    such metadata will not be predicated in CMSIMDCFLowering pass*/
+    void addUniformMetadata(llvm::Value *v);
 #endif
     /** @} */
 
