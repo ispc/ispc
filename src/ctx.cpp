@@ -2854,7 +2854,14 @@ void FunctionEmitContext::MemcpyInst(llvm::Value *dest, llvm::Value *src, llvm::
     args.push_back(src);
     args.push_back(count);
     args.push_back(LLVMFalse); /* not volatile */
+#ifdef ISPC_GENX_ENABLED
+    llvm::Value *callinst = CallInst(mcFunc, NULL, args, "");
+    if (g->target->getISA() == Target::GENX) {
+        addUniformMetadata(callinst);
+    }
+#else
     CallInst(mcFunc, NULL, args, "");
+#endif
 }
 
 void FunctionEmitContext::BranchInst(llvm::BasicBlock *dest) {
@@ -3458,5 +3465,14 @@ llvm::Value *FunctionEmitContext::GenXPrepareVectorBranch(llvm::Value *value) {
         ret = BroadcastValue(value, LLVMTypes::Int1VectorType);
     }
     return GenXSimdCFAny(ret);
+}
+
+void FunctionEmitContext::addUniformMetadata(llvm::Value *v) {
+    llvm::Instruction *inst = llvm::dyn_cast<llvm::Instruction>(v);
+    // Set ISPC-Uniform to exclude instruction from predication in CMSIMDCFLowering.
+    if (inst != NULL) {
+        llvm::MDNode *N = llvm::MDNode::get(*g->ctx, llvm::MDString::get(*g->ctx, "ISPC-Uniform"));
+        inst->setMetadata("ISPC-Uniform", N);
+    }
 }
 #endif
