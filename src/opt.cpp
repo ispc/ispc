@@ -133,6 +133,7 @@ static llvm::Pass *CreateFixBooleanSelectPass();
 
 #ifdef ISPC_GENX_ENABLED
 static llvm::Pass *CreatePromoteToPrivateMemoryPass();
+static llvm::Pass *CreateReplaceLLVMIntrinsics();
 #endif
 
 #ifndef ISPC_NO_DUMPS
@@ -718,6 +719,10 @@ void Optimize(llvm::Module *module, int optLevel) {
         optPM.add(llvm::createCFGSimplificationPass());
         optPM.add(llvm::createInstructionCombiningPass());
         optPM.add(CreateInstructionSimplifyPass());
+#ifdef ISPC_GENX_ENABLED
+        if (g->target->getISA() == Target::GENX)
+            optPM.add(CreateReplaceLLVMIntrinsics());
+#endif
         optPM.add(CreatePeepholePass());
         optPM.add(llvm::createFunctionInliningPass());
         optPM.add(llvm::createAggressiveDCEPass());
@@ -5337,4 +5342,50 @@ bool PromoteToPrivateMemoryPass::runOnBasicBlock(llvm::BasicBlock &bb) {
 
 static llvm::Pass *CreatePromoteToPrivateMemoryPass() { return new PromoteToPrivateMemoryPass(); }
 
+class ReplaceLLVMIntrinsics : public llvm::BasicBlockPass {
+  public:
+    static char ID;
+    ReplaceLLVMIntrinsics() : BasicBlockPass(ID) {}
+    llvm::StringRef getPassName() const { return "LLVM intrinsics replacement"; }
+    bool runOnBasicBlock(llvm::BasicBlock &BB);
+};
+
+char ReplaceLLVMIntrinsics::ID = 0;
+
+bool ReplaceLLVMIntrinsics::runOnBasicBlock(llvm::BasicBlock &BB) {
+    std::vector<llvm::AllocaInst *> Allocas;
+
+    bool modifiedAny = false;
+
+restart:
+    for (llvm::BasicBlock::iterator I = BB.begin(), E = --BB.end(); I != E; ++I) {
+        llvm::Instruction *inst = &*I;
+        if (llvm::CallInst *ci = llvm::dyn_cast<llvm::CallInst>(inst)) {
+            llvm::Function *func = ci->getCalledFunction();
+            if (func && func->getName() == "llvm.trap") {
+                llvm::Type *argTypes[] = {LLVMTypes::Int1VectorType, LLVMTypes::Int16VectorType};
+                // Description of parameters for genx_raw_send_noresult can be found in target-genx.ll
+                auto Fn = llvm::Intrinsic::getDeclaration(m->module, llvm::Intrinsic::genx_raw_send_noresult, argTypes);
+                llvm::SmallVector<llvm::Value *, 8> Args;
+                Args.push_back(llvm::ConstantInt::get(LLVMTypes::Int32Type, 0));
+                Args.push_back(llvm::ConstantVector::getSplat(16, llvm::ConstantInt::getTrue(*g->ctx)));
+                Args.push_back(llvm::ConstantInt::get(LLVMTypes::Int32Type, 39));
+                Args.push_back(llvm::ConstantInt::get(LLVMTypes::Int32Type, 33554448));
+                llvm::Value *zeroMask =
+                    llvm::ConstantVector::getSplat(16, llvm::Constant::getNullValue(llvm::Type::getInt16Ty(*g->ctx)));
+                Args.push_back(zeroMask);
+
+                llvm::Instruction *newInst = llvm::CallInst::Create(Fn, Args, ci->getName());
+                if (newInst != NULL) {
+                    llvm::ReplaceInstWithInst(ci, newInst);
+                    modifiedAny = true;
+                    goto restart;
+                }
+            }
+        }
+    }
+    return modifiedAny;
+}
+
+static llvm::Pass *CreateReplaceLLVMIntrinsics() { return new ReplaceLLVMIntrinsics(); }
 #endif
