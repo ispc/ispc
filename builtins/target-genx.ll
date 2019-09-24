@@ -792,10 +792,11 @@ define <WIDTH x $1> @__masked_load_$1(i8 *, <WIDTH x MASK> %mask) nounwind alway
 }
 
 define <WIDTH x $1> @__masked_load_private_$1(i8 *, <WIDTH x MASK> %mask) nounwind alwaysinline {
-  %ptr_bitcast = bitcast i8* %0 to <WIDTH x $1>*
-  %res = load <WIDTH x $1>, <WIDTH x $1>* %ptr_bitcast
-  %masked_res = select <WIDTH x MASK> %mask, <WIDTH x $1> %res, <WIDTH x $1> zeroinitializer
-  ret <WIDTH x $1> %masked_res
+  %broadcast_init = insertelement <WIDTH x i32> undef, i32 SIZEOF($1), i32 0
+  %shuffle = shufflevector <WIDTH x i32> %broadcast_init, <WIDTH x i32> undef, <WIDTH x i32> zeroinitializer
+  %offsets = mul <WIDTH x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>, %shuffle
+  %res = call <WIDTH x $1> @__gather_base_offsets32_private_$1(i8 * %0, i32 1, <WIDTH x i32> %offsets, <WIDTH x MASK> %mask)
+  ret <WIDTH x $1> %res
 }
 ')
 

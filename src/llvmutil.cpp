@@ -1608,7 +1608,7 @@ void lGetAddressSpace(llvm::Value *v, std::set<llvm::Value *> &done, AddressSpac
         return;
     }
 
-    if (inst == NULL) {
+    if (inst == NULL || llvm::isa<llvm::CallInst>(v)) {
         return;
     }
     for (unsigned i = 0; i < inst->getNumOperands(); ++i)
