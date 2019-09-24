@@ -2019,7 +2019,15 @@ void ForeachUniqueStmt::EmitCode(FunctionEmitContext *ctx) const {
     // to be processed by a pass through the foreach_unique loop body.  It
     // starts out with the full execution mask (which should never be all
     // off going in to this)...
-    llvm::Value *oldFullMask = ctx->GetFullMask();
+    llvm::Value *oldFullMask = NULL;
+#ifdef ISPC_GENX_ENABLED
+    if (g->target->getISA() == Target::GENX) {
+        // Current mask will be calculated according to EM mask
+        oldFullMask = ctx->GenXSimdCFPredicate(LLVMMaskAllOn);
+    } else
+#endif
+        oldFullMask = ctx->GetFullMask();
+
     llvm::Value *maskBitsPtr = ctx->AllocaInst(LLVMTypes::Int64Type, "mask_bits");
     llvm::Value *movmsk = ctx->LaneMask(oldFullMask);
     ctx->StoreInst(movmsk, maskBitsPtr);
@@ -2090,7 +2098,12 @@ void ForeachUniqueStmt::EmitCode(FunctionEmitContext *ctx) const {
 
         llvm::Value *loopMask =
             ctx->BinaryOperator(llvm::Instruction::And, oldMask, matchingLanes, "foreach_unique_loop_mask");
-        ctx->SetInternalMask(loopMask);
+#ifdef ISPC_GENX_ENABLED
+        // Don't need to change this mask in GENX: execution
+        // is performed according to GenX EM
+        if (g->target->getISA() != Target::GENX)
+#endif
+            ctx->SetInternalMask(loopMask);
 
         // Also update the bitvector of lanes left to process in subsequent
         // loop iterations:
@@ -2102,7 +2115,14 @@ void ForeachUniqueStmt::EmitCode(FunctionEmitContext *ctx) const {
         ctx->StoreInst(newRemaining, maskBitsPtr);
 
         // and onward...
-        ctx->BranchInst(bbBody);
+#ifdef ISPC_GENX_ENABLED
+        // Set GenX EM through simdcf.goto
+        // The EM will be restored when CheckForMore is reached
+        if (g->target->getISA() == Target::GENX)
+            ctx->BranchInst(bbBody, bbCheckForMore, loopMask);
+        else
+#endif
+            ctx->BranchInst(bbBody);
     }
 
     ctx->SetCurrentBasicBlock(bbBody);
@@ -2893,7 +2913,14 @@ void AssertStmt::EmitCode(FunctionEmitContext *ctx) const {
         return;
     }
     args.push_back(exprValue);
-    args.push_back(ctx->GetFullMask());
+#ifdef ISPC_GENX_ENABLED
+    if (g->target->getISA() == Target::GENX)
+        // This will create mask according to current EM on SIMD CF Lowering.
+        // The result will be like       mask = select (EM, AllOn, AllFalse)
+        args.push_back(ctx->GenXSimdCFPredicate(LLVMMaskAllOn));
+    else
+#endif
+        args.push_back(ctx->GetFullMask());
     ctx->CallInst(assertFunc, NULL, args, "");
 
     free(errorString);
