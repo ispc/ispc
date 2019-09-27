@@ -134,6 +134,7 @@ static llvm::Pass *CreateFixBooleanSelectPass();
 #ifdef ISPC_GENX_ENABLED
 static llvm::Pass *CreatePromoteToPrivateMemoryPass();
 static llvm::Pass *CreateReplaceLLVMIntrinsics();
+static llvm::Pass *CreateReplaceUnsupportedInsts();
 #endif
 
 #ifndef ISPC_NO_DUMPS
@@ -592,12 +593,17 @@ void Optimize(llvm::Module *module, int optLevel) {
         optPM.add(llvm::createInstructionCombiningPass());
         optPM.add(llvm::createCFGSimplificationPass());
         optPM.add(llvm::createPruneEHPass());
+#ifdef ISPC_GENX_ENABLED
+        if (g->target->getISA() == Target::GENX)
+            optPM.add(CreateReplaceUnsupportedInsts());
+#endif
         optPM.add(llvm::createPostOrderFunctionAttrsLegacyPass());
         optPM.add(llvm::createReversePostOrderFunctionAttrsPass());
 #ifdef ISPC_GENX_ENABLED
         if (g->target->getISA() == Target::GENX)
             optPM.add(CreatePromoteToPrivateMemoryPass());
 #endif
+        // Next inline pass will remove functions, saved by __keep_funcs_live
         optPM.add(llvm::createFunctionInliningPass());
         optPM.add(llvm::createConstantPropagationPass());
         optPM.add(llvm::createDeadInstEliminationPass());
@@ -5432,4 +5438,65 @@ restart:
 }
 
 static llvm::Pass *CreateReplaceLLVMIntrinsics() { return new ReplaceLLVMIntrinsics(); }
+
+///////////////////////////////////////////////////////////////////////////
+// ReplaceUnsupportedInsts
+
+/** This pass replaces supported by LLVM IR, but unsupported by CM for GENX instructions.
+    For example there is IR for i64 div, but there is no div i64 in VISA and CM don't handle this situation,
+    so ISPC mustn't generate IR with i64 div
+ */
+
+class ReplaceUnsupportedInsts : public llvm::BasicBlockPass {
+  public:
+    static char ID;
+    ReplaceUnsupportedInsts() : BasicBlockPass(ID) {}
+    llvm::StringRef getPassName() const { return "Replace LLVM instructions, unsupported by CM"; }
+    bool runOnBasicBlock(llvm::BasicBlock &BB);
+};
+
+char ReplaceUnsupportedInsts::ID = 0;
+
+bool ReplaceUnsupportedInsts::runOnBasicBlock(llvm::BasicBlock &bb) {
+    DEBUG_START_PASS("ReplaceUnsupportedInsts");
+    bool modifiedAny = false;
+
+restart:
+    for (llvm::BasicBlock::iterator I = bb.begin(), E = --bb.end(); I != E; ++I) {
+        llvm::Instruction *inst = &*I;
+        if ((inst->getOpcode() == inst->UDiv) || (inst->getOpcode() == inst->SDiv)) {
+            auto type = inst->getOperand(0)->getType();
+            if ((type == LLVMTypes::Int64Type) || (type == LLVMTypes::Int64VectorType)) {
+                llvm::Function *func;
+                char *name;
+                if (inst->getOpcode() == inst->UDiv) {
+                    if (type == LLVMTypes::Int64Type) {
+                        name = "__divus_ui64";
+                    } else {
+                        name = "__divus_vi64";
+                    }
+                } else {
+                    if (type == LLVMTypes::Int64Type) {
+                        name = "__divs_ui64";
+                    } else {
+                        name = "__divs_vi64";
+                    }
+                }
+                func = m->module->getFunction(name);
+                Assert(func != NULL && "Can't find correct function!!!");
+                llvm::SmallVector<llvm::Value *, 8> args;
+                args.push_back(inst->getOperand(0));
+                args.push_back(inst->getOperand(1));
+                llvm::Instruction *newInst = llvm::CallInst::Create(func, args, name);
+                llvm::ReplaceInstWithInst(inst, newInst);
+                modifiedAny = true;
+                I = newInst->getIterator();
+            }
+        }
+    }
+    DEBUG_END_PASS("ReplaceUnsupportedInsts");
+    return modifiedAny;
+}
+
+static llvm::Pass *CreateReplaceUnsupportedInsts() { return new ReplaceUnsupportedInsts(); }
 #endif

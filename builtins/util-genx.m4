@@ -400,23 +400,117 @@ saturation_arithmetic_sub_u(i16)
 saturation_arithmetic_sub_u(i32)
 saturation_arithmetic_sub_u(i64)
 
-;;no intrinsic for div
+;;OpenCL algorithm of udiv for i64
+;;no intrinsic for div so
+define i64 @__divus_ui64(i64 %a, i64 %b) {
+entry:
+  br label %do
+do:
+  %R1 = phi i64 [0, %entry], [%RF, %while]
+  %Q1 = phi i64 [0, %entry], [%QF, %while]
+  %I1 = phi i64  [63, %entry], [%IF, %while]
+  %R2 = shl i64 %R1, 1
 
-define(`abs_vi64', `
+  ;;R = (R & ~1UL) | ((a >> I) & 1UL);
+  ;;R = R3_1 | R3_2
+  %R3_1 = and i64 %R2, -2
+  %R3_2_1 = lshr i64 %a, %I1
+  %R3_2_2 = and i64 %R3_2_1, 1
+  %R4 = or i64 %R3_1, %R3_2_2
+  %cmp1 = icmp uge i64 %R4, %b
+  br i1 %cmp1, label %if, label %while
+
+if:
+  %R5 = sub i64 %R4, %b
+  %Q2 = shl i64 1, %I1
+  %Q3 = or i64 %Q1, %Q2
+  br label %while
+
+while:
+  %RF = phi i64 [%R4, %do], [%R5, %if]
+  %QF = phi i64 [%Q1, %do], [%Q3, %if]
+  %IF = sub i64 %I1, 1
+  %cmp2 = icmp ne i64 %IF, -1
+  br i1 %cmp2, label %do, label %done
+
+done:
+  ret i64 %QF
+}
+
+declare i64 @llvm.genx.absi.i64(i64) nounwind readnone
+define i64 @__divs_ui64(i64 %a, i64 %b) {
+  %ua = call i64 @llvm.genx.absi.i64(i64 %a)
+  %ub = call i64 @llvm.genx.absi.i64(i64 %b)
+  %ures = call i64 @__divus_ui64(i64 %ua, i64 %ub)
+  %cmp1 = xor i64 %a, %b
+  ;;0x8000000000000000 <=> sign
+  %cmp2 = icmp uge i64 %cmp1, -9223372036854775808
+  br i1 %cmp2, label %if, label %else
+if:
+  %res = mul i64 %ures, -1
+  ret i64 %res
+else:
+  ret i64 %ures
+}
+
+define(`div_vi64', `
+declare i1 @llvm.genx.simdcf.any.v$1i1(<$1 x i1>) nounwind readnone
+define <$1 x i64> @__divus_vi64(<$1 x i64> %a, <$1 x i64> %b) {
+entry:
+  br label %do
+do:
+  %R1 = phi <$1 x i64> [const_vector_size(i64, 0, $1), %entry], [%RF, %while]
+  %Q1 = phi <$1 x i64> [const_vector_size(i64, 0, $1), %entry], [%QF, %while]
+  %I1 = phi <$1 x i64>  [const_vector_size(i64, 63, $1), %entry], [%IF, %while]
+  %R2 = shl <$1 x i64> %R1, const_vector_size(i64, 1, $1)
+
+  ;;R = (R & ~1UL) | ((a >> I) & 1UL);
+  ;;R = R3_1 | R3_2
+  %R3_1 = and <$1 x i64> %R2, const_vector_size(i64, -2, $1)
+  %R3_2_1 = lshr <$1 x i64> %a, %I1
+  %R3_2_2 = and <$1 x i64> %R3_2_1, const_vector_size(i64, 1, $1)
+  %R4 = or <$1 x i64> %R3_1, %R3_2_2
+  %cmp1 = icmp uge <$1 x i64> %R4, %b
+  %cmp2 = call i1 @llvm.genx.simdcf.any.v$1i1(<$1 x i1> %cmp1)
+  br i1 %cmp2, label %if, label %while
+
+if:
+  %R5 = sub <$1 x i64> %R4, %b
+  %Q2 = shl <$1 x i64> const_vector_size(i64, 1, $1), %I1
+  %Q3 = or <$1 x i64> %Q1, %Q2
+  br label %while
+
+while:
+  %RF = phi <$1 x i64> [%R4, %do], [%R5, %if]
+  %QF = phi <$1 x i64> [%Q1, %do], [%Q3, %if]
+  %IF = sub <$1 x i64> %I1, const_vector_size(i64, 1, $1)
+  %cmp3 = icmp ne <$1 x i64> %IF, const_vector_size(i64, -1, $1)
+  %cmp4 = call i1 @llvm.genx.simdcf.any.v$1i1(<$1 x i1> %cmp3)
+  br i1  %cmp4, label %do, label %done
+
+done:
+  ret <$1 x i64> %QF
+}
+
 declare <$1 x i64> @llvm.genx.absi.v$1i64(<$1 x i64>)  nounwind readnone
-define <$1 x i64> @__abs_vi64(<$1 x i64> %a) {
-  %ret = call <$1 x i64> @llvm.genx.absi.v$1i64(<$1 x i64> %a)
-  ret <$1 x i64> %ret 
+define <$1 x i64> @__divs_vi64(<$1 x i64> %a, <$1 x i64> %b) {
+  %ua = call <$1 x i64> @llvm.genx.absi.v$1i64(<$1 x i64>  %a)
+  %ub = call <$1 x i64> @llvm.genx.absi.v$1i64(<$1 x i64>  %b)
+  %ures = call <$1 x i64> @__divus_vi64(<$1 x i64>  %ua, <$1 x i64>  %ub)
+  %cmp1 = xor <$1 x i64> %a, %b
+  ;;0x8000000000000000 <=> sign
+  %cmp2 = icmp uge <$1 x i64> %cmp1, const_vector_size(i64, -9223372036854775808, $1)
+  %cmp3 = call i1 @llvm.genx.simdcf.any.v$1i1(<$1 x i1> %cmp2)
+  br i1 %cmp3, label %if, label %else
+if:
+  %res = mul <$1 x i64> %ures, const_vector_size(i64, -1, $1)
+  ret <$1 x i64> %res
+else:
+  ret <$1 x i64> %ures
 }
 ')
 
-abs_vi64(WIDTH)
-
-declare i64 @llvm.genx.absi.i64(i64) nounwind readnone
-define i64 @__abs_ui64(i64 %a) {
-  %ret = call i64 @llvm.genx.absi.i64(i64 %a)
-  ret i64 %ret
-}
+div_vi64(WIDTH)
 
 ;; utility function used by saturation_arithmetic_novec below.  This shouldn't be called by
 ;; target .ll files directly.
@@ -3209,12 +3303,13 @@ declare void
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-declare void @__use8(<WIDTH x i8>)
-declare void @__use16(<WIDTH x i16>)
-declare void @__use32(<WIDTH x i32>)
-declare void @__usefloat(<WIDTH x float>)
-declare void @__use64(<WIDTH x i64>)
-declare void @__usedouble(<WIDTH x double>)
+declare void @__use_vi8(<WIDTH x i8>)
+declare void @__use_vi16(<WIDTH x i16>)
+declare void @__use_vi32(<WIDTH x i32>)
+declare void @__use_vf(<WIDTH x float>)
+declare void @__use_vi64(<WIDTH x i64>)
+declare void @__use_ui64(i64)
+declare void @__use_vd(<WIDTH x double>)
 
 ;; This is a temporary function that will be removed at the end of
 ;; compilation--the idea is that it calls out to all of the various
@@ -3229,31 +3324,31 @@ define void @__keep_funcs_live(i8 * %ptr, <WIDTH x i8> %v8, <WIDTH x i16> %v16,
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
   ;; loads
   %ml8  = call <WIDTH x i8>  @__masked_load_i8(i8 * %ptr, <WIDTH x MASK> %mask)
-  call void @__use8(<WIDTH x i8> %ml8)
+  call void @__use_vi8(<WIDTH x i8> %ml8)
   %ml16 = call <WIDTH x i16> @__masked_load_i16(i8 * %ptr, <WIDTH x MASK> %mask)
-  call void @__use16(<WIDTH x i16> %ml16)
+  call void @__use_vi16(<WIDTH x i16> %ml16)
   %ml32 = call <WIDTH x i32> @__masked_load_i32(i8 * %ptr, <WIDTH x MASK> %mask)
-  call void @__use32(<WIDTH x i32> %ml32)
+  call void @__use_vi32(<WIDTH x i32> %ml32)
   %mlf = call <WIDTH x float> @__masked_load_float(i8 * %ptr, <WIDTH x MASK> %mask)
-  call void @__usefloat(<WIDTH x float> %mlf)
+  call void @__use_vf(<WIDTH x float> %mlf)
   %ml64 = call <WIDTH x i64> @__masked_load_i64(i8 * %ptr, <WIDTH x MASK> %mask)
-  call void @__use64(<WIDTH x i64> %ml64)
+  call void @__use_vi64(<WIDTH x i64> %ml64)
   %mld = call <WIDTH x double> @__masked_load_double(i8 * %ptr, <WIDTH x MASK> %mask)
-  call void @__usedouble(<WIDTH x double> %mld)
+  call void @__use_vd(<WIDTH x double> %mld)
 
   ;; loads
   %prml8  = call <WIDTH x i8>  @__masked_load_private_i8(i8 * %ptr, <WIDTH x MASK> %mask)
-  call void @__use8(<WIDTH x i8> %prml8)
+  call void @__use_vi8(<WIDTH x i8> %prml8)
   %prml16 = call <WIDTH x i16> @__masked_load_private_i16(i8 * %ptr, <WIDTH x MASK> %mask)
-  call void @__use16(<WIDTH x i16> %prml16)
+  call void @__use_vi16(<WIDTH x i16> %prml16)
   %prml32 = call <WIDTH x i32> @__masked_load_private_i32(i8 * %ptr, <WIDTH x MASK> %mask)
-  call void @__use32(<WIDTH x i32> %prml32)
+  call void @__use_vi32(<WIDTH x i32> %prml32)
   %prmlf = call <WIDTH x float> @__masked_load_private_float(i8 * %ptr, <WIDTH x MASK> %mask)
-  call void @__usefloat(<WIDTH x float> %prmlf)
+  call void @__use_vf(<WIDTH x float> %prmlf)
   %prml64 = call <WIDTH x i64> @__masked_load_private_i64(i8 * %ptr, <WIDTH x MASK> %mask)
-  call void @__use64(<WIDTH x i64> %prml64)
+  call void @__use_vi64(<WIDTH x i64> %prml64)
   %prmld = call <WIDTH x double> @__masked_load_private_double(i8 * %ptr, <WIDTH x MASK> %mask)
-  call void @__usedouble(<WIDTH x double> %prmld)
+  call void @__use_vd(<WIDTH x double> %prmld)
 
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
   ;; stores
@@ -3310,282 +3405,282 @@ define void @__keep_funcs_live(i8 * %ptr, <WIDTH x i8> %v8, <WIDTH x i16> %v16,
 
   %pg32_8 = call <WIDTH x i8>  @__pseudo_gather32_i8(<WIDTH x i32> %v32,
                                                      <WIDTH x MASK> %mask)
-  call void @__use8(<WIDTH x i8> %pg32_8)
+  call void @__use_vi8(<WIDTH x i8> %pg32_8)
   %pg32_16 = call <WIDTH x i16>  @__pseudo_gather32_i16(<WIDTH x i32> %v32,
                                                         <WIDTH x MASK> %mask)
-  call void @__use16(<WIDTH x i16> %pg32_16)
+  call void @__use_vi16(<WIDTH x i16> %pg32_16)
   %pg32_32 = call <WIDTH x i32>  @__pseudo_gather32_i32(<WIDTH x i32> %v32,
                                                         <WIDTH x MASK> %mask)
-  call void @__use32(<WIDTH x i32> %pg32_32)
+  call void @__use_vi32(<WIDTH x i32> %pg32_32)
   %pg32_f = call <WIDTH x float>  @__pseudo_gather32_float(<WIDTH x i32> %v32,
                                                         <WIDTH x MASK> %mask)
-  call void @__usefloat(<WIDTH x float> %pg32_f)
+  call void @__use_vf(<WIDTH x float> %pg32_f)
   %pg32_64 = call <WIDTH x i64>  @__pseudo_gather32_i64(<WIDTH x i32> %v32,
                                                         <WIDTH x MASK> %mask)
-  call void @__use64(<WIDTH x i64> %pg32_64)
+  call void @__use_vi64(<WIDTH x i64> %pg32_64)
   %pg32_d = call <WIDTH x double>  @__pseudo_gather32_double(<WIDTH x i32> %v32,
                                                         <WIDTH x MASK> %mask)
-  call void @__usedouble(<WIDTH x double> %pg32_d)
+  call void @__use_vd(<WIDTH x double> %pg32_d)
 
   %pg64_8 = call <WIDTH x i8>  @__pseudo_gather64_i8(<WIDTH x i64> %v64,
                                                      <WIDTH x MASK> %mask)
-  call void @__use8(<WIDTH x i8> %pg64_8)
+  call void @__use_vi8(<WIDTH x i8> %pg64_8)
   %pg64_16 = call <WIDTH x i16>  @__pseudo_gather64_i16(<WIDTH x i64> %v64,
                                                         <WIDTH x MASK> %mask)
-  call void @__use16(<WIDTH x i16> %pg64_16)
+  call void @__use_vi16(<WIDTH x i16> %pg64_16)
   %pg64_32 = call <WIDTH x i32>  @__pseudo_gather64_i32(<WIDTH x i64> %v64,
                                                         <WIDTH x MASK> %mask)
-  call void @__use32(<WIDTH x i32> %pg64_32)
+  call void @__use_vi32(<WIDTH x i32> %pg64_32)
   %pg64_f = call <WIDTH x float>  @__pseudo_gather64_float(<WIDTH x i64> %v64,
                                                         <WIDTH x MASK> %mask)
-  call void @__usefloat(<WIDTH x float> %pg64_f)
+  call void @__use_vf(<WIDTH x float> %pg64_f)
   %pg64_64 = call <WIDTH x i64>  @__pseudo_gather64_i64(<WIDTH x i64> %v64,
                                                         <WIDTH x MASK> %mask)
-  call void @__use64(<WIDTH x i64> %pg64_64)
+  call void @__use_vi64(<WIDTH x i64> %pg64_64)
   %pg64_d = call <WIDTH x double>  @__pseudo_gather64_double(<WIDTH x i64> %v64,
                                                         <WIDTH x MASK> %mask)
-  call void @__usedouble(<WIDTH x double> %pg64_d)
+  call void @__use_vd(<WIDTH x double> %pg64_d)
 
   %g32_8 = call <WIDTH x i8>  @__gather32_i8(<WIDTH x i32> %v32,
                                                      <WIDTH x MASK> %mask)
-  call void @__use8(<WIDTH x i8> %g32_8)
+  call void @__use_vi8(<WIDTH x i8> %g32_8)
   %g32_16 = call <WIDTH x i16>  @__gather32_i16(<WIDTH x i32> %v32,
                                                         <WIDTH x MASK> %mask)
-  call void @__use16(<WIDTH x i16> %g32_16)
+  call void @__use_vi16(<WIDTH x i16> %g32_16)
   %g32_32 = call <WIDTH x i32>  @__gather32_i32(<WIDTH x i32> %v32,
                                                         <WIDTH x MASK> %mask)
-  call void @__use32(<WIDTH x i32> %g32_32)
+  call void @__use_vi32(<WIDTH x i32> %g32_32)
   %g32_f = call <WIDTH x float>  @__gather32_float(<WIDTH x i32> %v32,
                                                         <WIDTH x MASK> %mask)
-  call void @__usefloat(<WIDTH x float> %g32_f)
+  call void @__use_vf(<WIDTH x float> %g32_f)
   %g32_64 = call <WIDTH x i64>  @__gather32_i64(<WIDTH x i32> %v32,
                                                         <WIDTH x MASK> %mask)
-  call void @__use64(<WIDTH x i64> %g32_64)
+  call void @__use_vi64(<WIDTH x i64> %g32_64)
   %g32_d = call <WIDTH x double>  @__gather32_double(<WIDTH x i32> %v32,
                                                         <WIDTH x MASK> %mask)
-  call void @__usedouble(<WIDTH x double> %g32_d)
+  call void @__use_vd(<WIDTH x double> %g32_d)
 
   %g64_8 = call <WIDTH x i8>  @__gather64_i8(<WIDTH x i64> %v64,
                                                      <WIDTH x MASK> %mask)
-  call void @__use8(<WIDTH x i8> %g64_8)
+  call void @__use_vi8(<WIDTH x i8> %g64_8)
   %g64_16 = call <WIDTH x i16>  @__gather64_i16(<WIDTH x i64> %v64,
                                                         <WIDTH x MASK> %mask)
-  call void @__use16(<WIDTH x i16> %g64_16)
+  call void @__use_vi16(<WIDTH x i16> %g64_16)
   %g64_32 = call <WIDTH x i32>  @__gather64_i32(<WIDTH x i64> %v64,
                                                         <WIDTH x MASK> %mask)
-  call void @__use32(<WIDTH x i32> %g64_32)
+  call void @__use_vi32(<WIDTH x i32> %g64_32)
   %g64_f = call <WIDTH x float>  @__gather64_float(<WIDTH x i64> %v64,
                                                         <WIDTH x MASK> %mask)
-  call void @__usefloat(<WIDTH x float> %g64_f)
+  call void @__use_vf(<WIDTH x float> %g64_f)
   %g64_64 = call <WIDTH x i64>  @__gather64_i64(<WIDTH x i64> %v64,
                                                         <WIDTH x MASK> %mask)
-  call void @__use64(<WIDTH x i64> %g64_64)
+  call void @__use_vi64(<WIDTH x i64> %g64_64)
   %g64_d = call <WIDTH x double>  @__gather64_double(<WIDTH x i64> %v64,
                                                         <WIDTH x MASK> %mask)
-  call void @__usedouble(<WIDTH x double> %g64_d)
+  call void @__use_vd(<WIDTH x double> %g64_d)
 
 ifelse(HAVE_GATHER, `1',
 `
   %nfpgbo32_8 = call <WIDTH x i8>
        @__pseudo_gather_base_offsets32_i8(i8 * %ptr, i32 0,
                                           <WIDTH x i32> %v32, <WIDTH x MASK> %mask)
-  call void @__use8(<WIDTH x i8> %nfpgbo32_8)
+  call void @__use_vi8(<WIDTH x i8> %nfpgbo32_8)
   %nfpgbo32_16 = call <WIDTH x i16>
        @__pseudo_gather_base_offsets32_i16(i8 * %ptr, i32 0,
                                            <WIDTH x i32> %v32, <WIDTH x MASK> %mask)
-  call void @__use16(<WIDTH x i16> %nfpgbo32_16)
+  call void @__use_vi16(<WIDTH x i16> %nfpgbo32_16)
   %nfpgbo32_32 = call <WIDTH x i32>
        @__pseudo_gather_base_offsets32_i32(i8 * %ptr, i32 0,
                                            <WIDTH x i32> %v32, <WIDTH x MASK> %mask)
-  call void @__use32(<WIDTH x i32> %nfpgbo32_32)
+  call void @__use_vi32(<WIDTH x i32> %nfpgbo32_32)
   %nfpgbo32_f = call <WIDTH x float>
        @__pseudo_gather_base_offsets32_float(i8 * %ptr, i32 0,
                                            <WIDTH x i32> %v32, <WIDTH x MASK> %mask)
-  call void @__usefloat(<WIDTH x float> %nfpgbo32_f)
+  call void @__use_vf(<WIDTH x float> %nfpgbo32_f)
   %nfpgbo32_64 = call <WIDTH x i64>
        @__pseudo_gather_base_offsets32_i64(i8 * %ptr, i32 0,
                                            <WIDTH x i32> %v32, <WIDTH x MASK> %mask)
-  call void @__use64(<WIDTH x i64> %nfpgbo32_64)
+  call void @__use_vi64(<WIDTH x i64> %nfpgbo32_64)
   %nfpgbo32_d = call <WIDTH x double>
        @__pseudo_gather_base_offsets32_double(i8 * %ptr, i32 0,
                                            <WIDTH x i32> %v32, <WIDTH x MASK> %mask)
-  call void @__usedouble(<WIDTH x double> %nfpgbo32_d)
+  call void @__use_vd(<WIDTH x double> %nfpgbo32_d)
 
   %nfpgbo64_8 = call <WIDTH x i8>
        @__pseudo_gather_base_offsets64_i8(i8 * %ptr, i32 0,
                                           <WIDTH x i64> %v64, <WIDTH x MASK> %mask)
-  call void @__use8(<WIDTH x i8> %nfpgbo64_8)
+  call void @__use_vi8(<WIDTH x i8> %nfpgbo64_8)
   %nfpgbo64_16 = call <WIDTH x i16>
        @__pseudo_gather_base_offsets64_i16(i8 * %ptr, i32 0,
                                            <WIDTH x i64> %v64, <WIDTH x MASK> %mask)
-  call void @__use16(<WIDTH x i16> %nfpgbo64_16)
+  call void @__use_vi16(<WIDTH x i16> %nfpgbo64_16)
   %nfpgbo64_32 = call <WIDTH x i32>
        @__pseudo_gather_base_offsets64_i32(i8 * %ptr, i32 0,
                                            <WIDTH x i64> %v64, <WIDTH x MASK> %mask)
-  call void @__use32(<WIDTH x i32> %nfpgbo64_32)
+  call void @__use_vi32(<WIDTH x i32> %nfpgbo64_32)
   %nfpgbo64_f = call <WIDTH x float>
        @__pseudo_gather_base_offsets64_float(i8 * %ptr, i32 0,
                                            <WIDTH x i64> %v64, <WIDTH x MASK> %mask)
-  call void @__usefloat(<WIDTH x float> %nfpgbo64_f)
+  call void @__use_vf(<WIDTH x float> %nfpgbo64_f)
   %nfpgbo64_64 = call <WIDTH x i64>
        @__pseudo_gather_base_offsets64_i64(i8 * %ptr, i32 0,
                                            <WIDTH x i64> %v64, <WIDTH x MASK> %mask)
-  call void @__use64(<WIDTH x i64> %nfpgbo64_64)
+  call void @__use_vi64(<WIDTH x i64> %nfpgbo64_64)
   %nfpgbo64_d = call <WIDTH x double>
        @__pseudo_gather_base_offsets64_double(i8 * %ptr, i32 0,
                                            <WIDTH x i64> %v64, <WIDTH x MASK> %mask)
-  call void @__usedouble(<WIDTH x double> %nfpgbo64_d)
+  call void @__use_vd(<WIDTH x double> %nfpgbo64_d)
 
   %nfgbo32_8 = call <WIDTH x i8>
        @__gather_base_offsets32_i8(i8 * %ptr, i32 0,
                                           <WIDTH x i32> %v32, <WIDTH x MASK> %mask)
-  call void @__use8(<WIDTH x i8> %nfgbo32_8)
+  call void @__use_vi8(<WIDTH x i8> %nfgbo32_8)
   %nfgbo32_16 = call <WIDTH x i16>
        @__gather_base_offsets32_i16(i8 * %ptr, i32 0,
                                            <WIDTH x i32> %v32, <WIDTH x MASK> %mask)
-  call void @__use16(<WIDTH x i16> %nfgbo32_16)
+  call void @__use_vi16(<WIDTH x i16> %nfgbo32_16)
   %nfgbo32_32 = call <WIDTH x i32>
        @__gather_base_offsets32_i32(i8 * %ptr, i32 0,
                                            <WIDTH x i32> %v32, <WIDTH x MASK> %mask)
-  call void @__use32(<WIDTH x i32> %nfgbo32_32)
+  call void @__use_vi32(<WIDTH x i32> %nfgbo32_32)
   %nfgbo32_f = call <WIDTH x float>
        @__gather_base_offsets32_float(i8 * %ptr, i32 0,
                                            <WIDTH x i32> %v32, <WIDTH x MASK> %mask)
-  call void @__usefloat(<WIDTH x float> %nfgbo32_f)
+  call void @__use_vf(<WIDTH x float> %nfgbo32_f)
   %nfgbo32_64 = call <WIDTH x i64>
        @__gather_base_offsets32_i64(i8 * %ptr, i32 0,
                                            <WIDTH x i32> %v32, <WIDTH x MASK> %mask)
-  call void @__use64(<WIDTH x i64> %nfgbo32_64)
+  call void @__use_vi64(<WIDTH x i64> %nfgbo32_64)
   %nfgbo32_d = call <WIDTH x double>
        @__gather_base_offsets32_double(i8 * %ptr, i32 0,
                                            <WIDTH x i32> %v32, <WIDTH x MASK> %mask)
-  call void @__usedouble(<WIDTH x double> %nfgbo32_d)
+  call void @__use_vd(<WIDTH x double> %nfgbo32_d)
 
   %nfgbo64_8 = call <WIDTH x i8>
        @__gather_base_offsets64_i8(i8 * %ptr, i32 0,
                                           <WIDTH x i64> %v64, <WIDTH x MASK> %mask)
-  call void @__use8(<WIDTH x i8> %nfgbo64_8)
+  call void @__use_vi8(<WIDTH x i8> %nfgbo64_8)
   %nfgbo64_16 = call <WIDTH x i16>
        @__gather_base_offsets64_i16(i8 * %ptr, i32 0,
                                            <WIDTH x i64> %v64, <WIDTH x MASK> %mask)
-  call void @__use16(<WIDTH x i16> %nfgbo64_16)
+  call void @__use_vi16(<WIDTH x i16> %nfgbo64_16)
   %nfgbo64_32 = call <WIDTH x i32>
        @__gather_base_offsets64_i32(i8 * %ptr, i32 0,
                                            <WIDTH x i64> %v64, <WIDTH x MASK> %mask)
-  call void @__use32(<WIDTH x i32> %nfgbo64_32)
+  call void @__use_vi32(<WIDTH x i32> %nfgbo64_32)
   %nfgbo64_f = call <WIDTH x float>
        @__gather_base_offsets64_float(i8 * %ptr, i32 0,
                                            <WIDTH x i64> %v64, <WIDTH x MASK> %mask)
-  call void @__usefloat(<WIDTH x float> %nfgbo64_f)
+  call void @__use_vf(<WIDTH x float> %nfgbo64_f)
   %nfgbo64_64 = call <WIDTH x i64>
        @__gather_base_offsets64_i64(i8 * %ptr, i32 0,
                                            <WIDTH x i64> %v64, <WIDTH x MASK> %mask)
-  call void @__use64(<WIDTH x i64> %nfgbo64_64)
+  call void @__use_vi64(<WIDTH x i64> %nfgbo64_64)
   %nfgbo64_d = call <WIDTH x double>
        @__gather_base_offsets64_double(i8 * %ptr, i32 0,
                                            <WIDTH x i64> %v64, <WIDTH x MASK> %mask)
-  call void @__usedouble(<WIDTH x double> %nfgbo64_d)
+  call void @__use_vd(<WIDTH x double> %nfgbo64_d)
 ',
 `
   %pgbo32_8 = call <WIDTH x i8>
        @__pseudo_gather_factored_base_offsets32_i8(i8 * %ptr, <WIDTH x i32> %v32, i32 0,
                                           <WIDTH x i32> %v32, <WIDTH x MASK> %mask)
-  call void @__use8(<WIDTH x i8> %pgbo32_8)
+  call void @__use_vi8(<WIDTH x i8> %pgbo32_8)
   %pgbo32_16 = call <WIDTH x i16>
        @__pseudo_gather_factored_base_offsets32_i16(i8 * %ptr, <WIDTH x i32> %v32, i32 0,
                                            <WIDTH x i32> %v32, <WIDTH x MASK> %mask)
-  call void @__use16(<WIDTH x i16> %pgbo32_16)
+  call void @__use_vi16(<WIDTH x i16> %pgbo32_16)
   %pgbo32_32 = call <WIDTH x i32>
        @__pseudo_gather_factored_base_offsets32_i32(i8 * %ptr, <WIDTH x i32> %v32, i32 0,
                                            <WIDTH x i32> %v32, <WIDTH x MASK> %mask)
-  call void @__use32(<WIDTH x i32> %pgbo32_32)
+  call void @__use_vi32(<WIDTH x i32> %pgbo32_32)
   %pgbo32_f = call <WIDTH x float>
        @__pseudo_gather_factored_base_offsets32_float(i8 * %ptr, <WIDTH x i32> %v32, i32 0,
                                            <WIDTH x i32> %v32, <WIDTH x MASK> %mask)
-  call void @__usefloat(<WIDTH x float> %pgbo32_f)
+  call void @__use_vf(<WIDTH x float> %pgbo32_f)
   %pgbo32_64 = call <WIDTH x i64>
        @__pseudo_gather_factored_base_offsets32_i64(i8 * %ptr, <WIDTH x i32> %v32, i32 0,
                                            <WIDTH x i32> %v32, <WIDTH x MASK> %mask)
-  call void @__use64(<WIDTH x i64> %pgbo32_64)
+  call void @__use_vi64(<WIDTH x i64> %pgbo32_64)
   %pgbo32_d = call <WIDTH x double>
        @__pseudo_gather_factored_base_offsets32_double(i8 * %ptr, <WIDTH x i32> %v32, i32 0,
                                            <WIDTH x i32> %v32, <WIDTH x MASK> %mask)
-  call void @__usedouble(<WIDTH x double> %pgbo32_d)
+  call void @__use_vd(<WIDTH x double> %pgbo32_d)
 
   %pgbo64_8 = call <WIDTH x i8>
        @__pseudo_gather_factored_base_offsets64_i8(i8 * %ptr, <WIDTH x i64> %v64, i32 0,
                                           <WIDTH x i64> %v64, <WIDTH x MASK> %mask)
-  call void @__use8(<WIDTH x i8> %pgbo64_8)
+  call void @__use_vi8(<WIDTH x i8> %pgbo64_8)
   %pgbo64_16 = call <WIDTH x i16>
        @__pseudo_gather_factored_base_offsets64_i16(i8 * %ptr, <WIDTH x i64> %v64, i32 0,
                                            <WIDTH x i64> %v64, <WIDTH x MASK> %mask)
-  call void @__use16(<WIDTH x i16> %pgbo64_16)
+  call void @__use_vi16(<WIDTH x i16> %pgbo64_16)
   %pgbo64_32 = call <WIDTH x i32>
        @__pseudo_gather_factored_base_offsets64_i32(i8 * %ptr, <WIDTH x i64> %v64, i32 0,
                                            <WIDTH x i64> %v64, <WIDTH x MASK> %mask)
-  call void @__use32(<WIDTH x i32> %pgbo64_32)
+  call void @__use_vi32(<WIDTH x i32> %pgbo64_32)
   %pgbo64_f = call <WIDTH x float>
        @__pseudo_gather_factored_base_offsets64_float(i8 * %ptr, <WIDTH x i64> %v64, i32 0,
                                            <WIDTH x i64> %v64, <WIDTH x MASK> %mask)
-  call void @__usefloat(<WIDTH x float> %pgbo64_f)
+  call void @__use_vf(<WIDTH x float> %pgbo64_f)
   %pgbo64_64 = call <WIDTH x i64>
        @__pseudo_gather_factored_base_offsets64_i64(i8 * %ptr, <WIDTH x i64> %v64, i32 0,
                                            <WIDTH x i64> %v64, <WIDTH x MASK> %mask)
-  call void @__use64(<WIDTH x i64> %pgbo64_64)
+  call void @__use_vi64(<WIDTH x i64> %pgbo64_64)
   %pgbo64_d = call <WIDTH x double>
        @__pseudo_gather_factored_base_offsets64_double(i8 * %ptr, <WIDTH x i64> %v64, i32 0,
                                            <WIDTH x i64> %v64, <WIDTH x MASK> %mask)
-  call void @__usedouble(<WIDTH x double> %pgbo64_d)
+  call void @__use_vd(<WIDTH x double> %pgbo64_d)
 
   %gbo32_8 = call <WIDTH x i8>
        @__gather_factored_base_offsets32_i8(i8 * %ptr, <WIDTH x i32> %v32, i32 0,
                                           <WIDTH x i32> %v32, <WIDTH x MASK> %mask)
-  call void @__use8(<WIDTH x i8> %gbo32_8)
+  call void @__use_vi8(<WIDTH x i8> %gbo32_8)
   %gbo32_16 = call <WIDTH x i16>
        @__gather_factored_base_offsets32_i16(i8 * %ptr, <WIDTH x i32> %v32, i32 0,
                                            <WIDTH x i32> %v32, <WIDTH x MASK> %mask)
-  call void @__use16(<WIDTH x i16> %gbo32_16)
+  call void @__use_vi16(<WIDTH x i16> %gbo32_16)
   %gbo32_32 = call <WIDTH x i32>
        @__gather_factored_base_offsets32_i32(i8 * %ptr, <WIDTH x i32> %v32, i32 0,
                                            <WIDTH x i32> %v32, <WIDTH x MASK> %mask)
-  call void @__use32(<WIDTH x i32> %gbo32_32)
+  call void @__use_vi32(<WIDTH x i32> %gbo32_32)
   %gbo32_f = call <WIDTH x float>
        @__gather_factored_base_offsets32_float(i8 * %ptr, <WIDTH x i32> %v32, i32 0,
                                            <WIDTH x i32> %v32, <WIDTH x MASK> %mask)
-  call void @__usefloat(<WIDTH x float> %gbo32_f)
+  call void @__use_vf(<WIDTH x float> %gbo32_f)
   %gbo32_64 = call <WIDTH x i64>
        @__gather_factored_base_offsets32_i64(i8 * %ptr, <WIDTH x i32> %v32, i32 0,
                                            <WIDTH x i32> %v32, <WIDTH x MASK> %mask)
-  call void @__use64(<WIDTH x i64> %gbo32_64)
+  call void @__use_vi64(<WIDTH x i64> %gbo32_64)
   %gbo32_d = call <WIDTH x double>
        @__gather_factored_base_offsets32_double(i8 * %ptr, <WIDTH x i32> %v32, i32 0,
                                            <WIDTH x i32> %v32, <WIDTH x MASK> %mask)
-  call void @__usedouble(<WIDTH x double> %gbo32_d)
+  call void @__use_vd(<WIDTH x double> %gbo32_d)
 
   %gbo64_8 = call <WIDTH x i8>
        @__gather_factored_base_offsets64_i8(i8 * %ptr, <WIDTH x i64> %v64, i32 0,
                                           <WIDTH x i64> %v64, <WIDTH x MASK> %mask)
-  call void @__use8(<WIDTH x i8> %gbo64_8)
+  call void @__use_vi8(<WIDTH x i8> %gbo64_8)
   %gbo64_16 = call <WIDTH x i16>
        @__gather_factored_base_offsets64_i16(i8 * %ptr, <WIDTH x i64> %v64, i32 0,
                                            <WIDTH x i64> %v64, <WIDTH x MASK> %mask)
-  call void @__use16(<WIDTH x i16> %gbo64_16)
+  call void @__use_vi16(<WIDTH x i16> %gbo64_16)
   %gbo64_32 = call <WIDTH x i32>
        @__gather_factored_base_offsets64_i32(i8 * %ptr, <WIDTH x i64> %v64, i32 0,
                                            <WIDTH x i64> %v64, <WIDTH x MASK> %mask)
-  call void @__use32(<WIDTH x i32> %gbo64_32)
+  call void @__use_vi32(<WIDTH x i32> %gbo64_32)
   %gbo64_f = call <WIDTH x float>
        @__gather_factored_base_offsets64_float(i8 * %ptr, <WIDTH x i64> %v64, i32 0,
                                            <WIDTH x i64> %v64, <WIDTH x MASK> %mask)
-  call void @__usefloat(<WIDTH x float> %gbo64_f)
+  call void @__use_vf(<WIDTH x float> %gbo64_f)
   %gbo64_64 = call <WIDTH x i64>
        @__gather_factored_base_offsets64_i64(i8 * %ptr, <WIDTH x i64> %v64, i32 0,
                                            <WIDTH x i64> %v64, <WIDTH x MASK> %mask)
-  call void @__use64(<WIDTH x i64> %gbo64_64)
+  call void @__use_vi64(<WIDTH x i64> %gbo64_64)
   %gbo64_d = call <WIDTH x double>
        @__gather_factored_base_offsets64_double(i8 * %ptr, <WIDTH x i64> %v64, i32 0,
                                            <WIDTH x i64> %v64, <WIDTH x MASK> %mask)
-  call void @__usedouble(<WIDTH x double> %pgbo64_d)
+  call void @__use_vd(<WIDTH x double> %pgbo64_d)
 ')
 
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -3762,9 +3857,29 @@ ifelse(HAVE_SCATTER, `1',
                                               <WIDTH x i32> %v32, <WIDTH x MASK> %mask)
   call void @__prefetch_read_varying_nt(<WIDTH x i64> %v64, <WIDTH x MASK> %mask)
 
+  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+  ;; divs for i64
+
+  %extract1 = extractelement <WIDTH x i64> %v64, i32 1
+  %extract2 = extractelement <WIDTH x i64> %v64, i32 2
+  %divs_ui64 = call i64 @__divs_ui64(i64 %extract1, i64 %extract2)
+  call void @__use_ui64(i64 %divs_ui64)
+  %divs_vi64 = call <WIDTH x i64> @__divs_vi64(<WIDTH x i64> %v64, <WIDTH x i64> %v64)
+  call void @__use_vi64(<WIDTH x i64> %divs_vi64)
+  %divus_ui64 = call i64 @__divus_ui64(i64 %extract1, i64 %extract2)
+  call void @__use_ui64(i64 %divus_ui64)
+  %divus_vi64 = call <WIDTH x i64> @__divus_vi64(<WIDTH x i64> %v64, <WIDTH x i64> %v64)
+  call void @__use_vi64(<WIDTH x i64> %divus_vi64)
+
+  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+  ;; movmsk
+
+  %vi1 = trunc <WIDTH x i64> %v64 to <WIDTH x MASK>
+  %movmsk = call i64 @__movmsk(<WIDTH x MASK> %vi1)
+  call void @__use_ui64(i64 %movmsk)
+
   ret void
 }
-
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; vector ops

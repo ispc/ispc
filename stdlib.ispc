@@ -5257,60 +5257,14 @@ static inline varying int32 saturating_div(varying int32 a, varying int32 b) {
 
 static inline uniform int64 saturating_div(uniform int64 a, uniform int64 b) {
     /* Only one way to overflow, so test for and prevent it. */
-    if (__have_saturating_arithmetic)
-    {
-        if (!((b + 1) | ((uniform unsigned int64) a + INT64_MIN)))
-        {
-            return INT64_MAX;
-        }
-        else
-        {
-            /*Gen haven't i64 sdiv; Using OpenCL implementation*/
-            uniform unsigned int64 Q = saturating_div((uniform unsigned int64)__abs_ui64(a),
-                                                      (uniform unsigned int64)__abs_ui64(b));
-
-            if ((a ^ b) & 0x8000000000000000)
-            {
-                return -Q;
-            }
-
-            return (uniform int64)Q;
-        }
-    }
-    else
-    {
-        a += !((b + 1) | ((uniform unsigned int64) a + INT64_MIN));
-        return a / b;
-    }
+    a += !((b + 1) | ((uniform unsigned int64) a + INT64_MIN));
+    return a / b;
 }
 
 static inline varying int64 saturating_div(varying int64 a, varying int64 b) {
     /* Only one way to overflow, so test for and prevent it. */
-    if (__have_saturating_arithmetic)
-    {
-        if (!((b + 1) | ((varying unsigned int64) a + INT64_MIN)))
-        {
-            return INT64_MAX;
-        }
-        else
-        {
-            /*Gen haven't i64 sdiv; Using OpenCL implementation*/
-            varying unsigned int64 Q = saturating_div((varying unsigned int64)__abs_vi64(a),
-                                                      (varying unsigned int64)__abs_vi64(b));
-
-            if ((a ^ b) & 0x8000000000000000)
-            {
-                return -Q;
-            }
-
-            return (varying int64)Q;
-        }
-    }
-    else
-    {
-        a += !((b + 1) | ((varying unsigned int64) a + INT64_MIN));
-        return a / b;
-    }
+    a += !((b + 1) | ((varying unsigned int64) a + INT64_MIN));
+    return a / b;
 }
 
 static inline uniform unsigned int8 saturating_div(uniform unsigned int8 a,
@@ -5352,61 +5306,13 @@ static inline varying unsigned int32 saturating_div(varying unsigned int32 a,
 static inline uniform unsigned int64 saturating_div(uniform unsigned int64 a,
                                                     uniform unsigned int64 b) {
     /* No overflow possible */
-    if (__have_saturating_arithmetic)
-    {
-        /*Gen haven't i64 udiv; Using OpenCL implementation*/
-        uniform unsigned int64 Q = 0;
-        uniform unsigned int64 R = 0;
-        uniform int8 I = 63;
-
-        while (I != -1)
-        {
-            R = R << 1;
-            R = (R & ~1UL) | ((a >> I) & 1UL);
-            if (R >= b)
-            {
-                R -= b;
-                Q |= (1UL << I);
-            }
-            --I;
-        }
-
-        return Q;
-    }
-    else
-    {
-        return a / b;
-    }
+    return a / b;
 }
 
 static inline varying unsigned int64 saturating_div(varying unsigned int64 a,
                                                     varying unsigned int64 b) {
     /* No overflow possible */
-    if (__have_saturating_arithmetic)
-    {
-        /*Gen haven't i64 sdiv; Using OpenCL implementation*/
-        varying unsigned int64 Q = 0;
-        varying unsigned int64 R = 0;
-        varying int8 I = 63;
-
-        while (I != -1)
-        {
-            R = R << 1;
-            R = (R & ~1UL) | ((a >> I) & 1UL);
-            if (R >= b)
-            {
-                R -= b;
-                Q |= (1UL << I);
-            }
-            --I;
-        }
-
-        return Q;
-    }
-    else
-    {
-        return a / b;
-    }
+    return a / b;
 }
 
 static inline uniform int8 saturating_mul(uniform int8 a, uniform int8 b) {
