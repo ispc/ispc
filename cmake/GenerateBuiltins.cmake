@@ -133,6 +133,8 @@ function(builtin_to_cpp bit os_name arch supported_archs supported_oses resultFi
                 # -I/Users/Shared/android-ndk-r20/sysroot/usr/include -I/Users/Shared/android-ndk-r20/sysroot/usr/include/x86_64-linux-android
                 set(includePath -I${ISPC_ANDROID_NDK_PATH}/sysroot/usr/include -I${ISPC_ANDROID_NDK_PATH}/sysroot/usr/include/x86_64-linux-android)
             endif()
+        elseif (${os_name} STREQUAL "macos")
+            set(includePath -I${ISPC_MACOS_SDK_PATH}/usr/include)
         endif()
     else()
          if (${os_name} STREQUAL "macos")
