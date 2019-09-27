@@ -1111,7 +1111,9 @@ if __name__ == '__main__':
     llvm_group.add_option('--extra', dest='extra',
         help='load extra clang tools', default=False, action='store_true')
     llvm_group.add_option('--git', dest='use_git',
-        help='use git llvm repository instead of svn', default=False, action='store_true')
+        help='use git llvm repository instead of svn', default=True, action='store_true')
+    llvm_group.add_option('--svn', dest='use_git',
+        help='use svn llvm repository instead of svn', default=True, action='store_false')
     parser.add_option_group(llvm_group)
     # options for activity "validation run"
     run_group = OptionGroup(parser, "Options for validation run",
