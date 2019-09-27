@@ -133,7 +133,7 @@ def error(line, error_type = 1):
 
 def check_tools(m):
     input_tools=[[[1,4],"m4 --version", "bad m4 version"],
-                 [[2,4],"bison --version", "bad bison version"],
+                 [[3,0],"bison --version", "bad bison version"],
                  [[2,5], "flex --version", "bad flex version"]]
     ret = 1 
     for t in range(0,len(input_tools)):
