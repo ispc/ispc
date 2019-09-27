@@ -81,7 +81,7 @@
 #include <llvm/Support/ToolOutputFile.h>
 #include <llvm/Transforms/IPO.h>
 #include <llvm/Transforms/Utils/BasicBlockUtils.h>
-#if ISPC_LLVM_VERSION > ISPC_LLVM_7_0
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_8_0
 #include "llvm/IR/PatternMatch.h"
 #endif
 #include <algorithm>
@@ -502,7 +502,7 @@ class CWriter : public llvm::FunctionPass, public llvm::InstVisitor<CWriter> {
         // Must be an expression, must be used exactly once.  If it is dead, we
         // emit it inline where it would go.
         if (I.getType() == llvm::Type::getVoidTy(I.getContext()) || !I.hasOneUse() ||
-#if ISPC_LLVM_VERSION > ISPC_LLVM_7_0 // 8.0+
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_8_0 // 8.0+
             I.isTerminator()
 #else
             llvm::isa<llvm::TerminatorInst>(I)
@@ -3429,7 +3429,7 @@ void CWriter::visitBinaryOperator(llvm::Instruction &I) {
 
     // If this is a negation operation, print it out as such.  For FP, we don't
     // want to print "-0.0 - X".
-#if ISPC_LLVM_VERSION > ISPC_LLVM_7_0 // LLVM 8.0+
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_8_0 // LLVM 8.0+
     llvm::Value *X;
     if (match(&I, m_Neg(llvm::PatternMatch::m_Value(X)))) {
         Out << "-(";
