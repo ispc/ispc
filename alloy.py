@@ -129,12 +129,15 @@ def checkout_LLVM(component, use_git, version_LLVM, revision, target_dir, from_v
         error("Trying to checkout unidentified component: " + component, 1)
 
     # Identify the version
+    # An example of using branch (instead of final tag) is the foolowing (for 9.0):
+    # svn: "branches/release_90/"
+    # git: "origin/release/9.x"
     if  version_LLVM == "trunk":
         SVN_PATH="trunk"
         GIT_TAG="master"
     elif  version_LLVM == "9_0":
-        SVN_PATH="branches/release_90/"
-        GIT_TAG="origin/release/9.x"
+        SVN_PATH="tags/RELEASE_900/final"
+        GIT_TAG="llvmorg-9.0.0"
     elif  version_LLVM == "8_0":
         SVN_PATH="tags/RELEASE_801/final"
         GIT_TAG="llvmorg-8.0.1"
