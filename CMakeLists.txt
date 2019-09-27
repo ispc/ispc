@@ -90,6 +90,15 @@ else()
     endif()
 endif()
 
+if (APPLE AND NOT ISPC_MACOS_SDK_PATH)
+    set(command "xcrun" "--show-sdk-path")
+    execute_process(COMMAND ${command}
+        OUTPUT_VARIABLE ISPC_MACOS_SDK_PATH
+        OUTPUT_STRIP_TRAILING_WHITESPACE
+    )
+  message(STATUS "Using macOS SDK path ${ISPC_MACOS_SDK_PATH}")
+endif()
+
 if (UNIX)
     option(ISPC_STATIC_STDCXX_LINK "Link statically with libstdc++ and libgcc" OFF)
     if (ISPC_PREPARE_PACKAGE AND (NOT APPLE))
