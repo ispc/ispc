@@ -70,8 +70,8 @@ cache:
 
 install:
   - cmd: |-
-      cinst winflexbison
-      set FLEX_PATH=%CHOCO_DIR%\lib\winflexbison\tools
+      cinst winflexbison3
+      set FLEX_PATH=%CHOCO_DIR%\lib\winflexbison3\tools
       if exist "%FLEX_PATH%\win_flex.exe" ( cd %FLEX_PATH% && ren win_flex.exe flex.exe )
       if exist "%LLVM_HOME%\bin\" (if exist "%CROSS_TOOLS%\gnuwin32\" set NONEEDDOCKER=rem)
       if "%LLVM_VERSION%" == "latest" set LLVM_VERSION=%LLVM_LATEST%
@@ -83,7 +83,7 @@ install:
       %NONEEDDOCKER% set /p CONTAINER=<container_id.txt
       %NONEEDDOCKER% docker cp %CONTAINER%:%LLVM_HOME%\bin-%LLVM_VERSION% %LLVM_HOME%
       %NONEEDDOCKER% docker cp %CONTAINER%:%CROSS_TOOLS% %CROSS_TOOLS%
-      set PATH=%LLVM_HOME%\bin;C:\Python37\;C:\Python37\Scripts;%CHOCO_DIR%\lib\winflexbison\tools;%PATH%
+      set PATH=%LLVM_HOME%\bin;C:\Python37\;C:\Python37\Scripts;%CHOCO_DIR%\lib\winflexbison3\tools;%PATH%
   - sh: |-
       sudo apt-get install -y flex libc6-dev-i386 g++-multilib lib32stdc++6
       if [ "$LLVM_VERSION" = "latest" ]; then 

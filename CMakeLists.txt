@@ -132,7 +132,7 @@ find_package(Python3 REQUIRED)
         message(FATAL_ERROR "Python interpreter is not found")
     endif()
 
-find_package(BISON 2.4 REQUIRED)
+find_package(BISON 3.0 REQUIRED)
     if (BISON_FOUND)
         set(BISON_INPUT src/parse.yy)
         set(BISON_CPP_OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_CFG_INTDIR}/parse.cc)

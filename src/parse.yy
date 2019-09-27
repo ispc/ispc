@@ -37,7 +37,7 @@
 /* one for 'if', one for 'cif' */
 %expect 2
 
-%error-verbose
+%define parse.error verbose
 
 %code requires {
 
