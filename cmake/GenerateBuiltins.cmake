@@ -219,7 +219,7 @@ function(builtin_to_cpp bit os_name arch supported_archs supported_oses resultFi
     else()
         add_custom_command(
             OUTPUT ${output}
-            COMMAND ${CLANG_EXECUTABLE} ${target_flags} -m${bit} -emit-llvm -c ${inputFilePath} -o - | \"${LLVM_DIS_EXECUTABLE}\" -
+            COMMAND ${CLANG_EXECUTABLE} ${target_flags} -w -m${bit} -emit-llvm -c ${inputFilePath} -o - | \"${LLVM_DIS_EXECUTABLE}\" -
                 | \"${Python3_EXECUTABLE}\" bitcode2cpp.py c --runtime=${bit} --os=${os_name} --arch=${target_arch} --llvm_as ${LLVM_AS_EXECUTABLE}
                 > ${output}
             DEPENDS ${inputFilePath}
