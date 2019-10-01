@@ -107,12 +107,12 @@
 ;;             (info2[1] & (1 << 28)) != 0 && // AVX512 CDI
 ;;             (info2[1] & (1 << 30)) != 0 && // AVX512 BW
 ;;             (info2[1] & (1 << 31)) != 0) { // AVX512 VL
-;;             return 6; // SKX
+;;             return 5; // SKX
 ;;         }
 ;;         else if ((info2[1] & (1 << 26)) != 0 && // AVX512 PF
 ;;                  (info2[1] & (1 << 27)) != 0 && // AVX512 ER
 ;;                  (info2[1] & (1 << 28)) != 0) { // AVX512 CDI
-;;             return 5; // KNL_AVX512
+;;             return 4; // KNL_AVX512
 ;;         }
 ;;         // If it's unknown AVX512 target, fall through and use AVX2
 ;;         // or whatever is available in the machine.
@@ -124,7 +124,7 @@
 ;;        if ((info[2] & (1 << 29)) != 0 &&  // F16C
 ;;            (info[2] & (1 << 30)) != 0 &&  // RDRAND
 ;;            (info2[1] & (1 << 5)) != 0) {  // AVX2
-;;            return 4;
+;;            return 3;
 ;;        }
 ;;        // Regular AVX
 ;;        return 2;
@@ -197,7 +197,7 @@ if.then50:                                        ; preds = %land.lhs.true47
   %and60 = and i32 %asmresult4.i87, 32
   %cmp61 = icmp eq i32 %and60, 0
   %or.cond112 = or i1 %13, %cmp61
-  %spec.select = select i1 %or.cond112, i32 2, i32 4
+  %spec.select = select i1 %or.cond112, i32 2, i32 3
   ret i32 %spec.select
 
 if.else65:                                        ; preds = %land.lhs.true47, %if.end39, %entry
@@ -215,7 +215,7 @@ if.else75:                                        ; preds = %if.else70
   unreachable
 
 return:                                          ; preds = %if.else, %if.else70, %if.else65, %if.then
-  %retval.0 = phi i32 [ 6, %if.then ], [ 5, %if.else ], [ 1, %if.else65 ], [ 0, %if.else70 ]
+  %retval.0 = phi i32 [ 5, %if.then ], [ 4, %if.else ], [ 1, %if.else65 ], [ 0, %if.else70 ]
   ret i32 %retval.0
 }
 
