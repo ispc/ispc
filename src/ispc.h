@@ -171,10 +171,10 @@ class Target {
         AVX = 2,
         // Not supported anymore. Use either AVX or AVX2.
         // AVX11 = 3,
-        AVX2 = 4,
-        KNL_AVX512 = 5,
-        SKX_AVX512 = 6,
-        GENERIC = 7,
+        AVX2 = 3,
+        KNL_AVX512 = 4,
+        SKX_AVX512 = 5,
+        GENERIC = 6,
 #ifdef ISPC_NVPTX_ENABLED
         NVPTX,
 #endif
