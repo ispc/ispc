@@ -458,15 +458,19 @@ void Function::emitCode(FunctionEmitContext *ctx, llvm::Function *function, Sour
                 offset += bytes;
             }
 
-            llvm::Metadata *mdArgs[] = {llvm::ValueAsMetadata::get(function),
-                                        llvm::MDString::get(fContext, sym->name),
-                                        llvm::MDString::get(fContext, AsmName),
-                                        llvm::MDNode::get(fContext, argKinds),
-                                        llvm::ValueAsMetadata::get(llvm::ConstantInt::getNullValue(i32Type)),
-                                        llvm::ValueAsMetadata::get(llvm::ConstantInt::getNullValue(i32Type)),
-                                        llvm::MDNode::get(fContext, argInOutKinds),
-                                        llvm::MDNode::get(fContext, argTypeDescs),
-                                        llvm::ValueAsMetadata::get(llvm::ConstantInt::getNullValue(i32Type))
+            llvm::Metadata *mdArgs[] = {
+                llvm::ValueAsMetadata::get(function),     // reference to Function
+                llvm::MDString::get(fContext, sym->name), // kernel name
+                llvm::MDString::get(fContext, AsmName),   // asm name
+                llvm::MDNode::get(fContext, argKinds),    // reference to metadata node containing kernel arg kinds
+                llvm::ValueAsMetadata::get(llvm::ConstantInt::getNullValue(i32Type)), // slm-size in bytes
+                llvm::ValueAsMetadata::get(llvm::ConstantInt::getNullValue(i32Type)), // kernel argument offsets
+                llvm::MDNode::get(
+                    fContext,
+                    argInOutKinds), // reference to metadata node containing kernel argument input/output kinds
+                llvm::MDNode::get(fContext, argTypeDescs), // kernel argument type descriptors
+                llvm::ValueAsMetadata::get(llvm::ConstantInt::getNullValue(i32Type)), // named barrier count
+                llvm::ValueAsMetadata::get(llvm::ConstantInt::getNullValue(i32Type))  // barier count
 
             };
 
