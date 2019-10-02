@@ -2427,8 +2427,16 @@ static bool lGSBaseOffsetsGetMoreConst(llvm::CallInst *callInst) {
     return true;
 }
 
-static llvm::Value *lComputeCommonPointer(llvm::Value *base, llvm::Value *offsets, llvm::Instruction *insertBefore) {
+static llvm::Value *lComputeCommonPointer(llvm::Value *base, llvm::Value *offsets, llvm::Instruction *insertBefore,
+                                          int typeScale = 1) {
     llvm::Value *firstOffset = LLVMExtractFirstVectorElement(offsets);
+#ifdef ISPC_GENX_ENABLED
+    if (g->target->getISA() == Target::GENX && typeScale > 1) {
+        firstOffset = llvm::BinaryOperator::Create(llvm::Instruction::SDiv, firstOffset, LLVMInt32(typeScale),
+                                                   "scaled_offset", insertBefore);
+    }
+#endif
+
     return lGEPInst(base, firstOffset, "ptr", insertBefore);
 }
 
@@ -2623,31 +2631,48 @@ static bool lGSToLoadStore(llvm::CallInst *callInst) {
         llvm::Value *offsetScale = callInst->getArgOperand(1);
         llvm::Value *offsets = callInst->getArgOperand(2);
         llvm::Value *offsetScaleVec = lGetOffsetScaleVec(offsetScale, offsets->getType());
+
         fullOffsets =
             llvm::BinaryOperator::Create(llvm::Instruction::Mul, offsetScaleVec, offsets, "scaled_offsets", callInst);
     }
 
     Debug(SourcePos(), "GSToLoadStore: %s.", fullOffsets->getName().str().c_str());
+    llvm::Type *scalarType = (gatherInfo != NULL) ? gatherInfo->scalarType : scatterInfo->vecPtrType->getScalarType();
+#ifdef ISPC_GENX_ENABLED
+    int typeScale = g->target->getDataLayout()->getTypeStoreSize(scalarType) /
+                    g->target->getDataLayout()->getTypeStoreSize(base->getType()->getContainedType(0));
+#endif
 
     if (LLVMVectorValuesAllEqual(fullOffsets)) {
         // If all the offsets are equal, then compute the single
         // pointer they all represent based on the first one of them
         // (arbitrarily).
-        llvm::Value *ptr = lComputeCommonPointer(base, fullOffsets, callInst);
-        lCopyMetadata(ptr, callInst);
-
         if (gatherInfo != NULL) {
             // A gather with everyone going to the same location is
             // handled as a scalar load and broadcast across the lanes.
             Debug(pos, "Transformed gather to scalar load and broadcast!");
+            llvm::Value *ptr;
+#ifdef ISPC_GENX_ENABLED
+            // For gen we need to cast the base first and only after that get common pointer otherwise
+            // CM backend will be broken on bitcast i8* to T* instruction with following load.
+            // For this we need to re-calculate the offset basing on type sizes.
+            if (g->target->getISA() == Target::GENX) {
+                base = new llvm::BitCastInst(base, llvm::PointerType::get(scalarType, 0), base->getName(), callInst);
+                ptr = lComputeCommonPointer(base, fullOffsets, callInst, typeScale);
 
-            ptr =
-                new llvm::BitCastInst(ptr, llvm::PointerType::get(gatherInfo->scalarType, 0), ptr->getName(), callInst);
+            } else {
+#endif
+                ptr = lComputeCommonPointer(base, fullOffsets, callInst);
+                ptr = new llvm::BitCastInst(ptr, llvm::PointerType::get(scalarType, 0), base->getName(), callInst);
+#ifdef ISPC_GENX_ENABLED
+            }
+#endif
+            lCopyMetadata(ptr, callInst);
 #if ISPC_LLVM_VERSION >= ISPC_LLVM_11_0
             llvm::Value *scalarValue =
                 new llvm::LoadInst(llvm::dyn_cast<llvm::PointerType>(ptr->getType())->getPointerElementType(), ptr,
                                    callInst->getName(), callInst);
-#else
+#else            
             llvm::Value *scalarValue = new llvm::LoadInst(ptr, callInst->getName(), callInst);
 #endif
 
@@ -2691,16 +2716,28 @@ static bool lGSToLoadStore(llvm::CallInst *callInst) {
         }
     } else {
         int step = gatherInfo ? gatherInfo->align : scatterInfo->align;
-
         if (step > 0 && LLVMVectorIsLinear(fullOffsets, step)) {
             // We have a linear sequence of memory locations being accessed
             // starting with the location given by the offset from
             // offsetElements[0], with stride of 4 or 8 bytes (for 32 bit
-            // and 64 bit gather/scatters, respectively.)
-            llvm::Value *ptr = lComputeCommonPointer(base, fullOffsets, callInst);
-            lCopyMetadata(ptr, callInst);
+            // and 64 bit gather/scatters, respectively.
+            llvm::Value *ptr;
 
             if (gatherInfo != NULL) {
+#ifdef ISPC_GENX_ENABLED
+                if (g->target->getISA() == Target::GENX) {
+                    // For gen we need to cast the base first and only after that get common pointer otherwise
+                    // CM backend will be broken on bitcast i8* to T* instruction with following load.
+                    // For this we need to re-calculate the offset basing on type sizes.
+                    // Second bitcast to void* does not cause such problem in backend.
+                    base =
+                        new llvm::BitCastInst(base, llvm::PointerType::get(scalarType, 0), base->getName(), callInst);
+                    ptr = lComputeCommonPointer(base, fullOffsets, callInst, typeScale);
+                    ptr = new llvm::BitCastInst(ptr, LLVMTypes::Int8PointerType, base->getName(), callInst);
+                } else
+#endif
+                    ptr = lComputeCommonPointer(base, fullOffsets, callInst);
+                lCopyMetadata(ptr, callInst);
                 Debug(pos, "Transformed gather to unaligned vector load!");
                 llvm::Instruction *newCall =
                     lCallInst(gatherInfo->loadMaskedFunc, ptr, mask, LLVMGetName(ptr, "_masked_load"));
@@ -2709,6 +2746,7 @@ static bool lGSToLoadStore(llvm::CallInst *callInst) {
                 return true;
             } else {
                 Debug(pos, "Transformed scatter to unaligned vector store!");
+                ptr = lComputeCommonPointer(base, fullOffsets, callInst);
                 ptr = new llvm::BitCastInst(ptr, scatterInfo->vecPtrType, "ptrcast", callInst);
                 llvm::Instruction *newCall = lCallInst(scatterInfo->maskedStoreFunc, ptr, storeValue, mask, "");
                 lCopyMetadata(newCall, callInst);
