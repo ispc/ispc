@@ -1516,8 +1516,8 @@ static void lUnescapeStringInPlace(std::string &str) {
 }
 
 bool Module::writeDeps(const char *fn, bool generateMakeRule, const char *tn, const char *sn) {
-    if (fn) // We may be passed nullptr for stdout output.
-        std::cout << "writing dependencies to file " << fn << std::endl;
+    if (fn && g->debugPrint) // We may be passed nullptr for stdout output.
+        std::cout << "\nWriting dependencies to file " << fn << std::endl;
     FILE *file = fn ? fopen(fn, "w") : stdout;
     if (!file) {
         perror("fopen");
