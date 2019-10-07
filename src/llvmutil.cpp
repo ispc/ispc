@@ -1589,39 +1589,49 @@ const char *LLVMGetName(const char *op, llvm::Value *v1, llvm::Value *v2) {
 }
 
 #ifdef ISPC_GENX_ENABLED
-void lGetAddressSpace(llvm::Value *v, std::set<llvm::Value *> &done, AddressSpace &stackAlloc) {
-    if (done.find(v) != done.end())
+void lGetAddressSpace(llvm::Value *v, std::set<llvm::Value *> &done, std::set<AddressSpace> &addrSpaceVec) {
+    if (done.find(v) != done.end()) {
+        if (llvm::isa<llvm::PointerType>(v->getType()))
+            addrSpaceVec.insert(AddressSpace::External);
         return;
+    }
     llvm::Instruction *inst = llvm::dyn_cast<llvm::Instruction>(v);
     if (inst == NULL) {
-        llvm::ConstantExpr *constExpr = llvm::dyn_cast<llvm::ConstantExpr>(v);
-        if (constExpr != NULL) {
+        // Case when GEP is constant expression
+        if (llvm::ConstantExpr *constExpr = llvm::dyn_cast<llvm::ConstantExpr>(v)) {
             inst = constExpr->getAsInstruction();
         }
     }
 
-    llvm::GlobalValue *gValue = llvm::dyn_cast<llvm::GlobalValue>(v);
-    if (gValue != NULL) {
-        stackAlloc = AddressSpace::Global;
+    // Found global value
+    if (llvm::isa<llvm::GlobalValue>(v)) {
+        addrSpaceVec.insert(AddressSpace::Global);
         return;
     }
 
-    if (done.size() > 0 && inst == NULL)
+    if (done.size() > 0 && inst == NULL) {
+        // Found external pointer like "float* %aFOO"
+        if (llvm::isa<llvm::PointerType>(v->getType()))
+            addrSpaceVec.insert(AddressSpace::External);
         return;
+    }
 
     done.insert(v);
 
-    llvm::AllocaInst *allocainst = llvm::dyn_cast<llvm::AllocaInst>(v);
-    if (allocainst != NULL) {
-        stackAlloc = AddressSpace::Local;
+    // Found value allocated on stack like "%val = alloca [16 x float]"
+    if (llvm::isa<llvm::AllocaInst>(v)) {
+        addrSpaceVec.insert(AddressSpace::Local);
         return;
     }
 
     if (inst == NULL || llvm::isa<llvm::CallInst>(v)) {
+        if (llvm::isa<llvm::PointerType>(v->getType()))
+            addrSpaceVec.insert(AddressSpace::External);
         return;
     }
-    for (unsigned i = 0; i < inst->getNumOperands(); ++i)
-        lGetAddressSpace(inst->getOperand(i), done, stackAlloc);
+    for (unsigned i = 0; i < inst->getNumOperands(); ++i) {
+        lGetAddressSpace(inst->getOperand(i), done, addrSpaceVec);
+    }
 }
 
 /** This routine attempts to determine if the given value is pointing to
@@ -1630,8 +1640,15 @@ void lGetAddressSpace(llvm::Value *v, std::set<llvm::Value *> &done, AddressSpac
 */
 AddressSpace GetAddressSpace(llvm::Value *v) {
     std::set<llvm::Value *> done;
-    AddressSpace addrSpace = AddressSpace::External;
-    lGetAddressSpace(v, done, addrSpace);
-    return addrSpace;
+    std::set<AddressSpace> addrSpaceVec;
+    lGetAddressSpace(v, done, addrSpaceVec);
+    std::vector<AddressSpace>::iterator it;
+    if (addrSpaceVec.find(AddressSpace::External) != addrSpaceVec.end()) {
+        return AddressSpace::External;
+    }
+    if (addrSpaceVec.find(AddressSpace::Global) != addrSpaceVec.end()) {
+        return AddressSpace::Global;
+    }
+    return AddressSpace::Local;
 }
 #endif
