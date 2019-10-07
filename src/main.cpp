@@ -162,7 +162,7 @@ static void usage(int ret) {
     PrintWithWordBreaks(targetHelp, 24, TerminalWidth(), stdout);
     printf("    ");
     snprintf(targetHelp, sizeof(targetHelp), "[--target-os=<os>]\t\t\tSelect target OS.  <os>={%s}",
-             Target::SupportedOSes());
+             Target::SupportedOSes().c_str());
     PrintWithWordBreaks(targetHelp, 24, TerminalWidth(), stdout);
     printf("    [--version]\t\t\t\tPrint ispc version\n");
     printf("    [--werror]\t\t\t\tTreat warnings as errors\n");
@@ -591,7 +591,7 @@ int main(int Argc, char *Argv[]) {
             g->target_os = StringToOS(argv[i] + 12);
             if (g->target_os == OS_ERROR) {
                 fprintf(stderr, "Unsupported value for --target-os, supported values are: %s\n",
-                        Target::SupportedOSes());
+                        Target::SupportedOSes().c_str());
                 usage(1);
             }
         } else if (!strncmp(argv[i], "--math-lib=", 11)) {

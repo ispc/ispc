@@ -1116,30 +1116,37 @@ const char *Target::SupportedTargets() {
         ;
 }
 
-const char *Target::SupportedOSes() {
-    return
+std::string Target::SupportedOSes() {
+    std::vector<std::string> supported;
 #if defined(ISPC_HOST_IS_WINDOWS)
 #if !defined(ISPC_WINDOWS_TARGET_OFF)
-        "windows, "
+    supported.push_back("windows");
 #endif
 #if !defined(ISPC_PS4_TARGET_OFF)
-        "ps4, "
+    supported.push_back("ps4");
 #endif
 #elif defined(ISPC_HOST_IS_APPLE)
 #if !defined(ISPC_IOS_TARGET_OFF)
-        "ios, "
+    supported.push_back("ios");
 #endif
 #endif
 #if !defined(ISPC_LINUX_TARGET_OFF)
-        "linux, "
+    supported.push_back("linux");
 #endif
 #if !defined(ISPC_MACOS_TARGET_OFF)
-        "macos, "
+    supported.push_back("macos");
 #endif
 #if !defined(ISPC_ANDROID_TARGET_OFF)
-        "android"
+    supported.push_back("android");
 #endif
-        ;
+    std::string result;
+    for (int i = 0; i < supported.size(); i++) {
+        result += supported[i];
+        if (i < supported.size() - 1) {
+            result += ", ";
+        }
+    }
+    return result;
 }
 
 std::string Target::GetTripleString() const {

@@ -198,7 +198,7 @@ class Target {
 
     /** Returns a comma-delimited string giving the names of the currently
      *  supported target OSes */
-    static const char *SupportedOSes();
+    static std::string SupportedOSes();
 
     /** Returns a comma-delimited string giving the names of the currently
         supported CPUs. */
