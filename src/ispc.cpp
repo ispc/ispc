@@ -967,9 +967,9 @@ Target::Target(const char *arch, const char *cpu, const char *isa, bool pic, boo
     } else {
         if ((CPUfromISA != CPU_None) && !a.BackwardCompatible(CPUID, CPUfromISA)) {
             Error(SourcePos(),
-                  "The requested CPU is incompatible"
-                  " with the CPU %s needs: %s vs. %s!",
-                  isa, cpu, a.GetDefaultNameFromType(CPUfromISA).c_str());
+                  "The requested CPU (%s) is incompatible"
+                  " with the CPU required for %s target (%s)",
+                  cpu, isa, a.GetDefaultNameFromType(CPUfromISA).c_str());
             return;
         }
         cpu = a.GetDefaultNameFromType(CPUID).c_str();
