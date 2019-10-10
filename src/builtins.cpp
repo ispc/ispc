@@ -426,8 +426,9 @@ static void lSetInternalFunctions(llvm::Module *module) {
         "__do_print",
 #ifdef ISPC_GENX_ENABLED
         "__do_print_cm",
+        "__do_print_cm_str",
         "__send_eot",
-#endif
+#endif //ISPC_GENX_ENABLED
         "__doublebits_uniform_int64",
         "__doublebits_varying_int64",
         "__exclusive_scan_add_double",
@@ -811,13 +812,29 @@ static void lSetInternalFunctions(llvm::Module *module) {
         "__task_count",
     };
     // clang-format on
-    int count = sizeof(names) / sizeof(names[0]);
-    for (int i = 0; i < count; ++i) {
-        llvm::Function *f = module->getFunction(names[i]);
+    for (auto name : names) {
+        llvm::Function *f = module->getFunction(name);
         if (f != NULL && f->empty() == false) {
             f->setLinkage(llvm::GlobalValue::InternalLinkage);
             // TO-DO : Revisit adding this back for ARM support.
             // g->target->markFuncWithTargetAttr(f);
+        }
+    }
+}
+
+static void lSetAlwaysInlineFunctions(llvm::Module *module) {
+    std::vector<const char *> names = {
+#ifdef ISPC_GENX_ENABLED
+        "__do_print_cm"
+#endif /* ISPC_GENX_ENABLED */
+    };
+    for (auto name : names) {
+        llvm::Function *f = module->getFunction(name);
+        if (f) {
+            if (f->hasFnAttribute(llvm::Attribute::NoInline)) {
+                f->removeFnAttr(llvm::Attribute::NoInline);
+            }
+            f->addFnAttr(llvm::Attribute::AlwaysInline);
         }
     }
 }
@@ -907,6 +924,7 @@ void AddBitcodeToModule(const BitcodeLib *lib, llvm::Module *module, SymbolTable
         }
 
         lSetInternalFunctions(module);
+        lSetAlwaysInlineFunctions(module);
         if (symbolTable != NULL)
             lAddModuleSymbols(module, symbolTable);
         lCheckModuleIntrinsics(module);

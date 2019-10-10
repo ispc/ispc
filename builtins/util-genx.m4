@@ -4165,7 +4165,7 @@ define void @__send_eot() {
   ret void
 }
 
-define internal void @__do_print_cm(i8*) alwaysinline {
+define internal void @__do_print_cm_str(i8*) alwaysinline {
 ;; predefined.surface return Value: surface index of the specified id
 ;; id 2 is stdout
   %buf = tail call i32 @llvm.genx.predefined.surface(i32 2)
@@ -4189,7 +4189,7 @@ define void @__do_assert_uniform(i8 *%str, i1 %test, <WIDTH x MASK> %mask) {
   br i1 %test, label %ok, label %fail
 
 fail:
-  call void @__do_print_cm(i8* %str)
+  call void @__do_print_cm_str(i8* %str)
   call void @__send_eot()
   ret void
 
@@ -4208,7 +4208,7 @@ define void @__do_assert_varying(i8 *%str, <WIDTH x MASK> %test,
   br i1 %all_ok, label %ok, label %fail
 
 fail:
-  call void @__do_print_cm(i8* %str)
+  call void @__do_print_cm_str(i8* %str)
   call void @__send_eot()
   ret void
 
