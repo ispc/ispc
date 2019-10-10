@@ -55,6 +55,31 @@ find_program(CLANG_EXECUTABLE NAMES clang
     endif()
     message(STATUS "CLANG_EXECUTABLE: ${CLANG_EXECUTABLE}")
 
+find_program(CLANGPP_EXECUTABLE NAMES clang++
+    PATHS ${LLVM_TOOLS_BINARY_DIR} PATH_SUFFIXES bin NO_DEFAULT_PATH)
+if (NOT CLANGPP_EXECUTABLE)
+    message(FATAL_ERROR "Failed to find clang++" )
+endif()
+message(STATUS "CLANGPP_EXECUTABLE: ${CLANGPP_EXECUTABLE}")
+
+if (GENX_ENABLED)
+    find_program(CMC_EXECUTABLE NAMES cmc
+        PATHS ${LLVM_TOOLS_BINARY_DIR} PATH_SUFFIXES bin NO_DEFAULT_PATH)
+    if (NOT CMC_EXECUTABLE)
+        message(FATAL_ERROR "Failed to find cmc" )
+    endif()
+    message(STATUS "CMC_EXECUTABLE: ${CMC_EXECUTABLE}")
+    if (NOT CM_INCLUDE_PATH)
+        get_filename_component(CM_INCLUDE_PATH ${CMC_EXECUTABLE} DIRECTORY)
+        set(CM_INCLUDE_PATH ${CM_INCLUDE_PATH}/../include)
+        get_filename_component(CM_INCLUDE_PATH ${CM_INCLUDE_PATH} ABSOLUTE)
+        if (NOT EXISTS ${CM_INCLUDE_PATH} OR NOT EXISTS ${CM_INCLUDE_PATH}/cm)
+            message(FATAL_ERROR "Cannot find path to CM library headers (CM_INCLUDE_PATH)")
+        endif()
+    endif()
+    message(STATUS "CM_INCLUDE_PATH: ${CM_INCLUDE_PATH}")
+endif()
+
 find_program(LLVM_DIS_EXECUTABLE NAMES llvm-dis
     PATHS ${LLVM_TOOLS_BINARY_DIR} PATH_SUFFIXES bin NO_DEFAULT_PATH)
     if (NOT LLVM_DIS_EXECUTABLE)

@@ -82,7 +82,7 @@ function(ll_to_cpp llFileName bit os_name resultFileName)
 endfunction()
 
 function(builtin_to_cpp bit os_name arch supported_archs supported_oses resultFileName)
-    set(inputFilePath builtins/builtins.c)
+    set(inputFilePath builtins/builtins-c-cpu.cpp)
     set(includePath "")
     set(SKIP OFF)
     if (NOT ${arch} IN_LIST supported_archs OR NOT ${os_name} IN_LIST supported_oses)
@@ -245,12 +245,12 @@ function(builtin_to_cpp bit os_name arch supported_archs supported_oses resultFi
     # Compose target flags
     set(target_flags --target=${triple} ${fpic} ${includePath})
 
-    set(output ${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_CFG_INTDIR}/builtins-c-${bit}-${os_name}-${target_arch}.cpp)
+    set(output ${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_CFG_INTDIR}/builtins-cpp-${bit}-${os_name}-${target_arch}.cpp)
     if (${os_name} STREQUAL "web")
         add_custom_command(
             OUTPUT ${output}
-            COMMAND ${EMCC_EXECUTABLE} -DWASM -s WASM_OBJECT_FILES=0 -c ${inputFilePath} -emit-llvm -c -o -
-                | (\"${LLVM_DIS_EXECUTABLE}\" - || echo "builtins.c compile error")
+            COMMAND ${EMCC_EXECUTABLE} -DWASM -s WASM_OBJECT_FILES=0 -I${CMAKE_SOURCE_DIR} -c ${inputFilePath} --std=gnu++17 -emit-llvm -c -o -
+                | (\"${LLVM_DIS_EXECUTABLE}\" - || echo "builtins-c-*.cpp compile error")
                 | \"${Python3_EXECUTABLE}\" bitcode2cpp.py c --type=builtins-c --runtime=${bit} --os=${os_name} --arch=${target_arch} --llvm_as ${LLVM_AS_EXECUTABLE}
                 > ${output}
             DEPENDS ${inputFilePath} bitcode2cpp.py
@@ -259,7 +259,7 @@ function(builtin_to_cpp bit os_name arch supported_archs supported_oses resultFi
     else()
         add_custom_command(
             OUTPUT ${output}
-            COMMAND ${CLANG_EXECUTABLE} ${target_flags} -w -m${bit} -emit-llvm -c ${inputFilePath} -o - | (\"${LLVM_DIS_EXECUTABLE}\" - || echo "builtins.c compile error")
+            COMMAND ${CLANGPP_EXECUTABLE} ${target_flags} -I${CMAKE_SOURCE_DIR} -m${bit} -emit-llvm --std=gnu++17 -c ${inputFilePath} -o - | (\"${LLVM_DIS_EXECUTABLE}\" - || echo "builtins-c-*.cpp compile error")
                 | \"${Python3_EXECUTABLE}\" bitcode2cpp.py c --type=builtins-c --runtime=${bit} --os=${os_name} --arch=${target_arch} --llvm_as ${LLVM_AS_EXECUTABLE}
                 > ${output}
             DEPENDS ${inputFilePath} bitcode2cpp.py
@@ -269,6 +269,40 @@ function(builtin_to_cpp bit os_name arch supported_archs supported_oses resultFi
 
     set(${resultFileName} ${output} PARENT_SCOPE)
     set_source_files_properties(${resultFileName} PROPERTIES GENERATED true)
+endfunction()
+
+function(builtin_genx_to_cpp bit resultFileName)
+    set(inputFilePath builtins/builtins-c-genx.cpp)
+    set(SKIP OFF)
+    if (WIN32)
+        set(os_name "windows")
+    elseif (APPLE)
+        set(SKIP ON)
+    else ()
+        set(os_name "linux")
+    endif()
+
+    if ("${bit}" STREQUAL "32")
+        set(target_arch "genx32")
+    elseif ("${bit}" STREQUAL "64")
+        set(target_arch "genx64")
+    else()
+        set(SKIP ON)
+    endif()
+
+    if (NOT SKIP)
+      set(output ${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_CFG_INTDIR}/builtins-cm-${bit}.cpp)
+      add_custom_command(
+          OUTPUT ${output}
+          COMMAND ${CMC_EXECUTABLE} -I${CMAKE_SOURCE_DIR} -m${bit} -isystem ${CM_INCLUDE_PATH} -emit-llvm -S ${inputFilePath} -o -
+              | \"${Python3_EXECUTABLE}\" bitcode2cpp.py cm --type=builtins-c --runtime=${bit} --os=${os_name} --arch=${target_arch} --llvm_as ${LLVM_AS_EXECUTABLE}
+              > ${output}
+          DEPENDS ${inputFilePath}
+          WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+          )
+      set(${resultFileName} ${output} PARENT_SCOPE)
+      set_source_files_properties(${resultFileName} PROPERTIES GENERATED true)
+    endif()
 endfunction()
 
 function (generate_target_builtins resultList)
@@ -358,5 +392,15 @@ function (generate_common_builtins resultList)
             endforeach()
         endforeach()
     endforeach()
+    if (GENX_ENABLED)
+        foreach (bit 32 64)
+            builtin_genx_to_cpp(${bit} res_genx_${bit})
+            list(APPEND tmpList ${res_genx_${bit}} )
+            if(MSVC)
+                # Group generated files inside Visual Studio
+                source_group("Generated Builtins" FILES ${res_genx_${bit}})
+            endif()
+        endforeach()
+    endif()
     set(${resultList} ${tmpList} PARENT_SCOPE)
 endfunction()
