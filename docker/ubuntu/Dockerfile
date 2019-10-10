@@ -1,4 +1,4 @@
-FROM ubuntu:14.04
+FROM ubuntu:16.04
 MAINTAINER Dmitry Babokin <dmitry.y.babokin@intel.com>
 
 # !!! Make sure that your docker config provides enough memory to the container,
@@ -8,12 +8,12 @@ MAINTAINER Dmitry Babokin <dmitry.y.babokin@intel.com>
 #ENV http_proxy=http://proxy.yourcompany.com:888
 
 # Packages required to build ISPC and Clang.
-RUN apt-get -y update && apt-get install -y wget build-essential vim gcc g++ git subversion python m4 bison flex zlib1g-dev ncurses-dev libtinfo-dev libc6-dev-i386 && \
+RUN apt-get -y update && apt-get install -y wget build-essential vim gcc g++ git subversion python3 m4 bison flex zlib1g-dev ncurses-dev libtinfo-dev libc6-dev-i386 && \
     rm -rf /var/lib/apt/lists/*
 
-# Download and install required version of cmake (3.8) for ISPC build
-RUN wget https://cmake.org/files/v3.8/cmake-3.8.0-Linux-x86_64.sh && mkdir /opt/cmake && sh cmake-3.8.0-Linux-x86_64.sh --prefix=/opt/cmake --skip-license && \
-    ln -s /opt/cmake/bin/cmake /usr/local/bin/cmake && rm cmake-3.8.0-Linux-x86_64.sh
+# Download and install required version of cmake (3.12) for ISPC build
+RUN wget https://cmake.org/files/v3.12/cmake-3.12.0-Linux-x86_64.sh && mkdir /opt/cmake && sh cmake-3.12.0-Linux-x86_64.sh --prefix=/opt/cmake --skip-license && \
+    ln -s /opt/cmake/bin/cmake /usr/local/bin/cmake && rm cmake-3.12.0-Linux-x86_64.sh
 
 # If you are behind a proxy, you need to configure git and svn.
 #RUN git config --global --add http.proxy http://proxy.yourcompany.com:888

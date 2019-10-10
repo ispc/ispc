@@ -6,16 +6,16 @@ MAINTAINER Dmitry Babokin <dmitry.y.babokin@intel.com>
 
 # Packages required to build ISPC and Clang.
 # RUN echo "proxy=http://proxy.yourcompany.com:888" >> /etc/dnf/dnf.conf
-RUN dnf install -y vim wget yum-utils gcc gcc-c++ git subversion python m4 bison flex patch make ncurses-devel zlib-devel glibc-devel.x86_64 glibc-devel.i686 && \
+RUN dnf install -y vim wget yum-utils gcc gcc-c++ git subversion python3 m4 bison flex patch make ncurses-devel zlib-devel glibc-devel.x86_64 glibc-devel.i686 && \
     dnf clean -y all
 
 # These packages are required if you need to link IPSC with -static.
 RUN dnf install -y ncurses-static libstdc++-static zlib-static glibc-static && \
     dnf clean -y all
 
-# Download and install required version of cmake (3.8) for ISPC build
-RUN wget https://cmake.org/files/v3.8/cmake-3.8.0-Linux-x86_64.sh && mkdir /opt/cmake && sh cmake-3.8.0-Linux-x86_64.sh --prefix=/opt/cmake --skip-license && \
-    ln -s /opt/cmake/bin/cmake /usr/local/bin/cmake && rm cmake-3.8.0-Linux-x86_64.sh
+# Download and install required version of cmake (3.12) for ISPC build
+RUN wget https://cmake.org/files/v3.12/cmake-3.12.0-Linux-x86_64.sh && mkdir /opt/cmake && sh cmake-3.12.0-Linux-x86_64.sh --prefix=/opt/cmake --skip-license && \
+    ln -s /opt/cmake/bin/cmake /usr/local/bin/cmake && rm cmake-3.12.0-Linux-x86_64.sh
 
 # If you are behind a proxy, you need to configure git and svn.
 #RUN git config --global --add http.proxy http://proxy.yourcompany.com:888
