@@ -164,7 +164,7 @@ class FunctionEmitContext {
     /** Indicates that code generation for a 'foreach', 'foreach_tiled',
         'foreach_active', or 'foreach_unique' loop is about to start. */
     enum ForeachType { FOREACH_REGULAR, FOREACH_ACTIVE, FOREACH_UNIQUE };
-    void StartForeach(ForeachType ft);
+    void StartForeach(ForeachType ft, bool isEmulatedUniform = false);
     void EndForeach();
 
     /** Emit code for a 'break' statement in a loop.  If doCoherenceCheck
@@ -628,6 +628,10 @@ class FunctionEmitContext {
     /** The value of the expression used to determine which case in the
         statements after the switch to execute. */
     llvm::Value *switchExpr;
+
+    /** A pointer to memory that contains mask for lanes that should be
+        active in the next block */
+    llvm::Value *switchFallThroughMaskPtr;
 
     /** Map from case label numbers to the basic block that will hold code
         for that case. */
