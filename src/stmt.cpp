@@ -405,7 +405,7 @@ void IfStmt::EmitCode(FunctionEmitContext *ctx) const {
 
     if (isUniform) {
         ctx->StartUniformIf(emulateUniform);
-        if (doAllCheck)
+        if (doAllCheck && !emulateUniform)
             Warning(test->pos, "Uniform condition supplied to \"cif\" statement.");
 
         // 'If' statements with uniform conditions are relatively
@@ -1008,7 +1008,7 @@ void ForStmt::EmitCode(FunctionEmitContext *ctx) const {
     // For a non-uniform loop, we update the mask and jump into the loop if
     // any of the mask values are true.
     if (uniformTest) {
-        if (doCoherentCheck)
+        if (doCoherentCheck && !emulateUniform)
             if (test)
                 Warning(test->pos, "Uniform condition supplied to cfor/cwhile "
                                    "statement.");
@@ -1283,6 +1283,18 @@ static void lGetSpans(int dimsLeft, int nDims, int itemsLeft, bool isTiled, int 
 void ForeachStmt::EmitCode(FunctionEmitContext *ctx) const {
     if (ctx->GetCurrentBasicBlock() == NULL || stmts == NULL)
         return;
+
+#ifdef ISPC_GENX_ENABLED
+    if (g->target->getISA() == Target::GENX && ctx->ifEmulatedUniformForGen()) {
+        Error(pos, "\"foreach\" statement is not supported under varying CF for GenX yet.");
+        return;
+    }
+
+    if (g->target->getISA() == Target::GENX) {
+        Warning(pos, "\"foreach\" statement is not supported under varying CF for GenX yet. Make sure that"
+                     " function with the following \"foreach\" is not called under varying CF:");
+    }
+#endif
 
     llvm::BasicBlock *bbFullBody = ctx->CreateBasicBlock("foreach_full_body");
     llvm::BasicBlock *bbMaskedBody = ctx->CreateBasicBlock("foreach_masked_body");
@@ -1832,8 +1844,11 @@ void ForeachActiveStmt::EmitCode(FunctionEmitContext *ctx) const {
     // the current execution mask (which should never be all off going in
     // to this)...
     llvm::Value *oldFullMask = NULL;
+    bool uniformEmulated = false;
 #ifdef ISPC_GENX_ENABLED
     if (g->target->getISA() == Target::GENX) {
+        // Emulate uniform to make proper continue handler
+        uniformEmulated = true;
         // Current mask will be calculated according to EM mask
         oldFullMask = ctx->GenXSimdCFPredicate(LLVMMaskAllOn);
     } else
@@ -1845,7 +1860,7 @@ void ForeachActiveStmt::EmitCode(FunctionEmitContext *ctx) const {
 
     // Officially start the loop.
     ctx->StartScope();
-    ctx->StartForeach(FunctionEmitContext::FOREACH_ACTIVE);
+    ctx->StartForeach(FunctionEmitContext::FOREACH_ACTIVE, uniformEmulated);
     ctx->SetContinueTarget(bbCheckForMore);
 
     // Onward to find the first set of program instance to run the loop for
@@ -2020,8 +2035,11 @@ void ForeachUniqueStmt::EmitCode(FunctionEmitContext *ctx) const {
     // starts out with the full execution mask (which should never be all
     // off going in to this)...
     llvm::Value *oldFullMask = NULL;
+    bool emulatedUniform = false;
 #ifdef ISPC_GENX_ENABLED
     if (g->target->getISA() == Target::GENX) {
+        // Emulating uniform behavior for proper continue handling
+        emulatedUniform = true;
         // Current mask will be calculated according to EM mask
         oldFullMask = ctx->GenXSimdCFPredicate(LLVMMaskAllOn);
     } else
@@ -2033,7 +2051,7 @@ void ForeachUniqueStmt::EmitCode(FunctionEmitContext *ctx) const {
     ctx->StoreInst(movmsk, maskBitsPtr);
 
     // Officially start the loop.
-    ctx->StartForeach(FunctionEmitContext::FOREACH_UNIQUE);
+    ctx->StartForeach(FunctionEmitContext::FOREACH_UNIQUE, emulatedUniform);
     ctx->SetContinueTarget(bbCheckForMore);
 
     // Evaluate the varying expression we're iterating over just once.
@@ -2392,7 +2410,29 @@ void SwitchStmt::EmitCode(FunctionEmitContext *ctx) const {
     }
 
     bool isUniformCF = (type->IsUniformType() && lHasVaryingBreakOrContinue(stmts) == false);
-    ctx->StartSwitch(isUniformCF, bbDone);
+    bool emulateUniform = false;
+#ifdef ISPC_GENX_ENABLED
+    if (g->target->getISA() == Target::GENX) {
+        if (isUniformCF && ctx->ifEmulatedUniformForGen()) {
+            // Broadcast value to work with EM. We are doing
+            // it here because it is too late to make CMP
+            // broadcast through BranchInst: we need vectorized
+            // case checks to be able to reenable fall through
+            // cases under emulated uniform CF.
+            llvm::Type *vecType =
+                (exprValue->getType() == LLVMTypes::Int32Type) ? LLVMTypes::Int32VectorType : LLVMTypes::Int64VectorType;
+            exprValue = ctx->BroadcastValue(exprValue, vecType, "switch_expr_broadcast");
+            emulateUniform = true;
+        }
+
+        if (!isUniformCF) {
+            isUniformCF = true;
+            emulateUniform = true;
+        }
+    }
+#endif
+
+    ctx->StartSwitch(isUniformCF, bbDone, emulateUniform);
     ctx->SetBlockEntryMask(ctx->GetFullMask());
     ctx->SwitchInst(exprValue, svi.defaultBlock ? svi.defaultBlock : bbDone, svi.caseBlocks, svi.nextBlock);
 

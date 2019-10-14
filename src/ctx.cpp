@@ -72,7 +72,7 @@ struct CFInfo {
                            llvm::Value *savedContinueLanesPtr, llvm::Value *savedMask,
                            llvm::Value *savedBlockEntryMask);
 
-    static CFInfo *GetForeach(FunctionEmitContext::ForeachType ft, llvm::BasicBlock *breakTarget,
+    static CFInfo *GetForeach(bool isUniformEmulated, FunctionEmitContext::ForeachType ft, llvm::BasicBlock *breakTarget,
                               llvm::BasicBlock *continueTarget, llvm::Value *savedBreakLanesPtr,
                               llvm::Value *savedContinueLanesPtr, llvm::Value *savedMask,
                               llvm::Value *savedBlockEntryMask);
@@ -80,7 +80,8 @@ struct CFInfo {
     static CFInfo *GetSwitch(bool isUniform, bool isUniformEmulated, llvm::BasicBlock *breakTarget,
                              llvm::BasicBlock *continueTarget, llvm::Value *savedBreakLanesPtr,
                              llvm::Value *savedContinueLanesPtr, llvm::Value *savedMask,
-                             llvm::Value *savedBlockEntryMask, llvm::Value *switchExpr, llvm::BasicBlock *bbDefault,
+                             llvm::Value *savedBlockEntryMask, llvm::Value *switchExpr,
+                             llvm::Value *savedFallThroughMaskPtr, llvm::BasicBlock *bbDefault,
                              const std::vector<std::pair<int, llvm::BasicBlock *>> *bbCases,
                              const std::map<llvm::BasicBlock *, llvm::BasicBlock *> *bbNext, bool scUniform);
 
@@ -90,6 +91,7 @@ struct CFInfo {
     bool IsSwitch() { return type == Switch; }
     bool IsVarying() { return !isUniform; }
     bool IsUniform() { return isUniform; }
+    bool IsUniformEmulated() { return isUniformEmulated; }
 
     enum CFType { If, Loop, ForeachRegular, ForeachActive, ForeachUnique, Switch };
     CFType type;
@@ -99,6 +101,7 @@ struct CFInfo {
     llvm::Value *savedBreakLanesPtr, *savedContinueLanesPtr;
     llvm::Value *savedMask, *savedBlockEntryMask;
     llvm::Value *savedSwitchExpr;
+    llvm::Value *savedSwitchFallThroughMaskPtr;
     llvm::BasicBlock *savedDefaultBlock;
     const std::vector<std::pair<int, llvm::BasicBlock *>> *savedCaseBlocks;
     const std::map<llvm::BasicBlock *, llvm::BasicBlock *> *savedNextBlocks;
@@ -114,14 +117,15 @@ struct CFInfo {
         savedBreakLanesPtr = savedContinueLanesPtr = NULL;
         savedMask = savedBlockEntryMask = sm;
         savedSwitchExpr = NULL;
+        savedSwitchFallThroughMaskPtr = NULL;
         savedDefaultBlock = NULL;
         savedCaseBlocks = NULL;
         savedNextBlocks = NULL;
         savedSwitchConditionWasUniform = false;
     }
     CFInfo(CFType t, bool iu, bool uniformEmulated, llvm::BasicBlock *bt, llvm::BasicBlock *ct, llvm::Value *sb,
-           llvm::Value *sc, llvm::Value *sm, llvm::Value *lm, llvm::Value *sse = NULL, llvm::BasicBlock *bbd = NULL,
-           const std::vector<std::pair<int, llvm::BasicBlock *>> *bbc = NULL,
+           llvm::Value *sc, llvm::Value *sm, llvm::Value *lm, llvm::Value *sse = NULL, llvm::Value *ssftmp = NULL,
+           llvm::BasicBlock *bbd = NULL, const std::vector<std::pair<int, llvm::BasicBlock *>> *bbc = NULL,
            const std::map<llvm::BasicBlock *, llvm::BasicBlock *> *bbn = NULL, bool scu = false) {
         Assert(t == Loop || t == Switch);
         type = t;
@@ -134,16 +138,18 @@ struct CFInfo {
         savedMask = sm;
         savedBlockEntryMask = lm;
         savedSwitchExpr = sse;
+        savedSwitchFallThroughMaskPtr = ssftmp;
         savedDefaultBlock = bbd;
         savedCaseBlocks = bbc;
         savedNextBlocks = bbn;
         savedSwitchConditionWasUniform = scu;
     }
-    CFInfo(CFType t, llvm::BasicBlock *bt, llvm::BasicBlock *ct, llvm::Value *sb, llvm::Value *sc, llvm::Value *sm,
+    CFInfo(CFType t, bool uniformEmulated, llvm::BasicBlock *bt, llvm::BasicBlock *ct, llvm::Value *sb, llvm::Value *sc, llvm::Value *sm,
            llvm::Value *lm) {
         Assert(t == ForeachRegular || t == ForeachActive || t == ForeachUnique);
         type = t;
-        isUniform = false;
+        isUniform = uniformEmulated;
+        isUniformEmulated = uniformEmulated;
         savedBreakTarget = bt;
         savedContinueTarget = ct;
         savedBreakLanesPtr = sb;
@@ -151,6 +157,7 @@ struct CFInfo {
         savedMask = sm;
         savedBlockEntryMask = lm;
         savedSwitchExpr = NULL;
+        savedSwitchFallThroughMaskPtr = NULL;
         savedDefaultBlock = NULL;
         savedCaseBlocks = NULL;
         savedNextBlocks = NULL;
@@ -169,7 +176,7 @@ CFInfo *CFInfo::GetLoop(bool isUniform, bool isUniformEmulated, llvm::BasicBlock
                       savedContinueLanesPtr, savedMask, savedBlockEntryMask);
 }
 
-CFInfo *CFInfo::GetForeach(FunctionEmitContext::ForeachType ft, llvm::BasicBlock *breakTarget,
+CFInfo *CFInfo::GetForeach(bool isUniformEmulated, FunctionEmitContext::ForeachType ft, llvm::BasicBlock *breakTarget,
                            llvm::BasicBlock *continueTarget, llvm::Value *savedBreakLanesPtr,
                            llvm::Value *savedContinueLanesPtr, llvm::Value *savedMask, llvm::Value *savedForeachMask) {
     CFType cfType;
@@ -188,20 +195,20 @@ CFInfo *CFInfo::GetForeach(FunctionEmitContext::ForeachType ft, llvm::BasicBlock
         return NULL;
     }
 
-    return new CFInfo(cfType, breakTarget, continueTarget, savedBreakLanesPtr, savedContinueLanesPtr, savedMask,
+    return new CFInfo(cfType, isUniformEmulated, breakTarget, continueTarget, savedBreakLanesPtr, savedContinueLanesPtr, savedMask,
                       savedForeachMask);
 }
 
 CFInfo *CFInfo::GetSwitch(bool isUniform, bool isUniformEmulated, llvm::BasicBlock *breakTarget,
                           llvm::BasicBlock *continueTarget, llvm::Value *savedBreakLanesPtr,
                           llvm::Value *savedContinueLanesPtr, llvm::Value *savedMask, llvm::Value *savedBlockEntryMask,
-                          llvm::Value *savedSwitchExpr, llvm::BasicBlock *savedDefaultBlock,
+                          llvm::Value *savedSwitchExpr, llvm::Value *savedSwitchFallThroughMaskPtr, llvm::BasicBlock *savedDefaultBlock,
                           const std::vector<std::pair<int, llvm::BasicBlock *>> *savedCases,
                           const std::map<llvm::BasicBlock *, llvm::BasicBlock *> *savedNext,
                           bool savedSwitchConditionUniform) {
     return new CFInfo(Switch, isUniform, isUniformEmulated, breakTarget, continueTarget, savedBreakLanesPtr,
-                      savedContinueLanesPtr, savedMask, savedBlockEntryMask, savedSwitchExpr, savedDefaultBlock,
-                      savedCases, savedNext, savedSwitchConditionUniform);
+                      savedContinueLanesPtr, savedMask, savedBlockEntryMask, savedSwitchExpr, savedSwitchFallThroughMaskPtr,
+                      savedDefaultBlock, savedCases, savedNext, savedSwitchConditionUniform);
 }
 
 ///////////////////////////////////////////////////////////////////////////
@@ -530,7 +537,7 @@ void FunctionEmitContext::EndLoop() {
         restoreMaskGivenReturns(ci->savedMask);
 }
 
-void FunctionEmitContext::StartForeach(ForeachType ft) {
+void FunctionEmitContext::StartForeach(ForeachType ft, bool isEmulatedUniform) {
     // Issue an error if we're in a nested foreach...
     if (ft == FOREACH_REGULAR) {
         for (int i = 0; i < (int)controlFlowInfo.size(); ++i) {
@@ -550,12 +557,16 @@ void FunctionEmitContext::StartForeach(ForeachType ft) {
     // can restore it when we exit this loop.
     llvm::Value *oldMask = GetInternalMask();
     controlFlowInfo.push_back(
-        CFInfo::GetForeach(ft, breakTarget, continueTarget, breakLanesPtr, continueLanesPtr, oldMask, blockEntryMask));
+        CFInfo::GetForeach(isEmulatedUniform, ft, breakTarget, continueTarget, breakLanesPtr, continueLanesPtr, oldMask, blockEntryMask));
     breakLanesPtr = NULL;
     breakTarget = NULL;
 
-    continueLanesPtr = AllocaInst(LLVMTypes::MaskType, "foreach_continue_lanes");
-    StoreInst(LLVMMaskAllOff, continueLanesPtr);
+    continueLanesPtr = NULL;
+    if (!isEmulatedUniform) {
+        continueLanesPtr = AllocaInst(LLVMTypes::MaskType, "foreach_continue_lanes");
+        StoreInst(LLVMMaskAllOff, continueLanesPtr);
+    }
+
     continueTarget = NULL; // should be set by SetContinueTarget()
 
     blockEntryMask = NULL;
@@ -793,7 +804,8 @@ void FunctionEmitContext::StartSwitch(bool cfIsUniform, llvm::BasicBlock *bbBrea
     llvm::Value *oldMask = GetInternalMask();
     controlFlowInfo.push_back(CFInfo::GetSwitch(cfIsUniform, isEmulatedUniform, breakTarget, continueTarget,
                                                 breakLanesPtr, continueLanesPtr, oldMask, blockEntryMask, switchExpr,
-                                                defaultBlock, caseBlocks, nextBlocks, switchConditionWasUniform));
+                                                switchFallThroughMaskPtr, defaultBlock, caseBlocks,
+                                                nextBlocks, switchConditionWasUniform));
 
     breakLanesPtr = AllocaInst(LLVMTypes::MaskType, "break_lanes_memory");
     StoreInst(LLVMMaskAllOff, breakLanesPtr);
@@ -805,6 +817,7 @@ void FunctionEmitContext::StartSwitch(bool cfIsUniform, llvm::BasicBlock *bbBrea
 
     // These will be set by the SwitchInst() method
     switchExpr = NULL;
+    switchFallThroughMaskPtr = NULL;
     defaultBlock = NULL;
     caseBlocks = NULL;
     nextBlocks = NULL;
@@ -859,12 +872,74 @@ void FunctionEmitContext::EmitDefaultLabel(bool checkMask, SourcePos pos) {
     // should have been provided in the previous call to SwitchInst().
     AssertPos(currentPos, defaultBlock != NULL);
 
-    if (bblock != NULL)
+#ifdef ISPC_GENX_ENABLED
+    llvm::BasicBlock *bbDefaultImpl = NULL;
+    if (g->target->getISA() == Target::GENX) {
+        // Create basic block with actual default implementation
+        bbDefaultImpl = CreateBasicBlock("default_impl");
+    }
+#endif
+
+    if (bblock != NULL) {
         // The previous case in the switch fell through, or we're in a
         // varying switch; terminate the current block with a jump to the
         // block for the code for the default label.
-        BranchInst(defaultBlock);
+#ifdef ISPC_GENX_ENABLED
+        if (g->target->getISA() == Target::GENX &&
+            !ifEmulatedUniformForGen()) {
+            // Skip check, branch directly to implementation
+            BranchInst(bbDefaultImpl);
+        } else
+#endif
+            BranchInst(defaultBlock);
+    }
     SetCurrentBasicBlock(defaultBlock);
+
+#ifdef ISPC_GENX_ENABLED
+    if (switchConditionWasUniform && g->target->getISA() == Target::GENX) {
+        // Find next basic block after default
+        auto iter = nextBlocks->find(defaultBlock);
+        AssertPos(currentPos, iter != nextBlocks->end());
+        llvm::BasicBlock *bbNext = iter->second;
+
+        llvm::Value *testVal = llvm::isa<llvm::VectorType>(switchExpr->getType()) ? LLVMMaskAllOn : LLVMTrue;
+
+        // We check only cases after default:
+        // EM is turned off for previous ones (or not in case off fall through)
+        // Find case value for the next case
+        auto caseBlocksIt = caseBlocks->begin();
+        for (auto e = caseBlocks->end();
+             (caseBlocksIt != e) && (caseBlocksIt->second != bbNext);
+             ++caseBlocksIt);
+
+        for (auto e = caseBlocks->end(); caseBlocksIt != e; ++caseBlocksIt) {
+            int value = caseBlocksIt->first;
+            llvm::Value *val = NULL;
+            if (llvm::isa<llvm::VectorType>(switchExpr->getType())) {
+                val = (switchExpr->getType() == LLVMTypes::Int32VectorType) ? LLVMInt32Vector(value) : LLVMInt64Vector(value);
+            } else {
+                val = (switchExpr->getType() == LLVMTypes::Int32Type) ? LLVMInt32(value) : LLVMInt64(value);
+            }
+
+            // The way to get cmp is the same as under TODO comment below.
+            // However, seems like such constructions are transformed to cmp.ne
+            // in vISA anyway
+            llvm::Value *matchesCaseValue = CmpInst(llvm::Instruction::ICmp, llvm::CmpInst::ICMP_EQ, switchExpr, val, "cmp_case_value");
+            llvm::Value *notMatchesCaseValue = NotOperator(matchesCaseValue);
+            testVal = BinaryOperator(llvm::Instruction::And, testVal, notMatchesCaseValue, "default&~case_match");
+        }
+
+        // Don't need to check fall through mask: all lanes that
+        // executed on fall through won't fail case checks from
+        // above
+
+        // Branch to default/next block. It will set GenX EM
+        // for this block and restore mask for turned off lanes after
+        // reaching next block
+        BranchInst(bbDefaultImpl, bbNext, testVal);
+        SetCurrentBasicBlock(bbDefaultImpl);
+    }
+#endif
 
     if (switchConditionWasUniform)
         // Nothing more to do for this case; return back to the caller,
@@ -923,10 +998,64 @@ void FunctionEmitContext::EmitCaseLabel(int value, bool checkMask, SourcePos pos
         }
     AssertPos(currentPos, bbCase != NULL);
 
-    if (bblock != NULL)
+#ifdef ISPC_GENX_ENABLED
+    llvm::BasicBlock *bbCaseImpl = NULL;
+    if (g->target->getISA() == Target::GENX) {
+        // Create basic block with actual case implementation
+        std::string bbName = bbCase->getName().str() + "_impl";
+        bbCaseImpl = CreateBasicBlock(bbName.c_str());
+    }
+#endif
+
+    if (bblock != NULL) {
         // fall through from the previous case
-        BranchInst(bbCase);
+#ifdef ISPC_GENX_ENABLED
+        if (g->target->getISA() == Target::GENX &&
+            llvm::isa<llvm::VectorType>(switchExpr->getType())) {
+            // EM will be restored after this branch.
+            // We need to skip case check for lanes that are
+            // turned on at this point.
+            StoreInst(GenXSimdCFPredicate(LLVMMaskAllOn), switchFallThroughMaskPtr);
+        }
+
+        if (g->target->getISA() == Target::GENX &&
+            !ifEmulatedUniformForGen()) {
+            // Skip check, branch directly to implementation
+            BranchInst(bbCaseImpl);
+        } else
+#endif
+            BranchInst(bbCase);
+    }
     SetCurrentBasicBlock(bbCase);
+
+#ifdef ISPC_GENX_ENABLED
+    if (switchConditionWasUniform && g->target->getISA() == Target::GENX) {
+        // Find the next basic block after this case
+        std::map<llvm::BasicBlock *, llvm::BasicBlock *>::const_iterator iter;
+        iter = nextBlocks->find(bbCase);
+        AssertPos(currentPos, iter != nextBlocks->end());
+        llvm::BasicBlock *bbNext = iter->second;
+
+        // Create compare value
+        llvm::Value *caseTest = NULL;
+        if (llvm::isa<llvm::VectorType>(switchExpr->getType())) {
+            // Take fall through lanes to turn them on in the next block
+            llvm::Value *fallThroughMask = LoadInst(switchFallThroughMaskPtr, NULL, "fall_through_mask");
+            llvm::Value *val = (switchExpr->getType() == LLVMTypes::Int32VectorType) ? LLVMInt32Vector(value) : LLVMInt64Vector(value);
+            llvm::Value *cmpVal = CmpInst(llvm::Instruction::ICmp, llvm::CmpInst::ICMP_EQ, switchExpr, val, "cmp_case_value");
+            caseTest = BinaryOperator(llvm::Instruction::Or, cmpVal, fallThroughMask, "case_test");
+        } else {
+            llvm::Value *val = (switchExpr->getType() == LLVMTypes::Int32Type) ? LLVMInt32(value) : LLVMInt64(value);
+            caseTest = CmpInst(llvm::Instruction::ICmp, llvm::CmpInst::ICMP_EQ, switchExpr, val, "case_test");
+        }
+
+        // Branch to current case/next block. It will set GenX EM
+        // for this block and restore mask for turned off lanes after
+        // reaching next block
+        BranchInst(bbCaseImpl, bbNext, caseTest);
+        SetCurrentBasicBlock(bbCaseImpl);
+    }
+#endif
 
     if (switchConditionWasUniform)
         return;
@@ -965,9 +1094,16 @@ void FunctionEmitContext::SwitchInst(llvm::Value *expr, llvm::BasicBlock *bbDefa
     defaultBlock = bbDefault;
     caseBlocks = new std::vector<std::pair<int, llvm::BasicBlock *>>(bbCases);
     nextBlocks = new std::map<llvm::BasicBlock *, llvm::BasicBlock *>(bbNext);
-    switchConditionWasUniform = (llvm::isa<llvm::VectorType>(expr->getType()) == false);
+    switchConditionWasUniform = (llvm::isa<llvm::VectorType>(expr->getType()) == false) ||
+        (controlFlowInfo.back()->IsUniformEmulated());
 
-    if (switchConditionWasUniform == true) {
+#ifdef ISPC_GENX_ENABLED
+    // Do not make LLVM switch for GenX
+    if (switchConditionWasUniform == true && g->target->getISA() != Target::GENX)
+#else
+    if (switchConditionWasUniform == true)
+#endif
+    {
         // For a uniform switch condition, just wire things up to the LLVM
         // switch instruction.
         llvm::SwitchInst *s = llvm::SwitchInst::Create(expr, bbDefault, bbCases.size(), bblock);
@@ -984,8 +1120,17 @@ void FunctionEmitContext::SwitchInst(llvm::Value *expr, llvm::BasicBlock *bbDefa
         // switch is a terminator
         bblock = NULL;
     } else {
-        // For a varying switch, we first turn off all lanes of the mask
-        SetInternalMask(LLVMMaskAllOff);
+#ifdef ISPC_GENX_ENABLED
+        if (g->target->getISA() == Target::GENX) {
+            // Init fall through mask
+            switchFallThroughMaskPtr = AllocaInst(LLVMTypes::MaskType, "fall_through_mask");
+            StoreInst(LLVMMaskAllOff, switchFallThroughMaskPtr);
+        }
+
+        if (g->target->getISA() != Target::GENX)
+#endif
+            // For a varying switch, we first turn off all lanes of the mask
+            SetInternalMask(LLVMMaskAllOff);
 
         if (nextBlocks->size() > 0) {
             // If there are any labels inside the switch, jump to the first
@@ -3396,6 +3541,7 @@ CFInfo *FunctionEmitContext::popCFState() {
         continueLanesPtr = ci->savedContinueLanesPtr;
         blockEntryMask = ci->savedBlockEntryMask;
         switchExpr = ci->savedSwitchExpr;
+        switchFallThroughMaskPtr = ci->savedSwitchFallThroughMaskPtr;
         defaultBlock = ci->savedDefaultBlock;
         caseBlocks = ci->savedCaseBlocks;
         nextBlocks = ci->savedNextBlocks;
