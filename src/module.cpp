@@ -92,6 +92,10 @@
 #include <llvm/Target/TargetOptions.h>
 #include <llvm/Transforms/IPO.h>
 #include <llvm/Transforms/Utils/ValueMapper.h>
+#ifdef ISPC_GENX_ENABLED
+#include "LLVMSPIRVLib/LLVMSPIRVLib.h"
+#include <fstream>
+#endif
 
 /*! list of files encountered by the parser. this allows emitting of
     the module file's dependencies via the -MMM option */
@@ -894,6 +898,16 @@ bool Module::writeOutput(OutputType outputType, OutputFlags flags, const char *o
                 if (strcasecmp(suffix, "o") && strcasecmp(suffix, "obj"))
                     fileType = "object";
                 break;
+#ifdef ISPC_GENX_ENABLED
+            case ISA:
+                if (strcasecmp(suffix, "isa"))
+                    fileType = "GenX ISA";
+                break;
+            case SPIRV:
+                if (strcasecmp(suffix, "spv"))
+                    fileType = "spir-v";
+                break;
+#endif
             case Header:
                 if (strcasecmp(suffix, "h") && strcasecmp(suffix, "hh") && strcasecmp(suffix, "hpp"))
                     fileType = "header";
@@ -934,6 +948,10 @@ bool Module::writeOutput(OutputType outputType, OutputFlags flags, const char *o
         return writeDevStub(outFileName);
     else if ((outputType == Bitcode) || (outputType == BitcodeText))
         return writeBitcode(module, outFileName, outputType);
+#ifdef ISPC_GENX_ENABLED
+    else if (outputType == SPIRV)
+        return writeSPIRV(module, outFileName);
+#endif
     else
         return writeObjectFileOrAssembly(outputType, outFileName);
 }
@@ -967,6 +985,24 @@ bool Module::writeBitcode(llvm::Module *module, const char *outFileName, OutputT
     return true;
 }
 
+#ifdef ISPC_GENX_ENABLED
+bool Module::writeSPIRV(llvm::Module *module, const char *outFileName) {
+    std::ofstream fos(outFileName, std::ios::binary);
+    std::string err;
+    bool success = false;
+    if (!strcmp(outFileName, "-")) {
+        success = llvm::writeSpirv(module, std::cout, err);
+    } else {
+        success = llvm::writeSpirv(module, fos, err);
+    }
+    if (!success) {
+        fprintf(stderr, "Fails to save LLVM as SPIR-V: %s \n", err.c_str());
+        return false;
+    }
+    return true;
+}
+#endif // ISPC_GENX_ENABLED
+
 bool Module::writeObjectFileOrAssembly(OutputType outputType, const char *outFileName) {
     llvm::TargetMachine *targetMachine = g->target->GetTargetMachine();
     return writeObjectFileOrAssembly(targetMachine, module, outputType, outFileName);
@@ -977,8 +1013,14 @@ bool Module::writeObjectFileOrAssembly(llvm::TargetMachine *targetMachine, llvm:
     // Figure out if we're generating object file or assembly output, and
     // set binary output for object files
 #if ISPC_LLVM_VERSION <= ISPC_LLVM_9_0
+#ifdef ISPC_GENX_ENABLED
+    llvm::TargetMachine::CodeGenFileType fileType = (outputType == Object || outputType == ISA)
+                                                        ? llvm::TargetMachine::CGFT_ObjectFile
+                                                        : llvm::TargetMachine::CGFT_AssemblyFile;
+#else // !ISPC_GENX_ENABLED
     llvm::TargetMachine::CodeGenFileType fileType =
         (outputType == Object) ? llvm::TargetMachine::CGFT_ObjectFile : llvm::TargetMachine::CGFT_AssemblyFile;
+#endif // ISPC_GENX_ENABLED
     bool binary = (fileType == llvm::TargetMachine::CGFT_ObjectFile);
 #else // LLVM 10.0+
     llvm::CodeGenFileType fileType = (outputType == Object) ? llvm::CGFT_ObjectFile : llvm::CGFT_AssemblyFile;
@@ -2451,6 +2493,16 @@ int Module::CompileAndOutput(const char *srcFile, Arch arch, const char *cpu, st
 
         m = new Module(srcFile);
         if (m->CompileFile() == 0) {
+#ifdef ISPC_GENX_ENABLED
+            if (g->target->getISA() == Target::GENX && outputType == OutputType::Object) {
+                outputType = OutputType::ISA;
+            }
+            if (g->target->getISA() != Target::GENX &&
+                (outputType == OutputType::ISA || outputType == OutputType::SPIRV)) {
+                Error(SourcePos(), "SPIR-V and ISA formats are supported for gen target only");
+                return 1;
+            }
+#endif
             if (outFileName != NULL)
                 if (!m->writeOutput(outputType, outputFlags, outFileName))
                     return 1;
