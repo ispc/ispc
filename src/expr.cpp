@@ -614,7 +614,7 @@ void InitSymbol(llvm::Value *ptr, const Type *symType, Expr *initExpr, FunctionE
         }
 
         if (Type::IsBasicType(symType))
-            ctx->StoreInst(constValue, ptr, symType);
+            ctx->StoreInst(constValue, ptr, symType, symType->IsUniformType());
         else {
             llvm::Value *constPtr =
                 new llvm::GlobalVariable(*m->module, llvmType, true /* const */, llvm::GlobalValue::InternalLinkage,
@@ -640,7 +640,7 @@ void InitSymbol(llvm::Value *ptr, const Type *symType, Expr *initExpr, FunctionE
         llvm::Value *initializerValue = initExpr->GetValue(ctx);
         if (initializerValue != NULL)
             // Bingo; store the value in the variable's storage
-            ctx->StoreInst(initializerValue, ptr, symType);
+            ctx->StoreInst(initializerValue, ptr, symType, symType->IsUniformType());
         return;
     }
 
@@ -676,7 +676,7 @@ void InitSymbol(llvm::Value *ptr, const Type *symType, Expr *initExpr, FunctionE
 
         llvm::Value *initializerValue = initExpr->GetValue(ctx);
         if (initializerValue)
-            ctx->StoreInst(initializerValue, ptr, initExpr->GetType());
+            ctx->StoreInst(initializerValue, ptr, initExpr->GetType(), symType->IsUniformType());
         return;
     }
 
@@ -756,7 +756,7 @@ void InitSymbol(llvm::Value *ptr, const Type *symType, Expr *initExpr, FunctionE
                     }
 
                     llvm::Constant *zeroInit = llvm::Constant::getNullValue(llvmType);
-                    ctx->StoreInst(zeroInit, ep, elementType);
+                    ctx->StoreInst(zeroInit, ep, elementType, elementType->IsUniformType());
                 }
             }
         } else if (collectionType) {
@@ -1702,7 +1702,7 @@ llvm::Value *lEmitLogicalOp(BinaryExpr::Op op, Expr *arg0, Expr *arg1, FunctionE
             // uniform or varying)
             ctx->SetCurrentBasicBlock(bbSkipEvalValue1);
             llvm::Value *trueValue = retType->IsUniformType() ? LLVMTrue : LLVMMaskAllOn;
-            ctx->StoreInst(trueValue, retPtr, retType);
+            ctx->StoreInst(trueValue, retPtr, retType, retType->IsUniformType());
             ctx->BranchInst(bbLogicalDone);
         } else {
             AssertPos(pos, op == BinaryExpr::LogicalAnd);
@@ -1715,7 +1715,7 @@ llvm::Value *lEmitLogicalOp(BinaryExpr::Op op, Expr *arg0, Expr *arg1, FunctionE
             // uniform or varying false).
             ctx->SetCurrentBasicBlock(bbSkipEvalValue1);
             llvm::Value *falseValue = retType->IsUniformType() ? LLVMFalse : LLVMMaskAllOff;
-            ctx->StoreInst(falseValue, retPtr, retType);
+            ctx->StoreInst(falseValue, retPtr, retType, retType->IsUniformType());
             ctx->BranchInst(bbLogicalDone);
         }
 
@@ -1734,7 +1734,7 @@ llvm::Value *lEmitLogicalOp(BinaryExpr::Op op, Expr *arg0, Expr *arg1, FunctionE
             AssertPos(pos, m->errorCount > 0);
             return NULL;
         }
-        ctx->StoreInst(value1, retPtr, arg1->GetType());
+        ctx->StoreInst(value1, retPtr, arg1->GetType(), retType->IsUniformType());
         ctx->BranchInst(bbLogicalDone);
 
         // In all cases, we end up at the bbLogicalDone basic block;
@@ -1770,7 +1770,7 @@ llvm::Value *lEmitLogicalOp(BinaryExpr::Op op, Expr *arg0, Expr *arg1, FunctionE
             // value0 is true for all running lanes, so it can be used for
             // the final result
             ctx->SetCurrentBasicBlock(bbSkipEvalValue1);
-            ctx->StoreInst(value0, retPtr, arg0->GetType());
+            ctx->StoreInst(value0, retPtr, arg0->GetType(), retType->IsUniformType());
             ctx->BranchInst(bbLogicalDone);
 
             // Otherwise, we need to valuate arg1. However, first we need
@@ -1794,7 +1794,7 @@ llvm::Value *lEmitLogicalOp(BinaryExpr::Op op, Expr *arg0, Expr *arg1, FunctionE
             llvm::Value *value1AndMask =
                 ctx->BinaryOperator(llvm::Instruction::And, value1, ctx->GetInternalMask(), "op&mask");
             llvm::Value *result = ctx->BinaryOperator(llvm::Instruction::Or, value0AndMask, value1AndMask, "or_result");
-            ctx->StoreInst(result, retPtr, retType);
+            ctx->StoreInst(result, retPtr, retType, retType->IsUniformType());
             ctx->BranchInst(bbLogicalDone);
         } else {
             AssertPos(pos, op == BinaryExpr::LogicalAnd);
@@ -1814,7 +1814,7 @@ llvm::Value *lEmitLogicalOp(BinaryExpr::Op op, Expr *arg0, Expr *arg1, FunctionE
             // value0 was false for all running lanes, so use its value as
             // the overall result.
             ctx->SetCurrentBasicBlock(bbSkipEvalValue1);
-            ctx->StoreInst(value0, retPtr, arg0->GetType());
+            ctx->StoreInst(value0, retPtr, arg0->GetType(), retType->IsUniformType());
             ctx->BranchInst(bbLogicalDone);
 
             // Otherwise we need to evaluate value1, but again with the
@@ -1838,7 +1838,7 @@ llvm::Value *lEmitLogicalOp(BinaryExpr::Op op, Expr *arg0, Expr *arg1, FunctionE
                 ctx->BinaryOperator(llvm::Instruction::And, value1, ctx->GetInternalMask(), "value1&mask");
             llvm::Value *result =
                 ctx->BinaryOperator(llvm::Instruction::And, value0AndMask, value1AndMask, "or_result");
-            ctx->StoreInst(result, retPtr, retType);
+            ctx->StoreInst(result, retPtr, retType, retType->IsUniformType());
             ctx->BranchInst(bbLogicalDone);
         }
 
@@ -3038,7 +3038,7 @@ static llvm::Value *lEmitVaryingSelect(FunctionEmitContext *ctx, llvm::Value *te
     llvm::Value *resultPtr = ctx->AllocaInst(type, "selectexpr_tmp");
     Assert(resultPtr != NULL);
     // Don't need to worry about masking here
-    ctx->StoreInst(expr2, resultPtr, type);
+    ctx->StoreInst(expr2, resultPtr, type, type->IsUniformType());
     // Use masking to conditionally store the expr1 values
     Assert(resultPtr->getType() == PointerType::GetUniform(type)->LLVMStorageType(g->ctx));
     ctx->StoreInst(expr1, resultPtr, test, type, PointerType::GetUniform(type));
@@ -3060,7 +3060,7 @@ static void lEmitSelectExprCode(FunctionEmitContext *ctx, llvm::Value *testVal, 
     llvm::Value *testAndMask = ctx->BinaryOperator(llvm::Instruction::And, testVal, oldMask, "test&mask");
     ctx->SetInternalMask(testAndMask);
     llvm::Value *exprVal = expr->GetValue(ctx);
-    ctx->StoreInst(exprVal, exprPtr, expr->GetType());
+    ctx->StoreInst(exprVal, exprPtr, expr->GetType(), expr->GetType()->IsUniformType());
     ctx->BranchInst(bbDone);
 
     ctx->SetCurrentBasicBlock(bbDone);
@@ -3139,7 +3139,7 @@ llvm::Value *SelectExpr::GetValue(FunctionEmitContext *ctx) const {
         else {
             ctx->SetInternalMaskAnd(oldMask, testVal);
             llvm::Value *expr1Val = expr1->GetValue(ctx);
-            ctx->StoreInst(expr1Val, expr1Ptr, expr1->GetType());
+            ctx->StoreInst(expr1Val, expr1Ptr, expr1->GetType(), expr1->GetType()->IsUniformType());
         }
 
         if (shortCircuit2) {
@@ -3148,7 +3148,7 @@ llvm::Value *SelectExpr::GetValue(FunctionEmitContext *ctx) const {
         } else {
             ctx->SetInternalMaskAndNot(oldMask, testVal);
             llvm::Value *expr2Val = expr2->GetValue(ctx);
-            ctx->StoreInst(expr2Val, expr2Ptr, expr2->GetType());
+            ctx->StoreInst(expr2Val, expr2Ptr, expr2->GetType(), expr2->GetType()->IsUniformType());
         }
 
         ctx->SetInternalMask(oldMask);
@@ -4040,7 +4040,7 @@ llvm::Value *IndexExpr::GetValue(FunctionEmitContext *ctx) const {
         }
         ctx->SetDebugPos(pos);
         llvm::Value *tmpPtr = ctx->AllocaInst(baseExprType, "array_tmp");
-        ctx->StoreInst(val, tmpPtr, baseExprType);
+        ctx->StoreInst(val, tmpPtr, baseExprType, baseExprType->IsUniformType());
 
         // Get a pointer type to the underlying elements
         const SequentialType *st = CastType<SequentialType>(baseExprType);
@@ -4716,7 +4716,7 @@ llvm::Value *VectorMemberExpr::GetValue(FunctionEmitContext *ctx) const {
                 AssertPos(pos, m->errorCount > 0);
                 return NULL;
             }
-            ctx->StoreInst(exprValue, basePtr, expr->GetType());
+            ctx->StoreInst(exprValue, basePtr, expr->GetType(), expr->GetType()->IsUniformType());
         }
 
         // Allocate temporary memory to store the result
@@ -4742,7 +4742,7 @@ llvm::Value *VectorMemberExpr::GetValue(FunctionEmitContext *ctx) const {
 
             const char *resultName = LLVMGetName(resultPtr, idStr);
             llvm::Value *ptmp = ctx->AddElementOffset(resultPtr, i, NULL, resultName);
-            ctx->StoreInst(elementValue, ptmp, elementPtrType);
+            ctx->StoreInst(elementValue, ptmp, elementPtrType, expr->GetType()->IsUniformType());
         }
 
         return ctx->LoadInst(resultPtr, memberType, LLVMGetName(basePtr, "_swizzle"));
@@ -4864,7 +4864,7 @@ llvm::Value *MemberExpr::GetValue(FunctionEmitContext *ctx) const {
         ctx->SetDebugPos(pos);
         const Type *exprType = expr->GetType();
         llvm::Value *ptr = ctx->AllocaInst(exprType, "struct_tmp");
-        ctx->StoreInst(val, ptr, exprType);
+        ctx->StoreInst(val, ptr, exprType, exprType->IsUniformType());
 
         int elementNumber = getElementNumber();
         if (elementNumber == -1)
@@ -7120,7 +7120,7 @@ llvm::Value *ReferenceExpr::GetValue(FunctionEmitContext *ctx) const {
     }
 
     llvm::Value *ptr = ctx->AllocaInst(type);
-    ctx->StoreInst(value, ptr, type);
+    ctx->StoreInst(value, ptr, type, expr->GetType()->IsUniformType());
     return ptr;
 }
 
