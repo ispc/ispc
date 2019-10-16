@@ -95,6 +95,12 @@ class Module {
         Deps,        /** generate dependencies */
         DevStub,     /** generate device-side offload stubs */
         HostStub     /** generate host-side offload stubs */
+#ifdef ISPC_GENX_ENABLED
+        ,
+        ISA,  /** generate GenX ISA file */
+        SPIRV /** generate spir-v file */
+#endif
+
     };
 
     enum OutputFlags : int {
@@ -173,7 +179,9 @@ class Module {
     static bool writeObjectFileOrAssembly(llvm::TargetMachine *targetMachine, llvm::Module *module,
                                           OutputType outputType, const char *outFileName);
     static bool writeBitcode(llvm::Module *module, const char *outFileName, OutputType outputType);
-
+#ifdef ISPC_GENX_ENABLED
+    static bool writeSPIRV(llvm::Module *module, const char *outFileName);
+#endif
     void execPreprocessor(const char *infilename, llvm::raw_string_ostream *ostream) const;
 };
 

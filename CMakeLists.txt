@@ -246,7 +246,7 @@ if (GENX_ENABLED)
         set(PB_PATH_MODIFIER "x64")
     endif()
 
-    list(APPEND CLANG_LIBRARY_LIST igfxcmjit${TARGET_MODIFIER} iga_s${TARGET_MODIFIER} iga_enc${TARGET_MODIFIER})
+    list(APPEND CLANG_LIBRARY_LIST igfxcmjit${TARGET_MODIFIER} iga_s${TARGET_MODIFIER} iga_enc${TARGET_MODIFIER} LLVMSPIRVLib )
 endif()
 get_llvm_libfiles(LLVM_LIBRARY_LIST ${LLVM_COMPONENTS})
 get_llvm_cppflags(LLVM_CPP_FLAGS)

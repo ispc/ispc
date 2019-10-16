@@ -118,6 +118,10 @@ static void lPrintVersion() {
     printf("    [--emit-llvm]\t\t\tEmit LLVM bitcode file as output\n");
     printf("    [--emit-llvm-text]\t\t\tEmit LLVM bitcode file as output in textual form\n");
     printf("    [--emit-obj]\t\t\tGenerate object file file as output (default)\n");
+#ifdef ISPC_GENX_ENABLED
+    printf("    [--emit-isa]\t\t\tGenerate ISA file as output (default for gen target)\n");
+    printf("    [--emit-spirv]\t\t\tGenerate SPIR-V file as output\n");
+#endif
     printf("    [--force-alignment=<value>]\t\tForce alignment in memory allocations routine to be <value>\n");
     printf("    [--error-limit=<value>]\t\tLimit maximum number of errors emitting by ISPC to <value>\n");
     printf("    [-g]\t\t\t\tGenerate source-level debug information\n");
@@ -642,6 +646,12 @@ int main(int Argc, char *Argv[]) {
             ot = Module::BitcodeText;
         else if (!strcmp(argv[i], "--emit-obj"))
             ot = Module::Object;
+#ifdef ISPC_GENX_ENABLED
+        else if (!strcmp(argv[i], "--emit-isa"))
+            ot = Module::ISA;
+        else if (!strcmp(argv[i], "--emit-spirv"))
+            ot = Module::SPIRV;
+#endif
         else if (!strcmp(argv[i], "-I")) {
             if (++i != argc) {
                 lParseInclude(argv[i]);
