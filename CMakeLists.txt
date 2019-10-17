@@ -120,6 +120,13 @@ if (APPLE)
     endif()
 endif()
 
+# If GenX target is enabled, generate build targets for genx examples and ISPCRT
+if (GENX_ENABLED)
+    option(ISPC_INCLUDE_GENX_EXAMPLES "Generate build targets for the ISPC GenX examples" ON)
+else()
+    option(ISPC_INCLUDE_GENX_EXAMPLES "Generate build targets for the ISPC GenX examples" OFF)
+endif()
+
 if (UNIX)
     option(ISPC_STATIC_STDCXX_LINK "Link statically with libstdc++ and libgcc" OFF)
     if (ISPC_PREPARE_PACKAGE AND (NOT APPLE))
@@ -477,6 +484,10 @@ endif()
 
 if (ISPC_INCLUDE_EXAMPLES AND NOT ISPC_PREPARE_PACKAGE)
     add_subdirectory(examples)
+endif()
+
+if (ISPC_INCLUDE_GENX_EXAMPLES AND NOT ISPC_PREPARE_PACKAGE)
+    add_subdirectory(examples/portable/genx)
 endif()
 
 if (ISPC_INCLUDE_TESTS)
