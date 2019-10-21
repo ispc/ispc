@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2011-2014, Intel Corporation
+  Copyright (c) 2011-2019, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -95,9 +95,7 @@ InputData *CreateInputDataFromFile(const char *path);
 void DeleteInputData(InputData *input);
 void WriteFrame(const char *filename, const InputData *input, const Framebuffer &framebuffer);
 void InitDynamicC(InputData *input);
-void InitDynamicCilk(InputData *input);
 void DispatchDynamicC(InputData *input, Framebuffer *framebuffer);
-void DispatchDynamicCilk(InputData *input, Framebuffer *framebuffer);
 
 #endif // !ISPC
 
