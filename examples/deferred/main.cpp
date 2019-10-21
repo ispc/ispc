@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2011, Intel Corporation
+  Copyright (c) 2011-2019, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -83,9 +83,6 @@ int main(int argc, char **argv) {
     Framebuffer framebuffer(input->header.framebufferWidth, input->header.framebufferHeight);
 
     InitDynamicC(input);
-#ifdef __cilk
-    InitDynamicCilk(input);
-#endif // __cilk
 
     int nframes = test_iterations[2];
     double ispcCycles = 1e30;
@@ -105,20 +102,6 @@ int main(int argc, char **argv) {
     WriteFrame("deferred-ispc-static.ppm", input, framebuffer);
 
     nframes = 3;
-#ifdef __cilk
-    double dynamicCilkCycles = 1e30;
-    for (int i = 0; i < test_iterations[1]; ++i) {
-        framebuffer.clear();
-        reset_and_start_timer();
-        for (int j = 0; j < nframes; ++j)
-            DispatchDynamicCilk(input, &framebuffer);
-        double mcycles = get_elapsed_mcycles() / nframes;
-        printf("@time of serial run:\t\t\t[%.3f] million cycles\n", mcycles);
-        dynamicCilkCycles = std::min(dynamicCilkCycles, mcycles);
-    }
-    printf("[ispc + Cilk dynamic]:\t\t[%.3f] million cycles to render image\n", dynamicCilkCycles);
-    WriteFrame("deferred-ispc-dynamic.ppm", input, framebuffer);
-#endif // __cilk
 
     double serialCycles = 1e30;
     for (unsigned int i = 0; i < test_iterations[1]; ++i) {
@@ -133,12 +116,7 @@ int main(int argc, char **argv) {
     printf("[C++ serial dynamic, 1 core]:\t[%.3f] million cycles to render image\n", serialCycles);
     WriteFrame("deferred-serial-dynamic.ppm", input, framebuffer);
 
-#ifdef __cilk
-    printf("\t\t\t\t(%.2fx speedup from static ISPC, %.2fx from Cilk+ISPC)\n", serialCycles / ispcCycles,
-           serialCycles / dynamicCilkCycles);
-#else
     printf("\t\t\t\t(%.2fx speedup from ISPC + tasks)\n", serialCycles / ispcCycles);
-#endif // __cilk
 
     DeleteInputData(input);
 

@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2011-2012, Intel Corporation
+  Copyright (c) 2011-2019, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -44,7 +44,6 @@
     - Microsoft's Concurrency Runtime (ISPC_USE_CONCRT)
     - Apple's Grand Central Dispatch (ISPC_USE_GCD)
     - bare pthreads (ISPC_USE_PTHREADS, ISPC_USE_PTHREADS_FULLY_SUBSCRIBED)
-    - Cilk Plus (ISPC_USE_CILK)
     - TBB (ISPC_USE_TBB_TASK_GROUP, ISPC_USE_TBB_PARALLEL_FOR)
     - OpenMP (ISPC_USE_OMP)
     - HPX (ISPC_USE_HPX)
@@ -59,7 +58,6 @@
 #define ISPC_USE_CONCRT
 #define ISPC_USE_PTHREADS
 #define ISPC_USE_PTHREADS_FULLY_SUBSCRIBED
-#define ISPC_USE_CILK
 #define ISPC_USE_OMP
 #define ISPC_USE_TBB_TASK_GROUP
 #define ISPC_USE_TBB_PARALLEL_FOR
@@ -81,7 +79,7 @@
 
 #if !(defined ISPC_USE_CONCRT || defined ISPC_USE_GCD || defined ISPC_USE_PTHREADS ||                                  \
       defined ISPC_USE_PTHREADS_FULLY_SUBSCRIBED || defined ISPC_USE_TBB_TASK_GROUP ||                                 \
-      defined ISPC_USE_TBB_PARALLEL_FOR || defined ISPC_USE_OMP || defined ISPC_USE_CILK || defined ISPC_USE_HPX)
+      defined ISPC_USE_TBB_PARALLEL_FOR || defined ISPC_USE_OMP || defined ISPC_USE_HPX)
 
 // If no task model chosen from the compiler cmdline, pick a reasonable default
 #if defined(_WIN32) || defined(_WIN64)
@@ -149,9 +147,6 @@ using namespace Concurrency;
 #ifdef ISPC_USE_TBB_TASK_GROUP
 #include <tbb/task_group.h>
 #endif // ISPC_USE_TBB_TASK_GROUP
-#ifdef ISPC_USE_CILK
-#include <cilk/cilk.h>
-#endif // ISPC_USE_TBB
 #ifdef ISPC_USE_OMP
 #include <omp.h>
 #endif // ISPC_USE_OMP
@@ -434,16 +429,6 @@ class TaskGroup : public TaskGroupBase {
 };
 
 #endif // ISPC_USE_PTHREADS
-
-#ifdef ISPC_USE_CILK
-
-class TaskGroup : public TaskGroupBase {
-  public:
-    void Launch(int baseIndex, int count);
-    void Sync();
-};
-
-#endif // ISPC_USE_CILK
 
 #ifdef ISPC_USE_OMP
 
@@ -872,30 +857,6 @@ inline void TaskGroup::Sync() {
 }
 
 #endif // ISPC_USE_PTHREADS
-
-///////////////////////////////////////////////////////////////////////////
-// Cilk Plus
-
-#ifdef ISPC_USE_CILK
-
-static void InitTaskSystem() {
-    // No initialization needed
-}
-
-inline void TaskGroup::Launch(int baseIndex, int count) {
-    cilk_for(int i = 0; i < count; i++) {
-        TaskInfo *ti = GetTaskInfo(baseIndex + i);
-
-        // Actually run the task.
-        // Cilk does not expose the task -> thread mapping so we pretend it's 1:1
-        ti->func(ti->data, ti->taskIndex, ti->taskCount(), ti->taskIndex0(), ti->taskIndex1(), ti->taskIndex2(),
-                 ti->taskCount0(), ti->taskCount1(), ti->taskCount2());
-    }
-}
-
-inline void TaskGroup::Sync() {}
-
-#endif // ISPC_USE_CILK
 
 ///////////////////////////////////////////////////////////////////////////
 // OpenMP

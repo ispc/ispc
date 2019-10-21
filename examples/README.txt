@@ -54,7 +54,7 @@ sources. (See slides 19-29 of
 http://s09.idav.ucdavis.edu/talks/04-JAndersson-ParallelFrostbite-Siggraph09.pdf
 for more details on the algorithm.)
 
-This directory includes three implementations of the algorithm:
+This directory includes two implementations of the algorithm:
 
 - An ispc implementation that first does a static partitioning of the
   screen into tiles to parallelize across the CPU cores.  Within each tile
@@ -65,12 +65,6 @@ This directory includes three implementations of the algorithm:
   depth complexity (these tiles often have a large number of lights that
   affect them).  Within each final tile, the pixels are shaded using
   regular C++ code.
-- If the Cilk extensions are available in your compiler, an ispc
-  implementation that uses Cilk will also be built.
-  (See http://software.intel.com/en-us/articles/intel-cilk-plus/).  Like
-  the "best practices" serial implementation, this version does dynamic
-  tile partitioning for better load balancing and then uses ispc for the
-  light culling and shading.
 
 
 GMRES

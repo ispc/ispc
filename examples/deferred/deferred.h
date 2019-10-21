@@ -95,9 +95,7 @@ InputData *CreateInputDataFromFile(const char *path);
 void DeleteInputData(InputData *input);
 void WriteFrame(const char *filename, const InputData *input, const Framebuffer &framebuffer);
 void InitDynamicC(InputData *input);
-void InitDynamicCilk(InputData *input);
 void DispatchDynamicC(InputData *input, Framebuffer *framebuffer);
-void DispatchDynamicCilk(InputData *input, Framebuffer *framebuffer);
 
 #endif // !ISPC
 

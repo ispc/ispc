@@ -1364,8 +1364,7 @@ through the ``launch`` keyword.  (The syntax is documented in the `Task
 Parallelism: "launch" and "sync" Statements`_ section.)  A function called
 with ``launch`` executes asynchronously from the function that called it;
 it may run immediately or it may run concurrently on another processor in
-the system, for example.  (This model is closely modeled on the model
-introduced by Intel® Cilk(tm).)
+the system, for example.
 
 If a function launches multiple tasks, there are no guarantees about the
 order in which the tasks will execute.  Furthermore, multiple launched
@@ -3184,11 +3183,11 @@ Task Parallelism: "launch" and "sync" Statements
 
 One option for combining task-parallelism with ``ispc`` is to just use
 regular task parallelism in the C/C++ application code (be it through
-Intel® Cilk(tm), Intel® Thread Building Blocks or another task system), and
+Intel® Thread Building Blocks, OpenMP or another task system), and
 for tasks to use ``ispc`` for SPMD parallelism across the vector lanes as
 appropriate.  Alternatively, ``ispc`` also has support for launching tasks
-from ``ispc`` code.  The approach is similar to Intel® Cilk's task launch
-feature.  (Check the ``examples/mandelbrot_tasks`` example to see how it is used.)
+from ``ispc`` code.  (Check the ``examples/mandelbrot_tasks`` example to
+see how it is used.)
 
 Any function that is launched as a task must be declared with the
 ``task`` qualifier:

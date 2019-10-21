@@ -1,5 +1,5 @@
 #
-#  Copyright (c) 2018, Intel Corporation
+#  Copyright (c) 2018-2019, Intel Corporation
 #  All rights reserved.
 #
 #  Redistribution and use in source and binary forms, with or without
@@ -37,8 +37,7 @@ set (ISPC_SRC_NAME "kernels")
 set (TARGET_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/common.cpp
                     ${CMAKE_CURRENT_SOURCE_DIR}/main.cpp
                     ${CMAKE_CURRENT_SOURCE_DIR}/deferred.h
-                    ${CMAKE_CURRENT_SOURCE_DIR}/dynamic_c.cpp
-                    ${CMAKE_CURRENT_SOURCE_DIR}/dynamic_cilk.cpp)
+                    ${CMAKE_CURRENT_SOURCE_DIR}/dynamic_c.cpp)
 set (ISPC_FLAGS "--opt=fast-math")
 set (ISPC_IA_TARGETS "sse2-i32x4,sse4-i32x8,avx1-i32x16,avx2-i32x16,avx512knl-i32x16,avx512skx-i32x16" CACHE STRING "ISPC IA targets")
 set (ISPC_ARM_TARGETS "neon" CACHE STRING "ISPC ARM targets")
