@@ -400,7 +400,7 @@ saturation_arithmetic_sub_u(i16)
 saturation_arithmetic_sub_u(i32)
 saturation_arithmetic_sub_u(i64)
 
-;;OpenCL algorithm of udiv for i64
+;;IGC OpenCL algorithm of div for i64
 ;;no intrinsic for div so
 define i64 @__divus_ui64(i64 %a, i64 %b) {
 entry:
@@ -447,8 +447,10 @@ define i64 @__divs_ui64(i64 %a, i64 %b) {
   %cmp2 = icmp uge i64 %cmp1, -9223372036854775808
   br i1 %cmp2, label %if, label %else
 if:
-  %res = mul i64 %ures, -1
-  ret i64 %res
+  ;;%ures * -1; but there is no mul for i64 in VISA
+  %res1 = xor i64 %ures, -1
+  %res2 = add i64 %res1, 1
+  ret i64 %res2
 else:
   ret i64 %ures
 }
@@ -503,8 +505,10 @@ define <$1 x i64> @__divs_vi64(<$1 x i64> %a, <$1 x i64> %b) {
   %cmp3 = call i1 @llvm.genx.simdcf.any.v$1i1(<$1 x i1> %cmp2)
   br i1 %cmp3, label %if, label %else
 if:
-  %res = mul <$1 x i64> %ures, const_vector_size(i64, -1, $1)
-  ret <$1 x i64> %res
+  ;;%ures * -1; but there is no mul for i64 in VISA
+  %res1 = xor <$1 x i64> %ures, const_vector_size(i64, -1, $1)
+  %res2 = add <$1 x i64> %res1, const_vector_size(i64, 1, $1)
+  ret <$1 x i64> %res2
 else:
   ret <$1 x i64> %ures
 }
@@ -512,66 +516,111 @@ else:
 
 div_vi64(WIDTH)
 
-;; utility function used by saturation_arithmetic_novec below.  This shouldn't be called by
-;; target .ll files directly.
-;; $1: {add,sub} (used in constructing function names)
+;;IGC OpenCL algorithm of rem for i64
+;;no intrinsic for rem so
+define i64 @__remus_ui64(i64 %a, i64 %b) {
+entry:
+  br label %do
+do:
+  %R1 = phi i64 [0, %entry], [%RF, %while]
+  %I1 = phi i64  [63, %entry], [%IF, %while]
+  %R2 = shl i64 %R1, 1
 
-define(`saturation_arithmetic_novec_universal', `
-define <WIDTH x i8> @__p$1s_vi8(<WIDTH x i8>, <WIDTH x i8>) {
-  %v0_i16 = sext <WIDTH x i8> %0 to <WIDTH x i16>
-  %v1_i16 = sext <WIDTH x i8> %1 to <WIDTH x i16>
-  %res = $1 <WIDTH x i16> %v0_i16, %v1_i16
-  %over_mask = icmp sgt <WIDTH x i16> %res, const_vector(i16, 127)
-  %over_res = select <WIDTH x i1> %over_mask, <WIDTH x i16> const_vector(i16, 127), <WIDTH x i16> %res
-  %under_mask = icmp slt <WIDTH x i16> %res, const_vector(i16, -128)
-  %ret_i16 = select <WIDTH x i1> %under_mask, <WIDTH x i16> const_vector(i16, -128), <WIDTH x i16> %over_res
-  %ret = trunc <WIDTH x i16> %ret_i16 to <WIDTH x i8>
-  ret <WIDTH x i8> %ret
+  ;;R = (R & ~1UL) | ((a >> I) & 1UL);
+  ;;R = R3_1 | R3_2
+  %R3_1 = and i64 %R2, -2
+  %R3_2_1 = lshr i64 %a, %I1
+  %R3_2_2 = and i64 %R3_2_1, 1
+  %R4 = or i64 %R3_1, %R3_2_2
+  %cmp1 = icmp uge i64 %R4, %b
+  br i1 %cmp1, label %if, label %while
+
+if:
+  %R5 = sub i64 %R4, %b
+  %Q2 = shl i64 1, %I1
+  br label %while
+
+while:
+  %RF = phi i64 [%R4, %do], [%R5, %if]
+  %IF = sub i64 %I1, 1
+  %cmp2 = icmp ne i64 %IF, -1
+  br i1 %cmp2, label %do, label %done
+
+done:
+  ret i64 %RF
 }
 
-define <WIDTH x i16> @__p$1s_vi16(<WIDTH x i16>, <WIDTH x i16>) {
-  %v0_i32 = sext <WIDTH x i16> %0 to <WIDTH x i32>
-  %v1_i32 = sext <WIDTH x i16> %1 to <WIDTH x i32>
-  %res = $1 <WIDTH x i32> %v0_i32, %v1_i32
-  %over_mask = icmp sgt <WIDTH x i32> %res, const_vector(i32, 32767)
-  %over_res = select <WIDTH x i1> %over_mask, <WIDTH x i32> const_vector(i32, 32767), <WIDTH x i32> %res
-  %under_mask = icmp slt <WIDTH x i32> %res, const_vector(i32, -32768)
-  %ret_i32 = select <WIDTH x i1> %under_mask, <WIDTH x i32> const_vector(i32, -32768), <WIDTH x i32> %over_res
-  %ret = trunc <WIDTH x i32> %ret_i32 to <WIDTH x i16>
-  ret <WIDTH x i16> %ret
+define i64 @__rems_ui64(i64 %a, i64 %b) {
+  %ua = call i64 @llvm.genx.absi.i64(i64 %a)
+  %ub = call i64 @llvm.genx.absi.i64(i64 %b)
+  %ures = call i64 @__remus_ui64(i64 %ua, i64 %ub)
+  ;;0x8000000000000000 <=> sign
+  %cmp1 = icmp slt i64 %a, 0
+  br i1 %cmp1, label %if, label %else
+if:
+  ;;%ures * -1; but there is no mul for i64 in VISA
+  %res1 = xor i64 %ures, -1
+  %res2 = add i64 %res1, 1
+  ret i64 %res2
+else:
+  ret i64 %ures
 }
 
-define <WIDTH x i8> @__p$1us_vi8(<WIDTH x i8>, <WIDTH x i8>) {
-  %v0_i16 = zext <WIDTH x i8> %0 to <WIDTH x i16>
-  %v1_i16 = zext <WIDTH x i8> %1 to <WIDTH x i16>
-  %res = $1 <WIDTH x i16> %v0_i16, %v1_i16
-  %over_mask = icmp ugt <WIDTH x i16> %res, const_vector(i16, 255)
-  %over_res = select <WIDTH x i1> %over_mask, <WIDTH x i16> const_vector(i16, 255), <WIDTH x i16> %res
-  %under_mask = icmp slt <WIDTH x i16> %res, const_vector(i16, 0)
-  %ret_i16 = select <WIDTH x i1> %under_mask, <WIDTH x i16> const_vector(i16, 0), <WIDTH x i16> %over_res
-  %ret = trunc <WIDTH x i16> %ret_i16 to <WIDTH x i8>
-  ret <WIDTH x i8> %ret
+define(`rem_vi64', `
+define <$1 x i64> @__remus_vi64(<$1 x i64> %a, <$1 x i64> %b) {
+entry:
+  br label %do
+
+do:
+  %R1 = phi <$1 x i64> [const_vector_size(i64, 0, $1), %entry], [%RF, %while]
+  %I1 = phi <$1 x i64>  [const_vector_size(i64, 63, $1), %entry], [%IF, %while]
+  %R2 = shl <$1 x i64> %R1, const_vector_size(i64, 1, $1)
+
+  ;;R = (R & ~1UL) | ((a >> I) & 1UL);
+  ;;R = R3_1 | R3_2
+  %R3_1 = and <$1 x i64> %R2, const_vector_size(i64, -2, $1)
+  %R3_2_1 = lshr <$1 x i64> %a, %I1
+  %R3_2_2 = and <$1 x i64> %R3_2_1, const_vector_size(i64, 1, $1)
+  %R4 = or <$1 x i64> %R3_1, %R3_2_2
+  %cmp1 = icmp uge <$1 x i64> %R4, %b
+  %cmp2 = call i1 @llvm.genx.simdcf.any.v$1i1(<$1 x i1> %cmp1)
+  br i1 %cmp2, label %if, label %while
+
+if:
+  %R5 = sub <$1 x i64> %R4, %b
+  %Q2 = shl <$1 x i64> const_vector_size(i64, 1, $1), %I1
+  br label %while
+
+while:
+  %RF = phi <$1 x i64> [%R4, %do], [%R5, %if]
+  %IF = sub <$1 x i64> %I1, const_vector_size(i64, 1, $1)
+  %cmp3 = icmp ne <$1 x i64> %IF, const_vector_size(i64, -1, $1)
+  %cmp4 = call i1 @llvm.genx.simdcf.any.v$1i1(<$1 x i1> %cmp3)
+  br i1  %cmp4, label %do, label %done
+
+done:
+  ret <$1 x i64> %RF
 }
 
-define <WIDTH x i16> @__p$1us_vi16(<WIDTH x i16>, <WIDTH x i16>) {
-  %v0_i32 = zext <WIDTH x i16> %0 to <WIDTH x i32>
-  %v1_i32 = zext <WIDTH x i16> %1 to <WIDTH x i32>
-  %res = $1 <WIDTH x i32> %v0_i32, %v1_i32
-  %over_mask = icmp ugt <WIDTH x i32> %res, const_vector(i32, 65535)
-  %over_res = select <WIDTH x i1> %over_mask, <WIDTH x i32> const_vector(i32, 65535), <WIDTH x i32> %res
-  %under_mask = icmp slt <WIDTH x i32> %res, const_vector(i32, 0)
-  %ret_i32 = select <WIDTH x i1> %under_mask, <WIDTH x i32> const_vector(i32, 0), <WIDTH x i32> %over_res
-  %ret = trunc <WIDTH x i32> %ret_i32 to <WIDTH x i16>
-  ret <WIDTH x i16> %ret
+define <$1 x i64> @__rems_vi64(<$1 x i64> %a, <$1 x i64> %b) {
+  %ua = call <$1 x i64> @llvm.genx.absi.v$1i64(<$1 x i64>  %a)
+  %ub = call <$1 x i64> @llvm.genx.absi.v$1i64(<$1 x i64>  %b)
+  %ures = call <$1 x i64> @__remus_vi64(<$1 x i64>  %ua, <$1 x i64>  %ub)
+  ;;0x8000000000000000 <=> sign
+  %cmp1 = icmp slt <$1 x i64> %a, const_vector_size(i64, 0, $1)
+  %cmp2 = call i1 @llvm.genx.simdcf.any.v$1i1(<$1 x i1> %cmp1)
+  br i1 %cmp2, label %if, label %else
+if:
+  ;;%ures * -1; but there is no mul for i64 in VISA
+  %res1 = xor <$1 x i64> %ures, const_vector_size(i64, -1, $1)
+  %res2 = add <$1 x i64> %res1, const_vector_size(i64, 1, $1)
+  ret <$1 x i64> %res2
+else:
+  ret <$1 x i64> %ures
 }
 ')
 
-;; implementation for targets which doesn't have h/w instructions
-
-define(`saturation_arithmetic_novec', `
-saturation_arithmetic_novec_universal(sub)
-saturation_arithmetic_novec_universal(add)
-')
+rem_vi64(WIDTH)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -3858,10 +3907,22 @@ ifelse(HAVE_SCATTER, `1',
   call void @__prefetch_read_varying_nt(<WIDTH x i64> %v64, <WIDTH x MASK> %mask)
 
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-  ;; divs for i64
+  ;; movmsk
+
+  %vi1 = trunc <WIDTH x i64> %v64 to <WIDTH x MASK>
+  %movmsk = call i64 @__movmsk(<WIDTH x MASK> %vi1)
+  call void @__use_ui64(i64 %movmsk)
+
+
+  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+  ;; Function for ReplaceUnsupportedInsts pass
 
   %extract1 = extractelement <WIDTH x i64> %v64, i32 1
   %extract2 = extractelement <WIDTH x i64> %v64, i32 2
+
+  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+  ;; divs for i64
+
   %divs_ui64 = call i64 @__divs_ui64(i64 %extract1, i64 %extract2)
   call void @__use_ui64(i64 %divs_ui64)
   %divs_vi64 = call <WIDTH x i64> @__divs_vi64(<WIDTH x i64> %v64, <WIDTH x i64> %v64)
@@ -3872,11 +3933,15 @@ ifelse(HAVE_SCATTER, `1',
   call void @__use_vi64(<WIDTH x i64> %divus_vi64)
 
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-  ;; movmsk
-
-  %vi1 = trunc <WIDTH x i64> %v64 to <WIDTH x MASK>
-  %movmsk = call i64 @__movmsk(<WIDTH x MASK> %vi1)
-  call void @__use_ui64(i64 %movmsk)
+  ;; rems for i64
+  %rems_ui64 = call i64 @__rems_ui64(i64 %extract1, i64 %extract2)
+  call void @__use_ui64(i64 %rems_ui64)
+  %rems_vi64 = call <WIDTH x i64> @__rems_vi64(<WIDTH x i64> %v64, <WIDTH x i64> %v64)
+  call void @__use_vi64(<WIDTH x i64> %rems_vi64)
+  %remus_ui64 = call i64 @__remus_ui64(i64 %extract1, i64 %extract2)
+  call void @__use_ui64(i64 %remus_ui64)
+  %remus_vi64 = call <WIDTH x i64> @__divus_vi64(<WIDTH x i64> %v64, <WIDTH x i64> %v64)
+  call void @__use_vi64(<WIDTH x i64> %remus_vi64)
 
   ret void
 }
