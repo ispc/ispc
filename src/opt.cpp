@@ -5461,36 +5461,59 @@ bool ReplaceUnsupportedInsts::runOnBasicBlock(llvm::BasicBlock &bb) {
     DEBUG_START_PASS("ReplaceUnsupportedInsts");
     bool modifiedAny = false;
 
-restart:
+    char *name = NULL;
+    llvm::Function *func;
     for (llvm::BasicBlock::iterator I = bb.begin(), E = --bb.end(); I != E; ++I) {
         llvm::Instruction *inst = &*I;
-        if ((inst->getOpcode() == inst->UDiv) || (inst->getOpcode() == inst->SDiv)) {
+        // for now, all replaced inst have 2 operands
+        if (inst->getNumOperands() > 1) {
             auto type = inst->getOperand(0)->getType();
+            // for now, all replaced inst have i64 operands
             if ((type == LLVMTypes::Int64Type) || (type == LLVMTypes::Int64VectorType)) {
-                llvm::Function *func;
-                char *name;
-                if (inst->getOpcode() == inst->UDiv) {
+                switch (inst->getOpcode()) {
+                case inst->UDiv:
                     if (type == LLVMTypes::Int64Type) {
                         name = "__divus_ui64";
                     } else {
                         name = "__divus_vi64";
                     }
-                } else {
+                    break;
+                case inst->SDiv:
                     if (type == LLVMTypes::Int64Type) {
                         name = "__divs_ui64";
                     } else {
                         name = "__divs_vi64";
                     }
+                    break;
+                case inst->URem:
+                    if (type == LLVMTypes::Int64Type) {
+                        name = "__remus_ui64";
+                    } else {
+                        name = "__remus_vi64";
+                    }
+                    break;
+                case inst->SRem:
+                    if (type == LLVMTypes::Int64Type) {
+                        name = "__rems_ui64";
+                    } else {
+                        name = "__rems_vi64";
+                    }
+                    break;
+                default:
+                    name = NULL;
+                    break;
                 }
-                func = m->module->getFunction(name);
-                Assert(func != NULL && "Can't find correct function!!!");
-                llvm::SmallVector<llvm::Value *, 8> args;
-                args.push_back(inst->getOperand(0));
-                args.push_back(inst->getOperand(1));
-                llvm::Instruction *newInst = llvm::CallInst::Create(func, args, name);
-                llvm::ReplaceInstWithInst(inst, newInst);
-                modifiedAny = true;
-                I = newInst->getIterator();
+                if (name != NULL) {
+                    func = m->module->getFunction(name);
+                    Assert(func != NULL && "ReplaceUnsupportedInsts: Can't find correct function!!!");
+                    llvm::SmallVector<llvm::Value *, 8> args;
+                    args.push_back(inst->getOperand(0));
+                    args.push_back(inst->getOperand(1));
+                    llvm::Instruction *newInst = llvm::CallInst::Create(func, args, name);
+                    llvm::ReplaceInstWithInst(inst, newInst);
+                    modifiedAny = true;
+                    I = newInst->getIterator();
+                }
             }
         }
     }
