@@ -245,6 +245,9 @@ class ForeachStmt : public Stmt {
     static inline bool classof(ForeachStmt const *) { return true; }
     static inline bool classof(ASTNode const *N) { return N->getValueID() == ForeachStmtID; }
 
+#ifdef ISPC_GENX_ENABLED
+    void EmitCodeForGenX(FunctionEmitContext *ctx) const;
+#endif
     void EmitCode(FunctionEmitContext *ctx) const;
     void Print(int indent) const;
 

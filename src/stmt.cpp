@@ -1192,16 +1192,10 @@ ForeachStmt::ForeachStmt(const std::vector<Symbol *> &lvs, const std::vector<Exp
                          Stmt *s, bool t, SourcePos pos)
     : Stmt(pos, ForeachStmtID), dimVariables(lvs), startExprs(se), endExprs(ee), isTiled(t), stmts(s) {}
 
-/* Given a uniform counter value in the memory location pointed to by
-   uniformCounterPtr, compute the corresponding set of varying counter
-   values for use within the loop body.
- */
-static llvm::Value *lUpdateVaryingCounter(int dim, int nDims, FunctionEmitContext *ctx, llvm::Value *uniformCounterPtr,
-                                          llvm::Value *varyingCounterPtr, const std::vector<int> &spans) {
-    // Smear the uniform counter value out to be varying
-    llvm::Value *counter = ctx->LoadInst(uniformCounterPtr);
-    llvm::Value *smearCounter = ctx->BroadcastValue(counter, LLVMTypes::Int32VectorType, "smear_counter");
-
+/* Calculate delta that should be added to varying counter
+   between iterations for given dimension.
+*/
+static llvm::Constant *lCalculateDeltaForVaryingCounter(int dim, int nDims, const std::vector<int> &spans) {
     // Figure out the offsets; this is a little bit tricky.  As an example,
     // consider a 2D tiled foreach loop, where we're running 8-wide and
     // where the inner dimension has a stride of 4 and the outer dimension
@@ -1216,16 +1210,30 @@ static llvm::Value *lUpdateVaryingCounter(int dim, int nDims, FunctionEmitContex
         int prevDimSpanCount = 1;
         for (int j = dim; j < nDims - 1; ++j)
             prevDimSpanCount *= spans[j + 1];
-        d /= prevDimSpanCount;
 
+        d /= prevDimSpanCount;
         // And now with what's left, figure out our own offset
         delta[i] = d % spans[dim];
     }
 
+    return LLVMInt32Vector(delta);
+}
+
+/* Given a uniform counter value in the memory location pointed to by
+   uniformCounterPtr, compute the corresponding set of varying counter
+   values for use within the loop body.
+ */
+static llvm::Value *lUpdateVaryingCounter(int dim, int nDims, FunctionEmitContext *ctx, llvm::Value *uniformCounterPtr,
+                                          llvm::Value *varyingCounterPtr, const std::vector<int> &spans) {
+    // Smear the uniform counter value out to be varying
+    llvm::Value *counter = ctx->LoadInst(uniformCounterPtr);
+    llvm::Value *smearCounter = ctx->BroadcastValue(counter, LLVMTypes::Int32VectorType, "smear_counter");
+
+    llvm::Constant *delta = lCalculateDeltaForVaryingCounter(dim, nDims, spans);
+
     // Add the deltas to compute the varying counter values; store the
     // result to memory and then return it directly as well.
-    llvm::Value *varyingCounter =
-        ctx->BinaryOperator(llvm::Instruction::Add, smearCounter, LLVMInt32Vector(delta), "iter_val");
+    llvm::Value *varyingCounter = ctx->BinaryOperator(llvm::Instruction::Add, smearCounter, delta, "iter_val");
     ctx->StoreInst(varyingCounter, varyingCounterPtr);
     return varyingCounter;
 }
@@ -1281,20 +1289,16 @@ static void lGetSpans(int dimsLeft, int nDims, int itemsLeft, bool isTiled, int 
    to process.
  */
 void ForeachStmt::EmitCode(FunctionEmitContext *ctx) const {
-    if (ctx->GetCurrentBasicBlock() == NULL || stmts == NULL)
-        return;
 
 #ifdef ISPC_GENX_ENABLED
-    if (g->target->getISA() == Target::GENX && ctx->ifEmulatedUniformForGen()) {
-        Error(pos, "\"foreach\" statement is not supported under varying CF for GenX yet.");
+    if (g->target->getISA() == Target::GENX) {
+        EmitCodeForGenX(ctx);
         return;
     }
-
-    if (g->target->getISA() == Target::GENX) {
-        Warning(pos, "\"foreach\" statement is not supported under varying CF for GenX yet. Make sure that"
-                     " function with the following \"foreach\" is not called under varying CF:");
-    }
 #endif
+
+    if (ctx->GetCurrentBasicBlock() == NULL || stmts == NULL)
+        return;
 
     llvm::BasicBlock *bbFullBody = ctx->CreateBasicBlock("foreach_full_body");
     llvm::BasicBlock *bbMaskedBody = ctx->CreateBasicBlock("foreach_masked_body");
@@ -1717,6 +1721,160 @@ void ForeachStmt::EmitCode(FunctionEmitContext *ctx) const {
     ctx->EndForeach();
     ctx->EndScope();
 }
+
+#ifdef ISPC_GENX_ENABLED
+/* Emit code for a foreach statement on GenX. We effectively emit code to run
+   the set of n-dimensional nested loops corresponding to the dimensionality of
+   the foreach statement along with the extra logic to deal with mismatches
+   between the vector width we're compiling to and the number of elements
+   to process. Handler logic is different from the other targets due to
+   GenX Execution Mask usage. We do not need to generate different bodies
+   for full and partial masks due to it.
+*/
+void ForeachStmt::EmitCodeForGenX(FunctionEmitContext *ctx) const {
+    AssertPos(pos, g->target->getISA() == Target::GENX);
+
+    if (ctx->GetCurrentBasicBlock() == NULL || stmts == NULL)
+        return;
+
+    // TODO: We should store current EM and reset it to AllOn state. There
+    // is no way to do it now, so emit error if we are sure that this
+    // foreach is in varying CF, emit warning in other case.
+    if (ctx->ifEmulatedUniformForGen()) {
+        Error(pos, "\"foreach\" statement is not supported under varying CF for GenX yet.");
+        return;
+    }
+    Warning(pos, "\"foreach\" statement is not supported under varying CF for GenX yet. Make sure that"
+                 " function with the following \"foreach\" is not called under varying CF:");
+
+    llvm::BasicBlock *bbBody = ctx->CreateBasicBlock("foreach_body");
+    llvm::BasicBlock *bbExit = ctx->CreateBasicBlock("foreach_exit");
+
+    ctx->SetDebugPos(pos);
+    ctx->StartScope();
+
+    // This should be caught during typechecking
+    AssertPos(pos, startExprs.size() == dimVariables.size() && endExprs.size() == dimVariables.size());
+    int nDims = (int)dimVariables.size();
+
+    ///////////////////////////////////////////////////////////////////////
+    // Setup: compute the number of items we have to work on in each
+    // dimension and a number of derived values.
+    std::vector<llvm::BasicBlock *> bbReset, bbTest, bbStep;
+    std::vector<llvm::Value *> startVals, endVals;
+    std::vector<llvm::Constant *> steps;
+    std::vector<int> span(nDims, 0);
+    lGetSpans(nDims - 1, nDims, g->target->getVectorWidth(), isTiled, &span[0]);
+    for (int i = 0; i < nDims; ++i) {
+        // Basic blocks that we'll fill in later with the looping logic for
+        // this dimension.
+        bbReset.push_back(ctx->CreateBasicBlock("foreach_reset"));
+        bbStep.push_back(ctx->CreateBasicBlock("foreach_step"));
+        bbTest.push_back(ctx->CreateBasicBlock("foreach_test"));
+
+        llvm::Value *sv = startExprs[i]->GetValue(ctx);
+        llvm::Value *ev = endExprs[i]->GetValue(ctx);
+        if (sv == NULL || ev == NULL)
+            return;
+
+        // Store varying start
+        sv = ctx->BroadcastValue(sv, LLVMTypes::Int32VectorType, "start_broadcast");
+        llvm::Constant *delta = lCalculateDeltaForVaryingCounter(i, nDims, span);
+        sv = ctx->BinaryOperator(llvm::Instruction::Add, sv, delta, "varying_start");
+        startVals.push_back(sv);
+
+        // Store broadcasted end values
+        ev = ctx->BroadcastValue(ev, LLVMTypes::Int32VectorType, "end_broadcast");
+        endVals.push_back(ev);
+
+        // Store vectorized step
+        llvm::Constant *step = LLVMInt32Vector(span[i]);
+        steps.push_back(step);
+
+        // Init vectorized counters
+        dimVariables[i]->storagePtr = ctx->AllocaInst(LLVMTypes::Int32VectorType, dimVariables[i]->name.c_str());
+        dimVariables[i]->parentFunction = ctx->GetFunction();
+        ctx->StoreInst(sv, dimVariables[i]->storagePtr);
+        ctx->EmitVariableDebugInfo(dimVariables[i]);
+    }
+
+    // Officially start foreach. Emulating uniform for proper continue handlers.
+    ctx->StartForeach(FunctionEmitContext::FOREACH_REGULAR, true);
+
+    // Jump to outermost test block
+    ctx->BranchInst(bbTest[0]);
+
+    ///////////////////////////////////////////////////////////////////////////
+    // foreach_reset: this code runs when we need to reset the counter for
+    // a given dimension in preparation for running through its loop again,
+    // after the enclosing level advances its counter.
+    for (int i = 0; i < nDims; ++i) {
+        ctx->SetCurrentBasicBlock(bbReset[i]);
+        if (i == 0)
+            // Outermost loop finished - exit
+            ctx->BranchInst(bbExit);
+        else {
+            // Reset counter for this dimension, iterate over previous one
+            ctx->StoreInst(startVals[i], dimVariables[i]->storagePtr);
+            ctx->BranchInst(bbStep[i - 1]);
+        }
+    }
+
+    ///////////////////////////////////////////////////////////////////////////
+    // foreach_step: iterate counters with step that was calculated before
+    // entering foreach.
+    for (int i = 0; i < nDims; ++i) {
+        ctx->SetCurrentBasicBlock(bbStep[i]);
+        llvm::Value *counter = ctx->LoadInst(dimVariables[i]->storagePtr);
+        llvm::Value *newCounter = ctx->BinaryOperator(llvm::Instruction::Add, counter, steps[i], "new_counter");
+        ctx->StoreInst(newCounter, dimVariables[i]->storagePtr);
+        ctx->BranchInst(bbTest[i]);
+    }
+
+    ///////////////////////////////////////////////////////////////////////////
+    // foreach_test: compare varying counter with end value and branch to
+    // target or reset. GenX EM magic happens here: we turn off all lanes
+    // that fail check until reset is reached. And reset is reached only when
+    // all lanes fail this check due to test -> target -> step -> test loop.
+    //
+    // It looks tricky for multidimensional case. Suppose we have 3 dimensional
+    // loop, some lanes were turn off in the second dimension. When we reach
+    // reset in the innermost one (3rd) we won't be able to reset lanes that were
+    // turned off in the second dimension. But we don't actually need to reset
+    // them: they were reseted right before test of the second dimension turned
+    // them off. So after 2nd dimension's reset there will be reseted 2nd and 3rd
+    // counters. If some of lanes were turned off in the first dimension all
+    // this stuff doesn't matter: we will exit loop after this iteration anyway.
+    for (int i = 0; i < nDims; ++i) {
+        ctx->SetCurrentBasicBlock(bbTest[i]);
+        llvm::Value *val = ctx->LoadInst(dimVariables[i]->storagePtr, NULL, "val");
+        llvm::Value *checkVal = ctx->CmpInst(llvm::Instruction::ICmp, llvm::CmpInst::ICMP_SLT, val, endVals[i]);
+        // Target is body for innermost dimension, next dimension test for others
+        llvm::BasicBlock *targetBB = (i < nDims - 1) ? bbTest[i + 1] : bbBody;
+        // Turn off lanes untill reset is reached
+        ctx->BranchInst(targetBB, bbReset[i], checkVal);
+    }
+
+    ///////////////////////////////////////////////////////////////////////////
+    // foreach_body: emit code for loop body. Execution is driven by
+    // GenX Execution Mask.
+    ctx->SetCurrentBasicBlock(bbBody);
+    ctx->SetContinueTarget(bbStep[nDims - 1]);
+    ctx->AddInstrumentationPoint("foreach loop body");
+    stmts->EmitCode(ctx);
+    AssertPos(pos, ctx->GetCurrentBasicBlock() != NULL);
+    ctx->BranchInst(bbStep[nDims - 1]);
+
+    ///////////////////////////////////////////////////////////////////////////
+    // foreach_exit: All done. Restore the old mask and clean up
+    ctx->SetCurrentBasicBlock(bbExit);
+
+    // TODO: We should restore EM from value that was saved at the beginning.
+
+    ctx->EndForeach();
+    ctx->EndScope();
+}
+#endif
 
 Stmt *ForeachStmt::TypeCheck() {
     bool anyErrors = false;
@@ -2419,8 +2577,8 @@ void SwitchStmt::EmitCode(FunctionEmitContext *ctx) const {
             // broadcast through BranchInst: we need vectorized
             // case checks to be able to reenable fall through
             // cases under emulated uniform CF.
-            llvm::Type *vecType =
-                (exprValue->getType() == LLVMTypes::Int32Type) ? LLVMTypes::Int32VectorType : LLVMTypes::Int64VectorType;
+            llvm::Type *vecType = (exprValue->getType() == LLVMTypes::Int32Type) ? LLVMTypes::Int32VectorType
+                                                                                 : LLVMTypes::Int64VectorType;
             exprValue = ctx->BroadcastValue(exprValue, vecType, "switch_expr_broadcast");
             emulateUniform = true;
         }
