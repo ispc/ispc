@@ -846,8 +846,16 @@ declaration_specifiers
       {
           DeclSpecs *ds = (DeclSpecs *)$2;
           if (ds != NULL) {
-              if (ds->baseType != NULL)
-                  Error(@1, "Multiple types provided for declaration.");
+              if (ds->baseType != NULL) {
+                  if( ds->baseType->IsUnsignedType()) {
+                      Error(@1, "Redefining uint8/uint16/uint32/uint64 type "
+                      "which is part of ISPC language since version 1.13. "
+                      "Remove this typedef or use ISPC_UINT_IS_DEFINED to "
+                      "detect that these types are defined.");
+                  }
+                  else
+                      Error(@1, "Multiple types provided for declaration.");
+              }
               ds->baseType = $1;
           }
           $$ = ds;

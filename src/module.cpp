@@ -2121,6 +2121,10 @@ void Module::execPreprocessor(const char *infilename, llvm::raw_string_ostream *
     opts.addMacroDef("ISPC");
     opts.addMacroDef("PI=3.1415926535");
 
+    // Add defs for ISPC_UINT_IS_DEFINED.
+    // This lets the user know uint* is part of language.
+    opts.addMacroDef("ISPC_UINT_IS_DEFINED");
+
     // Add #define for current compilation target
     char targetMacro[128];
     snprintf(targetMacro, sizeof(targetMacro), "ISPC_TARGET_%s", g->target->GetISAString());
