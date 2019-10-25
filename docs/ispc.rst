@@ -822,6 +822,9 @@ preprocessor runs:
   * - TARGET_ELEMENT_WIDTH
     - Element width in bytes, e.g., 4 for i32.
     - Static varying initialization.
+  * - ISPC_UINT_IS_DEFINED
+    - 1.
+    - Detecting if uint8/uint16/uint32/uint64 types are defined in the ISPC version.
 
 ``ispc`` also provides ``#pragma ignore warning`` directives to ignore compiler warnings for individual lines.
 
