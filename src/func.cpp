@@ -475,6 +475,11 @@ void Function::emitCode(FunctionEmitContext *ctx, llvm::Function *function, Sour
             };
 
             mdKernels->addOperand(llvm::MDNode::get(fContext, mdArgs));
+            // This is needed to run in L0 runtime.
+            // For now we assume that SPIR-V is run in L0 by default.
+            // Later this condition may change
+            if (g->emitSPIRV)
+                function->addFnAttr("oclrt", "8");
         }
     }
 #endif

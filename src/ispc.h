@@ -589,6 +589,10 @@ struct Globals {
         manual.) */
     bool emitInstrumentation;
 
+#ifdef ISPC_GENX_ENABLED
+    bool emitSPIRV;
+#endif
+
     bool noPragmaOnce;
 
     /** Indicates whether ispc should generate debugging symbols for the
