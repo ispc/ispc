@@ -1489,6 +1489,9 @@ Globals::Globals() {
     disableLineWrap = false;
     emitPerfWarnings = true;
     emitInstrumentation = false;
+#ifdef ISPC_GENX_ENABLED
+    emitSPIRV = false;
+#endif
     noPragmaOnce = false;
     generateDebuggingSymbols = false;
     generateDWARFVersion = 3;

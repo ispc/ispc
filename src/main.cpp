@@ -649,8 +649,10 @@ int main(int Argc, char *Argv[]) {
 #ifdef ISPC_GENX_ENABLED
         else if (!strcmp(argv[i], "--emit-isa"))
             ot = Module::ISA;
-        else if (!strcmp(argv[i], "--emit-spirv"))
+        else if (!strcmp(argv[i], "--emit-spirv")) {
             ot = Module::SPIRV;
+            g->emitSPIRV = true;
+        }
 #endif
         else if (!strcmp(argv[i], "-I")) {
             if (++i != argc) {
