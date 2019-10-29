@@ -85,6 +85,7 @@ install:
       %NONEEDDOCKER% docker cp %CONTAINER%:%CROSS_TOOLS% %CROSS_TOOLS%
       set PATH=%LLVM_HOME%\bin;C:\Python37\;C:\Python37\Scripts;%CHOCO_DIR%\lib\winflexbison3\tools;%PATH%
   - sh: |-
+      sudo apt-get update
       sudo apt-get install -y flex libc6-dev-i386 g++-multilib lib32stdc++6
       if [ "$LLVM_VERSION" = "latest" ]; then 
         export LLVM_VERSION=$LLVM_LATEST
