@@ -811,7 +811,7 @@ preprocessor runs:
     - 1
     - Major version of the ``ispc`` compiler/language
   * - ISPC_MINOR_VERSION
-    - 3
+    - 13
     - Minor version of the ``ispc`` compiler/language
   * - PI
     - 3.1415926535
