@@ -762,10 +762,15 @@ int main(int Argc, char *Argv[]) {
     // Default settings for PS4
     if (g->target_os == TargetOS::OS_PS4) {
         flags |= Module::GeneratePIC;
+        if (!cpu) {
+            // Default is btver2, but do not enforce it.
+            cpu = "btver2";
+        }
+        /*
         if (cpu && std::string(cpu) != "btver2" && std::string(cpu) != "ps4") {
             Warning(SourcePos(), "--cpu switch is ignored for PS4 target OS. btver2 (ps4) cpu is used.");
         }
-        cpu = "btver2";
+        */
         if (arch && std::string(arch) != "x86-64") {
             Warning(SourcePos(), "--arch switch is ignored for PS4 target OS. x86-64 arch is used.");
         }
