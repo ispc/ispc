@@ -109,6 +109,8 @@
 #endif
 #ifdef ISPC_GENX_ENABLED
 #include "llvm/Transforms/Utils/UnifyFunctionExitNodes.h"
+// Constant in number of bytes.
+enum { BYTE = 1, WORD = 2, DWORD = 4, QWORD = 8, OWORD = 16, GRF = 32 };
 #endif
 
 static llvm::Pass *CreateIntrinsicsOptPass();
@@ -2824,9 +2826,9 @@ static bool lImproveMaskedStore(llvm::CallInst *callInst) {
         llvm::Instruction *store = NULL;
 #ifdef ISPC_GENX_ENABLED
         if (g->target->getISA() == Target::GENX && GetAddressSpace(lvalue) == AddressSpace::External) {
-            assert(isa<llvm::VectorType>(rvalue->getType()));
-            assert(llvm::isPowerOf2_32(rvalue->getType()->getVectorNumElements()));
-            assert(rvalue->getType()->getPrimitiveSizeInBits() / 8 <= 8 * OWORD);
+            Assert(llvm::isa<llvm::VectorType>(rvalue->getType()));
+            Assert(llvm::isPowerOf2_32(rvalue->getType()->getVectorNumElements()));
+            Assert(rvalue->getType()->getPrimitiveSizeInBits() / 8 <= 8 * OWORD);
             llvm::Instruction *svm_st_bitcast =
                 new llvm::BitCastInst(lvalue, LLVMTypes::Int32PointerType, "svm_st_bitcast", callInst);
             llvm::Instruction *svm_st_ptrtoint =
@@ -2909,9 +2911,9 @@ static bool lImproveMaskedLoad(llvm::CallInst *callInst, llvm::BasicBlock::itera
 #ifdef ISPC_GENX_ENABLED
         if (g->target->getISA() == Target::GENX && GetAddressSpace(ptr) == AddressSpace::External) {
             llvm::Type *retType = callInst->getType();
-            assert(isa<llvm::VectorType>(retType));
-            assert(llvm::isPowerOf2_32(retType->getVectorNumElements()));
-            assert(retType->getPrimitiveSizeInBits() / 8 <= 8 * OWORD);
+            Assert(llvm::isa<llvm::VectorType>(retType));
+            Assert(llvm::isPowerOf2_32(retType->getVectorNumElements()));
+            Assert(retType->getPrimitiveSizeInBits() / 8 <= 8 * OWORD);
             llvm::Value *svm_ld_ptrtoint =
                 new llvm::PtrToIntInst(ptr, LLVMTypes::Int32Type, "svm_ld_ptrtoint", callInst);
             llvm::Value *svm_ld_zext =
@@ -5461,7 +5463,7 @@ bool ReplaceUnsupportedInsts::runOnBasicBlock(llvm::BasicBlock &bb) {
     DEBUG_START_PASS("ReplaceUnsupportedInsts");
     bool modifiedAny = false;
 
-    char *name = NULL;
+    std::string name = "";
     llvm::Function *func;
     for (llvm::BasicBlock::iterator I = bb.begin(), E = --bb.end(); I != E; ++I) {
         llvm::Instruction *inst = &*I;
@@ -5471,28 +5473,28 @@ bool ReplaceUnsupportedInsts::runOnBasicBlock(llvm::BasicBlock &bb) {
             // for now, all replaced inst have i64 operands
             if ((type == LLVMTypes::Int64Type) || (type == LLVMTypes::Int64VectorType)) {
                 switch (inst->getOpcode()) {
-                case inst->UDiv:
+                case llvm::Instruction::BinaryOps::UDiv:
                     if (type == LLVMTypes::Int64Type) {
                         name = "__divus_ui64";
                     } else {
                         name = "__divus_vi64";
                     }
                     break;
-                case inst->SDiv:
+                case llvm::Instruction::BinaryOps::SDiv:
                     if (type == LLVMTypes::Int64Type) {
                         name = "__divs_ui64";
                     } else {
                         name = "__divs_vi64";
                     }
                     break;
-                case inst->URem:
+                case llvm::Instruction::BinaryOps::URem:
                     if (type == LLVMTypes::Int64Type) {
                         name = "__remus_ui64";
                     } else {
                         name = "__remus_vi64";
                     }
                     break;
-                case inst->SRem:
+                case llvm::Instruction::BinaryOps::SRem:
                     if (type == LLVMTypes::Int64Type) {
                         name = "__rems_ui64";
                     } else {
@@ -5500,10 +5502,10 @@ bool ReplaceUnsupportedInsts::runOnBasicBlock(llvm::BasicBlock &bb) {
                     }
                     break;
                 default:
-                    name = NULL;
+                    name = "";
                     break;
                 }
-                if (name != NULL) {
+                if (name != "") {
                     func = m->module->getFunction(name);
                     Assert(func != NULL && "ReplaceUnsupportedInsts: Can't find correct function!!!");
                     llvm::SmallVector<llvm::Value *, 8> args;

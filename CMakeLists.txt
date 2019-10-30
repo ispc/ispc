@@ -246,7 +246,15 @@ if (GENX_ENABLED)
         set(PB_PATH_MODIFIER "x64")
     endif()
 
-    list(APPEND CLANG_LIBRARY_LIST igfxcmjit${TARGET_MODIFIER} iga_s${TARGET_MODIFIER} iga_enc${TARGET_MODIFIER} LLVMSPIRVLib )
+    list(APPEND GEN_LIBRARY_LIST LLVMGenXIntrinsics LLVMSPIRVLib)
+    if (WIN32)
+        list(APPEND GEN_LIBRARY_LIST igfxcmjit${TARGET_MODIFIER})
+    else()
+        # We need to pass library name with suffix to find_library on Linux since it has non-standard name
+        # and cannot be found without it
+        list(APPEND GEN_LIBRARY_LIST igfxcmjit${TARGET_MODIFIER}.a)
+    endif()
+    list(APPEND GEN_LIBRARY_LIST iga_enc${TARGET_MODIFIER} iga_s${TARGET_MODIFIER})
 endif()
 get_llvm_libfiles(LLVM_LIBRARY_LIST ${LLVM_COMPONENTS})
 get_llvm_cppflags(LLVM_CPP_FLAGS)
@@ -370,7 +378,11 @@ target_include_directories(${PROJECT_NAME} PRIVATE
                            ${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_CFG_INTDIR})
 # Compile options
 if (UNIX)
-    target_compile_options(${PROJECT_NAME} PRIVATE -Wall -Wno-sign-compare -Wno-unused-function -Werror ${LLVM_CPP_FLAGS})
+    target_compile_options(${PROJECT_NAME} PRIVATE -Wall -Wno-sign-compare -Wno-unused-function ${LLVM_CPP_FLAGS})
+    #For Gen target we have more warnings so temporary disable -Werror
+    if (NOT GENX_ENABLED)
+        target_compile_options(${PROJECT_NAME} PRIVATE -Werror)
+    endif()
     # Security options
     target_compile_options(${PROJECT_NAME} PRIVATE -fstack-protector-strong
                            -fdata-sections -ffunction-sections -fno-delete-null-pointer-checks
@@ -428,6 +440,15 @@ target_link_libraries(${PROJECT_NAME} ${CLANG_LIBRARY_FULL_PATH_LIST})
 
 # Link against LLVM libraries
 target_link_libraries(${PROJECT_NAME} ${LLVM_LIBRARY_LIST} ${CMAKE_DL_LIBS})
+
+if (GENX_ENABLED)
+    # Link against GEN libraries
+    foreach(genLib ${GEN_LIBRARY_LIST})
+        find_library(${genLib}Path NAMES ${genLib} HINTS ${LLVM_LIBRARY_DIRS})
+        list(APPEND GEN_LIBRARY_FULL_PATH_LIST ${${genLib}Path})
+    endforeach()
+    target_link_libraries(${PROJECT_NAME} ${GEN_LIBRARY_FULL_PATH_LIST})
+endif()
 
 # System libraries, our own and transitive dependencies from LLVM libs.
 if (WIN32)
