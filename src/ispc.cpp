@@ -1068,6 +1068,11 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, bool pic, boo
             featuresString = "+neon";
         }
 #endif
+#ifdef ISPC_GENX_ENABLED
+        // Support 'i64' and 'double' types in cm
+        if (m_isa == Target::GENX)
+            featuresString += "+longlong";
+#endif
         if (g->opt.disableFMA == false)
             options.AllowFPOpFusion = llvm::FPOpFusion::Fast;
 
