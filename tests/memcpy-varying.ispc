@@ -1,3 +1,6 @@
+// rule: skip on arch=genx32
+// rule: skip on arch=genx64
+
 export void f_f(uniform float RET[], uniform float aFOO[]) {
     int32 *src = new int32[1024];
     int32 *dst = new int32[1024];

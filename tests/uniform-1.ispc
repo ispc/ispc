@@ -1,3 +1,6 @@
+// rule: skip on arch=genx32
+// rule: skip on arch=genx64
+
 #define THREADS 4
 
 task void f_f_task(uniform float RET[], uniform float aFOO[]) {

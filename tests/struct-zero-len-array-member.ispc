@@ -1,4 +1,5 @@
-
+// rule: skip on arch=genx32
+// rule: skip on arch=genx64
 struct Foo {
     float x;
     float a[0];
