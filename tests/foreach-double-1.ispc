@@ -1,3 +1,6 @@
+// rule: skip on arch=genx32
+// rule: skip on arch=genx64
+
 uniform double one = 1;
 
 void copy(uniform double dst[], uniform double src[], uniform int count) {

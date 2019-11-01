@@ -1,3 +1,6 @@
+// rule: skip on arch=genx32
+// rule: skip on arch=genx64
+
 struct Point {
     float x, y, z;
 };

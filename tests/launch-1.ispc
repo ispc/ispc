@@ -1,3 +1,6 @@
+// rule: skip on arch=genx32
+// rule: skip on arch=genx64
+
 static uniform float array[10000];
 
 task void x(float f) {

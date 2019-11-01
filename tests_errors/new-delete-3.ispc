@@ -1,3 +1,5 @@
+// rule: run on arch=x86
+// rule: run on arch=x86-64
 // syntax error, unexpected '\('
 
 int * func(int a) {

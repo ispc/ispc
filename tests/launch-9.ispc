@@ -1,3 +1,6 @@
+// rule: skip on arch=genx32
+// rule: skip on arch=genx64
+
 #define N0 12
 #define N1 20
 #define N2 50

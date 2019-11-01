@@ -1,3 +1,6 @@
+// rule: skip on arch=genx32
+// rule: skip on arch=genx64
+
 static float array[6];
 task void x(uniform int i, float f) {
     array[i] = f;

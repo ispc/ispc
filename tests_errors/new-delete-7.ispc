@@ -1,3 +1,5 @@
+// rule: run on arch=x86
+// rule: run on arch=x86-64
 // Can't convert from type "varying float" to type "uniform float" for initializer
 
 struct Point {
