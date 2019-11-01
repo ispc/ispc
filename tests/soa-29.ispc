@@ -1,7 +1,5 @@
-
 struct Point { float x, y; int8 zzz0; float z; double aa[3]; int8 zzz; };
 
-export uniform int width() { return programCount; }
 
 export void f_fu(uniform float RET[], uniform float aFOO[], uniform float b) {
     float a = aFOO[programIndex]; 

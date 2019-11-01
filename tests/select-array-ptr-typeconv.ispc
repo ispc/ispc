@@ -1,11 +1,9 @@
-
 uniform float a[1234];
 
 float * uniform func(uniform bool x) {
     return x ? a : NULL;
 }
 
-export uniform int width() { return programCount; }
 
 export void f_f(uniform float RET[], uniform float aFOO[]) {
     a[programIndex] = aFOO[programIndex];

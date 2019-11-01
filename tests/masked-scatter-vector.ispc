@@ -1,6 +1,3 @@
-
-export uniform int width() { return programCount; }
-
 typedef int<3> int3;
 
 export void f_fu(uniform float ret[], uniform float aa[], uniform float b) {

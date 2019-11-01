@@ -1,5 +1,4 @@
 
-export uniform int width() { return programCount; }
 
 float crashEven(uniform float a[]) {
     int offset = 0;

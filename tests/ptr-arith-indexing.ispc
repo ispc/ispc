@@ -1,6 +1,3 @@
-
-export uniform int width() { return programCount; }
-
 int foo(uniform float * uniform base, uniform int uOfs, varying int vOfs) {
     #pragma ignore warning(perf)
     return (base+uOfs)[vOfs];

@@ -1,6 +1,3 @@
-
-export uniform int width() { return programCount; }
-
 // We have all checks in place, so we are safe and don't read or write beyond the boundaries.
 #define SIZE 34
 

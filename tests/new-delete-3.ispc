@@ -1,7 +1,3 @@
-
-export uniform int width() { return programCount; }
-
-
 export void f_fu(uniform float RET[], uniform float aFOO[], uniform float b) {
     float a = aFOO[programIndex]; 
     varying float * uniform buf = uniform new varying float[programCount+1];

@@ -1,6 +1,3 @@
-
-export uniform int width() { return programCount; }
-
 int * uniform ptr = NULL;
 
 int func(int v) {

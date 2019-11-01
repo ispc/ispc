@@ -1,6 +1,3 @@
-
-export uniform int width() { return programCount; }
-
 export void f_fu(uniform float RET[], uniform float aFOO[], uniform float b) {
     int8 a = aFOO[programIndex]; 
     int reverse = programCount - 1 - programIndex + (int)b - 5;

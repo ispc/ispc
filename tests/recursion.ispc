@@ -1,8 +1,3 @@
-
-export uniform int width() { return programCount; }
-
-
-
 /*COfloat f(float);*/
 
 float f(float x) {

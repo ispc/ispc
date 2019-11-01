@@ -1,18 +1,4 @@
-
 struct Point { double x; double y[3], z; };
-
-export uniform int width() { return programCount; }
-
-static void p(uniform float *uniform ptr) {
-    for (uniform int s = 0; s < 4; ++s) {
-        for (uniform int i = 0; i < 5; ++i) {
-            for (uniform int j = 0; j < 4; ++j, ++ptr)
-                print("% ", *ptr);
-            print("\n");
-        }
-        print("\n");
-    }
-}
 
 export void f_fu(uniform float RET[], uniform float aFOO[], uniform float b) {
     #pragma ignore warning(perf)

@@ -1,6 +1,3 @@
-
-export uniform int width() { return programCount; }
-
 void foo(uniform float * uniform * ret) {
     #pragma ignore warning(perf)
     uniform float *px = *ret;

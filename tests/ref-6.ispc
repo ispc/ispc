@@ -1,8 +1,3 @@
-
-export uniform int width() { return programCount; }
-
-
-
 void foo(float<3> &a) {
     a.x = 0;
     a.y *= 2;

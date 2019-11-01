@@ -11,7 +11,6 @@ static float float4(uniform float a, uniform float b, uniform float c,
     return ret;
 }
 
-export uniform int width() { return programCount; }
 
 
 

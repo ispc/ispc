@@ -1,5 +1,4 @@
 
-export uniform int width() { return programCount; }
 
  int * uniform ptr;
 

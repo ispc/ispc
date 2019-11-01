@@ -1,5 +1,3 @@
-export uniform int width() { return programCount; }
-
 uniform float Neg(uniform float inVal) {
     return -inVal;
 }

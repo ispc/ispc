@@ -16,7 +16,6 @@ int A04(uniform float f){return 5;} int A04(uniform float& f){return 6;} int A04
 int A08(uniform float f){return 5;}                                      int A08(uniform const float& f){return 7;} int A08(uniform double f){return 8;} int A08(uniform int f){return 9;}
 int A09(uniform float f){return 5;} int A09(uniform float& f){return 6;}                                            int A09(uniform double f){return 8;} int A09(uniform int f){return 9;}
 
-export uniform int width() { return programCount; }
 
 
 

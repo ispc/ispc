@@ -1,7 +1,3 @@
-
-export uniform int width() { return programCount; }
-
-
 bool ok(float x, float ref) { return (abs(x - ref) < 1e-6) || abs((x-ref)/ref) < 1e-6; }
 
 export void f_v(uniform float RET[]) {

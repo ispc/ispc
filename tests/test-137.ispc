@@ -1,7 +1,3 @@
-
-export uniform int width() { return programCount; }
-
-
 export void f_v(uniform float RET[]) { 
     #pragma ignore warning
     cif (-1 < 0) RET[programIndex] = 10.; 

@@ -1,7 +1,3 @@
-
-
-export uniform int width() { return programCount; }
-
 extern int foo;
 int foo = 1;
 

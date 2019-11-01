@@ -1,7 +1,3 @@
-
-export uniform int width() { return programCount; }
-
-
 float foo(uniform float x[3]) {
     return x[1];
 }

@@ -1,6 +1,3 @@
-
-export uniform int width() { return programCount; }
-
 export void f_f(uniform float RET[], uniform float aFOO[]) {
     int32 *buf = new int32[1024];
 

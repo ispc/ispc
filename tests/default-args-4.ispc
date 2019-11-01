@@ -1,8 +1,3 @@
-
-export uniform int width() { return programCount; }
-
-
-
 static const float g = 100;
 
 float foo(uniform float x, float f = g) { return f+x; }

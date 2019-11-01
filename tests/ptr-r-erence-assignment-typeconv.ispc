@@ -1,8 +1,3 @@
-
-export uniform int width() { return programCount; }
-
-
-
 void foo(varying float * uniform x, int y) {
     *x = y;
 }

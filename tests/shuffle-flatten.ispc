@@ -1,6 +1,3 @@
-
-export uniform int width() { return programCount; }
-
 export void f_f(uniform float RET[], uniform float aFOO[]) {
     int tmp1 = shuffle(programIndex, 0, programIndex);
 

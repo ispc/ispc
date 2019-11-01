@@ -24,7 +24,6 @@ void A09(uniform float f){} void A09(uniform float& f){}                        
 void A10(uniform float f){} void A10(uniform float& f){} void A10(uniform const float& f){}                              void A10(uniform int f){}
 void A11(uniform float f){} void A11(uniform float& f){} void A11(uniform const float& f){} void A11(uniform double f){}
 
-export uniform int width() { return programCount; }
 
 
 

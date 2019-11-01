@@ -1,12 +1,7 @@
-
-export uniform int width() { return programCount; }
-
-
-
 export void f_fu(uniform float RET[], uniform float aFOO[], uniform float b) {
     float a = aFOO[programIndex];
     RET[programIndex] = max(3 * a, 10.f);
-    RET[width()-1] = max(b, 100.f);
+    RET[programCount-1] = max(b, 100.f);
 }
 
 

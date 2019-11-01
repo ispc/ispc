@@ -1,6 +1,5 @@
 //add test for f(int x[2][10]) - f(int x[][10]) - f(int (*x)[10])x
 
-export uniform int width() { return programCount; }
 
 
 int foo(uniform int x[2][10]) {

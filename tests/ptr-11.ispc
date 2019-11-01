@@ -1,6 +1,3 @@
-
-export uniform int width() { return programCount; }
-
 void inc(int * uniform v) {
     ++*v;
 }

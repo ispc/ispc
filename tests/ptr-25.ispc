@@ -1,6 +1,3 @@
-
-export uniform int width() { return programCount; }
-
 void update(varying float<2> * vp) {
     #pragma ignore warning(perf)
     vp->y = 0;

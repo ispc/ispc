@@ -1,6 +1,3 @@
-
-export uniform int width() { return programCount; }
-
 #define foo(x) ((int8)x / (programIndex-1))
 
 inline int fill(uniform float b[], int8 a) {

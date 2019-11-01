@@ -1,7 +1,3 @@
-
-export uniform int width() { return programCount; }
-
-
 float f(float v) { return 2 * v; }
 float f() { return 2.; }
 float f(float a, int b) { return a + b; }

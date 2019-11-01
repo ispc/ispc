@@ -1,7 +1,3 @@
-
-export uniform int width() { return programCount; }
-
-
 export void f_v(uniform float RET[]) {
     varying struct { varying struct { float x, y; } q; int i; } a[3];
     a[1].q.x = 1;

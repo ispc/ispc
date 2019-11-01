@@ -1,6 +1,3 @@
-
-export uniform int width() { return programCount; }
-
 export void f_f(uniform float RET[], uniform float aFOO[]) {
     uniform int8 * varying pa = (uniform int8 *)aFOO;
     uniform int8 * varying pb = (uniform int8 *)(&aFOO[10]);

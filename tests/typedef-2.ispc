@@ -1,6 +1,3 @@
-
-export uniform int width() { return programCount; }
-
 typedef float FLOAT;
 
 struct Foo {

@@ -29,7 +29,6 @@ static float check_x1(uniform float3 a[]) {
     return a[0][0];
 }
 
-export uniform int width() { return programCount; }
 
 export void f_v(uniform float RET[]) {
 

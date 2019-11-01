@@ -11,7 +11,6 @@ void A0(uniform int f)         {}
 
 
 
-export uniform int width() { return programCount; }
 
 
 

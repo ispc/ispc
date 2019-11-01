@@ -1,8 +1,3 @@
-
-export uniform int width() { return programCount; }
-
-
-
 struct Foo {
     uniform double udx[5][5];
 };

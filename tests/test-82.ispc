@@ -1,7 +1,3 @@
-
-export uniform int width() { return programCount; }
-
-
 void foo() { }
 export void f_v(uniform float RET[]) { foo(); RET[programIndex] = 1.; }
 

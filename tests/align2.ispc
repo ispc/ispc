@@ -12,10 +12,6 @@ struct f_sz {
 export void keep_struct_declared(varying f_sz * uniform s) {
 }
 
-export uniform int width() {
-    return 1;
-}
-
 export void result(uniform float RET[]) {
     RET[0] = sizeof(f_sz);
 }

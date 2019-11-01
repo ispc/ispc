@@ -1,6 +1,3 @@
-
-export uniform int width() { return programCount; }
-
 #define SIZE TARGET_WIDTH
 
 struct Foo {

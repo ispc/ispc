@@ -1,6 +1,3 @@
-
-export uniform int width() { return programCount; }
-
 uniform float a[programCount];
 
 static void foo(int index) {

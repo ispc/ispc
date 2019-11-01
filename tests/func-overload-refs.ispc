@@ -1,6 +1,3 @@
-
-export uniform int width() { return programCount; }
-
 float foo(float &a) { return 1; }
 float foo(const float &a) { return 2; }
 

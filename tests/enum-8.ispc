@@ -1,4 +1,3 @@
-
 enum Foo {
     ZERO,
     ONE,
@@ -12,7 +11,6 @@ enum Bar {
     THOUSAND = 1000
 };
 
-export uniform int width() { return programCount; }
 
 Foo Func(Foo f) { return ++f; }
 Bar Func(Bar b) { return FIFTY; }

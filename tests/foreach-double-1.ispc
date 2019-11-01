@@ -1,6 +1,3 @@
-
-export uniform int width() { return programCount; }
-
 uniform double one = 1;
 
 void copy(uniform double dst[], uniform double src[], uniform int count) {

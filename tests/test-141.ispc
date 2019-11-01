@@ -1,7 +1,3 @@
-
-export uniform int width() { return programCount; }
-
-
 export void f_f(uniform float RET[], uniform float aFOO[]) {
     float a = aFOO[programIndex];
     // calculation error 1e-6 is the same as in icc

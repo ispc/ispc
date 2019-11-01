@@ -1,6 +1,3 @@
-
-export uniform int width() { return programCount; }
-
 export void tests_int8(uniform float RET[]) {
 
     // abs() for int8 varying -ve value.

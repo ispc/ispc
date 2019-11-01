@@ -1,6 +1,3 @@
-
-export uniform int width() { return programCount; }
-
 noinline void swap(bool doSwap, float &a_foo, float &b_foo) { a_foo = doSwap ? b_foo : a_foo; }
 
 export void f_f(uniform float RET[], uniform float aFOO[]) {

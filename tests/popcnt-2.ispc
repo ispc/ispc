@@ -1,6 +1,3 @@
-
-export uniform int width() { return programCount; }
-
 static int int4(uniform int a, uniform int b, uniform int c, 
                 uniform int d) {
     int ret = 0;

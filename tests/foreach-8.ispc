@@ -1,6 +1,3 @@
-
-export uniform int width() { return programCount; }
-
 export void f_f(uniform float RET[], uniform float aFOO[]) {
     float sum1 = 0, sum2 = 0;
     foreach (x = 0 ... 10, i = 0 ... 6) {

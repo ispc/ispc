@@ -1,7 +1,3 @@
-
-export uniform int width() { return programCount; }
-
-
 float bar(float x) { return 2. * x; }
 export void f_f(uniform float RET[], uniform float aFOO[]) {
     float x = aFOO[programIndex]; 

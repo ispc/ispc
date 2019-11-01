@@ -1,7 +1,5 @@
-
 /* failing due to llvm bug http://llvm.org/bugs/show_bug.cgi?id=10421 */
 
-export uniform int width() { return programCount; }
 
 export void f_fu(uniform float RET[], uniform float aFOO[], uniform float b) {
     int8 aa = aFOO[programIndex]; 

@@ -1,7 +1,3 @@
-
-export uniform int width() { return programCount; }
-
-
 export void f_v(uniform float RET[]) {
 int i, j=0;
 cfor (i = 0; i < 10; ++i) {

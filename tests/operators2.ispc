@@ -1,6 +1,5 @@
 int off;
 
-export uniform int width() { return programCount; }
 
 struct S {
     float a;
