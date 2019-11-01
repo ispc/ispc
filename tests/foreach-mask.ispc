@@ -1,7 +1,3 @@
-
-export uniform int width() { return programCount; }
-
-
 // make sure we reset the func mask in the foreach loop...
 
 void update(uniform float val[], const uniform float a[]) {

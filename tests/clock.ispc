@@ -2,7 +2,6 @@
 // rule: skip on arch=arm
 // rule: skip on arch=aarch64
 
-export uniform int width() { return programCount; }
 
 float x;
 

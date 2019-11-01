@@ -1,6 +1,3 @@
-
-export uniform int width() { return programCount; }
-
 struct Foo;
 
 void bing(varying Foo * uniform);

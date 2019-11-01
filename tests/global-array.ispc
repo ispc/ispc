@@ -1,7 +1,5 @@
-
 uniform float a[100];
 
-export uniform int width() { return programCount; }
 
 
 export void f_f(uniform float RET[], uniform float aFOO[]) {

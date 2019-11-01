@@ -1,6 +1,3 @@
-
-export uniform int width() { return programCount; }
-
 export void f_v(uniform float RET[]) {
     int errors = 0;
 

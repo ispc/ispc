@@ -1,6 +1,3 @@
-
-export uniform int width() { return programCount; }
-
 export void f_f(uniform float RET[], uniform float aFOO[]) {
 #ifndef ISPC_HAS_RAND
     RET[programIndex] = 1;

@@ -1,6 +1,3 @@
-
-export uniform int width() { return programCount; }
-
 #define NA 1
 #define NB 3
 

@@ -1,7 +1,3 @@
-
-export uniform int width() { return programCount; }
-
-
 int &foo(int &a, int &b) {
     return b;
 }

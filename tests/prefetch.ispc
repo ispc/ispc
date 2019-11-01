@@ -1,7 +1,3 @@
-
-export uniform int width() { return programCount; }
-
-
 export void f_f(uniform float RET[], uniform float aFOO[]) {
     prefetch_l1(aFOO);
     prefetch_l2(aFOO);

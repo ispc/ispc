@@ -1,6 +1,3 @@
-
-export uniform int width() { return programCount; }
-
 bool bar(float * x) {
     return (x != 0);
 }

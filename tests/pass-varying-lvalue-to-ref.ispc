@@ -1,6 +1,3 @@
-
-export uniform int width() { return programCount; }
-
 #pragma ignore warning(perf)
 void inc(uniform float * varying v) { ++(*v); }
 

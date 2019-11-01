@@ -1,9 +1,7 @@
-
 struct Vector { float x, y, z; };
 
 struct Ray { Vector o; float t; Vector d; };
 
-export uniform int width() { return programCount; }
 
 void init(uniform Ray rays[], uniform int count, float v) {
     for (uniform int i = 0; i < count; ++i) {

@@ -1,6 +1,5 @@
 typedef bool<4> bool4;
 
-export uniform int width() { return programCount; }
 
 // a[] = { 1, 2, 3, ... };
 export void f_f(uniform float RET[], uniform float a[]) {

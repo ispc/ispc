@@ -1,6 +1,3 @@
-
-export uniform int width() { return programCount; }
-
 export void f_v(uniform float RET[]) {
 #define width 4
 //CO    const uniform int width = 4;

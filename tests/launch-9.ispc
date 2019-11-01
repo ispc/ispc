@@ -1,7 +1,3 @@
-
-export uniform int width() { return programCount; }
-
-
 #define N0 12
 #define N1 20
 #define N2 50

@@ -1,7 +1,3 @@
-
-export uniform int width() { return programCount; }
-
-
 int func(const int &a) { return a+1; }
 int bar() { return 0; }
 

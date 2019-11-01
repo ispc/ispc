@@ -1,6 +1,3 @@
-
-export uniform int width() { return programCount; }
-
 export void f_f(uniform float RET[], uniform float aFOO[]) {
     uniform float a[programCount];
     a[programIndex] = aFOO[programIndex];

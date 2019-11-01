@@ -1,6 +1,5 @@
 //test for 17631 bug in LLVM.
 
-export uniform int width() { return programCount; }
  
 struct s_temp
 {

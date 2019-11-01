@@ -1,9 +1,7 @@
-
 struct Ray {
     float<3> v;
 };
 
-export uniform int width() { return programCount; }
 
 
 export void f_f(uniform float RET[], uniform float aFOO[]) {

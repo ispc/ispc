@@ -1,6 +1,3 @@
-
-export uniform int width() { return programCount; }
-
 void var_store(uniform int64 a[], varying int64 x) {
     streaming_store(a, x);
 }

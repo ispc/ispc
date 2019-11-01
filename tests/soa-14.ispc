@@ -1,7 +1,6 @@
 
 struct Point { float x, y, z; };
 
-export uniform int width() { return programCount; }
 
 static void p(uniform float *uniform ptr) {
 //CO    for (uniform int s = 0; s < 1; ++s) { // num to print

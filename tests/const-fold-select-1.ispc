@@ -1,6 +1,3 @@
-
-export uniform int width() { return programCount; }
-
 export void f_f(uniform float RET[], uniform float aFOO[]) {
     RET[programIndex] = (programIndex >= 0) ? 1 : 0;
 }

@@ -1,8 +1,3 @@
-
-export uniform int width() { return programCount; }
-
-
-
 export void f_v(uniform float RET[]) {
     static const uniform float x = 1.;
     RET[programIndex] = x+x;

@@ -1,7 +1,5 @@
-
 typedef int<4> int4;
 
-export uniform int width() { return programCount; }
 
 export void f_fu(uniform float ret[], uniform float aa[], uniform float b) {
     float a = aa[programIndex];

@@ -1,8 +1,4 @@
 
-export uniform int width() { return programCount; }
-
-
-
 struct Bar {
     uniform float x;
 };

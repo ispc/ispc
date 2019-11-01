@@ -1,6 +1,3 @@
-
-export uniform int width() { return programCount; }
-
 #define SIZE TARGET_WIDTH+1
 
 export void f_fu(uniform float RET[], uniform float aFOO[], uniform float b) {

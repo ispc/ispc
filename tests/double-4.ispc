@@ -1,7 +1,3 @@
-
-export uniform int width() { return programCount; }
-
-
 export void f_duf(uniform float RET[], uniform double aFOO[], uniform float b) {
     double a = aFOO[programIndex];
     if (a+3 > b)

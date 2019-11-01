@@ -13,7 +13,6 @@ int func(int<5>  x) {
     return ret;
 }
 
-export uniform int width() { return programCount; }
 
 export void f_v(uniform float RET[]) {
     uniform Enum111 enum_ = Three;

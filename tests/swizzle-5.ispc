@@ -1,7 +1,3 @@
-
-export uniform int width() { return programCount; }
-
-
 export void f_v(uniform float RET[]) {
     float<3> a = {1,2,3};
     float<3> b = a.rgb;

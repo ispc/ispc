@@ -1,6 +1,3 @@
-
-export uniform int width() { return programCount; }
-
 export void f_fu(uniform float RET[], uniform float aFOO[], uniform float b) {
     uniform int16 a_max = 0x7FFF, a_min = -0x8000; // max and min signed int16
     if (programIndex % 3 == 0) {

@@ -1,7 +1,3 @@
-
-export uniform int width() { return programCount; }
-
-
 export void f_fu(uniform float RET[], uniform float aFOO[], uniform float b) {
     uniform int a[4][4][4];
     for (uniform int i = 0; i < 4; ++i)

@@ -1,6 +1,3 @@
-
-export uniform int width() { return programCount; }
-
 typedef float (*FuncType)(float, float);
 
 float foo(float a, float b) {

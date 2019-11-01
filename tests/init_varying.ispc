@@ -2,7 +2,6 @@
 #define TARGET_WIDTH_EIGHT 8
 #define TARGET_WIDTH_SIXTEEN 16
 
-export uniform int width() { return programCount; }
 
     // Arrays for comparison.
 #if TARGET_WIDTH == TARGET_WIDTH_FOUR

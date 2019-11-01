@@ -15,8 +15,6 @@ uniform int *uniform aaa = &ii[1][2][3];
 
 static uniform int sVar_loc_global = sizeof(varying int8);
 
-export uniform int width() { return programCount; }
-
 export void f_v(uniform float RET[]) {
     static uniform int sVar_loc = sizeof(varying int8);
     RET[programIndex] = (1 * *pa) + (2 * *parr[2]) + (3 * *pb[1]) + (4 * *pb1[2]) + (5 * *aaa) + (6 * sz) + (7 * sVar) + (8 * sVar_loc) + (9 * sVar_loc_global);

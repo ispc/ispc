@@ -4,7 +4,6 @@ struct Foo {
     float a[0];
 };
 
-export uniform int width() { return programCount; }
 
 
 export void f_f(uniform float RET[], uniform float aFOO[]) {

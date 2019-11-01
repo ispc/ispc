@@ -1,6 +1,3 @@
-
-export uniform int width() { return programCount; }
-
 bool foo(int *ptr) {
     return (ptr == NULL);
 }

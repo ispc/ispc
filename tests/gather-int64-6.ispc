@@ -1,6 +1,3 @@
-
-export uniform int width() { return programCount; }
-
 int64 zero = 0;
 void *gptr;
 

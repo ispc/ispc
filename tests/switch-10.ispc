@@ -1,6 +1,3 @@
-
-export uniform int width() { return programCount; }
-
 int switchit(int a, uniform int b) {
     switch (a) {
     case 3:

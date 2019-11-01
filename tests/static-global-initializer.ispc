@@ -1,8 +1,3 @@
-
-export uniform int width() { return programCount; }
-
-
-
 /*COextern "C" float f;*/
 static uniform float f = 2.;
 

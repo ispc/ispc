@@ -1,5 +1,3 @@
-export uniform int width() { return programCount; }
-
 // Testing int8 implementation of varying * varying
 export void tests_int8(uniform float RET[]) {
     varying int8 p_foo[programCount];

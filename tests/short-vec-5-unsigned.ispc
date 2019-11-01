@@ -1,7 +1,5 @@
-
 typedef unsigned int<4> uint4;
 
-export uniform int width() { return programCount; }
 
 export void f_fu(uniform float ret[], uniform float aa[], uniform float b) {
     float a = aa[programIndex];

@@ -1,8 +1,4 @@
 
-export uniform int width() { return programCount; }
-
-
-
 typedef float Float;
 
 export void f_fu(uniform float RET[], uniform Float aFOO[], uniform Float b) {

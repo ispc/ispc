@@ -1,6 +1,3 @@
-
-export uniform int width() { return programCount; }
-
 export void f_f(uniform float r[], uniform float a[]) {
     #pragma ignore warning(perf)
     unsigned int i = (unsigned int)a[programIndex];

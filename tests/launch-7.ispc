@@ -1,7 +1,3 @@
-
-export uniform int width() { return programCount; }
-
-
 static uniform float array[10];
 task void foo(uniform float f) { array[0] = f; }
 task void foo(uniform float f, uniform int i) { array[i] = f; }

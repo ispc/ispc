@@ -45,7 +45,6 @@ int A055(varying double f){return 3;}       int A055(varying int f){return 4;}
 int A056(varying float& f){return 1;}       int A056(varying const float& f){return 2;} int A056(varying int f){return 4;}
 
 
-export uniform int width() { return programCount; }
 
 
 

@@ -1,8 +1,3 @@
-
-export uniform int width() { return programCount; }
-
-
-
 void foo(float & x) {
     if ((x) <= 2) {
         ++(x);

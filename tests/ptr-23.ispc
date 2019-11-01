@@ -1,6 +1,3 @@
-
-export uniform int width() { return programCount; }
-
 struct Foo {
     int a;
     uniform float b;

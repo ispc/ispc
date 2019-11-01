@@ -1,6 +1,3 @@
-
-export uniform int width() { return programCount; }
-
 export void f_f(uniform float RET[], uniform float aFOO[]) {
     float sum = 0;
     // Obscfucated way to make delta all one, but make that unclear to the

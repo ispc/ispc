@@ -1,7 +1,3 @@
-
-export uniform int width() { return programCount; }
-
-
 float foo(uniform float xFOO[]) { 
     float x = xFOO[programIndex];
     return x + x; 
