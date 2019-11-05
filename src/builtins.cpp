@@ -312,9 +312,7 @@ static void lSetInternalFunctions(llvm::Module *module) {
         "__aos_to_soa3_double8",
         "__aos_to_soa3_int64",
         "__aos_to_soa3_float",
-//#ifdef ISPC_NVPTX_ENABLED
         "__aos_to_soa3_float1",
-//#endif /* ISPC_NVPTX_ENABLED */
         "__aos_to_soa3_float16",
         "__aos_to_soa3_float4",
         "__aos_to_soa3_float8",
@@ -326,9 +324,7 @@ static void lSetInternalFunctions(llvm::Module *module) {
         "__aos_to_soa4_double8",
         "__aos_to_soa4_int64",
         "__aos_to_soa4_float",
-//#ifdef ISPC_NVPTX_ENABLED
         "__aos_to_soa4_float1",
-//#endif /* ISPC_NVPTX_ENABLED */
         "__aos_to_soa4_float16",
         "__aos_to_soa4_float4",
         "__aos_to_soa4_float8",
@@ -377,38 +373,6 @@ static void lSetInternalFunctions(llvm::Module *module) {
         "__atomic_xor_int64_global",
         "__atomic_xor_uniform_int32_global",
         "__atomic_xor_uniform_int64_global",
-//#ifdef ISPC_NVPTX_ENABLED
-        "__atomic_add_varying_int32_global",
-        "__atomic_add_varying_int64_global",
-        "__atomic_and_varying_int32_global",
-        "__atomic_and_varying_int64_global",
-        "__atomic_compare_exchange_varying_double_global",
-        "__atomic_compare_exchange_varying_float_global",
-        "__atomic_compare_exchange_varying_int32_global",
-        "__atomic_compare_exchange_varying_int64_global",
-        "__atomic_max_varying_int32_global",
-        "__atomic_max_varying_int64_global",
-        "__atomic_min_varying_int32_global",
-        "__atomic_min_varying_int64_global",
-        "__atomic_or_varying_int32_global",
-        "__atomic_or_varying_int64_global",
-        "__atomic_sub_varying_int32_global",
-        "__atomic_sub_varying_int64_global",
-        "__atomic_swap_varying_double_global",
-        "__atomic_swap_varying_float_global",
-        "__atomic_swap_varying_int32_global",
-        "__atomic_swap_varying_int64_global",
-        "__atomic_umax_varying_uint32_global",
-        "__atomic_umax_varying_uint64_global",
-        "__atomic_umin_varying_uint32_global",
-        "__atomic_umin_varying_uint64_global",
-        "__atomic_xor_uniform_int32_global",
-        "__atomic_xor_uniform_int64_global",
-        "__atomic_xor_varying_int32_global",
-        "__atomic_xor_varying_int64_global",
-        "__atomic_xor_varying_int32_global",
-        "__atomic_xor_varying_int64_global",
-//#endif /* ISPC_NVPTX_ENABLED */
         "__broadcast_double",
         "__broadcast_float",
         "__broadcast_i16",
@@ -434,9 +398,6 @@ static void lSetInternalFunctions(llvm::Module *module) {
         "__do_assert_uniform",
         "__do_assert_varying",
         "__do_print",
-//#ifdef ISPC_NVPTX_ENABLED
-        "__do_print_nvptx",
-//#endif /* ISPC_NVPTX_ENABLED */
         "__doublebits_uniform_int64",
         "__doublebits_varying_int64",
         "__exclusive_scan_add_double",
@@ -451,10 +412,6 @@ static void lSetInternalFunctions(llvm::Module *module) {
         "__extract_int32",
         "__extract_int64",
         "__extract_int8",
-//#ifdef ISPC_NVPTX_ENABLED
-        "__extract_float",
-        "__extract_double",
-//#endif /* ISPC_NVPTX_ENABLED */
         "__extract_mask_low",
         "__extract_mask_hi",
         "__fastmath",
@@ -473,10 +430,6 @@ static void lSetInternalFunctions(llvm::Module *module) {
         "__insert_int32",
         "__insert_int64",
         "__insert_int8",
-//#ifdef ISPC_NVPTX_ENABLED
-        "__insert_float",
-        "__insert_double",
-//#endif /* ISPC_NVPTX_ENABLED */
         "__intbits_uniform_double",
         "__intbits_uniform_float",
         "__intbits_varying_double",
@@ -513,9 +466,6 @@ static void lSetInternalFunctions(llvm::Module *module) {
         "__min_varying_uint32",
         "__min_varying_uint64",
         "__movmsk",
-//#ifdef ISPC_NVPTX_ENABLED
-        "__movmsk_ptx",
-//#endif /* ISPC_NVPTX_ENABLED */
         "__new_uniform_32rt",
         "__new_uniform_64rt",
         "__new_varying32_32rt",
@@ -623,12 +573,10 @@ static void lSetInternalFunctions(llvm::Module *module) {
         "__soa_to_aos3_float8",
         "__soa_to_aos3_int32",
         "__soa_to_aos4_float",
-//#ifdef ISPC_NVPTX_ENABLED
         "__soa_to_aos3_double1",
         "__soa_to_aos3_float1",
         "__soa_to_aos4_float1",
         "__soa_to_aos4_double1",
-//#endif /* ISPC_NVPTX_ENABLED */
         "__soa_to_aos4_double16",
         "__soa_to_aos4_double4",
         "__soa_to_aos4_double8",
@@ -758,27 +706,10 @@ static void lSetInternalFunctions(llvm::Module *module) {
         "__vec4_add_float",
         "__vec4_add_int32",
         "__vselect_float",
-//#ifdef ISPC_NVPTX_ENABLED
-        "__program_index",
-        "__program_count",
-        "__warp_index",
-        "__task_index0",
-        "__task_index1",
-        "__task_index2",
-        "__task_index",
-        "__task_count0",
-        "__task_count1",
-        "__task_count2",
-        "__task_count",
-        "__cvt_loc2gen",
-        "__cvt_loc2gen_var",
-        "__cvt_const2gen",
-        "__puts_nvptx",
+        "__vselect_i32",
         "ISPCAlloc",
         "ISPCLaunch",
-        "ISPCSync",
-//#endif /* ISPC_NVPTX_ENABLED */
-        "__vselect_i32"
+        "ISPCSync"
     };
     // clang-format on
     int count = sizeof(names) / sizeof(names[0]);
@@ -841,10 +772,8 @@ void AddBitcodeToModule(const unsigned char *bitcode, int length, llvm::Module *
         if (g->target->getISA() != Target::NEON32 && g->target->getISA() != Target::NEON16 &&
             g->target->getISA() != Target::NEON8)
 #endif // !__arm__
-#ifdef ISPC_NVPTX_ENABLED
-            if (g->target->getISA() != Target::NVPTX)
-#endif      /* ISPC_NVPTX_ENABLED */
-            // Disable this code for cross compilation
+
+        // Disable this code for cross compilation
 #if 0
             {
                 Assert(bcTriple.getArch() == llvm::Triple::UnknownArch || mTriple.getArch() == bcTriple.getArch());
@@ -867,7 +796,7 @@ void AddBitcodeToModule(const unsigned char *bitcode, int length, llvm::Module *
                 }
             }
 #endif
-                bcModule->setTargetTriple(mTriple.str());
+            bcModule->setTargetTriple(mTriple.str());
         bcModule->setDataLayout(module->getDataLayout());
 
         // A hack to move over declaration, which have no definition.
@@ -1095,21 +1024,6 @@ void DefineStdlib(SymbolTable *symbolTable, llvm::LLVMContext *ctx, llvm::Module
     default:
         Error(SourcePos(), "Unsupported OS\n");
     }
-
-    // NVPTX target is depricated and will be removed soon.
-    /*
-    #ifdef ISPC_NVPTX_ENABLED
-        case Target::NVPTX: {
-            if (runtime32) {
-                fprintf(stderr, "Unfortunatly 32bit targets are not supported at the moment .. \n");
-                assert(0);
-            } else {
-                EXPORT_MODULE(builtins_bitcode_nvptx_64bit);
-            }
-            break;
-        };
-    #endif
-    */
 
     // Next, add the target's custom implementations of the various needed
     // builtin functions (e.g. __masked_store_32(), etc).
@@ -1664,15 +1578,7 @@ void DefineStdlib(SymbolTable *symbolTable, llvm::LLVMContext *ctx, llvm::Module
     }
 
     // define the 'programCount' builtin variable
-#ifdef ISPC_NVPTX_ENABLED
-    if (g->target->getISA() == Target::NVPTX) {
-        lDefineConstantInt("programCount", 32, module, symbolTable, debug_symbols);
-    } else {
-#endif /* ISPC_NVPTX_ENABLED */
-        lDefineConstantInt("programCount", g->target->getVectorWidth(), module, symbolTable, debug_symbols);
-#ifdef ISPC_NVPTX_ENABLED
-    }
-#endif /* ISPC_NVPTX_ENABLED */
+    lDefineConstantInt("programCount", g->target->getVectorWidth(), module, symbolTable, debug_symbols);
 
     // define the 'programIndex' builtin
     lDefineProgramIndex(module, symbolTable, debug_symbols);
@@ -1693,13 +1599,6 @@ void DefineStdlib(SymbolTable *symbolTable, llvm::LLVMContext *ctx, llvm::Module
     lDefineConstantInt("__have_native_trigonometry", g->target->hasTrigonometry(), module, symbolTable, debug_symbols);
     lDefineConstantInt("__have_native_rsqrtd", g->target->hasRsqrtd(), module, symbolTable, debug_symbols);
     lDefineConstantInt("__have_native_rcpd", g->target->hasRcpd(), module, symbolTable, debug_symbols);
-
-#ifdef ISPC_NVPTX_ENABLED
-    lDefineConstantInt("__is_nvptx_target", (int)(g->target->getISA() == Target::NVPTX), module, symbolTable,
-                       debug_symbols);
-#else
-    lDefineConstantInt("__is_nvptx_target", (int)0, module, symbolTable, debug_symbols);
-#endif /* ISPC_NVPTX_ENABLED */
 
     if (g->forceAlignment != -1) {
         llvm::GlobalVariable *alignment = module->getGlobalVariable("memory_alignment", true);

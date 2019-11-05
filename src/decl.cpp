@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2013, Intel Corporation
+  Copyright (c) 2010-2019, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -165,15 +165,6 @@ const Type *DeclSpecs::GetBaseType(SourcePos pos) const {
     retType = lApplyTypeQualifiers(typeQualifiers, retType, pos);
 
     if (soaWidth > 0) {
-#ifdef ISPC_NVPTX_ENABLED
-#if 0 /* see stmt.cpp in DeclStmt::EmitCode for work-around of SOAType Declaration */
-        if (g->target->getISA() == Target::NVPTX)
-        {
-            Error(pos, "\"soa\" data types are currently not supported with \"nvptx\" target.");
-            return NULL;
-        }
-#endif
-#endif /* ISPC_NVPTX_ENABLED */
         const StructType *st = CastType<StructType>(retType);
 
         if (st == NULL) {
@@ -416,22 +407,14 @@ void Declarator::InitFromType(const Type *baseType, DeclSpecs *ds) {
             return;
         }
 
-#ifdef ISPC_NVPTX_ENABLED
-#if 0 /* NVPTX */
-        if (baseType->IsUniformType())
-        {
-          fprintf(stderr, " detected uniform array of size= %d  array= %s\n" ,arraySize,
-              baseType->IsArrayType() ? " true " : " false ");
-        }
-#endif
-#endif /* ISPC_NVPTX_ENABLED */
         const Type *arrayType = new ArrayType(baseType, arraySize);
         if (child != NULL) {
             child->InitFromType(arrayType, ds);
             type = child->type;
             name = child->name;
-        } else
+        } else {
             type = arrayType;
+        }
     } else if (kind == DK_FUNCTION) {
         llvm::SmallVector<const Type *, 8> args;
         llvm::SmallVector<std::string, 8> argNames;

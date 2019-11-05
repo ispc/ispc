@@ -1,20 +1,13 @@
 
 export uniform int width() { return programCount; }
 
-
-
 struct Foo {
     uniform float udx[32][32];
 };
 
 export void f_fu(uniform float RET[], uniform float aFOO[], uniform float b) {
-    float a = aFOO[programIndex]; 
-#ifndef __NVPTX__ 
+    float a = aFOO[programIndex];
     uniform Foo f[5];
-#else     /* too much shared memory allocated, nvcc fails to link */
-    uniform Foo * uniform f = uniform new uniform Foo[5];
-#define _UNMALLOC
-#endif
     #pragma ignore warning
     cfor (uniform int i = 0; i < 5; ++i)
         #pragma ignore warning
@@ -25,9 +18,6 @@ export void f_fu(uniform float RET[], uniform float aFOO[], uniform float b) {
 
     int x = 1;
     RET[programIndex] = f[x+1].udx[b-4][programIndex];
-#ifdef _UNMALLOC
-    delete f;
-#endif
 }
 
 export void result(uniform float RET[]) { RET[programIndex] = 2100 +programIndex; }

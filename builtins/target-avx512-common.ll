@@ -960,7 +960,6 @@ define_prefetches()
 ;; int8/int16 builtins
 
 define_avgs()
-declare_nvptx()
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; reciprocals in double precision, if supported

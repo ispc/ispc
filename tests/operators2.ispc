@@ -1,9 +1,4 @@
-#ifdef __NVPTX__
-uniform int _off[programCount];
-#define off _off[programIndex]
-#else  /* global varying data types are not yet supported with "nvptx" target */
 int off;
-#endif
 
 export uniform int width() { return programCount; }
 
