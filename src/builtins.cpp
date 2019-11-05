@@ -1605,7 +1605,6 @@ void DefineStdlib(SymbolTable *symbolTable, llvm::LLVMContext *ctx, llvm::Module
         alignment->setInitializer(LLVMInt32(g->forceAlignment));
     }
 
-    // LLVM 3.6 is only because it was not tested with earlier versions.
     if (g->generateDebuggingSymbols) {
         emitLLVMUsed(*module, debug_symbols);
     }

@@ -643,7 +643,7 @@ def validation_run(only, only_targets, reference_branch, number, notify, update,
     print_debug("Folder: " + os.environ["ISPC_HOME"] + "\n", False, "")
     date = datetime.datetime.now()
     print_debug("Date: " + date.strftime('%H:%M %d/%m/%Y') + "\n", False, "")
-    newest_LLVM="3.6"
+    newest_LLVM="9.0"
     msg_additional_info = ""
 # *** *** ***
 # Stability validation run
@@ -1139,7 +1139,7 @@ if __name__ == '__main__':
             'current (do not rebuild ISPC), debug (only with debug info), nodebug (only without debug info, default).',
             default="")
     run_group.add_option('--perf_LLVM', dest='perf_llvm',
-        help='compare LLVM 3.6 with "--compare-with", default trunk', default=False, action='store_true')
+        help='compare LLVM 8.0 with "--compare-with", default trunk', default=False, action='store_true')
     run_group.add_option('--generator', dest='generator',
         help='specify cmake generator', default="")
     parser.add_option_group(run_group)

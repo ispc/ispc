@@ -663,19 +663,13 @@ void Module::AddFunctionDeclaration(const std::string &name, const FunctionType 
     }
     // Set function attributes: we never throw exceptions
     function->setDoesNotThrow();
-    if (storageClass != SC_EXTERN_C && isInline)
-#ifdef LLVM_3_2
-        function->addFnAttr(llvm::Attributes::AlwaysInline);
-#else // LLVM 3.3+
+    if (storageClass != SC_EXTERN_C && isInline) {
         function->addFnAttr(llvm::Attribute::AlwaysInline);
-#endif
+    }
 
-    if (isNoInline)
-#ifdef LLVM_3_2
-        function->addFnAttr(llvm::Attributes::NoInline);
-#else // LLVM 3.3+
+    if (isNoInline) {
         function->addFnAttr(llvm::Attribute::NoInline);
-#endif
+    }
 
     if (functionType->isTask) {
         // This also applies transitively to members I think?
