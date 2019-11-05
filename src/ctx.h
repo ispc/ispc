@@ -293,14 +293,6 @@ class FunctionEmitContext {
     /** generate constantvector, which contains programindex, i.e.
         < i32 0, i32 1, i32 2, i32 3> */
     llvm::Value *ProgramIndexVector(bool is32bits = true);
-#ifdef ISPC_NVPTX_ENABLED
-    llvm::Value *ProgramIndexVectorPTX(bool is32bits = true);
-
-    /** Issues a call to __insert_int8/int16/int32/int64/float/double */
-    llvm::Value *Insert(llvm::Value *vector, llvm::Value *lane, llvm::Value *scalar);
-    /** Issues a call to __extract_int8/int16/int32/int64/float/double */
-    llvm::Value *Extract(llvm::Value *vector, llvm::Value *lane);
-#endif
 
     /** Given a string, create an anonymous global variable to hold its
         value and return the pointer to the string. */

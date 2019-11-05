@@ -175,9 +175,6 @@ class Target {
         KNL_AVX512 = 4,
         SKX_AVX512 = 5,
         GENERIC = 6,
-#ifdef ISPC_NVPTX_ENABLED
-        NVPTX,
-#endif
 #ifdef ISPC_ARM_ENABLED
         NEON32,
         NEON16,

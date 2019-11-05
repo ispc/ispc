@@ -1444,7 +1444,7 @@ int VectorType::getVectorMemoryCount() const {
         return numElements;
     else if (base->IsUniformType()) {
         if (g->target->getDataTypeWidth() == -1) {
-            // For generic targets and NVPTX just return correct result,
+            // For generic targets just return correct result,
             // we don't care about optimizations in this case.
             // Should we just assume data type width equal to 32?
             return numElements;
@@ -2446,11 +2446,7 @@ llvm::FunctionType *FunctionType::LLVMFunctionType(llvm::LLVMContext *ctx, bool 
         llvmArgTypes.push_back(LLVMTypes::MaskType);
 
     std::vector<llvm::Type *> callTypes;
-    if (isTask
-#ifdef ISPC_NVPTX_ENABLED
-        && (g->target->getISA() != Target::NVPTX)
-#endif
-    ) {
+    if (isTask) {
         // Tasks take three arguments: a pointer to a struct that holds the
         // actual task arguments, the thread index, and the total number of
         // threads the tasks system has running.  (Task arguments are

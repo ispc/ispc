@@ -398,7 +398,6 @@ declare void @__prefetch_read_varying_nt_native(i8 * %base, i32 %scale, <WIDTH x
 ;; int8/int16 builtins
 
 define_avgs()
-declare_nvptx()
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; reciprocals in double precision, if supported

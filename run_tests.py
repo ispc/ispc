@@ -221,8 +221,6 @@ def run_test(testname):
             return (1, 0)
         else:
             global is_generic_target
-            global is_nvptx_target
-            global is_nvptx_nvvm
             if is_windows:
                 if is_generic_target:
                     obj_name = "%s.cpp" % os.path.basename(filename)
@@ -237,13 +235,6 @@ def run_test(testname):
             else:
                 if is_generic_target:
                     obj_name = "%s.cpp" % testname
-                elif is_nvptx_target:
-                  if os.environ.get("NVVM") == "1":
-                    is_nvptx_nvvm = True
-                    obj_name = "%s.ll" % testname
-                  else:
-                    obj_name = "%s.ptx" % testname
-                    is_nvptx_nvvm = False
                 else:
                     obj_name = "%s.o" % testname
                 exe_name = "%s.run" % testname
@@ -271,12 +262,6 @@ def run_test(testname):
                 if should_fail:
                     cc_cmd += " -DEXPECT_FAILURE"
 
-                if is_nvptx_target:
-                  nvptxcc_exe = "ptxtools/runtest_ptxcc.sh"
-                  nvptxcc_exe_rel = add_prefix(nvptxcc_exe)
-                  cc_cmd = "%s %s -DTEST_SIG=%d -o %s" % \
-                      (nvptxcc_exe_rel, obj_name, match, exe_name)
-
             ispc_cmd = ispc_exe_rel + " --woff %s -o %s --arch=%s --target=%s" % \
                         (filename, obj_name, options.arch, options.target)
 
@@ -284,22 +269,6 @@ def run_test(testname):
                 ispc_cmd += " -O0"
             if is_generic_target:
                 ispc_cmd += " --emit-c++ --c++-include-file=%s" % add_prefix(options.include_file)
-
-            if is_nvptx_target:
-                filename4ptx = "/tmp/"+os.path.basename(filename)+".parsed.ispc"
-#                grep_cmd = "grep -v 'export uniform int width' %s > %s " % \
-                grep_cmd = "sed  's/export\ uniform\ int\ width/static uniform\ int\ width/g' %s > %s" % \
-                    (filename, filename4ptx)
-                if options.verbose:
-                  print("Grepping: %s" % grep_cmd)
-                sp = subprocess.Popen(grep_cmd, shell=True)
-                sp.communicate()
-                if is_nvptx_nvvm:
-                  ispc_cmd = ispc_exe_rel + " --woff %s -o %s -O3 --emit-llvm --target=%s" % \
-                         (filename4ptx, obj_name, options.target)
-                else:
-                  ispc_cmd = ispc_exe_rel + " --woff %s -o %s -O3 --emit-asm --target=%s" % \
-                         (filename4ptx, obj_name, options.target)
 
         # compile the ispc code, make the executable, and run it...
         ispc_cmd += " -h " + filename + ".h"
@@ -339,10 +308,8 @@ def run_tasks_from_queue(queue, queue_ret, queue_error, queue_finish, total_test
     ispc_exe = glob_var[3]
     global is_generic_target
     is_generic_target = glob_var[4]
-    global is_nvptx_target
-    is_nvptx_target = glob_var[5]
     global run_tests_log
-    run_tests_log = glob_var[6]
+    run_tests_log = glob_var[5]
 
     if is_windows:
         tmpdir = "tmp%d" % os.getpid()
@@ -591,8 +558,6 @@ def run_tests(options1, args, print_version):
 
     if options.target == 'neon':
         options.arch = 'aarch64'
-    if options.target == "nvptx":
-        options.arch = "nvptx64"
 
     global ispc_exe
     ispc_exe = ""
@@ -622,9 +587,6 @@ def run_tests(options1, args, print_version):
     global is_generic_target
     is_generic_target = ((options.target.find("generic-") != -1 and
                      options.target != "generic-1" and options.target != "generic-x1"))
-
-    global is_nvptx_target
-    is_nvptx_target = (options.target.find("nvptx") != -1)
 
     if is_generic_target and options.include_file == None:
         if options.target == "generic-4" or options.target == "generic-x4":
@@ -741,7 +703,7 @@ def run_tests(options1, args, print_version):
 
     start_time = time.time()
     # launch jobs to run tests
-    glob_var = [is_windows, options, s, ispc_exe, is_generic_target, is_nvptx_target, run_tests_log]
+    glob_var = [is_windows, options, s, ispc_exe, is_generic_target, run_tests_log]
     global task_threads
     task_threads = [0] * nthreads
     for x in range(nthreads):

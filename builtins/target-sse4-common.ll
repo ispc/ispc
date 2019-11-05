@@ -297,8 +297,6 @@ define i64 @__popcnt_int64(i64) nounwind readonly alwaysinline {
   ret i64 %call
 }
 
-declare_nvptx()
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; switch macro
 ;; This is required to ensure that gather intrinsics are used with constant scale value.

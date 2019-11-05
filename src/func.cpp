@@ -46,9 +46,6 @@
 #include "util.h"
 #include <stdio.h>
 
-#ifdef ISPC_NVPTX_ENABLED
-#include <llvm/IR/Metadata.h>
-#endif /* ISPC_NVPTX_ENABLED */
 #include <llvm/IR/DerivedTypes.h>
 #include <llvm/IR/Instructions.h>
 #include <llvm/IR/Intrinsics.h>
@@ -116,11 +113,7 @@ Function::Function(Symbol *s, Stmt *c) {
             sym->parentFunction = this;
     }
 
-    if (type->isTask
-#ifdef ISPC_NVPTX_ENABLED
-        && (g->target->getISA() != Target::NVPTX)
-#endif
-    ) {
+    if (type->isTask) {
         threadIndexSym = m->symbolTable->LookupVariable("threadIndex");
         Assert(threadIndexSym);
         threadCountSym = m->symbolTable->LookupVariable("threadCount");
@@ -220,11 +213,7 @@ void Function::emitCode(FunctionEmitContext *ctx, llvm::Function *function, Sour
 #endif
     const FunctionType *type = CastType<FunctionType>(sym->type);
     Assert(type != NULL);
-    if (type->isTask == true
-#ifdef ISPC_NVPTX_ENABLED
-        && (g->target->getISA() != Target::NVPTX)
-#endif
-    ) {
+    if (type->isTask == true) {
         // For tasks, there should always be three parameters: the
         // pointer to the structure that holds all of the arguments, the
         // thread index, and the thread count variables.
@@ -321,16 +310,6 @@ void Function::emitCode(FunctionEmitContext *ctx, llvm::Function *function, Sour
             ctx->SetFunctionMask(&*argIter);
             Assert(++argIter == function->arg_end());
         }
-#ifdef ISPC_NVPTX_ENABLED
-        if (type->isTask == true && g->target->getISA() == Target::NVPTX) {
-            llvm::NamedMDNode *annotations = m->module->getOrInsertNamedMetadata("nvvm.annotations");
-            llvm::SmallVector<llvm::Metadata *, 3> av;
-            av.push_back(llvm::ValueAsMetadata::get(function));
-            av.push_back(llvm::MDString::get(*g->ctx, "kernel"));
-            av.push_back(llvm::ConstantAsMetadata::get(LLVMInt32(1)));
-            annotations->addOperand(llvm::MDNode::get(*g->ctx, llvm::ArrayRef<llvm::Metadata *>(av)));
-        }
-#endif /* ISPC_NVPTX_ENABLED */
     }
 
     // Finally, we can generate code for the function
@@ -482,21 +461,7 @@ void Function::GenerateIR() {
                     else
                         functionName += std::string("_") + g->target->GetISAString();
                 }
-#ifdef ISPC_NVPTX_ENABLED
-                if (g->target->getISA() == Target::NVPTX) {
-                    functionName +=
-                        std::string("___export"); /* add ___export to the end, for ptxcc to recognize it is exported */
-#if 0
-                  llvm::NamedMDNode* annotations =
-                    m->module->getOrInsertNamedMetadata("nvvm.annotations");
-                  llvm::SmallVector<llvm::Value*, 3> av;
-                  av.push_back(function);
-                  av.push_back(llvm::MDString::get(*g->ctx, "kernel"));
-                  av.push_back(llvm::ConstantInt::get(llvm::IntegerType::get(*g->ctx,32), 1));
-                  annotations->addOperand(llvm::MDNode::get(*g->ctx, av));
-#endif
-                }
-#endif /* ISPC_NVPTX_ENABLED */
+
                 llvm::Function *appFunction = llvm::Function::Create(ftype, linkage, functionName.c_str(), m->module);
                 appFunction->setDoesNotThrow();
 
@@ -518,18 +483,6 @@ void Function::GenerateIR() {
                     if (m->errorCount == 0) {
                         sym->exportedFunction = appFunction;
                     }
-#ifdef ISPC_NVPTX_ENABLED
-                    if (g->target->getISA() == Target::NVPTX) {
-                        llvm::NamedMDNode *annotations = m->module->getOrInsertNamedMetadata("nvvm.annotations");
-
-                        llvm::SmallVector<llvm::Metadata *, 3> av;
-                        av.push_back(llvm::ValueAsMetadata::get(appFunction));
-                        av.push_back(llvm::MDString::get(*g->ctx, "kernel"));
-                        av.push_back(llvm::ConstantAsMetadata::get(
-                            llvm::ConstantInt::get(llvm::IntegerType::get(*g->ctx, 32), 1)));
-                        annotations->addOperand(llvm::MDNode::get(*g->ctx, llvm::ArrayRef<llvm::Metadata *>(av)));
-                    }
-#endif /* ISPC_NVPTX_ENABLED */
                 }
             }
         }
