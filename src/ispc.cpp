@@ -157,44 +157,77 @@ static ISPCTarget lGetSystemISA() {
     // Call cpuid with eax=7, ecx=0
     __cpuidex(info2, 7, 0);
 
-    if ((info[2] & (1 << 27)) != 0 &&  // OSXSAVE
-        (info2[1] & (1 << 5)) != 0 &&  // AVX2
-        (info2[1] & (1 << 16)) != 0 && // AVX512 F
-        __os_has_avx512_support()) {
+    int info3[4];
+    // Call cpuid with eax=7, ecx=1
+    __cpuidex(info3, 7, 1);
+
+    // clang-format off
+    bool sse2 =                (info[3] & (1 << 26))  != 0;
+    bool sse4 =                (info[2] & (1 << 19))  != 0;
+    bool avx_f16c =            (info[2] & (1 << 29))  != 0;
+    bool avx_rdrand =          (info[2] & (1 << 30))  != 0;
+    bool osxsave =             (info[2] & (1 << 27))  != 0;
+    bool avx =                 (info[2] & (1 << 28))  != 0;
+    bool avx2 =                (info2[1] & (1 << 5))  != 0;
+    bool avx512_f =            (info2[1] & (1 << 16)) != 0;
+    bool avx512_dq =           (info2[1] & (1 << 17)) != 0;
+    bool avx512_pf =           (info2[1] & (1 << 26)) != 0;
+    bool avx512_er =           (info2[1] & (1 << 27)) != 0;
+    bool avx512_cd =           (info2[1] & (1 << 28)) != 0;
+    bool avx512_bw =           (info2[1] & (1 << 30)) != 0;
+    bool avx512_vl =           (info2[1] & (1 << 31)) != 0;
+    bool avx512_vbmi2 =        (info2[2] & (1 << 6))  != 0;
+    bool avx512_gfni =         (info2[2] & (1 << 8))  != 0;
+    bool avx512_vaes =         (info2[2] & (1 << 9))  != 0;
+    bool avx512_vpclmulqdq =   (info2[2] & (1 << 10)) != 0;
+    bool avx512_vnni =         (info2[2] & (1 << 11)) != 0;
+    bool avx512_bitalg =       (info2[2] & (1 << 12)) != 0;
+    bool avx512_vpopcntdq =    (info2[2] & (1 << 14)) != 0;
+    bool avx512_bf16 =         (info3[0] & (1 << 5))  != 0;
+    bool avx512_vp2intersect = (info2[3] & (1 << 8))  != 0;
+    // clang-format on
+
+    if (osxsave && avx2 && avx512_f && __os_has_avx512_support()) {
         // We need to verify that AVX2 is also available,
         // as well as AVX512, because our targets are supposed
         // to use both.
 
-        if ((info2[1] & (1 << 17)) != 0 && // AVX512 DQ
-            (info2[1] & (1 << 28)) != 0 && // AVX512 CDI
-            (info2[1] & (1 << 30)) != 0 && // AVX512 BW
-            (info2[1] & (1 << 31)) != 0) { // AVX512 VL
+        // Knights Landing:          KNL = F + PF + ER + CD
+        // Skylake server:           SKX = F + DQ + CD + BW + VL
+        // Cascade Lake server:      CLX = SKX + VNNI
+        // Cooper Lake server:       CPX = CLX + BF16
+        // Ice Lake client & server: ICL = CLX + VBMI2 + GFNI + VAES + VPCLMULQDQ + BITALG + VPOPCNTDQ
+        // Tiger Lake:               TGL = ICL + VP2INTERSECT
+        bool knl = avx512_pf && avx512_er && avx512_cd;
+        bool skx = avx512_dq && avx512_cd && avx512_bw && avx512_vl;
+        bool clx = skx && avx512_vnni;
+        bool cpx = clx && avx512_bf16;
+        bool icl =
+            clx && avx512_vbmi2 && avx512_gfni && avx512_vaes && avx512_vpclmulqdq && avx512_bitalg && avx512_vpopcntdq;
+        bool tgl = icl && avx512_vp2intersect;
+#pragma unused(tgl, cpx)
+        if (skx) {
             return ISPCTarget::avx512skx_x16;
-        } else if ((info2[1] & (1 << 26)) != 0 && // AVX512 PF
-                   (info2[1] & (1 << 27)) != 0 && // AVX512 ER
-                   (info2[1] & (1 << 28)) != 0) { // AVX512 CDI
+        } else if (knl) {
             return ISPCTarget::avx512knl_x16;
         }
         // If it's unknown AVX512 target, fall through and use AVX2
         // or whatever is available in the machine.
     }
 
-    if ((info[2] & (1 << 27)) != 0 &&                           // OSXSAVE
-        (info[2] & (1 << 28)) != 0 && __os_has_avx_support()) { // AVX
+    if (osxsave && avx && __os_has_avx_support()) {
         // AVX1 for sure....
         // Ivy Bridge?
-        if ((info[2] & (1 << 29)) != 0 && // F16C
-            (info[2] & (1 << 30)) != 0 && // RDRAND
-            (info2[1] & (1 << 5)) != 0) { // AVX2.
+        if (avx_f16c && avx_rdrand && avx2) {
             return ISPCTarget::avx2_i32x8;
         }
         // Regular AVX
         return ISPCTarget::avx1_i32x8;
-    } else if ((info[2] & (1 << 19)) != 0)
+    } else if (sse4) {
         return ISPCTarget::sse4_i32x4;
-    else if ((info[3] & (1 << 26)) != 0)
+    } else if (sse2) {
         return ISPCTarget::sse2_i32x4;
-    else {
+    } else {
         Error(SourcePos(), "Unable to detect supported SSE/AVX ISA.  Exiting.");
         exit(1);
     }
