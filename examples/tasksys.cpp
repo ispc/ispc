@@ -171,7 +171,7 @@ typedef void (*TaskFuncType)(void *data, int threadIndex, int threadCount, int t
 
 // Small structure used to hold the data for each task
 #ifdef _MSC_VER
-__declspec(align(16))
+__declspec(align(32))
 #endif
     struct TaskInfo {
     TaskFuncType func;
