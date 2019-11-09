@@ -176,8 +176,18 @@ def run_command(cmd, timeout=600, cwd="."):
     output += out[1].decode("utf-8")
     return (proc.returncode, output, is_timeout)
 
+# checks whether print ouput is correct
+# (whether test and reference outputs are same)
+# NOTE: output contains both test and reference lines
+def check_print_output(output):
+    lines = output.splitlines()
+    if len(lines) == 0 or len(lines) % 2:
+        return False
+    else:
+        return lines[0:len(lines)//2] == lines[len(lines)//2:len(lines)]
+
 # run the commands in cmd_list
-def run_cmds(compile_cmds, run_cmd, filename, expect_failure, exe_wd="."):
+def run_cmds(compile_cmds, run_cmd, filename, expect_failure, sig, exe_wd="."):
     for cmd in compile_cmds:
         (return_code, output, timeout) = run_command(cmd, options.test_time)
         compile_failed = (return_code != 0)
@@ -188,7 +198,13 @@ def run_cmds(compile_cmds, run_cmd, filename, expect_failure, exe_wd="."):
             return Status.Compfail
     if not options.save_bin:
         (return_code, output, timeout) = run_command(run_cmd, options.test_time, cwd=exe_wd)
-        run_failed = (return_code != 0) or timeout
+        if sig < 32:
+            run_failed = (return_code != 0) or timeout
+        else:
+            output_equality = check_print_output(output)
+            if not output_equality:
+                print_debug("Print outputs check failed\n", s, run_tests_log)
+            run_failed = (return_code != 0) or not output_equality or timeout
     else:
         run_failed = 0
     surprise = ((expect_failure and not run_failed) or
@@ -303,7 +319,8 @@ def run_test(testname, host, target):
         # We need to figure out the signature of the test
         # function that this test has.
         sig2def = { "f_v(" : 0, "f_f(" : 1, "f_fu(" : 2, "f_fi(" : 3,
-                    "f_du(" : 4, "f_duf(" : 5, "f_di(" : 6, "f_sz" : 7, "f_t" : 8 }
+                    "f_du(" : 4, "f_duf(" : 5, "f_di(" : 6, "f_sz" : 7,
+                    "f_t(" : 8, "print_uf(" : 32, "print_f(" : 33, "print_fuf(" : 34 }
         file = open(filename, 'r')
         match = -1
         for line in file:
@@ -429,7 +446,7 @@ def run_test(testname, host, target):
         ispc_cmd += " -h " + filename + ".h"
         cc_cmd += " -DTEST_HEADER=<" + filename + ".h>"
         status = run_cmds([ispc_cmd, cc_cmd], options.wrapexe + " " + exe_name,
-                          testname, should_fail, exe_wd=exe_wd)
+                          testname, should_fail, match, exe_wd=exe_wd)
 
         # clean up after running the test
         try:

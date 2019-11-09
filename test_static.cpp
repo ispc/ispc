@@ -89,7 +89,11 @@ extern void CALLINGCONV f_fi(float *result, float *a, int *b);
 extern void CALLINGCONV f_du(float *result, double *a, double b);
 extern void CALLINGCONV f_duf(float *result, double *a, float b);
 extern void CALLINGCONV f_di(float *result, double *a, int *b);
+extern void CALLINGCONV print_uf(float a);
+extern void CALLINGCONV print_f(float *a);
+extern void CALLINGCONV print_fuf(float *a, float b);
 extern void CALLINGCONV result(float *val);
+extern void CALLINGCONV print_result();
 
 void ISPCLaunch(void **handlePtr, void *f, void *d, int, int, int);
 void ISPCSync(void *handle);
@@ -177,21 +181,32 @@ int main(int argc, char *argv[]) {
 #elif (TEST_SIG == 3)
     f_fi(returned_result, vfloat, vint);
 #elif (TEST_SIG == 4)
-    f_du(returned_result, vdouble, 5.);
+    f_du(returned_result, vdouble, b);
 #elif (TEST_SIG == 5)
-    f_duf(returned_result, vdouble, 5.f);
+    f_duf(returned_result, vdouble, static_cast<float>(b));
 #elif (TEST_SIG == 6)
     f_di(returned_result, vdouble, vint2);
 #elif (TEST_SIG == 7)
     *returned_result = sizeof(ispc::f_sz);
     w = 1;
+#elif (TEST_SIG == 32)
+    print_uf(static_cast<float>(b));
+#elif (TEST_SIG == 33)
+    print_f(vfloat);
+#elif (TEST_SIG == 34)
+    print_fuf(vfloat, static_cast<float>(b));
 #else
 #error "Unknown or unset TEST_SIG value"
 #endif
 
     float expected_result[ARRAY_SIZE];
     memset(expected_result, 0, ARRAY_SIZE * sizeof(float));
+#if (TEST_SIG < 32)
     result(expected_result);
+#else
+    print_result();
+    return 0;
+#endif
 
     int errors = 0;
     for (int i = 0; i < w; ++i) {
