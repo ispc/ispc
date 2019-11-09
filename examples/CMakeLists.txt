@@ -40,6 +40,11 @@ project(${PROJECT_NAME})
 
 include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/AddISPCExample.cmake)
 
+if(WIN32)
+    add_compile_definitions(WIN32)
+    add_compile_options(/EHsc)
+endif()
+
 if (ISPC_BUILD)
     set (ISPC_EXECUTABLE $<TARGET_FILE:ispc>)
     set (EXAMPLES_ROOT ${CMAKE_SOURCE_DIR}/examples)
