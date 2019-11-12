@@ -57,7 +57,7 @@ function(ll_to_cpp llFileName bit os_name resultFileName)
                 -DLLVM_VERSION=${LLVM_VERSION} -DBUILD_OS=${os_name_macro} ${inputFilePath}
                 | \"${Python3_EXECUTABLE}\" bitcode2cpp.py ${inputFilePath} --os=${os_name_macro} --llvm_as ${LLVM_AS_EXECUTABLE}
                 > ${output}
-            DEPENDS ${inputFilePath}
+            DEPENDS ${inputFilePath} bitcode2cpp.py
             WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
         )
     else ()
@@ -68,7 +68,7 @@ function(ll_to_cpp llFileName bit os_name resultFileName)
                 -DLLVM_VERSION=${LLVM_VERSION} -DBUILD_OS=${os_name_macro} -DRUNTIME=${bit} ${inputFilePath}
                 | \"${Python3_EXECUTABLE}\" bitcode2cpp.py ${inputFilePath} --runtime=${bit} --os=${os_name_macro} --llvm_as ${LLVM_AS_EXECUTABLE}
                 > ${output}
-            DEPENDS ${inputFilePath}
+            DEPENDS ${inputFilePath} bitcode2cpp.py
             WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
         )
     endif()
@@ -213,7 +213,7 @@ function(builtin_to_cpp bit os_name arch supported_archs supported_oses resultFi
             OUTPUT ${output}
             COMMAND ${Python3_EXECUTABLE} bitcode2cpp.py c --runtime=${bit} --os=${os_name} --arch=${target_arch} --fake --llvm_as ${LLVM_AS_EXECUTABLE}
             > ${output}
-            DEPENDS ${inputFilePath}
+            DEPENDS ${inputFilePath} bitcode2cpp.py
             WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
             )
     else()
@@ -222,7 +222,7 @@ function(builtin_to_cpp bit os_name arch supported_archs supported_oses resultFi
             COMMAND ${CLANG_EXECUTABLE} ${target_flags} -w -m${bit} -emit-llvm -c ${inputFilePath} -o - | \"${LLVM_DIS_EXECUTABLE}\" -
                 | \"${Python3_EXECUTABLE}\" bitcode2cpp.py c --runtime=${bit} --os=${os_name} --arch=${target_arch} --llvm_as ${LLVM_AS_EXECUTABLE}
                 > ${output}
-            DEPENDS ${inputFilePath}
+            DEPENDS ${inputFilePath} bitcode2cpp.py
             WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
             )
     endif()
