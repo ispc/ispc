@@ -170,10 +170,7 @@ typedef void (*TaskFuncType)(void *data, int threadIndex, int threadCount, int t
                              int taskIndex1, int taskIndex2, int taskCount0, int taskCount1, int taskCount2);
 
 // Small structure used to hold the data for each task
-#ifdef _MSC_VER
-__declspec(align(32))
-#endif
-    struct TaskInfo {
+struct TaskInfo {
     TaskFuncType func;
     void *data;
     int taskIndex;
@@ -188,12 +185,8 @@ __declspec(align(32))
     int taskCount0() const { return taskCount3d[0]; }
     int taskCount1() const { return taskCount3d[1]; }
     int taskCount2() const { return taskCount3d[2]; }
-    TaskInfo() { assert(sizeof(TaskInfo) % 32 == 0); }
-}
-#ifndef _MSC_VER
-__attribute__((aligned(32)));
-#endif
-;
+    TaskInfo() = default;
+};
 
 // ispc expects these functions to have C linkage / not be mangled
 extern "C" {
