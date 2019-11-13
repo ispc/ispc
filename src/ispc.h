@@ -109,9 +109,9 @@ struct VariableDeclaration;
 
 enum StorageClass { SC_NONE, SC_EXTERN, SC_STATIC, SC_TYPEDEF, SC_EXTERN_C };
 
-enum TargetOS { OS_WINDOWS, OS_LINUX, OS_MAC, OS_ANDROID, OS_IOS, OS_PS4, OS_ERROR };
+enum class TargetOS { windows, linux, macos, android, ios, ps4, error };
 
-TargetOS StringToOS(std::string);
+TargetOS StringToOS(std::string os);
 constexpr TargetOS GetHostOS();
 
 /** @brief Representation of a range of positions in a source file.

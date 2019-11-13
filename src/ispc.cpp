@@ -1101,7 +1101,7 @@ std::string Target::SupportedOSes() {
 std::string Target::GetTripleString() const {
     llvm::Triple triple;
     switch (g->target_os) {
-    case OS_WINDOWS:
+    case TargetOS::windows:
         if (m_arch == "x86") {
             triple.setArchName("i386");
         } else if (m_arch == "x86-64") {
@@ -1121,7 +1121,7 @@ std::string Target::GetTripleString() const {
         triple.setOS(llvm::Triple::OSType::Win32);
         triple.setEnvironment(llvm::Triple::EnvironmentType::MSVC);
         break;
-    case OS_LINUX:
+    case TargetOS::linux:
         if (m_arch == "x86") {
             triple.setArchName("i386");
         } else if (m_arch == "x86-64") {
@@ -1138,7 +1138,7 @@ std::string Target::GetTripleString() const {
         triple.setOS(llvm::Triple::OSType::Linux);
         triple.setEnvironment(llvm::Triple::EnvironmentType::GNU);
         break;
-    case OS_MAC:
+    case TargetOS::macos:
         // asserts
         if (m_arch != "x86-64") {
             Error(SourcePos(), "macOS target supports only x86_64.");
@@ -1148,7 +1148,7 @@ std::string Target::GetTripleString() const {
         triple.setVendor(llvm::Triple::VendorType::Apple);
         triple.setOS(llvm::Triple::OSType::MacOSX);
         break;
-    case OS_ANDROID:
+    case TargetOS::android:
         if (m_arch == "x86") {
             triple.setArchName("i386");
         } else if (m_arch == "x86-64") {
@@ -1165,7 +1165,7 @@ std::string Target::GetTripleString() const {
         triple.setOS(llvm::Triple::OSType::Linux);
         triple.setEnvironment(llvm::Triple::EnvironmentType::Android);
         break;
-    case OS_IOS:
+    case TargetOS::ios:
         if (m_arch != "aarch64") {
             Error(SourcePos(), "iOS target supports only aarch64.");
             exit(1);
@@ -1177,7 +1177,7 @@ std::string Target::GetTripleString() const {
         triple.setVendor(llvm::Triple::VendorType::Apple);
         triple.setOS(llvm::Triple::OSType::IOS);
         break;
-    case OS_PS4:
+    case TargetOS::ps4:
         if (m_arch != "x86-64") {
             Error(SourcePos(), "PS4 target supports only x86_64.");
             exit(1);
@@ -1468,32 +1468,32 @@ SourcePos Union(const SourcePos &p1, const SourcePos &p2) {
 TargetOS StringToOS(std::string os) {
     std::string supportedOses = Target::SupportedOSes();
     if (supportedOses.find(os) == std::string::npos) {
-        return OS_ERROR;
+        return TargetOS::error;
     }
     if (os == "windows") {
-        return OS_WINDOWS;
+        return TargetOS::windows;
     } else if (os == "linux") {
-        return OS_LINUX;
+        return TargetOS::linux;
     } else if (os == "macos") {
-        return OS_MAC;
+        return TargetOS::macos;
     } else if (os == "android") {
-        return OS_ANDROID;
+        return TargetOS::android;
     } else if (os == "ios") {
-        return OS_IOS;
+        return TargetOS::ios;
     } else if (os == "ps4") {
-        return OS_PS4;
+        return TargetOS::ps4;
     }
-    return OS_ERROR;
+    return TargetOS::error;
 }
 
 constexpr TargetOS GetHostOS() {
 #if defined(ISPC_HOST_IS_WINDOWS) && !defined(ISPC_WINDOWS_TARGET_OFF)
-    return OS_WINDOWS;
+    return TargetOS::windows;
 #elif defined(ISPC_HOST_IS_LINUX) && !defined(ISPC_LINUX_TARGET_OFF)
-    return OS_LINUX;
+    return TargetOS::linux;
 #elif defined(ISPC_HOST_IS_APPLE) && !defined(ISPC_MACOS_TARGET_OFF)
-    return OS_MAC;
+    return TargetOS::macos;
 #else
-    return OS_ERROR;
+    return TargetOS::error;
 #endif
 }
