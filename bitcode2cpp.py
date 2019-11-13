@@ -9,6 +9,7 @@ import argparse
 
 parser = argparse.ArgumentParser()
 parser.add_argument("src", help="Source file to process")
+parser.add_argument("--type", help="Type of processed file", choices=['dispatch', 'builtins-c', 'ispc-target'], required=True)
 parser.add_argument("--runtime", help="Runtime", nargs='?', default='')
 parser.add_argument("--os", help="Target OS", default='')
 parser.add_argument("--arch", help="Target architecture", default='')

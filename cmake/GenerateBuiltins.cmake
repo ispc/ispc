@@ -48,6 +48,11 @@ endif()
 function(ll_to_cpp llFileName bit os_name resultFileName)
     set(inputFilePath builtins/${llFileName}.ll)
     set(includePath builtins)
+    if ("${llFileName}" STREQUAL "dispatch")
+        set(type dispatch)
+    else ()
+        set(type ispc-target)
+    endif()
     string(TOUPPER ${os_name} os_name_macro)
     if ("${bit}" STREQUAL "")
         set(output ${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_CFG_INTDIR}/builtins-${llFileName}-${os_name}.cpp)
@@ -55,7 +60,7 @@ function(ll_to_cpp llFileName bit os_name resultFileName)
             OUTPUT ${output}
             COMMAND ${M4_EXECUTABLE} -I${includePath}
                 -DLLVM_VERSION=${LLVM_VERSION} -DBUILD_OS=${os_name_macro} ${inputFilePath}
-                | \"${Python3_EXECUTABLE}\" bitcode2cpp.py ${inputFilePath} --os=${os_name_macro} --llvm_as ${LLVM_AS_EXECUTABLE}
+                | \"${Python3_EXECUTABLE}\" bitcode2cpp.py ${inputFilePath} --type=${type} --os=${os_name_macro} --llvm_as ${LLVM_AS_EXECUTABLE}
                 > ${output}
             DEPENDS ${inputFilePath} bitcode2cpp.py
             WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
@@ -66,7 +71,7 @@ function(ll_to_cpp llFileName bit os_name resultFileName)
             OUTPUT ${output}
             COMMAND ${M4_EXECUTABLE} -I${includePath}
                 -DLLVM_VERSION=${LLVM_VERSION} -DBUILD_OS=${os_name_macro} -DRUNTIME=${bit} ${inputFilePath}
-                | \"${Python3_EXECUTABLE}\" bitcode2cpp.py ${inputFilePath} --runtime=${bit} --os=${os_name_macro} --llvm_as ${LLVM_AS_EXECUTABLE}
+                | \"${Python3_EXECUTABLE}\" bitcode2cpp.py ${inputFilePath} --type=${type} --runtime=${bit} --os=${os_name_macro} --llvm_as ${LLVM_AS_EXECUTABLE}
                 > ${output}
             DEPENDS ${inputFilePath} bitcode2cpp.py
             WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
@@ -211,7 +216,7 @@ function(builtin_to_cpp bit os_name arch supported_archs supported_oses resultFi
     if (FAKE)
         add_custom_command(
             OUTPUT ${output}
-            COMMAND ${Python3_EXECUTABLE} bitcode2cpp.py c --runtime=${bit} --os=${os_name} --arch=${target_arch} --fake --llvm_as ${LLVM_AS_EXECUTABLE}
+            COMMAND ${Python3_EXECUTABLE} bitcode2cpp.py c --type=builtins-c --runtime=${bit} --os=${os_name} --arch=${target_arch} --fake --llvm_as ${LLVM_AS_EXECUTABLE}
             > ${output}
             DEPENDS ${inputFilePath} bitcode2cpp.py
             WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
@@ -220,7 +225,7 @@ function(builtin_to_cpp bit os_name arch supported_archs supported_oses resultFi
         add_custom_command(
             OUTPUT ${output}
             COMMAND ${CLANG_EXECUTABLE} ${target_flags} -w -m${bit} -emit-llvm -c ${inputFilePath} -o - | (\"${LLVM_DIS_EXECUTABLE}\" - || echo "builtins.c compile error")
-                | \"${Python3_EXECUTABLE}\" bitcode2cpp.py c --runtime=${bit} --os=${os_name} --arch=${target_arch} --llvm_as ${LLVM_AS_EXECUTABLE}
+                | \"${Python3_EXECUTABLE}\" bitcode2cpp.py c --type=builtins-c --runtime=${bit} --os=${os_name} --arch=${target_arch} --llvm_as ${LLVM_AS_EXECUTABLE}
                 > ${output}
             DEPENDS ${inputFilePath} bitcode2cpp.py
             WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
