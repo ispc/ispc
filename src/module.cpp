@@ -151,7 +151,7 @@ Module::Module(const char *fn) {
     if (g->generateDebuggingSymbols) {
         // To enable debug information on Windows, we have to let llvm know, that
         // debug information should be emitted in CodeView format.
-        if (g->target_os == OS_WINDOWS) {
+        if (g->target_os == TargetOS::windows) {
             module->addModuleFlag(llvm::Module::Warning, "CodeView", 1);
         } else {
             module->addModuleFlag(llvm::Module::Warning, "Dwarf Version", g->generateDWARFVersion);
@@ -650,7 +650,7 @@ void Module::AddFunctionDeclaration(const std::string &name, const FunctionType 
     }
     llvm::Function *function = llvm::Function::Create(llvmFunctionType, linkage, functionName.c_str(), module);
 
-    if (g->target_os == OS_WINDOWS) {
+    if (g->target_os == TargetOS::windows) {
         // Make export functions callable from DLLs.
         if ((g->dllExport) && (storageClass != SC_STATIC)) {
             function->setDLLStorageClass(llvm::GlobalValue::DLLExportStorageClass);
@@ -2267,7 +2267,7 @@ static llvm::Module *lInitDispatchModule() {
     module->setDataLayout(g->target->getDataLayout()->getStringRepresentation());
 
     // First, link in the definitions from the builtins-dispatch.ll file.
-    if (g->target_os == TargetOS::OS_WINDOWS) {
+    if (g->target_os == TargetOS::windows) {
 #ifdef ISPC_HOST_IS_WINDOWS // supported only on Windows
         extern const unsigned char builtins_bitcode_win_dispatch[];
         extern int builtins_bitcode_win_dispatch_length;

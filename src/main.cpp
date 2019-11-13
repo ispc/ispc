@@ -571,7 +571,7 @@ int main(int Argc, char *Argv[]) {
             target = argv[i] + 9;
         } else if (!strncmp(argv[i], "--target-os=", 12)) {
             g->target_os = StringToOS(argv[i] + 12);
-            if (g->target_os == OS_ERROR) {
+            if (g->target_os == TargetOS::error) {
                 fprintf(stderr, "Unsupported value for --target-os, supported values are: %s\n",
                         Target::SupportedOSes().c_str());
                 usage(1);
@@ -753,7 +753,7 @@ int main(int Argc, char *Argv[]) {
     }
 
     // Default settings for PS4
-    if (g->target_os == TargetOS::OS_PS4) {
+    if (g->target_os == TargetOS::ps4) {
         flags |= Module::GeneratePIC;
         if (!cpu) {
             // Default is btver2, but do not enforce it.
@@ -811,11 +811,11 @@ int main(int Argc, char *Argv[]) {
                              "Program will be compiled and warnings/errors will "
                              "be issued, but no output will be generated.");
 
-    if (g->target_os == OS_WINDOWS && (flags & Module::GeneratePIC) != 0) {
+    if (g->target_os == TargetOS::windows && (flags & Module::GeneratePIC) != 0) {
         Warning(SourcePos(), "--pic switch for Windows target will be ignored.");
     }
 
-    if (g->target_os != OS_WINDOWS && g->dllExport) {
+    if (g->target_os != TargetOS::windows && g->dllExport) {
         Warning(SourcePos(), "--dllexport switch will be ignored, as the target OS is not Windows.");
     }
 

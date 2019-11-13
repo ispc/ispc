@@ -932,7 +932,7 @@ void DefineStdlib(SymbolTable *symbolTable, llvm::LLVMContext *ctx, llvm::Module
     std::vector<llvm::Constant *> debug_symbols;
     bool runtime32 = g->target->is32Bit();
     bool warn = g->target->getISA() != Target::GENERIC;
-    bool target_is_windows = g->target_os == TargetOS::OS_WINDOWS;
+    bool target_is_windows = g->target_os == TargetOS::windows;
 
 #define EXPORT_MODULE_COND_WARN(export_module, warnings)                                                               \
     extern const unsigned char export_module[];                                                                        \
@@ -956,14 +956,14 @@ void DefineStdlib(SymbolTable *symbolTable, llvm::LLVMContext *ctx, llvm::Module
     // build are will have zero length.
 
     switch (g->target_os) {
-    case TargetOS::OS_WINDOWS:
+    case TargetOS::windows:
         if (runtime32) {
             EXPORT_MODULE_COND_WARN(builtins_bitcode_windows_i386_c_32bit, warn);
         } else {
             EXPORT_MODULE_COND_WARN(builtins_bitcode_windows_x86_64_c_64bit, warn);
         }
         break;
-    case TargetOS::OS_LINUX:
+    case TargetOS::linux:
         if (runtime32) {
             if (g->target->getArch() == "x86") {
                 EXPORT_MODULE_COND_WARN(builtins_bitcode_linux_i386_c_32bit, warn);
@@ -980,7 +980,7 @@ void DefineStdlib(SymbolTable *symbolTable, llvm::LLVMContext *ctx, llvm::Module
             }
         }
         break;
-    case TargetOS::OS_MAC:
+    case TargetOS::macos:
         if (runtime32) {
             Error(SourcePos(), "doesn't exist");
             EXPORT_MODULE_COND_WARN(builtins_bitcode_macos_i386_c_32bit, warn);
@@ -988,7 +988,7 @@ void DefineStdlib(SymbolTable *symbolTable, llvm::LLVMContext *ctx, llvm::Module
             EXPORT_MODULE_COND_WARN(builtins_bitcode_macos_x86_64_c_64bit, warn);
         }
         break;
-    case TargetOS::OS_ANDROID:
+    case TargetOS::android:
         if (runtime32) {
             if (g->target->getArch() == "x86") {
                 EXPORT_MODULE_COND_WARN(builtins_bitcode_android_i386_c_32bit, warn);
@@ -1005,7 +1005,7 @@ void DefineStdlib(SymbolTable *symbolTable, llvm::LLVMContext *ctx, llvm::Module
             }
         }
         break;
-    case TargetOS::OS_IOS:
+    case TargetOS::ios:
         if (runtime32) {
             Error(SourcePos(), "doesn't exist");
             EXPORT_MODULE_COND_WARN(builtins_bitcode_ios_i386_c_32bit, warn);
@@ -1013,7 +1013,7 @@ void DefineStdlib(SymbolTable *symbolTable, llvm::LLVMContext *ctx, llvm::Module
             EXPORT_MODULE_COND_WARN(builtins_bitcode_ios_arm64_c_64bit, warn);
         }
         break;
-    case TargetOS::OS_PS4:
+    case TargetOS::ps4:
         if (runtime32) {
             Error(SourcePos(), "doesn't exist");
             EXPORT_MODULE_COND_WARN(builtins_bitcode_ps4_i386_c_32bit, warn);
