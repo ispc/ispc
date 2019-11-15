@@ -3619,6 +3619,17 @@ llvm::Value *FunctionEmitContext::GenXPrepareVectorBranch(llvm::Value *value) {
     return GenXSimdCFAny(ret);
 }
 
+llvm::Value *FunctionEmitContext::GenXStartUnmaskedRegion() {
+    auto Fn = llvm::GenXIntrinsic::getGenXDeclaration(m->module, llvm::GenXIntrinsic::genx_unmask_begin);
+    std::vector<llvm::Value *> args;
+    return llvm::CallInst::Create(Fn, args, "", bblock);
+}
+
+void FunctionEmitContext::GenXEndUnmaskedRegion(llvm::Value *em) {
+    auto Fn = llvm::GenXIntrinsic::getGenXDeclaration(m->module, llvm::GenXIntrinsic::genx_unmask_end);
+    llvm::CallInst::Create(Fn, em, "", bblock);
+}
+
 void FunctionEmitContext::addUniformMetadata(llvm::Value *v) {
     llvm::Instruction *inst = llvm::dyn_cast<llvm::Instruction>(v);
     // Set ISPC-Uniform to exclude instruction from predication in CMSIMDCFLowering.
