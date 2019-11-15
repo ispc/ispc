@@ -966,17 +966,17 @@ void DefineStdlib(SymbolTable *symbolTable, llvm::LLVMContext *ctx, llvm::Module
         break;
     case TargetOS::linux:
         if (runtime32) {
-            if (g->target->getArch() == "x86") {
+            if (g->target->getArch() == Arch::x86) {
                 EXPORT_MODULE_COND_WARN(builtins_bitcode_linux_i386_c_32bit, warn);
             }
-            if (g->target->getArch() == "arm") {
+            if (g->target->getArch() == Arch::arm) {
                 EXPORT_MODULE_COND_WARN(builtins_bitcode_linux_armv7_c_32bit, warn);
             }
         } else {
-            if (g->target->getArch() == "x86-64") {
+            if (g->target->getArch() == Arch::x86_64) {
                 EXPORT_MODULE_COND_WARN(builtins_bitcode_linux_x86_64_c_64bit, warn);
             }
-            if (g->target->getArch() == "aarch64") {
+            if (g->target->getArch() == Arch::aarch64) {
                 EXPORT_MODULE_COND_WARN(builtins_bitcode_linux_aarch64_c_64bit, warn);
             }
         }
@@ -991,17 +991,17 @@ void DefineStdlib(SymbolTable *symbolTable, llvm::LLVMContext *ctx, llvm::Module
         break;
     case TargetOS::android:
         if (runtime32) {
-            if (g->target->getArch() == "x86") {
+            if (g->target->getArch() == Arch::x86) {
                 EXPORT_MODULE_COND_WARN(builtins_bitcode_android_i386_c_32bit, warn);
             }
-            if (g->target->getArch() == "arm") {
+            if (g->target->getArch() == Arch::arm) {
                 EXPORT_MODULE_COND_WARN(builtins_bitcode_android_armv7_c_32bit, warn);
             }
         } else {
-            if (g->target->getArch() == "x86-64") {
+            if (g->target->getArch() == Arch::x86_64) {
                 EXPORT_MODULE_COND_WARN(builtins_bitcode_android_x86_64_c_64bit, warn);
             }
-            if (g->target->getArch() == "aarch64") {
+            if (g->target->getArch() == Arch::aarch64) {
                 EXPORT_MODULE_COND_WARN(builtins_bitcode_android_aarch64_c_64bit, warn);
             }
         }
