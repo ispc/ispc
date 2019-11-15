@@ -108,6 +108,7 @@
 #include <llvm/Support/Regex.h>
 #endif
 #ifdef ISPC_GENX_ENABLED
+#include "llvm/GenXIntrinsics/GenXIntrinsics.h"
 #include "llvm/Transforms/Utils/UnifyFunctionExitNodes.h"
 // Constant in number of bytes.
 enum { BYTE = 1, WORD = 2, DWORD = 4, QWORD = 8, OWORD = 16, GRF = 32 };
@@ -2836,8 +2837,8 @@ static bool lImproveMaskedStore(llvm::CallInst *callInst) {
             llvm::Instruction *svm_st_zext =
                 new llvm::ZExtInst(svm_st_ptrtoint, LLVMTypes::Int64Type, "svm_st_zext", callInst);
             llvm::Type *argTypes[] = {rvalue->getType()};
-
-            auto Fn = llvm::Intrinsic::getDeclaration(m->module, llvm::Intrinsic::genx_svm_block_st, argTypes);
+            auto Fn =
+                llvm::GenXIntrinsic::getGenXDeclaration(m->module, llvm::GenXIntrinsic::genx_svm_block_st, argTypes);
             store = lCallInst(Fn, svm_st_zext, rvalue, "", NULL);
         } else if (g->target->getISA() != Target::GENX ||
                    g->target->getISA() == Target::GENX && GetAddressSpace(lvalue) == AddressSpace::Local) {
@@ -2918,8 +2919,9 @@ static bool lImproveMaskedLoad(llvm::CallInst *callInst, llvm::BasicBlock::itera
                 new llvm::PtrToIntInst(ptr, LLVMTypes::Int32Type, "svm_ld_ptrtoint", callInst);
             llvm::Value *svm_ld_zext =
                 new llvm::ZExtInst(svm_ld_ptrtoint, LLVMTypes::Int64Type, "svm_ld_zext", callInst);
+            auto Fn =
+                llvm::GenXIntrinsic::getGenXDeclaration(m->module, llvm::GenXIntrinsic::genx_svm_block_ld, retType);
 
-            auto Fn = llvm::Intrinsic::getDeclaration(m->module, llvm::Intrinsic::genx_svm_block_ld, retType);
             load = llvm::CallInst::Create(Fn, svm_ld_zext, callInst->getName());
         } else if (g->target->getISA() != Target::GENX ||
                    g->target->getISA() == Target::GENX && GetAddressSpace(ptr) == AddressSpace::Local) {
@@ -5413,7 +5415,8 @@ restart:
             if (func && func->getName() == "llvm.trap") {
                 llvm::Type *argTypes[] = {LLVMTypes::Int1VectorType, LLVMTypes::Int16VectorType};
                 // Description of parameters for genx_raw_send_noresult can be found in target-genx.ll
-                auto Fn = llvm::Intrinsic::getDeclaration(m->module, llvm::Intrinsic::genx_raw_send_noresult, argTypes);
+                auto Fn = +llvm::GenXIntrinsic::getGenXDeclaration(
+                    m->module, llvm::GenXIntrinsic::genx_raw_send_noresult, argTypes);
                 llvm::SmallVector<llvm::Value *, 8> Args;
                 Args.push_back(llvm::ConstantInt::get(LLVMTypes::Int32Type, 0));
                 Args.push_back(llvm::ConstantVector::getSplat(16, llvm::ConstantInt::getTrue(*g->ctx)));

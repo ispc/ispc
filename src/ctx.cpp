@@ -53,8 +53,7 @@
 #include <llvm/IR/Metadata.h>
 #include <llvm/IR/Module.h>
 #ifdef ISPC_GENX_ENABLED
-#include "llvm/IR/Intrinsics.h"
-#include "llvm/IR/IntrinsicsGenX.h"
+#include "llvm/GenXIntrinsics/GenXIntrinsics.h"
 #endif
 /** This is a small utility structure that records information related to one
     level of nested control flow.  It's mostly used in correctly restoring
@@ -3585,7 +3584,8 @@ llvm::Value *FunctionEmitContext::GenXSimdCFAny(llvm::Value *value) {
     AssertPos(currentPos, llvm::isa<llvm::VectorType>(value->getType()));
     llvm::Value *mask = GetInternalMask();
     value = BinaryOperator(llvm::BinaryOperator::And, mask, value);
-    auto Fn = llvm::Intrinsic::getDeclaration(m->module, llvm::Intrinsic::genx_simdcf_any, LLVMTypes::Int1VectorType);
+    auto Fn = llvm::GenXIntrinsic::getGenXDeclaration(m->module, llvm::GenXIntrinsic::genx_simdcf_any,
+                                                      LLVMTypes::Int1VectorType);
     return llvm::CallInst::Create(Fn, value, "", bblock);
 }
 
@@ -3598,7 +3598,8 @@ llvm::Value *FunctionEmitContext::GenXSimdCFPredicate(llvm::Value *value, llvm::
     }
 
     llvm::Type *Tys[] = {value->getType()};
-    auto Fn = llvm::Intrinsic::getDeclaration(m->module, llvm::Intrinsic::genx_simdcf_predicate, value->getType());
+    auto Fn = llvm::GenXIntrinsic::getGenXDeclaration(m->module, llvm::GenXIntrinsic::genx_simdcf_predicate,
+                                                      value->getType());
     std::vector<llvm::Value *> args;
     args.push_back(value);
     args.push_back(defaults);
