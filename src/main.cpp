@@ -519,7 +519,8 @@ int main(int Argc, char *Argv[]) {
 
     Module::OutputType ot = Module::Object;
     Module::OutputFlags flags = Module::NoFlags;
-    const char *arch = NULL, *cpu = NULL, *target = NULL, *intelAsmSyntax = NULL;
+    Arch arch = Arch::none;
+    const char *cpu = NULL, *target = NULL, *intelAsmSyntax = NULL;
 
     ArgErrors errorHandler;
 
@@ -542,12 +543,12 @@ int main(int Argc, char *Argv[]) {
                                       argv[i] + 13);
             }
         } else if (!strncmp(argv[i], "--arch=", 7)) {
-            arch = argv[i] + 7;
-            // Define arch alias
-            // LLVM TargetRegistry uses "x86-64", while triple uses "x86_64".
-            // We support both as input and internally keep it as "x86-64".
-            if (std::string(arch) == "x86_64") {
-                arch = "x86-64";
+            // TODO: warn on arch redefinition
+
+            arch = ParseArch(argv[i] + 7);
+            if (arch == Arch::error) {
+                errorHandler.AddError("Unsupported value for --arch, supported values are: %s",
+                                      Target::SupportedArchs());
             }
         } else if (!strncmp(argv[i], "--x86-asm-syntax=", 17)) {
             intelAsmSyntax = argv[i] + 17;
@@ -820,10 +821,10 @@ int main(int Argc, char *Argv[]) {
             Warning(SourcePos(), "--cpu switch is ignored for PS4 target OS. btver2 (ps4) cpu is used.");
         }
         */
-        if (arch && std::string(arch) != "x86-64") {
+        if (arch != Arch::x86_64) {
             Warning(SourcePos(), "--arch switch is ignored for PS4 target OS. x86-64 arch is used.");
+            arch = Arch::x86_64;
         }
-        arch = "x86-64";
     }
 
     if (g->enableFuzzTest) {

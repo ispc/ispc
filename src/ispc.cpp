@@ -180,17 +180,17 @@ static const char *lGetSystemISA() {
 #endif
 }
 
-static const bool lIsISAValidforArch(const char *isa, const char *arch) {
+static const bool lIsISAValidforArch(const char *isa, Arch arch) {
     bool ret = true;
     // If target name starts with sse or avx, has to be x86 or x86-64.
     if (!strncmp(isa, "sse", 3) || !strncmp(isa, "avx", 3)) {
-        if ((strcasecmp(arch, "x86-64") != 0) && (strcasecmp(arch, "x86") != 0))
+        if (arch != Arch::x86_64 && arch != Arch::x86)
             ret = false;
     } else if (!strcasecmp(isa, "neon-i8x16") || !strcasecmp(isa, "neon-i16x8")) {
-        if (strcasecmp(arch, "arm"))
+        if (arch != Arch::arm)
             ret = false;
     } else if (!strcasecmp(isa, "neon-i32x4") || !strcasecmp(isa, "neon-i32x8") || !strcasecmp(isa, "neon")) {
-        if ((strcasecmp(arch, "arm") != 0) && (strcasecmp(arch, "aarch64") != 0))
+        if (arch != Arch::arm && arch != Arch::aarch64)
             ret = false;
     }
 
@@ -440,8 +440,8 @@ class AllCPUs {
     }
 };
 
-Target::Target(const char *arch, const char *cpu, const char *isa, bool pic, bool printTarget)
-    : m_target(NULL), m_targetMachine(NULL), m_dataLayout(NULL), m_valid(false), m_isa(SSE2), m_arch(""),
+Target::Target(Arch arch, const char *cpu, const char *isa, bool pic, bool printTarget)
+    : m_target(NULL), m_targetMachine(NULL), m_dataLayout(NULL), m_valid(false), m_isa(SSE2), m_arch(Arch::none),
       m_is32Bit(true), m_cpu(""), m_attributes(""), m_tf_attributes(NULL), m_nativeVectorWidth(-1),
       m_nativeVectorAlignment(-1), m_dataTypeWidth(-1), m_vectorWidth(-1), m_generatePIC(pic), m_maskingIsFree(false),
       m_maskBitCount(-1), m_hasHalf(false), m_hasRand(false), m_hasGather(false), m_hasScatter(false),
@@ -541,17 +541,17 @@ Target::Target(const char *arch, const char *cpu, const char *isa, bool pic, boo
         isa = lGetSystemISA();
     }
 
-    if (arch == NULL) {
+    if (arch == Arch::none) {
 #ifdef ISPC_ARM_ENABLED
         if (!strncmp(isa, "neon", 4)) {
 #if defined(__arm__)
-            arch = "arm";
+            arch = Arch::arm;
 #else
-            arch = "aarch64";
+            arch = Arch::aarch64;
 #endif
         } else
 #endif
-            arch = "x86-64";
+            arch = Arch::x86_64;
     }
 
     bool error = false;
@@ -560,7 +560,7 @@ Target::Target(const char *arch, const char *cpu, const char *isa, bool pic, boo
     // with the valid ones otherwise.
     for (llvm::TargetRegistry::iterator iter = llvm::TargetRegistry::targets().begin();
          iter != llvm::TargetRegistry::targets().end(); ++iter) {
-        if (std::string(arch) == iter->getName()) {
+        if (ArchToString(arch) == iter->getName()) {
             this->m_target = &*iter;
             break;
         }
@@ -568,7 +568,7 @@ Target::Target(const char *arch, const char *cpu, const char *isa, bool pic, boo
     if (this->m_target == NULL) {
         std::string error_message;
         error_message = "Invalid architecture \"";
-        error_message += arch;
+        error_message += ArchToString(arch);
         error_message += "\"\nOptions: ";
         llvm::TargetRegistry::iterator iter;
         const char *separator = "";
@@ -586,7 +586,8 @@ Target::Target(const char *arch, const char *cpu, const char *isa, bool pic, boo
 
     // Ensure that we have a valid isa/arch combination.
     if (!lIsISAValidforArch(isa, arch)) {
-        Error(SourcePos(), "arch = %s and target = %s is not a valid combination.", arch, isa);
+        std::string str_arch = ArchToString(arch);
+        Error(SourcePos(), "arch = %s and target = %s is not a valid combination.", str_arch.c_str(), isa);
         return;
     }
 
@@ -909,11 +910,11 @@ Target::Target(const char *arch, const char *cpu, const char *isa, bool pic, boo
     }
 
 #if defined(ISPC_ARM_ENABLED) && !defined(__arm__)
-    if ((CPUID == CPU_None) && !strncmp(isa, "neon", 4) && !strncmp(arch, "arm", 3))
+    if ((CPUID == CPU_None) && !strncmp(isa, "neon", 4) && arch == Arch::arm)
         CPUID = CPU_CortexA9;
 #endif
 #if defined(ISPC_ARM_ENABLED) && !defined(__aarch64__)
-    if ((CPUID == CPU_None) && !strncmp(isa, "neon", 4) && !strncmp(arch, "aarch64", 7))
+    if ((CPUID == CPU_None) && !strncmp(isa, "neon", 4) && arch == Arch::aarch64)
         CPUID = CPU_CortexA35;
 #endif
     if (CPUID == CPU_None) {
@@ -942,10 +943,10 @@ Target::Target(const char *arch, const char *cpu, const char *isa, bool pic, boo
 #ifdef ISPC_ARM_ENABLED
         if (m_isa == Target::NEON)
             options.FloatABIType = llvm::FloatABI::Hard;
-        if (strcmp("arm", arch) == 0) {
+        if (arch == Arch::arm) {
             this->m_funcAttributes.push_back(std::make_pair("target-features", "+neon,+fp16"));
             featuresString = "+neon,+fp16";
-        } else if (strcmp("aarch64", arch) == 0) {
+        } else if (arch == Arch::aarch64) {
             this->m_funcAttributes.push_back(std::make_pair("target-features", "+neon"));
             featuresString = "+neon";
         }
@@ -1098,14 +1099,14 @@ std::string Target::GetTripleString() const {
     llvm::Triple triple;
     switch (g->target_os) {
     case TargetOS::windows:
-        if (m_arch == "x86") {
+        if (m_arch == Arch::x86) {
             triple.setArchName("i386");
-        } else if (m_arch == "x86-64") {
+        } else if (m_arch == Arch::x86_64) {
             triple.setArchName("x86_64");
-        } else if (m_arch == "arm") {
+        } else if (m_arch == Arch::arm) {
             Error(SourcePos(), "Arm is not supported on Windows.");
             exit(1);
-        } else if (m_arch == "aarch64") {
+        } else if (m_arch == Arch::aarch64) {
             Error(SourcePos(), "Aarch64 is not supported on Windows.");
             exit(1);
         } else {
@@ -1118,13 +1119,13 @@ std::string Target::GetTripleString() const {
         triple.setEnvironment(llvm::Triple::EnvironmentType::MSVC);
         break;
     case TargetOS::linux:
-        if (m_arch == "x86") {
+        if (m_arch == Arch::x86) {
             triple.setArchName("i386");
-        } else if (m_arch == "x86-64") {
+        } else if (m_arch == Arch::x86_64) {
             triple.setArchName("x86_64");
-        } else if (m_arch == "arm") {
+        } else if (m_arch == Arch::arm) {
             triple.setArchName("armv7");
-        } else if (m_arch == "aarch64") {
+        } else if (m_arch == Arch::aarch64) {
             triple.setArchName("aarch64");
         } else {
             Error(SourcePos(), "Unknown arch.");
@@ -1136,7 +1137,7 @@ std::string Target::GetTripleString() const {
         break;
     case TargetOS::macos:
         // asserts
-        if (m_arch != "x86-64") {
+        if (m_arch != Arch::x86_64) {
             Error(SourcePos(), "macOS target supports only x86_64.");
             exit(1);
         }
@@ -1145,13 +1146,13 @@ std::string Target::GetTripleString() const {
         triple.setOS(llvm::Triple::OSType::MacOSX);
         break;
     case TargetOS::android:
-        if (m_arch == "x86") {
+        if (m_arch == Arch::x86) {
             triple.setArchName("i386");
-        } else if (m_arch == "x86-64") {
+        } else if (m_arch == Arch::x86_64) {
             triple.setArchName("x86_64");
-        } else if (m_arch == "arm") {
+        } else if (m_arch == Arch::arm) {
             triple.setArchName("armv7");
-        } else if (m_arch == "aarch64") {
+        } else if (m_arch == Arch::aarch64) {
             triple.setArchName("aarch64");
         } else {
             Error(SourcePos(), "Unknown arch.");
@@ -1162,7 +1163,7 @@ std::string Target::GetTripleString() const {
         triple.setEnvironment(llvm::Triple::EnvironmentType::Android);
         break;
     case TargetOS::ios:
-        if (m_arch != "aarch64") {
+        if (m_arch != Arch::aarch64) {
             Error(SourcePos(), "iOS target supports only aarch64.");
             exit(1);
         }
@@ -1174,7 +1175,7 @@ std::string Target::GetTripleString() const {
         triple.setOS(llvm::Triple::OSType::IOS);
         break;
     case TargetOS::ps4:
-        if (m_arch != "x86-64") {
+        if (m_arch != Arch::x86_64) {
             Error(SourcePos(), "PS4 target supports only x86_64.");
             exit(1);
         }
@@ -1484,4 +1485,35 @@ constexpr TargetOS GetHostOS() {
 #else
     return TargetOS::error;
 #endif
+}
+
+Arch ParseArch(std::string arch) {
+    if (arch == "x86") {
+        return Arch::x86;
+    } else if (arch == "x86_64" || arch == "x86-64") {
+        return Arch::x86_64;
+    } else if (arch == "arm") {
+        return Arch::arm;
+    } else if (arch == "aarch64") {
+        return Arch::aarch64;
+    }
+    return Arch::error;
+}
+
+std::string ArchToString(Arch arch) {
+    switch (arch) {
+    case Arch::x86:
+        return "x86";
+    case Arch::x86_64:
+        return "x86-64";
+    case Arch::arm:
+        return "arm";
+    case Arch::aarch64:
+        return "aarch64";
+    default:
+        // none and error are not supposed to be printed.
+        Error(SourcePos(), "Invalid arch is processed");
+        exit(1);
+    }
+    return "error";
 }

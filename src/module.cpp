@@ -2367,7 +2367,7 @@ static void lExtractOrCheckGlobals(llvm::Module *msrc, llvm::Module *mdst, bool 
     }
 }
 
-int Module::CompileAndOutput(const char *srcFile, const char *arch, const char *cpu, const char *target,
+int Module::CompileAndOutput(const char *srcFile, Arch arch, const char *cpu, const char *target,
                              OutputFlags outputFlags, OutputType outputType, const char *outFileName,
                              const char *headerFileName, const char *includeFileName, const char *depsFileName,
                              const char *depsTargetName, const char *hostStubFileName, const char *devStubFileName) {

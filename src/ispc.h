@@ -114,6 +114,11 @@ enum class TargetOS { windows, linux, macos, android, ios, ps4, error };
 TargetOS StringToOS(std::string os);
 constexpr TargetOS GetHostOS();
 
+enum class Arch { none, x86, x86_64, arm, aarch64, error };
+
+Arch ParseArch(std::string arch);
+std::string ArchToString(Arch arch);
+
 /** @brief Representation of a range of positions in a source file.
 
     This class represents a range of characters in a source file
@@ -183,7 +188,7 @@ class Target {
     /** Initializes the given Target pointer for a target of the given
         name, if the name is a known target.  Returns true if the
         target was initialized and false if the name is unknown. */
-    Target(const char *arch, const char *cpu, const char *isa, bool pic, bool printTarget);
+    Target(Arch arch, const char *cpu, const char *isa, bool pic, bool printTarget);
 
     /** Returns a comma-delimited string giving the names of the currently
         supported compilation targets. */
@@ -244,7 +249,7 @@ class Target {
 
     ISA getISA() const { return m_isa; }
 
-    std::string getArch() const { return m_arch; }
+    Arch getArch() const { return m_arch; }
 
     bool is32Bit() const { return m_is32Bit; }
 
@@ -305,7 +310,7 @@ class Target {
     ISA m_isa;
 
     /** Target system architecture.  (e.g. "x86-64", "x86"). */
-    std::string m_arch;
+    Arch m_arch;
 
     /** Is the target architecture 32 or 64 bit */
     bool m_is32Bit;
