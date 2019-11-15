@@ -549,6 +549,12 @@ class FunctionEmitContext {
     emulated uniform condition was found in external scopes and start SIMD control
     flow with simdcf.any intrinsic*/
     llvm::Value *GenXPrepareVectorBranch(llvm::Value *value);
+    /*Start unmasked region. Sets execution mask to all-active, and return
+     the old mask in a temp.*/
+    llvm::Value *GenXStartUnmaskedRegion();
+    /*End unmasked region. Set execution mask back using the temp value from unmask-begin*/
+    void GenXEndUnmaskedRegion(llvm::Value *em);
+
     bool ifEmulatedUniformForGen() const;
     /*Add ISPC-Uniform metadata to llvm instruction. Instruction with
     such metadata will not be predicated in CMSIMDCFLowering pass*/
