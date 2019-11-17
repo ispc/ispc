@@ -520,7 +520,8 @@ int main(int Argc, char *Argv[]) {
     Module::OutputType ot = Module::Object;
     Module::OutputFlags flags = Module::NoFlags;
     Arch arch = Arch::none;
-    const char *cpu = NULL, *target = NULL, *intelAsmSyntax = NULL;
+    std::vector<ISPCTarget> targets;
+    const char *cpu = NULL, *intelAsmSyntax = NULL;
 
     ArgErrors errorHandler;
 
@@ -616,12 +617,22 @@ int main(int Argc, char *Argv[]) {
         else if (!strcmp(argv[i], "--target")) {
             // FIXME: should remove this way of specifying the target...
             if (++i != argc) {
-                target = argv[i];
+                auto result = ParseISPCTargets(argv[i]);
+                targets = result.first;
+                if (!result.second.empty()) {
+                    errorHandler.AddError("Incorrect targets: %s.  Choices are: %s.", result.second.c_str(),
+                                          Target::SupportedTargets());
+                }
             } else {
                 errorHandler.AddError("No target specified after --target option.");
             }
         } else if (!strncmp(argv[i], "--target=", 9)) {
-            target = argv[i] + 9;
+            auto result = ParseISPCTargets(argv[i] + 9);
+            targets = result.first;
+            if (!result.second.empty()) {
+                errorHandler.AddError("Incorrect targets: %s.  Choices are: %s.", result.second.c_str(),
+                                      Target::SupportedTargets());
+            }
         } else if (!strncmp(argv[i], "--target-os=", 12)) {
             g->target_os = StringToOS(argv[i] + 12);
             if (g->target_os == TargetOS::error) {
@@ -888,6 +899,6 @@ int main(int Argc, char *Argv[]) {
         llvm::cl::ParseCommandLineOptions(2, Args.data());
     }
 
-    return Module::CompileAndOutput(file, arch, cpu, target, flags, ot, outFileName, headerFileName, includeFileName,
+    return Module::CompileAndOutput(file, arch, cpu, targets, flags, ot, outFileName, headerFileName, includeFileName,
                                     depsFileName, depsTargetName, hostStubFileName, devStubFileName);
 }

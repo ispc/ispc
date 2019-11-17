@@ -135,7 +135,7 @@ class Module {
         @return             Number of errors encountered when compiling
                             srcFile.
      */
-    static int CompileAndOutput(const char *srcFile, Arch arch, const char *cpu, const char *targets,
+    static int CompileAndOutput(const char *srcFile, Arch arch, const char *cpu, std::vector<ISPCTarget> targets,
                                 OutputFlags outputFlags, OutputType outputType, const char *outFileName,
                                 const char *headerFileName, const char *includeFileName, const char *depsFileName,
                                 const char *depsTargetName, const char *hostStubFileName, const char *devStubFileName);

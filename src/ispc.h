@@ -119,6 +119,46 @@ enum class Arch { none, x86, x86_64, arm, aarch64, error };
 Arch ParseArch(std::string arch);
 std::string ArchToString(Arch arch);
 
+enum class ISPCTarget {
+    none,
+    host,
+    sse2_i32x4,
+    sse2_i32x8,
+    sse4_i8x16,
+    sse4_i16x8,
+    sse4_i32x4,
+    sse4_i32x8,
+    avx1_i32x4,
+    avx1_i32x8,
+    avx1_i32x16,
+    avx1_i64x4,
+    avx2_i32x4,
+    avx2_i32x8,
+    avx2_i32x16,
+    avx2_i64x4,
+    avx512knl_i32x16,
+    avx512skx_i32x8,
+    avx512skx_i32x16,
+    generic_1,
+    generic_4,
+    generic_8,
+    generic_16,
+    generic_32,
+    generic_64,
+    neon_i8x16,
+    neon_i16x8,
+    neon_i32x4,
+    neon_i32x8,
+    error
+};
+
+ISPCTarget ParseISPCTarget(std::string target);
+std::pair<std::vector<ISPCTarget>, std::string> ParseISPCTargets(const char *target);
+std::string ISPCTargetToString(ISPCTarget target);
+bool ISPCTargetIsX86(ISPCTarget target);
+bool ISPCTargetIsGeneric(ISPCTarget target);
+bool ISPCTargetIsNeon(ISPCTarget target);
+
 /** @brief Representation of a range of positions in a source file.
 
     This class represents a range of characters in a source file
@@ -188,7 +228,7 @@ class Target {
     /** Initializes the given Target pointer for a target of the given
         name, if the name is a known target.  Returns true if the
         target was initialized and false if the name is unknown. */
-    Target(Arch arch, const char *cpu, const char *isa, bool pic, bool printTarget);
+    Target(Arch arch, const char *cpu, ISPCTarget isa, bool pic, bool printTarget);
 
     /** Returns a comma-delimited string giving the names of the currently
         supported compilation targets. */
