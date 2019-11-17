@@ -16,6 +16,8 @@
 //; RUN: not %{ispc} %s -o %t.o --nowrap --target=avx2-i32x8 --debug-phase=2000 2>&1 | FileCheck %s -check-prefix=CHECK_ERROR_16
 //; RUN: not %{ispc} %s -o %t.o --nowrap --target=avx2-i32x8 --off-phase=2000 2>&1 | FileCheck %s -check-prefix=CHECK_ERROR_17
 //; RUN: not %{ispc} %s -o %t.o --nowrap --target=avx2-i32x8 --arch=x64 2>&1 | FileCheck %s -check-prefix=CHECK_ERROR_18
+//; RUN: not %{ispc} %s -o %t.o --nowrap --target=sse3,avx2-i32x8,gost 2>&1 | FileCheck %s -check-prefix=CHECK_ERROR_19
+//; RUN: not %{ispc} %s -o %t.o --nowrap --target sse3,avx2-i32x8,gost 2>&1 | FileCheck %s -check-prefix=CHECK_ERROR_20
 
 //; RUN: not %{ispc} %s -o %t.o --nowrap --target=avx2-i32x8 -not-existing-opt --quiet 2>&1 | FileCheck %s --allow-empty -check-prefix=CHECK_ERROR_QUIET
 
@@ -46,6 +48,8 @@
 //; CHECK_ERROR_16: Phases must be from 0 to 1000. 2000 is incorrect.
 //; CHECK_ERROR_17: Phases must be from 0 to 1000. 2000 is incorrect.
 //; CHECK_ERROR_18: Error: Unsupported value for --arch, supported values are:
+//; CHECK_ERROR_19: Error: Incorrect targets: sse3,gost. Choices are:
+//; CHECK_ERROR_20: Error: Incorrect targets: sse3,gost. Choices are:
 
 //; CHECK_ERROR_QUIET-NOT: Error
 

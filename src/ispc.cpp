@@ -125,9 +125,9 @@ static bool __os_has_avx512_support() {
 }
 #endif // !__arm__ && !__aarch64__
 
-static const char *lGetSystemISA() {
+static ISPCTarget lGetSystemISA() {
 #if defined(__arm__) || defined(__aarch64__)
-    return "neon-i32x4";
+    return ISPCTarget::neon_i32x4;
 #else
     int info[4];
     __cpuid(info, 1);
@@ -148,11 +148,11 @@ static const char *lGetSystemISA() {
             (info2[1] & (1 << 28)) != 0 && // AVX512 CDI
             (info2[1] & (1 << 30)) != 0 && // AVX512 BW
             (info2[1] & (1 << 31)) != 0) { // AVX512 VL
-            return "avx512skx-i32x16";
+            return ISPCTarget::avx512skx_i32x16;
         } else if ((info2[1] & (1 << 26)) != 0 && // AVX512 PF
                    (info2[1] & (1 << 27)) != 0 && // AVX512 ER
                    (info2[1] & (1 << 28)) != 0) { // AVX512 CDI
-            return "avx512knl-i32x16";
+            return ISPCTarget::avx512knl_i32x16;
         }
         // If it's unknown AVX512 target, fall through and use AVX2
         // or whatever is available in the machine.
@@ -165,14 +165,14 @@ static const char *lGetSystemISA() {
         if ((info[2] & (1 << 29)) != 0 && // F16C
             (info[2] & (1 << 30)) != 0 && // RDRAND
             (info2[1] & (1 << 5)) != 0) { // AVX2.
-            return "avx2-i32x8";
+            return ISPCTarget::avx2_i32x8;
         }
         // Regular AVX
-        return "avx1-i32x8";
+        return ISPCTarget::avx1_i32x8;
     } else if ((info[2] & (1 << 19)) != 0)
-        return "sse4-i32x4";
+        return ISPCTarget::sse4_i32x4;
     else if ((info[3] & (1 << 26)) != 0)
-        return "sse2-i32x4";
+        return ISPCTarget::sse2_i32x4;
     else {
         Error(SourcePos(), "Unable to detect supported SSE/AVX ISA.  Exiting.");
         exit(1);
@@ -180,16 +180,16 @@ static const char *lGetSystemISA() {
 #endif
 }
 
-static const bool lIsISAValidforArch(const char *isa, Arch arch) {
+static const bool lIsTargetValidforArch(ISPCTarget target, Arch arch) {
     bool ret = true;
     // If target name starts with sse or avx, has to be x86 or x86-64.
-    if (!strncmp(isa, "sse", 3) || !strncmp(isa, "avx", 3)) {
+    if (ISPCTargetIsX86(target)) {
         if (arch != Arch::x86_64 && arch != Arch::x86)
             ret = false;
-    } else if (!strcasecmp(isa, "neon-i8x16") || !strcasecmp(isa, "neon-i16x8")) {
+    } else if (target == ISPCTarget::neon_i8x16 || target == ISPCTarget::neon_i16x8) {
         if (arch != Arch::arm)
             ret = false;
-    } else if (!strcasecmp(isa, "neon-i32x4") || !strcasecmp(isa, "neon-i32x8") || !strcasecmp(isa, "neon")) {
+    } else if (target == ISPCTarget::neon_i32x4 || target == ISPCTarget::neon_i32x8) {
         if (arch != Arch::arm && arch != Arch::aarch64)
             ret = false;
     }
@@ -440,7 +440,7 @@ class AllCPUs {
     }
 };
 
-Target::Target(Arch arch, const char *cpu, const char *isa, bool pic, bool printTarget)
+Target::Target(Arch arch, const char *cpu, ISPCTarget target, bool pic, bool printTarget)
     : m_target(NULL), m_targetMachine(NULL), m_dataLayout(NULL), m_valid(false), m_isa(SSE2), m_arch(Arch::none),
       m_is32Bit(true), m_cpu(""), m_attributes(""), m_tf_attributes(NULL), m_nativeVectorWidth(-1),
       m_nativeVectorAlignment(-1), m_dataTypeWidth(-1), m_vectorWidth(-1), m_generatePIC(pic), m_maskingIsFree(false),
@@ -462,22 +462,24 @@ Target::Target(Arch arch, const char *cpu, const char *isa, bool pic, bool print
         }
     }
 
-    if (isa == NULL) {
+    if (target == ISPCTarget::none) {
         // If a CPU was specified explicitly, try to pick the best
         // possible ISA based on that.
         switch (CPUID) {
-        case CPU_None:
+        case CPU_None: {
             // No CPU and no ISA, so use system info to figure out
             // what this CPU supports.
-            isa = lGetSystemISA();
+            target = lGetSystemISA();
+            std::string target_string = ISPCTargetToString(target);
             Warning(SourcePos(),
                     "No --target specified on command-line."
                     " Using default system target \"%s\".",
-                    isa);
+                    target_string.c_str());
             break;
+        }
 
         case CPU_Generic:
-            isa = "generic-1";
+            target = ISPCTarget::generic_1;
             break;
 
 #ifdef ISPC_ARM_ENABLED
@@ -486,64 +488,66 @@ Target::Target(Arch arch, const char *cpu, const char *isa, bool pic, bool print
         case CPU_CortexA35:
         case CPU_CortexA53:
         case CPU_CortexA57:
-            isa = "neon-i32x4";
+            target = ISPCTarget::neon_i32x4;
             break;
 #endif
 
         case CPU_KNL:
-            isa = "avx512knl-i32x16";
+            target = ISPCTarget::avx512knl_i32x16;
             break;
 
 #if ISPC_LLVM_VERSION >= ISPC_LLVM_8_0 // LLVM 8.0
         case CPU_ICL:
 #endif
         case CPU_SKX:
-            isa = "avx512skx-i32x16";
+            target = ISPCTarget::avx512skx_i32x16;
             break;
 
         case CPU_Broadwell:
         case CPU_Haswell:
-            isa = "avx2-i32x8";
+            target = ISPCTarget::avx2_i32x8;
             break;
 
         case CPU_IvyBridge:
             // No specific target for IvyBridge anymore.
-            isa = "avx1-i32x8";
+            target = ISPCTarget::avx1_i32x8;
             break;
 
         case CPU_SandyBridge:
-            isa = "avx1-i32x8";
+            target = ISPCTarget::avx1_i32x8;
             break;
 
         // Penryn is here because ISPC does not use SSE 4.2
         case CPU_Penryn:
         case CPU_Nehalem:
         case CPU_Silvermont:
-            isa = "sse4-i32x4";
+            target = ISPCTarget::sse4_i32x4;
             break;
 
         case CPU_PS4:
-            isa = "avx1-i32x4";
+            target = ISPCTarget::avx1_i32x4;
             break;
 
         default:
-            isa = "sse2-i32x4";
+            target = ISPCTarget::sse2_i32x4;
             break;
         }
-        if (CPUID != CPU_None)
+        if (CPUID != CPU_None) {
+            std::string target_string = ISPCTargetToString(target);
             Warning(SourcePos(),
                     "No --target specified on command-line."
                     " Using ISA \"%s\" based on specified CPU \"%s\".",
-                    isa, cpu);
+                    target_string.c_str(), cpu);
+        }
     }
 
-    if (!strcasecmp(isa, "host")) {
-        isa = lGetSystemISA();
+    if (target == ISPCTarget::host) {
+        target = lGetSystemISA();
     }
 
     if (arch == Arch::none) {
 #ifdef ISPC_ARM_ENABLED
-        if (!strncmp(isa, "neon", 4)) {
+        if (ISPCTargetIsNeon(target)) {
 #if defined(__arm__)
             arch = Arch::arm;
 #else
@@ -584,15 +588,18 @@ Target::Target(Arch arch, const char *cpu, const char *isa, bool pic, bool print
         this->m_arch = arch;
     }
 
-    // Ensure that we have a valid isa/arch combination.
-    if (!lIsISAValidforArch(isa, arch)) {
+    // Ensure that we have a valid target/arch combination.
+    if (!lIsTargetValidforArch(target, arch)) {
         std::string str_arch = ArchToString(arch);
-        Error(SourcePos(), "arch = %s and target = %s is not a valid combination.", str_arch.c_str(), isa);
+        std::string target_string = ISPCTargetToString(target);
+        Error(SourcePos(), "arch = %s and target = %s is not a valid combination.", str_arch.c_str(),
+              target_string.c_str());
         return;
     }
 
     // Check default LLVM generated targets
-    if (!strcasecmp(isa, "sse2") || !strcasecmp(isa, "sse2-i32x4")) {
+    // TODO: convert to switch
+    if (target == ISPCTarget::sse2_i32x4) {
         this->m_isa = Target::SSE2;
         this->m_nativeVectorWidth = 4;
         this->m_nativeVectorAlignment = 16;
@@ -601,7 +608,7 @@ Target::Target(Arch arch, const char *cpu, const char *isa, bool pic, bool print
         this->m_maskingIsFree = false;
         this->m_maskBitCount = 32;
         CPUfromISA = CPU_x86_64;
-    } else if (!strcasecmp(isa, "sse2-x2") || !strcasecmp(isa, "sse2-i32x8")) {
+    } else if (target == ISPCTarget::sse2_i32x8) {
         this->m_isa = Target::SSE2;
         this->m_nativeVectorWidth = 4;
         this->m_nativeVectorAlignment = 16;
@@ -610,7 +617,7 @@ Target::Target(Arch arch, const char *cpu, const char *isa, bool pic, bool print
         this->m_maskingIsFree = false;
         this->m_maskBitCount = 32;
         CPUfromISA = CPU_Core2;
-    } else if (!strcasecmp(isa, "sse4") || !strcasecmp(isa, "sse4-i32x4")) {
+    } else if (target == ISPCTarget::sse4_i32x4) {
         this->m_isa = Target::SSE4;
         this->m_nativeVectorWidth = 4;
         this->m_nativeVectorAlignment = 16;
@@ -619,7 +626,7 @@ Target::Target(Arch arch, const char *cpu, const char *isa, bool pic, bool print
         this->m_maskingIsFree = false;
         this->m_maskBitCount = 32;
         CPUfromISA = CPU_Nehalem;
-    } else if (!strcasecmp(isa, "sse4x2") || !strcasecmp(isa, "sse4-x2") || !strcasecmp(isa, "sse4-i32x8")) {
+    } else if (target == ISPCTarget::sse4_i32x8) {
         this->m_isa = Target::SSE4;
         this->m_nativeVectorWidth = 4;
         this->m_nativeVectorAlignment = 16;
@@ -628,7 +635,7 @@ Target::Target(Arch arch, const char *cpu, const char *isa, bool pic, bool print
         this->m_maskingIsFree = false;
         this->m_maskBitCount = 32;
         CPUfromISA = CPU_Nehalem;
-    } else if (!strcasecmp(isa, "sse4-i8x16")) {
+    } else if (target == ISPCTarget::sse4_i8x16) {
         this->m_isa = Target::SSE4;
         this->m_nativeVectorWidth = 16;
         this->m_nativeVectorAlignment = 16;
@@ -637,7 +644,7 @@ Target::Target(Arch arch, const char *cpu, const char *isa, bool pic, bool print
         this->m_maskingIsFree = false;
         this->m_maskBitCount = 8;
         CPUfromISA = CPU_Nehalem;
-    } else if (!strcasecmp(isa, "sse4-i16x8")) {
+    } else if (target == ISPCTarget::sse4_i16x8) {
         this->m_isa = Target::SSE4;
         this->m_nativeVectorWidth = 8;
         this->m_nativeVectorAlignment = 16;
@@ -646,7 +653,7 @@ Target::Target(Arch arch, const char *cpu, const char *isa, bool pic, bool print
         this->m_maskingIsFree = false;
         this->m_maskBitCount = 16;
         CPUfromISA = CPU_Nehalem;
-    } else if (!strcasecmp(isa, "generic-4") || !strcasecmp(isa, "generic-x4")) {
+    } else if (target == ISPCTarget::generic_4) {
         this->m_isa = Target::GENERIC;
         this->m_nativeVectorWidth = 4;
         this->m_nativeVectorAlignment = 16;
@@ -659,7 +666,7 @@ Target::Target(Arch arch, const char *cpu, const char *isa, bool pic, bool print
         this->m_hasGather = this->m_hasScatter = true;
         this->m_hasRsqrtd = this->m_hasRcpd = true;
         CPUfromISA = CPU_Generic;
-    } else if (!strcasecmp(isa, "generic-8") || !strcasecmp(isa, "generic-x8")) {
+    } else if (target == ISPCTarget::generic_8) {
         this->m_isa = Target::GENERIC;
         this->m_nativeVectorWidth = 8;
         this->m_nativeVectorAlignment = 32;
@@ -672,7 +679,7 @@ Target::Target(Arch arch, const char *cpu, const char *isa, bool pic, bool print
         this->m_hasGather = this->m_hasScatter = true;
         this->m_hasRsqrtd = this->m_hasRcpd = true;
         CPUfromISA = CPU_Generic;
-    } else if (!strcasecmp(isa, "generic-16") || !strcasecmp(isa, "generic-x16")) {
+    } else if (target == ISPCTarget::generic_16) {
         this->m_isa = Target::GENERIC;
         this->m_nativeVectorWidth = 16;
         this->m_nativeVectorAlignment = 64;
@@ -690,7 +697,7 @@ Target::Target(Arch arch, const char *cpu, const char *isa, bool pic, bool print
         // It's set to true, because MIC has hardware vector prefetch instruction
         this->m_hasVecPrefetch = true;
         CPUfromISA = CPU_Generic;
-    } else if (!strcasecmp(isa, "generic-32") || !strcasecmp(isa, "generic-x32")) {
+    } else if (target == ISPCTarget::generic_32) {
         this->m_isa = Target::GENERIC;
         this->m_nativeVectorWidth = 32;
         this->m_nativeVectorAlignment = 64;
@@ -703,7 +710,7 @@ Target::Target(Arch arch, const char *cpu, const char *isa, bool pic, bool print
         this->m_hasGather = this->m_hasScatter = true;
         this->m_hasRsqrtd = this->m_hasRcpd = true;
         CPUfromISA = CPU_Generic;
-    } else if (!strcasecmp(isa, "generic-64") || !strcasecmp(isa, "generic-x64")) {
+    } else if (target == ISPCTarget::generic_64) {
         this->m_isa = Target::GENERIC;
         this->m_nativeVectorWidth = 64;
         this->m_nativeVectorAlignment = 64;
@@ -716,7 +723,7 @@ Target::Target(Arch arch, const char *cpu, const char *isa, bool pic, bool print
         this->m_hasGather = this->m_hasScatter = true;
         this->m_hasRsqrtd = this->m_hasRcpd = true;
         CPUfromISA = CPU_Generic;
-    } else if (!strcasecmp(isa, "generic-1") || !strcasecmp(isa, "generic-x1")) {
+    } else if (target == ISPCTarget::generic_1) {
         this->m_isa = Target::GENERIC;
         this->m_nativeVectorWidth = 1;
         this->m_nativeVectorAlignment = 16;
@@ -724,7 +731,7 @@ Target::Target(Arch arch, const char *cpu, const char *isa, bool pic, bool print
         this->m_maskingIsFree = false;
         this->m_maskBitCount = 32;
         CPUfromISA = CPU_Generic;
-    } else if (!strcasecmp(isa, "avx1-i32x4")) {
+    } else if (target == ISPCTarget::avx1_i32x4) {
         this->m_isa = Target::AVX;
         this->m_nativeVectorWidth = 8;
         this->m_nativeVectorAlignment = 32;
@@ -733,7 +740,7 @@ Target::Target(Arch arch, const char *cpu, const char *isa, bool pic, bool print
         this->m_maskingIsFree = false;
         this->m_maskBitCount = 32;
         CPUfromISA = CPU_SandyBridge;
-    } else if (!strcasecmp(isa, "avx") || !strcasecmp(isa, "avx1") || !strcasecmp(isa, "avx1-i32x8")) {
+    } else if (target == ISPCTarget::avx1_i32x8) {
         this->m_isa = Target::AVX;
         this->m_nativeVectorWidth = 8;
         this->m_nativeVectorAlignment = 32;
@@ -742,7 +749,7 @@ Target::Target(Arch arch, const char *cpu, const char *isa, bool pic, bool print
         this->m_maskingIsFree = false;
         this->m_maskBitCount = 32;
         CPUfromISA = CPU_SandyBridge;
-    } else if (!strcasecmp(isa, "avx-i64x4") || !strcasecmp(isa, "avx1-i64x4")) {
+    } else if (target == ISPCTarget::avx1_i64x4) {
         this->m_isa = Target::AVX;
         this->m_nativeVectorWidth = 8; /* native vector width in terms of floats */
         this->m_nativeVectorAlignment = 32;
@@ -751,7 +758,7 @@ Target::Target(Arch arch, const char *cpu, const char *isa, bool pic, bool print
         this->m_maskingIsFree = false;
         this->m_maskBitCount = 64;
         CPUfromISA = CPU_SandyBridge;
-    } else if (!strcasecmp(isa, "avx-x2") || !strcasecmp(isa, "avx1-x2") || !strcasecmp(isa, "avx1-i32x16")) {
+    } else if (target == ISPCTarget::avx1_i32x16) {
         this->m_isa = Target::AVX;
         this->m_nativeVectorWidth = 8;
         this->m_nativeVectorAlignment = 32;
@@ -760,7 +767,7 @@ Target::Target(Arch arch, const char *cpu, const char *isa, bool pic, bool print
         this->m_maskingIsFree = false;
         this->m_maskBitCount = 32;
         CPUfromISA = CPU_SandyBridge;
-    } else if (!strcasecmp(isa, "avx2") || !strcasecmp(isa, "avx2-i32x8")) {
+    } else if (target == ISPCTarget::avx2_i32x8) {
         this->m_isa = Target::AVX2;
         this->m_nativeVectorWidth = 8;
         this->m_nativeVectorAlignment = 32;
@@ -772,7 +779,7 @@ Target::Target(Arch arch, const char *cpu, const char *isa, bool pic, bool print
         this->m_hasRand = true;
         this->m_hasGather = true;
         CPUfromISA = CPU_Haswell;
-    } else if (!strcasecmp(isa, "avx2-i32x4")) {
+    } else if (target == ISPCTarget::avx2_i32x4) {
         this->m_isa = Target::AVX2;
         this->m_nativeVectorWidth = 8;
         this->m_nativeVectorAlignment = 32;
@@ -784,7 +791,7 @@ Target::Target(Arch arch, const char *cpu, const char *isa, bool pic, bool print
         this->m_hasRand = true;
         this->m_hasGather = true;
         CPUfromISA = CPU_Haswell;
-    } else if (!strcasecmp(isa, "avx2-x2") || !strcasecmp(isa, "avx2-i32x16")) {
+    } else if (target == ISPCTarget::avx2_i32x16) {
         this->m_isa = Target::AVX2;
         this->m_nativeVectorWidth = 16;
         this->m_nativeVectorAlignment = 32;
@@ -796,7 +803,7 @@ Target::Target(Arch arch, const char *cpu, const char *isa, bool pic, bool print
         this->m_hasRand = true;
         this->m_hasGather = true;
         CPUfromISA = CPU_Haswell;
-    } else if (!strcasecmp(isa, "avx2-i64x4")) {
+    } else if (target == ISPCTarget::avx2_i64x4) {
         this->m_isa = Target::AVX2;
         this->m_nativeVectorWidth = 8; /* native vector width in terms of floats */
         this->m_nativeVectorAlignment = 32;
@@ -808,7 +815,7 @@ Target::Target(Arch arch, const char *cpu, const char *isa, bool pic, bool print
         this->m_hasRand = true;
         this->m_hasGather = true;
         CPUfromISA = CPU_Haswell;
-    } else if (!strcasecmp(isa, "avx512knl-i32x16")) {
+    } else if (target == ISPCTarget::avx512knl_i32x16) {
         this->m_isa = Target::KNL_AVX512;
         this->m_nativeVectorWidth = 16;
         this->m_nativeVectorAlignment = 64;
@@ -825,7 +832,7 @@ Target::Target(Arch arch, const char *cpu, const char *isa, bool pic, bool print
         this->m_hasRsqrtd = this->m_hasRcpd = false;
         this->m_hasVecPrefetch = false;
         CPUfromISA = CPU_KNL;
-    } else if (!strcasecmp(isa, "avx512skx-i32x16")) {
+    } else if (target == ISPCTarget::avx512skx_i32x16) {
         this->m_isa = Target::SKX_AVX512;
         this->m_nativeVectorWidth = 16;
         this->m_nativeVectorAlignment = 64;
@@ -844,7 +851,7 @@ Target::Target(Arch arch, const char *cpu, const char *isa, bool pic, bool print
         CPUfromISA = CPU_SKX;
     }
 #if ISPC_LLVM_VERSION >= ISPC_LLVM_8_0 // LLVM 8.0+
-    else if (!strcasecmp(isa, "avx512skx-i32x8")) {
+    else if (target == ISPCTarget::avx512skx_i32x8) {
         this->m_isa = Target::SKX_AVX512;
         this->m_nativeVectorWidth = 16;
         this->m_nativeVectorAlignment = 64;
@@ -866,7 +873,7 @@ Target::Target(Arch arch, const char *cpu, const char *isa, bool pic, bool print
     }
 #endif
 #ifdef ISPC_ARM_ENABLED
-    else if (!strcasecmp(isa, "neon-i8x16")) {
+    else if (target == ISPCTarget::neon_i8x16) {
         this->m_isa = Target::NEON;
         this->m_nativeVectorWidth = 16;
         this->m_nativeVectorAlignment = 16;
@@ -875,7 +882,7 @@ Target::Target(Arch arch, const char *cpu, const char *isa, bool pic, bool print
         this->m_hasHalf = true; // ??
         this->m_maskingIsFree = false;
         this->m_maskBitCount = 8;
-    } else if (!strcasecmp(isa, "neon-i16x8")) {
+    } else if (target == ISPCTarget::neon_i16x8) {
         this->m_isa = Target::NEON;
         this->m_nativeVectorWidth = 8;
         this->m_nativeVectorAlignment = 16;
@@ -884,7 +891,7 @@ Target::Target(Arch arch, const char *cpu, const char *isa, bool pic, bool print
         this->m_hasHalf = true; // ??
         this->m_maskingIsFree = false;
         this->m_maskBitCount = 16;
-    } else if (!strcasecmp(isa, "neon") || !strcasecmp(isa, "neon-i32x4")) {
+    } else if (target == ISPCTarget::neon_i32x4) {
         this->m_isa = Target::NEON;
         this->m_nativeVectorWidth = 4;
         this->m_nativeVectorAlignment = 16;
@@ -893,7 +900,7 @@ Target::Target(Arch arch, const char *cpu, const char *isa, bool pic, bool print
         this->m_hasHalf = true; // ??
         this->m_maskingIsFree = false;
         this->m_maskBitCount = 32;
-    } else if (!strcasecmp(isa, "neon-i32x8")) {
+    } else if (target == ISPCTarget::neon_i32x8) {
         this->m_isa = Target::NEON;
         this->m_nativeVectorWidth = 4;
         this->m_nativeVectorAlignment = 16;
@@ -905,26 +912,28 @@ Target::Target(Arch arch, const char *cpu, const char *isa, bool pic, bool print
     }
 #endif
     else {
-        Error(SourcePos(), "Target \"%s\" is unknown.  Choices are: %s.", isa, SupportedTargets());
+        std::string target_string = ISPCTargetToString(target);
+        Error(SourcePos(), "Target \"%s\" is unknown.  Choices are: %s.", target_string.c_str(), SupportedTargets());
         error = true;
     }
 
 #if defined(ISPC_ARM_ENABLED) && !defined(__arm__)
-    if ((CPUID == CPU_None) && !strncmp(isa, "neon", 4) && arch == Arch::arm)
+    if ((CPUID == CPU_None) && ISPCTargetIsNeon(target) && arch == Arch::arm)
         CPUID = CPU_CortexA9;
 #endif
 #if defined(ISPC_ARM_ENABLED) && !defined(__aarch64__)
-    if ((CPUID == CPU_None) && !strncmp(isa, "neon", 4) && arch == Arch::aarch64)
+    if ((CPUID == CPU_None) && ISPCTargetIsNeon(target) && arch == Arch::aarch64)
         CPUID = CPU_CortexA35;
 #endif
     if (CPUID == CPU_None) {
         cpu = a.GetDefaultNameFromType(CPUfromISA).c_str();
     } else {
         if ((CPUfromISA != CPU_None) && !a.BackwardCompatible(CPUID, CPUfromISA)) {
+            std::string target_string = ISPCTargetToString(target);
             Error(SourcePos(),
                   "The requested CPU (%s) is incompatible"
                   " with the CPU required for %s target (%s)",
-                  cpu, isa, a.GetDefaultNameFromType(CPUfromISA).c_str());
+                  cpu, target_string.c_str(), a.GetDefaultNameFromType(CPUfromISA).c_str());
             return;
         }
         cpu = a.GetDefaultNameFromType(CPUID).c_str();
@@ -1516,4 +1525,218 @@ std::string ArchToString(Arch arch) {
         exit(1);
     }
     return "error";
+}
+
+ISPCTarget ParseISPCTarget(std::string target) {
+    // TODO: ensure skx-i32x8 is not enabled and linked for earli LLVM version.
+
+    // The first matching string for each target is the canonical way to name the target,
+    // all other strings are aliases.
+    if (target == "host") {
+        return ISPCTarget::host;
+    } else if (target == "sse2-i32x4" || target == "sse2") {
+        return ISPCTarget::sse2_i32x4;
+    } else if (target == "sse2-i32x8" || target == "sse2-x2") {
+        return ISPCTarget::sse2_i32x8;
+    } else if (target == "sse4-i8x16") {
+        return ISPCTarget::sse4_i8x16;
+    } else if (target == "sse4-i16x8") {
+        return ISPCTarget::sse4_i16x8;
+    } else if (target == "sse4-i32x4" || target == "sse4") {
+        return ISPCTarget::sse4_i32x4;
+    } else if (target == "sse4-i32x8" || target == "sse4-x2" || target == "sse4x2") {
+        return ISPCTarget::sse4_i32x8;
+    } else if (target == "avx1-i32x4") {
+        return ISPCTarget::avx1_i32x4;
+    } else if (target == "avx1-i32x8" || target == "avx" || target == "avx1") {
+        return ISPCTarget::avx1_i32x8;
+    } else if (target == "avx1-i64x4" || target == "avx-i64x4") {
+        return ISPCTarget::avx1_i64x4;
+    } else if (target == "avx1-i32x16" || target == "avx-x2" || target == "avx1-x2") {
+        return ISPCTarget::avx1_i32x16;
+    } else if (target == "avx2-i32x4") {
+        return ISPCTarget::avx2_i32x4;
+    } else if (target == "avx2-i32x8" || target == "avx2") {
+        return ISPCTarget::avx2_i32x8;
+    } else if (target == "avx2-i64x4") {
+        return ISPCTarget::avx2_i64x4;
+    } else if (target == "avx2-i32x16" || target == "avx2-x2") {
+        return ISPCTarget::avx2_i32x16;
+    } else if (target == "avx512knl-i32x16") {
+        return ISPCTarget::avx512knl_i32x16;
+    } else if (target == "avx512skx-i32x16") {
+        return ISPCTarget::avx512skx_i32x16;
+    } else if (target == "avx512skx-i32x8") {
+        return ISPCTarget::avx512skx_i32x8;
+    } else if (target == "generic-1" || target == "generic-x1") {
+        return ISPCTarget::generic_1;
+    } else if (target == "generic-4" || target == "generic-x4") {
+        return ISPCTarget::generic_4;
+    } else if (target == "generic-8" || target == "generic-x8") {
+        return ISPCTarget::generic_8;
+    } else if (target == "generic-16" || target == "generic-x16") {
+        return ISPCTarget::generic_16;
+    } else if (target == "generic-32" || target == "generic-x32") {
+        return ISPCTarget::generic_32;
+    } else if (target == "generic-64" || target == "generic-x64") {
+        return ISPCTarget::generic_64;
+    } else if (target == "neon-i8x16") {
+        return ISPCTarget::neon_i8x16;
+    } else if (target == "neon-i16x8") {
+        return ISPCTarget::neon_i8x16;
+    } else if (target == "neon-i32x4" || target == "neon") {
+        return ISPCTarget::neon_i32x4;
+    } else if (target == "neon-i32x8") {
+        return ISPCTarget::neon_i32x8;
+    }
+
+    return ISPCTarget::error;
+}
+
+// Given a comma-delimited string with one or more compilation targets of
+// the form "sse4-i32x4,avx2-i32x8", return a pair. First element of the pair is a vector
+// of correctly parsed targets, second element of the pair is a strings with targets, which
+// were not recognized.
+std::pair<std::vector<ISPCTarget>, std::string> ParseISPCTargets(const char *target) {
+    std::vector<ISPCTarget> targets;
+    std::string error_target;
+    const char *tstart = target;
+    bool done = false;
+    while (!done) {
+        const char *tend = strchr(tstart, ',');
+        if (tend == NULL) {
+            done = true;
+            tend = strchr(tstart, '\0');
+        }
+        std::string target_string = std::string(tstart, tend);
+        ISPCTarget target_parsed = ParseISPCTarget(target_string);
+        if (target_parsed == ISPCTarget::error) {
+            if (!error_target.empty()) {
+                error_target += ",";
+            }
+            error_target += target_string;
+        } else {
+            targets.push_back(target_parsed);
+        }
+        tstart = tend + 1;
+    }
+    return std::make_pair(targets, error_target);
+}
+
+std::string ISPCTargetToString(ISPCTarget target) {
+    switch (target) {
+    case ISPCTarget::host:
+        return "host";
+    case ISPCTarget::sse2_i32x4:
+        return "sse2-i32x4";
+    case ISPCTarget::sse2_i32x8:
+        return "sse2-i32x8";
+    case ISPCTarget::sse4_i8x16:
+        return "sse4-i8x16";
+    case ISPCTarget::sse4_i16x8:
+        return "sse4-i16x8";
+    case ISPCTarget::sse4_i32x4:
+        return "sse4-i32x4";
+    case ISPCTarget::sse4_i32x8:
+        return "sse4-i32x8";
+    case ISPCTarget::avx1_i32x4:
+        return "avx1-i32x4";
+    case ISPCTarget::avx1_i32x8:
+        return "avx1-i32x8";
+    case ISPCTarget::avx1_i32x16:
+        return "avx1-i32x16";
+    case ISPCTarget::avx1_i64x4:
+        return "avx1-i64x4";
+    case ISPCTarget::avx2_i32x4:
+        return "avx2-i32x4";
+    case ISPCTarget::avx2_i32x8:
+        return "avx2-i32x8";
+    case ISPCTarget::avx2_i32x16:
+        return "avx2-i32x16";
+    case ISPCTarget::avx2_i64x4:
+        return "avx2-i64x4";
+    case ISPCTarget::avx512knl_i32x16:
+        return "avx512knl-i32x16";
+    case ISPCTarget::avx512skx_i32x8:
+        return "avx512skx-i32x8";
+    case ISPCTarget::avx512skx_i32x16:
+        return "avx512skx-i32x16";
+    case ISPCTarget::generic_1:
+        return "generic-1";
+    case ISPCTarget::generic_4:
+        return "generic-4";
+    case ISPCTarget::generic_8:
+        return "generic-8";
+    case ISPCTarget::generic_16:
+        return "generic-16";
+    case ISPCTarget::generic_32:
+        return "generic-32";
+    case ISPCTarget::generic_64:
+        return "generic-64";
+    case ISPCTarget::neon_i8x16:
+        return "neon-i8x16";
+    case ISPCTarget::neon_i16x8:
+        return "neon-i16x8";
+    case ISPCTarget::neon_i32x4:
+        return "neon-i32x4";
+    case ISPCTarget::neon_i32x8:
+        return "neon-i32x8";
+    case ISPCTarget::none:
+    case ISPCTarget::error:
+        // Fall through
+        ;
+    }
+    Error(SourcePos(), "Invalid ISPCTarget is processed");
+    exit(1);
+}
+
+bool ISPCTargetIsX86(ISPCTarget target) {
+    switch (target) {
+    case ISPCTarget::sse2_i32x4:
+    case ISPCTarget::sse2_i32x8:
+    case ISPCTarget::sse4_i8x16:
+    case ISPCTarget::sse4_i16x8:
+    case ISPCTarget::sse4_i32x4:
+    case ISPCTarget::sse4_i32x8:
+    case ISPCTarget::avx1_i32x4:
+    case ISPCTarget::avx1_i32x8:
+    case ISPCTarget::avx1_i32x16:
+    case ISPCTarget::avx1_i64x4:
+    case ISPCTarget::avx2_i32x4:
+    case ISPCTarget::avx2_i32x8:
+    case ISPCTarget::avx2_i32x16:
+    case ISPCTarget::avx2_i64x4:
+    case ISPCTarget::avx512knl_i32x16:
+    case ISPCTarget::avx512skx_i32x8:
+    case ISPCTarget::avx512skx_i32x16:
+        return true;
+    default:
+        return false;
+    }
+}
+
+bool ISPCTargetIsGeneric(ISPCTarget target) {
+    switch (target) {
+    case ISPCTarget::generic_1:
+    case ISPCTarget::generic_4:
+    case ISPCTarget::generic_8:
+    case ISPCTarget::generic_16:
+    case ISPCTarget::generic_32:
+    case ISPCTarget::generic_64:
+        return true;
+    default:
+        return false;
+    }
+}
+
+bool ISPCTargetIsNeon(ISPCTarget target) {
+    switch (target) {
+    case ISPCTarget::neon_i8x16:
+    case ISPCTarget::neon_i16x8:
+    case ISPCTarget::neon_i32x4:
+    case ISPCTarget::neon_i32x8:
+        return true;
+    default:
+        return false;
+    }
 }

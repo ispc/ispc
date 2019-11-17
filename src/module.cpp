@@ -2021,25 +2021,6 @@ static std::string lGetTargetFileName(const char *outFileName, const char *isaSt
     return targetOutFileName;
 }
 
-// Given a comma-delimited string with one or more compilation targets of
-// the form "sse2,avx-x2", return a vector of strings where each returned
-// string holds one of the targets from the given string.
-static std::vector<std::string> lExtractTargets(const char *target) {
-    std::vector<std::string> targets;
-    const char *tstart = target;
-    bool done = false;
-    while (!done) {
-        const char *tend = strchr(tstart, ',');
-        if (tend == NULL) {
-            done = true;
-            tend = strchr(tstart, '\0');
-        }
-        targets.push_back(std::string(tstart, tend));
-        tstart = tend + 1;
-    }
-    return targets;
-}
-
 static bool lSymbolIsExported(const Symbol *s) { return s->exportedFunction != NULL; }
 
 // Small structure to hold pointers to the various different versions of a
@@ -2367,12 +2348,17 @@ static void lExtractOrCheckGlobals(llvm::Module *msrc, llvm::Module *mdst, bool 
     }
 }
 
-int Module::CompileAndOutput(const char *srcFile, Arch arch, const char *cpu, const char *target,
+int Module::CompileAndOutput(const char *srcFile, Arch arch, const char *cpu, std::vector<ISPCTarget> targets,
                              OutputFlags outputFlags, OutputType outputType, const char *outFileName,
                              const char *headerFileName, const char *includeFileName, const char *depsFileName,
                              const char *depsTargetName, const char *hostStubFileName, const char *devStubFileName) {
-    if (target == NULL || strchr(target, ',') == NULL) {
+    if (targets.size() == 0 || targets.size() == 1) {
         // We're only compiling to a single target
+        // TODO something wrong here
+        ISPCTarget target = ISPCTarget::none;
+        if (targets.size() == 1) {
+            target = targets[0];
+        }
         g->target = new Target(arch, cpu, target, 0 != (outputFlags & GeneratePIC), g->printTarget);
         if (!g->target->isValid())
             return 1;
@@ -2380,13 +2366,13 @@ int Module::CompileAndOutput(const char *srcFile, Arch arch, const char *cpu, co
         m = new Module(srcFile);
         if (m->CompileFile() == 0) {
             if (outputType == CXX) {
-                if (target == NULL || (strncmp(target, "generic-", 8) != 0)) {
+                if (target == ISPCTarget::none || !ISPCTargetIsGeneric(target)) {
                     Error(SourcePos(), "When generating C++ output, one of the \"generic-*\" "
                                        "targets must be used.");
                     return 1;
                 }
             } else if (outputType == Asm || outputType == Object) {
-                if (target != NULL && (strncmp(target, "generic-", 8) == 0)) {
+                if (ISPCTargetIsGeneric(target)) {
                     Error(SourcePos(),
                           "When using a \"generic-*\" compilation target, "
                           "%s output can not be used.",
@@ -2454,7 +2440,6 @@ int Module::CompileAndOutput(const char *srcFile, Arch arch, const char *cpu, co
         }
 
         // The user supplied multiple targets
-        std::vector<std::string> targets = lExtractTargets(target);
         Assert(targets.size() > 1);
 
         if (outFileName != NULL && strcmp(outFileName, "-") == 0) {
@@ -2497,7 +2482,7 @@ int Module::CompileAndOutput(const char *srcFile, Arch arch, const char *cpu, co
         }
 
         for (unsigned int i = 0; i < targets.size(); ++i) {
-            g->target = new Target(arch, cpu, targets[i].c_str(), 0 != (outputFlags & GeneratePIC), g->printTarget);
+            g->target = new Target(arch, cpu, targets[i], 0 != (outputFlags & GeneratePIC), g->printTarget);
             if (!g->target->isValid())
                 return 1;
 
@@ -2582,14 +2567,17 @@ int Module::CompileAndOutput(const char *srcFile, Arch arch, const char *cpu, co
         llvm::TargetMachine *firstTargetMachine = NULL;
         int i = 0;
         const char *firstISA = "";
+        ISPCTarget firstTarget = ISPCTarget::none;
         while (i < Target::NUM_ISAS && firstTargetMachine == NULL) {
             firstISA = Target::ISAToTargetString((Target::ISA)i);
+            firstTarget = ParseISPCTarget(firstISA);
             firstTargetMachine = targetMachines[i++];
         }
         Assert(strcmp(firstISA, "") != 0);
+        Assert(firstTarget != ISPCTarget::none);
         Assert(firstTargetMachine != NULL);
 
-        g->target = new Target(arch, cpu, firstISA, 0 != (outputFlags & GeneratePIC), false);
+        g->target = new Target(arch, cpu, firstTarget, 0 != (outputFlags & GeneratePIC), false);
         if (!g->target->isValid()) {
             return 1;
         }
