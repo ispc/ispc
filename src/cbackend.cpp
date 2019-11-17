@@ -1723,10 +1723,6 @@ void CWriter::printConstant(llvm::Constant *CPV, bool Static) {
         } else {
             Out << '(';
             if (CPV->getNumOperands()) {
-                // It is a kludge. It is needed because we cannot support short vectors
-                // when generating code for knl-generic in multitarget mode.
-                // Short vectors are mapped to "native" vectors and cause AVX-512 code
-                // generation in static block initialization (__vec16_* in ::init function).
                 Out << ' ';
                 printConstant(llvm::cast<llvm::Constant>(CPV->getOperand(0)), Static);
                 for (unsigned i = 1, e = CPV->getNumOperands(); i != e; ++i) {
