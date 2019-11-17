@@ -642,10 +642,7 @@ void Module::AddFunctionDeclaration(const std::string &name, const FunctionType 
         functionName += functionType->Mangle();
         // If we treat generic as smth, we should have appropriate mangling
         if (g->mangleFunctionsWithTarget) {
-            if (g->target->getISA() == Target::GENERIC && !g->target->getTreatGenericAsSmth().empty())
-                functionName += g->target->getTreatGenericAsSmth();
-            else
-                functionName += g->target->GetISAString();
+            functionName += g->target->GetISAString();
         }
     }
     llvm::Function *function = llvm::Function::Create(llvmFunctionType, linkage, functionName.c_str(), module);
@@ -2000,7 +1997,7 @@ void Module::execPreprocessor(const char *infilename, llvm::raw_string_ostream *
 // Given an output filename of the form "foo.obj", and an ISA name like
 // "avx", return a string with the ISA name inserted before the original
 // filename's suffix, like "foo_avx.obj".
-static std::string lGetTargetFileName(const char *outFileName, const char *isaString, bool forceCXX) {
+static std::string lGetTargetFileName(const char *outFileName, const char *isaString) {
     int bufferSize = strlen(outFileName) + 16;
     char *targetOutFileName = new char[bufferSize];
     if (strrchr(outFileName, '.') != NULL) {
@@ -2013,11 +2010,8 @@ static std::string lGetTargetFileName(const char *outFileName, const char *isaSt
         strncat(targetOutFileName, "_", bufferSize - strlen(targetOutFileName) - 1);
         strncat(targetOutFileName, isaString, bufferSize - strlen(targetOutFileName) - 1);
 
-        // And finish with the original file suffix if it is not *-generic target
-        if (!forceCXX)
-            strncat(targetOutFileName, strrchr(outFileName, '.'), bufferSize - strlen(targetOutFileName) - 1);
-        else
-            strncat(targetOutFileName, ".cpp", bufferSize - strlen(targetOutFileName) - 1);
+        // And finish with the original file suffix
+        strncat(targetOutFileName, strrchr(outFileName, '.'), bufferSize - strlen(targetOutFileName) - 1);
     } else {
         // Can't find a '.' in the filename, so just append the ISA suffix
         // to what we weregiven
@@ -2025,10 +2019,6 @@ static std::string lGetTargetFileName(const char *outFileName, const char *isaSt
         targetOutFileName[bufferSize - 1] = '\0';
         strncat(targetOutFileName, "_", bufferSize - strlen(targetOutFileName) - 1);
         strncat(targetOutFileName, isaString, bufferSize - strlen(targetOutFileName) - 1);
-
-        // Append ".cpp" suffix to the original file if it is *-generic target
-        if (forceCXX)
-            strncat(targetOutFileName, ".cpp", bufferSize - strlen(targetOutFileName) - 1);
     }
     return targetOutFileName;
 }
@@ -2198,11 +2188,8 @@ static void lCreateDispatchFunction(llvm::Module *module, llvm::Function *setISA
         // variant successfully--"is the system's ISA enumerant value >=
         // the enumerant value of the current candidate?"
 
-        // dispatchNum is needed to separate generic from *-generic target
-        int dispatchNum = i;
-
         llvm::Value *ok = llvm::CmpInst::Create(llvm::Instruction::ICmp, llvm::CmpInst::ICMP_SGE, systemISA,
-                                                LLVMInt32(dispatchNum), "isa_ok", bblock);
+                                                LLVMInt32(i), "isa_ok", bblock);
         llvm::BasicBlock *callBBlock = llvm::BasicBlock::Create(*g->ctx, "do_call", dispatchFunc);
         llvm::BasicBlock *nextBBlock = llvm::BasicBlock::Create(*g->ctx, "next_try", dispatchFunc);
         llvm::BranchInst::Create(callBBlock, nextBBlock, ok, bblock);
@@ -2511,17 +2498,10 @@ int Module::CompileAndOutput(const char *srcFile, const char *arch, const char *
             DHI.EmitBackMatter = false;
         }
 
-        // Variable is needed later for approptiate dispatch function.
-        // It indicates if we have *-generic target.
-        std::string treatGenericAsSmth = "";
-
         for (unsigned int i = 0; i < targets.size(); ++i) {
             g->target = new Target(arch, cpu, targets[i].c_str(), 0 != (outputFlags & GeneratePIC), g->printTarget);
             if (!g->target->isValid())
                 return 1;
-
-            if (!g->target->getTreatGenericAsSmth().empty())
-                treatGenericAsSmth = g->target->getTreatGenericAsSmth();
 
             // Issue an error if we've already compiled to a variant of
             // this target ISA.  (It doesn't make sense to compile to both
@@ -2551,17 +2531,10 @@ int Module::CompileAndOutput(const char *srcFile, const char *arch, const char *
 
                 if (outFileName != NULL) {
                     std::string targetOutFileName;
-                    // We always generate cpp file for *-generic target during multitarget compilation
-                    if (g->target->getISA() == Target::GENERIC && !g->target->getTreatGenericAsSmth().empty()) {
-                        targetOutFileName =
-                            lGetTargetFileName(outFileName, g->target->getTreatGenericAsSmth().c_str(), true);
-                        if (!m->writeOutput(CXX, outputFlags, targetOutFileName.c_str(), includeFileName))
-                            return 1;
-                    } else {
-                        const char *isaName = g->target->GetISAString();
-                        targetOutFileName = lGetTargetFileName(outFileName, isaName, false);
-                        if (!m->writeOutput(outputType, outputFlags, targetOutFileName.c_str()))
-                            return 1;
+                    const char *isaName = g->target->GetISAString();
+                    targetOutFileName = lGetTargetFileName(outFileName, isaName);
+                    if (!m->writeOutput(outputType, outputFlags, targetOutFileName.c_str())) {
+                        return 1;
                     }
                 }
             } else {
@@ -2582,11 +2555,8 @@ int Module::CompileAndOutput(const char *srcFile, const char *arch, const char *
                 }
 
                 const char *isaName;
-                if (g->target->getISA() == Target::GENERIC && !g->target->getTreatGenericAsSmth().empty())
-                    isaName = g->target->getTreatGenericAsSmth().c_str();
-                else
-                    isaName = g->target->GetISAString();
-                std::string targetHeaderFileName = lGetTargetFileName(headerFileName, isaName, false);
+                isaName = g->target->GetISAString();
+                std::string targetHeaderFileName = lGetTargetFileName(headerFileName, isaName);
                 // write out a header w/o target name for the first target only
                 if (!m->writeOutput(Module::Header, outputFlags, headerFileName, "", nullptr, &DHI)) {
                     return 1;
@@ -2621,7 +2591,7 @@ int Module::CompileAndOutput(const char *srcFile, const char *arch, const char *
         Assert(strcmp(firstISA, "") != 0);
         Assert(firstTargetMachine != NULL);
 
-        g->target = new Target(arch, cpu, firstISA, 0 != (outputFlags & GeneratePIC), false, treatGenericAsSmth);
+        g->target = new Target(arch, cpu, firstISA, 0 != (outputFlags & GeneratePIC), false);
         if (!g->target->isValid()) {
             return 1;
         }

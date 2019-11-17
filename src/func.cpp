@@ -455,11 +455,7 @@ void Function::GenerateIR() {
                 llvm::GlobalValue::LinkageTypes linkage = llvm::GlobalValue::ExternalLinkage;
                 std::string functionName = sym->name;
                 if (g->mangleFunctionsWithTarget) {
-                    // If we treat generic as smth, we should have appropriate mangling
-                    if (g->target->getISA() == Target::GENERIC && !g->target->getTreatGenericAsSmth().empty())
-                        functionName += std::string("_") + g->target->getTreatGenericAsSmth();
-                    else
-                        functionName += std::string("_") + g->target->GetISAString();
+                    functionName += std::string("_") + g->target->GetISAString();
                 }
 
                 llvm::Function *appFunction = llvm::Function::Create(ftype, linkage, functionName.c_str(), m->module);

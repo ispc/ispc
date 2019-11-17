@@ -440,14 +440,13 @@ class AllCPUs {
     }
 };
 
-Target::Target(const char *arch, const char *cpu, const char *isa, bool pic, bool printTarget,
-               std::string genericAsSmth)
-    : m_target(NULL), m_targetMachine(NULL), m_dataLayout(NULL), m_valid(false), m_isa(SSE2),
-      m_treatGenericAsSmth(genericAsSmth), m_arch(""), m_is32Bit(true), m_cpu(""), m_attributes(""),
-      m_tf_attributes(NULL), m_nativeVectorWidth(-1), m_nativeVectorAlignment(-1), m_dataTypeWidth(-1),
-      m_vectorWidth(-1), m_generatePIC(pic), m_maskingIsFree(false), m_maskBitCount(-1), m_hasHalf(false),
-      m_hasRand(false), m_hasGather(false), m_hasScatter(false), m_hasTranscendentals(false), m_hasTrigonometry(false),
-      m_hasRsqrtd(false), m_hasRcpd(false), m_hasVecPrefetch(false) {
+Target::Target(const char *arch, const char *cpu, const char *isa, bool pic, bool printTarget)
+    : m_target(NULL), m_targetMachine(NULL), m_dataLayout(NULL), m_valid(false), m_isa(SSE2), m_arch(""),
+      m_is32Bit(true), m_cpu(""), m_attributes(""), m_tf_attributes(NULL), m_nativeVectorWidth(-1),
+      m_nativeVectorAlignment(-1), m_dataTypeWidth(-1), m_vectorWidth(-1), m_generatePIC(pic), m_maskingIsFree(false),
+      m_maskBitCount(-1), m_hasHalf(false), m_hasRand(false), m_hasGather(false), m_hasScatter(false),
+      m_hasTranscendentals(false), m_hasTrigonometry(false), m_hasRsqrtd(false), m_hasRcpd(false),
+      m_hasVecPrefetch(false) {
     CPUtype CPUID = CPU_None, CPUfromISA = CPU_None;
     AllCPUs a;
     std::string featuresString;
@@ -664,19 +663,8 @@ Target::Target(const char *arch, const char *cpu, const char *isa, bool pic, boo
         this->m_hasGather = this->m_hasScatter = true;
         this->m_hasRsqrtd = this->m_hasRcpd = true;
         CPUfromISA = CPU_Generic;
-    } else if (!strcasecmp(isa, "generic-16") || !strcasecmp(isa, "generic-x16") ||
-               // We treat *-generic-16 as generic-16, but with special name mangling
-               strstr(isa, "-generic-16") || strstr(isa, "-generic-x16")) {
+    } else if (!strcasecmp(isa, "generic-16") || !strcasecmp(isa, "generic-x16")) {
         this->m_isa = Target::GENERIC;
-        if (strstr(isa, "-generic-16") || strstr(isa, "-generic-x16")) {
-            // It is used for appropriate name mangling and dispatch function during multitarget compilation
-            this->m_treatGenericAsSmth = isa;
-            // We need to create appropriate name for mangling.
-            // Remove "-x16" or "-16" and replace "-" with "_".
-            this->m_treatGenericAsSmth =
-                this->m_treatGenericAsSmth.substr(0, this->m_treatGenericAsSmth.find_last_of("-"));
-            std::replace(this->m_treatGenericAsSmth.begin(), this->m_treatGenericAsSmth.end(), '-', '_');
-        }
         this->m_nativeVectorWidth = 16;
         this->m_nativeVectorAlignment = 64;
         this->m_vectorWidth = 16;
@@ -1058,7 +1046,7 @@ const char *Target::SupportedTargets() {
            "avx512skx-i32x8, "
 #endif
            "generic-x1, generic-x4, generic-x8, generic-x16, "
-           "generic-x32, generic-x64, *-generic-x16"
+           "generic-x32, generic-x64"
 #ifdef ISPC_ARM_ENABLED
            ", neon-i8x16, neon-i16x8, neon-i32x4, neon-i32x8"
 #endif
