@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2013, Intel Corporation
+  Copyright (c) 2010-2019, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -35,8 +35,7 @@
     @brief File with declarations for classes related to type representation
 */
 
-#ifndef ISPC_TYPE_H
-#define ISPC_TYPE_H 1
+#pragma once
 
 #include "ispc.h"
 #include "util.h"
@@ -1004,5 +1003,3 @@ template <> inline const FunctionType *CastType(const Type *type) {
 }
 
 inline bool IsReferenceType(const Type *t) { return CastType<ReferenceType>(t) != NULL; }
-
-#endif // ISPC_TYPE_H

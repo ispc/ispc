@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2015, Intel Corporation
+  Copyright (c) 2010-2019, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -36,8 +36,7 @@
     of the results of compiling a source file.
  */
 
-#ifndef ISPC_MODULE_H
-#define ISPC_MODULE_H 1
+#pragma once
 
 #include "ast.h"
 #include "ispc.h"
@@ -191,5 +190,3 @@ inline Module::OutputFlags &operator&=(Module::OutputFlags &lhs, const __underly
 inline Module::OutputFlags operator|(const Module::OutputFlags lhs, const Module::OutputFlags rhs) {
     return (Module::OutputFlags)((__underlying_type(Module::OutputFlags))lhs | rhs);
 }
-
-#endif // ISPC_MODULE_H

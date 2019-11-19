@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2015, Intel Corporation
+  Copyright (c) 2010-2019, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -35,8 +35,7 @@
     @brief %Declaration of the FunctionEmitContext class
 */
 
-#ifndef ISPC_CTX_H
-#define ISPC_CTX_H 1
+#pragma once
 
 #include "ispc.h"
 #include <map>
@@ -683,5 +682,3 @@ class FunctionEmitContext {
 
     llvm::Value *addVaryingOffsetsIfNeeded(llvm::Value *ptr, const Type *ptrType);
 };
-
-#endif // ISPC_CTX_H

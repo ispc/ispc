@@ -36,8 +36,7 @@
     @brief
 */
 
-#ifndef ISPC_UTIL_H
-#define ISPC_UTIL_H
+#pragma once
 
 #include "ispc.h"
 #ifdef ISPC_HOST_IS_WINDOWS
@@ -163,5 +162,3 @@ void PrintWithWordBreaks(const char *buf, int indent, int columnWidth, FILE *out
     default.
  */
 int TerminalWidth();
-
-#endif // ISPC_UTIL_H

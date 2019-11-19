@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2011-2013, Intel Corporation
+  Copyright (c) 2011-2019, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -35,8 +35,7 @@
     @brief Representation of a function in a source file.
 */
 
-#ifndef ISPC_FUNC_H
-#define ISPC_FUNC_H 1
+#pragma once
 
 #include "ispc.h"
 #include <vector>
@@ -64,5 +63,3 @@ class Function {
     Symbol *taskIndexSym1, *taskCountSym1;
     Symbol *taskIndexSym2, *taskCountSym2;
 };
-
-#endif // ISPC_FUNC_H
