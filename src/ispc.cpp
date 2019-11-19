@@ -598,6 +598,7 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget target, bool pic, bool pri
     }
 
     // Check default LLVM generated targets
+    bool unsupported_target = false;
     switch (target) {
     case ISPCTarget::sse2_i32x4:
         this->m_isa = Target::SSE2;
@@ -769,8 +770,8 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget target, bool pic, bool pri
         this->m_hasVecPrefetch = false;
         CPUfromISA = CPU_KNL;
         break;
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_8_0 // LLVM 8.0+
     case ISPCTarget::avx512skx_i32x8:
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_8_0 // LLVM 8.0+
         this->m_isa = Target::SKX_AVX512;
         this->m_nativeVectorWidth = 16;
         this->m_nativeVectorAlignment = 64;
@@ -789,6 +790,9 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget target, bool pic, bool pri
         CPUfromISA = CPU_SKX;
         this->m_funcAttributes.push_back(std::make_pair("prefer-vector-width", "256"));
         this->m_funcAttributes.push_back(std::make_pair("min-legal-vector-width", "256"));
+        break;
+#else
+        unsupported_target = true;
         break;
 #endif
     case ISPCTarget::avx512skx_i32x16:
@@ -934,14 +938,26 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget target, bool pic, bool pri
         this->m_maskingIsFree = false;
         this->m_maskBitCount = 32;
         break;
+#else
+    case ISPCTarget::neon_i8x16:
+    case ISPCTarget::neon_i16x8:
+    case ISPCTarget::neon_i32x4:
+    case ISPCTarget::neon_i32x8:
+        unsupported_target = true;
+        break;
 #endif
     case ISPCTarget::none:
     case ISPCTarget::host:
     case ISPCTarget::error:
-        std::string target_string = ISPCTargetToString(target);
-        Error(SourcePos(), "Target \"%s\" is unknown.  Choices are: %s.", target_string.c_str(), SupportedTargets());
-        error = true;
+        unsupported_target = true;
         break;
+    }
+
+    if (unsupported_target) {
+        // Hitting one of unsupported targets is internal error.
+        // Proper reporting about incorrect targets is done during options parsing.
+        std::string target_string = "Problem with target (" + ISPCTargetToString(target) + ")";
+        FATAL(target_string.c_str());
     }
 
 #if defined(ISPC_ARM_ENABLED) && !defined(__arm__)
