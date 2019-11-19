@@ -619,6 +619,26 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget target, bool pic, bool pri
         this->m_maskBitCount = 32;
         CPUfromISA = CPU_Core2;
         break;
+    case ISPCTarget::sse4_i8x16:
+        this->m_isa = Target::SSE4;
+        this->m_nativeVectorWidth = 16;
+        this->m_nativeVectorAlignment = 16;
+        this->m_dataTypeWidth = 8;
+        this->m_vectorWidth = 16;
+        this->m_maskingIsFree = false;
+        this->m_maskBitCount = 8;
+        CPUfromISA = CPU_Nehalem;
+        break;
+    case ISPCTarget::sse4_i16x8:
+        this->m_isa = Target::SSE4;
+        this->m_nativeVectorWidth = 8;
+        this->m_nativeVectorAlignment = 16;
+        this->m_dataTypeWidth = 16;
+        this->m_vectorWidth = 8;
+        this->m_maskingIsFree = false;
+        this->m_maskBitCount = 16;
+        CPUfromISA = CPU_Nehalem;
+        break;
     case ISPCTarget::sse4_i32x4:
         this->m_isa = Target::SSE4;
         this->m_nativeVectorWidth = 4;
@@ -639,25 +659,164 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget target, bool pic, bool pri
         this->m_maskBitCount = 32;
         CPUfromISA = CPU_Nehalem;
         break;
-    case ISPCTarget::sse4_i8x16:
-        this->m_isa = Target::SSE4;
-        this->m_nativeVectorWidth = 16;
-        this->m_nativeVectorAlignment = 16;
-        this->m_dataTypeWidth = 8;
-        this->m_vectorWidth = 16;
-        this->m_maskingIsFree = false;
-        this->m_maskBitCount = 8;
-        CPUfromISA = CPU_Nehalem;
-        break;
-    case ISPCTarget::sse4_i16x8:
-        this->m_isa = Target::SSE4;
+    case ISPCTarget::avx1_i32x4:
+        this->m_isa = Target::AVX;
         this->m_nativeVectorWidth = 8;
-        this->m_nativeVectorAlignment = 16;
-        this->m_dataTypeWidth = 16;
+        this->m_nativeVectorAlignment = 32;
+        this->m_dataTypeWidth = 32;
+        this->m_vectorWidth = 4;
+        this->m_maskingIsFree = false;
+        this->m_maskBitCount = 32;
+        CPUfromISA = CPU_SandyBridge;
+        break;
+    case ISPCTarget::avx1_i32x8:
+        this->m_isa = Target::AVX;
+        this->m_nativeVectorWidth = 8;
+        this->m_nativeVectorAlignment = 32;
+        this->m_dataTypeWidth = 32;
         this->m_vectorWidth = 8;
         this->m_maskingIsFree = false;
-        this->m_maskBitCount = 16;
-        CPUfromISA = CPU_Nehalem;
+        this->m_maskBitCount = 32;
+        CPUfromISA = CPU_SandyBridge;
+        break;
+    case ISPCTarget::avx1_i32x16:
+        this->m_isa = Target::AVX;
+        this->m_nativeVectorWidth = 8;
+        this->m_nativeVectorAlignment = 32;
+        this->m_dataTypeWidth = 32;
+        this->m_vectorWidth = 16;
+        this->m_maskingIsFree = false;
+        this->m_maskBitCount = 32;
+        CPUfromISA = CPU_SandyBridge;
+        break;
+    case ISPCTarget::avx1_i64x4:
+        this->m_isa = Target::AVX;
+        this->m_nativeVectorWidth = 8; /* native vector width in terms of floats */
+        this->m_nativeVectorAlignment = 32;
+        this->m_dataTypeWidth = 64;
+        this->m_vectorWidth = 4;
+        this->m_maskingIsFree = false;
+        this->m_maskBitCount = 64;
+        CPUfromISA = CPU_SandyBridge;
+        break;
+    case ISPCTarget::avx2_i32x4:
+        this->m_isa = Target::AVX2;
+        this->m_nativeVectorWidth = 8;
+        this->m_nativeVectorAlignment = 32;
+        this->m_dataTypeWidth = 32;
+        this->m_vectorWidth = 4;
+        this->m_maskingIsFree = false;
+        this->m_maskBitCount = 32;
+        this->m_hasHalf = true;
+        this->m_hasRand = true;
+        this->m_hasGather = true;
+        CPUfromISA = CPU_Haswell;
+        break;
+    case ISPCTarget::avx2_i32x8:
+        this->m_isa = Target::AVX2;
+        this->m_nativeVectorWidth = 8;
+        this->m_nativeVectorAlignment = 32;
+        this->m_dataTypeWidth = 32;
+        this->m_vectorWidth = 8;
+        this->m_maskingIsFree = false;
+        this->m_maskBitCount = 32;
+        this->m_hasHalf = true;
+        this->m_hasRand = true;
+        this->m_hasGather = true;
+        CPUfromISA = CPU_Haswell;
+        break;
+    case ISPCTarget::avx2_i32x16:
+        this->m_isa = Target::AVX2;
+        this->m_nativeVectorWidth = 16;
+        this->m_nativeVectorAlignment = 32;
+        this->m_dataTypeWidth = 32;
+        this->m_vectorWidth = 16;
+        this->m_maskingIsFree = false;
+        this->m_maskBitCount = 32;
+        this->m_hasHalf = true;
+        this->m_hasRand = true;
+        this->m_hasGather = true;
+        CPUfromISA = CPU_Haswell;
+        break;
+    case ISPCTarget::avx2_i64x4:
+        this->m_isa = Target::AVX2;
+        this->m_nativeVectorWidth = 8; /* native vector width in terms of floats */
+        this->m_nativeVectorAlignment = 32;
+        this->m_dataTypeWidth = 64;
+        this->m_vectorWidth = 4;
+        this->m_maskingIsFree = false;
+        this->m_maskBitCount = 64;
+        this->m_hasHalf = true;
+        this->m_hasRand = true;
+        this->m_hasGather = true;
+        CPUfromISA = CPU_Haswell;
+        break;
+    case ISPCTarget::avx512knl_i32x16:
+        this->m_isa = Target::KNL_AVX512;
+        this->m_nativeVectorWidth = 16;
+        this->m_nativeVectorAlignment = 64;
+        this->m_dataTypeWidth = 32;
+        this->m_vectorWidth = 16;
+        this->m_maskingIsFree = true;
+        this->m_maskBitCount = 8;
+        this->m_hasHalf = true;
+        this->m_hasRand = true;
+        this->m_hasGather = this->m_hasScatter = true;
+        this->m_hasTranscendentals = false;
+        // For MIC it is set to true due to performance reasons. The option should be tested.
+        this->m_hasTrigonometry = false;
+        this->m_hasRsqrtd = this->m_hasRcpd = false;
+        this->m_hasVecPrefetch = false;
+        CPUfromISA = CPU_KNL;
+        break;
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_8_0 // LLVM 8.0+
+    case ISPCTarget::avx512skx_i32x8:
+        this->m_isa = Target::SKX_AVX512;
+        this->m_nativeVectorWidth = 16;
+        this->m_nativeVectorAlignment = 64;
+        this->m_dataTypeWidth = 32;
+        this->m_vectorWidth = 8;
+        this->m_maskingIsFree = true;
+        this->m_maskBitCount = 8;
+        this->m_hasHalf = true;
+        this->m_hasRand = true;
+        this->m_hasGather = this->m_hasScatter = true;
+        this->m_hasTranscendentals = false;
+        // For MIC it is set to true due to performance reasons. The option should be tested.
+        this->m_hasTrigonometry = false;
+        this->m_hasRsqrtd = this->m_hasRcpd = false;
+        this->m_hasVecPrefetch = false;
+        CPUfromISA = CPU_SKX;
+        this->m_funcAttributes.push_back(std::make_pair("prefer-vector-width", "256"));
+        this->m_funcAttributes.push_back(std::make_pair("min-legal-vector-width", "256"));
+        break;
+#endif
+    case ISPCTarget::avx512skx_i32x16:
+        this->m_isa = Target::SKX_AVX512;
+        this->m_nativeVectorWidth = 16;
+        this->m_nativeVectorAlignment = 64;
+        this->m_dataTypeWidth = 32;
+        this->m_vectorWidth = 16;
+        this->m_maskingIsFree = true;
+        this->m_maskBitCount = 8;
+        this->m_hasHalf = true;
+        this->m_hasRand = true;
+        this->m_hasGather = this->m_hasScatter = true;
+        this->m_hasTranscendentals = false;
+        // For MIC it is set to true due to performance reasons. The option should be tested.
+        this->m_hasTrigonometry = false;
+        this->m_hasRsqrtd = this->m_hasRcpd = false;
+        this->m_hasVecPrefetch = false;
+        CPUfromISA = CPU_SKX;
+        break;
+    case ISPCTarget::generic_1:
+        this->m_isa = Target::GENERIC;
+        this->m_nativeVectorWidth = 1;
+        this->m_nativeVectorAlignment = 16;
+        this->m_vectorWidth = 1;
+        this->m_maskingIsFree = false;
+        this->m_maskBitCount = 32;
+        CPUfromISA = CPU_Generic;
         break;
     case ISPCTarget::generic_4:
         this->m_isa = Target::GENERIC;
@@ -734,165 +893,6 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget target, bool pic, bool pri
         this->m_hasRsqrtd = this->m_hasRcpd = true;
         CPUfromISA = CPU_Generic;
         break;
-    case ISPCTarget::generic_1:
-        this->m_isa = Target::GENERIC;
-        this->m_nativeVectorWidth = 1;
-        this->m_nativeVectorAlignment = 16;
-        this->m_vectorWidth = 1;
-        this->m_maskingIsFree = false;
-        this->m_maskBitCount = 32;
-        CPUfromISA = CPU_Generic;
-        break;
-    case ISPCTarget::avx1_i32x4:
-        this->m_isa = Target::AVX;
-        this->m_nativeVectorWidth = 8;
-        this->m_nativeVectorAlignment = 32;
-        this->m_dataTypeWidth = 32;
-        this->m_vectorWidth = 4;
-        this->m_maskingIsFree = false;
-        this->m_maskBitCount = 32;
-        CPUfromISA = CPU_SandyBridge;
-        break;
-    case ISPCTarget::avx1_i32x8:
-        this->m_isa = Target::AVX;
-        this->m_nativeVectorWidth = 8;
-        this->m_nativeVectorAlignment = 32;
-        this->m_dataTypeWidth = 32;
-        this->m_vectorWidth = 8;
-        this->m_maskingIsFree = false;
-        this->m_maskBitCount = 32;
-        CPUfromISA = CPU_SandyBridge;
-        break;
-    case ISPCTarget::avx1_i64x4:
-        this->m_isa = Target::AVX;
-        this->m_nativeVectorWidth = 8; /* native vector width in terms of floats */
-        this->m_nativeVectorAlignment = 32;
-        this->m_dataTypeWidth = 64;
-        this->m_vectorWidth = 4;
-        this->m_maskingIsFree = false;
-        this->m_maskBitCount = 64;
-        CPUfromISA = CPU_SandyBridge;
-        break;
-    case ISPCTarget::avx1_i32x16:
-        this->m_isa = Target::AVX;
-        this->m_nativeVectorWidth = 8;
-        this->m_nativeVectorAlignment = 32;
-        this->m_dataTypeWidth = 32;
-        this->m_vectorWidth = 16;
-        this->m_maskingIsFree = false;
-        this->m_maskBitCount = 32;
-        CPUfromISA = CPU_SandyBridge;
-        break;
-    case ISPCTarget::avx2_i32x8:
-        this->m_isa = Target::AVX2;
-        this->m_nativeVectorWidth = 8;
-        this->m_nativeVectorAlignment = 32;
-        this->m_dataTypeWidth = 32;
-        this->m_vectorWidth = 8;
-        this->m_maskingIsFree = false;
-        this->m_maskBitCount = 32;
-        this->m_hasHalf = true;
-        this->m_hasRand = true;
-        this->m_hasGather = true;
-        CPUfromISA = CPU_Haswell;
-        break;
-    case ISPCTarget::avx2_i32x4:
-        this->m_isa = Target::AVX2;
-        this->m_nativeVectorWidth = 8;
-        this->m_nativeVectorAlignment = 32;
-        this->m_dataTypeWidth = 32;
-        this->m_vectorWidth = 4;
-        this->m_maskingIsFree = false;
-        this->m_maskBitCount = 32;
-        this->m_hasHalf = true;
-        this->m_hasRand = true;
-        this->m_hasGather = true;
-        CPUfromISA = CPU_Haswell;
-        break;
-    case ISPCTarget::avx2_i32x16:
-        this->m_isa = Target::AVX2;
-        this->m_nativeVectorWidth = 16;
-        this->m_nativeVectorAlignment = 32;
-        this->m_dataTypeWidth = 32;
-        this->m_vectorWidth = 16;
-        this->m_maskingIsFree = false;
-        this->m_maskBitCount = 32;
-        this->m_hasHalf = true;
-        this->m_hasRand = true;
-        this->m_hasGather = true;
-        CPUfromISA = CPU_Haswell;
-        break;
-    case ISPCTarget::avx2_i64x4:
-        this->m_isa = Target::AVX2;
-        this->m_nativeVectorWidth = 8; /* native vector width in terms of floats */
-        this->m_nativeVectorAlignment = 32;
-        this->m_dataTypeWidth = 64;
-        this->m_vectorWidth = 4;
-        this->m_maskingIsFree = false;
-        this->m_maskBitCount = 64;
-        this->m_hasHalf = true;
-        this->m_hasRand = true;
-        this->m_hasGather = true;
-        CPUfromISA = CPU_Haswell;
-        break;
-    case ISPCTarget::avx512knl_i32x16:
-        this->m_isa = Target::KNL_AVX512;
-        this->m_nativeVectorWidth = 16;
-        this->m_nativeVectorAlignment = 64;
-        this->m_dataTypeWidth = 32;
-        this->m_vectorWidth = 16;
-        this->m_maskingIsFree = true;
-        this->m_maskBitCount = 8;
-        this->m_hasHalf = true;
-        this->m_hasRand = true;
-        this->m_hasGather = this->m_hasScatter = true;
-        this->m_hasTranscendentals = false;
-        // For MIC it is set to true due to performance reasons. The option should be tested.
-        this->m_hasTrigonometry = false;
-        this->m_hasRsqrtd = this->m_hasRcpd = false;
-        this->m_hasVecPrefetch = false;
-        CPUfromISA = CPU_KNL;
-        break;
-    case ISPCTarget::avx512skx_i32x16:
-        this->m_isa = Target::SKX_AVX512;
-        this->m_nativeVectorWidth = 16;
-        this->m_nativeVectorAlignment = 64;
-        this->m_dataTypeWidth = 32;
-        this->m_vectorWidth = 16;
-        this->m_maskingIsFree = true;
-        this->m_maskBitCount = 8;
-        this->m_hasHalf = true;
-        this->m_hasRand = true;
-        this->m_hasGather = this->m_hasScatter = true;
-        this->m_hasTranscendentals = false;
-        // For MIC it is set to true due to performance reasons. The option should be tested.
-        this->m_hasTrigonometry = false;
-        this->m_hasRsqrtd = this->m_hasRcpd = false;
-        this->m_hasVecPrefetch = false;
-        CPUfromISA = CPU_SKX;
-        break;
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_8_0 // LLVM 8.0+
-    case ISPCTarget::avx512skx_i32x8:
-        this->m_isa = Target::SKX_AVX512;
-        this->m_nativeVectorWidth = 16;
-        this->m_nativeVectorAlignment = 64;
-        this->m_dataTypeWidth = 32;
-        this->m_vectorWidth = 8;
-        this->m_maskingIsFree = true;
-        this->m_maskBitCount = 8;
-        this->m_hasHalf = true;
-        this->m_hasRand = true;
-        this->m_hasGather = this->m_hasScatter = true;
-        this->m_hasTranscendentals = false;
-        // For MIC it is set to true due to performance reasons. The option should be tested.
-        this->m_hasTrigonometry = false;
-        this->m_hasRsqrtd = this->m_hasRcpd = false;
-        this->m_hasVecPrefetch = false;
-        CPUfromISA = CPU_SKX;
-        this->m_funcAttributes.push_back(std::make_pair("prefer-vector-width", "256"));
-        this->m_funcAttributes.push_back(std::make_pair("min-legal-vector-width", "256"));
-        break;
-#endif
 #ifdef ISPC_ARM_ENABLED
     case ISPCTarget::neon_i8x16:
         this->m_isa = Target::NEON;
