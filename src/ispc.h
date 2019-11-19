@@ -38,6 +38,7 @@
 #pragma once
 
 #include "ispc_version.h"
+#include "target_enums.h"
 
 #if ISPC_LLVM_VERSION < OLDEST_SUPPORTED_LLVM || ISPC_LLVM_VERSION > LATEST_SUPPORTED_LLVM
 #error "Only LLVM 6.0 - 9.0 and 10.0 development branch are supported"
@@ -108,57 +109,6 @@ class Type;
 struct VariableDeclaration;
 
 enum StorageClass { SC_NONE, SC_EXTERN, SC_STATIC, SC_TYPEDEF, SC_EXTERN_C };
-
-enum class TargetOS { windows, linux, macos, android, ios, ps4, error };
-
-TargetOS ParseOS(std::string os);
-std::string OSToString(TargetOS os);
-TargetOS GetHostOS();
-
-enum class Arch { none, x86, x86_64, arm, aarch64, error };
-
-Arch ParseArch(std::string arch);
-std::string ArchToString(Arch arch);
-
-enum class ISPCTarget {
-    none,
-    host,
-    sse2_i32x4,
-    sse2_i32x8,
-    sse4_i8x16,
-    sse4_i16x8,
-    sse4_i32x4,
-    sse4_i32x8,
-    avx1_i32x4,
-    avx1_i32x8,
-    avx1_i32x16,
-    avx1_i64x4,
-    avx2_i32x4,
-    avx2_i32x8,
-    avx2_i32x16,
-    avx2_i64x4,
-    avx512knl_i32x16,
-    avx512skx_i32x8,
-    avx512skx_i32x16,
-    generic_1,
-    generic_4,
-    generic_8,
-    generic_16,
-    generic_32,
-    generic_64,
-    neon_i8x16,
-    neon_i16x8,
-    neon_i32x4,
-    neon_i32x8,
-    error
-};
-
-ISPCTarget ParseISPCTarget(std::string target);
-std::pair<std::vector<ISPCTarget>, std::string> ParseISPCTargets(const char *target);
-std::string ISPCTargetToString(ISPCTarget target);
-bool ISPCTargetIsX86(ISPCTarget target);
-bool ISPCTargetIsGeneric(ISPCTarget target);
-bool ISPCTargetIsNeon(ISPCTarget target);
 
 /** @brief Representation of a range of positions in a source file.
 
