@@ -598,8 +598,8 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget target, bool pic, bool pri
     }
 
     // Check default LLVM generated targets
-    // TODO: convert to switch
-    if (target == ISPCTarget::sse2_i32x4) {
+    switch (target) {
+    case ISPCTarget::sse2_i32x4:
         this->m_isa = Target::SSE2;
         this->m_nativeVectorWidth = 4;
         this->m_nativeVectorAlignment = 16;
@@ -608,7 +608,8 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget target, bool pic, bool pri
         this->m_maskingIsFree = false;
         this->m_maskBitCount = 32;
         CPUfromISA = CPU_x86_64;
-    } else if (target == ISPCTarget::sse2_i32x8) {
+        break;
+    case ISPCTarget::sse2_i32x8:
         this->m_isa = Target::SSE2;
         this->m_nativeVectorWidth = 4;
         this->m_nativeVectorAlignment = 16;
@@ -617,7 +618,8 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget target, bool pic, bool pri
         this->m_maskingIsFree = false;
         this->m_maskBitCount = 32;
         CPUfromISA = CPU_Core2;
-    } else if (target == ISPCTarget::sse4_i32x4) {
+        break;
+    case ISPCTarget::sse4_i32x4:
         this->m_isa = Target::SSE4;
         this->m_nativeVectorWidth = 4;
         this->m_nativeVectorAlignment = 16;
@@ -626,7 +628,8 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget target, bool pic, bool pri
         this->m_maskingIsFree = false;
         this->m_maskBitCount = 32;
         CPUfromISA = CPU_Nehalem;
-    } else if (target == ISPCTarget::sse4_i32x8) {
+        break;
+    case ISPCTarget::sse4_i32x8:
         this->m_isa = Target::SSE4;
         this->m_nativeVectorWidth = 4;
         this->m_nativeVectorAlignment = 16;
@@ -635,7 +638,8 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget target, bool pic, bool pri
         this->m_maskingIsFree = false;
         this->m_maskBitCount = 32;
         CPUfromISA = CPU_Nehalem;
-    } else if (target == ISPCTarget::sse4_i8x16) {
+        break;
+    case ISPCTarget::sse4_i8x16:
         this->m_isa = Target::SSE4;
         this->m_nativeVectorWidth = 16;
         this->m_nativeVectorAlignment = 16;
@@ -644,7 +648,8 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget target, bool pic, bool pri
         this->m_maskingIsFree = false;
         this->m_maskBitCount = 8;
         CPUfromISA = CPU_Nehalem;
-    } else if (target == ISPCTarget::sse4_i16x8) {
+        break;
+    case ISPCTarget::sse4_i16x8:
         this->m_isa = Target::SSE4;
         this->m_nativeVectorWidth = 8;
         this->m_nativeVectorAlignment = 16;
@@ -653,7 +658,8 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget target, bool pic, bool pri
         this->m_maskingIsFree = false;
         this->m_maskBitCount = 16;
         CPUfromISA = CPU_Nehalem;
-    } else if (target == ISPCTarget::generic_4) {
+        break;
+    case ISPCTarget::generic_4:
         this->m_isa = Target::GENERIC;
         this->m_nativeVectorWidth = 4;
         this->m_nativeVectorAlignment = 16;
@@ -666,7 +672,8 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget target, bool pic, bool pri
         this->m_hasGather = this->m_hasScatter = true;
         this->m_hasRsqrtd = this->m_hasRcpd = true;
         CPUfromISA = CPU_Generic;
-    } else if (target == ISPCTarget::generic_8) {
+        break;
+    case ISPCTarget::generic_8:
         this->m_isa = Target::GENERIC;
         this->m_nativeVectorWidth = 8;
         this->m_nativeVectorAlignment = 32;
@@ -679,7 +686,8 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget target, bool pic, bool pri
         this->m_hasGather = this->m_hasScatter = true;
         this->m_hasRsqrtd = this->m_hasRcpd = true;
         CPUfromISA = CPU_Generic;
-    } else if (target == ISPCTarget::generic_16) {
+        break;
+    case ISPCTarget::generic_16:
         this->m_isa = Target::GENERIC;
         this->m_nativeVectorWidth = 16;
         this->m_nativeVectorAlignment = 64;
@@ -697,7 +705,8 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget target, bool pic, bool pri
         // It's set to true, because MIC has hardware vector prefetch instruction
         this->m_hasVecPrefetch = true;
         CPUfromISA = CPU_Generic;
-    } else if (target == ISPCTarget::generic_32) {
+        break;
+    case ISPCTarget::generic_32:
         this->m_isa = Target::GENERIC;
         this->m_nativeVectorWidth = 32;
         this->m_nativeVectorAlignment = 64;
@@ -710,7 +719,8 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget target, bool pic, bool pri
         this->m_hasGather = this->m_hasScatter = true;
         this->m_hasRsqrtd = this->m_hasRcpd = true;
         CPUfromISA = CPU_Generic;
-    } else if (target == ISPCTarget::generic_64) {
+        break;
+    case ISPCTarget::generic_64:
         this->m_isa = Target::GENERIC;
         this->m_nativeVectorWidth = 64;
         this->m_nativeVectorAlignment = 64;
@@ -723,7 +733,8 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget target, bool pic, bool pri
         this->m_hasGather = this->m_hasScatter = true;
         this->m_hasRsqrtd = this->m_hasRcpd = true;
         CPUfromISA = CPU_Generic;
-    } else if (target == ISPCTarget::generic_1) {
+        break;
+    case ISPCTarget::generic_1:
         this->m_isa = Target::GENERIC;
         this->m_nativeVectorWidth = 1;
         this->m_nativeVectorAlignment = 16;
@@ -731,7 +742,8 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget target, bool pic, bool pri
         this->m_maskingIsFree = false;
         this->m_maskBitCount = 32;
         CPUfromISA = CPU_Generic;
-    } else if (target == ISPCTarget::avx1_i32x4) {
+        break;
+    case ISPCTarget::avx1_i32x4:
         this->m_isa = Target::AVX;
         this->m_nativeVectorWidth = 8;
         this->m_nativeVectorAlignment = 32;
@@ -740,7 +752,8 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget target, bool pic, bool pri
         this->m_maskingIsFree = false;
         this->m_maskBitCount = 32;
         CPUfromISA = CPU_SandyBridge;
-    } else if (target == ISPCTarget::avx1_i32x8) {
+        break;
+    case ISPCTarget::avx1_i32x8:
         this->m_isa = Target::AVX;
         this->m_nativeVectorWidth = 8;
         this->m_nativeVectorAlignment = 32;
@@ -749,7 +762,8 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget target, bool pic, bool pri
         this->m_maskingIsFree = false;
         this->m_maskBitCount = 32;
         CPUfromISA = CPU_SandyBridge;
-    } else if (target == ISPCTarget::avx1_i64x4) {
+        break;
+    case ISPCTarget::avx1_i64x4:
         this->m_isa = Target::AVX;
         this->m_nativeVectorWidth = 8; /* native vector width in terms of floats */
         this->m_nativeVectorAlignment = 32;
@@ -758,7 +772,8 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget target, bool pic, bool pri
         this->m_maskingIsFree = false;
         this->m_maskBitCount = 64;
         CPUfromISA = CPU_SandyBridge;
-    } else if (target == ISPCTarget::avx1_i32x16) {
+        break;
+    case ISPCTarget::avx1_i32x16:
         this->m_isa = Target::AVX;
         this->m_nativeVectorWidth = 8;
         this->m_nativeVectorAlignment = 32;
@@ -767,7 +782,8 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget target, bool pic, bool pri
         this->m_maskingIsFree = false;
         this->m_maskBitCount = 32;
         CPUfromISA = CPU_SandyBridge;
-    } else if (target == ISPCTarget::avx2_i32x8) {
+        break;
+    case ISPCTarget::avx2_i32x8:
         this->m_isa = Target::AVX2;
         this->m_nativeVectorWidth = 8;
         this->m_nativeVectorAlignment = 32;
@@ -779,7 +795,8 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget target, bool pic, bool pri
         this->m_hasRand = true;
         this->m_hasGather = true;
         CPUfromISA = CPU_Haswell;
-    } else if (target == ISPCTarget::avx2_i32x4) {
+        break;
+    case ISPCTarget::avx2_i32x4:
         this->m_isa = Target::AVX2;
         this->m_nativeVectorWidth = 8;
         this->m_nativeVectorAlignment = 32;
@@ -791,7 +808,8 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget target, bool pic, bool pri
         this->m_hasRand = true;
         this->m_hasGather = true;
         CPUfromISA = CPU_Haswell;
-    } else if (target == ISPCTarget::avx2_i32x16) {
+        break;
+    case ISPCTarget::avx2_i32x16:
         this->m_isa = Target::AVX2;
         this->m_nativeVectorWidth = 16;
         this->m_nativeVectorAlignment = 32;
@@ -803,7 +821,8 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget target, bool pic, bool pri
         this->m_hasRand = true;
         this->m_hasGather = true;
         CPUfromISA = CPU_Haswell;
-    } else if (target == ISPCTarget::avx2_i64x4) {
+        break;
+    case ISPCTarget::avx2_i64x4:
         this->m_isa = Target::AVX2;
         this->m_nativeVectorWidth = 8; /* native vector width in terms of floats */
         this->m_nativeVectorAlignment = 32;
@@ -815,7 +834,8 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget target, bool pic, bool pri
         this->m_hasRand = true;
         this->m_hasGather = true;
         CPUfromISA = CPU_Haswell;
-    } else if (target == ISPCTarget::avx512knl_i32x16) {
+        break;
+    case ISPCTarget::avx512knl_i32x16:
         this->m_isa = Target::KNL_AVX512;
         this->m_nativeVectorWidth = 16;
         this->m_nativeVectorAlignment = 64;
@@ -832,7 +852,8 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget target, bool pic, bool pri
         this->m_hasRsqrtd = this->m_hasRcpd = false;
         this->m_hasVecPrefetch = false;
         CPUfromISA = CPU_KNL;
-    } else if (target == ISPCTarget::avx512skx_i32x16) {
+        break;
+    case ISPCTarget::avx512skx_i32x16:
         this->m_isa = Target::SKX_AVX512;
         this->m_nativeVectorWidth = 16;
         this->m_nativeVectorAlignment = 64;
@@ -849,9 +870,9 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget target, bool pic, bool pri
         this->m_hasRsqrtd = this->m_hasRcpd = false;
         this->m_hasVecPrefetch = false;
         CPUfromISA = CPU_SKX;
-    }
+        break;
 #if ISPC_LLVM_VERSION >= ISPC_LLVM_8_0 // LLVM 8.0+
-    else if (target == ISPCTarget::avx512skx_i32x8) {
+    case ISPCTarget::avx512skx_i32x8:
         this->m_isa = Target::SKX_AVX512;
         this->m_nativeVectorWidth = 16;
         this->m_nativeVectorAlignment = 64;
@@ -870,10 +891,10 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget target, bool pic, bool pri
         CPUfromISA = CPU_SKX;
         this->m_funcAttributes.push_back(std::make_pair("prefer-vector-width", "256"));
         this->m_funcAttributes.push_back(std::make_pair("min-legal-vector-width", "256"));
-    }
+        break;
 #endif
 #ifdef ISPC_ARM_ENABLED
-    else if (target == ISPCTarget::neon_i8x16) {
+    case ISPCTarget::neon_i8x16:
         this->m_isa = Target::NEON;
         this->m_nativeVectorWidth = 16;
         this->m_nativeVectorAlignment = 16;
@@ -882,7 +903,8 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget target, bool pic, bool pri
         this->m_hasHalf = true; // ??
         this->m_maskingIsFree = false;
         this->m_maskBitCount = 8;
-    } else if (target == ISPCTarget::neon_i16x8) {
+        break;
+    case ISPCTarget::neon_i16x8:
         this->m_isa = Target::NEON;
         this->m_nativeVectorWidth = 8;
         this->m_nativeVectorAlignment = 16;
@@ -891,7 +913,8 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget target, bool pic, bool pri
         this->m_hasHalf = true; // ??
         this->m_maskingIsFree = false;
         this->m_maskBitCount = 16;
-    } else if (target == ISPCTarget::neon_i32x4) {
+        break;
+    case ISPCTarget::neon_i32x4:
         this->m_isa = Target::NEON;
         this->m_nativeVectorWidth = 4;
         this->m_nativeVectorAlignment = 16;
@@ -900,7 +923,8 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget target, bool pic, bool pri
         this->m_hasHalf = true; // ??
         this->m_maskingIsFree = false;
         this->m_maskBitCount = 32;
-    } else if (target == ISPCTarget::neon_i32x8) {
+        break;
+    case ISPCTarget::neon_i32x8:
         this->m_isa = Target::NEON;
         this->m_nativeVectorWidth = 4;
         this->m_nativeVectorAlignment = 16;
@@ -909,12 +933,15 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget target, bool pic, bool pri
         this->m_hasHalf = true; // ??
         this->m_maskingIsFree = false;
         this->m_maskBitCount = 32;
-    }
+        break;
 #endif
-    else {
+    case ISPCTarget::none:
+    case ISPCTarget::host:
+    case ISPCTarget::error:
         std::string target_string = ISPCTargetToString(target);
         Error(SourcePos(), "Target \"%s\" is unknown.  Choices are: %s.", target_string.c_str(), SupportedTargets());
         error = true;
+        break;
     }
 
 #if defined(ISPC_ARM_ENABLED) && !defined(__arm__)
