@@ -228,6 +228,8 @@ target_sources(${PROJECT_NAME}
         "src/stmt.h"
         "src/sym.cpp"
         "src/sym.h"
+        "src/target_enums.cpp"
+        "src/target_enums.h"
         "src/type.cpp"
         "src/type.h"
         "src/util.cpp"
