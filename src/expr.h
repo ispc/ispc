@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2013, Intel Corporation
+  Copyright (c) 2010-2019, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -35,8 +35,7 @@
     @brief Expr abstract base class and expression implementations
 */
 
-#ifndef ISPC_EXPR_H
-#define ISPC_EXPR_H 1
+#pragma once
 
 #include "ast.h"
 #include "ispc.h"
@@ -790,5 +789,3 @@ Expr *MakeBinaryExpr(BinaryExpr::Op o, Expr *a, Expr *b, SourcePos p);
 void InitSymbol(llvm::Value *lvalue, const Type *symType, Expr *initExpr, FunctionEmitContext *ctx, SourcePos pos);
 
 bool PossiblyResolveFunctionOverloads(Expr *expr, const Type *type);
-
-#endif // ISPC_EXPR_H

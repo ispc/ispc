@@ -35,8 +35,7 @@
     @brief defines the ISPC version
 */
 
-#ifndef ISPC_VERSION_H
-#define ISPC_VERSION_H
+#pragma once
 
 #define ISPC_VERSION_MAJOR 1
 #define ISPC_VERSION_MINOR 12
@@ -67,5 +66,3 @@
 #if ISPC_LLVM_VERSION < OLDEST_SUPPORTED_LLVM || ISPC_LLVM_VERSION > LATEST_SUPPORTED_LLVM
 #error "Unhandled LLVM version"
 #endif
-
-#endif // ISPC_VERSION_H

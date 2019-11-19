@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2011-2013, Intel Corporation
+  Copyright (c) 2011-2019, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -35,8 +35,7 @@
     @brief
 */
 
-#ifndef ISPC_AST_H
-#define ISPC_AST_H 1
+#pragma once
 
 #include "ispc.h"
 #include <vector>
@@ -200,5 +199,3 @@ extern int EstimateCost(ASTNode *root);
 /** Returns true if it would be safe to run the given code with an "all
     off" mask. */
 extern bool SafeToRunWithMaskAllOff(ASTNode *root);
-
-#endif // ISPC_AST_H

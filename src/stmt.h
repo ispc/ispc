@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2013, Intel Corporation
+  Copyright (c) 2010-2019, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -35,8 +35,7 @@
     @brief File with declarations for classes related to statements in the language
 */
 
-#ifndef ISPC_STMT_H
-#define ISPC_STMT_H 1
+#pragma once
 
 #include "ast.h"
 #include "ispc.h"
@@ -535,5 +534,3 @@ class DeleteStmt : public Stmt {
 };
 
 extern Stmt *CreateForeachActiveStmt(Symbol *iterSym, Stmt *stmts, SourcePos pos);
-
-#endif // ISPC_STMT_H

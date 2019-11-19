@@ -35,8 +35,7 @@
     @brief Header file with declarations for various LLVM utility stuff
 */
 
-#ifndef ISPC_LLVMUTIL_H
-#define ISPC_LLVMUTIL_H 1
+#pragma once
 
 #include "ispc_version.h"
 
@@ -314,5 +313,3 @@ extern llvm::Value *LLVMShuffleVectors(llvm::Value *v1, llvm::Value *v2, int32_t
 */
 extern const char *LLVMGetName(llvm::Value *v, const char *);
 extern const char *LLVMGetName(const char *op, llvm::Value *v1, llvm::Value *v2);
-
-#endif // ISPC_LLVMUTIL_H

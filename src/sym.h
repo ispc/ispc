@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2013, Intel Corporation
+  Copyright (c) 2010-2019, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -37,8 +37,7 @@
     classes.
 */
 
-#ifndef ISPC_SYM_H
-#define ISPC_SYM_H
+#pragma once
 
 #include "decl.h"
 #include "ispc.h"
@@ -299,5 +298,3 @@ void SymbolTable::GetMatchingVariables(Predicate pred, std::vector<Symbol *> *ma
         }
     }
 }
-
-#endif // ISPC_SYM_H

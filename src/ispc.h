@@ -35,8 +35,7 @@
     @brief Main ispc.header file. Defines Target, Globals and Opt classes.
 */
 
-#ifndef ISPC_H
-#define ISPC_H
+#pragma once
 
 #include "ispc_version.h"
 
@@ -679,5 +678,3 @@ enum {
 
 extern Globals *g;
 extern Module *m;
-
-#endif // ISPC_H

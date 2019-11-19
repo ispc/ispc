@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2013, Intel Corporation
+  Copyright (c) 2010-2019, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -35,8 +35,7 @@
     @brief Declarations related to optimization passes
 */
 
-#ifndef ISPC_OPT_H
-#define ISPC_OPT_H 1
+#pragma once
 
 #include "ispc.h"
 
@@ -46,5 +45,3 @@
     corresponds to full optimization.
 */
 void Optimize(llvm::Module *module, int optLevel);
-
-#endif // ISPC_OPT_H
