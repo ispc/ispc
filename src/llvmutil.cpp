@@ -1595,18 +1595,22 @@ void lGetAddressSpace(llvm::Value *v, std::set<llvm::Value *> &done, std::set<Ad
             addrSpaceVec.insert(AddressSpace::External);
         return;
     }
-    llvm::Instruction *inst = llvm::dyn_cast<llvm::Instruction>(v);
-    if (inst == NULL) {
-        // Case when GEP is constant expression
-        if (llvm::ConstantExpr *constExpr = llvm::dyn_cast<llvm::ConstantExpr>(v)) {
-            inst = constExpr->getAsInstruction();
-        }
-    }
 
     // Found global value
     if (llvm::isa<llvm::GlobalValue>(v)) {
         addrSpaceVec.insert(AddressSpace::Global);
         return;
+    }
+
+    llvm::Instruction *inst = llvm::dyn_cast<llvm::Instruction>(v);
+    bool isConstExpr = false;
+    if (inst == NULL) {
+        // Case when GEP is constant expression
+        if (llvm::ConstantExpr *constExpr = llvm::dyn_cast<llvm::ConstantExpr>(v)) {
+            // This instruction isn't inserted anywhere, so delete it when done
+            inst = constExpr->getAsInstruction();
+            isConstExpr = true;
+        }
     }
 
     if (done.size() > 0 && inst == NULL) {
@@ -1631,6 +1635,12 @@ void lGetAddressSpace(llvm::Value *v, std::set<llvm::Value *> &done, std::set<Ad
     }
     for (unsigned i = 0; i < inst->getNumOperands(); ++i) {
         lGetAddressSpace(inst->getOperand(i), done, addrSpaceVec);
+    }
+
+    if (isConstExpr) {
+        // This is the only return point that constant expression instruction
+        // can reach, drop all references here
+        inst->dropAllReferences();
     }
 }
 
