@@ -410,6 +410,55 @@ static void lParseInclude(const char *path) {
     } while (pos_end != std::string::npos);
 }
 
+// ArgErrors accumulates error and warning messages during arguments parsing
+// prints them after the parsing is done. We need to delay printing to take
+// into account such options as --quite, --nowrap --werror, which affects how
+// errors and warnings are treated and printed.
+class ArgErrors {
+    enum class MsgType { warning, error };
+    std::vector<std::pair<MsgType, std::string>> m_messages;
+    void AddMessage(MsgType msg_type, const char *format, va_list args) {
+        char *messageBuf;
+        if (vasprintf(&messageBuf, format, args) == -1) {
+            fprintf(stderr, "vasprintf() unable to allocate memory!\n");
+            exit(-1);
+        }
+
+        m_messages.push_back(std::make_pair(msg_type, messageBuf));
+
+        free(messageBuf);
+    }
+
+  public:
+    ArgErrors(){};
+    void AddError(const char *format, ...) PRINTF_FUNC {
+        va_list args;
+        va_start(args, format);
+        AddMessage(MsgType::error, format, args);
+        va_end(args);
+    }
+    void AddWarning(const char *format, ...) PRINTF_FUNC {
+        va_list args;
+        va_start(args, format);
+        AddMessage(MsgType::warning, format, args);
+        va_end(args);
+    }
+    void Emit() {
+        bool errors = false;
+        for (auto &message : m_messages) {
+            if (message.first == MsgType::error || g->warningsAsErrors) {
+                errors = true;
+                Error(SourcePos(), "%s", message.second.c_str());
+            } else {
+                Warning(SourcePos(), "%s", message.second.c_str());
+            }
+        }
+        if (errors) {
+            exit(-1);
+        }
+    }
+};
+
 int main(int Argc, char *Argv[]) {
     int argc;
     char *argv[MAX_NUM_ARGS];
@@ -464,6 +513,8 @@ int main(int Argc, char *Argv[]) {
     Module::OutputFlags flags = Module::NoFlags;
     const char *arch = NULL, *cpu = NULL, *target = NULL, *intelAsmSyntax = NULL;
 
+    ArgErrors errorHandler;
+
     for (int i = 1; i < argc; ++i) {
         if (!strcmp(argv[i], "--help"))
             usage(0);
@@ -478,11 +529,9 @@ int main(int Argc, char *Argv[]) {
             else if (atoi(argv[i] + 13) == 32)
                 g->opt.force32BitAddressing = true;
             else {
-                fprintf(stderr,
-                        "Addressing width \"%s\" invalid--only 32 and "
-                        "64 are allowed.\n",
-                        argv[i] + 13);
-                usage(1);
+                errorHandler.AddError("Addressing width \"%s\" invalid -- only 32 and "
+                                      "64 are allowed.",
+                                      argv[i] + 13);
             }
         } else if (!strncmp(argv[i], "--arch=", 7)) {
             arch = argv[i] + 7;
@@ -496,20 +545,17 @@ int main(int Argc, char *Argv[]) {
             intelAsmSyntax = argv[i] + 17;
             if (!((std::string(intelAsmSyntax) == "intel") || (std::string(intelAsmSyntax) == "att"))) {
                 intelAsmSyntax = NULL;
-                fprintf(stderr,
-                        "Invalid value for --x86-asm-syntax: \"%s\" -- "
-                        "only intel and att are allowed.\n",
-                        argv[i] + 17);
+                errorHandler.AddError("Invalid value for --x86-asm-syntax: \"%s\" -- "
+                                      "only intel and att are allowed.",
+                                      argv[i] + 17);
             }
         } else if (!strncmp(argv[i], "--cpu=", 6)) {
             cpu = argv[i] + 6;
         } else if (!strcmp(argv[i], "--fast-math")) {
-            fprintf(stderr, "--fast-math option has been renamed to --opt=fast-math!\n");
-            usage(1);
+            errorHandler.AddError("--fast-math option has been renamed to --opt=fast-math!");
         } else if (!strcmp(argv[i], "--fast-masked-vload")) {
-            fprintf(stderr, "--fast-masked-vload option has been renamed to "
-                            "--opt=fast-masked-vload!\n");
-            usage(1);
+            errorHandler.AddError("--fast-masked-vload option has been renamed to "
+                                  "--opt=fast-masked-vload!");
         } else if (!strcmp(argv[i], "--debug"))
             g->debugPrint = true;
         else if (!strcmp(argv[i], "--debug-llvm"))
@@ -522,11 +568,9 @@ int main(int Argc, char *Argv[]) {
                 g->generateDebuggingSymbols = true;
                 g->generateDWARFVersion = val;
             } else {
-                fprintf(stderr,
-                        "Invalid value for DWARF version: \"%s\" -- "
-                        "only 2, 3 and 4 are allowed.\n",
-                        argv[i] + 16);
-                usage(1);
+                errorHandler.AddError("Invalid value for DWARF version: \"%s\" -- "
+                                      "only 2, 3 and 4 are allowed.",
+                                      argv[i] + 16);
             }
         } else if (!strcmp(argv[i], "--print-target"))
             g->printTarget = true;
@@ -549,11 +593,11 @@ int main(int Argc, char *Argv[]) {
         else if (!strcmp(argv[i], "--emit-obj"))
             ot = Module::Object;
         else if (!strcmp(argv[i], "-I")) {
-            if (++i == argc) {
-                fprintf(stderr, "No path specified after -I option.\n");
-                usage(1);
+            if (++i != argc) {
+                lParseInclude(argv[i]);
+            } else {
+                errorHandler.AddError("No path specified after -I option.");
             }
-            lParseInclude(argv[i]);
         } else if (!strncmp(argv[i], "-I", 2))
             lParseInclude(argv[i] + 2);
         else if (!strcmp(argv[i], "--fuzz-test"))
@@ -562,19 +606,18 @@ int main(int Argc, char *Argv[]) {
             g->fuzzTestSeed = atoi(argv[i] + 12);
         else if (!strcmp(argv[i], "--target")) {
             // FIXME: should remove this way of specifying the target...
-            if (++i == argc) {
-                fprintf(stderr, "No target specified after --target option.\n");
-                usage(1);
+            if (++i != argc) {
+                target = argv[i];
+            } else {
+                errorHandler.AddError("No target specified after --target option.");
             }
-            target = argv[i];
         } else if (!strncmp(argv[i], "--target=", 9)) {
             target = argv[i] + 9;
         } else if (!strncmp(argv[i], "--target-os=", 12)) {
             g->target_os = StringToOS(argv[i] + 12);
             if (g->target_os == TargetOS::error) {
-                fprintf(stderr, "Unsupported value for --target-os, supported values are: %s\n",
-                        Target::SupportedOSes().c_str());
-                usage(1);
+                errorHandler.AddError("Unsupported value for --target-os, supported values are: %s",
+                                      Target::SupportedOSes().c_str());
             }
         } else if (!strncmp(argv[i], "--math-lib=", 11)) {
             const char *lib = argv[i] + 11;
@@ -587,8 +630,7 @@ int main(int Argc, char *Argv[]) {
             else if (!strcmp(lib, "system"))
                 g->mathLib = Globals::Math_System;
             else {
-                fprintf(stderr, "Unknown --math-lib= option \"%s\".\n", lib);
-                usage(1);
+                errorHandler.AddError("Unknown --math-lib= option \"%s\".", lib);
             }
         } else if (!strncmp(argv[i], "--opt=", 6)) {
             const char *opt = argv[i] + 6;
@@ -628,8 +670,7 @@ int main(int Argc, char *Argv[]) {
             else if (!strcmp(opt, "disable-uniform-memory-optimizations"))
                 g->opt.disableUniformMemoryOptimizations = true;
             else {
-                fprintf(stderr, "Unknown --opt= option \"%s\".\n", opt);
-                usage(1);
+                errorHandler.AddError("Unknown --opt= option \"%s\".", opt);
             }
         } else if (!strncmp(argv[i], "--force-alignment=", 18)) {
             g->forceAlignment = atoi(argv[i] + 18);
@@ -643,19 +684,19 @@ int main(int Argc, char *Argv[]) {
         else if (!strcmp(argv[i], "--wno-perf") || !strcmp(argv[i], "-wno-perf"))
             g->emitPerfWarnings = false;
         else if (!strcmp(argv[i], "-o")) {
-            if (++i == argc) {
-                fprintf(stderr, "No output file specified after -o option.\n");
-                usage(1);
+            if (++i != argc) {
+                outFileName = argv[i];
+            } else {
+                errorHandler.AddError("No output file specified after -o option.");
             }
-            outFileName = argv[i];
         } else if (!strncmp(argv[i], "--outfile=", 10))
             outFileName = argv[i] + strlen("--outfile=");
         else if (!strcmp(argv[i], "-h")) {
-            if (++i == argc) {
-                fprintf(stderr, "No header file name specified after -h option.\n");
-                usage(1);
+            if (++i != argc) {
+                headerFileName = argv[i];
+            } else {
+                errorHandler.AddError("No header file name specified after -h option.");
             }
-            headerFileName = argv[i];
         } else if (!strncmp(argv[i], "--header-outfile=", 17)) {
             headerFileName = argv[i] + strlen("--header-outfile=");
         } else if (!strncmp(argv[i], "--c++-include-file=", 19)) {
@@ -687,46 +728,46 @@ int main(int Argc, char *Argv[]) {
             extern int yydebug;
             yydebug = 1;
         } else if (!strcmp(argv[i], "-MMM")) {
-            if (++i == argc) {
-                fprintf(stderr, "No output file name specified after -MMM option.\n");
-                usage(1);
+            if (++i != argc) {
+                depsFileName = argv[i];
+                flags |= Module::GenerateFlatDeps;
+            } else {
+                errorHandler.AddError("No output file name specified after -MMM option.");
             }
-            depsFileName = argv[i];
-            flags |= Module::GenerateFlatDeps;
         } else if (!strcmp(argv[i], "-M")) {
             flags |= Module::GenerateMakeRuleForDeps | Module::OutputDepsToStdout;
         } else if (!strcmp(argv[i], "-MF")) {
             depsFileName = nullptr;
-            if (++i == argc) {
-                fprintf(stderr, "No output file name specified after -MF option.\n");
-                usage(1);
+            if (++i != argc) {
+                depsFileName = argv[i];
+            } else {
+                errorHandler.AddError("No output file name specified after -MF option.");
             }
-            depsFileName = argv[i];
         } else if (!strcmp(argv[i], "-MT")) {
             depsTargetName = nullptr;
-            if (++i == argc) {
-                fprintf(stderr, "No target name specified after -MT option.\n");
-                usage(1);
+            if (++i != argc) {
+                depsTargetName = argv[i];
+            } else {
+                errorHandler.AddError("No target name specified after -MT option.");
             }
-            depsTargetName = argv[i];
         } else if (!strcmp(argv[i], "--dev-stub")) {
-            if (++i == argc) {
-                fprintf(stderr, "No output file name specified after --dev-stub option.\n");
-                usage(1);
+            if (++i != argc) {
+                devStubFileName = argv[i];
+            } else {
+                errorHandler.AddError("No output file name specified after --dev-stub option.");
             }
-            devStubFileName = argv[i];
         } else if (!strcmp(argv[i], "--host-stub")) {
-            if (++i == argc) {
-                fprintf(stderr, "No output file name specified after --host-stub option.\n");
-                usage(1);
+            if (++i != argc) {
+                hostStubFileName = argv[i];
+            } else {
+                errorHandler.AddError("No output file name specified after --host-stub option.");
             }
-            hostStubFileName = argv[i];
         }
 #ifndef ISPC_NO_DUMPS
         else if (strncmp(argv[i], "--debug-phase=", 14) == 0) {
-            fprintf(stderr, "WARNING: Adding debug phases may change the way PassManager"
-                            "handles the phases and it may possibly make some bugs go"
-                            "away or introduce the new ones.\n");
+            errorHandler.AddWarning("Adding debug phases may change the way PassManager"
+                                    "handles the phases and it may possibly make some bugs go"
+                                    "away or introduce the new ones.");
             g->debug_stages = ParsingPhases(argv[i] + strlen("--debug-phase="));
         } else if (strncmp(argv[i], "--dump-file", 11) == 0)
             g->dumpFile = true;
@@ -738,19 +779,21 @@ int main(int Argc, char *Argv[]) {
             lPrintVersion();
             return 0;
         } else if (argv[i][0] == '-') {
-            fprintf(stderr, "Unknown option \"%s\".\n", argv[i]);
-            usage(1);
+            errorHandler.AddError("Unknown option \"%s\".", argv[i]);
         } else {
             if (file != NULL) {
-                fprintf(stderr,
-                        "Multiple input files specified on command "
-                        "line: \"%s\" and \"%s\".\n",
-                        file, argv[i]);
-                usage(1);
-            } else
+                errorHandler.AddError("Multiple input files specified on command "
+                                      "line: \"%s\" and \"%s\".",
+                                      file, argv[i]);
+            } else {
                 file = argv[i];
+            }
         }
     }
+
+    // Emit accumulted errors and warnings, if any.
+    // All the rest of errors and warnigns will be processed in regullar way.
+    errorHandler.Emit();
 
     // Default settings for PS4
     if (g->target_os == TargetOS::ps4) {
@@ -806,10 +849,11 @@ int main(int Argc, char *Argv[]) {
 
     if (outFileName == NULL && headerFileName == NULL &&
         (depsFileName == NULL && 0 == (flags & Module::OutputDepsToStdout)) && hostStubFileName == NULL &&
-        devStubFileName == NULL)
+        devStubFileName == NULL) {
         Warning(SourcePos(), "No output file or header file name specified. "
                              "Program will be compiled and warnings/errors will "
                              "be issued, but no output will be generated.");
+    }
 
     if (g->target_os == TargetOS::windows && (flags & Module::GeneratePIC) != 0) {
         Warning(SourcePos(), "--pic switch for Windows target will be ignored.");
