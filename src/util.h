@@ -58,7 +58,7 @@ inline uint32_t RoundUpPow2(uint32_t v) {
 }
 
 #ifdef __GNUG__
-#define PRINTF_FUNC __attribute__((__format__(__printf__, 2, 3)))
+#define PRINTF_FUNC __attribute__((format(printf, 2, 3)))
 #else
 #define PRINTF_FUNC
 #endif // __GNUG__
