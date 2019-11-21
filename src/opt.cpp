@@ -87,6 +87,10 @@
 #include <llvm/IR/IntrinsicsX86.h>
 #endif
 
+#ifdef ISPC_GENX_ENABLED
+#include <llvm/GenXOpts/GenXOpts.h>
+#endif // ISPC_GENX_ENABLED
+
 #ifdef ISPC_HOST_IS_LINUX
 #include <alloca.h>
 #elif defined(ISPC_HOST_IS_WINDOWS)

@@ -246,7 +246,7 @@ if (GENX_ENABLED)
         set(PB_PATH_MODIFIER "x64")
     endif()
 
-    list(APPEND GEN_LIBRARY_LIST LLVMGenXIntrinsics LLVMSPIRVLib)
+    list(APPEND GEN_LIBRARY_LIST LLVMGenXIntrinsics LLVMGenXOpts LLVMSPIRVLib)
     if (WIN32)
         list(APPEND GEN_LIBRARY_LIST igfxcmjit${TARGET_MODIFIER})
     else()
