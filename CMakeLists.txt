@@ -294,7 +294,11 @@ else()
     set_source_files_properties(${BISON_OUTPUT} PROPERTIES COMPILE_FLAGS "/wd4005 /wd4065")
 endif()
 
-target_compile_features(${PROJECT_NAME} PRIVATE cxx_std_11)
+# Set C++ standard to C++11.
+set_target_properties(${PROJECT_NAME} PROPERTIES
+    CXX_STANDARD 11
+    CXX_STANDARD_REQUIRED YES)
+
 if (UNIX)
     set_target_properties(${PROJECT_NAME} PROPERTIES CXX_EXTENSIONS OFF)
     target_compile_options(${PROJECT_NAME} PRIVATE -Wno-c99-extensions -Wno-deprecated-register -fno-rtti)
