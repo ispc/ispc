@@ -121,7 +121,6 @@ using namespace Concurrency;
 #include <semaphore.h>
 #include <sys/param.h>
 #include <sys/stat.h>
-#include <sys/sysctl.h>
 #include <sys/types.h>
 #include <unistd.h>
 #include <vector>
@@ -134,7 +133,6 @@ using namespace Concurrency;
 #include <semaphore.h>
 #include <sys/param.h>
 #include <sys/stat.h>
-#include <sys/sysctl.h>
 #include <sys/types.h>
 #include <unistd.h>
 #include <vector>
