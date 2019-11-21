@@ -123,20 +123,11 @@ if (NOT CMAKE_BUILD_TYPE STREQUAL "DEBUG" )
 endif()
 
 run_llvm_config(LLVM_VERSION_NUMBER "--version")
+message(STATUS "Detected LLVM version: ${LLVM_VERSION_NUMBER}")
 
 function(get_llvm_libfiles resultList)
     run_llvm_config(LLVM_LIBS "--libfiles" ${ARGN})
     str_to_list("${LLVM_LIBS}" tmpList)
-    # bug in llvm-config on Windows from LLVM 3.8 and older
-    if (${LLVM_VERSION_NUMBER} VERSION_LESS "3.9.0")
-        if (WIN32)
-            foreach(llvm_lib ${tmpList})
-                string(REGEX REPLACE "lib(LLVM[-.a-zA-Z0-9]+)\.a$" "\\1\.lib" llvm_lib "${llvm_lib}")
-                list(APPEND FIXED_LLVM_LIBRARY_LIST ${llvm_lib})
-            endforeach()
-            set(tmpList ${FIXED_LLVM_LIBRARY_LIST})
-        endif()
-    endif()
     set(${resultList} ${tmpList} PARENT_SCOPE)
 endfunction()
 
