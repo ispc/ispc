@@ -554,9 +554,10 @@ void Function::GenerateIR() {
                 g->target->markFuncWithCallingConv(appFunction);
 
 #ifdef ISPC_GENX_ENABLED
-                // GenX kernel should have "dllexport"
+                // GenX kernel should have "dllexport" and "CMGenxMain" attribute
                 if (g->target->getISA() == Target::GENX) {
                     appFunction->setDLLStorageClass(llvm::GlobalValue::DLLExportStorageClass);
+                    appFunction->addFnAttr("CMGenxMain");
                 }
 #endif
                 for (int i = 0; i < function->getFunctionType()->getNumParams() - 1; i++) {
