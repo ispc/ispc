@@ -60,6 +60,9 @@
 #include <llvm/Linker/Linker.h>
 #include <llvm/Support/MemoryBuffer.h>
 #include <llvm/Target/TargetMachine.h>
+#ifdef ISPC_GENX_ENABLED
+#include <llvm/GenXIntrinsics/GenXIntrinsics.h>
+#endif
 
 extern int yyparse();
 struct yy_buffer_state;
@@ -252,6 +255,19 @@ static void lAddModuleSymbols(llvm::Module *module, SymbolTable *symbolTable) {
         lCreateISPCSymbol(func, symbolTable);
     }
 }
+
+#ifdef ISPC_GENX_ENABLED
+static void lUpdateIntrinsicsAttributes(llvm::Module *module) {
+    for (auto F = module->begin(), E = module->end(); F != E; ++F) {
+        llvm::Function *Fn = &*F;
+
+        if (llvm::GenXIntrinsic::isGenXIntrinsic(Fn)) {
+            Fn->setAttributes(
+                llvm::GenXIntrinsic::getAttributes(Fn->getContext(), llvm::GenXIntrinsic::getGenXIntrinsicID(Fn)));
+        }
+    }
+}
+#endif
 
 /** In many of the builtins-*.ll files, we have declarations of various LLVM
     intrinsics that are then used in the implementation of various target-
@@ -861,6 +877,16 @@ void AddBitcodeToModule(const BitcodeLib *lib, llvm::Module *module, SymbolTable
 
         bcModule->setTargetTriple(mTriple.str());
         bcModule->setDataLayout(module->getDataLayout());
+
+#ifdef ISPC_GENX_ENABLED
+        if (g->target->getISA() == Target::GENX) {
+            // Maybe we will use it for other targets in future,
+            // but now it is needed only by GenX. We need
+            // to update attributes because GenX intrinsics are
+            // separated from the others and it is not done by default
+            lUpdateIntrinsicsAttributes(bcModule);
+        }
+#endif
 
         // A hack to move over declaration, which have no definition.
         // New linker is kind of smart and think it knows better what to do, so
