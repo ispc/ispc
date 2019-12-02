@@ -142,7 +142,7 @@ Module::Module(const char *fn) {
 
     lDeclareSizeAndPtrIntTypes(symbolTable);
 
-    module = new llvm::Module(filename ? filename : "<stdin>", *g->ctx);
+    module = new llvm::Module(!IsStdin(filename) ? filename : "<stdin>", *g->ctx);
     module->setTargetTriple(g->target->GetTripleString());
 
     // DataLayout information supposed to be managed in single place in Target class.
@@ -160,7 +160,7 @@ Module::Module(const char *fn) {
 
         // Let the DIBuilder know that we're starting a new compilation
         // unit.
-        if (filename == NULL) {
+        if (IsStdin(filename)) {
             // Unfortunately we can't yet call Error() since the global 'm'
             // variable hasn't been initialized yet.
             fprintf(stderr, "Can't emit debugging information with no "
@@ -211,7 +211,7 @@ int Module::CompileFile() {
     bool runPreprocessor = g->runCPP;
 
     if (runPreprocessor) {
-        if (filename != NULL) {
+        if (!IsStdin(filename)) {
             // Try to open the file first, since otherwise we crash in the
             // preprocessor if the file doesn't exist.
             FILE *f = fopen(filename, "r");
@@ -224,16 +224,16 @@ int Module::CompileFile() {
 
         std::string buffer;
         llvm::raw_string_ostream os(buffer);
-        execPreprocessor((filename != NULL) ? filename : "-", &os);
+        execPreprocessor(!IsStdin(filename) ? filename : "-", &os);
         YY_BUFFER_STATE strbuf = yy_scan_string(os.str().c_str());
         yyparse();
         yy_delete_buffer(strbuf);
     } else {
         // No preprocessor, just open up the file if it's not stdin..
         FILE *f = NULL;
-        if (filename == NULL)
+        if (IsStdin(filename)) {
             f = stdin;
-        else {
+        } else {
             f = fopen(filename, "r");
             if (f == NULL) {
                 perror(filename);
@@ -1330,14 +1330,14 @@ bool Module::writeDeps(const char *fn, bool generateMakeRule, const char *tn, co
 
     if (generateMakeRule) {
         fprintf(file, "%s:", tn);
-        if (sn) // Rules always emit source first.
+        if (!IsStdin(sn)) // Rules always emit source first.
             fprintf(file, " %s \\\n", sn);
         std::string unescaped;
         for (std::set<std::string>::const_iterator it = registeredDependencies.begin();
              it != registeredDependencies.end(); ++it) {
             unescaped = *it; // As this is preprocessor output, paths come escaped.
             lUnescapeStringInPlace(unescaped);
-            if (sn && 0 == strcmp(sn, unescaped.c_str())) // If source has been passed, it's already emitted.
+            if (!IsStdin(sn) && 0 == strcmp(sn, unescaped.c_str())) // If source has been passed, it's already emitted.
                 continue;
             fprintf(file, " %s \\\n", unescaped.c_str());
         }
@@ -2409,7 +2409,7 @@ int Module::CompileAndOutput(const char *srcFile, const char *arch, const char *
                     targetName = depsTargetName;
                 else if (outFileName)
                     targetName = outFileName;
-                else if (srcFile) {
+                else if (!IsStdin(srcFile)) {
                     targetName = srcFile;
                     size_t dot = targetName.find_last_of('.');
                     if (dot != std::string::npos)
@@ -2443,7 +2443,7 @@ int Module::CompileAndOutput(const char *srcFile, const char *arch, const char *
                                "compiling C++ output.");
             return 1;
         }
-        if (srcFile == NULL || !strcmp(srcFile, "-")) {
+        if (IsStdin(srcFile)) {
             Error(SourcePos(), "Compiling programs from standard input isn't "
                                "supported when compiling for multiple targets.  Please use "
                                "an intermediate temporary file.");
