@@ -2717,7 +2717,7 @@ could instead be written inside a ``foreach_active`` statement:
 
 ::
 
-    foreach_active (i) {
+    foreach_active (index) {
         ++array[index];
     }
 
