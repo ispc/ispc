@@ -162,3 +162,7 @@ void PrintWithWordBreaks(const char *buf, int indent, int columnWidth, FILE *out
     default.
  */
 int TerminalWidth();
+
+/** Returns true is the filepath represents stdin, otherwise false.
+ */
+bool IsStdin(const char *);
