@@ -163,8 +163,8 @@ Module::Module(const char *fn) {
         if (IsStdin(filename)) {
             // Unfortunately we can't yet call Error() since the global 'm'
             // variable hasn't been initialized yet.
-            fprintf(stderr, "Can't emit debugging information with no "
-                            "source file on disk.\n");
+            Error(SourcePos(), "Can't emit debugging information with no "
+                               "source file on disk.\n");
             ++errorCount;
             delete diBuilder;
             diBuilder = NULL;
