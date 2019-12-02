@@ -8,6 +8,7 @@
 //; RUN: not %{ispc} %s -o %t.o --nowrap --target=avx2-i32x8 -MT 2>&1 | FileCheck %s -check-prefix=CHECK_ERROR_8
 //; RUN: not %{ispc} %s -o %t.o --nowrap --target=avx2-i32x8 --dev-stub 2>&1 | FileCheck %s -check-prefix=CHECK_ERROR_9
 //; RUN: not %{ispc} %s -o %t.o --nowrap --target=avx2-i32x8 --host-stub 2>&1 | FileCheck %s -check-prefix=CHECK_ERROR_10
+//; RUN: not %{ispc} --nowrap --target=avx2-i32x8 2>&1 | FileCheck %s -check-prefix=CHECK_ERROR_11
 
 //; RUN: not %{ispc} %s -o %t.o --nowrap --target=avx2-i32x8 -not-existing-opt --quiet 2>&1 | FileCheck %s --allow-empty -check-prefix=CHECK_ERROR_QUIET
 
@@ -30,6 +31,7 @@
 //; CHECK_ERROR_8: No target name specified after -MT option.
 //; CHECK_ERROR_9: No output file name specified after --dev-stub option.
 //; CHECK_ERROR_10: No output file name specified after --host-stub option.
+//; CHECK_ERROR_11: No input file were specified. To read text from stdin use "-" as file name.
 
 //; CHECK_ERROR_QUIET-NOT: Error
 

@@ -710,9 +710,9 @@ int main(int Argc, char *Argv[]) {
             g->codegenOptLevel = Globals::CodegenOptLevel::Aggressive;
             if (!strcmp(argv[i], "-O1"))
                 g->opt.disableCoherentControlFlow = true;
-        } else if (!strcmp(argv[i], "-"))
-            ;
-        else if (!strcmp(argv[i], "--nostdlib"))
+        } else if (!strcmp(argv[i], "-")) {
+            file = argv[i];
+        } else if (!strcmp(argv[i], "--nostdlib"))
             g->includeStdlib = false;
         else if (!strcmp(argv[i], "--nocpp"))
             g->runCPP = false;
@@ -794,6 +794,11 @@ int main(int Argc, char *Argv[]) {
     // Emit accumulted errors and warnings, if any.
     // All the rest of errors and warnigns will be processed in regullar way.
     errorHandler.Emit();
+
+    if (file == NULL) {
+        Error(SourcePos(), "No input file were specified. To read text from stdin use \"-\" as file name.");
+        exit(1);
+    }
 
     // Default settings for PS4
     if (g->target_os == TargetOS::ps4) {

@@ -616,7 +616,8 @@ bool VerifyDataLayoutCompatibility(const std::string &module_dl, const std::stri
 }
 
 bool IsStdin(const char *filepath) {
-    if (filepath == nullptr || !strcmp(filepath, "-")) {
+    Assert(filepath != nullptr);
+    if (!strcmp(filepath, "-")) {
         return true;
     } else {
         return false;
