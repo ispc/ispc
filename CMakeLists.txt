@@ -115,10 +115,18 @@ set(OUTPUT_DEBUG Debug/bin)
 set(OUTPUT_RELEASE Release/bin)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/bin )
 
-if(NOT CMAKE_BUILD_TYPE)
+if(CMAKE_BUILD_TYPE)
+    # Validate build type
+    set(CONFIGURATION_TYPES "Debug;Release;RelWithDebInfo")
+
+    string(FIND "${CONFIGURATION_TYPES}" "${CMAKE_BUILD_TYPE}" MATCHED_CONFIG)
+    if (${MATCHED_CONFIG} EQUAL -1)
+         message(FATAL_ERROR "CMAKE_BUILD_TYPE (${CMAKE_BUILD_TYPE}) allows only the following values: ${CONFIGURATION_TYPES}")
+    endif()
+else(NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE "Release")
     message(STATUS "Build type not specified: Use Release by default.")
-endif(NOT CMAKE_BUILD_TYPE)
+endif(CMAKE_BUILD_TYPE)
 
 include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/FixWindowsPath.cmake)
 include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/LLVMConfig.cmake)
