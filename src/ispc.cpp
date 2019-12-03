@@ -566,11 +566,19 @@ Target::Target(const char *arch, const char *cpu, const char *isa, bool pic, boo
         }
     }
     if (this->m_target == NULL) {
-        fprintf(stderr, "Invalid architecture \"%s\"\nOptions: ", arch);
+        std::string error_message;
+        error_message = "Invalid architecture \"";
+        error_message += arch;
+        error_message += "\"\nOptions: ";
         llvm::TargetRegistry::iterator iter;
-        for (iter = llvm::TargetRegistry::targets().begin(); iter != llvm::TargetRegistry::targets().end(); ++iter)
-            fprintf(stderr, "%s ", iter->getName());
-        fprintf(stderr, "\n");
+        const char *separator = "";
+        for (iter = llvm::TargetRegistry::targets().begin(); iter != llvm::TargetRegistry::targets().end(); ++iter) {
+            error_message += separator;
+            error_message += iter->getName();
+            separator = ", ";
+        }
+        error_message += ".";
+        Error(SourcePos(), "%s", error_message.c_str());
         error = true;
     } else {
         this->m_arch = arch;

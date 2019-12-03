@@ -323,7 +323,7 @@ static void lAddSingleArg(char *arg, int &argc, char *argv[MAX_NUM_ARGS]) {
     }
     if (arg != NULL) {
         if (argc >= MAX_NUM_ARGS) {
-            fprintf(stderr, "More than %d arguments have been specified - aborting\n", MAX_NUM_ARGS);
+            Error(SourcePos(), "More than %d arguments have been specified - aborting\n", MAX_NUM_ARGS);
             exit(EXIT_FAILURE);
         }
         // printf("Arg %d: %s\n", argc, arg);
@@ -350,65 +350,6 @@ static void lGetAllArgs(int Argc, char *Argv[], int &argc, char *argv[MAX_NUM_AR
 }
 
 static void lSignal(void *) { FATAL("Unhandled signal sent to process; terminating."); }
-
-static int ParsingPhaseName(char *stage) {
-    if (strncmp(stage, "first", 5) == 0) {
-        return 0;
-    } else if (strncmp(stage, "last", 4) == 0) {
-        return LAST_OPT_NUMBER;
-    } else {
-        int t = atoi(stage);
-        if (t < 0 || t > LAST_OPT_NUMBER) {
-            fprintf(stderr, "Phases must be from 0 to %d. %s is incorrect.\n", LAST_OPT_NUMBER, stage);
-            exit(0);
-        } else {
-            return t;
-        }
-    }
-}
-
-static std::set<int> ParsingPhases(char *stages) {
-    std::set<int> phases;
-    auto len = strnlen(stages, 100);
-    Assert(len && len < 100 && "phases string is too long!");
-    int begin = ParsingPhaseName(stages);
-    int end = begin;
-
-    for (unsigned i = 0; i < strlen(stages); i++) {
-        if ((stages[i] == ',') || (i == strlen(stages) - 1)) {
-            for (int j = begin; j < end + 1; j++) {
-                phases.insert(j);
-            }
-            begin = ParsingPhaseName(stages + i + 1);
-            end = begin;
-        } else if (stages[i] == ':') {
-            end = ParsingPhaseName(stages + i + 1);
-        }
-    }
-    return phases;
-}
-
-static void lParseInclude(const char *path) {
-#ifdef ISPC_HOST_IS_WINDOWS
-    char delim = ';';
-#else
-    char delim = ':';
-#endif
-    size_t pos = 0, pos_end;
-    std::string str_path(path);
-    do {
-        pos_end = str_path.find(delim, pos);
-        size_t len = (pos_end == std::string::npos) ?
-                                                    // Not found, copy till end of the string.
-                         std::string::npos
-                                                    :
-                                                    // Copy [pos, pos_end).
-                         (pos_end - pos);
-        std::string s = str_path.substr(pos, len);
-        g->includePath.push_back(s);
-        pos = pos_end + 1;
-    } while (pos_end != std::string::npos);
-}
 
 // ArgErrors accumulates error and warning messages during arguments parsing
 // prints them after the parsing is done. We need to delay printing to take
@@ -458,6 +399,73 @@ class ArgErrors {
         }
     }
 };
+
+static int ParsingPhaseName(char *stage, ArgErrors &errorHandler) {
+    if (strncmp(stage, "first", 5) == 0) {
+        return 0;
+    } else if (strncmp(stage, "last", 4) == 0) {
+        return LAST_OPT_NUMBER;
+    } else {
+        int t = atoi(stage);
+        if (t < 0 || t > LAST_OPT_NUMBER) {
+            errorHandler.AddError("Phases must be from 0 to %d. %s is incorrect.", LAST_OPT_NUMBER, stage);
+            return 0;
+        } else {
+            return t;
+        }
+    }
+}
+
+static std::set<int> ParsingPhases(char *stages, ArgErrors &errorHandler) {
+    constexpr int parsing_limit = 100;
+    std::set<int> phases;
+    auto len = strnlen(stages, parsing_limit);
+    if (len == 0) {
+        errorHandler.AddError("Empty phase list.");
+        return phases;
+    }
+    if (len == parsing_limit && stages[parsing_limit] != '\0') {
+        errorHandler.AddError("Phase list is too long.");
+        return phases;
+    }
+    int begin = ParsingPhaseName(stages, errorHandler);
+    int end = begin;
+
+    for (unsigned i = 0; i < strlen(stages); i++) {
+        if ((stages[i] == ',') || (i == strlen(stages) - 1)) {
+            for (int j = begin; j < end + 1; j++) {
+                phases.insert(j);
+            }
+            begin = ParsingPhaseName(stages + i + 1, errorHandler);
+            end = begin;
+        } else if (stages[i] == ':') {
+            end = ParsingPhaseName(stages + i + 1, errorHandler);
+        }
+    }
+    return phases;
+}
+
+static void lParseInclude(const char *path) {
+#ifdef ISPC_HOST_IS_WINDOWS
+    char delim = ';';
+#else
+    char delim = ':';
+#endif
+    size_t pos = 0, pos_end;
+    std::string str_path(path);
+    do {
+        pos_end = str_path.find(delim, pos);
+        size_t len = (pos_end == std::string::npos) ?
+                                                    // Not found, copy till end of the string.
+                         std::string::npos
+                                                    :
+                                                    // Copy [pos, pos_end).
+                         (pos_end - pos);
+        std::string s = str_path.substr(pos, len);
+        g->includePath.push_back(s);
+        pos = pos_end + 1;
+    } while (pos_end != std::string::npos);
+}
 
 int main(int Argc, char *Argv[]) {
     int argc;
@@ -768,13 +776,13 @@ int main(int Argc, char *Argv[]) {
             errorHandler.AddWarning("Adding debug phases may change the way PassManager"
                                     "handles the phases and it may possibly make some bugs go"
                                     "away or introduce the new ones.");
-            g->debug_stages = ParsingPhases(argv[i] + strlen("--debug-phase="));
+            g->debug_stages = ParsingPhases(argv[i] + strlen("--debug-phase="), errorHandler);
         } else if (strncmp(argv[i], "--dump-file", 11) == 0)
             g->dumpFile = true;
 #endif
 
         else if (strncmp(argv[i], "--off-phase=", 12) == 0) {
-            g->off_stages = ParsingPhases(argv[i] + strlen("--off-phase="));
+            g->off_stages = ParsingPhases(argv[i] + strlen("--off-phase="), errorHandler);
         } else if (!strcmp(argv[i], "-v") || !strcmp(argv[i], "--version")) {
             lPrintVersion();
             return 0;

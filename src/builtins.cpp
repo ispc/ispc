@@ -271,9 +271,11 @@ static void lCheckModuleIntrinsics(llvm::Module *module) {
         // check the llvm.x86.* intrinsics for now...
         if (!strncmp(funcName.c_str(), "llvm.x86.", 9)) {
             llvm::Intrinsic::ID id = (llvm::Intrinsic::ID)func->getIntrinsicID();
-            if (id == 0)
-                fprintf(stderr, "FATAL: intrinsic is not found: %s  \n", funcName.c_str());
-            Assert(id != 0);
+            if (id == 0) {
+                std::string error_message = "Intrinsic is not found: ";
+                error_message += funcName;
+                FATAL(error_message.c_str());
+            }
             llvm::Type *intrinsicType = llvm::Intrinsic::getType(*g->ctx, id);
             intrinsicType = llvm::PointerType::get(intrinsicType, 0);
             Assert(func->getType() == intrinsicType);

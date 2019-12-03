@@ -945,7 +945,7 @@ bool Module::writeObjectFileOrAssembly(llvm::TargetMachine *targetMachine, llvm:
     std::unique_ptr<llvm::ToolOutputFile> of(new llvm::ToolOutputFile(outFileName, error, flags));
 
     if (error) {
-        fprintf(stderr, "Error opening output file \"%s\".\n", outFileName);
+        Error(SourcePos(), "Cannot open output file \"%s\".\n", outFileName);
         return false;
     }
 
@@ -955,15 +955,13 @@ bool Module::writeObjectFileOrAssembly(llvm::TargetMachine *targetMachine, llvm:
         llvm::raw_fd_ostream &fos(of->os());
 #if ISPC_LLVM_VERSION == ISPC_LLVM_6_0
         if (targetMachine->addPassesToEmitFile(pm, fos, fileType)) {
-            fprintf(stderr, "Fatal error adding passes to emit object file!");
-            exit(1);
+            FATAL("Failed to add passes to emit object file!");
         }
 #else // LLVM 7.0+
       // Third parameter is for generation of .dwo file, which is separate DWARF
       // file for ELF targets. We don't support it currently.
         if (targetMachine->addPassesToEmitFile(pm, fos, nullptr, fileType)) {
-            fprintf(stderr, "Fatal error adding passes to emit object file!");
-            exit(1);
+            FATAL("Failed to add passes to emit object file!");
         }
 #endif
 

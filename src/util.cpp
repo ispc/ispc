@@ -305,7 +305,7 @@ static void lPrint(const char *type, bool isError, SourcePos p, const char *fmt,
     char *errorBuf, *formattedBuf;
     if (vasprintf(&errorBuf, fmt, args) == -1) {
         fprintf(stderr, "vasprintf() unable to allocate memory!\n");
-        abort();
+        exit(1);
     }
 
     int indent = 0;
