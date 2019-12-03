@@ -100,7 +100,7 @@ class constant_iterator : public std::iterator<std::forward_iterator_tag, const 
     unsigned OpIdx;                  // Operand index
 
     bool isAtConstant() const {
-        assert(!InstI.atEnd() && OpIdx < InstI->getNumOperands() && "isAtConstant called with invalid arguments!");
+        Assert(!InstI.atEnd() && OpIdx < InstI->getNumOperands() && "isAtConstant called with invalid arguments!");
         return llvm::isa<llvm::Constant>(InstI->getOperand(OpIdx));
     }
 
@@ -119,7 +119,7 @@ class constant_iterator : public std::iterator<std::forward_iterator_tag, const 
     bool operator!=(const constant_iterator &x) const { return !(*this == x); }
 
     pointer operator*() const {
-        assert(isAtConstant() && "Dereferenced an iterator at the end!");
+        Assert(isAtConstant() && "Dereferenced an iterator at the end!");
         return llvm::cast<llvm::Constant>(InstI->getOperand(OpIdx));
     }
 
@@ -659,7 +659,7 @@ void CWriter::printStructReturnPointerFunctionType(llvm::raw_ostream &Out, const
             FunctionInnards << ", ";
         llvm::Type *ArgTy = *I;
         if (PAL.getParamAttributes(Idx).hasAttribute(llvm::Attribute::ByVal)) {
-            assert(ArgTy->isPointerTy());
+            Assert(ArgTy->isPointerTy());
             ArgTy = llvm::cast<llvm::PointerType>(ArgTy)->getElementType();
         }
         printType(FunctionInnards, ArgTy, PAL.getParamAttributes(Idx).hasAttribute(llvm::Attribute::SExt), "");
@@ -678,7 +678,7 @@ void CWriter::printStructReturnPointerFunctionType(llvm::raw_ostream &Out, const
 
 llvm::raw_ostream &CWriter::printSimpleType(llvm::raw_ostream &Out, llvm::Type *Ty, bool isSigned,
                                             const std::string &NameSoFar) {
-    assert((Ty->isFloatingPointTy() || Ty->isX86_MMXTy() || Ty->isIntegerTy() || Ty->isVectorTy() || Ty->isVoidTy()) &&
+    Assert((Ty->isFloatingPointTy() || Ty->isX86_MMXTy() || Ty->isIntegerTy() || Ty->isVectorTy() || Ty->isVoidTy()) &&
            "Invalid type for printSimpleType");
     switch (Ty->getTypeID()) {
     case llvm::Type::VoidTyID:
@@ -723,7 +723,7 @@ llvm::raw_ostream &CWriter::printSimpleType(llvm::raw_ostream &Out, llvm::Type *
         else if (eltTy->isDoubleTy())
             suffix = "d";
         else {
-            assert(eltTy->isIntegerTy());
+            Assert(eltTy->isIntegerTy());
             switch (eltTy->getPrimitiveSizeInBits()) {
             case 1:
                 suffix = "i1";
@@ -784,7 +784,7 @@ llvm::raw_ostream &CWriter::printType(llvm::raw_ostream &Out, llvm::Type *Ty, bo
         for (llvm::FunctionType::param_iterator I = FTy->param_begin(), E = FTy->param_end(); I != E; ++I) {
             llvm::Type *ArgTy = *I;
             if (PAL.getParamAttributes(Idx).hasAttribute(llvm::Attribute::ByVal)) {
-                assert(ArgTy->isPointerTy());
+                Assert(ArgTy->isPointerTy());
                 ArgTy = llvm::cast<llvm::PointerType>(ArgTy)->getElementType();
             }
             if (I != FTy->param_begin())
@@ -1070,7 +1070,7 @@ static bool isFPCSafeToPrint(const llvm::ConstantFP *CFP) {
 /// @brief Print a cast
 bool CWriter::printCast(unsigned opc, llvm::Type *SrcTy, llvm::Type *DstTy) {
     if (llvm::isa<const llvm::VectorType>(DstTy)) {
-        assert(llvm::isa<const llvm::VectorType>(SrcTy));
+        Assert(llvm::isa<const llvm::VectorType>(SrcTy));
         switch (opc) {
         case llvm::Instruction::UIToFP:
             Out << "__cast_uitofp(";
@@ -1246,10 +1246,10 @@ static const char *lGetTypedFunc(const char *base, llvm::Type *matchType, int wi
 void CWriter::printConstant(llvm::Constant *CPV, bool Static) {
     if (const llvm::ConstantExpr *CE = llvm::dyn_cast<llvm::ConstantExpr>(CPV)) {
         if (llvm::isa<llvm::VectorType>(CPV->getType())) {
-            assert(CE->getOpcode() == llvm::Instruction::BitCast);
+            Assert(CE->getOpcode() == llvm::Instruction::BitCast);
             llvm::ConstantExpr *Op = llvm::dyn_cast<llvm::ConstantExpr>(CE->getOperand(0));
-            assert(Op && Op->getOpcode() == llvm::Instruction::BitCast);
-            assert(llvm::isa<llvm::VectorType>(Op->getOperand(0)->getType()));
+            Assert(Op && Op->getOpcode() == llvm::Instruction::BitCast);
+            Assert(llvm::isa<llvm::VectorType>(Op->getOperand(0)->getType()));
 
             Out << "(__cast_bits(";
             printType(Out, CE->getType());
@@ -1300,13 +1300,13 @@ void CWriter::printConstant(llvm::Constant *CPV, bool Static) {
             return;
         }
         case llvm::Instruction::GetElementPtr:
-            assert(!llvm::isa<llvm::VectorType>(CPV->getType()));
+            Assert(!llvm::isa<llvm::VectorType>(CPV->getType()));
             Out << "(";
             printGEPExpression(CE->getOperand(0), gep_type_begin(CPV), gep_type_end(CPV), Static);
             Out << ")";
             return;
         case llvm::Instruction::Select:
-            assert(!llvm::isa<llvm::VectorType>(CPV->getType()));
+            Assert(!llvm::isa<llvm::VectorType>(CPV->getType()));
             Out << '(';
             printConstant(CE->getOperand(0), Static);
             Out << '?';
@@ -1334,7 +1334,7 @@ void CWriter::printConstant(llvm::Constant *CPV, bool Static) {
         case llvm::Instruction::Shl:
         case llvm::Instruction::LShr:
         case llvm::Instruction::AShr: {
-            assert(!llvm::isa<llvm::VectorType>(CPV->getType()));
+            Assert(!llvm::isa<llvm::VectorType>(CPV->getType()));
             Out << '(';
             bool NeedsClosingParens = printConstExprCast(CE, Static);
             printConstantWithCast(CE->getOperand(0), CE->getOpcode());
@@ -1415,7 +1415,7 @@ void CWriter::printConstant(llvm::Constant *CPV, bool Static) {
             return;
         }
         case llvm::Instruction::FCmp: {
-            assert(!llvm::isa<llvm::VectorType>(CPV->getType()));
+            Assert(!llvm::isa<llvm::VectorType>(CPV->getType()));
             Out << '(';
             bool NeedsClosingParens = printConstExprCast(CE, Static);
             if (CE->getPredicate() == llvm::FCmpInst::FCMP_FALSE)
@@ -1620,7 +1620,7 @@ void CWriter::printConstant(llvm::Constant *CPV, bool Static) {
         } else if (llvm::ConstantDataSequential *CDS = llvm::dyn_cast<llvm::ConstantDataSequential>(CPV)) {
             printConstantDataSequential(CDS, Static);
         } else {
-            assert(llvm::isa<llvm::ConstantAggregateZero>(CPV) || llvm::isa<llvm::UndefValue>(CPV));
+            Assert(llvm::isa<llvm::ConstantAggregateZero>(CPV) || llvm::isa<llvm::UndefValue>(CPV));
             if (AT->getNumElements()) {
                 Out << ' ';
                 llvm::Constant *CZ = llvm::Constant::getNullValue(AT->getElementType());
@@ -1643,13 +1643,13 @@ void CWriter::printConstant(llvm::Constant *CPV, bool Static) {
         if (llvm::isa<llvm::ConstantAggregateZero>(CPV)) {
             // All zeros; call the __setzero_* function.
             const char *setZeroFunc = lGetTypedFunc("setzero", VT->getElementType(), vectorWidth);
-            assert(setZeroFunc != NULL);
+            Assert(setZeroFunc != NULL);
             Out << setZeroFunc << "()";
         } else if (llvm::isa<llvm::UndefValue>(CPV)) {
             // Undefined value; call __undef_* so that we can potentially pass
             // this information along..
             const char *undefFunc = lGetTypedFunc("undef", VT->getElementType(), vectorWidth);
-            assert(undefFunc != NULL);
+            Assert(undefFunc != NULL);
             Out << undefFunc << "()";
         } else {
             const char *smearFunc = lGetTypedFunc("smear", VT->getElementType(), vectorWidth);
@@ -2977,7 +2977,7 @@ void CWriter::printFunctionSignature(const llvm::Function *F, bool Prototype) {
             // If this is a struct-return function, don't print the hidden
             // struct-return argument.
             if (isStructReturn) {
-                assert(I != E && "Invalid struct return function!");
+                Assert(I != E && "Invalid struct return function!");
                 ++I;
                 ++Idx;
             }
@@ -3009,7 +3009,7 @@ void CWriter::printFunctionSignature(const llvm::Function *F, bool Prototype) {
         // If this is a struct-return function, don't print the hidden
         // struct-return argument.
         if (isStructReturn) {
-            assert(I != E && "Invalid struct return function!");
+            Assert(I != E && "Invalid struct return function!");
             ++I;
             ++Idx;
         }
@@ -3019,7 +3019,7 @@ void CWriter::printFunctionSignature(const llvm::Function *F, bool Prototype) {
                 FunctionInnards << ", ";
             llvm::Type *ArgTy = *I;
             if (PAL.getParamAttributes(Idx).hasAttribute(llvm::Attribute::ByVal)) {
-                assert(ArgTy->isPointerTy());
+                Assert(ArgTy->isPointerTy());
                 ArgTy = llvm::cast<llvm::PointerType>(ArgTy)->getElementType();
             }
             printType(FunctionInnards, ArgTy, PAL.getParamAttributes(Idx).hasAttribute(llvm::Attribute::SExt));
@@ -3324,7 +3324,7 @@ void CWriter::visitPHINode(llvm::PHINode &I) {
 
 void CWriter::visitBinaryOperator(llvm::Instruction &I) {
     // binary instructions, shift instructions, setCond instructions.
-    assert(!I.getType()->isPointerTy());
+    Assert(!I.getType()->isPointerTy());
 
     if (llvm::isa<const llvm::VectorType>(I.getOperand(0)->getType())) {
         const char *intrinsic = NULL;
@@ -3863,19 +3863,17 @@ static void printLimitValue(llvm::IntegerType &Ty, bool isSigned, bool isMax, ll
         Out << "U" << type << (isMax ? "_MAX" : "0");
 }
 
-#ifndef NDEBUG
 static bool isSupportedIntegerSize(llvm::IntegerType &T) {
     return T.getBitWidth() == 8 || T.getBitWidth() == 16 || T.getBitWidth() == 32 || T.getBitWidth() == 64;
 }
-#endif
 
 void CWriter::printIntrinsicDefinition(const llvm::Function &F, llvm::raw_ostream &Out) {
     llvm::FunctionType *funT = F.getFunctionType();
     llvm::Type *retT = F.getReturnType();
     llvm::IntegerType *elemT = llvm::cast<llvm::IntegerType>(funT->getParamType(1));
 
-    assert(isSupportedIntegerSize(*elemT) && "CBackend does not support arbitrary size integers.");
-    assert(llvm::cast<llvm::StructType>(retT)->getElementType(0) == elemT && elemT == funT->getParamType(0) &&
+    Assert(isSupportedIntegerSize(*elemT) && "CBackend does not support arbitrary size integers.");
+    Assert(llvm::cast<llvm::StructType>(retT)->getElementType(0) == elemT && elemT == funT->getParamType(0) &&
            funT->getNumParams() == 2);
 
     switch (F.getIntrinsicID()) {
@@ -3948,7 +3946,7 @@ void CWriter::printIntrinsicDefinition(const llvm::Function &F, llvm::raw_ostrea
         if (NumBits <= 32)
             str_type << "uint" << 2 * NumBits << "_t";
         else {
-            assert(NumBits <= 64 && "Bit widths > 128 not implemented yet");
+            Assert(NumBits <= 64 && "Bit widths > 128 not implemented yet");
             str_type << "llvmUInt128";
         }
 
@@ -4217,7 +4215,7 @@ bool CWriter::visitBuiltinCall(llvm::CallInst &I, llvm::Intrinsic::ID ID, bool &
 #endif
 #undef Intrinsic
 #undef GET_GCC_BUILTIN_NAME
-        assert(BuiltinName[0] && "Unknown LLVM intrinsic!");
+        Assert(BuiltinName[0] && "Unknown LLVM intrinsic!");
 
         Out << BuiltinName;
         WroteCallee = true;
@@ -4395,7 +4393,7 @@ bool CWriter::visitBuiltinCall(llvm::CallInst &I, llvm::Intrinsic::ID ID, bool &
 
 // TODO: assumptions about what consume arguments from the call are likely wrong
 //      handle communitivity
-void CWriter::visitInlineAsm(llvm::CallInst &CI) { assert(!"Inline assembly not supported"); }
+void CWriter::visitInlineAsm(llvm::CallInst &CI) { Assert(!"Inline assembly not supported"); }
 
 void CWriter::visitAllocaInst(llvm::AllocaInst &I) {
     Out << '(';
@@ -4500,7 +4498,7 @@ void CWriter::printGEPExpression(llvm::Value *Ptr, llvm::gep_type_iterator I, ll
 }
 
 void CWriter::writeMemoryAccess(llvm::Value *Operand, llvm::Type *OperandType, bool IsVolatile, unsigned Alignment) {
-    assert(!llvm::isa<llvm::VectorType>(OperandType));
+    Assert(!llvm::isa<llvm::VectorType>(OperandType));
     bool IsUnaligned = Alignment && Alignment < TD->getABITypeAlignment(OperandType);
 
     llvm::IntegerType *ITy = llvm::dyn_cast<llvm::IntegerType>(OperandType);
@@ -4697,7 +4695,7 @@ void CWriter::visitExtractValueInst(llvm::ExtractValueInst &EVI) {
     Out << "(";
     if (llvm::isa<llvm::UndefValue>(EVI.getOperand(0))) {
         // FIXME: need to handle these--a 0 initializer won't do...
-        assert(!llvm::isa<llvm::VectorType>(EVI.getType()));
+        Assert(!llvm::isa<llvm::VectorType>(EVI.getType()));
         Out << "(";
         printType(Out, EVI.getType());
         Out << ") 0/*UNDEF*/";
@@ -4850,7 +4848,7 @@ llvm::Value *SmearCleanupPass::getInsertChainSmearValue(llvm::Instruction *inst)
         // operand 0 is a vector to insert into.
         insertInst = llvm::dyn_cast<llvm::InsertElementInst>(insertInst->getOperand(0));
     }
-    assert(smearValue != NULL);
+    Assert(smearValue != NULL);
 
     return smearValue;
 }
@@ -4899,7 +4897,7 @@ llvm::Value *SmearCleanupPass::getShuffleSmearValue(llvm::Instruction *inst) con
                 shuffleInst->getOperand(0)->getType(), llvm::IntegerType::get(module->getContext(), 32));
             extractFunc = llvm::dyn_cast<llvm::Function>(ef.getCallee());
 #endif
-            assert(extractFunc != NULL);
+            Assert(extractFunc != NULL);
             extractFunc->setDoesNotThrow();
             extractFunc->setOnlyReadsMemory();
         }
@@ -4943,12 +4941,12 @@ restart:
                 llvm::FunctionCallee sf = module->getOrInsertFunction(smearFuncName, iter->getType(), smearType);
                 smearFunc = llvm::dyn_cast<llvm::Function>(sf.getCallee());
 #endif
-                assert(smearFunc != NULL);
+                Assert(smearFunc != NULL);
                 smearFunc->setDoesNotThrow();
                 smearFunc->setDoesNotAccessMemory();
             }
 
-            assert(smearFunc != NULL);
+            Assert(smearFunc != NULL);
             llvm::Value *args[1] = {smearValue};
             llvm::ArrayRef<llvm::Value *> argArray(&args[0], &args[1]);
             llvm::Instruction *smearCall = llvm::CallInst::Create(
@@ -5083,7 +5081,7 @@ class MaskOpsCleanupPass : public llvm::BasicBlockPass {
 #else
             llvm::dyn_cast<llvm::Function>(m->getOrInsertFunction("__not", mt, mt).getCallee());
 #endif
-        assert(notFunc != NULL);
+        Assert(notFunc != NULL);
         notFunc->addFnAttr(llvm::Attribute::NoUnwind);
         notFunc->addFnAttr(llvm::Attribute::ReadNone);
 
@@ -5093,7 +5091,7 @@ class MaskOpsCleanupPass : public llvm::BasicBlockPass {
 #else
             llvm::dyn_cast<llvm::Function>(m->getOrInsertFunction("__and_not1", mt, mt, mt).getCallee());
 #endif
-        assert(andNotFuncs[0] != NULL);
+        Assert(andNotFuncs[0] != NULL);
         andNotFuncs[0]->addFnAttr(llvm::Attribute::NoUnwind);
         andNotFuncs[0]->addFnAttr(llvm::Attribute::ReadNone);
         andNotFuncs[1] =
@@ -5102,7 +5100,7 @@ class MaskOpsCleanupPass : public llvm::BasicBlockPass {
 #else
             llvm::dyn_cast<llvm::Function>(m->getOrInsertFunction("__and_not2", mt, mt, mt).getCallee());
 #endif
-        assert(andNotFuncs[1] != NULL);
+        Assert(andNotFuncs[1] != NULL);
         andNotFuncs[1]->addFnAttr(llvm::Attribute::NoUnwind);
         andNotFuncs[1]->addFnAttr(llvm::Attribute::ReadNone);
     }
