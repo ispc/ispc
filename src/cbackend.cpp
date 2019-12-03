@@ -14,6 +14,7 @@
 
 #include "ispc.h"
 #include "module.h"
+#include "util.h"
 
 #include <math.h>
 #include <sstream>
@@ -5228,7 +5229,7 @@ bool WriteCXXFile(llvm::Module *module, const char *fn, int vectorWidth, const c
     llvm::ToolOutputFile *of = new llvm::ToolOutputFile(fn, error, flags);
 
     if (error) {
-        fprintf(stderr, "Error opening output file \"%s\".\n", fn);
+        Error(SourcePos(), "Error opening output file \"%s\".\n", fn);
         return false;
     }
 

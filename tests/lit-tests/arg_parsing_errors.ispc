@@ -9,6 +9,13 @@
 //; RUN: not %{ispc} %s -o %t.o --nowrap --target=avx2-i32x8 --dev-stub 2>&1 | FileCheck %s -check-prefix=CHECK_ERROR_9
 //; RUN: not %{ispc} %s -o %t.o --nowrap --target=avx2-i32x8 --host-stub 2>&1 | FileCheck %s -check-prefix=CHECK_ERROR_10
 //; RUN: not %{ispc} --nowrap --target=avx2-i32x8 2>&1 | FileCheck %s -check-prefix=CHECK_ERROR_11
+//; RUN: not %{ispc} %s -o %t.o --nowrap --target=avx2-i32x8 --debug-phase= 2>&1 | FileCheck %s -check-prefix=CHECK_ERROR_12
+//; RUN: not %{ispc} %s -o %t.o --nowrap --target=avx2-i32x8 --off-phase= 2>&1 | FileCheck %s -check-prefix=CHECK_ERROR_13
+//; RUN: not %{ispc} %s -o %t.o --nowrap --target=avx2-i32x8 --debug-phase=12345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890 2>&1 | FileCheck %s -check-prefix=CHECK_ERROR_14
+//; RUN: not %{ispc} %s -o %t.o --nowrap --target=avx2-i32x8 --off-phase=12345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890 2>&1 | FileCheck %s -check-prefix=CHECK_ERROR_15
+//; RUN: not %{ispc} %s -o %t.o --nowrap --target=avx2-i32x8 --debug-phase=2000 2>&1 | FileCheck %s -check-prefix=CHECK_ERROR_16
+//; RUN: not %{ispc} %s -o %t.o --nowrap --target=avx2-i32x8 --off-phase=2000 2>&1 | FileCheck %s -check-prefix=CHECK_ERROR_17
+
 
 //; RUN: not %{ispc} %s -o %t.o --nowrap --target=avx2-i32x8 -not-existing-opt --quiet 2>&1 | FileCheck %s --allow-empty -check-prefix=CHECK_ERROR_QUIET
 
@@ -32,6 +39,12 @@
 //; CHECK_ERROR_9: No output file name specified after --dev-stub option.
 //; CHECK_ERROR_10: No output file name specified after --host-stub option.
 //; CHECK_ERROR_11: No input file were specified. To read text from stdin use "-" as file name.
+//; CHECK_ERROR_12: Empty phase list.
+//; CHECK_ERROR_13: Empty phase list.
+//; CHECK_ERROR_14: Phase list is too long.
+//; CHECK_ERROR_15: Phase list is too long.
+//; CHECK_ERROR_16: Phases must be from 0 to 1000. 2000 is incorrect.
+//; CHECK_ERROR_17: Phases must be from 0 to 1000. 2000 is incorrect.
 
 //; CHECK_ERROR_QUIET-NOT: Error
 
