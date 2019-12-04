@@ -3146,6 +3146,12 @@ int AssertStmt::EstimateCost() const { return COST_ASSERT; }
 DeleteStmt::DeleteStmt(Expr *e, SourcePos p) : Stmt(p, DeleteStmtID) { expr = e; }
 
 void DeleteStmt::EmitCode(FunctionEmitContext *ctx) const {
+#ifdef ISPC_GENX_ENABLED
+    if (g->target->getISA() == Target::GENX) {
+        Error(pos, "\"delete\" statement is not supported for genx target");
+        return;
+    }
+#endif
     if (!ctx->GetCurrentBasicBlock())
         return;
 

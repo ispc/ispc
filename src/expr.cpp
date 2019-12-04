@@ -8204,6 +8204,12 @@ Expr *NewExpr::TypeCheck() {
         AssertPos(pos, m->errorCount > 0);
         return NULL;
     }
+#ifdef ISPC_GENX_ENABLED
+    if (g->target->getISA() == Target::GENX) {
+        Error(pos, "\"new\" is not supported for genx target");
+        return NULL;
+    }
+#endif
     if (CastType<UndefinedStructType>(allocType) != NULL) {
         Error(pos,
               "Can't dynamically allocate storage for declared "
