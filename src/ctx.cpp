@@ -3410,6 +3410,13 @@ llvm::Instruction *FunctionEmitContext::ReturnInst() {
 
 llvm::Value *FunctionEmitContext::LaunchInst(llvm::Value *callee, std::vector<llvm::Value *> &argVals,
                                              llvm::Value *launchCount[3]) {
+#ifdef ISPC_GENX_ENABLED
+    if (g->target->getISA() == Target::GENX) {
+        Error(currentPos, "\"launch\" keyword is not supported for genx target");
+        return NULL;
+    }
+#endif
+
     if (callee == NULL) {
         AssertPos(currentPos, m->errorCount > 0);
         return NULL;
@@ -3473,6 +3480,13 @@ llvm::Value *FunctionEmitContext::LaunchInst(llvm::Value *callee, std::vector<ll
 }
 
 void FunctionEmitContext::SyncInst() {
+#ifdef ISPC_GENX_ENABLED
+    if (g->target->getISA() == Target::GENX) {
+        Error(currentPos, "\"sync\" keyword is not supported for genx target");
+        return;
+    }
+#endif
+
     llvm::Value *launchGroupHandle = LoadInst(launchGroupHandlePtr);
     llvm::Value *nullPtrValue = llvm::Constant::getNullValue(LLVMTypes::VoidPointerType);
     llvm::Value *nonNull = CmpInst(llvm::Instruction::ICmp, llvm::CmpInst::ICMP_NE, launchGroupHandle, nullPtrValue);
