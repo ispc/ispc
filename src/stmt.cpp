@@ -1737,15 +1737,12 @@ void ForeachStmt::EmitCodeForGenX(FunctionEmitContext *ctx) const {
     if (ctx->GetCurrentBasicBlock() == NULL || stmts == NULL)
         return;
 
-    // TODO: We should store current EM and reset it to AllOn state. There
-    // is no way to do it now, so emit error if we are sure that this
-    // foreach is in varying CF, emit warning in other case.
-    if (ctx->ifEmulatedUniformForGen()) {
-        Error(pos, "\"foreach\" statement is not supported under varying CF for GenX yet.");
-        return;
-    }
-    Warning(pos, "\"foreach\" statement is not supported under varying CF for GenX yet. Make sure that"
-                 " function with the following \"foreach\" is not called under varying CF:");
+    // We store current EM and reset it to AllOn state.
+    llvm::Value *oldMask = ctx->GetInternalMask();
+    llvm::Value *oldFunctionMask = ctx->GetFunctionMask();
+    ctx->SetInternalMask(LLVMMaskAllOn);
+    ctx->SetFunctionMask(LLVMMaskAllOn);
+    llvm::Value *execMask = ctx->GenXStartUnmaskedRegion();
 
     llvm::BasicBlock *bbBody = ctx->CreateBasicBlock("foreach_body");
     llvm::BasicBlock *bbExit = ctx->CreateBasicBlock("foreach_exit");
@@ -1869,7 +1866,10 @@ void ForeachStmt::EmitCodeForGenX(FunctionEmitContext *ctx) const {
     // foreach_exit: All done. Restore the old mask and clean up
     ctx->SetCurrentBasicBlock(bbExit);
 
-    // TODO: We should restore EM from value that was saved at the beginning.
+    // Restore execution mask from value that was saved at the beginning
+    ctx->GenXEndUnmaskedRegion(execMask);
+    ctx->SetInternalMask(oldMask);
+    ctx->SetFunctionMask(oldFunctionMask);
 
     ctx->EndForeach();
     ctx->EndScope();
@@ -2661,15 +2661,24 @@ UnmaskedStmt::UnmaskedStmt(Stmt *s, SourcePos pos) : Stmt(pos, UnmaskedStmtID) {
 void UnmaskedStmt::EmitCode(FunctionEmitContext *ctx) const {
     if (!ctx->GetCurrentBasicBlock() || !stmts)
         return;
-
     llvm::Value *oldInternalMask = ctx->GetInternalMask();
     llvm::Value *oldFunctionMask = ctx->GetFunctionMask();
 
     ctx->SetInternalMask(LLVMMaskAllOn);
     ctx->SetFunctionMask(LLVMMaskAllOn);
-
-    stmts->EmitCode(ctx);
-
+#ifdef ISPC_GENX_ENABLED
+    if (g->target->getISA() != Target::GENX) {
+#endif
+        stmts->EmitCode(ctx);
+#ifdef ISPC_GENX_ENABLED
+    } else {
+        // For gen we insert special intrinsics at the beginning and end of unmasked region.
+        // Correct execution mask will be set in CMSIMDCFLowering
+        llvm::Value *oldInternalMask = ctx->GenXStartUnmaskedRegion();
+        stmts->EmitCode(ctx);
+        ctx->GenXEndUnmaskedRegion(oldInternalMask);
+    }
+#endif
     // Do not restore old mask if our basic block is over. This happends if we emit code
     // for something like 'unmasked{return;}', for example.
     if (ctx->GetCurrentBasicBlock() == NULL)
