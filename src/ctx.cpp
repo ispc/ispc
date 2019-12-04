@@ -3636,12 +3636,17 @@ llvm::Value *FunctionEmitContext::GenXPrepareVectorBranch(llvm::Value *value) {
 llvm::Value *FunctionEmitContext::GenXStartUnmaskedRegion() {
     auto Fn = llvm::GenXIntrinsic::getGenXDeclaration(m->module, llvm::GenXIntrinsic::genx_unmask_begin);
     std::vector<llvm::Value *> args;
-    return llvm::CallInst::Create(Fn, args, "", bblock);
+    llvm::Value *maskAlloca = AllocaInst(LLVMTypes::Int32Type);
+    llvm::Value *execMask = llvm::CallInst::Create(Fn, args, "", bblock);
+    StoreInst(execMask, maskAlloca);
+    return maskAlloca;
 }
 
-void FunctionEmitContext::GenXEndUnmaskedRegion(llvm::Value *em) {
-    auto Fn = llvm::GenXIntrinsic::getGenXDeclaration(m->module, llvm::GenXIntrinsic::genx_unmask_end);
-    llvm::CallInst::Create(Fn, em, "", bblock);
+void FunctionEmitContext::GenXEndUnmaskedRegion(llvm::Value *execMask) {
+    llvm::Value *restoredMask = LoadInst(execMask);
+    auto Fn =
+        llvm::GenXIntrinsic::getGenXDeclaration(m->module, llvm::GenXIntrinsic::genx_unmask_end, LLVMTypes::Int32Type);
+    llvm::CallInst::Create(Fn, restoredMask, "", bblock);
 }
 
 void FunctionEmitContext::addUniformMetadata(llvm::Value *v) {
