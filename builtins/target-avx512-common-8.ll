@@ -1,4 +1,4 @@
-;;  Copyright (c) 2019, Intel Corporation
+;;  Copyright (c) 2020, Intel Corporation
 ;;  All rights reserved.
 ;;
 ;;  Redistribution and use in source and binary forms, with or without
@@ -29,7 +29,7 @@
 ;;   NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 ;;   SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.  
 
-define(`MASK',`i8')
+define(`MASK',`i1')
 define(`HAVE_GATHER',`1')
 define(`HAVE_SCATTER',`1')
 
@@ -38,14 +38,8 @@ include(`target-avx512-utils.ll')
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Stub for mask conversion. LLVM's intrinsics want i1 mask, but we use i8
 
-define <WIDTH x i1> @__cast_mask_to_i1 (<WIDTH x MASK> %mask) alwaysinline {
-  %mask_vec_i1 = icmp ne <WIDTH x MASK> %mask, const_vector(MASK, 0)
-  ret <WIDTH x i1> %mask_vec_i1
-}
-
 define i8 @__cast_mask_to_i8 (<WIDTH x MASK> %mask) alwaysinline {
-  %mask_i1 = call <WIDTH x i1> @__cast_mask_to_i1 (<WIDTH x MASK> %mask)
-  %mask_i8 = bitcast <WIDTH x i1> %mask_i1 to i8
+  %mask_i8 = bitcast <WIDTH x i1> %mask to i8
   ret i8 %mask_i8
 }
 
@@ -617,8 +611,7 @@ define void @__masked_store_double(<8 x double>* nocapture, <8 x double> %v, <WI
 define void @__masked_store_blend_i8(<8 x i8>* nocapture, <8 x i8>,
                                      <WIDTH x MASK>) nounwind alwaysinline {
   %v = load PTR_OP_ARGS(`<8 x i8> ')  %0
-  %mask_vec_i1 = call <WIDTH x i1> @__cast_mask_to_i1 (<WIDTH x MASK> %2)
-  %v1 = select <WIDTH x i1> %mask_vec_i1, <8 x i8> %1, <8 x i8> %v
+  %v1 = select <WIDTH x i1> %2, <8 x i8> %1, <8 x i8> %v
   store <8 x i8> %v1, <8 x i8> * %0
   ret void
 }
@@ -626,8 +619,7 @@ define void @__masked_store_blend_i8(<8 x i8>* nocapture, <8 x i8>,
 define void @__masked_store_blend_i16(<8 x i16>* nocapture, <8 x i16>,
                                       <WIDTH x MASK>) nounwind alwaysinline {
   %v = load PTR_OP_ARGS(`<8 x i16> ')  %0
-  %mask_vec_i1 = call <WIDTH x i1> @__cast_mask_to_i1 (<WIDTH x MASK> %2)
-  %v1 = select <WIDTH x i1> %mask_vec_i1, <8 x i16> %1, <8 x i16> %v
+  %v1 = select <WIDTH x i1> %2, <8 x i16> %1, <8 x i16> %v
   store <8 x i16> %v1, <8 x i16> * %0
   ret void
 }
@@ -635,8 +627,7 @@ define void @__masked_store_blend_i16(<8 x i16>* nocapture, <8 x i16>,
 define void @__masked_store_blend_i32(<8 x i32>* nocapture, <8 x i32>,
                                       <WIDTH x MASK>) nounwind alwaysinline {
   %v = load PTR_OP_ARGS(`<8 x i32> ')  %0
-  %mask_vec_i1 = call <WIDTH x i1> @__cast_mask_to_i1 (<WIDTH x MASK> %2)
-  %v1 = select <WIDTH x i1> %mask_vec_i1, <8 x i32> %1, <8 x i32> %v
+  %v1 = select <WIDTH x i1> %2, <8 x i32> %1, <8 x i32> %v
   store <8 x i32> %v1, <8 x i32> * %0
   ret void
 }
@@ -644,8 +635,7 @@ define void @__masked_store_blend_i32(<8 x i32>* nocapture, <8 x i32>,
 define void @__masked_store_blend_float(<8 x float>* nocapture, <8 x float>, 
                                         <WIDTH x MASK>) nounwind alwaysinline {
   %v = load PTR_OP_ARGS(`<8 x float> ')  %0
-  %mask_vec_i1 = call <WIDTH x i1> @__cast_mask_to_i1 (<WIDTH x MASK> %2)
-  %v1 = select <WIDTH x i1> %mask_vec_i1, <8 x float> %1, <8 x float> %v
+  %v1 = select <WIDTH x i1> %2, <8 x float> %1, <8 x float> %v
   store <8 x float> %v1, <8 x float> * %0
   ret void
 }
@@ -653,8 +643,7 @@ define void @__masked_store_blend_float(<8 x float>* nocapture, <8 x float>,
 define void @__masked_store_blend_i64(<8 x i64>* nocapture,
                             <8 x i64>, <WIDTH x MASK>) nounwind alwaysinline {
   %v = load PTR_OP_ARGS(`<8 x i64> ')  %0
-  %mask_vec_i1 = call <WIDTH x i1> @__cast_mask_to_i1 (<WIDTH x MASK> %2)
-  %v1 = select <WIDTH x i1> %mask_vec_i1, <8 x i64> %1, <8 x i64> %v
+  %v1 = select <WIDTH x i1> %2, <8 x i64> %1, <8 x i64> %v
   store <8 x i64> %v1, <8 x i64> * %0
   ret void
 }
@@ -662,8 +651,7 @@ define void @__masked_store_blend_i64(<8 x i64>* nocapture,
 define void @__masked_store_blend_double(<8 x double>* nocapture,
                             <8 x double>, <WIDTH x MASK>) nounwind alwaysinline {
   %v = load PTR_OP_ARGS(`<8 x double> ')  %0
-  %mask_vec_i1 = call <WIDTH x i1> @__cast_mask_to_i1 (<WIDTH x MASK> %2)
-  %v1 = select <WIDTH x i1> %mask_vec_i1, <8 x double> %1, <8 x double> %v
+  %v1 = select <WIDTH x i1> %2, <8 x double> %1, <8 x double> %v
   store <8 x double> %v1, <8 x double> * %0
   ret void
 }
