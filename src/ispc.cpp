@@ -759,7 +759,7 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, bool pic, boo
         this->m_dataTypeWidth = 32;
         this->m_vectorWidth = 16;
         this->m_maskingIsFree = true;
-        this->m_maskBitCount = 8;
+        this->m_maskBitCount = 1;
         this->m_hasHalf = true;
         this->m_hasRand = true;
         this->m_hasGather = this->m_hasScatter = true;
@@ -778,7 +778,7 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, bool pic, boo
         this->m_dataTypeWidth = 32;
         this->m_vectorWidth = 8;
         this->m_maskingIsFree = true;
-        this->m_maskBitCount = 8;
+        this->m_maskBitCount = 1;
         this->m_hasHalf = true;
         this->m_hasRand = true;
         this->m_hasGather = this->m_hasScatter = true;
@@ -802,7 +802,7 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, bool pic, boo
         this->m_dataTypeWidth = 32;
         this->m_vectorWidth = 16;
         this->m_maskingIsFree = true;
-        this->m_maskBitCount = 8;
+        this->m_maskBitCount = 1;
         this->m_hasHalf = true;
         this->m_hasRand = true;
         this->m_hasGather = this->m_hasScatter = true;
