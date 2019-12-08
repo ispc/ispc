@@ -18,6 +18,7 @@
 //; RUN: not %{ispc} %s -o %t.o --nowrap --target=avx2-i32x8 --arch=x64 2>&1 | FileCheck %s -check-prefix=CHECK_ERROR_18
 //; RUN: not %{ispc} %s -o %t.o --nowrap --target=sse3,avx2-i32x8,gost 2>&1 | FileCheck %s -check-prefix=CHECK_ERROR_19
 //; RUN: not %{ispc} %s -o %t.o --nowrap --target sse3,avx2-i32x8,gost 2>&1 | FileCheck %s -check-prefix=CHECK_ERROR_20
+//; RUN: %{ispc} %s -o %t.o --nowrap --arch=x86 --arch=x86_64 2>&1 | FileCheck %s -check-prefix=CHECK_ERROR_21
 
 //; RUN: not %{ispc} %s -o %t.o --nowrap --target=avx2-i32x8 -not-existing-opt --quiet 2>&1 | FileCheck %s --allow-empty -check-prefix=CHECK_ERROR_QUIET
 
@@ -50,6 +51,7 @@
 //; CHECK_ERROR_18: Error: Unsupported value for --arch, supported values are:
 //; CHECK_ERROR_19: Error: Incorrect targets: sse3,gost. Choices are:
 //; CHECK_ERROR_20: Error: Incorrect targets: sse3,gost. Choices are:
+//; CHECK_ERROR_21: Warning: Overwriting --arch=x86 with --arch=x86-64
 
 //; CHECK_ERROR_QUIET-NOT: Error
 

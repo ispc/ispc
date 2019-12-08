@@ -544,12 +544,19 @@ int main(int Argc, char *Argv[]) {
                                       argv[i] + 13);
             }
         } else if (!strncmp(argv[i], "--arch=", 7)) {
-            // TODO: warn on arch redefinition
+            Arch prev_arch = arch;
 
             arch = ParseArch(argv[i] + 7);
             if (arch == Arch::error) {
                 errorHandler.AddError("Unsupported value for --arch, supported values are: %s",
                                       Target::SupportedArchs());
+            }
+
+            if (prev_arch != Arch::none && prev_arch != arch) {
+                std::string prev_arch_str = ArchToString(prev_arch);
+                std::string arch_str = ArchToString(arch);
+                errorHandler.AddWarning("Overwriting --arch=%s with --arch=%s", prev_arch_str.c_str(),
+                                        arch_str.c_str());
             }
         } else if (!strncmp(argv[i], "--x86-asm-syntax=", 17)) {
             intelAsmSyntax = argv[i] + 17;
