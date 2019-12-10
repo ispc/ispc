@@ -1506,7 +1506,7 @@ SourcePos Union(const SourcePos &p1, const SourcePos &p2) {
     return ret;
 }
 
-TargetOS StringToOS(std::string os) {
+TargetOS ParseOS(std::string os) {
     std::string supportedOses = Target::SupportedOSes();
     if (supportedOses.find(os) == std::string::npos) {
         return TargetOS::error;
@@ -1527,7 +1527,7 @@ TargetOS StringToOS(std::string os) {
     return TargetOS::error;
 }
 
-constexpr TargetOS GetHostOS() {
+TargetOS GetHostOS() {
 #if defined(ISPC_HOST_IS_WINDOWS) && !defined(ISPC_WINDOWS_TARGET_OFF)
     return TargetOS::windows;
 #elif defined(ISPC_HOST_IS_LINUX) && !defined(ISPC_LINUX_TARGET_OFF)
