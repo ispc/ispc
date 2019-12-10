@@ -1527,6 +1527,25 @@ TargetOS ParseOS(std::string os) {
     return TargetOS::error;
 }
 
+std::string OSToString(TargetOS os) {
+    switch (os) {
+    case TargetOS::windows:
+        return "Window";
+    case TargetOS::linux:
+        return "Linux";
+    case TargetOS::macos:
+        return "macOS";
+    case TargetOS::android:
+        return "Android";
+    case TargetOS::ios:
+        return "iOS";
+    case TargetOS::ps4:
+        return "PS4";
+    case TargetOS::error:
+        return "error";
+    }
+}
+
 TargetOS GetHostOS() {
 #if defined(ISPC_HOST_IS_WINDOWS) && !defined(ISPC_WINDOWS_TARGET_OFF)
     return TargetOS::windows;

@@ -112,6 +112,7 @@ enum StorageClass { SC_NONE, SC_EXTERN, SC_STATIC, SC_TYPEDEF, SC_EXTERN_C };
 enum class TargetOS { windows, linux, macos, android, ios, ps4, error };
 
 TargetOS ParseOS(std::string os);
+std::string OSToString(TargetOS os);
 TargetOS GetHostOS();
 
 enum class Arch { none, x86, x86_64, arm, aarch64, error };
