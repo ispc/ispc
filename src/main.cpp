@@ -634,7 +634,7 @@ int main(int Argc, char *Argv[]) {
                                       Target::SupportedTargets());
             }
         } else if (!strncmp(argv[i], "--target-os=", 12)) {
-            g->target_os = StringToOS(argv[i] + 12);
+            g->target_os = ParseOS(argv[i] + 12);
             if (g->target_os == TargetOS::error) {
                 errorHandler.AddError("Unsupported value for --target-os, supported values are: %s",
                                       Target::SupportedOSes().c_str());
