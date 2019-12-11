@@ -467,7 +467,6 @@ void Optimize(llvm::Module *module, int optLevel) {
         optPM.add(CreateIsCompileTimeConstantPass(true));
         optPM.add(llvm::createFunctionInliningPass());
         optPM.add(CreateMakeInternalFuncsStaticPass());
-        optPM.add(llvm::createCFGSimplificationPass());
         optPM.add(llvm::createGlobalDCEPass());
     } else {
         llvm::PassRegistry *registry = llvm::PassRegistry::getPassRegistry();
