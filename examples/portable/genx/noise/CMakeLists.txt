@@ -35,11 +35,21 @@ message(STATUS "Processing noise/CMakeLists.txt")
 cmake_minimum_required(VERSION 3.12)
 
 set(ISPC_SRC_NAME "noise")
-set(ISPC_OBJ_NAME "${CMAKE_CURRENT_BINARY_DIR}/test.isa")
-set(HOST_NAME "host")
 set(TEST_NAME "noise")
 
+# Param here?
+if(WIN32)
+    set(HOST_NAME "host")
+    set(ISPC_OBJ_NAME "${CMAKE_CURRENT_BINARY_DIR}/test.isa")
+else()
+    set(HOST_NAME "l0host")
+    set(ISPC_OBJ_NAME "${CMAKE_CURRENT_BINARY_DIR}/test.spv")
+    set(ISPC_FLAGS "--emit-spirv" "--addressing=32" "-DISPC_GENX_ENABLED")
+endif()
+
 set(HOST_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/${HOST_NAME}.cpp ${CMAKE_CURRENT_SOURCE_DIR}/${TEST_NAME}_serial.cpp)
+#set(HOST_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/${HOST_NAME}.cpp)
+message(STATUS "Host sources: ${HOST_SOURCES}")
 
 add_perf_example(
     NAME "noise"
@@ -49,6 +59,7 @@ add_perf_example(
     HOST_NAME ${HOST_NAME} 
     CM_OBJ_NAME ${CM_OBJ_NAME}
     TEST_NAME ${TEST_NAME} 
+    ISPC_FLAGS ${ISPC_FLAGS}
     HOST_SOURCES ${HOST_SOURCES} 
 )
 
