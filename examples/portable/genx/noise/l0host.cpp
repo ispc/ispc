@@ -26,7 +26,7 @@ static int run(int niter, int gx, int gy) {
     for (int i = 0; i < SZ; i++)
         out.data[i] = -1;
 
-    L0InitContext(hDriver, hDevice, hModule, hCommandQueue);
+    L0InitContext(hDriver, hDevice, hModule, hCommandQueue, "test.spv");
 
     ze_command_list_handle_t hCommandList;
     ze_kernel_handle_t hKernel;
@@ -57,8 +57,6 @@ static int run(int niter, int gx, int gy) {
 
 
     // EXECUTION
-    // set group size
-    // FIXME
     uint32_t groupSpaceWidth = gx;
     uint32_t groupSpaceHeight = gy;
     
@@ -68,10 +66,51 @@ static int run(int niter, int gx, int gy) {
     // set grid size
     ze_thread_group_dimensions_t dispatchTraits = {1, 1, 1};
 
+    /*zet_metric_group_handle_t hMetricGroup = nullptr;
+    ze_event_handle_t hEvent = nullptr;
+    ze_event_pool_handle_t hEventPool = nullptr;
+    ze_event_pool_desc_t poolDesc = {ZE_EVENT_POOL_DESC_VERSION_CURRENT, ZE_EVENT_POOL_FLAG_DEFAULT , 1};
+    ze_event_desc_t eventDesc = {ZE_EVENT_DESC_VERSION_CURRENT};
+    zet_metric_tracer_handle_t    hMetricTracer          = nullptr;
+    zet_metric_tracer_desc_t      metricTracerDescriptor = {ZET_METRIC_TRACER_DESC_VERSION_CURRENT};
+
+    FindMetricGroup(hDevice, "ComputeBasic", ZET_METRIC_GROUP_SAMPLING_TYPE_TIME_BASED, &hMetricGroup);
+    L0_SAFE_CALL(zetDeviceActivateMetricGroups( hDevice, 1, &hMetricGroup ));
+
+    // Create notification event
+    L0_SAFE_CALL(zeEventPoolCreate( hDriver, &poolDesc, 1, &hDevice, &hEventPool ));
+    eventDesc.index  = 0;
+    eventDesc.signal = ZE_EVENT_SCOPE_FLAG_HOST;
+    eventDesc.wait   = ZE_EVENT_SCOPE_FLAG_HOST;
+    L0_SAFE_CALL(zeEventCreate( hEventPool, &eventDesc, &hEvent ));
+
+    // Open metric tracer
+    metricTracerDescriptor.samplingPeriod       = 1000;
+    metricTracerDescriptor.notifyEveryNReports  = 32768;
+    L0_SAFE_CALL(zetMetricTracerOpen( hDevice, hMetricGroup, &metricTracerDescriptor, hEvent, &hMetricTracer ));
+    */
+
     // launch
     L0_SAFE_CALL(zeCommandListAppendLaunchKernel(hCommandList, hKernel, &dispatchTraits, nullptr, 0, nullptr));
-
     L0_SAFE_CALL(zeCommandListAppendBarrier(hCommandList, nullptr, 0, nullptr));
+
+    // Read raw data
+    /*size_t rawSize = 0;
+    L0_SAFE_CALL(zetMetricTracerReadData( hMetricTracer, UINT32_MAX, &rawSize, nullptr ));
+    uint8_t* rawData = (uint8_t*)malloc(rawSize);
+    L0_SAFE_CALL(zetMetricTracerReadData( hMetricTracer, UINT32_MAX, &rawSize, rawData ));
+    
+    // Close metric tracer
+    L0_SAFE_CALL(zetMetricTracerClose( hMetricTracer ));
+    L0_SAFE_CALL(zeEventDestroy( hEvent ));
+    L0_SAFE_CALL(zeEventPoolDestroy( hEventPool ));
+    // Deconfigure the device
+    L0_SAFE_CALL(zetDeviceActivateMetricGroups( hDevice, 0, nullptr ));
+
+    // Calculate metric data
+    CalculateMetricsExample( hMetricGroup, rawSize, rawData );
+    free(rawData);
+    */
 
     // copy result to host
     void *res = result.data;
@@ -81,11 +120,6 @@ static int run(int niter, int gx, int gy) {
     L0_SAFE_CALL(zeCommandQueueExecuteCommandLists(hCommandQueue, 1, &hCommandList, nullptr));
     L0_SAFE_CALL(zeCommandQueueSynchronize(hCommandQueue, std::numeric_limits<uint32_t>::max()));
 
-    // TODO: timeit!
-    /*auto timings = execute(device, kernel, gx, gy, niter, false, TIMEOUT);
-    timings.print(niter);*/
-
-    //void *res = out.data;
     L0_SAFE_CALL(zeDriverFreeMem(hDriver, buf_ref));
 
     // RESULT CHECK
