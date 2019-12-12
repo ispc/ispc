@@ -46,12 +46,16 @@ function(add_perf_example)
                       )
     add_custom_target(${parsed_TEST_NAME} ALL DEPENDS ${ISPC_BUILD_OUTPUT})
 
+    if (NOT HOST_SOURCES)
+        return()
+    endif()
+
     if (parsed_CM_TEST)
         set(parsed_TEST_NAME "${parsed_TEST_NAME}_cm")
     endif()
 
 # compile host code
-    set(HOST_EXECUTABLE ${parsed_HOST_NAME}_${parsed_TEST_NAME})
+    set(HOST_EXECUTABLE "host_${parsed_TEST_NAME}")
     if (WIN32)
         add_executable(${HOST_EXECUTABLE} ${parsed_HOST_SOURCES})
         target_include_directories(${HOST_EXECUTABLE} PRIVATE "${COMMON_PATH}"
@@ -62,20 +66,20 @@ function(add_perf_example)
 
         target_link_libraries(${HOST_EXECUTABLE} "${MDF}/runtime/lib/x86/igfx11cmrt32.lib"
                               "${MDF}/compiler/lib/x86/libcm.lib" AdvAPI32 Ole32)
-    install(TARGETS "${HOST_EXECUTABLE}" RUNTIME DESTINATION ${CMAKE_CURRENT_BINARY_DIR}
-        PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE)
+        install(TARGETS "${HOST_EXECUTABLE}" RUNTIME DESTINATION ${CMAKE_CURRENT_BINARY_DIR}
+            PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE)
     else()
 # L0 build
         # TODO: check exists
         set(SYCL_CLANG_EXECUTABLE "${SYCL}/bin/clang++")
         add_custom_target(${HOST_EXECUTABLE} ALL
-            COMMAND ${SYCL_CLANG_EXECUTABLE} -fsycl -isystem ${COMMON_PATH} ${parsed_HOST_SOURCES} -o ${HOST_EXECUTABLE} -L${SYCL}/lib -llevel_zero -v
+            COMMAND ${SYCL_CLANG_EXECUTABLE} -fsycl -isystem ${COMMON_PATH} ${parsed_HOST_SOURCES} -o ${HOST_EXECUTABLE} -L${SYCL}/lib -llevel_zero 
             WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
             VERBATIM
         )
     endif()
     # compile cm kernel if present
-    if (parsed_CM_TEST)
+    if (parsed_CM_TEST AND MDF)
         set(CM_TEST_NAME "${parsed_TEST_NAME}")
         list(APPEND CM_BUILD_OUTPUT ${parsed_CM_OBJ_NAME})
 

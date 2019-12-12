@@ -45,13 +45,26 @@ args, unknown = parser.parse_known_args()
 print("Found additional arguments: ", unknown, " Will append these to cmd line.")
 print("Using [" + args.exe_name + "] test in " + args.dir)
 
-mdf_path = "@MDF@"
+additional_path = ""
+additional_libs = ""
 
-compiler_lib = mdf_path + "/compiler/lib/x86"
-runtime_lib = mdf_path + "/runtime/lib/x86"
+if os.name == 'nt':
+    mdf_path = "@MDF@"
+    compiler_lib = mdf_path + "/compiler/lib/x86"
+    runtime_lib = mdf_path + "/runtime/lib/x86"
+    additional_path = os.pathsep + os.pathsep.join([compiler_lib, runtime_lib])
+else:
+    sycl_path = "@SYCL@"
+    cmc_path = "@CMC_INSTALL_PATH@"
+    sycl_lib = sycl_path + "/lib"
+    sycl_bin = sycl_path + "/bin"
+    cmc_lib = cmc_path + "/lib"
+    additional_path = os.pathsep + os.pathsep.join([sycl_bin])
+    additional_libs = os.pathsep + os.pathsep.join([sycl_lib, cmc_lib])
 
 test_env = os.environ.copy()
-test_env["PATH"] += os.pathsep + os.pathsep.join([compiler_lib, runtime_lib])
+test_env["PATH"] += additional_path
+test_env["LD_LIBRARY_PATH"] = additional_libs
 
 cur_dir = os.path.dirname(os.path.realpath(__file__))
 test_dir = os.path.join(cur_dir, str(args.dir))
