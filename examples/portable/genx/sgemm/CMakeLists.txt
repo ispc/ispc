@@ -34,11 +34,19 @@ message(STATUS "Processing sgemm/CMakeLists.txt")
 cmake_minimum_required(VERSION 3.12)
 
 set(ISPC_SRC_NAME "naive_sgemm")
-set(ISPC_OBJ_NAME "${CMAKE_CURRENT_BINARY_DIR}/naive_sgemm_mt.isa")
-set(HOST_NAME "host")
-set(TEST_NAME "naive_sgemm")
 
-set(HOST_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/${HOST_NAME}.cpp)
+if(WIN32)
+    set(HOST_NAME "host")
+    set(TEST_NAME "naive_sgemm")
+    set(ISPC_OBJ_NAME "${CMAKE_CURRENT_BINARY_DIR}/naive_sgemm_mt.isa")
+    set(HOST_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/${HOST_NAME}.cpp)
+else()
+    #set(HOST_NAME "l0host")
+    set(TEST_NAME "naive_sgemm")
+    set(ISPC_OBJ_NAME "${CMAKE_CURRENT_BINARY_DIR}/naive_sgemm_mt.spv")
+    set(ISPC_FLAGS "--emit-spirv" "--addressing=32" "-DISPC_GENX_ENABLED")
+endif()
+
 set(CM_OBJ_NAME "${CMAKE_CURRENT_BINARY_DIR}/naive_sgemm_mt_cm.isa")
 set(CM_SRC_NAME "NaiveCMSgemm_genx")
 
