@@ -37,33 +37,21 @@ function(add_perf_example)
     set(multiValueArgs ISPC_FLAGS HOST_SOURCES CM_HOST_SOURCES CM_HOST_FLAGS)
     cmake_parse_arguments("parsed" "${options}" "${oneValueArgs}" "${multiValueArgs}" ${ARGN} )
 # compile ispc kernel    
-    message("name = ${parsed_NAME}")
-    message("test_name = ${parsed_TEST_NAME}")
-    message("CMTEST ${CM_TEST}")
-    message("CMTEST ${CM_TEST}")
-    message("CMTEST ${CM_TEST}")
-    message("CMTEST ${CM_TEST}")
-    message("CMTEST ${CM_TEST}")
-    message("ISPC_OBJ_NAME: ${parsed_ISPC_OBJ_NAME}")
     list(APPEND ISPC_BUILD_OUTPUT ${parsed_ISPC_OBJ_NAME})
     add_custom_command(
                        OUTPUT ${ISPC_BUILD_OUTPUT}
                        COMMAND ${ISPC_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/${parsed_ISPC_SRC_NAME}.ispc ${parsed_ISPC_FLAGS} --target=genx -o ${parsed_ISPC_OBJ_NAME}
                        VERBATIM
                        DEPENDS ${ISPC_EXECUTABLE}
-                       DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/${parsed_ISPC_SRC_NAME}.ispc"
                       )
     add_custom_target(${parsed_TEST_NAME} ALL DEPENDS ${ISPC_BUILD_OUTPUT})
-
-    #set_target_properties(${parsed_TEST_NAME} PROPERTIES LINKER_LANGUAGE CXX)
-    # target_sources(${parsed_TEST_NAME} PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/${parsed_ISPC_SRC_NAME}.ispc")
 
     if (parsed_CM_TEST)
         set(parsed_TEST_NAME "${parsed_TEST_NAME}_cm")
     endif()
+
 # compile host code
     set(HOST_EXECUTABLE ${parsed_HOST_NAME}_${parsed_TEST_NAME})
-    message("HOST SOURCES for ${HOST_EXECUTABLE}: ${parsed_HOST_SOURCES}")
     if (WIN32)
         add_executable(${HOST_EXECUTABLE} ${parsed_HOST_SOURCES})
         target_include_directories(${HOST_EXECUTABLE} PRIVATE "${COMMON_PATH}"
@@ -78,23 +66,13 @@ function(add_perf_example)
         PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE)
     else()
 # L0 build
+        # TODO: check exists
         set(SYCL_CLANG_EXECUTABLE "${SYCL}/bin/clang++")
-        message("SYCL clang: ${SYCL_CLANG_EXECUTABLE}")
-        string(REPLACE ";" " " H_SOURCES "${parsed_HOST_SOURCES}")
-        message("${SYCL_CLANG_EXECUTABLE} -fsycl -isystem ${COMMON_PATH}  ${H_SOURCES} -o ${HOST_EXECUTABLE} -L${SYCL}/lib -llevel_zero -v")
-        set(sources ${parsed_HOST_SOURCES})
-        message("${HOST_EXECUTABLE}")
-        message("${HOST_EXECUTABLE}")
-        message("${HOST_EXECUTABLE}")
-        message("${HOST_EXECUTABLE}")
-        message("${HOST_EXECUTABLE}")
         add_custom_target(${HOST_EXECUTABLE} ALL
             COMMAND ${SYCL_CLANG_EXECUTABLE} -fsycl -isystem ${COMMON_PATH} ${parsed_HOST_SOURCES} -o ${HOST_EXECUTABLE} -L${SYCL}/lib -llevel_zero -v
             WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
             VERBATIM
         )
-        #target_include_directories(${HOST_EXECUTABLE} PRIVATE ${COMMON_PATH})
-        #target_link_libraries(${HOST_EXECUTABLE} liblevel_zero)
     endif()
     # compile cm kernel if present
     if (parsed_CM_TEST)
