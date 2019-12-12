@@ -38,22 +38,12 @@
 
 #include "cm_rt_helpers.h"
 #include "isa_helpers.h"
+#include "common_helpers.h"
 
 #include <chrono>
 
 namespace hostutil {
 
-struct Timings {
-    UINT64 kernel_ns, host_ns;
-    Timings(UINT64 ker, UINT64 hst) : kernel_ns(ker), host_ns(hst) {}
-    void print(int niter) {
-        double thost = host_ns / 1000000.0f / niter;
-        double tkern = kernel_ns / 1000000.0f / niter;
-
-        printf("%-18s%.2lf msec\n", "kern time:", tkern);
-        printf("%-18s%.2lf msec\n", "host time:", thost);
-    }
-};
 
 void CMInitContext(CmDevice *&device, CmKernel *&kernel, CmProgram *&program, const char *isa_file_name,
                    const char *func_name) {
@@ -117,8 +107,6 @@ Timings execute(CmDevice *device, CmKernel *kernel, int threadSpaceWidth = 1, in
 
     return Timings(kernel_ns, host_ns);
 }
-
-template <class T, size_t N> struct alignas(4096) PageAlignedArray { T data[N]; };
 
 } // namespace hostutil
 

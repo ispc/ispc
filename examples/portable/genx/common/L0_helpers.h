@@ -5,6 +5,8 @@
 #include <cassert>
 #include <fstream>
 
+#include "common_helpers.h"
+
 #define L0_SAFE_CALL(call)                                                                                             \
     {                                                                                                                  \
         auto status = (call);                                                                                          \
@@ -100,7 +102,5 @@ void L0Create_Kernel(ze_device_handle_t &hDevice, ze_module_handle_t &hModule,
 
     L0_SAFE_CALL(zeKernelCreate(hModule, &kernelDesc, &hKernel));
 }
-
-template <class T, size_t N> struct alignas(4096) PageAlignedArray { T data[N]; };
 
 #endif
