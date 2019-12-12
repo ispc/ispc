@@ -50,10 +50,6 @@ function(add_perf_example)
         return()
     endif()
 
-    if (parsed_CM_TEST)
-        set(parsed_TEST_NAME "${parsed_TEST_NAME}_cm")
-    endif()
-
 # compile host code
     set(HOST_EXECUTABLE "host_${parsed_TEST_NAME}")
     if (WIN32)
@@ -80,6 +76,7 @@ function(add_perf_example)
     endif()
     # compile cm kernel if present
     if (parsed_CM_TEST AND MDF)
+        set(parsed_TEST_NAME "${parsed_TEST_NAME}_cm")
         set(CM_TEST_NAME "${parsed_TEST_NAME}")
         list(APPEND CM_BUILD_OUTPUT ${parsed_CM_OBJ_NAME})
 
@@ -95,7 +92,7 @@ function(add_perf_example)
             DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/${parsed_CM_SRC_NAME}.cpp
         )
 
-        set(CM_HOST_EXECUTABLE ${parsed_CM_HOST_NAME}_${parsed_TEST_NAME})
+        set(CM_HOST_EXECUTABLE "host_${parsed_TEST_NAME}")
         add_executable(${CM_HOST_EXECUTABLE} ${parsed_CM_HOST_SOURCES})
         if (WIN32)
             target_include_directories(${CM_HOST_EXECUTABLE} PRIVATE "${COMMON_PATH}"

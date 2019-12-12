@@ -46,7 +46,7 @@ function(test_add name)
         set(test_name ${name})
     endif()
 
-    list(APPEND ${test_name} ${PARSED_ARGS_UNPARSED_ARGUMENTS})
+    list(APPEND ${test_name} ${PARSED_ARGS_UNPARSED_ARGUMENTS} ${PARSED_ARGS_TEST_IS_CM})
     list(JOIN ${test_name} "_" result_test_name)
 
     add_test(NAME ${result_test_name}
