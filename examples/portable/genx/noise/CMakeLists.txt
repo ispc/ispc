@@ -48,8 +48,6 @@ else()
 endif()
 
 set(HOST_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/${HOST_NAME}.cpp ${CMAKE_CURRENT_SOURCE_DIR}/${TEST_NAME}_serial.cpp)
-#set(HOST_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/${HOST_NAME}.cpp)
-message(STATUS "Host sources: ${HOST_SOURCES}")
 
 add_perf_example(
     NAME "noise"
