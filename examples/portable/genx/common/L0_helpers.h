@@ -57,7 +57,7 @@ namespace hostutil {
 
         std::ifstream ins;
         // FIXME
-        std::string fn = "test_genx.spv";
+        std::string fn = "test.spv";
         ins.open(fn, std::ios::binary);
         if (!ins.good()) {
             fprintf(stderr, "Open %s failed\n", fn.c_str());
