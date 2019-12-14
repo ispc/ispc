@@ -175,9 +175,7 @@ class Target {
         SKX_AVX512 = 5,
         GENERIC = 6,
 #ifdef ISPC_ARM_ENABLED
-        NEON32,
-        NEON16,
-        NEON8,
+        NEON,
 #endif
         NUM_ISAS
     };

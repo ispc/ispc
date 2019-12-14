@@ -794,7 +794,7 @@ preprocessor runs:
   * - ISPC
     - 1
     - Detecting that the ``ispc`` compiler is processing the file
-  * - ISPC_TARGET_{NEON_8, NEON_16, NEON_32, SSE2, SSE4, AVX, AVX2, AVX512KNL, AVX512SKX, GENERIC}
+  * - ISPC_TARGET_{NEON, SSE2, SSE4, AVX, AVX2, AVX512KNL, AVX512SKX, GENERIC}
     - 1
     - One of these will be set, depending on the compilation target.
   * - ISPC_POINTER_SIZE
