@@ -78,8 +78,7 @@ std::string ArchToString(Arch arch) {
 }
 
 ISPCTarget ParseISPCTarget(std::string target) {
-    // TODO host - remove?
-    // TODO LLVM support: skx-i32x8
+    // TODO: ensure skx-i32x8 is not enabled and linked for earli LLVM version.
 
     // The first matching string for each target is the canonical way to name the target,
     // all other strings are aliases.

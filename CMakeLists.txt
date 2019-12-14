@@ -203,6 +203,8 @@ target_sources(${PROJECT_NAME}
     PRIVATE
         "src/ast.cpp"
         "src/ast.h"
+        "src/bitcode_lib.cpp"
+        "src/bitcode_lib.h"
         "src/builtins.cpp"
         "src/builtins.h"
         "src/cbackend.cpp"
@@ -230,6 +232,8 @@ target_sources(${PROJECT_NAME}
         "src/sym.h"
         "src/target_enums.cpp"
         "src/target_enums.h"
+        "src/target_registry.cpp"
+        "src/target_registry.h"
         "src/type.cpp"
         "src/type.h"
         "src/util.cpp"
@@ -304,9 +308,9 @@ else()
     set_source_files_properties(${BISON_OUTPUT} PROPERTIES COMPILE_FLAGS "/wd4005 /wd4065")
 endif()
 
-# Set C++ standard to C++11.
+# Set C++ standard to C++14.
 set_target_properties(${PROJECT_NAME} PROPERTIES
-    CXX_STANDARD 11
+    CXX_STANDARD 14
     CXX_STANDARD_REQUIRED YES)
 
 if (UNIX)

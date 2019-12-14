@@ -45,26 +45,42 @@ name = target
 if args[0].runtime != '':
     name += "_" + args[0].runtime + "bit"
 
-# Macro style arguments "UNIX" and "WINDOWS" for .ll to .cpp
+# Macro style arguments "UNIX" and "WINDOWS" for .ll to .cpp (dispatch and targets)
 if args[0].os == "UNIX":
-    target_os = "unix"
+    target_os_old = "unix"
+    target_os = "linux"
 elif args[0].os == "WINDOWS":
-    target_os = "win"
+    target_os_old = "win"
+    target_os = "windows"
 # Exact OS names for builtins.c
 elif args[0].os in ["windows", "linux", "macos", "android", "ios", "ps4"]:
+    target_os_old = args[0].os
     target_os = args[0].os
 else:
     sys.stderr.write("Unknown argument for --os: " + args[0].os)
     sys.exit(1)
 
 target_arch = ""
+ispc_arch = ""
 if args[0].arch in ["i386", "x86_64", "armv7", "arm64", "aarch64"]:
     target_arch = args[0].arch + "_"
-    
+    # Canoncalization of arch value for Arch enum in ISPC.
+    if args[0].arch == "i386":
+        ispc_arch = "x86"
+    elif args[0].arch == "x86_64":
+        ispc_arch = "x86_64"
+    elif args[0].arch == "armv7":
+        ispc_arch = "arm"
+    elif args[0].arch == "arm64" or args[0].arch == "aarch64":
+        ispc_arch = "aarch64"
 
 width = 16
 
-sys.stdout.write("extern const unsigned char builtins_bitcode_" + target_os + "_" + target_arch + name + "[] = {\n")
+name = "builtins_bitcode_" + target_os_old + "_" + target_arch + name;
+
+sys.stdout.write("#include \"bitcode_lib.h\"\n\n");
+
+sys.stdout.write("extern const unsigned char " + name + "[] = {\n")
 
 if args[0].fake:
     data = []
@@ -79,7 +95,46 @@ else:
             sys.stdout.write(" ")
 
 sys.stdout.write("0x00 };\n\n")
-sys.stdout.write("int builtins_bitcode_" + target_os + "_" + target_arch + name + "_length = " + str(len(data)) + ";\n")
+sys.stdout.write("int " + name + "_length = " + str(len(data)) + ";\n")
+
+# There are 3 types of bitcodes to handle (dispatch module, builtins-c, and target),
+# each needs to be registered differently.
+if args[0].type == "dispatch":
+    # For dispatch the only parameter is TargetOS.
+    sys.stdout.write("static BitcodeLib " + name + "_lib(" +
+        name + ", " +
+        name + "_length, " +
+        "TargetOS::" + target_os +
+        ");\n")
+elif args[0].type == "builtins-c":
+    # For builtin-c we care about TargetOS and Arch.
+    sys.stdout.write("static BitcodeLib " + name + "_lib(" +
+        name + ", " +
+        name + "_length, " +
+        "TargetOS::" + target_os + ", " +
+        "Arch::" + ispc_arch +
+        ");\n")
+elif args[0].type == 'ispc-target':
+    # For ISPC target files we care about ISPCTarget id, TargetOS type (Windows/Unix), and runtime type (32/64).
+    arch = "error"
+    if ("sse" in target) or ("avx" in target):
+        arch = "x86" if args[0].runtime == "32" else "x86_64" if args[0].runtime == "64" else "error"
+    elif "neon" in target:
+        arch = "arm" if args[0].runtime == "32" else "aarch64" if args[0].runtime == "64" else "error"
+    elif "generic" in target:
+        # x86 and x86_64 for generic is just a convention
+        arch = "x86" if args[0].runtime == "32" else "x86_64" if args[0].runtime == "64" else "error"
+    sys.stdout.write("static BitcodeLib " + name + "_lib(" +
+        name + ", " +
+        name + "_length, " +
+        "ISPCTarget::" + target + ", " +
+        "TargetOS::" + target_os + ", " +
+        "Arch::" + arch +
+        ");\n")
+else:
+    sys.stderr.write("Unknown argument for --os: " + args[0].os)
+    sys.exit(1)
+
 
 if not args[0].fake:
     as_out.wait()

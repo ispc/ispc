@@ -1419,6 +1419,8 @@ Opt::Opt() {
 // Globals
 
 Globals::Globals() {
+    target_registry = TargetLibRegistry::getTargetLibRegistry();
+
     mathLib = Globals::Math_ISPC;
     codegenOptLevel = Globals::Aggressive;
 

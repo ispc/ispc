@@ -37,6 +37,7 @@
 
 #include "ispc.h"
 #include "module.h"
+#include "target_registry.h"
 #include "type.h"
 #include "util.h"
 #include <stdio.h>
