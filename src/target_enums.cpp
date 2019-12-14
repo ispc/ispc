@@ -57,6 +57,8 @@ Arch ParseArch(std::string arch) {
 
 std::string ArchToString(Arch arch) {
     switch (arch) {
+    case Arch::none:
+        return "none";
     case Arch::x86:
         return "x86";
     case Arch::x86_64:
@@ -65,6 +67,8 @@ std::string ArchToString(Arch arch) {
         return "arm";
     case Arch::aarch64:
         return "aarch64";
+    case Arch::error:
+        return "error";
     default:
         // none and error are not supposed to be printed.
         Error(SourcePos(), "Invalid arch is processed");
