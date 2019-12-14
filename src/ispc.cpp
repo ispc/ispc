@@ -866,7 +866,7 @@ Target::Target(const char *arch, const char *cpu, const char *isa, bool pic, boo
 #endif
 #ifdef ISPC_ARM_ENABLED
     else if (!strcasecmp(isa, "neon-i8x16")) {
-        this->m_isa = Target::NEON8;
+        this->m_isa = Target::NEON;
         this->m_nativeVectorWidth = 16;
         this->m_nativeVectorAlignment = 16;
         this->m_dataTypeWidth = 8;
@@ -875,7 +875,7 @@ Target::Target(const char *arch, const char *cpu, const char *isa, bool pic, boo
         this->m_maskingIsFree = false;
         this->m_maskBitCount = 8;
     } else if (!strcasecmp(isa, "neon-i16x8")) {
-        this->m_isa = Target::NEON16;
+        this->m_isa = Target::NEON;
         this->m_nativeVectorWidth = 8;
         this->m_nativeVectorAlignment = 16;
         this->m_dataTypeWidth = 16;
@@ -884,7 +884,7 @@ Target::Target(const char *arch, const char *cpu, const char *isa, bool pic, boo
         this->m_maskingIsFree = false;
         this->m_maskBitCount = 16;
     } else if (!strcasecmp(isa, "neon") || !strcasecmp(isa, "neon-i32x4")) {
-        this->m_isa = Target::NEON32;
+        this->m_isa = Target::NEON;
         this->m_nativeVectorWidth = 4;
         this->m_nativeVectorAlignment = 16;
         this->m_dataTypeWidth = 32;
@@ -893,7 +893,7 @@ Target::Target(const char *arch, const char *cpu, const char *isa, bool pic, boo
         this->m_maskingIsFree = false;
         this->m_maskBitCount = 32;
     } else if (!strcasecmp(isa, "neon-i32x8")) {
-        this->m_isa = Target::NEON32;
+        this->m_isa = Target::NEON;
         this->m_nativeVectorWidth = 4;
         this->m_nativeVectorAlignment = 16;
         this->m_dataTypeWidth = 32;
@@ -940,7 +940,7 @@ Target::Target(const char *arch, const char *cpu, const char *isa, bool pic, boo
         }
         llvm::TargetOptions options;
 #ifdef ISPC_ARM_ENABLED
-        if (m_isa == Target::NEON8 || m_isa == Target::NEON16 || m_isa == Target::NEON32)
+        if (m_isa == Target::NEON)
             options.FloatABIType = llvm::FloatABI::Hard;
         if (strcmp("arm", arch) == 0) {
             this->m_funcAttributes.push_back(std::make_pair("target-features", "+neon,+fp16"));
@@ -1008,7 +1008,7 @@ Target::Target(const char *arch, const char *cpu, const char *isa, bool pic, boo
         // TO-DO : Revisit addition of "target-features" and "target-cpu" for ARM support.
         llvm::AttrBuilder fattrBuilder;
 #ifdef ISPC_ARM_ENABLED
-        if (m_isa == Target::NEON8 || m_isa == Target::NEON16 || m_isa == Target::NEON32)
+        if (m_isa == Target::NEON)
             fattrBuilder.addAttribute("target-cpu", this->m_cpu);
 #endif
         for (auto const &f_attr : m_funcAttributes)
@@ -1197,11 +1197,7 @@ std::string Target::GetTripleString() const {
 const char *Target::ISAToString(ISA isa) {
     switch (isa) {
 #ifdef ISPC_ARM_ENABLED
-    case Target::NEON8:
-        return "neon";
-    case Target::NEON16:
-        return "neon";
-    case Target::NEON32:
+    case Target::NEON:
         return "neon";
 #endif
     case Target::SSE2:
@@ -1232,11 +1228,7 @@ const char *Target::GetISAString() const { return ISAToString(m_isa); }
 const char *Target::ISAToTargetString(ISA isa) {
     switch (isa) {
 #ifdef ISPC_ARM_ENABLED
-    case Target::NEON8:
-        return "neon-i8x16";
-    case Target::NEON16:
-        return "neon-i16x8";
-    case Target::NEON32:
+    case Target::NEON:
         return "neon-i32x4";
 #endif
     case Target::SSE2:

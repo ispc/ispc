@@ -771,8 +771,7 @@ void AddBitcodeToModule(const unsigned char *bitcode, int length, llvm::Module *
         // the values for an ARM target.  This maybe won't cause problems
         // in the generated code, since bulitins.c doesn't do anything too
         // complex w.r.t. struct layouts, etc.
-        if (g->target->getISA() != Target::NEON32 && g->target->getISA() != Target::NEON16 &&
-            g->target->getISA() != Target::NEON8)
+        if (g->target->getISA() != Target::NEON)
 #endif // !__arm__
 
         // Disable this code for cross compilation
@@ -1033,25 +1032,10 @@ void DefineStdlib(SymbolTable *symbolTable, llvm::LLVMContext *ctx, llvm::Module
 #ifdef ISPC_HOST_IS_WINDOWS // supported only on Windows
         switch (g->target->getISA()) {
 #ifdef ISPC_ARM_ENABLED
-        case Target::NEON8: {
-            if (runtime32) {
-                EXPORT_MODULE(builtins_bitcode_win_neon_i8x16_32bit);
-            } else {
-                EXPORT_MODULE(builtins_bitcode_win_neon_i8x16_64bit);
-            }
-            break;
-        }
-        case Target::NEON16: {
-            if (runtime32) {
-                EXPORT_MODULE(builtins_bitcode_win_neon_i16x8_32bit);
-            } else {
-                EXPORT_MODULE(builtins_bitcode_win_neon_i16x8_64bit);
-            }
-            break;
-        }
-        case Target::NEON32: {
+        case Target::NEON: {
             switch (g->target->getVectorWidth()) {
             case 4:
+                // i32x4
                 if (runtime32) {
                     EXPORT_MODULE(builtins_bitcode_win_neon_i32x4_32bit);
                 } else {
@@ -1059,16 +1043,35 @@ void DefineStdlib(SymbolTable *symbolTable, llvm::LLVMContext *ctx, llvm::Module
                 }
                 break;
             case 8:
-                if (runtime32) {
-                    EXPORT_MODULE(builtins_bitcode_win_neon_i32x8_32bit);
+                if (g->target->getDataTypeWidth() == 32) {
+                    // i32x8
+                    if (runtime32) {
+                        EXPORT_MODULE(builtins_bitcode_win_neon_i32x8_32bit);
+                    } else {
+                        EXPORT_MODULE(builtins_bitcode_win_neon_i32x8_64bit);
+                    }
+                } else if (g->target->getDataTypeWidth() == 16) {
+                    // i16x8
+                    if (runtime32) {
+                        EXPORT_MODULE(builtins_bitcode_win_neon_i16x8_32bit);
+                    } else {
+                        EXPORT_MODULE(builtins_bitcode_win_neon_i16x8_64bit);
+                    }
                 } else {
-                    EXPORT_MODULE(builtins_bitcode_win_neon_i32x8_64bit);
+                    FATAL("logic error in DefineStdlib");
+                }
+                break;
+            case 16:
+                // i8x16
+                if (runtime32) {
+                    EXPORT_MODULE(builtins_bitcode_win_neon_i8x16_32bit);
+                } else {
+                    EXPORT_MODULE(builtins_bitcode_win_neon_i8x16_64bit);
                 }
                 break;
             default:
                 FATAL("logic error in DefineStdlib");
             }
-            break;
         }
 #endif
         case Target::SSE2: {
@@ -1307,25 +1310,10 @@ void DefineStdlib(SymbolTable *symbolTable, llvm::LLVMContext *ctx, llvm::Module
     } else {
         switch (g->target->getISA()) {
 #ifdef ISPC_ARM_ENABLED
-        case Target::NEON8: {
-            if (runtime32) {
-                EXPORT_MODULE(builtins_bitcode_unix_neon_i8x16_32bit);
-            } else {
-                EXPORT_MODULE(builtins_bitcode_unix_neon_i8x16_64bit);
-            }
-            break;
-        }
-        case Target::NEON16: {
-            if (runtime32) {
-                EXPORT_MODULE(builtins_bitcode_unix_neon_i16x8_32bit);
-            } else {
-                EXPORT_MODULE(builtins_bitcode_unix_neon_i16x8_64bit);
-            }
-            break;
-        }
-        case Target::NEON32: {
+        case Target::NEON: {
             switch (g->target->getVectorWidth()) {
             case 4:
+                // i32x4
                 if (runtime32) {
                     EXPORT_MODULE(builtins_bitcode_unix_neon_i32x4_32bit);
                 } else {
@@ -1333,16 +1321,35 @@ void DefineStdlib(SymbolTable *symbolTable, llvm::LLVMContext *ctx, llvm::Module
                 }
                 break;
             case 8:
-                if (runtime32) {
-                    EXPORT_MODULE(builtins_bitcode_unix_neon_i32x8_32bit);
+                if (g->target->getDataTypeWidth() == 32) {
+                    // i32x8
+                    if (runtime32) {
+                        EXPORT_MODULE(builtins_bitcode_unix_neon_i32x8_32bit);
+                    } else {
+                        EXPORT_MODULE(builtins_bitcode_unix_neon_i32x8_64bit);
+                    }
+                } else if (g->target->getDataTypeWidth() == 16) {
+                    // i16x8
+                    if (runtime32) {
+                        EXPORT_MODULE(builtins_bitcode_unix_neon_i16x8_32bit);
+                    } else {
+                        EXPORT_MODULE(builtins_bitcode_unix_neon_i16x8_64bit);
+                    }
                 } else {
-                    EXPORT_MODULE(builtins_bitcode_unix_neon_i32x8_64bit);
+                    FATAL("logic error in DefineStdlib");
+                }
+                break;
+            case 16:
+                // i8x16
+                if (runtime32) {
+                    EXPORT_MODULE(builtins_bitcode_unix_neon_i8x16_32bit);
+                } else {
+                    EXPORT_MODULE(builtins_bitcode_unix_neon_i8x16_64bit);
                 }
                 break;
             default:
                 FATAL("logic error in DefineStdlib");
             }
-            break;
         }
 #endif
         case Target::SSE2: {
