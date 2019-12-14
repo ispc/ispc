@@ -938,11 +938,15 @@ void DefineStdlib(SymbolTable *symbolTable, llvm::LLVMContext *ctx, llvm::Module
 #define EXPORT_MODULE_COND_WARN(export_module, warnings)                                                               \
     extern const unsigned char export_module[];                                                                        \
     extern int export_module##_length;                                                                                 \
+    auto lib = g->target_registry->getBuiltinsCLib(g->target_os, g->target->getArch());                                \
+    Assert(lib &&export_module == lib->getLib() && "Problem with " #export_module);                                    \
     AddBitcodeToModule(export_module, export_module##_length, module, symbolTable, warnings);
 
 #define EXPORT_MODULE(export_module)                                                                                   \
     extern const unsigned char export_module[];                                                                        \
     extern int export_module##_length;                                                                                 \
+    auto lib = g->target_registry->getISPCTargetLib(g->target->getISPCTarget(), g->target_os, g->target->getArch());   \
+    Assert(lib &&export_module == lib->getLib() && "Problem with " #export_module);                                    \
     AddBitcodeToModule(export_module, export_module##_length, module, symbolTable, true);
 
     // Add the definitions from the compiled builtins.c file.

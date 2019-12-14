@@ -31,62 +31,44 @@
    SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-/** @file target_enums.h
-    @brief Define enums describing target platform.
+/** @file bitcode_lib.h
+    @brief a header to host BitcodeLib - a wrapper for single bitcode library.
 */
 
 #pragma once
 
-#include <string>
-#include <vector>
+#include "target_enums.h"
 
-enum class TargetOS { windows, linux, macos, android, ios, ps4, error };
+class BitcodeLib {
+  public:
+    enum class BitcodeLibType { Dispatch, Builtins_c, ISPC_target };
 
-TargetOS ParseOS(std::string os);
-std::string OSToString(TargetOS os);
-TargetOS GetHostOS();
+  private:
+    // Type of library
+    BitcodeLibType m_type;
 
-enum class Arch { none, x86, x86_64, arm, aarch64, error };
+    // The code and its size
+    const unsigned char *m_lib;
+    const size_t m_size;
 
-Arch ParseArch(std::string arch);
-std::string ArchToString(Arch arch);
+    // Identification of the library: OS, Arch, ISPCTarget
+    const TargetOS m_os;
+    const Arch m_arch;
+    const ISPCTarget m_target;
 
-enum class ISPCTarget {
-    none,
-    host,
-    sse2_i32x4,
-    sse2_i32x8,
-    sse4_i8x16,
-    sse4_i16x8,
-    sse4_i32x4,
-    sse4_i32x8,
-    avx1_i32x4,
-    avx1_i32x8,
-    avx1_i32x16,
-    avx1_i64x4,
-    avx2_i32x4,
-    avx2_i32x8,
-    avx2_i32x16,
-    avx2_i64x4,
-    avx512knl_i32x16,
-    avx512skx_i32x8,
-    avx512skx_i32x16,
-    generic_1,
-    generic_4,
-    generic_8,
-    generic_16,
-    generic_32,
-    generic_64,
-    neon_i8x16,
-    neon_i16x8,
-    neon_i32x4,
-    neon_i32x8,
-    error
+  public:
+    // Dispatch constructor
+    BitcodeLib(const unsigned char lib[], int size, TargetOS os);
+    // Builtins-c constructor
+    BitcodeLib(const unsigned char lib[], int size, TargetOS os, Arch arch);
+    // ISPC-target constructor
+    BitcodeLib(const unsigned char lib[], int size, ISPCTarget target, TargetOS os, Arch arch);
+    void print() const;
+
+    BitcodeLibType getType() const;
+    const unsigned char *getLib() const;
+    const size_t getSize() const;
+    const TargetOS getOS() const;
+    const Arch getArch() const;
+    const ISPCTarget getISPCTarget() const;
 };
-
-ISPCTarget ParseISPCTarget(std::string target);
-std::pair<std::vector<ISPCTarget>, std::string> ParseISPCTargets(const char *target);
-std::string ISPCTargetToString(ISPCTarget target);
-bool ISPCTargetIsX86(ISPCTarget target);
-bool ISPCTargetIsGeneric(ISPCTarget target);
-bool ISPCTargetIsNeon(ISPCTarget target);

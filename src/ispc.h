@@ -39,6 +39,7 @@
 
 #include "ispc_version.h"
 #include "target_enums.h"
+#include "target_registry.h"
 
 #if ISPC_LLVM_VERSION < OLDEST_SUPPORTED_LLVM || ISPC_LLVM_VERSION > LATEST_SUPPORTED_LLVM
 #error "Only LLVM 6.0 - 9.0 and 10.0 development branch are supported"
@@ -510,8 +511,12 @@ struct Opt {
 struct Globals {
     Globals();
 
+    /** TargetRegistry holding all stdlib bitcode. */
+    TargetLibRegistry *target_registry;
+
     /** Optimization option settings */
     Opt opt;
+
     /** Compilation target information */
     Target *target;
 
