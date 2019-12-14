@@ -238,6 +238,8 @@ class Target {
     /** Reports if Target object has valid state. */
     bool isValid() const { return m_valid; }
 
+    ISPCTarget getISPCTarget() const { return m_ispc_target; }
+
     ISA getISA() const { return m_isa; }
 
     Arch getArch() const { return m_arch; }
@@ -296,6 +298,9 @@ class Target {
     /** flag to report invalid state after construction
         (due to bad parameters passed to constructor). */
     bool m_valid;
+
+    /** ISPC target being used */
+    ISPCTarget m_ispc_target;
 
     /** Instruction set being compiled to. */
     ISA m_isa;

@@ -440,12 +440,12 @@ class AllCPUs {
     }
 };
 
-Target::Target(Arch arch, const char *cpu, ISPCTarget target, bool pic, bool printTarget)
-    : m_target(NULL), m_targetMachine(NULL), m_dataLayout(NULL), m_valid(false), m_isa(SSE2), m_arch(Arch::none),
-      m_is32Bit(true), m_cpu(""), m_attributes(""), m_tf_attributes(NULL), m_nativeVectorWidth(-1),
-      m_nativeVectorAlignment(-1), m_dataTypeWidth(-1), m_vectorWidth(-1), m_generatePIC(pic), m_maskingIsFree(false),
-      m_maskBitCount(-1), m_hasHalf(false), m_hasRand(false), m_hasGather(false), m_hasScatter(false),
-      m_hasTranscendentals(false), m_hasTrigonometry(false), m_hasRsqrtd(false), m_hasRcpd(false),
+Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, bool pic, bool printTarget)
+    : m_target(NULL), m_targetMachine(NULL), m_dataLayout(NULL), m_valid(false), m_ispc_target(ispc_target),
+      m_isa(SSE2), m_arch(Arch::none), m_is32Bit(true), m_cpu(""), m_attributes(""), m_tf_attributes(NULL),
+      m_nativeVectorWidth(-1), m_nativeVectorAlignment(-1), m_dataTypeWidth(-1), m_vectorWidth(-1), m_generatePIC(pic),
+      m_maskingIsFree(false), m_maskBitCount(-1), m_hasHalf(false), m_hasRand(false), m_hasGather(false),
+      m_hasScatter(false), m_hasTranscendentals(false), m_hasTrigonometry(false), m_hasRsqrtd(false), m_hasRcpd(false),
       m_hasVecPrefetch(false) {
     CPUtype CPUID = CPU_None, CPUfromISA = CPU_None;
     AllCPUs a;
@@ -462,15 +462,15 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget target, bool pic, bool pri
         }
     }
 
-    if (target == ISPCTarget::none) {
+    if (m_ispc_target == ISPCTarget::none) {
         // If a CPU was specified explicitly, try to pick the best
         // possible ISA based on that.
         switch (CPUID) {
         case CPU_None: {
             // No CPU and no ISA, so use system info to figure out
             // what this CPU supports.
-            target = lGetSystemISA();
-            std::string target_string = ISPCTargetToString(target);
+            m_ispc_target = lGetSystemISA();
+            std::string target_string = ISPCTargetToString(m_ispc_target);
             Warning(SourcePos(),
                     "No --target specified on command-line."
                     " Using default system target \"%s\".",
@@ -479,7 +479,7 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget target, bool pic, bool pri
         }
 
         case CPU_Generic:
-            target = ISPCTarget::generic_1;
+            m_ispc_target = ISPCTarget::generic_1;
             break;
 
 #ifdef ISPC_ARM_ENABLED
@@ -488,52 +488,52 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget target, bool pic, bool pri
         case CPU_CortexA35:
         case CPU_CortexA53:
         case CPU_CortexA57:
-            target = ISPCTarget::neon_i32x4;
+            m_ispc_target = ISPCTarget::neon_i32x4;
             break;
 #endif
 
         case CPU_KNL:
-            target = ISPCTarget::avx512knl_i32x16;
+            m_ispc_target = ISPCTarget::avx512knl_i32x16;
             break;
 
 #if ISPC_LLVM_VERSION >= ISPC_LLVM_8_0 // LLVM 8.0
         case CPU_ICL:
 #endif
         case CPU_SKX:
-            target = ISPCTarget::avx512skx_i32x16;
+            m_ispc_target = ISPCTarget::avx512skx_i32x16;
             break;
 
         case CPU_Broadwell:
         case CPU_Haswell:
-            target = ISPCTarget::avx2_i32x8;
+            m_ispc_target = ISPCTarget::avx2_i32x8;
             break;
 
         case CPU_IvyBridge:
-            // No specific target for IvyBridge anymore.
-            target = ISPCTarget::avx1_i32x8;
+            // No specific m_ispc_target for IvyBridge anymore.
+            m_ispc_target = ISPCTarget::avx1_i32x8;
             break;
 
         case CPU_SandyBridge:
-            target = ISPCTarget::avx1_i32x8;
+            m_ispc_target = ISPCTarget::avx1_i32x8;
             break;
 
         // Penryn is here because ISPC does not use SSE 4.2
         case CPU_Penryn:
         case CPU_Nehalem:
         case CPU_Silvermont:
-            target = ISPCTarget::sse4_i32x4;
+            m_ispc_target = ISPCTarget::sse4_i32x4;
             break;
 
         case CPU_PS4:
-            target = ISPCTarget::avx1_i32x4;
+            m_ispc_target = ISPCTarget::avx1_i32x4;
             break;
 
         default:
-            target = ISPCTarget::sse2_i32x4;
+            m_ispc_target = ISPCTarget::sse2_i32x4;
             break;
         }
         if (CPUID != CPU_None) {
-            std::string target_string = ISPCTargetToString(target);
+            std::string target_string = ISPCTargetToString(m_ispc_target);
             Warning(SourcePos(),
                     "No --target specified on command-line."
                     " Using ISA \"%s\" based on specified CPU \"%s\".",
@@ -541,13 +541,13 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget target, bool pic, bool pri
         }
     }
 
-    if (target == ISPCTarget::host) {
-        target = lGetSystemISA();
+    if (m_ispc_target == ISPCTarget::host) {
+        m_ispc_target = lGetSystemISA();
     }
 
     if (arch == Arch::none) {
 #ifdef ISPC_ARM_ENABLED
-        if (ISPCTargetIsNeon(target)) {
+        if (ISPCTargetIsNeon(m_ispc_target)) {
 #if defined(__arm__)
             arch = Arch::arm;
 #else
@@ -589,9 +589,9 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget target, bool pic, bool pri
     }
 
     // Ensure that we have a valid target/arch combination.
-    if (!lIsTargetValidforArch(target, arch)) {
+    if (!lIsTargetValidforArch(m_ispc_target, arch)) {
         std::string str_arch = ArchToString(arch);
-        std::string target_string = ISPCTargetToString(target);
+        std::string target_string = ISPCTargetToString(m_ispc_target);
         Error(SourcePos(), "arch = %s and target = %s is not a valid combination.", str_arch.c_str(),
               target_string.c_str());
         return;
@@ -599,7 +599,7 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget target, bool pic, bool pri
 
     // Check default LLVM generated targets
     bool unsupported_target = false;
-    switch (target) {
+    switch (m_ispc_target) {
     case ISPCTarget::sse2_i32x4:
         this->m_isa = Target::SSE2;
         this->m_nativeVectorWidth = 4;
@@ -956,23 +956,23 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget target, bool pic, bool pri
     if (unsupported_target) {
         // Hitting one of unsupported targets is internal error.
         // Proper reporting about incorrect targets is done during options parsing.
-        std::string target_string = "Problem with target (" + ISPCTargetToString(target) + ")";
+        std::string target_string = "Problem with target (" + ISPCTargetToString(m_ispc_target) + ")";
         FATAL(target_string.c_str());
     }
 
 #if defined(ISPC_ARM_ENABLED) && !defined(__arm__)
-    if ((CPUID == CPU_None) && ISPCTargetIsNeon(target) && arch == Arch::arm)
+    if ((CPUID == CPU_None) && ISPCTargetIsNeon(m_ispc_target) && arch == Arch::arm)
         CPUID = CPU_CortexA9;
 #endif
 #if defined(ISPC_ARM_ENABLED) && !defined(__aarch64__)
-    if ((CPUID == CPU_None) && ISPCTargetIsNeon(target) && arch == Arch::aarch64)
+    if ((CPUID == CPU_None) && ISPCTargetIsNeon(m_ispc_target) && arch == Arch::aarch64)
         CPUID = CPU_CortexA35;
 #endif
     if (CPUID == CPU_None) {
         cpu = a.GetDefaultNameFromType(CPUfromISA).c_str();
     } else {
         if ((CPUfromISA != CPU_None) && !a.BackwardCompatible(CPUID, CPUfromISA)) {
-            std::string target_string = ISPCTargetToString(target);
+            std::string target_string = ISPCTargetToString(m_ispc_target);
             Error(SourcePos(),
                   "The requested CPU (%s) is incompatible"
                   " with the CPU required for %s target (%s)",
