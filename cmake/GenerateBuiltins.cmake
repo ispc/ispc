@@ -84,9 +84,9 @@ endfunction()
 function(builtin_to_cpp bit os_name arch supported_archs supported_oses resultFileName)
     set(inputFilePath builtins/builtins.c)
     set(includePath "")
-    set(FAKE OFF)
+    set(SKIP OFF)
     if (NOT ${arch} IN_LIST supported_archs OR NOT ${os_name} IN_LIST supported_oses)
-        set(FAKE ON)
+        set(SKIP ON)
     endif()
 
     if ("${bit}" STREQUAL "32" AND ${arch} STREQUAL "x86")
@@ -106,7 +106,7 @@ function(builtin_to_cpp bit os_name arch supported_archs supported_oses resultFi
     string(FIND ${CMAKE_HOST_SYSTEM_PROCESSOR} "aarch64" IS_AARCH64_SYSTEM)
     if ((((${IS_ARM_SYSTEM} GREATER -1) AND NOT (${target_arch} STREQUAL "armv7"))) OR
         ((${IS_AARCH64_SYSTEM} GREATER -1) AND NOT (${target_arch} STREQUAL "aarch64")))
-            set(FAKE ON)
+            set(SKIP ON)
     endif()
 
     # Determine include path
@@ -151,39 +151,39 @@ function(builtin_to_cpp bit os_name arch supported_archs supported_oses resultFi
     # Host to target OS constrains
     if (WIN32)
         if (${os_name} STREQUAL "ios")
-            set(FAKE ON)
+            set(SKIP ON)
         endif()
     elseif (APPLE)
         if (${os_name} STREQUAL "windows")
-            set(FAKE ON)
+            set(SKIP ON)
         elseif (${os_name} STREQUAL "ps4")
-            set(FAKE ON)
+            set(SKIP ON)
         endif()
     else()
         if (${os_name} STREQUAL "windows")
-            set(FAKE ON)
+            set(SKIP ON)
         elseif (${os_name} STREQUAL "ps4")
-            set(FAKE ON)
+            set(SKIP ON)
         elseif (${os_name} STREQUAL "ios")
-            set(FAKE ON)
+            set(SKIP ON)
         endif()
     endif()
 
     # OS to arch constrains
     if (${os_name} STREQUAL "windows" AND ${arch} STREQUAL "arm")
-        set(FAKE ON)
+        set(SKIP ON)
     endif()
     if (${os_name} STREQUAL "macos" AND NOT ${target_arch} STREQUAL "x86_64")
-        set(FAKE ON)
+        set(SKIP ON)
     endif()
     if (${os_name} STREQUAL "ps4" AND NOT ${target_arch} STREQUAL "x86_64")
-        set(FAKE ON)
+        set(SKIP ON)
     endif()
     if (${os_name} STREQUAL "ios")
         if (${target_arch} STREQUAL "aarch64")
             set(target_arch "arm64")
         else()
-            set(FAKE ON)
+            set(SKIP ON)
         endif()
     endif()
 
@@ -204,24 +204,16 @@ function(builtin_to_cpp bit os_name arch supported_archs supported_oses resultFi
         message(FATAL_ERROR "Error")
     endif()
 
-    # Just invert FAKE to print supported targets
-    if (NOT ${FAKE})
+    # Just invert SKIP to print supported targets
+    if (NOT ${SKIP})
         set (SUPPORT ON)
     else()
         set (SUPPORT OFF)
     endif()
     message (STATUS "${os_name} for ${target_arch} is ${SUPPORT}")
 
-    set(output ${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_CFG_INTDIR}/builtins-c-${bit}-${os_name}-${target_arch}.cpp)
-    if (FAKE)
-        add_custom_command(
-            OUTPUT ${output}
-            COMMAND ${Python3_EXECUTABLE} bitcode2cpp.py c --type=builtins-c --runtime=${bit} --os=${os_name} --arch=${target_arch} --fake --llvm_as ${LLVM_AS_EXECUTABLE}
-            > ${output}
-            DEPENDS ${inputFilePath} bitcode2cpp.py
-            WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-            )
-    else()
+    if (NOT SKIP)
+        set(output ${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_CFG_INTDIR}/builtins-c-${bit}-${os_name}-${target_arch}.cpp)
         add_custom_command(
             OUTPUT ${output}
             COMMAND ${CLANG_EXECUTABLE} ${target_flags} -w -m${bit} -emit-llvm -c ${inputFilePath} -o - | (\"${LLVM_DIS_EXECUTABLE}\" - || echo "builtins.c compile error")
@@ -230,9 +222,9 @@ function(builtin_to_cpp bit os_name arch supported_archs supported_oses resultFi
             DEPENDS ${inputFilePath} bitcode2cpp.py
             WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
             )
+        set(${resultFileName} ${output} PARENT_SCOPE)
+        set_source_files_properties(${resultFileName} PROPERTIES GENERATED true)
     endif()
-    set(${resultFileName} ${output} PARENT_SCOPE)
-    set_source_files_properties(${resultFileName} PROPERTIES GENERATED true)
 endfunction()
 
 function (generate_target_builtins resultList)
