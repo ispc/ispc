@@ -140,15 +140,6 @@ struct SourcePos {
     extents. */
 SourcePos Union(const SourcePos &p1, const SourcePos &p2);
 
-// Assert
-
-extern void DoAssert(const char *file, int line, const char *expr);
-extern void DoAssertPos(SourcePos pos, const char *file, int line, const char *expr);
-
-#define Assert(expr) ((void)((expr) ? 0 : ((void)DoAssert(__FILE__, __LINE__, #expr), 0)))
-
-#define AssertPos(pos, expr) ((void)((expr) ? 0 : ((void)DoAssertPos(pos, __FILE__, __LINE__, #expr), 0)))
-
 /** @brief Structure that defines a compilation target
 
     This structure defines a compilation target for the ispc compiler.

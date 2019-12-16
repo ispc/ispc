@@ -114,7 +114,35 @@ void PerformanceWarning(SourcePos p, const char *format, ...) PRINTF_FUNC;
     used via the FATAL macro, which includes the file and line number where
     the error was issued.
  */
-void FatalError(const char *file, int line, const char *message);
+[[noreturn]] void FatalError(const char *file, int line, const char *message);
+
+/** Asserts that expr parameter is not equal to zero. Otherwise the program is
+    terminated with propper error message and with file and line number where
+    the assertion happend.
+ */
+#define Assert(expr) ((void)((expr) ? 0 : ((void)DoAssert(__FILE__, __LINE__, #expr), 0)))
+
+/** This function generally shouldn't be called directly, but should be
+    used via the Assert macro, which includes the file and line number where
+    the assertion happens.
+    Note: avoid adding [[noreturn]] as VS2017 treats Assert macros as never returning.
+ */
+void DoAssert(const char *file, int line, const char *expr);
+
+/** Asserts that expr parameter is not equal to zero. Otherwise the program is
+    terminated with propper error message and with file and line number where
+    the assertion happend and the information about source position in the user
+    program, which has triggered the problem.
+ */
+#define AssertPos(pos, expr) ((void)((expr) ? 0 : ((void)DoAssertPos(pos, __FILE__, __LINE__, #expr), 0)))
+
+/** This function generally shouldn't be called directly, but should be
+    used via the AssertPos macro, which includes the file and line number where
+    the assertion happens.
+    Note: avoid adding [[noreturn]] as VS2017 treats AssertPos macros as never returning.
+ */
+void DoAssertPos(SourcePos pos, const char *file, int line, const char *expr);
+
 
 /** Returns the number of single-character edits needed to transform
     between the two strings.
