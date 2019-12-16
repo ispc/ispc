@@ -104,6 +104,11 @@ void Error(SourcePos p, const char *format, ...) PRINTF_FUNC;
 */
 void PerformanceWarning(SourcePos p, const char *format, ...) PRINTF_FUNC;
 
+/** Reports that unreachable location is reached. This is a kind of fatal error
+    that causes the program to terminate.
+ */
+#define UNREACHABLE() FatalError(__FILE__, __LINE__, "unreachable code")
+
 /** Reports a fatal error that causes the program to terminate.  This
     should only be used for cases where there is an internal error in the
     compiler.
