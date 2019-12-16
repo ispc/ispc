@@ -428,7 +428,7 @@ static void lPrintBugText() {
                     "like to fix!\n***\n");
 }
 
-void FatalError(const char *file, int line, const char *message) {
+[[noreturn]] void FatalError(const char *file, int line, const char *message) {
     fprintf(stderr, "%s(%d): FATAL ERROR: %s\n", file, line, message);
     lPrintBugText();
     abort();

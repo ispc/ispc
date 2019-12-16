@@ -329,6 +329,7 @@ std::string OSToString(TargetOS os) {
     case TargetOS::error:
         return "error";
     }
+    UNREACHABLE();
 }
 
 TargetOS GetHostOS() {
