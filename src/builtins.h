@@ -53,5 +53,4 @@
  */
 void DefineStdlib(SymbolTable *symbolTable, llvm::LLVMContext *ctx, llvm::Module *module, bool includeStdlib);
 
-void AddBitcodeToModule(const unsigned char *bitcode, int length, llvm::Module *module, SymbolTable *symbolTable = NULL,
-                        bool warn = true);
+void AddBitcodeToModule(const BitcodeLib *lib, llvm::Module *module, SymbolTable *symbolTable = NULL, bool warn = true);

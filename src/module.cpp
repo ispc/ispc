@@ -2235,7 +2235,7 @@ static llvm::Module *lInitDispatchModule() {
     // First, link in the definitions from the builtins-dispatch.ll file.
     const BitcodeLib *dispatch = g->target_registry->getDispatchLib();
     Assert(dispatch);
-    AddBitcodeToModule(dispatch->getLib(), dispatch->getSize(), module);
+    AddBitcodeToModule(dispatch, module);
 
     return module;
 }
