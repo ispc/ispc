@@ -148,7 +148,6 @@ void DoAssert(const char *file, int line, const char *expr);
  */
 void DoAssertPos(SourcePos pos, const char *file, int line, const char *expr);
 
-
 /** Returns the number of single-character edits needed to transform
     between the two strings.
 
