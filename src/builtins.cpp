@@ -729,14 +729,12 @@ static void lSetInternalFunctions(llvm::Module *module) {
     definitions to the given module.  Functions in the bitcode that can be
     mapped to ispc functions are also added to the symbol table.
 
-    @param bitcode     Binary LLVM bitcode (e.g. the contents of a *.bc file)
-    @param length      Length of the bitcode buffer
+    @param lib         Pointer to BitcodeLib class representing LLVM bitcode (e.g. the contents of a *.bc file)
     @param module      Module to link the bitcode into
     @param symbolTable Symbol table to add definitions to
  */
-void AddBitcodeToModule(const unsigned char *bitcode, int length, llvm::Module *module, SymbolTable *symbolTable,
-                        bool warn) {
-    llvm::StringRef sb = llvm::StringRef((char *)bitcode, length);
+void AddBitcodeToModule(const BitcodeLib *lib, llvm::Module *module, SymbolTable *symbolTable, bool warn) {
+    llvm::StringRef sb = llvm::StringRef((const char *)lib->getLib(), lib->getSize());
     llvm::MemoryBufferRef bcBuf = llvm::MemoryBuffer::getMemBuffer(sb)->getMemBufferRef();
 
     llvm::Expected<std::unique_ptr<llvm::Module>> ModuleOrErr = llvm::parseBitcodeFile(bcBuf, *g->ctx);
@@ -945,14 +943,14 @@ void DefineStdlib(SymbolTable *symbolTable, llvm::LLVMContext *ctx, llvm::Module
 
     const BitcodeLib *builtins = g->target_registry->getBuiltinsCLib(g->target_os, g->target->getArch());
     Assert(builtins);
-    AddBitcodeToModule(builtins->getLib(), builtins->getSize(), module, symbolTable, warn);
+    AddBitcodeToModule(builtins, module, symbolTable, warn);
 
     // Next, add the target's custom implementations of the various needed
     // builtin functions (e.g. __masked_store_32(), etc).
     const BitcodeLib *target =
         g->target_registry->getISPCTargetLib(g->target->getISPCTarget(), g->target_os, g->target->getArch());
     Assert(target);
-    AddBitcodeToModule(target->getLib(), target->getSize(), module, symbolTable, true);
+    AddBitcodeToModule(target, module, symbolTable, true);
 
     // define the 'programCount' builtin variable
     lDefineConstantInt("programCount", g->target->getVectorWidth(), module, symbolTable, debug_symbols);
