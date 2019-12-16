@@ -13,7 +13,6 @@ parser.add_argument("--type", help="Type of processed file", choices=['dispatch'
 parser.add_argument("--runtime", help="Runtime", nargs='?', default='')
 parser.add_argument("--os", help="Target OS", default='')
 parser.add_argument("--arch", help="Target architecture", default='')
-parser.add_argument("--fake", help="Produce empty array", dest='fake', action='store_true', default=False)
 parser.add_argument("--llvm_as", help="Path to LLVM assembler executable", dest="path_to_llvm_as")
 args = parser.parse_known_args()
 src = args[0].src
@@ -35,8 +34,7 @@ else:
         llvm_as = os.getenv("LLVM_INSTALL_DIR").replace("\\", "/") + "/bin/" + llvm_as
 
 try:
-    if not args[0].fake:
-        as_out=subprocess.Popen([llvm_as, "-", "-o", "-"], stdout=subprocess.PIPE)
+    as_out=subprocess.Popen([llvm_as, "-", "-o", "-"], stdout=subprocess.PIPE)
 except IOError:
     sys.stderr.write("Couldn't open " + src)
     sys.exit(1)
@@ -82,17 +80,14 @@ sys.stdout.write("#include \"bitcode_lib.h\"\n\n");
 
 sys.stdout.write("extern const unsigned char " + name + "[] = {\n")
 
-if args[0].fake:
-    data = []
-else:
-    data = as_out.stdout.read()
-    for i in range(0, len(data), 1):
-        sys.stdout.write("0x%0.2X," % ord(data[i:i+1]))
-
-        if i%width == (width-1):
-            sys.stdout.write("\n")
-        else:
-            sys.stdout.write(" ")
+# Read input data and put it in the form of byte array in the source file.
+data = as_out.stdout.read()
+for i in range(0, len(data), 1):
+    sys.stdout.write("0x%0.2X," % ord(data[i:i+1]))
+    if i%width == (width-1):
+        sys.stdout.write("\n")
+    else:
+        sys.stdout.write(" ")
 
 sys.stdout.write("0x00 };\n\n")
 sys.stdout.write("int " + name + "_length = " + str(len(data)) + ";\n")
@@ -135,7 +130,5 @@ else:
     sys.stderr.write("Unknown argument for --os: " + args[0].os)
     sys.exit(1)
 
-
-if not args[0].fake:
-    as_out.wait()
-    sys.exit(as_out.returncode)
+as_out.wait()
+sys.exit(as_out.returncode)
