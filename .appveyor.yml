@@ -119,9 +119,12 @@ test_script:
       set PATH=%ISPC_HOME%\build\bin\%configuration%;%PATH%
       cd %ISPC_HOME%
       check_isa.exe
+      ispc --support-matrix
       python perf.py -n 1 -g "Visual Studio 15 Win64"
 # Run only lit testing here since we have full testing in Travis
-  - sh: make check-all
+  - sh: |-
+      make check-all
+      bin/ispc --support-matrix
 
 artifacts:
   - path: build/ispc-*

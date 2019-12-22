@@ -75,6 +75,7 @@ script:
     # Add ispc to the PATH
   - export PATH=$ISPC_HOME/build_$LLVM_VERSION/bin:$PATH && cd $ISPC_HOME
   - check_isa
+  - ispc --support-matrix
   - ./check_env.py
     # Run examples
   - ./perf.py -n 1
