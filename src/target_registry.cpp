@@ -35,6 +35,10 @@
     @brief Registry to handle bitcode libraries.
 */
 
+#include <numeric>
+#include <string>
+#include <vector>
+
 #include "target_registry.h"
 
 // Returns number of bits required to store this value
@@ -134,6 +138,71 @@ const BitcodeLib *TargetLibRegistry::getISPCTargetLib(ISPCTarget target, TargetO
         return result->second;
     }
     return nullptr;
+}
+
+// Print user-friendly message about supported targets
+void TargetLibRegistry::printSupportMatrix() const {
+    // Vector of rows, which are vectors of cells.
+    std::vector<std::vector<std::string>> table;
+
+    // OS names row
+    std::vector<std::string> os_names;
+    os_names.push_back("");
+    for (int j = (int)TargetOS::windows; j < (int)TargetOS::error; j++) {
+        os_names.push_back(OSToString((TargetOS)j));
+    }
+    table.push_back(os_names);
+
+    // Fill in the name, one target per the row.
+    for (int i = (int)ISPCTarget::sse2_i32x4; i < (int)ISPCTarget::error; i++) {
+        std::vector<std::string> row;
+        ISPCTarget target = (ISPCTarget)i;
+        row.push_back(ISPCTargetToString(target));
+        std::vector<std::string> arch_list_target;
+        // Fill in cell: list of arches for the target/os.
+        for (int j = (int)TargetOS::windows; j < (int)TargetOS::error; j++) {
+            std::string arch_list_os;
+            TargetOS os = (TargetOS)j;
+            for (int k = (int)Arch::none; k < (int)Arch::error; k++) {
+                Arch arch = (Arch)k;
+                if (isSupported(target, os, arch)) {
+                    if (!arch_list_os.empty()) {
+                        arch_list_os += ", ";
+                    }
+                    arch_list_os += ArchToString(arch);
+                }
+            }
+            arch_list_target.push_back(arch_list_os);
+            row.push_back(arch_list_os);
+        }
+        table.push_back(row);
+    }
+
+    // Colect maximum sizes for all columns
+    std::vector<int> column_sizes(table[0].size(), 7);
+    for (auto &row : table) {
+        for (int i = 0; i < row.size(); i++) {
+            column_sizes[i] = column_sizes[i] > row[i].size() ? column_sizes[i] : row[i].size();
+        }
+    }
+    int width = std::accumulate(column_sizes.begin(), column_sizes.end(), 0) + (column_sizes.size() - 1) * 3;
+
+    // Print the table
+    for (int i = 0; i < table.size(); i++) {
+        auto row = table[i];
+        for (int j = 0; j < row.size(); j++) {
+            auto align = std::string(column_sizes[j] - row[j].size(), ' ');
+            printf("%s%s", row[j].c_str(), align.c_str());
+            if (j + 1 != row.size()) {
+                printf(" | ");
+            }
+        }
+        printf("\n");
+        if (i == 0) {
+            auto line = std::string(width, '-');
+            printf("%s\n", line.c_str());
+        }
+    }
 }
 
 bool TargetLibRegistry::isSupported(ISPCTarget target, TargetOS os, Arch arch) const {

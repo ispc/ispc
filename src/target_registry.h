@@ -93,8 +93,7 @@ class TargetLibRegistry {
     // Return target module if available, otherwise nullptr.
     const BitcodeLib *getISPCTargetLib(ISPCTarget target, TargetOS os, Arch arch) const;
 
-    // Print user-friendly message about platforms support
-    // TODO: implement.
+    // Print user-friendly message about supported targets
     void printSupportMatrix() const;
 
     // TODO: implement

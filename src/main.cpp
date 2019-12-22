@@ -87,7 +87,7 @@ static void lPrintVersion() {
 #endif
 }
 
-static void usage(int ret) {
+[[noreturn]] static void usage(int ret) {
     lPrintVersion();
     printf("\nusage: ispc\n");
     printf("    [--addressing={32,64}]\t\tSelect 32- or 64-bit addressing. (Note that 32-bit\n");
@@ -154,6 +154,7 @@ static void usage(int ret) {
     printf("        force-aligned-memory\t\tAlways issue \"aligned\" vector load and store instructions\n");
     printf("    [--pic]\t\t\t\tGenerate position-independent code.  Ignored for Windows target\n");
     printf("    [--quiet]\t\t\t\tSuppress all output\n");
+    printf("    [--support-matrix]\t\t\t\tPrint full matrix of supported targets, architectures and OSes\n");
     printf("    ");
     char targetHelp[2048];
     snprintf(targetHelp, sizeof(targetHelp),
@@ -174,7 +175,7 @@ static void usage(int ret) {
     exit(ret);
 }
 
-static void devUsage(int ret) {
+[[noreturn]] static void devUsage(int ret) {
     lPrintVersion();
     printf("\nusage (developer options): ispc\n");
     printf("    [--debug]\t\t\t\tPrint information useful for debugging ispc\n");
@@ -527,13 +528,16 @@ int main(int Argc, char *Argv[]) {
     ArgErrors errorHandler;
 
     for (int i = 1; i < argc; ++i) {
-        if (!strcmp(argv[i], "--help"))
+        if (!strcmp(argv[i], "--help")) {
             usage(0);
-        if (!strcmp(argv[i], "--help-dev"))
+        } else if (!strcmp(argv[i], "--help-dev")) {
             devUsage(0);
-        else if (!strncmp(argv[i], "-D", 2))
+        } else if (!strcmp(argv[i], "--support-matrix")) {
+            g->target_registry->printSupportMatrix();
+            exit(0);
+        } else if (!strncmp(argv[i], "-D", 2)) {
             g->cppArgs.push_back(argv[i]);
-        else if (!strncmp(argv[i], "--addressing=", 13)) {
+        } else if (!strncmp(argv[i], "--addressing=", 13)) {
             if (atoi(argv[i] + 13) == 64)
                 // FIXME: this doesn't make sense on 32 bit platform.
                 g->opt.force32BitAddressing = false;
