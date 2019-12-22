@@ -44,6 +44,7 @@ enum class TargetOS { windows, linux, macos, android, ios, ps4, error };
 
 TargetOS ParseOS(std::string os);
 std::string OSToString(TargetOS os);
+std::string OSToLowerString(TargetOS os);
 TargetOS GetHostOS();
 
 enum class Arch { none, x86, x86_64, arm, aarch64, error };

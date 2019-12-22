@@ -174,20 +174,8 @@ class Target {
     Target(Arch arch, const char *cpu, ISPCTarget isa, bool pic, bool printTarget);
 
     /** Returns a comma-delimited string giving the names of the currently
-        supported compilation targets. */
-    static const char *SupportedTargets();
-
-    /** Returns a comma-delimited string giving the names of the currently
-     *  supported target OSes */
-    static std::string SupportedOSes();
-
-    /** Returns a comma-delimited string giving the names of the currently
         supported CPUs. */
     static std::string SupportedCPUs();
-
-    /** Returns a comma-delimited string giving the names of the currently
-        supported architectures. */
-    static const char *SupportedArchs();
 
     /** Returns a triple string specifying the target architecture, vendor,
         and environment. */

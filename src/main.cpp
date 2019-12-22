@@ -93,7 +93,7 @@ static void lPrintVersion() {
     printf("    [--addressing={32,64}]\t\tSelect 32- or 64-bit addressing. (Note that 32-bit\n");
     printf("                          \t\taddressing calculations are done by default, even\n");
     printf("                          \t\ton 64-bit target architectures.)\n");
-    printf("    [--arch={%s}]\t\tSelect target architecture\n", Target::SupportedArchs());
+    printf("    [--arch={%s}]\t\tSelect target architecture\n", g->target_registry->getSupportedArchs().c_str());
     printf("    [--c++-include-file=<name>]\t\tSpecify name of file to emit in #include statement in generated C++ "
            "code.\n");
 #ifndef ISPC_HOST_IS_WINDOWS
@@ -154,17 +154,17 @@ static void lPrintVersion() {
     printf("        force-aligned-memory\t\tAlways issue \"aligned\" vector load and store instructions\n");
     printf("    [--pic]\t\t\t\tGenerate position-independent code.  Ignored for Windows target\n");
     printf("    [--quiet]\t\t\t\tSuppress all output\n");
-    printf("    [--support-matrix]\t\t\t\tPrint full matrix of supported targets, architectures and OSes\n");
+    printf("    [--support-matrix]\t\t\tPrint full matrix of supported targets, architectures and OSes\n");
     printf("    ");
     char targetHelp[2048];
     snprintf(targetHelp, sizeof(targetHelp),
              "[--target=<t>]\t\t\tSelect target ISA and width.\n"
              "<t>={%s}",
-             Target::SupportedTargets());
+             g->target_registry->getSupportedTargets().c_str());
     PrintWithWordBreaks(targetHelp, 24, TerminalWidth(), stdout);
     printf("    ");
     snprintf(targetHelp, sizeof(targetHelp), "[--target-os=<os>]\t\t\tSelect target OS.  <os>={%s}",
-             Target::SupportedOSes().c_str());
+             g->target_registry->getSupportedOSes().c_str());
     PrintWithWordBreaks(targetHelp, 24, TerminalWidth(), stdout);
     printf("    [--version]\t\t\t\tPrint ispc version\n");
     printf("    [--werror]\t\t\t\tTreat warnings as errors\n");
@@ -554,7 +554,7 @@ int main(int Argc, char *Argv[]) {
             arch = ParseArch(argv[i] + 7);
             if (arch == Arch::error) {
                 errorHandler.AddError("Unsupported value for --arch, supported values are: %s",
-                                      Target::SupportedArchs());
+                                      g->target_registry->getSupportedArchs().c_str());
             }
 
             if (prev_arch != Arch::none && prev_arch != arch) {
@@ -633,7 +633,7 @@ int main(int Argc, char *Argv[]) {
                 targets = result.first;
                 if (!result.second.empty()) {
                     errorHandler.AddError("Incorrect targets: %s.  Choices are: %s.", result.second.c_str(),
-                                          Target::SupportedTargets());
+                                          g->target_registry->getSupportedTargets().c_str());
                 }
             } else {
                 errorHandler.AddError("No target specified after --target option.");
@@ -643,13 +643,13 @@ int main(int Argc, char *Argv[]) {
             targets = result.first;
             if (!result.second.empty()) {
                 errorHandler.AddError("Incorrect targets: %s.  Choices are: %s.", result.second.c_str(),
-                                      Target::SupportedTargets());
+                                      g->target_registry->getSupportedTargets().c_str());
             }
         } else if (!strncmp(argv[i], "--target-os=", 12)) {
             g->target_os = ParseOS(argv[i] + 12);
             if (g->target_os == TargetOS::error) {
                 errorHandler.AddError("Unsupported value for --target-os, supported values are: %s",
-                                      Target::SupportedOSes().c_str());
+                                      g->target_registry->getSupportedOSes().c_str());
             }
         } else if (!strncmp(argv[i], "--math-lib=", 11)) {
             const char *lib = argv[i] + 11;
