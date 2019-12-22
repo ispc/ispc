@@ -292,7 +292,7 @@ bool ISPCTargetIsNeon(ISPCTarget target) {
 }
 
 TargetOS ParseOS(std::string os) {
-    std::string supportedOses = Target::SupportedOSes();
+    std::string supportedOses = g->target_registry->getSupportedOSes().c_str();
     if (supportedOses.find(os) == std::string::npos) {
         return TargetOS::error;
     }
@@ -326,6 +326,26 @@ std::string OSToString(TargetOS os) {
         return "iOS";
     case TargetOS::ps4:
         return "PS4";
+    case TargetOS::error:
+        return "error";
+    }
+    UNREACHABLE();
+}
+
+std::string OSToLowerString(TargetOS os) {
+    switch (os) {
+    case TargetOS::windows:
+        return "window";
+    case TargetOS::linux:
+        return "linux";
+    case TargetOS::macos:
+        return "macos";
+    case TargetOS::android:
+        return "android";
+    case TargetOS::ios:
+        return "ios";
+    case TargetOS::ps4:
+        return "ps4";
     case TargetOS::error:
         return "error";
     }

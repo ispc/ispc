@@ -1087,66 +1087,6 @@ std::string Target::SupportedCPUs() {
     return a.HumanReadableListOfNames();
 }
 
-const char *Target::SupportedArchs() {
-    return
-#ifdef ISPC_ARM_ENABLED
-        "arm, aarch64, "
-#endif
-        "x86, x86-64";
-}
-
-const char *Target::SupportedTargets() {
-    return "host, sse2-i32x4, sse2-i32x8, "
-           "sse4-i32x4, sse4-i32x8, sse4-i16x8, sse4-i8x16, "
-           "avx1-i32x4, "
-           "avx1-i32x8, avx1-i32x16, avx1-i64x4, "
-           "avx2-i32x4, avx2-i32x8, avx2-i32x16, avx2-i64x4, "
-           "avx512knl-i32x16, "
-           "avx512skx-i32x16, "
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_8_0 // LLVM 8.0+
-           "avx512skx-i32x8, "
-#endif
-           "generic-x1, generic-x4, generic-x8, generic-x16, "
-           "generic-x32, generic-x64"
-#ifdef ISPC_ARM_ENABLED
-           ", neon-i8x16, neon-i16x8, neon-i32x4, neon-i32x8"
-#endif
-        ;
-}
-
-std::string Target::SupportedOSes() {
-    std::vector<std::string> supported;
-#if defined(ISPC_HOST_IS_WINDOWS)
-#if !defined(ISPC_WINDOWS_TARGET_OFF)
-    supported.push_back("windows");
-#endif
-#if !defined(ISPC_PS4_TARGET_OFF)
-    supported.push_back("ps4");
-#endif
-#elif defined(ISPC_HOST_IS_APPLE)
-#if !defined(ISPC_IOS_TARGET_OFF)
-    supported.push_back("ios");
-#endif
-#endif
-#if !defined(ISPC_LINUX_TARGET_OFF)
-    supported.push_back("linux");
-#endif
-#if !defined(ISPC_MACOS_TARGET_OFF)
-    supported.push_back("macos");
-#endif
-#if !defined(ISPC_ANDROID_TARGET_OFF)
-    supported.push_back("android");
-#endif
-    std::string result;
-    for (int i = 0; i < supported.size(); i++) {
-        result += supported[i];
-        if (i < supported.size() - 1) {
-            result += ", ";
-        }
-    }
-    return result;
-}
-
 std::string Target::GetTripleString() const {
     llvm::Triple triple;
     switch (g->target_os) {

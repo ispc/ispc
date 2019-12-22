@@ -39,6 +39,7 @@
 
 #include "bitcode_lib.h"
 
+#include <bitset>
 #include <map>
 #include <vector>
 
@@ -80,6 +81,9 @@ class TargetLibRegistry {
     // Target x OS (Win/Unix) x Arch [32/64/none]
     std::map<uint32_t, const BitcodeLib *> m_targets;
 
+    // Bitset with supported OSes
+    std::bitset<(int)TargetOS::error> m_supported_oses;
+
   public:
     static void RegisterTarget(const BitcodeLib *lib);
     static TargetLibRegistry *getTargetLibRegistry();
@@ -96,7 +100,6 @@ class TargetLibRegistry {
     // Print user-friendly message about supported targets
     void printSupportMatrix() const;
 
-    // TODO: implement
     std::string getSupportedArchs();
     std::string getSupportedTargets();
     std::string getSupportedOSes();

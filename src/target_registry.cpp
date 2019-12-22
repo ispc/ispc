@@ -94,6 +94,7 @@ TargetLibRegistry::TargetLibRegistry() {
             break;
         case BitcodeLib::BitcodeLibType::Builtins_c:
             m_builtins[Triple(lib->getISPCTarget(), lib->getOS(), lib->getArch()).encode()] = lib;
+            m_supported_oses[(int)lib->getOS()] = true;
             break;
         case BitcodeLib::BitcodeLibType::ISPC_target:
             m_targets[Triple(lib->getISPCTarget(), lib->getOS(), lib->getArch()).encode()] = lib;
@@ -203,6 +204,70 @@ void TargetLibRegistry::printSupportMatrix() const {
             printf("%s\n", line.c_str());
         }
     }
+}
+
+std::string TargetLibRegistry::getSupportedArchs() {
+    std::string archs;
+    for (int k = (int)Arch::none; k < (int)Arch::error; k++) {
+        Arch arch = (Arch)k;
+        for (int i = (int)ISPCTarget::sse2_i32x4; i < (int)ISPCTarget::error; i++) {
+            ISPCTarget target = (ISPCTarget)i;
+            for (int j = (int)TargetOS::windows; j < (int)TargetOS::error; j++) {
+                TargetOS os = (TargetOS)j;
+
+                if (isSupported(target, os, arch)) {
+                    if (!archs.empty()) {
+                        archs += ", ";
+                    }
+                    archs += ArchToString(arch);
+                    goto next_arch;
+                }
+            }
+        }
+    next_arch:;
+    }
+
+    return archs;
+}
+
+std::string TargetLibRegistry::getSupportedTargets() {
+    std::string targets;
+    for (int i = (int)ISPCTarget::sse2_i32x4; i < (int)ISPCTarget::error; i++) {
+        ISPCTarget target = (ISPCTarget)i;
+        for (int j = (int)TargetOS::windows; j < (int)TargetOS::error; j++) {
+            TargetOS os = (TargetOS)j;
+            for (int k = (int)Arch::none; k < (int)Arch::error; k++) {
+                Arch arch = (Arch)k;
+                if (isSupported(target, os, arch)) {
+                    if (!targets.empty()) {
+                        targets += ", ";
+                    }
+                    targets += ISPCTargetToString(target);
+                    goto next_target;
+                }
+            }
+        }
+    next_target:;
+    }
+
+    return targets;
+}
+
+std::string TargetLibRegistry::getSupportedOSes() {
+    // We use pre-computed bitset, as this function is perfomance critical - it's used
+    // during arguments parsing.
+    std::string oses;
+    for (int j = (int)TargetOS::windows; j < (int)TargetOS::error; j++) {
+        TargetOS os = (TargetOS)j;
+        if (m_supported_oses[j]) {
+            if (!oses.empty()) {
+                oses += ", ";
+            }
+            oses += OSToLowerString(os);
+        }
+    }
+
+    return oses;
 }
 
 bool TargetLibRegistry::isSupported(ISPCTarget target, TargetOS os, Arch arch) const {
