@@ -177,8 +177,11 @@ set (ISPC_TARGETS
         avx1-i32x8 avx1-i32x16 avx1-i64x4
         avx2-i32x4 avx2-i32x8 avx2-i32x16 avx2-i64x4
         avx512knl-i32x16
-        avx512skx-i32x8 avx512skx-i32x16
+        avx512skx-i32x16
         generic-1 generic-4 generic-8 generic-16 generic-32 generic-64)
+if (${LLVM_VERSION_NUMBER} GREATER_EQUAL "8.0.0")
+    list(APPEND ISPC_TARGETS avx512skx-i32x8)
+endif()
 
 set(CLANG_LIBRARY_LIST clangFrontend clangDriver clangSerialization clangParse clangSema clangAnalysis clangAST clangBasic clangEdit clangLex)
 set(LLVM_COMPONENTS engine ipo bitreader bitwriter instrumentation linker option)
