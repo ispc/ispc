@@ -135,3 +135,14 @@ const BitcodeLib *TargetLibRegistry::getISPCTargetLib(ISPCTarget target, TargetO
     }
     return nullptr;
 }
+
+bool TargetLibRegistry::isSupported(ISPCTarget target, TargetOS os, Arch arch) const {
+    auto clib = getBuiltinsCLib(os, arch);
+    if (clib) {
+        auto lib = getISPCTargetLib(target, os, arch);
+        if (lib) {
+            return true;
+        }
+    }
+    return false;
+}

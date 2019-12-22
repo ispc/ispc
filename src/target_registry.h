@@ -102,6 +102,5 @@ class TargetLibRegistry {
     std::string getSupportedTargets();
     std::string getSupportedOSes();
 
-    // TODO: implement
     bool isSupported(ISPCTarget target, TargetOS os, Arch arch) const;
 };
