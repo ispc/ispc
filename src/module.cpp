@@ -51,7 +51,6 @@
 #include <algorithm>
 #include <ctype.h>
 #include <fcntl.h>
-#include <iostream>
 #include <set>
 #include <sstream>
 #include <stdarg.h>
@@ -1318,8 +1317,9 @@ static void lUnescapeStringInPlace(std::string &str) {
 }
 
 bool Module::writeDeps(const char *fn, bool generateMakeRule, const char *tn, const char *sn) {
-    if (fn && g->debugPrint) // We may be passed nullptr for stdout output.
-        std::cout << "\nWriting dependencies to file " << fn << std::endl;
+    if (fn && g->debugPrint) { // We may be passed nullptr for stdout output.
+        printf("\nWriting dependencies to file %s\n", fn);
+    }
     FILE *file = fn ? fopen(fn, "w") : stdout;
     if (!file) {
         perror("fopen");
