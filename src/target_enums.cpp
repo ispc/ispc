@@ -315,7 +315,7 @@ TargetOS ParseOS(std::string os) {
 std::string OSToString(TargetOS os) {
     switch (os) {
     case TargetOS::windows:
-        return "Window";
+        return "Windows";
     case TargetOS::linux:
         return "Linux";
     case TargetOS::macos:
@@ -335,7 +335,7 @@ std::string OSToString(TargetOS os) {
 std::string OSToLowerString(TargetOS os) {
     switch (os) {
     case TargetOS::windows:
-        return "window";
+        return "windows";
     case TargetOS::linux:
         return "linux";
     case TargetOS::macos:

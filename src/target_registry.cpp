@@ -179,7 +179,7 @@ void TargetLibRegistry::printSupportMatrix() const {
         table.push_back(row);
     }
 
-    // Colect maximum sizes for all columns
+    // Collect maximum sizes for all columns
     std::vector<int> column_sizes(table[0].size(), 7);
     for (auto &row : table) {
         for (int i = 0; i < row.size(); i++) {
