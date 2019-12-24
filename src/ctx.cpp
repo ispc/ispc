@@ -3644,8 +3644,7 @@ llvm::Value *FunctionEmitContext::GenXStartUnmaskedRegion() {
 
 void FunctionEmitContext::GenXEndUnmaskedRegion(llvm::Value *execMask) {
     llvm::Value *restoredMask = LoadInst(execMask);
-    auto Fn =
-        llvm::GenXIntrinsic::getGenXDeclaration(m->module, llvm::GenXIntrinsic::genx_unmask_end, LLVMTypes::Int32Type);
+    auto Fn = llvm::GenXIntrinsic::getGenXDeclaration(m->module, llvm::GenXIntrinsic::genx_unmask_end);
     llvm::CallInst::Create(Fn, restoredMask, "", bblock);
 }
 
