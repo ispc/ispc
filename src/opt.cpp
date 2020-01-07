@@ -113,6 +113,7 @@
 #endif
 #ifdef ISPC_GENX_ENABLED
 #include "llvm/GenXIntrinsics/GenXIntrinsics.h"
+#include "llvm/GenXOpts/GenXOpts.h"
 #include "llvm/Transforms/Utils/UnifyFunctionExitNodes.h"
 // Constant in number of bytes.
 enum { BYTE = 1, WORD = 2, DWORD = 4, QWORD = 8, OWORD = 16, GRF = 32 };
