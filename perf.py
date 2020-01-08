@@ -452,7 +452,7 @@ def perf(options1, args):
         generator = options.generator
     else:
         if is_windows == True:
-            generator = "Visual Studio 14 Win64"
+            generator = "Visual Studio 16"
         else:
             generator = "Unix Makefiles"
     examples_folder_ref = "examples_ref"
