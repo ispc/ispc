@@ -56,6 +56,10 @@
 #include <llvm/Support/TargetRegistry.h>
 #include <llvm/Support/TargetSelect.h>
 
+#ifdef ISPC_GENX_ENABLED
+#include <llvm/GenXCodeGen/GenXTarget.h>
+#endif
+
 #ifdef ISPC_HOST_IS_WINDOWS
 #define strcasecmp stricmp
 #ifndef BUILD_DATE
