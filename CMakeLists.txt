@@ -437,6 +437,11 @@ if (ISPC_USE_ASAN)
     target_link_options(${PROJECT_NAME} PUBLIC -fsanitize=address)
 endif()
 
+if (NOT WIN32 AND NOT APPLE)
+    # To resolve circular dependencies between libraries use --start-group/--end-group
+    target_link_libraries(${PROJECT_NAME} "-Wl,--start-group")
+endif()
+
 # Link against Clang libraries
 foreach(clangLib ${CLANG_LIBRARY_LIST})
     find_library(${clangLib}Path NAMES ${clangLib} HINTS ${LLVM_LIBRARY_DIRS})
@@ -454,6 +459,10 @@ if (GENX_ENABLED)
         list(APPEND GEN_LIBRARY_FULL_PATH_LIST ${${genLib}Path})
     endforeach()
     target_link_libraries(${PROJECT_NAME} ${GEN_LIBRARY_FULL_PATH_LIST})
+endif()
+
+if (NOT WIN32 AND NOT APPLE)
+    target_link_libraries(${PROJECT_NAME} "-Wl,--end-group")
 endif()
 
 # System libraries, our own and transitive dependencies from LLVM libs.
