@@ -748,6 +748,33 @@ define(`reduce16', `
 '
 )
 
+;; Do an optimized for gen reduction over a 16-wide vector
+;; $1: type of final scalar result
+;; $2: genx reduction intrinsic name
+;; $3: rdregioni or rdregionf
+;; $4: input vector
+;; $5: scale
+
+define(`reducegen16', `
+  %scale1 = mul i16 $5, 8
+  %v1 = call <8 x $1> @llvm.genx.$3.GEN_SUFFIXN($1, 8).GEN_SUFFIX($1).i16(<16 x $1> $4, i32 0, i32 8, i32 1, i16 0, i32 undef)
+  %v2 = call <8 x $1> @llvm.genx.$3.GEN_SUFFIXN($1, 8).GEN_SUFFIX($1).i16(<16 x $1> $4, i32 0, i32 8, i32 1, i16 %scale1, i32 undef)
+  %m1 = call <8 x $1> @llvm.genx.$2.GEN_SUFFIXN($1, 8).GEN_SUFFIXN($1, 8)(<8 x $1> %v1, <8 x $1> %v2)
+  %scale2 = mul i16 $5, 4
+  %v3 = call <4 x $1> @llvm.genx.$3.GEN_SUFFIXN($1, 4).GEN_SUFFIXN($1, 8).i16(<8 x $1> %m1, i32 0, i32 4, i32 1, i16 0, i32 undef)
+  %v4 = call <4 x $1> @llvm.genx.$3.GEN_SUFFIXN($1, 4).GEN_SUFFIXN($1, 8).i16(<8 x $1> %m1, i32 0, i32 4, i32 1, i16 %scale2, i32 undef)
+  %m2 = call <4 x $1> @llvm.genx.$2.GEN_SUFFIXN($1, 4).GEN_SUFFIXN($1, 4)(<4 x $1> %v3, <4 x $1> %v4)
+  %scale3 = mul i16 $5, 2
+  %v5 = call <2 x $1> @llvm.genx.$3.GEN_SUFFIXN($1, 2).GEN_SUFFIXN($1, 4).i16(<4 x $1> %m2, i32 0, i32 2, i32 1, i16 0, i32 undef)
+  %v6 = call <2 x $1> @llvm.genx.$3.GEN_SUFFIXN($1, 2).GEN_SUFFIXN($1, 4).i16(<4 x $1> %m2, i32 0, i32 2, i32 1, i16 %scale3, i32 undef)
+  %m3 = call <2 x $1> @llvm.genx.$2.GEN_SUFFIXN($1, 2).GEN_SUFFIXN($1, 2)(<2 x $1> %v5, <2 x $1> %v6)
+  %m3a = extractelement <2 x $1> %m3, i32 0
+  %m3b = extractelement <2 x $1> %m3, i32 1
+  %m = call $1 @llvm.genx.$2.GEN_TYPE($1).GEN_TYPE($1)($1 %m3a, $1 %m3b)
+  ret $1 %m
+'
+)
+
 ;; Apply a unary function to the 4-vector in %0, return the vector result.
 ;; $1: scalar type of result
 ;; $2: name of scalar function to call
