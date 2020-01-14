@@ -48,6 +48,7 @@ define(`GEN_TYPE',
         $1, `i64', `i64')')
 
 define(`GEN_SUFFIX',`CONCAT(`v16', GEN_TYPE($1))')
+define(`GEN_SUFFIXN',`CONCAT(`v', CONCAT($2, GEN_TYPE($1)))')
 
 define(`SIZEOF',
 `ifelse($1, `i1', 1,
@@ -234,6 +235,14 @@ define <16 x double> @__max_varying_double(<16 x double>, <16 x double>) nounwin
   ret <16 x double> %res
 }
 
+;; Generates rdregion intrinsics needed for reductions
+;; $1 LLVM IR type
+define(`genx_rdregion', `
+  declare <8 x $1> @llvm.genx.$2.GEN_SUFFIXN($1,8).GEN_SUFFIX($1).i16(<WIDTH x $1>, i32, i32, i32, i16, i32)
+  declare <4 x $1> @llvm.genx.$2.GEN_SUFFIXN($1,4).GEN_SUFFIXN($1, 8).i16(<8 x $1>, i32, i32, i32, i16, i32)
+  declare <2 x $1> @llvm.genx.$2.GEN_SUFFIXN($1,2).GEN_SUFFIXN($1, 4).i16(<4 x $1>, i32, i32, i32, i16, i32)
+')
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Generates max/min builtins for unfiorm and varying
 ;; $1 LLVM IR type
@@ -244,7 +253,15 @@ define(`genx_maxmin', `
 declare $1 @llvm.genx.$2.GEN_TYPE($1).GEN_TYPE($1)($1, $1)
 declare $1 @llvm.genx.$3.GEN_TYPE($1).GEN_TYPE($1)($1, $1)
 declare <WIDTH x $1> @llvm.genx.$2.GEN_SUFFIX($1).GEN_SUFFIX($1)(<WIDTH x $1>, <WIDTH x $1>)
+declare <8 x $1> @llvm.genx.$2.GEN_SUFFIXN($1, 8).GEN_SUFFIXN($1, 8)(<8 x $1>, <8 x $1>)
+declare <4 x $1> @llvm.genx.$2.GEN_SUFFIXN($1, 4).GEN_SUFFIXN($1, 4)(<4 x $1>, <4 x $1>)
+declare <2 x $1> @llvm.genx.$2.GEN_SUFFIXN($1, 2).GEN_SUFFIXN($1, 2)(<2 x $1>, <2 x $1>)
+
 declare <WIDTH x $1> @llvm.genx.$3.GEN_SUFFIX($1).GEN_SUFFIX($1)(<WIDTH x $1>, <WIDTH x $1>)
+declare <8 x $1> @llvm.genx.$3.GEN_SUFFIXN($1, 8).GEN_SUFFIXN($1, 8)(<8 x $1>, <8 x $1>)
+declare <4 x $1> @llvm.genx.$3.GEN_SUFFIXN($1, 4).GEN_SUFFIXN($1, 4)(<4 x $1>, <4 x $1>)
+declare <2 x $1> @llvm.genx.$3.GEN_SUFFIXN($1, 2).GEN_SUFFIXN($1, 2)(<2 x $1>, <2 x $1>)
+
 
 define $1 @__max_uniform_$4($1, $1) nounwind readonly alwaysinline {
   %res = call $1 @llvm.genx.$3.GEN_TYPE($1).GEN_TYPE($1)($1 %0, $1 %1)
@@ -271,6 +288,10 @@ genx_maxmin(i32, smin, smax, int32)
 genx_maxmin(i64, smin, smax, int64)
 genx_maxmin(i32, umin, umax, uint32)
 genx_maxmin(i64, umin, umax, uint64)
+
+genx_rdregion(float, rdregionf)
+genx_rdregion(i32, rdregioni)
+genx_rdregion(i64, rdregioni)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; horizontal ops / reductions
@@ -680,27 +701,27 @@ define i64 @__reduce_add_int64(<WIDTH x i64>) nounwind readnone {
 }
 
 define i32 @__reduce_min_int32(<WIDTH x i32>) nounwind readnone {
-  reduce16(i32, @__min_varying_int32, @__min_uniform_int32, %0)
+  reducegen16(i32, smin, rdregioni, %0, 4)
 }
 
 define i32 @__reduce_max_int32(<WIDTH x i32>) nounwind readnone {
-  reduce16(i32, @__max_varying_int32, @__max_uniform_int32, %0)
+  reducegen16(i32, smax, rdregioni, %0, 4)
 }
 
 define i32 @__reduce_min_uint32(<WIDTH x i32>) nounwind readnone {
-  reduce16(i32, @__min_varying_uint32, @__min_uniform_uint32, %0)
+  reducegen16(i32, umin, rdregioni, %0, 4)
 }
 
 define i32 @__reduce_max_uint32(<WIDTH x i32>) nounwind readnone {
-  reduce16(i32, @__max_varying_uint32, @__max_uniform_uint32, %0)
+  reducegen16(i32, umax, rdregioni, %0, 4)
 }
 
 define float @__reduce_min_float(<WIDTH x float>) nounwind readnone {
-  reduce16(float, @__min_varying_float, @__min_uniform_float, %0)
+  reducegen16(float, fmin, rdregionf, %0, 4)
 }
 
 define float @__reduce_max_float(<WIDTH x float>) nounwind readnone {
-  reduce16(float, @__max_varying_float, @__max_uniform_float, %0)
+  reducegen16(float, fmax, rdregionf, %0, 4)
 }
 
 define double @__reduce_min_double(<WIDTH x double>) nounwind readnone {
@@ -712,19 +733,19 @@ define double @__reduce_max_double(<WIDTH x double>) nounwind readnone {
 }
 
 define i64 @__reduce_min_int64(<WIDTH x i64>) nounwind readnone {
-  reduce16(i64, @__min_varying_int64, @__min_uniform_int64, %0)
+  reducegen16(i64, smin, rdregioni, %0, 8)
 }
 
 define i64 @__reduce_max_int64(<WIDTH x i64>) nounwind readnone {
-  reduce16(i64, @__max_varying_int64, @__max_uniform_int64, %0)
+  reducegen16(i64, smax, rdregioni, %0, 8)
 }
 
 define i64 @__reduce_min_uint64(<WIDTH x i64>) nounwind readnone {
-  reduce16(i64, @__min_varying_uint64, @__min_uniform_uint64, %0)
+  reducegen16(i64, umin, rdregioni, %0, 8)
 }
 
 define i64 @__reduce_max_uint64(<WIDTH x i64>) nounwind readnone {
-  reduce16(i64, @__max_varying_uint64, @__max_uniform_uint64, %0)
+  reducegen16(i64, umax, rdregioni, %0, 8)
 }
 
 reduce_equal(WIDTH)
