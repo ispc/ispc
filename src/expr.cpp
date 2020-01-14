@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2019, Intel Corporation
+  Copyright (c) 2010-2020, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -1561,8 +1561,8 @@ Expr *lCreateBinaryOperatorCall(const BinaryExpr::Op bop, Expr *a0, Expr *a1, co
     if ((a0 == NULL) || (a1 == NULL)) {
         return NULL;
     }
-    Expr *arg0 = a0->TypeCheck();
-    Expr *arg1 = a1->TypeCheck();
+    Expr *arg0 = a0;
+    Expr *arg1 = a1;
     if ((arg0 == NULL) || (arg1 == NULL)) {
         return NULL;
     }
