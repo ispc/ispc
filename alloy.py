@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-#  Copyright (c) 2013-2019, Intel Corporation
+#  Copyright (c) 2013-2020, Intel Corporation
 #  All rights reserved.
 # 
 #  Redistribution and use in source and binary forms, with or without
@@ -133,11 +133,11 @@ def checkout_LLVM(component, use_git, version_LLVM, revision, target_dir, from_v
     # svn: "branches/release_90/"
     # git: "origin/release/9.x"
     if  version_LLVM == "trunk":
-        SVN_PATH="trunk"
+        SVN_PATH="UNSUPPORTED"
         GIT_TAG="master"
     elif  version_LLVM == "9_0":
-        SVN_PATH="tags/RELEASE_900/final"
-        GIT_TAG="llvmorg-9.0.0"
+        SVN_PATH="UNSUPPORTED"
+        GIT_TAG="llvmorg-9.0.1"
     elif  version_LLVM == "8_0":
         SVN_PATH="tags/RELEASE_801/final"
         GIT_TAG="llvmorg-8.0.1"
@@ -163,6 +163,8 @@ def checkout_LLVM(component, use_git, version_LLVM, revision, target_dir, from_v
                         "git checkout -b "+GIT_TAG+" "+GIT_TAG, from_validation)
             os.chdir("..")
     else:
+        if SVN_PATH == "UNSUPPORTED":
+            error("svn not supported for llvm version: " + version_LLVM, 1)
         try_do_LLVM("load "+component+" from "+SVN_REPO+SVN_PATH+" ",
                     "svn co --non-interactive "+revision+" "+SVN_REPO+SVN_PATH+" "+target_dir,
                     from_validation)
