@@ -543,6 +543,12 @@ static inline uniform unsigned int64 lanemask() {
     return __movmsk(__mask);
 }
 
+__declspec(safe)
+static inline uniform unsigned int64 packmask(bool v) {
+    return __packmsk(v & __mask);
+}
+
+
 ///////////////////////////////////////////////////////////////////////////
 // memcpy/memmove/memset
 
@@ -4099,7 +4105,7 @@ static inline uniform double asin(uniform double x) {
     {
       return __asin_uniform_double(x);
     }
-    else 
+    else
     {
       return __stdlib_asin(x);
     }

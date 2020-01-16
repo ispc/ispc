@@ -3458,6 +3458,13 @@ value ``true`` (rather than just having the value one).  The
     int sign_extend(bool value)
     uniform int sign_extend(uniform bool value)
 
+Also it is possible to convert a ``bool`` varying value to an integer using
+``packmask`` function.
+
+::
+
+    uniform int packmask(bool value)
+
 The ``intbits()`` and ``floatbits()`` functions can be used to implement
 low-level floating-point bit twiddling.  For example, ``intbits()`` returns
 an ``unsigned int`` that is a bit-for-bit copy of the given ``float``
