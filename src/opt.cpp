@@ -2449,8 +2449,9 @@ static llvm::Value *lComputeCommonPointer(llvm::Value *base, llvm::Value *offset
                                           int typeScale = 1) {
     llvm::Value *firstOffset = LLVMExtractFirstVectorElement(offsets);
 #ifdef ISPC_GENX_ENABLED
+    llvm::Value*  typeScaleValue = g->target->is32Bit() ? LLVMInt32(typeScale) : LLVMInt64(typeScale);
     if (g->target->getISA() == Target::GENX && typeScale > 1) {
-        firstOffset = llvm::BinaryOperator::Create(llvm::Instruction::SDiv, firstOffset, LLVMInt32(typeScale),
+        firstOffset = llvm::BinaryOperator::Create(llvm::Instruction::SDiv, firstOffset, typeScaleValue,
                                                    "scaled_offset", insertBefore);
     }
 #endif
