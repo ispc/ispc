@@ -4537,6 +4537,14 @@ errprint(`BUILD_OS should be defined to either UNIX or WINDOWS
 m4exit(`1')
 ')
 
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; pack mask
+define i64 @__packmsk(<WIDTH x i1>) nounwind readnone alwaysinline {
+  %v = bitcast <WIDTH x MASK> %0 to i16
+  %zext = zext i16 %v to i64
+  ret i64 %zext
+}
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; read hw clock
 
