@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2019, Intel Corporation
+  Copyright (c) 2010-2020, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -1820,10 +1820,14 @@ llvm::DIType *StructType::GetDIType(llvm::DIScope *scope) const {
     llvm::DINodeArray elements = m->diBuilder->getOrCreateArray(elementLLVMTypes);
     llvm::DIFile *diFile = pos.GetDIFile();
     return m->diBuilder->createStructType(diFile, name, diFile,
-                                          pos.first_line,             // Line number
-                                          layout->getSizeInBits(),    // Size in bits
+                                          pos.first_line,          // Line number
+                                          layout->getSizeInBits(), // Size in bits
+#if ISPC_LLVM_VERSION <= ISPC_LLVM_9_0
                                           layout->getAlignment() * 8, // Alignment in bits
-                                          llvm::DINode::FlagZero,     // Flags
+#else                                                                 // LLVM 10.0+
+                                          layout->getAlignment().value() * 8, // Alignment in bits
+#endif
+                                          llvm::DINode::FlagZero, // Flags
                                           NULL, elements);
 }
 
