@@ -55,6 +55,7 @@
 #include "llvm/IR/Module.h"
 #include "llvm/IR/TypeFinder.h"
 #include "llvm/IR/Verifier.h"
+#include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/FileSystem.h"
 #include <llvm/IR/IRPrintingPasses.h>
@@ -84,6 +85,10 @@
 #include <llvm/Transforms/Utils/BasicBlockUtils.h>
 #if ISPC_LLVM_VERSION >= ISPC_LLVM_8_0
 #include "llvm/IR/PatternMatch.h"
+#endif
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_10_0
+#include "llvm/IR/IntrinsicsPowerPC.h"
+#include "llvm/IR/IntrinsicsX86.h"
 #endif
 #include <algorithm>
 // Some ms header decided to define setjmp as _setjmp, undo this for this file.
@@ -3978,8 +3983,6 @@ void CWriter::lowerIntrinsics(llvm::Function &F) {
                     case llvm::Intrinsic::vaend:
                     case llvm::Intrinsic::returnaddress:
                     case llvm::Intrinsic::frameaddress:
-                    case llvm::Intrinsic::setjmp:
-                    case llvm::Intrinsic::longjmp:
                     case llvm::Intrinsic::memset:
                     case llvm::Intrinsic::prefetch:
                     case llvm::Intrinsic::powi:
@@ -4275,18 +4278,6 @@ bool CWriter::visitBuiltinCall(llvm::CallInst &I, llvm::Intrinsic::ID ID, bool &
     case llvm::Intrinsic::fabs:
         Out << "__builtin_fabs(";
         writeOperand(I.getArgOperand(0));
-        Out << ')';
-        return true;
-    case llvm::Intrinsic::setjmp:
-        Out << "setjmp(*(jmp_buf*)";
-        writeOperand(I.getArgOperand(0));
-        Out << ')';
-        return true;
-    case llvm::Intrinsic::longjmp:
-        Out << "longjmp(*(jmp_buf*)";
-        writeOperand(I.getArgOperand(0));
-        Out << ", ";
-        writeOperand(I.getArgOperand(1));
         Out << ')';
         return true;
     case llvm::Intrinsic::memset:
@@ -4779,15 +4770,16 @@ void CWriter::visitAtomicCmpXchgInst(llvm::AtomicCmpXchgInst &ACXI) {
 ///////////////////////////////////////////////////////////////////////////
 // SmearCleanupPass
 
-class SmearCleanupPass : public llvm::BasicBlockPass {
+class SmearCleanupPass : public llvm::FunctionPass {
   public:
-    SmearCleanupPass(llvm::Module *m, int width) : BasicBlockPass(ID) {
+    SmearCleanupPass(llvm::Module *m, int width) : FunctionPass(ID) {
         module = m;
         vectorWidth = width;
     }
 
     llvm::StringRef getPassName() const { return "Smear Cleanup Pass"; }
     bool runOnBasicBlock(llvm::BasicBlock &BB);
+    bool runOnFunction(llvm::Function &F);
 
     static char ID;
     llvm::Module *module;
@@ -4962,15 +4954,25 @@ restart:
     return modifiedAny;
 }
 
+bool SmearCleanupPass::runOnFunction(llvm::Function &F) {
+
+    bool modifiedAny = false;
+    for (llvm::BasicBlock &BB : F) {
+        modifiedAny |= runOnBasicBlock(BB);
+    }
+    return modifiedAny;
+}
+
 ///////////////////////////////////////////////////////////////////////////
 // AndCmpCleanupPass
 
-class AndCmpCleanupPass : public llvm::BasicBlockPass {
+class AndCmpCleanupPass : public llvm::FunctionPass {
   public:
-    AndCmpCleanupPass() : BasicBlockPass(ID) {}
+    AndCmpCleanupPass() : FunctionPass(ID) {}
 
     llvm::StringRef getPassName() const { return "AndCmp Cleanup Pass"; }
     bool runOnBasicBlock(llvm::BasicBlock &BB);
+    bool runOnFunction(llvm::Function &F);
 
     static char ID;
 };
@@ -5059,6 +5061,15 @@ restart:
     return modifiedAny;
 }
 
+bool AndCmpCleanupPass::runOnFunction(llvm::Function &F) {
+
+    bool modifiedAny = false;
+    for (llvm::BasicBlock &BB : F) {
+        modifiedAny |= runOnBasicBlock(BB);
+    }
+    return modifiedAny;
+}
+
 ///////////////////////////////////////////////////////////////////////////
 // MaskOpsCleanupPass
 
@@ -5068,9 +5079,9 @@ restart:
     __and_not1(a, b) (and similarly if the second operand has not applied
     to it...)
  */
-class MaskOpsCleanupPass : public llvm::BasicBlockPass {
+class MaskOpsCleanupPass : public llvm::FunctionPass {
   public:
-    MaskOpsCleanupPass(llvm::Module *m) : BasicBlockPass(ID) {
+    MaskOpsCleanupPass(llvm::Module *m) : FunctionPass(ID) {
         llvm::Type *mt = LLVMTypes::MaskType;
 
         // Declare the __not, __and_not1, and __and_not2 functions that we
@@ -5107,6 +5118,7 @@ class MaskOpsCleanupPass : public llvm::BasicBlockPass {
 
     llvm::StringRef getPassName() const { return "MaskOps Cleanup Pass"; }
     bool runOnBasicBlock(llvm::BasicBlock &BB);
+    bool runOnFunction(llvm::Function &F);
 
   private:
     llvm::Value *lGetNotOperand(llvm::Value *v) const;
@@ -5203,6 +5215,15 @@ restart:
         }
     }
 
+    return modifiedAny;
+}
+
+bool MaskOpsCleanupPass::runOnFunction(llvm::Function &F) {
+
+    bool modifiedAny = false;
+    for (llvm::BasicBlock &BB : F) {
+        modifiedAny |= runOnBasicBlock(BB);
+    }
     return modifiedAny;
 }
 

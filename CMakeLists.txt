@@ -1,5 +1,5 @@
 #
-#  Copyright (c) 2018-2019, Intel Corporation
+#  Copyright (c) 2018-2020, Intel Corporation
 #  All rights reserved.
 #
 #  Redistribution and use in source and binary forms, with or without
@@ -185,6 +185,10 @@ endif()
 
 set(CLANG_LIBRARY_LIST clangFrontend clangDriver clangSerialization clangParse clangSema clangAnalysis clangAST clangBasic clangEdit clangLex)
 set(LLVM_COMPONENTS engine ipo bitreader bitwriter instrumentation linker option)
+
+if (${LLVM_VERSION_NUMBER} VERSION_GREATER_EQUAL "10.0.0")
+    list(APPEND LLVM_COMPONENTS frontendopenmp)
+endif()
 
 list(APPEND LLVM_COMPONENTS x86)
 if (ARM_ENABLED)

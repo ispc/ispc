@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2019, Intel Corporation
+  Copyright (c) 2010-2020, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -47,6 +47,7 @@
 #else
 #include <unistd.h>
 #endif // ISPC_HOST_IS_WINDOWS
+#include <llvm/Support/CommandLine.h>
 #include <llvm/Support/Debug.h>
 #include <llvm/Support/Signals.h>
 #include <llvm/Support/TargetRegistry.h>

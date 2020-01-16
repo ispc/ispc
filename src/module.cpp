@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2019, Intel Corporation
+  Copyright (c) 2010-2020, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -934,9 +934,15 @@ bool Module::writeObjectFileOrAssembly(llvm::TargetMachine *targetMachine, llvm:
                                        const char *outFileName) {
     // Figure out if we're generating object file or assembly output, and
     // set binary output for object files
+#if ISPC_LLVM_VERSION <= ISPC_LLVM_9_0
     llvm::TargetMachine::CodeGenFileType fileType =
         (outputType == Object) ? llvm::TargetMachine::CGFT_ObjectFile : llvm::TargetMachine::CGFT_AssemblyFile;
     bool binary = (fileType == llvm::TargetMachine::CGFT_ObjectFile);
+#else // LLVM 10.0+
+    llvm::CodeGenFileType fileType = (outputType == Object) ? llvm::CGFT_ObjectFile : llvm::CGFT_AssemblyFile;
+    bool binary = (fileType == llvm::CGFT_ObjectFile);
+#endif
+
     llvm::sys::fs::OpenFlags flags = binary ? llvm::sys::fs::F_None : llvm::sys::fs::F_Text;
 
     std::error_code error;
@@ -1896,7 +1902,12 @@ void Module::execPreprocessor(const char *infilename, llvm::raw_string_ostream *
     inst.setTarget(target);
     inst.createSourceManager(inst.getFileManager());
 
+#if ISPC_LLVM_VERSION <= ISPC_LLVM_9_0
     clang::FrontendInputFile inputFile(infilename, clang::InputKind::Unknown);
+#else // LLVM 10.0+
+    clang::FrontendInputFile inputFile(infilename, clang::InputKind());
+#endif
+
     inst.InitializeSourceManager(inputFile);
 
     // Don't remove comments in the preprocessor, so that we can accurately

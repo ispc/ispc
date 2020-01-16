@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2019, Intel Corporation
+  Copyright (c) 2010-2020, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -276,7 +276,11 @@ FunctionEmitContext::FunctionEmitContext(Function *func, Symbol *funSym, llvm::F
             llvm::BasicBlock *offBB = llvm::BasicBlock::Create(*g->ctx, "entry", (llvm::Function *)offFunc, 0);
             llvm::StoreInst *inst = new llvm::StoreInst(LLVMMaskAllOff, globalAllOnMaskPtr, offBB);
             if (g->opt.forceAlignedMemory) {
+#if ISPC_LLVM_VERSION <= ISPC_LLVM_9_0
                 inst->setAlignment(g->target->getNativeVectorAlignment());
+#else // LLVM 10.0+
+                inst->setAlignment(llvm::MaybeAlign(g->target->getNativeVectorAlignment()));
+#endif
             }
             llvm::ReturnInst::Create(*g->ctx, offBB);
         }
@@ -2049,7 +2053,11 @@ llvm::Value *FunctionEmitContext::LoadInst(llvm::Value *ptr, const char *name) {
     llvm::LoadInst *inst = new llvm::LoadInst(ptr, name, bblock);
 
     if (g->opt.forceAlignedMemory && llvm::dyn_cast<llvm::VectorType>(pt->getElementType())) {
+#if ISPC_LLVM_VERSION <= ISPC_LLVM_9_0
         inst->setAlignment(g->target->getNativeVectorAlignment());
+#else // LLVM 10.0+
+        inst->setAlignment(llvm::MaybeAlign(g->target->getNativeVectorAlignment()));
+#endif
     }
 
     AddDebugPos(inst);
@@ -2163,7 +2171,12 @@ llvm::Value *FunctionEmitContext::LoadInst(llvm::Value *ptr, llvm::Value *mask, 
                 // it's totally unaligned.  (This shouldn't make any difference
                 // vs the proper alignment in practice.)
                 align = 1;
+#if ISPC_LLVM_VERSION <= ISPC_LLVM_9_0
             llvm::Instruction *inst = new llvm::LoadInst(ptr, name, false /* not volatile */, align, bblock);
+#else // LLVM 10.0+
+            llvm::Instruction *inst =
+                new llvm::LoadInst(ptr, name, false /* not volatile */, llvm::MaybeAlign(align), bblock);
+#endif
             AddDebugPos(inst);
             return inst;
         }
@@ -2340,8 +2353,13 @@ llvm::Value *FunctionEmitContext::AllocaInst(llvm::Type *llvmType, const char *n
     if (align == 0 && arrayType != NULL && !llvm::isa<llvm::VectorType>(arrayType->getElementType()))
         align = g->target->getNativeVectorAlignment();
 
-    if (align != 0)
+    if (align != 0) {
+#if ISPC_LLVM_VERSION <= ISPC_LLVM_9_0
         inst->setAlignment(align);
+#else // LLVM 10.0+
+        inst->setAlignment(llvm::MaybeAlign(align));
+#endif
+    }
     // Don't add debugging info to alloca instructions
     return inst;
 }
@@ -2563,7 +2581,11 @@ void FunctionEmitContext::StoreInst(llvm::Value *value, llvm::Value *ptr) {
     llvm::StoreInst *inst = new llvm::StoreInst(value, ptr, bblock);
 
     if (g->opt.forceAlignedMemory && llvm::dyn_cast<llvm::VectorType>(pt->getElementType())) {
+#if ISPC_LLVM_VERSION <= ISPC_LLVM_9_0
         inst->setAlignment(g->target->getNativeVectorAlignment());
+#else // LLVM 10.0+
+        inst->setAlignment(llvm::MaybeAlign(g->target->getNativeVectorAlignment()));
+#endif
     }
 
     AddDebugPos(inst);

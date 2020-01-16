@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2019, Intel Corporation
+  Copyright (c) 2010-2020, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -47,6 +47,7 @@
 #include <set>
 #include <stdio.h>
 
+#include "llvm/InitializePasses.h"
 #include <llvm/IR/BasicBlock.h>
 #include <llvm/IR/Constants.h>
 #include <llvm/IR/Function.h>
@@ -91,6 +92,9 @@
 #include <llvm/BinaryFormat/Dwarf.h>
 #include <llvm/Support/raw_ostream.h>
 #include <llvm/Target/TargetMachine.h>
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_10_0
+#include "llvm/IR/IntrinsicsX86.h"
+#endif
 
 #include <llvm/IR/IntrinsicInst.h>
 #ifdef ISPC_HOST_IS_LINUX
@@ -669,13 +673,15 @@ void Optimize(llvm::Module *module, int optLevel) {
     @todo The better thing to do would be to submit a patch to LLVM to get
     these; they're presumably pretty simple patterns to match.
 */
-class IntrinsicsOpt : public llvm::BasicBlockPass {
+class IntrinsicsOpt : public llvm::FunctionPass {
   public:
-    IntrinsicsOpt() : BasicBlockPass(ID){};
+    IntrinsicsOpt() : FunctionPass(ID){};
 
     llvm::StringRef getPassName() const { return "Intrinsics Cleanup Optimization"; }
 
     bool runOnBasicBlock(llvm::BasicBlock &BB);
+
+    bool runOnFunction(llvm::Function &F);
 
     static char ID;
 
@@ -867,7 +873,12 @@ restart:
                         align = callInst->getCalledFunction() == avxMaskedLoad32 ? 4 : 8;
                     name = LLVMGetName(callInst->getArgOperand(0), "_load");
                     llvm::Instruction *loadInst =
+#if ISPC_LLVM_VERSION <= ISPC_LLVM_9_0
                         new llvm::LoadInst(castPtr, name, false /* not volatile */, align, (llvm::Instruction *)NULL);
+#else // LLVM 10.0+
+                        new llvm::LoadInst(castPtr, name, false /* not volatile */, llvm::MaybeAlign(align),
+                                           (llvm::Instruction *)NULL);
+#endif
                     lCopyMetadata(loadInst, callInst);
                     llvm::ReplaceInstWithInst(callInst, loadInst);
                     modifiedAny = true;
@@ -900,7 +911,11 @@ restart:
                         align = g->target->getNativeVectorAlignment();
                     else
                         align = callInst->getCalledFunction() == avxMaskedStore32 ? 4 : 8;
+#if ISPC_LLVM_VERSION <= ISPC_LLVM_9_0
                     storeInst->setAlignment(align);
+#else // LLVM 10.0+
+                    storeInst->setAlignment(llvm::MaybeAlign(align));
+#endif
                     lCopyMetadata(storeInst, callInst);
                     llvm::ReplaceInstWithInst(callInst, storeInst);
 
@@ -913,6 +928,15 @@ restart:
 
     DEBUG_END_PASS("IntrinsicsOpt");
 
+    return modifiedAny;
+}
+
+bool IntrinsicsOpt::runOnFunction(llvm::Function &F) {
+
+    bool modifiedAny = false;
+    for (llvm::BasicBlock &BB : F) {
+        modifiedAny |= runOnBasicBlock(BB);
+    }
     return modifiedAny;
 }
 
@@ -945,12 +969,13 @@ static llvm::Pass *CreateIntrinsicsOptPass() { return new IntrinsicsOpt; }
     @todo The better thing to do would be to submit a patch to LLVM to get
     these; they're presumably pretty simple patterns to match.
 */
-class InstructionSimplifyPass : public llvm::BasicBlockPass {
+class InstructionSimplifyPass : public llvm::FunctionPass {
   public:
-    InstructionSimplifyPass() : BasicBlockPass(ID) {}
+    InstructionSimplifyPass() : FunctionPass(ID) {}
 
     llvm::StringRef getPassName() const { return "Vector Select Optimization"; }
     bool runOnBasicBlock(llvm::BasicBlock &BB);
+    bool runOnFunction(llvm::Function &F);
 
     static char ID;
 
@@ -1075,6 +1100,15 @@ restart:
     return modifiedAny;
 }
 
+bool InstructionSimplifyPass::runOnFunction(llvm::Function &F) {
+
+    bool modifiedAny = false;
+    for (llvm::BasicBlock &BB : F) {
+        modifiedAny |= runOnBasicBlock(BB);
+    }
+    return modifiedAny;
+}
+
 static llvm::Pass *CreateInstructionSimplifyPass() { return new InstructionSimplifyPass; }
 
 ///////////////////////////////////////////////////////////////////////////
@@ -1090,14 +1124,16 @@ static llvm::Pass *CreateInstructionSimplifyPass() { return new InstructionSimpl
     See for example the comments discussing the __pseudo_gather functions
     in builtins.cpp for more information about this.
  */
-class ImproveMemoryOpsPass : public llvm::BasicBlockPass {
+class ImproveMemoryOpsPass : public llvm::FunctionPass {
   public:
     static char ID;
-    ImproveMemoryOpsPass() : BasicBlockPass(ID) {}
+    ImproveMemoryOpsPass() : FunctionPass(ID) {}
 
     llvm::StringRef getPassName() const { return "Improve Memory Ops"; }
 
     bool runOnBasicBlock(llvm::BasicBlock &BB);
+
+    bool runOnFunction(llvm::Function &F);
 };
 
 char ImproveMemoryOpsPass::ID = 0;
@@ -2639,7 +2675,12 @@ static bool lImproveMaskedStore(llvm::CallInst *callInst) {
         lCopyMetadata(lvalue, callInst);
         llvm::Instruction *store =
             new llvm::StoreInst(rvalue, lvalue, false /* not volatile */,
+#if ISPC_LLVM_VERSION <= ISPC_LLVM_9_0
                                 g->opt.forceAlignedMemory ? g->target->getNativeVectorAlignment() : info->align);
+#else // LLVM 10.0+
+                                llvm::MaybeAlign(g->opt.forceAlignedMemory ? g->target->getNativeVectorAlignment()
+                                                                           : info->align));
+#endif
         lCopyMetadata(store, callInst);
         llvm::ReplaceInstWithInst(callInst, store);
         return true;
@@ -2690,7 +2731,12 @@ static bool lImproveMaskedLoad(llvm::CallInst *callInst, llvm::BasicBlock::itera
         ptr = new llvm::BitCastInst(ptr, ptrType, "ptr_cast_for_load", callInst);
         llvm::Instruction *load = new llvm::LoadInst(
             ptr, callInst->getName(), false /* not volatile */,
+#if ISPC_LLVM_VERSION <= ISPC_LLVM_9_0
             g->opt.forceAlignedMemory ? g->target->getNativeVectorAlignment() : info->align, (llvm::Instruction *)NULL);
+#else // LLVM 10.0+
+            llvm::MaybeAlign(g->opt.forceAlignedMemory ? g->target->getNativeVectorAlignment() : info->align),
+            (llvm::Instruction *)NULL);
+#endif
         lCopyMetadata(load, callInst);
         llvm::ReplaceInstWithInst(callInst, load);
         return true;
@@ -2739,6 +2785,15 @@ restart:
     return modifiedAny;
 }
 
+bool ImproveMemoryOpsPass::runOnFunction(llvm::Function &F) {
+
+    bool modifiedAny = false;
+    for (llvm::BasicBlock &BB : F) {
+        modifiedAny |= runOnBasicBlock(BB);
+    }
+    return modifiedAny;
+}
+
 static llvm::Pass *CreateImproveMemoryOpsPass() { return new ImproveMemoryOpsPass; }
 
 ///////////////////////////////////////////////////////////////////////////
@@ -2763,13 +2818,14 @@ static llvm::Pass *CreateImproveMemoryOpsPass() { return new ImproveMemoryOpsPas
 //  in this case, we're often able to generate wide vector loads and
 //  appropriate shuffles automatically.
 
-class GatherCoalescePass : public llvm::BasicBlockPass {
+class GatherCoalescePass : public llvm::FunctionPass {
   public:
     static char ID;
-    GatherCoalescePass() : BasicBlockPass(ID) {}
+    GatherCoalescePass() : FunctionPass(ID) {}
 
     llvm::StringRef getPassName() const { return "Gather Coalescing"; }
     bool runOnBasicBlock(llvm::BasicBlock &BB);
+    bool runOnFunction(llvm::Function &F);
 };
 
 char GatherCoalescePass::ID = 0;
@@ -3023,7 +3079,11 @@ llvm::Value *lGEPAndLoad(llvm::Value *basePtr, int64_t offset, int align, llvm::
                          llvm::Type *type) {
     llvm::Value *ptr = lGEPInst(basePtr, LLVMInt64(offset), "new_base", insertBefore);
     ptr = new llvm::BitCastInst(ptr, llvm::PointerType::get(type, 0), "ptr_cast", insertBefore);
+#if ISPC_LLVM_VERSION <= ISPC_LLVM_9_0
     return new llvm::LoadInst(ptr, "gather_load", false /* not volatile */, align, insertBefore);
+#else // LLVM 10.0+
+    return new llvm::LoadInst(ptr, "gather_load", false /* not volatile */, llvm::MaybeAlign(align), insertBefore);
+#endif
 }
 
 /* Having decided that we're doing to emit a series of loads, as encoded in
@@ -3723,6 +3783,15 @@ restart:
     return modifiedAny;
 }
 
+bool GatherCoalescePass::runOnFunction(llvm::Function &F) {
+
+    bool modifiedAny = false;
+    for (llvm::BasicBlock &BB : F) {
+        modifiedAny |= runOnBasicBlock(BB);
+    }
+    return modifiedAny;
+}
+
 static llvm::Pass *CreateGatherCoalescePass() { return new GatherCoalescePass; }
 
 ///////////////////////////////////////////////////////////////////////////
@@ -3732,13 +3801,14 @@ static llvm::Pass *CreateGatherCoalescePass() { return new GatherCoalescePass; }
     runs, we need to turn them into actual native gathers and scatters.
     This task is handled by the ReplacePseudoMemoryOpsPass here.
  */
-class ReplacePseudoMemoryOpsPass : public llvm::BasicBlockPass {
+class ReplacePseudoMemoryOpsPass : public llvm::FunctionPass {
   public:
     static char ID;
-    ReplacePseudoMemoryOpsPass() : BasicBlockPass(ID) {}
+    ReplacePseudoMemoryOpsPass() : FunctionPass(ID) {}
 
     llvm::StringRef getPassName() const { return "Replace Pseudo Memory Ops"; }
     bool runOnBasicBlock(llvm::BasicBlock &BB);
+    bool runOnFunction(llvm::Function &F);
 };
 
 char ReplacePseudoMemoryOpsPass::ID = 0;
@@ -4008,6 +4078,15 @@ restart:
     return modifiedAny;
 }
 
+bool ReplacePseudoMemoryOpsPass::runOnFunction(llvm::Function &F) {
+
+    bool modifiedAny = false;
+    for (llvm::BasicBlock &BB : F) {
+        modifiedAny |= runOnBasicBlock(BB);
+    }
+    return modifiedAny;
+}
+
 static llvm::Pass *CreateReplacePseudoMemoryOpsPass() { return new ReplacePseudoMemoryOpsPass; }
 
 ///////////////////////////////////////////////////////////////////////////
@@ -4026,13 +4105,14 @@ static llvm::Pass *CreateReplacePseudoMemoryOpsPass() { return new ReplacePseudo
     See stdlib.m4 for a number of uses of this idiom.
  */
 
-class IsCompileTimeConstantPass : public llvm::BasicBlockPass {
+class IsCompileTimeConstantPass : public llvm::FunctionPass {
   public:
     static char ID;
-    IsCompileTimeConstantPass(bool last = false) : BasicBlockPass(ID) { isLastTry = last; }
+    IsCompileTimeConstantPass(bool last = false) : FunctionPass(ID) { isLastTry = last; }
 
     llvm::StringRef getPassName() const { return "Resolve \"is compile time constant\""; }
     bool runOnBasicBlock(llvm::BasicBlock &BB);
+    bool runOnFunction(llvm::Function &F);
 
     bool isLastTry;
 };
@@ -4098,6 +4178,15 @@ restart:
 
     DEBUG_END_PASS("IsCompileTimeConstantPass");
 
+    return modifiedAny;
+}
+
+bool IsCompileTimeConstantPass::runOnFunction(llvm::Function &F) {
+
+    bool modifiedAny = false;
+    for (llvm::BasicBlock &BB : F) {
+        modifiedAny |= runOnBasicBlock(BB);
+    }
     return modifiedAny;
 }
 
@@ -4368,19 +4457,20 @@ static llvm::Pass *CreateMakeInternalFuncsStaticPass() { return new MakeInternal
 ///////////////////////////////////////////////////////////////////////////
 // PeepholePass
 
-class PeepholePass : public llvm::BasicBlockPass {
+class PeepholePass : public llvm::FunctionPass {
   public:
     PeepholePass();
 
     llvm::StringRef getPassName() const { return "Peephole Optimizations"; }
     bool runOnBasicBlock(llvm::BasicBlock &BB);
+    bool runOnFunction(llvm::Function &F);
 
     static char ID;
 };
 
 char PeepholePass::ID = 0;
 
-PeepholePass::PeepholePass() : BasicBlockPass(ID) {}
+PeepholePass::PeepholePass() : FunctionPass(ID) {}
 
 using namespace llvm::PatternMatch;
 
@@ -4656,6 +4746,15 @@ restart:
     return modifiedAny;
 }
 
+bool PeepholePass::runOnFunction(llvm::Function &F) {
+
+    bool modifiedAny = false;
+    for (llvm::BasicBlock &BB : F) {
+        modifiedAny |= runOnBasicBlock(BB);
+    }
+    return modifiedAny;
+}
+
 static llvm::Pass *CreatePeepholePass() { return new PeepholePass; }
 
 /** Given an llvm::Value known to be an integer, return its value as
@@ -4670,14 +4769,16 @@ static int64_t lGetIntValue(llvm::Value *offset) {
 ///////////////////////////////////////////////////////////////////////////
 // ReplaceStdlibShiftPass
 
-class ReplaceStdlibShiftPass : public llvm::BasicBlockPass {
+class ReplaceStdlibShiftPass : public llvm::FunctionPass {
   public:
     static char ID;
-    ReplaceStdlibShiftPass() : BasicBlockPass(ID) {}
+    ReplaceStdlibShiftPass() : FunctionPass(ID) {}
 
     llvm::StringRef getPassName() const { return "Resolve \"replace extract insert chains\""; }
 
     bool runOnBasicBlock(llvm::BasicBlock &BB);
+
+    bool runOnFunction(llvm::Function &F);
 };
 
 char ReplaceStdlibShiftPass::ID = 0;
@@ -4737,6 +4838,15 @@ bool ReplaceStdlibShiftPass::runOnBasicBlock(llvm::BasicBlock &bb) {
 
     DEBUG_END_PASS("ReplaceStdlibShiftPass");
 
+    return modifiedAny;
+}
+
+bool ReplaceStdlibShiftPass::runOnFunction(llvm::Function &F) {
+
+    bool modifiedAny = false;
+    for (llvm::BasicBlock &BB : F) {
+        modifiedAny |= runOnBasicBlock(BB);
+    }
     return modifiedAny;
 }
 
