@@ -682,7 +682,9 @@ def print_result(status, results, s, run_tests_log):
     title = StatusStr[status]
     file_list = [fname for fname, fstatus in results if status == fstatus]
     total_tests = len(results)
-    print_debug("%d / %d tests %s:\n" % (len(file_list), total_tests, title), s, run_tests_log)
+    print_debug("%d / %d tests %s\n" % (len(file_list), total_tests, title), s, run_tests_log)
+    if status == Status.Success:
+        return
     for f in sorted(file_list):
         print_debug("\t%s\n" % f, s, run_tests_log)
 
