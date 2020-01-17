@@ -614,7 +614,7 @@ def verify():
                 break
 
 # populate ex_state test table and run info with testing results
-def populate_ex_state(options, total_tests, test_result):
+def populate_ex_state(options, target, total_tests, test_result):
     # Detect opt_set
     if options.no_opt == True:
         opt = "-O0"
@@ -628,14 +628,14 @@ def populate_ex_state(options, total_tests, test_result):
             succ = status == Status.Success
             runf = status == Status.Runfail
             comp = status == Status.Compfail
-            skip = status == Status.Skipped
+            skip = status == Status.Skip
             # We do not add skipped tests to test table as we do not know the test result
             if status != Status.Skip:
                 common.ex_state.add_to_tt(fname, target.arch, opt, target.target, runf, comp)
             common.ex_state.add_to_rinf(target.arch, opt, target.target, succ, runf, comp, skip)
 
     except:
-        print_debug("Exception in ex_state. Skipping...", s, run_tests_log)
+        print_debug("Exception in ex_state. Skipping...\n", s, run_tests_log)
 
 # set compiler exe depending on the OS
 def set_compiler_exe(host, options):
@@ -791,7 +791,7 @@ def run_tests(options1, args, print_version):
         results += qret.get()
 
     # populate ex_state test table and run info with testing results
-    populate_ex_state(options, total_tests, results)
+    populate_ex_state(options, target, total_tests, results)
 
     # if all threads ended correctly, qerr is empty
     if not qerr.empty():
