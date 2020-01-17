@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-#  Copyright (c) 2013-2019, Intel Corporation
+#  Copyright (c) 2013-2020, Intel Corporation
 #  All rights reserved.
 #
 #  Redistribution and use in source and binary forms, with or without
@@ -518,10 +518,10 @@ def file_check(results, host, target):
     for x in f_lines:
         if x.startswith("."):
             possible_compilers.add(x.split(' ')[-3])
-    if not compiler_version in possible_compilers:
-        error("\n**********\nWe don't have history of fails for compiler " +
-                compiler_version +
-                "\nAll fails will be new!!!\n**********", 2)
+    #if not compiler_version in possible_compilers:
+    #    error("\n**********\nWe don't have history of fails for compiler " +
+    #            compiler_version +
+    #            "\nAll fails will be new!!!\n**********", 2)
     new_line = " "+target.arch.rjust(6)+" "+target.target.rjust(14)+" "+OS.rjust(7)+" "+llvm_version+" "+compiler_version.rjust(10)+" "+opt+" *\n"
     new_compfails = compfails[:]
     new_runfails = runfails[:]
