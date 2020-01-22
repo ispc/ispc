@@ -413,7 +413,7 @@ def run_test(testname, host, target):
 # pull tests to run from the given queue and run them.  Multiple copies of
 # this function will be running in parallel across all of the CPU cores of
 # the system.
-def run_tasks_from_queue(queue, queue_ret, queue_error, queue_finish, total_tests_arg, max_test_length_arg, counter, mutex, glob_var):
+def run_tasks_from_queue(queue, queue_ret, total_tests_arg, max_test_length_arg, counter, mutex, glob_var):
     # This is needed on windows because windows doesn't copy globals from parent process while multiprocessing
     host = glob_var[0]
     global options
@@ -433,57 +433,39 @@ def run_tasks_from_queue(queue, queue_ret, queue_error, queue_finish, total_test
     else:
         olddir = ""
 
-    # by default, the thread is presumed to fail
-    queue_error.put('ERROR')
-    results = []
+    for filename in iter(queue.get, 'STOP'):
+        status = Status.Skip
+        if check_test(filename, host, target):
+            try:
+                status = run_test(filename, host, target)
+            except:
+                # This is in case the child has unexpectedly died or some other exception happened
+                # Count it as runfail and continue with next test.
+                print_debug("ERROR: run_test function raised an exception: %s\n" % (sys.exc_info()[1]), s, run_tests_log)
+                status = Status.Runfail
 
-    while True:
-        if not queue.empty():
-            filename = queue.get()
-            status = Status.Skip
-            if check_test(filename, host, target):
-                try:
-                    status = run_test(filename, host, target)
-                except:
-                    # This is in case the child has unexpectedly died or some other exception happened
-                    # it`s not what we wanted, so we leave ERROR in queue_error
-                    print_debug("ERROR: run_test function raised an exception: %s\n" % (sys.exc_info()[1]), s, run_tests_log)
-                    # minus one thread, minus one STOP
-                    queue_finish.get()
-                    # needed for queue join
-                    queue_finish.task_done()
-                    # exiting the loop, returning from the thread
-                    break
+        queue_ret.put((filename, status))
+        with mutex:
+            update_progress(filename, total_tests_arg, counter, max_test_length_arg)
 
-                with mutex:
-                    update_progress(filename, total_tests_arg, counter, max_test_length_arg)
+        # Task done for the test.
+        queue.task_done()
 
-            results.append((filename, status))
+    if host.is_windows():
+        try:
+            os.remove("test_static.obj")
+            # vc*.pdb trick is in anticipaton of new versions of VS.
+            vcpdb = glob.glob("vc*.pdb")[0]
+            os.remove(vcpdb)
+            os.chdir("..")
+            # This will fail if there were failing tests or
+            # Windows is in bad mood.
+            os.rmdir(tmpdir)
+        except:
+            None
 
-        else:
-            queue_ret.put(results)
-            if host.is_windows():
-                try:
-                    os.remove("test_static.obj")
-                    # vc*.pdb trick is in anticipaton of new versions of VS.
-                    vcpdb = glob.glob("vc*.pdb")[0]
-                    os.remove(vcpdb)
-                    os.chdir("..")
-                    # This will fail if there were failing tests or
-                    # Windows is in bad mood.
-                    os.rmdir(tmpdir)
-                except:
-                    None
-
-            # the next line is crucial for error indication!
-            # this thread ended correctly, so take ERROR back
-            queue_error.get()
-            # minus one thread, minus one STOP
-            queue_finish.get()
-            # needed for queue join
-            queue_finish.task_done()
-            # exiting the loop, returning from the thread
-            break
+    # Task done for terminating `STOP`.
+    queue.task_done()
 
 
 def sigint(signum, frame):
@@ -769,19 +751,14 @@ def run_tests(options1, args, print_version):
     print_debug("Running %d jobs in parallel. Running %d tests.\n" % (nthreads, total_tests), s, run_tests_log)
 
     # put each of the test filenames into a queue
-    q = multiprocessing.Queue()
+    test_queue = multiprocessing.JoinableQueue()
     for fn in files:
-        q.put(fn)
+        test_queue.put(fn)
+    for x in range(nthreads):
+        test_queue.put('STOP')
+
     # qret is a queue for returned data
     qret = multiprocessing.Queue()
-    # qerr is an error indication queue
-    qerr = multiprocessing.Queue()
-    # qfin is a waiting queue: JoinableQueue has join() and task_done() methods
-    qfin = multiprocessing.JoinableQueue()
-
-    # for each thread, there is a STOP in qfin to synchronize execution
-    for x in range(nthreads):
-        qfin.put('STOP')
 
     # need to catch sigint so that we can terminate all of the tasks if
     # we're interrupted
@@ -798,13 +775,13 @@ def run_tests(options1, args, print_version):
     global task_threads
     task_threads = [0] * nthreads
     for x in range(nthreads):
-        task_threads[x] = multiprocessing.Process(target=run_tasks_from_queue, args=(q, qret, qerr, qfin, total_tests,
+        task_threads[x] = multiprocessing.Process(target=run_tasks_from_queue, args=(test_queue, qret, total_tests,
                 max_test_length, finished_tests_counter, lock, glob_var))
         task_threads[x].start()
 
     # wait for them all to finish and rid the queue of STOPs
     # join() here just waits for synchronization
-    qfin.join()
+    test_queue.join()
 
     if options.non_interactive == False:
         print_debug("\n", s, run_tests_log)
@@ -813,14 +790,10 @@ def run_tests(options1, args, print_version):
     elapsed_time = time.strftime('%Hh%Mm%Ssec.', time.gmtime(temp_time))
 
     while not qret.empty():
-        results += qret.get()
+        results.append(qret.get())
 
     # populate ex_state test table and run info with testing results
     populate_ex_state(options, target, total_tests, results)
-
-    # if all threads ended correctly, qerr is empty
-    if not qerr.empty():
-        raise OSError(2, 'Some test subprocess has thrown an exception', '')
 
     if options.non_interactive:
         print_debug(" Done %d / %d\n" % (finished_tests_counter.value, total_tests), s, run_tests_log)
