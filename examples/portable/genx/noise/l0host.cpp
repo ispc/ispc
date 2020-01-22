@@ -1,10 +1,43 @@
+/*
+  Copyright (c) 2020, Intel Corporation
+  All rights reserved.
+
+  Redistribution and use in source and binary forms, with or without
+  modification, are permitted provided that the following conditions are
+  met:
+
+    * Redistributions of source code must retain the above copyright
+      notice, this list of conditions and the following disclaimer.
+
+    * Redistributions in binary form must reproduce the above copyright
+      notice, this list of conditions and the following disclaimer in the
+      documentation and/or other materials provided with the distribution.
+
+    * Neither the name of Intel Corporation nor the names of its
+      contributors may be used to endorse or promote products derived from
+      this software without specific prior written permission.
+
+
+   THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS
+   IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
+   TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A
+   PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER
+   OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+   EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+   PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+   PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+   LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+   NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+   SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+*/
+
 #include <iostream>
 #include <level_zero/ze_api.h>
 #include <limits>
 #include <cmath>
 #include "L0_helpers.h"
+#include <chrono>
 
-// TODO: move out..
 #define CORRECTNESS_THRESHOLD 0.0002
 #define SZ 768 * 768
 #define TIMEOUT (40 * 1000)
@@ -66,51 +99,10 @@ static int run(int niter, int gx, int gy) {
     // set grid size
     ze_thread_group_dimensions_t dispatchTraits = {1, 1, 1};
 
-    /*zet_metric_group_handle_t hMetricGroup = nullptr;
-    ze_event_handle_t hEvent = nullptr;
-    ze_event_pool_handle_t hEventPool = nullptr;
-    ze_event_pool_desc_t poolDesc = {ZE_EVENT_POOL_DESC_VERSION_CURRENT, ZE_EVENT_POOL_FLAG_DEFAULT , 1};
-    ze_event_desc_t eventDesc = {ZE_EVENT_DESC_VERSION_CURRENT};
-    zet_metric_tracer_handle_t    hMetricTracer          = nullptr;
-    zet_metric_tracer_desc_t      metricTracerDescriptor = {ZET_METRIC_TRACER_DESC_VERSION_CURRENT};
-
-    FindMetricGroup(hDevice, "ComputeBasic", ZET_METRIC_GROUP_SAMPLING_TYPE_TIME_BASED, &hMetricGroup);
-    L0_SAFE_CALL(zetDeviceActivateMetricGroups( hDevice, 1, &hMetricGroup ));
-
-    // Create notification event
-    L0_SAFE_CALL(zeEventPoolCreate( hDriver, &poolDesc, 1, &hDevice, &hEventPool ));
-    eventDesc.index  = 0;
-    eventDesc.signal = ZE_EVENT_SCOPE_FLAG_HOST;
-    eventDesc.wait   = ZE_EVENT_SCOPE_FLAG_HOST;
-    L0_SAFE_CALL(zeEventCreate( hEventPool, &eventDesc, &hEvent ));
-
-    // Open metric tracer
-    metricTracerDescriptor.samplingPeriod       = 1000;
-    metricTracerDescriptor.notifyEveryNReports  = 32768;
-    L0_SAFE_CALL(zetMetricTracerOpen( hDevice, hMetricGroup, &metricTracerDescriptor, hEvent, &hMetricTracer ));
-    */
-
+    auto wct = std::chrono::system_clock::now();
     // launch
     L0_SAFE_CALL(zeCommandListAppendLaunchKernel(hCommandList, hKernel, &dispatchTraits, nullptr, 0, nullptr));
     L0_SAFE_CALL(zeCommandListAppendBarrier(hCommandList, nullptr, 0, nullptr));
-
-    // Read raw data
-    /*size_t rawSize = 0;
-    L0_SAFE_CALL(zetMetricTracerReadData( hMetricTracer, UINT32_MAX, &rawSize, nullptr ));
-    uint8_t* rawData = (uint8_t*)malloc(rawSize);
-    L0_SAFE_CALL(zetMetricTracerReadData( hMetricTracer, UINT32_MAX, &rawSize, rawData ));
-    
-    // Close metric tracer
-    L0_SAFE_CALL(zetMetricTracerClose( hMetricTracer ));
-    L0_SAFE_CALL(zeEventDestroy( hEvent ));
-    L0_SAFE_CALL(zeEventPoolDestroy( hEventPool ));
-    // Deconfigure the device
-    L0_SAFE_CALL(zetDeviceActivateMetricGroups( hDevice, 0, nullptr ));
-
-    // Calculate metric data
-    CalculateMetricsExample( hMetricGroup, rawSize, rawData );
-    free(rawData);
-    */
 
     // copy result to host
     void *res = result.data;
@@ -119,6 +111,11 @@ static int run(int niter, int gx, int gy) {
     L0_SAFE_CALL(zeCommandListClose(hCommandList));
     L0_SAFE_CALL(zeCommandQueueExecuteCommandLists(hCommandQueue, 1, &hCommandList, nullptr));
     L0_SAFE_CALL(zeCommandQueueSynchronize(hCommandQueue, std::numeric_limits<uint32_t>::max()));
+
+    auto dur = (std::chrono::system_clock::now() - wct);
+    auto secs = std::chrono::duration_cast<std::chrono::milliseconds>(dur);
+    std::cout << "Time elapsed: " << secs.count() << " ms" << std::endl;
+
 
     L0_SAFE_CALL(zeDriverFreeMem(hDriver, buf_ref));
 
