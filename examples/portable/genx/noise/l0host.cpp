@@ -113,8 +113,8 @@ static int run(int niter, int gx, int gy) {
     L0_SAFE_CALL(zeCommandQueueSynchronize(hCommandQueue, std::numeric_limits<uint32_t>::max()));
 
     auto dur = (std::chrono::system_clock::now() - wct);
-    auto secs = std::chrono::duration_cast<std::chrono::milliseconds>(dur);
-    std::cout << "Time elapsed: " << secs.count() << " ms" << std::endl;
+    auto secs = std::chrono::duration_cast<std::chrono::nanoseconds>(dur);
+    Timings(secs.count(), secs.count()).print(niter);
 
 
     L0_SAFE_CALL(zeDriverFreeMem(hDriver, buf_ref));
