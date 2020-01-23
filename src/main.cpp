@@ -66,8 +66,6 @@
 #endif
 #endif // ISPC_HOST_IS_WINDOWS
 
-#define MAX_NUM_ARGS (1024)
-
 static void lPrintVersion() {
 #ifdef ISPC_HOST_IS_WINDOWS
     printf("Intel(r) SPMD Program Compiler (ispc), %s (build date %s, LLVM %s)\n"
@@ -296,53 +294,48 @@ class StringArgFactory : public ArgFactory {
 };
 
 // Forward reference
-static void lAddSingleArg(char *arg, int &argc, char *argv[MAX_NUM_ARGS]);
+static void lAddSingleArg(char *arg, std::vector<char *> &argv);
 
-/** Add all args from a given factory to the argc/argv passed as parameters, which could
+/** Add all args from a given factory to the argv passed as parameters, which could
  *  include recursing into another ArgFactory.
  */
-static void lAddArgsFromFactory(ArgFactory &Args, int &argc, char *argv[MAX_NUM_ARGS]) {
+static void lAddArgsFromFactory(ArgFactory &Args, std::vector<char *> &argv) {
     while (true) {
         char *NextArg = Args.GetNextArg();
         if (NextArg == NULL)
             break;
-        lAddSingleArg(NextArg, argc, argv);
+        lAddSingleArg(NextArg, argv);
     }
 }
 
-/** Parse an open file for arguments and add them to the argc/argv passed as parameters */
-static void lAddArgsFromFile(FILE *file, int &argc, char *argv[MAX_NUM_ARGS]) {
+/** Parse an open file for arguments and add them to the argv passed as parameters */
+static void lAddArgsFromFile(FILE *file, std::vector<char *> &argv) {
     FileArgFactory args(file);
-    lAddArgsFromFactory(args, argc, argv);
+    lAddArgsFromFactory(args, argv);
 }
 
-/** Parse a string for arguments and add them to the argc/argv passed as parameters */
-static void lAddArgsFromString(const char *string, int &argc, char *argv[MAX_NUM_ARGS]) {
+/** Parse a string for arguments and add them to the argv passed as parameters */
+static void lAddArgsFromString(const char *string, std::vector<char *> &argv) {
     StringArgFactory args(string);
-    lAddArgsFromFactory(args, argc, argv);
+    lAddArgsFromFactory(args, argv);
 }
 
-/** Add a single argument to the argc/argv passed as parameters. If the argument is of the
+/** Add a single argument to the argv passed as parameters. If the argument is of the
  *  form @<filename> and <filename> exists and is readable, the arguments in the file will be
- *  inserted into argc/argv in place of the original argument.
+ *  inserted into argv in place of the original argument.
  */
-static void lAddSingleArg(char *arg, int &argc, char *argv[MAX_NUM_ARGS]) {
+static void lAddSingleArg(char *arg, std::vector<char *> &argv) {
     if (arg[0] == '@') {
         char *filename = &arg[1];
         FILE *file = fopen(filename, "r");
         if (file != NULL) {
-            lAddArgsFromFile(file, argc, argv);
+            lAddArgsFromFile(file, argv);
             fclose(file);
             arg = NULL;
         }
     }
     if (arg != NULL) {
-        if (argc >= MAX_NUM_ARGS) {
-            Error(SourcePos(), "More than %d arguments have been specified - aborting\n", MAX_NUM_ARGS);
-            exit(EXIT_FAILURE);
-        }
-        // printf("Arg %d: %s\n", argc, arg);
-        argv[argc++] = arg;
+        argv.push_back(arg);
     }
 }
 
@@ -351,17 +344,15 @@ static void lAddSingleArg(char *arg, int &argc, char *argv[MAX_NUM_ARGS]) {
  *  additional arguments using @<filename>. This function returns a new set of
  *  arguments representing the ones from all these sources merged together.
  */
-static void lGetAllArgs(int Argc, char *Argv[], int &argc, char *argv[MAX_NUM_ARGS]) {
-    argc = 0;
-
+static void lGetAllArgs(int Argc, char *Argv[], std::vector<char *> &argv) {
     // Copy over the command line arguments (passed in)
     for (int i = 0; i < Argc; ++i)
-        lAddSingleArg(Argv[i], argc, argv);
+        lAddSingleArg(Argv[i], argv);
 
     // See if we have any set via the environment variable
     const char *env = getenv("ISPC_ARGS");
     if (env)
-        lAddArgsFromString(env, argc, argv);
+        lAddArgsFromString(env, argv);
 }
 
 static void lSignal(void *) { FATAL("Unhandled signal sent to process; terminating."); }
@@ -483,9 +474,9 @@ static void lParseInclude(const char *path) {
 }
 
 int main(int Argc, char *Argv[]) {
-    int argc;
-    char *argv[MAX_NUM_ARGS];
-    lGetAllArgs(Argc, Argv, argc, argv);
+    std::vector<char *> argv;
+    lGetAllArgs(Argc, Argv, argv);
+    int argc = argv.size();
 
     llvm::sys::AddSignalHandler(lSignal, NULL);
 
