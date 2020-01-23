@@ -226,6 +226,8 @@ class ArgFactory {
     ArgFactory() {}
 
     char *GetNextArg() {
+        bool insideDQ = false;
+        bool insideSQ = false;
         std::string arg;
         char c = GetNextChar();
 
@@ -238,7 +240,17 @@ class ArgFactory {
             return NULL;
 
         // c now has the first character of the next argument, so collect the rest
-        while (c != '\0' && !isspace(c)) {
+        while (c != '\0' && !(isspace(c) && !insideDQ && !insideSQ)) {
+            if (c == '\"') {
+                c = GetNextChar();
+                insideDQ = !insideDQ;
+                continue;
+            }
+            if (c == '\"') {
+                c = GetNextChar();
+                insideSQ = !insideSQ;
+                continue;
+            }
             arg += c;
             c = GetNextChar();
         }
