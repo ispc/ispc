@@ -293,6 +293,8 @@ genx_rdregion(float, rdregionf)
 genx_rdregion(i32, rdregioni)
 genx_rdregion(i64, rdregioni)
 
+declare <WIDTH x i8> @llvm.genx.rdregioni.GEN_SUFFIX(i8).GEN_SUFFIXN(i8, 64).i16(<64 x i8>, i32, i32, i32, i16, i32)
+declare <64 x i8> @llvm.genx.svm.gather.GEN_SUFFIXN(i8, 64).v16i1.v16i64(<WIDTH x MASK>, i32, <WIDTH x i64>, <WIDTH x i8>)
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; horizontal ops / reductions
 
@@ -883,13 +885,23 @@ define <WIDTH x $1>
 define <WIDTH x $1>
 @__gather32_$1(<WIDTH x i32> %offsets, <WIDTH x MASK> %vecmask) nounwind readonly alwaysinline {
   %offsets64 = zext <WIDTH x i32> %offsets to <WIDTH x i64>
-  %res = call <WIDTH x $1> @llvm.genx.svm.gather.GEN_SUFFIX($1).v16i1.v16i64(<16 x MASK> %vecmask, i32 0, <WIDTH x i64> %offsets64, <WIDTH x $1> undef)
+  ifelse($1, i8,`
+    %res64 = call <64 x $1> @llvm.genx.svm.gather.GEN_SUFFIXN($1, 64).v16i1.v16i64(<16 x MASK> %vecmask, i32 1, <WIDTH x i64> %offsets64, <WIDTH x $1> undef)
+    %res = call <16 x $1> @llvm.genx.rdregioni.GEN_SUFFIX($1).GEN_SUFFIXN($1, 64).i16(<64 x $1> %res64, i32 0, i32 16, i32 4, i16 0, i32 undef)
+  ',`
+    %res = call <WIDTH x $1> @llvm.genx.svm.gather.GEN_SUFFIX($1).v16i1.v16i64(<16 x MASK> %vecmask, i32 0, <WIDTH x i64> %offsets64, <WIDTH x $1> undef)
+  ')
   ret <WIDTH x $1> %res
 }
 
 define <WIDTH x $1>
 @__gather64_$1(<WIDTH x i64> %offsets, <WIDTH x MASK> %vecmask) nounwind readonly alwaysinline {
-  %res = call <WIDTH x $1> @llvm.genx.svm.gather.GEN_SUFFIX($1).v16i1.v16i64(<WIDTH x MASK> %vecmask, i32 0, <WIDTH x i64> %offsets, <WIDTH x $1> undef)
+    ifelse($1, i8,`
+    %res64 = call <64 x $1> @llvm.genx.svm.gather.GEN_SUFFIXN($1, 64).v16i1.v16i64(<16 x MASK> %vecmask, i32 1, <WIDTH x i64> %offsets, <WIDTH x $1> undef)
+    %res = call <16 x $1> @llvm.genx.rdregioni.GEN_SUFFIX($1).GEN_SUFFIXN($1, 64).i16(<64 x $1> %res64, i32 0, i32 16, i32 4, i16 0, i32 undef)
+  ',`
+    %res = call <WIDTH x $1> @llvm.genx.svm.gather.GEN_SUFFIX($1).v16i1.v16i64(<16 x MASK> %vecmask, i32 0, <WIDTH x i64> %offsets, <WIDTH x $1> undef)
+  ')
   ret <WIDTH x $1> %res
 }
 
