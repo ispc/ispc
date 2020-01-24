@@ -31,7 +31,7 @@
 #   SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 
-test_add(noise host_noise 1 1 16)
+test_add(noise host_genx_noise 1 1 16)
 test_add(sgemm host_naive_sgemm 32 1 1 1)
 test_add(sgemm host_naive_sgemm 128 1 1 4)
 test_add(sgemm TEST_IS_CM host_naive_sgemm_cm 32 1 1 1)

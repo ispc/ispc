@@ -36,6 +36,8 @@ function(add_perf_example)
     set(oneValueArgs NAME ISPC_SRC_NAME CM_SRC_NAME ISPC_OBJ_NAME HOST_NAME CM_HOST_NAME CM_OBJ_NAME TEST_NAME CM_TEST_NAME)
     set(multiValueArgs ISPC_FLAGS HOST_SOURCES CM_HOST_SOURCES CM_HOST_FLAGS)
     cmake_parse_arguments("parsed" "${options}" "${oneValueArgs}" "${multiValueArgs}" ${ARGN} )
+    message(STATUS "Adding ${parsed_TEST_NAME} to perf examples!")
+    message(STATUS "Adding ${parsed_ISPC_OBJ_NAME} to perf examples!")
 # compile ispc kernel    
     list(APPEND ISPC_BUILD_OUTPUT ${parsed_ISPC_OBJ_NAME})
     add_custom_command(
