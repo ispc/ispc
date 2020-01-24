@@ -241,12 +241,12 @@ class ArgFactory {
 
         // c now has the first character of the next argument, so collect the rest
         while (c != '\0' && !(isspace(c) && !insideDQ && !insideSQ)) {
-            if (c == '\"') {
+            if (c == '\"' && !insideSQ) {
                 c = GetNextChar();
                 insideDQ = !insideDQ;
                 continue;
             }
-            if (c == '\"') {
+            if (c == '\'' && !insideDQ) {
                 c = GetNextChar();
                 insideSQ = !insideSQ;
                 continue;
