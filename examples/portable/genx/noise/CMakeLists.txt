@@ -35,7 +35,7 @@ message(STATUS "Processing noise/CMakeLists.txt")
 cmake_minimum_required(VERSION 3.12)
 
 set(ISPC_SRC_NAME "noise")
-set(TEST_NAME "noise")
+set(TEST_NAME "genx_noise")
 
 # Param here?
 if(WIN32)
@@ -47,10 +47,10 @@ else()
     set(ISPC_FLAGS "--emit-spirv" "--addressing=32" "-DISPC_GENX_ENABLED")
 endif()
 
-set(HOST_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/${HOST_NAME}.cpp ${CMAKE_CURRENT_SOURCE_DIR}/${TEST_NAME}_serial.cpp)
+set(HOST_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/${HOST_NAME}.cpp ${CMAKE_CURRENT_SOURCE_DIR}/noise_serial.cpp)
 
 add_perf_example(
-    NAME "noise"
+    NAME "genx_noise"
     ISPC_SRC_NAME ${ISPC_SRC_NAME} 
     CM_SRC_NAME ${CM_SRC_NAME}
     ISPC_OBJ_NAME ${ISPC_OBJ_NAME} 
