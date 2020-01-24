@@ -33,7 +33,7 @@
 message(STATUS "Processing cmake/AddPerfExample.cmake")
 function(add_perf_example)
     set(options CM_TEST)
-    set(oneValueArgs NAME ISPC_SRC_NAME CM_SRC_NAME ISPC_OBJ_NAME HOST_NAME CM_HOST_NAME CM_OBJ_NAME TEST_NAME)
+    set(oneValueArgs NAME ISPC_SRC_NAME CM_SRC_NAME ISPC_OBJ_NAME HOST_NAME CM_HOST_NAME CM_OBJ_NAME TEST_NAME CM_TEST_NAME)
     set(multiValueArgs ISPC_FLAGS HOST_SOURCES CM_HOST_SOURCES CM_HOST_FLAGS)
     cmake_parse_arguments("parsed" "${options}" "${oneValueArgs}" "${multiValueArgs}" ${ARGN} )
 # compile ispc kernel    
@@ -69,7 +69,7 @@ function(add_perf_example)
         # TODO: check exists
         set(SYCL_CLANG_EXECUTABLE "${SYCL}/bin/clang++")
         add_custom_target(${HOST_EXECUTABLE} ALL
-            COMMAND ${SYCL_CLANG_EXECUTABLE} -fsycl -isystem ${COMMON_PATH} ${parsed_HOST_SOURCES} -o ${HOST_EXECUTABLE} -L${SYCL}/lib -llevel_zero 
+            COMMAND ${SYCL_CLANG_EXECUTABLE} -fsycl -isystem ${COMMON_PATH} ${parsed_HOST_SOURCES} -D LZERO -o ${HOST_EXECUTABLE} -L${SYCL}/lib -llevel_zero 
             WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
             VERBATIM
         )
@@ -82,18 +82,30 @@ function(add_perf_example)
 
         if (WIN32)
             set(CMC_SUPPORT_INCLUDE ${CMC_INSTALL_PATH}/include)
-        endif()
 
-        add_custom_target(${parsed_CM_SRC_NAME} ALL
+	    add_custom_target(${parsed_CM_SRC_NAME} ALL
             COMMAND ${CM_EXECUTABLE} -isystem ${CMC_SUPPORT_INCLUDE} -march=SKL "/DCM_PTRSIZE=32" ${CMAKE_CURRENT_SOURCE_DIR}/${parsed_CM_SRC_NAME}.cpp -o ${parsed_CM_OBJ_NAME}
             WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
             VERBATIM
             DEPENDS ${CM_EXECUTABLE}
             DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/${parsed_CM_SRC_NAME}.cpp
-        )
+            )
 
-        set(CM_HOST_EXECUTABLE "host_${parsed_TEST_NAME}")
-        add_executable(${CM_HOST_EXECUTABLE} ${parsed_CM_HOST_SOURCES})
+            set(CM_HOST_EXECUTABLE "host_${parsed_TEST_NAME}")
+            add_executable(${CM_HOST_EXECUTABLE} ${parsed_CM_HOST_SOURCES}) 
+	else()
+	    add_custom_command(
+                       OUTPUT ${CM_BUILD_OUTPUT}
+                       COMMAND ${CM_EXECUTABLE} -march=SKL -fcmocl "/DCM_PTRSIZE=32" -emit-spirv -o ${parsed_CM_OBJ_NAME} ${CMAKE_CURRENT_SOURCE_DIR}/${parsed_CM_SRC_NAME}.cpp
+                       VERBATIM
+                       DEPENDS ${CM_EXECUTABLE}
+                      )
+
+            add_custom_target(${parsed_CM_TEST_NAME} ALL DEPENDS ${CM_BUILD_OUTPUT})
+          
+            set(CM_HOST_EXECUTABLE "host_${parsed_CM_TEST_NAME}")
+        endif()
+
         if (WIN32)
             target_include_directories(${CM_HOST_EXECUTABLE} PRIVATE "${COMMON_PATH}"
                                        "${MDF}/compiler/include_icl"
@@ -103,10 +115,18 @@ function(add_perf_example)
 
             target_link_libraries(${CM_HOST_EXECUTABLE} "${MDF}/runtime/lib/x86/igfx11cmrt32.lib"
                                   "${MDF}/compiler/lib/x86/libcm.lib" AdvAPI32 Ole32)
-        endif()
-        target_compile_options(${CM_HOST_EXECUTABLE} PRIVATE ${parsed_CM_HOST_FLAGS})
-        install(TARGETS "${CM_HOST_EXECUTABLE}" RUNTIME DESTINATION ${CMAKE_CURRENT_BINARY_DIR}
+            target_compile_options(${CM_HOST_EXECUTABLE} PRIVATE ${parsed_CM_HOST_FLAGS})
+            install(TARGETS "${CM_HOST_EXECUTABLE}" RUNTIME DESTINATION ${CMAKE_CURRENT_BINARY_DIR}
             PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE)
+
+        else()
+	    set(SYCL_CLANG_EXECUTABLE "${SYCL}/bin/clang++")
+            add_custom_target(${CM_HOST_EXECUTABLE} ALL
+            COMMAND ${SYCL_CLANG_EXECUTABLE} -fsycl -isystem ${COMMON_PATH} ${parsed_HOST_SOURCES} -D CMKERNEL -D LZERO -o ${CM_HOST_EXECUTABLE} -L${SYCL}/lib -llevel_zero 
+            WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+            VERBATIM
+        )
+        endif()
 
     endif()
 

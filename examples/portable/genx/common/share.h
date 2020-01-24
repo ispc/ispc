@@ -31,26 +31,20 @@
 #include <cmath>
 #include <cstdio>
 #include <cstdlib>
+#include <chrono>
+#include <thread>
 
-#include <cm_rt.h>
+#ifndef LZERO
+        #include <cm_rt.h>
+#else        
+        #include "common_helpers.h"
+#endif
 
 using namespace std;
 
 static float randData(float low, float high) {
     float t = (float)rand() / (float)RAND_MAX;
     return (1.0f - t) * low + t * high;
-}
-
-inline double get_cpu_freq() {
-    unsigned long long t0, t1;
-    t0 = __rdtsc();
-#ifndef LINUX
-    Sleep(1000);
-#else
-    sleep(1);
-#endif
-    t1 = __rdtsc();
-    return (double)(t1 - t0);
 }
 
 #endif
