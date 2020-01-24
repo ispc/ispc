@@ -39,7 +39,11 @@
 // alpha = 1; beta = 0;
 const short init_0_15[16] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15};
 
-extern "C" _GENX_MAIN_ void sgemm_kernel(svmptr_t indxA, svmptr_t indxB, svmptr_t indxC, int M, int N, int K) {
+#ifdef LINUX
+extern "C" _GENX_MAIN_ void sgemm_kernel(svmptr_t indxA [[type("svmptr_t")]], svmptr_t indxB [[type("svmptr_t")]], svmptr_t indxC [[type("svmptr_t")]], int M, int N, int K) {
+#else
+extern "C" _GENX_MAIN_ void sgemm_kernel(svmptr_t indxA, svmptr_t indxB, svmptr_t indxC, int M, int N, int K) {    
+#endif
     unsigned int x = cm_group_id(0) * cm_local_size(0) + cm_local_id(0);
     unsigned int y = cm_group_id(1) * cm_local_size(1) + cm_local_id(1);
 

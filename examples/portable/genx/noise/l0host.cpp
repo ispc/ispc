@@ -59,12 +59,20 @@ static int run(int niter, int gx, int gy) {
     for (int i = 0; i < SZ; i++)
         out.data[i] = -1;
 
-    L0InitContext(hDriver, hDevice, hModule, hCommandQueue, "test.spv");
+#ifdef CMKERNEL
+    L0InitContext(hDriver, hDevice, hModule, hCommandQueue, "noise_cm.spv");
+#else
+    L0InitContext(hDriver, hDevice, hModule, hCommandQueue, "noise.spv");
+#endif
 
     ze_command_list_handle_t hCommandList;
     ze_kernel_handle_t hKernel;
 
+ #ifdef CMKERNEL
+//    L0Create_Kernel(hDevice, hModule, hCommandList, hKernel, "sgemm_kernel");
+ #else
     L0Create_Kernel(hDevice, hModule, hCommandList, hKernel, "noise_ispc");
+ #endif
 
     // PARAMS
     const unsigned int height = 768;

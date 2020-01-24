@@ -26,12 +26,23 @@
 #include "share.h"
 
 typedef enum { RowMajor, ColMajor, Nd } storage_type_t;
-static char *storagename[Nd] = {"RowMajor", "ColMajor"};
+static const char *storagename[Nd] = {"RowMajor", "ColMajor"};
 
 #define CORRECTNESS_THRESHOLD 0.00002
+struct alignas(4096) aligned_struct_t {
+    float *data;
+
+    float& operator[](int index) {
+        return data[index];
+    }
+};
 
 class Matrix {
+#ifndef LZERO
     float *M;
+#else    
+    aligned_struct_t M;
+#endif
     int _size_;
     int nrow;
     int ncol;
@@ -42,7 +53,7 @@ class Matrix {
   public:
     fptype &operator()(int r, int c) { return ((st == ColMajor) ? M[r + c * ld] : M[r * ld + c]); }
 
-    Matrix(int nrow, int ncol, int ld, char *surfname, bool init, char *mtxname, storage_type_t st = RowMajor) {
+    Matrix(int nrow, int ncol, int ld, char *surfname, bool init, const char *mtxname, storage_type_t st = RowMajor) {
         if (st == ColMajor)
             assert(ld >= nrow);
         else {
@@ -56,16 +67,22 @@ class Matrix {
         this->st = st;
         this->ncol = ncol;
         this->ld = ld;
-
+#ifndef LZERO
         if (st == ColMajor)
             _size_ = (__int64)(sizeof(M[0]) * this->ncol * this->ld);
         else
             _size_ = (__int64)(sizeof(M[0]) * this->nrow * this->ld);
-
+       
+        M = (fptype *)CM_ALIGNED_MALLOC(_size_, 4096); 
+#else
+        if (st == ColMajor)
+            _size_ = (uint64_t)(sizeof(M[0]) * this->ncol * this->ld);
+        else
+            _size_ = (uint64_t)(sizeof(M[0]) * this->nrow * this->ld);
+       
+        M.data = (float *) malloc(_size_);
+#endif
         this->mtxname = strdup(mtxname);
-
-        M = (fptype *)CM_ALIGNED_MALLOC(_size_, 4096);
-
         for (int c = 0; c < this->ncol; c++) {
             for (int r = 0; r < this->nrow; r++) {
                 (*this)(r, c) = (init == true) ? randData(0.0f, 1.0f) : 0.0f;
@@ -73,11 +90,16 @@ class Matrix {
         }
     }
 
-    Matrix(Matrix &mat, char *mtxname) : nrow(mat.nrow), ncol(mat.ncol), ld(mat.ld), st(mat.st) {
+    Matrix(Matrix &mat, const char *mtxname) : nrow(mat.nrow), ncol(mat.ncol), ld(mat.ld), st(mat.st) {
 
         this->mtxname = strdup(mtxname);
         // printf("Allocating %s \n", mtxname);
+#ifndef LZERO        
         M = (fptype *)CM_ALIGNED_MALLOC(mat._size_, 4096);
+#else
+        M.data = (float *) malloc(mat._size_);
+#endif        
+
         for (int c = 0; c < this->ncol; c++)
             for (int r = 0; r < this->nrow; r++) {
                 (*this)(r, c) = mat(r, c);
@@ -111,7 +133,7 @@ class Matrix {
     }
 
     // friend ostream& operator<<(ostream&, const Matrix&);
-    void Print(char *str = NULL) {
+    void Print(const char *str = NULL) {
         if (str)
             printf("%s ", str);
         printf(" %d x %d\n", this->n_row(), this->l_dim());
@@ -126,7 +148,11 @@ class Matrix {
     int n_col() { return ncol; }
     int l_dim() { return ld; }
     ~Matrix() { /*printf("Deallocating %s \n", mtxname); */
+#ifndef LZERO
         CM_ALIGNED_FREE(M);
+#else
+        free(M.data);    
+#endif
     }
 };
 

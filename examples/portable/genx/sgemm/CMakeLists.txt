@@ -40,18 +40,26 @@ if(WIN32)
     set(TEST_NAME "naive_sgemm")
     set(ISPC_OBJ_NAME "${CMAKE_CURRENT_BINARY_DIR}/naive_sgemm_mt.isa")
     set(HOST_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/${HOST_NAME}.cpp)
+
+    set(CM_OBJ_NAME "${CMAKE_CURRENT_BINARY_DIR}/naive_sgemm_mt_cm.isa")
+    set(CM_SRC_NAME "NaiveCMSgemm_genx")
+
+    set(CM_HOST_NAME "SgemmSVMMultithread")
+    #set(CM_HOST_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/${CM_HOST_NAME}.cpp)
 else()
-    #set(HOST_NAME "l0host")
+    set(HOST_NAME "l0host")
     set(TEST_NAME "naive_sgemm")
     set(ISPC_OBJ_NAME "${CMAKE_CURRENT_BINARY_DIR}/naive_sgemm_mt.spv")
     set(ISPC_FLAGS "--emit-spirv" "--addressing=32" "-DISPC_GENX_ENABLED")
+
+    set(CM_OBJ_NAME "${CMAKE_CURRENT_BINARY_DIR}/naive_sgemm_cm_mt.spv")
+    set(CM_SRC_NAME "NaiveCMSgemm_genx")
+
+    set(CM_TEST_NAME "naive_sgemm_cm")
+    set(HOST_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/${HOST_NAME}.cpp)
 endif()
 
-set(CM_OBJ_NAME "${CMAKE_CURRENT_BINARY_DIR}/naive_sgemm_mt_cm.isa")
-set(CM_SRC_NAME "NaiveCMSgemm_genx")
 
-set(CM_HOST_NAME "SgemmSVMMultithread")
-#set(CM_HOST_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/${CM_HOST_NAME}.cpp)
 
 
 add_perf_example(
@@ -63,6 +71,8 @@ add_perf_example(
     HOST_NAME ${HOST_NAME} 
     CM_OBJ_NAME ${CM_OBJ_NAME}
     TEST_NAME ${TEST_NAME} 
+    CM_TEST_NAME ${CM_TEST_NAME}
+    ISPC_FLAGS ${ISPC_FLAGS}    
     CM_HOST_NAME ${CM_HOST_NAME}
     HOST_SOURCES ${HOST_SOURCES} 
     CM_HOST_SOURCES ${HOST_SOURCES}

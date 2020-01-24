@@ -43,7 +43,7 @@ if(WIN32)
     set(ISPC_OBJ_NAME "${CMAKE_CURRENT_BINARY_DIR}/test.isa")
 else()
     set(HOST_NAME "l0host")
-    set(ISPC_OBJ_NAME "${CMAKE_CURRENT_BINARY_DIR}/test.spv")
+    set(ISPC_OBJ_NAME "${CMAKE_CURRENT_BINARY_DIR}/noise.spv")
     set(ISPC_FLAGS "--emit-spirv" "--addressing=32" "-DISPC_GENX_ENABLED")
 endif()
 
