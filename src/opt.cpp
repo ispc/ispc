@@ -2840,12 +2840,8 @@ static bool lImproveMaskedStore(llvm::CallInst *callInst) {
             Assert(llvm::isa<llvm::VectorType>(rvalue->getType()));
             Assert(llvm::isPowerOf2_32(rvalue->getType()->getVectorNumElements()));
             Assert(rvalue->getType()->getPrimitiveSizeInBits() / 8 <= 8 * OWORD);
-            llvm::Instruction *svm_st_bitcast =
-                new llvm::BitCastInst(lvalue, LLVMTypes::Int32PointerType, "svm_st_bitcast", callInst);
-            llvm::Instruction *svm_st_ptrtoint =
-                new llvm::PtrToIntInst(svm_st_bitcast, LLVMTypes::Int32Type, "svm_st_ptrtoint", callInst);
             llvm::Instruction *svm_st_zext =
-                new llvm::ZExtInst(svm_st_ptrtoint, LLVMTypes::Int64Type, "svm_st_zext", callInst);
+                new llvm::PtrToIntInst(lvalue, LLVMTypes::Int64Type, "svm_st_ptrtoint", callInst);
             llvm::Type *argTypes[] = {rvalue->getType()};
             auto Fn =
                 llvm::GenXIntrinsic::getGenXDeclaration(m->module, llvm::GenXIntrinsic::genx_svm_block_st, argTypes);
@@ -2926,13 +2922,11 @@ static bool lImproveMaskedLoad(llvm::CallInst *callInst, llvm::BasicBlock::itera
             Assert(llvm::isPowerOf2_32(retType->getVectorNumElements()));
             Assert(retType->getPrimitiveSizeInBits() / 8 <= 8 * OWORD);
             llvm::Value *svm_ld_ptrtoint =
-                new llvm::PtrToIntInst(ptr, LLVMTypes::Int32Type, "svm_ld_ptrtoint", callInst);
-            llvm::Value *svm_ld_zext =
-                new llvm::ZExtInst(svm_ld_ptrtoint, LLVMTypes::Int64Type, "svm_ld_zext", callInst);
+                new llvm::PtrToIntInst(ptr, LLVMTypes::Int64Type, "svm_ld_ptrtoint", callInst);
             auto Fn =
                 llvm::GenXIntrinsic::getGenXDeclaration(m->module, llvm::GenXIntrinsic::genx_svm_block_ld, retType);
 
-            load = llvm::CallInst::Create(Fn, svm_ld_zext, callInst->getName());
+            load = llvm::CallInst::Create(Fn, svm_ld_ptrtoint, callInst->getName());
         } else if (g->target->getISA() != Target::GENX ||
                    g->target->getISA() == Target::GENX && GetAddressSpace(ptr) == AddressSpace::Local) {
 #endif
