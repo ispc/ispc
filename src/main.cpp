@@ -40,6 +40,7 @@
 #include "target_registry.h"
 #include "type.h"
 #include "util.h"
+#include <cstdarg>
 #include <stdio.h>
 #include <stdlib.h>
 #ifdef ISPC_HOST_IS_WINDOWS
