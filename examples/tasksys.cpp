@@ -84,7 +84,7 @@
 // If no task model chosen from the compiler cmdline, pick a reasonable default
 #if defined(_WIN32) || defined(_WIN64)
 #define ISPC_USE_CONCRT
-#elif defined(__linux__)
+#elif defined(__linux__) || defined(__FreeBSD__)
 #define ISPC_USE_PTHREADS
 #elif defined(__APPLE__)
 #define ISPC_USE_GCD
@@ -93,7 +93,7 @@
 
 #if defined(_WIN32) || defined(_WIN64)
 #define ISPC_IS_WINDOWS
-#elif defined(__linux__)
+#elif defined(__linux__) || defined(__FreeBSD__) // pretty much the same for these purposes
 #define ISPC_IS_LINUX
 #elif defined(__APPLE__)
 #define ISPC_IS_APPLE
@@ -153,7 +153,7 @@ using namespace Concurrency;
 #include <hpx/lcos/wait_all.hpp>
 #endif // ISPC_USE_HPX
 #ifdef ISPC_IS_LINUX
-#include <malloc.h>
+#include <stdlib.h>
 #endif // ISPC_IS_LINUX
 
 #include <algorithm>
@@ -671,7 +671,8 @@ static void InitTaskSystem() {
                     bool success = false;
                     srand(time(NULL));
                     for (int i = 0; i < 10; i++) {
-                        sprintf(name, "ispc_task.%d.%d", (int)getpid(), (int)rand());
+                        // Some platforms (e.g. FreeBSD) require the name to begin with a slash
+                        sprintf(name, "/ispc_task.%d.%d", (int)getpid(), (int)rand());
                         workerSemaphore = sem_open(name, O_CREAT, S_IRUSR | S_IWUSR, 0);
                         if (workerSemaphore != SEM_FAILED) {
                             success = true;

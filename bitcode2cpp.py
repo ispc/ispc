@@ -51,7 +51,7 @@ elif args[0].os == "WINDOWS":
     target_os_old = "win"
     target_os = "windows"
 # Exact OS names for builtins.c
-elif args[0].os in ["windows", "linux", "macos", "android", "ios", "ps4"]:
+elif args[0].os in ["windows", "linux", "freebsd", "macos", "android", "ios", "ps4"]:
     target_os_old = args[0].os
     target_os = args[0].os
 else:
@@ -60,12 +60,12 @@ else:
 
 target_arch = ""
 ispc_arch = ""
-if args[0].arch in ["i386", "x86_64", "armv7", "arm64", "aarch64"]:
+if args[0].arch in ["i386", "x86_64", "amd64", "armv7", "arm64", "aarch64"]:
     target_arch = args[0].arch + "_"
     # Canoncalization of arch value for Arch enum in ISPC.
     if args[0].arch == "i386":
         ispc_arch = "x86"
-    elif args[0].arch == "x86_64":
+    elif args[0].arch == "x86_64" or args[0].arch == "amd64":
         ispc_arch = "x86_64"
     elif args[0].arch == "armv7":
         ispc_arch = "arm"

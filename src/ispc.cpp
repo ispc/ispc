@@ -1127,6 +1127,22 @@ std::string Target::GetTripleString() const {
         triple.setOS(llvm::Triple::OSType::Linux);
         triple.setEnvironment(llvm::Triple::EnvironmentType::GNU);
         break;
+    case TargetOS::freebsd:
+        if (m_arch == Arch::x86) {
+            triple.setArchName("i386");
+        } else if (m_arch == Arch::x86_64) {
+            triple.setArchName("amd64");
+        } else if (m_arch == Arch::arm) {
+            triple.setArchName("armv7");
+        } else if (m_arch == Arch::aarch64) {
+            triple.setArchName("aarch64");
+        } else {
+            Error(SourcePos(), "Unknown arch.");
+            exit(1);
+        }
+        triple.setVendor(llvm::Triple::VendorType::UnknownVendor);
+        triple.setOS(llvm::Triple::OSType::FreeBSD);
+        break;
     case TargetOS::macos:
         // asserts
         if (m_arch != Arch::x86_64) {
