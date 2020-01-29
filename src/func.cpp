@@ -66,6 +66,7 @@
 #include <llvm/Transforms/IPO.h>
 
 #ifdef ISPC_GENX_ENABLED
+#include <llvm/GenXIntrinsics/GenXKernelMDOps.h>
 #define GENX_WIDTH_GENERAL_REG 32
 #endif
 
@@ -458,21 +459,22 @@ void Function::emitCode(FunctionEmitContext *ctx, llvm::Function *function, Sour
                 offset += bytes;
             }
 
-            llvm::Metadata *mdArgs[] = {
-                llvm::ValueAsMetadata::get(function),     // reference to Function
-                llvm::MDString::get(fContext, sym->name), // kernel name
-                llvm::MDString::get(fContext, AsmName),   // asm name
-                llvm::MDNode::get(fContext, argKinds),    // reference to metadata node containing kernel arg kinds
-                llvm::ValueAsMetadata::get(llvm::ConstantInt::getNullValue(i32Type)), // slm-size in bytes
-                llvm::ValueAsMetadata::get(llvm::ConstantInt::getNullValue(i32Type)), // kernel argument offsets
-                llvm::MDNode::get(
-                    fContext,
-                    argInOutKinds), // reference to metadata node containing kernel argument input/output kinds
-                llvm::MDNode::get(fContext, argTypeDescs), // kernel argument type descriptors
-                llvm::ValueAsMetadata::get(llvm::ConstantInt::getNullValue(i32Type)), // named barrier count
-                llvm::ValueAsMetadata::get(llvm::ConstantInt::getNullValue(i32Type))  // barier count
-
-            };
+            // TODO: Number of fields is 9 now, and it is a magic number that seems
+            // to be not defined anywhere. Consider changing it when possible.
+            llvm::SmallVector<llvm::Metadata *, 9> mdArgs(9, nullptr);
+            mdArgs[llvm::genx::KernelMDOp::FunctionRef] = llvm::ValueAsMetadata::get(function);
+            mdArgs[llvm::genx::KernelMDOp::Name] = llvm::MDString::get(fContext, sym->name);
+            mdArgs[llvm::genx::KernelMDOp::ArgKinds] = llvm::MDNode::get(fContext, argKinds);
+            mdArgs[llvm::genx::KernelMDOp::SLMSize] =
+                llvm::ValueAsMetadata::get(llvm::ConstantInt::getNullValue(i32Type));
+            mdArgs[llvm::genx::KernelMDOp::ArgOffsets] =
+                llvm::ValueAsMetadata::get(llvm::ConstantInt::getNullValue(i32Type));
+            mdArgs[llvm::genx::KernelMDOp::ArgIOKinds] = llvm::MDNode::get(fContext, argInOutKinds);
+            mdArgs[llvm::genx::KernelMDOp::ArgTypeDescs] = llvm::MDNode::get(fContext, argTypeDescs);
+            mdArgs[llvm::genx::KernelMDOp::Reserved_0] =
+                llvm::ValueAsMetadata::get(llvm::ConstantInt::getNullValue(i32Type));
+            mdArgs[llvm::genx::KernelMDOp::BarrierCnt] =
+                llvm::ValueAsMetadata::get(llvm::ConstantInt::getNullValue(i32Type));
 
             mdKernels->addOperand(llvm::MDNode::get(fContext, mdArgs));
             // This is needed to run in L0 runtime.
