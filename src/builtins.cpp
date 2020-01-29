@@ -509,7 +509,6 @@ static void lSetInternalFunctions(llvm::Module *module) {
         "__packed_load_active",
         "__packed_store_active",
         "__packed_store_active2",
-        "__packmsk",
         "__padds_ui8",
         "__padds_ui16",
         "__padds_ui32",

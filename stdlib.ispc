@@ -545,7 +545,11 @@ static inline uniform unsigned int64 lanemask() {
 
 __declspec(safe)
 static inline uniform unsigned int64 packmask(bool v) {
-    return __packmsk(v & __mask);
+#if (ISPC_MASK_BITS == 1)
+    return __movmsk(v & __mask);
+#else
+    return __movmsk((UIntMaskType)__sext_varying_bool(v) & __mask);
+#endif
 }
 
 
