@@ -1381,6 +1381,13 @@ void Target::markFuncWithTargetAttr(llvm::Function *func) {
     }
 }
 
+bool Target::IsGenericTypeLayoutIndeterminate(llvm::Type *type) {
+    bool ret = false;
+    if (m_isa == Target::GENERIC && lGenericTypeLayoutIndeterminate(type) == true)
+        ret = true;
+    return ret;
+}
+
 ///////////////////////////////////////////////////////////////////////////
 // Opt
 

@@ -167,6 +167,7 @@ class BinaryExpr : public Expr {
     Expr *Optimize();
     Expr *TypeCheck();
     int EstimateCost() const;
+    llvm::Constant *GetConstant(const Type *type) const;
 
     const Op op;
     Expr *arg0, *arg1;
@@ -605,6 +606,7 @@ class SizeOfExpr : public Expr {
     Expr *TypeCheck();
     Expr *Optimize();
     int EstimateCost() const;
+    llvm::Constant *GetConstant(const Type *type) const;
 
     /* One of expr or type should be non-NULL (but not both of them).  The
        SizeOfExpr returns the size of whichever one of them isn't NULL. */

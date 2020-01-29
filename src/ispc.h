@@ -214,6 +214,8 @@ class Target {
     /** Mark LLVM function with target specific attribute, if required. */
     void markFuncWithTargetAttr(llvm::Function *func);
 
+    bool IsGenericTypeLayoutIndeterminate(llvm::Type *type);
+
     const llvm::Target *getTarget() const { return m_target; }
 
     // Note the same name of method for 3.1 and 3.2+, this allows

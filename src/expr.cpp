@@ -2647,6 +2647,43 @@ void BinaryExpr::Print() const {
     pos.Print();
 }
 
+llvm::Constant *BinaryExpr::GetConstant(const Type *type) const {
+
+    // Are we doing something like (basePtr + offset)[...] = ... for a Global
+    // Variable
+    if (!GetLValueType())
+        return NULL;
+
+    if (!((op == BinaryExpr::Op::Add) || (op == BinaryExpr::Op::Sub)))
+        return NULL;
+    else if (op == BinaryExpr::Op::Sub) {
+        if (const PointerType *pt1 = CastType<PointerType>(arg1->GetType())) {
+            return NULL;
+        }
+    }
+
+    if (const PointerType *pt0 = CastType<PointerType>(arg0->GetType())) {
+        llvm::Constant *c1 = arg0->GetConstant(pt0);
+        ConstExpr *cExpr = llvm::dyn_cast<ConstExpr>(arg1);
+        if ((cExpr == NULL) || (c1 == NULL))
+            return NULL;
+        llvm::Constant *c2 = cExpr->GetConstant(cExpr->GetType());
+        if (op == BinaryExpr::Op::Sub)
+            c2 = llvm::ConstantExpr::getNeg(c2);
+        llvm::Constant *c = llvm::ConstantExpr::getGetElementPtr(PTYPE(c1), c1, c2);
+        return c;
+    } else if (const PointerType *pt1 = CastType<PointerType>(arg1->GetType())) {
+        llvm::Constant *c1 = arg1->GetConstant(pt1);
+        ConstExpr *cExpr = llvm::dyn_cast<ConstExpr>(arg0);
+        if ((cExpr == NULL) || (c1 == NULL))
+            return NULL;
+        llvm::Constant *c2 = cExpr->GetConstant(cExpr->GetType());
+        llvm::Constant *c = llvm::ConstantExpr::getGetElementPtr(PTYPE(c1), c1, c2);
+        return c;
+    }
+
+    return NULL;
+}
 ///////////////////////////////////////////////////////////////////////////
 // AssignExpr
 
@@ -6950,8 +6987,27 @@ llvm::Constant *TypeCastExpr::GetConstant(const Type *constType) const {
     // 2. Converting function types to pointer-to-function types
     // 3. And converting these from uniform to the varying/soa equivalents.
     //
-    if (CastType<PointerType>(constType) == NULL)
+
+    if ((CastType<PointerType>(constType) == NULL) && (llvm::dyn_cast<SizeOfExpr>(expr) == NULL))
         return NULL;
+
+    llvm::Value *ptr = NULL;
+    if (GetBaseSymbol())
+        ptr = GetBaseSymbol()->storagePtr;
+
+    if (ptr && llvm::dyn_cast<llvm::GlobalVariable>(ptr)) {
+        if (CastType<ArrayType>(expr->GetType())) {
+            if (llvm::Constant *c = llvm::dyn_cast<llvm::Constant>(ptr)) {
+                llvm::Value *offsets[2] = {LLVMInt32(0), LLVMInt32(0)};
+                llvm::ArrayRef<llvm::Value *> arrayRef(&offsets[0], &offsets[2]);
+                llvm::Value *resultPtr = llvm::ConstantExpr::getGetElementPtr(PTYPE(c), c, arrayRef);
+                if (resultPtr->getType() == constType->LLVMType(g->ctx)) {
+                    llvm::Constant *ret = llvm::dyn_cast<llvm::Constant>(resultPtr);
+                    return ret;
+                }
+            }
+        }
+    }
 
     llvm::Constant *c = expr->GetConstant(constType->GetAsUniformType());
     return lConvertPointerConstant(c, constType);
@@ -7299,8 +7355,30 @@ llvm::Constant *AddressOfExpr::GetConstant(const Type *type) const {
     if (ft != NULL) {
         llvm::Constant *c = expr->GetConstant(ft);
         return lConvertPointerConstant(c, type);
-    } else
-        return NULL;
+    } else {
+        llvm::Value *ptr = NULL;
+        if (GetBaseSymbol())
+            ptr = GetBaseSymbol()->storagePtr;
+        if (ptr && llvm::dyn_cast<llvm::GlobalVariable>(ptr)) {
+            const Type *eTYPE = GetType();
+            if (type->LLVMType(g->ctx) == eTYPE->LLVMType(g->ctx)) {
+                if (llvm::dyn_cast<SymbolExpr>(expr) != NULL) {
+                    if (llvm::Constant *c = llvm::dyn_cast<llvm::Constant>(ptr)) {
+                        return c;
+                    }
+                } else if (llvm::dyn_cast<IndexExpr>(expr) != NULL) {
+                    IndexExpr *IExpr = llvm::dyn_cast<IndexExpr>(expr);
+                    llvm::Constant *cIndex = IExpr->index->GetConstant(IExpr->index->GetType());
+                    llvm::Constant *c = llvm::dyn_cast<llvm::Constant>(ptr);
+                    llvm::Value *offsets[2] = {LLVMInt32(0), cIndex};
+                    llvm::ArrayRef<llvm::Value *> arrayRef(&offsets[0], &offsets[2]);
+                    llvm::Constant *c1 = llvm::ConstantExpr::getGetElementPtr(PTYPE(c), c, arrayRef);
+                    return c1;
+                }
+            }
+        }
+    }
+    return NULL;
 }
 
 ///////////////////////////////////////////////////////////////////////////
@@ -7357,6 +7435,26 @@ Expr *SizeOfExpr::TypeCheck() {
 Expr *SizeOfExpr::Optimize() { return this; }
 
 int SizeOfExpr::EstimateCost() const { return 0; }
+
+llvm::Constant *SizeOfExpr::GetConstant(const Type *type) const {
+
+    const Type *t = expr ? expr->GetType() : type;
+    if (t == NULL)
+        return NULL;
+
+    llvm::Type *llvmType = t->LLVMType(g->ctx);
+    if (llvmType == NULL)
+        return NULL;
+
+    if (g->target->IsGenericTypeLayoutIndeterminate(llvmType))
+        return NULL;
+
+    uint64_t byteSize = g->target->getDataLayout()->getTypeStoreSize(llvmType);
+    if (g->target->is32Bit() || g->opt.force32BitAddressing)
+        return LLVMInt32((int32_t)byteSize);
+    else
+        return LLVMInt64(byteSize);
+}
 
 ///////////////////////////////////////////////////////////////////////////
 // SymbolExpr
