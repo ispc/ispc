@@ -1334,17 +1334,23 @@ bool Module::writeDeps(const char *fn, bool generateMakeRule, const char *tn, co
 
     if (generateMakeRule) {
         fprintf(file, "%s:", tn);
-        if (!IsStdin(sn)) // Rules always emit source first.
-            fprintf(file, " %s \\\n", sn);
+        // Rules always emit source first.
+        if (sn && !IsStdin(sn)) {
+            fprintf(file, " %s", sn);
+        }
         std::string unescaped;
+
         for (std::set<std::string>::const_iterator it = registeredDependencies.begin();
              it != registeredDependencies.end(); ++it) {
             unescaped = *it; // As this is preprocessor output, paths come escaped.
             lUnescapeStringInPlace(unescaped);
-            if (!IsStdin(sn) && 0 == strcmp(sn, unescaped.c_str())) // If source has been passed, it's already emitted.
+            if (sn && !IsStdin(sn) &&
+                0 == strcmp(sn, unescaped.c_str())) // If source has been passed, it's already emitted.
                 continue;
-            fprintf(file, " %s \\\n", unescaped.c_str());
+            fprintf(file, " \\\n");
+            fprintf(file, " %s", unescaped.c_str());
         }
+        fprintf(file, "\n");
     } else {
         for (std::set<std::string>::const_iterator it = registeredDependencies.begin();
              it != registeredDependencies.end(); ++it)
@@ -2595,9 +2601,23 @@ int Module::CompileAndOutput(const char *srcFile, Arch arch, const char *cpu, st
                 writeObjectFileOrAssembly(firstTargetMachine, dispatchModule, outputType, outFileName);
         }
 
-        if (depsFileName != NULL)
-            if (!m->writeOutput(Module::Deps, outputFlags, depsFileName))
+        if (depsFileName != NULL || (outputFlags & Module::OutputDepsToStdout)) {
+            std::string targetName;
+            if (depsTargetName)
+                targetName = depsTargetName;
+            else if (outFileName)
+                targetName = outFileName;
+            else if (!IsStdin(srcFile)) {
+                targetName = srcFile;
+                size_t dot = targetName.find_last_of('.');
+                if (dot != std::string::npos)
+                    targetName.erase(dot, std::string::npos);
+                targetName.append(".o");
+            } else
+                targetName = "a.out";
+            if (!m->writeOutput(Module::Deps, outputFlags, depsFileName, targetName.c_str(), srcFile))
                 return 1;
+        }
 
         delete g->target;
         g->target = NULL;
