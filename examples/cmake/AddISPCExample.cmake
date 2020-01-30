@@ -1,5 +1,5 @@
 #
-#  Copyright (c) 2018-2019, Intel Corporation
+#  Copyright (c) 2018-2020, Intel Corporation
 #  All rights reserved.
 #
 #  Redistribution and use in source and binary forms, with or without
@@ -44,7 +44,7 @@ function(add_ispc_example)
     set(ISPC_OBJ_NAME "${CMAKE_CURRENT_BINARY_DIR}/${ISPC_SRC_NAME}_ispc${CMAKE_CXX_OUTPUT_EXTENSION}")
     set(ISPC_FLAGS ${example_ISPC_FLAGS})
     if (UNIX)
-        execute_process( COMMAND bash "-c" "uname -m | sed -e s/x86_64/x86/ -e s/i686/x86/ -e s/arm.*/arm/ -e s/sa110/arm/" OUTPUT_VARIABLE ARCH)
+        execute_process( COMMAND bash "-c" "uname -m | sed -e s/x86_64/x86/ -e s/amd64/x86/ -e s/i686/x86/ -e s/arm64/aarch64/ -e s/arm.*/arm/ -e s/sa110/arm/" OUTPUT_VARIABLE ARCH)
         string(STRIP ${ARCH} ARCH)
         execute_process( COMMAND getconf LONG_BIT OUTPUT_VARIABLE ARCH_BIT)
         string(STRIP ${ARCH_BIT} ARCH_BIT)

@@ -75,7 +75,7 @@ Features
     generations: ``ispc`` has targets for SSE2, SSE4, AVX, AVX2, and AVX512.
 
   * Portability across operating systems: Microsoft
-    Windows, macOS, and Linux are all supported
+    Windows, macOS, Linux, and FreeBSD are all supported
     by ``ispc``.
 
   * Debugging with standard tools: ``ispc``

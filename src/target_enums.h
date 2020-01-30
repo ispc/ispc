@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2019, Intel Corporation
+  Copyright (c) 2019-2020, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -40,7 +40,7 @@
 #include <string>
 #include <vector>
 
-enum class TargetOS { windows, linux, macos, android, ios, ps4, error };
+enum class TargetOS { windows, linux, freebsd, macos, android, ios, ps4, error };
 
 TargetOS ParseOS(std::string os);
 std::string OSToString(TargetOS os);

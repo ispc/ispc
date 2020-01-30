@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2019, Intel Corporation
+  Copyright (c) 2019-2020, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -300,6 +300,8 @@ TargetOS ParseOS(std::string os) {
         return TargetOS::windows;
     } else if (os == "linux") {
         return TargetOS::linux;
+    } else if (os == "freebsd") {
+        return TargetOS::freebsd;
     } else if (os == "macos") {
         return TargetOS::macos;
     } else if (os == "android") {
@@ -318,6 +320,8 @@ std::string OSToString(TargetOS os) {
         return "Windows";
     case TargetOS::linux:
         return "Linux";
+    case TargetOS::freebsd:
+        return "FreeBSD";
     case TargetOS::macos:
         return "macOS";
     case TargetOS::android:
@@ -338,6 +342,8 @@ std::string OSToLowerString(TargetOS os) {
         return "windows";
     case TargetOS::linux:
         return "linux";
+    case TargetOS::freebsd:
+        return "freebsd";
     case TargetOS::macos:
         return "macos";
     case TargetOS::android:
@@ -357,6 +363,8 @@ TargetOS GetHostOS() {
     return TargetOS::windows;
 #elif defined(ISPC_HOST_IS_LINUX) && !defined(ISPC_LINUX_TARGET_OFF)
     return TargetOS::linux;
+#elif defined(ISPC_HOST_IS_FREEBSD) && !defined(ISPC_FREEBSD_TARGET_OFF)
+    return TargetOS::freebsd;
 #elif defined(ISPC_HOST_IS_APPLE) && !defined(ISPC_MACOS_TARGET_OFF)
     return TargetOS::macos;
 #else
