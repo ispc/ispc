@@ -39,6 +39,7 @@ class OS(Enum):
     Windows = 1
     Linux = 2
     Mac = 3
+    FreeBSD = 4
 
 @unique
 class Status(Enum):
@@ -62,6 +63,8 @@ class Host(object):
             self.os = OS.Mac
         elif system == 'Linux':
             self.os = OS.Linux
+        elif system == 'FreeBSD':
+            self.os = OS.FreeBSD
         else:
             self.os = OS.Unknown
 
@@ -91,6 +94,15 @@ class Host(object):
 
     def is_windows(self):
         return self.os == OS.Windows
+
+    def is_linux(self):
+        return self.os == OS.Linux
+
+    def is_mac(self):
+        return self.os == OS.Mac
+
+    def is_freebsd(self):
+        return self.os == OS.FreeBSD
 
     def set_ispc_cmd(self, ispc_flags):
         self.ispc_cmd = self.ispc_exe + " " + ispc_flags
@@ -235,8 +247,15 @@ def check_test(filename, host, target):
     done = True
     if host.is_windows():
         oss = "windows"
+    elif host.is_linux():
+        oss = "linux"
+    elif host.is_mac():
+        oss = "mac"
+    elif host.is_freebsd():
+        oss = "freebsd"
     else:
-        oss = "linux" # FIXME: what was the assumption here?
+        oss = "unknown"
+
     with open(add_prefix(filename, host)) as f:
         b = f.read()
     for run in re.finditer('// *rule: run on .*', b):
