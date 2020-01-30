@@ -1,3 +1,5 @@
+// rule: run on OS=linux
+// sincos() function is available only on Linux.
 
 export uniform int width() { return programCount; }
 
