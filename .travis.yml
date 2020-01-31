@@ -54,10 +54,10 @@ env:
     - LLVM_HOME=/usr/local/src/llvm
     - ISPC_HOME=$TRAVIS_BUILD_DIR
   matrix:
+    - LLVM_VERSION=10.0 OS=Ubuntu16.04 DOCKER_TAG=llvm100
     - LLVM_VERSION=9.0 OS=Ubuntu16.04 DOCKER_TAG=llvm90
     - LLVM_VERSION=8.0 OS=Ubuntu16.04 DOCKER_TAG=llvm80
     - LLVM_VERSION=7.0 OS=Ubuntu16.04 DOCKER_TAG=llvm70
-    - LLVM_VERSION=6.0 OS=Ubuntu16.04 DOCKER_TAG=llvm60
 
 before_install:
   - sudo apt-get install -y libc6-dev-i386 g++-multilib lib32stdc++6
