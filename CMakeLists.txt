@@ -69,15 +69,6 @@ if (ISPC_CROSS)
             message (FATAL_ERROR "Set ISPC_MACOS_SDK_PATH variable for cross compilation to MacOS e.g. C:/iusers/MacOSX10.14.sdk")
         endif()
     elseif (APPLE)
-        # Use standard macOS SDK location if this is not specified.
-        if (NOT ISPC_MACOS_SDK_PATH)
-            set(command "xcrun" "--show-sdk-path")
-            execute_process(COMMAND ${command}
-                OUTPUT_VARIABLE ISPC_MACOS_SDK_PATH
-                OUTPUT_STRIP_TRAILING_WHITESPACE
-            )
-          message(STATUS "Using macOS SDK path ${ISPC_MACOS_SDK_PATH}")
-        endif()
         if ((ISPC_LINUX_TARGET OR ISPC_ANDROID_TARGET) AND NOT ISPC_ANDROID_NDK_PATH)
             message (FATAL_ERROR "Set ISPC_ANDROID_NDK_PATH variable for cross compilation to Linux/Android e.g. /Users/Shared/android-ndk-r20")
         endif()
@@ -104,6 +95,18 @@ else()
         set(ISPC_FREEBSD_TARGET ON)
     else()
         set(ISPC_LINUX_TARGET ON)
+    endif()
+endif()
+
+if (APPLE)
+    # Use standard macOS SDK location if this is not specified.
+    if (NOT ISPC_MACOS_SDK_PATH)
+        set(command "xcrun" "--show-sdk-path")
+        execute_process(COMMAND ${command}
+            OUTPUT_VARIABLE ISPC_MACOS_SDK_PATH
+            OUTPUT_STRIP_TRAILING_WHITESPACE
+        )
+        message(STATUS "Using macOS SDK path ${ISPC_MACOS_SDK_PATH}")
     endif()
 endif()
 
