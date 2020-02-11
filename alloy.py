@@ -213,17 +213,16 @@ def build_LLVM(version_LLVM, revision, folder, tarball, debug, selfbuild, extra,
     common.remove_if_exists(LLVM_BUILD)
     common.remove_if_exists(LLVM_BIN)
 
-    # Starting with MacOS 10.9 Maverics, we depend on Xcode being installed, as it contains C and C++ library headers.
-    # sysroot trick below helps finding C headers. For C++ we just check out libc++ sources.
-    # Starting macOS 10.12 Sierra we rely on "Command Line Tools for Xcode" to be installed. They are required anyway,
-    # and bring C headers to the system. You can install it by running "xcode-select --install".
+    # Starting from MacOS 10.9 Maverics, C and C++ library headers are part of the SDK, not the OS itself.
+    # System root must be specified during the compiler build, so the compiler knows the default location to search for headers.
+    # C headers are located at system root location, while C++ headers are part of the toolchain.
+    # I.e. specifying system root solved C header problem. For C++ headers we enable libc++ build as part of clang build (our own toolchain).
     # Note that on Sierra there's an issue with using C headers from High Sierra SDK, which instantiates as compile error:
     #     error: 'utimensat' is only available on macOS 10.13 or newer
     # This is due to using SDK targeting OS, which is newer than current one.
     mac_system_root = ""
     if current_OS == "MacOS" \
-        and int(current_OS_version.split(".")[0]) >= 13 \
-        and int(current_OS_version.split(".")[0]) < 16:
+        and int(current_OS_version.split(".")[0]) >= 13:
         search_path = os.environ["PATH"].split(os.pathsep)
         found_xcrun = False
         for path in search_path:
