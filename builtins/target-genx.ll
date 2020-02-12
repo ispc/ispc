@@ -765,7 +765,7 @@ define void @__masked_store_blend_$1(<WIDTH x $1>* nocapture, <WIDTH x $1>,
                                       <WIDTH x MASK> %mask) nounwind
                                       alwaysinline {
   %old = load <WIDTH x $1>, <WIDTH x $1>* %0
-  %blend = select <WIDTH x MASK> %mask, <16 x $1> %1, <16 x $1> %old
+  %blend = select <WIDTH x MASK> %mask, <WIDTH x $1> %1, <WIDTH x $1> %old
   store <WIDTH x $1> %blend, <WIDTH x $1>* %0
   ret void
 }
@@ -785,7 +785,15 @@ define void @__masked_store_$1(<WIDTH x $1>* nocapture, <WIDTH x $1>, <WIDTH x M
   %broadcast_init = insertelement <WIDTH x i32> undef, i32 SIZEOF($1), i32 0
   %shuffle = shufflevector <WIDTH x i32> %broadcast_init, <WIDTH x i32> undef, <WIDTH x i32> zeroinitializer
   %offsets = mul <WIDTH x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>, %shuffle
+ifelse(RUNTIME, `32',
+`
   call void @__scatter_base_offsets32_$1(i8* %ptr, i32 1, <WIDTH x i32> %offsets, <WIDTH x $1> %1, <WIDTH x MASK> %mask)
+  ',
+  RUNTIME, `64',
+`
+  %offsets64 = zext <WIDTH x i32> %offsets to <WIDTH x i64>
+  call void @__scatter_base_offsets64_$1(i8* %ptr, i32 1, <WIDTH x i64> %offsets64, <WIDTH x $1> %1, <WIDTH x MASK> %mask)
+')
   ret void
 }
 
@@ -794,7 +802,15 @@ define void @__masked_store_private_$1(<WIDTH x $1>* nocapture, <WIDTH x $1>, <W
   %broadcast_init = insertelement <WIDTH x i32> undef, i32 SIZEOF($1), i32 0
   %shuffle = shufflevector <WIDTH x i32> %broadcast_init, <WIDTH x i32> undef, <WIDTH x i32> zeroinitializer
   %offsets = mul <WIDTH x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>, %shuffle
+ifelse(RUNTIME, `32',
+`
   call void @__scatter_base_offsets32_private_$1(i8* %ptr, i32 1, <WIDTH x i32> %offsets, <WIDTH x $1> %1, <WIDTH x MASK> %mask)
+  ',
+  RUNTIME, `64',
+`
+  %offsets64 = zext <WIDTH x i32> %offsets to <WIDTH x i64>
+  call void @__scatter_base_offsets64_private_$1(i8* %ptr, i32 1, <WIDTH x i64> %offsets64, <WIDTH x $1> %1, <WIDTH x MASK> %mask)
+')
   ret void
 }
 ')
