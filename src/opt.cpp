@@ -143,6 +143,7 @@ static llvm::Pass *CreateFixBooleanSelectPass();
 static llvm::Pass *CreatePromoteToPrivateMemoryPass();
 static llvm::Pass *CreateReplaceLLVMIntrinsics();
 static llvm::Pass *CreateReplaceUnsupportedInsts();
+static llvm::Pass *CreateFixAddressSpace();
 #endif
 
 #ifndef ISPC_NO_DUMPS
@@ -749,7 +750,7 @@ void Optimize(llvm::Module *module, int optLevel) {
 
         optPM.add(llvm::createGlobalDCEPass());
         optPM.add(llvm::createConstantMergePass());
-
+        optPM.add(CreateFixAddressSpace());
         // Should be the last
         optPM.add(CreateFixBooleanSelectPass(), 400);
     }
@@ -2449,7 +2450,7 @@ static llvm::Value *lComputeCommonPointer(llvm::Value *base, llvm::Value *offset
                                           int typeScale = 1) {
     llvm::Value *firstOffset = LLVMExtractFirstVectorElement(offsets);
 #ifdef ISPC_GENX_ENABLED
-    llvm::Value*  typeScaleValue = g->target->is32Bit() ? LLVMInt32(typeScale) : LLVMInt64(typeScale);
+    llvm::Value *typeScaleValue = g->target->is32Bit() ? LLVMInt32(typeScale) : LLVMInt64(typeScale);
     if (g->target->getISA() == Target::GENX && typeScale > 1) {
         firstOffset = llvm::BinaryOperator::Create(llvm::Instruction::SDiv, firstOffset, typeScaleValue,
                                                    "scaled_offset", insertBefore);
@@ -5406,13 +5407,14 @@ class ReplaceLLVMIntrinsics : public llvm::BasicBlockPass {
 
 char ReplaceLLVMIntrinsics::ID = 0;
 
-bool ReplaceLLVMIntrinsics::runOnBasicBlock(llvm::BasicBlock &BB) {
+bool ReplaceLLVMIntrinsics::runOnBasicBlock(llvm::BasicBlock &bb) {
+    DEBUG_START_PASS("LLVM intrinsics replacement");
     std::vector<llvm::AllocaInst *> Allocas;
 
     bool modifiedAny = false;
 
 restart:
-    for (llvm::BasicBlock::iterator I = BB.begin(), E = --BB.end(); I != E; ++I) {
+    for (llvm::BasicBlock::iterator I = bb.begin(), E = --bb.end(); I != E; ++I) {
         llvm::Instruction *inst = &*I;
         if (llvm::CallInst *ci = llvm::dyn_cast<llvm::CallInst>(inst)) {
             llvm::Function *func = ci->getCalledFunction();
@@ -5443,6 +5445,7 @@ restart:
             }
         }
     }
+    DEBUG_END_PASS("LLVM intrinsics replacement");
     return modifiedAny;
 }
 
@@ -5531,4 +5534,84 @@ bool ReplaceUnsupportedInsts::runOnBasicBlock(llvm::BasicBlock &bb) {
 }
 
 static llvm::Pass *CreateReplaceUnsupportedInsts() { return new ReplaceUnsupportedInsts(); }
+
+///////////////////////////////////////////////////////////////////////////
+// FixAddressSpace
+
+/** This pass fixes should go close to the end of optimizations. It fixes address space issues
+    caused by functions inlining and LLVM optimizations.
+    TODO: the implemenattion is not completed yet, it just unblocks work on openvkl kernel.
+    1. fix where needed svn.block.ld -> load, svm.block.st -> store
+    2. svm gathers/scatters <-> private gathers/scatters
+    3. ideally generate LLVM vector loads/stores in ImproveOptMemory pass, fix address space here
+ */
+
+class FixAddressSpace : public llvm::BasicBlockPass {
+  public:
+    static char ID;
+    FixAddressSpace() : BasicBlockPass(ID) {}
+    llvm::StringRef getPassName() const { return "Fix address space"; }
+    bool runOnBasicBlock(llvm::BasicBlock &BB);
+};
+
+char FixAddressSpace::ID = 0;
+
+bool FixAddressSpace::runOnBasicBlock(llvm::BasicBlock &bb) {
+    DEBUG_START_PASS("FixAddressSpace");
+    bool modifiedAny = false;
+
+restart:
+    for (llvm::BasicBlock::iterator I = bb.begin(), E = --bb.end(); I != E; ++I) {
+        llvm::Instruction *inst = &*I;
+        if (llvm::LoadInst *ld = llvm::dyn_cast<llvm::LoadInst>(inst)) {
+            if (llvm::isa<llvm::VectorType>(ld->getType()) != NULL) {
+                llvm::Value *ptr = ld->getOperand(0);
+                llvm::Type *retType = ld->getType();
+                if (GetAddressSpace(ptr) == AddressSpace::External) {
+                    Assert(llvm::isPowerOf2_32(retType->getVectorNumElements()));
+                    Assert(retType->getPrimitiveSizeInBits() / 8 <= 8 * OWORD);
+                    llvm::Value *svm_ld_ptrtoint =
+                        new llvm::PtrToIntInst(ptr, LLVMTypes::Int64Type, "svm_ld_ptrtoint", ld);
+                    auto Fn = llvm::GenXIntrinsic::getGenXDeclaration(m->module, llvm::GenXIntrinsic::genx_svm_block_ld,
+                                                                      retType);
+
+                    llvm::CallInst *load_inst = llvm::CallInst::Create(Fn, svm_ld_ptrtoint, ld->getName());
+                    if (load_inst != NULL) {
+                        lCopyMetadata(load_inst, ld);
+                        llvm::ReplaceInstWithInst(ld, load_inst);
+                        modifiedAny = true;
+                        goto restart;
+                    }
+                }
+            }
+        } else if (llvm::StoreInst *st = llvm::dyn_cast<llvm::StoreInst>(inst)) {
+            if (llvm::isa<llvm::VectorType>(st->getType()) != NULL) {
+                llvm::Value *ptr = st->getOperand(1);
+                llvm::Value *val = st->getOperand(0);
+                if (GetAddressSpace(ptr) == AddressSpace::External) {
+                    Assert(llvm::isa<llvm::VectorType>(val->getType()));
+                    Assert(llvm::isPowerOf2_32(val->getType()->getVectorNumElements()));
+                    Assert(val->getType()->getPrimitiveSizeInBits() / 8 <= 8 * OWORD);
+                    llvm::Instruction *svm_st_zext =
+                        new llvm::PtrToIntInst(ptr, LLVMTypes::Int64Type, "svm_st_ptrtoint", st);
+                    llvm::Type *argTypes[] = {val->getType()};
+                    auto Fn = llvm::GenXIntrinsic::getGenXDeclaration(m->module, llvm::GenXIntrinsic::genx_svm_block_st,
+                                                                      argTypes);
+                    llvm::Instruction *store_inst = lCallInst(Fn, svm_st_zext, val, "", NULL);
+
+                    if (store_inst != NULL) {
+                        lCopyMetadata(store_inst, st);
+                        llvm::ReplaceInstWithInst(st, store_inst);
+                        modifiedAny = true;
+                        goto restart;
+                    }
+                }
+            }
+        }
+    }
+    DEBUG_END_PASS("Fix address space");
+    return modifiedAny;
+}
+
+static llvm::Pass *CreateFixAddressSpace() { return new FixAddressSpace(); }
 #endif
