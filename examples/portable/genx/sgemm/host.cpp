@@ -84,7 +84,8 @@ int run(int m, int niter, int gx, int gy) {
     Matrix A(m, k, lda, NULL, true, "A", st);
     Matrix B(k, n, ldb, NULL, true, "B", st);
     Matrix C_gold(m, n, ldc, NULL, false, "C_gold", st);
-    Matrix C(C_gold, "C");
+    //Matrix C(C_gold, "C");
+    Matrix C(m, n, ldc, NULL, false, "C", st);
     Matrix zero(C_gold, "C");
 
     if (niter == 1) {
@@ -148,6 +149,7 @@ int run(int m, int niter, int gx, int gy) {
 }
 
 int main(int argc, char *argv[]) {
+    std::cout << "HELLO!" << std::endl;
     int m = GEMM_BLOCK;
     int niterations = 1;
     int gx = 2, gy = 1;

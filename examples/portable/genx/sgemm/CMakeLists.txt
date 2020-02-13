@@ -50,7 +50,7 @@ else()
     set(HOST_NAME "l0host")
     set(TEST_NAME "naive_sgemm")
     set(ISPC_OBJ_NAME "${CMAKE_CURRENT_BINARY_DIR}/naive_sgemm_mt.spv")
-    set(ISPC_FLAGS "--emit-spirv" "--addressing=32" "-DISPC_GENX_ENABLED")
+    set(ISPC_FLAGS "--emit-spirv" "--addressing=64" "-DISPC_GENX_ENABLED")
 
     set(CM_OBJ_NAME "${CMAKE_CURRENT_BINARY_DIR}/naive_sgemm_cm_mt.spv")
     set(CM_SRC_NAME "NaiveCMSgemm_genx")
