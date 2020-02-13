@@ -130,8 +130,8 @@ static int run(int m, int niter, int gx, int gy) {
         L0_SAFE_CALL(zeCommandQueueSynchronize(hCommandQueue, std::numeric_limits<uint32_t>::max()));
     }
     auto dur = (std::chrono::system_clock::now() - wct);
-    auto secs = std::chrono::duration_cast<std::chrono::milliseconds>(dur);
-    std::cout << "Time is: " << secs.count() / niter << " milliseconds" << std::endl;
+    auto secs = std::chrono::duration_cast<std::chrono::nanoseconds>(dur);
+    std::cout << "Time is: " << secs.count() / 1e+6 / niter << " milliseconds" << std::endl;
 
     // TODO: timeit!
     /*auto timings = execute(device, kernel, gx, gy, niter, false, TIMEOUT);
