@@ -218,7 +218,7 @@ int main(int argc, char **argv) {
                                             0
                                             };
     img = new unsigned char[width * height * 3];
-    fimg = (float*)aligned_alloc(width * height * 3, 4096); //new float[width * height * 3];
+    fimg = (float*)aligned_alloc(4096, width * height * 3 * sizeof(float));
     void *dFimg = nullptr;
     L0_SAFE_CALL(zeDriverAllocDeviceMem(hDriver, &allocDesc, width * height * 3 *sizeof(float),
                                         width * height * 3 *sizeof(float), hDevice,
@@ -272,6 +272,7 @@ int main(int argc, char **argv) {
 
     savePPM("ao-ispc.ppm", width, height);
 
+    free(fimg);
     //L0_SAFE_CALL(zeDriverFreeMem(hDriver, dFimg));
 
     return 0;
