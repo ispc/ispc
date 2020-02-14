@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2011, Intel Corporation
+  Copyright (c) 2010-2020, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -219,6 +219,7 @@ int main(int argc, char **argv) {
                                             };
     img = new unsigned char[width * height * 3];
     fimg = (float*)aligned_alloc(4096, width * height * 3 * sizeof(float));
+    memset((void *)fimg, 0, sizeof(float) * width * height * 3);
     void *dFimg = nullptr;
     L0_SAFE_CALL(zeDriverAllocDeviceMem(hDriver, &allocDesc, width * height * 3 *sizeof(float),
                                         width * height * 3 *sizeof(float), hDevice,
@@ -273,7 +274,7 @@ int main(int argc, char **argv) {
     savePPM("ao-ispc.ppm", width, height);
 
     free(fimg);
-    //L0_SAFE_CALL(zeDriverFreeMem(hDriver, dFimg));
+    L0_SAFE_CALL(zeDriverFreeMem(hDriver, dFimg));
 
     return 0;
 }
