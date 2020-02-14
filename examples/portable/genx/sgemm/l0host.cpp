@@ -127,23 +127,33 @@ static int run(int m, int niter, int gx, int gy) {
         for (int j =0; j < m; j++)
             C(i, j) = C_result(i, j) = -1;
     
-    auto wct = std::chrono::system_clock::now();
+    double total = 0;
+    auto tot_wct = std::chrono::system_clock::now();
 
     for (int i = 0; i < niter; ++i) {
+        auto wct = std::chrono::system_clock::now();
         // launch
         L0_SAFE_CALL(zeCommandListAppendLaunchKernel(hCommandList, hKernel, &dispatchTraits, nullptr, 0, nullptr));    
         L0_SAFE_CALL(zeCommandListAppendBarrier(hCommandList, nullptr, 0, nullptr));
         
+        L0_SAFE_CALL(zeCommandListClose(hCommandList));
+        L0_SAFE_CALL(zeCommandQueueExecuteCommandLists(hCommandQueue, 1, &hCommandList, nullptr));
+        L0_SAFE_CALL(zeCommandQueueSynchronize(hCommandQueue, std::numeric_limits<uint32_t>::max()));
+        auto dur = (std::chrono::system_clock::now() - wct);
+        auto secs = std::chrono::duration_cast<std::chrono::nanoseconds>(dur);
+        total += (secs.count() / 1e+6);
         // copy result to host    
+        L0_SAFE_CALL(zeCommandListReset(hCommandList));
         L0_SAFE_CALL(zeCommandListAppendMemoryCopy(hCommandList, c_res_ref, c_ref, mtC_size * sizeof(float), nullptr));
         // dispatch & wait
         L0_SAFE_CALL(zeCommandListClose(hCommandList));
         L0_SAFE_CALL(zeCommandQueueExecuteCommandLists(hCommandQueue, 1, &hCommandList, nullptr));
         L0_SAFE_CALL(zeCommandQueueSynchronize(hCommandQueue, std::numeric_limits<uint32_t>::max()));
     }
-    auto dur = (std::chrono::system_clock::now() - wct);
-    auto secs = std::chrono::duration_cast<std::chrono::nanoseconds>(dur);
-    std::cout << "Time is: " << secs.count() / 1e+6 / niter << " milliseconds" << std::endl;
+    auto tot_dur = (std::chrono::system_clock::now() - tot_wct);
+    auto tot_secs = std::chrono::duration_cast<std::chrono::nanoseconds>(tot_dur);
+    std::cout << "Time is: " << tot_secs.count() / 1e+6 / niter << " milliseconds" << std::endl;
+    std::cout << "No memory time is: " << total / niter << " ms" << std::endl;
 
     // TODO: timeit!
     /*auto timings = execute(device, kernel, gx, gy, niter, false, TIMEOUT);
