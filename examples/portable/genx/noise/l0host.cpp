@@ -84,9 +84,13 @@ static int run(int niter, int gx, int gy) {
     const float y1 = 10;
 
     void *buf_ref = out.data;
-    L0_SAFE_CALL(zeDriverAllocSharedMem(hDriver, hDevice, ZE_DEVICE_MEM_ALLOC_FLAG_DEFAULT, 0,
-                                        ZE_HOST_MEM_ALLOC_FLAG_DEFAULT, SZ * sizeof(float), SZ * sizeof(float),
-                                        &buf_ref));
+    ze_device_mem_alloc_desc_t alloc_desc = {ZE_DEVICE_MEM_ALLOC_DESC_VERSION_CURRENT,
+                                             ZE_DEVICE_MEM_ALLOC_FLAG_DEFAULT,
+                                             0};
+    ze_host_mem_alloc_desc_t host_alloc_desc = {ZE_HOST_MEM_ALLOC_DESC_VERSION_CURRENT,
+                                                ZE_HOST_MEM_ALLOC_FLAG_DEFAULT};
+
+    L0_SAFE_CALL(zeDriverAllocSharedMem(hDriver, &alloc_desc, &host_alloc_desc, SZ * sizeof(float), 0/*align*/, hDevice, &buf_ref));
 
     L0_SAFE_CALL(zeKernelSetArgumentValue(hKernel, 0, sizeof(float), &x0));
     L0_SAFE_CALL(zeKernelSetArgumentValue(hKernel, 1, sizeof(float), &y0));
@@ -105,7 +109,7 @@ static int run(int niter, int gx, int gy) {
     L0_SAFE_CALL(zeKernelSetGroupSize(hKernel, /*x*/ groupSpaceWidth, /*y*/ groupSpaceHeight, /*z*/ 1));
 
     // set grid size
-    ze_thread_group_dimensions_t dispatchTraits = {1, 1, 1};
+    ze_group_count_t dispatchTraits = {1, 1, 1};
 
     auto wct = std::chrono::system_clock::now();
     // launch
