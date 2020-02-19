@@ -321,7 +321,10 @@ static void ao_scanlines(uniform int y0, uniform int y1, uniform int w,
 
 export void ao_ispc(uniform int w, uniform int h, uniform int nsubsamples,
                     uniform float image[]) {
-   ao_scanlines(0, h, w, h, nsubsamples, image);
+   uniform int linesPerThread = h/taskCount;
+   uniform int start = taskIndex * linesPerThread;
+   uniform int end = (taskIndex + 1) * linesPerThread;
+   ao_scanlines(start, end, w, h, nsubsamples, image);
 }
 
 
