@@ -750,7 +750,10 @@ void Optimize(llvm::Module *module, int optLevel) {
 
         optPM.add(llvm::createGlobalDCEPass());
         optPM.add(llvm::createConstantMergePass());
-        optPM.add(CreateFixAddressSpace());
+#ifdef ISPC_GENX_ENABLED
+        if (g->target->getISA() == Target::GENX)
+            optPM.add(CreateFixAddressSpace());
+#endif
         // Should be the last
         optPM.add(CreateFixBooleanSelectPass(), 400);
     }
