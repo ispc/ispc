@@ -1592,6 +1592,25 @@ define i64 @__count_leading_zeros_i64(i64) nounwind readnone alwaysinline {
 ')
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; population count
+
+define(`popcnt', `
+
+declare i32 @llvm.ctpop.i32(i32) nounwind readnone
+declare i64 @llvm.ctpop.i64(i64) nounwind readnone
+
+define i32 @__popcnt_int32(i32) nounwind readonly alwaysinline {
+  %call = call i32 @llvm.ctpop.i32(i32 %0)
+  ret i32 %call
+}
+
+define i64 @__popcnt_int64(i64) nounwind readonly alwaysinline {
+  %call = call i64 @llvm.ctpop.i64(i64 %0)
+  ret i64 %call
+}
+')
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; prefetching
 
 define(`define_prefetches', `

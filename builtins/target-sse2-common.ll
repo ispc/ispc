@@ -1,4 +1,4 @@
-;;  Copyright (c) 2010-2019, Intel Corporation
+;;  Copyright (c) 2010-2020, Intel Corporation
 ;;  All rights reserved.
 ;;
 ;;  Redistribution and use in source and binary forms, with or without
@@ -30,6 +30,7 @@
 ;;   SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.  
 
 ctlztz()
+popcnt()
 define_prefetches()
 define_shuffles()
 aossoa()
@@ -267,22 +268,6 @@ define double @__floor_uniform_double(double) nounwind readonly alwaysinline {
 define double @__ceil_uniform_double(double) nounwind readonly alwaysinline {
   %r = call double @ceil(double %0)
   ret double %r
-}
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-; horizontal ops / reductions
-
-declare i32 @llvm.ctpop.i32(i32)
-declare i64 @llvm.ctpop.i64(i64)
-
-define i32 @__popcnt_int32(i32) nounwind readonly alwaysinline {
-  %val = call i32 @llvm.ctpop.i32(i32 %0)
-  ret i32 %val
-}
-
-define i64 @__popcnt_int64(i64) nounwind readnone alwaysinline {
-  %val = call i64 @llvm.ctpop.i64(i64 %0)
-  ret i64 %val
 }
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
