@@ -799,15 +799,15 @@ gen_gather(double)
 define(`scatterbo32_64', `
 define void @__scatter_base_offsets32_$1(i8* %ptr, i32 %scale, <WIDTH x i32> %offsets,
                                          <WIDTH x $1> %vals, <WIDTH x MASK> %mask) nounwind {
-  call void @__scatter_factored_base_offsets32_$1(i8* %ptr, <16 x i32> %offsets,
-      i32 %scale, <16 x i32> zeroinitializer, <16 x $1> %vals, <WIDTH x MASK> %mask)
+  call void @__scatter_factored_base_offsets32_$1(i8* %ptr, <WIDTH x i32> %offsets,
+      i32 %scale, <WIDTH x i32> zeroinitializer, <WIDTH x $1> %vals, <WIDTH x MASK> %mask)
   ret void
 }
 
 define void @__scatter_base_offsets64_$1(i8* %ptr, i32 %scale, <WIDTH x i64> %offsets,
                                          <WIDTH x $1> %vals, <WIDTH x MASK> %mask) nounwind {
-  call void @__scatter_factored_base_offsets64_$1(i8* %ptr, <16 x i64> %offsets,
-      i32 %scale, <16 x i64> zeroinitializer, <16 x $1> %vals, <WIDTH x MASK> %mask)
+  call void @__scatter_factored_base_offsets64_$1(i8* %ptr, <WIDTH x i64> %offsets,
+      i32 %scale, <WIDTH x i64> zeroinitializer, <WIDTH x $1> %vals, <WIDTH x MASK> %mask)
   ret void
 } 
 ')
