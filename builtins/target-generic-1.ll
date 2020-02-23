@@ -1,4 +1,4 @@
-;;  Copyright (c) 2012-2019, Intel Corporation
+;;  Copyright (c) 2012-2020, Intel Corporation
 ;;  All rights reserved.
 ;;
 ;;  Redistribution and use in source and binary forms, with or without
@@ -538,19 +538,7 @@ define  i32 @__max_uniform_uint32(i32, i32) nounwind readonly alwaysinline {
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; horizontal ops / reductions
 
-declare i32 @llvm.ctpop.i32(i32) nounwind readnone
-
-define  i32 @__popcnt_int32(i32) nounwind readonly alwaysinline {
-  %call = call i32 @llvm.ctpop.i32(i32 %0)
-  ret i32 %call
-}
-
-declare i64 @llvm.ctpop.i64(i64) nounwind readnone
-
-define  i64 @__popcnt_int64(i64) nounwind readonly alwaysinline {
-  %call = call i64 @llvm.ctpop.i64(i64 %0)
-  ret i64 %call
-}
+popcnt()
 
 define i8 @__reduce_add_int8(<1 x i8> %v) nounwind readonly alwaysinline {
   %r = extractelement <1 x i8> %v, i32 0

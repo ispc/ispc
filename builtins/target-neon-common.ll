@@ -2,7 +2,7 @@
 ;; target-neon-common.ll
 ;;
 ;;  Copyright(c) 2013-2015 Google, Inc.
-;;  Copyright(c) 2019 Intel
+;;  Copyright(c) 2019-2020 Intel
 ;;
 ;;  All rights reserved.
 ;;
@@ -157,6 +157,7 @@ rdrand_decls()
 define_shuffles()
 aossoa()
 ctlztz()
+popcnt()
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; half conversion routines
@@ -366,21 +367,6 @@ declare double @llvm.sqrt.f64(double)
 define double @__sqrt_uniform_double(double) nounwind readnone alwaysinline {
   %r = call double @llvm.sqrt.f64(double %0)
   ret double %r
-}
-
-;; bit ops
-
-declare i32 @llvm.ctpop.i32(i32) nounwind readnone
-declare i64 @llvm.ctpop.i64(i64) nounwind readnone
-
-define i32 @__popcnt_int32(i32) nounwind readnone alwaysinline {
-  %v = call i32 @llvm.ctpop.i32(i32 %0)
-  ret i32 %v
-}
-
-define i64 @__popcnt_int64(i64) nounwind readnone alwaysinline {
-  %v = call i64 @llvm.ctpop.i64(i64 %0)
-  ret i64 %v
 }
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

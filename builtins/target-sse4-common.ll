@@ -1,4 +1,4 @@
-;;  Copyright (c) 2010-2019, Intel Corporation
+;;  Copyright (c) 2010-2020, Intel Corporation
 ;;  All rights reserved.
 ;;
 ;;  Redistribution and use in source and binary forms, with or without
@@ -33,6 +33,7 @@
 ;; SSE4 target implementation.
 
 ctlztz()
+popcnt()
 define_prefetches()
 define_shuffles()
 aossoa()
@@ -278,23 +279,6 @@ define i32 @__min_uniform_uint32(i32, i32) nounwind readonly alwaysinline {
 define i32 @__max_uniform_uint32(i32, i32) nounwind readonly alwaysinline {
   sse_binary_scalar(ret, 4, i32, @llvm.x86.sse41.pmaxud, %0, %1)
   ret i32 %ret
-}
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; horizontal ops / reductions
-
-declare i32 @llvm.ctpop.i32(i32) nounwind readnone
-
-define i32 @__popcnt_int32(i32) nounwind readonly alwaysinline {
-  %call = call i32 @llvm.ctpop.i32(i32 %0)
-  ret i32 %call
-}
-
-declare i64 @llvm.ctpop.i64(i64) nounwind readnone
-
-define i64 @__popcnt_int64(i64) nounwind readonly alwaysinline {
-  %call = call i64 @llvm.ctpop.i64(i64 %0)
-  ret i64 %call
 }
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
