@@ -739,21 +739,23 @@ void Optimize(llvm::Module *module, int optLevel) {
         optPM.add(llvm::createInstructionCombiningPass());
         optPM.add(CreateInstructionSimplifyPass());
 #ifdef ISPC_GENX_ENABLED
-        if (g->target->getISA() == Target::GENX)
+        if (g->target->getISA() == Target::GENX) {
             optPM.add(CreateReplaceLLVMIntrinsics());
+        }
 #endif
         optPM.add(CreatePeepholePass());
         optPM.add(llvm::createFunctionInliningPass());
         optPM.add(llvm::createAggressiveDCEPass());
         optPM.add(llvm::createStripDeadPrototypesPass());
         optPM.add(CreateMakeInternalFuncsStaticPass());
-
+#ifdef ISPC_GENX_ENABLED
+        if (g->target->getISA() == Target::GENX) {
+            optPM.add(CreateFixAddressSpace());
+        }
+#endif
         optPM.add(llvm::createGlobalDCEPass());
         optPM.add(llvm::createConstantMergePass());
-#ifdef ISPC_GENX_ENABLED
-        if (g->target->getISA() == Target::GENX)
-            optPM.add(CreateFixAddressSpace());
-#endif
+
         // Should be the last
         optPM.add(CreateFixBooleanSelectPass(), 400);
     }
