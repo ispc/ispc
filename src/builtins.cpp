@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2019, Intel Corporation
+  Copyright (c) 2010-2020, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -168,7 +168,7 @@ static bool lCreateISPCSymbol(llvm::Function *func, SymbolTable *symbolTable) {
     noPos.name = "__stdlib";
 
     const llvm::FunctionType *ftype = func->getFunctionType();
-    std::string name = func->getName();
+    std::string name = std::string(func->getName());
 
     if (name.size() < 3 || name[0] != '_' || name[1] != '_')
         return false;

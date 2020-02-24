@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2019, Intel Corporation
+  Copyright (c) 2010-2020, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -1509,7 +1509,7 @@ llvm::Value *LLVMShuffleVectors(llvm::Value *v1, llvm::Value *v2, int32_t shuf[]
 const char *LLVMGetName(llvm::Value *v, const char *s) {
     if (v == NULL)
         return s;
-    std::string ret = v->getName();
+    std::string ret = std::string(v->getName());
     ret += s;
     return strdup(ret.c_str());
 }
