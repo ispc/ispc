@@ -1883,7 +1883,7 @@ std::string CWriter::GetValueName(const llvm::Value *Operand) {
         return CBEMangle(Operand->getName().str().c_str());
     }
 
-    std::string Name = Operand->getName();
+    std::string Name = std::string(Operand->getName());
 
     if (Name.empty()) { // Assign unique names to local temporaries.
         unsigned &No = AnonValueNumbers[Operand];
@@ -2495,7 +2495,7 @@ bool CWriter::doInitialization(llvm::Module &M) {
             continue;
 
         // Don't redeclare ispc's own intrinsics
-        std::string name = I->getName();
+        std::string name = std::string(I->getName());
         if (name.size() > 2 && name[0] == '_' && name[1] == '_')
             continue;
 

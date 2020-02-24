@@ -314,7 +314,7 @@ FunctionEmitContext::FunctionEmitContext(Function *func, Symbol *funSym, llvm::F
         llvm::DISubroutineType *diSubprogramType_n = llvm::cast<llvm::DISubroutineType>(diSubprogramType);
         llvm::DINode::DIFlags flags = llvm::DINode::FlagPrototyped;
 
-        std::string mangledName = llvmFunction->getName();
+        std::string mangledName = std::string(llvmFunction->getName());
         if (mangledName == funSym->name)
             mangledName = "";
 
