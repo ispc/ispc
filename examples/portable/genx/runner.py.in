@@ -48,14 +48,14 @@ print("Using [" + args.exe_name + "] test in " + args.dir)
 additional_path = ""
 additional_libs = ""
 
+cmc_path = "@CMC_INSTALL_PATH@"
 if os.name == 'nt':
     mdf_path = "@MDF_ROOT@"
-    compiler_lib = mdf_path + "/compiler/lib/x86"
+    compiler_lib = cmc_path + "/lib"
     runtime_lib = mdf_path + "/runtime/lib/x86"
     additional_path = os.pathsep + os.pathsep.join([compiler_lib, runtime_lib])
 else:
     dpcpp_path = "@DPCPP_ROOT@"
-    cmc_path = "@CMC_INSTALL_PATH@"
     dpcpp_lib = dpcpp_path + "/lib"
     dpcpp_bin = dpcpp_path + "/bin"
     cmc_lib = cmc_path + "/lib"
