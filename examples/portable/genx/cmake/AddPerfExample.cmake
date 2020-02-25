@@ -1,5 +1,5 @@
 #
-#  Copyright (c) 2019, Intel Corporation
+#  Copyright (c) 2019-2020, Intel Corporation
 #  All rights reserved.
 #
 #  Redistribution and use in source and binary forms, with or without
@@ -56,21 +56,21 @@ function(add_perf_example)
     if (WIN32)
         add_executable(${HOST_EXECUTABLE} ${parsed_HOST_SOURCES})
         target_include_directories(${HOST_EXECUTABLE} PRIVATE "${COMMON_PATH}"
-                                   "${MDF}/compiler/include_icl"
-                                   "${MDF}/compiler/include_icl/cm"
-                                   "${MDF}/runtime/include"
-                                   "${MDF}/examples/helper")
+                                   "${MDF_ROOT}/compiler/include_icl"
+                                   "${MDF_ROOT}/compiler/include_icl/cm"
+                                   "${MDF_ROOT}/runtime/include"
+                                   "${MDF_ROOT}/examples/helper")
 
-        target_link_libraries(${HOST_EXECUTABLE} "${MDF}/runtime/lib/x86/igfx11cmrt32.lib"
-                              "${MDF}/compiler/lib/x86/libcm.lib" AdvAPI32 Ole32)
+        target_link_libraries(${HOST_EXECUTABLE} "${MDF_ROOT}/runtime/lib/x86/igfx11cmrt32.lib"
+                              "${MDF_ROOT}/compiler/lib/x86/libcm.lib" AdvAPI32 Ole32)
         install(TARGETS "${HOST_EXECUTABLE}" RUNTIME DESTINATION ${CMAKE_CURRENT_BINARY_DIR}
             PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE)
     else()
 # L0 build
         # TODO: check exists
-        set(SYCL_CLANG_EXECUTABLE "${SYCL}/bin/clang++")
+        set(DPCPP_CLANG_EXECUTABLE "${DPCPP_ROOT}/bin/clang++")
         add_custom_target(${HOST_EXECUTABLE} ALL
-            COMMAND ${SYCL_CLANG_EXECUTABLE} -fsycl -isystem ${COMMON_PATH} ${parsed_HOST_SOURCES} -D LZERO -o ${HOST_EXECUTABLE} -L${SYCL}/lib -llevel_zero 
+            COMMAND ${DPCPP_CLANG_EXECUTABLE} -fsycl -isystem ${COMMON_PATH} ${parsed_HOST_SOURCES} -D LZERO -o ${HOST_EXECUTABLE} -L${DPCPP_ROOT}/lib -llevel_zero 
             WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
             VERBATIM
         )
@@ -109,21 +109,21 @@ function(add_perf_example)
 
         if (WIN32)
             target_include_directories(${CM_HOST_EXECUTABLE} PRIVATE "${COMMON_PATH}"
-                                       "${MDF}/compiler/include_icl"
-                                       "${MDF}/compiler/include_icl/cm"
-                                       "${MDF}/runtime/include"
-                                       "${MDF}/examples/helper")
+                                       "${MDF_ROOT}/compiler/include_icl"
+                                       "${MDF_ROOT}/compiler/include_icl/cm"
+                                       "${MDF_ROOT}/runtime/include"
+                                       "${MDF_ROOT}/examples/helper")
 
-            target_link_libraries(${CM_HOST_EXECUTABLE} "${MDF}/runtime/lib/x86/igfx11cmrt32.lib"
-                                  "${MDF}/compiler/lib/x86/libcm.lib" AdvAPI32 Ole32)
+            target_link_libraries(${CM_HOST_EXECUTABLE} "${MDF_ROOT}/runtime/lib/x86/igfx11cmrt32.lib"
+                                  "${MDF_ROOT}/compiler/lib/x86/libcm.lib" AdvAPI32 Ole32)
             target_compile_options(${CM_HOST_EXECUTABLE} PRIVATE ${parsed_CM_HOST_FLAGS})
             install(TARGETS "${CM_HOST_EXECUTABLE}" RUNTIME DESTINATION ${CMAKE_CURRENT_BINARY_DIR}
             PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE)
 
         else()
-	    set(SYCL_CLANG_EXECUTABLE "${SYCL}/bin/clang++")
+	    set(DPCPP_CLANG_EXECUTABLE "${DPCPP_ROOT}/bin/clang++")
             add_custom_target(${CM_HOST_EXECUTABLE} ALL
-            COMMAND ${SYCL_CLANG_EXECUTABLE} -fsycl -isystem ${COMMON_PATH} ${parsed_HOST_SOURCES} -D CMKERNEL -D LZERO -o ${CM_HOST_EXECUTABLE} -L${SYCL}/lib -llevel_zero 
+            COMMAND ${DPCPP_CLANG_EXECUTABLE} -fsycl -isystem ${COMMON_PATH} ${parsed_HOST_SOURCES} -D CMKERNEL -D LZERO -o ${CM_HOST_EXECUTABLE} -L${DPCPP_ROOT}/lib -llevel_zero 
             WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
             VERBATIM
         )

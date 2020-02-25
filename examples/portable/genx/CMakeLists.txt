@@ -1,5 +1,5 @@
 #
-#  Copyright (c) 2019, Intel Corporation
+#  Copyright (c) 2019-2020, Intel Corporation
 #  All rights reserved.
 #
 #  Redistribution and use in source and binary forms, with or without
@@ -34,30 +34,38 @@ cmake_minimum_required(VERSION 3.12)
 
 project(GenxExamples)
 
+message(STATUS "Configuring GenX examples")
+
 if (WIN32)
-    if (NOT MDF)
-        message(FATAL_ERROR "Provide path to MDF root")
+    if (NOT MDF_ROOT)
+        message(FATAL_ERROR "Provide path to MDF root with -DMDF_ROOT")
     endif()
 else()
-    if (NOT SYCL)
-        message(FATAL_ERROR "Provide path to SYCL build root")
+    if (NOT DPCPP_ROOT)
+        message(FATAL_ERROR "Provide path to DPCPP build root -DDPCPP_ROOT")
     endif()
 endif()
 
+# CMC is needed for ISPC build so it should have been already found but it is possible to overwrite this with CMC_INSTALL_PATH.
 if (CMC_INSTALL_PATH)
-    find_program (CM_EXECUTABLE cmc PATHS ${CMC_INSTALL_PATH}/bin NO_DEFAULT_PATH)
-else()
+    find_program (CMC_EXECUTABLE cmc PATHS ${CMC_INSTALL_PATH}/bin NO_DEFAULT_PATH)
+endif()
+if (NOT CMC_EXECUTABLE)
     if (WIN32)
-        set(CM_EXECUTABLE ${MDF}/compiler/bin/cmc)
+	    message(WARNING "CM installation will be used from MDF. If you want to change it set path to CM install root with -DCMC_INSTALL_PATH")
+        set(CMC_EXECUTABLE ${MDF}/compiler/bin/cmc)
     else()
-        message(FATAL_ERROR "Provide path to CM installation")
+        message(FATAL_ERROR "Set path to CM install root with -DCMC_INSTALL_PATH")
     endif()
 endif()
 
-if (NOT CM_EXECUTABLE)
-    message(FATAL_ERROR "Failed to find cmc")
+# CMC_INSTALL_PATH will be needed in examples so if it was not explicitly set, let's find it:
+if (NOT CMC_INSTALL_PATH)
+	get_filename_component(CMC_INSTALL_PATH ${CMC_EXECUTABLE} DIRECTORY)
+	set(CMC_INSTALL_PATH ${CMC_INSTALL_PATH}/..)
 endif()
-message(STATUS "Found CMC: ${CM_EXECUTABLE}")
+
+message(STATUS "Found CMC install root: ${CMC_INSTALL_PATH} and CMC: ${CMC_EXECUTABLE}")
 
 if (ISPC_BUILD)
     set(ISPC_EXECUTABLE $<TARGET_FILE:ispc>)
@@ -68,7 +76,6 @@ if (NOT ISPC_EXECUTABLE)
     message(FATAL_ERROR "Failed to find ispc")
 endif()
 message(STATUS "Found ISPC: ${ISPC_EXECUTABLE}")
-
 
 # Used for testing
 find_package(Python3 REQUIRED)
@@ -85,4 +92,3 @@ add_subdirectory(noise)
 add_subdirectory(sgemm)
 
 include(TestLists.txt)
-
