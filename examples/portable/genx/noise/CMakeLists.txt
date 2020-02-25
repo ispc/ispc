@@ -44,7 +44,7 @@ if(WIN32)
 else()
     set(HOST_NAME "l0host")
     set(ISPC_OBJ_NAME "${CMAKE_CURRENT_BINARY_DIR}/noise.spv")
-    set(ISPC_FLAGS "--emit-spirv" "--addressing=32" "-DISPC_GENX_ENABLED")
+    set(ISPC_FLAGS "--emit-spirv" "--addressing=64" "-DISPC_GENX_ENABLED")
 endif()
 
 set(HOST_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/${HOST_NAME}.cpp ${CMAKE_CURRENT_SOURCE_DIR}/noise_serial.cpp)
@@ -60,4 +60,3 @@ add_perf_example(
     ISPC_FLAGS ${ISPC_FLAGS}
     HOST_SOURCES ${HOST_SOURCES} 
 )
-
