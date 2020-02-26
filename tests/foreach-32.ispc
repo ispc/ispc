@@ -20,6 +20,10 @@ export void f_f(uniform float RET[], uniform float aFOO[]) {
         RET[programIndex] = t - 16;
     else if (programCount == 16)
         RET[programIndex] = t - 8;
+    else if (programCount == 32)
+        RET[programIndex] = t - 4;
+    else if (programCount == 64)
+        RET[programIndex] = t - 2;
     else
         RET[programIndex] = t; //this case is still unknown, error in general
 }

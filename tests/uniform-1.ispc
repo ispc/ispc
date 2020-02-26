@@ -1,6 +1,7 @@
 
 export uniform int width() { return programCount; }
 
+#define THREADS 4
 
 task void f_f_task(uniform float RET[], uniform float aFOO[]) {
     uniform float val[programCount];
@@ -14,21 +15,21 @@ task void f_f_task(uniform float RET[], uniform float aFOO[]) {
     for (uniform int i = 0; i < programCount; ++i)
         sum += val[i];
 
-    if (programIndex < 32/4)
-      RET[programCount/4*taskIndex + programIndex] = sum;
+    if (programIndex < programCount/THREADS)
+        RET[programCount/THREADS*taskIndex + programIndex] = sum;
 }
 
-export void f_f(uniform float RET[], uniform float aFOO[]) 
+export void f_f(uniform float RET[], uniform float aFOO[])
 {
-  launch[4] f_f_task(RET,  aFOO);
+    launch[THREADS] f_f_task(RET,  aFOO);
 }
 task void result_task(uniform float RET[])
 {
-  const uniform float ret = reduce_add(programIndex + programCount*taskIndex);
-  if (programIndex < 32/4)
-    RET[programCount/4*taskIndex + programIndex] = ret;
+    const uniform float ret = reduce_add(programIndex + programCount*taskIndex);
+    if (programIndex < programCount/THREADS)
+        RET[programCount/THREADS*taskIndex + programIndex] = ret;
 }
 
 export void result(uniform float RET[]) {
-  launch[4] result_task(RET);
+    launch[THREADS] result_task(RET);
 }
