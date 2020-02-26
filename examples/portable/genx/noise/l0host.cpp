@@ -31,12 +31,12 @@
    SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
+#include "L0_helpers.h"
+#include <chrono>
+#include <cmath>
 #include <iostream>
 #include <level_zero/ze_api.h>
 #include <limits>
-#include <cmath>
-#include "L0_helpers.h"
-#include <chrono>
 
 #define CORRECTNESS_THRESHOLD 0.0002
 #define SZ 768 * 768
@@ -68,11 +68,11 @@ static int run(int niter, int gx, int gy) {
     ze_command_list_handle_t hCommandList;
     ze_kernel_handle_t hKernel;
 
- #ifdef CMKERNEL
-//    L0Create_Kernel(hDevice, hModule, hCommandList, hKernel, "sgemm_kernel");
- #else
+#ifdef CMKERNEL
+    //    L0Create_Kernel(hDevice, hModule, hCommandList, hKernel, "sgemm_kernel");
+#else
     L0Create_Kernel(hDevice, hModule, hCommandList, hKernel, "noise_ispc");
- #endif
+#endif
 
     // PARAMS
     const unsigned int height = 768;
@@ -84,13 +84,12 @@ static int run(int niter, int gx, int gy) {
     const float y1 = 10;
 
     void *buf_ref = out.data;
-    ze_device_mem_alloc_desc_t alloc_desc = {ZE_DEVICE_MEM_ALLOC_DESC_VERSION_CURRENT,
-                                             ZE_DEVICE_MEM_ALLOC_FLAG_DEFAULT,
+    ze_device_mem_alloc_desc_t alloc_desc = {ZE_DEVICE_MEM_ALLOC_DESC_VERSION_CURRENT, ZE_DEVICE_MEM_ALLOC_FLAG_DEFAULT,
                                              0};
-    ze_host_mem_alloc_desc_t host_alloc_desc = {ZE_HOST_MEM_ALLOC_DESC_VERSION_CURRENT,
-                                                ZE_HOST_MEM_ALLOC_FLAG_DEFAULT};
+    ze_host_mem_alloc_desc_t host_alloc_desc = {ZE_HOST_MEM_ALLOC_DESC_VERSION_CURRENT, ZE_HOST_MEM_ALLOC_FLAG_DEFAULT};
 
-    L0_SAFE_CALL(zeDriverAllocSharedMem(hDriver, &alloc_desc, &host_alloc_desc, SZ * sizeof(float), 0/*align*/, hDevice, &buf_ref));
+    L0_SAFE_CALL(zeDriverAllocSharedMem(hDriver, &alloc_desc, &host_alloc_desc, SZ * sizeof(float), 0 /*align*/,
+                                        hDevice, &buf_ref));
 
     L0_SAFE_CALL(zeKernelSetArgumentValue(hKernel, 0, sizeof(float), &x0));
     L0_SAFE_CALL(zeKernelSetArgumentValue(hKernel, 1, sizeof(float), &y0));
@@ -100,11 +99,10 @@ static int run(int niter, int gx, int gy) {
     L0_SAFE_CALL(zeKernelSetArgumentValue(hKernel, 5, sizeof(int), &height));
     L0_SAFE_CALL(zeKernelSetArgumentValue(hKernel, 6, sizeof(buf_ref), &buf_ref));
 
-
     // EXECUTION
     uint32_t groupSpaceWidth = gx;
     uint32_t groupSpaceHeight = gy;
-    
+
     uint32_t group_size = groupSpaceWidth * groupSpaceHeight;
     L0_SAFE_CALL(zeKernelSetGroupSize(hKernel, /*x*/ groupSpaceWidth, /*y*/ groupSpaceHeight, /*z*/ 1));
 
@@ -118,7 +116,7 @@ static int run(int niter, int gx, int gy) {
 
     // copy result to host
     void *res = result.data;
-    L0_SAFE_CALL(zeCommandListAppendMemoryCopy(hCommandList, res, buf_ref, SZ*sizeof(float), nullptr));
+    L0_SAFE_CALL(zeCommandListAppendMemoryCopy(hCommandList, res, buf_ref, SZ * sizeof(float), nullptr));
     // dispatch & wait
     L0_SAFE_CALL(zeCommandListClose(hCommandList));
     L0_SAFE_CALL(zeCommandQueueExecuteCommandLists(hCommandQueue, 1, &hCommandList, nullptr));
@@ -127,7 +125,6 @@ static int run(int niter, int gx, int gy) {
     auto dur = (std::chrono::system_clock::now() - wct);
     auto secs = std::chrono::duration_cast<std::chrono::nanoseconds>(dur);
     Timings(secs.count(), secs.count()).print(niter);
-
 
     L0_SAFE_CALL(zeDriverFreeMem(hDriver, buf_ref));
 
@@ -176,4 +173,3 @@ int main(int argc, char *argv[]) {
 
     return success;
 }
-

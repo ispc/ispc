@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2019, Intel Corporation
+  Copyright (c) 2019-2020, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -32,7 +32,7 @@
 */
 
 export void SGEMM_naive_task(uniform float matrixA[], uniform float matrixB[], uniform float matrixC[],
-                                    uniform int M, uniform int N, uniform int K) {
+                             uniform int M, uniform int N, uniform int K) {
     // Determine workset for this task instance:
     uniform unsigned int uNumRowsPerTask = M / taskCount;
     uniform unsigned int uRowStart = uNumRowsPerTask * taskIndex;

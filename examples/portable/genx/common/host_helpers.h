@@ -37,13 +37,12 @@
 #include <cstdlib>
 
 #include "cm_rt_helpers.h"
-#include "isa_helpers.h"
 #include "common_helpers.h"
+#include "isa_helpers.h"
 
 #include <chrono>
 
 namespace hostutil {
-
 
 void CMInitContext(CmDevice *&device, CmKernel *&kernel, CmProgram *&program, const char *isa_file_name,
                    const char *func_name) {

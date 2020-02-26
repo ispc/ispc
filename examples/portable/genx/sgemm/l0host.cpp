@@ -1,9 +1,9 @@
+#include "L0_helpers.h"
+#include "Matrix.h"
+#include <cmath>
 #include <iostream>
 #include <level_zero/ze_api.h>
 #include <limits>
-#include <cmath>
-#include "L0_helpers.h"
-#include "Matrix.h"
 
 using namespace hostutil;
 
@@ -42,13 +42,13 @@ static int run(int m, int niter, int gx, int gy) {
 
     ze_command_list_handle_t hCommandList;
     ze_kernel_handle_t hKernel;
- 
- #ifdef CMKERNEL
+
+#ifdef CMKERNEL
     L0Create_Kernel(hDevice, hModule, hCommandList, hKernel, "sgemm_kernel");
- #else
+#else
     L0Create_Kernel(hDevice, hModule, hCommandList, hKernel, "SGEMM_naive_task");
- #endif
-    
+#endif
+
     // Allocate matrices
     Matrix A(m, k, lda, NULL, true, "A", st);
     Matrix B(k, n, ldb, NULL, true, "B", st);
@@ -67,82 +67,81 @@ static int run(int m, int niter, int gx, int gy) {
     } else {
         printf("CPU result not computed: Make #iterations=1 to compute CPU result\n");
     }
-    
+
     void *a_ref = &A(0, 0);
     void *b_ref = &B(0, 0);
     void *c_ref = &C(0, 0);
-    void *a_res_ref = &A_result(0 ,0);
-    void *b_res_ref = &B_result(0 ,0);
-    void *c_res_ref = &C_result(0 ,0);
+    void *a_res_ref = &A_result(0, 0);
+    void *b_res_ref = &B_result(0, 0);
+    void *c_res_ref = &C_result(0, 0);
 
     int mtA_size = A.l_dim() * m;
     int mtB_size = B.l_dim() * B.n_row();
     int mtC_size = C.l_dim() * m;
-    
-    ze_device_mem_alloc_desc_t alloc_desc = {ZE_DEVICE_MEM_ALLOC_DESC_VERSION_CURRENT,
-                                             ZE_DEVICE_MEM_ALLOC_FLAG_DEFAULT,
+
+    ze_device_mem_alloc_desc_t alloc_desc = {ZE_DEVICE_MEM_ALLOC_DESC_VERSION_CURRENT, ZE_DEVICE_MEM_ALLOC_FLAG_DEFAULT,
                                              0};
-    ze_host_mem_alloc_desc_t host_alloc_desc = {ZE_HOST_MEM_ALLOC_DESC_VERSION_CURRENT,
-                                                ZE_HOST_MEM_ALLOC_FLAG_DEFAULT};
-
-
-    
-    /*L0_SAFE_CALL(zeDriverAllocSharedMem(hDriver, hDevice, ZE_DEVICE_MEM_ALLOC_FLAG_DEFAULT, 0,
-                                        ZE_HOST_MEM_ALLOC_FLAG_DEFAULT,  mtA_size * sizeof(float), mtA_size * sizeof(float),
-                                        &a_ref));*/
-    L0_SAFE_CALL(zeDriverAllocSharedMem(hDriver, &alloc_desc, &host_alloc_desc, mtA_size * sizeof(float), 0, hDevice, &a_ref));
+    ze_host_mem_alloc_desc_t host_alloc_desc = {ZE_HOST_MEM_ALLOC_DESC_VERSION_CURRENT, ZE_HOST_MEM_ALLOC_FLAG_DEFAULT};
 
     /*L0_SAFE_CALL(zeDriverAllocSharedMem(hDriver, hDevice, ZE_DEVICE_MEM_ALLOC_FLAG_DEFAULT, 0,
-                                        ZE_HOST_MEM_ALLOC_FLAG_DEFAULT,  mtB_size * sizeof(float), mtB_size * sizeof(float),
-                                        &b_ref));*/
-    L0_SAFE_CALL(zeDriverAllocSharedMem(hDriver, &alloc_desc, &host_alloc_desc, mtB_size * sizeof(float), 0, hDevice, &b_ref));
-    /*L0_SAFE_CALL(zeDriverAllocSharedMem(hDriver, hDevice, ZE_DEVICE_MEM_ALLOC_FLAG_DEFAULT, 0,
-                                        ZE_HOST_MEM_ALLOC_FLAG_DEFAULT, mtC_size * sizeof(float), mtC_size * sizeof(float),
-                                        &c_ref));*/
+                                        ZE_HOST_MEM_ALLOC_FLAG_DEFAULT,  mtA_size * sizeof(float), mtA_size *
+       sizeof(float), &a_ref));*/
+    L0_SAFE_CALL(
+        zeDriverAllocSharedMem(hDriver, &alloc_desc, &host_alloc_desc, mtA_size * sizeof(float), 0, hDevice, &a_ref));
 
-    L0_SAFE_CALL(zeDriverAllocSharedMem(hDriver, &alloc_desc, &host_alloc_desc, mtC_size * sizeof(float), 0, hDevice, &c_ref));
-    
-    L0_SAFE_CALL(zeCommandListAppendMemoryCopy(hCommandList, a_ref, a_res_ref, mtA_size * sizeof(float), nullptr)); 
-    L0_SAFE_CALL(zeCommandListAppendMemoryCopy(hCommandList, b_ref, b_res_ref, mtB_size * sizeof(float), nullptr)); 
-    
+    /*L0_SAFE_CALL(zeDriverAllocSharedMem(hDriver, hDevice, ZE_DEVICE_MEM_ALLOC_FLAG_DEFAULT, 0,
+                                        ZE_HOST_MEM_ALLOC_FLAG_DEFAULT,  mtB_size * sizeof(float), mtB_size *
+       sizeof(float), &b_ref));*/
+    L0_SAFE_CALL(
+        zeDriverAllocSharedMem(hDriver, &alloc_desc, &host_alloc_desc, mtB_size * sizeof(float), 0, hDevice, &b_ref));
+    /*L0_SAFE_CALL(zeDriverAllocSharedMem(hDriver, hDevice, ZE_DEVICE_MEM_ALLOC_FLAG_DEFAULT, 0,
+                                        ZE_HOST_MEM_ALLOC_FLAG_DEFAULT, mtC_size * sizeof(float), mtC_size *
+       sizeof(float), &c_ref));*/
+
+    L0_SAFE_CALL(
+        zeDriverAllocSharedMem(hDriver, &alloc_desc, &host_alloc_desc, mtC_size * sizeof(float), 0, hDevice, &c_ref));
+
+    L0_SAFE_CALL(zeCommandListAppendMemoryCopy(hCommandList, a_ref, a_res_ref, mtA_size * sizeof(float), nullptr));
+    L0_SAFE_CALL(zeCommandListAppendMemoryCopy(hCommandList, b_ref, b_res_ref, mtB_size * sizeof(float), nullptr));
+
     L0_SAFE_CALL(zeKernelSetArgumentValue(hKernel, 0, sizeof(a_ref), &a_ref));
     L0_SAFE_CALL(zeKernelSetArgumentValue(hKernel, 1, sizeof(b_ref), &b_ref));
     L0_SAFE_CALL(zeKernelSetArgumentValue(hKernel, 2, sizeof(c_ref), &c_ref));
     L0_SAFE_CALL(zeKernelSetArgumentValue(hKernel, 3, sizeof(int), &m));
     L0_SAFE_CALL(zeKernelSetArgumentValue(hKernel, 4, sizeof(int), &n));
     L0_SAFE_CALL(zeKernelSetArgumentValue(hKernel, 5, sizeof(int), &k));
-       
+
     // EXECUTION
     // set group size
     // FIXME
     uint32_t groupSpaceWidth = gx;
     uint32_t groupSpaceHeight = gy;
-    
+
     uint32_t group_size = groupSpaceWidth * groupSpaceHeight;
     L0_SAFE_CALL(zeKernelSetGroupSize(hKernel, /*x*/ groupSpaceWidth, /*y*/ groupSpaceHeight, /*z*/ 1));
 
     // set grid size
     ze_group_count_t dispatchTraits = {1, 1, 1};
     for (int i = 0; i < m; i++)
-        for (int j =0; j < m; j++)
+        for (int j = 0; j < m; j++)
             C(i, j) = C_result(i, j) = -1;
-    
+
     double total = 0;
     auto tot_wct = std::chrono::system_clock::now();
 
     for (int i = 0; i < niter; ++i) {
         auto wct = std::chrono::system_clock::now();
         // launch
-        L0_SAFE_CALL(zeCommandListAppendLaunchKernel(hCommandList, hKernel, &dispatchTraits, nullptr, 0, nullptr));    
+        L0_SAFE_CALL(zeCommandListAppendLaunchKernel(hCommandList, hKernel, &dispatchTraits, nullptr, 0, nullptr));
         L0_SAFE_CALL(zeCommandListAppendBarrier(hCommandList, nullptr, 0, nullptr));
-        
+
         L0_SAFE_CALL(zeCommandListClose(hCommandList));
         L0_SAFE_CALL(zeCommandQueueExecuteCommandLists(hCommandQueue, 1, &hCommandList, nullptr));
         L0_SAFE_CALL(zeCommandQueueSynchronize(hCommandQueue, std::numeric_limits<uint32_t>::max()));
         auto dur = (std::chrono::system_clock::now() - wct);
         auto secs = std::chrono::duration_cast<std::chrono::nanoseconds>(dur);
         total += (secs.count() / 1e+6);
-        // copy result to host    
+        // copy result to host
         L0_SAFE_CALL(zeCommandListReset(hCommandList));
         L0_SAFE_CALL(zeCommandListAppendMemoryCopy(hCommandList, c_res_ref, c_ref, mtC_size * sizeof(float), nullptr));
         // dispatch & wait
@@ -158,12 +157,12 @@ static int run(int m, int niter, int gx, int gy) {
     // TODO: timeit!
     /*auto timings = execute(device, kernel, gx, gy, niter, false, TIMEOUT);
     timings.print(niter);*/
-    
-    //void *res = out.data;
+
+    // void *res = out.data;
     L0_SAFE_CALL(zeDriverFreeMem(hDriver, a_ref));
     L0_SAFE_CALL(zeDriverFreeMem(hDriver, b_ref));
     L0_SAFE_CALL(zeDriverFreeMem(hDriver, c_ref));
-        
+
     // RESULT CHECK
     bool pass = false;
     if (niter == 1) {
@@ -174,8 +173,8 @@ static int run(int m, int niter, int gx, int gy) {
             printf("FAILED\n");
     } else
         printf("Result not checked - make #iterations=1 to check result!\n");
-    
-    //bool pass = true;
+
+    // bool pass = true;
     printf("----------------------------\n");
 
     return (pass) ? 0 : 1;
@@ -185,7 +184,7 @@ int main(int argc, char *argv[]) {
     int m = GEMM_BLOCK;
     int niterations = 1;
     int gx = 2, gy = 1;
-    
+
     if (argc >= 3) {
         m = atoi(argv[1]);
         niterations = atoi(argv[2]);
@@ -203,4 +202,3 @@ int main(int argc, char *argv[]) {
 
     return success;
 }
-
