@@ -71,7 +71,7 @@ test_dir = os.path.join(cur_dir, str(args.dir))
 
 host_name = args.exe_name
 executable = os.path.join(test_dir, host_name)
-#cmd = [executable, '1', '1', '16']
+
 cmd = [executable] + unknown
 
 print("Using host name: ", host_name)
