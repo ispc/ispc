@@ -54,4 +54,3 @@ function(test_add name)
         WORKING_DIRECTORY ${EXECUTABLE_OUTPUT_PATH}
     )
 endfunction()
-

@@ -41,14 +41,14 @@ if(WIN32)
     set(HOST_NAME "cmhost")
     set(ISPC_OBJ_NAME "${CMAKE_CURRENT_BINARY_DIR}/naive_sgemm_mt.isa")
     set(HOST_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/${HOST_NAME}.cpp)
-	set(ISPC_FLAGS "--addressing=32" "--arch=genx32")
-	
+    set(ISPC_FLAGS "--addressing=32" "--arch=genx32")
+
     set(CM_OBJ_NAME "${CMAKE_CURRENT_BINARY_DIR}/naive_sgemm_mt_cm.isa")
     set(CM_HOST_NAME "SgemmSVMMultithread")
 else()
     set(HOST_NAME "l0host")
     set(ISPC_OBJ_NAME "${CMAKE_CURRENT_BINARY_DIR}/naive_sgemm_mt.spv")
-	set(HOST_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/${HOST_NAME}.cpp)
+    set(HOST_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/${HOST_NAME}.cpp)
     set(ISPC_FLAGS "--emit-spirv" "--addressing=64" "--arch=genx64")
 
     set(CM_OBJ_NAME "${CMAKE_CURRENT_BINARY_DIR}/naive_sgemm_cm_mt.spv")
@@ -58,16 +58,16 @@ endif()
 add_perf_example(
     NAME "sgemm"
     CM_TEST
-    ISPC_SRC_NAME ${ISPC_SRC_NAME} 
+    ISPC_SRC_NAME ${ISPC_SRC_NAME}
     CM_SRC_NAME ${CM_SRC_NAME}
-    ISPC_OBJ_NAME ${ISPC_OBJ_NAME} 
-    HOST_NAME ${HOST_NAME} 
+    ISPC_OBJ_NAME ${ISPC_OBJ_NAME}
+    HOST_NAME ${HOST_NAME}
     CM_OBJ_NAME ${CM_OBJ_NAME}
-    TEST_NAME ${TEST_NAME} 
+    TEST_NAME ${TEST_NAME}
     CM_TEST_NAME ${CM_TEST_NAME}
-    ISPC_FLAGS ${ISPC_FLAGS}    
+    ISPC_FLAGS ${ISPC_FLAGS}
     CM_HOST_NAME ${CM_HOST_NAME}
-    HOST_SOURCES ${HOST_SOURCES} 
+    HOST_SOURCES ${HOST_SOURCES}
     CM_HOST_SOURCES ${HOST_SOURCES}
     CM_HOST_FLAGS "/DCMHOST"
 )
