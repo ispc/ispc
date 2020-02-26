@@ -30,50 +30,52 @@
 #   NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 #   SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-message(STATUS "Processing cmake/AddPerfExample.cmake")
 function(add_perf_example)
     set(options CM_TEST)
     set(oneValueArgs NAME ISPC_SRC_NAME CM_SRC_NAME ISPC_OBJ_NAME HOST_NAME CM_HOST_NAME CM_OBJ_NAME TEST_NAME CM_TEST_NAME)
     set(multiValueArgs ISPC_FLAGS HOST_SOURCES CM_HOST_SOURCES CM_HOST_FLAGS)
     cmake_parse_arguments("parsed" "${options}" "${oneValueArgs}" "${multiValueArgs}" ${ARGN} )
-# compile ispc kernel    
+	
+	# Compile ISPC kernel
     list(APPEND ISPC_BUILD_OUTPUT ${parsed_ISPC_OBJ_NAME})
-    add_custom_command(
-                       OUTPUT ${ISPC_BUILD_OUTPUT}
+    add_custom_command(OUTPUT ${ISPC_BUILD_OUTPUT}
                        COMMAND ${ISPC_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/${parsed_ISPC_SRC_NAME}.ispc ${parsed_ISPC_FLAGS} --target=genx -o ${parsed_ISPC_OBJ_NAME}
                        VERBATIM
-                       DEPENDS ${ISPC_EXECUTABLE}
-                      )
-    add_custom_target(${parsed_TEST_NAME} ALL DEPENDS ${ISPC_BUILD_OUTPUT})
-
-    message(STATUS "compiling sources: ${HOST_SOURCES}")
-    if (NOT HOST_SOURCES)
+                       DEPENDS ${ISPC_EXECUTABLE} 
+					   DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/${parsed_ISPC_SRC_NAME}.ispc)
+	set_source_files_properties(${ISPC_BUILD_OUTPUT} PROPERTIES GENERATED true)
+	# To show ispc source in VS solution:
+    if (WIN32)
+        set_source_files_properties("${CMAKE_CURRENT_SOURCE_DIR}/${parsed_ISPC_SRC_NAME}.ispc" PROPERTIES HEADER_FILE_ONLY TRUE)
+    endif()
+	# Compile host code
+	if (NOT HOST_SOURCES)
         return()
     endif()
-
-# compile host code
     set(HOST_EXECUTABLE "host_${parsed_TEST_NAME}")
     if (WIN32)
-        add_executable(${HOST_EXECUTABLE} ${parsed_HOST_SOURCES})
+        add_executable(${HOST_EXECUTABLE} ${parsed_HOST_SOURCES} ${ISPC_BUILD_OUTPUT} ${CMAKE_CURRENT_SOURCE_DIR}/${parsed_ISPC_SRC_NAME}.ispc)
         target_include_directories(${HOST_EXECUTABLE} PRIVATE "${COMMON_PATH}"
                                    "${CMC_INSTALL_PATH}/include"
                                    "${MDF_ROOT}/runtime/include"
                                    "${MDF_ROOT}/examples/helper")
-
         target_link_libraries(${HOST_EXECUTABLE} "${MDF_ROOT}/runtime/lib/x86/igfx11cmrt32.lib" AdvAPI32 Ole32)
         install(TARGETS "${HOST_EXECUTABLE}" RUNTIME DESTINATION ${CMAKE_CURRENT_BINARY_DIR}
             PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE)
+		file(COPY "${MDF_ROOT}/runtime/lib/x86/igfx11cmrt32.dll" DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
+	    set_target_properties(${HOST_EXECUTABLE} PROPERTIES FOLDER "GEN_Examples")
     else()
-# L0 build
+		# L0 build
         # TODO: check exists
         set(DPCPP_CLANG_EXECUTABLE "${DPCPP_ROOT}/bin/clang++")
         add_custom_target(${HOST_EXECUTABLE} ALL
-            COMMAND ${DPCPP_CLANG_EXECUTABLE} -fsycl -isystem ${COMMON_PATH} ${parsed_HOST_SOURCES} -D LZERO -o ${HOST_EXECUTABLE} -L${DPCPP_ROOT}/lib -llevel_zero 
+            COMMAND ${DPCPP_CLANG_EXECUTABLE} -fsycl -isystem ${COMMON_PATH} ${parsed_HOST_SOURCES} -D LZERO -o ${HOST_EXECUTABLE} -L${DPCPP_ROOT}/lib -llevel_zero
             WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
             VERBATIM
         )
     endif()
-    # compile cm kernel if present
+	
+    # Compile CM kernel if present
     if (parsed_CM_TEST AND MDF)
         set(parsed_TEST_NAME "${parsed_TEST_NAME}_cm")
         set(CM_TEST_NAME "${parsed_TEST_NAME}")
@@ -82,49 +84,40 @@ function(add_perf_example)
         if (WIN32)
             set(CMC_SUPPORT_INCLUDE ${CMC_INSTALL_PATH}/include)
 
-	    add_custom_target(${parsed_CM_SRC_NAME} ALL
-            COMMAND ${CMC_EXECUTABLE} -isystem ${CMC_SUPPORT_INCLUDE} -march=SKL "/DCM_PTRSIZE=32" ${CMAKE_CURRENT_SOURCE_DIR}/${parsed_CM_SRC_NAME}.cpp -o ${parsed_CM_OBJ_NAME}
-            WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
-            VERBATIM
-            DEPENDS ${CMC_EXECUTABLE}
-            DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/${parsed_CM_SRC_NAME}.cpp
-            )
+			add_custom_command(${parsed_CM_SRC_NAME} ALL
+				COMMAND ${CMC_EXECUTABLE} -isystem ${CMC_SUPPORT_INCLUDE} -march=SKL "/DCM_PTRSIZE=32" ${CMAKE_CURRENT_SOURCE_DIR}/${parsed_CM_SRC_NAME}.cpp -o ${parsed_CM_OBJ_NAME}
+				WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+				VERBATIM
+				DEPENDS ${CMC_EXECUTABLE}
+				DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/${parsed_CM_SRC_NAME}.cpp
+			)
 
-            set(CM_HOST_BINARY "host_${parsed_TEST_NAME}")
-            add_executable(${CM_HOST_BINARY} ${parsed_CM_HOST_SOURCES}) 
-	else()
-	    add_custom_command(
-                       OUTPUT ${CM_BUILD_OUTPUT}
-                       COMMAND ${CMC_EXECUTABLE} -march=SKL -fcmocl "/DCM_PTRSIZE=32" -emit-spirv -o ${parsed_CM_OBJ_NAME} ${CMAKE_CURRENT_SOURCE_DIR}/${parsed_CM_SRC_NAME}.cpp
-                       VERBATIM
-                       DEPENDS ${CMC_EXECUTABLE}
-                      )
-
-            add_custom_target(${parsed_CM_TEST_NAME} ALL DEPENDS ${CM_BUILD_OUTPUT})
-          
-            set(CM_HOST_BINARY "host_${parsed_CM_TEST_NAME}")
-        endif()
-
-        if (WIN32)
-            target_include_directories(${CM_HOST_BINARY} PRIVATE "${COMMON_PATH}"
+			set(CM_HOST_BINARY "host_${parsed_TEST_NAME}")
+			add_executable(${CM_HOST_BINARY} ${parsed_CM_HOST_SOURCES} ${parsed_CM_SRC_NAME})
+			target_compile_options(${CM_HOST_BINARY} PRIVATE /nologo /DCM_DX11 /EHsc /D_CRT_SECURE_NO_WARNINGS /Zi /DWIN32 ${parsed_CM_HOST_FLAGS})
+			target_include_directories(${CM_HOST_BINARY} PRIVATE "${COMMON_PATH}"
                                        "${CMC_INSTALL_PATH}/include"
                                        "${MDF_ROOT}/runtime/include"
                                        "${MDF_ROOT}/examples/helper")
-
             target_link_libraries(${CM_HOST_BINARY} "${MDF_ROOT}/runtime/lib/x86/igfx11cmrt32.lib" AdvAPI32 Ole32)
-            target_compile_options(${CM_HOST_BINARY} PRIVATE ${parsed_CM_HOST_FLAGS})
             install(TARGETS "${CM_HOST_BINARY}" RUNTIME DESTINATION ${CMAKE_CURRENT_BINARY_DIR}
-            PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE)
+				PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE)
+			set_target_properties(${CM_HOST_BINARY} PROPERTIES FOLDER "GEN_Examples")
+		else()
+			add_custom_command(
+			   OUTPUT ${CM_BUILD_OUTPUT}
+			   COMMAND ${CMC_EXECUTABLE} -march=SKL -fcmocl "/DCM_PTRSIZE=32" -emit-spirv -o ${parsed_CM_OBJ_NAME} ${CMAKE_CURRENT_SOURCE_DIR}/${parsed_CM_SRC_NAME}.cpp
+			   VERBATIM
+			   DEPENDS ${CMC_EXECUTABLE}
+			)
 
-        else()
-	    set(DPCPP_CLANG_EXECUTABLE "${DPCPP_ROOT}/bin/clang++")
+			add_custom_target(${parsed_CM_TEST_NAME} ALL DEPENDS ${CM_BUILD_OUTPUT})
+			set(CM_HOST_BINARY "host_${parsed_CM_TEST_NAME}")
+			set(DPCPP_CLANG_EXECUTABLE "${DPCPP_ROOT}/bin/clang++")
             add_custom_target(${CM_HOST_BINARY} ALL
-            COMMAND ${DPCPP_CLANG_EXECUTABLE} -fsycl -isystem ${COMMON_PATH} ${parsed_HOST_SOURCES} -D CMKERNEL -D LZERO -o ${CM_HOST_BINARY} -L${DPCPP_ROOT}/lib -llevel_zero 
-            WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
-            VERBATIM
-        )
-        endif()
-
+				COMMAND ${DPCPP_CLANG_EXECUTABLE} -fsycl -isystem ${COMMON_PATH} ${parsed_HOST_SOURCES} -D CMKERNEL -D LZERO -o ${CM_HOST_BINARY} -L${DPCPP_ROOT}/lib -llevel_zero
+				WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+				VERBATIM)
+		endif()
     endif()
-
 endfunction()

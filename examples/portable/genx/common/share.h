@@ -28,16 +28,16 @@
 #if !defined(GEN_KERNEL)
 #define fptype float
 #include <cassert>
+#include <chrono>
 #include <cmath>
 #include <cstdio>
 #include <cstdlib>
-#include <chrono>
 #include <thread>
 
 #ifndef LZERO
-        #include <cm_rt.h>
-#else        
-        #include "common_helpers.h"
+#include <cm_rt.h>
+#else
+#include "common_helpers.h"
 #endif
 
 using namespace std;

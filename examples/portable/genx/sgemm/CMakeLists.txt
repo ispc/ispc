@@ -1,5 +1,5 @@
 #
-#  Copyright (c) 2019, Intel Corporation
+#  Copyright (c) 2019-2020, Intel Corporation
 #  All rights reserved.
 #
 #  Redistribution and use in source and binary forms, with or without
@@ -34,33 +34,26 @@ message(STATUS "Processing sgemm/CMakeLists.txt")
 cmake_minimum_required(VERSION 3.12)
 
 set(ISPC_SRC_NAME "naive_sgemm")
+set(TEST_NAME "naive_sgemm")
+set(CM_SRC_NAME "NaiveCMSgemm_genx")
 
 if(WIN32)
-    set(HOST_NAME "host")
-    set(TEST_NAME "naive_sgemm")
+    set(HOST_NAME "cmhost")
     set(ISPC_OBJ_NAME "${CMAKE_CURRENT_BINARY_DIR}/naive_sgemm_mt.isa")
     set(HOST_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/${HOST_NAME}.cpp)
-
+	set(ISPC_FLAGS "--addressing=32" "--arch=genx32")
+	
     set(CM_OBJ_NAME "${CMAKE_CURRENT_BINARY_DIR}/naive_sgemm_mt_cm.isa")
-    set(CM_SRC_NAME "NaiveCMSgemm_genx")
-
     set(CM_HOST_NAME "SgemmSVMMultithread")
-    #set(CM_HOST_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/${CM_HOST_NAME}.cpp)
 else()
     set(HOST_NAME "l0host")
-    set(TEST_NAME "naive_sgemm")
     set(ISPC_OBJ_NAME "${CMAKE_CURRENT_BINARY_DIR}/naive_sgemm_mt.spv")
-    set(ISPC_FLAGS "--emit-spirv" "--addressing=64" "-DISPC_GENX_ENABLED")
+	set(HOST_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/${HOST_NAME}.cpp)
+    set(ISPC_FLAGS "--emit-spirv" "--addressing=64" "--arch=genx64")
 
     set(CM_OBJ_NAME "${CMAKE_CURRENT_BINARY_DIR}/naive_sgemm_cm_mt.spv")
-    set(CM_SRC_NAME "NaiveCMSgemm_genx")
-
     set(CM_TEST_NAME "naive_sgemm_cm")
-    set(HOST_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/${HOST_NAME}.cpp)
 endif()
-
-
-
 
 add_perf_example(
     NAME "sgemm"
@@ -78,5 +71,3 @@ add_perf_example(
     CM_HOST_SOURCES ${HOST_SOURCES}
     CM_HOST_FLAGS "/DCMHOST"
 )
-
-
