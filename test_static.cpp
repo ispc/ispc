@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2015, Intel Corporation
+  Copyright (c) 2010-2020, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -58,8 +58,13 @@
 #define v4_varying_f_sz f_sz
 #define v8_varying_f_sz f_sz
 #define v16_varying_f_sz f_sz
+#define v32_varying_f_sz f_sz
+#define v64_varying_f_sz f_sz
 #include TEST_HEADER
 #endif
+
+// For current tests we need max width multiplied by 4, i.e. 64*4
+#define ARRAY_SIZE 256
 
 extern "C" {
 extern int width();
@@ -118,13 +123,13 @@ int main(int argc, char *argv[]) {
     int w = width();
     assert(w <= 64);
 
-    ALIGN float returned_result[64];
-    ALIGN float vfloat[64];
-    ALIGN double vdouble[64];
-    ALIGN int vint[64];
-    ALIGN int vint2[64];
+    ALIGN float returned_result[ARRAY_SIZE];
+    ALIGN float vfloat[ARRAY_SIZE];
+    ALIGN double vdouble[ARRAY_SIZE];
+    ALIGN int vint[ARRAY_SIZE];
+    ALIGN int vint2[ARRAY_SIZE];
 
-    for (int i = 0; i < 64; ++i) {
+    for (int i = 0; i < ARRAY_SIZE; ++i) {
         returned_result[i] = -1e20;
         vfloat[i] = i + 1;
         vdouble[i] = i + 1;
@@ -154,8 +159,8 @@ int main(int argc, char *argv[]) {
 #error "Unknown or unset TEST_SIG value"
 #endif
 
-    float expected_result[64];
-    memset(expected_result, 0, 64 * sizeof(float));
+    float expected_result[ARRAY_SIZE];
+    memset(expected_result, 0, ARRAY_SIZE * sizeof(float));
     result(expected_result);
 
     int errors = 0;
