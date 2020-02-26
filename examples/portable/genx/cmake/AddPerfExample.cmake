@@ -57,7 +57,7 @@ function(add_perf_example)
         add_executable(${HOST_EXECUTABLE} ${parsed_HOST_SOURCES} ${ISPC_BUILD_OUTPUT} ${CMAKE_CURRENT_SOURCE_DIR}/${parsed_ISPC_SRC_NAME}.ispc)
         target_compile_options(${HOST_EXECUTABLE} PRIVATE /nologo /DCM_DX11 /EHsc /D_CRT_SECURE_NO_WARNINGS /Zi /DWIN32)
         target_include_directories(${HOST_EXECUTABLE} PRIVATE "${COMMON_PATH}"
-                                   "${CMC_INSTALL_PATH}/include"
+                                   "${CMC_INCLUDE_PATH}"
                                    "${MDF_ROOT}/runtime/include"
                                    "${MDF_ROOT}/examples/helper")
         target_link_libraries(${HOST_EXECUTABLE} "${MDF_ROOT}/runtime/lib/x86/igfx11cmrt32.lib" AdvAPI32 Ole32)
@@ -83,9 +83,8 @@ function(add_perf_example)
         list(APPEND CM_BUILD_OUTPUT ${parsed_CM_OBJ_NAME})
 
         if (WIN32)
-            set(CMC_SUPPORT_INCLUDE ${CMC_INSTALL_PATH}/include)
             add_custom_command(OUTPUT ${parsed_CM_SRC_NAME}
-                COMMAND ${CMC_EXECUTABLE} -isystem ${CMC_SUPPORT_INCLUDE} -march=SKL "/DCM_PTRSIZE=32" ${CMAKE_CURRENT_SOURCE_DIR}/${parsed_CM_SRC_NAME}.cpp -o ${parsed_CM_OBJ_NAME}
+                COMMAND ${CMC_EXECUTABLE} -isystem ${CMC_INCLUDE_PATH} -march=SKL "/DCM_PTRSIZE=32" ${CMAKE_CURRENT_SOURCE_DIR}/${parsed_CM_SRC_NAME}.cpp -o ${parsed_CM_OBJ_NAME}
                 WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
                 VERBATIM
                 DEPENDS ${CMC_EXECUTABLE}
@@ -96,7 +95,7 @@ function(add_perf_example)
             add_executable(${CM_HOST_BINARY} ${parsed_CM_HOST_SOURCES} ${parsed_CM_SRC_NAME})
             target_compile_options(${CM_HOST_BINARY} PRIVATE /nologo /DCM_DX11 /EHsc /D_CRT_SECURE_NO_WARNINGS /Zi /DWIN32 ${parsed_CM_HOST_FLAGS})
             target_include_directories(${CM_HOST_BINARY} PRIVATE "${COMMON_PATH}"
-                                       "${CMC_INSTALL_PATH}/include"
+                                       "${CMC_INCLUDE_PATH}"
                                        "${MDF_ROOT}/runtime/include"
                                        "${MDF_ROOT}/examples/helper")
             target_link_libraries(${CM_HOST_BINARY} "${MDF_ROOT}/runtime/lib/x86/igfx11cmrt32.lib" AdvAPI32 Ole32)
