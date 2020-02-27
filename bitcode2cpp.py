@@ -50,6 +50,9 @@ if args[0].os == "UNIX":
 elif args[0].os == "WINDOWS":
     target_os_old = "win"
     target_os = "windows"
+elif args[0].os == "WEB":
+    target_os_old = "web"
+    target_os = "web"
 # Exact OS names for builtins.c
 elif args[0].os in ["windows", "linux", "freebsd", "macos", "android", "ios", "ps4"]:
     target_os_old = args[0].os
@@ -119,6 +122,8 @@ elif args[0].type == 'ispc-target':
     elif "generic" in target:
         # x86 and x86_64 for generic is just a convention
         arch = "x86" if args[0].runtime == "32" else "x86_64" if args[0].runtime == "64" else "error"
+    elif "wasm32" in target:
+        arch = "wasm32"
     sys.stdout.write("static BitcodeLib " + name + "_lib(" +
         name + ", " +
         name + "_length, " +

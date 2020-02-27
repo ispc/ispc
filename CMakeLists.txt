@@ -45,6 +45,7 @@ set(ISPC_BUILD TRUE)
 project(${PROJECT_NAME})
 
 option(ARM_ENABLED "Enable ARM support" ON)
+option(WASM_ENABLED "Enable experimental Web Assembly support" OFF)
 option(ISPC_INCLUDE_EXAMPLES "Generate build targets for the ISPC examples" ON)
 option(ISPC_INCLUDE_TESTS "Generate build targets for the ISPC tests." ON)
 option(ISPC_INCLUDE_UTILS "Generate build targets for the utils." ON)
@@ -207,6 +208,9 @@ if (ARM_ENABLED)
     list(APPEND LLVM_COMPONENTS arm aarch64)
     list(APPEND ISPC_TARGETS neon-i8x16 neon-i16x8 neon-i32x4 neon-i32x8)
 endif()
+if (WASM_ENABLED)
+    list(APPEND LLVM_COMPONENTS webassembly)
+endif()
 get_llvm_libfiles(LLVM_LIBRARY_LIST ${LLVM_COMPONENTS})
 get_llvm_cppflags(LLVM_CPP_FLAGS)
 
@@ -281,6 +285,10 @@ endif()
 
 if (ARM_ENABLED)
     target_compile_definitions(${PROJECT_NAME} PRIVATE ISPC_ARM_ENABLED)
+endif()
+
+if (WASM_ENABLED)
+    target_compile_definitions(${PROJECT_NAME} PRIVATE ISPC_WASM_ENABLED)
 endif()
 
 if (ISPC_NO_DUMPS)

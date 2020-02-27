@@ -946,6 +946,22 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, bool pic, boo
         unsupported_target = true;
         break;
 #endif
+#ifdef ISPC_WASM_ENABLED
+    case ISPCTarget::wasm32_i32x4:
+        this->m_isa = Target::WASM;
+        this->m_nativeVectorWidth = 4;
+        this->m_nativeVectorAlignment = 16;
+        this->m_dataTypeWidth = 32;
+        this->m_vectorWidth = 4;
+        this->m_hasHalf = false;
+        this->m_maskingIsFree = false;
+        this->m_maskBitCount = 1;
+        break;
+#else
+    case ISPCTarget::wasm32_i32x4:
+        unsupported_target = true;
+        break;
+#endif
     case ISPCTarget::none:
     case ISPCTarget::host:
     case ISPCTarget::error:
@@ -1192,7 +1208,17 @@ std::string Target::GetTripleString() const {
         triple.setVendor(llvm::Triple::VendorType::SCEI);
         triple.setOS(llvm::Triple::OSType::PS4);
         break;
+    case TargetOS::web:
+        if (m_arch != Arch::wasm32) {
+            Error(SourcePos(), "Web target supports only wasm32.");
+            exit(1);
+        }
+        triple.setArch(llvm::Triple::ArchType::wasm32);
+        triple.setVendor(llvm::Triple::VendorType::UnknownVendor);
+        triple.setOS(llvm::Triple::OSType::UnknownOS);
+        break;
     default:
+
         Error(SourcePos(), "Invalid target OS.");
         exit(1);
     }
@@ -1208,6 +1234,10 @@ const char *Target::ISAToString(ISA isa) {
 #ifdef ISPC_ARM_ENABLED
     case Target::NEON:
         return "neon";
+#endif
+#ifdef ISPC_WASM_ENABLED
+    case Target::WASM:
+        return "wasm";
 #endif
     case Target::SSE2:
         return "sse2";
@@ -1239,6 +1269,10 @@ const char *Target::ISAToTargetString(ISA isa) {
 #ifdef ISPC_ARM_ENABLED
     case Target::NEON:
         return "neon-i32x4";
+#endif
+#ifdef ISPC_WASM_ENABLED
+    case Target::WASM:
+        return "wasm-i32x4";
 #endif
     case Target::SSE2:
         return "sse2-i32x4";

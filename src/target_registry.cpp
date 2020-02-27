@@ -132,8 +132,10 @@ const BitcodeLib *TargetLibRegistry::getISPCTargetLib(ISPCTarget target, TargetO
         target = ISPCTarget::sse4_i32x4;
     }
 
-    // Canonicalize OS, as for the target we only differentiate between Windows and Unix.
-    os = (os == TargetOS::windows) ? TargetOS::windows : TargetOS::linux;
+    if (os != TargetOS::web) {
+        // Canonicalize OS, as for the target we only differentiate between Windows and Unix.
+        os = (os == TargetOS::windows) ? TargetOS::windows : TargetOS::linux;
+    }
     auto result = m_targets.find(Triple(target, os, arch).encode());
     if (result != m_targets.end()) {
         return result->second;

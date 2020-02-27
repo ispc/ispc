@@ -67,6 +67,8 @@ std::string ArchToString(Arch arch) {
         return "arm";
     case Arch::aarch64:
         return "aarch64";
+    case Arch::wasm32:
+        return "wasm32";
     case Arch::error:
         return "error";
     default:
@@ -138,6 +140,8 @@ ISPCTarget ParseISPCTarget(std::string target) {
         return ISPCTarget::neon_i32x4;
     } else if (target == "neon-i32x8") {
         return ISPCTarget::neon_i32x8;
+    } else if (target == "wasm-i32x4") {
+        return ISPCTarget::wasm32_i32x4;
     }
 
     return ISPCTarget::error;
@@ -231,6 +235,8 @@ std::string ISPCTargetToString(ISPCTarget target) {
         return "neon-i32x4";
     case ISPCTarget::neon_i32x8:
         return "neon-i32x8";
+    case ISPCTarget::wasm32_i32x4:
+        return "wasm32";  
     case ISPCTarget::none:
     case ISPCTarget::error:
         // Fall through
@@ -291,6 +297,15 @@ bool ISPCTargetIsNeon(ISPCTarget target) {
     }
 }
 
+bool ISPCTargetIsWasm(ISPCTarget target) {
+    switch (target) {
+    case ISPCTarget::wasm32_i32x4:
+        return true;
+    default:
+        return false;
+    }
+}
+
 TargetOS ParseOS(std::string os) {
     std::string supportedOses = g->target_registry->getSupportedOSes().c_str();
     if (supportedOses.find(os) == std::string::npos) {
@@ -310,6 +325,8 @@ TargetOS ParseOS(std::string os) {
         return TargetOS::ios;
     } else if (os == "ps4") {
         return TargetOS::ps4;
+    } else if (os == "web") {
+        return TargetOS::web;
     }
     return TargetOS::error;
 }
@@ -330,6 +347,8 @@ std::string OSToString(TargetOS os) {
         return "iOS";
     case TargetOS::ps4:
         return "PS4";
+    case TargetOS::web:
+        return "web";
     case TargetOS::error:
         return "error";
     }
@@ -352,6 +371,8 @@ std::string OSToLowerString(TargetOS os) {
         return "ios";
     case TargetOS::ps4:
         return "ps4";
+    case TargetOS::web:
+        return "web";
     case TargetOS::error:
         return "error";
     }

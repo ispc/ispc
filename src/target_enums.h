@@ -40,14 +40,14 @@
 #include <string>
 #include <vector>
 
-enum class TargetOS { windows, linux, freebsd, macos, android, ios, ps4, error };
+enum class TargetOS { windows, linux, freebsd, macos, android, ios, ps4, web, error };
 
 TargetOS ParseOS(std::string os);
 std::string OSToString(TargetOS os);
 std::string OSToLowerString(TargetOS os);
 TargetOS GetHostOS();
 
-enum class Arch { none, x86, x86_64, arm, aarch64, error };
+enum class Arch { none, x86, x86_64, arm, aarch64, wasm32, error };
 
 Arch ParseArch(std::string arch);
 std::string ArchToString(Arch arch);
@@ -82,6 +82,7 @@ enum class ISPCTarget {
     neon_i16x8,
     neon_i32x4,
     neon_i32x8,
+    wasm32_i32x4,
     error
 };
 
@@ -91,3 +92,4 @@ std::string ISPCTargetToString(ISPCTarget target);
 bool ISPCTargetIsX86(ISPCTarget target);
 bool ISPCTargetIsGeneric(ISPCTarget target);
 bool ISPCTargetIsNeon(ISPCTarget target);
+bool ISPCTargetIsWasm(ISPCTarget target);
