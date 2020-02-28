@@ -81,9 +81,9 @@ const Type *Expr::GetLValueType() const {
     return NULL;
 }
 
-llvm::Constant *Expr::GetConstant(const Type *type) const {
+std::pair<llvm::Constant *, bool> Expr::GetConstant(const Type *type) const {
     // The default is failure; just return NULL
-    return NULL;
+    return std::pair<llvm::Constant *, bool>(NULL, false);
 }
 
 Symbol *Expr::GetBaseSymbol() const {
@@ -585,7 +585,8 @@ void InitSymbol(llvm::Value *ptr, const Type *symType, Expr *initExpr, FunctionE
         return;
 
     // See if we have a constant initializer a this point
-    llvm::Constant *constValue = initExpr->GetConstant(symType);
+    std::pair<llvm::Constant *, bool> constValPair = initExpr->GetConstant(symType);
+    llvm::Constant *constValue = constValPair.first;
     if (constValue != NULL) {
         // It'd be nice if we could just do a StoreInst(constValue, ptr)
         // at this point, but unfortunately that doesn't generate great
@@ -2647,42 +2648,67 @@ void BinaryExpr::Print() const {
     pos.Print();
 }
 
-llvm::Constant *BinaryExpr::GetConstant(const Type *type) const {
+std::pair<llvm::Constant *, bool> BinaryExpr::GetConstant(const Type *type) const {
 
     // Are we doing something like (basePtr + offset)[...] = ... for a Global
     // Variable
     if (!GetLValueType())
-        return NULL;
+        return std::pair<llvm::Constant *, bool>(NULL, false);
 
+    // We are limiting cases to just addition and subtraction involving
+    // pointer addresses
+    // Case 1 : first argument is a pointer address.
+    // In this case as long as the second argument is a constant value, we are fine
+    // Case 2 : second argument is a pointer address.
+    // In this case, it has to be an addition with first argument as
+    // a constant value.
     if (!((op == BinaryExpr::Op::Add) || (op == BinaryExpr::Op::Sub)))
-        return NULL;
-    else if (op == BinaryExpr::Op::Sub) {
-        if (const PointerType *pt1 = CastType<PointerType>(arg1->GetType())) {
-            return NULL;
-        }
+        return std::pair<llvm::Constant *, bool>(NULL, false);
+    if (op == BinaryExpr::Op::Sub) {
+        // Ignore cases where subtrahend is a PointerType
+        // Eg. b - 5 is valid but 5 - b is not.
+        if (CastType<PointerType>(arg1->GetType()))
+            return std::pair<llvm::Constant *, bool>(NULL, false);
     }
 
+    // 'isNotValidForMultiTargetGlobal' is required to let the caller know
+    // that the llvm::constant value returned cannot be used in case of
+    // multi-target compilation for initialization of globals. This is due
+    // to different constant values for different targets, i.e. computation
+    // involving sizeof() of varying types.
+    // Since converting expr to constant can be a recursive process, we need
+    // to ensure that if the flag is set by any expr in the chain, it's
+    // reflected in the final return value.
+    bool isNotValidForMultiTargetGlobal = false;
     if (const PointerType *pt0 = CastType<PointerType>(arg0->GetType())) {
-        llvm::Constant *c1 = arg0->GetConstant(pt0);
+        std::pair<llvm::Constant *, bool> c1Pair = arg0->GetConstant(pt0);
+        llvm::Constant *c1 = c1Pair.first;
+        isNotValidForMultiTargetGlobal = isNotValidForMultiTargetGlobal || c1Pair.second;
         ConstExpr *cExpr = llvm::dyn_cast<ConstExpr>(arg1);
         if ((cExpr == NULL) || (c1 == NULL))
-            return NULL;
-        llvm::Constant *c2 = cExpr->GetConstant(cExpr->GetType());
+            return std::pair<llvm::Constant *, bool>(NULL, false);
+        std::pair<llvm::Constant *, bool> c2Pair = cExpr->GetConstant(cExpr->GetType());
+        llvm::Constant *c2 = c2Pair.first;
+        isNotValidForMultiTargetGlobal = isNotValidForMultiTargetGlobal || c2Pair.second;
         if (op == BinaryExpr::Op::Sub)
             c2 = llvm::ConstantExpr::getNeg(c2);
         llvm::Constant *c = llvm::ConstantExpr::getGetElementPtr(PTYPE(c1), c1, c2);
-        return c;
+        return std::pair<llvm::Constant *, bool>(c, isNotValidForMultiTargetGlobal);
     } else if (const PointerType *pt1 = CastType<PointerType>(arg1->GetType())) {
-        llvm::Constant *c1 = arg1->GetConstant(pt1);
+        std::pair<llvm::Constant *, bool> c1Pair = arg1->GetConstant(pt1);
+        llvm::Constant *c1 = c1Pair.first;
+        isNotValidForMultiTargetGlobal = isNotValidForMultiTargetGlobal || c1Pair.second;
         ConstExpr *cExpr = llvm::dyn_cast<ConstExpr>(arg0);
         if ((cExpr == NULL) || (c1 == NULL))
-            return NULL;
-        llvm::Constant *c2 = cExpr->GetConstant(cExpr->GetType());
+            return std::pair<llvm::Constant *, bool>(NULL, false);
+        std::pair<llvm::Constant *, bool> c2Pair = cExpr->GetConstant(cExpr->GetType());
+        llvm::Constant *c2 = c2Pair.first;
+        isNotValidForMultiTargetGlobal = isNotValidForMultiTargetGlobal || c2Pair.second;
         llvm::Constant *c = llvm::ConstantExpr::getGetElementPtr(PTYPE(c1), c1, c2);
-        return c;
+        return std::pair<llvm::Constant *, bool>(c, isNotValidForMultiTargetGlobal);
     }
 
-    return NULL;
+    return std::pair<llvm::Constant *, bool>(NULL, false);
 }
 ///////////////////////////////////////////////////////////////////////////
 // AssignExpr
@@ -3711,8 +3737,9 @@ ExprList *ExprList::Optimize() { return this; }
 
 ExprList *ExprList::TypeCheck() { return this; }
 
-llvm::Constant *ExprList::GetConstant(const Type *type) const {
+std::pair<llvm::Constant *, bool> ExprList::GetConstant(const Type *type) const {
     bool isVaryingInit = false;
+    bool isNotValidForMultiTargetGlobal = false;
     if (exprs.size() == 1 &&
         (CastType<AtomicType>(type) != NULL || CastType<EnumType>(type) != NULL || CastType<PointerType>(type) != NULL))
         return exprs[0]->GetConstant(type);
@@ -3722,7 +3749,7 @@ llvm::Constant *ExprList::GetConstant(const Type *type) const {
         if (type->IsVaryingType() == true) {
             isVaryingInit = true;
         } else
-            return NULL;
+            return std::pair<llvm::Constant *, bool>(NULL, false);
     }
 
     std::string name;
@@ -3744,19 +3771,19 @@ llvm::Constant *ExprList::GetConstant(const Type *type) const {
               "Initializer list for %s \"%s\" must have no more than %d "
               "elements (has %d).",
               name.c_str(), errType->GetString().c_str(), elementCount, (int)exprs.size());
-        return NULL;
+        return std::pair<llvm::Constant *, bool>(NULL, false);
     } else if ((isVaryingInit == true) && ((int)exprs.size() < elementCount)) {
         Error(pos,
               "Initializer list for %s \"%s\" must have %d "
               "elements (has %d).",
               name.c_str(), type->GetString().c_str(), elementCount, (int)exprs.size());
-        return NULL;
+        return std::pair<llvm::Constant *, bool>(NULL, false);
     }
 
     std::vector<llvm::Constant *> cv;
     for (unsigned int i = 0; i < exprs.size(); ++i) {
         if (exprs[i] == NULL)
-            return NULL;
+            return std::pair<llvm::Constant *, bool>(NULL, false);
         const Type *elementType =
             (isVaryingInit == true) ? type->GetAsUniformType() : collectionType->GetElementType(i);
 
@@ -3769,17 +3796,18 @@ llvm::Constant *ExprList::GetConstant(const Type *type) const {
             expr = TypeConvertExpr(exprs[i], elementType, "initializer list");
             if (expr == NULL) {
                 AssertPos(pos, m->errorCount > 0);
-                return NULL;
+                return std::pair<llvm::Constant *, bool>(NULL, false);
             }
             // Re-establish const-ness if possible
             expr = ::Optimize(expr);
         }
-
-        llvm::Constant *c = expr->GetConstant(elementType);
+        std::pair<llvm::Constant *, bool> cPair = expr->GetConstant(elementType);
+        llvm::Constant *c = cPair.first;
         if (c == NULL)
             // If this list element couldn't convert to the right constant
             // type for the corresponding collection member, then give up.
-            return NULL;
+            return std::pair<llvm::Constant *, bool>(NULL, false);
+        isNotValidForMultiTargetGlobal = isNotValidForMultiTargetGlobal || cPair.second;
         cv.push_back(c);
     }
 
@@ -3789,12 +3817,12 @@ llvm::Constant *ExprList::GetConstant(const Type *type) const {
             const Type *elementType = collectionType->GetElementType(i);
             if (elementType == NULL) {
                 AssertPos(pos, m->errorCount > 0);
-                return NULL;
+                return std::pair<llvm::Constant *, bool>(NULL, false);
             }
             llvm::Type *llvmType = elementType->LLVMType(g->ctx);
             if (llvmType == NULL) {
                 AssertPos(pos, m->errorCount > 0);
-                return NULL;
+                return std::pair<llvm::Constant *, bool>(NULL, false);
             }
 
             llvm::Constant *c = llvm::Constant::getNullValue(llvmType);
@@ -3805,12 +3833,13 @@ llvm::Constant *ExprList::GetConstant(const Type *type) const {
     if (CastType<StructType>(type) != NULL) {
         llvm::StructType *llvmStructType = llvm::dyn_cast<llvm::StructType>(collectionType->LLVMType(g->ctx));
         AssertPos(pos, llvmStructType != NULL);
-        return llvm::ConstantStruct::get(llvmStructType, cv);
+        return std::pair<llvm::Constant *, bool>(llvm::ConstantStruct::get(llvmStructType, cv),
+                                                 isNotValidForMultiTargetGlobal);
     } else {
         llvm::Type *lt = type->LLVMType(g->ctx);
         llvm::ArrayType *lat = llvm::dyn_cast<llvm::ArrayType>(lt);
         if (lat != NULL)
-            return llvm::ConstantArray::get(lat, cv);
+            return std::pair<llvm::Constant *, bool>(llvm::ConstantArray::get(lat, cv), isNotValidForMultiTargetGlobal);
         else if (type->IsVaryingType()) {
             // uniform short vector type
             llvm::VectorType *lvt = llvm::dyn_cast<llvm::VectorType>(lt);
@@ -3821,7 +3850,7 @@ llvm::Constant *ExprList::GetConstant(const Type *type) const {
                 cv.push_back(llvm::UndefValue::get(lvt->getElementType()));
             }
 
-            return llvm::ConstantVector::get(cv);
+            return std::pair<llvm::Constant *, bool>(llvm::ConstantVector::get(cv), isNotValidForMultiTargetGlobal);
         } else {
             // uniform short vector type
             AssertPos(pos, type->IsUniformType() && CastType<VectorType>(type) != NULL);
@@ -3839,10 +3868,10 @@ llvm::Constant *ExprList::GetConstant(const Type *type) const {
                 cv.push_back(llvm::UndefValue::get(lvt->getElementType()));
             }
 
-            return llvm::ConstantVector::get(cv);
+            return std::pair<llvm::Constant *, bool>(llvm::ConstantVector::get(cv), isNotValidForMultiTargetGlobal);
         }
     }
-    return NULL;
+    return std::pair<llvm::Constant *, bool>(NULL, false);
 }
 
 int ExprList::EstimateCost() const { return 0; }
@@ -5732,9 +5761,10 @@ int ConstExpr::GetValues(uint32_t *up, bool forceVarying) const {
 
 int ConstExpr::Count() const { return GetType()->IsVaryingType() ? g->target->getVectorWidth() : 1; }
 
-llvm::Constant *ConstExpr::GetConstant(const Type *type) const {
+std::pair<llvm::Constant *, bool> ConstExpr::GetConstant(const Type *type) const {
     // Caller shouldn't be trying to stuff a varying value here into a
     // constant type.
+    bool isNotValidForMultiTargetGlobal = false;
     if (type->IsUniformType())
         AssertPos(pos, Count() == 1);
 
@@ -5743,80 +5773,80 @@ llvm::Constant *ConstExpr::GetConstant(const Type *type) const {
         bool bv[ISPC_MAX_NVEC];
         GetValues(bv, type->IsVaryingType());
         if (type->IsUniformType())
-            return bv[0] ? LLVMTrue : LLVMFalse;
+            return std::pair<llvm::Constant *, bool>(bv[0] ? LLVMTrue : LLVMFalse, isNotValidForMultiTargetGlobal);
         else
-            return LLVMBoolVector(bv);
+            return std::pair<llvm::Constant *, bool>(LLVMBoolVector(bv), isNotValidForMultiTargetGlobal);
     } else if (Type::Equal(type, AtomicType::UniformInt8) || Type::Equal(type, AtomicType::VaryingInt8)) {
         int8_t iv[ISPC_MAX_NVEC];
         GetValues(iv, type->IsVaryingType());
         if (type->IsUniformType())
-            return LLVMInt8(iv[0]);
+            return std::pair<llvm::Constant *, bool>(LLVMInt8(iv[0]), isNotValidForMultiTargetGlobal);
         else
-            return LLVMInt8Vector(iv);
+            return std::pair<llvm::Constant *, bool>(LLVMInt8Vector(iv), isNotValidForMultiTargetGlobal);
     } else if (Type::Equal(type, AtomicType::UniformUInt8) || Type::Equal(type, AtomicType::VaryingUInt8)) {
         uint8_t uiv[ISPC_MAX_NVEC];
         GetValues(uiv, type->IsVaryingType());
         if (type->IsUniformType())
-            return LLVMUInt8(uiv[0]);
+            return std::pair<llvm::Constant *, bool>(LLVMUInt8(uiv[0]), isNotValidForMultiTargetGlobal);
         else
-            return LLVMUInt8Vector(uiv);
+            return std::pair<llvm::Constant *, bool>(LLVMUInt8Vector(uiv), isNotValidForMultiTargetGlobal);
     } else if (Type::Equal(type, AtomicType::UniformInt16) || Type::Equal(type, AtomicType::VaryingInt16)) {
         int16_t iv[ISPC_MAX_NVEC];
         GetValues(iv, type->IsVaryingType());
         if (type->IsUniformType())
-            return LLVMInt16(iv[0]);
+            return std::pair<llvm::Constant *, bool>(LLVMInt16(iv[0]), isNotValidForMultiTargetGlobal);
         else
-            return LLVMInt16Vector(iv);
+            return std::pair<llvm::Constant *, bool>(LLVMInt16Vector(iv), isNotValidForMultiTargetGlobal);
     } else if (Type::Equal(type, AtomicType::UniformUInt16) || Type::Equal(type, AtomicType::VaryingUInt16)) {
         uint16_t uiv[ISPC_MAX_NVEC];
         GetValues(uiv, type->IsVaryingType());
         if (type->IsUniformType())
-            return LLVMUInt16(uiv[0]);
+            return std::pair<llvm::Constant *, bool>(LLVMUInt16(uiv[0]), isNotValidForMultiTargetGlobal);
         else
-            return LLVMUInt16Vector(uiv);
+            return std::pair<llvm::Constant *, bool>(LLVMUInt16Vector(uiv), isNotValidForMultiTargetGlobal);
     } else if (Type::Equal(type, AtomicType::UniformInt32) || Type::Equal(type, AtomicType::VaryingInt32)) {
         int32_t iv[ISPC_MAX_NVEC];
         GetValues(iv, type->IsVaryingType());
         if (type->IsUniformType())
-            return LLVMInt32(iv[0]);
+            return std::pair<llvm::Constant *, bool>(LLVMInt32(iv[0]), isNotValidForMultiTargetGlobal);
         else
-            return LLVMInt32Vector(iv);
+            return std::pair<llvm::Constant *, bool>(LLVMInt32Vector(iv), isNotValidForMultiTargetGlobal);
     } else if (Type::Equal(type, AtomicType::UniformUInt32) || Type::Equal(type, AtomicType::VaryingUInt32) ||
                CastType<EnumType>(type) != NULL) {
         uint32_t uiv[ISPC_MAX_NVEC];
         GetValues(uiv, type->IsVaryingType());
         if (type->IsUniformType())
-            return LLVMUInt32(uiv[0]);
+            return std::pair<llvm::Constant *, bool>(LLVMUInt32(uiv[0]), isNotValidForMultiTargetGlobal);
         else
-            return LLVMUInt32Vector(uiv);
+            return std::pair<llvm::Constant *, bool>(LLVMUInt32Vector(uiv), isNotValidForMultiTargetGlobal);
     } else if (Type::Equal(type, AtomicType::UniformFloat) || Type::Equal(type, AtomicType::VaryingFloat)) {
         float fv[ISPC_MAX_NVEC];
         GetValues(fv, type->IsVaryingType());
         if (type->IsUniformType())
-            return LLVMFloat(fv[0]);
+            return std::pair<llvm::Constant *, bool>(LLVMFloat(fv[0]), isNotValidForMultiTargetGlobal);
         else
-            return LLVMFloatVector(fv);
+            return std::pair<llvm::Constant *, bool>(LLVMFloatVector(fv), isNotValidForMultiTargetGlobal);
     } else if (Type::Equal(type, AtomicType::UniformInt64) || Type::Equal(type, AtomicType::VaryingInt64)) {
         int64_t iv[ISPC_MAX_NVEC];
         GetValues(iv, type->IsVaryingType());
         if (type->IsUniformType())
-            return LLVMInt64(iv[0]);
+            return std::pair<llvm::Constant *, bool>(LLVMInt64(iv[0]), isNotValidForMultiTargetGlobal);
         else
-            return LLVMInt64Vector(iv);
+            return std::pair<llvm::Constant *, bool>(LLVMInt64Vector(iv), isNotValidForMultiTargetGlobal);
     } else if (Type::Equal(type, AtomicType::UniformUInt64) || Type::Equal(type, AtomicType::VaryingUInt64)) {
         uint64_t uiv[ISPC_MAX_NVEC];
         GetValues(uiv, type->IsVaryingType());
         if (type->IsUniformType())
-            return LLVMUInt64(uiv[0]);
+            return std::pair<llvm::Constant *, bool>(LLVMUInt64(uiv[0]), isNotValidForMultiTargetGlobal);
         else
-            return LLVMUInt64Vector(uiv);
+            return std::pair<llvm::Constant *, bool>(LLVMUInt64Vector(uiv), isNotValidForMultiTargetGlobal);
     } else if (Type::Equal(type, AtomicType::UniformDouble) || Type::Equal(type, AtomicType::VaryingDouble)) {
         double dv[ISPC_MAX_NVEC];
         GetValues(dv, type->IsVaryingType());
         if (type->IsUniformType())
-            return LLVMDouble(dv[0]);
+            return std::pair<llvm::Constant *, bool>(LLVMDouble(dv[0]), isNotValidForMultiTargetGlobal);
         else
-            return LLVMDoubleVector(dv);
+            return std::pair<llvm::Constant *, bool>(LLVMDoubleVector(dv), isNotValidForMultiTargetGlobal);
     } else if (CastType<PointerType>(type) != NULL) {
         // The only time we should get here is if we have an integer '0'
         // constant that should be turned into a NULL pointer of the
@@ -5824,7 +5854,7 @@ llvm::Constant *ConstExpr::GetConstant(const Type *type) const {
         llvm::Type *llvmType = type->LLVMType(g->ctx);
         if (llvmType == NULL) {
             AssertPos(pos, m->errorCount > 0);
-            return NULL;
+            return std::pair<llvm::Constant *, bool>(NULL, false);
         }
 
         int64_t iv[ISPC_MAX_NVEC];
@@ -5833,12 +5863,13 @@ llvm::Constant *ConstExpr::GetConstant(const Type *type) const {
             if (iv[i] != 0)
                 // We'll issue an error about this later--trying to assign
                 // a constant int to a pointer, without a typecast.
-                return NULL;
+                return std::pair<llvm::Constant *, bool>(NULL, false);
 
-        return llvm::Constant::getNullValue(llvmType);
+        return std::pair<llvm::Constant *, bool>(llvm::Constant::getNullValue(llvmType),
+                                                 isNotValidForMultiTargetGlobal);
     } else {
         Debug(pos, "Unable to handle type \"%s\" in ConstExpr::GetConstant().", type->GetString().c_str());
-        return NULL;
+        return std::pair<llvm::Constant *, bool>(NULL, isNotValidForMultiTargetGlobal);
     }
 }
 
@@ -6974,7 +7005,7 @@ static llvm::Constant *lConvertPointerConstant(llvm::Constant *c, const Type *co
     }
 }
 
-llvm::Constant *TypeCastExpr::GetConstant(const Type *constType) const {
+std::pair<llvm::Constant *, bool> TypeCastExpr::GetConstant(const Type *constType) const {
     // We don't need to worry about most the basic cases where the type
     // cast can resolve to a constant here, since the
     // TypeCastExpr::Optimize() method generally ends up doing the type
@@ -6989,7 +7020,7 @@ llvm::Constant *TypeCastExpr::GetConstant(const Type *constType) const {
     //
 
     if ((CastType<PointerType>(constType) == NULL) && (llvm::dyn_cast<SizeOfExpr>(expr) == NULL))
-        return NULL;
+        return std::pair<llvm::Constant *, bool>(NULL, false);
 
     llvm::Value *ptr = NULL;
     if (GetBaseSymbol())
@@ -7003,14 +7034,15 @@ llvm::Constant *TypeCastExpr::GetConstant(const Type *constType) const {
                 llvm::Value *resultPtr = llvm::ConstantExpr::getGetElementPtr(PTYPE(c), c, arrayRef);
                 if (resultPtr->getType() == constType->LLVMType(g->ctx)) {
                     llvm::Constant *ret = llvm::dyn_cast<llvm::Constant>(resultPtr);
-                    return ret;
+                    return std::pair<llvm::Constant *, bool>(ret, false);
                 }
             }
         }
     }
 
-    llvm::Constant *c = expr->GetConstant(constType->GetAsUniformType());
-    return lConvertPointerConstant(c, constType);
+    std::pair<llvm::Constant *, bool> cPair = expr->GetConstant(constType->GetAsUniformType());
+    llvm::Constant *c = cPair.first;
+    return std::pair<llvm::Constant *, bool>(lConvertPointerConstant(c, constType), cPair.second);
 }
 
 ///////////////////////////////////////////////////////////////////////////
@@ -7340,45 +7372,51 @@ Expr *AddressOfExpr::Optimize() { return this; }
 
 int AddressOfExpr::EstimateCost() const { return 0; }
 
-llvm::Constant *AddressOfExpr::GetConstant(const Type *type) const {
+std::pair<llvm::Constant *, bool> AddressOfExpr::GetConstant(const Type *type) const {
     const Type *exprType;
     if (expr == NULL || (exprType = expr->GetType()) == NULL) {
         AssertPos(pos, m->errorCount > 0);
-        return NULL;
+        return std::pair<llvm::Constant *, bool>(NULL, false);
     }
 
     const PointerType *pt = CastType<PointerType>(type);
     if (pt == NULL)
-        return NULL;
+        return std::pair<llvm::Constant *, bool>(NULL, false);
 
+    bool isNotValidForMultiTargetGlobal = false;
     const FunctionType *ft = CastType<FunctionType>(pt->GetBaseType());
     if (ft != NULL) {
-        llvm::Constant *c = expr->GetConstant(ft);
-        return lConvertPointerConstant(c, type);
-    } else {
-        llvm::Value *ptr = NULL;
-        if (GetBaseSymbol())
-            ptr = GetBaseSymbol()->storagePtr;
-        if (ptr && llvm::dyn_cast<llvm::GlobalVariable>(ptr)) {
-            const Type *eTYPE = GetType();
-            if (type->LLVMType(g->ctx) == eTYPE->LLVMType(g->ctx)) {
-                if (llvm::dyn_cast<SymbolExpr>(expr) != NULL) {
-                    if (llvm::Constant *c = llvm::dyn_cast<llvm::Constant>(ptr)) {
-                        return c;
-                    }
-                } else if (llvm::dyn_cast<IndexExpr>(expr) != NULL) {
-                    IndexExpr *IExpr = llvm::dyn_cast<IndexExpr>(expr);
-                    llvm::Constant *cIndex = IExpr->index->GetConstant(IExpr->index->GetType());
-                    llvm::Constant *c = llvm::dyn_cast<llvm::Constant>(ptr);
-                    llvm::Value *offsets[2] = {LLVMInt32(0), cIndex};
-                    llvm::ArrayRef<llvm::Value *> arrayRef(&offsets[0], &offsets[2]);
-                    llvm::Constant *c1 = llvm::ConstantExpr::getGetElementPtr(PTYPE(c), c, arrayRef);
-                    return c1;
+        std::pair<llvm::Constant *, bool> cPair = expr->GetConstant(ft);
+        llvm::Constant *c = cPair.first;
+        return std::pair<llvm::Constant *, bool>(lConvertPointerConstant(c, type), cPair.second);
+    }
+    llvm::Value *ptr = NULL;
+    if (GetBaseSymbol())
+        ptr = GetBaseSymbol()->storagePtr;
+    if (ptr && llvm::dyn_cast<llvm::GlobalVariable>(ptr)) {
+        const Type *eTYPE = GetType();
+        if (type->LLVMType(g->ctx) == eTYPE->LLVMType(g->ctx)) {
+            if (llvm::dyn_cast<SymbolExpr>(expr) != NULL) {
+                return std::pair<llvm::Constant *, bool>(llvm::cast<llvm::Constant>(ptr),
+                                                         isNotValidForMultiTargetGlobal);
+
+            } else if (IndexExpr *IExpr = llvm::dyn_cast<IndexExpr>(expr)) {
+                std::vector<llvm::Value *> gepIndex;
+                while (IExpr) {
+                    std::pair<llvm::Constant *, bool> cIndexPair = IExpr->index->GetConstant(IExpr->index->GetType());
+                    llvm::Constant *cIndex = cIndexPair.first;
+                    gepIndex.insert(gepIndex.begin(), cIndex);
+                    IExpr = llvm::dyn_cast<IndexExpr>(IExpr->baseExpr);
+                    isNotValidForMultiTargetGlobal = isNotValidForMultiTargetGlobal || cIndexPair.second;
                 }
+                gepIndex.insert(gepIndex.begin(), LLVMInt64(0));
+                llvm::Constant *c = llvm::cast<llvm::Constant>(ptr);
+                llvm::Constant *c1 = llvm::ConstantExpr::getGetElementPtr(PTYPE(c), c, gepIndex);
+                return std::pair<llvm::Constant *, bool>(c1, isNotValidForMultiTargetGlobal);
             }
         }
     }
-    return NULL;
+    return std::pair<llvm::Constant *, bool>(NULL, false);
 }
 
 ///////////////////////////////////////////////////////////////////////////
@@ -7436,24 +7474,24 @@ Expr *SizeOfExpr::Optimize() { return this; }
 
 int SizeOfExpr::EstimateCost() const { return 0; }
 
-llvm::Constant *SizeOfExpr::GetConstant(const Type *type) const {
-
+std::pair<llvm::Constant *, bool> SizeOfExpr::GetConstant(const Type *rtype) const {
     const Type *t = expr ? expr->GetType() : type;
     if (t == NULL)
-        return NULL;
+        return std::pair<llvm::Constant *, bool>(NULL, false);
+
+    bool isNotValidForMultiTargetGlobal = false;
+    if (t->IsVaryingType())
+        isNotValidForMultiTargetGlobal = true;
 
     llvm::Type *llvmType = t->LLVMType(g->ctx);
     if (llvmType == NULL)
-        return NULL;
+        return std::pair<llvm::Constant *, bool>(NULL, false);
 
     if (g->target->IsGenericTypeLayoutIndeterminate(llvmType))
-        return NULL;
-
+        return std::pair<llvm::Constant *, bool>(NULL, false);
     uint64_t byteSize = g->target->getDataLayout()->getTypeStoreSize(llvmType);
-    if (g->target->is32Bit() || g->opt.force32BitAddressing)
-        return LLVMInt32((int32_t)byteSize);
-    else
-        return LLVMInt64(byteSize);
+    return std::pair<llvm::Constant *, bool>(llvm::ConstantInt::get(rtype->LLVMType(g->ctx), byteSize),
+                                             isNotValidForMultiTargetGlobal);
 }
 
 ///////////////////////////////////////////////////////////////////////////
@@ -7558,23 +7596,23 @@ void FunctionSymbolExpr::Print() const {
     pos.Print();
 }
 
-llvm::Constant *FunctionSymbolExpr::GetConstant(const Type *type) const {
+std::pair<llvm::Constant *, bool> FunctionSymbolExpr::GetConstant(const Type *type) const {
     if (matchingFunc == NULL || matchingFunc->function == NULL)
-        return NULL;
+        return std::pair<llvm::Constant *, bool>(NULL, false);
 
     const FunctionType *ft = CastType<FunctionType>(type);
     if (ft == NULL)
-        return NULL;
+        return std::pair<llvm::Constant *, bool>(NULL, false);
 
     if (Type::Equal(type, matchingFunc->type) == false) {
         Error(pos,
               "Type of function symbol \"%s\" doesn't match expected type "
               "\"%s\".",
               matchingFunc->type->GetString().c_str(), type->GetString().c_str());
-        return NULL;
+        return std::pair<llvm::Constant *, bool>(NULL, false);
     }
 
-    return matchingFunc->function;
+    return std::pair<llvm::Constant *, bool>(matchingFunc->function, false);
 }
 
 static std::string lGetOverloadCandidateMessage(const std::vector<Symbol *> &funcs,
@@ -7940,18 +7978,18 @@ Expr *NullPointerExpr::TypeCheck() { return this; }
 
 Expr *NullPointerExpr::Optimize() { return this; }
 
-llvm::Constant *NullPointerExpr::GetConstant(const Type *type) const {
+std::pair<llvm::Constant *, bool> NullPointerExpr::GetConstant(const Type *type) const {
     const PointerType *pt = CastType<PointerType>(type);
     if (pt == NULL)
-        return NULL;
+        return std::pair<llvm::Constant *, bool>(NULL, false);
 
     llvm::Type *llvmType = type->LLVMType(g->ctx);
     if (llvmType == NULL) {
         AssertPos(pos, m->errorCount > 0);
-        return NULL;
+        return std::pair<llvm::Constant *, bool>(NULL, false);
     }
 
-    return llvm::Constant::getNullValue(llvmType);
+    return std::pair<llvm::Constant *, bool>(llvm::Constant::getNullValue(llvmType), false);
 }
 
 void NullPointerExpr::Print() const {

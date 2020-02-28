@@ -2360,7 +2360,8 @@ lGetConstantInt(Expr *expr, int *value, SourcePos pos, const char *usage) {
     if (expr == NULL)
         return false;
 
-    llvm::Constant *cval = expr->GetConstant(expr->GetType());
+    std::pair<llvm::Constant *, bool> cValPair = expr->GetConstant(expr->GetType());
+    llvm::Constant *cval = cValPair.first;
     if (cval == NULL) {
         Error(pos, "%s must be a compile-time constant.", usage);
         return false;

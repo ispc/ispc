@@ -90,6 +90,7 @@
 #include <llvm/Target/TargetMachine.h>
 #include <llvm/Target/TargetOptions.h>
 #include <llvm/Transforms/IPO.h>
+#include <llvm/Transforms/Utils/ValueMapper.h>
 
 /*! list of files encountered by the parser. this allows emitting of
     the module file's dependencies via the -MMM option */
@@ -335,9 +336,27 @@ void Module::AddGlobalVariable(const std::string &name, const Type *type, Expr *
                     initExpr = Optimize(initExpr);
                     // Fingers crossed, now let's see if we've got a
                     // constant value..
-                    llvmInitializer = initExpr->GetConstant(type);
+                    std::pair<llvm::Constant *, bool> initPair = initExpr->GetConstant(type);
+                    llvmInitializer = initPair.first;
 
+                    // If compiling for multitarget, skip initialization for
+                    // indentified scenarios unless it's static
                     if (llvmInitializer != NULL) {
+                        if ((storageClass != SC_STATIC) && (initPair.second == true)) {
+                            if (g->isMultiTargetCompilation == true) {
+                                Error(initExpr->pos,
+                                      "Initializer for global variable \"%s\" "
+                                      "is not a constant for multi-target compilation.",
+                                      name.c_str());
+                                return;
+                            }
+                            Warning(initExpr->pos,
+                                    "Initializer for global variable \"%s\" "
+                                    "is a constant for single-target compilation "
+                                    "but not for multi-target compilation.",
+                                    name.c_str());
+                        }
+
                         if (type->IsConstType())
                             // Try to get a ConstExpr associated with
                             // the symbol.  This llvm::dyn_cast can
@@ -2316,16 +2335,12 @@ static bool lCompatibleTypes(llvm::Type *Ty1, llvm::Type *Ty2) {
 // files.
 static void lExtractOrCheckGlobals(llvm::Module *msrc, llvm::Module *mdst, bool check) {
     llvm::Module::global_iterator iter;
+    llvm::ValueToValueMapTy VMap;
 
     for (iter = msrc->global_begin(); iter != msrc->global_end(); ++iter) {
         llvm::GlobalVariable *gv = &*iter;
         // Is it a global definition?
         if (gv->getLinkage() == llvm::GlobalValue::ExternalLinkage && gv->hasInitializer()) {
-            // Turn this into an 'extern' declaration by clearing its
-            // initializer.
-            llvm::Constant *init = gv->getInitializer();
-            gv->setInitializer(NULL);
-
             llvm::Type *type = gv->getType()->getElementType();
             Symbol *sym = m->symbolTable->LookupVariable(gv->getName().str().c_str());
             Assert(sym != NULL);
@@ -2350,10 +2365,17 @@ static void lExtractOrCheckGlobals(llvm::Module *msrc, llvm::Module *mdst, bool 
             }
             // Alternatively, create it anew and make it match the original
             else {
-                llvm::GlobalVariable *newGlobal = new llvm::GlobalVariable(
-                    *mdst, type, gv->isConstant(), llvm::GlobalValue::ExternalLinkage, init, gv->getName());
+                llvm::GlobalVariable *newGlobal =
+                    new llvm::GlobalVariable(*mdst, type, gv->isConstant(), llvm::GlobalValue::ExternalLinkage,
+                                             (llvm::Constant *)nullptr, gv->getName());
+                VMap[&*iter] = newGlobal;
+
+                newGlobal->setInitializer(llvm::MapValue(iter->getInitializer(), VMap));
                 newGlobal->copyAttributesFrom(gv);
             }
+            // Turn this into an 'extern' declaration by clearing its
+            // initializer.
+            gv->setInitializer(NULL);
         }
     }
 }

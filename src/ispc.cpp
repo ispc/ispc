@@ -1324,8 +1324,15 @@ static bool lGenericTypeLayoutIndeterminate(llvm::Type *type) {
     return true;
 }
 
+bool Target::IsGenericTypeLayoutIndeterminate(llvm::Type *type) {
+    bool ret = false;
+    if (m_isa == Target::GENERIC && lGenericTypeLayoutIndeterminate(type) == true)
+        ret = true;
+    return ret;
+}
+
 llvm::Value *Target::SizeOf(llvm::Type *type, llvm::BasicBlock *insertAtEnd) {
-    if (m_isa == Target::GENERIC && lGenericTypeLayoutIndeterminate(type)) {
+    if (IsGenericTypeLayoutIndeterminate(type)) {
         llvm::Value *index[1] = {LLVMInt32(1)};
         llvm::PointerType *ptrType = llvm::PointerType::get(type, 0);
         llvm::Value *voidPtr = llvm::ConstantPointerNull::get(ptrType);
@@ -1346,7 +1353,7 @@ llvm::Value *Target::SizeOf(llvm::Type *type, llvm::BasicBlock *insertAtEnd) {
 }
 
 llvm::Value *Target::StructOffset(llvm::Type *type, int element, llvm::BasicBlock *insertAtEnd) {
-    if (m_isa == Target::GENERIC && lGenericTypeLayoutIndeterminate(type) == true) {
+    if (IsGenericTypeLayoutIndeterminate(type)) {
         llvm::Value *indices[2] = {LLVMInt32(0), LLVMInt32(element)};
         llvm::PointerType *ptrType = llvm::PointerType::get(type, 0);
         llvm::Value *voidPtr = llvm::ConstantPointerNull::get(ptrType);
@@ -1379,13 +1386,6 @@ void Target::markFuncWithTargetAttr(llvm::Function *func) {
     if (m_tf_attributes) {
         func->addAttributes(llvm::AttributeList::FunctionIndex, *m_tf_attributes);
     }
-}
-
-bool Target::IsGenericTypeLayoutIndeterminate(llvm::Type *type) {
-    bool ret = false;
-    if (m_isa == Target::GENERIC && lGenericTypeLayoutIndeterminate(type) == true)
-        ret = true;
-    return ret;
 }
 
 ///////////////////////////////////////////////////////////////////////////
@@ -1441,6 +1441,7 @@ Globals::Globals() {
     enableFuzzTest = false;
     fuzzTestSeed = -1;
     mangleFunctionsWithTarget = false;
+    isMultiTargetCompilation = false;
 
     ctx = new llvm::LLVMContext;
 
