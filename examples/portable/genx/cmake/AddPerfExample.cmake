@@ -53,37 +53,36 @@ function(add_perf_example)
         return()
     endif()
     set(HOST_EXECUTABLE "host_${parsed_TEST_NAME}")
+    add_executable(${HOST_EXECUTABLE} ${parsed_HOST_SOURCES} ${ISPC_BUILD_OUTPUT} ${CMAKE_CURRENT_SOURCE_DIR}/${parsed_ISPC_SRC_NAME}.ispc)
     if (WIN32)
-        add_executable(${HOST_EXECUTABLE} ${parsed_HOST_SOURCES} ${ISPC_BUILD_OUTPUT} ${CMAKE_CURRENT_SOURCE_DIR}/${parsed_ISPC_SRC_NAME}.ispc)
         target_compile_options(${HOST_EXECUTABLE} PRIVATE /nologo /DCM_DX11 /EHsc /D_CRT_SECURE_NO_WARNINGS /Zi /DWIN32)
         target_include_directories(${HOST_EXECUTABLE} PRIVATE "${COMMON_PATH}"
                                    "${CMC_INCLUDE_PATH}"
                                    "${MDF_ROOT}/runtime/include"
                                    "${MDF_ROOT}/examples/helper")
         target_link_libraries(${HOST_EXECUTABLE} "${MDF_ROOT}/runtime/lib/x86/igfx11cmrt32.lib" AdvAPI32 Ole32)
-        install(TARGETS "${HOST_EXECUTABLE}" RUNTIME DESTINATION ${CMAKE_CURRENT_BINARY_DIR}
-            PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE)
         file(COPY "${MDF_ROOT}/runtime/lib/x86/igfx11cmrt32.dll" DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
         set_target_properties(${HOST_EXECUTABLE} PROPERTIES FOLDER "GEN_Examples")
     else()
         # L0 build
-        # TODO: check exists
-        set(DPCPP_CLANG_EXECUTABLE "${DPCPP_ROOT}/bin/clang++")
-        add_custom_target(${HOST_EXECUTABLE} ALL
-            COMMAND ${DPCPP_CLANG_EXECUTABLE} -fsycl -isystem ${COMMON_PATH} ${parsed_HOST_SOURCES} -D LZERO -o ${HOST_EXECUTABLE} -L${DPCPP_ROOT}/lib -llevel_zero
-            WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
-            VERBATIM
-        )
+        target_compile_definitions(${HOST_EXECUTABLE} PRIVATE LZERO)
+        target_include_directories(${HOST_EXECUTABLE} PRIVATE "${COMMON_PATH}"
+                                   ${NEO_INSTALL_PATH}/neo/usr/local/include)
+        target_link_libraries(${HOST_EXECUTABLE} rt m dl tbb level_zero igdgmm -L${NEO_INSTALL_PATH}/neo/usr/local/lib
+                              -L${NEO_INSTALL_PATH}/neo/lib/extra)
     endif()
+    install(TARGETS "${HOST_EXECUTABLE}" RUNTIME DESTINATION ${CMAKE_CURRENT_BINARY_DIR}
+        PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE)
 
     # Compile CM kernel if present
-    if (parsed_CM_TEST AND MDF_ROOT)
+    if (parsed_CM_TEST)
         set(parsed_TEST_NAME "${parsed_TEST_NAME}_cm")
         set(CM_TEST_NAME "${parsed_TEST_NAME}")
         list(APPEND CM_BUILD_OUTPUT ${parsed_CM_OBJ_NAME})
-
+        set(CM_HOST_BINARY "host_${parsed_TEST_NAME}")
+        add_executable(${CM_HOST_BINARY} ${parsed_CM_HOST_SOURCES} ${parsed_CM_OBJ_NAME})
         if (WIN32)
-            add_custom_command(OUTPUT ${parsed_CM_SRC_NAME}
+            add_custom_command(OUTPUT ${parsed_CM_OBJ_NAME}
                 COMMAND ${CMC_EXECUTABLE} -isystem ${CMC_INCLUDE_PATH} -march=SKL "/DCM_PTRSIZE=32" ${CMAKE_CURRENT_SOURCE_DIR}/${parsed_CM_SRC_NAME}.cpp -o ${parsed_CM_OBJ_NAME}
                 WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
                 VERBATIM
@@ -91,33 +90,29 @@ function(add_perf_example)
                 DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/${parsed_CM_SRC_NAME}.cpp
             )
 
-            set(CM_HOST_BINARY "host_${parsed_TEST_NAME}")
-            add_executable(${CM_HOST_BINARY} ${parsed_CM_HOST_SOURCES} ${parsed_CM_SRC_NAME})
             target_compile_options(${CM_HOST_BINARY} PRIVATE /nologo /DCM_DX11 /EHsc /D_CRT_SECURE_NO_WARNINGS /Zi /DWIN32 ${parsed_CM_HOST_FLAGS})
             target_include_directories(${CM_HOST_BINARY} PRIVATE "${COMMON_PATH}"
                                        "${CMC_INCLUDE_PATH}"
                                        "${MDF_ROOT}/runtime/include"
                                        "${MDF_ROOT}/examples/helper")
             target_link_libraries(${CM_HOST_BINARY} "${MDF_ROOT}/runtime/lib/x86/igfx11cmrt32.lib" AdvAPI32 Ole32)
-            install(TARGETS "${CM_HOST_BINARY}" RUNTIME DESTINATION ${CMAKE_CURRENT_BINARY_DIR}
-                PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE)
             file(COPY "${MDF_ROOT}/runtime/lib/x86/igfx11cmrt32.dll" DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
             set_target_properties(${CM_HOST_BINARY} PROPERTIES FOLDER "GEN_Examples")
         else()
             add_custom_command(
-               OUTPUT ${CM_BUILD_OUTPUT}
+               OUTPUT ${parsed_CM_OBJ_NAME}
                COMMAND ${CMC_EXECUTABLE} -march=SKL -fcmocl "/DCM_PTRSIZE=32" -emit-spirv -o ${parsed_CM_OBJ_NAME} ${CMAKE_CURRENT_SOURCE_DIR}/${parsed_CM_SRC_NAME}.cpp
                VERBATIM
                DEPENDS ${CMC_EXECUTABLE}
             )
-
-            add_custom_target(${parsed_CM_TEST_NAME} ALL DEPENDS ${CM_BUILD_OUTPUT})
-            set(CM_HOST_BINARY "host_${parsed_CM_TEST_NAME}")
-            set(DPCPP_CLANG_EXECUTABLE "${DPCPP_ROOT}/bin/clang++")
-            add_custom_target(${CM_HOST_BINARY} ALL
-                COMMAND ${DPCPP_CLANG_EXECUTABLE} -fsycl -isystem ${COMMON_PATH} ${parsed_HOST_SOURCES} -D CMKERNEL -D LZERO -o ${CM_HOST_BINARY} -L${DPCPP_ROOT}/lib -llevel_zero
-                WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
-                VERBATIM)
+            # L0 build
+            target_compile_definitions(${CM_HOST_BINARY} PRIVATE LZERO)
+            target_include_directories(${CM_HOST_BINARY} PRIVATE "${COMMON_PATH}"
+                                   ${NEO_INSTALL_PATH}/neo/usr/local/include)
+            target_link_libraries(${CM_HOST_BINARY} rt m dl tbb level_zero igdgmm -L${NEO_INSTALL_PATH}/neo/usr/local/lib
+                                   -L${NEO_INSTALL_PATH}/neo/lib/extra)
         endif()
+        install(TARGETS "${CM_HOST_BINARY}" RUNTIME DESTINATION ${CMAKE_CURRENT_BINARY_DIR}
+                PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE)
     endif()
 endfunction()
