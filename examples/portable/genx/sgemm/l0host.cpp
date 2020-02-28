@@ -83,20 +83,11 @@ static int run(int m, int niter, int gx, int gy) {
                                              0};
     ze_host_mem_alloc_desc_t host_alloc_desc = {ZE_HOST_MEM_ALLOC_DESC_VERSION_CURRENT, ZE_HOST_MEM_ALLOC_FLAG_DEFAULT};
 
-    /*L0_SAFE_CALL(zeDriverAllocSharedMem(hDriver, hDevice, ZE_DEVICE_MEM_ALLOC_FLAG_DEFAULT, 0,
-                                        ZE_HOST_MEM_ALLOC_FLAG_DEFAULT,  mtA_size * sizeof(float), mtA_size *
-       sizeof(float), &a_ref));*/
     L0_SAFE_CALL(
         zeDriverAllocSharedMem(hDriver, &alloc_desc, &host_alloc_desc, mtA_size * sizeof(float), 0, hDevice, &a_ref));
 
-    /*L0_SAFE_CALL(zeDriverAllocSharedMem(hDriver, hDevice, ZE_DEVICE_MEM_ALLOC_FLAG_DEFAULT, 0,
-                                        ZE_HOST_MEM_ALLOC_FLAG_DEFAULT,  mtB_size * sizeof(float), mtB_size *
-       sizeof(float), &b_ref));*/
     L0_SAFE_CALL(
         zeDriverAllocSharedMem(hDriver, &alloc_desc, &host_alloc_desc, mtB_size * sizeof(float), 0, hDevice, &b_ref));
-    /*L0_SAFE_CALL(zeDriverAllocSharedMem(hDriver, hDevice, ZE_DEVICE_MEM_ALLOC_FLAG_DEFAULT, 0,
-                                        ZE_HOST_MEM_ALLOC_FLAG_DEFAULT, mtC_size * sizeof(float), mtC_size *
-       sizeof(float), &c_ref));*/
 
     L0_SAFE_CALL(
         zeDriverAllocSharedMem(hDriver, &alloc_desc, &host_alloc_desc, mtC_size * sizeof(float), 0, hDevice, &c_ref));

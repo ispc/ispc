@@ -62,7 +62,7 @@ static int run(int niter, int gx, int gy) {
 #ifdef CMKERNEL
     L0InitContext(hDriver, hDevice, hModule, hCommandQueue, "noise_cm.spv");
 #else
-    L0InitContext(hDriver, hDevice, hModule, hCommandQueue, "noise.spv");
+    L0InitContext(hDriver, hDevice, hModule, hCommandQueue, "noise_ispc.spv");
 #endif
 
     ze_command_list_handle_t hCommandList;

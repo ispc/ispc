@@ -55,11 +55,9 @@ if os.name == 'nt':
     runtime_lib = mdf_path + "/runtime/lib/x86"
     additional_path = os.pathsep + os.pathsep.join([compiler_lib, runtime_lib])
 else:
-    dpcpp_path = "@DPCPP_ROOT@"
-    dpcpp_lib = dpcpp_path + "/lib"
-    dpcpp_bin = dpcpp_path + "/bin"
+    neo_path = "@NEO_INSTALL_PATH@"
+    neo_lib = neo_path + "/neo/usr/local/lib"
     cmc_lib = cmc_lib
-    additional_path = os.pathsep + os.pathsep.join([dpcpp_bin])
     additional_libs = os.pathsep + os.pathsep.join([dpcpp_lib, cmc_lib])
 
 test_env = os.environ.copy()

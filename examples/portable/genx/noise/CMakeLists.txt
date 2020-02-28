@@ -37,7 +37,7 @@ set(TEST_NAME "genx_noise")
 
 if(WIN32)
     set(HOST_NAME "cmhost")
-    set(ISPC_OBJ_NAME "${CMAKE_CURRENT_BINARY_DIR}/test.isa")
+    set(ISPC_OBJ_NAME "${CMAKE_CURRENT_BINARY_DIR}/noise_ispc.isa")
 	set(ISPC_FLAGS "--addressing=32" "--arch=genx32")
 else()
     set(HOST_NAME "l0host")
