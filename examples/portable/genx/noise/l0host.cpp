@@ -102,7 +102,7 @@ static int run(int niter, int gx, int gy) {
     // EXECUTION
     uint32_t groupSpaceWidth = 1;
     uint32_t groupSpaceHeight = 1;
-    
+
     uint32_t group_size = groupSpaceWidth * groupSpaceHeight;
     L0_SAFE_CALL(zeKernelSetGroupSize(hKernel, /*x*/ groupSpaceWidth, /*y*/ groupSpaceHeight, /*z*/ 1));
 

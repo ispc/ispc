@@ -32,15 +32,13 @@ static const char *storagename[Nd] = {"RowMajor", "ColMajor"};
 struct alignas(4096) aligned_struct_t {
     float *data;
 
-    float& operator[](int index) {
-        return data[index];
-    }
+    float &operator[](int index) { return data[index]; }
 };
 
 class Matrix {
 #ifndef LZERO
     float *M;
-#else    
+#else
     aligned_struct_t M;
 #endif
     int _size_;
@@ -72,15 +70,15 @@ class Matrix {
             _size_ = (__int64)(sizeof(M[0]) * this->ncol * this->ld);
         else
             _size_ = (__int64)(sizeof(M[0]) * this->nrow * this->ld);
-       
-        M = (fptype *)CM_ALIGNED_MALLOC(_size_, 4096); 
+
+        M = (fptype *)CM_ALIGNED_MALLOC(_size_, 4096);
 #else
         if (st == ColMajor)
             _size_ = (uint64_t)(sizeof(M[0]) * this->ncol * this->ld);
         else
             _size_ = (uint64_t)(sizeof(M[0]) * this->nrow * this->ld);
-       
-        M.data = (float *) malloc(_size_);
+
+        M.data = (float *)malloc(_size_);
 #endif
         this->mtxname = strdup(mtxname);
         for (int c = 0; c < this->ncol; c++) {
@@ -94,11 +92,11 @@ class Matrix {
 
         this->mtxname = strdup(mtxname);
         // printf("Allocating %s \n", mtxname);
-#ifndef LZERO        
+#ifndef LZERO
         M = (fptype *)CM_ALIGNED_MALLOC(mat._size_, 4096);
 #else
-        M.data = (float *) malloc(mat._size_);
-#endif        
+        M.data = (float *)malloc(mat._size_);
+#endif
 
         for (int c = 0; c < this->ncol; c++)
             for (int r = 0; r < this->nrow; r++) {
@@ -151,7 +149,7 @@ class Matrix {
 #ifndef LZERO
         CM_ALIGNED_FREE(M);
 #else
-        free(M.data);    
+        free(M.data);
 #endif
     }
 };

@@ -68,8 +68,10 @@ function(add_perf_example)
         target_compile_definitions(${HOST_EXECUTABLE} PRIVATE LZERO)
         target_include_directories(${HOST_EXECUTABLE} PRIVATE "${COMMON_PATH}"
                                    ${NEO_INSTALL_PATH}/neo/usr/local/include)
-        target_link_libraries(${HOST_EXECUTABLE} rt m dl tbb level_zero igdgmm -L${NEO_INSTALL_PATH}/neo/usr/local/lib
-                              -L${NEO_INSTALL_PATH}/neo/lib/extra)
+        if (NEO_LOCAL_BUILD)
+            target_link_libraries(${CM_HOST_BINARY} igdgmm -L${NEO_INSTALL_PATH}/neo/lib/extra)
+        endif()
+        target_link_libraries(${HOST_EXECUTABLE} rt m dl tbb level_zero -L${NEO_INSTALL_PATH}/neo/usr/local/lib)
     endif()
     install(TARGETS "${HOST_EXECUTABLE}" RUNTIME DESTINATION ${CMAKE_CURRENT_BINARY_DIR}
         PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE)
@@ -109,8 +111,10 @@ function(add_perf_example)
             target_compile_definitions(${CM_HOST_BINARY} PRIVATE LZERO)
             target_include_directories(${CM_HOST_BINARY} PRIVATE "${COMMON_PATH}"
                                    ${NEO_INSTALL_PATH}/neo/usr/local/include)
-            target_link_libraries(${CM_HOST_BINARY} rt m dl tbb level_zero igdgmm -L${NEO_INSTALL_PATH}/neo/usr/local/lib
-                                   -L${NEO_INSTALL_PATH}/neo/lib/extra)
+            if (NEO_LOCAL_BUILD)
+                target_link_libraries(${CM_HOST_BINARY} igdgmm -L${NEO_INSTALL_PATH}/neo/lib/extra)
+            endif()
+            target_link_libraries(${CM_HOST_BINARY} rt m dl tbb level_zero -L${NEO_INSTALL_PATH}/neo/usr/local/lib)
         endif()
         install(TARGETS "${CM_HOST_BINARY}" RUNTIME DESTINATION ${CMAKE_CURRENT_BINARY_DIR}
                 PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE)

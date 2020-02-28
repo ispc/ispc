@@ -48,7 +48,7 @@ endif()
 set(HOST_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/${HOST_NAME}.cpp ${CMAKE_CURRENT_SOURCE_DIR}/noise_serial.cpp)
 
 add_perf_example(
-    NAME "genx_noise"
+    NAME ${TEST_NAME}
     ISPC_SRC_NAME ${ISPC_SRC_NAME} 
     ISPC_OBJ_NAME ${ISPC_OBJ_NAME} 
     HOST_NAME ${HOST_NAME} 
