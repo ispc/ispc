@@ -71,7 +71,7 @@ static int run(int niter, int gx, int gy) {
     for (int i = 0; i < SZ; i++)
         out.data[i] = -1;
 
-    CMInitContext(device, kernel, program, "test.isa", "noise_ispc");
+    CMInitContext(device, kernel, program, "noise_ispc.isa", "noise_ispc");
 
     // PARAMS
     unsigned int height = 768;

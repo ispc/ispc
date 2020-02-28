@@ -81,19 +81,19 @@ static int run(int m, int niter, int gx, int gy) {
 
     ze_device_mem_alloc_desc_t alloc_desc = {ZE_DEVICE_MEM_ALLOC_DESC_VERSION_CURRENT, ZE_DEVICE_MEM_ALLOC_FLAG_DEFAULT,
                                              0};
-    ze_host_mem_alloc_desc_t host_alloc_desc = {ZE_HOST_MEM_ALLOC_DESC_VERSION_CURRENT,
-                                                ZE_HOST_MEM_ALLOC_FLAG_DEFAULT};
+    ze_host_mem_alloc_desc_t host_alloc_desc = {ZE_HOST_MEM_ALLOC_DESC_VERSION_CURRENT, ZE_HOST_MEM_ALLOC_FLAG_DEFAULT};
 
+    L0_SAFE_CALL(
+        zeDriverAllocSharedMem(hDriver, &alloc_desc, &host_alloc_desc, mtA_size * sizeof(float), 0, hDevice, &a_ref));
+    L0_SAFE_CALL(
+        zeDriverAllocSharedMem(hDriver, &alloc_desc, &host_alloc_desc, mtB_size * sizeof(float), 0, hDevice, &b_ref));
+    L0_SAFE_CALL(
+        zeDriverAllocSharedMem(hDriver, &alloc_desc, &host_alloc_desc, mtC_size * sizeof(float), 0, hDevice, &c_ref));
 
-    
-    L0_SAFE_CALL(zeDriverAllocSharedMem(hDriver, &alloc_desc, &host_alloc_desc, mtA_size * sizeof(float), 0, hDevice, &a_ref));
-    L0_SAFE_CALL(zeDriverAllocSharedMem(hDriver, &alloc_desc, &host_alloc_desc, mtB_size * sizeof(float), 0, hDevice, &b_ref));
-    L0_SAFE_CALL(zeDriverAllocSharedMem(hDriver, &alloc_desc, &host_alloc_desc, mtC_size * sizeof(float), 0, hDevice, &c_ref));
-    
     // TODO: remove
-    L0_SAFE_CALL(zeCommandListAppendMemoryCopy(hCommandList, a_ref, a_res_ref, mtA_size * sizeof(float), nullptr)); 
-    L0_SAFE_CALL(zeCommandListAppendMemoryCopy(hCommandList, b_ref, b_res_ref, mtB_size * sizeof(float), nullptr)); 
-    
+    L0_SAFE_CALL(zeCommandListAppendMemoryCopy(hCommandList, a_ref, a_res_ref, mtA_size * sizeof(float), nullptr));
+    L0_SAFE_CALL(zeCommandListAppendMemoryCopy(hCommandList, b_ref, b_res_ref, mtB_size * sizeof(float), nullptr));
+
     L0_SAFE_CALL(zeKernelSetArgumentValue(hKernel, 0, sizeof(a_ref), &a_ref));
     L0_SAFE_CALL(zeKernelSetArgumentValue(hKernel, 1, sizeof(b_ref), &b_ref));
     L0_SAFE_CALL(zeKernelSetArgumentValue(hKernel, 2, sizeof(c_ref), &c_ref));
@@ -106,7 +106,7 @@ static int run(int m, int niter, int gx, int gy) {
     // FIXME
     uint32_t groupSpaceWidth = 1;
     uint32_t groupSpaceHeight = 1;
-    
+
     uint32_t group_size = groupSpaceWidth * groupSpaceHeight;
     L0_SAFE_CALL(zeKernelSetGroupSize(hKernel, /*x*/ groupSpaceWidth, /*y*/ groupSpaceHeight, /*z*/ 1));
 
@@ -125,17 +125,17 @@ static int run(int m, int niter, int gx, int gy) {
         // launch
         L0_SAFE_CALL(zeCommandListAppendLaunchKernel(hCommandList, hKernel, &dispatchTraits, nullptr, 0, nullptr));
         L0_SAFE_CALL(zeCommandListAppendBarrier(hCommandList, nullptr, 0, nullptr));
-        
+
         // TODO: enable
-        //L0_SAFE_CALL(zeCommandListClose(hCommandList));
-        //L0_SAFE_CALL(zeCommandQueueExecuteCommandLists(hCommandQueue, 1, &hCommandList, nullptr));
-        //L0_SAFE_CALL(zeCommandQueueSynchronize(hCommandQueue, std::numeric_limits<uint32_t>::max()));
+        // L0_SAFE_CALL(zeCommandListClose(hCommandList));
+        // L0_SAFE_CALL(zeCommandQueueExecuteCommandLists(hCommandQueue, 1, &hCommandList, nullptr));
+        // L0_SAFE_CALL(zeCommandQueueSynchronize(hCommandQueue, std::numeric_limits<uint32_t>::max()));
         auto dur = (std::chrono::system_clock::now() - wct);
         auto secs = std::chrono::duration_cast<std::chrono::nanoseconds>(dur);
         total += (secs.count() / 1e+6);
-        // copy result to host    
-        //L0_SAFE_CALL(zeCommandListReset(hCommandList));
-        //L0_SAFE_CALL(zeCommandListAppendBarrier(hCommandList, nullptr, 0, nullptr));
+        // copy result to host
+        // L0_SAFE_CALL(zeCommandListReset(hCommandList));
+        // L0_SAFE_CALL(zeCommandListAppendBarrier(hCommandList, nullptr, 0, nullptr));
         L0_SAFE_CALL(zeCommandListAppendMemoryCopy(hCommandList, c_res_ref, c_ref, mtC_size * sizeof(float), nullptr));
         // dispatch & wait
         L0_SAFE_CALL(zeCommandListClose(hCommandList));
@@ -149,9 +149,9 @@ static int run(int m, int niter, int gx, int gy) {
 
     /*auto timings = execute(device, kernel, gx, gy, niter, false, TIMEOUT);
     timings.print(niter);*/
-    
-    //void *res = out.data;
-            
+
+    // void *res = out.data;
+
     // RESULT CHECK
     bool pass = false;
     if (niter == 1) {

@@ -57,8 +57,9 @@ if os.name == 'nt':
 else:
     neo_path = "@NEO_INSTALL_PATH@"
     neo_lib = neo_path + "/neo/usr/local/lib"
+    extra_lib = neo_path + "/neo/lib/extra"
     cmc_lib = cmc_lib
-    additional_libs = os.pathsep + os.pathsep.join([dpcpp_lib, cmc_lib])
+    additional_libs = os.pathsep + os.pathsep.join([neo_lib, extra_lib, cmc_lib])
 
 test_env = os.environ.copy()
 test_env["PATH"] += additional_path
