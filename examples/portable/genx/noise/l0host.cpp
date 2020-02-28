@@ -100,14 +100,14 @@ static int run(int niter, int gx, int gy) {
     L0_SAFE_CALL(zeKernelSetArgumentValue(hKernel, 6, sizeof(buf_ref), &buf_ref));
 
     // EXECUTION
-    uint32_t groupSpaceWidth = gx;
-    uint32_t groupSpaceHeight = gy;
-
+    uint32_t groupSpaceWidth = 1;
+    uint32_t groupSpaceHeight = 1;
+    
     uint32_t group_size = groupSpaceWidth * groupSpaceHeight;
     L0_SAFE_CALL(zeKernelSetGroupSize(hKernel, /*x*/ groupSpaceWidth, /*y*/ groupSpaceHeight, /*z*/ 1));
 
     // set grid size
-    ze_group_count_t dispatchTraits = {1, 1, 1};
+    ze_group_count_t dispatchTraits = {(uint32_t)gx, (uint32_t)gy, 1};
 
     auto wct = std::chrono::system_clock::now();
     // launch
