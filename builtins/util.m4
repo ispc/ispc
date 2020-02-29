@@ -6130,6 +6130,18 @@ done:
   ret i32 %nextoffset
 }
 
+ifelse(MASK, `i1',
+`
+;; i1 mask variant requires different implementation and is here just for functional completeness.
+define i32 @__packed_store_active2(i32 * %startptr, <WIDTH x i32> %vals,
+                                   <WIDTH x MASK> %full_mask) nounwind alwaysinline {
+  %ret = call i32 @__packed_store_active(i32 * %startptr, <WIDTH x i32> %vals,
+                                         <WIDTH x MASK> %full_mask)
+  ret i32 %ret
+}
+',
+`
+;; TODO: function needs to return i32, but not MASK type.
 define MASK @__packed_store_active2(i32 * %startptr, <WIDTH x i32> %vals,
                                    <WIDTH x MASK> %full_mask) nounwind alwaysinline {
 entry:
@@ -6174,6 +6186,7 @@ ifelse(MASK, `i64',
 done:
   ret MASK %ch_offset
 }
+')
 ')
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
