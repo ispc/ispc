@@ -2986,7 +2986,40 @@ define void
   ret void
 }
 
+
 ;; versions to be called from stdlib
+
+define void
+@__aos_to_soa4_float(float * noalias %p,
+        <WIDTH x float> * noalias %out0, <WIDTH x float> * noalias %out1,
+        <WIDTH x float> * noalias %out2, <WIDTH x float> * noalias %out3)
+        nounwind alwaysinline {
+  %p0 = bitcast float * %p to <WIDTH x float> *
+  %v0 = load PTR_OP_ARGS(`<WIDTH x float> ')  %p0, align 4
+  %p1 = getelementptr PTR_OP_ARGS(`<WIDTH x float>') %p0, i32 1
+  %v1 = load PTR_OP_ARGS(`<WIDTH x float> ')  %p1, align 4
+  %p2 = getelementptr PTR_OP_ARGS(`<WIDTH x float>') %p0, i32 2
+  %v2 = load PTR_OP_ARGS(`<WIDTH x float> ')  %p2, align 4
+  %p3 = getelementptr PTR_OP_ARGS(`<WIDTH x float>') %p0, i32 3
+  %v3 = load PTR_OP_ARGS(`<WIDTH x float> ')  %p3, align 4
+  call void @__aos_to_soa4_float`'WIDTH (<WIDTH x float> %v0, <WIDTH x float> %v1,
+         <WIDTH x float> %v2, <WIDTH x float> %v3, <WIDTH x float> * %out0,
+         <WIDTH x float> * %out1, <WIDTH x float> * %out2, <WIDTH x float> * %out3)
+  ret void
+}
+
+define void
+@__soa_to_aos4_float(<WIDTH x float> %v0, <WIDTH x float> %v1, <WIDTH x float> %v2,
+             <WIDTH x float> %v3, float * noalias %p) nounwind alwaysinline {
+  %out0 = bitcast float * %p to <WIDTH x float> *
+  %out1 = getelementptr PTR_OP_ARGS(`<WIDTH x float>') %out0, i32 1
+  %out2 = getelementptr PTR_OP_ARGS(`<WIDTH x float>') %out0, i32 2
+  %out3 = getelementptr PTR_OP_ARGS(`<WIDTH x float>') %out0, i32 3
+  call void @__soa_to_aos4_float`'WIDTH (<WIDTH x float> %v0, <WIDTH x float> %v1,
+         <WIDTH x float> %v2, <WIDTH x float> %v3, <WIDTH x float> * %out0,
+         <WIDTH x float> * %out1, <WIDTH x float> * %out2, <WIDTH x float> * %out3)
+  ret void
+}
 
 define void
 @__aos_to_soa4_double(double * noalias %p,
@@ -3020,39 +3053,31 @@ define void
   ret void
 }
 
-
-;; versions to be called from stdlib
-
 define void
-@__aos_to_soa4_float(float * noalias %p,
-        <WIDTH x float> * noalias %out0, <WIDTH x float> * noalias %out1,
-        <WIDTH x float> * noalias %out2, <WIDTH x float> * noalias %out3)
-        nounwind alwaysinline {
+@__aos_to_soa3_float(float * noalias %p,
+        <WIDTH x float> * %out0, <WIDTH x float> * %out1,
+        <WIDTH x float> * %out2) nounwind alwaysinline {
   %p0 = bitcast float * %p to <WIDTH x float> *
   %v0 = load PTR_OP_ARGS(`<WIDTH x float> ')  %p0, align 4
   %p1 = getelementptr PTR_OP_ARGS(`<WIDTH x float>') %p0, i32 1
   %v1 = load PTR_OP_ARGS(`<WIDTH x float> ')  %p1, align 4
   %p2 = getelementptr PTR_OP_ARGS(`<WIDTH x float>') %p0, i32 2
   %v2 = load PTR_OP_ARGS(`<WIDTH x float> ')  %p2, align 4
-  %p3 = getelementptr PTR_OP_ARGS(`<WIDTH x float>') %p0, i32 3
-  %v3 = load PTR_OP_ARGS(`<WIDTH x float> ')  %p3, align 4
-  call void @__aos_to_soa4_float`'WIDTH (<WIDTH x float> %v0, <WIDTH x float> %v1,
-         <WIDTH x float> %v2, <WIDTH x float> %v3, <WIDTH x float> * %out0,
-         <WIDTH x float> * %out1, <WIDTH x float> * %out2, <WIDTH x float> * %out3)
+  call void @__aos_to_soa3_float`'WIDTH (<WIDTH x float> %v0, <WIDTH x float> %v1,
+         <WIDTH x float> %v2, <WIDTH x float> * %out0, <WIDTH x float> * %out1,
+         <WIDTH x float> * %out2)
   ret void
 }
 
-
 define void
-@__soa_to_aos4_float(<WIDTH x float> %v0, <WIDTH x float> %v1, <WIDTH x float> %v2,
-             <WIDTH x float> %v3, float * noalias %p) nounwind alwaysinline {
+@__soa_to_aos3_float(<WIDTH x float> %v0, <WIDTH x float> %v1, <WIDTH x float> %v2,
+                     float * noalias %p) nounwind alwaysinline {
   %out0 = bitcast float * %p to <WIDTH x float> *
   %out1 = getelementptr PTR_OP_ARGS(`<WIDTH x float>') %out0, i32 1
   %out2 = getelementptr PTR_OP_ARGS(`<WIDTH x float>') %out0, i32 2
-  %out3 = getelementptr PTR_OP_ARGS(`<WIDTH x float>') %out0, i32 3
-  call void @__soa_to_aos4_float`'WIDTH (<WIDTH x float> %v0, <WIDTH x float> %v1,
-         <WIDTH x float> %v2, <WIDTH x float> %v3, <WIDTH x float> * %out0,
-         <WIDTH x float> * %out1, <WIDTH x float> * %out2, <WIDTH x float> * %out3)
+  call void @__soa_to_aos3_float`'WIDTH (<WIDTH x float> %v0, <WIDTH x float> %v1,
+         <WIDTH x float> %v2, <WIDTH x float> * %out0, <WIDTH x float> * %out1,
+         <WIDTH x float> * %out2)
   ret void
 }
 
@@ -3072,7 +3097,6 @@ define void
   ret void
 }
 
-
 define void
 @__soa_to_aos3_double(<WIDTH x double> %v0, <WIDTH x double> %v1, <WIDTH x double> %v2,
                      double * noalias %p) nounwind alwaysinline {
@@ -3082,35 +3106,6 @@ define void
   call void @__soa_to_aos3_double`'WIDTH (<WIDTH x double> %v0, <WIDTH x double> %v1,
          <WIDTH x double> %v2, <WIDTH x double> * %out0, <WIDTH x double> * %out1,
          <WIDTH x double> * %out2)
-  ret void
-}
-
-define void
-@__aos_to_soa3_float(float * noalias %p,
-        <WIDTH x float> * %out0, <WIDTH x float> * %out1,
-        <WIDTH x float> * %out2) nounwind alwaysinline {
-  %p0 = bitcast float * %p to <WIDTH x float> *
-  %v0 = load PTR_OP_ARGS(`<WIDTH x float> ')  %p0, align 4
-  %p1 = getelementptr PTR_OP_ARGS(`<WIDTH x float>') %p0, i32 1
-  %v1 = load PTR_OP_ARGS(`<WIDTH x float> ')  %p1, align 4
-  %p2 = getelementptr PTR_OP_ARGS(`<WIDTH x float>') %p0, i32 2
-  %v2 = load PTR_OP_ARGS(`<WIDTH x float> ')  %p2, align 4
-  call void @__aos_to_soa3_float`'WIDTH (<WIDTH x float> %v0, <WIDTH x float> %v1,
-         <WIDTH x float> %v2, <WIDTH x float> * %out0, <WIDTH x float> * %out1,
-         <WIDTH x float> * %out2)
-  ret void
-}
-
-
-define void
-@__soa_to_aos3_float(<WIDTH x float> %v0, <WIDTH x float> %v1, <WIDTH x float> %v2,
-                     float * noalias %p) nounwind alwaysinline {
-  %out0 = bitcast float * %p to <WIDTH x float> *
-  %out1 = getelementptr PTR_OP_ARGS(`<WIDTH x float>') %out0, i32 1
-  %out2 = getelementptr PTR_OP_ARGS(`<WIDTH x float>') %out0, i32 2
-  call void @__soa_to_aos3_float`'WIDTH (<WIDTH x float> %v0, <WIDTH x float> %v1,
-         <WIDTH x float> %v2, <WIDTH x float> * %out0, <WIDTH x float> * %out1,
-         <WIDTH x float> * %out2)
   ret void
 }
 ')
