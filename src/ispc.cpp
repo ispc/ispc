@@ -769,7 +769,6 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, bool pic, boo
         this->m_hasRand = true;
         this->m_hasGather = this->m_hasScatter = true;
         this->m_hasTranscendentals = false;
-        // For MIC it is set to true due to performance reasons. The option should be tested.
         this->m_hasTrigonometry = false;
         this->m_hasRsqrtd = this->m_hasRcpd = false;
         this->m_hasVecPrefetch = false;
@@ -789,7 +788,6 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, bool pic, boo
         this->m_hasRand = true;
         this->m_hasGather = this->m_hasScatter = true;
         this->m_hasTranscendentals = false;
-        // For MIC it is set to true due to performance reasons. The option should be tested.
         this->m_hasTrigonometry = false;
         this->m_hasRsqrtd = this->m_hasRcpd = false;
         this->m_hasVecPrefetch = false;
@@ -802,6 +800,32 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, bool pic, boo
             this->m_funcAttributes.push_back(std::make_pair("min-legal-vector-width", "512"));
         }
         break;
+    case ISPCTarget::avx512skx_i8x64:
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_10_0 // LLVM 10.0+
+        // This target is enabled only for LLVM 10.0 and later
+        // because LLVM requires a number of fixes, which are
+        // committed to LLVM 11.0 and can be applied to 10.0, but not
+        // earlier versions.
+        this->m_isa = Target::SKX_AVX512;
+        this->m_nativeVectorWidth = 64;
+        this->m_nativeVectorAlignment = 64;
+        this->m_dataTypeWidth = 8;
+        this->m_vectorWidth = 64;
+        this->m_maskingIsFree = true;
+        this->m_maskBitCount = 1;
+        this->m_hasHalf = true;
+        this->m_hasRand = true;
+        this->m_hasGather = this->m_hasScatter = true;
+        this->m_hasTranscendentals = false;
+        this->m_hasTrigonometry = false;
+        this->m_hasRsqrtd = this->m_hasRcpd = false;
+        this->m_hasVecPrefetch = false;
+        CPUfromISA = CPU_SKX;
+        break;
+#else
+        unsupported_target = true;
+        break;
+#endif
     case ISPCTarget::generic_1:
         this->m_isa = Target::GENERIC;
         this->m_nativeVectorWidth = 1;
