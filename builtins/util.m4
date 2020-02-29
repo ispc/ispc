@@ -1934,7 +1934,9 @@ declare void @__prefetch_read_varying_nt_native(i8 * %base, i32 %scale, <WIDTH x
 ;; take 4 4-wide vectors laid out like <r0 g0 b0 a0> <r1 g1 b1 a1> ...
 ;; and reorder them to <r0 r1 r2 r3> <g0 g1 g2 g3> ...
 
-define(`aossoa', `define void
+define(`aossoa4', `
+
+define void
 @__aos_to_soa4_float4(<4 x float> %v0, <4 x float> %v1, <4 x float> %v2,
         <4 x float> %v3, <4 x float> * noalias %out0,
         <4 x float> * noalias %out1, <4 x float> * noalias %out2,
@@ -2135,11 +2137,16 @@ define void
   store <4 x double> %r2, <4 x double> * %out2
   ret void
 }
+')
 
 ;; 8-wide
 ;; These functions implement the 8-wide variants of the AOS/SOA conversion
 ;; routines above.  These implementations are all built on top of the 4-wide
 ;; vector versions.
+
+define(`aossoa8', `
+
+aossoa4()
 
 define void
 @__aos_to_soa4_float8(<8 x float> %v0, <8 x float> %v1, <8 x float> %v2,
@@ -2470,8 +2477,14 @@ define void
          <4 x double> * %out2b)
   ret void
 }
+')
 
 ;; 16-wide
+
+define(`aossoa16', `
+
+;; use 4-wide building blocks
+aossoa4()
 
 define void
 @__aos_to_soa4_float16(<16 x float> %v0, <16 x float> %v1, <16 x float> %v2,
@@ -2985,9 +2998,19 @@ define void
          <4 x double> * %out2d)
   ret void
 }
+')
 
 
 ;; versions to be called from stdlib
+define(`aossoa', `
+
+ifelse(WIDTH,  `1', `',
+       WIDTH,  `4', `aossoa4()',
+       WIDTH,  `8', `aossoa8()',
+       WIDTH, `16', `aossoa16() ',
+                    `errprint(`ERROR: aossoa() macro called with unsupported width = 'WIDTH
+)
+                      m4exit(`1')')
 
 define void
 @__aos_to_soa4_float(float * noalias %p,
