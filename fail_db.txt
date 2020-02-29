@@ -8,11 +8,6 @@
 %
 
 % Windows specific fails. transcendentals-10-0.ispc is not expected to work anywhere except Linux.
-.\tests\transcendentals-10-0.ispc compfail     x86           sse4 Windows LLVM 9.0         cl -O2 *
-.\tests\transcendentals-10-0.ispc compfail     x86           sse4 Windows LLVM 8.0         cl -O2 *
-.\tests\transcendentals-10-0.ispc compfail     x86           sse4 Windows LLVM 7.0         cl -O2 *
-.\tests\transcendentals-10-0.ispc compfail     x86           sse4 Windows LLVM 6.0         cl -O2 *
-.\tests\transcendentals-10-0.ispc compfail     x86           sse4 Windows LLVM 5.0         cl -O2 *
 
 % LLVM 5.0 fails
 ./tests/shuffle-3.ispc runfail     x86 avx512skx-i32x16   Linux LLVM 5.0 clang++5.0 -O0 *
@@ -31,3 +26,5 @@
 % LLVM 8.0 fails
 
 % LLVM 9.0 fails
+
+% LLVM 10.0 fails
