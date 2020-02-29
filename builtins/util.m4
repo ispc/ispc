@@ -698,7 +698,7 @@ define(`sse_binary_scalar', `
 
 ;; Do a reduction over a 4-wide vector
 ;; $1: type of final scalar result
-;; $2: 4-wide function that takes 2 4-wide operands and returns the 
+;; $2: 4-wide function that takes 2 4-wide operands and returns the
 ;;     element-wise reduction
 ;; $3: scalar function that takes two scalar operands and returns
 ;;     the final reduction
@@ -716,7 +716,7 @@ define(`reduce4', `
 
 ;; Similar to `reduce4', do a reduction over an 8-wide vector
 ;; $1: type of final scalar result
-;; $2: 8-wide function that takes 2 8-wide operands and returns the 
+;; $2: 8-wide function that takes 2 8-wide operands and returns the
 ;;     element-wise reduction
 ;; $3: scalar function that takes two scalar operands and returns
 ;;     the final reduction
@@ -734,6 +734,13 @@ define(`reduce8', `
   ret $1 %m
 '
 )
+
+;; Do a reduction over an 16-wide vector
+;; $1: type of final scalar result
+;; $2: 16-wide function that takes 2 16-wide operands and returns the
+;;     element-wise reduction
+;; $3: scalar function that takes two scalar operands and returns
+;;     the final reduction
 
 define(`reduce16', `
   %v1 = shufflevector <16 x $1> %0, <16 x $1> undef,
@@ -760,6 +767,113 @@ define(`reduce16', `
   ret $1 %m
 '
 )
+
+;; Do a reduction over an 32-wide vector
+;; $1: type of final scalar result
+;; $2: 32-wide function that takes 2 32-wide operands and returns the
+;;     element-wise reduction
+;; $3: scalar function that takes two scalar operands and returns
+;;     the final reduction
+
+define(`reduce32', `
+  %v1 = shufflevector <32 x $1> %0, <32 x $1> undef,
+        <32 x i32> <i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23,
+                    i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31,
+                    i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef,
+                    i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+  %m1 = call <32 x $1> $2(<32 x $1> %v1, <32 x $1> %0)
+  %v2 = shufflevector <32 x $1> %m1, <32 x $1> undef,
+        <32 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15,
+                    i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef,
+                    i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef,
+                    i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+  %m2 = call <32 x $1> $2(<32 x $1> %v2, <32 x $1> %m1)
+  %v3 = shufflevector <32 x $1> %m2, <32 x $1> undef,
+        <32 x i32> <i32 4, i32 5, i32 6, i32 7, i32 undef, i32 undef, i32 undef, i32 undef,
+                    i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef,
+                    i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef,
+                    i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+  %m3 = call <32 x $1> $2(<32 x $1> %v3, <32 x $1> %m2)
+  %v4 = shufflevector <32 x $1> %m3, <32 x $1> undef,
+        <32 x i32> <i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef,
+                    i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef,
+                    i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef,
+                    i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+  %m4 = call <32 x $1> $2(<32 x $1> %v4, <32 x $1> %m3)
+
+  %m4a = extractelement <32 x $1> %m4, i32 0
+  %m4b = extractelement <32 x $1> %m4, i32 1
+  %m = call $1 $3($1 %m4a, $1 %m4b)
+  ret $1 %m
+'
+)
+
+;; Do a reduction over an 64-wide vector
+;; $1: type of final scalar result
+;; $2: 64-wide function that takes 2 64-wide operands and returns the
+;;     element-wise reduction
+;; $3: scalar function that takes two scalar operands and returns
+;;     the final reduction
+
+define(`reduce64', `
+  %v1 = shufflevector <64 x $1> %0, <64 x $1> undef,
+        <64 x i32> <i32 32, i32 33, i32 34, i32 35, i32 36, i32 37, i32 38, i32 39,
+                    i32 40, i32 41, i32 42, i32 43, i32 44, i32 45, i32 46, i32 47,
+                    i32 48, i32 49, i32 50, i32 51, i32 52, i32 53, i32 54, i32 55,
+                    i32 56, i32 57, i32 58, i32 59, i32 60, i32 61, i32 62, i32 63,
+                    i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef,
+                    i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef,
+                    i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef,
+                    i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+  %m1 = call <64 x $1> $2(<64 x $1> %v1, <64 x $1> %0)
+  %v2 = shufflevector <64 x $1> %m1, <64 x $1> undef,
+        <64 x i32> <i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23,
+                    i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31,
+                    i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef,
+                    i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef,
+                    i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef,
+                    i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef,
+                    i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef,
+                    i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+  %m2 = call <64 x $1> $2(<64 x $1> %v2, <64 x $1> %m1)
+  %v3 = shufflevector <64 x $1> %m2, <64 x $1> undef,
+        <64 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15,
+                    i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef,
+                    i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef,
+                    i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef,
+                    i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef,
+                    i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef,
+                    i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef,
+                    i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+  %m3 = call <64 x $1> $2(<64 x $1> %v3, <64 x $1> %m2)
+  %v4 = shufflevector <64 x $1> %m3, <64 x $1> undef,
+        <64 x i32> <i32 4, i32 5, i32 6, i32 7, i32 undef, i32 undef, i32 undef, i32 undef,
+                    i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef,
+                    i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef,
+                    i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef,
+                    i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef,
+                    i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef,
+                    i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef,
+                    i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+  %m4 = call <64 x $1> $2(<64 x $1> %v4, <64 x $1> %m3)
+  %v5 = shufflevector <64 x $1> %m4, <64 x $1> undef,
+        <64 x i32> <i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef,
+                    i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef,
+                    i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef,
+                    i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef,
+                    i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef,
+                    i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef,
+                    i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef,
+                    i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+  %m5 = call <64 x $1> $2(<64 x $1> %v5, <64 x $1> %m4)
+
+  %m5a = extractelement <64 x $1> %m5, i32 0
+  %m5b = extractelement <64 x $1> %m5, i32 1
+  %m = call $1 $3($1 %m5a, $1 %m5b)
+  ret $1 %m
+'
+)
+
 
 ;; Do an reduction over an 8-wide vector, using a vector reduction function
 ;; that only takes 4-wide vectors
