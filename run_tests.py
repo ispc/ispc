@@ -577,12 +577,14 @@ def file_check(results, host, target):
                     if options.update == "FP":
                         new_f_lines.remove(f_lines[j])
     if len(new_runfails) != 0:
+        new_runfails.sort()
         print_debug("NEW RUNFAILS:\n", s, run_tests_log)
         exit_code = 1
         for i in range (0,len(new_runfails)):
             new_f_lines.append(new_runfails[i] + " runfail " + new_line)
             print_debug("\t" + new_runfails[i] + "\n", s, run_tests_log)
     if len(new_compfails) != 0:
+        new_compfails.sort()
         print_debug("NEW COMPFAILS:\n", s, run_tests_log)
         exit_code = 1
         for i in range (0,len(new_compfails)):
@@ -591,10 +593,12 @@ def file_check(results, host, target):
     if len(new_runfails) == 0 and len(new_compfails) == 0:
         print_debug("No new fails\n", s, run_tests_log)
     if len(new_passes_runfails) != 0:
+        new_passes_runfails.sort()
         print_debug("NEW PASSES after RUNFAILS:\n", s, run_tests_log)
         for i in range (0,len(new_passes_runfails)):
             print_debug("\t" + new_passes_runfails[i] + "\n", s, run_tests_log)
     if len(new_passes_compfails) != 0:
+        new_passes_compfails.sort()
         print_debug("NEW PASSES after COMPFAILS:\n", s, run_tests_log)
         for i in range (0,len(new_passes_compfails)):
             print_debug("\t" + new_passes_compfails[i] + "\n", s, run_tests_log)
