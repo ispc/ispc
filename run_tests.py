@@ -609,7 +609,7 @@ def verify():
               "avx2-i32x4", "avx2-i32x8", "avx2-i32x16", "avx2-i64x4",
               "generic-1", "generic-4", "generic-8",
               "generic-16", "generic-32", "generic-64",
-              "avx512knl-i32x16", "avx512skx-i32x16", "avx512skx-i32x8"]]
+              "avx512knl-i32x16", "avx512skx-i32x16", "avx512skx-i32x8", "avx512skx-i8x64", "avx512skx-i16x32"]]
     for i in range (0,len(f_lines)):
         if f_lines[i][0] == "%":
             continue
