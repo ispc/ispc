@@ -3000,6 +3000,401 @@ define void
 }
 ')
 
+;; 32 wide version
+
+define(`aossoa32', `
+
+;; reorder
+;; v0 = <a0 b0 c0 d0 ... a7 b7 c7 d7>
+;; v1 = <a8 b8 c8 d8 ... a15 b15 c15 d15>
+;; v2 = <a16 b16 c16 d16 ... a23 b23 c23 d23>
+;; v3 = <a24 b24 c24 d24 ... a31 b31 c31 d31>
+;; to
+;; out0 = <a0 ... a31>
+;; out1 = <b0 ... b31>
+;; out2 = <c0 ... c31>
+;; out3 = <d0 ... d31>
+
+define void
+@__aos_to_soa4_float32(<32 x float> %v0, <32 x float> %v1, <32 x float> %v2,
+        <32 x float> %v3, <32 x float> * noalias %out0,
+        <32 x float> * noalias %out1, <32 x float> * noalias %out2,
+        <32 x float> * noalias %out3) nounwind alwaysinline {
+  ;; t0 = <a16 ... a31, b16 ... b31>
+  %t0 = shufflevector <32 x float> %v2, <32 x float> %v3,
+          <32 x i32> <i32 0, i32 4, i32 8, i32 12, i32 16, i32 20, i32 24, i32 28, i32 32, i32 36, i32 40, i32 44, i32 48, i32 52, i32 56, i32 60,
+                      i32 1, i32 5, i32 9, i32 13, i32 17, i32 21, i32 25, i32 29, i32 33, i32 37, i32 41, i32 45, i32 49, i32 53, i32 57, i32 61>
+  ;; t1 = <c16 ... a31, d16 ... b31>
+  %t1 = shufflevector <32 x float> %v2, <32 x float> %v3,
+          <32 x i32> <i32 2, i32 6, i32 10, i32 14, i32 18, i32 22, i32 26, i32 30, i32 34, i32 38, i32 42, i32 46, i32 50, i32 54, i32 58, i32 62,
+                      i32 3, i32 7, i32 11, i32 15, i32 19, i32 23, i32 27, i32 31, i32 35, i32 39, i32 43, i32 47, i32 51, i32 55, i32 59, i32 63>
+  ;; t2 = <a0 ... a15, b0 ... b15>
+  %t2 = shufflevector <32 x float> %v0, <32 x float> %v1,
+          <32 x i32> <i32 0, i32 4, i32 8, i32 12, i32 16, i32 20, i32 24, i32 28, i32 32, i32 36, i32 40, i32 44, i32 48, i32 52, i32 56, i32 60,
+                      i32 1, i32 5, i32 9, i32 13, i32 17, i32 21, i32 25, i32 29, i32 33, i32 37, i32 41, i32 45, i32 49, i32 53, i32 57, i32 61>
+  ;; t3 = <c0 ... a15, d0 ... b15>
+  %t3 = shufflevector <32 x float> %v0, <32 x float> %v1,
+          <32 x i32> <i32 2, i32 6, i32 10, i32 14, i32 18, i32 22, i32 26, i32 30, i32 34, i32 38, i32 42, i32 46, i32 50, i32 54, i32 58, i32 62,
+                      i32 3, i32 7, i32 11, i32 15, i32 19, i32 23, i32 27, i32 31, i32 35, i32 39, i32 43, i32 47, i32 51, i32 55, i32 59, i32 63>
+
+  ;; Produce output vectors
+  %r0 = shufflevector <32 x float> %t2, <32 x float> %t0,
+          <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15,
+                      i32 32, i32 33, i32 34, i32 35, i32 36, i32 37, i32 38, i32 39, i32 40, i32 41, i32 42, i32 43, i32 44, i32 45, i32 46, i32 47>
+  store <32 x float> %r0, <32 x float> * %out0
+  %r1 = shufflevector <32 x float> %t2, <32 x float> %t0,
+          <32 x i32> <i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31,
+                      i32 48, i32 49, i32 50, i32 51, i32 52, i32 53, i32 54, i32 55, i32 56, i32 57, i32 58, i32 59, i32 60, i32 61, i32 62, i32 63>
+  store <32 x float> %r1, <32 x float> * %out1
+  %r2 = shufflevector <32 x float> %t3, <32 x float> %t1,
+          <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15,
+                      i32 32, i32 33, i32 34, i32 35, i32 36, i32 37, i32 38, i32 39, i32 40, i32 41, i32 42, i32 43, i32 44, i32 45, i32 46, i32 47>
+  store <32 x float> %r2, <32 x float> * %out2
+  %r3 = shufflevector <32 x float> %t3, <32 x float> %t1,
+          <32 x i32> <i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31,
+                      i32 48, i32 49, i32 50, i32 51, i32 52, i32 53, i32 54, i32 55, i32 56, i32 57, i32 58, i32 59, i32 60, i32 61, i32 62, i32 63>
+  store <32 x float> %r3, <32 x float> * %out3
+  ret void
+}
+
+;; reorder
+;; v0 = <a0 ... a31>
+;; v1 = <b0 ... b31>
+;; v2 = <c0 ... c31>
+;; v3 = <d0 ... d31>
+;; to
+;; out0 = <a0 b0 c0 d0 ... a7 b7 c7 d7>
+;; out1 = <a8 b8 c8 d8 ... a15 b15 c15 d15>
+;; out2 = <a16 b16 c16 d16 ... a23 b23 c23 d23>
+;; out3 = <a24 b24 c24 d24 ... a31 b31 c31 d31>
+
+define void
+@__soa_to_aos4_float32(<32 x float> %v0, <32 x float> %v1, <32 x float> %v2,
+        <32 x float> %v3, <32 x float> * noalias %out0,
+        <32 x float> * noalias %out1, <32 x float> * noalias %out2,
+        <32 x float> * noalias %out3) nounwind alwaysinline {
+  ;; t0 = <c0 ... c15, d0 ... d15>
+  %t0 = shufflevector <32 x float> %v2, <32 x float> %v3,
+          <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15,
+                      i32 32, i32 33, i32 34, i32 35, i32 36, i32 37, i32 38, i32 39, i32 40, i32 41, i32 42, i32 43, i32 44, i32 45, i32 46, i32 47>
+  ;; t1 = <c16 ... c31, d16 ... d31>
+  %t1 = shufflevector <32 x float> %v2, <32 x float> %v3,
+          <32 x i32> <i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31,
+                      i32 48, i32 49, i32 50, i32 51, i32 52, i32 53, i32 54, i32 55, i32 56, i32 57, i32 58, i32 59, i32 60, i32 61, i32 62, i32 63>
+  ;; t2 = <a0 ... a15, b0 ... b15>
+  %t2 = shufflevector <32 x float> %v0, <32 x float> %v1,
+          <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15,
+                      i32 32, i32 33, i32 34, i32 35, i32 36, i32 37, i32 38, i32 39, i32 40, i32 41, i32 42, i32 43, i32 44, i32 45, i32 46, i32 47>
+  ;; t3 = <a16 ... a31, b16 ... b31>
+  %t3 = shufflevector <32 x float> %v0, <32 x float> %v1,
+          <32 x i32> <i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31,
+                      i32 48, i32 49, i32 50, i32 51, i32 52, i32 53, i32 54, i32 55, i32 56, i32 57, i32 58, i32 59, i32 60, i32 61, i32 62, i32 63>
+
+  ;; Produce output vectors
+  %r0 = shufflevector <32 x float> %t2, <32 x float> %t0,
+          <32 x i32> <i32 0, i32 16, i32 32, i32 48, i32 1, i32 17, i32 33, i32 49, i32 2, i32 18, i32 34, i32 50, i32 3, i32 19, i32 35, i32 51,
+                      i32 4, i32 20, i32 36, i32 52, i32 5, i32 21, i32 37, i32 53, i32 6, i32 22, i32 38, i32 54, i32 7, i32 23, i32 39, i32 55>
+  store <32 x float> %r0, <32 x float> * %out0
+  %r1 = shufflevector <32 x float> %t2, <32 x float> %t0,
+          <32 x i32> <i32 8, i32 24, i32 40, i32 56, i32 9, i32 25, i32 41, i32 57, i32 10, i32 26, i32 42, i32 58, i32 11, i32 27, i32 43, i32 59,
+                      i32 12, i32 28, i32 44, i32 60, i32 13, i32 29, i32 45, i32 61, i32 14, i32 30, i32 46, i32 62, i32 15, i32 31, i32 47, i32 63>
+  store <32 x float> %r1, <32 x float> * %out1
+  %r2 = shufflevector <32 x float> %t3, <32 x float> %t1,
+          <32 x i32> <i32 0, i32 16, i32 32, i32 48, i32 1, i32 17, i32 33, i32 49, i32 2, i32 18, i32 34, i32 50, i32 3, i32 19, i32 35, i32 51,
+                      i32 4, i32 20, i32 36, i32 52, i32 5, i32 21, i32 37, i32 53, i32 6, i32 22, i32 38, i32 54, i32 7, i32 23, i32 39, i32 55>
+  store <32 x float> %r2, <32 x float> * %out2
+  %r3 = shufflevector <32 x float> %t3, <32 x float> %t1,
+          <32 x i32> <i32 8, i32 24, i32 40, i32 56, i32 9, i32 25, i32 41, i32 57, i32 10, i32 26, i32 42, i32 58, i32 11, i32 27, i32 43, i32 59,
+                      i32 12, i32 28, i32 44, i32 60, i32 13, i32 29, i32 45, i32 61, i32 14, i32 30, i32 46, i32 62, i32 15, i32 31, i32 47, i32 63>
+  store <32 x float> %r3, <32 x float> * %out3
+  ret void
+}
+
+;; reorder
+;; v0 = <a0 b0 c0 d0 ... a7 b7 c7 d7>
+;; v1 = <a8 b8 c8 d8 ... a15 b15 c15 d15>
+;; v2 = <a16 b16 c16 d16 ... a23 b23 c23 d23>
+;; v3 = <a24 b24 c24 d24 ... a31 b31 c31 d31>
+;; to
+;; out0 = <a0 ... a31>
+;; out1 = <b0 ... b31>
+;; out2 = <c0 ... c31>
+;; out3 = <d0 ... d31>
+
+define void
+@__aos_to_soa4_double32(<32 x double> %v0, <32 x double> %v1, <32 x double> %v2,
+        <32 x double> %v3, <32 x double> * noalias %out0,
+        <32 x double> * noalias %out1, <32 x double> * noalias %out2,
+        <32 x double> * noalias %out3) nounwind alwaysinline {
+  ;; t0 = <a16 ... a31, b16 ... b31>
+  %t0 = shufflevector <32 x double> %v2, <32 x double> %v3,
+          <32 x i32> <i32 0, i32 4, i32 8, i32 12, i32 16, i32 20, i32 24, i32 28, i32 32, i32 36, i32 40, i32 44, i32 48, i32 52, i32 56, i32 60,
+                      i32 1, i32 5, i32 9, i32 13, i32 17, i32 21, i32 25, i32 29, i32 33, i32 37, i32 41, i32 45, i32 49, i32 53, i32 57, i32 61>
+  ;; t1 = <c16 ... a31, d16 ... b31>
+  %t1 = shufflevector <32 x double> %v2, <32 x double> %v3,
+          <32 x i32> <i32 2, i32 6, i32 10, i32 14, i32 18, i32 22, i32 26, i32 30, i32 34, i32 38, i32 42, i32 46, i32 50, i32 54, i32 58, i32 62,
+                      i32 3, i32 7, i32 11, i32 15, i32 19, i32 23, i32 27, i32 31, i32 35, i32 39, i32 43, i32 47, i32 51, i32 55, i32 59, i32 63>
+  ;; t2 = <a0 ... a15, b0 ... b15>
+  %t2 = shufflevector <32 x double> %v0, <32 x double> %v1,
+          <32 x i32> <i32 0, i32 4, i32 8, i32 12, i32 16, i32 20, i32 24, i32 28, i32 32, i32 36, i32 40, i32 44, i32 48, i32 52, i32 56, i32 60,
+                      i32 1, i32 5, i32 9, i32 13, i32 17, i32 21, i32 25, i32 29, i32 33, i32 37, i32 41, i32 45, i32 49, i32 53, i32 57, i32 61>
+  ;; t3 = <c0 ... a15, d0 ... b15>
+  %t3 = shufflevector <32 x double> %v0, <32 x double> %v1,
+          <32 x i32> <i32 2, i32 6, i32 10, i32 14, i32 18, i32 22, i32 26, i32 30, i32 34, i32 38, i32 42, i32 46, i32 50, i32 54, i32 58, i32 62,
+                      i32 3, i32 7, i32 11, i32 15, i32 19, i32 23, i32 27, i32 31, i32 35, i32 39, i32 43, i32 47, i32 51, i32 55, i32 59, i32 63>
+
+  ;; Produce output vectors
+  %r0 = shufflevector <32 x double> %t2, <32 x double> %t0,
+          <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15,
+                      i32 32, i32 33, i32 34, i32 35, i32 36, i32 37, i32 38, i32 39, i32 40, i32 41, i32 42, i32 43, i32 44, i32 45, i32 46, i32 47>
+  store <32 x double> %r0, <32 x double> * %out0
+  %r1 = shufflevector <32 x double> %t2, <32 x double> %t0,
+          <32 x i32> <i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31,
+                      i32 48, i32 49, i32 50, i32 51, i32 52, i32 53, i32 54, i32 55, i32 56, i32 57, i32 58, i32 59, i32 60, i32 61, i32 62, i32 63>
+  store <32 x double> %r1, <32 x double> * %out1
+  %r2 = shufflevector <32 x double> %t3, <32 x double> %t1,
+          <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15,
+                      i32 32, i32 33, i32 34, i32 35, i32 36, i32 37, i32 38, i32 39, i32 40, i32 41, i32 42, i32 43, i32 44, i32 45, i32 46, i32 47>
+  store <32 x double> %r2, <32 x double> * %out2
+  %r3 = shufflevector <32 x double> %t3, <32 x double> %t1,
+          <32 x i32> <i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31,
+                      i32 48, i32 49, i32 50, i32 51, i32 52, i32 53, i32 54, i32 55, i32 56, i32 57, i32 58, i32 59, i32 60, i32 61, i32 62, i32 63>
+  store <32 x double> %r3, <32 x double> * %out3
+  ret void
+}
+
+;; reorder
+;; v0 = <a0 ... a31>
+;; v1 = <b0 ... b31>
+;; v2 = <c0 ... c31>
+;; v3 = <d0 ... d31>
+;; to
+;; out0 = <a0 b0 c0 d0 ... a7 b7 c7 d7>
+;; out1 = <a8 b8 c8 d8 ... a15 b15 c15 d15>
+;; out2 = <a16 b16 c16 d16 ... a23 b23 c23 d23>
+;; out3 = <a24 b24 c24 d24 ... a31 b31 c31 d31>
+
+define void
+@__soa_to_aos4_double32(<32 x double> %v0, <32 x double> %v1, <32 x double> %v2,
+        <32 x double> %v3, <32 x double> * noalias %out0,
+        <32 x double> * noalias %out1, <32 x double> * noalias %out2,
+        <32 x double> * noalias %out3) nounwind alwaysinline {
+  ;; t0 = <c0 ... c15, d0 ... d15>
+  %t0 = shufflevector <32 x double> %v2, <32 x double> %v3,
+          <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15,
+                      i32 32, i32 33, i32 34, i32 35, i32 36, i32 37, i32 38, i32 39, i32 40, i32 41, i32 42, i32 43, i32 44, i32 45, i32 46, i32 47>
+  ;; t1 = <c16 ... c31, d16 ... d31>
+  %t1 = shufflevector <32 x double> %v2, <32 x double> %v3,
+          <32 x i32> <i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31,
+                      i32 48, i32 49, i32 50, i32 51, i32 52, i32 53, i32 54, i32 55, i32 56, i32 57, i32 58, i32 59, i32 60, i32 61, i32 62, i32 63>
+  ;; t2 = <a0 ... a15, b0 ... b15>
+  %t2 = shufflevector <32 x double> %v0, <32 x double> %v1,
+          <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15,
+                      i32 32, i32 33, i32 34, i32 35, i32 36, i32 37, i32 38, i32 39, i32 40, i32 41, i32 42, i32 43, i32 44, i32 45, i32 46, i32 47>
+  ;; t3 = <a16 ... a31, b16 ... b31>
+  %t3 = shufflevector <32 x double> %v0, <32 x double> %v1,
+          <32 x i32> <i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31,
+                      i32 48, i32 49, i32 50, i32 51, i32 52, i32 53, i32 54, i32 55, i32 56, i32 57, i32 58, i32 59, i32 60, i32 61, i32 62, i32 63>
+
+  ;; Produce output vectors
+  %r0 = shufflevector <32 x double> %t2, <32 x double> %t0,
+          <32 x i32> <i32 0, i32 16, i32 32, i32 48, i32 1, i32 17, i32 33, i32 49, i32 2, i32 18, i32 34, i32 50, i32 3, i32 19, i32 35, i32 51,
+                      i32 4, i32 20, i32 36, i32 52, i32 5, i32 21, i32 37, i32 53, i32 6, i32 22, i32 38, i32 54, i32 7, i32 23, i32 39, i32 55>
+  store <32 x double> %r0, <32 x double> * %out0
+  %r1 = shufflevector <32 x double> %t2, <32 x double> %t0,
+          <32 x i32> <i32 8, i32 24, i32 40, i32 56, i32 9, i32 25, i32 41, i32 57, i32 10, i32 26, i32 42, i32 58, i32 11, i32 27, i32 43, i32 59,
+                      i32 12, i32 28, i32 44, i32 60, i32 13, i32 29, i32 45, i32 61, i32 14, i32 30, i32 46, i32 62, i32 15, i32 31, i32 47, i32 63>
+  store <32 x double> %r1, <32 x double> * %out1
+  %r2 = shufflevector <32 x double> %t3, <32 x double> %t1,
+          <32 x i32> <i32 0, i32 16, i32 32, i32 48, i32 1, i32 17, i32 33, i32 49, i32 2, i32 18, i32 34, i32 50, i32 3, i32 19, i32 35, i32 51,
+                      i32 4, i32 20, i32 36, i32 52, i32 5, i32 21, i32 37, i32 53, i32 6, i32 22, i32 38, i32 54, i32 7, i32 23, i32 39, i32 55>
+  store <32 x double> %r2, <32 x double> * %out2
+  %r3 = shufflevector <32 x double> %t3, <32 x double> %t1,
+          <32 x i32> <i32 8, i32 24, i32 40, i32 56, i32 9, i32 25, i32 41, i32 57, i32 10, i32 26, i32 42, i32 58, i32 11, i32 27, i32 43, i32 59,
+                      i32 12, i32 28, i32 44, i32 60, i32 13, i32 29, i32 45, i32 61, i32 14, i32 30, i32 46, i32 62, i32 15, i32 31, i32 47, i32 63>
+  store <32 x double> %r3, <32 x double> * %out3
+  ret void
+}
+
+;; reorder
+;; v0 = <a0 b0 c0 ... a9 b9 c9 a10 b10>
+;; v1 = <c10 ...       a20 b20 c20 a21>
+;; v3 = <b21 c21 ...       a31 b31 c31>
+;; to
+;; out0 = <a0 ... a31>
+;; out1 = <b0 ... b31>
+;; out2 = <c0 ... c31>
+
+define void
+@__aos_to_soa3_float32(<32 x float> %v0, <32 x float> %v1, <32 x float> %v2,
+        <32 x float> * noalias %out0, <32 x float> * noalias %out1,
+        <32 x float> * noalias %out2) nounwind alwaysinline {
+  ;; t0 = <a0 ... a15 b0 ... b15>
+  %t0 = shufflevector <32 x float> %v0, <32 x float> %v1,
+          <32 x i32> <i32 0, i32 3, i32 6, i32 9, i32 12, i32 15, i32 18, i32 21, i32 24, i32 27, i32 30, i32 33, i32 36, i32 39, i32 42, i32 45,
+                      i32 1, i32 4, i32 7, i32 10, i32 13, i32 16, i32 19, i32 22, i32 25, i32 28, i32 31, i32 34, i32 37, i32 40, i32 43, i32 46>
+  ;; t1 = <a16 ... a32 b16 ... b32>
+  %t1 = shufflevector <32 x float> %v1, <32 x float> %v2,
+          <32 x i32> <i32 16, i32 19, i32 22, i32 25, i32 28, i32 31, i32 34, i32 37, i32 40, i32 43, i32 46, i32 49, i32 52, i32 55, i32 58, i32 61,
+                      i32 17, i32 20, i32 23, i32 26, i32 29, i32 32, i32 35, i32 38, i32 41, i32 44, i32 47, i32 50, i32 53, i32 56, i32 59, i32 62>
+
+  ;; Produce output vectors
+  %r0 = shufflevector <32 x float> %t0, <32 x float> %t1,
+          <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15,
+                      i32 32, i32 33, i32 34, i32 35, i32 36, i32 37, i32 38, i32 39, i32 40, i32 41, i32 42, i32 43, i32 44, i32 45, i32 46, i32 47>
+  store <32 x float> %r0, <32 x float> * %out0
+  %r1 = shufflevector <32 x float> %t0, <32 x float> %t1,
+          <32 x i32> <i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31,
+                      i32 48, i32 49, i32 50, i32 51, i32 52, i32 53, i32 54, i32 55, i32 56, i32 57, i32 58, i32 59, i32 60, i32 61, i32 62, i32 63>
+  store <32 x float> %r1, <32 x float> * %out1
+
+  ;; t2 = <c0 ... c20 undef ... undef>
+  %t2 = shufflevector <32 x float> %v0, <32 x float> %v1,
+          <32 x i32> <i32 2, i32 5, i32 8, i32 11, i32 14, i32 17, i32 20, i32 23, i32 26, i32 29, i32 32, i32 35, i32 38, i32 41, i32 44, i32 47,
+                      i32 50, i32 53, i32 56, i32 59, i32 62, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+
+  ;; Produce output vector
+  %r2 = shufflevector <32 x float> %t2, <32 x float> %v2,
+          <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15,
+                      i32 16, i32 17, i32 18, i32 19, i32 20, i32 33, i32 36, i32 39, i32 42, i32 45, i32 48, i32 51, i32 54, i32 57, i32 60, i32 63>
+  store <32 x float> %r2, <32 x float> * %out2
+  ret void
+}
+
+;; reorder
+;; v0 = <a0 ... a31>
+;; v1 = <b0 ... b31>
+;; v2 = <c0 ... c31>
+;; to
+;; out0 = <a0 b0 c0 ... a9 b9 c9 a10 b10>
+;; out1 = <c10 ...       a20 b20 c20 a21>
+;; out3 = <b21 c21 ...       a31 b31 c31>
+
+define void
+@__soa_to_aos3_float32(<32 x float> %v0, <32 x float> %v1, <32 x float> %v2,
+        <32 x float> * noalias %out0, <32 x float> * noalias %out1,
+        <32 x float> * noalias %out2) nounwind alwaysinline {
+  ;; t0 = <a0 ... a21 b0 ... b9>
+  %t0 = shufflevector <32 x float> %v0, <32 x float> %v1,
+          <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15,
+                      i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 32, i32 33, i32 34, i32 35, i32 36, i32 37, i32 38, i32 39, i32 40, i32 41>
+  ;; t1 = <b10 ... b20 c0 .. c20>
+  %t1 = shufflevector <32 x float> %v1, <32 x float> %v2,
+          <32 x i32> <i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 32, i32 33, i32 34, i32 35, i32 36,
+                      i32 37, i32 38, i32 39, i32 40, i32 41, i32 42, i32 43, i32 44, i32 45, i32 46, i32 47, i32 48, i32 49, i32 50, i32 51, i32 52>
+
+  ;; Produce output vectors
+  %r0 = shufflevector <32 x float> %t0, <32 x float> %t1,
+          <32 x i32> <i32 0, i32 22, i32 43, i32 1, i32 23, i32 44, i32 2, i32 24, i32 45, i32 3, i32 25, i32 46, i32 4, i32 26, i32 47, i32 5,
+                      i32 27, i32 48, i32 6, i32 28, i32 49, i32 7, i32 29, i32 50, i32 8, i32 30, i32 51, i32 9, i32 31, i32 52, i32 10, i32 32>
+  store <32 x float> %r0, <32 x float> * %out0
+  %r1 = shufflevector <32 x float> %t0, <32 x float> %t1,
+          <32 x i32> <i32 53, i32 11, i32 33, i32 54, i32 12, i32 34, i32 55, i32 13, i32 35, i32 56, i32 14, i32 36, i32 57, i32 15, i32 37, i32 58,
+                      i32 16, i32 38, i32 59, i32 17, i32 39, i32 60, i32 18, i32 40, i32 61, i32 19, i32 41, i32 62, i32 20, i32 42, i32 63, i32 21>
+  store <32 x float> %r1, <32 x float> * %out1
+
+  ;; t2 = <a22 ... a31 b21 ... b31 undef ... undef>
+  %t2 = shufflevector <32 x float> %v0, <32 x float> %v1,
+          <32 x i32> <i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31, i32 53, i32 54, i32 55, i32 56, i32 57, i32 58,
+                      i32 59, i32 60, i32 61, i32 62, i32 63, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+  ;; Produce output vector
+  %r2 = shufflevector <32 x float> %t2, <32 x float> %v2,
+          <32 x i32> <i32 10, i32 53, i32 0, i32 11, i32 54, i32 1, i32 12, i32 55, i32 2, i32 13, i32 56, i32 3, i32 14, i32 57, i32 4, i32 15,
+                      i32 58, i32 5, i32 16, i32 59, i32 6, i32 17, i32 60, i32 7, i32 18, i32 61, i32 8, i32 19, i32 62, i32 9, i32 20, i32 63>
+  store <32 x float> %r2, <32 x float> * %out2
+  ret void
+}
+
+;; reorder
+;; v0 = <a0 b0 c0 ... a9 b9 c9 a10 b10>
+;; v1 = <c10 ...       a20 b20 c20 a21>
+;; v3 = <b21 c21 ...       a31 b31 c31>
+;; to
+;; out0 = <a0 ... a31>
+;; out1 = <b0 ... b31>
+;; out2 = <c0 ... c31>
+
+define void
+@__aos_to_soa3_double32(<32 x double> %v0, <32 x double> %v1, <32 x double> %v2,
+        <32 x double> * noalias %out0, <32 x double> * noalias %out1,
+        <32 x double> * noalias %out2) nounwind alwaysinline {
+  ;; t0 = <a0 ... a15 b0 ... b15>
+  %t0 = shufflevector <32 x double> %v0, <32 x double> %v1,
+          <32 x i32> <i32 0, i32 3, i32 6, i32 9, i32 12, i32 15, i32 18, i32 21, i32 24, i32 27, i32 30, i32 33, i32 36, i32 39, i32 42, i32 45,
+                      i32 1, i32 4, i32 7, i32 10, i32 13, i32 16, i32 19, i32 22, i32 25, i32 28, i32 31, i32 34, i32 37, i32 40, i32 43, i32 46>
+  ;; t1 = <a16 ... a32 b16 ... b32>
+  %t1 = shufflevector <32 x double> %v1, <32 x double> %v2,
+          <32 x i32> <i32 16, i32 19, i32 22, i32 25, i32 28, i32 31, i32 34, i32 37, i32 40, i32 43, i32 46, i32 49, i32 52, i32 55, i32 58, i32 61,
+                      i32 17, i32 20, i32 23, i32 26, i32 29, i32 32, i32 35, i32 38, i32 41, i32 44, i32 47, i32 50, i32 53, i32 56, i32 59, i32 62>
+
+  ;; Produce output vectors
+  %r0 = shufflevector <32 x double> %t0, <32 x double> %t1,
+          <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15,
+                      i32 32, i32 33, i32 34, i32 35, i32 36, i32 37, i32 38, i32 39, i32 40, i32 41, i32 42, i32 43, i32 44, i32 45, i32 46, i32 47>
+  store <32 x double> %r0, <32 x double> * %out0
+  %r1 = shufflevector <32 x double> %t0, <32 x double> %t1,
+          <32 x i32> <i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31,
+                      i32 48, i32 49, i32 50, i32 51, i32 52, i32 53, i32 54, i32 55, i32 56, i32 57, i32 58, i32 59, i32 60, i32 61, i32 62, i32 63>
+  store <32 x double> %r1, <32 x double> * %out1
+
+  ;; t2 = <c0 ... c20 undef ... undef>
+  %t2 = shufflevector <32 x double> %v0, <32 x double> %v1,
+          <32 x i32> <i32 2, i32 5, i32 8, i32 11, i32 14, i32 17, i32 20, i32 23, i32 26, i32 29, i32 32, i32 35, i32 38, i32 41, i32 44, i32 47,
+                      i32 50, i32 53, i32 56, i32 59, i32 62, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+
+  ;; Produce output vector
+  %r2 = shufflevector <32 x double> %t2, <32 x double> %v2,
+          <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15,
+                      i32 16, i32 17, i32 18, i32 19, i32 20, i32 33, i32 36, i32 39, i32 42, i32 45, i32 48, i32 51, i32 54, i32 57, i32 60, i32 63>
+  store <32 x double> %r2, <32 x double> * %out2
+  ret void
+}
+
+;; reorder
+;; v0 = <a0 ... a31>
+;; v1 = <b0 ... b31>
+;; v2 = <c0 ... c31>
+;; to
+;; out0 = <a0 b0 c0 ... a9 b9 c9 a10 b10>
+;; out1 = <c10 ...       a20 b20 c20 a21>
+;; out3 = <b21 c21 ...       a31 b31 c31>
+
+define void
+@__soa_to_aos3_double32(<32 x double> %v0, <32 x double> %v1, <32 x double> %v2,
+        <32 x double> * noalias %out0, <32 x double> * noalias %out1,
+        <32 x double> * noalias %out2) nounwind alwaysinline {
+  ;; t0 = <a0 ... a21 b0 ... b9>
+  %t0 = shufflevector <32 x double> %v0, <32 x double> %v1,
+          <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15,
+                      i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 32, i32 33, i32 34, i32 35, i32 36, i32 37, i32 38, i32 39, i32 40, i32 41>
+  ;; t1 = <b10 ... b20 c0 .. c20>
+  %t1 = shufflevector <32 x double> %v1, <32 x double> %v2,
+          <32 x i32> <i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 32, i32 33, i32 34, i32 35, i32 36,
+                      i32 37, i32 38, i32 39, i32 40, i32 41, i32 42, i32 43, i32 44, i32 45, i32 46, i32 47, i32 48, i32 49, i32 50, i32 51, i32 52>
+
+  ;; Produce output vectors
+  %r0 = shufflevector <32 x double> %t0, <32 x double> %t1,
+          <32 x i32> <i32 0, i32 22, i32 43, i32 1, i32 23, i32 44, i32 2, i32 24, i32 45, i32 3, i32 25, i32 46, i32 4, i32 26, i32 47, i32 5,
+                      i32 27, i32 48, i32 6, i32 28, i32 49, i32 7, i32 29, i32 50, i32 8, i32 30, i32 51, i32 9, i32 31, i32 52, i32 10, i32 32>
+  store <32 x double> %r0, <32 x double> * %out0
+  %r1 = shufflevector <32 x double> %t0, <32 x double> %t1,
+          <32 x i32> <i32 53, i32 11, i32 33, i32 54, i32 12, i32 34, i32 55, i32 13, i32 35, i32 56, i32 14, i32 36, i32 57, i32 15, i32 37, i32 58,
+                      i32 16, i32 38, i32 59, i32 17, i32 39, i32 60, i32 18, i32 40, i32 61, i32 19, i32 41, i32 62, i32 20, i32 42, i32 63, i32 21>
+  store <32 x double> %r1, <32 x double> * %out1
+
+  ;; t2 = <a22 ... a31 b21 ... b31 undef ... undef>
+  %t2 = shufflevector <32 x double> %v0, <32 x double> %v1,
+          <32 x i32> <i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31, i32 53, i32 54, i32 55, i32 56, i32 57, i32 58,
+                      i32 59, i32 60, i32 61, i32 62, i32 63, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+  ;; Produce output vector
+  %r2 = shufflevector <32 x double> %t2, <32 x double> %v2,
+          <32 x i32> <i32 10, i32 53, i32 0, i32 11, i32 54, i32 1, i32 12, i32 55, i32 2, i32 13, i32 56, i32 3, i32 14, i32 57, i32 4, i32 15,
+                      i32 58, i32 5, i32 16, i32 59, i32 6, i32 17, i32 60, i32 7, i32 18, i32 61, i32 8, i32 19, i32 62, i32 9, i32 20, i32 63>
+  store <32 x double> %r2, <32 x double> * %out2
+  ret void
+}
+')
+
 ;; 64 wide version
 
 define(`aossoa64', `
@@ -3519,6 +3914,7 @@ ifelse(WIDTH,  `1', `',
        WIDTH,  `4', `aossoa4()',
        WIDTH,  `8', `aossoa8()',
        WIDTH, `16', `aossoa16() ',
+       WIDTH, `32', `aossoa32() ',
        WIDTH, `64', `aossoa64() ',
                     `errprint(`ERROR: aossoa() macro called with unsupported width = 'WIDTH
 )
