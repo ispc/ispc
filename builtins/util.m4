@@ -516,9 +516,32 @@ define(`v16tov4', `
 ')
 
 ;; $1: vector element type
+;; $2: input 32-wide vector
+;; $3-$4: 2 output 16-wide vectors
+define(`v32tov16', `
+  $3 = shufflevector <32 x $1> $2, <32 x $1> undef,
+          <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+  $4 = shufflevector <32 x $1> $2, <32 x $1> undef,
+          <16 x i32> <i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
+')
+
+;; $1: vector element type
+;; $2: input 32-wide vector
+;; $3-$6: 4 output 8-wide vectors
+define(`v32tov8', `
+  $3 = shufflevector <32 x $1> $2, <32 x $1> undef,
+          <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  $4 = shufflevector <32 x $1> $2, <32 x $1> undef,
+          <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+  $5 = shufflevector <32 x $1> $2, <32 x $1> undef,
+          <8 x i32> <i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23>
+  $6 = shufflevector <32 x $1> $2, <32 x $1> undef,
+          <8 x i32> <i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
+')
+
+;; $1: vector element type
 ;; $2: input 64-wide vector
 ;; $3-$6: 4 output 16-wide vectors
-
 define(`v64tov16', `
   $3 = shufflevector <64 x $1> $2, <64 x $1> undef,
           <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
@@ -564,6 +587,30 @@ define(`v8tov16', `
   $4 = shufflevector <8 x $1> $2, <8 x $1> $3,
     <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7,
                 i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+')
+
+;; $1: vector element type
+;; $2-$3: 2 input 16-wide vectors
+;; $4: output 32-wide vector
+define(`v16tov32', `
+  $4 = shufflevector <16 x $1> $2, <16 x $1> $3,
+          <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15,
+                      i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
+')
+
+;; $1: vector element type
+;; $2-$5: 4 input 8-wide vectors
+;; $6: output 32-wide vector
+define(`v8tov32', `
+  %r01 = shufflevector <8 x $1> $2, <8 x $1> $3,
+    <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7,
+                i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+  %r23 = shufflevector <8 x $1> $4, <8 x $1> $5,
+    <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7,
+                i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+  $6 = shufflevector <16 x $1> %r01, <16 x $1> %r23,
+          <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15,
+                      i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
 ')
 
 ;; $1: vector element type
