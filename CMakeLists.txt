@@ -194,7 +194,7 @@ set (ISPC_TARGETS
         avx512skx-i32x16 avx512skx-i32x8
         generic-1 generic-4 generic-8 generic-16 generic-32 generic-64)
 if (${LLVM_VERSION_NUMBER} VERSION_GREATER_EQUAL "10.0.0")
-    list(APPEND ISPC_TARGETS avx512skx-i8x64)
+    list(APPEND ISPC_TARGETS avx512skx-i8x64 avx512skx-i16x32)
 endif()
 if (WASM_ENABLED)
     find_program(EMCC_EXECUTABLE emcc)
