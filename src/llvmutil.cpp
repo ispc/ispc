@@ -708,6 +708,9 @@ llvm::Value *LLVMFlattenInsertChain(llvm::Value *inst, int vectorWidth, bool com
                 if (bop != NULL && ((bop->getOpcode() == llvm::Instruction::Add) || IsOrEquivalentToAdd(bop))) {
                     if (lIsFirstElementConstVector(bop->getOperand(1))) {
                         ie = llvm::dyn_cast<llvm::InsertElementInst>(bop->getOperand(0));
+                    } else if (llvm::isa<llvm::InsertElementInst>(bop->getOperand(1))) {
+                        // Or shuffle vector can accept insertelement itself
+                        ie = llvm::cast<llvm::InsertElementInst>(bop->getOperand(1));
                     }
                 }
             }
