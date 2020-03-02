@@ -1409,6 +1409,7 @@ static llvm::Value *lGetBasePtrAndOffsets(llvm::Value *ptrs, llvm::Value **offse
                 // We expect here ConstantVector as
                 // <i64 4, i64 undef, i64 undef, i64 undef, i64 undef, i64 undef, i64 undef, i64 undef>
                 llvm::ConstantVector *cv = llvm::dyn_cast<llvm::ConstantVector>(bop_var->getOperand(1));
+                llvm::Value *shuffle_offset = NULL;
                 if (cv != NULL) {
                     llvm::Value *zeroMask =
 #if ISPC_LLVM_VERSION < ISPC_LLVM_11_0
@@ -1419,8 +1420,28 @@ static llvm::Value *lGetBasePtrAndOffsets(llvm::Value *ptrs, llvm::Value **offse
 #endif
                                                        llvm::Constant::getNullValue(llvm::Type::getInt32Ty(*g->ctx)));
                     // Create offset
-                    llvm::Value *shuffle_offset = new llvm::ShuffleVectorInst(cv, llvm::UndefValue::get(cv->getType()),
-                                                                              zeroMask, "shuffle", bop_var);
+                    shuffle_offset = new llvm::ShuffleVectorInst(cv, llvm::UndefValue::get(cv->getType()), zeroMask,
+                                                                 "shuffle", bop_var);
+                } else {
+                    // or it binaryoperator can accept another binary operator
+                    // that is a result of counting another part of offset:
+                    // %another_bop = bop <16 x i32> %vec, <i32 7, i32 undef, i32 undef, ...>
+                    // %offsets = add <16 x i32> %another_bop, %base
+                    bop_var = llvm::dyn_cast<llvm::BinaryOperator>(bop_var->getOperand(0));
+                    if (bop_var != NULL) {
+                        llvm::Type *bop_var_type = bop_var->getType();
+                        llvm::Value *zeroMask = llvm::ConstantVector::getSplat(
+#if ISPC_LLVM_VERSION < ISPC_LLVM_11_0
+                            bop_var_type->getVectorNumElements(),
+#else // LLVM 11.0+
+                            {llvm::dyn_cast<llvm::VectorType>(bop_var_type)->getNumElements(), false},
+#endif
+                            llvm::Constant::getNullValue(llvm::Type::getInt32Ty(*g->ctx)));
+                        shuffle_offset = new llvm::ShuffleVectorInst(bop_var, llvm::UndefValue::get(bop_var_type),
+                                                                     zeroMask, "shuffle", bop_var);
+                    }
+                }
+                if (shuffle_offset != NULL) {
                     *offsets = llvm::BinaryOperator::Create(llvm::Instruction::Add, *offsets, shuffle_offset,
                                                             "new_offsets", insertBefore);
                 }
