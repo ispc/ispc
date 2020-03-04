@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2019, Intel Corporation
+  Copyright (c) 2019-2020, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -40,6 +40,7 @@
 #include <vector>
 
 #include "target_registry.h"
+#include "util.h"
 
 // Returns number of bits required to store this value
 static constexpr uint32_t bits_required(uint32_t x) {
@@ -132,10 +133,24 @@ const BitcodeLib *TargetLibRegistry::getISPCTargetLib(ISPCTarget target, TargetO
         target = ISPCTarget::sse4_i32x4;
     }
 
-    if (os != TargetOS::web) {
-        // Canonicalize OS, as for the target we only differentiate between Windows and Unix.
-        os = (os == TargetOS::windows) ? TargetOS::windows : TargetOS::linux;
+    // Canonicalize OS, as for the target we only differentiate between Windows, Unix, and Web (WASM target).
+    switch (os) {
+    case TargetOS::windows:
+    case TargetOS::web:
+        // Keep these values.
+        break;
+    case TargetOS::linux:
+    case TargetOS::freebsd:
+    case TargetOS::macos:
+    case TargetOS::android:
+    case TargetOS::ios:
+    case TargetOS::ps4:
+        os = TargetOS::linux;
+        break;
+    case TargetOS::error:
+        UNREACHABLE();
     }
+
     auto result = m_targets.find(Triple(target, os, arch).encode());
     if (result != m_targets.end()) {
         return result->second;
