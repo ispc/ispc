@@ -947,7 +947,7 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, bool pic, boo
         break;
 #endif
 #ifdef ISPC_WASM_ENABLED
-    case ISPCTarget::wasm32_i32x4:
+    case ISPCTarget::wasm_i32x4:
         this->m_isa = Target::WASM;
         this->m_nativeVectorWidth = 4;
         this->m_nativeVectorAlignment = 16;
@@ -958,7 +958,7 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, bool pic, boo
         this->m_maskBitCount = 1;
         break;
 #else
-    case ISPCTarget::wasm32_i32x4:
+    case ISPCTarget::wasm_i32x4:
         unsupported_target = true;
         break;
 #endif

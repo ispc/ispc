@@ -82,7 +82,7 @@ enum class ISPCTarget {
     neon_i16x8,
     neon_i32x4,
     neon_i32x8,
-    wasm32_i32x4,
+    wasm_i32x4,
     error
 };
 

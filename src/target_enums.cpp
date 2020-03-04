@@ -141,7 +141,7 @@ ISPCTarget ParseISPCTarget(std::string target) {
     } else if (target == "neon-i32x8") {
         return ISPCTarget::neon_i32x8;
     } else if (target == "wasm-i32x4") {
-        return ISPCTarget::wasm32_i32x4;
+        return ISPCTarget::wasm_i32x4;
     }
 
     return ISPCTarget::error;
@@ -235,8 +235,8 @@ std::string ISPCTargetToString(ISPCTarget target) {
         return "neon-i32x4";
     case ISPCTarget::neon_i32x8:
         return "neon-i32x8";
-    case ISPCTarget::wasm32_i32x4:
-        return "wasm32";  
+    case ISPCTarget::wasm_i32x4:
+        return "wasm-i32x4";
     case ISPCTarget::none:
     case ISPCTarget::error:
         // Fall through
@@ -299,7 +299,7 @@ bool ISPCTargetIsNeon(ISPCTarget target) {
 
 bool ISPCTargetIsWasm(ISPCTarget target) {
     switch (target) {
-    case ISPCTarget::wasm32_i32x4:
+    case ISPCTarget::wasm_i32x4:
         return true;
     default:
         return false;
