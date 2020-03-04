@@ -329,6 +329,7 @@ def build_LLVM(version_LLVM, revision, folder, tarball, debug, selfbuild, extra,
                     (("  -DCMAKE_CXX_COMPILER=" + gcc_toolchain_path+"/bin/g++") if gcc_toolchain_path != "" else "") +
                     (("  -DDEFAULT_SYSROOT=" + mac_system_root) if mac_system_root != "" else "") +
                     "  -DLLVM_TARGETS_TO_BUILD=AArch64\;ARM\;X86" +
+                    "  -DLLVM_EXPERIMENTAL_TARGETS_TO_BUILD=WebAssembly" +
                     " ../" + cmakelists_path,
                     from_validation)
             selfbuild_compiler = ("  -DCMAKE_C_COMPILER=" +llvm_home+ "/" + LLVM_BIN_selfbuild + "/bin/clang " +
@@ -369,6 +370,7 @@ def build_LLVM(version_LLVM, revision, folder, tarball, debug, selfbuild, extra,
                         (("  -DCMAKE_CXX_COMPILER=" + gcc_toolchain_path+"/bin/g++") if gcc_toolchain_path != "" and selfbuild_compiler == "" else "") +
                         (("  -DDEFAULT_SYSROOT=" + mac_system_root) if mac_system_root != "" else "") +
                         "  -DLLVM_TARGETS_TO_BUILD=AArch64\;ARM\;X86" +
+                        "  -DLLVM_EXPERIMENTAL_TARGETS_TO_BUILD=WebAssembly" +
                         " ../" + cmakelists_path,
                         from_validation)
             else:
@@ -388,6 +390,7 @@ def build_LLVM(version_LLVM, revision, folder, tarball, debug, selfbuild, extra,
                     '  -DLLVM_ENABLE_ASSERTIONS=ON' +
                     '  -DLLVM_INSTALL_UTILS=ON' +
                     '  -DLLVM_TARGETS_TO_BUILD=AArch64\;ARM\;X86' +
+                    '  -DLLVM_EXPERIMENTAL_TARGETS_TO_BUILD=WebAssembly' +
                     '  -DLLVM_LIT_TOOLS_DIR="C:\\gnuwin32\\bin" ..\\' + cmakelists_path,
                     from_validation)
     else:
@@ -406,6 +409,7 @@ def build_LLVM(version_LLVM, revision, folder, tarball, debug, selfbuild, extra,
                     (("  -DCMAKE_CXX_COMPILER=" + gcc_toolchain_path+"/bin/g++") if gcc_toolchain_path != "" and selfbuild_compiler == "" else "") +
                     (("  -DDEFAULT_SYSROOT=" + mac_system_root) if mac_system_root != "" else "") +
                     "  -DLLVM_TARGETS_TO_BUILD=AArch64\;ARM\;X86" +
+                    "  -DLLVM_EXPERIMENTAL_TARGETS_TO_BUILD=WebAssembly" +
                     " ../" + cmakelists_path,
                     from_validation)
         else:
