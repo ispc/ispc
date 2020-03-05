@@ -940,11 +940,10 @@ void DefineStdlib(SymbolTable *symbolTable, llvm::LLVMContext *ctx, llvm::Module
     // Unlike regular builtins and dispatch module, which don't care about mangling of external functions,
     // so they only differentiate Windows/Unix and 32/64 bit, builtins-c need to take care about mangling.
     // Hence, different version for all potentially supported OSes.
-    if (g->target_os != TargetOS::web) {
-        const BitcodeLib *builtins = g->target_registry->getBuiltinsCLib(g->target_os, g->target->getArch());
-        Assert(builtins);
-        AddBitcodeToModule(builtins, module, symbolTable, warn);
-    }
+    const BitcodeLib *builtins = g->target_registry->getBuiltinsCLib(g->target_os, g->target->getArch());
+    Assert(builtins);
+    AddBitcodeToModule(builtins, module, symbolTable, warn);
+
     // Next, add the target's custom implementations of the various needed
     // builtin functions (e.g. __masked_store_32(), etc).
     const BitcodeLib *target =
