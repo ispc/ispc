@@ -57,8 +57,8 @@
 #include <llvm/Support/TargetSelect.h>
 
 #ifdef ISPC_GENX_ENABLED
-#include <llvm/Support/CommandLine.h>
 #include <llvm/GenXCodeGen/GenXTarget.h>
+#include <llvm/Support/CommandLine.h>
 #endif
 
 #ifdef ISPC_HOST_IS_WINDOWS
@@ -1002,17 +1002,6 @@ int main(int Argc, char *Argv[]) {
             g->target_os = TargetOS::web;
         }
     }
-    
-#ifdef ISPC_GENX_ENABLED
-    // FIXME: how do we handle miltiple errors if there multiple targets here?
-    if (targets.size() == 1 && ISPCTargetIsGen(targets[0])) {
-      std::vector<const char *> SSMOpt(3);
-      SSMOpt[0] = "ispc (LLVM option parsing)";
-      SSMOpt[1] = "-stack-scratch-mem=true";
-      SSMOpt[2] = nullptr;
-      llvm::cl::ParseCommandLineOptions(2, SSMOpt.data());
-    }
-#endif
 
     // This needs to happen after the TargetOS is decided.
     setCallingConv(vectorCall, arch);
