@@ -534,6 +534,31 @@ static void lCheckExportedParameterTypes(const Type *type, const std::string &na
     }
 }
 
+#ifdef ISPC_GENX_ENABLED
+// For gen target we have the same limitations in input parameters as for "export" functions
+static void lCheckTaskParameterTypes(const Type *type, const std::string &name, SourcePos pos) {
+    if (lRecursiveCheckValidParamType(type, false, name, pos) == false) {
+        if (CastType<PointerType>(type))
+            Error(pos,
+                  "Varying pointer type parameter \"%s\" is illegal "
+                  "in an \"task\" for genx target.",
+                  name.c_str());
+        if (CastType<StructType>(type->GetBaseType()))
+            Error(pos,
+                  "Struct parameter \"%s\" with vector typed "
+                  "member(s) is illegal in an \"task\" for genx target.",
+                  name.c_str());
+        else if (CastType<VectorType>(type))
+            Error(pos,
+                  "Vector-typed parameter \"%s\" is illegal in an \"task\" "
+                  "for genx target.",
+                  name.c_str());
+        else
+            Error(pos, "Varying parameter \"%s\" is illegal in an \"task\" for genx target.", name.c_str());
+    }
+}
+#endif
+
 /** Given a function type, loop through the function parameters and see if
     any are StructTypes.  If so, issue an error; this is currently broken
     (https://github.com/ispc/ispc/issues/3).
@@ -669,7 +694,8 @@ void Module::AddFunctionDeclaration(const std::string &name, const FunctionType 
                                                   : llvm::GlobalValue::ExternalLinkage;
 #ifdef ISPC_GENX_ENABLED
     // For gen target all functions except genx kernel must be internal.
-    if (g->target->getISA() == Target::GENX && !functionType->isExported)
+    // Genx kernel functions are "export"-qualified functions and tasks.
+    if (g->target->getISA() == Target::GENX && !functionType->isExported && !functionType->isTask)
         linkage = llvm::GlobalValue::InternalLinkage;
 #endif
 
@@ -717,7 +743,10 @@ void Module::AddFunctionDeclaration(const std::string &name, const FunctionType 
     }
 
     if (functionType->isTask) {
-        // This also applies transitively to members I think?
+#ifdef ISPC_GENX_ENABLED
+        if (g->target->getISA() != Target::GENX)
+#endif /* ISPC_GENX_ENABLED */
+            // This also applies transitively to members I think?
         function->addParamAttr(0, llvm::Attribute::NoAlias);
     }
     if (((isVectorCall) && (storageClass == SC_EXTERN_C)) || (storageClass != SC_EXTERN_C)) {
@@ -747,7 +776,12 @@ void Module::AddFunctionDeclaration(const std::string &name, const FunctionType 
     }
 #endif /* ISPC_GENX_ENABLED */
 
-    if (functionType->isExported || functionType->isExternC)
+    if (functionType->isExported || functionType->isExternC
+#ifdef ISPC_GENX_ENABLED
+        || g->target->getISA() == Target::GENX && functionType->isTask)
+#else
+    )
+#endif
         lCheckForStructParameters(functionType, pos);
 
     // Loop over all of the arguments; process default values if present
@@ -760,12 +794,15 @@ void Module::AddFunctionDeclaration(const std::string &name, const FunctionType 
         Expr *defaultValue = functionType->GetParameterDefault(i);
         const SourcePos &argPos = functionType->GetParameterSourcePos(i);
 
-        // If the function is exported, make sure that the parameter
+        // If the function is exported or in case of gen target is task, make sure that the parameter
         // doesn't have any funky stuff going on in it.
         // JCB nomosoa - Varying is now a-ok.
-        if (functionType->isExported) {
+        if (functionType->isExported)
             lCheckExportedParameterTypes(argType, argName, argPos);
-        }
+#ifdef ISPC_GENX_ENABLED
+        if (g->target->getISA() == Target::GENX && functionType->isTask)
+            lCheckTaskParameterTypes(argType, argName, argPos);
+#endif
 
         // ISPC assumes that no pointers alias.  (It should be possible to
         // specify when this is not the case, but this should be the
