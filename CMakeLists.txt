@@ -195,6 +195,13 @@ set (ISPC_TARGETS
 if (${LLVM_VERSION_NUMBER} VERSION_GREATER_EQUAL "8.0.0")
     list(APPEND ISPC_TARGETS avx512skx-i32x8)
 endif()
+if (WASM_ENABLED)
+    if (${LLVM_VERSION_NUMBER} VERSION_GREATER_EQUAL "7.0.0")
+        list(APPEND ISPC_TARGETS wasm-i32x4)
+    else()
+        message (FATAL_ERROR "WebAssembly is not supported with LLVM less than 7.0")
+    endif()
+endif()
 
 set(CLANG_LIBRARY_LIST clangFrontend clangDriver clangSerialization clangParse clangSema clangAnalysis clangAST clangBasic clangEdit clangLex)
 set(LLVM_COMPONENTS engine ipo bitreader bitwriter instrumentation linker option)

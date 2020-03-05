@@ -233,6 +233,7 @@ function(builtin_to_cpp bit os_name arch supported_archs supported_oses resultFi
 endfunction()
 
 function (generate_target_builtins resultList)
+    # Dispatch module for Windows and/or Unix targets.
     foreach (os_name ${TARGET_OS_LIST_FOR_LL})
         ll_to_cpp(dispatch "" ${os_name} output${os_name})
         list(APPEND tmpList ${output${os_name}})
@@ -241,7 +242,10 @@ function (generate_target_builtins resultList)
             source_group("Generated Builtins" FILES ${output}${os_name})
         endif()
     endforeach()
-    foreach (ispc_target ${ARGN})
+    # "Regular" targets, targeting specific real ISA: sse/avx/neon
+    set(regular_targets ${ARGN})
+    list(FILTER regular_targets EXCLUDE REGEX wasm)
+    foreach (ispc_target ${regular_targets})
         foreach (bit 32 64)
             foreach (os_name ${TARGET_OS_LIST_FOR_LL})
                 ll_to_cpp(target-${ispc_target} ${bit} ${os_name} output${os_name}${bit})
@@ -253,10 +257,16 @@ function (generate_target_builtins resultList)
             endforeach()
         endforeach()
     endforeach()
+    # WASM targets.
     if (WASM_ENABLED)
-        ll_to_cpp(target-wasm-i32x4 32 web outputweb32)
-        list(APPEND tmpList ${outputweb32})
+        set(wasm_targets ${ARGN})
+        list(FILTER wasm_targets INCLUDE REGEX wasm)
+        foreach (wasm_target ${wasm_targets})
+            ll_to_cpp(target-${wasm_target} 32 web outputweb32)
+            list(APPEND tmpList ${outputweb32})
+        endforeach()
     endif()
+    # Return the list
     set(${resultList} ${tmpList} PARENT_SCOPE)
 endfunction()
 
