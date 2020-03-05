@@ -231,11 +231,7 @@ int __num_cores() {
 
 #else // WASM
 #include <stdint.h>
-void __do_print(const char *format, const char *types, int width, uint64_t mask, void **args) {
-}
+void __do_print(const char *format, const char *types, int width, uint64_t mask, void **args) {}
 
-int __num_cores() {
-    return 1;
-}
+int __num_cores() { return 1; }
 #endif
-
