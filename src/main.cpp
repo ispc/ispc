@@ -512,6 +512,15 @@ int main(int Argc, char *Argv[]) {
     LLVMInitializeAArch64TargetMC();
 #endif
 
+#ifdef ISPC_WASM_ENABLED
+    LLVMInitializeWebAssemblyAsmParser();
+    LLVMInitializeWebAssemblyAsmPrinter();
+    LLVMInitializeWebAssemblyDisassembler();
+    LLVMInitializeWebAssemblyTarget();
+    LLVMInitializeWebAssemblyTargetInfo();
+    LLVMInitializeWebAssemblyTargetMC();
+#endif
+
     char *file = NULL;
     const char *headerFileName = NULL;
     const char *outFileName = NULL;
@@ -914,6 +923,14 @@ int main(int Argc, char *Argv[]) {
         else
             Args[1] = "--x86-asm-syntax=att";
         llvm::cl::ParseCommandLineOptions(2, Args.data());
+    }
+
+    for (auto target : targets) {
+        if (target == ISPCTarget::wasm_i32x4) {
+            Assert(targets.size() == 1 && "wasm32 supports only one target: i32x4");
+            arch = Arch::wasm32;
+            g->target_os = TargetOS::web;
+        }
     }
 
     return Module::CompileAndOutput(file, arch, cpu, targets, flags, ot, outFileName, headerFileName, includeFileName,

@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2019, Intel Corporation
+  Copyright (c) 2010-2020, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -49,6 +49,8 @@
     lLLVMTypeToIspcType() function, then its declaration will be made
     available to ispc programs at compile time automatically.
   */
+
+#ifndef WASM
 
 #ifdef _MSC_VER
 // We do want old school sprintf and don't want secure Microsoft extensions.
@@ -226,3 +228,10 @@ int __num_cores() {
     return sysconf(_SC_NPROCESSORS_ONLN);
 #endif // !_MSC_VER
 }
+
+#else // WASM
+#include <stdint.h>
+void __do_print(const char *format, const char *types, int width, uint64_t mask, void **args) {}
+
+int __num_cores() { return 1; }
+#endif

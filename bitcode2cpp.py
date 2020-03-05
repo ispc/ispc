@@ -50,8 +50,11 @@ if args[0].os == "UNIX":
 elif args[0].os == "WINDOWS":
     target_os_old = "win"
     target_os = "windows"
+elif args[0].os == "WEB":
+    target_os_old = "web"
+    target_os = "web"
 # Exact OS names for builtins.c
-elif args[0].os in ["windows", "linux", "freebsd", "macos", "android", "ios", "ps4"]:
+elif args[0].os in ["windows", "linux", "freebsd", "macos", "android", "ios", "ps4", "web"]:
     target_os_old = args[0].os
     target_os = args[0].os
 else:
@@ -60,7 +63,7 @@ else:
 
 target_arch = ""
 ispc_arch = ""
-if args[0].arch in ["i386", "x86_64", "amd64", "armv7", "arm64", "aarch64"]:
+if args[0].arch in ["i386", "x86_64", "amd64", "armv7", "arm64", "aarch64", "wasm32"]:
     target_arch = args[0].arch + "_"
     # Canoncalization of arch value for Arch enum in ISPC.
     if args[0].arch == "i386":
@@ -71,6 +74,8 @@ if args[0].arch in ["i386", "x86_64", "amd64", "armv7", "arm64", "aarch64"]:
         ispc_arch = "arm"
     elif args[0].arch == "arm64" or args[0].arch == "aarch64":
         ispc_arch = "aarch64"
+    elif args[0].arch == "wasm32":
+        ispc_arch = "wasm32"
 
 width = 16
 
@@ -119,6 +124,8 @@ elif args[0].type == 'ispc-target':
     elif "generic" in target:
         # x86 and x86_64 for generic is just a convention
         arch = "x86" if args[0].runtime == "32" else "x86_64" if args[0].runtime == "64" else "error"
+    elif "wasm" in target:
+        arch = "wasm32"
     sys.stdout.write("static BitcodeLib " + name + "_lib(" +
         name + ", " +
         name + "_length, " +
