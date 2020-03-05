@@ -47,10 +47,9 @@ if ! [[ $CURRENT_VERSION =~ $VERSION_STRING ]] ; then
     echo The results can be unexpected.
 fi
 
-LAST_REVISION=`git rev-parse HEAD`
-# Get the list of changed files, ignore deleted
-CHANGED_FILES=`git diff-tree --no-commit-id --name-only -r $LAST_REVISION --diff-filter=RCMA | grep -E "\.(cpp|h|c)$"`
-for FILE in $CHANGED_FILES; do
+# Check all source files.
+FILES=`ls src/*.cpp src/*.h *.cpp builtins/*.c`
+for FILE in $FILES; do
     $CLANG_FORMAT $FILE | cmp  $FILE >/dev/null
     if [ $? -ne 0 ]; then
         echo "[!] INCORRECT FORMATTING! $FILE" >&2
