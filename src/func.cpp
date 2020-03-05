@@ -209,7 +209,7 @@ void Function::emitCode(FunctionEmitContext *ctx, llvm::Function *function, Sour
         function->addFnAttr("no-frame-pointer-elim", "true");
     if (g->target->getArch() == Arch::wasm32)
         function->addFnAttr("target-features", "+simd128");
-        
+
     g->target->markFuncWithTargetAttr(function);
 #if 0
     llvm::BasicBlock *entryBBlock = ctx->GetCurrentBasicBlock();
