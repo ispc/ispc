@@ -37,9 +37,18 @@ configure_file(runner.py.in runner.py)
 set(TEST_RUNNER "${CMAKE_CURRENT_BINARY_DIR}/runner.py")
 
 function(test_add name)
-    set(options TEST_IS_CM TEST_IS_ISPC)
+    set(options TEST_IS_CM TEST_IS_ISPC TEST_IS_CM_RUNTIME TEST_IS_L0_RUNTIME)
     set(oneValueArgs NAME)
     cmake_parse_arguments(PARSE_ARGV 1 PARSED_ARGS "${options}" "" "")
+    set(SUPPORTED 1)
+    # If test is written with TEST_IS_CM_RUNTIME it is supported on Windows only
+    # If test is written with TEST_IS_L0_RUNTIME it is supported on Linux only
+    if (PARSED_ARGS_TEST_IS_L0_RUNTIME AND WIN32)
+        set(SUPPORTED 0)
+    endif()
+    if (PARSED_ARGS_TEST_IS_CM_RUNTIME AND NOT WIN32)
+        set(SUPPORTED 0)
+    endif()
     if (PARSED_ARGS_TEST_IS_CM)
         set(test_name "${name}_cm")
     else()
@@ -48,9 +57,10 @@ function(test_add name)
 
     list(APPEND ${test_name} ${PARSED_ARGS_UNPARSED_ARGUMENTS} ${PARSED_ARGS_TEST_IS_CM})
     list(JOIN ${test_name} "_" result_test_name)
-
-    add_test(NAME ${result_test_name}
-        COMMAND ${PYTHON_EXECUTABLE} ${TEST_RUNNER} ${name} ${PARSED_ARGS_UNPARSED_ARGUMENTS}
-        WORKING_DIRECTORY ${EXECUTABLE_OUTPUT_PATH}
-    )
+    if (SUPPORTED EQUAL 1)
+        add_test(NAME ${result_test_name}
+            COMMAND ${PYTHON_EXECUTABLE} ${TEST_RUNNER} ${name} ${PARSED_ARGS_UNPARSED_ARGUMENTS}
+            WORKING_DIRECTORY ${EXECUTABLE_OUTPUT_PATH}
+        )
+    endif()
 endfunction()

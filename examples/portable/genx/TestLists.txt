@@ -31,6 +31,8 @@
 #   SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 # Functional tests enabled in CI
+# iterations, width, height
+test_add(aobench_instrumented TEST_IS_L0_RUNTIME host_genx_ao 1 1 16)
 # iterations, gx, gy
 test_add(noise host_genx_noise 1 1 16)
 # size, iterations, gx, gy
