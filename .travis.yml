@@ -58,6 +58,8 @@ env:
     - LLVM_VERSION=9.0 OS=Ubuntu16.04 DOCKER_TAG=llvm90
     - LLVM_VERSION=8.0 OS=Ubuntu16.04 DOCKER_TAG=llvm80
     - LLVM_VERSION=7.0 OS=Ubuntu16.04 DOCKER_TAG=llvm70
+      # WASM enabled build
+    - LLVM_VERSION=10.0 OS=Ubuntu16.04 DOCKER_TAG=llvm100 WASM_FLAGS="-DWASM_ENABLED=ON"
 
 before_install:
   - sudo apt-get update
@@ -70,7 +72,7 @@ before_install:
 
 script:
   - mkdir build_$LLVM_VERSION && cd build_$LLVM_VERSION
-  - cmake -DCMAKE_INSTALL_PREFIX=$TRAVIS_BUILD_DIR ../
+  - cmake -DCMAKE_INSTALL_PREFIX=$TRAVIS_BUILD_DIR $WASM_FLAGS ../
     # Build ispc and check_isa utility. Run lit tests.
   - make ispc check_isa check-all -j4
     # Add ispc to the PATH
@@ -79,9 +81,9 @@ script:
   - ispc --support-matrix
   - ./check_env.py
     # Run examples
-  - ./perf.py -n 1
+  - if [ -z "$WASM_FLAGS" ]; then ./perf.py -n 1; fi
     # Run tests for latest LLVM version
-  - if [ "$LLVM_VERSION" == "10.0" ]; then ./run_tests.py; ./run_tests.py -a x86; fi
+  - if [ "$LLVM_VERSION" == "10.0" -a -z "$WASM_FLAGS" ]; then ./run_tests.py; ./run_tests.py -a x86; fi
 
 stages:
   - check format
