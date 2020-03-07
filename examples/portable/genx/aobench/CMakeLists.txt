@@ -31,28 +31,29 @@
 #   SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #
-# ispc examples: aobench_instrumented
+# ispc examples: aobench
 #
 
 cmake_minimum_required(VERSION 3.10)
 
-set(ISPC_SRC_NAME "ao_instrumented")
-set(TEST_NAME "genx_ao")
+set(ISPC_SRC_NAME "aobench")
+set(TEST_NAME "genx_aobench")
 
+#Linux test only
 if(UNIX)
     set(HOST_NAME "l0host")
-    set(ISPC_OBJ_NAME "${CMAKE_CURRENT_BINARY_DIR}/ao_instrumented_ispc.spv")
+    set(ISPC_OBJ_NAME "${CMAKE_CURRENT_BINARY_DIR}/aobench_ispc.spv")
     set(ISPC_FLAGS "--emit-spirv" "--addressing=64" "--arch=genx64")
+
+    set(HOST_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/ao.cpp ${CMAKE_CURRENT_SOURCE_DIR}/ao_serial.cpp)
+
+    add_perf_example(
+        NAME "aobench"
+        ISPC_SRC_NAME ${ISPC_SRC_NAME}
+        ISPC_OBJ_NAME ${ISPC_OBJ_NAME}
+        HOST_NAME ${HOST_NAME}
+        TEST_NAME ${TEST_NAME}
+        ISPC_FLAGS ${ISPC_FLAGS}
+        HOST_SOURCES ${HOST_SOURCES}
+    )
 endif()
-
-set(HOST_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/ao.cpp ${CMAKE_CURRENT_SOURCE_DIR}/ao_serial.cpp)
-
-add_perf_example(
-    NAME "aobench_instrumented"
-    ISPC_SRC_NAME ${ISPC_SRC_NAME}
-    ISPC_OBJ_NAME ${ISPC_OBJ_NAME}
-    HOST_NAME ${HOST_NAME}
-    TEST_NAME ${TEST_NAME}
-    ISPC_FLAGS ${ISPC_FLAGS}
-    HOST_SOURCES ${HOST_SOURCES}
-)

@@ -94,6 +94,6 @@ include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/TestDrivers.cmake)
 
 add_subdirectory(noise)
 add_subdirectory(sgemm)
-add_subdirectory(aobench_instrumented)
+add_subdirectory(aobench)
 
 include(TestLists.txt)

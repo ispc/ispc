@@ -114,7 +114,7 @@ static int run() {
     ze_module_handle_t hModule = nullptr;
     ze_driver_handle_t hDriver = nullptr;
     ze_command_queue_handle_t hCommandQueue = nullptr;
-    L0InitContext(hDriver, hDevice, hModule, hCommandQueue, "ao_instrumented_ispc.spv");
+    L0InitContext(hDriver, hDevice, hModule, hCommandQueue, "aobench_ispc.spv");
 
     ze_command_list_handle_t hCommandList;
     ze_kernel_handle_t hKernel;
