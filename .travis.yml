@@ -1,4 +1,4 @@
-#  Copyright (c) 2018-2019, Intel Corporation
+#  Copyright (c) 2018-2020, Intel Corporation
 #  All rights reserved.
 #
 #  Redistribution and use in source and binary forms, with or without
@@ -60,6 +60,7 @@ env:
     - LLVM_VERSION=7.0 OS=Ubuntu16.04 DOCKER_TAG=llvm70
 
 before_install:
+  - sudo apt-get update
   - sudo apt-get install -y libc6-dev-i386 g++-multilib lib32stdc++6
   - docker pull "$DOCKER_REPO_PATH:$DOCKER_TAG"
   - docker run "$DOCKER_REPO_PATH:$DOCKER_TAG"
@@ -80,7 +81,7 @@ script:
     # Run examples
   - ./perf.py -n 1
     # Run tests for latest LLVM version
-  - if [ "$LLVM_VERSION" == "8.0" ]; then ./run_tests.py; ./run_tests.py -a x86; fi
+  - if [ "$LLVM_VERSION" == "10.0" ]; then ./run_tests.py; ./run_tests.py -a x86; fi
 
 stages:
   - check format
