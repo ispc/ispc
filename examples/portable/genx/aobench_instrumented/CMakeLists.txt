@@ -35,27 +35,24 @@
 #
 
 cmake_minimum_required(VERSION 3.10)
-option(L0_LOCAL_BUILD "Use local build of L0" ON)
-if (L0_LOCAL_BUILD AND NOT NEO_INSTALL_PATH)
-    message (FATAL_ERROR "Set NEO_INSTALL_PATH variable")
+
+set(ISPC_SRC_NAME "ao_instrumented")
+set(TEST_NAME "genx_ao")
+
+if(UNIX)
+    set(HOST_NAME "l0host")
+    set(ISPC_OBJ_NAME "${CMAKE_CURRENT_BINARY_DIR}/ao_instrumented_ispc.spv")
+    set(ISPC_FLAGS "--emit-spirv" "--addressing=64" "--arch=genx64")
 endif()
-list(APPEND ISPC_BUILD_OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/ao_instrumented_ispc.h ${CMAKE_CURRENT_BINARY_DIR}/ao_instrumented_ispc.spv)
 
-add_custom_command(OUTPUT ${ISPC_BUILD_OUTPUT}
-    COMMAND ispc ${PROJECT_SOURCE_DIR}/ao_instrumented.ispc ${ISPC_FLAGS} --pic -O3 --target=genx --arch=genx64 --addressing=64 --emit-spirv
-    -h ${CMAKE_CURRENT_BINARY_DIR}/ao_instrumented_ispc.h -o ${CMAKE_CURRENT_BINARY_DIR}/ao_instrumented_ispc.spv
-    VERBATIM
-    DEPENDS "ao_instrumented.ispc")
+set(HOST_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/ao.cpp ${CMAKE_CURRENT_SOURCE_DIR}/ao_serial.cpp)
 
-
-add_executable(ao ${ISPC_BUILD_OUTPUT})
-
-target_sources(ao PRIVATE ao.cpp ${EXAMPLES_ROOT}/tasksys.cpp)
-target_compile_options(ao PRIVATE -fPIE -fPIC -std=c++11)
-#target_compile_definitions(ao PRIVATE)
-target_include_directories(ao PRIVATE
-                           ${NEO_INSTALL_PATH}/neo/usr/local/include
-                           ${EXAMPLES_ROOT}
-                           ${CMAKE_CURRENT_BINARY_DIR})
-target_link_libraries(ao pthread m level_zero -L${NEO_INSTALL_PATH}/neo/usr/local/lib)
-
+add_perf_example(
+    NAME "aobench_instrumented"
+    ISPC_SRC_NAME ${ISPC_SRC_NAME}
+    ISPC_OBJ_NAME ${ISPC_OBJ_NAME}
+    HOST_NAME ${HOST_NAME}
+    TEST_NAME ${TEST_NAME}
+    ISPC_FLAGS ${ISPC_FLAGS}
+    HOST_SOURCES ${HOST_SOURCES}
+)

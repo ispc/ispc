@@ -69,7 +69,7 @@ function(add_perf_example)
         target_include_directories(${HOST_EXECUTABLE} PRIVATE "${COMMON_PATH}"
                                    ${NEO_INSTALL_PATH}/neo/usr/local/include)
         if (NEO_LOCAL_BUILD)
-            target_link_libraries(${CM_HOST_BINARY} igdgmm -L${NEO_INSTALL_PATH}/neo/lib/extra)
+            target_link_libraries(${HOST_EXECUTABLE} igdgmm -L${NEO_INSTALL_PATH}/neo/lib/extra)
         endif()
         target_link_libraries(${HOST_EXECUTABLE} rt m dl tbb level_zero -L${NEO_INSTALL_PATH}/neo/usr/local/lib)
         set_target_properties(${HOST_EXECUTABLE} PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
