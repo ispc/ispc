@@ -1,0 +1,3 @@
+[submodule "benchmarks/vendor/google/benchmark"]
+	path = benchmarks/vendor/google/benchmark
+	url = https://github.com/google/benchmark

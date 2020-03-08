@@ -48,6 +48,7 @@ option(ARM_ENABLED "Enable ARM support" ON)
 option(WASM_ENABLED "Enable experimental Web Assembly support" OFF)
 option(ISPC_INCLUDE_EXAMPLES "Generate build targets for the ISPC examples" ON)
 option(ISPC_INCLUDE_TESTS "Generate build targets for the ISPC tests." ON)
+option(ISPC_INCLUDE_BENCHMARKS "Generate build targets for the ISPC tests." OFF)
 option(ISPC_INCLUDE_UTILS "Generate build targets for the utils." ON)
 option(ISPC_PREPARE_PACKAGE "Generate build targets for ispc package" OFF)
 option(ISPC_NO_DUMPS "Turn off functionality, which requires LLVM dump() functions" OFF)
@@ -419,6 +420,20 @@ endif()
 
 if (ISPC_INCLUDE_TESTS)
     add_subdirectory(tests)
+endif()
+
+if (ISPC_INCLUDE_BENCHMARKS)
+    # Benchmarks depend on Google Benchmark submodule
+    if(NOT EXISTS "${PROJECT_SOURCE_DIR}/benchmarks/vendor/google/benchmark/CMakeLists.txt")
+        message(STATUS "Google Beanchmark submodule update")
+        execute_process(COMMAND ${GIT_BINARY} submodule update --init --recursive
+                        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+                        RESULT_VARIABLE GIT_SUBMOD_RESULT)
+        if(NOT GIT_SUBMOD_RESULT EQUAL "0")
+            message(FATAL_ERROR "git submodule update --init failed with ${GIT_SUBMOD_RESULT}, please checkout submodules")
+        endif()
+    endif()
+#    add_subdirectory(benchmarks)
 endif()
 
 # Install
