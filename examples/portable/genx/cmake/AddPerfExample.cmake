@@ -78,7 +78,7 @@ function(add_perf_example)
         PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE)
 
     # Compile CM kernel if present
-    if (parsed_CM_TEST)
+    if (parsed_CM_TEST AND CMC_EXECUTABLE)
         set(parsed_TEST_NAME "${parsed_TEST_NAME}_cm")
         set(CM_TEST_NAME "${parsed_TEST_NAME}")
         list(APPEND CM_BUILD_OUTPUT ${parsed_CM_OBJ_NAME})
