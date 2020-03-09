@@ -4155,7 +4155,7 @@ If called when none of the program instances are running,
 ``reduce_equal()`` will return ``false``.
 
 There are also a number of functions to compute "scan"s of values across
-the program instances.  For example, the ``exclusive_scan_and()`` function
+the program instances.  For example, the ``exclusive_scan_add()`` function
 computes, for each program instance, the sum of the given value over all of
 the preceding program instances.  (The scans currently available in
 ``ispc`` are all so-called "exclusive" scans, meaning that the value
