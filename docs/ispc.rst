@@ -407,7 +407,7 @@ Installing ISPC
 
 The `ispc downloads web page`_ has prebuilt executables for Windows\*,
 Linux\* and macOS\* available for download.  Alternatively, you can
-download the source code from that page and build it yourself; see see the
+download the source code from that page and build it yourself; see the
 `ispc wiki`_ for instructions about building ``ispc`` from source.
 
 .. _ispc downloads web page: downloads.html
@@ -704,7 +704,7 @@ Generating Generic C++ Output
 
 In addition to generating object files or assembly output for specific
 targets like NEON, SSE2, SSE4, and AVX, ``ispc`` provides an option to generate
-"generic" C++ output.  This
+"generic" C++ output.
 
 As an example, consider the following simple ``ispc`` program:
 
@@ -1138,7 +1138,7 @@ in the infinite loop in the example above.)
 The way that "varying" function pointers are handled in ``ispc`` is also
 affected by this guarantee: if a function pointer is ``varying``, then it
 has a possibly-different value for all running program instances.  Given a
-call to a varying function pointer, ``ispc`` must maintains as much
+call to a varying function pointer, ``ispc`` must maintain as much
 execution convergence as possible; the assembly code generated finds the
 set of unique function pointers over the currently running program
 instances and calls each one just once, such that the executing program
@@ -2428,7 +2428,7 @@ the expected syntax:
 
     struct Foo { int x; float bar[3]; };
     Foo fa[2] = { { 1, { 2, 3, 4 } }, { 10, { 20, 30, 40 } } };
-    // now, fa[1].bar[2] == 30, and so forth
+    // now, fa[1].bar[2] == 40, and so forth
 
 Expressions
 -----------
@@ -3914,7 +3914,7 @@ the expression evaluates to false at runtime, then a diagnostic error
 message printed and the ``abort()`` function is called.
 
 When called with a ``varying`` quantity, an assertion triggers if the
-expression evaluates to false for any any of the executing program instances
+expression evaluates to false for any of the executing program instances
 at the point where it is called.  Thus, given code like:
 
 ::
@@ -5005,7 +5005,7 @@ have a declaration like:
 
 Because ``varying`` types have size that depends on the size of the gang of
 program instances, ``ispc`` has restrictrictions on using varying types in
-parameters to functions with the ``export`` qualifier.  ``ispc `` prohibits
+parameters to functions with the ``export`` qualifier.  ``ispc`` prohibits
 parameters to exported functions to have varying type unless the parameter is
 of pointer type.  (That is, ``varying float`` isn't allowed, but ``varying float * uniform``
 (uniform pointer to varying float) is permitted.)  Care must be taken
