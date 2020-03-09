@@ -4191,6 +4191,10 @@ bitwise-or are available:
     int64 exclusive_scan_or(int64 v)
     unsigned int64 exclusive_scan_or(unsigned int64 v)
 
+The returned value for the first program instance will be ``0`` for
+``exclusive_scan_add`` and ``exclusive_scan_or``, and have all bits set to
+``1`` for ``exclusive_scan_and``.
+
 The use of exclusive scan to generate variable amounts of output from
 program instances into a compact output buffer is `discussed in the FAQ`_.
 
