@@ -32,7 +32,9 @@
 
 # Functional tests enabled in CI
 # iterations, width, height
-test_add(aobench TEST_IS_L0_RUNTIME host_genx_aobench 1 1 16)
+test_add(aobench TEST_IS_L0_RUNTIME host_genx_aobench 1 16 16)
+#
+test_add(mandelbrot TEST_IS_L0_RUNTIME host_mandelbrot)
 # iterations, gx, gy
 test_add(noise host_genx_noise 1 1 16)
 # size, iterations, gx, gy
