@@ -194,7 +194,8 @@ void DeclStmt::EmitCode(FunctionEmitContext *ctx) const {
                     initExpr = ::Optimize(initExpr);
                 }
 
-                cinit = initExpr->GetConstant(sym->type);
+                std::pair<llvm::Constant *, bool> cinitPair = initExpr->GetConstant(sym->type);
+                cinit = cinitPair.first;
                 if (cinit == NULL)
                     Error(initExpr->pos,
                           "Initializer for static variable "

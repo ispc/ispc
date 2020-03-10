@@ -914,6 +914,9 @@ int main(int Argc, char *Argv[]) {
         Warning(SourcePos(), "--dllexport switch will be ignored, as the target OS is not Windows.");
     }
 
+    if (targets.size() > 1)
+        g->isMultiTargetCompilation = true;
+
     if ((ot == Module::Asm) && (intelAsmSyntax != NULL)) {
         std::vector<const char *> Args(3);
         Args[0] = "ispc (LLVM option parsing)";

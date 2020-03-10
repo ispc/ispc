@@ -214,6 +214,9 @@ class Target {
     /** Mark LLVM function with target specific attribute, if required. */
     void markFuncWithTargetAttr(llvm::Function *func);
 
+    /* Check if target is GENERIC and internally calls lGenericTypeLayoutIndeterminate */
+    bool IsGenericTypeLayoutIndeterminate(llvm::Type *type);
+
     const llvm::Target *getTarget() const { return m_target; }
 
     // Note the same name of method for 3.1 and 3.2+, this allows
@@ -624,6 +627,9 @@ struct Globals {
 
     /** Lines for which warnings are turned off. */
     std::map<std::pair<int, std::string>, bool> turnOffWarnings;
+
+    /* If true, we are compiling for more than one target. */
+    bool isMultiTargetCompilation;
 };
 
 enum {
