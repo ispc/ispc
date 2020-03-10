@@ -1233,8 +1233,7 @@ static bool lVectorIsLinear(llvm::Value *v, int vectorLength, int stride, std::v
             fallback_to_add = true;
         }
 #endif
-        if (bop->getOpcode() == llvm::Instruction::Add
-            || fallback_to_add) {
+        if (bop->getOpcode() == llvm::Instruction::Add || fallback_to_add) {
             // There are two cases to check if we have an add:
             //
             // programIndex + unif -> ascending linear seqeuence
