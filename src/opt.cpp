@@ -643,7 +643,6 @@ void Optimize(llvm::Module *module, int optLevel) {
             optPM.add(llvm::createCMLowerLoadStorePass());
             optPM.add(llvm::createCMImpParamPass());
             optPM.add(llvm::createCMABIPass());
-            optPM.add(llvm::createCMKernelArgOffsetPass(32));
         }
 #endif
         optPM.add(llvm::createTailCallEliminationPass());
@@ -755,7 +754,11 @@ void Optimize(llvm::Module *module, int optLevel) {
 #endif
         optPM.add(llvm::createGlobalDCEPass());
         optPM.add(llvm::createConstantMergePass());
-
+#ifdef ISPC_GENX_ENABLED
+        if (g->target->getISA() == Target::GENX) {
+            optPM.add(llvm::createCMKernelArgOffsetPass(32));
+        }
+#endif
         // Should be the last
         optPM.add(CreateFixBooleanSelectPass(), 400);
     }
