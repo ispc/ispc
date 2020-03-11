@@ -166,7 +166,7 @@ the data values have some coherence, iterating with compact regions will
 improve control flow coherence.
 
 Second, processing compact regions may mean that the data accessed by
-program instances in the gang is be more coherent, leading to performance
+program instances in the gang is more coherent, leading to performance
 benefits from better cache hit rates.
 
 As a concrete example, for the ray tracer example in the ``ispc``
@@ -341,7 +341,7 @@ the "simple" array indexing calculation below:
 
 Since the index ``i`` is a varying value, the program instances in the gang
 will in general be reading different locations in the array ``x``.  Because
-current CPUs have a "gather" instruction, the ``ispc`` compiler has to
+not all CPUs have a "gather" instruction, the ``ispc`` compiler has to
 serialize these memory reads, performing a separate memory load for each
 running program instance, packing the result into ``f``.  (The analogous
 case happens for a write into ``x[i]``.)
@@ -602,7 +602,7 @@ functions (a few lines long), and experiment with it for longer functions.
 Avoid The System Math Library
 -----------------------------
 
-The default math library for transcendentals and the like that ``ispc`` has
+The default math library for transcendentals and the like in ``ispc`` has
 higher error than the system's math library, though is much more efficient
 due to being vectorized across the program instances and due to the fact
 that the functions can be inlined in the final code.  (It generally has

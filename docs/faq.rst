@@ -451,7 +451,7 @@ For example, if you run the command:
    ispc foo.ispc -o foo.o --target=sse2,sse4-x2,avx-x2
 
 Then four object files will be generated: ``foo_sse2.o``, ``foo_sse4.o``,
-``foo_avx.o``, and ``foo.o``.[#]_  Link all of these into your executable, and
+``foo_avx.o``, and ``foo.o`` [#]_. Link all of these into your executable, and
 when you call a function in ``foo.ispc`` from your application code,
 ``ispc`` will determine which instruction sets are supported by the CPU the
 code is running on and will call the most appropriate version of the
@@ -463,7 +463,7 @@ function available.
 In general, the version of the function that runs will be the one in the
 most general instruction set that is supported by the system.  If you only
 compile SSE2 and SSE4 variants and run on a system that supports AVX, for
-example, then the SSE4 variant will be executed.  If the system doesn't
+example, then the SSE4 variant will be executed.  If the system
 is not able to run any of the available variants of the function (for
 example, trying to run a function that only has SSE4 and AVX variants on a
 system that only supports SSE2), then the standard library ``abort()``
@@ -767,7 +767,7 @@ There are two main components to the code: one handles
 ``programCount``-sized chunks of elements of the array, and the other
 handles any excess elements at the end of the array that don't completely
 fill a gang.  The code for the main loop is essentially what one would
-expect: a vector of values are laoded from the array, the multiply is done,
+expect: a vector of values are loaded from the array, the multiply is done,
 and the result is stored.
 
 ::
