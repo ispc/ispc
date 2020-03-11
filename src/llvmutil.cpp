@@ -667,7 +667,7 @@ llvm::Value *LLVMFlattenInsertChain(llvm::Value *inst, int vectorWidth, bool com
             if (ie == NULL && searchFirstUndef) {
                 // Trying to recognize 2nd pattern
                 llvm::BinaryOperator *bop = llvm::dyn_cast<llvm::BinaryOperator>(op);
-                if (bop != NULL && bop->getOpcode() == llvm::Instruction::Add) {
+                if (bop != NULL && ((bop->getOpcode() == llvm::Instruction::Add) || IsOrEquivalentToAdd(bop))) {
                     if (lIsFirstElementConstVector(bop->getOperand(1))) {
                         ie = llvm::dyn_cast<llvm::InsertElementInst>(bop->getOperand(0));
                     }
@@ -758,7 +758,7 @@ static bool lIsExactMultiple(llvm::Value *val, int baseValue, int vectorLength,
     }
 
     llvm::BinaryOperator *bop = llvm::dyn_cast<llvm::BinaryOperator>(val);
-    if (bop != NULL && bop->getOpcode() == llvm::Instruction::Add) {
+    if (bop != NULL && ((bop->getOpcode() == llvm::Instruction::Add) || IsOrEquivalentToAdd(bop))) {
         llvm::Value *op0 = bop->getOperand(0);
         llvm::Value *op1 = bop->getOperand(1);
 
@@ -838,7 +838,7 @@ static bool lAllDivBaseEqual(llvm::Value *val, int64_t baseValue, int vectorLeng
     }
 
     llvm::BinaryOperator *bop = llvm::dyn_cast<llvm::BinaryOperator>(val);
-    if (bop != NULL && bop->getOpcode() == llvm::Instruction::Add && canAdd == true) {
+    if (bop != NULL && ((bop->getOpcode() == llvm::Instruction::Add) || IsOrEquivalentToAdd(bop)) && canAdd == true) {
         llvm::Value *op0 = bop->getOperand(0);
         llvm::Value *op1 = bop->getOperand(1);
 
@@ -1072,6 +1072,23 @@ bool LLVMVectorValuesAllEqual(llvm::Value *v, llvm::Value **splat) {
     return equal;
 }
 
+/** Tests to see if a binary operator has an OR which is equivalent to an ADD.*/
+bool IsOrEquivalentToAdd(llvm::Value *op) {
+    bool isEq = false;
+    llvm::BinaryOperator *bop = llvm::dyn_cast<llvm::BinaryOperator>(op);
+    if (bop != NULL && bop->getOpcode() == llvm::Instruction::Or) {
+        // Special case when A+B --> A|B transformation is triggered
+        // We need to prove that A|B == A+B
+        llvm::Module *module = bop->getParent()->getParent()->getParent();
+        llvm::Value *op0 = bop->getOperand(0), *op1 = bop->getOperand(1);
+        if (!haveNoCommonBitsSet(op0, op1, module->getDataLayout()) == false) {
+            // Fallback to A+B case
+            isEq = true;
+        }
+    }
+    return isEq;
+}
+
 static bool lVectorIsLinear(llvm::Value *v, int vectorLength, int stride, std::vector<llvm::PHINode *> &seenPhis);
 
 /** Given a vector of compile-time constant integer values, test to see if
@@ -1219,17 +1236,7 @@ static bool lVectorIsLinear(llvm::Value *v, int vectorLength, int stride, std::v
     if (bop != NULL) {
         // FIXME: is it right to pass the seenPhis to the all equal check as well??
         llvm::Value *op0 = bop->getOperand(0), *op1 = bop->getOperand(1);
-        bool fallback_to_add = false;
-        if (bop->getOpcode() == llvm::Instruction::Or) {
-            // Special case when A+B --> A|B transformation is triggered
-            // We need to prove that A|B == A+B
-            llvm::Module *module = bop->getParent()->getParent()->getParent();
-            if (haveNoCommonBitsSet(op0, op1, module->getDataLayout()) == false)
-                return false;
-            // Fallback to A+B case
-            fallback_to_add = true;
-        }
-        if (bop->getOpcode() == llvm::Instruction::Add || fallback_to_add) {
+        if ((bop->getOpcode() == llvm::Instruction::Add) || IsOrEquivalentToAdd(bop)) {
             // There are two cases to check if we have an add:
             //
             // programIndex + unif -> ascending linear seqeuence
