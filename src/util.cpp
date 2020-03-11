@@ -334,7 +334,7 @@ static void lPrint(const char *type, bool isError, SourcePos p, const char *fmt,
     // exact same error message.  If so, return, so we don't redundantly
     // print it and annoy the user.
     static std::set<std::string> printed;
-    if (isError && printed.find(formattedBuf) != printed.end()) {
+    if (printed.find(formattedBuf) != printed.end()) {
         free(errorBuf);
         free(formattedBuf);
         return;
