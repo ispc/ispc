@@ -38,8 +38,10 @@
 #include "llvmutil.h"
 #include "ispc.h"
 #include "type.h"
+#include <llvm/Analysis/ValueTracking.h>
 #include <llvm/IR/BasicBlock.h>
 #include <llvm/IR/Instructions.h>
+#include <llvm/IR/Module.h>
 #include <map>
 #include <set>
 
@@ -1217,8 +1219,17 @@ static bool lVectorIsLinear(llvm::Value *v, int vectorLength, int stride, std::v
     if (bop != NULL) {
         // FIXME: is it right to pass the seenPhis to the all equal check as well??
         llvm::Value *op0 = bop->getOperand(0), *op1 = bop->getOperand(1);
-
-        if (bop->getOpcode() == llvm::Instruction::Add) {
+        bool fallback_to_add = false;
+        if (bop->getOpcode() == llvm::Instruction::Or) {
+            // Special case when A+B --> A|B transformation is triggered
+            // We need to prove that A|B == A+B
+            llvm::Module *module = bop->getParent()->getParent()->getParent();
+            if (haveNoCommonBitsSet(op0, op1, module->getDataLayout()) == false)
+                return false;
+            // Fallback to A+B case
+            fallback_to_add = true;
+        }
+        if (bop->getOpcode() == llvm::Instruction::Add || fallback_to_add) {
             // There are two cases to check if we have an add:
             //
             // programIndex + unif -> ascending linear seqeuence
