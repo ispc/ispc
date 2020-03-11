@@ -1286,7 +1286,7 @@ static llvm::Value *lGetBasePtrAndOffsets(llvm::Value *ptrs, llvm::Value **offse
         if (broadcastDetected) {
             llvm::Value *op = shuffle->getOperand(0);
             llvm::BinaryOperator *bop_var = llvm::dyn_cast<llvm::BinaryOperator>(op);
-            if (bop_var != NULL && bop_var->getOpcode() == llvm::Instruction::Add) {
+            if (bop_var != NULL && ((bop_var->getOpcode() == llvm::Instruction::Add) || IsOrEquivalentToAdd(bop_var))) {
                 // We expect here ConstantVector as
                 // <i64 4, i64 undef, i64 undef, i64 undef, i64 undef, i64 undef, i64 undef, i64 undef>
                 llvm::ConstantVector *cv = llvm::dyn_cast<llvm::ConstantVector>(bop_var->getOperand(1));
@@ -1306,7 +1306,7 @@ static llvm::Value *lGetBasePtrAndOffsets(llvm::Value *ptrs, llvm::Value **offse
     }
 
     llvm::BinaryOperator *bop = llvm::dyn_cast<llvm::BinaryOperator>(ptrs);
-    if (bop != NULL && bop->getOpcode() == llvm::Instruction::Add) {
+    if (bop != NULL && ((bop->getOpcode() == llvm::Instruction::Add) || IsOrEquivalentToAdd(bop))) {
         // If we have a common pointer plus something, then we're also
         // good.
         if ((base = lGetBasePtrAndOffsets(bop->getOperand(0), offsets, insertBefore)) != NULL) {
@@ -1346,7 +1346,7 @@ static llvm::Value *lGetBasePtrAndOffsets(llvm::Value *ptrs, llvm::Value **offse
                 // it as having an offset of zero
                 elementBase = ce;
                 delta[i] = g->target->is32Bit() ? LLVMInt32(0) : LLVMInt64(0);
-            } else if (ce->getOpcode() == llvm::Instruction::Add) {
+            } else if ((ce->getOpcode() == llvm::Instruction::Add) || IsOrEquivalentToAdd(ce)) {
                 // Try both orderings of the operands to see if we can get
                 // a pointer+offset out of them.
                 elementBase = lGetConstantAddExprBaseOffset(ce->getOperand(0), ce->getOperand(1), &delta[i]);
@@ -1435,7 +1435,7 @@ static void lExtractConstantOffset(llvm::Value *vec, llvm::Value **constOffset, 
         llvm::Value *op1 = bop->getOperand(1);
         llvm::Value *c0, *v0, *c1, *v1;
 
-        if (bop->getOpcode() == llvm::Instruction::Add) {
+        if (bop != NULL && ((bop->getOpcode() == llvm::Instruction::Add) || IsOrEquivalentToAdd(bop))) {
             lExtractConstantOffset(op0, &c0, &v0, insertBefore);
             lExtractConstantOffset(op1, &c1, &v1, insertBefore);
 
@@ -1610,7 +1610,7 @@ static llvm::Value *lExtractOffsetVector248Scale(llvm::Value **vec) {
         return LLVMInt32(1);
 
     llvm::Value *op0 = bop->getOperand(0), *op1 = bop->getOperand(1);
-    if (bop->getOpcode() == llvm::Instruction::Add) {
+    if (bop != NULL && ((bop->getOpcode() == llvm::Instruction::Add) || IsOrEquivalentToAdd(bop))) {
         if (llvm::isa<llvm::ConstantAggregateZero>(op0)) {
             *vec = op1;
             return lExtractOffsetVector248Scale(vec);
@@ -1817,7 +1817,7 @@ static bool lOffsets32BitSafe(llvm::Value **variableOffsetPtr, llvm::Value **con
 static bool lIs32BitSafeHelper(llvm::Value *v) {
     // handle Adds, SExts, Constant Vectors
     if (llvm::BinaryOperator *bop = llvm::dyn_cast<llvm::BinaryOperator>(v)) {
-        if (bop->getOpcode() == llvm::Instruction::Add) {
+        if (bop != NULL && ((bop->getOpcode() == llvm::Instruction::Add) || IsOrEquivalentToAdd(bop))) {
             return lIs32BitSafeHelper(bop->getOperand(0)) && lIs32BitSafeHelper(bop->getOperand(1));
         }
         return false;

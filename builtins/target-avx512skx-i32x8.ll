@@ -1,4 +1,4 @@
-;;  Copyright (c) 2016-2019, Intel Corporation
+;;  Copyright (c) 2016-2020, Intel Corporation
 ;;  All rights reserved.
 ;;
 ;;  Redistribution and use in source and binary forms, with or without
@@ -31,14 +31,7 @@
 
 define(`WIDTH',`8')
 
-
-ifelse(LLVM_VERSION, LLVM_8_0,
-    `include(`target-avx512-common-8.ll')',
-       LLVM_VERSION, LLVM_9_0,
-    `include(`target-avx512-common-8.ll')',
-         LLVM_VERSION, LLVM_10_0,
-    `include(`target-avx512-common-8.ll')'
-  )
+include(`target-avx512-common-8.ll')
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; rcp, rsqrt
@@ -82,12 +75,6 @@ define <8 x float> @__rsqrt_fast_varying_float(<8 x float> %v) nounwind readonly
 }
 ')
 
-ifelse(LLVM_VERSION, LLVM_8_0,
-    rcp_rsqrt_varying_float_skx_8(),
-         LLVM_VERSION, LLVM_9_0,
-    rcp_rsqrt_varying_float_skx_8(),
-         LLVM_VERSION, LLVM_10_0,
-    rcp_rsqrt_varying_float_skx_8()
-  )
+rcp_rsqrt_varying_float_skx_8()
 
 ;;saturation_arithmetic_novec()
