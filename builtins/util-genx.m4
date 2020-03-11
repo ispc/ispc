@@ -4558,6 +4558,10 @@ define i64 @__clock() nounwind {
   ret i64 %res
 }
 
+define i32 @__num_cores() nounwind {
+  ret i32 -1;
+}
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; stdlib transcendentals
 ;;

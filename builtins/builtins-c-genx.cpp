@@ -285,5 +285,3 @@ extern "C" __declspec(cm_builtin) __declspec(genx_SIMT(1)) void __do_print_cm(co
     details::_cm_print_format(BTI, init_offset, resultingStr);
 }
 
-// TODO: implement correctly for genx if possible
-extern "C" int __declspec(cm_builtin) __num_cores() { return -1; }
