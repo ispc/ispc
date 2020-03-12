@@ -136,6 +136,13 @@ else()
     endif()
 endif()
 
+# __INTEL_EMBARGO_BEGIN__
+if (XE_ENABLED)
+    option(__INTEL_EMBARGO__ "Building with IP sensitive code for Xe" ON)
+    message("-- Building with IP sensitive code for Xe")
+endif()
+# __INTEL_EMBARGO_END__
+
 if (APPLE)
     # Use standard macOS SDK location if this is not specified.
     if (NOT ISPC_MACOS_SDK_PATH)
@@ -475,6 +482,9 @@ endif()
 
 if (XE_ENABLED)
     target_compile_definitions(${PROJECT_NAME} PRIVATE ISPC_XE_ENABLED)
+    if( __INTEL_EMBARGO__)
+        target_compile_definitions(${PROJECT_NAME} PRIVATE __INTEL_EMBARGO__)
+    endif(__INTEL_EMBARGO__)
 endif()
 
 if (WASM_ENABLED)
