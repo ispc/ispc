@@ -80,6 +80,6 @@ message(STATUS "Using BENCHMARKS_ISPC_FLAGS: ${BENCHMARKS_ISPC_FLAGS}")
 
 include(cmake/AddBenchmark.cmake)
 
-#add_subdirectory(01_trivial)
-#add_subdirectory(02_medium)
-#add_subdirectory(03_complex)
+add_subdirectory(01_trivial)
+add_subdirectory(02_medium)
+add_subdirectory(03_complex)
