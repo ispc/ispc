@@ -35,6 +35,7 @@
 
 from collections import OrderedDict
 import re
+import traceback
 
 def tail_and_save(file_in, file_out, tail = 100):    
     with open(file_in, 'r') as f_in:
@@ -695,7 +696,9 @@ def validation_run(only, only_targets, reference_branch, number, notify, update,
                             try:
                                 execute_stability(stability, R_tmp, print_version)
                             except:
-                                print_debug("ERROR: Exception in execute_stability - maybe some test subprocess terminated before it should have\n", False, stability_log)
+                                exc_type, exc_value, exc_traceback = sys.exc_info()
+                                traceback.print_tb(exc_traceback, file=sys.stderr)
+                                print_debug("ERROR: Exception in execute_stability: %s\n" % (sys.exc_info()[1]), False, stability_log)
                             print_version = 0
             for j in range(0,len(sde_targets)):
                 stability.target = sde_targets[j][1]

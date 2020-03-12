@@ -448,6 +448,8 @@ def run_tasks_from_queue(queue, queue_ret, total_tests_arg, max_test_length_arg,
             except:
                 # This is in case the child has unexpectedly died or some other exception happened
                 # Count it as runfail and continue with next test.
+                exc_type, exc_value, exc_traceback = sys.exc_info()
+                traceback.print_tb(exc_traceback, file=sys.stderr)
                 print_debug("ERROR: run_test function raised an exception: %s\n" % (sys.exc_info()[1]), s, run_tests_log)
                 status = Status.Runfail
 
@@ -845,6 +847,7 @@ import os.path
 import time
 # our functions
 import common
+import traceback
 print_debug = common.print_debug
 error = common.error
 exit_code = 0
