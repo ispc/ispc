@@ -26,6 +26,13 @@
 // RUN: not %{ispc} %s -o %t.bin --emit-zebin --nostdlib --target=xehpg-x16 --device=dg1
 // RUN: %{ispc} %s -o %t.bin --emit-zebin --nostdlib --target=xehpg-x16 --device=dg2
 
+// XeHPC
+// RUN: not %{ispc} %s -o %t.bin --emit-zebin --nostdlib --target=xehpc-x16 --device=skl
+// RUN: not %{ispc} %s -o %t.bin --emit-zebin --nostdlib --target=xehpc-x16 --device=tgllp
+// RUN: not %{ispc} %s -o %t.bin --emit-zebin --nostdlib --target=xehpc-x16 --device=dg1
+// RUN: not %{ispc} %s -o %t.bin --emit-zebin --nostdlib --target=xehpc-x16 --device=dg2
+// RUN: %{ispc} %s -o %t.bin --emit-zebin --nostdlib --target=xehpc-x16 --device=pvc
+
 // REQUIRES: XE_ENABLED
 // REQUIRES: LINUX_HOST
 
