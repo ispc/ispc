@@ -92,6 +92,8 @@ enum class ISPCTarget {
     xelp_x16,
     xehpg_x8,
     xehpg_x16,
+    xehpc_x16,
+    xehpc_x32,
     error
 };
 

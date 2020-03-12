@@ -189,6 +189,7 @@ class Target {
         GEN9,
         XELP,
         XEHPG,
+        XEHPC,
 #endif
         NUM_ISAS
     };
@@ -198,6 +199,7 @@ class Target {
         gen9,
         xe_lp,
         xe_hpg,
+        xe_hpc,
     };
 #endif
 
@@ -269,7 +271,7 @@ class Target {
 
     bool isXeTarget() {
 #ifdef ISPC_XE_ENABLED
-        return m_isa == Target::GEN9 || m_isa == Target::XELP || m_isa == Target::XEHPG;
+        return m_isa == Target::GEN9 || m_isa == Target::XELP || m_isa == Target::XEHPG || m_isa == Target::XEHPC;
 #else
         return false;
 #endif
