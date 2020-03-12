@@ -187,7 +187,8 @@ def check_print_output(output):
         return lines[0:len(lines)//2] == lines[len(lines)//2:len(lines)]
 
 # run the commands in cmd_list
-def run_cmds(compile_cmds, run_cmd, filename, expect_failure, sig, exe_wd="."):
+def run_cmds(compile_cmds, run_cmd, filename, expect_failure, sig, simu, exe_wd="."):
+    simu, port, platform = simu
     for cmd in compile_cmds:
         (return_code, output, timeout) = run_command(cmd, options.test_time)
         compile_failed = (return_code != 0)
@@ -198,7 +199,8 @@ def run_cmds(compile_cmds, run_cmd, filename, expect_failure, sig, exe_wd="."):
             return Status.Compfail
 
     if not options.save_bin:
-        (return_code, output, timeout) = run_command(run_cmd, options.test_time, cwd=exe_wd)
+        with Simulator.Simulator(platform, simu, port, options.verbose):
+            (return_code, output, timeout) = run_command(run_cmd, options.test_time, cwd=exe_wd)
         if sig < 32:
             run_failed = (return_code != 0) or timeout
         else:
@@ -315,7 +317,7 @@ def check_if_skip_test(filename, host, target):
     return skip
 
 
-def run_test(testname, host, target):
+def run_test(testname, host, target, tid):
     # testname is a path to the test from the root of ispc dir
     # filename is a path to the test from the current dir
     # ispc_exe_rel is a relative path to ispc
@@ -483,8 +485,12 @@ def run_test(testname, host, target):
         # compile the ispc code, make the executable, and run it...
         ispc_cmd += " -h " + filename + ".h"
         cc_cmd += " -DTEST_HEADER=\"<" + filename + ".h>\""
+        simu = [None, None, None]
+# __INTEL_EMBARGO_BEGIN__
+        simu = [options.fulsim, options.tbxport + tid, options.platform]
+# __INTEL_EMBARGO_END__
         status = run_cmds([ispc_cmd, cc_cmd], options.wrapexe + " " + exe_name,
-                          testname, should_fail, match, exe_wd=exe_wd)
+                          testname, should_fail, match, simu, exe_wd=exe_wd)
 
         # clean up after running the test
         try:
@@ -508,7 +514,7 @@ def run_test(testname, host, target):
 # pull tests to run from the given queue and run them.  Multiple copies of
 # this function will be running in parallel across all of the CPU cores of
 # the system.
-def run_tasks_from_queue(queue, queue_ret, total_tests_arg, max_test_length_arg, counter, mutex, glob_var):
+def run_tasks_from_queue(queue, queue_ret, total_tests_arg, max_test_length_arg, counter, mutex, glob_var, tid):
     # This is needed on windows because windows doesn't copy globals from parent process while multiprocessing
     host = glob_var[0]
     global options
@@ -532,7 +538,7 @@ def run_tasks_from_queue(queue, queue_ret, total_tests_arg, max_test_length_arg,
         status = Status.Skip
         if not check_if_skip_test(filename, host, target):
             try:
-                status = run_test(filename, host, target)
+                status = run_test(filename, host, target, tid)
             except:
                 # This is in case the child has unexpectedly died or some other exception happened
                 # Count it as runfail and continue with next test.
@@ -909,7 +915,7 @@ def run_tests(options1, args, print_version):
     task_threads = [0] * nthreads
     for x in range(nthreads):
         task_threads[x] = multiprocessing.Process(target=run_tasks_from_queue, args=(test_queue, qret, total_tests,
-                max_test_length, finished_tests_counter, lock, glob_var))
+                max_test_length, finished_tests_counter, lock, glob_var, x))
         task_threads[x].start()
 
     # wait for them all to finish and rid the queue of STOPs
@@ -980,6 +986,7 @@ import os.path
 import time
 # our functions
 import common
+import simulator as Simulator
 import traceback
 print_debug = common.print_debug
 error = common.error
@@ -1033,6 +1040,11 @@ if __name__ == "__main__":
     parser.add_option('-s', "--silent", dest='silent', help='enable silent mode without any output', default=False,
                   action = "store_true")
     parser.add_option("--file", dest='in_file', help='file to save run_tests output', default="")
+# __INTEL_EMBARGO_BEGIN__
+    parser.add_option("--fulsim", dest='fulsim', help='Path to fulsim', default="")
+    parser.add_option("--platform", dest='platform', help='platform: skl or pvc', default="skl")
+    parser.add_option("--tbxport", dest='tbxport', help='Tbx port', default=4999, type="int", action="store")
+# __INTEL_EMBARGO_END__
     parser.add_option("--l0loader", dest='l0loader', help='Path to L0 loader', default="")
     parser.add_option("--device", dest='device', help='Specify target ISPC device. For example: core2, skx, cortex-a9, skl, tgllp, acm-g11, etc.', default=None)
     parser.add_option("--ispc_output", dest='ispc_output', choices=['obj', 'spv', 'ze'], help='Specify ISPC output', default=None)

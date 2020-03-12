@@ -569,6 +569,11 @@ def validation_run(only, only_targets, reference_branch, number, update, speed_n
         stability.device = None
         stability.ispc_output = None
         stability.debug_check = False
+# __INTEL_EMBARGO_BEGIN__
+        stability.platform = "skl"
+        stability.fulsim = ""
+        stability.tbxport = 4999
+# __INTEL_EMBARGO_END__
 # stability varying options
         stability.target = ""
         stability.arch = ""
