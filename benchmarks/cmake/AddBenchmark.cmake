@@ -146,10 +146,12 @@ function(add_ispc_to_target)
             COMMAND_EXPAND_LISTS
         )
         if(MSVC)
-            # Group ISPC files inside Visual Studio
-            source_group("ISPC" FILES ${ISPC_SRC_FILE})
-            # Add ispc file to VS solution.
-            target_sources(${ADD_ISPC_TARGET} PUBLIC ${ISPC_SRC_FILE})
+            # Add .ispc file to VS solution.
+            target_sources(${ADD_ISPC_TARGET} PUBLIC ${SRC_LOCATION})
+            # Group .ispc files inside Visual Studio
+            source_group("ISPC" FILES ${SRC_LOCATION})
+            # Group benchmarks in "Benchmarks" folder
+            set_target_properties(${ADD_ISPC_TARGET} PROPERTIES FOLDER "Benchmarks")
         endif()
 
         set_source_files_properties(${ISPC_TARGET_OBJS} PROPERTIES GENERATED TRUE EXTERNAL_OBJECT TRUE)
