@@ -12,7 +12,9 @@ export void f_v(uniform float RET[]) {
     int errors = 0;
     for (uniform int i = 0; i < 8; ++i) {
         if (ok(r[i], vals[i%8]) == false) {
+#ifndef ISPC_GENX_ENABLED
             print("error @ %: got %, expected %\n", i, r[i], vals[i%8]);
+#endif
             ++errors;
         }
     }

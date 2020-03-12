@@ -15,7 +15,9 @@ static float float4(uniform float a, uniform float b, uniform float c,
 bool ok(float x, float ref) { 
     bool r = (abs(x - ref) < 1e-4) || abs((x-ref)/ref) < 1e-4;
     if (any(r == false))
+#ifndef ISPC_GENX_ENABLED
         print("mismatch got %, expected %\n", x, ref);
+#endif
     return r;
 }
 
