@@ -15,7 +15,9 @@ static double double4(uniform double a, uniform double b, uniform double c,
 bool ok(double x, double ref) { 
     bool r = (abs(x - ref) < 1d-14) || abs((x-ref)/ref) < 1d-14;
     if (any(r == false))
+#ifndef ISPC_GENX_ENABLED
         print("mismatch got %, expected %\n", x, ref);
+#endif
     return r;
 }
 

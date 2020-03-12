@@ -1,6 +1,5 @@
 struct Point { float x, y[3], z; };
 
-
 export void f_fu(uniform float RET[], uniform float aFOO[], uniform float b) {
     #pragma ignore warning(perf)
     soa<4> Point pts[30];

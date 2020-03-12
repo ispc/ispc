@@ -7,7 +7,9 @@ export void f_f(uniform float RET[], uniform float aFOO[]) {
       if (__fast_idiv(num, div) != num/div) {
         ++errorCount;
         #pragma ignore warning(perf)
+#ifndef ISPC_GENX_ENABLED
         print("error %/% = %, got %\n", num, div, num/div, __fast_idiv(num,div));
+#endif
         if (errorCount > 32) break;
       }
     }
@@ -19,7 +21,9 @@ export void f_f(uniform float RET[], uniform float aFOO[]) {
       if (__fast_idiv(num, div) != num/div) {
         ++errorCount;
         #pragma ignore warning(perf)
+#ifndef ISPC_GENX_ENABLED
         print("error %/% = %, got %\n", num, div, num/div, __fast_idiv(num,div));
+#endif
         if (errorCount > 64) break;
       }
     }
@@ -31,7 +35,9 @@ export void f_f(uniform float RET[], uniform float aFOO[]) {
       if (__fast_idiv(num, div) != num/div) {
         ++errorCount;
         #pragma ignore warning(perf)
+#ifndef ISPC_GENX_ENABLED
         print("error %/% = %, got %\n", num, div, num/div, __fast_idiv(num,div));
+#endif
         if (errorCount > 96) break;
       }
     }
@@ -43,7 +49,9 @@ export void f_f(uniform float RET[], uniform float aFOO[]) {
       if (__fast_idiv(num, div) != num/div) {
         ++errorCount;
         #pragma ignore warning(perf)
+#ifndef ISPC_GENX_ENABLED
         print("error %/% = %, got %\n", num, div, num/div, __fast_idiv(num,div));
+#endif
         if (errorCount > 128) break;
       }
     }
@@ -59,7 +67,9 @@ export void f_f(uniform float RET[], uniform float aFOO[]) {
       if (__fast_idiv(num, div) != num/div) {
         ++errorCount;
         #pragma ignore warning(perf)
+#ifndef ISPC_GENX_ENABLED
         print("ui32 error %/% = %, got %\n", num, div, num/div, __fast_idiv(num,div));
+#endif
         if (errorCount > 160) break;
       }
     }
@@ -74,7 +84,9 @@ export void f_f(uniform float RET[], uniform float aFOO[]) {
       if (__fast_idiv(num, div) != num/div) {
         ++errorCount;
         #pragma ignore warning(perf)
+#ifndef ISPC_GENX_ENABLED
         print("si32 error %/% = %, got %\n", num, div, num/div, __fast_idiv(num,div));
+#endif
         if (errorCount > 192) break;
       }
     }

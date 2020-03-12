@@ -4,8 +4,10 @@ export void f_fu(uniform float RET[], uniform float aFOO[], uniform float b) {
         if (all(a < 256)) 
             RET[programIndex] = 1;
         else {
+#ifndef ISPC_GENX_ENABLED
             print("FALSE %\n", a);
             print("programCount %\n", programCount);
+#endif
         }
     }
     else RET[programIndex] = 0;
