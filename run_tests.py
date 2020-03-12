@@ -443,11 +443,18 @@ def run_test(testname, host, target):
                     cc_cmd += " -DEXPECT_FAILURE"
 
                 if target.is_xe():
-                    exe_name = "%s.run" % os.path.basename(testname)
-                    cc_cmd = "%s -O0 -I. -I %s/include -lze_loader -L %s/lib \
-                            %s %s -DTEST_SIG=%d -DTEST_WIDTH=%d -o %s" % \
-                            (options.compiler_exe, options.l0loader, options.l0loader, gcc_arch, add_prefix("test_static_l0.cpp", host, target),
-                             match, width, exe_name)
+                    if os.getenv("CLSH_DRIVER"):
+                        neo_driver = os.getenv('NEO_ROOT')+"/cl_runtimes/"+os.getenv("CLSH_DRIVER")
+                        exe_name = "%s.run" % os.path.basename(testname)
+                        cc_cmd = "%s -O2 -I. -I%s/usr/include -L%s/usr/lib/x86_64-linux-gnu -lze_intel_gpu  \
+                                %s %s -DTEST_SIG=%d -DTEST_WIDTH=%d -o %s" % \
+                                (options.compiler_exe, neo_driver, neo_driver, gcc_arch, add_prefix("test_static_l0.cpp", host, target), match, width, exe_name)
+                    else:
+                        exe_name = "%s.run" % os.path.basename(testname)
+                        cc_cmd = "%s -O0 -I. -I %s/include -lze_loader -L %s/lib \
+                                %s %s -DTEST_SIG=%d -DTEST_WIDTH=%d -o %s" % \
+                                (options.compiler_exe, options.l0loader, options.l0loader, gcc_arch, add_prefix("test_static_l0.cpp", host, target),
+                                 match, width, exe_name)
                     exe_name = "./" + exe_name
                     cc_cmd += " -DTEST_ZEBIN" if options.ispc_output == "ze" else " -DTEST_SPV"
             ispc_cmd = ispc_exe_rel + " --pic --woff %s -o %s --arch=%s --target=%s -DTEST_SIG=%d" % \
