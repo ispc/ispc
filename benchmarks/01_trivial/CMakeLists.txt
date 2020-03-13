@@ -32,3 +32,4 @@
 
 # List the benchmarks
 compile_benchmark_test(01_aossoa)
+compile_benchmark_test(02_soaaos)
