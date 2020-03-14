@@ -179,6 +179,12 @@ class Target {
         NUM_ISAS
     };
 
+#ifdef ISPC_GENX_ENABLED
+    enum GENX_PLATFORM {
+        GENX_GEN9,
+    };
+#endif
+
     /** Initializes the given Target pointer for a target of the given
         name, if the name is a known target.  Returns true if the
         target was initialized and false if the name is unknown. */
@@ -235,6 +241,11 @@ class Target {
     ISPCTarget getISPCTarget() const { return m_ispc_target; }
 
     ISA getISA() const { return m_isa; }
+
+#ifdef ISPC_GENX_ENABLED
+    GENX_PLATFORM getGenxPlatform() const { return m_genxPlatform; }
+    uint32_t getGenxGrfSize() const;
+#endif
 
     Arch getArch() const { return m_arch; }
 
@@ -296,6 +307,9 @@ class Target {
 
     /** Instruction set being compiled to. */
     ISA m_isa;
+#ifdef ISPC_GENX_ENABLED
+    GENX_PLATFORM m_genxPlatform;
+#endif
 
     /** Target system architecture.  (e.g. "x86-64", "x86"). */
     Arch m_arch;

@@ -515,7 +515,7 @@ void Optimize(llvm::Module *module, int optLevel) {
                 optPM.add(llvm::createCMImpParamPass(false));
             }
             optPM.add(llvm::createCMABIPass());
-            optPM.add(llvm::createCMKernelArgOffsetPass(32));
+            optPM.add(llvm::createCMKernelArgOffsetPass(g->target->getGenxGrfSize()));
             optPM.add(llvm::createGenXReduceIntSizePass());
             optPM.add(CreatePromoteToPrivateMemoryPass());
         }
@@ -768,7 +768,7 @@ void Optimize(llvm::Module *module, int optLevel) {
         optPM.add(llvm::createConstantMergePass());
 #ifdef ISPC_GENX_ENABLED
         if (g->target->getISA() == Target::GENX) {
-            optPM.add(llvm::createCMKernelArgOffsetPass(32));
+            optPM.add(llvm::createCMKernelArgOffsetPass(g->target->getGenxGrfSize()));
         }
 #endif
         // Should be the last

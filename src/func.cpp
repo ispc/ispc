@@ -67,7 +67,6 @@
 
 #ifdef ISPC_GENX_ENABLED
 #include <llvm/GenXIntrinsics/GenXKernelMDOps.h>
-#define GENX_WIDTH_GENERAL_REG 32
 #endif
 
 Function::Function(Symbol *s, Stmt *c) {
@@ -448,6 +447,7 @@ void Function::emitCode(FunctionEmitContext *ctx, llvm::Function *function, Sour
             enum { AK_NORMAL, AK_SAMPLER, AK_SURFACE, AK_VME };
             enum { IK_NORMAL, IK_INPUT, IK_OUTPUT, IK_INPUT_OUTPUT };
             unsigned int offset = 32;
+            unsigned int grf_size = g->target->getGenxGrfSize();
             for (int i = 0; i < args.size(); i++) {
                 const Type *T = args[i]->type;
                 argKinds.push_back(llvm::ValueAsMetadata::get(llvm::ConstantInt::get(i32Type, AK_NORMAL)));
@@ -462,9 +462,9 @@ void Function::emitCode(FunctionEmitContext *ctx, llvm::Function *function, Sour
                 if (llvm::isa<llvm::VectorType>(type)) {
                     bytes = type->getPrimitiveSizeInBits() / 8;
 
-                    if ((offset & (GENX_WIDTH_GENERAL_REG - 1)) + bytes > GENX_WIDTH_GENERAL_REG)
+                    if ((offset & (grf_size - 1)) + bytes > grf_size)
                         // GRF align if arg would cross GRF boundary
-                        offset = llvm::alignTo(offset, GENX_WIDTH_GENERAL_REG);
+                        offset = llvm::alignTo(offset, grf_size);
                 }
 
                 argOffsets.push_back(llvm::ValueAsMetadata::get(llvm::ConstantInt::get(i32Type, offset)));
