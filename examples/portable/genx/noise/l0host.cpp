@@ -32,10 +32,10 @@
 */
 
 #include "L0_helpers.h"
+#include "timing.h"
 #include <chrono>
 #include <cmath>
 #include <iostream>
-#include <level_zero/ze_api.h>
 #include <limits>
 
 #define CORRECTNESS_THRESHOLD 0.0002
@@ -56,8 +56,10 @@ static int run(int niter, int gx, int gy) {
     ze_driver_handle_t hDriver = nullptr;
     ze_command_queue_handle_t hCommandQueue = nullptr;
 
-    for (int i = 0; i < SZ; i++)
+    for (int i = 0; i < SZ; i++) {
         out.data[i] = -1;
+        gold.data[i] = -1;
+    }
 
 #ifdef CMKERNEL
     L0InitContext(hDriver, hDevice, hModule, hCommandQueue, "noise_cm.spv");
@@ -74,7 +76,6 @@ static int run(int niter, int gx, int gy) {
     L0Create_Kernel(hDevice, hModule, hCommandList, hKernel, "noise_ispc");
 #endif
 
-    // PARAMS
     const unsigned int height = 768;
     const unsigned int width = 768;
 
@@ -82,75 +83,94 @@ static int run(int niter, int gx, int gy) {
     const float y0 = -10;
     const float x1 = 10;
     const float y1 = 10;
+    double minCyclesISPCGPU = 1e30;
+    for (unsigned int i = 0; i < niter; i++) {
+        void *buf_ref = out.data;
+        ze_device_mem_alloc_desc_t alloc_desc = {ZE_DEVICE_MEM_ALLOC_DESC_VERSION_CURRENT,
+                                                 ZE_DEVICE_MEM_ALLOC_FLAG_DEFAULT, 0};
+        ze_host_mem_alloc_desc_t host_alloc_desc = {ZE_HOST_MEM_ALLOC_DESC_VERSION_CURRENT,
+                                                    ZE_HOST_MEM_ALLOC_FLAG_DEFAULT};
 
-    void *buf_ref = out.data;
-    ze_device_mem_alloc_desc_t alloc_desc = {ZE_DEVICE_MEM_ALLOC_DESC_VERSION_CURRENT, ZE_DEVICE_MEM_ALLOC_FLAG_DEFAULT,
-                                             0};
-    ze_host_mem_alloc_desc_t host_alloc_desc = {ZE_HOST_MEM_ALLOC_DESC_VERSION_CURRENT, ZE_HOST_MEM_ALLOC_FLAG_DEFAULT};
+        L0_SAFE_CALL(zeDriverAllocSharedMem(hDriver, &alloc_desc, &host_alloc_desc, SZ * sizeof(float), 0 /*align*/,
+                                            hDevice, &buf_ref));
 
-    L0_SAFE_CALL(zeDriverAllocSharedMem(hDriver, &alloc_desc, &host_alloc_desc, SZ * sizeof(float), 0 /*align*/,
-                                        hDevice, &buf_ref));
+        L0_SAFE_CALL(zeKernelSetArgumentValue(hKernel, 0, sizeof(float), &x0));
+        L0_SAFE_CALL(zeKernelSetArgumentValue(hKernel, 1, sizeof(float), &y0));
+        L0_SAFE_CALL(zeKernelSetArgumentValue(hKernel, 2, sizeof(float), &x1));
+        L0_SAFE_CALL(zeKernelSetArgumentValue(hKernel, 3, sizeof(float), &y1));
+        L0_SAFE_CALL(zeKernelSetArgumentValue(hKernel, 4, sizeof(int), &width));
+        L0_SAFE_CALL(zeKernelSetArgumentValue(hKernel, 5, sizeof(int), &height));
+        L0_SAFE_CALL(zeKernelSetArgumentValue(hKernel, 6, sizeof(buf_ref), &buf_ref));
 
-    L0_SAFE_CALL(zeKernelSetArgumentValue(hKernel, 0, sizeof(float), &x0));
-    L0_SAFE_CALL(zeKernelSetArgumentValue(hKernel, 1, sizeof(float), &y0));
-    L0_SAFE_CALL(zeKernelSetArgumentValue(hKernel, 2, sizeof(float), &x1));
-    L0_SAFE_CALL(zeKernelSetArgumentValue(hKernel, 3, sizeof(float), &y1));
-    L0_SAFE_CALL(zeKernelSetArgumentValue(hKernel, 4, sizeof(int), &width));
-    L0_SAFE_CALL(zeKernelSetArgumentValue(hKernel, 5, sizeof(int), &height));
-    L0_SAFE_CALL(zeKernelSetArgumentValue(hKernel, 6, sizeof(buf_ref), &buf_ref));
+        uint32_t groupSpaceWidth = 1;
+        uint32_t groupSpaceHeight = 1;
 
-    // EXECUTION
-    uint32_t groupSpaceWidth = 1;
-    uint32_t groupSpaceHeight = 1;
+        uint32_t group_size = groupSpaceWidth * groupSpaceHeight;
+        L0_SAFE_CALL(zeKernelSetGroupSize(hKernel, /*x*/ groupSpaceWidth, /*y*/ groupSpaceHeight, /*z*/ 1));
 
-    uint32_t group_size = groupSpaceWidth * groupSpaceHeight;
-    L0_SAFE_CALL(zeKernelSetGroupSize(hKernel, /*x*/ groupSpaceWidth, /*y*/ groupSpaceHeight, /*z*/ 1));
+        // set grid size
+        ze_group_count_t dispatchTraits = {(uint32_t)gx, (uint32_t)gy, 1};
 
-    // set grid size
-    ze_group_count_t dispatchTraits = {(uint32_t)gx, (uint32_t)gy, 1};
+        reset_and_start_timer();
+        auto wct = std::chrono::system_clock::now();
+        // launch
+        L0_SAFE_CALL(zeCommandListAppendLaunchKernel(hCommandList, hKernel, &dispatchTraits, nullptr, 0, nullptr));
+        L0_SAFE_CALL(zeCommandListAppendBarrier(hCommandList, nullptr, 0, nullptr));
 
-    auto wct = std::chrono::system_clock::now();
-    // launch
-    L0_SAFE_CALL(zeCommandListAppendLaunchKernel(hCommandList, hKernel, &dispatchTraits, nullptr, 0, nullptr));
-    L0_SAFE_CALL(zeCommandListAppendBarrier(hCommandList, nullptr, 0, nullptr));
+        // copy result to host
+        void *res = result.data;
+        L0_SAFE_CALL(zeCommandListAppendMemoryCopy(hCommandList, res, buf_ref, SZ * sizeof(float), nullptr));
+        // dispatch & wait
+        L0_SAFE_CALL(zeCommandListClose(hCommandList));
+        L0_SAFE_CALL(zeCommandQueueExecuteCommandLists(hCommandQueue, 1, &hCommandList, nullptr));
+        L0_SAFE_CALL(zeCommandQueueSynchronize(hCommandQueue, std::numeric_limits<uint32_t>::max()));
 
-    // copy result to host
-    void *res = result.data;
-    L0_SAFE_CALL(zeCommandListAppendMemoryCopy(hCommandList, res, buf_ref, SZ * sizeof(float), nullptr));
-    // dispatch & wait
-    L0_SAFE_CALL(zeCommandListClose(hCommandList));
-    L0_SAFE_CALL(zeCommandQueueExecuteCommandLists(hCommandQueue, 1, &hCommandList, nullptr));
-    L0_SAFE_CALL(zeCommandQueueSynchronize(hCommandQueue, std::numeric_limits<uint32_t>::max()));
+        auto dur = (std::chrono::system_clock::now() - wct);
+        auto secs = std::chrono::duration_cast<std::chrono::milliseconds>(dur);
+        std::cout << "@time of GPU run:: " << secs.count() << " milliseconds" << std::endl;
+        double dt = get_elapsed_mcycles();
+        printf("@time of GPU run:\t\t\t[%.3f] million cycles\n", dt);
+        minCyclesISPCGPU = std::min(minCyclesISPCGPU, dt);
+        L0_SAFE_CALL(zeDriverFreeMem(hDriver, buf_ref));
+    }
+    printf("[noise ISPC GPU]:\t\t[%.3f] million cycles (%d x %d image)\n", minCyclesISPCGPU, width, height);
 
-    auto dur = (std::chrono::system_clock::now() - wct);
-    auto secs = std::chrono::duration_cast<std::chrono::nanoseconds>(dur);
-    Timings(secs.count(), secs.count()).print(niter);
+    double minCyclesSerial = 1e30;
+    for (unsigned int i = 0; i < niter; i++) {
+        reset_and_start_timer();
+        auto wct = std::chrono::system_clock::now();
+        noise_serial(x0, y0, x1, y1, width, height, gold.data);
+        auto dur = (std::chrono::system_clock::now() - wct);
+        auto secs = std::chrono::duration_cast<std::chrono::milliseconds>(dur);
+        std::cout << "@time of CPU run:: " << secs.count() << " milliseconds" << std::endl;
+        double dt = get_elapsed_mcycles();
+        printf("@time of CPU run:\t\t\t[%.3f] million cycles\n", dt);
+        minCyclesSerial = std::min(minCyclesSerial, dt);
+    }
 
-    L0_SAFE_CALL(zeDriverFreeMem(hDriver, buf_ref));
+    printf("[noise serial]:\t\t[%.3f] million cycles (%d x %d image)\n", minCyclesSerial, width, height);
+    printf("\t\t\t\t(%.2fx speedup from ISPC)\n", minCyclesSerial / minCyclesISPCGPU);
 
     // RESULT CHECK
     bool pass = true;
-    if (niter == 1) {
-        noise_serial(x0, y0, x1, y1, width, height, gold.data);
-        double err = 0.0;
-        double max_err = 0.0;
+    double err = 0.0;
+    double max_err = 0.0;
 
-        int i = 0;
-        for (; i < width * height; i++) {
-            err = std::fabs(result.data[i] - gold.data[i]);
-            max_err = std::max(err, max_err);
-            if (err > CORRECTNESS_THRESHOLD) {
-                pass = false;
-                break;
-            }
+    int i = 0;
+    for (; i < width * height; i++) {
+        err = std::fabs(result.data[i] - gold.data[i]);
+        max_err = std::max(err, max_err);
+        if (err > CORRECTNESS_THRESHOLD) {
+            pass = false;
+            break;
         }
-        if (!pass) {
-            std::cout << "Correctness test failed on " << i << "th value." << std::endl;
-            std::cout << "Was " << result.data[i] << ", should be " << gold.data[i] << std::endl;
-        } else {
-            std::cout << "Passed!"
-                      << " Max error:" << max_err << std::endl;
-        }
+    }
+    if (!pass) {
+        std::cout << "Correctness test failed on " << i << "th value." << std::endl;
+        std::cout << "Was " << result.data[i] << ", should be " << gold.data[i] << std::endl;
+    } else {
+        std::cout << "Passed!"
+                  << " Max error:" << max_err << std::endl;
     }
 
     return (pass) ? 0 : 1;

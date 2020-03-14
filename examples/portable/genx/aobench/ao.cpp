@@ -47,6 +47,7 @@
 #include <malloc.h>
 #endif
 #include "L0_helpers.h"
+#include "timing.h"
 #include <algorithm>
 #include <chrono>
 #include <fstream>
@@ -58,6 +59,7 @@
 
 #define NSUBSAMPLES 2
 #define CORRECTNESS_THRESHOLD 0.01
+
 using namespace hostutil;
 
 extern void ao_serial(int w, int h, int nsubsamples, float image[]);
@@ -66,7 +68,6 @@ static unsigned int niterations;
 static unsigned int width, height;
 static unsigned char *img;
 static float *fimg;
-static float *fimg_serial;
 
 static unsigned char clamp(float f) {
     int i = (int)(f * 255.5);
@@ -107,7 +108,6 @@ static int run() {
     int nSubSamples = NSUBSAMPLES;
     img = new unsigned char[width * height * 3];
     fimg = (float *)aligned_alloc(4096, width * height * 3 * sizeof(float));
-    memset((void *)fimg, 0, sizeof(float) * width * height * 3);
 
     // L0 initialization
     ze_device_handle_t hDevice = nullptr;
@@ -119,66 +119,100 @@ static int run() {
     ze_command_list_handle_t hCommandList;
     ze_kernel_handle_t hKernel;
     L0Create_Kernel(hDevice, hModule, hCommandList, hKernel, "ao_ispc");
-
-    // Alloc & copy
-    ze_device_mem_alloc_desc_t allocDesc = {ZE_DEVICE_MEM_ALLOC_DESC_VERSION_CURRENT, ZE_DEVICE_MEM_ALLOC_FLAG_DEFAULT,
-                                            0};
+    //
+    // Run the ispc gpu code nIterations times, and report the minimum
+    // time for any of them.
+    //
+    double minCyclesISPCGPU = 1e30;
     void *dFimg = nullptr;
-    L0_SAFE_CALL(zeDriverAllocDeviceMem(hDriver, &allocDesc, width * height * 3 * sizeof(float),
-                                        width * height * 3 * sizeof(float), hDevice, &dFimg));
+    for (unsigned int i = 0; i < niterations; i++) {
+        memset((void *)fimg, 0, sizeof(float) * width * height * 3);
 
-    // copy buffers to device
-    L0_SAFE_CALL(zeCommandListAppendMemoryCopy(hCommandList, dFimg, fimg, width * height * 3 * sizeof(float), nullptr));
-    L0_SAFE_CALL(zeCommandListAppendBarrier(hCommandList, nullptr, 0, nullptr));
+        // Alloc & copy
+        ze_device_mem_alloc_desc_t allocDesc = {ZE_DEVICE_MEM_ALLOC_DESC_VERSION_CURRENT,
+                                                ZE_DEVICE_MEM_ALLOC_FLAG_DEFAULT, 0};
+        L0_SAFE_CALL(zeDriverAllocDeviceMem(hDriver, &allocDesc, width * height * 3 * sizeof(float),
+                                            width * height * 3 * sizeof(float), hDevice, &dFimg));
 
-    // set kernel arguments
-    L0_SAFE_CALL(zeKernelSetArgumentValue(hKernel, 0, sizeof(int), &width));
-    L0_SAFE_CALL(zeKernelSetArgumentValue(hKernel, 1, sizeof(int), &height));
-    L0_SAFE_CALL(zeKernelSetArgumentValue(hKernel, 2, sizeof(int), &nSubSamples));
-    L0_SAFE_CALL(zeKernelSetArgumentValue(hKernel, 3, sizeof(dFimg), &dFimg));
-    // set grid size
-    uint32_t threadWidth = 1;
-    uint32_t threadHeight = 1;
-    uint32_t threadZ = 1;
-    std::cout << "Set width=" << threadWidth << ", height=" << threadHeight << std::endl;
-    L0_SAFE_CALL(zeKernelSetGroupSize(hKernel, threadWidth, threadHeight, threadZ));
-    // thread space
-    ze_group_count_t dispatchTraits = {1, 1, 1};
-    L0_SAFE_CALL(zeCommandListClose(hCommandList));
-    L0_SAFE_CALL(zeCommandQueueExecuteCommandLists(hCommandQueue, 1, &hCommandList, nullptr));
-    L0_SAFE_CALL(zeCommandQueueSynchronize(hCommandQueue, std::numeric_limits<uint32_t>::max()));
-    L0_SAFE_CALL(zeCommandListReset(hCommandList));
+        // copy buffers to device
+        L0_SAFE_CALL(
+            zeCommandListAppendMemoryCopy(hCommandList, dFimg, fimg, width * height * 3 * sizeof(float), nullptr));
+        L0_SAFE_CALL(zeCommandListAppendBarrier(hCommandList, nullptr, 0, nullptr));
 
-    // launch
-    auto wct = std::chrono::system_clock::now();
-    L0_SAFE_CALL(zeCommandListAppendLaunchKernel(hCommandList, hKernel, &dispatchTraits, nullptr, 0, nullptr));
-    L0_SAFE_CALL(zeCommandListAppendBarrier(hCommandList, nullptr, 0, nullptr));
+        // set kernel arguments
+        L0_SAFE_CALL(zeKernelSetArgumentValue(hKernel, 0, sizeof(int), &width));
+        L0_SAFE_CALL(zeKernelSetArgumentValue(hKernel, 1, sizeof(int), &height));
+        L0_SAFE_CALL(zeKernelSetArgumentValue(hKernel, 2, sizeof(int), &nSubSamples));
+        L0_SAFE_CALL(zeKernelSetArgumentValue(hKernel, 3, sizeof(dFimg), &dFimg));
 
-    L0_SAFE_CALL(zeCommandListClose(hCommandList));
-    L0_SAFE_CALL(zeCommandQueueExecuteCommandLists(hCommandQueue, 1, &hCommandList, nullptr));
-    L0_SAFE_CALL(zeCommandQueueSynchronize(hCommandQueue, std::numeric_limits<uint32_t>::max()));
-    auto dur = (std::chrono::system_clock::now() - wct);
-    auto secs = std::chrono::duration_cast<std::chrono::milliseconds>(dur);
-    std::cout << "Time is: " << secs.count() << " milliseconds" << std::endl;
-    Timings(secs.count(), secs.count()).print(niterations);
+        // set grid size
+        uint32_t threadWidth = 1;
+        uint32_t threadHeight = 1;
+        uint32_t threadZ = 1;
+        std::cout << "Set thread width=" << threadWidth << ", thread height=" << threadHeight << std::endl;
+        L0_SAFE_CALL(zeKernelSetGroupSize(hKernel, threadWidth, threadHeight, threadZ));
 
-    L0_SAFE_CALL(zeCommandListReset(hCommandList));
+        // thread space
+        ze_group_count_t dispatchTraits = {1, 1, 1};
+        L0_SAFE_CALL(zeCommandListClose(hCommandList));
+        L0_SAFE_CALL(zeCommandQueueExecuteCommandLists(hCommandQueue, 1, &hCommandList, nullptr));
+        L0_SAFE_CALL(zeCommandQueueSynchronize(hCommandQueue, std::numeric_limits<uint32_t>::max()));
+        L0_SAFE_CALL(zeCommandListReset(hCommandList));
 
-    // copy result to host
-    L0_SAFE_CALL(zeCommandListAppendMemoryCopy(hCommandList, fimg, dFimg, width * height * 3 * sizeof(float), nullptr));
+        // launch
+        reset_and_start_timer();
+        auto wct = std::chrono::system_clock::now();
 
-    // dispatch & wait
-    L0_SAFE_CALL(zeCommandListClose(hCommandList));
-    L0_SAFE_CALL(zeCommandQueueExecuteCommandLists(hCommandQueue, 1, &hCommandList, nullptr));
-    L0_SAFE_CALL(zeCommandQueueSynchronize(hCommandQueue, std::numeric_limits<uint32_t>::max()));
+        L0_SAFE_CALL(zeCommandListAppendLaunchKernel(hCommandList, hKernel, &dispatchTraits, nullptr, 0, nullptr));
+        L0_SAFE_CALL(zeCommandListAppendBarrier(hCommandList, nullptr, 0, nullptr));
+        L0_SAFE_CALL(zeCommandListClose(hCommandList));
+        L0_SAFE_CALL(zeCommandQueueExecuteCommandLists(hCommandQueue, 1, &hCommandList, nullptr));
+        L0_SAFE_CALL(zeCommandQueueSynchronize(hCommandQueue, std::numeric_limits<uint32_t>::max()));
+
+        double dt = get_elapsed_mcycles();
+        auto dur = (std::chrono::system_clock::now() - wct);
+        auto secs = std::chrono::duration_cast<std::chrono::milliseconds>(dur);
+        std::cout << "@time of GPU run:: " << secs.count() << " milliseconds" << std::endl;
+        printf("@time of GPU run:\t\t\t[%.3f] million cycles\n", dt);
+        minCyclesISPCGPU = std::min(minCyclesISPCGPU, dt);
+
+        L0_SAFE_CALL(zeCommandListReset(hCommandList));
+        // copy result to host
+        L0_SAFE_CALL(
+            zeCommandListAppendMemoryCopy(hCommandList, fimg, dFimg, width * height * 3 * sizeof(float), nullptr));
+        L0_SAFE_CALL(zeCommandListClose(hCommandList));
+        L0_SAFE_CALL(zeCommandQueueExecuteCommandLists(hCommandQueue, 1, &hCommandList, nullptr));
+        L0_SAFE_CALL(zeCommandQueueSynchronize(hCommandQueue, std::numeric_limits<uint32_t>::max()));
+    }
 
     savePPM("ao-ispc-gpu.ppm", width, height, fimg);
-    ao_serial(width, height, NSUBSAMPLES, fimg);
+    printf("[aobench ISPC GPU]:\t\t[%.3f] million cycles (%d x %d image)\n", minCyclesISPCGPU, width, height);
+
+    //
+    // Run the serial code nIterations times, and report the minimum
+    // time for any of them.
+    //
+    double minCyclesSerial = 1e30;
+    for (unsigned int i = 0; i < niterations; i++) {
+        memset((void *)fimg, 0, sizeof(float) * width * height * 3);
+        reset_and_start_timer();
+        auto wct = std::chrono::system_clock::now();
+        ao_serial(width, height, NSUBSAMPLES, fimg);
+        auto dur = (std::chrono::system_clock::now() - wct);
+        auto secs = std::chrono::duration_cast<std::chrono::milliseconds>(dur);
+        std::cout << "@time of CPU run:: " << secs.count() << " milliseconds" << std::endl;
+        double dt = get_elapsed_mcycles();
+        printf("@time of CPU run:\t\t\t[%.3f] million cycles\n", dt);
+        minCyclesSerial = std::min(minCyclesSerial, dt);
+    }
     savePPM("ao-ispc-serial.ppm", width, height, fimg);
+
+    printf("[aobench serial]:\t\t[%.3f] million cycles (%d x %d image)\n", minCyclesSerial, width, height);
+    printf("\t\t\t\t(%.2fx speedup from ISPC)\n", minCyclesSerial / minCyclesISPCGPU);
 
     free(fimg);
     L0_SAFE_CALL(zeDriverFreeMem(hDriver, dFimg));
-    std::cout << "Passed!" << std::endl;
+    printf("aobench PASSED!\n");
     return 0;
 }
 
@@ -196,9 +230,9 @@ int main(int argc, char *argv[]) {
 
     int success = 0;
 
-    std::cout << "Running test with " << niterations << " iterations on " << width << " * " << height << " threads."
+    std::cout << "Running test with " << niterations << " iterations on " << width << " * " << height << " size."
               << std::endl;
     success = run();
-    std::cout << "SUCCESS" << success << std::endl;
+
     return success;
 }

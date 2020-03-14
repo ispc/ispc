@@ -147,11 +147,6 @@ static int run(int m, int niter, int gx, int gy) {
     std::cout << "Time is: " << tot_secs.count() / 1e+6 / niter << " milliseconds" << std::endl;
     std::cout << "No memory time is: " << total / niter << " ms" << std::endl;
 
-    /*auto timings = execute(device, kernel, gx, gy, niter, false, TIMEOUT);
-    timings.print(niter);*/
-
-    // void *res = out.data;
-
     // RESULT CHECK
     bool pass = false;
     if (niter == 1) {
@@ -163,7 +158,6 @@ static int run(int m, int niter, int gx, int gy) {
     } else
         printf("Result not checked - make #iterations=1 to check result!\n");
 
-    // bool pass = true;
     printf("----------------------------\n");
 
     L0_SAFE_CALL(zeDriverFreeMem(hDriver, a_ref));
