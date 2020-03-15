@@ -1,4 +1,5 @@
 #include <benchmark/benchmark.h>
+#include <cstdint>
 #include <stdio.h>
 
 #include "../common.h"
@@ -96,22 +97,22 @@ template <typename T> static void check(T *dst, int count) {
 
 SOA_TO_AOS_STDLIB(4, int, int32);
 SOA_TO_AOS_STDLIB(4, float, float);
-SOA_TO_AOS_STDLIB(4, long long, int64);
+SOA_TO_AOS_STDLIB(4, int64_t, int64);
 SOA_TO_AOS_STDLIB(4, double, double);
 
 // SOA_TO_AOS_ISPC(4, int, int32);
 // SOA_TO_AOS_ISPC(4, float, float);
-// SOA_TO_AOS_ISPC(4, long long, int64);
+// SOA_TO_AOS_ISPC(4, int64_t, int64);
 // SOA_TO_AOS_ISPC(4, double, double);
 
 SOA_TO_AOS_STDLIB(3, int, int32);
 SOA_TO_AOS_STDLIB(3, float, float);
-SOA_TO_AOS_STDLIB(3, long long, int64);
+SOA_TO_AOS_STDLIB(3, int64_t, int64);
 SOA_TO_AOS_STDLIB(3, double, double);
 
 // SOA_TO_AOS_ISPC(3, int, int32);
 // SOA_TO_AOS_ISPC(3, float, float);
-// SOA_TO_AOS_ISPC(3, long long, int64);
+// SOA_TO_AOS_ISPC(3, int64_t, int64);
 // SOA_TO_AOS_ISPC(3, double, double);
 
 BENCHMARK_MAIN();
