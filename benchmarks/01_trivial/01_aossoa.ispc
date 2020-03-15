@@ -8,7 +8,7 @@ export uniform int width() { return programCount; }
 // input parameter "n" is number of elements input array. Must be multiple of 4*programCount;
 
 #define AOS_TO_SOA4_STDLIB(T)                                                                                          \
-    export void aos_to_soa4_stdlib_##T(uniform T *uniform input, uniform T *uniform output, uniform T n) {             \
+    export void aos_to_soa4_stdlib_##T(uniform T *uniform input, uniform T *uniform output, uniform int n) {           \
         uniform int chunk = 4 * programCount;                                                                          \
         uniform int iterations = n / chunk;                                                                            \
                                                                                                                        \
@@ -33,7 +33,7 @@ AOS_TO_SOA4_STDLIB(double)
 // input parameter "n" is number of elements input array. Must be multiple of 3*programCount;
 
 #define AOS_TO_SOA3_STDLIB(T)                                                                                          \
-    export void aos_to_soa3_stdlib_##T(uniform T *uniform input, uniform T *uniform output, uniform T n) {             \
+    export void aos_to_soa3_stdlib_##T(uniform T *uniform input, uniform T *uniform output, uniform int n) {           \
         uniform int chunk = 3 * programCount;                                                                          \
         uniform int iterations = n / chunk;                                                                            \
                                                                                                                        \
