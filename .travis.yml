@@ -72,9 +72,11 @@ before_install:
 
 script:
   - mkdir build_$LLVM_VERSION && cd build_$LLVM_VERSION
-  - cmake -DCMAKE_INSTALL_PREFIX=$TRAVIS_BUILD_DIR $WASM_FLAGS ../
+  - cmake -DCMAKE_INSTALL_PREFIX=$TRAVIS_BUILD_DIR -DISPC_INCLUDE_BENCHMARKS=ON $WASM_FLAGS ../
     # Build ispc and check_isa utility. Run lit tests.
   - make ispc check_isa check-all -j4
+    # Build benchmarks and test them.
+  - make ispc_benchmarks && make test
     # Add ispc to the PATH
   - export PATH=$ISPC_HOME/build_$LLVM_VERSION/bin:$PATH && cd $ISPC_HOME
   - check_isa
