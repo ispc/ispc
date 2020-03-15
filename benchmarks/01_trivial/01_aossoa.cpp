@@ -66,8 +66,8 @@ template <typename T> static void check3(T *dst, int count) {
 #define AOS_TO_SOA_STDLIB(N, T_C, T_ISPC)                                                                              \
     static void aos_to_soa##N##_stdlib_##T_ISPC(benchmark::State &state) {                                             \
         int count = state.range(0);                                                                                    \
-        T_C *src = new T_C[count];                                                                                     \
-        T_C *dst = new T_C[count];                                                                                     \
+        T_C *src = static_cast<T_C *>(aligned_alloc(ALIGNMENT, sizeof(T_C) * count));                                  \
+        T_C *dst = static_cast<T_C *>(aligned_alloc(ALIGNMENT, sizeof(T_C) * count));                                  \
         init(src, dst, count);                                                                                         \
                                                                                                                        \
         for (auto _ : state) {                                                                                         \
@@ -75,16 +75,16 @@ template <typename T> static void check3(T *dst, int count) {
         }                                                                                                              \
                                                                                                                        \
         check##N(dst, count);                                                                                          \
-        delete[] src;                                                                                                  \
-        delete[] dst;                                                                                                  \
+        free(src);                                                                                                     \
+        free(dst);                                                                                                     \
     }                                                                                                                  \
     BENCHMARK(aos_to_soa##N##_stdlib_##T_ISPC)->ARGS##N;
 
 #define AOS_TO_SOA_ISPC(N, T_C, T_ISPC)                                                                                \
     static void aos_to_soa##N##_ispc_##T_ISPC(benchmark::State &state) {                                               \
         int count = state.range(0);                                                                                    \
-        T_C *src = new T_C[count];                                                                                     \
-        T_C *dst = new T_C[count];                                                                                     \
+        T_C *src = static_cast<T_C *>(aligned_alloc(ALIGNMENT, sizeof(T_C) * count));                                  \
+        T_C *dst = static_cast<T_C *>(aligned_alloc(ALIGNMENT, sizeof(T_C) * count));                                  \
         init(src, dst, count);                                                                                         \
                                                                                                                        \
         for (auto _ : state) {                                                                                         \
@@ -92,8 +92,8 @@ template <typename T> static void check3(T *dst, int count) {
         }                                                                                                              \
                                                                                                                        \
         check##N(dst, count);                                                                                          \
-        delete[] src;                                                                                                  \
-        delete[] dst;                                                                                                  \
+        free(src);                                                                                                     \
+        free(dst);                                                                                                     \
     }                                                                                                                  \
     BENCHMARK(aos_to_soa##N##_ispc_##T_ISPC)->ARGS##N;
 
