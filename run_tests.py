@@ -503,7 +503,11 @@ def file_check(results, host, target):
         opt = "-O2"
 # Detect LLVM version
     temp1 = common.take_lines(host.ispc_exe + " --version", "first")
-    llvm_version = temp1[-12:-4]
+    temp2 = re.search('LLVM [0-9]*\.[0-9]*', temp1)
+    if temp2 != None:
+        llvm_version = temp2.group()
+    else:
+        llvm_version = "unknown LLVM"
 # Detect compiler version
     if OS != "Windows":
         temp1 = common.take_lines(options.compiler_exe + " --version", "first")
