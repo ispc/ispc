@@ -5467,11 +5467,11 @@ restart:
                     m->module, llvm::GenXIntrinsic::genx_raw_send_noresult, argTypes);
                 llvm::SmallVector<llvm::Value *, 8> Args;
                 Args.push_back(llvm::ConstantInt::get(LLVMTypes::Int32Type, 0));
-                Args.push_back(llvm::ConstantVector::getSplat(16, llvm::ConstantInt::getTrue(*g->ctx)));
+                Args.push_back(llvm::ConstantVector::getSplat(g->target->getNativeVectorWidth(), llvm::ConstantInt::getTrue(*g->ctx)));
                 Args.push_back(llvm::ConstantInt::get(LLVMTypes::Int32Type, 39));
                 Args.push_back(llvm::ConstantInt::get(LLVMTypes::Int32Type, 33554448));
                 llvm::Value *zeroMask =
-                    llvm::ConstantVector::getSplat(16, llvm::Constant::getNullValue(llvm::Type::getInt16Ty(*g->ctx)));
+                    llvm::ConstantVector::getSplat(g->target->getNativeVectorWidth(), llvm::Constant::getNullValue(llvm::Type::getInt16Ty(*g->ctx)));
                 Args.push_back(zeroMask);
 
                 llvm::Instruction *newInst = llvm::CallInst::Create(Fn, Args, ci->getName());

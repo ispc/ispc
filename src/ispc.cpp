@@ -1335,7 +1335,7 @@ const char *Target::ISAToTargetString(ISA isa) {
 #endif
 #ifdef ISPC_GENX_ENABLED
     case Target::GENX:
-        return "genx";
+        return "genx-x16";
 #endif
     case Target::SSE2:
         return "sse2-i32x4";
