@@ -47,6 +47,19 @@ define(`MASK_HIGH_BIT_ON',
         WIDTH, `32', `2147483648',
                      `eval(1<<(WIDTH-1))')')
 
+;; Get linear vector for particular width
+;; $1 - elements type
+define(`LINEAR_VECTOR',
+`ifelse(WIDTH, `32', `<WIDTH x $1> <$1 0, $1 1, $1 2, $1 3, $1 4, $1 5, $1 6, $1 7, $1 8, $1 9, $1 10, $1 11, $1 12, $1 13, $1 14, $1 15, $1 16, $1 17, $1 18, $1 19, $1 20, $1 21, $1 22, $1 23, $1 24, $1 25, $1 26, $1 27, $1 28, $1 29, $1 30, $1 31>',
+        WIDTH, `16', `<WIDTH x $1> <$1 0, $1 1, $1 2, $1 3, $1 4, $1 5, $1 6, $1 7, $1 8, $1 9, $1 10, $1 11, $1 12, $1 13, $1 14, $1 15>',
+                     `<WIDTH x $1> <$1 0, $1 1, $1 2, $1 3, $1 4, $1 5, $1 6, $1 7>')')
+
+;; Get linear vector for particular width
+define(`ALL_TRUE_VECTOR',
+`ifelse(WIDTH, `32', `<WIDTH x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>',
+        WIDTH, `16', `<WIDTH x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>',
+                     `<WIDTH x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>')')
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ;; LLVM has different IR for different versions since 3.7
@@ -714,6 +727,27 @@ define(`sse_binary_scalar', `
   %$1 = extractelement <$2 x $3> %$1_val, i32 0
 ')
 
+;; Do a reduction over an 8-wide vector
+;; $1: type of final scalar result
+;; $2: 8-wide function that takes 2 8-wide operands and returns the
+;;     element-wise reduction
+;; $3: scalar function that takes two scalar operands and returns
+;;     the final reduction
+;; $4: input vector
+define(`reduce8', `
+  %v1 = shufflevector <8 x $1> $4, <8 x $1> undef,
+        <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 undef, i32 undef, i32 undef, i32 undef>
+  %m1 = call <8 x $1> $2(<8 x $1> %v1, <8 x $1> $4)
+  %v2 = shufflevector <8 x $1> %m1, <8 x $1> undef,
+        <8 x i32> <i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+  %m2 = call <8 x $1> $2(<8 x $1> %v2, <8 x $1> %m1)
+  %m2a = extractelement <8 x $1> %m2, i32 0
+  %m2b = extractelement <8 x $1> %m2, i32 1
+  %m = call $1 $3($1 %m2a, $1 %m2b)
+  ret $1 %m
+'
+)
+
 ;; Do a reduction over a 16-wide vector
 ;; $1: type of final scalar result
 ;; $2: 16-wide function that takes 2 16-wide operands and returns the
@@ -748,13 +782,34 @@ define(`reduce16', `
 '
 )
 
+;; Do an optimized for gen reduction over a 8-wide vector
+;; $1: type of final scalar result
+;; $2: genx reduction intrinsic name
+;; $3: rdregioni or rdregionf
+;; $4: input vector
+;; $5: scale
+define(`reducegen8', `
+  %scale2 = mul i16 $5, 4
+  %v3 = call <4 x $1> @llvm.genx.$3.GEN_SUFFIXN($1, 4).GEN_SUFFIXN($1, 8).i16(<8 x $1> $4, i32 0, i32 4, i32 1, i16 0, i32 undef)
+  %v4 = call <4 x $1> @llvm.genx.$3.GEN_SUFFIXN($1, 4).GEN_SUFFIXN($1, 8).i16(<8 x $1> $4, i32 0, i32 4, i32 1, i16 %scale2, i32 undef)
+  %m2 = call <4 x $1> @llvm.genx.$2.GEN_SUFFIXN($1, 4).GEN_SUFFIXN($1, 4)(<4 x $1> %v3, <4 x $1> %v4)
+  %scale3 = mul i16 $5, 2
+  %v5 = call <2 x $1> @llvm.genx.$3.GEN_SUFFIXN($1, 2).GEN_SUFFIXN($1, 4).i16(<4 x $1> %m2, i32 0, i32 2, i32 1, i16 0, i32 undef)
+  %v6 = call <2 x $1> @llvm.genx.$3.GEN_SUFFIXN($1, 2).GEN_SUFFIXN($1, 4).i16(<4 x $1> %m2, i32 0, i32 2, i32 1, i16 %scale3, i32 undef)
+  %m3 = call <2 x $1> @llvm.genx.$2.GEN_SUFFIXN($1, 2).GEN_SUFFIXN($1, 2)(<2 x $1> %v5, <2 x $1> %v6)
+  %m3a = extractelement <2 x $1> %m3, i32 0
+  %m3b = extractelement <2 x $1> %m3, i32 1
+  %m = call $1 @llvm.genx.$2.GEN_TYPE($1).GEN_TYPE($1)($1 %m3a, $1 %m3b)
+  ret $1 %m
+'
+)
+
 ;; Do an optimized for gen reduction over a 16-wide vector
 ;; $1: type of final scalar result
 ;; $2: genx reduction intrinsic name
 ;; $3: rdregioni or rdregionf
 ;; $4: input vector
 ;; $5: scale
-
 define(`reducegen16', `
   %scale1 = mul i16 $5, 8
   %v1 = call <8 x $1> @llvm.genx.$3.GEN_SUFFIXN($1, 8).GEN_SUFFIX($1).i16(<16 x $1> $4, i32 0, i32 8, i32 1, i16 0, i32 undef)
@@ -4157,7 +4212,7 @@ declare <8 x i32> @llvm.genx.dword.atomic.add.v8i32.v8i1.v8i32(<8 x i1>, i32, <8
 declare void @llvm.genx.oword.st.v8i32(i32, i32, <8 x i32>)
 declare void @llvm.genx.oword.st.v128i8(i32, i32, <128 x i8>)
 declare i32 @llvm.genx.predefined.surface(i32)
-declare void @llvm.genx.raw.send.noresult.v32i16.v16i1.v32i16(i32, <16 x i1>, i32, i32, <32 x i16>)
+declare void @llvm.genx.raw.send.noresult.v32i16.GEN_SUFFIX(i1).v32i16(i32, <WIDTH x i1>, i32, i32, <32 x i16>)
 
 
 define void @__send_eot() {
@@ -4188,7 +4243,7 @@ define void @__send_eot() {
 ;; [3:0]             Target Function ID
 ;;
 ;; 33554448 = 0b10000000000000000000010000
-  call void @llvm.genx.raw.send.noresult.v32i16.v16i1.v32i16(i32 0, <16 x i1>  <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>, i32 39, i32 33554448, <32 x i16> zeroinitializer)
+  call void @llvm.genx.raw.send.noresult.v32i16.GEN_SUFFIX(i1).v32i16(i32 0, ALL_TRUE_VECTOR, i32 39, i32 33554448, <32 x i16> zeroinitializer)
   ret void
 }
 

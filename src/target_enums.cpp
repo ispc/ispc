@@ -148,7 +148,7 @@ ISPCTarget ParseISPCTarget(std::string target) {
         return ISPCTarget::neon_i32x8;
     } else if (target == "wasm-i32x4") {
         return ISPCTarget::wasm_i32x4;
-    } else if (target == "genx") {
+    } else if (target == "genx-x16") {
         return ISPCTarget::genx_x16;
     }
 

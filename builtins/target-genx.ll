@@ -31,7 +31,6 @@
 
 target datalayout = "e-p:32:32-i64:64-n8:16:32";
 
-define(`WIDTH',`16')
 define(`MASK',`i1')
 define(`HAVE_GATHER',`1')
 define(`HAVE_SCATTER',`1')
@@ -47,7 +46,7 @@ define(`GEN_TYPE',
         $1, `double', `f64',
         $1, `i64', `i64')')
 
-define(`GEN_SUFFIX',`CONCAT(`v16', GEN_TYPE($1))')
+
 define(`GEN_SUFFIXN',`CONCAT(`v', CONCAT($2, GEN_TYPE($1)))')
 
 define(`SIZEOF',
@@ -75,8 +74,8 @@ rdrand_decls()
 
 declare float @llvm.genx.rndd.f32(float)
 declare float @llvm.genx.rndu.f32(float)
-declare <16 x float> @llvm.genx.rndu.GEN_SUFFIX(float)(<16 x float>)
-declare <16 x float> @llvm.genx.rndd.GEN_SUFFIX(float)(<16 x float>)
+declare <WIDTH x float> @llvm.genx.rndu.GEN_SUFFIX(float)(<WIDTH x float>)
+declare <WIDTH x float> @llvm.genx.rndd.GEN_SUFFIX(float)(<WIDTH x float>)
 
 
 define float @__floor_uniform_float(float) nounwind readonly alwaysinline {
@@ -223,24 +222,24 @@ define double @__max_uniform_double(double, double) nounwind readnone alwaysinli
   ret double %res
 }
 
-define <16 x double> @__min_varying_double(<16 x double>, <16 x double>) nounwind readnone {
-  %pred = fcmp olt <16 x double> %0, %1
-  %res = select <16 x i1> %pred, <16 x double> %0, <16 x double> %1
-  ret <16 x double> %res
+define <WIDTH x double> @__min_varying_double(<WIDTH x double>, <WIDTH x double>) nounwind readnone {
+  %pred = fcmp olt <WIDTH x double> %0, %1
+  %res = select <WIDTH x i1> %pred, <WIDTH x double> %0, <WIDTH x double> %1
+  ret <WIDTH x double> %res
 }
 
-define <16 x double> @__max_varying_double(<16 x double>, <16 x double>) nounwind readnone {
-  %pred = fcmp ogt <16 x double> %0, %1
-  %res = select <16 x i1> %pred, <16 x double> %0, <16 x double> %1
-  ret <16 x double> %res
+define <WIDTH x double> @__max_varying_double(<WIDTH x double>, <WIDTH x double>) nounwind readnone {
+  %pred = fcmp ogt <WIDTH x double> %0, %1
+  %res = select <WIDTH x i1> %pred, <WIDTH x double> %0, <WIDTH x double> %1
+  ret <WIDTH x double> %res
 }
 
 ;; Generates rdregion intrinsics needed for reductions
 ;; $1 LLVM IR type
 define(`genx_rdregion', `
-  declare <8 x $1> @llvm.genx.$2.GEN_SUFFIXN($1,8).GEN_SUFFIX($1).i16(<WIDTH x $1>, i32, i32, i32, i16, i32)
-  declare <4 x $1> @llvm.genx.$2.GEN_SUFFIXN($1,4).GEN_SUFFIXN($1, 8).i16(<8 x $1>, i32, i32, i32, i16, i32)
-  declare <2 x $1> @llvm.genx.$2.GEN_SUFFIXN($1,2).GEN_SUFFIXN($1, 4).i16(<4 x $1>, i32, i32, i32, i16, i32)
+  declare <HALF_WIDTH x $1> @llvm.genx.$2.GEN_SUFFIXN($1,HALF_WIDTH).GEN_SUFFIX($1).i16(<WIDTH x $1>, i32, i32, i32, i16, i32)
+  declare <QUARTER_WIDTH x $1> @llvm.genx.$2.GEN_SUFFIXN($1,QUARTER_WIDTH).GEN_SUFFIXN($1, HALF_WIDTH).i16(<HALF_WIDTH x $1>, i32, i32, i32, i16, i32)
+  declare <QUAVER_WIDTH x $1> @llvm.genx.$2.GEN_SUFFIXN($1,QUAVER_WIDTH).GEN_SUFFIXN($1, QUARTER_WIDTH).i16(<QUARTER_WIDTH x $1>, i32, i32, i32, i16, i32)
 ')
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -253,14 +252,14 @@ define(`genx_maxmin', `
 declare $1 @llvm.genx.$2.GEN_TYPE($1).GEN_TYPE($1)($1, $1)
 declare $1 @llvm.genx.$3.GEN_TYPE($1).GEN_TYPE($1)($1, $1)
 declare <WIDTH x $1> @llvm.genx.$2.GEN_SUFFIX($1).GEN_SUFFIX($1)(<WIDTH x $1>, <WIDTH x $1>)
-declare <8 x $1> @llvm.genx.$2.GEN_SUFFIXN($1, 8).GEN_SUFFIXN($1, 8)(<8 x $1>, <8 x $1>)
-declare <4 x $1> @llvm.genx.$2.GEN_SUFFIXN($1, 4).GEN_SUFFIXN($1, 4)(<4 x $1>, <4 x $1>)
-declare <2 x $1> @llvm.genx.$2.GEN_SUFFIXN($1, 2).GEN_SUFFIXN($1, 2)(<2 x $1>, <2 x $1>)
+declare <HALF_WIDTH x $1> @llvm.genx.$2.GEN_SUFFIXN($1, HALF_WIDTH).GEN_SUFFIXN($1, HALF_WIDTH)(<HALF_WIDTH x $1>, <HALF_WIDTH x $1>)
+declare <QUARTER_WIDTH x $1> @llvm.genx.$2.GEN_SUFFIXN($1, QUARTER_WIDTH).GEN_SUFFIXN($1, QUARTER_WIDTH)(<QUARTER_WIDTH x $1>, <QUARTER_WIDTH x $1>)
+declare <QUAVER_WIDTH x $1> @llvm.genx.$2.GEN_SUFFIXN($1, QUAVER_WIDTH).GEN_SUFFIXN($1, QUAVER_WIDTH)(<QUAVER_WIDTH x $1>, <QUAVER_WIDTH x $1>)
 
 declare <WIDTH x $1> @llvm.genx.$3.GEN_SUFFIX($1).GEN_SUFFIX($1)(<WIDTH x $1>, <WIDTH x $1>)
-declare <8 x $1> @llvm.genx.$3.GEN_SUFFIXN($1, 8).GEN_SUFFIXN($1, 8)(<8 x $1>, <8 x $1>)
-declare <4 x $1> @llvm.genx.$3.GEN_SUFFIXN($1, 4).GEN_SUFFIXN($1, 4)(<4 x $1>, <4 x $1>)
-declare <2 x $1> @llvm.genx.$3.GEN_SUFFIXN($1, 2).GEN_SUFFIXN($1, 2)(<2 x $1>, <2 x $1>)
+declare <HALF_WIDTH x $1> @llvm.genx.$3.GEN_SUFFIXN($1, HALF_WIDTH).GEN_SUFFIXN($1, HALF_WIDTH)(<HALF_WIDTH x $1>, <HALF_WIDTH x $1>)
+declare <QUARTER_WIDTH x $1> @llvm.genx.$3.GEN_SUFFIXN($1, QUARTER_WIDTH).GEN_SUFFIXN($1, QUARTER_WIDTH)(<QUARTER_WIDTH x $1>, <QUARTER_WIDTH x $1>)
+declare <QUAVER_WIDTH x $1> @llvm.genx.$3.GEN_SUFFIXN($1, QUAVER_WIDTH).GEN_SUFFIXN($1, QUAVER_WIDTH)(<QUAVER_WIDTH x $1>, <QUAVER_WIDTH x $1>)
 
 
 define $1 @__max_uniform_$4($1, $1) nounwind readonly alwaysinline {
@@ -293,10 +292,10 @@ genx_rdregion(float, rdregionf)
 genx_rdregion(i32, rdregioni)
 genx_rdregion(i64, rdregioni)
 
-declare <WIDTH x i8> @llvm.genx.rdregioni.GEN_SUFFIX(i8).GEN_SUFFIXN(i8, 64).i16(<64 x i8>, i32, i32, i32, i16, i32)
-declare <64 x i8> @llvm.genx.svm.gather.GEN_SUFFIXN(i8, 64).v16i1.v16i64(<WIDTH x MASK>, i32, <WIDTH x i64>, <WIDTH x i8>)
-declare <64 x i8> @llvm.genx.wrregioni.v64i8.v16i8.i16.v16i1(<64 x i8>, <16 x i8>, i32, i32, i32, i16, i32, <WIDTH x i1>)
-declare void @llvm.genx.svm.scatter.v16i1.v16i64.v64i8(<16 x i1>, i32, <16 x i64>, <64 x i8>)
+declare <WIDTH x i8> @llvm.genx.rdregioni.GEN_SUFFIX(i8).GEN_SUFFIXN(i8, WIDTH_X4).i16(<WIDTH_X4 x i8>, i32, i32, i32, i16, i32)
+declare <WIDTH_X4 x i8> @llvm.genx.svm.gather.GEN_SUFFIXN(i8, WIDTH_X4).GEN_SUFFIX(i1).GEN_SUFFIX(i64)(<WIDTH x MASK>, i32, <WIDTH x i64>, <WIDTH x i8>)
+declare <WIDTH_X4 x i8> @llvm.genx.wrregioni.GEN_SUFFIXN(i8, WIDTH_X4).GEN_SUFFIX(i8).i16.GEN_SUFFIX(i1)(<WIDTH_X4 x i8>, <WIDTH x i8>, i32, i32, i32, i16, i32, <WIDTH x i1>)
+declare void @llvm.genx.svm.scatter.GEN_SUFFIX(i1).GEN_SUFFIX(i64).GEN_SUFFIXN(i8, WIDTH_X4)(<WIDTH x i1>, i32, <WIDTH x i64>, <WIDTH_X4 x i8>)
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; horizontal ops / reductions
 
@@ -486,9 +485,9 @@ define <WIDTH x float> @__rcp_fast_varying_float(<WIDTH x float>) nounwind reado
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; rsqrt
 
-declare <16 x float> @llvm.genx.rsqrt.v16f32(<16 x float>)
+declare <WIDTH x float> @llvm.genx.rsqrt.GEN_SUFFIX(f32)(<WIDTH x float>)
 define <WIDTH x float> @__rsqrt_varying_float(<WIDTH x float> %v) nounwind readonly alwaysinline {
-  %r = call <16 x float> @llvm.genx.rsqrt.v16f32(<16 x float> %v)
+  %r = call <WIDTH x float> @llvm.genx.rsqrt.GEN_SUFFIX(f32)(<WIDTH x float> %v)
   ;; Newton-Raphson iteration to improve precision
   ;;  return 0.5 * r * (3. - (v * r) * r);
   %mult = fmul <WIDTH x float> %v, %r
@@ -500,113 +499,113 @@ define <WIDTH x float> @__rsqrt_varying_float(<WIDTH x float> %v) nounwind reado
 }
 
 define <WIDTH x float> @__rsqrt_fast_varying_float(<WIDTH x float>) nounwind readonly alwaysinline {
-  %res = call <16 x float> @llvm.genx.rsqrt.v16f32(<16 x float> %0)
+  %res = call <WIDTH x float> @llvm.genx.rsqrt.GEN_SUFFIX(f32)(<WIDTH x float> %0)
   ret <WIDTH x float> %res
 }
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; sqrt
 
-declare <16 x float> @llvm.genx.sqrt.v16f32(<16 x float>)
+declare <WIDTH x float> @llvm.genx.sqrt.GEN_SUFFIX(f32)(<WIDTH x float>)
 define <WIDTH x float> @__sqrt_varying_float(<WIDTH x float>) nounwind readonly alwaysinline {
-  %res = call <16 x float> @llvm.genx.sqrt.v16f32(<WIDTH x float> %0)
+  %res = call <WIDTH x float> @llvm.genx.sqrt.GEN_SUFFIX(f32)(<WIDTH x float> %0)
   ret <WIDTH x float> %res
 }
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; double precision sqrt
 
-declare <16 x double> @llvm.genx.ieee.sqrt.v16d64(<16 x double>)
+declare <WIDTH x double> @llvm.genx.ieee.sqrt.GEN_SUFFIX(d64)(<WIDTH x double>)
 define <WIDTH x double> @__sqrt_varying_double(<WIDTH x double>) nounwind alwaysinline {
-  %res = call <16 x double> @llvm.genx.ieee.sqrt.v16d64(<WIDTH x double> %0)
+  %res = call <WIDTH x double> @llvm.genx.ieee.sqrt.GEN_SUFFIX(d64)(<WIDTH x double> %0)
   ret <WIDTH x double> %res
 }
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; rounding floats
 
-define <16 x float> @__round_varying_float(<16 x float>) nounwind readonly alwaysinline {
-  %float_to_int_bitcast.i.i.i.i = bitcast <16 x float> %0 to <16 x i32>
+define <WIDTH x float> @__round_varying_float(<WIDTH x float>) nounwind readonly alwaysinline {
+  %float_to_int_bitcast.i.i.i.i = bitcast <WIDTH x float> %0 to <WIDTH x i32>
   ; create vector of literals
   %vec_lit.i = insertelement <1 x i32> undef, i32 -2147483648, i32 0
-  %vec_lit = shufflevector <1 x i32> %vec_lit.i, <1 x i32> undef, <16 x i32> zeroinitializer
-  %bitop.i.i = and <16 x i32> %float_to_int_bitcast.i.i.i.i, %vec_lit
-  %bitop.i = xor <16 x i32> %float_to_int_bitcast.i.i.i.i, %bitop.i.i
-  %int_to_float_bitcast.i.i40.i = bitcast <16 x i32> %bitop.i to <16 x float>
+  %vec_lit = shufflevector <1 x i32> %vec_lit.i, <1 x i32> undef, <WIDTH x i32> zeroinitializer
+  %bitop.i.i = and <WIDTH x i32> %float_to_int_bitcast.i.i.i.i, %vec_lit
+  %bitop.i = xor <WIDTH x i32> %float_to_int_bitcast.i.i.i.i, %bitop.i.i
+  %int_to_float_bitcast.i.i40.i = bitcast <WIDTH x i32> %bitop.i to <WIDTH x float>
   ; create vector of float literals
   %vec_lit_pos.i = insertelement <1 x float> undef, float 8.388608e+06, i32 0
-  %vec_lit_pos = shufflevector <1 x float> %vec_lit_pos.i, <1 x float> undef, <16 x i32> zeroinitializer
+  %vec_lit_pos = shufflevector <1 x float> %vec_lit_pos.i, <1 x float> undef, <WIDTH x i32> zeroinitializer
   ; create vector of float literals
   %vec_lit_neg.i = insertelement <1 x float> undef, float -8.388608e+06, i32 0
-  %vec_lit_neg = shufflevector <1 x float> %vec_lit_neg.i, <1 x float> undef, <16 x i32> zeroinitializer
-  %binop.i = fadd <16 x float> %int_to_float_bitcast.i.i40.i, %vec_lit_pos
-  %binop21.i = fadd <16 x float> %binop.i, %vec_lit_neg
-  %float_to_int_bitcast.i.i.i = bitcast <16 x float> %binop21.i to <16 x i32>
-  %bitop31.i = xor <16 x i32> %float_to_int_bitcast.i.i.i, %bitop.i.i
-  %int_to_float_bitcast.i.i.i = bitcast <16 x i32> %bitop31.i to <16 x float>
-  ret <16 x float> %int_to_float_bitcast.i.i.i
+  %vec_lit_neg = shufflevector <1 x float> %vec_lit_neg.i, <1 x float> undef, <WIDTH x i32> zeroinitializer
+  %binop.i = fadd <WIDTH x float> %int_to_float_bitcast.i.i40.i, %vec_lit_pos
+  %binop21.i = fadd <WIDTH x float> %binop.i, %vec_lit_neg
+  %float_to_int_bitcast.i.i.i = bitcast <WIDTH x float> %binop21.i to <WIDTH x i32>
+  %bitop31.i = xor <WIDTH x i32> %float_to_int_bitcast.i.i.i, %bitop.i.i
+  %int_to_float_bitcast.i.i.i = bitcast <WIDTH x i32> %bitop31.i to <WIDTH x float>
+  ret <WIDTH x float> %int_to_float_bitcast.i.i.i
 }
 
 
-define <16 x float> @__floor_varying_float(<16 x float>) nounwind readonly alwaysinline {
-    %res = call <16 x float> @llvm.genx.rndd.GEN_SUFFIX(float)(<16 x float> %0)
-    ret <16 x float> %res
+define <WIDTH x float> @__floor_varying_float(<WIDTH x float>) nounwind readonly alwaysinline {
+    %res = call <WIDTH x float> @llvm.genx.rndd.GEN_SUFFIX(float)(<WIDTH x float> %0)
+    ret <WIDTH x float> %res
 }
 
-define <16 x float> @__ceil_varying_float(<16 x float>) nounwind readonly alwaysinline  {
-    %res = call <16 x float> @llvm.genx.rndu.GEN_SUFFIX(float)(<16 x float> %0)
-    ret <16 x float> %res
+define <WIDTH x float> @__ceil_varying_float(<WIDTH x float>) nounwind readonly alwaysinline  {
+    %res = call <WIDTH x float> @llvm.genx.rndu.GEN_SUFFIX(float)(<WIDTH x float> %0)
+    ret <WIDTH x float> %res
 }
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; rounding doubles
 
-define <16 x double> @__round_varying_double(<16 x double>) nounwind readonly alwaysinline {
-  %float_to_int_bitcast.i.i.i.i = bitcast <16 x double> %0 to <16 x i64>
+define <WIDTH x double> @__round_varying_double(<WIDTH x double>) nounwind readonly alwaysinline {
+  %float_to_int_bitcast.i.i.i.i = bitcast <WIDTH x double> %0 to <WIDTH x i64>
   ; create vector of literals
   %vec_lit.i = insertelement <1 x i64> undef, i64 -9223372036854775808, i32 0
-  %vec_lit = shufflevector <1 x i64> %vec_lit.i, <1 x i64> undef, <16 x i32> zeroinitializer
-  %bitop.i.i = and <16 x i64> %float_to_int_bitcast.i.i.i.i, %vec_lit
-  %bitop.i = xor <16 x i64> %float_to_int_bitcast.i.i.i.i, %bitop.i.i
-  %int_to_float_bitcast.i.i40.i = bitcast <16 x i64> %bitop.i to <16 x double>
+  %vec_lit = shufflevector <1 x i64> %vec_lit.i, <1 x i64> undef, <WIDTH x i32> zeroinitializer
+  %bitop.i.i = and <WIDTH x i64> %float_to_int_bitcast.i.i.i.i, %vec_lit
+  %bitop.i = xor <WIDTH x i64> %float_to_int_bitcast.i.i.i.i, %bitop.i.i
+  %int_to_float_bitcast.i.i40.i = bitcast <WIDTH x i64> %bitop.i to <WIDTH x double>
   ; create vector of float literals
   %vec_lit_pos.i = insertelement <1 x double> undef, double 4.5036e+15, i32 0
-  %vec_lit_pos = shufflevector <1 x double> %vec_lit_pos.i, <1 x double> undef, <16 x i32> zeroinitializer
+  %vec_lit_pos = shufflevector <1 x double> %vec_lit_pos.i, <1 x double> undef, <WIDTH x i32> zeroinitializer
   ; create vector of float literals
   %vec_lit_neg.i = insertelement <1 x double> undef, double -4.5036e+15, i32 0
-  %vec_lit_neg = shufflevector <1 x double> %vec_lit_neg.i, <1 x double> undef, <16 x i32> zeroinitializer
-  %binop.i = fadd <16 x double> %int_to_float_bitcast.i.i40.i, %vec_lit_pos
-  %binop21.i = fadd <16 x double> %binop.i, %vec_lit_neg
-  %float_to_int_bitcast.i.i.i = bitcast <16 x double> %binop21.i to <16 x i64>
-  %bitop31.i = xor <16 x i64> %float_to_int_bitcast.i.i.i, %bitop.i.i
-  %int_to_float_bitcast.i.i.i = bitcast <16 x i64> %bitop31.i to <16 x double>
-  ret <16 x double> %int_to_float_bitcast.i.i.i
+  %vec_lit_neg = shufflevector <1 x double> %vec_lit_neg.i, <1 x double> undef, <WIDTH x i32> zeroinitializer
+  %binop.i = fadd <WIDTH x double> %int_to_float_bitcast.i.i40.i, %vec_lit_pos
+  %binop21.i = fadd <WIDTH x double> %binop.i, %vec_lit_neg
+  %float_to_int_bitcast.i.i.i = bitcast <WIDTH x double> %binop21.i to <WIDTH x i64>
+  %bitop31.i = xor <WIDTH x i64> %float_to_int_bitcast.i.i.i, %bitop.i.i
+  %int_to_float_bitcast.i.i.i = bitcast <WIDTH x i64> %bitop31.i to <WIDTH x double>
+  ret <WIDTH x double> %int_to_float_bitcast.i.i.i
 }
 
-define <16 x double> @__floor_varying_double(<16 x double>) nounwind readonly alwaysinline {
-  %calltmp.i = tail call <16 x double> @__round_varying_double(<16 x double> %0) nounwind
-  %bincmp.i = fcmp ogt <16 x double> %calltmp.i, %0
-  %val_to_boolvec32.i = sext <16 x i1> %bincmp.i to <16 x i64>
+define <WIDTH x double> @__floor_varying_double(<WIDTH x double>) nounwind readonly alwaysinline {
+  %calltmp.i = tail call <WIDTH x double> @__round_varying_double(<WIDTH x double> %0) nounwind
+  %bincmp.i = fcmp ogt <WIDTH x double> %calltmp.i, %0
+  %val_to_boolvec32.i = sext <WIDTH x i1> %bincmp.i to <WIDTH x i64>
   ; create vector of literals
   %vec_lit.i = insertelement <1 x i64> undef, i64 -4616189618054758400, i32 0
-  %vec_lit = shufflevector <1 x i64> %vec_lit.i, <1 x i64> undef, <16 x i32> zeroinitializer
-  %bitop.i = and <16 x i64> %val_to_boolvec32.i, %vec_lit
-  %int_to_float_bitcast.i.i.i = bitcast <16 x i64> %bitop.i to <16 x double>
-  %binop.i = fadd <16 x double> %calltmp.i, %int_to_float_bitcast.i.i.i
-  ret <16 x double> %binop.i
+  %vec_lit = shufflevector <1 x i64> %vec_lit.i, <1 x i64> undef, <WIDTH x i32> zeroinitializer
+  %bitop.i = and <WIDTH x i64> %val_to_boolvec32.i, %vec_lit
+  %int_to_float_bitcast.i.i.i = bitcast <WIDTH x i64> %bitop.i to <WIDTH x double>
+  %binop.i = fadd <WIDTH x double> %calltmp.i, %int_to_float_bitcast.i.i.i
+  ret <WIDTH x double> %binop.i
 }
 
-define <16 x double> @__ceil_varying_double(<16 x double>) nounwind readonly alwaysinline {
-  %calltmp.i = tail call <16 x double> @__round_varying_double(<16 x double> %0) nounwind
-  %bincmp.i = fcmp olt <16 x double> %calltmp.i, %0
-  %val_to_boolvec32.i = sext <16 x i1> %bincmp.i to <16 x i64>
+define <WIDTH x double> @__ceil_varying_double(<WIDTH x double>) nounwind readonly alwaysinline {
+  %calltmp.i = tail call <WIDTH x double> @__round_varying_double(<WIDTH x double> %0) nounwind
+  %bincmp.i = fcmp olt <WIDTH x double> %calltmp.i, %0
+  %val_to_boolvec32.i = sext <WIDTH x i1> %bincmp.i to <WIDTH x i64>
   ; create vector of literals
   %vec_lit.i = insertelement <1 x i64> undef, i64 4607182418800017408, i32 0
-  %vec_lit = shufflevector <1 x i64> %vec_lit.i, <1 x i64> undef, <16 x i32> zeroinitializer
-  %bitop.i = and <16 x i64> %val_to_boolvec32.i, %vec_lit
-  %int_to_float_bitcast.i.i.i = bitcast <16 x i64> %bitop.i to <16 x double>
-  %binop.i = fadd <16 x double> %calltmp.i, %int_to_float_bitcast.i.i.i
-  ret <16 x double> %binop.i
+  %vec_lit = shufflevector <1 x i64> %vec_lit.i, <1 x i64> undef, <WIDTH x i32> zeroinitializer
+  %bitop.i = and <WIDTH x i64> %val_to_boolvec32.i, %vec_lit
+  %int_to_float_bitcast.i.i.i = bitcast <WIDTH x i64> %bitop.i to <WIDTH x double>
+  %binop.i = fadd <WIDTH x double> %calltmp.i, %int_to_float_bitcast.i.i.i
+  ret <WIDTH x double> %binop.i
 }
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -619,12 +618,12 @@ svml_stubs(double,d,WIDTH)
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; horizontal ops / reductions
 
-declare i1 @llvm.genx.any.v16i1(<WIDTH x MASK>)
-declare i1 @llvm.genx.all.v16i1(<WIDTH x MASK>)
+declare i1 @llvm.genx.any.GEN_SUFFIX(i1)(<WIDTH x MASK>)
+declare i1 @llvm.genx.all.GEN_SUFFIX(i1)(<WIDTH x MASK>)
 
 define i64 @__movmsk(<WIDTH x MASK>) nounwind readnone alwaysinline {
-  %v = bitcast <WIDTH x MASK> %0 to i16
-  %zext = zext i16 %v to i64
+  %v = bitcast <WIDTH x MASK> %0 to BITCAST_WIDTH
+  %zext = zext BITCAST_WIDTH %v to i64
   ret i64 %zext
 }
 
@@ -677,79 +676,89 @@ define internal $1 @__fadd_uniform_$1($1, $1) nounwind readnone alwaysinline {
 genx_fadd(float)
 genx_fadd(double)
 
+define(`reduce_func',
+`ifelse(WIDTH, `32', `reduce16($1, $2, $3, $4)',
+        WIDTH, `16', `reduce16($1, $2, $3, $4)',
+                     `reduce8($1, $2, $3, $4)')')
+
+define(`reducegen_func',
+`ifelse(WIDTH, `32', `reducegen32($1, $2, $3, $4, $5)',
+        WIDTH, `16', `reducegen16($1, $2, $3, $4, $5)',
+                     `reducegen8($1, $2, $3, $4, $5)')')
+
 define i16 @__reduce_add_int8(<WIDTH x i8>) nounwind readnone alwaysinline {
   %ext = zext <WIDTH x i8> %0 to <WIDTH x i16>
-  reduce16(i16, @__add_varying_i16, @__add_uniform_i16, %ext)
+  reduce_func(i16, @__add_varying_i16, @__add_uniform_i16, %ext)
 }
 
 define i32 @__reduce_add_int16(<WIDTH x i16>) nounwind readnone alwaysinline {
   %ext = zext <WIDTH x i16> %0 to <WIDTH x i32>
-  reduce16(i32, @__add_varying_int32, @__add_uniform_int32, %ext)
+  reduce_func(i32, @__add_varying_int32, @__add_uniform_int32, %ext)
 }
 
 define i64 @__reduce_add_int32(<WIDTH x i32>) nounwind readnone {
   %ext = zext <WIDTH x i32> %0 to <WIDTH x i64>
-  reduce16(i64, @__add_varying_int64, @__add_uniform_int64, %ext)
+  reduce_func(i64, @__add_varying_int64, @__add_uniform_int64, %ext)
 }
 
 define float @__reduce_add_float(<WIDTH x float>) nounwind readonly alwaysinline {
-  reduce16(float, @__fadd_varying_float, @__fadd_uniform_float, %0)
+  reduce_func(float, @__fadd_varying_float, @__fadd_uniform_float, %0)
 }
 
 define double @__reduce_add_double(<WIDTH x double>) nounwind readnone {
-  reduce16(double, @__fadd_varying_double, @__fadd_uniform_double, %0)
+  reduce_func(double, @__fadd_varying_double, @__fadd_uniform_double, %0)
 }
 
 define i64 @__reduce_add_int64(<WIDTH x i64>) nounwind readnone {
-  reduce16(i64, @__add_varying_int64, @__add_uniform_int64, %0)
+  reduce_func(i64, @__add_varying_int64, @__add_uniform_int64, %0)
 }
 
 define i32 @__reduce_min_int32(<WIDTH x i32>) nounwind readnone {
-  reducegen16(i32, smin, rdregioni, %0, 4)
+  reducegen_func(i32, smin, rdregioni, %0, 4)
 }
 
 define i32 @__reduce_max_int32(<WIDTH x i32>) nounwind readnone {
-  reducegen16(i32, smax, rdregioni, %0, 4)
+  reducegen_func(i32, smax, rdregioni, %0, 4)
 }
 
 define i32 @__reduce_min_uint32(<WIDTH x i32>) nounwind readnone {
-  reducegen16(i32, umin, rdregioni, %0, 4)
+  reducegen_func(i32, umin, rdregioni, %0, 4)
 }
 
 define i32 @__reduce_max_uint32(<WIDTH x i32>) nounwind readnone {
-  reducegen16(i32, umax, rdregioni, %0, 4)
+  reducegen_func(i32, umax, rdregioni, %0, 4)
 }
 
 define float @__reduce_min_float(<WIDTH x float>) nounwind readnone {
-  reducegen16(float, fmin, rdregionf, %0, 4)
+  reducegen_func(float, fmin, rdregionf, %0, 4)
 }
 
 define float @__reduce_max_float(<WIDTH x float>) nounwind readnone {
-  reducegen16(float, fmax, rdregionf, %0, 4)
+  reducegen_func(float, fmax, rdregionf, %0, 4)
 }
 
 define double @__reduce_min_double(<WIDTH x double>) nounwind readnone {
-  reduce16(double, @__min_varying_double, @__min_uniform_double, %0)
+  reduce_func(double, @__min_varying_double, @__min_uniform_double, %0)
 }
 
 define double @__reduce_max_double(<WIDTH x double>) nounwind readnone {
-  reduce16(double, @__max_varying_double, @__max_uniform_double, %0)
+  reduce_func(double, @__max_varying_double, @__max_uniform_double, %0)
 }
 
 define i64 @__reduce_min_int64(<WIDTH x i64>) nounwind readnone {
-  reducegen16(i64, smin, rdregioni, %0, 8)
+  reducegen_func(i64, smin, rdregioni, %0, 8)
 }
 
 define i64 @__reduce_max_int64(<WIDTH x i64>) nounwind readnone {
-  reducegen16(i64, smax, rdregioni, %0, 8)
+  reducegen_func(i64, smax, rdregioni, %0, 8)
 }
 
 define i64 @__reduce_min_uint64(<WIDTH x i64>) nounwind readnone {
-  reducegen16(i64, umin, rdregioni, %0, 8)
+  reducegen_func(i64, umin, rdregioni, %0, 8)
 }
 
 define i64 @__reduce_max_uint64(<WIDTH x i64>) nounwind readnone {
-  reducegen16(i64, umax, rdregioni, %0, 8)
+  reducegen_func(i64, umax, rdregioni, %0, 8)
 }
 
 reduce_equal(WIDTH)
@@ -784,7 +793,7 @@ define void @__masked_store_$1(<WIDTH x $1>* nocapture, <WIDTH x $1>, <WIDTH x M
   %ptr = bitcast <WIDTH x $1>* %0 to i8*
   %broadcast_init = insertelement <WIDTH x i32> undef, i32 SIZEOF($1), i32 0
   %shuffle = shufflevector <WIDTH x i32> %broadcast_init, <WIDTH x i32> undef, <WIDTH x i32> zeroinitializer
-  %offsets = mul <WIDTH x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>, %shuffle
+  %offsets = mul LINEAR_VECTOR(i32), %shuffle
 ifelse(RUNTIME, `32',
 `
   call void @__scatter_base_offsets32_$1(i8* %ptr, i32 1, <WIDTH x i32> %offsets, <WIDTH x $1> %1, <WIDTH x MASK> %mask)
@@ -801,7 +810,7 @@ define void @__masked_store_private_$1(<WIDTH x $1>* nocapture, <WIDTH x $1>, <W
   %ptr = bitcast <WIDTH x $1>* %0 to i8*
   %broadcast_init = insertelement <WIDTH x i32> undef, i32 SIZEOF($1), i32 0
   %shuffle = shufflevector <WIDTH x i32> %broadcast_init, <WIDTH x i32> undef, <WIDTH x i32> zeroinitializer
-  %offsets = mul <WIDTH x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>, %shuffle
+  %offsets = mul LINEAR_VECTOR(i32), %shuffle
 ifelse(RUNTIME, `32',
 `
   call void @__scatter_base_offsets32_private_$1(i8* %ptr, i32 1, <WIDTH x i32> %offsets, <WIDTH x $1> %1, <WIDTH x MASK> %mask)
@@ -828,14 +837,14 @@ define <WIDTH x $1> @__masked_load_$1(i8 *, <WIDTH x MASK> %mask) nounwind alway
   %bitptr = bitcast i8* %0 to i64*
   %ptr = ptrtoint i64* %bitptr to i64
   %res = call <WIDTH x $1> @llvm.genx.svm.block.ld.GEN_SUFFIX($1)(i64 %ptr)
-  %res_masked = select <WIDTH x MASK> %mask, <16 x $1> %res, <16 x $1> undef
+  %res_masked = select <WIDTH x MASK> %mask, <WIDTH x $1> %res, <WIDTH x $1> undef
   ret <WIDTH x $1> %res_masked
 }
 
 define <WIDTH x $1> @__masked_load_private_$1(i8 *, <WIDTH x MASK> %mask) nounwind alwaysinline {
   %bitptr = bitcast i8* %0 to <WIDTH x $1>*
   %res = load <WIDTH x $1> , <WIDTH x $1>* %bitptr
-  %res_masked = select <WIDTH x MASK> %mask, <16 x $1> %res, <16 x $1> undef
+  %res_masked = select <WIDTH x MASK> %mask, <WIDTH x $1> %res, <WIDTH x $1> undef
   ret <WIDTH x $1> %res_masked
 }
 ')
@@ -851,8 +860,8 @@ genx_masked_load(i64)
 ;; gather/scatter
 ;; TODO_GEN: add computation of the block size and the number of blocks for svm gather/scatter.
 define(`genx_gather', `
-declare <WIDTH x $1> @llvm.genx.svm.gather.GEN_SUFFIX($1).v16i1.v16i64(<WIDTH x MASK>, i32, <WIDTH x i64>, <WIDTH x $1>)
-declare <WIDTH x $1> @llvm.genx.gather.private.GEN_SUFFIX($1).v16i1.pi8.v16i32(<WIDTH x MASK>, i8*, <WIDTH x i32>, <WIDTH x $1>)
+declare <WIDTH x $1> @llvm.genx.svm.gather.GEN_SUFFIX($1).GEN_SUFFIX(i1).GEN_SUFFIX(i64)(<WIDTH x MASK>, i32, <WIDTH x i64>, <WIDTH x $1>)
+declare <WIDTH x $1> @llvm.genx.gather.private.GEN_SUFFIX($1).GEN_SUFFIX(i1).pi8.GEN_SUFFIX(i32)(<WIDTH x MASK>, i8*, <WIDTH x i32>, <WIDTH x $1>)
 
 define <WIDTH x $1>
 @__gather_base_offsets32_$1(i8 * %ptr, i32 %offset_scale, <WIDTH x i32> %offsets, <WIDTH x MASK> %vecmask) nounwind readonly alwaysinline {
@@ -886,7 +895,7 @@ define <WIDTH x $1>
   %scale = insertelement <WIDTH x i32> undef, i32 %offset_scale, i32 0
   %scale_shuffle = shufflevector <WIDTH x i32> %scale, <WIDTH x i32> undef, <WIDTH x i32> zeroinitializer
   %new_offsets_scaled = mul <WIDTH x i32> %offsets, %scale_shuffle
-  %res = call <WIDTH x $1> @llvm.genx.gather.private.GEN_SUFFIX($1).v16i1.pi8.v16i32(<WIDTH x MASK> %vecmask, i8* %ptr, <WIDTH x i32> %new_offsets_scaled, <WIDTH x $1> undef)
+  %res = call <WIDTH x $1> @llvm.genx.gather.private.GEN_SUFFIX($1).GEN_SUFFIX(i1).pi8.GEN_SUFFIX(i32)(<WIDTH x MASK> %vecmask, i8* %ptr, <WIDTH x i32> %new_offsets_scaled, <WIDTH x $1> undef)
   ret <WIDTH x $1> %res
 }
 
@@ -896,7 +905,7 @@ define <WIDTH x $1>
   %scale = insertelement <WIDTH x i32> undef, i32 %offset_scale, i32 0
   %scale_shuffle = shufflevector <WIDTH x i32> %scale, <WIDTH x i32> undef, <WIDTH x i32> zeroinitializer
   %new_offsets32_scaled = mul <WIDTH x i32> %offsets32, %scale_shuffle
-  %res = call <WIDTH x $1> @llvm.genx.gather.private.GEN_SUFFIX($1).v16i1.pi8.v16i32(<WIDTH x MASK> %vecmask, i8* %ptr, <WIDTH x i32> %new_offsets32_scaled, <WIDTH x $1> undef)
+  %res = call <WIDTH x $1> @llvm.genx.gather.private.GEN_SUFFIX($1).GEN_SUFFIX(i1).pi8.GEN_SUFFIX(i32)(<WIDTH x MASK> %vecmask, i8* %ptr, <WIDTH x i32> %new_offsets32_scaled, <WIDTH x $1> undef)
   ret <WIDTH x $1> %res
 }
 
@@ -904,10 +913,10 @@ define <WIDTH x $1>
 @__gather32_$1(<WIDTH x i32> %offsets, <WIDTH x MASK> %vecmask) nounwind readonly alwaysinline {
   %offsets64 = zext <WIDTH x i32> %offsets to <WIDTH x i64>
   ifelse($1, i8,`
-    %res64 = call <64 x $1> @llvm.genx.svm.gather.GEN_SUFFIXN($1, 64).v16i1.v16i64(<16 x MASK> %vecmask, i32 0, <WIDTH x i64> %offsets64, <WIDTH x $1> undef)
-    %res = call <16 x $1> @llvm.genx.rdregioni.GEN_SUFFIX($1).GEN_SUFFIXN($1, 64).i16(<64 x $1> %res64, i32 0, i32 16, i32 4, i16 0, i32 undef)
+    %res64 = call <WIDTH_X4 x $1> @llvm.genx.svm.gather.GEN_SUFFIXN($1, WIDTH_X4).GEN_SUFFIX(i1).GEN_SUFFIX(i64)(<WIDTH x MASK> %vecmask, i32 0, <WIDTH x i64> %offsets64, <WIDTH x $1> undef)
+    %res = call <WIDTH x $1> @llvm.genx.rdregioni.GEN_SUFFIX($1).GEN_SUFFIXN($1, WIDTH_X4).i16(<WIDTH_X4 x $1> %res64, i32 0, i32 WIDTH, i32 QUARTER_WIDTH, i16 0, i32 undef)
   ',`
-    %res = call <WIDTH x $1> @llvm.genx.svm.gather.GEN_SUFFIX($1).v16i1.v16i64(<16 x MASK> %vecmask, i32 0, <WIDTH x i64> %offsets64, <WIDTH x $1> undef)
+    %res = call <WIDTH x $1> @llvm.genx.svm.gather.GEN_SUFFIX($1).GEN_SUFFIX(i1).GEN_SUFFIX(i64)(<WIDTH x MASK> %vecmask, i32 0, <WIDTH x i64> %offsets64, <WIDTH x $1> undef)
   ')
   ret <WIDTH x $1> %res
 }
@@ -915,10 +924,10 @@ define <WIDTH x $1>
 define <WIDTH x $1>
 @__gather64_$1(<WIDTH x i64> %offsets, <WIDTH x MASK> %vecmask) nounwind readonly alwaysinline {
     ifelse($1, i8,`
-    %res64 = call <64 x $1> @llvm.genx.svm.gather.GEN_SUFFIXN($1, 64).v16i1.v16i64(<16 x MASK> %vecmask, i32 0, <WIDTH x i64> %offsets, <WIDTH x $1> undef)
-    %res = call <16 x $1> @llvm.genx.rdregioni.GEN_SUFFIX($1).GEN_SUFFIXN($1, 64).i16(<64 x $1> %res64, i32 0, i32 16, i32 4, i16 0, i32 undef)
+    %res64 = call <WIDTH_X4 x $1> @llvm.genx.svm.gather.GEN_SUFFIXN($1, WIDTH_X4).GEN_SUFFIX(i1).GEN_SUFFIX(i64)(<WIDTH x MASK> %vecmask, i32 0, <WIDTH x i64> %offsets, <WIDTH x $1> undef)
+    %res = call <WIDTH x $1> @llvm.genx.rdregioni.GEN_SUFFIX($1).GEN_SUFFIXN($1, WIDTH_X4).i16(<WIDTH_X4 x $1> %res64, i32 0, i32 WIDTH, i32 QUARTER_WIDTH, i16 0, i32 undef)
   ',`
-    %res = call <WIDTH x $1> @llvm.genx.svm.gather.GEN_SUFFIX($1).v16i1.v16i64(<16 x MASK> %vecmask, i32 0, <WIDTH x i64> %offsets, <WIDTH x $1> undef)
+    %res = call <WIDTH x $1> @llvm.genx.svm.gather.GEN_SUFFIX($1).GEN_SUFFIX(i1).GEN_SUFFIX(i64)(<WIDTH x MASK> %vecmask, i32 0, <WIDTH x i64> %offsets, <WIDTH x $1> undef)
   ')
   ret <WIDTH x $1> %res
 }
@@ -945,8 +954,8 @@ genx_gather(i64)
 genx_gather(double)
 
 define(`genx_scatter', `
-declare void @llvm.genx.svm.scatter.v16i1.v16i64.GEN_SUFFIX($1)(<WIDTH x MASK>, i32, <WIDTH x i64>, <WIDTH x $1>)
-declare void @llvm.genx.scatter.private.v16i1.pi8.v16i32.GEN_SUFFIX($1)(<WIDTH x MASK>, i8*, <WIDTH x i32>, <WIDTH x $1>)
+declare void @llvm.genx.svm.scatter.GEN_SUFFIX(i1).GEN_SUFFIX(i64).GEN_SUFFIX($1)(<WIDTH x MASK>, i32, <WIDTH x i64>, <WIDTH x $1>)
+declare void @llvm.genx.scatter.private.GEN_SUFFIX(i1).pi8.GEN_SUFFIX(i32).GEN_SUFFIX($1)(<WIDTH x MASK>, i8*, <WIDTH x i32>, <WIDTH x $1>)
 
 define void
 @__scatter_base_offsets32_$1(i8* %ptr, i32 %offset_scale, <WIDTH x i32> %offsets, <WIDTH x $1> %vals, <WIDTH x MASK> %vecmask) nounwind {
@@ -980,7 +989,7 @@ define void
   %scale = insertelement <WIDTH x i32> undef, i32 %offset_scale, i32 0
   %scale_shuffle = shufflevector <WIDTH x i32> %scale, <WIDTH x i32> undef, <WIDTH x i32> zeroinitializer
   %new_offsets_scaled = mul <WIDTH x i32> %offsets, %scale_shuffle
-  call void @llvm.genx.scatter.private.v16i1.pi8.v16i32.GEN_SUFFIX($1)(<WIDTH x MASK> %vecmask, i8* %ptr, <WIDTH x i32> %new_offsets_scaled, <WIDTH x $1> %vals)
+  call void @llvm.genx.scatter.private.GEN_SUFFIX(i1).pi8.GEN_SUFFIX(i32).GEN_SUFFIX($1)(<WIDTH x MASK> %vecmask, i8* %ptr, <WIDTH x i32> %new_offsets_scaled, <WIDTH x $1> %vals)
   ret void
 }
 
@@ -990,7 +999,7 @@ define void
    %scale = insertelement <WIDTH x i32> undef, i32 %offset_scale, i32 0
    %scale_shuffle = shufflevector <WIDTH x i32> %scale, <WIDTH x i32> undef, <WIDTH x i32> zeroinitializer
    %new_offsets32_scaled = mul <WIDTH x i32> %offsets32, %scale_shuffle
-   call void @llvm.genx.scatter.private.v16i1.pi8.v16i32.GEN_SUFFIX($1)(<WIDTH x MASK> %vecmask, i8* %ptr, <WIDTH x i32> %new_offsets32_scaled, <WIDTH x $1> %vals)
+   call void @llvm.genx.scatter.private.GEN_SUFFIX(i1).pi8.GEN_SUFFIX(i32).GEN_SUFFIX($1)(<WIDTH x MASK> %vecmask, i8* %ptr, <WIDTH x i32> %new_offsets32_scaled, <WIDTH x $1> %vals)
    ret void
 }
 
@@ -998,10 +1007,10 @@ define void
 @__scatter32_$1(<WIDTH x i32> %ptrs, <WIDTH x $1> %values, <WIDTH x MASK> %vecmask) nounwind alwaysinline {
   %offsets64 = zext <WIDTH x i32> %ptrs to <WIDTH x i64>
   ifelse($1, i8,`
-    %res = tail call <64 x i8> @llvm.genx.wrregioni.v64i8.v16i8.i16.v16i1(<64 x i8> undef, <16 x i8> %values, i32 0, i32 16, i32 4, i16 0, i32 0, <WIDTH x MASK> %vecmask)
-    call void @llvm.genx.svm.scatter.v16i1.v16i64.v64i8(<WIDTH x MASK> %vecmask, i32 0, <16 x i64> %offsets64, <64 x i8> %res)
+    %res = tail call <WIDTH_X4 x i8> @llvm.genx.wrregioni.GEN_SUFFIXN(i8, WIDTH_X4).GEN_SUFFIX(i8).i16.GEN_SUFFIX(i1)(<WIDTH_X4 x i8> undef, <WIDTH x i8> %values, i32 0, i32 WIDTH, i32 QUARTER_WIDTH, i16 0, i32 0, <WIDTH x MASK> %vecmask)
+    call void @llvm.genx.svm.scatter.GEN_SUFFIX(i1).GEN_SUFFIX(i64).GEN_SUFFIXN(i8, WIDTH_X4)(<WIDTH x MASK> %vecmask, i32 0, <WIDTH x i64> %offsets64, <WIDTH_X4 x i8> %res)
   ',`
-    call void @llvm.genx.svm.scatter.v16i1.v16i64.GEN_SUFFIX($1)(<WIDTH x MASK> %vecmask, i32 0, <WIDTH x i64> %offsets64, <WIDTH x $1> %values)
+    call void @llvm.genx.svm.scatter.GEN_SUFFIX(i1).GEN_SUFFIX(i64).GEN_SUFFIX($1)(<WIDTH x MASK> %vecmask, i32 0, <WIDTH x i64> %offsets64, <WIDTH x $1> %values)
   ')
   ret void
 }
@@ -1009,10 +1018,10 @@ define void
 define void
 @__scatter64_$1(<WIDTH x i64> %ptrs, <WIDTH x $1> %values, <WIDTH x MASK> %vecmask) nounwind alwaysinline {
   ifelse($1, i8,`
-    %res = tail call <64 x i8> @llvm.genx.wrregioni.v64i8.v16i8.i16.v16i1(<64 x i8> undef, <16 x i8> %values, i32 0, i32 16, i32 4, i16 0, i32 0, <WIDTH x MASK> %vecmask)
-    call void @llvm.genx.svm.scatter.v16i1.v16i64.v64i8(<WIDTH x MASK> %vecmask, i32 0, <16 x i64> %ptrs, <64 x i8> %res)
+    %res = tail call <WIDTH_X4 x i8> @llvm.genx.wrregioni.GEN_SUFFIXN(i8, WIDTH_X4).GEN_SUFFIX(i8).i16.GEN_SUFFIX(i1)(<WIDTH_X4 x i8> undef, <WIDTH x i8> %values, i32 0, i32 WIDTH, i32 QUARTER_WIDTH, i16 0, i32 0, <WIDTH x MASK> %vecmask)
+    call void @llvm.genx.svm.scatter.GEN_SUFFIX(i1).GEN_SUFFIX(i64).GEN_SUFFIXN(i8, WIDTH_X4)(<WIDTH x MASK> %vecmask, i32 0, <WIDTH x i64> %ptrs, <WIDTH_X4 x i8> %res)
   ',`
-    call void @llvm.genx.svm.scatter.v16i1.v16i64.GEN_SUFFIX($1)(<WIDTH x MASK> %vecmask, i32 0, <WIDTH x i64> %ptrs, <WIDTH x $1> %values)
+    call void @llvm.genx.svm.scatter.GEN_SUFFIX(i1).GEN_SUFFIX(i64).GEN_SUFFIX($1)(<WIDTH x MASK> %vecmask, i32 0, <WIDTH x i64> %ptrs, <WIDTH x $1> %values)
   ')
   ret void
 }
