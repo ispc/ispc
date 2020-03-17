@@ -43,7 +43,8 @@ def compareImages(image0,image1):
     return False
   try: 
     line = subprocess.check_output("compare -metric MAE "+image0+" "+image1+" null:", stderr=subprocess.STDOUT, shell=True)
-  except subprocess.CalledProcessError, e: line = e.output
+  except subprocess.CalledProcessError as e:
+    print(e.message)
   error = float(line[line.index('(')+1:line.index(')')])
   # Temporary set max_error to 0.1 to avoid build issues
   max_error = 0.1
@@ -109,4 +110,3 @@ except subprocess.CalledProcessError as e:
     print("Return code is ", p.returncode)
     print(e.message)
     sys.exit(p.returncode)
-
