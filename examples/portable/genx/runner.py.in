@@ -41,10 +41,10 @@ def compareImages(image0,image1):
   if not os.path.isfile(image0) or not os.path.isfile(image1): 
     print("No such files")
     return False
-  try: 
-    line = subprocess.check_output("compare -metric MAE "+image0+" "+image1+" null:", stderr=subprocess.STDOUT, shell=True)
-  except subprocess.CalledProcessError as e:
-    print(e.message)
+
+  try: line = subprocess.check_output("compare -metric MAE "+image0+" "+image1+" null:", stderr=subprocess.STDOUT, shell=True)
+  except subprocess.CalledProcessError as e: line = e.output
+
   error = float(line[line.index('(')+1:line.index(')')])
   # Temporary set max_error to 0.1 to avoid build issues
   max_error = 0.1
