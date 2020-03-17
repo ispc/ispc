@@ -84,6 +84,10 @@ static int run(int niter, int gx, int gy) {
     const float x1 = 10;
     const float y1 = 10;
     double minCyclesISPCGPU = 1e30;
+    // set grid size
+    ze_group_count_t dispatchTraits = {(uint32_t)gx, (uint32_t)gy, 1};
+    std::cout << "Set dispatchTraits.x=" << dispatchTraits.groupCountX
+              << ", dispatchTraits.y=" << dispatchTraits.groupCountY << std::endl;
     for (unsigned int i = 0; i < niter; i++) {
         void *buf_ref = out.data;
         ze_device_mem_alloc_desc_t alloc_desc = {ZE_DEVICE_MEM_ALLOC_DESC_VERSION_CURRENT,
@@ -102,15 +106,6 @@ static int run(int niter, int gx, int gy) {
         L0_SAFE_CALL(zeKernelSetArgumentValue(hKernel, 5, sizeof(int), &height));
         L0_SAFE_CALL(zeKernelSetArgumentValue(hKernel, 6, sizeof(buf_ref), &buf_ref));
 
-        uint32_t groupSpaceWidth = 1;
-        uint32_t groupSpaceHeight = 1;
-
-        uint32_t group_size = groupSpaceWidth * groupSpaceHeight;
-        L0_SAFE_CALL(zeKernelSetGroupSize(hKernel, /*x*/ groupSpaceWidth, /*y*/ groupSpaceHeight, /*z*/ 1));
-
-        // set grid size
-        ze_group_count_t dispatchTraits = {(uint32_t)gx, (uint32_t)gy, 1};
-
         reset_and_start_timer();
         auto wct = std::chrono::system_clock::now();
         // launch
@@ -127,7 +122,7 @@ static int run(int niter, int gx, int gy) {
 
         auto dur = (std::chrono::system_clock::now() - wct);
         auto secs = std::chrono::duration_cast<std::chrono::milliseconds>(dur);
-        std::cout << "@time of GPU run:: " << secs.count() << " milliseconds" << std::endl;
+        std::cout << "@time of GPU run:\t\t\t[" << secs.count() << "] milliseconds" << std::endl;
         double dt = get_elapsed_mcycles();
         printf("@time of GPU run:\t\t\t[%.3f] million cycles\n", dt);
         minCyclesISPCGPU = std::min(minCyclesISPCGPU, dt);
@@ -142,7 +137,7 @@ static int run(int niter, int gx, int gy) {
         noise_serial(x0, y0, x1, y1, width, height, gold.data);
         auto dur = (std::chrono::system_clock::now() - wct);
         auto secs = std::chrono::duration_cast<std::chrono::milliseconds>(dur);
-        std::cout << "@time of CPU run:: " << secs.count() << " milliseconds" << std::endl;
+        std::cout << "@time of CPU run:\t\t\t[" << secs.count() << "] milliseconds" << std::endl;
         double dt = get_elapsed_mcycles();
         printf("@time of CPU run:\t\t\t[%.3f] million cycles\n", dt);
         minCyclesSerial = std::min(minCyclesSerial, dt);

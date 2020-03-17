@@ -37,9 +37,26 @@ import subprocess
 import argparse
 import re
 
+def compareImages(image0,image1):
+  if not os.path.isfile(image0) or not os.path.isfile(image1): 
+    print("No such files")
+    return False
+  try: 
+    line = subprocess.check_output("compare -metric MAE "+image0+" "+image1+" null:", stderr=subprocess.STDOUT, shell=True)
+  except subprocess.CalledProcessError, e: line = e.output
+  error = float(line[line.index('(')+1:line.index(')')])
+  max_error = 0.01
+  if error > max_error:
+    print("MAE error: " + str(error) + " is more then threshhold: " + str(max_error))
+  else:
+    print("Passed correctness test with max error: " + str(max_error))
+  return error < max_error
+
 parser = argparse.ArgumentParser()
 parser.add_argument('dir', type=str)
 parser.add_argument('exe_name', type=str)
+parser.add_argument('-res_image', dest='res_image', type=str)
+parser.add_argument('-ref_image', dest='ref_image', type=str)
 args, unknown = parser.parse_known_args()
 
 print("Found additional arguments: ", unknown, " Will append these to cmd line.")
@@ -84,6 +101,9 @@ try:
     print(out)
     if not success.search(out.decode()):
         sys.exit(-1)
+    if args.res_image and args.ref_image:
+        if not compareImages(os.path.join(test_dir, args.res_image ), os.path.join(test_dir, args.ref_image)):
+            sys.exit(-1)
 except subprocess.CalledProcessError as e:
     print("Return code is ", p.returncode)
     print(e.message)

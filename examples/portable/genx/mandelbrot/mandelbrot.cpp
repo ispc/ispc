@@ -99,6 +99,10 @@ static int run(unsigned int width, unsigned int height, unsigned int test_iterat
     ze_kernel_handle_t hKernel;
     L0Create_Kernel(hDevice, hModule, hCommandList, hKernel, "mandelbrot_tile");
     double minTimeISPCGPU = 1e30;
+    // thread space
+    ze_group_count_t dispatchTraits = {width / tileSize, height / tileSize, 1};
+    std::cout << "Set dispatchTraits.x=" << dispatchTraits.groupCountX
+              << ", dispatchTraits.y=" << dispatchTraits.groupCountY << std::endl;
     for (unsigned int i = 0; i < test_iterations[0]; ++i) {
         memset((void *)buf, 0, sizeof(int) * width * height);
 
@@ -124,10 +128,6 @@ static int run(unsigned int width, unsigned int height, unsigned int test_iterat
         L0_SAFE_CALL(zeKernelSetArgumentValue(hKernel, 7, sizeof(int), &maxIterations));
         L0_SAFE_CALL(zeKernelSetArgumentValue(hKernel, 8, width * height * sizeof(int), &dBuf));
 
-        // thread space
-        ze_group_count_t dispatchTraits = {width / tileSize, height / tileSize, 1};
-        std::cout << "Set dispatchTraits.x=" << width / tileSize << ", dispatchTraits.y=" << height / tileSize
-                  << std::endl;
         L0_SAFE_CALL(zeCommandListClose(hCommandList));
         L0_SAFE_CALL(zeCommandQueueExecuteCommandLists(hCommandQueue, 1, &hCommandList, nullptr));
         L0_SAFE_CALL(zeCommandQueueSynchronize(hCommandQueue, std::numeric_limits<uint32_t>::max()));
@@ -145,7 +145,7 @@ static int run(unsigned int width, unsigned int height, unsigned int test_iterat
         double dt = get_elapsed_mcycles();
         auto dur = (std::chrono::system_clock::now() - wct);
         auto secs = std::chrono::duration_cast<std::chrono::milliseconds>(dur);
-        std::cout << "@time of GPU run:: " << secs.count() << " milliseconds" << std::endl;
+        std::cout << "@time of GPU run:\t\t\t[" << secs.count() << "] milliseconds" << std::endl;
         printf("@time of GPU run:\t\t\t[%.3f] million cycles\n", dt);
         minTimeISPCGPU = std::min(minTimeISPCGPU, dt);
 
@@ -160,20 +160,24 @@ static int run(unsigned int width, unsigned int height, unsigned int test_iterat
         L0_SAFE_CALL(zeCommandQueueSynchronize(hCommandQueue, std::numeric_limits<uint32_t>::max()));
     }
 
-    writePPM(buf, width, height, "mandelbrot-ispc.ppm");
+    writePPM(buf, width, height, "mandelbrot-ispc-gpu.ppm");
     printf("[mandelbrot ISPC GPU]:\t\t[%.3f] million cycles (%d x %d image)\n", minTimeISPCGPU, width, height);
 
     double minTimeSerial = 1e30;
     for (unsigned int i = 0; i < test_iterations[1]; ++i) {
         memset((void *)buf, 0, sizeof(int) * width * height);
         reset_and_start_timer();
+        auto wct = std::chrono::system_clock::now();
         mandelbrot_cpp(x0, y0, x1, y1, width, height, maxIterations, buf);
         double dt = get_elapsed_mcycles();
+        auto dur = (std::chrono::system_clock::now() - wct);
+        auto secs = std::chrono::duration_cast<std::chrono::milliseconds>(dur);
+        std::cout << "@time of CPU run:\t\t\t[" << secs.count() << "] milliseconds" << std::endl;
         minTimeSerial = std::min(minTimeSerial, dt);
         printf("@time of CPU run:\t\t\t[%.3f] million cycles\n", dt);
     }
 
-    writePPM(buf, width, height, "mandelbrot-cpp.ppm");
+    writePPM(buf, width, height, "mandelbrot-cpp-serial.ppm");
     printf("[mandelbrot serial]:\t\t[%.3f] million cycles (%d x %d image)\n", minTimeSerial, width, height);
     printf("\t\t\t\t(%.2fx speedup from ISPC)\n", minTimeSerial / minTimeISPCGPU);
 

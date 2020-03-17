@@ -106,6 +106,7 @@ static void savePPM(const char *fname, int w, int h, float *fimg) {
 static int run() {
     std::cout.setf(std::ios::unitbuf);
     int nSubSamples = NSUBSAMPLES;
+    int tileSize = 16;
     img = new unsigned char[width * height * 3];
     fimg = (float *)aligned_alloc(4096, width * height * 3 * sizeof(float));
 
@@ -125,6 +126,11 @@ static int run() {
     //
     double minCyclesISPCGPU = 1e30;
     void *dFimg = nullptr;
+
+    // thread space
+    ze_group_count_t dispatchTraits = {width / tileSize, height / tileSize, 1};
+    std::cout << "Set dispatchTraits.x=" << dispatchTraits.groupCountX
+              << ", dispatchTraits.y=" << dispatchTraits.groupCountY << std::endl;
     for (unsigned int i = 0; i < niterations; i++) {
         memset((void *)fimg, 0, sizeof(float) * width * height * 3);
 
@@ -145,15 +151,6 @@ static int run() {
         L0_SAFE_CALL(zeKernelSetArgumentValue(hKernel, 2, sizeof(int), &nSubSamples));
         L0_SAFE_CALL(zeKernelSetArgumentValue(hKernel, 3, sizeof(dFimg), &dFimg));
 
-        // set grid size
-        uint32_t threadWidth = 1;
-        uint32_t threadHeight = 1;
-        uint32_t threadZ = 1;
-        std::cout << "Set thread width=" << threadWidth << ", thread height=" << threadHeight << std::endl;
-        L0_SAFE_CALL(zeKernelSetGroupSize(hKernel, threadWidth, threadHeight, threadZ));
-
-        // thread space
-        ze_group_count_t dispatchTraits = {1, 1, 1};
         L0_SAFE_CALL(zeCommandListClose(hCommandList));
         L0_SAFE_CALL(zeCommandQueueExecuteCommandLists(hCommandQueue, 1, &hCommandList, nullptr));
         L0_SAFE_CALL(zeCommandQueueSynchronize(hCommandQueue, std::numeric_limits<uint32_t>::max()));
@@ -172,7 +169,7 @@ static int run() {
         double dt = get_elapsed_mcycles();
         auto dur = (std::chrono::system_clock::now() - wct);
         auto secs = std::chrono::duration_cast<std::chrono::milliseconds>(dur);
-        std::cout << "@time of GPU run:: " << secs.count() << " milliseconds" << std::endl;
+        std::cout << "@time of GPU run:\t\t\t[" << secs.count() << "] milliseconds" << std::endl;
         printf("@time of GPU run:\t\t\t[%.3f] million cycles\n", dt);
         minCyclesISPCGPU = std::min(minCyclesISPCGPU, dt);
 
@@ -200,16 +197,15 @@ static int run() {
         ao_serial(width, height, NSUBSAMPLES, fimg);
         auto dur = (std::chrono::system_clock::now() - wct);
         auto secs = std::chrono::duration_cast<std::chrono::milliseconds>(dur);
-        std::cout << "@time of CPU run:: " << secs.count() << " milliseconds" << std::endl;
+        std::cout << "@time of CPU run:\t\t\t[" << secs.count() << "] milliseconds" << std::endl;
         double dt = get_elapsed_mcycles();
         printf("@time of CPU run:\t\t\t[%.3f] million cycles\n", dt);
         minCyclesSerial = std::min(minCyclesSerial, dt);
     }
-    savePPM("ao-ispc-serial.ppm", width, height, fimg);
+    savePPM("ao-cpp-serial.ppm", width, height, fimg);
 
     printf("[aobench serial]:\t\t[%.3f] million cycles (%d x %d image)\n", minCyclesSerial, width, height);
     printf("\t\t\t\t(%.2fx speedup from ISPC)\n", minCyclesSerial / minCyclesISPCGPU);
-
     free(fimg);
     L0_SAFE_CALL(zeDriverFreeMem(hDriver, dFimg));
     printf("aobench PASSED!\n");

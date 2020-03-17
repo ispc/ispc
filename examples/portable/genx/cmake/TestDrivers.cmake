@@ -36,13 +36,14 @@ enable_testing()
 configure_file(runner.py.in runner.py)
 set(TEST_RUNNER "${CMAKE_CURRENT_BINARY_DIR}/runner.py")
 
-function(test_add name)
+function(test_add)
     set(options TEST_IS_CM TEST_IS_ISPC TEST_IS_CM_RUNTIME TEST_IS_L0_RUNTIME)
-    set(oneValueArgs NAME)
-    cmake_parse_arguments(PARSE_ARGV 1 PARSED_ARGS "${options}" "" "")
-    set(SUPPORTED 1)
+    set(oneValueArgs NAME RES_IMAGE REF_IMAGE)
+    cmake_parse_arguments("PARSED_ARGS" "${options}" "${oneValueArgs}" "${multiValueArgs}" ${ARGN} )
+
     # If test is written with TEST_IS_CM_RUNTIME it is supported on Windows only
     # If test is written with TEST_IS_L0_RUNTIME it is supported on Linux only
+    set(SUPPORTED 1)
     if (PARSED_ARGS_TEST_IS_L0_RUNTIME AND WIN32)
         set(SUPPORTED 0)
     endif()
@@ -52,18 +53,25 @@ function(test_add name)
     if (PARSED_ARGS_TEST_IS_CM AND NOT CMC_EXECUTABLE)
         set(SUPPORTED 0)
     endif()
-
+    message (STATUS ${PARSED_ARGS_REF_IMAGE})
     if (PARSED_ARGS_TEST_IS_CM)
-        set(test_name "${name}_cm")
+        set(test_name "${PARSED_ARGS_NAME}_cm")
     else()
-        set(test_name ${name})
+        set(test_name "${PARSED_ARGS_NAME}")
     endif()
 
     list(APPEND ${test_name} ${PARSED_ARGS_UNPARSED_ARGUMENTS} ${PARSED_ARGS_TEST_IS_CM})
     list(JOIN ${test_name} "_" result_test_name)
+    if (PARSED_ARGS_REF_IMAGE)
+        set (REF_IMAGE_OPT "-ref_image" ${PARSED_ARGS_REF_IMAGE})
+    endif()
+    if (PARSED_ARGS_RES_IMAGE)
+        set (RES_IMAGE_OPT "-res_image" ${PARSED_ARGS_RES_IMAGE})
+    endif()
     if (SUPPORTED EQUAL 1)
         add_test(NAME ${result_test_name}
-            COMMAND ${PYTHON_EXECUTABLE} ${TEST_RUNNER} ${name} ${PARSED_ARGS_UNPARSED_ARGUMENTS}
+            COMMAND ${PYTHON_EXECUTABLE} ${TEST_RUNNER} ${REF_IMAGE_OPT} ${RES_IMAGE_OPT} 
+            ${PARSED_ARGS_NAME} ${PARSED_ARGS_UNPARSED_ARGUMENTS}
             WORKING_DIRECTORY ${EXECUTABLE_OUTPUT_PATH}
         )
     endif()
