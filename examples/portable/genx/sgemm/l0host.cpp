@@ -112,6 +112,8 @@ static int run(int m, int niter, int gx, int gy) {
 
     // set grid size
     ze_group_count_t dispatchTraits = {(uint32_t)gx, (uint32_t)gy, 1};
+    std::cout << "Set dispatchTraits.x=" << dispatchTraits.groupCountX
+              << ", dispatchTraits.y=" << dispatchTraits.groupCountY << std::endl;
 
     for (int i = 0; i < m; i++)
         for (int j = 0; j < m; j++)
@@ -144,8 +146,8 @@ static int run(int m, int niter, int gx, int gy) {
     }
     auto tot_dur = (std::chrono::system_clock::now() - tot_wct);
     auto tot_secs = std::chrono::duration_cast<std::chrono::nanoseconds>(tot_dur);
-    std::cout << "Time is: " << tot_secs.count() / 1e+6 / niter << " milliseconds" << std::endl;
-    std::cout << "No memory time is: " << total / niter << " ms" << std::endl;
+    std::cout << "@time is:\t\t\t[" << tot_secs.count() / 1e+6 / niter << "] milliseconds" << std::endl;
+    std::cout << "No memory time is:\t\t\t[" << total / niter << "] milliseconds" << std::endl;
 
     // RESULT CHECK
     bool pass = false;
