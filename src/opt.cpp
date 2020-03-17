@@ -1292,7 +1292,11 @@ static llvm::Value *lGetBasePtrAndOffsets(llvm::Value *ptrs, llvm::Value **offse
                 llvm::ConstantVector *cv = llvm::dyn_cast<llvm::ConstantVector>(bop_var->getOperand(1));
                 if (cv != NULL) {
                     llvm::Value *zeroMask =
+#if ISPC_LLVM_VERSION < ISPC_LLVM_11_0
                         llvm::ConstantVector::getSplat(cv->getType()->getVectorNumElements(),
+#else // LLVM 11.0+
+                        llvm::ConstantVector::getSplat({cv->getType()->getVectorNumElements(), false},
+#endif
                                                        llvm::Constant::getNullValue(llvm::Type::getInt32Ty(*g->ctx)));
                     // Create offset
                     llvm::Value *shuffle_offset = new llvm::ShuffleVectorInst(cv, llvm::UndefValue::get(cv->getType()),
@@ -2557,7 +2561,11 @@ static bool lGSToLoadStore(llvm::CallInst *callInst) {
             llvm::Value *insertVec =
                 llvm::InsertElementInst::Create(undef1Value, scalarValue, LLVMInt32(0), callInst->getName(), callInst);
             llvm::Value *zeroMask =
+#if ISPC_LLVM_VERSION < ISPC_LLVM_11_0
                 llvm::ConstantVector::getSplat(callInst->getType()->getVectorNumElements(),
+#else // LLVM 11.0+
+                llvm::ConstantVector::getSplat({callInst->getType()->getVectorNumElements(), false},
+#endif
                                                llvm::Constant::getNullValue(llvm::Type::getInt32Ty(*g->ctx)));
             llvm::Value *shufValue = new llvm::ShuffleVectorInst(insertVec, undef2Value, zeroMask, callInst->getName());
 
