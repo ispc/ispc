@@ -507,7 +507,13 @@ void Optimize(llvm::Module *module, int optLevel) {
             optPM.add(llvm::createGenXPacketizePass());
             optPM.add(llvm::createPromoteMemoryToRegisterPass());
             optPM.add(llvm::createCMLowerLoadStorePass());
-            optPM.add(llvm::createCMImpParamPass());
+            // Currently ISPC uses CM runtime on Windows and L0 runtime on Linux.
+            // TODO: rework this as soon as we move to L0 runtime completely
+            if (g->target_os == TargetOS::windows) {
+                optPM.add(llvm::createCMImpParamPass(true));
+            } else {
+                optPM.add(llvm::createCMImpParamPass(false));
+            }
             optPM.add(llvm::createCMABIPass());
             optPM.add(llvm::createCMKernelArgOffsetPass(32));
             optPM.add(llvm::createGenXReduceIntSizePass());
@@ -641,7 +647,13 @@ void Optimize(llvm::Module *module, int optLevel) {
             optPM.add(llvm::createEarlyCSEPass());
             optPM.add(llvm::createDeadCodeEliminationPass());
             optPM.add(llvm::createCMLowerLoadStorePass());
-            optPM.add(llvm::createCMImpParamPass());
+            // Currently ISPC uses CM runtime on Windows and L0 runtime on Linux.
+            // TODO: rework this as soon as we move to L0 runtime completely
+            if (g->target_os == TargetOS::windows) {
+                optPM.add(llvm::createCMImpParamPass(true));
+            } else {
+                optPM.add(llvm::createCMImpParamPass(false));
+            }
             optPM.add(llvm::createCMABIPass());
         }
 #endif
