@@ -914,7 +914,7 @@ define <WIDTH x $1>
   %offsets64 = zext <WIDTH x i32> %offsets to <WIDTH x i64>
   ifelse($1, i8,`
     %res64 = call <WIDTH_X4 x $1> @llvm.genx.svm.gather.GEN_SUFFIXN($1, WIDTH_X4).GEN_SUFFIX(i1).GEN_SUFFIX(i64)(<WIDTH x MASK> %vecmask, i32 0, <WIDTH x i64> %offsets64, <WIDTH x $1> undef)
-    %res = call <WIDTH x $1> @llvm.genx.rdregioni.GEN_SUFFIX($1).GEN_SUFFIXN($1, WIDTH_X4).i16(<WIDTH_X4 x $1> %res64, i32 0, i32 WIDTH, i32 QUARTER_WIDTH, i16 0, i32 undef)
+    %res = call <WIDTH x $1> @llvm.genx.rdregioni.GEN_SUFFIX($1).GEN_SUFFIXN($1, WIDTH_X4).i16(<WIDTH_X4 x $1> %res64, i32 0, i32 WIDTH, i32 4, i16 0, i32 undef)
   ',`
     %res = call <WIDTH x $1> @llvm.genx.svm.gather.GEN_SUFFIX($1).GEN_SUFFIX(i1).GEN_SUFFIX(i64)(<WIDTH x MASK> %vecmask, i32 0, <WIDTH x i64> %offsets64, <WIDTH x $1> undef)
   ')
@@ -925,7 +925,7 @@ define <WIDTH x $1>
 @__gather64_$1(<WIDTH x i64> %offsets, <WIDTH x MASK> %vecmask) nounwind readonly alwaysinline {
     ifelse($1, i8,`
     %res64 = call <WIDTH_X4 x $1> @llvm.genx.svm.gather.GEN_SUFFIXN($1, WIDTH_X4).GEN_SUFFIX(i1).GEN_SUFFIX(i64)(<WIDTH x MASK> %vecmask, i32 0, <WIDTH x i64> %offsets, <WIDTH x $1> undef)
-    %res = call <WIDTH x $1> @llvm.genx.rdregioni.GEN_SUFFIX($1).GEN_SUFFIXN($1, WIDTH_X4).i16(<WIDTH_X4 x $1> %res64, i32 0, i32 WIDTH, i32 QUARTER_WIDTH, i16 0, i32 undef)
+    %res = call <WIDTH x $1> @llvm.genx.rdregioni.GEN_SUFFIX($1).GEN_SUFFIXN($1, WIDTH_X4).i16(<WIDTH_X4 x $1> %res64, i32 0, i32 WIDTH, i32 4, i16 0, i32 undef)
   ',`
     %res = call <WIDTH x $1> @llvm.genx.svm.gather.GEN_SUFFIX($1).GEN_SUFFIX(i1).GEN_SUFFIX(i64)(<WIDTH x MASK> %vecmask, i32 0, <WIDTH x i64> %offsets, <WIDTH x $1> undef)
   ')
@@ -1007,7 +1007,7 @@ define void
 @__scatter32_$1(<WIDTH x i32> %ptrs, <WIDTH x $1> %values, <WIDTH x MASK> %vecmask) nounwind alwaysinline {
   %offsets64 = zext <WIDTH x i32> %ptrs to <WIDTH x i64>
   ifelse($1, i8,`
-    %res = tail call <WIDTH_X4 x i8> @llvm.genx.wrregioni.GEN_SUFFIXN(i8, WIDTH_X4).GEN_SUFFIX(i8).i16.GEN_SUFFIX(i1)(<WIDTH_X4 x i8> undef, <WIDTH x i8> %values, i32 0, i32 WIDTH, i32 QUARTER_WIDTH, i16 0, i32 0, <WIDTH x MASK> %vecmask)
+    %res = tail call <WIDTH_X4 x i8> @llvm.genx.wrregioni.GEN_SUFFIXN(i8, WIDTH_X4).GEN_SUFFIX(i8).i16.GEN_SUFFIX(i1)(<WIDTH_X4 x i8> undef, <WIDTH x i8> %values, i32 0, i32 WIDTH, i32 4, i16 0, i32 0, <WIDTH x MASK> %vecmask)
     call void @llvm.genx.svm.scatter.GEN_SUFFIX(i1).GEN_SUFFIX(i64).GEN_SUFFIXN(i8, WIDTH_X4)(<WIDTH x MASK> %vecmask, i32 0, <WIDTH x i64> %offsets64, <WIDTH_X4 x i8> %res)
   ',`
     call void @llvm.genx.svm.scatter.GEN_SUFFIX(i1).GEN_SUFFIX(i64).GEN_SUFFIX($1)(<WIDTH x MASK> %vecmask, i32 0, <WIDTH x i64> %offsets64, <WIDTH x $1> %values)
@@ -1018,7 +1018,7 @@ define void
 define void
 @__scatter64_$1(<WIDTH x i64> %ptrs, <WIDTH x $1> %values, <WIDTH x MASK> %vecmask) nounwind alwaysinline {
   ifelse($1, i8,`
-    %res = tail call <WIDTH_X4 x i8> @llvm.genx.wrregioni.GEN_SUFFIXN(i8, WIDTH_X4).GEN_SUFFIX(i8).i16.GEN_SUFFIX(i1)(<WIDTH_X4 x i8> undef, <WIDTH x i8> %values, i32 0, i32 WIDTH, i32 QUARTER_WIDTH, i16 0, i32 0, <WIDTH x MASK> %vecmask)
+    %res = tail call <WIDTH_X4 x i8> @llvm.genx.wrregioni.GEN_SUFFIXN(i8, WIDTH_X4).GEN_SUFFIX(i8).i16.GEN_SUFFIX(i1)(<WIDTH_X4 x i8> undef, <WIDTH x i8> %values, i32 0, i32 WIDTH, i32 4, i16 0, i32 0, <WIDTH x MASK> %vecmask)
     call void @llvm.genx.svm.scatter.GEN_SUFFIX(i1).GEN_SUFFIX(i64).GEN_SUFFIXN(i8, WIDTH_X4)(<WIDTH x MASK> %vecmask, i32 0, <WIDTH x i64> %ptrs, <WIDTH_X4 x i8> %res)
   ',`
     call void @llvm.genx.svm.scatter.GEN_SUFFIX(i1).GEN_SUFFIX(i64).GEN_SUFFIX($1)(<WIDTH x MASK> %vecmask, i32 0, <WIDTH x i64> %ptrs, <WIDTH x $1> %values)
