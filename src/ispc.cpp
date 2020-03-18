@@ -969,6 +969,22 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, bool pic, boo
         break;
 #endif
 #ifdef ISPC_GENX_ENABLED
+    case ISPCTarget::genx_x8:
+        this->m_isa = Target::GENX;
+        this->m_genxPlatform = Target::GENX_GEN9;
+        this->m_nativeVectorWidth = 8;
+        this->m_nativeVectorAlignment = 64;
+        this->m_vectorWidth = 8;
+        this->m_dataTypeWidth = 32;
+        this->m_hasHalf = true;
+        this->m_maskingIsFree = true;
+        this->m_maskBitCount = 1;
+        this->m_hasSaturatingArithmetic = true;
+        // this->m_hasTranscendentals = true;
+        // this->m_hasTrigonometry = true;
+        this->m_hasGather = this->m_hasScatter = true;
+        CPUfromISA = CPU_GENX;
+        break;
     case ISPCTarget::genx_x16:
         this->m_isa = Target::GENX;
         this->m_nativeVectorWidth = 16;
@@ -985,6 +1001,7 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, bool pic, boo
         CPUfromISA = CPU_GENX;
         break;
 #else
+    case ISPCTarget::genx_x8:
     case ISPCTarget::genx_x16:
         unsupported_target = true;
         break;
