@@ -32,7 +32,7 @@
 configuration: Release
 
 environment:
-  LLVM_LATEST: 9.0
+  LLVM_LATEST: 10.0
   DOCKER_PATH: "ispc/test_repo"
   matrix:
     - APPVEYOR_BUILD_WORKER_IMAGE: Ubuntu1604
@@ -42,9 +42,9 @@ environment:
     - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2017
       LLVM_VERSION: 8.0
     - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2019
-      LLVM_VERSION: latest
+      LLVM_VERSION: 9.0
     - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2019
-      LLVM_VERSION: 10.0
+      LLVM_VERSION: latest
 
 for:
 -
