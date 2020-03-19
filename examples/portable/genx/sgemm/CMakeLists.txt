@@ -55,10 +55,13 @@ else()
     set(CM_TEST_NAME "naive_sgemm_cm")
 endif()
 
+set(ISPC_TARGET "genx-x16")
+
 add_perf_example(
     NAME "sgemm"
     CM_TEST
     ISPC_SRC_NAME ${ISPC_SRC_NAME}
+    ISPC_TARGET ${ISPC_TARGET}
     CM_SRC_NAME ${CM_SRC_NAME}
     ISPC_OBJ_NAME ${ISPC_OBJ_NAME}
     HOST_NAME ${HOST_NAME}

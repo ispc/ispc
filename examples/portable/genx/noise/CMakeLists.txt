@@ -44,7 +44,7 @@ else()
     set(ISPC_OBJ_NAME "${CMAKE_CURRENT_BINARY_DIR}/noise_ispc.spv")
     set(ISPC_FLAGS "--emit-spirv" "--addressing=64" "--arch=genx64")
 endif()
-
+set(ISPC_TARGET "genx-x8")
 set(HOST_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/${HOST_NAME}.cpp ${CMAKE_CURRENT_SOURCE_DIR}/noise_serial.cpp)
 
 add_perf_example(
@@ -54,5 +54,6 @@ add_perf_example(
     HOST_NAME ${HOST_NAME} 
     TEST_NAME ${TEST_NAME} 
     ISPC_FLAGS ${ISPC_FLAGS}
+    ISPC_TARGET ${ISPC_TARGET}
     HOST_SOURCES ${HOST_SOURCES} 
 )

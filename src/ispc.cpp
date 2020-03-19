@@ -204,7 +204,6 @@ static const bool lIsTargetValidforArch(ISPCTarget target, Arch arch) {
 
     return ret;
 }
-
 typedef enum {
     // Special value, indicates that no CPU is present.
     CPU_None = 0,
@@ -561,7 +560,7 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, bool pic, boo
 #endif
 #if ISPC_GENX_ENABLED
         if (ISPCTargetIsGen(m_ispc_target)) {
-            arch = Arch::genx32;
+            arch = Arch::genx64;
         } else
 #endif
             arch = Arch::x86_64;
@@ -605,7 +604,14 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, bool pic, boo
               target_string.c_str());
         return;
     }
-
+#ifdef ISPC_GENX_ENABLED
+    // In case of gen target addressing should correspond to host addressing. Otherwise SVM pointers will not work.
+    if (arch == Arch::genx32) {
+        g->opt.force32BitAddressing = true;
+    } else if (arch == Arch::genx64) {
+        g->opt.force32BitAddressing = false;
+    }
+#endif
     // Check default LLVM generated targets
     bool unsupported_target = false;
     switch (m_ispc_target) {
