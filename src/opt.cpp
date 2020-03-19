@@ -2922,8 +2922,20 @@ static bool lImproveMaskedStore(llvm::CallInst *callInst) {
             llvm::ReplaceInstWithInst(callInst, store);
             return true;
         }
+#ifdef ISPC_GENX_ENABLED
+    } else {
+        if (g->target->getISA() == Target::GENX && GetAddressSpace(lvalue) == AddressSpace::External) {
+            // In thuis case we use masked_store which on genx target causes scatter usage.
+            // Get the source position from the metadata attached to the call
+            // instruction so that we can issue PerformanceWarning()s below.
+            SourcePos pos;
+            bool gotPosition = lGetSourcePosFromMetadata(callInst, &pos);
+            if (gotPosition) {
+                PerformanceWarning(pos, "Scatter required to store value.");
+            }
+        }
+#endif
     }
-
     return false;
 }
 
