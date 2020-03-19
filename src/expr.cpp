@@ -7402,13 +7402,19 @@ std::pair<llvm::Constant *, bool> AddressOfExpr::GetConstant(const Type *type) c
 
             } else if (IndexExpr *IExpr = llvm::dyn_cast<IndexExpr>(expr)) {
                 std::vector<llvm::Value *> gepIndex;
+                Expr *mBaseExpr = NULL;
                 while (IExpr) {
                     std::pair<llvm::Constant *, bool> cIndexPair = IExpr->index->GetConstant(IExpr->index->GetType());
                     llvm::Constant *cIndex = cIndexPair.first;
                     gepIndex.insert(gepIndex.begin(), cIndex);
-                    IExpr = llvm::dyn_cast<IndexExpr>(IExpr->baseExpr);
+                    mBaseExpr = IExpr->baseExpr;
+                    IExpr = llvm::dyn_cast<IndexExpr>(mBaseExpr);
                     isNotValidForMultiTargetGlobal = isNotValidForMultiTargetGlobal || cIndexPair.second;
                 }
+                // The base expression needs to be a global symbol so that the
+                // address is a constant.
+                if (llvm::dyn_cast<SymbolExpr>(mBaseExpr) == NULL)
+                    return std::pair<llvm::Constant *, bool>(NULL, false);
                 gepIndex.insert(gepIndex.begin(), LLVMInt64(0));
                 llvm::Constant *c = llvm::cast<llvm::Constant>(ptr);
                 llvm::Constant *c1 = llvm::ConstantExpr::getGetElementPtr(PTYPE(c), c, gepIndex);
