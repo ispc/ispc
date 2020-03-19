@@ -43,7 +43,7 @@ if(UNIX)
     set(HOST_NAME "mandelbrot")
     set(ISPC_OBJ_NAME "${CMAKE_CURRENT_BINARY_DIR}/mandelbrot_ispc.spv")
     set(ISPC_FLAGS "--emit-spirv" "--addressing=64" "--arch=genx64")
-
+    set(ISPC_TARGET "genx-x16")
     set(HOST_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/mandelbrot.cpp ${CMAKE_CURRENT_SOURCE_DIR}/mandelbrot_serial.cpp)
 
     add_perf_example(
@@ -53,6 +53,7 @@ if(UNIX)
         HOST_NAME ${HOST_NAME}
         TEST_NAME ${TEST_NAME}
         ISPC_FLAGS ${ISPC_FLAGS}
+        ISPC_TARGET ${ISPC_TARGET}
         HOST_SOURCES ${HOST_SOURCES}
     )
 endif()

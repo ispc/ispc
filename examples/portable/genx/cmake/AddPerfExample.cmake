@@ -32,14 +32,14 @@
 
 function(add_perf_example)
     set(options CM_TEST)
-    set(oneValueArgs NAME ISPC_SRC_NAME CM_SRC_NAME ISPC_OBJ_NAME HOST_NAME CM_HOST_NAME CM_OBJ_NAME TEST_NAME CM_TEST_NAME)
+    set(oneValueArgs NAME ISPC_SRC_NAME ISPC_TARGET CM_SRC_NAME ISPC_OBJ_NAME HOST_NAME CM_HOST_NAME CM_OBJ_NAME TEST_NAME CM_TEST_NAME)
     set(multiValueArgs ISPC_FLAGS HOST_SOURCES CM_HOST_SOURCES CM_HOST_FLAGS)
     cmake_parse_arguments("parsed" "${options}" "${oneValueArgs}" "${multiValueArgs}" ${ARGN} )
 
     # Compile ISPC kernel
     list(APPEND ISPC_BUILD_OUTPUT ${parsed_ISPC_OBJ_NAME})
     add_custom_command(OUTPUT ${ISPC_BUILD_OUTPUT}
-                       COMMAND ${ISPC_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/${parsed_ISPC_SRC_NAME}.ispc ${parsed_ISPC_FLAGS} --target=genx -o ${parsed_ISPC_OBJ_NAME}
+                       COMMAND ${ISPC_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/${parsed_ISPC_SRC_NAME}.ispc ${parsed_ISPC_FLAGS} --target=${parsed_ISPC_TARGET} -o ${parsed_ISPC_OBJ_NAME}
                        VERBATIM
                        DEPENDS ${ISPC_EXECUTABLE}
                        DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/${parsed_ISPC_SRC_NAME}.ispc)
