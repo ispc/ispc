@@ -96,9 +96,20 @@ TargetLibRegistry::TargetLibRegistry() {
         case BitcodeLib::BitcodeLibType::Builtins_c:
             m_builtins[Triple(lib->getISPCTarget(), lib->getOS(), lib->getArch()).encode()] = lib;
             m_supported_oses[(int)lib->getOS()] = true;
+            // "custom_linux" target is regular "linux" target for ARM with a few tweaks.
+            // So, create it as an alias.
+            if (lib->getOS() == TargetOS::linux && (lib->getArch() == Arch::arm || lib->getArch() == Arch::aarch64)) {
+                m_builtins[Triple(lib->getISPCTarget(), TargetOS::custom_linux, lib->getArch()).encode()] = lib;
+                m_supported_oses[(int)TargetOS::custom_linux] = true;
+            }
             break;
         case BitcodeLib::BitcodeLibType::ISPC_target:
             m_targets[Triple(lib->getISPCTarget(), lib->getOS(), lib->getArch()).encode()] = lib;
+            // "custom_linux" target is regular "linux" target for ARM with a few tweaks.
+            // So, create it as an alias.
+            if (lib->getOS() == TargetOS::linux && (lib->getArch() == Arch::arm || lib->getArch() == Arch::aarch64)) {
+                m_targets[Triple(lib->getISPCTarget(), TargetOS::custom_linux, lib->getArch()).encode()] = lib;
+            }
             break;
         }
     }
@@ -140,6 +151,7 @@ const BitcodeLib *TargetLibRegistry::getISPCTargetLib(ISPCTarget target, TargetO
         // Keep these values.
         break;
     case TargetOS::linux:
+    case TargetOS::custom_linux:
     case TargetOS::freebsd:
     case TargetOS::macos:
     case TargetOS::android:

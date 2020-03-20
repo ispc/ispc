@@ -315,6 +315,8 @@ TargetOS ParseOS(std::string os) {
         return TargetOS::windows;
     } else if (os == "linux") {
         return TargetOS::linux;
+    } else if (os == "custom_linux") {
+        return TargetOS::custom_linux;
     } else if (os == "freebsd") {
         return TargetOS::freebsd;
     } else if (os == "macos") {
@@ -337,6 +339,8 @@ std::string OSToString(TargetOS os) {
         return "Windows";
     case TargetOS::linux:
         return "Linux";
+    case TargetOS::custom_linux:
+        return "Linux (custom)";
     case TargetOS::freebsd:
         return "FreeBSD";
     case TargetOS::macos:
@@ -361,6 +365,8 @@ std::string OSToLowerString(TargetOS os) {
         return "windows";
     case TargetOS::linux:
         return "linux";
+    case TargetOS::custom_linux:
+        return "custom_linux";
     case TargetOS::freebsd:
         return "freebsd";
     case TargetOS::macos:

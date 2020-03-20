@@ -40,7 +40,7 @@
 #include <string>
 #include <vector>
 
-enum class TargetOS { windows, linux, freebsd, macos, android, ios, ps4, web, error };
+enum class TargetOS { windows, linux, custom_linux, freebsd, macos, android, ios, ps4, web, error };
 
 TargetOS ParseOS(std::string os);
 std::string OSToString(TargetOS os);

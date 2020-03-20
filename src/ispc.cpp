@@ -1009,13 +1009,21 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, bool pic, boo
         }
         llvm::TargetOptions options;
 #ifdef ISPC_ARM_ENABLED
-        if (m_isa == Target::NEON)
-            options.FloatABIType = llvm::FloatABI::Hard;
+        options.FloatABIType = llvm::FloatABI::Hard;
         if (arch == Arch::arm) {
-            this->m_funcAttributes.push_back(std::make_pair("target-features", "+neon,+fp16"));
+            if (g->target_os == TargetOS::custom_linux) {
+                this->m_funcAttributes.push_back(std::make_pair("target-features", "+crypto,+fp-armv8,+neon,+sha2"));
+            } else {
+                this->m_funcAttributes.push_back(std::make_pair("target-features", "+neon,+fp16"));
+            }
             featuresString = "+neon,+fp16";
         } else if (arch == Arch::aarch64) {
-            this->m_funcAttributes.push_back(std::make_pair("target-features", "+neon"));
+            if (g->target_os == TargetOS::custom_linux) {
+                this->m_funcAttributes.push_back(
+                    std::make_pair("target-features", "+aes,+crc,+crypto,+fp-armv8,+neon,+sha2"));
+            } else {
+                this->m_funcAttributes.push_back(std::make_pair("target-features", "+neon"));
+            }
             featuresString = "+neon";
         }
 #endif
