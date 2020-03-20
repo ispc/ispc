@@ -864,6 +864,14 @@ int main(int Argc, char *Argv[]) {
         }
     }
 
+    // Default setting for "custom_linux"
+    if (g->target_os == TargetOS::custom_linux) {
+        flags |= Module::GeneratePIC;
+        if (!cpu) {
+            cpu = "cortex-a57";
+        }
+    }
+
     if (g->enableFuzzTest) {
         if (g->fuzzTestSeed == -1) {
 #ifdef ISPC_HOST_IS_WINDOWS
