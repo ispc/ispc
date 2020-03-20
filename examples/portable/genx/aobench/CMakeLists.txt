@@ -43,7 +43,7 @@ set(TEST_NAME "genx_aobench")
 if(UNIX)
     set(HOST_NAME "l0host")
     set(ISPC_OBJ_NAME "${CMAKE_CURRENT_BINARY_DIR}/aobench_ispc.spv")
-    set(ISPC_FLAGS "--emit-spirv" "--addressing=64" "--arch=genx64")
+    set(ISPC_FLAGS "--emit-spirv" "--arch=genx64")
     set(ISPC_TARGET "genx-x8")
     set(HOST_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/ao.cpp ${CMAKE_CURRENT_SOURCE_DIR}/ao_serial.cpp)
 

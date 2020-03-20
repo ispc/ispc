@@ -424,10 +424,6 @@ def run_test(testname, host, target):
                         (filename, obj_name, options.arch, genx_target if target.is_genx() else options.target)
 
             if target.is_genx():
-                if options.arch == "genx32":
-                    ispc_cmd += " --addressing=32"
-                elif options.arch == "genx64":
-                    ispc_cmd += " --addressing=64"
                 ispc_cmd += " -DISPC_GENX_ENABLED --emit-spirv"
 
             if options.opt == 'O0':
