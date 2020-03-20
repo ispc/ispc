@@ -1,15 +1,15 @@
-// RUN: %{ispc} %s --target=genx-x16 --arch=genx64 --addressing=64 -DUNIFORM --emit-llvm-text -o %t.ll
+// RUN: %{ispc} %s --target=genx-x16 --arch=genx64 -DUNIFORM --emit-llvm-text -o %t.ll
 // RUN: FileCheck --input-file=%t.ll -check-prefix=CHECK_UNIFORM %s
-// RUN: %{ispc} %s --target=genx-x16 --arch=genx64 --addressing=64 -DVARYING --emit-llvm-text -o %t.ll 2>&1 | FileCheck %s -check-prefix=CHECK_VARYING_WARN
+// RUN: %{ispc} %s --target=genx-x16 --arch=genx64 -DVARYING --emit-llvm-text -o %t.ll 2>&1 | FileCheck %s -check-prefix=CHECK_VARYING_WARN
 // RUN: FileCheck --input-file=%t.ll %s -check-prefix=CHECK_VARYING
-// RUN: %{ispc} %s --target=genx-x16 --arch=genx64 --addressing=64 -DMASKED_ST --emit-llvm-text -o %t.ll 2>&1 | FileCheck %s -check-prefix=CHECK_MASKED_ST_WARN
+// RUN: %{ispc} %s --target=genx-x16 --arch=genx64 -DMASKED_ST --emit-llvm-text -o %t.ll 2>&1 | FileCheck %s -check-prefix=CHECK_MASKED_ST_WARN
 // RUN: FileCheck --input-file=%t.ll %s -check-prefix=CHECK_MASKED_ST
 
-// RUN: %{ispc} %s --target=genx-x16 --arch=genx32 --addressing=32 -DUNIFORM --emit-llvm-text -o %t.ll 2>&1
+// RUN: %{ispc} %s --target=genx-x16 --arch=genx32 -DUNIFORM --emit-llvm-text -o %t.ll 2>&1
 // RUN: FileCheck --input-file=%t.ll -check-prefix=CHECK_UNIFORM %s
-// RUN: %{ispc} %s --target=genx-x16 --arch=genx32 --addressing=32 -DVARYING --emit-llvm-text -o %t.ll 2>&1 | FileCheck %s -check-prefix=CHECK_VARYING_WARN
+// RUN: %{ispc} %s --target=genx-x16 --arch=genx32 -DVARYING --emit-llvm-text -o %t.ll 2>&1 | FileCheck %s -check-prefix=CHECK_VARYING_WARN
 // RUN: FileCheck --input-file=%t.ll %s -check-prefix=CHECK_VARYING
-// RUN: %{ispc} %s --target=genx-x16 --arch=genx32 --addressing=32 -DMASKED_ST --emit-llvm-text -o %t.ll 2>&1 | FileCheck %s -check-prefix=CHECK_MASKED_ST_WARN
+// RUN: %{ispc} %s --target=genx-x16 --arch=genx32 -DMASKED_ST --emit-llvm-text -o %t.ll 2>&1 | FileCheck %s -check-prefix=CHECK_MASKED_ST_WARN
 // RUN: FileCheck --input-file=%t.ll %s -check-prefix=CHECK_MASKED_ST
 
 // REQUIRES: GENX_ENABLED
