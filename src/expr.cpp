@@ -321,12 +321,21 @@ static bool lDoTypeConv(const Type *fromType, const Type *toType, Expr **expr, b
             goto typecast_ok;
         } else if (!Type::Equal(fromPointerType->GetBaseType(), toPointerType->GetBaseType()) &&
                    !Type::Equal(fromPointerType->GetBaseType()->GetAsConstType(), toPointerType->GetBaseType())) {
-            if (!failureOk)
-                Error(pos,
-                      "Can't convert from pointer type \"%s\" to "
-                      "incompatible pointer type \"%s\" for %s.",
-                      fromPointerType->GetString().c_str(), toPointerType->GetString().c_str(), errorMsgBase);
-            return false;
+            // for const * -> * conversion, print warning.
+            if (Type::Equal(fromPointerType->GetBaseType(), toPointerType->GetBaseType()->GetAsConstType())) {
+                Warning(pos,
+                        "Converting from const pointer type \"%s\" to "
+                        "pointer type \"%s\" for %s discards const qualifier.",
+                        fromPointerType->GetString().c_str(), toPointerType->GetString().c_str(), errorMsgBase);
+
+            } else {
+                if (!failureOk)
+                    Error(pos,
+                          "Can't convert from pointer type \"%s\" to "
+                          "incompatible pointer type \"%s\" for %s.",
+                          fromPointerType->GetString().c_str(), toPointerType->GetString().c_str(), errorMsgBase);
+                return false;
+            }
         }
 
         if (toType->IsVaryingType() && fromType->IsUniformType())
@@ -7874,7 +7883,7 @@ int FunctionSymbolExpr::computeOverloadCost(const FunctionType *ftype, const std
             const Type *fargTypeNC = fargType->GetAsNonConstType();
 
             // Now we forget about constants and references!
-            if (Type::Equal(callTypeNC, fargTypeNC)) {
+            if (Type::EqualIgnoringConst(callTypeNP, fargType)) {
                 // The best case: vf -> vf.
                 // Step "4" from documentation
                 cost[i] += 1 * costScale;
