@@ -1141,7 +1141,14 @@ std::string Target::GetTripleString() const {
         }
         triple.setVendor(llvm::Triple::VendorType::UnknownVendor);
         triple.setOS(llvm::Triple::OSType::Linux);
-        triple.setEnvironment(llvm::Triple::EnvironmentType::GNU);
+        if (m_arch == Arch::x86 || m_arch == Arch::x86_64 || m_arch == Arch::aarch64) {
+            triple.setEnvironment(llvm::Triple::EnvironmentType::GNU);
+        } else if (m_arch == Arch::arm) {
+            triple.setEnvironment(llvm::Triple::EnvironmentType::GNUEABIHF);
+        } else {
+            Error(SourcePos(), "Unknown arch.");
+            exit(1);
+        }
         break;
     case TargetOS::freebsd:
         if (m_arch == Arch::x86) {
