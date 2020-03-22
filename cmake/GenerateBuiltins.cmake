@@ -230,16 +230,26 @@ function(builtin_to_cpp bit os_name arch supported_archs supported_oses resultFi
     if (NOT SKIP)
         set(output ${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_CFG_INTDIR}/builtins-c-${bit}-${os_name}-${target_arch}.cpp)
         if (${os_name} STREQUAL "web")
-            set(wasm_define "-DWASM")
-        endif()
-        add_custom_command(
-            OUTPUT ${output}
-            COMMAND ${CLANG_EXECUTABLE} ${target_flags} -w -m${bit} -emit-llvm -c ${inputFilePath} ${wasm_define} -o - | (\"${LLVM_DIS_EXECUTABLE}\" - || echo "builtins.c compile error")
-                | \"${Python3_EXECUTABLE}\" bitcode2cpp.py c --type=builtins-c --runtime=${bit} --os=${os_name} --arch=${target_arch} --llvm_as ${LLVM_AS_EXECUTABLE}
-                > ${output}
-            DEPENDS ${inputFilePath} bitcode2cpp.py
-            WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+            add_custom_command(
+                OUTPUT ${output}
+                COMMAND ${EMCC_EXECUTABLE} -DWASM -s WASM_OBJECT_FILES=0 -c ${inputFilePath} -emit-llvm -c -o - -s EXPORTED_FUNCTIONS='["___wasm_do_print", "___wasm_clock"]'
+                    | (\"${LLVM_DIS_EXECUTABLE}\" - || echo "builtins.c compile error")
+                    | \"${Python3_EXECUTABLE}\" bitcode2cpp.py c --type=builtins-c --runtime=${bit} --os=${os_name} --arch=${target_arch} --llvm_as ${LLVM_AS_EXECUTABLE}
+                    > ${output}
+                DEPENDS ${inputFilePath} bitcode2cpp.py
+                WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
             )
+        else()
+            add_custom_command(
+                OUTPUT ${output}
+                COMMAND ${CLANG_EXECUTABLE} ${target_flags} -w -m${bit} -emit-llvm -c ${inputFilePath} -o - | (\"${LLVM_DIS_EXECUTABLE}\" - || echo "builtins.c compile error")
+                    | \"${Python3_EXECUTABLE}\" bitcode2cpp.py c --type=builtins-c --runtime=${bit} --os=${os_name} --arch=${target_arch} --llvm_as ${LLVM_AS_EXECUTABLE}
+                    > ${output}
+                DEPENDS ${inputFilePath} bitcode2cpp.py
+                WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+            )
+        endif()
+        
         set(${resultFileName} ${output} PARENT_SCOPE)
         set_source_files_properties(${resultFileName} PROPERTIES GENERATED true)
     endif()
