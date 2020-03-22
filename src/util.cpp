@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2019, Intel Corporation
+  Copyright (c) 2010-2020, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -95,7 +95,7 @@ int TerminalWidth() {
 static bool lHaveANSIColors() {
     static bool r = (getenv("TERM") != NULL && strcmp(getenv("TERM"), "dumb") != 0);
 #ifndef ISPC_HOST_IS_WINDOWS
-    r &= isatty(2);
+    r &= (bool)isatty(2);
     r |= g->forceColoredOutput;
 #endif // !ISPC_HOST_IS_WINDOWS
     return r;
