@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2019, Intel Corporation
+  Copyright (c) 2010-2020, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -428,7 +428,7 @@ class ConstExpr : public Expr {
     llvm::Value *GetValue(FunctionEmitContext *ctx) const;
     const Type *GetType() const;
     void Print() const;
-    std::pair<llvm::Constant *, bool> GetConstant(const Type *type) const;
+    std::pair<llvm::Constant *, bool> GetConstant(const Type *constType) const;
 
     Expr *TypeCheck();
     Expr *Optimize();
