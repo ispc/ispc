@@ -1159,7 +1159,7 @@ Expr *UnaryExpr::Optimize() {
                    Type::EqualIgnoringConst(type, AtomicType::VaryingInt64)) {
             return lOptimizeBitNot<int64_t>(constExpr, type, pos);
         } else if (Type::EqualIgnoringConst(type, AtomicType::UniformUInt64) ||
-                   Type::EqualIgnoringConst(type, AtomicType::VaryingUInt64) || isEnumType == true) {
+                   Type::EqualIgnoringConst(type, AtomicType::VaryingUInt64)) {
             return lOptimizeBitNot<uint64_t>(constExpr, type, pos);
         } else
             FATAL("unexpected type in UnaryExpr::Optimize() / BitNot case");

@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2019, Intel Corporation
+  Copyright (c) 2010-2020, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -337,6 +337,8 @@ class AtomicType : public Type {
 };
 
 /** @brief Type implementation for enumerated types
+ *
+ *  Note that ISPC enum assumes 32 bit int as underlying type.
  */
 class EnumType : public Type {
   public:
