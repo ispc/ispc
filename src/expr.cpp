@@ -1564,9 +1564,6 @@ Expr *lCreateBinaryOperatorCall(const BinaryExpr::Op bop, Expr *a0, Expr *a1, co
     }
     Expr *arg0 = a0;
     Expr *arg1 = a1;
-    if ((arg0 == NULL) || (arg1 == NULL)) {
-        return NULL;
-    }
     const Type *type0 = arg0->GetType();
     const Type *type1 = arg1->GetType();
 
@@ -3421,7 +3418,6 @@ llvm::Value *FunctionCallExpr::GetValue(FunctionEmitContext *ctx) const {
     // GetLValue call below needs a FunctionEmitContext, which is
     // problematic...)
     std::vector<Expr *> callargs = args->exprs;
-    bool err = false;
 
     // Specifically, this can happen if there's an error earlier during
     // overload resolution.
@@ -3453,8 +3449,6 @@ llvm::Value *FunctionCallExpr::GetValue(FunctionEmitContext *ctx) const {
             return NULL;
         callargs[i] = argExpr;
     }
-    if (err)
-        return NULL;
 
     // Fill in any default argument values needed.
     // FIXME: should we do this during type checking?

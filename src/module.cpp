@@ -315,7 +315,7 @@ void Module::AddGlobalVariable(const std::string &name, const Type *type, Expr *
     // make sure it's a compile-time constant!
     llvm::Constant *llvmInitializer = NULL;
     ConstExpr *constValue = NULL;
-    if (storageClass == SC_EXTERN || storageClass == SC_EXTERN_C) {
+    if (storageClass == SC_EXTERN) {
         if (initExpr != NULL)
             Error(pos,
                   "Initializer can't be provided with \"extern\" "
@@ -2496,7 +2496,7 @@ int Module::CompileAndOutput(const char *srcFile, Arch arch, const char *cpu, st
         // Handle creating a "generic" header file for multiple targets
         // that use exported varyings
         DispatchHeaderInfo DHI;
-        if ((targets.size() > 1) && (headerFileName != NULL)) {
+        if (headerFileName != NULL) {
             DHI.file = fopen(headerFileName, "w");
             if (!DHI.file) {
                 perror("fopen");

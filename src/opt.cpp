@@ -1439,7 +1439,7 @@ static void lExtractConstantOffset(llvm::Value *vec, llvm::Value **constOffset, 
         llvm::Value *op1 = bop->getOperand(1);
         llvm::Value *c0, *v0, *c1, *v1;
 
-        if (bop != NULL && ((bop->getOpcode() == llvm::Instruction::Add) || IsOrEquivalentToAdd(bop))) {
+        if ((bop->getOpcode() == llvm::Instruction::Add) || IsOrEquivalentToAdd(bop)) {
             lExtractConstantOffset(op0, &c0, &v0, insertBefore);
             lExtractConstantOffset(op1, &c1, &v1, insertBefore);
 
@@ -1614,7 +1614,7 @@ static llvm::Value *lExtractOffsetVector248Scale(llvm::Value **vec) {
         return LLVMInt32(1);
 
     llvm::Value *op0 = bop->getOperand(0), *op1 = bop->getOperand(1);
-    if (bop != NULL && ((bop->getOpcode() == llvm::Instruction::Add) || IsOrEquivalentToAdd(bop))) {
+    if ((bop->getOpcode() == llvm::Instruction::Add) || IsOrEquivalentToAdd(bop)) {
         if (llvm::isa<llvm::ConstantAggregateZero>(op0)) {
             *vec = op1;
             return lExtractOffsetVector248Scale(vec);
@@ -1821,7 +1821,7 @@ static bool lOffsets32BitSafe(llvm::Value **variableOffsetPtr, llvm::Value **con
 static bool lIs32BitSafeHelper(llvm::Value *v) {
     // handle Adds, SExts, Constant Vectors
     if (llvm::BinaryOperator *bop = llvm::dyn_cast<llvm::BinaryOperator>(v)) {
-        if (bop != NULL && ((bop->getOpcode() == llvm::Instruction::Add) || IsOrEquivalentToAdd(bop))) {
+        if ((bop->getOpcode() == llvm::Instruction::Add) || IsOrEquivalentToAdd(bop)) {
             return lIs32BitSafeHelper(bop->getOperand(0)) && lIs32BitSafeHelper(bop->getOperand(1));
         }
         return false;
@@ -4725,9 +4725,7 @@ restart:
     for (llvm::BasicBlock::iterator iter = bb.begin(), e = bb.end(); iter != e; ++iter) {
         llvm::Instruction *inst = &*iter;
 
-        llvm::Instruction *builtinCall = NULL;
-        if (!builtinCall)
-            builtinCall = lMatchAvgUpUInt8(inst);
+        llvm::Instruction *builtinCall = lMatchAvgUpUInt8(inst);
         if (!builtinCall)
             builtinCall = lMatchAvgUpUInt16(inst);
         if (!builtinCall)
