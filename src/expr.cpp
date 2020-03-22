@@ -6074,9 +6074,6 @@ static llvm::Value *lTypeConvAtomic(FunctionEmitContext *ctx, llvm::Value *exprV
             cast = ctx->TruncInst(exprVal, targetType, cOpName);
             break;
         case AtomicType::TYPE_FLOAT:
-            cast = ctx->CastInst(llvm::Instruction::FPToSI, // signed int
-                                 exprVal, targetType, cOpName);
-            break;
         case AtomicType::TYPE_DOUBLE:
             cast = ctx->CastInst(llvm::Instruction::FPToSI, // signed int
                                  exprVal, targetType, cOpName);
@@ -6143,16 +6140,13 @@ static llvm::Value *lTypeConvAtomic(FunctionEmitContext *ctx, llvm::Value *exprV
         case AtomicType::TYPE_UINT16:
             cast = exprVal;
             break;
-        case AtomicType::TYPE_FLOAT:
-            cast = ctx->CastInst(llvm::Instruction::FPToSI, // signed int
-                                 exprVal, targetType, cOpName);
-            break;
         case AtomicType::TYPE_INT32:
         case AtomicType::TYPE_UINT32:
         case AtomicType::TYPE_INT64:
         case AtomicType::TYPE_UINT64:
             cast = ctx->TruncInst(exprVal, targetType, cOpName);
             break;
+        case AtomicType::TYPE_FLOAT:
         case AtomicType::TYPE_DOUBLE:
             cast = ctx->CastInst(llvm::Instruction::FPToSI, // signed int
                                  exprVal, targetType, cOpName);
@@ -6225,14 +6219,11 @@ static llvm::Value *lTypeConvAtomic(FunctionEmitContext *ctx, llvm::Value *exprV
         case AtomicType::TYPE_UINT32:
             cast = exprVal;
             break;
-        case AtomicType::TYPE_FLOAT:
-            cast = ctx->CastInst(llvm::Instruction::FPToSI, // signed int
-                                 exprVal, targetType, cOpName);
-            break;
         case AtomicType::TYPE_INT64:
         case AtomicType::TYPE_UINT64:
             cast = ctx->TruncInst(exprVal, targetType, cOpName);
             break;
+        case AtomicType::TYPE_FLOAT:
         case AtomicType::TYPE_DOUBLE:
             cast = ctx->CastInst(llvm::Instruction::FPToSI, // signed int
                                  exprVal, targetType, cOpName);
@@ -6303,14 +6294,11 @@ static llvm::Value *lTypeConvAtomic(FunctionEmitContext *ctx, llvm::Value *exprV
         case AtomicType::TYPE_UINT32:
             cast = ctx->ZExtInst(exprVal, targetType, cOpName);
             break;
-        case AtomicType::TYPE_FLOAT:
-            cast = ctx->CastInst(llvm::Instruction::FPToSI, // signed int
-                                 exprVal, targetType, cOpName);
-            break;
         case AtomicType::TYPE_INT64:
         case AtomicType::TYPE_UINT64:
             cast = exprVal;
             break;
+        case AtomicType::TYPE_FLOAT:
         case AtomicType::TYPE_DOUBLE:
             cast = ctx->CastInst(llvm::Instruction::FPToSI, // signed int
                                  exprVal, targetType, cOpName);

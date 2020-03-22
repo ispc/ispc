@@ -509,10 +509,6 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, bool pic, boo
             break;
 
         case CPU_IvyBridge:
-            // No specific m_ispc_target for IvyBridge anymore.
-            m_ispc_target = ISPCTarget::avx1_i32x8;
-            break;
-
         case CPU_SandyBridge:
             m_ispc_target = ISPCTarget::avx1_i32x8;
             break;
