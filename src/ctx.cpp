@@ -110,6 +110,7 @@ struct CFInfo {
         savedDefaultBlock = NULL;
         savedCaseBlocks = NULL;
         savedNextBlocks = NULL;
+        savedSwitchConditionWasUniform = false;
     }
     CFInfo(CFType t, bool iu, llvm::BasicBlock *bt, llvm::BasicBlock *ct, llvm::Value *sb, llvm::Value *sc,
            llvm::Value *sm, llvm::Value *lm, llvm::Value *sse = NULL, llvm::BasicBlock *bbd = NULL,
@@ -145,6 +146,7 @@ struct CFInfo {
         savedDefaultBlock = NULL;
         savedCaseBlocks = NULL;
         savedNextBlocks = NULL;
+        savedSwitchConditionWasUniform = false;
     }
 };
 
