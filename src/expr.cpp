@@ -7776,9 +7776,8 @@ int FunctionSymbolExpr::computeOverloadCost(const FunctionType *ftype, const std
 
             // Now we deal with references, so we can normalize to non-const types
             // because we're passing by value anyway, so const doesn't matter.
-            const Type *callTypeNC = callTypeNP, *fargTypeNC = fargType;
-            callTypeNC = callTypeNP->GetAsNonConstType();
-            fargTypeNC = fargType->GetAsNonConstType();
+            const Type *callTypeNC = callTypeNP->GetAsNonConstType();
+            const Type *fargTypeNC = fargType->GetAsNonConstType();
 
             // Now we forget about constants and references!
             if (Type::Equal(callTypeNC, fargTypeNC)) {
