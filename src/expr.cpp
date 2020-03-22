@@ -939,7 +939,7 @@ static llvm::Value *lEmitPrePostIncDec(UnaryExpr::Op op, Expr *expr, SourcePos p
         type = type->GetReferenceTarget();
         lvalue = expr->GetValue(ctx);
 
-        Expr *deref = new RefDerefExpr(expr, expr->pos);
+        RefDerefExpr *deref = new RefDerefExpr(expr, expr->pos);
         rvalue = deref->GetValue(ctx);
     } else {
         lvalue = expr->GetLValue(ctx);
