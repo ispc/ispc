@@ -5755,104 +5755,104 @@ int ConstExpr::GetValues(uint32_t *up, bool forceVarying) const {
 
 int ConstExpr::Count() const { return GetType()->IsVaryingType() ? g->target->getVectorWidth() : 1; }
 
-std::pair<llvm::Constant *, bool> ConstExpr::GetConstant(const Type *type) const {
+std::pair<llvm::Constant *, bool> ConstExpr::GetConstant(const Type *constType) const {
     // Caller shouldn't be trying to stuff a varying value here into a
     // constant type.
     bool isNotValidForMultiTargetGlobal = false;
-    if (type->IsUniformType())
+    if (constType->IsUniformType())
         AssertPos(pos, Count() == 1);
 
-    type = type->GetAsNonConstType();
-    if (Type::Equal(type, AtomicType::UniformBool) || Type::Equal(type, AtomicType::VaryingBool)) {
+    constType = constType->GetAsNonConstType();
+    if (Type::Equal(constType, AtomicType::UniformBool) || Type::Equal(constType, AtomicType::VaryingBool)) {
         bool bv[ISPC_MAX_NVEC];
-        GetValues(bv, type->IsVaryingType());
-        if (type->IsUniformType())
+        GetValues(bv, constType->IsVaryingType());
+        if (constType->IsUniformType())
             return std::pair<llvm::Constant *, bool>(bv[0] ? LLVMTrue : LLVMFalse, isNotValidForMultiTargetGlobal);
         else
             return std::pair<llvm::Constant *, bool>(LLVMBoolVector(bv), isNotValidForMultiTargetGlobal);
-    } else if (Type::Equal(type, AtomicType::UniformInt8) || Type::Equal(type, AtomicType::VaryingInt8)) {
+    } else if (Type::Equal(constType, AtomicType::UniformInt8) || Type::Equal(constType, AtomicType::VaryingInt8)) {
         int8_t iv[ISPC_MAX_NVEC];
-        GetValues(iv, type->IsVaryingType());
-        if (type->IsUniformType())
+        GetValues(iv, constType->IsVaryingType());
+        if (constType->IsUniformType())
             return std::pair<llvm::Constant *, bool>(LLVMInt8(iv[0]), isNotValidForMultiTargetGlobal);
         else
             return std::pair<llvm::Constant *, bool>(LLVMInt8Vector(iv), isNotValidForMultiTargetGlobal);
-    } else if (Type::Equal(type, AtomicType::UniformUInt8) || Type::Equal(type, AtomicType::VaryingUInt8)) {
+    } else if (Type::Equal(constType, AtomicType::UniformUInt8) || Type::Equal(constType, AtomicType::VaryingUInt8)) {
         uint8_t uiv[ISPC_MAX_NVEC];
-        GetValues(uiv, type->IsVaryingType());
-        if (type->IsUniformType())
+        GetValues(uiv, constType->IsVaryingType());
+        if (constType->IsUniformType())
             return std::pair<llvm::Constant *, bool>(LLVMUInt8(uiv[0]), isNotValidForMultiTargetGlobal);
         else
             return std::pair<llvm::Constant *, bool>(LLVMUInt8Vector(uiv), isNotValidForMultiTargetGlobal);
-    } else if (Type::Equal(type, AtomicType::UniformInt16) || Type::Equal(type, AtomicType::VaryingInt16)) {
+    } else if (Type::Equal(constType, AtomicType::UniformInt16) || Type::Equal(constType, AtomicType::VaryingInt16)) {
         int16_t iv[ISPC_MAX_NVEC];
-        GetValues(iv, type->IsVaryingType());
-        if (type->IsUniformType())
+        GetValues(iv, constType->IsVaryingType());
+        if (constType->IsUniformType())
             return std::pair<llvm::Constant *, bool>(LLVMInt16(iv[0]), isNotValidForMultiTargetGlobal);
         else
             return std::pair<llvm::Constant *, bool>(LLVMInt16Vector(iv), isNotValidForMultiTargetGlobal);
-    } else if (Type::Equal(type, AtomicType::UniformUInt16) || Type::Equal(type, AtomicType::VaryingUInt16)) {
+    } else if (Type::Equal(constType, AtomicType::UniformUInt16) || Type::Equal(constType, AtomicType::VaryingUInt16)) {
         uint16_t uiv[ISPC_MAX_NVEC];
-        GetValues(uiv, type->IsVaryingType());
-        if (type->IsUniformType())
+        GetValues(uiv, constType->IsVaryingType());
+        if (constType->IsUniformType())
             return std::pair<llvm::Constant *, bool>(LLVMUInt16(uiv[0]), isNotValidForMultiTargetGlobal);
         else
             return std::pair<llvm::Constant *, bool>(LLVMUInt16Vector(uiv), isNotValidForMultiTargetGlobal);
-    } else if (Type::Equal(type, AtomicType::UniformInt32) || Type::Equal(type, AtomicType::VaryingInt32)) {
+    } else if (Type::Equal(constType, AtomicType::UniformInt32) || Type::Equal(constType, AtomicType::VaryingInt32)) {
         int32_t iv[ISPC_MAX_NVEC];
-        GetValues(iv, type->IsVaryingType());
-        if (type->IsUniformType())
+        GetValues(iv, constType->IsVaryingType());
+        if (constType->IsUniformType())
             return std::pair<llvm::Constant *, bool>(LLVMInt32(iv[0]), isNotValidForMultiTargetGlobal);
         else
             return std::pair<llvm::Constant *, bool>(LLVMInt32Vector(iv), isNotValidForMultiTargetGlobal);
-    } else if (Type::Equal(type, AtomicType::UniformUInt32) || Type::Equal(type, AtomicType::VaryingUInt32) ||
-               CastType<EnumType>(type) != NULL) {
+    } else if (Type::Equal(constType, AtomicType::UniformUInt32) || Type::Equal(constType, AtomicType::VaryingUInt32) ||
+               CastType<EnumType>(constType) != NULL) {
         uint32_t uiv[ISPC_MAX_NVEC];
-        GetValues(uiv, type->IsVaryingType());
-        if (type->IsUniformType())
+        GetValues(uiv, constType->IsVaryingType());
+        if (constType->IsUniformType())
             return std::pair<llvm::Constant *, bool>(LLVMUInt32(uiv[0]), isNotValidForMultiTargetGlobal);
         else
             return std::pair<llvm::Constant *, bool>(LLVMUInt32Vector(uiv), isNotValidForMultiTargetGlobal);
-    } else if (Type::Equal(type, AtomicType::UniformFloat) || Type::Equal(type, AtomicType::VaryingFloat)) {
+    } else if (Type::Equal(constType, AtomicType::UniformFloat) || Type::Equal(constType, AtomicType::VaryingFloat)) {
         float fv[ISPC_MAX_NVEC];
-        GetValues(fv, type->IsVaryingType());
-        if (type->IsUniformType())
+        GetValues(fv, constType->IsVaryingType());
+        if (constType->IsUniformType())
             return std::pair<llvm::Constant *, bool>(LLVMFloat(fv[0]), isNotValidForMultiTargetGlobal);
         else
             return std::pair<llvm::Constant *, bool>(LLVMFloatVector(fv), isNotValidForMultiTargetGlobal);
-    } else if (Type::Equal(type, AtomicType::UniformInt64) || Type::Equal(type, AtomicType::VaryingInt64)) {
+    } else if (Type::Equal(constType, AtomicType::UniformInt64) || Type::Equal(constType, AtomicType::VaryingInt64)) {
         int64_t iv[ISPC_MAX_NVEC];
-        GetValues(iv, type->IsVaryingType());
-        if (type->IsUniformType())
+        GetValues(iv, constType->IsVaryingType());
+        if (constType->IsUniformType())
             return std::pair<llvm::Constant *, bool>(LLVMInt64(iv[0]), isNotValidForMultiTargetGlobal);
         else
             return std::pair<llvm::Constant *, bool>(LLVMInt64Vector(iv), isNotValidForMultiTargetGlobal);
-    } else if (Type::Equal(type, AtomicType::UniformUInt64) || Type::Equal(type, AtomicType::VaryingUInt64)) {
+    } else if (Type::Equal(constType, AtomicType::UniformUInt64) || Type::Equal(constType, AtomicType::VaryingUInt64)) {
         uint64_t uiv[ISPC_MAX_NVEC];
-        GetValues(uiv, type->IsVaryingType());
-        if (type->IsUniformType())
+        GetValues(uiv, constType->IsVaryingType());
+        if (constType->IsUniformType())
             return std::pair<llvm::Constant *, bool>(LLVMUInt64(uiv[0]), isNotValidForMultiTargetGlobal);
         else
             return std::pair<llvm::Constant *, bool>(LLVMUInt64Vector(uiv), isNotValidForMultiTargetGlobal);
-    } else if (Type::Equal(type, AtomicType::UniformDouble) || Type::Equal(type, AtomicType::VaryingDouble)) {
+    } else if (Type::Equal(constType, AtomicType::UniformDouble) || Type::Equal(constType, AtomicType::VaryingDouble)) {
         double dv[ISPC_MAX_NVEC];
-        GetValues(dv, type->IsVaryingType());
-        if (type->IsUniformType())
+        GetValues(dv, constType->IsVaryingType());
+        if (constType->IsUniformType())
             return std::pair<llvm::Constant *, bool>(LLVMDouble(dv[0]), isNotValidForMultiTargetGlobal);
         else
             return std::pair<llvm::Constant *, bool>(LLVMDoubleVector(dv), isNotValidForMultiTargetGlobal);
-    } else if (CastType<PointerType>(type) != NULL) {
+    } else if (CastType<PointerType>(constType) != NULL) {
         // The only time we should get here is if we have an integer '0'
         // constant that should be turned into a NULL pointer of the
         // appropriate type.
-        llvm::Type *llvmType = type->LLVMType(g->ctx);
+        llvm::Type *llvmType = constType->LLVMType(g->ctx);
         if (llvmType == NULL) {
             AssertPos(pos, m->errorCount > 0);
             return std::pair<llvm::Constant *, bool>(NULL, false);
         }
 
         int64_t iv[ISPC_MAX_NVEC];
-        GetValues(iv, type->IsVaryingType());
+        GetValues(iv, constType->IsVaryingType());
         for (int i = 0; i < Count(); ++i)
             if (iv[i] != 0)
                 // We'll issue an error about this later--trying to assign
@@ -5862,7 +5862,7 @@ std::pair<llvm::Constant *, bool> ConstExpr::GetConstant(const Type *type) const
         return std::pair<llvm::Constant *, bool>(llvm::Constant::getNullValue(llvmType),
                                                  isNotValidForMultiTargetGlobal);
     } else {
-        Debug(pos, "Unable to handle type \"%s\" in ConstExpr::GetConstant().", type->GetString().c_str());
+        Debug(pos, "Unable to handle type \"%s\" in ConstExpr::GetConstant().", constType->GetString().c_str());
         return std::pair<llvm::Constant *, bool>(NULL, isNotValidForMultiTargetGlobal);
     }
 }
