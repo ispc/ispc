@@ -815,17 +815,17 @@ bool Module::writeOutput(OutputType outputType, OutputFlags flags, const char *o
     if (diBuilder && (outputType != Header) && (outputType != Deps))
         lStripUnusedDebugInfo(module);
 
+    // SIC! (verifyModule() == TRUE) means "failed", see llvm-link code.
+    if ((outputType != Header) && (outputType != Deps) && (outputType != HostStub) && (outputType != DevStub) &&
+        module && llvm::verifyModule(*module))
+        FATAL("Resulting module verification failed!");
+
     // In LLVM_3_4 after r195494 and r195504 revisions we should pass
     // "Debug Info Version" constant to the module. LLVM will ignore
     // our Debug Info metadata without it.
     if (g->generateDebuggingSymbols == true) {
         module->addModuleFlag(llvm::Module::Warning, "Debug Info Version", llvm::DEBUG_METADATA_VERSION);
     }
-
-    // SIC! (verifyModule() == TRUE) means "failed", see llvm-link code.
-    if ((outputType != Header) && (outputType != Deps) && (outputType != HostStub) && (outputType != DevStub) &&
-        module && llvm::verifyModule(*module))
-        FATAL("Resulting module verification failed!");
 
     if (outFileName) {
         // First, issue a warning if the output file suffix and the type of
