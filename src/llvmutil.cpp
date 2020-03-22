@@ -44,6 +44,7 @@
 #include <llvm/IR/Module.h>
 #include <map>
 #include <set>
+#include <vector>
 
 llvm::Type *LLVMTypes::VoidType = NULL;
 llvm::PointerType *LLVMTypes::VoidPointerType = NULL;
@@ -561,10 +562,7 @@ static bool lIsFirstElementConstVector(llvm::Value *v) {
 
 llvm::Value *LLVMFlattenInsertChain(llvm::Value *inst, int vectorWidth, bool compare, bool undef,
                                     bool searchFirstUndef) {
-    llvm::Value **elements = new llvm::Value *[vectorWidth];
-    for (int i = 0; i < vectorWidth; ++i) {
-        elements[i] = NULL;
-    }
+    std::vector<llvm::Value *> elements(vectorWidth, nullptr);
 
     // Catch a pattern of InsertElement chain.
     if (llvm::InsertElementInst *ie = llvm::dyn_cast<llvm::InsertElementInst>(inst)) {
