@@ -1134,6 +1134,7 @@ std::string Target::GetTripleString() const {
         triple.setOS(llvm::Triple::OSType::Win32);
         triple.setEnvironment(llvm::Triple::EnvironmentType::MSVC);
         break;
+    case TargetOS::custom_linux:
     case TargetOS::linux:
         if (m_arch == Arch::x86) {
             triple.setArchName("i386");
@@ -1232,8 +1233,7 @@ std::string Target::GetTripleString() const {
         triple.setVendor(llvm::Triple::VendorType::UnknownVendor);
         triple.setOS(llvm::Triple::OSType::UnknownOS);
         break;
-    default:
-
+    case TargetOS::error:
         Error(SourcePos(), "Invalid target OS.");
         exit(1);
     }
