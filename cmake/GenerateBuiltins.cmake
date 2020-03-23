@@ -232,7 +232,7 @@ function(builtin_to_cpp bit os_name arch supported_archs supported_oses resultFi
         if (${os_name} STREQUAL "web")
             add_custom_command(
                 OUTPUT ${output}
-                COMMAND ${EMCC_EXECUTABLE} -DWASM -s WASM_OBJECT_FILES=0 -c ${inputFilePath} -emit-llvm -c -o - -s EXPORTED_FUNCTIONS='["___wasm_do_print", "___wasm_clock"]'
+                COMMAND ${EMCC_EXECUTABLE} -DWASM -s WASM_OBJECT_FILES=0 -c ${inputFilePath} -emit-llvm -c -o - -s EXPORTED_FUNCTIONS='[\"___wasm_do_print\", \"___wasm_clock\"]'
                     | (\"${LLVM_DIS_EXECUTABLE}\" - || echo "builtins.c compile error")
                     | \"${Python3_EXECUTABLE}\" bitcode2cpp.py c --type=builtins-c --runtime=${bit} --os=${os_name} --arch=${target_arch} --llvm_as ${LLVM_AS_EXECUTABLE}
                     > ${output}
