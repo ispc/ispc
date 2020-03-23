@@ -870,6 +870,14 @@ int main(int Argc, char *Argv[]) {
         if (!cpu) {
             cpu = "cortex-a57";
         }
+        if (targets.empty()) {
+            targets.push_back(ISPCTarget::neon_i32x4);
+            std::string target_string = ISPCTargetToString(targets[0]);
+            Warning(SourcePos(),
+                    "No --target specified on command-line."
+                    " Using \"%s\".",
+                    target_string.c_str());
+        }
     }
 
     if (g->enableFuzzTest) {
