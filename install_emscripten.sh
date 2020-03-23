@@ -5,4 +5,4 @@ git pull && \
 ./emsdk install latest && \
 ./emsdk activate latest && \
 source ./emsdk_env.sh
-cd $(WD)
+cd $WD
