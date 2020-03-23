@@ -37,21 +37,21 @@ environment:
   matrix:
     - APPVEYOR_BUILD_WORKER_IMAGE: Ubuntu1604
       LLVM_VERSION: latest
-    - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2017
-      LLVM_VERSION: 7.0
-    - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2017
-      LLVM_VERSION: 8.0
-    - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2019
-      LLVM_VERSION: 9.0
     - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2019
       LLVM_VERSION: latest
+    - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2019
+      LLVM_VERSION: 9.0
+    - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2017
+      LLVM_VERSION: 8.0
+    - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2017
+      LLVM_VERSION: 7.0
 
 for:
 -
   matrix:
     only:
-    - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2017
     - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2019
+    - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2017
   init:
     - cmd: |-
         set ISPC_HOME=%APPVEYOR_BUILD_FOLDER%
