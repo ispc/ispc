@@ -349,8 +349,11 @@ static void lPrint(const char *type, bool isError, SourcePos p, const char *fmt,
 }
 
 void Error(SourcePos p, const char *fmt, ...) {
-    if (m != NULL)
+    if (m != NULL) {
         ++m->errorCount;
+        if ((g->errorLimit != -1) && (g->errorLimit <= m->errorCount - 1))
+            return;
+    }
     if (g->quiet)
         return;
 

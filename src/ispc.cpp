@@ -1453,6 +1453,7 @@ Globals::Globals() {
     fuzzTestSeed = -1;
     mangleFunctionsWithTarget = false;
     isMultiTargetCompilation = false;
+    errorLimit = -1;
 
     ctx = new llvm::LLVMContext;
 

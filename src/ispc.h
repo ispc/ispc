@@ -630,6 +630,9 @@ struct Globals {
 
     /* If true, we are compiling for more than one target. */
     bool isMultiTargetCompilation;
+
+    /* Number of errors to show in ISPC. */
+    int errorLimit;
 };
 
 enum {
