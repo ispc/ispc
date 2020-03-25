@@ -138,7 +138,7 @@ def checkout_LLVM(component, use_git, version_LLVM, revision, target_dir, from_v
     elif  version_LLVM == "10_0":
         SVN_PATH="UNSUPPORTED"
         # Update tag when 10.0 releases
-        GIT_TAG="origin/release/10.x"
+        GIT_TAG="llvmorg-10.0.0"
     elif  version_LLVM == "9_0":
         SVN_PATH="UNSUPPORTED"
         GIT_TAG="llvmorg-9.0.1"
