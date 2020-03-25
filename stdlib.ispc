@@ -329,6 +329,11 @@ static inline uniform float extract(float x, uniform int i) {
 }
 
 __declspec(safe,cost1)
+static inline uniform bool extract(bool x, uniform int i) {
+    return __extract_bool(x, i);
+}
+
+__declspec(safe,cost1)
 static inline uniform int8 extract(int8 x, uniform int i) {
     return __extract_int8(x, i);
 }
@@ -377,6 +382,11 @@ static inline uniform unsigned int64 extract(unsigned int64 x, uniform int i) {
 __declspec(safe,cost1)
 static inline float insert(float x, uniform int i, uniform float v) {
     return floatbits(__insert_int32((int)intbits(x), i, (int)intbits(v)));
+}
+
+__declspec(safe,cost1)
+static inline bool insert(bool x, uniform int i, uniform bool v) {
+    return __insert_bool(x, i, v);
 }
 
 __declspec(safe,cost1)

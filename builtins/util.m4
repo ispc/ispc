@@ -4947,6 +4947,21 @@ ifelse(HAVE_SCATTER, `1',
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; vector ops
 
+define i1 @__extract_bool(<WIDTH x MASK>, i32) nounwind readnone alwaysinline {
+  %extract = extractelement <WIDTH x MASK> %0, i32 %1
+  ifelse(MASK,i1, `%extractBool = bitcast i1 %extract to i1',
+                  `%extractBool = trunc MASK %extract to i1')
+  ret i1 %extractBool
+}
+
+define <WIDTH x MASK> @__insert_bool(<WIDTH x MASK>, i32, 
+                                   i1) nounwind readnone alwaysinline {
+  ifelse(MASK,i1, `%insertVal = bitcast i1 %2 to i1',
+                  `%insertVal = sext i1 %2 to MASK')
+  %insert = insertelement <WIDTH x MASK> %0, MASK %insertVal, i32 %1
+  ret <WIDTH x MASK> %insert
+}
+
 define i8 @__extract_int8(<WIDTH x i8>, i32) nounwind readnone alwaysinline {
   %extract = extractelement <WIDTH x i8> %0, i32 %1
   ret i8 %extract
