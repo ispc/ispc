@@ -362,20 +362,24 @@ endif()
 # Link options
 if (WIN32)
     if (NOT CMAKE_BUILD_TYPE STREQUAL "DEBUG" )
-        set_target_properties(${PROJECT_NAME} PROPERTIES LINK_FLAGS "/OPT:REF /OPT:ICF")
+        target_link_options(${PROJECT_NAME} PUBLIC /OPT:REF /OPT:ICF)
     endif()
 elseif (APPLE)
 else()
     # Link options for security hardening.
-    set_target_properties(${PROJECT_NAME} PROPERTIES LINK_FLAGS "-z noexecstack -z relro -z now -Wl,--gc-sections")
+    target_link_options(${PROJECT_NAME}
+        PUBLIC "SHELL: -z noexecstack"
+               "SHELL: -z relro"
+               "SHELL: -z now"
+               "SHELL: -Wl,--gc-sections")
 endif()
 
 if (ISPC_STATIC_STDCXX_LINK OR ISPC_STATIC_LINK)
-    set_target_properties(${PROJECT_NAME} PROPERTIES LINK_FLAGS "-static-libgcc -static-libstdc++")
+    target_link_options(${PROJECT_NAME} PUBLIC -static-libgcc -static-libstdc++)
 endif()
 
 if (ISPC_USE_ASAN)
-    set_target_properties(${PROJECT_NAME} PROPERTIES LINK_FLAGS "-fsanitize=address")
+    target_link_options(${PROJECT_NAME} PUBLIC -fsanitize=address)
 endif()
 
 # Link against Clang libraries
