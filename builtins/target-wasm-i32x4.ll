@@ -437,16 +437,16 @@ define <WIDTH x i64> @__max_varying_uint64(<WIDTH x i64>, <WIDTH x i64>) nounwin
   ret <WIDTH x i64> %r
 }
 
-define <4 x float> @__max_varying_float(<4 x float> %a, <4 x float> %b) local_unnamed_addr #1 {
-entry:
-  %0 = tail call <4 x float> @llvm.maximum.v4f32(<4 x float> %a, <4 x float> %b) #5
-  ret <4 x float> %0
+define <4 x float> @__min_varying_float(<4 x float> %0, <4 x float> %1) {
+  %3 = fcmp olt <4 x float> %0, %1
+  %4 = select <4 x i1> %3, <4 x float>  %0, <4 x float>  %1
+  ret <4 x float>  %4
 }
 
-define <4 x float> @__min_varying_float(<4 x float> %a, <4 x float> %b) local_unnamed_addr #1 {
-entry:
-  %0 = tail call <4 x float> @llvm.minimum.v4f32(<4 x float> %a, <4 x float> %b) #5
-  ret <4 x float> %0
+define <4 x float> @__max_varying_float(<4 x float> %0, <4 x float> %1) unnamed_addr #0 {
+  %3 = fcmp ogt <4 x float> %0, %1
+  %4 = select <4 x i1> %3, <4 x float>  %0, <4 x float>  %1
+  ret <4 x float>  %4
 }
 
 define <4 x double> @__max_varying_double(<4 x double> %a, <4 x double> %b) {
