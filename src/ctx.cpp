@@ -110,6 +110,7 @@ struct CFInfo {
         savedDefaultBlock = NULL;
         savedCaseBlocks = NULL;
         savedNextBlocks = NULL;
+        savedSwitchConditionWasUniform = false;
     }
     CFInfo(CFType t, bool iu, llvm::BasicBlock *bt, llvm::BasicBlock *ct, llvm::Value *sb, llvm::Value *sc,
            llvm::Value *sm, llvm::Value *lm, llvm::Value *sse = NULL, llvm::BasicBlock *bbd = NULL,
@@ -145,6 +146,7 @@ struct CFInfo {
         savedDefaultBlock = NULL;
         savedCaseBlocks = NULL;
         savedNextBlocks = NULL;
+        savedSwitchConditionWasUniform = false;
     }
 };
 
@@ -1500,7 +1502,12 @@ llvm::Value *FunctionEmitContext::SmearUniform(llvm::Value *value, const char *n
 
     // Check for a constant case.
     if (llvm::Constant *const_val = llvm::dyn_cast<llvm::Constant>(value)) {
+#if ISPC_LLVM_VERSION < ISPC_LLVM_11_0
         ret = llvm::ConstantVector::getSplat(g->target->getVectorWidth(), const_val);
+#else // LLVM 11.0+
+        ret =
+            llvm::ConstantVector::getSplat({static_cast<unsigned int>(g->target->getVectorWidth()), false}, const_val);
+#endif
         return ret;
     }
 
@@ -2809,8 +2816,14 @@ llvm::Value *FunctionEmitContext::BroadcastValue(llvm::Value *v, llvm::Type *vec
     llvm::Value *insert = InsertInst(undef1, v, 0, tw.str().c_str());
 
     // ShuffleVector
+#if ISPC_LLVM_VERSION < ISPC_LLVM_11_0
     llvm::Constant *zeroVec = llvm::ConstantVector::getSplat(
         vecType->getVectorNumElements(), llvm::Constant::getNullValue(llvm::Type::getInt32Ty(*g->ctx)));
+#else // LLVM 11.0+
+    llvm::Constant *zeroVec =
+        llvm::ConstantVector::getSplat({static_cast<unsigned int>(vecType->getVectorNumElements()), false},
+                                       llvm::Constant::getNullValue(llvm::Type::getInt32Ty(*g->ctx)));
+#endif
     llvm::Value *ret = ShuffleInst(insert, undef2, zeroVec, name);
 
     return ret;

@@ -509,10 +509,6 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, bool pic, boo
             break;
 
         case CPU_IvyBridge:
-            // No specific m_ispc_target for IvyBridge anymore.
-            m_ispc_target = ISPCTarget::avx1_i32x8;
-            break;
-
         case CPU_SandyBridge:
             m_ispc_target = ISPCTarget::avx1_i32x8;
             break;
@@ -1016,13 +1012,21 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, bool pic, boo
         }
         llvm::TargetOptions options;
 #ifdef ISPC_ARM_ENABLED
-        if (m_isa == Target::NEON)
-            options.FloatABIType = llvm::FloatABI::Hard;
+        options.FloatABIType = llvm::FloatABI::Hard;
         if (arch == Arch::arm) {
-            this->m_funcAttributes.push_back(std::make_pair("target-features", "+neon,+fp16"));
+            if (g->target_os == TargetOS::custom_linux) {
+                this->m_funcAttributes.push_back(std::make_pair("target-features", "+crypto,+fp-armv8,+neon,+sha2"));
+            } else {
+                this->m_funcAttributes.push_back(std::make_pair("target-features", "+neon,+fp16"));
+            }
             featuresString = "+neon,+fp16";
         } else if (arch == Arch::aarch64) {
-            this->m_funcAttributes.push_back(std::make_pair("target-features", "+neon"));
+            if (g->target_os == TargetOS::custom_linux) {
+                this->m_funcAttributes.push_back(
+                    std::make_pair("target-features", "+aes,+crc,+crypto,+fp-armv8,+neon,+sha2"));
+            } else {
+                this->m_funcAttributes.push_back(std::make_pair("target-features", "+neon"));
+            }
             featuresString = "+neon";
         }
 #endif
@@ -1133,6 +1137,7 @@ std::string Target::GetTripleString() const {
         triple.setOS(llvm::Triple::OSType::Win32);
         triple.setEnvironment(llvm::Triple::EnvironmentType::MSVC);
         break;
+    case TargetOS::custom_linux:
     case TargetOS::linux:
         if (m_arch == Arch::x86) {
             triple.setArchName("i386");
@@ -1148,7 +1153,14 @@ std::string Target::GetTripleString() const {
         }
         triple.setVendor(llvm::Triple::VendorType::UnknownVendor);
         triple.setOS(llvm::Triple::OSType::Linux);
-        triple.setEnvironment(llvm::Triple::EnvironmentType::GNU);
+        if (m_arch == Arch::x86 || m_arch == Arch::x86_64 || m_arch == Arch::aarch64) {
+            triple.setEnvironment(llvm::Triple::EnvironmentType::GNU);
+        } else if (m_arch == Arch::arm) {
+            triple.setEnvironment(llvm::Triple::EnvironmentType::GNUEABIHF);
+        } else {
+            Error(SourcePos(), "Unknown arch.");
+            exit(1);
+        }
         break;
     case TargetOS::freebsd:
         if (m_arch == Arch::x86) {
@@ -1224,8 +1236,7 @@ std::string Target::GetTripleString() const {
         triple.setVendor(llvm::Triple::VendorType::UnknownVendor);
         triple.setOS(llvm::Triple::OSType::UnknownOS);
         break;
-    default:
-
+    case TargetOS::error:
         Error(SourcePos(), "Invalid target OS.");
         exit(1);
     }
@@ -1449,6 +1460,7 @@ Globals::Globals() {
     fuzzTestSeed = -1;
     mangleFunctionsWithTarget = false;
     isMultiTargetCompilation = false;
+    errorLimit = -1;
 
     ctx = new llvm::LLVMContext;
 

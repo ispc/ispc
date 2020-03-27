@@ -40,3 +40,4 @@ by updates of docker files.
 01/07/2020: Updated LLVM 9.0 docker to use VS2019
 01/16/2020: Updated LLVM 8.0 docker with r372480 patch and LLVM 9.0 docker with 9.0.1 version instead of 9.0
 01/30/2020: Added dockers for LLVM 10.0. Switched latest to LLVM 9.0
+03/18/2020: Updated LLVM 10.0 docker

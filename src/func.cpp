@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2011-2019, Intel Corporation
+  Copyright (c) 2011-2020, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -103,14 +103,14 @@ Function::Function(Symbol *s, Stmt *c) {
 
     for (int i = 0; i < type->GetNumParameters(); ++i) {
         const char *paramName = type->GetParameterName(i).c_str();
-        Symbol *sym = m->symbolTable->LookupVariable(paramName);
-        if (sym == NULL)
+        Symbol *paramSym = m->symbolTable->LookupVariable(paramName);
+        if (paramSym == NULL)
             Assert(strncmp(paramName, "__anon_parameter_", 17) == 0);
-        args.push_back(sym);
+        args.push_back(paramSym);
 
         const Type *t = type->GetParameterType(i);
-        if (sym != NULL && CastType<ReferenceType>(t) == NULL)
-            sym->parentFunction = this;
+        if (paramSym != NULL && CastType<ReferenceType>(t) == NULL)
+            paramSym->parentFunction = this;
     }
 
     if (type->isTask) {
@@ -280,19 +280,19 @@ void Function::emitCode(FunctionEmitContext *ctx, llvm::Function *function, Sour
         // Regular, non-task function
         llvm::Function::arg_iterator argIter = function->arg_begin();
         for (unsigned int i = 0; i < args.size(); ++i, ++argIter) {
-            Symbol *sym = args[i];
-            if (sym == NULL)
+            Symbol *argSym = args[i];
+            if (argSym == NULL)
                 // anonymous function parameter
                 continue;
 
-            argIter->setName(sym->name.c_str());
+            argIter->setName(argSym->name.c_str());
 
             // Allocate stack storage for the parameter and emit code
             // to store the its value there.
-            sym->storagePtr = ctx->AllocaInst(argIter->getType(), sym->name.c_str());
+            argSym->storagePtr = ctx->AllocaInst(argIter->getType(), argSym->name.c_str());
 
-            ctx->StoreInst(&*argIter, sym->storagePtr);
-            ctx->EmitFunctionParameterDebugInfo(sym, i);
+            ctx->StoreInst(&*argIter, argSym->storagePtr);
+            ctx->EmitFunctionParameterDebugInfo(argSym, i);
         }
 
         // If the number of actual function arguments is equal to the

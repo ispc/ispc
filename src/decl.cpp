@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2019, Intel Corporation
+  Copyright (c) 2010-2020, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -570,17 +570,17 @@ void Declarator::InitFromType(const Type *baseType, DeclSpecs *ds) {
         if (ds != NULL) {
             for (int i = 0; i < (int)ds->declSpecList.size(); ++i) {
                 std::string str = ds->declSpecList[i].first;
-                SourcePos pos = ds->declSpecList[i].second;
+                SourcePos ds_spec_pos = ds->declSpecList[i].second;
 
                 if (str == "safe")
                     (const_cast<FunctionType *>(functionType))->isSafe = true;
                 else if (!strncmp(str.c_str(), "cost", 4)) {
                     int cost = atoi(str.c_str() + 4);
                     if (cost < 0)
-                        Error(pos, "Negative function cost %d is illegal.", cost);
+                        Error(ds_spec_pos, "Negative function cost %d is illegal.", cost);
                     (const_cast<FunctionType *>(functionType))->costOverride = cost;
                 } else
-                    Error(pos, "__declspec parameter \"%s\" unknown.", str.c_str());
+                    Error(ds_spec_pos, "__declspec parameter \"%s\" unknown.", str.c_str());
             }
         }
 

@@ -48,7 +48,7 @@ if ! [[ $CURRENT_VERSION =~ $VERSION_STRING ]] ; then
 fi
 
 # Check all source files.
-FILES=`ls src/*.cpp src/*.h *.cpp builtins/*.c`
+FILES=`ls src/*.cpp src/*.h *.cpp builtins/*.c benchmarks/*/*.cpp benchmarks/*/*.ispc`
 for FILE in $FILES; do
     $CLANG_FORMAT $FILE | cmp  $FILE >/dev/null
     if [ $? -ne 0 ]; then

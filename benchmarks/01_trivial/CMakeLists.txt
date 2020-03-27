@@ -30,4 +30,6 @@
 #   NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 #   SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-
+# List the benchmarks
+compile_benchmark_test(01_aossoa)
+compile_benchmark_test(02_soaaos)

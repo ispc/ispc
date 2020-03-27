@@ -33,7 +33,7 @@
 #
 # ispc CMakeLists.txt
 #
-cmake_minimum_required(VERSION 3.12)
+cmake_minimum_required(VERSION 3.13)
 
 if (UNIX)
     set(CMAKE_C_COMPILER "clang")
@@ -115,9 +115,9 @@ endif()
 if (UNIX)
     option(ISPC_STATIC_STDCXX_LINK "Link statically with libstdc++ and libgcc" OFF)
     if (ISPC_PREPARE_PACKAGE AND (NOT APPLE))
-        option(ISPC_STATIC_LINK "Link statically" ON)
+        option(ISPC_STATIC_LINK "Link statically (all except glibc)" ON)
     else()
-        option(ISPC_STATIC_LINK "Link statically" OFF)
+        option(ISPC_STATIC_LINK "Link statically (all except glibc)" OFF)
     endif()
     option(ISPC_USE_ASAN "Build ispc with address sanitizer instrumentation using clang compiler" OFF)
 endif()
@@ -367,24 +367,24 @@ endif()
 # Link options
 if (WIN32)
     if (NOT CMAKE_BUILD_TYPE STREQUAL "DEBUG" )
-        set_target_properties(${PROJECT_NAME} PROPERTIES LINK_FLAGS "/OPT:REF /OPT:ICF")
+        target_link_options(${PROJECT_NAME} PUBLIC /OPT:REF /OPT:ICF)
     endif()
 elseif (APPLE)
 else()
     # Link options for security hardening.
-    set_target_properties(${PROJECT_NAME} PROPERTIES LINK_FLAGS "-z noexecstack -z relro -z now -Wl,--gc-sections")
+    target_link_options(${PROJECT_NAME}
+        PUBLIC "SHELL: -z noexecstack"
+               "SHELL: -z relro"
+               "SHELL: -z now"
+               "SHELL: -Wl,--gc-sections")
 endif()
 
-if (ISPC_STATIC_STDCXX_LINK)
-    set_target_properties(${PROJECT_NAME} PROPERTIES LINK_FLAGS "-static-libgcc -static-libstdc++")
-endif()
-
-if (ISPC_STATIC_LINK)
-    set_target_properties(${PROJECT_NAME} PROPERTIES LINK_FLAGS "-static")
+if (ISPC_STATIC_STDCXX_LINK OR ISPC_STATIC_LINK)
+    target_link_options(${PROJECT_NAME} PUBLIC -static-libgcc -static-libstdc++)
 endif()
 
 if (ISPC_USE_ASAN)
-    set_target_properties(${PROJECT_NAME} PROPERTIES LINK_FLAGS "-fsanitize=address")
+    target_link_options(${PROJECT_NAME} PUBLIC -fsanitize=address)
 endif()
 
 # Link against Clang libraries
@@ -396,16 +396,19 @@ target_link_libraries(${PROJECT_NAME} ${CLANG_LIBRARY_FULL_PATH_LIST})
 
 # Link against LLVM libraries
 target_link_libraries(${PROJECT_NAME} ${LLVM_LIBRARY_LIST})
+
+# System libraries, our own and transitive dependencies from LLVM libs.
 if (WIN32)
     target_link_libraries(${PROJECT_NAME} version.lib shlwapi.lib odbc32.lib odbccp32.lib)
 else()
-    target_link_libraries(${PROJECT_NAME} pthread dl)
-    target_link_libraries(${PROJECT_NAME} z)
     if (APPLE)
-        target_link_libraries(${PROJECT_NAME} curses)
+        target_link_libraries(${PROJECT_NAME} pthread z curses)
     else()
-        target_link_libraries(${PROJECT_NAME} tinfo)
-        target_link_libraries(${PROJECT_NAME} curses)
+        if (ISPC_STATIC_LINK)
+            target_link_libraries(${PROJECT_NAME} pthread z.a tinfo.a curses.a)
+        else()
+            target_link_libraries(${PROJECT_NAME} pthread z tinfo curses)
+        endif()
     endif()
 endif()
 

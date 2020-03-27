@@ -315,7 +315,7 @@ void Module::AddGlobalVariable(const std::string &name, const Type *type, Expr *
     // make sure it's a compile-time constant!
     llvm::Constant *llvmInitializer = NULL;
     ConstExpr *constValue = NULL;
-    if (storageClass == SC_EXTERN || storageClass == SC_EXTERN_C) {
+    if (storageClass == SC_EXTERN) {
         if (initExpr != NULL)
             Error(pos,
                   "Initializer can't be provided with \"extern\" "
@@ -815,6 +815,8 @@ bool Module::writeOutput(OutputType outputType, OutputFlags flags, const char *o
     if (diBuilder && (outputType != Header) && (outputType != Deps))
         lStripUnusedDebugInfo(module);
 
+    Assert(module);
+
     // In LLVM_3_4 after r195494 and r195504 revisions we should pass
     // "Debug Info Version" constant to the module. LLVM will ignore
     // our Debug Info metadata without it.
@@ -824,8 +826,9 @@ bool Module::writeOutput(OutputType outputType, OutputFlags flags, const char *o
 
     // SIC! (verifyModule() == TRUE) means "failed", see llvm-link code.
     if ((outputType != Header) && (outputType != Deps) && (outputType != HostStub) && (outputType != DevStub) &&
-        module && llvm::verifyModule(*module))
+        llvm::verifyModule(*module)) {
         FATAL("Resulting module verification failed!");
+    }
 
     if (outFileName) {
         // First, issue a warning if the output file suffix and the type of
@@ -2496,7 +2499,7 @@ int Module::CompileAndOutput(const char *srcFile, Arch arch, const char *cpu, st
         // Handle creating a "generic" header file for multiple targets
         // that use exported varyings
         DispatchHeaderInfo DHI;
-        if ((targets.size() > 1) && (headerFileName != NULL)) {
+        if (headerFileName != NULL) {
             DHI.file = fopen(headerFileName, "w");
             if (!DHI.file) {
                 perror("fopen");

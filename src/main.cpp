@@ -118,6 +118,7 @@ static void lPrintVersion() {
     printf("    [--emit-llvm-text]\t\t\tEmit LLVM bitcode file as output in textual form\n");
     printf("    [--emit-obj]\t\t\tGenerate object file file as output (default)\n");
     printf("    [--force-alignment=<value>]\t\tForce alignment in memory allocations routine to be <value>\n");
+    printf("    [--error-limit=<value>]\t\tLimit maximum number of errors emitting by ISPC to <value>\n");
     printf("    [-g]\t\t\t\tGenerate source-level debug information\n");
     printf("    [--help]\t\t\t\tPrint help\n");
     printf("    [--help-dev]\t\t\tPrint help for developer options\n");
@@ -725,7 +726,15 @@ int main(int Argc, char *Argv[]) {
             g->emitPerfWarnings = false;
         } else if (!strcmp(argv[i], "--werror"))
             g->warningsAsErrors = true;
-        else if (!strcmp(argv[i], "--nowrap"))
+        else if (!strncmp(argv[i], "--error-limit=", 14)) {
+            int errLimit = atoi(argv[i] + 14);
+            if (errLimit >= 0)
+                g->errorLimit = errLimit;
+            else
+                errorHandler.AddError("Invalid value for --error-limit: \"%d\" -- "
+                                      "value cannot be a negative number.",
+                                      errLimit);
+        } else if (!strcmp(argv[i], "--nowrap"))
             g->disableLineWrap = true;
         else if (!strcmp(argv[i], "--wno-perf") || !strcmp(argv[i], "-wno-perf"))
             g->emitPerfWarnings = false;
@@ -861,6 +870,22 @@ int main(int Argc, char *Argv[]) {
         if (arch != Arch::x86_64) {
             Warning(SourcePos(), "--arch switch is ignored for PS4 target OS. x86-64 arch is used.");
             arch = Arch::x86_64;
+        }
+    }
+
+    // Default setting for "custom_linux"
+    if (g->target_os == TargetOS::custom_linux) {
+        flags |= Module::GeneratePIC;
+        if (!cpu) {
+            cpu = "cortex-a57";
+        }
+        if (targets.empty()) {
+            targets.push_back(ISPCTarget::neon_i32x4);
+            std::string target_string = ISPCTargetToString(targets[0]);
+            Warning(SourcePos(),
+                    "No --target specified on command-line."
+                    " Using \"%s\".",
+                    target_string.c_str());
         }
     }
 
