@@ -73,7 +73,7 @@
 // #define _SC_NPROCESSORS_ONLN 58
 // long sysconf(int);
 #endif // !_MSC_VER
-
+#endif // !WASM
 #include <stdarg.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -205,6 +205,9 @@ done:
     fflush(stdout);
 }
 
+#ifdef WASM
+int __num_cores() { return 1; }
+#else // WASM
 int __num_cores() {
 #if defined(_MSC_VER) || defined(__MINGW32__)
     // This is quite a hack.  Including all of windows.h to get this definition
@@ -228,10 +231,4 @@ int __num_cores() {
     return sysconf(_SC_NPROCESSORS_ONLN);
 #endif // !_MSC_VER
 }
-
-#else // WASM
-#include <stdint.h>
-void __do_print(const char *format, const char *types, int width, uint64_t mask, void **args) {}
-
-int __num_cores() { return 1; }
-#endif
+#endif // !WASM

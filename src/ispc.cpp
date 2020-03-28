@@ -951,7 +951,14 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, bool pic, boo
         this->m_vectorWidth = 4;
         this->m_hasHalf = false;
         this->m_maskingIsFree = false;
-        this->m_maskBitCount = 1;
+        this->m_maskBitCount = 32;
+        this->m_hasTranscendentals = false;
+        this->m_hasTrigonometry = false;
+        this->m_hasRcpd = false;
+        this->m_hasRsqrtd = false;
+        this->m_hasScatter = false;
+        this->m_hasGather = false;
+        this->m_hasVecPrefetch = false;
         break;
 #else
     case ISPCTarget::wasm_i32x4:

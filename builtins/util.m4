@@ -5446,10 +5446,13 @@ m4exit(`1')
 
 declare i64 @llvm.readcyclecounter()
 
+ifelse(HAS_CUSTOM_CLOCK, `1',`
+',`
 define i64 @__clock() nounwind {
   %r = call i64 @llvm.readcyclecounter()
   ret i64 %r
 }
+')
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; stdlib transcendentals

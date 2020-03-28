@@ -1196,6 +1196,10 @@ llvm::Value *FunctionEmitContext::MasksAllEqual(llvm::Value *v1, llvm::Value *v2
     // And see if it's all on
     return All(cmp);
 #else
+    if (g->target->getArch() == Arch::wasm32) {
+        llvm::Function *fmm = m->module->getFunction("__wasm_cmp_msk_eq");
+        return CallInst(fmm, NULL, {v1, v2}, LLVMGetName("wasm_cmp_msk_eq", v1, v2));
+    }
     llvm::Value *mm1 = LaneMask(v1);
     llvm::Value *mm2 = LaneMask(v2);
     return CmpInst(llvm::Instruction::ICmp, llvm::CmpInst::ICMP_EQ, mm1, mm2, LLVMGetName("equal", v1, v2));
