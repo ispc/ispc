@@ -170,6 +170,11 @@ endfunction()
 macro(compile_benchmark_test name)
     add_executable(${name} "")
 
+    # aligned_alloc() requires C++17
+    set_target_properties(${name} PROPERTIES
+        CXX_STANDARD 17
+        CXX_STANDARD_REQUIRED YES)
+
     add_ispc_to_target(
         TARGET ${name}
         CPP_MAIN_FILE ${CMAKE_CURRENT_SOURCE_DIR}/${name}.cpp
