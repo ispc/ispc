@@ -73,7 +73,7 @@
 // #define _SC_NPROCESSORS_ONLN 58
 // long sysconf(int);
 #endif // !_MSC_VER
-#endif // WASM
+#endif // !WASM
 #include <stdarg.h>
 #include <stdint.h>
 #include <stdio.h>
