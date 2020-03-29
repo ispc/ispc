@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-#  Copyright (c) 2013-2019, Intel Corporation
+#  Copyright (c) 2013-2020, Intel Corporation
 #  All rights reserved.
 # 
 #  Redistribution and use in source and binary forms, with or without
@@ -36,6 +36,7 @@
 import common
 import sys
 import os
+import re
 from pkg_resources import parse_version
 print_debug = common.print_debug
 error = common.error
@@ -78,11 +79,16 @@ for i in range(5,8):
         error("you don't have " + names[i], 2)
 print_debug("\nCMake:\n", False, "")
 if exists[8]:
-    cmake_version = take_lines(names[8] + " --version", "first")[3]
-    if (parse_version(cmake_version) >= parse_version("3.8.0")):
-        print_debug(take_lines(names[8] + " --version", "first"), False, "")
+    first_line = take_lines(names[8] + " --version", "first")
+    matched_version = re.search(r"\d+\.\d+\.\d+", first_line)
+    if matched_version is None:
+        error("Unable to parse cmake version")
     else:
-        error("CMake version is older than needed. Please install version 3.8 or newer", 2)
+        cmake_version = matched_version.group(0)
+        if (parse_version(cmake_version) >= parse_version("3.13.0")):
+            print_debug(first_line, False, "")
+        else:
+            error("CMake version is older than needed. Please install version 3.8 or newer", 2)
 else:
     error("you don't have " + names[8], 2)
 
