@@ -322,18 +322,20 @@ static bool lDoTypeConv(const Type *fromType, const Type *toType, Expr **expr, b
         } else if (!Type::Equal(fromPointerType->GetBaseType(), toPointerType->GetBaseType()) &&
                    !Type::Equal(fromPointerType->GetBaseType()->GetAsConstType(), toPointerType->GetBaseType())) {
             // for const * -> * conversion, print warning.
-            if (Type::Equal(fromPointerType->GetBaseType(), toPointerType->GetBaseType()->GetAsConstType())) {
-                Warning(pos,
-                        "Converting from const pointer type \"%s\" to "
-                        "pointer type \"%s\" for %s discards const qualifier.",
-                        fromPointerType->GetString().c_str(), toPointerType->GetString().c_str(), errorMsgBase);
-
+            if (Type::EqualIgnoringConst(fromPointerType->GetBaseType(), toPointerType->GetBaseType())) {
+                if (!Type::Equal(fromPointerType->GetBaseType()->GetAsConstType(), toPointerType->GetBaseType())) {
+                    Warning(pos,
+                            "Converting from const pointer type \"%s\" to "
+                            "pointer type \"%s\" for %s discards const qualifier.",
+                            fromPointerType->GetString().c_str(), toPointerType->GetString().c_str(), errorMsgBase);
+                }
             } else {
-                if (!failureOk)
+                if (!failureOk) {
                     Error(pos,
                           "Can't convert from pointer type \"%s\" to "
                           "incompatible pointer type \"%s\" for %s.",
                           fromPointerType->GetString().c_str(), toPointerType->GetString().c_str(), errorMsgBase);
+                }
                 return false;
             }
         }
