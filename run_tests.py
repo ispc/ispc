@@ -74,7 +74,7 @@ class Host(object):
         ispc_ext = ""
         if self.is_windows():
             ispc_ext = ".exe"
-        if os.environ["ISPC_HOME"]:
+        if "ISPC_HOME" in os.environ:
             if os.path.exists(os.environ["ISPC_HOME"] + os.sep + "ispc" + ispc_ext):
                 ispc_exe = os.environ["ISPC_HOME"] + os.sep + "ispc" + ispc_ext
         PATH_dir = os.environ["PATH"].split(os.pathsep)
