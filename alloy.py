@@ -383,7 +383,7 @@ def build_LLVM(version_LLVM, revision, folder, tarball, debug, selfbuild, extra,
                         from_validation)
         else:
             try_do_LLVM("configure release version ",
-                    'cmake -A Win32 -G ' + '\"' + generator + '\"' + ' -DCMAKE_INSTALL_PREFIX="..\\'+ LLVM_BIN + '" ' +
+                    'cmake -Thost=x64 -G ' + '\"' + generator + '\"' + ' -DCMAKE_INSTALL_PREFIX="..\\'+ LLVM_BIN + '" ' +
                     '  -DCMAKE_BUILD_TYPE=Release' +
                     llvm_enable_projects +
                     get_llvm_enable_dump_switch(version_LLVM) +
@@ -425,7 +425,7 @@ def build_LLVM(version_LLVM, revision, folder, tarball, debug, selfbuild, extra,
         try_do_LLVM("build LLVM ", make, from_validation)
         try_do_LLVM("install LLVM ", "make install", from_validation)
     else:
-        try_do_LLVM("build LLVM and than install LLVM ", "msbuild INSTALL.vcxproj /V:m /p:Platform=Win32 /p:Configuration=Release /t:rebuild", from_validation)
+        try_do_LLVM("build LLVM and than install LLVM ", "msbuild INSTALL.vcxproj /V:m /p:Platform=x64 /p:Configuration=Release /t:rebuild", from_validation)
     os.chdir(current_path) 
 
 
@@ -563,12 +563,12 @@ def build_ispc(version_LLVM, make):
         copyfile(os.path.join(ispc_home, ISPC_BIN, "bin", "ispc"), os.path.join(ispc_home, + "ispc"))
         os.environ["PATH"] = p_temp
     else:
-        try_do_LLVM("configure ispc build", 'cmake -A Win32 -G ' + '\"' + generator + '\"' + ' -DCMAKE_INSTALL_PREFIX="..\\'+ ISPC_BIN + '" ' +
+        try_do_LLVM("configure ispc build", 'cmake -Thost=x64 -G ' + '\"' + generator + '\"' + ' -DCMAKE_INSTALL_PREFIX="..\\'+ ISPC_BIN + '" ' +
                     '  -DCMAKE_BUILD_TYPE=Release ' +
                         ispc_home, True)
         try_do_LLVM("clean ISPC for building", "msbuild ispc.vcxproj /t:clean", True)
-        try_do_LLVM("build ISPC with LLVM version " + version_LLVM + " ", "msbuild ispc.vcxproj /V:m /p:Platform=Win32 /p:Configuration=Release /t:rebuild", True)
-        try_do_LLVM("install ISPC  ", "msbuild INSTALL.vcxproj /p:Platform=Win32 /p:Configuration=Release", True)
+        try_do_LLVM("build ISPC with LLVM version " + version_LLVM + " ", "msbuild ispc.vcxproj /V:m /p:Platform=x64 /p:Configuration=Release /t:rebuild", True)
+        try_do_LLVM("install ISPC  ", "msbuild INSTALL.vcxproj /p:Platform=x64 /p:Configuration=Release", True)
         copyfile(os.path.join(ispc_home, ISPC_BIN, "bin", "ispc.exe"), os.path.join(ispc_home, + "ispc.exe"))
 
     os.chdir(current_path)

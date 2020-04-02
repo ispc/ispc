@@ -59,9 +59,9 @@ for:
         set CROSS_TOOLS=C:\projects\cross
         set CHOCO_DIR=%ProgramData%\chocolatey
         set MACOS_SDK=MacOSX10.13.sdk
-        if "%APPVEYOR_BUILD_WORKER_IMAGE%"=="Visual Studio 2017" ( (set generator="Visual Studio 15") & (set vsversion=2017))
+        if "%APPVEYOR_BUILD_WORKER_IMAGE%"=="Visual Studio 2017" ( (set generator="Visual Studio 15 Win64") & (set vsversion=2017))
         if "%APPVEYOR_BUILD_WORKER_IMAGE%"=="Visual Studio 2019" ( (set generator="Visual Studio 16") & (set vsversion=2019))
-        call "C:\Program Files (x86)\Microsoft Visual Studio\%vsversion%\Community\VC\Auxiliary\Build\vcvars32.bat"
+        call "C:\Program Files (x86)\Microsoft Visual Studio\%vsversion%\Community\VC\Auxiliary\Build\vcvars64.bat"
   install:
     - cmd: |-
         cinst winflexbison3
@@ -81,14 +81,14 @@ for:
   before_build:
     - cmd: |-
         cd %ISPC_HOME% && mkdir build && cd build
-        cmake .. -A Win32 -G %generator% -DCMAKE_INSTALL_PREFIX=%ISPC_HOME%\install -DISPC_PREPARE_PACKAGE=ON -DM4_EXECUTABLE=C:\cygwin64\bin\m4.exe -DISPC_CROSS=ON -DISPC_GNUWIN32_PATH=%CROSS_TOOLS%\gnuwin32 -DISPC_MACOS_SDK_PATH=%CROSS_TOOLS%\%MACOS_SDK%
+        cmake .. -Thost=x64 -G %generator% -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=%ISPC_HOME%\install -DISPC_PREPARE_PACKAGE=ON -DM4_EXECUTABLE=C:\cygwin64\bin\m4.exe -DISPC_CROSS=ON -DISPC_GNUWIN32_PATH=%CROSS_TOOLS%\gnuwin32 -DISPC_MACOS_SDK_PATH=%CROSS_TOOLS%\%MACOS_SDK%
   build_script:
-    - cmd: msbuild %ISPC_HOME%\build\PACKAGE.vcxproj
+    - cmd: msbuild %ISPC_HOME%\build\PACKAGE.vcxproj /p:Platform=x64 /p:Configuration=Release
   test_script:
   # Perf tests require Win64 configuration. "Visual Studio 16" generator is Win64 by default but for older versions
   # we need to specify it manually.
     - cmd: |-
-        msbuild c:\projects\ispc\build\tests\check-all.vcxproj /t:Build
+        msbuild c:\projects\ispc\build\tests\check-all.vcxproj /t:Build /p:Platform=x64 /p:Configuration=Release
         set PATH=%ISPC_HOME%\build\bin\%configuration%;%PATH%
         cd %ISPC_HOME%
         check_isa.exe
