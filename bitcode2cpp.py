@@ -10,9 +10,9 @@ import argparse
 parser = argparse.ArgumentParser()
 parser.add_argument("src", help="Source file to process")
 parser.add_argument("--type", help="Type of processed file", choices=['dispatch', 'builtins-c', 'ispc-target'], required=True)
-parser.add_argument("--runtime", help="Runtime", nargs='?', default='')
-parser.add_argument("--os", help="Target OS", default='')
-parser.add_argument("--arch", help="Target architecture", default='')
+parser.add_argument("--runtime", help="Runtime", choices=['32', '64'], nargs='?', default='')
+parser.add_argument("--os", help="Target OS", choices=['windows', 'linux', 'macos', 'freebsd', 'android', 'ios', 'ps4', 'web', 'WINDOWS', 'UNIX', 'WEB'], default='')
+parser.add_argument("--arch", help="Target architecture", choices=['i386', 'x86_64', 'armv7', 'arm64', 'aarch64', 'wasm32'], default='')
 parser.add_argument("--llvm_as", help="Path to LLVM assembler executable", dest="path_to_llvm_as")
 args = parser.parse_known_args()
 src = args[0].src
@@ -36,14 +36,14 @@ else:
 try:
     as_out=subprocess.Popen([llvm_as, "-", "-o", "-"], stdout=subprocess.PIPE)
 except IOError:
-    sys.stderr.write("Couldn't open " + src)
+    sys.stderr.write("Couldn't open " + src + "\n")
     sys.exit(1)
 
 name = target
 if args[0].runtime != '':
     name += "_" + args[0].runtime + "bit"
 
-# Macro style arguments "UNIX" and "WINDOWS" for .ll to .cpp (dispatch and targets)
+# Macro style arguments "UNIX", "WINDOWS", and "WEB" for .ll to .cpp (dispatch and targets)
 if args[0].os == "UNIX":
     target_os_old = "unix"
     target_os = "linux"
@@ -54,11 +54,11 @@ elif args[0].os == "WEB":
     target_os_old = "web"
     target_os = "web"
 # Exact OS names for builtins.c
-elif args[0].os in ["windows", "linux", "freebsd", "macos", "android", "ios", "ps4", "web"]:
+elif args[0].os in ["windows", "linux", "macos", "freebsd", "android", "ios", "ps4", "web"]:
     target_os_old = args[0].os
     target_os = args[0].os
 else:
-    sys.stderr.write("Unknown argument for --os: " + args[0].os)
+    sys.stderr.write("Unknown argument for --os: " + args[0].os + "\n")
     sys.exit(1)
 
 target_arch = ""
@@ -126,6 +126,9 @@ elif args[0].type == 'ispc-target':
         arch = "x86" if args[0].runtime == "32" else "x86_64" if args[0].runtime == "64" else "error"
     elif "wasm" in target:
         arch = "wasm32"
+    else:
+        sys.stderr.write("Unknown target detected: " + target + "\n")
+        sys.exit(1)
     sys.stdout.write("static BitcodeLib " + name + "_lib(" +
         name + ", " +
         name + "_length, " +
@@ -134,7 +137,7 @@ elif args[0].type == 'ispc-target':
         "Arch::" + arch +
         ");\n")
 else:
-    sys.stderr.write("Unknown argument for --os: " + args[0].os)
+    sys.stderr.write("Unknown argument for --type: " + args[0].type + "\n")
     sys.exit(1)
 
 as_out.wait()
