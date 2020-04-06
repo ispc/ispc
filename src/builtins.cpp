@@ -761,24 +761,6 @@ void AddBitcodeToModule(const BitcodeLib *lib, llvm::Module *module, SymbolTable
         llvm::Triple mTriple(m->module->getTargetTriple());
         llvm::Triple bcTriple(bcModule->getTargetTriple());
         Debug(SourcePos(), "module triple: %s\nbitcode triple: %s\n", mTriple.str().c_str(), bcTriple.str().c_str());
-#if defined(ISPC_ARM_ENABLED) && !defined(__arm__)
-        // FIXME: More ugly and dangerous stuff.  We really haven't set up
-        // proper build and runtime infrastructure for ispc to do
-        // cross-compilation, yet it's at minimum useful to be able to emit
-        // ARM code from x86 for ispc development.  One side-effect is that
-        // when the build process turns builtins/builtins.c to LLVM bitcode
-        // for us to link in at runtime, that bitcode has been compiled for
-        // an IA target, which in turn causes the checks in the following
-        // code to (appropraitely) fail.
-        //
-        // In order to be able to have some ability to generate ARM code on
-        // IA, we'll just skip those tests in that case and allow the
-        // setTargetTriple() and setDataLayout() calls below to shove in
-        // the values for an ARM target.  This maybe won't cause problems
-        // in the generated code, since bulitins.c doesn't do anything too
-        // complex w.r.t. struct layouts, etc.
-        if (g->target->getISA() != Target::NEON)
-#endif // !__arm__
 
         // Disable this code for cross compilation
 #if 0
@@ -803,7 +785,8 @@ void AddBitcodeToModule(const BitcodeLib *lib, llvm::Module *module, SymbolTable
                 }
             }
 #endif
-            bcModule->setTargetTriple(mTriple.str());
+
+        bcModule->setTargetTriple(mTriple.str());
         bcModule->setDataLayout(module->getDataLayout());
 
         // A hack to move over declaration, which have no definition.
