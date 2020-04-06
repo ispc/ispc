@@ -51,6 +51,8 @@ Arch ParseArch(std::string arch) {
         return Arch::arm;
     } else if (arch == "aarch64") {
         return Arch::aarch64;
+    } else if (arch == "wasm32") {
+        return Arch::wasm32;
     }
     return Arch::error;
 }
