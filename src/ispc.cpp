@@ -1312,7 +1312,7 @@ const char *Target::ISAToTargetString(ISA isa) {
     return "";
 }
 
-const char *Target::GetISATargetString() const { return ISAToString(m_isa); }
+const char *Target::GetISATargetString() const { return ISAToTargetString(m_isa); }
 
 static bool lGenericTypeLayoutIndeterminate(llvm::Type *type) {
     if (type->isFloatingPointTy() || type->isX86_MMXTy() || type->isVoidTy() || type->isIntegerTy() ||
