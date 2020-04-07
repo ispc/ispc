@@ -12,7 +12,7 @@ static float float4(uniform float a, uniform float b, uniform float c,
 
 
 
-bool ok(float x, float ref) { return (abs(x - ref) < 1e-6) || abs((x-ref)/ref) < 1e-5; }
+bool ok(float x, float ref) { return (abs(x - ref) < 1e-6) || abs((x-ref)/ref) < 1e-4; }
 
 export void f_v(uniform float RET[]) {
     float v = float4((1.000000000000000),(-1.000000000000000),(0),(0));
