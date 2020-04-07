@@ -194,9 +194,7 @@ function(builtin_to_cpp bit os_name arch supported_archs supported_oses resultFi
             set(SKIP ON)
         endif()
     endif()
-    if (${os_name} STREQUAL "freebsd" AND ${target_arch} STREQUAL "x86_64")
-        set(target_arch "amd64")
-    endif()
+    # FreeBSD seems to prefer using amd64 over x86_64 naming, but it's nothing more than an alias.
 
     # Determine triple
     if (${os_name} STREQUAL "windows")
