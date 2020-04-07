@@ -1076,6 +1076,13 @@ void DefineStdlib(SymbolTable *symbolTable, llvm::LLVMContext *ctx, llvm::Module
     lDefineConstantInt("__have_native_rcpd", g->target->hasRcpd(), module, symbolTable, debug_symbols);
     lDefineConstantInt("__have_saturating_arithmetic", g->target->hasSatArith(), module, symbolTable, debug_symbols);
 
+#ifdef ISPC_GENX_ENABLED
+    lDefineConstantInt("__is_genx_target", (int)(g->target->getISA() == Target::GENX), module, symbolTable,
+                       debug_symbols);
+#else
+    lDefineConstantInt("__is_genx_target", (int)0, module, symbolTable, debug_symbols);
+#endif /* ISPC_GENX_ENABLED */
+
     if (g->forceAlignment != -1) {
         llvm::GlobalVariable *alignment = module->getGlobalVariable("memory_alignment", true);
         alignment->setInitializer(LLVMInt32(g->forceAlignment));

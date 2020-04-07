@@ -3074,30 +3074,12 @@ static inline float acos(float v) {
 }
 
 __declspec(safe)
-static inline double acos(const double v) {
-  if (__have_native_trigonometry)
-    return __acos_varying_double(v);
-  else
-    return 1.57079637050628662109375d0 - asin(v);
-}
-
-
-__declspec(safe)
 static inline uniform float acos(uniform float v) {
   if (__have_native_trigonometry)
     return __acos_uniform_float(v);
   else
     return 1.57079637050628662109375 - asin(v);
 }
-
-__declspec(safe)
-static inline uniform double acos(const uniform double v) {
-  if (__have_native_trigonometry)
-    return __acos_uniform_double(v);
-  else
-    return 1.57079637050628662109375d0 - asin(v);
-}
-
 
 __declspec(safe)
 static inline void sincos(float x_full, varying float * uniform sin_result,
@@ -4084,6 +4066,7 @@ static inline uniform double frexp(uniform double x, uniform int * uniform pw2) 
     return doublebits(ix);
 }
 
+#ifndef __is_genx_target
 __declspec(safe)
 static inline double sin(double x) {
     if (__have_native_trigonometry)
@@ -4123,6 +4106,22 @@ static inline uniform double sin(uniform double x) {
     }
     else
         return __stdlib_sin(x);
+}
+
+__declspec(safe)
+static inline double acos(const double v) {
+  if (__have_native_trigonometry)
+    return __acos_varying_double(v);
+  else
+    return 1.57079637050628662109375d0 - asin(v);
+}
+
+__declspec(safe)
+static inline uniform double acos(const uniform double v) {
+  if (__have_native_trigonometry)
+    return __acos_uniform_double(v);
+  else
+    return 1.57079637050628662109375d0 - asin(v);
 }
 
 __declspec(safe)
@@ -4376,7 +4375,7 @@ static inline uniform double pow(uniform double a, uniform double b) {
     else
         return __stdlib_pow(a, b);
 }
-
+#endif
 ///////////////////////////////////////////////////////////////////////////
 // half-precision floats
 
