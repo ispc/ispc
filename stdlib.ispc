@@ -2814,7 +2814,7 @@ static inline float asin(float x0) {
     bool isnan = (x > 1);
     float v;
 
-    if (__have_native_trigonometry)
+    if (__have_native_trigonometry && !__is_genx_target)
     {
       return __asin_varying_float(x0);
     }
@@ -2879,7 +2879,7 @@ static inline uniform float asin(uniform float x0) {
     uniform float x = abs(x0);
     uniform bool isnan = (x > 1);
     uniform float v;
-    if (__have_native_trigonometry)
+    if (__have_native_trigonometry && !__is_genx_target)
     {
       return __asin_uniform_float(x0);
     }
@@ -3067,7 +3067,7 @@ static inline uniform float cos(uniform float x_full) {
 
 __declspec(safe)
 static inline float acos(float v) {
-  if (__have_native_trigonometry)
+  if (__have_native_trigonometry && !__is_genx_target)
     return __acos_varying_float(v);
   else
     return 1.57079637050628662109375 - asin(v);
@@ -3075,7 +3075,7 @@ static inline float acos(float v) {
 
 __declspec(safe)
 static inline uniform float acos(uniform float v) {
-  if (__have_native_trigonometry)
+  if (__have_native_trigonometry && !__is_genx_target)
     return __acos_uniform_float(v);
   else
     return 1.57079637050628662109375 - asin(v);
@@ -3084,7 +3084,7 @@ static inline uniform float acos(uniform float v) {
 __declspec(safe)
 static inline void sincos(float x_full, varying float * uniform sin_result,
                           varying float * uniform cos_result) {
-    if (__have_native_trigonometry)
+    if (__have_native_trigonometry && !__is_genx_target)
     {
       __sincos_varying_float(x_full,sin_result,cos_result);
     }
@@ -3158,7 +3158,7 @@ static inline void sincos(float x_full, varying float * uniform sin_result,
 __declspec(safe)
 static inline void sincos(uniform float x_full, uniform float * uniform sin_result,
                           uniform float * uniform cos_result) {
-    if (__have_native_trigonometry)
+    if (__have_native_trigonometry && !__is_genx_target)
     {
       __sincos_uniform_float(x_full, sin_result, cos_result);
     }
@@ -3383,7 +3383,7 @@ static inline uniform float tan(uniform float x_full) {
 
 __declspec(safe)
 static inline float atan(float x_full) {
-    if (__have_native_trigonometry)
+    if (__have_native_trigonometry && !__is_genx_target)
     {
       return __atan_varying_float(x_full);
     }
@@ -3438,7 +3438,7 @@ static inline float atan(float x_full) {
 
 __declspec(safe)
 static inline uniform float atan(uniform float x_full) {
-    if (__have_native_trigonometry)
+    if (__have_native_trigonometry && !__is_genx_target)
     {
       return __atan_uniform_float(x_full);
     }
@@ -3486,7 +3486,7 @@ static inline uniform float atan(uniform float x_full) {
 
 __declspec(safe)
 static inline float atan2(float y, float x) {
-    if (__have_native_trigonometry)
+    if (__have_native_trigonometry && !__is_genx_target)
     {
       return __atan2_varying_float(y,x);
     }
@@ -3529,7 +3529,7 @@ static inline float atan2(float y, float x) {
 
 __declspec(safe)
 static inline uniform float atan2(uniform float y, uniform float x) {
-    if (__have_native_trigonometry)
+    if (__have_native_trigonometry && !__is_genx_target)
     {
       return __atan2_uniform_float(y,x);
     }

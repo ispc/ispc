@@ -5998,21 +5998,15 @@ define(`transcendetals_decl',`
 ')
 
 define(`trigonometry_decl',`
-    declare <WIDTH x float> @__sin_varying_float(<WIDTH x float>) nounwind readnone
     declare <WIDTH x float> @__asin_varying_float(<WIDTH x float>) nounwind readnone
-    declare <WIDTH x float> @__cos_varying_float(<WIDTH x float>) nounwind readnone
     declare <WIDTH x float> @__acos_varying_float(<WIDTH x float>) nounwind readnone
     declare void @__sincos_varying_float(<WIDTH x float>, <WIDTH x float>*, <WIDTH x float>*) nounwind
-    declare <WIDTH x float> @__tan_varying_float(<WIDTH x float>) nounwind readnone
     declare <WIDTH x float> @__atan_varying_float(<WIDTH x float>) nounwind readnone
     declare <WIDTH x float> @__atan2_varying_float(<WIDTH x float>,<WIDTH x float>) nounwind readnone
 
-    declare float @__sin_uniform_float(float) nounwind readnone
     declare float @__asin_uniform_float(float) nounwind readnone
-    declare float @__cos_uniform_float(float) nounwind readnone
     declare float @__acos_uniform_float(float) nounwind readnone
     declare void @__sincos_uniform_float(float, float*, float*) nounwind
-    declare float @__tan_uniform_float(float) nounwind readnone
     declare float @__atan_uniform_float(float) nounwind readnone
     declare float @__atan2_uniform_float(float,float) nounwind readnone
 
