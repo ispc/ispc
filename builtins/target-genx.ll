@@ -1093,7 +1093,7 @@ define <WIDTH x float> @__pow_varying_float(<WIDTH x float>, <WIDTH x float>) no
   ret <WIDTH x float> %res
 }
 
-declare float @llvm.genx.exp(float) nounwind readnone
+
 define float @__exp_uniform_float(float) nounwind readnone {
   %res = call float @llvm.genx.pow(float EXP, float %0)
   ret float %res
@@ -1107,4 +1107,46 @@ define <WIDTH x float> @__exp_varying_float(<WIDTH x float>) nounwind readnone {
 }
 
 transcendetals_decl()
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; native trigonometry
+
+declare float @llvm.genx.sin(float) nounwind readnone
+define float @__sin_uniform_float(float) nounwind readnone {
+  %res = call float @llvm.genx.sin(float %0)
+  ret float %res
+}
+
+declare <WIDTH x float> @llvm.genx.sin.GEN_SUFFIX(float)(<WIDTH x float>) nounwind readnone
+define <WIDTH x float> @__sin_varying_float(<WIDTH x float>) nounwind readnone {
+  %res = call <WIDTH x float> @llvm.genx.sin.GEN_SUFFIX(float)(<WIDTH x float> %0)
+  ret <WIDTH x float> %res
+}
+
+declare float @llvm.genx.cos(float) nounwind readnone
+define float @__cos_uniform_float(float) nounwind readnone {
+  %res = call float @llvm.genx.cos(float %0)
+  ret float %res
+}
+
+declare <WIDTH x float> @llvm.genx.cos.GEN_SUFFIX(float)(<WIDTH x float>) nounwind readnone
+define <WIDTH x float> @__cos_varying_float(<WIDTH x float>) nounwind readnone {
+  %res = call <WIDTH x float> @llvm.genx.cos.GEN_SUFFIX(float)(<WIDTH x float> %0)
+  ret <WIDTH x float> %res
+}
+
+define float @__tan_uniform_float(float) nounwind readnone {
+  %cos = call float @llvm.genx.cos(float %0)
+  %sin = call float @llvm.genx.sin(float %0)
+  %res = fdiv float %sin, %cos
+  ret float %res
+}
+
+define <WIDTH x float> @__tan_varying_float(<WIDTH x float>) nounwind readnone {
+  %cos = call <WIDTH x float> @llvm.genx.cos.GEN_SUFFIX(float)(<WIDTH x float> %0)
+  %sin = call <WIDTH x float> @llvm.genx.sin.GEN_SUFFIX(float)(<WIDTH x float> %0)
+  %res = fdiv <WIDTH x float> %sin, %cos
+  ret <WIDTH x float> %res
+}
+
 trigonometry_decl()
