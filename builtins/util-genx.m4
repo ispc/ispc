@@ -5989,13 +5989,6 @@ global_atomic_varying(WIDTH, umin, i64, uint64)
 global_atomic_varying(WIDTH, umax, i64, uint64)
 
 define(`transcendetals_decl',`
-    declare float @__log_uniform_float(float) nounwind readnone
-    declare <WIDTH x float> @__log_varying_float(<WIDTH x float>) nounwind readnone
-    declare float @__exp_uniform_float(float) nounwind readnone
-    declare <WIDTH x float> @__exp_varying_float(<WIDTH x float>) nounwind readnone
-    declare float @__pow_uniform_float(float, float) nounwind readnone
-    declare <WIDTH x float> @__pow_varying_float(<WIDTH x float>, <WIDTH x float>) nounwind readnone
-
     declare double @__log_uniform_double(double) nounwind readnone
     declare <WIDTH x double> @__log_varying_double(<WIDTH x double>) nounwind readnone
     declare double @__exp_uniform_double(double) nounwind readnone
