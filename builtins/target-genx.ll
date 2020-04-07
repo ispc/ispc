@@ -1059,5 +1059,52 @@ define_avgs()
 rsqrtd_decl()
 rcpd_decl()
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; native transcendetals
+
+define(`EXP', `0x4005BF0A80000000')
+define(`LOG2E', `0x3FF7154760000000') ;; LOG2E = log(2, e)
+
+declare float @llvm.genx.log(float) nounwind readnone
+define float @__log_uniform_float(float) nounwind readnone {
+  %res2base = call float @llvm.genx.log(float %0)
+  %res = fdiv float %res2base, LOG2E
+  ret float %res
+}
+
+declare <WIDTH x float> @llvm.genx.log.GEN_SUFFIX(float)(<WIDTH x float>) nounwind readnone
+define <WIDTH x float> @__log_varying_float(<WIDTH x float>) nounwind readnone {
+  %res2base = call <WIDTH x float> @llvm.genx.log.GEN_SUFFIX(float)(<WIDTH x float> %0)
+  %log2e = insertelement <WIDTH x float> undef, float LOG2E, i32 0
+  %log2e_shuffle = shufflevector <WIDTH x float> %log2e, <WIDTH x float> undef, <WIDTH x i32> zeroinitializer
+  %res = fdiv <WIDTH x float> %res2base, %log2e_shuffle
+  ret <WIDTH x float> %res
+}
+
+declare float @llvm.genx.pow(float, float) nounwind readnone
+define float @__pow_uniform_float(float, float) nounwind readnone {
+  %res = call float @llvm.genx.pow(float %0, float %1)
+  ret float %res
+}
+
+declare <WIDTH x float> @llvm.genx.pow.GEN_SUFFIX(float).GEN_SUFFIX(float)(<WIDTH x float>, <WIDTH x float>) nounwind readnone
+define <WIDTH x float> @__pow_varying_float(<WIDTH x float>, <WIDTH x float>) nounwind readnone {
+  %res = call <WIDTH x float> @llvm.genx.pow.GEN_SUFFIX(float).GEN_SUFFIX(float)(<WIDTH x float> %0, <WIDTH x float> %1)
+  ret <WIDTH x float> %res
+}
+
+declare float @llvm.genx.exp(float) nounwind readnone
+define float @__exp_uniform_float(float) nounwind readnone {
+  %res = call float @llvm.genx.pow(float EXP, float %0)
+  ret float %res
+}
+
+define <WIDTH x float> @__exp_varying_float(<WIDTH x float>) nounwind readnone {
+  %exp = insertelement <WIDTH x float> undef, float EXP, i32 0
+  %exp_shuffle = shufflevector <WIDTH x float> %exp, <WIDTH x float> undef, <WIDTH x i32> zeroinitializer
+  %res = call <WIDTH x float> @llvm.genx.pow.GEN_SUFFIX(float).GEN_SUFFIX(float)(<WIDTH x float> %exp_shuffle, <WIDTH x float> %0)
+  ret <WIDTH x float> %res
+}
+
 transcendetals_decl()
 trigonometry_decl()

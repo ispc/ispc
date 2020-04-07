@@ -990,7 +990,7 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, bool pic, boo
         this->m_maskingIsFree = true;
         this->m_maskBitCount = 1;
         this->m_hasSaturatingArithmetic = true;
-        // this->m_hasTranscendentals = true;
+        this->m_hasTranscendentals = true;
         // this->m_hasTrigonometry = true;
         this->m_hasGather = this->m_hasScatter = true;
         CPUfromISA = CPU_GENX;
@@ -1006,7 +1006,7 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, bool pic, boo
         this->m_maskingIsFree = true;
         this->m_maskBitCount = 1;
         this->m_hasSaturatingArithmetic = true;
-        // this->m_hasTranscendentals = true;
+        this->m_hasTranscendentals = true;
         // this->m_hasTrigonometry = true;
         this->m_hasGather = this->m_hasScatter = true;
         CPUfromISA = CPU_GENX;
