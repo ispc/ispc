@@ -2887,7 +2887,11 @@ static bool lImproveMaskedStore(llvm::CallInst *callInst) {
         llvm::Type *rvalueType = rvalue->getType();
         llvm::Instruction *store = NULL;
 #ifdef ISPC_GENX_ENABLED
-        if (g->target->getISA() == Target::GENX && GetAddressSpace(lvalue) == AddressSpace::External) {
+        // InternalLinkage check is to prevent generation of SVM store when the pointer came from caller.
+        // Since it can be allocated in a caller, it may be allocated on register. Possible svm store
+        // is resolved after inlining. TODO: problems can be met here in case of Stack Calls.
+        if (g->target->getISA() == Target::GENX && GetAddressSpace(lvalue) == AddressSpace::External &&
+            callInst->getParent()->getParent()->getLinkage() != llvm::GlobalValue::LinkageTypes::InternalLinkage) {
             Assert(llvm::isa<llvm::VectorType>(rvalue->getType()));
             Assert(llvm::isPowerOf2_32(rvalue->getType()->getVectorNumElements()));
             Assert(rvalue->getType()->getPrimitiveSizeInBits() / 8 <= 8 * OWORD);
@@ -2979,7 +2983,11 @@ static bool lImproveMaskedLoad(llvm::CallInst *callInst, llvm::BasicBlock::itera
         // The mask is all on, so turn this into a regular load
         llvm::Instruction *load = NULL;
 #ifdef ISPC_GENX_ENABLED
-        if (g->target->getISA() == Target::GENX && GetAddressSpace(ptr) == AddressSpace::External) {
+        // InternalLinkage check is to prevent generation of SVM load when the pointer came from caller.
+        // Since it can be allocated in a caller, it may be allocated on register. Possible svm load
+        // is resolved after inlining. TODO: problems can be met here in case of Stack Calls.
+        if (g->target->getISA() == Target::GENX && GetAddressSpace(ptr) == AddressSpace::External &&
+            callInst->getParent()->getParent()->getLinkage() != llvm::GlobalValue::LinkageTypes::InternalLinkage) {
             llvm::Type *retType = callInst->getType();
             Assert(llvm::isa<llvm::VectorType>(retType));
             Assert(llvm::isPowerOf2_32(retType->getVectorNumElements()));

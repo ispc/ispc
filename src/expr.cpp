@@ -7555,6 +7555,13 @@ llvm::Value *SymbolExpr::GetValue(FunctionEmitContext *ctx) const {
     ctx->SetDebugPos(pos);
 
     std::string loadName = symbol->name + std::string("_load");
+#ifdef ISPC_GENX_ENABLED
+    // TODO: this is a temporary workaround and will be changed as part
+    // of SPIR-V emitting solution
+    if (g->target->getISA() == Target::GENX && symbol->name == "__mask") {
+        return ctx->GenXSimdCFPredicate(LLVMMaskAllOn);
+    }
+#endif
     return ctx->LoadInst(symbol->storagePtr, symbol->type, loadName.c_str());
 }
 
