@@ -559,7 +559,7 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, bool pic, boo
         } else
 #endif
 #if ISPC_GENX_ENABLED
-        if (ISPCTargetIsGen(m_ispc_target)) {
+            if (ISPCTargetIsGen(m_ispc_target)) {
             arch = Arch::genx64;
         } else
 #endif

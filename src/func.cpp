@@ -344,9 +344,11 @@ void Function::emitCode(FunctionEmitContext *ctx, llvm::Function *function, Sour
         // on, all off, or mixed.  If this is a simple function, then this
         // isn't worth the code bloat / overhead.
 #ifdef ISPC_GENX_ENABLED
-        bool checkMask = (g->target->getISA() != Target::GENX && type->isTask == true) ||
+        bool checkMask =
+            (g->target->getISA() != Target::GENX && type->isTask == true) ||
 #else
-        bool checkMask = (type->isTask == true) ||
+        bool checkMask =
+            (type->isTask == true) ||
 #endif
             ((function->getAttributes().getFnAttributes().hasAttribute(llvm::Attribute::AlwaysInline) == false) &&
              costEstimate > CHECK_MASK_AT_FUNCTION_START_COST);

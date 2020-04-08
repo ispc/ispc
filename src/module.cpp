@@ -752,7 +752,7 @@ void Module::AddFunctionDeclaration(const std::string &name, const FunctionType 
         if (g->target->getISA() != Target::GENX)
 #endif /* ISPC_GENX_ENABLED */
             // This also applies transitively to members I think?
-        function->addParamAttr(0, llvm::Attribute::NoAlias);
+            function->addParamAttr(0, llvm::Attribute::NoAlias);
     }
     if (((isVectorCall) && (storageClass == SC_EXTERN_C)) || (storageClass != SC_EXTERN_C)) {
         g->target->markFuncWithCallingConv(function);
@@ -1064,7 +1064,7 @@ bool Module::writeObjectFileOrAssembly(llvm::TargetMachine *targetMachine, llvm:
     llvm::TargetMachine::CodeGenFileType fileType = (outputType == Object || outputType == ISA)
                                                         ? llvm::TargetMachine::CGFT_ObjectFile
                                                         : llvm::TargetMachine::CGFT_AssemblyFile;
-#else // !ISPC_GENX_ENABLED
+#else  // !ISPC_GENX_ENABLED
     llvm::TargetMachine::CodeGenFileType fileType =
         (outputType == Object) ? llvm::TargetMachine::CGFT_ObjectFile : llvm::TargetMachine::CGFT_AssemblyFile;
 #endif // ISPC_GENX_ENABLED
