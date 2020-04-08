@@ -260,6 +260,29 @@ FunctionEmitContext::FunctionEmitContext(Function *func, Symbol *funSym, llvm::F
         returnValuePtr = AllocaInst(returnType, "return_value_memory");
     }
 
+#ifdef ISPC_GENX_ENABLED
+    if (g->target->getISA() == Target::GENX) {
+        /* Create return point for GenX */
+        returnPoint = llvm::BasicBlock::Create(*g->ctx, "return_point", llvmFunction, 0);
+        /* Load return value and return it */
+        if (returnValuePtr != NULL) {
+            // We have value(s) to return; load them from their storage
+            // location
+            // Note that LoadInst() needs to be used instead of direct llvm instruction generation
+            // to handle correctly bool values (they need extra convertion, as memory representation
+            // is i8, while in SSa form they are l1)
+            auto bb = GetCurrentBasicBlock();;
+            SetCurrentBasicBlock(returnPoint);
+            llvm::Value *retVal = LoadInst(returnValuePtr, returnType, "return_value");
+            SetCurrentBasicBlock(bb);
+            // llvm::Value *retVal = new llvm::LoadInst(returnValuePtr, "return_value", returnPoint);
+            llvm::ReturnInst::Create(*g->ctx, retVal, returnPoint);
+        } else {
+            llvm::ReturnInst::Create(*g->ctx, returnPoint);
+        }
+    }
+#endif
+
     if (g->opt.disableMaskAllOnOptimizations) {
         // This is really disgusting.  We want to be able to fool the
         // compiler to not be able to reason that the mask is all on, but
@@ -1237,8 +1260,9 @@ void FunctionEmitContext::CurrentLanesReturned(Expr *expr, bool doCoherenceCheck
         }
     }
 #ifdef ISPC_GENX_ENABLED
-    if (g->target->getISA() == Target::GENX && !ifEmulatedUniformForGen() && VaryingCFDepth() == 0 ||
-        g->target->getISA() != Target::GENX && VaryingCFDepth() == 0) {
+    if (g->target->getISA() == Target::GENX || g->target->getISA() != Target::GENX && VaryingCFDepth() == 0) {
+        // Don't need to create mask management instructions for GenX
+        // since execution is managed through GenX EM
 #else
     if (VaryingCFDepth() == 0) {
 #endif
@@ -3391,6 +3415,20 @@ llvm::Instruction *FunctionEmitContext::ReturnInst() {
     if (launchedTasks)
         // Add a sync call at the end of any function that launched tasks
         SyncInst();
+
+#ifdef ISPC_GENX_ENABLED
+    if (g->target->getISA() == Target::GENX) {
+        // Branch to return point. It will turn off lanes
+        // in varying CF. For uniform CF it will be considered
+        // as usual jmp.
+        // TODO: this is a temporary workaround and will be
+        // changed with SPIR-V emitting solution
+        BranchInst(returnPoint);
+        bblock = NULL;
+        // We don't actually create return instruction here
+        return NULL;
+    }
+#endif
 
     llvm::Instruction *rinst = NULL;
     if (returnValuePtr != NULL) {
