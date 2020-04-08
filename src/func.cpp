@@ -326,7 +326,18 @@ void Function::emitCode(FunctionEmitContext *ctx, llvm::Function *function, Sour
             argIter->setName("__mask");
             Assert(argIter->getType() == LLVMTypes::MaskType);
 
-            ctx->SetFunctionMask(&*argIter);
+#ifdef ISPC_GENX_ENABLED
+            if (g->target->getISA() == Target::GENX) {
+                // We should not create explicit predication
+                // to avoid EM usage duplication. All stuff
+                // will be done by SIMD CF Lowering
+                // TODO: temporary workaround that will be changed
+                // as part of SPIR-V emitting solution
+                ctx->SetFunctionMask(LLVMMaskAllOn);
+            } else
+#endif
+                ctx->SetFunctionMask(&*argIter);
+
             Assert(++argIter == function->arg_end());
         }
     }
