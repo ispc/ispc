@@ -623,6 +623,12 @@ class FunctionEmitContext {
         the running lanes have executed a 'continue' statement. */
     llvm::BasicBlock *continueTarget;
 
+#ifdef ISPC_GENX_ENABLED
+    /** Final basic block of the function. It is used for GenX to
+        disable returned lanes until return point is reached */
+    llvm::BasicBlock *returnPoint;
+#endif
+
     /** @name Switch statement state
 
         These variables store various state that's active when we're
