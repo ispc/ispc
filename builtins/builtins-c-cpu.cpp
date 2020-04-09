@@ -75,18 +75,18 @@
 
 #endif // !WASM
 
-#include <array>
+#include "array.hpp"
 #include <stdarg.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
-using SizeT = std::size_t;
+using SizeT = int;
 using MaskT = uint64_t;
 constexpr SizeT RES_STR_SIZE = 8196;
 constexpr SizeT ARG_STR_SIZE = 1024;
-template <typename T, SizeT Size> using StaticContainer = std::array<T, Size>;
+template <typename T, SizeT Size> using StaticContainer = notstd::array<T, Size>;
 template <typename T, SizeT Size> using StaticContainerRef = StaticContainer<T, Size> &;
 
 template <SizeT Size> using StaticString = StaticContainer<char, Size>;
