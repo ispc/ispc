@@ -82,7 +82,7 @@ class Expr : public ASTNode {
         valid for multi-target compilation for use as an initializer of
         a global variable. Otherwise it should return the llvm::constant
         value as NULL. */
-    virtual std::pair<llvm::Constant *, bool> GetConstant(const Type *type) const;
+    virtual std::pair<llvm::Constant *, bool> GetConstant(const Type *type, bool isStorageType = false) const;
 
     /** This method should perform early optimizations of the expression
         (constant folding, etc.) and return a pointer to the resulting
@@ -169,7 +169,7 @@ class BinaryExpr : public Expr {
     Expr *Optimize();
     Expr *TypeCheck();
     int EstimateCost() const;
-    std::pair<llvm::Constant *, bool> GetConstant(const Type *type) const;
+    std::pair<llvm::Constant *, bool> GetConstant(const Type *type, bool isStorageType = false) const;
 
     const Op op;
     Expr *arg0, *arg1;
@@ -248,7 +248,7 @@ class ExprList : public Expr {
     llvm::Value *GetValue(FunctionEmitContext *ctx) const;
     const Type *GetType() const;
     void Print() const;
-    std::pair<llvm::Constant *, bool> GetConstant(const Type *type) const;
+    std::pair<llvm::Constant *, bool> GetConstant(const Type *type, bool isStorageType = false) const;
     ExprList *Optimize();
     ExprList *TypeCheck();
     int EstimateCost() const;
@@ -428,7 +428,7 @@ class ConstExpr : public Expr {
     llvm::Value *GetValue(FunctionEmitContext *ctx) const;
     const Type *GetType() const;
     void Print() const;
-    std::pair<llvm::Constant *, bool> GetConstant(const Type *constType) const;
+    std::pair<llvm::Constant *, bool> GetConstant(const Type *constType, bool isStorageType = false) const;
 
     Expr *TypeCheck();
     Expr *Optimize();
@@ -493,7 +493,7 @@ class TypeCastExpr : public Expr {
     Expr *Optimize();
     int EstimateCost() const;
     Symbol *GetBaseSymbol() const;
-    std::pair<llvm::Constant *, bool> GetConstant(const Type *type) const;
+    std::pair<llvm::Constant *, bool> GetConstant(const Type *type, bool isStorageType = false) const;
 
     const Type *type;
     Expr *expr;
@@ -587,7 +587,7 @@ class AddressOfExpr : public Expr {
     Expr *TypeCheck();
     Expr *Optimize();
     int EstimateCost() const;
-    std::pair<llvm::Constant *, bool> GetConstant(const Type *type) const;
+    std::pair<llvm::Constant *, bool> GetConstant(const Type *type, bool isStorageType = false) const;
 
     Expr *expr;
 };
@@ -608,7 +608,7 @@ class SizeOfExpr : public Expr {
     Expr *TypeCheck();
     Expr *Optimize();
     int EstimateCost() const;
-    std::pair<llvm::Constant *, bool> GetConstant(const Type *type) const;
+    std::pair<llvm::Constant *, bool> GetConstant(const Type *type, bool isStorageType = false) const;
 
     /* One of expr or type should be non-NULL (but not both of them).  The
        SizeOfExpr returns the size of whichever one of them isn't NULL. */
@@ -655,7 +655,7 @@ class FunctionSymbolExpr : public Expr {
     Expr *Optimize();
     void Print() const;
     int EstimateCost() const;
-    std::pair<llvm::Constant *, bool> GetConstant(const Type *type) const;
+    std::pair<llvm::Constant *, bool> GetConstant(const Type *type, bool isStorageType = false) const;
 
     /** Given the types of the function arguments, in the presence of
         function overloading, this method resolves which actual function
@@ -723,7 +723,7 @@ class NullPointerExpr : public Expr {
     const Type *GetType() const;
     Expr *TypeCheck();
     Expr *Optimize();
-    std::pair<llvm::Constant *, bool> GetConstant(const Type *type) const;
+    std::pair<llvm::Constant *, bool> GetConstant(const Type *type, bool isStorageType = false) const;
     void Print() const;
     int EstimateCost() const;
 };

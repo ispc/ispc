@@ -443,19 +443,25 @@ class FunctionEmitContext {
     llvm::Value *LoadInst(llvm::Value *ptr, llvm::Value *mask, const Type *ptrType, const char *name = NULL,
                           bool one_elem = false);
 
-    llvm::Value *LoadInst(llvm::Value *ptr, const char *name = NULL);
+    /* Load from memory location(s) given.
+     * 'type' needs to be provided if there is a possibility that this a bool.
+     * Otherwise leave this as NULL.*/
+    llvm::Value *LoadInst(llvm::Value *ptr, const Type *type, const char *name = NULL);
 
     /** Emits an alloca instruction to allocate stack storage for the given
         type.  If a non-zero alignment is specified, the object is also
         allocated at the given alignment.  By default, the alloca
         instruction is added at the start of the function in the entry
         basic block; if it should be added to the current basic block, then
-        the atEntryBlock parameter should be false. */
-    llvm::Value *AllocaInst(llvm::Type *llvmType, const char *name = NULL, int align = 0, bool atEntryBlock = true);
+        the atEntryBlock parameter should be false.
+        'ptrType' needs to be a non null value if there is a possibility that this a bool.*/
+    llvm::Value *AllocaInst(llvm::Type *llvmType, const Type *ptrType, const char *name = NULL, int align = 0,
+                            bool atEntryBlock = true);
 
     /** Standard store instruction; for this variant, the lvalue must be a
-        single pointer, not a varying lvalue. */
-    void StoreInst(llvm::Value *value, llvm::Value *ptr);
+        single pointer, not a varying lvalue.
+        'ptrType' needs to be provided if there is a possibility that this a bool value.*/
+    void StoreInst(llvm::Value *value, llvm::Value *ptr, const Type *ptrType = NULL);
 
     /** In this variant of StoreInst(), the lvalue may be varying.  If so,
         this corresponds to a scatter.  Whether the lvalue is uniform of
