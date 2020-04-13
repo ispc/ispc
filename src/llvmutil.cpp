@@ -50,6 +50,7 @@ llvm::Type *LLVMTypes::VoidType = NULL;
 llvm::PointerType *LLVMTypes::VoidPointerType = NULL;
 llvm::Type *LLVMTypes::PointerIntType = NULL;
 llvm::Type *LLVMTypes::BoolType = NULL;
+llvm::Type *LLVMTypes::BoolStorageType = NULL;
 
 llvm::Type *LLVMTypes::Int8Type = NULL;
 llvm::Type *LLVMTypes::Int16Type = NULL;
@@ -67,6 +68,7 @@ llvm::Type *LLVMTypes::DoublePointerType = NULL;
 
 llvm::VectorType *LLVMTypes::MaskType = NULL;
 llvm::VectorType *LLVMTypes::BoolVectorType = NULL;
+llvm::VectorType *LLVMTypes::BoolVectorStorageType = NULL;
 
 llvm::VectorType *LLVMTypes::Int1VectorType = NULL;
 llvm::VectorType *LLVMTypes::Int8VectorType = NULL;
@@ -87,6 +89,8 @@ llvm::VectorType *LLVMTypes::VoidPointerVectorType = NULL;
 
 llvm::Constant *LLVMTrue = NULL;
 llvm::Constant *LLVMFalse = NULL;
+llvm::Constant *LLVMTrueInStorage = NULL;
+llvm::Constant *LLVMFalseInStorage = NULL;
 llvm::Constant *LLVMMaskAllOn = NULL;
 llvm::Constant *LLVMMaskAllOff = NULL;
 
@@ -96,7 +100,7 @@ void InitLLVMUtil(llvm::LLVMContext *ctx, Target &target) {
     LLVMTypes::PointerIntType = target.is32Bit() ? llvm::Type::getInt32Ty(*ctx) : llvm::Type::getInt64Ty(*ctx);
 
     LLVMTypes::BoolType = llvm::Type::getInt1Ty(*ctx);
-    LLVMTypes::Int8Type = llvm::Type::getInt8Ty(*ctx);
+    LLVMTypes::Int8Type = LLVMTypes::BoolStorageType = llvm::Type::getInt8Ty(*ctx);
     LLVMTypes::Int16Type = llvm::Type::getInt16Ty(*ctx);
     LLVMTypes::Int32Type = llvm::Type::getInt32Ty(*ctx);
     LLVMTypes::Int64Type = llvm::Type::getInt64Ty(*ctx);
@@ -136,7 +140,8 @@ void InitLLVMUtil(llvm::LLVMContext *ctx, Target &target) {
     }
 
     LLVMTypes::Int1VectorType = llvm::VectorType::get(llvm::Type::getInt1Ty(*ctx), target.getVectorWidth());
-    LLVMTypes::Int8VectorType = llvm::VectorType::get(LLVMTypes::Int8Type, target.getVectorWidth());
+    LLVMTypes::Int8VectorType = LLVMTypes::BoolVectorStorageType =
+        llvm::VectorType::get(LLVMTypes::Int8Type, target.getVectorWidth());
     LLVMTypes::Int16VectorType = llvm::VectorType::get(LLVMTypes::Int16Type, target.getVectorWidth());
     LLVMTypes::Int32VectorType = llvm::VectorType::get(LLVMTypes::Int32Type, target.getVectorWidth());
     LLVMTypes::Int64VectorType = llvm::VectorType::get(LLVMTypes::Int64Type, target.getVectorWidth());
@@ -154,6 +159,8 @@ void InitLLVMUtil(llvm::LLVMContext *ctx, Target &target) {
 
     LLVMTrue = llvm::ConstantInt::getTrue(*ctx);
     LLVMFalse = llvm::ConstantInt::getFalse(*ctx);
+    LLVMTrueInStorage = llvm::ConstantInt::get(LLVMTypes::Int8Type, 0xff, false /*unsigned*/);
+    LLVMFalseInStorage = llvm::ConstantInt::get(LLVMTypes::Int8Type, 0x00, false /*unsigned*/);
 
     std::vector<llvm::Constant *> maskOnes;
     llvm::Constant *onMask = NULL;
@@ -431,6 +438,23 @@ llvm::Constant *LLVMBoolVector(const bool *bvec) {
             v = bvec[i] ? LLVMTrue : LLVMFalse;
         }
 
+        vals.push_back(v);
+    }
+    return llvm::ConstantVector::get(vals);
+}
+
+llvm::Constant *LLVMBoolVectorInStorage(bool b) {
+    llvm::Constant *v = b ? LLVMTrueInStorage : LLVMFalseInStorage;
+    std::vector<llvm::Constant *> vals;
+    for (int i = 0; i < g->target->getVectorWidth(); ++i)
+        vals.push_back(v);
+    return llvm::ConstantVector::get(vals);
+}
+
+llvm::Constant *LLVMBoolVectorInStorage(const bool *bvec) {
+    std::vector<llvm::Constant *> vals;
+    for (int i = 0; i < g->target->getVectorWidth(); ++i) {
+        llvm::Constant *v = llvm::ConstantInt::get(LLVMTypes::Int8Type, bvec[i] ? 0xff : 0, false /*unsigned*/);
         vals.push_back(v);
     }
     return llvm::ConstantVector::get(vals);
