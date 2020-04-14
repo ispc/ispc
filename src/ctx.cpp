@@ -209,12 +209,12 @@ FunctionEmitContext::FunctionEmitContext(Function *func, Symbol *funSym, llvm::F
 
     funcStartPos = funSym->pos;
 
-    internalMaskPointer = AllocaInst(LLVMTypes::MaskType, NULL, "internal_mask_memory");
+    internalMaskPointer = AllocaInst(LLVMTypes::MaskType, "internal_mask_memory");
     StoreInst(LLVMMaskAllOn, internalMaskPointer);
 
     functionMaskValue = LLVMMaskAllOn;
 
-    fullMaskPointer = AllocaInst(LLVMTypes::MaskType, NULL, "full_mask_memory");
+    fullMaskPointer = AllocaInst(LLVMTypes::MaskType, "full_mask_memory");
     StoreInst(LLVMMaskAllOn, fullMaskPointer);
 
     blockEntryMask = NULL;
@@ -226,11 +226,11 @@ FunctionEmitContext::FunctionEmitContext(Function *func, Symbol *funSym, llvm::F
     defaultBlock = NULL;
     nextBlocks = NULL;
 
-    returnedLanesPtr = AllocaInst(LLVMTypes::MaskType, NULL, "returned_lanes_memory");
+    returnedLanesPtr = AllocaInst(LLVMTypes::MaskType, "returned_lanes_memory");
     StoreInst(LLVMMaskAllOff, returnedLanesPtr);
 
     launchedTasks = false;
-    launchGroupHandlePtr = AllocaInst(LLVMTypes::VoidPointerType, NULL, "launch_group_handle");
+    launchGroupHandlePtr = AllocaInst(LLVMTypes::VoidPointerType, "launch_group_handle");
     StoreInst(llvm::Constant::getNullValue(LLVMTypes::VoidPointerType), launchGroupHandlePtr);
 
     disableGSWarningCount = 0;
@@ -239,8 +239,7 @@ FunctionEmitContext::FunctionEmitContext(Function *func, Symbol *funSym, llvm::F
     if (!returnType || returnType->IsVoidType())
         returnValuePtr = NULL;
     else {
-        llvm::Type *ftype = returnType->LLVMType(g->ctx);
-        returnValuePtr = AllocaInst(ftype, returnType, "return_value_memory");
+        returnValuePtr = AllocaInst(returnType, "return_value_memory");
     }
 
     if (g->opt.disableMaskAllOnOptimizations) {
@@ -499,9 +498,9 @@ void FunctionEmitContext::StartLoop(llvm::BasicBlock *bt, llvm::BasicBlock *ct, 
     else {
         // For loops with varying conditions, allocate space to store masks
         // that record which lanes have done these
-        continueLanesPtr = AllocaInst(LLVMTypes::MaskType, NULL, "continue_lanes_memory");
+        continueLanesPtr = AllocaInst(LLVMTypes::MaskType, "continue_lanes_memory");
         StoreInst(LLVMMaskAllOff, continueLanesPtr);
-        breakLanesPtr = AllocaInst(LLVMTypes::MaskType, NULL, "break_lanes_memory");
+        breakLanesPtr = AllocaInst(LLVMTypes::MaskType, "break_lanes_memory");
         StoreInst(LLVMMaskAllOff, breakLanesPtr);
     }
 
@@ -547,7 +546,7 @@ void FunctionEmitContext::StartForeach(ForeachType ft) {
     breakLanesPtr = NULL;
     breakTarget = NULL;
 
-    continueLanesPtr = AllocaInst(LLVMTypes::MaskType, NULL, "foreach_continue_lanes");
+    continueLanesPtr = AllocaInst(LLVMTypes::MaskType, "foreach_continue_lanes");
     StoreInst(LLVMMaskAllOff, continueLanesPtr);
     continueTarget = NULL; // should be set by SetContinueTarget()
 
@@ -788,7 +787,7 @@ void FunctionEmitContext::StartSwitch(bool cfIsUniform, llvm::BasicBlock *bbBrea
                                                 continueLanesPtr, oldMask, blockEntryMask, switchExpr, defaultBlock,
                                                 caseBlocks, nextBlocks, switchConditionWasUniform));
 
-    breakLanesPtr = AllocaInst(LLVMTypes::MaskType, NULL, "break_lanes_memory");
+    breakLanesPtr = AllocaInst(LLVMTypes::MaskType, "break_lanes_memory");
     StoreInst(LLVMMaskAllOff, breakLanesPtr);
     breakTarget = bbBreak;
 
@@ -2049,6 +2048,26 @@ llvm::Value *FunctionEmitContext::AddElementOffset(llvm::Value *fullBasePtr, int
         return resultPtr;
 }
 
+llvm::Value *FunctionEmitContext::SwitchBoolSize(llvm::Value *value, llvm::Type *fromType, llvm::Type *toType,
+                                                 const char *name) {
+    if ((value == NULL) || (fromType == NULL) || (toType == NULL)) {
+        AssertPos(currentPos, m->errorCount > 0);
+        return NULL;
+    }
+
+    if (name == NULL)
+        name = LLVMGetName(value, "_switchBool");
+
+    llvm::Value *newBool = value;
+    if (g->target->getDataLayout()->getTypeSizeInBits(fromType) > g->target->getDataLayout()->getTypeSizeInBits(toType))
+        newBool = TruncInst(value, toType);
+    else if (g->target->getDataLayout()->getTypeSizeInBits(fromType) <
+             g->target->getDataLayout()->getTypeSizeInBits(toType))
+        newBool = SExtInst(value, toType);
+
+    return newBool;
+}
+
 llvm::Value *FunctionEmitContext::LoadInst(llvm::Value *ptr, const Type *type, const char *name) {
     if (ptr == NULL) {
         AssertPos(currentPos, m->errorCount > 0);
@@ -2073,31 +2092,18 @@ llvm::Value *FunctionEmitContext::LoadInst(llvm::Value *ptr, const Type *type, c
 
     AddDebugPos(inst);
 
-    llvm::Instruction *toReg = inst;
+    llvm::Value *loadVal = inst;
     // bool type is stored as i8. So, it requires some processing.
     if ((type != NULL) && (type->IsBoolType())) {
-        if (CastType<AtomicType>(type) != NULL) {
-            if (g->target->getDataLayout()->getTypeSizeInBits(inst->getType()) >
-                g->target->getDataLayout()->getTypeSizeInBits(type->LLVMType(g->ctx)))
-                toReg = TruncInst(inst, type->LLVMType(g->ctx));
-            else if (g->target->getDataLayout()->getTypeSizeInBits(inst->getType()) <
-                     g->target->getDataLayout()->getTypeSizeInBits(type->LLVMType(g->ctx)))
-                toReg = SExtInst(inst, type->LLVMType(g->ctx));
-        }
-        if (CastType<VectorType>(type) != NULL) {
+        if (CastType<AtomicType>(type) != NULL)
+            loadVal = SwitchBoolSize(loadVal, inst->getType(), type->LLVMType(g->ctx));
+        if ((CastType<VectorType>(type) != NULL) && (type->IsBoolType())) {
             const VectorType *vType = CastType<VectorType>(type);
-            if (CastType<AtomicType>(vType->GetElementType()) != NULL) {
-                if (g->target->getDataLayout()->getTypeSizeInBits(inst->getType()) >
-                    g->target->getDataLayout()->getTypeSizeInBits(type->LLVMType(g->ctx)))
-                    toReg = TruncInst(inst, type->LLVMType(g->ctx));
-                else if (g->target->getDataLayout()->getTypeSizeInBits(inst->getType()) <
-                         g->target->getDataLayout()->getTypeSizeInBits(type->LLVMType(g->ctx)))
-                    toReg = SExtInst(inst, type->LLVMType(g->ctx));
-            }
+            if (CastType<AtomicType>(vType->GetElementType()) != NULL)
+                loadVal = SwitchBoolSize(loadVal, inst->getType(), type->LLVMType(g->ctx));
         }
     }
-
-    return toReg;
+    return loadVal;
 }
 
 /** Given a slice pointer to soa'd data that is a basic type (atomic,
@@ -2217,16 +2223,12 @@ llvm::Value *FunctionEmitContext::LoadInst(llvm::Value *ptr, llvm::Value *mask, 
                 new llvm::LoadInst(ptr, name, false /* not volatile */, llvm::MaybeAlign(align), bblock);
 #endif
             AddDebugPos(inst);
+            llvm::Value *loadVal = inst;
             // bool type is stored as i8. So, it requires some processing.
             if (elType->IsBoolType() && (CastType<AtomicType>(elType) != NULL)) {
-                if (g->target->getDataLayout()->getTypeSizeInBits(inst->getType()) >
-                    g->target->getDataLayout()->getTypeSizeInBits(elType->LLVMType(g->ctx)))
-                    inst = TruncInst(inst, elType->LLVMType(g->ctx));
-                else if (g->target->getDataLayout()->getTypeSizeInBits(inst->getType()) <
-                         g->target->getDataLayout()->getTypeSizeInBits(elType->LLVMType(g->ctx)))
-                    inst = SExtInst(inst, elType->LLVMType(g->ctx));
+                loadVal = SwitchBoolSize(loadVal, inst->getType(), elType->LLVMType(g->ctx));
             }
-            return inst;
+            return loadVal;
         }
     } else {
         // Otherwise we should have a varying ptr and it's time for a
@@ -2344,7 +2346,7 @@ llvm::Value *FunctionEmitContext::gather(llvm::Value *ptr, const PointerType *pt
 
     // bool type is stored as i8. So, it requires some processing.
     if (returnType->IsBoolType()) {
-        if (g->target->getDataLayout()->getTypeSizeInBits(returnType->LLVMType(g->ctx, true)) <
+        if (g->target->getDataLayout()->getTypeSizeInBits(returnType->GetStorageType()->LLVMType(g->ctx)) <
             g->target->getDataLayout()->getTypeSizeInBits(llvmReturnType)) {
             // This is needed when array of bool is passed in from cpp side
             // TRUE in clang is '1'. This is zero extended to i8.
@@ -2357,7 +2359,7 @@ llvm::Value *FunctionEmitContext::gather(llvm::Value *ptr, const PointerType *pt
                 gatherCall = SExtInst(gatherCall, llvmReturnType);
             } else
                 gatherCall = SExtInst(gatherCall, llvmReturnType);
-        } else if (g->target->getDataLayout()->getTypeSizeInBits(returnType->LLVMType(g->ctx, true)) >
+        } else if (g->target->getDataLayout()->getTypeSizeInBits(returnType->GetStorageType()->LLVMType(g->ctx)) >
                    g->target->getDataLayout()->getTypeSizeInBits(llvmReturnType)) {
             gatherCall = TruncInst(gatherCall, llvmReturnType);
         }
@@ -2394,20 +2396,10 @@ void FunctionEmitContext::addGSMetadata(llvm::Value *v, SourcePos pos) {
     inst->setMetadata("last_column", md);
 }
 
-llvm::Value *FunctionEmitContext::AllocaInst(llvm::Type *llvmType, const Type *ptrType, const char *name, int align,
-                                             bool atEntryBlock) {
+llvm::Value *FunctionEmitContext::AllocaInst(llvm::Type *llvmType, const char *name, int align, bool atEntryBlock) {
     if (llvmType == NULL) {
         AssertPos(currentPos, m->errorCount > 0);
         return NULL;
-    }
-
-    llvm::Type *llvmStorageType = llvmType;
-    if (ptrType != NULL) {
-        if ((((CastType<AtomicType>(ptrType) != NULL) || (CastType<VectorType>(ptrType) != NULL)) &&
-             (ptrType->IsBoolType())) ||
-            ((CastType<ArrayType>(ptrType) != NULL) && (ptrType->GetBaseType()->IsBoolType()))) {
-            llvmStorageType = ptrType->LLVMType(g->ctx, true);
-        }
     }
 
     llvm::AllocaInst *inst = NULL;
@@ -2417,12 +2409,12 @@ llvm::Value *FunctionEmitContext::AllocaInst(llvm::Type *llvmType, const Type *p
         llvm::Instruction *retInst = allocaBlock->getTerminator();
         AssertPos(currentPos, retInst);
         unsigned AS = llvmFunction->getParent()->getDataLayout().getAllocaAddrSpace();
-        inst = new llvm::AllocaInst(llvmStorageType, AS, name ? name : "", retInst);
+        inst = new llvm::AllocaInst(llvmType, AS, name ? name : "", retInst);
     } else {
         // Unless the caller overrode the default and wants it in the
         // current basic block
         unsigned AS = llvmFunction->getParent()->getDataLayout().getAllocaAddrSpace();
-        inst = new llvm::AllocaInst(llvmStorageType, AS, name ? name : "", bblock);
+        inst = new llvm::AllocaInst(llvmType, AS, name ? name : "", bblock);
     }
 
     // If no alignment was specified but we have an array of a uniform
@@ -2430,7 +2422,7 @@ llvm::Value *FunctionEmitContext::AllocaInst(llvm::Type *llvmType, const Type *p
     // unlikely that this array will be loaded into varying variables with
     // what will be aligned accesses if the uniform -> varying load is done
     // in regular chunks.
-    llvm::ArrayType *arrayType = llvm::dyn_cast<llvm::ArrayType>(llvmStorageType);
+    llvm::ArrayType *arrayType = llvm::dyn_cast<llvm::ArrayType>(llvmType);
     if (align == 0 && arrayType != NULL && !llvm::isa<llvm::VectorType>(arrayType->getElementType()))
         align = g->target->getNativeVectorAlignment();
 
@@ -2443,6 +2435,22 @@ llvm::Value *FunctionEmitContext::AllocaInst(llvm::Type *llvmType, const Type *p
     }
     // Don't add debugging info to alloca instructions
     return inst;
+}
+
+llvm::Value *FunctionEmitContext::AllocaInst(const Type *ptrType, const char *name, int align, bool atEntryBlock) {
+    if (ptrType == NULL) {
+        AssertPos(currentPos, m->errorCount > 0);
+        return NULL;
+    }
+
+    llvm::Type *llvmStorageType = ptrType->LLVMType(g->ctx);
+    if ((((CastType<AtomicType>(ptrType) != NULL) || (CastType<VectorType>(ptrType) != NULL)) &&
+         (ptrType->IsBoolType())) ||
+        ((CastType<ArrayType>(ptrType) != NULL) && (ptrType->GetBaseType()->IsBoolType()))) {
+        llvmStorageType = ptrType->GetStorageType()->LLVMType(g->ctx);
+    }
+
+    return AllocaInst(llvmStorageType, name, align, atEntryBlock);
 }
 
 /** Code to store the given varying value to the given location, only
@@ -2491,7 +2499,7 @@ void FunctionEmitContext::maskedStore(llvm::Value *value, llvm::Value *ptr, cons
     llvm::Type *llvmValueStorageType = llvmValueType;
 
     const PointerType *pt = CastType<PointerType>(valueType);
-    // bool type is stored as i8.
+    // bool type is stored as i8. So, it requires some processing.
     if ((pt == NULL) && (valueType->IsBoolType())) {
         llvmValueStorageType = LLVMTypes::BoolVectorStorageType;
     }
@@ -2539,12 +2547,7 @@ void FunctionEmitContext::maskedStore(llvm::Value *value, llvm::Value *ptr, cons
         maskedStoreFunc = m->module->getFunction("__pseudo_masked_store_i16");
     } else if (llvmValueStorageType == LLVMTypes::Int8VectorType) {
         maskedStoreFunc = m->module->getFunction("__pseudo_masked_store_i8");
-        if (g->target->getDataLayout()->getTypeSizeInBits(llvmValueType) <
-            g->target->getDataLayout()->getTypeSizeInBits(llvmValueStorageType))
-            value = SExtInst(value, LLVMTypes::BoolVectorStorageType);
-        else if (g->target->getDataLayout()->getTypeSizeInBits(llvmValueType) >
-                 g->target->getDataLayout()->getTypeSizeInBits(llvmValueStorageType))
-            value = TruncInst(value, LLVMTypes::BoolVectorStorageType);
+        value = SwitchBoolSize(value, llvmValueType, llvmValueStorageType);
     }
     AssertPos(currentPos, maskedStoreFunc != NULL);
 
@@ -2632,13 +2635,7 @@ void FunctionEmitContext::scatter(llvm::Value *value, llvm::Value *ptr, const Ty
     // bool type is stored as i8. So, it requires some processing.
     if ((pt != NULL) && (valueType->IsBoolType())) {
         llvmStorageType = LLVMTypes::BoolVectorStorageType;
-        if (g->target->getDataLayout()->getTypeSizeInBits(type) <
-            g->target->getDataLayout()->getTypeSizeInBits(llvmStorageType)) {
-            value = SExtInst(value, llvmStorageType);
-        } else if (g->target->getDataLayout()->getTypeSizeInBits(type) >
-                   g->target->getDataLayout()->getTypeSizeInBits(llvmStorageType)) {
-            value = TruncInst(value, llvmStorageType);
-        }
+        value = SwitchBoolSize(value, type, llvmStorageType);
     }
     const char *funcName = NULL;
     if (pt != NULL) {
@@ -2682,33 +2679,18 @@ void FunctionEmitContext::StoreInst(llvm::Value *value, llvm::Value *ptr, const 
     llvm::PointerType *pt = llvm::dyn_cast<llvm::PointerType>(ptr->getType());
     AssertPos(currentPos, pt != NULL);
 
-    llvm::Value *toReg = value;
-    // bool type is stored as i8. So, it requires some processing.
     if ((ptrType != NULL) && (ptrType->IsBoolType())) {
-        if (CastType<AtomicType>(ptrType) != NULL) {
-            if (g->target->getDataLayout()->getTypeSizeInBits(value->getType()) >
-                g->target->getDataLayout()->getTypeSizeInBits(ptrType->LLVMType(g->ctx, true))) {
-                toReg = TruncInst(value, ptrType->LLVMType(g->ctx, true));
-            } else if (g->target->getDataLayout()->getTypeSizeInBits(value->getType()) <
-                       g->target->getDataLayout()->getTypeSizeInBits(ptrType->LLVMType(g->ctx, true))) {
-                toReg = SExtInst(value, ptrType->LLVMType(g->ctx, true));
-            }
-        }
+        if ((CastType<AtomicType>(ptrType) != NULL))
+            value = SwitchBoolSize(value, value->getType(), ptrType->GetStorageType()->LLVMType(g->ctx));
         if (CastType<VectorType>(ptrType) != NULL) {
             const VectorType *vType = CastType<VectorType>(ptrType);
             if (CastType<AtomicType>(vType->GetElementType()) != NULL) {
-                if (g->target->getDataLayout()->getTypeSizeInBits(value->getType()) >
-                    g->target->getDataLayout()->getTypeSizeInBits(ptrType->LLVMType(g->ctx, true))) {
-                    toReg = TruncInst(value, ptrType->LLVMType(g->ctx, true));
-                } else if (g->target->getDataLayout()->getTypeSizeInBits(value->getType()) <
-                           g->target->getDataLayout()->getTypeSizeInBits(ptrType->LLVMType(g->ctx, true))) {
-                    toReg = SExtInst(value, ptrType->LLVMType(g->ctx, true));
-                }
+                value = SwitchBoolSize(value, value->getType(), ptrType->GetStorageType()->LLVMType(g->ctx));
             }
         }
     }
 
-    llvm::StoreInst *inst = new llvm::StoreInst(toReg, ptr, bblock);
+    llvm::StoreInst *inst = new llvm::StoreInst(value, ptr, bblock);
 
     if (g->opt.forceAlignedMemory && llvm::dyn_cast<llvm::VectorType>(pt->getElementType())) {
 #if ISPC_LLVM_VERSION <= ISPC_LLVM_9_0
@@ -3043,13 +3025,13 @@ llvm::Value *FunctionEmitContext::CallInst(llvm::Value *func, const FunctionType
         llvm::Type *llvmReturnType = returnType->LLVMType(g->ctx);
         llvm::Value *resultPtr = NULL;
         if (llvmReturnType->isVoidTy() == false)
-            resultPtr = AllocaInst(llvmReturnType, returnType);
+            resultPtr = AllocaInst(returnType);
 
         // The memory pointed to by maskPointer tracks the set of program
         // instances for which we still need to call the function they are
         // pointing to.  It starts out initialized with the mask of
         // currently running program instances.
-        llvm::Value *maskPtr = AllocaInst(LLVMTypes::MaskType, NULL);
+        llvm::Value *maskPtr = AllocaInst(LLVMTypes::MaskType);
         StoreInst(GetFullMask(), maskPtr);
 
         // And now we branch to the test to see if there's more work to be
@@ -3060,7 +3042,7 @@ llvm::Value *FunctionEmitContext::CallInst(llvm::Value *func, const FunctionType
         // bbCall
         SetCurrentBasicBlock(bbTest);
         {
-            llvm::Value *maskLoad = LoadInst(maskPtr, NULL);
+            llvm::Value *maskLoad = LoadInst(maskPtr);
             llvm::Value *any = Any(maskLoad);
             BranchInst(bbCall, bbDone, any);
         }
@@ -3071,7 +3053,7 @@ llvm::Value *FunctionEmitContext::CallInst(llvm::Value *func, const FunctionType
         {
             // Figure out the first lane that still needs its function
             // pointer to be called.
-            llvm::Value *currentMask = LoadInst(maskPtr, NULL);
+            llvm::Value *currentMask = LoadInst(maskPtr);
             llvm::Function *cttz = m->module->getFunction("__count_trailing_zeros_i64");
             AssertPos(currentPos, cttz != NULL);
             llvm::Value *firstLane64 = CallInst(cttz, NULL, LaneMask(currentMask), "first_lane64");
@@ -3210,7 +3192,6 @@ llvm::Value *FunctionEmitContext::LaunchInst(llvm::Value *callee, std::vector<ll
     for (unsigned int i = 0; i < argVals.size(); ++i) {
         llvm::Value *ptr = AddElementOffset(argmem, i, NULL, "funarg");
         // don't need to do masked store here, I think
-        // DEEPAK : REVISIT - NEED TYPE
         StoreInst(argVals[i], ptr);
     }
 
@@ -3238,7 +3219,7 @@ llvm::Value *FunctionEmitContext::LaunchInst(llvm::Value *callee, std::vector<ll
 }
 
 void FunctionEmitContext::SyncInst() {
-    llvm::Value *launchGroupHandle = LoadInst(launchGroupHandlePtr, NULL);
+    llvm::Value *launchGroupHandle = LoadInst(launchGroupHandlePtr);
     llvm::Value *nullPtrValue = llvm::Constant::getNullValue(LLVMTypes::VoidPointerType);
     llvm::Value *nonNull = CmpInst(llvm::Instruction::ICmp, llvm::CmpInst::ICMP_NE, launchGroupHandle, nullPtrValue);
     llvm::BasicBlock *bSync = CreateBasicBlock("call_sync");

@@ -201,6 +201,12 @@ const AtomicType *AtomicType::GetAsUnsignedType() const {
     }
 }
 
+const AtomicType *AtomicType::GetStorageType() const {
+    if (basicType == TYPE_BOOL)
+        return new AtomicType(TYPE_UINT8, variability, isConst);
+    return this;
+}
+
 const AtomicType *AtomicType::GetAsConstType() const {
     if (isConst == true)
         return this;
@@ -461,7 +467,7 @@ std::string AtomicType::GetCDeclaration(const std::string &name) const {
     return ret;
 }
 
-llvm::Type *AtomicType::LLVMType(llvm::LLVMContext *ctx, bool isStorageType) const {
+llvm::Type *AtomicType::LLVMType(llvm::LLVMContext *ctx) const {
     Assert(variability.type != Variability::Unbound);
     bool isUniform = (variability == Variability::Uniform);
     bool isVarying = (variability == Variability::Varying);
@@ -471,8 +477,6 @@ llvm::Type *AtomicType::LLVMType(llvm::LLVMContext *ctx, bool isStorageType) con
         case TYPE_VOID:
             return llvm::Type::getVoidTy(*ctx);
         case TYPE_BOOL:
-            if (isStorageType)
-                return isUniform ? LLVMTypes::BoolStorageType : LLVMTypes::BoolVectorStorageType;
             return isUniform ? LLVMTypes::BoolType : LLVMTypes::BoolVectorType;
         case TYPE_INT8:
         case TYPE_UINT8:
@@ -641,6 +645,8 @@ const EnumType *EnumType::GetAsSOAType(int width) const {
     }
 }
 
+const EnumType *EnumType::GetStorageType() const { return this; }
+
 const EnumType *EnumType::GetAsConstType() const {
     if (isConst)
         return this;
@@ -713,7 +719,7 @@ std::string EnumType::GetCDeclaration(const std::string &varName) const {
     return ret;
 }
 
-llvm::Type *EnumType::LLVMType(llvm::LLVMContext *ctx, bool isStorageType) const {
+llvm::Type *EnumType::LLVMType(llvm::LLVMContext *ctx) const {
     Assert(variability != Variability::Unbound);
 
     switch (variability.type) {
@@ -723,7 +729,7 @@ llvm::Type *EnumType::LLVMType(llvm::LLVMContext *ctx, bool isStorageType) const
         return LLVMTypes::Int32VectorType;
     case Variability::SOA: {
         ArrayType at(AtomicType::UniformInt32, variability.soaWidth);
-        return at.LLVMType(ctx, isStorageType);
+        return at.LLVMType(ctx);
     }
     default:
         FATAL("Unexpected variability in EnumType::LLVMType()");
@@ -871,6 +877,14 @@ const PointerType *PointerType::ResolveUnboundVariability(Variability v) const {
     return new PointerType(resolvedBaseType, ptrVariability, isConst, isSlice, isFrozen);
 }
 
+const PointerType *PointerType::GetStorageType() const {
+    if (baseType == NULL) {
+        Assert(m->errorCount > 0);
+        return NULL;
+    }
+    return new PointerType(baseType->GetStorageType(), variability, isConst, isSlice, isFrozen);
+}
+
 const PointerType *PointerType::GetAsConstType() const {
     if (isConst == true)
         return this;
@@ -971,7 +985,7 @@ std::string PointerType::GetCDeclaration(const std::string &name) const {
     return ret;
 }
 
-llvm::Type *PointerType::LLVMType(llvm::LLVMContext *ctx, bool isStorageType) const {
+llvm::Type *PointerType::LLVMType(llvm::LLVMContext *ctx) const {
     if (baseType == NULL) {
         Assert(m->errorCount > 0);
         return NULL;
@@ -1010,7 +1024,7 @@ llvm::Type *PointerType::LLVMType(llvm::LLVMContext *ctx, bool isStorageType) co
             if (baseType->IsVoidType())
                 ptype = LLVMTypes::VoidPointerType;
             else
-                ptype = llvm::PointerType::get(baseType->LLVMType(ctx, isStorageType), 0);
+                ptype = llvm::PointerType::get(baseType->LLVMType(ctx), 0);
         }
         return ptype;
     }
@@ -1020,7 +1034,7 @@ llvm::Type *PointerType::LLVMType(llvm::LLVMContext *ctx, bool isStorageType) co
         return LLVMTypes::VoidPointerVectorType;
     case Variability::SOA: {
         ArrayType at(GetAsUniformType(), variability.soaWidth);
-        return at.LLVMType(ctx, isStorageType);
+        return at.LLVMType(ctx);
     }
     default:
         FATAL("Unexpected variability in PointerType::LLVMType()");
@@ -1068,13 +1082,13 @@ ArrayType::ArrayType(const Type *c, int a) : SequentialType(ARRAY_TYPE), child(c
     Assert(c->IsVoidType() == false);
 }
 
-llvm::ArrayType *ArrayType::LLVMType(llvm::LLVMContext *ctx, bool isStorageType) const {
+llvm::ArrayType *ArrayType::LLVMType(llvm::LLVMContext *ctx) const {
     if (child == NULL) {
         Assert(m->errorCount > 0);
         return NULL;
     }
 
-    llvm::Type *ct = child->LLVMType(ctx, isStorageType);
+    llvm::Type *ct = child->LLVMType(ctx);
     if (ct == NULL) {
         Assert(m->errorCount > 0);
         return NULL;
@@ -1153,6 +1167,14 @@ const ArrayType *ArrayType::GetAsUnsignedType() const {
         return NULL;
     }
     return new ArrayType(child->GetAsUnsignedType(), numElements);
+}
+
+const ArrayType *ArrayType::GetStorageType() const {
+    if (child == NULL) {
+        Assert(m->errorCount > 0);
+        return NULL;
+    }
+    return new ArrayType(child->GetStorageType(), numElements);
 }
 
 const ArrayType *ArrayType::GetAsConstType() const {
@@ -1375,6 +1397,14 @@ const VectorType *VectorType::GetAsUnsignedType() const {
     return new VectorType(base->GetAsUnsignedType(), numElements);
 }
 
+const VectorType *VectorType::GetStorageType() const {
+    if (base == NULL) {
+        Assert(m->errorCount > 0);
+        return NULL;
+    }
+    return new VectorType(base->GetStorageType(), numElements);
+}
+
 const VectorType *VectorType::GetAsConstType() const { return new VectorType(base->GetAsConstType(), numElements); }
 
 const VectorType *VectorType::GetAsNonConstType() const {
@@ -1406,13 +1436,13 @@ int VectorType::GetElementCount() const { return numElements; }
 
 const AtomicType *VectorType::GetElementType() const { return base; }
 
-llvm::Type *VectorType::LLVMType(llvm::LLVMContext *ctx, bool isStorageType) const {
+llvm::Type *VectorType::LLVMType(llvm::LLVMContext *ctx) const {
     if (base == NULL) {
         Assert(m->errorCount > 0);
         return NULL;
     }
 
-    llvm::Type *bt = base->LLVMType(ctx, isStorageType);
+    llvm::Type *bt = base->LLVMType(ctx);
     if (!bt)
         return NULL;
 
@@ -1589,7 +1619,7 @@ StructType::StructType(const std::string &n, const llvm::SmallVector<const Type 
                                                "supported.");
                     return;
                 } else
-                    elementTypes.push_back(type->LLVMType(g->ctx, true));
+                    elementTypes.push_back(type->GetStorageType()->LLVMType(g->ctx));
             }
         }
 
@@ -1694,6 +1724,15 @@ const StructType *StructType::ResolveUnboundVariability(Variability v) const {
     return new StructType(name, elementTypes, elementNames, elementPositions, isConst, v, pos);
 }
 
+const StructType *StructType::GetStorageType() const {
+    llvm::SmallVector<const Type *, 8> storageElementTypes;
+    int nElements = GetElementCount();
+    for (int i = 0; i < nElements; ++i)
+        storageElementTypes.push_back(GetElementType(i)->GetStorageType());
+
+    return new StructType(name, storageElementTypes, elementNames, elementPositions, isConst, variability, pos);
+}
+
 const StructType *StructType::GetAsConstType() const {
     if (isConst == true)
         return this;
@@ -1783,7 +1822,7 @@ std::string StructType::GetCDeclaration(const std::string &n) const {
     return ret;
 }
 
-llvm::Type *StructType::LLVMType(llvm::LLVMContext *ctx, bool isStorageType) const {
+llvm::Type *StructType::LLVMType(llvm::LLVMContext *ctx) const {
     Assert(variability != Variability::Unbound);
     std::string mname = lMangleStructName(name, variability);
     if (lStructTypeMap.find(mname) == lStructTypeMap.end()) {
@@ -1806,7 +1845,7 @@ llvm::DIType *StructType::GetDIType(llvm::DIScope *scope) const {
         llvm::DIType *eltType = GetElementType(i)->GetDIType(scope);
         uint64_t eltSize = eltType->getSizeInBits();
 
-        auto llvmType = GetElementType(i)->LLVMType(g->ctx);
+        auto llvmType = GetElementType(i)->GetStorageType()->LLVMType(g->ctx);
         uint64_t eltAlign = dataLayout.getABITypeAlignment(llvmType) * 8;
         Assert(eltAlign != 0);
 
@@ -1953,6 +1992,10 @@ const UndefinedStructType *UndefinedStructType::ResolveUnboundVariability(Variab
     return new UndefinedStructType(name, v, isConst, pos);
 }
 
+const UndefinedStructType *UndefinedStructType::GetStorageType() const {
+    return new UndefinedStructType(name, variability, isConst, pos);
+}
+
 const UndefinedStructType *UndefinedStructType::GetAsConstType() const {
     if (isConst)
         return this;
@@ -1987,7 +2030,7 @@ std::string UndefinedStructType::GetCDeclaration(const std::string &n) const {
     return ret;
 }
 
-llvm::Type *UndefinedStructType::LLVMType(llvm::LLVMContext *ctx, bool isStorageType) const {
+llvm::Type *UndefinedStructType::LLVMType(llvm::LLVMContext *ctx) const {
     Assert(variability != Variability::Unbound);
     std::string mname = lMangleStructName(name, variability);
     if (lStructTypeMap.find(mname) == lStructTypeMap.end()) {
@@ -2114,6 +2157,14 @@ const ReferenceType *ReferenceType::ResolveUnboundVariability(Variability v) con
     return new ReferenceType(targetType->ResolveUnboundVariability(v));
 }
 
+const ReferenceType *ReferenceType::GetStorageType() const {
+    if (targetType == NULL) {
+        Assert(m->errorCount > 0);
+        return NULL;
+    }
+    return new ReferenceType(targetType->GetStorageType());
+}
+
 const ReferenceType *ReferenceType::GetAsConstType() const {
     if (targetType == NULL) {
         Assert(m->errorCount > 0);
@@ -2194,13 +2245,13 @@ std::string ReferenceType::GetCDeclaration(const std::string &name) const {
     }
 }
 
-llvm::Type *ReferenceType::LLVMType(llvm::LLVMContext *ctx, bool isStorageType) const {
+llvm::Type *ReferenceType::LLVMType(llvm::LLVMContext *ctx) const {
     if (targetType == NULL) {
         Assert(m->errorCount > 0);
         return NULL;
     }
 
-    llvm::Type *t = targetType->LLVMType(ctx, isStorageType);
+    llvm::Type *t = targetType->LLVMType(ctx);
     if (t == NULL) {
         Assert(m->errorCount > 0);
         return NULL;
@@ -2304,6 +2355,8 @@ const FunctionType *FunctionType::ResolveUnboundVariability(Variability v) const
     return ret;
 }
 
+const Type *FunctionType::GetStorageType() const { return this; }
+
 const Type *FunctionType::GetAsConstType() const { return this; }
 
 const Type *FunctionType::GetAsNonConstType() const { return this; }
@@ -2404,7 +2457,7 @@ std::string FunctionType::GetCDeclarationForDispatch(const std::string &fname) c
     return ret;
 }
 
-llvm::Type *FunctionType::LLVMType(llvm::LLVMContext *ctx, bool isStorageType) const {
+llvm::Type *FunctionType::LLVMType(llvm::LLVMContext *ctx) const {
     FATAL("FunctionType::LLVMType() shouldn't be called");
     return NULL;
 }
@@ -2463,11 +2516,11 @@ llvm::FunctionType *FunctionType::LLVMFunctionType(llvm::LLVMContext *ctx, bool 
         }
         Assert(paramTypes[i]->IsVoidType() == false);
 
-        bool isStorageType = false;
+        const Type *argType = paramTypes[i];
         if (CastType<AtomicType>(paramTypes[i]) == NULL)
-            isStorageType = true;
+            argType = argType->GetStorageType();
 
-        llvm::Type *t = paramTypes[i]->LLVMType(ctx, isStorageType);
+        llvm::Type *t = argType->LLVMType(ctx);
         if (t == NULL) {
             Assert(m->errorCount > 0);
             return NULL;
@@ -2510,7 +2563,11 @@ llvm::FunctionType *FunctionType::LLVMFunctionType(llvm::LLVMContext *ctx, bool 
     bool isStorageType = false;
     if (CastType<AtomicType>(returnType) == NULL)
         isStorageType = true;
-    llvm::Type *llvmReturnType = returnType->LLVMType(g->ctx, isStorageType);
+    const Type *retType = returnType;
+    if (CastType<AtomicType>(returnType) == NULL)
+        retType = retType->GetStorageType();
+
+    llvm::Type *llvmReturnType = retType->LLVMType(g->ctx);
     if (llvmReturnType == NULL)
         return NULL;
     return llvm::FunctionType::get(llvmReturnType, callTypes, false);

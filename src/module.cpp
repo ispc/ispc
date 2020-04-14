@@ -307,7 +307,7 @@ void Module::AddGlobalVariable(const std::string &name, const Type *type, Expr *
         return;
     }
 
-    llvm::Type *llvmType = type->LLVMType(g->ctx, true);
+    llvm::Type *llvmType = type->GetStorageType()->LLVMType(g->ctx);
     if (llvmType == NULL)
         return;
 
@@ -336,7 +336,7 @@ void Module::AddGlobalVariable(const std::string &name, const Type *type, Expr *
                     initExpr = Optimize(initExpr);
                     // Fingers crossed, now let's see if we've got a
                     // constant value..
-                    std::pair<llvm::Constant *, bool> initPair = initExpr->GetConstant(type, true);
+                    std::pair<llvm::Constant *, bool> initPair = initExpr->GetStorageConstant(type);
                     llvmInitializer = initPair.first;
 
                     // If compiling for multitarget, skip initialization for

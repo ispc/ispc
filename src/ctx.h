@@ -435,6 +435,10 @@ class FunctionEmitContext {
     llvm::Value *AddElementOffset(llvm::Value *basePtr, int elementNum, const Type *ptrType, const char *name = NULL,
                                   const PointerType **resultPtrType = NULL);
 
+    /** Bool is stored as i8 and <WIDTH x i8> but represented in IR as i1 and
+     * <WIDTH x MASK>. This is a helper function to match bool size at storage
+     * interface. */
+    llvm::Value *SwitchBoolSize(llvm::Value *value, llvm::Type *fromType, llvm::Type *toType, const char *name = NULL);
     /** Load from the memory location(s) given by lvalue, using the given
         mask.  The lvalue may be varying, in which case this corresponds to
         a gather from the multiple memory locations given by the array of
@@ -444,9 +448,18 @@ class FunctionEmitContext {
                           bool one_elem = false);
 
     /* Load from memory location(s) given.
-     * 'type' needs to be provided if there is a possibility that this a bool.
-     * Otherwise leave this as NULL.*/
-    llvm::Value *LoadInst(llvm::Value *ptr, const Type *type, const char *name = NULL);
+     * 'type' needs to be provided when storage type is different from IR type. For example,
+     * 'unform bool' is 'i1' in IR but stored as 'i8'.
+     * Otherwise leave this as NULL. */
+    llvm::Value *LoadInst(llvm::Value *ptr, const Type *type = NULL, const char *name = NULL);
+
+    /** Emits an alloca instruction to allocate stack storage for the given
+        type.  If a non-zero alignment is specified, the object is also
+        allocated at the given alignment.  By default, the alloca
+        instruction is added at the start of the function in the entry
+        basic block; if it should be added to the current basic block, then
+        the atEntryBlock parameter should be false. */
+    llvm::Value *AllocaInst(llvm::Type *llvmType, const char *name = NULL, int align = 0, bool atEntryBlock = true);
 
     /** Emits an alloca instruction to allocate stack storage for the given
         type.  If a non-zero alignment is specified, the object is also
@@ -454,13 +467,15 @@ class FunctionEmitContext {
         instruction is added at the start of the function in the entry
         basic block; if it should be added to the current basic block, then
         the atEntryBlock parameter should be false.
-        'ptrType' needs to be a non null value if there is a possibility that this a bool.*/
-    llvm::Value *AllocaInst(llvm::Type *llvmType, const Type *ptrType, const char *name = NULL, int align = 0,
-                            bool atEntryBlock = true);
+        This implementation is preferred when possible. It is needed when
+        storage type is different from IR type. For example,
+        'unform bool' is 'i1' in IR but stored as 'i8'. */
+    llvm::Value *AllocaInst(const Type *ptrType, const char *name = NULL, int align = 0, bool atEntryBlock = true);
 
     /** Standard store instruction; for this variant, the lvalue must be a
         single pointer, not a varying lvalue.
-        'ptrType' needs to be provided if there is a possibility that this a bool value.*/
+        'ptrType' needs to be provided when storage type is different from IR type. For example,
+     * 'unform bool' is 'i1' in IR but stored as 'i8'. */
     void StoreInst(llvm::Value *value, llvm::Value *ptr, const Type *ptrType = NULL);
 
     /** In this variant of StoreInst(), the lvalue may be varying.  If so,
