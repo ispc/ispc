@@ -5332,13 +5332,14 @@ static llvm::Pass *CreateFixBooleanSelectPass() { return new FixBooleanSelectPas
 /** This pass checks if memory was allocated on stack and if yes,
     replaces regular call with "private" call
  */
-class PromoteToPrivateMemoryPass : public llvm::BasicBlockPass {
+class PromoteToPrivateMemoryPass : public llvm::FunctionPass {
   public:
     static char ID;
-    PromoteToPrivateMemoryPass() : BasicBlockPass(ID) {}
+    PromoteToPrivateMemoryPass() : FunctionPass(ID) {}
 
     llvm::StringRef getPassName() const { return "Promote to Private Memory"; }
     bool runOnBasicBlock(llvm::BasicBlock &BB);
+    bool runOnFunction(llvm::Function &F);
 };
 
 char PromoteToPrivateMemoryPass::ID = 0;
@@ -5460,14 +5461,24 @@ bool PromoteToPrivateMemoryPass::runOnBasicBlock(llvm::BasicBlock &bb) {
     return modifiedAny;
 }
 
+bool PromoteToPrivateMemoryPass::runOnFunction(llvm::Function &F) {
+
+    bool modifiedAny = false;
+    for (llvm::BasicBlock &BB : F) {
+        modifiedAny |= runOnBasicBlock(BB);
+    }
+    return modifiedAny;
+}
+
 static llvm::Pass *CreatePromoteToPrivateMemoryPass() { return new PromoteToPrivateMemoryPass(); }
 
-class ReplaceLLVMIntrinsics : public llvm::BasicBlockPass {
+class ReplaceLLVMIntrinsics : public llvm::FunctionPass {
   public:
     static char ID;
-    ReplaceLLVMIntrinsics() : BasicBlockPass(ID) {}
+    ReplaceLLVMIntrinsics() : FunctionPass(ID) {}
     llvm::StringRef getPassName() const { return "LLVM intrinsics replacement"; }
     bool runOnBasicBlock(llvm::BasicBlock &BB);
+    bool runOnFunction(llvm::Function &F);
 };
 
 char ReplaceLLVMIntrinsics::ID = 0;
@@ -5515,6 +5526,15 @@ restart:
     return modifiedAny;
 }
 
+bool ReplaceLLVMIntrinsics::runOnFunction(llvm::Function &F) {
+
+    bool modifiedAny = false;
+    for (llvm::BasicBlock &BB : F) {
+        modifiedAny |= runOnBasicBlock(BB);
+    }
+    return modifiedAny;
+}
+
 static llvm::Pass *CreateReplaceLLVMIntrinsics() { return new ReplaceLLVMIntrinsics(); }
 
 ///////////////////////////////////////////////////////////////////////////
@@ -5525,12 +5545,13 @@ static llvm::Pass *CreateReplaceLLVMIntrinsics() { return new ReplaceLLVMIntrins
     so ISPC mustn't generate IR with i64 div
  */
 
-class ReplaceUnsupportedInsts : public llvm::BasicBlockPass {
+class ReplaceUnsupportedInsts : public llvm::FunctionPass {
   public:
     static char ID;
-    ReplaceUnsupportedInsts() : BasicBlockPass(ID) {}
+    ReplaceUnsupportedInsts() : FunctionPass(ID) {}
     llvm::StringRef getPassName() const { return "Replace LLVM instructions, unsupported by CM"; }
     bool runOnBasicBlock(llvm::BasicBlock &BB);
+    bool runOnFunction(llvm::Function &F);
 };
 
 char ReplaceUnsupportedInsts::ID = 0;
@@ -5599,6 +5620,15 @@ bool ReplaceUnsupportedInsts::runOnBasicBlock(llvm::BasicBlock &bb) {
     return modifiedAny;
 }
 
+bool ReplaceUnsupportedInsts::runOnFunction(llvm::Function &F) {
+
+    bool modifiedAny = false;
+    for (llvm::BasicBlock &BB : F) {
+        modifiedAny |= runOnBasicBlock(BB);
+    }
+    return modifiedAny;
+}
+
 static llvm::Pass *CreateReplaceUnsupportedInsts() { return new ReplaceUnsupportedInsts(); }
 
 ///////////////////////////////////////////////////////////////////////////
@@ -5612,12 +5642,13 @@ static llvm::Pass *CreateReplaceUnsupportedInsts() { return new ReplaceUnsupport
     3. ideally generate LLVM vector loads/stores in ImproveOptMemory pass, fix address space here
  */
 
-class FixAddressSpace : public llvm::BasicBlockPass {
+class FixAddressSpace : public llvm::FunctionPass {
   public:
     static char ID;
-    FixAddressSpace() : BasicBlockPass(ID) {}
+    FixAddressSpace() : FunctionPass(ID) {}
     llvm::StringRef getPassName() const { return "Fix address space"; }
     bool runOnBasicBlock(llvm::BasicBlock &BB);
+    bool runOnFunction(llvm::Function &F);
 };
 
 char FixAddressSpace::ID = 0;
@@ -5676,6 +5707,15 @@ restart:
         }
     }
     DEBUG_END_PASS("Fix address space");
+    return modifiedAny;
+}
+
+bool FixAddressSpace::runOnFunction(llvm::Function &F) {
+
+    bool modifiedAny = false;
+    for (llvm::BasicBlock &BB : F) {
+        modifiedAny |= runOnBasicBlock(BB);
+    }
     return modifiedAny;
 }
 
