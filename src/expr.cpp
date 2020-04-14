@@ -768,7 +768,7 @@ static const Type *lMatchingBoolType(const Type *type) {
     if (vt != NULL)
         return new VectorType(boolBase, vt->GetElementCount());
     else {
-        Assert(Type::IsBasicType(type));
+        Assert(Type::IsBasicType(type) || type->IsReferenceType());
         return boolBase;
     }
 }
