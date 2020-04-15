@@ -69,6 +69,8 @@ using WidthT = int;
 
 enum LaneState : bool { OFF = false, ON = true };
 
+using CStrT = const char (&)[1];
+
 // returns length of the string
 // null character is not taken into account
 template <typename T> inline int strLen(T str) {
@@ -85,7 +87,7 @@ template <typename T> inline T max(T a, T b) {
     return b;
 }
 
-template <typename T> inline const char *cmType2Specifier() { return type2Specifier<T>(); }
+template <typename T> inline const char *cmType2Specifier() { return PrintInfo::type2Specifier<T>(); }
 
 // cm printf doesn't support %p, so it is emulated with %X
 template <> inline const char *cmType2Specifier<void *>() {
@@ -131,13 +133,13 @@ class ArgWriter {
         auto wereCopied = CopyFullText(fmt, res, 0, ARG_STR_SIZE - 1);
         res[wereCopied] = '\0';
 
-        writeArg<T>();
+        WriteArg<T>();
         return res;
     }
 
     template <> inline auto uniform2Str<bool>() {
         StaticString<ARG_STR_SIZE> res;
-        auto wereCopied = CopyFullText(ValueAdapter<bool>(getElementaryArg()), res, 0, ARG_STR_SIZE - 1);
+        auto wereCopied = CopyFullText(ValueAdapter<bool>(GetElementaryArg()), res, 0, ARG_STR_SIZE - 1);
         res[wereCopied] = '\0';
         return res;
     }
@@ -165,24 +167,24 @@ class ArgWriter {
             res[haveBeenWritten] = lane == width_ - 1 ? ']' : ',';
             ++haveBeenWritten;
 
-            writeArg<T>();
+            WriteArg<T>();
         }
         res[haveBeenWritten] = '\0';
         return res;
     }
 
   private:
-    inline ArgT getElementaryArg() { return args_[curArgIdx_++]; }
+    inline ArgT GetElementaryArg() { return args_[curArgIdx_++]; }
 
     // accesses next scalar argument or element of vector argument from args_ (reads 2 elementary args if 64 bit value)
     // and writes it to cm printf surface
-    template <typename T> inline void writeArg() {
+    template <typename T> inline void WriteArg() {
         ArgT low, high;
         if constexpr (sizeof(T) > 4) {
-            low = getElementaryArg();
-            high = getElementaryArg();
+            low = GetElementaryArg();
+            high = GetElementaryArg();
         } else {
-            low = getElementaryArg();
+            low = GetElementaryArg();
             high = 0;
         }
         SurfaceIndex BTI = details::__cm_intrinsic_impl_predefined_surface(details::PRINT_SURF_IDX);
@@ -192,19 +194,19 @@ class ArgWriter {
 
     // cm printf doesn't support %p specifier, so it is emulated with unsigned
     // look at cmType2Specifier for more details
-    template <> inline void writeArg<void *>() {
+    template <> inline void WriteArg<void *>() {
         if constexpr (sizeof(void *) > sizeof(unsigned))
-            writeArg<unsigned long long>();
+            WriteArg<unsigned long long>();
         else
-            writeArg<unsigned>();
+            WriteArg<unsigned>();
     }
 
     // in case of bool we do not push the argument to surface, we directly write true or false into format string
-    template <> inline void writeArg<bool>() {}
+    template <> inline void WriteArg<bool>() {}
 
     // appends format string for vector element to res starting from position haveBeenWritten
     // behaves differently for bools, look at specializations for details
-    // NOTE: this is a method because bool specialization require access to getElementaryArg
+    // NOTE: this is a method because bool specialization require access to GetElementaryArg
     template <typename T, LaneState lane>
     inline int writeFormat4VecElem(StaticStringRef<ARG_STR_SIZE> res, int haveBeenWritten) {
         auto fmt = cmType2Specifier<T>();
@@ -219,7 +221,7 @@ class ArgWriter {
     // in case of bools we directly write "true" or "false" to format string, as cm printf doesn't support %s
     template <>
     inline int writeFormat4VecElem<bool, LaneState::ON>(StaticStringRef<ARG_STR_SIZE> res, int haveBeenWritten) {
-        haveBeenWritten += CopyFullText(ValueAdapter<bool>(getElementaryArg()), res, haveBeenWritten,
+        haveBeenWritten += CopyFullText(ValueAdapter<bool>(GetElementaryArg()), res, haveBeenWritten,
                                         ARG_STR_SIZE - haveBeenWritten - 1);
         return haveBeenWritten;
     }
@@ -265,7 +267,7 @@ class ArgWriter {
     FIXME: __declspec(genx_SIMT(1)) is used to make __do_print_cm function be called unpredicated in simd cf.
     It is possibly an abuse of this attribute, in this case it's better to solve the issue differently.
  */
-extern "C" __declspec(cm_builtin) __declspec(genx_SIMT(1)) void __do_print_cm(const char *format, const char *types,
+extern "C" __declspec(cm_builtin) __declspec(genx_no_SIMD_pred) void __do_print_cm(const char *format, const char *types,
                                                                               WidthT width, MaskT mask,
                                                                               const ArgT *args, int numNotBoolUniArgs,
                                                                               int numNotBoolVarArgs) {
@@ -285,3 +287,168 @@ extern "C" __declspec(cm_builtin) __declspec(genx_SIMT(1)) void __do_print_cm(co
     details::_cm_print_format(BTI, init_offset, resultingStr);
 }
 
+template <int width, typename T> static CM_INLINE vector<T, width> vector_cast(T elem) {
+    vector<T, width> res = elem;
+    return res;
+}
+
+template <typename T> static CM_INLINE vector<T, 1> vector_cast(T elem) { return vector_cast<1>(elem); }
+
+enum { LeftParenthes = 0, RightParenthes, EmptyStr, FalseStr, TrueStr, NumAuxStr };
+
+using StrIdxT = std::remove_reference_t<decltype(cm_print_format_index(""))>;
+
+CM_INLINE vector<StrIdxT, NumAuxStr> get_auxiliary_str() {
+    vector<StrIdxT, NumAuxStr> res;
+    res[LeftParenthes] = cm_print_format_index("((");
+    res[RightParenthes] = cm_print_format_index("))");
+    res[EmptyStr] = cm_print_format_index("");
+    res[FalseStr] = cm_print_format_index("false");
+    res[TrueStr] = cm_print_format_index("true");
+    return res;
+};
+
+template <typename T> static CM_INLINE void write_arg_with_promotion(svmptr_t &offset, ArgT low, ArgT high) {
+    details::cm_write_arg_ocl<T>(offset, low, high);
+    offset += CMPHFOCL_VEC_BSZ;
+}
+
+// Both UniformWriter and VaryingWriter promote both current offset in the print
+// buffer and the pointer to current argument. And both functors depend on both
+// variables. So they capture them by reference.
+class UniformWriter {
+    svmptr_t &offset;
+    const ArgT *&args;
+    WidthT width;
+    MaskT mask;
+    vector<StrIdxT, NumAuxStr> auxStr;
+
+  public:
+    CM_INLINE UniformWriter(svmptr_t &offsetIn, const ArgT *&argsIn, WidthT widthIn, MaskT maskIn,
+                            vector<StrIdxT, NumAuxStr> auxStrIn)
+        : offset(offsetIn), args(argsIn), width(widthIn), mask(maskIn), auxStr(auxStrIn) {}
+
+    template <typename T> CM_INLINE void call() { WriteArg<T>(); }
+
+  private:
+    CM_INLINE ArgT GetElementaryArg() { return *args++; }
+
+    // accesses next scalar argument or element of vector argument from args_ (reads 2 elementary args if 64 bit value)
+    // and writes it to cm printf surface
+    template <typename T> CM_INLINE void WriteArg() {
+        ArgT low, high;
+        if constexpr (sizeof(T) > 4) {
+            low = GetElementaryArg();
+            high = GetElementaryArg();
+        } else {
+            low = GetElementaryArg();
+            high = 0;
+        }
+        write_arg_with_promotion<T>(offset, low, high);
+    }
+
+    template <> CM_INLINE void WriteArg<bool>() {
+        ArgT low;
+        if (GetElementaryArg())
+            low = auxStr[TrueStr];
+        else
+            low = auxStr[FalseStr];
+        write_arg_with_promotion<CStrT>(offset, low, 0);
+    }
+};
+
+class VaryingWriter {
+    svmptr_t &offset;
+    const ArgT *&args;
+    WidthT width;
+    MaskT mask;
+    vector<StrIdxT, NumAuxStr> auxStr;
+
+  public:
+    CM_INLINE VaryingWriter(svmptr_t &offsetIn, const ArgT *&argsIn, WidthT widthIn, MaskT maskIn,
+                            vector<StrIdxT, NumAuxStr> auxStrIn)
+        : offset(offsetIn), args(argsIn), width(widthIn), mask(maskIn), auxStr(auxStrIn) {}
+
+    template <typename T> CM_INLINE void call() { WriteArg<T>(); }
+
+  private:
+    template <typename T> CM_INLINE void WriteArg() {
+        for (int lane = 0; lane < width; ++lane) {
+            StrIdxT posibleLeftParenthes;
+            StrIdxT posibleRightParenthes;
+            if (mask & (1ull << lane)) {
+                posibleLeftParenthes = auxStr[EmptyStr];
+                posibleRightParenthes = auxStr[EmptyStr];
+            } else {
+                posibleLeftParenthes = auxStr[LeftParenthes];
+                posibleRightParenthes = auxStr[RightParenthes];
+            }
+            write_arg_with_promotion<CStrT>(offset, posibleLeftParenthes, 0);
+            WriteVecElem<T>();
+            write_arg_with_promotion<CStrT>(offset, posibleRightParenthes, 0);
+        }
+    }
+
+    template <typename T> CM_INLINE void WriteVecElem() { UniformWriter{offset, args, width, mask, auxStr}.call<T>(); }
+};
+
+/** This function is called by PrintStmt to do the work of printing values
+    from ispc programs.  Note that the function signature here must match
+    the parameters that PrintStmt::EmitCode() generates.
+
+    @param format_idx   Print format string index
+    @param types        Encoded types of the values being printed.
+                        (See lEncodeType()).
+    @param width        Vector width of the compilation target
+    @param mask         Current lane mask when the print statement is called
+    @param args         Array of split into uints values
+                        (if a value bigger than uint it stored in 2 uints: low bits, then high bits,
+                         vector values stored by scalar values with the previous rule being applied)
+    @param numUniformArgs   number of uniform arguments
+    @param numVaryingArgs   number of varying arguments
+
+    Root: cm/lz printf works in the following way. All strings (format and %s) must be compile known,
+    as the backend will eventually have to store them special sections (patch tokens). For every string
+    there is its index. To obtain index and present a string there is cm_print_format_index("some str")
+    builtin. When printf is called, kernel side code must write to a special area of memory (can be
+    obtained with cm_print_buffer()) the index of format string and each argument, then runtime reads
+    the content of the area, finds the format string, and performs print based on the recieved data.
+
+    ISPC frontend transforms ISPC format string to normal printf format string:
+        qualifiers are added (% -> %d,% -> %f,...) depending on the type of argument
+        (note: some type can be changed, e.g. integrals smaller than 32 are extended to i32,
+         bools are presented with %s, "true" or "false" strings are passed as arguments)
+        for varying  (% -> [%s%d%s,%s%d%s,...,%s%d%s]), %s are added on both sides for simd-cf
+        case, "((" "))" must be added to output when the lane is off.
+
+    Frontend also splits transformed string into legal for level-zero size strings and calls
+    cm_print_format_index on its side (only format string index is passed as argument).
+
+    This function (__do_print_lz) task is to store properly all the indexes and arguments to
+    the special memory area.
+ */
+extern "C" __declspec(cm_builtin) __declspec(genx_no_SIMD_pred) void __do_print_lz(int format_idx, const char *types, WidthT width, MaskT mask,
+                                                     const ArgT *args, int numUniformArgs, int numVaryingArgs) {
+    // obtaining initial offset/pointer to write to
+    svmptr_t offset = cm_print_buffer();
+    // each vector is written with 3 arguments (%s%d%s)
+    auto total_len = CMPHFOCL_STR_SZ + (numUniformArgs + 3 * width * numVaryingArgs) * CMPHFOCL_VEC_BSZ;
+    // different threads write in parallel to the print buffer,
+    // this function atomically allocates free space and returns offset to it
+    offset += details::_cm_print_init_offset_ocl(offset, total_len);
+
+    // write-out the index of format string
+    cm_svm_scatter_write(vector_cast(offset), vector_cast(format_idx));
+    offset += CMPHFOCL_STR_SZ;
+
+    auto auxStr = get_auxiliary_str();
+    // write all arguments
+    for (; *types != '\0'; ++types) {
+        PrintInfo::switchEncoding(static_cast<PrintInfo::Encoding>(*types),
+                                  UniformWriter(offset, args, width, mask, auxStr),
+                                  VaryingWriter(offset, args, width, mask, auxStr));
+    }
+}
+
+// TODO: implement correctly for genx if possible
+extern "C" int __declspec(cm_builtin) __num_cores() { return -1; }

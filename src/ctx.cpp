@@ -3694,4 +3694,17 @@ void FunctionEmitContext::addUniformMetadata(llvm::Value *v) {
         inst->setMetadata("ISPC-Uniform", N);
     }
 }
+
+llvm::CallInst *FunctionEmitContext::GenXLZFormatStr(const std::string &str) {
+    auto *initializer = llvm::ConstantDataArray::getString(*g->ctx, str, true);
+    auto *GV = new llvm::GlobalVariable(*m->module, initializer->getType(), true /* const */,
+                                        llvm::GlobalValue::InternalLinkage, initializer, "lz_format_str");
+
+    auto *GEP = GetElementPtrInst(GV, LLVMInt32(0), LLVMInt32(0), PointerType::GetUniform(AtomicType::UniformInt8),
+                                  "lz_format_str_ptr");
+
+    auto Fn = llvm::GenXIntrinsic::getGenXDeclaration(m->module, llvm::GenXIntrinsic::genx_print_format_index,
+                                                      LLVMTypes::Int8PointerType);
+    return llvm::CallInst::Create(Fn, GEP, "lz_format_str_idx", bblock);
+}
 #endif

@@ -106,7 +106,7 @@ class ArgWriter {
         : args_(args), curArgIdx_(0), width_(width), mask_(mask) {}
 
     template <typename T> auto uniform2Str() {
-        auto fmt = type2Specifier<T>();
+        auto fmt = PrintInfo::type2Specifier<T>();
         auto argPtr = getArg();
         StaticString<ARG_STR_SIZE> res;
         sprintf(&res[0], fmt, ValueAdapter<T>(*argCast<T>(argPtr)));
@@ -114,7 +114,7 @@ class ArgWriter {
     }
 
     template <typename T> auto varying2Str() {
-        auto fmt = type2Specifier<T>();
+        auto fmt = PrintInfo::type2Specifier<T>();
         StaticString<ARG_STR_SIZE> res;
         res[0] = '[';
         int haveBeenWritten = 1;
@@ -145,7 +145,7 @@ class ArgWriter {
     template <typename T>
     int writeOffLane(StaticString<ARG_STR_SIZE> &res, int haveBeenWritten, const void *argPtr, int lane) {
         haveBeenWritten += sprintf(&res[haveBeenWritten], "((");
-        auto fmt = type2Specifier<T>();
+        auto fmt = PrintInfo::type2Specifier<T>();
         haveBeenWritten += sprintf(&res[haveBeenWritten], fmt, ValueAdapter<T>(argCast<T>(argPtr)[lane]));
         haveBeenWritten += sprintf(&res[haveBeenWritten], "))");
         return haveBeenWritten;
