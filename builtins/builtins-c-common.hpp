@@ -150,28 +150,6 @@ inline int CopyFullText(StaticStringRef<SRC_SIZE> src, const int srcIdx, StaticS
     return details::CopyTillSep<'\0'>(src, srcIdx, dst, dstIdx, leftSpace);
 }
 
-// Converts type to corresponding printf type specifier
-template <typename T> inline const char *type2Specifier();
-
-template <> inline const char *type2Specifier<bool>() {
-    // %s is because we will eventually print "true" or "false"
-    return "%s";
-}
-
-template <> inline const char *type2Specifier<int>() { return "%d"; }
-
-template <> inline const char *type2Specifier<unsigned>() { return "%u"; }
-
-template <> inline const char *type2Specifier<float>() { return "%f"; }
-
-template <> inline const char *type2Specifier<long long>() { return "%lld"; }
-
-template <> inline const char *type2Specifier<long long unsigned>() { return "%llu"; }
-
-template <> inline const char *type2Specifier<double>() { return "%f"; }
-
-template <> inline const char *type2Specifier<void *>() { return "%p"; }
-
 // This function parses format string and string of arg types.
 // User must implement ArgWriter class, which has such template methods as uniform2Str<type> and varying2Str<type>.
 // Those functions must return text representation (c-string) of the next argument, the type of argument is provided

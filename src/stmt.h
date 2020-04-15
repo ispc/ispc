@@ -487,6 +487,7 @@ class PrintStmt : public Stmt {
     std::vector<llvm::Value *> getPrintImplArgs(FunctionEmitContext *ctx) const;
 #ifdef ISPC_GENX_ENABLED
     std::vector<llvm::Value *> getDoPrintCMArgs(FunctionEmitContext *ctx) const;
+    void emitCode4LZ(FunctionEmitContext *ctx) const;
 #endif // ISPC_GENX_ENABLED
 
     enum {

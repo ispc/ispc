@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2019, Intel Corporation
+  Copyright (c) 2010-2020, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -47,6 +47,7 @@
 #include "util.h"
 
 #include <map>
+#include <sstream>
 #include <stdio.h>
 
 #include <llvm/IR/CallingConv.h>
@@ -2986,6 +2987,22 @@ static ExprWithType lProcessPrintArgType(Expr *expr) {
     return {expr, t};
 }
 
+// Returns pointer to __do_print function
+static llvm::Function *getPrintImplFunc() {
+    llvm::Function *printImplFunc = nullptr;
+    switch (g->target->getISA()) {
+#ifdef ISPC_GENX_ENABLED
+    case Target::GENX:
+        printImplFunc = m->module->getFunction("__do_print_lz");
+        break;
+#endif /* ISPC_GENX_ENABLED */
+    default:
+        printImplFunc = m->module->getFunction("__do_print");
+        break;
+    }
+    return printImplFunc;
+}
+
 #ifdef ISPC_GENX_ENABLED
 class PrintArgsBuilder {
     // properly dereferenced and size extended value expressions
@@ -2994,6 +3011,7 @@ class PrintArgsBuilder {
 
   public:
     PrintArgsBuilder() : argExprs_(), ctx_(NULL) {}
+    PrintArgsBuilder(FunctionEmitContext *ctx) : argExprs_(), ctx_(ctx) {}
 
     template <typename Iter>
     PrintArgsBuilder(Iter first, Iter last, FunctionEmitContext *ctx) : argExprs_(), ctx_(ctx) {
@@ -3003,8 +3021,20 @@ class PrintArgsBuilder {
                       [](const ExprWithType &elem) { Assert(elem.expr && "must have all values processed"); });
     }
 
+    // Returns new args builder with subset of original args.
+    // Subset is defined with pair of indexes, element with \p end index is not included.
+    PrintArgsBuilder extract(int beg, int end) const {
+        Assert(beg >= 0 && beg <= argExprs_.size() && end >= 0 && end <= argExprs_.size() &&
+               "wrong argument: index is out of bound");
+        Assert(beg <= end && "wrong arguments: beg must preceed end");
+        PrintArgsBuilder extraction(ctx_);
+        std::copy(std::next(argExprs_.begin(), beg), std::next(argExprs_.begin(), end),
+                  std::back_inserter(extraction.argExprs_));
+        return extraction;
+    }
+
     // the string that will later go as TYPES_IDX argument
-    const std::string generateArgTypes() const {
+    std::string generateArgTypes() const {
         std::string argTypes;
         std::transform(argExprs_.cbegin(), argExprs_.cend(), std::back_inserter(argTypes),
                        [](const ExprWithType &argInfo) { return argInfo.type; });
@@ -3013,7 +3043,10 @@ class PrintArgsBuilder {
 
     // the value that will later go as ARGS_IDX argument
     // Splits arguments into set of uints, stores them in uint[], returns pointer to it
-    llvm::Value *emitArgCode() {
+    llvm::Value *emitArgCode() const {
+        if (argExprs_.empty())
+            return llvm::Constant::getNullValue(LLVMTypes::Int32PointerType);
+
         std::vector<llvm::Value *> argValues(argExprs_.size());
         std::transform(argExprs_.cbegin(), argExprs_.cend(), argValues.begin(),
                        [this](const ExprWithType &argInfo) { return argInfo.expr->GetValue(ctx_); });
@@ -3021,6 +3054,18 @@ class PrintArgsBuilder {
         createAlignedArgValues(argValues.cbegin(), argValues.cend(), std::back_inserter(alignedArgValues));
         auto argAlloca = storeAlignedArgValues(alignedArgValues.cbegin(), alignedArgValues.cend());
         return ctx_->BitCastInst(argAlloca, LLVMTypes::Int32PointerType);
+    }
+
+    // current implementation of __do_print_cm requires the number of uniform arguments with bool excluded
+    int countUniformArgs() const {
+        return std::count_if(argExprs_.cbegin(), argExprs_.cend(),
+                             [](const ExprWithType &argInfo) { return argInfo.expr->GetType()->IsUniformType(); });
+    }
+
+    // current implementation of __do_print_cm requires the number of varying arguments with bool excluded
+    int countVaryingArgs() const {
+        return std::count_if(argExprs_.cbegin(), argExprs_.cend(),
+                             [](const ExprWithType &argInfo) { return argInfo.expr->GetType()->IsVaryingType(); });
     }
 
     // current implementation of __do_print_cm requires the number of uniform arguments with bool excluded
@@ -3040,7 +3085,7 @@ class PrintArgsBuilder {
   private:
     // Aligned here means that every value is represented by set of i32
     template <typename InputIter, typename OutputIter>
-    OutputIter createAlignedArgValues(InputIter first, InputIter last, OutputIter dst) {
+    OutputIter createAlignedArgValues(InputIter first, InputIter last, OutputIter dst) const {
         for (; first != last; ++first) {
             auto arg = *first;
             if (arg->getType()->isVectorTy())
@@ -3052,7 +3097,7 @@ class PrintArgsBuilder {
     }
 
     // vector becomes separate scalars
-    template <typename OutputIter> OutputIter createAlignedVectorArgValue(llvm::Value *vecArg, OutputIter dst) {
+    template <typename OutputIter> OutputIter createAlignedVectorArgValue(llvm::Value *vecArg, OutputIter dst) const {
         auto width = g->target->getVectorWidth();
         for (auto lane = 0; lane < width; ++lane) {
             auto scalarArg = ctx_->ExtractInst(vecArg, lane);
@@ -3062,7 +3107,7 @@ class PrintArgsBuilder {
     }
 
     // 64-bit values must become 2 i32
-    template <typename OutputIter> OutputIter createAlignedScalarArgValue(llvm::Value *arg, OutputIter dst) {
+    template <typename OutputIter> OutputIter createAlignedScalarArgValue(llvm::Value *arg, OutputIter dst) const {
         if (arg->getType()->getPrimitiveSizeInBits() == 64) {
             arg = castToIntIfNeeded(arg, LLVMTypes::Int64Type);
             auto lowArg = ctx_->TruncInst(arg, LLVMTypes::Int32Type);
@@ -3072,7 +3117,7 @@ class PrintArgsBuilder {
             *dst++ = hiArg;
             return dst;
         } else {
-            assert(arg->getType()->getPrimitiveSizeInBits() == 32 && "must be either 32 or 64 bit");
+            Assert(arg->getType()->getPrimitiveSizeInBits() == 32 && "must be either 32 or 64 bit");
             *dst++ = castToIntIfNeeded(arg, LLVMTypes::Int32Type);
             return dst;
         }
@@ -3080,7 +3125,7 @@ class PrintArgsBuilder {
 
     // creates alloca, stores values from [first, last) into it
     // returns alloca value
-    template <typename InputIter> llvm::Value *storeAlignedArgValues(InputIter first, InputIter last) {
+    template <typename InputIter> llvm::Value *storeAlignedArgValues(InputIter first, InputIter last) const {
         auto numArgs = last - first;
         auto arrTy = llvm::ArrayType::get(LLVMTypes::Int32Type, numArgs);
         auto argAlloca = ctx_->AllocaInst(arrTy, "print_arg_ptrs");
@@ -3091,9 +3136,9 @@ class PrintArgsBuilder {
         return argAlloca;
     }
 
-    llvm::Value *castToIntIfNeeded(llvm::Value *val, llvm::Type *intTy) {
-        assert(intTy->isIntegerTy());
-        assert(val->getType()->getPrimitiveSizeInBits() == intTy->getPrimitiveSizeInBits());
+    llvm::Value *castToIntIfNeeded(llvm::Value *val, llvm::Type *intTy) const {
+        Assert(intTy->isIntegerTy());
+        Assert(val->getType()->getPrimitiveSizeInBits() == intTy->getPrimitiveSizeInBits());
         if (val->getType() != intTy)
             if (val->getType()->isPointerTy())
                 return ctx_->PtrToIntInst(val, intTy);
@@ -3101,6 +3146,176 @@ class PrintArgsBuilder {
         return val;
     }
 };
+
+// When one print is split in several smaller ones,
+// this structure will hold info about a split.
+struct PrintSliceInfo {
+    // format holds ISPC-style format string (with just '%')
+    std::string format_;
+    PrintArgsBuilder args_;
+};
+
+class PrintLZFormatStrBuilder {
+    std::array<std::string, PrintInfo::Encoding::Size> specifiers;
+    const int width;
+
+  public:
+    PrintLZFormatStrBuilder(int widthIn) : width{widthIn} {}
+
+    // Based on original ISPC format string, and encoded arg types
+    // generates printf format string.
+    // More info is in the comment to __do_print_lz function.
+    std::string get(const std::string &ISPCFormat, const std::string &argTypes, const SourcePos &pos) {
+        std::string format;
+        format.reserve(ISPCFormat.size());
+        auto curISPCFormatIt = ISPCFormat.begin();
+        for (auto type : argTypes) {
+            auto percentIt = std::find(curISPCFormatIt, ISPCFormat.end(), '%');
+            if (percentIt == ISPCFormat.end())
+                Error(pos, "Too much arguments are provided in print call");
+            format.append(curISPCFormatIt, percentIt);
+            format.append(getOrCreateSpecifier(static_cast<PrintInfo::Encoding>(type)));
+            curISPCFormatIt = std::next(percentIt);
+        }
+        if (std::any_of(curISPCFormatIt, ISPCFormat.end(), [](char ch) { return ch == '%'; }))
+            Error(pos, "Not enough arguments are provided in print call");
+        format.append(curISPCFormatIt, ISPCFormat.end());
+        return format;
+    }
+
+    const std::string &getOrCreateSpecifier(PrintInfo::Encoding type) {
+        assertEncoding(type);
+        auto &specifier = getSpecifier(type);
+        if (specifier.empty())
+            return createSpecifier(type);
+        return specifier;
+    }
+
+  private:
+    static void assertEncoding(PrintInfo::Encoding type) {
+        Assert(type >= PrintInfo::Encoding::Bool && type <= PrintInfo::Encoding::VecPtr &&
+               "wrong argument: unsupported type");
+    }
+
+    static void assertEncoding4Uniform(PrintInfo::Encoding type) {
+        Assert(type >= PrintInfo::Encoding::Bool && type < PrintInfo::Encoding::VecBool &&
+               "wrong argument: unsupported type");
+    }
+
+    static void assertEncoding4Varying(PrintInfo::Encoding type) {
+        Assert(type >= PrintInfo::Encoding::VecBool && type <= PrintInfo::Encoding::VecPtr &&
+               "wrong argument: unsupported type");
+    }
+
+    // helper functor to generate specifier for uniform type
+    struct FillSpecifier4Uniform {
+        std::string &str;
+        FillSpecifier4Uniform(std::string &strIn) : str(strIn) {}
+        template <typename T> void call() { str = PrintInfo::type2Specifier<T>(); }
+    };
+
+    // tip: don't access specifiers field directly, use this function.
+    std::string &accessSpecifier(PrintInfo::Encoding type) {
+        assertEncoding(type);
+        return specifiers[type - PrintInfo::Bool];
+    }
+
+    const std::string &getSpecifier(PrintInfo::Encoding type) const {
+        assertEncoding(type);
+        return const_cast<PrintLZFormatStrBuilder *>(this)->accessSpecifier(type);
+    }
+
+    const std::string &createSpecifier4Uniform(PrintInfo::Encoding type) {
+        assertEncoding4Uniform(type);
+        switchEncoding4Uniform(type, FillSpecifier4Uniform{accessSpecifier(type)});
+        return getSpecifier(type);
+    }
+
+    const std::string &getOrCreateSpecifier4Uniform(PrintInfo::Encoding type) {
+        assertEncoding4Uniform(type);
+        auto &specifier = getSpecifier(type);
+        if (specifier.empty())
+            return createSpecifier4Uniform(type);
+        return specifier;
+    }
+
+    const std::string &createSpecifier4Varying(PrintInfo::Encoding type) {
+        assertEncoding4Varying(type);
+        const std::string &uniform = getOrCreateSpecifier4Uniform(getCorrespondingEncoding4Uniform(type));
+        std::stringstream ss;
+        ss << "[";
+        for (int i = 0; i < width - 1; ++i)
+            ss << "%s" << uniform << "%s,";
+        ss << "%s" << uniform << "%s]";
+        accessSpecifier(type) = ss.str();
+        return getSpecifier(type);
+    }
+
+    const std::string &createSpecifier(PrintInfo::Encoding type) {
+        assertEncoding(type);
+        if (type < PrintInfo::Encoding::VecBool)
+            return createSpecifier4Uniform(type);
+        return createSpecifier4Varying(type);
+    }
+};
+
+// Finds a prefix of a format string with a valid weight.
+//
+// Arguments:
+//    [\p formatFirst, \p formatLast) format string defined with a range
+//    [\p typeWeightFirst, ...) range of weights of every type to be printed,
+//      only begin of the range is required, length of the range must correspond to
+//      the number of '%' in format string. Weight here is meant to represent
+//      the length of the string, with which '%' will be replaced. In other
+//      words weight of every char except '%' is 1, and the weight of every
+//      '%' char is taken from the range.
+//    \p LZPrintFormatLimit - limit on the weight of the resulting string.
+//
+// Iterator to the provided format string such that string [\p formatFirst, returned iter)
+// meets the limit is returned.
+// Iterator to the element past the last weight element used is returned. When no weight
+// info is used unchanged \p typeWeightFirst is returned.
+template <typename FormatIt, typename TypeWeightIt>
+std::tuple<FormatIt, TypeWeightIt> splitValidFormat(FormatIt formatFirst, FormatIt formatLast,
+                                                    TypeWeightIt typeWeightFirst, int LZPrintFormatLimit) {
+    int sum = 0;
+    // space for '\0'
+    --LZPrintFormatLimit;
+    for (; formatFirst != formatLast; ++formatFirst) {
+        char curCh = *formatFirst;
+        if (curCh == '%') {
+            sum += *typeWeightFirst;
+            if (sum <= LZPrintFormatLimit)
+                ++typeWeightFirst;
+        } else
+            ++sum;
+        if (sum > LZPrintFormatLimit)
+            return {formatFirst, typeWeightFirst};
+    }
+    return {formatFirst, typeWeightFirst};
+}
+
+// Splits original print into several prints with valid length format strings.
+static std::vector<PrintSliceInfo> getPrintSlices(const std::string &format, PrintLZFormatStrBuilder &formatBuilder,
+                                                  const PrintArgsBuilder &args, const int LZPrintFormatLimit) {
+    auto argTypes = args.generateArgTypes();
+    std::vector<PrintSliceInfo> printSlices;
+    std::vector<int> argWeights(argTypes.size());
+    std::transform(argTypes.begin(), argTypes.end(), argWeights.begin(), [&formatBuilder](char type) {
+        return formatBuilder.getOrCreateSpecifier(static_cast<PrintInfo::Encoding>(type)).size();
+    });
+    auto firstArgWeight = argWeights.begin();
+    auto curArgWeight = firstArgWeight;
+    for (auto curFormat = format.begin(), lastFormat = format.end(); curFormat != lastFormat;) {
+        auto prevFormat = curFormat;
+        auto prevArgWeight = curArgWeight;
+        std::tie(curFormat, curArgWeight) = splitValidFormat(curFormat, lastFormat, curArgWeight, LZPrintFormatLimit);
+        Assert(curFormat > prevFormat && "haven't managed to split format string");
+        printSlices.push_back({std::string(prevFormat, curFormat),
+                               args.extract(prevArgWeight - firstArgWeight, curArgWeight - firstArgWeight)});
+    }
+    return printSlices;
+}
 
 // prepares arguments for __do_print_cm function
 std::vector<llvm::Value *> PrintStmt::getDoPrintCMArgs(FunctionEmitContext *ctx) const {
@@ -3126,6 +3341,50 @@ std::vector<llvm::Value *> PrintStmt::getDoPrintCMArgs(FunctionEmitContext *ctx)
         doPrintCMArgs[VAR_NUM_IDX] = LLVMInt32(argsBuilder.countNonBoolVaryingArgs());
     }
     return doPrintCMArgs;
+}
+
+// prepares arguments for __do_print_lz function
+static std::vector<llvm::Value *> getDoPrintLZArgs(const std::string &format, PrintLZFormatStrBuilder &formatBuilder,
+                                                   const PrintArgsBuilder &args, FunctionEmitContext *ctx,
+                                                   const SourcePos &pos) {
+    std::vector<llvm::Value *> doPrintLZArgs(PrintStmt::GENX_NUM_IDX);
+    auto argTypes = args.generateArgTypes();
+    doPrintLZArgs[PrintStmt::FORMAT_IDX] = ctx->GenXLZFormatStr(formatBuilder.get(format, argTypes, pos));
+    doPrintLZArgs[PrintStmt::WIDTH_IDX] = LLVMInt32(g->target->getVectorWidth());
+    doPrintLZArgs[PrintStmt::MASK_IDX] = ctx->LaneMask(ctx->GenXSimdCFPredicate(LLVMMaskAllOn));
+    doPrintLZArgs[PrintStmt::TYPES_IDX] = ctx->GetStringPtr(argTypes);
+    doPrintLZArgs[PrintStmt::ARGS_IDX] = args.emitArgCode();
+    doPrintLZArgs[PrintStmt::UNI_NUM_IDX] = LLVMInt32(args.countUniformArgs());
+    doPrintLZArgs[PrintStmt::VAR_NUM_IDX] = LLVMInt32(args.countVaryingArgs());
+    return doPrintLZArgs;
+}
+
+static PrintArgsBuilder getPrintArgsBuilder(Expr *values, FunctionEmitContext *ctx) {
+    if (values == NULL)
+        return PrintArgsBuilder(ctx);
+    else {
+        ExprList *elist = llvm::dyn_cast<ExprList>(values);
+        if (elist)
+            return PrintArgsBuilder{elist->exprs.begin(), elist->exprs.end(), ctx};
+        else
+            return PrintArgsBuilder{&values, &values + 1, ctx};
+    }
+}
+
+void emitCode4LZPrintSlice(const PrintSliceInfo &printSlice, PrintLZFormatStrBuilder &formatBuilder,
+                           FunctionEmitContext *ctx, const SourcePos &pos) {
+    auto printImplArgs = getDoPrintLZArgs(printSlice.format_, formatBuilder, printSlice.args_, ctx, pos);
+    auto printImplFunc = getPrintImplFunc();
+    Assert(printImplFunc && "__do_print_lz function wasn't found");
+    ctx->CallInst(printImplFunc, NULL, printImplArgs, "");
+}
+
+void PrintStmt::emitCode4LZ(FunctionEmitContext *ctx) const {
+    auto allArgs = getPrintArgsBuilder(values, ctx);
+    PrintLZFormatStrBuilder formatBuilder(g->target->getVectorWidth());
+    auto printSlices = getPrintSlices(format, formatBuilder, allArgs, PrintInfo::LZMaxFormatStrSize);
+    for (const auto &printSlice : printSlices)
+        emitCode4LZPrintSlice(printSlice, formatBuilder, ctx, pos);
 }
 
 #endif // ISPC_GENX_ENABLED
@@ -3228,21 +3487,6 @@ std::vector<llvm::Value *> PrintStmt::getPrintImplArgs(FunctionEmitContext *ctx)
     return printImplArgs;
 }
 
-// Returns pointer to __do_print(_cm) function
-llvm::Function *getPrintImplFunc() {
-    llvm::Function *printImplFunc = nullptr;
-    switch (g->target->getISA()) {
-#ifdef ISPC_GENX_ENABLED
-    case Target::GENX:
-        printImplFunc = m->module->getFunction("__do_print_cm");
-        break;
-#endif /* ISPC_GENX_ENABLED */
-    default:
-        printImplFunc = m->module->getFunction("__do_print");
-        break;
-    }
-    return printImplFunc;
-}
 /* PrintStmt works closely with the __do_print() function implemented in
    the builtins-c-cpu.cpp file. In particular, the EmitCode() method here needs to
    take the arguments passed to it from ispc and generate a valid call to
@@ -3253,8 +3497,14 @@ void PrintStmt::EmitCode(FunctionEmitContext *ctx) const {
     if (!ctx->GetCurrentBasicBlock())
         return;
     ctx->SetDebugPos(pos);
+#ifdef ISPC_GENX_ENABLED
+    if (g->target->getISA() == Target::GENX) {
+        emitCode4LZ(ctx);
+        return;
+    }
+#endif /* ISPC_GENX_ENABLED */
     auto printImplArgs = getPrintImplArgs(ctx);
-    Assert(!printImplArgs.empty() && "Haven't managed to produce __do_print(_cm) args");
+    Assert(!printImplArgs.empty() && "Haven't managed to produce __do_print args");
     auto printImplFunc = getPrintImplFunc();
     AssertPos(pos, printImplFunc);
     ctx->CallInst(printImplFunc, NULL, printImplArgs, "");

@@ -294,8 +294,10 @@ function(builtin_genx_to_cpp bit resultFileName)
       set(output ${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_CFG_INTDIR}/builtins-cm-${bit}.cpp)
       add_custom_command(
           OUTPUT ${output}
-          COMMAND ${CMC_EXECUTABLE} -I${CMAKE_SOURCE_DIR} -m${bit} -isystem ${CM_INCLUDE_PATH} -emit-llvm -S ${inputFilePath} -o -
-              | \"${Python3_EXECUTABLE}\" bitcode2cpp.py cm --type=builtins-c --runtime=${bit} --os=${os_name} --arch=${target_arch} --llvm_as ${LLVM_AS_EXECUTABLE}
+          COMMAND ${CMC_EXECUTABLE} -I${CMAKE_SOURCE_DIR} -m${bit} -isystem ${CM_INCLUDE_PATH}
+              -Xclang -disable-llvm-passes -emit-llvm -S ${inputFilePath} -o -
+              | \"${Python3_EXECUTABLE}\" bitcode2cpp.py cm --type=builtins-c --runtime=${bit}
+              --os=${os_name} --arch=${target_arch} --llvm_as ${LLVM_AS_EXECUTABLE}
               > ${output}
           DEPENDS ${inputFilePath}
           WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}

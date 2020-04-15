@@ -554,6 +554,7 @@ class FunctionEmitContext {
     /*End unmasked region. Sets execution mask back using the value from unmask-begin.
     CMSIMDCFLowering expect that execMask have alloca+load+store */
     void GenXEndUnmaskedRegion(llvm::Value *execMask);
+    llvm::CallInst *GenXLZFormatStr(const std::string &str);
 
     bool ifEmulatedUniformForGen() const;
     /*Add ISPC-Uniform metadata to llvm instruction. Instruction with
