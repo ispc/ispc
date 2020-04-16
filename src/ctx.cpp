@@ -2095,12 +2095,13 @@ llvm::Value *FunctionEmitContext::LoadInst(llvm::Value *ptr, const Type *type, c
     llvm::Value *loadVal = inst;
     // bool type is stored as i8. So, it requires some processing.
     if ((type != NULL) && (type->IsBoolType())) {
-        if (CastType<AtomicType>(type) != NULL)
+        if (CastType<AtomicType>(type) != NULL) {
             loadVal = SwitchBoolSize(loadVal, inst->getType(), type->LLVMType(g->ctx));
-        if ((CastType<VectorType>(type) != NULL) && (type->IsBoolType())) {
+        } else if ((CastType<VectorType>(type) != NULL)) {
             const VectorType *vType = CastType<VectorType>(type);
-            if (CastType<AtomicType>(vType->GetElementType()) != NULL)
+            if (CastType<AtomicType>(vType->GetElementType()) != NULL) {
                 loadVal = SwitchBoolSize(loadVal, inst->getType(), type->LLVMType(g->ctx));
+            }
         }
     }
     return loadVal;
@@ -2351,14 +2352,15 @@ llvm::Value *FunctionEmitContext::gather(llvm::Value *ptr, const PointerType *pt
             // This is needed when array of bool is passed in from cpp side
             // TRUE in clang is '1'. This is zero extended to i8.
             // In ispc, this is uniform * varying which after gather becomes
-            // varying bool. Varying bool is ispc is '-1'. The most
+            // varying bool. Varying bool in ispc is '-1'. The most
             // significant bit being set to 1 is important for blendv
             // operations to work as expected.
             if (ptrType->GetBaseType()->IsUniformType()) {
                 gatherCall = TruncInst(gatherCall, LLVMTypes::Int1VectorType);
                 gatherCall = SExtInst(gatherCall, llvmReturnType);
-            } else
+            } else {
                 gatherCall = SExtInst(gatherCall, llvmReturnType);
+            }
         } else if (g->target->getDataLayout()->getTypeSizeInBits(returnType->LLVMStorageType(g->ctx)) >
                    g->target->getDataLayout()->getTypeSizeInBits(llvmReturnType)) {
             gatherCall = TruncInst(gatherCall, llvmReturnType);
@@ -2680,9 +2682,9 @@ void FunctionEmitContext::StoreInst(llvm::Value *value, llvm::Value *ptr, const 
     AssertPos(currentPos, pt != NULL);
 
     if ((ptrType != NULL) && (ptrType->IsBoolType())) {
-        if ((CastType<AtomicType>(ptrType) != NULL))
+        if ((CastType<AtomicType>(ptrType) != NULL)) {
             value = SwitchBoolSize(value, value->getType(), ptrType->LLVMStorageType(g->ctx));
-        if (CastType<VectorType>(ptrType) != NULL) {
+        } else if (CastType<VectorType>(ptrType) != NULL) {
             const VectorType *vType = CastType<VectorType>(ptrType);
             if (CastType<AtomicType>(vType->GetElementType()) != NULL) {
                 value = SwitchBoolSize(value, value->getType(), ptrType->LLVMStorageType(g->ctx));

@@ -3854,7 +3854,6 @@ static std::pair<llvm::Constant *, bool> lGetExprListConstant(const Type *type, 
                 return std::pair<llvm::Constant *, bool>(NULL, false);
             }
             llvm::Type *llvmType = elementType->LLVMType(g->ctx);
-            ;
             if (llvmType == NULL) {
                 AssertPos(pos, m->errorCount > 0);
                 return std::pair<llvm::Constant *, bool>(NULL, false);
@@ -6526,8 +6525,9 @@ static llvm::Value *lUniformValueToVarying(FunctionEmitContext *ctx, llvm::Value
                 v = lUniformValueToVarying(ctx, v, elemType, pos);
                 // If the extracted element if bool and varying needs to be
                 // converted back to i8 vector to insert into varying struct.
-                if ((elemType->IsBoolType()) && (CastType<AtomicType>(elemType) != NULL))
+                if ((elemType->IsBoolType()) && (CastType<AtomicType>(elemType) != NULL)) {
                     v = ctx->SwitchBoolSize(v, v->getType(), LLVMTypes::BoolVectorStorageType);
+                }
             }
             retValue = ctx->InsertInst(retValue, v, i, "set_element");
         }
@@ -6756,8 +6756,9 @@ llvm::Value *TypeCastExpr::GetValue(FunctionEmitContext *ctx) const {
             if (!conv)
                 return NULL;
             if ((toVector->GetElementType()->IsBoolType()) &&
-                (CastType<AtomicType>(toVector->GetElementType()) != NULL))
+                (CastType<AtomicType>(toVector->GetElementType()) != NULL)) {
                 conv = ctx->SwitchBoolSize(conv, conv->getType(), toVector->GetElementType()->LLVMStorageType(g->ctx));
+            }
 
             cast = ctx->InsertInst(cast, conv, i);
         }
@@ -6797,9 +6798,10 @@ llvm::Value *TypeCastExpr::GetValue(FunctionEmitContext *ctx) const {
             cast = llvm::UndefValue::get(toType->LLVMStorageType(g->ctx));
             for (int i = 0; i < toVector->GetElementCount(); ++i) {
                 if ((toVector->GetElementType()->IsBoolType()) &&
-                    (CastType<AtomicType>(toVector->GetElementType()) != NULL))
+                    (CastType<AtomicType>(toVector->GetElementType()) != NULL)) {
                     conv =
                         ctx->SwitchBoolSize(conv, conv->getType(), toVector->GetElementType()->LLVMStorageType(g->ctx));
+                }
                 // Here's InsertInst produces InsertValueInst.
                 cast = ctx->InsertInst(cast, conv, i);
             }
