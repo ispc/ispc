@@ -106,7 +106,6 @@ static void savePPM(const char *fname, int w, int h, float *fimg) {
 static int run() {
     std::cout.setf(std::ios::unitbuf);
     int nSubSamples = NSUBSAMPLES;
-    int tileSize = 16;
     img = new unsigned char[width * height * 3];
     fimg = (float *)aligned_alloc(4096, width * height * 3 * sizeof(float));
 
@@ -128,7 +127,7 @@ static int run() {
     void *dFimg = nullptr;
 
     // thread space
-    ze_group_count_t dispatchTraits = {width / tileSize, height / tileSize, 1};
+    ze_group_count_t dispatchTraits = {1, height, 1};
     std::cout << "Set dispatchTraits.x=" << dispatchTraits.groupCountX
               << ", dispatchTraits.y=" << dispatchTraits.groupCountY << std::endl;
     for (unsigned int i = 0; i < niterations; i++) {
