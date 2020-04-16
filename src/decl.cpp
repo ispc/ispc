@@ -168,10 +168,17 @@ const Type *DeclSpecs::GetBaseType(SourcePos pos) const {
         const StructType *st = CastType<StructType>(retType);
 
         if (st == NULL) {
-            Error(pos,
-                  "Illegal to provide soa<%d> qualifier with non-struct "
-                  "type \"%s\".",
-                  soaWidth, retType->GetString().c_str());
+            if (retType != NULL) {
+                Error(pos,
+                      "Illegal to provide soa<%d> qualifier with non-struct "
+                      "type \"%s\".",
+                      soaWidth, retType->GetString().c_str());
+            } else {
+                Error(pos,
+                      "Illegal to provide soa<%d> qualifier with non-struct "
+                      "type.",
+                      soaWidth);
+            }
             return NULL;
         } else if (soaWidth <= 0 || (soaWidth & (soaWidth - 1)) != 0) {
             Error(pos,

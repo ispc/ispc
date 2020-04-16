@@ -336,7 +336,7 @@ static bool lCheckAllOffSafety(ASTNode *node, void *data) {
 
     if (llvm::dyn_cast<BinaryExpr>(node) != NULL) {
         BinaryExpr *binaryExpr = llvm::dyn_cast<BinaryExpr>(node);
-        if (binaryExpr->op == BinaryExpr::Mod || binaryExpr->op == BinaryExpr::Div) {
+        if (binaryExpr != NULL && (binaryExpr->op == BinaryExpr::Mod || binaryExpr->op == BinaryExpr::Div)) {
             *okPtr = false;
             return false;
         }

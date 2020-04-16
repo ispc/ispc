@@ -747,9 +747,12 @@ void InitSymbol(llvm::Value *ptr, const Type *symType, Expr *initExpr, FunctionE
                     ctx->StoreInst(zeroInit, ep, elementType);
                 }
             }
-        } else
+        } else if (collectionType) {
             Error(initExpr->pos, "Can't assign type \"%s\" to \"%s\".", initExpr->GetType()->GetString().c_str(),
                   collectionType->GetString().c_str());
+        } else {
+            FATAL("CollectionType is NULL in InitSymbol()");
+        }
         return;
     }
 
@@ -1659,8 +1662,11 @@ llvm::Value *lEmitLogicalOp(BinaryExpr::Op op, Expr *arg0, Expr *arg1, FunctionE
 
     // Allocate temporary storage for the return value
     const Type *retType = Type::MoreGeneralType(type0, type1, pos, lOpString(op));
+    if (retType == NULL) {
+        AssertPos(pos, m->errorCount > 0);
+        return NULL;
+    }
     llvm::Value *retPtr = ctx->AllocaInst(retType, "logical_op_mem");
-
     llvm::BasicBlock *bbSkipEvalValue1 = ctx->CreateBasicBlock("skip_eval_1");
     llvm::BasicBlock *bbEvalValue1 = ctx->CreateBasicBlock("eval_1");
     llvm::BasicBlock *bbLogicalDone = ctx->CreateBasicBlock("logical_op_done");
@@ -3076,6 +3082,7 @@ static llvm::Value *lEmitVaryingSelect(FunctionEmitContext *ctx, llvm::Value *te
                                        llvm::Value *expr2, const Type *type) {
 
     llvm::Value *resultPtr = ctx->AllocaInst(type, "selectexpr_tmp");
+    Assert(resultPtr != NULL);
     // Don't need to worry about masking here
     ctx->StoreInst(expr2, resultPtr, type);
     // Use masking to conditionally store the expr1 values
@@ -3722,7 +3729,7 @@ int FunctionCallExpr::EstimateCost() const {
         type = type->GetBaseType();
     const FunctionType *ftype = CastType<FunctionType>(type);
 
-    if (ftype->costOverride > -1)
+    if (ftype != NULL && ftype->costOverride > -1)
         return ftype->costOverride;
 
     if (pt != NULL)
@@ -4203,6 +4210,8 @@ static void lCheckIndicesVersusBounds(const Type *baseExprType, Expr *index) {
 static llvm::Value *lConvertPtrToSliceIfNeeded(FunctionEmitContext *ctx, llvm::Value *ptr, const Type **type) {
     Assert(*type != NULL);
     const PointerType *ptrType = CastType<PointerType>(*type);
+    if (ptrType == NULL)
+        return ptr;
     bool convertToSlice = (ptrType->GetBaseType()->IsSOAType() && ptrType->IsSlice() == false);
     if (convertToSlice == false)
         return ptr;

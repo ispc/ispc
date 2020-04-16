@@ -876,6 +876,9 @@ lStringConst(YYSTYPE *yylval, SourcePos *pos)
     char *p;
     std::string str;
     p = strchr(yytext, '"') + 1;
+    if (p == NULL)
+       return;
+
     while (*p != '\"') {
        char cval = '\0';
        p = lEscapeChar(p, &cval, pos);
@@ -955,7 +958,9 @@ lParseHexFloat(const char *ptr) {
     ++ptr; // skip the 'p'
 
     // interestingly enough, the exponent is provided base 10..
-    int exponent = (int)strtol(ptr, (char **)NULL, 10);
+    char* endptr = NULL;
+    int exponent = (int)strtol(ptr, &endptr, 10);
+    Assert(ptr != endptr);
 
     // Does stdlib exp2() guarantee exact results for integer n where can
     // be represented exactly as doubles?  I would hope so but am not sure,
