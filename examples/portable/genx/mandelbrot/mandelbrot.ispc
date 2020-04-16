@@ -42,11 +42,12 @@ static inline int mandel(float c_re, float c_im, uniform int count)
     float new_re = z_re * z_re - z_im * z_im;
     float new_im = 2.f * z_re * z_im;
 
-    z_re = c_re + new_re;
-    z_im = c_im + new_im;
+    if (!done) {
+      z_re = c_re + new_re;
+      z_im = c_im + new_im;
 
-    if (!done)
       j++;
+    }
   }
 
   return j;
