@@ -287,7 +287,7 @@ void Function::emitCode(FunctionEmitContext *ctx, llvm::Function *function, Sour
 
             // Allocate stack storage for the parameter and emit code
             // to store the its value there.
-            argSym->storagePtr = ctx->AllocaInst(argSym->type->GetStorageType(), argSym->name.c_str());
+            argSym->storagePtr = ctx->AllocaInst(argSym->type, argSym->name.c_str());
 
             ctx->StoreInst(&*argIter, argSym->storagePtr, argSym->type);
             ctx->EmitFunctionParameterDebugInfo(argSym, i);

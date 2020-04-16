@@ -2346,7 +2346,7 @@ llvm::Value *FunctionEmitContext::gather(llvm::Value *ptr, const PointerType *pt
 
     // bool type is stored as i8. So, it requires some processing.
     if (returnType->IsBoolType()) {
-        if (g->target->getDataLayout()->getTypeSizeInBits(returnType->GetStorageType()->LLVMType(g->ctx)) <
+        if (g->target->getDataLayout()->getTypeSizeInBits(returnType->LLVMStorageType(g->ctx)) <
             g->target->getDataLayout()->getTypeSizeInBits(llvmReturnType)) {
             // This is needed when array of bool is passed in from cpp side
             // TRUE in clang is '1'. This is zero extended to i8.
@@ -2359,7 +2359,7 @@ llvm::Value *FunctionEmitContext::gather(llvm::Value *ptr, const PointerType *pt
                 gatherCall = SExtInst(gatherCall, llvmReturnType);
             } else
                 gatherCall = SExtInst(gatherCall, llvmReturnType);
-        } else if (g->target->getDataLayout()->getTypeSizeInBits(returnType->GetStorageType()->LLVMType(g->ctx)) >
+        } else if (g->target->getDataLayout()->getTypeSizeInBits(returnType->LLVMStorageType(g->ctx)) >
                    g->target->getDataLayout()->getTypeSizeInBits(llvmReturnType)) {
             gatherCall = TruncInst(gatherCall, llvmReturnType);
         }
@@ -2447,7 +2447,7 @@ llvm::Value *FunctionEmitContext::AllocaInst(const Type *ptrType, const char *na
     if ((((CastType<AtomicType>(ptrType) != NULL) || (CastType<VectorType>(ptrType) != NULL)) &&
          (ptrType->IsBoolType())) ||
         ((CastType<ArrayType>(ptrType) != NULL) && (ptrType->GetBaseType()->IsBoolType()))) {
-        llvmStorageType = ptrType->GetStorageType()->LLVMType(g->ctx);
+        llvmStorageType = ptrType->LLVMStorageType(g->ctx);
     }
 
     return AllocaInst(llvmStorageType, name, align, atEntryBlock);
@@ -2681,11 +2681,11 @@ void FunctionEmitContext::StoreInst(llvm::Value *value, llvm::Value *ptr, const 
 
     if ((ptrType != NULL) && (ptrType->IsBoolType())) {
         if ((CastType<AtomicType>(ptrType) != NULL))
-            value = SwitchBoolSize(value, value->getType(), ptrType->GetStorageType()->LLVMType(g->ctx));
+            value = SwitchBoolSize(value, value->getType(), ptrType->LLVMStorageType(g->ctx));
         if (CastType<VectorType>(ptrType) != NULL) {
             const VectorType *vType = CastType<VectorType>(ptrType);
             if (CastType<AtomicType>(vType->GetElementType()) != NULL) {
-                value = SwitchBoolSize(value, value->getType(), ptrType->GetStorageType()->LLVMType(g->ctx));
+                value = SwitchBoolSize(value, value->getType(), ptrType->LLVMStorageType(g->ctx));
             }
         }
     }

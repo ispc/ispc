@@ -214,7 +214,7 @@ void DeclStmt::EmitCode(FunctionEmitContext *ctx) const {
             ctx->EmitVariableDebugInfo(sym);
         } else {
             // For non-static variables, allocate storage on the stack
-            sym->storagePtr = ctx->AllocaInst(sym->type->GetStorageType(), sym->name.c_str());
+            sym->storagePtr = ctx->AllocaInst(sym->type, sym->name.c_str());
 
             // Tell the FunctionEmitContext about the variable; must do
             // this before the initializer stuff.

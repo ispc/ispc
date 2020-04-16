@@ -307,7 +307,7 @@ void Module::AddGlobalVariable(const std::string &name, const Type *type, Expr *
         return;
     }
 
-    llvm::Type *llvmType = type->GetStorageType()->LLVMType(g->ctx);
+    llvm::Type *llvmType = type->LLVMStorageType(g->ctx);
     if (llvmType == NULL)
         return;
 
