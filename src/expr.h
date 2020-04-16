@@ -77,6 +77,14 @@ class Expr : public ASTNode {
     virtual Symbol *GetBaseSymbol() const;
 
     /** If this is a constant expression that can be converted to a
+        constant of storage type of the given type, this method should return the
+        corresponding llvm::Constant value and a flag denoting if it's
+        valid for multi-target compilation for use as an initializer of
+        a global variable. Otherwise it should return the llvm::constant
+        value as NULL. */
+    virtual std::pair<llvm::Constant *, bool> GetStorageConstant(const Type *type) const;
+
+    /** If this is a constant expression that can be converted to a
         constant of the given type, this method should return the
         corresponding llvm::Constant value and a flag denoting if it's
         valid for multi-target compilation for use as an initializer of
@@ -169,6 +177,7 @@ class BinaryExpr : public Expr {
     Expr *Optimize();
     Expr *TypeCheck();
     int EstimateCost() const;
+    std::pair<llvm::Constant *, bool> GetStorageConstant(const Type *type) const;
     std::pair<llvm::Constant *, bool> GetConstant(const Type *type) const;
 
     const Op op;
@@ -248,6 +257,7 @@ class ExprList : public Expr {
     llvm::Value *GetValue(FunctionEmitContext *ctx) const;
     const Type *GetType() const;
     void Print() const;
+    std::pair<llvm::Constant *, bool> GetStorageConstant(const Type *type) const;
     std::pair<llvm::Constant *, bool> GetConstant(const Type *type) const;
     ExprList *Optimize();
     ExprList *TypeCheck();
@@ -428,6 +438,7 @@ class ConstExpr : public Expr {
     llvm::Value *GetValue(FunctionEmitContext *ctx) const;
     const Type *GetType() const;
     void Print() const;
+    std::pair<llvm::Constant *, bool> GetStorageConstant(const Type *type) const;
     std::pair<llvm::Constant *, bool> GetConstant(const Type *constType) const;
 
     Expr *TypeCheck();

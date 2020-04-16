@@ -60,6 +60,7 @@ struct LLVMTypes {
     static llvm::PointerType *VoidPointerType;
     static llvm::Type *PointerIntType;
     static llvm::Type *BoolType;
+    static llvm::Type *BoolStorageType;
 
     static llvm::Type *Int8Type;
     static llvm::Type *Int16Type;
@@ -78,6 +79,7 @@ struct LLVMTypes {
     static llvm::VectorType *MaskType;
 
     static llvm::VectorType *BoolVectorType;
+    static llvm::VectorType *BoolVectorStorageType;
     static llvm::VectorType *Int1VectorType;
     static llvm::VectorType *Int8VectorType;
     static llvm::VectorType *Int16VectorType;
@@ -99,7 +101,7 @@ struct LLVMTypes {
 /** These variables hold the corresponding LLVM constant values as a
     convenience to code elsewhere in the system.
  */
-extern llvm::Constant *LLVMTrue, *LLVMFalse;
+extern llvm::Constant *LLVMTrue, *LLVMFalse, *LLVMTrueInStorage, *LLVMFalseInStorage;
 
 /** This should be called early in initialization to initialize the members
     of LLVMTypes and the LLVMTrue/LLVMFalse constants.  However, it can't
@@ -132,6 +134,10 @@ extern llvm::Constant *LLVMDouble(double f);
 /** Returns an LLVM boolean vector constant of the given value smeared
     across all elements */
 extern llvm::Constant *LLVMBoolVector(bool v);
+
+/** Returns an LLVM boolean vector constant of the given value smeared
+    across all elements with bool represented as storage type(i8)*/
+extern llvm::Constant *LLVMBoolVectorInStorage(bool v);
 
 /** Returns an LLVM i8 vector constant of the given value smeared
     across all elements */
@@ -179,6 +185,11 @@ extern llvm::Constant *LLVMUIntAsType(uint64_t, llvm::Type *t);
 /** Returns an LLVM boolean vector based on the given array of values.
     The array should have g->target.vectorWidth elements. */
 extern llvm::Constant *LLVMBoolVector(const bool *v);
+
+/** Returns an LLVM boolean vector based on the given array of values
+    with bool represented as storage type(i8).
+    The array should have g->target.vectorWidth elements. */
+extern llvm::Constant *LLVMBoolVectorInStorage(const bool *v);
 
 /** Returns an LLVM i8 vector based on the given array of values.
     The array should have g->target.vectorWidth elements. */

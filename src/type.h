@@ -202,8 +202,11 @@ class Type {
         syntax. */
     virtual std::string GetCDeclaration(const std::string &name) const = 0;
 
-    /** Returns the LLVM type corresponding to this ispc type */
+    /** Returns the LLVM type corresponding to this ispc type. */
     virtual llvm::Type *LLVMType(llvm::LLVMContext *ctx) const = 0;
+
+    /** Returns the LLVM storage type corresponding to this ispc type. */
+    virtual llvm::Type *LLVMStorageType(llvm::LLVMContext *ctx) const;
 
     /** Returns the DIType (LLVM's debugging information structure),
         corresponding to this type. */
@@ -291,6 +294,7 @@ class AtomicType : public Type {
     std::string Mangle() const;
     std::string GetCDeclaration(const std::string &name) const;
 
+    llvm::Type *LLVMStorageType(llvm::LLVMContext *ctx) const;
     llvm::Type *LLVMType(llvm::LLVMContext *ctx) const;
 
     llvm::DIType *GetDIType(llvm::DIScope *scope) const;
@@ -620,6 +624,7 @@ class VectorType : public SequentialType {
     std::string Mangle() const;
     std::string GetCDeclaration(const std::string &name) const;
 
+    llvm::Type *LLVMStorageType(llvm::LLVMContext *ctx) const;
     llvm::Type *LLVMType(llvm::LLVMContext *ctx) const;
 
     llvm::DIType *GetDIType(llvm::DIScope *scope) const;

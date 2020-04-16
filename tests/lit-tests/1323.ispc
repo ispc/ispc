@@ -6,7 +6,7 @@
 // CHECK_TYPES-NEXT: type { <8 x i32> }
 // CHECK_TYPES-NEXT: type { <4 x i8> }
 // CHECK_TYPES-NEXT: type { <16 x i64> }
-// CHECK_TYPES-NEXT: type { <4 x i1> }
+// CHECK_TYPES-NEXT: type { <4 x i8> }
 
 typedef float<3> float3;
 // CHECK_ALIGN: #ifdef _MSC_VER

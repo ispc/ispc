@@ -168,10 +168,8 @@ static void lCopyInTaskParameter(int i, llvm::Value *structArgPtr, const std::ve
     Assert(llvm::isa<llvm::PointerType>(structArgType));
     const llvm::PointerType *pt = llvm::dyn_cast<const llvm::PointerType>(structArgType);
     Assert(llvm::isa<llvm::StructType>(pt->getElementType()));
-    const llvm::StructType *argStructType = llvm::dyn_cast<const llvm::StructType>(pt->getElementType());
 
     // Get the type of the argument we're copying in and its Symbol pointer
-    llvm::Type *argType = argStructType->getElementType(i);
     Symbol *sym = args[i];
 
     if (sym == NULL)
@@ -179,15 +177,15 @@ static void lCopyInTaskParameter(int i, llvm::Value *structArgPtr, const std::ve
         return;
 
     // allocate space to copy the parameter in to
-    sym->storagePtr = ctx->AllocaInst(argType, sym->name.c_str());
+    sym->storagePtr = ctx->AllocaInst(sym->type, sym->name.c_str());
 
     // get a pointer to the value in the struct
     llvm::Value *ptr = ctx->AddElementOffset(structArgPtr, i, NULL, sym->name.c_str());
 
     // and copy the value from the struct and into the local alloca'ed
     // memory
-    llvm::Value *ptrval = ctx->LoadInst(ptr, sym->name.c_str());
-    ctx->StoreInst(ptrval, sym->storagePtr);
+    llvm::Value *ptrval = ctx->LoadInst(ptr, sym->type, sym->name.c_str());
+    ctx->StoreInst(ptrval, sym->storagePtr, sym->type);
     ctx->EmitFunctionParameterDebugInfo(sym, i);
 }
 
@@ -243,7 +241,7 @@ void Function::emitCode(FunctionEmitContext *ctx, llvm::Function *function, Sour
             int nArgs = (int)args.size();
             // The mask is the last parameter in the argument structure
             llvm::Value *ptr = ctx->AddElementOffset(structParamPtr, nArgs, NULL, "task_struct_mask");
-            llvm::Value *ptrval = ctx->LoadInst(ptr, "mask");
+            llvm::Value *ptrval = ctx->LoadInst(ptr, NULL, "mask");
             ctx->SetFunctionMask(ptrval);
         }
 
@@ -289,9 +287,9 @@ void Function::emitCode(FunctionEmitContext *ctx, llvm::Function *function, Sour
 
             // Allocate stack storage for the parameter and emit code
             // to store the its value there.
-            argSym->storagePtr = ctx->AllocaInst(argIter->getType(), argSym->name.c_str());
+            argSym->storagePtr = ctx->AllocaInst(argSym->type, argSym->name.c_str());
 
-            ctx->StoreInst(&*argIter, argSym->storagePtr);
+            ctx->StoreInst(&*argIter, argSym->storagePtr, argSym->type);
             ctx->EmitFunctionParameterDebugInfo(argSym, i);
         }
 
