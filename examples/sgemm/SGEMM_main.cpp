@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2018, Intel Corporation
+  Copyright (c) 2018-2020, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -199,6 +199,7 @@ int main(int argc, char **argv) {
     int M = 256;
     int N = 64;
     int K = 512;
+
     printf("\nUsage: SGEMM (optional)[ispc iterations] (optional)[[Matrix A Rows] [Matrix A Columns/ matrix B Rows] "
            "[Matrix B Columns]]\n");
     if (argc < 2) {
@@ -231,7 +232,25 @@ int main(int argc, char **argv) {
     } else {
         printf("%s\n", argv[0]);
         printf("\nInvalid number of inputs\n");
-        getchar();
+        exit(-1);
+    }
+
+    int programCount = SGEMM_get_program_count();
+    int tileSize = SGEMM_get_tile_size();
+    if (K % programCount != 0 || K % tileSize != 0) {
+        printf("\nNumber of columns in Matrix B (K) must be a multiple of %d (target width) and %d (tile size)!\n",
+               programCount, tileSize);
+        exit(-1);
+    }
+
+    if (M % programCount != 0) {
+        printf("\nNumber of rows in Matrix A (M) must be a multiple of %d (target width)!\n", programCount);
+        exit(-1);
+    }
+
+    if (N % programCount != 0) {
+        printf("\nNumber of columns in Matrix A (N), which is also number of rows in Matrix B, "
+               "must be a multiple of %d (target width)!\n", programCount);
         exit(-1);
     }
 
@@ -243,7 +262,7 @@ int main(int argc, char **argv) {
     init_matrix_rand(matrixB, N, K, 10.0f);
     float *matrixC;
     matrixC = (float *)malloc(M * K * sizeof(float));
-    init_matrix_rand(matrixC, M, K, 0.0f);
+    init_matrix(matrixC, M, K, 0.0f);
     float *matrixValid;
     matrixValid = (float *)malloc(M * K * sizeof(float));
     bool tasks = false;
