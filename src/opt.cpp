@@ -2742,7 +2742,7 @@ static bool lGSToLoadStore(llvm::CallInst *callInst) {
             llvm::Value *scalarValue =
                 new llvm::LoadInst(llvm::dyn_cast<llvm::PointerType>(ptr->getType())->getPointerElementType(), ptr,
                                    callInst->getName(), callInst);
-#else            
+#else
             llvm::Value *scalarValue = new llvm::LoadInst(ptr, callInst->getName(), callInst);
 #endif
 
@@ -2902,8 +2902,9 @@ static bool lImproveMaskedStore(llvm::CallInst *callInst) {
                 llvm::GenXIntrinsic::getGenXDeclaration(m->module, llvm::GenXIntrinsic::genx_svm_block_st, argTypes);
             store = lCallInst(Fn, svm_st_zext, rvalue, "", NULL);
         } else if (g->target->getISA() != Target::GENX ||
-                   g->target->getISA() == Target::GENX && GetAddressSpace(lvalue) == AddressSpace::Local) {
+                   g->target->getISA() == Target::GENX && GetAddressSpace(lvalue) == AddressSpace::Local)
 #endif
+        {
             llvm::Type *ptrType = llvm::PointerType::get(rvalueType, 0);
 
             lvalue = new llvm::BitCastInst(lvalue, ptrType, "lvalue_to_ptr_type", callInst);
@@ -2912,15 +2913,13 @@ static bool lImproveMaskedStore(llvm::CallInst *callInst) {
             store =
                 new llvm::StoreInst(rvalue, lvalue, false /* not volatile */,
                                     g->opt.forceAlignedMemory ? g->target->getNativeVectorAlignment() : info->align);
-#else // LLVM 10.0+
+#else
             store = new llvm::StoreInst(
                 rvalue, lvalue, false /* not volatile */,
                 llvm::MaybeAlign(g->opt.forceAlignedMemory ? g->target->getNativeVectorAlignment() : info->align)
                     .valueOrOne());
 #endif
-#ifdef ISPC_GENX_ENABLED
         }
-#endif
         if (store != NULL) {
             lCopyMetadata(store, callInst);
             llvm::ReplaceInstWithInst(callInst, store);
@@ -2999,14 +2998,15 @@ static bool lImproveMaskedLoad(llvm::CallInst *callInst, llvm::BasicBlock::itera
 
             load = llvm::CallInst::Create(Fn, svm_ld_ptrtoint, callInst->getName());
         } else if (g->target->getISA() != Target::GENX ||
-                   g->target->getISA() == Target::GENX && GetAddressSpace(ptr) == AddressSpace::Local) {
+                   g->target->getISA() == Target::GENX && GetAddressSpace(ptr) == AddressSpace::Local)
 #endif
+        {
             llvm::Type *ptrType = llvm::PointerType::get(callInst->getType(), 0);
             ptr = new llvm::BitCastInst(ptr, ptrType, "ptr_cast_for_load", callInst);
 #if ISPC_LLVM_VERSION <= ISPC_LLVM_9_0
-            load = new llvm::LoadInst(
-                ptr, callInst->getName(), false /* not volatile */,
-                g->opt.forceAlignedMemory ? g->target->getNativeVectorAlignment() : info->align, (llvm::Instruction *)NULL);
+            load = new llvm::LoadInst(ptr, callInst->getName(), false /* not volatile */,
+                                      g->opt.forceAlignedMemory ? g->target->getNativeVectorAlignment() : info->align,
+                                      (llvm::Instruction *)NULL);
 #elif ISPC_LLVM_VERSION == ISPC_LLVM_10_0
             load = new llvm::LoadInst(
                 ptr, callInst->getName(), false /* not volatile */,
@@ -3021,9 +3021,7 @@ static bool lImproveMaskedLoad(llvm::CallInst *callInst, llvm::BasicBlock::itera
                     .valueOrOne(),
                 (llvm::Instruction *)NULL);
 #endif
-#ifdef ISPC_GENX_ENABLED
         }
-#endif
         if (load != NULL) {
             lCopyMetadata(load, callInst);
             llvm::ReplaceInstWithInst(callInst, load);
@@ -5495,11 +5493,12 @@ restart:
                     m->module, llvm::GenXIntrinsic::genx_raw_send_noresult, argTypes);
                 llvm::SmallVector<llvm::Value *, 8> Args;
                 Args.push_back(llvm::ConstantInt::get(LLVMTypes::Int32Type, 0));
-                Args.push_back(llvm::ConstantVector::getSplat(g->target->getNativeVectorWidth(), llvm::ConstantInt::getTrue(*g->ctx)));
+                Args.push_back(llvm::ConstantVector::getSplat(g->target->getNativeVectorWidth(),
+                                                              llvm::ConstantInt::getTrue(*g->ctx)));
                 Args.push_back(llvm::ConstantInt::get(LLVMTypes::Int32Type, 39));
                 Args.push_back(llvm::ConstantInt::get(LLVMTypes::Int32Type, 33554448));
-                llvm::Value *zeroMask =
-                    llvm::ConstantVector::getSplat(g->target->getNativeVectorWidth(), llvm::Constant::getNullValue(llvm::Type::getInt16Ty(*g->ctx)));
+                llvm::Value *zeroMask = llvm::ConstantVector::getSplat(
+                    g->target->getNativeVectorWidth(), llvm::Constant::getNullValue(llvm::Type::getInt16Ty(*g->ctx)));
                 Args.push_back(zeroMask);
 
                 llvm::Instruction *newInst = llvm::CallInst::Create(Fn, Args, ci->getName());
