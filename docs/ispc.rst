@@ -4041,6 +4041,7 @@ element of it as a single ``uniform`` value.  .
 
 ::
 
+    uniform bool extract(bool x, uniform int i)
     uniform int8 extract(int8 x, uniform int i)
     uniform int16 extract(int16 x, uniform int i)
     uniform int32 extract(int32 x, uniform int i)
@@ -4052,6 +4053,7 @@ where the ``i`` th element of ``x`` has been replaced with the value ``v``
 
 ::
 
+    bool insert(bool x, uniform int i, uniform bool v)
     int8 insert(int8 x, uniform int i, uniform int8 v)
     int16 insert(int16 x, uniform int i, uniform int16 v)
     int32 insert(int32 x, uniform int i, uniform int32 v)
