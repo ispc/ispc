@@ -1187,13 +1187,31 @@ std::string Target::GetTripleString() const {
             Error(SourcePos(), "Aarch64 is not supported on Windows.");
             exit(1);
         } else if (m_arch == Arch::genx32) {
-            triple.setArchName("genx32");
+#ifdef ISPC_GENX_ENABLED
+            // As soon as we generate spirv only for gen we can get rid of this condition
+            // and keep only triple.setArchName("spir32")/triple.setArchName("spir64")
+            g->emitSPIRV == true ? triple.setArchName("spir32") : triple.setArchName("genx32");
+#else
+            UNREACHABLE();
+#endif
         } else if (m_arch == Arch::genx64) {
-            triple.setArchName("genx64");
+#ifdef ISPC_GENX_ENABLED
+            g->emitSPIRV == true ? triple.setArchName("spir64") : triple.setArchName("genx64");
+#else
+            UNREACHABLE();
+#endif
         } else {
             Error(SourcePos(), "Unknown arch.");
             exit(1);
         }
+#ifdef ISPC_GENX_ENABLED
+        //"spir64-unknown-unknown"
+        if (g->emitSPIRV == true) {
+            triple.setVendor(llvm::Triple::VendorType::UnknownVendor);
+            triple.setOS(llvm::Triple::OSType::UnknownOS);
+        }
+        return triple.str();
+#endif
         //"x86_64-pc-windows-msvc"
         triple.setVendor(llvm::Triple::VendorType::PC);
         triple.setOS(llvm::Triple::OSType::Win32);
@@ -1209,14 +1227,33 @@ std::string Target::GetTripleString() const {
             triple.setArchName("armv7");
         } else if (m_arch == Arch::aarch64) {
             triple.setArchName("aarch64");
+
         } else if (m_arch == Arch::genx32) {
-            triple.setArchName("genx32");
+#ifdef ISPC_GENX_ENABLED
+            // As soon as we generate spirv only for gen we can get rid of this condition
+            // and keep only triple.setArchName("spir32")/triple.setArchName("spir64")
+            g->emitSPIRV == true ? triple.setArchName("spir32") : triple.setArchName("genx32");
+#else
+            UNREACHABLE();
+#endif
         } else if (m_arch == Arch::genx64) {
-            triple.setArchName("genx64");
+#ifdef ISPC_GENX_ENABLED
+            g->emitSPIRV == true ? triple.setArchName("spir64") : triple.setArchName("genx64");
+#else
+            UNREACHABLE();
+#endif
         } else {
             Error(SourcePos(), "Unknown arch.");
             exit(1);
         }
+#ifdef ISPC_GENX_ENABLED
+        //"spir64-unknown-unknown"
+        if (g->emitSPIRV == true) {
+            triple.setVendor(llvm::Triple::VendorType::UnknownVendor);
+            triple.setOS(llvm::Triple::OSType::UnknownOS);
+        }
+        return triple.str();
+#endif
         triple.setVendor(llvm::Triple::VendorType::UnknownVendor);
         triple.setOS(llvm::Triple::OSType::Linux);
         if (m_arch == Arch::x86 || m_arch == Arch::x86_64 || m_arch == Arch::aarch64 || m_arch == Arch::genx32 ||
