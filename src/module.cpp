@@ -61,8 +61,6 @@
 #include <io.h>
 #include <windows.h>
 #define strcasecmp stricmp
-#else
-#include <unistd.h>
 #endif
 #include "llvm/IR/LegacyPassManager.h"
 #include <clang/Basic/TargetInfo.h>
