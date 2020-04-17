@@ -238,12 +238,19 @@ int main(int argc, char **argv) {
     int programCount = SGEMM_get_program_count();
     int tileSize = SGEMM_get_tile_size();
     if (K % programCount != 0 || K % tileSize != 0) {
-        printf("\nNumber of columns in Matrix B must be a multiple of %d and %d!\n", programCount, tileSize);
+        printf("\nNumber of columns in Matrix B (K) must be a multiple of %d (target width) and %d (tile size)!\n",
+               programCount, tileSize);
         exit(-1);
     }
 
     if (M % programCount != 0) {
-        printf("\nNumber of rows in Matrix A must be a multiple of %d!\n", programCount);
+        printf("\nNumber of rows in Matrix A (M) must be a multiple of %d (target width)!\n", programCount);
+        exit(-1);
+    }
+
+    if (N % programCount != 0) {
+        printf("\nNumber of columns in Matrix A (N), which is also number of rows in Matrix B, "
+               "must be a multiple of %d (target width)!\n", programCount);
         exit(-1);
     }
 

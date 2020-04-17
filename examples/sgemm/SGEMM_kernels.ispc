@@ -94,8 +94,8 @@ static task void SGEMM_naive_task(uniform float matrixA[], uniform float matrixB
 
 export void SGEMM_naive_withTasks(uniform float matA[], uniform float matB[], uniform float matC[],
                                     uniform int M, uniform int N, uniform int K) {
-    // Task must have at least programCount columns to process, but we require the matrix
-    // K size to be a miltiple of programCount, so it's safe to divide here
+    // The algorithm divides rows in matrix C (M size) between tasks.
+    // We want each task to process programCount rows in C matrix to maximize SIMD usage.
     uniform int numTasks = M / programCount;
     launch[numTasks] SGEMM_naive_task(matA, matB, matC, M, N, K);
 }
@@ -160,8 +160,8 @@ static task void SGEMM_tileShuffle_task(uniform float matrixA[], uniform float m
 
 export void SGEMM_tileShuffle_withTasks(uniform float matA[], uniform float matB[], uniform float matC[],
     uniform int M, uniform int N, uniform int K) {
-    // Task must have at least programCount columns to process, but we require the matrix
-    // K size to be a miltiple of programCount, so it's safe to divide here
+    // The algorithm divides columns in matrix C (K size) between tasks.
+    // We want each task to process programCount colums in C matrix to maximize SIMD usage.
     uniform int numTasks = K / programCount;
     launch[numTasks] SGEMM_tileShuffle_task(matA, matB, matC, M, N, K);
  }
@@ -185,12 +185,10 @@ export void SGEMM_tileReduceAdd(uniform float matrixA[], uniform float matrixB[]
             // SPMD "vertically" over the matrix N dimension:
             foreach (n = 0 ... N) {
                 tileOfA = matrixA[m*N + n];
-
                 for (uniform int kt = 0; kt < TILE_SIZE; kt++) {
                     #pragma ignore warning(perf)
                     sumTile[kt] += reduce_add(tileOfA * matrixB[n*K + k0 + kt]);
                 }
-
             }
 
             // SPMD "horizontally" again over TILE dimension:
@@ -239,8 +237,9 @@ static task void SGEMM_tileReduceAdd_task(uniform float matrixA[], uniform float
 
 export void SGEMM_tileReduceAdd_withTasks(uniform float matA[], uniform float matB[], uniform float matC[],
     uniform int M, uniform int N, uniform int K) {
-    // Generate more tasks than threads, to enable some load balancing:
-    uniform int numTasks = K / programCount;
+    // The algorithm divides rows in matrix C (M size) between tasks.
+    // We want each task to process programCount rows in C matrix to maximize SIMD usage.
+    uniform int numTasks = M / programCount;
     launch[numTasks] SGEMM_tileReduceAdd_task(matA, matB, matC, M, N, K);
 }
 
@@ -319,8 +318,9 @@ task void SGEMM_tileAtomicAdd_task(uniform float matrixA[], uniform float matrix
 
 export void SGEMM_tileAtomicAdd_withTasks(uniform float matA[], uniform float matB[], uniform float matC[],
     uniform int M, uniform int N, uniform int K) {
-    // Generate more tasks than threads, to enable some load balancing:
-    uniform int numTasks = K / programCount;
+    // The algorithm divides rows in matrix C (M size) between tasks.
+    // We want each task to process programCount rows in C matrix to maximize SIMD usage.
+    uniform int numTasks = M / programCount;
     launch[numTasks] SGEMM_tileAtomicAdd_task(matA, matB, matC, M, N, K);
 }
 
@@ -411,7 +411,8 @@ static task void SGEMM_tileNoSIMDIntrin_task(uniform float matrixA[], uniform fl
 
 export void SGEMM_tileNoSIMDIntrin_withTasks(uniform float matA[], uniform float matB[], uniform float matC[],
     uniform int M, uniform int N, uniform int K) {
-    // Generate more tasks than threads, to enable some load balancing:
+    // The algorithm divides rows in matrix C (M size) between tasks.
+    // We want each task to process programCount rows in C matrix to maximize SIMD usage.
     uniform int numTasks = M / programCount;
     launch[numTasks] SGEMM_tileNoSIMDIntrin_task(matA, matB, matC, M, N, K);
 }
@@ -513,7 +514,8 @@ task void SGEMM_tileBlockNoSIMDIntrin_task(uniform float matrixA[], uniform floa
 
 export void SGEMM_tileBlockNoSIMDIntrin_withTasks(uniform float matA[], uniform float matB[], uniform float matC[],
     uniform int M, uniform int N, uniform int K) {
-    // Generate more tasks than threads, to enable some load balancing:
+    // The algorithm divides rows in matrix C (M size) between tasks.
+    // We want each task to process programCount rows in C matrix to maximize SIMD usage.
     uniform int numTasks = M / programCount;
     launch[numTasks] SGEMM_tileBlockNoSIMDIntrin_task(matA, matB, matC, M, N, K);
 }
@@ -618,7 +620,8 @@ task void SGEMM_tileBlockNoSIMDIntrin_2_task(uniform float matrixA[], uniform fl
 
 export void SGEMM_tileBlockNoSIMDIntrin_2_withTasks(uniform float matA[], uniform float matB[], uniform float matC[],
     uniform int M, uniform int N, uniform int K) {
-    // Generate more tasks than threads, to enable some load balancing:
+    // The algorithm divides rows in matrix C (M size) between tasks.
+    // We want each task to process programCount rows in C matrix to maximize SIMD usage.
     uniform int numTasks = M / programCount;
     launch[numTasks] SGEMM_tileBlockNoSIMDIntrin_2_task(matA, matB, matC, M, N, K);
 }
