@@ -145,6 +145,9 @@ Module::Module(const char *fn) {
     module = new llvm::Module(!IsStdin(filename) ? filename : "<stdin>", *g->ctx);
     module->setTargetTriple(g->target->GetTripleString());
 
+    diBuilder = NULL;
+    diCompileUnit = NULL;
+
     // DataLayout information supposed to be managed in single place in Target class.
     module->setDataLayout(g->target->getDataLayout()->getStringRepresentation());
 
@@ -168,7 +171,6 @@ Module::Module(const char *fn) {
             ++errorCount;
             delete diBuilder;
             diBuilder = NULL;
-            diCompileUnit = NULL;
         } else {
             std::string directory, name;
             GetDirectoryAndFileName(g->currentDirectory, filename, &directory, &name);
@@ -187,9 +189,6 @@ Module::Module(const char *fn) {
                                              g->opt.level > 0 /* is optimized */, "-g", /* command line args */
                                              0 /* run time version */);
         }
-    } else {
-        diBuilder = NULL;
-        diCompileUnit = NULL;
     }
 }
 
@@ -1269,14 +1268,14 @@ static void lGetExportedParamTypes(const std::vector<Symbol *> &funcs,
                                    std::vector<const VectorType *> *exportedVectorTypes) {
     for (unsigned int i = 0; i < funcs.size(); ++i) {
         const FunctionType *ftype = CastType<FunctionType>(funcs[i]->type);
-        // Handle the return type
-        if (ftype != NULL) {
-            lGetExportedTypes(ftype->GetReturnType(), exportedStructTypes, exportedEnumTypes, exportedVectorTypes);
+        Assert(ftype != NULL);
 
-            // And now the parameter types...
-            for (int j = 0; j < ftype->GetNumParameters(); ++j)
-                lGetExportedTypes(ftype->GetParameterType(j), exportedStructTypes, exportedEnumTypes,
-                                  exportedVectorTypes);
+        // Handle the return type
+        lGetExportedTypes(ftype->GetReturnType(), exportedStructTypes, exportedEnumTypes, exportedVectorTypes);
+
+        // And now the parameter types...
+        for (int j = 0; j < ftype->GetNumParameters(); ++j) {
+            lGetExportedTypes(ftype->GetParameterType(j), exportedStructTypes, exportedEnumTypes, exportedVectorTypes);
         }
     }
 }
@@ -2324,10 +2323,11 @@ static bool lCompatibleTypes(llvm::Type *Ty1, llvm::Type *Ty2) {
             Ty2 = Ty2->getPointerElementType();
             break;
 
-        case llvm::ArrayType::StructTyID:
-            if (llvm::dyn_cast<llvm::StructType>(Ty1) != NULL && llvm::dyn_cast<llvm::StructType>(Ty2) != NULL)
-                return llvm::dyn_cast<llvm::StructType>(Ty1)->isLayoutIdentical(llvm::dyn_cast<llvm::StructType>(Ty2));
-            break;
+        case llvm::ArrayType::StructTyID: {
+            llvm::StructType *STy1 = llvm::dyn_cast<llvm::StructType>(Ty1);
+            llvm::StructType *STy2 = llvm::dyn_cast<llvm::StructType>(Ty2);
+            return STy1 && STy2 && STy1->isLayoutIdentical(STy2);
+        }
         default:
             // Pointers for compatible simple types are assumed equal
             return Ty1 == Ty2;
@@ -2621,15 +2621,18 @@ int Module::CompileAndOutput(const char *srcFile, Arch arch, const char *cpu, st
             return 1;
         }
 
-        if (dispatchModule != NULL) {
-            lEmitDispatchModule(dispatchModule, exportedFunctions);
+        if (dispatchModule == NULL) {
+            Error(SourcePos(), "Failed to create dispatch module.\n");
+            return 1;
+        }
 
-            if (outFileName != NULL) {
-                if ((outputType == Bitcode) || (outputType == BitcodeText))
-                    writeBitcode(dispatchModule, outFileName, outputType);
-                else
-                    writeObjectFileOrAssembly(firstTargetMachine, dispatchModule, outputType, outFileName);
-            }
+        lEmitDispatchModule(dispatchModule, exportedFunctions);
+
+        if (outFileName != NULL) {
+            if ((outputType == Bitcode) || (outputType == BitcodeText))
+                writeBitcode(dispatchModule, outFileName, outputType);
+            else
+                writeObjectFileOrAssembly(firstTargetMachine, dispatchModule, outputType, outFileName);
         }
 
         if (depsFileName != NULL || (outputFlags & Module::OutputDepsToStdout)) {

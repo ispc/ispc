@@ -206,25 +206,23 @@ class TypeFinder {
 
                     // Incorporate the type of the instruction and all its operands.
                     incorporateType(I.getType());
-                    if (llvm::isa<llvm::StoreInst>(&I))
+                    const llvm::StoreInst *St = llvm::dyn_cast<llvm::StoreInst>(&I);
+                    if (St) {
                         if (llvm::IntegerType *ITy = llvm::dyn_cast<llvm::IntegerType>(I.getType())) {
                             IntegerTypes.push_back(ITy);
-                            const llvm::StoreInst *St = llvm::dyn_cast<llvm::StoreInst>(&I);
-                            if (St != NULL) {
-                                IsVolatile.push_back(St->isVolatile());
-                                Alignment.push_back(St->getAlignment());
-                            }
+                            IsVolatile.push_back(St->isVolatile());
+                            Alignment.push_back(St->getAlignment());
                         }
+                    }
 
-                    if (llvm::isa<llvm::LoadInst>(&I))
+                    const llvm::LoadInst *Ld = llvm::dyn_cast<llvm::LoadInst>(&I);
+                    if (Ld) {
                         if (llvm::IntegerType *ITy = llvm::dyn_cast<llvm::IntegerType>(I.getType())) {
                             IntegerTypes.push_back(ITy);
-                            const llvm::LoadInst *St = llvm::dyn_cast<llvm::LoadInst>(&I);
-                            if (St != NULL) {
-                                IsVolatile.push_back(St->isVolatile());
-                                Alignment.push_back(St->getAlignment());
-                            }
+                            IsVolatile.push_back(Ld->isVolatile());
+                            Alignment.push_back(Ld->getAlignment());
                         }
+                    }
 
                     for (llvm::User::const_op_iterator OI = I.op_begin(), OE = I.op_end(); OI != OE; ++OI)
                         incorporateValue(*OI);

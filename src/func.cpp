@@ -171,8 +171,6 @@ static void lCopyInTaskParameter(int i, llvm::Value *structArgPtr, const std::ve
     const llvm::PointerType *pt = llvm::dyn_cast<const llvm::PointerType>(structArgType);
     Assert(pt);
     Assert(llvm::isa<llvm::StructType>(pt->getElementType()));
-    const llvm::StructType *argStructType = llvm::dyn_cast<const llvm::StructType>(pt->getElementType());
-    Assert(argStructType);
 
     // Get the type of the argument we're copying in and its Symbol pointer
     Symbol *sym = args[i];

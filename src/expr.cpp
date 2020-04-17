@@ -3727,8 +3727,8 @@ int FunctionCallExpr::EstimateCost() const {
     const PointerType *pt = CastType<PointerType>(type);
     if (pt != NULL)
         type = type->GetBaseType();
-    const FunctionType *ftype = CastType<FunctionType>(type);
 
+    const FunctionType *ftype = CastType<FunctionType>(type);
     if (ftype != NULL && ftype->costOverride > -1)
         return ftype->costOverride;
 
@@ -4210,8 +4210,7 @@ static void lCheckIndicesVersusBounds(const Type *baseExprType, Expr *index) {
 static llvm::Value *lConvertPtrToSliceIfNeeded(FunctionEmitContext *ctx, llvm::Value *ptr, const Type **type) {
     Assert(*type != NULL);
     const PointerType *ptrType = CastType<PointerType>(*type);
-    if (ptrType == NULL)
-        return ptr;
+    Assert(ptrType != NULL);
     bool convertToSlice = (ptrType->GetBaseType()->IsSOAType() && ptrType->IsSlice() == false);
     if (convertToSlice == false)
         return ptr;

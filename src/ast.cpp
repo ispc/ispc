@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2011-2019, Intel Corporation
+  Copyright (c) 2011-2020, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -334,9 +334,9 @@ static bool lCheckAllOffSafety(ASTNode *node, void *data) {
         return false;
     }
 
-    if (llvm::dyn_cast<BinaryExpr>(node) != NULL) {
-        BinaryExpr *binaryExpr = llvm::dyn_cast<BinaryExpr>(node);
-        if (binaryExpr != NULL && (binaryExpr->op == BinaryExpr::Mod || binaryExpr->op == BinaryExpr::Div)) {
+    BinaryExpr *binaryExpr;
+    if ((binaryExpr = llvm::dyn_cast<BinaryExpr>(node)) != NULL) {
+        if (binaryExpr->op == BinaryExpr::Mod || binaryExpr->op == BinaryExpr::Div) {
             *okPtr = false;
             return false;
         }
