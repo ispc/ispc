@@ -66,7 +66,7 @@
 #include <llvm/Transforms/IPO.h>
 
 #ifdef ISPC_GENX_ENABLED
-#include <llvm/GenXIntrinsics/GenXKernelMDOps.h>
+#include <llvm/GenXIntrinsics/GenXMetadata.h>
 #endif
 
 Function::Function(Symbol *s, Stmt *c) {
