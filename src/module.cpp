@@ -145,6 +145,9 @@ Module::Module(const char *fn) {
     module = new llvm::Module(!IsStdin(filename) ? filename : "<stdin>", *g->ctx);
     module->setTargetTriple(g->target->GetTripleString());
 
+    diBuilder = NULL;
+    diCompileUnit = NULL;
+
     // DataLayout information supposed to be managed in single place in Target class.
     module->setDataLayout(g->target->getDataLayout()->getStringRepresentation());
 
@@ -186,8 +189,7 @@ Module::Module(const char *fn) {
                                              g->opt.level > 0 /* is optimized */, "-g", /* command line args */
                                              0 /* run time version */);
         }
-    } else
-        diBuilder = NULL;
+    }
 }
 
 extern FILE *yyin;
@@ -887,7 +889,6 @@ bool Module::writeOutput(OutputType outputType, OutputFlags flags, const char *o
                         fileType, outFileName, suffix);
         }
     }
-
     if (outputType == Header) {
         if (DHI)
             return writeDispatchHeader(DHI);
@@ -943,7 +944,6 @@ bool Module::writeBitcode(llvm::Module *module, const char *outFileName, OutputT
 #endif
     else if (outputType == BitcodeText)
         module->print(fos, nullptr);
-
     return true;
 }
 
@@ -1268,12 +1268,15 @@ static void lGetExportedParamTypes(const std::vector<Symbol *> &funcs,
                                    std::vector<const VectorType *> *exportedVectorTypes) {
     for (unsigned int i = 0; i < funcs.size(); ++i) {
         const FunctionType *ftype = CastType<FunctionType>(funcs[i]->type);
+        Assert(ftype != NULL);
+
         // Handle the return type
         lGetExportedTypes(ftype->GetReturnType(), exportedStructTypes, exportedEnumTypes, exportedVectorTypes);
 
         // And now the parameter types...
-        for (int j = 0; j < ftype->GetNumParameters(); ++j)
+        for (int j = 0; j < ftype->GetNumParameters(); ++j) {
             lGetExportedTypes(ftype->GetParameterType(j), exportedStructTypes, exportedEnumTypes, exportedVectorTypes);
+        }
     }
 }
 
@@ -1898,7 +1901,6 @@ bool Module::writeDispatchHeader(DispatchHeaderInfo *DHI) {
             fprintf(f, "\n#endif // %s\n", guard.c_str());
         DHI->EmitBackMatter = false;
     }
-
     return true;
 }
 
@@ -2321,9 +2323,11 @@ static bool lCompatibleTypes(llvm::Type *Ty1, llvm::Type *Ty2) {
             Ty2 = Ty2->getPointerElementType();
             break;
 
-        case llvm::ArrayType::StructTyID:
-            return llvm::dyn_cast<llvm::StructType>(Ty1)->isLayoutIdentical(llvm::dyn_cast<llvm::StructType>(Ty2));
-
+        case llvm::ArrayType::StructTyID: {
+            llvm::StructType *STy1 = llvm::dyn_cast<llvm::StructType>(Ty1);
+            llvm::StructType *STy2 = llvm::dyn_cast<llvm::StructType>(Ty2);
+            return STy1 && STy2 && STy1->isLayoutIdentical(STy2);
+        }
         default:
             // Pointers for compatible simple types are assumed equal
             return Ty1 == Ty2;
@@ -2617,6 +2621,11 @@ int Module::CompileAndOutput(const char *srcFile, Arch arch, const char *cpu, st
             return 1;
         }
 
+        if (dispatchModule == NULL) {
+            Error(SourcePos(), "Failed to create dispatch module.\n");
+            return 1;
+        }
+
         lEmitDispatchModule(dispatchModule, exportedFunctions);
 
         if (outFileName != NULL) {
@@ -2646,7 +2655,6 @@ int Module::CompileAndOutput(const char *srcFile, Arch arch, const char *cpu, st
 
         delete g->target;
         g->target = NULL;
-
         return errorCount > 0;
     }
 }

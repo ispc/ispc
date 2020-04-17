@@ -1461,7 +1461,7 @@ Globals::Globals() {
     mangleFunctionsWithTarget = false;
     isMultiTargetCompilation = false;
     errorLimit = -1;
-
+    target = NULL;
     ctx = new llvm::LLVMContext;
 
 #ifdef ISPC_HOST_IS_WINDOWS

@@ -2002,7 +2002,7 @@ void ForeachUniqueStmt::EmitCode(FunctionEmitContext *ctx) const {
         // type we store in the vector to the actual pointer type
         if (llvm::dyn_cast<llvm::PointerType>(symType) != NULL)
             uniqueValue = ctx->IntToPtrInst(uniqueValue, symType);
-
+        Assert(uniqueValue != NULL);
         // Store that value in sym's storage so that the iteration variable
         // has the right value inside the loop body
         ctx->StoreInst(uniqueValue, sym->storagePtr, sym->type);

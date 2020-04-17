@@ -94,7 +94,9 @@ Function::Function(Symbol *s, Stmt *c) {
 
     if (g->debugPrint) {
         printf("Add Function %s\n", sym->name.c_str());
-        code->Print(0);
+        if (code != NULL) {
+            code->Print(0);
+        }
         printf("\n\n\n");
     }
 
@@ -167,6 +169,7 @@ static void lCopyInTaskParameter(int i, llvm::Value *structArgPtr, const std::ve
     const llvm::Type *structArgType = structArgPtr->getType();
     Assert(llvm::isa<llvm::PointerType>(structArgType));
     const llvm::PointerType *pt = llvm::dyn_cast<const llvm::PointerType>(structArgType);
+    Assert(pt);
     Assert(llvm::isa<llvm::StructType>(pt->getElementType()));
 
     // Get the type of the argument we're copying in and its Symbol pointer

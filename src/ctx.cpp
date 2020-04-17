@@ -1722,7 +1722,7 @@ llvm::Value *FunctionEmitContext::applyVaryingGEP(llvm::Value *basePtr, llvm::Va
             index = SExtInst(index, LLVMTypes::Int64VectorType);
 
         scale = SmearUniform(scale);
-
+        Assert(index != NULL);
         // offset = index * scale
         offset = BinaryOperator(llvm::Instruction::Mul, scale, index, LLVMGetName("mul", scale, index));
     }
@@ -1788,7 +1788,7 @@ static llvm::Value *lComputeSliceIndex(FunctionEmitContext *ctx, int soaWidth, l
     Assert((1 << logWidth) == soaWidth);
 
     ctx->MatchIntegerTypes(&indexValue, &ptrSliceOffset);
-
+    Assert(indexValue != NULL);
     llvm::Type *indexType = indexValue->getType();
     llvm::Value *shift = LLVMIntAsType(logWidth, indexType);
     llvm::Value *mask = LLVMIntAsType(soaWidth - 1, indexType);
@@ -2188,8 +2188,8 @@ llvm::Value *FunctionEmitContext::LoadInst(llvm::Value *ptr, llvm::Value *mask, 
         elType = ptrRefType->GetReferenceTarget();
     } else {
         ptrType = CastType<PointerType>(ptrRefType);
-        elType = ptrType->GetBaseType()->GetBaseType();
         AssertPos(currentPos, ptrType != NULL);
+        elType = ptrType->GetBaseType()->GetBaseType();
     }
 
     if (CastType<UndefinedStructType>(ptrType->GetBaseType())) {
@@ -3170,6 +3170,7 @@ llvm::Value *FunctionEmitContext::LaunchInst(llvm::Value *callee, std::vector<ll
     llvm::Type *argType = (llvm::dyn_cast<llvm::Function>(callee))->arg_begin()->getType();
     AssertPos(currentPos, llvm::PointerType::classof(argType));
     llvm::PointerType *pt = llvm::dyn_cast<llvm::PointerType>(argType);
+    AssertPos(currentPos, pt);
     AssertPos(currentPos, llvm::StructType::classof(pt->getElementType()));
     llvm::StructType *argStructType = static_cast<llvm::StructType *>(pt->getElementType());
 

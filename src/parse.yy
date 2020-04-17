@@ -2209,7 +2209,6 @@ lAddFunctionParams(Declarator *decl) {
     m->symbolTable->PushScope();
 
     if (decl == NULL) {
-        AssertPos(decl->pos, m->errorCount > 0);
         return;
     }
 

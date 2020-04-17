@@ -1193,6 +1193,7 @@ std::string ArrayType::GetString() const {
     std::string s = base->GetString();
 
     const ArrayType *at = this;
+    Assert(at);
     // Walk through this and any children arrays and print all of their
     // dimensions
     while (at) {
@@ -1236,6 +1237,7 @@ std::string ArrayType::GetCDeclaration(const std::string &name) const {
     std::string s = base->GetCDeclaration(name);
 
     const ArrayType *at = this;
+    Assert(at);
     while (at) {
         char buf[16];
         if (at->numElements > 0)

@@ -206,21 +206,23 @@ class TypeFinder {
 
                     // Incorporate the type of the instruction and all its operands.
                     incorporateType(I.getType());
-                    if (llvm::isa<llvm::StoreInst>(&I))
+                    const llvm::StoreInst *St = llvm::dyn_cast<llvm::StoreInst>(&I);
+                    if (St) {
                         if (llvm::IntegerType *ITy = llvm::dyn_cast<llvm::IntegerType>(I.getType())) {
                             IntegerTypes.push_back(ITy);
-                            const llvm::StoreInst *St = llvm::dyn_cast<llvm::StoreInst>(&I);
                             IsVolatile.push_back(St->isVolatile());
                             Alignment.push_back(St->getAlignment());
                         }
+                    }
 
-                    if (llvm::isa<llvm::LoadInst>(&I))
+                    const llvm::LoadInst *Ld = llvm::dyn_cast<llvm::LoadInst>(&I);
+                    if (Ld) {
                         if (llvm::IntegerType *ITy = llvm::dyn_cast<llvm::IntegerType>(I.getType())) {
                             IntegerTypes.push_back(ITy);
-                            const llvm::LoadInst *St = llvm::dyn_cast<llvm::LoadInst>(&I);
-                            IsVolatile.push_back(St->isVolatile());
-                            Alignment.push_back(St->getAlignment());
+                            IsVolatile.push_back(Ld->isVolatile());
+                            Alignment.push_back(Ld->getAlignment());
                         }
+                    }
 
                     for (llvm::User::const_op_iterator OI = I.op_begin(), OE = I.op_end(); OI != OE; ++OI)
                         incorporateValue(*OI);
@@ -3144,7 +3146,7 @@ void CWriter::printLoop(llvm::Loop *L) {
         llvm::Loop *BBLoop = LI->getLoopFor(BB);
         if (BBLoop == L)
             printBasicBlock(BB);
-        else if (BB == BBLoop->getHeader() && BBLoop->getParentLoop() == L)
+        else if (BBLoop != NULL && BB == BBLoop->getHeader() && BBLoop->getParentLoop() == L)
             printLoop(BBLoop);
     }
     Out << "  } while (1); /* end of syntactic loop '" << L->getHeader()->getName() << "' */\n";
@@ -4823,7 +4825,7 @@ llvm::Value *SmearCleanupPass::getInsertChainSmearValue(llvm::Instruction *inst)
     // for now we at least avoid one case where we definitely don't
     // want to do this.
     llvm::VectorType *vt = llvm::dyn_cast<llvm::VectorType>(insertInst->getType());
-    if (vt->getNumElements() == 1) {
+    if (vt != NULL && vt->getNumElements() == 1) {
         return NULL;
     }
 
@@ -4856,6 +4858,7 @@ llvm::Value *SmearCleanupPass::getShuffleSmearValue(llvm::Instruction *inst) con
     // Check that the shuffle is a broadcast of the element of the first vector,
     // i.e. mask vector is vector with equal elements of expected size.
     if (!(mask && (mask->isNullValue() || (shuffleInst->getMask()->getSplatValue() != 0)) &&
+          llvm::isa<llvm::VectorType>(mask->getType()) &&
           llvm::dyn_cast<llvm::VectorType>(mask->getType())->getNumElements() == vectorWidth)) {
         return NULL;
     }

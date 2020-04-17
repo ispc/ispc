@@ -88,6 +88,7 @@ std::vector<const BitcodeLib *> *TargetLibRegistry::libs = nullptr;
 TargetLibRegistry::TargetLibRegistry() {
     // TODO: sort before adding - to canonicalize.
     // TODO: check for conflicts / duplicates.
+    m_dispatch = NULL;
     for (auto lib : *libs) {
         switch (lib->getType()) {
         case BitcodeLib::BitcodeLibType::Dispatch:

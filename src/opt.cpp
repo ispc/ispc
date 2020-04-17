@@ -1028,7 +1028,8 @@ llvm::Value *InstructionSimplifyPass::simplifyBoolVec(llvm::Value *value) {
 bool InstructionSimplifyPass::simplifySelect(llvm::SelectInst *selectInst, llvm::BasicBlock::iterator iter) {
     if (selectInst->getType()->isVectorTy() == false)
         return false;
-
+    Assert(selectInst->getOperand(1) != NULL);
+    Assert(selectInst->getOperand(2) != NULL);
     llvm::Value *factor = selectInst->getOperand(0);
 
     // Simplify all-on or all-off mask values
@@ -3509,6 +3510,7 @@ static llvm::Value *lComputeBasePtr(llvm::CallInst *gatherInst, llvm::Instructio
     // checking for this in GatherCoalescePass::runOnBasicBlock().  Thus,
     // extract the first value and use that as a scalar.
     llvm::Value *variable = LLVMExtractFirstVectorElement(variableOffsets);
+    Assert(variable != NULL);
     if (variable->getType() == LLVMTypes::Int64Type)
         offsetScale = new llvm::ZExtInst(offsetScale, LLVMTypes::Int64Type, "scale_to64", insertBefore);
     llvm::Value *offset =
@@ -4901,6 +4903,7 @@ char FixBooleanSelectPass::ID = 0;
 llvm::Instruction *FixBooleanSelectPass::fixSelect(llvm::SelectInst *sel, llvm::SExtInst *sext) {
     // Select instruction result type and its integer equivalent
     llvm::VectorType *orig_type = llvm::dyn_cast<llvm::VectorType>(sel->getType());
+    Assert(orig_type);
     llvm::VectorType *int_type = llvm::VectorType::getInteger(orig_type);
 
     // Result value and optional pointer to instruction to delete

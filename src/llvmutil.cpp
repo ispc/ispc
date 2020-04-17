@@ -753,7 +753,7 @@ static bool lIsExactMultiple(llvm::Value *val, int baseValue, int vectorLength,
         llvm::Value *element = LLVMFlattenInsertChain(val, g->target->getVectorWidth());
         // We just need to check the scalar first value, since we know that
         // all elements are equal
-        return lIsExactMultiple(element, baseValue, vectorLength, seenPhis);
+        return element ? lIsExactMultiple(element, baseValue, vectorLength, seenPhis) : false;
     }
 
     llvm::PHINode *phi = llvm::dyn_cast<llvm::PHINode>(val);
