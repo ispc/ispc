@@ -7482,6 +7482,8 @@ std::pair<llvm::Constant *, bool> AddressOfExpr::GetConstant(const Type *type) c
                 while (IExpr) {
                     std::pair<llvm::Constant *, bool> cIndexPair = IExpr->index->GetConstant(IExpr->index->GetType());
                     llvm::Constant *cIndex = cIndexPair.first;
+                    if (cIndex == NULL)
+                        return std::pair<llvm::Constant *, bool>(NULL, false);
                     gepIndex.insert(gepIndex.begin(), cIndex);
                     mBaseExpr = IExpr->baseExpr;
                     IExpr = llvm::dyn_cast<IndexExpr>(mBaseExpr);
