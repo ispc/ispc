@@ -5,8 +5,8 @@ fetch v8 &&  \
 cd v8 &&  \
 gclient sync &&  \
 ./build/install-build-deps.sh &&  \
-./tools/dev/v8gen.py x64.optdebug &&  \
-ninja -C out.gn/x64.optdebug &&  \
-export PATH=$WD/v8/out.gn/x64.optdebug:"$PATH"
+./tools/dev/v8gen.py x64.release &&  \
+ninja -j12 -C out.gn/x64.release &&  \
+export PATH=$WD/v8/out.gn/x64.release:"$PATH"
 
 cd $WD
