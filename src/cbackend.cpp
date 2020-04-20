@@ -4857,8 +4857,15 @@ llvm::Value *SmearCleanupPass::getShuffleSmearValue(llvm::Instruction *inst) con
 
     // Check that the shuffle is a broadcast of the element of the first vector,
     // i.e. mask vector is vector with equal elements of expected size.
-    if (!(mask && (mask->isNullValue() || (shuffleInst->getMask()->getSplatValue() != 0)) &&
-          llvm::isa<llvm::VectorType>(mask->getType()) &&
+
+    if (!(mask &&
+          (mask->isNullValue() ||
+#if ISPC_LLVM_VERSION == ISPC_LLVM_11_0
+           (shuffleInst->getShuffleMaskForBitcode()->getSplatValue() != 0))
+#else
+           (shuffleInst->getMask()->getSplatValue() != 0))
+#endif
+          && llvm::isa<llvm::VectorType>(mask->getType()) &&
           llvm::dyn_cast<llvm::VectorType>(mask->getType())->getNumElements() == vectorWidth)) {
         return NULL;
     }
@@ -4881,7 +4888,13 @@ llvm::Value *SmearCleanupPass::getShuffleSmearValue(llvm::Instruction *inst) con
         if (extractFunc == NULL) {
             // Declare the __extract_element function if needed; it takes a vector and
             // a scalar parameter and returns a scalar of the vector parameter type.
-#if ISPC_LLVM_VERSION <= ISPC_LLVM_8_0
+#if ISPC_LLVM_VERSION == ISPC_LLVM_11_0
+            llvm::VectorType *vtype = llvm::dyn_cast<llvm::VectorType>(shuffleInst->getOperand(0)->getType());
+            llvm::FunctionCallee ef = module->getOrInsertFunction("__extract_element", vtype->getElementType(),
+                                                                  shuffleInst->getOperand(0)->getType(),
+                                                                  llvm::IntegerType::get(module->getContext(), 32));
+            extractFunc = llvm::dyn_cast<llvm::Function>(ef.getCallee());
+#elif ISPC_LLVM_VERSION <= ISPC_LLVM_8_0
             llvm::Constant *ef = module->getOrInsertFunction(
                 "__extract_element", shuffleInst->getOperand(0)->getType()->getVectorElementType(),
                 shuffleInst->getOperand(0)->getType(), llvm::IntegerType::get(module->getContext(), 32));

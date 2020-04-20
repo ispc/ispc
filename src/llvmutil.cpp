@@ -682,7 +682,12 @@ llvm::Value *LLVMFlattenInsertChain(llvm::Value *inst, int vectorWidth, bool com
     //              <i64 4, i64 undef, i64 undef, i64 undef, i64 undef, i64 undef, i64 undef, i64 undef>
     //   %gep_offset = shufflevector <8 x i64> %0, <8 x i64> undef, <8 x i32> zeroinitializer
     else if (llvm::ShuffleVectorInst *shuf = llvm::dyn_cast<llvm::ShuffleVectorInst>(inst)) {
+#if ISPC_LLVM_VERSION == ISPC_LLVM_11_0
+        llvm::Value *indices = shuf->getShuffleMaskForBitcode();
+#else
         llvm::Value *indices = shuf->getOperand(2);
+#endif
+
         if (llvm::isa<llvm::ConstantAggregateZero>(indices)) {
             llvm::Value *op = shuf->getOperand(0);
             llvm::InsertElementInst *ie = llvm::dyn_cast<llvm::InsertElementInst>(op);
@@ -1048,7 +1053,12 @@ static bool lVectorValuesAllEqual(llvm::Value *v, int vectorLength, std::vector<
 
     llvm::ShuffleVectorInst *shuffle = llvm::dyn_cast<llvm::ShuffleVectorInst>(v);
     if (shuffle != NULL) {
+#if ISPC_LLVM_VERSION == ISPC_LLVM_11_0
+        llvm::Value *indices = shuffle->getShuffleMaskForBitcode();
+#else
         llvm::Value *indices = shuffle->getOperand(2);
+#endif
+
         if (lVectorValuesAllEqual(indices, vectorLength, seenPhis))
             // The easy case--just a smear of the same element across the
             // whole vector.
@@ -1478,7 +1488,11 @@ static llvm::Value *lExtractFirstVectorElement(llvm::Value *v, std::map<llvm::PH
     // "lExtractFirstVectorElement" function.
     if (llvm::isa<llvm::ShuffleVectorInst>(v)) {
         llvm::ShuffleVectorInst *shuf = llvm::dyn_cast<llvm::ShuffleVectorInst>(v);
+#if ISPC_LLVM_VERSION == ISPC_LLVM_11_0
+        llvm::Value *indices = shuf->getShuffleMaskForBitcode();
+#else
         llvm::Value *indices = shuf->getOperand(2);
+#endif
         if (llvm::isa<llvm::ConstantAggregateZero>(indices)) {
             return lExtractFirstVectorElement(shuf->getOperand(0), phiMap);
         }
