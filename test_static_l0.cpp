@@ -172,8 +172,8 @@ static void L0Create_Kernel(ze_device_handle_t &hDevice, ze_module_handle_t &hMo
 }
 
 static void L0Launch_Kernel(ze_command_queue_handle_t &hCommandQueue, ze_command_list_handle_t &hCommandList,
-                            ze_kernel_handle_t &hKernel, int bufsize, void *return_data, void *OUTBuff,
-                            int groupSpaceWidth = 1, int groupSpaceHeight = 1) {
+                            ze_kernel_handle_t &hKernel, int bufsize = 0, void *return_data = nullptr,
+                            void *OUTBuff = nullptr, int groupSpaceWidth = 1, int groupSpaceHeight = 1) {
     // set group size
     uint32_t group_size = groupSpaceWidth * groupSpaceHeight;
     L0_SAFE_CALL(zeKernelSetGroupSize(hKernel, /*x*/ groupSpaceWidth, /*y*/ groupSpaceHeight, /*z*/ 1));
@@ -189,7 +189,8 @@ static void L0Launch_Kernel(ze_command_queue_handle_t &hCommandQueue, ze_command
     L0_SAFE_CALL(zeCommandListAppendBarrier(hCommandList, nullptr, 0, nullptr));
 
     // copy result to host
-    L0_SAFE_CALL(zeCommandListAppendMemoryCopy(hCommandList, return_data, OUTBuff, bufsize, nullptr));
+    if (return_data && OUTBuff)
+        L0_SAFE_CALL(zeCommandListAppendMemoryCopy(hCommandList, return_data, OUTBuff, bufsize, nullptr));
     // dispatch & wait
     L0_SAFE_CALL(zeCommandListClose(hCommandList));
     L0_SAFE_CALL(zeCommandQueueExecuteCommandLists(hCommandQueue, 1, &hCommandList, nullptr));
@@ -422,6 +423,82 @@ static void L0Launch_F_DI(ze_driver_handle_t &hDriver, ze_device_handle_t &hDevi
     L0_SAFE_CALL(zeCommandListDestroy(hCommandList));
 }
 
+static void L0Launch_Print_UF(ze_driver_handle_t &hDriver, ze_device_handle_t &hDevice, ze_module_handle_t &hModule,
+                              ze_command_queue_handle_t &hCommandQueue, float b) {
+    ze_command_list_handle_t hCommandList;
+    ze_kernel_handle_t hKernel;
+    L0Create_Kernel(hDevice, hModule, hCommandList, hKernel, "print_uf");
+
+    // set kernel arguments
+    L0_SAFE_CALL(zeKernelSetArgumentValue(hKernel, 0, sizeof(float), &b));
+
+    L0Launch_Kernel(hCommandQueue, hCommandList, hKernel);
+
+    L0_SAFE_CALL(zeKernelDestroy(hKernel));
+    L0_SAFE_CALL(zeCommandListDestroy(hCommandList));
+}
+
+static void L0Launch_Print_F(ze_driver_handle_t &hDriver, ze_device_handle_t &hDevice, ze_module_handle_t &hModule,
+                             ze_command_queue_handle_t &hCommandQueue, void *vfloat_data) {
+    ze_command_list_handle_t hCommandList;
+    ze_kernel_handle_t hKernel;
+    L0Create_Kernel(hDevice, hModule, hCommandList, hKernel, "print_f");
+    // allocate buffers
+    ze_device_mem_alloc_desc_t allocDesc = {ZE_DEVICE_MEM_ALLOC_DESC_VERSION_CURRENT, ZE_DEVICE_MEM_ALLOC_FLAG_DEFAULT,
+                                            0};
+    void *INBuff = nullptr;
+    L0_SAFE_CALL(zeDriverAllocDeviceMem(hDriver, &allocDesc, N * sizeof(float), N * sizeof(float), hDevice, &INBuff));
+    // copy buffers to device
+    L0_SAFE_CALL(zeCommandListAppendMemoryCopy(hCommandList, INBuff, vfloat_data, N * sizeof(float), nullptr));
+
+    // set kernel arguments
+    L0_SAFE_CALL(zeKernelSetArgumentValue(hKernel, 0, sizeof(INBuff), &INBuff));
+
+    L0Launch_Kernel(hCommandQueue, hCommandList, hKernel);
+
+    L0_SAFE_CALL(zeDriverFreeMem(hDriver, INBuff));
+
+    L0_SAFE_CALL(zeKernelDestroy(hKernel));
+    L0_SAFE_CALL(zeCommandListDestroy(hCommandList));
+}
+
+static void L0Launch_Print_FUF(ze_driver_handle_t &hDriver, ze_device_handle_t &hDevice, ze_module_handle_t &hModule,
+                               ze_command_queue_handle_t &hCommandQueue, void *vfloat_data, float b) {
+    ze_command_list_handle_t hCommandList;
+    ze_kernel_handle_t hKernel;
+    L0Create_Kernel(hDevice, hModule, hCommandList, hKernel, "print_fuf");
+    // allocate buffers
+    ze_device_mem_alloc_desc_t allocDesc = {ZE_DEVICE_MEM_ALLOC_DESC_VERSION_CURRENT, ZE_DEVICE_MEM_ALLOC_FLAG_DEFAULT,
+                                            0};
+    void *INBuff = nullptr;
+    L0_SAFE_CALL(zeDriverAllocDeviceMem(hDriver, &allocDesc, N * sizeof(float), N * sizeof(float), hDevice, &INBuff));
+    // copy buffers to device
+    L0_SAFE_CALL(zeCommandListAppendMemoryCopy(hCommandList, INBuff, vfloat_data, N * sizeof(float), nullptr));
+
+    // set kernel arguments
+    L0_SAFE_CALL(zeKernelSetArgumentValue(hKernel, 0, sizeof(INBuff), &INBuff));
+    L0_SAFE_CALL(zeKernelSetArgumentValue(hKernel, 1, sizeof(float), &b));
+
+    L0Launch_Kernel(hCommandQueue, hCommandList, hKernel);
+
+    L0_SAFE_CALL(zeDriverFreeMem(hDriver, INBuff));
+
+    L0_SAFE_CALL(zeKernelDestroy(hKernel));
+    L0_SAFE_CALL(zeCommandListDestroy(hCommandList));
+}
+
+static void L0Launch_Print_NO(ze_driver_handle_t &hDriver, ze_device_handle_t &hDevice, ze_module_handle_t &hModule,
+                              ze_command_queue_handle_t &hCommandQueue) {
+    ze_command_list_handle_t hCommandList;
+    ze_kernel_handle_t hKernel;
+    L0Create_Kernel(hDevice, hModule, hCommandList, hKernel, "print_no");
+
+    L0Launch_Kernel(hCommandQueue, hCommandList, hKernel);
+
+    L0_SAFE_CALL(zeKernelDestroy(hKernel));
+    L0_SAFE_CALL(zeCommandListDestroy(hCommandList));
+}
+
 static void L0Launch_Result(ze_driver_handle_t &hDriver, ze_device_handle_t &hDevice, ze_module_handle_t &hModule,
                             ze_command_queue_handle_t &hCommandQueue, void *return_data) {
     ze_command_list_handle_t hCommandList;
@@ -438,6 +515,18 @@ static void L0Launch_Result(ze_driver_handle_t &hDriver, ze_device_handle_t &hDe
     L0_SAFE_CALL(zeKernelSetArgumentValue(hKernel, 0, sizeof(OUTBuff), &OUTBuff));
     L0Launch_Kernel(hCommandQueue, hCommandList, hKernel, N * sizeof(float), return_data, OUTBuff);
     L0_SAFE_CALL(zeDriverFreeMem(hDriver, OUTBuff));
+
+    L0_SAFE_CALL(zeKernelDestroy(hKernel));
+    L0_SAFE_CALL(zeCommandListDestroy(hCommandList));
+}
+
+static void L0Launch_Print_Result(ze_driver_handle_t &hDriver, ze_device_handle_t &hDevice, ze_module_handle_t &hModule,
+                                  ze_command_queue_handle_t &hCommandQueue) {
+    ze_command_list_handle_t hCommandList;
+    ze_kernel_handle_t hKernel;
+    L0Create_Kernel(hDevice, hModule, hCommandList, hKernel, "print_result");
+
+    L0Launch_Kernel(hCommandQueue, hCommandList, hKernel);
 
     L0_SAFE_CALL(zeKernelDestroy(hKernel));
     L0_SAFE_CALL(zeCommandListDestroy(hCommandList));
@@ -525,6 +614,14 @@ int main(int argc, char *argv[]) {
     assert(N >= groupSpaceWidth * groupSpaceHeight);
     L0Launch_F_Threads(hDriver, hDevice, hModule, hCommandQueue, return_data, groupSpaceWidth, groupSpaceHeight);
     L0Launch_Result_Threads(hDriver, hDevice, hModule, hCommandQueue, expect_data, groupSpaceWidth, groupSpaceHeight);
+#elif (TEST_SIG == 32)
+    L0Launch_Print_UF(hDriver, hDevice, hModule, hCommandQueue, 5.0f);
+#elif (TEST_SIG == 33)
+    L0Launch_Print_F(hDriver, hDevice, hModule, hCommandQueue, vfloat_data);
+#elif (TEST_SIG == 34)
+    L0Launch_Print_FUF(hDriver, hDevice, hModule, hCommandQueue, vfloat_data, 5.0f);
+#elif (TEST_SIG == 35)
+    L0Launch_Print_NO(hDriver, hDevice, hModule, hCommandQueue);
 #else
 #error "Unknown or unset TEST_SIG value"
 #endif
@@ -533,8 +630,11 @@ int main(int argc, char *argv[]) {
 #else
     const bool verbose = false;
 #endif
-#if (TEST_SIG != 8)
+#if (TEST_SIG < 8)
     L0Launch_Result(hDriver, hDevice, hModule, hCommandQueue, expect_data);
+#elif (TEST_SIG >= 32)
+    L0Launch_Print_Result(hDriver, hDevice, hModule, hCommandQueue);
+    return 0;
 #endif
     L0_SAFE_CALL(zeModuleDestroy(hModule));
     L0_SAFE_CALL(zeCommandQueueDestroy(hCommandQueue));
