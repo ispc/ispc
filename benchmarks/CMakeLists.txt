@@ -55,8 +55,11 @@ set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 # Build google benchmark (target: benchmark)
 # Do not build tests of benchmarking lib
 set(BENCHMARK_ENABLE_TESTING OFF CACHE BOOL "Suppressing benchmark's tests" FORCE)
-# Do not install benchmarking lib, we don't need it, as we link statically. 
+# Do not install benchmarking lib, we don't need it, as we run them from build directory with correct rpath embedded.
 set(BENCHMARK_ENABLE_INSTALL OFF CACHE BOOL "Suppressing benchmark's install" FORCE)
+# Link shared library
+set(BUILD_SHARED_LIBS ON CACHE BOOL "Build shared benchmark's lib" FORCE)
+
 add_subdirectory(vendor/google/benchmark)
 
 # Warn if build type is not release.
