@@ -1,6 +1,6 @@
 #!/bin/bash
 # ##################################################
-#  Copyright (c) 2019, Intel Corporation
+#  Copyright (c) 2020, Intel Corporation
 #  All rights reserved.
 #
 #  Redistribution and use in source and binary forms, with or without
@@ -37,32 +37,32 @@ set -o errexit
 scriptName="${BASH_SOURCE[0]}"
 scriptPath="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
-# Print usage
-usage() {
-  echo -n "${scriptName} [OPTION]...
-
-This is a script to build ISPC from scratch, including building patch version of LLVM.
-NOTE THAT RELEASE VERSION OF ISPC MUST BE BUILT WITH PATCHED VERSION OF LLVM.
-
- Options:
-  -v, --version       LLVM version to build with. 5.0 is currently recommended.
-  -h, --ispc_home     Path to ISPC HOME directory.
-  -l, --llvm_dir      Path to use for LLVM build. ${ISPC_HOME}/llvm is default.
-  -b, --ispc_build    Path to ISPC build directory. ${ISPC_HOME}/build is default.
-  -i, --ispc_install  Path to ISPC install directory. ${ISPC_HOME}/install is default.
-  -j, --speed         Number of threads for build. 4 is default.
-  --help              Display this help and exit.
-"
-}
-
 # Flags which can be overridden by user input
 # Default values are below
 ispc_home=${scriptPath}/..
 llvm_dir=${ispc_home}/llvm
-llvm_version=5.0
+llvm_version=10.0
 ispc_build=${ispc_home}/build
 ispc_install=${ispc_home}/install
 speed=4
+
+# Print usage
+usage() {
+  echo -n "${scriptName} [OPTION]...
+
+This is a script to build ISPC from scratch, including building patched version of LLVM.
+NOTE THAT RELEASE VERSION OF ISPC MUST BE BUILT WITH PATCHED VERSION OF LLVM.
+
+ Options:
+  -v, --version       LLVM version to build with. ${llvm_version} is currently recommended.
+  -h, --ispc_home     Path to ISPC HOME directory.
+  -l, --llvm_dir      Path to use for LLVM build. ${llvm_dir} is default.
+  -b, --ispc_build    Path to ISPC build directory. ${ispc_build} is default.
+  -i, --ispc_install  Path to ISPC install directory. ${ispc_install} is default.
+  -j, --speed         Number of threads for build. ${speed} is default.
+  --help              Display this help and exit.
+"
+}
 
 # Read the options and set the flags
 while [[ $1 = -?* ]]; do
@@ -95,7 +95,7 @@ export ISPC_HOME=${ispc_home}
 export LLVM_VERSION=${llvm_version}
 
 # Run alloy.py to checkout, patch and build LLVM
-python3 ${ISPC_HOME}/alloy.py --version=${llvm_version} -b --selfbuild -j ${speed} --git && \
+python3 ${ISPC_HOME}/alloy.py -b --version=${llvm_version} --selfbuild -j ${speed} && \
     rm -rf ${LLVM_HOME}/build-${LLVM_VERSION} ${LLVM_HOME}/llvm-${LLVM_VERSION} ${LLVM_HOME}/bin-${LLVM_VERSION}_temp ${LLVM_HOME}/build-${LLVM_VERSION}_temp
 exitCode=$?; if [[ ${exitCode} != 0 ]]; then exit ${exitCode}; fi
 export PATH=${LLVM_HOME}/bin-${LLVM_VERSION}/bin:$PATH
