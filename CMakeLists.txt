@@ -442,9 +442,24 @@ if (ISPC_PREPARE_PACKAGE)
     install (DIRECTORY "${PROJECT_SOURCE_DIR}/contrib/" DESTINATION contrib)
     install (FILES "${PROJECT_SOURCE_DIR}/LICENSE.txt" DESTINATION .)
     install (FILES "${PROJECT_SOURCE_DIR}/docs/ReleaseNotes.txt" DESTINATION .)
+
+    # Get ispc version
+    file(READ "${CMAKE_CURRENT_SOURCE_DIR}/src/ispc_version.h" ispc_ver)
+    string(REGEX MATCH "ISPC_VERSION \"([0-9]*)\.([0-9]*)\.([0-9]*[a-z]*)" _ ${ispc_ver})
+    set(ISPC_VERSION_MAJOR ${CMAKE_MATCH_1})
+    set(ISPC_VERSION_MINOR ${CMAKE_MATCH_2})
+    set(ISPC_VERSION_PATCH ${CMAKE_MATCH_3})
+    if (${ISPC_VERSION_PATCH} MATCHES ".*dev")
+        set (REPO_TAG "master")
+    else()
+        set (REPO_TAG "v${ISPC_VERSION_MAJOR}.${ISPC_VERSION_MINOR}.${ISPC_VERSION_PATCH}")
+    endif()
+
+    # Clone corresponding version of documentation
     include(ExternalProject)
     ExternalProject_Add(ispc_web
       GIT_REPOSITORY    https://github.com/ispc/ispc.github.com.git
+      GIT_TAG ${REPO_TAG}
       PREFIX ispc_web
       SOURCE_DIR ispc_web/repo
       CONFIGURE_COMMAND cmake -E echo "Skipping configure step."
@@ -475,12 +490,9 @@ if (ISPC_PREPARE_PACKAGE)
         endif()
     endif()
     set(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_CURRENT_SOURCE_DIR}/LICENSE.txt")
-    # Get ispc version
-    file(READ "${CMAKE_CURRENT_SOURCE_DIR}/src/ispc_version.h" ispc_ver)
-    string(REGEX MATCH "ISPC_VERSION \"([0-9]*)\.([0-9]*)\.([0-9]*[a-z]*)" _ ${ispc_ver})
-    set(CPACK_PACKAGE_VERSION_MAJOR ${CMAKE_MATCH_1})
-    set(CPACK_PACKAGE_VERSION_MINOR ${CMAKE_MATCH_2})
-    set(CPACK_PACKAGE_VERSION_PATCH ${CMAKE_MATCH_3})
+    set(CPACK_PACKAGE_VERSION_MAJOR ${ISPC_VERSION_MAJOR})
+    set(CPACK_PACKAGE_VERSION_MINOR ${ISPC_VERSION_MINOR})
+    set(CPACK_PACKAGE_VERSION_PATCH ${ISPC_VERSION_PATCH})
     if (${CPACK_PACKAGE_VERSION_PATCH} MATCHES ".*dev")
         string(CONCAT CPACK_PACKAGE_FILE_NAME "${PROJECT_NAME}"
                              "-trunk"
