@@ -441,6 +441,7 @@ if (ISPC_PREPARE_PACKAGE)
     install (DIRECTORY "${PROJECT_SOURCE_DIR}/examples/" DESTINATION examples PATTERN "portable" EXCLUDE)
     install (DIRECTORY "${PROJECT_SOURCE_DIR}/contrib/" DESTINATION contrib)
     install (FILES "${PROJECT_SOURCE_DIR}/LICENSE.txt" DESTINATION .)
+    install (FILES "${PROJECT_SOURCE_DIR}/third-party-programs.txt" DESTINATION .)
     install (FILES "${PROJECT_SOURCE_DIR}/docs/ReleaseNotes.txt" DESTINATION .)
     include(ExternalProject)
     ExternalProject_Add(ispc_web
