@@ -69,12 +69,12 @@
 
 static void lPrintVersion() {
 #ifdef ISPC_HOST_IS_WINDOWS
-    printf("Intel(r) SPMD Program Compiler (ispc), %s (build date %s, LLVM %s)\n"
+    printf("Intel(r) Implicit SPMD Program Compiler (Intel(r) ISPC), %s (build date %s, LLVM %s)\n"
            "Supported Visual Studio versions: %s.\n",
            ISPC_VERSION, BUILD_DATE, ISPC_LLVM_VERSION_STRING, ISPC_VS_VERSION);
 #else
-    printf("Intel(r) SPMD Program Compiler (ispc), %s (build %s @ %s, LLVM %s)\n", ISPC_VERSION, BUILD_VERSION,
-           BUILD_DATE, ISPC_LLVM_VERSION_STRING);
+    printf("Intel(r) Implicit SPMD Program Compiler (Intel(r) ISPC), %s (build %s @ %s, LLVM %s)\n", ISPC_VERSION,
+           BUILD_VERSION, BUILD_DATE, ISPC_LLVM_VERSION_STRING);
 #endif
 
 // The recommended way to build ISPC assumes custom LLVM build with a set of patches.

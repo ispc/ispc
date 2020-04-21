@@ -1,8 +1,8 @@
 [![TravisCI build status (Linux)](https://travis-ci.com/ispc/ispc.svg?branch=master)](https://travis-ci.com/ispc/ispc)
 [![Appveyor build status (Windows)](https://ci.appveyor.com/api/projects/status/xfllw9vkp3lj4l0v/branch/master?svg=true)](https://ci.appveyor.com/project/ispc/ispc/branch/master)
 
-Intel(r) SPMD Program Compiler
-==============================
+Intel® Implicit SPMD Program Compiler (Intel® ISPC)
+===================================================
 
 ``ispc`` is a compiler for a variant of the C programming language, with
 extensions for

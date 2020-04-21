@@ -1,6 +1,6 @@
-==============================================
-Intel® SPMD Program Compiler Performance Guide
-==============================================
+=====================================================================
+Intel® Implicit SPMD Program Compiler (Intel® ISPC) Performance Guide
+=====================================================================
 
 The SPMD programming model provided by ``ispc`` naturally delivers
 excellent performance for many workloads thanks to efficient use of CPU
@@ -27,7 +27,7 @@ the most out of ``ispc`` in practice.
   + `"inline" Aggressively`_
   + `Avoid The System Math Library`_
   + `Declare Variables In The Scope Where They're Used`_
-  + `Instrumenting ISPC Programs To Understand Runtime Behavior`_
+  + `Instrumenting Intel® ISPC Programs To Understand Runtime Behavior`_
   + `Choosing A Target Vector Width`_
 
 * `Disclaimer and Legal Information`_
@@ -648,8 +648,8 @@ Try not to write code as:
 Doing so can reduce the amount of masked store instructions that the
 compiler needs to generate.
 
-Instrumenting ISPC Programs To Understand Runtime Behavior
-----------------------------------------------------------
+Instrumenting Intel® ISPC Programs To Understand Runtime Behavior
+-----------------------------------------------------------------
 
 ``ispc`` has an optional instrumentation feature that can help you
 understand performance issues.  If a program is compiled using the
