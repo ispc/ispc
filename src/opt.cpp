@@ -875,15 +875,13 @@ restart:
                     llvm::Instruction *loadInst =
 #if ISPC_LLVM_VERSION <= ISPC_LLVM_9_0
                         new llvm::LoadInst(castPtr, name, false /* not volatile */, align, (llvm::Instruction *)NULL);
-#else // LLVM 10.0+
-#if ISPC_LLVM_VERSION == ISPC_LLVM_11_0
+#elif ISPC_LLVM_VERSION >= ISPC_LLVM_11_0
                         new llvm::LoadInst(
                             llvm::dyn_cast<llvm::PointerType>(castPtr->getType())->getPointerElementType(), castPtr,
                             name, false /* not volatile */, llvm::MaybeAlign(align), (llvm::Instruction *)NULL);
 #else
                         new llvm::LoadInst(castPtr, name, false /* not volatile */, llvm::MaybeAlign(align),
                                            (llvm::Instruction *)NULL);
-#endif
 #endif
                     lCopyMetadata(loadInst, callInst);
                     llvm::ReplaceInstWithInst(callInst, loadInst);
@@ -1275,13 +1273,12 @@ static llvm::Value *lGetBasePtrAndOffsets(llvm::Value *ptrs, llvm::Value **offse
     // Looking for %gep_offset = shufflevector <8 x i64> %0, <8 x i64> undef, <8 x i32> zeroinitializer
     llvm::ShuffleVectorInst *shuffle = llvm::dyn_cast<llvm::ShuffleVectorInst>(ptrs);
     if (shuffle != NULL) {
-#if ISPC_LLVM_VERSION == ISPC_LLVM_11_0
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_11_0
         llvm::Value *indices = shuffle->getShuffleMaskForBitcode();
-        llvm::Value *vec = shuffle->getOperand(1);
 #else
         llvm::Value *indices = shuffle->getOperand(2);
-        llvm::Value *vec = shuffle->getOperand(1);
 #endif
+        llvm::Value *vec = shuffle->getOperand(1);
 
         if (lIsUndef(vec) && llvm::isa<llvm::ConstantAggregateZero>(indices)) {
             broadcastDetected = true;
@@ -2564,7 +2561,7 @@ static bool lGSToLoadStore(llvm::CallInst *callInst) {
 
             ptr =
                 new llvm::BitCastInst(ptr, llvm::PointerType::get(gatherInfo->scalarType, 0), ptr->getName(), callInst);
-#if ISPC_LLVM_VERSION == ISPC_LLVM_11_0
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_11_0
             llvm::Value *scalarValue =
                 new llvm::LoadInst(llvm::dyn_cast<llvm::PointerType>(ptr->getType())->getPointerElementType(), ptr,
                                    callInst->getName(), callInst);
@@ -2759,7 +2756,7 @@ static bool lImproveMaskedLoad(llvm::CallInst *callInst, llvm::BasicBlock::itera
         llvm::Type *ptrType = llvm::PointerType::get(callInst->getType(), 0);
         ptr = new llvm::BitCastInst(ptr, ptrType, "ptr_cast_for_load", callInst);
         llvm::Instruction *load = new llvm::LoadInst(
-#if ISPC_LLVM_VERSION == ISPC_LLVM_11_0
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_11_0
             llvm::dyn_cast<llvm::PointerType>(ptr->getType())->getPointerElementType(),
 #endif
             ptr, callInst->getName(), false /* not volatile */,
@@ -3113,13 +3110,11 @@ llvm::Value *lGEPAndLoad(llvm::Value *basePtr, int64_t offset, int align, llvm::
     ptr = new llvm::BitCastInst(ptr, llvm::PointerType::get(type, 0), "ptr_cast", insertBefore);
 #if ISPC_LLVM_VERSION <= ISPC_LLVM_9_0
     return new llvm::LoadInst(ptr, "gather_load", false /* not volatile */, align, insertBefore);
-#else // LLVM 10.0+
-#if ISPC_LLVM_VERSION == ISPC_LLVM_11_0
+#elif ISPC_LLVM_VERSION >= ISPC_LLVM_11_0
     return new llvm::LoadInst(llvm::dyn_cast<llvm::PointerType>(ptr->getType())->getPointerElementType(), ptr,
                               "gather_load", false /* not volatile */, llvm::MaybeAlign(align), insertBefore);
 #else
     return new llvm::LoadInst(ptr, "gather_load", false /* not volatile */, llvm::MaybeAlign(align), insertBefore);
-#endif
 #endif
 }
 

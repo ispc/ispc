@@ -2079,7 +2079,7 @@ llvm::Value *FunctionEmitContext::LoadInst(llvm::Value *ptr, const Type *type, c
 
     if (name == NULL)
         name = LLVMGetName(ptr, "_load");
-#if ISPC_LLVM_VERSION == ISPC_LLVM_11_0
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_11_0
     llvm::LoadInst *inst = new llvm::LoadInst(pt->getPointerElementType(), ptr, name, bblock);
 #else
     llvm::LoadInst *inst = new llvm::LoadInst(ptr, name, bblock);
@@ -2221,15 +2221,13 @@ llvm::Value *FunctionEmitContext::LoadInst(llvm::Value *ptr, llvm::Value *mask, 
                 align = 1;
 #if ISPC_LLVM_VERSION <= ISPC_LLVM_9_0
             llvm::Instruction *inst = new llvm::LoadInst(ptr, name, false /* not volatile */, align, bblock);
-#else // LLVM 10.0+
-#if ISPC_LLVM_VERSION == ISPC_LLVM_11_0
+#elif ISPC_LLVM_VERSION >= ISPC_LLVM_11_0
             llvm::PointerType *ptr_type = llvm::dyn_cast<llvm::PointerType>(ptr->getType());
             llvm::Instruction *inst = new llvm::LoadInst(ptr_type->getPointerElementType(), ptr, name,
                                                          false /* not volatile */, llvm::MaybeAlign(align), bblock);
 #else
             llvm::Instruction *inst =
                 new llvm::LoadInst(ptr, name, false /* not volatile */, llvm::MaybeAlign(align), bblock);
-#endif
 #endif
             AddDebugPos(inst);
             llvm::Value *loadVal = inst;
@@ -2905,7 +2903,7 @@ llvm::Value *FunctionEmitContext::BroadcastValue(llvm::Value *v, llvm::Type *vec
     }
 
     llvm::VectorType *ty = llvm::dyn_cast<llvm::VectorType>(vecType);
-#if ISPC_LLVM_VERSION == ISPC_LLVM_11_0
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_11_0
     Assert(ty && ty->getElementType() == v->getType());
 #else
     Assert(ty && ty->getVectorElementType() == v->getType());
@@ -2933,8 +2931,7 @@ llvm::Value *FunctionEmitContext::BroadcastValue(llvm::Value *v, llvm::Type *vec
 #if ISPC_LLVM_VERSION < ISPC_LLVM_11_0
     llvm::Constant *zeroVec = llvm::ConstantVector::getSplat(
         vecType->getVectorNumElements(), llvm::Constant::getNullValue(llvm::Type::getInt32Ty(*g->ctx)));
-#else // LLVM 11.0+
-#if ISPC_LLVM_VERSION == ISPC_LLVM_11_0
+#elif ISPC_LLVM_VERSION >= ISPC_LLVM_11_0
     llvm::Constant *zeroVec =
         llvm::ConstantVector::getSplat({static_cast<unsigned int>(ty->getNumElements()), false},
                                        llvm::Constant::getNullValue(llvm::Type::getInt32Ty(*g->ctx)));
@@ -2942,7 +2939,6 @@ llvm::Value *FunctionEmitContext::BroadcastValue(llvm::Value *v, llvm::Type *vec
     llvm::Constant *zeroVec =
         llvm::ConstantVector::getSplat({static_cast<unsigned int>(vecType->getVectorNumElements()), false},
                                        llvm::Constant::getNullValue(llvm::Type::getInt32Ty(*g->ctx)));
-#endif
 #endif
     llvm::Value *ret = ShuffleInst(insert, undef2, zeroVec, name);
 
@@ -3009,7 +3005,7 @@ llvm::Value *FunctionEmitContext::CallInst(llvm::Value *func, const FunctionType
     if (llvm::isa<llvm::VectorType>(func->getType()) == false) {
         // Regular 'uniform' function call--just one function or function
         // pointer, so just emit the IR directly.
-#if ISPC_LLVM_VERSION == ISPC_LLVM_11_0
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_11_0
         llvm::PointerType *func_ptr_type = llvm::dyn_cast<llvm::PointerType>(func->getType());
         llvm::FunctionType *func_type = llvm::dyn_cast<llvm::FunctionType>(func_ptr_type->getPointerElementType());
         llvm::Instruction *ci = llvm::CallInst::Create(func_type, func, argVals, name ? name : "", bblock);

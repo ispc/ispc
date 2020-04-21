@@ -4860,7 +4860,7 @@ llvm::Value *SmearCleanupPass::getShuffleSmearValue(llvm::Instruction *inst) con
 
     if (!(mask &&
           (mask->isNullValue() ||
-#if ISPC_LLVM_VERSION == ISPC_LLVM_11_0
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_11_0
            (shuffleInst->getShuffleMaskForBitcode()->getSplatValue() != 0))
 #else
            (shuffleInst->getMask()->getSplatValue() != 0))
@@ -4888,7 +4888,7 @@ llvm::Value *SmearCleanupPass::getShuffleSmearValue(llvm::Instruction *inst) con
         if (extractFunc == NULL) {
             // Declare the __extract_element function if needed; it takes a vector and
             // a scalar parameter and returns a scalar of the vector parameter type.
-#if ISPC_LLVM_VERSION == ISPC_LLVM_11_0
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_11_0
             llvm::VectorType *vtype = llvm::dyn_cast<llvm::VectorType>(shuffleInst->getOperand(0)->getType());
             llvm::FunctionCallee ef = module->getOrInsertFunction("__extract_element", vtype->getElementType(),
                                                                   shuffleInst->getOperand(0)->getType(),
