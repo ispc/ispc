@@ -18,7 +18,7 @@
 <div id="wrap">
   <div id="wrap2">
     <div id="header">
-      <h1 id="logo">Intel SPMD Program Compiler</h1>
+      <h1 id="logo">Intel® Implicit SPMD Program Compiler (Intel® ISPC)</h1>
       <div id="slogan">An open-source compiler for high-performance SIMD programming on
       the CPU</div>
     </div>

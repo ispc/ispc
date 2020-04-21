@@ -1,9 +1,10 @@
-=========================================
-Intel® SPMD Program Compiler User's Guide
-=========================================
+================================================================
+Intel® Implicit SPMD Program Compiler (Intel® ISPC) User's Guide
+================================================================
 
-The Intel® SPMD Program Compiler (``ispc``) is a compiler for writing SPMD
-(single program multiple data) programs to run on the CPU.  The SPMD
+The Intel® Implicit SPMD Program Compiler (Intel® ISPC) is a compiler for
+writing SPMD (single program multiple data) programs to run on the CPU.
+The SPMD
 programming approach is widely known to graphics and GPGPU programmers; it
 is used for GPU shaders and CUDA\* and OpenCL\* kernels, for example.  The
 main idea behind SPMD is that one writes programs as if they were operating
@@ -3831,7 +3832,7 @@ be used to get a pseudo-random ``float`` value.
 Random Numbers
 --------------
 
-Some recent CPUs (including those based on the Intel(r) Ivy Bridge
+Some recent CPUs (including those based on the Intel® Ivy Bridge
 micro-architecture), provide support for generating true random numbers.  A
 few standard library functions make this functionality available:
 
