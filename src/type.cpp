@@ -2663,8 +2663,8 @@ const Type *Type::MoreGeneralType(const Type *t0, const Type *t1, SourcePos pos,
         }
     }
 
-    const VectorType *vt0 = CastType<VectorType>(t0);
-    const VectorType *vt1 = CastType<VectorType>(t1);
+    const VectorType *vt0 = CastType<VectorType>(t0->GetReferenceTarget());
+    const VectorType *vt1 = CastType<VectorType>(t1->GetReferenceTarget());
     if (vt0 && vt1) {
         // both are vectors; convert their base types and make a new vector
         // type, as long as their lengths match
