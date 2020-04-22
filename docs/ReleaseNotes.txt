@@ -1,3 +1,35 @@
+=== v1.13.0 === (23 April 2020)
+
+An ISPC update, which graduates cross-compilation support to production and
+has multiple code generation improvements and bug fixes. AVX512 targets may
+get the biggest performance boost due to changed internal representation of
+masks (we observed up to 5% speedups), and new switch '--opt=diable-zmm',
+which disables using zmm registers in favour of ymm for avx512skx-i32x16 target.
+All targets will definitely benefit from LLVM 10.0 backend used in this release.
+
+Here are the list of other changes:
+
+- new switch '--support-matrix' was added to display information about supported
+  cross-compilation targets, which are managed by '--target-os=<os>',
+  '--target=<ispc-target>', and '--arch=<arch>' switches.
+- representation of 'bool' type in storage was changed to match C/C++ (i.e. one
+  'bool' occupies one byte) for better interoperability.
+- type aliases for unsigned types were added: 'uint8', 'uint16', 'uint32',
+  'uint64', and 'uint'. To detect if these types are supported you can check if
+  ISPC_UINT_IS_DEFINED macro is defined.
+- 'extract()'/'insert()' for boolean arguments, and 'abs()' for all integer and
+  FP types were added to standard library.
+- FreeBSD was added to the list of supported target OSes, but it's not well
+  tested.
+
+Supported platforms in this release are below. Rows are hosts, columns are
+targets. x86 and arm are both 32 and 64 bits, where appropriate.
+
+          Windows | Linux    | macOS | Android  | iOS | PS4 | FreeBSD
+Windows | x86     | x86, arm | x86   | x86, arm |     | x86 | x86, arm
+Linux   |         | x86, arm | x86   | x86, arm |     |     | x86, arm
+macOS   |         | x86, arm | x86   | x86, arm | arm |     | x86, arm
+
 === v1.12.0 === (15 August 2019)
 
 This ISPC update includes experimental cross OS compilation support, ARM and AARCH64
