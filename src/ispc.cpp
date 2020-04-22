@@ -339,8 +339,8 @@ class AllCPUs {
         names[CPU_SKX].push_back("skx");
 
 #if ISPC_LLVM_VERSION >= ISPC_LLVM_8_0 // LLVM 8.0+
-        names[CPU_ICL].push_back("icl");
         names[CPU_ICL].push_back("icelake-client");
+        names[CPU_ICL].push_back("icl");
 #endif
 
 #ifdef ISPC_ARM_ENABLED
