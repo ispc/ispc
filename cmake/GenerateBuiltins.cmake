@@ -122,37 +122,37 @@ function(builtin_to_cpp bit os_name arch supported_archs supported_oses resultFi
         if (${os_name} STREQUAL "windows")
             set(includePath "")
         elseif(${os_name} STREQUAL "macos")
-            # -IC:/iusers/MacOSX10.14.sdk.tar/MacOSX10.14.sdk/usr/include
-            set(includePath -I${ISPC_MACOS_SDK_PATH}/usr/include)
+            # -isystemC:/iusers/MacOSX10.14.sdk.tar/MacOSX10.14.sdk/usr/include
+            set(includePath -isystem${ISPC_MACOS_SDK_PATH}/usr/include)
         else()
-            # -IC:/gnuwin32/include/glibc
-            set(includePath -I${ISPC_GNUWIN32_PATH}/include/glibc)
+            # -isystemC:/gnuwin32/include/glibc
+            set(includePath -isystem${ISPC_GNUWIN32_PATH}/include/glibc)
         endif()
     elseif (APPLE)
         if (${os_name} STREQUAL "ios")
-            # -I/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS.sdk/usr/include/
-            set(includePath -I${ISPC_IOS_SDK_PATH}/usr/include)
+            # -isystem/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS.sdk/usr/include/
+            set(includePath -isystem${ISPC_IOS_SDK_PATH}/usr/include)
         elseif (${os_name} STREQUAL "linux" OR ${os_name} STREQUAL "android")
             if (${target_arch} STREQUAL "armv7")
-                # -I/Users/Shared/android-ndk-r20/sysroot/usr/include -I/Users/Shared/android-ndk-r20/sysroot/usr/include/arm-linux-androideabi
-                set(includePath -I${ISPC_ANDROID_NDK_PATH}/sysroot/usr/include -I${ISPC_ANDROID_NDK_PATH}/sysroot/usr/include/arm-linux-androideabi)
+                # -isystem/Users/Shared/android-ndk-r20/sysroot/usr/include -isystem/Users/Shared/android-ndk-r20/sysroot/usr/include/arm-linux-androideabi
+                set(includePath -isystem${ISPC_ANDROID_NDK_PATH}/sysroot/usr/include -isystem${ISPC_ANDROID_NDK_PATH}/sysroot/usr/include/arm-linux-androideabi)
             elseif (${target_arch} STREQUAL "aarch64")
-                # -I/Users/Shared/android-ndk-r20/sysroot/usr/include -I/Users/Shared/android-ndk-r20/sysroot/usr/include/aarch64-linux-android
-                set(includePath -I${ISPC_ANDROID_NDK_PATH}/sysroot/usr/include -I${ISPC_ANDROID_NDK_PATH}/sysroot/usr/include/aarch64-linux-android)
+                # -isystem/Users/Shared/android-ndk-r20/sysroot/usr/include -isystem/Users/Shared/android-ndk-r20/sysroot/usr/include/aarch64-linux-android
+                set(includePath -isystem${ISPC_ANDROID_NDK_PATH}/sysroot/usr/include -isystem${ISPC_ANDROID_NDK_PATH}/sysroot/usr/include/aarch64-linux-android)
             elseif(${target_arch} STREQUAL "i386")
-                # -I/Users/Shared/android-ndk-r20/sysroot/usr/include -I/Users/Shared/android-ndk-r20/sysroot/usr/include/i686-linux-android
-                set(includePath -I${ISPC_ANDROID_NDK_PATH}/sysroot/usr/include -I${ISPC_ANDROID_NDK_PATH}/sysroot/usr/include/i686-linux-android)
+                # -isystem/Users/Shared/android-ndk-r20/sysroot/usr/include -isystem/Users/Shared/android-ndk-r20/sysroot/usr/include/i686-linux-android
+                set(includePath -isystem${ISPC_ANDROID_NDK_PATH}/sysroot/usr/include -isystem${ISPC_ANDROID_NDK_PATH}/sysroot/usr/include/i686-linux-android)
             else()
-                # -I/Users/Shared/android-ndk-r20/sysroot/usr/include -I/Users/Shared/android-ndk-r20/sysroot/usr/include/x86_64-linux-android
-                set(includePath -I${ISPC_ANDROID_NDK_PATH}/sysroot/usr/include -I${ISPC_ANDROID_NDK_PATH}/sysroot/usr/include/x86_64-linux-android)
+                # -isystem/Users/Shared/android-ndk-r20/sysroot/usr/include -isystem/Users/Shared/android-ndk-r20/sysroot/usr/include/x86_64-linux-android
+                set(includePath -isystem${ISPC_ANDROID_NDK_PATH}/sysroot/usr/include -isystem${ISPC_ANDROID_NDK_PATH}/sysroot/usr/include/x86_64-linux-android)
             endif()
         elseif (${os_name} STREQUAL "macos")
-            set(includePath -I${ISPC_MACOS_SDK_PATH}/usr/include)
+            set(includePath -isystem${ISPC_MACOS_SDK_PATH}/usr/include)
         endif()
     else()
          if (${os_name} STREQUAL "macos")
-            # -I/iusers/MacOSX10.14.sdk.tar/MacOSX10.14.sdk/usr/include
-            set(includePath -I${ISPC_MACOS_SDK_PATH}/usr/include)
+            # -isystem/iusers/MacOSX10.14.sdk.tar/MacOSX10.14.sdk/usr/include
+            set(includePath -isystem${ISPC_MACOS_SDK_PATH}/usr/include)
         endif()
     endif()
 
