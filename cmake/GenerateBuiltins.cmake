@@ -132,7 +132,7 @@ function(builtin_to_cpp bit os_name arch supported_archs supported_oses resultFi
         if (${os_name} STREQUAL "ios")
             # -isystem/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS.sdk/usr/include/
             set(includePath -isystem${ISPC_IOS_SDK_PATH}/usr/include)
-        elseif (${os_name} STREQUAL "linux" OR ${os_name} STREQUAL "android")
+        elseif (${os_name} STREQUAL "linux" OR ${os_name} STREQUAL "android" OR ${os_name} STREQUAL "freebsd")
             if (${target_arch} STREQUAL "armv7")
                 # -isystem/Users/Shared/android-ndk-r20/sysroot/usr/include -isystem/Users/Shared/android-ndk-r20/sysroot/usr/include/arm-linux-androideabi
                 set(includePath -isystem${ISPC_ANDROID_NDK_PATH}/sysroot/usr/include -isystem${ISPC_ANDROID_NDK_PATH}/sysroot/usr/include/arm-linux-androideabi)
