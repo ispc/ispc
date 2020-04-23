@@ -150,6 +150,10 @@ static void lPrintVersion() {
     printf("        disable-assertions\t\tRemove assertion statements from final code.\n");
     printf("        disable-fma\t\t\tDisable 'fused multiply-add' instructions (on targets that support them)\n");
     printf("        disable-loop-unroll\t\tDisable loop unrolling.\n");
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_8_0
+    printf("        disable-zmm\t\tDisable using zmm registers for avx512 targets in favour of ymm. This also affects "
+           "ABI.\n");
+#endif
     printf("        fast-masked-vload\t\tFaster masked vector loads on SSE (may go past end of array)\n");
     printf("        fast-math\t\t\tPerform non-IEEE-compliant optimizations of numeric expressions\n");
     printf("        force-aligned-memory\t\tAlways issue \"aligned\" vector load and store instructions\n");
@@ -691,6 +695,10 @@ int main(int Argc, char *Argv[]) {
                 g->opt.unrollLoops = false;
             else if (!strcmp(opt, "disable-fma"))
                 g->opt.disableFMA = true;
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_8_0
+            else if (!strcmp(opt, "disable-zmm"))
+                g->opt.disableZMM = true;
+#endif
             else if (!strcmp(opt, "force-aligned-memory"))
                 g->opt.forceAlignedMemory = true;
 
