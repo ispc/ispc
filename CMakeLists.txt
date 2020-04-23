@@ -474,7 +474,7 @@ if (ISPC_PREPARE_PACKAGE)
                    ${ISPC_WEB_SOURCE_DIR}/perfguide.html)
 
     install(FILES ${ISPC_DOCS} DESTINATION .)
-    install(DIRECTORY "${ISPC_WEB_SOURCE_DIR}/css" DESTINATION css)
+    install(DIRECTORY "${ISPC_WEB_SOURCE_DIR}/css" DESTINATION .)
 
     # CPack configuration
     if (WIN32)
