@@ -30,7 +30,7 @@ the most out of ``ispc`` in practice.
   + `Instrumenting Intel® ISPC Programs To Understand Runtime Behavior`_
   + `Choosing A Target Vector Width`_
 
-* `Disclaimer and Legal Information`_
+* `Notices & Disclaimers`_
 
 * `Optimization Notice`_
 
@@ -732,98 +732,43 @@ It is selected with the ``--target=sse2-x2``, ``--target=sse4-x2`` and
 ``--target=avx-x2`` options, respectively.
 
 
-Disclaimer and Legal Information
-================================
+Notices & Disclaimers
+=====================
 
-INFORMATION IN THIS DOCUMENT IS PROVIDED IN CONNECTION WITH INTEL(R) PRODUCTS.
-NO LICENSE, EXPRESS OR IMPLIED, BY ESTOPPEL OR OTHERWISE, TO ANY INTELLECTUAL
-PROPERTY RIGHTS IS GRANTED BY THIS DOCUMENT. EXCEPT AS PROVIDED IN INTEL'S TERMS
-AND CONDITIONS OF SALE FOR SUCH PRODUCTS, INTEL ASSUMES NO LIABILITY WHATSOEVER,
-AND INTEL DISCLAIMS ANY EXPRESS OR IMPLIED WARRANTY, RELATING TO SALE AND/OR USE
-OF INTEL PRODUCTS INCLUDING LIABILITY OR WARRANTIES RELATING TO FITNESS FOR A
-PARTICULAR PURPOSE, MERCHANTABILITY, OR INFRINGEMENT OF ANY PATENT, COPYRIGHT
-OR OTHER INTELLECTUAL PROPERTY RIGHT.
+Software and workloads used in performance tests may have been optimized for
+performance only on Intel microprocessors.
 
-UNLESS OTHERWISE AGREED IN WRITING BY INTEL, THE INTEL PRODUCTS ARE NOT DESIGNED
-NOR INTENDED FOR ANY APPLICATION IN WHICH THE FAILURE OF THE INTEL PRODUCT COULD
-CREATE A SITUATION WHERE PERSONAL INJURY OR DEATH MAY OCCUR.
+Performance tests, such as SYSmark and MobileMark, are measured using specific
+computer systems, components, software, operations and functions.  Any change
+to any of those factors may cause the results to vary.  You should consult
+other information and performance tests to assist you in fully evaluating your
+contemplated purchases, including the performance of that product when combined
+with other products.   For more complete information visit
+www.intel.com/benchmarks.
 
-Intel may make changes to specifications and product descriptions at any time,
-without notice. Designers must not rely on the absence or characteristics of any
-features or instructions marked "reserved" or "undefined." Intel reserves these
-for future definition and shall have no responsibility whatsoever for conflicts
-or incompatibilities arising from future changes to them. The information here
-is subject to change without notice. Do not finalize a design with this
-information.
+Performance results are based on testing as of dates shown in configurations and
+may not reflect all publicly available updates.  See backup for configuration
+details.  No product or component can be absolutely secure.
 
-The products described in this document may contain design defects or errors
-known as errata which may cause the product to deviate from published
-specifications. Current characterized errata are available on request.
+Your costs and results may vary.
 
-Contact your local Intel sales office or your distributor to obtain the latest
-specifications and before placing your product order.
+Intel technologies may require enabled hardware, software or service activation.
 
-Copies of documents which have an order number and are referenced in this
-document, or other Intel literature, may be obtained by calling 1-800-548-4725,
-or by visiting Intel's Web Site.
-
-Intel processor numbers are not a measure of performance. Processor numbers
-differentiate features within each processor family, not across different
-processor families. See http://www.intel.com/products/processor_number for
-details.
-
-BunnyPeople, Celeron, Celeron Inside, Centrino, Centrino Atom,
-Centrino Atom Inside, Centrino Inside, Centrino logo, Core Inside, FlashFile,
-i960, InstantIP, Intel, Intel logo, Intel386, Intel486, IntelDX2, IntelDX4,
-IntelSX2, Intel Atom, Intel Atom Inside, Intel Core, Intel Inside,
-Intel Inside logo, Intel. Leap ahead., Intel. Leap ahead. logo, Intel NetBurst,
-Intel NetMerge, Intel NetStructure, Intel SingleDriver, Intel SpeedStep,
-Intel StrataFlash, Intel Viiv, Intel vPro, Intel XScale, Itanium,
-Itanium Inside, MCS, MMX, Oplus, OverDrive, PDCharm, Pentium, Pentium Inside,
-skoool, Sound Mark, The Journey Inside, Viiv Inside, vPro Inside, VTune, Xeon,
-and Xeon Inside are trademarks of Intel Corporation in the U.S. and other
-countries.
-
-* Other names and brands may be claimed as the property of others.
-
-Copyright(C) 2011-2019, Intel Corporation. All rights reserved.
+© Intel Corporation.  Intel, the Intel logo, and other Intel marks are
+trademarks of Intel Corporation or its subsidiaries.  Other names and brands may
+be claimed as the property of others.
 
 
 Optimization Notice
 ===================
 
-Intel compilers, associated libraries and associated development tools may
-include or utilize options that optimize for instruction sets that are
-available in both Intel and non-Intel microprocessors (for example SIMD
-instruction sets), but do not optimize equally for non-Intel
-microprocessors.  In addition, certain compiler options for Intel
-compilers, including some that are not specific to Intel
-micro-architecture, are reserved for Intel microprocessors.  For a detailed
-description of Intel compiler options, including the instruction sets and
-specific microprocessors they implicate, please refer to the "Intel
-Compiler User and Reference Guides" under "Compiler Options."  Many library
-routines that are part of Intel compiler products are more highly optimized
-for Intel microprocessors than for other microprocessors.  While the
-compilers and libraries in Intel compiler products offer optimizations for
-both Intel and Intel-compatible microprocessors, depending on the options
-you select, your code and other factors, you likely will get extra
-performance on Intel microprocessors.
-
-Intel compilers, associated libraries and associated development tools may
-or may not optimize to the same degree for non-Intel microprocessors for
-optimizations that are not unique to Intel microprocessors.  These
-optimizations include Intel® Streaming SIMD Extensions 2 (Intel® SSE2),
-Intel® Streaming SIMD Extensions 3 (Intel® SSE3), and Supplemental
-Streaming SIMD Extensions 3 (Intel SSSE3) instruction sets and other
-optimizations.  Intel does not guarantee the availability, functionality,
-or effectiveness of any optimization on microprocessors not manufactured by
-Intel.  Microprocessor-dependent optimizations in this product are intended
-for use with Intel microprocessors.
-
-While Intel believes our compilers and libraries are excellent choices to
-assist in obtaining the best performance on Intel and non-Intel
-microprocessors, Intel recommends that you evaluate other compilers and
-libraries to determine which best meet your requirements.  We hope to win
-your business by striving to offer the best performance of any compiler or
-library; please let us know if you find we do not.
-
+Intel's compilers may or may not optimize to the same degree for non-Intel
+microprocessors for optimizations that are not unique to Intel microprocessors.
+These optimizations include SSE2, SSE3, and SSSE3 instruction sets and other
+optimizations. Intel does not guarantee the availability, functionality, or
+effectiveness of any optimization on microprocessors not manufactured by Intel.
+Microprocessor-dependent optimizations in this product are intended for use with
+Intel microprocessors. Certain optimizations not specific to Intel
+microarchitecture are reserved for Intel microprocessors. Please refer to the
+applicable product User and Reference Guides for more information regarding the
+specific instruction sets covered by this notice.
