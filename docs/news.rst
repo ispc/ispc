@@ -2,6 +2,20 @@
 ispc News
 =========
 
+ispc 1.13.0 is Released
+-----------------------
+
+An ISPC update, which graduates cross-compilation support to production and
+has multiple code generation improvements and bug fixes. AVX512 targets may
+get the biggest performance boost due to changed internal representation of
+masks (we observed up to 5% speedups), and new switch '--opt=diable-zmm',
+which disables using zmm registers in favour of ymm for avx512skx-i32x16 target.
+All targets will definitely benefit from LLVM 10.0 backend used in this release.
+
+For more details, please check `Release Notes`_.
+
+.. _Release Notes: https://github.com/ispc/ispc/blob/master/docs/ReleaseNotes.txt
+
 ispc 1.12.0 is Released
 -----------------------
 
