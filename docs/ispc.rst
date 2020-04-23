@@ -1,6 +1,6 @@
-================================================================
-Intel® Implicit SPMD Program Compiler (Intel® ISPC) User's Guide
-================================================================
+========================
+Intel® ISPC User's Guide
+========================
 
 The Intel® Implicit SPMD Program Compiler (Intel® ISPC) is a compiler for
 writing SPMD (single program multiple data) programs to run on the CPU.

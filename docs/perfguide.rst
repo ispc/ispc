@@ -1,6 +1,6 @@
-=====================================================================
-Intel® Implicit SPMD Program Compiler (Intel® ISPC) Performance Guide
-=====================================================================
+=============================
+Intel® ISPC Performance Guide
+=============================
 
 The SPMD programming model provided by ``ispc`` naturally delivers
 excellent performance for many workloads thanks to efficient use of CPU
