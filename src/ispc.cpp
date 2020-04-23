@@ -808,6 +808,13 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, bool pic, boo
         this->m_hasRsqrtd = this->m_hasRcpd = false;
         this->m_hasVecPrefetch = false;
         CPUfromISA = CPU_SKX;
+        if (g->opt.disableZMM) {
+            this->m_funcAttributes.push_back(std::make_pair("prefer-vector-width", "256"));
+            this->m_funcAttributes.push_back(std::make_pair("min-legal-vector-width", "256"));
+        } else {
+            this->m_funcAttributes.push_back(std::make_pair("prefer-vector-width", "512"));
+            this->m_funcAttributes.push_back(std::make_pair("min-legal-vector-width", "512"));
+        }
         break;
     case ISPCTarget::generic_1:
         this->m_isa = Target::GENERIC;
@@ -1428,6 +1435,7 @@ Opt::Opt() {
     disableGatherScatterFlattening = false;
     disableUniformMemoryOptimizations = false;
     disableCoalescing = false;
+    disableZMM = false;
 }
 
 ///////////////////////////////////////////////////////////////////////////

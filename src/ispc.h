@@ -485,6 +485,10 @@ struct Opt {
     /** Disables optimizations that coalesce incoherent scalar memory
         access from gathers into wider vector operations, when possible. */
     bool disableCoalescing;
+
+    /** Disable using zmm registers for avx512 target in favour of ymm.
+        Affects only >= 512 bit wide targets and only if avx512vl is available */
+    bool disableZMM;
 };
 
 /** @brief This structure collects together a number of global variables.
