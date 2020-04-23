@@ -1,6 +1,6 @@
-=====================================
-Frequently Asked Questions About ispc
-=====================================
+============================================
+Frequently Asked Questions About Intel® ISPC
+============================================
 
 This document includes a number of frequently (and not frequently) asked
 questions about ispc, the Intel® Implicit SPMD Program Compiler (Intel® ISPC).
