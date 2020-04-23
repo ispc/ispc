@@ -59,6 +59,7 @@ Contents:
   + `Updating ISPC Programs For Changes In ISPC 1.10.0`_
   + `Updating ISPC Programs For Changes In ISPC 1.11.0`_
   + `Updating ISPC Programs For Changes In ISPC 1.12.0`_
+  + `Updating ISPC Programs For Changes In ISPC 1.13.0`_
 
 * `Getting Started with ISPC`_
 
@@ -386,9 +387,9 @@ Updating ISPC Programs For Changes In ISPC 1.12.0
 This release contains the following changes that may affect compatibility with
 older versions:
 
-* 'noinline' keyword was added.
+* ``noinline`` keyword was added.
 
-* Standard library functions 'rsqrt_fast()' and 'rcp_fast()' were added.
+* Standard library functions ``rsqrt_fast()`` and ``rcp_fast()`` were added.
 
 * AVX1.1 (IvyBridge) targets and generic KNC and KNL targets were removed. 
   Note that KNL is still supported through avx512knl-i32x16.
@@ -399,6 +400,25 @@ should not affect compatibility.
 This release introduces experimental cross OS compilation support and ARM/AARCH64
 support. It also contains a new 128-bit AVX2 target (avx2-i32x4) and a CPU
 definition for Ice Lake client (--cpu=icl).
+
+Updating ISPC Programs For Changes In ISPC 1.13.0
+-------------------------------------------------
+
+This release contains the following changes that may affect compatibility with
+older versions:
+
+* Representation of ``bool`` type in storage was changed from target-specific to
+  one byte per boolean value.  So size of ``varying bool`` is target width (in
+  bytes), and size of ``unform bool`` is one.  This definition is compatible
+  with C/C++, hence improves interoperability.
+
+* type aliases for unsigned types were added: ``uint8``, ``uint16``, ``uint32``,
+  ``uint64``, and ``uint``.  To detect if these types are supported you can
+  check if ISPC_UINT_IS_DEFINED macro is defined, this is handy for writing code
+  which works with older versions of ``ispc``.
+
+* ``extract()``/``insert()`` for boolean arguments, and ``abs()`` for all integer and
+  FP types were added to standard library.
 
 Getting Started with ISPC
 =========================
