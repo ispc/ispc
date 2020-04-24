@@ -65,6 +65,7 @@ before_install:
   - sudo apt-get update
   - sudo apt-get install -y libc6-dev-i386 g++-multilib lib32stdc++6
   - if [ -n "$WASM_FLAGS" ]; then source scripts/install_emscripten.sh && emcc --version; fi
+  - if [ -n "$WASM_FLAGS" ]; then source scripts/install_v8.sh && v8-debug -e "console.log(\"V8 TEST\")"; fi
   - wget https://cmake.org/files/v3.17/cmake-3.17.0-Linux-x86_64.sh && mkdir /opt/cmake && sh cmake-3.17.0-Linux-x86_64.sh --prefix=/opt/cmake --skip-license && sudo ln -s /opt/cmake/bin/cmake /usr/local/bin/cmake && rm cmake-3.17.0-Linux-x86_64.sh
   - export PATH=/opt/cmake/bin:$PATH
   - cmake --version
