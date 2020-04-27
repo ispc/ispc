@@ -110,6 +110,7 @@ export void xyzSumSOA(uniform float array[], uniform int count,
     result[2] = reduce_add(zsum);
 }
 
+#pragma ignore warning
 export void xyzSumVarying(varying float array[], uniform int count,
                           uniform float zeros[], uniform float result[]) {
     float xsum = 0, ysum = 0, zsum = 0;
