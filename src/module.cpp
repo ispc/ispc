@@ -462,11 +462,11 @@ void Module::AddGlobalVariable(const std::string &name, const Type *type, Expr *
     This functions returns true and issues an error if are any illegal
     types are found and returns false otherwise.
 */
-static bool lRecursiveCheckValidParamType(const Type *t, bool vectorOk) {
+static bool lRecursiveCheckValidParamType(const Type *t, bool vectorOk, const std::string &name, SourcePos pos) {
     const StructType *st = CastType<StructType>(t);
     if (st != NULL) {
         for (int i = 0; i < st->GetElementCount(); ++i)
-            if (!lRecursiveCheckValidParamType(st->GetElementType(i), vectorOk))
+            if (!lRecursiveCheckValidParamType(st->GetElementType(i), vectorOk, name, pos))
                 return false;
         return true;
     }
@@ -479,7 +479,7 @@ static bool lRecursiveCheckValidParamType(const Type *t, bool vectorOk) {
 
     const SequentialType *seqt = CastType<SequentialType>(t);
     if (seqt != NULL)
-        return lRecursiveCheckValidParamType(seqt->GetElementType(), vectorOk);
+        return lRecursiveCheckValidParamType(seqt->GetElementType(), vectorOk, name, pos);
 
     const PointerType *pt = CastType<PointerType>(t);
     if (pt != NULL) {
@@ -488,13 +488,17 @@ static bool lRecursiveCheckValidParamType(const Type *t, bool vectorOk) {
         if (pt->IsVaryingType())
             return false;
         else
-            return lRecursiveCheckValidParamType(pt->GetBaseType(), true);
+            return lRecursiveCheckValidParamType(pt->GetBaseType(), true, name, pos);
     }
 
     if (t->IsVaryingType() && !vectorOk)
         return false;
-    else
+    else {
+        if (t->IsVaryingType()) {
+            Warning(pos, "Exported function parameter \"%s\" points to varying type", name.c_str());
+        }
         return true;
+    }
 }
 
 /** Given a Symbol representing a function parameter, see if it or any
@@ -503,7 +507,7 @@ static bool lRecursiveCheckValidParamType(const Type *t, bool vectorOk) {
     varying parameters is illegal.
  */
 static void lCheckExportedParameterTypes(const Type *type, const std::string &name, SourcePos pos) {
-    if (lRecursiveCheckValidParamType(type, false) == false) {
+    if (lRecursiveCheckValidParamType(type, false, name, pos) == false) {
         if (CastType<PointerType>(type))
             Error(pos,
                   "Varying pointer type parameter \"%s\" is illegal "
@@ -697,7 +701,8 @@ void Module::AddFunctionDeclaration(const std::string &name, const FunctionType 
 
     // Make sure that the return type isn't 'varying' or vector typed if
     // the function is 'export'ed.
-    if (functionType->isExported && lRecursiveCheckValidParamType(functionType->GetReturnType(), false) == false)
+    if (functionType->isExported &&
+        lRecursiveCheckValidParamType(functionType->GetReturnType(), false, name, pos) == false)
         Error(pos,
               "Illegal to return a \"varying\" or vector type from "
               "exported function \"%s\"",
