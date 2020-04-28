@@ -2034,12 +2034,21 @@ static ConstExpr *lConstFoldBinaryIntOp(BinaryExpr::Op op, const T *v0, const T 
     int count = carg0->Count();
 
     switch (op) {
-        FOLD_OP_REF(BinaryExpr::Mod, %, TRef);
         FOLD_OP_REF(BinaryExpr::Shl, <<, TRef);
         FOLD_OP_REF(BinaryExpr::Shr, >>, TRef);
         FOLD_OP_REF(BinaryExpr::BitAnd, &, TRef);
         FOLD_OP_REF(BinaryExpr::BitXor, ^, TRef);
         FOLD_OP_REF(BinaryExpr::BitOr, |, TRef);
+    case BinaryExpr::Mod:
+        for (int i = 0; i < count; ++i) {
+            if (v1[i] == 0) {
+                Warning(pos, "Remainder by zero is undefined.");
+                return NULL;
+            } else {
+                result[i] = (v0[i] % v1[i]);
+            }
+        }
+        break;
     default:
         return NULL;
     }
@@ -2086,10 +2095,11 @@ static ConstExpr *lConstFoldBinaryArithOp(BinaryExpr::Op op, const T *v0, const 
     case BinaryExpr::Div:
         for (int i = 0; i < count; ++i) {
             if (v1[i] == 0) {
-                Error(pos, "Division by zero encountered in expression.");
-                result[i] = 0;
-            } else
+                Warning(pos, "Division by zero is undefined.");
+                return NULL;
+            } else {
                 result[i] = (v0[i] / v1[i]);
+            }
         }
         break;
     default:
