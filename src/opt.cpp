@@ -295,25 +295,38 @@ static uint64_t lConstElementsToMask(const llvm::SmallVector<llvm::Constant *, I
     Assert(elements.size() <= 64);
 
     uint64_t mask = 0;
+    uint64_t undefSetMask = 0;
+    llvm::APInt intMaskValue;
     for (unsigned int i = 0; i < elements.size(); ++i) {
-        llvm::APInt intMaskValue;
         // SSE has the "interesting" approach of encoding blending
         // masks as <n x float>.
-        llvm::ConstantFP *cf = llvm::dyn_cast<llvm::ConstantFP>(elements[i]);
-        if (cf != NULL) {
+        if (llvm::ConstantFP *cf = llvm::dyn_cast<llvm::ConstantFP>(elements[i])) {
             llvm::APFloat apf = cf->getValueAPF();
             intMaskValue = apf.bitcastToAPInt();
-        } else {
+        } else if (llvm::ConstantInt *ci = llvm::dyn_cast<llvm::ConstantInt>(elements[i])) {
             // Otherwise get it as an int
-            llvm::ConstantInt *ci = llvm::dyn_cast<llvm::ConstantInt>(elements[i]);
-            Assert(ci != NULL); // vs return -1 if NULL?
             intMaskValue = ci->getValue();
+        } else {
+            // We create a separate 'undef mask' with all undef bits set.
+            // This mask will have no bits set if there are no 'undef' elements.
+            llvm::UndefValue *uv = llvm::dyn_cast<llvm::UndefValue>(elements[i]);
+            Assert(uv != NULL); // vs return -1 if NULL?
+            undefSetMask |= (1ull << i);
+            continue;
         }
         // Is the high-bit set?  If so, OR in the appropriate bit in
         // the result mask
         if (intMaskValue.countLeadingOnes() > 0)
             mask |= (1ull << i);
     }
+
+    // if no bits are set in mask, do not need to consider undefs. It's
+    // always 'all_off'.
+    // If any bits are set in mask, assume' undef' bits as as '1'. This ensures
+    // cases with only '1's and 'undef's will be considered as 'all_on'
+    if (mask != 0)
+        mask |= undefSetMask;
+
     return mask;
 }
 
@@ -366,7 +379,7 @@ static bool lGetMask(llvm::Value *factor, uint64_t *mask) {
     }
 }
 
-enum MaskStatus { ALL_ON, ALL_OFF, MIXED, UNKNOWN };
+enum class MaskStatus { all_on, all_off, mixed, unknown };
 
 /** Determines if the given mask value is all on, all off, mixed, or
     unknown at compile time.
@@ -374,10 +387,10 @@ enum MaskStatus { ALL_ON, ALL_OFF, MIXED, UNKNOWN };
 static MaskStatus lGetMaskStatus(llvm::Value *mask, int vecWidth = -1) {
     uint64_t bits;
     if (lGetMask(mask, &bits) == false)
-        return UNKNOWN;
+        return MaskStatus::unknown;
 
     if (bits == 0)
-        return ALL_OFF;
+        return MaskStatus::all_off;
 
     if (vecWidth == -1)
         vecWidth = g->target->getVectorWidth();
@@ -385,9 +398,9 @@ static MaskStatus lGetMaskStatus(llvm::Value *mask, int vecWidth = -1) {
 
     for (int i = 0; i < vecWidth; ++i) {
         if ((bits & (1ull << i)) == 0)
-            return MIXED;
+            return MaskStatus::mixed;
     }
-    return ALL_ON;
+    return MaskStatus::all_on;
 }
 
 ///////////////////////////////////////////////////////////////////////////
@@ -814,21 +827,20 @@ restart:
                 goto restart;
             }
 
-            uint64_t mask;
-            if (lGetMask(factor, &mask) == true) {
-                llvm::Value *value = NULL;
-                if (mask == 0)
-                    // Mask all off -> replace with the first blend value
-                    value = v[0];
-                else if (mask == blend->allOnMask)
-                    // Mask all on -> replace with the second blend value
-                    value = v[1];
+            MaskStatus maskStatus = lGetMaskStatus(factor);
+            llvm::Value *value = NULL;
+            if (maskStatus == MaskStatus::all_off) {
+                // Mask all off -> replace with the first blend value
+                value = v[0];
+            } else if (maskStatus == MaskStatus::all_on) {
+                // Mask all on -> replace with the second blend value
+                value = v[1];
+            }
 
-                if (value != NULL) {
-                    llvm::ReplaceInstWithValue(iter->getParent()->getInstList(), iter, value);
-                    modifiedAny = true;
-                    goto restart;
-                }
+            if (value != NULL) {
+                llvm::ReplaceInstWithValue(iter->getParent()->getInstList(), iter, value);
+                modifiedAny = true;
+                goto restart;
             }
         } else if (matchesMaskInstruction(callInst->getCalledFunction())) {
             llvm::Value *factor = callInst->getArgOperand(0);
@@ -845,85 +857,81 @@ restart:
         } else if (callInst->getCalledFunction() == avxMaskedLoad32 ||
                    callInst->getCalledFunction() == avxMaskedLoad64) {
             llvm::Value *factor = callInst->getArgOperand(1);
-            uint64_t mask;
-            if (lGetMask(factor, &mask) == true) {
-                if (mask == 0) {
-                    // nothing being loaded, replace with undef value
-                    llvm::Type *returnType = callInst->getType();
-                    Assert(llvm::isa<llvm::VectorType>(returnType));
-                    llvm::Value *undefValue = llvm::UndefValue::get(returnType);
-                    llvm::ReplaceInstWithValue(iter->getParent()->getInstList(), iter, undefValue);
-                    modifiedAny = true;
-                    goto restart;
-                } else if (mask == 0xff) {
-                    // all lanes active; replace with a regular load
-                    llvm::Type *returnType = callInst->getType();
-                    Assert(llvm::isa<llvm::VectorType>(returnType));
-                    // cast the i8 * to the appropriate type
-                    const char *name = LLVMGetName(callInst->getArgOperand(0), "_cast");
-                    llvm::Value *castPtr = new llvm::BitCastInst(callInst->getArgOperand(0),
-                                                                 llvm::PointerType::get(returnType, 0), name, callInst);
-                    lCopyMetadata(castPtr, callInst);
-                    int align;
-                    if (g->opt.forceAlignedMemory)
-                        align = g->target->getNativeVectorAlignment();
-                    else
-                        align = callInst->getCalledFunction() == avxMaskedLoad32 ? 4 : 8;
-                    name = LLVMGetName(callInst->getArgOperand(0), "_load");
-                    llvm::Instruction *loadInst =
+            MaskStatus maskStatus = lGetMaskStatus(factor);
+            if (maskStatus == MaskStatus::all_off) {
+                // nothing being loaded, replace with undef value
+                llvm::Type *returnType = callInst->getType();
+                Assert(llvm::isa<llvm::VectorType>(returnType));
+                llvm::Value *undefValue = llvm::UndefValue::get(returnType);
+                llvm::ReplaceInstWithValue(iter->getParent()->getInstList(), iter, undefValue);
+                modifiedAny = true;
+                goto restart;
+            } else if (maskStatus == MaskStatus::all_on) {
+                // all lanes active; replace with a regular load
+                llvm::Type *returnType = callInst->getType();
+                Assert(llvm::isa<llvm::VectorType>(returnType));
+                // cast the i8 * to the appropriate type
+                const char *name = LLVMGetName(callInst->getArgOperand(0), "_cast");
+                llvm::Value *castPtr = new llvm::BitCastInst(callInst->getArgOperand(0),
+                                                             llvm::PointerType::get(returnType, 0), name, callInst);
+                lCopyMetadata(castPtr, callInst);
+                int align;
+                if (g->opt.forceAlignedMemory)
+                    align = g->target->getNativeVectorAlignment();
+                else
+                    align = callInst->getCalledFunction() == avxMaskedLoad32 ? 4 : 8;
+                name = LLVMGetName(callInst->getArgOperand(0), "_load");
+                llvm::Instruction *loadInst =
 #if ISPC_LLVM_VERSION <= ISPC_LLVM_9_0
-                        new llvm::LoadInst(castPtr, name, false /* not volatile */, align, (llvm::Instruction *)NULL);
+                    new llvm::LoadInst(castPtr, name, false /* not volatile */, align, (llvm::Instruction *)NULL);
 #elif ISPC_LLVM_VERSION >= ISPC_LLVM_11_0
-                        new llvm::LoadInst(
-                            llvm::dyn_cast<llvm::PointerType>(castPtr->getType())->getPointerElementType(), castPtr,
-                            name, false /* not volatile */, llvm::MaybeAlign(align), (llvm::Instruction *)NULL);
+                    new llvm::LoadInst(llvm::dyn_cast<llvm::PointerType>(castPtr->getType())->getPointerElementType(),
+                                       castPtr, name, false /* not volatile */, llvm::MaybeAlign(align),
+                                       (llvm::Instruction *)NULL);
 #else
-                        new llvm::LoadInst(castPtr, name, false /* not volatile */, llvm::MaybeAlign(align),
-                                           (llvm::Instruction *)NULL);
+                    new llvm::LoadInst(castPtr, name, false /* not volatile */, llvm::MaybeAlign(align),
+                                       (llvm::Instruction *)NULL);
 #endif
-                    lCopyMetadata(loadInst, callInst);
-                    llvm::ReplaceInstWithInst(callInst, loadInst);
-                    modifiedAny = true;
-                    goto restart;
-                }
+                lCopyMetadata(loadInst, callInst);
+                llvm::ReplaceInstWithInst(callInst, loadInst);
+                modifiedAny = true;
+                goto restart;
             }
         } else if (callInst->getCalledFunction() == avxMaskedStore32 ||
                    callInst->getCalledFunction() == avxMaskedStore64) {
             // NOTE: mask is the 2nd parameter, not the 3rd one!!
             llvm::Value *factor = callInst->getArgOperand(1);
-            uint64_t mask;
-            if (lGetMask(factor, &mask) == true) {
-                if (mask == 0) {
-                    // nothing actually being stored, just remove the inst
-                    callInst->eraseFromParent();
-                    modifiedAny = true;
-                    goto restart;
-                } else if (mask == 0xff) {
-                    // all lanes storing, so replace with a regular store
-                    llvm::Value *rvalue = callInst->getArgOperand(2);
-                    llvm::Type *storeType = rvalue->getType();
-                    const char *name = LLVMGetName(callInst->getArgOperand(0), "_ptrcast");
-                    llvm::Value *castPtr = new llvm::BitCastInst(callInst->getArgOperand(0),
-                                                                 llvm::PointerType::get(storeType, 0), name, callInst);
-                    lCopyMetadata(castPtr, callInst);
+            MaskStatus maskStatus = lGetMaskStatus(factor);
+            if (maskStatus == MaskStatus::all_off) {
+                // nothing actually being stored, just remove the inst
+                callInst->eraseFromParent();
+                modifiedAny = true;
+                goto restart;
+            } else if (maskStatus == MaskStatus::all_on) {
+                // all lanes storing, so replace with a regular store
+                llvm::Value *rvalue = callInst->getArgOperand(2);
+                llvm::Type *storeType = rvalue->getType();
+                const char *name = LLVMGetName(callInst->getArgOperand(0), "_ptrcast");
+                llvm::Value *castPtr = new llvm::BitCastInst(callInst->getArgOperand(0),
+                                                             llvm::PointerType::get(storeType, 0), name, callInst);
+                lCopyMetadata(castPtr, callInst);
 
-                    llvm::StoreInst *storeInst = new llvm::StoreInst(rvalue, castPtr, (llvm::Instruction *)NULL);
-                    int align;
-                    if (g->opt.forceAlignedMemory)
-                        align = g->target->getNativeVectorAlignment();
-                    else
-                        align = callInst->getCalledFunction() == avxMaskedStore32 ? 4 : 8;
+                llvm::StoreInst *storeInst = new llvm::StoreInst(rvalue, castPtr, (llvm::Instruction *)NULL);
+                int align;
+                if (g->opt.forceAlignedMemory)
+                    align = g->target->getNativeVectorAlignment();
+                else
+                    align = callInst->getCalledFunction() == avxMaskedStore32 ? 4 : 8;
 #if ISPC_LLVM_VERSION <= ISPC_LLVM_9_0
-                    storeInst->setAlignment(align);
+                storeInst->setAlignment(align);
 #else // LLVM 10.0+
-                    storeInst->setAlignment(llvm::MaybeAlign(align));
+                storeInst->setAlignment(llvm::MaybeAlign(align));
 #endif
-                    lCopyMetadata(storeInst, callInst);
-                    llvm::ReplaceInstWithInst(callInst, storeInst);
+                lCopyMetadata(storeInst, callInst);
+                llvm::ReplaceInstWithInst(callInst, storeInst);
 
-                    modifiedAny = true;
-                    goto restart;
-                }
+                modifiedAny = true;
+                goto restart;
             }
         }
     }
@@ -1037,10 +1045,10 @@ bool InstructionSimplifyPass::simplifySelect(llvm::SelectInst *selectInst, llvm:
     // Simplify all-on or all-off mask values
     MaskStatus maskStatus = lGetMaskStatus(factor);
     llvm::Value *value = NULL;
-    if (maskStatus == ALL_ON)
+    if (maskStatus == MaskStatus::all_on)
         // Mask all on -> replace with the first select value
         value = selectInst->getOperand(1);
-    else if (maskStatus == ALL_OFF)
+    else if (maskStatus == MaskStatus::all_off)
         // Mask all off -> replace with the second select value
         value = selectInst->getOperand(2);
     if (value != NULL) {
@@ -2684,13 +2692,13 @@ static bool lImproveMaskedStore(llvm::CallInst *callInst) {
     llvm::Value *mask = callInst->getArgOperand(2);
 
     MaskStatus maskStatus = lGetMaskStatus(mask);
-    if (maskStatus == ALL_OFF) {
+    if (maskStatus == MaskStatus::all_off) {
         // Zero mask - no-op, so remove the store completely.  (This
         // may in turn lead to being able to optimize out instructions
         // that compute the rvalue...)
         callInst->eraseFromParent();
         return true;
-    } else if (maskStatus == ALL_ON) {
+    } else if (maskStatus == MaskStatus::all_on) {
         // The mask is all on, so turn this into a regular store
         llvm::Type *rvalueType = rvalue->getType();
         llvm::Type *ptrType = llvm::PointerType::get(rvalueType, 0);
@@ -2745,11 +2753,11 @@ static bool lImproveMaskedLoad(llvm::CallInst *callInst, llvm::BasicBlock::itera
     llvm::Value *mask = callInst->getArgOperand(1);
 
     MaskStatus maskStatus = lGetMaskStatus(mask);
-    if (maskStatus == ALL_OFF) {
+    if (maskStatus == MaskStatus::all_off) {
         // Zero mask - no-op, so replace the load with an undef value
         llvm::ReplaceInstWithValue(iter->getParent()->getInstList(), iter, llvm::UndefValue::get(callInst->getType()));
         return true;
-    } else if (maskStatus == ALL_ON) {
+    } else if (maskStatus == MaskStatus::all_on) {
         // The mask is all on, so turn this into a regular load
         llvm::Type *ptrType = llvm::PointerType::get(callInst->getType(), 0);
         ptr = new llvm::BitCastInst(ptr, ptrType, "ptr_cast_for_load", callInst);
@@ -3726,7 +3734,7 @@ restart:
         // Then and only then do we have a common base pointer with all
         // offsets from that constants (in which case we can potentially
         // coalesce).
-        if (lGetMaskStatus(mask) != ALL_ON)
+        if (lGetMaskStatus(mask) != MaskStatus::all_on)
             continue;
 
         if (!LLVMVectorValuesAllEqual(variableOffsets))
