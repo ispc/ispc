@@ -60,8 +60,8 @@ function(add_perf_example)
                                    "${CMC_INCLUDE_PATH}"
                                    "${MDF_ROOT}/runtime/include"
                                    "${MDF_ROOT}/examples/helper")
-        target_link_libraries(${HOST_EXECUTABLE} "${MDF_ROOT}/runtime/lib/x86/igfx11cmrt32.lib" AdvAPI32 Ole32)
-        file(COPY "${MDF_ROOT}/runtime/lib/x86/igfx11cmrt32.dll" DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
+        target_link_libraries(${HOST_EXECUTABLE} "${MDF_ROOT}/runtime/lib/x64/igfx11cmrt64.lib" AdvAPI32 Ole32)
+        file(COPY "${MDF_ROOT}/runtime/lib/x64/igfx11cmrt64.dll" DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
         set_target_properties(${HOST_EXECUTABLE} PROPERTIES FOLDER "GEN_Examples")
     else()
         # L0 build
@@ -86,7 +86,7 @@ function(add_perf_example)
         add_executable(${CM_HOST_BINARY} ${parsed_CM_HOST_SOURCES} ${parsed_CM_OBJ_NAME})
         if (WIN32)
             add_custom_command(OUTPUT ${parsed_CM_OBJ_NAME}
-                COMMAND ${CMC_EXECUTABLE} -isystem ${CMC_INCLUDE_PATH} -march=SKL "/DCM_PTRSIZE=32" ${CMAKE_CURRENT_SOURCE_DIR}/${parsed_CM_SRC_NAME}.cpp -o ${parsed_CM_OBJ_NAME}
+                COMMAND ${CMC_EXECUTABLE} -isystem ${CMC_INCLUDE_PATH} -march=SKL "/DCM_PTRSIZE=64" ${CMAKE_CURRENT_SOURCE_DIR}/${parsed_CM_SRC_NAME}.cpp -o ${parsed_CM_OBJ_NAME}
                 WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
                 VERBATIM
                 DEPENDS ${CMC_EXECUTABLE}
@@ -98,13 +98,13 @@ function(add_perf_example)
                                        "${CMC_INCLUDE_PATH}"
                                        "${MDF_ROOT}/runtime/include"
                                        "${MDF_ROOT}/examples/helper")
-            target_link_libraries(${CM_HOST_BINARY} "${MDF_ROOT}/runtime/lib/x86/igfx11cmrt32.lib" AdvAPI32 Ole32)
-            file(COPY "${MDF_ROOT}/runtime/lib/x86/igfx11cmrt32.dll" DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
+            target_link_libraries(${CM_HOST_BINARY} "${MDF_ROOT}/runtime/lib/x64/igfx11cmrt64.lib" AdvAPI32 Ole32)
+            file(COPY "${MDF_ROOT}/runtime/lib/x64/igfx11cmrt64.dll" DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
             set_target_properties(${CM_HOST_BINARY} PROPERTIES FOLDER "GEN_Examples")
         else()
             add_custom_command(
                OUTPUT ${parsed_CM_OBJ_NAME}
-               COMMAND ${CMC_EXECUTABLE} -march=SKL -fcmocl "/DCM_PTRSIZE=32" -emit-spirv -o ${parsed_CM_OBJ_NAME} ${CMAKE_CURRENT_SOURCE_DIR}/${parsed_CM_SRC_NAME}.cpp
+               COMMAND ${CMC_EXECUTABLE} -march=SKL -fcmocl "/DCM_PTRSIZE=64" -emit-spirv -o ${parsed_CM_OBJ_NAME} ${CMAKE_CURRENT_SOURCE_DIR}/${parsed_CM_SRC_NAME}.cpp
                VERBATIM
                DEPENDS ${CMC_EXECUTABLE}
             )

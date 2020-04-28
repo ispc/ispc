@@ -71,7 +71,7 @@ cmc_lib = "@CMC_LIBRARY_PATH@"
 if os.name == 'nt':
     mdf_path = "@MDF_ROOT@"
     compiler_lib = cmc_lib
-    runtime_lib = mdf_path + "/runtime/lib/x86"
+    runtime_lib = mdf_path + "/runtime/lib/x64"
     additional_path = os.pathsep + os.pathsep.join([compiler_lib, runtime_lib])
 else:
     neo_path = "@NEO_INSTALL_PATH@"
