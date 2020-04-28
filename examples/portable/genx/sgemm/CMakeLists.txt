@@ -41,7 +41,7 @@ if(WIN32)
     set(HOST_NAME "cmhost")
     set(ISPC_OBJ_NAME "${CMAKE_CURRENT_BINARY_DIR}/naive_sgemm_mt.isa")
     set(HOST_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/${HOST_NAME}.cpp)
-    set(ISPC_FLAGS "--arch=genx32")
+    set(ISPC_FLAGS "--arch=genx64")
 
     set(CM_OBJ_NAME "${CMAKE_CURRENT_BINARY_DIR}/naive_sgemm_mt_cm.isa")
     set(CM_HOST_NAME "SgemmSVMMultithread")

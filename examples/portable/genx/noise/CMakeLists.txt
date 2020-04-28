@@ -1,5 +1,5 @@
 #
-#  Copyright (c) 2019, Intel Corporation
+#  Copyright (c) 2019-2020, Intel Corporation
 #  All rights reserved.
 #
 #  Redistribution and use in source and binary forms, with or without
@@ -38,7 +38,7 @@ set(TEST_NAME "genx_noise")
 if(WIN32)
     set(HOST_NAME "cmhost")
     set(ISPC_OBJ_NAME "${CMAKE_CURRENT_BINARY_DIR}/noise_ispc.isa")
-	set(ISPC_FLAGS "--arch=genx32")
+    set(ISPC_FLAGS "--arch=genx64")
 else()
     set(HOST_NAME "l0host")
     set(ISPC_OBJ_NAME "${CMAKE_CURRENT_BINARY_DIR}/noise_ispc.spv")
