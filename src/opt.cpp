@@ -87,10 +87,6 @@
 #include <llvm/IR/IntrinsicsX86.h>
 #endif
 
-#ifdef ISPC_GENX_ENABLED
-#include <llvm/GenXOpts/GenXOpts.h>
-#endif // ISPC_GENX_ENABLED
-
 #ifdef ISPC_HOST_IS_LINUX
 #include <alloca.h>
 #elif defined(ISPC_HOST_IS_WINDOWS)
@@ -115,6 +111,7 @@
 #include "llvm/GenXIntrinsics/GenXIntrinsics.h"
 #include "llvm/GenXOpts/GenXOpts.h"
 #include "llvm/Transforms/Utils/UnifyFunctionExitNodes.h"
+#include <llvm/GenXIntrinsics/GenXIntrOpts.h>
 // Constant in number of bytes.
 enum { BYTE = 1, WORD = 2, DWORD = 4, QWORD = 8, OWORD = 16, GRF = 32 };
 #endif
