@@ -1,6 +1,6 @@
 #!/bin/bash
 # ##################################################
-#  Copyright (c) 2019, Intel Corporation
+#  Copyright (c) 2019-2020, Intel Corporation
 #  All rights reserved.
 #
 #  Redistribution and use in source and binary forms, with or without
@@ -48,7 +48,8 @@ if ! [[ $CURRENT_VERSION =~ $VERSION_STRING ]] ; then
 fi
 
 # Check all source files.
-FILES=`ls src/*.cpp src/*.h *.cpp builtins/*.c benchmarks/*/*.cpp benchmarks/*/*.ispc`
+# For benchmarks folder do not check 03_complex, as these tests come from real projects with their formatting.
+FILES=`ls src/*.cpp src/*.h *.cpp builtins/*.c benchmarks/{01,02}*/*{cpp,ispc}`
 for FILE in $FILES; do
     $CLANG_FORMAT $FILE | cmp  $FILE >/dev/null
     if [ $? -ne 0 ]; then
