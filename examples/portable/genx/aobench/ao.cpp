@@ -127,9 +127,10 @@ static int run() {
     void *dFimg = nullptr;
 
     // thread space
-    ze_group_count_t dispatchTraits = {1, height, 1};
+    ze_group_count_t dispatchTraits = {1, height*width/16, 1};
     std::cout << "Set dispatchTraits.x=" << dispatchTraits.groupCountX
               << ", dispatchTraits.y=" << dispatchTraits.groupCountY << std::endl;
+
     for (unsigned int i = 0; i < niterations; i++) {
         memset((void *)fimg, 0, sizeof(float) * width * height * 3);
 
@@ -142,6 +143,7 @@ static int run() {
         // copy buffers to device
         L0_SAFE_CALL(
             zeCommandListAppendMemoryCopy(hCommandList, dFimg, fimg, width * height * 3 * sizeof(float), nullptr));
+
         L0_SAFE_CALL(zeCommandListAppendBarrier(hCommandList, nullptr, 0, nullptr));
 
         // set kernel arguments
