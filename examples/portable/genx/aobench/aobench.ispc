@@ -201,7 +201,7 @@ ambient_occlusion(Isect &isect, Plane &plane, Sphere spheres[3],
 /* Compute the image for the scanlines from [y0,y1), for an overall image
    of width w and height h.
  */
-static void ao_scanlines(uniform int y0, uniform int y1, uniform int w,
+static void ao_scanlines(uniform int y0, uniform int y1, uniform int x0, uniform int x1, uniform int w,
                          uniform int h,  uniform int nsubsamples,
                          uniform float image[]) {
     static Plane plane = { { 0.0f, -0.5f, 0.0f }, { 0.f, 1.f, 0.f } };
@@ -253,67 +253,66 @@ static void ao_scanlines(uniform int y0, uniform int y1, uniform int w,
 
     // Now loop over all of the pixels, stepping in x and y as calculated
     // above.  (Assumes that ny divides y and nx divides x...)
-    for (uniform int y = y0; y < y1; y += ny) {
-        for (uniform int x = 0; x < w; x += nx)  {
-            // Figure out x,y pixel in NDC
-            float px =  (x + du - (w / 2.0f)) / (w / 2.0f);
-            float py = -(y + dv - (h / 2.0f)) / (h / 2.0f);
+    uniform int y = y0;
+    for (uniform int x = x0; x < x1; x += nx)  {
+        // Figure out x,y pixel in NDC
+        float px =  (x + du - (w / 2.0f)) / (w / 2.0f);
+        float py = -(y + dv - (h / 2.0f)) / (h / 2.0f);
 
-            // Scale NDC based on width/height ratio, supporting non-square image output
-            px *= (float)w / (float)h;
+        // Scale NDC based on width/height ratio, supporting non-square image output
+        px *= (float)w / (float)h;
 
-            float ret = 0.f;
-            Ray ray;
-            Isect isect;
+        float ret = 0.f;
+        Ray ray;
+        Isect isect;
 
-            ray.org = 0.f;
+        ray.org = 0.f;
 
-            // Poor man's perspective projection
-            ray.dir.x = px;
-            ray.dir.y = py;
-            ray.dir.z = -1.0;
-            vnormalize(ray.dir);
+        // Poor man's perspective projection
+        ray.dir.x = px;
+        ray.dir.y = py;
+        ray.dir.z = -1.0;
+        vnormalize(ray.dir);
 
-            isect.t   = 1.0e+17;
-            isect.hit = 0;
+        isect.t   = 1.0e+17;
+        isect.hit = 0;
 
-            for (uniform int snum = 0; snum < 3; ++snum)
-                ray_sphere_intersect(isect, ray, spheres[snum]);
-            ray_plane_intersect(isect, ray, plane);
+        for (uniform int snum = 0; snum < 3; ++snum)
+            ray_sphere_intersect(isect, ray, spheres[snum]);
+        ray_plane_intersect(isect, ray, plane);
 
-            // Note use of 'coherent' if statement; the set of rays we
-            // trace will often all hit or all miss the scene
-            cif (isect.hit)
-                ret = ambient_occlusion(isect, plane, spheres, rngstate);
+        // Note use of 'coherent' if statement; the set of rays we
+        // trace will often all hit or all miss the scene
+        cif (isect.hit)
+            ret = ambient_occlusion(isect, plane, spheres, rngstate);
 
-            // This is a little grungy; we have results for
-            // programCount-worth of values.  Because we're doing 2x2
-            // subsamples, we need to peel them off in groups of four,
-            // average the four values for each pixel, and update the
-            // output image.
-            //
-            // Store the varying value to a uniform array of the same size.
-            // See the discussion about communication among program
-            // instances in the ispc user's manual for more discussion on
-            // this idiom.
-            uniform float retArray[programCount];
-            retArray[programIndex] = ret;
+        // This is a little grungy; we have results for
+        // programCount-worth of values.  Because we're doing 2x2
+        // subsamples, we need to peel them off in groups of four,
+        // average the four values for each pixel, and update the
+        // output image.
+        //
+        // Store the varying value to a uniform array of the same size.
+        // See the discussion about communication among program
+        // instances in the ispc user's manual for more discussion on
+        // this idiom.
+        uniform float retArray[programCount];
+        retArray[programIndex] = ret;
 
-            // offset to the first pixel in the image
-            uniform int offset = 3 * (y * w + x);
-            for (uniform int p = 0; p < programCount; p += 4, offset += 3) {
-                // Get the four sample values for this pixel
-                uniform float sumret = retArray[p] + retArray[p+1] + retArray[p+2] +
-                    retArray[p+3];
+        // offset to the first pixel in the image
+        uniform int offset = 3 * (y * w + x);
+        for (uniform int p = 0; p < programCount; p += 4, offset += 3) {
+            // Get the four sample values for this pixel
+            uniform float sumret = retArray[p] + retArray[p+1] + retArray[p+2] +
+                retArray[p+3];
 
-                // Normalize by number of samples taken
-                sumret /= nsubsamples * nsubsamples;
+            // Normalize by number of samples taken
+            sumret /= nsubsamples * nsubsamples;
 
-                // Store result in the image
-                image[offset+0] = sumret;
-                image[offset+1] = sumret;
-                image[offset+2] = sumret;
-            }
+            // Store result in the image
+            image[offset+0] = sumret;
+            image[offset+1] = sumret;
+            image[offset+2] = sumret;
         }
     }
 }
@@ -321,20 +320,16 @@ static void ao_scanlines(uniform int y0, uniform int y1, uniform int w,
 
 export void ao_ispc(uniform int w, uniform int h, uniform int nsubsamples,
                     uniform float image[]) {
-   uniform int linesPerThread = h/taskCount;
-   uniform int start = taskIndex * linesPerThread;
-   uniform int end = (taskIndex + 1) * linesPerThread;
-   ao_scanlines(start, end, w, h, nsubsamples, image);
+
+    uniform int workPerThread = (w*h)/taskCount;
+    uniform int workItemsPerLine = w / workPerThread;
+    // this assumes thread does less or equal work to a single line
+    uniform int start = (taskIndex*workPerThread)/w;
+    uniform int end = start + 1;
+    uniform int x_start = (taskIndex*workPerThread) % w;
+    uniform int x_end = x_start + workPerThread;
+
+    ao_scanlines(start, end, x_start, x_end, w, h, nsubsamples, image);
 }
 
 
-/*static void task ao_task(uniform int width, uniform int height,
-                         uniform int nsubsamples, uniform float image[]) {
-    ao_scanlines(taskIndex, taskIndex+1, width, height, nsubsamples, image);
-}
-
-
-export void ao_ispc_tasks(uniform int w, uniform int h, uniform int nsubsamples,
-                          uniform float image[]) {
-    launch[h] ao_task(w, h, nsubsamples, image);
-}*/
