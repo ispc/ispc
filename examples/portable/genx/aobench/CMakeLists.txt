@@ -44,7 +44,7 @@ if(UNIX)
     set(HOST_NAME "l0host")
     set(ISPC_OBJ_NAME "${CMAKE_CURRENT_BINARY_DIR}/aobench_ispc.spv")
     set(ISPC_FLAGS "--emit-spirv" "--arch=genx64")
-    set(ISPC_TARGET "genx-x8")
+    set(ISPC_TARGET "genx-x16")
     set(HOST_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/ao.cpp ${CMAKE_CURRENT_SOURCE_DIR}/ao_serial.cpp)
 
     add_perf_example(
