@@ -110,7 +110,6 @@
 #ifdef ISPC_GENX_ENABLED
 #include "llvm/GenXIntrinsics/GenXIntrinsics.h"
 #include "llvm/GenXOpts/GenXOpts.h"
-#include "llvm/Transforms/Utils/UnifyFunctionExitNodes.h"
 #include <llvm/GenXIntrinsics/GenXIntrOpts.h>
 #include "gen/GlobalsLocalization.h"
 // Used for GenX gather coalescing
@@ -472,11 +471,14 @@ void Optimize(llvm::Module *module, int optLevel) {
     optPM.add(llvm::createVerifierPass(), 0);
 
     optPM.add(new llvm::TargetLibraryInfoWrapperPass(llvm::Triple(module->getTargetTriple())));
-
-    llvm::TargetMachine *targetMachine = g->target->GetTargetMachine();
-
-    optPM.getPM().add(createTargetTransformInfoWrapperPass(targetMachine->getTargetIRAnalysis()));
-
+#ifdef ISPC_GENX_ENABLED
+    if (g->target->getISA() != Target::GENX) {
+#endif
+        llvm::TargetMachine *targetMachine = g->target->GetTargetMachine();
+        optPM.getPM().add(createTargetTransformInfoWrapperPass(targetMachine->getTargetIRAnalysis()));
+#ifdef ISPC_GENX_ENABLED
+    }
+#endif
     optPM.add(llvm::createIndVarSimplifyPass());
 
     if (optLevel == 0) {
@@ -487,7 +489,6 @@ void Optimize(llvm::Module *module, int optLevel) {
         // them into something that can actually execute.
 #ifdef ISPC_GENX_ENABLED
         if (g->target->getISA() == Target::GENX) {
-            optPM.add(llvm::createUnifyFunctionExitNodesPass());
             optPM.add(llvm::createGenXLayoutBlocksPass());
             // FIXME: temporary solution
             optPM.add(llvm::createDemoteRegisterToMemoryPass());
@@ -505,14 +506,13 @@ void Optimize(llvm::Module *module, int optLevel) {
         optPM.add(CreateIsCompileTimeConstantPass(true));
 #ifdef ISPC_GENX_ENABLED
         if (g->target->getISA() == Target::GENX) {
-            optPM.add(llvm::createGenXPacketizePass());
             optPM.add(llvm::createPromoteMemoryToRegisterPass());
+            optPM.add(llvm::createGenXRegionCollapsingPass());
             optPM.add(llvm::createCMImpParamPass(/*IsCMRT*/ false));
             optPM.add(llvm::createGlobalsLocalizationPass());
             // remove dead globals after localization
             optPM.add(llvm::createGlobalDCEPass());
             optPM.add(llvm::createCMKernelArgOffsetPass(g->target->getGenxGrfSize(), /* OCLCodeGen*/ true));
-            optPM.add(llvm::createGenXReduceIntSizePass());
             optPM.add(CreatePromoteToPrivateMemoryPass());
         }
 #endif
@@ -535,7 +535,6 @@ void Optimize(llvm::Module *module, int optLevel) {
 
 #ifdef ISPC_GENX_ENABLED
         if (g->target->getISA() == Target::GENX) {
-            optPM.add(llvm::createUnifyFunctionExitNodesPass());
             optPM.add(llvm::createGenXLayoutBlocksPass());
             // FIXME: temporary solution
             optPM.add(llvm::createDemoteRegisterToMemoryPass());
@@ -634,11 +633,9 @@ void Optimize(llvm::Module *module, int optLevel) {
         if (g->target->getISA() == Target::GENX) {
             // Inline
             optPM.add(llvm::createCorrelatedValuePropagationPass());
-            optPM.add(llvm::createGenXReduceIntSizePass());
             optPM.add(llvm::createInstructionCombiningPass());
             optPM.add(llvm::createGlobalDCEPass());
             optPM.add(llvm::createInstructionCombiningPass());
-            // Simplify region accesses.
             optPM.add(llvm::createGenXRegionCollapsingPass());
             optPM.add(llvm::createEarlyCSEPass());
             optPM.add(llvm::createDeadCodeEliminationPass());

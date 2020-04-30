@@ -255,16 +255,13 @@ if (GENX_ENABLED)
         set(PB_PATH_MODIFIER "x64")
     endif()
 
-    list(APPEND GEN_LIBRARY_LIST LLVMGenXIntrinsics LLVMGenXOpts LLVMGenXCodeGen LLVMGenXInfo LLVMSPIRVLib)
+    list(APPEND GEN_LIBRARY_LIST LLVMGenXIntrinsics LLVMGenXCodeGen LLVMGenXOpts LLVMSPIRVLib)
     if (WIN32)
         list(APPEND GEN_LIBRARY_LIST igfxcmjit${TARGET_MODIFIER})
-    else()
-        # We need to pass library name with suffix to find_library on Linux since it has non-standard name
-        # and cannot be found without it
-        list(APPEND GEN_LIBRARY_LIST igfxcmjit${TARGET_MODIFIER}.a)
+        list(APPEND GEN_LIBRARY_LIST iga_enc${TARGET_MODIFIER} iga_s${TARGET_MODIFIER})
     endif()
-    list(APPEND GEN_LIBRARY_LIST iga_enc${TARGET_MODIFIER} iga_s${TARGET_MODIFIER})
 endif()
+
 get_llvm_libfiles(LLVM_LIBRARY_LIST ${LLVM_COMPONENTS})
 get_llvm_cppflags(LLVM_CPP_FLAGS)
 
