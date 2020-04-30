@@ -124,6 +124,7 @@ static int run() {
     // time for any of them.
     //
     double minCyclesISPCGPU = 1e30;
+    uint64_t minKernelClocksGPU = std::numeric_limits<uint64_t>::max();
     void *dFimg = nullptr;
 
     // Profiling initialization
@@ -209,6 +210,7 @@ static int run() {
         L0_SAFE_CALL(zeEventGetTimestamp(hTSEvent, ZE_EVENT_TIMESTAMP_CONTEXT_START, &contextStart));
         L0_SAFE_CALL(zeEventGetTimestamp(hTSEvent, ZE_EVENT_TIMESTAMP_CONTEXT_END, &contextEnd));
         printf("@time of GPU kernel run:\t\t[%.1f] milliseconds\n", 1e-6*timestampFreq*(contextEnd - contextStart));
+        minKernelClocksGPU = std::min(minKernelClocksGPU, (contextEnd - contextStart));
     }
 
     savePPM("ao-ispc-gpu.ppm", width, height, fimg);
@@ -219,6 +221,7 @@ static int run() {
     // time for any of them.
     //
     double minCyclesSerial = 1e30;
+    uint64_t minSerialTimeCPU = std::numeric_limits<uint64_t>::max();
     for (unsigned int i = 0; i < niterations; i++) {
         memset((void *)fimg, 0, sizeof(float) * width * height * 3);
         reset_and_start_timer();
@@ -230,11 +233,13 @@ static int run() {
         double dt = get_elapsed_mcycles();
         printf("@time of CPU run:\t\t\t[%.3f] million cycles\n", dt);
         minCyclesSerial = std::min(minCyclesSerial, dt);
+        uint64_t nanos = std::chrono::duration_cast<std::chrono::nanoseconds>(dur).count();
+        minSerialTimeCPU = std::min(minSerialTimeCPU, nanos);
     }
     savePPM("ao-cpp-serial.ppm", width, height, fimg);
 
     printf("[aobench serial]:\t\t[%.3f] million cycles (%d x %d image)\n", minCyclesSerial, width, height);
-    printf("\t\t\t\t(%.2fx speedup from ISPC)\n", minCyclesSerial / minCyclesISPCGPU);
+    printf("\t\t\t\t(%.2fx speedup from ISPC)\n", 1.*minSerialTimeCPU / (minKernelClocksGPU*timestampFreq));
     free(fimg);
     L0_SAFE_CALL(zeDriverFreeMem(hDriver, dFimg));
     printf("aobench PASSED!\n");
