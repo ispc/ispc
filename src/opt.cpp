@@ -69,13 +69,11 @@
 
 #include <llvm/Analysis/ConstantFolding.h>
 
-#include <llvm/Analysis/TargetLibraryInfo.h>
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_7_0
 #include "llvm/Transforms/InstCombine/InstCombine.h"
 #include "llvm/Transforms/Utils.h"
-#endif
 #include <llvm/ADT/SmallSet.h>
 #include <llvm/ADT/Triple.h>
+#include <llvm/Analysis/TargetLibraryInfo.h>
 #include <llvm/Target/TargetOptions.h>
 #include <llvm/Transforms/IPO.h>
 #include <llvm/Transforms/Scalar.h>

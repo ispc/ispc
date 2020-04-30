@@ -323,12 +323,6 @@ FunctionEmitContext::FunctionEmitContext(Function *func, Symbol *funSym, llvm::F
         bool isOptimized = (g->opt.level > 0);
         int firstLine = funcStartPos.first_line;
 
-#if ISPC_LLVM_VERSION < ISPC_LLVM_8_0
-        diSubprogram = m->diBuilder->createFunction(diFile /* scope */, funSym->name, mangledName, diFile, firstLine,
-                                                    diSubprogramType_n, isStatic, true, /* is defn */
-                                                    firstLine, flags, isOptimized);
-        llvmFunction->setSubprogram(diSubprogram);
-#else /* LLVM 8.0+ */
         /* isDefinition is always set to 'true' */
         llvm::DISubprogram::DISPFlags SPFlags = llvm::DISubprogram::SPFlagDefinition;
         if (isOptimized)
@@ -339,7 +333,6 @@ FunctionEmitContext::FunctionEmitContext(Function *func, Symbol *funSym, llvm::F
         diSubprogram = m->diBuilder->createFunction(diFile /* scope */, funSym->name, mangledName, diFile, firstLine,
                                                     diSubprogramType_n, firstLine, flags, SPFlags);
         llvmFunction->setSubprogram(diSubprogram);
-#endif
 
         /* And start a scope representing the initial function scope */
         StartScope();
@@ -2791,16 +2784,8 @@ void FunctionEmitContext::MemcpyInst(llvm::Value *dest, llvm::Value *src, llvm::
         align = LLVMInt32(1);
 #if ISPC_LLVM_VERSION <= ISPC_LLVM_8_0
     llvm::Constant *mcFunc =
-#if ISPC_LLVM_VERSION == ISPC_LLVM_6_0 // LLVM 6.0
-        m->module->getOrInsertFunction("llvm.memcpy.p0i8.p0i8.i64", LLVMTypes::VoidType, LLVMTypes::VoidPointerType,
-                                       LLVMTypes::VoidPointerType, LLVMTypes::Int64Type, LLVMTypes::Int32Type,
-                                       LLVMTypes::BoolType);
-#else // LLVM 7.0+
-      // Now alignment goes as an attribute, not as a parameter.
-      // See LLVM r322965/r323597 for more details.
         m->module->getOrInsertFunction("llvm.memcpy.p0i8.p0i8.i64", LLVMTypes::VoidType, LLVMTypes::VoidPointerType,
                                        LLVMTypes::VoidPointerType, LLVMTypes::Int64Type, LLVMTypes::BoolType);
-#endif
 #else // LLVM 9.0+
     llvm::FunctionCallee mcFuncCallee =
         m->module->getOrInsertFunction("llvm.memcpy.p0i8.p0i8.i64", LLVMTypes::VoidType, LLVMTypes::VoidPointerType,
@@ -2814,10 +2799,6 @@ void FunctionEmitContext::MemcpyInst(llvm::Value *dest, llvm::Value *src, llvm::
     args.push_back(dest);
     args.push_back(src);
     args.push_back(count);
-#if ISPC_LLVM_VERSION < ISPC_LLVM_7_0
-    // Don't bother about setting alignment for 7.0+, as this parameter is never really used by ISPC.
-    args.push_back(align);
-#endif
     args.push_back(LLVMFalse); /* not volatile */
     CallInst(mcFunc, NULL, args, "");
 }

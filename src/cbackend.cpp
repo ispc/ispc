@@ -60,10 +60,6 @@
 #include "llvm/Support/FileSystem.h"
 #include <llvm/IR/IRPrintingPasses.h>
 //#include "llvm/Target/Mangler.h"
-#include "llvm/Transforms/Scalar.h"
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_7_0
-#include "llvm/Transforms/Utils.h"
-#endif
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/InstVisitor.h"
 #include "llvm/MC/MCAsmInfo.h"
@@ -79,13 +75,13 @@
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/TargetRegistry.h"
 #include "llvm/Target/TargetMachine.h"
+#include "llvm/Transforms/Scalar.h"
+#include "llvm/Transforms/Utils.h"
 
+#include "llvm/IR/PatternMatch.h"
 #include <llvm/Support/ToolOutputFile.h>
 #include <llvm/Transforms/IPO.h>
 #include <llvm/Transforms/Utils/BasicBlockUtils.h>
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_8_0
-#include "llvm/IR/PatternMatch.h"
-#endif
 #if ISPC_LLVM_VERSION >= ISPC_LLVM_10_0
 #include "llvm/IR/IntrinsicsPowerPC.h"
 #include "llvm/IR/IntrinsicsX86.h"
@@ -509,13 +505,8 @@ class CWriter : public llvm::FunctionPass, public llvm::InstVisitor<CWriter> {
 
         // Must be an expression, must be used exactly once.  If it is dead, we
         // emit it inline where it would go.
-        if (I.getType() == llvm::Type::getVoidTy(I.getContext()) || !I.hasOneUse() ||
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_8_0 // 8.0+
-            I.isTerminator()
-#else
-            llvm::isa<llvm::TerminatorInst>(I)
-#endif
-            || llvm::isa<llvm::CallInst>(I) || llvm::isa<llvm::PHINode>(I) || llvm::isa<llvm::LoadInst>(I) ||
+        if (I.getType() == llvm::Type::getVoidTy(I.getContext()) || !I.hasOneUse() || I.isTerminator() ||
+            llvm::isa<llvm::CallInst>(I) || llvm::isa<llvm::PHINode>(I) || llvm::isa<llvm::LoadInst>(I) ||
             llvm::isa<llvm::VAArgInst>(I) || llvm::isa<llvm::InsertElementInst>(I) ||
             llvm::isa<llvm::InsertValueInst>(I) || llvm::isa<llvm::ExtractValueInst>(I) ||
             llvm::isa<llvm::SelectInst>(I))
@@ -3433,7 +3424,6 @@ void CWriter::visitBinaryOperator(llvm::Instruction &I) {
 
     // If this is a negation operation, print it out as such.  For FP, we don't
     // want to print "-0.0 - X".
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_8_0 // LLVM 8.0+
     llvm::Value *X;
     if (match(&I, m_Neg(llvm::PatternMatch::m_Value(X)))) {
         Out << "-(";
@@ -3443,19 +3433,7 @@ void CWriter::visitBinaryOperator(llvm::Instruction &I) {
         Out << "-(";
         writeOperand(X);
         Out << ")";
-    }
-#else
-    if (llvm::BinaryOperator::isNeg(&I)) {
-        Out << "-(";
-        writeOperand(llvm::BinaryOperator::getNegArgument(llvm::cast<llvm::BinaryOperator>(&I)));
-        Out << ")";
-    } else if (llvm::BinaryOperator::isFNeg(&I)) {
-        Out << "-(";
-        writeOperand(llvm::BinaryOperator::getFNegArgument(llvm::cast<llvm::BinaryOperator>(&I)));
-        Out << ")";
-    }
-#endif
-    else if (I.getOpcode() == llvm::Instruction::FRem) {
+    } else if (I.getOpcode() == llvm::Instruction::FRem) {
         // Output a call to fmod/fmodf instead of emitting a%b
         if (I.getType() == llvm::Type::getFloatTy(I.getContext()))
             Out << "fmodf(";
@@ -4010,13 +3988,9 @@ void CWriter::lowerIntrinsics(llvm::Function &F) {
                         const char *BuiltinName = "";
 #define GET_GCC_BUILTIN_NAME
 #define Intrinsic llvm::Intrinsic
-#if ISPC_LLVM_VERSION == ISPC_LLVM_6_0 /* LLVM 6.0 */
-#include "llvm/IR/Intrinsics.gen"
-#else /* LLVM 7.0+ */
 // This looks completely broken, even in 3.2, need to figure out what's going on here
 // and how to fix it (if needed).
 //  #include "llvm/IR/Intrinsics.inc"
-#endif
 #undef Intrinsic
 #undef GET_GCC_BUILTIN_NAME
                         // If we handle it, don't lower it.
@@ -4211,13 +4185,9 @@ bool CWriter::visitBuiltinCall(llvm::CallInst &I, llvm::Intrinsic::ID ID, bool &
         const char *BuiltinName = "";
 #define GET_GCC_BUILTIN_NAME
 #define Intrinsic llvm::Intrinsic
-#if ISPC_LLVM_VERSION == ISPC_LLVM_6_0 /* LLVM 6.0 */
-#include "llvm/IR/Intrinsics.gen"
-#else /* LLVM 7.0+ */
 // This looks completely broken, even in 3.2, need to figure out what's going on here
 // and how to fix it (if needed).
 //  #include "llvm/IR/Intrinsics.inc"
-#endif
 #undef Intrinsic
 #undef GET_GCC_BUILTIN_NAME
         Assert(BuiltinName[0] && "Unknown LLVM intrinsic!");
@@ -4945,7 +4915,7 @@ restart:
 #if ISPC_LLVM_VERSION <= ISPC_LLVM_8_0
                 llvm::Constant *sf = module->getOrInsertFunction(smearFuncName, iter->getType(), smearType);
                 smearFunc = llvm::dyn_cast<llvm::Function>(sf);
-#else
+#else // LLVM 9.0+
                 llvm::FunctionCallee sf = module->getOrInsertFunction(smearFuncName, iter->getType(), smearType);
                 smearFunc = llvm::dyn_cast<llvm::Function>(sf.getCallee());
 #endif
@@ -5049,7 +5019,7 @@ restart:
                 llvm::Constant *acf = m->module->getOrInsertFunction(funcName, LLVMTypes::MaskType, cmpOpType,
                                                                      cmpOpType, LLVMTypes::MaskType);
                 andCmpFunc = llvm::dyn_cast<llvm::Function>(acf);
-#else
+#else // LLVM 9.0+
                 llvm::FunctionCallee acf = m->module->getOrInsertFunction(funcName, LLVMTypes::MaskType, cmpOpType,
                                                                           cmpOpType, LLVMTypes::MaskType);
                 andCmpFunc = llvm::dyn_cast<llvm::Function>(acf.getCallee());
@@ -5105,7 +5075,7 @@ class MaskOpsCleanupPass : public llvm::FunctionPass {
         notFunc =
 #if ISPC_LLVM_VERSION <= ISPC_LLVM_8_0
             llvm::dyn_cast<llvm::Function>(m->getOrInsertFunction("__not", mt, mt));
-#else
+#else // LLVM 9.0+
             llvm::dyn_cast<llvm::Function>(m->getOrInsertFunction("__not", mt, mt).getCallee());
 #endif
         Assert(notFunc != NULL);
@@ -5115,7 +5085,7 @@ class MaskOpsCleanupPass : public llvm::FunctionPass {
         andNotFuncs[0] =
 #if ISPC_LLVM_VERSION <= ISPC_LLVM_8_0
             llvm::dyn_cast<llvm::Function>(m->getOrInsertFunction("__and_not1", mt, mt, mt));
-#else
+#else // LLVM 9.0+
             llvm::dyn_cast<llvm::Function>(m->getOrInsertFunction("__and_not1", mt, mt, mt).getCallee());
 #endif
         Assert(andNotFuncs[0] != NULL);
@@ -5124,7 +5094,7 @@ class MaskOpsCleanupPass : public llvm::FunctionPass {
         andNotFuncs[1] =
 #if ISPC_LLVM_VERSION <= ISPC_LLVM_8_0
             llvm::dyn_cast<llvm::Function>(m->getOrInsertFunction("__and_not2", mt, mt, mt));
-#else
+#else // LLVM 9.0+
             llvm::dyn_cast<llvm::Function>(m->getOrInsertFunction("__and_not2", mt, mt, mt).getCallee());
 #endif
         Assert(andNotFuncs[1] != NULL);
