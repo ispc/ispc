@@ -521,7 +521,7 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, bool pic, boo
             m_ispc_target = ISPCTarget::avx1_i32x8;
             break;
 
-        // Penryn is here because ISPC does not use SSE 4.2
+            // Penryn is here because ISPC does not use SSE 4.2
         case CPU_Penryn:
         case CPU_Nehalem:
         case CPU_Silvermont:
@@ -568,7 +568,6 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, bool pic, boo
     }
 
     bool error = false;
-
     // Make sure the target architecture is a known one; print an error
     // with the valid ones otherwise.
     for (llvm::TargetRegistry::iterator iter = llvm::TargetRegistry::targets().begin();
@@ -578,7 +577,8 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, bool pic, boo
             break;
         }
     }
-    if (this->m_target == NULL) {
+    // For gen target we do not need to create target/targetMachine
+    if (this->m_target == NULL && !ISPCTargetIsGen(m_ispc_target)) {
         std::string error_message;
         error_message = "Invalid architecture \"";
         error_message += ArchToString(arch);
@@ -1105,36 +1105,47 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, bool pic, boo
         if (g->opt.disableFMA == false)
             options.AllowFPOpFusion = llvm::FPOpFusion::Fast;
 
-        m_targetMachine = m_target->createTargetMachine(triple, m_cpu, featuresString, options, relocModel);
-        Assert(m_targetMachine != NULL);
+            // For gen target we do not need to create target/targetMachine
+#ifdef ISPC_GENX_ENABLED
+        if (!ISPCTargetIsGen(m_ispc_target)) {
+#endif
+            m_targetMachine = m_target->createTargetMachine(triple, m_cpu, featuresString, options, relocModel);
+            Assert(m_targetMachine != NULL);
 
-        // Set Optimization level for llvm codegen based on Optimization level
-        // requested by user via ISPC Optimization Flag. Mapping is :
-        // ISPC O0 -> Codegen O0
-        // ISPC O1,O2,O3,default -> Codegen O3
-        llvm::CodeGenOpt::Level cOptLevel = llvm::CodeGenOpt::Level::Aggressive;
-        switch (g->codegenOptLevel) {
-        case Globals::CodegenOptLevel::None:
-            cOptLevel = llvm::CodeGenOpt::Level::None;
-            break;
+            // Set Optimization level for llvm codegen based on Optimization level
+            // requested by user via ISPC Optimization Flag. Mapping is :
+            // ISPC O0 -> Codegen O0
+            // ISPC O1,O2,O3,default -> Codegen O3
+            llvm::CodeGenOpt::Level cOptLevel = llvm::CodeGenOpt::Level::Aggressive;
+            switch (g->codegenOptLevel) {
+            case Globals::CodegenOptLevel::None:
+                cOptLevel = llvm::CodeGenOpt::Level::None;
+                break;
 
-        case Globals::CodegenOptLevel::Aggressive:
-            cOptLevel = llvm::CodeGenOpt::Level::Aggressive;
-            break;
+            case Globals::CodegenOptLevel::Aggressive:
+                cOptLevel = llvm::CodeGenOpt::Level::Aggressive;
+                break;
+            }
+            m_targetMachine->setOptLevel(cOptLevel);
+
+            m_targetMachine->Options.MCOptions.AsmVerbose = true;
+
+            // Change default version of generated DWARF.
+            if (g->generateDWARFVersion != 0) {
+                m_targetMachine->Options.MCOptions.DwarfVersion = g->generateDWARFVersion;
+            }
+#ifdef ISPC_GENX_ENABLED
         }
-        m_targetMachine->setOptLevel(cOptLevel);
-
-        m_targetMachine->Options.MCOptions.AsmVerbose = true;
-
-        // Change default version of generated DWARF.
-        if (g->generateDWARFVersion != 0) {
-            m_targetMachine->Options.MCOptions.DwarfVersion = g->generateDWARFVersion;
-        }
-
+#endif
         // Initialize TargetData/DataLayout in 3 steps.
         // 1. Get default data layout first
         std::string dl_string;
-        dl_string = m_targetMachine->createDataLayout().getStringRepresentation();
+        if (m_targetMachine != NULL)
+            dl_string = m_targetMachine->createDataLayout().getStringRepresentation();
+#ifdef ISPC_GENX_ENABLED
+        if (m_isa == Target::GENX)
+            dl_string = m_arch == Arch::genx64 ? "e-p:64:64-i64:64-n8:16:32" : "e-p:32:32-i64:64-n8:16:32";
+#endif
 
         // 2. Finally set member data
         m_dataLayout = new llvm::DataLayout(dl_string);
@@ -1160,9 +1171,19 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, bool pic, boo
     m_valid = !error;
 
     if (printTarget) {
-        printf("Target Triple: %s\n", m_targetMachine->getTargetTriple().str().c_str());
-        printf("Target CPU: %s\n", m_targetMachine->getTargetCPU().str().c_str());
-        printf("Target Feature String: %s\n", m_targetMachine->getTargetFeatureString().str().c_str());
+#ifdef ISPC_GENX_ENABLED
+        if (!ISPCTargetIsGen(m_ispc_target)) {
+#endif
+            printf("Target Triple: %s\n", m_targetMachine->getTargetTriple().str().c_str());
+            printf("Target CPU: %s\n", m_targetMachine->getTargetCPU().str().c_str());
+            printf("Target Feature String: %s\n", m_targetMachine->getTargetFeatureString().str().c_str());
+#ifdef ISPC_GENX_ENABLED
+        } else {
+            printf("Target Triple: %s\n", this->GetTripleString().c_str());
+            printf("Target GPU: %s\n", this->getCPU().c_str());
+            printf("Target Feature String: %s\n", featuresString.c_str());
+        }
+#endif
     }
 
     return;
@@ -1188,30 +1209,20 @@ std::string Target::GetTripleString() const {
             Error(SourcePos(), "Aarch64 is not supported on Windows.");
             exit(1);
         } else if (m_arch == Arch::genx32) {
-#ifdef ISPC_GENX_ENABLED
-            // As soon as we generate spirv only for gen we can get rid of this condition
-            // and keep only triple.setArchName("spir32")/triple.setArchName("spir64")
-            g->emitSPIRV == true ? triple.setArchName("spir32") : triple.setArchName("genx32");
-#else
-            UNREACHABLE();
-#endif
+            triple.setArchName("spir32");
         } else if (m_arch == Arch::genx64) {
-#ifdef ISPC_GENX_ENABLED
-            g->emitSPIRV == true ? triple.setArchName("spir64") : triple.setArchName("genx64");
-#else
-            UNREACHABLE();
-#endif
+            triple.setArchName("spir64");
         } else {
             Error(SourcePos(), "Unknown arch.");
             exit(1);
         }
 #ifdef ISPC_GENX_ENABLED
-        //"spir64-unknown-unknown"
-        if (g->emitSPIRV == true) {
+        if (m_arch == Arch::genx32 || m_arch == Arch::genx64) {
+            //"spir64-unknown-unknown"
             triple.setVendor(llvm::Triple::VendorType::UnknownVendor);
             triple.setOS(llvm::Triple::OSType::UnknownOS);
+            return triple.str();
         }
-        return triple.str();
 #endif
         //"x86_64-pc-windows-msvc"
         triple.setVendor(llvm::Triple::VendorType::PC);
@@ -1228,32 +1239,21 @@ std::string Target::GetTripleString() const {
             triple.setArchName("armv7");
         } else if (m_arch == Arch::aarch64) {
             triple.setArchName("aarch64");
-
         } else if (m_arch == Arch::genx32) {
-#ifdef ISPC_GENX_ENABLED
-            // As soon as we generate spirv only for gen we can get rid of this condition
-            // and keep only triple.setArchName("spir32")/triple.setArchName("spir64")
-            g->emitSPIRV == true ? triple.setArchName("spir32") : triple.setArchName("genx32");
-#else
-            UNREACHABLE();
-#endif
+            triple.setArchName("spir32");
         } else if (m_arch == Arch::genx64) {
-#ifdef ISPC_GENX_ENABLED
-            g->emitSPIRV == true ? triple.setArchName("spir64") : triple.setArchName("genx64");
-#else
-            UNREACHABLE();
-#endif
+            triple.setArchName("spir64");
         } else {
             Error(SourcePos(), "Unknown arch.");
             exit(1);
         }
 #ifdef ISPC_GENX_ENABLED
-        //"spir64-unknown-unknown"
-        if (g->emitSPIRV == true) {
+        if (m_arch == Arch::genx32 || m_arch == Arch::genx64) {
+            //"spir64-unknown-unknown"
             triple.setVendor(llvm::Triple::VendorType::UnknownVendor);
             triple.setOS(llvm::Triple::OSType::UnknownOS);
+            return triple.str();
         }
-        return triple.str();
 #endif
         triple.setVendor(llvm::Triple::VendorType::UnknownVendor);
         triple.setOS(llvm::Triple::OSType::Linux);
