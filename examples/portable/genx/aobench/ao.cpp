@@ -158,6 +158,11 @@ static int run() {
     for (unsigned int i = 0; i < niterations; i++) {
         memset((void *)fimg, 0, sizeof(float) * width * height * 3);
 
+        L0_SAFE_CALL(zeCommandListReset(hCommandList));
+
+        reset_and_start_timer();
+        auto wct = std::chrono::system_clock::now();
+
         // Alloc & copy
         ze_device_mem_alloc_desc_t allocDesc = {ZE_DEVICE_MEM_ALLOC_DESC_VERSION_CURRENT,
                                                 ZE_DEVICE_MEM_ALLOC_FLAG_DEFAULT, 0};
@@ -176,17 +181,13 @@ static int run() {
         L0_SAFE_CALL(zeKernelSetArgumentValue(hKernel, 2, sizeof(int), &nSubSamples));
         L0_SAFE_CALL(zeKernelSetArgumentValue(hKernel, 3, sizeof(dFimg), &dFimg));
 
-        L0_SAFE_CALL(zeCommandListClose(hCommandList));
-        L0_SAFE_CALL(zeCommandQueueExecuteCommandLists(hCommandQueue, 1, &hCommandList, nullptr));
-        L0_SAFE_CALL(zeCommandQueueSynchronize(hCommandQueue, std::numeric_limits<uint32_t>::max()));
-        L0_SAFE_CALL(zeCommandListReset(hCommandList));
-
         // launch
-        reset_and_start_timer();
-        auto wct = std::chrono::system_clock::now();
-
         L0_SAFE_CALL(zeCommandListAppendLaunchKernel(hCommandList, hKernel, &dispatchTraits, hTSEvent, 0, nullptr));
         L0_SAFE_CALL(zeCommandListAppendBarrier(hCommandList, nullptr, 0, nullptr));
+
+        // copy result to host
+        L0_SAFE_CALL(
+            zeCommandListAppendMemoryCopy(hCommandList, fimg, dFimg, width * height * 3 * sizeof(float), nullptr));
         L0_SAFE_CALL(zeCommandListClose(hCommandList));
         L0_SAFE_CALL(zeCommandQueueExecuteCommandLists(hCommandQueue, 1, &hCommandList, nullptr));
         L0_SAFE_CALL(zeCommandQueueSynchronize(hCommandQueue, std::numeric_limits<uint32_t>::max()));
@@ -197,14 +198,6 @@ static int run() {
         std::cout << "@time of GPU run:\t\t\t[" << secs.count() << "] milliseconds" << std::endl;
         printf("@time of GPU run:\t\t\t[%.3f] million cycles\n", dt);
         minCyclesISPCGPU = std::min(minCyclesISPCGPU, dt);
-
-        L0_SAFE_CALL(zeCommandListReset(hCommandList));
-        // copy result to host
-        L0_SAFE_CALL(
-            zeCommandListAppendMemoryCopy(hCommandList, fimg, dFimg, width * height * 3 * sizeof(float), nullptr));
-        L0_SAFE_CALL(zeCommandListClose(hCommandList));
-        L0_SAFE_CALL(zeCommandQueueExecuteCommandLists(hCommandQueue, 1, &hCommandList, nullptr));
-        L0_SAFE_CALL(zeCommandQueueSynchronize(hCommandQueue, std::numeric_limits<uint32_t>::max()));
 
         uint64_t contextStart, contextEnd;
         L0_SAFE_CALL(zeEventGetTimestamp(hTSEvent, ZE_EVENT_TIMESTAMP_CONTEXT_START, &contextStart));
