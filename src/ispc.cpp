@@ -251,10 +251,8 @@ typedef enum {
     //          AVX-512BW: Byte and Word Support.
     CPU_SKX,
 
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_8_0
     // Icelake client
     CPU_ICL,
-#endif
 
     // Late Atom-like design. Supports SSE 4.2 + POPCNT/LZCNT.
     CPU_Silvermont,
@@ -338,10 +336,8 @@ class AllCPUs {
 
         names[CPU_SKX].push_back("skx");
 
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_8_0 // LLVM 8.0+
         names[CPU_ICL].push_back("icelake-client");
         names[CPU_ICL].push_back("icl");
-#endif
 
 #ifdef ISPC_ARM_ENABLED
         names[CPU_CortexA15].push_back("cortex-a15");
@@ -366,11 +362,8 @@ class AllCPUs {
         compat[CPU_SKX] = Set(CPU_SKX, CPU_x86_64, CPU_Bonnell, CPU_Penryn, CPU_Core2, CPU_Nehalem, CPU_Silvermont,
                               CPU_SandyBridge, CPU_IvyBridge, CPU_Haswell, CPU_Broadwell, CPU_None);
 
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_8_0 // LLVM 8.0+
         compat[CPU_ICL] = Set(CPU_ICL, CPU_SKX, CPU_x86_64, CPU_Bonnell, CPU_Penryn, CPU_Core2, CPU_Nehalem,
                               CPU_Silvermont, CPU_SandyBridge, CPU_IvyBridge, CPU_Haswell, CPU_Broadwell, CPU_None);
-        ;
-#endif
 
         compat[CPU_Broadwell] =
             Set(CPU_Generic, CPU_x86_64, CPU_Bonnell, CPU_Penryn, CPU_Core2, CPU_Nehalem, CPU_Silvermont,
@@ -496,9 +489,7 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, bool pic, boo
             m_ispc_target = ISPCTarget::avx512knl_i32x16;
             break;
 
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_8_0 // LLVM 8.0
         case CPU_ICL:
-#endif
         case CPU_SKX:
             m_ispc_target = ISPCTarget::avx512skx_i32x16;
             break;
@@ -767,7 +758,6 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, bool pic, boo
         CPUfromISA = CPU_KNL;
         break;
     case ISPCTarget::avx512skx_i32x8:
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_8_0 // LLVM 8.0+
         this->m_isa = Target::SKX_AVX512;
         this->m_nativeVectorWidth = 16;
         this->m_nativeVectorAlignment = 64;
@@ -787,10 +777,6 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, bool pic, boo
         this->m_funcAttributes.push_back(std::make_pair("prefer-vector-width", "256"));
         this->m_funcAttributes.push_back(std::make_pair("min-legal-vector-width", "256"));
         break;
-#else
-        unsupported_target = true;
-        break;
-#endif
     case ISPCTarget::avx512skx_i32x16:
         this->m_isa = Target::SKX_AVX512;
         this->m_nativeVectorWidth = 16;

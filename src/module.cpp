@@ -942,11 +942,7 @@ bool Module::writeBitcode(llvm::Module *module, const char *outFileName, OutputT
 
     llvm::raw_fd_ostream fos(fd, (fd != 1), false);
     if (outputType == Bitcode)
-#if ISPC_LLVM_VERSION < ISPC_LLVM_7_0
-        llvm::WriteBitcodeToFile(module, fos);
-#else
         llvm::WriteBitcodeToFile(*module, fos);
-#endif
     else if (outputType == BitcodeText)
         module->print(fos, nullptr);
     return true;
@@ -985,17 +981,11 @@ bool Module::writeObjectFileOrAssembly(llvm::TargetMachine *targetMachine, llvm:
 
     {
         llvm::raw_fd_ostream &fos(of->os());
-#if ISPC_LLVM_VERSION == ISPC_LLVM_6_0
-        if (targetMachine->addPassesToEmitFile(pm, fos, fileType)) {
-            FATAL("Failed to add passes to emit object file!");
-        }
-#else // LLVM 7.0+
-      // Third parameter is for generation of .dwo file, which is separate DWARF
-      // file for ELF targets. We don't support it currently.
+        // Third parameter is for generation of .dwo file, which is separate DWARF
+        // file for ELF targets. We don't support it currently.
         if (targetMachine->addPassesToEmitFile(pm, fos, nullptr, fileType)) {
             FATAL("Failed to add passes to emit object file!");
         }
-#endif
 
         // Finally, run the passes to emit the object file/assembly
         pm.run(*module);

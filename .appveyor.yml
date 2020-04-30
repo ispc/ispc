@@ -43,8 +43,6 @@ environment:
       LLVM_VERSION: 9.0
     - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2017
       LLVM_VERSION: 8.0
-    - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2017
-      LLVM_VERSION: 7.0
 
 for:
 -
