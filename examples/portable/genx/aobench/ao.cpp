@@ -126,6 +126,29 @@ static int run() {
     double minCyclesISPCGPU = 1e30;
     void *dFimg = nullptr;
 
+    // Profiling initialization
+    ze_device_properties_t device_properties;
+    L0_SAFE_CALL(zeDeviceGetProperties(hDevice, &device_properties));
+    uint64_t timestampFreq = device_properties.timerResolution;
+
+    // Create event pool
+    ze_event_pool_desc_t tsEventPoolDesc;
+    tsEventPoolDesc.count = 1;
+    tsEventPoolDesc.flags = ZE_EVENT_POOL_FLAG_TIMESTAMP;
+    tsEventPoolDesc.version = ZE_EVENT_POOL_DESC_VERSION_CURRENT;
+
+    ze_event_pool_handle_t hTSEventPool;
+    L0_SAFE_CALL(zeEventPoolCreate(hDriver, &tsEventPoolDesc, 1, &hDevice, &hTSEventPool));
+
+    ze_event_desc_t tsEventDesc;
+    tsEventDesc.index = 0;
+    tsEventDesc.signal = ZE_EVENT_SCOPE_FLAG_HOST;
+    tsEventDesc.wait = ZE_EVENT_SCOPE_FLAG_HOST;
+    tsEventDesc.version = ZE_EVENT_DESC_VERSION_CURRENT;
+
+    ze_event_handle_t hTSEvent;
+    L0_SAFE_CALL(zeEventCreate(hTSEventPool, &tsEventDesc, &hTSEvent));
+
     // thread space
     ze_group_count_t dispatchTraits = {1, height*width/16, 1};
     std::cout << "Set dispatchTraits.x=" << dispatchTraits.groupCountX
@@ -161,7 +184,7 @@ static int run() {
         reset_and_start_timer();
         auto wct = std::chrono::system_clock::now();
 
-        L0_SAFE_CALL(zeCommandListAppendLaunchKernel(hCommandList, hKernel, &dispatchTraits, nullptr, 0, nullptr));
+        L0_SAFE_CALL(zeCommandListAppendLaunchKernel(hCommandList, hKernel, &dispatchTraits, hTSEvent, 0, nullptr));
         L0_SAFE_CALL(zeCommandListAppendBarrier(hCommandList, nullptr, 0, nullptr));
         L0_SAFE_CALL(zeCommandListClose(hCommandList));
         L0_SAFE_CALL(zeCommandQueueExecuteCommandLists(hCommandQueue, 1, &hCommandList, nullptr));
@@ -181,6 +204,11 @@ static int run() {
         L0_SAFE_CALL(zeCommandListClose(hCommandList));
         L0_SAFE_CALL(zeCommandQueueExecuteCommandLists(hCommandQueue, 1, &hCommandList, nullptr));
         L0_SAFE_CALL(zeCommandQueueSynchronize(hCommandQueue, std::numeric_limits<uint32_t>::max()));
+
+        uint64_t contextStart, contextEnd;
+        L0_SAFE_CALL(zeEventGetTimestamp(hTSEvent, ZE_EVENT_TIMESTAMP_CONTEXT_START, &contextStart));
+        L0_SAFE_CALL(zeEventGetTimestamp(hTSEvent, ZE_EVENT_TIMESTAMP_CONTEXT_END, &contextEnd));
+        printf("@time of GPU kernel run:\t\t[%.1f] milliseconds\n", 1e-6*timestampFreq*(contextEnd - contextStart));
     }
 
     savePPM("ao-ispc-gpu.ppm", width, height, fimg);
