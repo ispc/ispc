@@ -1061,13 +1061,10 @@ bool Module::writeObjectFileOrAssembly(llvm::TargetMachine *targetMachine, llvm:
     // set binary output for object files
 #if ISPC_LLVM_VERSION <= ISPC_LLVM_9_0
 #ifdef ISPC_GENX_ENABLED
-    llvm::TargetMachine::CodeGenFileType fileType = (outputType == Object || outputType == ISA)
-                                                        ? llvm::TargetMachine::CGFT_ObjectFile
-                                                        : llvm::TargetMachine::CGFT_AssemblyFile;
-#else  // !ISPC_GENX_ENABLED
+    Assert(g->target->getISA() != Target::GENX);
+#endif // !ISPC_GENX_ENABLED
     llvm::TargetMachine::CodeGenFileType fileType =
         (outputType == Object) ? llvm::TargetMachine::CGFT_ObjectFile : llvm::TargetMachine::CGFT_AssemblyFile;
-#endif // ISPC_GENX_ENABLED
     bool binary = (fileType == llvm::TargetMachine::CGFT_ObjectFile);
 #else // LLVM 10.0+
     llvm::CodeGenFileType fileType = (outputType == Object) ? llvm::CGFT_ObjectFile : llvm::CGFT_AssemblyFile;
@@ -2541,6 +2538,15 @@ int Module::CompileAndOutput(const char *srcFile, Arch arch, const char *cpu, st
         m = new Module(srcFile);
         if (m->CompileFile() == 0) {
 #ifdef ISPC_GENX_ENABLED
+            if (outputType == Asm || outputType == Object) {
+                if (ISPCTargetIsGen(target)) {
+                    Error(SourcePos(),
+                          "When using a \"genx-*\" compilation target, "
+                          "%s output can not be used.",
+                          (outputType == Asm) ? "assembly" : "gen binary file");
+                    return 1;
+                }
+            }
             if (g->target->getISA() == Target::GENX && outputType == OutputType::Object) {
                 outputType = OutputType::ISA;
             }
