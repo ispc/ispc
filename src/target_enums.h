@@ -65,6 +65,7 @@ enum class ISPCTarget {
     avx1_i32x8,
     avx1_i32x16,
     avx1_i64x4,
+    avx2_i16x16,
     avx2_i32x4,
     avx2_i32x8,
     avx2_i32x16,

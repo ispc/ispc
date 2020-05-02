@@ -108,6 +108,8 @@ ISPCTarget ParseISPCTarget(std::string target) {
         return ISPCTarget::avx1_i64x4;
     } else if (target == "avx1-i32x16" || target == "avx-x2" || target == "avx1-x2") {
         return ISPCTarget::avx1_i32x16;
+    } else if (target == "avx2-i16x16") {
+        return ISPCTarget::avx2_i16x16;
     } else if (target == "avx2-i32x4") {
         return ISPCTarget::avx2_i32x4;
     } else if (target == "avx2-i32x8" || target == "avx2") {
@@ -207,6 +209,8 @@ std::string ISPCTargetToString(ISPCTarget target) {
         return "avx1-i32x16";
     case ISPCTarget::avx1_i64x4:
         return "avx1-i64x4";
+    case ISPCTarget::avx2_i16x16:
+        return "avx2-i16x16";
     case ISPCTarget::avx2_i32x4:
         return "avx2-i32x4";
     case ISPCTarget::avx2_i32x8:
@@ -268,6 +272,7 @@ bool ISPCTargetIsX86(ISPCTarget target) {
     case ISPCTarget::avx1_i32x8:
     case ISPCTarget::avx1_i32x16:
     case ISPCTarget::avx1_i64x4:
+    case ISPCTarget::avx2_i16x16:
     case ISPCTarget::avx2_i32x4:
     case ISPCTarget::avx2_i32x8:
     case ISPCTarget::avx2_i32x16:
