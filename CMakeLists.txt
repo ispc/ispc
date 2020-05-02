@@ -189,6 +189,7 @@ set (ISPC_TARGETS
         sse4-i32x4 sse4-i32x8 sse4-i8x16 sse4-i16x8
         # Note here that avx1-i32x4 is aliased to sse4-i32x4 plus avx attribute.
         avx1-i32x8 avx1-i32x16 avx1-i64x4
+        avx2-i16x16
         avx2-i32x4 avx2-i32x8 avx2-i32x16 avx2-i64x4
         avx512knl-i32x16
         avx512skx-i32x16 avx512skx-i32x8

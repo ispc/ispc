@@ -687,6 +687,19 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, bool pic, boo
         this->m_maskBitCount = 64;
         CPUfromISA = CPU_SandyBridge;
         break;
+    case ISPCTarget::avx2_i16x16:
+        this->m_isa = Target::AVX2;
+        this->m_nativeVectorWidth = 16;
+        this->m_nativeVectorAlignment = 32;
+        this->m_dataTypeWidth = 16;
+        this->m_vectorWidth = 16;
+        this->m_maskingIsFree = false;
+        this->m_maskBitCount = 16;
+        this->m_hasHalf = true;
+        this->m_hasRand = true;
+        this->m_hasGather = true;
+        CPUfromISA = CPU_Haswell;
+        break;
     case ISPCTarget::avx2_i32x4:
         this->m_isa = Target::AVX2;
         this->m_nativeVectorWidth = 8;

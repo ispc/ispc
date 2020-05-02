@@ -580,6 +580,16 @@ define(`v64tov8', `
 ;; vector assembly: wider vector from two narrower vectors
 ;;
 ;; $1: vector element type
+;; $2-$5: 4 input 4-wide vectors
+;; $6: output 16-wide vector
+define(`v4tov16', `
+  %r01 = shufflevector <4 x $1> $2, <4 x $1> $3, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  %r23 = shufflevector <4 x $1> $4, <4 x $1> $5, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  $6 = shufflevector <8 x $1> %r01, <8 x $1> %r23,
+          <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+')
+
+;; $1: vector element type
 ;; $2: first n-wide vector
 ;; $3: second n-wide vector
 ;; $4: result 2*n-wide vector
