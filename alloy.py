@@ -680,7 +680,7 @@ def validation_run(only, only_targets, reference_branch, number, notify, update,
 # stability varying options
         stability.target = ""
         stability.arch = ""
-        stability.no_opt = False
+        stability.opt = ""
         stability.wrapexe = ""
 # prepare parameters of run
         [targets_t, targets_generic_t, sde_targets_t] = check_targets()
@@ -695,9 +695,11 @@ def validation_run(only, only_targets, reference_branch, number, notify, update,
 
 # parsing option only, update parameters of run
         if "-O2" in only:
-            opts.append(False)
+            opts.append("O2")
+        if "-O1" in only:
+            opts.append("O1")
         if "-O0" in only:
-            opts.append(True)
+            opts.append("O0")
         if "debug" in only:
             if not ("nodebug" in only):
                 dbg_begin = 1
@@ -754,7 +756,7 @@ def validation_run(only, only_targets, reference_branch, number, notify, update,
             only = only + " stability "
 # finish parameters of run, prepare LLVM
         if len(opts) == 0:
-            opts = [False]
+            opts = ["O2"]
         if len(archs) == 0:
             archs = ["x86", "x86-64"]
         if len(LLVM) == 0:
@@ -797,7 +799,7 @@ def validation_run(only, only_targets, reference_branch, number, notify, update,
                     for i2 in range(0,len(opts)):
                         for i3 in range(dbg_begin,dbg_total):
                             stability.arch = arch[i1]
-                            stability.no_opt = opts[i2]
+                            stability.opt = opts[i2]
                             stability.ispc_flags = ispc_flags_tmp
                             if (i3 != 0):
                                 stability.ispc_flags += " -g"
@@ -828,7 +830,7 @@ def validation_run(only, only_targets, reference_branch, number, notify, update,
                     for i2 in range(0,len(opts)):
                         for i3 in range(dbg_begin,dbg_total):
                             stability.arch = arch[i1]
-                            stability.no_opt = opts[i2]
+                            stability.opt = opts[i2]
                             stability.ispc_flags = ispc_flags_tmp
                             if (i3 != 0):
                                 stability.ispc_flags += " -g"
@@ -984,7 +986,7 @@ def Main():
         if os.environ.get("SMTP_ISPC") == None:
             error("you have no SMTP_ISPC in your environment for option notify", 1)
     if options.only != "":
-        test_only_r = " 6.0 7.0 8.0 9.0 10.0 trunk current build stability performance x86 x86-64 x86_64 -O0 -O2 native debug nodebug "
+        test_only_r = " 6.0 7.0 8.0 9.0 10.0 trunk current build stability performance x86 x86-64 x86_64 -O0 -O1 -O2 native debug nodebug "
         test_only = options.only.split(" ")
         for iterator in test_only:
             if not (" " + iterator + " " in test_only_r):
@@ -1146,7 +1148,7 @@ if __name__ == '__main__':
         help='display time of testing', default=False, action='store_true')
     run_group.add_option('--only', dest='only',
         help='set types of tests. Possible values:\n' + 
-            '-O0, -O2, x86, x86-64, stability (test only stability), performance (test only performance),\n' +
+            '-O0, -O1, -O2, x86, x86-64, stability (test only stability), performance (test only performance),\n' +
             'build (only build with different LLVM), 6.0, 7.0, 8.0, 9.0, 10.0, trunk, native (do not use SDE),\n' +
             'current (do not rebuild ISPC), debug (only with debug info), nodebug (only without debug info, default).',
             default="")
