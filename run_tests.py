@@ -383,8 +383,13 @@ def run_test(testname, host, target):
             ispc_cmd = ispc_exe_rel + " --woff %s -o %s --arch=%s --target=%s" % \
                         (filename, obj_name, target.arch, target.target)
 
-            if options.no_opt:
+            if options.opt == 'O0':
                 ispc_cmd += " -O0"
+            elif options.opt == 'O1':
+                ispc_cmd += " -O1"
+            elif options.opt == 'O2':
+                ispc_cmd += " -O2"
+
             if target.is_generic():
                 ispc_cmd += " --emit-c++ --c++-include-file=%s" % add_prefix(target.include_file, host)
 
@@ -497,10 +502,7 @@ def file_check(results, host, target):
         else:
             OS = "Linux"
 # Detect opt_set
-    if options.no_opt == True:
-        opt = "-O0"
-    else:
-        opt = "-O2"
+    opt = options.opt
 # Detect LLVM version
     temp1 = common.take_lines(host.ispc_exe + " --version", "first")
     temp2 = re.search('LLVM [0-9]*\.[0-9]*', temp1)
@@ -625,10 +627,7 @@ def verify():
 # populate ex_state test table and run info with testing results
 def populate_ex_state(options, target, total_tests, test_result):
     # Detect opt_set
-    if options.no_opt == True:
-        opt = "-O0"
-    else:
-        opt = "-O2"
+    opt = options.opt
 
     try:
         common.ex_state.add_to_rinf_testall(total_tests)
@@ -855,8 +854,8 @@ if __name__ == "__main__":
                   help='Set architecture (arm, aarch64, x86, x86-64)',default="x86-64")
     parser.add_option("-c", "--compiler", dest="compiler_exe", help="C/C++ compiler binary to use to run tests",
                   default=None)
-    parser.add_option('-o', '--no-opt', dest='no_opt', help='Disable optimization',
-                  default=False, action="store_true")
+    parser.add_option('-o', '--opt', dest='opt', choices=['', 'O0', 'O1', 'O2'], help='Set optimization level passed to the compiler (O0, O1, O2).',
+                  default='')
     parser.add_option('-j', '--jobs', dest='num_jobs', help='Maximum number of jobs to run in parallel',
                   default="1024", type="int")
     parser.add_option('-v', '--verbose', dest='verbose', help='Enable verbose output',
