@@ -3243,10 +3243,17 @@ llvm::Value *SelectExpr::GetValue(FunctionEmitContext *ctx) const {
             llvm::Value *e1i = ctx->ExtractInst(expr1Val, i);
             llvm::Value *e2i = ctx->ExtractInst(expr2Val, i);
             llvm::Value *sel = NULL;
-            if (testType->IsUniformType())
+            if (testType->IsUniformType()) {
+                // Extracting uniform vector bool to uniform bool require
+                // switching from i8 -> i1
+                ti = ctx->SwitchBoolSize(ti, ti->getType(), LLVMTypes::BoolType);
                 sel = ctx->SelectInst(ti, e1i, e2i);
-            else
+            } else {
+                // Extracting varying vector bools to varying bools require
+                // switching from <WIDTH x i8> -> <WIDTH x MaskType>
+                ti = ctx->SwitchBoolSize(ti, ti->getType(), LLVMTypes::BoolVectorType);
                 sel = lEmitVaryingSelect(ctx, ti, e1i, e2i, vt->GetElementType());
+            }
             result = ctx->InsertInst(result, sel, i);
         }
         return result;

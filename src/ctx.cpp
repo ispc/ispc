@@ -1234,13 +1234,15 @@ llvm::Value *FunctionEmitContext::I1VecToBoolVec(llvm::Value *b) {
     llvm::ArrayType *at = llvm::dyn_cast<llvm::ArrayType>(b->getType());
     if (at) {
         // If we're given an array of vectors of i1s, then do the
-        // conversion for each of the elements
-        llvm::Type *boolArrayType = llvm::ArrayType::get(LLVMTypes::BoolVectorType, at->getNumElements());
+        // conversion for each of the elements.
+        // Using 'LLVMTypes::BoolVectorStorageType' since it's a varying short
+        // vector and stored as an array in IR.
+        llvm::Type *boolArrayType = llvm::ArrayType::get(LLVMTypes::BoolVectorStorageType, at->getNumElements());
         llvm::Value *ret = llvm::UndefValue::get(boolArrayType);
 
         for (unsigned int i = 0; i < at->getNumElements(); ++i) {
             llvm::Value *elt = ExtractInst(b, i);
-            llvm::Value *sext = SExtInst(elt, LLVMTypes::BoolVectorType, LLVMGetName(elt, "_to_boolvec"));
+            llvm::Value *sext = SExtInst(elt, LLVMTypes::BoolVectorStorageType, LLVMGetName(elt, "_to_boolvec"));
             ret = InsertInst(ret, sext, i);
         }
         return ret;
