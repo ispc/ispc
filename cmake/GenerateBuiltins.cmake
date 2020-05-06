@@ -109,14 +109,6 @@ function(builtin_to_cpp bit os_name arch supported_archs supported_oses resultFi
         message(FATAL_ERROR "Error")
     endif()
 
-    # Special case when ISPC is built on ARM system:
-    string(FIND ${CMAKE_HOST_SYSTEM_PROCESSOR} "armv" IS_ARM_SYSTEM)
-    string(FIND ${CMAKE_HOST_SYSTEM_PROCESSOR} "aarch64" IS_AARCH64_SYSTEM)
-    if ((((${IS_ARM_SYSTEM} GREATER -1) AND NOT (${target_arch} STREQUAL "armv7"))) OR
-        ((${IS_AARCH64_SYSTEM} GREATER -1) AND NOT (${target_arch} STREQUAL "aarch64")))
-            set(SKIP ON)
-    endif()
-
     # Determine include path
     if (WIN32)
         if (${os_name} STREQUAL "windows")
@@ -298,7 +290,10 @@ function (generate_target_builtins resultList)
 endfunction()
 
 function (generate_common_builtins resultList)
-    list (APPEND supported_archs "x86")
+    # Supported architectures
+    if (X86_ENABLED)
+        list (APPEND supported_archs "x86")
+    endif()
     if (ARM_ENABLED)
         list (APPEND supported_archs "arm")
     endif()
@@ -306,6 +301,8 @@ function (generate_common_builtins resultList)
         list (APPEND supported_archs "wasm32")
         list (APPEND supported_oses "web")
     endif()
+
+    # Supported OSes.
     if (ISPC_WINDOWS_TARGET)
         list (APPEND supported_oses "windows")
     endif()
@@ -327,6 +324,7 @@ function (generate_common_builtins resultList)
     if (ISPC_PS4_TARGET)
         list (APPEND supported_oses "ps4")
     endif()
+
     message (STATUS "ISPC will be built with support of ${supported_oses} for ${supported_archs}")
     foreach (bit 32 64)
         foreach (os_name "windows" "linux" "freebsd" "macos" "android" "ios" "ps4" "web")

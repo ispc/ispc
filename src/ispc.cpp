@@ -1075,6 +1075,16 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, bool pic, boo
         // Create TargetMachine
         std::string triple = GetTripleString();
 
+        // The last validity check to ensure that supported for this target was enabled in the build.
+        if (!g->target_registry->isSupported(m_ispc_target, g->target_os, arch)) {
+            std::string target_string = ISPCTargetToString(m_ispc_target);
+            std::string arch_str = ArchToString(arch);
+            std::string os_str = OSToString(g->target_os);
+            Error(SourcePos(), "%s target for %s on %s is not supported in current build.", target_string.c_str(),
+                  arch_str.c_str(), os_str.c_str());
+            return;
+        }
+
         llvm::Optional<llvm::Reloc::Model> relocModel;
         if (m_generatePIC) {
             relocModel = llvm::Reloc::PIC_;
