@@ -44,6 +44,12 @@ set(PROJECT_NAME ispc)
 set(ISPC_BUILD TRUE)
 project(${PROJECT_NAME})
 
+set(X86_HOST FALSE)
+if (${CMAKE_HOST_SYSTEM_PROCESSOR} MATCHES "AMD64|86")
+    set(X86_HOST TRUE)
+endif()
+
+option(X86_ENABLED "Enable x86 support" ${X86_HOST})
 option(ARM_ENABLED "Enable ARM support" ON)
 option(WASM_ENABLED "Enable experimental Web Assembly support" OFF)
 option(ISPC_INCLUDE_EXAMPLES "Generate build targets for the ISPC examples" ON)
@@ -184,7 +190,10 @@ find_package(FLEX 2.5 REQUIRED)
     endif()
 
 set (ISPC_MASKS 1 8 16 32 64)
-set (ISPC_TARGETS
+set (ISPC_TARGETS generic-1 generic-4 generic-8 generic-16 generic-32 generic-64)
+
+if (X86_ENABLED)
+    list(APPEND ISPC_TARGETS
         sse2-i32x4 sse2-i32x8
         sse4-i32x4 sse4-i32x8 sse4-i8x16 sse4-i16x8
         # Note here that avx1-i32x4 is aliased to sse4-i32x4 plus avx attribute.
@@ -192,10 +201,13 @@ set (ISPC_TARGETS
         avx2-i8x32 avx2-i16x16
         avx2-i32x4 avx2-i32x8 avx2-i32x16 avx2-i64x4
         avx512knl-i32x16
-        avx512skx-i32x16 avx512skx-i32x8
-        generic-1 generic-4 generic-8 generic-16 generic-32 generic-64)
-if (${LLVM_VERSION_NUMBER} VERSION_GREATER_EQUAL "10.0.0")
-    list(APPEND ISPC_TARGETS avx512skx-i8x64 avx512skx-i16x32)
+        avx512skx-i32x16 avx512skx-i32x8)
+    if (${LLVM_VERSION_NUMBER} VERSION_GREATER_EQUAL "10.0.0")
+        list(APPEND ISPC_TARGETS avx512skx-i8x64 avx512skx-i16x32)
+    endif()
+endif()
+if (ARM_ENABLED)
+    list(APPEND ISPC_TARGETS neon-i8x16 neon-i16x8 neon-i32x4 neon-i32x8)
 endif()
 if (WASM_ENABLED)
     find_program(EMCC_EXECUTABLE emcc)
@@ -213,10 +225,11 @@ if (${LLVM_VERSION_NUMBER} VERSION_GREATER_EQUAL "10.0.0")
     list(APPEND LLVM_COMPONENTS frontendopenmp)
 endif()
 
-list(APPEND LLVM_COMPONENTS x86)
+if (X86_ENABLED)
+    list(APPEND LLVM_COMPONENTS x86)
+endif()
 if (ARM_ENABLED)
     list(APPEND LLVM_COMPONENTS arm aarch64)
-    list(APPEND ISPC_TARGETS neon-i8x16 neon-i16x8 neon-i32x4 neon-i32x8)
 endif()
 if (WASM_ENABLED)
     list(APPEND LLVM_COMPONENTS webassembly)
