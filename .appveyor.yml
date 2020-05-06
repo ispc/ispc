@@ -57,6 +57,8 @@ for:
         set CROSS_TOOLS=C:\projects\cross
         set CHOCO_DIR=%ProgramData%\chocolatey
         set MACOS_SDK=MacOSX10.13.sdk
+        set WASM=OFF
+        if "%LLVM_VERSION%"=="latest" (set WASM=ON)
         if "%APPVEYOR_BUILD_WORKER_IMAGE%"=="Visual Studio 2017" ( (set generator="Visual Studio 15 Win64") & (set vsversion=2017))
         if "%APPVEYOR_BUILD_WORKER_IMAGE%"=="Visual Studio 2019" ( (set generator="Visual Studio 16") & (set vsversion=2019))
         call "C:\Program Files (x86)\Microsoft Visual Studio\%vsversion%\Community\VC\Auxiliary\Build\vcvars64.bat"
@@ -68,6 +70,9 @@ for:
         if exist "%LLVM_HOME%\bin\" (if exist "%CROSS_TOOLS%\gnuwin32\" set NONEEDDOCKER=rem)
         if "%LLVM_VERSION%" == "latest" set LLVM_VERSION=%LLVM_LATEST%
         set LLVM_SHORT_VER=%LLVM_VERSION:.=%
+        cd %ISPC_HOME%
+        if "%WASM%" == "ON" ( call scripts\install_emscripten.bat )
+        if "%WASM%" == "ON" ( emcc --version )
         set DOCKER_NAME=%DOCKER_PATH%:win_llvm%LLVM_SHORT_VER%
         %NONEEDDOCKER% docker pull %DOCKER_NAME%
         %NONEEDDOCKER% docker run -d %DOCKER_NAME%
@@ -79,7 +84,7 @@ for:
   before_build:
     - cmd: |-
         cd %ISPC_HOME% && mkdir build && cd build
-        cmake .. -Thost=x64 -G %generator% -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=%ISPC_HOME%\install -DISPC_PREPARE_PACKAGE=ON -DM4_EXECUTABLE=C:\cygwin64\bin\m4.exe -DISPC_CROSS=ON -DISPC_GNUWIN32_PATH=%CROSS_TOOLS%\gnuwin32 -DISPC_MACOS_SDK_PATH=%CROSS_TOOLS%\%MACOS_SDK%
+        cmake .. -Thost=x64 -G %generator% -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=%ISPC_HOME%\install -DISPC_PREPARE_PACKAGE=ON -DM4_EXECUTABLE=C:\cygwin64\bin\m4.exe -DISPC_CROSS=ON -DISPC_GNUWIN32_PATH=%CROSS_TOOLS%\gnuwin32 -DISPC_MACOS_SDK_PATH=%CROSS_TOOLS%\%MACOS_SDK% -DWASM_ENABLED=%WASM%
   build_script:
     - cmd: msbuild %ISPC_HOME%\build\PACKAGE.vcxproj /p:Platform=x64 /p:Configuration=Release
   test_script:
@@ -105,13 +110,16 @@ for:
         export LLVM_HOME=/usr/local/src/llvm
         export CROSS_TOOLS=/usr/local/src/cross
         export MACOS_SDK=MacOSX10.13.sdk
+        export WASM=OFF
   install:
     - sh: |-
         sudo apt-get update
         sudo apt-get install -y flex libc6-dev-i386 g++-multilib lib32stdc++6
         if [ "$LLVM_VERSION" = "latest" ]; then 
           export LLVM_VERSION=$LLVM_LATEST
+          export WASM=ON
         fi;
+        if [ "$WASM" == "ON" ]; then source scripts/install_emscripten.sh && emcc --version; fi
         LLVM_SHORT_VER=${LLVM_VERSION/\.}
         export DOCKER_NAME=$DOCKER_PATH:ubuntu_llvm$LLVM_SHORT_VER
         if [ ! -d "$LLVM_HOME/bin-$LLVM_VERSION/bin" ]; then
@@ -125,7 +133,7 @@ for:
   before_build:
     - sh: |-
         cd $ISPC_HOME && mkdir build && cd build
-        cmake ../ -DISPC_PREPARE_PACKAGE=ON -DCMAKE_INSTALL_PREFIX=%ISPC_HOME%/install -DISPC_CROSS=ON -DISPC_MACOS_SDK_PATH=$CROSS_TOOLS/$MACOS_SDK
+        cmake ../ -DISPC_PREPARE_PACKAGE=ON -DCMAKE_INSTALL_PREFIX=$ISPC_HOME/install -DISPC_CROSS=ON -DISPC_MACOS_SDK_PATH=$CROSS_TOOLS/$MACOS_SDK -DWASM_ENABLED=$WASM
   build_script:
     - sh: make package -j4
 
