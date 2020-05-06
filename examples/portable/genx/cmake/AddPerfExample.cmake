@@ -35,7 +35,6 @@ function(add_perf_example)
     set(oneValueArgs NAME ISPC_SRC_NAME ISPC_TARGET CM_SRC_NAME ISPC_OBJ_NAME HOST_NAME CM_HOST_NAME CM_OBJ_NAME TEST_NAME CM_TEST_NAME)
     set(multiValueArgs ISPC_FLAGS HOST_SOURCES CM_HOST_SOURCES CM_HOST_FLAGS)
     cmake_parse_arguments("parsed" "${options}" "${oneValueArgs}" "${multiValueArgs}" ${ARGN} )
-
     # Compile ISPC kernel
     list(APPEND ISPC_BUILD_OUTPUT ${parsed_ISPC_OBJ_NAME})
     add_custom_command(OUTPUT ${ISPC_BUILD_OUTPUT}
@@ -109,7 +108,7 @@ function(add_perf_example)
                DEPENDS ${CMC_EXECUTABLE}
             )
             # L0 build
-            target_compile_definitions(${CM_HOST_BINARY} PRIVATE LZERO)
+            target_compile_definitions(${CM_HOST_BINARY} PRIVATE LZERO CMKERNEL)
             target_include_directories(${CM_HOST_BINARY} PRIVATE "${COMMON_PATH}"
                                    ${NEO_INSTALL_PATH}/neo/usr/local/include)
             if (NEO_LOCAL_BUILD)
