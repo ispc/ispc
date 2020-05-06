@@ -44,8 +44,10 @@ static int run(int m, int niter, int gx, int gy) {
     ze_kernel_handle_t hKernel;
 
 #ifdef CMKERNEL
+    std::cout << "Running CM kernel\n";
     L0Create_Kernel(hDevice, hModule, hCommandList, hKernel, "sgemm_kernel");
 #else
+    std::cout << "Running ISPC kernel\n";
     L0Create_Kernel(hDevice, hModule, hCommandList, hKernel, "SGEMM_naive_task");
 #endif
 
