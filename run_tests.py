@@ -161,7 +161,7 @@ def update_progress(fn, total_tests_arg, counter, max_test_length_arg):
         sys.stdout.flush()
 
 # 240 is enough even for longest test under sde.
-def run_command(cmd, timeout=600):
+def run_command(cmd, timeout=600, cwd="."):
     if options.verbose:
         print_debug("Running: %s\n" % cmd, s, run_tests_log)
 
@@ -177,7 +177,7 @@ def run_command(cmd, timeout=600):
 
     # prepare for OSError exceptions raised in the child process (re-raised in the parent)
     try:
-        proc = subprocess.Popen(arg_list, stdin=None, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        proc = subprocess.Popen(arg_list, stdin=None, stdout=subprocess.PIPE, stderr=subprocess.PIPE, cwd=cwd)
     except:
         print_debug("ERROR: The child (%s) raised an exception: %s\n" % (arg_list, sys.exc_info()[1]), s, run_tests_log)
         raise
@@ -200,7 +200,7 @@ def run_command(cmd, timeout=600):
     return (proc.returncode, output, is_timeout)
 
 # run the commands in cmd_list
-def run_cmds(compile_cmds, run_cmd, filename, expect_failure):
+def run_cmds(compile_cmds, run_cmd, filename, expect_failure, exe_wd="."):
     for cmd in compile_cmds:
         (return_code, output, timeout) = run_command(cmd, 10)
         compile_failed = (return_code != 0)
@@ -210,7 +210,7 @@ def run_cmds(compile_cmds, run_cmd, filename, expect_failure):
                 print_debug("%s" % output, s, run_tests_log)
             return Status.Compfail
     if not options.save_bin:
-        (return_code, output, timeout) = run_command(run_cmd)
+        (return_code, output, timeout) = run_command(run_cmd, cwd=exe_wd)
         run_failed = (return_code != 0) or timeout
     else:
         run_failed = 0
@@ -344,7 +344,11 @@ def run_test(testname, host, target):
                     obj_name = "%s.cpp" % os.path.basename(filename)
                 else:
                     obj_name = "%s.obj" % os.path.basename(filename)
-                exe_name = "%s.exe" % os.path.basename(filename)
+
+                if target.arch == "wasm32":
+                    exe_name = "%s.js" % os.path.realpath(filename)
+                else:
+                    exe_name = "%s.exe" % os.path.basename(filename)
 
                 cc_cmd = "%s /I. /Zi /nologo /DTEST_SIG=%d %s %s /Fe%s" % \
                          (options.compiler_exe, match, add_prefix("test_static.cpp", host), obj_name, exe_name)
@@ -355,11 +359,15 @@ def run_test(testname, host, target):
                     obj_name = "%s.cpp" % testname
                 else:
                     obj_name = "%s.o" % testname
-                exe_name = "%s.run" % testname
+
+                if target.arch == "wasm32":
+                    exe_name = "%s.js" % os.path.realpath(testname)
+                else:
+                    exe_name = "%s.run" % testname
 
                 if target.arch == 'arm':
                      gcc_arch = '--with-fpu=hardfp -marm -mfpu=neon -mfloat-abi=hard'
-                elif target.arch == 'x86':
+                elif target.arch == 'x86' or target.arch == "wasm32":
                     gcc_arch = '-m32'
                 elif target.arch == 'aarch64':
                     gcc_arch = '-march=armv8-a -target aarch64-linux-gnueabi --static'
@@ -393,11 +401,16 @@ def run_test(testname, host, target):
             if target.is_generic():
                 ispc_cmd += " --emit-c++ --c++-include-file=%s" % add_prefix(target.include_file, host)
 
+        exe_wd = "."
+        if target.arch == "wasm32":
+            cc_cmd += " -D__WASM__"
+            options.wrapexe = "v8 --experimental-wasm-simd"
+            exe_wd = os.path.realpath("./tests")
         # compile the ispc code, make the executable, and run it...
         ispc_cmd += " -h " + filename + ".h"
         cc_cmd += " -DTEST_HEADER=<" + filename + ".h>"
         status = run_cmds([ispc_cmd, cc_cmd], options.wrapexe + " " + exe_name,
-                          testname, should_fail)
+                          testname, should_fail, exe_wd=exe_wd)
 
         # clean up after running the test
         try:
@@ -410,6 +423,9 @@ def run_test(testname, host, target):
                         os.unlink("%s.pdb" % basename)
                         os.unlink("%s.ilk" % basename)
                 os.unlink(obj_name)
+                os.unlink(filename + ".wasm")
+                os.unlink(filename + ".js")
+                os.unlink(filename + ".html")
         except:
             None
 
@@ -648,7 +664,9 @@ def populate_ex_state(options, target, total_tests, test_result):
 # set compiler exe depending on the OS
 def set_compiler_exe(host, options):
     if options.compiler_exe == None:
-        if host.is_windows():
+        if options.arch == "wasm32":
+          options.compiler_exe = "emcc"
+        elif host.is_windows():
             options.compiler_exe = "cl.exe"
         else:
             options.compiler_exe = "clang++"

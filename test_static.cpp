@@ -31,7 +31,9 @@
    SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-#if defined(_WIN32) || defined(_WIN64)
+#if defined(__WASM__)
+#define ISPC_IS_WASM
+#elif defined(_WIN32) || defined(_WIN64)
 #define ISPC_IS_WINDOWS
 #elif defined(__linux__)
 #define ISPC_IS_LINUX
@@ -48,6 +50,9 @@
 #include <stdio.h>
 #include <string.h>
 #ifdef ISPC_IS_LINUX
+#include <malloc.h>
+#endif
+#ifdef ISPC_IS_WASM
 #include <malloc.h>
 #endif
 
@@ -105,6 +110,13 @@ void *ISPCAlloc(void **handle, int64_t size, int32_t alignment) {
     return memalign(alignment, size);
 #endif
 #ifdef ISPC_IS_APPLE
+    void *mem = malloc(size + (alignment - 1) + sizeof(void *));
+    char *amem = ((char *)mem) + sizeof(void *);
+    amem = amem + uint32_t(alignment - (reinterpret_cast<uint64_t>(amem) & (alignment - 1)));
+    ((void **)amem)[-1] = mem;
+    return amem;
+#endif
+#ifdef ISPC_IS_WASM
     void *mem = malloc(size + (alignment - 1) + sizeof(void *));
     char *amem = ((char *)mem) + sizeof(void *);
     amem = amem + uint32_t(alignment - (reinterpret_cast<uint64_t>(amem) & (alignment - 1)));
