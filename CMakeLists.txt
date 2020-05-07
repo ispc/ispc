@@ -306,6 +306,10 @@ else()
     endif()
 endif()
 
+if (X86_ENABLED)
+    target_compile_definitions(${PROJECT_NAME} PRIVATE ISPC_X86_ENABLED)
+endif()
+
 if (ARM_ENABLED)
     target_compile_definitions(${PROJECT_NAME} PRIVATE ISPC_ARM_ENABLED)
 endif()
