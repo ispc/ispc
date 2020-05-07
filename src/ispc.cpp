@@ -75,7 +75,11 @@ Module *m;
 ///////////////////////////////////////////////////////////////////////////
 // Target
 
-#if !defined(ISPC_HOST_IS_WINDOWS) && !defined(__arm__) && !defined(__aarch64__)
+#if defined(__arm__) || defined(__aarch64__)
+#define ARM_HOST
+#endif
+
+#if !defined(ISPC_HOST_IS_WINDOWS) && !defined(ARM_HOST)
 // __cpuid() and __cpuidex() are defined on Windows in <intrin.h> for x86/x64.
 // On *nix they need to be defined manually through inline assembler.
 static void __cpuid(int info[4], int infoType) {
@@ -92,7 +96,7 @@ static void __cpuidex(int info[4], int level, int count) {
 }
 #endif // !ISPC_HOST_IS_WINDOWS && !__ARM__ && !__AARCH64__
 
-#if !defined(__arm__) && !defined(__aarch64__)
+#ifndef ARM_HOST
 static bool __os_has_avx_support() {
 #if defined(ISPC_HOST_IS_WINDOWS)
     // Check if the OS will save the YMM registers
@@ -123,10 +127,10 @@ static bool __os_has_avx512_support() {
     return (rEAX & 0xE6) == 0xE6;
 #endif // !defined(ISPC_HOST_IS_WINDOWS)
 }
-#endif // !__arm__ && !__aarch64__
+#endif // !ARM_HOST
 
 static ISPCTarget lGetSystemISA() {
-#if defined(__arm__) || defined(__aarch64__)
+#ifdef ARM_HOST
     return ISPCTarget::neon_i32x4;
 #else
     int info[4];
@@ -261,11 +265,11 @@ typedef enum {
 // cortex-a9 and a15.  We should be able to handle any of them that also
 // have NEON support.
 #ifdef ISPC_ARM_ENABLED
-    // ARM Cortex A15. Supports NEON VFPv4.
-    CPU_CortexA15,
-
     // ARM Cortex A9. Supports NEON VFPv3.
     CPU_CortexA9,
+
+    // ARM Cortex A15. Supports NEON VFPv4.
+    CPU_CortexA15,
 
     // ARM Cortex A35, A53, A57.
     CPU_CortexA35,
@@ -340,9 +344,9 @@ class AllCPUs {
         names[CPU_ICL].push_back("icl");
 
 #ifdef ISPC_ARM_ENABLED
-        names[CPU_CortexA15].push_back("cortex-a15");
-
         names[CPU_CortexA9].push_back("cortex-a9");
+
+        names[CPU_CortexA15].push_back("cortex-a15");
 
         names[CPU_CortexA35].push_back("cortex-a35");
 
@@ -1048,14 +1052,18 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, bool pic, boo
         FATAL(target_string.c_str());
     }
 
-#if defined(ISPC_ARM_ENABLED) && !defined(__arm__)
-    if ((CPUID == CPU_None) && ISPCTargetIsNeon(m_ispc_target) && arch == Arch::arm)
-        CPUID = CPU_CortexA9;
+#if defined(ISPC_ARM_ENABLED)
+    if ((CPUID == CPU_None) && ISPCTargetIsNeon(m_ispc_target)) {
+        if (arch == Arch::arm) {
+            CPUID = CPU_CortexA9;
+        } else if (arch == Arch::aarch64) {
+            CPUID = CPU_CortexA35;
+        } else {
+            UNREACHABLE();
+        }
+    }
 #endif
-#if defined(ISPC_ARM_ENABLED) && !defined(__aarch64__)
-    if ((CPUID == CPU_None) && ISPCTargetIsNeon(m_ispc_target) && arch == Arch::aarch64)
-        CPUID = CPU_CortexA35;
-#endif
+
     if (CPUID == CPU_None) {
         cpu = a.GetDefaultNameFromType(CPUfromISA).c_str();
     } else {
