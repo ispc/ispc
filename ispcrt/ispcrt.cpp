@@ -111,6 +111,7 @@ ISPCRTDevice ispcrtGetDevice(ISPCRTDeviceType type) ISPCRT_CATCH_BEGIN {
 #else
         throw std::runtime_error("CPU support not enabled");
 #endif
+        break;
     default:
         throw std::runtime_error("Unknown device type queried!");
     }

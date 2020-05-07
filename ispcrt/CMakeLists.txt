@@ -34,6 +34,10 @@ option(ISPCRT_BUILD_CPU "Enable CPU support in ispcrt" ON)
 option(ISPCRT_BUILD_GPU "Enable Level0 GPU support in ispcrt" ON)
 option(ISPCRT_BUILD_TASKING "Enable CPU tasking targets in ispcrt" ON)
 
+if (NOT ISPCRT_BUILD_CPU AND NOT ISPCRT_BUILD_GPU)
+  message(FATAL_ERROR "You must enable either CPU or GPU support!")
+endif()
+
 if (ISPCRT_BUILD_GPU)
   find_package(level_zero REQUIRED)
 endif()
@@ -52,7 +56,7 @@ macro(build_ispcrt SHARED_OR_STATIC TARGET_NAME)
     $<$<BOOL:${ISPCRT_BUILD_TASKING}>:ispc_tasking.c>
 
     ispcrt.cpp
-    detail/cpu/CPUDevice.cpp
+    $<$<BOOL:${ISPCRT_BUILD_CPU}>:detail/cpu/CPUDevice.cpp>
     $<$<BOOL:${ISPCRT_BUILD_GPU}>:detail/gpu/GPUDevice.cpp>
   )
 
@@ -67,7 +71,7 @@ macro(build_ispcrt SHARED_OR_STATIC TARGET_NAME)
   target_include_directories(${TARGET_NAME}
   PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}>
-    $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/ispcrt>
+    $<INSTALL_INTERFACE:${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_INCLUDEDIR}/ispcrt>
   )
 
   target_link_libraries(${TARGET_NAME}

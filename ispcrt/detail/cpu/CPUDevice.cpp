@@ -34,7 +34,12 @@ struct MemoryView : public ispcrt::MemoryView {
 struct Module : public ispcrt::Module {
     Module(const char *moduleFile) : m_file(moduleFile) {
         if (!m_file.empty()) {
-            m_lib = dlopen(("lib" + m_file + ".so").c_str(), RTLD_LAZY | RTLD_LOCAL);
+#if defined(__MACOSX__) || defined(__APPLE__)
+            std::string ext = ".dylib";
+#else
+            std::string ext = ".so";
+#endif
+            m_lib = dlopen(("lib" + m_file + ext).c_str(), RTLD_LAZY | RTLD_LOCAL);
 
             if (!m_lib)
                 throw std::logic_error("could not open CPU shared module file");

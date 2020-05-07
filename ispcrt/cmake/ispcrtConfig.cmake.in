@@ -11,3 +11,8 @@ check_required_components("@PROJECT_NAME@")
 ## Standard signal that the package was found ##
 
 set(ISPCRT_FOUND TRUE)
+
+## Setup ISPC includes ##
+
+set(ISPCRT_INCLUDE_DIR ${CMAKE_CURRENT_LIST_DIR}/../../../include/ispcrt)
+include_directories_ispc(${ISPCRT_INCLUDE_DIR})
