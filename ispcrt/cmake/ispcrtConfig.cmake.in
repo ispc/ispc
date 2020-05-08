@@ -8,11 +8,26 @@ include("${CMAKE_CURRENT_LIST_DIR}/ispc.cmake")
 
 check_required_components("@PROJECT_NAME@")
 
-## Standard signal that the package was found ##
-
-set(ISPCRT_FOUND TRUE)
-
 ## Setup ISPC includes ##
 
 set(ISPCRT_INCLUDE_DIR ${CMAKE_CURRENT_LIST_DIR}/../../../include/ispcrt)
 include_directories_ispc(${ISPCRT_INCLUDE_DIR})
+
+## Find level_zero if required ##
+
+if(@ISPCRT_BUILD_GPU@)
+  include(CMakeFindDependencyMacro)
+
+  set(OLD_CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH})
+
+  list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_LIST_DIR})
+
+  find_dependency(level_zero)
+
+  set(CMAKE_MODULE_PATH ${OLD_CMAKE_MODULE_PATH})
+  unset(OLD_CMAKE_MODULE_PATH)
+endif()
+
+## Standard signal that the package was found ##
+
+set(ISPCRT_FOUND TRUE)

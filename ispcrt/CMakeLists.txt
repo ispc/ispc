@@ -75,8 +75,9 @@ macro(build_ispcrt SHARED_OR_STATIC TARGET_NAME)
   )
 
   target_link_libraries(${TARGET_NAME}
-  PRIVATE
+  PUBLIC
     $<$<BOOL:${ISPCRT_BUILD_GPU}>:level_zero>
+  PRIVATE
     ${CMAKE_DL_LIBS}
     $<$<BOOL:${ISPCRT_BUILD_TASKING}>:OpenMP::OpenMP_CXX>
   )
