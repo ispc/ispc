@@ -1678,9 +1678,9 @@ llvm::Value *lEmitLogicalOp(BinaryExpr::Op op, Expr *arg0, Expr *arg1, FunctionE
         return NULL;
     }
     llvm::Value *retPtr = ctx->AllocaInst(retType, "logical_op_mem");
-    llvm::BasicBlock *bbSkipEvalValue1 = ctx->CreateBasicBlock("skip_eval_1");
-    llvm::BasicBlock *bbEvalValue1 = ctx->CreateBasicBlock("eval_1");
-    llvm::BasicBlock *bbLogicalDone = ctx->CreateBasicBlock("logical_op_done");
+    llvm::BasicBlock *bbSkipEvalValue1 = ctx->CreateBasicBlock("skip_eval_1", ctx->GetCurrentBasicBlock());
+    llvm::BasicBlock *bbEvalValue1 = ctx->CreateBasicBlock("eval_1", bbSkipEvalValue1);
+    llvm::BasicBlock *bbLogicalDone = ctx->CreateBasicBlock("logical_op_done", bbEvalValue1);
 
     // Evaluate the first operand
     llvm::Value *value0 = arg0->GetValue(ctx);
@@ -3047,8 +3047,8 @@ static llvm::Value *lEmitVaryingSelect(FunctionEmitContext *ctx, llvm::Value *te
 
 static void lEmitSelectExprCode(FunctionEmitContext *ctx, llvm::Value *testVal, llvm::Value *oldMask,
                                 llvm::Value *fullMask, Expr *expr, llvm::Value *exprPtr) {
-    llvm::BasicBlock *bbEval = ctx->CreateBasicBlock("select_eval_expr");
-    llvm::BasicBlock *bbDone = ctx->CreateBasicBlock("select_done");
+    llvm::BasicBlock *bbEval = ctx->CreateBasicBlock("select_eval_expr", ctx->GetCurrentBasicBlock());
+    llvm::BasicBlock *bbDone = ctx->CreateBasicBlock("select_done", bbEval);
 
     // Check to see if the test was true for any of the currently executing
     // program instances.
@@ -3086,9 +3086,9 @@ llvm::Value *SelectExpr::GetValue(FunctionEmitContext *ctx) const {
         // the value of so that if the other one has side-effects or
         // accesses invalid memory, it doesn't execute.
         llvm::Value *testVal = test->GetValue(ctx);
-        llvm::BasicBlock *testTrue = ctx->CreateBasicBlock("select_true");
-        llvm::BasicBlock *testFalse = ctx->CreateBasicBlock("select_false");
-        llvm::BasicBlock *testDone = ctx->CreateBasicBlock("select_done");
+        llvm::BasicBlock *testTrue = ctx->CreateBasicBlock("select_true", ctx->GetCurrentBasicBlock());
+        llvm::BasicBlock *testFalse = ctx->CreateBasicBlock("select_false", testTrue);
+        llvm::BasicBlock *testDone = ctx->CreateBasicBlock("select_done", testFalse);
         ctx->BranchInst(testTrue, testFalse, testVal);
 
         ctx->SetCurrentBasicBlock(testTrue);
