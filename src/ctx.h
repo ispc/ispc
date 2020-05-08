@@ -302,7 +302,7 @@ class FunctionEmitContext {
     llvm::Value *GetStringPtr(const std::string &str);
 
     /** Create a new basic block with given name */
-    llvm::BasicBlock *CreateBasicBlock(const char *name);
+    llvm::BasicBlock *CreateBasicBlock(const char *name, llvm::BasicBlock *insertAfter = NULL);
 
     /** Given a vector with element type i1, return a vector of type
         LLVMTypes::BoolVectorType.  This method handles the conversion for

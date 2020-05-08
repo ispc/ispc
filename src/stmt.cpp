@@ -413,9 +413,9 @@ void IfStmt::EmitCode(FunctionEmitContext *ctx) const {
         // 'If' statements with uniform conditions are relatively
         // straightforward.  We evaluate the condition and then jump to
         // either the 'then' or 'else' clause depending on its value.
-        llvm::BasicBlock *bthen = ctx->CreateBasicBlock("if_then");
-        llvm::BasicBlock *belse = ctx->CreateBasicBlock("if_else");
-        llvm::BasicBlock *bexit = ctx->CreateBasicBlock("if_exit");
+        llvm::BasicBlock *bthen = ctx->CreateBasicBlock("if_then", ctx->GetCurrentBasicBlock());
+        llvm::BasicBlock *belse = ctx->CreateBasicBlock("if_else", bthen);
+        llvm::BasicBlock *bexit = ctx->CreateBasicBlock("if_exit", belse);
 
         // Jump to the appropriate basic block based on the value of
         // the 'if' test
@@ -786,9 +786,9 @@ void DoStmt::EmitCode(FunctionEmitContext *ctx) const {
         Warning(testExpr->pos, "Uniform condition supplied to \"cdo\" "
                                "statement.");
 
-    llvm::BasicBlock *bloop = ctx->CreateBasicBlock("do_loop");
-    llvm::BasicBlock *bexit = ctx->CreateBasicBlock("do_exit");
-    llvm::BasicBlock *btest = ctx->CreateBasicBlock("do_test");
+    llvm::BasicBlock *bloop = ctx->CreateBasicBlock("do_loop", ctx->GetCurrentBasicBlock());
+    llvm::BasicBlock *btest = ctx->CreateBasicBlock("do_test", bloop);
+    llvm::BasicBlock *bexit = ctx->CreateBasicBlock("do_exit", btest);
     bool emulateUniform = false;
 #ifdef ISPC_GENX_ENABLED
     if (!uniformTest && g->target->getISA() == Target::GENX) {
@@ -954,10 +954,10 @@ void ForStmt::EmitCode(FunctionEmitContext *ctx) const {
     if (!ctx->GetCurrentBasicBlock())
         return;
 
-    llvm::BasicBlock *btest = ctx->CreateBasicBlock("for_test");
-    llvm::BasicBlock *bstep = ctx->CreateBasicBlock("for_step");
-    llvm::BasicBlock *bloop = ctx->CreateBasicBlock("for_loop");
-    llvm::BasicBlock *bexit = ctx->CreateBasicBlock("for_exit");
+    llvm::BasicBlock *btest = ctx->CreateBasicBlock("for_test", ctx->GetCurrentBasicBlock());
+    llvm::BasicBlock *bloop = ctx->CreateBasicBlock("for_loop", btest);
+    llvm::BasicBlock *bstep = ctx->CreateBasicBlock("for_step", bloop);
+    llvm::BasicBlock *bexit = ctx->CreateBasicBlock("for_exit", bstep);
 
     bool uniformTest = test ? test->GetType()->IsUniformType()
                             : (!g->opt.disableUniformControlFlow && !lHasVaryingBreakOrContinue(stmts));
@@ -1746,8 +1746,8 @@ void ForeachStmt::EmitCodeForGenX(FunctionEmitContext *ctx) const {
     ctx->SetFunctionMask(LLVMMaskAllOn);
     llvm::Value *execMask = ctx->GenXStartUnmaskedRegion();
 
-    llvm::BasicBlock *bbBody = ctx->CreateBasicBlock("foreach_body");
-    llvm::BasicBlock *bbExit = ctx->CreateBasicBlock("foreach_exit");
+    llvm::BasicBlock *bbBody = ctx->CreateBasicBlock("foreach_body", ctx->GetCurrentBasicBlock());
+    llvm::BasicBlock *bbExit = ctx->CreateBasicBlock("foreach_exit", bbBody);
 
     ctx->SetDebugPos(pos);
     ctx->StartScope();
@@ -1767,9 +1767,9 @@ void ForeachStmt::EmitCodeForGenX(FunctionEmitContext *ctx) const {
     for (int i = 0; i < nDims; ++i) {
         // Basic blocks that we'll fill in later with the looping logic for
         // this dimension.
-        bbReset.push_back(ctx->CreateBasicBlock("foreach_reset"));
-        bbStep.push_back(ctx->CreateBasicBlock("foreach_step"));
-        bbTest.push_back(ctx->CreateBasicBlock("foreach_test"));
+        bbTest.push_back(ctx->CreateBasicBlock("foreach_test", i == 0 ? ctx->GetCurrentBasicBlock() : bbTest[i - 1]));
+        bbStep.push_back(ctx->CreateBasicBlock("foreach_step", bbBody));
+        bbReset.push_back(ctx->CreateBasicBlock("foreach_reset", bbStep[i]));
 
         llvm::Value *sv = startExprs[i]->GetValue(ctx);
         llvm::Value *ev = endExprs[i]->GetValue(ctx);
@@ -1991,10 +1991,10 @@ void ForeachActiveStmt::EmitCode(FunctionEmitContext *ctx) const {
     ctx->EmitVariableDebugInfo(sym);
 
     // The various basic blocks that we'll need in the below
-    llvm::BasicBlock *bbFindNext = ctx->CreateBasicBlock("foreach_active_find_next");
-    llvm::BasicBlock *bbBody = ctx->CreateBasicBlock("foreach_active_body");
-    llvm::BasicBlock *bbCheckForMore = ctx->CreateBasicBlock("foreach_active_check_for_more");
-    llvm::BasicBlock *bbDone = ctx->CreateBasicBlock("foreach_active_done");
+    llvm::BasicBlock *bbFindNext = ctx->CreateBasicBlock("foreach_active_find_next", ctx->GetCurrentBasicBlock());
+    llvm::BasicBlock *bbBody = ctx->CreateBasicBlock("foreach_active_body", bbFindNext);
+    llvm::BasicBlock *bbCheckForMore = ctx->CreateBasicBlock("foreach_active_check_for_more", bbBody);
+    llvm::BasicBlock *bbDone = ctx->CreateBasicBlock("foreach_active_done", bbCheckForMore);
 
     // Save the old mask so that we can restore it at the end
     llvm::Value *oldInternalMask = ctx->GetInternalMask();
@@ -2179,10 +2179,10 @@ void ForeachUniqueStmt::EmitCode(FunctionEmitContext *ctx) const {
     ctx->EmitVariableDebugInfo(sym);
 
     // The various basic blocks that we'll need in the below
-    llvm::BasicBlock *bbFindNext = ctx->CreateBasicBlock("foreach_find_next");
-    llvm::BasicBlock *bbBody = ctx->CreateBasicBlock("foreach_body");
-    llvm::BasicBlock *bbCheckForMore = ctx->CreateBasicBlock("foreach_check_for_more");
-    llvm::BasicBlock *bbDone = ctx->CreateBasicBlock("foreach_done");
+    llvm::BasicBlock *bbFindNext = ctx->CreateBasicBlock("foreach_find_next", ctx->GetCurrentBasicBlock());
+    llvm::BasicBlock *bbBody = ctx->CreateBasicBlock("foreach_body", bbFindNext);
+    llvm::BasicBlock *bbCheckForMore = ctx->CreateBasicBlock("foreach_check_for_more", bbBody);
+    llvm::BasicBlock *bbDone = ctx->CreateBasicBlock("foreach_done", bbCheckForMore);
 
     // Prepare the FunctionEmitContext
     ctx->StartScope();
@@ -2467,6 +2467,7 @@ struct SwitchVisitInfo {
         ctx = c;
         defaultBlock = NULL;
         lastBlock = NULL;
+        insertAfter = ctx->GetCurrentBasicBlock();
     }
 
     FunctionEmitContext *ctx;
@@ -2487,6 +2488,8 @@ struct SwitchVisitInfo {
        we create the basic block for the next one, we'll use this to update
        the nextBlock map<> above. */
     llvm::BasicBlock *lastBlock;
+
+    llvm::BasicBlock *insertAfter;
 };
 
 static bool lSwitchASTPreVisit(ASTNode *node, void *d) {
@@ -2515,7 +2518,7 @@ static bool lSwitchASTPreVisit(ASTNode *node, void *d) {
         // value and the basic block
         char buf[32];
         snprintf(buf, sizeof(buf), "case_%d", cs->value);
-        bb = svi->ctx->CreateBasicBlock(buf);
+        bb = svi->ctx->CreateBasicBlock(buf, svi->insertAfter);
         svi->caseBlocks.push_back(std::make_pair(cs->value, bb));
     } else if (ds != NULL) {
         // And complain if we've seen another 'default' label..
@@ -2525,7 +2528,7 @@ static bool lSwitchASTPreVisit(ASTNode *node, void *d) {
         } else {
             // Otherwise create a basic block for the code following the
             // "default".
-            bb = svi->ctx->CreateBasicBlock("default");
+            bb = svi->ctx->CreateBasicBlock("default", svi->insertAfter);
             svi->defaultBlock = bb;
         }
     }
@@ -2536,6 +2539,7 @@ static bool lSwitchASTPreVisit(ASTNode *node, void *d) {
     if (bb != NULL) {
         svi->nextBlock[svi->lastBlock] = bb;
         svi->lastBlock = bb;
+        svi->insertAfter = bb;
     }
 
     return true;
@@ -2552,7 +2556,7 @@ void SwitchStmt::EmitCode(FunctionEmitContext *ctx) const {
     }
 
     // Basic block we'll end up after the switch statement
-    llvm::BasicBlock *bbDone = ctx->CreateBasicBlock("switch_done");
+    llvm::BasicBlock *bbDone = ctx->CreateBasicBlock("switch_done", ctx->GetCurrentBasicBlock());
 
     // Walk the AST of the statements after the 'switch' to collect a bunch
     // of information about the structure of the 'case' and 'default'

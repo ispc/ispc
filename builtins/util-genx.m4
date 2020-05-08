@@ -527,9 +527,12 @@ if:
   ;;%ures * -1; but there is no mul for i64 in VISA
   %res1 = xor <$1 x i64> %ures, const_vector_size(i64, -1, $1)
   %res2 = add <$1 x i64> %res1, const_vector_size(i64, 1, $1)
-  ret <$1 x i64> %res2
+  br label %return
 else:
-  ret <$1 x i64> %ures
+  br label %return
+return:
+  %result = phi <$1 x i64> [%res2, %if], [%ures, %else]
+  ret <$1 x i64> %result
 }
 ')
 
@@ -633,9 +636,12 @@ if:
   ;;%ures * -1; but there is no mul for i64 in VISA
   %res1 = xor <$1 x i64> %ures, const_vector_size(i64, -1, $1)
   %res2 = add <$1 x i64> %res1, const_vector_size(i64, 1, $1)
-  ret <$1 x i64> %res2
+  br label %return
 else:
-  ret <$1 x i64> %ures
+  br label %return
+return:
+  %result = phi <$1 x i64> [%res2, %if], [%ures, %else]
+  ret <$1 x i64> %result
 }
 ')
 

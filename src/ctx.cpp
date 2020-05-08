@@ -900,7 +900,7 @@ void FunctionEmitContext::EmitDefaultLabel(bool checkMask, SourcePos pos) {
     llvm::BasicBlock *bbDefaultImpl = NULL;
     if (g->target->getISA() == Target::GENX) {
         // Create basic block with actual default implementation
-        bbDefaultImpl = CreateBasicBlock("default_impl");
+        bbDefaultImpl = CreateBasicBlock("default_impl", defaultBlock);
     }
 #endif
 
@@ -1027,7 +1027,7 @@ void FunctionEmitContext::EmitCaseLabel(int value, bool checkMask, SourcePos pos
     if (g->target->getISA() == Target::GENX) {
         // Create basic block with actual case implementation
         std::string bbName = bbCase->getName().str() + "_impl";
-        bbCaseImpl = CreateBasicBlock(bbName.c_str());
+        bbCaseImpl = CreateBasicBlock(bbName.c_str(), bbCase);
     }
 #endif
 
@@ -1408,8 +1408,11 @@ llvm::Value *FunctionEmitContext::GetStringPtr(const std::string &str) {
     return new llvm::BitCastInst(lstrPtr, LLVMTypes::VoidPointerType, "str_void_ptr", bblock);
 }
 
-llvm::BasicBlock *FunctionEmitContext::CreateBasicBlock(const char *name) {
-    return llvm::BasicBlock::Create(*g->ctx, name, llvmFunction);
+llvm::BasicBlock *FunctionEmitContext::CreateBasicBlock(const char *name, llvm::BasicBlock *insertAfter) {
+    llvm::BasicBlock *newBB = llvm::BasicBlock::Create(*g->ctx, name, llvmFunction);
+    if (insertAfter)
+        newBB->moveAfter(insertAfter);
+    return newBB;
 }
 
 llvm::Value *FunctionEmitContext::I1VecToBoolVec(llvm::Value *b) {
