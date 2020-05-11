@@ -501,7 +501,7 @@ void Function::emitCode(FunctionEmitContext *ctx, llvm::Function *function, Sour
             llvm::ValueAsMetadata::get(llvm::ConstantInt::getNullValue(i32Type));
         mdArgs[llvm::genx::KernelMDOp::ArgIOKinds] = llvm::MDNode::get(fContext, argInOutKinds);
         mdArgs[llvm::genx::KernelMDOp::ArgTypeDescs] = llvm::MDNode::get(fContext, argTypeDescs);
-        mdArgs[llvm::genx::KernelMDOp::Reserved_0] =
+        mdArgs[llvm::genx::KernelMDOp::NBarrierCnt] =
             llvm::ValueAsMetadata::get(llvm::ConstantInt::getNullValue(i32Type));
         mdArgs[llvm::genx::KernelMDOp::BarrierCnt] =
             llvm::ValueAsMetadata::get(llvm::ConstantInt::getNullValue(i32Type));
