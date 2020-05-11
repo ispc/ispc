@@ -13,9 +13,9 @@ RUN dnf install -y vim wget yum-utils gcc gcc-c++ git subversion python3 m4 biso
 RUN dnf install -y ncurses-static libstdc++-static zlib-static glibc-static && \
     dnf clean -y all
 
-# Download and install required version of cmake (3.12) for ISPC build
-RUN wget https://cmake.org/files/v3.12/cmake-3.12.0-Linux-x86_64.sh && mkdir /opt/cmake && sh cmake-3.12.0-Linux-x86_64.sh --prefix=/opt/cmake --skip-license && \
-    ln -s /opt/cmake/bin/cmake /usr/local/bin/cmake && rm cmake-3.12.0-Linux-x86_64.sh
+# Download and install required version of cmake (3.13) for ISPC build
+RUN wget https://github.com/Kitware/CMake/releases/download/v3.13.5/cmake-3.13.5-Linux-x86_64.sh && mkdir /opt/cmake && sh cmake-3.13.5-Linux-x86_64.sh --prefix=/opt/cmake --skip-license && \
+    ln -s /opt/cmake/bin/cmake /usr/local/bin/cmake && rm cmake-3.13.5-Linux-x86_64.sh
 
 # If you are behind a proxy, you need to configure git and svn.
 #RUN git config --global --add http.proxy http://proxy.yourcompany.com:888
