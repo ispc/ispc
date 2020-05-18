@@ -179,7 +179,13 @@ def checkout_LLVM(component, use_git, version_LLVM, revision, target_dir, from_v
 def get_llvm_enable_dump_switch(version_LLVM):
     return " -DLLVM_ENABLE_DUMP=ON "
 
-def build_LLVM(version_LLVM, revision, folder, tarball, debug, selfbuild, extra, from_validation, force, make, gcc_toolchain_path, use_git):
+def get_llvm_disable_assertions_switch(llvm_disable_assertions):
+    if llvm_disable_assertions == True:
+        return "  -DLLVM_ENABLE_ASSERTIONS=OFF"
+    else:
+        return "  -DLLVM_ENABLE_ASSERTIONS=ON"
+
+def build_LLVM(version_LLVM, revision, folder, tarball, debug, selfbuild, extra, from_validation, force, make, gcc_toolchain_path, use_git, llvm_disable_assertions):
     print_debug("Building LLVM. Version: " + version_LLVM + ". ", from_validation, alloy_build)
     if revision != "":
         print_debug("Revision: " + revision + ".\n", from_validation, alloy_build)
@@ -322,7 +328,7 @@ def build_LLVM(version_LLVM, revision, folder, tarball, debug, selfbuild, extra,
                     "  -DCMAKE_BUILD_TYPE=Release" +
                     llvm_enable_projects +
                     get_llvm_enable_dump_switch(version_LLVM) +
-                    "  -DLLVM_ENABLE_ASSERTIONS=ON" +
+                    get_llvm_disable_assertions_switch(llvm_disable_assertions) +
                     "  -DLLVM_INSTALL_UTILS=ON" +
                     (("  -DGCC_INSTALL_PREFIX=" + gcc_toolchain_path) if gcc_toolchain_path != "" else "") +
                     (("  -DCMAKE_C_COMPILER=" + gcc_toolchain_path+"/bin/gcc") if gcc_toolchain_path != "" else "") +
@@ -363,7 +369,7 @@ def build_LLVM(version_LLVM, revision, folder, tarball, debug, selfbuild, extra,
                         "  -DCMAKE_BUILD_TYPE=Release" +
                         llvm_enable_projects +
                         get_llvm_enable_dump_switch(version_LLVM) +
-                        "  -DLLVM_ENABLE_ASSERTIONS=ON" +
+                        get_llvm_disable_assertions_switch(llvm_disable_assertions) +
                         "  -DLLVM_INSTALL_UTILS=ON" +
                         (("  -DGCC_INSTALL_PREFIX=" + gcc_toolchain_path) if gcc_toolchain_path != "" else "") +
                         (("  -DCMAKE_C_COMPILER=" + gcc_toolchain_path+"/bin/gcc") if gcc_toolchain_path != "" and selfbuild_compiler == "" else "") +
@@ -387,7 +393,7 @@ def build_LLVM(version_LLVM, revision, folder, tarball, debug, selfbuild, extra,
                     '  -DCMAKE_BUILD_TYPE=Release' +
                     llvm_enable_projects +
                     get_llvm_enable_dump_switch(version_LLVM) +
-                    '  -DLLVM_ENABLE_ASSERTIONS=ON' +
+                    get_llvm_disable_assertions_switch(llvm_disable_assertions) +
                     '  -DLLVM_INSTALL_UTILS=ON' +
                     '  -DLLVM_TARGETS_TO_BUILD=AArch64\;ARM\;X86' +
                     '  -DLLVM_EXPERIMENTAL_TARGETS_TO_BUILD=WebAssembly' +
@@ -402,7 +408,7 @@ def build_LLVM(version_LLVM, revision, folder, tarball, debug, selfbuild, extra,
                     "  -DCMAKE_BUILD_TYPE=Debug" +
                     llvm_enable_projects +
                     get_llvm_enable_dump_switch(version_LLVM) +
-                    "  -DLLVM_ENABLE_ASSERTIONS=ON" +
+                    get_llvm_disable_assertions_switch(llvm_disable_assertions) +
                     "  -DLLVM_INSTALL_UTILS=ON" +
                     (("  -DGCC_INSTALL_PREFIX=" + gcc_toolchain_path) if gcc_toolchain_path != "" else "") +
                     (("  -DCMAKE_C_COMPILER=" + gcc_toolchain_path+"/bin/gcc") if gcc_toolchain_path != "" and selfbuild_compiler == "" else "") +
@@ -1026,7 +1032,7 @@ def Main():
         start_time = time.time()
         if options.build_llvm:
             build_LLVM(options.version, options.revision, options.folder, options.tarball,
-                    options.debug, options.selfbuild, options.extra, False, options.force, make, options.gcc_toolchain_path, options.use_git)
+                    options.debug, options.selfbuild, options.extra, False, options.force, make, options.gcc_toolchain_path, options.use_git, options.llvm_disable_assertions)
         if options.validation_run:
             validation_run(options.only, options.only_targets, options.branch,
                     options.number_for_performance, options.notify, options.update, int(options.speed),
@@ -1120,6 +1126,8 @@ if __name__ == '__main__':
         help='"llvm_tarball clang_tarball"', default="")
     llvm_group.add_option('--selfbuild', dest='selfbuild',
         help='make selfbuild of LLVM and clang', default=False, action="store_true")
+    llvm_group.add_option('--llvm-disable-assertions', dest='llvm_disable_assertions',
+        help='build LLVM with assertions disabled', default=False, action="store_true")
     llvm_group.add_option('--force', dest='force',
         help='rebuild LLVM', default=False, action='store_true')
     llvm_group.add_option('--extra', dest='extra',
