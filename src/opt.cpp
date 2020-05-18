@@ -2495,6 +2495,7 @@ static bool lGSBaseOffsetsGetMoreConst(llvm::CallInst *callInst) {
 static llvm::Value *lComputeCommonPointer(llvm::Value *base, llvm::Value *offsets, llvm::Instruction *insertBefore,
                                           int typeScale = 1) {
     llvm::Value *firstOffset = LLVMExtractFirstVectorElement(offsets);
+    Assert(firstOffset != NULL);
 #ifdef ISPC_GENX_ENABLED
     llvm::Value *typeScaleValue =
         firstOffset->getType() == LLVMTypes::Int32Type ? LLVMInt32(typeScale) : LLVMInt64(typeScale);
@@ -5686,6 +5687,7 @@ restart:
                 llvm::Value *ptr = st->getOperand(1);
                 llvm::Value *val = st->getOperand(0);
                 if (GetAddressSpace(ptr) == AddressSpace::External) {
+                    Assert(val != NULL);
                     Assert(llvm::isa<llvm::VectorType>(val->getType()));
                     Assert(llvm::isPowerOf2_32(val->getType()->getVectorNumElements()));
                     Assert(val->getType()->getPrimitiveSizeInBits() / 8 <= 8 * OWORD);

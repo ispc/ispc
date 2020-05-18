@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, Intel Corporation
+ * Copyright (c) 2019-2020, Intel Corporation
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -88,7 +88,8 @@ class Matrix {
         }
     }
 
-    Matrix(Matrix &mat, const char *mtxname) : nrow(mat.nrow), ncol(mat.ncol), ld(mat.ld), st(mat.st) {
+    Matrix(Matrix &mat, const char *mtxname)
+        : nrow(mat.nrow), ncol(mat.ncol), ld(mat.ld), st(mat.st), _size_(mat._size_) {
 
         this->mtxname = strdup(mtxname);
         // printf("Allocating %s \n", mtxname);

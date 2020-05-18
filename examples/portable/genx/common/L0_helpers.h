@@ -59,6 +59,11 @@ void L0InitContext(ze_driver_handle_t &hDriver, ze_device_handle_t &hDevice, ze_
     L0_SAFE_CALL(zeDriverGet(&driverCount, nullptr));
 
     ze_driver_handle_t *allDrivers = (ze_driver_handle_t *)malloc(driverCount * sizeof(ze_driver_handle_t));
+    if (allDrivers == NULL) {
+        fprintf(stderr, "%s:%d: Cannot allocate L0 drivers", __FILE__, __LINE__);
+        exit(1);
+    }
+
     L0_SAFE_CALL(zeDriverGet(&driverCount, allDrivers));
 
     // Find a driver instance with a GPU device
@@ -67,6 +72,10 @@ void L0InitContext(ze_driver_handle_t &hDriver, ze_device_handle_t &hDevice, ze_
         hDriver = allDrivers[i];
         L0_SAFE_CALL(zeDeviceGet(hDriver, &deviceCount, nullptr));
         ze_device_handle_t *allDevices = (ze_device_handle_t *)malloc(deviceCount * sizeof(ze_device_handle_t));
+        if (allDevices == NULL) {
+            fprintf(stderr, "%s:%d: Cannot allocate L0 devices", __FILE__, __LINE__);
+            exit(1);
+        }
         L0_SAFE_CALL(zeDeviceGet(hDriver, &deviceCount, allDevices));
         for (uint32_t d = 0; d < deviceCount; ++d) {
             ze_device_properties_t device_properties;

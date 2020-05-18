@@ -56,6 +56,10 @@ extern void mandelbrot_cpp(float x0, float y0, float x1, float y1, int width, in
 /* Write a PPM image file with the image of the Mandelbrot set */
 static void writePPM(int *buf, int width, int height, const char *fn) {
     FILE *fp = fopen(fn, "wb");
+    if (!fp) {
+        perror(fn);
+        exit(1);
+    }
     fprintf(fp, "P6\n");
     fprintf(fp, "%d %d\n", width, height);
     fprintf(fp, "255\n");
