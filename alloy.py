@@ -1126,7 +1126,7 @@ if __name__ == '__main__':
         help='"llvm_tarball clang_tarball"', default="")
     llvm_group.add_option('--selfbuild', dest='selfbuild',
         help='make selfbuild of LLVM and clang', default=False, action="store_true")
-    llvm_group.add_option('--llvm_disable_assertions', dest='llvm_disable_assertions',
+    llvm_group.add_option('--llvm-disable-assertions', dest='llvm_disable_assertions',
         help='build LLVM with assertions disabled', default=False, action="store_true")
     llvm_group.add_option('--force', dest='force',
         help='rebuild LLVM', default=False, action='store_true')
