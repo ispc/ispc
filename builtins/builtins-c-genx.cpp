@@ -67,6 +67,8 @@ using WidthT = int;
 #include "builtins/builtins-c-common.hpp"
 #include <cm/cm.h>
 
+#define CMPHFOCL_VEC_BSZ 8
+
 enum LaneState : bool { OFF = false, ON = true };
 
 using CStrT = const char (&)[1];
@@ -267,10 +269,11 @@ class ArgWriter {
     FIXME: __declspec(genx_SIMT(1)) is used to make __do_print_cm function be called unpredicated in simd cf.
     It is possibly an abuse of this attribute, in this case it's better to solve the issue differently.
  */
-extern "C" __declspec(cm_builtin) __declspec(genx_no_SIMD_pred) void __do_print_cm(const char *format, const char *types,
-                                                                              WidthT width, MaskT mask,
-                                                                              const ArgT *args, int numNotBoolUniArgs,
-                                                                              int numNotBoolVarArgs) {
+extern "C" __declspec(cm_builtin) __declspec(genx_no_SIMD_pred) void __do_print_cm(const char *format,
+                                                                                   const char *types, WidthT width,
+                                                                                   MaskT mask, const ArgT *args,
+                                                                                   int numNotBoolUniArgs,
+                                                                                   int numNotBoolVarArgs) {
     // boolean args are not included in total_len as we won't write them into the print surface
     // they will be written directly to format string
     // FIXME: if we won't write all arguments (which can happen if we don't fit in 128 characters), behavior
@@ -427,8 +430,10 @@ class VaryingWriter {
     This function (__do_print_lz) task is to store properly all the indexes and arguments to
     the special memory area.
  */
-extern "C" __declspec(cm_builtin) __declspec(genx_no_SIMD_pred) void __do_print_lz(int format_idx, const char *types, WidthT width, MaskT mask,
-                                                     const ArgT *args, int numUniformArgs, int numVaryingArgs) {
+extern "C" __declspec(cm_builtin) __declspec(genx_no_SIMD_pred) void __do_print_lz(int format_idx, const char *types,
+                                                                                   WidthT width, MaskT mask,
+                                                                                   const ArgT *args, int numUniformArgs,
+                                                                                   int numVaryingArgs) {
     // obtaining initial offset/pointer to write to
     svmptr_t offset = cm_print_buffer();
     // each vector is written with 3 arguments (%s%d%s)
