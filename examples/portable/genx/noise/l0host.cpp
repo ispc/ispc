@@ -171,6 +171,11 @@ static int run(int niter, int gx, int gy) {
     return (pass) ? 0 : 1;
 }
 
+static void usage() {
+    fprintf(stderr, "usage: noise [niterations] [group threads width] [group threads height]\n");
+    exit(1);
+}
+
 int main(int argc, char *argv[]) {
     int niterations = 1;
     int gx = 1, gy = 1;
@@ -179,7 +184,9 @@ int main(int argc, char *argv[]) {
         gx = atoi(argv[2]);
         gy = atoi(argv[3]);
     }
-
+    if (niterations < 1 || gx < 1 || gy < 1) {
+        usage();
+    }
     int success = 0;
 
     std::cout << "Running test with " << niterations << " iterations on " << gx << " * " << gy << " threads."

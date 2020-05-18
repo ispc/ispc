@@ -271,7 +271,7 @@ FunctionEmitContext::FunctionEmitContext(Function *func, Symbol *funSym, llvm::F
             // Note that LoadInst() needs to be used instead of direct llvm instruction generation
             // to handle correctly bool values (they need extra convertion, as memory representation
             // is i8, while in SSa form they are l1)
-            auto bb = GetCurrentBasicBlock();;
+            auto bb = GetCurrentBasicBlock();
             SetCurrentBasicBlock(returnPoint);
             llvm::Value *retVal = LoadInst(returnValuePtr, returnType, "return_value");
             SetCurrentBasicBlock(bb);
@@ -3668,6 +3668,7 @@ llvm::Value *FunctionEmitContext::GenXPrepareVectorBranch(llvm::Value *value) {
             return ret;
         ret = BroadcastValue(value, LLVMTypes::Int1VectorType);
     }
+    Assert(ret != NULL);
     return GenXSimdCFAny(ret);
 }
 

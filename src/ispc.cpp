@@ -498,6 +498,7 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, bool pic, boo
 #ifdef ISPC_GENX_ENABLED
         case CPU_GENX:
             m_ispc_target = ISPCTarget::genx_x16;
+            m_genxPlatform = GENX_PLATFORM::GENX_GEN9;
             break;
 #endif
 

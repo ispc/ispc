@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2019, Intel Corporation
+  Copyright (c) 2010-2020, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -109,7 +109,7 @@ class ArgWriter {
         auto fmt = PrintInfo::type2Specifier<T>();
         auto argPtr = getArg();
         StaticString<ARG_STR_SIZE> res;
-        sprintf(&res[0], fmt, ValueAdapter<T>(*argCast<T>(argPtr)));
+        snprintf(&res[0], ARG_STR_SIZE, fmt, ValueAdapter<T>(*argCast<T>(argPtr)));
         return res;
     }
 
@@ -121,7 +121,7 @@ class ArgWriter {
         auto argPtr = getArg();
         for (int lane = 0; lane < width_; ++lane) {
             if (mask_ & (1ull << lane)) {
-                haveBeenWritten += sprintf(&res[haveBeenWritten], fmt, ValueAdapter<T>(argCast<T>(argPtr)[lane]));
+                haveBeenWritten += snprintf(&res[haveBeenWritten], ARG_STR_SIZE, fmt, ValueAdapter<T>(argCast<T>(argPtr)[lane]));
             } else {
                 haveBeenWritten = writeOffLane<T>(res, haveBeenWritten, argPtr, lane);
             }
@@ -144,16 +144,17 @@ class ArgWriter {
 
     template <typename T>
     int writeOffLane(StaticString<ARG_STR_SIZE> &res, int haveBeenWritten, const void *argPtr, int lane) {
-        haveBeenWritten += sprintf(&res[haveBeenWritten], "((");
+        haveBeenWritten += snprintf(&res[haveBeenWritten], ARG_STR_SIZE, "((");
         auto fmt = PrintInfo::type2Specifier<T>();
-        haveBeenWritten += sprintf(&res[haveBeenWritten], fmt, ValueAdapter<T>(argCast<T>(argPtr)[lane]));
-        haveBeenWritten += sprintf(&res[haveBeenWritten], "))");
+        haveBeenWritten += snprintf(&res[haveBeenWritten], ARG_STR_SIZE, fmt, ValueAdapter<T>(argCast<T>(argPtr)[lane]));
+        haveBeenWritten += snprintf(&res[haveBeenWritten], ARG_STR_SIZE, "))");
         return haveBeenWritten;
     }
 
     template <>
     int writeOffLane<bool>(StaticString<ARG_STR_SIZE> &res, int haveBeenWritten, const void *argPtr, int lane) {
-        haveBeenWritten += sprintf(&res[haveBeenWritten], OffLaneBoolStr);
+        auto fmt = PrintInfo::type2Specifier<bool>();
+        haveBeenWritten += snprintf(&res[haveBeenWritten], ARG_STR_SIZE, fmt, OffLaneBoolStr);
         return haveBeenWritten;
     }
 };
