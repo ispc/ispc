@@ -1,4 +1,4 @@
-export void print_no() {
+export void print_f(uniform float aFOO[]) {
     print("Hello World!\n");
 }
 
