@@ -3021,6 +3021,15 @@ class PrintArgsBuilder {
                       [](const ExprWithType &elem) { Assert(elem.expr && "must have all values processed"); });
     }
 
+    void extendPtrTo64BitInt() {
+        std::for_each(argExprs_.begin(), argExprs_.end(), [](ExprWithType &exprWithType) {
+            if (exprWithType.expr->GetType()->IsPointerType())
+                exprWithType.expr = new TypeCastExpr(
+                    exprWithType.expr->GetType()->IsUniformType() ? AtomicType::UniformInt64 : AtomicType::VaryingInt64,
+                    exprWithType.expr, exprWithType.expr->pos);
+        });
+    }
+
     // Returns new args builder with subset of original args.
     // Subset is defined with pair of indexes, element with \p end index is not included.
     PrintArgsBuilder extract(int beg, int end) const {
@@ -3069,6 +3078,23 @@ class PrintArgsBuilder {
     }
 
     // current implementation of __do_print_cm requires the number of uniform arguments with bool excluded
+    int count64BitUniformArgs() const {
+        return std::count_if(argExprs_.cbegin(), argExprs_.cend(), [](const ExprWithType &argInfo) {
+            return argInfo.expr->GetType()->IsUniformType() &&
+                   g->target->getDataLayout()->getTypeSizeInBits(argInfo.expr->GetType()->LLVMType(g->ctx)) == 64;
+        });
+    }
+
+    // current implementation of __do_print_cm requires the number of varying arguments with bool excluded
+    int count64BitVaryingArgs() const {
+        return std::count_if(argExprs_.cbegin(), argExprs_.cend(), [](const ExprWithType &argInfo) {
+            return argInfo.expr->GetType()->IsVaryingType() &&
+                   g->target->getDataLayout()->getTypeSizeInBits(
+                       argInfo.expr->GetType()->LLVMType(g->ctx)->getScalarType()) == 64;
+        });
+    }
+
+    // current implementation of __do_print_cm requires the number of uniform arguments with bool excluded
     int countNonBoolUniformArgs() const {
         return std::count_if(argExprs_.cbegin(), argExprs_.cend(), [](const ExprWithType &argInfo) {
             return argInfo.expr->GetType()->IsUniformType() && argInfo.type != PrintInfo::getEncoding4Uniform<bool>();
@@ -3108,16 +3134,17 @@ class PrintArgsBuilder {
 
     // 64-bit values must become 2 i32
     template <typename OutputIter> OutputIter createAlignedScalarArgValue(llvm::Value *arg, OutputIter dst) const {
-        if (arg->getType()->getPrimitiveSizeInBits() == 64) {
+        if (g->target->getDataLayout()->getTypeSizeInBits(arg->getType()) == 64) {
             arg = castToIntIfNeeded(arg, LLVMTypes::Int64Type);
-            auto lowArg = ctx_->TruncInst(arg, LLVMTypes::Int32Type);
-            auto almostHiArg = ctx_->BinaryOperator(llvm::Instruction::LShr, arg, LLVMInt64(32));
-            auto hiArg = ctx_->TruncInst(almostHiArg, LLVMTypes::Int32Type);
+            auto *lowArg = ctx_->TruncInst(arg, LLVMTypes::Int32Type);
+            auto *almostHiArg = ctx_->BinaryOperator(llvm::Instruction::LShr, arg, LLVMInt64(32));
+            auto *hiArg = ctx_->TruncInst(almostHiArg, LLVMTypes::Int32Type);
             *dst++ = lowArg;
             *dst++ = hiArg;
             return dst;
         } else {
-            Assert(arg->getType()->getPrimitiveSizeInBits() == 32 && "must be either 32 or 64 bit");
+            Assert(g->target->getDataLayout()->getTypeSizeInBits(arg->getType()) == 32 &&
+                   "must be either 32 or 64 bit");
             *dst++ = castToIntIfNeeded(arg, LLVMTypes::Int32Type);
             return dst;
         }
@@ -3138,11 +3165,12 @@ class PrintArgsBuilder {
 
     llvm::Value *castToIntIfNeeded(llvm::Value *val, llvm::Type *intTy) const {
         Assert(intTy->isIntegerTy());
-        Assert(val->getType()->getPrimitiveSizeInBits() == intTy->getPrimitiveSizeInBits());
-        if (val->getType() != intTy)
+        Assert(g->target->getDataLayout()->getTypeSizeInBits(val->getType()) == intTy->getPrimitiveSizeInBits());
+        if (val->getType() != intTy) {
             if (val->getType()->isPointerTy())
                 return ctx_->PtrToIntInst(val, intTy);
-        return ctx_->BitCastInst(val, intTy);
+            return ctx_->BitCastInst(val, intTy);
+        }
         return val;
     }
 };
@@ -3319,7 +3347,7 @@ static std::vector<PrintSliceInfo> getPrintSlices(const std::string &format, Pri
 
 // prepares arguments for __do_print_cm function
 std::vector<llvm::Value *> PrintStmt::getDoPrintCMArgs(FunctionEmitContext *ctx) const {
-    std::vector<llvm::Value *> doPrintCMArgs(GENX_NUM_IDX);
+    std::vector<llvm::Value *> doPrintCMArgs(GENX_NUM_IDX - 2);
     doPrintCMArgs[FORMAT_IDX] = ctx->GetStringPtr(format);
     doPrintCMArgs[WIDTH_IDX] = LLVMInt32(g->target->getVectorWidth());
     doPrintCMArgs[MASK_IDX] = ctx->LaneMask(ctx->GenXSimdCFPredicate(LLVMMaskAllOn));
@@ -3356,6 +3384,8 @@ static std::vector<llvm::Value *> getDoPrintLZArgs(const std::string &format, Pr
     doPrintLZArgs[PrintStmt::ARGS_IDX] = args.emitArgCode();
     doPrintLZArgs[PrintStmt::UNI_NUM_IDX] = LLVMInt32(args.countUniformArgs());
     doPrintLZArgs[PrintStmt::VAR_NUM_IDX] = LLVMInt32(args.countVaryingArgs());
+    doPrintLZArgs[PrintStmt::UNI_64_NUM_IDX] = LLVMInt32(args.count64BitUniformArgs());
+    doPrintLZArgs[PrintStmt::VAR_64_NUM_IDX] = LLVMInt32(args.count64BitVaryingArgs());
     return doPrintLZArgs;
 }
 
@@ -3381,6 +3411,7 @@ void emitCode4LZPrintSlice(const PrintSliceInfo &printSlice, PrintLZFormatStrBui
 
 void PrintStmt::emitCode4LZ(FunctionEmitContext *ctx) const {
     auto allArgs = getPrintArgsBuilder(values, ctx);
+    allArgs.extendPtrTo64BitInt();
     PrintLZFormatStrBuilder formatBuilder(g->target->getVectorWidth());
     auto printSlices = getPrintSlices(format, formatBuilder, allArgs, PrintInfo::LZMaxFormatStrSize);
     for (const auto &printSlice : printSlices)

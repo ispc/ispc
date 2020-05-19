@@ -67,8 +67,6 @@ using WidthT = int;
 #include "builtins/builtins-c-common.hpp"
 #include <cm/cm.h>
 
-#define CMPHFOCL_VEC_BSZ 8
-
 enum LaneState : bool { OFF = false, ON = true };
 
 using CStrT = const char (&)[1];
@@ -311,9 +309,29 @@ CM_INLINE vector<StrIdxT, NumAuxStr> get_auxiliary_str() {
     return res;
 };
 
+// size of print argument with description in printf buffer
+constexpr int OCL32BitArgSize = 2 * sizeof(ArgT);
+constexpr int OCL64BitArgSize = 3 * sizeof(ArgT);
+
 template <typename T> static CM_INLINE void write_arg_with_promotion(svmptr_t &offset, ArgT low, ArgT high) {
-    details::cm_write_arg_ocl<T>(offset, low, high);
-    offset += CMPHFOCL_VEC_BSZ;
+    vector<ArgT, 1> dataType = details::_cm_print_type_ocl<T>();
+    cm_svm_scatter_write(vector_cast(offset), dataType);
+    offset += sizeof(ArgT);
+    if constexpr (details::is_printf_string<T>::value || sizeof(T) == sizeof(ArgT)) {
+        vector<ArgT, 1> data = low;
+        cm_svm_scatter_write(vector_cast(offset), data);
+        offset += sizeof(ArgT);
+    } else {
+        static_assert(sizeof(T) > sizeof(ArgT), "only 64-bit types are expected here");
+        vector<ArgT, 2> data;
+        data[0] = low;
+        data[1] = high;
+        vector<svmptr_t, 2> addr;
+        addr[0] = offset;
+        addr[1] = offset + sizeof(ArgT);
+        cm_svm_scatter_write(addr, data);
+        offset += 2 * sizeof(ArgT);
+    }
 }
 
 // Both UniformWriter and VaryingWriter promote both current offset in the print
@@ -340,7 +358,8 @@ class UniformWriter {
     // and writes it to cm printf surface
     template <typename T> CM_INLINE void WriteArg() {
         ArgT low, high;
-        if constexpr (sizeof(T) > 4) {
+        // for level-zero runtime pointer is always stored in 64 bits
+        if constexpr (sizeof(T) > 4 || std::is_pointer<T>::value) {
             low = GetElementaryArg();
             high = GetElementaryArg();
         } else {
@@ -409,6 +428,8 @@ class VaryingWriter {
                          vector values stored by scalar values with the previous rule being applied)
     @param numUniformArgs   number of uniform arguments
     @param numVaryingArgs   number of varying arguments
+    @param num64BitUniformArgs   number of 64-bit uniform arguments
+    @param num64BitVaryingArgs   number of 64-bit varying arguments
 
     Root: cm/lz printf works in the following way. All strings (format and %s) must be compile known,
     as the backend will eventually have to store them special sections (patch tokens). For every string
@@ -430,14 +451,14 @@ class VaryingWriter {
     This function (__do_print_lz) task is to store properly all the indexes and arguments to
     the special memory area.
  */
-extern "C" __declspec(cm_builtin) __declspec(genx_no_SIMD_pred) void __do_print_lz(int format_idx, const char *types,
-                                                                                   WidthT width, MaskT mask,
-                                                                                   const ArgT *args, int numUniformArgs,
-                                                                                   int numVaryingArgs) {
+extern "C" __declspec(cm_builtin) __declspec(genx_no_SIMD_pred) void __do_print_lz(
+    int format_idx, const char *types, WidthT width, MaskT mask, const ArgT *args, int numUniformArgs,
+    int numVaryingArgs, int num64BitUniformArgs, int num64BitVaryingArgs) {
     // obtaining initial offset/pointer to write to
     svmptr_t offset = cm_print_buffer();
     // each vector is written with 3 arguments (%s%d%s)
-    auto total_len = CMPHFOCL_STR_SZ + (numUniformArgs + 3 * width * numVaryingArgs) * CMPHFOCL_VEC_BSZ;
+    auto total_len = CMPHFOCL_STR_SZ + (numUniformArgs + 3 * width * numVaryingArgs) * OCL32BitArgSize +
+                     (num64BitUniformArgs + width * num64BitVaryingArgs) * (OCL64BitArgSize - OCL32BitArgSize);
     // different threads write in parallel to the print buffer,
     // this function atomically allocates free space and returns offset to it
     offset += details::_cm_print_init_offset_ocl(offset, total_len);
