@@ -280,7 +280,7 @@ FunctionEmitContext::FunctionEmitContext(Function *func, Symbol *funSym, llvm::F
 #if ISPC_LLVM_VERSION <= ISPC_LLVM_9_0
                 inst->setAlignment(g->target->getNativeVectorAlignment());
 #else // LLVM 10.0+
-                inst->setAlignment(llvm::MaybeAlign(g->target->getNativeVectorAlignment()));
+                inst->setAlignment(llvm::MaybeAlign(g->target->getNativeVectorAlignment()).valueOrOne());
 #endif
             }
             llvm::ReturnInst::Create(*g->ctx, offBB);
@@ -2086,7 +2086,7 @@ llvm::Value *FunctionEmitContext::LoadInst(llvm::Value *ptr, const Type *type, c
 #if ISPC_LLVM_VERSION <= ISPC_LLVM_9_0
         inst->setAlignment(g->target->getNativeVectorAlignment());
 #else // LLVM 10.0+
-        inst->setAlignment(llvm::MaybeAlign(g->target->getNativeVectorAlignment()));
+        inst->setAlignment(llvm::MaybeAlign(g->target->getNativeVectorAlignment()).valueOrOne());
 #endif
     }
 
@@ -2222,10 +2222,10 @@ llvm::Value *FunctionEmitContext::LoadInst(llvm::Value *ptr, llvm::Value *mask, 
 #elif ISPC_LLVM_VERSION >= ISPC_LLVM_11_0
             llvm::PointerType *ptr_type = llvm::dyn_cast<llvm::PointerType>(ptr->getType());
             llvm::Instruction *inst = new llvm::LoadInst(ptr_type->getPointerElementType(), ptr, name,
-                                                         false /* not volatile */, llvm::MaybeAlign(align), bblock);
+                                                         false /* not volatile */, llvm::MaybeAlign(align).valueOrOne(), bblock);
 #else
             llvm::Instruction *inst =
-                new llvm::LoadInst(ptr, name, false /* not volatile */, llvm::MaybeAlign(align), bblock);
+                new llvm::LoadInst(ptr, name, false /* not volatile */, llvm::MaybeAlign(align).valueOrOne(), bblock);
 #endif
             AddDebugPos(inst);
             llvm::Value *loadVal = inst;
@@ -2436,7 +2436,7 @@ llvm::Value *FunctionEmitContext::AllocaInst(llvm::Type *llvmType, const char *n
 #if ISPC_LLVM_VERSION <= ISPC_LLVM_9_0
         inst->setAlignment(align);
 #else // LLVM 10.0+
-        inst->setAlignment(llvm::MaybeAlign(align));
+        inst->setAlignment(llvm::MaybeAlign(align).valueOrOne());
 #endif
     }
     // Don't add debugging info to alloca instructions
@@ -2702,7 +2702,7 @@ void FunctionEmitContext::StoreInst(llvm::Value *value, llvm::Value *ptr, const 
 #if ISPC_LLVM_VERSION <= ISPC_LLVM_9_0
         inst->setAlignment(g->target->getNativeVectorAlignment());
 #else // LLVM 10.0+
-        inst->setAlignment(llvm::MaybeAlign(g->target->getNativeVectorAlignment()));
+        inst->setAlignment(llvm::MaybeAlign(g->target->getNativeVectorAlignment()).valueOrOne());
 #endif
     }
 
