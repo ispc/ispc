@@ -6,7 +6,10 @@ export void print_fuf(uniform float aFOO[], uniform float b) {
         varBoolVal = false;
 
     print("Test bool: uniform: %, %;", uniBoolVal, !uniBoolVal);
-    print(" varying: %, %\n", varBoolVal, !varBoolVal);
+    print(" varying: %, %;", varBoolVal, !varBoolVal);
+
+    if (a > b/2)
+        print(" in simd cf: %, %.\n", varBoolVal, !varBoolVal);
 }
 
 export void print_result() {
@@ -38,5 +41,33 @@ export void print_result() {
               ",false,false,true,false,false,true,false,false"
               ",true,false,false,true,false,false,true,false"
               ",false,true,false,false,true,false,false,true");
-    print("]\n");
+
+    print("]; in simd cf: [_________,_________,true,false");
+    if (programCount > 4)
+        print(",true,true,false,true");
+    if (programCount > 8)
+        print(",true,false,true,true,false,true,true,false");
+    if (programCount > 16)
+        print(",true,true,false,true,true,false,true,true"
+              ",false,true,true,false,true,true,false,true");
+    if (programCount > 32)
+        print(",true,false,true,true,false,true,true,false"
+              ",true,true,false,true,true,false,true,true"
+              ",false,true,true,false,true,true,false,true"
+              ",true,false,true,true,false,true,true,false");
+
+    print("], [_________,_________,false,true");
+    if (programCount > 4)
+        print(",false,false,true,false");
+    if (programCount > 8)
+        print(",false,true,false,false,true,false,false,true");
+    if (programCount > 16)
+        print(",false,false,true,false,false,true,false,false"
+              ",true,false,false,true,false,false,true,false");
+    if (programCount > 32)
+        print(",false,true,false,false,true,false,false,true"
+              ",false,false,true,false,false,true,false,false"
+              ",true,false,false,true,false,false,true,false"
+              ",false,true,false,false,true,false,false,true");
+    print("].\n");
 }

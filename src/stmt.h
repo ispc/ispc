@@ -499,11 +499,13 @@ class PrintStmt : public Stmt {
         MASK_IDX,   // the current lane mask
         ARGS_IDX,   // a pointer to an array of pointers to the values to be printed
 #ifdef ISPC_GENX_ENABLED
-        UNI_NUM_IDX,  // number of uniform nonbool values
-        VAR_NUM_IDX,  // number of varying nonbool values
-        GENX_NUM_IDX, // number of arguments of __do_print_cm
-#endif                // ISPC_GENX_ENABLED
-                      // number of arguments of __do_print
+        UNI_NUM_IDX,    // number of all uniform values
+        VAR_NUM_IDX,    // number of all varying values
+        UNI_64_NUM_IDX, // number of 64-bit uniform values
+        VAR_64_NUM_IDX, // number of 64-bit varying values
+        GENX_NUM_IDX,   // number of arguments of __do_print_cm
+#endif                  // ISPC_GENX_ENABLED
+       // number of arguments of __do_print
         STD_NUM_IDX = ARGS_IDX + 1
     };
 
