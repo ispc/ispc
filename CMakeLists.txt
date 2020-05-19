@@ -122,8 +122,10 @@ endif()
 
 # If GenX target is enabled, generate build targets for genx examples and ISPCRT
 if (GENX_ENABLED)
+    option(ISPC_INCLUDE_RT "Generate build targets for ISPC runtime." ON)
     option(ISPC_INCLUDE_GENX_EXAMPLES "Generate build targets for the ISPC GenX examples" ON)
 else()
+    option(ISPC_INCLUDE_RT "Generate build targets for ISPC runtime." OFF)
     option(ISPC_INCLUDE_GENX_EXAMPLES "Generate build targets for the ISPC GenX examples" OFF)
 endif()
 
@@ -157,6 +159,7 @@ else(NOT CMAKE_BUILD_TYPE)
     message(STATUS "Build type not specified: Use Release by default.")
 endif(CMAKE_BUILD_TYPE)
 
+list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/ispcrt/cmake)
 include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/FixWindowsPath.cmake)
 include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/LLVMConfig.cmake)
 include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/Git.cmake)
@@ -505,6 +508,10 @@ endif()
 if (ISPC_INCLUDE_BENCHMARKS)
     enable_testing()
     add_subdirectory(benchmarks)
+endif()
+
+if (ISPC_INCLUDE_RT)
+    add_subdirectory(ispcrt)
 endif()
 
 # Install
