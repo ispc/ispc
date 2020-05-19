@@ -2221,8 +2221,9 @@ llvm::Value *FunctionEmitContext::LoadInst(llvm::Value *ptr, llvm::Value *mask, 
             llvm::Instruction *inst = new llvm::LoadInst(ptr, name, false /* not volatile */, align, bblock);
 #elif ISPC_LLVM_VERSION >= ISPC_LLVM_11_0
             llvm::PointerType *ptr_type = llvm::dyn_cast<llvm::PointerType>(ptr->getType());
-            llvm::Instruction *inst = new llvm::LoadInst(ptr_type->getPointerElementType(), ptr, name,
-                                                         false /* not volatile */, llvm::MaybeAlign(align).valueOrOne(), bblock);
+            llvm::Instruction *inst =
+                new llvm::LoadInst(ptr_type->getPointerElementType(), ptr, name, false /* not volatile */,
+                                   llvm::MaybeAlign(align).valueOrOne(), bblock);
 #else
             llvm::Instruction *inst =
                 new llvm::LoadInst(ptr, name, false /* not volatile */, llvm::MaybeAlign(align).valueOrOne(), bblock);
