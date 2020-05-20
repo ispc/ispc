@@ -32,27 +32,29 @@
 
 function(add_perf_example)
     set(options CM_TEST)
-    set(oneValueArgs NAME ISPC_SRC_NAME ISPC_TARGET CM_SRC_NAME ISPC_OBJ_NAME HOST_NAME CM_HOST_NAME CM_OBJ_NAME TEST_NAME CM_TEST_NAME)
+    set(oneValueArgs NAME ISPC_SRC_NAME ISPC_TARGET CM_SRC_NAME CM_OBJ_NAME TEST_NAME CM_TEST_NAME)
     set(multiValueArgs ISPC_FLAGS HOST_SOURCES CM_HOST_SOURCES CM_HOST_FLAGS)
     cmake_parse_arguments("parsed" "${options}" "${oneValueArgs}" "${multiValueArgs}" ${ARGN} )
-    # Compile ISPC kernel
-    list(APPEND ISPC_BUILD_OUTPUT ${parsed_ISPC_OBJ_NAME})
-    add_custom_command(OUTPUT ${ISPC_BUILD_OUTPUT}
-                       COMMAND ${ISPC_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/${parsed_ISPC_SRC_NAME}.ispc ${parsed_ISPC_FLAGS} --target=${parsed_ISPC_TARGET} -o ${parsed_ISPC_OBJ_NAME}
-                       VERBATIM
-                       DEPENDS ${ISPC_EXECUTABLE}
-                       DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/${parsed_ISPC_SRC_NAME}.ispc)
-    set_source_files_properties(${ISPC_BUILD_OUTPUT} PROPERTIES GENERATED true)
-    # To show ispc source in VS solution:
-    if (WIN32)
-        set_source_files_properties("${CMAKE_CURRENT_SOURCE_DIR}/${parsed_ISPC_SRC_NAME}.ispc" PROPERTIES HEADER_FILE_ONLY TRUE)
-    endif()
+
     # Compile host code
     if (NOT HOST_SOURCES)
         return()
     endif()
     set(HOST_EXECUTABLE "host_${parsed_TEST_NAME}")
-    add_executable(${HOST_EXECUTABLE} ${parsed_HOST_SOURCES} ${ISPC_BUILD_OUTPUT} ${CMAKE_CURRENT_SOURCE_DIR}/${parsed_ISPC_SRC_NAME}.ispc)
+    add_executable(${HOST_EXECUTABLE} ${parsed_HOST_SOURCES})
+
+    # Compile device code
+    set(ISPC_EXECUTABLE_GPU ${ISPC_EXECUTABLE})
+    set(ISPC_TARGET_GEN ${parsed_ISPC_TARGET})
+    set(ISPC_TARGET_DIR ${CMAKE_CURRENT_BINARY_DIR})
+    add_ispc_kernel(${parsed_TEST_NAME} ${parsed_ISPC_SRC_NAME} "")
+    target_link_libraries(${parsed_TEST_NAME} PRIVATE ispcrt)
+
+    # Show ispc source in VS solution:
+    if (WIN32)
+        set_source_files_properties("${CMAKE_CURRENT_SOURCE_DIR}/${parsed_ISPC_SRC_NAME}" PROPERTIES HEADER_FILE_ONLY TRUE)
+    endif()
+
     if (WIN32)
         target_compile_options(${HOST_EXECUTABLE} PRIVATE /nologo /DCM_DX11 /EHsc /D_CRT_SECURE_NO_WARNINGS /Zi /DWIN32)
         target_include_directories(${HOST_EXECUTABLE} PRIVATE "${COMMON_PATH}"
@@ -63,14 +65,9 @@ function(add_perf_example)
         file(COPY "${MDF_ROOT}/runtime/lib/x64/igfx11cmrt64.dll" DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
         set_target_properties(${HOST_EXECUTABLE} PROPERTIES FOLDER "GEN_Examples")
     else()
-        # L0 build
-        target_compile_definitions(${HOST_EXECUTABLE} PRIVATE LZERO)
-        target_include_directories(${HOST_EXECUTABLE} PRIVATE "${COMMON_PATH}"
-                                   ${NEO_INSTALL_PATH}/neo/usr/local/include)
-        if (NEO_LOCAL_BUILD)
-            target_link_libraries(${HOST_EXECUTABLE} igdgmm -L${NEO_INSTALL_PATH}/neo/lib/extra)
-        endif()
-        target_link_libraries(${HOST_EXECUTABLE} rt m dl tbb ze_loader -L${NEO_INSTALL_PATH}/neo/usr/local/lib)
+        target_compile_definitions(${HOST_EXECUTABLE} PRIVATE ISPCRT)
+        target_include_directories(${HOST_EXECUTABLE} PRIVATE ${COMMON_PATH})
+        target_link_libraries(${HOST_EXECUTABLE} rt m dl tbb ispcrt)
         set_target_properties(${HOST_EXECUTABLE} PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
     endif()
     install(TARGETS "${HOST_EXECUTABLE}" RUNTIME DESTINATION ${CMAKE_CURRENT_BINARY_DIR}
@@ -107,14 +104,10 @@ function(add_perf_example)
                VERBATIM
                DEPENDS ${CMC_EXECUTABLE}
             )
-            # L0 build
-            target_compile_definitions(${CM_HOST_BINARY} PRIVATE LZERO CMKERNEL)
-            target_include_directories(${CM_HOST_BINARY} PRIVATE "${COMMON_PATH}"
-                                   ${NEO_INSTALL_PATH}/neo/usr/local/include)
-            if (NEO_LOCAL_BUILD)
-                target_link_libraries(${CM_HOST_BINARY} igdgmm -L${NEO_INSTALL_PATH}/neo/lib/extra)
-            endif()
-            target_link_libraries(${CM_HOST_BINARY} rt m dl tbb ze_loader -L${NEO_INSTALL_PATH}/neo/usr/local/lib)
+            # ISPCRT
+            target_compile_definitions(${CM_HOST_BINARY} PRIVATE ISPCRT CMKERNEL)
+            target_include_directories(${CM_HOST_BINARY} PRIVATE ${COMMON_PATH})
+            target_link_libraries(${CM_HOST_BINARY} rt m dl tbb ispcrt)
             set_target_properties(${CM_HOST_BINARY} PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
         endif()
         install(TARGETS "${CM_HOST_BINARY}" RUNTIME DESTINATION ${CMAKE_CURRENT_BINARY_DIR}
