@@ -41,7 +41,7 @@
 #include "llvm/CodeGen/IntrinsicLowering.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/IR/CFG.h"
-#include "llvm/IR/CallSite.h"
+#include "llvm/IR/AbstractCallSite.h"
 #include "llvm/IR/CallingConv.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DerivedTypes.h"
