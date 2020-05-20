@@ -503,7 +503,6 @@ void Optimize(llvm::Module *module, int optLevel) {
         if (g->target->getISA() == Target::GENX) {
             optPM.add(llvm::createGenXPacketizePass());
             optPM.add(llvm::createPromoteMemoryToRegisterPass());
-            optPM.add(llvm::createCMLowerLoadStorePass());
             // Currently ISPC uses CM runtime on Windows and L0 runtime on Linux.
             // TODO: rework this as soon as we move to L0 runtime completely
             if (g->target_os == TargetOS::windows) {
@@ -647,7 +646,6 @@ void Optimize(llvm::Module *module, int optLevel) {
             optPM.add(llvm::createGenXRegionCollapsingPass());
             optPM.add(llvm::createEarlyCSEPass());
             optPM.add(llvm::createDeadCodeEliminationPass());
-            optPM.add(llvm::createCMLowerLoadStorePass());
             // Currently ISPC uses CM runtime on Windows and L0 runtime on Linux.
             // TODO: rework this as soon as we move to L0 runtime completely
             if (g->target_os == TargetOS::windows) {
