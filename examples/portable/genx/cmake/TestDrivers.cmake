@@ -1,5 +1,5 @@
 #
-#  Copyright (c) 2019, Intel Corporation
+#  Copyright (c) 2019-2020, Intel Corporation
 #  All rights reserved.
 #
 #  Redistribution and use in source and binary forms, with or without
@@ -30,21 +30,20 @@
 #   NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 #   SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-message(STATUS "Processing cmake/TestDrivers.cmake")
 enable_testing()
 # Default test runner
 configure_file(runner.py.in runner.py)
 set(TEST_RUNNER "${CMAKE_CURRENT_BINARY_DIR}/runner.py")
 
 function(test_add)
-    set(options TEST_IS_CM TEST_IS_ISPC TEST_IS_CM_RUNTIME TEST_IS_L0_RUNTIME)
+    set(options TEST_IS_CM TEST_IS_ISPC TEST_IS_CM_RUNTIME TEST_IS_ISPCRT_RUNTIME)
     set(oneValueArgs NAME RES_IMAGE REF_IMAGE)
     cmake_parse_arguments("PARSED_ARGS" "${options}" "${oneValueArgs}" "${multiValueArgs}" ${ARGN} )
 
     # If test is written with TEST_IS_CM_RUNTIME it is supported on Windows only
-    # If test is written with TEST_IS_L0_RUNTIME it is supported on Linux only
+    # If test is written with TEST_IS_ISPCRT_RUNTIME it is supported on Linux only
     set(SUPPORTED 1)
-    if (PARSED_ARGS_TEST_IS_L0_RUNTIME AND WIN32)
+    if (PARSED_ARGS_TEST_IS_ISPCRT_RUNTIME AND WIN32)
         set(SUPPORTED 0)
     endif()
     if (PARSED_ARGS_TEST_IS_CM_RUNTIME AND NOT WIN32)
