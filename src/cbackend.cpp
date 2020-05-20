@@ -4050,8 +4050,10 @@ void CWriter::visitCallInst(llvm::CallInst &I) {
 
     llvm::Value *Callee = I.getCalledValue();
 
-    llvm::PointerType *PTy = llvm::cast<llvm::PointerType>(Callee->getType());
-    llvm::FunctionType *FTy = llvm::cast<llvm::FunctionType>(PTy->getElementType());
+    // llvm::PointerType *PTy = llvm::cast<llvm::PointerType>(Callee->getType());
+    // llvm::FunctionType *FTy = llvm::cast<llvm::FunctionType>(PTy->getElementType());
+    llvm::PointerType *PTy = llvm::cast<llvm::PointerType>(I.getType());
+    llvm::FunctionType *FTy = I.getFunctionType();
 
     // If this is a call to a struct-return function, assign to the first
     // parameter instead of passing it to the call.
@@ -4123,11 +4125,14 @@ void CWriter::visitCallInst(llvm::CallInst &I) {
             Out << "((";
             if (isStructRet)
                 printStructReturnPointerFunctionType(Out, PAL,
-                                                     llvm::cast<llvm::PointerType>(I.getCalledValue()->getType()));
+                                                     // llvm::cast<llvm::PointerType>(I.getCalledValue()->getType()));
+                                                     llvm::cast<llvm::PointerType>(I.getType()));
             else if (hasByVal)
-                printType(Out, I.getCalledValue()->getType(), false, "", true, PAL);
+                // printType(Out, I.getCalledValue()->getType(), false, "", true, PAL);
+                printType(Out, I.getType(), false, "", true, PAL);
             else
-                printType(Out, I.getCalledValue()->getType());
+                // printType(Out, I.getCalledValue()->getType());
+                printType(Out, I.getType());
             Out << ")(void*)";
         }
         writeOperand(Callee);
