@@ -37,7 +37,7 @@ test_add(NAME aobench TEST_IS_ISPCRT_RUNTIME RES_IMAGE "ao-ispc-gpu.ppm" REF_IMA
 test_add(NAME aobench TEST_IS_ISPCRT_RUNTIME RES_IMAGE "ao-ispc-gpu.ppm" REF_IMAGE "ao-cpp-serial.ppm" host_genx_aobench 3 128 128)
 test_add(NAME aobench TEST_IS_ISPCRT_RUNTIME RES_IMAGE "ao-ispc-gpu.ppm" REF_IMAGE "ao-cpp-serial.ppm" host_genx_aobench 3 256 256)
 #
-test_add(NAME mandelbrot TEST_IS_ISPCRT_RUNTIME RES_IMAGE "mandelbrot-ispc-gpu.ppm" REF_IMAGE "mandelbrot-cpp-serial.ppm" host_mandelbrot)
+test_add(NAME mandelbrot TEST_IS_ISPCRT_RUNTIME RES_IMAGE "mandelbrot-ispc-gpu.ppm" REF_IMAGE "mandelbrot-ispc-cpu.ppm" host_mandelbrot)
 test_add(NAME mandelbrot TEST_IS_ISPCRT_RUNTIME host_mandelbrot --scale=2)
 # iterations, gx, gy
 test_add(NAME noise host_genx_noise 1 1 16)
