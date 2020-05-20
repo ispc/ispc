@@ -40,8 +40,8 @@
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/CodeGen/IntrinsicLowering.h"
 #include "llvm/CodeGen/Passes.h"
-#include "llvm/IR/CFG.h"
 #include "llvm/IR/AbstractCallSite.h"
+#include "llvm/IR/CFG.h"
 #include "llvm/IR/CallingConv.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DerivedTypes.h"
@@ -4149,8 +4149,10 @@ void CWriter::visitCallInst(llvm::CallInst &I) {
     }
 
     unsigned NumDeclaredParams = FTy->getNumParams();
-    llvm::CallSite CS(&I);
-    llvm::CallSite::arg_iterator AI = CS.arg_begin(), AE = CS.arg_end();
+    // llvm::CallSite CS(&I);
+    // llvm::CallSite::arg_iterator AI = CS.arg_begin(), AE = CS.arg_end();
+    llvm::User::op_iterator AI = I.arg_begin();
+    llvm::User::op_iterator AE = I.arg_end();
     unsigned ArgNo = 0;
     if (isStructRet) { // Skip struct return argument.
         ++AI;
