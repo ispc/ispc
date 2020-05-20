@@ -237,7 +237,12 @@ macro (ispc_compile_gpu parent_target output_prefix)
       message(STATUS "ISPC-GPU source file to be compiled: ${src}")
 
       set(input ${CMAKE_CURRENT_LIST_DIR}/${dir}/${fname}.ispc)
-      set(outdir ${CMAKE_BINARY_DIR})
+
+      if (NOT ISPC_TARGET_DIR)
+        set(ISPC_TARGET_DIR ${CMAKE_BINARY_DIR})
+      endif()
+
+      set(outdir ${ISPC_TARGET_DIR})
 
       set(result "${outdir}/${output_prefix}${fname}.spv")
 
