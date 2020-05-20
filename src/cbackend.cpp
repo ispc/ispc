@@ -711,7 +711,7 @@ llvm::raw_ostream &CWriter::printSimpleType(llvm::raw_ostream &Out, llvm::Type *
         return printSimpleType(Out, llvm::Type::getInt32Ty(Ty->getContext()), isSigned,
                                " __attribute__((vector_size(64))) " + NameSoFar);
 
-    case llvm::Type::VectorTyID: {
+    case llvm::Type::FixedVectorTyID: {
         llvm::VectorType *VTy = llvm::cast<llvm::VectorType>(Ty);
 #if 1
         const char *suffix = NULL;
@@ -1635,7 +1635,7 @@ void CWriter::printConstant(llvm::Constant *CPV, bool Static) {
             Out << ")";
         break;
     }
-    case llvm::Type::VectorTyID: {
+    case llvm::Type::FixedVectorTyID: {
         llvm::VectorType *VT = llvm::dyn_cast<llvm::VectorType>(CPV->getType());
 
         if (llvm::isa<llvm::ConstantAggregateZero>(CPV)) {
