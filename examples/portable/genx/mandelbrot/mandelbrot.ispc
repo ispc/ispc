@@ -30,53 +30,60 @@
    NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
    SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
-static inline int mandel(float c_re, float c_im, uniform int count)
-{
-  float z_re = c_re, z_im = c_im;
-  int j = 0;
-  for (uniform int i = 0; i < count; ++i) {
-    bool done = (z_re * z_re + z_im * z_im > 4.f);
-    if (all(done))
-      break;
+static inline int mandel(float c_re, float c_im, uniform int count) {
+    float z_re = c_re, z_im = c_im;
+    int j = 0;
+    for (uniform int i = 0; i < count; ++i) {
+        bool done = (z_re * z_re + z_im * z_im > 4.f);
+        if (all(done))
+            break;
 
-    float new_re = z_re * z_re - z_im * z_im;
-    float new_im = 2.f * z_re * z_im;
+        float new_re = z_re * z_re - z_im * z_im;
+        float new_im = 2.f * z_re * z_im;
 
-    if (!done) {
-      z_re = c_re + new_re;
-      z_im = c_im + new_im;
+        if (!done) {
+            z_re = c_re + new_re;
+            z_im = c_im + new_im;
 
-      j++;
+            j++;
+        }
     }
-  }
 
-  return j;
+    return j;
 }
 
-task void mandelbrot_tile(uniform float x0,
-                          uniform float dx,
-                          uniform float y0,
-                          uniform float dy,
-                          uniform int width,
-                          uniform int height,
-                          uniform int tile_size,
-                          uniform int maxIterations,
-                          uniform int output[])
-{
-  uniform const int x_begin = taskIndex0 * tile_size;
-  uniform const int y_begin = taskIndex1 * tile_size;
+struct Parameters {
+    float x0;
+    float dx;
+    float y0;
+    float dy;
+    int width;
+    int height;
+    int tile_size;
+    int maxIterations;
+    int *output;
+};
 
-  uniform const int x_edge = x_begin + tile_size;
-  uniform const int y_edge = y_begin + tile_size;
+task void mandelbrot_tile(void *uniform _p) {
+    Parameters *uniform p = (Parameters * uniform) _p;
 
-  uniform const int x_end = min(x_edge, width);
-  uniform const int y_end = min(y_edge, height);
+    uniform const int x_begin = taskIndex0 * p->tile_size;
+    uniform const int y_begin = taskIndex1 * p->tile_size;
 
-  foreach (yi = y_begin... y_end, xi = x_begin... x_end) {
-    const float x = x0 + xi * dx;
-    const float y = y0 + yi * dy;
+    uniform const int x_edge = x_begin + p->tile_size;
+    uniform const int y_edge = y_begin + p->tile_size;
 
-    const int index = yi * width + xi;
-    output[index]   = mandel(x, y, maxIterations);
-  }
+    uniform const int x_end = min(x_edge, p->width);
+    uniform const int y_end = min(y_edge, p->height);
+
+    foreach (yi = y_begin... y_end, xi = x_begin... x_end) {
+        const float x = p->x0 + xi * p->dx;
+        const float y = p->y0 + yi * p->dy;
+
+        const int index = yi * p->width + xi;
+        p->output[index] = mandel(x, y, p->maxIterations);
+    }
 }
+
+#include "ispcrt.isph"
+DEFINE_CPU_ENTRY_POINT(mandelbrot_tile)

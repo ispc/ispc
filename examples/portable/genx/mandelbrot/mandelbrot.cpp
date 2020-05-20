@@ -38,7 +38,6 @@
 #pragma warning(disable : 4305)
 #endif
 
-#include "L0_helpers.h"
 #include "timing.h"
 #include <algorithm>
 #include <chrono>
@@ -48,10 +47,23 @@
 #include <iostream>
 #include <string.h>
 
-using namespace hostutil;
+// ispcrt
+#include "ispcrt.hpp"
 
 extern void mandelbrot_cpp(float x0, float y0, float x1, float y1, int width, int height, int maxIterations,
                            int output[]);
+
+struct Parameters {
+    float x0;
+    float dx;
+    float y0;
+    float dy;
+    int width;
+    int height;
+    int tile_size{32};
+    int maxIterations;
+    int *output{nullptr};
+};
 
 /* Write a PPM image file with the image of the Mandelbrot set */
 static void writePPM(int *buf, int width, int height, const char *fn) {
@@ -74,121 +86,101 @@ static void writePPM(int *buf, int width, int height, const char *fn) {
     printf("Wrote image file %s\n", fn);
 }
 
-static void usage() {
-    fprintf(stderr, "usage: mandelbrot [--scale=<factor>] [tasks iterations] [serial iterations]\n");
-    exit(1);
-}
-
 static int run(unsigned int width, unsigned int height, unsigned int test_iterations[]) {
     std::cout.setf(std::ios::unitbuf);
+
     int maxIterations = 512;
-    int tileSize = 32;
     float x0 = -2;
     float x1 = 1;
     float y0 = -1;
     float y1 = 1;
-    float dx = (x1 - x0) / width;
-    float dy = (y1 - y0) / height;
-    int *buf = (int *)aligned_alloc(4096, width * height * sizeof(int));
 
-    void *dBuf = nullptr;
-    // L0 initialization
-    ze_device_handle_t hDevice = nullptr;
-    ze_module_handle_t hModule = nullptr;
-    ze_driver_handle_t hDriver = nullptr;
-    ze_command_queue_handle_t hCommandQueue = nullptr;
-    L0InitContext(hDriver, hDevice, hModule, hCommandQueue, "mandelbrot_ispc.spv");
+    std::vector<int> buf(width * height);
+    auto run_kernel = [&](ISPCRTDeviceType type) {
+        ispcrt::Device device(type);
 
-    ze_command_list_handle_t hCommandList;
-    ze_kernel_handle_t hKernel;
-    L0Create_Kernel(hDevice, hModule, hCommandList, hKernel, "mandelbrot_tile");
-    double minTimeISPCGPU = 1e30;
-    // thread space
-    ze_group_count_t dispatchTraits = {width / tileSize, height / tileSize, 1};
-    std::cout << "Set dispatchTraits.x=" << dispatchTraits.groupCountX
-              << ", dispatchTraits.y=" << dispatchTraits.groupCountY << std::endl;
-    for (unsigned int i = 0; i < test_iterations[0]; ++i) {
-        memset((void *)buf, 0, sizeof(int) * width * height);
+        // Setup output array
+        ispcrt::Array<int> buf_dev(device, buf);
 
-        // Alloc & copy
-        ze_device_mem_alloc_desc_t allocDesc = {ZE_DEVICE_MEM_ALLOC_DESC_VERSION_CURRENT,
-                                                ZE_DEVICE_MEM_ALLOC_FLAG_DEFAULT, 0};
+        // Setup parameters structure
+        Parameters p;
 
-        L0_SAFE_CALL(zeDriverAllocDeviceMem(hDriver, &allocDesc, width * height * sizeof(int),
-                                            width * height * sizeof(int), hDevice, &dBuf));
+        p.dx = (x1 - x0) / width;
+        p.dy = (y1 - y0) / height;
+        p.x0 = x0;
+        p.y0 = y0;
+        p.width = width;
+        p.height = height;
+        p.maxIterations = maxIterations;
+        p.output = buf_dev.devicePtr();
 
-        // copy buffers to device
-        L0_SAFE_CALL(zeCommandListAppendMemoryCopy(hCommandList, dBuf, buf, width * height * sizeof(int), nullptr));
-        L0_SAFE_CALL(zeCommandListAppendBarrier(hCommandList, nullptr, 0, nullptr));
+        auto p_dev = ispcrt::Array<Parameters>(device, p);
 
-        // set kernel arguments
-        L0_SAFE_CALL(zeKernelSetArgumentValue(hKernel, 0, sizeof(float), &x0));
-        L0_SAFE_CALL(zeKernelSetArgumentValue(hKernel, 1, sizeof(float), &dx));
-        L0_SAFE_CALL(zeKernelSetArgumentValue(hKernel, 2, sizeof(float), &y0));
-        L0_SAFE_CALL(zeKernelSetArgumentValue(hKernel, 3, sizeof(float), &dy));
-        L0_SAFE_CALL(zeKernelSetArgumentValue(hKernel, 4, sizeof(int), &width));
-        L0_SAFE_CALL(zeKernelSetArgumentValue(hKernel, 5, sizeof(int), &height));
-        L0_SAFE_CALL(zeKernelSetArgumentValue(hKernel, 6, sizeof(int), &tileSize));
-        L0_SAFE_CALL(zeKernelSetArgumentValue(hKernel, 7, sizeof(int), &maxIterations));
-        L0_SAFE_CALL(zeKernelSetArgumentValue(hKernel, 8, width * height * sizeof(int), &dBuf));
+        // Create module and kernel to execute
+        ispcrt::Module module(device, "mandelbrot");
+        ispcrt::Kernel kernel(device, module, "mandelbrot_tile");
 
-        L0_SAFE_CALL(zeCommandListClose(hCommandList));
-        L0_SAFE_CALL(zeCommandQueueExecuteCommandLists(hCommandQueue, 1, &hCommandList, nullptr));
-        L0_SAFE_CALL(zeCommandQueueSynchronize(hCommandQueue, std::numeric_limits<uint32_t>::max()));
-        L0_SAFE_CALL(zeCommandListReset(hCommandList));
+        // Create task queue and execute kernel
+        ispcrt::TaskQueue queue(device);
 
-        // launch
-        reset_and_start_timer();
-        auto wct = std::chrono::system_clock::now();
-        L0_SAFE_CALL(zeCommandListAppendLaunchKernel(hCommandList, hKernel, &dispatchTraits, nullptr, 0, nullptr));
-        L0_SAFE_CALL(zeCommandListAppendBarrier(hCommandList, nullptr, 0, nullptr));
+        std::fill(buf.begin(), buf.end(), 0);
+        double minTimeISPC = 1e30;
+        const char *device_str = (type == ISPCRT_DEVICE_TYPE_GPU) ? "GPU" : "CPU";
+        std::fill(buf.begin(), buf.end(), 0);
+        for (unsigned int i = 0; i < test_iterations[0]; ++i) {
+            reset_and_start_timer();
+            queue.copyToDevice(p_dev);
+            queue.barrier();
+            queue.sync();
+            auto wct = std::chrono::system_clock::now();
+            queue.launch(kernel, p_dev, width / p.tile_size, height / p.tile_size);
+            queue.barrier();
+            queue.sync();
+            double dt = get_elapsed_mcycles();
+            auto dur = (std::chrono::system_clock::now() - wct);
+            auto secs = std::chrono::duration_cast<std::chrono::milliseconds>(dur);
+            queue.copyToHost(buf_dev);
+            queue.sync();
 
-        L0_SAFE_CALL(zeCommandListClose(hCommandList));
-        L0_SAFE_CALL(zeCommandQueueExecuteCommandLists(hCommandQueue, 1, &hCommandList, nullptr));
-        L0_SAFE_CALL(zeCommandQueueSynchronize(hCommandQueue, std::numeric_limits<uint32_t>::max()));
-        double dt = get_elapsed_mcycles();
-        auto dur = (std::chrono::system_clock::now() - wct);
-        auto secs = std::chrono::duration_cast<std::chrono::milliseconds>(dur);
-        std::cout << "@time of GPU run:\t\t\t[" << secs.count() << "] milliseconds" << std::endl;
-        printf("@time of GPU run:\t\t\t[%.3f] million cycles\n", dt);
-        minTimeISPCGPU = std::min(minTimeISPCGPU, dt);
+            // Print resulting time
+            printf("@time of %s run:\t\t\t[%ld] milliseconds\n", device_str, secs.count());
+            printf("@time of %s run:\t\t\t[%.3f] million cycles\n", device_str, dt);
+            minTimeISPC = std::min(minTimeISPC, dt);
+        }
+        printf("[mandelbrot ISPC %s]:\t\t[%.3f] million cycles (%d x %d image)\n", device_str, minTimeISPC, width,
+               height);
+    };
+    run_kernel(ISPCRT_DEVICE_TYPE_CPU);
+    writePPM(buf.data(), width, height, "mandelbrot-ispc-cpu.ppm");
 
-        L0_SAFE_CALL(zeCommandListReset(hCommandList));
-
-        // copy result to host
-        L0_SAFE_CALL(zeCommandListAppendMemoryCopy(hCommandList, buf, dBuf, width * height * sizeof(int), nullptr));
-
-        // dispatch & wait
-        L0_SAFE_CALL(zeCommandListClose(hCommandList));
-        L0_SAFE_CALL(zeCommandQueueExecuteCommandLists(hCommandQueue, 1, &hCommandList, nullptr));
-        L0_SAFE_CALL(zeCommandQueueSynchronize(hCommandQueue, std::numeric_limits<uint32_t>::max()));
-    }
-
-    writePPM(buf, width, height, "mandelbrot-ispc-gpu.ppm");
-    printf("[mandelbrot ISPC GPU]:\t\t[%.3f] million cycles (%d x %d image)\n", minTimeISPCGPU, width, height);
+    run_kernel(ISPCRT_DEVICE_TYPE_GPU);
+    writePPM(buf.data(), width, height, "mandelbrot-ispc-gpu.ppm");
 
     double minTimeSerial = 1e30;
+    std::fill(buf.begin(), buf.end(), 0);
     for (unsigned int i = 0; i < test_iterations[1]; ++i) {
-        memset((void *)buf, 0, sizeof(int) * width * height);
         reset_and_start_timer();
         auto wct = std::chrono::system_clock::now();
-        mandelbrot_cpp(x0, y0, x1, y1, width, height, maxIterations, buf);
+        mandelbrot_cpp(x0, y0, x1, y1, width, height, maxIterations, buf.data());
         double dt = get_elapsed_mcycles();
         auto dur = (std::chrono::system_clock::now() - wct);
         auto secs = std::chrono::duration_cast<std::chrono::milliseconds>(dur);
-        std::cout << "@time of CPU run:\t\t\t[" << secs.count() << "] milliseconds" << std::endl;
+
+        // Print resulting time
+        printf("@time of serial run:\t\t\t[%ld] milliseconds\n", secs.count());
+        printf("@time of serial run:\t\t\t[%.3f] million cycles\n", dt);
         minTimeSerial = std::min(minTimeSerial, dt);
-        printf("@time of CPU run:\t\t\t[%.3f] million cycles\n", dt);
     }
-
-    writePPM(buf, width, height, "mandelbrot-cpp-serial.ppm");
     printf("[mandelbrot serial]:\t\t[%.3f] million cycles (%d x %d image)\n", minTimeSerial, width, height);
-    printf("\t\t\t\t(%.2fx speedup from ISPC)\n", minTimeSerial / minTimeISPCGPU);
+    writePPM(buf.data(), width, height, "mandelbrot-cpp-serial.ppm");
 
-    free(buf);
-    L0_SAFE_CALL(zeDriverFreeMem(hDriver, dBuf));
     printf("mandelbrot PASSED!\n");
     return 0;
+}
+
+static void usage() {
+    fprintf(stderr, "usage: mandelbrot [--scale=<factor>] [tasks iterations] [serial iterations]\n");
+    exit(1);
 }
 
 int main(int argc, char *argv[]) {
@@ -214,8 +206,8 @@ int main(int argc, char *argv[]) {
         }
     }
     int success = 0;
-    std::cout << "Running test with " << test_iterations[0] << " ISPC on gpu and " << test_iterations[1]
-              << " serial iterations on " << width << " * " << height << " size." << std::endl;
+    std::cout << "Running test with " << test_iterations[0] << " iterations of ISPC on GEN and CPU and "
+              << test_iterations[1] << " serial iterations on " << width << " * " << height << " size." << std::endl;
     success = run(width, height, test_iterations);
 
     return success;
