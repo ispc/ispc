@@ -36,7 +36,7 @@
 #include <string.h>
 #include <thread>
 
-#ifndef LZERO
+#ifndef ISPCRT
 #include <cm_rt.h>
 #else
 #include "common_helpers.h"
