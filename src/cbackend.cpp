@@ -545,7 +545,8 @@ class CWriter : public llvm::FunctionPass, public llvm::InstVisitor<CWriter> {
     // isInlineAsm - Check if the instruction is a call to an inline asm chunk.
     static bool isInlineAsm(const llvm::Instruction &I) {
         if (const llvm::CallInst *CI = llvm::dyn_cast<llvm::CallInst>(&I))
-            return llvm::isa<llvm::InlineAsm>(CI->getCalledValue());
+            // return llvm::isa<llvm::InlineAsm>(CI->getCalledValue());
+            return CI->isInlineAsm();
         return false;
     }
 
@@ -4035,7 +4036,8 @@ void CWriter::lowerIntrinsics(llvm::Function &F) {
 }
 
 void CWriter::visitCallInst(llvm::CallInst &I) {
-    if (llvm::isa<llvm::InlineAsm>(I.getCalledValue()))
+    // if (llvm::isa<llvm::InlineAsm>(I.getCalledValue()))
+    if (I.isInlineAsm())
         return visitInlineAsm(I);
 
     bool WroteCallee = false;
