@@ -10,7 +10,6 @@
 //; RUN: llvm-dis %t_8.bc -o - | FileCheck %s -check-prefix=CHECK_ATTR_8
 
 // REQUIRES: X86_ENABLED
-// REQUIRES: LLVM_8_0+
 
 double ret_round(double val)
 {

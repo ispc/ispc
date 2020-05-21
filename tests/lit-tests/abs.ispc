@@ -2,7 +2,6 @@
 //; RUN: %{ispc} --emit-asm --target=sse4 %s -o - | FileCheck %s -check-prefix=CHECK_SSE4
 //; RUN: %{ispc} --emit-asm --target=avx512skx-i32x16 %s -o - | FileCheck %s -check-prefix=CHECK_AVX512
 // REQUIRES: X86_ENABLED
-// REQUIRES: LLVM_8_0+
 unsigned int foo_var(int a) {
 
 //; CHECK_SSE4: pabsd

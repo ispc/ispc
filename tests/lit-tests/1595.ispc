@@ -1,5 +1,4 @@
 // RUN: %{ispc} %s > %t 2>&1
-// REQUIRES: LLVM_8_0+
 
 struct Vec3f {
 };
