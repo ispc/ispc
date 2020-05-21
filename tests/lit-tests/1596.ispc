@@ -1,5 +1,8 @@
 //; RUN: %{ispc} %s -o %t.o --nowrap --target=avx2-i32x8 2>&1 | FileCheck %s -check-prefix=CHECK_SINGLE
 //; RUN: not %{ispc} %s -o %t.o --nowrap --target=avx2-i32x8,sse2-i32x4 2>&1 | FileCheck %s -check-prefix=CHECK_MULTI
+
+// REQUIRES: X86_ENABLED
+
 //; CHECK_SINGLE: Initializer for global variable "sz_var" is a constant for single-target compilation but not for multi-target compilation.
 //; CHECK_MULTI: Initializer for global variable "sz_var" is not a constant for multi-target compilation
 uniform int sz = sizeof(uniform int);

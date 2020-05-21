@@ -1,4 +1,4 @@
-//; RUN: not %{ispc} %s -o %t.o --nowrap --target=avx2-i32x8 2>&1 | FileCheck %s
+//; RUN: not %{ispc} %s -o %t.o --nowrap --target=host 2>&1 | FileCheck %s
 //; CHECK: Error: Initializer for global variable "g_final" must be a constant.
 struct globStruct
   {

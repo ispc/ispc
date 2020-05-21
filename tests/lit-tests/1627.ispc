@@ -1,4 +1,4 @@
-// RUN: %{ispc} --target=avx2-i32x4 %s > %t 2>&1
+// RUN: %{ispc} --target=host %s > %t 2>&1
 // REQUIRES: LLVM_8_0+
 struct FVector8
 {

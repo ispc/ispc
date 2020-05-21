@@ -5,6 +5,8 @@
 // RUN: %{ispc} --target=avx512knl-i32x16 -h %t.h %s
 // RUN: %{ispc} --target=avx512skx-i32x16 -h %t.h %s
 
+// REQUIRES: X86_ENABLED
+
 typedef float<2>    float2;
 typedef bool<2>     bool2;
 

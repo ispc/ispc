@@ -3,6 +3,7 @@
 //; RUN: %{ispc} %s -o %t.o --nostdlib --target=sse2-i32x4 --cpu=icelake-client
 //; RUN: %{ispc} %s -o %t.o --nostdlib --target=sse2-i32x4 --cpu=icl
 
+// REQUIRES: X86_ENABLED
 // REQUIRES: LLVM_8_0+
 
 uniform int i;

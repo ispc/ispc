@@ -1,4 +1,4 @@
-// RUN: %{ispc} -O0 --target=avx2-i32x8 %s > %t 2>&1
+// RUN: %{ispc} -O0 --target=host %s > %t 2>&1
 // RUN: FileCheck --input-file=%t %s
 // CHECK-NOT: Gather
 

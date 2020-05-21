@@ -12,6 +12,7 @@
 
 // The fix will not be ported to earlier versions.
 // REQUIRES: LLVM_8_0+
+// REQUIRES: X86_ENABLED
 
 struct FVector4 {
     float V[4];

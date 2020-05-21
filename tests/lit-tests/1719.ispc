@@ -1,4 +1,4 @@
-//; RUN: %{ispc} %s -o %t.o --nowrap --target=avx2-i32x8 2>&1 | FileCheck %s
+//; RUN: %{ispc} %s -o %t.o --nowrap --target=host 2>&1 | FileCheck %s
 void test(uniform int64 var1, uniform int64 var2) {
     //; CHECK: Warning: Division by zero is undefined
     var1 = -25 / 0;

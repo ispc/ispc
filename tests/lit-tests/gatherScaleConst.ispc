@@ -12,6 +12,8 @@
 // RUN: %{ispc} %s --target=avx512skx-i32x16 -h %t.h --emit-llvm -o %t.bc
 // RUN: llvm-dis %t.bc -o - | FileCheck %s -check-prefix=CHECK_AVX512SKX_I32X16 --implicit-check-not "switch"
 
+// REQUIRES: X86_ENABLED
+
 //; CHECK_AVX2_I64X4: llvm.x86.avx2.gather.d.ps
 
 //; CHECK_AVX2_I32X8: llvm.x86.avx2.gather.d.ps.256

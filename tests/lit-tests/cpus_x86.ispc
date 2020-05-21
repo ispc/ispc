@@ -22,6 +22,8 @@
 //; RUN: %{ispc} %s -o %t.o --nostdlib --target=sse2-i32x4 --cpu=knl
 //; RUN: %{ispc} %s -o %t.o --nostdlib --target=sse2-i32x4 --cpu=skx
 
+// REQUIRES: X86_ENABLED
+
 uniform int i;
 
 void foo() {}

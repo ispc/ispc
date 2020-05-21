@@ -1,4 +1,4 @@
-//; RUN: %{ispc} %s -o %t.o --nowrap --target=avx2-i32x8 2>&1 | FileCheck %s
+//; RUN: %{ispc} %s -o %t.o --nowrap --target=host 2>&1 | FileCheck %s
 //; CHECK: Warning: Converting from const pointer type "const uniform float * uniform" to pointer type "uniform float *
 
 /* CASE 1 : const uniform float* uniform -> uniform float* uniform

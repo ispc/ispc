@@ -1,11 +1,13 @@
 //; RUN: not %{ispc} %s --target=sse2-i32x4 2>&1 | FileCheck %s -check-prefix=CHECK_4
 //; RUN: not %{ispc} %s --target=avx1-i32x8 2>&1 | FileCheck %s -check-prefix=CHECK_8
-//; CHECK_4: varying_init_error.ispc:13:14
-//; CHECK_4: varying_init_error.ispc:16:23
-//; CHECK_4: varying_init_error.ispc:18:14
-//; CHECK_8: varying_init_error.ispc:21:14
-//; CHECK_8: varying_init_error.ispc:24:35
-//; CHECK_8: varying_init_error.ispc:26:14
+//; CHECK_4: varying_init_error.ispc:15:14
+//; CHECK_4: varying_init_error.ispc:18:23
+//; CHECK_4: varying_init_error.ispc:20:14
+//; CHECK_8: varying_init_error.ispc:23:14
+//; CHECK_8: varying_init_error.ispc:26:35
+//; CHECK_8: varying_init_error.ispc:28:14
+
+//; REQUIRES: X86_ENABLED
 
 export void foo() {
 #if TARGET_WIDTH == 4
