@@ -1,5 +1,5 @@
 #
-#  Copyright (c) 2018-2019, Intel Corporation
+#  Copyright (c) 2018-2020, Intel Corporation
 #  All rights reserved.
 #
 #  Redistribution and use in source and binary forms, with or without
@@ -45,6 +45,10 @@ list(APPEND LIT_ARGS "${CMAKE_CURRENT_SOURCE_DIR}/lit-tests")
 list(APPEND LIT_ARGS "-Dispc_test_exec_root=${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/${CMAKE_CFG_INTDIR}/tests")
 # LLVM version used to build ISPC
 list(APPEND LIT_ARGS "-Dispc_llvm_version_number=${LLVM_VERSION_NUMBER}")
+# ISPC enabled targets
+list(APPEND LIT_ARGS "-Dx86_enabled=$<IF:$<BOOL:${X86_ENABLED}>,'ON','OFF'>")
+list(APPEND LIT_ARGS "-Darm_enabled=$<IF:$<BOOL:${ARM_ENABLED}>,'ON','OFF'>")
+list(APPEND LIT_ARGS "-Dwasm_enabled=$<IF:$<BOOL:${WASM_ENABLED}>,'ON','OFF'>")
 add_custom_target(check-all DEPENDS ispc
     COMMAND ${LIT_COMMAND} ${LIT_ARGS}
     COMMENT "Running lit tests"
