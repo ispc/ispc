@@ -1,7 +1,7 @@
-//; RUN: not %{ispc} %s --nowrap --target=avx2-i32x8 2>&1 | FileCheck %s -check-prefix=CHECK_ALL_ERR
-//; RUN: not %{ispc} %s --nowrap --error-limit=2 --target=avx2-i32x8 2>&1 | FileCheck %s -check-prefix=CHECK_2_ERR
-//; RUN: not %{ispc} %s --nowrap --error-limit=0 --target=avx2-i32x8 2>&1 | FileCheck %s --implicit-check-not "ERROR:"
-//; RUN: not %{ispc} %s --nowrap --error-limit=-4 --target=avx2-i32x8 2>&1 | FileCheck %s -check-prefix=CHECK_INVALID
+//; RUN: not %{ispc} %s --nowrap --target=host 2>&1 | FileCheck %s -check-prefix=CHECK_ALL_ERR
+//; RUN: not %{ispc} %s --nowrap --error-limit=2 --target=host 2>&1 | FileCheck %s -check-prefix=CHECK_2_ERR
+//; RUN: not %{ispc} %s --nowrap --error-limit=0 --target=host 2>&1 | FileCheck %s --implicit-check-not "ERROR:"
+//; RUN: not %{ispc} %s --nowrap --error-limit=-4 --target=host 2>&1 | FileCheck %s -check-prefix=CHECK_INVALID
 
 //; CHECK_INVALID: Error: Invalid value for --error-limit: "-4" -- value cannot be a negative number.
 

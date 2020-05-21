@@ -42,6 +42,8 @@
 // RUN: %{ispc}  %s --emit-llvm -h %t.h --target=avx512skx-i32x16 -o %t.bc
 // RUN: llvm-dis %t.bc -o - | FileCheck %s
 
+// REQUIRES: X86_ENABLED
+
 typedef float<2> vec2;
 typedef float<4> vec4;
 

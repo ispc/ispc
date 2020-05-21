@@ -14,6 +14,8 @@
 //; RUN: %{ispc} %s --nowrap -o deps.o --target=sse4-i32x4,avx2-i32x8       -M -MF %t.d -MT new_file.ispc && FileCheck %s --input-file=%t.d -check-prefix=CHECK2
 //; RUN: %{ispc} %s --nowrap -o deps.o --target=sse2-i32x8,avx512knl-i32x16 -MMM %t.d && FileCheck %s --input-file=%t.d -check-prefix=CHECK3
 
+//; REQUIRES: X86_ENABLED
+
 //; CHECK1: deps.o: {{.*}}deps.ispc
 //; CHECK2: new_file.ispc: {{.*}}deps.ispc
 //; CHECK3: {{.*}}deps.ispc

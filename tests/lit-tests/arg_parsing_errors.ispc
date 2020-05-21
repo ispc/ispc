@@ -25,6 +25,8 @@
 
 //; RUN: not %{ispc} %s -o %t.o --nowrap --target=avx2-i32x8 -not-existing-opt --quiet 2>&1 | FileCheck %s --allow-empty -check-prefix=CHECK_ERROR_QUIET
 
+// REQUIRES: X86_ENABLED
+
 //; CHECK_ERROR_1: Error: Addressing width "123" invalid -- only 32 and 64 are allowed.
 //; CHECK_ERROR_1: Error: Invalid value for --x86-asm-syntax: "amd" -- only intel and att are allowed.
 //; CHECK_ERROR_1: Error: --fast-math option has been renamed to --opt=fast-math!

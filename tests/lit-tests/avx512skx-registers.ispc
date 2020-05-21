@@ -8,6 +8,7 @@
 // RUN: %{ispc} %s --emit-asm --target=avx512skx-i32x16 -o - 2>&1 | FileCheck %s -check-prefix=ZMM
 // RUN: %{ispc} %s --emit-asm --target=avx512skx-i32x16 --opt=disable-zmm -o - 2>&1 | FileCheck %s -check-prefix=YMM
 
+// REQUIRES: X86_ENABLED
 // REQUIRES: LLVM_8_0+
 
 // ZMM-NOT: ymm

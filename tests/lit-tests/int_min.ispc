@@ -7,6 +7,8 @@
 // RUN: %{ispc} %s --target=avx1-i64x4 -h %t.h --emit-llvm -o %t.bc
 // RUN: llvm-dis %t.bc -o - | FileCheck %s
 
+// REQUIRES: X86_ENABLED
+
 // CHECK: global i8 -128
 uniform unsigned int8 a_min8 = -0x80;
 // CHECK: global i16 -32768

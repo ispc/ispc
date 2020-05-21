@@ -1,6 +1,7 @@
 //; RUN: %{ispc} %s --target=avx512knl-i32x16 --emit-asm -o - | FileCheck %s --implicit-check-not "vpcmpeqb" -check-prefix=CHECK_AVX512knl16
 //; RUN: %{ispc} %s --target=avx512skx-i32x16 --emit-asm -o - | FileCheck %s -check-prefix=CHECK_AVX512skx16
 //; RUN: %{ispc} %s --target=avx512skx-i32x8 --emit-asm -o - | FileCheck %s --implicit-check-not "vptestnmw" -check-prefix=CHECK_AVX512skx8
+// REQUIRES: X86_ENABLED
 // REQUIRES: LLVM_8_0+
 void while_loop_test(uniform float cmp[], uniform float vout[], uniform int count) {
     foreach (index = 0 ... count) {
