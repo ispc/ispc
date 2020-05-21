@@ -34,16 +34,17 @@ EXIT_CODE=0
 echo "\
 ############################################################################
 Checking formatting of modified files. It is expected that the files were
-formatted with clang-format 8.0.0. It is also expected that clang-format
-version 8.0.0 is used for the check. Otherwise the result can ne unexpected.
+formatted with clang-format 10.0.0. It is also expected that clang-format
+version 10.0.0 is used for the check. Otherwise the result can ne unexpected.
 ############################################################################"
 
 CLANG_FORMAT="clang-format"
-REQUIRED_VERSION="8.0.0"
-VERSION_STRING="$CLANG_FORMAT version $REQUIRED_VERSION .*"
-CURRENT_VERSION="$(clang-format --version)"
+[[ ! -z $1 ]] && CLANG_FORMAT=$1
+REQUIRED_VERSION="10.0.0"
+VERSION_STRING="clang-format version $REQUIRED_VERSION.*"
+CURRENT_VERSION="$($CLANG_FORMAT --version)"
 if ! [[ $CURRENT_VERSION =~ $VERSION_STRING ]] ; then
-    echo WARNING: $CLANG_FORMAT version $REQUIRED_VERSION is required but $CURRENT_VERSION is used.
+    echo WARNING: clang-format version $REQUIRED_VERSION is required but $CURRENT_VERSION is used.
     echo The results can be unexpected.
 fi
 

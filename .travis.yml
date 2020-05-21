@@ -98,5 +98,13 @@ stages:
 jobs:
   include:
     - stage: check format
+      os: linux
+      dist: focal
+      addons:
+        apt:
+          packages:
+            - clang-format
+      env: LLVM_VERSION=10.0 OS=Ubuntu20.04
+      before_install:
       script:
-        - cd $ISPC_HOME && ./check_format.sh
+        - ./check_format.sh clang-format-10
