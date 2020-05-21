@@ -1,5 +1,4 @@
 // RUN: %{ispc} --target=host %s > %t 2>&1
-// REQUIRES: LLVM_8_0+
 struct FVector8
 {
 	float<8> V;
