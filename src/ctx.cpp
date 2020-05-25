@@ -2634,7 +2634,7 @@ void FunctionEmitContext::scatter(llvm::Value *value, llvm::Value *ptr, const Ty
     llvm::Type *type = value->getType();
     llvm::Type *llvmStorageType = type;
     // bool type is stored as i8. So, it requires some processing.
-    if ((pt != NULL) && (valueType->IsBoolType())) {
+    if ((pt == NULL) && (valueType->IsBoolType())) {
         llvmStorageType = LLVMTypes::BoolVectorStorageType;
         value = SwitchBoolSize(value, type, llvmStorageType);
     }
