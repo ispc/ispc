@@ -158,13 +158,16 @@ function(builtin_to_cpp bit os_name arch supported_archs supported_oses resultFi
 
     # Determine triple
     set(fpic "")
+    set(debian_triple)
     if (${os_name} STREQUAL "windows")
         set(triple ${target_arch}-pc-win32)
     elseif (${os_name} STREQUAL "linux")
         if (${target_arch} STREQUAL "i686" OR ${target_arch} STREQUAL "x86_64" OR ${target_arch} STREQUAL "aarch64")
             set(triple ${target_arch}-unknown-linux-gnu)
+            set(debian_triple ${target_arch}-linux-gnu)
         elseif (${target_arch} STREQUAL "armv7")
             set(triple ${target_arch}-unknown-linux-gnueabihf)
+            set(debian_triple arm-linux-gnueabihf)
         else()
             message(FATAL_ERROR "Error")
         endif()
@@ -222,9 +225,20 @@ function(builtin_to_cpp bit os_name arch supported_archs supported_oses resultFi
             set(includePath -isystem${ISPC_MACOS_SDK_PATH}/usr/include)
         endif()
     else()
-         if (${os_name} STREQUAL "macos")
+        if (${os_name} STREQUAL "macos")
             # -isystem/iusers/MacOSX10.14.sdk.tar/MacOSX10.14.sdk/usr/include
             set(includePath -isystem${ISPC_MACOS_SDK_PATH}/usr/include)
+        elseif(NOT ${debian_triple} STREQUAL "")
+            # When compiling on Linux, there are two way to support cross targets:
+            # - add "foreign" architecture to the set of supported architectures and install corresponding toolchain.
+            #   For example on aarch64: "dpkg --add-architecture armhf" and "apt-get install libc6-dev:armhf".
+            #   In this case the headers will be installed in /usr/include/arm-linux-gnueabihf and will be
+            #   automatically picked up by clang.
+            # - install cross library. For example: "apt-get install libc6-dev-armhf-cross".
+            #   In this case headers will be installed in /usr/arm-linux-gnueabihf/include and will not be picked up
+            #   by clang by default. So the following line adds such path explicitly. If this path doesn't exist and
+            #   the headers can be found in other locations, this should not be a problem.
+            set(includePath -isystem/usr/${debian_triple}/include)
         endif()
     endif()
 
