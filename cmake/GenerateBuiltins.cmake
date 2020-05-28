@@ -148,6 +148,15 @@ function(builtin_to_cpp bit os_name arch supported_archs supported_oses resultFi
         endif()
     endif()
 
+    # Return if the target is not supported.
+    if (${SKIP})
+        return()
+    endif()
+
+    # Report supported targets.
+    message (STATUS "Enabling target: ${os_name} / ${target_arch}")
+
+
     # Determine include path
     if (WIN32)
         if (${os_name} STREQUAL "windows")
@@ -216,40 +225,30 @@ function(builtin_to_cpp bit os_name arch supported_archs supported_oses resultFi
         message(FATAL_ERROR "Error")
     endif()
 
-    # Just invert SKIP to print supported targets
-    if (NOT ${SKIP})
-        set (SUPPORT ON)
+    set(output ${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_CFG_INTDIR}/builtins-c-${bit}-${os_name}-${target_arch}.cpp)
+    if (${os_name} STREQUAL "web")
+        add_custom_command(
+            OUTPUT ${output}
+            COMMAND ${EMCC_EXECUTABLE} -DWASM -s WASM_OBJECT_FILES=0 -c ${inputFilePath} -emit-llvm -c -o -
+                | (\"${LLVM_DIS_EXECUTABLE}\" - || echo "builtins.c compile error")
+                | \"${Python3_EXECUTABLE}\" bitcode2cpp.py c --type=builtins-c --runtime=${bit} --os=${os_name} --arch=${target_arch} --llvm_as ${LLVM_AS_EXECUTABLE}
+                > ${output}
+            DEPENDS ${inputFilePath} bitcode2cpp.py
+            WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+        )
     else()
-        set (SUPPORT OFF)
+        add_custom_command(
+            OUTPUT ${output}
+            COMMAND ${CLANG_EXECUTABLE} ${target_flags} -w -m${bit} -emit-llvm -c ${inputFilePath} -o - | (\"${LLVM_DIS_EXECUTABLE}\" - || echo "builtins.c compile error")
+                | \"${Python3_EXECUTABLE}\" bitcode2cpp.py c --type=builtins-c --runtime=${bit} --os=${os_name} --arch=${target_arch} --llvm_as ${LLVM_AS_EXECUTABLE}
+                > ${output}
+            DEPENDS ${inputFilePath} bitcode2cpp.py
+            WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+        )
     endif()
-    message (STATUS "${os_name} for ${target_arch} is ${SUPPORT}")
 
-    if (NOT SKIP)
-        set(output ${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_CFG_INTDIR}/builtins-c-${bit}-${os_name}-${target_arch}.cpp)
-        if (${os_name} STREQUAL "web")
-            add_custom_command(
-                OUTPUT ${output}
-                COMMAND ${EMCC_EXECUTABLE} -DWASM -s WASM_OBJECT_FILES=0 -c ${inputFilePath} -emit-llvm -c -o -
-                    | (\"${LLVM_DIS_EXECUTABLE}\" - || echo "builtins.c compile error")
-                    | \"${Python3_EXECUTABLE}\" bitcode2cpp.py c --type=builtins-c --runtime=${bit} --os=${os_name} --arch=${target_arch} --llvm_as ${LLVM_AS_EXECUTABLE}
-                    > ${output}
-                DEPENDS ${inputFilePath} bitcode2cpp.py
-                WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-            )
-        else()
-            add_custom_command(
-                OUTPUT ${output}
-                COMMAND ${CLANG_EXECUTABLE} ${target_flags} -w -m${bit} -emit-llvm -c ${inputFilePath} -o - | (\"${LLVM_DIS_EXECUTABLE}\" - || echo "builtins.c compile error")
-                    | \"${Python3_EXECUTABLE}\" bitcode2cpp.py c --type=builtins-c --runtime=${bit} --os=${os_name} --arch=${target_arch} --llvm_as ${LLVM_AS_EXECUTABLE}
-                    > ${output}
-                DEPENDS ${inputFilePath} bitcode2cpp.py
-                WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-            )
-        endif()
-        
-        set(${resultFileName} ${output} PARENT_SCOPE)
-        set_source_files_properties(${resultFileName} PROPERTIES GENERATED true)
-    endif()
+    set(${resultFileName} ${output} PARENT_SCOPE)
+    set_source_files_properties(${resultFileName} PROPERTIES GENERATED true)
 endfunction()
 
 function (generate_target_builtins resultList)
