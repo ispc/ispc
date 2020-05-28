@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2019, Intel Corporation
+  Copyright (c) 2019-2020, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -123,18 +123,31 @@ static float Turbulence(float x, float y, float z, uniform int octaves) {
     return sum * 0.5;
 }
 
-export void noise_ispc(uniform float x0, uniform float y0, uniform float x1, uniform float y1, uniform int width,
-                       uniform int height, uniform float output[]) {
-    uniform float dx = (x1 - x0) / width;
-    uniform float dy = (y1 - y0) / height;
+struct Parameters {
+    float x0;
+    float y0;
+    float x1;
+    float y1;
+    int width;
+    int height;
+    float *output;
+};
 
-    for (uniform int j = 0; j < height; j++) {
-        for (uniform int i = 0; i < width; i += taskCount) {
-            float x = x0 + (i + taskIndex) * dx;
-            float y = y0 + j * dy;
+task void noise_ispc(void *uniform _p) {
+    Parameters *uniform p = (Parameters * uniform) _p;
+    uniform float dx = (p->x1 - p->x0) / p->width;
+    uniform float dy = (p->y1 - p->y0) / p->height;
 
-            int index = (j * width + i + taskIndex);
-            output[index] = Turbulence(x, y, 0.6, 8);
+    for (uniform int j = 0; j < p->height; j++) {
+        for (uniform int i = 0; i < p->width; i += taskCount) {
+            float x = p->x0 + (i + taskIndex) * dx;
+            float y = p->y0 + j * dy;
+
+            int index = (j * p->width + i + taskIndex);
+            p->output[index] = Turbulence(x, y, 0.6, 8);
         }
     }
 }
+
+#include "ispcrt.isph"
+DEFINE_CPU_ENTRY_POINT(noise_ispc)

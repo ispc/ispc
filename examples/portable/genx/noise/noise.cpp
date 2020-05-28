@@ -31,129 +31,134 @@
    SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-#include "L0_helpers.h"
-#include "timing.h"
 #include <chrono>
 #include <cmath>
+#include <cstdio>
+#include <cstdlib>
 #include <iostream>
 #include <limits>
 
+#include "common_helpers.h"
+#include "timing.h"
+
+// ispcrt
+#include "ispcrt.hpp"
+
 #define CORRECTNESS_THRESHOLD 0.0002
-#define SZ 768 * 768
+#define WIDTH 768
+#define HEIGHT 768
+#define SZ WIDTH *HEIGHT
 #define TIMEOUT (40 * 1000)
 
 extern void noise_serial(float x0, float y0, float x1, float y1, int width, int height, float output[]);
 
 using namespace hostutil;
 
-PageAlignedArray<float, SZ> out, gold, result;
+struct Parameters {
+    float x0;
+    float y0;
+    float x1;
+    float y1;
+    int width;
+    int height;
+    float *output{nullptr};
+};
 
 static int run(int niter, int gx, int gy) {
-
     std::cout.setf(std::ios::unitbuf);
-    ze_device_handle_t hDevice = nullptr;
-    ze_module_handle_t hModule = nullptr;
-    ze_driver_handle_t hDriver = nullptr;
-    ze_command_queue_handle_t hCommandQueue = nullptr;
-
-    for (int i = 0; i < SZ; i++) {
-        out.data[i] = -1;
-        gold.data[i] = -1;
-    }
-
-#ifdef CMKERNEL
-    L0InitContext(hDriver, hDevice, hModule, hCommandQueue, "noise_cm.spv");
-#else
-    L0InitContext(hDriver, hDevice, hModule, hCommandQueue, "noise_ispc.spv");
-#endif
-
-    ze_command_list_handle_t hCommandList;
-    ze_kernel_handle_t hKernel;
-
-#ifdef CMKERNEL
-    //    L0Create_Kernel(hDevice, hModule, hCommandList, hKernel, "sgemm_kernel");
-#else
-    L0Create_Kernel(hDevice, hModule, hCommandList, hKernel, "noise_ispc");
-#endif
-
-    const unsigned int height = 768;
-    const unsigned int width = 768;
+    const unsigned int height = HEIGHT;
+    const unsigned int width = WIDTH;
 
     const float x0 = -10;
     const float y0 = -10;
     const float x1 = 10;
     const float y1 = 10;
-    double minCyclesISPCGPU = 1e30;
-    // set grid size
-    ze_group_count_t dispatchTraits = {(uint32_t)gx, (uint32_t)gy, 1};
-    std::cout << "Set dispatchTraits.x=" << dispatchTraits.groupCountX
-              << ", dispatchTraits.y=" << dispatchTraits.groupCountY << std::endl;
-    for (unsigned int i = 0; i < niter; i++) {
-        void *buf_ref = out.data;
-        ze_device_mem_alloc_desc_t alloc_desc = {ZE_DEVICE_MEM_ALLOC_DESC_VERSION_CURRENT,
-                                                 ZE_DEVICE_MEM_ALLOC_FLAG_DEFAULT, 0};
-        ze_host_mem_alloc_desc_t host_alloc_desc = {ZE_HOST_MEM_ALLOC_DESC_VERSION_CURRENT,
-                                                    ZE_HOST_MEM_ALLOC_FLAG_DEFAULT};
+    double minCyclesISPC = 1e30;
 
-        L0_SAFE_CALL(zeDriverAllocSharedMem(hDriver, &alloc_desc, &host_alloc_desc, SZ * sizeof(float), 0 /*align*/,
-                                            hDevice, &buf_ref));
+    std::vector<float> buf(SZ);
+    std::vector<float> gold(SZ);
 
-        L0_SAFE_CALL(zeKernelSetArgumentValue(hKernel, 0, sizeof(float), &x0));
-        L0_SAFE_CALL(zeKernelSetArgumentValue(hKernel, 1, sizeof(float), &y0));
-        L0_SAFE_CALL(zeKernelSetArgumentValue(hKernel, 2, sizeof(float), &x1));
-        L0_SAFE_CALL(zeKernelSetArgumentValue(hKernel, 3, sizeof(float), &y1));
-        L0_SAFE_CALL(zeKernelSetArgumentValue(hKernel, 4, sizeof(int), &width));
-        L0_SAFE_CALL(zeKernelSetArgumentValue(hKernel, 5, sizeof(int), &height));
-        L0_SAFE_CALL(zeKernelSetArgumentValue(hKernel, 6, sizeof(buf_ref), &buf_ref));
+    auto run_kernel = [&](ISPCRTDeviceType type) {
+        ispcrt::Device device(type);
 
-        reset_and_start_timer();
-        auto wct = std::chrono::system_clock::now();
-        // launch
-        L0_SAFE_CALL(zeCommandListAppendLaunchKernel(hCommandList, hKernel, &dispatchTraits, nullptr, 0, nullptr));
-        L0_SAFE_CALL(zeCommandListAppendBarrier(hCommandList, nullptr, 0, nullptr));
+        // Setup output array
+        ispcrt::Array<float> buf_dev(device, buf);
 
-        // copy result to host
-        void *res = result.data;
-        L0_SAFE_CALL(zeCommandListAppendMemoryCopy(hCommandList, res, buf_ref, SZ * sizeof(float), nullptr));
-        // dispatch & wait
-        L0_SAFE_CALL(zeCommandListClose(hCommandList));
-        L0_SAFE_CALL(zeCommandQueueExecuteCommandLists(hCommandQueue, 1, &hCommandList, nullptr));
-        L0_SAFE_CALL(zeCommandQueueSynchronize(hCommandQueue, std::numeric_limits<uint32_t>::max()));
+        // Setup parameters structure
+        Parameters p;
 
-        auto dur = (std::chrono::system_clock::now() - wct);
-        auto secs = std::chrono::duration_cast<std::chrono::milliseconds>(dur);
-        std::cout << "@time of GPU run:\t\t\t[" << secs.count() << "] milliseconds" << std::endl;
-        double dt = get_elapsed_mcycles();
-        printf("@time of GPU run:\t\t\t[%.3f] million cycles\n", dt);
-        minCyclesISPCGPU = std::min(minCyclesISPCGPU, dt);
-        L0_SAFE_CALL(zeDriverFreeMem(hDriver, buf_ref));
-    }
-    printf("[noise ISPC GPU]:\t\t[%.3f] million cycles (%d x %d image)\n", minCyclesISPCGPU, width, height);
+        p.x0 = x0;
+        p.y0 = y0;
+        p.x1 = x1;
+        p.y1 = y1;
+        p.width = width;
+        p.height = height;
+        p.output = buf_dev.devicePtr();
+
+        auto p_dev = ispcrt::Array<Parameters>(device, p);
+
+        // Create module and kernel to execute
+        ispcrt::Module module(device, "noise");
+        ispcrt::Kernel kernel(device, module, "noise_ispc");
+
+        // Create task queue and execute kernel
+        ispcrt::TaskQueue queue(device);
+
+        const char *device_str = (type == ISPCRT_DEVICE_TYPE_GPU) ? "GPU" : "CPU";
+        std::fill(buf.begin(), buf.end(), 0);
+        for (unsigned int i = 0; i < niter; i++) {
+            reset_and_start_timer();
+            queue.copyToDevice(p_dev);
+            queue.barrier();
+            // queue.sync();
+            auto wct = std::chrono::system_clock::now();
+            queue.launch(kernel, p_dev, gx, gy);
+            queue.barrier();
+            // queue.sync();
+            double dt = get_elapsed_mcycles();
+            auto dur = (std::chrono::system_clock::now() - wct);
+            auto secs = std::chrono::duration_cast<std::chrono::milliseconds>(dur);
+            queue.copyToHost(buf_dev);
+            queue.barrier();
+            queue.sync();
+
+            // Print resulting time
+            printf("@time of %s run:\t\t\t[%ld] milliseconds\n", device_str, secs.count());
+            printf("@time of %s run:\t\t\t[%.3f] million cycles\n", device_str, dt);
+            minCyclesISPC = std::min(minCyclesISPC, dt);
+        }
+        printf("[noise ISPC %s]:\t\t[%.3f] million cycles (%d x %d image)\n", device_str, minCyclesISPC, width, height);
+    };
+
+    run_kernel(ISPCRT_DEVICE_TYPE_CPU);
+    run_kernel(ISPCRT_DEVICE_TYPE_GPU);
 
     double minCyclesSerial = 1e30;
+    std::fill(gold.begin(), gold.end(), 0);
     for (unsigned int i = 0; i < niter; i++) {
         reset_and_start_timer();
         auto wct = std::chrono::system_clock::now();
-        noise_serial(x0, y0, x1, y1, width, height, gold.data);
+        noise_serial(x0, y0, x1, y1, width, height, gold.data());
+        double dt = get_elapsed_mcycles();
         auto dur = (std::chrono::system_clock::now() - wct);
         auto secs = std::chrono::duration_cast<std::chrono::milliseconds>(dur);
-        std::cout << "@time of CPU run:\t\t\t[" << secs.count() << "] milliseconds" << std::endl;
-        double dt = get_elapsed_mcycles();
-        printf("@time of CPU run:\t\t\t[%.3f] million cycles\n", dt);
+
+        // Print resulting time
+        printf("@time of serial run:\t\t\t[%ld] milliseconds\n", secs.count());
+        printf("@time of serial run:\t\t\t[%.3f] million cycles\n", dt);
         minCyclesSerial = std::min(minCyclesSerial, dt);
     }
 
     printf("[noise serial]:\t\t[%.3f] million cycles (%d x %d image)\n", minCyclesSerial, width, height);
-    printf("\t\t\t\t(%.2fx speedup from ISPC)\n", minCyclesSerial / minCyclesISPCGPU);
 
-    // RESULT CHECK
+    // Result check
     bool pass = true;
     double err = 0.0;
     double max_err = 0.0;
 
     int i = 0;
     for (; i < width * height; i++) {
-        err = std::fabs(result.data[i] - gold.data[i]);
+        err = std::fabs(buf.at(i) - gold.at(i));
         max_err = std::max(err, max_err);
         if (err > CORRECTNESS_THRESHOLD) {
             pass = false;
@@ -162,7 +167,7 @@ static int run(int niter, int gx, int gy) {
     }
     if (!pass) {
         std::cout << "Correctness test failed on " << i << "th value." << std::endl;
-        std::cout << "Was " << result.data[i] << ", should be " << gold.data[i] << std::endl;
+        std::cout << "Was " << buf.at(i) << ", should be " << gold.at(i) << std::endl;
     } else {
         std::cout << "Passed!"
                   << " Max error:" << max_err << std::endl;
@@ -178,9 +183,9 @@ static void usage() {
 
 int main(int argc, char *argv[]) {
     int niterations = 1;
-    int gx = 1, gy = 1;
-    niterations = atoi(argv[1]);
+    int gx = 1, gy = 8;
     if (argc == 4) {
+        niterations = atoi(argv[1]);
         gx = atoi(argv[2]);
         gy = atoi(argv[3]);
     }
@@ -189,8 +194,8 @@ int main(int argc, char *argv[]) {
     }
     int success = 0;
 
-    std::cout << "Running test with " << niterations << " iterations on " << gx << " * " << gy << " threads."
-              << std::endl;
+    std::cout << "Running test with " << niterations << " iterations of ISPC on GEN and CPU using " << gx << " * " << gy
+              << " threads." << std::endl;
     success = run(niterations, gx, gy);
 
     return success;

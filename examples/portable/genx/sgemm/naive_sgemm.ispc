@@ -31,7 +31,7 @@
    SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-export void SGEMM_naive_task(uniform float matrixA[], uniform float matrixB[], uniform float matrixC[], uniform int M,
+task void SGEMM_naive_task(uniform float matrixA[], uniform float matrixB[], uniform float matrixC[], uniform int M,
                              uniform int N, uniform int K) {
     // Determine workset for this task instance:
     uniform unsigned int uNumRowsPerTask = M / taskCount;
