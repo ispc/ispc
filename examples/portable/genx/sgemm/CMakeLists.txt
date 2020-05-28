@@ -30,47 +30,32 @@
 #   NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 #   SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-message(STATUS "Processing sgemm/CMakeLists.txt")
-cmake_minimum_required(VERSION 3.12)
+#
+# ispc examples: sgemm
+#
 
-set(ISPC_SRC_NAME "naive_sgemm")
-set(TEST_NAME "naive_sgemm")
-set(CM_SRC_NAME "NaiveCMSgemm_genx")
+cmake_minimum_required(VERSION 3.13)
 
-if(WIN32)
-    set(HOST_NAME "cmhost")
-    set(ISPC_OBJ_NAME "${CMAKE_CURRENT_BINARY_DIR}/naive_sgemm_mt.isa")
-    set(HOST_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/${HOST_NAME}.cpp)
-    set(ISPC_FLAGS "--arch=genx64")
-
-    set(CM_OBJ_NAME "${CMAKE_CURRENT_BINARY_DIR}/naive_sgemm_mt_cm.isa")
-    set(CM_HOST_NAME "SgemmSVMMultithread")
-else()
-    set(HOST_NAME "l0host")
-    set(ISPC_OBJ_NAME "${CMAKE_CURRENT_BINARY_DIR}/naive_sgemm_mt.spv")
-    set(HOST_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/${HOST_NAME}.cpp)
-    set(ISPC_FLAGS "--emit-spirv" "--arch=genx64")
-
-    set(CM_OBJ_NAME "${CMAKE_CURRENT_BINARY_DIR}/naive_sgemm_cm_mt.spv")
-    set(CM_TEST_NAME "naive_sgemm_cm")
-endif()
-
+set(TEST_NAME "sgemm")
+set(ISPC_SRC_NAME "naive_sgemm.ispc")
 set(ISPC_TARGET "genx-x16")
+set(HOST_SOURCES sgemm.cpp)
 
-add_perf_example(
-    NAME "sgemm"
-    CM_TEST
-    ISPC_SRC_NAME ${ISPC_SRC_NAME}
-    ISPC_TARGET ${ISPC_TARGET}
-    CM_SRC_NAME ${CM_SRC_NAME}
-    ISPC_OBJ_NAME ${ISPC_OBJ_NAME}
-    HOST_NAME ${HOST_NAME}
-    CM_OBJ_NAME ${CM_OBJ_NAME}
-    TEST_NAME ${TEST_NAME}
-    CM_TEST_NAME ${CM_TEST_NAME}
-    ISPC_FLAGS ${ISPC_FLAGS}
-    CM_HOST_NAME ${CM_HOST_NAME}
-    HOST_SOURCES ${HOST_SOURCES}
-    CM_HOST_SOURCES ${HOST_SOURCES}
-    CM_HOST_FLAGS "/DCMHOST"
-)
+set(CM_SRC_NAME "NaiveCMSgemm_genx")
+set(CM_OBJ_NAME "${CMAKE_CURRENT_BINARY_DIR}/naive_sgemm_cm_mt.spv")
+set(CM_TEST_NAME "naive_sgemm_cm")
+set(CM_HOST_SOURCES ${HOST_SOURCES})
+
+if(UNIX)
+    add_perf_example(
+        ISPC_SRC_NAME ${ISPC_SRC_NAME}
+        TEST_NAME ${TEST_NAME}
+        ISPC_TARGET ${ISPC_TARGET}
+        HOST_SOURCES ${HOST_SOURCES}
+        CM_TEST
+        CM_SRC_NAME ${CM_SRC_NAME}
+        CM_TEST_NAME ${CM_TEST_NAME}
+        CM_HOST_SOURCES ${CM_HOST_SOURCES}
+        CM_OBJ_NAME ${CM_OBJ_NAME}
+    )
+endif()

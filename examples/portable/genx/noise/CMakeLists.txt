@@ -30,30 +30,22 @@
 #   NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 #   SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-cmake_minimum_required(VERSION 3.12)
+#
+# ispc examples: noise
+#
 
-set(ISPC_SRC_NAME "noise")
-set(TEST_NAME "genx_noise")
+cmake_minimum_required(VERSION 3.13)
 
-if(WIN32)
-    set(HOST_NAME "cmhost")
-    set(ISPC_OBJ_NAME "${CMAKE_CURRENT_BINARY_DIR}/noise_ispc.isa")
-    set(ISPC_FLAGS "--arch=genx64")
-else()
-    set(HOST_NAME "l0host")
-    set(ISPC_OBJ_NAME "${CMAKE_CURRENT_BINARY_DIR}/noise_ispc.spv")
-    set(ISPC_FLAGS "--emit-spirv" "--arch=genx64")
-endif()
+set(TEST_NAME "noise")
+set(ISPC_SRC_NAME "noise.ispc")
 set(ISPC_TARGET "genx-x8")
-set(HOST_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/${HOST_NAME}.cpp ${CMAKE_CURRENT_SOURCE_DIR}/noise_serial.cpp)
+set(HOST_SOURCES noise.cpp noise_serial.cpp)
 
-add_perf_example(
-    NAME ${TEST_NAME}
-    ISPC_SRC_NAME ${ISPC_SRC_NAME} 
-    ISPC_OBJ_NAME ${ISPC_OBJ_NAME} 
-    HOST_NAME ${HOST_NAME} 
-    TEST_NAME ${TEST_NAME} 
-    ISPC_FLAGS ${ISPC_FLAGS}
-    ISPC_TARGET ${ISPC_TARGET}
-    HOST_SOURCES ${HOST_SOURCES} 
-)
+if(UNIX)
+    add_perf_example(
+        ISPC_SRC_NAME ${ISPC_SRC_NAME}
+        TEST_NAME ${TEST_NAME}
+        ISPC_TARGET ${ISPC_TARGET}
+        HOST_SOURCES ${HOST_SOURCES}
+    )
+endif()
