@@ -34,26 +34,17 @@
 # ispc examples: aobench
 #
 
-cmake_minimum_required(VERSION 3.10)
+cmake_minimum_required(VERSION 3.13)
 
-set(ISPC_SRC_NAME "aobench")
-set(TEST_NAME "genx_aobench")
+set(TEST_NAME "aobench")
+set(ISPC_SRC_NAME "aobench.ispc")
+set(ISPC_TARGET "genx-x16")
+set(HOST_SOURCES ao.cpp ao_serial.cpp)
 
-#Linux test only
 if(UNIX)
-    set(HOST_NAME "l0host")
-    set(ISPC_OBJ_NAME "${CMAKE_CURRENT_BINARY_DIR}/aobench_ispc.spv")
-    set(ISPC_FLAGS "--emit-spirv" "--arch=genx64")
-    set(ISPC_TARGET "genx-x16")
-    set(HOST_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/ao.cpp ${CMAKE_CURRENT_SOURCE_DIR}/ao_serial.cpp)
-
     add_perf_example(
-        NAME "aobench"
         ISPC_SRC_NAME ${ISPC_SRC_NAME}
-        ISPC_OBJ_NAME ${ISPC_OBJ_NAME}
-        HOST_NAME ${HOST_NAME}
         TEST_NAME ${TEST_NAME}
-        ISPC_FLAGS ${ISPC_FLAGS}
         ISPC_TARGET ${ISPC_TARGET}
         HOST_SOURCES ${HOST_SOURCES}
     )

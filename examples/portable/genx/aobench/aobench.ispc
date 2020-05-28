@@ -317,19 +317,26 @@ static void ao_scanlines(uniform int y0, uniform int y1, uniform int x0, uniform
     }
 }
 
+struct Parameters {
+    int width;
+    int height;
+    int nsubsamples;
+    float *image;
+};
 
-export void ao_ispc(uniform int w, uniform int h, uniform int nsubsamples,
-                    uniform float image[]) {
+task void ao_ispc(void *uniform _p) {
+    Parameters *uniform p = (Parameters * uniform) _p;
 
-    uniform int workPerThread = (w*h)/taskCount;
-    uniform int workItemsPerLine = w / workPerThread;
+    uniform int workPerThread = (p->width*p->height)/taskCount;
+    uniform int workItemsPerLine = p->width / workPerThread;
     // this assumes thread does less or equal work to a single line
-    uniform int start = (taskIndex*workPerThread)/w;
+    uniform int start = (taskIndex*workPerThread)/p->width;
     uniform int end = start + 1;
-    uniform int x_start = (taskIndex*workPerThread) % w;
+    uniform int x_start = (taskIndex*workPerThread) % p->width;
     uniform int x_end = x_start + workPerThread;
 
-    ao_scanlines(start, end, x_start, x_end, w, h, nsubsamples, image);
+    ao_scanlines(start, end, x_start, x_end, p->width, p->height, p->nsubsamples, p->image);
 }
 
-
+#include "ispcrt.isph"
+DEFINE_CPU_ENTRY_POINT(ao_ispc)
