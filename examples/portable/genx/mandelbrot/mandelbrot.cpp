@@ -125,6 +125,7 @@ static int run(unsigned int width, unsigned int height, unsigned int test_iterat
 
         std::fill(buf.begin(), buf.end(), 0);
         double minTimeISPC = 1e30;
+        double kernelTicks = 1e30;
         const char *device_str = (type == ISPCRT_DEVICE_TYPE_GPU) ? "GPU" : "CPU";
         std::fill(buf.begin(), buf.end(), 0);
         for (unsigned int i = 0; i < test_iterations[0]; ++i) {
@@ -132,20 +133,20 @@ static int run(unsigned int width, unsigned int height, unsigned int test_iterat
             queue.copyToDevice(p_dev);
             queue.barrier();
             queue.sync();
-            auto wct = std::chrono::system_clock::now();
-            queue.launch(kernel, p_dev, width / p.tile_size, height / p.tile_size);
+            auto res = queue.launch(kernel, p_dev, width / p.tile_size, height / p.tile_size);
             queue.barrier();
             queue.sync();
-            double dt = get_elapsed_mcycles();
-            auto dur = (std::chrono::system_clock::now() - wct);
-            auto secs = std::chrono::duration_cast<std::chrono::milliseconds>(dur);
+            if (ispcrtFutureIsValid(res)) {
+                kernelTicks = ispcrtFutureGetTimeNs(res) * 1e-6;
+            }
+            double mcycles = get_elapsed_mcycles();
             queue.copyToHost(buf_dev);
             queue.sync();
 
             // Print resulting time
-            printf("@time of %s run:\t\t\t[%ld] milliseconds\n", device_str, secs.count());
-            printf("@time of %s run:\t\t\t[%.3f] million cycles\n", device_str, dt);
-            minTimeISPC = std::min(minTimeISPC, dt);
+            printf("@time of %s run:\t\t\t[%.3f] milliseconds\n", device_str, kernelTicks);
+            printf("@time of %s run:\t\t\t[%.3f] million cycles\n", device_str, mcycles);
+            minTimeISPC = std::min(minTimeISPC, mcycles);
         }
         printf("[mandelbrot ISPC %s]:\t\t[%.3f] million cycles (%d x %d image)\n", device_str, minTimeISPC, width,
                height);
@@ -162,14 +163,14 @@ static int run(unsigned int width, unsigned int height, unsigned int test_iterat
         reset_and_start_timer();
         auto wct = std::chrono::system_clock::now();
         mandelbrot_cpp(x0, y0, x1, y1, width, height, maxIterations, buf.data());
-        double dt = get_elapsed_mcycles();
+        double mcycles = get_elapsed_mcycles();
         auto dur = (std::chrono::system_clock::now() - wct);
         auto secs = std::chrono::duration_cast<std::chrono::milliseconds>(dur);
 
         // Print resulting time
         printf("@time of serial run:\t\t\t[%ld] milliseconds\n", secs.count());
-        printf("@time of serial run:\t\t\t[%.3f] million cycles\n", dt);
-        minTimeSerial = std::min(minTimeSerial, dt);
+        printf("@time of serial run:\t\t\t[%.3f] million cycles\n", mcycles);
+        minTimeSerial = std::min(minTimeSerial, mcycles);
     }
     printf("[mandelbrot serial]:\t\t[%.3f] million cycles (%d x %d image)\n", minTimeSerial, width, height);
     writePPM(buf.data(), width, height, "mandelbrot-cpp-serial.ppm");
