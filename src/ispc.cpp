@@ -1206,7 +1206,7 @@ std::string Target::GetTripleString() const {
     switch (g->target_os) {
     case TargetOS::windows:
         if (m_arch == Arch::x86) {
-            triple.setArchName("i386");
+            triple.setArchName("i686");
         } else if (m_arch == Arch::x86_64) {
             triple.setArchName("x86_64");
         } else if (m_arch == Arch::arm) {
@@ -1227,7 +1227,7 @@ std::string Target::GetTripleString() const {
     case TargetOS::custom_linux:
     case TargetOS::linux:
         if (m_arch == Arch::x86) {
-            triple.setArchName("i386");
+            triple.setArchName("i686");
         } else if (m_arch == Arch::x86_64) {
             triple.setArchName("x86_64");
         } else if (m_arch == Arch::arm) {
@@ -1251,7 +1251,7 @@ std::string Target::GetTripleString() const {
         break;
     case TargetOS::freebsd:
         if (m_arch == Arch::x86) {
-            triple.setArchName("i386");
+            triple.setArchName("i686");
         } else if (m_arch == Arch::x86_64) {
             triple.setArchName("amd64");
         } else if (m_arch == Arch::arm) {
@@ -1277,7 +1277,7 @@ std::string Target::GetTripleString() const {
         break;
     case TargetOS::android:
         if (m_arch == Arch::x86) {
-            triple.setArchName("i386");
+            triple.setArchName("i686");
         } else if (m_arch == Arch::x86_64) {
             triple.setArchName("x86_64");
         } else if (m_arch == Arch::arm) {

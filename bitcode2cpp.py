@@ -12,7 +12,7 @@ parser.add_argument("src", help="Source file to process")
 parser.add_argument("--type", help="Type of processed file", choices=['dispatch', 'builtins-c', 'ispc-target'], required=True)
 parser.add_argument("--runtime", help="Runtime", choices=['32', '64'], nargs='?', default='')
 parser.add_argument("--os", help="Target OS", choices=['windows', 'linux', 'macos', 'freebsd', 'android', 'ios', 'ps4', 'web', 'WINDOWS', 'UNIX', 'WEB'], default='')
-parser.add_argument("--arch", help="Target architecture", choices=['i386', 'x86_64', 'armv7', 'arm64', 'aarch64', 'wasm32'], default='')
+parser.add_argument("--arch", help="Target architecture", choices=['i686', 'x86_64', 'armv7', 'arm64', 'aarch64', 'wasm32'], default='')
 parser.add_argument("--llvm_as", help="Path to LLVM assembler executable", dest="path_to_llvm_as")
 args = parser.parse_known_args()
 src = args[0].src
@@ -63,10 +63,10 @@ else:
 
 target_arch = ""
 ispc_arch = ""
-if args[0].arch in ["i386", "x86_64", "amd64", "armv7", "arm64", "aarch64", "wasm32"]:
+if args[0].arch in ["i686", "x86_64", "amd64", "armv7", "arm64", "aarch64", "wasm32"]:
     target_arch = args[0].arch + "_"
     # Canoncalization of arch value for Arch enum in ISPC.
-    if args[0].arch == "i386":
+    if args[0].arch == "i686":
         ispc_arch = "x86"
     elif args[0].arch == "x86_64" or args[0].arch == "amd64":
         ispc_arch = "x86_64"

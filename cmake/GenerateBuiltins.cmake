@@ -96,7 +96,7 @@ function(builtin_to_cpp bit os_name arch supported_archs supported_oses resultFi
     endif()
 
     if ("${bit}" STREQUAL "32" AND ${arch} STREQUAL "x86")
-        set(target_arch "i386")
+        set(target_arch "i686")
     elseif ("${bit}" STREQUAL "64" AND ${arch} STREQUAL "x86")
         set(target_arch "x86_64")
     elseif ("${bit}" STREQUAL "32" AND ${arch} STREQUAL "arm")
@@ -211,7 +211,7 @@ function(builtin_to_cpp bit os_name arch supported_archs supported_oses resultFi
             elseif (${target_arch} STREQUAL "aarch64")
                 # -isystem/Users/Shared/android-ndk-r20/sysroot/usr/include -isystem/Users/Shared/android-ndk-r20/sysroot/usr/include/aarch64-linux-android
                 set(includePath -isystem${ISPC_ANDROID_NDK_PATH}/sysroot/usr/include -isystem${ISPC_ANDROID_NDK_PATH}/sysroot/usr/include/aarch64-linux-android)
-            elseif(${target_arch} STREQUAL "i386")
+            elseif(${target_arch} STREQUAL "i686")
                 # -isystem/Users/Shared/android-ndk-r20/sysroot/usr/include -isystem/Users/Shared/android-ndk-r20/sysroot/usr/include/i686-linux-android
                 set(includePath -isystem${ISPC_ANDROID_NDK_PATH}/sysroot/usr/include -isystem${ISPC_ANDROID_NDK_PATH}/sysroot/usr/include/i686-linux-android)
             else()

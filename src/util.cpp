@@ -573,7 +573,7 @@ bool VerifyDataLayoutCompatibility(const std::string &module_dl, const std::stri
 
     // Get "canonical" form. Instead of looking at "raw" DataLayout string, we
     // look at the actual representation, as DataLayout class understands it.
-    // In the most cases there's no difference. But on x86 Windows (i386-pc-win32),
+    // In the most cases there's no difference. But on x86 Windows (i686-pc-win32),
     // clang generates a DataLayout string, which contains two definitions of f80,
     // which contradic: f80:128:128 followed by f80:32:32. This is a bug, but
     // correct thing to do is to interpret this exactly how LLVM would treat it,
