@@ -67,25 +67,22 @@ print("Using [" + args.exe_name + "] test in " + args.dir)
 additional_path = ""
 additional_libs = ""
 
-cmc_lib = "@CMC_LIBRARY_PATH@"
-if os.name == 'nt':
-    mdf_path = "@MDF_ROOT@"
-    compiler_lib = cmc_lib
-    runtime_lib = mdf_path + "/runtime/lib/x64"
-    additional_path = os.pathsep + os.pathsep.join([compiler_lib, runtime_lib])
-else:
+cur_dir = os.path.dirname(os.path.realpath(__file__))
+test_dir = os.path.join(cur_dir, str(args.dir))
+
+if os.name != 'nt':
     neo_path = "@NEO_INSTALL_PATH@"
     neo_lib = neo_path + "/neo/usr/local/lib"
     extra_lib = neo_path + "/neo/lib/extra"
     local_lib = "/usr/local/lib"
-    additional_libs = os.pathsep + os.pathsep.join([neo_lib, extra_lib, local_lib])
+    runtime_lib = os.path.join(cur_dir, "../../../install/lib")
+    additional_libs = os.pathsep + os.pathsep.join([runtime_lib, neo_lib, extra_lib, local_lib])
+
+print("Using runtime lib path: ", additional_libs)
 
 test_env = os.environ.copy()
 test_env["PATH"] += additional_path
 test_env["LD_LIBRARY_PATH"] = additional_libs
-
-cur_dir = os.path.dirname(os.path.realpath(__file__))
-test_dir = os.path.join(cur_dir, str(args.dir))
 
 host_name = args.exe_name
 executable = os.path.join(test_dir, host_name)
