@@ -11,6 +11,8 @@
 // std
 #include <exception>
 #include <string>
+#include <chrono>
+#include <cassert>
 
 namespace ispcrt {
 namespace cpu {
@@ -104,13 +106,23 @@ struct TaskQueue : public ispcrt::TaskQueue {
         // no-op
     }
 
-    void launch(ispcrt::Kernel &k, ispcrt::MemoryView *params, size_t dim0, size_t dim1, size_t dim2) override {
+    Future* launch(ispcrt::Kernel &k, ispcrt::MemoryView *params, size_t dim0, size_t dim1, size_t dim2) override {
         auto &kernel = (cpu::Kernel &)k;
         auto *parameters = (cpu::MemoryView *)params;
 
         auto *fcn = kernel.entryPoint();
 
+        auto *future = new Future;
+        assert(future);
+
+        auto start = std::chrono::high_resolution_clock::now();
         fcn(parameters ? parameters->devicePtr() : nullptr, dim0, dim1, dim2);
+        auto end = std::chrono::high_resolution_clock::now();
+
+        future->time = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();
+        future->valid = true;
+
+        return future;
     }
 
     void sync() override {

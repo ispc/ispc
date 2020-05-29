@@ -71,6 +71,16 @@ template <typename HANDLE_T> inline HANDLE_T GenericObject<HANDLE_T>::handle() c
 template <typename HANDLE_T> inline GenericObject<HANDLE_T>::operator bool() const { return handle() != nullptr; }
 
 /////////////////////////////////////////////////////////////////////////////
+// Future wrapper ///////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////////////////////
+
+class Future : public GenericObject<ISPCRTFuture> {
+  public:
+    Future() = default;
+};
+
+
+/////////////////////////////////////////////////////////////////////////////
 // Device wrapper ///////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////////////////////
 
@@ -168,6 +178,7 @@ inline Kernel::Kernel(const Device &device, const Module &module, const char *ke
 // TaskQueue wrapper ////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////////////////////
 
+
 class TaskQueue : public GenericObject<ISPCRTTaskQueue> {
   public:
     TaskQueue() = default;
@@ -178,13 +189,13 @@ class TaskQueue : public GenericObject<ISPCRTTaskQueue> {
     template <typename T> void copyToDevice(const Array<T> &arr) const;
     template <typename T> void copyToHost(const Array<T> &arr) const;
 
-    void launch(const Kernel &k, size_t dim0) const;
-    void launch(const Kernel &k, size_t dim0, size_t dim1) const;
-    void launch(const Kernel &k, size_t dim0, size_t dim1, size_t dim2) const;
+    ISPCRTFuture launch(const Kernel &k, size_t dim0) const;
+    ISPCRTFuture launch(const Kernel &k, size_t dim0, size_t dim1) const;
+    ISPCRTFuture launch(const Kernel &k, size_t dim0, size_t dim1, size_t dim2) const;
 
-    template <typename T> void launch(const Kernel &k, const Array<T> &p, size_t dim0) const;
-    template <typename T> void launch(const Kernel &k, const Array<T> &p, size_t dim0, size_t dim1) const;
-    template <typename T> void launch(const Kernel &k, const Array<T> &p, size_t dim0, size_t dim1, size_t dim2) const;
+    template <typename T> ISPCRTFuture launch(const Kernel &k, const Array<T> &p, size_t dim0) const;
+    template <typename T> ISPCRTFuture launch(const Kernel &k, const Array<T> &p, size_t dim0, size_t dim1) const;
+    template <typename T> ISPCRTFuture launch(const Kernel &k, const Array<T> &p, size_t dim0, size_t dim1, size_t dim2) const;
 
     void sync() const;
 };
@@ -204,30 +215,31 @@ template <typename T> inline void TaskQueue::copyToHost(const Array<T> &arr) con
     ispcrtCopyToHost(handle(), arr.handle());
 }
 
-inline void TaskQueue::launch(const Kernel &k, size_t dim0) const {
-    ispcrtLaunch1D(handle(), k.handle(), nullptr, dim0);
+inline ISPCRTFuture TaskQueue::launch(const Kernel &k, size_t dim0) const {
+    return ispcrtLaunch1D(handle(), k.handle(), nullptr, dim0);
 }
 
-inline void TaskQueue::launch(const Kernel &k, size_t dim0, size_t dim1) const {
-    ispcrtLaunch2D(handle(), k.handle(), nullptr, dim0, dim1);
+inline ISPCRTFuture TaskQueue::launch(const Kernel &k, size_t dim0, size_t dim1) const {
+    return ispcrtLaunch2D(handle(), k.handle(), nullptr, dim0, dim1);
 }
 
-inline void TaskQueue::launch(const Kernel &k, size_t dim0, size_t dim1, size_t dim2) const {
-    ispcrtLaunch3D(handle(), k.handle(), nullptr, dim0, dim1, dim2);
+inline ISPCRTFuture TaskQueue::launch(const Kernel &k, size_t dim0, size_t dim1, size_t dim2) const {
+    return ispcrtLaunch3D(handle(), k.handle(), nullptr, dim0, dim1, dim2);
 }
 
-template <typename T> inline void TaskQueue::launch(const Kernel &k, const Array<T> &p, size_t dim0) const {
-    ispcrtLaunch1D(handle(), k.handle(), p.handle(), dim0);
-}
-
-template <typename T>
-inline void TaskQueue::launch(const Kernel &k, const Array<T> &p, size_t dim0, size_t dim1) const {
-    ispcrtLaunch2D(handle(), k.handle(), p.handle(), dim0, dim1);
+template <typename T> 
+inline ISPCRTFuture TaskQueue::launch(const Kernel &k, const Array<T> &p, size_t dim0) const {
+    return ispcrtLaunch1D(handle(), k.handle(), p.handle(), dim0);
 }
 
 template <typename T>
-inline void TaskQueue::launch(const Kernel &k, const Array<T> &p, size_t dim0, size_t dim1, size_t dim2) const {
-    ispcrtLaunch3D(handle(), k.handle(), p.handle(), dim0, dim1, dim2);
+inline ISPCRTFuture TaskQueue::launch(const Kernel &k, const Array<T> &p, size_t dim0, size_t dim1) const {
+    return ispcrtLaunch2D(handle(), k.handle(), p.handle(), dim0, dim1);
+}
+
+template <typename T>
+inline ISPCRTFuture TaskQueue::launch(const Kernel &k, const Array<T> &p, size_t dim0, size_t dim1, size_t dim2) const {
+    return ispcrtLaunch3D(handle(), k.handle(), p.handle(), dim0, dim1, dim2);
 }
 
 inline void TaskQueue::sync() const { ispcrtSync(handle()); }

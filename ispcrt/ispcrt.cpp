@@ -195,18 +195,18 @@ void ispcrtCopyToHost(ISPCRTTaskQueue q, ISPCRTMemoryView mv) ISPCRT_CATCH_BEGIN
 }
 ISPCRT_CATCH_END()
 
-void ispcrtLaunch1D(ISPCRTTaskQueue q, ISPCRTKernel k, ISPCRTMemoryView p, size_t dim0) ISPCRT_CATCH_BEGIN {
-    ispcrtLaunch3D(q, k, p, dim0, 1, 1);
+ISPCRTFuture ispcrtLaunch1D(ISPCRTTaskQueue q, ISPCRTKernel k, ISPCRTMemoryView p, size_t dim0) ISPCRT_CATCH_BEGIN {
+    return ispcrtLaunch3D(q, k, p, dim0, 1, 1);
 }
-ISPCRT_CATCH_END()
+ISPCRT_CATCH_END(nullptr)
 
-void ispcrtLaunch2D(ISPCRTTaskQueue q, ISPCRTKernel k, ISPCRTMemoryView p, size_t dim0,
+ISPCRTFuture ispcrtLaunch2D(ISPCRTTaskQueue q, ISPCRTKernel k, ISPCRTMemoryView p, size_t dim0,
                     size_t dim1) ISPCRT_CATCH_BEGIN {
-    ispcrtLaunch3D(q, k, p, dim0, dim1, 1);
+    return ispcrtLaunch3D(q, k, p, dim0, dim1, 1);
 }
-ISPCRT_CATCH_END()
+ISPCRT_CATCH_END(nullptr)
 
-void ispcrtLaunch3D(ISPCRTTaskQueue q, ISPCRTKernel k, ISPCRTMemoryView p, size_t dim0, size_t dim1,
+ISPCRTFuture ispcrtLaunch3D(ISPCRTTaskQueue q, ISPCRTKernel k, ISPCRTMemoryView p, size_t dim0, size_t dim1,
                     size_t dim2) ISPCRT_CATCH_BEGIN {
     auto &queue = referenceFromHandle<ispcrt::TaskQueue>(q);
     auto &kernel = referenceFromHandle<ispcrt::Kernel>(k);
@@ -216,14 +216,30 @@ void ispcrtLaunch3D(ISPCRTTaskQueue q, ISPCRTKernel k, ISPCRTMemoryView p, size_
     if (p)
         params = &referenceFromHandle<ispcrt::MemoryView>(p);
 
-    queue.launch(kernel, params, dim0, dim1, dim2);
+    return (ISPCRTFuture)queue.launch(kernel, params, dim0, dim1, dim2);
 }
-ISPCRT_CATCH_END()
+ISPCRT_CATCH_END(nullptr)
 
 void ispcrtSync(ISPCRTTaskQueue q) ISPCRT_CATCH_BEGIN {
     auto &queue = referenceFromHandle<ispcrt::TaskQueue>(q);
     queue.sync();
 }
 ISPCRT_CATCH_END()
+
+uint64_t ispcrtFutureGetTimeNs(ISPCRTFuture f) ISPCRT_CATCH_BEGIN {
+    auto &future = referenceFromHandle<ispcrt::Future>(f);
+    
+    if (!future.valid)
+        return -1;
+
+    return future.time;
+}
+ISPCRT_CATCH_END(-1)
+
+bool ispcrtFutureIsValid(ISPCRTFuture f) ISPCRT_CATCH_BEGIN {
+    auto &future = referenceFromHandle<ispcrt::Future>(f);
+    return future.valid;
+}
+ISPCRT_CATCH_END(false)
 
 } // extern "C"

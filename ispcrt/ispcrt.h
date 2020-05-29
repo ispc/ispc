@@ -18,18 +18,21 @@ struct _ISPCRTMemoryView;
 struct _ISPCRTTaskQueue;
 struct _ISPCRTModule;
 struct _ISPCRTKernel;
+struct _ISPCRTFuture;
 
 typedef _ISPCRTDevice *ISPCRTDevice;
 typedef _ISPCRTMemoryView *ISPCRTMemoryView;
 typedef _ISPCRTTaskQueue *ISPCRTTaskQueue;
 typedef _ISPCRTModule *ISPCRTModule;
 typedef _ISPCRTKernel *ISPCRTKernel;
+typedef _ISPCRTFuture *ISPCRTFuture;
 #else
 typedef void *ISPCRTDevice;
 typedef void *ISPCRTMemoryView;
 typedef void *ISPCRTTaskQueue;
 typedef void *ISPCRTModule;
 typedef void *ISPCRTKernel;
+typedef void *ISPCRTFuture;
 #endif
 
 // NOTE: ISPCRTGenericHandle usage implies compatibility with any of the above
@@ -63,6 +66,7 @@ typedef enum {
 } ISPCRTDeviceType;
 
 ISPCRTDevice ispcrtGetDevice(ISPCRTDeviceType);
+uint64_t     ispcrtGetDeviceTimeTickResolution();
 
 // MemoryViews ////////////////////////////////////////////////////////////////
 
@@ -88,11 +92,17 @@ void ispcrtCopyToDevice(ISPCRTTaskQueue, ISPCRTMemoryView);
 void ispcrtCopyToHost(ISPCRTTaskQueue, ISPCRTMemoryView);
 
 // NOTE: 'params' can be a NULL handle (NULL will get passed to the ISPC task as the function parameter)
-void ispcrtLaunch1D(ISPCRTTaskQueue, ISPCRTKernel, ISPCRTMemoryView params, size_t dim0);
-void ispcrtLaunch2D(ISPCRTTaskQueue, ISPCRTKernel, ISPCRTMemoryView params, size_t dim0, size_t dim1);
-void ispcrtLaunch3D(ISPCRTTaskQueue, ISPCRTKernel, ISPCRTMemoryView params, size_t dim0, size_t dim1, size_t dim2);
+ISPCRTFuture ispcrtLaunch1D(ISPCRTTaskQueue, ISPCRTKernel, ISPCRTMemoryView params, size_t dim0);
+ISPCRTFuture ispcrtLaunch2D(ISPCRTTaskQueue, ISPCRTKernel, ISPCRTMemoryView params, size_t dim0, size_t dim1);
+ISPCRTFuture ispcrtLaunch3D(ISPCRTTaskQueue, ISPCRTKernel, ISPCRTMemoryView params, size_t dim0, size_t dim1, size_t dim2);
 
 void ispcrtSync(ISPCRTTaskQueue);
+
+// Futures and task timing ////////////////////////////////////////////////////
+
+uint64_t ispcrtFutureGetTimeNs(ISPCRTFuture);
+
+bool ispcrtFutureIsValid(ISPCRTFuture);
 
 #ifdef __cplusplus
 } // extern "C"
