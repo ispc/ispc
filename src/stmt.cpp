@@ -2660,9 +2660,12 @@ static llvm::Value *lProcessPrintArg(Expr *expr, FunctionEmitContext *ctx, std::
     }
 
     // Just int8 and int16 types to int32s...
+    // Also ensure 'varying bool' is excluded since it's baseType can be one
+    // of these types.
     const Type *baseType = type->GetAsNonConstType()->GetAsUniformType();
-    if (Type::Equal(baseType, AtomicType::UniformInt8) || Type::Equal(baseType, AtomicType::UniformUInt8) ||
-        Type::Equal(baseType, AtomicType::UniformInt16) || Type::Equal(baseType, AtomicType::UniformUInt16)) {
+    if ((Type::Equal(baseType, AtomicType::UniformInt8) || Type::Equal(baseType, AtomicType::UniformUInt8) ||
+         Type::Equal(baseType, AtomicType::UniformInt16) || Type::Equal(baseType, AtomicType::UniformUInt16)) &&
+        !type->IsBoolType()) {
         expr = new TypeCastExpr(type->IsUniformType() ? AtomicType::UniformInt32 : AtomicType::VaryingInt32, expr,
                                 expr->pos);
         type = expr->GetType();
@@ -2676,7 +2679,7 @@ static llvm::Value *lProcessPrintArg(Expr *expr, FunctionEmitContext *ctx, std::
               type->GetString().c_str());
         return NULL;
     } else {
-        if (Type::Equal(baseType, AtomicType::UniformBool)) {
+        if (type->IsBoolType()) {
             // Blast bools to ints, but do it here to preserve encoding for
             // printing 'true' or 'false'
             expr = new TypeCastExpr(type->IsUniformType() ? AtomicType::UniformInt32 : AtomicType::VaryingInt32, expr,
