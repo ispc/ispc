@@ -73,7 +73,6 @@ static int run(int niter, int gx, int gy) {
     const float y0 = -10;
     const float x1 = 10;
     const float y1 = 10;
-    double minCyclesISPC = 1e30;
 
     std::vector<float> buf(SZ);
     std::vector<float> gold(SZ);
@@ -103,29 +102,27 @@ static int run(int niter, int gx, int gy) {
 
         // Create task queue and execute kernel
         ispcrt::TaskQueue queue(device);
-
+        double minCyclesISPC = 1e30;
+        double kernelTicks = 1e30;
         const char *device_str = (type == ISPCRT_DEVICE_TYPE_GPU) ? "GPU" : "CPU";
         std::fill(buf.begin(), buf.end(), 0);
         for (unsigned int i = 0; i < niter; i++) {
             reset_and_start_timer();
             queue.copyToDevice(p_dev);
             queue.barrier();
-            // queue.sync();
-            auto wct = std::chrono::system_clock::now();
-            queue.launch(kernel, p_dev, gx, gy);
+            auto res = queue.launch(kernel, p_dev, gx, gy);
             queue.barrier();
-            // queue.sync();
-            double dt = get_elapsed_mcycles();
-            auto dur = (std::chrono::system_clock::now() - wct);
-            auto secs = std::chrono::duration_cast<std::chrono::milliseconds>(dur);
             queue.copyToHost(buf_dev);
             queue.barrier();
             queue.sync();
-
+            if (ispcrtFutureIsValid(res)) {
+                kernelTicks = ispcrtFutureGetTimeNs(res) * 1e-6;
+            }
+            double mcycles = get_elapsed_mcycles();
             // Print resulting time
-            printf("@time of %s run:\t\t\t[%ld] milliseconds\n", device_str, secs.count());
-            printf("@time of %s run:\t\t\t[%.3f] million cycles\n", device_str, dt);
-            minCyclesISPC = std::min(minCyclesISPC, dt);
+            printf("@time of %s run:\t\t\t[%.3f] milliseconds\n", device_str, kernelTicks);
+            printf("@time of %s run:\t\t\t[%.3f] million cycles\n", device_str, mcycles);
+            minCyclesISPC = std::min(minCyclesISPC, mcycles);
         }
         printf("[noise ISPC %s]:\t\t[%.3f] million cycles (%d x %d image)\n", device_str, minCyclesISPC, width, height);
     };
@@ -139,14 +136,14 @@ static int run(int niter, int gx, int gy) {
         reset_and_start_timer();
         auto wct = std::chrono::system_clock::now();
         noise_serial(x0, y0, x1, y1, width, height, gold.data());
-        double dt = get_elapsed_mcycles();
+        double mcycles = get_elapsed_mcycles();
         auto dur = (std::chrono::system_clock::now() - wct);
         auto secs = std::chrono::duration_cast<std::chrono::milliseconds>(dur);
 
         // Print resulting time
         printf("@time of serial run:\t\t\t[%ld] milliseconds\n", secs.count());
-        printf("@time of serial run:\t\t\t[%.3f] million cycles\n", dt);
-        minCyclesSerial = std::min(minCyclesSerial, dt);
+        printf("@time of serial run:\t\t\t[%.3f] million cycles\n", mcycles);
+        minCyclesSerial = std::min(minCyclesSerial, mcycles);
     }
 
     printf("[noise serial]:\t\t[%.3f] million cycles (%d x %d image)\n", minCyclesSerial, width, height);

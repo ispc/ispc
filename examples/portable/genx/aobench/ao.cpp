@@ -151,22 +151,24 @@ static int run() {
         // time for any of them.
         const char *device_str = (type == ISPCRT_DEVICE_TYPE_GPU) ? "GPU" : "CPU";
         double minCyclesISPC = 1e30;
+        double kernelTicks = 1e30;
         for (unsigned int i = 0; i < niterations; i++) {
             memset((void *)fimg, 0, sizeof(float) * width * height * 3);
             ispcrtCopyToDevice(queue, p_dev);
             ispcrtDeviceBarrier(queue);
             ispcrtSync(queue);
             reset_and_start_timer();
-            auto wct = std::chrono::system_clock::now();
-            ispcrtLaunch2D(queue, kernel, p_dev, height * width / 16, 1);
+            auto res = ispcrtLaunch2D(queue, kernel, p_dev, height * width / 16, 1);
             ispcrtDeviceBarrier(queue);
             ispcrtSync(queue);
-            double dt = get_elapsed_mcycles();
-            auto dur = (std::chrono::system_clock::now() - wct);
-            auto secs = std::chrono::duration_cast<std::chrono::nanoseconds>(dur);
-            printf("@time of %s run:\t\t\t[%ld] nanoseconds\n", device_str, dt);
-            printf("@time of %s run:\t\t\t[%.3f] million cycles\n", device_str, dt);
-            minCyclesISPC = std::min(minCyclesISPC, dt);
+
+            if (ispcrtFutureIsValid(res)) {
+                kernelTicks = ispcrtFutureGetTimeNs(res) * 1e-6;
+            }
+            double mcycles = get_elapsed_mcycles();
+            printf("@time of %s run:\t\t\t[%.3f] milliseconds\n", device_str, kernelTicks);
+            printf("@time of %s run:\t\t\t[%.3f] million cycles\n", device_str, mcycles);
+            minCyclesISPC = std::min(minCyclesISPC, mcycles);
             ispcrtCopyToHost(queue, buf_dev);
             ispcrtSync(queue);
         }
@@ -187,12 +189,12 @@ static int run() {
         reset_and_start_timer();
         auto wct = std::chrono::system_clock::now();
         ao_serial(width, height, NSUBSAMPLES, fimg);
-        double dt = get_elapsed_mcycles();
+        double mcycles = get_elapsed_mcycles();
         auto dur = (std::chrono::system_clock::now() - wct);
-        auto secs = std::chrono::duration_cast<std::chrono::nanoseconds>(dur);
-        printf("@time of CPU run:\t\t\t[%ld] nanoseconds\n", secs.count());
-        printf("@time of CPU run:\t\t\t[%.3f] million cycles\n", dt);
-        minCyclesSerial = std::min(minCyclesSerial, dt);
+        auto secs = std::chrono::duration_cast<std::chrono::milliseconds>(dur);
+        printf("@time of CPU run:\t\t\t[%ld] milliseconds\n", secs.count());
+        printf("@time of CPU run:\t\t\t[%.3f] million cycles\n", mcycles);
+        minCyclesSerial = std::min(minCyclesSerial, mcycles);
     }
     savePPM("ao-cpp-serial.ppm", width, height, fimg);
     printf("[aobench serial]:\t\t[%.3f] million cycles (%d x %d image)\n", minCyclesSerial, width, height);
