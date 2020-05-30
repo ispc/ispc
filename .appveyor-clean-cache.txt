@@ -1,4 +1,4 @@
-#  Copyright (c) 2019, Intel Corporation
+#  Copyright (c) 2019-2020, Intel Corporation
 #  All rights reserved.
 #
 #  Redistribution and use in source and binary forms, with or without
@@ -42,3 +42,4 @@ by updates of docker files.
 01/30/2020: Added dockers for LLVM 10.0. Switched latest to LLVM 9.0
 03/18/2020: Updated LLVM 10.0 docker
 04/02/2020: Updated Windows dockers with LLVM built for x64
+04/29/2020: Updated LLVM 9.0/10.0 with backport fix from trunk for #1767.
