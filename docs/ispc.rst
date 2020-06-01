@@ -2153,15 +2153,15 @@ Arrays of any type can be declared just as in C and C++:
 
 ::
 
-    float a[10];
-    uniform int * varying b[20];
+    float a[10]; // array of 10 varying floats
+    uniform int * varying b[20]; // array of 20 varying pointers to uniform int
 
 Multidimensional arrays can be specified as arrays of arrays; the following
 declares an array of 5 arrays of 15 floats.
 
 ::
 
-    float a[5][15];
+    uniform float a[5][15];
 
 The size of arrays must be a compile-time constant, though array size can
 be determined from array initializer lists; see the following section,
@@ -2177,7 +2177,7 @@ a uniform pointer to the array type if needed:
 
 ::
 
-    int a[10];
+    uniform int a[10];
     int * uniform ap = a;
 
 
