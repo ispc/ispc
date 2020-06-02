@@ -504,11 +504,7 @@ void Function::emitCode(FunctionEmitContext *ctx, llvm::Function *function, Sour
 
             mdKernels->addOperand(llvm::MDNode::get(fContext, mdArgs));
             // This is needed to run in L0 runtime.
-            // Currently ISPC uses CM runtime on Windows and L0 runtime on Linux.
-            // TODO: rework this as soon as we move to L0 runtime completely
-            if (g->target_os != TargetOS::windows) {
-                function->addFnAttr("oclrt", "8");
-            }
+            function->addFnAttr("oclrt", "1");
         }
     }
 #endif
