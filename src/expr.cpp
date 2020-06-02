@@ -1640,11 +1640,10 @@ llvm::Value *lEmitLogicalOp(BinaryExpr::Op op, Expr *arg0, Expr *arg1, FunctionE
     // right side of the expression is a) relatively simple, and b) can be
     // safely executed with an all-off execution mask, then we just
     // evaluate both sides and then the logical operator in that case.
-    // FIXME: not sure what we should do about vector types here...
     bool shortCircuit =
-        (EstimateCost(arg1) > PREDICATE_SAFE_IF_STATEMENT_COST || SafeToRunWithMaskAllOff(arg1) == false ||
-         CastType<VectorType>(type0) != NULL || CastType<VectorType>(type1) != NULL);
-    if (shortCircuit == false) {
+        (EstimateCost(arg1) > PREDICATE_SAFE_IF_STATEMENT_COST || SafeToRunWithMaskAllOff(arg1) == false);
+    // Skip short-circuiting for VectorTypes as well.
+    if ((shortCircuit == false) || CastType<VectorType>(type0) != NULL || CastType<VectorType>(type1) != NULL) {
         // If one of the operands is uniform but the other is varying,
         // promote the uniform one to varying
         if (type0->IsUniformType() && type1->IsVaryingType()) {
