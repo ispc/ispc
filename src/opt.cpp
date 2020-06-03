@@ -112,6 +112,8 @@
 #include "llvm/GenXOpts/GenXOpts.h"
 #include "llvm/Transforms/Utils/UnifyFunctionExitNodes.h"
 #include <llvm/GenXIntrinsics/GenXIntrOpts.h>
+// Used for GenX gather coalescing
+#include "llvm/Transforms/Utils/Local.h"
 // Constant in number of bytes.
 enum { BYTE = 1, WORD = 2, DWORD = 4, QWORD = 8, OWORD = 16, GRF = 32 };
 #endif
@@ -137,6 +139,7 @@ static llvm::Pass *CreateReplaceStdlibShiftPass();
 static llvm::Pass *CreateFixBooleanSelectPass();
 
 #ifdef ISPC_GENX_ENABLED
+static llvm::Pass *CreateGenXGatherCoalescingPass();
 static llvm::Pass *CreatePromoteToPrivateMemoryPass();
 static llvm::Pass *CreateReplaceLLVMIntrinsics();
 static llvm::Pass *CreateReplaceUnsupportedInsts();
@@ -665,6 +668,10 @@ void Optimize(llvm::Module *module, int optLevel) {
 
         if (g->opt.disableGatherScatterOptimizations == false && g->target->getVectorWidth() > 1) {
             optPM.add(llvm::createInstructionCombiningPass(), 255);
+#ifdef ISPC_GENX_ENABLED
+            if (g->target->getISA() == Target::GENX && !g->opt.disableGenXGatherCoalescing)
+                optPM.add(CreateGenXGatherCoalescingPass());
+#endif
             optPM.add(CreateImproveMemoryOpsPass());
 
             if (g->opt.disableCoalescing == false) {
@@ -5325,6 +5332,552 @@ bool FixBooleanSelectPass::runOnFunction(llvm::Function &F) {
 static llvm::Pass *CreateFixBooleanSelectPass() { return new FixBooleanSelectPass(); }
 
 #ifdef ISPC_GENX_ENABLED
+
+///////////////////////////////////////////////////////////////////////////
+// GenXGatherCoalescingPass
+
+/** This pass performs gather coalescing for GenX target.
+ */
+class GenXGatherCoalescing : public llvm::FunctionPass {
+  public:
+    static char ID;
+    GenXGatherCoalescing() : FunctionPass(ID) {}
+
+    llvm::StringRef getPassName() const { return "GenX Gather Coalescing"; }
+
+    bool runOnBasicBlock(llvm::BasicBlock &BB);
+
+    bool runOnFunction(llvm::Function &Fn);
+};
+
+char GenXGatherCoalescing::ID = 0;
+
+// Returns pointer to pseudo_gather CallInst if inst is
+// actually a pseudo_gather
+static llvm::CallInst *lGetPseudoGather(llvm::Instruction *inst) {
+    if (auto CI = llvm::dyn_cast<llvm::CallInst>(inst)) {
+        if (CI->getCalledFunction()->getName().startswith("__pseudo_gather_base_offsets"))
+            return CI;
+    }
+    return nullptr;
+}
+
+// Returns type of GEP users: nullptr in case when type is
+// different.
+//
+// TODO: currently only few instructions are handled:
+//   - load (scalar, see TODO below)
+//   - bitcast (checking it users)
+//   - pseudo_gather: see lGetPseudoGather
+static llvm::Type *lGetLoadsType(llvm::Instruction *inst) {
+    llvm::Type *ty = nullptr;
+
+    // Bad user was provided
+    if (!inst)
+        return nullptr;
+
+    for (auto ui = inst->use_begin(), ue = inst->use_end(); ui != ue; ++ui) {
+
+        llvm::Instruction *user = llvm::dyn_cast<llvm::Instruction>(ui->getUser());
+        llvm::Type *curr_type = nullptr;
+
+        // Bitcast appeared, go through it
+        if (auto BCI = llvm::dyn_cast<llvm::BitCastInst>(user)) {
+            if (!(curr_type = lGetLoadsType(BCI)))
+                return nullptr;
+        } else {
+            // Load is OK if it is scalar
+            // TODO: perform full investigation on situation
+            // with non-scalar loads
+            if (auto LI = llvm::dyn_cast<llvm::LoadInst>(user)) {
+                if (LI->getType()->isVectorTy())
+                    return nullptr;
+                curr_type = LI->getType();
+            } else if (lGetPseudoGather(user)) {
+                curr_type = user->getType();
+            } else
+                continue;
+        }
+
+        if (!curr_type || (ty && ty != curr_type))
+            return nullptr;
+
+        ty = curr_type;
+    }
+
+    return ty;
+}
+
+// Struct that contains info about memory users
+struct PtrUse {
+    llvm::Instruction *user; // Ptr
+
+    std::vector<int64_t> idxs; // Users a presented in this list like it was Ptr[idx]
+                               // TODO: current implementation depends on traverse order:
+                               //       see lCreateBlockLDUse and lCollectIdxs
+
+    llvm::Type *type; // Currently loads are grouped by types.
+                      // TODO: it can be optimized
+
+    int64_t &getScalarIdx() { return idxs[0]; }
+};
+
+// Create users for newly created block ld
+// TODO: current implementation depends on traverse order: see lCollectIdxs
+static void lCreateBlockLDUse(llvm::Instruction *currInst, std::vector<llvm::ExtractElementInst *> EEIs, PtrUse &ptrUse,
+                              int &curr_idx, std::vector<llvm::Instruction *> &dead) {
+    for (auto ui = currInst->use_begin(), ue = currInst->use_end(); ui != ue; ++ui) {
+        if (auto BCI = llvm::dyn_cast<llvm::BitCastInst>(ui->getUser())) {
+            // Go through bitcast
+            lCreateBlockLDUse(BCI, EEIs, ptrUse, curr_idx, dead);
+        } else if (auto LI = llvm::dyn_cast<llvm::LoadInst>(ui->getUser())) {
+            // Only scalar loads are supported now
+            llvm::ExtractElementInst *EEI = EEIs[ptrUse.idxs[curr_idx++]];
+            LI->replaceAllUsesWith(EEI);
+            lCopyMetadata(EEI, LI);
+            dead.push_back(LI);
+        } else if (auto gather = lGetPseudoGather(llvm::dyn_cast<llvm::Instruction>(ui->getUser()))) {
+            // Collect idxs from gather and fix users
+            llvm::Value *res = llvm::UndefValue::get(gather->getType());
+            for (unsigned i = 0, end = llvm::dyn_cast<llvm::VectorType>(res->getType())->getNumElements(); i < end;
+                 ++i) {
+                // Get element via IEI
+                res = llvm::InsertElementInst::Create(res, EEIs[ptrUse.idxs[curr_idx++]],
+                                                      llvm::ConstantInt::get(LLVMTypes::Int32Type, i),
+                                                      "coalesced_gather_iei", gather);
+            }
+            gather->replaceAllUsesWith(res);
+            lCopyMetadata(res, gather);
+            dead.push_back(gather);
+        } else {
+            continue;
+        }
+    }
+}
+
+// Perform optimization from GEPs
+static bool lVectorizeGEPs(llvm::Value *ptr, std::vector<PtrUse> &ptrUses, std::vector<llvm::Instruction *> &dead) {
+    // Calculate memory width for GEPs
+    int64_t min_idx = INT64_MAX;
+    int64_t max_idx = INT64_MIN;
+    for (auto elem : ptrUses) {
+        for (auto i : elem.idxs) {
+            int64_t idx = i;
+            max_idx = std::max(idx, max_idx);
+            min_idx = std::min(idx, min_idx);
+        }
+    }
+    llvm::Type *type = ptrUses[0].type;
+    llvm::Type *scalar_type = type;
+    llvm::Instruction *insertBefore = ptrUses[0].user;
+
+    // Calculate element size in bytes
+    uint64_t t_size = type->getPrimitiveSizeInBits() >> 3;
+
+    // Adjust values for vector load
+    if (auto vecTy = llvm::dyn_cast<llvm::VectorType>(type)) {
+        // Get single element size
+        t_size /= vecTy->getNumElements();
+        // Get single element type
+        scalar_type = vecTy->getScalarType();
+    }
+
+    // Calculate length of array that needs to be loaded.
+    // Idxs are in bytes now.
+    uint64_t data_size = max_idx - min_idx + t_size;
+
+    unsigned loads_needed = 1;
+    uint64_t reqSize = 1;
+
+    // Required load size. It can be 1, 2, 4, 8 OWORDs
+    while (reqSize < data_size)
+        reqSize <<= 1;
+
+    // Adjust number of loads.
+    // TODO: it is not clear if we should adjust
+    // load size here
+    if (reqSize > 8 * OWORD) {
+        loads_needed = reqSize / (8 * OWORD);
+        reqSize = 8 * OWORD;
+    }
+
+    // TODO: it is not clear if we should skip it or not
+    if (reqSize < OWORD) {
+        // Skip it for now
+        return false;
+    }
+
+    // Coalesce loads/gathers
+    std::vector<llvm::CallInst *> loads;
+    std::vector<llvm::ExtractElementInst *> EEIs;
+    for (unsigned i = 0; i < loads_needed; ++i) {
+        llvm::Constant *offset = llvm::ConstantInt::get(LLVMTypes::Int64Type, min_idx + i * reqSize);
+        llvm::PtrToIntInst *ptrToInt =
+            new llvm::PtrToIntInst(ptr, LLVMTypes::Int64Type, "vectorized_ptrtoint", insertBefore);
+        llvm::Instruction *addr = llvm::BinaryOperator::CreateAdd(ptrToInt, offset, "vectorized_address", insertBefore);
+        llvm::Type *retType = llvm::VectorType::get(scalar_type, reqSize / t_size);
+        llvm::Function *fn =
+            llvm::GenXIntrinsic::getGenXDeclaration(m->module, llvm::GenXIntrinsic::genx_svm_block_ld, retType);
+        llvm::CallInst *ld = llvm::CallInst::Create(fn, {addr}, "vectorized_ld", insertBefore);
+        loads.push_back(ld);
+
+        // Scalar extracts for all loaded elements
+        for (unsigned j = 0; j < reqSize / t_size; ++j) {
+            auto EEI = llvm::ExtractElementInst::Create(ld, llvm::ConstantInt::get(LLVMTypes::Int64Type, j),
+                                                        "vectorized_extr_elem", ld->getParent());
+            EEIs.push_back(EEI);
+            EEI->moveAfter(ld);
+        }
+    }
+
+    // Change value in users and delete redundant insts
+    for (auto elem : ptrUses) {
+        // Recalculate idx: we are going to use extractelement
+        for (auto &index : elem.idxs) {
+            index -= min_idx;
+            index /= t_size;
+        }
+        int curr_idx = 0;
+        lCreateBlockLDUse(elem.user, EEIs, elem, curr_idx, dead);
+    }
+
+    return true;
+}
+
+// Get idxs from current instruction users
+// TODO: current implementation depends on traverse order: see lCreateBlockLDUse
+static void lCollectIdxs(llvm::Instruction *inst, std::vector<int64_t> &idxs, int64_t original_idx) {
+    for (auto ui = inst->use_begin(), ue = inst->use_end(); ui != ue; ++ui) {
+
+        llvm::Instruction *user = llvm::dyn_cast<llvm::Instruction>(ui->getUser());
+
+        if (auto BCI = llvm::dyn_cast<llvm::BitCastInst>(user)) {
+            // Bitcast appeared, go through it
+            lCollectIdxs(BCI, idxs, original_idx);
+        } else {
+            if (auto LI = llvm::dyn_cast<llvm::LoadInst>(user)) {
+                // Only scalar loads are supported now. It should be checked earlier.
+                Assert(!LI->getType()->isVectorTy());
+                idxs.push_back(original_idx);
+            } else if (auto gather = lGetPseudoGather(user)) {
+                // Collect gather's idxs
+                auto scale_c = llvm::dyn_cast<llvm::ConstantInt>(gather->getOperand(1));
+                int64_t scale = scale_c->getSExtValue();
+                auto offset = llvm::dyn_cast<llvm::ConstantDataVector>(gather->getOperand(2));
+
+                for (unsigned i = 0, size = offset->getType()->getNumElements(); i < size; ++i) {
+                    int64_t curr_offset =
+                        llvm::dyn_cast<llvm::ConstantInt>(offset->getElementAsConstant(i))->getSExtValue() * scale +
+                        original_idx;
+                    idxs.push_back(curr_offset);
+                }
+            } else {
+                continue;
+            }
+        }
+    }
+}
+
+// Update GEP index in case of nested GEP interaction
+static void lSetRealPtr(llvm::GetElementPtrInst *GEP) {
+    llvm::GetElementPtrInst *predGEP = llvm::dyn_cast<llvm::GetElementPtrInst>(GEP->getPointerOperand());
+    // The deepest GEP
+    if (!predGEP)
+        return;
+    // Pred is a bypass
+    if (predGEP->hasAllConstantIndices() && predGEP->getNumOperands() == 2 &&
+        llvm::dyn_cast<llvm::Constant>(predGEP->getOperand(1))->isNullValue()) {
+        // Go through several bypasses
+        lSetRealPtr(predGEP);
+        GEP->setOperand(0, predGEP->getPointerOperand());
+    }
+}
+
+static bool lSkipInst(llvm::Instruction *inst) {
+    // TODO: this variable should have different
+    // value for scatter coalescing
+    unsigned min_operands = 1;
+
+    // Skip phis
+    if (llvm::isa<llvm::PHINode>(inst))
+        return true;
+    // Skip obviously wrong instruction
+    if (inst->getNumOperands() < min_operands)
+        return true;
+    // Skip GEPs: handle its users instead
+    if (llvm::isa<llvm::GetElementPtrInst>(inst))
+        return true;
+
+    return false;
+}
+
+// Prepare GEPs for further optimization:
+//   - Simplify complex GEPs
+//   - Copy GEPs that are located in other BBs
+//   - Resolve possible duplications in current BB
+// TODO: it looks possible to find common pointers in
+//       some cases. Not implemented now.
+static bool lPrepareGEPs(llvm::BasicBlock &bb) {
+    bool changed = true;
+    bool modified = false;
+    // TODO: this variable should have different
+    // value for scatter coalescing
+    unsigned gep_operand_index = 0;
+
+    while (changed) {
+        changed = false;
+
+        std::map<llvm::Value *, std::map<llvm::Value *, llvm::Value *>> ptrData;
+        std::vector<llvm::Instruction *> dead;
+        std::map<llvm::Value *, llvm::Value *> movedGEPs;
+        for (auto bi = bb.begin(), be = bb.end(); bi != be; ++bi) {
+            llvm::Instruction *inst = &*bi;
+
+            if (lSkipInst(inst))
+                continue;
+
+            llvm::GetElementPtrInst *GEP = llvm::dyn_cast<llvm::GetElementPtrInst>(inst->getOperand(gep_operand_index));
+            if (!GEP) {
+                continue;
+            }
+
+            // Set real pointer in order to ignore possible bypasses
+            lSetRealPtr(GEP);
+
+            // Copy GEP to current BB
+            if (GEP->getParent() != &bb) {
+                auto it = movedGEPs.end();
+                if ((it = movedGEPs.find(GEP)) == movedGEPs.end()) {
+                    auto newGEP = llvm::dyn_cast<llvm::GetElementPtrInst>(GEP->clone());
+                    Assert(newGEP != nullptr);
+                    newGEP->insertBefore(inst);
+                    inst->setOperand(gep_operand_index, newGEP);
+                    movedGEPs[GEP] = newGEP;
+                    dead.push_back(GEP);
+                    GEP = newGEP;
+                    changed = true;
+                } else {
+                    GEP = llvm::dyn_cast<llvm::GetElementPtrInst>(it->second);
+                    Assert(GEP != nullptr);
+                    inst->setOperand(gep_operand_index, GEP);
+                    // Do not handle GEP during one BB run twice
+                    continue;
+                }
+            }
+
+            // GEP is ready for optimization
+            if (GEP->hasAllConstantIndices())
+                continue;
+            // TODO: Currently skipping constants at first index
+            // We can handle const-(const)*-arg-(arg)*-const-(const)*
+            // pattern if the first 4 fields are the same for some GEPs
+            if (llvm::dyn_cast<llvm::Constant>(GEP->getOperand(1)))
+                continue;
+            // Not interested in it
+            if (!GEP->getNumUses())
+                continue;
+
+            llvm::Value *ptr = GEP->getPointerOperand();
+            llvm::Value *idx = GEP->getOperand(1);
+            llvm::Value *foundGEP = nullptr;
+            auto it = ptrData[ptr].find(idx);
+
+            if (it != ptrData[ptr].end()) {
+                foundGEP = it->second;
+                // Duplication: just move uses
+                if (GEP->getNumOperands() == 2) {
+                    if (GEP != foundGEP) {
+                        GEP->replaceAllUsesWith(foundGEP);
+                        lCopyMetadata(foundGEP, GEP);
+                        dead.push_back(GEP);
+                        changed = true;
+                    }
+
+                    continue;
+                }
+            } else {
+                // Don't need to create new GEP, use this one
+                if (GEP->getNumOperands() == 2)
+                    foundGEP = GEP;
+                else
+                    foundGEP = llvm::GetElementPtrInst::Create(nullptr, ptr, {idx}, "lowered_gep", GEP);
+
+                ptrData[ptr][idx] = foundGEP;
+            }
+
+            if (foundGEP == GEP)
+                continue;
+
+            std::vector<llvm::Value *> args;
+            args.push_back(llvm::Constant::getNullValue(GEP->getOperand(1)->getType()));
+            for (unsigned i = 2, end = GEP->getNumOperands(); i < end; ++i)
+                args.push_back(GEP->getOperand(i));
+            auto foundGEPUser = llvm::GetElementPtrInst::Create(nullptr, foundGEP, args, "lowered_gep_succ", GEP);
+            GEP->replaceAllUsesWith(foundGEPUser);
+            lCopyMetadata(foundGEPUser, GEP);
+            dead.push_back(GEP);
+            changed = true;
+        }
+
+        for (auto inst : dead) {
+            llvm::RecursivelyDeleteTriviallyDeadInstructions(inst);
+        }
+
+        if (changed)
+            modified = true;
+    }
+
+    return modified;
+}
+
+// Return true if there is a possibility of
+// load-store-load sequence due to current instruction
+static bool lCheckForPossibleStore(llvm::Instruction *inst) {
+    if (auto CI = llvm::dyn_cast<llvm::CallInst>(inst)) {
+        // Such call may introduce load-store-load sequence
+        if (!CI->onlyReadsMemory())
+            return true;
+    } else if (auto SI = llvm::dyn_cast<llvm::StoreInst>(inst)) {
+        // May introduce load-store-load sequence
+        if (GetAddressSpace(SI->getPointerOperand()) == AddressSpace::External)
+            return true;
+    }
+
+    // No possible bad store detected
+    return false;
+}
+
+// Run optimization for all collected GEPs
+static bool lRunGenXCoalescing(std::map<llvm::Value *, std::map<llvm::Type *, std::vector<PtrUse>>> &ptrUses,
+                               std::vector<llvm::Instruction *> &dead) {
+    bool modifiedAny = false;
+
+    for (auto data : ptrUses) {
+        for (auto data_t : data.second)
+            modifiedAny |= lVectorizeGEPs(data.first, data_t.second, dead);
+    }
+
+    return modifiedAny;
+}
+
+// Analyze and optimize loads/gathers in current BB
+static bool lVectorizeLoads(llvm::BasicBlock &bb) {
+    bool modifiedAny = false;
+
+    // TODO: this variable should have different
+    // value for scatter coalescing
+    unsigned gep_operand_index = 0;
+
+    std::map<llvm::Value *, std::map<llvm::Type *, std::vector<PtrUse>>> ptrUses;
+    std::vector<llvm::Instruction *> dead;
+    std::set<llvm::GetElementPtrInst *> handledGEPs;
+    for (auto bi = bb.begin(), be = bb.end(); bi != be; ++bi) {
+        llvm::Instruction *inst = &*bi;
+
+        if (lSkipInst(inst))
+            continue;
+
+        // Check for possible load-store-load sequence
+        if (lCheckForPossibleStore(inst)) {
+            // Perform early run of the optimization
+            modifiedAny |= lRunGenXCoalescing(ptrUses, dead);
+            // All current changes were applied
+            ptrUses.clear();
+            handledGEPs.clear();
+            continue;
+        }
+
+        // Get GEP operand: current algorithm is based on GEPs
+        // TODO: this fact leads to a problem with PTR[0]: it can be
+        // accessed without GEP. The possible solution is to build GEP
+        // during preprocessing GEPs.
+        llvm::GetElementPtrInst *GEP = llvm::dyn_cast<llvm::GetElementPtrInst>(inst->getOperand(gep_operand_index));
+        if (!GEP)
+            continue;
+
+        // Since gathers work with SVM, this optimization
+        // should be applied to external address space only
+        llvm::Value *ptr = GEP->getPointerOperand();
+        if (GetAddressSpace(ptr) != AddressSpace::External)
+            continue;
+
+        // GEP was already added to the list for optimization
+        if (handledGEPs.count(GEP))
+            continue;
+        handledGEPs.insert(GEP);
+
+        // All GEPs that are located in other BB should be copied during preprocessing
+        Assert(GEP->getParent() == &bb);
+
+        // Create bypass for bad GEPs
+        // TODO: that can be applied to several GEPs, so they can be grouped.
+        // It is not done now.
+        if (!GEP->hasAllConstantIndices()) {
+            llvm::GetElementPtrInst *newGEP = llvm::GetElementPtrInst::Create(
+                nullptr, GEP, {llvm::dyn_cast<llvm::ConstantInt>(llvm::ConstantInt::get(LLVMTypes::Int32Type, 0))},
+                "ptr_bypass", GEP->getParent());
+            newGEP->moveAfter(GEP);
+            GEP->replaceAllUsesWith(newGEP);
+            lCopyMetadata(newGEP, GEP);
+            newGEP->setOperand(0, GEP);
+            GEP = newGEP;
+            continue;
+        }
+
+        // Calculate GEP offset
+        llvm::APInt acc(g->target->is32Bit() ? 32 : 64, 0, true);
+        bool checker = GEP->accumulateConstantOffset(GEP->getParent()->getParent()->getParent()->getDataLayout(), acc);
+        Assert(checker);
+
+        // Skip unsuitable GEPs
+        llvm::Type *ty = nullptr;
+        if (!(ty = lGetLoadsType(GEP)))
+            continue;
+
+        // Collect used idxs
+        int64_t idx = acc.getSExtValue();
+        std::vector<int64_t> idxs;
+        lCollectIdxs(GEP, idxs, idx);
+
+        // Store data for GEP
+        ptrUses[ptr][ty].push_back({GEP, idxs, ty});
+    }
+
+    // Run optimization
+    modifiedAny |= lRunGenXCoalescing(ptrUses, dead);
+
+    // TODO: perform investigation on compilation failure with it
+#if 0
+    for (auto d : dead) {
+        llvm::RecursivelyDeleteTriviallyDeadInstructions(d);
+    }
+#endif
+
+    return modifiedAny;
+}
+
+bool GenXGatherCoalescing::runOnBasicBlock(llvm::BasicBlock &bb) {
+    DEBUG_START_PASS("GenXGatherCoalescing");
+
+    bool modifiedAny = lPrepareGEPs(bb);
+
+    modifiedAny |= lVectorizeLoads(bb);
+
+    DEBUG_END_PASS("GenXGatherCoalescing");
+
+    return modifiedAny;
+}
+
+bool GenXGatherCoalescing::runOnFunction(llvm::Function &F) {
+    bool modifiedAny = false;
+    for (llvm::BasicBlock &BB : F) {
+        modifiedAny |= runOnBasicBlock(BB);
+    }
+    return modifiedAny;
+}
+
+static llvm::Pass *CreateGenXGatherCoalescingPass() { return new GenXGatherCoalescing; }
+
 ///////////////////////////////////////////////////////////////////////////
 // PromoteToPrivateMemoryPass
 

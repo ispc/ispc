@@ -1547,6 +1547,9 @@ Opt::Opt() {
     disableUniformMemoryOptimizations = false;
     disableCoalescing = false;
     disableZMM = false;
+#ifdef ISPC_GENX_ENABLED
+    disableGenXGatherCoalescing = false;
+#endif
 }
 
 ///////////////////////////////////////////////////////////////////////////
