@@ -508,6 +508,12 @@ struct Opt {
     /** Disable using zmm registers for avx512 target in favour of ymm.
         Affects only >= 512 bit wide targets and only if avx512vl is available */
     bool disableZMM;
+
+#ifdef ISPC_GENX_ENABLED
+    /** Disables optimization that coalesce gathers on GenX. This is
+        likely only useful for measuring the impact of this optimization */
+    bool disableGenXGatherCoalescing;
+#endif
 };
 
 /** @brief This structure collects together a number of global variables.

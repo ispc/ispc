@@ -207,6 +207,9 @@ static void lPrintVersion() {
     printf("        disable-handle-pseudo-memory-ops\tLeave __pseudo_* calls for gather/scatter/etc. in final IR\n");
     printf("        disable-uniform-control-flow\t\tDisable uniform control flow optimizations\n");
     printf("        disable-uniform-memory-optimizations\tDisable uniform-based coherent memory access\n");
+#ifdef ISPC_GENX_ENABLED
+    printf("        disable-genx-gather-coalescing\t\tDisable GenX gather coalescing.\n");
+#endif
     printf("    [--yydebug]\t\t\t\tPrint debugging information during parsing\n");
 #ifndef ISPC_NO_DUMPS
     printf("    [--debug-phase=<value>]\t\tSet optimization phases to dump. "
@@ -752,6 +755,10 @@ int main(int Argc, char *Argv[]) {
                 g->opt.disableGatherScatterFlattening = true;
             else if (!strcmp(opt, "disable-uniform-memory-optimizations"))
                 g->opt.disableUniformMemoryOptimizations = true;
+#ifdef ISPC_GENX_ENABLED
+            else if (!strcmp(opt, "disable-genx-gather-coalescing"))
+                g->opt.disableGenXGatherCoalescing = true;
+#endif
             else {
                 errorHandler.AddError("Unknown --opt= option \"%s\".", opt);
             }
