@@ -112,6 +112,7 @@
 #include "llvm/GenXOpts/GenXOpts.h"
 #include "llvm/Transforms/Utils/UnifyFunctionExitNodes.h"
 #include <llvm/GenXIntrinsics/GenXIntrOpts.h>
+#include "gen/GlobalsLocalization.h"
 // Used for GenX gather coalescing
 #include "llvm/Transforms/Utils/Local.h"
 // Constant in number of bytes.
@@ -507,7 +508,9 @@ void Optimize(llvm::Module *module, int optLevel) {
             optPM.add(llvm::createGenXPacketizePass());
             optPM.add(llvm::createPromoteMemoryToRegisterPass());
             optPM.add(llvm::createCMImpParamPass(/*IsCMRT*/ false));
-            optPM.add(llvm::createCMABIPass());
+            optPM.add(llvm::createGlobalsLocalizationPass());
+            // remove dead globals after localization
+            optPM.add(llvm::createGlobalDCEPass());
             optPM.add(llvm::createCMKernelArgOffsetPass(g->target->getGenxGrfSize(), /* OCLCodeGen*/ true));
             optPM.add(llvm::createGenXReduceIntSizePass());
             optPM.add(CreatePromoteToPrivateMemoryPass());
@@ -640,7 +643,9 @@ void Optimize(llvm::Module *module, int optLevel) {
             optPM.add(llvm::createEarlyCSEPass());
             optPM.add(llvm::createDeadCodeEliminationPass());
             optPM.add(llvm::createCMImpParamPass(/*IsCMRT*/ false));
-            optPM.add(llvm::createCMABIPass());
+            optPM.add(llvm::createGlobalsLocalizationPass());
+            // remove dead globals after localization
+            optPM.add(llvm::createGlobalDCEPass());
         }
 #endif
         optPM.add(llvm::createTailCallEliminationPass());
