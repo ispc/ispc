@@ -2,3 +2,4 @@
 
 - ``01_aossoa`` - all variations of ``aos_to_soa``, stdlib and ISPC source implementations.
 - ``02_soaaos`` - all variations of stdlib implmentation ``soa_to_aos``. TODO: ISPC source implementations.
+- ``04_fastdiv`` - division operations which used to trigger ``__fast_idiv`` in ispc. 
