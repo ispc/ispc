@@ -31,9 +31,9 @@
 #   SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 function(add_perf_example)
-    set(options CM_TEST)
-    set(oneValueArgs ISPC_SRC_NAME ISPC_TARGET CM_SRC_NAME CM_OBJ_NAME TEST_NAME CM_TEST_NAME)
-    set(multiValueArgs ISPC_GENX_ADDITIONAL_ARGS HOST_SOURCES CM_HOST_SOURCES)
+    set(options CM_TEST GBENCH)
+    set(oneValueArgs ISPC_SRC_NAME ISPC_TARGET CM_SRC_NAME CM_OBJ_NAME TEST_NAME CM_TEST_NAME GBENCH_TEST_NAME)
+    set(multiValueArgs ISPC_GENX_ADDITIONAL_ARGS HOST_SOURCES CM_HOST_SOURCES GBENCH_SRC_NAME)
     cmake_parse_arguments("parsed" "${options}" "${oneValueArgs}" "${multiValueArgs}" ${ARGN} )
 
     # Compile host code
@@ -70,6 +70,22 @@ function(add_perf_example)
             target_link_libraries(${HOST_EXECUTABLE} PRIVATE ispcrt::ispcrt)
         endif()
         set_target_properties(${HOST_EXECUTABLE} PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
+    endif()
+
+    # Compile Google Benchmark executable if requested
+    if (parsed_GBENCH AND ISPC_INCLUDE_BENCHMARKS)
+        set(GBENCH_TEST_NAME "${parsed_GBENCH_TEST_NAME}")
+        set(GBENCH_SRC_NAME "${parsed_GBENCH_SRC_NAME}")
+        add_executable(${GBENCH_TEST_NAME} ${parsed_GBENCH_SRC_NAME})
+        target_compile_definitions(${GBENCH_TEST_NAME} PRIVATE ISPCRT)
+        target_include_directories(${GBENCH_TEST_NAME} PRIVATE ${COMMON_PATH} ${GBENCH_INCLUDE_DIR})
+        link_directories(${CMAKE_SOURCE_DIR}/build/)
+        if (ISPC_BUILD)
+            target_link_libraries(${GBENCH_TEST_NAME} ispcrt benchmark)
+        else()
+            target_link_libraries(${GBENCH_TEST_NAME} PRIVATE ispcrt::ispcrt benchmark::benchmark)
+        endif()
+        set_target_properties(${GBENCH_TEST_NAME} PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
     endif()
 
     # Compile CM kernel if present
