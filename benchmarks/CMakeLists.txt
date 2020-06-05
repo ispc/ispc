@@ -59,7 +59,6 @@ set(BENCHMARK_ENABLE_TESTING OFF CACHE BOOL "Suppressing benchmark's tests" FORC
 set(BENCHMARK_ENABLE_INSTALL OFF CACHE BOOL "Suppressing benchmark's install" FORCE)
 # Link shared library
 set(BUILD_SHARED_LIBS ON CACHE BOOL "Build shared benchmark's lib" FORCE)
-
 add_subdirectory(vendor/google/benchmark)
 
 # Warn if build type is not release.

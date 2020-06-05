@@ -164,7 +164,6 @@ struct MemoryView : public ispcrt::MemoryView {
     void allocate() {
         ze_device_mem_alloc_desc_t allocDesc = {ZE_DEVICE_MEM_ALLOC_DESC_VERSION_CURRENT,
                                                 ZE_DEVICE_MEM_ALLOC_FLAG_DEFAULT, 0};
-
         L0_SAFE_CALL(zeDriverAllocDeviceMem(m_driver, &allocDesc, m_size, m_size, m_device, &m_devicePtr));
     }
 
