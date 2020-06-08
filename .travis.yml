@@ -131,6 +131,8 @@ jobs:
       os: linux
       arch: arm64
       dist: bionic
+      env:
+        - LLVM_VERSION=10.0 OS=Ubuntu18.04
       before_install:
         - sudo apt-get update
         - dpkg --print-architecture
@@ -168,6 +170,8 @@ jobs:
     - stage: test
       os: osx
       osx_image: xcode11.4
+      env:
+        - LLVM_VERSION=10.0 OS=macOS10.15
       before_install:
         - wget https://github.com/dbabokin/llvm-project/releases/download/llvm-10.0.0-ispc-dev/llvm-10.0.0-macos10.15-Release+Asserts-x86.arm.wasm.tar.xz
         - tar xvf llvm-10.0.0-macos10.15-Release+Asserts-x86.arm.wasm.tar.xz
