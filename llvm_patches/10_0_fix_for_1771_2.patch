@@ -1,0 +1,35 @@
+# This patch is a fix for #1771.
+# It is a port of the following llvm 11.0 commit: https://reviews.llvm.org/D81292
+# Git hash of the commit: 3408dcbd
+--- lib/Target/X86/X86ISelLowering.cpp
++++ lib/Target/X86/X86ISelLowering.cpp
+@@ -23319,7 +23353,8 @@ static SDValue getTargetVShiftByConstNode(unsigned Opc, const SDLoc &dl, MVT VT,
+       for (unsigned i = 0; i != NumElts; ++i) {
+         SDValue CurrentOp = SrcOp->getOperand(i);
+         if (CurrentOp->isUndef()) {
+-          Elts.push_back(CurrentOp);
++          // Must produce 0s in the correct bits.
++          Elts.push_back(DAG.getConstant(0, dl, ElementType));
+           continue;
+         }
+         auto *ND = cast<ConstantSDNode>(CurrentOp);
+@@ -23331,7 +23366,8 @@ static SDValue getTargetVShiftByConstNode(unsigned Opc, const SDLoc &dl, MVT VT,
+       for (unsigned i = 0; i != NumElts; ++i) {
+         SDValue CurrentOp = SrcOp->getOperand(i);
+         if (CurrentOp->isUndef()) {
+-          Elts.push_back(CurrentOp);
++          // Must produce 0s in the correct bits.
++          Elts.push_back(DAG.getConstant(0, dl, ElementType));
+           continue;
+         }
+         auto *ND = cast<ConstantSDNode>(CurrentOp);
+@@ -23343,7 +23379,8 @@ static SDValue getTargetVShiftByConstNode(unsigned Opc, const SDLoc &dl, MVT VT,
+       for (unsigned i = 0; i != NumElts; ++i) {
+         SDValue CurrentOp = SrcOp->getOperand(i);
+         if (CurrentOp->isUndef()) {
+-          Elts.push_back(CurrentOp);
++          // All shifted in bits must be the same so use 0.
++          Elts.push_back(DAG.getConstant(0, dl, ElementType));
+           continue;
+         }
+         auto *ND = cast<ConstantSDNode>(CurrentOp);
