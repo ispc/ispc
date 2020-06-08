@@ -42,14 +42,14 @@ WORKDIR /usr/local/src/ispc
 
 # Build Clang with all required patches.
 # Pass required LLVM_VERSION with --build-arg LLVM_VERSION=<version>.
-# By default 8.0 is used.
+# By default 10.0 is used.
 # Note self-build options, it's required to build clang and ispc with the same compiler,
 # i.e. if clang was built by gcc, you may need to use gcc to build ispc (i.e. run "make gcc"),
 # or better do clang selfbuild and use it for ispc build as well (i.e. just "make").
 # "rm" are just to keep docker image small.
-ARG LLVM_VERSION=8.0
+ARG LLVM_VERSION=10.0
 RUN ./alloy.py -b --version=$LLVM_VERSION --selfbuild --git && \
-    rm -rf $LLVM_HOME/build-$LLVM_VERSION $LLVM_HOME/llvm-$LLVM_VERSION $LLVM_HOME/bin-$LLVM_VERSION_temp $LLVM_HOME/build-$LLVM_VERSION_temp
+    rm -rf $LLVM_HOME/build-$LLVM_VERSION $LLVM_HOME/llvm-$LLVM_VERSION $LLVM_HOME/bin-"$LLVM_VERSION"_temp $LLVM_HOME/build-"$LLVM_VERSION"_temp
 
 ENV PATH=$LLVM_HOME/bin-$LLVM_VERSION/bin:$PATH
 
