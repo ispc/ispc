@@ -53,43 +53,38 @@ env:
     - DOCKER_REPO_PATH=ispc/ubuntu_16.04
     - LLVM_HOME=/usr/local/src/llvm
     - ISPC_HOME=$TRAVIS_BUILD_DIR
-  matrix:
-    - LLVM_VERSION=10.0 OS=Ubuntu16.04 DOCKER_TAG=llvm100
-    - LLVM_VERSION=9.0 OS=Ubuntu16.04 DOCKER_TAG=llvm90
-    - LLVM_VERSION=8.0 OS=Ubuntu16.04 DOCKER_TAG=llvm80
-      # WASM enabled build
-    - LLVM_VERSION=10.0 OS=Ubuntu16.04 DOCKER_TAG=llvm100 WASM_FLAGS="-DWASM_ENABLED=ON"
 
-before_install:
-  - sudo apt-get update
-  - sudo apt-get install -y libc6-dev-i386 g++-multilib lib32stdc++6
-  - if [ -n "$WASM_FLAGS" ]; then source scripts/install_emscripten.sh && emcc --version; fi
-  - if [ -n "$WASM_FLAGS" ]; then source scripts/install_v8.sh && v8 -e "console.log(\"V8 WORKS\")"; fi
-  - wget https://cmake.org/files/v3.17/cmake-3.17.0-Linux-x86_64.sh && mkdir /opt/cmake && sh cmake-3.17.0-Linux-x86_64.sh --prefix=/opt/cmake --skip-license && sudo ln -s /opt/cmake/bin/cmake /usr/local/bin/cmake && rm cmake-3.17.0-Linux-x86_64.sh
-  - export PATH=/opt/cmake/bin:$PATH
-  - cmake --version
-  - docker pull "$DOCKER_REPO_PATH:$DOCKER_TAG"
-  - docker run "$DOCKER_REPO_PATH:$DOCKER_TAG"
-  - export CONTAINER=`docker ps --all |head -2 |tail -1 |awk '//{print $1}'`
-  - sudo docker cp $CONTAINER:$LLVM_HOME /usr/local/src
-  - export PATH=$LLVM_HOME/bin-$LLVM_VERSION/bin:$PATH
-
-script:
-  - mkdir build_$LLVM_VERSION && cd build_$LLVM_VERSION
-  - cmake -DCMAKE_INSTALL_PREFIX=$TRAVIS_BUILD_DIR -DISPC_INCLUDE_BENCHMARKS=ON $WASM_FLAGS ../
-    # Build ispc and check_isa utility. Run lit tests.
-  - make ispc check_isa check-all -j4
-    # Build benchmarks and test them.
-  - make ispc_benchmarks && make test
-    # Add ispc to the PATH
-  - export PATH=$ISPC_HOME/build_$LLVM_VERSION/bin:$PATH && cd $ISPC_HOME
-  - check_isa
-  - ispc --support-matrix
-  - ./check_env.py
-    # Run examples
-  - if [ -z "$WASM_FLAGS" ]; then ./perf.py -n 1; fi
-    # Run tests for latest LLVM version
-  - if [ "$LLVM_VERSION" == "10.0" -a -z "$WASM_FLAGS" ]; then ./run_tests.py; ./run_tests.py -a x86; fi
+my_tag: &my_tag
+      stage: test
+      before_install:
+        - sudo apt-get update
+        - sudo apt-get install -y libc6-dev-i386 g++-multilib lib32stdc++6
+        - if [ -n "$WASM_FLAGS" ]; then source scripts/install_emscripten.sh && emcc --version; fi
+        - if [ -n "$WASM_FLAGS" ]; then source scripts/install_v8.sh && v8 -e "console.log(\"V8 WORKS\")"; fi
+        - wget https://cmake.org/files/v3.17/cmake-3.17.0-Linux-x86_64.sh && mkdir /opt/cmake && sh cmake-3.17.0-Linux-x86_64.sh --prefix=/opt/cmake --skip-license && sudo ln -s /opt/cmake/bin/cmake /usr/local/bin/cmake && rm cmake-3.17.0-Linux-x86_64.sh
+        - export PATH=/opt/cmake/bin:$PATH
+        - cmake --version
+        - docker pull "$DOCKER_REPO_PATH:$DOCKER_TAG"
+        - docker run "$DOCKER_REPO_PATH:$DOCKER_TAG"
+        - export CONTAINER=`docker ps --all |head -2 |tail -1 |awk '//{print $1}'`
+        - sudo docker cp $CONTAINER:$LLVM_HOME /usr/local/src
+        - export PATH=$LLVM_HOME/bin-$LLVM_VERSION/bin:$PATH
+      script:
+        - mkdir build_$LLVM_VERSION && cd build_$LLVM_VERSION
+        - cmake -DCMAKE_INSTALL_PREFIX=$TRAVIS_BUILD_DIR -DISPC_INCLUDE_BENCHMARKS=ON $WASM_FLAGS ../
+          # Build ispc and check_isa utility. Run lit tests.
+        - make ispc check_isa check-all -j4
+          # Build benchmarks and test them.
+        - make ispc_benchmarks && make test
+          # Add ispc to the PATH
+        - export PATH=$ISPC_HOME/build_$LLVM_VERSION/bin:$PATH && cd $ISPC_HOME
+        - check_isa
+        - ispc --support-matrix
+        - ./check_env.py
+          # Run examples
+        - if [ -z "$WASM_FLAGS" ]; then ./perf.py -n 1; fi
+          # Run tests for latest LLVM version
+        - if [ "$LLVM_VERSION" == "10.0" -a -z "$WASM_FLAGS" ]; then ./run_tests.py; ./run_tests.py -a x86; fi
 
 stages:
   - check format
@@ -108,3 +103,16 @@ jobs:
       before_install:
       script:
         - ./check_format.sh clang-format-10
+    - <<: *my_tag
+      env:
+        - LLVM_VERSION=10.0 OS=Ubuntu16.04 DOCKER_TAG=llvm100
+    - <<: *my_tag
+      env:
+        - LLVM_VERSION=9.0 OS=Ubuntu16.04 DOCKER_TAG=llvm90
+    - <<: *my_tag
+      env:
+        - LLVM_VERSION=8.0 OS=Ubuntu16.04 DOCKER_TAG=llvm80
+    # WASM enabled build
+    - <<: *my_tag
+      env:
+        - LLVM_VERSION=10.0 OS=Ubuntu16.04 DOCKER_TAG=llvm100 WASM_FLAGS="-DWASM_ENABLED=ON"
