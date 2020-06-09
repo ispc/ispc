@@ -97,14 +97,12 @@ cmd = [executable] + unknown
 print("Using host name: ", host_name)
 print("Attempting to access executable at: ", executable)
 
-success = re.compile(r'passed', re.IGNORECASE)
-
 try:
     p = subprocess.Popen(cmd, stdout=subprocess.PIPE, env=test_env, cwd=test_dir)
     out, err = p.communicate()
     print(out)
-    if not success.search(out.decode()):
-        sys.exit(-1)
+    if p.returncode:
+        raise subprocess.CalledProcessError('Workload returned non-zero error code')
     if args.res_image and args.ref_image:
         if not compareImages(os.path.join(test_dir, args.res_image), os.path.join(test_dir, args.ref_image)):
             print('Test FAILED')
@@ -115,4 +113,7 @@ try:
 except subprocess.CalledProcessError as e:
     print("Return code is ", p.returncode)
     print(e.message)
+    print('Test FAILED')
     sys.exit(p.returncode)
+
+print('Test PASSED')

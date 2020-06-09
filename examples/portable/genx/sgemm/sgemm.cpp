@@ -171,7 +171,7 @@ static int run(int m, int niter, int gx, int gy) {
         }
     } else {
         printf("Result not checked - make #iterations=1 to check result!\n");
-        printf("PASSED\n");
+        printf("Completed!\n");
     }
 
     L0_SAFE_CALL(zeDriverFreeMem(hDriver, a_buf));
