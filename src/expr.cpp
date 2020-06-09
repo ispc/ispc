@@ -4860,7 +4860,11 @@ MemberExpr *MemberExpr::create(Expr *e, const char *id, SourcePos p, SourcePos i
                   exprType->GetString().c_str());
         return NULL;
     }
-    if (derefLValue == false && pointerType != NULL && CastType<StructType>(pointerType->GetBaseType()) != NULL) {
+    // For struct and short-vector, emit error if elements are accessed
+    // incorrectly.
+    if (derefLValue == false && pointerType != NULL &&
+        ((CastType<StructType>(pointerType->GetBaseType()) != NULL) ||
+         (CastType<VectorType>(pointerType->GetBaseType()) != NULL))) {
         Error(p,
               "Member operator \".\" can't be applied to pointer "
               "type \"%s\".  Did you mean to use \"->\"?",
