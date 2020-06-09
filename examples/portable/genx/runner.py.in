@@ -71,12 +71,9 @@ cur_dir = os.path.dirname(os.path.realpath(__file__))
 test_dir = os.path.join(cur_dir, str(args.dir))
 
 if os.name != 'nt':
-    neo_path = "@NEO_INSTALL_PATH@"
-    neo_lib = neo_path + "/neo/usr/local/lib"
-    extra_lib = neo_path + "/neo/lib/extra"
     local_lib = "/usr/local/lib"
     runtime_lib = os.path.join(cur_dir, "../../../install/lib")
-    additional_libs = os.pathsep + os.pathsep.join([runtime_lib, neo_lib, extra_lib, local_lib])
+    additional_libs = os.pathsep + os.pathsep.join([runtime_lib, local_lib])
 
 print("Using runtime lib path: ", additional_libs)
 
