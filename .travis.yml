@@ -50,8 +50,7 @@ dist: xenial
 #   (4) to have flexibility of testing with a range of LLVM versions that we need.
 env:
   global:
-    - DOCKER_REPO_PATH=ispc/ubuntu_16.04
-    - LLVM_HOME=/usr/local/src/llvm
+    - LLVM_REPO=https://github.com/dbabokin/llvm-project
     - ISPC_HOME=$TRAVIS_BUILD_DIR
 
 # Matrix expansion is not supported in builds stages, see: https://github.com/travis-ci/travis-ci/issues/8295
@@ -66,11 +65,9 @@ my_tag: &my_tag
         - wget https://cmake.org/files/v3.17/cmake-3.17.0-Linux-x86_64.sh && mkdir /opt/cmake && sh cmake-3.17.0-Linux-x86_64.sh --prefix=/opt/cmake --skip-license && sudo ln -s /opt/cmake/bin/cmake /usr/local/bin/cmake && rm cmake-3.17.0-Linux-x86_64.sh
         - export PATH=/opt/cmake/bin:$PATH
         - cmake --version
-        - docker pull "$DOCKER_REPO_PATH:$DOCKER_TAG"
-        - docker run "$DOCKER_REPO_PATH:$DOCKER_TAG"
-        - export CONTAINER=`docker ps --all |head -2 |tail -1 |awk '//{print $1}'`
-        - sudo docker cp $CONTAINER:$LLVM_HOME /usr/local/src
-        - export PATH=$LLVM_HOME/bin-$LLVM_VERSION/bin:$PATH
+        - wget $LLVM_REPO/releases/download/llvm-$LLVM_VERSION-ispc-dev/$LLVM_TAR
+        - tar xvf $LLVM_TAR
+        - export PATH=`pwd`/bin-$LLVM_VERSION/bin:$PATH
       script:
         - mkdir build_$LLVM_VERSION && cd build_$LLVM_VERSION
         - cmake -DCMAKE_INSTALL_PREFIX=$TRAVIS_BUILD_DIR -DISPC_INCLUDE_BENCHMARKS=ON $WASM_FLAGS ../
@@ -110,19 +107,23 @@ jobs:
     - <<: *my_tag
       env:
         - LLVM_VERSION=10.0 OS=Ubuntu16.04 DOCKER_TAG=llvm100
+        - LLVM_TAR=llvm-10.0.0-ubuntu16.04-Release+Asserts-x86.arm.wasm.tar.xz
     # LLVM 9.0 + Ubuntu 16.04: build, lit tests, examples (build + run), benchmarks (build + trial run)
     - <<: *my_tag
       env:
         - LLVM_VERSION=9.0 OS=Ubuntu16.04 DOCKER_TAG=llvm90
+        - LLVM_TAR=llvm-9.0.1-ubuntu16.04-Release+Asserts-x86.arm.wasm.tar.xz
     # LLVM 8.0 + Ubuntu 16.04: build, lit tests, examples (build + run), benchmarks (build + trial run)
     - <<: *my_tag
       env:
         - LLVM_VERSION=8.0 OS=Ubuntu16.04 DOCKER_TAG=llvm80
+        - LLVM_TAR=llvm-8.0.1-ubuntu16.04-Release+Asserts-x86.arm.wasm.tar.xz
     # WASM enabled build
     # LLVM 10.0 + Ubuntu 16.04: build, lit tests, examples (build), benchmarks (build + trial run)
     - <<: *my_tag
       env:
         - LLVM_VERSION=10.0 OS=Ubuntu16.04 DOCKER_TAG=llvm100 WASM_FLAGS="-DWASM_ENABLED=ON"
+        - LLVM_TAR=llvm-10.0.0-ubuntu16.04-Release+Asserts-x86.arm.wasm.tar.xz
     # ARM build
     # LLVM 10.0 + Ubuntu 18.04:
     #   - ARM only (default): build, lit tests, examples (build)
@@ -133,6 +134,7 @@ jobs:
       dist: bionic
       env:
         - LLVM_VERSION=10.0 OS=Ubuntu18.04
+        - LLVM_TAR=llvm-10.0.0-ubuntu16.04aarch64-Release+Asserts-x86.arm.wasm.tar.xz
       before_install:
         - sudo apt-get update
         - dpkg --print-architecture
@@ -146,9 +148,9 @@ jobs:
             tar -xjvf cmake-3.17.0-h28c56e5_0.tar.bz2 -C $HOME/cmake;
             export PATH=$HOME/cmake/bin:$PATH;
           fi
-        - wget https://github.com/dbabokin/llvm-project/releases/download/llvm-10.0.0-ispc-dev/llvm-10.0.0-ubuntu16.04aarch64-Release+Asserts-x86.arm.wasm.tar.xz
-        - tar xvf llvm-10.0.0-ubuntu16.04aarch64-Release+Asserts-x86.arm.wasm.tar.xz
-        - export PATH=`pwd`/bin-10.0/bin:$PATH
+        - wget $LLVM_REPO/releases/download/llvm-$LLVM_VERSION-ispc-dev/$LLVM_TAR
+        - tar xvf $LLVM_TAR
+        - export PATH=`pwd`/bin-$LLVM_VERSION/bin:$PATH
       script:
         - mkdir build-arm && cd build-arm
         - cmake ..
@@ -172,10 +174,11 @@ jobs:
       osx_image: xcode11.4
       env:
         - LLVM_VERSION=10.0 OS=macOS10.15
+        - LLVM_TAR=llvm-10.0.0-macos10.15-Release+Asserts-x86.arm.wasm.tar.xz
       before_install:
-        - wget https://github.com/dbabokin/llvm-project/releases/download/llvm-10.0.0-ispc-dev/llvm-10.0.0-macos10.15-Release+Asserts-x86.arm.wasm.tar.xz
-        - tar xvf llvm-10.0.0-macos10.15-Release+Asserts-x86.arm.wasm.tar.xz
-        - export PATH=`pwd`/bin-10.0/bin:$PATH
+        - wget $LLVM_REPO/releases/download/llvm-$LLVM_VERSION-ispc-dev/$LLVM_TAR
+        - tar xvf $LLVM_TAR
+        - export PATH=`pwd`/bin-$LLVM_VERSION/bin:$PATH
         - brew update && brew install bison
         - export PATH=/usr/local/opt/bison/bin:$PATH
       script:
