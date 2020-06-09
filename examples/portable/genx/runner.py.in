@@ -37,9 +37,17 @@ import subprocess
 import argparse
 import re
 
-def compareImages(image0,image1):
-  if not os.path.isfile(image0) or not os.path.isfile(image1): 
-    print("No such files")
+def compareImages(image0, image1):
+  if not image1:
+    print("Incorrect arguments (image1 is None)")
+    return False
+
+  if not os.path.isfile(image0):
+    print('No such file: {0}'.format(image0))
+    return False
+
+  if not os.path.isfile(image1):
+    print('No such file: {0}'.format(image1))
     return False
 
   try: line = subprocess.check_output("compare -metric MAE "+image0+" "+image1+" null:", stderr=subprocess.STDOUT, shell=True)
@@ -98,8 +106,12 @@ try:
     if not success.search(out.decode()):
         sys.exit(-1)
     if args.res_image and args.ref_image:
-        if not compareImages(os.path.join(test_dir, args.res_image ), os.path.join(test_dir, args.ref_image)):
+        if not compareImages(os.path.join(test_dir, args.res_image), os.path.join(test_dir, args.ref_image)):
+            print('Test FAILED')
             sys.exit(-1)
+        else:
+            print('Test PASSED')
+            sys.exit(0)
 except subprocess.CalledProcessError as e:
     print("Return code is ", p.returncode)
     print(e.message)
