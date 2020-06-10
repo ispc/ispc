@@ -1793,16 +1793,18 @@ std::string StructType::GetCDeclaration(const std::string &n) const {
     if (isConst)
         ret += "const ";
     ret += std::string("struct ") + GetCStructName();
+
+    // Add _SOA<SOAWIDTH> to end of struct name.
+    if (variability.soaWidth > 0) {
+        char buf[32];
+        // This has to match the naming scheme used in lEmitStructDecls()
+        // in module.cpp
+        snprintf(buf, sizeof(buf), "_SOA%d", variability.soaWidth);
+        ret += buf;
+    }
+
     if (lShouldPrintName(n)) {
         ret += std::string(" ") + n;
-
-        if (variability.soaWidth > 0) {
-            char buf[32];
-            // This has to match the naming scheme used in lEmitStructDecls()
-            // in module.cpp
-            snprintf(buf, sizeof(buf), "_SOA%d", variability.soaWidth);
-            ret += buf;
-        }
     }
 
     return ret;
