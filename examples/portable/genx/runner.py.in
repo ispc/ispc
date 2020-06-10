@@ -105,15 +105,10 @@ try:
         raise subprocess.CalledProcessError('Workload returned non-zero error code')
     if args.res_image and args.ref_image:
         if not compareImages(os.path.join(test_dir, args.res_image), os.path.join(test_dir, args.ref_image)):
-            print('Test FAILED')
             sys.exit(-1)
         else:
-            print('Test PASSED')
             sys.exit(0)
 except subprocess.CalledProcessError as e:
     print("Return code is ", p.returncode)
     print(e.message)
-    print('Test FAILED')
     sys.exit(p.returncode)
-
-print('Test PASSED')

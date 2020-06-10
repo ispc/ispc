@@ -175,7 +175,6 @@ static int run(unsigned int width, unsigned int height, unsigned int test_iterat
     printf("[mandelbrot serial]:\t\t[%.3f] million cycles (%d x %d image)\n", minTimeSerial, width, height);
     writePPM(buf.data(), width, height, "mandelbrot-cpp-serial.ppm");
 
-    printf("mandelbrot completed!\n");
     return 0;
 }
 

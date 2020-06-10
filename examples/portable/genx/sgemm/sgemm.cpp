@@ -163,15 +163,12 @@ static int run(int m, int niter, int gx, int gy) {
     // Result check
     bool pass = true;
     if (niter == 1) {
-        if (C == C_gold) {
-            printf("PASSED\n");
-        } else {
+        if (C != C_gold) {
             pass = false;
-            printf("FAILED\n");
+            printf("Result is NOT correct!\n");
         }
     } else {
         printf("Result not checked - make #iterations=1 to check result!\n");
-        printf("Completed!\n");
     }
 
     L0_SAFE_CALL(zeDriverFreeMem(hDriver, a_buf));
