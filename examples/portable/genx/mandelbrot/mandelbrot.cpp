@@ -136,8 +136,8 @@ static int run(unsigned int width, unsigned int height, unsigned int test_iterat
             auto res = queue.launch(kernel, p_dev, width / p.tile_size, height / p.tile_size);
             queue.barrier();
             queue.sync();
-            if (ispcrtFutureIsValid(res)) {
-                kernelTicks = ispcrtFutureGetTimeNs(res) * 1e-6;
+            if (res.valid()) {
+                kernelTicks = res.time() * 1e-6;
             }
             double mcycles = get_elapsed_mcycles();
             queue.copyToHost(buf_dev);
