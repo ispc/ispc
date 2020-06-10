@@ -80,6 +80,7 @@ macro(build_ispcrt SHARED_OR_STATIC TARGET_NAME)
   PRIVATE
     ${CMAKE_DL_LIBS}
     $<$<BOOL:${ISPCRT_BUILD_TASKING}>:OpenMP::OpenMP_CXX>
+    $<$<BOOL:${ISPCRT_BUILD_TASKING}>:OpenMP::OpenMP_C>
   )
 
   ## Install targets + exports ##
