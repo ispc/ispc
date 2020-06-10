@@ -163,11 +163,10 @@ static int run(int niter, int gx, int gy) {
         }
     }
     if (!pass) {
-        std::cout << "Correctness test failed on " << i << "th value." << std::endl;
+        std::cout << "Mismatch on " << i << "th value." << std::endl;
         std::cout << "Was " << buf.at(i) << ", should be " << gold.at(i) << std::endl;
     } else {
-        std::cout << "Passed!"
-                  << " Max error:" << max_err << std::endl;
+        std::cout << "No issues found, max error:" << max_err << std::endl;
     }
 
     return (pass) ? 0 : 1;

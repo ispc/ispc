@@ -104,6 +104,9 @@ class Matrix {
                 (*this)(r, c) = mat(r, c);
             }
     }
+    bool operator!=(Matrix &m) {
+        return !(*this == m);
+    }
     bool operator==(Matrix &m) {
         if (m.n_col() != this->n_col())
             return false;
