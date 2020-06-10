@@ -115,8 +115,8 @@ static int run(int niter, int gx, int gy) {
             queue.copyToHost(buf_dev);
             queue.barrier();
             queue.sync();
-            if (ispcrtFutureIsValid(res)) {
-                kernelTicks = ispcrtFutureGetTimeNs(res) * 1e-6;
+            if (res.valid()) {
+                kernelTicks = res.time() * 1e-6;
             }
             double mcycles = get_elapsed_mcycles();
             // Print resulting time
