@@ -255,15 +255,7 @@ if (GENX_ENABLED)
         set(PB_PATH_MODIFIER "x64")
     endif()
 
-    list(APPEND GEN_LIBRARY_LIST LLVMGenXIntrinsics LLVMGenXCodeGen LLVMGenXOpts LLVMSPIRVLib)
-    if (WIN32)
-        list(APPEND GEN_LIBRARY_LIST igfxcmjit${TARGET_MODIFIER})
-    else()
-        # We need to pass library name with suffix to find_library on Linux since it has non-standard name
-        # and cannot be found without it
-        list(APPEND GEN_LIBRARY_LIST igfxcmjit${TARGET_MODIFIER}.a)
-    endif()
-    list(APPEND GEN_LIBRARY_LIST iga_enc${TARGET_MODIFIER} iga_s${TARGET_MODIFIER})
+    list(APPEND GEN_LIBRARY_LIST LLVMGenXIntrinsics LLVMSPIRVLib)
 endif()
 
 get_llvm_libfiles(LLVM_LIBRARY_LIST ${LLVM_COMPONENTS})
@@ -389,6 +381,7 @@ endif()
 # Include directories
 target_include_directories(${PROJECT_NAME} PRIVATE
                            ${LLVM_INCLUDE_DIRS}
+                           ${GENX_DEPS_DIR}/include
                            ${CMAKE_CURRENT_SOURCE_DIR}/src
                            ${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_CFG_INTDIR})
 # Compile options
@@ -464,7 +457,7 @@ target_link_libraries(${PROJECT_NAME} ${LLVM_LIBRARY_LIST} ${CMAKE_DL_LIBS})
 if (GENX_ENABLED)
     # Link against GEN libraries
     foreach(genLib ${GEN_LIBRARY_LIST})
-        find_library(${genLib}Path NAMES ${genLib} HINTS ${LLVM_LIBRARY_DIRS})
+        find_library(${genLib}Path NAMES ${genLib} HINTS ${GENX_DEPS_DIR}/lib)
         list(APPEND GEN_LIBRARY_FULL_PATH_LIST ${${genLib}Path})
     endforeach()
     target_link_libraries(${PROJECT_NAME} ${GEN_LIBRARY_FULL_PATH_LIST})
