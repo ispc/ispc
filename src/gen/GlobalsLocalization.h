@@ -35,7 +35,7 @@
     @brief Define extra passes required for Gen target
 */
 
-
+#include "../ispc_version.h"
 #ifndef GEN_GLOBALS_LOCALIZATION_H
 #define GEN_GLOBALS_LOCALIZATION_H
 
@@ -43,7 +43,6 @@ namespace llvm {
 class Pass;
 
 Pass *createGlobalsLocalizationPass();
-}
+} // namespace llvm
 
 #endif
-
