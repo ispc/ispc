@@ -549,7 +549,7 @@ void Function::GenerateIR() {
         // For GEN target we emit code only for unmasked version of a kernel and subroutines.
         // TODO_GEN: revise this one more time after testing of subroutines calls.
         const FunctionType *type = CastType<FunctionType>(sym->type);
-        if (type->isExported && type->isUnmasked || !type->isExported && !type->isTask) {
+        if ((type->isExported && type->isUnmasked) || (!type->isExported && !type->isTask)) {
             FunctionEmitContext ec(this, sym, function, firstStmtPos);
             emitCode(&ec, function, firstStmtPos);
         }
@@ -567,8 +567,8 @@ void Function::GenerateIR() {
         // the application can call it
         // For gen we emit a version without mask parameter only for "export" -qualified functions and tasks.
 #ifdef ISPC_GENX_ENABLED
-        if (type->isExported || g->target->getISA() == Target::GENX && type->isTask) {
-            if (g->target->getISA() != Target::GENX && !type->isTask || g->target->getISA() == Target::GENX) {
+        if (type->isExported || (g->target->getISA() == Target::GENX && type->isTask)) {
+            if ((g->target->getISA() != Target::GENX && !type->isTask) || g->target->getISA() == Target::GENX) {
 #else
         if (type->isExported) {
             if (!type->isTask) {

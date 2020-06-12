@@ -783,7 +783,7 @@ void Module::AddFunctionDeclaration(const std::string &name, const FunctionType 
 
     if (functionType->isExported || functionType->isExternC
 #ifdef ISPC_GENX_ENABLED
-        || g->target->getISA() == Target::GENX && functionType->isTask)
+        || (g->target->getISA() == Target::GENX && functionType->isTask))
 #else
     )
 #endif

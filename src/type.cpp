@@ -2504,9 +2504,9 @@ llvm::FunctionType *FunctionType::LLVMFunctionType(llvm::LLVMContext *ctx, bool 
     // And add the function mask, if asked for
     if (!(removeMask || isUnmasked
 #ifdef ISPC_GENX_ENABLED
-          || g->target->getISA() == Target::GENX && isTask
+          || (g->target->getISA() == Target::GENX && isTask)
 #endif
-          ))
+              ))
         llvmArgTypes.push_back(LLVMTypes::MaskType);
 
     std::vector<llvm::Type *> callTypes;
