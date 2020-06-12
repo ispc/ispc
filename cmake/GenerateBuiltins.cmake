@@ -272,7 +272,7 @@ function(builtin_to_cpp bit os_name arch supported_archs supported_oses resultFi
 endfunction()
 
 function(builtin_genx_to_cpp bit resultFileName)
-    set(inputFilePath builtins/builtins-c-genx.cpp)
+    set(inputFilePath builtins/builtins-cm-${bit}.ll)
     set(SKIP OFF)
     if (WIN32)
         set(os_name "windows")
@@ -294,8 +294,7 @@ function(builtin_genx_to_cpp bit resultFileName)
       set(output ${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_CFG_INTDIR}/builtins-cm-${bit}.cpp)
       add_custom_command(
           OUTPUT ${output}
-          COMMAND ${CMC_EXECUTABLE} -I${CMAKE_SOURCE_DIR} -m${bit} -isystem ${CM_INCLUDE_PATH}
-              -Xclang -disable-llvm-passes -emit-llvm -S ${inputFilePath} -o -
+          COMMAND cat ${inputFilePath}
               | \"${Python3_EXECUTABLE}\" bitcode2cpp.py cm --type=builtins-c --runtime=${bit}
               --os=${os_name} --arch=${target_arch} --llvm_as ${LLVM_AS_EXECUTABLE}
               > ${output}
