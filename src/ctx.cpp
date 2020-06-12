@@ -1260,7 +1260,7 @@ void FunctionEmitContext::CurrentLanesReturned(Expr *expr, bool doCoherenceCheck
         }
     }
 #ifdef ISPC_GENX_ENABLED
-    if (g->target->getISA() == Target::GENX || g->target->getISA() != Target::GENX && VaryingCFDepth() == 0) {
+    if (g->target->getISA() == Target::GENX || (g->target->getISA() != Target::GENX && VaryingCFDepth() == 0)) {
         // Don't need to create mask management instructions for GenX
         // since execution is managed through GenX EM
 #else
@@ -3652,7 +3652,6 @@ llvm::Value *FunctionEmitContext::GenXSimdCFPredicate(llvm::Value *value, llvm::
                                                   llvm::Constant::getNullValue(vt->getElementType()));
     }
 
-    llvm::Type *Tys[] = {value->getType()};
     auto Fn = llvm::GenXIntrinsic::getGenXDeclaration(m->module, llvm::GenXIntrinsic::genx_simdcf_predicate,
                                                       value->getType());
     std::vector<llvm::Value *> args;

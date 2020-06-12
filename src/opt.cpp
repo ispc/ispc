@@ -2887,7 +2887,7 @@ static bool lImproveMaskedStore(llvm::CallInst *callInst) {
                 llvm::GenXIntrinsic::getGenXDeclaration(m->module, llvm::GenXIntrinsic::genx_svm_block_st, argTypes);
             store = lCallInst(Fn, svm_st_zext, rvalue, "", NULL);
         } else if (g->target->getISA() != Target::GENX ||
-                   g->target->getISA() == Target::GENX && GetAddressSpace(lvalue) == AddressSpace::Local)
+                   (g->target->getISA() == Target::GENX && GetAddressSpace(lvalue) == AddressSpace::Local))
 #endif
         {
             llvm::Type *ptrType = llvm::PointerType::get(rvalueType, 0);
@@ -2983,7 +2983,7 @@ static bool lImproveMaskedLoad(llvm::CallInst *callInst, llvm::BasicBlock::itera
 
             load = llvm::CallInst::Create(Fn, svm_ld_ptrtoint, callInst->getName());
         } else if (g->target->getISA() != Target::GENX ||
-                   g->target->getISA() == Target::GENX && GetAddressSpace(ptr) == AddressSpace::Local)
+                   (g->target->getISA() == Target::GENX && GetAddressSpace(ptr) == AddressSpace::Local))
 #endif
         {
             llvm::Type *ptrType = llvm::PointerType::get(callInst->getType(), 0);
@@ -6195,7 +6195,7 @@ restart:
     for (llvm::BasicBlock::iterator I = bb.begin(), E = --bb.end(); I != E; ++I) {
         llvm::Instruction *inst = &*I;
         if (llvm::LoadInst *ld = llvm::dyn_cast<llvm::LoadInst>(inst)) {
-            if (llvm::isa<llvm::VectorType>(ld->getType()) != NULL) {
+            if (llvm::isa<llvm::VectorType>(ld->getType())) {
                 llvm::Value *ptr = ld->getOperand(0);
                 llvm::Type *retType = ld->getType();
                 if (GetAddressSpace(ptr) == AddressSpace::External) {
@@ -6216,7 +6216,7 @@ restart:
                 }
             }
         } else if (llvm::StoreInst *st = llvm::dyn_cast<llvm::StoreInst>(inst)) {
-            if (llvm::isa<llvm::VectorType>(st->getType()) != NULL) {
+            if (llvm::isa<llvm::VectorType>(st->getType())) {
                 llvm::Value *ptr = st->getOperand(1);
                 llvm::Value *val = st->getOperand(0);
                 if (GetAddressSpace(ptr) == AddressSpace::External) {

@@ -826,8 +826,7 @@ static void lSetInternalFunctions(llvm::Module *module) {
 static void lSetAlwaysInlineFunctions(llvm::Module *module) {
     std::vector<const char *> names = {
 #ifdef ISPC_GENX_ENABLED
-        "__do_print_cm",
-        "__do_print_lz"
+        "__do_print_cm", "__do_print_lz"
 #endif /* ISPC_GENX_ENABLED */
     };
     for (auto name : names) {
