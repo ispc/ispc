@@ -1,17 +1,17 @@
 # Nightly Linux run.
 
-name: Linux tests / LLVM 10.0
+name: Nightly Linux tests / LLVM 10.0
 
 # Run daily - test sse2-avx2 targets @ -O0/-O1/-O2
 on:
   schedule:
-    - cron:  '0 7 * * *'
+    - cron:  '0 9 * * *'
 
 env:
   LLVM_VERSION: "10.0"
   LLVM_REPO: https://github.com/dbabokin/llvm-project
   LLVM_TAR: llvm-10.0.0-ubuntu16.04-Release+Asserts-x86.arm.wasm.tar.xz
-  # package name ispc_llvm10_linux
+  SDE_TAR_NAME: sde-external-8.50.0-2020-03-26-lin
 
 jobs:
   linux-build:
@@ -93,3 +93,6 @@ jobs:
       with:
         name: fail_db.${{matrix.target}}.txt
         path: fail_db.txt
+    - name: Check
+      run: |
+        [ -z "`git diff`" ]
