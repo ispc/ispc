@@ -62,3 +62,6 @@ RUN cmake ../ -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_INSTALL_PREFIX=/usr/local/src
 RUN make ispc -j8 && make install
 WORKDIR ../
 RUN rm -rf build_$LLVM_VERSION
+
+#export path for ispc
+ENV PATH=/usr/local/src/ispc/bin-$LLVM_VERSION/bin:$PATH
