@@ -755,9 +755,10 @@ llvm::DIType *EnumType::GetDIType(llvm::DIScope *scope) const {
 
     llvm::DINodeArray elementArray = m->diBuilder->getOrCreateArray(enumeratorDescriptors);
     llvm::DIFile *diFile = pos.GetDIFile();
+    llvm::DINamespace *diSpace = pos.GetDINamespace();
     llvm::DIType *underlyingType = AtomicType::UniformInt32->GetDIType(scope);
     llvm::DIType *diType =
-        m->diBuilder->createEnumerationType(diFile, name, diFile, pos.first_line, 32 /* size in bits */,
+        m->diBuilder->createEnumerationType(diSpace, GetString(), diFile, pos.first_line, 32 /* size in bits */,
                                             32 /* align in bits */, elementArray, underlyingType, name);
     switch (variability.type) {
     case Variability::Uniform:
@@ -1848,7 +1849,8 @@ llvm::DIType *StructType::GetDIType(llvm::DIScope *scope) const {
 
     llvm::DINodeArray elements = m->diBuilder->getOrCreateArray(elementLLVMTypes);
     llvm::DIFile *diFile = pos.GetDIFile();
-    return m->diBuilder->createStructType(diFile, name, diFile,
+    llvm::DINamespace *diSpace = pos.GetDINamespace();
+    return m->diBuilder->createStructType(diSpace, GetString(), diFile,
                                           pos.first_line,          // Line number
                                           layout->getSizeInBits(), // Size in bits
 #if ISPC_LLVM_VERSION <= ISPC_LLVM_9_0
@@ -2026,8 +2028,9 @@ llvm::Type *UndefinedStructType::LLVMType(llvm::LLVMContext *ctx) const {
 
 llvm::DIType *UndefinedStructType::GetDIType(llvm::DIScope *scope) const {
     llvm::DIFile *diFile = pos.GetDIFile();
+    llvm::DINamespace *diSpace = pos.GetDINamespace();
     llvm::DINodeArray elements;
-    return m->diBuilder->createStructType(diFile, name, diFile,
+    return m->diBuilder->createStructType(diSpace, GetString(), diFile,
                                           pos.first_line,         // Line number
                                           0,                      // Size
                                           0,                      // Align

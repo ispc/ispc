@@ -296,6 +296,7 @@ FunctionEmitContext::FunctionEmitContext(Function *func, Symbol *funSym, llvm::F
         /* If debugging is enabled, tell the debug information emission
            code about this new function */
         diFile = funcStartPos.GetDIFile();
+        diSpace = funcStartPos.GetDINamespace();
         llvm::DIScope *scope = m->diCompileUnit;
         llvm::DIType *diSubprogramType = NULL;
 
@@ -330,7 +331,7 @@ FunctionEmitContext::FunctionEmitContext(Function *func, Symbol *funSym, llvm::F
         if (isStatic)
             SPFlags |= llvm::DISubprogram::SPFlagLocalToUnit;
 
-        diSubprogram = m->diBuilder->createFunction(diFile /* scope */, funSym->name, mangledName, diFile, firstLine,
+        diSubprogram = m->diBuilder->createFunction(diSpace /* scope */, funSym->name, mangledName, diFile, firstLine,
                                                     diSubprogramType_n, firstLine, flags, SPFlags);
         llvmFunction->setSubprogram(diSubprogram);
 
@@ -339,6 +340,7 @@ FunctionEmitContext::FunctionEmitContext(Function *func, Symbol *funSym, llvm::F
     } else {
         diSubprogram = NULL;
         diFile = NULL;
+        diSpace = NULL;
     }
 }
 

@@ -1591,6 +1591,12 @@ SourcePos::GetDIFile() const {
     return ret;
 }
 
+llvm::DINamespace *SourcePos::GetDINamespace() const {
+    llvm::DIScope *discope = GetDIFile();
+    llvm::DINamespace *ret = m->diBuilder->createNameSpace(discope, "ispc", true);
+    return ret;
+}
+
 void SourcePos::Print() const {
     printf(" @ [%s:%d.%d - %d.%d] ", name, first_line, first_column, last_line, last_column);
 }
