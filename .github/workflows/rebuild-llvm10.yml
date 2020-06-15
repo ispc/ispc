@@ -1,9 +1,14 @@
 name: Rebuild LLVM 10.0
 
 on:
+  push:
+    branches:
+      - master
+    path:
+      - "llvm_patches/*10_0*"
   pull_request:
     path:
-      - 'llvm_patches/*10_0*'
+      - "llvm_patches/*10_0*"
 
 jobs:
   linux-build:
