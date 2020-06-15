@@ -5464,6 +5464,10 @@ static bool lVectorizeGEPs(llvm::Value *ptr, std::vector<PtrUse> &ptrUses, std::
         scalar_type = vecTy->getScalarType();
     }
 
+    if (auto pTy = llvm::dyn_cast<llvm::PointerType>(scalar_type)) {
+        t_size = g->target->is32Bit() ? 4 : 8;
+    }
+
     // Calculate length of array that needs to be loaded.
     // Idxs are in bytes now.
     uint64_t data_size = max_idx - min_idx + t_size;
