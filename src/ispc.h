@@ -89,6 +89,7 @@ class TargetMachine;
 class Type;
 class Value;
 class DIFile;
+class DINamespace;
 class DIType;
 
 class DIScope;
@@ -134,6 +135,9 @@ struct SourcePos {
 
     /** Returns a LLVM DIFile object that represents the SourcePos's file */
     llvm::DIFile *GetDIFile() const;
+
+    /** Returns a LLVM DINamespace object that represents 'ispc' namespace. */
+    llvm::DINamespace *GetDINamespace() const;
 
     bool operator==(const SourcePos &p2) const;
 };

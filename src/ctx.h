@@ -654,6 +654,9 @@ class FunctionEmitContext {
         function was defined (used for debugging info). */
     llvm::DIFile *diFile;
 
+    /** DINamespace object corresponding to 'ispc' namespace in 'diFile'. */
+    llvm::DINamespace *diSpace;
+
     /** DISubprogram corresponding to this function (used for debugging
         info). */
     llvm::DISubprogram *diSubprogram;

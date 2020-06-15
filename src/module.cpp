@@ -437,11 +437,12 @@ void Module::AddGlobalVariable(const std::string &name, const Type *type, Expr *
 
     if (diBuilder) {
         llvm::DIFile *file = pos.GetDIFile();
+        llvm::DINamespace *diSpace = pos.GetDINamespace();
         // llvm::MDFile *file = pos.GetDIFile();
         llvm::GlobalVariable *sym_GV_storagePtr = llvm::dyn_cast<llvm::GlobalVariable>(sym->storagePtr);
         Assert(sym_GV_storagePtr);
         llvm::DIGlobalVariableExpression *var = diBuilder->createGlobalVariableExpression(
-            file, name, name, file, pos.first_line, sym->type->GetDIType(file), (sym->storageClass == SC_STATIC));
+            diSpace, name, name, file, pos.first_line, sym->type->GetDIType(diSpace), (sym->storageClass == SC_STATIC));
         sym_GV_storagePtr->addDebugInfo(var);
         /*#if ISPC_LLVM_VERSION <= ISPC_LLVM_3_6
                 Assert(var.Verify());
