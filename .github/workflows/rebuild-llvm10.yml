@@ -5,10 +5,8 @@ on:
     branches:
       - master
     path:
-      - "llvm_patches/*10_0*"
-  pull_request:
-    path:
-      - "llvm_patches/*10_0*"
+      # "llvm_patches/*10_0*" pattern is known not to work, i.e. triggers on any commit.
+      - "llvm_patches/**"
 
 jobs:
   linux-build:
@@ -81,6 +79,6 @@ jobs:
     - name: Upload package
       uses: actions/upload-artifact@v2
       with:
-        name: llvm10_windows
+        name: llvm10_macos
         path: llvm/llvm-10.0.0-macos10.15-Release+Asserts-x86.arm.wasm.tar.xz
 
