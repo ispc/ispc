@@ -39,19 +39,8 @@ services:
     - docker
 dist: xenial
 
-# Some magic is here. Docker is used to load pre-built LLVM as part of custom built image.
-# Custom built LLVM is required because
-#   (1) we need a patched version of LLVM for some of LLVM versions for performance and
-#       stability reasons,
-#   (2) it must be a dump-enabled LLVM build (release version without assertions and without
-#       stripping off dump() function), this affects LLVM 5.0 and later versions,
-#   (3) same compiler needs to be used for building LLVM and ISPC, otherwise there might be
-#       ABI incompatibilities causing link errors and runtime segfaults,
-#   (4) to have flexibility of testing with a range of LLVM versions that we need.
-env:
-  global:
-    - LLVM_REPO=https://github.com/dbabokin/llvm-project
-    - ISPC_HOME=$TRAVIS_BUILD_DIR
+# Note, global env variables are not used, even though they would make sense, because they appear first in
+# web view and hide matrix env variables.
 
 # Matrix expansion is not supported in builds stages, see: https://github.com/travis-ci/travis-ci/issues/8295
 # Using tags as workaround to reduce amount of copy-pasting.
@@ -106,24 +95,32 @@ jobs:
     # LLVM 10.0 + Ubuntu 16.04: build, lit tests, examples (build + run), benchmarks (build + trial run), tests
     - <<: *my_tag
       env:
-        - LLVM_VERSION=10.0 OS=Ubuntu16.04 DOCKER_TAG=llvm100
+        - LLVM_VERSION=10.0 OS=Ubuntu16.04
         - LLVM_TAR=llvm-10.0.0-ubuntu16.04-Release+Asserts-x86.arm.wasm.tar.xz
+        - LLVM_REPO=https://github.com/dbabokin/llvm-project
+        - ISPC_HOME=$TRAVIS_BUILD_DIR
     # LLVM 9.0 + Ubuntu 16.04: build, lit tests, examples (build + run), benchmarks (build + trial run)
     - <<: *my_tag
       env:
-        - LLVM_VERSION=9.0 OS=Ubuntu16.04 DOCKER_TAG=llvm90
+        - LLVM_VERSION=9.0 OS=Ubuntu16.04
         - LLVM_TAR=llvm-9.0.1-ubuntu16.04-Release+Asserts-x86.arm.wasm.tar.xz
+        - LLVM_REPO=https://github.com/dbabokin/llvm-project
+        - ISPC_HOME=$TRAVIS_BUILD_DIR
     # LLVM 8.0 + Ubuntu 16.04: build, lit tests, examples (build + run), benchmarks (build + trial run)
     - <<: *my_tag
       env:
-        - LLVM_VERSION=8.0 OS=Ubuntu16.04 DOCKER_TAG=llvm80
+        - LLVM_VERSION=8.0 OS=Ubuntu16.04
         - LLVM_TAR=llvm-8.0.1-ubuntu16.04-Release+Asserts-x86.arm.wasm.tar.xz
+        - LLVM_REPO=https://github.com/dbabokin/llvm-project
+        - ISPC_HOME=$TRAVIS_BUILD_DIR
     # WASM enabled build
     # LLVM 10.0 + Ubuntu 16.04: build, lit tests, examples (build), benchmarks (build + trial run)
     - <<: *my_tag
       env:
-        - LLVM_VERSION=10.0 OS=Ubuntu16.04 DOCKER_TAG=llvm100 WASM_FLAGS="-DWASM_ENABLED=ON"
+        - LLVM_VERSION=10.0 OS=Ubuntu16.04 WASM_FLAGS="-DWASM_ENABLED=ON"
         - LLVM_TAR=llvm-10.0.0-ubuntu16.04-Release+Asserts-x86.arm.wasm.tar.xz
+        - LLVM_REPO=https://github.com/dbabokin/llvm-project
+        - ISPC_HOME=$TRAVIS_BUILD_DIR
     # ARM build
     # LLVM 10.0 + Ubuntu 18.04:
     #   - ARM only (default): build, lit tests, examples (build)
@@ -133,8 +130,10 @@ jobs:
       arch: arm64
       dist: bionic
       env:
-        - LLVM_VERSION=10.0 OS=Ubuntu18.04
+        - LLVM_VERSION=10.0 OS=Ubuntu18.04aarch64
         - LLVM_TAR=llvm-10.0.0-ubuntu16.04aarch64-Release+Asserts-x86.arm.wasm.tar.xz
+        - LLVM_REPO=https://github.com/dbabokin/llvm-project
+        - ISPC_HOME=$TRAVIS_BUILD_DIR
       before_install:
         - sudo apt-get update
         - dpkg --print-architecture
@@ -175,6 +174,8 @@ jobs:
       env:
         - LLVM_VERSION=10.0 OS=macOS10.15
         - LLVM_TAR=llvm-10.0.0-macos10.15-Release+Asserts-x86.arm.wasm.tar.xz
+        - LLVM_REPO=https://github.com/dbabokin/llvm-project
+        - ISPC_HOME=$TRAVIS_BUILD_DIR
       before_install:
         - wget $LLVM_REPO/releases/download/llvm-$LLVM_VERSION-ispc-dev/$LLVM_TAR
         - tar xvf $LLVM_TAR
