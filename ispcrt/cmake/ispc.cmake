@@ -251,10 +251,34 @@ macro (ispc_compile_gpu parent_target output_prefix)
         set(ISPC_PROGRAM_COUNT 16)
       endif()
 
+      set(ISPC_GENX_FLAGS_DEBUG "-g" CACHE STRING "ISPC GENX Debug flags")
+      mark_as_advanced(ISPC_GENX_FLAGS_DEBUG)
+      set(ISPC_GENX_FLAGS_RELEASE "-O3" CACHE STRING "ISPC GENX Release flags")
+      mark_as_advanced(ISPC_GENX_FLAGS_RELEASE)
+      set(ISPC_GENX_FLAGS_RELWITHDEBINFO "-O2 -g" CACHE STRING "ISPC GENX Release with Debug symbols flags")
+      mark_as_advanced(ISPC_GENX_FLAGS_RELWITHDEBINFO)
+
+      if (WIN32 OR "${CMAKE_BUILD_TYPE}" STREQUAL "Release")
+        set(ISPC_GENX_OPT_FLAGS ${ISPC_GENX_FLAGS_RELEASE})
+      elseif ("${CMAKE_BUILD_TYPE}" STREQUAL "Debug")
+        set(ISPC_GENX_OPT_FLAGS ${ISPC_GENX_FLAGS_DEBUG})
+      else()
+        set(ISPC_GENX_OPT_FLAGS ${ISPC_GENX_FLAGS_RELWITHDEBINFO})
+      endif()
+      # turn space sparated list into ';' separated list
+      string(REPLACE " " ";" ISPC_GENX_OPT_FLAGS "${ISPC_GENX_OPT_FLAGS}")
+
+      # Additional flags passed by user
+      if (NOT ISPC_GENX_ADDITIONAL_ARGS)
+        set(ISPC_GENX_ADDITIONAL_ARGS "")
+      endif()
+
       add_custom_target(${fname}_spv
         COMMAND ${ISPC_EXECUTABLE_GPU}
           -I ${CMAKE_CURRENT_SOURCE_DIR}
           ${ISPC_INCLUDE_DIR_PARMS}
+          ${ISPC_GENX_OPT_FLAGS}
+          ${ISPC_GENX_ADDITIONAL_ARGS}
           -DISPC_GPU
           --addressing=64
           --target=${ISPC_TARGET_GEN}
