@@ -9,35 +9,35 @@
 #include <dlfcn.h>
 #endif
 // std
-#include <exception>
-#include <fstream>
-#include <limits>
-#include <vector>
-#include <iostream>
-#include <sstream>
 #include <cassert>
 #include <deque>
+#include <exception>
+#include <fstream>
+#include <iostream>
+#include <limits>
+#include <sstream>
+#include <vector>
 // level0
 #include <level_zero/ze_api.h>
 
-#define L0_SAFE_CALL(call)                                                                    \
-    {                                                                                         \
-        auto status = (call);                                                                 \
-        if (status != 0) {                                                                    \
-            std::stringstream ss;                                                             \
-            ss << __FILE__ << ":" << __LINE__ << ": L0 error 0x" << std::hex << (int)status;  \
-            throw std::runtime_error(ss.str());                                               \
-        }                                                                                     \
+#define L0_SAFE_CALL(call)                                                                                             \
+    {                                                                                                                  \
+        auto status = (call);                                                                                          \
+        if (status != 0) {                                                                                             \
+            std::stringstream ss;                                                                                      \
+            ss << __FILE__ << ":" << __LINE__ << ": L0 error 0x" << std::hex << (int)status;                           \
+            throw std::runtime_error(ss.str());                                                                        \
+        }                                                                                                              \
     }
 
-#define L0_SAFE_CALL_NOEXCEPT(call)                                                           \
-    {                                                                                         \
-        auto status = (call);                                                                 \
-        if (status != 0) {                                                                    \
-            std::stringstream ss;                                                             \
-            ss << __FILE__ << ":" << __LINE__ << ": L0 error 0x" << std::hex << (int)status;  \
-            std::cerr << ss.str() << std::endl;                                               \
-        }                                                                                     \
+#define L0_SAFE_CALL_NOEXCEPT(call)                                                                                    \
+    {                                                                                                                  \
+        auto status = (call);                                                                                          \
+        if (status != 0) {                                                                                             \
+            std::stringstream ss;                                                                                      \
+            ss << __FILE__ << ":" << __LINE__ << ": L0 error 0x" << std::hex << (int)status;                           \
+            std::cerr << ss.str() << std::endl;                                                                        \
+        }                                                                                                              \
     }
 
 namespace ispcrt {
@@ -67,15 +67,15 @@ struct Event {
         eventDesc.signal = ZE_EVENT_SCOPE_FLAG_HOST;
         eventDesc.wait = ZE_EVENT_SCOPE_FLAG_HOST;
         eventDesc.version = ZE_EVENT_DESC_VERSION_CURRENT;
-    
+
         L0_SAFE_CALL(zeEventCreate(m_pool, &eventDesc, &m_handle));
 
         if (!m_handle)
             throw std::runtime_error("Failed to create event!");
     }
-    ze_event_handle_t m_handle {nullptr};
-    ze_event_pool_handle_t m_pool {nullptr};
-    uint32_t m_index {0};
+    ze_event_handle_t m_handle{nullptr};
+    ze_event_pool_handle_t m_pool{nullptr};
+    uint32_t m_index{0};
 };
 
 struct EventPool {
@@ -97,7 +97,8 @@ struct EventPool {
         L0_SAFE_CALL(zeEventPoolCreate(m_driver, &eventPoolDesc, 1, &m_device, &m_pool));
         if (!m_pool) {
             std::stringstream ss;
-            ss << "Failed to create event pool for device 0x" << std::hex << m_device << " (driver 0x" << m_driver << ")";
+            ss << "Failed to create event pool for device 0x" << std::hex << m_device << " (driver 0x" << m_driver
+               << ")";
             throw std::runtime_error(ss.str());
         }
         // Put all event ids into a freelist
@@ -114,7 +115,7 @@ struct EventPool {
         m_freeList.clear();
     }
 
-    Event* createEvent() { 
+    Event *createEvent() {
         if (m_freeList.empty()) {
             return nullptr;
         }
@@ -123,8 +124,8 @@ struct EventPool {
         m_freeList.pop_front();
         return e;
     }
-    
-    void deleteEvent(Event* e) { 
+
+    void deleteEvent(Event *e) {
         assert(e);
         m_freeList.push_back(e->index());
         delete e;
@@ -133,9 +134,9 @@ struct EventPool {
     uint64_t getTimestampRes() const { return m_timestampFreq; }
 
   private:
-    ze_driver_handle_t m_driver {nullptr};
-    ze_device_handle_t m_device {nullptr};
-    ze_event_pool_handle_t m_pool {nullptr};
+    ze_driver_handle_t m_driver{nullptr};
+    ze_device_handle_t m_device{nullptr};
+    ze_event_pool_handle_t m_pool{nullptr};
     uint64_t m_timestampFreq;
     std::deque<uint32_t> m_freeList;
 };
@@ -286,7 +287,7 @@ struct TaskQueue : public ispcrt::TaskQueue {
         L0_SAFE_CALL(zeCommandListAppendMemoryCopy(m_cl, view.devicePtr(), view.hostPtr(), view.numBytes(), nullptr));
     }
 
-    Future* launch(ispcrt::Kernel &k, ispcrt::MemoryView *params, size_t dim0, size_t dim1, size_t dim2) override {
+    Future *launch(ispcrt::Kernel &k, ispcrt::MemoryView *params, size_t dim0, size_t dim1, size_t dim2) override {
         auto &kernel = (gpu::Kernel &)k;
 
         auto *future = new Future;
@@ -301,7 +302,12 @@ struct TaskQueue : public ispcrt::TaskQueue {
 
         ze_group_count_t dispatchTraits = {uint32_t(dim0), uint32_t(dim1), uint32_t(dim2)};
         auto event = m_ep.createEvent();
-        L0_SAFE_CALL(zeCommandListAppendLaunchKernel(m_cl, kernel.handle(), &dispatchTraits, event->handle(), 0, nullptr));
+
+        if (event == nullptr)
+            throw std::runtime_error("Failed to create event!");
+
+        L0_SAFE_CALL(
+            zeCommandListAppendLaunchKernel(m_cl, kernel.handle(), &dispatchTraits, event->handle(), 0, nullptr));
         m_events.push_back(std::make_pair(event, future));
 
         return future;
@@ -313,8 +319,8 @@ struct TaskQueue : public ispcrt::TaskQueue {
         L0_SAFE_CALL(zeCommandQueueSynchronize(m_q, std::numeric_limits<uint32_t>::max()));
         L0_SAFE_CALL(zeCommandListReset(m_cl));
         // Update future objects corresponding to the events that have just completed
-        for (const auto& p : m_events) {
-            auto *e = p.first; 
+        for (const auto &p : m_events) {
+            auto *e = p.first;
             auto *f = p.second;
             uint64_t contextStart, contextEnd;
             L0_SAFE_CALL(zeEventGetTimestamp(e->handle(), ZE_EVENT_TIMESTAMP_CONTEXT_START, &contextStart));
@@ -330,7 +336,7 @@ struct TaskQueue : public ispcrt::TaskQueue {
     ze_command_queue_handle_t m_q{nullptr};
     ze_command_list_handle_t m_cl{nullptr};
     EventPool m_ep;
-    std::vector<std::pair<Event*, Future*>> m_events;
+    std::vector<std::pair<Event *, Future *>> m_events;
 };
 } // namespace gpu
 
@@ -377,7 +383,9 @@ MemoryView *GPUDevice::newMemoryView(void *appMem, size_t numBytes) const {
     return new gpu::MemoryView((ze_driver_handle_t)m_driver, (ze_device_handle_t)m_device, appMem, numBytes);
 }
 
-TaskQueue *GPUDevice::newTaskQueue() const { return new gpu::TaskQueue((ze_device_handle_t)m_device, (ze_driver_handle_t)m_driver); }
+TaskQueue *GPUDevice::newTaskQueue() const {
+    return new gpu::TaskQueue((ze_device_handle_t)m_device, (ze_driver_handle_t)m_driver);
+}
 
 Module *GPUDevice::newModule(const char *moduleFile) const {
     return new gpu::Module((ze_device_handle_t)m_device, moduleFile);

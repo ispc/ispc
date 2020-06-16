@@ -149,8 +149,8 @@ static int run(int m, int niter, int gx, int gy) {
     }
     auto tot_dur = (std::chrono::system_clock::now() - tot_wct);
     auto tot_secs = std::chrono::duration_cast<std::chrono::nanoseconds>(tot_dur);
-    printf("@Average execution time is:\t\t\t[%ld] nanoseconds\n", tot_secs.count() / 1e+6 / niter);
-    printf("No memory time is:\t\t\t[%ld] nanoseconds\n", total / niter);
+    printf("@Average execution time is:\t\t\t[%f] nanoseconds\n", (double)tot_secs.count() / 1e+6 / niter);
+    printf("No memory time is:\t\t\t[%f] nanoseconds\n", (double)total / niter);
 
     // copy result to host
     L0_SAFE_CALL(zeCommandListReset(hCommandList));

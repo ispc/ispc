@@ -198,7 +198,7 @@ static int run() {
     }
     savePPM("ao-cpp-serial.ppm", width, height, fimg);
     printf("[aobench serial]:\t\t[%.3f] million cycles (%d x %d image)\n", minCyclesSerial, width, height);
-    free(img);
+    delete[] img;
     free(fimg);
     return 0;
 }
