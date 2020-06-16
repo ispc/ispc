@@ -33,7 +33,7 @@
 function(add_perf_example)
     set(options CM_TEST)
     set(oneValueArgs ISPC_SRC_NAME ISPC_TARGET CM_SRC_NAME CM_OBJ_NAME TEST_NAME CM_TEST_NAME)
-    set(multiValueArgs ISPC_FLAGS HOST_SOURCES CM_HOST_SOURCES CM_HOST_FLAGS)
+    set(multiValueArgs ISPC_GENX_ADDITIONAL_ARGS HOST_SOURCES CM_HOST_SOURCES)
     cmake_parse_arguments("parsed" "${options}" "${oneValueArgs}" "${multiValueArgs}" ${ARGN} )
 
     # Compile host code
@@ -50,6 +50,7 @@ function(add_perf_example)
     set(ISPC_EXECUTABLE_GPU ${ISPC_EXECUTABLE})
     set(ISPC_TARGET_GEN ${parsed_ISPC_TARGET})
     set(ISPC_TARGET_DIR ${CMAKE_CURRENT_BINARY_DIR})
+    set(ISPC_GENX_ADDITIONAL_ARGS ${parsed_ISPC_GENX_ADDITIONAL_ARGS})
     add_ispc_kernel(${parsed_TEST_NAME} ${parsed_ISPC_SRC_NAME} "")
 
     # Show ispc source in VS solution:

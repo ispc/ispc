@@ -39,12 +39,13 @@ message(STATUS "Configuring GenX examples")
 # CMC is needed for ISPC build so it should have been already found but it is possible to overwrite this with CM_INSTALL_PATH.
 if (CM_INSTALL_PATH)
     find_program (CMC_EXECUTABLE cmc PATHS ${CM_INSTALL_PATH}/bin NO_DEFAULT_PATH)
-    if (NOT CMC_EXECUTABLE)
-        message(WARNING "CM compiler was not found so CM tests will not run. If you want to run them set path to CM install root with -DCM_INSTALL_PATH")
-    endif()
 endif()
 
-message(STATUS "Found CMC to use in examples: ${CMC_EXECUTABLE}")
+if (NOT CMC_EXECUTABLE)
+    message(STATUS "CM compiler was not found so CM tests will not run. If you want to run them set path to CM install root with -DCM_INSTALL_PATH")
+else()
+    message(STATUS "Found CMC to use in examples: ${CMC_EXECUTABLE}")
+endif()
 
 if (ISPC_BUILD)
     set(ISPC_EXECUTABLE $<TARGET_FILE:ispc>)
