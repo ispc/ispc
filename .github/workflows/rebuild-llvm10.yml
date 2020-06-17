@@ -9,42 +9,38 @@ on:
       - "llvm_patches/**"
 
 jobs:
+  # Building LLVM in docker, as using native Ubuntu 16.04 github-hosted image contains newer-than-expected libs and
+  # makes the resulting build not usable on other Ubuntu 16.04 images.
   linux-build:
-    runs-on: ubuntu-16.04
+    runs-on: ubuntu-latest
 
     steps:
     - uses: actions/checkout@v2
       with:
         submodules: true
 
-    - name: Install dependencies
-      run: |
-        sudo apt-get update
-        sudo apt-get install libc6-dev-i386 ncurses-dev
-        mkdir llvm
-        echo "::set-env name=LLVM_HOME::${GITHUB_WORKSPACE}/llvm"
-        echo "::set-env name=ISPC_HOME::${GITHUB_WORKSPACE}"
-
     - name: Check environment
       run: |
-        ./check_env.py
-        which -a clang
         cat /proc/cpuinfo
 
     - name: Build LLVM
       run: |
-        ./alloy.py -b --version=10.0 --selfbuild
+        cd docker/ubuntu/llvm_build
+        docker build --tag ispc/ubuntu16.04 --build-arg REPO=$GITHUB_REPOSITORY --build-arg SHA=$GITHUB_SHA .
 
     - name: Pack LLVM
       run: |
-        cd llvm
+        cd docker/ubuntu/llvm_build
+        docker run ispc/ubuntu16.04
+        export CONTAINER=`docker ps --all |head -2 |tail -1 |awk '//{print $1}'`
+        sudo docker cp $CONTAINER:/usr/local/src/llvm/bin-10.0 .
         tar cJvf llvm-10.0.0-ubuntu16.04-Release+Asserts-x86.arm.wasm.tar.xz bin-10.0
 
     - name: Upload package
       uses: actions/upload-artifact@v2
       with:
         name: llvm10_linux
-        path: llvm/llvm-10.0.0-ubuntu16.04-Release+Asserts-x86.arm.wasm.tar.xz
+        path: docker/ubuntu/llvm_build/llvm-10.0.0-ubuntu16.04-Release+Asserts-x86.arm.wasm.tar.xz
 
   mac-build:
     runs-on: macos-10.15
