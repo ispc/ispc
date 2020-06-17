@@ -115,66 +115,38 @@ def try_do_LLVM(text, command, from_validation, verbose=False):
         error("can't " + text, 1)
     print_debug("DONE.\n", from_validation, alloy_build)
 
-def checkout_LLVM(component, use_git, version_LLVM, revision, target_dir, from_validation, verbose):
+def checkout_LLVM(component, version_LLVM, target_dir, from_validation, verbose):
     # Identify the component
     GIT_REPO_BASE="https://github.com/llvm/llvm-project.git"
-    if component == "llvm":
-        SVN_REPO="https://llvm.org/svn/llvm-project/llvm/"
-    elif component == "clang":
-        SVN_REPO="https://llvm.org/svn/llvm-project/cfe/"
-    elif component == "libcxx":
-        SVN_REPO="https://llvm.org/svn/llvm-project/libcxx/"
-    elif component == "clang-tools-extra":
-        SVN_REPO="https://llvm.org/svn/llvm-project/clang-tools-extra/"
-    elif component == "compiler-rt":
-        SVN_REPO="https://llvm.org/svn/llvm-project/compiler-rt/"
-    else:
-        error("Trying to checkout unidentified component: " + component, 1)
 
     # Identify the version
     # An example of using branch (instead of final tag) is the following (for 9.0):
-    # svn: "branches/release_90/"
     # git: "origin/release/9.x"
     if  version_LLVM == "trunk":
-        SVN_PATH="UNSUPPORTED"
         GIT_TAG="master"
     elif  version_LLVM == "10_0":
-        SVN_PATH="UNSUPPORTED"
-        # Update tag when 10.0 releases
         GIT_TAG="llvmorg-10.0.0"
     elif  version_LLVM == "9_0":
-        SVN_PATH="UNSUPPORTED"
         GIT_TAG="llvmorg-9.0.1"
     elif  version_LLVM == "8_0":
-        SVN_PATH="tags/RELEASE_801/final"
         GIT_TAG="llvmorg-8.0.1"
     elif  version_LLVM == "7_1":
-        SVN_PATH="tags/RELEASE_710/final"
         GIT_TAG="llvmorg-7.1.0"
     elif  version_LLVM == "7_0":
-        SVN_PATH="tags/RELEASE_701/final"
         GIT_TAG="llvmorg-7.0.1"
     elif  version_LLVM == "6_0":
-        SVN_PATH="tags/RELEASE_601/final"
         GIT_TAG="llvmorg-6.0.1"
     else:
         error("Unsupported llvm version: " + version_LLVM, 1)
 
-    if use_git:
-        try_do_LLVM("clone "+component+" from "+GIT_REPO_BASE+" to "+target_dir+" ",
-                    "git clone "+GIT_REPO_BASE+" "+target_dir,
-                    from_validation, verbose)
-        if GIT_TAG != "master":
-            os.chdir(target_dir)
-            try_do_LLVM("switch to "+GIT_TAG+" tag ",
-                        "git checkout -b "+GIT_TAG+" "+GIT_TAG, from_validation, verbose)
-            os.chdir("..")
-    else:
-        if SVN_PATH == "UNSUPPORTED":
-            error("svn not supported for llvm version: " + version_LLVM, 1)
-        try_do_LLVM("load "+component+" from "+SVN_REPO+SVN_PATH+" ",
-                    "svn co --non-interactive "+revision+" "+SVN_REPO+SVN_PATH+" "+target_dir,
-                    from_validation, verbose)
+    try_do_LLVM("clone "+component+" from "+GIT_REPO_BASE+" to "+target_dir+" ",
+                "git clone "+GIT_REPO_BASE+" "+target_dir,
+                from_validation, verbose)
+    if GIT_TAG != "master":
+        os.chdir(target_dir)
+        try_do_LLVM("switch to "+GIT_TAG+" tag ",
+                    "git checkout -b "+GIT_TAG+" "+GIT_TAG, from_validation, verbose)
+        os.chdir("..")
 
 # ISPC uses LLVM dumps for debug output, so build correctly it requires these functions to be
 # present in LLVM libraries. In LLVM 5.0 they are not there by default and require explicit enabling.
@@ -188,12 +160,8 @@ def get_llvm_disable_assertions_switch(llvm_disable_assertions):
     else:
         return "  -DLLVM_ENABLE_ASSERTIONS=ON"
 
-def build_LLVM(version_LLVM, revision, folder, tarball, debug, selfbuild, extra, from_validation, force, make, gcc_toolchain_path, use_git, llvm_disable_assertions, verbose):
-    print_debug("Building LLVM. Version: " + version_LLVM + ". ", from_validation, alloy_build)
-    if revision != "":
-        print_debug("Revision: " + revision + ".\n", from_validation, alloy_build)
-    else:
-        print_debug("\n", from_validation, alloy_build)
+def build_LLVM(version_LLVM, folder, tarball, debug, selfbuild, extra, from_validation, force, make, gcc_toolchain_path, llvm_disable_assertions, verbose):
+    print_debug("Building LLVM. Version: " + version_LLVM + ".\n", from_validation, alloy_build)
     # Here we understand what and where do we want to build
     current_path = os.getcwd()
     llvm_home = os.environ["LLVM_HOME"]
@@ -204,9 +172,6 @@ def build_LLVM(version_LLVM, revision, folder, tarball, debug, selfbuild, extra,
     version_LLVM = re.sub('\.', '_', version_LLVM)
     
     os.chdir(llvm_home)
-    if revision != "":
-        FOLDER_NAME = FOLDER_NAME + "_" + revision
-        revision = "-" + revision
     if folder == "":
         folder = FOLDER_NAME
     if debug == True:
@@ -250,13 +215,8 @@ def build_LLVM(version_LLVM, revision, folder, tarball, debug, selfbuild, extra,
     # load llvm
     llvm_enable_projects = ""
     if tarball == "":
-        checkout_LLVM("llvm", options.use_git, version_LLVM, revision, LLVM_SRC, from_validation, verbose)
-        if not options.use_git:
-            os.chdir(LLVM_SRC + "/tools")
-            checkout_LLVM("clang", options.use_git, version_LLVM, revision, "clang", from_validation, verbose)
-            os.chdir("..")
-        else:
-            llvm_enable_projects = "  -DLLVM_ENABLE_PROJECTS=\"clang"
+        checkout_LLVM("llvm", version_LLVM, LLVM_SRC, from_validation, verbose)
+        llvm_enable_projects = "  -DLLVM_ENABLE_PROJECTS=\"clang"
         if current_OS == "MacOS" and int(current_OS_version.split(".")[0]) >= 13:
             # Starting with MacOS 10.9 Maverics, the system doesn't contain headers for standard C++ library and
             # the default library is libc++, bit libstdc++. The headers are part of XCode now. But we are checking out
@@ -266,24 +226,13 @@ def build_LLVM(version_LLVM, revision, folder, tarball, debug, selfbuild, extra,
             # Note, that we can also build a libc++ library, but it must be on system default location or should be passed
             # to the linker explicitly (either through command line or environment variables). So we are not doing it
             # currently to make the build process easier.
-            if not options.use_git:
-                os.chdir("projects")
-                checkout_LLVM("libcxx", options.use_git, version_LLVM, revision, "libcxx", from_validation, verbose)
-                os.chdir("..")
-            else:
-                # We either need to explicitly opt-out from using libcxxabi from this repo, or build and use it,
-                # otherwise a build error will occure (attempt to use just built libcxxabi, which was not built).
-                # An option to build seems to be a better one.
-                llvm_enable_projects +=";libcxx;libcxxabi"
+
+            # We either need to explicitly opt-out from using libcxxabi from this repo, or build and use it,
+            # otherwise a build error will occure (attempt to use just built libcxxabi, which was not built).
+            # An option to build seems to be a better one.
+            llvm_enable_projects +=";libcxx;libcxxabi"
         if extra == True:
-            if not options.use_git:
-                os.chdir("tools/clang/tools")
-                checkout_LLVM("clang-tools-extra", options.use_git, version_LLVM, revision, "extra", from_validation, verbose)
-                os.chdir("../../../projects")
-                checkout_LLVM("compiler-rt", options.use_git, version_LLVM, revision, "compiler-rt", from_validation, verbose)
-                os.chdir("..")
-            else:
-                llvm_enable_projects +=";compiler-rt;clang-tools-extra"
+            llvm_enable_projects +=";compiler-rt;clang-tools-extra"
     else:
         tar = tarball.split(" ")
         os.makedirs(LLVM_SRC) 
@@ -297,9 +246,8 @@ def build_LLVM(version_LLVM, revision, folder, tarball, debug, selfbuild, extra,
                     "tar -xvzf " + tar[1] + " --strip-components 1", from_validation, verbose)
         os.chdir("../../")
     # paching llvm
-    if options.use_git:
-        llvm_enable_projects += "\""
-        os.chdir(LLVM_SRC + "/llvm")
+    llvm_enable_projects += "\""
+    os.chdir(LLVM_SRC + "/llvm")
     patches = glob.glob(os.environ["ISPC_HOME"] + os.sep + "llvm_patches" + os.sep + "*.*")
     for patch in patches:
         if version_LLVM in os.path.basename(patch):
@@ -307,17 +255,13 @@ def build_LLVM(version_LLVM, revision, folder, tarball, debug, selfbuild, extra,
                 try_do_LLVM("patch LLVM with patch " + patch + " ", "patch -p0 < " + patch, from_validation, verbose)
             else:
                 try_do_LLVM("patch LLVM with patch " + patch + " ", "C:\\gnuwin32\\bin\\patch.exe -p0 < " + patch, from_validation, verbose)
-    if options.use_git:
-        os.chdir("../")
-    os.chdir("../")
+    os.chdir("../../")
     # configuring llvm, build first part of selfbuild
     os.makedirs(LLVM_BUILD)
     os.makedirs(LLVM_BIN)
     selfbuild_compiler = ""
     LLVM_configure_capable = ["3_2", "3_3", "3_4", "3_5", "3_6", "3_7"]
-    cmakelists_path = LLVM_SRC
-    if options.use_git:
-        cmakelists_path += "/llvm"
+    cmakelists_path = LLVM_SRC + "/llvm"
     if selfbuild:
         print_debug("Making selfbuild and use folders " + LLVM_BUILD_selfbuild + " and " +
             LLVM_BIN_selfbuild + "\n", from_validation, alloy_build)
@@ -548,25 +492,6 @@ def build_ispc(version_LLVM, make):
         if options.debug == True:
             folder +=  "dbg"
 
-        llvm_rev = ""
-        # determine LLVM revision
-        p = subprocess.Popen("svn info " + folder, shell=True, \
-               stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        (info_llvm, err) = p.communicate()
-        info_llvm = re.split('\n', info_llvm)
-        for i in info_llvm:
-            if len(i) > 0 and i.startswith("Last Changed Rev: "):
-                llvm_rev = str(i[len("Last Changed Rev: "):])
-
-        if llvm_rev != "":
-            common.ex_state.switch_revision(llvm_rev)
-            print_debug("\nBuilding ISPC with LLVM %s (%s):\n" \
-                                              % (version_LLVM, llvm_rev), False, stability_log)
-        else:
-            print_debug("Unable to retrieve LLVM revision\n", False, stability_log)
-            raise
-
-        try_do_LLVM("recognize LLVM revision", "svn info " + folder, True)
         try_do_LLVM("configure ispc build", 'cmake -DCMAKE_INSTALL_PREFIX="..\\'+ ISPC_BIN + '" ' +
                     '  -DCMAKE_BUILD_TYPE=Release' +
                         ispc_home, True)
@@ -882,7 +807,7 @@ def validation_run(only, only_targets, reference_branch, number, notify, update,
 # prepare newest LLVM
         need_LLVM = check_LLVM([newest_LLVM])
         if len(need_LLVM) != 0:
-            build_LLVM(need_LLVM[0], "", "", "", False, False, False, True, False, make, options.gcc_toolchain_path, options.use_git, True, False)
+            build_LLVM(need_LLVM[0], "", "", "", False, False, False, True, False, make, options.gcc_toolchain_path, True, False)
         if perf_llvm == False:
             # prepare reference point. build both test and reference compilers
             try_do_LLVM("apply git", "git branch", True)
@@ -1021,8 +946,6 @@ def Main():
     if options.perf_llvm == True:
         if options.branch == "master":
             options.branch = "trunk"
-    if options.use_git and options.revision != "":
-        error("--revision is not supported with --git", 1)
     global generator
     if options.generator:
         generator = options.generator
@@ -1034,8 +957,8 @@ def Main():
     try:
         start_time = time.time()
         if options.build_llvm:
-            build_LLVM(options.version, options.revision, options.folder, options.tarball,
-                    options.debug, options.selfbuild, options.extra, False, options.force, make, options.gcc_toolchain_path, options.use_git, options.llvm_disable_assertions, options.verbose)
+            build_LLVM(options.version, options.folder, options.tarball,
+                    options.debug, options.selfbuild, options.extra, False, options.force, make, options.gcc_toolchain_path, options.llvm_disable_assertions, options.verbose)
         if options.validation_run:
             validation_run(options.only, options.only_targets, options.branch,
                     options.number_for_performance, options.notify, options.update, int(options.speed),
@@ -1087,10 +1010,9 @@ if __name__ == '__main__':
         def format_epilog(self, formatter):
             return self.epilog
     examples =  ("Examples:\n" +
-    "Load and build LLVM from trunk\n\talloy.py -b\n" +
-    "Load and build LLVM 8.0. Rewrite LLVM folders\n\talloy.py -b --version=8.0 --force\n" +
+    "Download and build LLVM from trunk\n\talloy.py -b\n" +
+    "Download and build LLVM 8.0. Rewrite LLVM folders\n\talloy.py -b --version=8.0 --force\n" +
     "Untar files llvm.tgz clang.tgz, build LLVM from them in folder bin-from_tar\n\talloy.py -b --tarball='llvm.tgz clang.tgz' --folder=from_tar\n" +
-    "Load LLVM from trunk, revision r172870. Build it. Do selfbuild\n\talloy.py -b --revision=r172870 --selfbuild\n" +
     "Validation run with LLVM trunk; x86, x86-64; -O2;\nall supported targets; performance\n\talloy.py -r\n" +
     "Validation run with all avx targets and sse4-i8x16 without performance\n\talloy.py -r --only=stability --only-targets='avx sse4-i8x16'\n" +
     "Validation run with avx2-i32x8, all sse4 and sse2 targets\nand all targets with i32x16\n\talloy.py -r --only-targets='avx2-i32x8 sse4 i32x16 sse2'\n" +
@@ -1119,8 +1041,6 @@ if __name__ == '__main__':
          help='GCC install dir to use when building clang. It is important to set when ' +
          'you have alternative gcc installation. Note that otherwise gcc from standard ' +
          'location will be used, not from your PATH', default="")
-    llvm_group.add_option('--revision', dest='revision',
-        help='revision of llvm to build in format r172870 (not supported with --git)', default="")
     llvm_group.add_option('--debug', dest='debug',
         help='debug build of LLVM?', default=False, action="store_true")
     llvm_group.add_option('--folder', dest='folder',
@@ -1135,10 +1055,6 @@ if __name__ == '__main__':
         help='rebuild LLVM', default=False, action='store_true')
     llvm_group.add_option('--extra', dest='extra',
         help='load extra clang tools', default=False, action='store_true')
-    llvm_group.add_option('--git', dest='use_git',
-        help='use git llvm repository instead of svn', default=True, action='store_true')
-    llvm_group.add_option('--svn', dest='use_git',
-        help='use svn llvm repository instead of svn', default=True, action='store_false')
     llvm_group.add_option('--verbose', dest='verbose',
         help='verbose output during the build', default=False, action='store_true')
     parser.add_option_group(llvm_group)
