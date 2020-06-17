@@ -260,7 +260,6 @@ def build_LLVM(version_LLVM, folder, tarball, debug, selfbuild, extra, from_vali
     os.makedirs(LLVM_BUILD)
     os.makedirs(LLVM_BIN)
     selfbuild_compiler = ""
-    LLVM_configure_capable = ["3_2", "3_3", "3_4", "3_5", "3_6", "3_7"]
     cmakelists_path = LLVM_SRC + "/llvm"
     if selfbuild:
         print_debug("Making selfbuild and use folders " + LLVM_BUILD_selfbuild + " and " +
@@ -268,35 +267,24 @@ def build_LLVM(version_LLVM, folder, tarball, debug, selfbuild, extra, from_vali
         os.makedirs(LLVM_BUILD_selfbuild)
         os.makedirs(LLVM_BIN_selfbuild)
         os.chdir(LLVM_BUILD_selfbuild)
-        if  version_LLVM not in LLVM_configure_capable:
-            try_do_LLVM("configure release version for selfbuild ",
-                    "cmake -G " + "\"" + generator + "\"" + " -DCMAKE_EXPORT_COMPILE_COMMANDS=ON" +
-                    "  -DCMAKE_INSTALL_PREFIX=" + llvm_home + "/" + LLVM_BIN_selfbuild +
-                    "  -DCMAKE_BUILD_TYPE=Release" +
-                    llvm_enable_projects +
-                    get_llvm_enable_dump_switch(version_LLVM) +
-                    get_llvm_disable_assertions_switch(llvm_disable_assertions) +
-                    "  -DLLVM_INSTALL_UTILS=ON" +
-                    (("  -DGCC_INSTALL_PREFIX=" + gcc_toolchain_path) if gcc_toolchain_path != "" else "") +
-                    (("  -DCMAKE_C_COMPILER=" + gcc_toolchain_path+"/bin/gcc") if gcc_toolchain_path != "" else "") +
-                    (("  -DCMAKE_CXX_COMPILER=" + gcc_toolchain_path+"/bin/g++") if gcc_toolchain_path != "" else "") +
-                    (("  -DDEFAULT_SYSROOT=" + mac_system_root) if mac_system_root != "" else "") +
-                    "  -DLLVM_TARGETS_TO_BUILD=AArch64\;ARM\;X86" +
-                    "  -DLLVM_EXPERIMENTAL_TARGETS_TO_BUILD=WebAssembly" +
-                    " ../" + cmakelists_path,
-                    from_validation, verbose)
-            selfbuild_compiler = ("  -DCMAKE_C_COMPILER=" +llvm_home+ "/" + LLVM_BIN_selfbuild + "/bin/clang " +
-                                  "  -DCMAKE_CXX_COMPILER="+llvm_home+ "/" + LLVM_BIN_selfbuild + "/bin/clang++ ")
-        else:
-            try_do_LLVM("configure release version for selfbuild ",
-                        "../" + LLVM_SRC + "/configure --prefix=" + llvm_home + "/" +
-                        LLVM_BIN_selfbuild + " --enable-optimized" +
-                        " --enable-targets=aarch64,arm,armeb,thumb,thumbeb,x86,x86_64" +
-                        ((" --with-gcc-toolchain=" + gcc_toolchain_path) if gcc_toolchain_path != "" else "") +
-                        ((" --with-default-sysroot=" + mac_system_root) if mac_system_root != "" else ""),
-                        from_validation, verbose)
-            selfbuild_compiler = ("CC=" +llvm_home+ "/" + LLVM_BIN_selfbuild + "/bin/clang " +
-                                  "CXX="+llvm_home+ "/" + LLVM_BIN_selfbuild + "/bin/clang++ ")
+        try_do_LLVM("configure release version for selfbuild ",
+                "cmake -G " + "\"" + generator + "\"" + " -DCMAKE_EXPORT_COMPILE_COMMANDS=ON" +
+                "  -DCMAKE_INSTALL_PREFIX=" + llvm_home + "/" + LLVM_BIN_selfbuild +
+                "  -DCMAKE_BUILD_TYPE=Release" +
+                llvm_enable_projects +
+                get_llvm_enable_dump_switch(version_LLVM) +
+                get_llvm_disable_assertions_switch(llvm_disable_assertions) +
+                "  -DLLVM_INSTALL_UTILS=ON" +
+                (("  -DGCC_INSTALL_PREFIX=" + gcc_toolchain_path) if gcc_toolchain_path != "" else "") +
+                (("  -DCMAKE_C_COMPILER=" + gcc_toolchain_path+"/bin/gcc") if gcc_toolchain_path != "" else "") +
+                (("  -DCMAKE_CXX_COMPILER=" + gcc_toolchain_path+"/bin/g++") if gcc_toolchain_path != "" else "") +
+                (("  -DDEFAULT_SYSROOT=" + mac_system_root) if mac_system_root != "" else "") +
+                "  -DLLVM_TARGETS_TO_BUILD=AArch64\;ARM\;X86" +
+                "  -DLLVM_EXPERIMENTAL_TARGETS_TO_BUILD=WebAssembly" +
+                " ../" + cmakelists_path,
+                from_validation, verbose)
+        selfbuild_compiler = ("  -DCMAKE_C_COMPILER=" +llvm_home+ "/" + LLVM_BIN_selfbuild + "/bin/clang " +
+                              "  -DCMAKE_CXX_COMPILER="+llvm_home+ "/" + LLVM_BIN_selfbuild + "/bin/clang++ ")
         try_do_LLVM("build release version for selfbuild ",
                     make, from_validation, verbose)
         try_do_LLVM("install release version for selfbuild ",
@@ -308,51 +296,11 @@ def build_LLVM(version_LLVM, folder, tarball, debug, selfbuild, extra, from_vali
     os.chdir(LLVM_BUILD)
     if debug == False:
         if current_OS != "Windows":
-            if  version_LLVM not in LLVM_configure_capable:
-                try_do_LLVM("configure release version ",
-                        "cmake -G " + "\"" + generator + "\"" + " -DCMAKE_EXPORT_COMPILE_COMMANDS=ON" +
-                        selfbuild_compiler +
-                        "  -DCMAKE_INSTALL_PREFIX=" + llvm_home + "/" + LLVM_BIN +
-                        "  -DCMAKE_BUILD_TYPE=Release" +
-                        llvm_enable_projects +
-                        get_llvm_enable_dump_switch(version_LLVM) +
-                        get_llvm_disable_assertions_switch(llvm_disable_assertions) +
-                        "  -DLLVM_INSTALL_UTILS=ON" +
-                        (("  -DGCC_INSTALL_PREFIX=" + gcc_toolchain_path) if gcc_toolchain_path != "" else "") +
-                        (("  -DCMAKE_C_COMPILER=" + gcc_toolchain_path+"/bin/gcc") if gcc_toolchain_path != "" and selfbuild_compiler == "" else "") +
-                        (("  -DCMAKE_CXX_COMPILER=" + gcc_toolchain_path+"/bin/g++") if gcc_toolchain_path != "" and selfbuild_compiler == "" else "") +
-                        (("  -DDEFAULT_SYSROOT=" + mac_system_root) if mac_system_root != "" else "") +
-                        "  -DLLVM_TARGETS_TO_BUILD=AArch64\;ARM\;X86" +
-                        "  -DLLVM_EXPERIMENTAL_TARGETS_TO_BUILD=WebAssembly" +
-                        " ../" + cmakelists_path,
-                        from_validation, verbose)
-            else:
-                try_do_LLVM("configure release version ",
-                        selfbuild_compiler + "../" + LLVM_SRC + "/configure --prefix=" + llvm_home + "/" +
-                        LLVM_BIN + " --enable-optimized" +
-                        " --enable-targets=aarch64,arm,armeb,thumb,thumbeb,x86,x86_64" +
-                        ((" --with-gcc-toolchain=" + gcc_toolchain_path) if gcc_toolchain_path != "" else "") +
-                        ((" --with-default-sysroot=" + mac_system_root) if mac_system_root != "" else ""),
-                        from_validation, verbose)
-        else:
             try_do_LLVM("configure release version ",
-                    'cmake -Thost=x64 -G ' + '\"' + generator + '\"' + ' -DCMAKE_INSTALL_PREFIX="..\\'+ LLVM_BIN + '" ' +
-                    '  -DCMAKE_BUILD_TYPE=Release' +
-                    llvm_enable_projects +
-                    get_llvm_enable_dump_switch(version_LLVM) +
-                    get_llvm_disable_assertions_switch(llvm_disable_assertions) +
-                    '  -DLLVM_INSTALL_UTILS=ON' +
-                    '  -DLLVM_TARGETS_TO_BUILD=AArch64\;ARM\;X86' +
-                    '  -DLLVM_EXPERIMENTAL_TARGETS_TO_BUILD=WebAssembly' +
-                    '  -DLLVM_LIT_TOOLS_DIR="C:\\gnuwin32\\bin" ..\\' + cmakelists_path,
-                    from_validation, verbose)
-    else:
-        if  version_LLVM not in LLVM_configure_capable:
-            try_do_LLVM("configure debug version ",
                     "cmake -G " + "\"" + generator + "\"" + " -DCMAKE_EXPORT_COMPILE_COMMANDS=ON" +
                     selfbuild_compiler +
                     "  -DCMAKE_INSTALL_PREFIX=" + llvm_home + "/" + LLVM_BIN +
-                    "  -DCMAKE_BUILD_TYPE=Debug" +
+                    "  -DCMAKE_BUILD_TYPE=Release" +
                     llvm_enable_projects +
                     get_llvm_enable_dump_switch(version_LLVM) +
                     get_llvm_disable_assertions_switch(llvm_disable_assertions) +
@@ -366,13 +314,36 @@ def build_LLVM(version_LLVM, folder, tarball, debug, selfbuild, extra, from_vali
                     " ../" + cmakelists_path,
                     from_validation, verbose)
         else:
-            try_do_LLVM("configure debug version ",
-                        selfbuild_compiler + "../" + LLVM_SRC + "/configure --prefix=" + llvm_home + "/" + LLVM_BIN +
-                        " --enable-debug-runtime --enable-debug-symbols --enable-keep-symbols" +
-                        " --enable-targets=aarch64,arm,armeb,thumb,thumbeb,x86,x86_64" +
-                        ((" --with-gcc-toolchain=" + gcc_toolchain_path) if gcc_toolchain_path != "" else "") +
-                        ((" --with-default-sysroot=" + mac_system_root) if mac_system_root != "" else ""),
-                        from_validation, verbose)
+            try_do_LLVM("configure release version ",
+                    'cmake -Thost=x64 -G ' + '\"' + generator + '\"' + ' -DCMAKE_INSTALL_PREFIX="..\\'+ LLVM_BIN + '" ' +
+                    '  -DCMAKE_BUILD_TYPE=Release' +
+                    llvm_enable_projects +
+                    get_llvm_enable_dump_switch(version_LLVM) +
+                    get_llvm_disable_assertions_switch(llvm_disable_assertions) +
+                    '  -DLLVM_INSTALL_UTILS=ON' +
+                    '  -DLLVM_TARGETS_TO_BUILD=AArch64\;ARM\;X86' +
+                    '  -DLLVM_EXPERIMENTAL_TARGETS_TO_BUILD=WebAssembly' +
+                    '  -DLLVM_LIT_TOOLS_DIR="C:\\gnuwin32\\bin" ..\\' + cmakelists_path,
+                    from_validation, verbose)
+    else:
+        try_do_LLVM("configure debug version ",
+                "cmake -G " + "\"" + generator + "\"" + " -DCMAKE_EXPORT_COMPILE_COMMANDS=ON" +
+                selfbuild_compiler +
+                "  -DCMAKE_INSTALL_PREFIX=" + llvm_home + "/" + LLVM_BIN +
+                "  -DCMAKE_BUILD_TYPE=Debug" +
+                llvm_enable_projects +
+                get_llvm_enable_dump_switch(version_LLVM) +
+                get_llvm_disable_assertions_switch(llvm_disable_assertions) +
+                "  -DLLVM_INSTALL_UTILS=ON" +
+                (("  -DGCC_INSTALL_PREFIX=" + gcc_toolchain_path) if gcc_toolchain_path != "" else "") +
+                (("  -DCMAKE_C_COMPILER=" + gcc_toolchain_path+"/bin/gcc") if gcc_toolchain_path != "" and selfbuild_compiler == "" else "") +
+                (("  -DCMAKE_CXX_COMPILER=" + gcc_toolchain_path+"/bin/g++") if gcc_toolchain_path != "" and selfbuild_compiler == "" else "") +
+                (("  -DDEFAULT_SYSROOT=" + mac_system_root) if mac_system_root != "" else "") +
+                "  -DLLVM_TARGETS_TO_BUILD=AArch64\;ARM\;X86" +
+                "  -DLLVM_EXPERIMENTAL_TARGETS_TO_BUILD=WebAssembly" +
+                " ../" + cmakelists_path,
+                from_validation, verbose)
+
     # building llvm
     if current_OS != "Windows":
         try_do_LLVM("build LLVM ", make, from_validation, verbose)
