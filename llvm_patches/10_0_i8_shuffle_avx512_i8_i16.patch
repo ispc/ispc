@@ -12,8 +12,8 @@ Date:   Thu Feb 27 13:52:16 2020 +0000
 
 diff --git a/llvm/lib/Target/X86/X86ISelLowering.cpp b/llvm/lib/Target/X86/X86ISelLowering.cpp
 index 1f132bc768c..1cc9c7b16d7 100644
---- lib/Target/X86/X86ISelLowering.cpp
-+++ lib/Target/X86/X86ISelLowering.cpp
+--- a/llvm/lib/Target/X86/X86ISelLowering.cpp
++++ b/llvm/lib/Target/X86/X86ISelLowering.cpp
 @@ -9631,9 +9631,11 @@ static SDValue createVariablePermute(MVT VT, SDValue SrcVec, SDValue IndicesVec,
        IndicesVT = EVT(VT).changeVectorElementTypeToInteger();
        IndicesVec = widenSubVector(IndicesVT.getSimpleVT(), IndicesVec, false,

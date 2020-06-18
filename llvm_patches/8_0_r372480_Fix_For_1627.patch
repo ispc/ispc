@@ -1,8 +1,8 @@
 # This is a fix for crash in SROA pass ported from llvm commit - r372480.
 diff --git a/llvm/lib/Transforms/Scalar/SROA.cpp b/llvm/lib/Transforms/Scalar/SROA.cpp
 index 68ca6c47c8f..39a6ed8b210 100644
---- lib/Transforms/Scalar/SROA.cpp
-+++ lib/Transforms/Scalar/SROA.cpp
+--- a/llvm/lib/Transforms/Scalar/SROA.cpp
++++ b/llvm/lib/Transforms/Scalar/SROA.cpp
 @@ -1855,6 +1855,14 @@ static VectorType *isVectorPromotionViable(Partition &P, const DataLayout &DL) {
    bool HaveCommonEltTy = true;
    auto CheckCandidateType = [&](Type *Ty) {

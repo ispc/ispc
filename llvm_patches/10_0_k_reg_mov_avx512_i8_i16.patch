@@ -6,8 +6,8 @@
 
 diff --git a/llvm/lib/CodeGen/SelectionDAG/DAGCombiner.cpp b/llvm/lib/CodeGen/SelectionDAG/DAGCombiner.cpp
 index 8ff04797c8d..30fe382bae3 100644
---- lib/CodeGen/SelectionDAG/DAGCombiner.cpp
-+++ lib/CodeGen/SelectionDAG/DAGCombiner.cpp
+--- a/llvm/lib/CodeGen/SelectionDAG/DAGCombiner.cpp
++++ b/llvm/lib/CodeGen/SelectionDAG/DAGCombiner.cpp
 @@ -18462,6 +18462,26 @@ static SDValue narrowExtractedVectorLoad(SDNode *Extract, SelectionDAG &DAG) {
  
    // Allow targets to opt-out.

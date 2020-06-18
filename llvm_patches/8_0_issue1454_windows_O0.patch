@@ -2,8 +2,8 @@
 # See ISPC bug 1454 for more details. 
 Index: lib/Target/X86/X86ISelLowering.cpp
 ===================================================================
---- lib/Target/X86/X86ISelLowering.cpp	(revision 357656)
-+++ lib/Target/X86/X86ISelLowering.cpp	(working copy)
+--- a/llvm/lib/Target/X86/X86ISelLowering.cpp	(revision 357656)
++++ b/llvm/lib/Target/X86/X86ISelLowering.cpp	(working copy)
 @@ -3022,7 +3022,9 @@
    }
  

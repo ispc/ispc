@@ -16,8 +16,8 @@ code gets involved.
 
 diff --git a/llvm/lib/Target/X86/X86FastISel.cpp b/llvm/lib/Target/X86/X86FastISel.cpp
 index 027e2c2d45a..c25785b9000 100644
---- lib/Target/X86/X86FastISel.cpp
-+++ lib/Target/X86/X86FastISel.cpp
+--- a/llvm/lib/Target/X86/X86FastISel.cpp
++++ b/llvm/lib/Target/X86/X86FastISel.cpp
 @@ -3289,7 +3289,8 @@ bool X86FastISel::fastLowerCall(CallLoweringInfo &CLI) {
        ResultReg =
          fastEmit_ri(VT, VT, ISD::AND, ResultReg, hasTrivialKill(PrevVal), 1);

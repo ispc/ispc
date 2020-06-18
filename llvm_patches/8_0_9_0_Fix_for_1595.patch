@@ -2,8 +2,8 @@
 # Fixing crash in constant propagation pass when returning nested structs.
 Index: lib/Transforms/IPO/IPConstantPropagation.cpp
 ===================================================================
---- lib/Transforms/IPO/IPConstantPropagation.cpp
-+++ lib/Transforms/IPO/IPConstantPropagation.cpp
+--- a/llvm/lib/Transforms/IPO/IPConstantPropagation.cpp
++++ b/llvm/lib/Transforms/IPO/IPConstantPropagation.cpp
 @@ -232,7 +232,7 @@ static bool PropagateConstantReturn(Function &F) {
        // Find the index of the retval to replace with
        int index = -1;

@@ -4,8 +4,8 @@
 # r339307.
 Index: cmake/modules/GetHostTriple.cmake
 ===================================================================
---- cmake/modules/GetHostTriple.cmake	(revision 346555)
-+++ cmake/modules/GetHostTriple.cmake	(working copy)
+--- a/llvm/cmake/modules/GetHostTriple.cmake	(revision 346555)
++++ b/llvm/cmake/modules/GetHostTriple.cmake	(working copy)
 @@ -4,15 +4,15 @@
  function( get_host_triple var )
    if( MSVC )

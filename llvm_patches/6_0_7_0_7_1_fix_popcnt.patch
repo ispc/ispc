@@ -9,8 +9,8 @@
 # the alias with the offset 0 store, but not the offset 16 store.
 Index: lib/CodeGen/SelectionDAG/DAGCombiner.cpp
 ===================================================================
---- lib/CodeGen/SelectionDAG/DAGCombiner.cpp
-+++ lib/CodeGen/SelectionDAG/DAGCombiner.cpp
+--- a/llvm/lib/CodeGen/SelectionDAG/DAGCombiner.cpp
++++ b/llvm/lib/CodeGen/SelectionDAG/DAGCombiner.cpp
 @@ -15656,7 +15656,9 @@
      Offset = DAG.getNode(
          ISD::MUL, DL, PtrType, Offset,
