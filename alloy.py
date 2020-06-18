@@ -346,7 +346,7 @@ def build_LLVM(version_LLVM, folder, tarball, debug, selfbuild, extra, from_vali
         try_do_LLVM("build LLVM ", make, from_validation, verbose)
         try_do_LLVM("install LLVM ", "make install", from_validation, verbose)
     else:
-        try_do_LLVM("build LLVM and than install LLVM ", "msbuild INSTALL.vcxproj /V:m /p:Platform=x64 /p:Configuration=Release /t:rebuild", from_validation, verbose)
+        try_do_LLVM("build LLVM and then install LLVM ", "msbuild INSTALL.vcxproj /V:m /p:Platform=x64 /p:Configuration=Release /t:rebuild", from_validation, verbose)
     os.chdir(current_path) 
 
 
