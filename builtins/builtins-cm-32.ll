@@ -615,7 +615,7 @@ define internal <1 x i8> @_ZN7details13__impl_divremILi1EEEu2CMvbT__cS1_S1_u2CMv
 }
 
 ; Function Attrs: nounwind readnone
-declare !genx_intrinsic_id !10 <1 x i8> @llvm.genx.rdregioni.v1i8.v1i8.i16(<1 x i8>, i32, i32, i32, i16, i32) #2
+declare <1 x i8> @llvm.genx.rdregioni.v1i8.v1i8.i16(<1 x i8>, i32, i32, i32, i16, i32) #2
 
 ; Function Attrs: noinline nounwind
 define dso_local <1 x i8> @_Z24__cm_intrinsic_impl_sdivu2CMvb1_cS_(<1 x i8>, <1 x i8>) #0 {
@@ -1055,7 +1055,7 @@ define internal <1 x i16> @_ZN7details13__impl_divremILi1EEEu2CMvbT__sS1_S1_u2CM
 }
 
 ; Function Attrs: nounwind readnone
-declare !genx_intrinsic_id !10 <1 x i16> @llvm.genx.rdregioni.v1i16.v1i16.i16(<1 x i16>, i32, i32, i32, i16, i32) #2
+declare <1 x i16> @llvm.genx.rdregioni.v1i16.v1i16.i16(<1 x i16>, i32, i32, i32, i16, i32) #2
 
 ; Function Attrs: noinline nounwind
 define dso_local <1 x i16> @_Z24__cm_intrinsic_impl_sdivu2CMvb1_sS_(<1 x i16>, <1 x i16>) #3 {
@@ -1727,7 +1727,7 @@ define internal <1 x i32> @_ZN7details13__impl_divremILi1EEEu2CMvbT__iS1_S1_u2CM
 }
 
 ; Function Attrs: nounwind readnone
-declare !genx_intrinsic_id !10 <1 x i32> @llvm.genx.rdregioni.v1i32.v1i32.i16(<1 x i32>, i32, i32, i32, i16, i32) #2
+declare <1 x i32> @llvm.genx.rdregioni.v1i32.v1i32.i16(<1 x i32>, i32, i32, i32, i16, i32) #2
 
 ; Function Attrs: noinline nounwind
 define dso_local <1 x i32> @_Z24__cm_intrinsic_impl_sdivu2CMvb1_iS_(<1 x i32>, <1 x i32>) #14 {
@@ -4806,7 +4806,7 @@ define dso_local void @__do_print_cm(i8*, i8*, i32, i64, i32*, i32, i32) #23 !db
 declare dso_local i32 @_ZN7details38__cm_intrinsic_impl_predefined_surfaceEj(i32) #24
 
 ; Function Attrs: nounwind readnone
-declare !genx_intrinsic_id !55 i32 @llvm.genx.predefined.surface(i32) #2
+declare i32 @llvm.genx.predefined.surface(i32) #2
 
 ; Function Attrs: alwaysinline inlinehint nounwind
 define internal i32 @_ZN7details21_cm_print_init_offsetE15cm_surfaceindexj(i32, i32) #10 comdat {
@@ -5083,7 +5083,7 @@ define dso_local void @__do_print_lz(i32, i8*, i32, i64, i32*, i32, i32, i32, i3
 }
 
 ; Function Attrs: nounwind
-declare !genx_intrinsic_id !167 i64 @llvm.genx.print.buffer() #27
+declare i64 @llvm.genx.print.buffer() #27
 
 ; Function Attrs: alwaysinline inlinehint nounwind
 define internal i32 @_ZN7details25_cm_print_init_offset_oclEu2CMvb1_jj(<1 x i32>, i32) #10 comdat {
@@ -5284,7 +5284,7 @@ define dso_local i32 @__num_cores() #29 !dbg !236 {
 }
 
 ; Function Attrs: nounwind readnone
-declare !genx_intrinsic_id !238 <8 x i32> @llvm.genx.wrregioni.v8i32.v1i32.i16.i1(<8 x i32>, <1 x i32>, i32, i32, i32, i16, i32, i1) #2
+declare <8 x i32> @llvm.genx.wrregioni.v8i32.v1i32.i16.i1(<8 x i32>, <1 x i32>, i32, i32, i32, i16, i32, i1) #2
 
 ; Function Attrs: alwaysinline inlinehint nounwind
 define internal void @_Z12write_atomicIL14CmAtomicOpType0EjLi8EENSt9enable_ifIXaaaaaaaaaaneT_LS0_7EneT_LS0_18EneT_LS0_2EneT_LS0_3EneT_LS0_255EclL_ZN7detailsL10isPowerOf2EjjET1_Li32EEEvE4typeE15cm_surfaceindexu2CMvbT1__ju2CMvbT1__T0_u2CMvrT1__S6_(i32, <8 x i32>, <8 x i32>, <8 x i32>*) #10 comdat {
@@ -5315,7 +5315,7 @@ define internal void @_Z12write_atomicIL14CmAtomicOpType0EjLi8EENSt9enable_ifIXa
 }
 
 ; Function Attrs: nounwind readnone
-declare !genx_intrinsic_id !10 <1 x i32> @llvm.genx.rdregioni.v1i32.v8i32.i16(<8 x i32>, i32, i32, i32, i16, i32) #2
+declare <1 x i32> @llvm.genx.rdregioni.v1i32.v8i32.i16(<8 x i32>, i32, i32, i32, i16, i32) #2
 
 ; Function Attrs: noinline nounwind
 define internal void @_ZN7details18is_valid_atomic_opIjL14CmAtomicOpType0ELi8EE5checkEv() #30 comdat align 2 !dbg !239 {
@@ -5325,39 +5325,39 @@ define internal void @_ZN7details18is_valid_atomic_opIjL14CmAtomicOpType0ELi8EE5
 declare dso_local <8 x i32> @_ZN7details32__cm_intrinsic_impl_atomic_writeIL14CmAtomicOpType0ELi8EjEEu2CMvbT0__T1_u2CMvbT0__t15cm_surfaceindexu2CMvbT0__jS3_S3_S3_(<8 x i16>, i32, <8 x i32>, <8 x i32>, <8 x i32>, <8 x i32>) #24
 
 ; Function Attrs: nounwind
-declare !genx_intrinsic_id !242 <8 x i32> @llvm.genx.vload.v8i32.p0v8i32(<8 x i32>*) #27
+declare <8 x i32> @llvm.genx.vload.v8i32.p0v8i32(<8 x i32>*) #27
 
 ; Function Attrs: nounwind
-declare !genx_intrinsic_id !243 <8 x i32> @llvm.genx.dword.atomic.add.v8i32.v8i1.v8i32(<8 x i1>, i32, <8 x i32>, <8 x i32>, <8 x i32>) #27
+declare <8 x i32> @llvm.genx.dword.atomic.add.v8i32.v8i1.v8i32(<8 x i1>, i32, <8 x i32>, <8 x i32>, <8 x i32>) #27
 
 ; Function Attrs: nounwind
-declare !genx_intrinsic_id !244 void @llvm.genx.vstore.v8i32.p0v8i32(<8 x i32>, <8 x i32>*) #27
+declare void @llvm.genx.vstore.v8i32.p0v8i32(<8 x i32>, <8 x i32>*) #27
 
 declare dso_local void @_Z13cm_svm_atomicIjLi8EEv14CmAtomicOpTypeu2CMvbT0__ju2CMvrT0__T_u2CMvbT0__S2_(i32, <8 x i32>, <8 x i32>*, <8 x i32>) #24
 
 ; Function Attrs: nounwind
-declare !genx_intrinsic_id !245 <8 x i32> @llvm.genx.svm.atomic.add.v8i32.v8i1.v8i32(<8 x i1>, <8 x i32>, <8 x i32>, <8 x i32>) #27
+declare <8 x i32> @llvm.genx.svm.atomic.add.v8i32.v8i1.v8i32(<8 x i1>, <8 x i32>, <8 x i32>, <8 x i32>) #27
 
 ; Function Attrs: nounwind readnone
-declare !genx_intrinsic_id !246 i32 @llvm.genx.print.format.index.p0i8(i8*) #2
+declare i32 @llvm.genx.print.format.index.p0i8(i8*) #2
 
 ; Function Attrs: nounwind readnone
-declare !genx_intrinsic_id !238 <5 x i32> @llvm.genx.wrregioni.v5i32.v1i32.i16.i1(<5 x i32>, <1 x i32>, i32, i32, i32, i16, i32, i1) #2
+declare <5 x i32> @llvm.genx.wrregioni.v5i32.v1i32.i16.i1(<5 x i32>, <1 x i32>, i32, i32, i32, i16, i32, i1) #2
 
 ; Function Attrs: nounwind
-declare !genx_intrinsic_id !244 void @llvm.genx.vstore.v2i8.p0v2i8(<2 x i8>, <2 x i8>*) #27
+declare void @llvm.genx.vstore.v2i8.p0v2i8(<2 x i8>, <2 x i8>*) #27
 
 ; Function Attrs: nounwind
-declare !genx_intrinsic_id !244 void @llvm.genx.vstore.v4i8.p0v4i8(<4 x i8>, <4 x i8>*) #27
+declare void @llvm.genx.vstore.v4i8.p0v4i8(<4 x i8>, <4 x i8>*) #27
 
 ; Function Attrs: nounwind
-declare !genx_intrinsic_id !244 void @llvm.genx.vstore.v8i8.p0v8i8(<8 x i8>, <8 x i8>*) #27
+declare void @llvm.genx.vstore.v8i8.p0v8i8(<8 x i8>, <8 x i8>*) #27
 
 ; Function Attrs: nounwind
-declare !genx_intrinsic_id !244 void @llvm.genx.vstore.v16i8.p0v16i8(<16 x i8>, <16 x i8>*) #27
+declare void @llvm.genx.vstore.v16i8.p0v16i8(<16 x i8>, <16 x i8>*) #27
 
 ; Function Attrs: nounwind
-declare !genx_intrinsic_id !244 void @llvm.genx.vstore.v32i8.p0v32i8(<32 x i8>, <32 x i8>*) #27
+declare void @llvm.genx.vstore.v32i8.p0v32i8(<32 x i8>, <32 x i8>*) #27
 
 ; Function Attrs: alwaysinline inlinehint nounwind
 define internal float @_ZN7details16__impl_hex2floatEj(i32) #25 comdat {
@@ -5379,34 +5379,34 @@ define internal float @_ZN7details16__impl_hex2floatEj(i32) #25 comdat {
 }
 
 ; Function Attrs: nounwind readnone
-declare !genx_intrinsic_id !247 <1 x float> @llvm.genx.rdregionf.v1f32.v1f32.i16(<1 x float>, i32, i32, i32, i16, i32) #2
+declare <1 x float> @llvm.genx.rdregionf.v1f32.v1f32.i16(<1 x float>, i32, i32, i32, i16, i32) #2
 
 ; Function Attrs: nounwind
-declare !genx_intrinsic_id !244 void @llvm.genx.vstore.v2i16.p0v2i16(<2 x i16>, <2 x i16>*) #27
+declare void @llvm.genx.vstore.v2i16.p0v2i16(<2 x i16>, <2 x i16>*) #27
 
 ; Function Attrs: nounwind
-declare !genx_intrinsic_id !244 void @llvm.genx.vstore.v4i16.p0v4i16(<4 x i16>, <4 x i16>*) #27
+declare void @llvm.genx.vstore.v4i16.p0v4i16(<4 x i16>, <4 x i16>*) #27
 
 ; Function Attrs: nounwind
-declare !genx_intrinsic_id !244 void @llvm.genx.vstore.v8i16.p0v8i16(<8 x i16>, <8 x i16>*) #27
+declare void @llvm.genx.vstore.v8i16.p0v8i16(<8 x i16>, <8 x i16>*) #27
 
 ; Function Attrs: nounwind
-declare !genx_intrinsic_id !244 void @llvm.genx.vstore.v16i16.p0v16i16(<16 x i16>, <16 x i16>*) #27
+declare void @llvm.genx.vstore.v16i16.p0v16i16(<16 x i16>, <16 x i16>*) #27
 
 ; Function Attrs: nounwind
-declare !genx_intrinsic_id !244 void @llvm.genx.vstore.v32i16.p0v32i16(<32 x i16>, <32 x i16>*) #27
+declare void @llvm.genx.vstore.v32i16.p0v32i16(<32 x i16>, <32 x i16>*) #27
 
 ; Function Attrs: nounwind
-declare !genx_intrinsic_id !244 void @llvm.genx.vstore.v2i32.p0v2i32(<2 x i32>, <2 x i32>*) #27
+declare void @llvm.genx.vstore.v2i32.p0v2i32(<2 x i32>, <2 x i32>*) #27
 
 ; Function Attrs: nounwind
-declare !genx_intrinsic_id !244 void @llvm.genx.vstore.v4i32.p0v4i32(<4 x i32>, <4 x i32>*) #27
+declare void @llvm.genx.vstore.v4i32.p0v4i32(<4 x i32>, <4 x i32>*) #27
 
 ; Function Attrs: nounwind
-declare !genx_intrinsic_id !244 void @llvm.genx.vstore.v16i32.p0v16i32(<16 x i32>, <16 x i32>*) #27
+declare void @llvm.genx.vstore.v16i32.p0v16i32(<16 x i32>, <16 x i32>*) #27
 
 ; Function Attrs: nounwind
-declare !genx_intrinsic_id !244 void @llvm.genx.vstore.v32i32.p0v32i32(<32 x i32>, <32 x i32>*) #27
+declare void @llvm.genx.vstore.v32i32.p0v32i32(<32 x i32>, <32 x i32>*) #27
 
 ; Function Attrs: alwaysinline inlinehint nounwind
 define internal i32 @_Z13CopyPlainTextILj128EEiPKcu2CMvrT__cii(i8*, <128 x i8>*, i32, i32) #25 comdat !dbg !248 {
@@ -5505,7 +5505,7 @@ define internal i32 @_Z12CopyFullTextILj100ELj128EEiu2CMvrT__ciu2CMvrT0__cii(<10
 }
 
 ; Function Attrs: nounwind readnone
-declare !genx_intrinsic_id !238 <128 x i8> @llvm.genx.wrregioni.v128i8.v1i8.i16.i1(<128 x i8>, <1 x i8>, i32, i32, i32, i16, i32, i1) #2
+declare <128 x i8> @llvm.genx.wrregioni.v128i8.v1i8.i16.i1(<128 x i8>, <1 x i8>, i32, i32, i32, i16, i32, i1) #2
 
 ; Function Attrs: alwaysinline inlinehint nounwind
 define internal i32 @_ZN7details11CopyTillSepIJLc37ELc0EEPKcLj128EEEiT0_iu2CMvrT1__cii(i8*, i32, <128 x i8>*, i32, i32) #25 comdat !dbg !294 {
@@ -5580,10 +5580,10 @@ define internal i32 @_ZN7details11CopyTillSepIJLc37ELc0EEPKcLj128EEEiT0_iu2CMvrT
 }
 
 ; Function Attrs: nounwind
-declare !genx_intrinsic_id !242 <128 x i8> @llvm.genx.vload.v128i8.p0v128i8(<128 x i8>*) #27
+declare <128 x i8> @llvm.genx.vload.v128i8.p0v128i8(<128 x i8>*) #27
 
 ; Function Attrs: nounwind
-declare !genx_intrinsic_id !244 void @llvm.genx.vstore.v128i8.p0v128i8(<128 x i8>, <128 x i8>*) #27
+declare void @llvm.genx.vstore.v128i8.p0v128i8(<128 x i8>, <128 x i8>*) #27
 
 ; Function Attrs: alwaysinline inlinehint nounwind
 define internal zeroext i1 @_ZN7details17Arg2StrIfSuitableIb9ArgWriterEEbcRT0_u2CMvr100_c(i8 signext, %class.ArgWriter* dereferenceable(24), <100 x i8>*) #25 comdat !dbg !317 {
@@ -5869,7 +5869,7 @@ define internal <100 x i8> @_ZN9ArgWriter11uniform2StrIbEEDav(%class.ArgWriter*)
 }
 
 ; Function Attrs: nounwind
-declare !genx_intrinsic_id !244 void @llvm.genx.vstore.v100i8.p0v100i8(<100 x i8>, <100 x i8>*) #27
+declare void @llvm.genx.vstore.v100i8.p0v100i8(<100 x i8>, <100 x i8>*) #27
 
 ; Function Attrs: alwaysinline inlinehint nounwind
 define internal i32 @_Z12CopyFullTextILj100EEiPKcu2CMvrT__cii(i8*, <100 x i8>*, i32, i32) #25 comdat !dbg !420 {
@@ -5916,7 +5916,7 @@ define internal i32 @_ZN9ArgWriter16GetElementaryArgEv(%class.ArgWriter*) #25 co
 }
 
 ; Function Attrs: nounwind readnone
-declare !genx_intrinsic_id !238 <100 x i8> @llvm.genx.wrregioni.v100i8.v1i8.i16.i1(<100 x i8>, <1 x i8>, i32, i32, i32, i16, i32, i1) #2
+declare <100 x i8> @llvm.genx.wrregioni.v100i8.v1i8.i16.i1(<100 x i8>, <1 x i8>, i32, i32, i32, i16, i32, i1) #2
 
 ; Function Attrs: alwaysinline inlinehint nounwind
 define internal i32 @_ZN7details11CopyTillSepIJLc0EEPKcLj100EEEiT0_iu2CMvrT1__cii(i8*, i32, <100 x i8>*, i32, i32) #25 comdat !dbg !438 {
@@ -5982,7 +5982,7 @@ define internal i32 @_ZN7details11CopyTillSepIJLc0EEPKcLj100EEEiT0_iu2CMvrT1__ci
 }
 
 ; Function Attrs: nounwind
-declare !genx_intrinsic_id !242 <100 x i8> @llvm.genx.vload.v100i8.p0v100i8(<100 x i8>*) #27
+declare <100 x i8> @llvm.genx.vload.v100i8.p0v100i8(<100 x i8>*) #27
 
 ; Function Attrs: alwaysinline inlinehint nounwind
 define internal i8* @_ZN7detailsL16ValueAdapterImplEb(i1 zeroext) #25 !dbg !460 {
@@ -6413,7 +6413,7 @@ define internal void @_Z5writeIjLi8EEv15cm_surfaceindexiu2CMvbT0__T_(i32, i32, <
 declare dso_local void @_ZN7details31__cm_intrinsic_impl_oword_writeIjLi8EEEv15cm_surfaceindexiu2CMvbT0__T_(i32, i32, <8 x i32>) #24
 
 ; Function Attrs: nounwind
-declare !genx_intrinsic_id !616 void @llvm.genx.oword.st.v8i32(i32, i32, <8 x i32>) #27
+declare void @llvm.genx.oword.st.v8i32(i32, i32, <8 x i32>) #27
 
 ; Function Attrs: alwaysinline inlinehint nounwind
 define internal signext i8 @_ZN9PrintInfo19getEncoding4VaryingIiEENS_8EncodingEv() #25 comdat !dbg !617 {
@@ -8787,7 +8787,7 @@ define internal i32 @_ZN7details11CopyTillSepIJLc0EELj100ELj128EEEiu2CMvrT0__ciu
 }
 
 ; Function Attrs: nounwind readnone
-declare !genx_intrinsic_id !10 <1 x i8> @llvm.genx.rdregioni.v1i8.v100i8.i16(<100 x i8>, i32, i32, i32, i16, i32) #2
+declare <1 x i8> @llvm.genx.rdregioni.v1i8.v100i8.i16(<100 x i8>, i32, i32, i32, i16, i32) #2
 
 ; Function Attrs: alwaysinline inlinehint nounwind
 define internal void @_Z5writeIcLi128EEv15cm_surfaceindexiu2CMvbT0__T_(i32, i32, <128 x i8>) #20 comdat {
@@ -8810,7 +8810,7 @@ define internal void @_Z5writeIcLi128EEv15cm_surfaceindexiu2CMvbT0__T_(i32, i32,
 declare dso_local void @_ZN7details31__cm_intrinsic_impl_oword_writeIcLi128EEEv15cm_surfaceindexiu2CMvbT0__T_(i32, i32, <128 x i8>) #24
 
 ; Function Attrs: nounwind
-declare !genx_intrinsic_id !616 void @llvm.genx.oword.st.v128i8(i32, i32, <128 x i8>) #27
+declare void @llvm.genx.oword.st.v128i8(i32, i32, <128 x i8>) #27
 
 ; Function Attrs: alwaysinline inlinehint nounwind
 define internal <1 x i32> @_ZL11vector_castILi1EjEu2CMvbT__T0_S0_(i32) #4 !dbg !1634 {
@@ -8857,7 +8857,7 @@ define internal void @_ZN7details25cm_svm_scatter_write_implIiLi1EEENSt9enable_i
 declare dso_local void @_ZN7details37__cm_intrinsic_impl_svm_scatter_writeIiLi1ELi1EEEvu2CMvbT0__yu2CMvbmlT0_T1__T_(<1 x i64>, <1 x i32>) #24
 
 ; Function Attrs: nounwind
-declare !genx_intrinsic_id !1644 void @llvm.genx.svm.scatter.v1i1.v1i64.v1i32(<1 x i1>, i32, <1 x i64>, <1 x i32>) #27
+declare void @llvm.genx.svm.scatter.v1i1.v1i64.v1i32(<1 x i1>, i32, <1 x i64>, <1 x i32>) #27
 
 ; Function Attrs: alwaysinline inlinehint nounwind
 define internal zeroext i1 @_ZN9PrintInfo22switchEncoding4UniformI13UniformWriterEEbNS_8EncodingET_(i8 signext, %class.UniformWriter* byval align 32) #25 comdat !dbg !1645 {
@@ -9253,7 +9253,7 @@ define internal i32 @_ZN13UniformWriter16GetElementaryArgEv(%class.UniformWriter
 }
 
 ; Function Attrs: nounwind readnone
-declare !genx_intrinsic_id !10 <1 x i32> @llvm.genx.rdregioni.v1i32.v5i32.i16(<5 x i32>, i32, i32, i32, i16, i32) #2
+declare <1 x i32> @llvm.genx.rdregioni.v1i32.v5i32.i16(<5 x i32>, i32, i32, i32, i16, i32) #2
 
 ; Function Attrs: alwaysinline inlinehint nounwind
 define internal void @_ZL24write_arg_with_promotionIRA1_KcEvRjjj(i32* dereferenceable(4), i32, i32) #4 !dbg !1784 {
@@ -9669,7 +9669,7 @@ define internal i32 @_ZN7details18_cm_print_type_oclIxEENS_18SHADER_PRINTF_TYPEE
 }
 
 ; Function Attrs: nounwind readnone
-declare !genx_intrinsic_id !238 <2 x i32> @llvm.genx.wrregioni.v2i32.v1i32.i16.i1(<2 x i32>, <1 x i32>, i32, i32, i32, i16, i32, i1) #2
+declare <2 x i32> @llvm.genx.wrregioni.v2i32.v1i32.i16.i1(<2 x i32>, <1 x i32>, i32, i32, i32, i16, i32, i1) #2
 
 ; Function Attrs: alwaysinline inlinehint nounwind
 define internal void @_Z20cm_svm_scatter_writeIjLi2EEvu2CMvbT0__ju2CMvbT0__T_(<2 x i32>, <2 x i32>) #6 comdat {
@@ -9702,7 +9702,7 @@ define internal void @_ZN7details25cm_svm_scatter_write_implIjLi2EEENSt9enable_i
 declare dso_local void @_ZN7details37__cm_intrinsic_impl_svm_scatter_writeIjLi2ELi1EEEvu2CMvbT0__yu2CMvbmlT0_T1__T_(<2 x i64>, <2 x i32>) #24
 
 ; Function Attrs: nounwind
-declare !genx_intrinsic_id !1644 void @llvm.genx.svm.scatter.v2i1.v2i64.v2i32(<2 x i1>, i32, <2 x i64>, <2 x i32>) #27
+declare void @llvm.genx.svm.scatter.v2i1.v2i64.v2i32(<2 x i1>, i32, <2 x i64>, <2 x i32>) #27
 
 ; Function Attrs: alwaysinline nounwind
 define internal signext i8 @_ZNK9PrintInfo16Encoding4Uniform4callIyEENS_8EncodingEv(%"struct.PrintInfo::Encoding4Uniform"*) #33 comdat align 2 !dbg !1941 {
