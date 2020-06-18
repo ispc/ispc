@@ -2,8 +2,8 @@
 # It prevents generation of redundant instructions for AVX2 target.
 Index: lib/Target/X86/X86ISelLowering.cpp
 ===================================================================
---- lib/Target/X86/X86ISelLowering.cpp	(revision 357958)
-+++ lib/Target/X86/X86ISelLowering.cpp	(working copy)
+--- a/llvm/lib/Target/X86/X86ISelLowering.cpp	(revision 357958)
++++ b/llvm/lib/Target/X86/X86ISelLowering.cpp	(working copy)
 @@ -37415,6 +37415,9 @@
    if (ML->getPassThru().isUndef())
      return SDValue();

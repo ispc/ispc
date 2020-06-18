@@ -3,8 +3,8 @@
 # before type legalization. In this particular case extending bool to 32 bits.
 Index: lib/Target/X86/X86ISelLowering.cpp
 ===================================================================
---- lib/Target/X86/X86ISelLowering.cpp	(revision 348642)
-+++ lib/Target/X86/X86ISelLowering.cpp	(working copy)
+--- a/llvm/lib/Target/X86/X86ISelLowering.cpp	(revision 348642)
++++ b/llvm/lib/Target/X86/X86ISelLowering.cpp	(working copy)
 @@ -36768,11 +36768,11 @@
    SDValue Op0 = N->getOperand(0);
    EVT VT = N->getValueType(0);

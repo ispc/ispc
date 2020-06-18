@@ -2,8 +2,8 @@
 # This removes unnecessary multiplies.
 diff --git a/lib/CodeGen/SelectionDAG/SelectionDAGBuilder.cpp b/lib/CodeGen/SelectionDAG/SelectionDAGBuilder.cpp
 index ebe1725..0aa21d0 100644
---- lib/CodeGen/SelectionDAG/SelectionDAGBuilder.cpp
-+++ lib/CodeGen/SelectionDAG/SelectionDAGBuilder.cpp
+--- a/llvm/lib/CodeGen/SelectionDAG/SelectionDAGBuilder.cpp
++++ b/llvm/lib/CodeGen/SelectionDAG/SelectionDAGBuilder.cpp
 @@ -823,7 +823,7 @@ SDValue RegsForValue::getCopyFromRegs(SelectionDAG &DAG,
        // If the source register was virtual and if we know something about it,
        // add an assert node.
@@ -24,8 +24,8 @@ index ebe1725..0aa21d0 100644
 
 diff --git a/lib/CodeGen/SelectionDAG/SelectionDAGISel.cpp b/lib/CodeGen/SelectionDAG/SelectionDAGISel.cpp
 index ce0032c..927b459 100644
---- lib/CodeGen/SelectionDAG/SelectionDAGISel.cpp
-+++ lib/CodeGen/SelectionDAG/SelectionDAGISel.cpp
+--- a/llvm/lib/CodeGen/SelectionDAG/SelectionDAGISel.cpp
++++ b/llvm/lib/CodeGen/SelectionDAG/SelectionDAGISel.cpp
 @@ -697,10 +697,10 @@ void SelectionDAGISel::ComputeLiveOutVRegInfo() {
      if (!TargetRegisterInfo::isVirtualRegister(DestReg))
        continue;

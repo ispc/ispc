@@ -247,15 +247,12 @@ def build_LLVM(version_LLVM, folder, tarball, debug, selfbuild, extra, from_vali
         os.chdir("../../")
     # paching llvm
     llvm_enable_projects += "\""
-    os.chdir(LLVM_SRC + "/llvm")
+    os.chdir(LLVM_SRC)
     patches = glob.glob(os.environ["ISPC_HOME"] + os.sep + "llvm_patches" + os.sep + "*.*")
     for patch in patches:
         if version_LLVM in os.path.basename(patch):
-            if current_OS != "Windows":
-                try_do_LLVM("patch LLVM with patch " + patch + " ", "patch -p0 < " + patch, from_validation, verbose)
-            else:
-                try_do_LLVM("patch LLVM with patch " + patch + " ", "C:\\gnuwin32\\bin\\patch.exe -p0 < " + patch, from_validation, verbose)
-    os.chdir("../../")
+            try_do_LLVM("patch LLVM with patch " + patch + " ", "git apply " + patch, from_validation, verbose)
+    os.chdir("../")
     # configuring llvm, build first part of selfbuild
     os.makedirs(LLVM_BUILD)
     os.makedirs(LLVM_BIN)

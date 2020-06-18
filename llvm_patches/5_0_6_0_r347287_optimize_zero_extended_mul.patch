@@ -11,8 +11,8 @@ Date:   Wed Dec 19 10:30:45 2018 -0800
 
 diff --git lib/CodeGen/SelectionDAG/SelectionDAG.cpp b/lib/CodeGen/SelectionDAG/SelectionDAG.cpp
 index 3ffc6fa..352ec99 100644
---- lib/CodeGen/SelectionDAG/SelectionDAG.cpp
-+++ lib/CodeGen/SelectionDAG/SelectionDAG.cpp
+--- a/llvm/lib/CodeGen/SelectionDAG/SelectionDAG.cpp
++++ b/llvm/lib/CodeGen/SelectionDAG/SelectionDAG.cpp
 @@ -4401,8 +4401,8 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
      assert(!EVT.isVector() &&
             "AssertSExt/AssertZExt type should be the vector element type "
@@ -26,8 +26,8 @@ index 3ffc6fa..352ec99 100644
    case ISD::SIGN_EXTEND_INREG: {
 diff --git a/lib/CodeGen/SelectionDAG/SelectionDAGBuilder.cpp b/lib/CodeGen/SelectionDAG/SelectionDAGBuilder.cpp
 index 68bbd62..19b8c6f 100644
---- lib/CodeGen/SelectionDAG/SelectionDAGBuilder.cpp
-+++ lib/CodeGen/SelectionDAG/SelectionDAGBuilder.cpp
+--- a/llvm/lib/CodeGen/SelectionDAG/SelectionDAGBuilder.cpp
++++ b/llvm/lib/CodeGen/SelectionDAG/SelectionDAGBuilder.cpp
 @@ -796,7 +796,7 @@ SDValue RegsForValue::getCopyFromRegs(SelectionDAG &DAG,
        // If the source register was virtual and if we know something about it,
        // add an assert node.
@@ -48,8 +48,8 @@ index 68bbd62..19b8c6f 100644
 
 diff --git a/lib/CodeGen/SelectionDAG/SelectionDAGISel.cpp b/lib/CodeGen/SelectionDAG/SelectionDAGISel.cpp
 index bd9fcfb..a73a4e0 100644
---- lib/CodeGen/SelectionDAG/SelectionDAGISel.cpp
-+++ lib/CodeGen/SelectionDAG/SelectionDAGISel.cpp
+--- a/llvm/lib/CodeGen/SelectionDAG/SelectionDAGISel.cpp
++++ b/llvm/lib/CodeGen/SelectionDAG/SelectionDAGISel.cpp
 @@ -692,10 +692,10 @@ void SelectionDAGISel::ComputeLiveOutVRegInfo() {
      if (!TargetRegisterInfo::isVirtualRegister(DestReg))
        continue;

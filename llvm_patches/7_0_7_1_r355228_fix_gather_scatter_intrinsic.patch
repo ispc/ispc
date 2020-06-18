@@ -4,8 +4,8 @@
 # that gather later uses the result of this store. This change prevents this bug.
 Index: include/llvm/IR/IntrinsicsX86.td
 ===================================================================
---- include/llvm/IR/IntrinsicsX86.td	(revision 355350)
-+++ include/llvm/IR/IntrinsicsX86.td	(working copy)
+--- a/llvm/include/llvm/IR/IntrinsicsX86.td	(revision 355350)
++++ b/llvm/include/llvm/IR/IntrinsicsX86.td	(working copy)
 @@ -1820,71 +1820,73 @@
  
  // Gather ops

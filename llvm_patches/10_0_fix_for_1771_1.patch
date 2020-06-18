@@ -1,8 +1,8 @@
 # This patch is a fix for #1771.
 # It is a port of the following llvm 11.0 commit: https://reviews.llvm.org/D81212.
 # Git hash of the commit: 7c9a89fe
---- lib/Target/X86/X86ISelLowering.cpp
-+++ lib/Target/X86/X86ISelLowering.cpp
+--- a/llvm/lib/Target/X86/X86ISelLowering.cpp
++++ b/llvm/lib/Target/X86/X86ISelLowering.cpp
 @@ -41439,14 +41439,22 @@
        getTargetConstantBitsFromNode(N0, NumBitsPerElt, UndefElts, EltBits)) {
      assert(EltBits.size() == VT.getVectorNumElements() &&

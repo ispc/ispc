@@ -2,8 +2,8 @@
 # It is a port of the following llvm 11.0 commit : https://reviews.llvm.org/D76994.
 diff --git a/llvm/lib/CodeGen/SelectionDAG/LegalizeTypes.cpp b/llvm/lib/CodeGen/SelectionDAG/LegalizeTypes.cpp
 index 63ddb59fce6..822da218326 100644
---- lib/CodeGen/SelectionDAG/LegalizeTypes.cpp
-+++ lib/CodeGen/SelectionDAG/LegalizeTypes.cpp
+--- a/llvm/lib/CodeGen/SelectionDAG/LegalizeTypes.cpp
++++ b/llvm/lib/CodeGen/SelectionDAG/LegalizeTypes.cpp
 @@ -173,7 +173,7 @@ void DAGTypeLegalizer::PerformExpensiveChecks() {
        }
      }
@@ -23,8 +23,8 @@ index 63ddb59fce6..822da218326 100644
  /// This is the main entry point for the type legalizer. This does a top-down
 diff --git a/llvm/lib/CodeGen/SelectionDAG/LegalizeTypes.h b/llvm/lib/CodeGen/SelectionDAG/LegalizeTypes.h
 index faae14444d5..b908c5c58e9 100644
---- lib/CodeGen/SelectionDAG/LegalizeTypes.h
-+++ lib/CodeGen/SelectionDAG/LegalizeTypes.h
+--- a/llvm/lib/CodeGen/SelectionDAG/LegalizeTypes.h
++++ b/llvm/lib/CodeGen/SelectionDAG/LegalizeTypes.h
 @@ -155,7 +155,9 @@ private:
    const SDValue &getSDValue(TableId &Id) {
      RemapId(Id);

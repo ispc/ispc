@@ -29,8 +29,8 @@ Date:   Wed Mar 4 14:57:58 2020 -0800
 
 diff --git a/llvm/lib/Target/X86/X86ISelLowering.cpp b/llvm/lib/Target/X86/X86ISelLowering.cpp
 index d0696c24a11..01948c6c6c1 100644
---- lib/Target/X86/X86ISelLowering.cpp
-+++ lib/Target/X86/X86ISelLowering.cpp
+--- a/llvm/lib/Target/X86/X86ISelLowering.cpp
++++ b/llvm/lib/Target/X86/X86ISelLowering.cpp
 @@ -2125,51 +2125,83 @@ X86TargetLowering::getPreferredVectorAction(MVT VT) const {
    return TargetLoweringBase::getPreferredVectorAction(VT);
  }
