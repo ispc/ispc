@@ -50,7 +50,7 @@ WORKDIR /usr/local/src/ispc
 # or better do clang selfbuild and use it for ispc build as well (i.e. just "make").
 # "rm" are just to keep docker image small.
 ARG LLVM_VERSION=8.0
-RUN ./alloy.py -b --version=$LLVM_VERSION --selfbuild --git && \
+RUN ./alloy.py -b --version=$LLVM_VERSION --selfbuild && \
     rm -rf $LLVM_HOME/build-$LLVM_VERSION $LLVM_HOME/llvm-$LLVM_VERSION $LLVM_HOME/bin-$LLVM_VERSION_temp $LLVM_HOME/build-$LLVM_VERSION_temp
 
 ENV PATH=$LLVM_HOME/bin-$LLVM_VERSION/bin:$PATH
