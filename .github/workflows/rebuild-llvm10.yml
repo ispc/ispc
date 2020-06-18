@@ -42,6 +42,49 @@ jobs:
         name: llvm10_linux
         path: docker/ubuntu/llvm_build/llvm-10.0.0-ubuntu16.04-Release+Asserts-x86.arm.wasm.tar.xz
 
+  win-build:
+    runs-on: windows-latest
+
+    steps:
+    - uses: actions/checkout@v2
+      with:
+        submodules: true
+
+    - name: Setup MSBuild.exe
+      uses: microsoft/setup-msbuild@v1
+
+    - name: Check environment
+      shell: cmd
+      run: |
+        wmic cpu get caption, deviceid, name, numberofcores, maxclockspeed, status
+
+    - name: Install dependencies
+      shell: cmd
+      run: |
+        mkdir llvm
+        echo ::set-env name=LLVM_HOME::%GITHUB_WORKSPACE%\llvm
+        echo ::set-env name=ISPC_HOME::%GITHUB_WORKSPACE%
+
+    - name: Build LLVM
+      shell: cmd
+      run: |
+        echo %LLVM_HOME%
+        echo %ISPC_HOME%
+        python ./alloy.py -b --version=10.0 --verbose
+        cd alloy_results* && type alloy_build.log
+
+    - name: Pack LLVM
+      shell: cmd
+      run: |
+        cd llvm
+        7z.exe a -t7z llvm-10.0.0-win.vs2019-Release+Asserts-x86.arm.wasm.zip bin-10.0
+
+    - name: Upload package
+      uses: actions/upload-artifact@v2
+      with:
+        name: llvm10_win
+        path: llvm/llvm-10.0.0-win.vs2019-Release+Asserts-x86.arm.wasm.zip
+
   mac-build:
     runs-on: macos-10.15
 
