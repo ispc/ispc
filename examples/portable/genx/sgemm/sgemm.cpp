@@ -23,18 +23,56 @@
 #include "Matrix.h"
 #include <cmath>
 #include <iostream>
-#include <level_zero/ze_api.h>
 #include <limits>
+#include <chrono>
+
+#include "sgemm.hpp"
 
 using namespace hostutil;
 
-static int run(int m, int niter, int gx, int gy) {
+void SGEMMApp::initialize()
+{
+    if (initialized)
+        return;
+
+#ifdef CMKERNEL
+    L0InitContext(m_driver, m_device, m_module, m_command_queue, "naive_sgemm_cm_mt.spv");
+#else
+    L0InitContext(m_driver, m_device, m_module, m_command_queue, "naive_sgemm.spv");
+#endif
+
+    // Get device timestamp resolution - needed for time measurments
+    ze_device_properties_t device_properties;
+    L0_SAFE_CALL(zeDeviceGetProperties(m_device, &device_properties));
+    m_timestamp_freq = device_properties.timerResolution;
+
+#ifdef CMKERNEL
+    if (m_verbose) std::cout << "Running CM kernel\n";
+    L0Create_Kernel(m_device, m_module, m_command_list, m_kernel, "sgemm_kernel");
+#else
+    if (m_verbose) std::cout << "Running ISPC kernel\n";
+    L0Create_Kernel(m_device, m_module, m_command_list, m_kernel, "SGEMM_naive_task");
+#endif
+
+    L0Create_EventPool(m_device, m_driver, 1, m_pool);
+
+    // Create event used to measure kernel execution time
+    ze_event_desc_t eventDesc;
+    eventDesc.index = 0;
+    eventDesc.signal = ZE_EVENT_SCOPE_FLAG_HOST;
+    eventDesc.wait = ZE_EVENT_SCOPE_FLAG_HOST;
+    eventDesc.version = ZE_EVENT_DESC_VERSION_CURRENT;
+
+    L0_SAFE_CALL(zeEventCreate(m_pool, &eventDesc, &m_event));
+
+    initialized = true;
+}
+
+void SGEMMApp::run(SGEMMApp::RunResult &result, int m, int niter, int gx, int gy, bool validate) {
+    if (!initialized)
+        throw std::runtime_error("Trying to run test on uninitialized app");
 
     std::cout.setf(std::ios::unitbuf);
-    ze_device_handle_t hDevice = nullptr;
-    ze_module_handle_t hModule = nullptr;
-    ze_driver_handle_t hDriver = nullptr;
-    ze_command_queue_handle_t hCommandQueue = nullptr;
 
     storage_type_t st = RowMajor;
     float alpha = +1.0, beta = +0.0;
@@ -52,68 +90,60 @@ static int run(int m, int niter, int gx, int gy) {
     const int lda_tmp = (((GEMM_BLOCK / TILE_m) * TILE_m) + 15) & ~15;
     const int ldb_tmp = lda_tmp;
     const int ldc_tmp = lda_tmp;
-    printf("SGEMM: C(%d, %d) = %.2f * C(%d, %d) + %.2f A(%d, %d) * B(%d, %d)\n", m, n, beta, m, n, alpha, m, k, k, n);
-    printf("Thread-group setting: %d x %d \n", gx, gy);
-
-#ifdef CMKERNEL
-    L0InitContext(hDriver, hDevice, hModule, hCommandQueue, "naive_sgemm_cm_mt.spv");
-#else
-    L0InitContext(hDriver, hDevice, hModule, hCommandQueue, "naive_sgemm.spv");
-#endif
-
-    ze_command_list_handle_t hCommandList;
-    ze_kernel_handle_t hKernel;
-
-#ifdef CMKERNEL
-    std::cout << "Running CM kernel\n";
-    L0Create_Kernel(hDevice, hModule, hCommandList, hKernel, "sgemm_kernel");
-#else
-    std::cout << "Running ISPC kernel\n";
-    L0Create_Kernel(hDevice, hModule, hCommandList, hKernel, "SGEMM_naive_task");
-#endif
-
+    if (m_verbose) {
+        printf("SGEMM: C(%d, %d) = %.2f * C(%d, %d) + %.2f A(%d, %d) * B(%d, %d)\n", m, n, beta, m, n, alpha, m, k, k, n);
+        printf("Thread-group setting: %d x %d \n", gx, gy);
+    }
     // Allocate matrices
     Matrix A(m, k, lda, NULL, true, "A", st);
     Matrix B(k, n, ldb, NULL, true, "B", st);
     Matrix C(m, n, ldc, NULL, false, "C", st);
     Matrix C_gold(C, "C_gold");
 
-    if (niter == 1) {
-        printf("** validation run, only one iteration **\n");
-        printf("** For performance run, add cmd-args: Sgemm 2048 1000 ** \n");
+    if (validate) {
+        if (m_verbose) {
+            printf("** validation run, only one iteration **\n");
+            printf("** For performance run, add cmd-args: Sgemm 2048 1000 ** \n");
+            printf("Compute gold result\n");
+        }
         // Compute gold result
-        printf("Compute gold result\n");
         sgemmNxN(m, n, k, alpha, &A(0, 0), A.l_dim(), &B(0, 0), B.l_dim(), beta, &C_gold(0, 0), C_gold.l_dim(), st);
     } else {
-        printf("CPU result not computed: Make #iterations=1 to compute CPU result\n");
+        if (m_verbose)
+            printf("CPU result not computed: Make #iterations=1 to compute CPU result\n");
     }
 
-    void *a_buf;
-    void *b_buf;
-    void *c_buf;
+    void *a_buf = nullptr;
+    void *b_buf = nullptr;
+    void *c_buf = nullptr;
 
     int mtA_size = A.l_dim() * m;
     int mtB_size = B.l_dim() * B.n_row();
     int mtC_size = C.l_dim() * m;
 
+    for (int i = 0; i < m; i++)
+        for (int j = 0; j < m; j++)
+            C(i, j) = -1;
+
     ze_device_mem_alloc_desc_t alloc_desc = {ZE_DEVICE_MEM_ALLOC_DESC_VERSION_CURRENT, ZE_DEVICE_MEM_ALLOC_FLAG_DEFAULT,
                                              0};
-    L0_SAFE_CALL(zeDriverAllocDeviceMem(hDriver, &alloc_desc, mtA_size * sizeof(float), 0, hDevice, &a_buf));
-    L0_SAFE_CALL(zeDriverAllocDeviceMem(hDriver, &alloc_desc, mtB_size * sizeof(float), 0, hDevice, &b_buf));
-    L0_SAFE_CALL(zeDriverAllocDeviceMem(hDriver, &alloc_desc, mtC_size * sizeof(float), 0, hDevice, &c_buf));
+    L0_SAFE_CALL(zeDriverAllocDeviceMem(m_driver, &alloc_desc, mtA_size * sizeof(float), 0, m_device, &a_buf));
+    L0_SAFE_CALL(zeDriverAllocDeviceMem(m_driver, &alloc_desc, mtB_size * sizeof(float), 0, m_device, &b_buf));
+    L0_SAFE_CALL(zeDriverAllocDeviceMem(m_driver, &alloc_desc, mtC_size * sizeof(float), 0, m_device, &c_buf));
 
-    L0_SAFE_CALL(zeCommandListAppendMemoryCopy(hCommandList, a_buf, &A(0, 0), mtA_size * sizeof(float), nullptr));
-    L0_SAFE_CALL(zeCommandListAppendMemoryCopy(hCommandList, b_buf, &B(0, 0), mtB_size * sizeof(float), nullptr));
-    L0_SAFE_CALL(zeCommandListAppendMemoryCopy(hCommandList, c_buf, &C(0, 0), mtC_size * sizeof(float), nullptr));
+    L0_SAFE_CALL(zeCommandListReset(m_command_list));
+    L0_SAFE_CALL(zeCommandListAppendMemoryCopy(m_command_list, a_buf, &A(0, 0), mtA_size * sizeof(float), nullptr));
+    L0_SAFE_CALL(zeCommandListAppendMemoryCopy(m_command_list, b_buf, &B(0, 0), mtB_size * sizeof(float), nullptr));
+    L0_SAFE_CALL(zeCommandListAppendMemoryCopy(m_command_list, c_buf, &C(0, 0), mtC_size * sizeof(float), nullptr));
 
-    L0_SAFE_CALL(zeKernelSetArgumentValue(hKernel, 0, sizeof(a_buf), &a_buf));
-    L0_SAFE_CALL(zeKernelSetArgumentValue(hKernel, 1, sizeof(b_buf), &b_buf));
-    L0_SAFE_CALL(zeKernelSetArgumentValue(hKernel, 2, sizeof(c_buf), &c_buf));
-    L0_SAFE_CALL(zeKernelSetArgumentValue(hKernel, 3, sizeof(int), &m));
-    L0_SAFE_CALL(zeKernelSetArgumentValue(hKernel, 4, sizeof(int), &n));
-    L0_SAFE_CALL(zeKernelSetArgumentValue(hKernel, 5, sizeof(int), &k));
+    L0_SAFE_CALL(zeKernelSetArgumentValue(m_kernel, 0, sizeof(a_buf), &a_buf));
+    L0_SAFE_CALL(zeKernelSetArgumentValue(m_kernel, 1, sizeof(b_buf), &b_buf));
+    L0_SAFE_CALL(zeKernelSetArgumentValue(m_kernel, 2, sizeof(c_buf), &c_buf));
+    L0_SAFE_CALL(zeKernelSetArgumentValue(m_kernel, 3, sizeof(int), &m));
+    L0_SAFE_CALL(zeKernelSetArgumentValue(m_kernel, 4, sizeof(int), &n));
+    L0_SAFE_CALL(zeKernelSetArgumentValue(m_kernel, 5, sizeof(int), &k));
 
-    L0_SAFE_CALL(zeCommandListAppendBarrier(hCommandList, nullptr, 0, nullptr));
+    L0_SAFE_CALL(zeCommandListAppendBarrier(m_command_list, nullptr, 0, nullptr));
 
     // EXECUTION
     // set group size
@@ -121,89 +151,79 @@ static int run(int m, int niter, int gx, int gy) {
     uint32_t groupSpaceHeight = 1;
 
     uint32_t group_size = groupSpaceWidth * groupSpaceHeight;
-    L0_SAFE_CALL(zeKernelSetGroupSize(hKernel, /*x*/ groupSpaceWidth, /*y*/ groupSpaceHeight, /*z*/ 1));
+    L0_SAFE_CALL(zeKernelSetGroupSize(m_kernel, /*x*/ groupSpaceWidth, /*y*/ groupSpaceHeight, /*z*/ 1));
 
     // set grid size
     ze_group_count_t dispatchTraits = {(uint32_t)gx, (uint32_t)gy, 1};
-    std::cout << "Set dispatchTraits.x=" << dispatchTraits.groupCountX
-              << ", dispatchTraits.y=" << dispatchTraits.groupCountY << std::endl;
+    if (m_verbose) {
+        std::cout << "Set dispatchTraits.x=" << dispatchTraits.groupCountX
+                << ", dispatchTraits.y=" << dispatchTraits.groupCountY << std::endl;
+    }
 
-    for (int i = 0; i < m; i++)
-        for (int j = 0; j < m; j++)
-            C(i, j) = -1;
-
-    double total = 0;
+    std::chrono::duration<uint64_t, std::nano> gpu_duration(0);
     auto tot_wct = std::chrono::system_clock::now();
 
     for (int i = 0; i < niter; ++i) {
-        auto wct = std::chrono::system_clock::now();
-        // launch
-        L0_SAFE_CALL(zeCommandListAppendLaunchKernel(hCommandList, hKernel, &dispatchTraits, nullptr, 0, nullptr));
-        L0_SAFE_CALL(zeCommandListAppendBarrier(hCommandList, nullptr, 0, nullptr));
-        L0_SAFE_CALL(zeCommandListClose(hCommandList));
-        L0_SAFE_CALL(zeCommandQueueExecuteCommandLists(hCommandQueue, 1, &hCommandList, nullptr));
-        L0_SAFE_CALL(zeCommandQueueSynchronize(hCommandQueue, std::numeric_limits<uint32_t>::max()));
-        auto dur = (std::chrono::system_clock::now() - wct);
-        auto secs = std::chrono::duration_cast<std::chrono::nanoseconds>(dur);
-        total += (secs.count() / 1e+6);
+        L0_SAFE_CALL(zeCommandListAppendLaunchKernel(m_command_list, m_kernel, &dispatchTraits, m_event, 0, nullptr));
+        L0_SAFE_CALL(zeCommandListAppendBarrier(m_command_list, nullptr, 0, nullptr));
+        L0_SAFE_CALL(zeCommandListClose(m_command_list));
+        L0_SAFE_CALL(zeCommandQueueExecuteCommandLists(m_command_queue, 1, &m_command_list, nullptr));
+        L0_SAFE_CALL(zeCommandQueueSynchronize(m_command_queue, std::numeric_limits<uint32_t>::max()));
+        L0_SAFE_CALL(zeCommandListReset(m_command_list));
+        // get time
+        uint64_t contextStart, contextEnd;
+        L0_SAFE_CALL(zeEventGetTimestamp(m_event, ZE_EVENT_TIMESTAMP_CONTEXT_START, &contextStart));
+        L0_SAFE_CALL(zeEventGetTimestamp(m_event, ZE_EVENT_TIMESTAMP_CONTEXT_END, &contextEnd));
+        std::chrono::duration<uint64_t, std::nano> event_dur(m_timestamp_freq * (contextEnd - contextStart));
+        gpu_duration += event_dur;
     }
-    auto tot_dur = (std::chrono::system_clock::now() - tot_wct);
-    auto tot_secs = std::chrono::duration_cast<std::chrono::nanoseconds>(tot_dur);
-    printf("@Average execution time is:\t\t\t[%f] nanoseconds\n", (double)tot_secs.count() / 1e+6 / niter);
-    printf("No memory time is:\t\t\t[%f] nanoseconds\n", (double)total / niter);
+    auto tot_dur = std::chrono::system_clock::now() - tot_wct;
+    auto tot_nsecs = std::chrono::duration_cast<std::chrono::nanoseconds>(tot_dur);
+    auto gpu_nsecs = std::chrono::nanoseconds(gpu_duration);
+
+    if (m_verbose) {
+        using double_mili = std::chrono::duration<double, std::chrono::milliseconds::period>;
+        printf("@Average execution time is:\t\t\t[%f] milliseconds\n", double_mili(tot_nsecs).count() / niter);
+        printf("@Average GPU time is:\t\t\t[%f] milliseconds\n", double_mili(gpu_nsecs).count() / niter);
+    }
 
     // copy result to host
-    L0_SAFE_CALL(zeCommandListReset(hCommandList));
-    L0_SAFE_CALL(zeCommandListAppendMemoryCopy(hCommandList, &C(0, 0), c_buf, mtC_size * sizeof(float), nullptr));
-    L0_SAFE_CALL(zeCommandListAppendBarrier(hCommandList, nullptr, 0, nullptr));
-    L0_SAFE_CALL(zeCommandListClose(hCommandList));
-    L0_SAFE_CALL(zeCommandQueueExecuteCommandLists(hCommandQueue, 1, &hCommandList, nullptr));
-    L0_SAFE_CALL(zeCommandQueueSynchronize(hCommandQueue, std::numeric_limits<uint32_t>::max()));
-
+    // L0_SAFE_CALL(zeCommandListReset(m_command_list));
+    L0_SAFE_CALL(zeCommandListAppendMemoryCopy(m_command_list, &C(0, 0), c_buf, mtC_size * sizeof(float), nullptr));
+    L0_SAFE_CALL(zeCommandListAppendBarrier(m_command_list, nullptr, 0, nullptr));
+    L0_SAFE_CALL(zeCommandListClose(m_command_list));
+    L0_SAFE_CALL(zeCommandQueueExecuteCommandLists(m_command_queue, 1, &m_command_list, nullptr));
+    L0_SAFE_CALL(zeCommandQueueSynchronize(m_command_queue, std::numeric_limits<uint32_t>::max()));
     // Result check
     bool pass = true;
-    if (niter == 1) {
+    if (validate) {
         if (C != C_gold) {
             pass = false;
-            printf("Result is NOT correct!\n");
+            if (m_verbose)
+                printf("Result is NOT correct!\n");
         }
     } else {
-        printf("Result not checked - make #iterations=1 to check result!\n");
+        if (m_verbose)
+            printf("Result not checked - make #iterations=1 to check result!\n");
     }
 
-    L0_SAFE_CALL(zeDriverFreeMem(hDriver, a_buf));
-    L0_SAFE_CALL(zeDriverFreeMem(hDriver, b_buf));
-    L0_SAFE_CALL(zeDriverFreeMem(hDriver, c_buf));
+    L0_SAFE_CALL(zeDriverFreeMem(m_driver, a_buf));
+    L0_SAFE_CALL(zeDriverFreeMem(m_driver, b_buf));
+    L0_SAFE_CALL(zeDriverFreeMem(m_driver, c_buf));
 
-    return (pass) ? 0 : 1;
+    result.valid = pass;
+    result.cpuTime = tot_nsecs.count();
+    result.gpuTime = gpu_nsecs.count();
+
 }
 
-static void usage() {
-    fprintf(stderr, "usage: sgemm [gemm block] [niterations] [group threads width] [group threads height]\n");
-    exit(1);
-}
+void SGEMMApp::cleanup()
+{
+    L0_SAFE_CALL(zeEventDestroy(m_event));
 
-int main(int argc, char *argv[]) {
-    int m = GEMM_BLOCK;
-    int niterations = 1;
-    int gx = 2, gy = 1;
+    L0Destroy_EventPool(m_pool);
+    L0Destroy_Kernel(m_command_list, m_kernel);
+    L0DestroyContext(m_driver, m_device, m_module, m_command_queue);
 
-    if (argc >= 3) {
-        m = atoi(argv[1]);
-        niterations = atoi(argv[2]);
-        if (argc == 5) {
-            gx = atoi(argv[3]);
-            gy = atoi(argv[4]);
-        }
-    }
-    if (m < 1 || niterations < 1 || gx < 1 || gy < 1) {
-        usage();
-    }
-    int success = 0;
-
-    std::cout << "Running test with " << niterations << " iterations on " << gx << " * " << gy << " threads."
-              << std::endl;
-    success = run(m, niterations, gx, gy);
-
-    return success;
+    initialized = false;
 }
