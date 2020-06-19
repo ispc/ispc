@@ -48,6 +48,10 @@
 #include <llvm/IR/Instructions.h>
 #include <llvm/IR/Module.h>
 
+#ifdef ISPC_GENX_ENABLED
+#include "llvm/GenXIntrinsics/GenXIntrinsics.h"
+#endif
+
 llvm::Type *LLVMTypes::VoidType = NULL;
 llvm::PointerType *LLVMTypes::VoidPointerType = NULL;
 llvm::Type *LLVMTypes::PointerIntType = NULL;
@@ -1631,7 +1635,8 @@ void lGetAddressSpace(llvm::Value *v, std::set<llvm::Value *> &done, std::set<Ad
     }
 
     if (inst == NULL || llvm::isa<llvm::CallInst>(v)) {
-        if (llvm::isa<llvm::PointerType>(v->getType()))
+        if (llvm::isa<llvm::PointerType>(v->getType()) ||
+            (inst && llvm::GenXIntrinsic::getGenXIntrinsicID(inst) == llvm::GenXIntrinsic::genx_svm_block_ld))
             addrSpaceVec.insert(AddressSpace::External);
         return;
     }
