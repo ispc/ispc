@@ -130,7 +130,12 @@ void L0InitContext(ze_driver_handle_t &hDriver, ze_device_handle_t &hDevice, ze_
                                    "-cmc"};
     L0_SAFE_CALL(zeModuleCreate(hDevice, &moduleDesc, &hModule, nullptr));
 }
-}; // namespace hostutil
+
+void L0DestroyContext(ze_driver_handle_t hDriver, ze_device_handle_t hDevice, ze_module_handle_t hModule,
+                      ze_command_queue_handle_t hCommandQueue) {
+    L0_SAFE_CALL(zeCommandQueueDestroy(hCommandQueue));
+    L0_SAFE_CALL(zeModuleDestroy(hModule));
+}
 
 void L0Create_Kernel(ze_device_handle_t &hDevice, ze_module_handle_t &hModule, ze_command_list_handle_t &hCommandList,
                      ze_kernel_handle_t &hKernel, const char *name) {
@@ -143,5 +148,25 @@ void L0Create_Kernel(ze_device_handle_t &hDevice, ze_module_handle_t &hModule, z
 
     L0_SAFE_CALL(zeKernelCreate(hModule, &kernelDesc, &hKernel));
 }
+
+void L0Destroy_Kernel(ze_command_list_handle_t hCommandList, ze_kernel_handle_t hKernel) {
+    L0_SAFE_CALL(zeKernelDestroy(hKernel));
+    L0_SAFE_CALL(zeCommandListDestroy(hCommandList));
+}
+
+void L0Create_EventPool(ze_device_handle_t hDevice, ze_driver_handle_t hDriver, const size_t size, ze_event_pool_handle_t &hPool) {
+    // Create event pool and enable time measurements
+    ze_event_pool_desc_t eventPoolDesc;
+    eventPoolDesc.count = size;
+    eventPoolDesc.flags = (ze_event_pool_flag_t)(ZE_EVENT_POOL_FLAG_TIMESTAMP);
+    eventPoolDesc.version = ZE_EVENT_POOL_DESC_VERSION_CURRENT;
+    L0_SAFE_CALL(zeEventPoolCreate(hDriver, &eventPoolDesc, 1, &hDevice, &hPool));
+}
+
+void L0Destroy_EventPool(ze_event_pool_handle_t hPool) {
+    L0_SAFE_CALL(zeEventPoolDestroy(hPool));
+}
+
+}; // namespace hostutil
 
 #endif
