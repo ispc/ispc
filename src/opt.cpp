@@ -5464,8 +5464,13 @@ static bool lVectorizeGEPs(llvm::Value *ptr, std::vector<PtrUse> &ptrUses, std::
         scalar_type = vecTy->getScalarType();
     }
 
+    // Pointer load should be done via inttoptr: replace type
+    bool loadingPtr = false;
+    llvm::Type *originalType = scalar_type;
     if (auto pTy = llvm::dyn_cast<llvm::PointerType>(scalar_type)) {
-        t_size = g->target->is32Bit() ? 4 : 8;
+        scalar_type = g->target->is32Bit() ? LLVMTypes::Int32Type : LLVMTypes::Int64Type;
+        t_size = scalar_type->getPrimitiveSizeInBits() >> 3;
+        loadingPtr = true;
     }
 
     // Calculate length of array that needs to be loaded.
@@ -5494,7 +5499,6 @@ static bool lVectorizeGEPs(llvm::Value *ptr, std::vector<PtrUse> &ptrUses, std::
     }
 
     // Coalesce loads/gathers
-    std::vector<llvm::CallInst *> loads;
     std::vector<llvm::ExtractElementInst *> EEIs;
     for (unsigned i = 0; i < loads_needed; ++i) {
         llvm::Constant *offset = llvm::ConstantInt::get(LLVMTypes::Int64Type, min_idx + i * reqSize);
@@ -5504,8 +5508,13 @@ static bool lVectorizeGEPs(llvm::Value *ptr, std::vector<PtrUse> &ptrUses, std::
         llvm::Type *retType = llvm::VectorType::get(scalar_type, reqSize / t_size);
         llvm::Function *fn =
             llvm::GenXIntrinsic::getGenXDeclaration(m->module, llvm::GenXIntrinsic::genx_svm_block_ld, retType);
-        llvm::CallInst *ld = llvm::CallInst::Create(fn, {addr}, "vectorized_ld", insertBefore);
-        loads.push_back(ld);
+        llvm::Instruction *ld = llvm::CallInst::Create(fn, {addr}, "vectorized_ld", insertBefore);
+
+        if (loadingPtr) {
+            // Cast int to ptr via inttoptr
+            ld = new llvm::IntToPtrInst(ld, llvm::VectorType::get(originalType, reqSize / t_size),
+                                        "vectorized_inttoptr", insertBefore);
+        }
 
         // Scalar extracts for all loaded elements
         for (unsigned j = 0; j < reqSize / t_size; ++j) {
