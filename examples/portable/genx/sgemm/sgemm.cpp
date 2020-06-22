@@ -38,7 +38,7 @@ void SGEMMApp::initialize()
 #ifdef CMKERNEL
     L0InitContext(m_driver, m_device, m_module, m_command_queue, "naive_sgemm_cm_mt.spv");
 #else
-    L0InitContext(m_driver, m_device, m_module, m_command_queue, "naive_sgemm.spv");
+    L0InitContext(m_driver, m_device, m_module, m_command_queue, "genx_sgemm.spv");
 #endif
 
     // Get device timestamp resolution - needed for time measurments

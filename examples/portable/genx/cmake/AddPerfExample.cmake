@@ -51,7 +51,9 @@ function(add_perf_example)
     set(ISPC_TARGET_GEN ${parsed_ISPC_TARGET})
     set(ISPC_TARGET_DIR ${CMAKE_CURRENT_BINARY_DIR})
     set(ISPC_GENX_ADDITIONAL_ARGS ${parsed_ISPC_GENX_ADDITIONAL_ARGS})
-    add_ispc_kernel(${parsed_TEST_NAME} ${parsed_ISPC_SRC_NAME} "")
+
+    # Add "ispcrt" suffix here to avoid CMake target conflicts with CPU examples
+    add_ispc_kernel("genx_${parsed_TEST_NAME}" "${parsed_ISPC_SRC_NAME}" "")
 
     # Show ispc source in VS solution:
     if (WIN32)

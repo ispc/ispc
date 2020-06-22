@@ -97,7 +97,7 @@ static int run(int niter, int gx, int gy) {
         auto p_dev = ispcrt::Array<Parameters>(device, p);
 
         // Create module and kernel to execute
-        ispcrt::Module module(device, "noise");
+        ispcrt::Module module(device, "genx_noise");
         ispcrt::Kernel kernel(device, module, "noise_ispc");
 
         // Create task queue and execute kernel

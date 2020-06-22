@@ -244,7 +244,7 @@ macro (ispc_compile_gpu parent_target output_prefix)
 
       set(outdir ${ISPC_TARGET_DIR})
 
-      set(result "${outdir}/${output_prefix}${fname}.spv")
+      set(result "${outdir}/${output_prefix}${parent_target}.spv")
 
       set(ISPC_PROGRAM_COUNT 8)
       if ("${ISPC_TARGET_GEN}" STREQUAL "genx-x16")
