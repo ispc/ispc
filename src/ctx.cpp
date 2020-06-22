@@ -1228,9 +1228,6 @@ llvm::Value *FunctionEmitContext::I1VecToBoolVec(llvm::Value *b) {
         return NULL;
     }
 
-    if (g->target->getMaskBitCount() == 1)
-        return b;
-
     llvm::ArrayType *at = llvm::dyn_cast<llvm::ArrayType>(b->getType());
     if (at) {
         // If we're given an array of vectors of i1s, then do the
@@ -1242,12 +1239,16 @@ llvm::Value *FunctionEmitContext::I1VecToBoolVec(llvm::Value *b) {
 
         for (unsigned int i = 0; i < at->getNumElements(); ++i) {
             llvm::Value *elt = ExtractInst(b, i);
-            llvm::Value *sext = SExtInst(elt, LLVMTypes::BoolVectorStorageType, LLVMGetName(elt, "_to_boolvec"));
+            llvm::Value *sext =
+                SwitchBoolSize(elt, elt->getType(), LLVMTypes::BoolVectorStorageType, LLVMGetName(elt, "_to_boolvec"));
             ret = InsertInst(ret, sext, i);
         }
         return ret;
-    } else
-        return SExtInst(b, LLVMTypes::BoolVectorType, LLVMGetName(b, "_to_boolvec"));
+    } else {
+        // For non-array types, convert to 'LLVMTypes::BoolVectorType' if
+        // necessary.
+        return SwitchBoolSize(b, b->getType(), LLVMTypes::BoolVectorType, LLVMGetName(b, "_to_boolvec"));
+    }
 }
 
 static llvm::Value *lGetStringAsValue(llvm::BasicBlock *bblock, const char *s) {
