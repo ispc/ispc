@@ -37,12 +37,16 @@ environment:
   matrix:
     - APPVEYOR_BUILD_WORKER_IMAGE: Ubuntu1604
       LLVM_VERSION: latest
+      LLVM_TAR: llvm-10.0.0-ubuntu16.04-Release+Asserts-x86.arm.wasm.tar.xz
     - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2019
       LLVM_VERSION: latest
+      LLVM_TAR: llvm-10.0.0-win.vs2019-Release+Asserts-x86.arm.wasm.zip
     - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2019
       LLVM_VERSION: 9.0
+      LLVM_TAR: llvm-9.0.1-win.vs2017-Release+Asserts-x86.arm.wasm.zip
     - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2017
       LLVM_VERSION: 8.0
+      LLVM_TAR: llvm-8.0.1-win.vs2017-Release+Asserts-x86.arm.wasm.zip
 
 for:
 -
@@ -67,7 +71,7 @@ for:
         cinst winflexbison3
         set FLEX_PATH=%CHOCO_DIR%\lib\winflexbison3\tools
         if exist "%FLEX_PATH%\win_flex.exe" ( cd %FLEX_PATH% && ren win_flex.exe flex.exe )
-        if exist "%LLVM_HOME%\bin\" (if exist "%CROSS_TOOLS%\gnuwin32\" set NONEEDDOCKER=rem)
+        if exist "%CROSS_TOOLS%\gnuwin32\" set NONEEDDOCKER=rem
         if "%LLVM_VERSION%" == "latest" set LLVM_VERSION=%LLVM_LATEST%
         set LLVM_SHORT_VER=%LLVM_VERSION:.=%
         cd %ISPC_HOME%
@@ -78,9 +82,13 @@ for:
         %NONEEDDOCKER% docker run -d %DOCKER_NAME%
         %NONEEDDOCKER% docker ps --all  --format "{{.ID}}" --filter ancestor=%DOCKER_NAME% | head -1 > container_id.txt
         %NONEEDDOCKER% set /p CONTAINER=<container_id.txt
-        %NONEEDDOCKER% docker cp %CONTAINER%:%LLVM_HOME%\bin-%LLVM_VERSION% %LLVM_HOME%
         %NONEEDDOCKER% docker cp %CONTAINER%:%CROSS_TOOLS% %CROSS_TOOLS%
         set PATH=%LLVM_HOME%\bin;C:\Python37\;C:\Python37\Scripts;%CHOCO_DIR%\lib\winflexbison3\tools;%PATH%
+        mkdir %LLVM_HOME% && cd %LLVM_HOME%
+        cinst wget
+        wget https://github.com/dbabokin/llvm-project/releases/download/llvm-%LLVM_VERSION%-ispc-dev/%LLVM_TAR%
+        7z.exe x -t7z %LLVM_TAR%
+        set PATH=%LLVM_HOME%\bin-%LLVM_VERSION%\bin;%PATH%
   before_build:
     - cmd: |-
         cd %ISPC_HOME% && mkdir build && cd build
@@ -107,7 +115,7 @@ for:
   init:
     - sh: |-
         export ISPC_HOME=$APPVEYOR_BUILD_FOLDER
-        export LLVM_HOME=/usr/local/src/llvm
+        export LLVM_HOME=$APPVEYOR_BUILD_FOLDER/llvm
         export CROSS_TOOLS=/usr/local/src/cross
         export MACOS_SDK=MacOSX10.13.sdk
         export WASM=OFF
@@ -122,13 +130,15 @@ for:
         if [ "$WASM" == "ON" ]; then source scripts/install_emscripten.sh && emcc --version; fi
         LLVM_SHORT_VER=${LLVM_VERSION/\.}
         export DOCKER_NAME=$DOCKER_PATH:ubuntu_llvm$LLVM_SHORT_VER
-        if [ ! -d "$LLVM_HOME/bin-$LLVM_VERSION/bin" ]; then
+        if [ ! -d "$CROSS_TOOLS" ]; then
           docker pull "$DOCKER_NAME"
           docker run "$DOCKER_NAME"
           export CONTAINER=`docker ps --all |head -2 |tail -1 |awk '//{print $1}'`
-          sudo docker cp $CONTAINER:$LLVM_HOME $LLVM_HOME
           sudo docker cp $CONTAINER:$CROSS_TOOLS $CROSS_TOOLS
         fi
+        mkdir $LLVM_HOME && cd $LLVM_HOME
+        wget https://github.com/dbabokin/llvm-project/releases/download/llvm-$LLVM_VERSION-ispc-dev/$LLVM_TAR
+        tar xvf $LLVM_TAR
         export PATH=$LLVM_HOME/bin-$LLVM_VERSION/bin:$PATH
   before_build:
     - sh: |-
@@ -146,7 +156,6 @@ for:
 cache:
   - '%CHOCO_DIR%\bin -> .appveyor.yml'
   - '%CHOCO_DIR%\lib -> .appveyor.yml'
-  - '%LLVM_HOME% -> .appveyor-clean-cache.txt'
   - '%CROSS_TOOLS%\gnuwin32 -> .appveyor-clean-cache.txt'
   - '%CROSS_TOOLS%\%MACOS_SDK% -> .appveyor-clean-cache.txt'
 
