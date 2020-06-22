@@ -117,7 +117,7 @@ static int run(unsigned int width, unsigned int height, unsigned int test_iterat
         auto p_dev = ispcrt::Array<Parameters>(device, p);
 
         // Create module and kernel to execute
-        ispcrt::Module module(device, "mandelbrot");
+        ispcrt::Module module(device, "genx_mandelbrot");
         ispcrt::Kernel kernel(device, module, "mandelbrot_tile");
 
         // Create task queue and execute kernel
