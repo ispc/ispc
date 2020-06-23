@@ -4,9 +4,8 @@ on:
   push:
     branches:
       - master
-    path:
-      # "llvm_patches/*10_0*" pattern is known not to work, i.e. triggers on any commit.
-      - "llvm_patches/**"
+    paths:
+      - "llvm_patches/*10_0*"
 
 jobs:
   # Building LLVM in docker, as using native Ubuntu 16.04 github-hosted image contains newer-than-expected libs and
