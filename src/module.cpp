@@ -83,6 +83,7 @@
 #include <llvm/IR/Type.h>
 #include <llvm/IR/Verifier.h>
 #include <llvm/PassRegistry.h>
+#include <llvm/Support/CommandLine.h>
 #include <llvm/Support/FileUtilities.h>
 #include <llvm/Support/FormattedStream.h>
 #include <llvm/Support/Host.h>
@@ -1037,6 +1038,13 @@ bool Module::writeSPIRV(llvm::Module *module, const char *outFileName) {
     std::ofstream fos(outFileName, std::ios::binary);
     std::string err;
     bool success = false;
+    // Pass this option to open source SPIR-V translator.
+    // This option will break internal version of SPIR-V translator.
+    std::vector<const char *> Args(3);
+    Args[0] = "ispc (SPIRV translator option parsing)";
+    Args[2] = nullptr;
+    Args[1] = "-spirv-allow-unknown-intrinsics";
+    llvm::cl::ParseCommandLineOptions(2, Args.data());
     if (!strcmp(outFileName, "-")) {
         success = llvm::writeSpirv(module, std::cout, err);
     } else {

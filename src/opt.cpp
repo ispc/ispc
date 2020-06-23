@@ -110,8 +110,9 @@
 #endif
 #ifdef ISPC_GENX_ENABLED
 #include "gen/GlobalsLocalization.h"
+#include "llvm/GenXIntrinsics/GenXIntrOpts.h"
 #include "llvm/GenXIntrinsics/GenXIntrinsics.h"
-#include <llvm/GenXIntrinsics/GenXIntrOpts.h>
+#include "llvm/GenXIntrinsics/GenXSPIRVWriterAdaptor.h"
 // Used for GenX gather coalescing
 #include "llvm/Transforms/Utils/Local.h"
 // Constant in number of bytes.
@@ -521,6 +522,12 @@ void Optimize(llvm::Module *module, int optLevel) {
 #endif
         optPM.add(CreateMakeInternalFuncsStaticPass());
         optPM.add(llvm::createCFGSimplificationPass());
+#ifdef ISPC_GENX_ENABLED
+        if (g->target->getISA() == Target::GENX) {
+            // This pass is required to prepare LLVM IR for open source SPIR-V translator
+            optPM.add(llvm::createGenXSPIRVWriterAdaptorPass());
+        }
+#endif
         optPM.add(llvm::createGlobalDCEPass());
     } else {
         llvm::PassRegistry *registry = llvm::PassRegistry::getPassRegistry();
@@ -754,6 +761,8 @@ void Optimize(llvm::Module *module, int optLevel) {
         if (g->target->getISA() == Target::GENX) {
             optPM.add(CreateCheckUnsupportedInsts());
             optPM.add(CreateFixAddressSpace());
+            // This pass is required to prepare LLVM IR for open source SPIR-V translator
+            optPM.add(llvm::createGenXSPIRVWriterAdaptorPass());
         }
 #endif
         optPM.add(llvm::createGlobalDCEPass());
