@@ -218,7 +218,26 @@ if (WASM_ENABLED)
     list(APPEND ISPC_TARGETS wasm-i32x4)
 endif()
 
-set(CLANG_LIBRARY_LIST clangFrontend clangDriver clangSerialization clangParse clangSema clangAnalysis clangAST clangBasic clangEdit clangLex)
+find_program(LSB_RELEASE_EXECUTABLE lsb_release)
+if (NOT LSB_RELEASE_EXECUTABLE)
+  message(STATUS "lsb_release not found!")
+    set(CLANG_LIBRARY_LIST clangFrontend clangDriver clangSerialization clangParse clangSema clangAnalysis clangAST clangBasic clangEdit clangLex)
+else()
+  message(STATUS "LSB_RELEASE_EXECUTABLE: ${LSB_RELEASE_EXECUTABLE}")
+    execute_process(COMMAND ${LSB_RELEASE_EXECUTABLE} -is
+        OUTPUT_VARIABLE LSB_RELEASE_SHORT_ID
+        OUTPUT_STRIP_TRAILING_WHITESPACE
+    )
+    execute_process(COMMAND ${LSB_RELEASE_EXECUTABLE} -rs
+        OUTPUT_VARIABLE LSB_RELEASE_SHORT_RELEASE
+        OUTPUT_STRIP_TRAILING_WHITESPACE
+    )
+  if (${LSB_RELEASE_SHORT_ID} STREQUAL "Fedora" AND ${LSB_RELEASE_SHORT_RELEASE} VERSION_GREATER_EQUAL "32")
+        set(CLANG_LIBRARY_LIST clang-cpp)
+    else()
+        set(CLANG_LIBRARY_LIST clangFrontend clangDriver clangSerialization clangParse clangSema clangAnalysis clangAST clangBasic clangEdit clangLex)
+    endif()
+endif()
 set(LLVM_COMPONENTS engine ipo bitreader bitwriter instrumentation linker option)
 
 if (${LLVM_VERSION_NUMBER} VERSION_GREATER_EQUAL "10.0.0")
