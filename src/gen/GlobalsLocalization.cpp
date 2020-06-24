@@ -776,9 +776,6 @@ static void breakConstantVector(unsigned i, Instruction *CurInst, Instruction *I
         auto Inst = S->getAsInstruction();
         Inst->setDebugLoc(CurInst->getDebugLoc());
         Inst->insertBefore(InsertPt);
-        Type *NewTy = VectorType::get(Inst->getType(), 1);
-        Inst = CastInst::Create(Instruction::BitCast, Inst, NewTy, "", CurInst);
-        Inst->setDebugLoc(CurInst->getDebugLoc());
 
         // Splat this value.
         IRBuilder<> Builder(InsertPt);
