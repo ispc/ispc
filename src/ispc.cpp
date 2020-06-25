@@ -1549,6 +1549,7 @@ Opt::Opt() {
     disableZMM = false;
 #ifdef ISPC_GENX_ENABLED
     disableGenXGatherCoalescing = false;
+    enableForeachInsideVarying = false;
 #endif
 }
 
