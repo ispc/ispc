@@ -157,6 +157,9 @@ static void lPrintVersion() {
     printf("        disable-loop-unroll\t\tDisable loop unrolling.\n");
     printf("        disable-zmm\t\tDisable using zmm registers for avx512 targets in favour of ymm. This also affects "
            "ABI.\n");
+#ifdef ISPC_GENX_ENABLED
+    printf("        enable-genx-foreach-varying\t\tEnable experimental foreach support inside varying control flow.\n");
+#endif
     printf("        fast-masked-vload\t\tFaster masked vector loads on SSE (may go past end of array)\n");
     printf("        fast-math\t\t\tPerform non-IEEE-compliant optimizations of numeric expressions\n");
     printf("        force-aligned-memory\t\tAlways issue \"aligned\" vector load and store instructions\n");
@@ -748,6 +751,8 @@ int main(int Argc, char *Argv[]) {
 #ifdef ISPC_GENX_ENABLED
             else if (!strcmp(opt, "disable-genx-gather-coalescing"))
                 g->opt.disableGenXGatherCoalescing = true;
+            else if (!strcmp(opt, "enable-genx-foreach-varying"))
+                g->opt.enableForeachInsideVarying = true;
 #endif
             else {
                 errorHandler.AddError("Unknown --opt= option \"%s\".", opt);

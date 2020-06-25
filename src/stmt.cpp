@@ -1742,10 +1742,18 @@ void ForeachStmt::EmitCodeForGenX(FunctionEmitContext *ctx) const {
     // We store current EM and reset it to AllOn state.
     llvm::Value *oldMask = ctx->GetInternalMask();
     llvm::Value *oldFunctionMask = ctx->GetFunctionMask();
-    ctx->SetInternalMask(LLVMMaskAllOn);
-    ctx->SetFunctionMask(LLVMMaskAllOn);
-    llvm::Value *execMask = ctx->GenXStartUnmaskedRegion();
 
+    llvm::Value *execMask = NULL;
+    if (g->opt.enableForeachInsideVarying) {
+        Warning(pos, "\"foreach\" statement is not optimized for genx-* targets yet.");
+        ctx->SetInternalMask(LLVMMaskAllOn);
+        ctx->SetFunctionMask(LLVMMaskAllOn);
+        execMask = ctx->GenXStartUnmaskedRegion();
+    } else {
+        Warning(pos, "\"foreach\" statement is not supported under varying CF for genx-* targets yet. Make sure that"
+                     " it is not called under varying CF or use \"--opt=enable-genx-foreach-varying\" to enable its "
+                     "experimental support.");
+    }
     llvm::BasicBlock *bbBody = ctx->CreateBasicBlock("foreach_body", ctx->GetCurrentBasicBlock());
     llvm::BasicBlock *bbExit = ctx->CreateBasicBlock("foreach_exit", bbBody);
 
@@ -1869,9 +1877,11 @@ void ForeachStmt::EmitCodeForGenX(FunctionEmitContext *ctx) const {
     ctx->SetCurrentBasicBlock(bbExit);
 
     // Restore execution mask from value that was saved at the beginning
-    ctx->GenXEndUnmaskedRegion(execMask);
-    ctx->SetInternalMask(oldMask);
-    ctx->SetFunctionMask(oldFunctionMask);
+    if (execMask != NULL) {
+        ctx->GenXEndUnmaskedRegion(execMask);
+        ctx->SetInternalMask(oldMask);
+        ctx->SetFunctionMask(oldFunctionMask);
+    }
 
     ctx->EndForeach();
     ctx->EndScope();

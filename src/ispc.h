@@ -513,6 +513,11 @@ struct Opt {
     /** Disables optimization that coalesce gathers on GenX. This is
         likely only useful for measuring the impact of this optimization */
     bool disableGenXGatherCoalescing;
+
+    /** Enables experimental support of foreach statement inside varying CF.
+        Current implementation brings performance degradation due to ineffective
+        implementation of unmasked.*/
+    bool enableForeachInsideVarying;
 #endif
 };
 
