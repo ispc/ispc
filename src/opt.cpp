@@ -44,6 +44,7 @@
 #include "util.h"
 
 #include <map>
+#include <regex>
 #include <set>
 #include <stdio.h>
 
@@ -108,10 +109,10 @@
 #include <llvm/Support/Regex.h>
 #endif
 #ifdef ISPC_GENX_ENABLED
+#include "gen/GlobalsLocalization.h"
 #include "llvm/GenXIntrinsics/GenXIntrinsics.h"
 #include "llvm/GenXOpts/GenXOpts.h"
 #include <llvm/GenXIntrinsics/GenXIntrOpts.h>
-#include "gen/GlobalsLocalization.h"
 // Used for GenX gather coalescing
 #include "llvm/Transforms/Utils/Local.h"
 // Constant in number of bytes.
@@ -144,6 +145,7 @@ static llvm::Pass *CreatePromoteToPrivateMemoryPass();
 static llvm::Pass *CreateReplaceLLVMIntrinsics();
 static llvm::Pass *CreateReplaceUnsupportedInsts();
 static llvm::Pass *CreateFixAddressSpace();
+static llvm::Pass *CreateCheckUnsupportedInsts();
 #endif
 
 #ifndef ISPC_NO_DUMPS
@@ -517,6 +519,11 @@ void Optimize(llvm::Module *module, int optLevel) {
         }
 #endif
         optPM.add(llvm::createFunctionInliningPass());
+#ifdef ISPC_GENX_ENABLED
+        if (g->target->getISA() == Target::GENX) {
+            optPM.add(CreateCheckUnsupportedInsts());
+        }
+#endif
         optPM.add(CreateMakeInternalFuncsStaticPass());
         optPM.add(llvm::createCFGSimplificationPass());
         optPM.add(llvm::createGlobalDCEPass());
@@ -753,6 +760,7 @@ void Optimize(llvm::Module *module, int optLevel) {
         optPM.add(CreateMakeInternalFuncsStaticPass());
 #ifdef ISPC_GENX_ENABLED
         if (g->target->getISA() == Target::GENX) {
+            optPM.add(CreateCheckUnsupportedInsts());
             optPM.add(CreateFixAddressSpace());
         }
 #endif
@@ -6177,6 +6185,74 @@ bool ReplaceUnsupportedInsts::runOnFunction(llvm::Function &F) {
 }
 
 static llvm::Pass *CreateReplaceUnsupportedInsts() { return new ReplaceUnsupportedInsts(); }
+
+///////////////////////////////////////////////////////////////////////////
+// CheckUnsupportedInsts
+
+/** This pass checks if there are any functions used which are not supported currently for gen target,
+    reports error and stops compilation.
+ */
+
+class CheckUnsupportedInsts : public llvm::FunctionPass {
+  public:
+    static char ID;
+    CheckUnsupportedInsts(bool last = false) : FunctionPass(ID) {}
+
+    llvm::StringRef getPassName() const { return "Check unsupported instructions for gen target"; }
+    bool runOnBasicBlock(llvm::BasicBlock &BB);
+    bool runOnFunction(llvm::Function &F);
+};
+
+char CheckUnsupportedInsts::ID = 0;
+
+bool CheckUnsupportedInsts::runOnBasicBlock(llvm::BasicBlock &bb) {
+    bool modifiedAny = false;
+    // This list contains regex expr for unsupported function names
+    // To be extended
+    std::vector<std::regex> unsupportedFuncs = {
+        std::regex("__(acos|asin|sin|cos|sincos|tan|atan|atan2|exp|log|pow)_(uniform|varying)_(double)")};
+
+    for (llvm::BasicBlock::iterator I = bb.begin(), E = --bb.end(); I != E; ++I) {
+        llvm::Instruction *inst = &*I;
+        if (llvm::CallInst *ci = llvm::dyn_cast<llvm::CallInst>(inst)) {
+            llvm::Function *func = ci->getCalledFunction();
+            Assert(func != NULL);
+            for (std::vector<std::regex>::iterator str = unsupportedFuncs.begin(); str != unsupportedFuncs.end();
+                 ++str) {
+                std::smatch match;
+                std::string funcName = func->getName();
+                if (std::regex_match(funcName, match, *str)) {
+                    // We found unsupported function. Generate error and stop compilation.
+                    SourcePos pos;
+                    bool gotPosition = lGetSourcePosFromMetadata(ci, &pos);
+                    if (match.size() == 4) {
+                        std::string match_func = match[1].str();
+                        std::string match_var = match[2].str();
+                        std::string match_type = match[3].str();
+                        Error(pos, "\"%s(%s %s x)\" is not supported for genx-* targets yet\n", match_func.c_str(),
+                              match_var.c_str(), match_type.c_str());
+                    } else {
+                        Error(pos, "\"%s\" is not supported for genx-* targets yet\n", funcName.c_str());
+                    }
+                }
+            }
+        }
+    }
+
+    return modifiedAny;
+}
+
+bool CheckUnsupportedInsts::runOnFunction(llvm::Function &F) {
+    DEBUG_START_PASS("CheckUnsupportedInsts");
+    bool modifiedAny = false;
+    for (llvm::BasicBlock &BB : F) {
+        modifiedAny |= runOnBasicBlock(BB);
+    }
+    DEBUG_END_PASS("CheckUnsupportedInsts");
+    return modifiedAny;
+}
+
+static llvm::Pass *CreateCheckUnsupportedInsts() { return new CheckUnsupportedInsts(); }
 
 ///////////////////////////////////////////////////////////////////////////
 // FixAddressSpace
