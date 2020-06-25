@@ -1639,54 +1639,9 @@ mask_converts(WIDTH)
 
 define(`global_atomic_associative', `
 
-define <$1 x $3> @__atomic_$2_$4_global($3 * %ptr, <$1 x $3> %val,
-                                        <$1 x MASK> %m) nounwind alwaysinline {
-  ; first, for any lanes where the mask is off, compute a vector where those lanes
-  ; hold the identity value..
+declare <$1 x $3> @__atomic_$2_$4_global($3 * %ptr, <$1 x $3> %val,
+                                        <$1 x MASK> %m) nounwind alwaysinline;
 
-  ; for the bit tricks below, we need the mask to have the
-  ; the same element size as the element type.
-  %mask = call <$1 x $3> @convertmask_`'MASK`'_$3_$1(<$1 x MASK> %m)
-
-  ; zero out any lanes that are off
-  %valoff = and <$1 x $3> %val, %mask
-
-  ; compute an identity vector that is zero in on lanes and has the identiy value
-  ; in the off lanes
-  %idv1 = bitcast $3 $5 to <1 x $3>
-  %idvec = shufflevector <1 x $3> %idv1, <1 x $3> undef,
-     <$1 x i32> < forloop(i, 1, eval($1-1), `i32 0, ') i32 0 >
-  %notmask = xor <$1 x $3> %mask, < forloop(i, 1, eval($1-1), `$3 -1, ') $3 -1 >
-  %idoff = and <$1 x $3> %idvec, %notmask
-
-  ; and comptue the merged vector that holds the identity in the off lanes
-  %valp = or <$1 x $3> %valoff, %idoff
-
-  ; now compute the local reduction (val0 op val1 op ... )--initialize
-  ; %eltvec so that the 0th element is the identity, the first is val0,
-  ; the second is (val0 op val1), ..
-  %red0 = extractelement <$1 x $3> %valp, i32 0
-  %eltvec0 = insertelement <$1 x $3> undef, $3 $5, i32 0
-
-  forloop(i, 1, eval($1-1), `
-  %elt`'i = extractelement <$1 x $3> %valp, i32 i
-  %red`'i = $2 $3 %red`'eval(i-1), %elt`'i
-  %eltvec`'i = insertelement <$1 x $3> %eltvec`'eval(i-1), $3 %red`'eval(i-1), i32 i')
-
-  ; make the atomic call, passing it the final reduced value
-  %final0 = atomicrmw $2 $3 * %ptr, $3 %red`'eval($1-1) seq_cst
-
-  ; now go back and compute the values to be returned for each program
-  ; instance--this just involves smearing the old value returned from the
-  ; actual atomic call across the vector and applying the vector op to the
-  ; %eltvec vector computed above..
-  %finalv1 = bitcast $3 %final0 to <1 x $3>
-  %final_base = shufflevector <1 x $3> %finalv1, <1 x $3> undef,
-     <$1 x i32> < forloop(i, 1, eval($1-1), `i32 0, ') i32 0 >
-  %r = $2 <$1 x $3> %final_base, %eltvec`'eval($1-1)
-
-  ret <$1 x $3> %r
-}
 ')
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -1703,10 +1658,7 @@ define <$1 x $3> @__atomic_$2_$4_global($3 * %ptr, <$1 x $3> %val,
 ;; $4: return type of the LLVM atomic type, in ispc naming paralance (e.g. int32)
 
 define(`global_atomic_uniform', `
-define $3 @__atomic_$2_uniform_$4_global($3 * %ptr, $3 %val) nounwind alwaysinline {
-  %r = atomicrmw $2 $3 * %ptr, $3 %val seq_cst
-  ret $3 %r
-}
+declare $3 @__atomic_$2_uniform_$4_global($3 * %ptr, $3 %val) nounwind alwaysinline;
 ')
 
 ;; Macro to declare the function that implements the swap atomic.
@@ -1716,10 +1668,7 @@ define $3 @__atomic_$2_uniform_$4_global($3 * %ptr, $3 %val) nounwind alwaysinli
 ;; $3: ispc type of the elements (e.g. int32)
 
 define(`global_swap', `
-define $2 @__atomic_swap_uniform_$3_global($2* %ptr, $2 %val) nounwind alwaysinline {
- %r = atomicrmw xchg $2 * %ptr, $2 %val seq_cst
- ret $2 %r
-}
+declare $2 @__atomic_swap_uniform_$3_global($2* %ptr, $2 %val) nounwind alwaysinline;
 ')
 
 
@@ -1731,112 +1680,11 @@ define $2 @__atomic_swap_uniform_$3_global($2* %ptr, $2 %val) nounwind alwaysinl
 
 define(`global_atomic_exchange', `
 
-define <$1 x $2> @__atomic_compare_exchange_$3_global($2* %ptr, <$1 x $2> %cmp,
-                               <$1 x $2> %val, <$1 x MASK> %mask) nounwind alwaysinline {
-  %rptr = alloca <$1 x $2>
-  %rptr32 = bitcast <$1 x $2> * %rptr to $2 *
+declare <$1 x $2> @__atomic_compare_exchange_$3_global($2* %ptr, <$1 x $2> %cmp,
+                               <$1 x $2> %val, <$1 x MASK> %mask) nounwind alwaysinline;
 
-  per_lane($1, <$1 x MASK> %mask, `
-   %cmp_LANE_ID = extractelement <$1 x $2> %cmp, i32 LANE
-   %val_LANE_ID = extractelement <$1 x $2> %val, i32 LANE
-
-  ;; 3.5 - trunk code is the same since m4 has no OR and AND operators
-  ifelse(LLVM_VERSION,LLVM_3_5,`
-    %r_LANE_ID_t = cmpxchg $2 * %ptr, $2 %cmp_LANE_ID, $2 %val_LANE_ID seq_cst seq_cst
-    %r_LANE_ID = extractvalue { $2, i1 } %r_LANE_ID_t, 0
-  ',LLVM_VERSION,LLVM_3_6,`
-    %r_LANE_ID_t = cmpxchg $2 * %ptr, $2 %cmp_LANE_ID, $2 %val_LANE_ID seq_cst seq_cst
-    %r_LANE_ID = extractvalue { $2, i1 } %r_LANE_ID_t, 0
-  ',LLVM_VERSION,LLVM_3_7,`
-    %r_LANE_ID_t = cmpxchg $2 * %ptr, $2 %cmp_LANE_ID, $2 %val_LANE_ID seq_cst seq_cst
-    %r_LANE_ID = extractvalue { $2, i1 } %r_LANE_ID_t, 0
-  ',LLVM_VERSION,LLVM_3_8,`
-    %r_LANE_ID_t = cmpxchg $2 * %ptr, $2 %cmp_LANE_ID, $2 %val_LANE_ID seq_cst seq_cst
-    %r_LANE_ID = extractvalue { $2, i1 } %r_LANE_ID_t, 0
-  ',LLVM_VERSION,LLVM_3_9,`
-    %r_LANE_ID_t = cmpxchg $2 * %ptr, $2 %cmp_LANE_ID, $2 %val_LANE_ID seq_cst seq_cst
-    %r_LANE_ID = extractvalue { $2, i1 } %r_LANE_ID_t, 0
-  ',LLVM_VERSION,LLVM_4_0,`
-    %r_LANE_ID_t = cmpxchg $2 * %ptr, $2 %cmp_LANE_ID, $2 %val_LANE_ID seq_cst seq_cst
-    %r_LANE_ID = extractvalue { $2, i1 } %r_LANE_ID_t, 0
-  ',LLVM_VERSION,LLVM_5_0,`
-    %r_LANE_ID_t = cmpxchg $2 * %ptr, $2 %cmp_LANE_ID, $2 %val_LANE_ID seq_cst seq_cst
-    %r_LANE_ID = extractvalue { $2, i1 } %r_LANE_ID_t, 0
-  ',LLVM_VERSION,LLVM_6_0,`
-    %r_LANE_ID_t = cmpxchg $2 * %ptr, $2 %cmp_LANE_ID, $2 %val_LANE_ID seq_cst seq_cst
-    %r_LANE_ID = extractvalue { $2, i1 } %r_LANE_ID_t, 0
-  ',LLVM_VERSION,LLVM_7_0,`
-    %r_LANE_ID_t = cmpxchg $2 * %ptr, $2 %cmp_LANE_ID, $2 %val_LANE_ID seq_cst seq_cst
-    %r_LANE_ID = extractvalue { $2, i1 } %r_LANE_ID_t, 0
-  ',LLVM_VERSION,LLVM_7_1,`
-    %r_LANE_ID_t = cmpxchg $2 * %ptr, $2 %cmp_LANE_ID, $2 %val_LANE_ID seq_cst seq_cst
-    %r_LANE_ID = extractvalue { $2, i1 } %r_LANE_ID_t, 0
-  ',LLVM_VERSION,LLVM_8_0,`
-    %r_LANE_ID_t = cmpxchg $2 * %ptr, $2 %cmp_LANE_ID, $2 %val_LANE_ID seq_cst seq_cst
-    %r_LANE_ID = extractvalue { $2, i1 } %r_LANE_ID_t, 0
-  ',LLVM_VERSION,LLVM_9_0,`
-    %r_LANE_ID_t = cmpxchg $2 * %ptr, $2 %cmp_LANE_ID, $2 %val_LANE_ID seq_cst seq_cst
-    %r_LANE_ID = extractvalue { $2, i1 } %r_LANE_ID_t, 0
-  ',LLVM_VERSION,LLVM_10_0,`
-    %r_LANE_ID_t = cmpxchg $2 * %ptr, $2 %cmp_LANE_ID, $2 %val_LANE_ID seq_cst seq_cst
-    %r_LANE_ID = extractvalue { $2, i1 } %r_LANE_ID_t, 0
-  ',`
-    %r_LANE_ID = cmpxchg $2 * %ptr, $2 %cmp_LANE_ID, $2 %val_LANE_ID seq_cst
-  ')
-   %rp_LANE_ID = getelementptr PTR_OP_ARGS(`$2') %rptr32, i32 LANE
-   store $2 %r_LANE_ID, $2 * %rp_LANE_ID')
-
-  %r = load PTR_OP_ARGS(`<$1 x $2> ')  %rptr
-  ret <$1 x $2> %r
-}
-
-define $2 @__atomic_compare_exchange_uniform_$3_global($2* %ptr, $2 %cmp,
-                                                       $2 %val) nounwind alwaysinline {
-  ;; 3.5 - trunk code is the same since m4 has no OR and AND operators
-  ifelse(LLVM_VERSION,LLVM_3_5,`
-   %r_t = cmpxchg $2 * %ptr, $2 %cmp, $2 %val seq_cst seq_cst
-   %r = extractvalue { $2, i1 } %r_t, 0
-  ',LLVM_VERSION,LLVM_3_6,`
-   %r_t = cmpxchg $2 * %ptr, $2 %cmp, $2 %val seq_cst seq_cst
-   %r = extractvalue { $2, i1 } %r_t, 0
-  ',LLVM_VERSION,LLVM_3_7,`
-   %r_t = cmpxchg $2 * %ptr, $2 %cmp, $2 %val seq_cst seq_cst
-   %r = extractvalue { $2, i1 } %r_t, 0
-  ',LLVM_VERSION,LLVM_3_8,`
-   %r_t = cmpxchg $2 * %ptr, $2 %cmp, $2 %val seq_cst seq_cst
-   %r = extractvalue { $2, i1 } %r_t, 0
-  ',LLVM_VERSION,LLVM_3_9,`
-   %r_t = cmpxchg $2 * %ptr, $2 %cmp, $2 %val seq_cst seq_cst
-   %r = extractvalue { $2, i1 } %r_t, 0
-  ',LLVM_VERSION,LLVM_4_0,`
-   %r_t = cmpxchg $2 * %ptr, $2 %cmp, $2 %val seq_cst seq_cst
-   %r = extractvalue { $2, i1 } %r_t, 0
-  ',LLVM_VERSION,LLVM_5_0,`
-   %r_t = cmpxchg $2 * %ptr, $2 %cmp, $2 %val seq_cst seq_cst
-   %r = extractvalue { $2, i1 } %r_t, 0
-  ',LLVM_VERSION,LLVM_6_0,`
-   %r_t = cmpxchg $2 * %ptr, $2 %cmp, $2 %val seq_cst seq_cst
-   %r = extractvalue { $2, i1 } %r_t, 0
-  ',LLVM_VERSION,LLVM_7_0,`
-   %r_t = cmpxchg $2 * %ptr, $2 %cmp, $2 %val seq_cst seq_cst
-   %r = extractvalue { $2, i1 } %r_t, 0
-  ',LLVM_VERSION,LLVM_7_1,`
-   %r_t = cmpxchg $2 * %ptr, $2 %cmp, $2 %val seq_cst seq_cst
-   %r = extractvalue { $2, i1 } %r_t, 0
-  ',LLVM_VERSION,LLVM_8_0,`
-   %r_t = cmpxchg $2 * %ptr, $2 %cmp, $2 %val seq_cst seq_cst
-   %r = extractvalue { $2, i1 } %r_t, 0
-  ',LLVM_VERSION,LLVM_9_0,`
-   %r_t = cmpxchg $2 * %ptr, $2 %cmp, $2 %val seq_cst seq_cst
-   %r = extractvalue { $2, i1 } %r_t, 0
-  ',LLVM_VERSION,LLVM_10_0,`
-   %r_t = cmpxchg $2 * %ptr, $2 %cmp, $2 %val seq_cst seq_cst
-   %r = extractvalue { $2, i1 } %r_t, 0
-  ',`
-   %r = cmpxchg $2 * %ptr, $2 %cmp, $2 %val seq_cst
-  ')
-  ret $2 %r
-}
+declare $2 @__atomic_compare_exchange_uniform_$3_global($2* %ptr, $2 %cmp,
+                                                       $2 %val) nounwind alwaysinline;
 ')
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -4817,67 +4665,23 @@ global_atomic_uniform(WIDTH, umax, i64, uint64)
 global_swap(WIDTH, i32, int32)
 global_swap(WIDTH, i64, int64)
 
-define float @__atomic_swap_uniform_float_global(float * %ptr, float %val) nounwind alwaysinline {
-  %iptr = bitcast float * %ptr to i32 *
-  %ival = bitcast float %val to i32
-  %iret = call i32 @__atomic_swap_uniform_int32_global(i32 * %iptr, i32 %ival)
-  %ret = bitcast i32 %iret to float
-  ret float %ret
-}
-
-define double @__atomic_swap_uniform_double_global(double * %ptr, double %val) nounwind alwaysinline {
-  %iptr = bitcast double * %ptr to i64 *
-  %ival = bitcast double %val to i64
-  %iret = call i64 @__atomic_swap_uniform_int64_global(i64 * %iptr, i64 %ival)
-  %ret = bitcast i64 %iret to double
-  ret double %ret
-}
+declare float @__atomic_swap_uniform_float_global(float * %ptr, float %val) nounwind alwaysinline;
+declare double @__atomic_swap_uniform_double_global(double * %ptr, double %val) nounwind alwaysinline;
 
 global_atomic_exchange(WIDTH, i32, int32)
 global_atomic_exchange(WIDTH, i64, int64)
 
-define <WIDTH x float> @__atomic_compare_exchange_float_global(float * %ptr,
-                      <WIDTH x float> %cmp, <WIDTH x float> %val, <WIDTH x MASK> %mask) nounwind alwaysinline {
-  %iptr = bitcast float * %ptr to i32 *
-  %icmp = bitcast <WIDTH x float> %cmp to <WIDTH x i32>
-  %ival = bitcast <WIDTH x float> %val to <WIDTH x i32>
-  %iret = call <WIDTH x i32> @__atomic_compare_exchange_int32_global(i32 * %iptr, <WIDTH x i32> %icmp,
-                                                                  <WIDTH x i32> %ival, <WIDTH x MASK> %mask)
-  %ret = bitcast <WIDTH x i32> %iret to <WIDTH x float>
-  ret <WIDTH x float> %ret
-}
+declare <WIDTH x float> @__atomic_compare_exchange_float_global(float * %ptr,
+                      <WIDTH x float> %cmp, <WIDTH x float> %val, <WIDTH x MASK> %mask) nounwind alwaysinline;
 
-define <WIDTH x double> @__atomic_compare_exchange_double_global(double * %ptr,
-                      <WIDTH x double> %cmp, <WIDTH x double> %val, <WIDTH x MASK> %mask) nounwind alwaysinline {
-  %iptr = bitcast double * %ptr to i64 *
-  %icmp = bitcast <WIDTH x double> %cmp to <WIDTH x i64>
-  %ival = bitcast <WIDTH x double> %val to <WIDTH x i64>
-  %iret = call <WIDTH x i64> @__atomic_compare_exchange_int64_global(i64 * %iptr, <WIDTH x i64> %icmp,
-                                                                  <WIDTH x i64> %ival, <WIDTH x MASK> %mask)
-  %ret = bitcast <WIDTH x i64> %iret to <WIDTH x double>
-  ret <WIDTH x double> %ret
-}
+declare <WIDTH x double> @__atomic_compare_exchange_double_global(double * %ptr,
+                      <WIDTH x double> %cmp, <WIDTH x double> %val, <WIDTH x MASK> %mask) nounwind alwaysinline;
 
-define float @__atomic_compare_exchange_uniform_float_global(float * %ptr, float %cmp,
-                                                             float %val) nounwind alwaysinline {
-  %iptr = bitcast float * %ptr to i32 *
-  %icmp = bitcast float %cmp to i32
-  %ival = bitcast float %val to i32
-  %iret = call i32 @__atomic_compare_exchange_uniform_int32_global(i32 * %iptr, i32 %icmp,
-                                                                   i32 %ival)
-  %ret = bitcast i32 %iret to float
-  ret float %ret
-}
+declare float @__atomic_compare_exchange_uniform_float_global(float * %ptr, float %cmp,
+                                                             float %val) nounwind alwaysinline;
 
-define double @__atomic_compare_exchange_uniform_double_global(double * %ptr, double %cmp,
-                                                               double %val) nounwind alwaysinline {
-  %iptr = bitcast double * %ptr to i64 *
-  %icmp = bitcast double %cmp to i64
-  %ival = bitcast double %val to i64
-  %iret = call i64 @__atomic_compare_exchange_uniform_int64_global(i64 * %iptr, i64 %icmp, i64 %ival)
-  %ret = bitcast i64 %iret to double
-  ret double %ret
-}
+declare double @__atomic_compare_exchange_uniform_double_global(double * %ptr, double %cmp,
+                                                               double %val) nounwind alwaysinline;
 
 ')
 

@@ -6210,27 +6210,29 @@ bool CheckUnsupportedInsts::runOnBasicBlock(llvm::BasicBlock &bb) {
     // This list contains regex expr for unsupported function names
     // To be extended
     std::vector<std::regex> unsupportedFuncs = {
-        std::regex("__(acos|asin|sin|cos|sincos|tan|atan|atan2|exp|log|pow)_(uniform|varying)_(double)")};
+        std::regex("__(acos|asin|sin|cos|sincos|tan|atan|atan2|exp|log|pow)_(uniform|varying)_(double)"),
+        std::regex("__(atomic_.*)_(global)")};
 
     for (llvm::BasicBlock::iterator I = bb.begin(), E = --bb.end(); I != E; ++I) {
         llvm::Instruction *inst = &*I;
         if (llvm::CallInst *ci = llvm::dyn_cast<llvm::CallInst>(inst)) {
             llvm::Function *func = ci->getCalledFunction();
             Assert(func != NULL);
-            for (std::vector<std::regex>::iterator str = unsupportedFuncs.begin(); str != unsupportedFuncs.end();
-                 ++str) {
+            for (int i = 0; i < unsupportedFuncs.size(); i++) {
                 std::smatch match;
                 std::string funcName = func->getName();
-                if (std::regex_match(funcName, match, *str)) {
+                if (std::regex_match(funcName, match, unsupportedFuncs[i])) {
                     // We found unsupported function. Generate error and stop compilation.
                     SourcePos pos;
                     bool gotPosition = lGetSourcePosFromMetadata(ci, &pos);
-                    if (match.size() == 4) {
+                    if (i == 0 && match.size() == 4) {
                         std::string match_func = match[1].str();
                         std::string match_var = match[2].str();
                         std::string match_type = match[3].str();
                         Error(pos, "\"%s(%s %s x)\" is not supported for genx-* targets yet\n", match_func.c_str(),
                               match_var.c_str(), match_type.c_str());
+                    } else if (i == 1 && match.size() == 3) {
+                        Error(pos, "Global atomics are not supported for genx-* targets yet\n");
                     } else {
                         Error(pos, "\"%s\" is not supported for genx-* targets yet\n", funcName.c_str());
                     }
