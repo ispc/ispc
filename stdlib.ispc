@@ -4066,7 +4066,6 @@ static inline uniform double frexp(uniform double x, uniform int * uniform pw2) 
     return doublebits(ix);
 }
 
-#ifndef __is_genx_target
 __declspec(safe)
 static inline double sin(double x) {
     if (__have_native_trigonometry)
@@ -4375,7 +4374,7 @@ static inline uniform double pow(uniform double a, uniform double b) {
     else
         return __stdlib_pow(a, b);
 }
-#endif
+
 ///////////////////////////////////////////////////////////////////////////
 // half-precision floats
 
