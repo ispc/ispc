@@ -121,7 +121,8 @@ class ArgWriter {
         auto argPtr = getArg();
         for (int lane = 0; lane < width_; ++lane) {
             if (mask_ & (1ull << lane)) {
-                haveBeenWritten += snprintf(&res[haveBeenWritten], ARG_STR_SIZE, fmt, ValueAdapter<T>(argCast<T>(argPtr)[lane]));
+                haveBeenWritten +=
+                    snprintf(&res[haveBeenWritten], ARG_STR_SIZE, fmt, ValueAdapter<T>(argCast<T>(argPtr)[lane]));
             } else {
                 haveBeenWritten = writeOffLane<T>(res, haveBeenWritten, argPtr, lane);
             }
@@ -146,7 +147,8 @@ class ArgWriter {
     int writeOffLane(StaticString<ARG_STR_SIZE> &res, int haveBeenWritten, const void *argPtr, int lane) {
         haveBeenWritten += snprintf(&res[haveBeenWritten], ARG_STR_SIZE, "((");
         auto fmt = PrintInfo::type2Specifier<T>();
-        haveBeenWritten += snprintf(&res[haveBeenWritten], ARG_STR_SIZE, fmt, ValueAdapter<T>(argCast<T>(argPtr)[lane]));
+        haveBeenWritten +=
+            snprintf(&res[haveBeenWritten], ARG_STR_SIZE, fmt, ValueAdapter<T>(argCast<T>(argPtr)[lane]));
         haveBeenWritten += snprintf(&res[haveBeenWritten], ARG_STR_SIZE, "))");
         return haveBeenWritten;
     }

@@ -201,13 +201,13 @@ ISPCRTFuture ispcrtLaunch1D(ISPCRTTaskQueue q, ISPCRTKernel k, ISPCRTMemoryView 
 ISPCRT_CATCH_END(nullptr)
 
 ISPCRTFuture ispcrtLaunch2D(ISPCRTTaskQueue q, ISPCRTKernel k, ISPCRTMemoryView p, size_t dim0,
-                    size_t dim1) ISPCRT_CATCH_BEGIN {
+                            size_t dim1) ISPCRT_CATCH_BEGIN {
     return ispcrtLaunch3D(q, k, p, dim0, dim1, 1);
 }
 ISPCRT_CATCH_END(nullptr)
 
 ISPCRTFuture ispcrtLaunch3D(ISPCRTTaskQueue q, ISPCRTKernel k, ISPCRTMemoryView p, size_t dim0, size_t dim1,
-                    size_t dim2) ISPCRT_CATCH_BEGIN {
+                            size_t dim2) ISPCRT_CATCH_BEGIN {
     auto &queue = referenceFromHandle<ispcrt::TaskQueue>(q);
     auto &kernel = referenceFromHandle<ispcrt::Kernel>(k);
 
@@ -228,7 +228,7 @@ ISPCRT_CATCH_END()
 
 uint64_t ispcrtFutureGetTimeNs(ISPCRTFuture f) ISPCRT_CATCH_BEGIN {
     auto &future = referenceFromHandle<ispcrt::Future>(f);
-    
+
     if (!future.valid)
         return -1;
 

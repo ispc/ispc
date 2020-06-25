@@ -20,20 +20,17 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 
-
 #include <level_zero/ze_api.h>
 
-class SGEMMApp
-{
-public:
+class SGEMMApp {
+  public:
     SGEMMApp() = default;
-    SGEMMApp(bool verbose) : m_verbose { verbose } {};
+    SGEMMApp(bool verbose) : m_verbose{verbose} {};
 
-    struct RunResult
-    {
+    struct RunResult {
         uint64_t cpuTime;
         uint64_t gpuTime;
-        bool     valid;
+        bool valid;
 
         RunResult() = default;
     };
@@ -42,18 +39,17 @@ public:
     void run(RunResult &result, int m, int niter, int gx, int gy, bool validate);
     void cleanup();
 
-private:
-
-    bool initialized {false};
-    bool m_verbose {true};
-    ze_driver_handle_t m_driver {nullptr};
-    ze_device_handle_t m_device {nullptr};
-    uint64_t m_timestamp_freq {0};
-    ze_event_pool_handle_t m_pool {nullptr};
-    ze_event_handle_t m_event {nullptr};
-    ze_module_handle_t m_module {nullptr};
-    ze_kernel_handle_t m_kernel {nullptr};
-    ze_command_list_handle_t m_command_list {nullptr};
-    ze_command_queue_handle_t m_command_queue {nullptr};
-    void *m_device_ptr {nullptr};
+  private:
+    bool initialized{false};
+    bool m_verbose{true};
+    ze_driver_handle_t m_driver{nullptr};
+    ze_device_handle_t m_device{nullptr};
+    uint64_t m_timestamp_freq{0};
+    ze_event_pool_handle_t m_pool{nullptr};
+    ze_event_handle_t m_event{nullptr};
+    ze_module_handle_t m_module{nullptr};
+    ze_kernel_handle_t m_kernel{nullptr};
+    ze_command_list_handle_t m_command_list{nullptr};
+    ze_command_queue_handle_t m_command_queue{nullptr};
+    void *m_device_ptr{nullptr};
 };

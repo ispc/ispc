@@ -88,7 +88,6 @@ inline bool Future::valid() const { return ispcrtFutureIsValid(handle()); }
 
 inline uint64_t Future::time() const { return ispcrtFutureGetTimeNs(handle()); }
 
-
 /////////////////////////////////////////////////////////////////////////////
 // Device wrapper ///////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////////////////////
@@ -187,7 +186,6 @@ inline Kernel::Kernel(const Device &device, const Module &module, const char *ke
 // TaskQueue wrapper ////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////////////////////
 
-
 class TaskQueue : public GenericObject<ISPCRTTaskQueue> {
   public:
     TaskQueue() = default;
@@ -204,7 +202,8 @@ class TaskQueue : public GenericObject<ISPCRTTaskQueue> {
 
     template <typename T> Future launch(const Kernel &k, const Array<T> &p, size_t dim0) const;
     template <typename T> Future launch(const Kernel &k, const Array<T> &p, size_t dim0, size_t dim1) const;
-    template <typename T> Future launch(const Kernel &k, const Array<T> &p, size_t dim0, size_t dim1, size_t dim2) const;
+    template <typename T>
+    Future launch(const Kernel &k, const Array<T> &p, size_t dim0, size_t dim1, size_t dim2) const;
 
     void sync() const;
 };
@@ -236,8 +235,7 @@ inline Future TaskQueue::launch(const Kernel &k, size_t dim0, size_t dim1, size_
     return ispcrtLaunch3D(handle(), k.handle(), nullptr, dim0, dim1, dim2);
 }
 
-template <typename T>
-inline Future TaskQueue::launch(const Kernel &k, const Array<T> &p, size_t dim0) const {
+template <typename T> inline Future TaskQueue::launch(const Kernel &k, const Array<T> &p, size_t dim0) const {
     return ispcrtLaunch1D(handle(), k.handle(), p.handle(), dim0);
 }
 

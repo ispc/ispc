@@ -14,16 +14,14 @@
 // limitations under the License.                                           //
 // ======================================================================== //
 
-
 // Google Benchmark
 #include <benchmark/benchmark.h>
-#include <iostream>
 #include <chrono>
+#include <iostream>
 
 #include "sgemm.hpp"
 
-
-static void run_sgemm(benchmark::State& state) {
+static void run_sgemm(benchmark::State &state) {
     SGEMMApp app(false);
 
     app.initialize();
@@ -42,7 +40,9 @@ static void run_sgemm(benchmark::State& state) {
     state.SetItemsProcessed(state.iterations());
 }
 
-BENCHMARK(run_sgemm)->Threads(1)->RangeMultiplier(2)->Range( 32, 256)->MinTime(3)->UseManualTime()->Unit(benchmark::kMillisecond);
-BENCHMARK(run_sgemm)->Threads(1)->RangeMultiplier(2)->Range(512, 512)->MinTime(4)->UseManualTime()->Unit(benchmark::kMillisecond);
+BENCHMARK(run_sgemm)->Threads(1)->RangeMultiplier(2)->Range(32, 256)->MinTime(3)->UseManualTime()->Unit(
+    benchmark::kMillisecond);
+BENCHMARK(run_sgemm)->Threads(1)->RangeMultiplier(2)->Range(512, 512)->MinTime(4)->UseManualTime()->Unit(
+    benchmark::kMillisecond);
 
 BENCHMARK_MAIN();

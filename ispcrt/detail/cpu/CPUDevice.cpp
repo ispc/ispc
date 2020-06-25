@@ -9,10 +9,10 @@
 #include <dlfcn.h>
 #endif
 // std
+#include <cassert>
+#include <chrono>
 #include <exception>
 #include <string>
-#include <chrono>
-#include <cassert>
 
 namespace ispcrt {
 namespace cpu {
@@ -106,7 +106,7 @@ struct TaskQueue : public ispcrt::TaskQueue {
         // no-op
     }
 
-    Future* launch(ispcrt::Kernel &k, ispcrt::MemoryView *params, size_t dim0, size_t dim1, size_t dim2) override {
+    Future *launch(ispcrt::Kernel &k, ispcrt::MemoryView *params, size_t dim0, size_t dim1, size_t dim2) override {
         auto &kernel = (cpu::Kernel &)k;
         auto *parameters = (cpu::MemoryView *)params;
 

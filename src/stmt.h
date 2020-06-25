@@ -505,7 +505,7 @@ class PrintStmt : public Stmt {
         VAR_64_NUM_IDX, // number of 64-bit varying values
         GENX_NUM_IDX,   // number of arguments of __do_print_cm
 #endif                  // ISPC_GENX_ENABLED
-       // number of arguments of __do_print
+                        // number of arguments of __do_print
         STD_NUM_IDX = ARGS_IDX + 1
     };
 
