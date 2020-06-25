@@ -11,8 +11,8 @@
 namespace ispcrt {
 
 struct Future : public RefCounted {
-    uint64_t time {0};
-    bool valid {false};
+    uint64_t time{0};
+    bool valid{false};
 
     Future() = default;
     virtual ~Future() = default;

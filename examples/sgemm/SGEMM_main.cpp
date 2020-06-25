@@ -250,7 +250,8 @@ int main(int argc, char **argv) {
 
     if (N % programCount != 0) {
         printf("\nNumber of columns in Matrix A (N), which is also number of rows in Matrix B, "
-               "must be a multiple of %d (target width)!\n", programCount);
+               "must be a multiple of %d (target width)!\n",
+               programCount);
         exit(-1);
     }
 

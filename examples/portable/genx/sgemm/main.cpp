@@ -26,7 +26,7 @@
 #include "sgemm.hpp"
 
 constexpr int MAX_ITERS = 1000000;
-constexpr int MAX_M  = 4096;
+constexpr int MAX_M = 4096;
 constexpr int MAX_TH = 4096;
 
 static void usage() {
@@ -49,8 +49,8 @@ int main(int argc, char *argv[]) {
             gy = atoi(argv[4]);
         }
     }
-    if (m < 1 || niterations < 1 || gx < 1 || gy < 1 ||
-        m > MAX_M || niterations > MAX_ITERS || gx > MAX_TH || gy > MAX_TH) {
+    if (m < 1 || niterations < 1 || gx < 1 || gy < 1 || m > MAX_M || niterations > MAX_ITERS || gx > MAX_TH ||
+        gy > MAX_TH) {
         usage();
         return -1;
     }

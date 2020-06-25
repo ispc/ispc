@@ -21,17 +21,16 @@
  */
 #include "L0_helpers.h"
 #include "Matrix.h"
+#include <chrono>
 #include <cmath>
 #include <iostream>
 #include <limits>
-#include <chrono>
 
 #include "sgemm.hpp"
 
 using namespace hostutil;
 
-void SGEMMApp::initialize()
-{
+void SGEMMApp::initialize() {
     if (initialized)
         return;
 
@@ -47,10 +46,12 @@ void SGEMMApp::initialize()
     m_timestamp_freq = device_properties.timerResolution;
 
 #ifdef CMKERNEL
-    if (m_verbose) std::cout << "Running CM kernel\n";
+    if (m_verbose)
+        std::cout << "Running CM kernel\n";
     L0Create_Kernel(m_device, m_module, m_command_list, m_kernel, "sgemm_kernel");
 #else
-    if (m_verbose) std::cout << "Running ISPC kernel\n";
+    if (m_verbose)
+        std::cout << "Running ISPC kernel\n";
     L0Create_Kernel(m_device, m_module, m_command_list, m_kernel, "SGEMM_naive_task");
 #endif
 
@@ -91,7 +92,8 @@ void SGEMMApp::run(SGEMMApp::RunResult &result, int m, int niter, int gx, int gy
     const int ldb_tmp = lda_tmp;
     const int ldc_tmp = lda_tmp;
     if (m_verbose) {
-        printf("SGEMM: C(%d, %d) = %.2f * C(%d, %d) + %.2f A(%d, %d) * B(%d, %d)\n", m, n, beta, m, n, alpha, m, k, k, n);
+        printf("SGEMM: C(%d, %d) = %.2f * C(%d, %d) + %.2f A(%d, %d) * B(%d, %d)\n", m, n, beta, m, n, alpha, m, k, k,
+               n);
         printf("Thread-group setting: %d x %d \n", gx, gy);
     }
     // Allocate matrices
@@ -157,7 +159,7 @@ void SGEMMApp::run(SGEMMApp::RunResult &result, int m, int niter, int gx, int gy
     ze_group_count_t dispatchTraits = {(uint32_t)gx, (uint32_t)gy, 1};
     if (m_verbose) {
         std::cout << "Set dispatchTraits.x=" << dispatchTraits.groupCountX
-                << ", dispatchTraits.y=" << dispatchTraits.groupCountY << std::endl;
+                  << ", dispatchTraits.y=" << dispatchTraits.groupCountY << std::endl;
     }
 
     std::chrono::duration<uint64_t, std::nano> gpu_duration(0);
@@ -214,11 +216,9 @@ void SGEMMApp::run(SGEMMApp::RunResult &result, int m, int niter, int gx, int gy
     result.valid = pass;
     result.cpuTime = tot_nsecs.count();
     result.gpuTime = gpu_nsecs.count();
-
 }
 
-void SGEMMApp::cleanup()
-{
+void SGEMMApp::cleanup() {
     L0_SAFE_CALL(zeEventDestroy(m_event));
 
     L0Destroy_EventPool(m_pool);

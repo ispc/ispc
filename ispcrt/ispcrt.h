@@ -66,7 +66,7 @@ typedef enum {
 } ISPCRTDeviceType;
 
 ISPCRTDevice ispcrtGetDevice(ISPCRTDeviceType);
-uint64_t     ispcrtGetDeviceTimeTickResolution();
+uint64_t ispcrtGetDeviceTimeTickResolution();
 
 // MemoryViews ////////////////////////////////////////////////////////////////
 
@@ -94,7 +94,8 @@ void ispcrtCopyToHost(ISPCRTTaskQueue, ISPCRTMemoryView);
 // NOTE: 'params' can be a NULL handle (NULL will get passed to the ISPC task as the function parameter)
 ISPCRTFuture ispcrtLaunch1D(ISPCRTTaskQueue, ISPCRTKernel, ISPCRTMemoryView params, size_t dim0);
 ISPCRTFuture ispcrtLaunch2D(ISPCRTTaskQueue, ISPCRTKernel, ISPCRTMemoryView params, size_t dim0, size_t dim1);
-ISPCRTFuture ispcrtLaunch3D(ISPCRTTaskQueue, ISPCRTKernel, ISPCRTMemoryView params, size_t dim0, size_t dim1, size_t dim2);
+ISPCRTFuture ispcrtLaunch3D(ISPCRTTaskQueue, ISPCRTKernel, ISPCRTMemoryView params, size_t dim0, size_t dim1,
+                            size_t dim2);
 
 void ispcrtSync(ISPCRTTaskQueue);
 

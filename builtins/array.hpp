@@ -40,55 +40,35 @@
 
 namespace notstd {
 
-template<typename T, int sizeImpl>
-struct array {
+template <typename T, int sizeImpl> struct array {
     T dataImpl[sizeImpl];
 
     using value_type = T;
-    using reference = T&;
-    using const_reference = const T&;
-    using pointer = T*;
-    using const_pointer = const T*;
+    using reference = T &;
+    using const_reference = const T &;
+    using pointer = T *;
+    using const_pointer = const T *;
     using iterator = pointer;
     using const_iterator = const_pointer;
     using size_type = int;
 
-    size_type size() const noexcept {
-        return sizeImpl;
-    }
+    size_type size() const noexcept { return sizeImpl; }
 
-    pointer data() noexcept {
-        return &dataImpl[0];
-    }
+    pointer data() noexcept { return &dataImpl[0]; }
 
-    const_pointer data() const noexcept {
-        return &dataImpl[0];
-    }
+    const_pointer data() const noexcept { return &dataImpl[0]; }
 
-    iterator begin() noexcept {
-        return data();
-    }
+    iterator begin() noexcept { return data(); }
 
-    const_iterator begin() const noexcept {
-        return data();
-    }
+    const_iterator begin() const noexcept { return data(); }
 
-    iterator end() noexcept {
-        return data() + size();
-    }
+    iterator end() noexcept { return data() + size(); }
 
-    const_iterator end() const noexcept {
-        return data() + size();
-    }
+    const_iterator end() const noexcept { return data() + size(); }
 
-    const_reference operator[](int idx) const noexcept {
-        return dataImpl[idx];
-    }
+    const_reference operator[](int idx) const noexcept { return dataImpl[idx]; }
 
-    reference operator[](int idx) noexcept {
-        return dataImpl[idx];
-    }
+    reference operator[](int idx) noexcept { return dataImpl[idx]; }
 };
 
 } // namespace notstd
-
