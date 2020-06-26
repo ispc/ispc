@@ -85,6 +85,9 @@ jobs:
         echo "::add-path::${GITHUB_WORKSPACE}/ispc-trunk-linux/bin"
         echo "::set-env name=LLVM_HOME::${GITHUB_WORKSPACE}"
         echo "::set-env name=ISPC_HOME::${GITHUB_WORKSPACE}"
+    - name: Check environment
+      run: |
+        cat /proc/cpuinfo
     - name: Running tests
       run: |
         ./alloy.py -r --only="stability current -O0 -O1 -O2" --only-targets="${{ matrix.target }}" --time --update-errors=FP
@@ -95,4 +98,7 @@ jobs:
         path: fail_db.txt
     - name: Check
       run: |
+        # Print fails to the log.
+        git diff
+        # Exit with error code is there are fails.
         [ -z "`git diff`" ]
