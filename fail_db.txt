@@ -7,22 +7,6 @@
 % folder). The recommended way to build LLVM on Unix is to use "alloy.py".
 %
 
-% Windows specific fails. transcendentals-10-0.ispc is not expected to work anywhere except Linux.
-
-% LLVM 5.0 fails
-./tests/shuffle-3.ispc runfail     x86 avx512skx-i32x16   Linux LLVM 5.0 clang++5.0 -O0 *
-./tests/shuffle-5.ispc runfail     x86 avx512skx-i32x16   Linux LLVM 5.0 clang++5.0 -O0 *
-./tests/shuffle-3.ispc runfail  x86-64 avx512skx-i32x16   Linux LLVM 5.0 clang++5.0 -O0 *
-./tests/shuffle-5.ispc runfail  x86-64 avx512skx-i32x16   Linux LLVM 5.0 clang++5.0 -O0 *
-./tests/shuffle-3.ispc runfail     x86 avx512knl-i32x16   Linux LLVM 5.0 clang++5.0 -O0 *
-./tests/shuffle-5.ispc runfail     x86 avx512knl-i32x16   Linux LLVM 5.0 clang++5.0 -O0 *
-./tests/shuffle-3.ispc runfail  x86-64 avx512knl-i32x16   Linux LLVM 5.0 clang++5.0 -O0 *
-./tests/shuffle-5.ispc runfail  x86-64 avx512knl-i32x16   Linux LLVM 5.0 clang++5.0 -O0 *
-
-% LLVM 6.0 fails
-
-% LLVM 7.0 fails
-
 % LLVM 8.0 fails
 
 % LLVM 9.0 fails
