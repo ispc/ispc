@@ -6,6 +6,8 @@ on:
       - master
     paths:
       - "llvm_patches/*10_0*"
+      - "alloy.py"
+      - ".github/workflows/rebuild-llvm10.yml"
 
 jobs:
   # Building LLVM in docker, as using native Ubuntu 16.04 github-hosted image contains newer-than-expected libs and
