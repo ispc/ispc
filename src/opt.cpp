@@ -491,6 +491,8 @@ void Optimize(llvm::Module *module, int optLevel) {
         // them into something that can actually execute.
 #ifdef ISPC_GENX_ENABLED
         if (g->target->getISA() == Target::GENX) {
+            // Global DCE is required for ISPCSimdCFLoweringPass
+            optPM.add(llvm::createGlobalDCEPass());
             // FIXME: temporary solution
             optPM.add(llvm::createDemoteRegisterToMemoryPass());
             optPM.add(llvm::createISPCSimdCFLoweringPass());
@@ -507,23 +509,26 @@ void Optimize(llvm::Module *module, int optLevel) {
         optPM.add(CreateIsCompileTimeConstantPass(true));
 #ifdef ISPC_GENX_ENABLED
         if (g->target->getISA() == Target::GENX) {
-            optPM.add(llvm::createPromoteMemoryToRegisterPass());
-            optPM.add(llvm::createGlobalsLocalizationPass());
-            // remove dead globals after localization
-            optPM.add(llvm::createGlobalDCEPass());
+            // InstructionCombining pass is required for ReplaceUnsupportedInsts
+            optPM.add(llvm::createInstructionCombiningPass());
+            optPM.add(CreateReplaceUnsupportedInsts());
             optPM.add(CreatePromoteToPrivateMemoryPass());
         }
 #endif
         optPM.add(llvm::createFunctionInliningPass());
-#ifdef ISPC_GENX_ENABLED
-        if (g->target->getISA() == Target::GENX) {
-            optPM.add(CreateCheckUnsupportedInsts());
-        }
-#endif
         optPM.add(CreateMakeInternalFuncsStaticPass());
         optPM.add(llvm::createCFGSimplificationPass());
 #ifdef ISPC_GENX_ENABLED
         if (g->target->getISA() == Target::GENX) {
+            optPM.add(llvm::createPromoteMemoryToRegisterPass());
+            optPM.add(llvm::createGlobalsLocalizationPass());
+            // Remove dead globals after localization
+            optPM.add(llvm::createGlobalDCEPass());
+            // This pass is needed for correct prints work
+            optPM.add(llvm::createSROAPass());
+            optPM.add(CreateReplaceLLVMIntrinsics());
+            optPM.add(CreateCheckUnsupportedInsts());
+            optPM.add(CreateFixAddressSpace());
             // This pass is required to prepare LLVM IR for open source SPIR-V translator
             optPM.add(llvm::createGenXSPIRVWriterAdaptorPass());
         }
