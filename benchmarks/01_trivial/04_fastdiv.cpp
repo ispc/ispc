@@ -11,7 +11,6 @@ static Docs docs("Check fast_idiv implmentation of stdlib functions:\n"
                  "Conditions to trigger fast_idiv:\n"
                  " - The value being divided must be an int8/16/32.\n"
                  " - The divisor must be the same compile-time constant value for all of the vector lanes.\n"
-                 " - The divisor must be >= 2 and <128 (for 8-bit divides), and <256 otherwise.\n"
                  "Expectation:\n"
                  " - No regressions\n");
 
