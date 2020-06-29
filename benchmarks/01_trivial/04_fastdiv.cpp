@@ -16,18 +16,17 @@ static Docs docs("Check fast_idiv implmentation of stdlib functions:\n"
 
 // Minimum size is maximum target width, i.e. 64.
 // Larger buffer is better, but preferably to stay within L1.
-// For int8, maximum value is 128.
-#define ARGS_int8 Arg(128)
-#define ARGS_uint8 Arg(256)
-#define ARGS_int16 Arg(8192)
-#define ARGS_uint16 Arg(8192)
-#define ARGS_int32 Arg(8192)
-#define ARGS_uint32 Arg(8192)
-#define ARGS_int64 Arg(8192)
-#define ARGS_uint64 Arg(8192)
+#define ARGS Arg(8192)
 //#define ARGS RangeMultiplier(2)->Range(64, 64<<15)->Complexity(benchmark::oN)
 
-template <typename T> static void init(T *dst, int count) {
+template <typename T> static void init_src(T *src, int count) {
+    for (int i = 0; i < count; i++) {
+        // These computations may involve overflow/underflow, but this is ok.
+        src[i] = ((T)i) - ((T)count / 2);
+    }
+}
+
+template <typename T> static void init_dst(T *dst, int count) {
     for (int i = 0; i < count; i++) {
         dst[i] = 0;
     }
@@ -43,18 +42,16 @@ template <typename T> static void check(T *src, T *dst, int divisor, int count) 
     }
 }
 
-#define FASTDIV(UT_C, UT_ISPC, ST_C, ST_ISPC, DIV_VAL)                                                                 \
-    static void fastdiv_##UT_ISPC##_##DIV_VAL(benchmark::State &state) {                                               \
+#define FASTDIV(T_C, T_ISPC, DIV_VAL)                                                                                  \
+    static void fastdiv_##T_ISPC##_##DIV_VAL(benchmark::State &state) {                                                \
         int count = state.range(0);                                                                                    \
-        UT_C *dst = static_cast<UT_C *>(aligned_alloc(ALIGNMENT, sizeof(UT_C) * count));                               \
-        UT_C *src = static_cast<UT_C *>(aligned_alloc(ALIGNMENT, sizeof(UT_C) * count));                               \
-        init(dst, count);                                                                                              \
+        T_C *dst = static_cast<T_C *>(aligned_alloc(ALIGNMENT, sizeof(T_C) * count));                                  \
+        T_C *src = static_cast<T_C *>(aligned_alloc(ALIGNMENT, sizeof(T_C) * count));                                  \
+        init_src(src, count);                                                                                          \
+        init_dst(dst, count);                                                                                          \
                                                                                                                        \
-        for (int i = 0; i < count; i++) {                                                                              \
-            src[i] = static_cast<UT_C>(i);                                                                             \
-        }                                                                                                              \
         for (auto _ : state) {                                                                                         \
-            ispc::fastdiv_##UT_ISPC##_##DIV_VAL(src, dst, count);                                                      \
+            ispc::fastdiv_##T_ISPC##_##DIV_VAL(src, dst, count);                                                       \
         }                                                                                                              \
                                                                                                                        \
         check(src, dst, DIV_VAL, count);                                                                               \
@@ -62,42 +59,30 @@ template <typename T> static void check(T *src, T *dst, int divisor, int count) 
         free(dst);                                                                                                     \
         state.SetComplexityN(state.range(0));                                                                          \
     }                                                                                                                  \
-    BENCHMARK(fastdiv_##UT_ISPC##_##DIV_VAL)->ARGS_##UT_ISPC;                                                          \
-                                                                                                                       \
-    static void fastdiv_##ST_ISPC##_##DIV_VAL(benchmark::State &state) {                                               \
-        int count = state.range(0);                                                                                    \
-        ST_C *dst = static_cast<ST_C *>(aligned_alloc(ALIGNMENT, sizeof(ST_C) * 2 * count));                           \
-        ST_C *src = static_cast<ST_C *>(aligned_alloc(ALIGNMENT, sizeof(ST_C) * 2 * count));                           \
-        init(dst, 2 * count);                                                                                          \
-                                                                                                                       \
-        for (int i = 0; i < 2 * count; i++) {                                                                          \
-            src[i] = static_cast<ST_C>((i - count));                                                                   \
-        }                                                                                                              \
-        for (auto _ : state) {                                                                                         \
-            ispc::fastdiv_##ST_ISPC##_##DIV_VAL(src, dst, 2 * count);                                                  \
-        }                                                                                                              \
-                                                                                                                       \
-        check(src, dst, DIV_VAL, 2 * count);                                                                           \
-        free(src);                                                                                                     \
-        free(dst);                                                                                                     \
-        state.SetComplexityN(state.range(0));                                                                          \
-    }                                                                                                                  \
-    BENCHMARK(fastdiv_##ST_ISPC##_##DIV_VAL)->ARGS_##ST_ISPC;
+    BENCHMARK(fastdiv_##T_ISPC##_##DIV_VAL)->ARGS;
 
-FASTDIV(uint64_t, uint64, int64_t, int64, 13)
+FASTDIV(uint64_t, uint64, 13)
+FASTDIV(int64_t, int64, 13)
 
-FASTDIV(uint32_t, uint32, int32_t, int32, 13)
+FASTDIV(uint32_t, uint32, 13)
+FASTDIV(int32_t, int32, 13)
 
-FASTDIV(uint16_t, uint16, int16_t, int16, 13)
+FASTDIV(uint16_t, uint16, 13)
+FASTDIV(int16_t, int16, 13)
 
-FASTDIV(uint8_t, uint8, int8_t, int8, 13)
+FASTDIV(uint8_t, uint8, 13)
+FASTDIV(int8_t, int8, 13)
 
-FASTDIV(uint64_t, uint64, int64_t, int64, 16)
+FASTDIV(uint64_t, uint64, 16)
+FASTDIV(int64_t, int64, 16)
 
-FASTDIV(uint32_t, uint32, int32_t, int32, 16)
+FASTDIV(uint32_t, uint32, 16)
+FASTDIV(int32_t, int32, 16)
 
-FASTDIV(uint16_t, uint16, int16_t, int16, 16)
+FASTDIV(uint16_t, uint16, 16)
+FASTDIV(int16_t, int16, 16)
 
-FASTDIV(uint8_t, uint8, int8_t, int8, 16)
+FASTDIV(uint8_t, uint8, 16)
+FASTDIV(int8_t, int8, 16)
 
 BENCHMARK_MAIN();
