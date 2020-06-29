@@ -34,21 +34,9 @@ template <typename T> static void init(T *dst, int count) {
     }
 }
 
-template <typename T> static void check_unsigned(T *dst, int divisor, int count) {
+template <typename T> static void check(T *src, T *dst, int divisor, int count) {
     for (int i = 0; i < count; i++) {
-        T num = i;
-        T val = num / divisor;
-        if (val != dst[i]) {
-            printf("Error i=%d\n", i);
-            return;
-        }
-    }
-}
-
-template <typename T> static void check_signed(T *dst, int divisor, int count) {
-    for (int i = 0; i < 2 * count; i++) {
-        T num = i - count;
-        T val = num / divisor;
+        T val = src[i] / divisor;
         if (val != dst[i]) {
             printf("Error i=%d\n", i);
             return;
@@ -60,13 +48,18 @@ template <typename T> static void check_signed(T *dst, int divisor, int count) {
     static void fastdiv_##UT_ISPC##_##DIV_VAL(benchmark::State &state) {                                               \
         int count = state.range(0);                                                                                    \
         UT_C *dst = static_cast<UT_C *>(aligned_alloc(ALIGNMENT, sizeof(UT_C) * count));                               \
+        UT_C *src = static_cast<UT_C *>(aligned_alloc(ALIGNMENT, sizeof(UT_C) * count));                               \
         init(dst, count);                                                                                              \
                                                                                                                        \
+        for (int i = 0; i < count; i++) {                                                                              \
+            src[i] = static_cast<UT_C>(i);                                                                             \
+        }                                                                                                              \
         for (auto _ : state) {                                                                                         \
-            ispc::fastdiv_##UT_ISPC##_##DIV_VAL(dst, count);                                                           \
+            ispc::fastdiv_##UT_ISPC##_##DIV_VAL(src, dst, count);                                                      \
         }                                                                                                              \
                                                                                                                        \
-        check_unsigned(dst, DIV_VAL, count);                                                                           \
+        check(src, dst, DIV_VAL, count);                                                                               \
+        free(src);                                                                                                     \
         free(dst);                                                                                                     \
         state.SetComplexityN(state.range(0));                                                                          \
     }                                                                                                                  \
@@ -75,13 +68,18 @@ template <typename T> static void check_signed(T *dst, int divisor, int count) {
     static void fastdiv_##ST_ISPC##_##DIV_VAL(benchmark::State &state) {                                               \
         int count = state.range(0);                                                                                    \
         ST_C *dst = static_cast<ST_C *>(aligned_alloc(ALIGNMENT, sizeof(ST_C) * 2 * count));                           \
+        ST_C *src = static_cast<ST_C *>(aligned_alloc(ALIGNMENT, sizeof(ST_C) * 2 * count));                           \
         init(dst, 2 * count);                                                                                          \
                                                                                                                        \
+        for (int i = 0; i < 2 * count; i++) {                                                                          \
+            src[i] = static_cast<ST_C>((i - count));                                                                   \
+        }                                                                                                              \
         for (auto _ : state) {                                                                                         \
-            ispc::fastdiv_##ST_ISPC##_##DIV_VAL(dst, count);                                                           \
+            ispc::fastdiv_##ST_ISPC##_##DIV_VAL(src, dst, 2 * count);                                                  \
         }                                                                                                              \
                                                                                                                        \
-        check_signed(dst, DIV_VAL, count);                                                                             \
+        check(src, dst, DIV_VAL, 2 * count);                                                                           \
+        free(src);                                                                                                     \
         free(dst);                                                                                                     \
         state.SetComplexityN(state.range(0));                                                                          \
     }                                                                                                                  \

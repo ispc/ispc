@@ -1,30 +1,38 @@
 
-#define FASTDIVISPC(UT_ISPC, ST_ISPC, DIV_VAL)                                                                         \
-    export void fastdiv_##ST_ISPC##_##DIV_VAL(uniform ST_ISPC *uniform dst, uniform int count) {                       \
-        foreach (i = 0... 2 * count) {                                                                                 \
-            ST_ISPC num = i - count;                                                                                   \
-            dst[i] = num / DIV_VAL;                                                                                    \
-        }                                                                                                              \
-    }                                                                                                                  \
-    export void fastdiv_##UT_ISPC##_##DIV_VAL(uniform UT_ISPC *uniform dst, uniform int count) {                       \
-        foreach (i = 0 ... count) {                                                                                    \
-            UT_ISPC num = i;                                                                                           \
-            dst[i] = num / DIV_VAL;                                                                                    \
-        }                                                                                                              \
+#define FASTDIVISPC(T_ISPC, DIV_VAL)                                                                                   \
+    export void fastdiv_##T_ISPC##_##DIV_VAL(uniform T_ISPC *uniform src, uniform T_ISPC *uniform dst,                 \
+                                             uniform int count) {                                                      \
+        foreach (i = 0... count) { dst[i] = src[i] / DIV_VAL; }                                                        \
     }
 
-FASTDIVISPC(uint64, int64, 13)
+FASTDIVISPC(uint64, 13)
 
-FASTDIVISPC(uint32, int32, 13)
+FASTDIVISPC(int64, 13)
 
-FASTDIVISPC(uint16, int16, 13)
+FASTDIVISPC(uint32, 13)
 
-FASTDIVISPC(uint8, int8, 13)
+FASTDIVISPC(int32, 13)
 
-FASTDIVISPC(uint64, int64, 16)
+FASTDIVISPC(uint16, 13)
 
-FASTDIVISPC(uint32, int32, 16)
+FASTDIVISPC(int16, 13)
 
-FASTDIVISPC(uint16, int16, 16)
+FASTDIVISPC(uint8, 13)
 
-FASTDIVISPC(uint8, int8, 16)
+FASTDIVISPC(int8, 13)
+
+FASTDIVISPC(uint64, 16)
+
+FASTDIVISPC(int64, 16)
+
+FASTDIVISPC(uint32, 16)
+
+FASTDIVISPC(int32, 16)
+
+FASTDIVISPC(uint16, 16)
+
+FASTDIVISPC(int16, 16)
+
+FASTDIVISPC(uint8, 16)
+
+FASTDIVISPC(int8, 16)
