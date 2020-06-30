@@ -2189,7 +2189,7 @@ llvm::Value *FunctionEmitContext::LoadInst(llvm::Value *ptr, llvm::Value *mask, 
     } else {
         ptrType = CastType<PointerType>(ptrRefType);
         AssertPos(currentPos, ptrType != NULL);
-        elType = ptrType->GetBaseType()->GetBaseType();
+        elType = ptrType->GetBaseType();
     }
 
     if (CastType<UndefinedStructType>(ptrType->GetBaseType())) {
