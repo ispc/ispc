@@ -77,5 +77,6 @@ add_subdirectory(noise)
 add_subdirectory(sgemm)
 add_subdirectory(aobench)
 add_subdirectory(mandelbrot)
+add_subdirectory(simple)
 
 include(TestLists.txt)
