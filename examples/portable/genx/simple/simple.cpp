@@ -38,6 +38,23 @@
 // ispcrt
 #include "ispcrt.hpp"
 
+std::ostream &operator<<(std::ostream &os, const ISPCRTDeviceType dt) {
+    switch (dt) {
+    case ISPCRT_DEVICE_TYPE_AUTO:
+        os << "Auto";
+        break;
+    case ISPCRT_DEVICE_TYPE_GPU:
+        os << "GPU";
+        break;
+    case ISPCRT_DEVICE_TYPE_CPU:
+        os << "CPU";
+        break;
+    default:
+        break;
+    }
+    return os;
+}
+
 struct Parameters {
     float *vin;
     float *vout;
@@ -86,24 +103,7 @@ static void run(const ISPCRTDeviceType device_type, const unsigned int SIZE) {
     queue.barrier();
     queue.sync();
 
-    std::string device_str;
-
-    switch (device_type) {
-    case ISPCRT_DEVICE_TYPE_AUTO:
-        device_str = "Auto";
-        break;
-    case ISPCRT_DEVICE_TYPE_GPU:
-        device_str = "GPU";
-        break;
-    case ISPCRT_DEVICE_TYPE_CPU:
-        device_str = "CPU";
-        break;
-    default:
-        break;
-    }
-
-    std::cout << "Executed on: " << device_str << '\n';
-    std::cout << std::setprecision(6) << std::fixed;
+    std::cout << "Executed on: " << device_type << '\n' << std::setprecision(6) << std::fixed;
     for (int i = 0; i < SIZE; i++) {
         std::cout << i << ": simple(" << vin[i] << ") = " << vout[i] << '\n';
     }
