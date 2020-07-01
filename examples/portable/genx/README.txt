@@ -12,6 +12,21 @@ cmake ../
 Some of the benchmarks are running ispc for CPU/GEN and then regular serial C++ implementations,
 printing out execution time.
 
+Simple
+======
+
+This is the most basic example. It executes a simple kernel on target device
+(which can be a GEN GPU or CPU) and demonstrates basics concepts
+of ISPC Runtime API (such as device, module, kernel, memory view).
+It uses C++ API of ispcrt.
+
+If no command line arguments are provided, the example chooses device
+to execute on automatically. It is possible to force usage of concrete
+device using command line options:
+
+simple [ --cpu | --gpu ]
+
+
 AOBench
 =======
 
