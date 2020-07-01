@@ -31,9 +31,9 @@
    SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-#include <iostream>
-#include <iomanip>
 #include <algorithm>
+#include <iomanip>
+#include <iostream>
 
 // ispcrt
 #include "ispcrt.hpp"
@@ -41,7 +41,7 @@
 struct Parameters {
     float *vin;
     float *vout;
-    int    count;
+    int count;
 };
 
 static void run(const ISPCRTDeviceType device_type, const unsigned int SIZE) {
@@ -59,8 +59,8 @@ static void run(const ISPCRTDeviceType device_type, const unsigned int SIZE) {
     // Setup parameters structure
     Parameters p;
 
-    p.vin   = vin_dev.devicePtr();
-    p.vout  = vout_dev.devicePtr();
+    p.vin = vin_dev.devicePtr();
+    p.vout = vout_dev.devicePtr();
     p.count = SIZE;
 
     auto p_dev = ispcrt::Array<Parameters>(device, p);
@@ -72,7 +72,7 @@ static void run(const ISPCRTDeviceType device_type, const unsigned int SIZE) {
     // Create task queue and execute kernel
     ispcrt::TaskQueue queue(device);
 
-    std::generate(vin.begin(), vin.end(), [i = 0] () mutable { return i++; });
+    std::generate(vin.begin(), vin.end(), [i = 0]() mutable { return i++; });
 
     queue.copyToDevice(p_dev);
     queue.copyToDevice(vin_dev);
@@ -88,8 +88,7 @@ static void run(const ISPCRTDeviceType device_type, const unsigned int SIZE) {
 
     std::string device_str;
 
-    switch (device_type)
-    {
+    switch (device_type) {
     case ISPCRT_DEVICE_TYPE_AUTO:
         device_str = "Auto";
         break;
