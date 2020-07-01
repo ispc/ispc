@@ -3291,7 +3291,12 @@ llvm::Value *FunctionEmitContext::CallInst(llvm::Value *func, const FunctionType
         // equal to the set of active program instances that also have that
         // function pointer.  When all unique function pointers have been
         // called, we're done.
-
+#ifdef ISPC_GENX_ENABLED
+        if (g->target->getISA() == Target::GENX) {
+            Error(currentPos, "varying function calls are not supported for genx-* targets yet.");
+            return NULL;
+        }
+#endif
         llvm::BasicBlock *bbTest = CreateBasicBlock("varying_funcall_test");
         llvm::BasicBlock *bbCall = CreateBasicBlock("varying_funcall_call");
         llvm::BasicBlock *bbDone = CreateBasicBlock("varying_funcall_done");
@@ -3453,7 +3458,7 @@ llvm::Value *FunctionEmitContext::LaunchInst(llvm::Value *callee, std::vector<ll
                                              llvm::Value *launchCount[3]) {
 #ifdef ISPC_GENX_ENABLED
     if (g->target->getISA() == Target::GENX) {
-        Error(currentPos, "\"launch\" keyword is not supported for genx target");
+        Error(currentPos, "\"launch\" keyword is not supported for genx-* targets");
         return NULL;
     }
 #endif
@@ -3523,7 +3528,7 @@ llvm::Value *FunctionEmitContext::LaunchInst(llvm::Value *callee, std::vector<ll
 void FunctionEmitContext::SyncInst() {
 #ifdef ISPC_GENX_ENABLED
     if (g->target->getISA() == Target::GENX) {
-        Error(currentPos, "\"sync\" keyword is not supported for genx target");
+        Error(currentPos, "\"sync\" keyword is not supported for genx-* targets");
         return;
     }
 #endif
