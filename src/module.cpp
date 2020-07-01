@@ -546,20 +546,20 @@ static void lCheckTaskParameterTypes(const Type *type, const std::string &name, 
         if (CastType<PointerType>(type))
             Error(pos,
                   "Varying pointer type parameter \"%s\" is illegal "
-                  "in an \"task\" for genx target.",
+                  "in an \"task\" for genx-* targets.",
                   name.c_str());
         if (CastType<StructType>(type->GetBaseType()))
             Error(pos,
                   "Struct parameter \"%s\" with vector typed "
-                  "member(s) is illegal in an \"task\" for genx target.",
+                  "member(s) is illegal in an \"task\" for genx-* targets.",
                   name.c_str());
         else if (CastType<VectorType>(type))
             Error(pos,
                   "Vector-typed parameter \"%s\" is illegal in an \"task\" "
-                  "for genx target.",
+                  "for genx-* targets.",
                   name.c_str());
         else
-            Error(pos, "Varying parameter \"%s\" is illegal in an \"task\" for genx target.", name.c_str());
+            Error(pos, "Varying parameter \"%s\" is illegal in an \"task\" for genx-* targets.", name.c_str());
     }
 }
 #endif
@@ -776,8 +776,8 @@ void Module::AddFunctionDeclaration(const std::string &name, const FunctionType 
     if (g->target->getISA() == Target::GENX && Type::Equal(functionType->GetReturnType(), AtomicType::Void) == false &&
         functionType->isExported) {
         // TODO_GEN: According to CM requirements kernel should have void type. It is strong restriction to ISPC
-        // language so we would need to think more about it in the future. For now emit warning to allow tests run.
-        Warning(pos, "Export-qualified functions must have void return type with \"genx\" target.");
+        // language so we would need to think more about it in the future.
+        Error(pos, "Export-qualified functions must have void return type with \"genx\" target.");
     }
 #endif /* ISPC_GENX_ENABLED */
 
@@ -2540,10 +2540,8 @@ int Module::CompileAndOutput(const char *srcFile, Arch arch, const char *cpu, st
 #ifdef ISPC_GENX_ENABLED
             if (outputType == Asm || outputType == Object) {
                 if (ISPCTargetIsGen(target)) {
-                    Error(SourcePos(),
-                          "When using a \"genx-*\" compilation target, "
-                          "%s output can not be used.",
-                          (outputType == Asm) ? "assembly" : "gen binary file");
+                    Error(SourcePos(), "%s output is not supported yet for \"genx-*\" targets. ",
+                          (outputType == Asm) ? "assembly" : "binary");
                     return 1;
                 }
             }

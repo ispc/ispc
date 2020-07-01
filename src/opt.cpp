@@ -6218,7 +6218,8 @@ bool CheckUnsupportedInsts::runOnBasicBlock(llvm::BasicBlock &bb) {
         llvm::Instruction *inst = &*I;
         if (llvm::CallInst *ci = llvm::dyn_cast<llvm::CallInst>(inst)) {
             llvm::Function *func = ci->getCalledFunction();
-            Assert(func != NULL);
+            if (func == NULL)
+                continue;
             for (int i = 0; i < unsupportedFuncs.size(); i++) {
                 std::smatch match;
                 std::string funcName = func->getName();

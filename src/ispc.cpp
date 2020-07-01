@@ -356,7 +356,6 @@ class AllCPUs {
 #endif
 
 #ifdef ISPC_GENX_ENABLED
-        // TODO_GEN: find out correct name for GEN target
         names[CPU_GENX].push_back("SKL");
 #endif
 

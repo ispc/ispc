@@ -8213,7 +8213,7 @@ Expr *NewExpr::TypeCheck() {
     }
 #ifdef ISPC_GENX_ENABLED
     if (g->target->getISA() == Target::GENX) {
-        Error(pos, "\"new\" is not supported for genx target");
+        Error(pos, "\"new\" is not supported for genx-* targets yet.");
         return NULL;
     }
 #endif
