@@ -31,6 +31,12 @@
 #   SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 # Functional tests enabled in CI
+
+# auto | --cpu | --gpu
+test_add(NAME simple host_simple "")
+test_add(NAME simple host_simple --cpu)
+test_add(NAME simple host_simple --gpu)
+
 # iterations, width, height
 test_add(NAME aobench TEST_IS_ISPCRT_RUNTIME RES_IMAGE "ao-ispc-gpu.ppm" REF_IMAGE "ao-cpp-serial.ppm" host_aobench 3 32 32)
 test_add(NAME aobench TEST_IS_ISPCRT_RUNTIME RES_IMAGE "ao-ispc-gpu.ppm" REF_IMAGE "ao-cpp-serial.ppm" host_aobench 3 64 64)
