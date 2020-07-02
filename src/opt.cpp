@@ -5514,8 +5514,8 @@ static bool lVectorizeGEPs(llvm::Value *ptr, std::vector<PtrUse> &ptrUses, std::
             new llvm::PtrToIntInst(ptr, LLVMTypes::Int64Type, "vectorized_ptrtoint", insertBefore);
         llvm::Instruction *addr = llvm::BinaryOperator::CreateAdd(ptrToInt, offset, "vectorized_address", insertBefore);
         llvm::Type *retType = llvm::VectorType::get(scalar_type, reqSize / t_size);
-        llvm::Function *fn =
-            llvm::GenXIntrinsic::getGenXDeclaration(m->module, llvm::GenXIntrinsic::genx_svm_block_ld, retType);
+        llvm::Function *fn = llvm::GenXIntrinsic::getGenXDeclaration(
+            m->module, llvm::GenXIntrinsic::genx_svm_block_ld_unaligned, retType);
         llvm::Instruction *ld = llvm::CallInst::Create(fn, {addr}, "vectorized_ld", insertBefore);
 
         if (loadingPtr) {

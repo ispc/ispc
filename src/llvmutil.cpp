@@ -1636,7 +1636,8 @@ void lGetAddressSpace(llvm::Value *v, std::set<llvm::Value *> &done, std::set<Ad
 
     if (inst == NULL || llvm::isa<llvm::CallInst>(v)) {
         if (llvm::isa<llvm::PointerType>(v->getType()) ||
-            (inst && llvm::GenXIntrinsic::getGenXIntrinsicID(inst) == llvm::GenXIntrinsic::genx_svm_block_ld))
+            (inst && llvm::GenXIntrinsic::getGenXIntrinsicID(inst) == llvm::GenXIntrinsic::genx_svm_block_ld) ||
+            (inst && llvm::GenXIntrinsic::getGenXIntrinsicID(inst) == llvm::GenXIntrinsic::genx_svm_block_ld_unaligned))
             addrSpaceVec.insert(AddressSpace::External);
         return;
     }
