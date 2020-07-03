@@ -6269,6 +6269,14 @@ static llvm::Pass *CreateCheckUnsupportedInsts() { return new CheckUnsupportedIn
  */
 
 class FixAddressSpace : public llvm::FunctionPass {
+    llvm::Instruction *processVectorLoad(llvm::LoadInst *LI);
+    llvm::Instruction *processVectorStore(llvm::StoreInst *SI);
+    llvm::Instruction *processGatherScatterPrivate(llvm::CallInst *CI, bool IsGather);
+    llvm::Value *calculateGatherScatterAddress(llvm::Value *Ptr, llvm::Value *Offsets, llvm::Instruction *InsertBefore);
+    llvm::Instruction *createInt8WrRegion(llvm::Value *Val, llvm::Value *Mask);
+    llvm::Instruction *createInt8RdRegion(llvm::Value *Val);
+    void applyReplace(llvm::Instruction *Inst, llvm::Instruction *ToReplace);
+
   public:
     static char ID;
     FixAddressSpace() : FunctionPass(ID) {}
@@ -6279,6 +6287,237 @@ class FixAddressSpace : public llvm::FunctionPass {
 
 char FixAddressSpace::ID = 0;
 
+void FixAddressSpace::applyReplace(llvm::Instruction *Inst, llvm::Instruction *ToReplace) {
+    lCopyMetadata(Inst, ToReplace);
+    llvm::ReplaceInstWithInst(ToReplace, Inst);
+}
+
+/** SVM gather/scatter takes offsets as an int64 value without ptr.
+    This creates some arithmetics to prepare address.
+    Ptr and Offsets are taken from gather/scatter.private
+ */
+llvm::Value *FixAddressSpace::calculateGatherScatterAddress(llvm::Value *Ptr, llvm::Value *Offsets,
+                                                            llvm::Instruction *InsertBefore) {
+    Assert(Ptr);
+    Assert(Offsets);
+
+    Assert(Ptr->getType()->isPointerTy() && "Expected valid ptr from gather/scatter.private");
+    Assert(Offsets->getType()->isVectorTy() && "Expected valid offsets from gather/scatter.private");
+
+    llvm::Type *addressType = Offsets->getType();
+    llvm::Value *address = NULL;
+
+    // Cast offsets to int64
+    Offsets = new llvm::ZExtInst(
+        Offsets, llvm::VectorType::get(LLVMTypes::Int64Type, Offsets->getType()->getVectorNumElements()),
+        "svm_offset_zext", InsertBefore);
+
+    if (!llvm::isa<llvm::ConstantPointerNull>(Ptr)) {
+        // Cast ptr to int64
+        address = new llvm::PtrToIntInst(Ptr, LLVMTypes::Int64Type, "svm_ptr_ptrtoint", InsertBefore);
+
+        // Vectorize ptr
+        llvm::Value *undefInsertValue =
+            llvm::UndefValue::get(llvm::VectorType::get(LLVMTypes::Int64Type, addressType->getVectorNumElements()));
+        address = llvm::InsertElementInst::Create(undefInsertValue, address, LLVMInt32(0), "svm_ptr_iei", InsertBefore);
+        llvm::Constant *zeroVec = llvm::ConstantVector::getSplat(
+            addressType->getVectorNumElements(),
+            llvm::Constant::getNullValue(llvm::Type::getInt32Ty(InsertBefore->getContext())));
+        llvm::Value *undefShuffleValue =
+            llvm::UndefValue::get(llvm::VectorType::get(LLVMTypes::Int64Type, addressType->getVectorNumElements()));
+        address = new llvm::ShuffleVectorInst(address, undefShuffleValue, zeroVec, "svm_ptr_svi", InsertBefore);
+
+        // Calculate address
+        address = llvm::BinaryOperator::CreateAdd(address, Offsets, "svm_ptr_vec", InsertBefore);
+    } else {
+        // Ptr is null: take offsets directly
+        address = Offsets;
+    }
+
+    return address;
+}
+
+llvm::Instruction *FixAddressSpace::processVectorLoad(llvm::LoadInst *LI) {
+    llvm::Value *ptr = LI->getOperand(0);
+    llvm::Type *retType = LI->getType();
+
+    Assert(llvm::isa<llvm::VectorType>(LI->getType()));
+
+    if (GetAddressSpace(ptr) != AddressSpace::External)
+        return NULL;
+
+    // Ptr load should be done via inttoptr
+    bool isPtrLoad = false;
+    if (retType->getScalarType()->isPointerTy()) {
+        isPtrLoad = true;
+        auto scalarType = g->target->is32Bit() ? LLVMTypes::Int32Type : LLVMTypes::Int64Type;
+        retType = llvm::VectorType::get(scalarType, retType->getVectorNumElements());
+    }
+
+    Assert(llvm::isPowerOf2_32(retType->getVectorNumElements()));
+    Assert(retType->getPrimitiveSizeInBits() / 8 <= 8 * OWORD);
+    Assert(retType->getPrimitiveSizeInBits());
+
+    llvm::Value *svm_ld_ptrtoint = new llvm::PtrToIntInst(ptr, LLVMTypes::Int64Type, "svm_ld_ptrtoint", LI);
+    auto Fn = llvm::GenXIntrinsic::getGenXDeclaration(m->module, llvm::GenXIntrinsic::genx_svm_block_ld, retType);
+
+    llvm::Instruction *res = llvm::CallInst::Create(Fn, svm_ld_ptrtoint, LI->getName());
+
+    if (isPtrLoad) {
+        res->insertBefore(LI);
+        res = new llvm::IntToPtrInst(res, LI->getType(), "svm_ld_inttoptr");
+    }
+
+    return res;
+}
+
+llvm::Instruction *FixAddressSpace::processVectorStore(llvm::StoreInst *SI) {
+    llvm::Value *ptr = SI->getOperand(1);
+    llvm::Value *val = SI->getOperand(0);
+    Assert(val != NULL);
+
+    llvm::Type *valType = val->getType();
+
+    Assert(llvm::isa<llvm::VectorType>(valType));
+
+    if (GetAddressSpace(ptr) != AddressSpace::External)
+        return NULL;
+
+    // Ptr store should be done via ptrtoint
+    // Note: it doesn't look like a normal case for GenX target
+    if (valType->getScalarType()->isPointerTy()) {
+        auto scalarType = g->target->is32Bit() ? LLVMTypes::Int32Type : LLVMTypes::Int64Type;
+        valType = llvm::VectorType::get(scalarType, valType->getVectorNumElements());
+        val = new llvm::PtrToIntInst(val, valType, "svm_st_val_ptrtoint", SI);
+    }
+
+    Assert(llvm::isPowerOf2_32(valType->getVectorNumElements()));
+    Assert(valType->getPrimitiveSizeInBits() / 8 <= 8 * OWORD);
+    Assert(valType->getPrimitiveSizeInBits());
+
+    llvm::Instruction *svm_st_zext = new llvm::PtrToIntInst(ptr, LLVMTypes::Int64Type, "svm_st_ptrtoint", SI);
+    llvm::Type *argTypes[] = {valType};
+    auto Fn = llvm::GenXIntrinsic::getGenXDeclaration(m->module, llvm::GenXIntrinsic::genx_svm_block_st, argTypes);
+
+    return llvm::CallInst::Create(Fn, {svm_st_zext, val}, "");
+}
+
+llvm::Instruction *FixAddressSpace::createInt8WrRegion(llvm::Value *Val, llvm::Value *Mask) {
+    int width = g->target->getVectorWidth();
+
+    llvm::Value *Args[8];
+
+    Args[0] = llvm::UndefValue::get(llvm::VectorType::get(LLVMTypes::Int8Type, width * 4)); // old value
+    Args[1] = Val;                                                                          // value to store
+    Args[2] = llvm::ConstantInt::get(LLVMTypes::Int32Type, 0);                              // vstride
+    Args[3] = llvm::ConstantInt::get(LLVMTypes::Int32Type, width);                          // width
+    Args[4] = llvm::ConstantInt::get(LLVMTypes::Int32Type, 4);                              // stride
+    Args[5] = llvm::ConstantInt::get(LLVMTypes::Int16Type, 0);                              // offsets
+    Args[6] = llvm::ConstantInt::get(LLVMTypes::Int32Type, 0);                              // parent width (ignored)
+    Args[7] = Mask;                                                                         // mask
+
+    llvm::Type *Tys[4];
+
+    Tys[0] = Args[0]->getType(); // return type
+    Tys[1] = Args[1]->getType(); // value type
+    Tys[2] = Args[5]->getType(); // offset type
+    Tys[3] = Args[7]->getType(); // mask type
+
+    auto WrReg = llvm::GenXIntrinsic::getGenXDeclaration(m->module, llvm::GenXIntrinsic::genx_wrregioni, Tys);
+
+    return llvm::CallInst::Create(WrReg, Args, "");
+}
+
+llvm::Instruction *FixAddressSpace::createInt8RdRegion(llvm::Value *Val) {
+    int width = g->target->getVectorWidth();
+
+    llvm::Value *Args[6];
+
+    Args[0] = Val;                                                 // value to read from
+    Args[1] = llvm::ConstantInt::get(LLVMTypes::Int32Type, 0);     // vstride
+    Args[2] = llvm::ConstantInt::get(LLVMTypes::Int32Type, width); // width
+    Args[3] = llvm::ConstantInt::get(LLVMTypes::Int32Type, 4);     // stride
+    Args[4] = llvm::ConstantInt::get(LLVMTypes::Int16Type, 0);     // offsets
+    Args[5] = llvm::ConstantInt::get(LLVMTypes::Int32Type, 0);     // parent width (ignored)
+
+    llvm::Type *Tys[3];
+
+    Tys[0] = LLVMTypes::Int8VectorType; // return type
+    Tys[1] = Args[0]->getType();        // value type
+    Tys[2] = Args[4]->getType();        // offset type
+
+    auto RdReg = llvm::GenXIntrinsic::getGenXDeclaration(m->module, llvm::GenXIntrinsic::genx_rdregioni, Tys);
+
+    return llvm::CallInst::Create(RdReg, Args, "svm_gather_rdreg");
+}
+
+llvm::Instruction *FixAddressSpace::processGatherScatterPrivate(llvm::CallInst *CI, bool IsGather) {
+    Assert((IsGather && llvm::GenXIntrinsic::getGenXIntrinsicID(CI) == llvm::GenXIntrinsic::genx_gather_private) ||
+           (!IsGather && llvm::GenXIntrinsic::getGenXIntrinsicID(CI) == llvm::GenXIntrinsic::genx_scatter_private));
+
+    int width = g->target->getVectorWidth();
+    llvm::Value *mask = CI->getOperand(0);
+    llvm::Value *ptr = CI->getOperand(1);
+    llvm::Value *offsets = CI->getOperand(2);
+    llvm::Value *value = CI->getOperand(3);
+
+    Assert(ptr);
+    Assert(offsets);
+
+    if ((llvm::isa<llvm::ConstantPointerNull>(ptr) && GetAddressSpace(offsets) != AddressSpace::External) ||
+        GetAddressSpace(ptr) != AddressSpace::External)
+        return NULL;
+
+    llvm::Value *address = calculateGatherScatterAddress(ptr, offsets, CI);
+    llvm::Type *i8VecType = llvm::VectorType::get(LLVMTypes::Int8Type, width * 4);
+    bool isInt8 = (value->getType()->getScalarType() == LLVMTypes::Int8Type);
+
+    Assert(address && "Bad gather/scatter address!");
+
+    if (isInt8 && !IsGather) {
+        // Special handler for i8 scatter
+        llvm::Instruction *wrReg = createInt8WrRegion(value, mask);
+        wrReg->insertBefore(CI);
+        value = wrReg;
+    }
+
+    llvm::Value *Args[] = {
+        mask,                                            // same as for gather/scatter.private
+        llvm::ConstantInt::get(LLVMTypes::Int32Type, 0), // log2(1) block
+        address,                                         // vectorized (ptr + offset)
+        value                                            // same as for gather/scatter.private
+    };
+
+    llvm::Type *Tys[3];
+
+    if (IsGather) {
+        // For svm.gather:
+        Tys[0] = isInt8 ? i8VecType : Args[3]->getType(); // return type
+        Tys[1] = Args[0]->getType();                      // mask type
+        Tys[2] = Args[2]->getType();                      // address type
+    } else {
+        // For svm.scatter:
+        Tys[0] = Args[0]->getType(); // mask type
+        Tys[1] = Args[2]->getType(); // address type
+        Tys[2] = Args[3]->getType(); // value type
+    }
+
+    auto Fn = llvm::GenXIntrinsic::getGenXDeclaration(
+        m->module, IsGather ? llvm::GenXIntrinsic::genx_svm_gather : llvm::GenXIntrinsic::genx_svm_scatter, Tys);
+    llvm::Instruction *res = llvm::CallInst::Create(Fn, Args, "");
+
+    if (IsGather)
+        res->setName(CI->getName());
+
+    if (isInt8 && IsGather) {
+        // Special handler for i8 gather
+        res->insertBefore(CI);
+        res = createInt8RdRegion(res);
+    }
+
+    return res;
+}
+
 bool FixAddressSpace::runOnBasicBlock(llvm::BasicBlock &bb) {
     DEBUG_START_PASS("FixAddressSpace");
     bool modifiedAny = false;
@@ -6288,48 +6527,39 @@ restart:
         llvm::Instruction *inst = &*I;
         if (llvm::LoadInst *ld = llvm::dyn_cast<llvm::LoadInst>(inst)) {
             if (llvm::isa<llvm::VectorType>(ld->getType())) {
-                llvm::Value *ptr = ld->getOperand(0);
-                llvm::Type *retType = ld->getType();
-                if (GetAddressSpace(ptr) == AddressSpace::External) {
-                    Assert(llvm::isPowerOf2_32(retType->getVectorNumElements()));
-                    Assert(retType->getPrimitiveSizeInBits() / 8 <= 8 * OWORD);
-                    llvm::Value *svm_ld_ptrtoint =
-                        new llvm::PtrToIntInst(ptr, LLVMTypes::Int64Type, "svm_ld_ptrtoint", ld);
-                    auto Fn = llvm::GenXIntrinsic::getGenXDeclaration(m->module, llvm::GenXIntrinsic::genx_svm_block_ld,
-                                                                      retType);
-
-                    llvm::CallInst *load_inst = llvm::CallInst::Create(Fn, svm_ld_ptrtoint, ld->getName());
-                    if (load_inst != NULL) {
-                        lCopyMetadata(load_inst, ld);
-                        llvm::ReplaceInstWithInst(ld, load_inst);
-                        modifiedAny = true;
-                        goto restart;
-                    }
+                llvm::Instruction *load_inst = processVectorLoad(ld);
+                if (load_inst != NULL) {
+                    applyReplace(load_inst, ld);
+                    modifiedAny = true;
+                    goto restart;
                 }
             }
         } else if (llvm::StoreInst *st = llvm::dyn_cast<llvm::StoreInst>(inst)) {
-            if (llvm::isa<llvm::VectorType>(st->getType())) {
-                llvm::Value *ptr = st->getOperand(1);
-                llvm::Value *val = st->getOperand(0);
-                if (GetAddressSpace(ptr) == AddressSpace::External) {
-                    Assert(val != NULL);
-                    Assert(llvm::isa<llvm::VectorType>(val->getType()));
-                    Assert(llvm::isPowerOf2_32(val->getType()->getVectorNumElements()));
-                    Assert(val->getType()->getPrimitiveSizeInBits() / 8 <= 8 * OWORD);
-                    llvm::Instruction *svm_st_zext =
-                        new llvm::PtrToIntInst(ptr, LLVMTypes::Int64Type, "svm_st_ptrtoint", st);
-                    llvm::Type *argTypes[] = {val->getType()};
-                    auto Fn = llvm::GenXIntrinsic::getGenXDeclaration(m->module, llvm::GenXIntrinsic::genx_svm_block_st,
-                                                                      argTypes);
-                    llvm::Instruction *store_inst = lCallInst(Fn, svm_st_zext, val, "", NULL);
-
-                    if (store_inst != NULL) {
-                        lCopyMetadata(store_inst, st);
-                        llvm::ReplaceInstWithInst(st, store_inst);
-                        modifiedAny = true;
-                        goto restart;
-                    }
+            llvm::Value *val = st->getOperand(0);
+            Assert(val != NULL);
+            if (llvm::isa<llvm::VectorType>(val->getType())) {
+                llvm::Instruction *store_inst = processVectorStore(st);
+                if (store_inst != NULL) {
+                    applyReplace(store_inst, st);
+                    modifiedAny = true;
+                    goto restart;
                 }
+            }
+        } else if (llvm::GenXIntrinsic::getGenXIntrinsicID(inst) == llvm::GenXIntrinsic::genx_gather_private) {
+            llvm::Instruction *svm_gather =
+                processGatherScatterPrivate(llvm::cast<llvm::CallInst>(inst), /* IsGather */ true);
+            if (svm_gather != NULL) {
+                applyReplace(svm_gather, inst);
+                modifiedAny = true;
+                goto restart;
+            }
+        } else if (llvm::GenXIntrinsic::getGenXIntrinsicID(inst) == llvm::GenXIntrinsic::genx_scatter_private) {
+            llvm::Instruction *svm_scatter =
+                processGatherScatterPrivate(llvm::cast<llvm::CallInst>(inst), /* IsGather */ false);
+            if (svm_scatter != NULL) {
+                applyReplace(svm_scatter, inst);
+                modifiedAny = true;
+                goto restart;
             }
         }
     }
@@ -6338,6 +6568,11 @@ restart:
 }
 
 bool FixAddressSpace::runOnFunction(llvm::Function &F) {
+    // Transformations are correct when the function is not internal.
+    // This is due to address space calculation algorithm.
+    // TODO: problems can be met in case of Stack Calls
+    if (F.getLinkage() == llvm::GlobalValue::LinkageTypes::InternalLinkage)
+        return false;
 
     bool modifiedAny = false;
     for (llvm::BasicBlock &BB : F) {

@@ -1596,6 +1596,19 @@ const char *LLVMGetName(const char *op, llvm::Value *v1, llvm::Value *v2) {
 }
 
 #ifdef ISPC_GENX_ENABLED
+bool lIsSVMLoad(llvm::Instruction *inst) {
+    Assert(inst);
+
+    switch (llvm::GenXIntrinsic::getGenXIntrinsicID(inst)) {
+    case llvm::GenXIntrinsic::genx_svm_block_ld:
+    case llvm::GenXIntrinsic::genx_svm_block_ld_unaligned:
+    case llvm::GenXIntrinsic::genx_svm_gather:
+        return true;
+    default:
+        return false;
+    }
+}
+
 void lGetAddressSpace(llvm::Value *v, std::set<llvm::Value *> &done, std::set<AddressSpace> &addrSpaceVec) {
     if (done.find(v) != done.end()) {
         if (llvm::isa<llvm::PointerType>(v->getType()))
@@ -1635,9 +1648,7 @@ void lGetAddressSpace(llvm::Value *v, std::set<llvm::Value *> &done, std::set<Ad
     }
 
     if (inst == NULL || llvm::isa<llvm::CallInst>(v)) {
-        if (llvm::isa<llvm::PointerType>(v->getType()) ||
-            (inst && llvm::GenXIntrinsic::getGenXIntrinsicID(inst) == llvm::GenXIntrinsic::genx_svm_block_ld) ||
-            (inst && llvm::GenXIntrinsic::getGenXIntrinsicID(inst) == llvm::GenXIntrinsic::genx_svm_block_ld_unaligned))
+        if (llvm::isa<llvm::PointerType>(v->getType()) || (inst && lIsSVMLoad(inst)))
             addrSpaceVec.insert(AddressSpace::External);
         return;
     }
