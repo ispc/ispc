@@ -6,6 +6,9 @@ name: Nightly Linux tests / LLVM 10.0
 on:
   schedule:
     - cron:  '0 9 * * *'
+  push:
+    branches:
+      - '**test_nightly**'
 
 env:
   LLVM_VERSION: "10.0"
