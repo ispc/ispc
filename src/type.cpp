@@ -174,7 +174,7 @@ bool AtomicType::IsIntType() const {
 }
 
 bool AtomicType::IsUnsignedType() const {
-    return (basicType == TYPE_UINT8 || basicType == TYPE_UINT16 || basicType == TYPE_UINT32 ||
+    return (basicType == TYPE_BOOL || basicType == TYPE_UINT8 || basicType == TYPE_UINT16 || basicType == TYPE_UINT32 ||
             basicType == TYPE_UINT64);
 }
 
