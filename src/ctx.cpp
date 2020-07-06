@@ -1445,7 +1445,7 @@ static llvm::Type *lGetMatchingBoolVectorType(llvm::Type *type) {
     Assert(vectorElementType != NULL);
     Assert((int)vectorElementType->getNumElements() == g->target->getVectorWidth());
 
-    llvm::Type *base = llvm::VectorType::get(LLVMTypes::BoolType, g->target->getVectorWidth());
+    llvm::Type *base = LLVMVECTOR::get(LLVMTypes::BoolType, g->target->getVectorWidth());
     return llvm::ArrayType::get(base, arrayType->getNumElements());
 }
 
@@ -1494,7 +1494,7 @@ llvm::Value *FunctionEmitContext::SmearUniform(llvm::Value *value, const char *n
     } else {
         // All other varying types are represented as vectors of the
         // underlying type.
-        vecType = llvm::VectorType::get(eltType, g->target->getVectorWidth());
+        vecType = LLVMVECTOR::get(eltType, g->target->getVectorWidth());
     }
 
     // Check for a constant case.
