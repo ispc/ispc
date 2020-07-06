@@ -6,10 +6,12 @@
 #include "MemoryView.h"
 
 namespace ispcrt {
+namespace base {
 
 struct Kernel : public RefCounted {
     Kernel() = default;
     virtual ~Kernel() = default;
 };
 
+} // namespace base
 } // namespace ispcrt

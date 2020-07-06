@@ -43,6 +43,20 @@
 namespace ispcrt {
 namespace gpu {
 
+struct Future : public ispcrt::base::Future {
+    Future() {}
+    virtual ~Future() {}
+
+    bool valid() override { return m_valid; }
+    uint64_t time() override { return m_time; }
+
+    friend class TaskQueue;
+
+  private:
+    uint64_t m_time{0};
+    bool m_valid{false};
+};
+
 struct Event {
     Event(ze_event_pool_handle_t pool, uint32_t index) : m_pool(pool), m_index(index) {}
 
@@ -141,7 +155,7 @@ struct EventPool {
     std::deque<uint32_t> m_freeList;
 };
 
-struct MemoryView : public ispcrt::MemoryView {
+struct MemoryView : public ispcrt::base::MemoryView {
     MemoryView(ze_driver_handle_t driver, ze_device_handle_t device, void *appMem, size_t numBytes)
         : m_hostPtr(appMem), m_size(numBytes), m_driver(driver), m_device(device) {}
 
@@ -175,7 +189,7 @@ struct MemoryView : public ispcrt::MemoryView {
     ze_device_handle_t m_device{nullptr};
 };
 
-struct Module : public ispcrt::Module {
+struct Module : public ispcrt::base::Module {
     Module(ze_device_handle_t device, const char *moduleFile) : m_file(moduleFile) {
         std::ifstream is;
         is.open(m_file + ".spv", std::ios::binary);
@@ -221,8 +235,8 @@ struct Module : public ispcrt::Module {
     ze_module_handle_t m_module{nullptr};
 };
 
-struct Kernel : public ispcrt::Kernel {
-    Kernel(const ispcrt::Module &_module, const char *name) : m_fcnName(name), m_module(&_module) {
+struct Kernel : public ispcrt::base::Kernel {
+    Kernel(const ispcrt::base::Module &_module, const char *name) : m_fcnName(name), m_module(&_module) {
         const gpu::Module &module = (const gpu::Module &)_module;
 
         ze_kernel_desc_t kernelDesc = {ZE_KERNEL_DESC_VERSION_CURRENT, //
@@ -246,11 +260,11 @@ struct Kernel : public ispcrt::Kernel {
   private:
     std::string m_fcnName;
 
-    const ispcrt::Module *m_module{nullptr};
+    const ispcrt::base::Module *m_module{nullptr};
     ze_kernel_handle_t m_kernel{nullptr};
 };
 
-struct TaskQueue : public ispcrt::TaskQueue {
+struct TaskQueue : public ispcrt::base::TaskQueue {
     TaskQueue(ze_device_handle_t device, ze_driver_handle_t driver) : m_ep(driver, device) {
         ze_command_list_desc_t commandListDesc = {ZE_COMMAND_LIST_DESC_VERSION_CURRENT, ZE_COMMAND_LIST_FLAG_NONE};
         L0_SAFE_CALL(zeCommandListCreate(device, &commandListDesc, &m_cl));
@@ -276,20 +290,21 @@ struct TaskQueue : public ispcrt::TaskQueue {
 
     void barrier() override { L0_SAFE_CALL(zeCommandListAppendBarrier(m_cl, nullptr, 0, nullptr)); }
 
-    void copyToHost(ispcrt::MemoryView &mv) override {
+    void copyToHost(ispcrt::base::MemoryView &mv) override {
         auto &view = (gpu::MemoryView &)mv;
         L0_SAFE_CALL(zeCommandListAppendMemoryCopy(m_cl, view.hostPtr(), view.devicePtr(), view.numBytes(), nullptr));
     }
 
-    void copyToDevice(ispcrt::MemoryView &mv) override {
+    void copyToDevice(ispcrt::base::MemoryView &mv) override {
         auto &view = (gpu::MemoryView &)mv;
         L0_SAFE_CALL(zeCommandListAppendMemoryCopy(m_cl, view.devicePtr(), view.hostPtr(), view.numBytes(), nullptr));
     }
 
-    Future *launch(ispcrt::Kernel &k, ispcrt::MemoryView *params, size_t dim0, size_t dim1, size_t dim2) override {
+    ispcrt::base::Future *launch(ispcrt::base::Kernel &k, ispcrt::base::MemoryView *params, size_t dim0, size_t dim1,
+                                 size_t dim2) override {
         auto &kernel = (gpu::Kernel &)k;
 
-        auto *future = new Future;
+        auto *future = new gpu::Future;
         assert(future);
 
         void *param_ptr = nullptr;
@@ -308,7 +323,6 @@ struct TaskQueue : public ispcrt::TaskQueue {
         L0_SAFE_CALL(
             zeCommandListAppendLaunchKernel(m_cl, kernel.handle(), &dispatchTraits, event->handle(), 0, nullptr));
         m_events.push_back(std::make_pair(event, future));
-
         return future;
     }
 
@@ -319,13 +333,14 @@ struct TaskQueue : public ispcrt::TaskQueue {
         L0_SAFE_CALL(zeCommandListReset(m_cl));
         // Update future objects corresponding to the events that have just completed
         for (const auto &p : m_events) {
-            auto *e = p.first;
-            auto *f = p.second;
+            auto e = p.first;
+            auto f = p.second;
             uint64_t contextStart, contextEnd;
             L0_SAFE_CALL(zeEventGetTimestamp(e->handle(), ZE_EVENT_TIMESTAMP_CONTEXT_START, &contextStart));
             L0_SAFE_CALL(zeEventGetTimestamp(e->handle(), ZE_EVENT_TIMESTAMP_CONTEXT_END, &contextEnd));
-            f->time = (contextEnd - contextStart) * m_ep.getTimestampRes();
-            f->valid = true;
+            f->m_time = (contextEnd - contextStart) * m_ep.getTimestampRes();
+            f->m_valid = true;
+            f->refDec();
             m_ep.deleteEvent(e);
         }
         m_events.clear();
@@ -378,18 +393,20 @@ GPUDevice::GPUDevice() {
         throw std::runtime_error("could not find a valid GPU device");
 }
 
-MemoryView *GPUDevice::newMemoryView(void *appMem, size_t numBytes) const {
+base::MemoryView *GPUDevice::newMemoryView(void *appMem, size_t numBytes) const {
     return new gpu::MemoryView((ze_driver_handle_t)m_driver, (ze_device_handle_t)m_device, appMem, numBytes);
 }
 
-TaskQueue *GPUDevice::newTaskQueue() const {
+base::TaskQueue *GPUDevice::newTaskQueue() const {
     return new gpu::TaskQueue((ze_device_handle_t)m_device, (ze_driver_handle_t)m_driver);
 }
 
-Module *GPUDevice::newModule(const char *moduleFile) const {
+base::Module *GPUDevice::newModule(const char *moduleFile) const {
     return new gpu::Module((ze_device_handle_t)m_device, moduleFile);
 }
 
-Kernel *GPUDevice::newKernel(const Module &module, const char *name) const { return new gpu::Kernel(module, name); }
+base::Kernel *GPUDevice::newKernel(const base::Module &module, const char *name) const {
+    return new gpu::Kernel(module, name);
+}
 
 } // namespace ispcrt

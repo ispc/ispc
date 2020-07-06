@@ -159,12 +159,14 @@ static int run() {
             ispcrtSync(queue);
             reset_and_start_timer();
             auto res = ispcrtLaunch2D(queue, kernel, p_dev, height * width / 16, 1);
+            ispcrtRetain(res);
             ispcrtDeviceBarrier(queue);
             ispcrtSync(queue);
 
             if (ispcrtFutureIsValid(res)) {
                 kernelTicks = ispcrtFutureGetTimeNs(res) * 1e-6;
             }
+            ispcrtRelease(res);
             double mcycles = get_elapsed_mcycles();
             printf("@time of %s run:\t\t\t[%.3f] milliseconds\n", device_str, kernelTicks);
             printf("@time of %s run:\t\t\t[%.3f] million cycles\n", device_str, mcycles);

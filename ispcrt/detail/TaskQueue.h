@@ -8,6 +8,7 @@
 #include "MemoryView.h"
 
 namespace ispcrt {
+namespace base {
 
 struct TaskQueue : public RefCounted {
     TaskQueue() = default;
@@ -15,12 +16,13 @@ struct TaskQueue : public RefCounted {
 
     virtual void barrier() = 0;
 
-    virtual void copyToHost(MemoryView &mv) = 0;
-    virtual void copyToDevice(MemoryView &mv) = 0;
+    virtual void copyToHost(base::MemoryView &mv) = 0;
+    virtual void copyToDevice(base::MemoryView &mv) = 0;
 
-    virtual Future *launch(Kernel &k, MemoryView *params, size_t dim0, size_t dim1, size_t dim2) = 0;
+    virtual base::Future *launch(Kernel &k, base::MemoryView *params, size_t dim0, size_t dim1, size_t dim2) = 0;
 
     virtual void sync() = 0;
 };
 
+} // namespace base
 } // namespace ispcrt

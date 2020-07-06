@@ -4,6 +4,7 @@
 #pragma once
 
 #include <atomic>
+#include <iostream>
 #include <stdexcept>
 #include <type_traits>
 

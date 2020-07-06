@@ -78,7 +78,7 @@ ISPCRT_CATCH_END()
 ///////////////////////////////////////////////////////////////////////////////
 
 ISPCRTDevice ispcrtGetDevice(ISPCRTDeviceType type) ISPCRT_CATCH_BEGIN {
-    ispcrt::Device *device = nullptr;
+    ispcrt::base::Device *device = nullptr;
 
     switch (type) {
     case ISPCRT_DEVICE_TYPE_AUTO: {
@@ -125,25 +125,25 @@ ISPCRT_CATCH_END(nullptr)
 ///////////////////////////////////////////////////////////////////////////////
 
 ISPCRTMemoryView ispcrtNewMemoryView(ISPCRTDevice d, void *appMemory, size_t numBytes) ISPCRT_CATCH_BEGIN {
-    const auto &device = referenceFromHandle<ispcrt::Device>(d);
+    const auto &device = referenceFromHandle<ispcrt::base::Device>(d);
     return (ISPCRTMemoryView)device.newMemoryView(appMemory, numBytes);
 }
 ISPCRT_CATCH_END(nullptr)
 
 void *ispcrtHostPtr(ISPCRTMemoryView h) ISPCRT_CATCH_BEGIN {
-    auto &mv = referenceFromHandle<ispcrt::MemoryView>(h);
+    auto &mv = referenceFromHandle<ispcrt::base::MemoryView>(h);
     return mv.hostPtr();
 }
 ISPCRT_CATCH_END(nullptr)
 
 void *ispcrtDevicePtr(ISPCRTMemoryView h) ISPCRT_CATCH_BEGIN {
-    auto &mv = referenceFromHandle<ispcrt::MemoryView>(h);
+    auto &mv = referenceFromHandle<ispcrt::base::MemoryView>(h);
     return mv.devicePtr();
 }
 ISPCRT_CATCH_END(nullptr)
 
 size_t ispcrtSize(ISPCRTMemoryView h) ISPCRT_CATCH_BEGIN {
-    auto &mv = referenceFromHandle<ispcrt::MemoryView>(h);
+    auto &mv = referenceFromHandle<ispcrt::base::MemoryView>(h);
     return mv.numBytes();
 }
 ISPCRT_CATCH_END(0)
@@ -153,14 +153,14 @@ ISPCRT_CATCH_END(0)
 ///////////////////////////////////////////////////////////////////////////////
 
 ISPCRTModule ispcrtLoadModule(ISPCRTDevice d, const char *moduleFile) ISPCRT_CATCH_BEGIN {
-    const auto &device = referenceFromHandle<ispcrt::Device>(d);
+    const auto &device = referenceFromHandle<ispcrt::base::Device>(d);
     return (ISPCRTModule)device.newModule(moduleFile);
 }
 ISPCRT_CATCH_END(nullptr)
 
 ISPCRTKernel ispcrtNewKernel(ISPCRTDevice d, ISPCRTModule m, const char *name) ISPCRT_CATCH_BEGIN {
-    const auto &device = referenceFromHandle<ispcrt::Device>(d);
-    const auto &module = referenceFromHandle<ispcrt::Module>(m);
+    const auto &device = referenceFromHandle<ispcrt::base::Device>(d);
+    const auto &module = referenceFromHandle<ispcrt::base::Module>(m);
     return (ISPCRTKernel)device.newKernel(module, name);
 }
 ISPCRT_CATCH_END(nullptr)
@@ -170,27 +170,27 @@ ISPCRT_CATCH_END(nullptr)
 ///////////////////////////////////////////////////////////////////////////////
 
 ISPCRTTaskQueue ispcrtNewTaskQueue(ISPCRTDevice d) ISPCRT_CATCH_BEGIN {
-    const auto &device = referenceFromHandle<ispcrt::Device>(d);
+    const auto &device = referenceFromHandle<ispcrt::base::Device>(d);
     return (ISPCRTTaskQueue)device.newTaskQueue();
 }
 ISPCRT_CATCH_END(nullptr)
 
 void ispcrtDeviceBarrier(ISPCRTTaskQueue q) ISPCRT_CATCH_BEGIN {
-    auto &queue = referenceFromHandle<ispcrt::TaskQueue>(q);
+    auto &queue = referenceFromHandle<ispcrt::base::TaskQueue>(q);
     queue.barrier();
 }
 ISPCRT_CATCH_END()
 
 void ispcrtCopyToDevice(ISPCRTTaskQueue q, ISPCRTMemoryView mv) ISPCRT_CATCH_BEGIN {
-    auto &queue = referenceFromHandle<ispcrt::TaskQueue>(q);
-    auto &view = referenceFromHandle<ispcrt::MemoryView>(mv);
+    auto &queue = referenceFromHandle<ispcrt::base::TaskQueue>(q);
+    auto &view = referenceFromHandle<ispcrt::base::MemoryView>(mv);
     queue.copyToDevice(view);
 }
 ISPCRT_CATCH_END()
 
 void ispcrtCopyToHost(ISPCRTTaskQueue q, ISPCRTMemoryView mv) ISPCRT_CATCH_BEGIN {
-    auto &queue = referenceFromHandle<ispcrt::TaskQueue>(q);
-    auto &view = referenceFromHandle<ispcrt::MemoryView>(mv);
+    auto &queue = referenceFromHandle<ispcrt::base::TaskQueue>(q);
+    auto &view = referenceFromHandle<ispcrt::base::MemoryView>(mv);
     queue.copyToHost(view);
 }
 ISPCRT_CATCH_END()
@@ -208,37 +208,37 @@ ISPCRT_CATCH_END(nullptr)
 
 ISPCRTFuture ispcrtLaunch3D(ISPCRTTaskQueue q, ISPCRTKernel k, ISPCRTMemoryView p, size_t dim0, size_t dim1,
                             size_t dim2) ISPCRT_CATCH_BEGIN {
-    auto &queue = referenceFromHandle<ispcrt::TaskQueue>(q);
-    auto &kernel = referenceFromHandle<ispcrt::Kernel>(k);
+    auto &queue = referenceFromHandle<ispcrt::base::TaskQueue>(q);
+    auto &kernel = referenceFromHandle<ispcrt::base::Kernel>(k);
 
-    ispcrt::MemoryView *params = nullptr;
+    ispcrt::base::MemoryView *params = nullptr;
 
     if (p)
-        params = &referenceFromHandle<ispcrt::MemoryView>(p);
+        params = &referenceFromHandle<ispcrt::base::MemoryView>(p);
 
     return (ISPCRTFuture)queue.launch(kernel, params, dim0, dim1, dim2);
 }
 ISPCRT_CATCH_END(nullptr)
 
 void ispcrtSync(ISPCRTTaskQueue q) ISPCRT_CATCH_BEGIN {
-    auto &queue = referenceFromHandle<ispcrt::TaskQueue>(q);
+    auto &queue = referenceFromHandle<ispcrt::base::TaskQueue>(q);
     queue.sync();
 }
 ISPCRT_CATCH_END()
 
 uint64_t ispcrtFutureGetTimeNs(ISPCRTFuture f) ISPCRT_CATCH_BEGIN {
-    auto &future = referenceFromHandle<ispcrt::Future>(f);
+    auto &future = referenceFromHandle<ispcrt::base::Future>(f);
 
-    if (!future.valid)
+    if (!future.valid())
         return -1;
 
-    return future.time;
+    return future.time();
 }
 ISPCRT_CATCH_END(-1)
 
 bool ispcrtFutureIsValid(ISPCRTFuture f) ISPCRT_CATCH_BEGIN {
-    auto &future = referenceFromHandle<ispcrt::Future>(f);
-    return future.valid;
+    auto &future = referenceFromHandle<ispcrt::base::Future>(f);
+    return future.valid();
 }
 ISPCRT_CATCH_END(false)
 

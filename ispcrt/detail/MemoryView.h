@@ -6,6 +6,7 @@
 #include "IntrusivePtr.h"
 
 namespace ispcrt {
+namespace base {
 
 struct MemoryView : public RefCounted {
     MemoryView() = default;
@@ -16,4 +17,5 @@ struct MemoryView : public RefCounted {
     virtual size_t numBytes() = 0;
 };
 
+} // namespace base
 } // namespace ispcrt

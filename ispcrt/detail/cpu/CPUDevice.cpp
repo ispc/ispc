@@ -17,9 +17,23 @@
 namespace ispcrt {
 namespace cpu {
 
+struct Future : public ispcrt::base::Future {
+    Future() = default;
+    virtual ~Future() = default;
+
+    bool valid() override { return m_valid; }
+    uint64_t time() override { return m_time; }
+
+    friend class TaskQueue;
+
+  private:
+    uint64_t m_time{0};
+    bool m_valid{false};
+};
+
 using CPUKernelEntryPoint = void (*)(void *, size_t, size_t, size_t);
 
-struct MemoryView : public ispcrt::MemoryView {
+struct MemoryView : public ispcrt::base::MemoryView {
     MemoryView(void *appMem, size_t numBytes) : m_mem(appMem), m_size(numBytes) {}
 
     void *hostPtr() { return m_mem; };
@@ -33,7 +47,7 @@ struct MemoryView : public ispcrt::MemoryView {
     size_t m_size{0};
 };
 
-struct Module : public ispcrt::Module {
+struct Module : public ispcrt::base::Module {
     Module(const char *moduleFile) : m_file(moduleFile) {
         if (!m_file.empty()) {
 #if defined(__MACOSX__) || defined(__APPLE__)
@@ -60,8 +74,8 @@ struct Module : public ispcrt::Module {
     void *m_lib{nullptr};
 };
 
-struct Kernel : public ispcrt::Kernel {
-    Kernel(const ispcrt::Module &_module, const char *_name) : m_fcnName(_name), m_module(&_module) {
+struct Kernel : public ispcrt::base::Kernel {
+    Kernel(const ispcrt::base::Module &_module, const char *_name) : m_fcnName(_name), m_module(&_module) {
         const cpu::Module &module = (const cpu::Module &)_module;
 
         auto name = std::string(_name) + "_cpu_entry_point";
@@ -86,10 +100,10 @@ struct Kernel : public ispcrt::Kernel {
     std::string m_fcnName;
     CPUKernelEntryPoint m_fcn{nullptr};
 
-    const ispcrt::Module *m_module{nullptr};
+    const ispcrt::base::Module *m_module{nullptr};
 };
 
-struct TaskQueue : public ispcrt::TaskQueue {
+struct TaskQueue : public ispcrt::base::TaskQueue {
     TaskQueue() {
         // no-op
     }
@@ -98,29 +112,30 @@ struct TaskQueue : public ispcrt::TaskQueue {
         // no-op
     }
 
-    void copyToHost(ispcrt::MemoryView &) override {
+    void copyToHost(ispcrt::base::MemoryView &) override {
         // no-op
     }
 
-    void copyToDevice(ispcrt::MemoryView &) override {
+    void copyToDevice(ispcrt::base::MemoryView &) override {
         // no-op
     }
 
-    Future *launch(ispcrt::Kernel &k, ispcrt::MemoryView *params, size_t dim0, size_t dim1, size_t dim2) override {
+    ispcrt::base::Future *launch(ispcrt::base::Kernel &k, ispcrt::base::MemoryView *params, size_t dim0, size_t dim1,
+                                 size_t dim2) override {
         auto &kernel = (cpu::Kernel &)k;
         auto *parameters = (cpu::MemoryView *)params;
 
         auto *fcn = kernel.entryPoint();
 
-        auto *future = new Future;
+        auto *future = new cpu::Future;
         assert(future);
 
         auto start = std::chrono::high_resolution_clock::now();
         fcn(parameters ? parameters->devicePtr() : nullptr, dim0, dim1, dim2);
         auto end = std::chrono::high_resolution_clock::now();
 
-        future->time = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();
-        future->valid = true;
+        future->m_time = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();
+        future->m_valid = true;
 
         return future;
     }
@@ -131,14 +146,16 @@ struct TaskQueue : public ispcrt::TaskQueue {
 };
 } // namespace cpu
 
-MemoryView *CPUDevice::newMemoryView(void *appMem, size_t numBytes) const {
+ispcrt::base::MemoryView *CPUDevice::newMemoryView(void *appMem, size_t numBytes) const {
     return new cpu::MemoryView(appMem, numBytes);
 }
 
-TaskQueue *CPUDevice::newTaskQueue() const { return new cpu::TaskQueue(); }
+ispcrt::base::TaskQueue *CPUDevice::newTaskQueue() const { return new cpu::TaskQueue(); }
 
-Module *CPUDevice::newModule(const char *moduleFile) const { return new cpu::Module(moduleFile); }
+ispcrt::base::Module *CPUDevice::newModule(const char *moduleFile) const { return new cpu::Module(moduleFile); }
 
-Kernel *CPUDevice::newKernel(const Module &module, const char *name) const { return new cpu::Kernel(module, name); }
+ispcrt::base::Kernel *CPUDevice::newKernel(const ispcrt::base::Module &module, const char *name) const {
+    return new cpu::Kernel(module, name);
+}
 
 } // namespace ispcrt
