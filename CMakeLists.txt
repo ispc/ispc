@@ -409,7 +409,7 @@ endforeach()
 target_link_libraries(${PROJECT_NAME} ${CLANG_LIBRARY_FULL_PATH_LIST})
 
 # Link against LLVM libraries
-target_link_libraries(${PROJECT_NAME} ${LLVM_LIBRARY_LIST})
+target_link_libraries(${PROJECT_NAME} ${LLVM_LIBRARY_LIST} ${CMAKE_DL_LIBS})
 
 # System libraries, our own and transitive dependencies from LLVM libs.
 if (WIN32)
