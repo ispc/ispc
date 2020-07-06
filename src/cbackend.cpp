@@ -4048,7 +4048,11 @@ void CWriter::visitCallInst(llvm::CallInst &I) {
             if (visitBuiltinCall(I, ID, WroteCallee))
                 return;
 
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_11_0
+    llvm::Value *Callee = I.getCalledOperand();
+#else
     llvm::Value *Callee = I.getCalledValue();
+#endif
 
     // llvm::PointerType *PTy = llvm::cast<llvm::PointerType>(Callee->getType());
     // llvm::FunctionType *FTy = llvm::cast<llvm::FunctionType>(PTy->getElementType());
