@@ -6,10 +6,12 @@
 #include "IntrusivePtr.h"
 
 namespace ispcrt {
+namespace base {
 
 struct Module : public RefCounted {
     Module() = default;
     virtual ~Module() = default;
 };
 
+} // namespace base
 } // namespace ispcrt

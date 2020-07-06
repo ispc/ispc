@@ -11,6 +11,7 @@
 #include "TaskQueue.h"
 
 namespace ispcrt {
+namespace base {
 
 struct Device : public RefCounted {
     Device() = default;
@@ -25,4 +26,5 @@ struct Device : public RefCounted {
     virtual Kernel *newKernel(const Module &module, const char *name) const = 0;
 };
 
+} // namespace base
 } // namespace ispcrt

@@ -4,19 +4,20 @@
 #pragma once
 
 #include "../Device.h"
+#include "../Future.h"
 
 namespace ispcrt {
 
-struct CPUDevice : public Device {
+struct CPUDevice : public base::Device {
     CPUDevice() = default;
 
-    MemoryView *newMemoryView(void *appMem, size_t numBytes) const override;
+    base::MemoryView *newMemoryView(void *appMem, size_t numBytes) const override;
 
-    TaskQueue *newTaskQueue() const override;
+    base::TaskQueue *newTaskQueue() const override;
 
-    Module *newModule(const char *moduleFile) const override;
+    base::Module *newModule(const char *moduleFile) const override;
 
-    Kernel *newKernel(const Module &module, const char *name) const override;
+    base::Kernel *newKernel(const base::Module &module, const char *name) const override;
 };
 
 } // namespace ispcrt

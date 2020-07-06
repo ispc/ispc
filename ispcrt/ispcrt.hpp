@@ -6,6 +6,8 @@
 #include "ispcrt.h"
 // std
 #include <array>
+#include <cassert>
+#include <iostream>
 #include <vector>
 
 namespace ispcrt {
@@ -78,11 +80,17 @@ class Future : public GenericObject<ISPCRTFuture> {
   public:
     Future() = default;
     Future(ISPCRTFuture f);
+    ~Future();
     bool valid() const;
     uint64_t time() const;
 };
 
-inline Future::Future(ISPCRTFuture f) : GenericObject(f) {}
+inline Future::Future(ISPCRTFuture f) : GenericObject<ISPCRTFuture>(f) { ispcrtRetain(f); }
+
+inline Future::~Future() {
+    assert(handle());
+    // release called by GenericObject destructor
+}
 
 inline bool Future::valid() const { return ispcrtFutureIsValid(handle()); }
 
