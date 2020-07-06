@@ -8,12 +8,12 @@
 // REQUIRES: LLVM_10_0+
 // REQUIRES: X86_ENABLED
 
-// CHECKAVX2_I32X8: vxorps  %xmm0, %xmm0, %xmm0
-// CHECKAVX2_I64X4: vxorps  %xmm0, %xmm0, %xmm0
-// CHECKSSE2_I32X4: pxor  %xmm0, %xmm0
-// CHECKSSE2_I32X8: xorps   %xmm0, %xmm0
-// CHECKSSE4_I16X8: xorps   %xmm0, %xmm0
-// CHECKSSE4_I8X16: xorps   %xmm0, %xmm0
+// CHECKAVX2_I32X8: {{[a-z]*xor[a-z]*}}  %xmm0, %xmm0, %xmm0
+// CHECKAVX2_I64X4: {{[a-z]*xor[a-z]*}}  %xmm0, %xmm0, %xmm0
+// CHECKSSE2_I32X4: {{[a-z]*xor[a-z]*}}  %xmm0, %xmm0
+// CHECKSSE2_I32X8: {{[a-z]*xor[a-z]*}}   %xmm0, %xmm0
+// CHECKSSE4_I16X8: {{[a-z]*xor[a-z]*}}   %xmm0, %xmm0
+// CHECKSSE4_I8X16: {{[a-z]*xor[a-z]*}}   %xmm0, %xmm0
 
 extern uniform unsigned int var_18;
 extern uniform unsigned int16 arr_202 [17] ;
