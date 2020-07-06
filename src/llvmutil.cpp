@@ -117,36 +117,36 @@ void InitLLVMUtil(llvm::LLVMContext *ctx, Target &target) {
     switch (target.getMaskBitCount()) {
     case 1:
         LLVMTypes::MaskType = LLVMTypes::BoolVectorType =
-            llvm::VectorType::get(llvm::Type::getInt1Ty(*ctx), target.getVectorWidth());
+            LLVMVECTOR::get(llvm::Type::getInt1Ty(*ctx), target.getVectorWidth());
         break;
     case 8:
         LLVMTypes::MaskType = LLVMTypes::BoolVectorType =
-            llvm::VectorType::get(llvm::Type::getInt8Ty(*ctx), target.getVectorWidth());
+            LLVMVECTOR::get(llvm::Type::getInt8Ty(*ctx), target.getVectorWidth());
         break;
     case 16:
         LLVMTypes::MaskType = LLVMTypes::BoolVectorType =
-            llvm::VectorType::get(llvm::Type::getInt16Ty(*ctx), target.getVectorWidth());
+            LLVMVECTOR::get(llvm::Type::getInt16Ty(*ctx), target.getVectorWidth());
         break;
     case 32:
         LLVMTypes::MaskType = LLVMTypes::BoolVectorType =
-            llvm::VectorType::get(llvm::Type::getInt32Ty(*ctx), target.getVectorWidth());
+            LLVMVECTOR::get(llvm::Type::getInt32Ty(*ctx), target.getVectorWidth());
         break;
     case 64:
         LLVMTypes::MaskType = LLVMTypes::BoolVectorType =
-            llvm::VectorType::get(llvm::Type::getInt64Ty(*ctx), target.getVectorWidth());
+            LLVMVECTOR::get(llvm::Type::getInt64Ty(*ctx), target.getVectorWidth());
         break;
     default:
         FATAL("Unhandled mask width for initializing MaskType");
     }
 
-    LLVMTypes::Int1VectorType = llvm::VectorType::get(llvm::Type::getInt1Ty(*ctx), target.getVectorWidth());
+    LLVMTypes::Int1VectorType = LLVMVECTOR::get(llvm::Type::getInt1Ty(*ctx), target.getVectorWidth());
     LLVMTypes::Int8VectorType = LLVMTypes::BoolVectorStorageType =
-        llvm::VectorType::get(LLVMTypes::Int8Type, target.getVectorWidth());
-    LLVMTypes::Int16VectorType = llvm::VectorType::get(LLVMTypes::Int16Type, target.getVectorWidth());
-    LLVMTypes::Int32VectorType = llvm::VectorType::get(LLVMTypes::Int32Type, target.getVectorWidth());
-    LLVMTypes::Int64VectorType = llvm::VectorType::get(LLVMTypes::Int64Type, target.getVectorWidth());
-    LLVMTypes::FloatVectorType = llvm::VectorType::get(LLVMTypes::FloatType, target.getVectorWidth());
-    LLVMTypes::DoubleVectorType = llvm::VectorType::get(LLVMTypes::DoubleType, target.getVectorWidth());
+        LLVMVECTOR::get(LLVMTypes::Int8Type, target.getVectorWidth());
+    LLVMTypes::Int16VectorType = LLVMVECTOR::get(LLVMTypes::Int16Type, target.getVectorWidth());
+    LLVMTypes::Int32VectorType = LLVMVECTOR::get(LLVMTypes::Int32Type, target.getVectorWidth());
+    LLVMTypes::Int64VectorType = LLVMVECTOR::get(LLVMTypes::Int64Type, target.getVectorWidth());
+    LLVMTypes::FloatVectorType = LLVMVECTOR::get(LLVMTypes::FloatType, target.getVectorWidth());
+    LLVMTypes::DoubleVectorType = LLVMVECTOR::get(LLVMTypes::DoubleType, target.getVectorWidth());
 
     LLVMTypes::Int8VectorPointerType = llvm::PointerType::get(LLVMTypes::Int8VectorType, 0);
     LLVMTypes::Int16VectorPointerType = llvm::PointerType::get(LLVMTypes::Int16VectorType, 0);

@@ -2711,7 +2711,8 @@ static bool lImproveMaskedStore(llvm::CallInst *callInst) {
                                 g->opt.forceAlignedMemory ? g->target->getNativeVectorAlignment() : info->align);
 #else // LLVM 10.0+
                                 llvm::MaybeAlign(g->opt.forceAlignedMemory ? g->target->getNativeVectorAlignment()
-                                                                           : info->align).valueOrOne());
+                                                                           : info->align)
+                                    .valueOrOne());
 #endif
         lCopyMetadata(store, callInst);
         llvm::ReplaceInstWithInst(callInst, store);
@@ -2769,7 +2770,8 @@ static bool lImproveMaskedLoad(llvm::CallInst *callInst, llvm::BasicBlock::itera
 #if ISPC_LLVM_VERSION <= ISPC_LLVM_9_0
             g->opt.forceAlignedMemory ? g->target->getNativeVectorAlignment() : info->align, (llvm::Instruction *)NULL);
 #else // LLVM 10.0+
-            llvm::MaybeAlign(g->opt.forceAlignedMemory ? g->target->getNativeVectorAlignment() : info->align).valueOrOne(),
+            llvm::MaybeAlign(g->opt.forceAlignedMemory ? g->target->getNativeVectorAlignment() : info->align)
+                .valueOrOne(),
             (llvm::Instruction *)NULL);
 #endif
         lCopyMetadata(load, callInst);
@@ -3118,7 +3120,8 @@ llvm::Value *lGEPAndLoad(llvm::Value *basePtr, int64_t offset, int align, llvm::
     return new llvm::LoadInst(ptr, "gather_load", false /* not volatile */, align, insertBefore);
 #elif ISPC_LLVM_VERSION >= ISPC_LLVM_11_0
     return new llvm::LoadInst(llvm::dyn_cast<llvm::PointerType>(ptr->getType())->getPointerElementType(), ptr,
-                              "gather_load", false /* not volatile */, llvm::MaybeAlign(align).valueOrOne(), insertBefore);
+                              "gather_load", false /* not volatile */, llvm::MaybeAlign(align).valueOrOne(),
+                              insertBefore);
 #else
     return new llvm::LoadInst(ptr, "gather_load", false /* not volatile */, llvm::MaybeAlign(align), insertBefore);
 #endif
@@ -3162,7 +3165,7 @@ static void lEmitLoads(llvm::Value *basePtr, std::vector<CoalescedLoadOp> &loadO
             if (g->opt.forceAlignedMemory) {
                 align = g->target->getNativeVectorAlignment();
             }
-            llvm::VectorType *vt = llvm::VectorType::get(LLVMTypes::Int32Type, 4);
+            llvm::VectorType *vt = LLVMVECTOR::get(LLVMTypes::Int32Type, 4);
             loadOps[i].load = lGEPAndLoad(basePtr, start, align, insertBefore, vt);
             break;
         }
@@ -3171,7 +3174,7 @@ static void lEmitLoads(llvm::Value *basePtr, std::vector<CoalescedLoadOp> &loadO
             if (g->opt.forceAlignedMemory) {
                 align = g->target->getNativeVectorAlignment();
             }
-            llvm::VectorType *vt = llvm::VectorType::get(LLVMTypes::Int32Type, 8);
+            llvm::VectorType *vt = LLVMVECTOR::get(LLVMTypes::Int32Type, 8);
             loadOps[i].load = lGEPAndLoad(basePtr, start, align, insertBefore, vt);
             break;
         }
@@ -3249,7 +3252,7 @@ static llvm::Value *lApplyLoad2(llvm::Value *result, const CoalescedLoadOp &load
             Assert(set[elt] == false && ((elt < 3) && set[elt + 1] == false));
 
             // In this case, we bitcast from a 4xi32 to a 2xi64 vector
-            llvm::Type *vec2x64Type = llvm::VectorType::get(LLVMTypes::Int64Type, 2);
+            llvm::Type *vec2x64Type = LLVMVECTOR::get(LLVMTypes::Int64Type, 2);
             result = new llvm::BitCastInst(result, vec2x64Type, "to2x64", insertBefore);
 
             // And now we can insert the 64-bit wide value into the
@@ -3257,7 +3260,7 @@ static llvm::Value *lApplyLoad2(llvm::Value *result, const CoalescedLoadOp &load
             result = llvm::InsertElementInst::Create(result, load.load, LLVMInt32(elt / 2), "insert64", insertBefore);
 
             // And back to 4xi32.
-            llvm::Type *vec4x32Type = llvm::VectorType::get(LLVMTypes::Int32Type, 4);
+            llvm::Type *vec4x32Type = LLVMVECTOR::get(LLVMTypes::Int32Type, 4);
             result = new llvm::BitCastInst(result, vec4x32Type, "to4x32", insertBefore);
 
             set[elt] = true;
@@ -3332,7 +3335,7 @@ static llvm::Value *lApplyLoad4(llvm::Value *result, const CoalescedLoadOp &load
 */
 static llvm::Value *lAssemble4Vector(const std::vector<CoalescedLoadOp> &loadOps, const int64_t offsets[4],
                                      llvm::Instruction *insertBefore) {
-    llvm::Type *returnType = llvm::VectorType::get(LLVMTypes::Int32Type, 4);
+    llvm::Type *returnType = LLVMVECTOR::get(LLVMTypes::Int32Type, 4);
     llvm::Value *result = llvm::UndefValue::get(returnType);
 
     Debug(SourcePos(), "Starting search for loads [%" PRId64 " %" PRId64 " %" PRId64 " %" PRId64 "].", offsets[0],
@@ -3460,7 +3463,7 @@ static llvm::Value *lApplyLoad12s(llvm::Value *result, const std::vector<Coalesc
 */
 static llvm::Value *lAssemble4Vector(const std::vector<CoalescedLoadOp> &loadOps, const int64_t offsets[4],
                                      llvm::Instruction *insertBefore) {
-    llvm::Type *returnType = llvm::VectorType::get(LLVMTypes::Int32Type, 4);
+    llvm::Type *returnType = LLVMVECTOR::get(LLVMTypes::Int32Type, 4);
     llvm::Value *result = llvm::UndefValue::get(returnType);
 
     Debug(SourcePos(), "Starting search for loads [%" PRId64 " %" PRId64 " %" PRId64 " %" PRId64 "].", offsets[0],
