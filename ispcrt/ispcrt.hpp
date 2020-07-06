@@ -17,7 +17,7 @@ namespace ispcrt {
 template <typename HANDLE_T = ISPCRTGenericHandle> class GenericObject {
   public:
     GenericObject(HANDLE_T object = nullptr);
-    ~GenericObject();
+    virtual ~GenericObject();
 
     GenericObject(const GenericObject<HANDLE_T> &copy);
     GenericObject(GenericObject<HANDLE_T> &&move);
