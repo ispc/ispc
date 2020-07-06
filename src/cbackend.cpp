@@ -40,7 +40,11 @@
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/CodeGen/IntrinsicLowering.h"
 #include "llvm/CodeGen/Passes.h"
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_11_0
 #include "llvm/IR/AbstractCallSite.h"
+#else
+#include "llvm/IR/CallSite.h"
+#endif
 #include "llvm/IR/CFG.h"
 #include "llvm/IR/CallingConv.h"
 #include "llvm/IR/Constants.h"
@@ -545,8 +549,11 @@ class CWriter : public llvm::FunctionPass, public llvm::InstVisitor<CWriter> {
     // isInlineAsm - Check if the instruction is a call to an inline asm chunk.
     static bool isInlineAsm(const llvm::Instruction &I) {
         if (const llvm::CallInst *CI = llvm::dyn_cast<llvm::CallInst>(&I))
-            // return llvm::isa<llvm::InlineAsm>(CI->getCalledValue());
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_11_0
             return CI->isInlineAsm();
+#else
+            return llvm::isa<llvm::InlineAsm>(CI->getCalledValue());
+#endif
         return false;
     }
 
@@ -712,7 +719,11 @@ llvm::raw_ostream &CWriter::printSimpleType(llvm::raw_ostream &Out, llvm::Type *
         return printSimpleType(Out, llvm::Type::getInt32Ty(Ty->getContext()), isSigned,
                                " __attribute__((vector_size(64))) " + NameSoFar);
 
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_11_0
     case llvm::Type::FixedVectorTyID: {
+#else
+    case llvm::Type::VectorTyID: {
+#endif
         llvm::VectorType *VTy = llvm::cast<llvm::VectorType>(Ty);
 #if 1
         const char *suffix = NULL;
@@ -1636,7 +1647,11 @@ void CWriter::printConstant(llvm::Constant *CPV, bool Static) {
             Out << ")";
         break;
     }
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_11_0
     case llvm::Type::FixedVectorTyID: {
+#else
+    case llvm::Type::VectorTyID: {
+#endif
         llvm::VectorType *VT = llvm::dyn_cast<llvm::VectorType>(CPV->getType());
 
         if (llvm::isa<llvm::ConstantAggregateZero>(CPV)) {
@@ -4036,8 +4051,11 @@ void CWriter::lowerIntrinsics(llvm::Function &F) {
 }
 
 void CWriter::visitCallInst(llvm::CallInst &I) {
-    // if (llvm::isa<llvm::InlineAsm>(I.getCalledValue()))
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_11_0
     if (I.isInlineAsm())
+#else
+    if (llvm::isa<llvm::InlineAsm>(I.getCalledValue()))
+#endif
         return visitInlineAsm(I);
 
     bool WroteCallee = false;
@@ -4054,10 +4072,12 @@ void CWriter::visitCallInst(llvm::CallInst &I) {
     llvm::Value *Callee = I.getCalledValue();
 #endif
 
-    // llvm::PointerType *PTy = llvm::cast<llvm::PointerType>(Callee->getType());
-    // llvm::FunctionType *FTy = llvm::cast<llvm::FunctionType>(PTy->getElementType());
-    llvm::PointerType *PTy = llvm::cast<llvm::PointerType>(I.getType());
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_11_0
     llvm::FunctionType *FTy = I.getFunctionType();
+#else
+    llvm::PointerType *PTy = llvm::cast<llvm::PointerType>(Callee->getType());
+    llvm::FunctionType *FTy = llvm::cast<llvm::FunctionType>(PTy->getElementType());
+#endif
 
     // If this is a call to a struct-return function, assign to the first
     // parameter instead of passing it to the call.
@@ -4126,17 +4146,18 @@ void CWriter::visitCallInst(llvm::CallInst &I) {
 
         if (NeedsCast) {
             // Ok, just cast the pointer type.
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_11_0
+            llvm::Type *callValType = I.getType();
+#else
+            llvm::Type *callValType = I.getCalledValue()->getType();
+#endif
             Out << "((";
             if (isStructRet)
-                printStructReturnPointerFunctionType(Out, PAL,
-                                                     // llvm::cast<llvm::PointerType>(I.getCalledValue()->getType()));
-                                                     llvm::cast<llvm::PointerType>(I.getType()));
+                printStructReturnPointerFunctionType(Out, PAL, llvm::cast<llvm::PointerType>(callValType));
             else if (hasByVal)
-                // printType(Out, I.getCalledValue()->getType(), false, "", true, PAL);
-                printType(Out, I.getType(), false, "", true, PAL);
+                printType(Out, callValType, false, "", true, PAL);
             else
-                // printType(Out, I.getCalledValue()->getType());
-                printType(Out, I.getType());
+                printType(Out, callValType);
             Out << ")(void*)";
         }
         writeOperand(Callee);
@@ -4153,10 +4174,13 @@ void CWriter::visitCallInst(llvm::CallInst &I) {
     }
 
     unsigned NumDeclaredParams = FTy->getNumParams();
-    // llvm::CallSite CS(&I);
-    // llvm::CallSite::arg_iterator AI = CS.arg_begin(), AE = CS.arg_end();
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_11_0
     llvm::User::op_iterator AI = I.arg_begin();
     llvm::User::op_iterator AE = I.arg_end();
+#else
+    llvm::CallSite CS(&I);
+    llvm::CallSite::arg_iterator AI = CS.arg_begin(), AE = CS.arg_end();
+#endif
     unsigned ArgNo = 0;
     if (isStructRet) { // Skip struct return argument.
         ++AI;
