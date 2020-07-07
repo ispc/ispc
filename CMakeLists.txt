@@ -190,7 +190,6 @@ find_package(FLEX 2.5 REQUIRED)
     endif()
 
 set (ISPC_MASKS 1 8 16 32 64)
-set (ISPC_TARGETS generic-1 generic-4 generic-8 generic-16 generic-32 generic-64)
 
 if (X86_ENABLED)
     list(APPEND ISPC_TARGETS
@@ -253,7 +252,6 @@ target_sources(${PROJECT_NAME}
         "src/bitcode_lib.h"
         "src/builtins.cpp"
         "src/builtins.h"
-        "src/cbackend.cpp"
         "src/ctx.cpp"
         "src/ctx.h"
         "src/decl.cpp"
@@ -359,7 +357,6 @@ if (UNIX)
     target_compile_options(${PROJECT_NAME} PRIVATE -fstack-protector-strong -fno-strict-float-cast-overflow
                            -fdata-sections -ffunction-sections -fno-delete-null-pointer-checks
                            -Wformat -Wformat-security -fpie -fwrapv)
-    set_source_files_properties("src/cbackend.cpp" PROPERTIES COMPILE_FLAGS "-fno-exceptions")
 else()
     target_compile_options(${PROJECT_NAME} PRIVATE /W3 /wd4146 /wd4800 /wd4996 /wd4355 /wd4624 /wd4244 /wd4141 /wd4291 /wd4018 /wd4267)
     # Security options

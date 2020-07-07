@@ -109,41 +109,15 @@ class Host(object):
 
 # The description of testing target configuration
 class TargetConfig(object):
-    def __init__(self, arch, target, include_file):
+    def __init__(self, arch, target):
         self.arch = arch
         self.target = target
-        self.generic = target.find("generic-") != -1 and target != "generic-1" and target != "generic-x1"
-        self.include_file = include_file
         self.set_target()
 
-    def is_generic(self):
-        return self.generic
-
-    # set arch/target (and include_file for generic targets)
+    # set arch/target
     def set_target(self):
         if self.target == 'neon':
             self.arch = 'aarch64'
-
-        if self.is_generic() and self.include_file == None:
-            if self.target == "generic-4" or self.target == "generic-x4":
-                error("No generics #include specified; using examples/intrinsics/sse4.h\n", 2)
-                self.include_file = "examples/intrinsics/sse4.h"
-                self.target = "generic-4"
-            elif self.target == "generic-8" or self.target == "generic-x8":
-                error("No generics #include specified and no default available for \"generic-8\" target.\n", 1)
-                self.target = "generic-8"
-            elif self.target == "generic-16" or self.target == "generic-x16":
-                error("No generics #include specified; using examples/intrinsics/generic-16.h\n", 2)
-                self.include_file = "examples/intrinsics/generic-16.h"
-                self.target = "generic-16"
-            elif self.target == "generic-32" or self.target == "generic-x32":
-                error("No generics #include specified; using examples/intrinsics/generic-32.h\n", 2)
-                self.include_file = "examples/intrinsics/generic-32.h"
-                self.target = "generic-32"
-            elif self.target == "generic-64" or self.target == "generic-x64":
-                error("No generics #include specified; using examples/intrinsics/generic-64.h\n", 2)
-                self.include_file = "examples/intrinsics/generic-64.h"
-                self.target = "generic-64"
 
 # test-running driver for ispc
 # utility routine to print an update on the number of tests that have been
@@ -340,10 +314,7 @@ def run_test(testname, host, target):
             return Status.Compfail
         else:
             if host.is_windows():
-                if target.is_generic():
-                    obj_name = "%s.cpp" % os.path.basename(filename)
-                else:
-                    obj_name = "%s.obj" % os.path.basename(filename)
+                obj_name = "%s.obj" % os.path.basename(filename)
 
                 if target.arch == "wasm32":
                     exe_name = "%s.js" % os.path.realpath(filename)
@@ -355,10 +326,7 @@ def run_test(testname, host, target):
                 if should_fail:
                     cc_cmd += " /DEXPECT_FAILURE"
             else:
-                if target.is_generic():
-                    obj_name = "%s.cpp" % testname
-                else:
-                    obj_name = "%s.o" % testname
+                obj_name = "%s.o" % testname
 
                 if target.arch == "wasm32":
                     exe_name = "%s.js" % os.path.realpath(testname)
@@ -374,14 +342,8 @@ def run_test(testname, host, target):
                 else:
                     gcc_arch = '-m64'
 
-                gcc_isa=""
-                if target.target == 'generic-4':
-                    gcc_isa = '-msse4.2'
-                if target.target == 'generic-8':
-                    gcc_isa = '-mavx'
-
-                cc_cmd = "%s -O2 -I. %s %s test_static.cpp -DTEST_SIG=%d %s -o %s" % \
-                    (options.compiler_exe, gcc_arch, gcc_isa, match, obj_name, exe_name)
+                cc_cmd = "%s -O2 -I. %s test_static.cpp -DTEST_SIG=%d %s -o %s" % \
+                    (options.compiler_exe, gcc_arch, match, obj_name, exe_name)
 
                 if platform.system() == 'Darwin':
                     cc_cmd += ' -Wl,-no_pie'
@@ -397,9 +359,6 @@ def run_test(testname, host, target):
                 ispc_cmd += " -O1"
             elif options.opt == 'O2':
                 ispc_cmd += " -O2"
-
-            if target.is_generic():
-                ispc_cmd += " --emit-c++ --c++-include-file=%s" % add_prefix(target.include_file, host)
 
         exe_wd = "."
         if target.arch == "wasm32":
@@ -625,8 +584,6 @@ def verify():
               "sse4-i32x4", "sse4-i32x8", "sse4-i16x8", "sse4-i8x16",
               "avx1-i32x4", "avx1-i32x8", "avx1-i32x16", "avx1-i64x4",
               "avx2-i32x4", "avx2-i32x8", "avx2-i32x16", "avx2-i64x4",
-              "generic-1", "generic-4", "generic-8",
-              "generic-16", "generic-32", "generic-64",
               "avx512knl-i32x16", "avx512skx-i32x16", "avx512skx-i32x8", "avx512skx-i8x64", "avx512skx-i16x32"]]
     for i in range (0,len(f_lines)):
         if f_lines[i][0] == "%":
@@ -741,7 +698,7 @@ def run_tests(options1, args, print_version):
 
     print_debug("Testing ispc: " + host.ispc_exe + "\n", s, run_tests_log)
 
-    target = TargetConfig(options.arch, options.target, options.include_file)
+    target = TargetConfig(options.arch, options.target)
 
     set_compiler_exe(host, options)
 
@@ -862,8 +819,6 @@ if __name__ == "__main__":
     parser = OptionParser()
     parser.add_option("-r", "--random-shuffle", dest="random", help="Randomly order tests",
                   default=False, action="store_true")
-    parser.add_option("-g", "--generics-include", dest="include_file", help="Filename for header implementing functions for generics",
-                  default=None)
     parser.add_option("-f", "--ispc-flags", dest="ispc_flags", help="Additional flags for ispc (-g, -O1, ...)",
                   default="")
     parser.add_option('-t', '--target', dest='target',

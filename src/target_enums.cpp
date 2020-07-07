@@ -130,18 +130,6 @@ ISPCTarget ParseISPCTarget(std::string target) {
         return ISPCTarget::avx512skx_i8x64;
     } else if (target == "avx512skx-i16x32") {
         return ISPCTarget::avx512skx_i16x32;
-    } else if (target == "generic-1" || target == "generic-x1") {
-        return ISPCTarget::generic_1;
-    } else if (target == "generic-4" || target == "generic-x4") {
-        return ISPCTarget::generic_4;
-    } else if (target == "generic-8" || target == "generic-x8") {
-        return ISPCTarget::generic_8;
-    } else if (target == "generic-16" || target == "generic-x16") {
-        return ISPCTarget::generic_16;
-    } else if (target == "generic-32" || target == "generic-x32") {
-        return ISPCTarget::generic_32;
-    } else if (target == "generic-64" || target == "generic-x64") {
-        return ISPCTarget::generic_64;
     } else if (target == "neon-i8x16") {
         return ISPCTarget::neon_i8x16;
     } else if (target == "neon-i16x8") {
@@ -233,18 +221,6 @@ std::string ISPCTargetToString(ISPCTarget target) {
         return "avx512skx-i8x64";
     case ISPCTarget::avx512skx_i16x32:
         return "avx512skx-i16x32";
-    case ISPCTarget::generic_1:
-        return "generic-1";
-    case ISPCTarget::generic_4:
-        return "generic-4";
-    case ISPCTarget::generic_8:
-        return "generic-8";
-    case ISPCTarget::generic_16:
-        return "generic-16";
-    case ISPCTarget::generic_32:
-        return "generic-32";
-    case ISPCTarget::generic_64:
-        return "generic-64";
     case ISPCTarget::neon_i8x16:
         return "neon-i8x16";
     case ISPCTarget::neon_i16x8:
@@ -287,20 +263,6 @@ bool ISPCTargetIsX86(ISPCTarget target) {
     case ISPCTarget::avx512skx_i32x16:
     case ISPCTarget::avx512skx_i8x64:
     case ISPCTarget::avx512skx_i16x32:
-        return true;
-    default:
-        return false;
-    }
-}
-
-bool ISPCTargetIsGeneric(ISPCTarget target) {
-    switch (target) {
-    case ISPCTarget::generic_1:
-    case ISPCTarget::generic_4:
-    case ISPCTarget::generic_8:
-    case ISPCTarget::generic_16:
-    case ISPCTarget::generic_32:
-    case ISPCTarget::generic_64:
         return true;
     default:
         return false;

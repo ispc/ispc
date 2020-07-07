@@ -88,7 +88,6 @@ class Module {
         Bitcode,     /** Generate LLVM IR bitcode output */
         BitcodeText, /** Generate LLVM IR Text output */
         Object,      /** Generate a native object file */
-        CXX,         /** Generate a C++ file */
         Header,      /** Generate a C/C++ header file with
                          declarations of 'export'ed functions, global
                          variables, and the types used by them. */
@@ -128,17 +127,13 @@ class Module {
                               inclusion from C/C++ code with declarations of
                               types and functions exported from the given ispc
                               source file.
-        @param includeFileName If non-NULL, gives the filename for the C++
-                               backend to emit in an #include statement to
-                               get definitions of the builtins for the generic
-                               target.
         @return             Number of errors encountered when compiling
                             srcFile.
      */
     static int CompileAndOutput(const char *srcFile, Arch arch, const char *cpu, std::vector<ISPCTarget> targets,
                                 OutputFlags outputFlags, OutputType outputType, const char *outFileName,
-                                const char *headerFileName, const char *includeFileName, const char *depsFileName,
-                                const char *depsTargetName, const char *hostStubFileName, const char *devStubFileName);
+                                const char *headerFileName, const char *depsFileName, const char *depsTargetName,
+                                const char *hostStubFileName, const char *devStubFileName);
 
     /** Total number of errors encountered during compilation. */
     int errorCount;
@@ -165,7 +160,7 @@ class Module {
         true on success, false if there has been an error.  The given
         filename may be NULL, indicating that output should go to standard
         output. */
-    bool writeOutput(OutputType ot, OutputFlags flags, const char *filename, const char *includeFileName = NULL,
+    bool writeOutput(OutputType ot, OutputFlags flags, const char *filename, const char *depTargetFileName = NULL,
                      const char *sourceFileName = NULL, DispatchHeaderInfo *DHI = 0);
     bool writeHeader(const char *filename);
     bool writeDispatchHeader(DispatchHeaderInfo *DHI);

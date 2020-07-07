@@ -1495,12 +1495,6 @@ int VectorType::getVectorMemoryCount() const {
     if (base->IsVaryingType())
         return numElements;
     else if (base->IsUniformType()) {
-        if (g->target->getDataTypeWidth() == -1) {
-            // For generic targets just return correct result,
-            // we don't care about optimizations in this case.
-            // Should we just assume data type width equal to 32?
-            return numElements;
-        }
         // Round up the element count to power of 2 bits in size but not less then 128 bit in total vector size
         // where one element size is data type width in bits.
         // This strategy was chosen by the following reasons:

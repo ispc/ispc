@@ -121,9 +121,6 @@ elif args[0].type == 'ispc-target':
         arch = "x86" if args[0].runtime == "32" else "x86_64" if args[0].runtime == "64" else "error"
     elif "neon" in target:
         arch = "arm" if args[0].runtime == "32" else "aarch64" if args[0].runtime == "64" else "error"
-    elif "generic" in target:
-        # x86 and x86_64 for generic is just a convention
-        arch = "x86" if args[0].runtime == "32" else "x86_64" if args[0].runtime == "64" else "error"
     elif "wasm" in target:
         arch = "wasm32"
     else:

@@ -6036,7 +6036,7 @@ static llvm::Value *lTypeConvAtomic(FunctionEmitContext *ctx, llvm::Value *exprV
         case AtomicType::TYPE_UINT16:
         case AtomicType::TYPE_UINT32:
         case AtomicType::TYPE_UINT64:
-            if (fromType->IsVaryingType() && g->target->getISA() != Target::GENERIC)
+            if (fromType->IsVaryingType())
                 PerformanceWarning(pos, "Conversion from unsigned int to float is slow. "
                                         "Use \"int\" if possible");
             cast = ctx->CastInst(llvm::Instruction::UIToFP, // unsigned int to float
@@ -6140,14 +6140,14 @@ static llvm::Value *lTypeConvAtomic(FunctionEmitContext *ctx, llvm::Value *exprV
             cast = ctx->TruncInst(exprVal, targetType, cOpName);
             break;
         case AtomicType::TYPE_FLOAT:
-            if (fromType->IsVaryingType() && g->target->getISA() != Target::GENERIC)
+            if (fromType->IsVaryingType())
                 PerformanceWarning(pos, "Conversion from float to unsigned int is slow. "
                                         "Use \"int\" if possible");
             cast = ctx->CastInst(llvm::Instruction::FPToUI, // unsigned int
                                  exprVal, targetType, cOpName);
             break;
         case AtomicType::TYPE_DOUBLE:
-            if (fromType->IsVaryingType() && g->target->getISA() != Target::GENERIC)
+            if (fromType->IsVaryingType())
                 PerformanceWarning(pos, "Conversion from double to unsigned int is slow. "
                                         "Use \"int\" if possible");
             cast = ctx->CastInst(llvm::Instruction::FPToUI, // unsigned int
@@ -6211,7 +6211,7 @@ static llvm::Value *lTypeConvAtomic(FunctionEmitContext *ctx, llvm::Value *exprV
             cast = exprVal;
             break;
         case AtomicType::TYPE_FLOAT:
-            if (fromType->IsVaryingType() && g->target->getISA() != Target::GENERIC)
+            if (fromType->IsVaryingType())
                 PerformanceWarning(pos, "Conversion from float to unsigned int is slow. "
                                         "Use \"int\" if possible");
             cast = ctx->CastInst(llvm::Instruction::FPToUI, // unsigned int
@@ -6224,7 +6224,7 @@ static llvm::Value *lTypeConvAtomic(FunctionEmitContext *ctx, llvm::Value *exprV
             cast = ctx->TruncInst(exprVal, targetType, cOpName);
             break;
         case AtomicType::TYPE_DOUBLE:
-            if (fromType->IsVaryingType() && g->target->getISA() != Target::GENERIC)
+            if (fromType->IsVaryingType())
                 PerformanceWarning(pos, "Conversion from double to unsigned int is slow. "
                                         "Use \"int\" if possible");
             cast = ctx->CastInst(llvm::Instruction::FPToUI, // unsigned int
@@ -6290,7 +6290,7 @@ static llvm::Value *lTypeConvAtomic(FunctionEmitContext *ctx, llvm::Value *exprV
             cast = exprVal;
             break;
         case AtomicType::TYPE_FLOAT:
-            if (fromType->IsVaryingType() && g->target->getISA() != Target::GENERIC)
+            if (fromType->IsVaryingType())
                 PerformanceWarning(pos, "Conversion from float to unsigned int is slow. "
                                         "Use \"int\" if possible");
             cast = ctx->CastInst(llvm::Instruction::FPToUI, // unsigned int
@@ -6301,7 +6301,7 @@ static llvm::Value *lTypeConvAtomic(FunctionEmitContext *ctx, llvm::Value *exprV
             cast = ctx->TruncInst(exprVal, targetType, cOpName);
             break;
         case AtomicType::TYPE_DOUBLE:
-            if (fromType->IsVaryingType() && g->target->getISA() != Target::GENERIC)
+            if (fromType->IsVaryingType())
                 PerformanceWarning(pos, "Conversion from double to unsigned int is slow. "
                                         "Use \"int\" if possible");
             cast = ctx->CastInst(llvm::Instruction::FPToUI, // unsigned int
@@ -6363,7 +6363,7 @@ static llvm::Value *lTypeConvAtomic(FunctionEmitContext *ctx, llvm::Value *exprV
             cast = ctx->ZExtInst(exprVal, targetType, cOpName);
             break;
         case AtomicType::TYPE_FLOAT:
-            if (fromType->IsVaryingType() && g->target->getISA() != Target::GENERIC)
+            if (fromType->IsVaryingType())
                 PerformanceWarning(pos, "Conversion from float to unsigned int64 is slow. "
                                         "Use \"int64\" if possible");
             cast = ctx->CastInst(llvm::Instruction::FPToUI, // signed int
@@ -6374,7 +6374,7 @@ static llvm::Value *lTypeConvAtomic(FunctionEmitContext *ctx, llvm::Value *exprV
             cast = exprVal;
             break;
         case AtomicType::TYPE_DOUBLE:
-            if (fromType->IsVaryingType() && g->target->getISA() != Target::GENERIC)
+            if (fromType->IsVaryingType())
                 PerformanceWarning(pos, "Conversion from double to unsigned int64 is slow. "
                                         "Use \"int64\" if possible");
             cast = ctx->CastInst(llvm::Instruction::FPToUI, // signed int
@@ -7536,8 +7536,6 @@ std::pair<llvm::Constant *, bool> SizeOfExpr::GetConstant(const Type *rtype) con
     if (llvmType == NULL)
         return std::pair<llvm::Constant *, bool>(NULL, false);
 
-    if (g->target->IsGenericTypeLayoutIndeterminate(llvmType))
-        return std::pair<llvm::Constant *, bool>(NULL, false);
     uint64_t byteSize = g->target->getDataLayout()->getTypeStoreSize(llvmType);
     return std::pair<llvm::Constant *, bool>(llvm::ConstantInt::get(rtype->LLVMType(g->ctx), byteSize),
                                              isNotValidForMultiTargetGlobal);

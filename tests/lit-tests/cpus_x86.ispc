@@ -1,6 +1,5 @@
 // The test checks that cpu definitions (including all synonyms) are successfully consumed by compiler.
 
-//; RUN: %{ispc} %s -o %t.cpp --emit-c++ --nostdlib --target=generic-4 --cpu=generic
 //; RUN: %{ispc} %s -o %t.o --nostdlib --target=sse2-i32x4 --cpu=x86-64
 //; RUN: %{ispc} %s -o %t.o --nostdlib --target=sse2-i32x4 --cpu=atom
 //; RUN: %{ispc} %s -o %t.o --nostdlib --target=sse2-i32x4 --cpu=bonnell

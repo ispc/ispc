@@ -361,13 +361,11 @@ def unsupported_llvm_targets(LLVM_VERSION):
     return []
 
 
-# Split targets into categories: native, generic, sde.
+# Split targets into categories: native, sde.
 # native - native targets run natively on current hardware.
-# generic - hardware agnostic generic target.
 # sde - native target, which need to be emulated on current hardware.
 def check_targets():
     result = []
-    result_generic = []
     result_sde = []
     # check what native targets do we have
     if current_OS != "Windows":
@@ -424,9 +422,6 @@ def check_targets():
             for target in targets:
                 result_sde = result_sde + [[item[2], target]]
 
-    if current_OS != "Windows":
-        result_generic = ["generic-4", "generic-16", "generic-8", "generic-1", "generic-32", "generic-64"]
-
     # now check what targets we have with the help of SDE
     sde_exists = get_sde()
     if sde_exists == "":
@@ -434,7 +429,7 @@ def check_targets():
             "To test all platforms please set SDE_HOME to path containing SDE.\n" +
             "Please refer to http://www.intel.com/software/sde for SDE download information.", 2)
 
-    return [result, result_generic, result_sde]
+    return [result, result_sde]
 
 def build_ispc(version_LLVM, make):
     current_path = os.getcwd()
@@ -585,7 +580,7 @@ def validation_run(only, only_targets, reference_branch, number, notify, update,
         stability.opt = ""
         stability.wrapexe = ""
 # prepare parameters of run
-        [targets_t, targets_generic_t, sde_targets_t] = check_targets()
+        [targets_t, sde_targets_t] = check_targets()
         rebuild = True
         opts = []
         archs = []
@@ -624,11 +619,6 @@ def validation_run(only, only_targets, reference_branch, number, notify, update,
         if only_targets != "":
             only_targets += " "
             only_targets_t = only_targets.split(" ")
-            if "generic" in only_targets_t:
-                only_targets_t.append("generic-4")
-                only_targets_t.append("generic-16")
-            while "generic" in only_targets_t:
-                only_targets_t.remove("generic")
             
             for i in only_targets_t:
                 if i == "":
@@ -638,10 +628,6 @@ def validation_run(only, only_targets, reference_branch, number, notify, update,
                     if i in targets_t[j]:
                         targets.append(targets_t[j])
                         err = False
-                for j in range(0,len(targets_generic_t)):
-                    if i in targets_generic_t[j]:
-                        targets.append(targets_generic_t[j])
-                        err = False
                 for j in range(0,len(sde_targets_t)):
                     if i in sde_targets_t[j][1]:
                         sde_targets.append(sde_targets_t[j])
@@ -649,7 +635,7 @@ def validation_run(only, only_targets, reference_branch, number, notify, update,
                 if err == True:
                     error("You haven't sde for target " + i, 1)
         else:
-            targets = targets_t + targets_generic_t[:-4]
+            targets = targets_t
             sde_targets = sde_targets_t
 
         if "build" in only:
@@ -663,7 +649,6 @@ def validation_run(only, only_targets, reference_branch, number, notify, update,
             archs = ["x86", "x86-64"]
         if len(LLVM) == 0:
             LLVM = [newest_LLVM, "trunk"]
-        gen_archs = ["x86-64"]
         need_LLVM = check_LLVM(LLVM)
         for i in range(0,len(need_LLVM)):
             build_LLVM(need_LLVM[i], "", "", "", False, False, False, True, False, make, options.gcc_toolchain_path, False, True, False)
@@ -693,10 +678,7 @@ def validation_run(only, only_targets, reference_branch, number, notify, update,
                 if options.ispc_build_compiler == "gcc":
                     stability.compiler_exe = "g++"
                 # now set archs for targets
-                if ("generic" in stability.target):
-                    arch = gen_archs
-                else:
-                    arch = archs
+                arch = archs
                 for i1 in range(0,len(arch)):
                     for i2 in range(0,len(opts)):
                         for i3 in range(dbg_begin,dbg_total):
@@ -724,10 +706,7 @@ def validation_run(only, only_targets, reference_branch, number, notify, update,
                 if options.ispc_build_compiler == "gcc":
                     stability.compiler_exe = "g++"
                 stability.wrapexe = get_sde() + " " + sde_targets[j][0] + " -- "
-                if ("generic" in stability.target):
-                    arch = gen_archs
-                else:
-                    arch = archs
+                arch = archs
                 for i1 in range(0,len(arch)):
                     for i2 in range(0,len(opts)):
                         for i3 in range(dbg_begin,dbg_total):

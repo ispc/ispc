@@ -76,12 +76,6 @@ enum class ISPCTarget {
     avx512skx_i32x16,
     avx512skx_i8x64,
     avx512skx_i16x32,
-    generic_1,
-    generic_4,
-    generic_8,
-    generic_16,
-    generic_32,
-    generic_64,
     neon_i8x16,
     neon_i16x8,
     neon_i32x4,
@@ -94,6 +88,5 @@ ISPCTarget ParseISPCTarget(std::string target);
 std::pair<std::vector<ISPCTarget>, std::string> ParseISPCTargets(const char *target);
 std::string ISPCTargetToString(ISPCTarget target);
 bool ISPCTargetIsX86(ISPCTarget target);
-bool ISPCTargetIsGeneric(ISPCTarget target);
 bool ISPCTargetIsNeon(ISPCTarget target);
 bool ISPCTargetIsWasm(ISPCTarget target);

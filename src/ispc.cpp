@@ -205,13 +205,10 @@ typedef enum {
     // Special value, indicates that no CPU is present.
     CPU_None = 0,
 
-    // 'Generic' CPU without any hardware SIMD capabilities.
-    CPU_Generic = 1,
-
     // A generic 64-bit specific x86 processor model which tries to be good
     // for modern chips without enabling instruction set encodings past the
     // basic SSE2 and 64-bit ones
-    CPU_x86_64,
+    CPU_x86_64 = 1,
 
     // Early Atom CPU. Supports SSSE3.
     CPU_Bonnell,
@@ -305,8 +302,6 @@ class AllCPUs {
 
         names[CPU_None].push_back("");
 
-        names[CPU_Generic].push_back("generic");
-
         names[CPU_x86_64].push_back("x86-64");
 
         names[CPU_Bonnell].push_back("atom");
@@ -358,10 +353,10 @@ class AllCPUs {
         Assert(names.size() == sizeofCPUtype);
 
         compat[CPU_Silvermont] =
-            Set(CPU_Generic, CPU_x86_64, CPU_Bonnell, CPU_Penryn, CPU_Core2, CPU_Nehalem, CPU_Silvermont, CPU_None);
+            Set(CPU_x86_64, CPU_Bonnell, CPU_Penryn, CPU_Core2, CPU_Nehalem, CPU_Silvermont, CPU_None);
 
-        compat[CPU_KNL] = Set(CPU_KNL, CPU_Generic, CPU_x86_64, CPU_Bonnell, CPU_Penryn, CPU_Core2, CPU_Nehalem,
-                              CPU_Silvermont, CPU_SandyBridge, CPU_IvyBridge, CPU_Haswell, CPU_Broadwell, CPU_None);
+        compat[CPU_KNL] = Set(CPU_KNL, CPU_x86_64, CPU_Bonnell, CPU_Penryn, CPU_Core2, CPU_Nehalem, CPU_Silvermont,
+                              CPU_SandyBridge, CPU_IvyBridge, CPU_Haswell, CPU_Broadwell, CPU_None);
 
         compat[CPU_SKX] = Set(CPU_SKX, CPU_x86_64, CPU_Bonnell, CPU_Penryn, CPU_Core2, CPU_Nehalem, CPU_Silvermont,
                               CPU_SandyBridge, CPU_IvyBridge, CPU_Haswell, CPU_Broadwell, CPU_None);
@@ -369,39 +364,36 @@ class AllCPUs {
         compat[CPU_ICL] = Set(CPU_ICL, CPU_SKX, CPU_x86_64, CPU_Bonnell, CPU_Penryn, CPU_Core2, CPU_Nehalem,
                               CPU_Silvermont, CPU_SandyBridge, CPU_IvyBridge, CPU_Haswell, CPU_Broadwell, CPU_None);
 
-        compat[CPU_Broadwell] =
-            Set(CPU_Generic, CPU_x86_64, CPU_Bonnell, CPU_Penryn, CPU_Core2, CPU_Nehalem, CPU_Silvermont,
-                CPU_SandyBridge, CPU_IvyBridge, CPU_Haswell, CPU_Broadwell, CPU_None);
-        compat[CPU_Haswell] = Set(CPU_Generic, CPU_x86_64, CPU_Bonnell, CPU_Penryn, CPU_Core2, CPU_Nehalem,
-                                  CPU_Silvermont, CPU_SandyBridge, CPU_IvyBridge, CPU_Haswell, CPU_Broadwell, CPU_None);
-        compat[CPU_IvyBridge] = Set(CPU_Generic, CPU_x86_64, CPU_Bonnell, CPU_Penryn, CPU_Core2, CPU_Nehalem,
-                                    CPU_Silvermont, CPU_SandyBridge, CPU_IvyBridge, CPU_None);
-        compat[CPU_SandyBridge] = Set(CPU_Generic, CPU_x86_64, CPU_Bonnell, CPU_Penryn, CPU_Core2, CPU_Nehalem,
-                                      CPU_Silvermont, CPU_SandyBridge, CPU_None);
-        compat[CPU_PS4] = Set(CPU_Generic, CPU_x86_64, CPU_Bonnell, CPU_Penryn, CPU_Core2, CPU_Nehalem, CPU_Silvermont,
+        compat[CPU_Broadwell] = Set(CPU_x86_64, CPU_Bonnell, CPU_Penryn, CPU_Core2, CPU_Nehalem, CPU_Silvermont,
+                                    CPU_SandyBridge, CPU_IvyBridge, CPU_Haswell, CPU_Broadwell, CPU_None);
+        compat[CPU_Haswell] = Set(CPU_x86_64, CPU_Bonnell, CPU_Penryn, CPU_Core2, CPU_Nehalem, CPU_Silvermont,
+                                  CPU_SandyBridge, CPU_IvyBridge, CPU_Haswell, CPU_Broadwell, CPU_None);
+        compat[CPU_IvyBridge] = Set(CPU_x86_64, CPU_Bonnell, CPU_Penryn, CPU_Core2, CPU_Nehalem, CPU_Silvermont,
+                                    CPU_SandyBridge, CPU_IvyBridge, CPU_None);
+        compat[CPU_SandyBridge] =
+            Set(CPU_x86_64, CPU_Bonnell, CPU_Penryn, CPU_Core2, CPU_Nehalem, CPU_Silvermont, CPU_SandyBridge, CPU_None);
+        compat[CPU_PS4] = Set(CPU_x86_64, CPU_Bonnell, CPU_Penryn, CPU_Core2, CPU_Nehalem, CPU_Silvermont,
                               CPU_SandyBridge, CPU_PS4, CPU_None);
         compat[CPU_Nehalem] =
-            Set(CPU_Generic, CPU_x86_64, CPU_Bonnell, CPU_Penryn, CPU_Core2, CPU_Nehalem, CPU_Silvermont, CPU_None);
-        compat[CPU_Penryn] =
-            Set(CPU_Generic, CPU_x86_64, CPU_Bonnell, CPU_Penryn, CPU_Core2, CPU_Nehalem, CPU_Silvermont, CPU_None);
-        compat[CPU_Core2] = Set(CPU_Generic, CPU_x86_64, CPU_Bonnell, CPU_Core2, CPU_None);
-        compat[CPU_Bonnell] = Set(CPU_Generic, CPU_x86_64, CPU_Bonnell, CPU_Core2, CPU_None);
-        compat[CPU_Generic] = Set(CPU_Generic, CPU_None);
+            Set(CPU_x86_64, CPU_Bonnell, CPU_Penryn, CPU_Core2, CPU_Nehalem, CPU_Silvermont, CPU_None);
+        compat[CPU_Penryn] = Set(CPU_x86_64, CPU_Bonnell, CPU_Penryn, CPU_Core2, CPU_Nehalem, CPU_Silvermont, CPU_None);
+        compat[CPU_Core2] = Set(CPU_x86_64, CPU_Bonnell, CPU_Core2, CPU_None);
+        compat[CPU_Bonnell] = Set(CPU_x86_64, CPU_Bonnell, CPU_Core2, CPU_None);
 
-        compat[CPU_x86_64] = Set(CPU_Generic, CPU_x86_64, CPU_None);
+        compat[CPU_x86_64] = Set(CPU_x86_64, CPU_None);
 
 #ifdef ISPC_ARM_ENABLED
-        compat[CPU_CortexA15] = Set(CPU_Generic, CPU_CortexA9, CPU_CortexA15, CPU_None);
-        compat[CPU_CortexA9] = Set(CPU_Generic, CPU_CortexA9, CPU_None);
-        compat[CPU_CortexA35] = Set(CPU_Generic, CPU_CortexA35, CPU_None);
-        compat[CPU_CortexA53] = Set(CPU_Generic, CPU_CortexA53, CPU_None);
-        compat[CPU_CortexA57] = Set(CPU_Generic, CPU_CortexA57, CPU_None);
+        compat[CPU_CortexA15] = Set(CPU_CortexA9, CPU_CortexA15, CPU_None);
+        compat[CPU_CortexA9] = Set(CPU_CortexA9, CPU_None);
+        compat[CPU_CortexA35] = Set(CPU_CortexA35, CPU_None);
+        compat[CPU_CortexA53] = Set(CPU_CortexA53, CPU_None);
+        compat[CPU_CortexA57] = Set(CPU_CortexA57, CPU_None);
 #endif
     }
 
     std::string HumanReadableListOfNames() {
         std::stringstream CPUs;
-        for (int i = CPU_Generic; i < sizeofCPUtype; i++) {
+        for (int i = CPU_x86_64; i < sizeofCPUtype; i++) {
             CPUs << names[i][0];
             if (names[i].size() > 1) {
                 CPUs << " (synonyms: " << names[i][1];
@@ -474,10 +466,6 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, bool pic, boo
                     target_string.c_str());
             break;
         }
-
-        case CPU_Generic:
-            m_ispc_target = ISPCTarget::generic_1;
-            break;
 
 #ifdef ISPC_ARM_ENABLED
         case CPU_CortexA9:
@@ -882,90 +870,6 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, bool pic, boo
         unsupported_target = true;
         break;
 #endif
-    case ISPCTarget::generic_1:
-        this->m_isa = Target::GENERIC;
-        this->m_nativeVectorWidth = 1;
-        this->m_nativeVectorAlignment = 16;
-        this->m_vectorWidth = 1;
-        this->m_maskingIsFree = false;
-        this->m_maskBitCount = 32;
-        CPUfromISA = CPU_Generic;
-        break;
-    case ISPCTarget::generic_4:
-        this->m_isa = Target::GENERIC;
-        this->m_nativeVectorWidth = 4;
-        this->m_nativeVectorAlignment = 16;
-        this->m_vectorWidth = 4;
-        this->m_maskingIsFree = true;
-        this->m_maskBitCount = 1;
-        this->m_hasHalf = true;
-        this->m_hasTranscendentals = true;
-        this->m_hasTrigonometry = true;
-        this->m_hasGather = this->m_hasScatter = true;
-        this->m_hasRsqrtd = this->m_hasRcpd = true;
-        CPUfromISA = CPU_Generic;
-        break;
-    case ISPCTarget::generic_8:
-        this->m_isa = Target::GENERIC;
-        this->m_nativeVectorWidth = 8;
-        this->m_nativeVectorAlignment = 32;
-        this->m_vectorWidth = 8;
-        this->m_maskingIsFree = true;
-        this->m_maskBitCount = 1;
-        this->m_hasHalf = true;
-        this->m_hasTranscendentals = true;
-        this->m_hasTrigonometry = true;
-        this->m_hasGather = this->m_hasScatter = true;
-        this->m_hasRsqrtd = this->m_hasRcpd = true;
-        CPUfromISA = CPU_Generic;
-        break;
-    case ISPCTarget::generic_16:
-        this->m_isa = Target::GENERIC;
-        this->m_nativeVectorWidth = 16;
-        this->m_nativeVectorAlignment = 64;
-        this->m_vectorWidth = 16;
-        this->m_maskingIsFree = true;
-        this->m_maskBitCount = 1;
-        this->m_hasHalf = true;
-        this->m_hasTranscendentals = true;
-        // It's set to false, because stdlib implementation of math functions
-        // is faster on MIC, than "native" implementation provided by the
-        // icc compiler.
-        this->m_hasTrigonometry = false;
-        this->m_hasGather = this->m_hasScatter = true;
-        this->m_hasRsqrtd = this->m_hasRcpd = true;
-        // It's set to true, because MIC has hardware vector prefetch instruction
-        this->m_hasVecPrefetch = true;
-        CPUfromISA = CPU_Generic;
-        break;
-    case ISPCTarget::generic_32:
-        this->m_isa = Target::GENERIC;
-        this->m_nativeVectorWidth = 32;
-        this->m_nativeVectorAlignment = 64;
-        this->m_vectorWidth = 32;
-        this->m_maskingIsFree = true;
-        this->m_maskBitCount = 1;
-        this->m_hasHalf = true;
-        this->m_hasTranscendentals = true;
-        this->m_hasTrigonometry = true;
-        this->m_hasGather = this->m_hasScatter = true;
-        this->m_hasRsqrtd = this->m_hasRcpd = true;
-        CPUfromISA = CPU_Generic;
-        break;
-    case ISPCTarget::generic_64:
-        this->m_isa = Target::GENERIC;
-        this->m_nativeVectorWidth = 64;
-        this->m_nativeVectorAlignment = 64;
-        this->m_vectorWidth = 64;
-        this->m_maskingIsFree = true;
-        this->m_maskBitCount = 1;
-        this->m_hasHalf = true;
-        this->m_hasTranscendentals = true;
-        this->m_hasTrigonometry = true;
-        this->m_hasGather = this->m_hasScatter = true;
-        this->m_hasRsqrtd = this->m_hasRcpd = true;
-        CPUfromISA = CPU_Generic;
-        break;
 #ifdef ISPC_ARM_ENABLED
     case ISPCTarget::neon_i8x16:
         this->m_isa = Target::NEON;
@@ -1150,25 +1054,12 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, bool pic, boo
         // 1. Get default data layout first
         std::string dl_string;
         dl_string = m_targetMachine->createDataLayout().getStringRepresentation();
-        // 2. Adjust for generic
-        if (m_isa == Target::GENERIC) {
-            // <16 x i1> vectors only need 16 bit / 2 byte alignment, so add
-            // that to the regular datalayout string for IA..
-            // For generic-4 target we need to treat <4 x i1> as 128 bit value
-            // in terms of required memory storage and alignment, as this is
-            // translated to __m128 type.
-            dl_string = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-"
-                        "i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-s0:64:64-"
-                        "f80:128:128-n8:16:32:64-S128-v16:16:16-v32:32:32-v4:128:128";
-        }
 
-        // 3. Finally set member data
+        // 2. Finally set member data
         m_dataLayout = new llvm::DataLayout(dl_string);
 
         // Set is32Bit
-        // This indicates if we are compiling for 32 bit platform
-        // and can assume 32 bit runtime.
-        // FIXME: all generic targets are handled as 64 bit, which is incorrect.
+        // This indicates if we are compiling for 32 bit platform and can assume 32 bit runtime.
 
         this->m_is32Bit = (getDataLayout()->getPointerSize() == 4);
 
@@ -1356,8 +1247,6 @@ const char *Target::ISAToString(ISA isa) {
         return "avx512knl";
     case Target::SKX_AVX512:
         return "avx512skx";
-    case Target::GENERIC:
-        return "generic";
     default:
         FATAL("Unhandled target in ISAToString()");
     }
@@ -1391,8 +1280,6 @@ const char *Target::ISAToTargetString(ISA isa) {
         return "avx512knl-i32x16";
     case Target::SKX_AVX512:
         return "avx512skx-i32x16";
-    case Target::GENERIC:
-        return "generic-4";
     default:
         FATAL("Unhandled target in ISAToTargetString()");
     }
@@ -1401,55 +1288,7 @@ const char *Target::ISAToTargetString(ISA isa) {
 
 const char *Target::GetISATargetString() const { return ISAToTargetString(m_isa); }
 
-static bool lGenericTypeLayoutIndeterminate(llvm::Type *type) {
-    if (type->isFloatingPointTy() || type->isX86_MMXTy() || type->isVoidTy() || type->isIntegerTy() ||
-        type->isLabelTy() || type->isMetadataTy())
-        return false;
-
-    if (type == LLVMTypes::BoolVectorType || type == LLVMTypes::MaskType || type == LLVMTypes::Int1VectorType)
-        return true;
-
-    llvm::ArrayType *at = llvm::dyn_cast<llvm::ArrayType>(type);
-    if (at != NULL)
-        return lGenericTypeLayoutIndeterminate(at->getElementType());
-
-    llvm::PointerType *pt = llvm::dyn_cast<llvm::PointerType>(type);
-    if (pt != NULL)
-        return false;
-
-    llvm::StructType *st = llvm::dyn_cast<llvm::StructType>(type);
-    if (st != NULL) {
-        for (int i = 0; i < (int)st->getNumElements(); ++i)
-            if (lGenericTypeLayoutIndeterminate(st->getElementType(i)))
-                return true;
-        return false;
-    }
-
-    Assert(llvm::isa<llvm::VectorType>(type));
-    return true;
-}
-
-bool Target::IsGenericTypeLayoutIndeterminate(llvm::Type *type) {
-    bool ret = false;
-    if (m_isa == Target::GENERIC && lGenericTypeLayoutIndeterminate(type) == true)
-        ret = true;
-    return ret;
-}
-
 llvm::Value *Target::SizeOf(llvm::Type *type, llvm::BasicBlock *insertAtEnd) {
-    if (IsGenericTypeLayoutIndeterminate(type)) {
-        llvm::Value *index[1] = {LLVMInt32(1)};
-        llvm::PointerType *ptrType = llvm::PointerType::get(type, 0);
-        llvm::Value *voidPtr = llvm::ConstantPointerNull::get(ptrType);
-        llvm::ArrayRef<llvm::Value *> arrayRef(&index[0], &index[1]);
-        llvm::Instruction *gep =
-            llvm::GetElementPtrInst::Create(PTYPE(voidPtr), voidPtr, arrayRef, "sizeof_gep", insertAtEnd);
-        if (m_is32Bit || g->opt.force32BitAddressing)
-            return new llvm::PtrToIntInst(gep, LLVMTypes::Int32Type, "sizeof_int", insertAtEnd);
-        else
-            return new llvm::PtrToIntInst(gep, LLVMTypes::Int64Type, "sizeof_int", insertAtEnd);
-    }
-
     uint64_t byteSize = getDataLayout()->getTypeStoreSize(type);
     if (m_is32Bit || g->opt.force32BitAddressing)
         return LLVMInt32((int32_t)byteSize);
@@ -1458,19 +1297,6 @@ llvm::Value *Target::SizeOf(llvm::Type *type, llvm::BasicBlock *insertAtEnd) {
 }
 
 llvm::Value *Target::StructOffset(llvm::Type *type, int element, llvm::BasicBlock *insertAtEnd) {
-    if (IsGenericTypeLayoutIndeterminate(type)) {
-        llvm::Value *indices[2] = {LLVMInt32(0), LLVMInt32(element)};
-        llvm::PointerType *ptrType = llvm::PointerType::get(type, 0);
-        llvm::Value *voidPtr = llvm::ConstantPointerNull::get(ptrType);
-        llvm::ArrayRef<llvm::Value *> arrayRef(&indices[0], &indices[2]);
-        llvm::Instruction *gep =
-            llvm::GetElementPtrInst::Create(PTYPE(voidPtr), voidPtr, arrayRef, "offset_gep", insertAtEnd);
-        if (m_is32Bit || g->opt.force32BitAddressing)
-            return new llvm::PtrToIntInst(gep, LLVMTypes::Int32Type, "offset_int", insertAtEnd);
-        else
-            return new llvm::PtrToIntInst(gep, LLVMTypes::Int64Type, "offset_int", insertAtEnd);
-    }
-
     llvm::StructType *structType = llvm::dyn_cast<llvm::StructType>(type);
     if (structType == NULL || structType->isSized() == false) {
         Assert(m->errorCount > 0);

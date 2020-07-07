@@ -743,7 +743,7 @@ static void lSetInternalFunctions(llvm::Module *module) {
     @param module      Module to link the bitcode into
     @param symbolTable Symbol table to add definitions to
  */
-void AddBitcodeToModule(const BitcodeLib *lib, llvm::Module *module, SymbolTable *symbolTable, bool warn) {
+void AddBitcodeToModule(const BitcodeLib *lib, llvm::Module *module, SymbolTable *symbolTable) {
     llvm::StringRef sb = llvm::StringRef((const char *)lib->getLib(), lib->getSize());
     llvm::MemoryBufferRef bcBuf = llvm::MemoryBuffer::getMemBuffer(sb)->getMemBufferRef();
 
@@ -777,7 +777,7 @@ void AddBitcodeToModule(const BitcodeLib *lib, llvm::Module *module, SymbolTable
                 // architecture and investigate what happened.
                 // Generally we allow library DataLayout to be subset of module
                 // DataLayout or library DataLayout to be empty.
-                if (!VerifyDataLayoutCompatibility(module->getDataLayoutStr(), bcModule->getDataLayoutStr()) && warn) {
+                if (!VerifyDataLayoutCompatibility(module->getDataLayoutStr(), bcModule->getDataLayoutStr())) {
                     Warning(SourcePos(),
                             "Module DataLayout is incompatible with "
                             "library DataLayout:\n"
@@ -922,27 +922,20 @@ void DefineStdlib(SymbolTable *symbolTable, llvm::LLVMContext *ctx, llvm::Module
     // They will be referenced in llvm.used intrinsic to prevent they removal from
     // the object file.
     std::vector<llvm::Constant *> debug_symbols;
-    bool warn = g->target->getISA() != Target::GENERIC;
-
-    // Add the definitions from the compiled builtins.c file.
-    // When compiling for "generic" target family, data layout warnings for
-    // "builtins_bitcode_c" have to be switched off: its DL is incompatible
-    // with the DL of "generic". Anyway, AddBitcodeToModule() corrects this
-    // automatically if DLs differ (by copying module`s DL to export`s DL).
 
     // Unlike regular builtins and dispatch module, which don't care about mangling of external functions,
     // so they only differentiate Windows/Unix and 32/64 bit, builtins-c need to take care about mangling.
     // Hence, different version for all potentially supported OSes.
     const BitcodeLib *builtins = g->target_registry->getBuiltinsCLib(g->target_os, g->target->getArch());
     Assert(builtins);
-    AddBitcodeToModule(builtins, module, symbolTable, warn);
+    AddBitcodeToModule(builtins, module, symbolTable);
 
     // Next, add the target's custom implementations of the various needed
     // builtin functions (e.g. __masked_store_32(), etc).
     const BitcodeLib *target =
         g->target_registry->getISPCTargetLib(g->target->getISPCTarget(), g->target_os, g->target->getArch());
     Assert(target);
-    AddBitcodeToModule(target, module, symbolTable, true);
+    AddBitcodeToModule(target, module, symbolTable);
 
     // define the 'programCount' builtin variable
     lDefineConstantInt("programCount", g->target->getVectorWidth(), module, symbolTable, debug_symbols);
@@ -982,28 +975,24 @@ void DefineStdlib(SymbolTable *symbolTable, llvm::LLVMContext *ctx, llvm::Module
         // definitions added.
         extern const char stdlib_mask1_code[], stdlib_mask8_code[];
         extern const char stdlib_mask16_code[], stdlib_mask32_code[], stdlib_mask64_code[];
-        if (g->target->getISA() == Target::GENERIC && g->target->getVectorWidth() == 1) { // 1 wide uses 32 stdlib
+        switch (g->target->getMaskBitCount()) {
+        case 1:
+            yy_scan_string(stdlib_mask1_code);
+            break;
+        case 8:
+            yy_scan_string(stdlib_mask8_code);
+            break;
+        case 16:
+            yy_scan_string(stdlib_mask16_code);
+            break;
+        case 32:
             yy_scan_string(stdlib_mask32_code);
-        } else {
-            switch (g->target->getMaskBitCount()) {
-            case 1:
-                yy_scan_string(stdlib_mask1_code);
-                break;
-            case 8:
-                yy_scan_string(stdlib_mask8_code);
-                break;
-            case 16:
-                yy_scan_string(stdlib_mask16_code);
-                break;
-            case 32:
-                yy_scan_string(stdlib_mask32_code);
-                break;
-            case 64:
-                yy_scan_string(stdlib_mask64_code);
-                break;
-            default:
-                FATAL("Unhandled mask bit size for stdlib.ispc");
-            }
+            break;
+        case 64:
+            yy_scan_string(stdlib_mask64_code);
+            break;
+        default:
+            FATAL("Unhandled mask bit size for stdlib.ispc");
         }
         yyparse();
     }

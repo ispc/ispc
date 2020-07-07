@@ -818,8 +818,8 @@ void Module::AddExportedTypes(const std::vector<std::pair<const Type *, SourcePo
     }
 }
 
-bool Module::writeOutput(OutputType outputType, OutputFlags flags, const char *outFileName, const char *includeFileName,
-                         const char *sourceFileName, DispatchHeaderInfo *DHI) {
+bool Module::writeOutput(OutputType outputType, OutputFlags flags, const char *outFileName,
+                         const char *depTargetFileName, const char *sourceFileName, DispatchHeaderInfo *DHI) {
     if (diBuilder && (outputType != Header) && (outputType != Deps))
         lStripUnusedDebugInfo(module);
 
@@ -863,11 +863,6 @@ bool Module::writeOutput(OutputType outputType, OutputFlags flags, const char *o
                 if (strcasecmp(suffix, "o") && strcasecmp(suffix, "obj"))
                     fileType = "object";
                 break;
-            case CXX:
-                if (strcasecmp(suffix, "c") && strcasecmp(suffix, "cc") && strcasecmp(suffix, "c++") &&
-                    strcasecmp(suffix, "cxx") && strcasecmp(suffix, "cpp"))
-                    fileType = "c++";
-                break;
             case Header:
                 if (strcasecmp(suffix, "h") && strcasecmp(suffix, "hh") && strcasecmp(suffix, "hpp"))
                     fileType = "header";
@@ -901,22 +896,14 @@ bool Module::writeOutput(OutputType outputType, OutputFlags flags, const char *o
         else
             return writeHeader(outFileName);
     } else if (outputType == Deps)
-        return writeDeps(outFileName, 0 != (flags & GenerateMakeRuleForDeps), includeFileName, sourceFileName);
+        return writeDeps(outFileName, 0 != (flags & GenerateMakeRuleForDeps), depTargetFileName, sourceFileName);
     else if (outputType == HostStub)
         return writeHostStub(outFileName);
     else if (outputType == DevStub)
         return writeDevStub(outFileName);
     else if ((outputType == Bitcode) || (outputType == BitcodeText))
         return writeBitcode(module, outFileName, outputType);
-    else if (outputType == CXX) {
-        if (g->target->getISA() != Target::GENERIC) {
-            Error(SourcePos(), "Only \"generic-*\" targets can be used with "
-                               "C++ emission.");
-            return false;
-        }
-        extern bool WriteCXXFile(llvm::Module * module, const char *fn, int vectorWidth, const char *includeName);
-        return WriteCXXFile(module, outFileName, g->target->getVectorWidth(), includeFileName);
-    } else
+    else
         return writeObjectFileOrAssembly(outputType, outFileName);
 }
 
@@ -1354,6 +1341,7 @@ bool Module::writeDeps(const char *fn, bool generateMakeRule, const char *tn, co
     }
 
     if (generateMakeRule) {
+        Assert(tn);
         fprintf(file, "%s:", tn);
         // Rules always emit source first.
         if (sn && !IsStdin(sn)) {
@@ -2391,8 +2379,8 @@ static void lExtractOrCheckGlobals(llvm::Module *msrc, llvm::Module *mdst, bool 
 
 int Module::CompileAndOutput(const char *srcFile, Arch arch, const char *cpu, std::vector<ISPCTarget> targets,
                              OutputFlags outputFlags, OutputType outputType, const char *outFileName,
-                             const char *headerFileName, const char *includeFileName, const char *depsFileName,
-                             const char *depsTargetName, const char *hostStubFileName, const char *devStubFileName) {
+                             const char *headerFileName, const char *depsFileName, const char *depsTargetName,
+                             const char *hostStubFileName, const char *devStubFileName) {
     if (targets.size() == 0 || targets.size() == 1) {
         // We're only compiling to a single target
         // TODO something wrong here
@@ -2406,24 +2394,8 @@ int Module::CompileAndOutput(const char *srcFile, Arch arch, const char *cpu, st
 
         m = new Module(srcFile);
         if (m->CompileFile() == 0) {
-            if (outputType == CXX) {
-                if (target == ISPCTarget::none || !ISPCTargetIsGeneric(target)) {
-                    Error(SourcePos(), "When generating C++ output, one of the \"generic-*\" "
-                                       "targets must be used.");
-                    return 1;
-                }
-            } else if (outputType == Asm || outputType == Object) {
-                if (ISPCTargetIsGeneric(target)) {
-                    Error(SourcePos(),
-                          "When using a \"generic-*\" compilation target, "
-                          "%s output can not be used.",
-                          (outputType == Asm) ? "assembly" : "object file");
-                    return 1;
-                }
-            }
-
             if (outFileName != NULL)
-                if (!m->writeOutput(outputType, outputFlags, outFileName, includeFileName))
+                if (!m->writeOutput(outputType, outputFlags, outFileName))
                     return 1;
             if (headerFileName != NULL)
                 if (!m->writeOutput(Module::Header, outputFlags, headerFileName))
@@ -2463,11 +2435,6 @@ int Module::CompileAndOutput(const char *srcFile, Arch arch, const char *cpu, st
 
         return errorCount > 0;
     } else {
-        if (outputType == CXX) {
-            Error(SourcePos(), "Illegal to specify more than one target when "
-                               "compiling C++ output.");
-            return 1;
-        }
         if (IsStdin(srcFile)) {
             Error(SourcePos(), "Compiling programs from standard input isn't "
                                "supported when compiling for multiple targets.  Please use "
@@ -2582,7 +2549,7 @@ int Module::CompileAndOutput(const char *srcFile, Arch arch, const char *cpu, st
                 isaName = g->target->GetISAString();
                 std::string targetHeaderFileName = lGetTargetFileName(headerFileName, isaName);
                 // write out a header w/o target name for the first target only
-                if (!m->writeOutput(Module::Header, outputFlags, headerFileName, "", nullptr, &DHI)) {
+                if (!m->writeOutput(Module::Header, outputFlags, headerFileName, nullptr, nullptr, &DHI)) {
                     return 1;
                 }
                 if (!m->writeOutput(Module::Header, outputFlags, targetHeaderFileName.c_str())) {
