@@ -14,11 +14,15 @@ ARG LLVM_VERSION=10.0
 RUN uname -a
 
 # Packages required to build ISPC and Clang.
-RUN apt-get -y update && apt-get install -y build-essential gcc g++ git python3 ncurses-dev libtinfo-dev cmake && \
+RUN apt-get -y update && apt-get install -y wget build-essential gcc g++ git python3 ncurses-dev libtinfo-dev && \
     rm -rf /var/lib/apt/lists/*
 
 # If you are behind a proxy, you need to configure git and svn.
 #RUN git config --global --add http.proxy http://proxy.yourcompany.com:888
+
+# Download and install required version of cmake (3.13) for ISPC build
+RUN wget https://github.com/Kitware/CMake/releases/download/v3.13.5/cmake-3.13.5-Linux-x86_64.sh && mkdir /opt/cmake && sh cmake-3.13.5-Linux-x86_64.sh --prefix=/opt/cmake --skip-license && \
+    ln -s /opt/cmake/bin/cmake /usr/local/bin/cmake && rm cmake-3.13.5-Linux-x86_64.sh
 
 WORKDIR /usr/local/src
 
