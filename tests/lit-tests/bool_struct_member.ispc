@@ -1,6 +1,4 @@
-// RUN: %{ispc} %s --target=host > %t 2>&1
-// RUN: FileCheck --input-file=%t %s
-// CHECK-NOT: Please file a bug report at https://github.com/ispc/ispc/issues
+// RUN: %{ispc} %s --target=host --nostdlib
 struct BoolHelper {
     bool *bHelper;
 };
