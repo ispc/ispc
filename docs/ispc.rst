@@ -70,7 +70,6 @@ Contents:
 
   + `Basic Command-line Options`_
   + `Selecting The Compilation Target`_
-  + `Generating Generic C++ Output`_
   + `Selecting 32 or 64 Bit Addressing`_
   + `The Preprocessor`_
   + `Debugging`_
@@ -720,64 +719,6 @@ Note that cross OS compilation is in experimental stage. We encourage you to
 try it and send us a note with your experiences or to file a bug or feature
 requests with the ``ispc`` `bug tracker`_.
 
-Generating Generic C++ Output
------------------------------
-
-In addition to generating object files or assembly output for specific
-targets like NEON, SSE2, SSE4, and AVX, ``ispc`` provides an option to generate
-"generic" C++ output.
-
-As an example, consider the following simple ``ispc`` program:
-
-::
-
-    int foo(int i, int j) {
-        return (i < 0) ? 0 : i + j;
-    }
-
-If this program is compiled with the following command:
-
-::
-
-  ispc foo.ispc --emit-c++ --target=generic-4 -o foo.cpp
-
-Then ``foo()`` is compiled to the following C++ code (after various
-automatically-generated boilerplate code):
-
-::
-
-    __vec4_i32 foo(__vec4_i32 i_llvm_cbe, __vec4_i32 j_llvm_cbe,
-                   __vec4_i1 __mask_llvm_cbe) {
-        return (__select((__signed_less_than(i_llvm_cbe,
-                                             __vec4_i32 (0u, 0u, 0u, 0u))),
-                         __vec4_i32 (0u, 0u, 0u, 0u),
-                        (__add(i_llvm_cbe, j_llvm_cbe))));
-    }
-
-Note that the original computation has been expressed in terms of a number
-of vector types (e.g. ``__vec4_i32`` for a 4-wide vector of 32-bit integers
-and ``__vec4_i1`` for a 4-wide vector of boolean values) and in terms of
-vector operations on these types like ``__add()`` and ``__select()``).
-
-You are then free to provide your own implementations of these types and
-functions.  For example, you might want to target a specific vector ISA, or
-you might want to instrument these functions for performance measurements.
-
-There is an example implementation of 4-wide variants of the required
-functions, suitable for use with the ``generic-4`` target in the file
-``examples/intrinsics/sse4.h``, and there is an example straightforward C
-implementation of the 16-wide variants for the ``generic-16`` target in the
-file ``examples/intrinsics/generic-16.h``.  There is not yet comprehensive
-documentation of these types and the functions that must be provided for
-them when the C++ target is used, but a review of those two files should
-provide the basic context.
-
-If you are using C++ source emission, you may also find the
-``--c++-include-file=<filename>`` command line argument useful; it adds an
-``#include`` statement with the given filename at the top of the emitted
-C++ file; this can be used to easily include specific implementations of
-the vector types and functions.
-
 
 Selecting 32 or 64 Bit Addressing
 ---------------------------------
@@ -815,7 +756,7 @@ preprocessor runs:
   * - ISPC
     - 1
     - Detecting that the ``ispc`` compiler is processing the file
-  * - ISPC_TARGET_{NEON, SSE2, SSE4, AVX, AVX2, AVX512KNL, AVX512SKX, GENERIC}
+  * - ISPC_TARGET_{NEON, SSE2, SSE4, AVX, AVX2, AVX512KNL, AVX512SKX}
     - 1
     - One of these will be set, depending on the compilation target.
   * - ISPC_POINTER_SIZE
