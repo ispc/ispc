@@ -94,8 +94,6 @@ static void lPrintVersion() {
     printf("                          \t\taddressing calculations are done by default, even\n");
     printf("                          \t\ton 64-bit target architectures.)\n");
     printf("    [--arch={%s}]\t\tSelect target architecture\n", g->target_registry->getSupportedArchs().c_str());
-    printf("    [--c++-include-file=<name>]\t\tSpecify name of file to emit in #include statement in generated C++ "
-           "code.\n");
 #ifndef ISPC_HOST_IS_WINDOWS
     printf("    [--colored-output]\t\tAlways use terminal colors in error/warning messages\n");
 #endif
@@ -113,7 +111,6 @@ static void lPrintVersion() {
     printf("    [--x86-asm-syntax=<option>]\t\tSelect style of code if generating assembly\n");
     printf("        intel\t\t\t\tEmit Intel-style assembly\n");
     printf("        att\t\t\t\tEmit AT&T-style assembly\n");
-    printf("    [--emit-c++]\t\t\tEmit a C++ source file as output\n");
     printf("    [--emit-llvm]\t\t\tEmit LLVM bitcode file as output\n");
     printf("    [--emit-llvm-text]\t\t\tEmit LLVM bitcode file as output in textual form\n");
     printf("    [--emit-obj]\t\t\tGenerate object file file as output (default)\n");
@@ -522,7 +519,6 @@ int main(int Argc, char *Argv[]) {
     char *file = NULL;
     const char *headerFileName = NULL;
     const char *outFileName = NULL;
-    const char *includeFileName = NULL;
     const char *depsFileName = NULL;
     const char *depsTargetName = NULL;
     const char *hostStubFileName = NULL;
@@ -618,8 +614,6 @@ int main(int Argc, char *Argv[]) {
             g->generateDebuggingSymbols = true;
         } else if (!strcmp(argv[i], "--emit-asm"))
             ot = Module::Asm;
-        else if (!strcmp(argv[i], "--emit-c++"))
-            ot = Module::CXX;
         else if (!strcmp(argv[i], "--emit-llvm"))
             ot = Module::Bitcode;
         else if (!strcmp(argv[i], "--emit-llvm-text"))
@@ -753,8 +747,6 @@ int main(int Argc, char *Argv[]) {
             }
         } else if (!strncmp(argv[i], "--header-outfile=", 17)) {
             headerFileName = argv[i] + strlen("--header-outfile=");
-        } else if (!strncmp(argv[i], "--c++-include-file=", 19)) {
-            includeFileName = argv[i] + strlen("--c++-include-file=");
         } else if (!strcmp(argv[i], "-O0")) {
             g->opt.level = 0;
             g->codegenOptLevel = Globals::CodegenOptLevel::None;
@@ -960,6 +952,6 @@ int main(int Argc, char *Argv[]) {
         }
     }
 
-    return Module::CompileAndOutput(file, arch, cpu, targets, flags, ot, outFileName, headerFileName, includeFileName,
-                                    depsFileName, depsTargetName, hostStubFileName, devStubFileName);
+    return Module::CompileAndOutput(file, arch, cpu, targets, flags, ot, outFileName, headerFileName, depsFileName,
+                                    depsTargetName, hostStubFileName, devStubFileName);
 }

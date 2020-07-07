@@ -167,7 +167,6 @@ class Target {
         AVX2 = 3,
         KNL_AVX512 = 4,
         SKX_AVX512 = 5,
-        GENERIC = 6,
 #ifdef ISPC_ARM_ENABLED
         NEON,
 #endif
@@ -217,9 +216,6 @@ class Target {
 
     /** Mark LLVM function with target specific attribute, if required. */
     void markFuncWithTargetAttr(llvm::Function *func);
-
-    /* Check if target is GENERIC and internally calls lGenericTypeLayoutIndeterminate */
-    bool IsGenericTypeLayoutIndeterminate(llvm::Type *type);
 
     const llvm::Target *getTarget() const { return m_target; }
 
@@ -279,11 +275,7 @@ class Target {
     /** llvm TargetMachine.
         Note that it's not destroyed during Target destruction, as
         Module::CompileAndOutput() uses TargetMachines after Target is destroyed.
-        This needs to be changed.
-        It's also worth noticing, that DataLayout of TargetMachine cannot be
-        modified and for generic targets it's not what we really need, so it
-        must not be used.
-        */
+        This needs to be changed. */
     llvm::TargetMachine *m_targetMachine;
     llvm::DataLayout *m_dataLayout;
 
@@ -329,8 +321,7 @@ class Target {
         --opt=force-aligned-memory is used. */
     int m_nativeVectorAlignment;
 
-    /** Data type width in bits. Typically it's 32, but could be 8, 16 or 64.
-        For generic it's -1, which means undefined. */
+    /** Data type width in bits. Typically it's 32, but could be 8, 16 or 64. */
     int m_dataTypeWidth;
 
     /** Actual vector width currently being compiled to.  This may be an
@@ -348,8 +339,7 @@ class Target {
     bool m_maskingIsFree;
 
     /** How many bits are used to store each element of the mask: e.g. this
-        is 32 on SSE/AVX, since that matches the HW better, but it's 1 for
-        the generic target. */
+        is 32 on SSE/AVX, since that matches the HW better. */
     int m_maskBitCount;
 
     /** Indicates whether the target has native support for float/half

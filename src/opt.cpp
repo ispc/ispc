@@ -579,7 +579,7 @@ void Optimize(llvm::Module *module, int optLevel) {
             optPM.add(llvm::createInstructionCombiningPass(), 255);
             optPM.add(CreateImproveMemoryOpsPass());
 
-            if (g->opt.disableCoalescing == false && g->target->getISA() != Target::GENERIC) {
+            if (g->opt.disableCoalescing == false) {
                 // It is important to run this here to make it easier to
                 // finding matching gathers we can coalesce..
                 optPM.add(llvm::createEarlyCSEPass(), 260);
