@@ -299,6 +299,8 @@ if (UNIX)
     string(TIMESTAMP BUILD_DATE "%Y%m%d")
     target_compile_definitions(${PROJECT_NAME} PRIVATE BUILD_DATE=\"${BUILD_DATE}\"
                             BUILD_VERSION=\"${GIT_COMMIT_HASH}\")
+    # Compile-time protection against static sized buffer overflows.
+    target_compile_definitions(${PROJECT_NAME} PRIVATE "_FORTIFY_SOURCE=2")
 else()
     target_compile_definitions(${PROJECT_NAME} PRIVATE NOMINMAX)
     if (NOT CMAKE_BUILD_TYPE STREQUAL "DEBUG" )
@@ -354,7 +356,8 @@ target_include_directories(${PROJECT_NAME} PRIVATE
 if (UNIX)
     target_compile_options(${PROJECT_NAME} PRIVATE -Wall -Wno-sign-compare -Wno-unused-function -Werror ${LLVM_CPP_FLAGS})
     # Security options
-    target_compile_options(${PROJECT_NAME} PRIVATE -fstack-protector -fdata-sections -ffunction-sections
+    target_compile_options(${PROJECT_NAME} PRIVATE -fstack-protector-strong -fno-strict-float-cast-overflow
+                           -fdata-sections -ffunction-sections -fno-delete-null-pointer-checks
                            -Wformat -Wformat-security -fpie -fwrapv)
     set_source_files_properties("src/cbackend.cpp" PROPERTIES COMPILE_FLAGS "-fno-exceptions")
 else()
