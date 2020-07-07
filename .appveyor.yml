@@ -99,14 +99,13 @@ for:
   # Perf tests require Win64 configuration. "Visual Studio 16" generator is Win64 by default but for older versions
   # we need to specify it manually.
     - cmd: |-
-        msbuild c:\projects\ispc\build\tests\check-all.vcxproj /t:Build /p:Platform=x64 /p:Configuration=Release
         set PATH=%ISPC_HOME%\build\bin\%configuration%;%PATH%
         cd %ISPC_HOME%
         check_isa.exe
         ispc --support-matrix
         if %vsversion%==2017 ( set generator="Visual Studio 15 Win64")
         if %vsversion%==2019 ( set generator="Visual Studio 16")
-        python perf.py -n 1 -g %generator%
+        python perf.py -n 1 -g %generator% && msbuild %ISPC_HOME%\build\tests\check-all.vcxproj /t:Build /p:Platform=x64 /p:Configuration=Release
 
 -
   matrix:
@@ -150,8 +149,8 @@ for:
   test_script:
     # Run only lit testing here since we have full testing in Travis
     - sh: |-
-        make check-all
         bin/ispc --support-matrix
+        make check-all
 
 cache:
   - '%CHOCO_DIR%\bin -> .appveyor.yml'
