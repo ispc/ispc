@@ -1,6 +1,6 @@
 # Nightly Linux run.
 
-name: Nightly Linux tests / LLVM 10.0
+name: Nightly Linux tests / LLVM trunk
 
 # Run daily - test sse2-avx512 targets @ -O0/-O1/-O2
 on:
@@ -11,13 +11,12 @@ on:
       - '**test_nightly**'
 
 env:
-  LLVM_VERSION: "10.0"
-  LLVM_REPO: https://github.com/dbabokin/llvm-project
-  LLVM_TAR: llvm-10.0.0-ubuntu16.04-Release+Asserts-x86.arm.wasm.tar.xz
   SDE_TAR_NAME: sde-external-8.50.0-2020-03-26-lin
 
 jobs:
-  linux-build:
+  # Building LLVM in docker, as using native Ubuntu 16.04 github-hosted image contains newer-than-expected libs and
+  # makes the resulting build not usable on other Ubuntu 16.04 images.
+  linux-build-llvm:
     runs-on: ubuntu-latest
 
     steps:
@@ -25,13 +24,49 @@ jobs:
       with:
         submodules: true
 
+    - name: Check environment
+      run: |
+        cat /proc/cpuinfo
+
+    - name: Build LLVM
+      run: |
+        cd docker/ubuntu/llvm_build
+        docker build --tag ispc/ubuntu16.04 --build-arg REPO=$GITHUB_REPOSITORY --build-arg SHA=$GITHUB_SHA --build-arg LLVM_VERSION=trunk .
+
+    - name: Pack LLVM
+      run: |
+        cd docker/ubuntu/llvm_build
+        docker run ispc/ubuntu16.04
+        export CONTAINER=`docker ps --all |head -2 |tail -1 |awk '//{print $1}'`
+        sudo docker cp $CONTAINER:/usr/local/src/llvm/bin-trunk .
+        tar cJvf llvm-trunk-ubuntu16.04-Release+Asserts-x86.arm.wasm.tar.xz bin-trunk
+
+    - name: Upload package
+      uses: actions/upload-artifact@v2
+      with:
+        name: llvm_trunk_linux
+        path: docker/ubuntu/llvm_build/llvm-trunk-ubuntu16.04-Release+Asserts-x86.arm.wasm.tar.xz
+
+  linux-build:
+    runs-on: ubuntu-latest
+    needs: linux-build-llvm
+
+    steps:
+    - uses: actions/checkout@v2
+      with:
+        submodules: true
+
+    - name: Download package
+      uses: actions/download-artifact@v2
+      with:
+        name: llvm_trunk_linux
+
     - name: Install dependencies
       run: |
         sudo apt-get update
         sudo apt-get install bison flex libc6-dev-i386 g++-multilib lib32stdc++6 ncurses-dev
-        wget $LLVM_REPO/releases/download/llvm-$LLVM_VERSION-ispc-dev/$LLVM_TAR
-        tar xvf $LLVM_TAR 
-        echo "::add-path::${GITHUB_WORKSPACE}/bin-$LLVM_VERSION/bin"
+        tar xvf llvm-trunk-ubuntu16.04-Release+Asserts-x86.arm.wasm.tar.xz 
+        echo "::add-path::${GITHUB_WORKSPACE}/bin-trunk/bin"
 
     - name: Check environment
       run: |
@@ -56,7 +91,7 @@ jobs:
     - name: Upload package
       uses: actions/upload-artifact@v2
       with:
-        name: ispc_llvm10_linux
+        name: ispc_llvm_trunk_linux
         path: build/ispc-trunk-linux.tar.gz
 
   test:
@@ -76,7 +111,7 @@ jobs:
     - name: Download package
       uses: actions/download-artifact@v2
       with:
-        name: ispc_llvm10_linux
+        name: ispc_llvm_trunk_linux
     - name: Install dependencies and unpack artifacts
       run: |
         sudo apt-get update && sudo apt-get install libc6-dev-i386 g++-multilib lib32stdc++6
