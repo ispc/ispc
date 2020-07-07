@@ -51,7 +51,7 @@ my_tag: &my_tag
         - sudo apt-get install -y libc6-dev-i386 g++-multilib lib32stdc++6
         - if [ -n "$WASM_FLAGS" ]; then source scripts/install_emscripten.sh && emcc --version; fi
         - if [ -n "$WASM_FLAGS" ]; then source scripts/install_v8.sh && v8 -e "console.log(\"V8 WORKS\")"; fi
-        - wget https://cmake.org/files/v3.17/cmake-3.17.0-Linux-x86_64.sh && mkdir /opt/cmake && sh cmake-3.17.0-Linux-x86_64.sh --prefix=/opt/cmake --skip-license && sudo ln -s /opt/cmake/bin/cmake /usr/local/bin/cmake && rm cmake-3.17.0-Linux-x86_64.sh
+        - wget https://cmake.org/files/v3.17/cmake-3.17.3-Linux-x86_64.sh && mkdir /opt/cmake && sh cmake-3.17.3-Linux-x86_64.sh --prefix=/opt/cmake --skip-license && sudo ln -s /opt/cmake/bin/cmake /usr/local/bin/cmake && rm cmake-3.17.3-Linux-x86_64.sh
         - export PATH=/opt/cmake/bin:$PATH
         - cmake --version
         - wget $LLVM_REPO/releases/download/llvm-$LLVM_VERSION-ispc-dev/$LLVM_TAR
