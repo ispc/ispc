@@ -6443,6 +6443,7 @@ static llvm::Value *lTypeConvAtomic(FunctionEmitContext *ctx, llvm::Value *exprV
                 // extend out to an bool as an i8/i16/i32 from the i1 here.
                 // Then we'll turn that into a vector below, the way it
                 // does for everyone else...
+                Assert(cast);
                 cast = ctx->SwitchBoolSize(cast, cast->getType(), LLVMTypes::BoolVectorType->getElementType(),
                                            LLVMGetName(cast, "to_i_bool"));
             }
