@@ -1389,6 +1389,9 @@ Globals::Globals() {
 
     // Target OS defaults to host OS.
     target_os = GetHostOS();
+
+    // Set default based on host OS.
+    calling_conv = GetDefaultCallingConv();
 }
 
 ///////////////////////////////////////////////////////////////////////////

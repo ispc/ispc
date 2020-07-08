@@ -508,6 +508,9 @@ struct Globals {
     /** Target OS */
     TargetOS target_os;
 
+    /** Function Calling Convention */
+    CallingConv calling_conv;
+
     /** There are a number of math libraries that can be used for
         transcendentals and the like during program compilation. */
     enum MathLib { Math_ISPC, Math_ISPCFast, Math_SVML, Math_System };

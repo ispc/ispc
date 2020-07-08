@@ -104,6 +104,7 @@ static void lPrintVersion() {
     PrintWithWordBreaks(cpuHelp, 16, TerminalWidth(), stdout);
     printf("    [-D<foo>]\t\t\t\t#define given value when running preprocessor\n");
     printf("    [--dev-stub <filename>]\t\tEmit device-side offload stub functions to file\n");
+    printf("    [--disable-vectorcall]\t\t\t\tDisable vectorcall calling convention.\n");
     printf("    [--dllexport]\t\t\tMake non-static functions DLL exported.  Windows target only\n");
     printf("    [--dwarf-version={2,3,4}]\t\tGenerate source-level debug information with given DWARF version "
            "(triggers -g).  Ignored for Windows target\n");
@@ -423,6 +424,15 @@ static int ParsingPhaseName(char *stage, ArgErrors &errorHandler) {
     }
 }
 
+static void resetCallingConv(bool disableVectorCall) {
+
+    if ((g->target_os == TargetOS::windows) && !disableVectorCall) {
+        g->calling_conv = CallingConv::x86_vectorcall;
+    } else {
+        g->calling_conv = CallingConv::defaultcall;
+    }
+}
+
 static std::set<int> ParsingPhases(char *stages, ArgErrors &errorHandler) {
     constexpr int parsing_limit = 100;
     std::set<int> phases;
@@ -532,6 +542,7 @@ int main(int Argc, char *Argv[]) {
     Arch arch = Arch::none;
     std::vector<ISPCTarget> targets;
     const char *cpu = NULL, *intelAsmSyntax = NULL;
+    bool disableVectorCall = false;
 
     ArgErrors errorHandler;
 
@@ -657,6 +668,8 @@ int main(int Argc, char *Argv[]) {
                 errorHandler.AddError("Unsupported value for --target-os, supported values are: %s",
                                       g->target_registry->getSupportedOSes().c_str());
             }
+        } else if (!strcmp(argv[i], "--disable-vectorcall")) {
+            disableVectorCall = true;
         } else if (!strncmp(argv[i], "--math-lib=", 11)) {
             const char *lib = argv[i] + 11;
             if (!strcmp(lib, "default"))
@@ -951,6 +964,9 @@ int main(int Argc, char *Argv[]) {
             g->target_os = TargetOS::web;
         }
     }
+
+    // This needs to happen after the TargetOS  is decided.
+    resetCallingConv(disableVectorCall);
 
     return Module::CompileAndOutput(file, arch, cpu, targets, flags, ot, outFileName, headerFileName, depsFileName,
                                     depsTargetName, hostStubFileName, devStubFileName);

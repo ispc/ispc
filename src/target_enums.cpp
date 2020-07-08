@@ -382,3 +382,11 @@ TargetOS GetHostOS() {
     return TargetOS::error;
 #endif
 }
+
+CallingConv GetDefaultCallingConv() {
+
+    if (GetHostOS() == TargetOS::windows)
+        return CallingConv::x86_vectorcall;
+    else
+        return CallingConv::defaultcall;
+}
