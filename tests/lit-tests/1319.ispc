@@ -1,4 +1,4 @@
-//; RUN: %{ispc} %s -h %t.h -o /dev/null
+//; RUN: %{ispc} %s -h %t.h --disable-vectorcall -o /dev/null
 //; RUN: FileCheck --input-file=%t.h %s
 
 typedef void (*foo_fn)(const uniform int x);
