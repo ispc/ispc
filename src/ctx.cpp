@@ -2053,15 +2053,18 @@ llvm::Value *FunctionEmitContext::SwitchBoolSize(llvm::Value *value, llvm::Type 
         return NULL;
     }
 
-    if (name == NULL)
-        name = LLVMGetName(value, "_switchBool");
-
     llvm::Value *newBool = value;
-    if (g->target->getDataLayout()->getTypeSizeInBits(fromType) > g->target->getDataLayout()->getTypeSizeInBits(toType))
-        newBool = TruncInst(value, toType);
-    else if (g->target->getDataLayout()->getTypeSizeInBits(fromType) <
-             g->target->getDataLayout()->getTypeSizeInBits(toType))
-        newBool = SExtInst(value, toType);
+    if (g->target->getDataLayout()->getTypeSizeInBits(fromType) >
+        g->target->getDataLayout()->getTypeSizeInBits(toType)) {
+        if (name == NULL)
+            name = LLVMGetName(value, "_switchBool");
+        newBool = TruncInst(value, toType, name);
+    } else if (g->target->getDataLayout()->getTypeSizeInBits(fromType) <
+               g->target->getDataLayout()->getTypeSizeInBits(toType)) {
+        if (name == NULL)
+            name = LLVMGetName(value, "_switchBool");
+        newBool = SExtInst(value, toType, name);
+    }
 
     return newBool;
 }
