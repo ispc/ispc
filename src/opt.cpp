@@ -881,16 +881,16 @@ restart:
                 else
                     align = callInst->getCalledFunction() == avxMaskedLoad32 ? 4 : 8;
                 name = LLVMGetName(callInst->getArgOperand(0), "_load");
-                llvm::Instruction *loadInst =
 #if ISPC_LLVM_VERSION <= ISPC_LLVM_9_0
+                llvm::Instruction *loadInst =
                     new llvm::LoadInst(castPtr, name, false /* not volatile */, align, (llvm::Instruction *)NULL);
-#elif ISPC_LLVM_VERSION >= ISPC_LLVM_11_0
-                    new llvm::LoadInst(llvm::dyn_cast<llvm::PointerType>(castPtr->getType())->getPointerElementType(),
-                                       castPtr, name, false /* not volatile */, llvm::MaybeAlign(align).valueOrOne(),
-                                       (llvm::Instruction *)NULL);
+#elif ISPC_LLVM_VERSION == ISPC_LLVM_10_0
+                llvm::Instruction *loadInst = new llvm::LoadInst(castPtr, name, false /* not volatile */,
+                                                                 llvm::MaybeAlign(align), (llvm::Instruction *)NULL);
 #else
-                    new llvm::LoadInst(castPtr, name, false /* not volatile */, llvm::MaybeAlign(align),
-                                       (llvm::Instruction *)NULL);
+                llvm::Instruction *loadInst = new llvm::LoadInst(
+                    llvm::dyn_cast<llvm::PointerType>(castPtr->getType())->getPointerElementType(), castPtr, name,
+                    false /* not volatile */, llvm::MaybeAlign(align).valueOrOne(), (llvm::Instruction *)NULL);
 #endif
                 lCopyMetadata(loadInst, callInst);
                 llvm::ReplaceInstWithInst(callInst, loadInst);
@@ -2705,14 +2705,15 @@ static bool lImproveMaskedStore(llvm::CallInst *callInst) {
 
         lvalue = new llvm::BitCastInst(lvalue, ptrType, "lvalue_to_ptr_type", callInst);
         lCopyMetadata(lvalue, callInst);
+#if ISPC_LLVM_VERSION <= ISPC_LLVM_9_0
         llvm::Instruction *store =
             new llvm::StoreInst(rvalue, lvalue, false /* not volatile */,
-#if ISPC_LLVM_VERSION <= ISPC_LLVM_9_0
                                 g->opt.forceAlignedMemory ? g->target->getNativeVectorAlignment() : info->align);
 #else // LLVM 10.0+
-                                llvm::MaybeAlign(g->opt.forceAlignedMemory ? g->target->getNativeVectorAlignment()
-                                                                           : info->align)
-                                    .valueOrOne());
+        llvm::Instruction *store = new llvm::StoreInst(
+            rvalue, lvalue, false /* not volatile */,
+            llvm::MaybeAlign(g->opt.forceAlignedMemory ? g->target->getNativeVectorAlignment() : info->align)
+                .valueOrOne());
 #endif
         lCopyMetadata(store, callInst);
         llvm::ReplaceInstWithInst(callInst, store);
@@ -2762,14 +2763,20 @@ static bool lImproveMaskedLoad(llvm::CallInst *callInst, llvm::BasicBlock::itera
         // The mask is all on, so turn this into a regular load
         llvm::Type *ptrType = llvm::PointerType::get(callInst->getType(), 0);
         ptr = new llvm::BitCastInst(ptr, ptrType, "ptr_cast_for_load", callInst);
-        llvm::Instruction *load = new llvm::LoadInst(
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_11_0
-            llvm::dyn_cast<llvm::PointerType>(ptr->getType())->getPointerElementType(),
-#endif
-            ptr, callInst->getName(), false /* not volatile */,
 #if ISPC_LLVM_VERSION <= ISPC_LLVM_9_0
+        llvm::Instruction *load = new llvm::LoadInst(
+            ptr, callInst->getName(), false /* not volatile */,
             g->opt.forceAlignedMemory ? g->target->getNativeVectorAlignment() : info->align, (llvm::Instruction *)NULL);
-#else // LLVM 10.0+
+#elif ISPC_LLVM_VERSION == ISPC_LLVM_10_0
+        llvm::Instruction *load = new llvm::LoadInst(
+            ptr, callInst->getName(), false /* not volatile */,
+            llvm::MaybeAlign(g->opt.forceAlignedMemory ? g->target->getNativeVectorAlignment() : info->align)
+                .valueOrOne(),
+            (llvm::Instruction *)NULL);
+#else // LLVM 11.0+
+        llvm::Instruction *load = new llvm::LoadInst(
+            llvm::dyn_cast<llvm::PointerType>(ptr->getType())->getPointerElementType(), ptr, callInst->getName(),
+            false /* not volatile */,
             llvm::MaybeAlign(g->opt.forceAlignedMemory ? g->target->getNativeVectorAlignment() : info->align)
                 .valueOrOne(),
             (llvm::Instruction *)NULL);
@@ -3118,12 +3125,12 @@ llvm::Value *lGEPAndLoad(llvm::Value *basePtr, int64_t offset, int align, llvm::
     ptr = new llvm::BitCastInst(ptr, llvm::PointerType::get(type, 0), "ptr_cast", insertBefore);
 #if ISPC_LLVM_VERSION <= ISPC_LLVM_9_0
     return new llvm::LoadInst(ptr, "gather_load", false /* not volatile */, align, insertBefore);
-#elif ISPC_LLVM_VERSION >= ISPC_LLVM_11_0
+#elif ISPC_LLVM_VERSION == ISPC_LLVM_10_0
+    return new llvm::LoadInst(ptr, "gather_load", false /* not volatile */, llvm::MaybeAlign(align), insertBefore);
+#else // LLVM 11.0+
     return new llvm::LoadInst(llvm::dyn_cast<llvm::PointerType>(ptr->getType())->getPointerElementType(), ptr,
                               "gather_load", false /* not volatile */, llvm::MaybeAlign(align).valueOrOne(),
                               insertBefore);
-#else
-    return new llvm::LoadInst(ptr, "gather_load", false /* not volatile */, llvm::MaybeAlign(align), insertBefore);
 #endif
 }
 
