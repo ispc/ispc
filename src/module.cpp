@@ -689,6 +689,8 @@ void Module::AddFunctionDeclaration(const std::string &name, const FunctionType 
         function->addFnAttr(llvm::Attribute::AlwaysInline);
     }
 
+    if (g->calling_conv == CallingConv::x86_vectorcall)
+        function->setCallingConv(llvm::CallingConv::X86_VectorCall);
     if (isNoInline) {
         function->addFnAttr(llvm::Attribute::NoInline);
     }
@@ -1273,10 +1275,14 @@ static void lPrintFunctionDeclarations(FILE *file, const std::vector<Symbol *> &
         const FunctionType *ftype = CastType<FunctionType>(funcs[i]->type);
         Assert(ftype);
         std::string decl;
+        std::string fname = funcs[i]->name;
+        if (g->calling_conv == CallingConv::x86_vectorcall) {
+            fname = "__vectorcall " + fname;
+        }
         if (rewriteForDispatch) {
-            decl = ftype->GetCDeclarationForDispatch(funcs[i]->name);
+            decl = ftype->GetCDeclarationForDispatch(fname);
         } else {
-            decl = ftype->GetCDeclaration(funcs[i]->name);
+            decl = ftype->GetCDeclaration(fname);
         }
         fprintf(file, "    extern %s;\n", decl.c_str());
     }
@@ -2156,11 +2162,15 @@ static void lCreateDispatchFunction(llvm::Module *module, llvm::Function *setISA
     // type is the same across all architectures, however in different
     // modules it may have dissimilar names. The loop below works this
     // around.
+
     for (int i = 0; i < Target::NUM_ISAS; ++i) {
-        if (funcs.func[i])
+        if (funcs.func[i]) {
+
             targetFuncs[i] =
                 llvm::Function::Create(ftype, llvm::GlobalValue::ExternalLinkage, funcs.func[i]->getName(), module);
-        else
+            if (g->calling_conv == CallingConv::x86_vectorcall)
+                targetFuncs[i]->setCallingConv(llvm::CallingConv::X86_VectorCall);
+        } else
             targetFuncs[i] = NULL;
     }
 
@@ -2169,6 +2179,8 @@ static void lCreateDispatchFunction(llvm::Module *module, llvm::Function *setISA
     // Now we can emit the definition of the dispatch function..
     llvm::Function *dispatchFunc =
         llvm::Function::Create(ftype, llvm::GlobalValue::ExternalLinkage, name.c_str(), module);
+    if (g->calling_conv == CallingConv::x86_vectorcall)
+        dispatchFunc->setCallingConv(llvm::CallingConv::X86_VectorCall);
     llvm::BasicBlock *bblock = llvm::BasicBlock::Create(*g->ctx, "entry", dispatchFunc);
 
     // Start by calling out to the function that determines the system's

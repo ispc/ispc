@@ -2998,10 +2998,25 @@ llvm::Value *FunctionEmitContext::CallInst(llvm::Value *func, const FunctionType
 #if ISPC_LLVM_VERSION >= ISPC_LLVM_11_0
         llvm::PointerType *func_ptr_type = llvm::dyn_cast<llvm::PointerType>(func->getType());
         llvm::FunctionType *func_type = llvm::dyn_cast<llvm::FunctionType>(func_ptr_type->getPointerElementType());
-        llvm::Instruction *ci = llvm::CallInst::Create(func_type, func, argVals, name ? name : "", bblock);
+        llvm::CallInst *callinst = llvm::CallInst::Create(func_type, func, argVals, name ? name : "", bblock);
 #else
-        llvm::Instruction *ci = llvm::CallInst::Create(func, argVals, name ? name : "", bblock);
+        llvm::CallInst *callinst = llvm::CallInst::Create(func, argVals, name ? name : "", bblock);
 #endif
+
+        // We could be dealing with a function pointer in which case this will not be a 'llvm::Function'.
+        // If 'llvm::Function', use same calling convention as the actual function definition. It's
+        // important we do this since  prebuilt stdlib functions does not use vectorcall on any OS.
+        // If function pointer, it's safe to assume  that we use the cached calling convention
+        // since this has to be a user defined function.
+        llvm::Function *funcForConv = llvm::dyn_cast<llvm::Function>(func);
+
+        if (funcForConv) {
+            callinst->setCallingConv(funcForConv->getCallingConv());
+        } else if (g->calling_conv == CallingConv::x86_vectorcall) {
+            callinst->setCallingConv(llvm::CallingConv::X86_VectorCall);
+        }
+
+        llvm::Instruction *ci = callinst;
 
         // Copy noalias attribute to call instruction, to enable better
         // alias analysis.
