@@ -6545,7 +6545,15 @@ restart:
                     goto restart;
                 }
             }
-        } else if (llvm::GenXIntrinsic::getGenXIntrinsicID(inst) == llvm::GenXIntrinsic::genx_gather_private) {
+        }
+// This transformation introduces an instruction sequence which leads to incorrect address:
+// trunc i64 %addr to i32 (required for gather.private/scatter.private)
+// add/mul ... %addr
+// zext i32 %addr to i64
+// For now correct svm instruction selection is made in backend.
+// TODO: uncomment this code when i64 is introduced to gather.private/scatter.private
+#if 0
+        else if (llvm::GenXIntrinsic::getGenXIntrinsicID(inst) == llvm::GenXIntrinsic::genx_gather_private) {
             llvm::Instruction *svm_gather =
                 processGatherScatterPrivate(llvm::cast<llvm::CallInst>(inst), /* IsGather */ true);
             if (svm_gather != NULL) {
@@ -6562,6 +6570,7 @@ restart:
                 goto restart;
             }
         }
+#endif
     }
     DEBUG_END_PASS("Fix address space");
     return modifiedAny;
