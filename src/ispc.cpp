@@ -1319,6 +1319,12 @@ void Target::markFuncWithTargetAttr(llvm::Function *func) {
     }
 }
 
+void Target::markFuncWithCallingConv(llvm::Function *func) {
+    assert(g->calling_conv != CallingConv::uninitialized);
+    if (g->calling_conv == CallingConv::x86_vectorcall)
+        func->setCallingConv(llvm::CallingConv::X86_VectorCall);
+}
+
 ///////////////////////////////////////////////////////////////////////////
 // Opt
 
@@ -1390,8 +1396,9 @@ Globals::Globals() {
     // Target OS defaults to host OS.
     target_os = GetHostOS();
 
-    // Set default based on host OS.
-    calling_conv = GetDefaultCallingConv();
+    // Set calling convention to 'uninitialized'.
+    // This needs to be set once target OS is decided.
+    calling_conv = CallingConv::uninitialized;
 }
 
 ///////////////////////////////////////////////////////////////////////////

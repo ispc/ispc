@@ -33,10 +33,7 @@
 
 #include <math.h>
 
-#ifdef _WIN32
-#define WINDOWS
-#endif
-#ifdef _WIN64
+#if defined(_WIN32) || defined(_WIN64)
 #define WINDOWS
 #endif
 

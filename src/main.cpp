@@ -104,7 +104,7 @@ static void lPrintVersion() {
     PrintWithWordBreaks(cpuHelp, 16, TerminalWidth(), stdout);
     printf("    [-D<foo>]\t\t\t\t#define given value when running preprocessor\n");
     printf("    [--dev-stub <filename>]\t\tEmit device-side offload stub functions to file\n");
-    printf("    [--disable-vectorcall]\t\t\t\tDisable vectorcall calling convention.\n");
+    printf("    [--disable-vectorcall]\t\t\t\tDisable vectorcall calling convention on windows.\n");
     printf("    [--dllexport]\t\t\tMake non-static functions DLL exported.  Windows target only\n");
     printf("    [--dwarf-version={2,3,4}]\t\tGenerate source-level debug information with given DWARF version "
            "(triggers -g).  Ignored for Windows target\n");
@@ -424,8 +424,7 @@ static int ParsingPhaseName(char *stage, ArgErrors &errorHandler) {
     }
 }
 
-static void resetCallingConv(bool disableVectorCall) {
-
+static void setCallingConv(bool disableVectorCall) {
     if ((g->target_os == TargetOS::windows) && !disableVectorCall) {
         g->calling_conv = CallingConv::x86_vectorcall;
     } else {
@@ -966,7 +965,7 @@ int main(int Argc, char *Argv[]) {
     }
 
     // This needs to happen after the TargetOS  is decided.
-    resetCallingConv(disableVectorCall);
+    setCallingConv(disableVectorCall);
 
     return Module::CompileAndOutput(file, arch, cpu, targets, flags, ot, outFileName, headerFileName, depsFileName,
                                     depsTargetName, hostStubFileName, devStubFileName);

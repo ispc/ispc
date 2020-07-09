@@ -71,28 +71,22 @@
 // For current tests we need max width multiplied by 4, i.e. 64*4
 #define ARRAY_SIZE 256
 
-extern "C" {
 #ifdef ISPC_IS_WINDOWS
-extern int __vectorcall width();
-extern void __vectorcall f_v(float *result);
-extern void __vectorcall f_f(float *result, float *a);
-extern void __vectorcall f_fu(float *result, float *a, float b);
-extern void __vectorcall f_fi(float *result, float *a, int *b);
-extern void __vectorcall f_du(float *result, double *a, double b);
-extern void __vectorcall f_duf(float *result, double *a, float b);
-extern void __vectorcall f_di(float *result, double *a, int *b);
-extern void __vectorcall result(float *val);
+#define CALLINGCONV __vectorcall
 #else
-extern int width();
-extern void f_v(float *result);
-extern void f_f(float *result, float *a);
-extern void f_fu(float *result, float *a, float b);
-extern void f_fi(float *result, float *a, int *b);
-extern void f_du(float *result, double *a, double b);
-extern void f_duf(float *result, double *a, float b);
-extern void f_di(float *result, double *a, int *b);
-extern void result(float *val);
+#define CALLINGCONV
 #endif
+
+extern "C" {
+extern int CALLINGCONV width();
+extern void CALLINGCONV f_v(float *result);
+extern void CALLINGCONV f_f(float *result, float *a);
+extern void CALLINGCONV f_fu(float *result, float *a, float b);
+extern void CALLINGCONV f_fi(float *result, float *a, int *b);
+extern void CALLINGCONV f_du(float *result, double *a, double b);
+extern void CALLINGCONV f_duf(float *result, double *a, float b);
+extern void CALLINGCONV f_di(float *result, double *a, int *b);
+extern void CALLINGCONV result(float *val);
 
 void ISPCLaunch(void **handlePtr, void *f, void *d, int, int, int);
 void ISPCSync(void *handle);
