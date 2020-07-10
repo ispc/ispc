@@ -3010,10 +3010,12 @@ llvm::Value *FunctionEmitContext::CallInst(llvm::Value *func, const FunctionType
         // since this has to be a user defined function.
         llvm::Function *funcForConv = llvm::dyn_cast<llvm::Function>(func);
 
-        if (funcForConv) {
-            callinst->setCallingConv(funcForConv->getCallingConv());
-        } else if (g->calling_conv == CallingConv::x86_vectorcall) {
-            callinst->setCallingConv(llvm::CallingConv::X86_VectorCall);
+        if (g->calling_conv == CallingConv::x86_vectorcall) {
+            if (funcForConv) {
+                callinst->setCallingConv(funcForConv->getCallingConv());
+            } else {
+                callinst->setCallingConv(llvm::CallingConv::X86_VectorCall);
+            }
         }
 
         llvm::Instruction *ci = callinst;
