@@ -1,7 +1,7 @@
-
-// RUN: %{ispc} %s -h %t1.h --target=host -o /dev/null
+// This test checks header files created with and without vectorcall on Windows. 
+// RUN: %{ispc} %s -h %t1.h --target=host --target-os=windows
 // RUN: FileCheck --input-file=%t1.h %s -check-prefix=CHECK1
-// RUN: %{ispc} %s -h %t2.h --disable-vectorcall --target=host -o /dev/null
+// RUN: %{ispc} %s -h %t2.h --disable-vectorcall --target=host --target-os=windows
 // RUN: FileCheck --input-file=%t2.h %s -check-prefix=CHECK2
 
 // REQUIRES: X86_ENABLED

@@ -104,7 +104,7 @@ static void lPrintVersion() {
     PrintWithWordBreaks(cpuHelp, 16, TerminalWidth(), stdout);
     printf("    [-D<foo>]\t\t\t\t#define given value when running preprocessor\n");
     printf("    [--dev-stub <filename>]\t\tEmit device-side offload stub functions to file\n");
-    printf("    [--disable-vectorcall]\t\t\t\tDisable vectorcall calling convention on windows.\n");
+    printf("    [--disable-vectorcall]\t\t\t\tDisable vectorcall calling convention on Windows.\n");
     printf("    [--dllexport]\t\t\tMake non-static functions DLL exported.  Windows target only\n");
     printf("    [--dwarf-version={2,3,4}]\t\tGenerate source-level debug information with given DWARF version "
            "(triggers -g).  Ignored for Windows target\n");
@@ -940,6 +940,10 @@ int main(int Argc, char *Argv[]) {
 
     if (g->target_os != TargetOS::windows && g->dllExport) {
         Warning(SourcePos(), "--dllexport switch will be ignored, as the target OS is not Windows.");
+    }
+
+    if (g->target_os != TargetOS::windows && disableVectorCall) {
+        Warning(SourcePos(), "--disable-vectorcall switch will be ignored, as the target OS is not Windows.");
     }
 
     if (targets.size() > 1)
