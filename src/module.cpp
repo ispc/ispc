@@ -552,7 +552,8 @@ static void lCheckForStructParameters(const FunctionType *ftype, SourcePos pos) 
     false if any errors were encountered.
  */
 void Module::AddFunctionDeclaration(const std::string &name, const FunctionType *functionType,
-                                    StorageClass storageClass, bool isInline, bool isNoInline, SourcePos pos) {
+                                    StorageClass storageClass, bool isInline, bool isNoInline, bool isVectorCall,
+                                    SourcePos pos) {
     Assert(functionType != NULL);
 
     // If a global variable with the same name has already been declared
@@ -689,7 +690,20 @@ void Module::AddFunctionDeclaration(const std::string &name, const FunctionType 
         function->addFnAttr(llvm::Attribute::AlwaysInline);
     }
 
-    g->target->markFuncWithCallingConv(function);
+    if (isVectorCall) {
+        if ((storageClass != SC_EXTERN_C)) {
+            Error(pos, "Illegal to use \"vectorcall\" qualifier on non-extern function \"%s\".", name.c_str());
+            return;
+        }
+        if (g->target_os != TargetOS::windows) {
+            Error(pos, "Illegal to use \"vectorcall\" qualifier on function \"%s\" for non-Windows OS.", name.c_str());
+            return;
+        }
+    }
+    if (((isVectorCall) && (storageClass == SC_EXTERN_C)) || (storageClass != SC_EXTERN_C)) {
+        g->target->markFuncWithCallingConv(function);
+    }
+
     if (isNoInline) {
         function->addFnAttr(llvm::Attribute::NoInline);
     }

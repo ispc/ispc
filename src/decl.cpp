@@ -652,7 +652,8 @@ void Declaration::DeclareFunctions() {
 
         bool isInline = (declSpecs->typeQualifiers & TYPEQUAL_INLINE);
         bool isNoInline = (declSpecs->typeQualifiers & TYPEQUAL_NOINLINE);
-        m->AddFunctionDeclaration(decl->name, ftype, decl->storageClass, isInline, isNoInline, decl->pos);
+        bool isVectorCall = (declSpecs->typeQualifiers & TYPEQUAL_VECTORCALL);
+        m->AddFunctionDeclaration(decl->name, ftype, decl->storageClass, isInline, isNoInline, isVectorCall, decl->pos);
     }
 }
 
