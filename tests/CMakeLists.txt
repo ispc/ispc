@@ -51,7 +51,7 @@ list(APPEND LIT_ARGS "-Darm_enabled=$<IF:$<BOOL:${ARM_ENABLED}>,ON,OFF>")
 list(APPEND LIT_ARGS "-Dwasm_enabled=$<IF:$<BOOL:${WASM_ENABLED}>,ON,OFF>")
 
 #ISPC enabled OS.
-list(APPEND LIT_ARGS "-Dwindows_enabled=$<IF:$<BOOL:${ISPC_WINDOWS_TARGET}>,ON,OFF>")
+list(APPEND LIT_ARGS "-Dwindows_enabled=$<IF:$<BOOL:${ISPC_LIT_WINDOWS_TARGET}>,ON,OFF>")
 
 add_custom_target(check-all DEPENDS ispc
     COMMAND ${LIT_COMMAND} ${LIT_ARGS}
