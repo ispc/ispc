@@ -2,7 +2,7 @@
 
 rst2html=rst2html
 
-for i in ispc perfguide faq; do
+for i in ispc ispc_for_gen perfguide faq; do
     $rst2html --template=template.txt --link-stylesheet \
         --stylesheet-path=css/style.css $i.rst > $i.html
 done
