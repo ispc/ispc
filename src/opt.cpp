@@ -916,16 +916,17 @@ restart:
                                                              llvm::PointerType::get(storeType, 0), name, callInst);
                 lCopyMetadata(castPtr, callInst);
 
-                llvm::StoreInst *storeInst = new llvm::StoreInst(rvalue, castPtr, (llvm::Instruction *)NULL);
                 int align;
                 if (g->opt.forceAlignedMemory)
                     align = g->target->getNativeVectorAlignment();
                 else
                     align = callInst->getCalledFunction() == avxMaskedStore32 ? 4 : 8;
 #if ISPC_LLVM_VERSION <= ISPC_LLVM_9_0
+                llvm::StoreInst *storeInst = new llvm::StoreInst(rvalue, castPtr, (llvm::Instruction *)NULL);
                 storeInst->setAlignment(align);
-#else // LLVM 10.0+
-                storeInst->setAlignment(llvm::MaybeAlign(align).valueOrOne());
+#else
+                llvm::StoreInst *storeInst = new llvm::StoreInst(rvalue, castPtr, (llvm::Instruction *)NULL,
+                                                                 llvm::MaybeAlign(align).valueOrOne());
 #endif
                 lCopyMetadata(storeInst, callInst);
                 llvm::ReplaceInstWithInst(callInst, storeInst);
