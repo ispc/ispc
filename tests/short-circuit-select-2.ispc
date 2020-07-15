@@ -1,3 +1,5 @@
+// rule: skip on arch=genx32
+// rule: skip on arch=genx64
 
 
 uniform int * uniform ptr;
