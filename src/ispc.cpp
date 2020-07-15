@@ -1208,7 +1208,7 @@ std::string Target::GetTripleString() const {
             Error(SourcePos(), "Aarch64 is not supported on Windows.");
             exit(1);
         } else if (m_arch == Arch::genx32) {
-            triple.setArchName("spir32");
+            triple.setArchName("spir");
         } else if (m_arch == Arch::genx64) {
             triple.setArchName("spir64");
         } else {
@@ -1239,7 +1239,7 @@ std::string Target::GetTripleString() const {
         } else if (m_arch == Arch::aarch64) {
             triple.setArchName("aarch64");
         } else if (m_arch == Arch::genx32) {
-            triple.setArchName("spir32");
+            triple.setArchName("spir");
         } else if (m_arch == Arch::genx64) {
             triple.setArchName("spir64");
         } else {
