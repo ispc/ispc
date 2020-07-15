@@ -2245,11 +2245,17 @@ static void lCreateDispatchFunction(llvm::Module *module, llvm::Function *setISA
             }
         }
         if (voidReturn) {
-            llvm::CallInst::Create(targetFuncs[i], args, "", callBBlock);
+            llvm::CallInst *callInst = llvm::CallInst::Create(targetFuncs[i], args, "", callBBlock);
+            if (g->calling_conv == CallingConv::x86_vectorcall) {
+                callInst->setCallingConv(llvm::CallingConv::X86_VectorCall);
+            }
             llvm::ReturnInst::Create(*g->ctx, callBBlock);
         } else {
-            llvm::Value *retValue = llvm::CallInst::Create(targetFuncs[i], args, "ret_value", callBBlock);
-            llvm::ReturnInst::Create(*g->ctx, retValue, callBBlock);
+            llvm::CallInst *callInst = llvm::CallInst::Create(targetFuncs[i], args, "ret_value", callBBlock);
+            if (g->calling_conv == CallingConv::x86_vectorcall) {
+                callInst->setCallingConv(llvm::CallingConv::X86_VectorCall);
+            }
+            llvm::ReturnInst::Create(*g->ctx, callInst, callBBlock);
         }
 
         // Otherwise we'll go on to the next candidate and see about that
