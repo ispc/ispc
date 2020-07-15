@@ -14,7 +14,7 @@
             a[n] = _in[n];   \
     } while (false)
 
-// CHECK: call <[[#]] x float> @llvm.genx.svm.block.ld
+// CHECK: @llvm.genx.svm.block.ld
 export void gather_coalescing(uniform float _out[], uniform float _in[]) {
     uniform int a[programCount];
 
