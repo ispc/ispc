@@ -567,8 +567,8 @@ def file_check(results, host, target):
     new_runfails = []
     new_passes_compfails = []
     new_passes_runfails = []
-# Open file fail_db.txt
-    f = open(test_states, 'r')
+# Open fail db file
+    f = open(options.fail_db, 'r')
     f_lines = f.readlines()
     f.close()
 # Detect OS
@@ -675,15 +675,15 @@ def file_check(results, host, target):
             print_debug("\t" + new_passes_compfails[i] + "\n", s, run_tests_log)
 
     if options.update != "":
-        output = open(test_states, 'w')
+        output = open(options.fail_db, 'w')
         output.writelines(new_f_lines)
         output.close()
     return [new_runfails, new_compfails, new_passes_runfails, new_passes_compfails, new_line, errors]
 
 # TODO: This function is out of date, it needs update and test coverage.
 def verify():
-    # Open file fail_db.txt
-    f = open(test_states, 'r')
+    # Open fail db file
+    f = open(options.fail_db, 'r')
     f_lines = f.readlines()
     f.close()
     check = [["g++", "clang++", "cl"],["-O0", "-O2"],["x86","x86-64"],
@@ -792,11 +792,17 @@ def print_result(status, results, s, run_tests_log, csv):
         print_debug("%s;%s\n" % (f, title), csv, csv) # dump result to csv if filename is non-empty
 
 def run_tests(options1, args, print_version):
+    global exit_code
     global options
     options = options1
     global s
     s = options.silent
     # prepare run_tests_log and fail_db file
+    if len(args) != 0 and not os.path.exists(options.fail_db):
+        print("Fail database file not found!")
+        exit_code = 1
+        return 0
+
     global run_tests_log
     if options.in_file:
         run_tests_log = os.getcwd() + os.sep + options.in_file
@@ -944,7 +950,6 @@ import traceback
 print_debug = common.print_debug
 error = common.error
 exit_code = 0
-test_states = "fail_db.txt"
 
 if __name__ == "__main__":
     parser = OptionParser()
@@ -978,12 +983,12 @@ if __name__ == "__main__":
     parser.add_option("--l0loader", dest='l0loader', help='Path to L0 loader', default="")
     parser.add_option("--cpu", dest='cpu', help='Specify target ISPC CPU. For example: core2, skx, cortex-a9, SKL, TGLLP, etc.', default=None)
     parser.add_option("--ispc_output", dest='ispc_output', choices=['obj', 'spv', 'ze'], help='Specify ISPC output', default=None)
-    parser.add_option("--verify", dest='verify', help='verify the file fail_db.txt', default=False, action="store_true")
+    parser.add_option("--fail_db", dest='fail_db', help='File to use as a fail database', default='fail_db.txt', type=str)
+    parser.add_option("--verify", dest='verify', help='verify the fail database file', default=False, action="store_true")
     parser.add_option("--save-bin", dest='save_bin', help='compile and create bin, but don\'t execute it',
                   default=False, action="store_true")
     parser.add_option('--csv', dest="csv", help="file to save testing results", default="")
     parser.add_option('--test_time', dest="test_time", help="time needed for each test", default=600, type="int", action="store")
     (options, args) = parser.parse_args()
-
     L = run_tests(options, args, 1)
     exit(exit_code)
