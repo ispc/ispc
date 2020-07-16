@@ -48,9 +48,10 @@
 #define ISPC_LLVM_9_0 90000
 #define ISPC_LLVM_10_0 100000
 #define ISPC_LLVM_11_0 110000
+#define ISPC_LLVM_12_0 120000
 
 #define OLDEST_SUPPORTED_LLVM ISPC_LLVM_8_0
-#define LATEST_SUPPORTED_LLVM ISPC_LLVM_11_0
+#define LATEST_SUPPORTED_LLVM ISPC_LLVM_12_0
 
 #ifdef __ispc__xstr
 #undef __ispc__xstr
