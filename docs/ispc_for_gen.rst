@@ -449,9 +449,15 @@ FAQ
 How to Get an Assembly File from SPIR-V?
 ----------------------------------------
 
-Use cmoc tool installed as part of intel-igc-core package:
-:
+Use ``ocloc`` tool installed as part of intel-ocloc package:
+::
 
-  cmoc -mdump_asm genx_simple.spv
+  // Create binary first
+  ocloc compile -file file.spv -spirv_input -options "-vc-codegen" -device <name>
 
-You will get file.asm and file.visa as a result of this command.
+::
+
+  // Then disassemble it
+  ocloc disasm -file file_Gen9core.bin -device <name> -dump <FOLDER_TO_DUMP>
+
+You will get ``.asm`` files for each kernel in <FOLDER_TO_DUMP>.
