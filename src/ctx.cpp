@@ -3025,8 +3025,16 @@ llvm::Value *FunctionEmitContext::CallInst(llvm::Value *func, const FunctionType
         // TODO: what other attributes needs to be copied?
         // TODO: do the same for varing path.
         llvm::CallInst *cc = llvm::dyn_cast<llvm::CallInst>(ci);
-        if (cc && cc->getCalledFunction() && cc->getCalledFunction()->returnDoesNotAlias()) {
-            cc->addAttribute(llvm::AttributeList::ReturnIndex, llvm::Attribute::NoAlias);
+        if (cc && cc->getCalledFunction()) {
+            if (cc->getCalledFunction()->returnDoesNotAlias()) {
+                cc->addAttribute(llvm::AttributeList::ReturnIndex, llvm::Attribute::NoAlias);
+            }
+            unsigned int argSize = cc->arg_size();
+            llvm::Function *calledFunc = cc->getCalledFunction();
+            for (int argNum = 0; argNum < argSize; argNum++) {
+                if (calledFunc->getArg(argNum)->hasAttribute(llvm::Attribute::InReg))
+                    cc->addParamAttr(argNum, llvm::Attribute::InReg);
+            }
         }
 
         AddDebugPos(ci);

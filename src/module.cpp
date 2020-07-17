@@ -700,9 +700,6 @@ void Module::AddFunctionDeclaration(const std::string &name, const FunctionType 
             return;
         }
     }
-    if (((isVectorCall) && (storageClass == SC_EXTERN_C)) || (storageClass != SC_EXTERN_C)) {
-        g->target->markFuncWithCallingConv(function);
-    }
 
     if (isNoInline) {
         function->addFnAttr(llvm::Attribute::NoInline);
@@ -711,6 +708,10 @@ void Module::AddFunctionDeclaration(const std::string &name, const FunctionType 
     if (functionType->isTask) {
         // This also applies transitively to members I think?
         function->addParamAttr(0, llvm::Attribute::NoAlias);
+    } else {
+        if (((isVectorCall) && (storageClass == SC_EXTERN_C)) || (storageClass != SC_EXTERN_C)) {
+            g->target->markFuncWithCallingConv(function);
+        }
     }
 
     g->target->markFuncWithTargetAttr(function);
