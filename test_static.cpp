@@ -41,6 +41,10 @@
 #define ISPC_IS_APPLE
 #endif
 
+#if defined(_WIN64)
+#define ISPC_IS_WINDOWS64
+#endif
+
 #ifdef ISPC_IS_WINDOWS
 #include <windows.h>
 #endif // ISPC_IS_WINDOWS
@@ -71,7 +75,7 @@
 // For current tests we need max width multiplied by 4, i.e. 64*4
 #define ARRAY_SIZE 256
 
-#ifdef ISPC_IS_WINDOWS
+#ifdef ISPC_IS_WINDOWS64
 #define CALLINGCONV __vectorcall
 #else
 #define CALLINGCONV

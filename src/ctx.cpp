@@ -3029,12 +3029,13 @@ llvm::Value *FunctionEmitContext::CallInst(llvm::Value *func, const FunctionType
             if (cc->getCalledFunction()->returnDoesNotAlias()) {
                 cc->addAttribute(llvm::AttributeList::ReturnIndex, llvm::Attribute::NoAlias);
             }
-            unsigned int argSize = cc->arg_size();
+            // TO DO:Add x86 changes as a separate commit
+            /* unsigned int argSize = cc->arg_size();
             llvm::Function *calledFunc = cc->getCalledFunction();
             for (int argNum = 0; argNum < argSize; argNum++) {
                 if (calledFunc->getArg(argNum)->hasAttribute(llvm::Attribute::InReg))
                     cc->addParamAttr(argNum, llvm::Attribute::InReg);
-            }
+            }*/
         }
 
         AddDebugPos(ci);

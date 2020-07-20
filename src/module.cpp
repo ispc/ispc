@@ -692,11 +692,12 @@ void Module::AddFunctionDeclaration(const std::string &name, const FunctionType 
 
     if (isVectorCall) {
         if ((storageClass != SC_EXTERN_C)) {
-            Error(pos, "Illegal to use \"vectorcall\" qualifier on non-extern function \"%s\".", name.c_str());
+            Error(pos, "Illegal to use \"__vectorcall\" qualifier on non-extern function \"%s\".", name.c_str());
             return;
         }
         if (g->target_os != TargetOS::windows) {
-            Error(pos, "Illegal to use \"vectorcall\" qualifier on function \"%s\" for non-Windows OS.", name.c_str());
+            Error(pos, "Illegal to use \"__vectorcall\" qualifier on function \"%s\" for non-Windows OS.",
+                  name.c_str());
             return;
         }
     }

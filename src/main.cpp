@@ -424,8 +424,9 @@ static int ParsingPhaseName(char *stage, ArgErrors &errorHandler) {
     }
 }
 
-static void setCallingConv(bool disableVectorCall) {
-    if ((g->target_os == TargetOS::windows) && !disableVectorCall) {
+static void setCallingConv(bool disableVectorCall, Arch arch) {
+    // Restrict vectorcall to just x86_64.
+    if ((g->target_os == TargetOS::windows) && !disableVectorCall && arch != Arch::x86) {
         g->calling_conv = CallingConv::x86_vectorcall;
     } else {
         g->calling_conv = CallingConv::defaultcall;
@@ -969,7 +970,7 @@ int main(int Argc, char *Argv[]) {
     }
 
     // This needs to happen after the TargetOS  is decided.
-    setCallingConv(disableVectorCall);
+    setCallingConv(disableVectorCall, arch);
 
     return Module::CompileAndOutput(file, arch, cpu, targets, flags, ot, outFileName, headerFileName, depsFileName,
                                     depsTargetName, hostStubFileName, devStubFileName);
