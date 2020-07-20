@@ -1457,7 +1457,7 @@ The following reserved words from C89 are also reserved in ``ispc``:
 
 ``bool``, ``delete``, ``export``, ``cdo``, ``cfor``, ``cif``, ``cwhile``,
 ``false``, ``foreach``, ``foreach_active``, ``foreach_tiled``,
-``foreach_unique``, ``in``, ``inline``, ``noinline``, ``vectorcall``, ``int8``, ``int16``,
+``foreach_unique``, ``in``, ``inline``, ``noinline``, ``__vectorcall``, ``int8``, ``int16``,
 ``int32``, ``int64``, ``launch``, ``new``, ``print``, ``soa``, ``sync``, ``task``,
 ``true``, ``uniform``, and ``varying``.
 
@@ -1573,7 +1573,7 @@ The following identifiers are reserved as language keywords: ``bool``,
 ``const``, ``continue``, ``default``, ``do``, ``double``, ``else``,
 ``enum``, ``export``, ``extern``, ``false``, ``float``, ``for``,
 ``foreach``, ``foreach_active``, ``foreach_tiled``, ``foreach_unique``,
-``goto``, ``if``, ``in``, ``inline``, ``noinline``, ``vectorcall``, ``int``, ``int8``,
+``goto``, ``if``, ``in``, ``inline``, ``noinline``, ``__vectorcall``, ``int``, ``int8``,
 ``int16``, ``int32``, ``int64``, ``launch``, ``NULL``, ``print``, ``return``,
 ``signed``, ``sizeof``, ``soa``, ``static``, ``struct``, ``switch``,
 ``sync``, ``task``, ``true``, ``typedef``, ``uniform``, ``union``,
@@ -4873,14 +4873,14 @@ It is illegal to overload functions declared with ``extern "C"`` linkage;
 ``ispc`` issues an error in this case.
 
 Functions declared with ``extern "C"`` linkage can be made to follow
-``__vectorcall`` calling convention on Windows by using ``vectorcall``
+``__vectorcall`` calling convention on Windows by using ``__vectorcall``
 qualifier.
 
 ::
 
-   extern "C" vectorcall void foo(uniform float f, uniform float g);
+   extern "C" __vectorcall void foo(uniform float f, uniform float g);
 
-``vectorcall`` can only be used for ``extern "C"`` function declarations and
+``__vectorcall`` can only be used for ``extern "C"`` function declarations and
 on Windows OS.
 
 **Only a single function call is made back to C++ for the entire gang of

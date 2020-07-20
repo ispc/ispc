@@ -1135,7 +1135,7 @@ specifier_qualifier_list
                 $$ = $2;
             }
             else if ($1 == TYPEQUAL_VECTORCALL) {
-                Error(@1, "\"vectorcall\" qualifier is illegal outside of "
+                Error(@1, "\"__vectorcall\" qualifier is illegal outside of "
                       "function declarations.");
                 $$ = $2;
             }

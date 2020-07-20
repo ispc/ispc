@@ -1348,8 +1348,8 @@ void Target::markFuncWithCallingConv(llvm::Function *func) {
             for (; argIter != func->arg_end(); ++argIter) {
                 llvm::Type *argType = fType->getParamType(argIter->getArgNo());
                 if (argType->isIntegerTy() || argType->isStructTy() || argType->isPointerTy()) {
-                    if (((argType->isIntegerTy()) ||
-                         (argType->isStructTy()) && (g->target->getDataLayout()->getTypeSizeInBits(argType) > 32))) {
+                    if (((argType->isIntegerTy()) || (argType->isStructTy())) &&
+                        (g->target->getDataLayout()->getTypeSizeInBits(argType) > 32)) {
                         numArgsIntInReg = 2;
                         continue;
                     }
