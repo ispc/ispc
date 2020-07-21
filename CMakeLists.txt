@@ -354,7 +354,14 @@ target_include_directories(${PROJECT_NAME} PRIVATE
 if (UNIX)
     target_compile_options(${PROJECT_NAME} PRIVATE -Wall -Wno-sign-compare -Wno-unused-function -Werror ${LLVM_CPP_FLAGS})
     # Security options
-    target_compile_options(${PROJECT_NAME} PRIVATE -fstack-protector-strong -fno-strict-float-cast-overflow
+    if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+      # Using the clang compiler
+      set(COMPILER_SPECIFIC_FLAGS -fno-strict-float-cast-overflow)
+    else()
+      # Assume that we are using GCC
+      set(COMPILER_SPECIFIC_FLAGS -fno-sanitize=float-cast-overflow)
+    endif()
+    target_compile_options(${PROJECT_NAME} PRIVATE ${COMPILER_SPECIFIC_FLAGS} -fstack-protector-strong
                            -fdata-sections -ffunction-sections -fno-delete-null-pointer-checks
                            -Wformat -Wformat-security -fpie -fwrapv)
 else()
