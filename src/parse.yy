@@ -191,7 +191,7 @@ struct ForeachDimension {
 %token TOKEN_AND_ASSIGN TOKEN_OR_ASSIGN TOKEN_XOR_ASSIGN
 %token TOKEN_SIZEOF TOKEN_NEW TOKEN_DELETE TOKEN_IN
 
-%token TOKEN_EXTERN TOKEN_EXPORT TOKEN_STATIC TOKEN_INLINE TOKEN_NOINLINE TOKEN_TASK TOKEN_DECLSPEC
+%token TOKEN_EXTERN TOKEN_EXPORT TOKEN_STATIC TOKEN_INLINE TOKEN_NOINLINE TOKEN_VECTORCALL TOKEN_TASK TOKEN_DECLSPEC
 %token TOKEN_UNIFORM TOKEN_VARYING TOKEN_TYPEDEF TOKEN_SOA TOKEN_UNMASKED
 %token TOKEN_CHAR TOKEN_INT TOKEN_SIGNED TOKEN_UNSIGNED TOKEN_FLOAT TOKEN_DOUBLE
 %token TOKEN_INT8 TOKEN_INT16 TOKEN_INT64 TOKEN_CONST TOKEN_VOID TOKEN_BOOL
@@ -1134,6 +1134,11 @@ specifier_qualifier_list
                       "function declarations.");
                 $$ = $2;
             }
+            else if ($1 == TYPEQUAL_VECTORCALL) {
+                Error(@1, "\"__vectorcall\" qualifier is illegal outside of "
+                      "function declarations.");
+                $$ = $2;
+            }
             else if ($1 == TYPEQUAL_TASK) {
                 Error(@1, "\"task\" qualifier is illegal outside of "
                       "function declarations.");
@@ -1285,6 +1290,7 @@ type_qualifier
     | TOKEN_EXPORT     { $$ = TYPEQUAL_EXPORT; }
     | TOKEN_INLINE     { $$ = TYPEQUAL_INLINE; }
     | TOKEN_NOINLINE   { $$ = TYPEQUAL_NOINLINE; }
+    | TOKEN_VECTORCALL { $$ = TYPEQUAL_VECTORCALL; }
     | TOKEN_SIGNED     { $$ = TYPEQUAL_SIGNED; }
     | TOKEN_UNSIGNED   { $$ = TYPEQUAL_UNSIGNED; }
     ;
@@ -2189,8 +2195,9 @@ lAddDeclaration(DeclSpecs *ds, Declarator *decl) {
         if (ft != NULL) {
             bool isInline = (ds->typeQualifiers & TYPEQUAL_INLINE);
             bool isNoInline = (ds->typeQualifiers & TYPEQUAL_NOINLINE);
+            bool isVectorCall = (ds->typeQualifiers & TYPEQUAL_VECTORCALL);
             m->AddFunctionDeclaration(decl->name, ft, ds->storageClass,
-                                      isInline, isNoInline, decl->pos);
+                                      isInline, isNoInline, isVectorCall, decl->pos);
         }
         else {
             bool isConst = (ds->typeQualifiers & TYPEQUAL_CONST) != 0;

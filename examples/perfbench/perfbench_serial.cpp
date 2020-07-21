@@ -33,7 +33,15 @@
 
 #include <math.h>
 
+#if defined(_WIN32) || defined(_WIN64)
+#define WINDOWS
+#endif
+
+#ifdef WINDOWS
+void __vectorcall xyzSumAOS(float *a, int count, float *zeros, float *result) {
+#else
 void xyzSumAOS(float *a, int count, float *zeros, float *result) {
+#endif
     float xsum = 0, ysum = 0, zsum = 0;
     for (int i = 0; i < count; i += 3) {
         xsum += a[i];
@@ -45,7 +53,11 @@ void xyzSumAOS(float *a, int count, float *zeros, float *result) {
     result[2] = zsum;
 }
 
+#ifdef WINDOWS
+void __vectorcall xyzSumSOA(float *a, int count, float *zeros, float *result) {
+#else
 void xyzSumSOA(float *a, int count, float *zeros, float *result) {
+#endif
     float xsum = 0, ysum = 0, zsum = 0;
     for (int i = 0; i < count / 3; ++i) {
         float *p = a + (i >> 3) * 24 + (i & 7);

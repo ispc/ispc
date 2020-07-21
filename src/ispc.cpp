@@ -1319,6 +1319,64 @@ void Target::markFuncWithTargetAttr(llvm::Function *func) {
     }
 }
 
+void Target::markFuncWithCallingConv(llvm::Function *func) {
+    assert(g->calling_conv != CallingConv::uninitialized);
+    if (g->calling_conv == CallingConv::x86_vectorcall) {
+        func->setCallingConv(llvm::CallingConv::X86_VectorCall);
+        // Add x86 vectorcall changes as a separate commit.
+        /*
+        // We have to jump through some hoops for x86.
+        // In LLVM IR for x86, arguments which are to be passed in registers
+        // have to marked with 'InReg' attribue.
+        // Rules(Ref : https://docs.microsoft.com/en-us/cpp/cpp/vectorcall?view=vs-2019 )
+        // Definitions:
+        // Integer Type : it fits in the native register size of the processor—for example,
+        // 4 bytes on an x86 machine.Integer types include pointer, reference, and struct or union types of 4 bytes or
+        less.
+        // Vector Type : either a floating - point type—for example, a float or double—or an SIMD vector type—for
+        // example, __m128 or __m256.
+        // Rules for x86: Integer Type : The first two integer type arguments found in the
+        // parameter list from left to right are placed in ECX and EDX, respectively.
+        // Vector Type : The first six vector type arguments in order from left to right are passed by value in SSE
+        vector registers 0 to 5.
+        //The seventh and subsequent vector type arguments are passed on the stack by reference to memory allocated by
+        the caller.
+        // Observations from Clang(Is there somewhere these rules are mentioned??)
+        // Integer Type : After first Integer Type greater than 32 bit, other integer types NOT passed in reg.
+        // Vector Type : After 6 Vector Type args, if 2 Integer Type registers are not yet used, VectorType args
+        // passed by reference via register - TO DO
+
+        if (m_arch == Arch::x86) {
+            llvm::Function::arg_iterator argIter = func->arg_begin();
+            llvm::FunctionType *fType = func->getFunctionType();
+            int numArgsVecInReg = 0;
+            int numArgsIntInReg = 0;
+            for (; argIter != func->arg_end(); ++argIter) {
+                llvm::Type *argType = fType->getParamType(argIter->getArgNo());
+                if (argType->isIntegerTy() || argType->isStructTy() || argType->isPointerTy()) {
+                    if (((argType->isIntegerTy()) || (argType->isStructTy())) &&
+                        (g->target->getDataLayout()->getTypeSizeInBits(argType) > 32)) {
+                        numArgsIntInReg = 2;
+                        continue;
+                    }
+
+                    numArgsIntInReg++;
+                    argIter->addAttr(llvm::Attribute::InReg);
+                    continue;
+                }
+                if (((llvm::dyn_cast<llvm::VectorType>(argType) != NULL) || argType->isFloatTy() ||
+                     argType->isDoubleTy())) {
+                    numArgsVecInReg++;
+                    argIter->addAttr(llvm::Attribute::InReg);
+                }
+
+                if ((numArgsIntInReg == 2) && (numArgsVecInReg == 6))
+                    break;
+            }
+        }*/
+    }
+}
+
 ///////////////////////////////////////////////////////////////////////////
 // Opt
 
@@ -1389,6 +1447,10 @@ Globals::Globals() {
 
     // Target OS defaults to host OS.
     target_os = GetHostOS();
+
+    // Set calling convention to 'uninitialized'.
+    // This needs to be set once target OS is decided.
+    calling_conv = CallingConv::uninitialized;
 }
 
 ///////////////////////////////////////////////////////////////////////////

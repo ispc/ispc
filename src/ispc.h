@@ -217,6 +217,9 @@ class Target {
     /** Mark LLVM function with target specific attribute, if required. */
     void markFuncWithTargetAttr(llvm::Function *func);
 
+    /** Set LLVM function with Calling Convention. */
+    void markFuncWithCallingConv(llvm::Function *func);
+
     const llvm::Target *getTarget() const { return m_target; }
 
     // Note the same name of method for 3.1 and 3.2+, this allows
@@ -507,6 +510,9 @@ struct Globals {
 
     /** Target OS */
     TargetOS target_os;
+
+    /** Function Calling Convention */
+    CallingConv calling_conv;
 
     /** There are a number of math libraries that can be used for
         transcendentals and the like during program compilation. */

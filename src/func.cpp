@@ -464,6 +464,7 @@ void Function::GenerateIR() {
 
                 llvm::Function *appFunction = llvm::Function::Create(ftype, linkage, functionName.c_str(), m->module);
                 appFunction->setDoesNotThrow();
+                g->target->markFuncWithCallingConv(appFunction);
 
                 for (int i = 0; i < function->getFunctionType()->getNumParams() - 1; i++) {
                     if (function->hasParamAttribute(i, llvm::Attribute::NoAlias)) {

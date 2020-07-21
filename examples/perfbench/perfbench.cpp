@@ -37,6 +37,9 @@
 #pragma warning(disable : 4244)
 #pragma warning(disable : 4305)
 #endif
+#if defined(_WIN32) || defined(_WIN64)
+#define WINDOWS
+#endif
 
 #include "../timing.h"
 #include <algorithm>
@@ -44,7 +47,13 @@
 
 #include "perfbench_ispc.h"
 
-typedef void(FuncType)(float *, int, float *, float *);
+#ifdef WINDOWS
+#define CALLINGCONV __vectorcall
+#else
+#define CALLINGCONV
+#endif
+
+typedef void(CALLINGCONV FuncType)(float *, int, float *, float *);
 
 struct PerfTest {
     FuncType *aFunc;
@@ -54,8 +63,8 @@ struct PerfTest {
     const char *testName;
 };
 
-extern void xyzSumAOS(float *a, int count, float *zeros, float *result);
-extern void xyzSumSOA(float *a, int count, float *zeros, float *result);
+extern void CALLINGCONV xyzSumAOS(float *a, int count, float *zeros, float *result);
+extern void CALLINGCONV xyzSumSOA(float *a, int count, float *zeros, float *result);
 
 static void lInitData(float *ptr, int count) {
     for (int i = 0; i < count; ++i)

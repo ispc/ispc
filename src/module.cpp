@@ -552,7 +552,8 @@ static void lCheckForStructParameters(const FunctionType *ftype, SourcePos pos) 
     false if any errors were encountered.
  */
 void Module::AddFunctionDeclaration(const std::string &name, const FunctionType *functionType,
-                                    StorageClass storageClass, bool isInline, bool isNoInline, SourcePos pos) {
+                                    StorageClass storageClass, bool isInline, bool isNoInline, bool isVectorCall,
+                                    SourcePos pos) {
     Assert(functionType != NULL);
 
     // If a global variable with the same name has already been declared
@@ -689,6 +690,18 @@ void Module::AddFunctionDeclaration(const std::string &name, const FunctionType 
         function->addFnAttr(llvm::Attribute::AlwaysInline);
     }
 
+    if (isVectorCall) {
+        if ((storageClass != SC_EXTERN_C)) {
+            Error(pos, "Illegal to use \"__vectorcall\" qualifier on non-extern function \"%s\".", name.c_str());
+            return;
+        }
+        if (g->target_os != TargetOS::windows) {
+            Error(pos, "Illegal to use \"__vectorcall\" qualifier on function \"%s\" for non-Windows OS.",
+                  name.c_str());
+            return;
+        }
+    }
+
     if (isNoInline) {
         function->addFnAttr(llvm::Attribute::NoInline);
     }
@@ -696,6 +709,9 @@ void Module::AddFunctionDeclaration(const std::string &name, const FunctionType 
     if (functionType->isTask) {
         // This also applies transitively to members I think?
         function->addParamAttr(0, llvm::Attribute::NoAlias);
+    }
+    if (((isVectorCall) && (storageClass == SC_EXTERN_C)) || (storageClass != SC_EXTERN_C)) {
+        g->target->markFuncWithCallingConv(function);
     }
 
     g->target->markFuncWithTargetAttr(function);
@@ -1273,10 +1289,14 @@ static void lPrintFunctionDeclarations(FILE *file, const std::vector<Symbol *> &
         const FunctionType *ftype = CastType<FunctionType>(funcs[i]->type);
         Assert(ftype);
         std::string decl;
+        std::string fname = funcs[i]->name;
+        if (g->calling_conv == CallingConv::x86_vectorcall) {
+            fname = "__vectorcall " + fname;
+        }
         if (rewriteForDispatch) {
-            decl = ftype->GetCDeclarationForDispatch(funcs[i]->name);
+            decl = ftype->GetCDeclarationForDispatch(fname);
         } else {
-            decl = ftype->GetCDeclaration(funcs[i]->name);
+            decl = ftype->GetCDeclaration(fname);
         }
         fprintf(file, "    extern %s;\n", decl.c_str());
     }
@@ -2156,11 +2176,14 @@ static void lCreateDispatchFunction(llvm::Module *module, llvm::Function *setISA
     // type is the same across all architectures, however in different
     // modules it may have dissimilar names. The loop below works this
     // around.
+
     for (int i = 0; i < Target::NUM_ISAS; ++i) {
-        if (funcs.func[i])
+        if (funcs.func[i]) {
+
             targetFuncs[i] =
                 llvm::Function::Create(ftype, llvm::GlobalValue::ExternalLinkage, funcs.func[i]->getName(), module);
-        else
+            g->target->markFuncWithCallingConv(targetFuncs[i]);
+        } else
             targetFuncs[i] = NULL;
     }
 
@@ -2169,6 +2192,7 @@ static void lCreateDispatchFunction(llvm::Module *module, llvm::Function *setISA
     // Now we can emit the definition of the dispatch function..
     llvm::Function *dispatchFunc =
         llvm::Function::Create(ftype, llvm::GlobalValue::ExternalLinkage, name.c_str(), module);
+    g->target->markFuncWithCallingConv(dispatchFunc);
     llvm::BasicBlock *bblock = llvm::BasicBlock::Create(*g->ctx, "entry", dispatchFunc);
 
     // Start by calling out to the function that determines the system's
@@ -2222,11 +2246,17 @@ static void lCreateDispatchFunction(llvm::Module *module, llvm::Function *setISA
             }
         }
         if (voidReturn) {
-            llvm::CallInst::Create(targetFuncs[i], args, "", callBBlock);
+            llvm::CallInst *callInst = llvm::CallInst::Create(targetFuncs[i], args, "", callBBlock);
+            if (g->calling_conv == CallingConv::x86_vectorcall) {
+                callInst->setCallingConv(llvm::CallingConv::X86_VectorCall);
+            }
             llvm::ReturnInst::Create(*g->ctx, callBBlock);
         } else {
-            llvm::Value *retValue = llvm::CallInst::Create(targetFuncs[i], args, "ret_value", callBBlock);
-            llvm::ReturnInst::Create(*g->ctx, retValue, callBBlock);
+            llvm::CallInst *callInst = llvm::CallInst::Create(targetFuncs[i], args, "ret_value", callBBlock);
+            if (g->calling_conv == CallingConv::x86_vectorcall) {
+                callInst->setCallingConv(llvm::CallingConv::X86_VectorCall);
+            }
+            llvm::ReturnInst::Create(*g->ctx, callInst, callBBlock);
         }
 
         // Otherwise we'll go on to the next candidate and see about that
