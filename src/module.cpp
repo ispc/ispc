@@ -1038,17 +1038,19 @@ bool Module::writeSPIRV(llvm::Module *module, const char *outFileName) {
     std::ofstream fos(outFileName, std::ios::binary);
     std::string err;
     bool success = false;
+    SPIRV::TranslatorOpts Opts;
+    Opts.enableAllExtensions();
     // Pass this option to open source SPIR-V translator.
     // This option will break internal version of SPIR-V translator.
-    std::vector<const char *> Args(3);
-    Args[0] = "ispc (SPIRV translator option parsing)";
-    Args[2] = nullptr;
-    Args[1] = "-spirv-allow-unknown-intrinsics";
-    llvm::cl::ParseCommandLineOptions(2, Args.data());
+    llvm::cl::opt<bool> SPIRVAllowUnknownIntrinsics(
+        "spirv-allow-unknown-intrinsics", llvm::cl::init(true),
+        llvm::cl::desc("Unknown LLVM intrinsics will be translated as external function "
+                       "calls in SPIR-V"));
+    Opts.setSPIRVAllowUnknownIntrinsicsEnabled(SPIRVAllowUnknownIntrinsics);
     if (!strcmp(outFileName, "-")) {
-        success = llvm::writeSpirv(module, std::cout, err);
+        success = llvm::writeSpirv(module, Opts, std::cout, err);
     } else {
-        success = llvm::writeSpirv(module, fos, err);
+        success = llvm::writeSpirv(module, Opts, fos, err);
     }
     if (!success) {
         fprintf(stderr, "Fails to save LLVM as SPIR-V: %s \n", err.c_str());
