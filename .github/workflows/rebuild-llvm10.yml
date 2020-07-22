@@ -35,13 +35,13 @@ jobs:
         docker run ispc/ubuntu16.04
         export CONTAINER=`docker ps --all |head -2 |tail -1 |awk '//{print $1}'`
         sudo docker cp $CONTAINER:/usr/local/src/llvm/bin-10.0 .
-        tar cJvf llvm-10.0.0-ubuntu16.04-Release+Asserts-x86.arm.wasm.tar.xz bin-10.0
+        tar cJvf llvm-10.0.1-ubuntu16.04-Release+Asserts-x86.arm.wasm.tar.xz bin-10.0
 
     - name: Upload package
       uses: actions/upload-artifact@v2
       with:
         name: llvm10_linux
-        path: docker/ubuntu/llvm_build/llvm-10.0.0-ubuntu16.04-Release+Asserts-x86.arm.wasm.tar.xz
+        path: docker/ubuntu/llvm_build/llvm-10.0.1-ubuntu16.04-Release+Asserts-x86.arm.wasm.tar.xz
 
   win-build:
     runs-on: windows-latest
@@ -78,13 +78,13 @@ jobs:
       shell: cmd
       run: |
         cd llvm
-        7z.exe a -t7z llvm-10.0.0-win.vs2019-Release+Asserts-x86.arm.wasm.zip bin-10.0
+        7z.exe a -t7z llvm-10.0.1-win.vs2019-Release+Asserts-x86.arm.wasm.zip bin-10.0
 
     - name: Upload package
       uses: actions/upload-artifact@v2
       with:
         name: llvm10_win
-        path: llvm/llvm-10.0.0-win.vs2019-Release+Asserts-x86.arm.wasm.zip
+        path: llvm/llvm-10.0.1-win.vs2019-Release+Asserts-x86.arm.wasm.zip
 
   mac-build:
     runs-on: macos-10.15
@@ -121,11 +121,11 @@ jobs:
     - name: Pack LLVM
       run: |
         cd llvm
-        tar cJvf llvm-10.0.0-macos10.15-Release+Asserts-x86.arm.wasm.tar.xz bin-10.0
+        tar cJvf llvm-10.0.1-macos10.15-Release+Asserts-x86.arm.wasm.tar.xz bin-10.0
 
     - name: Upload package
       uses: actions/upload-artifact@v2
       with:
         name: llvm10_macos
-        path: llvm/llvm-10.0.0-macos10.15-Release+Asserts-x86.arm.wasm.tar.xz
+        path: llvm/llvm-10.0.1-macos10.15-Release+Asserts-x86.arm.wasm.tar.xz
 
