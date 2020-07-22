@@ -40,6 +40,7 @@
 #include "target_registry.h"
 #include "type.h"
 #include "util.h"
+
 #include <cstdarg>
 #include <stdio.h>
 #include <stdlib.h>
@@ -48,6 +49,7 @@
 #else
 #include <unistd.h>
 #endif // ISPC_HOST_IS_WINDOWS
+
 #include <llvm/Support/CommandLine.h>
 #include <llvm/Support/Debug.h>
 #include <llvm/Support/Signals.h>

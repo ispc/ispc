@@ -38,6 +38,7 @@
 #pragma once
 
 #include "ispc.h"
+
 #include <vector>
 
 class Function {

@@ -39,6 +39,7 @@
 #include "llvmutil.h"
 #include "module.h"
 #include "util.h"
+
 #include <sstream>
 #include <stdarg.h> /* va_list, va_start, va_arg, va_end */
 #include <stdio.h>
@@ -47,21 +48,21 @@
 #include <windows.h>
 #define strcasecmp stricmp
 #include <intrin.h>
-#else
+#else // !ISPC_HOST_IS_WINDOWS
 #include <sys/types.h>
 #include <unistd.h>
-#endif
+#endif // ISPC_HOST_IS_WINDOWS
+
+#include <llvm/BinaryFormat/Dwarf.h>
 #include <llvm/CodeGen/TargetLowering.h>
 #include <llvm/CodeGen/TargetSubtargetInfo.h>
+#include <llvm/IR/Attributes.h>
 #include <llvm/IR/DIBuilder.h>
+#include <llvm/IR/DataLayout.h>
 #include <llvm/IR/DebugInfo.h>
 #include <llvm/IR/Instructions.h>
 #include <llvm/IR/LLVMContext.h>
 #include <llvm/IR/Module.h>
-
-#include <llvm/BinaryFormat/Dwarf.h>
-#include <llvm/IR/Attributes.h>
-#include <llvm/IR/DataLayout.h>
 #include <llvm/Support/CodeGen.h>
 #include <llvm/Support/Host.h>
 #include <llvm/Support/TargetRegistry.h>

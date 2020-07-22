@@ -47,54 +47,46 @@
 #include <set>
 #include <stdio.h>
 
-#include "llvm/InitializePasses.h"
-#include <llvm/IR/BasicBlock.h>
-#include <llvm/IR/Constants.h>
-#include <llvm/IR/Function.h>
-#include <llvm/IR/Instructions.h>
-#include <llvm/IR/Intrinsics.h>
-#include <llvm/IR/Module.h>
-#include <llvm/Pass.h>
-
-#include <llvm/Transforms/Instrumentation.h>
-
-#include "llvm/IR/LegacyPassManager.h"
-
-#include <llvm/PassRegistry.h>
-
-#include <llvm/IR/DebugInfo.h>
-#include <llvm/IR/IRPrintingPasses.h>
-#include <llvm/IR/PatternMatch.h>
-#include <llvm/IR/Verifier.h>
-
-#include <llvm/Analysis/ConstantFolding.h>
-
-#include "llvm/Transforms/InstCombine/InstCombine.h"
-#include "llvm/Transforms/Utils.h"
 #include <llvm/ADT/SmallSet.h>
 #include <llvm/ADT/Triple.h>
-#include <llvm/Analysis/TargetLibraryInfo.h>
-#include <llvm/Target/TargetOptions.h>
-#include <llvm/Transforms/IPO.h>
-#include <llvm/Transforms/Scalar.h>
-#include <llvm/Transforms/Utils/BasicBlockUtils.h>
-
-#include <llvm/Analysis/TargetTransformInfo.h>
-#include <llvm/IR/DataLayout.h>
-
-#include "llvm/Analysis/TypeBasedAliasAnalysis.h"
-#include "llvm/Transforms/IPO/FunctionAttrs.h"
-#include "llvm/Transforms/Scalar/GVN.h"
 #include <llvm/Analysis/BasicAliasAnalysis.h>
+#include <llvm/Analysis/ConstantFolding.h>
 #include <llvm/Analysis/Passes.h>
+#include <llvm/Analysis/TargetLibraryInfo.h>
+#include <llvm/Analysis/TargetTransformInfo.h>
+#include <llvm/Analysis/TypeBasedAliasAnalysis.h>
 #include <llvm/BinaryFormat/Dwarf.h>
+#include <llvm/IR/BasicBlock.h>
+#include <llvm/IR/Constants.h>
+#include <llvm/IR/DataLayout.h>
+#include <llvm/IR/DebugInfo.h>
+#include <llvm/IR/Function.h>
+#include <llvm/IR/IRPrintingPasses.h>
+#include <llvm/IR/Instructions.h>
+#include <llvm/IR/IntrinsicInst.h>
+#include <llvm/IR/Intrinsics.h>
+#include <llvm/IR/LegacyPassManager.h>
+#include <llvm/IR/Module.h>
+#include <llvm/IR/PatternMatch.h>
+#include <llvm/IR/Verifier.h>
+#include <llvm/InitializePasses.h>
+#include <llvm/Pass.h>
+#include <llvm/PassRegistry.h>
 #include <llvm/Support/raw_ostream.h>
 #include <llvm/Target/TargetMachine.h>
+#include <llvm/Target/TargetOptions.h>
+#include <llvm/Transforms/IPO.h>
+#include <llvm/Transforms/IPO/FunctionAttrs.h>
+#include <llvm/Transforms/InstCombine/InstCombine.h>
+#include <llvm/Transforms/Instrumentation.h>
+#include <llvm/Transforms/Scalar.h>
+#include <llvm/Transforms/Scalar/GVN.h>
+#include <llvm/Transforms/Utils.h>
+#include <llvm/Transforms/Utils/BasicBlockUtils.h>
 #if ISPC_LLVM_VERSION >= ISPC_LLVM_10_0
-#include "llvm/IR/IntrinsicsX86.h"
+#include <llvm/IR/IntrinsicsX86.h>
 #endif
 
-#include <llvm/IR/IntrinsicInst.h>
 #ifdef ISPC_HOST_IS_LINUX
 #include <alloca.h>
 #elif defined(ISPC_HOST_IS_WINDOWS)

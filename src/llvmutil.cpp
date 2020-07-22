@@ -38,13 +38,15 @@
 #include "llvmutil.h"
 #include "ispc.h"
 #include "type.h"
+
+#include <map>
+#include <set>
+#include <vector>
+
 #include <llvm/Analysis/ValueTracking.h>
 #include <llvm/IR/BasicBlock.h>
 #include <llvm/IR/Instructions.h>
 #include <llvm/IR/Module.h>
-#include <map>
-#include <set>
-#include <vector>
 
 llvm::Type *LLVMTypes::VoidType = NULL;
 llvm::PointerType *LLVMTypes::VoidPointerType = NULL;

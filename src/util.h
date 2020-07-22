@@ -39,6 +39,7 @@
 #pragma once
 
 #include "ispc.h"
+
 #ifdef ISPC_HOST_IS_WINDOWS
 #include <stdarg.h>
 #endif

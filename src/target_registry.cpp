@@ -35,12 +35,12 @@
     @brief Registry to handle bitcode libraries.
 */
 
+#include "target_registry.h"
+#include "util.h"
+
 #include <numeric>
 #include <string>
 #include <vector>
-
-#include "target_registry.h"
-#include "util.h"
 
 // Returns number of bits required to store this value
 static constexpr uint32_t bits_required(uint32_t x) {

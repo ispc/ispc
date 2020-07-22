@@ -54,6 +54,7 @@
 #pragma once
 
 #include "ispc.h"
+
 #include <llvm/ADT/SmallVector.h>
 
 struct VariableDeclaration;

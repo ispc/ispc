@@ -44,9 +44,10 @@
 #include "sym.h"
 #include "type.h"
 #include "util.h"
-#include <llvm/BinaryFormat/Dwarf.h>
+
 #include <map>
 
+#include <llvm/BinaryFormat/Dwarf.h>
 #include <llvm/IR/DerivedTypes.h>
 #include <llvm/IR/Instructions.h>
 #include <llvm/IR/Metadata.h>
