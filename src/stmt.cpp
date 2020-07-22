@@ -392,7 +392,7 @@ void IfStmt::EmitCode(FunctionEmitContext *ctx) const {
 
     bool emulateUniform = false;
 #ifdef ISPC_GENX_ENABLED
-    if (!isUniform && g->target->getISA() == Target::GENX) {
+    if (!isUniform && g->target->isGenXTarget()) {
         /* With "genx" target we generate uniform control flow but
            emit varying using CM simdcf.any intrinsic. We mark the scope as
            emulateUniform = true to let nested scopes know that they should
@@ -791,7 +791,7 @@ void DoStmt::EmitCode(FunctionEmitContext *ctx) const {
     llvm::BasicBlock *bexit = ctx->CreateBasicBlock("do_exit", btest);
     bool emulateUniform = false;
 #ifdef ISPC_GENX_ENABLED
-    if (!uniformTest && g->target->getISA() == Target::GENX) {
+    if (!uniformTest && g->target->isGenXTarget()) {
         /* With "genx" target we generate uniform control flow but
            emit varying using CM simdcf.any intrinsic. We mark the scope as
            emulateUniform = true to let nested scopes know that they should
@@ -963,7 +963,7 @@ void ForStmt::EmitCode(FunctionEmitContext *ctx) const {
                             : (!g->opt.disableUniformControlFlow && !lHasVaryingBreakOrContinue(stmts));
     bool emulateUniform = false;
 #ifdef ISPC_GENX_ENABLED
-    if (!uniformTest && g->target->getISA() == Target::GENX) {
+    if (!uniformTest && g->target->isGenXTarget()) {
         /* With "genx" target we generate uniform control flow but
            emit varying using CM simdcf.any intrinsic. We mark the scope as
            emulateUniform = true to let nested scopes know that they should
@@ -1015,7 +1015,7 @@ void ForStmt::EmitCode(FunctionEmitContext *ctx) const {
                 Warning(test->pos, "Uniform condition supplied to cfor/cwhile "
                                    "statement.");
 #ifdef ISPC_GENX_ENABLED
-        if (g->target->getISA() != Target::GENX)
+        if (!g->target->isGenXTarget())
             AssertPos(pos, ltest->getType() == LLVMTypes::BoolType);
 #endif
         ctx->BranchInst(bloop, bexit, ltest);
@@ -1293,7 +1293,7 @@ static void lGetSpans(int dimsLeft, int nDims, int itemsLeft, bool isTiled, int 
 void ForeachStmt::EmitCode(FunctionEmitContext *ctx) const {
 
 #ifdef ISPC_GENX_ENABLED
-    if (g->target->getISA() == Target::GENX) {
+    if (g->target->isGenXTarget()) {
         EmitCodeForGenX(ctx);
         return;
     }
@@ -1734,7 +1734,7 @@ void ForeachStmt::EmitCode(FunctionEmitContext *ctx) const {
    for full and partial masks due to it.
 */
 void ForeachStmt::EmitCodeForGenX(FunctionEmitContext *ctx) const {
-    AssertPos(pos, g->target->getISA() == Target::GENX);
+    AssertPos(pos, g->target->isGenXTarget());
 
     if (ctx->GetCurrentBasicBlock() == NULL || stmts == NULL)
         return;
@@ -2016,7 +2016,7 @@ void ForeachActiveStmt::EmitCode(FunctionEmitContext *ctx) const {
     llvm::Value *oldFullMask = NULL;
     bool uniformEmulated = false;
 #ifdef ISPC_GENX_ENABLED
-    if (g->target->getISA() == Target::GENX) {
+    if (g->target->isGenXTarget()) {
         // Emulate uniform to make proper continue handler
         uniformEmulated = true;
         // Current mask will be calculated according to EM mask
@@ -2071,7 +2071,7 @@ void ForeachActiveStmt::EmitCode(FunctionEmitContext *ctx) const {
 #ifdef ISPC_GENX_ENABLED
         // Don't need to change this mask in GENX: execution
         // is performed according to GenX EM
-        if (g->target->getISA() != Target::GENX)
+        if (!g->target->isGenXTarget())
 #endif
             ctx->SetInternalMask(iterMask);
 
@@ -2087,7 +2087,7 @@ void ForeachActiveStmt::EmitCode(FunctionEmitContext *ctx) const {
 #ifdef ISPC_GENX_ENABLED
         // Set GenX EM through simdcf.goto
         // The EM will be restored when CheckForMore is reached
-        if (g->target->getISA() == Target::GENX)
+        if (g->target->isGenXTarget())
             ctx->BranchInst(bbBody, bbCheckForMore, iterMask);
         else
 #endif
@@ -2207,7 +2207,7 @@ void ForeachUniqueStmt::EmitCode(FunctionEmitContext *ctx) const {
     llvm::Value *oldFullMask = NULL;
     bool emulatedUniform = false;
 #ifdef ISPC_GENX_ENABLED
-    if (g->target->getISA() == Target::GENX) {
+    if (g->target->isGenXTarget()) {
         // Emulating uniform behavior for proper continue handling
         emulatedUniform = true;
         // Current mask will be calculated according to EM mask
@@ -2289,7 +2289,7 @@ void ForeachUniqueStmt::EmitCode(FunctionEmitContext *ctx) const {
 #ifdef ISPC_GENX_ENABLED
         // Don't need to change this mask in GENX: execution
         // is performed according to GenX EM
-        if (g->target->getISA() != Target::GENX)
+        if (!g->target->isGenXTarget())
 #endif
             ctx->SetInternalMask(loopMask);
 
@@ -2306,7 +2306,7 @@ void ForeachUniqueStmt::EmitCode(FunctionEmitContext *ctx) const {
 #ifdef ISPC_GENX_ENABLED
         // Set GenX EM through simdcf.goto
         // The EM will be restored when CheckForMore is reached
-        if (g->target->getISA() == Target::GENX)
+        if (g->target->isGenXTarget())
             ctx->BranchInst(bbBody, bbCheckForMore, loopMask);
         else
 #endif
@@ -2586,7 +2586,7 @@ void SwitchStmt::EmitCode(FunctionEmitContext *ctx) const {
     bool isUniformCF = (type->IsUniformType() && lHasVaryingBreakOrContinue(stmts) == false);
     bool emulateUniform = false;
 #ifdef ISPC_GENX_ENABLED
-    if (g->target->getISA() == Target::GENX) {
+    if (g->target->isGenXTarget()) {
         if (isUniformCF && ctx->ifEmulatedUniformForGen()) {
             // Broadcast value to work with EM. We are doing
             // it here because it is too late to make CMP
@@ -2683,7 +2683,7 @@ void UnmaskedStmt::EmitCode(FunctionEmitContext *ctx) const {
     ctx->SetInternalMask(LLVMMaskAllOn);
     ctx->SetFunctionMask(LLVMMaskAllOn);
 #ifdef ISPC_GENX_ENABLED
-    if (g->target->getISA() != Target::GENX) {
+    if (!g->target->isGenXTarget()) {
 #endif
         stmts->EmitCode(ctx);
 #ifdef ISPC_GENX_ENABLED
@@ -2787,7 +2787,7 @@ void GotoStmt::EmitCode(FunctionEmitContext *ctx) const {
         return;
 
 #ifdef ISPC_GENX_ENABLED
-    if ((g->target->getISA() == Target::GENX && ctx->ifEmulatedUniformForGen()) || ctx->VaryingCFDepth() > 0) {
+    if ((g->target->isGenXTarget() && ctx->ifEmulatedUniformForGen()) || ctx->VaryingCFDepth() > 0) {
 #else
     if (ctx->VaryingCFDepth() > 0) {
 #endif
@@ -3543,7 +3543,7 @@ void PrintStmt::EmitCode(FunctionEmitContext *ctx) const {
         return;
     ctx->SetDebugPos(pos);
 #ifdef ISPC_GENX_ENABLED
-    if (g->target->getISA() == Target::GENX) {
+    if (g->target->isGenXTarget()) {
         emitCode4LZ(ctx);
         return;
     }
@@ -3600,7 +3600,7 @@ void AssertStmt::EmitCode(FunctionEmitContext *ctx) const {
     }
     args.push_back(exprValue);
 #ifdef ISPC_GENX_ENABLED
-    if (g->target->getISA() == Target::GENX)
+    if (g->target->isGenXTarget())
         // This will create mask according to current EM on SIMD CF Lowering.
         // The result will be like       mask = select (EM, AllOn, AllFalse)
         args.push_back(ctx->GenXSimdCFPredicate(LLVMMaskAllOn));
@@ -3635,7 +3635,7 @@ DeleteStmt::DeleteStmt(Expr *e, SourcePos p) : Stmt(p, DeleteStmtID) { expr = e;
 
 void DeleteStmt::EmitCode(FunctionEmitContext *ctx) const {
 #ifdef ISPC_GENX_ENABLED
-    if (g->target->getISA() == Target::GENX) {
+    if (g->target->isGenXTarget()) {
         Error(pos, "\"delete\" statement is not supported for genx-* targets yet.");
         return;
     }

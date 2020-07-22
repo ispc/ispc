@@ -897,7 +897,7 @@ void AddBitcodeToModule(const BitcodeLib *lib, llvm::Module *module, SymbolTable
         bcModule->setDataLayout(module->getDataLayout());
 
 #ifdef ISPC_GENX_ENABLED
-        if (g->target->getISA() == Target::GENX) {
+        if (g->target->isGenXTarget()) {
             // Maybe we will use it for other targets in future,
             // but now it is needed only by GenX. We need
             // to update attributes because GenX intrinsics are
@@ -1078,7 +1078,7 @@ void DefineStdlib(SymbolTable *symbolTable, llvm::LLVMContext *ctx, llvm::Module
     lDefineConstantInt("__have_saturating_arithmetic", g->target->hasSatArith(), module, symbolTable, debug_symbols);
 
 #ifdef ISPC_GENX_ENABLED
-    lDefineConstantInt("__is_genx_target", (int)(g->target->getISA() == Target::GENX), module, symbolTable,
+    lDefineConstantInt("__is_genx_target", (int)(g->target->isGenXTarget()), module, symbolTable,
                        debug_symbols);
 #else
     lDefineConstantInt("__is_genx_target", (int)0, module, symbolTable, debug_symbols);

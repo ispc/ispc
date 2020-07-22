@@ -242,6 +242,14 @@ class Target {
 
     ISA getISA() const { return m_isa; }
 
+    bool isGenXTarget() {
+#ifdef ISPC_GENX_ENABLED
+        return m_isa == Target::GENX;
+#else
+        return false;
+#endif
+    }
+
 #ifdef ISPC_GENX_ENABLED
     GENX_PLATFORM getGenxPlatform() const { return m_genxPlatform; }
     uint32_t getGenxGrfSize() const;

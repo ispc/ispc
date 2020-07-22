@@ -166,7 +166,7 @@ Module::Module(const char *fn) {
             // When we link with CM, "Dwarf version" and "Debug info version" is already set
             // so we don't need to do this here.  Otherwise VerifyModule will be broken.
 #ifdef ISPC_GENX_ENABLED
-            if (g->target->getISA() != Target::GENX)
+            if (!g->target->isGenXTarget())
 #endif
                 module->addModuleFlag(llvm::Module::Warning, "Dwarf Version", g->generateDWARFVersion);
         }
@@ -701,7 +701,7 @@ void Module::AddFunctionDeclaration(const std::string &name, const FunctionType 
 #ifdef ISPC_GENX_ENABLED
     // For gen target all functions except genx kernel must be internal.
     // Genx kernel functions are "export"-qualified functions and tasks.
-    if (g->target->getISA() == Target::GENX && !functionType->isExported && !functionType->isTask)
+    if (g->target->isGenXTarget() && !functionType->isExported && !functionType->isTask)
         linkage = llvm::GlobalValue::InternalLinkage;
 #endif
 
@@ -750,7 +750,7 @@ void Module::AddFunctionDeclaration(const std::string &name, const FunctionType 
 
     if (functionType->isTask) {
 #ifdef ISPC_GENX_ENABLED
-        if (g->target->getISA() != Target::GENX)
+        if (!g->target->isGenXTarget())
 #endif /* ISPC_GENX_ENABLED */
             // This also applies transitively to members I think?
             function->addParamAttr(0, llvm::Attribute::NoAlias);
@@ -774,7 +774,7 @@ void Module::AddFunctionDeclaration(const std::string &name, const FunctionType 
         Error(pos, "Task-qualified functions must have void return type.");
 
 #ifdef ISPC_GENX_ENABLED
-    if (g->target->getISA() == Target::GENX && Type::Equal(functionType->GetReturnType(), AtomicType::Void) == false &&
+    if (g->target->isGenXTarget() && Type::Equal(functionType->GetReturnType(), AtomicType::Void) == false &&
         functionType->isExported) {
         // TODO_GEN: According to CM requirements kernel should have void type. It is strong restriction to ISPC
         // language so we would need to think more about it in the future.
@@ -784,7 +784,7 @@ void Module::AddFunctionDeclaration(const std::string &name, const FunctionType 
 
     if (functionType->isExported || functionType->isExternC
 #ifdef ISPC_GENX_ENABLED
-        || (g->target->getISA() == Target::GENX && functionType->isTask))
+        || (g->target->isGenXTarget() && functionType->isTask))
 #else
     )
 #endif
@@ -806,7 +806,7 @@ void Module::AddFunctionDeclaration(const std::string &name, const FunctionType 
         if (functionType->isExported)
             lCheckExportedParameterTypes(argType, argName, argPos);
 #ifdef ISPC_GENX_ENABLED
-        if (g->target->getISA() == Target::GENX && functionType->isTask)
+        if (g->target->isGenXTarget() && functionType->isTask)
             lCheckTaskParameterTypes(argType, argName, argPos);
 #endif
 
@@ -910,7 +910,7 @@ bool Module::writeOutput(OutputType outputType, OutputFlags flags, const char *o
 // When we link with CM, "Dwarf version" and "Debug info version" is already set
 // so we don't need to do this here.  Otherwise VerifyModule will be broken.
 #ifdef ISPC_GENX_ENABLED
-        if (g->target->getISA() != Target::GENX)
+        if (!g->target->isGenXTarget())
 #endif
             module->addModuleFlag(llvm::Module::Warning, "Debug Info Version", llvm::DEBUG_METADATA_VERSION);
     }
@@ -1071,7 +1071,7 @@ bool Module::writeObjectFileOrAssembly(llvm::TargetMachine *targetMachine, llvm:
     // set binary output for object files
 #if ISPC_LLVM_VERSION <= ISPC_LLVM_9_0
 #ifdef ISPC_GENX_ENABLED
-    Assert(g->target->getISA() != Target::GENX);
+    Assert(!g->target->isGenXTarget());
 #endif // !ISPC_GENX_ENABLED
     llvm::TargetMachine::CodeGenFileType fileType =
         (outputType == Object) ? llvm::TargetMachine::CGFT_ObjectFile : llvm::TargetMachine::CGFT_AssemblyFile;
@@ -2139,7 +2139,7 @@ void Module::execPreprocessor(const char *infilename, llvm::raw_string_ostream *
         }
     }
 #ifdef ISPC_GENX_ENABLED
-    if (g->target->getISA() == Target::GENX) {
+    if (g->target->isGenXTarget()) {
         opts.addMacroDef("taskIndex=__taskIndex()");
         opts.addMacroDef("taskCount=__taskCount()");
         opts.addMacroDef("taskCount0=__taskCount0()");
@@ -2555,10 +2555,10 @@ int Module::CompileAndOutput(const char *srcFile, Arch arch, const char *cpu, st
                     return 1;
                 }
             }
-            if (g->target->getISA() == Target::GENX && outputType == OutputType::Object) {
+            if (g->target->isGenXTarget() && outputType == OutputType::Object) {
                 outputType = OutputType::ISA;
             }
-            if (g->target->getISA() != Target::GENX &&
+            if (!g->target->isGenXTarget() &&
                 (outputType == OutputType::ISA || outputType == OutputType::SPIRV)) {
                 Error(SourcePos(), "SPIR-V and ISA formats are supported for gen target only");
                 return 1;
