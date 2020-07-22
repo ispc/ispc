@@ -61,7 +61,6 @@ for:
         if "%LLVM_VERSION%"=="latest" (set WASM=ON)
         if "%APPVEYOR_BUILD_WORKER_IMAGE%"=="Visual Studio 2017" ( (set generator="Visual Studio 15 Win64") & (set vsversion=2017))
         if "%APPVEYOR_BUILD_WORKER_IMAGE%"=="Visual Studio 2019" ( (set generator="Visual Studio 16") & (set vsversion=2019))
-        call "C:\Program Files (x86)\Microsoft Visual Studio\%vsversion%\Community\VC\Auxiliary\Build\vcvars64.bat"
         set LLVM_TAR=llvm-10.0.0-win.vs2019-Release+Asserts-x86.arm.wasm.zip
         if "%LLVM_VERSION%"=="9.0" (set LLVM_TAR=llvm-9.0.1-win.vs2017-Release+Asserts-x86.arm.wasm.zip)
         if "%LLVM_VERSION%"=="8.0" (set LLVM_TAR=llvm-8.0.1-win.vs2017-Release+Asserts-x86.arm.wasm.zip)
@@ -90,6 +89,7 @@ for:
         set PATH=%LLVM_HOME%\bin-%LLVM_VERSION%\bin;%PATH%
   before_build:
     - cmd: |-
+        call "C:\Program Files (x86)\Microsoft Visual Studio\%vsversion%\Community\VC\Auxiliary\Build\vcvars64.bat"
         cd %ISPC_HOME%
         check_env.py
         mkdir build && cd build
@@ -104,8 +104,6 @@ for:
         cd %ISPC_HOME%
         check_isa.exe
         ispc --support-matrix
-        if %vsversion%==2017 ( set generator="Visual Studio 15 Win64")
-        if %vsversion%==2019 ( set generator="Visual Studio 16")
         python perf.py -n 1 -g %generator% && msbuild %ISPC_HOME%\build\tests\check-all.vcxproj /t:Build /p:Platform=x64 /p:Configuration=Release
 
 -
