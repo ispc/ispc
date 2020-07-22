@@ -6071,7 +6071,7 @@ restart:
                     modifiedAny = true;
                     goto restart;
                 }
-            } else if (func && func->getName() == "llvm.prefetch") {
+            } else if ((func && func->getName() == "llvm.prefetch") || (func && func->getName() == "llvm.assume")) {
                 ci->eraseFromParent();
                 modifiedAny = true;
                 goto restart;
