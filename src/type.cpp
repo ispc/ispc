@@ -2477,7 +2477,7 @@ const std::string FunctionType::GetReturnTypeString() const {
 
 llvm::FunctionType *FunctionType::LLVMFunctionType(llvm::LLVMContext *ctx, bool removeMask) const {
 #ifdef ISPC_GENX_ENABLED
-    if (g->target->getISA() != Target::GENX && isTask == true)
+    if (!g->target->isGenXTarget() && isTask == true)
 #else
     if (isTask == true)
 #endif
@@ -2504,7 +2504,7 @@ llvm::FunctionType *FunctionType::LLVMFunctionType(llvm::LLVMContext *ctx, bool 
     // And add the function mask, if asked for
     if (!(removeMask || isUnmasked
 #ifdef ISPC_GENX_ENABLED
-          || (g->target->getISA() == Target::GENX && isTask)
+          || (g->target->isGenXTarget() && isTask)
 #endif
               ))
         llvmArgTypes.push_back(LLVMTypes::MaskType);
@@ -2512,7 +2512,7 @@ llvm::FunctionType *FunctionType::LLVMFunctionType(llvm::LLVMContext *ctx, bool 
     std::vector<llvm::Type *> callTypes;
     if (isTask
 #ifdef ISPC_GENX_ENABLED
-        && (g->target->getISA() != Target::GENX)
+        && (!g->target->isGenXTarget())
 #endif
     ) {
         // Tasks take three arguments: a pointer to a struct that holds the

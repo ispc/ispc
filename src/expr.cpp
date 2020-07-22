@@ -7558,7 +7558,7 @@ llvm::Value *SymbolExpr::GetValue(FunctionEmitContext *ctx) const {
 #ifdef ISPC_GENX_ENABLED
     // TODO: this is a temporary workaround and will be changed as part
     // of SPIR-V emitting solution
-    if (g->target->getISA() == Target::GENX && symbol->name == "__mask") {
+    if (g->target->isGenXTarget() && symbol->name == "__mask") {
         return ctx->GenXSimdCFPredicate(LLVMMaskAllOn);
     }
 #endif
@@ -8212,7 +8212,7 @@ Expr *NewExpr::TypeCheck() {
         return NULL;
     }
 #ifdef ISPC_GENX_ENABLED
-    if (g->target->getISA() == Target::GENX) {
+    if (g->target->isGenXTarget()) {
         Error(pos, "\"new\" is not supported for genx-* targets yet.");
         return NULL;
     }
