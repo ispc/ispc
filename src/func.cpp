@@ -44,27 +44,26 @@
 #include "sym.h"
 #include "type.h"
 #include "util.h"
+
 #include <stdio.h>
 
+#include <llvm/IR/CFG.h>
 #include <llvm/IR/DerivedTypes.h>
+#include <llvm/IR/IRPrintingPasses.h>
 #include <llvm/IR/Instructions.h>
 #include <llvm/IR/Intrinsics.h>
 #include <llvm/IR/LLVMContext.h>
+#include <llvm/IR/LegacyPassManager.h>
 #include <llvm/IR/Module.h>
 #include <llvm/IR/Type.h>
-
-#include "llvm/IR/LegacyPassManager.h"
-#include <llvm/IR/CFG.h>
-#include <llvm/IR/IRPrintingPasses.h>
 #include <llvm/IR/Verifier.h>
 #include <llvm/PassRegistry.h>
 #include <llvm/Support/FileUtilities.h>
 #include <llvm/Support/FormattedStream.h>
+#include <llvm/Support/ToolOutputFile.h>
 #include <llvm/Target/TargetMachine.h>
 #include <llvm/Target/TargetOptions.h>
 #include <llvm/Transforms/IPO.h>
-
-#include <llvm/Support/ToolOutputFile.h>
 
 Function::Function(Symbol *s, Stmt *c) {
     sym = s;

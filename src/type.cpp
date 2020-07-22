@@ -41,14 +41,15 @@
 #include "module.h"
 #include "sym.h"
 
+#include <map>
+#include <stdio.h>
+
 #include <llvm/BinaryFormat/Dwarf.h>
 #include <llvm/IR/DIBuilder.h>
 #include <llvm/IR/DebugInfo.h>
 #include <llvm/IR/Module.h>
 #include <llvm/IR/Value.h>
 #include <llvm/Support/MathExtras.h>
-#include <map>
-#include <stdio.h>
 
 /** Utility routine used in code that prints out declarations; returns true
     if the given name should be printed, false otherwise.  This allows us

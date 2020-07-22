@@ -43,6 +43,7 @@
 #include "sym.h"
 #include "type.h"
 #include "util.h"
+
 #ifndef _MSC_VER
 #include <inttypes.h>
 #endif
