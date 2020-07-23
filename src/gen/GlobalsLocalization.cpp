@@ -38,36 +38,36 @@
 #ifdef ISPC_GENX_ENABLED
 #define DEBUG_TYPE "localize_globals"
 
-#include "llvm/ADT/PostOrderIterator.h"
-#include "llvm/ADT/SCCIterator.h"
-#include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/SetVector.h"
-#include "llvm/ADT/Statistic.h"
-#include "llvm/Analysis/CallGraph.h"
-#include "llvm/Analysis/CallGraphSCCPass.h"
-#include "llvm/Analysis/PostDominators.h"
-#include "llvm/GenXIntrinsics/GenXIntrOpts.h"
-#include "llvm/GenXIntrinsics/GenXIntrinsics.h"
-#include "llvm/GenXIntrinsics/GenXMetadata.h"
-#include "llvm/IR/CFG.h"
-#include "llvm/IR/CallSite.h"
-#include "llvm/IR/DebugInfo.h"
-#include "llvm/IR/Dominators.h"
-#include "llvm/IR/Function.h"
-#include "llvm/IR/IRBuilder.h"
-#include "llvm/IR/InstIterator.h"
-#include "llvm/IR/Intrinsics.h"
-#include "llvm/IR/Module.h"
-#include "llvm/InitializePasses.h"
-#include "llvm/Pass.h"
-#include "llvm/Support/CommandLine.h"
-#include "llvm/Support/Debug.h"
-#include "llvm/Support/raw_ostream.h"
-#include "llvm/Transforms/Scalar.h"
-
 #include "GlobalsLocalization.h"
 
 #include <iterator>
+
+#include <llvm/ADT/PostOrderIterator.h>
+#include <llvm/ADT/SCCIterator.h>
+#include <llvm/ADT/STLExtras.h>
+#include <llvm/ADT/SetVector.h>
+#include <llvm/ADT/Statistic.h>
+#include <llvm/Analysis/CallGraph.h>
+#include <llvm/Analysis/CallGraphSCCPass.h>
+#include <llvm/Analysis/PostDominators.h>
+#include <llvm/GenXIntrinsics/GenXIntrOpts.h>
+#include <llvm/GenXIntrinsics/GenXIntrinsics.h>
+#include <llvm/GenXIntrinsics/GenXMetadata.h>
+#include <llvm/IR/CFG.h>
+#include <llvm/IR/CallSite.h>
+#include <llvm/IR/DebugInfo.h>
+#include <llvm/IR/Dominators.h>
+#include <llvm/IR/Function.h>
+#include <llvm/IR/IRBuilder.h>
+#include <llvm/IR/InstIterator.h>
+#include <llvm/IR/Intrinsics.h>
+#include <llvm/IR/Module.h>
+#include <llvm/InitializePasses.h>
+#include <llvm/Pass.h>
+#include <llvm/Support/CommandLine.h>
+#include <llvm/Support/Debug.h>
+#include <llvm/Support/raw_ostream.h>
+#include <llvm/Transforms/Scalar.h>
 
 using namespace llvm;
 

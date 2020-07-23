@@ -52,8 +52,9 @@
 #include <llvm/IR/Instructions.h>
 #include <llvm/IR/Metadata.h>
 #include <llvm/IR/Module.h>
+
 #ifdef ISPC_GENX_ENABLED
-#include "llvm/GenXIntrinsics/GenXIntrinsics.h"
+#include <llvm/GenXIntrinsics/GenXIntrinsics.h>
 #endif
 /** This is a small utility structure that records information related to one
     level of nested control flow.  It's mostly used in correctly restoring

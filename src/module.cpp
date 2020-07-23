@@ -93,8 +93,9 @@
 #include <llvm/Target/TargetOptions.h>
 #include <llvm/Transforms/IPO.h>
 #include <llvm/Transforms/Utils/ValueMapper.h>
+
 #ifdef ISPC_GENX_ENABLED
-#include "LLVMSPIRVLib/LLVMSPIRVLib.h"
+#include <LLVMSPIRVLib/LLVMSPIRVLib.h>
 #include <fstream>
 #endif
 
