@@ -2476,12 +2476,9 @@ const std::string FunctionType::GetReturnTypeString() const {
 }
 
 llvm::FunctionType *FunctionType::LLVMFunctionType(llvm::LLVMContext *ctx, bool removeMask) const {
-#ifdef ISPC_GENX_ENABLED
-    if (!g->target->isGenXTarget() && isTask == true)
-#else
-    if (isTask == true)
-#endif
+    if (!g->target->isGenXTarget() && isTask == true) {
         Assert(removeMask == false);
+    }
 
     // Get the LLVM Type *s for the function arguments
     std::vector<llvm::Type *> llvmArgTypes;
@@ -2502,19 +2499,12 @@ llvm::FunctionType *FunctionType::LLVMFunctionType(llvm::LLVMContext *ctx, bool 
     }
 
     // And add the function mask, if asked for
-    if (!(removeMask || isUnmasked
-#ifdef ISPC_GENX_ENABLED
-          || (g->target->isGenXTarget() && isTask)
-#endif
-              ))
+    if (!(removeMask || isUnmasked || (g->target->isGenXTarget() && isTask))) {
         llvmArgTypes.push_back(LLVMTypes::MaskType);
+    }
 
     std::vector<llvm::Type *> callTypes;
-    if (isTask
-#ifdef ISPC_GENX_ENABLED
-        && (!g->target->isGenXTarget())
-#endif
-    ) {
+    if (isTask && (!g->target->isGenXTarget())) {
         // Tasks take three arguments: a pointer to a struct that holds the
         // actual task arguments, the thread index, and the total number of
         // threads the tasks system has running.  (Task arguments are
@@ -2532,9 +2522,10 @@ llvm::FunctionType *FunctionType::LLVMFunctionType(llvm::LLVMContext *ctx, bool 
         callTypes.push_back(LLVMTypes::Int32Type); // taskCount0
         callTypes.push_back(LLVMTypes::Int32Type); // taskCount1
         callTypes.push_back(LLVMTypes::Int32Type); // taskCount2
-    } else
+    } else {
         // Otherwise we already have the types of the arguments
         callTypes = llvmArgTypes;
+    }
 
     if (returnType == NULL) {
         Assert(m->errorCount > 0);

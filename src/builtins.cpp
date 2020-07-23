@@ -256,8 +256,8 @@ static void lAddModuleSymbols(llvm::Module *module, SymbolTable *symbolTable) {
     }
 }
 
-#ifdef ISPC_GENX_ENABLED
 static void lUpdateIntrinsicsAttributes(llvm::Module *module) {
+#ifdef ISPC_GENX_ENABLED
     for (auto F = module->begin(), E = module->end(); F != E; ++F) {
         llvm::Function *Fn = &*F;
 
@@ -266,8 +266,8 @@ static void lUpdateIntrinsicsAttributes(llvm::Module *module) {
                 llvm::GenXIntrinsic::getAttributes(Fn->getContext(), llvm::GenXIntrinsic::getGenXIntrinsicID(Fn)));
         }
     }
-}
 #endif
+}
 
 /** In many of the builtins-*.ll files, we have declarations of various LLVM
     intrinsics that are then used in the implementation of various target-
@@ -896,7 +896,6 @@ void AddBitcodeToModule(const BitcodeLib *lib, llvm::Module *module, SymbolTable
         bcModule->setTargetTriple(mTriple.str());
         bcModule->setDataLayout(module->getDataLayout());
 
-#ifdef ISPC_GENX_ENABLED
         if (g->target->isGenXTarget()) {
             // Maybe we will use it for other targets in future,
             // but now it is needed only by GenX. We need
@@ -904,7 +903,6 @@ void AddBitcodeToModule(const BitcodeLib *lib, llvm::Module *module, SymbolTable
             // separated from the others and it is not done by default
             lUpdateIntrinsicsAttributes(bcModule);
         }
-#endif
 
         // A hack to move over declaration, which have no definition.
         // New linker is kind of smart and think it knows better what to do, so
@@ -1077,12 +1075,7 @@ void DefineStdlib(SymbolTable *symbolTable, llvm::LLVMContext *ctx, llvm::Module
     lDefineConstantInt("__have_native_rcpd", g->target->hasRcpd(), module, symbolTable, debug_symbols);
     lDefineConstantInt("__have_saturating_arithmetic", g->target->hasSatArith(), module, symbolTable, debug_symbols);
 
-#ifdef ISPC_GENX_ENABLED
-    lDefineConstantInt("__is_genx_target", (int)(g->target->isGenXTarget()), module, symbolTable,
-                       debug_symbols);
-#else
-    lDefineConstantInt("__is_genx_target", (int)0, module, symbolTable, debug_symbols);
-#endif /* ISPC_GENX_ENABLED */
+    lDefineConstantInt("__is_genx_target", (int)(g->target->isGenXTarget()), module, symbolTable, debug_symbols);
 
     if (g->forceAlignment != -1) {
         llvm::GlobalVariable *alignment = module->getGlobalVariable("memory_alignment", true);

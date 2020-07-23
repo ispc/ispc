@@ -473,14 +473,10 @@ void Optimize(llvm::Module *module, int optLevel) {
     optPM.add(llvm::createVerifierPass(), 0);
 
     optPM.add(new llvm::TargetLibraryInfoWrapperPass(llvm::Triple(module->getTargetTriple())));
-#ifdef ISPC_GENX_ENABLED
     if (!g->target->isGenXTarget()) {
-#endif
         llvm::TargetMachine *targetMachine = g->target->GetTargetMachine();
         optPM.getPM().add(createTargetTransformInfoWrapperPass(targetMachine->getTargetIRAnalysis()));
-#ifdef ISPC_GENX_ENABLED
     }
-#endif
     optPM.add(llvm::createIndVarSimplifyPass());
 
     if (optLevel == 0) {
@@ -2492,14 +2488,12 @@ static llvm::Value *lComputeCommonPointer(llvm::Value *base, llvm::Value *offset
                                           int typeScale = 1) {
     llvm::Value *firstOffset = LLVMExtractFirstVectorElement(offsets);
     Assert(firstOffset != NULL);
-#ifdef ISPC_GENX_ENABLED
     llvm::Value *typeScaleValue =
         firstOffset->getType() == LLVMTypes::Int32Type ? LLVMInt32(typeScale) : LLVMInt64(typeScale);
     if (g->target->isGenXTarget() && typeScale > 1) {
         firstOffset = llvm::BinaryOperator::Create(llvm::Instruction::SDiv, firstOffset, typeScaleValue,
                                                    "scaled_offset", insertBefore);
     }
-#endif
 
     return lGEPInst(base, firstOffset, "ptr", insertBefore);
 }
@@ -2702,10 +2696,8 @@ static bool lGSToLoadStore(llvm::CallInst *callInst) {
 
     Debug(SourcePos(), "GSToLoadStore: %s.", fullOffsets->getName().str().c_str());
     llvm::Type *scalarType = (gatherInfo != NULL) ? gatherInfo->scalarType : scatterInfo->vecPtrType->getScalarType();
-#ifdef ISPC_GENX_ENABLED
     int typeScale = g->target->getDataLayout()->getTypeStoreSize(scalarType) /
                     g->target->getDataLayout()->getTypeStoreSize(base->getType()->getContainedType(0));
-#endif
 
     if (LLVMVectorValuesAllEqual(fullOffsets)) {
         // If all the offsets are equal, then compute the single
@@ -2716,21 +2708,17 @@ static bool lGSToLoadStore(llvm::CallInst *callInst) {
             // handled as a scalar load and broadcast across the lanes.
             Debug(pos, "Transformed gather to scalar load and broadcast!");
             llvm::Value *ptr;
-#ifdef ISPC_GENX_ENABLED
             // For gen we need to cast the base first and only after that get common pointer otherwise
             // CM backend will be broken on bitcast i8* to T* instruction with following load.
             // For this we need to re-calculate the offset basing on type sizes.
             if (g->target->isGenXTarget()) {
                 base = new llvm::BitCastInst(base, llvm::PointerType::get(scalarType, 0), base->getName(), callInst);
                 ptr = lComputeCommonPointer(base, fullOffsets, callInst, typeScale);
-
             } else {
-#endif
                 ptr = lComputeCommonPointer(base, fullOffsets, callInst);
                 ptr = new llvm::BitCastInst(ptr, llvm::PointerType::get(scalarType, 0), base->getName(), callInst);
-#ifdef ISPC_GENX_ENABLED
             }
-#endif
+
             lCopyMetadata(ptr, callInst);
 #if ISPC_LLVM_VERSION >= ISPC_LLVM_11_0
             llvm::Value *scalarValue =
@@ -2788,7 +2776,6 @@ static bool lGSToLoadStore(llvm::CallInst *callInst) {
             llvm::Value *ptr;
 
             if (gatherInfo != NULL) {
-#ifdef ISPC_GENX_ENABLED
                 if (g->target->isGenXTarget()) {
                     // For gen we need to cast the base first and only after that get common pointer otherwise
                     // CM backend will be broken on bitcast i8* to T* instruction with following load.
@@ -2798,9 +2785,9 @@ static bool lGSToLoadStore(llvm::CallInst *callInst) {
                         new llvm::BitCastInst(base, llvm::PointerType::get(scalarType, 0), base->getName(), callInst);
                     ptr = lComputeCommonPointer(base, fullOffsets, callInst, typeScale);
                     ptr = new llvm::BitCastInst(ptr, LLVMTypes::Int8PointerType, base->getName(), callInst);
-                } else
-#endif
+                } else {
                     ptr = lComputeCommonPointer(base, fullOffsets, callInst);
+                }
                 lCopyMetadata(ptr, callInst);
                 Debug(pos, "Transformed gather to unaligned vector load!");
                 llvm::Instruction *newCall =

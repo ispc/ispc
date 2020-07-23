@@ -118,11 +118,7 @@ Function::Function(Symbol *s, Stmt *c) {
             paramSym->parentFunction = this;
     }
 
-    if (type->isTask
-#ifdef ISPC_GENX_ENABLED
-        && (!g->target->isGenXTarget())
-#endif
-    ) {
+    if (type->isTask && (!g->target->isGenXTarget())) {
         threadIndexSym = m->symbolTable->LookupVariable("threadIndex");
         Assert(threadIndexSym);
         threadCountSym = m->symbolTable->LookupVariable("threadCount");
@@ -224,11 +220,7 @@ void Function::emitCode(FunctionEmitContext *ctx, llvm::Function *function, Sour
 #endif
     const FunctionType *type = CastType<FunctionType>(sym->type);
     Assert(type != NULL);
-    if (type->isTask == true
-#ifdef ISPC_GENX_ENABLED
-        && (!g->target->isGenXTarget())
-#endif
-    ) {
+    if (type->isTask == true && (!g->target->isGenXTarget())) {
         // For tasks, there should always be three parameters: the
         // pointer to the structure that holds all of the arguments, the
         // thread index, and the thread count variables.
@@ -313,11 +305,7 @@ void Function::emitCode(FunctionEmitContext *ctx, llvm::Function *function, Sour
         // happens for exmaple with 'export'ed functions that the app
         // calls.
         if (argIter == function->arg_end()) {
-#ifdef ISPC_GENX_ENABLED
-            Assert(type->isUnmasked || type->isExported || g->target->isGenXTarget() && type->isTask);
-#else
-            Assert(type->isUnmasked || type->isExported);
-#endif
+            Assert(type->isUnmasked || type->isExported || (g->target->isGenXTarget() && type->isTask));
             ctx->SetFunctionMask(LLVMMaskAllOn);
         } else {
             Assert(type->isUnmasked == false);
@@ -326,7 +314,6 @@ void Function::emitCode(FunctionEmitContext *ctx, llvm::Function *function, Sour
             argIter->setName("__mask");
             Assert(argIter->getType() == LLVMTypes::MaskType);
 
-#ifdef ISPC_GENX_ENABLED
             if (g->target->isGenXTarget()) {
                 // We should not create explicit predication
                 // to avoid EM usage duplication. All stuff
@@ -334,9 +321,9 @@ void Function::emitCode(FunctionEmitContext *ctx, llvm::Function *function, Sour
                 // TODO: temporary workaround that will be changed
                 // as part of SPIR-V emitting solution
                 ctx->SetFunctionMask(LLVMMaskAllOn);
-            } else
-#endif
+            } else {
                 ctx->SetFunctionMask(&*argIter);
+            }
 
             Assert(++argIter == function->arg_end());
         }
@@ -354,13 +341,8 @@ void Function::emitCode(FunctionEmitContext *ctx, llvm::Function *function, Sour
         // entire thing inside code that tests to see if the mask is all
         // on, all off, or mixed.  If this is a simple function, then this
         // isn't worth the code bloat / overhead.
-#ifdef ISPC_GENX_ENABLED
         bool checkMask =
             (!g->target->isGenXTarget() && type->isTask == true) ||
-#else
-        bool checkMask =
-            (type->isTask == true) ||
-#endif
             ((function->getAttributes().getFnAttributes().hasAttribute(llvm::Attribute::AlwaysInline) == false) &&
              costEstimate > CHECK_MASK_AT_FUNCTION_START_COST);
         checkMask &= (type->isUnmasked == false);
@@ -544,7 +526,6 @@ void Function::GenerateIR() {
             firstStmtPos = code->pos;
     }
     // And we can now go ahead and emit the code
-#ifdef ISPC_GENX_ENABLED
     if (g->target->isGenXTarget()) {
         // For GEN target we emit code only for unmasked version of a kernel and subroutines.
         // TODO_GEN: revise this one more time after testing of subroutines calls.
@@ -554,25 +535,17 @@ void Function::GenerateIR() {
             emitCode(&ec, function, firstStmtPos);
         }
     } else {
-#endif
         FunctionEmitContext ec(this, sym, function, firstStmtPos);
         emitCode(&ec, function, firstStmtPos);
-#ifdef ISPC_GENX_ENABLED
     }
-#endif
 
     if (m->errorCount == 0) {
         // If the function is 'export'-qualified, emit a second version of
         // it without a mask parameter and without name mangling so that
         // the application can call it
         // For gen we emit a version without mask parameter only for "export" -qualified functions and tasks.
-#ifdef ISPC_GENX_ENABLED
         if (type->isExported || (g->target->isGenXTarget() && type->isTask)) {
             if ((!g->target->isGenXTarget() && !type->isTask) || g->target->isGenXTarget()) {
-#else
-        if (type->isExported) {
-            if (!type->isTask) {
-#endif
                 llvm::FunctionType *ftype = type->LLVMFunctionType(g->ctx, true);
                 llvm::GlobalValue::LinkageTypes linkage = llvm::GlobalValue::ExternalLinkage;
                 std::string functionName = sym->name;
@@ -584,13 +557,12 @@ void Function::GenerateIR() {
                 appFunction->setDoesNotThrow();
                 g->target->markFuncWithCallingConv(appFunction);
 
-#ifdef ISPC_GENX_ENABLED
                 // GenX kernel should have "dllexport" and "CMGenxMain" attribute
                 if (g->target->isGenXTarget()) {
                     appFunction->setDLLStorageClass(llvm::GlobalValue::DLLExportStorageClass);
                     appFunction->addFnAttr("CMGenxMain");
                 }
-#endif
+
                 for (int i = 0; i < function->getFunctionType()->getNumParams() - 1; i++) {
                     if (function->hasParamAttribute(i, llvm::Attribute::NoAlias)) {
                         appFunction->addParamAttr(i, llvm::Attribute::NoAlias);
