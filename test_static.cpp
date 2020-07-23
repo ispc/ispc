@@ -82,7 +82,6 @@
 #endif
 
 extern "C" {
-extern int CALLINGCONV width();
 extern void CALLINGCONV f_v(float *result);
 extern void CALLINGCONV f_f(float *result, float *a);
 extern void CALLINGCONV f_fu(float *result, float *a, float b);
@@ -95,6 +94,14 @@ extern void CALLINGCONV result(float *val);
 void ISPCLaunch(void **handlePtr, void *f, void *d, int, int, int);
 void ISPCSync(void *handle);
 void *ISPCAlloc(void **handlePtr, int64_t size, int32_t alignment);
+}
+
+int width() {
+#if defined(TEST_WIDTH)
+    return TEST_WIDTH;
+#else
+#error "Unknown or unset TEST_WIDTH value"
+#endif
 }
 
 void ISPCLaunch(void **handle, void *f, void *d, int count0, int count1, int count2) {
@@ -177,6 +184,7 @@ int main(int argc, char *argv[]) {
     f_di(returned_result, vdouble, vint2);
 #elif (TEST_SIG == 7)
     *returned_result = sizeof(ispc::f_sz);
+    w = 1;
 #else
 #error "Unknown or unset TEST_SIG value"
 #endif
