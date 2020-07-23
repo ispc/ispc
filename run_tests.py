@@ -309,6 +309,34 @@ def run_test(testname, host, target):
                     match = ident
                     break
         file.close()
+
+        # Figure out target width
+        width = -1
+        target_match = re.match('(.*-i[0-9]*x)([0-9]*)', options.target)
+        # If target does not contain width in a standard way:
+        if target_match == None:
+            if re.match('(sse[0-9]*-x2)', options.target) != None:
+                width = 8
+            elif re.match('(sse[0-9]*)', options.target) != None:
+                width = 4
+            elif re.match('(avx[0-9]*-x2)', options.target) != None:
+                width = 16
+            elif re.match('(avx[0-9]*)', options.target) != None:
+                width = 8
+            elif options.target == "neon":
+                width = 4
+            elif re.search('genx', options.target) != None:
+                width = 16
+                target_match = re.match('(genx-x)([0-9]*)', options.target)
+                if target_match != None:
+                    width = int(target_match.group(2))
+                else:
+                    width = 16
+        else:
+            width = int(target_match.group(2))
+        if width == -1:
+            error("unable to determine target width for target %s\n" % options.target, 0)
+            return Status.Compfail
         if match == -1:
             error("unable to find function signature in test %s\n" % testname, 0)
             return Status.Compfail
@@ -321,8 +349,8 @@ def run_test(testname, host, target):
                 else:
                     exe_name = "%s.exe" % os.path.basename(filename)
 
-                cc_cmd = "%s /I. /Zi /nologo /DTEST_SIG=%d %s %s /Fe%s" % \
-                         (options.compiler_exe, match, add_prefix("test_static.cpp", host), obj_name, exe_name)
+                cc_cmd = "%s /I. /Zi /nologo /DTEST_SIG=%d /DTEST_WIDTH=%d %s %s /Fe%s" % \
+                         (options.compiler_exe, match, width, add_prefix("test_static.cpp", host), obj_name, exe_name)
                 if should_fail:
                     cc_cmd += " /DEXPECT_FAILURE"
             else:
@@ -342,8 +370,8 @@ def run_test(testname, host, target):
                 else:
                     gcc_arch = '-m64'
 
-                cc_cmd = "%s -O2 -I. %s test_static.cpp -DTEST_SIG=%d %s -o %s" % \
-                    (options.compiler_exe, gcc_arch, match, obj_name, exe_name)
+                cc_cmd = "%s -O2 -I. %s test_static.cpp -DTEST_SIG=%d -DTEST_WIDTH=%d %s -o %s" % \
+                    (options.compiler_exe, gcc_arch, match, width, obj_name, exe_name)
 
                 if platform.system() == 'Darwin':
                     cc_cmd += ' -Wl,-no_pie'
