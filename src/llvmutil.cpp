@@ -49,7 +49,7 @@
 #include <llvm/IR/Module.h>
 
 #ifdef ISPC_GENX_ENABLED
-#include "llvm/GenXIntrinsics/GenXIntrinsics.h"
+#include <llvm/GenXIntrinsics/GenXIntrinsics.h>
 #endif
 
 llvm::Type *LLVMTypes::VoidType = NULL;

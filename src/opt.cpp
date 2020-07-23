@@ -110,11 +110,11 @@
 #endif
 #ifdef ISPC_GENX_ENABLED
 #include "gen/GlobalsLocalization.h"
-#include "llvm/GenXIntrinsics/GenXIntrOpts.h"
-#include "llvm/GenXIntrinsics/GenXIntrinsics.h"
-#include "llvm/GenXIntrinsics/GenXSPIRVWriterAdaptor.h"
+#include <llvm/GenXIntrinsics/GenXIntrOpts.h>
+#include <llvm/GenXIntrinsics/GenXIntrinsics.h>
+#include <llvm/GenXIntrinsics/GenXSPIRVWriterAdaptor.h>
 // Used for GenX gather coalescing
-#include "llvm/Transforms/Utils/Local.h"
+#include <llvm/Transforms/Utils/Local.h>
 // Constant in number of bytes.
 enum { BYTE = 1, WORD = 2, DWORD = 4, QWORD = 8, OWORD = 16, GRF = 32 };
 #endif

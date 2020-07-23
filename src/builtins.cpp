@@ -60,6 +60,7 @@
 #include <llvm/Linker/Linker.h>
 #include <llvm/Support/MemoryBuffer.h>
 #include <llvm/Target/TargetMachine.h>
+
 #ifdef ISPC_GENX_ENABLED
 #include <llvm/GenXIntrinsics/GenXIntrinsics.h>
 #endif
