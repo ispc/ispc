@@ -391,8 +391,7 @@ void IfStmt::EmitCode(FunctionEmitContext *ctx) const {
         return;
 
     bool emulateUniform = false;
-#ifdef ISPC_GENX_ENABLED
-    if (!isUniform && g->target->isGenXTarget()) {
+    if (g->target->isGenXTarget() && !isUniform) {
         /* With "genx" target we generate uniform control flow but
            emit varying using CM simdcf.any intrinsic. We mark the scope as
            emulateUniform = true to let nested scopes know that they should
@@ -403,7 +402,6 @@ void IfStmt::EmitCode(FunctionEmitContext *ctx) const {
         isUniform = true;
         emulateUniform = true;
     }
-#endif
 
     if (isUniform) {
         ctx->StartUniformIf(emulateUniform);
@@ -790,8 +788,7 @@ void DoStmt::EmitCode(FunctionEmitContext *ctx) const {
     llvm::BasicBlock *btest = ctx->CreateBasicBlock("do_test", bloop);
     llvm::BasicBlock *bexit = ctx->CreateBasicBlock("do_exit", btest);
     bool emulateUniform = false;
-#ifdef ISPC_GENX_ENABLED
-    if (!uniformTest && g->target->isGenXTarget()) {
+    if (g->target->isGenXTarget() && !uniformTest) {
         /* With "genx" target we generate uniform control flow but
            emit varying using CM simdcf.any intrinsic. We mark the scope as
            emulateUniform = true to let nested scopes know that they should
@@ -802,7 +799,6 @@ void DoStmt::EmitCode(FunctionEmitContext *ctx) const {
         uniformTest = true;
         emulateUniform = true;
     }
-#endif
     ctx->StartLoop(bexit, btest, uniformTest, emulateUniform);
 
     // Start by jumping into the loop body
@@ -962,8 +958,7 @@ void ForStmt::EmitCode(FunctionEmitContext *ctx) const {
     bool uniformTest = test ? test->GetType()->IsUniformType()
                             : (!g->opt.disableUniformControlFlow && !lHasVaryingBreakOrContinue(stmts));
     bool emulateUniform = false;
-#ifdef ISPC_GENX_ENABLED
-    if (!uniformTest && g->target->isGenXTarget()) {
+    if (g->target->isGenXTarget() && !uniformTest) {
         /* With "genx" target we generate uniform control flow but
            emit varying using CM simdcf.any intrinsic. We mark the scope as
            emulateUniform = true to let nested scopes know that they should
@@ -974,7 +969,6 @@ void ForStmt::EmitCode(FunctionEmitContext *ctx) const {
         uniformTest = true;
         emulateUniform = true;
     }
-#endif
     ctx->StartLoop(bexit, bstep, uniformTest, emulateUniform);
     ctx->SetDebugPos(pos);
 
@@ -1014,10 +1008,8 @@ void ForStmt::EmitCode(FunctionEmitContext *ctx) const {
             if (test)
                 Warning(test->pos, "Uniform condition supplied to cfor/cwhile "
                                    "statement.");
-#ifdef ISPC_GENX_ENABLED
         if (!g->target->isGenXTarget())
             AssertPos(pos, ltest->getType() == LLVMTypes::BoolType);
-#endif
         ctx->BranchInst(bloop, bexit, ltest);
     } else {
         llvm::Value *mask = ctx->GetInternalMask();
@@ -2024,6 +2016,7 @@ void ForeachActiveStmt::EmitCode(FunctionEmitContext *ctx) const {
     } else
 #endif
         oldFullMask = ctx->GetFullMask();
+
     llvm::Value *maskBitsPtr = ctx->AllocaInst(LLVMTypes::Int64Type, "mask_bits");
     llvm::Value *movmsk = ctx->LaneMask(oldFullMask);
     ctx->StoreInst(movmsk, maskBitsPtr);
@@ -2068,11 +2061,9 @@ void ForeachActiveStmt::EmitCode(FunctionEmitContext *ctx) const {
             ctx->CmpInst(llvm::Instruction::ICmp, llvm::CmpInst::ICMP_EQ, firstSet32Smear, programIndex);
         iterMask = ctx->I1VecToBoolVec(iterMask);
 
-#ifdef ISPC_GENX_ENABLED
         // Don't need to change this mask in GENX: execution
         // is performed according to GenX EM
         if (!g->target->isGenXTarget())
-#endif
             ctx->SetInternalMask(iterMask);
 
         // Also update the bitvector of lanes left to turn off the bit for
@@ -2084,14 +2075,13 @@ void ForeachActiveStmt::EmitCode(FunctionEmitContext *ctx) const {
         ctx->StoreInst(newRemaining, maskBitsPtr);
 
         // and onward to run the loop body...
-#ifdef ISPC_GENX_ENABLED
         // Set GenX EM through simdcf.goto
         // The EM will be restored when CheckForMore is reached
-        if (g->target->isGenXTarget())
+        if (g->target->isGenXTarget()) {
             ctx->BranchInst(bbBody, bbCheckForMore, iterMask);
-        else
-#endif
+        } else {
             ctx->BranchInst(bbBody);
+        }
     }
 
     ctx->SetCurrentBasicBlock(bbBody);
@@ -2286,11 +2276,10 @@ void ForeachUniqueStmt::EmitCode(FunctionEmitContext *ctx) const {
 
         llvm::Value *loopMask =
             ctx->BinaryOperator(llvm::Instruction::And, oldMask, matchingLanes, "foreach_unique_loop_mask");
-#ifdef ISPC_GENX_ENABLED
+
         // Don't need to change this mask in GENX: execution
         // is performed according to GenX EM
         if (!g->target->isGenXTarget())
-#endif
             ctx->SetInternalMask(loopMask);
 
         // Also update the bitvector of lanes left to process in subsequent
@@ -2303,14 +2292,13 @@ void ForeachUniqueStmt::EmitCode(FunctionEmitContext *ctx) const {
         ctx->StoreInst(newRemaining, maskBitsPtr);
 
         // and onward...
-#ifdef ISPC_GENX_ENABLED
         // Set GenX EM through simdcf.goto
         // The EM will be restored when CheckForMore is reached
-        if (g->target->isGenXTarget())
+        if (g->target->isGenXTarget()) {
             ctx->BranchInst(bbBody, bbCheckForMore, loopMask);
-        else
-#endif
+        } else {
             ctx->BranchInst(bbBody);
+        }
     }
 
     ctx->SetCurrentBasicBlock(bbBody);
@@ -2682,19 +2670,17 @@ void UnmaskedStmt::EmitCode(FunctionEmitContext *ctx) const {
 
     ctx->SetInternalMask(LLVMMaskAllOn);
     ctx->SetFunctionMask(LLVMMaskAllOn);
-#ifdef ISPC_GENX_ENABLED
     if (!g->target->isGenXTarget()) {
-#endif
         stmts->EmitCode(ctx);
-#ifdef ISPC_GENX_ENABLED
     } else {
+#ifdef ISPC_GENX_ENABLED
         // For gen we insert special intrinsics at the beginning and end of unmasked region.
         // Correct execution mask will be set in CMSIMDCFLowering
         llvm::Value *oldInternalMask = ctx->GenXStartUnmaskedRegion();
         stmts->EmitCode(ctx);
         ctx->GenXEndUnmaskedRegion(oldInternalMask);
-    }
 #endif
+    }
     // Do not restore old mask if our basic block is over. This happends if we emit code
     // for something like 'unmasked{return;}', for example.
     if (ctx->GetCurrentBasicBlock() == NULL)
@@ -2795,6 +2781,7 @@ void GotoStmt::EmitCode(FunctionEmitContext *ctx) const {
                    "control flow.");
         return;
     }
+
     if (ctx->InForeachLoop()) {
         Error(pos, "\"goto\" statements are currently illegal inside "
                    "\"foreach\" loops.");
@@ -3634,12 +3621,11 @@ int AssertStmt::EstimateCost() const { return COST_ASSERT; }
 DeleteStmt::DeleteStmt(Expr *e, SourcePos p) : Stmt(p, DeleteStmtID) { expr = e; }
 
 void DeleteStmt::EmitCode(FunctionEmitContext *ctx) const {
-#ifdef ISPC_GENX_ENABLED
     if (g->target->isGenXTarget()) {
         Error(pos, "\"delete\" statement is not supported for genx-* targets yet.");
         return;
     }
-#endif
+
     if (!ctx->GetCurrentBasicBlock())
         return;
 

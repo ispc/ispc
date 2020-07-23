@@ -1121,13 +1121,8 @@ void FunctionEmitContext::SwitchInst(llvm::Value *expr, llvm::BasicBlock *bbDefa
     switchConditionWasUniform =
         (llvm::isa<llvm::VectorType>(expr->getType()) == false) || (controlFlowInfo.back()->IsUniformEmulated());
 
-#ifdef ISPC_GENX_ENABLED
     // Do not make LLVM switch for GenX
-    if (switchConditionWasUniform == true && !g->target->isGenXTarget())
-#else
-    if (switchConditionWasUniform == true)
-#endif
-    {
+    if (switchConditionWasUniform == true && !g->target->isGenXTarget()) {
         // For a uniform switch condition, just wire things up to the LLVM
         // switch instruction.
         llvm::SwitchInst *s = llvm::SwitchInst::Create(expr, bbDefault, bbCases.size(), bblock);
@@ -1144,17 +1139,14 @@ void FunctionEmitContext::SwitchInst(llvm::Value *expr, llvm::BasicBlock *bbDefa
         // switch is a terminator
         bblock = NULL;
     } else {
-#ifdef ISPC_GENX_ENABLED
         if (g->target->isGenXTarget()) {
             // Init fall through mask
             switchFallThroughMaskPtr = AllocaInst(LLVMTypes::MaskType, "fall_through_mask");
             StoreInst(LLVMMaskAllOff, switchFallThroughMaskPtr);
-        }
-
-        if (!g->target->isGenXTarget())
-#endif
+        } else {
             // For a varying switch, we first turn off all lanes of the mask
             SetInternalMask(LLVMMaskAllOff);
+        }
 
         if (nextBlocks->size() > 0) {
             // If there are any labels inside the switch, jump to the first
@@ -1259,13 +1251,11 @@ void FunctionEmitContext::CurrentLanesReturned(Expr *expr, bool doCoherenceCheck
             }
         }
     }
-#ifdef ISPC_GENX_ENABLED
+
     if (g->target->isGenXTarget() || (!g->target->isGenXTarget() && VaryingCFDepth() == 0)) {
         // Don't need to create mask management instructions for GenX
         // since execution is managed through GenX EM
-#else
-    if (VaryingCFDepth() == 0) {
-#endif
+
         // If there is only uniform control flow between us and the
         // function entry, then it's guaranteed that all lanes are running,
         // so we can just emit a true return instruction
@@ -3291,12 +3281,11 @@ llvm::Value *FunctionEmitContext::CallInst(llvm::Value *func, const FunctionType
         // equal to the set of active program instances that also have that
         // function pointer.  When all unique function pointers have been
         // called, we're done.
-#ifdef ISPC_GENX_ENABLED
         if (g->target->isGenXTarget()) {
             Error(currentPos, "varying function calls are not supported for genx-* targets yet.");
             return NULL;
         }
-#endif
+
         llvm::BasicBlock *bbTest = CreateBasicBlock("varying_funcall_test");
         llvm::BasicBlock *bbCall = CreateBasicBlock("varying_funcall_call");
         llvm::BasicBlock *bbDone = CreateBasicBlock("varying_funcall_done");
@@ -3456,12 +3445,10 @@ llvm::Instruction *FunctionEmitContext::ReturnInst() {
 
 llvm::Value *FunctionEmitContext::LaunchInst(llvm::Value *callee, std::vector<llvm::Value *> &argVals,
                                              llvm::Value *launchCount[3]) {
-#ifdef ISPC_GENX_ENABLED
     if (g->target->isGenXTarget()) {
         Error(currentPos, "\"launch\" keyword is not supported for genx-* targets");
         return NULL;
     }
-#endif
 
     if (callee == NULL) {
         AssertPos(currentPos, m->errorCount > 0);
@@ -3526,12 +3513,10 @@ llvm::Value *FunctionEmitContext::LaunchInst(llvm::Value *callee, std::vector<ll
 }
 
 void FunctionEmitContext::SyncInst() {
-#ifdef ISPC_GENX_ENABLED
     if (g->target->isGenXTarget()) {
         Error(currentPos, "\"sync\" keyword is not supported for genx-* targets");
         return;
     }
-#endif
 
     llvm::Value *launchGroupHandle = LoadInst(launchGroupHandlePtr);
     llvm::Value *nullPtrValue = llvm::Constant::getNullValue(LLVMTypes::VoidPointerType);

@@ -94,13 +94,11 @@ class Module {
                          variables, and the types used by them. */
         Deps,        /** generate dependencies */
         DevStub,     /** generate device-side offload stubs */
-        HostStub     /** generate host-side offload stubs */
+        HostStub,    /** generate host-side offload stubs */
 #ifdef ISPC_GENX_ENABLED
-        ,
-        ISA,  /** generate GenX ISA file */
-        SPIRV /** generate spir-v file */
+        ISA,   /** generate GenX ISA file */
+        SPIRV, /** generate spir-v file */
 #endif
-
     };
 
     enum OutputFlags : int {

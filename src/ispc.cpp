@@ -1096,18 +1096,16 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, bool pic, boo
             featuresString = "+neon";
         }
 #endif
-#ifdef ISPC_GENX_ENABLED
+
         // Support 'i64' and 'double' types in cm
-        if (m_isa == Target::GENX)
+        if (isGenXTarget())
             featuresString += "+longlong";
-#endif
+
         if (g->opt.disableFMA == false)
             options.AllowFPOpFusion = llvm::FPOpFusion::Fast;
 
-            // For gen target we do not need to create target/targetMachine
-#ifdef ISPC_GENX_ENABLED
-        if (!ISPCTargetIsGen(m_ispc_target)) {
-#endif
+        // For gen target we do not need to create target/targetMachine
+        if (!isGenXTarget()) {
             m_targetMachine = m_target->createTargetMachine(triple, m_cpu, featuresString, options, relocModel);
             Assert(m_targetMachine != NULL);
 
@@ -1133,18 +1131,14 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, bool pic, boo
             if (g->generateDWARFVersion != 0) {
                 m_targetMachine->Options.MCOptions.DwarfVersion = g->generateDWARFVersion;
             }
-#ifdef ISPC_GENX_ENABLED
         }
-#endif
         // Initialize TargetData/DataLayout in 3 steps.
         // 1. Get default data layout first
         std::string dl_string;
         if (m_targetMachine != NULL)
             dl_string = m_targetMachine->createDataLayout().getStringRepresentation();
-#ifdef ISPC_GENX_ENABLED
-        if (m_isa == Target::GENX)
+        if (isGenXTarget())
             dl_string = m_arch == Arch::genx64 ? "e-p:64:64-i64:64-n8:16:32" : "e-p:32:32-i64:64-n8:16:32";
-#endif
 
         // 2. Finally set member data
         m_dataLayout = new llvm::DataLayout(dl_string);
@@ -1170,19 +1164,15 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, bool pic, boo
     m_valid = !error;
 
     if (printTarget) {
-#ifdef ISPC_GENX_ENABLED
-        if (!ISPCTargetIsGen(m_ispc_target)) {
-#endif
+        if (!isGenXTarget()) {
             printf("Target Triple: %s\n", m_targetMachine->getTargetTriple().str().c_str());
             printf("Target CPU: %s\n", m_targetMachine->getTargetCPU().str().c_str());
             printf("Target Feature String: %s\n", m_targetMachine->getTargetFeatureString().str().c_str());
-#ifdef ISPC_GENX_ENABLED
         } else {
             printf("Target Triple: %s\n", this->GetTripleString().c_str());
             printf("Target GPU: %s\n", this->getCPU().c_str());
             printf("Target Feature String: %s\n", featuresString.c_str());
         }
-#endif
     }
 
     return;
