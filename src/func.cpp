@@ -583,6 +583,11 @@ void Function::GenerateIR() {
                     }
                 }
             }
+        } else {
+            // In case if it is not the kernel, mark function as a stack call
+            if (g->target->isGenXTarget()) {
+                function->addFnAttr("CMStackCall");
+            }
         }
     }
 }
