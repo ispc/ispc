@@ -96,7 +96,7 @@ jobs:
     - <<: *my_tag
       env:
         - LLVM_VERSION=10.0 OS=Ubuntu16.04
-        - LLVM_TAR=llvm-10.0.0-ubuntu16.04-Release+Asserts-x86.arm.wasm.tar.xz
+        - LLVM_TAR=llvm-10.0.1-ubuntu16.04-Release+Asserts-x86.arm.wasm.tar.xz
         - LLVM_REPO=https://github.com/dbabokin/llvm-project
         - ISPC_HOME=$TRAVIS_BUILD_DIR
     # LLVM 9.0 + Ubuntu 16.04: build, lit tests, examples (build + run), benchmarks (build + trial run)
@@ -118,7 +118,7 @@ jobs:
     - <<: *my_tag
       env:
         - LLVM_VERSION=10.0 OS=Ubuntu16.04 WASM_FLAGS="-DWASM_ENABLED=ON"
-        - LLVM_TAR=llvm-10.0.0-ubuntu16.04-Release+Asserts-x86.arm.wasm.tar.xz
+        - LLVM_TAR=llvm-10.0.1-ubuntu16.04-Release+Asserts-x86.arm.wasm.tar.xz
         - LLVM_REPO=https://github.com/dbabokin/llvm-project
         - ISPC_HOME=$TRAVIS_BUILD_DIR
     # ARM build
@@ -131,7 +131,7 @@ jobs:
       dist: bionic
       env:
         - LLVM_VERSION=10.0 OS=Ubuntu18.04aarch64
-        - LLVM_TAR=llvm-10.0.0-ubuntu16.04aarch64-Release+Asserts-x86.arm.wasm.tar.xz
+        - LLVM_TAR=llvm-10.0.1-ubuntu16.04aarch64-Release+Asserts-x86.arm.wasm.tar.xz
         - LLVM_REPO=https://github.com/dbabokin/llvm-project
         - ISPC_HOME=$TRAVIS_BUILD_DIR
       before_install:
@@ -173,7 +173,7 @@ jobs:
       osx_image: xcode11.4
       env:
         - LLVM_VERSION=10.0 OS=macOS10.15
-        - LLVM_TAR=llvm-10.0.0-macos10.15-Release+Asserts-x86.arm.wasm.tar.xz
+        - LLVM_TAR=llvm-10.0.1-macos10.15-Release+Asserts-x86.arm.wasm.tar.xz
         - LLVM_REPO=https://github.com/dbabokin/llvm-project
         - ISPC_HOME=$TRAVIS_BUILD_DIR
       before_install:

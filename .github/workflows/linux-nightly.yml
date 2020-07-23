@@ -13,7 +13,7 @@ on:
 env:
   LLVM_VERSION: "10.0"
   LLVM_REPO: https://github.com/dbabokin/llvm-project
-  LLVM_TAR: llvm-10.0.0-ubuntu16.04-Release+Asserts-x86.arm.wasm.tar.xz
+  LLVM_TAR: llvm-10.0.1-ubuntu16.04-Release+Asserts-x86.arm.wasm.tar.xz
   SDE_TAR_NAME: sde-external-8.50.0-2020-03-26-lin
 
 jobs:
