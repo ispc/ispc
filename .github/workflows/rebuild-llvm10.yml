@@ -116,7 +116,7 @@ jobs:
 
     - name: Build LLVM
       run: |
-        ./alloy.py -b --version=10.0 --selfbuild
+        ./alloy.py -b --version=10.0 --selfbuild --verbose
 
     - name: Pack LLVM
       run: |
