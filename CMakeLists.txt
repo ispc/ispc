@@ -355,7 +355,7 @@ target_include_directories(${PROJECT_NAME} PRIVATE
 if (UNIX)
     target_compile_options(${PROJECT_NAME} PRIVATE -Wall -Wno-sign-compare -Wno-unused-function -Werror ${LLVM_CPP_FLAGS})
     # Security options
-    target_compile_options(${PROJECT_NAME} PRIVATE -fstack-protector-strong -fno-strict-float-cast-overflow
+    target_compile_options(${PROJECT_NAME} PRIVATE -fstack-protector-strong
                            -fdata-sections -ffunction-sections -fno-delete-null-pointer-checks
                            -Wformat -Wformat-security -fpie -fwrapv)
 else()
