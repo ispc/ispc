@@ -1,5 +1,5 @@
 // This test checks function signature of externs to ensure it doesn't have 'x86_vectorcallcc' by default.
-// RUN: %{ispc}  %s --emit-llvm-text --target=host -o - | FileCheck %s
+// RUN: %{ispc}  %s --emit-llvm-text --vectorcall --target=host -o - | FileCheck %s
 
 // REQUIRES: X86_ENABLED
 
