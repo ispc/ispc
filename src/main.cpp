@@ -106,7 +106,8 @@ static void lPrintVersion() {
     PrintWithWordBreaks(cpuHelp, 16, TerminalWidth(), stdout);
     printf("    [-D<foo>]\t\t\t\t#define given value when running preprocessor\n");
     printf("    [--dev-stub <filename>]\t\tEmit device-side offload stub functions to file\n");
-    printf("    [--vectorcall/--no-vectorcall]\tEnable/disable vectorcall calling convention on Windows (x64 only). Disabled by default\n");
+    printf("    [--vectorcall/--no-vectorcall]\tEnable/disable vectorcall calling convention on Windows (x64 only). "
+           "Disabled by default\n");
     printf("    [--dllexport]\t\t\tMake non-static functions DLL exported.  Windows target only\n");
     printf("    [--dwarf-version={2,3,4}]\t\tGenerate source-level debug information with given DWARF version "
            "(triggers -g).  Ignored for Windows target\n");
@@ -430,8 +431,7 @@ enum class VectorCallStatus { none, enabled, disabled };
 
 static void setCallingConv(VectorCallStatus vectorCall, Arch arch) {
     // Restrict vectorcall to just x86_64 - vectorcall for x86 not supported yet.
-    if (g->target_os == TargetOS::windows &&
-        vectorCall == VectorCallStatus::enabled &&
+    if (g->target_os == TargetOS::windows && vectorCall == VectorCallStatus::enabled &&
         // Arch is not properly set yet, we assume none is x86_64.
         (arch == Arch::x86_64 || arch == Arch::none)) {
         g->calling_conv = CallingConv::x86_vectorcall;
@@ -677,8 +677,7 @@ int main(int Argc, char *Argv[]) {
             }
         } else if (!strcmp(argv[i], "--no-vectorcall")) {
             vectorCall = VectorCallStatus::disabled;
-         }
-        else if (!strcmp(argv[i], "--vectorcall")) {
+        } else if (!strcmp(argv[i], "--vectorcall")) {
             vectorCall = VectorCallStatus::enabled;
         } else if (!strncmp(argv[i], "--math-lib=", 11)) {
             const char *lib = argv[i] + 11;
@@ -953,10 +952,12 @@ int main(int Argc, char *Argv[]) {
         Warning(SourcePos(), "--dllexport switch will be ignored, as the target OS is not Windows.");
     }
 
-    if (vectorCall != VectorCallStatus::none && (g->target_os != TargetOS::windows ||
-        // This is a hacky check. Arch is properly set later, so we rely that default means x86_64.
-        (arch != Arch::x86_64 && arch != Arch::none))) {
-        Warning(SourcePos(), "--vectorcall/--no-vectorcall are supported only for x86_64 Windows target, so these options will be ignored.");
+    if (vectorCall != VectorCallStatus::none &&
+        (g->target_os != TargetOS::windows ||
+         // This is a hacky check. Arch is properly set later, so we rely that default means x86_64.
+         (arch != Arch::x86_64 && arch != Arch::none))) {
+        Warning(SourcePos(), "--vectorcall/--no-vectorcall are supported only for x86_64 Windows target, so these "
+                             "options will be ignored.");
     }
 
     if (targets.size() > 1)
