@@ -48,7 +48,7 @@
 #include "perfbench_ispc.h"
 
 #ifdef WINDOWS
-#define CALLINGCONV __vectorcall
+#define CALLINGCONV /*__vectorcall*/
 #else
 #define CALLINGCONV
 #endif
