@@ -5,14 +5,7 @@ export void f_f(uniform float RET[], uniform float aFOO[]) {
     ix = rcp_fast(x);
     d = (ix - 1. / x);
     d = (d < 0) ? -d : d;
-    if (d < 1e-3)
-    {
-        RET[programIndex] = 1.;
-    }
-    else
-    {
-        RET[programIndex] = 0.;
-    }
+    RET[programIndex] = (d < 1e-3) ? 1. : 0.;
 }
 
 export void result(uniform float RET[]) {
