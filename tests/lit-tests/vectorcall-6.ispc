@@ -11,10 +11,8 @@ __vectorcall uniform float CopyFloat(const uniform float Source) {
     return Source;
 }
 
-export void CopyFloat_ispc(uniform float Result[], const uniform float Source[], const uniform int Iterations)
-{
-	for(uniform int i = 0; i < Iterations; i++)
-	{
+export void CopyFloat_ispc(uniform float Result[], const uniform float Source[], const uniform int Iterations) {
+    for(uniform int i = 0; i < Iterations; i++) {
         Result[i] = CopyFloat(Source[i]);
-	}
+    }
 }
