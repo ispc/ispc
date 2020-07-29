@@ -3,7 +3,9 @@ export void f_f(uniform float RET[], uniform float aFOO[]) {
     float d, invsqrt = rsqrt_fast(x);
     d = (x * (invsqrt * invsqrt)) - 1.;
     if (d < 0.) d = -d;
-    RET[programIndex] = (d > 1e-3) ? 1 : 0;
+
+    // The worst precision is demonstrated by ARM, it requires 1e-2 to pass.
+    RET[programIndex] = (d > 1e-2) ? 1 : 0;
 }
 
 

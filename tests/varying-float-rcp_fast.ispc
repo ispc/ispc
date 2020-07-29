@@ -5,7 +5,9 @@ export void f_f(uniform float RET[], uniform float aFOO[]) {
     ix = rcp_fast(x);
     d = (ix - 1. / x);
     d = (d < 0) ? -d : d;
-    RET[programIndex] = (d < 1e-3) ? 1. : 0.;
+
+    // The worst precision is demonstrated by ARM, it requires 2e-3 to pass.
+    RET[programIndex] = (d < 2e-3) ? 1. : 0.;
 }
 
 export void result(uniform float RET[]) {
