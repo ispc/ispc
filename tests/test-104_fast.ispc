@@ -4,8 +4,6 @@ export void f_f(uniform float RET[], uniform float aFOO[]) {
     float d, ix;
     ix = rcp_fast(x);
     d = (ix - 1. / x);
-    float ix_ = rcp_fast(x);
-    float d_ = (ix_ - 1. / x);
     d = (d < 0) ? -d : d;
     RET[programIndex] = (d < 1e-2) ? 1. : 0.;
 }
