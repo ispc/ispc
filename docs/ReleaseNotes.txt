@@ -1,3 +1,36 @@
+=== v1.14.0 === (30 July 2020)
+An ISPC release introducing initial support of Intel graphics hardware architectures.
+You can build ISPC programs and run them on Intel Core Processors with Gen9 graphics
+devices (formerly Skylake, Kaby Lake, Coffee Lake) using new '--target' options:
+'genx-x8' and 'genx-x16'. For code generation ISPC uses Vector Compute backend which
+is the part of 'Intel(R) Graphics Compute Runtime' through SPIR-V interface.
+This release also includes ISPC Runtime based on 'oneAPI Level Zero' for GPU and
+'OpenMP Runtime' for CPU, which creates unified abstraction for executing ISPC code
+on CPU and GPU.
+
+More details here: https://ispc.github.io/ispc_for_gen.html
+
+For build instructions check our docker recipe:
+https://github.com/ispc/ispc/blob/master/docker/ubuntu/gen/Dockerfile
+
+The stability and performance of this release is not mature yet but we strongly
+recommend to try it out and give us feedback!
+
+Runtime Dependencies 
+- Intel(R) Graphics Compute Runtime
+  https://github.com/intel/compute-runtime/releases/tag/20.29.17408
+- Level Zero Loader
+  https://github.com/oneapi-src/level-zero/releases/tag/v0.91.21
+- OpenMP Runtime
+  Consult your Linux distribution documentation for installation of OpenMP runtime
+  instructions.
+
+Components revisions used in a build:
+KhronosGroup/SPIRV-LLVM-Translator@1e661b2
+intel/vc-intrinsics.git@a0b66f2
+oneapi-src/level-zero@v0.91.21
+llvm/llvm-project@llvmorg-10.0.0
+
 === v1.13.0 === (23 April 2020)
 
 An ISPC update, which graduates cross-compilation support to production and
