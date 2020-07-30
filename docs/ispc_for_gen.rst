@@ -411,7 +411,6 @@ expect to cover missing features in the nearest future releases.
 Below is the list of known limitations:
 
 * No function pointers support
-* No recursion support
 * No ``prefetch`` support
 * No global atomics
 * No double precision math functions
