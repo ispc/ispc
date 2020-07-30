@@ -924,7 +924,11 @@ void AddBitcodeToModule(const BitcodeLib *lib, llvm::Module *module, SymbolTable
         }
 
         lSetInternalFunctions(module);
-        lSetAlwaysInlineFunctions(module);
+        if (g->target->isGenXTarget()) {
+            // For now this function is used for gen target only
+            // TODO: check if its usage affects CPU targets
+            lSetAlwaysInlineFunctions(module);
+        }
         if (symbolTable != NULL)
             lAddModuleSymbols(module, symbolTable);
         lCheckModuleIntrinsics(module);
