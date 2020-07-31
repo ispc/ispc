@@ -26,7 +26,6 @@
       <div id="nbar">
         <ul>
           <li><a href="index.html">Overview</a></li>
-          <li><a href="news.html">News</a></li>
           <li><a href="features.html">Features</a></li>
           <li><a href="downloads.html">Downloads</a></li>
           <li id="selected"><a href="documentation.html">Documentation</a></li>
