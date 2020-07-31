@@ -1,6 +1,6 @@
-========================
+===================
 Intel® ISPC for GEN
-========================
+===================
 
 The Intel® Implicit SPMD Program Compiler (Intel® ISPC) got initial support for
 Intel GPUs recently. The compilation for a GPU is pretty straightforward from
@@ -100,7 +100,7 @@ the same for host and device code so 32-bit addressing will only work with
 
 
 ISPC Run Time (ISPCRT)
-=======================
+======================
 
 ``ISPC Run Time (ISPCRT)`` unifies execution models for CPU and GPU targets. It
 is a high-level abstraction on the top of `oneAPI Level Zero
@@ -117,7 +117,7 @@ this API to run SPMD programs on CPU or GPU. You can see how to use
 
 
 ISPCRT Objects
----------------
+--------------
 
 The ``ISPC Run Time`` uses the following abstractions to manage code execution:
 
