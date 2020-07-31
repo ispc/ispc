@@ -60,6 +60,7 @@ Contents:
   + `Updating ISPC Programs For Changes In ISPC 1.11.0`_
   + `Updating ISPC Programs For Changes In ISPC 1.12.0`_
   + `Updating ISPC Programs For Changes In ISPC 1.13.0`_
+  + `Updating ISPC Programs For Changes In ISPC 1.14.0`_
 
 * `Getting Started with ISPC`_
 
@@ -418,6 +419,21 @@ older versions:
 
 * ``extract()``/``insert()`` for boolean arguments, and ``abs()`` for all integer and
   FP types were added to standard library.
+
+Updating ISPC Programs For Changes In ISPC 1.14.0
+-------------------------------------------------
+
+This release contains the following changes that may affect compatibility with
+older versions:
+
+* "generic" targets were removed. Please use native targets instead.
+
+New i8 and i16 targets were introduced: avx2-i8x32, avx2-i16x16, avx512skx-i8x64,
+and avx512skx-i16x32.
+
+Windows x86_64 target now supports ``__vectorcall`` calling convention.
+It's off by default, can be enabled by ``--vectorcall`` command line switch.
+
 
 Getting Started with ISPC
 =========================
