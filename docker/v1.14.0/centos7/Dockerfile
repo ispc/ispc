@@ -46,7 +46,7 @@ WORKDIR /usr/local/src/ispc
 # "rm" are just to keep docker image small.
 ARG LLVM_VERSION=10.0
 RUN source /opt/rh/devtoolset-7/enable && \
-    ./alloy.py -b --version=$LLVM_VERSION --selfbuild && --llvm-disable-assertions \
+    ./alloy.py -b --version=$LLVM_VERSION --selfbuild --llvm-disable-assertions && \
     rm -rf $LLVM_HOME/build-$LLVM_VERSION $LLVM_HOME/llvm-$LLVM_VERSION $LLVM_HOME/bin-$LLVM_VERSION_temp $LLVM_HOME/build-$LLVM_VERSION_temp
 
 ENV PATH=$LLVM_HOME/bin-$LLVM_VERSION/bin:$PATH
