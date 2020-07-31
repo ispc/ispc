@@ -1,20 +1,35 @@
 === v1.14.0 === (30 July 2020)
-An ISPC release introducing initial support of Intel graphics hardware architectures.
-You can build ISPC programs and run them on Intel Core Processors with Gen9 graphics
-devices (formerly Skylake, Kaby Lake, Coffee Lake) using new '--target' options:
-'genx-x8' and 'genx-x16'. For code generation ISPC uses Vector Compute backend which
-is the part of 'Intel(R) Graphics Compute Runtime' through SPIR-V interface.
-This release also includes ISPC Runtime based on 'oneAPI Level Zero' for GPU and
-'OpenMP Runtime' for CPU, which creates unified abstraction for executing ISPC code
-on CPU and GPU.
 
-More details here: https://ispc.github.io/ispc_for_gen.html
+An ISPC release with several improvements for CPU and initial support of Intel
+graphics hardware architectures. The binaries in this release include CPU versions
+for Windows, Linux, and macOS, as previous releases, plus a GPU-enabled Linux binary,
+which supports both CPU and GPU. CPU binaries are based on patched LLVM 10.0.1.
+
+CPU changes include:
+- new avx2-i8x32, avx2-i16x16, avx512skx-i8x64, avx512skx-i16x32 targets.
+- "generic" targets were removed.
+- several stability fixes, including bugs discovered during fuzzing ISPC by YARPGen.
+- integer division performance improvements.
+- support for __vectorcall calling convention on Windows x64 (enabled by 
+  '--vectorcall')
+
+Using GPU-enabled Linux binary you can build ISPC programs and run them on Intel(R)
+Core(tm) Processors with Gen9 graphics (formerly Skylake, Kaby Lake, Coffee Lake)
+using new '--target' options: 'genx-x8' and 'genx-x16'. For code generation ISPC
+uses Vector Compute backend which is the part of 'Intel(R) Graphics Compute Runtime'
+through SPIR-V interface. This release also includes ISPC Runtime based on
+'oneAPI Level Zero' for GPU and 'OpenMP Runtime' for CPU, which creates unified
+abstraction for executing ISPC code on CPU and GPU.
+
+More details are available here: https://ispc.github.io/ispc_for_gen.html
 
 For build instructions check our docker recipe:
 https://github.com/ispc/ispc/blob/master/docker/ubuntu/gen/Dockerfile
 
-The stability and performance of this release is not mature yet but we strongly
-recommend to try it out and give us feedback!
+The stability and performance of GPU part of this release is not mature yet but we
+strongly encourage to try it out and give us feedback! You can reach us through
+Github issues, ISPC mailing list (ispc-users@googlegroups.com), or on Twitter
+(@ispc_updates).
 
 Runtime Dependencies 
 - Intel(R) Graphics Compute Runtime
@@ -25,7 +40,7 @@ Runtime Dependencies
   Consult your Linux distribution documentation for installation of OpenMP runtime
   instructions.
 
-Components revisions used in a build:
+Components revisions used in this build:
 KhronosGroup/SPIRV-LLVM-Translator@1e661b2
 intel/vc-intrinsics.git@a0b66f2
 oneapi-src/level-zero@v0.91.21
