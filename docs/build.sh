@@ -7,9 +7,6 @@ for i in ispc ispc_for_gen perfguide faq; do
         --stylesheet-path=css/style.css $i.rst > $i.html
 done
 
-$rst2html --template=template-news.txt --link-stylesheet \
-    --stylesheet-path=css/style.css news.rst > news.html
-
 $rst2html --template=template-perf.txt --link-stylesheet \
         --stylesheet-path=css/style.css perf.rst > perf.html
 
