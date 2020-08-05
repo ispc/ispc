@@ -4,6 +4,7 @@ MAINTAINER Dmitry Babokin <dmitry.y.babokin@intel.com>
 ARG REPO=ispc/ispc
 ARG SHA=master
 ARG LLVM_VERSION=10.0
+ARG EXTRA_BUILD_ARG=
 
 # !!! Make sure that your docker config provides enough memory to the container,
 # otherwise LLVM build may fail, as it will use all the cores available to container.
@@ -49,7 +50,7 @@ WORKDIR /usr/local/src/ispc
 # i.e. if clang was built by gcc, you may need to use gcc to build ispc (i.e. run "make gcc"),
 # or better do clang selfbuild and use it for ispc build as well (i.e. just "make").
 # "rm" are just to keep docker image small.
-RUN ./alloy.py -b --version=$LLVM_VERSION --selfbuild --verbose && \
+RUN ./alloy.py -b --version=$LLVM_VERSION --selfbuild --verbose $EXTRA_BUILD_ARG && \
     rm -rf $LLVM_HOME/build-$LLVM_VERSION $LLVM_HOME/llvm-$LLVM_VERSION $LLVM_HOME/bin-"$LLVM_VERSION"_temp $LLVM_HOME/build-"$LLVM_VERSION"_temp
 
 ENV PATH=$LLVM_HOME/bin-$LLVM_VERSION/bin:$PATH
