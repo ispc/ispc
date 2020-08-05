@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - master
+      - '**rebuild_llvm**'
     paths:
       - "llvm_patches/*10_0*"
       - "alloy.py"
