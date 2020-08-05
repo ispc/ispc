@@ -1,10 +1,13 @@
-// RUN: %{ispc} %s --arch=x86-64 --target=avx512skx-i8x64
-// RUN: %{ispc} %s --arch=x86-64 --target=avx512skx-i16x32
-// RUN: %{ispc} %s --arch=x86-64 --target=avx512skx-i32x16
-// RUN: %{ispc} %s --arch=x86-64 --target=avx2-i8x32
-// RUN: %{ispc} %s --arch=x86-64 --target=host
+// RUN: %{ispc} %s -o %t.o --arch=x86-64 --target=avx512skx-i8x64
+// RUN: %{ispc} %s -o %t.o --arch=x86-64 --target=avx512skx-i16x32
+// RUN: %{ispc} %s -o %t.o --arch=x86-64 --target=avx512skx-i32x16
+// RUN: %{ispc} %s -o %t.o --arch=x86-64 --target=avx2-i8x32
+// RUN: %{ispc} %s -o %t.o --target=host
 
 // REQUIRES: X86_ENABLED
+
+// It doesn't work for anything earlier than 10.0, but it will not be fixed, so don't run.
+// REQUIRES: LLVM_10_0+
 
 extern uniform unsigned int64 var_6;
 extern uniform unsigned int16 var_11;
