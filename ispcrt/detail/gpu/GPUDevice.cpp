@@ -9,7 +9,9 @@
 #include <dlfcn.h>
 #endif
 // std
+#include <algorithm>
 #include <cassert>
+#include <cstring>
 #include <deque>
 #include <exception>
 #include <fstream>
@@ -17,6 +19,7 @@
 #include <limits>
 #include <sstream>
 #include <vector>
+
 // level0
 #include <level_zero/ze_api.h>
 
@@ -208,11 +211,40 @@ struct Module : public ispcrt::base::Module {
         is.read((char *)m_code.data(), codeSize);
         is.close();
 
+        // Collect potential additional options for the compiler from the environment.
+        // We assume some default options for the compiler, but we also
+        // allow adding more options by the user. The content of the
+        // ISPCRT_IGC_OPTIONS variable should be prefixed by the user with
+        // + or = sign. '+' means that the content of the variable should
+        // be added to the default igc options, while '=' will replace
+        // the options with the content of the env var.
+        std::string igcOptions = "-cmc";
+        constexpr auto MAX_ISPCRT_IGC_OPTIONS = 2000UL;
+
+        const char* userIgcOptionsEnv = getenv("ISPCRT_IGC_OPTIONS");
+        if (userIgcOptionsEnv) {
+            // Copy at most MAX_ISPCRT_IGC_OPTIONS characters from the env - just to be safe
+            const auto copyChars = std::min(std::strlen(userIgcOptionsEnv), MAX_ISPCRT_IGC_OPTIONS);
+            std::string userIgcOptions(userIgcOptionsEnv, copyChars);
+            if (userIgcOptions.length() >= 3) {
+                auto prefix = userIgcOptions.substr(0, 2);
+                if (prefix == "+ ") {
+                    igcOptions += ' ' + userIgcOptions.substr(2);
+                } else if (prefix == "= ") {
+                    igcOptions = userIgcOptions.substr(2);
+                } else {
+                    throw std::runtime_error("Invalid ISPCRT_IGC_OPTIONS string" + userIgcOptions);
+                }
+            } else {
+                throw std::runtime_error("Invalid ISPCRT_IGC_OPTIONS string" + userIgcOptions);
+            }
+        }
+
         ze_module_desc_t moduleDesc = {ZE_MODULE_DESC_VERSION_CURRENT, //
                                        ZE_MODULE_FORMAT_IL_SPIRV,      //
                                        codeSize,                       //
                                        m_code.data(),                  //
-                                       "-cmc"};
+                                       igcOptions.c_str()};
         assert(device != nullptr);
         L0_SAFE_CALL(zeModuleCreate(device, &moduleDesc, &m_module, nullptr));
         assert(m_module != nullptr);
