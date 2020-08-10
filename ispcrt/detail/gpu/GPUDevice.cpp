@@ -218,7 +218,7 @@ struct Module : public ispcrt::base::Module {
         // + or = sign. '+' means that the content of the variable should
         // be added to the default igc options, while '=' will replace
         // the options with the content of the env var.
-        std::string igcOptions = "-cmc";
+        std::string igcOptions = "-vc-codegen -no-optimize";
         constexpr auto MAX_ISPCRT_IGC_OPTIONS = 2000UL;
 
         const char* userIgcOptionsEnv = getenv("ISPCRT_IGC_OPTIONS");
