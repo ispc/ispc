@@ -78,12 +78,12 @@ struct Event {
 
   private:
     void create() {
-        ze_event_desc_t eventDesc;
+        ze_event_desc_t eventDesc = {};
 
         eventDesc.index = m_index;
+        eventDesc.pNext = nullptr;
         eventDesc.signal = ZE_EVENT_SCOPE_FLAG_HOST;
         eventDesc.wait = ZE_EVENT_SCOPE_FLAG_HOST;
-        eventDesc.version = ZE_EVENT_DESC_VERSION_CURRENT;
 
         L0_SAFE_CALL(zeEventCreate(m_pool, &eventDesc, &m_handle));
 
@@ -98,23 +98,22 @@ struct Event {
 struct EventPool {
     constexpr static uint32_t POOL_SIZE = 100;
 
-    EventPool(ze_driver_handle_t driver, ze_device_handle_t device) : m_driver(driver), m_device(device) {
+    EventPool(ze_context_handle_t context, ze_device_handle_t device) : m_context(context), m_device(device) {
         // Get device timestamp resolution
         ze_device_properties_t device_properties;
         L0_SAFE_CALL(zeDeviceGetProperties(m_device, &device_properties));
         m_timestampFreq = device_properties.timerResolution;
-
+        m_timestampMaxValue = ~(-1 << device_properties.kernelTimestampValidBits);
         // Create pool
-        ze_event_pool_desc_t eventPoolDesc;
+        ze_event_pool_desc_t eventPoolDesc = {};
         eventPoolDesc.count = POOL_SIZE;
         // JZTODO: shouldn't it be host-visible?
         // ZE_EVENT_POOL_FLAG_HOST_VISIBLE
-        eventPoolDesc.flags = (ze_event_pool_flag_t)(ZE_EVENT_POOL_FLAG_TIMESTAMP);
-        eventPoolDesc.version = ZE_EVENT_POOL_DESC_VERSION_CURRENT;
-        L0_SAFE_CALL(zeEventPoolCreate(m_driver, &eventPoolDesc, 1, &m_device, &m_pool));
+        eventPoolDesc.flags = (ze_event_pool_flag_t)(ZE_EVENT_POOL_FLAG_KERNEL_TIMESTAMP);
+        L0_SAFE_CALL(zeEventPoolCreate(m_context, &eventPoolDesc, 1, &m_device, &m_pool));
         if (!m_pool) {
             std::stringstream ss;
-            ss << "Failed to create event pool for device 0x" << std::hex << m_device << " (driver 0x" << m_driver
+            ss << "Failed to create event pool for device 0x" << std::hex << m_device << " (context 0x" << m_context
                << ")";
             throw std::runtime_error(ss.str());
         }
@@ -149,22 +148,24 @@ struct EventPool {
     }
 
     uint64_t getTimestampRes() const { return m_timestampFreq; }
+    uint64_t getTimestampMaxValue() const { return m_timestampMaxValue; }
 
   private:
-    ze_driver_handle_t m_driver{nullptr};
+    ze_context_handle_t m_context{nullptr};
     ze_device_handle_t m_device{nullptr};
     ze_event_pool_handle_t m_pool{nullptr};
     uint64_t m_timestampFreq;
+    uint64_t m_timestampMaxValue;
     std::deque<uint32_t> m_freeList;
 };
 
 struct MemoryView : public ispcrt::base::MemoryView {
-    MemoryView(ze_driver_handle_t driver, ze_device_handle_t device, void *appMem, size_t numBytes)
-        : m_hostPtr(appMem), m_size(numBytes), m_driver(driver), m_device(device) {}
+    MemoryView(ze_context_handle_t context, ze_device_handle_t device, void *appMem, size_t numBytes)
+        : m_hostPtr(appMem), m_size(numBytes), m_context(context), m_device(device) {}
 
     ~MemoryView() {
         if (m_devicePtr)
-            L0_SAFE_CALL_NOEXCEPT(zeDriverFreeMem(m_driver, m_devicePtr));
+            L0_SAFE_CALL_NOEXCEPT(zeMemFree(m_context, m_devicePtr));
     }
 
     void *hostPtr() { return m_hostPtr; };
@@ -179,21 +180,20 @@ struct MemoryView : public ispcrt::base::MemoryView {
 
   private:
     void allocate() {
-        ze_device_mem_alloc_desc_t allocDesc = {ZE_DEVICE_MEM_ALLOC_DESC_VERSION_CURRENT,
-                                                ZE_DEVICE_MEM_ALLOC_FLAG_DEFAULT, 0};
-        L0_SAFE_CALL(zeDriverAllocDeviceMem(m_driver, &allocDesc, m_size, m_size, m_device, &m_devicePtr));
+        ze_device_mem_alloc_desc_t allocDesc = {};
+        L0_SAFE_CALL(zeMemAllocDevice(m_context, &allocDesc, m_size, m_size, m_device, &m_devicePtr));
     }
 
     void *m_hostPtr{nullptr};
     void *m_devicePtr{nullptr};
     size_t m_size{0};
 
-    ze_driver_handle_t m_driver{nullptr};
     ze_device_handle_t m_device{nullptr};
+    ze_context_handle_t m_context{nullptr};
 };
 
 struct Module : public ispcrt::base::Module {
-    Module(ze_device_handle_t device, const char *moduleFile) : m_file(moduleFile) {
+    Module(ze_device_handle_t device, ze_context_handle_t context, const char *moduleFile) : m_file(moduleFile) {
         std::ifstream is;
         is.open(m_file + ".spv", std::ios::binary);
         if (!is.good())
@@ -221,7 +221,7 @@ struct Module : public ispcrt::base::Module {
         std::string igcOptions = "-vc-codegen -no-optimize";
         constexpr auto MAX_ISPCRT_IGC_OPTIONS = 2000UL;
 
-        const char* userIgcOptionsEnv = getenv("ISPCRT_IGC_OPTIONS");
+        const char *userIgcOptionsEnv = getenv("ISPCRT_IGC_OPTIONS");
         if (userIgcOptionsEnv) {
             // Copy at most MAX_ISPCRT_IGC_OPTIONS characters from the env - just to be safe
             const auto copyChars = std::min(std::strlen(userIgcOptionsEnv), MAX_ISPCRT_IGC_OPTIONS);
@@ -240,13 +240,14 @@ struct Module : public ispcrt::base::Module {
             }
         }
 
-        ze_module_desc_t moduleDesc = {ZE_MODULE_DESC_VERSION_CURRENT, //
-                                       ZE_MODULE_FORMAT_IL_SPIRV,      //
-                                       codeSize,                       //
-                                       m_code.data(),                  //
-                                       igcOptions.c_str()};
+        ze_module_desc_t moduleDesc = {};
+        moduleDesc.format = ZE_MODULE_FORMAT_IL_SPIRV;
+        moduleDesc.inputSize = codeSize;
+        moduleDesc.pInputModule = m_code.data();
+        moduleDesc.pBuildFlags = igcOptions.c_str();
+
         assert(device != nullptr);
-        L0_SAFE_CALL(zeModuleCreate(device, &moduleDesc, &m_module, nullptr));
+        L0_SAFE_CALL(zeModuleCreate(context, device, &moduleDesc, &m_module, nullptr));
         assert(m_module != nullptr);
 
         if (m_module == nullptr)
@@ -271,9 +272,8 @@ struct Kernel : public ispcrt::base::Kernel {
     Kernel(const ispcrt::base::Module &_module, const char *name) : m_fcnName(name), m_module(&_module) {
         const gpu::Module &module = (const gpu::Module &)_module;
 
-        ze_kernel_desc_t kernelDesc = {ZE_KERNEL_DESC_VERSION_CURRENT, //
-                                       ZE_KERNEL_FLAG_NONE,            //
-                                       name};
+        ze_kernel_desc_t kernelDesc = {};
+        kernelDesc.pKernelName = name;
         L0_SAFE_CALL(zeKernelCreate(module.handle(), &kernelDesc, &m_kernel));
 
         if (m_kernel == nullptr)
@@ -297,17 +297,18 @@ struct Kernel : public ispcrt::base::Kernel {
 };
 
 struct TaskQueue : public ispcrt::base::TaskQueue {
-    TaskQueue(ze_device_handle_t device, ze_driver_handle_t driver) : m_ep(driver, device) {
-        ze_command_list_desc_t commandListDesc = {ZE_COMMAND_LIST_DESC_VERSION_CURRENT, ZE_COMMAND_LIST_FLAG_NONE};
-        L0_SAFE_CALL(zeCommandListCreate(device, &commandListDesc, &m_cl));
+    TaskQueue(ze_device_handle_t device, ze_context_handle_t context) : m_ep(context, device) {
+        ze_command_list_desc_t commandListDesc = {};
+        L0_SAFE_CALL(zeCommandListCreate(context, device, &commandListDesc, &m_cl));
 
         if (m_cl == nullptr)
             throw std::runtime_error("Failed to create command list!");
 
-        ze_command_queue_desc_t commandQueueDesc = {ZE_COMMAND_QUEUE_DESC_VERSION_CURRENT, ZE_COMMAND_QUEUE_FLAG_NONE,
-                                                    ZE_COMMAND_QUEUE_MODE_DEFAULT, ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0};
-
-        L0_SAFE_CALL(zeCommandQueueCreate(device, &commandQueueDesc, &m_q));
+        // Create a command queue
+        ze_command_queue_desc_t commandQueueDesc = {};
+        commandQueueDesc.mode = ZE_COMMAND_QUEUE_MODE_ASYNCHRONOUS;
+        commandQueueDesc.priority = ZE_COMMAND_QUEUE_PRIORITY_NORMAL;
+        L0_SAFE_CALL(zeCommandQueueCreate(context, device, &commandQueueDesc, &m_q));
 
         if (m_q == nullptr)
             throw std::runtime_error("Failed to create command queue!");
@@ -324,12 +325,14 @@ struct TaskQueue : public ispcrt::base::TaskQueue {
 
     void copyToHost(ispcrt::base::MemoryView &mv) override {
         auto &view = (gpu::MemoryView &)mv;
-        L0_SAFE_CALL(zeCommandListAppendMemoryCopy(m_cl, view.hostPtr(), view.devicePtr(), view.numBytes(), nullptr));
+        L0_SAFE_CALL(zeCommandListAppendMemoryCopy(m_cl, view.hostPtr(), view.devicePtr(), view.numBytes(), nullptr, 0,
+                                                   nullptr));
     }
 
     void copyToDevice(ispcrt::base::MemoryView &mv) override {
         auto &view = (gpu::MemoryView &)mv;
-        L0_SAFE_CALL(zeCommandListAppendMemoryCopy(m_cl, view.devicePtr(), view.hostPtr(), view.numBytes(), nullptr));
+        L0_SAFE_CALL(zeCommandListAppendMemoryCopy(m_cl, view.devicePtr(), view.hostPtr(), view.numBytes(), nullptr, 0,
+                                                   nullptr));
     }
 
     ispcrt::base::Future *launch(ispcrt::base::Kernel &k, ispcrt::base::MemoryView *params, size_t dim0, size_t dim1,
@@ -367,10 +370,15 @@ struct TaskQueue : public ispcrt::base::TaskQueue {
         for (const auto &p : m_events) {
             auto e = p.first;
             auto f = p.second;
-            uint64_t contextStart, contextEnd;
-            L0_SAFE_CALL(zeEventGetTimestamp(e->handle(), ZE_EVENT_TIMESTAMP_CONTEXT_START, &contextStart));
-            L0_SAFE_CALL(zeEventGetTimestamp(e->handle(), ZE_EVENT_TIMESTAMP_CONTEXT_END, &contextEnd));
-            f->m_time = (contextEnd - contextStart) * m_ep.getTimestampRes();
+            ze_kernel_timestamp_result_t tsResult;
+            L0_SAFE_CALL(zeEventQueryKernelTimestamp(e->handle(), &tsResult));
+            if (tsResult.context.kernelEnd >= tsResult.context.kernelStart) {
+                f->m_time = (tsResult.context.kernelEnd - tsResult.context.kernelStart);
+            } else {
+                f->m_time =
+                    ((m_ep.getTimestampMaxValue() - tsResult.context.kernelStart) + tsResult.context.kernelEnd + 1);
+            }
+            f->m_time *= m_ep.getTimestampRes();
             f->m_valid = true;
             f->refDec();
             m_ep.deleteEvent(e);
@@ -390,7 +398,7 @@ GPUDevice::GPUDevice() {
     static bool initialized = false;
 
     if (!initialized)
-        L0_SAFE_CALL(zeInit(ZE_INIT_FLAG_NONE));
+        L0_SAFE_CALL(zeInit(0));
 
     // Discover all the driver instances
     uint32_t driverCount = 0;
@@ -423,18 +431,25 @@ GPUDevice::GPUDevice() {
 
     if (!m_device)
         throw std::runtime_error("could not find a valid GPU device");
+
+    ze_context_desc_t contextDesc = {}; // use default values
+
+    L0_SAFE_CALL(zeContextCreate((ze_driver_handle_t)m_driver, &contextDesc, (ze_context_handle_t *)&m_context));
+
+    if (!m_context)
+        throw std::runtime_error("failed to create GPU context");
 }
 
 base::MemoryView *GPUDevice::newMemoryView(void *appMem, size_t numBytes) const {
-    return new gpu::MemoryView((ze_driver_handle_t)m_driver, (ze_device_handle_t)m_device, appMem, numBytes);
+    return new gpu::MemoryView((ze_context_handle_t)m_context, (ze_device_handle_t)m_device, appMem, numBytes);
 }
 
 base::TaskQueue *GPUDevice::newTaskQueue() const {
-    return new gpu::TaskQueue((ze_device_handle_t)m_device, (ze_driver_handle_t)m_driver);
+    return new gpu::TaskQueue((ze_device_handle_t)m_device, (ze_context_handle_t)m_context);
 }
 
 base::Module *GPUDevice::newModule(const char *moduleFile) const {
-    return new gpu::Module((ze_device_handle_t)m_device, moduleFile);
+    return new gpu::Module((ze_device_handle_t)m_device, (ze_context_handle_t)m_context, moduleFile);
 }
 
 base::Kernel *GPUDevice::newKernel(const base::Module &module, const char *name) const {

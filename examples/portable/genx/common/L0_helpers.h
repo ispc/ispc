@@ -37,6 +37,7 @@
 #include <cassert>
 #include <fstream>
 #include <level_zero/ze_api.h>
+#include <level_zero/zes_api.h>
 
 #include "common_helpers.h"
 
@@ -44,62 +45,42 @@
     {                                                                                                                  \
         auto status = (call);                                                                                          \
         if (status != 0) {                                                                                             \
-            fprintf(stderr, "%s:%d: L0 error %d\n", __FILE__, __LINE__, (int)status);                                  \
+            fprintf(stderr, "%s:%d: L0 error 0x%x\n", __FILE__, __LINE__, (int)status);                                \
             exit(1);                                                                                                   \
         }                                                                                                              \
     }
 
 namespace hostutil {
-void L0InitContext(ze_driver_handle_t &hDriver, ze_device_handle_t &hDevice, ze_module_handle_t &hModule,
-                   ze_command_queue_handle_t &hCommandQueue, const char *filename) {
-    L0_SAFE_CALL(zeInit(ZE_INIT_FLAG_NONE));
+void L0InitContext(ze_driver_handle_t &hDriver, ze_device_handle_t &hDevice, ze_context_handle_t &hContext,
+                   ze_module_handle_t &hModule, ze_command_queue_handle_t &hCommandQueue, const char *filename) {
+    L0_SAFE_CALL(zeInit(ZE_INIT_FLAG_GPU_ONLY));
 
-    // Discover all the driver instances
+    // Retrieve driver
     uint32_t driverCount = 0;
     L0_SAFE_CALL(zeDriverGet(&driverCount, nullptr));
 
-    ze_driver_handle_t *allDrivers = (ze_driver_handle_t *)malloc(driverCount * sizeof(ze_driver_handle_t));
-    if (allDrivers == NULL) {
-        fprintf(stderr, "%s:%d: Cannot allocate L0 drivers", __FILE__, __LINE__);
-        exit(1);
-    }
+    ze_driver_handle_t hDriver;
+    L0_SAFE_CALL(zeDriverGet(&driverCount, &hDriver));
 
-    L0_SAFE_CALL(zeDriverGet(&driverCount, allDrivers));
+    // Retrieve device
+    uint32_t deviceCount = 0;
+    L0_SAFE_CALL(zeDeviceGet(hDriver, &deviceCount, nullptr));
+    L0_SAFE_CALL(zeDeviceGet(hDriver, &deviceCount, &hDevice));
 
-    // Find a driver instance with a GPU device
-    for (uint32_t i = 0; i < driverCount; ++i) {
-        uint32_t deviceCount = 0;
-        hDriver = allDrivers[i];
-        L0_SAFE_CALL(zeDeviceGet(hDriver, &deviceCount, nullptr));
-        ze_device_handle_t *allDevices = (ze_device_handle_t *)malloc(deviceCount * sizeof(ze_device_handle_t));
-        if (allDevices == NULL) {
-            fprintf(stderr, "%s:%d: Cannot allocate L0 devices", __FILE__, __LINE__);
-            exit(1);
-        }
-        L0_SAFE_CALL(zeDeviceGet(hDriver, &deviceCount, allDevices));
-        for (uint32_t d = 0; d < deviceCount; ++d) {
-            ze_device_properties_t device_properties;
-            L0_SAFE_CALL(zeDeviceGetProperties(allDevices[d], &device_properties));
-            if (ZE_DEVICE_TYPE_GPU == device_properties.type) {
-                hDevice = allDevices[d];
-                break;
-            }
-        }
-        free(allDevices);
-        if (nullptr != hDevice) {
-            break;
-        }
-    }
-    free(allDrivers);
     assert(hDriver);
     assert(hDevice);
+
+    // Create a contxt
+    ze_context_desc_t contextDesc = {}; // use default values
+    L0_SAFE_CALL(zeContextCreate(hDriver, &contextDesc, &hContext));
+
     // Create a command queue
-    ze_command_queue_desc_t commandQueueDesc = {ZE_COMMAND_QUEUE_DESC_VERSION_CURRENT, ZE_COMMAND_QUEUE_FLAG_NONE,
-                                                ZE_COMMAND_QUEUE_MODE_DEFAULT, ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0};
-    L0_SAFE_CALL(zeCommandQueueCreate(hDevice, &commandQueueDesc, &hCommandQueue));
+    ze_command_queue_desc_t commandQueueDesc = {};
+    commandQueueDesc.mode = ZE_COMMAND_QUEUE_MODE_ASYNCHRONOUS;
+    commandQueueDesc.priority = ZE_COMMAND_QUEUE_PRIORITY_NORMAL;
+    L0_SAFE_CALL(zeCommandQueueCreate(hContext, hDevice, &commandQueueDesc, &hCommandQueue));
 
     std::ifstream ins;
-    // FIXME
     std::string fn = filename;
     ins.open(fn, std::ios::binary);
     if (!ins.good()) {
@@ -123,29 +104,28 @@ void L0InitContext(ze_driver_handle_t &hDriver, ze_device_handle_t &hDevice, ze_
     ins.read((char *)codeBin, codeSize);
     ins.close();
 
-    ze_module_desc_t moduleDesc = {ZE_MODULE_DESC_VERSION_CURRENT, //
-                                   ZE_MODULE_FORMAT_IL_SPIRV,      //
-                                   codeSize,                       //
-                                   codeBin,                        //
-                                   "-vc-codegen -no-optimize"};
-    L0_SAFE_CALL(zeModuleCreate(hDevice, &moduleDesc, &hModule, nullptr));
+    ze_module_desc_t moduleDesc = {};
+    moduleDesc.format = ZE_MODULE_FORMAT_IL_SPIRV;
+    moduleDesc.inputSize = codeSize;
+    moduleDesc.pInputModule = codeBin;
+    moduleDesc.pBuildFlags = "-vc-codegen -no-optimize";
+    L0_SAFE_CALL(zeModuleCreate(hContext, hDevice, &moduleDesc, &hModule, nullptr));
 }
 
-void L0DestroyContext(ze_driver_handle_t hDriver, ze_device_handle_t hDevice, ze_module_handle_t hModule,
-                      ze_command_queue_handle_t hCommandQueue) {
+void L0DestroyContext(ze_driver_handle_t hDriver, ze_device_handle_t hDevice, ze_context_handle_t hContext,
+                      ze_module_handle_t hModule, ze_command_queue_handle_t hCommandQueue) {
     L0_SAFE_CALL(zeCommandQueueDestroy(hCommandQueue));
     L0_SAFE_CALL(zeModuleDestroy(hModule));
+    L0_SAFE_CALL(zeContextDestroy(hContext));
 }
 
-void L0Create_Kernel(ze_device_handle_t &hDevice, ze_module_handle_t &hModule, ze_command_list_handle_t &hCommandList,
-                     ze_kernel_handle_t &hKernel, const char *name) {
+void L0Create_Kernel(ze_device_handle_t &hDevice, ze_context_handle_t &hContext, ze_module_handle_t &hModule,
+                     ze_command_list_handle_t &hCommandList, ze_kernel_handle_t &hKernel, const char *name) {
     // Create a command list
-    ze_command_list_desc_t commandListDesc = {ZE_COMMAND_LIST_DESC_VERSION_CURRENT, ZE_COMMAND_LIST_FLAG_NONE};
-    L0_SAFE_CALL(zeCommandListCreate(hDevice, &commandListDesc, &hCommandList));
-    ze_kernel_desc_t kernelDesc = {ZE_KERNEL_DESC_VERSION_CURRENT, //
-                                   ZE_KERNEL_FLAG_NONE,            //
-                                   name};
-
+    ze_command_list_desc_t commandListDesc = {};
+    L0_SAFE_CALL(zeCommandListCreate(hContext, hDevice, &commandListDesc, &hCommandList));
+    ze_kernel_desc_t kernelDesc = {};
+    kernelDesc.pKernelName = name;
     L0_SAFE_CALL(zeKernelCreate(hModule, &kernelDesc, &hKernel));
 }
 
@@ -154,14 +134,13 @@ void L0Destroy_Kernel(ze_command_list_handle_t hCommandList, ze_kernel_handle_t 
     L0_SAFE_CALL(zeCommandListDestroy(hCommandList));
 }
 
-void L0Create_EventPool(ze_device_handle_t hDevice, ze_driver_handle_t hDriver, const size_t size,
+void L0Create_EventPool(ze_device_handle_t hDevice, ze_context_handle_t hContext, const size_t size,
                         ze_event_pool_handle_t &hPool) {
     // Create event pool and enable time measurements
-    ze_event_pool_desc_t eventPoolDesc;
+    ze_event_pool_desc_t eventPoolDesc = {};
     eventPoolDesc.count = size;
-    eventPoolDesc.flags = (ze_event_pool_flag_t)(ZE_EVENT_POOL_FLAG_TIMESTAMP);
-    eventPoolDesc.version = ZE_EVENT_POOL_DESC_VERSION_CURRENT;
-    L0_SAFE_CALL(zeEventPoolCreate(hDriver, &eventPoolDesc, 1, &hDevice, &hPool));
+    eventPoolDesc.flags = (ze_event_pool_flag_t)(ZE_EVENT_POOL_FLAG_KERNEL_TIMESTAMP);
+    L0_SAFE_CALL(zeEventPoolCreate(hContext, &eventPoolDesc, 1, &hDevice, &hPool));
 }
 
 void L0Destroy_EventPool(ze_event_pool_handle_t hPool) { L0_SAFE_CALL(zeEventPoolDestroy(hPool)); }

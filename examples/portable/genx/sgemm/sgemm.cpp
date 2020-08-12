@@ -35,9 +35,9 @@ void SGEMMApp::initialize() {
         return;
 
 #ifdef CMKERNEL
-    L0InitContext(m_driver, m_device, m_module, m_command_queue, "naive_sgemm_cm_mt.spv");
+    L0InitContext(m_driver, m_device, m_context, m_module, m_command_queue, "naive_sgemm_cm_mt.spv");
 #else
-    L0InitContext(m_driver, m_device, m_module, m_command_queue, "genx_sgemm.spv");
+    L0InitContext(m_driver, m_device, m_context, m_module, m_command_queue, "genx_sgemm.spv");
 #endif
 
     // Get device timestamp resolution - needed for time measurments
@@ -48,21 +48,20 @@ void SGEMMApp::initialize() {
 #ifdef CMKERNEL
     if (m_verbose)
         std::cout << "Running CM kernel\n";
-    L0Create_Kernel(m_device, m_module, m_command_list, m_kernel, "sgemm_kernel");
+    L0Create_Kernel(m_device, m_context, m_module, m_command_list, m_kernel, "sgemm_kernel");
 #else
     if (m_verbose)
         std::cout << "Running ISPC kernel\n";
-    L0Create_Kernel(m_device, m_module, m_command_list, m_kernel, "SGEMM_naive_task");
+    L0Create_Kernel(m_device, m_context, m_module, m_command_list, m_kernel, "SGEMM_naive_task");
 #endif
 
-    L0Create_EventPool(m_device, m_driver, 1, m_pool);
+    L0Create_EventPool(m_device, m_context, 1, m_pool);
 
     // Create event used to measure kernel execution time
-    ze_event_desc_t eventDesc;
+    ze_event_desc_t eventDesc = {};
     eventDesc.index = 0;
     eventDesc.signal = ZE_EVENT_SCOPE_FLAG_HOST;
     eventDesc.wait = ZE_EVENT_SCOPE_FLAG_HOST;
-    eventDesc.version = ZE_EVENT_DESC_VERSION_CURRENT;
 
     L0_SAFE_CALL(zeEventCreate(m_pool, &eventDesc, &m_event));
 
@@ -127,16 +126,19 @@ void SGEMMApp::run(SGEMMApp::RunResult &result, int m, int niter, int gx, int gy
         for (int j = 0; j < m; j++)
             C(i, j) = -1;
 
-    ze_device_mem_alloc_desc_t alloc_desc = {ZE_DEVICE_MEM_ALLOC_DESC_VERSION_CURRENT, ZE_DEVICE_MEM_ALLOC_FLAG_DEFAULT,
-                                             0};
-    L0_SAFE_CALL(zeDriverAllocDeviceMem(m_driver, &alloc_desc, mtA_size * sizeof(float), 0, m_device, &a_buf));
-    L0_SAFE_CALL(zeDriverAllocDeviceMem(m_driver, &alloc_desc, mtB_size * sizeof(float), 0, m_device, &b_buf));
-    L0_SAFE_CALL(zeDriverAllocDeviceMem(m_driver, &alloc_desc, mtC_size * sizeof(float), 0, m_device, &c_buf));
+    ze_device_mem_alloc_desc_t alloc_desc = {};
+
+    L0_SAFE_CALL(zeMemAllocDevice(m_context, &alloc_desc, mtA_size * sizeof(float), 0, m_device, &a_buf));
+    L0_SAFE_CALL(zeMemAllocDevice(m_context, &alloc_desc, mtB_size * sizeof(float), 0, m_device, &b_buf));
+    L0_SAFE_CALL(zeMemAllocDevice(m_context, &alloc_desc, mtC_size * sizeof(float), 0, m_device, &c_buf));
 
     L0_SAFE_CALL(zeCommandListReset(m_command_list));
-    L0_SAFE_CALL(zeCommandListAppendMemoryCopy(m_command_list, a_buf, &A(0, 0), mtA_size * sizeof(float), nullptr));
-    L0_SAFE_CALL(zeCommandListAppendMemoryCopy(m_command_list, b_buf, &B(0, 0), mtB_size * sizeof(float), nullptr));
-    L0_SAFE_CALL(zeCommandListAppendMemoryCopy(m_command_list, c_buf, &C(0, 0), mtC_size * sizeof(float), nullptr));
+    L0_SAFE_CALL(
+        zeCommandListAppendMemoryCopy(m_command_list, a_buf, &A(0, 0), mtA_size * sizeof(float), nullptr, 0, nullptr));
+    L0_SAFE_CALL(
+        zeCommandListAppendMemoryCopy(m_command_list, b_buf, &B(0, 0), mtB_size * sizeof(float), nullptr, 0, nullptr));
+    L0_SAFE_CALL(
+        zeCommandListAppendMemoryCopy(m_command_list, c_buf, &C(0, 0), mtC_size * sizeof(float), nullptr, 0, nullptr));
 
     L0_SAFE_CALL(zeKernelSetArgumentValue(m_kernel, 0, sizeof(a_buf), &a_buf));
     L0_SAFE_CALL(zeKernelSetArgumentValue(m_kernel, 1, sizeof(b_buf), &b_buf));
@@ -173,10 +175,11 @@ void SGEMMApp::run(SGEMMApp::RunResult &result, int m, int niter, int gx, int gy
         L0_SAFE_CALL(zeCommandQueueSynchronize(m_command_queue, std::numeric_limits<uint32_t>::max()));
         L0_SAFE_CALL(zeCommandListReset(m_command_list));
         // get time
-        uint64_t contextStart, contextEnd;
-        L0_SAFE_CALL(zeEventGetTimestamp(m_event, ZE_EVENT_TIMESTAMP_CONTEXT_START, &contextStart));
-        L0_SAFE_CALL(zeEventGetTimestamp(m_event, ZE_EVENT_TIMESTAMP_CONTEXT_END, &contextEnd));
-        std::chrono::duration<uint64_t, std::nano> event_dur(m_timestamp_freq * (contextEnd - contextStart));
+        ze_kernel_timestamp_result_t tsResult;
+        L0_SAFE_CALL(zeEventQueryKernelTimestamp(m_event, &tsResult));
+
+        std::chrono::duration<uint64_t, std::nano> event_dur(
+            m_timestamp_freq * (tsResult.context.kernelEnd - tsResult.context.kernelStart));
         gpu_duration += event_dur;
     }
     auto tot_dur = std::chrono::system_clock::now() - tot_wct;
@@ -191,7 +194,8 @@ void SGEMMApp::run(SGEMMApp::RunResult &result, int m, int niter, int gx, int gy
 
     // copy result to host
     // L0_SAFE_CALL(zeCommandListReset(m_command_list));
-    L0_SAFE_CALL(zeCommandListAppendMemoryCopy(m_command_list, &C(0, 0), c_buf, mtC_size * sizeof(float), nullptr));
+    L0_SAFE_CALL(
+        zeCommandListAppendMemoryCopy(m_command_list, &C(0, 0), c_buf, mtC_size * sizeof(float), nullptr, 0, nullptr));
     L0_SAFE_CALL(zeCommandListAppendBarrier(m_command_list, nullptr, 0, nullptr));
     L0_SAFE_CALL(zeCommandListClose(m_command_list));
     L0_SAFE_CALL(zeCommandQueueExecuteCommandLists(m_command_queue, 1, &m_command_list, nullptr));
@@ -209,9 +213,9 @@ void SGEMMApp::run(SGEMMApp::RunResult &result, int m, int niter, int gx, int gy
             printf("Result not checked - make #iterations=1 to check result!\n");
     }
 
-    L0_SAFE_CALL(zeDriverFreeMem(m_driver, a_buf));
-    L0_SAFE_CALL(zeDriverFreeMem(m_driver, b_buf));
-    L0_SAFE_CALL(zeDriverFreeMem(m_driver, c_buf));
+    L0_SAFE_CALL(zeMemFree(m_context, a_buf));
+    L0_SAFE_CALL(zeMemFree(m_context, b_buf));
+    L0_SAFE_CALL(zeMemFree(m_context, c_buf));
 
     result.valid = pass;
     result.cpuTime = tot_nsecs.count();
@@ -223,7 +227,7 @@ void SGEMMApp::cleanup() {
 
     L0Destroy_EventPool(m_pool);
     L0Destroy_Kernel(m_command_list, m_kernel);
-    L0DestroyContext(m_driver, m_device, m_module, m_command_queue);
+    L0DestroyContext(m_driver, m_device, m_context, m_module, m_command_queue);
 
     initialized = false;
 }

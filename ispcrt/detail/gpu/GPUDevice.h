@@ -22,6 +22,7 @@ struct GPUDevice : public base::Device {
   private:
     void *m_driver{nullptr};
     void *m_device{nullptr};
+    void *m_context{nullptr};
 };
 
 } // namespace ispcrt
