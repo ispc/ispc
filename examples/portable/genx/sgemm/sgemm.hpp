@@ -49,6 +49,7 @@ class SGEMMApp {
     ze_event_handle_t m_event{nullptr};
     ze_module_handle_t m_module{nullptr};
     ze_kernel_handle_t m_kernel{nullptr};
+    ze_context_handle_t m_context{nullptr};
     ze_command_list_handle_t m_command_list{nullptr};
     ze_command_queue_handle_t m_command_queue{nullptr};
     void *m_device_ptr{nullptr};
