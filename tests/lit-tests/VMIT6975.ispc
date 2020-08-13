@@ -13,7 +13,7 @@ struct vec3f {
 // CHECK: alloca [3 x %v16_varying_vec3f]
 // CHECK: load float, float* %_in
 // CHECK: load <16 x float>, <16 x float>* %ptr_cast_for_load
-// CHECK: call void @llvm.genx.svm.block.st.v16f32(i64 %svm_st_ptrtoint
+// CHECK: call void @llvm.genx.svm.block.st.i64.v16f32(i64 %svm_st_ptrtoint
 export void checkAddrSpace(uniform float _out[], uniform float _in[]) {
     float a = _in[programIndex];
     vec3f myFoo[3] = { { -1, -2, -3 }, {a, -3, 0}, {-4, -5, -6} };
