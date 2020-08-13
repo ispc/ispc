@@ -1038,6 +1038,8 @@ bool Module::writeSPIRV(llvm::Module *module, const char *outFileName) {
         llvm::cl::desc("Unknown LLVM intrinsics will be translated as external function "
                        "calls in SPIR-V"));
     Opts.setSPIRVAllowUnknownIntrinsicsEnabled(SPIRVAllowUnknownIntrinsics);
+    Opts.setDesiredBIsRepresentation(SPIRV::BIsRepresentation::SPIRVFriendlyIR);
+
     if (!strcmp(outFileName, "-")) {
         success = llvm::writeSpirv(module, Opts, std::cout, err);
     } else {
