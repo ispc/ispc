@@ -2890,7 +2890,7 @@ static bool lImproveMaskedStore(llvm::CallInst *callInst) {
             Assert(rvalue->getType()->getPrimitiveSizeInBits() / 8 <= 8 * OWORD);
             llvm::Instruction *svm_st_zext =
                 new llvm::PtrToIntInst(lvalue, LLVMTypes::Int64Type, "svm_st_ptrtoint", callInst);
-            llvm::Type *argTypes[] = {rvalue->getType()};
+            llvm::Type *argTypes[] = {svm_st_zext->getType(), rvalue->getType()};
             auto Fn =
                 llvm::GenXIntrinsic::getGenXDeclaration(m->module, llvm::GenXIntrinsic::genx_svm_block_st, argTypes);
             store = lCallInst(Fn, svm_st_zext, rvalue, "", NULL);
@@ -2986,8 +2986,8 @@ static bool lImproveMaskedLoad(llvm::CallInst *callInst, llvm::BasicBlock::itera
             Assert(retType->getPrimitiveSizeInBits() / 8 <= 8 * OWORD);
             llvm::Value *svm_ld_ptrtoint =
                 new llvm::PtrToIntInst(ptr, LLVMTypes::Int64Type, "svm_ld_ptrtoint", callInst);
-            auto Fn =
-                llvm::GenXIntrinsic::getGenXDeclaration(m->module, llvm::GenXIntrinsic::genx_svm_block_ld, retType);
+            auto Fn = llvm::GenXIntrinsic::getGenXDeclaration(m->module, llvm::GenXIntrinsic::genx_svm_block_ld,
+                                                              {retType, svm_ld_ptrtoint->getType()});
 
             load = llvm::CallInst::Create(Fn, svm_ld_ptrtoint, callInst->getName());
         } else if (!g->target->isGenXTarget() ||
@@ -5515,7 +5515,7 @@ static bool lVectorizeGEPs(llvm::Value *ptr, std::vector<PtrUse> &ptrUses, std::
         llvm::Instruction *addr = llvm::BinaryOperator::CreateAdd(ptrToInt, offset, "vectorized_address", insertBefore);
         llvm::Type *retType = llvm::VectorType::get(scalar_type, reqSize / t_size);
         llvm::Function *fn = llvm::GenXIntrinsic::getGenXDeclaration(
-            m->module, llvm::GenXIntrinsic::genx_svm_block_ld_unaligned, retType);
+            m->module, llvm::GenXIntrinsic::genx_svm_block_ld_unaligned, {retType, addr->getType()});
         llvm::Instruction *ld = llvm::CallInst::Create(fn, {addr}, "vectorized_ld", insertBefore);
 
         if (loadingPtr) {
@@ -6359,7 +6359,8 @@ llvm::Instruction *FixAddressSpace::processVectorLoad(llvm::LoadInst *LI) {
     Assert(retType->getPrimitiveSizeInBits());
 
     llvm::Value *svm_ld_ptrtoint = new llvm::PtrToIntInst(ptr, LLVMTypes::Int64Type, "svm_ld_ptrtoint", LI);
-    auto Fn = llvm::GenXIntrinsic::getGenXDeclaration(m->module, llvm::GenXIntrinsic::genx_svm_block_ld, retType);
+    auto Fn = llvm::GenXIntrinsic::getGenXDeclaration(m->module, llvm::GenXIntrinsic::genx_svm_block_ld,
+                                                      {retType, svm_ld_ptrtoint->getType()});
 
     llvm::Instruction *res = llvm::CallInst::Create(Fn, svm_ld_ptrtoint, LI->getName());
 
@@ -6396,7 +6397,7 @@ llvm::Instruction *FixAddressSpace::processVectorStore(llvm::StoreInst *SI) {
     Assert(valType->getPrimitiveSizeInBits());
 
     llvm::Instruction *svm_st_zext = new llvm::PtrToIntInst(ptr, LLVMTypes::Int64Type, "svm_st_ptrtoint", SI);
-    llvm::Type *argTypes[] = {valType};
+    llvm::Type *argTypes[] = {svm_st_zext->getType(), valType};
     auto Fn = llvm::GenXIntrinsic::getGenXDeclaration(m->module, llvm::GenXIntrinsic::genx_svm_block_st, argTypes);
 
     return llvm::CallInst::Create(Fn, {svm_st_zext, val}, "");
