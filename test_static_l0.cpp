@@ -155,7 +155,7 @@ static void L0InitContext(ze_driver_handle_t &hDriver, ze_device_handle_t &hDevi
                                    ZE_MODULE_FORMAT_IL_SPIRV,      //
                                    codeSize,                       //
                                    codeBin,                        //
-                                   "-cmc"};
+                                   "-vc-codegen -no-optimize"};
     L0_SAFE_CALL(zeModuleCreate(hDevice, &moduleDesc, &hModule, nullptr));
 }
 
