@@ -58,8 +58,6 @@ void L0InitContext(ze_driver_handle_t &hDriver, ze_device_handle_t &hDevice, ze_
     // Retrieve driver
     uint32_t driverCount = 0;
     L0_SAFE_CALL(zeDriverGet(&driverCount, nullptr));
-
-    ze_driver_handle_t hDriver;
     L0_SAFE_CALL(zeDriverGet(&driverCount, &hDriver));
 
     // Retrieve device
