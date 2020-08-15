@@ -62,6 +62,7 @@
 #include <math.h>
 #include <sstream>
 #include <string>
+#include <vector>
 
 #define L0_SAFE_CALL(call)                                                                                             \
     {                                                                                                                  \
@@ -88,44 +89,34 @@ int width() {
 #define ALIGN __attribute__((aligned(64)))
 #endif
 
-static void L0InitContext(ze_driver_handle_t &hDriver, ze_device_handle_t &hDevice, ze_module_handle_t &hModule,
+static void L0InitContext(ze_device_handle_t &hDevice, ze_module_handle_t &hModule, ze_context_handle_t &hContext,
                           ze_command_queue_handle_t &hCommandQueue) {
-    L0_SAFE_CALL(zeInit(ZE_INIT_FLAG_NONE));
+    L0_SAFE_CALL(zeInit(ZE_INIT_FLAG_GPU_ONLY));
 
-    // Discover all the driver instances
+    // Retrieve driver
     uint32_t driverCount = 0;
     L0_SAFE_CALL(zeDriverGet(&driverCount, nullptr));
 
-    ze_driver_handle_t *allDrivers = (ze_driver_handle_t *)malloc(driverCount * sizeof(ze_driver_handle_t));
-    L0_SAFE_CALL(zeDriverGet(&driverCount, allDrivers));
+    ze_driver_handle_t hDriver;
+    L0_SAFE_CALL(zeDriverGet(&driverCount, &hDriver));
 
-    // Find a driver instance with a GPU device
-    for (uint32_t i = 0; i < driverCount; ++i) {
-        uint32_t deviceCount = 0;
-        hDriver = allDrivers[i];
-        L0_SAFE_CALL(zeDeviceGet(hDriver, &deviceCount, nullptr));
-        ze_device_handle_t *allDevices = (ze_device_handle_t *)malloc(deviceCount * sizeof(ze_device_handle_t));
-        L0_SAFE_CALL(zeDeviceGet(hDriver, &deviceCount, allDevices));
-        for (uint32_t d = 0; d < deviceCount; ++d) {
-            ze_device_properties_t device_properties;
-            L0_SAFE_CALL(zeDeviceGetProperties(allDevices[d], &device_properties));
-            if (ZE_DEVICE_TYPE_GPU == device_properties.type) {
-                hDevice = allDevices[d];
-                break;
-            }
-        }
-        free(allDevices);
-        if (nullptr != hDevice) {
-            break;
-        }
-    }
-    free(allDrivers);
+    // Retrieve device
+    uint32_t deviceCount = 0;
+    L0_SAFE_CALL(zeDeviceGet(hDriver, &deviceCount, nullptr));
+    L0_SAFE_CALL(zeDeviceGet(hDriver, &deviceCount, &hDevice));
+
     assert(hDriver);
     assert(hDevice);
+
+    // Create default command context
+    ze_context_desc_t contextDesc = {}; // use default values
+    L0_SAFE_CALL(zeContextCreate(hDriver, &contextDesc, &hContext));
+
     // Create a command queue
-    ze_command_queue_desc_t commandQueueDesc = {ZE_COMMAND_QUEUE_DESC_VERSION_CURRENT, ZE_COMMAND_QUEUE_FLAG_NONE,
-                                                ZE_COMMAND_QUEUE_MODE_DEFAULT, ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0};
-    L0_SAFE_CALL(zeCommandQueueCreate(hDevice, &commandQueueDesc, &hCommandQueue));
+    ze_command_queue_desc_t commandQueueDesc = {};
+    commandQueueDesc.mode = ZE_COMMAND_QUEUE_MODE_ASYNCHRONOUS;
+    commandQueueDesc.priority = ZE_COMMAND_QUEUE_PRIORITY_NORMAL;
+    L0_SAFE_CALL(zeCommandQueueCreate(hContext, hDevice, &commandQueueDesc, &hCommandQueue));
 
     std::ifstream is;
     std::string fn = "test_genx.spv";
@@ -151,23 +142,35 @@ static void L0InitContext(ze_driver_handle_t &hDriver, ze_device_handle_t &hDevi
     is.read((char *)codeBin, codeSize);
     is.close();
 
-    ze_module_desc_t moduleDesc = {ZE_MODULE_DESC_VERSION_CURRENT, //
-                                   ZE_MODULE_FORMAT_IL_SPIRV,      //
-                                   codeSize,                       //
-                                   codeBin,                        //
-                                   "-vc-codegen -no-optimize"};
-    L0_SAFE_CALL(zeModuleCreate(hDevice, &moduleDesc, &hModule, nullptr));
+    // Create module
+    ze_module_desc_t moduleDesc = {};
+    moduleDesc.format = ZE_MODULE_FORMAT_IL_SPIRV;
+    moduleDesc.pInputModule = codeBin;
+    moduleDesc.inputSize = codeSize;
+    moduleDesc.pBuildFlags = "-vc-codegen -no-optimize";
+    // Add build log output for easier debugginer the tests
+    ze_module_build_log_handle_t buildlog;
+    if (zeModuleCreate(hContext, hDevice, &moduleDesc, &hModule, &buildlog) != ZE_RESULT_SUCCESS) {
+        size_t szLog = 0;
+        zeModuleBuildLogGetString(buildlog, &szLog, nullptr);
+
+        char *strLog = (char *)malloc(szLog);
+        zeModuleBuildLogGetString(buildlog, &szLog, strLog);
+        std::cout << "Build log:" << strLog << std::endl;
+
+        free(strLog);
+    }
+    L0_SAFE_CALL(zeModuleBuildLogDestroy(buildlog));
 }
 
-static void L0Create_Kernel(ze_device_handle_t &hDevice, ze_module_handle_t &hModule,
+static void L0Create_Kernel(ze_device_handle_t &hDevice, ze_module_handle_t &hModule, ze_context_handle_t &hContext,
                             ze_command_list_handle_t &hCommandList, ze_kernel_handle_t &hKernel, const char *name) {
-    // Create a command list
-    ze_command_list_desc_t commandListDesc = {ZE_COMMAND_LIST_DESC_VERSION_CURRENT, ZE_COMMAND_LIST_FLAG_NONE};
-    L0_SAFE_CALL(zeCommandListCreate(hDevice, &commandListDesc, &hCommandList));
-    ze_kernel_desc_t kernelDesc = {ZE_KERNEL_DESC_VERSION_CURRENT, //
-                                   ZE_KERNEL_FLAG_NONE,            //
-                                   name};
+    // Create command list
+    ze_command_list_desc_t commandListDesc = {};
+    L0_SAFE_CALL(zeCommandListCreate(hContext, hDevice, &commandListDesc, &hCommandList));
 
+    ze_kernel_desc_t kernelDesc = {};
+    kernelDesc.pKernelName = name;
     L0_SAFE_CALL(zeKernelCreate(hModule, &kernelDesc, &hKernel));
 }
 
@@ -190,71 +193,73 @@ static void L0Launch_Kernel(ze_command_queue_handle_t &hCommandQueue, ze_command
 
     // copy result to host
     if (return_data && OUTBuff)
-        L0_SAFE_CALL(zeCommandListAppendMemoryCopy(hCommandList, return_data, OUTBuff, bufsize, nullptr));
+        L0_SAFE_CALL(zeCommandListAppendMemoryCopy(hCommandList, return_data, OUTBuff, bufsize, nullptr, 0, nullptr));
     // dispatch & wait
     L0_SAFE_CALL(zeCommandListClose(hCommandList));
     L0_SAFE_CALL(zeCommandQueueExecuteCommandLists(hCommandQueue, 1, &hCommandList, nullptr));
     L0_SAFE_CALL(zeCommandQueueSynchronize(hCommandQueue, (std::numeric_limits<uint32_t>::max)()));
 }
 
-static void L0Launch_F_V(ze_driver_handle_t &hDriver, ze_device_handle_t &hDevice, ze_module_handle_t &hModule,
+static void L0Launch_F_V(ze_device_handle_t &hDevice, ze_module_handle_t &hModule, ze_context_handle_t &hContext,
                          ze_command_queue_handle_t &hCommandQueue, void *return_data) {
     ze_command_list_handle_t hCommandList;
     ze_kernel_handle_t hKernel;
-    L0Create_Kernel(hDevice, hModule, hCommandList, hKernel, "f_v");
+    L0Create_Kernel(hDevice, hModule, hContext, hCommandList, hKernel, "f_v");
     // allocate buffers
-    ze_device_mem_alloc_desc_t allocDesc = {ZE_DEVICE_MEM_ALLOC_DESC_VERSION_CURRENT, ZE_DEVICE_MEM_ALLOC_FLAG_DEFAULT,
-                                            0};
+    ze_device_mem_alloc_desc_t allocDesc = {};
     void *OUTBuff = nullptr;
-    L0_SAFE_CALL(zeDriverAllocDeviceMem(hDriver, &allocDesc, N * sizeof(float), N * sizeof(float), hDevice, &OUTBuff));
+    L0_SAFE_CALL(zeMemAllocDevice(hContext, &allocDesc, N * sizeof(float), N * sizeof(float), hDevice, &OUTBuff));
     // copy buffers to device
-    L0_SAFE_CALL(zeCommandListAppendMemoryCopy(hCommandList, OUTBuff, return_data, N * sizeof(float), nullptr));
+    L0_SAFE_CALL(
+        zeCommandListAppendMemoryCopy(hCommandList, OUTBuff, return_data, N * sizeof(float), nullptr, 0, nullptr));
 
     // set kernel arguments
     L0_SAFE_CALL(zeKernelSetArgumentValue(hKernel, 0, sizeof(OUTBuff), &OUTBuff));
     L0Launch_Kernel(hCommandQueue, hCommandList, hKernel, N * sizeof(float), return_data, OUTBuff);
-    L0_SAFE_CALL(zeDriverFreeMem(hDriver, OUTBuff));
+    L0_SAFE_CALL(zeMemFree(hContext, OUTBuff));
     L0_SAFE_CALL(zeKernelDestroy(hKernel));
     L0_SAFE_CALL(zeCommandListDestroy(hCommandList));
 }
 
-static void L0Launch_F_Threads(ze_driver_handle_t &hDriver, ze_device_handle_t &hDevice, ze_module_handle_t &hModule,
+static void L0Launch_F_Threads(ze_device_handle_t &hDevice, ze_module_handle_t &hModule, ze_context_handle_t &hContext,
                                ze_command_queue_handle_t &hCommandQueue, void *return_data, int groupSpaceWidth,
                                int groupSpaceHeight) {
     ze_command_list_handle_t hCommandList;
     ze_kernel_handle_t hKernel;
-    L0Create_Kernel(hDevice, hModule, hCommandList, hKernel, "f_t");
+    L0Create_Kernel(hDevice, hModule, hContext, hCommandList, hKernel, "f_t");
+
     // allocate buffers
-    ze_device_mem_alloc_desc_t allocDesc = {ZE_DEVICE_MEM_ALLOC_DESC_VERSION_CURRENT, ZE_DEVICE_MEM_ALLOC_FLAG_DEFAULT,
-                                            0};
+    ze_device_mem_alloc_desc_t allocDesc = {};
     void *OUTBuff = nullptr;
-    L0_SAFE_CALL(zeDriverAllocDeviceMem(hDriver, &allocDesc, N * sizeof(float), N * sizeof(float), hDevice, &OUTBuff));
+    L0_SAFE_CALL(zeMemAllocDevice(hContext, &allocDesc, N * sizeof(float), N * sizeof(float), hDevice, &OUTBuff));
     // copy buffers to device
-    L0_SAFE_CALL(zeCommandListAppendMemoryCopy(hCommandList, OUTBuff, return_data, N * sizeof(float), nullptr));
+    L0_SAFE_CALL(
+        zeCommandListAppendMemoryCopy(hCommandList, OUTBuff, return_data, N * sizeof(float), nullptr, 0, nullptr));
 
     // set kernel arguments
     L0_SAFE_CALL(zeKernelSetArgumentValue(hKernel, 0, sizeof(OUTBuff), &OUTBuff));
     L0Launch_Kernel(hCommandQueue, hCommandList, hKernel, N * sizeof(float), return_data, OUTBuff, groupSpaceWidth,
                     groupSpaceHeight);
-    L0_SAFE_CALL(zeDriverFreeMem(hDriver, OUTBuff));
+    L0_SAFE_CALL(zeMemFree(hContext, OUTBuff));
     L0_SAFE_CALL(zeKernelDestroy(hKernel));
     L0_SAFE_CALL(zeCommandListDestroy(hCommandList));
 }
 
-static void L0Launch_F_F(ze_driver_handle_t &hDriver, ze_device_handle_t &hDevice, ze_module_handle_t &hModule,
+static void L0Launch_F_F(ze_device_handle_t &hDevice, ze_module_handle_t &hModule, ze_context_handle_t &hContext,
                          ze_command_queue_handle_t &hCommandQueue, void *return_data, void *vfloat_data) {
     ze_command_list_handle_t hCommandList;
     ze_kernel_handle_t hKernel;
-    L0Create_Kernel(hDevice, hModule, hCommandList, hKernel, "f_f");
+    L0Create_Kernel(hDevice, hModule, hContext, hCommandList, hKernel, "f_f");
     // allocate buffers
-    ze_device_mem_alloc_desc_t allocDesc = {ZE_DEVICE_MEM_ALLOC_DESC_VERSION_CURRENT, ZE_DEVICE_MEM_ALLOC_FLAG_DEFAULT,
-                                            0};
+    ze_device_mem_alloc_desc_t allocDesc = {};
     void *OUTBuff = nullptr, *INBuff = nullptr;
-    L0_SAFE_CALL(zeDriverAllocDeviceMem(hDriver, &allocDesc, N * sizeof(float), N * sizeof(float), hDevice, &OUTBuff));
-    L0_SAFE_CALL(zeDriverAllocDeviceMem(hDriver, &allocDesc, N * sizeof(float), N * sizeof(float), hDevice, &INBuff));
+    L0_SAFE_CALL(zeMemAllocDevice(hContext, &allocDesc, N * sizeof(float), N * sizeof(float), hDevice, &OUTBuff));
+    L0_SAFE_CALL(zeMemAllocDevice(hContext, &allocDesc, N * sizeof(float), N * sizeof(float), hDevice, &INBuff));
     // copy buffers to device
-    L0_SAFE_CALL(zeCommandListAppendMemoryCopy(hCommandList, OUTBuff, return_data, N * sizeof(float), nullptr));
-    L0_SAFE_CALL(zeCommandListAppendMemoryCopy(hCommandList, INBuff, vfloat_data, N * sizeof(float), nullptr));
+    L0_SAFE_CALL(
+        zeCommandListAppendMemoryCopy(hCommandList, OUTBuff, return_data, N * sizeof(float), nullptr, 0, nullptr));
+    L0_SAFE_CALL(
+        zeCommandListAppendMemoryCopy(hCommandList, INBuff, vfloat_data, N * sizeof(float), nullptr, 0, nullptr));
 
     // set kernel arguments
     L0_SAFE_CALL(zeKernelSetArgumentValue(hKernel, 0, sizeof(OUTBuff), &OUTBuff));
@@ -262,30 +267,31 @@ static void L0Launch_F_F(ze_driver_handle_t &hDriver, ze_device_handle_t &hDevic
 
     L0Launch_Kernel(hCommandQueue, hCommandList, hKernel, N * sizeof(float), return_data, OUTBuff);
 
-    L0_SAFE_CALL(zeDriverFreeMem(hDriver, OUTBuff));
-    L0_SAFE_CALL(zeDriverFreeMem(hDriver, INBuff));
+    L0_SAFE_CALL(zeMemFree(hContext, OUTBuff));
+    L0_SAFE_CALL(zeMemFree(hContext, INBuff));
 
     L0_SAFE_CALL(zeKernelDestroy(hKernel));
     L0_SAFE_CALL(zeCommandListDestroy(hCommandList));
 }
 
-static void L0Launch_F_FI(ze_driver_handle_t &hDriver, ze_device_handle_t &hDevice, ze_module_handle_t &hModule,
+static void L0Launch_F_FI(ze_device_handle_t &hDevice, ze_module_handle_t &hModule, ze_context_handle_t &hContext,
                           ze_command_queue_handle_t &hCommandQueue, void *return_data, void *vfloat_data,
                           void *vint_data) {
     ze_command_list_handle_t hCommandList;
     ze_kernel_handle_t hKernel;
-    L0Create_Kernel(hDevice, hModule, hCommandList, hKernel, "f_fi");
+    L0Create_Kernel(hDevice, hModule, hContext, hCommandList, hKernel, "f_fi");
     // allocate buffers
-    ze_device_mem_alloc_desc_t allocDesc = {ZE_DEVICE_MEM_ALLOC_DESC_VERSION_CURRENT, ZE_DEVICE_MEM_ALLOC_FLAG_DEFAULT,
-                                            0};
+    ze_device_mem_alloc_desc_t allocDesc = {};
     void *OUTBuff = nullptr, *INBuff = nullptr, *IN1Buff = nullptr;
-    L0_SAFE_CALL(zeDriverAllocDeviceMem(hDriver, &allocDesc, N * sizeof(float), N * sizeof(float), hDevice, &OUTBuff));
-    L0_SAFE_CALL(zeDriverAllocDeviceMem(hDriver, &allocDesc, N * sizeof(float), N * sizeof(float), hDevice, &INBuff));
-    L0_SAFE_CALL(zeDriverAllocDeviceMem(hDriver, &allocDesc, N * sizeof(int), N * sizeof(int), hDevice, &IN1Buff));
+    L0_SAFE_CALL(zeMemAllocDevice(hContext, &allocDesc, N * sizeof(float), N * sizeof(float), hDevice, &OUTBuff));
+    L0_SAFE_CALL(zeMemAllocDevice(hContext, &allocDesc, N * sizeof(float), N * sizeof(float), hDevice, &INBuff));
+    L0_SAFE_CALL(zeMemAllocDevice(hContext, &allocDesc, N * sizeof(int), N * sizeof(int), hDevice, &IN1Buff));
     // copy buffers to device
-    L0_SAFE_CALL(zeCommandListAppendMemoryCopy(hCommandList, OUTBuff, return_data, N * sizeof(float), nullptr));
-    L0_SAFE_CALL(zeCommandListAppendMemoryCopy(hCommandList, INBuff, vfloat_data, N * sizeof(float), nullptr));
-    L0_SAFE_CALL(zeCommandListAppendMemoryCopy(hCommandList, IN1Buff, vint_data, N * sizeof(int), nullptr));
+    L0_SAFE_CALL(
+        zeCommandListAppendMemoryCopy(hCommandList, OUTBuff, return_data, N * sizeof(float), nullptr, 0, nullptr));
+    L0_SAFE_CALL(
+        zeCommandListAppendMemoryCopy(hCommandList, INBuff, vfloat_data, N * sizeof(float), nullptr, 0, nullptr));
+    L0_SAFE_CALL(zeCommandListAppendMemoryCopy(hCommandList, IN1Buff, vint_data, N * sizeof(int), nullptr, 0, nullptr));
 
     // set kernel arguments
     L0_SAFE_CALL(zeKernelSetArgumentValue(hKernel, 0, sizeof(OUTBuff), &OUTBuff));
@@ -294,28 +300,29 @@ static void L0Launch_F_FI(ze_driver_handle_t &hDriver, ze_device_handle_t &hDevi
 
     L0Launch_Kernel(hCommandQueue, hCommandList, hKernel, N * sizeof(float), return_data, OUTBuff);
 
-    L0_SAFE_CALL(zeDriverFreeMem(hDriver, OUTBuff));
-    L0_SAFE_CALL(zeDriverFreeMem(hDriver, INBuff));
-    L0_SAFE_CALL(zeDriverFreeMem(hDriver, IN1Buff));
+    L0_SAFE_CALL(zeMemFree(hContext, OUTBuff));
+    L0_SAFE_CALL(zeMemFree(hContext, INBuff));
+    L0_SAFE_CALL(zeMemFree(hContext, IN1Buff));
 
     L0_SAFE_CALL(zeKernelDestroy(hKernel));
     L0_SAFE_CALL(zeCommandListDestroy(hCommandList));
 }
 
-static void L0Launch_F_FU(ze_driver_handle_t &hDriver, ze_device_handle_t &hDevice, ze_module_handle_t &hModule,
+static void L0Launch_F_FU(ze_device_handle_t &hDevice, ze_module_handle_t &hModule, ze_context_handle_t &hContext,
                           ze_command_queue_handle_t &hCommandQueue, void *return_data, void *vfloat_data, float b) {
     ze_command_list_handle_t hCommandList;
     ze_kernel_handle_t hKernel;
-    L0Create_Kernel(hDevice, hModule, hCommandList, hKernel, "f_fu");
+    L0Create_Kernel(hDevice, hModule, hContext, hCommandList, hKernel, "f_fu");
     // allocate buffers
-    ze_device_mem_alloc_desc_t allocDesc = {ZE_DEVICE_MEM_ALLOC_DESC_VERSION_CURRENT, ZE_DEVICE_MEM_ALLOC_FLAG_DEFAULT,
-                                            0};
+    ze_device_mem_alloc_desc_t allocDesc = {};
     void *OUTBuff = nullptr, *INBuff = nullptr;
-    L0_SAFE_CALL(zeDriverAllocDeviceMem(hDriver, &allocDesc, N * sizeof(float), N * sizeof(float), hDevice, &OUTBuff));
-    L0_SAFE_CALL(zeDriverAllocDeviceMem(hDriver, &allocDesc, N * sizeof(float), N * sizeof(float), hDevice, &INBuff));
+    L0_SAFE_CALL(zeMemAllocDevice(hContext, &allocDesc, N * sizeof(float), N * sizeof(float), hDevice, &OUTBuff));
+    L0_SAFE_CALL(zeMemAllocDevice(hContext, &allocDesc, N * sizeof(float), N * sizeof(float), hDevice, &INBuff));
     // copy buffers to device
-    L0_SAFE_CALL(zeCommandListAppendMemoryCopy(hCommandList, OUTBuff, return_data, N * sizeof(float), nullptr));
-    L0_SAFE_CALL(zeCommandListAppendMemoryCopy(hCommandList, INBuff, vfloat_data, N * sizeof(float), nullptr));
+    L0_SAFE_CALL(
+        zeCommandListAppendMemoryCopy(hCommandList, OUTBuff, return_data, N * sizeof(float), nullptr, 0, nullptr));
+    L0_SAFE_CALL(
+        zeCommandListAppendMemoryCopy(hCommandList, INBuff, vfloat_data, N * sizeof(float), nullptr, 0, nullptr));
 
     // set kernel arguments
     L0_SAFE_CALL(zeKernelSetArgumentValue(hKernel, 0, sizeof(OUTBuff), &OUTBuff));
@@ -324,27 +331,28 @@ static void L0Launch_F_FU(ze_driver_handle_t &hDriver, ze_device_handle_t &hDevi
 
     L0Launch_Kernel(hCommandQueue, hCommandList, hKernel, N * sizeof(float), return_data, OUTBuff);
 
-    L0_SAFE_CALL(zeDriverFreeMem(hDriver, OUTBuff));
-    L0_SAFE_CALL(zeDriverFreeMem(hDriver, INBuff));
+    L0_SAFE_CALL(zeMemFree(hContext, OUTBuff));
+    L0_SAFE_CALL(zeMemFree(hContext, INBuff));
 
     L0_SAFE_CALL(zeKernelDestroy(hKernel));
     L0_SAFE_CALL(zeCommandListDestroy(hCommandList));
 }
 
-static void L0Launch_F_DU(ze_driver_handle_t &hDriver, ze_device_handle_t &hDevice, ze_module_handle_t &hModule,
+static void L0Launch_F_DU(ze_device_handle_t &hDevice, ze_module_handle_t &hModule, ze_context_handle_t &hContext,
                           ze_command_queue_handle_t &hCommandQueue, void *return_data, void *vdouble_data, double b) {
     ze_command_list_handle_t hCommandList;
     ze_kernel_handle_t hKernel;
-    L0Create_Kernel(hDevice, hModule, hCommandList, hKernel, "f_du");
+    L0Create_Kernel(hDevice, hModule, hContext, hCommandList, hKernel, "f_du");
     // allocate buffers
-    ze_device_mem_alloc_desc_t allocDesc = {ZE_DEVICE_MEM_ALLOC_DESC_VERSION_CURRENT, ZE_DEVICE_MEM_ALLOC_FLAG_DEFAULT,
-                                            0};
+    ze_device_mem_alloc_desc_t allocDesc = {};
     void *OUTBuff = nullptr, *INBuff = nullptr;
-    L0_SAFE_CALL(zeDriverAllocDeviceMem(hDriver, &allocDesc, N * sizeof(float), N * sizeof(float), hDevice, &OUTBuff));
-    L0_SAFE_CALL(zeDriverAllocDeviceMem(hDriver, &allocDesc, N * sizeof(double), N * sizeof(double), hDevice, &INBuff));
+    L0_SAFE_CALL(zeMemAllocDevice(hContext, &allocDesc, N * sizeof(float), N * sizeof(float), hDevice, &OUTBuff));
+    L0_SAFE_CALL(zeMemAllocDevice(hContext, &allocDesc, N * sizeof(double), N * sizeof(double), hDevice, &INBuff));
     // copy buffers to device
-    L0_SAFE_CALL(zeCommandListAppendMemoryCopy(hCommandList, OUTBuff, return_data, N * sizeof(float), nullptr));
-    L0_SAFE_CALL(zeCommandListAppendMemoryCopy(hCommandList, INBuff, vdouble_data, N * sizeof(double), nullptr));
+    L0_SAFE_CALL(
+        zeCommandListAppendMemoryCopy(hCommandList, OUTBuff, return_data, N * sizeof(float), nullptr, 0, nullptr));
+    L0_SAFE_CALL(
+        zeCommandListAppendMemoryCopy(hCommandList, INBuff, vdouble_data, N * sizeof(double), nullptr, 0, nullptr));
 
     // set kernel arguments
     L0_SAFE_CALL(zeKernelSetArgumentValue(hKernel, 0, sizeof(OUTBuff), &OUTBuff));
@@ -353,27 +361,28 @@ static void L0Launch_F_DU(ze_driver_handle_t &hDriver, ze_device_handle_t &hDevi
 
     L0Launch_Kernel(hCommandQueue, hCommandList, hKernel, N * sizeof(float), return_data, OUTBuff);
 
-    L0_SAFE_CALL(zeDriverFreeMem(hDriver, OUTBuff));
-    L0_SAFE_CALL(zeDriverFreeMem(hDriver, INBuff));
+    L0_SAFE_CALL(zeMemFree(hContext, OUTBuff));
+    L0_SAFE_CALL(zeMemFree(hContext, INBuff));
 
     L0_SAFE_CALL(zeKernelDestroy(hKernel));
     L0_SAFE_CALL(zeCommandListDestroy(hCommandList));
 }
 
-static void L0Launch_F_DUF(ze_driver_handle_t &hDriver, ze_device_handle_t &hDevice, ze_module_handle_t &hModule,
+static void L0Launch_F_DUF(ze_device_handle_t &hDevice, ze_module_handle_t &hModule, ze_context_handle_t &hContext,
                            ze_command_queue_handle_t &hCommandQueue, void *return_data, void *vdouble_data, float b) {
     ze_command_list_handle_t hCommandList;
     ze_kernel_handle_t hKernel;
-    L0Create_Kernel(hDevice, hModule, hCommandList, hKernel, "f_duf");
+    L0Create_Kernel(hDevice, hModule, hContext, hCommandList, hKernel, "f_duf");
     // allocate buffers
-    ze_device_mem_alloc_desc_t allocDesc = {ZE_DEVICE_MEM_ALLOC_DESC_VERSION_CURRENT, ZE_DEVICE_MEM_ALLOC_FLAG_DEFAULT,
-                                            0};
+    ze_device_mem_alloc_desc_t allocDesc = {};
     void *OUTBuff = nullptr, *INBuff = nullptr;
-    L0_SAFE_CALL(zeDriverAllocDeviceMem(hDriver, &allocDesc, N * sizeof(float), N * sizeof(float), hDevice, &OUTBuff));
-    L0_SAFE_CALL(zeDriverAllocDeviceMem(hDriver, &allocDesc, N * sizeof(double), N * sizeof(double), hDevice, &INBuff));
+    L0_SAFE_CALL(zeMemAllocDevice(hContext, &allocDesc, N * sizeof(float), N * sizeof(float), hDevice, &OUTBuff));
+    L0_SAFE_CALL(zeMemAllocDevice(hContext, &allocDesc, N * sizeof(double), N * sizeof(double), hDevice, &INBuff));
     // copy buffers to device
-    L0_SAFE_CALL(zeCommandListAppendMemoryCopy(hCommandList, OUTBuff, return_data, N * sizeof(float), nullptr));
-    L0_SAFE_CALL(zeCommandListAppendMemoryCopy(hCommandList, INBuff, vdouble_data, N * sizeof(double), nullptr));
+    L0_SAFE_CALL(
+        zeCommandListAppendMemoryCopy(hCommandList, OUTBuff, return_data, N * sizeof(float), nullptr, 0, nullptr));
+    L0_SAFE_CALL(
+        zeCommandListAppendMemoryCopy(hCommandList, INBuff, vdouble_data, N * sizeof(double), nullptr, 0, nullptr));
 
     // set kernel arguments
     L0_SAFE_CALL(zeKernelSetArgumentValue(hKernel, 0, sizeof(OUTBuff), &OUTBuff));
@@ -382,31 +391,33 @@ static void L0Launch_F_DUF(ze_driver_handle_t &hDriver, ze_device_handle_t &hDev
 
     L0Launch_Kernel(hCommandQueue, hCommandList, hKernel, N * sizeof(float), return_data, OUTBuff);
 
-    L0_SAFE_CALL(zeDriverFreeMem(hDriver, OUTBuff));
-    L0_SAFE_CALL(zeDriverFreeMem(hDriver, INBuff));
+    L0_SAFE_CALL(zeMemFree(hContext, OUTBuff));
+    L0_SAFE_CALL(zeMemFree(hContext, INBuff));
 
     L0_SAFE_CALL(zeKernelDestroy(hKernel));
     L0_SAFE_CALL(zeCommandListDestroy(hCommandList));
 }
 
-static void L0Launch_F_DI(ze_driver_handle_t &hDriver, ze_device_handle_t &hDevice, ze_module_handle_t &hModule,
+static void L0Launch_F_DI(ze_device_handle_t &hDevice, ze_module_handle_t &hModule, ze_context_handle_t &hContext,
                           ze_command_queue_handle_t &hCommandQueue, void *return_data, void *vdouble_data,
                           void *vint2_data) {
     ze_command_list_handle_t hCommandList;
     ze_kernel_handle_t hKernel;
-    L0Create_Kernel(hDevice, hModule, hCommandList, hKernel, "f_di");
+    L0Create_Kernel(hDevice, hModule, hContext, hCommandList, hKernel, "f_di");
     // allocate buffers
-    ze_device_mem_alloc_desc_t allocDesc = {ZE_DEVICE_MEM_ALLOC_DESC_VERSION_CURRENT, ZE_DEVICE_MEM_ALLOC_FLAG_DEFAULT,
-                                            0};
+    ze_device_mem_alloc_desc_t allocDesc = {};
     void *OUTBuff = nullptr, *INBuff = nullptr, *IN1Buff = nullptr;
-    L0_SAFE_CALL(zeDriverAllocDeviceMem(hDriver, &allocDesc, N * sizeof(float), N * sizeof(float), hDevice, &OUTBuff));
-    L0_SAFE_CALL(zeDriverAllocDeviceMem(hDriver, &allocDesc, N * sizeof(double), N * sizeof(double), hDevice, &INBuff));
-    L0_SAFE_CALL(zeDriverAllocDeviceMem(hDriver, &allocDesc, N * sizeof(int), N * sizeof(int), hDevice, &IN1Buff));
+    L0_SAFE_CALL(zeMemAllocDevice(hContext, &allocDesc, N * sizeof(float), N * sizeof(float), hDevice, &OUTBuff));
+    L0_SAFE_CALL(zeMemAllocDevice(hContext, &allocDesc, N * sizeof(double), N * sizeof(double), hDevice, &INBuff));
+    L0_SAFE_CALL(zeMemAllocDevice(hContext, &allocDesc, N * sizeof(int), N * sizeof(int), hDevice, &IN1Buff));
 
     // copy buffers to device
-    L0_SAFE_CALL(zeCommandListAppendMemoryCopy(hCommandList, OUTBuff, return_data, N * sizeof(float), nullptr));
-    L0_SAFE_CALL(zeCommandListAppendMemoryCopy(hCommandList, INBuff, vdouble_data, N * sizeof(double), nullptr));
-    L0_SAFE_CALL(zeCommandListAppendMemoryCopy(hCommandList, IN1Buff, vint2_data, N * sizeof(int), nullptr));
+    L0_SAFE_CALL(
+        zeCommandListAppendMemoryCopy(hCommandList, OUTBuff, return_data, N * sizeof(float), nullptr, 0, nullptr));
+    L0_SAFE_CALL(
+        zeCommandListAppendMemoryCopy(hCommandList, INBuff, vdouble_data, N * sizeof(double), nullptr, 0, nullptr));
+    L0_SAFE_CALL(
+        zeCommandListAppendMemoryCopy(hCommandList, IN1Buff, vint2_data, N * sizeof(int), nullptr, 0, nullptr));
 
     // set kernel arguments
     L0_SAFE_CALL(zeKernelSetArgumentValue(hKernel, 0, sizeof(OUTBuff), &OUTBuff));
@@ -415,19 +426,19 @@ static void L0Launch_F_DI(ze_driver_handle_t &hDriver, ze_device_handle_t &hDevi
 
     L0Launch_Kernel(hCommandQueue, hCommandList, hKernel, N * sizeof(float), return_data, OUTBuff);
 
-    L0_SAFE_CALL(zeDriverFreeMem(hDriver, OUTBuff));
-    L0_SAFE_CALL(zeDriverFreeMem(hDriver, INBuff));
-    L0_SAFE_CALL(zeDriverFreeMem(hDriver, IN1Buff));
+    L0_SAFE_CALL(zeMemFree(hContext, OUTBuff));
+    L0_SAFE_CALL(zeMemFree(hContext, INBuff));
+    L0_SAFE_CALL(zeMemFree(hContext, IN1Buff));
 
     L0_SAFE_CALL(zeKernelDestroy(hKernel));
     L0_SAFE_CALL(zeCommandListDestroy(hCommandList));
 }
 
-static void L0Launch_Print_UF(ze_driver_handle_t &hDriver, ze_device_handle_t &hDevice, ze_module_handle_t &hModule,
+static void L0Launch_Print_UF(ze_device_handle_t &hDevice, ze_module_handle_t &hModule, ze_context_handle_t &hContext,
                               ze_command_queue_handle_t &hCommandQueue, float b) {
     ze_command_list_handle_t hCommandList;
     ze_kernel_handle_t hKernel;
-    L0Create_Kernel(hDevice, hModule, hCommandList, hKernel, "print_uf");
+    L0Create_Kernel(hDevice, hModule, hContext, hCommandList, hKernel, "print_uf");
 
     // set kernel arguments
     L0_SAFE_CALL(zeKernelSetArgumentValue(hKernel, 0, sizeof(float), &b));
@@ -438,42 +449,42 @@ static void L0Launch_Print_UF(ze_driver_handle_t &hDriver, ze_device_handle_t &h
     L0_SAFE_CALL(zeCommandListDestroy(hCommandList));
 }
 
-static void L0Launch_Print_F(ze_driver_handle_t &hDriver, ze_device_handle_t &hDevice, ze_module_handle_t &hModule,
+static void L0Launch_Print_F(ze_device_handle_t &hDevice, ze_module_handle_t &hModule, ze_context_handle_t &hContext,
                              ze_command_queue_handle_t &hCommandQueue, void *vfloat_data) {
     ze_command_list_handle_t hCommandList;
     ze_kernel_handle_t hKernel;
-    L0Create_Kernel(hDevice, hModule, hCommandList, hKernel, "print_f");
+    L0Create_Kernel(hDevice, hModule, hContext, hCommandList, hKernel, "print_f");
     // allocate buffers
-    ze_device_mem_alloc_desc_t allocDesc = {ZE_DEVICE_MEM_ALLOC_DESC_VERSION_CURRENT, ZE_DEVICE_MEM_ALLOC_FLAG_DEFAULT,
-                                            0};
+    ze_device_mem_alloc_desc_t allocDesc = {};
     void *INBuff = nullptr;
-    L0_SAFE_CALL(zeDriverAllocDeviceMem(hDriver, &allocDesc, N * sizeof(float), N * sizeof(float), hDevice, &INBuff));
+    L0_SAFE_CALL(zeMemAllocDevice(hContext, &allocDesc, N * sizeof(float), N * sizeof(float), hDevice, &INBuff));
     // copy buffers to device
-    L0_SAFE_CALL(zeCommandListAppendMemoryCopy(hCommandList, INBuff, vfloat_data, N * sizeof(float), nullptr));
+    L0_SAFE_CALL(
+        zeCommandListAppendMemoryCopy(hCommandList, INBuff, vfloat_data, N * sizeof(float), nullptr, 0, nullptr));
 
     // set kernel arguments
     L0_SAFE_CALL(zeKernelSetArgumentValue(hKernel, 0, sizeof(INBuff), &INBuff));
 
     L0Launch_Kernel(hCommandQueue, hCommandList, hKernel);
 
-    L0_SAFE_CALL(zeDriverFreeMem(hDriver, INBuff));
+    L0_SAFE_CALL(zeMemFree(hContext, INBuff));
 
     L0_SAFE_CALL(zeKernelDestroy(hKernel));
     L0_SAFE_CALL(zeCommandListDestroy(hCommandList));
 }
 
-static void L0Launch_Print_FUF(ze_driver_handle_t &hDriver, ze_device_handle_t &hDevice, ze_module_handle_t &hModule,
+static void L0Launch_Print_FUF(ze_device_handle_t &hDevice, ze_module_handle_t &hModule, ze_context_handle_t &hContext,
                                ze_command_queue_handle_t &hCommandQueue, void *vfloat_data, float b) {
     ze_command_list_handle_t hCommandList;
     ze_kernel_handle_t hKernel;
-    L0Create_Kernel(hDevice, hModule, hCommandList, hKernel, "print_fuf");
+    L0Create_Kernel(hDevice, hModule, hContext, hCommandList, hKernel, "print_fuf");
     // allocate buffers
-    ze_device_mem_alloc_desc_t allocDesc = {ZE_DEVICE_MEM_ALLOC_DESC_VERSION_CURRENT, ZE_DEVICE_MEM_ALLOC_FLAG_DEFAULT,
-                                            0};
+    ze_device_mem_alloc_desc_t allocDesc = {};
     void *INBuff = nullptr;
-    L0_SAFE_CALL(zeDriverAllocDeviceMem(hDriver, &allocDesc, N * sizeof(float), N * sizeof(float), hDevice, &INBuff));
+    L0_SAFE_CALL(zeMemAllocDevice(hContext, &allocDesc, N * sizeof(float), N * sizeof(float), hDevice, &INBuff));
     // copy buffers to device
-    L0_SAFE_CALL(zeCommandListAppendMemoryCopy(hCommandList, INBuff, vfloat_data, N * sizeof(float), nullptr));
+    L0_SAFE_CALL(
+        zeCommandListAppendMemoryCopy(hCommandList, INBuff, vfloat_data, N * sizeof(float), nullptr, 0, nullptr));
 
     // set kernel arguments
     L0_SAFE_CALL(zeKernelSetArgumentValue(hKernel, 0, sizeof(INBuff), &INBuff));
@@ -481,17 +492,17 @@ static void L0Launch_Print_FUF(ze_driver_handle_t &hDriver, ze_device_handle_t &
 
     L0Launch_Kernel(hCommandQueue, hCommandList, hKernel);
 
-    L0_SAFE_CALL(zeDriverFreeMem(hDriver, INBuff));
+    L0_SAFE_CALL(zeMemFree(hContext, INBuff));
 
     L0_SAFE_CALL(zeKernelDestroy(hKernel));
     L0_SAFE_CALL(zeCommandListDestroy(hCommandList));
 }
 
-static void L0Launch_Print_NO(ze_driver_handle_t &hDriver, ze_device_handle_t &hDevice, ze_module_handle_t &hModule,
+static void L0Launch_Print_NO(ze_device_handle_t &hDevice, ze_module_handle_t &hModule, ze_context_handle_t &hContext,
                               ze_command_queue_handle_t &hCommandQueue) {
     ze_command_list_handle_t hCommandList;
     ze_kernel_handle_t hKernel;
-    L0Create_Kernel(hDevice, hModule, hCommandList, hKernel, "print_no");
+    L0Create_Kernel(hDevice, hModule, hContext, hCommandList, hKernel, "print_no");
 
     L0Launch_Kernel(hCommandQueue, hCommandList, hKernel);
 
@@ -499,32 +510,32 @@ static void L0Launch_Print_NO(ze_driver_handle_t &hDriver, ze_device_handle_t &h
     L0_SAFE_CALL(zeCommandListDestroy(hCommandList));
 }
 
-static void L0Launch_Result(ze_driver_handle_t &hDriver, ze_device_handle_t &hDevice, ze_module_handle_t &hModule,
+static void L0Launch_Result(ze_device_handle_t &hDevice, ze_module_handle_t &hModule, ze_context_handle_t &hContext,
                             ze_command_queue_handle_t &hCommandQueue, void *return_data) {
     ze_command_list_handle_t hCommandList;
     ze_kernel_handle_t hKernel;
-    L0Create_Kernel(hDevice, hModule, hCommandList, hKernel, "result");
+    L0Create_Kernel(hDevice, hModule, hContext, hCommandList, hKernel, "result");
     // allocate buffers
-    ze_device_mem_alloc_desc_t allocDesc = {ZE_DEVICE_MEM_ALLOC_DESC_VERSION_CURRENT, ZE_DEVICE_MEM_ALLOC_FLAG_DEFAULT,
-                                            0};
+    ze_device_mem_alloc_desc_t allocDesc = {};
     void *OUTBuff = nullptr;
-    L0_SAFE_CALL(zeDriverAllocDeviceMem(hDriver, &allocDesc, N * sizeof(float), N * sizeof(float), hDevice, &OUTBuff));
+    L0_SAFE_CALL(zeMemAllocDevice(hContext, &allocDesc, N * sizeof(float), N * sizeof(float), hDevice, &OUTBuff));
     // copy buffers to device
-    L0_SAFE_CALL(zeCommandListAppendMemoryCopy(hCommandList, OUTBuff, return_data, N * sizeof(float), nullptr));
+    L0_SAFE_CALL(
+        zeCommandListAppendMemoryCopy(hCommandList, OUTBuff, return_data, N * sizeof(float), nullptr, 0, nullptr));
     // set kernel arguments
     L0_SAFE_CALL(zeKernelSetArgumentValue(hKernel, 0, sizeof(OUTBuff), &OUTBuff));
     L0Launch_Kernel(hCommandQueue, hCommandList, hKernel, N * sizeof(float), return_data, OUTBuff);
-    L0_SAFE_CALL(zeDriverFreeMem(hDriver, OUTBuff));
+    L0_SAFE_CALL(zeMemFree(hContext, OUTBuff));
 
     L0_SAFE_CALL(zeKernelDestroy(hKernel));
     L0_SAFE_CALL(zeCommandListDestroy(hCommandList));
 }
 
-static void L0Launch_Print_Result(ze_driver_handle_t &hDriver, ze_device_handle_t &hDevice, ze_module_handle_t &hModule,
-                                  ze_command_queue_handle_t &hCommandQueue) {
+static void L0Launch_Print_Result(ze_device_handle_t &hDevice, ze_module_handle_t &hModule,
+                                  ze_context_handle_t &hContext, ze_command_queue_handle_t &hCommandQueue) {
     ze_command_list_handle_t hCommandList;
     ze_kernel_handle_t hKernel;
-    L0Create_Kernel(hDevice, hModule, hCommandList, hKernel, "print_result");
+    L0Create_Kernel(hDevice, hModule, hContext, hCommandList, hKernel, "print_result");
 
     L0Launch_Kernel(hCommandQueue, hCommandList, hKernel);
 
@@ -532,26 +543,26 @@ static void L0Launch_Print_Result(ze_driver_handle_t &hDriver, ze_device_handle_
     L0_SAFE_CALL(zeCommandListDestroy(hCommandList));
 }
 
-static void L0Launch_Result_Threads(ze_driver_handle_t &hDriver, ze_device_handle_t &hDevice,
-                                    ze_module_handle_t &hModule, ze_command_queue_handle_t &hCommandQueue,
+static void L0Launch_Result_Threads(ze_device_handle_t &hDevice, ze_module_handle_t &hModule,
+                                    ze_context_handle_t &hContext, ze_command_queue_handle_t &hCommandQueue,
                                     void *return_data, int groupSpaceWidth, int groupSpaceHeight) {
     ze_command_list_handle_t hCommandList;
     ze_kernel_handle_t hKernel;
-    L0Create_Kernel(hDevice, hModule, hCommandList, hKernel, "result_t");
+    L0Create_Kernel(hDevice, hModule, hContext, hCommandList, hKernel, "result_t");
     // allocate buffers
-    ze_device_mem_alloc_desc_t allocDesc = {ZE_DEVICE_MEM_ALLOC_DESC_VERSION_CURRENT, ZE_DEVICE_MEM_ALLOC_FLAG_DEFAULT,
-                                            0};
+    ze_device_mem_alloc_desc_t allocDesc = {};
     void *OUTBuff = nullptr;
-    L0_SAFE_CALL(zeDriverAllocDeviceMem(hDriver, &allocDesc, N * sizeof(float), N * sizeof(float), hDevice, &OUTBuff));
+    L0_SAFE_CALL(zeMemAllocDevice(hContext, &allocDesc, N * sizeof(float), N * sizeof(float), hDevice, &OUTBuff));
     // copy buffers to device
-    L0_SAFE_CALL(zeCommandListAppendMemoryCopy(hCommandList, OUTBuff, return_data, N * sizeof(float), nullptr));
+    L0_SAFE_CALL(
+        zeCommandListAppendMemoryCopy(hCommandList, OUTBuff, return_data, N * sizeof(float), nullptr, 0, nullptr));
     // set kernel arguments
     L0_SAFE_CALL(zeKernelSetArgumentValue(hKernel, 0, sizeof(OUTBuff), &OUTBuff));
     L0_SAFE_CALL(zeKernelSetArgumentValue(hKernel, 1, sizeof(int), &groupSpaceWidth));
     L0_SAFE_CALL(zeKernelSetArgumentValue(hKernel, 2, sizeof(int), &groupSpaceHeight));
     L0Launch_Kernel(hCommandQueue, hCommandList, hKernel, N * sizeof(float), return_data, OUTBuff, groupSpaceWidth,
                     groupSpaceHeight);
-    L0_SAFE_CALL(zeDriverFreeMem(hDriver, OUTBuff));
+    L0_SAFE_CALL(zeMemFree(hContext, OUTBuff));
 
     L0_SAFE_CALL(zeKernelDestroy(hKernel));
     L0_SAFE_CALL(zeCommandListDestroy(hCommandList));
@@ -586,25 +597,26 @@ int main(int argc, char *argv[]) {
     ze_device_handle_t hDevice = nullptr;
     ze_module_handle_t hModule = nullptr;
     ze_driver_handle_t hDriver = nullptr;
+    ze_context_handle_t hContext = nullptr;
     ze_command_queue_handle_t hCommandQueue = nullptr;
-    L0InitContext(hDriver, hDevice, hModule, hCommandQueue);
+    L0InitContext(hDevice, hModule, hContext, hCommandQueue);
 #if (TEST_SIG == 0)
-    L0Launch_F_V(hDriver, hDevice, hModule, hCommandQueue, return_data);
+    L0Launch_F_V(hDevice, hModule, hContext, hCommandQueue, return_data);
 #elif (TEST_SIG == 1)
-    L0Launch_F_F(hDriver, hDevice, hModule, hCommandQueue, return_data, vfloat_data);
+    L0Launch_F_F(hDevice, hModule, hContext, hCommandQueue, return_data, vfloat_data);
 #elif (TEST_SIG == 2)
     float num = 5.0f;
-    L0Launch_F_FU(hDriver, hDevice, hModule, hCommandQueue, return_data, vfloat_data, num);
+    L0Launch_F_FU(hDevice, hModule, hContext, hCommandQueue, return_data, vfloat_data, num);
 #elif (TEST_SIG == 3)
-    L0Launch_F_FI(hDriver, hDevice, hModule, hCommandQueue, return_data, vfloat_data, vint_data);
+    L0Launch_F_FI(hDevice, hModule, hContext, hCommandQueue, return_data, vfloat_data, vint_data);
 #elif (TEST_SIG == 4)
     double num = 5.0;
-    L0Launch_F_DU(hDriver, hDevice, hModule, hCommandQueue, return_data, vdouble_data, num);
+    L0Launch_F_DU(hDevice, hModule, hContext, hCommandQueue, return_data, vdouble_data, num);
 #elif (TEST_SIG == 5)
     float num = 5.0f;
-    L0Launch_F_DUF(hDriver, hDevice, hModule, hCommandQueue, return_data, vdouble_data, num);
+    L0Launch_F_DUF(hDevice, hModule, hContext, hCommandQueue, return_data, vdouble_data, num);
 #elif (TEST_SIG == 6)
-    L0Launch_F_DI(hDriver, hDevice, hModule, hCommandQueue, return_data, vdouble_data, vint2_data);
+    L0Launch_F_DI(hDevice, hModule, hContext, hCommandQueue, return_data, vdouble_data, vint2_data);
 #elif (TEST_SIG == 7)
 // L0Launch_F_SZ(return_data);
 #error "Currently unsupported for GEN"
@@ -612,16 +624,16 @@ int main(int argc, char *argv[]) {
     int groupSpaceWidth = 2;
     int groupSpaceHeight = 8;
     assert(N >= groupSpaceWidth * groupSpaceHeight);
-    L0Launch_F_Threads(hDriver, hDevice, hModule, hCommandQueue, return_data, groupSpaceWidth, groupSpaceHeight);
-    L0Launch_Result_Threads(hDriver, hDevice, hModule, hCommandQueue, expect_data, groupSpaceWidth, groupSpaceHeight);
+    L0Launch_F_Threads(hDevice, hModule, hContext, hCommandQueue, return_data, groupSpaceWidth, groupSpaceHeight);
+    L0Launch_Result_Threads(hDevice, hModule, hContext, hCommandQueue, expect_data, groupSpaceWidth, groupSpaceHeight);
 #elif (TEST_SIG == 32)
-    L0Launch_Print_UF(hDriver, hDevice, hModule, hCommandQueue, 5.0f);
+    L0Launch_Print_UF(hDevice, hModule, hContext, hCommandQueue, 5.0f);
 #elif (TEST_SIG == 33)
-    L0Launch_Print_F(hDriver, hDevice, hModule, hCommandQueue, vfloat_data);
+    L0Launch_Print_F(hDevice, hModule, hContext, hCommandQueue, vfloat_data);
 #elif (TEST_SIG == 34)
-    L0Launch_Print_FUF(hDriver, hDevice, hModule, hCommandQueue, vfloat_data, 5.0f);
+    L0Launch_Print_FUF(hDevice, hModule, hContext, hCommandQueue, vfloat_data, 5.0f);
 #elif (TEST_SIG == 35)
-    L0Launch_Print_NO(hDriver, hDevice, hModule, hCommandQueue);
+    L0Launch_Print_NO(hDevice, hModule, hContext, hCommandQueue);
 #else
 #error "Unknown or unset TEST_SIG value"
 #endif
@@ -631,13 +643,14 @@ int main(int argc, char *argv[]) {
     const bool verbose = false;
 #endif
 #if (TEST_SIG < 8)
-    L0Launch_Result(hDriver, hDevice, hModule, hCommandQueue, expect_data);
+    L0Launch_Result(hDevice, hModule, hContext, hCommandQueue, expect_data);
 #elif (TEST_SIG >= 32)
-    L0Launch_Print_Result(hDriver, hDevice, hModule, hCommandQueue);
+    L0Launch_Print_Result(hDevice, hModule, hContext, hCommandQueue);
     return 0;
 #endif
-    L0_SAFE_CALL(zeModuleDestroy(hModule));
     L0_SAFE_CALL(zeCommandQueueDestroy(hCommandQueue));
+    L0_SAFE_CALL(zeModuleDestroy(hModule));
+    L0_SAFE_CALL(zeContextDestroy(hContext));
 
     // check results.
     int errors = 0;
