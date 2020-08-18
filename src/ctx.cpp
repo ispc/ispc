@@ -3285,14 +3285,16 @@ llvm::Value *FunctionEmitContext::CallInst(llvm::Value *func, const FunctionType
         // equal to the set of active program instances that also have that
         // function pointer.  When all unique function pointers have been
         // called, we're done.
-        if (g->target->isGenXTarget()) {
-            Error(currentPos, "varying function calls are not supported for genx-* targets yet.");
-            return NULL;
-        }
+        llvm::BasicBlock *bbTest = CreateBasicBlock("varying_funcall_test", GetCurrentBasicBlock());
+        llvm::BasicBlock *bbCall = CreateBasicBlock("varying_funcall_call", bbTest);
+        llvm::BasicBlock *bbDone = CreateBasicBlock("varying_funcall_done", bbCall);
 
-        llvm::BasicBlock *bbTest = CreateBasicBlock("varying_funcall_test");
-        llvm::BasicBlock *bbCall = CreateBasicBlock("varying_funcall_call");
-        llvm::BasicBlock *bbDone = CreateBasicBlock("varying_funcall_done");
+        llvm::BasicBlock *bbSIMDCall = NULL;
+        llvm::BasicBlock *bbSIMDCallJoin = NULL;
+        if (g->target->isGenXTarget()) {
+            bbSIMDCall = CreateBasicBlock("varying_funcall_simd_call", bbCall);
+            bbSIMDCallJoin = CreateBasicBlock("varying_funcall_simd_call_join", bbSIMDCall);
+        }
 
         // Get the current mask value so we can restore it later
         llvm::Value *origMask = GetInternalMask();
@@ -3309,8 +3311,21 @@ llvm::Value *FunctionEmitContext::CallInst(llvm::Value *func, const FunctionType
         // instances for which we still need to call the function they are
         // pointing to.  It starts out initialized with the mask of
         // currently running program instances.
+        llvm::Value *oldFullMask = NULL;
         llvm::Value *maskPtr = AllocaInst(LLVMTypes::MaskType);
-        StoreInst(GetFullMask(), maskPtr);
+        if (g->target->isGenXTarget()) {
+#ifdef ISPC_GENX_ENABLED
+            // Current mask will be calculated according to EM mask
+            oldFullMask = GenXSimdCFPredicate(LLVMMaskAllOn);
+            StoreInst(oldFullMask, maskPtr, NULL, true);
+#endif
+        } else {
+            oldFullMask = GetFullMask();
+            StoreInst(oldFullMask, maskPtr);
+        }
+
+        // Mask wasn't initialized
+        Assert(oldFullMask != NULL && "Mask is not initialized");
 
         // And now we branch to the test to see if there's more work to be
         // done.
@@ -3357,8 +3372,20 @@ llvm::Value *FunctionEmitContext::CallInst(llvm::Value *func, const FunctionType
             // callMask = (currentMask & fpOverlap)
             llvm::Value *callMask = BinaryOperator(llvm::Instruction::And, currentMask, fpOverlap, "call_mask");
 
-            // Set the mask
-            SetInternalMask(callMask);
+            if (g->target->isGenXTarget()) {
+                // TODO: Seems like it is possible to move code
+                // from bbSIMDCallJoin block here. Decide if
+                // it should be done.
+
+                // Execution is performed according to EM for GenX.
+                // Branch to BB where EM is applied for call.
+                BranchInst(bbSIMDCall, bbSIMDCallJoin, callMask);
+                // Emit code for call
+                SetCurrentBasicBlock(bbSIMDCall);
+            } else {
+                // Set the mask
+                SetInternalMask(callMask);
+            }
 
             // bitcast the i32/64 function pointer to the actual function
             // pointer type.
@@ -3373,16 +3400,31 @@ llvm::Value *FunctionEmitContext::CallInst(llvm::Value *func, const FunctionType
             // accumulate the result using the call mask.
             if (callResult != NULL && callResult->getType() != LLVMTypes::VoidType) {
                 AssertPos(currentPos, resultPtr != NULL);
-                StoreInst(callResult, resultPtr, callMask, returnType, PointerType::GetUniform(returnType));
+                if (g->target->isGenXTarget()) {
+                    // This store will be predicated during SIMD CF Lowering
+                    StoreInst(callResult, resultPtr);
+                } else {
+                    StoreInst(callResult, resultPtr, callMask, returnType, PointerType::GetUniform(returnType));
+                }
             } else
                 AssertPos(currentPos, resultPtr == NULL);
+
+            if (g->target->isGenXTarget()) {
+                // Finish SIMDCall BB
+                BranchInst(bbSIMDCallJoin);
+                SetCurrentBasicBlock(bbSIMDCallJoin);
+            }
 
             // Update the mask to turn off the program instances for which
             // we just called the function.
             // currentMask = currentMask & ~callmask
             llvm::Value *notCallMask = BinaryOperator(llvm::Instruction::Xor, callMask, LLVMMaskAllOn, "~callMask");
             currentMask = BinaryOperator(llvm::Instruction::And, currentMask, notCallMask, "currentMask&~callMask");
-            StoreInst(currentMask, maskPtr);
+            if (g->target->isGenXTarget()) {
+                StoreInst(currentMask, maskPtr, NULL, true);
+            } else {
+                StoreInst(currentMask, maskPtr);
+            }
 
             // And go back to the test to see if we need to do another
             // call.
