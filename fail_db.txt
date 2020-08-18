@@ -8,660 +8,10 @@
 %
 
 % LLVM 8.0 fails
-.\tests\asin.ispc compfail     genx32           genx-x16 Windows LLVM 8.0         cl -O2 *
-.\tests\atomics-1.ispc compfail     genx32           genx-x16 Windows LLVM 8.0         cl -O2 *
-.\tests\atomics-10.ispc compfail     genx32           genx-x16 Windows LLVM 8.0         cl -O2 *
-.\tests\atomics-11.ispc compfail     genx32           genx-x16 Windows LLVM 8.0         cl -O2 *
-.\tests\atomics-12.ispc compfail     genx32           genx-x16 Windows LLVM 8.0         cl -O2 *
-.\tests\atomics-13.ispc compfail     genx32           genx-x16 Windows LLVM 8.0         cl -O2 *
-.\tests\atomics-14.ispc compfail     genx32           genx-x16 Windows LLVM 8.0         cl -O2 *
-.\tests\atomics-2.ispc compfail     genx32           genx-x16 Windows LLVM 8.0         cl -O2 *
-.\tests\atomics-3.ispc compfail     genx32           genx-x16 Windows LLVM 8.0         cl -O2 *
-.\tests\atomics-4.ispc compfail     genx32           genx-x16 Windows LLVM 8.0         cl -O2 *
-.\tests\atomics-5.ispc compfail     genx32           genx-x16 Windows LLVM 8.0         cl -O2 *
-.\tests\atomics-6.ispc compfail     genx32           genx-x16 Windows LLVM 8.0         cl -O2 *
-.\tests\atomics-7.ispc compfail     genx32           genx-x16 Windows LLVM 8.0         cl -O2 *
-.\tests\atomics-8.ispc compfail     genx32           genx-x16 Windows LLVM 8.0         cl -O2 *
-.\tests\atomics-9.ispc compfail     genx32           genx-x16 Windows LLVM 8.0         cl -O2 *
-.\tests\atomics-swap.ispc compfail     genx32           genx-x16 Windows LLVM 8.0         cl -O2 *
-.\tests\atomics-uniform-1.ispc compfail     genx32           genx-x16 Windows LLVM 8.0         cl -O2 *
-.\tests\atomics-uniform-2.ispc compfail     genx32           genx-x16 Windows LLVM 8.0         cl -O2 *
-.\tests\atomics-uniform-3.ispc compfail     genx32           genx-x16 Windows LLVM 8.0         cl -O2 *
-.\tests\atomics-uniform-4.ispc compfail     genx32           genx-x16 Windows LLVM 8.0         cl -O2 *
-.\tests\atomics-uniform-5.ispc compfail     genx32           genx-x16 Windows LLVM 8.0         cl -O2 *
-.\tests\atomics-uniform-6.ispc compfail     genx32           genx-x16 Windows LLVM 8.0         cl -O2 *
-.\tests\atomics-uniform-7.ispc compfail     genx32           genx-x16 Windows LLVM 8.0         cl -O2 *
-.\tests\atomics-uniform-8.ispc compfail     genx32           genx-x16 Windows LLVM 8.0         cl -O2 *
-.\tests\atomics-uniform-9.ispc compfail     genx32           genx-x16 Windows LLVM 8.0         cl -O2 *
-.\tests\atomics-varyingptr-1.ispc compfail     genx32           genx-x16 Windows LLVM 8.0         cl -O2 *
-.\tests\atomics-varyingptr-2.ispc compfail     genx32           genx-x16 Windows LLVM 8.0         cl -O2 *
-.\tests\atomics-varyingptr-3.ispc compfail     genx32           genx-x16 Windows LLVM 8.0         cl -O2 *
-.\tests\atomics-varyingptr-4.ispc compfail     genx32           genx-x16 Windows LLVM 8.0         cl -O2 *
-.\tests\funcptr-null-2.ispc compfail     genx32           genx-x16 Windows LLVM 8.0         cl -O2 *
-.\tests\funcptr-null-3.ispc compfail     genx32           genx-x16 Windows LLVM 8.0         cl -O2 *
-.\tests\funcptr-null-4.ispc compfail     genx32           genx-x16 Windows LLVM 8.0         cl -O2 *
-.\tests\funcptr-null-5.ispc compfail     genx32           genx-x16 Windows LLVM 8.0         cl -O2 *
-.\tests\funcptr-null-6.ispc compfail     genx32           genx-x16 Windows LLVM 8.0         cl -O2 *
-.\tests\funcptr-uniform-10.ispc compfail     genx32           genx-x16 Windows LLVM 8.0         cl -O2 *
-.\tests\funcptr-uniform-2.ispc compfail     genx32           genx-x16 Windows LLVM 8.0         cl -O2 *
-.\tests\funcptr-uniform-3.ispc compfail     genx32           genx-x16 Windows LLVM 8.0         cl -O2 *
-.\tests\funcptr-uniform-7.ispc compfail     genx32           genx-x16 Windows LLVM 8.0         cl -O2 *
-.\tests\funcptr-uniform-8.ispc compfail     genx32           genx-x16 Windows LLVM 8.0         cl -O2 *
-.\tests\funcptr-uniform-9.ispc compfail     genx32           genx-x16 Windows LLVM 8.0         cl -O2 *
-.\tests\funcptr-varying-5.ispc compfail     genx32           genx-x16 Windows LLVM 8.0         cl -O2 *
-.\tests\funcptr-varying-7.ispc compfail     genx32           genx-x16 Windows LLVM 8.0         cl -O2 *
-.\tests\funcptr-varying-8.ispc compfail     genx32           genx-x16 Windows LLVM 8.0         cl -O2 *
-.\tests\funcptr-varying-9.ispc compfail     genx32           genx-x16 Windows LLVM 8.0         cl -O2 *
-.\tests\gather-double-7.ispc compfail     genx32           genx-x16 Windows LLVM 8.0         cl -O2 *
-.\tests\gather-double-8.ispc compfail     genx32           genx-x16 Windows LLVM 8.0         cl -O2 *
-.\tests\gather-int64-7.ispc compfail     genx32           genx-x16 Windows LLVM 8.0         cl -O2 *
-.\tests\gather-int64-8.ispc compfail     genx32           genx-x16 Windows LLVM 8.0         cl -O2 *
-.\tests\isnan.ispc compfail     genx32           genx-x16 Windows LLVM 8.0         cl -O2 *
-.\tests\local-atomics-varyingptr-1.ispc compfail     genx32           genx-x16 Windows LLVM 8.0         cl -O2 *
-.\tests\local-atomics-varyingptr-2.ispc compfail     genx32           genx-x16 Windows LLVM 8.0         cl -O2 *
-.\tests\local-atomics-varyingptr-3.ispc compfail     genx32           genx-x16 Windows LLVM 8.0         cl -O2 *
-.\tests\local-atomics-varyingptr-4.ispc compfail     genx32           genx-x16 Windows LLVM 8.0         cl -O2 *
-.\tests\masked-struct-scatter-varying.ispc compfail     genx32           genx-x16 Windows LLVM 8.0         cl -O2 *
-.\tests\print_bool_simd.ispc compfail     genx32           genx-x16 Windows LLVM 8.0         cl -O2 *
-.\tests\print_varying.ispc compfail     genx32           genx-x16 Windows LLVM 8.0         cl -O2 *
-.\tests\ptr-15.ispc compfail     genx32           genx-x16 Windows LLVM 8.0         cl -O2 *
-.\tests\recursion-forward-func-decl.ispc runfail     genx32           genx-x16 Windows LLVM 8.0         cl -O2 *
-.\tests\recursion.ispc runfail     genx32           genx-x16 Windows LLVM 8.0         cl -O2 *
-.\tests\short-vec-bool3.ispc compfail     genx32           genx-x16 Windows LLVM 8.0         cl -O2 *
-.\tests\short-vec-bool4.ispc compfail     genx32           genx-x16 Windows LLVM 8.0         cl -O2 *
-.\tests\transcendentals-10-0.ispc compfail     genx32           genx-x16 Windows LLVM 8.0         cl -O2 *
-.\tests\transcendentals-5-0.ispc compfail     genx32           genx-x16 Windows LLVM 8.0         cl -O2 *
-.\tests\transcendentals-5-1.ispc compfail     genx32           genx-x16 Windows LLVM 8.0         cl -O2 *
-.\tests\transcendentals-5-2.ispc compfail     genx32           genx-x16 Windows LLVM 8.0         cl -O2 *
-.\tests\transcendentals-5-3.ispc compfail     genx32           genx-x16 Windows LLVM 8.0         cl -O2 *
-.\tests\transcendentals-6-0.ispc compfail     genx32           genx-x16 Windows LLVM 8.0         cl -O2 *
-.\tests\transcendentals-6-1.ispc compfail     genx32           genx-x16 Windows LLVM 8.0         cl -O2 *
-.\tests\transcendentals-6-2.ispc compfail     genx32           genx-x16 Windows LLVM 8.0         cl -O2 *
-.\tests\transcendentals-6-3.ispc compfail     genx32           genx-x16 Windows LLVM 8.0         cl -O2 *
-.\tests\transcendentals-7-0.ispc compfail     genx32           genx-x16 Windows LLVM 8.0         cl -O2 *
-.\tests\transcendentals-7-1.ispc compfail     genx32           genx-x16 Windows LLVM 8.0         cl -O2 *
-.\tests\transcendentals-7-2.ispc compfail     genx32           genx-x16 Windows LLVM 8.0         cl -O2 *
-.\tests\transcendentals-7-3.ispc compfail     genx32           genx-x16 Windows LLVM 8.0         cl -O2 *
-.\tests\transcendentals-8-0.ispc compfail     genx32           genx-x16 Windows LLVM 8.0         cl -O2 *
-.\tests\transcendentals-8-1.ispc compfail     genx32           genx-x16 Windows LLVM 8.0         cl -O2 *
-.\tests\transcendentals-8-2.ispc compfail     genx32           genx-x16 Windows LLVM 8.0         cl -O2 *
-.\tests\transcendentals-8-3.ispc compfail     genx32           genx-x16 Windows LLVM 8.0         cl -O2 *
-.\tests\transcendentals-9-0.ispc compfail     genx32           genx-x16 Windows LLVM 8.0         cl -O2 *
-.\tests\transcendentals-9-1.ispc compfail     genx32           genx-x16 Windows LLVM 8.0         cl -O2 *
-.\tests\transcendentals-9-2.ispc compfail     genx32           genx-x16 Windows LLVM 8.0         cl -O2 *
-.\tests\transcendentals-9-3.ispc compfail     genx32           genx-x16 Windows LLVM 8.0         cl -O2 *
-.\tests\local-atomics-1.ispc runfail  genx32           genx-x16 Windows LLVM 8.0         cl -O2 *
-.\tests\local-atomics-10.ispc runfail  genx32           genx-x16 Windows LLVM 8.0         cl -O2 *
-.\tests\local-atomics-11.ispc runfail  genx32           genx-x16 Windows LLVM 8.0         cl -O2 *
-.\tests\local-atomics-12.ispc runfail  genx32           genx-x16 Windows LLVM 8.0         cl -O2 *
-.\tests\local-atomics-13.ispc runfail  genx32           genx-x16 Windows LLVM 8.0         cl -O2 *
-.\tests\local-atomics-14.ispc runfail  genx32           genx-x16 Windows LLVM 8.0         cl -O2 *
-.\tests\local-atomics-2.ispc runfail  genx32           genx-x16 Windows LLVM 8.0         cl -O2 *
-.\tests\local-atomics-3.ispc runfail  genx32           genx-x16 Windows LLVM 8.0         cl -O2 *
-.\tests\local-atomics-4.ispc runfail  genx32           genx-x16 Windows LLVM 8.0         cl -O2 *
-.\tests\local-atomics-5.ispc runfail  genx32           genx-x16 Windows LLVM 8.0         cl -O2 *
-.\tests\local-atomics-6.ispc runfail  genx32           genx-x16 Windows LLVM 8.0         cl -O2 *
-.\tests\local-atomics-7.ispc runfail  genx32           genx-x16 Windows LLVM 8.0         cl -O2 *
-.\tests\local-atomics-8.ispc runfail  genx32           genx-x16 Windows LLVM 8.0         cl -O2 *
-.\tests\local-atomics-9.ispc runfail  genx32           genx-x16 Windows LLVM 8.0         cl -O2 *
-.\tests\local-atomics-swap.ispc runfail  genx32           genx-x16 Windows LLVM 8.0         cl -O2 *
-.\tests\local-atomics-uniform-1.ispc runfail  genx32           genx-x16 Windows LLVM 8.0         cl -O2 *
-.\tests\local-atomics-uniform-2.ispc runfail  genx32           genx-x16 Windows LLVM 8.0         cl -O2 *
-.\tests\local-atomics-uniform-3.ispc runfail  genx32           genx-x16 Windows LLVM 8.0         cl -O2 *
-.\tests\local-atomics-uniform-4.ispc runfail  genx32           genx-x16 Windows LLVM 8.0         cl -O2 *
-.\tests\local-atomics-uniform-5.ispc runfail  genx32           genx-x16 Windows LLVM 8.0         cl -O2 *
-.\tests\local-atomics-uniform-6.ispc runfail  genx32           genx-x16 Windows LLVM 8.0         cl -O2 *
-.\tests\short-vec-int-logical.ispc runfail  genx32           genx-x16 Windows LLVM 8.0         cl -O2 *
-.\tests\foreach-mask.ispc runfail  genx32           genx-x16 Windows LLVM 8.0         cl -O2 *
-.\tests\foreach-mask-1.ispc runfail  genx32           genx-x16 Windows LLVM 8.0         cl -O2 *
-.\tests\atomics-1.ispc compfail     genx64           genx-x16 Windows LLVM 8.0         cl -O2 *
-.\tests\atomics-10.ispc compfail     genx64           genx-x16 Windows LLVM 8.0         cl -O2 *
-.\tests\atomics-11.ispc compfail     genx64           genx-x16 Windows LLVM 8.0         cl -O2 *
-.\tests\atomics-12.ispc compfail     genx64           genx-x16 Windows LLVM 8.0         cl -O2 *
-.\tests\atomics-13.ispc compfail     genx64           genx-x16 Windows LLVM 8.0         cl -O2 *
-.\tests\atomics-14.ispc compfail     genx64           genx-x16 Windows LLVM 8.0         cl -O2 *
-.\tests\atomics-2.ispc compfail     genx64           genx-x16 Windows LLVM 8.0         cl -O2 *
-.\tests\atomics-3.ispc compfail     genx64           genx-x16 Windows LLVM 8.0         cl -O2 *
-.\tests\atomics-4.ispc compfail     genx64           genx-x16 Windows LLVM 8.0         cl -O2 *
-.\tests\atomics-5.ispc compfail     genx64           genx-x16 Windows LLVM 8.0         cl -O2 *
-.\tests\atomics-6.ispc compfail     genx64           genx-x16 Windows LLVM 8.0         cl -O2 *
-.\tests\atomics-7.ispc compfail     genx64           genx-x16 Windows LLVM 8.0         cl -O2 *
-.\tests\atomics-8.ispc compfail     genx64           genx-x16 Windows LLVM 8.0         cl -O2 *
-.\tests\atomics-9.ispc compfail     genx64           genx-x16 Windows LLVM 8.0         cl -O2 *
-.\tests\atomics-swap.ispc compfail     genx64           genx-x16 Windows LLVM 8.0         cl -O2 *
-.\tests\atomics-uniform-1.ispc compfail     genx64           genx-x16 Windows LLVM 8.0         cl -O2 *
-.\tests\atomics-uniform-2.ispc compfail     genx64           genx-x16 Windows LLVM 8.0         cl -O2 *
-.\tests\atomics-uniform-3.ispc compfail     genx64           genx-x16 Windows LLVM 8.0         cl -O2 *
-.\tests\atomics-uniform-4.ispc compfail     genx64           genx-x16 Windows LLVM 8.0         cl -O2 *
-.\tests\atomics-uniform-5.ispc compfail     genx64           genx-x16 Windows LLVM 8.0         cl -O2 *
-.\tests\atomics-uniform-6.ispc compfail     genx64           genx-x16 Windows LLVM 8.0         cl -O2 *
-.\tests\atomics-uniform-7.ispc compfail     genx64           genx-x16 Windows LLVM 8.0         cl -O2 *
-.\tests\atomics-uniform-8.ispc compfail     genx64           genx-x16 Windows LLVM 8.0         cl -O2 *
-.\tests\atomics-uniform-9.ispc compfail     genx64           genx-x16 Windows LLVM 8.0         cl -O2 *
-.\tests\atomics-varyingptr-1.ispc compfail     genx64           genx-x16 Windows LLVM 8.0         cl -O2 *
-.\tests\atomics-varyingptr-2.ispc compfail     genx64           genx-x16 Windows LLVM 8.0         cl -O2 *
-.\tests\atomics-varyingptr-3.ispc compfail     genx64           genx-x16 Windows LLVM 8.0         cl -O2 *
-.\tests\atomics-varyingptr-4.ispc compfail     genx64           genx-x16 Windows LLVM 8.0         cl -O2 *
-.\tests\funcptr-null-2.ispc compfail     genx64           genx-x16 Windows LLVM 8.0         cl -O2 *
-.\tests\funcptr-null-3.ispc compfail     genx64           genx-x16 Windows LLVM 8.0         cl -O2 *
-.\tests\funcptr-null-4.ispc compfail     genx64           genx-x16 Windows LLVM 8.0         cl -O2 *
-.\tests\funcptr-null-5.ispc compfail     genx64           genx-x16 Windows LLVM 8.0         cl -O2 *
-.\tests\funcptr-null-6.ispc compfail     genx64           genx-x16 Windows LLVM 8.0         cl -O2 *
-.\tests\funcptr-uniform-7.ispc compfail     genx64           genx-x16 Windows LLVM 8.0         cl -O2 *
-.\tests\funcptr-uniform-8.ispc compfail     genx64           genx-x16 Windows LLVM 8.0         cl -O2 *
-.\tests\funcptr-uniform-9.ispc compfail     genx64           genx-x16 Windows LLVM 8.0         cl -O2 *
-.\tests\funcptr-varying-5.ispc compfail     genx64           genx-x16 Windows LLVM 8.0         cl -O2 *
-.\tests\funcptr-varying-7.ispc compfail     genx64           genx-x16 Windows LLVM 8.0         cl -O2 *
-.\tests\funcptr-varying-8.ispc compfail     genx64           genx-x16 Windows LLVM 8.0         cl -O2 *
-.\tests\funcptr-varying-9.ispc compfail     genx64           genx-x16 Windows LLVM 8.0         cl -O2 *
-.\tests\recursion-forward-func-decl.ispc runfail     genx64           genx-x16 Windows LLVM 8.0         cl -O2 *
-.\tests\recursion.ispc runfail     genx64           genx-x16 Windows LLVM 8.0         cl -O2 *
-.\tests\1548.ispc runfail  genx64       genx-x16 Windows LLVM 8.0         cl -O2 *
-.\tests\abs-int.ispc runfail  genx64       genx-x16 Windows LLVM 8.0         cl -O2 *
-.\tests\array-gather-multi-unif.ispc runfail  genx64       genx-x16 Windows LLVM 8.0         cl -O2 *
-.\tests\array-mixed-unif-vary-indexing-2.ispc runfail  genx64       genx-x16 Windows LLVM 8.0         cl -O2 *
-.\tests\array-mixed-unif-vary-indexing.ispc runfail  genx64       genx-x16 Windows LLVM 8.0         cl -O2 *
-.\tests\array-multidim-gather-scatter.ispc runfail  genx64       genx-x16 Windows LLVM 8.0         cl -O2 *
-.\tests\asin.ispc compfail  genx64       genx-x16 Windows LLVM 8.0         cl -O2 *
-.\tests\cfor-gs-double-improve-multidim-struct-1.ispc runfail  genx64       genx-x16 Windows LLVM 8.0         cl -O2 *
-.\tests\cfor-gs-improve-multidim-struct-1.ispc runfail  genx64       genx-x16 Windows LLVM 8.0         cl -O2 *
-.\tests\chkstk.ispc runfail  genx64       genx-x16 Windows LLVM 8.0         cl -O2 *
-.\tests\foreach-mask.ispc runfail  genx64       genx-x16 Windows LLVM 8.0         cl -O2 *
-.\tests\foreach-mask-1.ispc runfail  genx64       genx-x16 Windows LLVM 8.0         cl -O2 *
-.\tests\funcptr-varying-1.ispc compfail  genx64       genx-x16 Windows LLVM 8.0         cl -O2 *
-.\tests\funcptr-varying-2.ispc compfail  genx64       genx-x16 Windows LLVM 8.0         cl -O2 *
-.\tests\funcptr-varying-3.ispc compfail  genx64       genx-x16 Windows LLVM 8.0         cl -O2 *
-.\tests\funcptr-varying-4.ispc compfail  genx64       genx-x16 Windows LLVM 8.0         cl -O2 *
-.\tests\funcptr-varying-6.ispc compfail  genx64       genx-x16 Windows LLVM 8.0         cl -O2 *
-.\tests\gather-double-5.ispc runfail  genx64       genx-x16 Windows LLVM 8.0         cl -O2 *
-.\tests\gather-double-6.ispc runfail  genx64       genx-x16 Windows LLVM 8.0         cl -O2 *
-.\tests\gather-double-7.ispc runfail  genx64       genx-x16 Windows LLVM 8.0         cl -O2 *
-.\tests\gather-double-8.ispc runfail  genx64       genx-x16 Windows LLVM 8.0         cl -O2 *
-.\tests\gather-float-5.ispc runfail  genx64       genx-x16 Windows LLVM 8.0         cl -O2 *
-.\tests\gather-float-6.ispc runfail  genx64       genx-x16 Windows LLVM 8.0         cl -O2 *
-.\tests\gather-float-7.ispc runfail  genx64       genx-x16 Windows LLVM 8.0         cl -O2 *
-.\tests\gather-float-8.ispc runfail  genx64       genx-x16 Windows LLVM 8.0         cl -O2 *
-.\tests\gather-int16-5.ispc runfail  genx64       genx-x16 Windows LLVM 8.0         cl -O2 *
-.\tests\gather-int16-6.ispc runfail  genx64       genx-x16 Windows LLVM 8.0         cl -O2 *
-.\tests\gather-int16-7.ispc runfail  genx64       genx-x16 Windows LLVM 8.0         cl -O2 *
-.\tests\gather-int16-8.ispc runfail  genx64       genx-x16 Windows LLVM 8.0         cl -O2 *
-.\tests\gather-int32-5.ispc runfail  genx64       genx-x16 Windows LLVM 8.0         cl -O2 *
-.\tests\gather-int32-6.ispc runfail  genx64       genx-x16 Windows LLVM 8.0         cl -O2 *
-.\tests\gather-int32-7.ispc runfail  genx64       genx-x16 Windows LLVM 8.0         cl -O2 *
-.\tests\gather-int32-8.ispc runfail  genx64       genx-x16 Windows LLVM 8.0         cl -O2 *
-.\tests\gather-int64-5.ispc runfail  genx64       genx-x16 Windows LLVM 8.0         cl -O2 *
-.\tests\gather-int64-6.ispc runfail  genx64       genx-x16 Windows LLVM 8.0         cl -O2 *
-.\tests\gather-int64-7.ispc runfail  genx64       genx-x16 Windows LLVM 8.0         cl -O2 *
-.\tests\gather-int64-8.ispc runfail  genx64       genx-x16 Windows LLVM 8.0         cl -O2 *
-.\tests\gather-int8-5.ispc runfail  genx64       genx-x16 Windows LLVM 8.0         cl -O2 *
-.\tests\gather-int8-6.ispc runfail  genx64       genx-x16 Windows LLVM 8.0         cl -O2 *
-.\tests\gather-int8-7.ispc runfail  genx64       genx-x16 Windows LLVM 8.0         cl -O2 *
-.\tests\gather-int8-8.ispc runfail  genx64       genx-x16 Windows LLVM 8.0         cl -O2 *
-.\tests\global-array-3.ispc runfail  genx64       genx-x16 Windows LLVM 8.0         cl -O2 *
-.\tests\global-array-4.ispc runfail  genx64       genx-x16 Windows LLVM 8.0         cl -O2 *
-.\tests\half-3.ispc runfail  genx64       genx-x16 Windows LLVM 8.0         cl -O2 *
-.\tests\half.ispc runfail  genx64       genx-x16 Windows LLVM 8.0         cl -O2 *
-.\tests\idiv.ispc runfail  genx64       genx-x16 Windows LLVM 8.0         cl -O2 *
-.\tests\isnan.ispc compfail  genx64       genx-x16 Windows LLVM 8.0         cl -O2 *
-.\tests\local-atomics-varyingptr-1.ispc runfail  genx64       genx-x16 Windows LLVM 8.0         cl -O2 *
-.\tests\local-atomics-varyingptr-2.ispc runfail  genx64       genx-x16 Windows LLVM 8.0         cl -O2 *
-.\tests\local-atomics-varyingptr-3.ispc runfail  genx64       genx-x16 Windows LLVM 8.0         cl -O2 *
-.\tests\local-atomics-varyingptr-4.ispc runfail  genx64       genx-x16 Windows LLVM 8.0         cl -O2 *
-.\tests\masked-struct-scatter-varying.ispc runfail  genx64       genx-x16 Windows LLVM 8.0         cl -O2 *
-.\tests\nested-structs-2.ispc runfail  genx64       genx-x16 Windows LLVM 8.0         cl -O2 *
-.\tests\print_bool.ispc runfail  genx64       genx-x16 Windows LLVM 8.0         cl -O2 *
-.\tests\print_bool_simd.ispc runfail  genx64       genx-x16 Windows LLVM 8.0         cl -O2 *
-.\tests\print_uniform.ispc runfail  genx64       genx-x16 Windows LLVM 8.0         cl -O2 *
-.\tests\print_varying.ispc runfail  genx64       genx-x16 Windows LLVM 8.0         cl -O2 *
-.\tests\print_varying_simd.ispc runfail  genx64       genx-x16 Windows LLVM 8.0         cl -O2 *
-.\tests\ptr-15.ispc runfail  genx64       genx-x16 Windows LLVM 8.0         cl -O2 *
-.\tests\ptr-22.ispc runfail  genx64       genx-x16 Windows LLVM 8.0         cl -O2 *
-.\tests\ptr-cmp-1.ispc runfail  genx64       genx-x16 Windows LLVM 8.0         cl -O2 *
-.\tests\scatter-struct.ispc runfail  genx64       genx-x16 Windows LLVM 8.0         cl -O2 *
-.\tests\select-array-ptr-typeconv.ispc runfail  genx64       genx-x16 Windows LLVM 8.0         cl -O2 *
-.\tests\soa-16.ispc runfail  genx64       genx-x16 Windows LLVM 8.0         cl -O2 *
-.\tests\soa-17.ispc runfail  genx64       genx-x16 Windows LLVM 8.0         cl -O2 *
-.\tests\soa-20.ispc runfail  genx64       genx-x16 Windows LLVM 8.0         cl -O2 *
-.\tests\soa-29.ispc runfail  genx64       genx-x16 Windows LLVM 8.0         cl -O2 *
-.\tests\struct-nested-1.ispc runfail  genx64       genx-x16 Windows LLVM 8.0         cl -O2 *
-.\tests\test-147.ispc runfail  genx64       genx-x16 Windows LLVM 8.0         cl -O2 *
-.\tests\transcendentals-5-0.ispc compfail  genx64       genx-x16 Windows LLVM 8.0         cl -O2 *
-.\tests\transcendentals-5-1.ispc compfail  genx64       genx-x16 Windows LLVM 8.0         cl -O2 *
-.\tests\transcendentals-5-2.ispc compfail  genx64       genx-x16 Windows LLVM 8.0         cl -O2 *
-.\tests\transcendentals-5-3.ispc compfail  genx64       genx-x16 Windows LLVM 8.0         cl -O2 *
-.\tests\transcendentals-6-0.ispc compfail  genx64       genx-x16 Windows LLVM 8.0         cl -O2 *
-.\tests\transcendentals-6-1.ispc compfail  genx64       genx-x16 Windows LLVM 8.0         cl -O2 *
-.\tests\transcendentals-6-2.ispc compfail  genx64       genx-x16 Windows LLVM 8.0         cl -O2 *
-.\tests\transcendentals-6-3.ispc compfail  genx64       genx-x16 Windows LLVM 8.0         cl -O2 *
-.\tests\transcendentals-7-0.ispc compfail  genx64       genx-x16 Windows LLVM 8.0         cl -O2 *
-.\tests\transcendentals-7-1.ispc compfail  genx64       genx-x16 Windows LLVM 8.0         cl -O2 *
-.\tests\transcendentals-7-2.ispc compfail  genx64       genx-x16 Windows LLVM 8.0         cl -O2 *
-.\tests\transcendentals-7-3.ispc compfail  genx64       genx-x16 Windows LLVM 8.0         cl -O2 *
-.\tests\transcendentals-8-0.ispc compfail  genx64       genx-x16 Windows LLVM 8.0         cl -O2 *
-.\tests\transcendentals-8-1.ispc compfail  genx64       genx-x16 Windows LLVM 8.0         cl -O2 *
-.\tests\transcendentals-8-2.ispc compfail  genx64       genx-x16 Windows LLVM 8.0         cl -O2 *
-.\tests\transcendentals-8-3.ispc compfail  genx64       genx-x16 Windows LLVM 8.0         cl -O2 *
-.\tests\transcendentals-9-0.ispc compfail  genx64       genx-x16 Windows LLVM 8.0         cl -O2 *
-.\tests\transcendentals-9-1.ispc compfail  genx64       genx-x16 Windows LLVM 8.0         cl -O2 *
-.\tests\transcendentals-9-2.ispc compfail  genx64       genx-x16 Windows LLVM 8.0         cl -O2 *
-.\tests\transcendentals-9-3.ispc compfail  genx64       genx-x16 Windows LLVM 8.0         cl -O2 *
-.\tests\typedef-2.ispc runfail  genx64       genx-x16 Windows LLVM 8.0         cl -O2 *
-./tests/atomics-1.ispc compfail     genx64           genx-x16   Linux LLVM 8.0 clang++8.0 -O2 *
-./tests/atomics-10.ispc compfail     genx64           genx-x16   Linux LLVM 8.0 clang++8.0 -O2 *
-./tests/atomics-11.ispc compfail     genx64           genx-x16   Linux LLVM 8.0 clang++8.0 -O2 *
-./tests/atomics-12.ispc compfail     genx64           genx-x16   Linux LLVM 8.0 clang++8.0 -O2 *
-./tests/atomics-13.ispc compfail     genx64           genx-x16   Linux LLVM 8.0 clang++8.0 -O2 *
-./tests/atomics-14.ispc compfail     genx64           genx-x16   Linux LLVM 8.0 clang++8.0 -O2 *
-./tests/atomics-2.ispc compfail     genx64           genx-x16   Linux LLVM 8.0 clang++8.0 -O2 *
-./tests/atomics-3.ispc compfail     genx64           genx-x16   Linux LLVM 8.0 clang++8.0 -O2 *
-./tests/atomics-4.ispc compfail     genx64           genx-x16   Linux LLVM 8.0 clang++8.0 -O2 *
-./tests/atomics-5.ispc compfail     genx64           genx-x16   Linux LLVM 8.0 clang++8.0 -O2 *
-./tests/atomics-6.ispc compfail     genx64           genx-x16   Linux LLVM 8.0 clang++8.0 -O2 *
-./tests/atomics-7.ispc compfail     genx64           genx-x16   Linux LLVM 8.0 clang++8.0 -O2 *
-./tests/atomics-8.ispc compfail     genx64           genx-x16   Linux LLVM 8.0 clang++8.0 -O2 *
-./tests/atomics-9.ispc compfail     genx64           genx-x16   Linux LLVM 8.0 clang++8.0 -O2 *
-./tests/atomics-swap.ispc compfail     genx64           genx-x16   Linux LLVM 8.0 clang++8.0 -O2 *
-./tests/atomics-uniform-1.ispc compfail     genx64           genx-x16   Linux LLVM 8.0 clang++8.0 -O2 *
-./tests/atomics-uniform-2.ispc compfail     genx64           genx-x16   Linux LLVM 8.0 clang++8.0 -O2 *
-./tests/atomics-uniform-3.ispc compfail     genx64           genx-x16   Linux LLVM 8.0 clang++8.0 -O2 *
-./tests/atomics-uniform-4.ispc compfail     genx64           genx-x16   Linux LLVM 8.0 clang++8.0 -O2 *
-./tests/atomics-uniform-5.ispc compfail     genx64           genx-x16   Linux LLVM 8.0 clang++8.0 -O2 *
-./tests/atomics-uniform-6.ispc compfail     genx64           genx-x16   Linux LLVM 8.0 clang++8.0 -O2 *
-./tests/atomics-uniform-7.ispc compfail     genx64           genx-x16   Linux LLVM 8.0 clang++8.0 -O2 *
-./tests/atomics-uniform-8.ispc compfail     genx64           genx-x16   Linux LLVM 8.0 clang++8.0 -O2 *
-./tests/atomics-uniform-9.ispc compfail     genx64           genx-x16   Linux LLVM 8.0 clang++8.0 -O2 *
-./tests/atomics-varyingptr-1.ispc compfail     genx64           genx-x16   Linux LLVM 8.0 clang++8.0 -O2 *
-./tests/atomics-varyingptr-2.ispc compfail     genx64           genx-x16   Linux LLVM 8.0 clang++8.0 -O2 *
-./tests/atomics-varyingptr-3.ispc compfail     genx64           genx-x16   Linux LLVM 8.0 clang++8.0 -O2 *
-./tests/atomics-varyingptr-4.ispc compfail     genx64           genx-x16   Linux LLVM 8.0 clang++8.0 -O2 *
-./tests/funcptr-null-2.ispc compfail     genx64           genx-x16   Linux LLVM 8.0 clang++8.0 -O2 *
-./tests/funcptr-null-3.ispc compfail     genx64           genx-x16   Linux LLVM 8.0 clang++8.0 -O2 *
-./tests/funcptr-null-4.ispc compfail     genx64           genx-x16   Linux LLVM 8.0 clang++8.0 -O2 *
-./tests/funcptr-null-5.ispc compfail     genx64           genx-x16   Linux LLVM 8.0 clang++8.0 -O2 *
-./tests/funcptr-null-6.ispc compfail     genx64           genx-x16   Linux LLVM 8.0 clang++8.0 -O2 *
-./tests/funcptr-uniform-10.ispc compfail     genx64           genx-x16   Linux LLVM 8.0 clang++8.0 -O2 *
-./tests/funcptr-uniform-2.ispc compfail     genx64           genx-x16   Linux LLVM 8.0 clang++8.0 -O2 *
-./tests/funcptr-uniform-3.ispc compfail     genx64           genx-x16   Linux LLVM 8.0 clang++8.0 -O2 *
-./tests/funcptr-uniform-7.ispc compfail     genx64           genx-x16   Linux LLVM 8.0 clang++8.0 -O2 *
-./tests/funcptr-uniform-8.ispc compfail     genx64           genx-x16   Linux LLVM 8.0 clang++8.0 -O2 *
-./tests/funcptr-uniform-9.ispc compfail     genx64           genx-x16   Linux LLVM 8.0 clang++8.0 -O2 *
-./tests/funcptr-varying-5.ispc compfail     genx64           genx-x16   Linux LLVM 8.0 clang++8.0 -O2 *
-./tests/funcptr-varying-7.ispc compfail     genx64           genx-x16   Linux LLVM 8.0 clang++8.0 -O2 *
-./tests/funcptr-varying-8.ispc compfail     genx64           genx-x16   Linux LLVM 8.0 clang++8.0 -O2 *
-./tests/funcptr-varying-9.ispc compfail     genx64           genx-x16   Linux LLVM 8.0 clang++8.0 -O2 *
-./tests/1548.ispc runfail  genx64           genx-x16   Linux LLVM 8.0 clang++8.0 -O2 *
-./tests/asin.ispc compfail  genx64           genx-x16   Linux LLVM 8.0 clang++8.0 -O2 *
-./tests/foreach-mask.ispc runfail  genx64           genx-x16   Linux LLVM 8.0 clang++8.0 -O2 *
-./tests/foreach-mask-1.ispc runfail  genx64           genx-x16   Linux LLVM 8.0 clang++8.0 -O2 *
-./tests/funcptr-varying-1.ispc compfail  genx64           genx-x16   Linux LLVM 8.0 clang++8.0 -O2 *
-./tests/funcptr-varying-2.ispc compfail  genx64           genx-x16   Linux LLVM 8.0 clang++8.0 -O2 *
-./tests/funcptr-varying-3.ispc compfail  genx64           genx-x16   Linux LLVM 8.0 clang++8.0 -O2 *
-./tests/funcptr-varying-4.ispc compfail  genx64           genx-x16   Linux LLVM 8.0 clang++8.0 -O2 *
-./tests/funcptr-varying-6.ispc compfail  genx64           genx-x16   Linux LLVM 8.0 clang++8.0 -O2 *
-./tests/gather-double-7.ispc runfail  genx64           genx-x16   Linux LLVM 8.0 clang++8.0 -O2 *
-./tests/gather-double-8.ispc runfail  genx64           genx-x16   Linux LLVM 8.0 clang++8.0 -O2 *
-./tests/gather-int64-7.ispc runfail  genx64           genx-x16   Linux LLVM 8.0 clang++8.0 -O2 *
-./tests/gather-int64-8.ispc runfail  genx64           genx-x16   Linux LLVM 8.0 clang++8.0 -O2 *
-./tests/half-3.ispc runfail  genx64           genx-x16   Linux LLVM 8.0 clang++8.0 -O2 *
-./tests/half.ispc runfail  genx64           genx-x16   Linux LLVM 8.0 clang++8.0 -O2 *
-./tests/idiv.ispc runfail  genx64           genx-x16   Linux LLVM 8.0 clang++8.0 -O2 *
-./tests/isnan.ispc compfail  genx64           genx-x16   Linux LLVM 8.0 clang++8.0 -O2 *
-./tests/local-atomics-varyingptr-1.ispc runfail  genx64           genx-x16   Linux LLVM 8.0 clang++8.0 -O2 *
-./tests/local-atomics-varyingptr-2.ispc runfail  genx64           genx-x16   Linux LLVM 8.0 clang++8.0 -O2 *
-./tests/local-atomics-varyingptr-3.ispc runfail  genx64           genx-x16   Linux LLVM 8.0 clang++8.0 -O2 *
-./tests/local-atomics-varyingptr-4.ispc runfail  genx64           genx-x16   Linux LLVM 8.0 clang++8.0 -O2 *
-./tests/masked-struct-scatter-varying.ispc runfail  genx64           genx-x16   Linux LLVM 8.0 clang++8.0 -O2 *
-./tests/ptr-15.ispc runfail  genx64           genx-x16   Linux LLVM 8.0 clang++8.0 -O2 *
-./tests/ptr-cmp-1.ispc runfail  genx64           genx-x16   Linux LLVM 8.0 clang++8.0 -O2 *
-./tests/short-circuit-10.ispc runfail  genx64           genx-x16   Linux LLVM 8.0 clang++8.0 -O2 *
-./tests/short-circuit-11.ispc runfail  genx64           genx-x16   Linux LLVM 8.0 clang++8.0 -O2 *
-./tests/test-147.ispc runfail  genx64           genx-x16   Linux LLVM 8.0 clang++8.0 -O2 *
-./tests/transcendentals-10-0.ispc compfail  genx64           genx-x16   Linux LLVM 8.0 clang++8.0 -O2 *
-./tests/transcendentals-5-0.ispc compfail  genx64           genx-x16   Linux LLVM 8.0 clang++8.0 -O2 *
-./tests/transcendentals-5-1.ispc compfail  genx64           genx-x16   Linux LLVM 8.0 clang++8.0 -O2 *
-./tests/transcendentals-5-2.ispc compfail  genx64           genx-x16   Linux LLVM 8.0 clang++8.0 -O2 *
-./tests/transcendentals-5-3.ispc compfail  genx64           genx-x16   Linux LLVM 8.0 clang++8.0 -O2 *
-./tests/transcendentals-6-0.ispc compfail  genx64           genx-x16   Linux LLVM 8.0 clang++8.0 -O2 *
-./tests/transcendentals-6-1.ispc compfail  genx64           genx-x16   Linux LLVM 8.0 clang++8.0 -O2 *
-./tests/transcendentals-6-2.ispc compfail  genx64           genx-x16   Linux LLVM 8.0 clang++8.0 -O2 *
-./tests/transcendentals-6-3.ispc compfail  genx64           genx-x16   Linux LLVM 8.0 clang++8.0 -O2 *
-./tests/transcendentals-7-0.ispc compfail  genx64           genx-x16   Linux LLVM 8.0 clang++8.0 -O2 *
-./tests/transcendentals-7-1.ispc compfail  genx64           genx-x16   Linux LLVM 8.0 clang++8.0 -O2 *
-./tests/transcendentals-7-2.ispc compfail  genx64           genx-x16   Linux LLVM 8.0 clang++8.0 -O2 *
-./tests/transcendentals-7-3.ispc compfail  genx64           genx-x16   Linux LLVM 8.0 clang++8.0 -O2 *
-./tests/transcendentals-8-0.ispc compfail  genx64           genx-x16   Linux LLVM 8.0 clang++8.0 -O2 *
-./tests/transcendentals-8-1.ispc compfail  genx64           genx-x16   Linux LLVM 8.0 clang++8.0 -O2 *
-./tests/transcendentals-8-2.ispc compfail  genx64           genx-x16   Linux LLVM 8.0 clang++8.0 -O2 *
-./tests/transcendentals-8-3.ispc compfail  genx64           genx-x16   Linux LLVM 8.0 clang++8.0 -O2 *
-./tests/transcendentals-9-0.ispc compfail  genx64           genx-x16   Linux LLVM 8.0 clang++8.0 -O2 *
-./tests/transcendentals-9-1.ispc compfail  genx64           genx-x16   Linux LLVM 8.0 clang++8.0 -O2 *
-./tests/transcendentals-9-2.ispc compfail  genx64           genx-x16   Linux LLVM 8.0 clang++8.0 -O2 *
-./tests/transcendentals-9-3.ispc compfail  genx64           genx-x16   Linux LLVM 8.0 clang++8.0 -O2 *
-./tests/atomics-1.ispc compfail     genx64           genx-x8   Linux LLVM 8.0 clang++8.0 -O2 *
-./tests/atomics-10.ispc compfail     genx64           genx-x8   Linux LLVM 8.0 clang++8.0 -O2 *
-./tests/atomics-11.ispc compfail     genx64           genx-x8   Linux LLVM 8.0 clang++8.0 -O2 *
-./tests/atomics-12.ispc compfail     genx64           genx-x8   Linux LLVM 8.0 clang++8.0 -O2 *
-./tests/atomics-13.ispc compfail     genx64           genx-x8   Linux LLVM 8.0 clang++8.0 -O2 *
-./tests/atomics-14.ispc compfail     genx64           genx-x8   Linux LLVM 8.0 clang++8.0 -O2 *
-./tests/atomics-2.ispc compfail     genx64           genx-x8   Linux LLVM 8.0 clang++8.0 -O2 *
-./tests/atomics-3.ispc compfail     genx64           genx-x8   Linux LLVM 8.0 clang++8.0 -O2 *
-./tests/atomics-4.ispc compfail     genx64           genx-x8   Linux LLVM 8.0 clang++8.0 -O2 *
-./tests/atomics-5.ispc compfail     genx64           genx-x8   Linux LLVM 8.0 clang++8.0 -O2 *
-./tests/atomics-6.ispc compfail     genx64           genx-x8   Linux LLVM 8.0 clang++8.0 -O2 *
-./tests/atomics-7.ispc compfail     genx64           genx-x8   Linux LLVM 8.0 clang++8.0 -O2 *
-./tests/atomics-8.ispc compfail     genx64           genx-x8   Linux LLVM 8.0 clang++8.0 -O2 *
-./tests/atomics-9.ispc compfail     genx64           genx-x8   Linux LLVM 8.0 clang++8.0 -O2 *
-./tests/atomics-swap.ispc compfail     genx64           genx-x8   Linux LLVM 8.0 clang++8.0 -O2 *
-./tests/atomics-uniform-1.ispc compfail     genx64           genx-x8   Linux LLVM 8.0 clang++8.0 -O2 *
-./tests/atomics-uniform-2.ispc compfail     genx64           genx-x8   Linux LLVM 8.0 clang++8.0 -O2 *
-./tests/atomics-uniform-3.ispc compfail     genx64           genx-x8   Linux LLVM 8.0 clang++8.0 -O2 *
-./tests/atomics-uniform-4.ispc compfail     genx64           genx-x8   Linux LLVM 8.0 clang++8.0 -O2 *
-./tests/atomics-uniform-5.ispc compfail     genx64           genx-x8   Linux LLVM 8.0 clang++8.0 -O2 *
-./tests/atomics-uniform-6.ispc compfail     genx64           genx-x8   Linux LLVM 8.0 clang++8.0 -O2 *
-./tests/atomics-uniform-7.ispc compfail     genx64           genx-x8   Linux LLVM 8.0 clang++8.0 -O2 *
-./tests/atomics-uniform-8.ispc compfail     genx64           genx-x8   Linux LLVM 8.0 clang++8.0 -O2 *
-./tests/atomics-uniform-9.ispc compfail     genx64           genx-x8   Linux LLVM 8.0 clang++8.0 -O2 *
-./tests/atomics-varyingptr-1.ispc compfail     genx64           genx-x8   Linux LLVM 8.0 clang++8.0 -O2 *
-./tests/atomics-varyingptr-2.ispc compfail     genx64           genx-x8   Linux LLVM 8.0 clang++8.0 -O2 *
-./tests/atomics-varyingptr-3.ispc compfail     genx64           genx-x8   Linux LLVM 8.0 clang++8.0 -O2 *
-./tests/atomics-varyingptr-4.ispc compfail     genx64           genx-x8   Linux LLVM 8.0 clang++8.0 -O2 *
-./tests/funcptr-null-2.ispc compfail     genx64           genx-x8   Linux LLVM 8.0 clang++8.0 -O2 *
-./tests/funcptr-null-3.ispc compfail     genx64           genx-x8   Linux LLVM 8.0 clang++8.0 -O2 *
-./tests/funcptr-null-4.ispc compfail     genx64           genx-x8   Linux LLVM 8.0 clang++8.0 -O2 *
-./tests/funcptr-null-5.ispc compfail     genx64           genx-x8   Linux LLVM 8.0 clang++8.0 -O2 *
-./tests/funcptr-null-6.ispc compfail     genx64           genx-x8   Linux LLVM 8.0 clang++8.0 -O2 *
-./tests/funcptr-uniform-10.ispc runfail     genx64           genx-x8   Linux LLVM 8.0 clang++8.0 -O2 *
-./tests/funcptr-uniform-2.ispc runfail     genx64           genx-x8   Linux LLVM 8.0 clang++8.0 -O2 *
-./tests/funcptr-uniform-3.ispc runfail     genx64           genx-x8   Linux LLVM 8.0 clang++8.0 -O2 *
-./tests/funcptr-uniform-10.ispc runfail     genx64           genx-x16   Linux LLVM 8.0 clang++8.0 -O2 *
-./tests/funcptr-uniform-2.ispc runfail     genx64           genx-x16   Linux LLVM 8.0 clang++8.0 -O2 *
-./tests/funcptr-uniform-3.ispc runfail     genx64           genx-x16   Linux LLVM 8.0 clang++8.0 -O2 *
-./tests/funcptr-uniform-7.ispc compfail     genx64           genx-x8   Linux LLVM 8.0 clang++8.0 -O2 *
-./tests/funcptr-uniform-8.ispc compfail     genx64           genx-x8   Linux LLVM 8.0 clang++8.0 -O2 *
-./tests/funcptr-uniform-9.ispc compfail     genx64           genx-x8   Linux LLVM 8.0 clang++8.0 -O2 *
-./tests/funcptr-varying-5.ispc compfail     genx64           genx-x8   Linux LLVM 8.0 clang++8.0 -O2 *
-./tests/funcptr-varying-7.ispc compfail     genx64           genx-x8   Linux LLVM 8.0 clang++8.0 -O2 *
-./tests/funcptr-varying-8.ispc compfail     genx64           genx-x8   Linux LLVM 8.0 clang++8.0 -O2 *
-./tests/funcptr-varying-9.ispc compfail     genx64           genx-x8   Linux LLVM 8.0 clang++8.0 -O2 *
-./tests/pmuls-vi64.ispc runfail     genx64           genx-x8   Linux LLVM 8.0 clang++8.0 -O2 *
-./tests/pmuls-vi64.ispc runfail     genx64           genx-x16   Linux LLVM 8.0 clang++8.0 -O2 *
-./tests/1548.ispc runfail  genx64           genx-x8   Linux LLVM 8.0 clang++8.0 -O2 *
-./tests/asin.ispc compfail  genx64           genx-x8   Linux LLVM 8.0 clang++8.0 -O2 *
-./tests/foreach-mask.ispc runfail  genx64           genx-x8   Linux LLVM 8.0 clang++8.0 -O2 *
-./tests/foreach-mask-1.ispc runfail  genx64           genx-x8   Linux LLVM 8.0 clang++8.0 -O2 *
-./tests/funcptr-varying-1.ispc compfail  genx64           genx-x8   Linux LLVM 8.0 clang++8.0 -O2 *
-./tests/funcptr-varying-2.ispc compfail  genx64           genx-x8   Linux LLVM 8.0 clang++8.0 -O2 *
-./tests/funcptr-varying-3.ispc compfail  genx64           genx-x8   Linux LLVM 8.0 clang++8.0 -O2 *
-./tests/funcptr-varying-4.ispc compfail  genx64           genx-x8   Linux LLVM 8.0 clang++8.0 -O2 *
-./tests/funcptr-varying-6.ispc compfail  genx64           genx-x8   Linux LLVM 8.0 clang++8.0 -O2 *
-./tests/gather-double-7.ispc runfail  genx64           genx-x8   Linux LLVM 8.0 clang++8.0 -O2 *
-./tests/gather-double-8.ispc runfail  genx64           genx-x8   Linux LLVM 8.0 clang++8.0 -O2 *
-./tests/gather-int64-7.ispc runfail  genx64           genx-x8   Linux LLVM 8.0 clang++8.0 -O2 *
-./tests/gather-int64-8.ispc runfail  genx64           genx-x8   Linux LLVM 8.0 clang++8.0 -O2 *
-./tests/half-3.ispc runfail  genx64           genx-x8   Linux LLVM 8.0 clang++8.0 -O2 *
-./tests/half.ispc runfail  genx64           genx-x8   Linux LLVM 8.0 clang++8.0 -O2 *
-./tests/idiv.ispc runfail  genx64           genx-x8   Linux LLVM 8.0 clang++8.0 -O2 *
-./tests/isnan.ispc compfail  genx64           genx-x8   Linux LLVM 8.0 clang++8.0 -O2 *
-./tests/local-atomics-varyingptr-1.ispc runfail  genx64           genx-x8   Linux LLVM 8.0 clang++8.0 -O2 *
-./tests/local-atomics-varyingptr-2.ispc runfail  genx64           genx-x8   Linux LLVM 8.0 clang++8.0 -O2 *
-./tests/local-atomics-varyingptr-3.ispc runfail  genx64           genx-x8   Linux LLVM 8.0 clang++8.0 -O2 *
-./tests/local-atomics-varyingptr-4.ispc runfail  genx64           genx-x8   Linux LLVM 8.0 clang++8.0 -O2 *
-./tests/ptr-15.ispc runfail  genx64           genx-x8   Linux LLVM 8.0 clang++8.0 -O2 *
-./tests/short-circuit-10.ispc runfail  genx64           genx-x8   Linux LLVM 8.0 clang++8.0 -O2 *
-./tests/short-circuit-11.ispc runfail  genx64           genx-x8   Linux LLVM 8.0 clang++8.0 -O2 *
-./tests/test-147.ispc runfail  genx64           genx-x8   Linux LLVM 8.0 clang++8.0 -O2 *
-./tests/transcendentals-10-0.ispc compfail  genx64           genx-x8   Linux LLVM 8.0 clang++8.0 -O2 *
-./tests/transcendentals-5-0.ispc compfail  genx64           genx-x8   Linux LLVM 8.0 clang++8.0 -O2 *
-./tests/transcendentals-5-1.ispc compfail  genx64           genx-x8   Linux LLVM 8.0 clang++8.0 -O2 *
-./tests/transcendentals-5-2.ispc compfail  genx64           genx-x8   Linux LLVM 8.0 clang++8.0 -O2 *
-./tests/transcendentals-5-3.ispc compfail  genx64           genx-x8   Linux LLVM 8.0 clang++8.0 -O2 *
-./tests/transcendentals-6-0.ispc compfail  genx64           genx-x8   Linux LLVM 8.0 clang++8.0 -O2 *
-./tests/transcendentals-6-1.ispc compfail  genx64           genx-x8   Linux LLVM 8.0 clang++8.0 -O2 *
-./tests/transcendentals-6-2.ispc compfail  genx64           genx-x8   Linux LLVM 8.0 clang++8.0 -O2 *
-./tests/transcendentals-6-3.ispc compfail  genx64           genx-x8   Linux LLVM 8.0 clang++8.0 -O2 *
-./tests/transcendentals-7-0.ispc compfail  genx64           genx-x8   Linux LLVM 8.0 clang++8.0 -O2 *
-./tests/transcendentals-7-1.ispc compfail  genx64           genx-x8   Linux LLVM 8.0 clang++8.0 -O2 *
-./tests/transcendentals-7-2.ispc compfail  genx64           genx-x8   Linux LLVM 8.0 clang++8.0 -O2 *
-./tests/transcendentals-7-3.ispc compfail  genx64           genx-x8   Linux LLVM 8.0 clang++8.0 -O2 *
-./tests/transcendentals-8-0.ispc compfail  genx64           genx-x8   Linux LLVM 8.0 clang++8.0 -O2 *
-./tests/transcendentals-8-1.ispc compfail  genx64           genx-x8   Linux LLVM 8.0 clang++8.0 -O2 *
-./tests/transcendentals-8-2.ispc compfail  genx64           genx-x8   Linux LLVM 8.0 clang++8.0 -O2 *
-./tests/transcendentals-8-3.ispc compfail  genx64           genx-x8   Linux LLVM 8.0 clang++8.0 -O2 *
-./tests/transcendentals-9-0.ispc compfail  genx64           genx-x8   Linux LLVM 8.0 clang++8.0 -O2 *
-./tests/transcendentals-9-1.ispc compfail  genx64           genx-x8   Linux LLVM 8.0 clang++8.0 -O2 *
-./tests/transcendentals-9-2.ispc compfail  genx64           genx-x8   Linux LLVM 8.0 clang++8.0 -O2 *
-./tests/transcendentals-9-3.ispc compfail  genx64           genx-x8   Linux LLVM 8.0 clang++8.0 -O2 *
-
-.\tests\1546.ispc runfail  genx64        genx-x8 Windows LLVM 8.0         cl  *
-.\tests\1548.ispc runfail  genx64        genx-x8 Windows LLVM 8.0         cl  *
-.\tests\abs-int.ispc runfail  genx64        genx-x8 Windows LLVM 8.0         cl  *
-.\tests\array-gather-multi-unif.ispc runfail  genx64        genx-x8 Windows LLVM 8.0         cl  *
-.\tests\array-mixed-unif-vary-indexing-2.ispc runfail  genx64        genx-x8 Windows LLVM 8.0         cl  *
-.\tests\array-mixed-unif-vary-indexing.ispc runfail  genx64        genx-x8 Windows LLVM 8.0         cl  *
-.\tests\array-multidim-gather-scatter.ispc runfail  genx64        genx-x8 Windows LLVM 8.0         cl  *
-.\tests\cfor-gs-improve-multidim-struct-1.ispc runfail  genx64        genx-x8 Windows LLVM 8.0         cl  *
-.\tests\foreach-mask-1.ispc runfail  genx64        genx-x8 Windows LLVM 8.0         cl  *
-.\tests\foreach-mask.ispc runfail  genx64        genx-x8 Windows LLVM 8.0         cl  *
-.\tests\foreach-unique-1.ispc runfail  genx64        genx-x8 Windows LLVM 8.0         cl  *
-.\tests\foreach-unique-10.ispc runfail  genx64        genx-x8 Windows LLVM 8.0         cl  *
-.\tests\foreach-unique-11.ispc runfail  genx64        genx-x8 Windows LLVM 8.0         cl  *
-.\tests\foreach-unique-2.ispc runfail  genx64        genx-x8 Windows LLVM 8.0         cl  *
-.\tests\foreach-unique-3.ispc runfail  genx64        genx-x8 Windows LLVM 8.0         cl  *
-.\tests\foreach-unique-4.ispc runfail  genx64        genx-x8 Windows LLVM 8.0         cl  *
-.\tests\foreach-unique-5.ispc runfail  genx64        genx-x8 Windows LLVM 8.0         cl  *
-.\tests\foreach-unique-6.ispc runfail  genx64        genx-x8 Windows LLVM 8.0         cl  *
-.\tests\foreach-unique-7.ispc runfail  genx64        genx-x8 Windows LLVM 8.0         cl  *
-.\tests\foreach-unique-8.ispc runfail  genx64        genx-x8 Windows LLVM 8.0         cl  *
-.\tests\foreach-unique-9.ispc runfail  genx64        genx-x8 Windows LLVM 8.0         cl  *
-.\tests\funcptr-uniform-10.ispc runfail  genx64        genx-x8 Windows LLVM 8.0         cl  *
-.\tests\funcptr-uniform-2.ispc runfail  genx64        genx-x8 Windows LLVM 8.0         cl  *
-.\tests\funcptr-uniform-3.ispc runfail  genx64        genx-x8 Windows LLVM 8.0         cl  *
-.\tests\gather-double-5.ispc runfail  genx64        genx-x8 Windows LLVM 8.0         cl  *
-.\tests\gather-double-6.ispc runfail  genx64        genx-x8 Windows LLVM 8.0         cl  *
-.\tests\gather-double-7.ispc runfail  genx64        genx-x8 Windows LLVM 8.0         cl  *
-.\tests\gather-double-8.ispc runfail  genx64        genx-x8 Windows LLVM 8.0         cl  *
-.\tests\gather-float-5.ispc runfail  genx64        genx-x8 Windows LLVM 8.0         cl  *
-.\tests\gather-float-6.ispc runfail  genx64        genx-x8 Windows LLVM 8.0         cl  *
-.\tests\gather-float-7.ispc runfail  genx64        genx-x8 Windows LLVM 8.0         cl  *
-.\tests\gather-float-8.ispc runfail  genx64        genx-x8 Windows LLVM 8.0         cl  *
-.\tests\gather-int16-5.ispc runfail  genx64        genx-x8 Windows LLVM 8.0         cl  *
-.\tests\gather-int16-6.ispc runfail  genx64        genx-x8 Windows LLVM 8.0         cl  *
-.\tests\gather-int16-7.ispc runfail  genx64        genx-x8 Windows LLVM 8.0         cl  *
-.\tests\gather-int16-8.ispc runfail  genx64        genx-x8 Windows LLVM 8.0         cl  *
-.\tests\gather-int16.ispc runfail  genx64        genx-x8 Windows LLVM 8.0         cl  *
-.\tests\gather-int32-5.ispc runfail  genx64        genx-x8 Windows LLVM 8.0         cl  *
-.\tests\gather-int32-6.ispc runfail  genx64        genx-x8 Windows LLVM 8.0         cl  *
-.\tests\gather-int32-7.ispc runfail  genx64        genx-x8 Windows LLVM 8.0         cl  *
-.\tests\gather-int32-8.ispc runfail  genx64        genx-x8 Windows LLVM 8.0         cl  *
-.\tests\gather-int64-5.ispc runfail  genx64        genx-x8 Windows LLVM 8.0         cl  *
-.\tests\gather-int64-6.ispc runfail  genx64        genx-x8 Windows LLVM 8.0         cl  *
-.\tests\gather-int64-7.ispc runfail  genx64        genx-x8 Windows LLVM 8.0         cl  *
-.\tests\gather-int64-8.ispc runfail  genx64        genx-x8 Windows LLVM 8.0         cl  *
-.\tests\gather-int8-5.ispc runfail  genx64        genx-x8 Windows LLVM 8.0         cl  *
-.\tests\gather-int8-6.ispc runfail  genx64        genx-x8 Windows LLVM 8.0         cl  *
-.\tests\gather-int8-7.ispc runfail  genx64        genx-x8 Windows LLVM 8.0         cl  *
-.\tests\gather-int8-8.ispc runfail  genx64        genx-x8 Windows LLVM 8.0         cl  *
-.\tests\gather-int8.ispc runfail  genx64        genx-x8 Windows LLVM 8.0         cl  *
-.\tests\global-array-3.ispc runfail  genx64        genx-x8 Windows LLVM 8.0         cl  *
-.\tests\global-array-4.ispc runfail  genx64        genx-x8 Windows LLVM 8.0         cl  *
-.\tests\half-3.ispc runfail  genx64        genx-x8 Windows LLVM 8.0         cl  *
-.\tests\half.ispc runfail  genx64        genx-x8 Windows LLVM 8.0         cl  *
-.\tests\idiv.ispc runfail  genx64        genx-x8 Windows LLVM 8.0         cl  *
-.\tests\local-atomics-varyingptr-1.ispc runfail  genx64        genx-x8 Windows LLVM 8.0         cl  *
-.\tests\local-atomics-varyingptr-2.ispc runfail  genx64        genx-x8 Windows LLVM 8.0         cl  *
-.\tests\local-atomics-varyingptr-3.ispc runfail  genx64        genx-x8 Windows LLVM 8.0         cl  *
-.\tests\local-atomics-varyingptr-4.ispc runfail  genx64        genx-x8 Windows LLVM 8.0         cl  *
-.\tests\nested-structs-2.ispc runfail  genx64        genx-x8 Windows LLVM 8.0         cl  *
-.\tests\packed-load-2.ispc runfail  genx64        genx-x8 Windows LLVM 8.0         cl  *
-.\tests\pmuls-vi64.ispc runfail  genx64        genx-x8 Windows LLVM 8.0         cl  *
-.\tests\pragma-ignore-warning.ispc runfail  genx64        genx-x8 Windows LLVM 8.0         cl  *
-.\tests\print_bool.ispc runfail  genx64        genx-x8 Windows LLVM 8.0         cl  *
-.\tests\print_bool_simd.ispc runfail  genx64        genx-x8 Windows LLVM 8.0         cl  *
-.\tests\print_uniform.ispc runfail  genx64        genx-x8 Windows LLVM 8.0         cl  *
-.\tests\print_varying.ispc runfail  genx64        genx-x8 Windows LLVM 8.0         cl  *
-.\tests\print_varying_simd.ispc runfail  genx64        genx-x8 Windows LLVM 8.0         cl  *
-.\tests\ptr-15.ispc runfail  genx64        genx-x8 Windows LLVM 8.0         cl  *
-.\tests\ptr-22.ispc runfail  genx64        genx-x8 Windows LLVM 8.0         cl  *
-.\tests\ptr-varying-unif-index.ispc runfail  genx64        genx-x8 Windows LLVM 8.0         cl  *
-.\tests\ref-vec-param-index.ispc runfail  genx64        genx-x8 Windows LLVM 8.0         cl  *
-.\tests\scatter-int16-1.ispc runfail  genx64        genx-x8 Windows LLVM 8.0         cl  *
-.\tests\scatter-int16.ispc runfail  genx64        genx-x8 Windows LLVM 8.0         cl  *
-.\tests\scatter-int8-1.ispc runfail  genx64        genx-x8 Windows LLVM 8.0         cl  *
-.\tests\scatter-int8.ispc runfail  genx64        genx-x8 Windows LLVM 8.0         cl  *
-.\tests\scatter-mask-1.ispc runfail  genx64        genx-x8 Windows LLVM 8.0         cl  *
-.\tests\scatter-mask-2.ispc runfail  genx64        genx-x8 Windows LLVM 8.0         cl  *
-.\tests\scatter-struct.ispc runfail  genx64        genx-x8 Windows LLVM 8.0         cl  *
-.\tests\select-array-ptr-typeconv.ispc runfail  genx64        genx-x8 Windows LLVM 8.0         cl  *
-.\tests\short-vec-10.ispc runfail  genx64        genx-x8 Windows LLVM 8.0         cl  *
-.\tests\short-vec-11.ispc runfail  genx64        genx-x8 Windows LLVM 8.0         cl  *
-.\tests\short-vec-12.ispc runfail  genx64        genx-x8 Windows LLVM 8.0         cl  *
-.\tests\short-vec-13.ispc runfail  genx64        genx-x8 Windows LLVM 8.0         cl  *
-.\tests\short-vec-14.ispc runfail  genx64        genx-x8 Windows LLVM 8.0         cl  *
-.\tests\short-vec-16.ispc runfail  genx64        genx-x8 Windows LLVM 8.0         cl  *
-.\tests\short-vec-17.ispc runfail  genx64        genx-x8 Windows LLVM 8.0         cl  *
-.\tests\short-vec-19.ispc runfail  genx64        genx-x8 Windows LLVM 8.0         cl  *
-.\tests\short-vec-9.ispc runfail  genx64        genx-x8 Windows LLVM 8.0         cl  *
-.\tests\shuffle2-10.ispc runfail  genx64        genx-x8 Windows LLVM 8.0         cl  *
-.\tests\shuffle2-3.ispc runfail  genx64        genx-x8 Windows LLVM 8.0         cl  *
-.\tests\shuffle2-4.ispc runfail  genx64        genx-x8 Windows LLVM 8.0         cl  *
-.\tests\shuffle2-9.ispc runfail  genx64        genx-x8 Windows LLVM 8.0         cl  *
-.\tests\soa-16.ispc runfail  genx64        genx-x8 Windows LLVM 8.0         cl  *
-.\tests\soa-17.ispc runfail  genx64        genx-x8 Windows LLVM 8.0         cl  *
-.\tests\soa-20.ispc runfail  genx64        genx-x8 Windows LLVM 8.0         cl  *
-.\tests\soa-29.ispc runfail  genx64        genx-x8 Windows LLVM 8.0         cl  *
-.\tests\test-147.ispc runfail  genx64        genx-x8 Windows LLVM 8.0         cl  *
-.\tests\typedef-2.ispc runfail  genx64        genx-x8 Windows LLVM 8.0         cl  *
-.\tests\asin.ispc compfail  genx64        genx-x8 Windows LLVM 8.0         cl  *
-.\tests\atomics-1.ispc compfail  genx64        genx-x8 Windows LLVM 8.0         cl  *
-.\tests\atomics-10.ispc compfail  genx64        genx-x8 Windows LLVM 8.0         cl  *
-.\tests\atomics-11.ispc compfail  genx64        genx-x8 Windows LLVM 8.0         cl  *
-.\tests\atomics-12.ispc compfail  genx64        genx-x8 Windows LLVM 8.0         cl  *
-.\tests\atomics-13.ispc compfail  genx64        genx-x8 Windows LLVM 8.0         cl  *
-.\tests\atomics-14.ispc compfail  genx64        genx-x8 Windows LLVM 8.0         cl  *
-.\tests\atomics-2.ispc compfail  genx64        genx-x8 Windows LLVM 8.0         cl  *
-.\tests\atomics-3.ispc compfail  genx64        genx-x8 Windows LLVM 8.0         cl  *
-.\tests\atomics-4.ispc compfail  genx64        genx-x8 Windows LLVM 8.0         cl  *
-.\tests\atomics-5.ispc compfail  genx64        genx-x8 Windows LLVM 8.0         cl  *
-.\tests\atomics-6.ispc compfail  genx64        genx-x8 Windows LLVM 8.0         cl  *
-.\tests\atomics-7.ispc compfail  genx64        genx-x8 Windows LLVM 8.0         cl  *
-.\tests\atomics-8.ispc compfail  genx64        genx-x8 Windows LLVM 8.0         cl  *
-.\tests\atomics-9.ispc compfail  genx64        genx-x8 Windows LLVM 8.0         cl  *
-.\tests\atomics-swap.ispc compfail  genx64        genx-x8 Windows LLVM 8.0         cl  *
-.\tests\atomics-uniform-1.ispc compfail  genx64        genx-x8 Windows LLVM 8.0         cl  *
-.\tests\atomics-uniform-2.ispc compfail  genx64        genx-x8 Windows LLVM 8.0         cl  *
-.\tests\atomics-uniform-3.ispc compfail  genx64        genx-x8 Windows LLVM 8.0         cl  *
-.\tests\atomics-uniform-4.ispc compfail  genx64        genx-x8 Windows LLVM 8.0         cl  *
-.\tests\atomics-uniform-5.ispc compfail  genx64        genx-x8 Windows LLVM 8.0         cl  *
-.\tests\atomics-uniform-6.ispc compfail  genx64        genx-x8 Windows LLVM 8.0         cl  *
-.\tests\atomics-uniform-7.ispc compfail  genx64        genx-x8 Windows LLVM 8.0         cl  *
-.\tests\atomics-uniform-8.ispc compfail  genx64        genx-x8 Windows LLVM 8.0         cl  *
-.\tests\atomics-uniform-9.ispc compfail  genx64        genx-x8 Windows LLVM 8.0         cl  *
-.\tests\atomics-varyingptr-1.ispc compfail  genx64        genx-x8 Windows LLVM 8.0         cl  *
-.\tests\atomics-varyingptr-2.ispc compfail  genx64        genx-x8 Windows LLVM 8.0         cl  *
-.\tests\atomics-varyingptr-3.ispc compfail  genx64        genx-x8 Windows LLVM 8.0         cl  *
-.\tests\atomics-varyingptr-4.ispc compfail  genx64        genx-x8 Windows LLVM 8.0         cl  *
-.\tests\funcptr-null-2.ispc compfail  genx64        genx-x8 Windows LLVM 8.0         cl  *
-.\tests\funcptr-null-3.ispc compfail  genx64        genx-x8 Windows LLVM 8.0         cl  *
-.\tests\funcptr-null-4.ispc compfail  genx64        genx-x8 Windows LLVM 8.0         cl  *
-.\tests\funcptr-null-5.ispc compfail  genx64        genx-x8 Windows LLVM 8.0         cl  *
-.\tests\funcptr-null-6.ispc compfail  genx64        genx-x8 Windows LLVM 8.0         cl  *
-.\tests\funcptr-uniform-7.ispc compfail  genx64        genx-x8 Windows LLVM 8.0         cl  *
-.\tests\funcptr-uniform-8.ispc compfail  genx64        genx-x8 Windows LLVM 8.0         cl  *
-.\tests\funcptr-uniform-9.ispc compfail  genx64        genx-x8 Windows LLVM 8.0         cl  *
-.\tests\funcptr-varying-1.ispc compfail  genx64        genx-x8 Windows LLVM 8.0         cl  *
-.\tests\funcptr-varying-2.ispc compfail  genx64        genx-x8 Windows LLVM 8.0         cl  *
-.\tests\funcptr-varying-3.ispc compfail  genx64        genx-x8 Windows LLVM 8.0         cl  *
-.\tests\funcptr-varying-4.ispc compfail  genx64        genx-x8 Windows LLVM 8.0         cl  *
-.\tests\funcptr-varying-5.ispc compfail  genx64        genx-x8 Windows LLVM 8.0         cl  *
-.\tests\funcptr-varying-6.ispc compfail  genx64        genx-x8 Windows LLVM 8.0         cl  *
-.\tests\funcptr-varying-7.ispc compfail  genx64        genx-x8 Windows LLVM 8.0         cl  *
-.\tests\funcptr-varying-8.ispc compfail  genx64        genx-x8 Windows LLVM 8.0         cl  *
-.\tests\funcptr-varying-9.ispc compfail  genx64        genx-x8 Windows LLVM 8.0         cl  *
-.\tests\isnan.ispc compfail  genx64        genx-x8 Windows LLVM 8.0         cl  *
-.\tests\recursion-forward-func-decl.ispc runfail  genx64        genx-x8 Windows LLVM 8.0         cl  *
-.\tests\recursion.ispc runfail  genx64        genx-x8 Windows LLVM 8.0         cl  *
-.\tests\transcendentals-5-0.ispc compfail  genx64        genx-x8 Windows LLVM 8.0         cl  *
-.\tests\transcendentals-5-1.ispc compfail  genx64        genx-x8 Windows LLVM 8.0         cl  *
-.\tests\transcendentals-5-2.ispc compfail  genx64        genx-x8 Windows LLVM 8.0         cl  *
-.\tests\transcendentals-5-3.ispc compfail  genx64        genx-x8 Windows LLVM 8.0         cl  *
-.\tests\transcendentals-6-0.ispc compfail  genx64        genx-x8 Windows LLVM 8.0         cl  *
-.\tests\transcendentals-6-1.ispc compfail  genx64        genx-x8 Windows LLVM 8.0         cl  *
-.\tests\transcendentals-6-2.ispc compfail  genx64        genx-x8 Windows LLVM 8.0         cl  *
-.\tests\transcendentals-6-3.ispc compfail  genx64        genx-x8 Windows LLVM 8.0         cl  *
-.\tests\transcendentals-7-0.ispc compfail  genx64        genx-x8 Windows LLVM 8.0         cl  *
-.\tests\transcendentals-7-1.ispc compfail  genx64        genx-x8 Windows LLVM 8.0         cl  *
-.\tests\transcendentals-7-2.ispc compfail  genx64        genx-x8 Windows LLVM 8.0         cl  *
-.\tests\transcendentals-7-3.ispc compfail  genx64        genx-x8 Windows LLVM 8.0         cl  *
-.\tests\transcendentals-8-0.ispc compfail  genx64        genx-x8 Windows LLVM 8.0         cl  *
-.\tests\transcendentals-8-1.ispc compfail  genx64        genx-x8 Windows LLVM 8.0         cl  *
-.\tests\transcendentals-8-2.ispc compfail  genx64        genx-x8 Windows LLVM 8.0         cl  *
-.\tests\transcendentals-8-3.ispc compfail  genx64        genx-x8 Windows LLVM 8.0         cl  *
-.\tests\transcendentals-9-0.ispc compfail  genx64        genx-x8 Windows LLVM 8.0         cl  *
-.\tests\transcendentals-9-1.ispc compfail  genx64        genx-x8 Windows LLVM 8.0         cl  *
-.\tests\transcendentals-9-2.ispc compfail  genx64        genx-x8 Windows LLVM 8.0         cl  *
-.\tests\transcendentals-9-3.ispc compfail  genx64        genx-x8 Windows LLVM 8.0         cl  *
-.\tests\1546.ispc runfail  genx64       genx-x16 Windows LLVM 8.0         cl  *
-.\tests\foreach-unique-1.ispc runfail  genx64       genx-x16 Windows LLVM 8.0         cl  *
-.\tests\foreach-unique-10.ispc runfail  genx64       genx-x16 Windows LLVM 8.0         cl  *
-.\tests\foreach-unique-11.ispc runfail  genx64       genx-x16 Windows LLVM 8.0         cl  *
-.\tests\foreach-unique-2.ispc runfail  genx64       genx-x16 Windows LLVM 8.0         cl  *
-.\tests\foreach-unique-3.ispc runfail  genx64       genx-x16 Windows LLVM 8.0         cl  *
-.\tests\foreach-unique-4.ispc runfail  genx64       genx-x16 Windows LLVM 8.0         cl  *
-.\tests\foreach-unique-5.ispc runfail  genx64       genx-x16 Windows LLVM 8.0         cl  *
-.\tests\foreach-unique-6.ispc runfail  genx64       genx-x16 Windows LLVM 8.0         cl  *
-.\tests\foreach-unique-7.ispc runfail  genx64       genx-x16 Windows LLVM 8.0         cl  *
-.\tests\foreach-unique-8.ispc runfail  genx64       genx-x16 Windows LLVM 8.0         cl  *
-.\tests\foreach-unique-9.ispc runfail  genx64       genx-x16 Windows LLVM 8.0         cl  *
-.\tests\funcptr-uniform-10.ispc runfail  genx64       genx-x16 Windows LLVM 8.0         cl  *
-.\tests\funcptr-uniform-2.ispc runfail  genx64       genx-x16 Windows LLVM 8.0         cl  *
-.\tests\funcptr-uniform-3.ispc runfail  genx64       genx-x16 Windows LLVM 8.0         cl  *
-.\tests\gather-int16.ispc runfail  genx64       genx-x16 Windows LLVM 8.0         cl  *
-.\tests\gather-int8.ispc runfail  genx64       genx-x16 Windows LLVM 8.0         cl  *
-.\tests\packed-load-2.ispc runfail  genx64       genx-x16 Windows LLVM 8.0         cl  *
-.\tests\packed-load-4.ispc runfail  genx64       genx-x16 Windows LLVM 8.0         cl  *
-.\tests\packed-load-5.ispc runfail  genx64       genx-x16 Windows LLVM 8.0         cl  *
-.\tests\pmuls-vi64.ispc runfail  genx64       genx-x16 Windows LLVM 8.0         cl  *
-.\tests\pragma-ignore-warning.ispc runfail  genx64       genx-x16 Windows LLVM 8.0         cl  *
-.\tests\ptr-varying-unif-index.ispc runfail  genx64       genx-x16 Windows LLVM 8.0         cl  *
-.\tests\ref-vec-param-index.ispc runfail  genx64       genx-x16 Windows LLVM 8.0         cl  *
-.\tests\scatter-int16-1.ispc runfail  genx64       genx-x16 Windows LLVM 8.0         cl  *
-.\tests\scatter-int16.ispc runfail  genx64       genx-x16 Windows LLVM 8.0         cl  *
-.\tests\scatter-int8-1.ispc runfail  genx64       genx-x16 Windows LLVM 8.0         cl  *
-.\tests\scatter-int8.ispc runfail  genx64       genx-x16 Windows LLVM 8.0         cl  *
-.\tests\scatter-mask-1.ispc runfail  genx64       genx-x16 Windows LLVM 8.0         cl  *
-.\tests\scatter-mask-2.ispc runfail  genx64       genx-x16 Windows LLVM 8.0         cl  *
-.\tests\short-vec-10.ispc runfail  genx64       genx-x16 Windows LLVM 8.0         cl  *
-.\tests\short-vec-11.ispc runfail  genx64       genx-x16 Windows LLVM 8.0         cl  *
-.\tests\short-vec-12.ispc runfail  genx64       genx-x16 Windows LLVM 8.0         cl  *
-.\tests\short-vec-13.ispc runfail  genx64       genx-x16 Windows LLVM 8.0         cl  *
-.\tests\short-vec-14.ispc runfail  genx64       genx-x16 Windows LLVM 8.0         cl  *
-.\tests\short-vec-16.ispc runfail  genx64       genx-x16 Windows LLVM 8.0         cl  *
-.\tests\short-vec-17.ispc runfail  genx64       genx-x16 Windows LLVM 8.0         cl  *
-.\tests\short-vec-19.ispc runfail  genx64       genx-x16 Windows LLVM 8.0         cl  *
-.\tests\short-vec-20.ispc runfail  genx64       genx-x16 Windows LLVM 8.0         cl  *
-.\tests\short-vec-8.ispc runfail  genx64       genx-x16 Windows LLVM 8.0         cl  *
-.\tests\short-vec-9.ispc runfail  genx64       genx-x16 Windows LLVM 8.0         cl  *
-.\tests\shuffle2-10.ispc runfail  genx64       genx-x16 Windows LLVM 8.0         cl  *
-.\tests\shuffle2-3.ispc runfail  genx64       genx-x16 Windows LLVM 8.0         cl  *
-.\tests\shuffle2-4.ispc runfail  genx64       genx-x16 Windows LLVM 8.0         cl  *
-.\tests\shuffle2-9.ispc runfail  genx64       genx-x16 Windows LLVM 8.0         cl  *
-
 
 % LLVM 9.0 fails
 
 % LLVM 10.0 fails
-./tests/abs-int.ispc runfail  genx64       genx-x16   Linux LLVM 8.0 clang++8.0 -O2 *
-./tests/switch-11.ispc runfail  genx64       genx-x16   Linux LLVM 8.0 clang++8.0 -O2 *
-./tests/switch-12.ispc runfail  genx64       genx-x16   Linux LLVM 8.0 clang++8.0 -O2 *
-./tests/abs-int.ispc runfail  genx64        genx-x8   Linux LLVM 8.0 clang++8.0 -O2 *
-./tests/print_bool_simd.ispc runfail  genx64       genx-x16   Linux LLVM 8.0 clang++8.0 -O2 *
-./tests/print_bool_simd.ispc runfail  genx64        genx-x8   Linux LLVM 8.0 clang++8.0 -O2 *
-./tests/short-vec-int-logical.ispc runfail  genx64        genx-x16   Linux LLVM 8.0 clang++8.0  *
-./tests/short-vec-bool3.ispc compfail  genx64        genx-x16   Linux LLVM 8.0 clang++8.0  *
-./tests/short-vec-bool4.ispc compfail  genx64        genx-x16   Linux LLVM 8.0 clang++8.0  *
-./tests/short-vec-int-logical.ispc runfail  genx64        genx-x8   Linux LLVM 8.0 clang++8.0  *
-./tests/short-vec-bool3.ispc compfail  genx64        genx-x8   Linux LLVM 8.0 clang++8.0  *
-./tests/short-vec-bool4.ispc compfail  genx64        genx-x8   Linux LLVM 8.0 clang++8.0  *
 ./tests/1548.ispc runfail  genx64       genx-x16   Linux LLVM 10.0 clang++10.0  *
 ./tests/abs-int.ispc runfail  genx64       genx-x16   Linux LLVM 10.0 clang++10.0  *
 ./tests/gather-double-7.ispc runfail  genx64       genx-x16   Linux LLVM 10.0 clang++10.0  *
@@ -846,3 +196,342 @@
 ./tests/transcendentals-9-3.ispc compfail  genx64        genx-x16   Linux LLVM 10.0 clang++10.0  *
 ./tests/1546.ispc runfail  genx64       genx-x16   Linux LLVM 10.0 clang++10.0  *
 ./tests/1546.ispc runfail  genx64       genx-x8   Linux LLVM 10.0 clang++10.0  *
+./tests/short-vec-15.ispc runfail  genx64       genx-x16   Linux LLVM 10.0 clang++10.0  *
+./tests/short-vec-15.ispc runfail  genx64       genx-x8   Linux LLVM 10.0 clang++10.0  *
+
+.\tests\1546.ispc runfail  genx64        genx-x8 Windows LLVM 10.0         cl  *
+.\tests\1548.ispc runfail  genx64        genx-x8 Windows LLVM 10.0         cl  *
+.\tests\abs-int.ispc runfail  genx64        genx-x8 Windows LLVM 10.0         cl  *
+.\tests\array-gather-multi-unif.ispc runfail  genx64        genx-x8 Windows LLVM 10.0         cl  *
+.\tests\array-mixed-unif-vary-indexing-2.ispc runfail  genx64        genx-x8 Windows LLVM 10.0         cl  *
+.\tests\array-mixed-unif-vary-indexing.ispc runfail  genx64        genx-x8 Windows LLVM 10.0         cl  *
+.\tests\array-multidim-gather-scatter.ispc runfail  genx64        genx-x8 Windows LLVM 10.0         cl  *
+.\tests\cfor-gs-improve-multidim-struct-1.ispc runfail  genx64        genx-x8 Windows LLVM 10.0         cl  *
+.\tests\foreach-mask-1.ispc runfail  genx64        genx-x8 Windows LLVM 10.0         cl  *
+.\tests\foreach-mask.ispc runfail  genx64        genx-x8 Windows LLVM 10.0         cl  *
+.\tests\foreach-unique-1.ispc runfail  genx64        genx-x8 Windows LLVM 10.0         cl  *
+.\tests\foreach-unique-10.ispc runfail  genx64        genx-x8 Windows LLVM 10.0         cl  *
+.\tests\foreach-unique-11.ispc runfail  genx64        genx-x8 Windows LLVM 10.0         cl  *
+.\tests\foreach-unique-2.ispc runfail  genx64        genx-x8 Windows LLVM 10.0         cl  *
+.\tests\foreach-unique-3.ispc runfail  genx64        genx-x8 Windows LLVM 10.0         cl  *
+.\tests\foreach-unique-4.ispc runfail  genx64        genx-x8 Windows LLVM 10.0         cl  *
+.\tests\foreach-unique-5.ispc runfail  genx64        genx-x8 Windows LLVM 10.0         cl  *
+.\tests\foreach-unique-6.ispc runfail  genx64        genx-x8 Windows LLVM 10.0         cl  *
+.\tests\foreach-unique-7.ispc runfail  genx64        genx-x8 Windows LLVM 10.0         cl  *
+.\tests\foreach-unique-8.ispc runfail  genx64        genx-x8 Windows LLVM 10.0         cl  *
+.\tests\foreach-unique-9.ispc runfail  genx64        genx-x8 Windows LLVM 10.0         cl  *
+.\tests\funcptr-uniform-10.ispc runfail  genx64        genx-x8 Windows LLVM 10.0         cl  *
+.\tests\funcptr-uniform-2.ispc runfail  genx64        genx-x8 Windows LLVM 10.0         cl  *
+.\tests\funcptr-uniform-3.ispc runfail  genx64        genx-x8 Windows LLVM 10.0         cl  *
+.\tests\gather-double-5.ispc runfail  genx64        genx-x8 Windows LLVM 10.0         cl  *
+.\tests\gather-double-6.ispc runfail  genx64        genx-x8 Windows LLVM 10.0         cl  *
+.\tests\gather-double-7.ispc runfail  genx64        genx-x8 Windows LLVM 10.0         cl  *
+.\tests\gather-double-8.ispc runfail  genx64        genx-x8 Windows LLVM 10.0         cl  *
+.\tests\gather-float-5.ispc runfail  genx64        genx-x8 Windows LLVM 10.0         cl  *
+.\tests\gather-float-6.ispc runfail  genx64        genx-x8 Windows LLVM 10.0         cl  *
+.\tests\gather-float-7.ispc runfail  genx64        genx-x8 Windows LLVM 10.0         cl  *
+.\tests\gather-float-8.ispc runfail  genx64        genx-x8 Windows LLVM 10.0         cl  *
+.\tests\gather-int16-5.ispc runfail  genx64        genx-x8 Windows LLVM 10.0         cl  *
+.\tests\gather-int16-6.ispc runfail  genx64        genx-x8 Windows LLVM 10.0         cl  *
+.\tests\gather-int16-7.ispc runfail  genx64        genx-x8 Windows LLVM 10.0         cl  *
+.\tests\gather-int16-8.ispc runfail  genx64        genx-x8 Windows LLVM 10.0         cl  *
+.\tests\gather-int16.ispc runfail  genx64        genx-x8 Windows LLVM 10.0         cl  *
+.\tests\gather-int32-5.ispc runfail  genx64        genx-x8 Windows LLVM 10.0         cl  *
+.\tests\gather-int32-6.ispc runfail  genx64        genx-x8 Windows LLVM 10.0         cl  *
+.\tests\gather-int32-7.ispc runfail  genx64        genx-x8 Windows LLVM 10.0         cl  *
+.\tests\gather-int32-8.ispc runfail  genx64        genx-x8 Windows LLVM 10.0         cl  *
+.\tests\gather-int64-5.ispc runfail  genx64        genx-x8 Windows LLVM 10.0         cl  *
+.\tests\gather-int64-6.ispc runfail  genx64        genx-x8 Windows LLVM 10.0         cl  *
+.\tests\gather-int64-7.ispc runfail  genx64        genx-x8 Windows LLVM 10.0         cl  *
+.\tests\gather-int64-8.ispc runfail  genx64        genx-x8 Windows LLVM 10.0         cl  *
+.\tests\gather-int8-5.ispc runfail  genx64        genx-x8 Windows LLVM 10.0         cl  *
+.\tests\gather-int8-6.ispc runfail  genx64        genx-x8 Windows LLVM 10.0         cl  *
+.\tests\gather-int8-7.ispc runfail  genx64        genx-x8 Windows LLVM 10.0         cl  *
+.\tests\gather-int8-8.ispc runfail  genx64        genx-x8 Windows LLVM 10.0         cl  *
+.\tests\gather-int8.ispc runfail  genx64        genx-x8 Windows LLVM 10.0         cl  *
+.\tests\global-array-3.ispc runfail  genx64        genx-x8 Windows LLVM 10.0         cl  *
+.\tests\global-array-4.ispc runfail  genx64        genx-x8 Windows LLVM 10.0         cl  *
+.\tests\half-3.ispc runfail  genx64        genx-x8 Windows LLVM 10.0         cl  *
+.\tests\half.ispc runfail  genx64        genx-x8 Windows LLVM 10.0         cl  *
+.\tests\idiv.ispc runfail  genx64        genx-x8 Windows LLVM 10.0         cl  *
+.\tests\local-atomics-varyingptr-1.ispc runfail  genx64        genx-x8 Windows LLVM 10.0         cl  *
+.\tests\local-atomics-varyingptr-2.ispc runfail  genx64        genx-x8 Windows LLVM 10.0         cl  *
+.\tests\local-atomics-varyingptr-3.ispc runfail  genx64        genx-x8 Windows LLVM 10.0         cl  *
+.\tests\local-atomics-varyingptr-4.ispc runfail  genx64        genx-x8 Windows LLVM 10.0         cl  *
+.\tests\nested-structs-2.ispc runfail  genx64        genx-x8 Windows LLVM 10.0         cl  *
+.\tests\packed-load-2.ispc runfail  genx64        genx-x8 Windows LLVM 10.0         cl  *
+.\tests\pmuls-vi64.ispc runfail  genx64        genx-x8 Windows LLVM 10.0         cl  *
+.\tests\pragma-ignore-warning.ispc runfail  genx64        genx-x8 Windows LLVM 10.0         cl  *
+.\tests\prefetch-varying.ispc runfail  genx64        genx-x8 Windows LLVM 10.0         cl  *
+.\tests\prefetch.ispc runfail  genx64        genx-x8 Windows LLVM 10.0         cl  *
+.\tests\print_bool.ispc runfail  genx64        genx-x8 Windows LLVM 10.0         cl  *
+.\tests\print_bool_simd.ispc runfail  genx64        genx-x8 Windows LLVM 10.0         cl  *
+.\tests\print_uniform.ispc runfail  genx64        genx-x8 Windows LLVM 10.0         cl  *
+.\tests\print_varying.ispc runfail  genx64        genx-x8 Windows LLVM 10.0         cl  *
+.\tests\print_varying_simd.ispc runfail  genx64        genx-x8 Windows LLVM 10.0         cl  *
+.\tests\ptr-15.ispc runfail  genx64        genx-x8 Windows LLVM 10.0         cl  *
+.\tests\ptr-22.ispc runfail  genx64        genx-x8 Windows LLVM 10.0         cl  *
+.\tests\ptr-varying-unif-index.ispc runfail  genx64        genx-x8 Windows LLVM 10.0         cl  *
+.\tests\ref-vec-param-index.ispc runfail  genx64        genx-x8 Windows LLVM 10.0         cl  *
+.\tests\scatter-int16-1.ispc runfail  genx64        genx-x8 Windows LLVM 10.0         cl  *
+.\tests\scatter-int16.ispc runfail  genx64        genx-x8 Windows LLVM 10.0         cl  *
+.\tests\scatter-int8-1.ispc runfail  genx64        genx-x8 Windows LLVM 10.0         cl  *
+.\tests\scatter-int8.ispc runfail  genx64        genx-x8 Windows LLVM 10.0         cl  *
+.\tests\scatter-mask-1.ispc runfail  genx64        genx-x8 Windows LLVM 10.0         cl  *
+.\tests\scatter-mask-2.ispc runfail  genx64        genx-x8 Windows LLVM 10.0         cl  *
+.\tests\scatter-struct.ispc runfail  genx64        genx-x8 Windows LLVM 10.0         cl  *
+.\tests\select-array-ptr-typeconv.ispc runfail  genx64        genx-x8 Windows LLVM 10.0         cl  *
+.\tests\short-vec-10.ispc runfail  genx64        genx-x8 Windows LLVM 10.0         cl  *
+.\tests\short-vec-11.ispc runfail  genx64        genx-x8 Windows LLVM 10.0         cl  *
+.\tests\short-vec-12.ispc runfail  genx64        genx-x8 Windows LLVM 10.0         cl  *
+.\tests\short-vec-13.ispc runfail  genx64        genx-x8 Windows LLVM 10.0         cl  *
+.\tests\short-vec-14.ispc runfail  genx64        genx-x8 Windows LLVM 10.0         cl  *
+.\tests\short-vec-16.ispc runfail  genx64        genx-x8 Windows LLVM 10.0         cl  *
+.\tests\short-vec-17.ispc runfail  genx64        genx-x8 Windows LLVM 10.0         cl  *
+.\tests\short-vec-19.ispc runfail  genx64        genx-x8 Windows LLVM 10.0         cl  *
+.\tests\short-vec-9.ispc runfail  genx64        genx-x8 Windows LLVM 10.0         cl  *
+.\tests\shuffle2-10.ispc runfail  genx64        genx-x8 Windows LLVM 10.0         cl  *
+.\tests\shuffle2-3.ispc runfail  genx64        genx-x8 Windows LLVM 10.0         cl  *
+.\tests\shuffle2-4.ispc runfail  genx64        genx-x8 Windows LLVM 10.0         cl  *
+.\tests\shuffle2-9.ispc runfail  genx64        genx-x8 Windows LLVM 10.0         cl  *
+.\tests\soa-16.ispc runfail  genx64        genx-x8 Windows LLVM 10.0         cl  *
+.\tests\soa-17.ispc runfail  genx64        genx-x8 Windows LLVM 10.0         cl  *
+.\tests\soa-20.ispc runfail  genx64        genx-x8 Windows LLVM 10.0         cl  *
+.\tests\soa-29.ispc runfail  genx64        genx-x8 Windows LLVM 10.0         cl  *
+.\tests\test-147.ispc runfail  genx64        genx-x8 Windows LLVM 10.0         cl  *
+.\tests\typedef-2.ispc runfail  genx64        genx-x8 Windows LLVM 10.0         cl  *
+.\tests\asin.ispc compfail  genx64        genx-x8 Windows LLVM 10.0         cl  *
+.\tests\atomics-1.ispc compfail  genx64        genx-x8 Windows LLVM 10.0         cl  *
+.\tests\atomics-10.ispc compfail  genx64        genx-x8 Windows LLVM 10.0         cl  *
+.\tests\atomics-11.ispc compfail  genx64        genx-x8 Windows LLVM 10.0         cl  *
+.\tests\atomics-12.ispc compfail  genx64        genx-x8 Windows LLVM 10.0         cl  *
+.\tests\atomics-13.ispc compfail  genx64        genx-x8 Windows LLVM 10.0         cl  *
+.\tests\atomics-14.ispc compfail  genx64        genx-x8 Windows LLVM 10.0         cl  *
+.\tests\atomics-2.ispc compfail  genx64        genx-x8 Windows LLVM 10.0         cl  *
+.\tests\atomics-3.ispc compfail  genx64        genx-x8 Windows LLVM 10.0         cl  *
+.\tests\atomics-4.ispc compfail  genx64        genx-x8 Windows LLVM 10.0         cl  *
+.\tests\atomics-5.ispc compfail  genx64        genx-x8 Windows LLVM 10.0         cl  *
+.\tests\atomics-6.ispc compfail  genx64        genx-x8 Windows LLVM 10.0         cl  *
+.\tests\atomics-7.ispc compfail  genx64        genx-x8 Windows LLVM 10.0         cl  *
+.\tests\atomics-8.ispc compfail  genx64        genx-x8 Windows LLVM 10.0         cl  *
+.\tests\atomics-9.ispc compfail  genx64        genx-x8 Windows LLVM 10.0         cl  *
+.\tests\atomics-swap.ispc compfail  genx64        genx-x8 Windows LLVM 10.0         cl  *
+.\tests\atomics-uniform-1.ispc compfail  genx64        genx-x8 Windows LLVM 10.0         cl  *
+.\tests\atomics-uniform-2.ispc compfail  genx64        genx-x8 Windows LLVM 10.0         cl  *
+.\tests\atomics-uniform-3.ispc compfail  genx64        genx-x8 Windows LLVM 10.0         cl  *
+.\tests\atomics-uniform-4.ispc compfail  genx64        genx-x8 Windows LLVM 10.0         cl  *
+.\tests\atomics-uniform-5.ispc compfail  genx64        genx-x8 Windows LLVM 10.0         cl  *
+.\tests\atomics-uniform-6.ispc compfail  genx64        genx-x8 Windows LLVM 10.0         cl  *
+.\tests\atomics-uniform-7.ispc compfail  genx64        genx-x8 Windows LLVM 10.0         cl  *
+.\tests\atomics-uniform-8.ispc compfail  genx64        genx-x8 Windows LLVM 10.0         cl  *
+.\tests\atomics-uniform-9.ispc compfail  genx64        genx-x8 Windows LLVM 10.0         cl  *
+.\tests\atomics-varyingptr-1.ispc compfail  genx64        genx-x8 Windows LLVM 10.0         cl  *
+.\tests\atomics-varyingptr-2.ispc compfail  genx64        genx-x8 Windows LLVM 10.0         cl  *
+.\tests\atomics-varyingptr-3.ispc compfail  genx64        genx-x8 Windows LLVM 10.0         cl  *
+.\tests\atomics-varyingptr-4.ispc compfail  genx64        genx-x8 Windows LLVM 10.0         cl  *
+.\tests\funcptr-null-2.ispc compfail  genx64        genx-x8 Windows LLVM 10.0         cl  *
+.\tests\funcptr-null-3.ispc compfail  genx64        genx-x8 Windows LLVM 10.0         cl  *
+.\tests\funcptr-null-4.ispc compfail  genx64        genx-x8 Windows LLVM 10.0         cl  *
+.\tests\funcptr-null-5.ispc compfail  genx64        genx-x8 Windows LLVM 10.0         cl  *
+.\tests\funcptr-null-6.ispc compfail  genx64        genx-x8 Windows LLVM 10.0         cl  *
+.\tests\funcptr-uniform-7.ispc compfail  genx64        genx-x8 Windows LLVM 10.0         cl  *
+.\tests\funcptr-uniform-8.ispc compfail  genx64        genx-x8 Windows LLVM 10.0         cl  *
+.\tests\funcptr-uniform-9.ispc compfail  genx64        genx-x8 Windows LLVM 10.0         cl  *
+.\tests\funcptr-varying-1.ispc compfail  genx64        genx-x8 Windows LLVM 10.0         cl  *
+.\tests\funcptr-varying-2.ispc compfail  genx64        genx-x8 Windows LLVM 10.0         cl  *
+.\tests\funcptr-varying-3.ispc compfail  genx64        genx-x8 Windows LLVM 10.0         cl  *
+.\tests\funcptr-varying-4.ispc compfail  genx64        genx-x8 Windows LLVM 10.0         cl  *
+.\tests\funcptr-varying-5.ispc compfail  genx64        genx-x8 Windows LLVM 10.0         cl  *
+.\tests\funcptr-varying-6.ispc compfail  genx64        genx-x8 Windows LLVM 10.0         cl  *
+.\tests\funcptr-varying-7.ispc compfail  genx64        genx-x8 Windows LLVM 10.0         cl  *
+.\tests\funcptr-varying-8.ispc compfail  genx64        genx-x8 Windows LLVM 10.0         cl  *
+.\tests\funcptr-varying-9.ispc compfail  genx64        genx-x8 Windows LLVM 10.0         cl  *
+.\tests\isnan.ispc compfail  genx64        genx-x8 Windows LLVM 10.0         cl  *
+.\tests\transcendentals-5-0.ispc compfail  genx64        genx-x8 Windows LLVM 10.0         cl  *
+.\tests\transcendentals-5-1.ispc compfail  genx64        genx-x8 Windows LLVM 10.0         cl  *
+.\tests\transcendentals-5-2.ispc compfail  genx64        genx-x8 Windows LLVM 10.0         cl  *
+.\tests\transcendentals-5-3.ispc compfail  genx64        genx-x8 Windows LLVM 10.0         cl  *
+.\tests\transcendentals-6-0.ispc compfail  genx64        genx-x8 Windows LLVM 10.0         cl  *
+.\tests\transcendentals-6-1.ispc compfail  genx64        genx-x8 Windows LLVM 10.0         cl  *
+.\tests\transcendentals-6-2.ispc compfail  genx64        genx-x8 Windows LLVM 10.0         cl  *
+.\tests\transcendentals-6-3.ispc compfail  genx64        genx-x8 Windows LLVM 10.0         cl  *
+.\tests\transcendentals-7-0.ispc compfail  genx64        genx-x8 Windows LLVM 10.0         cl  *
+.\tests\transcendentals-7-1.ispc compfail  genx64        genx-x8 Windows LLVM 10.0         cl  *
+.\tests\transcendentals-7-2.ispc compfail  genx64        genx-x8 Windows LLVM 10.0         cl  *
+.\tests\transcendentals-7-3.ispc compfail  genx64        genx-x8 Windows LLVM 10.0         cl  *
+.\tests\transcendentals-8-0.ispc compfail  genx64        genx-x8 Windows LLVM 10.0         cl  *
+.\tests\transcendentals-8-1.ispc compfail  genx64        genx-x8 Windows LLVM 10.0         cl  *
+.\tests\transcendentals-8-2.ispc compfail  genx64        genx-x8 Windows LLVM 10.0         cl  *
+.\tests\transcendentals-8-3.ispc compfail  genx64        genx-x8 Windows LLVM 10.0         cl  *
+.\tests\transcendentals-9-0.ispc compfail  genx64        genx-x8 Windows LLVM 10.0         cl  *
+.\tests\transcendentals-9-1.ispc compfail  genx64        genx-x8 Windows LLVM 10.0         cl  *
+.\tests\transcendentals-9-2.ispc compfail  genx64        genx-x8 Windows LLVM 10.0         cl  *
+.\tests\transcendentals-9-3.ispc compfail  genx64        genx-x8 Windows LLVM 10.0         cl  *
+.\tests\1546.ispc runfail  genx64        genx-x16 Windows LLVM 10.0         cl  *
+.\tests\1548.ispc runfail  genx64        genx-x16 Windows LLVM 10.0         cl  *
+.\tests\abs-int.ispc runfail  genx64        genx-x16 Windows LLVM 10.0         cl  *
+.\tests\array-gather-multi-unif.ispc runfail  genx64        genx-x16 Windows LLVM 10.0         cl  *
+.\tests\array-mixed-unif-vary-indexing-2.ispc runfail  genx64        genx-x16 Windows LLVM 10.0         cl  *
+.\tests\array-mixed-unif-vary-indexing.ispc runfail  genx64        genx-x16 Windows LLVM 10.0         cl  *
+.\tests\array-multidim-gather-scatter.ispc runfail  genx64        genx-x16 Windows LLVM 10.0         cl  *
+.\tests\cfor-gs-improve-multidim-struct-1.ispc runfail  genx64        genx-x16 Windows LLVM 10.0         cl  *
+.\tests\foreach-mask-1.ispc runfail  genx64        genx-x16 Windows LLVM 10.0         cl  *
+.\tests\foreach-mask.ispc runfail  genx64        genx-x16 Windows LLVM 10.0         cl  *
+.\tests\foreach-unique-1.ispc runfail  genx64        genx-x16 Windows LLVM 10.0         cl  *
+.\tests\foreach-unique-10.ispc runfail  genx64        genx-x16 Windows LLVM 10.0         cl  *
+.\tests\foreach-unique-11.ispc runfail  genx64        genx-x16 Windows LLVM 10.0         cl  *
+.\tests\foreach-unique-2.ispc runfail  genx64        genx-x16 Windows LLVM 10.0         cl  *
+.\tests\foreach-unique-3.ispc runfail  genx64        genx-x16 Windows LLVM 10.0         cl  *
+.\tests\foreach-unique-4.ispc runfail  genx64        genx-x16 Windows LLVM 10.0         cl  *
+.\tests\foreach-unique-5.ispc runfail  genx64        genx-x16 Windows LLVM 10.0         cl  *
+.\tests\foreach-unique-6.ispc runfail  genx64        genx-x16 Windows LLVM 10.0         cl  *
+.\tests\foreach-unique-7.ispc runfail  genx64        genx-x16 Windows LLVM 10.0         cl  *
+.\tests\foreach-unique-8.ispc runfail  genx64        genx-x16 Windows LLVM 10.0         cl  *
+.\tests\foreach-unique-9.ispc runfail  genx64        genx-x16 Windows LLVM 10.0         cl  *
+.\tests\funcptr-uniform-10.ispc runfail  genx64        genx-x16 Windows LLVM 10.0         cl  *
+.\tests\funcptr-uniform-2.ispc runfail  genx64        genx-x16 Windows LLVM 10.0         cl  *
+.\tests\funcptr-uniform-3.ispc runfail  genx64        genx-x16 Windows LLVM 10.0         cl  *
+.\tests\gather-double-5.ispc runfail  genx64        genx-x16 Windows LLVM 10.0         cl  *
+.\tests\gather-double-6.ispc runfail  genx64        genx-x16 Windows LLVM 10.0         cl  *
+.\tests\gather-double-7.ispc runfail  genx64        genx-x16 Windows LLVM 10.0         cl  *
+.\tests\gather-double-8.ispc runfail  genx64        genx-x16 Windows LLVM 10.0         cl  *
+.\tests\gather-float-5.ispc runfail  genx64        genx-x16 Windows LLVM 10.0         cl  *
+.\tests\gather-float-6.ispc runfail  genx64        genx-x16 Windows LLVM 10.0         cl  *
+.\tests\gather-float-7.ispc runfail  genx64        genx-x16 Windows LLVM 10.0         cl  *
+.\tests\gather-float-8.ispc runfail  genx64        genx-x16 Windows LLVM 10.0         cl  *
+.\tests\gather-int16-5.ispc runfail  genx64        genx-x16 Windows LLVM 10.0         cl  *
+.\tests\gather-int16-6.ispc runfail  genx64        genx-x16 Windows LLVM 10.0         cl  *
+.\tests\gather-int16-7.ispc runfail  genx64        genx-x16 Windows LLVM 10.0         cl  *
+.\tests\gather-int16-8.ispc runfail  genx64        genx-x16 Windows LLVM 10.0         cl  *
+.\tests\gather-int16.ispc runfail  genx64        genx-x16 Windows LLVM 10.0         cl  *
+.\tests\gather-int32-5.ispc runfail  genx64        genx-x16 Windows LLVM 10.0         cl  *
+.\tests\gather-int32-6.ispc runfail  genx64        genx-x16 Windows LLVM 10.0         cl  *
+.\tests\gather-int32-7.ispc runfail  genx64        genx-x16 Windows LLVM 10.0         cl  *
+.\tests\gather-int32-8.ispc runfail  genx64        genx-x16 Windows LLVM 10.0         cl  *
+.\tests\gather-int64-5.ispc runfail  genx64        genx-x16 Windows LLVM 10.0         cl  *
+.\tests\gather-int64-6.ispc runfail  genx64        genx-x16 Windows LLVM 10.0         cl  *
+.\tests\gather-int64-7.ispc runfail  genx64        genx-x16 Windows LLVM 10.0         cl  *
+.\tests\gather-int64-8.ispc runfail  genx64        genx-x16 Windows LLVM 10.0         cl  *
+.\tests\gather-int8-5.ispc runfail  genx64        genx-x16 Windows LLVM 10.0         cl  *
+.\tests\gather-int8-6.ispc runfail  genx64        genx-x16 Windows LLVM 10.0         cl  *
+.\tests\gather-int8-7.ispc runfail  genx64        genx-x16 Windows LLVM 10.0         cl  *
+.\tests\gather-int8-8.ispc runfail  genx64        genx-x16 Windows LLVM 10.0         cl  *
+.\tests\gather-int8.ispc runfail  genx64        genx-x16 Windows LLVM 10.0         cl  *
+.\tests\global-array-3.ispc runfail  genx64        genx-x16 Windows LLVM 10.0         cl  *
+.\tests\global-array-4.ispc runfail  genx64        genx-x16 Windows LLVM 10.0         cl  *
+.\tests\half-3.ispc runfail  genx64        genx-x16 Windows LLVM 10.0         cl  *
+.\tests\half.ispc runfail  genx64        genx-x16 Windows LLVM 10.0         cl  *
+.\tests\idiv.ispc runfail  genx64        genx-x16 Windows LLVM 10.0         cl  *
+.\tests\local-atomics-varyingptr-1.ispc runfail  genx64        genx-x16 Windows LLVM 10.0         cl  *
+.\tests\local-atomics-varyingptr-2.ispc runfail  genx64        genx-x16 Windows LLVM 10.0         cl  *
+.\tests\local-atomics-varyingptr-3.ispc runfail  genx64        genx-x16 Windows LLVM 10.0         cl  *
+.\tests\local-atomics-varyingptr-4.ispc runfail  genx64        genx-x16 Windows LLVM 10.0         cl  *
+.\tests\nested-structs-2.ispc runfail  genx64        genx-x16 Windows LLVM 10.0         cl  *
+.\tests\packed-load-2.ispc runfail  genx64        genx-x16 Windows LLVM 10.0         cl  *
+.\tests\pmuls-vi64.ispc runfail  genx64        genx-x16 Windows LLVM 10.0         cl  *
+.\tests\pragma-ignore-warning.ispc runfail  genx64        genx-x16 Windows LLVM 10.0         cl  *
+.\tests\prefetch-varying.ispc runfail  genx64        genx-x16 Windows LLVM 10.0         cl  *
+.\tests\prefetch.ispc runfail  genx64        genx-x16 Windows LLVM 10.0         cl  *
+.\tests\print_bool.ispc runfail  genx64        genx-x16 Windows LLVM 10.0         cl  *
+.\tests\print_bool_simd.ispc runfail  genx64        genx-x16 Windows LLVM 10.0         cl  *
+.\tests\print_uniform.ispc runfail  genx64        genx-x16 Windows LLVM 10.0         cl  *
+.\tests\print_varying.ispc runfail  genx64        genx-x16 Windows LLVM 10.0         cl  *
+.\tests\print_varying_simd.ispc runfail  genx64        genx-x16 Windows LLVM 10.0         cl  *
+.\tests\ptr-15.ispc runfail  genx64        genx-x16 Windows LLVM 10.0         cl  *
+.\tests\ptr-22.ispc runfail  genx64        genx-x16 Windows LLVM 10.0         cl  *
+.\tests\ptr-varying-unif-index.ispc runfail  genx64        genx-x16 Windows LLVM 10.0         cl  *
+.\tests\ref-vec-param-index.ispc runfail  genx64        genx-x16 Windows LLVM 10.0         cl  *
+.\tests\scatter-int16-1.ispc runfail  genx64        genx-x16 Windows LLVM 10.0         cl  *
+.\tests\scatter-int16.ispc runfail  genx64        genx-x16 Windows LLVM 10.0         cl  *
+.\tests\scatter-int8-1.ispc runfail  genx64        genx-x16 Windows LLVM 10.0         cl  *
+.\tests\scatter-int8.ispc runfail  genx64        genx-x16 Windows LLVM 10.0         cl  *
+.\tests\scatter-mask-1.ispc runfail  genx64        genx-x16 Windows LLVM 10.0         cl  *
+.\tests\scatter-mask-2.ispc runfail  genx64        genx-x16 Windows LLVM 10.0         cl  *
+.\tests\scatter-struct.ispc runfail  genx64        genx-x16 Windows LLVM 10.0         cl  *
+.\tests\select-array-ptr-typeconv.ispc runfail  genx64        genx-x16 Windows LLVM 10.0         cl  *
+.\tests\short-vec-10.ispc runfail  genx64        genx-x16 Windows LLVM 10.0         cl  *
+.\tests\short-vec-11.ispc runfail  genx64        genx-x16 Windows LLVM 10.0         cl  *
+.\tests\short-vec-12.ispc runfail  genx64        genx-x16 Windows LLVM 10.0         cl  *
+.\tests\short-vec-13.ispc runfail  genx64        genx-x16 Windows LLVM 10.0         cl  *
+.\tests\short-vec-14.ispc runfail  genx64        genx-x16 Windows LLVM 10.0         cl  *
+.\tests\short-vec-16.ispc runfail  genx64        genx-x16 Windows LLVM 10.0         cl  *
+.\tests\short-vec-17.ispc runfail  genx64        genx-x16 Windows LLVM 10.0         cl  *
+.\tests\short-vec-19.ispc runfail  genx64        genx-x16 Windows LLVM 10.0         cl  *
+.\tests\short-vec-9.ispc runfail  genx64        genx-x16 Windows LLVM 10.0         cl  *
+.\tests\shuffle2-10.ispc runfail  genx64        genx-x16 Windows LLVM 10.0         cl  *
+.\tests\shuffle2-3.ispc runfail  genx64        genx-x16 Windows LLVM 10.0         cl  *
+.\tests\shuffle2-4.ispc runfail  genx64        genx-x16 Windows LLVM 10.0         cl  *
+.\tests\shuffle2-9.ispc runfail  genx64        genx-x16 Windows LLVM 10.0         cl  *
+.\tests\soa-16.ispc runfail  genx64        genx-x16 Windows LLVM 10.0         cl  *
+.\tests\soa-17.ispc runfail  genx64        genx-x16 Windows LLVM 10.0         cl  *
+.\tests\soa-20.ispc runfail  genx64        genx-x16 Windows LLVM 10.0         cl  *
+.\tests\soa-29.ispc runfail  genx64        genx-x16 Windows LLVM 10.0         cl  *
+.\tests\test-147.ispc runfail  genx64        genx-x16 Windows LLVM 10.0         cl  *
+.\tests\typedef-2.ispc runfail  genx64        genx-x16 Windows LLVM 10.0         cl  *
+.\tests\asin.ispc compfail  genx64        genx-x16 Windows LLVM 10.0         cl  *
+.\tests\atomics-1.ispc compfail  genx64        genx-x16 Windows LLVM 10.0         cl  *
+.\tests\atomics-10.ispc compfail  genx64        genx-x16 Windows LLVM 10.0         cl  *
+.\tests\atomics-11.ispc compfail  genx64        genx-x16 Windows LLVM 10.0         cl  *
+.\tests\atomics-12.ispc compfail  genx64        genx-x16 Windows LLVM 10.0         cl  *
+.\tests\atomics-13.ispc compfail  genx64        genx-x16 Windows LLVM 10.0         cl  *
+.\tests\atomics-14.ispc compfail  genx64        genx-x16 Windows LLVM 10.0         cl  *
+.\tests\atomics-2.ispc compfail  genx64        genx-x16 Windows LLVM 10.0         cl  *
+.\tests\atomics-3.ispc compfail  genx64        genx-x16 Windows LLVM 10.0         cl  *
+.\tests\atomics-4.ispc compfail  genx64        genx-x16 Windows LLVM 10.0         cl  *
+.\tests\atomics-5.ispc compfail  genx64        genx-x16 Windows LLVM 10.0         cl  *
+.\tests\atomics-6.ispc compfail  genx64        genx-x16 Windows LLVM 10.0         cl  *
+.\tests\atomics-7.ispc compfail  genx64        genx-x16 Windows LLVM 10.0         cl  *
+.\tests\atomics-8.ispc compfail  genx64        genx-x16 Windows LLVM 10.0         cl  *
+.\tests\atomics-9.ispc compfail  genx64        genx-x16 Windows LLVM 10.0         cl  *
+.\tests\atomics-swap.ispc compfail  genx64        genx-x16 Windows LLVM 10.0         cl  *
+.\tests\atomics-uniform-1.ispc compfail  genx64        genx-x16 Windows LLVM 10.0         cl  *
+.\tests\atomics-uniform-2.ispc compfail  genx64        genx-x16 Windows LLVM 10.0         cl  *
+.\tests\atomics-uniform-3.ispc compfail  genx64        genx-x16 Windows LLVM 10.0         cl  *
+.\tests\atomics-uniform-4.ispc compfail  genx64        genx-x16 Windows LLVM 10.0         cl  *
+.\tests\atomics-uniform-5.ispc compfail  genx64        genx-x16 Windows LLVM 10.0         cl  *
+.\tests\atomics-uniform-6.ispc compfail  genx64        genx-x16 Windows LLVM 10.0         cl  *
+.\tests\atomics-uniform-7.ispc compfail  genx64        genx-x16 Windows LLVM 10.0         cl  *
+.\tests\atomics-uniform-8.ispc compfail  genx64        genx-x16 Windows LLVM 10.0         cl  *
+.\tests\atomics-uniform-9.ispc compfail  genx64        genx-x16 Windows LLVM 10.0         cl  *
+.\tests\atomics-varyingptr-1.ispc compfail  genx64        genx-x16 Windows LLVM 10.0         cl  *
+.\tests\atomics-varyingptr-2.ispc compfail  genx64        genx-x16 Windows LLVM 10.0         cl  *
+.\tests\atomics-varyingptr-3.ispc compfail  genx64        genx-x16 Windows LLVM 10.0         cl  *
+.\tests\atomics-varyingptr-4.ispc compfail  genx64        genx-x16 Windows LLVM 10.0         cl  *
+.\tests\funcptr-null-2.ispc compfail  genx64        genx-x16 Windows LLVM 10.0         cl  *
+.\tests\funcptr-null-3.ispc compfail  genx64        genx-x16 Windows LLVM 10.0         cl  *
+.\tests\funcptr-null-4.ispc compfail  genx64        genx-x16 Windows LLVM 10.0         cl  *
+.\tests\funcptr-null-5.ispc compfail  genx64        genx-x16 Windows LLVM 10.0         cl  *
+.\tests\funcptr-null-6.ispc compfail  genx64        genx-x16 Windows LLVM 10.0         cl  *
+.\tests\funcptr-uniform-7.ispc compfail  genx64        genx-x16 Windows LLVM 10.0         cl  *
+.\tests\funcptr-uniform-8.ispc compfail  genx64        genx-x16 Windows LLVM 10.0         cl  *
+.\tests\funcptr-uniform-9.ispc compfail  genx64        genx-x16 Windows LLVM 10.0         cl  *
+.\tests\funcptr-varying-1.ispc compfail  genx64        genx-x16 Windows LLVM 10.0         cl  *
+.\tests\funcptr-varying-2.ispc compfail  genx64        genx-x16 Windows LLVM 10.0         cl  *
+.\tests\funcptr-varying-3.ispc compfail  genx64        genx-x16 Windows LLVM 10.0         cl  *
+.\tests\funcptr-varying-4.ispc compfail  genx64        genx-x16 Windows LLVM 10.0         cl  *
+.\tests\funcptr-varying-5.ispc compfail  genx64        genx-x16 Windows LLVM 10.0         cl  *
+.\tests\funcptr-varying-6.ispc compfail  genx64        genx-x16 Windows LLVM 10.0         cl  *
+.\tests\funcptr-varying-7.ispc compfail  genx64        genx-x16 Windows LLVM 10.0         cl  *
+.\tests\funcptr-varying-8.ispc compfail  genx64        genx-x16 Windows LLVM 10.0         cl  *
+.\tests\funcptr-varying-9.ispc compfail  genx64        genx-x16 Windows LLVM 10.0         cl  *
+.\tests\isnan.ispc compfail  genx64        genx-x16 Windows LLVM 10.0         cl  *
+.\tests\transcendentals-5-0.ispc compfail  genx64        genx-x16 Windows LLVM 10.0         cl  *
+.\tests\transcendentals-5-1.ispc compfail  genx64        genx-x16 Windows LLVM 10.0         cl  *
+.\tests\transcendentals-5-2.ispc compfail  genx64        genx-x16 Windows LLVM 10.0         cl  *
+.\tests\transcendentals-5-3.ispc compfail  genx64        genx-x16 Windows LLVM 10.0         cl  *
+.\tests\transcendentals-6-0.ispc compfail  genx64        genx-x16 Windows LLVM 10.0         cl  *
+.\tests\transcendentals-6-1.ispc compfail  genx64        genx-x16 Windows LLVM 10.0         cl  *
+.\tests\transcendentals-6-2.ispc compfail  genx64        genx-x16 Windows LLVM 10.0         cl  *
+.\tests\transcendentals-6-3.ispc compfail  genx64        genx-x16 Windows LLVM 10.0         cl  *
+.\tests\transcendentals-7-0.ispc compfail  genx64        genx-x16 Windows LLVM 10.0         cl  *
+.\tests\transcendentals-7-1.ispc compfail  genx64        genx-x16 Windows LLVM 10.0         cl  *
+.\tests\transcendentals-7-2.ispc compfail  genx64        genx-x16 Windows LLVM 10.0         cl  *
+.\tests\transcendentals-7-3.ispc compfail  genx64        genx-x16 Windows LLVM 10.0         cl  *
+.\tests\transcendentals-8-0.ispc compfail  genx64        genx-x16 Windows LLVM 10.0         cl  *
+.\tests\transcendentals-8-1.ispc compfail  genx64        genx-x16 Windows LLVM 10.0         cl  *
+.\tests\transcendentals-8-2.ispc compfail  genx64        genx-x16 Windows LLVM 10.0         cl  *
+.\tests\transcendentals-8-3.ispc compfail  genx64        genx-x16 Windows LLVM 10.0         cl  *
+.\tests\transcendentals-9-0.ispc compfail  genx64        genx-x16 Windows LLVM 10.0         cl  *
+.\tests\transcendentals-9-1.ispc compfail  genx64        genx-x16 Windows LLVM 10.0         cl  *
+.\tests\transcendentals-9-2.ispc compfail  genx64        genx-x16 Windows LLVM 10.0         cl  *
+.\tests\transcendentals-9-3.ispc compfail  genx64        genx-x16 Windows LLVM 10.0         cl  *
