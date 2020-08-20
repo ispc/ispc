@@ -40,6 +40,10 @@
 #endif
 
 #ifdef ISPC_IS_WINDOWS
+#define _CRT_SECURE_NO_WARNINGS
+#define NOMINMAX
+#pragma warning(disable : 4244)
+#pragma warning(disable : 4305)
 #include <windows.h>
 #endif // ISPC_IS_WINDOWS
 
@@ -142,12 +146,31 @@ static void L0InitContext(ze_device_handle_t &hDevice, ze_module_handle_t &hModu
     is.read((char *)codeBin, codeSize);
     is.close();
 
+    std::string igcOptions = "-vc-codegen -no-optimize";
+    const char *userIgcOptionsEnv = getenv("ISPCRT_IGC_OPTIONS");
+    if (userIgcOptionsEnv) {
+        std::string userIgcOptions(userIgcOptionsEnv);
+
+        if (userIgcOptions.length() >= 3) {
+            auto prefix = userIgcOptions.substr(0, 2);
+            if (prefix == "+ ") {
+                igcOptions += ' ' + userIgcOptions.substr(2);
+            } else if (prefix == "= ") {
+                igcOptions = userIgcOptions.substr(2);
+            } else {
+                throw std::runtime_error("Invalid ISPCRT_IGC_OPTIONS string" + userIgcOptions);
+            }
+        } else {
+            throw std::runtime_error("Invalid ISPCRT_IGC_OPTIONS string" + userIgcOptions);
+        }
+    }
+
     // Create module
     ze_module_desc_t moduleDesc = {};
     moduleDesc.format = ZE_MODULE_FORMAT_IL_SPIRV;
     moduleDesc.pInputModule = codeBin;
     moduleDesc.inputSize = codeSize;
-    moduleDesc.pBuildFlags = "-vc-codegen -no-optimize";
+    moduleDesc.pBuildFlags = igcOptions.c_str();
     // Add build log output for easier debugginer the tests
     ze_module_build_log_handle_t buildlog;
     if (zeModuleCreate(hContext, hDevice, &moduleDesc, &hModule, &buildlog) != ZE_RESULT_SUCCESS) {
