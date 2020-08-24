@@ -1682,9 +1682,12 @@ llvm::Value *FunctionEmitContext::SmearUniform(llvm::Value *value, const char *n
     if (llvm::Constant *const_val = llvm::dyn_cast<llvm::Constant>(value)) {
 #if ISPC_LLVM_VERSION < ISPC_LLVM_11_0
         ret = llvm::ConstantVector::getSplat(g->target->getVectorWidth(), const_val);
-#else // LLVM 11.0+
+#elif ISPC_LLVM_VERSION == ISPC_LLVM_11_0
         ret =
             llvm::ConstantVector::getSplat({static_cast<unsigned int>(g->target->getVectorWidth()), false}, const_val);
+#else // LLVM 12.0+
+        ret = llvm::ConstantVector::getSplat(
+            llvm::ElementCount::get(static_cast<unsigned int>(g->target->getVectorWidth()), false), const_val);
 #endif
         return ret;
     }
@@ -3143,13 +3146,13 @@ llvm::Value *FunctionEmitContext::BroadcastValue(llvm::Value *v, llvm::Type *vec
 #if ISPC_LLVM_VERSION < ISPC_LLVM_11_0
     llvm::Constant *zeroVec = llvm::ConstantVector::getSplat(
         vecType->getVectorNumElements(), llvm::Constant::getNullValue(llvm::Type::getInt32Ty(*g->ctx)));
-#elif ISPC_LLVM_VERSION >= ISPC_LLVM_11_0
+#elif ISPC_LLVM_VERSION == ISPC_LLVM_11_0
     llvm::Constant *zeroVec =
         llvm::ConstantVector::getSplat({static_cast<unsigned int>(ty->getNumElements()), false},
                                        llvm::Constant::getNullValue(llvm::Type::getInt32Ty(*g->ctx)));
 #else
     llvm::Constant *zeroVec =
-        llvm::ConstantVector::getSplat({static_cast<unsigned int>(vecType->getVectorNumElements()), false},
+        llvm::ConstantVector::getSplat(llvm::ElementCount::get(static_cast<unsigned int>(ty->getNumElements()), false),
                                        llvm::Constant::getNullValue(llvm::Type::getInt32Ty(*g->ctx)));
 #endif
     llvm::Value *ret = ShuffleInst(insert, undef2, zeroVec, name);
