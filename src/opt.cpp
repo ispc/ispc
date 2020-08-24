@@ -1426,9 +1426,13 @@ static llvm::Value *lGetBasePtrAndOffsets(llvm::Value *ptrs, llvm::Value **offse
                     llvm::Value *zeroMask =
 #if ISPC_LLVM_VERSION < ISPC_LLVM_11_0
                         llvm::ConstantVector::getSplat(cv->getType()->getVectorNumElements(),
-#else // LLVM 11.0+
+#elif ISPC_LLVM_VERSION == ISPC_LLVM_11_0
                         llvm::ConstantVector::getSplat(
                             {llvm::dyn_cast<llvm::VectorType>(cv->getType())->getNumElements(), false},
+#else // LLVM 12.0+
+                        llvm::ConstantVector::getSplat(
+                            llvm::ElementCount::get(llvm::dyn_cast<llvm::VectorType>(cv->getType())->getNumElements(),
+                                                    false),
 #endif
                                                        llvm::Constant::getNullValue(llvm::Type::getInt32Ty(*g->ctx)));
                     // Create offset
@@ -1445,8 +1449,11 @@ static llvm::Value *lGetBasePtrAndOffsets(llvm::Value *ptrs, llvm::Value **offse
                         llvm::Value *zeroMask = llvm::ConstantVector::getSplat(
 #if ISPC_LLVM_VERSION < ISPC_LLVM_11_0
                             bop_var_type->getVectorNumElements(),
-#else // LLVM 11.0+
+#elif ISPC_LLVM_VERSION == ISPC_LLVM_11_0
                             {llvm::dyn_cast<llvm::VectorType>(bop_var_type)->getNumElements(), false},
+#else // LLVM 12.0+
+                            llvm::ElementCount::get(llvm::dyn_cast<llvm::VectorType>(bop_var_type)->getNumElements(),
+                                                    false),
 #endif
                             llvm::Constant::getNullValue(llvm::Type::getInt32Ty(*g->ctx)));
                         shuffle_offset = new llvm::ShuffleVectorInst(bop_var, llvm::UndefValue::get(bop_var_type),
@@ -2739,9 +2746,14 @@ static bool lGSToLoadStore(llvm::CallInst *callInst) {
             llvm::Value *zeroMask =
 #if ISPC_LLVM_VERSION < ISPC_LLVM_11_0
                 llvm::ConstantVector::getSplat(callInst->getType()->getVectorNumElements(),
-#else // LLVM 11.0+
+#elif ISPC_LLVM_VERSION == ISPC_LLVM_11_0
                 llvm::ConstantVector::getSplat(
                     {llvm::dyn_cast<llvm::VectorType>(callInst->getType())->getNumElements(), false},
+
+#else // LLVM 12.0+
+                llvm::ConstantVector::getSplat(
+                    llvm::ElementCount::get(llvm::dyn_cast<llvm::VectorType>(callInst->getType())->getNumElements(),
+                                            false),
 #endif
                                                llvm::Constant::getNullValue(llvm::Type::getInt32Ty(*g->ctx)));
             llvm::Value *shufValue = new llvm::ShuffleVectorInst(insertVec, undef2Value, zeroMask, callInst->getName());
