@@ -957,6 +957,7 @@ static void lDefineConstantInt(const char *name, int val, llvm::Module *module, 
         // have the DW_AT_artifical attribute.  It's not clear if this
         // matters for anything though.
         llvm::GlobalVariable *sym_GV_storagePtr = llvm::dyn_cast<llvm::GlobalVariable>(sym->storagePtr);
+        Assert(sym_GV_storagePtr);
         llvm::DIGlobalVariableExpression *var =
             m->diBuilder->createGlobalVariableExpression(cu, name, name, file, 0 /* line */, diType, true /* static */);
         sym_GV_storagePtr->addDebugInfo(var);
@@ -1008,6 +1009,7 @@ static void lDefineProgramIndex(llvm::Module *module, SymbolTable *symbolTable,
         llvm::DICompileUnit *cu = m->diCompileUnit;
         llvm::DIType *diType = sym->type->GetDIType(file);
         llvm::GlobalVariable *sym_GV_storagePtr = llvm::dyn_cast<llvm::GlobalVariable>(sym->storagePtr);
+        Assert(sym_GV_storagePtr);
         llvm::DIGlobalVariableExpression *var = m->diBuilder->createGlobalVariableExpression(
             cu, sym->name.c_str(), sym->name.c_str(), file, 0 /* line */, diType, false /* static */);
         sym_GV_storagePtr->addDebugInfo(var);
