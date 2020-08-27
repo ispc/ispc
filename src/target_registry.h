@@ -69,9 +69,10 @@ class TargetLibRegistry {
 
     // Dispatch
     // Currently only one dispatch module is supported: for x86 CPUs.
-    // It's OS / arch agnostic.
-    // TODO: do we need separate dispatch module for Windows and for Unix (or any specific platform)?
+    // It's OS / arch agnostic, except for macOS, see issue 1854 for more details.
+    // TODO: do we need separate dispatch module for Windows and for Unix?
     const BitcodeLib *m_dispatch;
+    const BitcodeLib *m_dispatch_macos;
 
     // Builtins-c
     // OS x Arch
@@ -89,7 +90,7 @@ class TargetLibRegistry {
     static TargetLibRegistry *getTargetLibRegistry();
 
     // Return dispatch module if available, otherwise nullptr.
-    const BitcodeLib *getDispatchLib() const;
+    const BitcodeLib *getDispatchLib(const TargetOS os) const;
 
     // Return builtins-c module if available, otherwise nullptr.
     const BitcodeLib *getBuiltinsCLib(TargetOS os, Arch arch) const;

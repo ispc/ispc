@@ -89,10 +89,15 @@ TargetLibRegistry::TargetLibRegistry() {
     // TODO: sort before adding - to canonicalize.
     // TODO: check for conflicts / duplicates.
     m_dispatch = NULL;
+    m_dispatch_macos = NULL;
     for (auto lib : *libs) {
         switch (lib->getType()) {
         case BitcodeLib::BitcodeLibType::Dispatch:
-            m_dispatch = lib;
+            if (lib->getOS() == TargetOS::macos) {
+                m_dispatch_macos = lib;
+            } else {
+                m_dispatch = lib;
+            }
             break;
         case BitcodeLib::BitcodeLibType::Builtins_c:
             m_builtins[Triple(lib->getISPCTarget(), lib->getOS(), lib->getArch()).encode()] = lib;
@@ -128,7 +133,9 @@ TargetLibRegistry *TargetLibRegistry::getTargetLibRegistry() {
     return reg;
 }
 
-const BitcodeLib *TargetLibRegistry::getDispatchLib() const { return m_dispatch; }
+const BitcodeLib *TargetLibRegistry::getDispatchLib(const TargetOS os) const {
+    return (os == TargetOS::macos) ? m_dispatch_macos : m_dispatch;
+}
 
 const BitcodeLib *TargetLibRegistry::getBuiltinsCLib(TargetOS os, Arch arch) const {
     auto result = m_builtins.find(Triple(ISPCTarget::none, os, arch).encode());
