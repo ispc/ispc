@@ -2405,7 +2405,7 @@ static llvm::Module *lInitDispatchModule() {
     module->setDataLayout(g->target->getDataLayout()->getStringRepresentation());
 
     // First, link in the definitions from the builtins-dispatch.ll file.
-    const BitcodeLib *dispatch = g->target_registry->getDispatchLib();
+    const BitcodeLib *dispatch = g->target_registry->getDispatchLib(g->target_os);
     Assert(dispatch);
     AddBitcodeToModule(dispatch, module);
 

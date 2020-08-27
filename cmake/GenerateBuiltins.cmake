@@ -45,38 +45,35 @@ elseif (UNIX)
     set(TARGET_OS_LIST_FOR_LL "unix")
 endif()
 
-function(ll_to_cpp llFileName bit os_name resultFileName)
+function(target_ll_to_cpp llFileName bit os_name resultFileName)
     set(inputFilePath builtins/${llFileName}.ll)
     set(includePath builtins)
-    if ("${llFileName}" STREQUAL "dispatch")
-        set(type dispatch)
-    else ()
-        set(type ispc-target)
-    endif()
     string(TOUPPER ${os_name} os_name_macro)
-    if ("${bit}" STREQUAL "")
-        set(output ${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_CFG_INTDIR}/builtins-${llFileName}-${os_name}.cpp)
-        add_custom_command(
-            OUTPUT ${output}
-            COMMAND ${M4_EXECUTABLE} -I${includePath}
-                -DLLVM_VERSION=${LLVM_VERSION} -DBUILD_OS=${os_name_macro} ${inputFilePath}
-                | \"${Python3_EXECUTABLE}\" bitcode2cpp.py ${inputFilePath} --type=${type} --os=${os_name_macro} --llvm_as ${LLVM_AS_EXECUTABLE}
-                > ${output}
-            DEPENDS ${inputFilePath} bitcode2cpp.py
-            WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-        )
-    else ()
-        set(output ${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_CFG_INTDIR}/builtins-${llFileName}-${bit}bit-${os_name}.cpp)
-        add_custom_command(
-            OUTPUT ${output}
-            COMMAND ${M4_EXECUTABLE} -I${includePath}
-                -DLLVM_VERSION=${LLVM_VERSION} -DBUILD_OS=${os_name_macro} -DRUNTIME=${bit} ${inputFilePath}
-                | \"${Python3_EXECUTABLE}\" bitcode2cpp.py ${inputFilePath} --type=${type} --runtime=${bit} --os=${os_name_macro} --llvm_as ${LLVM_AS_EXECUTABLE}
-                > ${output}
-            DEPENDS ${inputFilePath} bitcode2cpp.py
-            WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-        )
-    endif()
+    set(output ${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_CFG_INTDIR}/builtins-${llFileName}-${bit}bit-${os_name}.cpp)
+    add_custom_command(
+        OUTPUT ${output}
+        COMMAND ${M4_EXECUTABLE} -I${includePath}
+            -DLLVM_VERSION=${LLVM_VERSION} -DBUILD_OS=${os_name_macro} -DRUNTIME=${bit} ${inputFilePath}
+            | \"${Python3_EXECUTABLE}\" bitcode2cpp.py ${inputFilePath} --type=ispc-target --runtime=${bit} --os=${os_name_macro} --llvm_as ${LLVM_AS_EXECUTABLE}
+            > ${output}
+        DEPENDS ${inputFilePath} bitcode2cpp.py
+        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+    )
+    set(${resultFileName} ${output} PARENT_SCOPE)
+    set_source_files_properties(${resultFileName} PROPERTIES GENERATED true)
+endfunction()
+
+function(dispatch_ll_to_cpp llFileName os_name resultFileName)
+    set(inputFilePath builtins/${llFileName}.ll)
+    set(output ${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_CFG_INTDIR}/builtins-${llFileName}.cpp)
+    add_custom_command(
+        OUTPUT ${output}
+        COMMAND ${M4_EXECUTABLE} -DLLVM_VERSION=${LLVM_VERSION} ${inputFilePath}
+            | \"${Python3_EXECUTABLE}\" bitcode2cpp.py ${inputFilePath} --type=dispatch --os=${os_name} --llvm_as ${LLVM_AS_EXECUTABLE}
+            > ${output}
+        DEPENDS ${inputFilePath} bitcode2cpp.py
+        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+    )
     set(${resultFileName} ${output} PARENT_SCOPE)
     set_source_files_properties(${resultFileName} PROPERTIES GENERATED true)
 endfunction()
@@ -307,22 +304,22 @@ function(builtin_genx_to_cpp bit resultFileName)
 endfunction()
 
 function (generate_target_builtins resultList)
-    # Dispatch module for Windows and/or Unix targets.
-    foreach (os_name ${TARGET_OS_LIST_FOR_LL})
-        ll_to_cpp(dispatch "" ${os_name} output${os_name})
-        list(APPEND tmpList ${output${os_name}})
-        if(MSVC)
-            # Group generated files inside Visual Studio
-            source_group("Generated Builtins" FILES ${output}${os_name})
-        endif()
-    endforeach()
+    # Dispatch module for macOS and all the rest of targets.
+    dispatch_ll_to_cpp(dispatch "linux" output_generic)
+    dispatch_ll_to_cpp(dispatch-macos "macos" output_macos)
+    list(APPEND tmpList ${output_generic} ${output_macos})
+    if(MSVC)
+        # Group generated files inside Visual Studio
+        source_group("Generated Builtins" FILES ${output_generic} ${output_macos})
+    endif()
+
     # "Regular" targets, targeting specific real ISA: sse/avx/neon
     set(regular_targets ${ARGN})
     list(FILTER regular_targets EXCLUDE REGEX wasm)
     foreach (ispc_target ${regular_targets})
         foreach (bit 32 64)
             foreach (os_name ${TARGET_OS_LIST_FOR_LL})
-                ll_to_cpp(target-${ispc_target} ${bit} ${os_name} output${os_name}${bit})
+                target_ll_to_cpp(target-${ispc_target} ${bit} ${os_name} output${os_name}${bit})
                 list(APPEND tmpList ${output${os_name}${bit}})
                 if(MSVC)
                     # Group generated files inside Visual Studio
@@ -336,7 +333,7 @@ function (generate_target_builtins resultList)
         set(wasm_targets ${ARGN})
         list(FILTER wasm_targets INCLUDE REGEX wasm)
         foreach (wasm_target ${wasm_targets})
-            ll_to_cpp(target-${wasm_target} 32 web outputweb32)
+            target_ll_to_cpp(target-${wasm_target} 32 web outputweb32)
             list(APPEND tmpList ${outputweb32})
         endforeach()
     endif()
