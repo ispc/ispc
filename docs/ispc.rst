@@ -61,6 +61,7 @@ Contents:
   + `Updating ISPC Programs For Changes In ISPC 1.12.0`_
   + `Updating ISPC Programs For Changes In ISPC 1.13.0`_
   + `Updating ISPC Programs For Changes In ISPC 1.14.0`_
+  + `Updating ISPC Programs For Changes In ISPC 1.14.1`_
 
 * `Getting Started with ISPC`_
 
@@ -433,6 +434,12 @@ and avx512skx-i16x32.
 
 Windows x86_64 target now supports ``__vectorcall`` calling convention.
 It's off by default, can be enabled by ``--vectorcall`` command line switch.
+
+Updating ISPC Programs For Changes In ISPC 1.14.1
+-------------------------------------------------
+
+The release doesn't contain language changes, which may affect compatibility with
+older versions.
 
 
 Getting Started with ISPC

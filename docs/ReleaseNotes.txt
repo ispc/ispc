@@ -1,3 +1,24 @@
+=== v1.14.1 === (28 August 2020)
+
+A minor ISPC update with a bug fix for AVX512 detection problem on macOS
+(for more details see issue #1854) and update of GPU version to use Level0 v1.0.
+CPU binaries are based on patched LLVM 10.0.1.
+
+Runtime Dependencies for GPU-enabled build:
+- Intel(R) Graphics Compute Runtime
+  https://github.com/intel/compute-runtime/releases/tag/20.33.17675
+- Level Zero Loader
+  https://github.com/oneapi-src/level-zero/releases/tag/v1.0
+- OpenMP Runtime
+  Consult your Linux distribution documentation for installation of OpenMP runtime
+  instructions.
+
+Components revisions used in GPU-enabled build:
+KhronosGroup/SPIRV-LLVM-Translator@1a5c52f
+intel/vc-intrinsics@f39ff1e
+oneapi-src/level-zero@fcc7b7a (v1.0)
+llvm/llvm-project@ef32c61 (llvmorg-10.0.1) + patches from llvm_patches folder
+
 === v1.14.0 === (30 July 2020)
 
 An ISPC release with several improvements for CPU and initial support of Intel
