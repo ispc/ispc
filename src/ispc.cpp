@@ -119,6 +119,16 @@ static bool __os_has_avx512_support() {
     // See section 2.1 of software.intel.com/sites/default/files/managed/0d/53/319433-022.pdf
     unsigned long long xcrFeatureMask = _xgetbv(_XCR_XFEATURE_ENABLED_MASK);
     return (xcrFeatureMask & 0xE6) == 0xE6;
+#elif defined(ISPC_HOST_IS_APPLE)
+    // macOS has different way of dealing with AVX512 than Windows and Linux:
+    // - by default AVX512 is off in the newly created thread, which means CPUID flags will
+    //   indicate AVX512 availability, but OS support check (XCR0) will not succeed.
+    // - AVX512 can be enabled either by calling thread_set_state() or by executing any
+    //   AVX512 instruction, which would cause #UD exception handled by the OS.
+    // The purpose of this check is to identify if AVX512 is potentially available, so we
+    // need to bypass OS check and look at CPUID flags only.
+    // See ispc issue #1854 for more details.
+    return true;
 #else  // !defined(ISPC_HOST_IS_WINDOWS)
     // Check xgetbv; this uses a .byte sequence instead of the instruction
     // directly because older assemblers do not include support for xgetbv and

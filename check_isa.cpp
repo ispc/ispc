@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2013-2015, Intel Corporation
+  Copyright (c) 2013-2020, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -40,12 +40,14 @@
 #include <stdio.h>
 
 #if defined(_WIN32) || defined(_WIN64)
-#define ISPC_IS_WINDOWS
+#define HOST_IS_WINDOWS
 #include <intrin.h>
+#elif defined(__APPLE__)
+#define HOST_IS_APPLE
 #endif
 
 #if !defined(__arm__) && !defined(__aarch64__)
-#if !defined(ISPC_IS_WINDOWS)
+#if !defined(HOST_IS_WINDOWS)
 static void __cpuid(int info[4], int infoType) {
     __asm__ __volatile__("cpuid" : "=a"(info[0]), "=b"(info[1]), "=c"(info[2]), "=d"(info[3]) : "0"(infoType));
 }
@@ -58,37 +60,47 @@ static void __cpuidex(int info[4], int level, int count) {
                          : "=a"(info[0]), "=r"(info[1]), "=c"(info[2]), "=d"(info[3])
                          : "0"(level), "2"(count));
 }
-#endif // !ISPC_IS_WINDOWS
+#endif // !HOST_IS_WINDOWS
 
 static bool __os_has_avx_support() {
-#if defined(ISPC_IS_WINDOWS)
+#if defined(HOST_IS_WINDOWS)
     // Check if the OS will save the YMM registers
     unsigned long long xcrFeatureMask = _xgetbv(_XCR_XFEATURE_ENABLED_MASK);
     return (xcrFeatureMask & 6) == 6;
-#else  // !defined(ISPC_IS_WINDOWS)
+#else  // !defined(HOST_IS_WINDOWS)
     // Check xgetbv; this uses a .byte sequence instead of the instruction
     // directly because older assemblers do not include support for xgetbv and
     // there is no easy way to conditionally compile based on the assembler used.
     int rEAX, rEDX;
     __asm__ __volatile__(".byte 0x0f, 0x01, 0xd0" : "=a"(rEAX), "=d"(rEDX) : "c"(0));
     return (rEAX & 6) == 6;
-#endif // !defined(ISPC_IS_WINDOWS)
+#endif // !defined(HOST_IS_WINDOWS)
 }
 
 static bool __os_has_avx512_support() {
-#if defined(ISPC_IS_WINDOWS)
+#if defined(HOST_IS_WINDOWS)
     // Check if the OS saves the XMM, YMM and ZMM registers, i.e. it supports AVX2 and AVX512.
     // See section 2.1 of software.intel.com/sites/default/files/managed/0d/53/319433-022.pdf
     unsigned long long xcrFeatureMask = _xgetbv(_XCR_XFEATURE_ENABLED_MASK);
     return (xcrFeatureMask & 0xE6) == 0xE6;
-#else  // !defined(ISPC_IS_WINDOWS)
+#elif defined(HOST_IS_APPLE)
+    // macOS has different way of dealing with AVX512 than Windows and Linux:
+    // - by default AVX512 is off in the newly created thread, which means CPUID flags will
+    //   indicate AVX512 availability, but OS support check (XCR0) will not succeed.
+    // - AVX512 can be enabled either by calling thread_set_state() or by executing any
+    //   AVX512 instruction, which would cause #UD exception handled by the OS.
+    // The purpose of this check is to identify if AVX512 is potentially available, so we
+    // need to bypass OS check and look at CPUID flags only.
+    // See ispc issue #1854 for more details.
+    return true;
+#else  // !defined(HOST_IS_WINDOWS)
     // Check xgetbv; this uses a .byte sequence instead of the instruction
     // directly because older assemblers do not include support for xgetbv and
     // there is no easy way to conditionally compile based on the assembler used.
     int rEAX, rEDX;
     __asm__ __volatile__(".byte 0x0f, 0x01, 0xd0" : "=a"(rEAX), "=d"(rEDX) : "c"(0));
     return (rEAX & 0xE6) == 0xE6;
-#endif // !defined(ISPC_IS_WINDOWS)
+#endif // !defined(HOST_IS_WINDOWS)
 }
 #endif // !__arm__
 
