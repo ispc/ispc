@@ -82,6 +82,7 @@
 #include <llvm/Transforms/Instrumentation.h>
 #include <llvm/Transforms/Scalar.h>
 #include <llvm/Transforms/Scalar/GVN.h>
+#include <llvm/Transforms/Scalar/InstSimplifyPass.h>
 #include <llvm/Transforms/Utils.h>
 #include <llvm/Transforms/Utils/BasicBlockUtils.h>
 #if ISPC_LLVM_VERSION >= ISPC_LLVM_10_0
@@ -573,7 +574,7 @@ void Optimize(llvm::Module *module, int optLevel) {
         // Early optimizations to try to reduce the total amount of code to
         // work with if we can
         optPM.add(llvm::createReassociatePass(), 200);
-        optPM.add(llvm::createConstantPropagationPass());
+        optPM.add(llvm::createInstSimplifyLegacyPass());
         optPM.add(llvm::createDeadInstEliminationPass());
         optPM.add(llvm::createCFGSimplificationPass());
 
@@ -624,7 +625,7 @@ void Optimize(llvm::Module *module, int optLevel) {
 #endif
         // Next inline pass will remove functions, saved by __keep_funcs_live
         optPM.add(llvm::createFunctionInliningPass());
-        optPM.add(llvm::createConstantPropagationPass());
+        optPM.add(llvm::createInstSimplifyLegacyPass());
         optPM.add(llvm::createDeadInstEliminationPass());
         optPM.add(llvm::createCFGSimplificationPass());
 
@@ -679,7 +680,7 @@ void Optimize(llvm::Module *module, int optLevel) {
             optPM.add(CreatePromoteToPrivateMemoryPass());
 #endif
         optPM.add(llvm::createFunctionInliningPass(), 265);
-        optPM.add(llvm::createConstantPropagationPass());
+        optPM.add(llvm::createInstSimplifyLegacyPass());
         optPM.add(CreateIntrinsicsOptPass());
         optPM.add(CreateInstructionSimplifyPass());
 
