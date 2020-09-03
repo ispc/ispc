@@ -384,6 +384,29 @@ target_include_directories(${PROJECT_NAME} PRIVATE
                            ${GENX_DEPS_DIR}/include
                            ${CMAKE_CURRENT_SOURCE_DIR}/src
                            ${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_CFG_INTDIR})
+
+if (GENX_ENABLED)
+    if (UNIX)
+        if (NOT GENX_ADAPTOR_OCL_INCLUDES)
+            set(GENX_ADAPTOR_OCL_INCLUDES /usr/include/igc)
+        endif()
+        if (NOT GENX_INC_COMMON)
+            set(GENX_INC_COMMON /usr/include/igdgmm/inc/common)
+        endif()
+    else()
+        if (NOT GENX_ADAPTOR_OCL_INCLUDES)
+            set(GENX_ADAPTOR_OCL_INCLUDES ${GENX_GFX_DIR}/IGC/AdaptorOCL)
+        endif()
+        if (NOT GENX_INC_COMMON)
+            set(GENX_INC_COMMON ${GENX_GFX_DIR}/inc/common)
+        endif()
+    endif()
+    target_include_directories(${PROJECT_NAME} PRIVATE
+            ${GENX_INC_COMMON}
+            ${GENX_ADAPTOR_OCL_INCLUDES}
+            ${GENX_ADAPTOR_OCL_INCLUDES}/cif
+            ${GENX_ADAPTOR_OCL_INCLUDES}/ocl_igc_shared/executable_format)
+endif()
 # Compile options
 if (UNIX)
     target_compile_options(${PROJECT_NAME} PRIVATE -Wall -Wno-sign-compare -Wno-unused-function -Werror ${LLVM_CPP_FLAGS})

@@ -123,7 +123,11 @@ static void L0InitContext(ze_device_handle_t &hDevice, ze_module_handle_t &hModu
     L0_SAFE_CALL(zeCommandQueueCreate(hContext, hDevice, &commandQueueDesc, &hCommandQueue));
 
     std::ifstream is;
+#ifdef TEST_ZEBIN
+    std::string fn = "test_genx.bin";
+#else
     std::string fn = "test_genx.spv";
+#endif
     is.open(fn, std::ios::binary);
     if (!is.good()) {
         fprintf(stderr, "Open %s failed\n", fn.c_str());
@@ -167,7 +171,11 @@ static void L0InitContext(ze_device_handle_t &hDevice, ze_module_handle_t &hModu
 
     // Create module
     ze_module_desc_t moduleDesc = {};
+#ifdef TEST_ZEBIN
+    moduleDesc.format = ZE_MODULE_FORMAT_NATIVE;
+#else
     moduleDesc.format = ZE_MODULE_FORMAT_IL_SPIRV;
+#endif
     moduleDesc.pInputModule = codeBin;
     moduleDesc.inputSize = codeSize;
     moduleDesc.pBuildFlags = igcOptions.c_str();

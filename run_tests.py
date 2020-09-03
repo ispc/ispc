@@ -370,7 +370,7 @@ def run_test(testname, host, target):
             genx_target = options.target
             if host.is_windows():
                 if target.is_genx():
-                    obj_name = "test_genx.spv"
+                    obj_name = "test_genx.bin" if options.ispc_output == "ze" else "test_genx.spv"
                 else:
                     obj_name = "%s.obj" % os.path.basename(filename)
 
@@ -382,13 +382,14 @@ def run_test(testname, host, target):
                 cc_cmd = "%s /I. /Zi /nologo /DTEST_SIG=%d /DTEST_WIDTH=%d %s %s /Fe%s" % \
                          (options.compiler_exe, match, width, add_prefix("test_static.cpp", host, target), obj_name, exe_name)
                 if target.is_genx():
-                    cc_cmd = "%s /I. /I%s\\include /nologo /DTEST_SIG=%d /DTEST_WIDTH=%d %s /Fe%s ze_loader.lib /link /LIBPATH:%s\\lib" % \
-                         (options.compiler_exe, options.l0loader, match, width, add_prefix("test_static_l0.cpp", host, target), exe_name, options.l0loader)
+                    cc_cmd = "%s /I. /I%s\\include /nologo /DTEST_SIG=%d /DTEST_WIDTH=%d %s %s /Fe%s ze_loader.lib /link /LIBPATH:%s\\lib" % \
+                         (options.compiler_exe, options.l0loader, match, width, " /DTEST_ZEBIN" if options.ispc_output == "ze" else " /DTEST_SPV", \
+                         add_prefix("test_static_l0.cpp", host, target), exe_name, options.l0loader)
                 if should_fail:
                     cc_cmd += " /DEXPECT_FAILURE"
             else:
                 if target.is_genx():
-                    obj_name = "test_genx.spv"
+                    obj_name = "test_genx.bin" if options.ispc_output == "ze" else "test_genx.spv"
                 else:
                     obj_name = "%s.o" % testname
 
@@ -420,12 +421,13 @@ def run_test(testname, host, target):
                             %s %s -DTEST_SIG=%d -DTEST_WIDTH=%d -o %s" % \
                             (options.compiler_exe, gcc_arch, add_prefix("test_static_l0.cpp", host, target), match, width, exe_name)
                     exe_name = "./" + exe_name
+                    cc_cmd += " -DTEST_ZEBIN" if options.ispc_output == "ze" else " -DTEST_SPV"
 
             ispc_cmd = ispc_exe_rel + " --woff %s -o %s --arch=%s --target=%s" % \
                         (filename, obj_name, options.arch, genx_target if target.is_genx() else options.target)
 
             if target.is_genx():
-                ispc_cmd += " -DISPC_GENX_ENABLED --emit-spirv"
+                ispc_cmd += " --emit-zebin" if options.ispc_output == "ze" else " --emit-spirv"
 
             if options.opt == 'O0':
                 ispc_cmd += " -O0"
@@ -561,6 +563,8 @@ def file_check(results, host, target):
             OS = "Linux"
 # Detect opt_set
     opt = options.opt
+# Detect testing output
+    ispc_output = options.ispc_output
 # Detect LLVM version
     temp1 = common.take_lines(host.ispc_exe + " --version", "first")
     temp2 = re.search('LLVM [0-9]*\.[0-9]*', temp1)
@@ -587,7 +591,7 @@ def file_check(results, host, target):
     #    error("\n**********\nWe don't have history of fails for compiler " +
     #            compiler_version +
     #            "\nAll fails will be new!!!\n**********", 2)
-    new_line = " "+target.arch.rjust(6)+" "+target.target.rjust(14)+" "+OS.rjust(7)+" "+llvm_version+" "+compiler_version.rjust(10)+" "+opt+" *\n"
+    new_line = " "+target.arch.rjust(6)+" "+target.target.rjust(14)+" "+OS.rjust(7)+" "+llvm_version+" "+compiler_version.rjust(10)+" "+opt+ " " + ispc_output + " *\n"
     new_compfails = compfails[:]
     new_runfails = runfails[:]
     new_f_lines = f_lines[:]
@@ -597,7 +601,8 @@ def file_check(results, host, target):
            ((" "+OS+" ") in f_lines[j]) and
            ((" "+llvm_version+" ") in f_lines[j]) and
            ((" "+compiler_version+" ") in f_lines[j]) and
-           ((" "+opt+" ") in f_lines[j])):
+           ((" "+opt+" ") in f_lines[j]) and
+           ((" "+ispc_output+" ") in f_lines[j])):
             if (" compfail " in f_lines[j]):
                 f = 0
                 for i in range(0, len(compfails)):
@@ -713,6 +718,17 @@ def set_compiler_exe(host, options):
     # checks the required compiler otherwise prints an error message
     check_compiler_exists(options.compiler_exe)
 
+# set ISPC output format
+def set_ispc_output(target, options):
+    if options.ispc_output == None:
+        if target.is_genx():
+            options.ispc_output = "spv"
+        else:
+            options.ispc_output = "obj"
+    else:
+        if not target.is_genx() and not options.ispc_output=="obj" or target.is_genx() and options.ispc_output=="obj":
+            error("unsupported test output \"%s\" is specified for target: %s \n" % (options.ispc_output, target.target), 1)
+
 # returns the list of test files
 def get_test_files(host, args):
     if len(args) == 0:
@@ -784,6 +800,7 @@ def run_tests(options1, args, print_version):
     target = TargetConfig(options.arch, options.target)
 
     set_compiler_exe(host, options)
+    set_ispc_output(target, options)
 
     # print compilers versions
     if print_version > 0:
@@ -939,6 +956,7 @@ if __name__ == "__main__":
                   action = "store_true")
     parser.add_option("--file", dest='in_file', help='file to save run_tests output', default="")
     parser.add_option("--l0loader", dest='l0loader', help='Path to L0 loader', default="")
+    parser.add_option("--ispc_output", dest='ispc_output', choices=['obj', 'spv', 'ze'], help='Specify ISPC output', default=None)
     parser.add_option("--verify", dest='verify', help='verify the file fail_db.txt', default=False, action="store_true")
     parser.add_option("--save-bin", dest='save_bin', help='compile and create bin, but don\'t execute it',
                   default=False, action="store_true")

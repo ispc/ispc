@@ -84,6 +84,7 @@
 #include <llvm/IR/Verifier.h>
 #include <llvm/PassRegistry.h>
 #include <llvm/Support/CommandLine.h>
+#include <llvm/Support/DynamicLibrary.h>
 #include <llvm/Support/FileUtilities.h>
 #include <llvm/Support/FormattedStream.h>
 #include <llvm/Support/Host.h>
@@ -97,6 +98,17 @@
 #ifdef ISPC_GENX_ENABLED
 #include <LLVMSPIRVLib/LLVMSPIRVLib.h>
 #include <fstream>
+// Gen binary generation is supported for internal builds only now
+#include "cif/common/library_api.h"
+#if defined(_WIN64)
+#define IGC_LIBRARY_NAME "igc64.dll"
+#elif defined(_WIN32)
+#define IGC_LIBRARY_NAME "igc32.dll"
+#elif defined(__linux__)
+#define IGC_LIBRARY_NAME "libigc.so"
+#else
+#error "Unexpected platform"
+#endif
 #endif
 
 /*! list of files encountered by the parser. this allows emitting of
@@ -958,9 +970,9 @@ bool Module::writeOutput(OutputType outputType, OutputFlags flags, const char *o
                     fileType = "object";
                 break;
 #ifdef ISPC_GENX_ENABLED
-            case ISA:
-                if (strcasecmp(suffix, "isa"))
-                    fileType = "GenX ISA";
+            case ZEBIN:
+                if (strcasecmp(suffix, "bin"))
+                    fileType = "L0 binary";
                 break;
             case SPIRV:
                 if (strcasecmp(suffix, "spv"))
@@ -1010,6 +1022,8 @@ bool Module::writeOutput(OutputType outputType, OutputFlags flags, const char *o
 #ifdef ISPC_GENX_ENABLED
     else if (outputType == SPIRV)
         return writeSPIRV(module, outFileName);
+    else if (outputType == ZEBIN)
+        return writeZEBin(module, outFileName);
 #endif
     else
         return writeObjectFileOrAssembly(outputType, outFileName);
@@ -1045,10 +1059,8 @@ bool Module::writeBitcode(llvm::Module *module, const char *outFileName, OutputT
 }
 
 #ifdef ISPC_GENX_ENABLED
-bool Module::writeSPIRV(llvm::Module *module, const char *outFileName) {
-    std::ofstream fos(outFileName, std::ios::binary);
+bool Module::translateToSPIRV(llvm::Module *module, std::stringstream &ss) {
     std::string err;
-    bool success = false;
     SPIRV::TranslatorOpts Opts;
     Opts.enableAllExtensions();
     // Pass this option to open source SPIR-V translator.
@@ -1059,15 +1071,136 @@ bool Module::writeSPIRV(llvm::Module *module, const char *outFileName) {
                        "calls in SPIR-V"));
     Opts.setSPIRVAllowUnknownIntrinsicsEnabled(SPIRVAllowUnknownIntrinsics);
     Opts.setDesiredBIsRepresentation(SPIRV::BIsRepresentation::SPIRVFriendlyIR);
-
-    if (!strcmp(outFileName, "-")) {
-        success = llvm::writeSpirv(module, Opts, std::cout, err);
-    } else {
-        success = llvm::writeSpirv(module, Opts, fos, err);
-    }
+    bool success = llvm::writeSpirv(module, Opts, ss, err);
     if (!success) {
         fprintf(stderr, "Fails to save LLVM as SPIR-V: %s \n", err.c_str());
         return false;
+    }
+    return true;
+}
+
+bool Module::writeSPIRV(llvm::Module *module, const char *outFileName) {
+    std::stringstream translatedStream;
+    bool success = translateToSPIRV(module, translatedStream);
+    if (!success) {
+        return false;
+    }
+    if (!strcmp(outFileName, "-")) {
+        std::cout << translatedStream.rdbuf();
+    } else {
+        std::ofstream fos(outFileName, std::ios::binary);
+        fos << translatedStream.rdbuf();
+    }
+    return true;
+}
+
+bool Module::writeZEBin(llvm::Module *module, const char *outFileName) {
+    std::stringstream translatedStream;
+    bool success = translateToSPIRV(module, translatedStream);
+    if (!success) {
+        return false;
+    }
+    const std::string &translatedStr = translatedStream.str();
+    std::vector<char> spirStr(translatedStr.begin(), translatedStr.end());
+
+    std::string CPUName = g->target->getCPU();
+
+    auto platformDescription = SupportedGenPlatforms.find(CPUName);
+    if (platformDescription == SupportedGenPlatforms.end()) {
+        Error(SourcePos(), "<%s> is not supported for SPIRV->OclGenBin translation\n", CPUName.c_str());
+        return false;
+    }
+
+    auto IGCDL = llvm::sys::DynamicLibrary::getPermanentLibrary(IGC_LIBRARY_NAME);
+    if (!IGCDL.isValid()) {
+        Error(SourcePos(), "Cannot open '" IGC_LIBRARY_NAME "'\n");
+        return false;
+    }
+
+    auto *createIGCMainFunc =
+        reinterpret_cast<CIF::CreateCIFMainFunc_t>(IGCDL.getAddressOfSymbol(CIF::CreateCIFMainFuncName));
+    if (!createIGCMainFunc) {
+        Error(SourcePos(), "No main entry symbol in '" IGC_LIBRARY_NAME "'\n");
+        return false;
+    }
+
+    auto IGCMain = CIF::RAII::UPtr(createIGCMainFunc());
+    if (!IGCMain) {
+        Error(SourcePos(), "Cannot create igc main\n");
+        return false;
+    }
+
+    auto IGCDeviceCtx = IGCMain->CreateInterface<IGC::IgcOclDeviceCtxTagOCL>();
+    if (!IGCDeviceCtx) {
+        Error(SourcePos(), "Cannot create igc device context\n");
+        return false;
+    }
+
+    auto IGCPlatform = IGCDeviceCtx->GetPlatformHandle();
+    if (!IGCPlatform) {
+        Error(SourcePos(), "Cannot retrieve igc platform\n");
+        return false;
+    }
+    PLATFORM platform = platformDescription->second;
+    IGC::PlatformHelper::PopulateInterfaceWith(*IGCPlatform, platform);
+
+    auto srcBuf = CIF::Builtins::CreateConstBuffer(IGCMain.get(), spirStr.data(), spirStr.size());
+
+    std::string options{"-vc-codegen -no-optimize"};
+    // Add debug option to VC backend of "-g" is set to ISPC
+    if (g->generateDebuggingSymbols) {
+        options.append(" -g");
+    }
+    // TODO: add possibility to pass additional options to backend
+    /*auto ISPCVCOptions = llvm::sys::Process::GetEnv("ISPC_VC_OPTIONS");
+    if (ISPCVCOptions) {
+        Options.append(" ").append(ISPCVCOptions.getValue());
+    }*/
+    // TODO: add possibility to pass additional internal options to backend
+    std::string internalOptions;
+    // Use L0 binary
+    internalOptions.append(" -binary-format=").append("ze");
+
+    auto optsBuf = CIF::Builtins::CreateConstBuffer(IGCMain.get(), options.c_str(), options.size());
+    if (!optsBuf) {
+        Error(SourcePos(), "Could not create IGC translation context (cbuff)\n");
+        return false;
+    }
+
+    auto intOptsBuf = CIF::Builtins::CreateConstBuffer(IGCMain.get(), internalOptions.c_str(), internalOptions.size());
+    if (!intOptsBuf) {
+        Error(SourcePos(), "Could not create IGC translation context (IntOpts)\n");
+        return false;
+    }
+
+    auto IGCTranslationCtx = IGCDeviceCtx->CreateTranslationCtx(IGC::CodeType::spirV, IGC::CodeType::oclGenBin);
+    if (!IGCTranslationCtx) {
+        Error(SourcePos(), "Could not create SPIRV->OclGenBin translation context\n");
+        return false;
+    }
+
+    auto IGCOutput = IGCTranslationCtx->Translate(srcBuf.get(), optsBuf.get(), intOptsBuf.get(), nullptr, 0);
+    if (!IGCOutput) {
+        Error(SourcePos(), "SPIRV->OclGenBin translation produced not output\n");
+        return false;
+    }
+    if (!IGCOutput->Successful()) {
+        auto *logBegin = IGCOutput->GetBuildLog()->GetMemory<char>();
+        auto *logEnd = logBegin + IGCOutput->GetBuildLog()->GetSizeRaw();
+        std::string log(logBegin, logEnd);
+        Error(SourcePos(), "Translation failed!\n%s\n", log.c_str());
+        return false;
+    }
+
+    size_t resultSize = IGCOutput->GetOutput()->GetSizeRaw();
+    auto *outBegin = IGCOutput->GetOutput()->GetMemory<char>();
+    auto *outEnd = outBegin + resultSize;
+    std::vector<char> igcRes = {outBegin, outEnd};
+    if (!strcmp(outFileName, "-")) {
+        std::cout.write(igcRes.data(), igcRes.size());
+    } else {
+        std::ofstream fos(outFileName, std::ios::binary);
+        fos.write(igcRes.data(), igcRes.size());
     }
     return true;
 }
@@ -2566,10 +2699,10 @@ int Module::CompileAndOutput(const char *srcFile, Arch arch, const char *cpu, st
                 }
             }
             if (g->target->isGenXTarget() && outputType == OutputType::Object) {
-                outputType = OutputType::ISA;
+                outputType = OutputType::ZEBIN;
             }
-            if (!g->target->isGenXTarget() && (outputType == OutputType::ISA || outputType == OutputType::SPIRV)) {
-                Error(SourcePos(), "SPIR-V and ISA formats are supported for gen target only");
+            if (!g->target->isGenXTarget() && (outputType == OutputType::ZEBIN || outputType == OutputType::SPIRV)) {
+                Error(SourcePos(), "SPIR-V and L0 binary formats are supported for gen target only");
                 return 1;
             }
 #endif
