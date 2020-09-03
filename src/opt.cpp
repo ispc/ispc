@@ -1432,8 +1432,8 @@ static llvm::Value *lGetBasePtrAndOffsets(llvm::Value *ptrs, llvm::Value **offse
                             {llvm::dyn_cast<llvm::VectorType>(cv->getType())->getNumElements(), false},
 #else // LLVM 12.0+
                         llvm::ConstantVector::getSplat(
-                            llvm::ElementCount::get(llvm::dyn_cast<llvm::VectorType>(cv->getType())->getNumElements(),
-                                                    false),
+                            llvm::ElementCount::get(
+                                llvm::dyn_cast<llvm::FixedVectorType>(cv->getType())->getNumElements(), false),
 #endif
                                                        llvm::Constant::getNullValue(llvm::Type::getInt32Ty(*g->ctx)));
                     // Create offset
@@ -1453,8 +1453,8 @@ static llvm::Value *lGetBasePtrAndOffsets(llvm::Value *ptrs, llvm::Value **offse
 #elif ISPC_LLVM_VERSION == ISPC_LLVM_11_0
                             {llvm::dyn_cast<llvm::VectorType>(bop_var_type)->getNumElements(), false},
 #else // LLVM 12.0+
-                            llvm::ElementCount::get(llvm::dyn_cast<llvm::VectorType>(bop_var_type)->getNumElements(),
-                                                    false),
+                            llvm::ElementCount::get(
+                                llvm::dyn_cast<llvm::FixedVectorType>(bop_var_type)->getNumElements(), false),
 #endif
                             llvm::Constant::getNullValue(llvm::Type::getInt32Ty(*g->ctx)));
                         shuffle_offset = new llvm::ShuffleVectorInst(bop_var, llvm::UndefValue::get(bop_var_type),
@@ -2753,8 +2753,8 @@ static bool lGSToLoadStore(llvm::CallInst *callInst) {
 
 #else // LLVM 12.0+
                 llvm::ConstantVector::getSplat(
-                    llvm::ElementCount::get(llvm::dyn_cast<llvm::VectorType>(callInst->getType())->getNumElements(),
-                                            false),
+                    llvm::ElementCount::get(
+                        llvm::dyn_cast<llvm::FixedVectorType>(callInst->getType())->getNumElements(), false),
 #endif
                                                llvm::Constant::getNullValue(llvm::Type::getInt32Ty(*g->ctx)));
             llvm::Value *shufValue = new llvm::ShuffleVectorInst(insertVec, undef2Value, zeroMask, callInst->getName());
@@ -4120,7 +4120,11 @@ static bool lIsSafeToBlend(llvm::Value *lvalue) {
             while ((at = llvm::dyn_cast<llvm::ArrayType>(type))) {
                 type = at->getElementType();
             }
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_11_0
+            llvm::FixedVectorType *vt = llvm::dyn_cast<llvm::FixedVectorType>(type);
+#else
             llvm::VectorType *vt = llvm::dyn_cast<llvm::VectorType>(type);
+#endif
             return (vt != NULL && (int)vt->getNumElements() == g->target->getVectorWidth());
         } else {
             llvm::GetElementPtrInst *gep = llvm::dyn_cast<llvm::GetElementPtrInst>(lvalue);
@@ -5466,7 +5470,11 @@ static bool lVectorizeGEPs(llvm::Value *ptr, std::vector<PtrUse> &ptrUses, std::
     uint64_t t_size = type->getPrimitiveSizeInBits() >> 3;
 
     // Adjust values for vector load
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_11_0
+    if (auto vecTy = llvm::dyn_cast<llvm::FixedVectorType>(type)) {
+#else
     if (auto vecTy = llvm::dyn_cast<llvm::VectorType>(type)) {
+#endif
         // Get single element size
         t_size /= vecTy->getNumElements();
         // Get single element type
