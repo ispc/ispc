@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2019, Intel Corporation
+  Copyright (c) 2010-2020, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -43,11 +43,26 @@
 
 #include <llvm/IR/DebugInfo.h>
 
+#ifdef ISPC_GENX_ENABLED
+#include "ocl_igc_interface/igc_ocl_device_ctx.h"
+#include "ocl_igc_interface/platform_helper.h"
+
+#include "igfxfmid.h"
+
+#include <unordered_map>
+#endif
+
 namespace llvm {
 class raw_string_ostream;
 }
 
 struct DispatchHeaderInfo;
+
+#ifdef ISPC_GENX_ENABLED
+static const std::unordered_map<std::string, PLATFORM> SupportedGenPlatforms = {
+    {"SKL", {IGFX_SKYLAKE, PCH_UNKNOWN, IGFX_GEN9_CORE, IGFX_GEN9_CORE, PLATFORM_NONE, 0, 9, 0, 0, GTTYPE_UNDEFINED}},
+};
+#endif
 
 class Module {
   public:
@@ -96,7 +111,7 @@ class Module {
         DevStub,     /** generate device-side offload stubs */
         HostStub,    /** generate host-side offload stubs */
 #ifdef ISPC_GENX_ENABLED
-        ISA,   /** generate GenX ISA file */
+        ZEBIN, /** generate L0 binary file */
         SPIRV, /** generate spir-v file */
 #endif
     };
@@ -178,7 +193,9 @@ class Module {
                                           OutputType outputType, const char *outFileName);
     static bool writeBitcode(llvm::Module *module, const char *outFileName, OutputType outputType);
 #ifdef ISPC_GENX_ENABLED
+    static bool translateToSPIRV(llvm::Module *module, std::stringstream &outString);
     static bool writeSPIRV(llvm::Module *module, const char *outFileName);
+    static bool writeZEBin(llvm::Module *module, const char *outFileName);
 #endif
     void execPreprocessor(const char *infilename, llvm::raw_string_ostream *ostream) const;
 };
