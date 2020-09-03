@@ -1151,12 +1151,10 @@ bool Module::writeZEBin(llvm::Module *module, const char *outFileName) {
     if (g->generateDebuggingSymbols) {
         options.append(" -g");
     }
-    // TODO: add possibility to pass additional options to backend
-    /*auto ISPCVCOptions = llvm::sys::Process::GetEnv("ISPC_VC_OPTIONS");
-    if (ISPCVCOptions) {
-        Options.append(" ").append(ISPCVCOptions.getValue());
-    }*/
-    // TODO: add possibility to pass additional internal options to backend
+
+    if (g->vcOpts != "") {
+        options.append(" " + g->vcOpts);
+    }
     std::string internalOptions;
     // Use L0 binary
     internalOptions.append(" -binary-format=").append("ze");
@@ -1189,6 +1187,7 @@ bool Module::writeZEBin(llvm::Module *module, const char *outFileName) {
         auto *logEnd = logBegin + IGCOutput->GetBuildLog()->GetSizeRaw();
         std::string log(logBegin, logEnd);
         Error(SourcePos(), "Translation failed!\n%s\n", log.c_str());
+        Error(SourcePos(), "IGC options used: %s\n", options.c_str());
         return false;
     }
 

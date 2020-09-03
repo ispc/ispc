@@ -178,6 +178,9 @@ static void lPrintVersion() {
              g->target_registry->getSupportedOSes().c_str());
     PrintWithWordBreaks(targetHelp, 24, TerminalWidth(), stdout);
     printf("    [--version]\t\t\t\tPrint ispc version\n");
+#ifdef ISPC_GENX_ENABLED
+    printf("    [--vc-options=<\"-option1 -option2...\">]\t\t\t\tPass additional options to Vector Compiler backend\n");
+#endif
     printf("    [--werror]\t\t\t\tTreat warnings as errors\n");
     printf("    [--woff]\t\t\t\tDisable warnings\n");
     printf("    [--wno-perf]\t\t\tDon't issue warnings related to performance-related issues\n");
@@ -650,7 +653,6 @@ int main(int Argc, char *Argv[]) {
 #ifdef ISPC_GENX_ENABLED
         else if (!strcmp(argv[i], "--emit-spirv")) {
             ot = Module::SPIRV;
-            g->emitSPIRV = true;
         } else if (!strcmp(argv[i], "--emit-zebin")) {
             ot = Module::ZEBIN;
         }
@@ -866,6 +868,10 @@ int main(int Argc, char *Argv[]) {
 
         else if (strncmp(argv[i], "--off-phase=", 12) == 0) {
             g->off_stages = ParsingPhases(argv[i] + strlen("--off-phase="), errorHandler);
+#ifdef ISPC_GENX_ENABLED
+        } else if (!strncmp(argv[i], "--vc-options=", 12)) {
+            g->vcOpts = argv[i] + strlen("--vc-options=");
+#endif
         } else if (!strcmp(argv[i], "-v") || !strcmp(argv[i], "--version")) {
             lPrintVersion();
             return 0;
@@ -1009,7 +1015,6 @@ int main(int Argc, char *Argv[]) {
             // Generate .spv for gen target instead of object by default.
             if (ot == Module::Object) {
                 Warning(SourcePos(), "Emitting spir-v file for genx-* targets.");
-                g->emitSPIRV = true;
                 ot = Module::SPIRV;
             }
         }
