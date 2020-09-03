@@ -1548,11 +1548,12 @@ void FunctionEmitContext::EmitFunctionParameterDebugInfo(Symbol *sym, int argNum
  */
 static int lArrayVectorWidth(llvm::Type *t) {
     llvm::ArrayType *arrayType = llvm::dyn_cast<llvm::ArrayType>(t);
-    if (arrayType == NULL)
+    if (arrayType == NULL) {
         return 0;
+    }
 
-        // We shouldn't be seeing arrays of anything but vectors being passed
-        // to things like FunctionEmitContext::BinaryOperator() as operands.
+    // We shouldn't be seeing arrays of anything but vectors being passed
+    // to things like FunctionEmitContext::BinaryOperator() as operands.
 #if ISPC_LLVM_VERSION >= ISPC_LLVM_11_0
     llvm::FixedVectorType *vectorElementType = llvm::dyn_cast<llvm::FixedVectorType>(arrayType->getElementType());
 #else
