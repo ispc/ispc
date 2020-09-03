@@ -623,7 +623,9 @@ struct Globals {
     bool emitInstrumentation;
 
 #ifdef ISPC_GENX_ENABLED
-    bool emitSPIRV;
+    /** Arguments to pass to Vector Compiler backend for offline
+    compilation to L0 binary */
+    std::string vcOpts;
 #endif
 
     bool noPragmaOnce;
