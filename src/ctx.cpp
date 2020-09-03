@@ -1551,9 +1551,13 @@ static int lArrayVectorWidth(llvm::Type *t) {
     if (arrayType == NULL)
         return 0;
 
-    // We shouldn't be seeing arrays of anything but vectors being passed
-    // to things like FunctionEmitContext::BinaryOperator() as operands.
+        // We shouldn't be seeing arrays of anything but vectors being passed
+        // to things like FunctionEmitContext::BinaryOperator() as operands.
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_11_0
+    llvm::FixedVectorType *vectorElementType = llvm::dyn_cast<llvm::FixedVectorType>(arrayType->getElementType());
+#else
     llvm::VectorType *vectorElementType = llvm::dyn_cast<llvm::VectorType>(arrayType->getElementType());
+#endif
     Assert((vectorElementType != NULL && (int)vectorElementType->getNumElements() == g->target->getVectorWidth()));
 
     return (int)arrayType->getNumElements();
@@ -1622,7 +1626,11 @@ static llvm::Type *lGetMatchingBoolVectorType(llvm::Type *type) {
     llvm::ArrayType *arrayType = llvm::dyn_cast<llvm::ArrayType>(type);
     Assert(arrayType != NULL);
 
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_11_0
+    llvm::FixedVectorType *vectorElementType = llvm::dyn_cast<llvm::FixedVectorType>(arrayType->getElementType());
+#else
     llvm::VectorType *vectorElementType = llvm::dyn_cast<llvm::VectorType>(arrayType->getElementType());
+#endif
     Assert(vectorElementType != NULL);
     Assert((int)vectorElementType->getNumElements() == g->target->getVectorWidth());
 
@@ -3117,10 +3125,11 @@ llvm::Value *FunctionEmitContext::BroadcastValue(llvm::Value *v, llvm::Type *vec
         return NULL;
     }
 
-    llvm::VectorType *ty = llvm::dyn_cast<llvm::VectorType>(vecType);
 #if ISPC_LLVM_VERSION >= ISPC_LLVM_11_0
+    llvm::FixedVectorType *ty = llvm::dyn_cast<llvm::FixedVectorType>(vecType);
     Assert(ty && ty->getElementType() == v->getType());
 #else
+    llvm::VectorType *ty = llvm::dyn_cast<llvm::VectorType>(vecType);
     Assert(ty && ty->getVectorElementType() == v->getType());
 #endif
 
