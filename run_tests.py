@@ -428,6 +428,8 @@ def run_test(testname, host, target):
 
             if target.is_genx():
                 ispc_cmd += " --emit-zebin" if options.ispc_output == "ze" else " --emit-spirv"
+            if options.cpu != None:
+                ispc_cmd += " --cpu="+ options.cpu
 
             if options.opt == 'O0':
                 ispc_cmd += " -O0"
@@ -956,6 +958,7 @@ if __name__ == "__main__":
                   action = "store_true")
     parser.add_option("--file", dest='in_file', help='file to save run_tests output', default="")
     parser.add_option("--l0loader", dest='l0loader', help='Path to L0 loader', default="")
+    parser.add_option("--cpu", dest='cpu', help='Specify target ISPC CPU. For example: core2, skx, cortex-a9, SKL, TGLLP, etc.', default=None)
     parser.add_option("--ispc_output", dest='ispc_output', choices=['obj', 'spv', 'ze'], help='Specify ISPC output', default=None)
     parser.add_option("--verify", dest='verify', help='verify the file fail_db.txt', default=False, action="store_true")
     parser.add_option("--save-bin", dest='save_bin', help='compile and create bin, but don\'t execute it',

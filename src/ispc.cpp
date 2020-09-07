@@ -288,6 +288,7 @@ typedef enum {
 #endif
 #ifdef ISPC_GENX_ENABLED
     CPU_GENX,
+    CPU_GENX_TGLLP,
 #endif
     sizeofCPUtype
 } CPUtype;
@@ -367,6 +368,7 @@ class AllCPUs {
 
 #ifdef ISPC_GENX_ENABLED
         names[CPU_GENX].push_back("SKL");
+        names[CPU_GENX_TGLLP].push_back("TGLLP");
 #endif
 
         Assert(names.size() == sizeofCPUtype);
@@ -411,6 +413,7 @@ class AllCPUs {
 
 #ifdef ISPC_GENX_ENABLED
         compat[CPU_GENX] = Set(CPU_GENX, CPU_None);
+        compat[CPU_GENX_TGLLP] = Set(CPU_GENX_TGLLP, CPU_GENX, CPU_None);
 #endif
     }
 

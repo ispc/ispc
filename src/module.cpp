@@ -96,10 +96,9 @@
 #include <llvm/Transforms/Utils/ValueMapper.h>
 
 #ifdef ISPC_GENX_ENABLED
+#include "cif/common/library_api.h"
 #include <LLVMSPIRVLib/LLVMSPIRVLib.h>
 #include <fstream>
-// Gen binary generation is supported for internal builds only now
-#include "cif/common/library_api.h"
 #if defined(_WIN64)
 #define IGC_LIBRARY_NAME "igc64.dll"
 #elif defined(_WIN32)
@@ -1158,7 +1157,10 @@ bool Module::writeZEBin(llvm::Module *module, const char *outFileName) {
     std::string internalOptions;
     // Use L0 binary
     internalOptions.append(" -binary-format=").append("ze");
-
+    // Enable long long and double support for TGLLP
+    if (CPUName == "TGLLP") {
+        internalOptions.append(" -target-features=").append("+emulate_i64");
+    }
     auto optsBuf = CIF::Builtins::CreateConstBuffer(IGCMain.get(), options.c_str(), options.size());
     if (!optsBuf) {
         Error(SourcePos(), "Could not create IGC translation context (cbuff)\n");
@@ -1186,11 +1188,10 @@ bool Module::writeZEBin(llvm::Module *module, const char *outFileName) {
         auto *logBegin = IGCOutput->GetBuildLog()->GetMemory<char>();
         auto *logEnd = logBegin + IGCOutput->GetBuildLog()->GetSizeRaw();
         std::string log(logBegin, logEnd);
-        Error(SourcePos(), "Translation failed!\n%s\n", log.c_str());
-        Error(SourcePos(), "IGC options used: %s\n", options.c_str());
+        Error(SourcePos(), "Translation failed!\n%s\n IGC options used: %s %s\n", log.c_str(), options.c_str(),
+              internalOptions.c_str());
         return false;
     }
-
     size_t resultSize = IGCOutput->GetOutput()->GetSizeRaw();
     auto *outBegin = IGCOutput->GetOutput()->GetMemory<char>();
     auto *outEnd = outBegin + resultSize;
