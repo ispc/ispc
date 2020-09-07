@@ -61,6 +61,9 @@ struct DispatchHeaderInfo;
 #ifdef ISPC_GENX_ENABLED
 static const std::unordered_map<std::string, PLATFORM> SupportedGenPlatforms = {
     {"SKL", {IGFX_SKYLAKE, PCH_UNKNOWN, IGFX_GEN9_CORE, IGFX_GEN9_CORE, PLATFORM_NONE, 0, 9, 0, 0, GTTYPE_UNDEFINED}},
+    {"TGLLP",
+     {IGFX_TIGERLAKE_LP, PCH_UNKNOWN, IGFX_GEN12LP_CORE, IGFX_GEN12LP_CORE, PLATFORM_NONE, 0, 0, 0, 0,
+      GTTYPE_UNDEFINED}},
 };
 #endif
 
