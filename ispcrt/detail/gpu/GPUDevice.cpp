@@ -195,9 +195,21 @@ struct MemoryView : public ispcrt::base::MemoryView {
 struct Module : public ispcrt::base::Module {
     Module(ze_device_handle_t device, ze_context_handle_t context, const char *moduleFile) : m_file(moduleFile) {
         std::ifstream is;
-        is.open(m_file + ".spv", std::ios::binary);
-        if (!is.good())
-            throw std::runtime_error("Failed to open spv file!");
+        ze_module_format_t moduleFormat = ZE_MODULE_FORMAT_IL_SPIRV;
+        // Try to open spv file by default if ISPCRT_USE_ZEBIN is not set.
+        // TODO: change default to zebin when it gets more mature
+        const char *userZEBinFormatEnv = getenv("ISPCRT_USE_ZEBIN");
+        if (userZEBinFormatEnv) {
+            is.open(m_file + ".bin", std::ios::binary);
+            moduleFormat = ZE_MODULE_FORMAT_NATIVE;
+            if (!is.good())
+                throw std::runtime_error("Failed to open zebin file!");
+        } else {
+            // Try to read .spv file by default
+            is.open(m_file + ".spv", std::ios::binary);
+            if (!is.good())
+                throw std::runtime_error("Failed to open spv file!");
+        }
 
         is.seekg(0, std::ios::end);
         size_t codeSize = is.tellg();
@@ -241,7 +253,7 @@ struct Module : public ispcrt::base::Module {
         }
 
         ze_module_desc_t moduleDesc = {};
-        moduleDesc.format = ZE_MODULE_FORMAT_IL_SPIRV;
+        moduleDesc.format = moduleFormat;
         moduleDesc.inputSize = codeSize;
         moduleDesc.pInputModule = m_code.data();
         moduleDesc.pBuildFlags = igcOptions.c_str();
