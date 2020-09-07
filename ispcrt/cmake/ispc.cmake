@@ -244,8 +244,6 @@ macro (ispc_compile_gpu parent_target output_prefix)
 
       set(outdir ${ISPC_TARGET_DIR})
 
-      set(result "${outdir}/${output_prefix}${parent_target}.spv")
-
       set(ISPC_PROGRAM_COUNT 8)
       if ("${ISPC_TARGET_GEN}" STREQUAL "genx-x16")
         set(ISPC_PROGRAM_COUNT 16)
@@ -273,7 +271,22 @@ macro (ispc_compile_gpu parent_target output_prefix)
         set(ISPC_GENX_ADDITIONAL_ARGS "")
       endif()
 
-      add_custom_target(${fname}_spv
+      # Output ISPC module format passed by user
+      if (NOT ISPC_GENX_FORMAT)
+        set (ISPC_GENX_FORMAT "spv")
+      endif()
+
+      if (ISPC_GENX_FORMAT STREQUAL "spv")
+        set(ISPC_GPU_TARGET_NAME ${fname}_spv)
+        set(ISPC_GPU_OUTPUT_OPT "--emit-spirv")
+        set(result "${outdir}/${output_prefix}${parent_target}.spv")
+      elseif (ISPC_GENX_FORMAT STREQUAL "zebin")
+        set(ISPC_GPU_TARGET_NAME ${fname}_bin)
+        set(ISPC_GPU_OUTPUT_OPT "--emit-zebin")
+        set(result "${outdir}/${output_prefix}${parent_target}.bin")
+      endif()
+
+      add_custom_target(${ISPC_GPU_TARGET_NAME}
         COMMAND ${ISPC_EXECUTABLE_GPU}
           -I ${CMAKE_CURRENT_SOURCE_DIR}
           ${ISPC_INCLUDE_DIR_PARMS}
@@ -282,14 +295,14 @@ macro (ispc_compile_gpu parent_target output_prefix)
           -DISPC_GPU
           --addressing=64
           --target=${ISPC_TARGET_GEN}
-          --emit-spirv
+          ${ISPC_GPU_OUTPUT_OPT}
           --woff
           -o ${result}
           ${input}
-        COMMENT "Building ISPC GPU object ${outdir}/${output_prefix}${fname}.spv"
+        COMMENT "Building ISPC GPU object ${result}"
       )
 
-      add_dependencies(${parent_target} ${fname}_spv)
+      add_dependencies(${parent_target} ${ISPC_GPU_TARGET_NAME})
 
       target_compile_definitions(${parent_target}
       PRIVATE
