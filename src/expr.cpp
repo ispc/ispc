@@ -2039,6 +2039,22 @@ const Type *BinaryExpr::GetType() const {
         }                                                                                                              \
         break
 
+template <typename T> static int countLeadingZeros(T val) {
+
+    int leadingZeros = 0;
+    size_t size = sizeof(T) * CHAR_BIT;
+    T msb = (T)(1 << (size - 1));
+
+    while (size--) {
+        if (msb & val) {
+            break;
+        }
+        msb = msb >> 1;
+        leadingZeros++;
+    }
+    return leadingZeros;
+}
+
 /** Constant fold the binary integer operations that aren't also applicable
     to floating-point types.
 */
@@ -2048,11 +2064,20 @@ static ConstExpr *lConstFoldBinaryIntOp(BinaryExpr::Op op, const T *v0, const T 
     int count = carg0->Count();
 
     switch (op) {
-        FOLD_OP_REF(BinaryExpr::Shl, <<, TRef);
         FOLD_OP_REF(BinaryExpr::Shr, >>, TRef);
         FOLD_OP_REF(BinaryExpr::BitAnd, &, TRef);
         FOLD_OP_REF(BinaryExpr::BitXor, ^, TRef);
         FOLD_OP_REF(BinaryExpr::BitOr, |, TRef);
+
+    case BinaryExpr::Shl:
+        for (int i = 0; i < count; ++i) {
+            result[i] = (v0[i] << v1[i]);
+            if (v1[i] > countLeadingZeros(v0[i])) {
+                Warning(pos, "Binary expression with type \"%s\" can't represent value.",
+                        carg0->GetType()->GetString().c_str());
+            }
+        }
+        break;
     case BinaryExpr::Mod:
         for (int i = 0; i < count; ++i) {
             if (v1[i] == 0) {
