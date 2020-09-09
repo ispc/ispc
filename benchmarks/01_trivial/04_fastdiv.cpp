@@ -45,8 +45,8 @@ template <typename T> static void check(T *src, T *dst, int divisor, int count) 
 #define FASTDIV(T_C, T_ISPC, DIV_VAL)                                                                                  \
     static void fastdiv_##T_ISPC##_##DIV_VAL(benchmark::State &state) {                                                \
         int count = state.range(0);                                                                                    \
-        T_C *dst = static_cast<T_C *>(aligned_alloc(ALIGNMENT, sizeof(T_C) * count));                                  \
-        T_C *src = static_cast<T_C *>(aligned_alloc(ALIGNMENT, sizeof(T_C) * count));                                  \
+        T_C *dst = static_cast<T_C *>(aligned_alloc_helper(sizeof(T_C) * count));                                      \
+        T_C *src = static_cast<T_C *>(aligned_alloc_helper(sizeof(T_C) * count));                                      \
         init_src(src, count);                                                                                          \
         init_dst(dst, count);                                                                                          \
                                                                                                                        \
@@ -55,8 +55,8 @@ template <typename T> static void check(T *src, T *dst, int divisor, int count) 
         }                                                                                                              \
                                                                                                                        \
         check(src, dst, DIV_VAL, count);                                                                               \
-        free(src);                                                                                                     \
-        free(dst);                                                                                                     \
+        aligned_free_helper(src);                                                                                      \
+        aligned_free_helper(dst);                                                                                      \
         state.SetComplexityN(state.range(0));                                                                          \
     }                                                                                                                  \
     BENCHMARK(fastdiv_##T_ISPC##_##DIV_VAL)->ARGS;
