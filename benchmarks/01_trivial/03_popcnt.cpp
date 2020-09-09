@@ -55,8 +55,8 @@ template <typename T> static void check_even(T *src, T *dst, int count) {
 #define POPCNT(T_C, T_ISPC, V, ALL)                                                                                    \
     static void popcnt_stdlib_##V##_##T_ISPC##_##ALL(benchmark::State &state) {                                        \
         int count = state.range(0);                                                                                    \
-        T_C *src = static_cast<T_C *>(aligned_alloc(ALIGNMENT, sizeof(T_C) * count));                                  \
-        T_C *dst = static_cast<T_C *>(aligned_alloc(ALIGNMENT, sizeof(T_C) * count));                                  \
+        T_C *src = static_cast<T_C *>(aligned_alloc_helper(sizeof(T_C) * count));                                      \
+        T_C *dst = static_cast<T_C *>(aligned_alloc_helper(sizeof(T_C) * count));                                      \
         init(src, dst, count);                                                                                         \
                                                                                                                        \
         for (auto _ : state) {                                                                                         \
@@ -64,8 +64,8 @@ template <typename T> static void check_even(T *src, T *dst, int count) {
         }                                                                                                              \
                                                                                                                        \
         check_##ALL(src, dst, count);                                                                                  \
-        free(src);                                                                                                     \
-        free(dst);                                                                                                     \
+        aligned_free_helper(src);                                                                                      \
+        aligned_free_helper(dst);                                                                                      \
         state.SetComplexityN(state.range(0));                                                                          \
     }                                                                                                                  \
     BENCHMARK(popcnt_stdlib_##V##_##T_ISPC##_##ALL)->ARGS;
