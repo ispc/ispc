@@ -93,9 +93,9 @@ for:
         cd %ISPC_HOME%
         check_env.py
         mkdir build && cd build
-        cmake .. -Thost=x64 -G %generator% -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=%ISPC_HOME%\install -DISPC_PREPARE_PACKAGE=ON -DM4_EXECUTABLE=C:\cygwin64\bin\m4.exe -DISPC_CROSS=ON -DISPC_GNUWIN32_PATH=%CROSS_TOOLS%\gnuwin32 -DISPC_MACOS_SDK_PATH=%CROSS_TOOLS%\%MACOS_SDK% -DWASM_ENABLED=%WASM% -DISPC_INCLUDE_BENCHMARKS=ON
+        cmake .. -Thost=x64 -G %generator% -DCMAKE_BUILD_TYPE=%configuration% -DCMAKE_INSTALL_PREFIX=%ISPC_HOME%\install -DISPC_PREPARE_PACKAGE=ON -DM4_EXECUTABLE=C:\cygwin64\bin\m4.exe -DISPC_CROSS=ON -DISPC_GNUWIN32_PATH=%CROSS_TOOLS%\gnuwin32 -DISPC_MACOS_SDK_PATH=%CROSS_TOOLS%\%MACOS_SDK% -DWASM_ENABLED=%WASM% -DISPC_INCLUDE_BENCHMARKS=ON
   build_script:
-    - cmd: msbuild %ISPC_HOME%\build\PACKAGE.vcxproj /p:Platform=x64 /p:Configuration=Release
+    - cmd: msbuild %ISPC_HOME%\build\PACKAGE.vcxproj /p:Platform=x64 /p:Configuration=%configuration%
   test_script:
   # Perf tests require Win64 configuration. "Visual Studio 16" generator is Win64 by default but for older versions
   # we need to specify it manually.
@@ -104,7 +104,7 @@ for:
         cd %ISPC_HOME%
         check_isa.exe
         ispc --support-matrix
-        python perf.py -n 1 -g %generator% && msbuild %ISPC_HOME%\build\tests\check-all.vcxproj /t:Build /p:Platform=x64 /p:Configuration=Release
+        python perf.py -n 1 -g %generator% && msbuild %ISPC_HOME%\build\tests\check-all.vcxproj /t:Build /p:Platform=x64 /p:Configuration=%configuration% && msbuild %ISPC_HOME%\build\RUN_TESTS.vcxproj /t:Build /p:Platform=x64 /p:Configuration=%configuration%
 
 -
   matrix:
