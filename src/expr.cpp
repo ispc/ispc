@@ -735,7 +735,7 @@ void InitSymbol(llvm::Value *ptr, const Type *symType, Expr *initExpr, FunctionE
                 // For SOA types and varying, the element type is the uniform variant
                 // of the underlying type
                 const Type *elementType =
-                    collectionType ? collectionType->GetElementType(i) : symType->GetAsUniformType();
+                    collectionType ? collectionType->GetElementType(i) : symType->GetAsUniformStorageType();
 
                 llvm::Value *ep;
                 if (CastType<StructType>(symType) != NULL)

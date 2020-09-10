@@ -124,6 +124,8 @@ std::string Variability::MangleString() const {
 ///////////////////////////////////////////////////////////////////////////
 // Type
 llvm::Type *Type::LLVMStorageType(llvm::LLVMContext *ctx) const { return LLVMType(ctx); }
+
+const Type *Type::GetAsUniformStorageType() const { return GetAsUniformType(); }
 ///////////////////////////////////////////////////////////////////////////
 // AtomicType
 
@@ -276,6 +278,18 @@ const AtomicType *AtomicType::GetAsUniformType() const {
         if (variability == Variability::Varying)
             asUniformType->asVaryingType = this;
     }
+    return asUniformType;
+}
+
+const AtomicType *AtomicType::GetAsUniformStorageType() const {
+
+    Assert(basicType != TYPE_VOID);
+    if (variability == Variability::Uniform)
+        return this;
+
+    asUniformType = new AtomicType(basicType, Variability::Uniform, isConst);
+    if (variability == Variability::Varying)
+        asUniformType->asVaryingType = this;
     return asUniformType;
 }
 

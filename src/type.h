@@ -157,6 +157,11 @@ class Type {
         uniform, its "this" pointer will be returned. */
     virtual const Type *GetAsUniformType() const = 0;
 
+    /** Return a "uniform" instance of this type.  If the type is already
+        uniform, its "this" pointer will be returned. In this case, varying bools
+        are converted to uniform bools*/
+    virtual const Type *GetAsUniformStorageType() const;
+
     /** Return a "varying" instance of this type.  If the type is already
         varying, its "this" pointer will be returned. */
     virtual const Type *GetAsVaryingType() const = 0;
@@ -281,6 +286,7 @@ class AtomicType : public Type {
         itself. */
     const AtomicType *GetBaseType() const;
     const AtomicType *GetAsUniformType() const;
+    const AtomicType *GetAsUniformStorageType() const;
     const AtomicType *GetAsVaryingType() const;
     const AtomicType *GetAsUnboundVariabilityType() const;
     const AtomicType *GetAsSOAType(int width) const;
