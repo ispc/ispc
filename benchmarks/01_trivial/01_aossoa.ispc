@@ -115,7 +115,7 @@ static const varying int vPerm43 = {32,  33,  34,  35,  36,  37,  38,  39,  40, 
         *v3 = shuffle(t3, t1, vPerm43);                                                                                \
     }                                                                                                                  \
                                                                                                                        \
-    export void aos_to_soa4_ispc_##T(uniform T *uniform input, uniform T *uniform output, uniform T n) {               \
+    export void aos_to_soa4_ispc_##T(uniform T *uniform input, uniform T *uniform output, uniform int n) {             \
         uniform int chunk = 4 * programCount;                                                                          \
         uniform int iterations = n / chunk;                                                                            \
                                                                                                                        \
@@ -213,7 +213,7 @@ static const varying int vPerm35 = {0,  1,  2,  3,  4,  5,  6,   7,   8,   9,   
         *v2 = shuffle(t2, src2, vPerm35);                                                                              \
     }                                                                                                                  \
                                                                                                                        \
-    export void aos_to_soa3_ispc_##T(uniform T *uniform input, uniform T *uniform output, uniform T n) {               \
+    export void aos_to_soa3_ispc_##T(uniform T *uniform input, uniform T *uniform output, uniform int n) {             \
         uniform int chunk = 3 * programCount;                                                                          \
         uniform int iterations = n / chunk;                                                                            \
                                                                                                                        \

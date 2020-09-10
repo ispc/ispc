@@ -54,7 +54,7 @@ template <typename T> static void check_even(T *src, T *dst, int count) {
 
 #define POPCNT(T_C, T_ISPC, V, ALL)                                                                                    \
     static void popcnt_stdlib_##V##_##T_ISPC##_##ALL(benchmark::State &state) {                                        \
-        int count = state.range(0);                                                                                    \
+        int count = static_cast<int>(state.range(0));                                                                  \
         T_C *src = static_cast<T_C *>(aligned_alloc_helper(sizeof(T_C) * count));                                      \
         T_C *dst = static_cast<T_C *>(aligned_alloc_helper(sizeof(T_C) * count));                                      \
         init(src, dst, count);                                                                                         \

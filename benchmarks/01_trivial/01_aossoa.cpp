@@ -65,7 +65,7 @@ template <typename T> static void check3(T *dst, int count) {
 
 #define AOS_TO_SOA_STDLIB(N, T_C, T_ISPC)                                                                              \
     static void aos_to_soa##N##_stdlib_##T_ISPC(benchmark::State &state) {                                             \
-        int count = state.range(0);                                                                                    \
+        int count = static_cast<int>(state.range(0));                                                                  \
         T_C *src = static_cast<T_C *>(aligned_alloc_helper(sizeof(T_C) * count));                                      \
         T_C *dst = static_cast<T_C *>(aligned_alloc_helper(sizeof(T_C) * count));                                      \
         init(src, dst, count);                                                                                         \
@@ -82,7 +82,7 @@ template <typename T> static void check3(T *dst, int count) {
 
 #define AOS_TO_SOA_ISPC(N, T_C, T_ISPC)                                                                                \
     static void aos_to_soa##N##_ispc_##T_ISPC(benchmark::State &state) {                                               \
-        int count = state.range(0);                                                                                    \
+        int count = static_cast<int>(state.range(0));                                                                  \
         T_C *src = static_cast<T_C *>(aligned_alloc_helper(sizeof(T_C) * count));                                      \
         T_C *dst = static_cast<T_C *>(aligned_alloc_helper(sizeof(T_C) * count));                                      \
         init(src, dst, count);                                                                                         \
