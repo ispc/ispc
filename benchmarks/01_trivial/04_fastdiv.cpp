@@ -44,7 +44,7 @@ template <typename T> static void check(T *src, T *dst, int divisor, int count) 
 
 #define FASTDIV(T_C, T_ISPC, DIV_VAL)                                                                                  \
     static void fastdiv_##T_ISPC##_##DIV_VAL(benchmark::State &state) {                                                \
-        int count = state.range(0);                                                                                    \
+        int count = static_cast<int>(state.range(0));                                                                  \
         T_C *dst = static_cast<T_C *>(aligned_alloc_helper(sizeof(T_C) * count));                                      \
         T_C *src = static_cast<T_C *>(aligned_alloc_helper(sizeof(T_C) * count));                                      \
         init_src(src, count);                                                                                          \

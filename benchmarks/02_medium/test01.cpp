@@ -4,16 +4,16 @@
 
 #include "test01_ispc.h"
 
-const float eps = 0.00001;
+const float eps = 0.00001f;
 #define ARGS Arg(100)->Arg(1000)->Arg(10000)
 
 using namespace ispc;
 
 static void init(struct FVector *dst, struct FVector *src0, struct FVector *src1, int count) {
     for (int i = 0; i < count; i++) {
-        src0[i].V[0] = i;
-        src0[i].V[1] = i + 1;
-        src0[i].V[2] = i + 2;
+        src0[i].V[0] = (float)i;
+        src0[i].V[1] = (float)(i + 1);
+        src0[i].V[2] = (float)(i + 2);
         src1[i].V[0] = 2;
         src1[i].V[1] = 4;
         src1[i].V[2] = 8;
@@ -35,7 +35,7 @@ static void check(struct FVector *dst, struct FVector *src0, struct FVector *src
 }
 
 static void test01_1(benchmark::State &state) {
-    int count = state.range(0);
+    int count = static_cast<int>(state.range(0));
     FVector *src0 = new FVector[count];
     FVector *src1 = new FVector[count];
     FVector *dst = new FVector[count];
@@ -53,7 +53,7 @@ static void test01_1(benchmark::State &state) {
 BENCHMARK(test01_1)->ARGS;
 
 static void test01_2(benchmark::State &state) {
-    int count = state.range(0);
+    int count = static_cast<int>(state.range(0));
     FVector *src0 = new FVector[count];
     FVector *src1 = new FVector[count];
     FVector *dst = new FVector[count];
@@ -71,7 +71,7 @@ static void test01_2(benchmark::State &state) {
 BENCHMARK(test01_2)->ARGS;
 
 static void test01_3(benchmark::State &state) {
-    int count = state.range(0);
+    int count = static_cast<int>(state.range(0));
     FVector *src0 = new FVector[count];
     FVector *src1 = new FVector[count];
     FVector *dst = new FVector[count];
