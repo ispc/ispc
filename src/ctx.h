@@ -442,7 +442,7 @@ class FunctionEmitContext {
     /** Bool is stored as i8 and <WIDTH x i8> but represented in IR as i1 and
      * <WIDTH x MASK>. This is a helper function to match bool size at storage
      * interface. */
-    llvm::Value *SwitchBoolSize(llvm::Value *value, llvm::Type *fromType, llvm::Type *toType, const char *name = NULL);
+    llvm::Value *SwitchBoolSize(llvm::Value *value, llvm::Type *toType, const char *name = NULL);
     /** Load from the memory location(s) given by lvalue, using the given
         mask.  The lvalue may be varying, in which case this corresponds to
         a gather from the multiple memory locations given by the array of
