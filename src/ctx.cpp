@@ -1424,15 +1424,14 @@ llvm::Value *FunctionEmitContext::I1VecToBoolVec(llvm::Value *b) {
 
         for (unsigned int i = 0; i < at->getNumElements(); ++i) {
             llvm::Value *elt = ExtractInst(b, i);
-            llvm::Value *sext =
-                SwitchBoolSize(elt, elt->getType(), LLVMTypes::BoolVectorStorageType, LLVMGetName(elt, "_to_boolvec"));
+            llvm::Value *sext = SwitchBoolSize(elt, LLVMTypes::BoolVectorStorageType, LLVMGetName(elt, "_to_boolvec"));
             ret = InsertInst(ret, sext, i);
         }
         return ret;
     } else {
         // For non-array types, convert to 'LLVMTypes::BoolVectorType' if
         // necessary.
-        return SwitchBoolSize(b, b->getType(), LLVMTypes::BoolVectorType, LLVMGetName(b, "_to_boolvec"));
+        return SwitchBoolSize(b, LLVMTypes::BoolVectorType, LLVMGetName(b, "_to_boolvec"));
     }
 }
 
@@ -2240,12 +2239,13 @@ llvm::Value *FunctionEmitContext::AddElementOffset(llvm::Value *fullBasePtr, int
         return resultPtr;
 }
 
-llvm::Value *FunctionEmitContext::SwitchBoolSize(llvm::Value *value, llvm::Type *fromType, llvm::Type *toType,
-                                                 const char *name) {
-    if ((value == NULL) || (fromType == NULL) || (toType == NULL)) {
+llvm::Value *FunctionEmitContext::SwitchBoolSize(llvm::Value *value, llvm::Type *toType, const char *name) {
+    if ((value == NULL) || (toType == NULL)) {
         AssertPos(currentPos, m->errorCount > 0);
         return NULL;
     }
+
+    llvm::Type *fromType = value->getType();
 
     llvm::Value *newBool = value;
     if (g->target->getDataLayout()->getTypeSizeInBits(fromType) >
@@ -2295,11 +2295,11 @@ llvm::Value *FunctionEmitContext::LoadInst(llvm::Value *ptr, const Type *type, c
     // bool type is stored as i8. So, it requires some processing.
     if ((type != NULL) && (type->IsBoolType())) {
         if (CastType<AtomicType>(type) != NULL) {
-            loadVal = SwitchBoolSize(loadVal, inst->getType(), type->LLVMType(g->ctx));
+            loadVal = SwitchBoolSize(loadVal, type->LLVMType(g->ctx));
         } else if ((CastType<VectorType>(type) != NULL)) {
             const VectorType *vType = CastType<VectorType>(type);
             if (CastType<AtomicType>(vType->GetElementType()) != NULL) {
-                loadVal = SwitchBoolSize(loadVal, inst->getType(), type->LLVMType(g->ctx));
+                loadVal = SwitchBoolSize(loadVal, type->LLVMType(g->ctx));
             }
         }
     }
@@ -2436,7 +2436,7 @@ llvm::Value *FunctionEmitContext::LoadInst(llvm::Value *ptr, llvm::Value *mask, 
             llvm::Value *loadVal = inst;
             // bool type is stored as i8. So, it requires some processing.
             if (elType->IsBoolType() && (CastType<AtomicType>(elType) != NULL)) {
-                loadVal = SwitchBoolSize(loadVal, inst->getType(), elType->LLVMType(g->ctx));
+                loadVal = SwitchBoolSize(loadVal, elType->LLVMType(g->ctx));
             }
             return loadVal;
         }
@@ -2763,7 +2763,7 @@ void FunctionEmitContext::maskedStore(llvm::Value *value, llvm::Value *ptr, cons
         maskedStoreFunc = m->module->getFunction("__pseudo_masked_store_i16");
     } else if (llvmValueStorageType == LLVMTypes::Int8VectorType) {
         maskedStoreFunc = m->module->getFunction("__pseudo_masked_store_i8");
-        value = SwitchBoolSize(value, llvmValueType, llvmValueStorageType);
+        value = SwitchBoolSize(value, llvmValueStorageType);
     }
     AssertPos(currentPos, maskedStoreFunc != NULL);
 
@@ -2851,12 +2851,12 @@ void FunctionEmitContext::scatter(llvm::Value *value, llvm::Value *ptr, const Ty
     AssertPos(currentPos,
               pt != NULL || CastType<AtomicType>(valueType) != NULL || CastType<EnumType>(valueType) != NULL);
 
-    llvm::Type *type = value->getType();
-    llvm::Type *llvmStorageType = type;
+    llvm::Type *llvmStorageType = value->getType();
+    ;
     // bool type is stored as i8. So, it requires some processing.
     if ((pt == NULL) && (valueType->IsBoolType())) {
         llvmStorageType = LLVMTypes::BoolVectorStorageType;
-        value = SwitchBoolSize(value, type, llvmStorageType);
+        value = SwitchBoolSize(value, llvmStorageType);
     }
     const char *funcName = NULL;
     if (pt != NULL) {
@@ -2908,11 +2908,11 @@ void FunctionEmitContext::StoreInst(llvm::Value *value, llvm::Value *ptr, const 
 
     if ((ptrType != NULL) && (ptrType->IsBoolType())) {
         if ((CastType<AtomicType>(ptrType) != NULL)) {
-            value = SwitchBoolSize(value, value->getType(), ptrType->LLVMStorageType(g->ctx));
+            value = SwitchBoolSize(value, ptrType->LLVMStorageType(g->ctx));
         } else if (CastType<VectorType>(ptrType) != NULL) {
             const VectorType *vType = CastType<VectorType>(ptrType);
             if (CastType<AtomicType>(vType->GetElementType()) != NULL) {
-                value = SwitchBoolSize(value, value->getType(), ptrType->LLVMStorageType(g->ctx));
+                value = SwitchBoolSize(value, ptrType->LLVMStorageType(g->ctx));
             }
         }
     }
