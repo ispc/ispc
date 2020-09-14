@@ -65,82 +65,15 @@ define(`ALL_TRUE_VECTOR',
 ;; LLVM has different IR for different versions since 3.7
 
 define(`PTR_OP_ARGS',
-  ifelse(LLVM_VERSION, LLVM_3_7,
-    ``$1 , $1 *'',
-         LLVM_VERSION, LLVM_3_8,
-    ``$1 , $1 *'',
-         LLVM_VERSION, LLVM_3_9,
-    ``$1 , $1 *'',
-         LLVM_VERSION, LLVM_4_0,
-    ``$1 , $1 *'',
-         LLVM_VERSION, LLVM_5_0,
-    ``$1 , $1 *'',
-         LLVM_VERSION, LLVM_6_0,
-    ``$1 , $1 *'',
-         LLVM_VERSION, LLVM_7_0,
-    ``$1 , $1 *'',
-         LLVM_VERSION, LLVM_7_1,
-    ``$1 , $1 *'',
-         LLVM_VERSION, LLVM_8_0,
-    ``$1 , $1 *'',
-         LLVM_VERSION, LLVM_9_0,
-    ``$1 , $1 *'',
-         LLVM_VERSION, LLVM_10_0,
-    ``$1 , $1 *'',
-    ``$1 *''
-  )
+    `$1 , $1 *'
 )
 
-;; x86 mask load/stores have different mask type since 3.8
-
 define(`MdORi64',
-  ifelse(LLVM_VERSION, LLVM_3_8,
-    ``i64'',
-    LLVM_VERSION, LLVM_3_9,
-    ``i64'',
-    LLVM_VERSION, LLVM_4_0,
-    ``i64'',
-    LLVM_VERSION, LLVM_5_0,
-    ``i64'',
-    LLVM_VERSION, LLVM_6_0,
-    ``i64'',
-    LLVM_VERSION, LLVM_7_0,
-    ``i64'',
-    LLVM_VERSION, LLVM_7_1,
-    ``i64'',
-    LLVM_VERSION, LLVM_8_0,
-    ``i64'',
-    LLVM_VERSION, LLVM_9_0,
-    ``i64'',
-    LLVM_VERSION, LLVM_10_0,
-    ``i64'',
-    ``double''
-  )
+  ``i64''
 )
 
 define(`MfORi32',
-  ifelse(LLVM_VERSION, LLVM_3_8,
-    ``i32'',
-    LLVM_VERSION, LLVM_3_9,
-    ``i32'',
-    LLVM_VERSION, LLVM_4_0,
-    ``i32'',
-    LLVM_VERSION, LLVM_5_0,
-    ``i32'',
-    LLVM_VERSION, LLVM_6_0,
-    ``i32'',
-    LLVM_VERSION, LLVM_7_0,
-    ``i32'',
-    LLVM_VERSION, LLVM_7_1,
-    ``i32'',
-    LLVM_VERSION, LLVM_8_0,
-    ``i32'',
-    LLVM_VERSION, LLVM_9_0,
-    ``i32'',
-    LLVM_VERSION, LLVM_10_0,
-    ``i32'',
-    ``float''
-  )
+  ``i32''
 )
 
 
