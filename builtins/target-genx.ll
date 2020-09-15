@@ -1093,7 +1093,6 @@ define <WIDTH x float> @__pow_varying_float(<WIDTH x float>, <WIDTH x float>) no
   ret <WIDTH x float> %res
 }
 
-
 define float @__exp_uniform_float(float) nounwind readnone {
   %res = call float @llvm.genx.pow(float EXP, float %0)
   ret float %res
@@ -1106,7 +1105,41 @@ define <WIDTH x float> @__exp_varying_float(<WIDTH x float>) nounwind readnone {
   ret <WIDTH x float> %res
 }
 
-transcendetals_decl()
+declare double @llvm.log.f64(double) nounwind readnone
+define double @__log_uniform_double(double) nounwind readnone {
+  %res = call double @llvm.log.f64(double %0)
+  ret double %res
+}
+
+declare <WIDTH x double> @llvm.log.GEN_SUFFIX(double)(<WIDTH x double>) nounwind readnone
+define <WIDTH x double> @__log_varying_double(<WIDTH x double>) nounwind readnone {
+  %res = call <WIDTH x double> @llvm.log.GEN_SUFFIX(double)(<WIDTH x double> %0)
+  ret <WIDTH x double> %res
+}
+
+declare double @llvm.exp.f64(double) nounwind readnone
+define double @__exp_uniform_double(double) nounwind readnone {
+  %res = call double @llvm.exp.f64(double %0)
+  ret double %res
+}
+
+declare <WIDTH x double> @llvm.exp.GEN_SUFFIX(double)(<WIDTH x double>) nounwind readnone
+define <WIDTH x double> @__exp_varying_double(<WIDTH x double>) nounwind readnone {
+  %res = call <WIDTH x double> @llvm.exp.GEN_SUFFIX(double)(<WIDTH x double> %0)
+  ret <WIDTH x double> %res
+}
+
+declare double @llvm.pow.f64(double, double) nounwind readnone
+define double @__pow_uniform_double(double, double) nounwind readnone {
+  %res = call double @llvm.pow.f64(double %0, double %1)
+  ret double %res
+}
+
+declare <WIDTH x double> @llvm.pow.GEN_SUFFIX(double).GEN_SUFFIX(double)(<WIDTH x double>, <WIDTH x double>) nounwind readnone
+define <WIDTH x double> @__pow_varying_double(<WIDTH x double>, <WIDTH x double>) nounwind readnone {
+  %res = call <WIDTH x double> @llvm.pow.GEN_SUFFIX(double).GEN_SUFFIX(double)(<WIDTH x double> %0, <WIDTH x double> %1)
+  ret <WIDTH x double> %res
+}
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; native trigonometry
@@ -1147,6 +1180,60 @@ define <WIDTH x float> @__tan_varying_float(<WIDTH x float>) nounwind readnone {
   %sin = call <WIDTH x float> @llvm.genx.sin.GEN_SUFFIX(float)(<WIDTH x float> %0)
   %res = fdiv <WIDTH x float> %sin, %cos
   ret <WIDTH x float> %res
+}
+
+declare double @llvm.sin.f64(double) nounwind readnone
+define double @__sin_uniform_double(double) nounwind readnone {
+  %res = call double @llvm.sin.f64(double %0)
+  ret double %res
+}
+
+declare <WIDTH x double> @llvm.sin.GEN_SUFFIX(double)(<WIDTH x double>) nounwind readnone
+define <WIDTH x double> @__sin_varying_double(<WIDTH x double>) nounwind readnone {
+  %res = call <WIDTH x double> @llvm.sin.GEN_SUFFIX(double)(<WIDTH x double> %0)
+  ret <WIDTH x double> %res
+}
+
+declare double @llvm.cos.f64(double) nounwind readnone
+define double @__cos_uniform_double(double) nounwind readnone {
+  %res = call double @llvm.cos.f64(double %0)
+  ret double %res
+}
+
+declare <WIDTH x double> @llvm.cos.GEN_SUFFIX(double)(<WIDTH x double>) nounwind readnone
+define <WIDTH x double> @__cos_varying_double(<WIDTH x double>) nounwind readnone {
+  %res = call <WIDTH x double> @llvm.cos.GEN_SUFFIX(double)(<WIDTH x double> %0)
+  ret <WIDTH x double> %res
+}
+
+define double @__tan_uniform_double(double) nounwind readnone {
+  %sin = call double @llvm.sin.f64(double %0)
+  %cos = call double @llvm.cos.f64(double %0)
+  %res = fdiv double %sin, %cos
+  ret double %res
+}
+
+define <WIDTH x double> @__tan_varying_double(<WIDTH x double>) nounwind readnone {
+  %sin = call <WIDTH x double> @llvm.sin.GEN_SUFFIX(double)(<WIDTH x double> %0)
+  %cos = call <WIDTH x double> @llvm.cos.GEN_SUFFIX(double)(<WIDTH x double> %0)
+  %res = fdiv <WIDTH x double> %sin, %cos
+  ret <WIDTH x double> %res
+}
+
+define void @__sincos_uniform_double(double, double*, double*) nounwind {
+  %sin = call double @llvm.sin.f64(double %0)
+  %cos = call double @llvm.cos.f64(double %0)
+  store double %sin, double* %1
+  store double %cos, double* %2
+  ret void
+}
+
+define void @__sincos_varying_double(<WIDTH x double>, <WIDTH x double>*, <WIDTH x double>*) nounwind {
+  %sin = call <WIDTH x double> @llvm.sin.GEN_SUFFIX(double)(<WIDTH x double> %0)
+  %cos = call <WIDTH x double> @llvm.cos.GEN_SUFFIX(double)(<WIDTH x double> %0)
+  store <WIDTH x double> %sin, <WIDTH x double>* %1
+  store <WIDTH x double> %cos, <WIDTH x double>* %2
+  ret void
 }
 
 trigonometry_decl()
