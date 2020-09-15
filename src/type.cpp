@@ -282,7 +282,6 @@ const AtomicType *AtomicType::GetAsUniformType() const {
 }
 
 const AtomicType *AtomicType::GetAsUniformStorageType() const {
-
     Assert(basicType != TYPE_VOID);
     if (variability == Variability::Uniform)
         return this;
