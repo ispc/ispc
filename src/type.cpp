@@ -156,7 +156,7 @@ const AtomicType *AtomicType::Void = new AtomicType(TYPE_VOID, Variability::Unif
 AtomicType::AtomicType(BasicType bt, Variability v, bool ic)
     : Type(ATOMIC_TYPE), basicType(bt), variability(v), isConst(ic) {
     asOtherConstType = NULL;
-    asUniformType = asVaryingType = NULL;
+    asUniformType = asVaryingType = asUniformStorageType = NULL;
 }
 
 Variability AtomicType::GetVariability() const { return variability; }
@@ -238,8 +238,10 @@ const AtomicType *AtomicType::GetAsVaryingType() const {
 
     if (asVaryingType == NULL) {
         asVaryingType = new AtomicType(basicType, Variability::Varying, isConst);
-        if (variability == Variability::Uniform)
+        if (variability == Variability::Uniform) {
             asVaryingType->asUniformType = this;
+            asVaryingType->asUniformStorageType = this;
+        }
     }
     return asVaryingType;
 }
@@ -286,10 +288,12 @@ const AtomicType *AtomicType::GetAsUniformStorageType() const {
     if (variability == Variability::Uniform)
         return this;
 
-    asUniformType = new AtomicType(basicType, Variability::Uniform, isConst);
-    if (variability == Variability::Varying)
-        asUniformType->asVaryingType = this;
-    return asUniformType;
+    if (asUniformStorageType == NULL) {
+        asUniformStorageType = new AtomicType(basicType, Variability::Uniform, isConst);
+        if (variability == Variability::Varying)
+            asUniformStorageType->asVaryingType = this;
+    }
+    return asUniformStorageType;
 }
 
 const AtomicType *AtomicType::GetAsUnboundVariabilityType() const {
