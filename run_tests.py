@@ -862,7 +862,10 @@ def run_tests(options1, args, print_version):
     # Pass rate
     run_succeed_files = [fname for fname, fstatus in results if fstatus == Status.Success]
     skip_files = [fname for fname, fstatus in results if fstatus == Status.Skip]
-    pass_rate = len(run_succeed_files)/(total_tests-len(skip_files))*100
+    if (total_tests-len(skip_files)) > 0:
+        pass_rate = len(run_succeed_files)/(total_tests-len(skip_files))*100
+    else:
+        pass_rate = -1
     print_debug("PASSRATE %d%% \n" % pass_rate, s, run_tests_log)
 
     for status in Status:
