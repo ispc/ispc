@@ -11,7 +11,7 @@ on:
       - '**test_nightly**'
 
 env:
-  SDE_TAR_NAME: sde-external-8.50.0-2020-03-26-lin
+  SDE_TAR_NAME: sde-external-8.56.0-2020-07-05-lin
 
 jobs:
   # Building LLVM in docker, as using native Ubuntu 16.04 github-hosted image contains newer-than-expected libs and
