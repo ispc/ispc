@@ -759,6 +759,8 @@ void Optimize(llvm::Module *module, int optLevel) {
         optPM.add(llvm::createAggressiveDCEPass());
         optPM.add(llvm::createStripDeadPrototypesPass());
         optPM.add(CreateMakeInternalFuncsStaticPass());
+        optPM.add(llvm::createGlobalDCEPass());
+        optPM.add(llvm::createConstantMergePass());
 #ifdef ISPC_GENX_ENABLED
         if (g->target->isGenXTarget()) {
             optPM.add(CreateCheckUnsupportedInsts());
@@ -767,8 +769,6 @@ void Optimize(llvm::Module *module, int optLevel) {
             optPM.add(llvm::createGenXSPIRVWriterAdaptorPass());
         }
 #endif
-        optPM.add(llvm::createGlobalDCEPass());
-        optPM.add(llvm::createConstantMergePass());
         // Should be the last
         optPM.add(CreateFixBooleanSelectPass(), 400);
     }
@@ -6224,6 +6224,8 @@ bool CheckUnsupportedInsts::runOnBasicBlock(llvm::BasicBlock &bb) {
 
     for (llvm::BasicBlock::iterator I = bb.begin(), E = --bb.end(); I != E; ++I) {
         llvm::Instruction *inst = &*I;
+        SourcePos pos;
+        lGetSourcePosFromMetadata(inst, &pos);
         if (llvm::CallInst *ci = llvm::dyn_cast<llvm::CallInst>(inst)) {
             llvm::Function *func = ci->getCalledFunction();
             if (func == NULL)
@@ -6246,6 +6248,17 @@ bool CheckUnsupportedInsts::runOnBasicBlock(llvm::BasicBlock &bb) {
                     } else {
                         Error(pos, "\"%s\" is not supported for genx-* targets yet\n", funcName.c_str());
                     }
+                }
+            }
+        }
+        // Report error that double types are not supported for TGLLP
+        if (g->target->getCPU() == "TGLLP") {
+            for (int i = 0; i < (int)inst->getNumOperands(); ++i) {
+                llvm::Type *t = inst->getOperand(i)->getType();
+
+                if (t == LLVMTypes::DoubleType || t == LLVMTypes::DoublePointerType ||
+                    t == LLVMTypes::DoubleVectorType || t == LLVMTypes::DoubleVectorPointerType) {
+                    Error(pos, "\'double\' type is not supported by TGLLP\n");
                 }
             }
         }
