@@ -317,8 +317,6 @@ define i64 @__popcnt_int64(i64) nounwind readonly alwaysinline {
   ret i64 %res
 }
 
-declare_nvptx()
-
 declare i32 @llvm.genx.group.id.x()
 declare i32 @llvm.genx.group.id.y()
 declare i32 @llvm.genx.group.id.z()
