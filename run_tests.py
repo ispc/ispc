@@ -124,10 +124,7 @@ class TargetConfig(object):
             self.cpu = cpu
         else:
             self.cpu = "unspec"
-    
-    def cpu_specified(self):
-        return self.cpu != "unspec"
-            
+
     # set arch/target
     def set_target(self):
         if self.target == 'neon':
@@ -282,7 +279,7 @@ def check_test(filename, host, target):
                 prev_os = True
             done_os = prev_os
         cpu = re.match('.* cpu=.*', run.group())
-        if cpu != None and target.cpu_specified():
+        if cpu != None:
             if re.search(' cpu='+target.cpu, cpu.group()) != None:
                 prev_cpu = True
             done_cpu = prev_cpu
@@ -292,7 +289,7 @@ def check_test(filename, host, target):
             done = False
         if re.search(' arch=' + target.arch + ' ', skip.group())!=None:
             done = False
-        if re.search(' OS=' + oss, skip.group())!=None and target.cpu_specified():
+        if re.search(' OS=' + oss, skip.group())!=None:
             done = False
         if re.search(' cpu=' + target.cpu, skip.group())!=None:
             done = False
@@ -676,7 +673,7 @@ def file_check(results, host, target):
         print_debug("NEW PASSES after COMPFAILS:\n", s, run_tests_log)
         for i in range (0,len(new_passes_compfails)):
             print_debug("\t" + new_passes_compfails[i] + "\n", s, run_tests_log)
-            
+
     if options.update != "":
         output = open(test_states, 'w')
         output.writelines(new_f_lines)
