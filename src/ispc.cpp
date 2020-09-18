@@ -465,7 +465,7 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, bool pic, boo
       m_nativeVectorAlignment(-1), m_dataTypeWidth(-1), m_vectorWidth(-1), m_generatePIC(pic), m_maskingIsFree(false),
       m_maskBitCount(-1), m_hasHalf(false), m_hasRand(false), m_hasGather(false), m_hasScatter(false),
       m_hasTranscendentals(false), m_hasTrigonometry(false), m_hasRsqrtd(false), m_hasRcpd(false),
-      m_hasVecPrefetch(false), m_hasSaturatingArithmetic(false) {
+      m_hasVecPrefetch(false), m_hasSaturatingArithmetic(false), m_hasFp64Support(true) {
     CPUtype CPUID = CPU_None, CPUfromISA = CPU_None;
     AllCPUs a;
     std::string featuresString;
@@ -511,6 +511,10 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, bool pic, boo
         case CPU_GENX:
             m_ispc_target = ISPCTarget::genx_x16;
             m_genxPlatform = GENX_PLATFORM::GENX_GEN9;
+            break;
+        case CPU_GENX_TGLLP:
+            m_ispc_target = ISPCTarget::genx_x16;
+            m_genxPlatform = GENX_PLATFORM::GENX_TGLLP;
             break;
 #endif
 
@@ -618,6 +622,9 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, bool pic, boo
         return;
     }
 #ifdef ISPC_GENX_ENABLED
+    if ((ISPCTargetIsGen(m_ispc_target)) && (CPUID == CPU_GENX_TGLLP)) {
+        m_hasFp64Support = false;
+    }
     // In case of gen target addressing should correspond to host addressing. Otherwise SVM pointers will not work.
     if (arch == Arch::genx32) {
         g->opt.force32BitAddressing = true;
@@ -1518,6 +1525,7 @@ void Target::markFuncWithCallingConv(llvm::Function *func) {
 uint32_t Target::getGenxGrfSize() const {
     switch (m_genxPlatform) {
     case GENX_GEN9:
+    case GENX_TGLLP:
         return 32;
     default:
         return 32;

@@ -182,6 +182,7 @@ class Target {
 #ifdef ISPC_GENX_ENABLED
     enum GENX_PLATFORM {
         GENX_GEN9,
+        GENX_TGLLP,
     };
 #endif
 
@@ -295,6 +296,8 @@ class Target {
 
     bool hasSatArith() const { return m_hasSaturatingArithmetic; }
 
+    bool hasFp64Support() const { return m_hasFp64Support; }
+
   private:
     /** llvm Target object representing this target. */
     const llvm::Target *m_target;
@@ -403,6 +406,9 @@ class Target {
 
     /** Indicates whether the target has special saturating arithmetic instructions. */
     bool m_hasSaturatingArithmetic;
+
+    /** Indicates whether the target has FP64 support. */
+    bool m_hasFp64Support;
 };
 
 /** @brief Structure that collects optimization options
