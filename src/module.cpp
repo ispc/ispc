@@ -2269,6 +2269,10 @@ void Module::execPreprocessor(const char *infilename, llvm::raw_string_ostream *
     opts.addMacroDef(ispc_major);
     opts.addMacroDef(ispc_minor);
 
+    if (g->target->hasFp64Support()) {
+        opts.addMacroDef("ISPC_FP64_SUPPORTED ");
+    }
+
     if (g->includeStdlib) {
         if (g->opt.disableAsserts)
             opts.addMacroDef("assert(x)=");
