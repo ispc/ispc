@@ -109,15 +109,25 @@ class Host(object):
 
 # The description of testing target configuration
 class TargetConfig(object):
-    def __init__(self, arch, target):
+    def __init__(self, arch, target, cpu):
         self.arch = arch
         self.target = target
         self.genx = target.find("genx") != -1
+        self.set_cpu(cpu)
         self.set_target()
 
     def is_genx(self):
         return self.genx
 
+    def set_cpu(self, cpu):
+        if cpu is not None:
+            self.cpu = cpu
+        else:
+            self.cpu = "unspec"
+    
+    def cpu_specified(self):
+        return self.cpu != "unspec"
+            
     # set arch/target
     def set_target(self):
         if self.target == 'neon':
@@ -240,8 +250,10 @@ def add_prefix(path, host, target):
 def check_test(filename, host, target):
     prev_arch = False
     prev_os = False
+    prev_cpu = False
     done_arch = True
     done_os = True
+    done_cpu = True
     done = True
     if host.is_windows():
         oss = "windows"
@@ -269,13 +281,20 @@ def check_test(filename, host, target):
             if re.search(' OS='+oss, OS.group()) != None:
                 prev_os = True
             done_os = prev_os
-    done = done_arch and done_os
+        cpu = re.match('.* cpu=.*', run.group())
+        if cpu != None and target.cpu_specified():
+            if re.search(' cpu='+target.cpu, cpu.group()) != None:
+                prev_cpu = True
+            done_cpu = prev_cpu
+    done = done_arch and done_os and done_cpu
     for skip in re.finditer('// *rule: skip on .*', b):
         if re.search(' arch=' + target.arch + '$', skip.group())!=None:
             done = False
         if re.search(' arch=' + target.arch + ' ', skip.group())!=None:
             done = False
-        if re.search(' OS=' + oss, skip.group())!=None:
+        if re.search(' OS=' + oss, skip.group())!=None and target.cpu_specified():
+            done = False
+        if re.search(' cpu=' + target.cpu, skip.group())!=None:
             done = False
     return done
 
@@ -585,6 +604,7 @@ def file_check(results, host, target):
         compiler_version = options.compiler_exe + temp3.group()
     else:
         compiler_version = "cl"
+    cpu = target.cpu
     possible_compilers=set()
     for x in f_lines:
         if x.startswith("."):
@@ -593,13 +613,14 @@ def file_check(results, host, target):
     #    error("\n**********\nWe don't have history of fails for compiler " +
     #            compiler_version +
     #            "\nAll fails will be new!!!\n**********", 2)
-    new_line = " "+target.arch.rjust(6)+" "+target.target.rjust(14)+" "+OS.rjust(7)+" "+llvm_version+" "+compiler_version.rjust(10)+" "+opt+ " " + ispc_output + " *\n"
+    new_line = " "+target.arch.rjust(6)+" "+target.target.rjust(14)+" "+cpu+" "+OS.rjust(7)+" "+llvm_version+" "+compiler_version.rjust(10)+" "+opt+ " " + ispc_output + " *\n"
     new_compfails = compfails[:]
     new_runfails = runfails[:]
     new_f_lines = f_lines[:]
     for j in range(0, len(f_lines)):
         if (((" "+target.arch+" ") in f_lines[j]) and
            ((" "+target.target+" ") in f_lines[j]) and
+           ((" "+cpu+" ") in f_lines[j]) and
            ((" "+OS+" ") in f_lines[j]) and
            ((" "+llvm_version+" ") in f_lines[j]) and
            ((" "+compiler_version+" ") in f_lines[j]) and
@@ -655,7 +676,7 @@ def file_check(results, host, target):
         print_debug("NEW PASSES after COMPFAILS:\n", s, run_tests_log)
         for i in range (0,len(new_passes_compfails)):
             print_debug("\t" + new_passes_compfails[i] + "\n", s, run_tests_log)
-
+            
     if options.update != "":
         output = open(test_states, 'w')
         output.writelines(new_f_lines)
@@ -799,7 +820,7 @@ def run_tests(options1, args, print_version):
 
     print_debug("Testing ispc: " + host.ispc_exe + "\n", s, run_tests_log)
 
-    target = TargetConfig(options.arch, options.target)
+    target = TargetConfig(options.arch, options.target, options.cpu)
 
     set_compiler_exe(host, options)
     set_ispc_output(target, options)
