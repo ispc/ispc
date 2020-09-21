@@ -97,17 +97,52 @@ static void L0InitContext(ze_device_handle_t &hDevice, ze_module_handle_t &hModu
                           ze_command_queue_handle_t &hCommandQueue) {
     L0_SAFE_CALL(zeInit(ZE_INIT_FLAG_GPU_ONLY));
 
-    // Retrieve driver
+    // Retrieve drivers
     uint32_t driverCount = 0;
     L0_SAFE_CALL(zeDriverGet(&driverCount, nullptr));
 
-    ze_driver_handle_t hDriver;
-    L0_SAFE_CALL(zeDriverGet(&driverCount, &hDriver));
+    std::vector<ze_driver_handle_t> allDrivers(driverCount);
+    L0_SAFE_CALL(zeDriverGet(&driverCount, allDrivers.data()));
 
-    // Retrieve device
-    uint32_t deviceCount = 0;
-    L0_SAFE_CALL(zeDeviceGet(hDriver, &deviceCount, nullptr));
-    L0_SAFE_CALL(zeDeviceGet(hDriver, &deviceCount, &hDevice));
+    // Find an instance of Intel GPU device
+    // User can select particular device using env variable
+    // By default first available device is selected
+    auto gpuDeviceToGrab = 0;
+    const char *gpuDeviceEnv = getenv("ISPC_GPU_DEVICE");
+    if (gpuDeviceEnv) {
+        std::istringstream(gpuDeviceEnv) >> gpuDeviceToGrab;
+    } else {
+        // Allow using ISPCRT env to make things easier
+        const char *gpuDeviceEnv = getenv("ISPCRT_GPU_DEVICE");
+        if (gpuDeviceEnv) {
+            std::istringstream(gpuDeviceEnv) >> gpuDeviceToGrab;
+        }
+    }
+
+    auto gpuDevice = 0;
+    ze_driver_handle_t hDriver = 0;
+    for (auto &driver : allDrivers) {
+        uint32_t deviceCount = 0;
+        L0_SAFE_CALL(zeDeviceGet(driver, &deviceCount, nullptr));
+        std::vector<ze_device_handle_t> allDevices(deviceCount);
+        L0_SAFE_CALL(zeDeviceGet(driver, &deviceCount, allDevices.data()));
+
+        for (auto &device : allDevices) {
+            ze_device_properties_t device_properties;
+            L0_SAFE_CALL(zeDeviceGetProperties(device, &device_properties));
+            if (device_properties.type == ZE_DEVICE_TYPE_GPU && device_properties.vendorId == 0x8086) {
+                gpuDevice++;
+                if (gpuDevice == gpuDeviceToGrab + 1) {
+                    hDevice = device;
+                    hDriver = driver;
+                    break;
+                }
+            }
+        }
+
+        if (hDevice)
+            break;
+    }
 
     assert(hDriver);
     assert(hDevice);
