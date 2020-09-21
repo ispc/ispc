@@ -52,7 +52,8 @@
 
 namespace hostutil {
 void L0InitContext(ze_driver_handle_t &hDriver, ze_device_handle_t &hDevice, ze_context_handle_t &hContext,
-                   ze_module_handle_t &hModule, ze_command_queue_handle_t &hCommandQueue, const char *filename) {
+                   ze_module_handle_t &hModule, ze_command_queue_handle_t &hCommandQueue, const char *filename,
+                   bool use_zebin) {
     L0_SAFE_CALL(zeInit(ZE_INIT_FLAG_GPU_ONLY));
 
     // Retrieve driver
@@ -68,7 +69,7 @@ void L0InitContext(ze_driver_handle_t &hDriver, ze_device_handle_t &hDevice, ze_
     assert(hDriver);
     assert(hDevice);
 
-    // Create a contxt
+    // Create a context
     ze_context_desc_t contextDesc = {}; // use default values
     L0_SAFE_CALL(zeContextCreate(hDriver, &contextDesc, &hContext));
 
@@ -80,6 +81,7 @@ void L0InitContext(ze_driver_handle_t &hDriver, ze_device_handle_t &hDevice, ze_
 
     std::ifstream ins;
     std::string fn = filename;
+    fn += (use_zebin ? ".bin" : ".spv");
     ins.open(fn, std::ios::binary);
     if (!ins.good()) {
         fprintf(stderr, "Open %s failed\n", fn.c_str());
@@ -103,7 +105,7 @@ void L0InitContext(ze_driver_handle_t &hDriver, ze_device_handle_t &hDevice, ze_
     ins.close();
 
     ze_module_desc_t moduleDesc = {};
-    moduleDesc.format = ZE_MODULE_FORMAT_IL_SPIRV;
+    moduleDesc.format = use_zebin ? ZE_MODULE_FORMAT_NATIVE : ZE_MODULE_FORMAT_IL_SPIRV;
     moduleDesc.inputSize = codeSize;
     moduleDesc.pInputModule = codeBin;
     moduleDesc.pBuildFlags = "-vc-codegen -no-optimize";
