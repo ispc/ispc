@@ -416,13 +416,22 @@ GPUDevice::GPUDevice() {
     uint32_t driverCount = 0;
     L0_SAFE_CALL(zeDriverGet(&driverCount, nullptr));
 
+    if (driverCount == 0)
+        throw std::runtime_error("could not find L0 driver");
+
     std::vector<ze_driver_handle_t> allDrivers(driverCount);
     L0_SAFE_CALL(zeDriverGet(&driverCount, allDrivers.data()));
 
-    // Find a driver instance with a GPU device
+    // Find an instance of Intel GPU device
+    // User can select particular device using env variable
+    // By default first available device is selected
+    auto gpuDeviceToGrab = 0;
+    const char *gpuDeviceEnv = getenv("ISPCRT_GPU_DEVICE");
+    if (gpuDeviceEnv) {
+        std::istringstream(gpuDeviceEnv) >> gpuDeviceToGrab;
+    }
+    auto gpuDevice = 0;
     for (auto &driver : allDrivers) {
-        m_driver = driver;
-
         uint32_t deviceCount = 0;
         L0_SAFE_CALL(zeDeviceGet(driver, &deviceCount, nullptr));
         std::vector<ze_device_handle_t> allDevices(deviceCount);
@@ -431,9 +440,13 @@ GPUDevice::GPUDevice() {
         for (auto &device : allDevices) {
             ze_device_properties_t device_properties;
             L0_SAFE_CALL(zeDeviceGetProperties(device, &device_properties));
-            if (ZE_DEVICE_TYPE_GPU == device_properties.type) {
-                m_device = device;
-                break;
+            if (device_properties.type == ZE_DEVICE_TYPE_GPU && device_properties.vendorId == 0x8086) {
+                gpuDevice++;
+                if (gpuDevice == gpuDeviceToGrab + 1) {
+                    m_device = device;
+                    m_driver = driver;
+                    break;
+                }
             }
         }
 
