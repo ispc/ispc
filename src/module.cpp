@@ -1070,6 +1070,7 @@ bool Module::translateToSPIRV(llvm::Module *module, std::stringstream &ss) {
                        "calls in SPIR-V"));
     Opts.setSPIRVAllowUnknownIntrinsicsEnabled(SPIRVAllowUnknownIntrinsics);
     Opts.setDesiredBIsRepresentation(SPIRV::BIsRepresentation::SPIRVFriendlyIR);
+    Opts.setDebugInfoEIS(SPIRV::DebugInfoEIS::OpenCL_DebugInfo_100);
     bool success = llvm::writeSpirv(module, Opts, ss, err);
     if (!success) {
         fprintf(stderr, "Fails to save LLVM as SPIR-V: %s \n", err.c_str());
