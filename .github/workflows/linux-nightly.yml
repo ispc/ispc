@@ -60,8 +60,9 @@ jobs:
         path: build/ispc-trunk-linux.tar.gz
 
   test:
-    continue-on-error: true
+    continue-on-error: false
     strategy:
+      fail-fast: false
       matrix:
         target: [sse2-i32x4, sse2-i32x8,
                  sse4-i8x16, sse4-i16x8, sse4-i32x4, sse4-i32x8,
