@@ -146,6 +146,7 @@ static llvm::Pass *CreatePromoteToPrivateMemoryPass();
 static llvm::Pass *CreateReplaceLLVMIntrinsics();
 static llvm::Pass *CreateReplaceUnsupportedInsts();
 static llvm::Pass *CreateFixAddressSpace();
+static llvm::Pass *CreateDemotePHIs();
 static llvm::Pass *CreateCheckUnsupportedInsts();
 #endif
 
@@ -491,7 +492,8 @@ void Optimize(llvm::Module *module, int optLevel) {
             // Global DCE is required for ISPCSimdCFLoweringPass
             optPM.add(llvm::createGlobalDCEPass());
             // FIXME: temporary solution
-            optPM.add(llvm::createDemoteRegisterToMemoryPass());
+            optPM.add(llvm::createBreakCriticalEdgesPass());
+            optPM.add(CreateDemotePHIs());
             optPM.add(llvm::createISPCSimdCFLoweringPass());
             // FIXME: temporary solution
             optPM.add(llvm::createPromoteMemoryToRegisterPass());
@@ -547,7 +549,8 @@ void Optimize(llvm::Module *module, int optLevel) {
 #ifdef ISPC_GENX_ENABLED
         if (g->target->isGenXTarget()) {
             // FIXME: temporary solution
-            optPM.add(llvm::createDemoteRegisterToMemoryPass());
+            optPM.add(llvm::createBreakCriticalEdgesPass());
+            optPM.add(CreateDemotePHIs());
             optPM.add(llvm::createISPCSimdCFLoweringPass());
             // FIXME: temporary solution
             optPM.add(llvm::createPromoteMemoryToRegisterPass());
@@ -6613,4 +6616,33 @@ bool FixAddressSpace::runOnFunction(llvm::Function &F) {
 }
 
 static llvm::Pass *CreateFixAddressSpace() { return new FixAddressSpace(); }
+
+class DemotePHIs : public llvm::FunctionPass {
+  public:
+    static char ID;
+    DemotePHIs() : FunctionPass(ID) {}
+    llvm::StringRef getPassName() const { return "Demote PHI nodes"; }
+    bool runOnFunction(llvm::Function &F);
+};
+
+char DemotePHIs::ID = 0;
+
+bool DemotePHIs::runOnFunction(llvm::Function &F) {
+    if (F.isDeclaration() || skipFunction(F))
+        return false;
+    std::vector<llvm::Instruction *> WorkList;
+    for (auto &ibb : F)
+        for (llvm::BasicBlock::iterator iib = ibb.begin(), iie = ibb.end(); iib != iie; ++iib)
+            if (llvm::isa<llvm::PHINode>(iib))
+                WorkList.push_back(&*iib);
+
+    // Demote phi nodes
+    for (auto *ilb : llvm::reverse(WorkList))
+        DemotePHIToStack(llvm::cast<llvm::PHINode>(ilb), nullptr);
+
+    return !WorkList.empty();
+}
+
+static llvm::Pass *CreateDemotePHIs() { return new DemotePHIs(); }
+
 #endif
