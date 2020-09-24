@@ -575,7 +575,7 @@ void Optimize(llvm::Module *module, int optLevel) {
         // work with if we can
         optPM.add(llvm::createReassociatePass(), 200);
         optPM.add(llvm::createInstSimplifyLegacyPass());
-        optPM.add(llvm::createDeadInstEliminationPass());
+        optPM.add(llvm::createDeadCodeEliminationPass());
         optPM.add(llvm::createCFGSimplificationPass());
 
         optPM.add(llvm::createPromoteMemoryToRegisterPass());
@@ -589,7 +589,7 @@ void Optimize(llvm::Module *module, int optLevel) {
             optPM.add(CreateIntrinsicsOptPass(), 215);
             optPM.add(CreateInstructionSimplifyPass());
         }
-        optPM.add(llvm::createDeadInstEliminationPass(), 220);
+        optPM.add(llvm::createDeadCodeEliminationPass(), 220);
 
         // On to more serious optimizations
         optPM.add(llvm::createSROAPass());
@@ -626,7 +626,7 @@ void Optimize(llvm::Module *module, int optLevel) {
         // Next inline pass will remove functions, saved by __keep_funcs_live
         optPM.add(llvm::createFunctionInliningPass());
         optPM.add(llvm::createInstSimplifyLegacyPass());
-        optPM.add(llvm::createDeadInstEliminationPass());
+        optPM.add(llvm::createDeadCodeEliminationPass());
         optPM.add(llvm::createCFGSimplificationPass());
 
         optPM.add(llvm::createArgumentPromotionPass());
