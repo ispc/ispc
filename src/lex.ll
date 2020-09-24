@@ -46,7 +46,9 @@ static uint64_t lParseBinary(const char *ptr, SourcePos pos, char **endPtr);
 static int lParseInteger(bool dotdotdot);
 static void lCComment(SourcePos *);
 static void lCppComment(SourcePos *);
-static void lPragmaIgnoreWarning(SourcePos *);
+static void lPragmaIgnoreWarning(SourcePos *, std::string);
+static void lPragmaUnroll(SourcePos *, std::string, bool);
+static bool lConsumePragma(SourcePos *);
 static void lHandleCppHash(SourcePos *);
 static void lStringConst(YYSTYPE *, SourcePos *);
 static double lParseHexFloat(const char *ptr);
@@ -369,7 +371,12 @@ ZO_SWIZZLE ([01]+[w-z]+)+|([01]+[rgba]+)+|([01]+[uv]+)+
 %%
 "/*"            { lCComment(&yylloc); }
 "//"            { lCppComment(&yylloc); }
-"#pragma ignore warning" { lPragmaIgnoreWarning(&yylloc); }
+"#pragma" {
+    if (lConsumePragma(&yylloc)) {
+        return TOKEN_PRAGMA;
+    }
+}
+
 
 __assert { RT; return TOKEN_ASSERT; }
 bool { RT; return TOKEN_BOOL; }
@@ -706,64 +713,197 @@ lCComment(SourcePos *pos) {
     Error(*pos, "unterminated comment");
 }
 
-/** Handle pragma directive to ignore warning.
- */
-static void
-lPragmaIgnoreWarning(SourcePos *pos) {
-    char c;
-    std::string userReq;
-    bool perfWarningOnly = false;
-    do {
-        c = yyinput();
+/** Handle pragma directive to unroll loops.
+*/
+static void lPragmaUnroll(SourcePos *pos, std::string fromUserReq, bool isNounroll) {
+
+    const char *currChar = fromUserReq.data();
+    Globals::pragmaUnrollType rollType = Globals::pragmaUnrollType::unroll;
+    int count = -1;
+    std::pair<Globals::pragmaUnrollType, int> unrollVal = std::pair<Globals::pragmaUnrollType, int>(rollType, count);
+
+    while (*currChar == ' ') {
         ++pos->last_column;
-    } while (c == ' ');
-    if (c == '\n') {
+        currChar++;
+    }
+
+    if (isNounroll) {
+        unrollVal.first = Globals::pragmaUnrollType::nounroll;
+        if (*currChar == '\n') {
+            (g->pragmaLoopUnroll).push_back(unrollVal);
+            pos->last_column = 1;
+            pos->last_line++;
+            return;
+        }
+        pos->last_column = 1;
+        pos->last_line++;
+        Error(*pos, "extra tokens at end of '#pragma nounroll'");
+        return;
+
+    }
+
+    if (*currChar == '\n') {
+        (g->pragmaLoopUnroll).push_back(unrollVal);
+        pos->last_column = 1;
+        pos->last_line++;
+        return;
+    }
+
+    bool popPar = false;
+    if (*currChar == '(') {
+        popPar = true;
+        currChar++;
+        ++pos->last_column;
+    }
+
+    char *endPtr = NULL;
+#if defined(ISPC_HOST_IS_WINDOWS) && !defined(__MINGW32__)
+    count = _strtoui64(currChar, &endPtr, 0);
+#else
+    // FIXME: should use strtouq and then issue an error if we can't
+    // fit into 64 bits...
+    count = strtoull(currChar, &endPtr, 0);
+#endif
+
+    if((count == 0) && (endPtr != currChar)){
+        Error(*pos, "'#pragma unroll()' invalid value '0'; must be positive");
+    }
+
+    while (*endPtr == ' ') {
+        ++pos->last_column;
+        endPtr++;
+    }
+
+    if (popPar == true) {
+        if (*endPtr == ')') {
+            ++pos->last_column;
+            endPtr++;
+            while (*endPtr == ' ') {
+                ++pos->last_column;
+                endPtr++;
+            }
+        }
+        else {
+            Error(*pos, "Incomplete '#pragma unroll()' : expected ')'");
+        }
+    }
+
+    unrollVal.first = Globals::pragmaUnrollType::count;
+    unrollVal.second = count;
+    (g->pragmaLoopUnroll).push_back(unrollVal);
+    pos->last_line++;
+    pos->last_column = 1;
+}
+
+/** Handle pragma directive to ignore warning.
+*/
+static void
+lPragmaIgnoreWarning(SourcePos *pos, std::string fromUserReq) {
+    std::string userReq;
+    const char *currChar = fromUserReq.data();
+    bool perfWarningOnly = false;
+    while (*currChar == ' ') {
+        ++pos->last_column;
+        currChar++;
+    }
+
+    if (*currChar == '\n') {
         pos->last_column = 1;
         pos->last_line++;
         std::pair<int, std::string> key = std::pair<int, std::string>(pos->last_line, pos->name);
         g->turnOffWarnings[key] = perfWarningOnly;
         return;
     }
-    else if (c == '(') {
+    else if (*currChar == '(') {
         do {
-            c = yyinput();
+            currChar++;
             ++pos->last_column;
-        } while (c == ' ');
-        while (c != 0 && c != '\n' && c != ' ' && c != ')') {
-            userReq += c;
-            c = yyinput();
+        } while (*currChar == ' ');
+        while (*currChar != 0 && *currChar != '\n' && *currChar != ' ' && *currChar != ')') {
+            userReq += *currChar;
+            currChar++;
             ++pos->last_column;
         }
-        if ((c == ' ') || (c == ')')) {
-            while (c == ' ') {
-                c = yyinput();
+        if ((*currChar == ' ') || (*currChar == ')')) {
+            while (*currChar == ' ') {
+                currChar++;
                 ++pos->last_column;
             }
-            if (c == ')') {
+            if (*currChar == ')') {
                 do {
-                    c = yyinput();
+                    currChar++;
                     ++pos->last_column;
-                } while (c == ' ');
-                if (c == '\n') {
+                } while (*currChar == ' ');
+                if (*currChar == '\n') {
                     pos->last_column = 1;
                     pos->last_line++;
                     if (userReq.compare("perf") == 0) {
                         perfWarningOnly = true;
                         std::pair<int, std::string> key = std::pair<int, std::string>(pos->last_line, pos->name);
                         g->turnOffWarnings[key] = perfWarningOnly;
-                        return;
                     }
                     else if (userReq.compare("all") == 0) {
                         std::pair<int, std::string> key = std::pair<int, std::string>(pos->last_line, pos->name);
                         g->turnOffWarnings[key] = perfWarningOnly;
-                        return;
                     }
+                    else {
+                        Error(*pos, "Incorrect argument for '#pragma ignore warning()'");
+                    }
+                    return;
                 }
             }
         }
-        else if (c == '\n') pos->last_line++;;
+        else if (*currChar == '\n') {
+            Error(*pos, "Incomplete '#pragma ignore warning()' : expected ')'");
+            pos->last_column = 1;
+            pos->last_line++;
+            return;
+        }
     }
     Error(*pos, "Undefined #pragma");
+}
+
+/** Consume line starting with '#pragma' and decide on next action based on
+ * directive.
+ */
+static bool lConsumePragma(SourcePos *pos) {
+    char c;
+    std::string userReq;
+    do {
+        c = yyinput();
+        ++pos->last_column;
+    } while (c == ' ');
+    if (c == '\n') {
+        // Ignore pragma since - directive provided.
+        pos->last_column = 1;
+        pos->last_line++;
+        return false;
+    }
+
+    while (c != '\n') {
+        userReq += c;
+        c = yyinput();
+    }
+    userReq += c;
+    std::string loopUnroll("unroll"), loopNounroll("nounroll"), ignoreWarning("ignore warning");
+    if (loopUnroll == userReq.substr(0, loopUnroll.size())) {
+        pos->last_column += loopUnroll.size();
+        lPragmaUnroll(pos, userReq.erase(0, loopUnroll.size()), false);
+        return true;
+    }
+    else if (loopNounroll == userReq.substr(0, loopNounroll.size())) {
+        pos->last_column += loopNounroll.size();
+        lPragmaUnroll(pos, userReq.erase(0, loopNounroll.size()), true);
+        return true;
+    }
+    else if (ignoreWarning == userReq.substr(0, ignoreWarning.size())) {
+        pos->last_column += ignoreWarning.size();
+        lPragmaIgnoreWarning(pos, userReq.erase(0, ignoreWarning.size()));
+        return false;
+    }
+
+    // Ignore pragma : invalid directive provided.
+    return true;
 }
 
 /** Handle a C++-style comment--eat everything up until the end of the line.
