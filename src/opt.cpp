@@ -111,6 +111,7 @@
 #endif
 #ifdef ISPC_GENX_ENABLED
 #include "gen/GlobalsLocalization.h"
+#include <LLVMSPIRVLib/LLVMSPIRVLib.h>
 #include <llvm/GenXIntrinsics/GenXIntrOpts.h>
 #include <llvm/GenXIntrinsics/GenXIntrinsics.h>
 #include <llvm/GenXIntrinsics/GenXSPIRVWriterAdaptor.h>
@@ -148,6 +149,7 @@ static llvm::Pass *CreateReplaceUnsupportedInsts();
 static llvm::Pass *CreateFixAddressSpace();
 static llvm::Pass *CreateDemotePHIs();
 static llvm::Pass *CreateCheckUnsupportedInsts();
+static llvm::Pass *CreateMangleOpenCLBuiltins();
 #endif
 
 #ifndef ISPC_NO_DUMPS
@@ -528,6 +530,7 @@ void Optimize(llvm::Module *module, int optLevel) {
             optPM.add(CreateReplaceLLVMIntrinsics());
             optPM.add(CreateCheckUnsupportedInsts());
             optPM.add(CreateFixAddressSpace());
+            optPM.add(CreateMangleOpenCLBuiltins());
             // This pass is required to prepare LLVM IR for open source SPIR-V translator
             optPM.add(llvm::createGenXSPIRVWriterAdaptorPass());
         }
@@ -768,6 +771,7 @@ void Optimize(llvm::Module *module, int optLevel) {
         if (g->target->isGenXTarget()) {
             optPM.add(CreateCheckUnsupportedInsts());
             optPM.add(CreateFixAddressSpace());
+            optPM.add(CreateMangleOpenCLBuiltins());
             // This pass is required to prepare LLVM IR for open source SPIR-V translator
             optPM.add(llvm::createGenXSPIRVWriterAdaptorPass());
         }
@@ -6285,6 +6289,74 @@ bool CheckUnsupportedInsts::runOnFunction(llvm::Function &F) {
 }
 
 static llvm::Pass *CreateCheckUnsupportedInsts() { return new CheckUnsupportedInsts(); }
+
+///////////////////////////////////////////////////////////////////////////
+// MangleOpenCLBuiltins
+
+/** This pass mangles SPIR-V OpenCL builtins used in gen target file
+ */
+
+class MangleOpenCLBuiltins : public llvm::FunctionPass {
+  public:
+    static char ID;
+    MangleOpenCLBuiltins(bool last = false) : FunctionPass(ID) {}
+
+    llvm::StringRef getPassName() const { return "Mangle OpenCL builtins"; }
+    bool runOnBasicBlock(llvm::BasicBlock &BB);
+    bool runOnFunction(llvm::Function &F);
+};
+
+char MangleOpenCLBuiltins::ID = 0;
+
+bool MangleOpenCLBuiltins::runOnBasicBlock(llvm::BasicBlock &bb) {
+    DEBUG_START_PASS("MangleOpenCLBuiltins");
+    bool modifiedAny = false;
+    for (llvm::BasicBlock::iterator I = bb.begin(), E = --bb.end(); I != E; ++I) {
+        llvm::Instruction *inst = &*I;
+        if (llvm::CallInst *ci = llvm::dyn_cast<llvm::CallInst>(inst)) {
+            llvm::Function *func = ci->getCalledFunction();
+            if (func == NULL)
+                continue;
+            if (func->getName().startswith("__spirv_ocl")) {
+                std::string mangledName;
+                llvm::Type *retType = func->getReturnType();
+                std::string funcName = func->getName();
+                std::vector<llvm::Type *> ArgTy;
+                // spirv OpenCL builtins are used for double types only
+                Assert(retType->isVectorTy() && retType->getVectorElementType()->isDoubleTy() ||
+                       retType->isSingleValueType() && retType->isDoubleTy());
+                if (retType->isVectorTy() && retType->getVectorElementType()->isDoubleTy()) {
+                    ArgTy.push_back(LLVMTypes::DoubleVectorType);
+                    // _DvWIDTH suffix is used in target file to differentiate scalar
+                    // and vector versions of intrinsics. Here we remove this
+                    // suffix and mangle the name.
+                    size_t pos = funcName.find("_DvWIDTH");
+                    if (pos != std::string::npos) {
+                        funcName.erase(pos, 8);
+                    }
+                } else if (retType->isSingleValueType() && retType->isDoubleTy()) {
+                    ArgTy.push_back(LLVMTypes::DoubleType);
+                }
+                mangleOpenClBuiltin(funcName, ArgTy, mangledName);
+                func->setName(mangledName);
+                modifiedAny = true;
+            }
+        }
+    }
+    DEBUG_END_PASS("MangleOpenCLBuiltins");
+
+    return modifiedAny;
+}
+
+bool MangleOpenCLBuiltins::runOnFunction(llvm::Function &F) {
+    bool modifiedAny = false;
+    for (llvm::BasicBlock &BB : F) {
+        modifiedAny |= runOnBasicBlock(BB);
+    }
+    return modifiedAny;
+}
+
+static llvm::Pass *CreateMangleOpenCLBuiltins() { return new MangleOpenCLBuiltins(); }
 
 ///////////////////////////////////////////////////////////////////////////
 // FixAddressSpace
