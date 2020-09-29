@@ -5870,14 +5870,4 @@ define(`trigonometry_decl',`
     declare void @__sincos_uniform_float(float, float*, float*) nounwind
     declare float @__atan_uniform_float(float) nounwind readnone
     declare float @__atan2_uniform_float(float,float) nounwind readnone
-
-    declare <WIDTH x double> @__asin_varying_double(<WIDTH x double>) nounwind readnone
-    declare <WIDTH x double> @__acos_varying_double(<WIDTH x double>) nounwind readnone
-    declare <WIDTH x double> @__atan_varying_double(<WIDTH x double>) nounwind readnone
-    declare <WIDTH x double> @__atan2_varying_double(<WIDTH x double>,<WIDTH x double>) nounwind readnone
-
-    declare double @__asin_uniform_double(double) nounwind readnone
-    declare double @__acos_uniform_double(double) nounwind readnone
-    declare double @__atan_uniform_double(double) nounwind readnone
-    declare double @__atan2_uniform_double(double,double) nounwind readnone
 ')
