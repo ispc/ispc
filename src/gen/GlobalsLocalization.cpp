@@ -593,10 +593,25 @@ CallGraphNode *GlobalsLocalization::TransformNode(Function *F, LocalizationInfo 
     CallGraph &CG = getAnalysis<CallGraphWrapperPass>().getCallGraph();
     CallGraphNode *NF_CGN = CG.getOrInsertFunction(NF);
 
+    std::vector<llvm::User*> DirectUsers;
+    std::vector<llvm::User*> IndirectUsers;
+
+    for (auto U : F->users())
+        (isa<CallInst>(U) ? DirectUsers : IndirectUsers).push_back(U);
+
+    for (auto *U : IndirectUsers) {
+        // ignore old constexprs as
+        // they may still be hanging around
+        // but are irrelevant as we called breakConstantExprs earlier
+        // in this pass
+        if (!isa<ConstantExpr>(U))
+            U->replaceUsesOfWith(F, NF);
+    }
+
     // Loop over all of the callers of the function, transforming the call sites
     // to pass in the loaded pointers.
-    while (!F->use_empty()) {
-        CallSite CS(F->user_back());
+    for (auto U: DirectUsers) {
+        CallSite CS(U);
         assert(CS.getCalledFunction() == F);
         Instruction *Call = CS.getInstruction();
         const AttributeList &CallPAL = CS.getAttributes();
