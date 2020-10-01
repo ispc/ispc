@@ -116,7 +116,7 @@ class FunctionEmitContext {
 
     /** Emits a branch instruction to the basic block btrue if any of the
         lanes of current mask are on and bfalse if none are on. */
-    void BranchIfMaskAny(llvm::BasicBlock *btrue, llvm::BasicBlock *bfalse);
+    llvm::Instruction *BranchIfMaskAny(llvm::BasicBlock *btrue, llvm::BasicBlock *bfalse);
 
     /** Emits a branch instruction to the basic block btrue if all of the
         lanes of current mask are on and bfalse if none are on. */
@@ -494,8 +494,10 @@ class FunctionEmitContext {
         overlapping.) */
     void MemcpyInst(llvm::Value *dest, llvm::Value *src, llvm::Value *count, llvm::Value *align = NULL);
 
-    void BranchInst(llvm::BasicBlock *block);
-    void BranchInst(llvm::BasicBlock *trueBlock, llvm::BasicBlock *falseBlock, llvm::Value *test);
+    void setLoopUnrollMetadata(llvm::Instruction *inst, std::pair<Globals::pragmaUnrollType, int> loopAttribute,
+                               SourcePos pos);
+    llvm::Instruction *BranchInst(llvm::BasicBlock *block);
+    llvm::Instruction *BranchInst(llvm::BasicBlock *trueBlock, llvm::BasicBlock *falseBlock, llvm::Value *test);
 
     /** This convenience method maps to an llvm::ExtractElementInst if the
         given value is a llvm::VectorType, and to an llvm::ExtractValueInst

@@ -432,13 +432,14 @@ void FunctionEmitContext::SetInternalMaskAndNot(llvm::Value *oldMask, llvm::Valu
     SetInternalMask(mask);
 }
 
-void FunctionEmitContext::BranchIfMaskAny(llvm::BasicBlock *btrue, llvm::BasicBlock *bfalse) {
+llvm::Instruction *FunctionEmitContext::BranchIfMaskAny(llvm::BasicBlock *btrue, llvm::BasicBlock *bfalse) {
     AssertPos(currentPos, bblock != NULL);
     llvm::Value *any = Any(GetFullMask());
-    BranchInst(btrue, bfalse, any);
+    llvm::Instruction *bInst = BranchInst(btrue, bfalse, any);
     // It's illegal to add any additional instructions to the basic block
     // now that it's terminated, so set bblock to NULL to be safe
     bblock = NULL;
+    return bInst;
 }
 
 void FunctionEmitContext::BranchIfMaskAll(llvm::BasicBlock *btrue, llvm::BasicBlock *bfalse) {
@@ -3043,22 +3044,56 @@ void FunctionEmitContext::MemcpyInst(llvm::Value *dest, llvm::Value *src, llvm::
 #endif
 }
 
-void FunctionEmitContext::BranchInst(llvm::BasicBlock *dest) {
-    llvm::Instruction *b = llvm::BranchInst::Create(dest, bblock);
-    AddDebugPos(b);
+void FunctionEmitContext::setLoopUnrollMetadata(llvm::Instruction *inst,
+                                                std::pair<Globals::pragmaUnrollType, int> loopAttribute,
+                                                SourcePos pos) {
+    if (inst == NULL) {
+        return;
+    }
+
+    if (loopAttribute.first == Globals::pragmaUnrollType::none) {
+        return;
+    }
+
+    llvm::SmallVector<llvm::Metadata *, 4> Args;
+    llvm::TempMDTuple TempNode = llvm::MDNode::getTemporary(*g->ctx, llvm::None);
+    Args.push_back(TempNode.get());
+    if (loopAttribute.first == Globals::pragmaUnrollType::count) {
+        llvm::Metadata *Vals[] = {llvm::MDString::get(*g->ctx, "llvm.loop.unroll.count"),
+                                  llvm::ConstantAsMetadata::get(LLVMInt32(loopAttribute.second))};
+        Args.push_back(llvm::MDNode::get(*g->ctx, Vals));
+    } else if (loopAttribute.first == Globals::pragmaUnrollType::unroll) {
+        llvm::Metadata *Vals[] = {llvm::MDString::get(*g->ctx, "llvm.loop.unroll.enable")};
+        Args.push_back(llvm::MDNode::get(*g->ctx, Vals));
+    } else if (loopAttribute.first == Globals::pragmaUnrollType::nounroll) {
+        llvm::Metadata *Vals[] = {llvm::MDString::get(*g->ctx, "llvm.loop.unroll.disable")};
+        Args.push_back(llvm::MDNode::get(*g->ctx, Vals));
+    }
+    llvm::MDNode *LoopID = llvm::MDNode::getDistinct(*g->ctx, Args);
+    LoopID->replaceOperandWith(0, LoopID);
+    inst->setMetadata("llvm.loop", LoopID);
 }
 
-void FunctionEmitContext::BranchInst(llvm::BasicBlock *trueBlock, llvm::BasicBlock *falseBlock, llvm::Value *test) {
+llvm::Instruction *FunctionEmitContext::BranchInst(llvm::BasicBlock *dest) {
+    llvm::Instruction *b = llvm::BranchInst::Create(dest, bblock);
+    AddDebugPos(b);
+    return b;
+}
+
+llvm::Instruction *FunctionEmitContext::BranchInst(llvm::BasicBlock *trueBlock, llvm::BasicBlock *falseBlock,
+                                                   llvm::Value *test) {
+    llvm::Instruction *b = NULL;
     if (test == NULL) {
         AssertPos(currentPos, m->errorCount > 0);
-        return;
+        return b;
     }
 #ifdef ISPC_GENX_ENABLED
     if (g->target->isGenXTarget())
         test = GenXPrepareVectorBranch(test);
 #endif
-    llvm::Instruction *b = llvm::BranchInst::Create(trueBlock, falseBlock, test, bblock);
+    b = llvm::BranchInst::Create(trueBlock, falseBlock, test, bblock);
     AddDebugPos(b);
+    return b;
 }
 
 llvm::Value *FunctionEmitContext::ExtractInst(llvm::Value *v, int elt, const char *name) {
