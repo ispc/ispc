@@ -80,6 +80,7 @@ void ExprStmt::EmitCode(FunctionEmitContext *ctx) const {
 }
 
 Stmt *ExprStmt::TypeCheck() { return this; }
+void ExprStmt::SetLoopAttribute() { Error(pos, "Illegal '#Pragma' - expected a loop to follow '#pragma unroll/nounroll'."); }
 
 void ExprStmt::Print(int indent) const {
     if (!expr)
@@ -312,6 +313,8 @@ Stmt *DeclStmt::TypeCheck() {
     return encounteredError ? NULL : this;
 }
 
+void DeclStmt::SetLoopAttribute() { Error(pos, "Illegal '#Pragma' - expected a loop to follow '#pragma unroll/nounroll'."); }
+
 void DeclStmt::Print(int indent) const {
     printf("%*cDecl Stmt:", indent, ' ');
     pos.Print();
@@ -466,6 +469,8 @@ Stmt *IfStmt::TypeCheck() {
 
     return this;
 }
+
+void IfStmt::SetLoopAttribute() { Error(pos, "Illegal '#Pragma' - expected a loop to follow '#pragma unroll/nounroll'."); }
 
 int IfStmt::EstimateCost() const {
     const Type *type;
@@ -788,6 +793,7 @@ void DoStmt::EmitCode(FunctionEmitContext *ctx) const {
     llvm::BasicBlock *btest = ctx->CreateBasicBlock("do_test", bloop);
     llvm::BasicBlock *bexit = ctx->CreateBasicBlock("do_exit", btest);
     bool emulateUniform = false;
+    llvm::Instruction *branchInst = NULL;
     if (g->target->isGenXTarget() && !uniformTest) {
         /* With "genx" target we generate uniform control flow but
            emit varying using CM simdcf.any intrinsic. We mark the scope as
@@ -849,8 +855,9 @@ void DoStmt::EmitCode(FunctionEmitContext *ctx) const {
         // mask is good.
         if (bodyStmts)
             bodyStmts->EmitCode(ctx);
-        if (ctx->GetCurrentBasicBlock())
+        if (ctx->GetCurrentBasicBlock()) {
             ctx->BranchInst(btest);
+        }
     }
     // End the scope we started above, if needed.
     if (!bodyStmts || !llvm::dyn_cast<StmtList>(bodyStmts))
@@ -874,14 +881,17 @@ void DoStmt::EmitCode(FunctionEmitContext *ctx) const {
     if (uniformTest) {
         // For the uniform case, just jump to the top of the loop or the
         // exit basic block depending on the value of the test.
-        ctx->BranchInst(bloop, bexit, testValue);
+        branchInst = ctx->BranchInst(bloop, bexit, testValue);
+        ctx->setLoopUnrollMetadata(branchInst, loopAttribute, pos);
     } else {
         // For the varying case, update the mask based on the value of the
         // test.  If any program instances still want to be running, jump
         // to the top of the loop.  Otherwise, jump out.
         llvm::Value *mask = ctx->GetInternalMask();
         ctx->SetInternalMaskAnd(mask, testValue);
-        ctx->BranchIfMaskAny(bloop, bexit);
+        branchInst = ctx->BranchIfMaskAny(bloop, bexit);
+        printf("\n VARYING \n");
+        ctx->setLoopUnrollMetadata(branchInst, loopAttribute, pos);
     }
 
     // ...and we're done.  Set things up for subsequent code to be emitted
@@ -916,6 +926,11 @@ Stmt *DoStmt::TypeCheck() {
     }
 
     return this;
+}
+
+void DoStmt::SetLoopAttribute() {
+    loopAttribute = g->pragmaLoopUnroll.back();
+    g->pragmaLoopUnroll.pop_back();
 }
 
 int DoStmt::EstimateCost() const {
@@ -1078,7 +1093,9 @@ void ForStmt::EmitCode(FunctionEmitContext *ctx) const {
 
     if (step)
         step->EmitCode(ctx);
-    ctx->BranchInst(btest);
+
+    llvm::Instruction *branchInst = ctx->BranchInst(btest);
+    ctx->setLoopUnrollMetadata(branchInst, loopAttribute, pos);
 
     // Set the current emission basic block to the loop exit basic block
     ctx->SetCurrentBasicBlock(bexit);
@@ -1101,6 +1118,11 @@ Stmt *ForStmt::TypeCheck() {
     }
 
     return this;
+}
+
+void ForStmt::SetLoopAttribute() {
+    loopAttribute = g->pragmaLoopUnroll.back();
+    g->pragmaLoopUnroll.pop_back();
 }
 
 int ForStmt::EstimateCost() const {
@@ -1148,6 +1170,8 @@ void BreakStmt::EmitCode(FunctionEmitContext *ctx) const {
 
 Stmt *BreakStmt::TypeCheck() { return this; }
 
+void BreakStmt::SetLoopAttribute() { Error(pos, "Illegal '#Pragma' - expected a loop to follow '#pragma unroll/nounroll'."); }
+
 int BreakStmt::EstimateCost() const { return COST_BREAK_CONTINUE; }
 
 void BreakStmt::Print(int indent) const {
@@ -1170,6 +1194,8 @@ void ContinueStmt::EmitCode(FunctionEmitContext *ctx) const {
 }
 
 Stmt *ContinueStmt::TypeCheck() { return this; }
+
+void ContinueStmt::SetLoopAttribute() { Error(pos, "Illegal '#Pragma' - expected a loop to follow '#pragma unroll/nounroll'."); }
 
 int ContinueStmt::EstimateCost() const { return COST_BREAK_CONTINUE; }
 
@@ -1283,7 +1309,6 @@ static void lGetSpans(int dimsLeft, int nDims, int itemsLeft, bool isTiled, int 
    to process.
  */
 void ForeachStmt::EmitCode(FunctionEmitContext *ctx) const {
-
 #ifdef ISPC_GENX_ENABLED
     if (g->target->isGenXTarget()) {
         EmitCodeForGenX(ctx);
@@ -1635,7 +1660,8 @@ void ForeachStmt::EmitCode(FunctionEmitContext *ctx) const {
         llvm::Value *newCounter =
             ctx->BinaryOperator(llvm::Instruction::Add, counter, LLVMInt32(span[nDims - 1]), "new_counter");
         ctx->StoreInst(newCounter, uniformCounterPtrs[nDims - 1]);
-        ctx->BranchInst(bbOuterNotInExtras);
+        llvm::Instruction *branchInst = ctx->BranchInst(bbOuterNotInExtras);
+        ctx->setLoopUnrollMetadata(branchInst, loopAttribute, pos);
     }
 
     ///////////////////////////////////////////////////////////////////////////
@@ -1862,7 +1888,8 @@ void ForeachStmt::EmitCodeForGenX(FunctionEmitContext *ctx) const {
     ctx->AddInstrumentationPoint("foreach loop body");
     stmts->EmitCode(ctx);
     AssertPos(pos, ctx->GetCurrentBasicBlock() != NULL);
-    ctx->BranchInst(bbStep[nDims - 1]);
+    llvm::Instruction *branchInst = ctx->BranchInst(bbStep[nDims - 1]);
+    ctx->setLoopUnrollMetadata(branchInst, loopAttribute, pos);
 
     ///////////////////////////////////////////////////////////////////////////
     // foreach_exit: All done. Restore the old mask and clean up
@@ -1922,6 +1949,11 @@ Stmt *ForeachStmt::TypeCheck() {
     }
 
     return anyErrors ? NULL : this;
+}
+
+void ForeachStmt::SetLoopAttribute() {
+    loopAttribute = g->pragmaLoopUnroll.back();
+    g->pragmaLoopUnroll.pop_back();
 }
 
 int ForeachStmt::EstimateCost() const { return dimVariables.size() * (COST_UNIFORM_LOOP + COST_SIMPLE_ARITH_LOGIC_OP); }
@@ -2106,7 +2138,8 @@ void ForeachActiveStmt::EmitCode(FunctionEmitContext *ctx) const {
         llvm::Value *remainingBits = ctx->LoadInst(maskBitsPtr, NULL, "remaining_bits");
         llvm::Value *nonZero = ctx->CmpInst(llvm::Instruction::ICmp, llvm::CmpInst::ICMP_NE, remainingBits,
                                             LLVMInt64(0), "remaining_ne_zero");
-        ctx->BranchInst(bbFindNext, bbDone, nonZero);
+        llvm::Instruction *branchInst = ctx->BranchInst(bbFindNext, bbDone, nonZero);
+        ctx->setLoopUnrollMetadata(branchInst, loopAttribute, pos);
     }
 
     ctx->SetCurrentBasicBlock(bbDone);
@@ -2142,6 +2175,11 @@ Stmt *ForeachActiveStmt::TypeCheck() {
         return NULL;
 
     return this;
+}
+
+void ForeachActiveStmt::SetLoopAttribute() {
+    loopAttribute = g->pragmaLoopUnroll.back();
+    g->pragmaLoopUnroll.pop_back();
 }
 
 int ForeachActiveStmt::EstimateCost() const { return COST_VARYING_LOOP; }
@@ -2322,7 +2360,8 @@ void ForeachUniqueStmt::EmitCode(FunctionEmitContext *ctx) const {
         llvm::Value *remainingBits = ctx->LoadInst(maskBitsPtr, NULL, "remaining_bits");
         llvm::Value *nonZero = ctx->CmpInst(llvm::Instruction::ICmp, llvm::CmpInst::ICMP_NE, remainingBits,
                                             LLVMInt64(0), "remaining_ne_zero");
-        ctx->BranchInst(bbFindNext, bbDone, nonZero);
+        llvm::Instruction *branchInst = ctx->BranchInst(bbFindNext, bbDone, nonZero);
+        ctx->setLoopUnrollMetadata(branchInst, loopAttribute, pos);
     }
 
     ctx->SetCurrentBasicBlock(bbDone);
@@ -2384,6 +2423,11 @@ Stmt *ForeachUniqueStmt::TypeCheck() {
     return this;
 }
 
+void ForeachUniqueStmt::SetLoopAttribute() {
+    loopAttribute = g->pragmaLoopUnroll.back();
+    g->pragmaLoopUnroll.pop_back();
+}
+
 int ForeachUniqueStmt::EstimateCost() const { return COST_VARYING_LOOP; }
 
 ///////////////////////////////////////////////////////////////////////////
@@ -2424,6 +2468,8 @@ void CaseStmt::Print(int indent) const {
 
 Stmt *CaseStmt::TypeCheck() { return this; }
 
+void CaseStmt::SetLoopAttribute() { Error(pos, "Illegal '#Pragma' - expected a loop to follow '#pragma unroll/nounroll'."); }
+
 int CaseStmt::EstimateCost() const { return 0; }
 
 ///////////////////////////////////////////////////////////////////////////
@@ -2445,6 +2491,8 @@ void DefaultStmt::Print(int indent) const {
 }
 
 Stmt *DefaultStmt::TypeCheck() { return this; }
+
+void DefaultStmt::SetLoopAttribute() { Error(pos, "Illegal '#Pragma' - expected a loop to follow '#pragma unroll/nounroll'."); }
 
 int DefaultStmt::EstimateCost() const { return 0; }
 
@@ -2649,6 +2697,8 @@ Stmt *SwitchStmt::TypeCheck() {
     return this;
 }
 
+void SwitchStmt::SetLoopAttribute() { Error(pos, "Illegal '#Pragma' - expected a loop to follow '#pragma unroll/nounroll'."); }
+
 int SwitchStmt::EstimateCost() const {
     const Type *type = expr->GetType();
     if (type && type->IsVaryingType())
@@ -2705,6 +2755,8 @@ void UnmaskedStmt::Print(int indent) const {
 
 Stmt *UnmaskedStmt::TypeCheck() { return this; }
 
+void UnmaskedStmt::SetLoopAttribute() { Error(pos, "Illegal '#Pragma' - expected a loop to follow '#pragma unroll/nounroll'."); }
+
 int UnmaskedStmt::EstimateCost() const { return COST_ASSIGN; }
 
 ///////////////////////////////////////////////////////////////////////////
@@ -2747,6 +2799,8 @@ void ReturnStmt::EmitCode(FunctionEmitContext *ctx) const {
 }
 
 Stmt *ReturnStmt::TypeCheck() { return this; }
+
+void ReturnStmt::SetLoopAttribute() { Error(pos, "Illegal '#Pragma' - expected a loop to follow '#pragma unroll/nounroll'."); }
 
 int ReturnStmt::EstimateCost() const { return COST_RETURN; }
 
@@ -2817,6 +2871,8 @@ Stmt *GotoStmt::Optimize() { return this; }
 
 Stmt *GotoStmt::TypeCheck() { return this; }
 
+void GotoStmt::SetLoopAttribute() { Error(pos, "Illegal '#Pragma' - expected a loop to follow '#pragma unroll/nounroll'."); }
+
 int GotoStmt::EstimateCost() const { return COST_GOTO; }
 
 ///////////////////////////////////////////////////////////////////////////
@@ -2866,6 +2922,8 @@ Stmt *LabeledStmt::TypeCheck() {
     return this;
 }
 
+void LabeledStmt::SetLoopAttribute() { Error(pos, "Illegal '#Pragma' - expected a loop to follow '#pragma unroll/nounroll'."); }
+
 int LabeledStmt::EstimateCost() const { return 0; }
 
 ///////////////////////////////////////////////////////////////////////////
@@ -2881,6 +2939,8 @@ void StmtList::EmitCode(FunctionEmitContext *ctx) const {
 }
 
 Stmt *StmtList::TypeCheck() { return this; }
+
+void StmtList::SetLoopAttribute() { Error(pos, "Illegal '#Pragma' - expected a loop to follow '#pragma unroll/nounroll'."); }
 
 int StmtList::EstimateCost() const { return 0; }
 
@@ -3546,6 +3606,8 @@ void PrintStmt::Print(int indent) const { printf("%*cPrint Stmt (%s)", indent, '
 
 Stmt *PrintStmt::TypeCheck() { return this; }
 
+void PrintStmt::SetLoopAttribute() { Error(pos, "Illegal '#Pragma' - expected a loop to follow '#pragma unroll/nounroll'."); }
+
 int PrintStmt::EstimateCost() const { return COST_FUNCALL; }
 
 ///////////////////////////////////////////////////////////////////////////
@@ -3613,6 +3675,8 @@ Stmt *AssertStmt::TypeCheck() {
     return this;
 }
 
+void AssertStmt::SetLoopAttribute() { Error(pos, "Illegal '#Pragma' - expected a loop to follow '#pragma unroll/nounroll'."); }
+
 int AssertStmt::EstimateCost() const { return COST_ASSERT; }
 
 ///////////////////////////////////////////////////////////////////////////
@@ -3677,6 +3741,8 @@ void DeleteStmt::EmitCode(FunctionEmitContext *ctx) const {
 }
 
 void DeleteStmt::Print(int indent) const { printf("%*cDelete Stmt", indent, ' '); }
+
+void DeleteStmt::SetLoopAttribute() { Error(pos, "Illegal '#Pragma' - expected a loop to follow '#pragma unroll/nounroll'."); }
 
 Stmt *DeleteStmt::TypeCheck() {
     const Type *exprType;

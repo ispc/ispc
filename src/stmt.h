@@ -66,7 +66,10 @@ class Stmt : public ASTNode {
     // also provide a default implementation of Optimize(), since most
     // Stmts don't have anything to do here.
     virtual Stmt *Optimize();
+
     virtual Stmt *TypeCheck() = 0;
+
+    virtual void SetLoopAttribute() = 0;
 };
 
 /** @brief Statement representing a single expression */
@@ -81,6 +84,8 @@ class ExprStmt : public Stmt {
     void Print(int indent) const;
 
     Stmt *TypeCheck();
+
+    void SetLoopAttribute();
     int EstimateCost() const;
 
     Expr *expr;
@@ -109,6 +114,9 @@ class DeclStmt : public Stmt {
 
     Stmt *Optimize();
     Stmt *TypeCheck();
+
+    void SetLoopAttribute();
+
     int EstimateCost() const;
 
     std::vector<VariableDeclaration> vars;
@@ -127,6 +135,8 @@ class IfStmt : public Stmt {
     void Print(int indent) const;
 
     Stmt *TypeCheck();
+
+    void SetLoopAttribute();
     int EstimateCost() const;
 
     // @todo these are only public for lHasVaryingBreakOrContinue(); would
@@ -166,6 +176,10 @@ class DoStmt : public Stmt {
     void Print(int indent) const;
 
     Stmt *TypeCheck();
+
+    std::pair<Globals::pragmaUnrollType, int> loopAttribute =
+        std::pair<Globals::pragmaUnrollType, int>(Globals::pragmaUnrollType::none, -1);
+    void SetLoopAttribute();
     int EstimateCost() const;
 
     Expr *testExpr;
@@ -188,6 +202,10 @@ class ForStmt : public Stmt {
     void Print(int indent) const;
 
     Stmt *TypeCheck();
+
+    std::pair<Globals::pragmaUnrollType, int> loopAttribute =
+        std::pair<Globals::pragmaUnrollType, int>(Globals::pragmaUnrollType::none, -1);
+    void SetLoopAttribute();
     int EstimateCost() const;
 
     /** 'for' statment initializer; may be NULL, indicating no intitializer */
@@ -216,6 +234,7 @@ class BreakStmt : public Stmt {
     void Print(int indent) const;
 
     Stmt *TypeCheck();
+    void SetLoopAttribute();
     int EstimateCost() const;
 };
 
@@ -232,6 +251,7 @@ class ContinueStmt : public Stmt {
     void Print(int indent) const;
 
     Stmt *TypeCheck();
+    void SetLoopAttribute();
     int EstimateCost() const;
 };
 
@@ -252,6 +272,9 @@ class ForeachStmt : public Stmt {
     void Print(int indent) const;
 
     Stmt *TypeCheck();
+    std::pair<Globals::pragmaUnrollType, int> loopAttribute =
+        std::pair<Globals::pragmaUnrollType, int>(Globals::pragmaUnrollType::none, -1);
+    void SetLoopAttribute();
     int EstimateCost() const;
 
     std::vector<Symbol *> dimVariables;
@@ -274,6 +297,9 @@ class ForeachActiveStmt : public Stmt {
     void Print(int indent) const;
 
     Stmt *TypeCheck();
+    std::pair<Globals::pragmaUnrollType, int> loopAttribute =
+        std::pair<Globals::pragmaUnrollType, int>(Globals::pragmaUnrollType::none, -1);
+    void SetLoopAttribute();
     int EstimateCost() const;
 
     Symbol *sym;
@@ -294,6 +320,9 @@ class ForeachUniqueStmt : public Stmt {
     void Print(int indent) const;
 
     Stmt *TypeCheck();
+    std::pair<Globals::pragmaUnrollType, int> loopAttribute =
+        std::pair<Globals::pragmaUnrollType, int>(Globals::pragmaUnrollType::none, -1);
+    void SetLoopAttribute();
     int EstimateCost() const;
 
     Symbol *sym;
@@ -314,6 +343,7 @@ class UnmaskedStmt : public Stmt {
     void Print(int indent) const;
 
     Stmt *TypeCheck();
+    void SetLoopAttribute();
     int EstimateCost() const;
 
     Stmt *stmts;
@@ -332,6 +362,7 @@ class ReturnStmt : public Stmt {
     void Print(int indent) const;
 
     Stmt *TypeCheck();
+    void SetLoopAttribute();
     int EstimateCost() const;
 
     Expr *expr;
@@ -351,6 +382,7 @@ class CaseStmt : public Stmt {
     void Print(int indent) const;
 
     Stmt *TypeCheck();
+    void SetLoopAttribute();
     int EstimateCost() const;
 
     /** Integer value after the "case" statement */
@@ -371,6 +403,7 @@ class DefaultStmt : public Stmt {
     void Print(int indent) const;
 
     Stmt *TypeCheck();
+    void SetLoopAttribute();
     int EstimateCost() const;
 
     Stmt *stmts;
@@ -388,6 +421,7 @@ class SwitchStmt : public Stmt {
     void Print(int indent) const;
 
     Stmt *TypeCheck();
+    void SetLoopAttribute();
     int EstimateCost() const;
 
     /** Expression that is used to determine which label to jump to. */
@@ -409,6 +443,7 @@ class GotoStmt : public Stmt {
 
     Stmt *Optimize();
     Stmt *TypeCheck();
+    void SetLoopAttribute();
     int EstimateCost() const;
 
     /** Name of the label to jump to when the goto is executed. */
@@ -430,6 +465,7 @@ class LabeledStmt : public Stmt {
 
     Stmt *Optimize();
     Stmt *TypeCheck();
+    void SetLoopAttribute();
     int EstimateCost() const;
 
     /** Name of the label. */
@@ -451,6 +487,7 @@ class StmtList : public Stmt {
     void Print(int indent) const;
 
     Stmt *TypeCheck();
+    void SetLoopAttribute();
     int EstimateCost() const;
 
     void Add(Stmt *s) {
@@ -481,6 +518,7 @@ class PrintStmt : public Stmt {
     void Print(int indent) const;
 
     Stmt *TypeCheck();
+    void SetLoopAttribute();
     int EstimateCost() const;
 
     std::vector<llvm::Value *> getDoPrintArgs(FunctionEmitContext *ctx) const;
@@ -535,6 +573,7 @@ class AssertStmt : public Stmt {
     void Print(int indent) const;
 
     Stmt *TypeCheck();
+    void SetLoopAttribute();
     int EstimateCost() const;
 
     /** Message to print if the assertion fails. */
@@ -556,6 +595,7 @@ class DeleteStmt : public Stmt {
     void Print(int indent) const;
 
     Stmt *TypeCheck();
+    void SetLoopAttribute();
     int EstimateCost() const;
 
     /** Expression that gives the pointer value to be deleted. */
