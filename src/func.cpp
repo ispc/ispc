@@ -447,7 +447,13 @@ void Function::emitCode(FunctionEmitContext *ctx, llvm::Function *function, Sour
                 const Type *T = args[i]->type;
                 argKinds.push_back(llvm::ValueAsMetadata::get(llvm::ConstantInt::get(i32Type, AK_NORMAL)));
                 argInOutKinds.push_back(llvm::ValueAsMetadata::get(llvm::ConstantInt::get(i32Type, IK_NORMAL)));
-                argTypeDescs.push_back(llvm::MDString::get(fContext, llvm::StringRef("")));
+                llvm::Type *argType = function->getArg(i)->getType();
+                if (argType->isPtrOrPtrVectorTy() || argType->isArrayTy()) {
+                    argTypeDescs.push_back(llvm::MDString::get(fContext, llvm::StringRef("svmptr_t read_write")));
+                } else {
+                    argTypeDescs.push_back(llvm::MDString::get(fContext, llvm::StringRef("")));
+                }
+
                 llvm::Type *type = T->LLVMType(&fContext);
                 unsigned bytes = type->getScalarSizeInBits() / 8;
                 if (bytes != 0) {
