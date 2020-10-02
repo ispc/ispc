@@ -737,7 +737,7 @@ static void lPragmaUnroll(SourcePos *pos, std::string fromUserReq, bool isNounro
         }
         pos->last_column = 1;
         pos->last_line++;
-        Error(*pos, "extra tokens at end of '#pragma nounroll'");
+        Error(*pos, "extra tokens at end of '#pragma nounroll'.");
         return;
 
     }
@@ -766,7 +766,7 @@ static void lPragmaUnroll(SourcePos *pos, std::string fromUserReq, bool isNounro
 #endif
 
     if((count == 0) && (endPtr != currChar)){
-        Error(*pos, "'#pragma unroll()' invalid value '0'; must be positive");
+        Error(*pos, "'#pragma unroll()' invalid value '0'; must be positive.");
     }
 
     while (*endPtr == ' ') {
@@ -784,7 +784,7 @@ static void lPragmaUnroll(SourcePos *pos, std::string fromUserReq, bool isNounro
             }
         }
         else {
-            Error(*pos, "Incomplete '#pragma unroll()' : expected ')'");
+            Error(*pos, "Incomplete '#pragma unroll()' : expected ')'.");
         }
     }
 
@@ -847,20 +847,20 @@ lPragmaIgnoreWarning(SourcePos *pos, std::string fromUserReq) {
                         g->turnOffWarnings[key] = perfWarningOnly;
                     }
                     else {
-                        Error(*pos, "Incorrect argument for '#pragma ignore warning()'");
+                        Error(*pos, "Incorrect argument for '#pragma ignore warning()'.");
                     }
                     return;
                 }
             }
         }
         else if (*currChar == '\n') {
-            Error(*pos, "Incomplete '#pragma ignore warning()' : expected ')'");
+            Error(*pos, "Incomplete '#pragma ignore warning()' : expected ')'.");
             pos->last_column = 1;
             pos->last_line++;
             return;
         }
     }
-    Error(*pos, "Undefined #pragma");
+    Error(*pos, "Undefined #pragma.");
 }
 
 /** Consume line starting with '#pragma' and decide on next action based on
@@ -903,7 +903,8 @@ static bool lConsumePragma(SourcePos *pos) {
     }
 
     // Ignore pragma : invalid directive provided.
-    return true;
+    Warning(*pos, "Undefined #pragma.");
+    return false;
 }
 
 /** Handle a C++-style comment--eat everything up until the end of the line.
