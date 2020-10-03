@@ -80,7 +80,9 @@ void ExprStmt::EmitCode(FunctionEmitContext *ctx) const {
 }
 
 Stmt *ExprStmt::TypeCheck() { return this; }
-void ExprStmt::SetLoopAttribute() { Error(pos, "Illegal '#Pragma' - expected a loop to follow '#pragma unroll/nounroll'."); }
+void ExprStmt::SetLoopAttribute() {
+    Error(pos, "Illegal '#Pragma' - expected a loop to follow '#pragma unroll/nounroll'.");
+}
 
 void ExprStmt::Print(int indent) const {
     if (!expr)
@@ -313,7 +315,9 @@ Stmt *DeclStmt::TypeCheck() {
     return encounteredError ? NULL : this;
 }
 
-void DeclStmt::SetLoopAttribute() { Error(pos, "Illegal '#Pragma' - expected a loop to follow '#pragma unroll/nounroll'."); }
+void DeclStmt::SetLoopAttribute() {
+    Error(pos, "Illegal '#Pragma' - expected a loop to follow '#pragma unroll/nounroll'.");
+}
 
 void DeclStmt::Print(int indent) const {
     printf("%*cDecl Stmt:", indent, ' ');
@@ -470,7 +474,9 @@ Stmt *IfStmt::TypeCheck() {
     return this;
 }
 
-void IfStmt::SetLoopAttribute() { Error(pos, "Illegal '#Pragma' - expected a loop to follow '#pragma unroll/nounroll'."); }
+void IfStmt::SetLoopAttribute() {
+    Error(pos, "Illegal '#Pragma' - expected a loop to follow '#pragma unroll/nounroll'.");
+}
 
 int IfStmt::EstimateCost() const {
     const Type *type;
@@ -1170,7 +1176,9 @@ void BreakStmt::EmitCode(FunctionEmitContext *ctx) const {
 
 Stmt *BreakStmt::TypeCheck() { return this; }
 
-void BreakStmt::SetLoopAttribute() { Error(pos, "Illegal '#Pragma' - expected a loop to follow '#pragma unroll/nounroll'."); }
+void BreakStmt::SetLoopAttribute() {
+    Error(pos, "Illegal '#Pragma' - expected a loop to follow '#pragma unroll/nounroll'.");
+}
 
 int BreakStmt::EstimateCost() const { return COST_BREAK_CONTINUE; }
 
@@ -1195,7 +1203,9 @@ void ContinueStmt::EmitCode(FunctionEmitContext *ctx) const {
 
 Stmt *ContinueStmt::TypeCheck() { return this; }
 
-void ContinueStmt::SetLoopAttribute() { Error(pos, "Illegal '#Pragma' - expected a loop to follow '#pragma unroll/nounroll'."); }
+void ContinueStmt::SetLoopAttribute() {
+    Error(pos, "Illegal '#Pragma' - expected a loop to follow '#pragma unroll/nounroll'.");
+}
 
 int ContinueStmt::EstimateCost() const { return COST_BREAK_CONTINUE; }
 
@@ -2468,7 +2478,9 @@ void CaseStmt::Print(int indent) const {
 
 Stmt *CaseStmt::TypeCheck() { return this; }
 
-void CaseStmt::SetLoopAttribute() { Error(pos, "Illegal '#Pragma' - expected a loop to follow '#pragma unroll/nounroll'."); }
+void CaseStmt::SetLoopAttribute() {
+    Error(pos, "Illegal '#Pragma' - expected a loop to follow '#pragma unroll/nounroll'.");
+}
 
 int CaseStmt::EstimateCost() const { return 0; }
 
@@ -2492,7 +2504,9 @@ void DefaultStmt::Print(int indent) const {
 
 Stmt *DefaultStmt::TypeCheck() { return this; }
 
-void DefaultStmt::SetLoopAttribute() { Error(pos, "Illegal '#Pragma' - expected a loop to follow '#pragma unroll/nounroll'."); }
+void DefaultStmt::SetLoopAttribute() {
+    Error(pos, "Illegal '#Pragma' - expected a loop to follow '#pragma unroll/nounroll'.");
+}
 
 int DefaultStmt::EstimateCost() const { return 0; }
 
@@ -2697,7 +2711,9 @@ Stmt *SwitchStmt::TypeCheck() {
     return this;
 }
 
-void SwitchStmt::SetLoopAttribute() { Error(pos, "Illegal '#Pragma' - expected a loop to follow '#pragma unroll/nounroll'."); }
+void SwitchStmt::SetLoopAttribute() {
+    Error(pos, "Illegal '#Pragma' - expected a loop to follow '#pragma unroll/nounroll'.");
+}
 
 int SwitchStmt::EstimateCost() const {
     const Type *type = expr->GetType();
@@ -2755,7 +2771,9 @@ void UnmaskedStmt::Print(int indent) const {
 
 Stmt *UnmaskedStmt::TypeCheck() { return this; }
 
-void UnmaskedStmt::SetLoopAttribute() { Error(pos, "Illegal '#Pragma' - expected a loop to follow '#pragma unroll/nounroll'."); }
+void UnmaskedStmt::SetLoopAttribute() {
+    Error(pos, "Illegal '#Pragma' - expected a loop to follow '#pragma unroll/nounroll'.");
+}
 
 int UnmaskedStmt::EstimateCost() const { return COST_ASSIGN; }
 
@@ -2800,7 +2818,9 @@ void ReturnStmt::EmitCode(FunctionEmitContext *ctx) const {
 
 Stmt *ReturnStmt::TypeCheck() { return this; }
 
-void ReturnStmt::SetLoopAttribute() { Error(pos, "Illegal '#Pragma' - expected a loop to follow '#pragma unroll/nounroll'."); }
+void ReturnStmt::SetLoopAttribute() {
+    Error(pos, "Illegal '#Pragma' - expected a loop to follow '#pragma unroll/nounroll'.");
+}
 
 int ReturnStmt::EstimateCost() const { return COST_RETURN; }
 
@@ -2871,7 +2891,9 @@ Stmt *GotoStmt::Optimize() { return this; }
 
 Stmt *GotoStmt::TypeCheck() { return this; }
 
-void GotoStmt::SetLoopAttribute() { Error(pos, "Illegal '#Pragma' - expected a loop to follow '#pragma unroll/nounroll'."); }
+void GotoStmt::SetLoopAttribute() {
+    Error(pos, "Illegal '#Pragma' - expected a loop to follow '#pragma unroll/nounroll'.");
+}
 
 int GotoStmt::EstimateCost() const { return COST_GOTO; }
 
@@ -2922,7 +2944,9 @@ Stmt *LabeledStmt::TypeCheck() {
     return this;
 }
 
-void LabeledStmt::SetLoopAttribute() { Error(pos, "Illegal '#Pragma' - expected a loop to follow '#pragma unroll/nounroll'."); }
+void LabeledStmt::SetLoopAttribute() {
+    Error(pos, "Illegal '#Pragma' - expected a loop to follow '#pragma unroll/nounroll'.");
+}
 
 int LabeledStmt::EstimateCost() const { return 0; }
 
@@ -2940,7 +2964,9 @@ void StmtList::EmitCode(FunctionEmitContext *ctx) const {
 
 Stmt *StmtList::TypeCheck() { return this; }
 
-void StmtList::SetLoopAttribute() { Error(pos, "Illegal '#Pragma' - expected a loop to follow '#pragma unroll/nounroll'."); }
+void StmtList::SetLoopAttribute() {
+    Error(pos, "Illegal '#Pragma' - expected a loop to follow '#pragma unroll/nounroll'.");
+}
 
 int StmtList::EstimateCost() const { return 0; }
 
@@ -3606,7 +3632,9 @@ void PrintStmt::Print(int indent) const { printf("%*cPrint Stmt (%s)", indent, '
 
 Stmt *PrintStmt::TypeCheck() { return this; }
 
-void PrintStmt::SetLoopAttribute() { Error(pos, "Illegal '#Pragma' - expected a loop to follow '#pragma unroll/nounroll'."); }
+void PrintStmt::SetLoopAttribute() {
+    Error(pos, "Illegal '#Pragma' - expected a loop to follow '#pragma unroll/nounroll'.");
+}
 
 int PrintStmt::EstimateCost() const { return COST_FUNCALL; }
 
@@ -3675,7 +3703,9 @@ Stmt *AssertStmt::TypeCheck() {
     return this;
 }
 
-void AssertStmt::SetLoopAttribute() { Error(pos, "Illegal '#Pragma' - expected a loop to follow '#pragma unroll/nounroll'."); }
+void AssertStmt::SetLoopAttribute() {
+    Error(pos, "Illegal '#Pragma' - expected a loop to follow '#pragma unroll/nounroll'.");
+}
 
 int AssertStmt::EstimateCost() const { return COST_ASSERT; }
 
@@ -3742,7 +3772,9 @@ void DeleteStmt::EmitCode(FunctionEmitContext *ctx) const {
 
 void DeleteStmt::Print(int indent) const { printf("%*cDelete Stmt", indent, ' '); }
 
-void DeleteStmt::SetLoopAttribute() { Error(pos, "Illegal '#Pragma' - expected a loop to follow '#pragma unroll/nounroll'."); }
+void DeleteStmt::SetLoopAttribute() {
+    Error(pos, "Illegal '#Pragma' - expected a loop to follow '#pragma unroll/nounroll'.");
+}
 
 Stmt *DeleteStmt::TypeCheck() {
     const Type *exprType;
