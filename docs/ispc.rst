@@ -803,6 +803,9 @@ preprocessor runs:
   * - ISPC_UINT_IS_DEFINED
     - 1.
     - Detecting if uint8/uint16/uint32/uint64 types are defined in the ISPC version.
+  * - ISPC_FP64_SUPPORTED
+    - 1.
+    - Detecting if double type is supported by the target.
 
 ``ispc`` supports the following ``#pragma`` directives.
 
