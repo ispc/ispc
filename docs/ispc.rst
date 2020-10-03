@@ -804,7 +804,9 @@ preprocessor runs:
     - 1.
     - Detecting if uint8/uint16/uint32/uint64 types are defined in the ISPC version.
 
-``ispc`` also provides ``#pragma ignore warning`` directives to ignore compiler warnings for individual lines.
+``ispc`` supports the following ``#pragma`` directives.
+
+``#pragma ignore warning`` directives direct the compiler  to ignore compiler warnings for individual lines.
 
 .. list-table:: ``#pragma ignore warning`` directives and their functions:
 
@@ -818,6 +820,22 @@ preprocessor runs:
     - Turns off all ``ispc`` compiler warnings including performance warnings for the following line of code.
 
 When using ``#pragma ignore warning`` before a call to a macro, it suppresses warnings from the expanded macro code.
+
+
+``#pragma unroll`` and ``#pragma nounroll`` directives provide loop unrolling optimization hints to the compiler.
+This pragma is placed immediately before a loop statement.
+
+.. list-table:: ``#pragma unroll`` and ``#pragma nounroll`` directives and their functions:
+
+  * - ``#pragma`` name
+    - Use
+  * - ``#pragma unroll COUNT``
+    - Directs the loop unroller to unroll the loop ``COUNT`` times.
+    - The parameter may optionally be enclosed in parentheses:  ``#pragma unroll (COUNT)``.
+  * - ``#pragma unroll``
+    - Directs the loop unroller to fully unroll the loop if possible.
+  * - ``#pragma nounroll``
+    - Directs the loop unroller to not unroll the loop.
 
 Debugging
 ---------
