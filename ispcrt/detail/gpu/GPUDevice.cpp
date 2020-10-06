@@ -376,7 +376,7 @@ struct TaskQueue : public ispcrt::base::TaskQueue {
     void sync() override {
         L0_SAFE_CALL(zeCommandListClose(m_cl));
         L0_SAFE_CALL(zeCommandQueueExecuteCommandLists(m_q, 1, &m_cl, nullptr));
-        L0_SAFE_CALL(zeCommandQueueSynchronize(m_q, std::numeric_limits<uint32_t>::max()));
+        L0_SAFE_CALL(zeCommandQueueSynchronize(m_q, std::numeric_limits<uint64_t>::max()));
         L0_SAFE_CALL(zeCommandListReset(m_cl));
         // Update future objects corresponding to the events that have just completed
         for (const auto &p : m_events) {
