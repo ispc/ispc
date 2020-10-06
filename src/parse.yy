@@ -68,6 +68,18 @@
 
 struct ForeachDimension;
 
+struct PragmaAttributes {
+    enum class AttributeType { none, pragmaloop, pragmawarning };
+    PragmaAttributes() {
+        aType = AttributeType::none;
+        unrollType =  Globals::pragmaUnrollType::none;
+        count = -1;
+    }    
+    AttributeType aType;
+    Globals::pragmaUnrollType unrollType;
+    int count;
+};
+
 }
 
 
@@ -173,6 +185,7 @@ struct ForeachDimension {
     std::vector<ForeachDimension *> *foreachDimensionList;
     std::pair<std::string, SourcePos> *declspecPair;
     std::vector<std::pair<std::string, SourcePos> > *declspecList;
+    PragmaAttributes *pragmaAttributes;
 }
 
 
@@ -252,6 +265,7 @@ struct ForeachDimension {
 
 %type <intVal> int_constant soa_width_specifier rate_qualified_new
 
+%type <pragmaAttributes> attribute_list
 %type <foreachDimension> foreach_dimension_specifier
 %type <foreachDimensionList> foreach_dimension_list
 
@@ -1667,10 +1681,23 @@ initializer_list
       }
     ;
 
-statement
-    : TOKEN_PRAGMA statement_base
+attribute_list
+    : TOKEN_PRAGMA
     {
-        $2->SetLoopAttribute();
+        $$ = (yylval.pragmaAttributes);
+    }
+    ;
+
+statement
+    : attribute_list statement_base
+    {
+        if ($1->aType == PragmaAttributes::AttributeType::pragmaloop) {
+            std::pair<Globals::pragmaUnrollType, int> unrollVal = std::pair<Globals::pragmaUnrollType, int>($1->unrollType, $1->count);
+            $2->SetLoopAttribute(unrollVal);
+        }
+        else if ($1->aType == PragmaAttributes::AttributeType::pragmawarning) {
+            printf("\n warning \n");   
+        }
         $$ = $2;
     }
     | statement_base
