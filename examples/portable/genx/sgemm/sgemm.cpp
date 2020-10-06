@@ -177,7 +177,7 @@ void SGEMMApp::run(SGEMMApp::RunResult &result, int m, int niter, int gx, int gy
         L0_SAFE_CALL(zeCommandListAppendBarrier(m_command_list, nullptr, 0, nullptr));
         L0_SAFE_CALL(zeCommandListClose(m_command_list));
         L0_SAFE_CALL(zeCommandQueueExecuteCommandLists(m_command_queue, 1, &m_command_list, nullptr));
-        L0_SAFE_CALL(zeCommandQueueSynchronize(m_command_queue, std::numeric_limits<uint32_t>::max()));
+        L0_SAFE_CALL(zeCommandQueueSynchronize(m_command_queue, std::numeric_limits<uint64_t>::max()));
         L0_SAFE_CALL(zeCommandListReset(m_command_list));
         // get time
         ze_kernel_timestamp_result_t tsResult;
@@ -204,7 +204,7 @@ void SGEMMApp::run(SGEMMApp::RunResult &result, int m, int niter, int gx, int gy
     L0_SAFE_CALL(zeCommandListAppendBarrier(m_command_list, nullptr, 0, nullptr));
     L0_SAFE_CALL(zeCommandListClose(m_command_list));
     L0_SAFE_CALL(zeCommandQueueExecuteCommandLists(m_command_queue, 1, &m_command_list, nullptr));
-    L0_SAFE_CALL(zeCommandQueueSynchronize(m_command_queue, std::numeric_limits<uint32_t>::max()));
+    L0_SAFE_CALL(zeCommandQueueSynchronize(m_command_queue, std::numeric_limits<uint64_t>::max()));
     // Result check
     bool pass = true;
     if (validate) {

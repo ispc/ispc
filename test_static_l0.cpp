@@ -263,7 +263,7 @@ static void L0Launch_Kernel(ze_command_queue_handle_t &hCommandQueue, ze_command
     // dispatch & wait
     L0_SAFE_CALL(zeCommandListClose(hCommandList));
     L0_SAFE_CALL(zeCommandQueueExecuteCommandLists(hCommandQueue, 1, &hCommandList, nullptr));
-    L0_SAFE_CALL(zeCommandQueueSynchronize(hCommandQueue, (std::numeric_limits<uint32_t>::max)()));
+    L0_SAFE_CALL(zeCommandQueueSynchronize(hCommandQueue, (std::numeric_limits<uint64_t>::max)()));
 }
 
 static void L0Launch_F_V(ze_device_handle_t &hDevice, ze_module_handle_t &hModule, ze_context_handle_t &hContext,
