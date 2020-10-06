@@ -678,7 +678,6 @@ struct Globals {
     std::map<std::pair<int, std::string>, bool> turnOffWarnings;
 
     enum pragmaUnrollType { none, nounroll, unroll, count };
-    std::vector<std::pair<pragmaUnrollType, int>> pragmaLoopUnroll;
 
     /* If true, we are compiling for more than one target. */
     bool isMultiTargetCompilation;

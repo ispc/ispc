@@ -47,8 +47,8 @@ static int lParseInteger(bool dotdotdot);
 static void lCComment(SourcePos *);
 static void lCppComment(SourcePos *);
 static void lPragmaIgnoreWarning(SourcePos *, std::string);
-static void lPragmaUnroll(SourcePos *, std::string, bool);
-static bool lConsumePragma(SourcePos *);
+static void lPragmaUnroll(YYSTYPE *, SourcePos *, std::string, bool);
+static bool lConsumePragma(YYSTYPE *, SourcePos *);
 static void lHandleCppHash(SourcePos *);
 static void lStringConst(YYSTYPE *, SourcePos *);
 static double lParseHexFloat(const char *ptr);
@@ -372,7 +372,7 @@ ZO_SWIZZLE ([01]+[w-z]+)+|([01]+[rgba]+)+|([01]+[uv]+)+
 "/*"            { lCComment(&yylloc); }
 "//"            { lCppComment(&yylloc); }
 "#pragma" {
-    if (lConsumePragma(&yylloc)) {
+    if (lConsumePragma(&yylval, &yylloc)) {
         return TOKEN_PRAGMA;
     }
 }
@@ -715,12 +715,12 @@ lCComment(SourcePos *pos) {
 
 /** Handle pragma directive to unroll loops.
 */
-static void lPragmaUnroll(SourcePos *pos, std::string fromUserReq, bool isNounroll) {
+static void lPragmaUnroll(YYSTYPE *yylval, SourcePos *pos, std::string fromUserReq, bool isNounroll) {
 
     const char *currChar = fromUserReq.data();
-    Globals::pragmaUnrollType rollType = Globals::pragmaUnrollType::unroll;
+    yylval->pragmaAttributes = new PragmaAttributes();
+    yylval->pragmaAttributes->aType = PragmaAttributes::AttributeType::pragmaloop;
     int count = -1;
-    std::pair<Globals::pragmaUnrollType, int> unrollVal = std::pair<Globals::pragmaUnrollType, int>(rollType, count);
 
     while (*currChar == ' ') {
         ++pos->last_column;
@@ -728,9 +728,8 @@ static void lPragmaUnroll(SourcePos *pos, std::string fromUserReq, bool isNounro
     }
 
     if (isNounroll) {
-        unrollVal.first = Globals::pragmaUnrollType::nounroll;
         if (*currChar == '\n') {
-            (g->pragmaLoopUnroll).push_back(unrollVal);
+            yylval->pragmaAttributes->unrollType = Globals::pragmaUnrollType::nounroll;
             pos->last_column = 1;
             pos->last_line++;
             return;
@@ -743,7 +742,7 @@ static void lPragmaUnroll(SourcePos *pos, std::string fromUserReq, bool isNounro
     }
 
     if (*currChar == '\n') {
-        (g->pragmaLoopUnroll).push_back(unrollVal);
+        yylval->pragmaAttributes->unrollType = Globals::pragmaUnrollType::unroll;
         pos->last_column = 1;
         pos->last_line++;
         return;
@@ -788,9 +787,8 @@ static void lPragmaUnroll(SourcePos *pos, std::string fromUserReq, bool isNounro
         }
     }
 
-    unrollVal.first = Globals::pragmaUnrollType::count;
-    unrollVal.second = count;
-    (g->pragmaLoopUnroll).push_back(unrollVal);
+    yylval->pragmaAttributes->unrollType = Globals::pragmaUnrollType::count;
+    yylval->pragmaAttributes->count = count;
     pos->last_line++;
     pos->last_column = 1;
 }
@@ -866,7 +864,7 @@ lPragmaIgnoreWarning(SourcePos *pos, std::string fromUserReq) {
 /** Consume line starting with '#pragma' and decide on next action based on
  * directive.
  */
-static bool lConsumePragma(SourcePos *pos) {
+static bool lConsumePragma(YYSTYPE *yylval, SourcePos *pos) {
     char c;
     std::string userReq;
     do {
@@ -888,12 +886,12 @@ static bool lConsumePragma(SourcePos *pos) {
     std::string loopUnroll("unroll"), loopNounroll("nounroll"), ignoreWarning("ignore warning");
     if (loopUnroll == userReq.substr(0, loopUnroll.size())) {
         pos->last_column += loopUnroll.size();
-        lPragmaUnroll(pos, userReq.erase(0, loopUnroll.size()), false);
+        lPragmaUnroll(yylval, pos, userReq.erase(0, loopUnroll.size()), false);
         return true;
     }
     else if (loopNounroll == userReq.substr(0, loopNounroll.size())) {
         pos->last_column += loopNounroll.size();
-        lPragmaUnroll(pos, userReq.erase(0, loopNounroll.size()), true);
+        lPragmaUnroll(yylval, pos, userReq.erase(0, loopNounroll.size()), true);
         return true;
     }
     else if (ignoreWarning == userReq.substr(0, ignoreWarning.size())) {
