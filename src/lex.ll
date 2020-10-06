@@ -46,6 +46,7 @@ static uint64_t lParseBinary(const char *ptr, SourcePos pos, char **endPtr);
 static int lParseInteger(bool dotdotdot);
 static void lCComment(SourcePos *);
 static void lCppComment(SourcePos *);
+static void lNextValidChar(SourcePos *, char const*&);
 static void lPragmaIgnoreWarning(SourcePos *, std::string);
 static void lPragmaUnroll(YYSTYPE *, SourcePos *, std::string, bool);
 static bool lConsumePragma(YYSTYPE *, SourcePos *);
@@ -713,6 +714,13 @@ lCComment(SourcePos *pos) {
     Error(*pos, "unterminated comment");
 }
 
+static void lNextValidChar(SourcePos *pos, char const*&currChar) {
+    while (*currChar == ' ') {
+        ++pos->last_column;
+        currChar++;
+    }
+}
+
 /** Handle pragma directive to unroll loops.
 */
 static void lPragmaUnroll(YYSTYPE *yylval, SourcePos *pos, std::string fromUserReq, bool isNounroll) {
@@ -722,10 +730,7 @@ static void lPragmaUnroll(YYSTYPE *yylval, SourcePos *pos, std::string fromUserR
     yylval->pragmaAttributes->aType = PragmaAttributes::AttributeType::pragmaloop;
     int count = -1;
 
-    while (*currChar == ' ') {
-        ++pos->last_column;
-        currChar++;
-    }
+    lNextValidChar(pos, currChar);
 
     if (isNounroll) {
         if (*currChar == '\n') {
@@ -768,19 +773,13 @@ static void lPragmaUnroll(YYSTYPE *yylval, SourcePos *pos, std::string fromUserR
         Error(*pos, "'#pragma unroll()' invalid value '0'; must be positive.");
     }
 
-    while (*endPtr == ' ') {
-        ++pos->last_column;
-        endPtr++;
-    }
+    lNextValidChar(pos, const_cast<const char*&>(endPtr));
 
     if (popPar == true) {
         if (*endPtr == ')') {
             ++pos->last_column;
             endPtr++;
-            while (*endPtr == ' ') {
-                ++pos->last_column;
-                endPtr++;
-            }
+            lNextValidChar(pos, const_cast<const char*&>(endPtr));
         }
         else {
             Error(*pos, "Incomplete '#pragma unroll()' : expected ')'.");
@@ -800,10 +799,7 @@ lPragmaIgnoreWarning(SourcePos *pos, std::string fromUserReq) {
     std::string userReq;
     const char *currChar = fromUserReq.data();
     bool perfWarningOnly = false;
-    while (*currChar == ' ') {
-        ++pos->last_column;
-        currChar++;
-    }
+    lNextValidChar(pos, currChar);
 
     if (*currChar == '\n') {
         pos->last_column = 1;
@@ -813,20 +809,15 @@ lPragmaIgnoreWarning(SourcePos *pos, std::string fromUserReq) {
         return;
     }
     else if (*currChar == '(') {
-        do {
-            currChar++;
-            ++pos->last_column;
-        } while (*currChar == ' ');
+        currChar++;
+        lNextValidChar(pos, currChar);
         while (*currChar != 0 && *currChar != '\n' && *currChar != ' ' && *currChar != ')') {
             userReq += *currChar;
             currChar++;
             ++pos->last_column;
         }
         if ((*currChar == ' ') || (*currChar == ')')) {
-            while (*currChar == ' ') {
-                currChar++;
-                ++pos->last_column;
-            }
+            lNextValidChar(pos, currChar);
             if (*currChar == ')') {
                 do {
                     currChar++;

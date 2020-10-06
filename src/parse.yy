@@ -1695,9 +1695,6 @@ statement
             std::pair<Globals::pragmaUnrollType, int> unrollVal = std::pair<Globals::pragmaUnrollType, int>($1->unrollType, $1->count);
             $2->SetLoopAttribute(unrollVal);
         }
-        else if ($1->aType == PragmaAttributes::AttributeType::pragmawarning) {
-            printf("\n warning \n");   
-        }
         $$ = $2;
     }
     | statement_base
