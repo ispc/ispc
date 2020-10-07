@@ -1624,6 +1624,13 @@ Expr *MakeBinaryExpr(BinaryExpr::Op o, Expr *a, Expr *b, SourcePos p) {
     if (op != NULL) {
         return op;
     }
+
+    // lCreateBinaryOperatorCall can return NULL for 2 cases:
+    // 1. When there is an error.
+    // 2. We have to create a new BinaryExpr.
+    if (m->errorCount > 0)
+        return NULL;
+
     op = new BinaryExpr(o, a, b, p);
     return op;
 }
@@ -6856,6 +6863,8 @@ const Type *TypeCastExpr::GetType() const {
     // (uniform base_type) of (varying base_type). This is a part of function
     // TypeCastExpr::TypeCheck. After implementation of operators we
     // have to have this functionality here.
+    if (expr == NULL)
+        return NULL;
     const Type *toType = type, *fromType = expr->GetType();
     if (toType == NULL || fromType == NULL)
         return NULL;

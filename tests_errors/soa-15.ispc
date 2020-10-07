@@ -19,7 +19,7 @@ varying Foo vf;
 
 int index;
 
-export void x(uniform Foo &x, soa<8> Foo f[]) {
+void x(uniform Foo &x, soa<8> Foo f[]) {
     soa<4> Foo xyz;
     xyz.x = xyz.y-xyz.x;
 }
