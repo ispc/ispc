@@ -715,7 +715,7 @@ lCComment(SourcePos *pos) {
 }
 
 static void lNextValidChar(SourcePos *pos, char const*&currChar) {
-    while (*currChar == ' ') {
+    while ((*currChar == ' ') || (*currChar == '\t') || (*currChar == '\r')) {
         ++pos->last_column;
         currChar++;
     }
@@ -741,7 +741,7 @@ static void lPragmaUnroll(YYSTYPE *yylval, SourcePos *pos, std::string fromUserR
         }
         pos->last_column = 1;
         pos->last_line++;
-        Error(*pos, "extra tokens at end of '#pragma nounroll'.");
+        Warning(*pos, "extra tokens at end of '#pragma nounroll'.");
         return;
 
     }
@@ -819,10 +819,9 @@ lPragmaIgnoreWarning(SourcePos *pos, std::string fromUserReq) {
         if ((*currChar == ' ') || (*currChar == ')')) {
             lNextValidChar(pos, currChar);
             if (*currChar == ')') {
-                do {
-                    currChar++;
-                    ++pos->last_column;
-                } while (*currChar == ' ');
+                currChar++;
+                ++pos->last_column;
+                lNextValidChar(pos, currChar);
                 if (*currChar == '\n') {
                     pos->last_column = 1;
                     pos->last_line++;
@@ -861,7 +860,7 @@ static bool lConsumePragma(YYSTYPE *yylval, SourcePos *pos) {
     do {
         c = yyinput();
         ++pos->last_column;
-    } while (c == ' ');
+    } while ((c == ' ') || (c == '\t') || (c == '\r'));
     if (c == '\n') {
         // Ignore pragma since - directive provided.
         pos->last_column = 1;
@@ -892,7 +891,7 @@ static bool lConsumePragma(YYSTYPE *yylval, SourcePos *pos) {
     }
 
     // Ignore pragma : invalid directive provided.
-    Warning(*pos, "Undefined #pragma.");
+    Warning(*pos, "unknown pragma ignored.");
     return false;
 }
 

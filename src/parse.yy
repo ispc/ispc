@@ -228,7 +228,7 @@ struct ForeachDimension {
 %type <expr> initializer constant_expression for_test
 %type <exprList> argument_expression_list initializer_list
 
-%type <stmt> statement labeled_statement compound_statement for_init_statement statement_base
+%type <stmt> attributed_statement labeled_statement compound_statement for_init_statement statement
 %type <stmt> expression_statement selection_statement iteration_statement
 %type <stmt> jump_statement statement_list declaration_statement print_statement
 %type <stmt> assert_statement sync_statement delete_statement unmasked_statement
@@ -265,7 +265,7 @@ struct ForeachDimension {
 
 %type <intVal> int_constant soa_width_specifier rate_qualified_new
 
-%type <pragmaAttributes> attribute_list
+%type <pragmaAttributes> pragma
 %type <foreachDimension> foreach_dimension_specifier
 %type <foreachDimensionList> foreach_dimension_list
 
@@ -1681,15 +1681,15 @@ initializer_list
       }
     ;
 
-attribute_list
+pragma
     : TOKEN_PRAGMA
     {
         $$ = (yylval.pragmaAttributes);
     }
     ;
 
-statement
-    : attribute_list statement_base
+attributed_statement
+    : pragma attributed_statement
     {
         if ($1->aType == PragmaAttributes::AttributeType::pragmaloop) {
             std::pair<Globals::pragmaUnrollType, int> unrollVal = std::pair<Globals::pragmaUnrollType, int>($1->unrollType, $1->count);
@@ -1697,10 +1697,10 @@ statement
         }
         $$ = $2;
     }
-    | statement_base
+    | statement
     ;
 
-statement_base
+statement
     : labeled_statement
     | compound_statement
     | expression_statement
@@ -1721,11 +1721,11 @@ statement_base
     ;
 
 labeled_statement
-    : goto_identifier ':' statement
+    : goto_identifier ':' attributed_statement
     {
         $$ = new LabeledStmt($1, $3, @1);
     }
-    | TOKEN_CASE constant_expression ':' statement
+    | TOKEN_CASE constant_expression ':' attributed_statement
       {
           int value;
           if ($2 != NULL &&
@@ -1735,7 +1735,7 @@ labeled_statement
           else
               $$ = NULL;
       }
-    | TOKEN_DEFAULT ':' statement
+    | TOKEN_DEFAULT ':' attributed_statement
       { $$ = new DefaultStmt($3, @1); }
     ;
 
@@ -1753,13 +1753,13 @@ compound_statement
     ;
 
 statement_list
-    : statement
+    : attributed_statement
       {
           StmtList *sl = new StmtList(@1);
           sl->Add($1);
           $$ = sl;
       }
-    | statement_list statement
+    | statement_list attributed_statement
       {
           StmtList *sl = (StmtList *)$1;
           if (sl == NULL) {
@@ -1777,15 +1777,15 @@ expression_statement
     ;
 
 selection_statement
-    : TOKEN_IF '(' expression ')' statement
+    : TOKEN_IF '(' expression ')' attributed_statement
       { $$ = new IfStmt($3, $5, NULL, false, @1); }
-    | TOKEN_IF '(' expression ')' statement TOKEN_ELSE statement
+    | TOKEN_IF '(' expression ')' attributed_statement TOKEN_ELSE attributed_statement
       { $$ = new IfStmt($3, $5, $7, false, @1); }
-    | TOKEN_CIF '(' expression ')' statement
+    | TOKEN_CIF '(' expression ')' attributed_statement
       { $$ = new IfStmt($3, $5, NULL, true, @1); }
-    | TOKEN_CIF '(' expression ')' statement TOKEN_ELSE statement
+    | TOKEN_CIF '(' expression ')' attributed_statement TOKEN_ELSE attributed_statement
       { $$ = new IfStmt($3, $5, $7, true, @1); }
-    | TOKEN_SWITCH '(' expression ')' statement
+    | TOKEN_SWITCH '(' expression ')' attributed_statement
       { $$ = new SwitchStmt($3, $5, @1); }
     ;
 
@@ -1893,27 +1893,27 @@ foreach_unique_identifier
     ;
 
 iteration_statement
-    : TOKEN_WHILE '(' expression ')' statement
+    : TOKEN_WHILE '(' expression ')' attributed_statement
       { $$ = new ForStmt(NULL, $3, NULL, $5, false, @1); }
-    | TOKEN_CWHILE '(' expression ')' statement
+    | TOKEN_CWHILE '(' expression ')' attributed_statement
       { $$ = new ForStmt(NULL, $3, NULL, $5, true, @1); }
-    | TOKEN_DO statement TOKEN_WHILE '(' expression ')' ';'
+    | TOKEN_DO attributed_statement TOKEN_WHILE '(' expression ')' ';'
       { $$ = new DoStmt($5, $2, false, @1); }
-    | TOKEN_CDO statement TOKEN_WHILE '(' expression ')' ';'
+    | TOKEN_CDO attributed_statement TOKEN_WHILE '(' expression ')' ';'
       { $$ = new DoStmt($5, $2, true, @1); }
-    | for_scope '(' for_init_statement for_test ')' statement
+    | for_scope '(' for_init_statement for_test ')' attributed_statement
       { $$ = new ForStmt($3, $4, NULL, $6, false, @1);
         m->symbolTable->PopScope();
       }
-    | for_scope '(' for_init_statement for_test expression ')' statement
+    | for_scope '(' for_init_statement for_test expression ')' attributed_statement
       { $$ = new ForStmt($3, $4, new ExprStmt($5, @5), $7, false, @1);
         m->symbolTable->PopScope();
       }
-    | cfor_scope '(' for_init_statement for_test ')' statement
+    | cfor_scope '(' for_init_statement for_test ')' attributed_statement
       { $$ = new ForStmt($3, $4, NULL, $6, true, @1);
         m->symbolTable->PopScope();
       }
-    | cfor_scope '(' for_init_statement for_test expression ')' statement
+    | cfor_scope '(' for_init_statement for_test expression ')' attributed_statement
       { $$ = new ForStmt($3, $4, new ExprStmt($5, @5), $7, true, @1);
         m->symbolTable->PopScope();
       }
@@ -1927,7 +1927,7 @@ iteration_statement
          for (unsigned int i = 0; i < dims->size(); ++i)
              m->symbolTable->AddVariable((*dims)[i]->sym);
      }
-     statement
+     attributed_statement
      {
          std::vector<ForeachDimension *> *dims = $3;
          if (dims == NULL) {
@@ -1956,7 +1956,7 @@ iteration_statement
          for (unsigned int i = 0; i < dims->size(); ++i)
              m->symbolTable->AddVariable((*dims)[i]->sym);
      }
-     statement
+     attributed_statement
      {
          std::vector<ForeachDimension *> *dims = $3;
          if (dims == NULL) {
@@ -1979,7 +1979,7 @@ iteration_statement
          if ($3 != NULL)
              m->symbolTable->AddVariable($3);
      }
-     statement
+     attributed_statement
      {
          $$ = new ForeachActiveStmt($3, $6, Union(@1, @4));
          m->symbolTable->PopScope();
@@ -1997,7 +1997,7 @@ iteration_statement
              m->symbolTable->AddVariable(sym);
          }
      }
-     statement
+     attributed_statement
      {
          $$ = new ForeachUniqueStmt($3, $5, $8, @1);
          m->symbolTable->PopScope();
