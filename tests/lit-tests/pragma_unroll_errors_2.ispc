@@ -2,16 +2,14 @@
 
 // RUN: not %{ispc} %s --target=host --nostdlib --nowrap 2>&1 | FileCheck %s
 
-// CHECK: Warning: unknown pragma ignored.
-// CHECK: Error: '#pragma unroll()' invalid value '0'; must be positive.
-// CHECK: Error: Illegal pragma - expected a loop to follow '#pragma unroll/nounroll'.
+// CHECK: Warning: extra tokens at end of '#pragma nounroll'.
+// CHECK: Error: Multiple '#pragma unroll/nounroll' directives used.
 
-#pragma whaaat!!
 extern void goo_for(uniform int);
 void foo_for() {
-#pragma unroll(0)
+#pragma nounroll 9
+#pragma unroll
     for (uniform int iter1 = 0; iter1 < 45; iter1++) {
-#pragma nounroll
         goo_for(iter1);
     }   
 }

@@ -65,6 +65,10 @@
 
 Stmt *Stmt::Optimize() { return this; }
 
+void Stmt::SetLoopAttribute(std::pair<Globals::pragmaUnrollType, int> lAttr) {
+    Error(pos, "Illegal pragma - expected a loop to follow '#pragma unroll/nounroll'.");
+}
+
 ///////////////////////////////////////////////////////////////////////////
 // ExprStmt
 
@@ -80,9 +84,6 @@ void ExprStmt::EmitCode(FunctionEmitContext *ctx) const {
 }
 
 Stmt *ExprStmt::TypeCheck() { return this; }
-void ExprStmt::SetLoopAttribute(std::pair<Globals::pragmaUnrollType, int> lAttr) {
-    Error(pos, "Illegal '#Pragma' - expected a loop to follow '#pragma unroll/nounroll'.");
-}
 
 void ExprStmt::Print(int indent) const {
     if (!expr)
@@ -315,10 +316,6 @@ Stmt *DeclStmt::TypeCheck() {
     return encounteredError ? NULL : this;
 }
 
-void DeclStmt::SetLoopAttribute(std::pair<Globals::pragmaUnrollType, int> lAttr) {
-    Error(pos, "Illegal '#Pragma' - expected a loop to follow '#pragma unroll/nounroll'.");
-}
-
 void DeclStmt::Print(int indent) const {
     printf("%*cDecl Stmt:", indent, ' ');
     pos.Print();
@@ -472,10 +469,6 @@ Stmt *IfStmt::TypeCheck() {
     }
 
     return this;
-}
-
-void IfStmt::SetLoopAttribute(std::pair<Globals::pragmaUnrollType, int> lAttr) {
-    Error(pos, "Illegal '#Pragma' - expected a loop to follow '#pragma unroll/nounroll'.");
 }
 
 int IfStmt::EstimateCost() const {
@@ -896,7 +889,6 @@ void DoStmt::EmitCode(FunctionEmitContext *ctx) const {
         llvm::Value *mask = ctx->GetInternalMask();
         ctx->SetInternalMaskAnd(mask, testValue);
         branchInst = ctx->BranchIfMaskAny(bloop, bexit);
-        printf("\n VARYING \n");
         ctx->setLoopUnrollMetadata(branchInst, loopAttribute, pos);
     }
 
@@ -934,7 +926,11 @@ Stmt *DoStmt::TypeCheck() {
     return this;
 }
 
-void DoStmt::SetLoopAttribute(std::pair<Globals::pragmaUnrollType, int> lAttr) { loopAttribute = lAttr; }
+void DoStmt::SetLoopAttribute(std::pair<Globals::pragmaUnrollType, int> lAttr) {
+    if (loopAttribute.first != Globals::pragmaUnrollType::none)
+        Error(pos, "Multiple '#pragma unroll/nounroll' directives used.");
+    loopAttribute = lAttr;
+}
 
 int DoStmt::EstimateCost() const {
     bool uniformTest = testExpr ? testExpr->GetType()->IsUniformType()
@@ -1123,7 +1119,11 @@ Stmt *ForStmt::TypeCheck() {
     return this;
 }
 
-void ForStmt::SetLoopAttribute(std::pair<Globals::pragmaUnrollType, int> lAttr) { loopAttribute = lAttr; }
+void ForStmt::SetLoopAttribute(std::pair<Globals::pragmaUnrollType, int> lAttr) {
+    if (loopAttribute.first != Globals::pragmaUnrollType::none)
+        Error(pos, "Multiple '#pragma unroll/nounroll' directives used.");
+    loopAttribute = lAttr;
+}
 
 int ForStmt::EstimateCost() const {
     bool uniformTest = test ? test->GetType()->IsUniformType()
@@ -1170,10 +1170,6 @@ void BreakStmt::EmitCode(FunctionEmitContext *ctx) const {
 
 Stmt *BreakStmt::TypeCheck() { return this; }
 
-void BreakStmt::SetLoopAttribute(std::pair<Globals::pragmaUnrollType, int> lAttr) {
-    Error(pos, "Illegal '#Pragma' - expected a loop to follow '#pragma unroll/nounroll'.");
-}
-
 int BreakStmt::EstimateCost() const { return COST_BREAK_CONTINUE; }
 
 void BreakStmt::Print(int indent) const {
@@ -1196,10 +1192,6 @@ void ContinueStmt::EmitCode(FunctionEmitContext *ctx) const {
 }
 
 Stmt *ContinueStmt::TypeCheck() { return this; }
-
-void ContinueStmt::SetLoopAttribute(std::pair<Globals::pragmaUnrollType, int> lAttr) {
-    Error(pos, "Illegal '#Pragma' - expected a loop to follow '#pragma unroll/nounroll'.");
-}
 
 int ContinueStmt::EstimateCost() const { return COST_BREAK_CONTINUE; }
 
@@ -1313,6 +1305,7 @@ static void lGetSpans(int dimsLeft, int nDims, int itemsLeft, bool isTiled, int 
    to process.
  */
 void ForeachStmt::EmitCode(FunctionEmitContext *ctx) const {
+
 #ifdef ISPC_GENX_ENABLED
     if (g->target->isGenXTarget()) {
         EmitCodeForGenX(ctx);
@@ -1955,7 +1948,11 @@ Stmt *ForeachStmt::TypeCheck() {
     return anyErrors ? NULL : this;
 }
 
-void ForeachStmt::SetLoopAttribute(std::pair<Globals::pragmaUnrollType, int> lAttr) { loopAttribute = lAttr; }
+void ForeachStmt::SetLoopAttribute(std::pair<Globals::pragmaUnrollType, int> lAttr) {
+    if (loopAttribute.first != Globals::pragmaUnrollType::none)
+        Error(pos, "Multiple '#pragma unroll/nounroll' directives used.");
+    loopAttribute = lAttr;
+}
 
 int ForeachStmt::EstimateCost() const { return dimVariables.size() * (COST_UNIFORM_LOOP + COST_SIMPLE_ARITH_LOGIC_OP); }
 
@@ -2178,7 +2175,11 @@ Stmt *ForeachActiveStmt::TypeCheck() {
     return this;
 }
 
-void ForeachActiveStmt::SetLoopAttribute(std::pair<Globals::pragmaUnrollType, int> lAttr) { loopAttribute = lAttr; }
+void ForeachActiveStmt::SetLoopAttribute(std::pair<Globals::pragmaUnrollType, int> lAttr) {
+    if (loopAttribute.first != Globals::pragmaUnrollType::none)
+        Error(pos, "Multiple '#pragma unroll/nounroll' directives used.");
+    loopAttribute = lAttr;
+}
 
 int ForeachActiveStmt::EstimateCost() const { return COST_VARYING_LOOP; }
 
@@ -2421,7 +2422,11 @@ Stmt *ForeachUniqueStmt::TypeCheck() {
     return this;
 }
 
-void ForeachUniqueStmt::SetLoopAttribute(std::pair<Globals::pragmaUnrollType, int> lAttr) { loopAttribute = lAttr; }
+void ForeachUniqueStmt::SetLoopAttribute(std::pair<Globals::pragmaUnrollType, int> lAttr) {
+    if (loopAttribute.first != Globals::pragmaUnrollType::none)
+        Error(pos, "Multiple '#pragma unroll/nounroll' directives used.");
+    loopAttribute = lAttr;
+}
 
 int ForeachUniqueStmt::EstimateCost() const { return COST_VARYING_LOOP; }
 
@@ -2463,10 +2468,6 @@ void CaseStmt::Print(int indent) const {
 
 Stmt *CaseStmt::TypeCheck() { return this; }
 
-void CaseStmt::SetLoopAttribute(std::pair<Globals::pragmaUnrollType, int> lAttr) {
-    Error(pos, "Illegal '#Pragma' - expected a loop to follow '#pragma unroll/nounroll'.");
-}
-
 int CaseStmt::EstimateCost() const { return 0; }
 
 ///////////////////////////////////////////////////////////////////////////
@@ -2488,10 +2489,6 @@ void DefaultStmt::Print(int indent) const {
 }
 
 Stmt *DefaultStmt::TypeCheck() { return this; }
-
-void DefaultStmt::SetLoopAttribute(std::pair<Globals::pragmaUnrollType, int> lAttr) {
-    Error(pos, "Illegal '#Pragma' - expected a loop to follow '#pragma unroll/nounroll'.");
-}
 
 int DefaultStmt::EstimateCost() const { return 0; }
 
@@ -2696,10 +2693,6 @@ Stmt *SwitchStmt::TypeCheck() {
     return this;
 }
 
-void SwitchStmt::SetLoopAttribute(std::pair<Globals::pragmaUnrollType, int> lAttr) {
-    Error(pos, "Illegal '#Pragma' - expected a loop to follow '#pragma unroll/nounroll'.");
-}
-
 int SwitchStmt::EstimateCost() const {
     const Type *type = expr->GetType();
     if (type && type->IsVaryingType())
@@ -2756,10 +2749,6 @@ void UnmaskedStmt::Print(int indent) const {
 
 Stmt *UnmaskedStmt::TypeCheck() { return this; }
 
-void UnmaskedStmt::SetLoopAttribute(std::pair<Globals::pragmaUnrollType, int> lAttr) {
-    Error(pos, "Illegal '#Pragma' - expected a loop to follow '#pragma unroll/nounroll'.");
-}
-
 int UnmaskedStmt::EstimateCost() const { return COST_ASSIGN; }
 
 ///////////////////////////////////////////////////////////////////////////
@@ -2802,10 +2791,6 @@ void ReturnStmt::EmitCode(FunctionEmitContext *ctx) const {
 }
 
 Stmt *ReturnStmt::TypeCheck() { return this; }
-
-void ReturnStmt::SetLoopAttribute(std::pair<Globals::pragmaUnrollType, int> lAttr) {
-    Error(pos, "Illegal '#Pragma' - expected a loop to follow '#pragma unroll/nounroll'.");
-}
 
 int ReturnStmt::EstimateCost() const { return COST_RETURN; }
 
@@ -2876,10 +2861,6 @@ Stmt *GotoStmt::Optimize() { return this; }
 
 Stmt *GotoStmt::TypeCheck() { return this; }
 
-void GotoStmt::SetLoopAttribute(std::pair<Globals::pragmaUnrollType, int> lAttr) {
-    Error(pos, "Illegal '#Pragma' - expected a loop to follow '#pragma unroll/nounroll'.");
-}
-
 int GotoStmt::EstimateCost() const { return COST_GOTO; }
 
 ///////////////////////////////////////////////////////////////////////////
@@ -2929,10 +2910,6 @@ Stmt *LabeledStmt::TypeCheck() {
     return this;
 }
 
-void LabeledStmt::SetLoopAttribute(std::pair<Globals::pragmaUnrollType, int> lAttr) {
-    Error(pos, "Illegal '#Pragma' - expected a loop to follow '#pragma unroll/nounroll'.");
-}
-
 int LabeledStmt::EstimateCost() const { return 0; }
 
 ///////////////////////////////////////////////////////////////////////////
@@ -2948,10 +2925,6 @@ void StmtList::EmitCode(FunctionEmitContext *ctx) const {
 }
 
 Stmt *StmtList::TypeCheck() { return this; }
-
-void StmtList::SetLoopAttribute(std::pair<Globals::pragmaUnrollType, int> lAttr) {
-    Error(pos, "Illegal '#Pragma' - expected a loop to follow '#pragma unroll/nounroll'.");
-}
 
 int StmtList::EstimateCost() const { return 0; }
 
@@ -3617,10 +3590,6 @@ void PrintStmt::Print(int indent) const { printf("%*cPrint Stmt (%s)", indent, '
 
 Stmt *PrintStmt::TypeCheck() { return this; }
 
-void PrintStmt::SetLoopAttribute(std::pair<Globals::pragmaUnrollType, int> lAttr) {
-    Error(pos, "Illegal '#Pragma' - expected a loop to follow '#pragma unroll/nounroll'.");
-}
-
 int PrintStmt::EstimateCost() const { return COST_FUNCALL; }
 
 ///////////////////////////////////////////////////////////////////////////
@@ -3688,10 +3657,6 @@ Stmt *AssertStmt::TypeCheck() {
     return this;
 }
 
-void AssertStmt::SetLoopAttribute(std::pair<Globals::pragmaUnrollType, int> lAttr) {
-    Error(pos, "Illegal '#Pragma' - expected a loop to follow '#pragma unroll/nounroll'.");
-}
-
 int AssertStmt::EstimateCost() const { return COST_ASSERT; }
 
 ///////////////////////////////////////////////////////////////////////////
@@ -3756,10 +3721,6 @@ void DeleteStmt::EmitCode(FunctionEmitContext *ctx) const {
 }
 
 void DeleteStmt::Print(int indent) const { printf("%*cDelete Stmt", indent, ' '); }
-
-void DeleteStmt::SetLoopAttribute(std::pair<Globals::pragmaUnrollType, int> lAttr) {
-    Error(pos, "Illegal '#Pragma' - expected a loop to follow '#pragma unroll/nounroll'.");
-}
 
 Stmt *DeleteStmt::TypeCheck() {
     const Type *exprType;

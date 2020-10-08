@@ -1,11 +1,12 @@
 // Test to check '#pragma nounroll' functionality for different loop statemnts.
 
-// RUN: %{ispc} %s --target=avx2-i32x8 --nowrap -O0 --emit-llvm-text -o - | FileCheck %s -check-prefix=CHECKO0
-// RUN: %{ispc} %s --target=avx2-i32x8 --nowrap -O2 --emit-llvm-text -o - | FileCheck %s -check-prefix=CHECKO2
-// REQUIRES: X86_ENABLED
+// RUN: %{ispc} %s --target=host --nowrap -O0 --emit-llvm-text --nostdlib --nostdlib -o - | FileCheck %s -check-prefix=CHECKO0
+// RUN: %{ispc} %s --target=host --nowrap -O2 --emit-llvm-text --nostdlib --nostdlib -o - | FileCheck %s -check-prefix=CHECKO2
 
-// CHECKO0: br label %for_test, !llvm.loop
+// CHECKO0: define void @foo_for___
+// CHECKO0: br label %{{[a-zA-Z_][a-zA-Z0-9_]*}}, !llvm.loop
 
+// CHECKO2: define void @foo_for___
 // CHECKO2: call void @goo_for___uni
 // CHECKO2-NOT: call void @goo_for___uni
 
@@ -17,9 +18,10 @@ void foo_for() {
     }   
 }
 
+// CHECKO0: define void @foo_do___
+// CHECKO0: br i1 %{{[a-zA-Z_][a-zA-Z0-9_]*}}, label %{{[a-zA-Z_][a-zA-Z0-9_]*}}, label %{{[a-zA-Z_][a-zA-Z0-9_]*}}, !llvm.loop
 
-// CHECKO0: br i1 %less_iter1_load7_, label %do_loop, label %do_exit, !llvm.loop
-
+// CHECKO2: define void @foo_do___
 // CHECKO2: call void @goo_do___uni
 // CHECKO2-NOT: call void @goo_do___uni
 
@@ -33,8 +35,10 @@ void foo_do() {
     } while(iter1 < 45);
 }
 
-// CHECKO0: br label %outer_not_in_extras, !llvm.loop
+// CHECKO0: define void @foo_foreach___
+// CHECKO0: br label %{{[a-zA-Z_][a-zA-Z0-9_]*}}, !llvm.loop
 
+// CHECKO2: define void @foo_foreach___
 // CHECKO2: call void @goo_foreach___vyivyi
 // CHECKO2: call void @goo_foreach___vyivyi
 // CHECKO2-NOT: call void @goo_foreach___vyivyi
@@ -47,9 +51,10 @@ void foo_foreach() {
     }
 }
 
+// CHECKO0: define void @foo_foreach_active___
+// CHECKO0: br i1 %{{[a-zA-Z_][a-zA-Z0-9_]*}}, label %{{[a-zA-Z_][a-zA-Z0-9_]*}}, label %{{[a-zA-Z_][a-zA-Z0-9_]*}}, !llvm.loop
 
-// CHECKO0: br i1 %remaining_ne_zero, label %foreach_active_find_next, label %foreach_active_done, !llvm.loop
-
+// CHECKO2: define void @foo_foreach_active___
 // CHECKO2: call void @goo_foreach_active___uni
 // CHECKO2-NOT: call void @goo_foreach_active___uni
 
@@ -61,9 +66,10 @@ void foo_foreach_active() {
     }
 }
 
+// CHECKO0: define void @foo_foreach_unique___
+// CHECKO0:br i1 %{{[a-zA-Z_][a-zA-Z0-9_]*}}, label %{{[a-zA-Z_][a-zA-Z0-9_]*}}, label %{{[a-zA-Z_][a-zA-Z0-9_]*}}, !llvm.loop
 
-// CHECKO0:br i1 %remaining_ne_zero, label %foreach_find_next, label %foreach_done, !llvm.loop
-
+// CHECKO2: define void @foo_foreach_unique___
 // CHECKO2: call void @goo_foreach_unique___uni
 // CHECKO2-NOT: call void @goo_foreach_unique___uni
 
@@ -75,9 +81,10 @@ void foo_foreach_unique(int var) {
     }
 }
 
+// CHECKO0: define void @foo_foreach_tiled___
+// CHECKO0:br label %{{[a-zA-Z_][a-zA-Z0-9_]*}}, !llvm.loop
 
-// CHECKO0:br label %outer_not_in_extras, !llvm.loop
-
+// CHECKO2: define void @foo_foreach_tiled___
 // CHECKO2: call void @goo_foreach_tiled___vyivyivyi
 // CHECKO2: call void @goo_foreach_tiled___vyivyivyi
 // CHECKO2: call void @goo_foreach_tiled___vyivyivyi
