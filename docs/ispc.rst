@@ -831,7 +831,7 @@ This pragma is placed immediately before a loop statement.
     - Use
   * - ``#pragma unroll COUNT``
     - Directs the loop unroller to unroll the loop ``COUNT`` times.
-    - The parameter may optionally be enclosed in parentheses:  ``#pragma unroll (COUNT)``.
+      The parameter may optionally be enclosed in parentheses:  ``#pragma unroll (COUNT)``.
   * - ``#pragma unroll``
     - Directs the loop unroller to fully unroll the loop if possible.
   * - ``#pragma nounroll``
