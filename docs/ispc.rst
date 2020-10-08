@@ -806,7 +806,7 @@ preprocessor runs:
 
 ``ispc`` supports the following ``#pragma`` directives.
 
-``#pragma ignore warning`` directives direct the compiler  to ignore compiler warnings for individual lines.
+``#pragma ignore warning`` directives direct the compiler to ignore compiler warnings for individual lines.
 
 .. list-table:: ``#pragma ignore warning`` directives and their functions:
 
