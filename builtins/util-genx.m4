@@ -1463,28 +1463,6 @@ shuffles(double, 8)
 shuffles(i64, 8)
 ')
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; global_atomic_associative
-;; More efficient implementation for atomics that are associative (e.g.,
-;; add, and, ...).  If a basic implementation would do sometihng like:
-;; result0 = atomic_op(ptr, val0)
-;; result1 = atomic_op(ptr, val1)
-;; ..
-;; Then instead we can do:
-;; tmp = (val0 op val1 op ...)
-;; result0 = atomic_op(ptr, tmp)
-;; result1 = (result0 op val0)
-;; ..
-;; And more efficiently compute the same result
-;;
-;; Takes five parameters:
-;; $1: vector width of the target
-;; $2: operation being performed (w.r.t. LLVM atomic intrinsic names)
-;;     (add, sub...)
-;; $3: return type of the LLVM atomic (e.g. i32)
-;; $4: return type of the LLVM atomic type, in ispc naming paralance (e.g. int32)
-;; $5: identity value for the operator (e.g. 0 for add, -1 for AND, ...)
-
 define(`mask_converts', `
 define internal <$1 x i8> @convertmask_i1_i8_$1(<$1 x i1>) {
   %r = sext <$1 x i1> %0 to <$1 x i8>
@@ -1570,28 +1548,96 @@ define internal <$1 x i64> @convertmask_i64_i64_$1(<$1 x i64>) {
 
 mask_converts(WIDTH)
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; global_atomic_associative
+;; Implementation for atomics for vector types
+;;
+;; Takes four parameters:
+;; $1: vector width of the target
+;; $2: operation being performed (w.r.t. ISPC stdlib/VC atomic intrinsic names)
+;;     (add, sub...)
+;; $3: return type of the VC atomic (e.g. i32)
+;; $4: return type of the VC atomic type, in ispc naming paralance (e.g. int32)
+
 define(`global_atomic_associative', `
-
-declare <$1 x $3> @__atomic_$2_$4_global($3 * %ptr, <$1 x $3> %val,
-                                        <$1 x MASK> %m) nounwind alwaysinline;
-
+define <$1 x $3> @__atomic_$2_$4_global($3 * %ptr, <$1 x $3> %val,
+                                        <$1 x MASK> %m) nounwind alwaysinline {
+  ifelse($1, 8,`
+    %dst = alloca <$1 x $3>
+    %dst_load = load <$1 x $3>, <$1 x $3>* %dst
+    %ptr_to_int = ptrtoint $3* %ptr to i64
+    %base = insertelement <WIDTH x i64> undef, i64 %ptr_to_int, i32 0
+    %shuffle = shufflevector <WIDTH x i64> %base, <WIDTH x i64> undef, <WIDTH x i32> zeroinitializer
+    %res = call <$1 x $3> @llvm.genx.svm.atomic.$2.GEN_SUFFIX($3).GEN_SUFFIX(i1).GEN_SUFFIX(i64)(<$1 x i1> %m, <$1 x i64> %shuffle, <$1 x $3> %val, <$1 x $3> %dst_load)
+  ',`
+    %ret_ptr = alloca <$1 x $3>
+    per_lane($1, <$1 x MASK> %m, `
+      %val_LANE_ID = extractelement <$1 x $3> %val, i32 LANE
+      %res_LANE_ID = call $3 @__atomic_$2_uniform_$4_global($3 * %ptr, $3 %val_LANE_ID)
+      %store_ptr_LANE_ID = getelementptr PTR_OP_ARGS(`<$1 x $3>') %ret_ptr, i32 0, i32 LANE
+      store $3 %res_LANE_ID, $3 * %store_ptr_LANE_ID
+    ')
+    %res = load PTR_OP_ARGS(`<$1 x $3> ')  %ret_ptr
+  ')
+  ret <$1 x $3> %res
+}
 ')
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; global_atomic_uniform
 ;; Defines the implementation of a function that handles the mapping from
-;; an ispc atomic function to the underlying LLVM intrinsics.  This variant
+;; an ispc atomic function to the VC intrinsics.  This variant
 ;; just calls the atomic once, for the given uniform value
 ;;
 ;; Takes four parameters:
 ;; $1: vector width of the target
-;; $2: operation being performed (w.r.t. LLVM atomic intrinsic names)
+;; $2: operation being performed (w.r.t. ISPC stdlib/VC atomic intrinsic names)
 ;;     (add, sub...)
-;; $3: return type of the LLVM atomic (e.g. i32)
-;; $4: return type of the LLVM atomic type, in ispc naming paralance (e.g. int32)
+;; $3: return type of the VC atomic (e.g. i32)
+;; $4: return type of the VC atomic type, in ispc naming paralance (e.g. int32)
 
 define(`global_atomic_uniform', `
-declare $3 @__atomic_$2_uniform_$4_global($3 * %ptr, $3 %val) nounwind alwaysinline;
+
+define $3 @__atomic_$2_uniform_$4_global($3 * %ptr, $3 %val) nounwind alwaysinline {
+  %dst = alloca <1 x $3>
+  %dst_load = load <1 x $3>, <1 x $3>* %dst
+  %ptr_to_int = ptrtoint $3* %ptr to i64
+  %ptr_to_int_v = bitcast i64 %ptr_to_int to <1 x i64>
+  %val_v = bitcast $3 %val to <1 x $3>
+  %res_v = call <1 x $3> @llvm.genx.svm.atomic.$2.GEN_SUFFIXN($3, 1).v1i1.v1i64(<1 x i1> <i1 true>, <1 x i64> %ptr_to_int_v, <1 x $3> %val_v, <1 x $3> %dst_load), !ISPC-Uniform !1
+  %res = extractelement <1 x $3> %res_v, i32 0 
+  ret $3 %res
+}
+')
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; global_atomic_uniform_minmax
+;; Defines the implementation of a function that handles the mapping from
+;; an ispc atomic function to VC intrinsics for umin/umax.  This variant
+;; just calls the atomic once, for the given uniform value. For ISPC and VC
+;; name conventions are different for umin/umax that's why it requires separate 
+;; function.
+;;
+;; Takes four parameters:
+;; $1: vector width of the target
+;; $2: operation being performed (w.r.t. ISPC stdlib operation names)
+;;     (umin, umax)
+;; $3: return type of the VC atomic (e.g. i32)
+;; $4: return type of the VC atomic type, in ispc naming paralance (e.g. int32)
+;; $5: operation being performed (w.r.t. VC atomic intrinsic names)
+;;     (imin, imax...)
+
+define(`global_atomic_uniform_minmax', `
+define $3 @__atomic_$2_uniform_$4_global($3 * %ptr, $3 %val) nounwind alwaysinline {
+  %dst = alloca <1 x $3>
+  %dst_load = load <1 x $3>, <1 x $3>* %dst
+  %ptr_to_int = ptrtoint $3* %ptr to i64
+  %ptr_to_int_v = bitcast i64 %ptr_to_int to <1 x i64>
+  %val_v = bitcast $3 %val to <1 x $3>
+  %res_v = call <1 x $3> @llvm.genx.svm.atomic.$5.GEN_SUFFIXN($3, 1).v1i1.v1i64(<1 x i1> <i1 true>, <1 x i64> %ptr_to_int_v, <1 x $3> %val_v, <1 x $3> %dst_load), !ISPC-Uniform !1
+  %res = extractelement <1 x $3> %res_v, i32 0 
+  ret $3 %res
+}
 ')
 
 ;; Macro to declare the function that implements the swap atomic.
@@ -1601,9 +1647,17 @@ declare $3 @__atomic_$2_uniform_$4_global($3 * %ptr, $3 %val) nounwind alwaysinl
 ;; $3: ispc type of the elements (e.g. int32)
 
 define(`global_swap', `
-declare $2 @__atomic_swap_uniform_$3_global($2* %ptr, $2 %val) nounwind alwaysinline;
+define $2 @__atomic_swap_uniform_$3_global($2* %ptr, $2 %val) nounwind alwaysinline {
+  %dst = alloca <1 x $2>
+  %dst_load = load <1 x $2>, <1 x $2>* %dst
+  %ptr_to_int = ptrtoint $2* %ptr to i64
+  %ptr_to_int_v = bitcast i64 %ptr_to_int to <1 x i64>
+  %val_v = bitcast $2 %val to <1 x $2>
+  %res_v = call <1 x $2> @llvm.genx.svm.atomic.xchg.GEN_SUFFIXN($2, 1).v1i1.v1i64(<1 x i1> <i1 true>, <1 x i64> %ptr_to_int_v, <1 x $2> %val_v, <1 x $2> %dst_load), !ISPC-Uniform !1
+  %res = extractelement <1 x $2> %res_v, i32 0 
+  ret $2 %res
+}
 ')
-
 
 ;; Similarly, macro to declare the function that implements the compare/exchange
 ;; atomic.  Takes three parameters:
@@ -1612,12 +1666,41 @@ declare $2 @__atomic_swap_uniform_$3_global($2* %ptr, $2 %val) nounwind alwaysin
 ;; $3: ispc type of the elements (e.g. int32)
 
 define(`global_atomic_exchange', `
+define <$1 x $2> @__atomic_compare_exchange_$3_global($2* %ptr, <$1 x $2> %cmp,
+                               <$1 x $2> %val, <$1 x MASK> %mask) nounwind alwaysinline {
+  ifelse($1, 8,`
+    %dst = alloca <$1 x $2>
+    %dst_load = load <$1 x $2>, <$1 x $2>* %dst
+    %ptr_to_int = ptrtoint $2* %ptr to i64
+    %base = insertelement <WIDTH x i64> undef, i64 %ptr_to_int, i32 0
+    %shuffle = shufflevector <WIDTH x i64> %base, <WIDTH x i64> undef, <WIDTH x i32> zeroinitializer
+    %res = call <$1 x $2> @llvm.genx.svm.atomic.cmpxchg.GEN_SUFFIX($2).GEN_SUFFIX(i1).GEN_SUFFIX(i64)(<$1 x i1> %mask, <$1 x i64> %shuffle, <$1 x $2> %val, <$1 x $2> %cmp, <$1 x $2> %dst_load)
+  ',`
+    %ret_ptr = alloca <$1 x $2>
+      per_lane($1, <$1 x MASK> %mask, `
+        %val_LANE_ID = extractelement <$1 x $2> %val, i32 LANE
+        %cmp_LANE_ID = extractelement <$1 x $2> %cmp, i32 LANE
+        %res_LANE_ID = call $2 @__atomic_compare_exchange_uniform_$3_global($2 * %ptr, $2 %cmp_LANE_ID, $2 %val_LANE_ID)
+        %store_ptr_LANE_ID = getelementptr PTR_OP_ARGS(`<$1 x $2>') %ret_ptr, i32 0, i32 LANE
+        store $2 %res_LANE_ID, $2 * %store_ptr_LANE_ID
+    ')
+    %res = load PTR_OP_ARGS(`<$1 x $2> ')  %ret_ptr
+  ')
+  ret <$1 x $2> %res
+}
 
-declare <$1 x $2> @__atomic_compare_exchange_$3_global($2* %ptr, <$1 x $2> %cmp,
-                               <$1 x $2> %val, <$1 x MASK> %mask) nounwind alwaysinline;
-
-declare $2 @__atomic_compare_exchange_uniform_$3_global($2* %ptr, $2 %cmp,
-                                                       $2 %val) nounwind alwaysinline;
+define $2 @__atomic_compare_exchange_uniform_$3_global($2* %ptr, $2 %cmp,
+                                                       $2 %val) nounwind alwaysinline {
+  %dst = alloca <1 x $2>
+  %dst_load = load <1 x $2>, <1 x $2>* %dst
+  %ptr_to_int = ptrtoint $2* %ptr to i64
+  %ptr_to_int_v = bitcast i64 %ptr_to_int to <1 x i64>
+  %val_v = bitcast $2 %val to <1 x $2>
+  %cmp_v = bitcast $2 %cmp to <1 x $2>
+  %res_v = call <1 x $2> @llvm.genx.svm.atomic.cmpxchg.GEN_SUFFIXN($2, 1).v1i1.v1i64(<1 x i1> <i1 true>, <1 x i64> %ptr_to_int_v, <1 x $2> %val_v, <1 x $2> %cmp_v, <1 x $2> %dst_load), !ISPC-Uniform !1
+  %res = extractelement <1 x $2> %res_v, i32 0 
+  ret $2 %res
+}
 ')
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -4575,10 +4658,10 @@ global_atomic_uniform(WIDTH, sub, i32, int32)
 global_atomic_uniform(WIDTH, and, i32, int32)
 global_atomic_uniform(WIDTH, or, i32, int32)
 global_atomic_uniform(WIDTH, xor, i32, int32)
-global_atomic_uniform(WIDTH, min, i32, int32)
-global_atomic_uniform(WIDTH, max, i32, int32)
-global_atomic_uniform(WIDTH, umin, i32, uint32)
-global_atomic_uniform(WIDTH, umax, i32, uint32)
+global_atomic_uniform_minmax(WIDTH, min, i32, int32, imin)
+global_atomic_uniform_minmax(WIDTH, max, i32, int32, imax)
+global_atomic_uniform_minmax(WIDTH, umin, i32, uint32, min)
+global_atomic_uniform_minmax(WIDTH, umax, i32, uint32, max)
 
 global_atomic_associative(WIDTH, add, i64, int64, 0)
 global_atomic_associative(WIDTH, sub, i64, int64, 0)
@@ -4590,32 +4673,75 @@ global_atomic_uniform(WIDTH, sub, i64, int64)
 global_atomic_uniform(WIDTH, and, i64, int64)
 global_atomic_uniform(WIDTH, or, i64, int64)
 global_atomic_uniform(WIDTH, xor, i64, int64)
-global_atomic_uniform(WIDTH, min, i64, int64)
-global_atomic_uniform(WIDTH, max, i64, int64)
-global_atomic_uniform(WIDTH, umin, i64, uint64)
-global_atomic_uniform(WIDTH, umax, i64, uint64)
+global_atomic_uniform_minmax(WIDTH, min, i64, int64, imin)
+global_atomic_uniform_minmax(WIDTH, max, i64, int64, imax)
+global_atomic_uniform_minmax(WIDTH, umin, i64, uint64, min)
+global_atomic_uniform_minmax(WIDTH, umax, i64, uint64, max)
 
 global_swap(WIDTH, i32, int32)
 global_swap(WIDTH, i64, int64)
 
-declare float @__atomic_swap_uniform_float_global(float * %ptr, float %val) nounwind alwaysinline;
-declare double @__atomic_swap_uniform_double_global(double * %ptr, double %val) nounwind alwaysinline;
+define float @__atomic_swap_uniform_float_global(float * %ptr, float %val) nounwind alwaysinline {
+  %iptr = bitcast float * %ptr to i32 *
+  %ival = bitcast float %val to i32
+  %iret = call i32 @__atomic_swap_uniform_int32_global(i32 * %iptr, i32 %ival)
+  %ret = bitcast i32 %iret to float
+  ret float %ret
+}
+
+define double @__atomic_swap_uniform_double_global(double * %ptr, double %val) nounwind alwaysinline {
+  %iptr = bitcast double * %ptr to i64 *
+  %ival = bitcast double %val to i64
+  %iret = call i64 @__atomic_swap_uniform_int64_global(i64 * %iptr, i64 %ival)
+  %ret = bitcast i64 %iret to double
+  ret double %ret
+}
 
 global_atomic_exchange(WIDTH, i32, int32)
 global_atomic_exchange(WIDTH, i64, int64)
 
-declare <WIDTH x float> @__atomic_compare_exchange_float_global(float * %ptr,
-                      <WIDTH x float> %cmp, <WIDTH x float> %val, <WIDTH x MASK> %mask) nounwind alwaysinline;
+define <WIDTH x float> @__atomic_compare_exchange_float_global(float * %ptr,
+                      <WIDTH x float> %cmp, <WIDTH x float> %val, <WIDTH x MASK> %mask) nounwind alwaysinline {
+  %iptr = bitcast float * %ptr to i32 *
+  %icmp = bitcast <WIDTH x float> %cmp to <WIDTH x i32>
+  %ival = bitcast <WIDTH x float> %val to <WIDTH x i32>
+  %iret = call <WIDTH x i32> @__atomic_compare_exchange_int32_global(i32 * %iptr, <WIDTH x i32> %icmp,
+                                                                  <WIDTH x i32> %ival, <WIDTH x MASK> %mask)
+  %ret = bitcast <WIDTH x i32> %iret to <WIDTH x float>
+  ret <WIDTH x float> %ret
+}
 
-declare <WIDTH x double> @__atomic_compare_exchange_double_global(double * %ptr,
-                      <WIDTH x double> %cmp, <WIDTH x double> %val, <WIDTH x MASK> %mask) nounwind alwaysinline;
+define <WIDTH x double> @__atomic_compare_exchange_double_global(double * %ptr,
+                      <WIDTH x double> %cmp, <WIDTH x double> %val, <WIDTH x MASK> %mask) nounwind alwaysinline {
+  %iptr = bitcast double * %ptr to i64 *
+  %icmp = bitcast <WIDTH x double> %cmp to <WIDTH x i64>
+  %ival = bitcast <WIDTH x double> %val to <WIDTH x i64>
+  %iret = call <WIDTH x i64> @__atomic_compare_exchange_int64_global(i64 * %iptr, <WIDTH x i64> %icmp,
+                                                                  <WIDTH x i64> %ival, <WIDTH x MASK> %mask)
+  %ret = bitcast <WIDTH x i64> %iret to <WIDTH x double>
+  ret <WIDTH x double> %ret
+}
 
-declare float @__atomic_compare_exchange_uniform_float_global(float * %ptr, float %cmp,
-                                                             float %val) nounwind alwaysinline;
+define float @__atomic_compare_exchange_uniform_float_global(float * %ptr, float %cmp,
+                                                             float %val) nounwind alwaysinline {
+  %iptr = bitcast float * %ptr to i32 *
+  %icmp = bitcast float %cmp to i32
+  %ival = bitcast float %val to i32
+  %iret = call i32 @__atomic_compare_exchange_uniform_int32_global(i32 * %iptr, i32 %icmp,
+                                                                   i32 %ival)
+  %ret = bitcast i32 %iret to float
+  ret float %ret
+}
 
-declare double @__atomic_compare_exchange_uniform_double_global(double * %ptr, double %cmp,
-                                                               double %val) nounwind alwaysinline;
-
+define double @__atomic_compare_exchange_uniform_double_global(double * %ptr, double %cmp,
+                                                               double %val) nounwind alwaysinline {
+  %iptr = bitcast double * %ptr to i64 *
+  %icmp = bitcast double %cmp to i64
+  %ival = bitcast double %val to i64
+  %iret = call i64 @__atomic_compare_exchange_uniform_int64_global(i64 * %iptr, i64 %icmp, i64 %ival)
+  %ret = bitcast i64 %iret to double
+  ret double %ret
+}
 ')
 
 
