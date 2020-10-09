@@ -6222,8 +6222,7 @@ bool CheckUnsupportedInsts::runOnBasicBlock(llvm::BasicBlock &bb) {
     bool modifiedAny = false;
     // This list contains regex expr for unsupported function names
     // To be extended
-    std::vector<std::regex> unsupportedFuncs = {std::regex("__(acos|asin|atan|atan2)_(uniform|varying)_(double)"),
-                                                std::regex("__(atomic_.*)_(global)")};
+    std::vector<std::regex> unsupportedFuncs = {std::regex("__(acos|asin|atan|atan2)_(uniform|varying)_(double)")};
 
     for (llvm::BasicBlock::iterator I = bb.begin(), E = --bb.end(); I != E; ++I) {
         llvm::Instruction *inst = &*I;

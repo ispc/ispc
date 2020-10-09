@@ -1252,3 +1252,33 @@ define void @__sincos_varying_double(<WIDTH x double>, <WIDTH x double>*, <WIDTH
 }
 
 trigonometry_decl()
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;; atomics
+;; Generates atomics intrinsics. Gen intrinsics are supported for WIDTH = 1, 2, 4, 8
+;; so for WIDTH = 16 or more we will use 8-wide width intrinsics.
+;; $1 atomic operation (e.g. max, min...)
+
+define(`genx_atomics_decl', `
+  declare <1 x i32> @llvm.genx.svm.atomic.$1.v1i32.v1i1.v1i64(<1 x i1>, <1 x i64>, <1 x i32>, <1 x i32>)
+  declare <1 x i64> @llvm.genx.svm.atomic.$1.v1i64.v1i1.v1i64(<1 x i1>, <1 x i64>, <1 x i64>, <1 x i64>)
+  declare <8 x i32> @llvm.genx.svm.atomic.$1.v8i32.v8i1.v8i64(<8 x i1>, <8 x i64>, <8 x i32>, <8 x i32>)
+  declare <8 x i64> @llvm.genx.svm.atomic.$1.v8i64.v8i1.v8i64(<8 x i1>, <8 x i64>, <8 x i64>, <8 x i64>)
+')
+;; cmpxchg has another signature, declare them separately
+declare <1 x i32> @llvm.genx.svm.atomic.cmpxchg.v1i32.v1i1.v1i64(<1 x i1>, <1 x i64>, <1 x i32>, <1 x i32>, <1 x i32>)
+declare <1 x i64> @llvm.genx.svm.atomic.cmpxchg.v1i64.v1i1.v1i64(<1 x i1>, <1 x i64>, <1 x i64>, <1 x i64>, <1 x i64>)
+declare <8 x i32> @llvm.genx.svm.atomic.cmpxchg.v8i32.v8i1.v8i64(<8 x i1>, <8 x i64>, <8 x i32>, <8 x i32>, <8 x i32>)
+declare <8 x i64> @llvm.genx.svm.atomic.cmpxchg.v8i64.v8i1.v8i64(<8 x i1>, <8 x i64>, <8 x i64>, <8 x i64>, <8 x i64>)
+
+genx_atomics_decl(add)
+genx_atomics_decl(xchg)
+genx_atomics_decl(sub)
+genx_atomics_decl(and)
+genx_atomics_decl(or)
+genx_atomics_decl(xor)
+genx_atomics_decl(max)
+genx_atomics_decl(imax)
+genx_atomics_decl(min)
+genx_atomics_decl(imin)
