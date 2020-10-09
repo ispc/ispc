@@ -1628,8 +1628,10 @@ Expr *MakeBinaryExpr(BinaryExpr::Op o, Expr *a, Expr *b, SourcePos p) {
     // lCreateBinaryOperatorCall can return NULL for 2 cases:
     // 1. When there is an error.
     // 2. We have to create a new BinaryExpr.
-    if (m->errorCount > 0)
+    if (m->errorCount > 0) {
+        AssertPos(p, m->errorCount > 0);
         return NULL;
+    }
 
     op = new BinaryExpr(o, a, b, p);
     return op;
