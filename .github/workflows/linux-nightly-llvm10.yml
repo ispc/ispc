@@ -29,9 +29,9 @@ jobs:
       run: |
         sudo apt-get update
         sudo apt-get install bison flex libc6-dev-i386 g++-multilib lib32stdc++6 ncurses-dev
-        wget $LLVM_REPO/releases/download/llvm-$LLVM_VERSION-ispc-dev/$LLVM_TAR
-        tar xvf $LLVM_TAR 
-        echo "::add-path::${GITHUB_WORKSPACE}/bin-$LLVM_VERSION/bin"
+        wget -q $LLVM_REPO/releases/download/llvm-$LLVM_VERSION-ispc-dev/$LLVM_TAR
+        tar xf $LLVM_TAR
+        echo "PATH=${GITHUB_WORKSPACE}/bin-$LLVM_VERSION/bin:$PATH" >> $GITHUB_ENV
 
     - name: Check environment
       run: |
@@ -83,17 +83,21 @@ jobs:
         sudo apt-get update && sudo apt-get install libc6-dev-i386 g++-multilib lib32stdc++6
         find /usr -name cdefs.h
         wget --user-agent='Mozilla/4.0' https://software.intel.com/content/dam/develop/external/us/en/documents/$SDE_TAR_NAME.tar.bz2
-        tar xvf $SDE_TAR_NAME.tar.bz2
-        echo "::add-path::${GITHUB_WORKSPACE}/$SDE_TAR_NAME"
-        tar xvf ispc-trunk-linux.tar.gz
-        echo "::add-path::${GITHUB_WORKSPACE}/ispc-trunk-linux/bin"
-        echo "::set-env name=LLVM_HOME::${GITHUB_WORKSPACE}"
-        echo "::set-env name=ISPC_HOME::${GITHUB_WORKSPACE}"
+        tar xf $SDE_TAR_NAME.tar.bz2
+        echo "ADD_PATH=$GITHUB_WORKSPACE/$SDE_TAR_NAME:$ADD_PATH" >> $GITHUB_ENV
+        tar xf ispc-trunk-linux.tar.gz
+        echo "ADD_PATH=$GITHUB_WORKSPACE/ispc-trunk-linux/bin:$ADD_PATH" >> $GITHUB_ENV
+        echo "LLVM_HOME=$GITHUB_WORKSPACE" >> $GITHUB_ENV
+        echo "ISPC_HOME=$GITHUB_WORKSPACE" >> $GITHUB_ENV
+
     - name: Check environment
       run: |
         cat /proc/cpuinfo
     - name: Running tests
       run: |
+        # Setting PATH in prev step not surived moving to this step
+        # use ADD_PATH to pass it through steps in this job.
+        echo "PATH=$ADD_PATH:$PATH" >> $GITHUB_ENV
         ./alloy.py -r --only="stability current -O0 -O1 -O2" --only-targets="${{ matrix.target }}" --time --update-errors=FP
     - name: Upload fail_db.txt
       uses: actions/upload-artifact@v2
