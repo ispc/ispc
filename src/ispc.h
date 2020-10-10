@@ -254,6 +254,7 @@ class Target {
 #ifdef ISPC_GENX_ENABLED
     GENX_PLATFORM getGenxPlatform() const { return m_genxPlatform; }
     uint32_t getGenxGrfSize() const;
+    bool hasGenxPrefetch() const;
 #endif
 
     Arch getArch() const { return m_arch; }
