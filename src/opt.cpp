@@ -6082,7 +6082,7 @@ restart:
                     modifiedAny = true;
                     goto restart;
                 }
-            } else if ((func && func->getName() == "llvm.prefetch") || (func && func->getName() == "llvm.assume")) {
+            } else if (func && func->getName() == "llvm.assume") {
                 ci->eraseFromParent();
                 modifiedAny = true;
                 goto restart;
@@ -6251,6 +6251,12 @@ bool CheckUnsupportedInsts::runOnBasicBlock(llvm::BasicBlock &bb) {
                     } else {
                         Error(pos, "\"%s\" is not supported for genx-* targets yet\n", funcName.c_str());
                     }
+                }
+            }
+            // Report error that prefetch is not supported on SKL and TGLLP
+            if (!g->target->hasGenxPrefetch()) {
+                if (func && func->getName().contains("prefetch")) {
+                    Error(pos, "\'prefetch\' is not supported by %s\n", g->target->getCPU().c_str());
                 }
             }
         }

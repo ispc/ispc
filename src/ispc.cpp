@@ -1532,6 +1532,17 @@ uint32_t Target::getGenxGrfSize() const {
     }
     return 32;
 }
+
+bool Target::hasGenxPrefetch() const {
+    switch (m_genxPlatform) {
+    case GENX_GEN9:
+    case GENX_TGLLP:
+        return false;
+    default:
+        return true;
+    }
+    return true;
+}
 #endif
 
 ///////////////////////////////////////////////////////////////////////////
