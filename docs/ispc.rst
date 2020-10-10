@@ -823,7 +823,7 @@ When using ``#pragma ignore warning`` before a call to a macro, it suppresses wa
 
 
 ``#pragma unroll`` and ``#pragma nounroll`` directives provide loop unrolling optimization hints to the compiler.
-This pragma is placed immediately before a loop statement.
+This pragma is placed immediately before a loop statement. Currently, this functionality is limited to uniform ``for`` and ``do-while``.
 
 .. list-table:: ``#pragma unroll`` and ``#pragma nounroll`` directives and their functions:
 

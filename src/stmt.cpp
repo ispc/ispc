@@ -888,8 +888,7 @@ void DoStmt::EmitCode(FunctionEmitContext *ctx) const {
         // to the top of the loop.  Otherwise, jump out.
         llvm::Value *mask = ctx->GetInternalMask();
         ctx->SetInternalMaskAnd(mask, testValue);
-        branchInst = ctx->BranchIfMaskAny(bloop, bexit);
-        ctx->setLoopUnrollMetadata(branchInst, loopAttribute, pos);
+        ctx->BranchIfMaskAny(bloop, bexit);
     }
 
     // ...and we're done.  Set things up for subsequent code to be emitted
@@ -929,7 +928,13 @@ Stmt *DoStmt::TypeCheck() {
 void DoStmt::SetLoopAttribute(std::pair<Globals::pragmaUnrollType, int> lAttr) {
     if (loopAttribute.first != Globals::pragmaUnrollType::none)
         Error(pos, "Multiple '#pragma unroll/nounroll' directives used.");
-    loopAttribute = lAttr;
+    bool uniformTest = testExpr ? testExpr->GetType()->IsUniformType()
+                                : (!g->opt.disableUniformControlFlow && !lHasVaryingBreakOrContinue(bodyStmts));
+    if (uniformTest) {
+        loopAttribute = lAttr;
+    } else {
+        Warning(pos, "'#pragma unroll/nounroll' ignored - not supported for varying do loop.");
+    }
 }
 
 int DoStmt::EstimateCost() const {
@@ -1094,7 +1099,9 @@ void ForStmt::EmitCode(FunctionEmitContext *ctx) const {
         step->EmitCode(ctx);
 
     llvm::Instruction *branchInst = ctx->BranchInst(btest);
-    ctx->setLoopUnrollMetadata(branchInst, loopAttribute, pos);
+    if (uniformTest) {
+        ctx->setLoopUnrollMetadata(branchInst, loopAttribute, pos);
+    }
 
     // Set the current emission basic block to the loop exit basic block
     ctx->SetCurrentBasicBlock(bexit);
@@ -1122,7 +1129,15 @@ Stmt *ForStmt::TypeCheck() {
 void ForStmt::SetLoopAttribute(std::pair<Globals::pragmaUnrollType, int> lAttr) {
     if (loopAttribute.first != Globals::pragmaUnrollType::none)
         Error(pos, "Multiple '#pragma unroll/nounroll' directives used.");
-    loopAttribute = lAttr;
+
+    bool uniformTest = test ? test->GetType()->IsUniformType()
+                            : (!g->opt.disableUniformControlFlow && !lHasVaryingBreakOrContinue(stmts));
+
+    if (uniformTest) {
+        loopAttribute = lAttr;
+    } else {
+        Warning(pos, "'#pragma unroll/nounroll' ignored - not supported for varying for loop.");
+    }
 }
 
 int ForStmt::EstimateCost() const {
@@ -1657,8 +1672,7 @@ void ForeachStmt::EmitCode(FunctionEmitContext *ctx) const {
         llvm::Value *newCounter =
             ctx->BinaryOperator(llvm::Instruction::Add, counter, LLVMInt32(span[nDims - 1]), "new_counter");
         ctx->StoreInst(newCounter, uniformCounterPtrs[nDims - 1]);
-        llvm::Instruction *branchInst = ctx->BranchInst(bbOuterNotInExtras);
-        ctx->setLoopUnrollMetadata(branchInst, loopAttribute, pos);
+        ctx->BranchInst(bbOuterNotInExtras);
     }
 
     ///////////////////////////////////////////////////////////////////////////
@@ -1885,8 +1899,7 @@ void ForeachStmt::EmitCodeForGenX(FunctionEmitContext *ctx) const {
     ctx->AddInstrumentationPoint("foreach loop body");
     stmts->EmitCode(ctx);
     AssertPos(pos, ctx->GetCurrentBasicBlock() != NULL);
-    llvm::Instruction *branchInst = ctx->BranchInst(bbStep[nDims - 1]);
-    ctx->setLoopUnrollMetadata(branchInst, loopAttribute, pos);
+    ctx->BranchInst(bbStep[nDims - 1]);
 
     ///////////////////////////////////////////////////////////////////////////
     // foreach_exit: All done. Restore the old mask and clean up
@@ -1949,9 +1962,7 @@ Stmt *ForeachStmt::TypeCheck() {
 }
 
 void ForeachStmt::SetLoopAttribute(std::pair<Globals::pragmaUnrollType, int> lAttr) {
-    if (loopAttribute.first != Globals::pragmaUnrollType::none)
-        Error(pos, "Multiple '#pragma unroll/nounroll' directives used.");
-    loopAttribute = lAttr;
+    Warning(pos, "'#pragma unroll/nounroll' ignored - not supported for foreach loop.");
 }
 
 int ForeachStmt::EstimateCost() const { return dimVariables.size() * (COST_UNIFORM_LOOP + COST_SIMPLE_ARITH_LOGIC_OP); }
@@ -2136,8 +2147,7 @@ void ForeachActiveStmt::EmitCode(FunctionEmitContext *ctx) const {
         llvm::Value *remainingBits = ctx->LoadInst(maskBitsPtr, NULL, "remaining_bits");
         llvm::Value *nonZero = ctx->CmpInst(llvm::Instruction::ICmp, llvm::CmpInst::ICMP_NE, remainingBits,
                                             LLVMInt64(0), "remaining_ne_zero");
-        llvm::Instruction *branchInst = ctx->BranchInst(bbFindNext, bbDone, nonZero);
-        ctx->setLoopUnrollMetadata(branchInst, loopAttribute, pos);
+        ctx->BranchInst(bbFindNext, bbDone, nonZero);
     }
 
     ctx->SetCurrentBasicBlock(bbDone);
@@ -2176,9 +2186,7 @@ Stmt *ForeachActiveStmt::TypeCheck() {
 }
 
 void ForeachActiveStmt::SetLoopAttribute(std::pair<Globals::pragmaUnrollType, int> lAttr) {
-    if (loopAttribute.first != Globals::pragmaUnrollType::none)
-        Error(pos, "Multiple '#pragma unroll/nounroll' directives used.");
-    loopAttribute = lAttr;
+    Warning(pos, "'#pragma unroll/nounroll' ignored - not supported for foreach_active loop.");
 }
 
 int ForeachActiveStmt::EstimateCost() const { return COST_VARYING_LOOP; }
@@ -2359,8 +2367,7 @@ void ForeachUniqueStmt::EmitCode(FunctionEmitContext *ctx) const {
         llvm::Value *remainingBits = ctx->LoadInst(maskBitsPtr, NULL, "remaining_bits");
         llvm::Value *nonZero = ctx->CmpInst(llvm::Instruction::ICmp, llvm::CmpInst::ICMP_NE, remainingBits,
                                             LLVMInt64(0), "remaining_ne_zero");
-        llvm::Instruction *branchInst = ctx->BranchInst(bbFindNext, bbDone, nonZero);
-        ctx->setLoopUnrollMetadata(branchInst, loopAttribute, pos);
+        ctx->BranchInst(bbFindNext, bbDone, nonZero);
     }
 
     ctx->SetCurrentBasicBlock(bbDone);
@@ -2423,9 +2430,7 @@ Stmt *ForeachUniqueStmt::TypeCheck() {
 }
 
 void ForeachUniqueStmt::SetLoopAttribute(std::pair<Globals::pragmaUnrollType, int> lAttr) {
-    if (loopAttribute.first != Globals::pragmaUnrollType::none)
-        Error(pos, "Multiple '#pragma unroll/nounroll' directives used.");
-    loopAttribute = lAttr;
+    Warning(pos, "'#pragma unroll/nounroll' ignored - not supported for foreach_unique loop.");
 }
 
 int ForeachUniqueStmt::EstimateCost() const { return COST_VARYING_LOOP; }
