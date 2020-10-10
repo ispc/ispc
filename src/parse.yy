@@ -1691,7 +1691,7 @@ pragma
 attributed_statement
     : pragma attributed_statement
     {
-        if ($1->aType == PragmaAttributes::AttributeType::pragmaloop) {
+        if (($1->aType == PragmaAttributes::AttributeType::pragmaloop) && ($2 != NULL)) {
             std::pair<Globals::pragmaUnrollType, int> unrollVal = std::pair<Globals::pragmaUnrollType, int>($1->unrollType, $1->count);
             $2->SetLoopAttribute(unrollVal);
         }

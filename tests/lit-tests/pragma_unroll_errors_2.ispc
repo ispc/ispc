@@ -1,4 +1,4 @@
-// Test to check '#pragma nounroll' functionality for different loop statemnts.
+// Test to check '#pragma unroll/nounroll' functionality for different loop statemnts.
 
 // RUN: not %{ispc} %s --target=host --nostdlib --nowrap 2>&1 | FileCheck %s
 

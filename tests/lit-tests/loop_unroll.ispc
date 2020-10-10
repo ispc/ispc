@@ -37,75 +37,6 @@ void foo_do() {
     } while(iter1 < 45);
 }
 
-// CHECKO0: define void @foo_foreach___
-// CHECKO0: br label %{{[a-zA-Z_][a-zA-Z0-9_]*}}, !llvm.loop
-
-// CHECKO2: define void @foo_foreach___
-// CHECKO2: call void @goo_foreach___vyivyi
-// CHECKO2: call void @goo_foreach___vyivyi
-// CHECKO2: call void @goo_foreach___vyivyi
-// CHECKO2: call void @goo_foreach___vyivyi
-
-extern void goo_foreach(int, int);
-void foo_foreach() {
-#pragma unroll(3)
-    foreach (iter1 = 0 ... 45, iter2 = 0 ... 86) {
-        goo_foreach(iter1, iter2);
-    }
-}
-
-// CHECKO0: define void @foo_foreach_active___
-// CHECKO0: br i1 %{{[a-zA-Z_][a-zA-Z0-9_]*}}, label %{{[a-zA-Z_][a-zA-Z0-9_]*}}, label %{{[a-zA-Z_][a-zA-Z0-9_]*}}, !llvm.loop
-
-// CHECKO2: define void @foo_foreach_active___
-// CHECKO2: call void @goo_foreach_active___uni
-// CHECKO2: call void @goo_foreach_active___uni
-// CHECKO2: call void @goo_foreach_active___uni
-
-extern void goo_foreach_active(uniform int);
-void foo_foreach_active() {
-#pragma unroll 3
-    foreach_active (iter) {
-        goo_foreach_active(iter);
-    }
-}
-
-// CHECKO0: define void @foo_foreach_unique___
-// CHECKO0: br i1 %{{[a-zA-Z_][a-zA-Z0-9_]*}}, label %{{[a-zA-Z_][a-zA-Z0-9_]*}}, label %{{[a-zA-Z_][a-zA-Z0-9_]*}}, !llvm.loop
-
-// CHECKO2: define void @foo_foreach_unique___
-// CHECKO2: call void @goo_foreach_unique___uni
-// CHECKO2: call void @goo_foreach_unique___uni
-// CHECKO2: call void @goo_foreach_unique___uni
-
-extern void goo_foreach_unique(uniform int);
-void foo_foreach_unique(int var) {
-#pragma unroll 3
-    foreach_unique (iter in var) {
-        goo_foreach_unique(iter);
-    }
-}
-
-// CHECKO0: define void @foo_foreach_tiled___
-// CHECKO0: br label %{{[a-zA-Z_][a-zA-Z0-9_]*}}, !llvm.loop
-
-// CHECKO2: define void @foo_foreach_tiled___
-// CHECKO2: call void @goo_foreach_tiled___vyivyivyi
-// CHECKO2: call void @goo_foreach_tiled___vyivyivyi
-// CHECKO2: call void @goo_foreach_tiled___vyivyivyi
-// CHECKO2: call void @goo_foreach_tiled___vyivyivyi
-// CHECKO2: call void @goo_foreach_tiled___vyivyivyi
-// CHECKO2: call void @goo_foreach_tiled___vyivyivyi
-// CHECKO2: call void @goo_foreach_tiled___vyivyivyi
-
-extern void goo_foreach_tiled(int, int, int);
-void foo_foreach_tiled() {
-#pragma unroll 3
-    foreach_tiled (iter1 = 2 ... 14, iter2 = 24 ... 31, iter3 = 0 ... 8) {
-        goo_foreach_tiled(iter1, iter2, iter3);
-    }
-}
-
 // CHECKO0: define void @foo_for_no_count___
 // CHECKO0: br label %{{[a-zA-Z_][a-zA-Z0-9_]*}}, !llvm.loop
 
@@ -131,6 +62,3 @@ void foo_for_no_count() {
 
 // CHECKO0: !{!"llvm.loop.unroll.count", i32 3}
 // CHECKO0: !{!"llvm.loop.unroll.enable"}
-
-
-
