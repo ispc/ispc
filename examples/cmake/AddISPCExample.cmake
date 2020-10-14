@@ -33,138 +33,49 @@
 #
 # ispc ADDISPCTest.cmake
 #
-function(add_ispc_example)
-    set(options USE_COMMON_SETTINGS)
-    set(oneValueArgs NAME ISPC_SRC_NAME DATA_DIR)
-    set(multiValueArgs ISPC_IA_TARGETS ISPC_ARM_TARGETS ISPC_FLAGS TARGET_SOURCES LIBRARIES DATA_FILES)
-    cmake_parse_arguments("example" "${options}" "${oneValueArgs}" "${multiValueArgs}" ${ARGN} )
 
-    set(ISPC_KNOWN_TARGETS "sse2" "sse4" "avx1-" "avx2" "avx512knl" "avx512skx" "neon")
-    set(ISPC_HEADER_NAME "${CMAKE_CURRENT_BINARY_DIR}/${ISPC_SRC_NAME}_ispc.h")
-    set(ISPC_OBJ_NAME "${CMAKE_CURRENT_BINARY_DIR}/${ISPC_SRC_NAME}_ispc${CMAKE_CXX_OUTPUT_EXTENSION}")
-    set(ISPC_FLAGS ${example_ISPC_FLAGS})
-    if (UNIX)
+include_guard(DIRECTORY)
+
+if (UNIX)
+    if(NOT ISPC_ARCH)
         execute_process( COMMAND bash "-c" "uname -m | sed -e s/x86_64/x86/ -e s/amd64/x86/ -e s/i686/x86/ -e s/arm64/aarch64/ -e s/arm.*/arm/ -e s/sa110/arm/" OUTPUT_VARIABLE ARCH)
+
         string(STRIP ${ARCH} ARCH)
         execute_process( COMMAND getconf LONG_BIT OUTPUT_VARIABLE ARCH_BIT)
-        string(STRIP ${ARCH_BIT} ARCH_BIT)
+        string(STRIP ${ARCH_BIT} arch_bit)
         if ("${ARCH}" STREQUAL "x86")
-            if (${ARCH_BIT} EQUAL 32)
-                set(ISPC_ARCH "x86")
+            if (${arch_bit} EQUAL 32)
+                set(ispc_arch "x86")
             else()
-                set(ISPC_ARCH "x86-64")
+                set(ispc_arch "x86-64")
             endif()
         elseif ("${ARCH}" STREQUAL "arm")
-            set(ISPC_ARCH "arm")
+            set(ispc_arch "arm")
         elseif ("${ARCH}" STREQUAL "aarch64")
-            set(ISPC_ARCH "aarch64")
+            set(ispc_arch "aarch64")
         endif()
-        list(APPEND ISPC_FLAGS --pic)
-    else()
-        set(ARCH "x86")
+    endif()
+
+    set(ISPC_ARCH "${ispc_arch}" CACHE STRING "ISPC CPU ARCH")
+    set(ISPC_ARCH_BIT "${arch_bit}" CACHE STRING "ISPC CPU BIT")
+else()
+    if(NOT ISPC_ARCH)
+        set(ispc_arch "x86")
         if (CMAKE_SIZEOF_VOID_P EQUAL 8 )
-            set(ISPC_ARCH "x86-64")
-        else()
-            set(ISPC_ARCH "x86")
+            set(ispc_arch "x86-64")
         endif()
     endif()
 
-    # Collect list of expected outputs
-    list(APPEND ISPC_BUILD_OUTPUT ${ISPC_HEADER_NAME} ${ISPC_OBJ_NAME})
-    if (example_USE_COMMON_SETTINGS)
-        if ("${ARCH}" STREQUAL "x86")
-            set(ISPC_TARGETS ${example_ISPC_IA_TARGETS})
-            string(FIND ${example_ISPC_IA_TARGETS} "," MULTI_TARGET)
-            if (${MULTI_TARGET} GREATER -1)
-                foreach (ispc_target ${ISPC_KNOWN_TARGETS})
-                    string(FIND ${example_ISPC_IA_TARGETS} ${ispc_target} FOUND_TARGET)
-                    if (${FOUND_TARGET} GREATER -1)
-                        set(OUTPUT_TARGET ${ispc_target})
-                        if (${ispc_target} STREQUAL "avx1-")
-                            set(OUTPUT_TARGET "avx")
-                        endif()
-                        list(APPEND ISPC_BUILD_OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/${ISPC_SRC_NAME}_ispc_${OUTPUT_TARGET}.h"
-                                    "${CMAKE_CURRENT_BINARY_DIR}/${ISPC_SRC_NAME}_ispc_${OUTPUT_TARGET}${CMAKE_CXX_OUTPUT_EXTENSION}")
-                    endif()
-                endforeach()
-            endif()
-        elseif ("${ARCH}" STREQUAL "arm" OR "${ARCH}" STREQUAL "aarch64")
-            set(ISPC_TARGETS ${example_ISPC_ARM_TARGETS})
-        else()
-            message(FATAL_ERROR "Unknown architecture ${ARCH}")
-        endif()
-    else()
-        if ("${ARCH}" STREQUAL "x86")
-            set(ISPC_TARGETS ${example_ISPC_IA_TARGETS})
-        elseif ("${ARCH}" STREQUAL "arm" OR "${ARCH}" STREQUAL "aarch64")
-            set(ISPC_TARGETS ${example_ISPC_ARM_TARGETS})
-        else()
-            message(FATAL_ERROR "Unknown architecture ${ARCH}")
-        endif()
+    set(ISPC_ARCH "${ispc_arch}" CACHE STRING "ISPC CPU ARCH")
+    set(ISPC_ARCH_BIT "${arch_bit}" CACHE STRING "ISPC CPU BIT")
+endif()
 
-    endif()
-    # ISPC command
-    add_custom_command(OUTPUT ${ISPC_BUILD_OUTPUT}
-        COMMAND ${ISPC_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/${ISPC_SRC_NAME}.ispc ${ISPC_FLAGS} --target=${ISPC_TARGETS} --arch=${ISPC_ARCH}
-                                   -h ${ISPC_HEADER_NAME} -o ${ISPC_OBJ_NAME}
-        VERBATIM
-        DEPENDS ${ISPC_EXECUTABLE}
-        DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/${ISPC_SRC_NAME}.ispc")
 
-    # To show ispc source in VS solution:
-    if (WIN32)
-        set_source_files_properties("${CMAKE_CURRENT_SOURCE_DIR}/${ISPC_SRC_NAME}.ispc" PROPERTIES HEADER_FILE_ONLY TRUE)
-    endif()
 
-    add_executable(${example_NAME} ${ISPC_BUILD_OUTPUT} "${CMAKE_CURRENT_SOURCE_DIR}/${ISPC_SRC_NAME}.ispc")
-    target_sources(${example_NAME} PRIVATE ${example_TARGET_SOURCES})
-    target_include_directories(${example_NAME} PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
-    # Compile options
-    if (UNIX)
-        if (${ARCH_BIT} EQUAL 32)
-            target_compile_options(${example_NAME} PRIVATE -m32)
-        else()
-            target_compile_options(${example_NAME} PRIVATE -m64)
-        endif()
-        target_compile_options(${example_NAME} PRIVATE -fpie)
-    else()
-        target_compile_options(${example_NAME} PRIVATE /fp:fast /Oi)
-    endif()
-
-    # Common settings
-    if (example_USE_COMMON_SETTINGS)
-        target_sources(${example_NAME} PRIVATE ${EXAMPLES_ROOT}/tasksys.cpp)
-        target_sources(${example_NAME} PRIVATE ${EXAMPLES_ROOT}/timing.h)
-        if (UNIX)
-            target_compile_options(${example_NAME} PRIVATE -O2)
-            target_link_libraries(${example_NAME} pthread m stdc++)
-        endif()
-    endif()
-
-    # Link libraries
-    if (example_LIBRARIES)
-        target_link_libraries(${example_NAME} ${example_LIBRARIES})
-    endif()
-
-    set_target_properties(${example_NAME} PROPERTIES FOLDER "Examples")
-    if(MSVC)
-        # Group ISPC files inside Visual Studio
-        source_group("ISPC" FILES "${CMAKE_CURRENT_SOURCE_DIR}/${ISPC_SRC_NAME}.ispc")
-    endif()
-
-    # Install example
-    # We do not need to include examples binaries to the package
-    if (NOT ISPC_PREPARE_PACKAGE)
-        install(TARGETS ${example_NAME} RUNTIME DESTINATION examples/${example_NAME})
-        if (example_DATA_FILES)
-            install(FILES ${example_DATA_FILES}
-                    DESTINATION examples/${example_NAME})
-        endif()
-
-        if (example_DATA_DIR)
-            install(DIRECTORY ${example_DATA_DIR}
-                    DESTINATION examples/${example_NAME})
-        endif()
-    endif()
-
-endfunction()
+if(CMAKE_VERSION VERSION_GREATER_EQUAL 3.19.2 AND
+    (("${CMAKE_GENERATOR}" MATCHES "Make") OR ("${CMAKE_GENERATOR}" MATCHES "Ninja")) )
+    enable_language(ISPC)
+    include(${CMAKE_CURRENT_LIST_DIR}/AddISPCExampleModern.cmake)
+else()
+    include(${CMAKE_CURRENT_LIST_DIR}/AddISPCExampleLegacy.cmake)
+endif()

@@ -36,7 +36,7 @@
 cmake_minimum_required(VERSION 3.12)
 
 set (PROJECT_NAME ispc_examples)
-project(${PROJECT_NAME})
+project(${PROJECT_NAME} C CXX)
 
 include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/AddISPCExample.cmake)
 
