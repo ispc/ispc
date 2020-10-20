@@ -64,7 +64,10 @@ enum Encoding : char {
     Size = VecPtr - Bool + 1
 };
 
-constexpr int LZMaxFormatStrSize = 256;
+// Empirically defined max format string length supported by L0 runtime.
+// FIXME: get rid of this constant and corresponeding splitting code when
+//        L0 supports arbitrary length format string.
+constexpr int LZMaxFormatStrSize = 1024;
 
 // get encoding (as a char) for uniform T type, that is used in type argument of __do_print
 template <typename T> Encoding getEncoding4Uniform();
