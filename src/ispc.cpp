@@ -1560,6 +1560,7 @@ Opt::Opt() {
 #ifdef ISPC_GENX_ENABLED
     disableGenXGatherCoalescing = false;
     enableForeachInsideVarying = false;
+    emitGenXHardwareMask = true;
 #endif
 }
 

@@ -532,6 +532,11 @@ struct Opt {
         Current implementation brings performance degradation due to ineffective
         implementation of unmasked.*/
     bool enableForeachInsideVarying;
+
+    /** Enables emitting of genx.any intrinsics and the control flow which is
+        based on impliit hardware mask. Forces generation of goto/join instructions
+        in assembly.*/
+    bool emitGenXHardwareMask;
 #endif
 };
 
