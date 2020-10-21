@@ -544,29 +544,43 @@ class FunctionEmitContext {
 
     llvm::Instruction *ReturnInst();
 #ifdef ISPC_GENX_ENABLED
-    // GenX-specific functions
+    /** Emit genx_simdcf_any intrinsic.
+        Required when GenX hardware mask is emitted. */
     llvm::Value *GenXSimdCFAny(llvm::Value *value);
+
+    /** Emit genx_simdcf_predicate intrinsic
+        Required when GenX hardware mask is emitted. */
     llvm::Value *GenXSimdCFPredicate(llvm::Value *values, llvm::Value *defaults = NULL);
-    /*This function changes scalar condition to vector condition before branching if
-    emulated uniform condition was found in external scopes and start SIMD control
-    flow with simdcf.any intrinsic*/
-    llvm::Value *GenXPrepareVectorBranch(llvm::Value *value);
-    /*Start unmasked region. Sets execution mask to all-active, and return the old mask.*/
+
+    /** Start unmasked region. Sets execution mask to all-active, and return the old mask.*/
     llvm::Value *GenXStartUnmaskedRegion();
-    /*End unmasked region. Sets execution mask back using the value from unmask-begin.
-    CMSIMDCFLowering expect that execMask have alloca+load+store */
+
+    /** End unmasked region. Sets execution mask back using the value from unmask-begin.
+        ISPCSIMDCFLowering expect that execMask have alloca+load+store. */
     void GenXEndUnmaskedRegion(llvm::Value *execMask);
+
+    /** Emit L0 format string using genx_print_format_index intrinsics. */
     llvm::CallInst *GenXLZFormatStr(const std::string &str);
 
-    bool ifEmulatedUniformForGen() const;
-    /*Add ISPC-Uniform metadata to llvm instruction. Instruction with
-    such metadata will not be predicated in CMSIMDCFLowering pass*/
-    void addUniformMetadata(llvm::Value *v);
+    /** Change scalar condition to vector condition before branching if
+        emulated uniform condition was found in external scopes and start SIMD control
+        flow with simdcf.any intrinsic.
+        Required when GenX hardware mask is emitted. */
+    llvm::Value *GenXPrepareVectorBranch(llvm::Value *value);
+
+    /** Emit ISPC-Uniform metadata to llvm instruction. Instruction with
+        such metadata will not be predicated in ISPCSIMDCFLowering pass.
+        Required when GenX hardware mask is emitted. */
+    void GenXUniformMetadata(llvm::Value *v);
+
+    /** Check if current control flow block is inside GenX SIND CF
+        Required when GenX hardware mask is emitted. */
+    bool inGenXSimdCF() const;
 
 #endif
     /** Enables emitting of genx.any intrinsics and the control flow which is
         based on impliit hardware mask. Forces generation of goto/join instructions
-        in assembly.*/
+        in assembly. */
     bool emitGenXHardwareMask();
 
     /** @} */
@@ -634,7 +648,7 @@ class FunctionEmitContext {
 
 #ifdef ISPC_GENX_ENABLED
     /** Final basic block of the function. It is used for GenX to
-        disable returned lanes until return point is reached */
+        disable returned lanes until return point is reached. */
     llvm::BasicBlock *returnPoint;
 #endif
 
