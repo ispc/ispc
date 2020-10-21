@@ -1,4 +1,6 @@
 // rule: run on OS=linux
+// rule: skip on arch=genx32
+// rule: skip on arch=genx64
 // sincos() function is available only on Linux.
 
 

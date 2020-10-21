@@ -1,7 +1,9 @@
+// rule: skip on arch=genx32
+// rule: skip on arch=genx64
 uniform unsigned int64 s = 0xffffffffff000000;
 
 export void f_f(uniform float RET[], uniform float aFOO[]) {
-    float a = aFOO[programIndex]; 
+    float a = aFOO[programIndex];
     float b = 0;
     if (programIndex & 1) {
         #pragma ignore warning(perf)

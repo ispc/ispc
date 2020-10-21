@@ -899,17 +899,22 @@ def run_tests(options1, args, print_version):
     # populate ex_state test table and run info with testing results
     populate_ex_state(options, target, total_tests, results)
 
+    run_succeed_files = [fname for fname, fstatus in results if fstatus == Status.Success]
+    skip_files = [fname for fname, fstatus in results if fstatus == Status.Skip]
+
+    total_tests_executed = total_tests-len(skip_files)
+
     if options.non_interactive:
         print_debug(" Done %d / %d\n" % (finished_tests_counter.value, total_tests), s, run_tests_log)
 
+    print_debug("\nExecuted %d / %d (%d skipped)\n\n" % (total_tests_executed, total_tests, len(skip_files)), s, run_tests_log)
+
     # Pass rate
-    run_succeed_files = [fname for fname, fstatus in results if fstatus == Status.Success]
-    skip_files = [fname for fname, fstatus in results if fstatus == Status.Skip]
-    if (total_tests-len(skip_files)) > 0:
-        pass_rate = len(run_succeed_files)/(total_tests-len(skip_files))*100
+    if (total_tests_executed) > 0:
+        pass_rate = (len(run_succeed_files)/total_tests_executed)*100
     else:
         pass_rate = -1
-    print_debug("PASSRATE %d%% \n" % pass_rate, s, run_tests_log)
+    print_debug("PASSRATE (%d/%d) = %d%% \n\n" % (len(run_succeed_files), total_tests_executed, pass_rate), s, run_tests_log)
 
     for status in Status:
         print_result(status, results, s, run_tests_log, options.csv)
