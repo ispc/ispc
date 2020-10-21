@@ -3791,4 +3791,13 @@ llvm::CallInst *FunctionEmitContext::GenXLZFormatStr(const std::string &str) {
                                                       LLVMTypes::Int8PointerType);
     return llvm::CallInst::Create(Fn, GEP, "lz_format_str_idx", bblock);
 }
+
 #endif
+
+bool FunctionEmitContext::emitGenXHardwareMask() {
+    bool emitGenXHardwareMask = g->target->isGenXTarget();
+#ifdef ISPC_GENX_ENABLED
+    emitGenXHardwareMask &= g->opt.emitGenXHardwareMask;
+#endif
+    return emitGenXHardwareMask;
+}

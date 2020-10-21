@@ -562,7 +562,13 @@ class FunctionEmitContext {
     /*Add ISPC-Uniform metadata to llvm instruction. Instruction with
     such metadata will not be predicated in CMSIMDCFLowering pass*/
     void addUniformMetadata(llvm::Value *v);
+
 #endif
+    /** Enables emitting of genx.any intrinsics and the control flow which is
+        based on impliit hardware mask. Forces generation of goto/join instructions
+        in assembly.*/
+    bool emitGenXHardwareMask();
+
     /** @} */
 
   private:
