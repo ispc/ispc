@@ -1780,7 +1780,7 @@ llvm::Value *lEmitLogicalOp(BinaryExpr::Op op, Expr *arg0, Expr *arg1, FunctionE
             llvm::Value *equalsMask = ctx->CmpInst(llvm::Instruction::ICmp, llvm::CmpInst::ICMP_EQ, value0AndMask,
                                                    oldFullMask, "value0&mask==mask");
             equalsMask = ctx->I1VecToBoolVec(equalsMask);
-            if (!g->target->isGenXTarget()) {
+            if (!ctx->emitGenXHardwareMask()) {
                 llvm::Value *allMatch = ctx->All(equalsMask);
                 ctx->BranchInst(bbSkipEvalValue1, bbEvalValue1, allMatch);
             } else {
@@ -1829,7 +1829,7 @@ llvm::Value *lEmitLogicalOp(BinaryExpr::Op op, Expr *arg0, Expr *arg1, FunctionE
             llvm::Value *equalsMask = ctx->CmpInst(llvm::Instruction::ICmp, llvm::CmpInst::ICMP_EQ, notValue0AndMask,
                                                    oldFullMask, "not_value0&mask==mask");
             equalsMask = ctx->I1VecToBoolVec(equalsMask);
-            if (!g->target->isGenXTarget()) {
+            if (!ctx->emitGenXHardwareMask()) {
                 llvm::Value *allMatch = ctx->All(equalsMask);
                 ctx->BranchInst(bbSkipEvalValue1, bbEvalValue1, allMatch);
             } else {
@@ -7611,7 +7611,7 @@ llvm::Value *SymbolExpr::GetValue(FunctionEmitContext *ctx) const {
 #ifdef ISPC_GENX_ENABLED
     // TODO: this is a temporary workaround and will be changed as part
     // of SPIR-V emitting solution
-    if (g->target->isGenXTarget() && symbol->name == "__mask") {
+    if (ctx->emitGenXHardwareMask() && symbol->name == "__mask") {
         return ctx->GenXSimdCFPredicate(LLVMMaskAllOn);
     }
 #endif
