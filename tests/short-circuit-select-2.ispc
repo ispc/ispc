@@ -1,7 +1,3 @@
-// rule: skip on arch=genx32
-// rule: skip on arch=genx64
-
-
 uniform int * uniform ptr;
 
 bool crashEven() {
@@ -9,7 +5,7 @@ bool crashEven() {
 }
 
 export void f_fu(uniform float RET[], uniform float aFOO[], uniform float b) {
-    float a = aFOO[programIndex]; 
+    float a = aFOO[programIndex];
     float a0 = aFOO[0], a1 = aFOO[1];
     if (((programIndex & 1) == 1) && crashEven())
         RET[programIndex] = 1;

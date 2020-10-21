@@ -1,3 +1,5 @@
+// rule: skip on arch=genx32
+// rule: skip on arch=genx64
 bool ok(float x, float ref) { return (abs(x - ref) < 1e-6) || abs((x-ref)/ref) < 1e-6; }
 bool ok(double x, double ref) { return (abs(x - ref) < 1e-6) || abs((x-ref)/ref) < 1e-6; }
 

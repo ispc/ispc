@@ -1,3 +1,5 @@
+// rule: skip on arch=genx32
+// rule: skip on arch=genx64
 export void f_f(uniform float RET[], uniform float aFOO[]) {
     uniform float val[programCount+3];
     for (uniform int i = 0; i < programCount+3; ++i)
@@ -11,7 +13,7 @@ export void f_f(uniform float RET[], uniform float aFOO[]) {
             val[i] += aFOO[ic] - 1 + i-ic;
         }
 
-    RET[programIndex] = val[3+programIndex]; 
+    RET[programIndex] = val[3+programIndex];
 }
 
 export void result(uniform float RET[]) {

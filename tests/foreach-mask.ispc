@@ -1,3 +1,6 @@
+// rule: skip on arch=genx32
+// rule: skip on arch=genx64
+
 // make sure we reset the func mask in the foreach loop...
 
 void update(uniform float val[], const uniform float a[]) {
@@ -16,7 +19,7 @@ export void f_f(uniform float RET[], uniform float aFOO[]) {
     if ((int)aFOO[programIndex] & 1)
         update(val, aFOO);
 
-    RET[programIndex] = val[3+programIndex]; 
+    RET[programIndex] = val[3+programIndex];
 }
 
 export void result(uniform float RET[]) {
