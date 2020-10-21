@@ -2624,7 +2624,7 @@ void SwitchStmt::EmitCode(FunctionEmitContext *ctx) const {
     bool emulateUniform = false;
 #ifdef ISPC_GENX_ENABLED
     if (g->target->isGenXTarget()) {
-        if (isUniformCF && ctx->ifEmulatedUniformForGen()) {
+        if (isUniformCF && ctx->inGenXSimdCF()) {
             // Broadcast value to work with EM. We are doing
             // it here because it is too late to make CMP
             // broadcast through BranchInst: we need vectorized
@@ -2822,7 +2822,7 @@ void GotoStmt::EmitCode(FunctionEmitContext *ctx) const {
         return;
 
 #ifdef ISPC_GENX_ENABLED
-    if ((g->target->isGenXTarget() && ctx->ifEmulatedUniformForGen()) || ctx->VaryingCFDepth() > 0) {
+    if ((g->target->isGenXTarget() && ctx->inGenXSimdCF()) || ctx->VaryingCFDepth() > 0) {
 #else
     if (ctx->VaryingCFDepth() > 0) {
 #endif

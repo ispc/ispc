@@ -911,7 +911,7 @@ void FunctionEmitContext::EmitDefaultLabel(bool checkMask, SourcePos pos) {
         // varying switch; terminate the current block with a jump to the
         // block for the code for the default label.
 #ifdef ISPC_GENX_ENABLED
-        if (g->target->isGenXTarget() && !ifEmulatedUniformForGen()) {
+        if (g->target->isGenXTarget() && !inGenXSimdCF()) {
             // Skip check, branch directly to implementation
             BranchInst(bbDefaultImpl);
         } else
@@ -1043,7 +1043,7 @@ void FunctionEmitContext::EmitCaseLabel(int value, bool checkMask, SourcePos pos
             StoreInst(GenXSimdCFPredicate(LLVMMaskAllOn), switchFallThroughMaskPtr);
         }
 
-        if (g->target->isGenXTarget() && !ifEmulatedUniformForGen()) {
+        if (g->target->isGenXTarget() && !inGenXSimdCF()) {
             // Skip check, branch directly to implementation
             BranchInst(bbCaseImpl);
         } else
@@ -2930,7 +2930,7 @@ void FunctionEmitContext::StoreInst(llvm::Value *value, llvm::Value *ptr, const 
     llvm::VectorType *ty = llvm::dyn_cast<llvm::VectorType>(value->getType());
     if (ty != NULL) {
         if (g->target->isGenXTarget() && isUniformData) {
-            addUniformMetadata(inst);
+            GenXUniformMetadata(inst);
         }
     }
 #endif
@@ -3037,7 +3037,7 @@ void FunctionEmitContext::MemcpyInst(llvm::Value *dest, llvm::Value *src, llvm::
 #ifdef ISPC_GENX_ENABLED
     llvm::Value *callinst = CallInst(mcFunc, NULL, args, "");
     if (g->target->isGenXTarget()) {
-        addUniformMetadata(callinst);
+        GenXUniformMetadata(callinst);
     }
 #else
     CallInst(mcFunc, NULL, args, "");
@@ -3701,7 +3701,7 @@ CFInfo *FunctionEmitContext::popCFState() {
 }
 
 #ifdef ISPC_GENX_ENABLED
-bool FunctionEmitContext::ifEmulatedUniformForGen() const {
+bool FunctionEmitContext::inGenXSimdCF() const {
     // Go backwards through controlFlowInfo, since we add new nested scopes
     // to the back.
     if (controlFlowInfo.size() > 0) {
@@ -3747,7 +3747,7 @@ llvm::Value *FunctionEmitContext::GenXPrepareVectorBranch(llvm::Value *value) {
     // If condition is a scalar we should change it to vector but only if we had
     // varying condition which was emulated as uniform in external scopes.
     if (!llvm::isa<llvm::VectorType>(value->getType())) {
-        if (!ifEmulatedUniformForGen())
+        if (!inGenXSimdCF())
             return ret;
         ret = BroadcastValue(value, LLVMTypes::Int1VectorType);
     }
@@ -3770,7 +3770,7 @@ void FunctionEmitContext::GenXEndUnmaskedRegion(llvm::Value *execMask) {
     llvm::CallInst::Create(Fn, restoredMask, "", bblock);
 }
 
-void FunctionEmitContext::addUniformMetadata(llvm::Value *v) {
+void FunctionEmitContext::GenXUniformMetadata(llvm::Value *v) {
     llvm::Instruction *inst = llvm::dyn_cast<llvm::Instruction>(v);
     // Set ISPC-Uniform to exclude instruction from predication in CMSIMDCFLowering.
     if (inst != NULL) {
