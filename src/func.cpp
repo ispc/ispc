@@ -314,7 +314,7 @@ void Function::emitCode(FunctionEmitContext *ctx, llvm::Function *function, Sour
             argIter->setName("__mask");
             Assert(argIter->getType() == LLVMTypes::MaskType);
 
-            if (g->target->isGenXTarget()) {
+            if (ctx->emitGenXHardwareMask()) {
                 // We should not create explicit predication
                 // to avoid EM usage duplication. All stuff
                 // will be done by SIMD CF Lowering
