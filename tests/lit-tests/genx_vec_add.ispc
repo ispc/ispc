@@ -24,14 +24,14 @@ export void vadd(uniform int n, uniform float aIN[], uniform float bIN[], unifor
     cOUT[i + programIndex] = a + b;
   }
 #elif defined VARYING
-// CHECK_VARYING_WARN: Performance Warning: Gather required to load value.
-// CHECK_VARYING_WARN: Performance Warning: Gather required to load value.
 // CHECK_VARYING_WARN: Performance Warning: Scatter required to store value.
+// CHECK_VARYING_WARN: Performance Warning: Gather required to load value.
+// CHECK_VARYING_WARN: Performance Warning: Gather required to load value.
   for (int i = 0; i < n; i += programCount) {
 // CHECK_VARYING: @llvm.genx.svm.gather
-    float a = aIN[i + programIndex];
+    float a = aIN[i + programIndex/2];
 // CHECK_VARYING: @llvm.genx.svm.gather
-    float b = bIN[i + programIndex];
+    float b = bIN[i + programIndex/2];
 // CHECK_VARYING: @llvm.genx.svm.scatter
     cOUT[i + programIndex] = a + b;
   }
