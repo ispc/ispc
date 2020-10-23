@@ -223,6 +223,8 @@ find_program(ISPC_EXECUTABLE_GPU ispc-gpu DOC "Path to GEN enabled ISPC.")
 
 define_ispc_isa_options(GEN genx-x8 genx-x16)
 
+set(ISPC_GENX_ADDITIONAL_ARGS "" CACHE STRING "extra arguments to pass to ISPC for GEN targets")
+
 macro (ispc_compile_gpu parent_target output_prefix)
   if(ISPC_INCLUDE_DIR)
     string(REPLACE ";" ";-I;" ISPC_INCLUDE_DIR_PARMS "${ISPC_INCLUDE_DIR}")
@@ -291,12 +293,12 @@ macro (ispc_compile_gpu parent_target output_prefix)
           -I ${CMAKE_CURRENT_SOURCE_DIR}
           ${ISPC_INCLUDE_DIR_PARMS}
           ${ISPC_GENX_OPT_FLAGS}
-          ${ISPC_GENX_ADDITIONAL_ARGS}
           -DISPC_GPU
           --addressing=64
           --target=${ISPC_TARGET_GEN}
           ${ISPC_GPU_OUTPUT_OPT}
           --woff
+          ${ISPC_GENX_ADDITIONAL_ARGS}
           -o ${result}
           ${input}
         COMMENT "Building ISPC GPU object ${result}"
