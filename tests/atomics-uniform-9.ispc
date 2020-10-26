@@ -1,5 +1,3 @@
-// rule: skip on arch=genx32
-// rule: skip on arch=genx64
 uniform int64 s = 100.;
 
 export void f_f(uniform float RET[], uniform float aFOO[]) {
