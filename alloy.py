@@ -2,23 +2,23 @@
 #
 #  Copyright (c) 2013-2020, Intel Corporation
 #  All rights reserved.
-# 
+#
 #  Redistribution and use in source and binary forms, with or without
 #  modification, are permitted provided that the following conditions are
 #  met:
-# 
+#
 #    * Redistributions of source code must retain the above copyright
 #      notice, this list of conditions and the following disclaimer.
-# 
+#
 #    * Redistributions in binary form must reproduce the above copyright
 #      notice, this list of conditions and the following disclaimer in the
 #      documentation and/or other materials provided with the distribution.
-# 
+#
 #    * Neither the name of Intel Corporation nor the names of its
 #      contributors may be used to endorse or promote products derived from
 #      this software without specific prior written permission.
-# 
-# 
+#
+#
 #   THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS
 #   IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
 #   TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A
@@ -37,10 +37,10 @@ from collections import OrderedDict
 import re
 import traceback
 
-def tail_and_save(file_in, file_out, tail = 100):    
+def tail_and_save(file_in, file_out, tail = 100):
     with open(file_in, 'r') as f_in:
         lines = f_in.readlines()[-tail:]
-        
+
     with open(file_out, 'w') as f_out:
         f_out.writelines(lines)
 
@@ -52,7 +52,7 @@ def attach_mail_file(msg, filename, name, tail = -1):
             fp = open(filename + '.tail', "rb")
         else:
             fp = open(filename, "rb")
-        
+
         to_attach = MIMEBase("application", "octet-stream")
         to_attach.set_payload(fp.read())
         encode_base64(to_attach)
@@ -168,12 +168,12 @@ def build_LLVM(version_LLVM, folder, tarball, debug, selfbuild, extra, from_vali
     # Here we understand what and where do we want to build
     current_path = os.getcwd()
     llvm_home = os.environ["LLVM_HOME"]
-    
+
     make_sure_dir_exists(llvm_home)
 
     FOLDER_NAME=version_LLVM
     version_LLVM = re.sub('\.', '_', version_LLVM)
-    
+
     os.chdir(llvm_home)
     if folder == "":
         folder = FOLDER_NAME
@@ -213,7 +213,7 @@ def build_LLVM(version_LLVM, folder, tarball, debug, selfbuild, extra, from_vali
     if selfbuild:
         common.remove_if_exists(LLVM_BUILD_selfbuild)
         common.remove_if_exists(LLVM_BIN_selfbuild)
-    print_debug("Using folders: " + LLVM_SRC + " " + LLVM_BUILD + " " + LLVM_BIN + " in " + 
+    print_debug("Using folders: " + LLVM_SRC + " " + LLVM_BUILD + " " + LLVM_BIN + " in " +
         llvm_home + "\n", from_validation, alloy_build)
     # load llvm
     llvm_enable_projects = ""
@@ -238,13 +238,13 @@ def build_LLVM(version_LLVM, folder, tarball, debug, selfbuild, extra, from_vali
             llvm_enable_projects +=";compiler-rt;clang-tools-extra"
     else:
         tar = tarball.split(" ")
-        os.makedirs(LLVM_SRC) 
-        os.chdir(LLVM_SRC) 
+        os.makedirs(LLVM_SRC)
+        os.chdir(LLVM_SRC)
         try_do_LLVM("untar LLVM from " + tar[0] + " ",
                     "tar -xvzf " + tar[0] + " --strip-components 1", from_validation, verbose)
-        os.chdir("./tools") 
-        os.makedirs("clang") 
-        os.chdir("./clang") 
+        os.chdir("./tools")
+        os.makedirs("clang")
+        os.chdir("./clang")
         try_do_LLVM("untar clang from " + tar[1] + " ",
                     "tar -xvzf " + tar[1] + " --strip-components 1", from_validation, verbose)
         os.chdir("../../")
@@ -350,7 +350,7 @@ def build_LLVM(version_LLVM, folder, tarball, debug, selfbuild, extra, from_vali
         try_do_LLVM("install LLVM ", "make install", from_validation, verbose)
     else:
         try_do_LLVM("build LLVM and then install LLVM ", "msbuild INSTALL.vcxproj /V:m /p:Platform=x64 /p:Configuration=Release /t:rebuild", from_validation, verbose)
-    os.chdir(current_path) 
+    os.chdir(current_path)
 
 
 def unsupported_llvm_targets(LLVM_VERSION):
@@ -428,7 +428,7 @@ def check_targets():
     # now check what targets we have with the help of SDE
     sde_exists = get_sde()
     if sde_exists == "":
-        error("you haven't got sde neither in SDE_HOME nor in your PATH.\n" + 
+        error("you haven't got sde neither in SDE_HOME nor in your PATH.\n" +
             "To test all platforms please set SDE_HOME to path containing SDE.\n" +
             "Please refer to http://www.intel.com/software/sde for SDE download information.", 2)
 
@@ -625,7 +625,7 @@ def validation_run(only, only_targets, reference_branch, number, notify, update,
         if only_targets != "":
             only_targets += " "
             only_targets_t = only_targets.split(" ")
-            
+
             for i in only_targets_t:
                 if i == "":
                     continue
@@ -819,7 +819,7 @@ def send_mail(body_header, msg):
         body_header += "\nUnable to open notify_log.log: " + str(sys.exc_info()) + "\n"
         print_debug("Unable to open notify_log.log: " + str(sys.exc_info()) + "\n", False, stability_log)
         return_status = 1
-    
+
     body = "Hostname: " + common.get_host_name() + "\n\n"
 
     if  not sys.exc_info()[0] == None:
@@ -852,15 +852,15 @@ def Main():
         if (platform.system() == 'Darwin'):
             current_OS = "MacOS"
         else:
-            current_OS = "Linux" 
+            current_OS = "Linux"
     if (options.build_llvm == False and options.validation_run == False):
         parser.print_help()
         exit(1)
 
     # set appropriate makefile target
-    # gcc and g++ options are equal and added for ease of use 
+    # gcc and g++ options are equal and added for ease of use
     if options.ispc_build_compiler != "clang" and \
-       options.ispc_build_compiler != "gcc":   
+       options.ispc_build_compiler != "gcc":
         error("unknow option for --ispc-build-compiler: " + options.ispc_build_compiler, 1)
         parser.print_help()
         exit(1)
@@ -1036,7 +1036,7 @@ if __name__ == '__main__':
     run_group.add_option('--time', dest='time',
         help='display time of testing', default=False, action='store_true')
     run_group.add_option('--only', dest='only',
-        help='set types of tests. Possible values:\n' + 
+        help='set types of tests. Possible values:\n' +
             '-O0, -O1, -O2, x86, x86-64, stability (test only stability), performance (test only performance),\n' +
             'build (only build with different LLVM), 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, trunk, native (do not use SDE),\n' +
             'current (do not rebuild ISPC), debug (only with debug info), nodebug (only without debug info, default).',
