@@ -39,6 +39,7 @@
 
 #include "ispc.h"
 #include "util.h"
+#include "source_pos.h"
 
 #include <llvm/ADT/SmallVector.h>
 #include <llvm/IR/DerivedTypes.h>

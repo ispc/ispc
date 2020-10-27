@@ -44,8 +44,6 @@
 #include <stdarg.h>
 #endif
 
-struct SourcePos;
-
 /** Rounds up the given value to the next power of two, if it isn't a power
     of two already. */
 inline uint32_t RoundUpPow2(uint32_t v) {

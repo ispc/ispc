@@ -85,7 +85,7 @@ void BitcodeLib::print() const {
 
 BitcodeLib::BitcodeLibType BitcodeLib::getType() const { return m_type; }
 const unsigned char *BitcodeLib::getLib() const { return m_lib; }
-const size_t BitcodeLib::getSize() const { return m_size; }
-const TargetOS BitcodeLib::getOS() const { return m_os; }
-const Arch BitcodeLib::getArch() const { return m_arch; }
-const ISPCTarget BitcodeLib::getISPCTarget() const { return m_target; }
+size_t BitcodeLib::getSize() const { return m_size; }
+TargetOS BitcodeLib::getOS() const { return m_os; }
+Arch BitcodeLib::getArch() const { return m_arch; }
+ISPCTarget BitcodeLib::getISPCTarget() const { return m_target; }

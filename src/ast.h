@@ -38,6 +38,8 @@
 #pragma once
 
 #include "ispc.h"
+#include "source_pos.h"
+
 #include <vector>
 
 /** @brief Abstract base class for nodes in the abstract syntax tree (AST).

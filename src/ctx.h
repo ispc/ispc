@@ -38,6 +38,7 @@
 #pragma once
 
 #include "ispc.h"
+#include "source_pos.h"
 
 #include <map>
 
