@@ -69,6 +69,8 @@
 #endif
 #endif // ISPC_HOST_IS_WINDOWS
 
+using namespace ispc;
+
 static void lPrintVersion() {
 #ifdef ISPC_HOST_IS_WINDOWS
     printf("Intel(r) Implicit SPMD Program Compiler (Intel(r) ISPC), %s (build date %s, LLVM %s)\n"
@@ -585,11 +587,12 @@ int main(int Argc, char *Argv[]) {
         } else if (!strncmp(argv[i], "--arch=", 7)) {
             Arch prev_arch = arch;
 
-            arch = ParseArch(argv[i] + 7);
-            if (arch == Arch::error) {
+            auto result = ParseArch(argv[i] + 7);
+            if (!result.has_value())
                 errorHandler.AddError("Unsupported value for --arch, supported values are: %s",
                                       g->target_registry->getSupportedArchs().c_str());
-            }
+            else
+                arch = *result;
 
             if (prev_arch != Arch::none && prev_arch != arch) {
                 std::string prev_arch_str = ArchToString(prev_arch);

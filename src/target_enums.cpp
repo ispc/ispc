@@ -43,53 +43,6 @@
 
 #include <cstring>
 
-Arch ParseArch(std::string arch) {
-    if (arch == "x86") {
-        return Arch::x86;
-    } else if (arch == "x86_64" || arch == "x86-64") {
-        return Arch::x86_64;
-    } else if (arch == "arm") {
-        return Arch::arm;
-    } else if (arch == "aarch64") {
-        return Arch::aarch64;
-    } else if (arch == "wasm32") {
-        return Arch::wasm32;
-    } else if (arch == "genx32") {
-        return Arch::genx32;
-    } else if (arch == "genx64") {
-        return Arch::genx64;
-    }
-    return Arch::error;
-}
-
-std::string ArchToString(Arch arch) {
-    switch (arch) {
-    case Arch::none:
-        return "none";
-    case Arch::x86:
-        return "x86";
-    case Arch::x86_64:
-        return "x86-64";
-    case Arch::arm:
-        return "arm";
-    case Arch::aarch64:
-        return "aarch64";
-    case Arch::wasm32:
-        return "wasm32";
-    case Arch::genx32:
-        return "genx32";
-    case Arch::genx64:
-        return "genx64";
-    case Arch::error:
-        return "error";
-    default:
-        // none and error are not supposed to be printed.
-        Error(SourcePos(), "Invalid arch is processed");
-        exit(1);
-    }
-    return "error";
-}
-
 ISPCTarget ParseISPCTarget(std::string target) {
     // TODO: ensure skx-i32x8 is not enabled and linked for earli LLVM version.
 

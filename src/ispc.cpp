@@ -581,7 +581,7 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, bool pic, boo
     // with the valid ones otherwise.
     for (llvm::TargetRegistry::iterator iter = llvm::TargetRegistry::targets().begin();
          iter != llvm::TargetRegistry::targets().end(); ++iter) {
-        if (ArchToString(arch) == iter->getName()) {
+        if (iter->getName() == std::string_view(ArchToString(arch))) {
             this->m_target = &*iter;
             break;
         }

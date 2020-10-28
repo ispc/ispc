@@ -37,8 +37,12 @@
 
 #pragma once
 
+#include "arch.h"
+
 #include <string>
 #include <vector>
+
+using ispc::Arch;
 
 enum class CallingConv { uninitialized, defaultcall, x86_vectorcall };
 
@@ -48,11 +52,6 @@ TargetOS ParseOS(std::string os);
 std::string OSToString(TargetOS os);
 std::string OSToLowerString(TargetOS os);
 TargetOS GetHostOS();
-
-enum class Arch { none, x86, x86_64, arm, aarch64, wasm32, genx32, genx64, error };
-
-Arch ParseArch(std::string arch);
-std::string ArchToString(Arch arch);
 
 enum class ISPCTarget {
     none,
