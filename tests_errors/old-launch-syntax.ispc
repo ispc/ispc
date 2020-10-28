@@ -1,8 +1,5 @@
 // "launch" expressions no longer take '<' '>' around function call expression. 
 
-export uniform int width() { return programCount; }
-
-
 static uniform float array[10000];
 
 task void x(float f) {
