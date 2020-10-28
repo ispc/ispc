@@ -177,11 +177,11 @@ void DeclStmt::EmitCode(FunctionEmitContext *ctx) const {
 
         llvm::Type *llvmType = sym->type->LLVMType(g->ctx);
         if (llvmType == NULL) {
-            AssertPos(pos, m->errorCount > 0);
+            AssertPos(pos, m->HasErrors());
             return;
         }
 
-        if (sym->storageClass == SC_STATIC) {
+        if (sym->storageClass == StorageClass::Static) {
             // For static variables, we need a compile-time constant value
             // for its initializer; if there's no initializer, we use a
             // zero value.
@@ -214,7 +214,7 @@ void DeclStmt::EmitCode(FunctionEmitContext *ctx) const {
             // Allocate space for the static variable in global scope, so
             // that it persists across function calls
             sym->storagePtr = new llvm::GlobalVariable(
-                *m->module, llvmType, sym->type->IsConstType(), llvm::GlobalValue::InternalLinkage, cinit,
+                *m->GetLLVMModule(), llvmType, sym->type->IsConstType(), llvm::GlobalValue::InternalLinkage, cinit,
                 llvm::Twine("static.") + llvm::Twine(sym->pos.first_line) + llvm::Twine(".") + sym->name.c_str());
             // Tell the FunctionEmitContext about the variable
             ctx->EmitVariableDebugInfo(sym);
@@ -2024,7 +2024,7 @@ void ForeachActiveStmt::EmitCode(FunctionEmitContext *ctx) const {
     // variable that holds the current program instance in each loop
     // iteration.
     if (sym->type == NULL) {
-        Assert(m->errorCount > 0);
+        Assert(m->HasErrors());
         return;
     }
     Assert(Type::Equal(sym->type, AtomicType::UniformInt64->GetAsConstType()));
@@ -2076,7 +2076,7 @@ void ForeachActiveStmt::EmitCode(FunctionEmitContext *ctx) const {
         llvm::Value *remainingBits = ctx->LoadInst(maskBitsPtr, NULL, "remaining_bits");
 
         // Find the index of the first set bit in the mask
-        llvm::Function *ctlzFunc = m->module->getFunction("__count_trailing_zeros_i64");
+        llvm::Function *ctlzFunc = m->GetFunction("__count_trailing_zeros_i64");
         Assert(ctlzFunc != NULL);
         llvm::Value *firstSet = ctx->CallInst(ctlzFunc, NULL, remainingBits, "first_set");
 
@@ -2196,7 +2196,7 @@ int ForeachActiveStmt::EstimateCost() const { return COST_VARYING_LOOP; }
 
 ForeachUniqueStmt::ForeachUniqueStmt(const char *iterName, Expr *e, Stmt *s, SourcePos pos)
     : Stmt(pos, ForeachUniqueStmtID) {
-    sym = m->symbolTable->LookupVariable(iterName);
+    sym = m->GetSymbolTable().LookupVariable(iterName);
     expr = e;
     stmts = s;
 }
@@ -2209,12 +2209,12 @@ void ForeachUniqueStmt::EmitCode(FunctionEmitContext *ctx) const {
     // uniform variable that holds the current unique value through each
     // loop.
     if (sym->type == NULL) {
-        Assert(m->errorCount > 0);
+        Assert(m->HasErrors());
         return;
     }
     llvm::Type *symType = sym->type->LLVMType(g->ctx);
     if (symType == NULL) {
-        Assert(m->errorCount > 0);
+        Assert(m->HasErrors());
         return;
     }
 
@@ -2268,7 +2268,7 @@ void ForeachUniqueStmt::EmitCode(FunctionEmitContext *ctx) const {
     llvm::VectorType *llvmExprType;
     if (exprValue == NULL || (exprType = expr->GetType()) == NULL ||
         (llvmExprType = llvm::dyn_cast<llvm::VectorType>(exprValue->getType())) == NULL) {
-        Assert(m->errorCount > 0);
+        Assert(m->HasErrors());
         return;
     }
     ctx->SetDebugPos(pos);
@@ -2285,7 +2285,7 @@ void ForeachUniqueStmt::EmitCode(FunctionEmitContext *ctx) const {
         llvm::Value *remainingBits = ctx->LoadInst(maskBitsPtr, NULL, "remaining_bits");
 
         // Find the index of the first set bit in the mask
-        llvm::Function *ctlzFunc = m->module->getFunction("__count_trailing_zeros_i64");
+        llvm::Function *ctlzFunc = m->GetFunction("__count_trailing_zeros_i64");
         Assert(ctlzFunc != NULL);
         llvm::Value *firstSet = ctx->CallInst(ctlzFunc, NULL, remainingBits, "first_set");
 
@@ -2598,7 +2598,7 @@ void SwitchStmt::EmitCode(FunctionEmitContext *ctx) const {
 
     const Type *type;
     if (expr == NULL || ((type = expr->GetType()) == NULL)) {
-        AssertPos(pos, m->errorCount > 0);
+        AssertPos(pos, m->HasErrors());
         return;
     }
 
@@ -2616,7 +2616,7 @@ void SwitchStmt::EmitCode(FunctionEmitContext *ctx) const {
 
     llvm::Value *exprValue = expr->GetValue(ctx);
     if (exprValue == NULL) {
-        AssertPos(pos, m->errorCount > 0);
+        AssertPos(pos, m->HasErrors());
         return;
     }
 
@@ -2670,7 +2670,7 @@ void SwitchStmt::Print(int indent) const {
 Stmt *SwitchStmt::TypeCheck() {
     const Type *exprType;
     if (expr == NULL || (exprType = expr->GetType()) == NULL) {
-        Assert(m->errorCount > 0);
+        Assert(m->HasErrors());
         return NULL;
     }
 
@@ -3043,11 +3043,11 @@ static llvm::Function *getPrintImplFunc() {
     switch (g->target->getISA()) {
 #ifdef ISPC_GENX_ENABLED
     case Target::GENX:
-        printImplFunc = m->module->getFunction("__do_print_lz");
+        printImplFunc = m->GetFunction("__do_print_lz");
         break;
 #endif /* ISPC_GENX_ENABLED */
     default:
-        printImplFunc = m->module->getFunction("__do_print");
+        printImplFunc = m->GetFunction("__do_print");
         break;
     }
     return printImplFunc;
@@ -3608,7 +3608,7 @@ void AssertStmt::EmitCode(FunctionEmitContext *ctx) const {
 
     const Type *type;
     if (expr == NULL || (type = expr->GetType()) == NULL) {
-        AssertPos(pos, m->errorCount > 0);
+        AssertPos(pos, m->HasErrors());
         return;
     }
     bool isUniform = type->IsUniformType();
@@ -3616,7 +3616,7 @@ void AssertStmt::EmitCode(FunctionEmitContext *ctx) const {
     // The actual functionality to do the check and then handle failure is
     // done via a builtin written in bitcode in builtins/util.m4.
     llvm::Function *assertFunc =
-        isUniform ? m->module->getFunction("__do_assert_uniform") : m->module->getFunction("__do_assert_varying");
+        isUniform ? m->GetFunction("__do_assert_uniform") : m->GetLLVMModule()->getFunction("__do_assert_varying");
     AssertPos(pos, assertFunc != NULL);
 
     char *errorString;
@@ -3631,7 +3631,7 @@ void AssertStmt::EmitCode(FunctionEmitContext *ctx) const {
     args.push_back(ctx->GetStringPtr(errorString));
     llvm::Value *exprValue = expr->GetValue(ctx);
     if (exprValue == NULL) {
-        AssertPos(pos, m->errorCount > 0);
+        AssertPos(pos, m->HasErrors());
         return;
     }
     args.push_back(exprValue);
@@ -3680,13 +3680,13 @@ void DeleteStmt::EmitCode(FunctionEmitContext *ctx) const {
 
     const Type *exprType;
     if (expr == NULL || ((exprType = expr->GetType()) == NULL)) {
-        AssertPos(pos, m->errorCount > 0);
+        AssertPos(pos, m->HasErrors());
         return;
     }
 
     llvm::Value *exprValue = expr->GetValue(ctx);
     if (exprValue == NULL) {
-        AssertPos(pos, m->errorCount > 0);
+        AssertPos(pos, m->HasErrors());
         return;
     }
 
@@ -3700,9 +3700,9 @@ void DeleteStmt::EmitCode(FunctionEmitContext *ctx) const {
         exprValue = ctx->BitCastInst(exprValue, LLVMTypes::VoidPointerType, "ptr_to_void");
         llvm::Function *func;
         if (g->target->is32Bit()) {
-            func = m->module->getFunction("__delete_uniform_32rt");
+            func = m->GetFunction("__delete_uniform_32rt");
         } else {
-            func = m->module->getFunction("__delete_uniform_64rt");
+            func = m->GetFunction("__delete_uniform_64rt");
         }
         AssertPos(pos, func != NULL);
 
@@ -3714,9 +3714,9 @@ void DeleteStmt::EmitCode(FunctionEmitContext *ctx) const {
         // calling it.
         llvm::Function *func;
         if (g->target->is32Bit()) {
-            func = m->module->getFunction("__delete_varying_32rt");
+            func = m->GetFunction("__delete_varying_32rt");
         } else {
-            func = m->module->getFunction("__delete_varying_64rt");
+            func = m->GetFunction("__delete_varying_64rt");
         }
         AssertPos(pos, func != NULL);
         if (g->target->is32Bit())

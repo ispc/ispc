@@ -1,10 +1,10 @@
 #pragma once
 
-class Module;
-
 struct Globals;
 
 namespace ispc {
+
+class Module;
 
 Module *getModule();
 

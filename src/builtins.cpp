@@ -866,7 +866,7 @@ void AddBitcodeToModule(const BitcodeLib *lib, llvm::Module *module, SymbolTable
         // compile to bitcode with clang has module triples like
         // 'i386-apple-macosx10.7.0'.  And then LLVM issues a warning about
         // linking together modules with incompatible target triples..
-        llvm::Triple mTriple(m->module->getTargetTriple());
+        llvm::Triple mTriple(m->GetLLVMModule()->getTargetTriple());
         llvm::Triple bcTriple(bcModule->getTargetTriple());
         Debug(SourcePos(), "module triple: %s\nbitcode triple: %s\n", mTriple.str().c_str(), bcTriple.str().c_str());
 
@@ -940,7 +940,7 @@ void AddBitcodeToModule(const BitcodeLib *lib, llvm::Module *module, SymbolTable
  */
 static void lDefineConstantInt(const char *name, int val, llvm::Module *module, SymbolTable *symbolTable,
                                std::vector<llvm::Constant *> &dbg_sym) {
-    Symbol *sym = new Symbol(name, SourcePos(), AtomicType::UniformInt32->GetAsConstType(), SC_STATIC);
+    Symbol *sym = new Symbol(name, SourcePos(), AtomicType::UniformInt32->GetAsConstType(), StorageClass::Static);
     sym->constValue = new ConstExpr(sym->type, val, SourcePos());
     llvm::Type *ltype = LLVMTypes::Int32Type;
     llvm::Constant *linit = LLVMInt32(val);
@@ -949,9 +949,10 @@ static void lDefineConstantInt(const char *name, int val, llvm::Module *module, 
     sym->storagePtr = GV;
     symbolTable->AddVariable(sym);
 
-    if (m->diBuilder != NULL) {
-        llvm::DIFile *file = m->diCompileUnit->getFile();
-        llvm::DICompileUnit *cu = m->diCompileUnit;
+    if (m->GetDIBuilder() != nullptr) {
+        auto *diBuilder = m->GetDIBuilder();
+        llvm::DIFile *file = m->GetDICompileUnit()->getFile();
+        llvm::DICompileUnit *cu = m->GetDICompileUnit();
         llvm::DIType *diType = sym->type->GetDIType(file);
         // FIXME? DWARF says that this (and programIndex below) should
         // have the DW_AT_artifical attribute.  It's not clear if this
@@ -959,7 +960,7 @@ static void lDefineConstantInt(const char *name, int val, llvm::Module *module, 
         llvm::GlobalVariable *sym_GV_storagePtr = llvm::dyn_cast<llvm::GlobalVariable>(sym->storagePtr);
         Assert(sym_GV_storagePtr);
         llvm::DIGlobalVariableExpression *var =
-            m->diBuilder->createGlobalVariableExpression(cu, name, name, file, 0 /* line */, diType, true /* static */);
+            diBuilder->createGlobalVariableExpression(cu, name, name, file, 0 /* line */, diType, true /* static */);
         sym_GV_storagePtr->addDebugInfo(var);
         /*#if ISPC_LLVM_VERSION <= ISPC_LLVM_3_6
                 Assert(var.Verify());
@@ -973,7 +974,7 @@ static void lDefineConstantIntFunc(const char *name, int val, llvm::Module *modu
                                    std::vector<llvm::Constant *> &dbg_sym) {
     llvm::SmallVector<const Type *, 8> args;
     FunctionType *ft = new FunctionType(AtomicType::UniformInt32, args, SourcePos());
-    Symbol *sym = new Symbol(name, SourcePos(), ft, SC_STATIC);
+    Symbol *sym = new Symbol(name, SourcePos(), ft, StorageClass::Static);
 
     llvm::Function *func = module->getFunction(name);
     dbg_sym.push_back(func);
@@ -988,7 +989,7 @@ static void lDefineConstantIntFunc(const char *name, int val, llvm::Module *modu
 
 static void lDefineProgramIndex(llvm::Module *module, SymbolTable *symbolTable,
                                 std::vector<llvm::Constant *> &dbg_sym) {
-    Symbol *sym = new Symbol("programIndex", SourcePos(), AtomicType::VaryingInt32->GetAsConstType(), SC_STATIC);
+    Symbol *sym = new Symbol("programIndex", SourcePos(), AtomicType::VaryingInt32->GetAsConstType(), StorageClass::Static);
 
     int pi[ISPC_MAX_NVEC];
     for (int i = 0; i < g->target->getVectorWidth(); ++i)
@@ -1004,13 +1005,13 @@ static void lDefineProgramIndex(llvm::Module *module, SymbolTable *symbolTable,
     sym->storagePtr = GV;
     symbolTable->AddVariable(sym);
 
-    if (m->diBuilder != NULL) {
-        llvm::DIFile *file = m->diCompileUnit->getFile();
-        llvm::DICompileUnit *cu = m->diCompileUnit;
+    if (m->GetDIBuilder() != nullptr) {
+        llvm::DIFile *file = m->GetDICompileUnit()->getFile();
+        llvm::DICompileUnit *cu = m->GetDICompileUnit();
         llvm::DIType *diType = sym->type->GetDIType(file);
         llvm::GlobalVariable *sym_GV_storagePtr = llvm::dyn_cast<llvm::GlobalVariable>(sym->storagePtr);
         Assert(sym_GV_storagePtr);
-        llvm::DIGlobalVariableExpression *var = m->diBuilder->createGlobalVariableExpression(
+        llvm::DIGlobalVariableExpression *var = m->GetDIBuilder()->createGlobalVariableExpression(
             cu, sym->name.c_str(), sym->name.c_str(), file, 0 /* line */, diType, false /* static */);
         sym_GV_storagePtr->addDebugInfo(var);
         /*#if ISPC_LLVM_VERSION <= ISPC_LLVM_3_6

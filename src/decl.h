@@ -86,7 +86,7 @@ class Declarator;
  */
 class DeclSpecs {
   public:
-    DeclSpecs(const Type *t = NULL, StorageClass sc = SC_NONE, int tq = TYPEQUAL_NONE);
+    DeclSpecs(const Type *t = NULL, StorageClass sc = StorageClass::None, int tq = TYPEQUAL_NONE);
 
     void Print() const;
 

@@ -63,7 +63,7 @@ class Symbol {
   public:
     /** The Symbol constructor takes the name of the symbol, its
         position in a source file, and its type (if known). */
-    Symbol(const std::string &name, SourcePos pos, const Type *t = NULL, StorageClass sc = SC_NONE);
+    Symbol(const std::string &name, SourcePos pos, const Type *t = NULL, StorageClass sc = StorageClass::None);
 
     SourcePos pos;            /*!< Source file position where the symbol was defined */
     std::string name;         /*!< Symbol's name */
@@ -113,9 +113,11 @@ class Symbol {
     throughout the ispc implementation.
  */
 
-class SymbolTable {
+class SymbolTable final {
   public:
+
     SymbolTable();
+    SymbolTable(const SymbolTable&) = delete;
     ~SymbolTable();
 
     /** The parser calls this method when it enters a new scope in the

@@ -38,22 +38,45 @@
 
 #pragma once
 
-#include "ast.h"
-#include "ispc.h"
+#include <string>
+#include <vector>
 
-#include <llvm/IR/DebugInfo.h>
+enum class ISPCTarget;
+
+class Expr;
+class FunctionType;
+class Type;
+class Stmt;
+class SymbolTable;
 
 namespace llvm {
+
 class raw_string_ostream;
-}
 
-struct DispatchHeaderInfo;
+class DIBuilder;
+class DICompileUnit;
+class Function;
+class Module;
+class StringRef;
 
-class Module {
+} // namespace llvm
+
+namespace ispc {
+
+enum class Arch;
+enum class StorageClass;
+
+struct SourcePos;
+
+class Module final {
   public:
     /** The name of the source file being compiled should be passed as the
         module name. */
     Module(const char *filename);
+
+    Module(Module &&other);
+
+    ~Module();
 
     /** Compiles the source file passed to the Module constructor, adding
         its global variables and functions to both the llvm::Module and
@@ -140,47 +163,48 @@ class Module {
                                 const char *headerFileName, const char *depsFileName, const char *depsTargetName,
                                 const char *hostStubFileName, const char *devStubFileName);
 
-    /** Total number of errors encountered during compilation. */
-    int errorCount;
+    /** Accesses the debug info builder.
+     * The diBuilder manages generating debugging information.
+     *
+     * @return May return a pointer to the debug info builder.
+     *         In some cases, this function may return a null pointer.
+     * */
+    llvm::DIBuilder *GetDIBuilder() noexcept;
 
-    /** Symbol table to hold symbols visible in the current scope during
-        compilation. */
-    SymbolTable *symbolTable;
+    llvm::DICompileUnit *GetDICompileUnit() noexcept;
 
-    /** llvm Module object into which globals and functions are added. */
-    llvm::Module *module;
+    /** Searches the LLVM module for a function.
 
-    /** The diBuilder manages generating debugging information */
-    llvm::DIBuilder *diBuilder;
+       @param name The name of the function to search for.
+                  This may also be a string literal.
 
-    llvm::DICompileUnit *diCompileUnit;
+       @return If the function was found, then a pointer
+               to it is returned. Otherwise, nullptr is
+               returned instead.
+     */
+    llvm::Function *GetFunction(const llvm::StringRef &name) const;
+
+    /** Gets a pointer to the LLVM module.
+
+       @return A pointer to the LLVM module.
+               This function never returns a
+               null pointer.
+     */
+    llvm::Module *GetLLVMModule() const noexcept;
+
+    SymbolTable &GetSymbolTable() noexcept;
+
+    const SymbolTable &GetSymbolTable() const noexcept;
+
+    bool HasErrors() const noexcept;
+
+    bool IsErrorCountWithin(int limit) const noexcept;
+
+    void IncreaseErrorCount(int n = 1) noexcept;
 
   private:
-    const char *filename;
-    AST *ast;
-
-    std::vector<std::pair<const Type *, SourcePos>> exportedTypes;
-
-    /** Write the corresponding output type to the given file.  Returns
-        true on success, false if there has been an error.  The given
-        filename may be NULL, indicating that output should go to standard
-        output. */
-    bool writeOutput(OutputType ot, OutputFlags flags, const char *filename, const char *depTargetFileName = NULL,
-                     const char *sourceFileName = NULL, DispatchHeaderInfo *DHI = 0);
-    bool writeHeader(const char *filename);
-    bool writeDispatchHeader(DispatchHeaderInfo *DHI);
-    bool writeDeps(const char *filename, bool generateMakeRule, const char *targetName = NULL,
-                   const char *srcFilename = NULL);
-    bool writeDevStub(const char *filename);
-    bool writeHostStub(const char *filename);
-    bool writeObjectFileOrAssembly(OutputType outputType, const char *filename);
-    static bool writeObjectFileOrAssembly(llvm::TargetMachine *targetMachine, llvm::Module *module,
-                                          OutputType outputType, const char *outFileName);
-    static bool writeBitcode(llvm::Module *module, const char *outFileName, OutputType outputType);
-#ifdef ISPC_GENX_ENABLED
-    static bool writeSPIRV(llvm::Module *module, const char *outFileName);
-#endif
-    void execPreprocessor(const char *infilename, llvm::raw_string_ostream *ostream) const;
+    class Impl;
+    Impl *self = nullptr;
 };
 
 inline Module::OutputFlags &operator|=(Module::OutputFlags &lhs, const __underlying_type(Module::OutputFlags) rhs) {
@@ -192,3 +216,5 @@ inline Module::OutputFlags &operator&=(Module::OutputFlags &lhs, const __underly
 inline Module::OutputFlags operator|(const Module::OutputFlags lhs, const Module::OutputFlags rhs) {
     return (Module::OutputFlags)((__underlying_type(Module::OutputFlags))lhs | rhs);
 }
+
+} // namespace ispc

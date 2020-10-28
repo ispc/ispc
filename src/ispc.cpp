@@ -38,6 +38,7 @@
 #include "ispc.h"
 #include "llvmutil.h"
 #include "module.h"
+#include "source_pos.h"
 #include "util.h"
 
 #include <sstream>
@@ -1433,7 +1434,7 @@ llvm::Value *Target::SizeOf(llvm::Type *type, llvm::BasicBlock *insertAtEnd) {
 llvm::Value *Target::StructOffset(llvm::Type *type, int element, llvm::BasicBlock *insertAtEnd) {
     llvm::StructType *structType = llvm::dyn_cast<llvm::StructType>(type);
     if (structType == NULL || structType->isSized() == false) {
-        Assert(m->errorCount > 0);
+        Assert(m->HasErrors());
         return NULL;
     }
 

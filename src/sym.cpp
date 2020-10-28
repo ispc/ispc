@@ -61,7 +61,6 @@ SymbolTable::SymbolTable() { PushScope(); }
 SymbolTable::~SymbolTable() {
     // Otherwise we have mismatched push/pop scopes
     Assert(variables.size() == 1);
-    PopScope();
 }
 
 void SymbolTable::PushScope() {

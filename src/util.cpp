@@ -37,6 +37,7 @@
 
 #include "util.h"
 #include "module.h"
+#include "source_pos.h"
 
 #ifdef ISPC_HOST_IS_LINUX
 #include <alloca.h>
@@ -350,8 +351,8 @@ static void lPrint(const char *type, bool isError, SourcePos p, const char *fmt,
 
 void Error(SourcePos p, const char *fmt, ...) {
     if (m != NULL) {
-        ++m->errorCount;
-        if ((g->errorLimit != -1) && (g->errorLimit <= m->errorCount - 1))
+        m->IncreaseErrorCount();
+        if ((g->errorLimit != -1) && (m->IsErrorCountWithin(g->errorLimit)))
             return;
     }
     if (g->quiet)
@@ -383,7 +384,7 @@ void Warning(SourcePos p, const char *fmt, ...) {
         return;
 
     if (g->warningsAsErrors && m != NULL)
-        ++m->errorCount;
+        m->IncreaseErrorCount();
 
     if (g->disableWarnings || g->quiet)
         return;
@@ -409,7 +410,7 @@ void PerformanceWarning(SourcePos p, const char *fmt, ...) {
         return;
 
     if (g->warningsAsErrors && m != NULL)
-        ++m->errorCount;
+        m->IncreaseErrorCount();
 
     va_list args;
     va_start(args, fmt);

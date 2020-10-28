@@ -73,7 +73,7 @@ Function::Function(Symbol *s, Stmt *c) {
     sym = s;
     code = c;
 
-    maskSymbol = m->symbolTable->LookupVariable("__mask");
+    maskSymbol = m->GetSymbolTable().LookupVariable("__mask");
     Assert(maskSymbol != NULL);
 
     if (code != NULL) {
@@ -108,7 +108,7 @@ Function::Function(Symbol *s, Stmt *c) {
 
     for (int i = 0; i < type->GetNumParameters(); ++i) {
         const char *paramName = type->GetParameterName(i).c_str();
-        Symbol *paramSym = m->symbolTable->LookupVariable(paramName);
+        Symbol *paramSym = m->GetSymbolTable().LookupVariable(paramName);
         if (paramSym == NULL)
             Assert(strncmp(paramName, "__anon_parameter_", 17) == 0);
         args.push_back(paramSym);
@@ -119,27 +119,27 @@ Function::Function(Symbol *s, Stmt *c) {
     }
 
     if (type->isTask && (!g->target->isGenXTarget())) {
-        threadIndexSym = m->symbolTable->LookupVariable("threadIndex");
+        threadIndexSym = m->GetSymbolTable().LookupVariable("threadIndex");
         Assert(threadIndexSym);
-        threadCountSym = m->symbolTable->LookupVariable("threadCount");
+        threadCountSym = m->GetSymbolTable().LookupVariable("threadCount");
         Assert(threadCountSym);
-        taskIndexSym = m->symbolTable->LookupVariable("taskIndex");
+        taskIndexSym = m->GetSymbolTable().LookupVariable("taskIndex");
         Assert(taskIndexSym);
-        taskCountSym = m->symbolTable->LookupVariable("taskCount");
+        taskCountSym = m->GetSymbolTable().LookupVariable("taskCount");
         Assert(taskCountSym);
 
-        taskIndexSym0 = m->symbolTable->LookupVariable("taskIndex0");
+        taskIndexSym0 = m->GetSymbolTable().LookupVariable("taskIndex0");
         Assert(taskIndexSym0);
-        taskIndexSym1 = m->symbolTable->LookupVariable("taskIndex1");
+        taskIndexSym1 = m->GetSymbolTable().LookupVariable("taskIndex1");
         Assert(taskIndexSym1);
-        taskIndexSym2 = m->symbolTable->LookupVariable("taskIndex2");
+        taskIndexSym2 = m->GetSymbolTable().LookupVariable("taskIndex2");
         Assert(taskIndexSym2);
 
-        taskCountSym0 = m->symbolTable->LookupVariable("taskCount0");
+        taskCountSym0 = m->GetSymbolTable().LookupVariable("taskCount0");
         Assert(taskCountSym0);
-        taskCountSym1 = m->symbolTable->LookupVariable("taskCount1");
+        taskCountSym1 = m->GetSymbolTable().LookupVariable("taskCount1");
         Assert(taskCountSym1);
-        taskCountSym2 = m->symbolTable->LookupVariable("taskCount2");
+        taskCountSym2 = m->GetSymbolTable().LookupVariable("taskCount2");
         Assert(taskCountSym2);
     } else {
         threadIndexSym = threadCountSym = taskIndexSym = taskCountSym = NULL;
@@ -539,7 +539,7 @@ void Function::GenerateIR() {
         emitCode(&ec, function, firstStmtPos);
     }
 
-    if (m->errorCount == 0) {
+    if (!m->HasErrors()) {
         // If the function is 'export'-qualified, emit a second version of
         // it without a mask parameter and without name mangling so that
         // the application can call it
@@ -553,7 +553,7 @@ void Function::GenerateIR() {
                     functionName += std::string("_") + g->target->GetISAString();
                 }
 
-                llvm::Function *appFunction = llvm::Function::Create(ftype, linkage, functionName.c_str(), m->module);
+                llvm::Function *appFunction = llvm::Function::Create(ftype, linkage, functionName.c_str(), m->GetLLVMModule());
                 appFunction->setDoesNotThrow();
                 g->target->markFuncWithCallingConv(appFunction);
 
@@ -578,7 +578,7 @@ void Function::GenerateIR() {
                     // And emit the code again
                     FunctionEmitContext ec(this, sym, appFunction, firstStmtPos);
                     emitCode(&ec, appFunction, firstStmtPos);
-                    if (m->errorCount == 0) {
+                    if (!m->HasErrors()) {
                         sym->exportedFunction = appFunction;
                     }
                 }

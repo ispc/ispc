@@ -609,7 +609,7 @@ void InitSymbol(llvm::Value *ptr, const Type *symType, Expr *initExpr, FunctionE
         // pointer we have.
         llvm::Type *llvmType = symType->LLVMStorageType(g->ctx);
         if (llvmType == NULL) {
-            AssertPos(pos, m->errorCount > 0);
+            AssertPos(pos, m->HasErrors());
             return;
         }
 
@@ -617,7 +617,7 @@ void InitSymbol(llvm::Value *ptr, const Type *symType, Expr *initExpr, FunctionE
             ctx->StoreInst(constValue, ptr, symType, symType->IsUniformType());
         else {
             llvm::Value *constPtr =
-                new llvm::GlobalVariable(*m->module, llvmType, true /* const */, llvm::GlobalValue::InternalLinkage,
+                new llvm::GlobalVariable(*m->GetLLVMModule(), llvmType, true /* const */, llvm::GlobalValue::InternalLinkage,
                                          constValue, "const_initializer");
             llvm::Value *size = g->target->SizeOf(llvmType, ctx->GetCurrentBasicBlock());
             ctx->MemcpyInst(ptr, constPtr, size);
@@ -751,7 +751,7 @@ void InitSymbol(llvm::Value *ptr, const Type *symType, Expr *initExpr, FunctionE
                     // rest as zero.
                     llvm::Type *llvmType = elementType->LLVMStorageType(g->ctx);
                     if (llvmType == NULL) {
-                        AssertPos(pos, m->errorCount > 0);
+                        AssertPos(pos, m->HasErrors());
                         return;
                     }
 
@@ -915,7 +915,7 @@ static llvm::Value *lMaskForSymbol(Symbol *baseSym, FunctionEmitContext *ctx) {
         // depending on context...
         return ctx->GetFullMask();
 
-    llvm::Value *mask = (baseSym->parentFunction == ctx->GetFunction() && baseSym->storageClass != SC_STATIC)
+    llvm::Value *mask = (baseSym->parentFunction == ctx->GetFunction() && baseSym->storageClass != StorageClass::Static)
                             ? ctx->GetInternalMask()
                             : ctx->GetFullMask();
     return mask;
@@ -927,7 +927,7 @@ static void lStoreAssignResult(llvm::Value *value, llvm::Value *ptr, const Type 
                                FunctionEmitContext *ctx, Symbol *baseSym) {
     Assert(baseSym == NULL || baseSym->varyingCFDepth <= ctx->VaryingCFDepth());
     if (!g->opt.disableMaskedStoreToStore && !g->opt.disableMaskAllOnOptimizations && baseSym != NULL &&
-        baseSym->varyingCFDepth == ctx->VaryingCFDepth() && baseSym->storageClass != SC_STATIC &&
+        baseSym->varyingCFDepth == ctx->VaryingCFDepth() && baseSym->storageClass != StorageClass::Static &&
         CastType<ReferenceType>(baseSym->type) == NULL && CastType<PointerType>(baseSym->type) == NULL) {
         // If the variable is declared at the same varying control flow
         // depth as where it's being assigned, then we don't need to do any
@@ -1603,7 +1603,7 @@ Expr *lCreateBinaryOperatorCall(const BinaryExpr::Op bop, Expr *a0, Expr *a1, co
     if (CastType<StructType>(type0) != NULL || CastType<StructType>(type1) != NULL) {
         std::string opName = std::string("operator") + lOpString(bop);
         std::vector<Symbol *> funs;
-        m->symbolTable->LookupFunction(opName.c_str(), &funs);
+        m->GetSymbolTable().LookupFunction(opName.c_str(), &funs);
         if (funs.size() == 0) {
             Error(sp, "operator %s(%s, %s) is not defined.", opName.c_str(), (type0->GetString()).c_str(),
                   (type1->GetString()).c_str());
@@ -1628,8 +1628,8 @@ Expr *MakeBinaryExpr(BinaryExpr::Op o, Expr *a, Expr *b, SourcePos p) {
     // lCreateBinaryOperatorCall can return NULL for 2 cases:
     // 1. When there is an error.
     // 2. We have to create a new BinaryExpr.
-    if (m->errorCount > 0) {
-        AssertPos(p, m->errorCount > 0);
+    if (m->HasErrors()) {
+        AssertPos(p, m->HasErrors());
         return NULL;
     }
 
@@ -1646,7 +1646,7 @@ llvm::Value *lEmitLogicalOp(BinaryExpr::Op op, Expr *arg0, Expr *arg1, FunctionE
 
     const Type *type0 = arg0->GetType(), *type1 = arg1->GetType();
     if (type0 == NULL || type1 == NULL) {
-        AssertPos(pos, m->errorCount > 0);
+        AssertPos(pos, m->HasErrors());
         return NULL;
     }
 
@@ -1672,7 +1672,7 @@ llvm::Value *lEmitLogicalOp(BinaryExpr::Op op, Expr *arg0, Expr *arg1, FunctionE
         llvm::Value *value0 = arg0->GetValue(ctx);
         llvm::Value *value1 = arg1->GetValue(ctx);
         if (value0 == NULL || value1 == NULL) {
-            AssertPos(pos, m->errorCount > 0);
+            AssertPos(pos, m->HasErrors());
             return NULL;
         }
 
@@ -1687,7 +1687,7 @@ llvm::Value *lEmitLogicalOp(BinaryExpr::Op op, Expr *arg0, Expr *arg1, FunctionE
     // Allocate temporary storage for the return value
     const Type *retType = Type::MoreGeneralType(type0, type1, pos, lOpString(op));
     if (retType == NULL) {
-        AssertPos(pos, m->errorCount > 0);
+        AssertPos(pos, m->HasErrors());
         return NULL;
     }
     llvm::Value *retPtr = ctx->AllocaInst(retType, "logical_op_mem");
@@ -1698,7 +1698,7 @@ llvm::Value *lEmitLogicalOp(BinaryExpr::Op op, Expr *arg0, Expr *arg1, FunctionE
     // Evaluate the first operand
     llvm::Value *value0 = arg0->GetValue(ctx);
     if (value0 == NULL) {
-        AssertPos(pos, m->errorCount > 0);
+        AssertPos(pos, m->HasErrors());
         return NULL;
     }
 
@@ -1744,7 +1744,7 @@ llvm::Value *lEmitLogicalOp(BinaryExpr::Op op, Expr *arg0, Expr *arg1, FunctionE
 
         llvm::Value *value1 = arg1->GetValue(ctx);
         if (value1 == NULL) {
-            AssertPos(pos, m->errorCount > 0);
+            AssertPos(pos, m->HasErrors());
             return NULL;
         }
         ctx->StoreInst(value1, retPtr, arg1->GetType(), retType->IsUniformType());
@@ -1801,7 +1801,7 @@ llvm::Value *lEmitLogicalOp(BinaryExpr::Op op, Expr *arg0, Expr *arg1, FunctionE
 
             llvm::Value *value1 = arg1->GetValue(ctx);
             if (value1 == NULL) {
-                AssertPos(pos, m->errorCount > 0);
+                AssertPos(pos, m->HasErrors());
                 return NULL;
             }
 
@@ -1849,7 +1849,7 @@ llvm::Value *lEmitLogicalOp(BinaryExpr::Op op, Expr *arg0, Expr *arg1, FunctionE
 
             llvm::Value *value1 = arg1->GetValue(ctx);
             if (value1 == NULL) {
-                AssertPos(pos, m->errorCount > 0);
+                AssertPos(pos, m->HasErrors());
                 return NULL;
             }
 
@@ -1907,7 +1907,7 @@ static bool lIsDifficultShiftAmount(Expr *expr) {
 
 llvm::Value *BinaryExpr::GetValue(FunctionEmitContext *ctx) const {
     if (!arg0 || !arg1) {
-        AssertPos(pos, m->errorCount > 0);
+        AssertPos(pos, m->HasErrors());
         return NULL;
     }
 
@@ -1918,7 +1918,7 @@ llvm::Value *BinaryExpr::GetValue(FunctionEmitContext *ctx) const {
     llvm::Value *value0 = arg0->GetValue(ctx);
     llvm::Value *value1 = arg1->GetValue(ctx);
     if (value0 == NULL || value1 == NULL) {
-        AssertPos(pos, m->errorCount > 0);
+        AssertPos(pos, m->HasErrors());
         return NULL;
     }
 
@@ -2249,7 +2249,7 @@ Expr *BinaryExpr::Optimize() {
                 Type::EqualIgnoringConst(type1, AtomicType::VaryingFloat)) {
                 // Get the symbol for the appropriate builtin
                 std::vector<Symbol *> rcpFuns;
-                m->symbolTable->LookupFunction("rcp", &rcpFuns);
+                m->GetSymbolTable().LookupFunction("rcp", &rcpFuns);
                 if (rcpFuns.size() > 0) {
                     Expr *rcpSymExpr = new FunctionSymbolExpr("rcp", rcpFuns, pos);
                     ExprList *args = new ExprList(arg1, arg1->pos);
@@ -2893,13 +2893,13 @@ llvm::Value *AssignExpr::GetValue(FunctionEmitContext *ctx) const {
         const Type *ptrType = lvalue->GetLValueType();
         const Type *valueType = rvalue->GetType();
         if (ptrType == NULL || valueType == NULL) {
-            AssertPos(pos, m->errorCount > 0);
+            AssertPos(pos, m->HasErrors());
             return NULL;
         }
 
         llvm::Value *value = rvalue->GetValue(ctx);
         if (value == NULL) {
-            AssertPos(pos, m->errorCount > 0);
+            AssertPos(pos, m->HasErrors());
             return NULL;
         }
 
@@ -2980,7 +2980,7 @@ Expr *AssignExpr::TypeCheck() {
 
     const Type *lhsType = lvalue->GetType();
     if (lhsType == NULL) {
-        AssertPos(pos, m->errorCount > 0);
+        AssertPos(pos, m->HasErrors());
         return NULL;
     }
 
@@ -3450,7 +3450,7 @@ llvm::Value *FunctionCallExpr::GetValue(FunctionEmitContext *ctx) const {
     llvm::Value *callee = func->GetValue(ctx);
 
     if (callee == NULL) {
-        AssertPos(pos, m->errorCount > 0);
+        AssertPos(pos, m->HasErrors());
         return NULL;
     }
 
@@ -3467,7 +3467,7 @@ llvm::Value *FunctionCallExpr::GetValue(FunctionEmitContext *ctx) const {
     // Specifically, this can happen if there's an error earlier during
     // overload resolution.
     if ((int)callargs.size() > ft->GetNumParameters()) {
-        AssertPos(pos, m->errorCount > 0);
+        AssertPos(pos, m->HasErrors());
         return NULL;
     }
 
@@ -3841,7 +3841,7 @@ static std::pair<llvm::Constant *, bool> lGetExprListConstant(const Type *type, 
             // conversion machinery handle it.
             expr = TypeConvertExpr(exprs[i], elementType, "initializer list");
             if (expr == NULL) {
-                AssertPos(pos, m->errorCount > 0);
+                AssertPos(pos, m->HasErrors());
                 return std::pair<llvm::Constant *, bool>(NULL, false);
             }
             // Re-establish const-ness if possible
@@ -3866,12 +3866,12 @@ static std::pair<llvm::Constant *, bool> lGetExprListConstant(const Type *type, 
         for (int i = (int)exprs.size(); i < collectionType->GetElementCount(); ++i) {
             const Type *elementType = collectionType->GetElementType(i);
             if (elementType == NULL) {
-                AssertPos(pos, m->errorCount > 0);
+                AssertPos(pos, m->HasErrors());
                 return std::pair<llvm::Constant *, bool>(NULL, false);
             }
             llvm::Type *llvmType = elementType->LLVMType(g->ctx);
             if (llvmType == NULL) {
-                AssertPos(pos, m->errorCount > 0);
+                AssertPos(pos, m->HasErrors());
                 return std::pair<llvm::Constant *, bool>(NULL, false);
             }
 
@@ -4033,7 +4033,7 @@ static bool lVaryingStructHasUniformMember(const Type *type, SourcePos pos) {
     for (int i = 0; i < st->GetElementCount(); ++i) {
         const Type *eltType = st->GetElementType(i);
         if (eltType == NULL) {
-            AssertPos(pos, m->errorCount > 0);
+            AssertPos(pos, m->HasErrors());
             continue;
         }
 
@@ -4061,7 +4061,7 @@ llvm::Value *IndexExpr::GetValue(FunctionEmitContext *ctx) const {
     const Type *indexType, *returnType;
     if (baseExpr == NULL || index == NULL || ((indexType = index->GetType()) == NULL) ||
         ((returnType = GetType()) == NULL)) {
-        AssertPos(pos, m->errorCount > 0);
+        AssertPos(pos, m->HasErrors());
         return NULL;
     }
 
@@ -4083,7 +4083,7 @@ llvm::Value *IndexExpr::GetValue(FunctionEmitContext *ctx) const {
         const Type *baseExprType = baseExpr->GetType();
         llvm::Value *val = baseExpr->GetValue(ctx);
         if (baseExprType == NULL || val == NULL) {
-            AssertPos(pos, m->errorCount > 0);
+            AssertPos(pos, m->HasErrors());
             return NULL;
         }
         ctx->SetDebugPos(pos);
@@ -4093,7 +4093,7 @@ llvm::Value *IndexExpr::GetValue(FunctionEmitContext *ctx) const {
         // Get a pointer type to the underlying elements
         const SequentialType *st = CastType<SequentialType>(baseExprType);
         if (st == NULL) {
-            Assert(m->errorCount > 0);
+            Assert(m->HasErrors());
             return NULL;
         }
         lvType = PointerType::GetUniform(st->GetElementType());
@@ -4231,14 +4231,14 @@ static llvm::Value *lConvertPtrToSliceIfNeeded(FunctionEmitContext *ctx, llvm::V
 llvm::Value *IndexExpr::GetLValue(FunctionEmitContext *ctx) const {
     const Type *baseExprType;
     if (baseExpr == NULL || index == NULL || ((baseExprType = baseExpr->GetType()) == NULL)) {
-        AssertPos(pos, m->errorCount > 0);
+        AssertPos(pos, m->HasErrors());
         return NULL;
     }
 
     ctx->SetDebugPos(pos);
     llvm::Value *indexValue = index->GetValue(ctx);
     if (indexValue == NULL) {
-        AssertPos(pos, m->errorCount > 0);
+        AssertPos(pos, m->HasErrors());
         return NULL;
     }
 
@@ -4247,7 +4247,7 @@ llvm::Value *IndexExpr::GetLValue(FunctionEmitContext *ctx) const {
         // We're indexing off of a pointer
         llvm::Value *basePtrValue = baseExpr->GetValue(ctx);
         if (basePtrValue == NULL) {
-            AssertPos(pos, m->errorCount > 0);
+            AssertPos(pos, m->HasErrors());
             return NULL;
         }
         ctx->SetDebugPos(pos);
@@ -4359,13 +4359,13 @@ Expr *IndexExpr::Optimize() {
 Expr *IndexExpr::TypeCheck() {
     const Type *indexType;
     if (baseExpr == NULL || index == NULL || ((indexType = index->GetType()) == NULL)) {
-        AssertPos(pos, m->errorCount > 0);
+        AssertPos(pos, m->HasErrors());
         return NULL;
     }
 
     const Type *baseExprType = baseExpr->GetType();
     if (baseExprType == NULL) {
-        AssertPos(pos, m->errorCount > 0);
+        AssertPos(pos, m->HasErrors());
         return NULL;
     }
 
@@ -4508,7 +4508,7 @@ const Type *StructMemberExpr::GetType() const {
     const StructType *structType;
     if (expr == NULL || ((exprType = expr->GetType()) == NULL) || ((structType = getStructType()) == NULL) ||
         ((lvalueType = GetLValueType()) == NULL)) {
-        AssertPos(pos, m->errorCount > 0);
+        AssertPos(pos, m->HasErrors());
         return NULL;
     }
 
@@ -4548,13 +4548,13 @@ const Type *StructMemberExpr::GetLValueType() const {
         return lvalueType;
 
     if (expr == NULL) {
-        AssertPos(pos, m->errorCount > 0);
+        AssertPos(pos, m->HasErrors());
         return NULL;
     }
 
     const Type *exprLValueType = dereferenceExpr ? expr->GetType() : expr->GetLValueType();
     if (exprLValueType == NULL) {
-        AssertPos(pos, m->errorCount > 0);
+        AssertPos(pos, m->HasErrors());
         return NULL;
     }
 
@@ -4698,7 +4698,7 @@ const Type *VectorMemberExpr::GetLValueType() const {
 
     if (identifier.length() == 1) {
         if (expr == NULL) {
-            AssertPos(pos, m->errorCount > 0);
+            AssertPos(pos, m->HasErrors());
             return NULL;
         }
 
@@ -4761,7 +4761,7 @@ llvm::Value *VectorMemberExpr::GetValue(FunctionEmitContext *ctx) const {
             basePtr = ctx->AllocaInst(expr->GetType());
             basePtrType = PointerType::GetUniform(exprVectorType);
             if (basePtr == NULL || basePtrType == NULL) {
-                AssertPos(pos, m->errorCount > 0);
+                AssertPos(pos, m->HasErrors());
                 return NULL;
             }
             ctx->StoreInst(exprValue, basePtr, expr->GetType(), expr->GetType()->IsUniformType());
@@ -4898,7 +4898,7 @@ llvm::Value *MemberExpr::GetValue(FunctionEmitContext *ctx) const {
 
     llvm::Value *mask = NULL;
     if (lvalue == NULL) {
-        if (m->errorCount > 0)
+        if (m->HasErrors())
             return NULL;
 
         // As in the array case, this may be a temporary that hasn't hit
@@ -4906,7 +4906,7 @@ llvm::Value *MemberExpr::GetValue(FunctionEmitContext *ctx) const {
         // so that we can index from there...
         llvm::Value *val = expr->GetValue(ctx);
         if (!val) {
-            AssertPos(pos, m->errorCount > 0);
+            AssertPos(pos, m->HasErrors());
             return NULL;
         }
         ctx->SetDebugPos(pos);
@@ -4956,7 +4956,7 @@ llvm::Value *MemberExpr::GetLValue(FunctionEmitContext *ctx) const {
     ctx->SetDebugPos(pos);
     llvm::Value *ptr = ctx->AddElementOffset(basePtr, elementNumber, exprLValueType, basePtr->getName().str().c_str());
     if (ptr == NULL) {
-        AssertPos(pos, m->errorCount > 0);
+        AssertPos(pos, m->HasErrors());
         return NULL;
     }
 
@@ -5925,7 +5925,7 @@ static std::pair<llvm::Constant *, bool> lGetConstExprConstant(const Type *const
         // appropriate type.
         llvm::Type *llvmType = constType->LLVMType(g->ctx);
         if (llvmType == NULL) {
-            AssertPos(pos, m->errorCount > 0);
+            AssertPos(pos, m->HasErrors());
             return std::pair<llvm::Constant *, bool>(NULL, false);
         }
 
@@ -6575,7 +6575,7 @@ llvm::Value *TypeCastExpr::GetValue(FunctionEmitContext *ctx) const {
     ctx->SetDebugPos(pos);
     const Type *toType = GetType(), *fromType = expr->GetType();
     if (toType == NULL || fromType == NULL) {
-        AssertPos(pos, m->errorCount > 0);
+        AssertPos(pos, m->HasErrors());
         return NULL;
     }
 
@@ -7146,7 +7146,7 @@ ReferenceExpr::ReferenceExpr(Expr *e, SourcePos p) : Expr(p, ReferenceExprID) { 
 llvm::Value *ReferenceExpr::GetValue(FunctionEmitContext *ctx) const {
     ctx->SetDebugPos(pos);
     if (expr == NULL) {
-        AssertPos(pos, m->errorCount > 0);
+        AssertPos(pos, m->HasErrors());
         return NULL;
     }
 
@@ -7159,13 +7159,13 @@ llvm::Value *ReferenceExpr::GetValue(FunctionEmitContext *ctx) const {
     const Type *type;
     llvm::Type *llvmType;
     if ((type = expr->GetType()) == NULL || (llvmType = type->LLVMType(g->ctx)) == NULL) {
-        AssertPos(pos, m->errorCount > 0);
+        AssertPos(pos, m->HasErrors());
         return NULL;
     }
 
     value = expr->GetValue(ctx);
     if (value == NULL) {
-        AssertPos(pos, m->errorCount > 0);
+        AssertPos(pos, m->HasErrors());
         return NULL;
     }
 
@@ -7278,7 +7278,7 @@ PtrDerefExpr::PtrDerefExpr(Expr *e, SourcePos p) : DerefExpr(e, p, PtrDerefExprI
 const Type *PtrDerefExpr::GetType() const {
     const Type *type;
     if (expr == NULL || (type = expr->GetType()) == NULL) {
-        AssertPos(pos, m->errorCount > 0);
+        AssertPos(pos, m->HasErrors());
         return NULL;
     }
     AssertPos(pos, CastType<PointerType>(type) != NULL);
@@ -7292,7 +7292,7 @@ const Type *PtrDerefExpr::GetType() const {
 Expr *PtrDerefExpr::TypeCheck() {
     const Type *type;
     if (expr == NULL || (type = expr->GetType()) == NULL) {
-        AssertPos(pos, m->errorCount > 0);
+        AssertPos(pos, m->HasErrors());
         return NULL;
     }
 
@@ -7312,7 +7312,7 @@ Expr *PtrDerefExpr::TypeCheck() {
 int PtrDerefExpr::EstimateCost() const {
     const Type *type;
     if (expr == NULL || (type = expr->GetType()) == NULL) {
-        AssertPos(pos, m->errorCount > 0);
+        AssertPos(pos, m->HasErrors());
         return 0;
     }
 
@@ -7342,7 +7342,7 @@ RefDerefExpr::RefDerefExpr(Expr *e, SourcePos p) : DerefExpr(e, p, RefDerefExprI
 const Type *RefDerefExpr::GetType() const {
     const Type *type;
     if (expr == NULL || (type = expr->GetType()) == NULL) {
-        AssertPos(pos, m->errorCount > 0);
+        AssertPos(pos, m->HasErrors());
         return NULL;
     }
 
@@ -7353,7 +7353,7 @@ const Type *RefDerefExpr::GetType() const {
 Expr *RefDerefExpr::TypeCheck() {
     const Type *type;
     if (expr == NULL || (type = expr->GetType()) == NULL) {
-        AssertPos(pos, m->errorCount > 0);
+        AssertPos(pos, m->HasErrors());
         return NULL;
     }
 
@@ -7413,7 +7413,7 @@ const Type *AddressOfExpr::GetType() const {
     else {
         t = expr->GetType();
         if (t == NULL) {
-            AssertPos(pos, m->errorCount > 0);
+            AssertPos(pos, m->HasErrors());
             return NULL;
         }
         return PointerType::GetUniform(t);
@@ -7446,7 +7446,7 @@ void AddressOfExpr::Print() const {
 Expr *AddressOfExpr::TypeCheck() {
     const Type *exprType;
     if (expr == NULL || (exprType = expr->GetType()) == NULL) {
-        AssertPos(pos, m->errorCount > 0);
+        AssertPos(pos, m->HasErrors());
         return NULL;
     }
 
@@ -7468,7 +7468,7 @@ int AddressOfExpr::EstimateCost() const { return 0; }
 std::pair<llvm::Constant *, bool> AddressOfExpr::GetConstant(const Type *type) const {
     const Type *exprType;
     if (expr == NULL || (exprType = expr->GetType()) == NULL) {
-        AssertPos(pos, m->errorCount > 0);
+        AssertPos(pos, m->HasErrors());
         return std::pair<llvm::Constant *, bool>(NULL, false);
     }
 
@@ -8090,7 +8090,7 @@ std::pair<llvm::Constant *, bool> NullPointerExpr::GetConstant(const Type *type)
 
     llvm::Type *llvmType = type->LLVMType(g->ctx);
     if (llvmType == NULL) {
-        AssertPos(pos, m->errorCount > 0);
+        AssertPos(pos, m->HasErrors());
         return std::pair<llvm::Constant *, bool>(NULL, false);
     }
 
@@ -8142,7 +8142,7 @@ llvm::Value *NewExpr::GetValue(FunctionEmitContext *ctx) const {
     if (countExpr != NULL) {
         countValue = countExpr->GetValue(ctx);
         if (countValue == NULL) {
-            AssertPos(pos, m->errorCount > 0);
+            AssertPos(pos, m->HasErrors());
             return NULL;
         }
     } else {
@@ -8172,20 +8172,20 @@ llvm::Value *NewExpr::GetValue(FunctionEmitContext *ctx) const {
     llvm::Function *func;
     if (isVarying) {
         if (g->target->is32Bit()) {
-            func = m->module->getFunction("__new_varying32_32rt");
+            func = m->GetFunction("__new_varying32_32rt");
         } else if (g->opt.force32BitAddressing) {
-            func = m->module->getFunction("__new_varying32_64rt");
+            func = m->GetFunction("__new_varying32_64rt");
         } else {
-            func = m->module->getFunction("__new_varying64_64rt");
+            func = m->GetFunction("__new_varying64_64rt");
         }
     } else {
         // FIXME: __new_uniform_32rt should take i32
         if (allocSize->getType() != LLVMTypes::Int64Type)
             allocSize = ctx->SExtInst(allocSize, LLVMTypes::Int64Type, "alloc_size64");
         if (g->target->is32Bit()) {
-            func = m->module->getFunction("__new_uniform_32rt");
+            func = m->GetFunction("__new_uniform_32rt");
         } else {
-            func = m->module->getFunction("__new_uniform_64rt");
+            func = m->GetFunction("__new_uniform_64rt");
         }
     }
     AssertPos(pos, func != NULL);
@@ -8258,7 +8258,7 @@ const Type *NewExpr::GetType() const {
 Expr *NewExpr::TypeCheck() {
     // It's illegal to call new with an undefined struct type
     if (allocType == NULL) {
-        AssertPos(pos, m->errorCount > 0);
+        AssertPos(pos, m->HasErrors());
         return NULL;
     }
 

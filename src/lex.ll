@@ -98,6 +98,8 @@ static int allTokens[] = {
 std::map<int, std::string> tokenToName;
 std::map<std::string, std::string> tokenNameRemap;
 
+namespace ispc {
+
 void ParserInit() {
     tokenToName[TOKEN_ASSERT] = "assert";
     tokenToName[TOKEN_BOOL] = "bool";
@@ -317,6 +319,7 @@ void ParserInit() {
     tokenNameRemap["$end"] = "end of file";
 }
 
+} // namespace ispc
 
 inline int ispcRand() {
 #ifdef ISPC_HOST_IS_WINDOWS
@@ -341,7 +344,7 @@ inline int ispcRand() {
             return allTokens[tn]; \
         } \
         else if (r == 2) { \
-            Symbol *sym = m->symbolTable->RandomSymbol(); \
+            Symbol *sym = m->GetSymbolTable().RandomSymbol(); \
             if (sym != NULL) { \
                 yylval.stringVal = new std::string(sym->name); \
                 Warning(yylloc, "Fuzz test replaced with identifier \"%s\".", sym->name.c_str()); \
@@ -464,7 +467,7 @@ L?\"(\\.|[^\\"])*\" { lStringConst(&yylval, &yylloc); return TOKEN_STRING_LITERA
     /* We have an identifier--is it a type name or an identifier?
        The symbol table will straighten us out... */
     yylval.stringVal = new std::string(yytext);
-    if (m->symbolTable->LookupType(yytext) != NULL)
+    if (m->GetSymbolTable().LookupType(yytext) != NULL)
         return TOKEN_TYPE_NAME;
     else
         return TOKEN_IDENTIFIER;

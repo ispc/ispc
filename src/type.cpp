@@ -70,14 +70,14 @@ static bool lShouldPrintName(const std::string &name) {
     the given element type. */
 static llvm::DIType *lCreateDIArray(llvm::DIType *eltType, int count) {
 
-    llvm::Metadata *sub = m->diBuilder->getOrCreateSubrange(0, count);
+    llvm::Metadata *sub = m->GetDIBuilder()->getOrCreateSubrange(0, count);
     std::vector<llvm::Metadata *> subs;
     subs.push_back(sub);
-    llvm::DINodeArray subArray = m->diBuilder->getOrCreateArray(subs);
+    llvm::DINodeArray subArray = m->GetDIBuilder()->getOrCreateArray(subs);
     uint64_t size = eltType->getSizeInBits() * count;
     uint64_t align = eltType->getAlignInBits();
 
-    return m->diBuilder->createArrayType(size, align, eltType, subArray);
+    return m->GetDIBuilder()->createArrayType(size, align, eltType, subArray);
 }
 
 ///////////////////////////////////////////////////////////////////////////
@@ -404,7 +404,7 @@ std::string AtomicType::Mangle() const {
 std::string AtomicType::GetCDeclaration(const std::string &name) const {
     std::string ret;
     if (variability == Variability::Unbound) {
-        Assert(m->errorCount > 0);
+        Assert(m->HasErrors());
         return ret;
     }
     if (isConst)
@@ -513,43 +513,45 @@ llvm::Type *AtomicType::LLVMType(llvm::LLVMContext *ctx) const { return lGetAtom
 llvm::DIType *AtomicType::GetDIType(llvm::DIScope *scope) const {
     Assert(variability.type != Variability::Unbound);
 
+    auto *diBuilder = m->GetDIBuilder();
+
     if (variability.type == Variability::Uniform) {
         switch (basicType) {
         case TYPE_VOID:
             return NULL;
 
         case TYPE_BOOL:
-            return m->diBuilder->createBasicType("bool", 32 /* size */, llvm::dwarf::DW_ATE_unsigned);
+            return diBuilder->createBasicType("bool", 32 /* size */, llvm::dwarf::DW_ATE_unsigned);
             break;
         case TYPE_INT8:
-            return m->diBuilder->createBasicType("int8", 8 /* size */, llvm::dwarf::DW_ATE_signed);
+            return diBuilder->createBasicType("int8", 8 /* size */, llvm::dwarf::DW_ATE_signed);
             break;
         case TYPE_UINT8:
-            return m->diBuilder->createBasicType("uint8", 8 /* size */, llvm::dwarf::DW_ATE_unsigned);
+            return diBuilder->createBasicType("uint8", 8 /* size */, llvm::dwarf::DW_ATE_unsigned);
             break;
         case TYPE_INT16:
-            return m->diBuilder->createBasicType("int16", 16 /* size */, llvm::dwarf::DW_ATE_signed);
+            return diBuilder->createBasicType("int16", 16 /* size */, llvm::dwarf::DW_ATE_signed);
             break;
         case TYPE_UINT16:
-            return m->diBuilder->createBasicType("uint16", 16 /* size */, llvm::dwarf::DW_ATE_unsigned);
+            return diBuilder->createBasicType("uint16", 16 /* size */, llvm::dwarf::DW_ATE_unsigned);
             break;
         case TYPE_INT32:
-            return m->diBuilder->createBasicType("int32", 32 /* size */, llvm::dwarf::DW_ATE_signed);
+            return diBuilder->createBasicType("int32", 32 /* size */, llvm::dwarf::DW_ATE_signed);
             break;
         case TYPE_UINT32:
-            return m->diBuilder->createBasicType("uint32", 32 /* size */, llvm::dwarf::DW_ATE_unsigned);
+            return diBuilder->createBasicType("uint32", 32 /* size */, llvm::dwarf::DW_ATE_unsigned);
             break;
         case TYPE_FLOAT:
-            return m->diBuilder->createBasicType("float", 32 /* size */, llvm::dwarf::DW_ATE_float);
+            return diBuilder->createBasicType("float", 32 /* size */, llvm::dwarf::DW_ATE_float);
             break;
         case TYPE_DOUBLE:
-            return m->diBuilder->createBasicType("double", 64 /* size */, llvm::dwarf::DW_ATE_float);
+            return diBuilder->createBasicType("double", 64 /* size */, llvm::dwarf::DW_ATE_float);
             break;
         case TYPE_INT64:
-            return m->diBuilder->createBasicType("int64", 64 /* size */, llvm::dwarf::DW_ATE_signed);
+            return diBuilder->createBasicType("int64", 64 /* size */, llvm::dwarf::DW_ATE_signed);
             break;
         case TYPE_UINT64:
-            return m->diBuilder->createBasicType("uint64", 64 /* size */, llvm::dwarf::DW_ATE_unsigned);
+            return diBuilder->createBasicType("uint64", 64 /* size */, llvm::dwarf::DW_ATE_unsigned);
             break;
 
         default:
@@ -559,13 +561,13 @@ llvm::DIType *AtomicType::GetDIType(llvm::DIScope *scope) const {
         }
     } else if (variability == Variability::Varying) {
 
-        llvm::Metadata *sub = m->diBuilder->getOrCreateSubrange(0, g->target->getVectorWidth());
+        llvm::Metadata *sub = m->GetDIBuilder()->getOrCreateSubrange(0, g->target->getVectorWidth());
 
-        llvm::DINodeArray subArray = m->diBuilder->getOrCreateArray(sub);
+        llvm::DINodeArray subArray = m->GetDIBuilder()->getOrCreateArray(sub);
         llvm::DIType *unifType = GetAsUniformType()->GetDIType(scope);
         uint64_t size = unifType->getSizeInBits() * g->target->getVectorWidth();
         uint64_t align = unifType->getAlignInBits() * g->target->getVectorWidth();
-        return m->diBuilder->createVectorType(size, align, unifType, subArray);
+        return m->GetDIBuilder()->createVectorType(size, align, unifType, subArray);
     } else {
         Assert(variability == Variability::SOA);
         ArrayType at(GetAsUniformType(), variability.soaWidth);
@@ -697,7 +699,7 @@ std::string EnumType::Mangle() const {
 
 std::string EnumType::GetCDeclaration(const std::string &varName) const {
     if (variability == Variability::Unbound) {
-        Assert(m->errorCount > 0);
+        Assert(m->HasErrors());
         return "";
     }
 
@@ -750,28 +752,28 @@ llvm::DIType *EnumType::GetDIType(llvm::DIScope *scope) const {
         int count = enumerators[i]->constValue->GetValues(&enumeratorValue);
         Assert(count == 1);
 
-        llvm::Metadata *descriptor = m->diBuilder->createEnumerator(enumerators[i]->name, enumeratorValue);
+        llvm::Metadata *descriptor = m->GetDIBuilder()->createEnumerator(enumerators[i]->name, enumeratorValue);
         enumeratorDescriptors.push_back(descriptor);
     }
 
-    llvm::DINodeArray elementArray = m->diBuilder->getOrCreateArray(enumeratorDescriptors);
+    llvm::DINodeArray elementArray = m->GetDIBuilder()->getOrCreateArray(enumeratorDescriptors);
     llvm::DIFile *diFile = pos.GetDIFile();
     llvm::DINamespace *diSpace = pos.GetDINamespace();
     llvm::DIType *underlyingType = AtomicType::UniformInt32->GetDIType(scope);
     llvm::DIType *diType =
-        m->diBuilder->createEnumerationType(diSpace, GetString(), diFile, pos.first_line, 32 /* size in bits */,
+        m->GetDIBuilder()->createEnumerationType(diSpace, GetString(), diFile, pos.first_line, 32 /* size in bits */,
                                             32 /* align in bits */, elementArray, underlyingType, name);
     switch (variability.type) {
     case Variability::Uniform:
         return diType;
     case Variability::Varying: {
-        llvm::Metadata *sub = m->diBuilder->getOrCreateSubrange(0, g->target->getVectorWidth());
+        llvm::Metadata *sub = m->GetDIBuilder()->getOrCreateSubrange(0, g->target->getVectorWidth());
 
-        llvm::DINodeArray subArray = m->diBuilder->getOrCreateArray(sub);
-        // llvm::DebugNodeArray subArray = m->diBuilder->getOrCreateArray(sub);
+        llvm::DINodeArray subArray = m->GetDIBuilder()->getOrCreateArray(sub);
+        // llvm::DebugNodeArray subArray = m->GetDIBuilder()->getOrCreateArray(sub);
         uint64_t size = diType->getSizeInBits() * g->target->getVectorWidth();
         uint64_t align = diType->getAlignInBits() * g->target->getVectorWidth();
-        return m->diBuilder->createVectorType(size, align, diType, subArray);
+        return m->GetDIBuilder()->createVectorType(size, align, diType, subArray);
     }
     case Variability::SOA: {
         return lCreateDIArray(diType, variability.soaWidth);
@@ -872,7 +874,7 @@ const PointerType *PointerType::GetAsFrozenSlice() const {
 
 const PointerType *PointerType::ResolveUnboundVariability(Variability v) const {
     if (baseType == NULL) {
-        Assert(m->errorCount > 0);
+        Assert(m->HasErrors());
         return NULL;
     }
 
@@ -898,7 +900,7 @@ const PointerType *PointerType::GetAsNonConstType() const {
 
 std::string PointerType::GetString() const {
     if (baseType == NULL) {
-        Assert(m->errorCount > 0);
+        Assert(m->HasErrors());
         return "";
     }
 
@@ -919,7 +921,7 @@ std::string PointerType::GetString() const {
 std::string PointerType::Mangle() const {
     Assert(variability != Variability::Unbound);
     if (baseType == NULL) {
-        Assert(m->errorCount > 0);
+        Assert(m->HasErrors());
         return "";
     }
 
@@ -937,12 +939,12 @@ std::string PointerType::Mangle() const {
 
 std::string PointerType::GetCDeclaration(const std::string &name) const {
     if (isSlice || (variability == Variability::Unbound)) {
-        Assert(m->errorCount > 0);
+        Assert(m->HasErrors());
         return "";
     }
 
     if (baseType == NULL) {
-        Assert(m->errorCount > 0);
+        Assert(m->HasErrors());
         return "";
     }
 
@@ -984,7 +986,7 @@ std::string PointerType::GetCDeclaration(const std::string &name) const {
 
 llvm::Type *PointerType::LLVMType(llvm::LLVMContext *ctx) const {
     if (baseType == NULL) {
-        Assert(m->errorCount > 0);
+        Assert(m->HasErrors());
         return NULL;
     }
 
@@ -1041,7 +1043,7 @@ llvm::Type *PointerType::LLVMType(llvm::LLVMContext *ctx) const {
 
 llvm::DIType *PointerType::GetDIType(llvm::DIScope *scope) const {
     if (baseType == NULL) {
-        Assert(m->errorCount > 0);
+        Assert(m->HasErrors());
         return NULL;
     }
     llvm::DIType *diTargetType = baseType->GetDIType(scope);
@@ -1049,10 +1051,10 @@ llvm::DIType *PointerType::GetDIType(llvm::DIScope *scope) const {
     int ptrAlignBits = bitsSize;
     switch (variability.type) {
     case Variability::Uniform:
-        return m->diBuilder->createPointerType(diTargetType, bitsSize, ptrAlignBits);
+        return m->GetDIBuilder()->createPointerType(diTargetType, bitsSize, ptrAlignBits);
     case Variability::Varying: {
         // emit them as an array of pointers
-        llvm::DIDerivedType *eltType = m->diBuilder->createPointerType(diTargetType, bitsSize, ptrAlignBits);
+        llvm::DIDerivedType *eltType = m->GetDIBuilder()->createPointerType(diTargetType, bitsSize, ptrAlignBits);
         return lCreateDIArray(eltType, g->target->getVectorWidth());
     }
     case Variability::SOA: {
@@ -1081,13 +1083,13 @@ ArrayType::ArrayType(const Type *c, int a) : SequentialType(ARRAY_TYPE), child(c
 
 llvm::ArrayType *ArrayType::LLVMType(llvm::LLVMContext *ctx) const {
     if (child == NULL) {
-        Assert(m->errorCount > 0);
+        Assert(m->HasErrors());
         return NULL;
     }
 
     llvm::Type *ct = child->LLVMStorageType(ctx);
     if (ct == NULL) {
-        Assert(m->errorCount > 0);
+        Assert(m->HasErrors());
         return NULL;
     }
     return llvm::ArrayType::get(ct, numElements);
@@ -1120,7 +1122,7 @@ const Type *ArrayType::GetBaseType() const {
 
 const ArrayType *ArrayType::GetAsVaryingType() const {
     if (child == NULL) {
-        Assert(m->errorCount > 0);
+        Assert(m->HasErrors());
         return NULL;
     }
     return new ArrayType(child->GetAsVaryingType(), numElements);
@@ -1128,7 +1130,7 @@ const ArrayType *ArrayType::GetAsVaryingType() const {
 
 const ArrayType *ArrayType::GetAsUniformType() const {
     if (child == NULL) {
-        Assert(m->errorCount > 0);
+        Assert(m->HasErrors());
         return NULL;
     }
     return new ArrayType(child->GetAsUniformType(), numElements);
@@ -1136,7 +1138,7 @@ const ArrayType *ArrayType::GetAsUniformType() const {
 
 const ArrayType *ArrayType::GetAsUnboundVariabilityType() const {
     if (child == NULL) {
-        Assert(m->errorCount > 0);
+        Assert(m->HasErrors());
         return NULL;
     }
     return new ArrayType(child->GetAsUnboundVariabilityType(), numElements);
@@ -1144,7 +1146,7 @@ const ArrayType *ArrayType::GetAsUnboundVariabilityType() const {
 
 const ArrayType *ArrayType::GetAsSOAType(int width) const {
     if (child == NULL) {
-        Assert(m->errorCount > 0);
+        Assert(m->HasErrors());
         return NULL;
     }
     return new ArrayType(child->GetAsSOAType(width), numElements);
@@ -1152,7 +1154,7 @@ const ArrayType *ArrayType::GetAsSOAType(int width) const {
 
 const ArrayType *ArrayType::ResolveUnboundVariability(Variability v) const {
     if (child == NULL) {
-        Assert(m->errorCount > 0);
+        Assert(m->HasErrors());
         return NULL;
     }
     return new ArrayType(child->ResolveUnboundVariability(v), numElements);
@@ -1160,7 +1162,7 @@ const ArrayType *ArrayType::ResolveUnboundVariability(Variability v) const {
 
 const ArrayType *ArrayType::GetAsUnsignedType() const {
     if (child == NULL) {
-        Assert(m->errorCount > 0);
+        Assert(m->HasErrors());
         return NULL;
     }
     return new ArrayType(child->GetAsUnsignedType(), numElements);
@@ -1168,7 +1170,7 @@ const ArrayType *ArrayType::GetAsUnsignedType() const {
 
 const ArrayType *ArrayType::GetAsConstType() const {
     if (child == NULL) {
-        Assert(m->errorCount > 0);
+        Assert(m->HasErrors());
         return NULL;
     }
     return new ArrayType(child->GetAsConstType(), numElements);
@@ -1176,7 +1178,7 @@ const ArrayType *ArrayType::GetAsConstType() const {
 
 const ArrayType *ArrayType::GetAsNonConstType() const {
     if (child == NULL) {
-        Assert(m->errorCount > 0);
+        Assert(m->HasErrors());
         return NULL;
     }
     return new ArrayType(child->GetAsNonConstType(), numElements);
@@ -1189,7 +1191,7 @@ const Type *ArrayType::GetElementType() const { return child; }
 std::string ArrayType::GetString() const {
     const Type *base = GetBaseType();
     if (base == NULL) {
-        Assert(m->errorCount > 0);
+        Assert(m->HasErrors());
         return "";
     }
     std::string s = base->GetString();
@@ -1212,7 +1214,7 @@ std::string ArrayType::GetString() const {
 
 std::string ArrayType::Mangle() const {
     if (child == NULL) {
-        Assert(m->errorCount > 0);
+        Assert(m->HasErrors());
         return "(error)";
     }
     std::string s = child->Mangle();
@@ -1228,7 +1230,7 @@ std::string ArrayType::Mangle() const {
 std::string ArrayType::GetCDeclaration(const std::string &name) const {
     const Type *base = GetBaseType();
     if (base == NULL) {
-        Assert(m->errorCount > 0);
+        Assert(m->HasErrors());
         return "";
     }
 
@@ -1275,7 +1277,7 @@ int ArrayType::TotalElementCount() const {
 
 llvm::DIType *ArrayType::GetDIType(llvm::DIScope *scope) const {
     if (child == NULL) {
-        Assert(m->errorCount > 0);
+        Assert(m->HasErrors());
         return NULL;
     }
     llvm::DIType *eltType = child->GetDIType(scope);
@@ -1323,7 +1325,7 @@ const Type *ArrayType::SizeUnsizedArrays(const Type *type, Expr *initExpr) {
         for (unsigned int i = 1; i < exprList->exprs.size(); ++i) {
             if (exprList->exprs[i] == NULL) {
                 // We should have seen an error earlier in this case.
-                Assert(m->errorCount > 0);
+                Assert(m->HasErrors());
                 continue;
             }
 
@@ -1382,7 +1384,7 @@ const VectorType *VectorType::ResolveUnboundVariability(Variability v) const {
 
 const VectorType *VectorType::GetAsUnsignedType() const {
     if (base == NULL) {
-        Assert(m->errorCount > 0);
+        Assert(m->HasErrors());
         return NULL;
     }
     return new VectorType(base->GetAsUnsignedType(), numElements);
@@ -1425,7 +1427,7 @@ static llvm::Type *lGetVectorLLVMType(llvm::LLVMContext *ctx, const VectorType *
     int numElements = vType->GetElementCount();
 
     if (base == NULL) {
-        Assert(m->errorCount > 0);
+        Assert(m->HasErrors());
         return NULL;
     }
 
@@ -1466,13 +1468,13 @@ llvm::Type *VectorType::LLVMType(llvm::LLVMContext *ctx) const { return lGetVect
 llvm::DIType *VectorType::GetDIType(llvm::DIScope *scope) const {
     llvm::DIType *eltType = base->GetDIType(scope);
 
-    llvm::Metadata *sub = m->diBuilder->getOrCreateSubrange(0, numElements);
+    llvm::Metadata *sub = m->GetDIBuilder()->getOrCreateSubrange(0, numElements);
 
     // vectors of varying types are already naturally aligned to the
     // machine's vector width, but arrays of uniform types need to be
     // explicitly aligned to the machines natural vector alignment.
 
-    llvm::DINodeArray subArray = m->diBuilder->getOrCreateArray(sub);
+    llvm::DINodeArray subArray = m->GetDIBuilder()->getOrCreateArray(sub);
     uint64_t sizeBits = eltType->getSizeInBits() * numElements;
     uint64_t align = eltType->getAlignInBits();
 
@@ -1482,7 +1484,7 @@ llvm::DIType *VectorType::GetDIType(llvm::DIScope *scope) const {
     }
 
     if (IsUniformType() || IsVaryingType())
-        return m->diBuilder->createVectorType(sizeBits, align, eltType, subArray);
+        return m->GetDIBuilder()->createVectorType(sizeBits, align, eltType, subArray);
     else if (IsSOAType()) {
         ArrayType at(base, numElements);
         return at.GetDIType(scope);
@@ -1603,7 +1605,7 @@ StructType::StructType(const std::string &n, const llvm::SmallVector<const Type 
             for (int i = 0; i < nElements; ++i) {
                 const Type *type = GetElementType(i);
                 if (type == NULL) {
-                    Assert(m->errorCount > 0);
+                    Assert(m->HasErrors());
                     return;
                 } else if (CastType<FunctionType>(type) != NULL) {
                     Error(elementPositions[i], "Method declarations are not "
@@ -1810,7 +1812,7 @@ llvm::Type *StructType::LLVMType(llvm::LLVMContext *ctx) const {
     Assert(variability != Variability::Unbound);
     std::string mname = lMangleStructName(name, variability);
     if (lStructTypeMap.find(mname) == lStructTypeMap.end()) {
-        Assert(m->errorCount > 0);
+        Assert(m->HasErrors());
         return NULL;
     }
     return lStructTypeMap[mname];
@@ -1819,7 +1821,7 @@ llvm::Type *StructType::LLVMType(llvm::LLVMContext *ctx) const {
 // Versioning of this function becomes really messy, so versioning the whole function.
 llvm::DIType *StructType::GetDIType(llvm::DIScope *scope) const {
     llvm::Type *llvm_type = LLVMStorageType(g->ctx);
-    auto &dataLayout = m->module->getDataLayout();
+    auto &dataLayout = m->GetLLVMModule()->getDataLayout();
     auto layout = dataLayout.getStructLayout(llvm::dyn_cast_or_null<llvm::StructType>(llvm_type));
     std::vector<llvm::Metadata *> elementLLVMTypes;
     // Walk through the elements of the struct; for each one figure out its
@@ -1837,15 +1839,15 @@ llvm::DIType *StructType::GetDIType(llvm::DIScope *scope) const {
 
         int line = elementPositions[i].first_line;
         llvm::DIFile *diFile = elementPositions[i].GetDIFile();
-        llvm::DIDerivedType *fieldType = m->diBuilder->createMemberType(
+        llvm::DIDerivedType *fieldType = m->GetDIBuilder()->createMemberType(
             scope, elementNames[i], diFile, line, eltSize, eltAlign, eltOffset, llvm::DINode::FlagZero, eltType);
         elementLLVMTypes.push_back(fieldType);
     }
 
-    llvm::DINodeArray elements = m->diBuilder->getOrCreateArray(elementLLVMTypes);
+    llvm::DINodeArray elements = m->GetDIBuilder()->getOrCreateArray(elementLLVMTypes);
     llvm::DIFile *diFile = pos.GetDIFile();
     llvm::DINamespace *diSpace = pos.GetDINamespace();
-    return m->diBuilder->createStructType(diSpace, GetString(), diFile,
+    return m->GetDIBuilder()->createStructType(diSpace, GetString(), diFile,
                                           pos.first_line,          // Line number
                                           layout->getSizeInBits(), // Size in bits
 #if ISPC_LLVM_VERSION <= ISPC_LLVM_9_0
@@ -1864,7 +1866,7 @@ const Type *StructType::GetElementType(int i) const {
     if (finalElementTypes[i] == NULL) {
         const Type *type = elementTypes[i];
         if (type == NULL) {
-            Assert(m->errorCount > 0);
+            Assert(m->HasErrors());
             return NULL;
         }
 
@@ -2015,7 +2017,7 @@ llvm::Type *UndefinedStructType::LLVMType(llvm::LLVMContext *ctx) const {
     Assert(variability != Variability::Unbound);
     std::string mname = lMangleStructName(name, variability);
     if (lStructTypeMap.find(mname) == lStructTypeMap.end()) {
-        Assert(m->errorCount > 0);
+        Assert(m->HasErrors());
         return NULL;
     }
     return lStructTypeMap[mname];
@@ -2025,7 +2027,7 @@ llvm::DIType *UndefinedStructType::GetDIType(llvm::DIScope *scope) const {
     llvm::DIFile *diFile = pos.GetDIFile();
     llvm::DINamespace *diSpace = pos.GetDINamespace();
     llvm::DINodeArray elements;
-    return m->diBuilder->createStructType(diSpace, GetString(), diFile,
+    return m->GetDIBuilder()->createStructType(diSpace, GetString(), diFile,
                                           pos.first_line,         // Line number
                                           0,                      // Size
                                           0,                      // Align
@@ -2040,7 +2042,7 @@ ReferenceType::ReferenceType(const Type *t) : Type(REFERENCE_TYPE), targetType(t
 
 Variability ReferenceType::GetVariability() const {
     if (targetType == NULL) {
-        Assert(m->errorCount > 0);
+        Assert(m->HasErrors());
         return Variability(Variability::Unbound);
     }
     return targetType->GetVariability();
@@ -2048,7 +2050,7 @@ Variability ReferenceType::GetVariability() const {
 
 bool ReferenceType::IsBoolType() const {
     if (targetType == NULL) {
-        Assert(m->errorCount > 0);
+        Assert(m->HasErrors());
         return false;
     }
     return targetType->IsBoolType();
@@ -2056,7 +2058,7 @@ bool ReferenceType::IsBoolType() const {
 
 bool ReferenceType::IsFloatType() const {
     if (targetType == NULL) {
-        Assert(m->errorCount > 0);
+        Assert(m->HasErrors());
         return false;
     }
     return targetType->IsFloatType();
@@ -2064,7 +2066,7 @@ bool ReferenceType::IsFloatType() const {
 
 bool ReferenceType::IsIntType() const {
     if (targetType == NULL) {
-        Assert(m->errorCount > 0);
+        Assert(m->HasErrors());
         return false;
     }
     return targetType->IsIntType();
@@ -2072,7 +2074,7 @@ bool ReferenceType::IsIntType() const {
 
 bool ReferenceType::IsUnsignedType() const {
     if (targetType == NULL) {
-        Assert(m->errorCount > 0);
+        Assert(m->HasErrors());
         return false;
     }
     return targetType->IsUnsignedType();
@@ -2080,7 +2082,7 @@ bool ReferenceType::IsUnsignedType() const {
 
 bool ReferenceType::IsConstType() const {
     if (targetType == NULL) {
-        Assert(m->errorCount > 0);
+        Assert(m->HasErrors());
         return false;
     }
     return targetType->IsConstType();
@@ -2090,7 +2092,7 @@ const Type *ReferenceType::GetReferenceTarget() const { return targetType; }
 
 const Type *ReferenceType::GetBaseType() const {
     if (targetType == NULL) {
-        Assert(m->errorCount > 0);
+        Assert(m->HasErrors());
         return NULL;
     }
     return targetType->GetBaseType();
@@ -2098,7 +2100,7 @@ const Type *ReferenceType::GetBaseType() const {
 
 const ReferenceType *ReferenceType::GetAsVaryingType() const {
     if (targetType == NULL) {
-        Assert(m->errorCount > 0);
+        Assert(m->HasErrors());
         return NULL;
     }
     if (IsVaryingType())
@@ -2108,7 +2110,7 @@ const ReferenceType *ReferenceType::GetAsVaryingType() const {
 
 const ReferenceType *ReferenceType::GetAsUniformType() const {
     if (targetType == NULL) {
-        Assert(m->errorCount > 0);
+        Assert(m->HasErrors());
         return NULL;
     }
     if (IsUniformType())
@@ -2118,7 +2120,7 @@ const ReferenceType *ReferenceType::GetAsUniformType() const {
 
 const ReferenceType *ReferenceType::GetAsUnboundVariabilityType() const {
     if (targetType == NULL) {
-        Assert(m->errorCount > 0);
+        Assert(m->HasErrors());
         return NULL;
     }
     if (HasUnboundVariability())
@@ -2133,7 +2135,7 @@ const Type *ReferenceType::GetAsSOAType(int width) const {
 
 const ReferenceType *ReferenceType::ResolveUnboundVariability(Variability v) const {
     if (targetType == NULL) {
-        Assert(m->errorCount > 0);
+        Assert(m->HasErrors());
         return NULL;
     }
     return new ReferenceType(targetType->ResolveUnboundVariability(v));
@@ -2141,7 +2143,7 @@ const ReferenceType *ReferenceType::ResolveUnboundVariability(Variability v) con
 
 const ReferenceType *ReferenceType::GetAsConstType() const {
     if (targetType == NULL) {
-        Assert(m->errorCount > 0);
+        Assert(m->HasErrors());
         return NULL;
     }
     if (IsConstType())
@@ -2156,7 +2158,7 @@ const ReferenceType *ReferenceType::GetAsConstType() const {
 
 const ReferenceType *ReferenceType::GetAsNonConstType() const {
     if (targetType == NULL) {
-        Assert(m->errorCount > 0);
+        Assert(m->HasErrors());
         return NULL;
     }
     if (!IsConstType())
@@ -2171,7 +2173,7 @@ const ReferenceType *ReferenceType::GetAsNonConstType() const {
 
 std::string ReferenceType::GetString() const {
     if (targetType == NULL) {
-        Assert(m->errorCount > 0);
+        Assert(m->HasErrors());
         return "";
     }
 
@@ -2183,7 +2185,7 @@ std::string ReferenceType::GetString() const {
 
 std::string ReferenceType::Mangle() const {
     if (targetType == NULL) {
-        Assert(m->errorCount > 0);
+        Assert(m->HasErrors());
         return "";
     }
     std::string ret;
@@ -2193,7 +2195,7 @@ std::string ReferenceType::Mangle() const {
 
 std::string ReferenceType::GetCDeclaration(const std::string &name) const {
     if (targetType == NULL) {
-        Assert(m->errorCount > 0);
+        Assert(m->HasErrors());
         return "";
     }
 
@@ -2221,13 +2223,13 @@ std::string ReferenceType::GetCDeclaration(const std::string &name) const {
 
 llvm::Type *ReferenceType::LLVMType(llvm::LLVMContext *ctx) const {
     if (targetType == NULL) {
-        Assert(m->errorCount > 0);
+        Assert(m->HasErrors());
         return NULL;
     }
 
     llvm::Type *t = targetType->LLVMStorageType(ctx);
     if (t == NULL) {
-        Assert(m->errorCount > 0);
+        Assert(m->HasErrors());
         return NULL;
     }
 
@@ -2236,11 +2238,11 @@ llvm::Type *ReferenceType::LLVMType(llvm::LLVMContext *ctx) const {
 
 llvm::DIType *ReferenceType::GetDIType(llvm::DIScope *scope) const {
     if (targetType == NULL) {
-        Assert(m->errorCount > 0);
+        Assert(m->HasErrors());
         return NULL;
     }
     llvm::DIType *diTargetType = targetType->GetDIType(scope);
-    return m->diBuilder->createReferenceType(llvm::dwarf::DW_TAG_reference_type, diTargetType);
+    return m->GetDIBuilder()->createReferenceType(llvm::dwarf::DW_TAG_reference_type, diTargetType);
 }
 
 ///////////////////////////////////////////////////////////////////////////
@@ -2307,7 +2309,7 @@ const Type *FunctionType::GetAsSOAType(int width) const {
 
 const FunctionType *FunctionType::ResolveUnboundVariability(Variability v) const {
     if (returnType == NULL) {
-        Assert(m->errorCount > 0);
+        Assert(m->HasErrors());
         return NULL;
     }
     const Type *rt = returnType->ResolveUnboundVariability(v);
@@ -2315,7 +2317,7 @@ const FunctionType *FunctionType::ResolveUnboundVariability(Variability v) const
     llvm::SmallVector<const Type *, 8> pt;
     for (unsigned int i = 0; i < paramTypes.size(); ++i) {
         if (paramTypes[i] == NULL) {
-            Assert(m->errorCount > 0);
+            Assert(m->HasErrors());
             return NULL;
         }
         pt.push_back(paramTypes[i]->ResolveUnboundVariability(v));
@@ -2356,7 +2358,7 @@ std::string FunctionType::Mangle() const {
 
     for (unsigned int i = 0; i < paramTypes.size(); ++i)
         if (paramTypes[i] == NULL)
-            Assert(m->errorCount > 0);
+            Assert(m->HasErrors());
         else
             ret += paramTypes[i]->Mangle();
 
@@ -2446,8 +2448,8 @@ llvm::DIType *FunctionType::GetDIType(llvm::DIScope *scope) const {
         retArgTypes.push_back(t->GetDIType(scope));
     }
 
-    llvm::DITypeRefArray retArgTypesArray = m->diBuilder->getOrCreateTypeArray(retArgTypes);
-    llvm::DIType *diType = m->diBuilder->createSubroutineType(retArgTypesArray);
+    llvm::DITypeRefArray retArgTypesArray = m->GetDIBuilder()->getOrCreateTypeArray(retArgTypes);
+    llvm::DIType *diType = m->GetDIBuilder()->createSubroutineType(retArgTypesArray);
     return diType;
 }
 
@@ -2484,7 +2486,7 @@ llvm::FunctionType *FunctionType::LLVMFunctionType(llvm::LLVMContext *ctx, bool 
     std::vector<llvm::Type *> llvmArgTypes;
     for (unsigned int i = 0; i < paramTypes.size(); ++i) {
         if (paramTypes[i] == NULL) {
-            Assert(m->errorCount > 0);
+            Assert(m->HasErrors());
             return NULL;
         }
         Assert(paramTypes[i]->IsVoidType() == false);
@@ -2492,7 +2494,7 @@ llvm::FunctionType *FunctionType::LLVMFunctionType(llvm::LLVMContext *ctx, bool 
         const Type *argType = paramTypes[i];
         llvm::Type *t = argType->LLVMType(ctx);
         if (t == NULL) {
-            Assert(m->errorCount > 0);
+            Assert(m->HasErrors());
             return NULL;
         }
         llvmArgTypes.push_back(t);
@@ -2528,7 +2530,7 @@ llvm::FunctionType *FunctionType::LLVMFunctionType(llvm::LLVMContext *ctx, bool 
     }
 
     if (returnType == NULL) {
-        Assert(m->errorCount > 0);
+        Assert(m->HasErrors());
         return NULL;
     }
 

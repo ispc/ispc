@@ -134,7 +134,7 @@ DeclSpecs::DeclSpecs(const Type *t, StorageClass sc, int tq) {
     soaWidth = 0;
     vectorSize = 0;
     if (t != NULL) {
-        if (m->symbolTable->ContainsType(t)) {
+        if (m->GetSymbolTable().ContainsType(t)) {
             // Typedefs might have uniform/varying qualifiers inside.
             if (t->IsVaryingType()) {
                 typeQualifiers |= TYPEQUAL_VARYING;
@@ -208,26 +208,8 @@ const Type *DeclSpecs::GetBaseType(SourcePos pos) const {
     return retType;
 }
 
-static const char *lGetStorageClassName(StorageClass storageClass) {
-    switch (storageClass) {
-    case SC_NONE:
-        return "";
-    case SC_EXTERN:
-        return "extern";
-    case SC_EXTERN_C:
-        return "extern \"C\"";
-    case SC_STATIC:
-        return "static";
-    case SC_TYPEDEF:
-        return "typedef";
-    default:
-        FATAL("Unhandled storage class in lGetStorageClassName");
-        return "";
-    }
-}
-
 void DeclSpecs::Print() const {
-    printf("Declspecs: [%s ", lGetStorageClassName(storageClass));
+    printf("Declspecs: [%s ", ToString(storageClass));
 
     if (soaWidth > 0)
         printf("soa<%d> ", soaWidth);
@@ -245,7 +227,7 @@ void DeclSpecs::Print() const {
 Declarator::Declarator(DeclaratorKind dk, SourcePos p) : pos(p), kind(dk) {
     child = NULL;
     typeQualifiers = 0;
-    storageClass = SC_NONE;
+    storageClass = StorageClass::None;
     arraySize = -1;
     type = NULL;
     initExpr = NULL;
@@ -257,7 +239,7 @@ void Declarator::InitFromDeclSpecs(DeclSpecs *ds) {
     InitFromType(baseType, ds);
 
     if (type == NULL) {
-        AssertPos(pos, m->errorCount > 0);
+        AssertPos(pos, m->HasErrors());
         return;
     }
 
@@ -276,7 +258,7 @@ void Declarator::Print(int indent) const {
     pos.Print();
 
     lPrintTypeQualifiers(typeQualifiers);
-    printf("%s ", lGetStorageClassName(storageClass));
+    printf("%s ", ToString(storageClass));
     if (name.size() > 0)
         printf("%s", name.c_str());
     else
@@ -429,7 +411,7 @@ void Declarator::InitFromType(const Type *baseType, DeclSpecs *ds) {
             Declaration *d = functionParams[i];
 
             if (d == NULL) {
-                AssertPos(pos, m->errorCount > 0);
+                AssertPos(pos, m->HasErrors());
                 continue;
             }
             if (d->declarators.size() == 0) {
@@ -442,7 +424,7 @@ void Declarator::InitFromType(const Type *baseType, DeclSpecs *ds) {
             AssertPos(pos, d->declarators.size() == 1);
             Declarator *decl = d->declarators[0];
             if (decl == NULL || decl->type == NULL) {
-                AssertPos(pos, m->errorCount > 0);
+                AssertPos(pos, m->HasErrors());
                 continue;
             }
 
@@ -454,11 +436,11 @@ void Declarator::InitFromType(const Type *baseType, DeclSpecs *ds) {
             }
             decl->type = decl->type->ResolveUnboundVariability(Variability::Varying);
 
-            if (d->declSpecs->storageClass != SC_NONE)
+            if (d->declSpecs->storageClass != StorageClass::None)
                 Error(decl->pos,
                       "Storage class \"%s\" is illegal in "
                       "function parameter declaration for parameter \"%s\".",
-                      lGetStorageClassName(d->declSpecs->storageClass), decl->name.c_str());
+                      ToString(d->declSpecs->storageClass), decl->name.c_str());
             if (decl->type->IsVoidType()) {
                 Error(decl->pos, "Parameter with type \"void\" illegal in function "
                                  "parameter list.");
@@ -477,7 +459,7 @@ void Declarator::InitFromType(const Type *baseType, DeclSpecs *ds) {
                 // significant problem.)
                 const Type *targetType = at->GetElementType();
                 if (targetType == NULL) {
-                    AssertPos(pos, m->errorCount > 0);
+                    AssertPos(pos, m->HasErrors());
                     return;
                 }
 
@@ -535,7 +517,7 @@ void Declarator::InitFromType(const Type *baseType, DeclSpecs *ds) {
 
         returnType = returnType->ResolveUnboundVariability(Variability::Varying);
 
-        bool isExternC = ds && (ds->storageClass == SC_EXTERN_C);
+        bool isExternC = ds && (ds->storageClass == StorageClass::ExternC);
         bool isExported = ds && ((ds->typeQualifiers & TYPEQUAL_EXPORT) != 0);
         bool isTask = ds && ((ds->typeQualifiers & TYPEQUAL_TASK) != 0);
         bool isUnmasked = ds && ((ds->typeQualifiers & TYPEQUAL_UNMASKED) != 0);
@@ -560,7 +542,7 @@ void Declarator::InitFromType(const Type *baseType, DeclSpecs *ds) {
                          "functions.");
 
         if (child == NULL) {
-            AssertPos(pos, m->errorCount > 0);
+            AssertPos(pos, m->HasErrors());
             return;
         }
 
@@ -612,14 +594,14 @@ Declaration::Declaration(DeclSpecs *ds, Declarator *d) {
 }
 
 std::vector<VariableDeclaration> Declaration::GetVariableDeclarations() const {
-    Assert(declSpecs->storageClass != SC_TYPEDEF);
+    Assert(declSpecs->storageClass != StorageClass::Typedef);
     std::vector<VariableDeclaration> vars;
 
     for (unsigned int i = 0; i < declarators.size(); ++i) {
         Declarator *decl = declarators[i];
         if (decl == NULL || decl->type == NULL) {
             // Ignore earlier errors
-            Assert(m->errorCount > 0);
+            Assert(m->HasErrors());
             continue;
         }
 
@@ -628,7 +610,7 @@ std::vector<VariableDeclaration> Declaration::GetVariableDeclarations() const {
         else if (CastType<FunctionType>(decl->type) == NULL) {
             decl->type = decl->type->ResolveUnboundVariability(Variability::Varying);
             Symbol *sym = new Symbol(decl->name, decl->pos, decl->type, decl->storageClass);
-            m->symbolTable->AddVariable(sym);
+            m->GetSymbolTable().AddVariable(sym);
             vars.push_back(VariableDeclaration(sym, decl->initExpr));
         }
     }
@@ -637,13 +619,13 @@ std::vector<VariableDeclaration> Declaration::GetVariableDeclarations() const {
 }
 
 void Declaration::DeclareFunctions() {
-    Assert(declSpecs->storageClass != SC_TYPEDEF);
+    Assert(declSpecs->storageClass != StorageClass::Typedef);
 
     for (unsigned int i = 0; i < declarators.size(); ++i) {
         Declarator *decl = declarators[i];
         if (decl == NULL || decl->type == NULL) {
             // Ignore earlier errors
-            Assert(m->errorCount > 0);
+            Assert(m->HasErrors());
             continue;
         }
 

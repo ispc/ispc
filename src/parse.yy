@@ -118,7 +118,6 @@ static void lAddFunctionParams(Declarator *decl);
 static void lAddMaskToSymbolTable(SourcePos pos);
 static void lAddThreadIndexCountToSymbolTable(SourcePos pos);
 static std::string lGetAlternates(std::vector<std::string> &alternates);
-static const char *lGetStorageClassString(StorageClass sc);
 static bool lGetConstantInt(Expr *expr, int *value, SourcePos pos, const char *usage);
 static EnumType *lCreateEnumType(const char *name, std::vector<Symbol *> *enums,
                                  SourcePos pos);
@@ -288,19 +287,19 @@ string_constant
 primary_expression
     : TOKEN_IDENTIFIER {
         const char *name = yylval.stringVal->c_str();
-        Symbol *s = m->symbolTable->LookupVariable(name);
+        Symbol *s = m->GetSymbolTable().LookupVariable(name);
         $$ = NULL;
         if (s)
             $$ = new SymbolExpr(s, @1);
         else {
             std::vector<Symbol *> funs;
-            m->symbolTable->LookupFunction(name, &funs);
+            m->GetSymbolTable().LookupFunction(name, &funs);
             if (funs.size() > 0)
                 $$ = new FunctionSymbolExpr(name, funs, @1);
         }
         if ($$ == NULL) {
             std::vector<std::string> alternates =
-                m->symbolTable->ClosestVariableOrFunctionMatch(name);
+                m->GetSymbolTable().ClosestVariableOrFunctionMatch(name);
             std::string alts = lGetAlternates(alternates);
             Error(@1, "Undeclared symbol \"%s\".%s", name, alts.c_str());
         }
@@ -493,7 +492,7 @@ argument_expression_list
       {
           ExprList *argList = llvm::dyn_cast<ExprList>($1);
           if (argList == NULL) {
-              AssertPos(@1, m->errorCount > 0);
+              AssertPos(@1, m->HasErrors());
               argList = new ExprList(@3);
           }
           argList->exprs.push_back($3);
@@ -725,13 +724,13 @@ declaration_statement
     : declaration
     {
         if ($1 == NULL) {
-            AssertPos(@1, m->errorCount > 0);
+            AssertPos(@1, m->HasErrors());
             $$ = NULL;
         }
-        else if ($1->declSpecs->storageClass == SC_TYPEDEF) {
+        else if ($1->declSpecs->storageClass == StorageClass::Typedef) {
             for (unsigned int i = 0; i < $1->declarators.size(); ++i) {
                 if ($1->declarators[i] == NULL)
-                    AssertPos(@1, m->errorCount > 0);
+                    AssertPos(@1, m->HasErrors());
                 else
                     m->AddTypeDef($1->declarators[i]->name,
                                   $1->declarators[i]->type,
@@ -803,11 +802,11 @@ declaration_specifiers
       {
           DeclSpecs *ds = (DeclSpecs *)$2;
           if (ds != NULL) {
-              if (ds->storageClass != SC_NONE)
+              if (ds->storageClass != StorageClass::None)
                   Error(@1, "Multiple storage class specifiers in a declaration are illegal. "
                         "(Have provided both \"%s\" and \"%s\".)",
-                        lGetStorageClassString(ds->storageClass),
-                        lGetStorageClassString($1));
+                        ToString(ds->storageClass),
+                        ToString($1));
               else
                   ds->storageClass = $1;
           }
@@ -876,7 +875,7 @@ declaration_specifiers
       }
     | type_qualifier
       {
-          $$ = new DeclSpecs(NULL, SC_NONE, $1);
+          $$ = new DeclSpecs(NULL, StorageClass::None, $1);
       }
     | type_qualifier declaration_specifiers
       {
@@ -899,7 +898,7 @@ init_declarator_list
       {
           std::vector<Declarator *> *dl = (std::vector<Declarator *> *)$1;
           if (dl == NULL) {
-              AssertPos(@1, m->errorCount > 0);
+              AssertPos(@1, m->HasErrors());
               dl = new std::vector<Declarator *>;
           }
           if ($3 != NULL)
@@ -919,17 +918,17 @@ init_declarator
     ;
 
 storage_class_specifier
-    : TOKEN_TYPEDEF { $$ = SC_TYPEDEF; }
-    | TOKEN_EXTERN { $$ = SC_EXTERN; }
-    | TOKEN_EXTERN TOKEN_STRING_C_LITERAL  { $$ = SC_EXTERN_C; }
-    | TOKEN_STATIC { $$ = SC_STATIC; }
+    : TOKEN_TYPEDEF { $$ = StorageClass::Typedef; }
+    | TOKEN_EXTERN { $$ = StorageClass::Extern; }
+    | TOKEN_EXTERN TOKEN_STRING_C_LITERAL  { $$ = StorageClass::ExternC; }
+    | TOKEN_STATIC { $$ = StorageClass::Static; }
     ;
 
 type_specifier
     : atomic_var_type_specifier { $$ = $1; }
     | TOKEN_TYPE_NAME
     {
-        const Type *t = m->symbolTable->LookupType(yytext);
+        const Type *t = m->GetSymbolTable().LookupType(yytext);
         $$ = t;
     }
     | struct_or_union_specifier { $$ = $1; }
@@ -952,7 +951,7 @@ type_specifier_list
     {
         $$ = $1;
         if ($1 == NULL)
-            Assert(m->errorCount > 0);
+            Assert(m->HasErrors());
         else
             $$->push_back(std::make_pair($3, @3));
     }
@@ -988,10 +987,10 @@ struct_or_union_name
 struct_or_union_and_name
     : struct_or_union struct_or_union_name
       {
-          const Type *st = m->symbolTable->LookupType($2);
+          const Type *st = m->GetSymbolTable().LookupType($2);
           if (st == NULL) {
               st = new UndefinedStructType($2, Variability::Unbound, false, @2);
-              m->symbolTable->AddType($2, st, @2);
+              m->GetSymbolTable().AddType($2, st, @2);
               $$ = st;
           }
           else {
@@ -1022,7 +1021,7 @@ struct_or_union_specifier
                   CastType<UndefinedStructType>($1)->GetStructName();
               StructType *st = new StructType(name, elementTypes, elementNames,
                                               elementPositions, false, Variability::Unbound, @1);
-              m->symbolTable->AddType(name.c_str(), st, @1);
+              m->GetSymbolTable().AddType(name.c_str(), st, @1);
               $$ = st;
           }
           else
@@ -1061,7 +1060,7 @@ struct_or_union_specifier
           StructType *st = new StructType(name, elementTypes,
                                           elementNames, elementPositions,
                                           false, Variability::Unbound, @1);
-          m->symbolTable->AddType(name.c_str(), st, @2);
+          m->GetSymbolTable().AddType(name.c_str(), st, @2);
           $$ = st;
       }
     ;
@@ -1082,7 +1081,7 @@ struct_declaration_list
       {
           std::vector<StructDeclaration *> *sdl = (std::vector<StructDeclaration *> *)$1;
           if (sdl == NULL) {
-              AssertPos(@1, m->errorCount > 0);
+              AssertPos(@1, m->HasErrors());
               sdl = new std::vector<StructDeclaration *>;
           }
           if ($2 != NULL)
@@ -1172,7 +1171,7 @@ specifier_qualifier_list
                 FATAL("Unhandled type qualifier in parser.");
         }
         else {
-            if (m->errorCount == 0)
+            if (!m->HasErrors())
                 Error(@1, "Lost type qualifier in parser.");
             $$ = NULL;
         }
@@ -1192,7 +1191,7 @@ struct_declarator_list
       {
           std::vector<Declarator *> *sdl = (std::vector<Declarator *> *)$1;
           if (sdl == NULL) {
-              AssertPos(@1, m->errorCount > 0);
+              AssertPos(@1, m->HasErrors());
               sdl = new std::vector<Declarator *>;
           }
           if ($3 != NULL)
@@ -1231,9 +1230,9 @@ enum_specifier
       }
     | TOKEN_ENUM enum_identifier
       {
-          const Type *type = m->symbolTable->LookupType($2);
+          const Type *type = m->GetSymbolTable().LookupType($2);
           if (type == NULL) {
-              std::vector<std::string> alternates = m->symbolTable->ClosestEnumTypeMatch($2);
+              std::vector<std::string> alternates = m->GetSymbolTable().ClosestEnumTypeMatch($2);
               std::string alts = lGetAlternates(alternates);
               Error(@2, "Enum type \"%s\" unknown.%s", $2, alts.c_str());
               $$ = NULL;
@@ -1266,7 +1265,7 @@ enumerator_list
       {
           std::vector<Symbol *> *symList = $1;
           if (symList == NULL) {
-              AssertPos(@1, m->errorCount > 0);
+              AssertPos(@1, m->HasErrors());
               symList = new std::vector<Symbol *>;
           }
           if ($3 != NULL)
@@ -1672,7 +1671,7 @@ initializer_list
       {
           ExprList *exprList = $1;
           if (exprList == NULL) {
-              AssertPos(@1, m->errorCount > 0);
+              AssertPos(@1, m->HasErrors());
               exprList = new ExprList(@3);
           }
           exprList->exprs.push_back($3);
@@ -1740,11 +1739,11 @@ labeled_statement
     ;
 
 start_scope
-    : '{' { m->symbolTable->PushScope(); }
+    : '{' { m->GetSymbolTable().PushScope(); }
     ;
 
 end_scope
-    : '}' { m->symbolTable->PopScope(); }
+    : '}' { m->GetSymbolTable().PopScope(); }
     ;
 
 compound_statement
@@ -1763,7 +1762,7 @@ statement_list
       {
           StmtList *sl = (StmtList *)$1;
           if (sl == NULL) {
-              AssertPos(@1, m->errorCount > 0);
+              AssertPos(@1, m->HasErrors());
               sl = new StmtList(@2);
           }
           sl->Add($2);
@@ -1802,19 +1801,19 @@ for_init_statement
     ;
 
 for_scope
-    : TOKEN_FOR { m->symbolTable->PushScope(); }
+    : TOKEN_FOR { m->GetSymbolTable().PushScope(); }
     ;
 
 cfor_scope
-    : TOKEN_CFOR { m->symbolTable->PushScope(); }
+    : TOKEN_CFOR { m->GetSymbolTable().PushScope(); }
     ;
 
 foreach_scope
-    : TOKEN_FOREACH { m->symbolTable->PushScope(); }
+    : TOKEN_FOREACH { m->GetSymbolTable().PushScope(); }
     ;
 
 foreach_tiled_scope
-    : TOKEN_FOREACH_TILED { m->symbolTable->PushScope(); }
+    : TOKEN_FOREACH_TILED { m->GetSymbolTable().PushScope(); }
     ;
 
 foreach_identifier
@@ -1825,7 +1824,7 @@ foreach_identifier
     ;
 
 foreach_active_scope
-    : TOKEN_FOREACH_ACTIVE { m->symbolTable->PushScope(); }
+    : TOKEN_FOREACH_ACTIVE { m->GetSymbolTable().PushScope(); }
     ;
 
 foreach_active_identifier
@@ -1875,7 +1874,7 @@ foreach_dimension_list
     {
         std::vector<ForeachDimension *> *dv = $1;
         if (dv == NULL) {
-            AssertPos(@1, m->errorCount > 0);
+            AssertPos(@1, m->HasErrors());
             dv = new std::vector<ForeachDimension *>;
         }
         if ($3 != NULL)
@@ -1885,7 +1884,7 @@ foreach_dimension_list
     ;
 
 foreach_unique_scope
-    : TOKEN_FOREACH_UNIQUE { m->symbolTable->PushScope(); }
+    : TOKEN_FOREACH_UNIQUE { m->GetSymbolTable().PushScope(); }
     ;
 
 foreach_unique_identifier
@@ -1903,35 +1902,35 @@ iteration_statement
       { $$ = new DoStmt($5, $2, true, @1); }
     | for_scope '(' for_init_statement for_test ')' attributed_statement
       { $$ = new ForStmt($3, $4, NULL, $6, false, @1);
-        m->symbolTable->PopScope();
+        m->GetSymbolTable().PopScope();
       }
     | for_scope '(' for_init_statement for_test expression ')' attributed_statement
       { $$ = new ForStmt($3, $4, new ExprStmt($5, @5), $7, false, @1);
-        m->symbolTable->PopScope();
+        m->GetSymbolTable().PopScope();
       }
     | cfor_scope '(' for_init_statement for_test ')' attributed_statement
       { $$ = new ForStmt($3, $4, NULL, $6, true, @1);
-        m->symbolTable->PopScope();
+        m->GetSymbolTable().PopScope();
       }
     | cfor_scope '(' for_init_statement for_test expression ')' attributed_statement
       { $$ = new ForStmt($3, $4, new ExprStmt($5, @5), $7, true, @1);
-        m->symbolTable->PopScope();
+        m->GetSymbolTable().PopScope();
       }
     | foreach_scope '(' foreach_dimension_list ')'
      {
          std::vector<ForeachDimension *> *dims = $3;
          if (dims == NULL) {
-             AssertPos(@3, m->errorCount > 0);
+             AssertPos(@3, m->HasErrors());
              dims = new std::vector<ForeachDimension *>;
          }
          for (unsigned int i = 0; i < dims->size(); ++i)
-             m->symbolTable->AddVariable((*dims)[i]->sym);
+             m->GetSymbolTable().AddVariable((*dims)[i]->sym);
      }
      attributed_statement
      {
          std::vector<ForeachDimension *> *dims = $3;
          if (dims == NULL) {
-             AssertPos(@3, m->errorCount > 0);
+             AssertPos(@3, m->HasErrors());
              dims = new std::vector<ForeachDimension *>;
          }
 
@@ -1943,24 +1942,24 @@ iteration_statement
              ends.push_back((*dims)[i]->endExpr);
          }
          $$ = new ForeachStmt(syms, begins, ends, $6, false, @1);
-         m->symbolTable->PopScope();
+         m->GetSymbolTable().PopScope();
      }
     | foreach_tiled_scope '(' foreach_dimension_list ')'
      {
          std::vector<ForeachDimension *> *dims = $3;
          if (dims == NULL) {
-             AssertPos(@3, m->errorCount > 0);
+             AssertPos(@3, m->HasErrors());
              dims = new std::vector<ForeachDimension *>;
          }
 
          for (unsigned int i = 0; i < dims->size(); ++i)
-             m->symbolTable->AddVariable((*dims)[i]->sym);
+             m->GetSymbolTable().AddVariable((*dims)[i]->sym);
      }
      attributed_statement
      {
          std::vector<ForeachDimension *> *dims = $3;
          if (dims == NULL) {
-             AssertPos(@1, m->errorCount > 0);
+             AssertPos(@1, m->HasErrors());
              dims = new std::vector<ForeachDimension *>;
          }
 
@@ -1972,17 +1971,17 @@ iteration_statement
              ends.push_back((*dims)[i]->endExpr);
          }
          $$ = new ForeachStmt(syms, begins, ends, $6, true, @1);
-         m->symbolTable->PopScope();
+         m->GetSymbolTable().PopScope();
      }
     | foreach_active_scope '(' foreach_active_identifier ')'
      {
          if ($3 != NULL)
-             m->symbolTable->AddVariable($3);
+             m->GetSymbolTable().AddVariable($3);
      }
      attributed_statement
      {
          $$ = new ForeachActiveStmt($3, $6, Union(@1, @4));
-         m->symbolTable->PopScope();
+         m->GetSymbolTable().PopScope();
      }
     | foreach_unique_scope '(' foreach_unique_identifier TOKEN_IN
          expression ')'
@@ -1994,13 +1993,13 @@ iteration_statement
              (type = expr->GetType()) != NULL) {
              const Type *iterType = type->GetAsUniformType()->GetAsConstType();
              Symbol *sym = new Symbol($3, @3, iterType);
-             m->symbolTable->AddVariable(sym);
+             m->GetSymbolTable().AddVariable(sym);
          }
      }
      attributed_statement
      {
          $$ = new ForeachUniqueStmt($3, $5, $8, @1);
-         m->symbolTable->PopScope();
+         m->GetSymbolTable().PopScope();
      }
     ;
 
@@ -2096,8 +2095,8 @@ function_definition
             $2->InitFromDeclSpecs($1);
             const FunctionType *funcType = CastType<FunctionType>($2->type);
             if (funcType == NULL)
-                AssertPos(@1, m->errorCount > 0);
-            else if ($1->storageClass == SC_TYPEDEF)
+                AssertPos(@1, m->HasErrors());
+            else if ($1->storageClass == StorageClass::Typedef)
                 Error(@1, "Illegal \"typedef\" provided with function definition.");
             else {
                 Stmt *code = $4;
@@ -2105,14 +2104,14 @@ function_definition
                 m->AddFunctionDefinition($2->name, funcType, code);
             }
         }
-        m->symbolTable->PopScope(); // push in lAddFunctionParams();
+        m->GetSymbolTable().PopScope(); // push in lAddFunctionParams();
     }
 /* function with no declared return type??
 func(...)
     | declarator { lAddFunctionParams($1); } compound_statement
     {
         m->AddFunction(new DeclSpecs(XXX, $1, $3);
-        m->symbolTable->PopScope(); // push in lAddFunctionParams();
+        m->GetSymbolTable().PopScope(); // push in lAddFunctionParams();
     }
 */
     ;
@@ -2214,11 +2213,11 @@ lAddDeclaration(DeclSpecs *ds, Declarator *decl) {
         return;
 
     decl->InitFromDeclSpecs(ds);
-    if (ds->storageClass == SC_TYPEDEF)
+    if (ds->storageClass == StorageClass::Typedef)
         m->AddTypeDef(decl->name, decl->type, decl->pos);
     else {
         if (decl->type == NULL) {
-            Assert(m->errorCount > 0);
+            Assert(m->HasErrors());
             return;
         }
 
@@ -2246,7 +2245,7 @@ lAddDeclaration(DeclSpecs *ds, Declarator *decl) {
 */
 static void
 lAddFunctionParams(Declarator *decl) {
-    m->symbolTable->PushScope();
+    m->GetSymbolTable().PushScope();
 
     if (decl == NULL) {
         return;
@@ -2256,7 +2255,7 @@ lAddFunctionParams(Declarator *decl) {
     while (decl->kind != DK_FUNCTION && decl->child != NULL)
         decl = decl->child;
     if (decl->kind != DK_FUNCTION) {
-        AssertPos(decl->pos, m->errorCount > 0);
+        AssertPos(decl->pos, m->HasErrors());
         return;
     }
 
@@ -2266,16 +2265,16 @@ lAddFunctionParams(Declarator *decl) {
         Assert(pdecl != NULL && pdecl->declarators.size() == 1);
         Declarator *declarator = pdecl->declarators[0];
         if (declarator == NULL)
-            AssertPos(decl->pos, m->errorCount > 0);
+            AssertPos(decl->pos, m->HasErrors());
         else {
             Symbol *sym = new Symbol(declarator->name, declarator->pos,
                                      declarator->type, declarator->storageClass);
 #ifndef NDEBUG
-            bool ok = m->symbolTable->AddVariable(sym);
+            bool ok = m->GetSymbolTable().AddVariable(sym);
             if (ok == false)
-                AssertPos(decl->pos, m->errorCount > 0);
+                AssertPos(decl->pos, m->HasErrors());
 #else
-            m->symbolTable->AddVariable(sym);
+            m->GetSymbolTable().AddVariable(sym);
 #endif
         }
     }
@@ -2310,7 +2309,7 @@ static void lAddMaskToSymbolTable(SourcePos pos) {
 
     t = t->GetAsConstType();
     Symbol *maskSymbol = new Symbol("__mask", pos, t);
-    m->symbolTable->AddVariable(maskSymbol);
+    m->GetSymbolTable().AddVariable(maskSymbol);
 }
 
 
@@ -2320,31 +2319,31 @@ static void lAddThreadIndexCountToSymbolTable(SourcePos pos) {
     const Type *type = AtomicType::UniformUInt32->GetAsConstType();
 
     Symbol *threadIndexSym = new Symbol("threadIndex", pos, type);
-    m->symbolTable->AddVariable(threadIndexSym);
+    m->GetSymbolTable().AddVariable(threadIndexSym);
 
     Symbol *threadCountSym = new Symbol("threadCount", pos, type);
-    m->symbolTable->AddVariable(threadCountSym);
+    m->GetSymbolTable().AddVariable(threadCountSym);
 
     Symbol *taskIndexSym = new Symbol("taskIndex", pos, type);
-    m->symbolTable->AddVariable(taskIndexSym);
+    m->GetSymbolTable().AddVariable(taskIndexSym);
     
     Symbol *taskCountSym = new Symbol("taskCount", pos, type);
-    m->symbolTable->AddVariable(taskCountSym);
+    m->GetSymbolTable().AddVariable(taskCountSym);
     
     Symbol *taskIndexSym0 = new Symbol("taskIndex0", pos, type);
-    m->symbolTable->AddVariable(taskIndexSym0);
+    m->GetSymbolTable().AddVariable(taskIndexSym0);
     Symbol *taskIndexSym1 = new Symbol("taskIndex1", pos, type);
-    m->symbolTable->AddVariable(taskIndexSym1);
+    m->GetSymbolTable().AddVariable(taskIndexSym1);
     Symbol *taskIndexSym2 = new Symbol("taskIndex2", pos, type);
-    m->symbolTable->AddVariable(taskIndexSym2);
+    m->GetSymbolTable().AddVariable(taskIndexSym2);
 
     
     Symbol *taskCountSym0 = new Symbol("taskCount0", pos, type);
-    m->symbolTable->AddVariable(taskCountSym0);
+    m->GetSymbolTable().AddVariable(taskCountSym0);
     Symbol *taskCountSym1 = new Symbol("taskCount1", pos, type);
-    m->symbolTable->AddVariable(taskCountSym1);
+    m->GetSymbolTable().AddVariable(taskCountSym1);
     Symbol *taskCountSym2 = new Symbol("taskCount2", pos, type);
-    m->symbolTable->AddVariable(taskCountSym2);
+    m->GetSymbolTable().AddVariable(taskCountSym2);
 }
 
 
@@ -2362,26 +2361,6 @@ static std::string lGetAlternates(std::vector<std::string> &alternates) {
     }
     return alts;
 }
-
-static const char *
-lGetStorageClassString(StorageClass sc) {
-    switch (sc) {
-    case SC_NONE:
-        return "";
-    case SC_EXTERN:
-        return "extern";
-    case SC_STATIC:
-        return "static";
-    case SC_TYPEDEF:
-        return "typedef";
-    case SC_EXTERN_C:
-        return "extern \"C\"";
-    default:
-        Assert(!"logic error in lGetStorageClassString()");
-        return "";
-    }
-}
-
 
 /** Given an expression, see if it is equal to a compile-time constant
     integer value.  If so, return true and return the value in *value.
@@ -2432,11 +2411,11 @@ lCreateEnumType(const char *name, std::vector<Symbol *> *enums, SourcePos pos) {
 
     EnumType *enumType = name ? new EnumType(name, pos) : new EnumType(pos);
     if (name != NULL)
-        m->symbolTable->AddType(name, enumType, pos);
+        m->GetSymbolTable().AddType(name, enumType, pos);
 
     lFinalizeEnumeratorSymbols(*enums, enumType);
     for (unsigned int i = 0; i < enums->size(); ++i)
-        m->symbolTable->AddVariable((*enums)[i]);
+        m->GetSymbolTable().AddVariable((*enums)[i]);
     enumType->SetEnumerators(*enums);
     return enumType;
 }

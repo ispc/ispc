@@ -14,7 +14,7 @@ SourcePos::SourcePos(const char *n, int fl, int fc, int ll, int lc) {
     name = n;
     if (name == NULL) {
         if (getModule() != nullptr)
-            name = getModule()->module->getModuleIdentifier().c_str();
+            name = getModule()->GetLLVMModule()->getModuleIdentifier().c_str();
         else
             name = "(unknown)";
     }
@@ -29,13 +29,13 @@ llvm::DIFile *
 SourcePos::GetDIFile() const {
     std::string directory, filename;
     GetDirectoryAndFileName(g->currentDirectory, name, &directory, &filename);
-    llvm::DIFile *ret = m->diBuilder->createFile(filename, directory);
+    llvm::DIFile *ret = m->GetDIBuilder()->createFile(filename, directory);
     return ret;
 }
 
 llvm::DINamespace *SourcePos::GetDINamespace() const {
     llvm::DIScope *discope = GetDIFile();
-    llvm::DINamespace *ret = m->diBuilder->createNameSpace(discope, "ispc", true);
+    llvm::DINamespace *ret = m->GetDIBuilder()->createNameSpace(discope, "ispc", true);
     return ret;
 }
 

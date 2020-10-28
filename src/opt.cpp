@@ -876,35 +876,35 @@ bool IntrinsicsOpt::runOnBasicBlock(llvm::BasicBlock &bb) {
     // compiling for AVX, we may still encounter the regular 4-wide SSE
     // MOVMSK instruction.
     if (llvm::Function *ssei8Movmsk =
-            m->module->getFunction(llvm::Intrinsic::getName(llvm::Intrinsic::x86_sse2_pmovmskb_128))) {
+            m->GetFunction(llvm::Intrinsic::getName(llvm::Intrinsic::x86_sse2_pmovmskb_128))) {
         maskInstructions.push_back(ssei8Movmsk);
     }
     if (llvm::Function *sseFloatMovmsk =
-            m->module->getFunction(llvm::Intrinsic::getName(llvm::Intrinsic::x86_sse_movmsk_ps))) {
+            m->GetFunction(llvm::Intrinsic::getName(llvm::Intrinsic::x86_sse_movmsk_ps))) {
         maskInstructions.push_back(sseFloatMovmsk);
     }
-    if (llvm::Function *__movmsk = m->module->getFunction("__movmsk")) {
+    if (llvm::Function *__movmsk = m->GetFunction("__movmsk")) {
         maskInstructions.push_back(__movmsk);
     }
     if (llvm::Function *avxFloatMovmsk =
-            m->module->getFunction(llvm::Intrinsic::getName(llvm::Intrinsic::x86_avx_movmsk_ps_256))) {
+            m->GetFunction(llvm::Intrinsic::getName(llvm::Intrinsic::x86_avx_movmsk_ps_256))) {
         maskInstructions.push_back(avxFloatMovmsk);
     }
 
     // And all of the blend instructions
     blendInstructions.push_back(BlendInstruction(
-        m->module->getFunction(llvm::Intrinsic::getName(llvm::Intrinsic::x86_sse41_blendvps)), 0xf, 0, 1, 2));
+        m->GetFunction(llvm::Intrinsic::getName(llvm::Intrinsic::x86_sse41_blendvps)), 0xf, 0, 1, 2));
     blendInstructions.push_back(BlendInstruction(
-        m->module->getFunction(llvm::Intrinsic::getName(llvm::Intrinsic::x86_avx_blendv_ps_256)), 0xff, 0, 1, 2));
+        m->GetFunction(llvm::Intrinsic::getName(llvm::Intrinsic::x86_avx_blendv_ps_256)), 0xff, 0, 1, 2));
 
     llvm::Function *avxMaskedLoad32 =
-        m->module->getFunction(llvm::Intrinsic::getName(llvm::Intrinsic::x86_avx_maskload_ps_256));
+        m->GetFunction(llvm::Intrinsic::getName(llvm::Intrinsic::x86_avx_maskload_ps_256));
     llvm::Function *avxMaskedLoad64 =
-        m->module->getFunction(llvm::Intrinsic::getName(llvm::Intrinsic::x86_avx_maskload_pd_256));
+        m->GetFunction(llvm::Intrinsic::getName(llvm::Intrinsic::x86_avx_maskload_pd_256));
     llvm::Function *avxMaskedStore32 =
-        m->module->getFunction(llvm::Intrinsic::getName(llvm::Intrinsic::x86_avx_maskstore_ps_256));
+        m->GetFunction(llvm::Intrinsic::getName(llvm::Intrinsic::x86_avx_maskstore_ps_256));
     llvm::Function *avxMaskedStore64 =
-        m->module->getFunction(llvm::Intrinsic::getName(llvm::Intrinsic::x86_avx_maskstore_pd_256));
+        m->GetFunction(llvm::Intrinsic::getName(llvm::Intrinsic::x86_avx_maskstore_pd_256));
 
     bool modifiedAny = false;
 restart:
@@ -1192,7 +1192,7 @@ bool InstructionSimplifyPass::simplifyCall(llvm::CallInst *callInst, llvm::Basic
 
     // Turn a __movmsk call with a compile-time constant vector into the
     // equivalent scalar value.
-    if (calledFunc == NULL || calledFunc != m->module->getFunction("__movmsk"))
+    if (calledFunc == NULL || calledFunc != m->GetFunction("__movmsk"))
         return false;
 
     uint64_t mask;
@@ -2024,9 +2024,9 @@ static bool lGSToGSBaseOffsets(llvm::CallInst *callInst) {
     struct GSInfo {
         GSInfo(const char *pgFuncName, const char *pgboFuncName, const char *pgbo32FuncName, bool ig, bool ip)
             : isGather(ig), isPrefetch(ip) {
-            func = m->module->getFunction(pgFuncName);
-            baseOffsetsFunc = m->module->getFunction(pgboFuncName);
-            baseOffsets32Func = m->module->getFunction(pgbo32FuncName);
+            func = m->GetFunction(pgFuncName);
+            baseOffsetsFunc = m->GetFunction(pgboFuncName);
+            baseOffsets32Func = m->GetFunction(pgbo32FuncName);
         }
         llvm::Function *func;
         llvm::Function *baseOffsetsFunc, *baseOffsets32Func;
@@ -2339,8 +2339,8 @@ static bool lGSBaseOffsetsGetMoreConst(llvm::CallInst *callInst) {
     struct GSBOInfo {
         GSBOInfo(const char *pgboFuncName, const char *pgbo32FuncName, bool ig, bool ip)
             : isGather(ig), isPrefetch(ip) {
-            baseOffsetsFunc = m->module->getFunction(pgboFuncName);
-            baseOffsets32Func = m->module->getFunction(pgbo32FuncName);
+            baseOffsetsFunc = m->GetFunction(pgboFuncName);
+            baseOffsets32Func = m->GetFunction(pgbo32FuncName);
         }
         llvm::Function *baseOffsetsFunc, *baseOffsets32Func;
         const bool isGather;
@@ -2542,8 +2542,8 @@ static bool lGSToLoadStore(llvm::CallInst *callInst) {
     struct GatherImpInfo {
         GatherImpInfo(const char *pName, const char *lmName, llvm::Type *st, int a)
             : align(a), isFactored(!g->target->hasGather()) {
-            pseudoFunc = m->module->getFunction(pName);
-            loadMaskedFunc = m->module->getFunction(lmName);
+            pseudoFunc = m->GetFunction(pName);
+            loadMaskedFunc = m->GetFunction(lmName);
             Assert(pseudoFunc != NULL && loadMaskedFunc != NULL);
             scalarType = st;
         }
@@ -2597,8 +2597,8 @@ static bool lGSToLoadStore(llvm::CallInst *callInst) {
     struct ScatterImpInfo {
         ScatterImpInfo(const char *pName, const char *msName, llvm::Type *vpt, int a)
             : align(a), isFactored(!g->target->hasScatter()) {
-            pseudoFunc = m->module->getFunction(pName);
-            maskedStoreFunc = m->module->getFunction(msName);
+            pseudoFunc = m->GetFunction(pName);
+            maskedStoreFunc = m->GetFunction(msName);
             vecPtrType = vpt;
             Assert(pseudoFunc != NULL && maskedStoreFunc != NULL);
         }
@@ -2834,7 +2834,7 @@ static bool lGSToLoadStore(llvm::CallInst *callInst) {
 static bool lImproveMaskedStore(llvm::CallInst *callInst) {
     struct MSInfo {
         MSInfo(const char *name, const int a) : align(a) {
-            func = m->module->getFunction(name);
+            func = m->GetFunction(name);
             Assert(func != NULL);
         }
         llvm::Function *func;
@@ -2893,7 +2893,7 @@ static bool lImproveMaskedStore(llvm::CallInst *callInst) {
                 new llvm::PtrToIntInst(lvalue, LLVMTypes::Int64Type, "svm_st_ptrtoint", callInst);
             llvm::Type *argTypes[] = {svm_st_zext->getType(), rvalue->getType()};
             auto Fn =
-                llvm::GenXIntrinsic::getGenXDeclaration(m->module, llvm::GenXIntrinsic::genx_svm_block_st, argTypes);
+                llvm::GenXIntrinsic::getGenXDeclaration(m->GetLLVMModule(), llvm::GenXIntrinsic::genx_svm_block_st, argTypes);
             store = lCallInst(Fn, svm_st_zext, rvalue, "", NULL);
         } else if (!g->target->isGenXTarget() ||
                    (g->target->isGenXTarget() && GetAddressSpace(lvalue) == AddressSpace::Local))
@@ -2939,7 +2939,7 @@ static bool lImproveMaskedStore(llvm::CallInst *callInst) {
 static bool lImproveMaskedLoad(llvm::CallInst *callInst, llvm::BasicBlock::iterator iter) {
     struct MLInfo {
         MLInfo(const char *name, const int a) : align(a) {
-            func = m->module->getFunction(name);
+            func = m->GetFunction(name);
             Assert(func != NULL);
         }
         llvm::Function *func;
@@ -2987,7 +2987,7 @@ static bool lImproveMaskedLoad(llvm::CallInst *callInst, llvm::BasicBlock::itera
             Assert(retType->getPrimitiveSizeInBits() / 8 <= 8 * OWORD);
             llvm::Value *svm_ld_ptrtoint =
                 new llvm::PtrToIntInst(ptr, LLVMTypes::Int64Type, "svm_ld_ptrtoint", callInst);
-            auto Fn = llvm::GenXIntrinsic::getGenXDeclaration(m->module, llvm::GenXIntrinsic::genx_svm_block_ld,
+            auto Fn = llvm::GenXIntrinsic::getGenXDeclaration(m->GetLLVMModule(), llvm::GenXIntrinsic::genx_svm_block_ld,
                                                               {retType, svm_ld_ptrtoint->getType()});
 
             load = llvm::CallInst::Create(Fn, svm_ld_ptrtoint, callInst->getName());
@@ -3930,10 +3930,10 @@ bool GatherCoalescePass::runOnBasicBlock(llvm::BasicBlock &bb) {
     DEBUG_START_PASS("GatherCoalescePass");
 
     llvm::Function *gatherFuncs[] = {
-        m->module->getFunction("__pseudo_gather_factored_base_offsets32_i32"),
-        m->module->getFunction("__pseudo_gather_factored_base_offsets32_float"),
-        m->module->getFunction("__pseudo_gather_factored_base_offsets64_i32"),
-        m->module->getFunction("__pseudo_gather_factored_base_offsets64_float"),
+        m->GetFunction("__pseudo_gather_factored_base_offsets32_i32"),
+        m->GetFunction("__pseudo_gather_factored_base_offsets32_float"),
+        m->GetFunction("__pseudo_gather_factored_base_offsets64_i32"),
+        m->GetFunction("__pseudo_gather_factored_base_offsets64_float"),
     };
     int nGatherFuncs = sizeof(gatherFuncs) / sizeof(gatherFuncs[0]);
 
@@ -4139,9 +4139,9 @@ static bool lIsSafeToBlend(llvm::Value *lvalue) {
 static bool lReplacePseudoMaskedStore(llvm::CallInst *callInst) {
     struct LMSInfo {
         LMSInfo(const char *pname, const char *bname, const char *msname) {
-            pseudoFunc = m->module->getFunction(pname);
-            blendFunc = m->module->getFunction(bname);
-            maskedStoreFunc = m->module->getFunction(msname);
+            pseudoFunc = m->GetFunction(pname);
+            blendFunc = m->GetFunction(bname);
+            maskedStoreFunc = m->GetFunction(msname);
             Assert(pseudoFunc != NULL && blendFunc != NULL && maskedStoreFunc != NULL);
         }
         llvm::Function *pseudoFunc;
@@ -4189,8 +4189,8 @@ static bool lReplacePseudoMaskedStore(llvm::CallInst *callInst) {
 static bool lReplacePseudoGS(llvm::CallInst *callInst) {
     struct LowerGSInfo {
         LowerGSInfo(const char *pName, const char *aName, bool ig, bool ip) : isGather(ig), isPrefetch(ip) {
-            pseudoFunc = m->module->getFunction(pName);
-            actualFunc = m->module->getFunction(aName);
+            pseudoFunc = m->GetFunction(pName);
+            actualFunc = m->GetFunction(aName);
         }
         llvm::Function *pseudoFunc;
         llvm::Function *actualFunc;
@@ -4441,9 +4441,9 @@ char IsCompileTimeConstantPass::ID = 0;
 bool IsCompileTimeConstantPass::runOnBasicBlock(llvm::BasicBlock &bb) {
     DEBUG_START_PASS("IsCompileTimeConstantPass");
 
-    llvm::Function *funcs[] = {m->module->getFunction("__is_compile_time_constant_mask"),
-                               m->module->getFunction("__is_compile_time_constant_uniform_int32"),
-                               m->module->getFunction("__is_compile_time_constant_varying_int32")};
+    llvm::Function *funcs[] = {m->GetFunction("__is_compile_time_constant_mask"),
+                               m->GetFunction("__is_compile_time_constant_uniform_int32"),
+                               m->GetFunction("__is_compile_time_constant_varying_int32")};
 
     bool modifiedAny = false;
 restart:
@@ -4823,7 +4823,7 @@ bool MakeInternalFuncsStaticPass::runOnModule(llvm::Module &module) {
     bool modifiedAny = false;
     int count = sizeof(names) / sizeof(names[0]);
     for (int i = 0; i < count; ++i) {
-        llvm::Function *f = m->module->getFunction(names[i]);
+        llvm::Function *f = m->GetFunction(names[i]);
         if (f != NULL && f->empty() == false) {
             f->setLinkage(llvm::GlobalValue::InternalLinkage);
             modifiedAny = true;
@@ -4972,7 +4972,7 @@ static bool lHasIntrinsicInDefinition(llvm::Function *func) {
 }
 
 static llvm::Instruction *lGetBinaryIntrinsic(const char *name, llvm::Value *opa, llvm::Value *opb) {
-    llvm::Function *func = m->module->getFunction(name);
+    llvm::Function *func = m->GetFunction(name);
     Assert(func != NULL);
 
     // Make sure that the definition of the llvm::Function has a call to an
@@ -5173,12 +5173,12 @@ bool ReplaceStdlibShiftPass::runOnBasicBlock(llvm::BasicBlock &bb) {
     bool modifiedAny = false;
 
     llvm::Function *shifts[6];
-    shifts[0] = m->module->getFunction("shift___vytuni");
-    shifts[1] = m->module->getFunction("shift___vysuni");
-    shifts[2] = m->module->getFunction("shift___vyiuni");
-    shifts[3] = m->module->getFunction("shift___vyIuni");
-    shifts[4] = m->module->getFunction("shift___vyfuni");
-    shifts[5] = m->module->getFunction("shift___vyduni");
+    shifts[0] = m->GetFunction("shift___vytuni");
+    shifts[1] = m->GetFunction("shift___vysuni");
+    shifts[2] = m->GetFunction("shift___vyiuni");
+    shifts[3] = m->GetFunction("shift___vyIuni");
+    shifts[4] = m->GetFunction("shift___vyfuni");
+    shifts[5] = m->GetFunction("shift___vyduni");
 
     for (llvm::BasicBlock::iterator iter = bb.begin(), e = bb.end(); iter != e; ++iter) {
         llvm::Instruction *inst = &*iter;
@@ -5524,7 +5524,7 @@ static bool lVectorizeGEPs(llvm::Value *ptr, std::vector<PtrUse> &ptrUses, std::
         llvm::Instruction *addr = llvm::BinaryOperator::CreateAdd(ptrToInt, offset, "vectorized_address", insertBefore);
         llvm::Type *retType = llvm::VectorType::get(scalar_type, reqSize / t_size);
         llvm::Function *fn = llvm::GenXIntrinsic::getGenXDeclaration(
-            m->module, llvm::GenXIntrinsic::genx_svm_block_ld_unaligned, {retType, addr->getType()});
+            m->GetLLVMModule(), llvm::GenXIntrinsic::genx_svm_block_ld_unaligned, {retType, addr->getType()});
         llvm::Instruction *ld = llvm::CallInst::Create(fn, {addr}, "vectorized_ld", insertBefore);
 
         if (loadingPtr) {
@@ -5911,8 +5911,8 @@ char PromoteToPrivateMemoryPass::ID = 0;
 static bool lPromoteToPrivateMemory(llvm::CallInst *callInst) {
     struct MemInfo {
         MemInfo(const char *oname, const char *pname) {
-            originalFunc = m->module->getFunction(oname);
-            privateFunc = m->module->getFunction(pname);
+            originalFunc = m->GetFunction(oname);
+            privateFunc = m->GetFunction(pname);
             Assert(originalFunc != NULL && privateFunc != NULL);
         }
         llvm::Function *originalFunc;
@@ -6062,7 +6062,7 @@ restart:
                 llvm::Type *argTypes[] = {LLVMTypes::Int1VectorType, LLVMTypes::Int16VectorType};
                 // Description of parameters for genx_raw_send_noresult can be found in target-genx.ll
                 auto Fn = +llvm::GenXIntrinsic::getGenXDeclaration(
-                    m->module, llvm::GenXIntrinsic::genx_raw_send_noresult, argTypes);
+                    m->GetLLVMModule(), llvm::GenXIntrinsic::genx_raw_send_noresult, argTypes);
                 llvm::SmallVector<llvm::Value *, 8> Args;
                 Args.push_back(llvm::ConstantInt::get(LLVMTypes::Int32Type, 0));
                 Args.push_back(llvm::ConstantVector::getSplat(g->target->getNativeVectorWidth(),
@@ -6167,7 +6167,7 @@ bool ReplaceUnsupportedInsts::runOnBasicBlock(llvm::BasicBlock &bb) {
                     break;
                 }
                 if (name != "") {
-                    func = m->module->getFunction(name);
+                    func = m->GetFunction(name);
                     Assert(func != NULL && "ReplaceUnsupportedInsts: Can't find correct function!!!");
                     llvm::SmallVector<llvm::Value *, 8> args;
                     args.push_back(inst->getOperand(0));
@@ -6368,7 +6368,7 @@ llvm::Instruction *FixAddressSpace::processVectorLoad(llvm::LoadInst *LI) {
     Assert(retType->getPrimitiveSizeInBits());
 
     llvm::Value *svm_ld_ptrtoint = new llvm::PtrToIntInst(ptr, LLVMTypes::Int64Type, "svm_ld_ptrtoint", LI);
-    auto Fn = llvm::GenXIntrinsic::getGenXDeclaration(m->module, llvm::GenXIntrinsic::genx_svm_block_ld,
+    auto Fn = llvm::GenXIntrinsic::getGenXDeclaration(m->GetLLVMModule(), llvm::GenXIntrinsic::genx_svm_block_ld,
                                                       {retType, svm_ld_ptrtoint->getType()});
 
     llvm::Instruction *res = llvm::CallInst::Create(Fn, svm_ld_ptrtoint, LI->getName());
@@ -6407,7 +6407,7 @@ llvm::Instruction *FixAddressSpace::processVectorStore(llvm::StoreInst *SI) {
 
     llvm::Instruction *svm_st_zext = new llvm::PtrToIntInst(ptr, LLVMTypes::Int64Type, "svm_st_ptrtoint", SI);
     llvm::Type *argTypes[] = {svm_st_zext->getType(), valType};
-    auto Fn = llvm::GenXIntrinsic::getGenXDeclaration(m->module, llvm::GenXIntrinsic::genx_svm_block_st, argTypes);
+    auto Fn = llvm::GenXIntrinsic::getGenXDeclaration(m->GetLLVMModule(), llvm::GenXIntrinsic::genx_svm_block_st, argTypes);
 
     return llvm::CallInst::Create(Fn, {svm_st_zext, val}, "");
 }
@@ -6433,7 +6433,7 @@ llvm::Instruction *FixAddressSpace::createInt8WrRegion(llvm::Value *Val, llvm::V
     Tys[2] = Args[5]->getType(); // offset type
     Tys[3] = Args[7]->getType(); // mask type
 
-    auto WrReg = llvm::GenXIntrinsic::getGenXDeclaration(m->module, llvm::GenXIntrinsic::genx_wrregioni, Tys);
+    auto WrReg = llvm::GenXIntrinsic::getGenXDeclaration(m->GetLLVMModule(), llvm::GenXIntrinsic::genx_wrregioni, Tys);
 
     return llvm::CallInst::Create(WrReg, Args, "");
 }
@@ -6456,7 +6456,7 @@ llvm::Instruction *FixAddressSpace::createInt8RdRegion(llvm::Value *Val) {
     Tys[1] = Args[0]->getType();        // value type
     Tys[2] = Args[4]->getType();        // offset type
 
-    auto RdReg = llvm::GenXIntrinsic::getGenXDeclaration(m->module, llvm::GenXIntrinsic::genx_rdregioni, Tys);
+    auto RdReg = llvm::GenXIntrinsic::getGenXDeclaration(m->GetLLVMModule(), llvm::GenXIntrinsic::genx_rdregioni, Tys);
 
     return llvm::CallInst::Create(RdReg, Args, "svm_gather_rdreg");
 }
@@ -6513,7 +6513,7 @@ llvm::Instruction *FixAddressSpace::processGatherScatterPrivate(llvm::CallInst *
     }
 
     auto Fn = llvm::GenXIntrinsic::getGenXDeclaration(
-        m->module, IsGather ? llvm::GenXIntrinsic::genx_svm_gather : llvm::GenXIntrinsic::genx_svm_scatter, Tys);
+        m->GetLLVMModule(), IsGather ? llvm::GenXIntrinsic::genx_svm_gather : llvm::GenXIntrinsic::genx_svm_scatter, Tys);
     llvm::Instruction *res = llvm::CallInst::Create(Fn, Args, "");
 
     if (IsGather)

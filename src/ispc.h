@@ -40,6 +40,7 @@
 #include "ispc_version.h"
 #include "target_enums.h"
 #include "target_registry.h"
+#include "storage_class.h"
 
 #if ISPC_LLVM_VERSION < OLDEST_SUPPORTED_LLVM || ISPC_LLVM_VERSION > LATEST_SUPPORTED_LLVM
 #error "Only LLVM 8.0 - 11.0 and 12.0 development branch are supported"
@@ -69,10 +70,13 @@ struct SourcePos;
 
 class AST;
 class ASTNode;
+class Module;
 
 } // namespace ispc
 
 using ispc::SourcePos;
+using ispc::StorageClass;
+using ispc::Module;
 
 /** @def ISPC_MAX_NVEC maximum vector size of any of the compliation
     targets.
@@ -113,15 +117,12 @@ class Expr;
 class ExprList;
 class Function;
 class FunctionType;
-class Module;
 class PointerType;
 class Stmt;
 class Symbol;
 class SymbolTable;
 class Type;
 struct VariableDeclaration;
-
-enum StorageClass { SC_NONE, SC_EXTERN, SC_STATIC, SC_TYPEDEF, SC_EXTERN_C };
 
 /** @brief Structure that defines a compilation target
 
