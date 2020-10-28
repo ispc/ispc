@@ -545,6 +545,7 @@ def concatenate_test_results(R1, R2):
     return R
 
 def validation_run(only, only_targets, reference_branch, number, notify, update, speed_number, make, perf_llvm, time):
+    global return_status
     os.chdir(os.environ["ISPC_HOME"])
     if current_OS != "Windows":
         os.environ["PATH"] = os.environ["ISPC_HOME"] + ":" + os.environ["PATH"]
@@ -698,6 +699,7 @@ def validation_run(only, only_targets, reference_branch, number, notify, update,
                                 exc_type, exc_value, exc_traceback = sys.exc_info()
                                 traceback.print_tb(exc_traceback, file=sys.stderr)
                                 print_debug("ERROR: Exception in execute_stability: %s\n" % (sys.exc_info()[1]), False, stability_log)
+                                return_status = 1
                             print_version = 0
             for j in range(0,len(sde_targets)):
                 stability.target = sde_targets[j][1]
@@ -808,6 +810,7 @@ def validation_run(only, only_targets, reference_branch, number, notify, update,
         send_mail(msg_additional_info, msg)
 
 def send_mail(body_header, msg):
+    global return_status
     try:
         fp = open(os.environ["ISPC_HOME"] + os.sep + "notify_log.log", 'rb')
         f_lines = fp.readlines()
@@ -815,6 +818,7 @@ def send_mail(body_header, msg):
     except:
         body_header += "\nUnable to open notify_log.log: " + str(sys.exc_info()) + "\n"
         print_debug("Unable to open notify_log.log: " + str(sys.exc_info()) + "\n", False, stability_log)
+        return_status = 1
     
     body = "Hostname: " + common.get_host_name() + "\n\n"
 
@@ -840,6 +844,7 @@ def send_mail(body_header, msg):
 def Main():
     global current_OS
     global current_OS_version
+    global return_status
     current_OS_version = platform.release()
     if (platform.system() == 'Windows' or 'CYGWIN_NT' in platform.system()) == True:
         current_OS = "Windows"
@@ -850,7 +855,7 @@ def Main():
             current_OS = "Linux" 
     if (options.build_llvm == False and options.validation_run == False):
         parser.print_help()
-        exit(0)
+        exit(1)
 
     # set appropriate makefile target
     # gcc and g++ options are equal and added for ease of use 
@@ -858,7 +863,7 @@ def Main():
        options.ispc_build_compiler != "gcc":   
         error("unknow option for --ispc-build-compiler: " + options.ispc_build_compiler, 1)
         parser.print_help()
-        exit(0)
+        exit(1)
 
     if options.notify != "":
         # in case 'notify' option is used but build (in '-b' for example) failed we do not want to have trash in our message body
@@ -927,7 +932,7 @@ def Main():
             error("It's forbidden to run alloy two times in a second, logs are in ./logs", 1)
         os.rename(f_date, date_name)
         print_debug("Logs are in " + date_name + "\n", False, "")
-        exit(0)
+        exit(return_status)
 
 ###Main###
 from optparse import OptionParser
@@ -958,6 +963,7 @@ error = common.error
 take_lines = common.take_lines
 print_debug = common.print_debug
 make_sure_dir_exists = common.make_sure_dir_exists
+return_status = 0
 if __name__ == '__main__':
     # parsing options
     class MyParser(OptionParser):
