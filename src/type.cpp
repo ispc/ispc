@@ -762,7 +762,7 @@ llvm::DIType *EnumType::GetDIType(llvm::DIScope *scope) const {
     llvm::DIType *underlyingType = AtomicType::UniformInt32->GetDIType(scope);
     llvm::DIType *diType =
         m->GetDIBuilder()->createEnumerationType(diSpace, GetString(), diFile, pos.first_line, 32 /* size in bits */,
-                                            32 /* align in bits */, elementArray, underlyingType, name);
+                                                 32 /* align in bits */, elementArray, underlyingType, name);
     switch (variability.type) {
     case Variability::Uniform:
         return diType;
@@ -1848,15 +1848,15 @@ llvm::DIType *StructType::GetDIType(llvm::DIScope *scope) const {
     llvm::DIFile *diFile = pos.GetDIFile();
     llvm::DINamespace *diSpace = pos.GetDINamespace();
     return m->GetDIBuilder()->createStructType(diSpace, GetString(), diFile,
-                                          pos.first_line,          // Line number
-                                          layout->getSizeInBits(), // Size in bits
+                                               pos.first_line,          // Line number
+                                               layout->getSizeInBits(), // Size in bits
 #if ISPC_LLVM_VERSION <= ISPC_LLVM_9_0
-                                          layout->getAlignment() * 8, // Alignment in bits
-#else                                                                 // LLVM 10.0+
-                                          layout->getAlignment().value() * 8, // Alignment in bits
+                                               layout->getAlignment() * 8, // Alignment in bits
+#else                                                                      // LLVM 10.0+
+                                               layout->getAlignment().value() * 8, // Alignment in bits
 #endif
-                                          llvm::DINode::FlagZero, // Flags
-                                          NULL, elements);
+                                               llvm::DINode::FlagZero, // Flags
+                                               NULL, elements);
 }
 
 const Type *StructType::GetElementType(int i) const {
@@ -2028,11 +2028,11 @@ llvm::DIType *UndefinedStructType::GetDIType(llvm::DIScope *scope) const {
     llvm::DINamespace *diSpace = pos.GetDINamespace();
     llvm::DINodeArray elements;
     return m->GetDIBuilder()->createStructType(diSpace, GetString(), diFile,
-                                          pos.first_line,         // Line number
-                                          0,                      // Size
-                                          0,                      // Align
-                                          llvm::DINode::FlagZero, // Flags
-                                          NULL, elements);
+                                               pos.first_line,         // Line number
+                                               0,                      // Size
+                                               0,                      // Align
+                                               llvm::DINode::FlagZero, // Flags
+                                               NULL, elements);
 }
 
 ///////////////////////////////////////////////////////////////////////////

@@ -4,8 +4,8 @@
 #include "module.h"
 #include "util.h"
 
-#include <llvm/IR/DebugInfoMetadata.h>
 #include <llvm/IR/DIBuilder.h>
+#include <llvm/IR/DebugInfoMetadata.h>
 #include <llvm/IR/Module.h>
 
 namespace ispc {

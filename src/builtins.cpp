@@ -989,7 +989,8 @@ static void lDefineConstantIntFunc(const char *name, int val, llvm::Module *modu
 
 static void lDefineProgramIndex(llvm::Module *module, SymbolTable *symbolTable,
                                 std::vector<llvm::Constant *> &dbg_sym) {
-    Symbol *sym = new Symbol("programIndex", SourcePos(), AtomicType::VaryingInt32->GetAsConstType(), StorageClass::Static);
+    Symbol *sym =
+        new Symbol("programIndex", SourcePos(), AtomicType::VaryingInt32->GetAsConstType(), StorageClass::Static);
 
     int pi[ISPC_MAX_NVEC];
     for (int i = 0; i < g->target->getVectorWidth(); ++i)

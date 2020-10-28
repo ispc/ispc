@@ -4,12 +4,8 @@
 
 namespace ispc {
 
-Globals *getGlobals() {
-    return g;
-}
+Globals *getGlobals() { return g; }
 
-Module *getModule() {
-    return m;
-}
+Module *getModule() { return m; }
 
 } // namespace ispc

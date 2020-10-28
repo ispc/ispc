@@ -303,8 +303,8 @@ FunctionEmitContext::FunctionEmitContext(Function *func, Symbol *funSym, llvm::F
         llvm::Value *globalAllOnMaskPtr = m->GetLLVMModule()->getNamedGlobal("__all_on_mask");
         if (globalAllOnMaskPtr == NULL) {
             globalAllOnMaskPtr =
-                new llvm::GlobalVariable(*m->GetLLVMModule(), LLVMTypes::MaskType, false, llvm::GlobalValue::InternalLinkage,
-                                         LLVMMaskAllOn, "__all_on_mask");
+                new llvm::GlobalVariable(*m->GetLLVMModule(), LLVMTypes::MaskType, false,
+                                         llvm::GlobalValue::InternalLinkage, LLVMMaskAllOn, "__all_on_mask");
 
             char buf[256];
             snprintf(buf, sizeof(buf), "__off_all_on_mask_%s", g->target->GetISAString());
@@ -373,8 +373,8 @@ FunctionEmitContext::FunctionEmitContext(Function *func, Symbol *funSym, llvm::F
         if (isStatic)
             SPFlags |= llvm::DISubprogram::SPFlagLocalToUnit;
 
-        diSubprogram = m->GetDIBuilder()->createFunction(diSpace /* scope */, funSym->name, mangledName, diFile, firstLine,
-                                                    diSubprogramType_n, firstLine, flags, SPFlags);
+        diSubprogram = m->GetDIBuilder()->createFunction(diSpace /* scope */, funSym->name, mangledName, diFile,
+                                                         firstLine, diSubprogramType_n, firstLine, flags, SPFlags);
         llvmFunction->setSubprogram(diSubprogram);
 
         /* And start a scope representing the initial function scope */
@@ -1491,9 +1491,9 @@ void FunctionEmitContext::StartScope() {
         else
             parentScope = diSubprogram;
         lexicalBlock = m->GetDIBuilder()->createLexicalBlock(parentScope, diFile, currentPos.first_line,
-                                                        // Revision 216239 in LLVM removes support of DWARF
-                                                        // discriminator as the last argument
-                                                        currentPos.first_column);
+                                                             // Revision 216239 in LLVM removes support of DWARF
+                                                             // discriminator as the last argument
+                                                             currentPos.first_column);
         debugScopes.push_back(llvm::cast<llvm::DILexicalBlockBase>(lexicalBlock));
     }
 }
@@ -1522,8 +1522,8 @@ void FunctionEmitContext::EmitVariableDebugInfo(Symbol *sym) {
         scope, sym->name, sym->pos.GetDIFile(), sym->pos.first_line, diType, true /* preserve through opts */);
 
     llvm::Instruction *declareInst =
-        diBuilder->insertDeclare(sym->storagePtr, var,diBuilder->createExpression(),
-                                    llvm::DebugLoc::get(sym->pos.first_line, sym->pos.first_column, scope), bblock);
+        diBuilder->insertDeclare(sym->storagePtr, var, diBuilder->createExpression(),
+                                 llvm::DebugLoc::get(sym->pos.first_line, sym->pos.first_column, scope), bblock);
     AddDebugPos(declareInst, &sym->pos, scope);
 }
 
@@ -1538,11 +1538,11 @@ void FunctionEmitContext::EmitFunctionParameterDebugInfo(Symbol *sym, int argNum
     llvm::DIType *diType = sym->type->GetDIType(scope);
     llvm::DILocalVariable *var =
         diBuilder->createParameterVariable(scope, sym->name, argNum + 1, sym->pos.GetDIFile(), sym->pos.first_line,
-                                              diType, true /* preserve through opts */, flags);
+                                           diType, true /* preserve through opts */, flags);
 
     llvm::Instruction *declareInst =
         diBuilder->insertDeclare(sym->storagePtr, var, diBuilder->createExpression(),
-                                    llvm::DebugLoc::get(sym->pos.first_line, sym->pos.first_column, scope), bblock);
+                                 llvm::DebugLoc::get(sym->pos.first_line, sym->pos.first_column, scope), bblock);
     AddDebugPos(declareInst, &sym->pos, scope);
 }
 
@@ -3021,13 +3021,13 @@ void FunctionEmitContext::MemcpyInst(llvm::Value *dest, llvm::Value *src, llvm::
     if (align == NULL)
         align = LLVMInt32(1);
 #if ISPC_LLVM_VERSION <= ISPC_LLVM_8_0
-    llvm::Constant *mcFunc =
-        m->GetLLVMModule()->getOrInsertFunction("llvm.memcpy.p0i8.p0i8.i64", LLVMTypes::VoidType, LLVMTypes::VoidPointerType,
-                                       LLVMTypes::VoidPointerType, LLVMTypes::Int64Type, LLVMTypes::BoolType);
+    llvm::Constant *mcFunc = m->GetLLVMModule()->getOrInsertFunction(
+        "llvm.memcpy.p0i8.p0i8.i64", LLVMTypes::VoidType, LLVMTypes::VoidPointerType, LLVMTypes::VoidPointerType,
+        LLVMTypes::Int64Type, LLVMTypes::BoolType);
 #else // LLVM 9.0+
-    llvm::FunctionCallee mcFuncCallee =
-        m->GetLLVMModule()->getOrInsertFunction("llvm.memcpy.p0i8.p0i8.i64", LLVMTypes::VoidType, LLVMTypes::VoidPointerType,
-                                       LLVMTypes::VoidPointerType, LLVMTypes::Int64Type, LLVMTypes::BoolType);
+    llvm::FunctionCallee mcFuncCallee = m->GetLLVMModule()->getOrInsertFunction(
+        "llvm.memcpy.p0i8.p0i8.i64", LLVMTypes::VoidType, LLVMTypes::VoidPointerType, LLVMTypes::VoidPointerType,
+        LLVMTypes::Int64Type, LLVMTypes::BoolType);
     llvm::Constant *mcFunc = llvm::cast<llvm::Constant>(mcFuncCallee.getCallee());
 #endif
     AssertPos(currentPos, mcFunc != NULL);

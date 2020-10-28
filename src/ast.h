@@ -53,7 +53,6 @@ class ASTNode {
     const unsigned char SubclassID; // Subclass identifier (for isa/dyn_cast)
 
   public:
-
     ASTNode(SourcePos p, unsigned scid) : SubclassID(scid), pos(p) {}
 
     virtual ~ASTNode() {}
@@ -143,12 +142,9 @@ class ASTNode {
 
 class AST final {
   public:
-
     constexpr AST() noexcept {}
 
-    constexpr AST(AST &&other) noexcept : self(other.self) {
-        other.self = nullptr;
-    }
+    constexpr AST(AST &&other) noexcept : self(other.self) { other.self = nullptr; }
 
     ~AST();
 

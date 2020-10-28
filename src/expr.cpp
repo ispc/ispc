@@ -617,8 +617,8 @@ void InitSymbol(llvm::Value *ptr, const Type *symType, Expr *initExpr, FunctionE
             ctx->StoreInst(constValue, ptr, symType, symType->IsUniformType());
         else {
             llvm::Value *constPtr =
-                new llvm::GlobalVariable(*m->GetLLVMModule(), llvmType, true /* const */, llvm::GlobalValue::InternalLinkage,
-                                         constValue, "const_initializer");
+                new llvm::GlobalVariable(*m->GetLLVMModule(), llvmType, true /* const */,
+                                         llvm::GlobalValue::InternalLinkage, constValue, "const_initializer");
             llvm::Value *size = g->target->SizeOf(llvmType, ctx->GetCurrentBasicBlock());
             ctx->MemcpyInst(ptr, constPtr, size);
         }

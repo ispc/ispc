@@ -553,7 +553,8 @@ void Function::GenerateIR() {
                     functionName += std::string("_") + g->target->GetISAString();
                 }
 
-                llvm::Function *appFunction = llvm::Function::Create(ftype, linkage, functionName.c_str(), m->GetLLVMModule());
+                llvm::Function *appFunction =
+                    llvm::Function::Create(ftype, linkage, functionName.c_str(), m->GetLLVMModule());
                 appFunction->setDoesNotThrow();
                 g->target->markFuncWithCallingConv(appFunction);
 

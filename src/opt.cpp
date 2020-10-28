@@ -879,8 +879,7 @@ bool IntrinsicsOpt::runOnBasicBlock(llvm::BasicBlock &bb) {
             m->GetFunction(llvm::Intrinsic::getName(llvm::Intrinsic::x86_sse2_pmovmskb_128))) {
         maskInstructions.push_back(ssei8Movmsk);
     }
-    if (llvm::Function *sseFloatMovmsk =
-            m->GetFunction(llvm::Intrinsic::getName(llvm::Intrinsic::x86_sse_movmsk_ps))) {
+    if (llvm::Function *sseFloatMovmsk = m->GetFunction(llvm::Intrinsic::getName(llvm::Intrinsic::x86_sse_movmsk_ps))) {
         maskInstructions.push_back(sseFloatMovmsk);
     }
     if (llvm::Function *__movmsk = m->GetFunction("__movmsk")) {
@@ -892,8 +891,8 @@ bool IntrinsicsOpt::runOnBasicBlock(llvm::BasicBlock &bb) {
     }
 
     // And all of the blend instructions
-    blendInstructions.push_back(BlendInstruction(
-        m->GetFunction(llvm::Intrinsic::getName(llvm::Intrinsic::x86_sse41_blendvps)), 0xf, 0, 1, 2));
+    blendInstructions.push_back(
+        BlendInstruction(m->GetFunction(llvm::Intrinsic::getName(llvm::Intrinsic::x86_sse41_blendvps)), 0xf, 0, 1, 2));
     blendInstructions.push_back(BlendInstruction(
         m->GetFunction(llvm::Intrinsic::getName(llvm::Intrinsic::x86_avx_blendv_ps_256)), 0xff, 0, 1, 2));
 
@@ -2892,8 +2891,8 @@ static bool lImproveMaskedStore(llvm::CallInst *callInst) {
             llvm::Instruction *svm_st_zext =
                 new llvm::PtrToIntInst(lvalue, LLVMTypes::Int64Type, "svm_st_ptrtoint", callInst);
             llvm::Type *argTypes[] = {svm_st_zext->getType(), rvalue->getType()};
-            auto Fn =
-                llvm::GenXIntrinsic::getGenXDeclaration(m->GetLLVMModule(), llvm::GenXIntrinsic::genx_svm_block_st, argTypes);
+            auto Fn = llvm::GenXIntrinsic::getGenXDeclaration(m->GetLLVMModule(),
+                                                              llvm::GenXIntrinsic::genx_svm_block_st, argTypes);
             store = lCallInst(Fn, svm_st_zext, rvalue, "", NULL);
         } else if (!g->target->isGenXTarget() ||
                    (g->target->isGenXTarget() && GetAddressSpace(lvalue) == AddressSpace::Local))
@@ -2987,8 +2986,8 @@ static bool lImproveMaskedLoad(llvm::CallInst *callInst, llvm::BasicBlock::itera
             Assert(retType->getPrimitiveSizeInBits() / 8 <= 8 * OWORD);
             llvm::Value *svm_ld_ptrtoint =
                 new llvm::PtrToIntInst(ptr, LLVMTypes::Int64Type, "svm_ld_ptrtoint", callInst);
-            auto Fn = llvm::GenXIntrinsic::getGenXDeclaration(m->GetLLVMModule(), llvm::GenXIntrinsic::genx_svm_block_ld,
-                                                              {retType, svm_ld_ptrtoint->getType()});
+            auto Fn = llvm::GenXIntrinsic::getGenXDeclaration(
+                m->GetLLVMModule(), llvm::GenXIntrinsic::genx_svm_block_ld, {retType, svm_ld_ptrtoint->getType()});
 
             load = llvm::CallInst::Create(Fn, svm_ld_ptrtoint, callInst->getName());
         } else if (!g->target->isGenXTarget() ||
@@ -6407,7 +6406,8 @@ llvm::Instruction *FixAddressSpace::processVectorStore(llvm::StoreInst *SI) {
 
     llvm::Instruction *svm_st_zext = new llvm::PtrToIntInst(ptr, LLVMTypes::Int64Type, "svm_st_ptrtoint", SI);
     llvm::Type *argTypes[] = {svm_st_zext->getType(), valType};
-    auto Fn = llvm::GenXIntrinsic::getGenXDeclaration(m->GetLLVMModule(), llvm::GenXIntrinsic::genx_svm_block_st, argTypes);
+    auto Fn =
+        llvm::GenXIntrinsic::getGenXDeclaration(m->GetLLVMModule(), llvm::GenXIntrinsic::genx_svm_block_st, argTypes);
 
     return llvm::CallInst::Create(Fn, {svm_st_zext, val}, "");
 }
@@ -6513,7 +6513,8 @@ llvm::Instruction *FixAddressSpace::processGatherScatterPrivate(llvm::CallInst *
     }
 
     auto Fn = llvm::GenXIntrinsic::getGenXDeclaration(
-        m->GetLLVMModule(), IsGather ? llvm::GenXIntrinsic::genx_svm_gather : llvm::GenXIntrinsic::genx_svm_scatter, Tys);
+        m->GetLLVMModule(), IsGather ? llvm::GenXIntrinsic::genx_svm_gather : llvm::GenXIntrinsic::genx_svm_scatter,
+        Tys);
     llvm::Instruction *res = llvm::CallInst::Create(Fn, Args, "");
 
     if (IsGather)

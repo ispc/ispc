@@ -115,9 +115,8 @@ class Symbol {
 
 class SymbolTable final {
   public:
-
     SymbolTable();
-    SymbolTable(const SymbolTable&) = delete;
+    SymbolTable(const SymbolTable &) = delete;
     ~SymbolTable();
 
     /** The parser calls this method when it enters a new scope in the

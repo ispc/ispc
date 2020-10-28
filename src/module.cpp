@@ -138,8 +138,7 @@ void lStripUnusedDebugInfo(llvm::Module *module) { return; }
     This functions returns true and issues an error if are any illegal
     types are found and returns false otherwise.
 */
-bool lRecursiveCheckValidParamType(const Type *t, bool vectorOk, bool soaOk, const std::string &name,
-                                          SourcePos pos) {
+bool lRecursiveCheckValidParamType(const Type *t, bool vectorOk, bool soaOk, const std::string &name, SourcePos pos) {
     const StructType *st = CastType<StructType>(t);
     if (st != NULL) {
         for (int i = 0; i < st->GetElementCount(); ++i)
@@ -526,8 +525,7 @@ void lGetExportedTypes(const Type *type, std::vector<const StructType *> *export
 /** Given a set of functions, return the set of structure and vector types
     present in the parameters to them.
  */
-void lGetExportedParamTypes(const std::vector<Symbol *> &funcs,
-                            std::vector<const StructType *> *exportedStructTypes,
+void lGetExportedParamTypes(const std::vector<Symbol *> &funcs, std::vector<const StructType *> *exportedStructTypes,
                             std::vector<const EnumType *> *exportedEnumTypes,
                             std::vector<const VectorType *> *exportedVectorTypes) {
     for (unsigned int i = 0; i < funcs.size(); ++i) {
@@ -672,22 +670,19 @@ struct DispatchHeaderInfo;
 
 class Module::Impl final {
   public:
-
     Impl(const char *fn);
 
     void AddGlobalVariable(const std::string &name, const Type *type, Expr *initExpr, bool isConst,
-                          StorageClass storageClass, SourcePos pos);
+                           StorageClass storageClass, SourcePos pos);
 
-    void AddFunctionDeclaration(const std::string &name, const FunctionType *functionType,
-                                StorageClass storageClass, bool isInline, bool isNoInline, bool isVectorCall,
-                                SourcePos pos);
+    void AddFunctionDeclaration(const std::string &name, const FunctionType *functionType, StorageClass storageClass,
+                                bool isInline, bool isNoInline, bool isVectorCall, SourcePos pos);
 
     void AddFunctionDefinition(const std::string &name, const FunctionType *type, Stmt *code);
 
     int CompileFile();
 
   private:
-
     friend Module;
 
     const char *filename = "(unknown)";
@@ -1208,7 +1203,8 @@ void Module::Impl::AddGlobalVariable(const std::string &name, const Type *type, 
 
         // If the type doesn't match with the previous one, issue an error.
         if (!Type::Equal(sym->type, type) ||
-            (sym->storageClass != StorageClass::Extern && sym->storageClass != StorageClass::ExternC && sym->storageClass != storageClass)) {
+            (sym->storageClass != StorageClass::Extern && sym->storageClass != StorageClass::ExternC &&
+             sym->storageClass != storageClass)) {
             Error(pos,
                   "Definition of variable \"%s\" conflicts with "
                   "definition at %s:%d.",
@@ -1220,7 +1216,8 @@ void Module::Impl::AddGlobalVariable(const std::string &name, const Type *type, 
         Assert(gv != NULL);
 
         // And issue an error if this is a redefinition of a variable
-        if (gv->hasInitializer() && sym->storageClass != StorageClass::Extern && sym->storageClass != StorageClass::ExternC) {
+        if (gv->hasInitializer() && sym->storageClass != StorageClass::Extern &&
+            sym->storageClass != StorageClass::ExternC) {
             Error(pos,
                   "Redefinition of variable \"%s\" is illegal. "
                   "(Previous definition at %s:%d.)",
@@ -1238,8 +1235,9 @@ void Module::Impl::AddGlobalVariable(const std::string &name, const Type *type, 
     }
     sym->constValue = constValue;
 
-    llvm::GlobalValue::LinkageTypes linkage =
-        (sym->storageClass == StorageClass::Static) ? llvm::GlobalValue::InternalLinkage : llvm::GlobalValue::ExternalLinkage;
+    llvm::GlobalValue::LinkageTypes linkage = (sym->storageClass == StorageClass::Static)
+                                                  ? llvm::GlobalValue::InternalLinkage
+                                                  : llvm::GlobalValue::ExternalLinkage;
 
     // Note that the NULL llvmInitializer is what leads to "extern"
     // declarations coming up extern and not defining storage (a bit
@@ -1261,7 +1259,8 @@ void Module::Impl::AddGlobalVariable(const std::string &name, const Type *type, 
         llvm::GlobalVariable *sym_GV_storagePtr = llvm::dyn_cast<llvm::GlobalVariable>(sym->storagePtr);
         Assert(sym_GV_storagePtr);
         llvm::DIGlobalVariableExpression *var = diBuilder->createGlobalVariableExpression(
-            diSpace, name, name, file, pos.first_line, sym->type->GetDIType(diSpace), (sym->storageClass == StorageClass::Static));
+            diSpace, name, name, file, pos.first_line, sym->type->GetDIType(diSpace),
+            (sym->storageClass == StorageClass::Static));
         sym_GV_storagePtr->addDebugInfo(var);
         /*#if ISPC_LLVM_VERSION <= ISPC_LLVM_3_6
                 Assert(var.Verify());
@@ -1508,8 +1507,8 @@ bool Module::Impl::writeObjectFileOrAssembly(OutputType outputType, const char *
     return writeObjectFileOrAssembly(targetMachine, module.get(), outputType, outFileName);
 }
 
-bool Module::Impl::writeObjectFileOrAssembly(llvm::TargetMachine *targetMachine, llvm::Module *module, OutputType outputType,
-                                       const char *outFileName) {
+bool Module::Impl::writeObjectFileOrAssembly(llvm::TargetMachine *targetMachine, llvm::Module *module,
+                                             OutputType outputType, const char *outFileName) {
     // Figure out if we're generating object file or assembly output, and
     // set binary output for object files
 #if ISPC_LLVM_VERSION <= ISPC_LLVM_9_0
@@ -2216,54 +2215,32 @@ void Module::Impl::execPreprocessor(const char *infilename, llvm::raw_string_ost
     diagPrinter->EndSourceFile();
 }
 
-Module::Module(const char *fn) : self(new Impl(fn)) {
-
-}
+Module::Module(const char *fn) : self(new Impl(fn)) {}
 
 Module::~Module() {
     delete self;
     self = nullptr;
 }
 
-llvm::DIBuilder *Module::GetDIBuilder() noexcept {
-    return self->diBuilder;
-}
+llvm::DIBuilder *Module::GetDIBuilder() noexcept { return self->diBuilder; }
 
-llvm::DICompileUnit *Module::GetDICompileUnit() noexcept {
-    return self->diCompileUnit;
-}
+llvm::DICompileUnit *Module::GetDICompileUnit() noexcept { return self->diCompileUnit; }
 
-llvm::Function *Module::GetFunction(const llvm::StringRef &name) const {
-    return self->module->getFunction(name);
-}
+llvm::Function *Module::GetFunction(const llvm::StringRef &name) const { return self->module->getFunction(name); }
 
-llvm::Module *Module::GetLLVMModule() const noexcept {
-    return self->module.get();
-}
+llvm::Module *Module::GetLLVMModule() const noexcept { return self->module.get(); }
 
-SymbolTable &Module::GetSymbolTable() noexcept {
-    return *self->symbolTable;
-}
+SymbolTable &Module::GetSymbolTable() noexcept { return *self->symbolTable; }
 
-const SymbolTable &Module::GetSymbolTable() const noexcept {
-    return *self->symbolTable;
-}
+const SymbolTable &Module::GetSymbolTable() const noexcept { return *self->symbolTable; }
 
-bool Module::HasErrors() const noexcept {
-    return self->errorCount > 0;
-}
+bool Module::HasErrors() const noexcept { return self->errorCount > 0; }
 
-void Module::IncreaseErrorCount(int n) noexcept {
-    self->errorCount += n;
-}
+void Module::IncreaseErrorCount(int n) noexcept { self->errorCount += n; }
 
-bool Module::IsErrorCountWithin(int n) const noexcept {
-    return self->errorCount < n;
-}
+bool Module::IsErrorCountWithin(int n) const noexcept { return self->errorCount < n; }
 
-int Module::CompileFile() {
-    return self->CompileFile();
-}
+int Module::CompileFile() { return self->CompileFile(); }
 
 void Module::AddTypeDef(const std::string &name, const Type *type, SourcePos pos) {
     // Typedefs are easy; just add the mapping between the given name and
@@ -2355,7 +2332,7 @@ struct FunctionTargetVariants {
 // Given the symbol table for a module, return a map from function names to
 // FunctionTargetVariants for each function that was defined with the
 // 'export' qualifier in ispc.
-static void lGetExportedFunctions(SymbolTable& symbolTable, std::map<std::string, FunctionTargetVariants> &functions) {
+static void lGetExportedFunctions(SymbolTable &symbolTable, std::map<std::string, FunctionTargetVariants> &functions) {
     std::vector<Symbol *> syms;
     symbolTable.GetMatchingFunctions(lSymbolIsExported, &syms);
     for (auto *sym : syms) {

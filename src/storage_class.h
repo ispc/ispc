@@ -2,13 +2,7 @@
 
 namespace ispc {
 
-enum class StorageClass {
-    None,
-    Extern,
-    Static,
-    Typedef,
-    ExternC
-};
+enum class StorageClass { None, Extern, Static, Typedef, ExternC };
 
 constexpr const char *ToString(StorageClass sc) noexcept {
     switch (sc) {

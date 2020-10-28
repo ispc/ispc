@@ -38,8 +38,8 @@
 #include "target_enums.h"
 
 #include "ispc.h"
-#include "util.h"
 #include "source_pos.h"
+#include "util.h"
 
 #include <cstring>
 
