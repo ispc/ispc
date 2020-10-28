@@ -40,7 +40,7 @@
 #include "ispc.h"
 #include "source_pos.h"
 
-#include <vector>
+namespace ispc {
 
 /** @brief Abstract base class for nodes in the abstract syntax tree (AST).
 
@@ -49,10 +49,14 @@
     (Expr) and statements (Stmt) inherit from this class.
 */
 class ASTNode {
+
     const unsigned char SubclassID; // Subclass identifier (for isa/dyn_cast)
+
   public:
+
     ASTNode(SourcePos p, unsigned scid) : SubclassID(scid), pos(p) {}
-    virtual ~ASTNode();
+
+    virtual ~ASTNode() {}
 
     /** The Optimize() method should perform any appropriate early-stage
         optimizations on the node (e.g. constant folding).  This method
@@ -137,8 +141,17 @@ class ASTNode {
     static inline bool classof(ASTNode const *) { return true; }
 };
 
-class AST {
+class AST final {
   public:
+
+    constexpr AST() noexcept {}
+
+    constexpr AST(AST &&other) noexcept : self(other.self) {
+        other.self = nullptr;
+    }
+
+    ~AST();
+
     /** Add the AST for a function described by the given declaration
         information and source code. */
     void AddFunction(Symbol *sym, Stmt *code);
@@ -148,8 +161,14 @@ class AST {
     void GenerateIR();
 
   private:
-    std::vector<Function *> functions;
+    class Impl;
+    /** A pointer to the implementation data. */
+    Impl *self = nullptr;
 };
+
+} // namespace ispc
+
+using namespace ispc;
 
 /** Callback function type for preorder traversial visiting function for
     the AST walk.

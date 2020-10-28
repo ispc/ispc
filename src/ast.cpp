@@ -44,24 +44,35 @@
 #include "sym.h"
 #include "util.h"
 
-///////////////////////////////////////////////////////////////////////////
-// ASTNode
+namespace ispc {
 
-ASTNode::~ASTNode() {}
+class AST::Impl final {
+    friend AST;
+    std::vector<std::unique_ptr<Function>> functions;
+};
 
-///////////////////////////////////////////////////////////////////////////
-// AST
+AST::~AST() {
+    delete self;
+    self = nullptr;
+}
 
 void AST::AddFunction(Symbol *sym, Stmt *code) {
-    if (sym == NULL)
+
+    if (!sym)
         return;
-    functions.push_back(new Function(sym, code));
+
+    if (!self)
+        self = new Impl;
+
+    self->functions.emplace_back(new Function(sym, code));
 }
 
 void AST::GenerateIR() {
-    for (unsigned int i = 0; i < functions.size(); ++i)
-        functions[i]->GenerateIR();
+    for (auto &func : self->functions)
+        func->GenerateIR();
 }
+
+} // namespace ispc
 
 ///////////////////////////////////////////////////////////////////////////
 

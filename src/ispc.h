@@ -67,6 +67,9 @@ namespace ispc {
 
 struct SourcePos;
 
+class AST;
+class ASTNode;
+
 } // namespace ispc
 
 using ispc::SourcePos;
@@ -104,8 +107,6 @@ class DIScope;
 } // namespace llvm
 
 class ArrayType;
-class AST;
-class ASTNode;
 class AtomicType;
 class FunctionEmitContext;
 class Expr;

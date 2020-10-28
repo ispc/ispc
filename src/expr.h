@@ -41,6 +41,8 @@
 #include "ispc.h"
 #include "type.h"
 
+using ispc::ASTNode;
+
 /** @brief Expr is the abstract base class that defines the interface that
     all expression types must implement.
  */

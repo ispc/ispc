@@ -47,6 +47,8 @@
 #include <llvm/IR/InstrTypes.h>
 #include <llvm/IR/Instructions.h>
 
+using ispc::ASTNode;
+
 struct CFInfo;
 
 /** FunctionEmitContext is one of the key classes in ispc; it is used to
