@@ -1,4 +1,6 @@
-
+// rule: skip on arch=genx32
+// rule: skip on arch=genx64
+// currently cos/sin/pow/sincos is very slow on gen so skip it
 bool ok(double x, double ref) { return (abs(x - ref) < 1e-6) || abs((x-ref)/ref) < 1e-4; }
 
 export void f_v(uniform float RET[]) {
