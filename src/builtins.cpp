@@ -310,7 +310,11 @@ static void lUpdateIntrinsicsAttributes(llvm::Module *module) {
 #ifdef ISPC_XE_ENABLED
     for (auto F = module->begin(), E = module->end(); F != E; ++F) {
         llvm::Function *Fn = &*F;
-
+        // WA for isGenXIntrinsic(Fn) and getGenXIntrinsicID(Fn)
+        // There are crashes if intrinsics is not supported on some platforms
+        if (Fn && Fn->getName().contains("prefetch")) {
+            continue;
+        }
         if (Fn && llvm::GenXIntrinsic::isGenXIntrinsic(Fn)) {
             Fn->setAttributes(
                 llvm::GenXIntrinsic::getAttributes(Fn->getContext(), llvm::GenXIntrinsic::getGenXIntrinsicID(Fn)));
@@ -630,6 +634,10 @@ static void lSetInternalFunctions(llvm::Module *module) {
         "__prefetch_write_uniform_1",
         "__prefetch_write_uniform_2",
         "__prefetch_write_uniform_3",
+        "__prefetch_read_sized_uniform_1",
+        "__prefetch_read_sized_uniform_2",
+        "__prefetch_read_sized_uniform_3",
+        "__prefetch_read_sized_uniform_nt",
         "__pseudo_prefetch_read_varying_1",
         "__pseudo_prefetch_read_varying_2",
         "__pseudo_prefetch_read_varying_3",
@@ -637,6 +645,10 @@ static void lSetInternalFunctions(llvm::Module *module) {
         "__pseudo_prefetch_write_varying_1",
         "__pseudo_prefetch_write_varying_2",
         "__pseudo_prefetch_write_varying_3",
+        "__prefetch_read_sized_varying_1",
+        "__prefetch_read_sized_varying_2",
+        "__prefetch_read_sized_varying_3",
+        "__prefetch_read_sized_varying_nt",
         "__psubs_ui8",
         "__psubs_ui16",
         "__psubs_ui32",
