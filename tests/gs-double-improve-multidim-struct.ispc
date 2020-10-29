@@ -1,3 +1,5 @@
+// rule: skip on cpu=TGLLP
+
 struct Foo {
     uniform double udx[5][5];
 };

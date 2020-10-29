@@ -1,3 +1,5 @@
+// rule: skip on cpu=TGLLP
+
 struct Point { double x; float y[3], z; };
 
 export void f_fu(uniform float RET[], uniform float aFOO[], uniform float b) {

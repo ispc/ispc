@@ -1,3 +1,5 @@
+// rule: skip on cpu=TGLLP
+
 #define SIZE TARGET_WIDTH
 
 struct Foo {

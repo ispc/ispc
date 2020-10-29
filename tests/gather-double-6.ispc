@@ -1,3 +1,5 @@
+// rule: skip on cpu=TGLLP
+
 int64 zero = 0;
 void *gptr;
 

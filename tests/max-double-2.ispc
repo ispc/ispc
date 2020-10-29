@@ -1,3 +1,5 @@
+// rule: skip on cpu=TGLLP
+
 export void f_du(uniform float RET[], uniform double aFOO[], uniform double b) {
     double a = aFOO[programIndex];
     RET[programIndex] = max(-10 * (a-3), (double).1f);

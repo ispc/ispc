@@ -1,3 +1,5 @@
+// rule: skip on cpu=TGLLP
+
 export void f_fu(uniform float RET[], uniform float aFOO[], uniform float b) {
     float v = aFOO[programIndex];
     uniform float m;

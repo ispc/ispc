@@ -1,3 +1,5 @@
+// rule: skip on cpu=TGLLP
+
 export void f_f(uniform float RET[], uniform float aFOO[]) {
     #pragma ignore warning(perf)
     double x = aFOO[programIndex&0x3]*1d100;

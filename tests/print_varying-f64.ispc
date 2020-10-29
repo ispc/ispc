@@ -1,3 +1,5 @@
+// rule: skip on cpu=TGLLP
+
 export void print_f(uniform float aFOO[]) {
     double a = aFOO[programIndex];
     int intA = a;
