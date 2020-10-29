@@ -1681,23 +1681,46 @@ define i64 @__count_leading_zeros_i64(i64) nounwind readnone alwaysinline {
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; prefetching
 
+;; 0x0: default (.df)
+;; 0x1: uncached (.uc)
+;; 0x2: cached (.ca)
+
+;;  L1    L3
+;; .uc   .ca   loads    bypass L1 / cache in L3
+;; .ca   .uc   loads    cache in L1 / bypass L3
+
 define(`define_prefetches', `
 declare void @llvm.prefetch(i8* nocapture %ptr, i32 %readwrite, i32 %locality,
                             i32 %cachetype) ; cachetype == 1 is dcache
 
-define void @__prefetch_read_uniform_1(i8 *) alwaysinline {
+declare void @llvm.genx.lsc.prefetch.stateless.i1.i64(i1, i8, i8, i8, i16, i32, i8, i8, i8, i8, i64, i32)
+define void @__prefetch_read_sized_uniform_1(i8 *, i8) alwaysinline {
+  %bitptr = bitcast i8* %0 to i64*
+  %ptr64 = ptrtoint i64* %bitptr to i64
+  call void @llvm.genx.lsc.prefetch.stateless.i1.i64(i1 true, i8 0, i8 2, i8 1, i16 1, i32 0, i8 %1, i8 1, i8 1, i8 0, i64 %ptr64, i32 0)
   ret void
 }
 
-define void @__prefetch_read_uniform_2(i8 *) alwaysinline {
+;; On GPU L2 is mapped to L3
+define void @__prefetch_read_sized_uniform_2(i8 *, i8) alwaysinline {
+  %bitptr = bitcast i8* %0 to i64*
+  %ptr64 = ptrtoint i64* %bitptr to i64
+  call void @llvm.genx.lsc.prefetch.stateless.i1.i64(i1 true, i8 0, i8 1, i8 2, i16 1, i32 0, i8 %1, i8 1, i8 1, i8 0, i64 %ptr64, i32 0)
   ret void
 }
 
-define void @__prefetch_read_uniform_3(i8 *) alwaysinline {
+define void @__prefetch_read_sized_uniform_3(i8 *, i8) alwaysinline {
+  %bitptr = bitcast i8* %0 to i64*
+  %ptr64 = ptrtoint i64* %bitptr to i64
+  call void @llvm.genx.lsc.prefetch.stateless.i1.i64(i1 true, i8 0, i8 1, i8 2, i16 1, i32 0, i8 %1, i8 1, i8 1, i8 0, i64 %ptr64, i32 0)
   ret void
 }
 
-define void @__prefetch_read_uniform_nt(i8 *) alwaysinline {
+;; On GPU nt is mapped to L1
+define void @__prefetch_read_sized_uniform_nt(i8 *, i8) alwaysinline {
+  %bitptr = bitcast i8* %0 to i64*
+  %ptr64 = ptrtoint i64* %bitptr to i64
+  call void @llvm.genx.lsc.prefetch.stateless.i1.i64(i1 true, i8 0, i8 6, i8 2, i16 1, i32 0, i8 %1, i8 1, i8 1, i8 0, i64 %ptr64, i32 0)
   ret void
 }
 
@@ -1714,25 +1737,30 @@ define void @__prefetch_write_uniform_3(i8 *) alwaysinline {
   ret void
 }
 
-define void @__prefetch_read_varying_1(<WIDTH x i64>, <WIDTH x MASK>) alwaysinline {
+declare void @llvm.genx.lsc.prefetch.stateless.XE_SUFFIX(i1).XE_SUFFIX(i64)(<WIDTH x MASK>, i8, i8, i8, i16, i32, i8, i8, i8, i8, <WIDTH x i64>, i32)
+define void @__prefetch_read_sized_varying_1(<WIDTH x i64> %addr, i8 %datasize, <WIDTH x MASK> %mask) alwaysinline {
+  call void @llvm.genx.lsc.prefetch.stateless.XE_SUFFIX(i1).XE_SUFFIX(i64)(<WIDTH x MASK> %mask, i8 0, i8 2, i8 1, i16 1, i32 0, i8 %datasize, i8 1, i8 1, i8 0, <WIDTH x i64> %addr, i32 0)
   ret void
 }
 
 declare void @__prefetch_read_varying_1_native(i8 * %base, i32 %scale, <WIDTH x i32> %offsets, <WIDTH x MASK> %mask) nounwind
 
-define void @__prefetch_read_varying_2(<WIDTH x i64>, <WIDTH x MASK>) alwaysinline {
+define void @__prefetch_read_sized_varying_2(<WIDTH x i64> %addr, i8 %datasize, <WIDTH x MASK> %mask) alwaysinline {
+  call void @llvm.genx.lsc.prefetch.stateless.XE_SUFFIX(i1).XE_SUFFIX(i64)(<WIDTH x MASK> %mask, i8 0, i8 1, i8 2, i16 1, i32 0, i8 %datasize, i8 1, i8 1, i8 0, <WIDTH x i64> %addr, i32 0)
   ret void
 }
 
 declare void @__prefetch_read_varying_2_native(i8 * %base, i32 %scale, <WIDTH x i32> %offsets, <WIDTH x MASK> %mask) nounwind
 
-define void @__prefetch_read_varying_3(<WIDTH x i64>, <WIDTH x MASK>) alwaysinline {
+define void @__prefetch_read_sized_varying_3(<WIDTH x i64> %addr, i8 %datasize, <WIDTH x MASK> %mask) alwaysinline {
+  call void @llvm.genx.lsc.prefetch.stateless.XE_SUFFIX(i1).XE_SUFFIX(i64)(<WIDTH x MASK> %mask, i8 0, i8 1, i8 2, i16 1, i32 0, i8 %datasize, i8 1, i8 1, i8 0, <WIDTH x i64> %addr, i32 0)
   ret void
 }
 
 declare void @__prefetch_read_varying_3_native(i8 * %base, i32 %scale, <WIDTH x i32> %offsets, <WIDTH x MASK> %mask) nounwind
 
-define void @__prefetch_read_varying_nt(<WIDTH x i64>, <WIDTH x MASK>) alwaysinline {
+define void @__prefetch_read_sized_varying_nt(<WIDTH x i64> %addr, i8 %datasize, <WIDTH x MASK> %mask) alwaysinline {
+  call void @llvm.genx.lsc.prefetch.stateless.XE_SUFFIX(i1).XE_SUFFIX(i64)(<WIDTH x MASK> %mask, i8 0, i8 6, i8 2, i16 1, i32 0, i8 %datasize, i8 1, i8 1, i8 0, <WIDTH x i64> %addr, i32 0)
   ret void
 }
 
@@ -1753,6 +1781,39 @@ define void @__prefetch_write_varying_3(<WIDTH x i64> %addr, <WIDTH x MASK> %mas
   ret void
 }
 declare void @__prefetch_write_varying_3_native(i8 * %base, i32 %scale, <WIDTH x i32> %offsets, <WIDTH x MASK> %mask) nounwind
+
+define void @__prefetch_read_uniform_1(i8 *) alwaysinline {
+  ret void
+}
+
+define void @__prefetch_read_uniform_2(i8 *) alwaysinline {
+  ret void
+}
+
+define void @__prefetch_read_uniform_3(i8 *) alwaysinline {
+  ret void
+}
+
+define void @__prefetch_read_uniform_nt(i8 *) alwaysinline {
+  ret void
+}
+
+define void @__prefetch_read_varying_1(<WIDTH x i64>, <WIDTH x MASK>) alwaysinline {
+  ret void
+}
+
+define void @__prefetch_read_varying_2(<WIDTH x i64>, <WIDTH x MASK>) alwaysinline {
+  ret void
+}
+
+define void @__prefetch_read_varying_3(<WIDTH x i64>, <WIDTH x MASK>) alwaysinline {
+  ret void
+}
+
+define void @__prefetch_read_varying_nt(<WIDTH x i64>, <WIDTH x MASK>) alwaysinline {
+  ret void
+}
+
 ')
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

@@ -2529,6 +2529,16 @@ define void @__prefetch_write_varying_3(<WIDTH x i64> %addr, <WIDTH x MASK> %mas
 }
 
 declare void @__prefetch_write_varying_3_native(i8 * %base, i32 %scale, <WIDTH x i32> %offsets, <WIDTH x MASK> %mask) nounwind
+
+declare void @__prefetch_read_sized_uniform_1(i8 *, i8)
+declare void @__prefetch_read_sized_uniform_2(i8 *, i8)
+declare void @__prefetch_read_sized_uniform_3(i8 *, i8)
+declare void @__prefetch_read_sized_uniform_nt(i8 *, i8)
+
+declare void @__prefetch_read_sized_varying_1(<WIDTH x i64>, i8, <WIDTH x MASK>)
+declare void @__prefetch_read_sized_varying_2(<WIDTH x i64>, i8, <WIDTH x MASK>)
+declare void @__prefetch_read_sized_varying_3(<WIDTH x i64>, i8, <WIDTH x MASK>)
+declare void @__prefetch_read_sized_varying_nt(<WIDTH x i64>, i8, <WIDTH x MASK>)
 ')
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
