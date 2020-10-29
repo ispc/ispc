@@ -1,7 +1,7 @@
 #define TEST_SIMD
 
 export void print_f(uniform float aFOO[]) {
-    double a = aFOO[programIndex];
+    float a = aFOO[programIndex];
     int intA = a;
 
     if (intA % 2 == 0)
