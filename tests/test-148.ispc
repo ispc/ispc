@@ -1,3 +1,5 @@
+// rule: skip on cpu=TGLLP
+
 export void f_f(uniform float RET[], uniform float aFOO[]) {
     double x = aFOO[programIndex]*1d100;
     double d, invsqrt = rsqrt(x);

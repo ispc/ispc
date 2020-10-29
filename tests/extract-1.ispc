@@ -1,5 +1,5 @@
 export void f_f(uniform float RET[], uniform float aFOO[]) {
-    double a = programIndex;
+    float a = programIndex;
     RET[programIndex] = extract(a, min(programCount-1, 3)); 
 }
 

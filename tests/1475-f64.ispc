@@ -1,3 +1,5 @@
+// rule: skip on cpu=TGLLP
+
 // Testing double implementation of varying * varying
 void tests_double(uniform float RET[]) {
     varying double p_foo[programCount];

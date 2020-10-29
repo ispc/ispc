@@ -1,3 +1,5 @@
+// rule: skip on cpu=TGLLP
+
 bool ok(double x, double ref) { return (abs(x - ref) < 1d-15) || abs((x-ref)/ref) < 1d-14; }
 
 export void f_f(uniform float RET[], uniform float aFOO[]) {

@@ -1,3 +1,5 @@
+// rule: skip on cpu=TGLLP
+
 static double double4(uniform double a, uniform double b, uniform double c, 
                     uniform double d) {
     double ret = 0;

@@ -1,3 +1,5 @@
+// rule: skip on cpu=TGLLP
+
 export void f_f(uniform float RET[], uniform float aFOO[]) {
     RET[programIndex] = exclusive_scan_add((double)aFOO[programIndex]);
 }

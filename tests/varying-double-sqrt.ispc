@@ -1,3 +1,5 @@
+// rule: skip on cpu=TGLLP
+
 export void f_f(uniform float RET[], uniform float aFOO[]) {
     varying double f = programIndex;
     varying double calc = sqrt(f) * sqrt(f) - programIndex;

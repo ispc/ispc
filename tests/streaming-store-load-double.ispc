@@ -1,3 +1,5 @@
+// rule: skip on cpu=TGLLP
+
 void var_store(uniform double a[], varying float x) {
     streaming_store(a, x);
 }

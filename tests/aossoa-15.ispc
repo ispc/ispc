@@ -1,3 +1,5 @@
+// rule: skip on cpu=TGLLP
+
 export void f_v(uniform float RET[]) {
 #define width 3ul
 #define maxProgramCount 64ul

@@ -1,3 +1,5 @@
+// rule: skip on cpu=TGLLP
+
 int64 zero = 0;
 
 export void f_f(uniform float RET[], uniform float aFOO[]) {
