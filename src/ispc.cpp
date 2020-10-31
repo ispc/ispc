@@ -369,6 +369,7 @@ class AllCPUs {
 #ifdef ISPC_GENX_ENABLED
         names[CPU_GENX].push_back("SKL");
         names[CPU_GENX_TGLLP].push_back("TGLLP");
+        names[CPU_GENX_TGLLP].push_back("DG1");
 #endif
 
         Assert(names.size() == sizeofCPUtype);
