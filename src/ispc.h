@@ -252,7 +252,7 @@ class Target {
     }
 
 #ifdef ISPC_GENX_ENABLED
-    GENX_PLATFORM getGenxPlatform() const { return m_genxPlatform; }
+    GENX_PLATFORM getGenxPlatform() const;
     uint32_t getGenxGrfSize() const;
     bool hasGenxPrefetch() const;
 #endif
@@ -319,9 +319,6 @@ class Target {
 
     /** Instruction set being compiled to. */
     ISA m_isa;
-#ifdef ISPC_GENX_ENABLED
-    GENX_PLATFORM m_genxPlatform;
-#endif
 
     /** Target system architecture.  (e.g. "x86-64", "x86"). */
     Arch m_arch;

@@ -457,14 +457,10 @@ class AllCPUs {
 
 Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, bool pic, bool printTarget)
     : m_target(NULL), m_targetMachine(NULL), m_dataLayout(NULL), m_valid(false), m_ispc_target(ispc_target),
-      m_isa(SSE2),
-#ifdef ISPC_GENX_ENABLED
-      m_genxPlatform(GENX_GEN9),
-#endif
-      m_arch(Arch::none), m_is32Bit(true), m_cpu(""), m_attributes(""), m_tf_attributes(NULL), m_nativeVectorWidth(-1),
-      m_nativeVectorAlignment(-1), m_dataTypeWidth(-1), m_vectorWidth(-1), m_generatePIC(pic), m_maskingIsFree(false),
-      m_maskBitCount(-1), m_hasHalf(false), m_hasRand(false), m_hasGather(false), m_hasScatter(false),
-      m_hasTranscendentals(false), m_hasTrigonometry(false), m_hasRsqrtd(false), m_hasRcpd(false),
+      m_isa(SSE2), m_arch(Arch::none), m_is32Bit(true), m_cpu(""), m_attributes(""), m_tf_attributes(NULL),
+      m_nativeVectorWidth(-1), m_nativeVectorAlignment(-1), m_dataTypeWidth(-1), m_vectorWidth(-1), m_generatePIC(pic),
+      m_maskingIsFree(false), m_maskBitCount(-1), m_hasHalf(false), m_hasRand(false), m_hasGather(false),
+      m_hasScatter(false), m_hasTranscendentals(false), m_hasTrigonometry(false), m_hasRsqrtd(false), m_hasRcpd(false),
       m_hasVecPrefetch(false), m_hasSaturatingArithmetic(false), m_hasFp64Support(true) {
     CPUtype CPUID = CPU_None, CPUfromISA = CPU_None;
     AllCPUs a;
@@ -510,11 +506,9 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, bool pic, boo
 #ifdef ISPC_GENX_ENABLED
         case CPU_GENX:
             m_ispc_target = ISPCTarget::genx_x16;
-            m_genxPlatform = GENX_PLATFORM::GENX_GEN9;
             break;
         case CPU_GENX_TGLLP:
             m_ispc_target = ISPCTarget::genx_x16;
-            m_genxPlatform = GENX_PLATFORM::GENX_TGLLP;
             break;
 #endif
 
@@ -1001,7 +995,6 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, bool pic, boo
 #ifdef ISPC_GENX_ENABLED
     case ISPCTarget::genx_x8:
         this->m_isa = Target::GENX;
-        this->m_genxPlatform = Target::GENX_GEN9;
         this->m_nativeVectorWidth = 8;
         this->m_nativeVectorAlignment = 64;
         this->m_vectorWidth = 8;
@@ -1017,7 +1010,6 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, bool pic, boo
         break;
     case ISPCTarget::genx_x16:
         this->m_isa = Target::GENX;
-        this->m_genxPlatform = Target::GENX_GEN9;
         this->m_nativeVectorWidth = 16;
         this->m_nativeVectorAlignment = 64;
         this->m_vectorWidth = 16;
@@ -1522,8 +1514,21 @@ void Target::markFuncWithCallingConv(llvm::Function *func) {
 }
 
 #ifdef ISPC_GENX_ENABLED
+Target::GENX_PLATFORM Target::getGenxPlatform() const {
+    AllCPUs a;
+    switch (a.GetTypeFromName(m_cpu)) {
+    case CPU_GENX:
+        return GENX_PLATFORM::GENX_GEN9;
+    case CPU_GENX_TGLLP:
+        return GENX_PLATFORM::GENX_TGLLP;
+    default:
+        return GENX_PLATFORM::GENX_GEN9;
+    }
+    return GENX_PLATFORM::GENX_GEN9;
+}
+
 uint32_t Target::getGenxGrfSize() const {
-    switch (m_genxPlatform) {
+    switch (getGenxPlatform()) {
     case GENX_GEN9:
     case GENX_TGLLP:
         return 32;
@@ -1534,7 +1539,7 @@ uint32_t Target::getGenxGrfSize() const {
 }
 
 bool Target::hasGenxPrefetch() const {
-    switch (m_genxPlatform) {
+    switch (getGenxPlatform()) {
     case GENX_GEN9:
     case GENX_TGLLP:
         return false;

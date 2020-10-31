@@ -6261,13 +6261,13 @@ bool CheckUnsupportedInsts::runOnBasicBlock(llvm::BasicBlock &bb) {
             }
         }
         // Report error that double types are not supported for TGLLP
-        if (g->target->getCPU() == "TGLLP") {
+        if (g->target->getGenxPlatform() == Target::GENX_PLATFORM::GENX_TGLLP) {
             for (int i = 0; i < (int)inst->getNumOperands(); ++i) {
                 llvm::Type *t = inst->getOperand(i)->getType();
 
                 if (t == LLVMTypes::DoubleType || t == LLVMTypes::DoublePointerType ||
                     t == LLVMTypes::DoubleVectorType || t == LLVMTypes::DoubleVectorPointerType) {
-                    Error(pos, "\'double\' type is not supported by TGLLP\n");
+                    Error(pos, "\'double\' type is not supported by the target\n");
                 }
             }
         }
