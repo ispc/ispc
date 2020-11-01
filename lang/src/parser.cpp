@@ -6,6 +6,7 @@
 #include <ispc/token.h>
 #include <ispc/source_pos.h>
 
+#include "consumer_ref_wrapper.h"
 #include "parser.hh"
 
 #include <optional>
@@ -83,7 +84,6 @@ class ParserImpl final {
     }
 
     void Finish() {
-
         ispc_push_parse(state, 0, nullptr, &position, diagnosticConsumer, nodeConsumer, "", 0);
     }
 
@@ -93,17 +93,27 @@ class ParserImpl final {
 
     static constexpr std::optional<ispc_tokentype> ToBisonType(TokenType type) noexcept {
         switch (type) {
-            case TokenType::Identifier:
-                return ISPC_TOKEN_IDENTIFIER;
-            case TokenType::BinInt:
-                return ISPC_TOKEN_BIN_INT;
-            case TokenType::DecInt:
-                return ISPC_TOKEN_DEC_INT;
-            case TokenType::HexInt:
-                return ISPC_TOKEN_HEX_INT;
-            case TokenType::Space:
-            case TokenType::Newline:
-                break;
+        case TokenType::Identifier:
+            return ISPC_TOKEN_IDENTIFIER;
+        case TokenType::BinInt:
+            return ISPC_TOKEN_BIN_INT;
+        case TokenType::DecInt:
+            return ISPC_TOKEN_DEC_INT;
+        case TokenType::HexInt:
+            return ISPC_TOKEN_HEX_INT;
+        case TokenType::StringLiteral:
+            return ISPC_TOKEN_STRING_LITERAL;
+        case TokenType::BinIntIncomplete:
+        case TokenType::BinIntInvalid:
+        case TokenType::DecIntInvalid:
+        case TokenType::HexIntIncomplete:
+        case TokenType::HexIntInvalid:
+        case TokenType::StringLiteralIncomplete:
+            // TODO
+            return std::nullopt;
+        case TokenType::Space:
+        case TokenType::Newline:
+            break;
         }
         return std::nullopt;
     }
@@ -122,12 +132,20 @@ void Parser::AddASTNodeConsumer(std::unique_ptr<ASTNodeConsumer> &&consumer) {
     self->AddASTNodeConsumer(std::move(consumer));
 }
 
+void Parser::AddASTNodeConsumer(ASTNodeConsumer &consumer) {
+    AddASTNodeConsumer(ConsumerRef<ASTNodeConsumer, ASTNode>::make(consumer));
+}
+
 void Parser::AddDiagnosticConsumer(std::unique_ptr<DiagnosticConsumer> &&consumer) {
 
     if (!self)
         self = new ParserImpl;
 
     self->AddDiagnosticConsumer(std::move(consumer));
+}
+
+void Parser::AddDiagnosticConsumer(DiagnosticConsumer &consumer) {
+    AddDiagnosticConsumer(ConsumerRef<DiagnosticConsumer, Diagnostic>::make(consumer));
 }
 
 void Parser::Consume(const Token &token) {

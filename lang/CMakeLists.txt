@@ -11,11 +11,11 @@ if(NOT EXISTS "${gendir}")
 endif(NOT EXISTS "${gendir}")
 
 if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
-    set(cxxflags -Wall -Wextra)
+    set(cxxflags -Wall -Wextra -Werror -Wfatal-errors)
 endif(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
 
 if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
-    set(cxxflags -Wall -Wextra -Wdocumentation)
+    set(cxxflags -Wall -Wextra -Wdocumentation -Werror -Wfatal-errors)
 endif(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
 
 ###############
@@ -75,18 +75,26 @@ add_library(ispc-lang-generated OBJECT
 
 target_include_directories(ispc-lang-generated PRIVATE include)
 
+target_compile_features(ispc-lang-generated PRIVATE cxx_std_17)
+
 add_library(ispc-lang
     include/ispc/ast_node.h
     include/ispc/ast_node_consumer.h
     include/ispc/ast_node_visitor.h
+    include/ispc/diagnostic.h
+    include/ispc/diagnostic_consumer.h
+    include/ispc/diagnostic_printer.h
     include/ispc/expr.h
     include/ispc/parser.h
     include/ispc/scanner.h
     include/ispc/token.h
     include/ispc/token_consumer.h
     src/expr.cpp
+    src/diagnostic_printer.cpp
     src/parser.cpp
     src/scanner.cpp
+    src/invalid_token_diagnostic.h
+    src/invalid_token_diagnostic.cpp
     $<TARGET_OBJECTS:ispc-lang-generated>)
 
 target_compile_options(ispc-lang PRIVATE ${cxxflags})
@@ -108,6 +116,9 @@ if(ISPC_LANG_TESTING)
     find_package(GTest REQUIRED)
 
     add_executable(ispc-lang-tests
+        testing/main.cpp
+        testing/diagnostic_test.h
+        testing/diagnostic_test.cpp
         testing/parser_tests.cpp
         testing/scanner_tests.cpp)
 
@@ -115,13 +126,18 @@ if(ISPC_LANG_TESTING)
         PROPERTIES
             OUTPUT_NAME run_tests)
 
+    target_compile_definitions(ispc-lang-tests
+        PRIVATE TESTING_DIR="\"\"${CMAKE_CURRENT_SOURCE_DIR}/testing\"\"")
+
     target_compile_features(ispc-lang-tests
         PRIVATE cxx_std_17)
 
     target_link_libraries(ispc-lang-tests
         PRIVATE ISPC::Lang GTest::GTest GTest::Main)
 
-    add_test(NAME ispc-lang-tests COMMAND $<TARGET_FILE:ispc-lang-tests>)
+    add_test(NAME ispc-lang-tests
+        COMMAND $<TARGET_FILE:ispc-lang-tests>
+        WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/testing")
 
     enable_testing()
 

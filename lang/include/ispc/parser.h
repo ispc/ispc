@@ -33,6 +33,18 @@ public:
      * */
     void AddASTNodeConsumer(std::unique_ptr<ASTNodeConsumer> &&consumer);
 
+    /** Adds a consumer to pass AST nodes to as
+     * they are found by the parser. This function
+     * uses a reference to the consumer and does not
+     * take ownership of the object.
+     *
+     * @note The lifetime of @p consumer must be at least
+     *       as long as the lifetime of the parser.
+     *
+     * @param consumer A reference to the consumer to add.
+     * */
+    void AddASTNodeConsumer(ASTNodeConsumer &consumer);
+
     /** Adds a diagnostic consumer to handle
      * syntax errors found by the parser.
      *
@@ -42,6 +54,17 @@ public:
      *                 this function.
      * */
     void AddDiagnosticConsumer(std::unique_ptr<DiagnosticConsumer> &&consumer);
+
+    /** Adds a diagnostic consumer to the parser.
+     * This function does not take ownership of the
+     * diagnostic consumer.
+     *
+     * @note The lifetime of @p consumer must be at least
+     *       as long as the lifetime of the parser.
+     *
+     * @param consumer A reference to the consumer to add.
+     * */
+    void AddDiagnosticConsumer(DiagnosticConsumer &consumer);
 
     /** Consumes a token produced
      * by an instance of @ref Scanner.

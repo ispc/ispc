@@ -27,7 +27,29 @@ public:
 
     ~Scanner();
 
+    /** Adds a token consumer to the scanner.
+     * A token consumer gets called whenever the
+     * scanner matches a token. There can be any
+     * number of token consumers in the scanner.
+     *
+     * @param consumer The token consumer to add.
+     *                 This function causes the
+     *                 scanner to take ownership
+     *                 of @p consumer.
+     * */
     void AddTokenConsumer(std::unique_ptr<TokenConsumer> &&consumer);
+
+    /** This function adds a token consumer to the
+     * scanner, without transferring ownership of
+     * the token consumer.
+     *
+     * @note Care must by taken that the lifetime of
+     *       @p consumer is at least as long as the
+     *       lifetime of the scanner.
+     *
+     * @param consumer A reference to the consumer to add.
+     * */
+    void AddTokenConsumer(TokenConsumer &consumer);
 
     /** This function will scan for tokens
      * in @p text up until @p length.

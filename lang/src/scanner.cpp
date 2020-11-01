@@ -2,6 +2,7 @@
 
 #include <ispc/token_consumer.h>
 
+#include "consumer_ref_wrapper.h"
 #include "scanner.h"
 
 #include <stdexcept>
@@ -79,6 +80,10 @@ void Scanner::AddTokenConsumer(std::unique_ptr<TokenConsumer> &&consumer) {
         self = new ScannerImpl;
 
     self->AddTokenConsumer(std::move(consumer));
+}
+
+void Scanner::AddTokenConsumer(TokenConsumer &consumer) {
+    AddTokenConsumer(ConsumerRef<TokenConsumer, Token>::make(consumer));
 }
 
 void Scanner::ScanBuffer(const char *text, std::size_t length) {

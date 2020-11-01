@@ -23,7 +23,11 @@ enum class TokenType {
      * immediately followed by a line feed. */
     Newline,
     /** Consists of any number of spaces or tabs. */
-    Space
+    Space,
+    /** A double quoted string constant. */
+    StringLiteral,
+    /** A string literal with a missing right quote. */
+    StringLiteralIncomplete
 };
 
 /** Converts the name of the token into
@@ -69,6 +73,10 @@ constexpr const char *ToString(TokenType type) noexcept {
             return "Newline";
         case TokenType::Space:
             return "Space";
+        case TokenType::StringLiteral:
+            return "String Literal";
+        case TokenType::StringLiteralIncomplete:
+            return "String Literal (Incomplete)";
     }
     return "";
 }

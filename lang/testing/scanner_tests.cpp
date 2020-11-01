@@ -119,3 +119,27 @@ TEST(Scanner, HexIntIncomplete) {
 TEST(Scanner, HexIntInvalid) {
     RunTest("0x4skdf ", TokenType::HexIntInvalid, "0x4skdf");
 }
+
+TEST(Scanner, StringLiteral) {
+    RunTest(R"("A string literal." )", TokenType::StringLiteral, R"("A string literal.")");
+}
+
+TEST(Scanner, StringLiteralWithL) {
+    RunTest(R"(L"A string literal." )", TokenType::StringLiteral, R"(L"A string literal.")");
+}
+
+TEST(Scanner, StringLiteralWithEscapedRightQuote) {
+    RunTest(R"(L"An example\"" )", TokenType::StringLiteral, R"(L"An example\"")");
+}
+
+TEST(Scanner, StringLiteralWithMissingRightQuote) {
+    RunTest(R"("A missing right quotation )", TokenType::StringLiteralIncomplete, R"("A missing right quotation )");
+}
+
+TEST(Scanner, StringLiteralWithLineFeed) {
+    RunTest("\"Newlines are not allowed\n\"", TokenType::StringLiteralIncomplete, "\"Newlines are not allowed");
+}
+
+TEST(Scanner, StringLiteralWithCarriageReturn) {
+    RunTest("\"Newlines are not allowed\r\"", TokenType::StringLiteralIncomplete, "\"Newlines are not allowed");
+}

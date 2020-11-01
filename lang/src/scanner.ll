@@ -44,6 +44,9 @@ HEX_INT (0x[0-9a-fA-F]+)[uUlL]*[kMG]?[uUlL]*
 HEX_INT_INCOMPLETE 0x
 HEX_INT_INVALID 0x({DIGIT}|{NON_DIGIT})+
 
+STRING_LITERAL_INCOMPLETE L?\"(\\.|[^\\\n\r"])*
+STRING_LITERAL {STRING_LITERAL_INCOMPLETE}\"
+
 INT_NUMBER_DOTDOTDOT (([0-9]+)|(0x[0-9a-fA-F]+)|(0b[01]+))[uUlL]*[kMG]?[uUlL]*\.\.\.
 FLOAT_NUMBER (([0-9]+|(([0-9]+\.[0-9]*[fF]?)|(\.[0-9]+)))([eE][-+]?[0-9]+)?[fF]?)
 HEX_FLOAT_NUMBER (0x[01](\.[0-9a-fA-F]*)?p[-+]?[0-9]+[fF]?)
@@ -90,6 +93,14 @@ ZO_SWIZZLE ([01]+[w-z]+)+|([01]+[rgba]+)+|([01]+[uv]+)+
 
 {HEX_INT_INCOMPLETE} {
     PRODUCE(ispc::TokenType::HexIntIncomplete);
+}
+
+{STRING_LITERAL} {
+    PRODUCE(ispc::TokenType::StringLiteral);
+}
+
+{STRING_LITERAL_INCOMPLETE} {
+    PRODUCE(ispc::TokenType::StringLiteralIncomplete);
 }
 
 %%
