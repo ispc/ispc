@@ -1578,9 +1578,10 @@ BinaryExpr::BinaryExpr(Op o, Expr *a, Expr *b, SourcePos p) : Expr(p, BinaryExpr
     arg1 = b;
 }
 
-Expr *lCreateBinaryOperatorCall(const BinaryExpr::Op bop, Expr *a0, Expr *a1, const SourcePos &sp) {
+bool lCreateBinaryOperatorCall(const BinaryExpr::Op bop, Expr *a0, Expr *a1, Expr *&op, const SourcePos &sp) {
+    bool abort = false;
     if ((a0 == NULL) || (a1 == NULL)) {
-        return NULL;
+        return abort;
     }
     Expr *arg0 = a0;
     Expr *arg1 = a1;
@@ -1598,7 +1599,7 @@ Expr *lCreateBinaryOperatorCall(const BinaryExpr::Op bop, Expr *a0, Expr *a1, co
         type1 = arg1->GetType();
     }
     if ((type0 == NULL) || (type1 == NULL)) {
-        return NULL;
+        return abort;
     }
     if (CastType<StructType>(type0) != NULL || CastType<StructType>(type1) != NULL) {
         std::string opName = std::string("operator") + lOpString(bop);
@@ -1607,20 +1608,22 @@ Expr *lCreateBinaryOperatorCall(const BinaryExpr::Op bop, Expr *a0, Expr *a1, co
         if (funs.size() == 0) {
             Error(sp, "operator %s(%s, %s) is not defined.", opName.c_str(), (type0->GetString()).c_str(),
                   (type1->GetString()).c_str());
-            return NULL;
+            abort = true;
+            return abort;
         }
         Expr *func = new FunctionSymbolExpr(opName.c_str(), funs, sp);
         ExprList *args = new ExprList(sp);
         args->exprs.push_back(arg0);
         args->exprs.push_back(arg1);
-        Expr *opCallExpr = new FunctionCallExpr(func, args, sp);
-        return opCallExpr;
+        op = new FunctionCallExpr(func, args, sp);
+        return abort;
     }
-    return NULL;
+    return abort;
 }
 
 Expr *MakeBinaryExpr(BinaryExpr::Op o, Expr *a, Expr *b, SourcePos p) {
-    Expr *op = lCreateBinaryOperatorCall(o, a, b, p);
+    Expr *op = NULL;
+    bool abort = lCreateBinaryOperatorCall(o, a, b, op, p);
     if (op != NULL) {
         return op;
     }
@@ -1628,7 +1631,7 @@ Expr *MakeBinaryExpr(BinaryExpr::Op o, Expr *a, Expr *b, SourcePos p) {
     // lCreateBinaryOperatorCall can return NULL for 2 cases:
     // 1. When there is an error.
     // 2. We have to create a new BinaryExpr.
-    if (m->HasErrors()) {
+    if (abort) {
         AssertPos(p, m->HasErrors());
         return NULL;
     }
