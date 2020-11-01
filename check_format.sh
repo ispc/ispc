@@ -50,7 +50,7 @@ fi
 
 # Check all source files.
 # For benchmarks folder do not check 03_complex, as these tests come from real projects with their formatting.
-FILES=`ls src/*.cpp src/*.h *.cpp builtins/builtins-c-* benchmarks/{01,02}*/*{cpp,ispc}`
+FILES=`ls lang/src/*.cpp lang/src/*.h lang/include/ispc/*.hpp src/*.cpp src/*.h *.cpp builtins/builtins-c-* benchmarks/{01,02}*/*{cpp,ispc}`
 for FILE in $FILES; do
     $CLANG_FORMAT $FILE | cmp  $FILE >/dev/null
     if [ $? -ne 0 ]; then
