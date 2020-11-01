@@ -8,7 +8,6 @@ class Diagnostic;
 class DiagnosticConsumer {
 
   public:
-
     virtual ~DiagnosticConsumer() {}
 
     virtual void Consume(const Diagnostic &) = 0;

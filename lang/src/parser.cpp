@@ -3,8 +3,8 @@
 #include <ispc/ast_node.h>
 #include <ispc/ast_node_consumer.h>
 #include <ispc/diagnostic_consumer.h>
-#include <ispc/token.h>
 #include <ispc/source_pos.h>
+#include <ispc/token.h>
 
 #include "consumer_ref_wrapper.h"
 #include "parser.hh"
@@ -19,6 +19,7 @@ namespace ispc {
 
 class CompositeDiagnosticConsumer final : public DiagnosticConsumer {
     std::vector<std::unique_ptr<DiagnosticConsumer>> consumers;
+
   public:
     void AddDiagnosticConsumer(std::unique_ptr<DiagnosticConsumer> &&consumer) {
         consumers.emplace_back(std::move(consumer));
@@ -31,6 +32,7 @@ class CompositeDiagnosticConsumer final : public DiagnosticConsumer {
 
 class CompositeASTNodeConsumer final : public ASTNodeConsumer {
     std::vector<std::unique_ptr<ASTNodeConsumer>> consumers;
+
   public:
     void AddASTNodeConsumer(std::unique_ptr<ASTNodeConsumer> &&consumer) {
         consumers.emplace_back(std::move(consumer));
@@ -54,15 +56,12 @@ class ParserImpl final {
     CompositeASTNodeConsumer nodeConsumer;
 
   public:
-
     ParserImpl() : state(ispc_pstate_new()) {
         if (!state)
             throw std::bad_alloc();
     }
 
-    ~ParserImpl() {
-        ispc_pstate_delete(state);
-    }
+    ~ParserImpl() { ispc_pstate_delete(state); }
 
     void AddDiagnosticConsumer(std::unique_ptr<DiagnosticConsumer> &&consumer) {
         diagnosticConsumer.AddDiagnosticConsumer(std::move(consumer));
@@ -78,18 +77,15 @@ class ParserImpl final {
         if (!bisonType)
             return;
 
-        auto status = ispc_push_parse(state, *bisonType, nullptr, &position, diagnosticConsumer, nodeConsumer, token.text, token.length);
+        auto status = ispc_push_parse(state, *bisonType, nullptr, &position, diagnosticConsumer, nodeConsumer,
+                                      token.text, token.length);
 
         needsMore = (status == YYPUSH_MORE);
     }
 
-    void Finish() {
-        ispc_push_parse(state, 0, nullptr, &position, diagnosticConsumer, nodeConsumer, "", 0);
-    }
+    void Finish() { ispc_push_parse(state, 0, nullptr, &position, diagnosticConsumer, nodeConsumer, "", 0); }
 
-    bool NeedsMore() const noexcept {
-        return needsMore;
-    }
+    bool NeedsMore() const noexcept { return needsMore; }
 
     static constexpr std::optional<ispc_tokentype> ToBisonType(TokenType type) noexcept {
         switch (type) {
@@ -161,8 +157,6 @@ void Parser::Finish() {
         self->Finish();
 }
 
-bool Parser::NeedsMore() const noexcept {
-    return self ? self->NeedsMore() : false;
-}
+bool Parser::NeedsMore() const noexcept { return self ? self->NeedsMore() : false; }
 
 } // namespace ispc

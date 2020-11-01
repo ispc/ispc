@@ -51,32 +51,32 @@ struct Token final {
 
 constexpr const char *ToString(TokenType type) noexcept {
     switch (type) {
-        case TokenType::Identifier:
-            return "Identifier";
-        case TokenType::BinInt:
-            return "Binary Integer";
-        case TokenType::BinIntIncomplete:
-            return "Binary Integer (Incomplete)";
-        case TokenType::BinIntInvalid:
-            return "Binary Integer (Invalid)";
-        case TokenType::DecInt:
-            return "Decimal Integer";
-        case TokenType::DecIntInvalid:
-            return "Decimal Integer (Invalid)";
-        case TokenType::HexInt:
-            return "Hexidecimal Integer";
-        case TokenType::HexIntIncomplete:
-            return "Hexidecimal Integer (Incomplete)";
-        case TokenType::HexIntInvalid:
-            return "Hexidecimal Integer (Invalid)";
-        case TokenType::Newline:
-            return "Newline";
-        case TokenType::Space:
-            return "Space";
-        case TokenType::StringLiteral:
-            return "String Literal";
-        case TokenType::StringLiteralIncomplete:
-            return "String Literal (Incomplete)";
+    case TokenType::Identifier:
+        return "Identifier";
+    case TokenType::BinInt:
+        return "Binary Integer";
+    case TokenType::BinIntIncomplete:
+        return "Binary Integer (Incomplete)";
+    case TokenType::BinIntInvalid:
+        return "Binary Integer (Invalid)";
+    case TokenType::DecInt:
+        return "Decimal Integer";
+    case TokenType::DecIntInvalid:
+        return "Decimal Integer (Invalid)";
+    case TokenType::HexInt:
+        return "Hexidecimal Integer";
+    case TokenType::HexIntIncomplete:
+        return "Hexidecimal Integer (Incomplete)";
+    case TokenType::HexIntInvalid:
+        return "Hexidecimal Integer (Invalid)";
+    case TokenType::Newline:
+        return "Newline";
+    case TokenType::Space:
+        return "Space";
+    case TokenType::StringLiteral:
+        return "String Literal";
+    case TokenType::StringLiteralIncomplete:
+        return "String Literal (Incomplete)";
     }
     return "";
 }

@@ -18,12 +18,11 @@ class TokenConsumer;
 class Scanner final {
     /** A pointer to the implementation data. */
     ScannerImpl *self = nullptr;
-public:
+
+  public:
     constexpr Scanner() noexcept {}
 
-    constexpr Scanner(Scanner &other) noexcept : self(other.self) {
-        other.self = nullptr;
-    }
+    constexpr Scanner(Scanner &other) noexcept : self(other.self) { other.self = nullptr; }
 
     ~Scanner();
 

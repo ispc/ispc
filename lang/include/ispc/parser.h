@@ -14,13 +14,11 @@ class ParserImpl;
 class Parser final : public TokenConsumer {
     /** Contains the implementation data. */
     ParserImpl *self = nullptr;
-public:
 
+  public:
     constexpr Parser() noexcept {}
 
-    constexpr Parser(Parser &&other) noexcept : self(other.self) {
-        self = other.self;
-    }
+    constexpr Parser(Parser &&other) noexcept : self(other.self) { self = other.self; }
 
     ~Parser();
 

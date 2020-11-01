@@ -7,9 +7,9 @@ namespace ispc {
 
 class InvalidTokenDiagnostic final : public Diagnostic {
     Token token;
+
   public:
-    InvalidTokenDiagnostic(const Token &t) noexcept
-        : token(t) {}
+    InvalidTokenDiagnostic(const Token &t) noexcept : token(t) {}
 
     void Print(std::ostream &stream) const override;
 };

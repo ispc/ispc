@@ -19,7 +19,6 @@ class StringLiteral;
 class ASTNodeVisitor {
 
   public:
-
     virtual ~ASTNodeVisitor() {}
 
     virtual void Visit(const IntegerLiteral &) = 0;

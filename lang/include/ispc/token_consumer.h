@@ -5,10 +5,10 @@ namespace ispc {
 struct Token;
 
 class TokenConsumer {
-public:
+  public:
     virtual ~TokenConsumer() {}
 
-    virtual void Consume(const Token&) = 0;
+    virtual void Consume(const Token &) = 0;
 };
 
 } // namespace ispc

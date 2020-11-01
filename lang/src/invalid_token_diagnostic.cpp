@@ -5,9 +5,7 @@
 namespace ispc {
 
 void InvalidTokenDiagnostic::Print(std::ostream &stream) const {
-    auto print = [&stream](const char *msg) {
-        stream << "syntax error, " << msg << std::endl;
-    };
+    auto print = [&stream](const char *msg) { stream << "syntax error, " << msg << std::endl; };
     switch (token.type) {
     case TokenType::Identifier:
         print("unexpected identifier");

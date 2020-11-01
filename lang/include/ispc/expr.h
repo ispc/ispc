@@ -6,8 +6,8 @@
 #include <optional>
 #include <string_view>
 
-#include <cstdint>
 #include <cstddef>
+#include <cstdint>
 
 namespace ispc {
 
@@ -34,7 +34,6 @@ class IntegerLiteral final : public PrimaryExpr {
     std::uint64_t value = 0;
 
   public:
-
     /** Parses an integer literal value from a binary sequence.
      *
      * @note This function ignores errors in the sequence, since they are
@@ -45,14 +44,11 @@ class IntegerLiteral final : public PrimaryExpr {
      * */
     IntegerLiteral(BinFormat, const std::string_view &text) noexcept;
 
-    constexpr IntegerLiteral(std::uint64_t v) noexcept
-        : value(v) {}
+    constexpr IntegerLiteral(std::uint64_t v) noexcept : value(v) {}
 
     void Accept(ASTNodeVisitor &) const override;
 
-    constexpr std::uint64_t GetValue() const noexcept {
-        return value;
-    }
+    constexpr std::uint64_t GetValue() const noexcept { return value; }
 };
 
 class StringLiteralImpl;
@@ -121,6 +117,7 @@ struct StringSequence final {
 class StringLiteral final : public PrimaryExpr {
     /** Contains the original token and transformed string. */
     StringLiteralImpl *self;
+
   public:
     /** Constructs a new string literal.
      * This function also parses the contents of @p token
@@ -141,10 +138,7 @@ class StringLiteral final : public PrimaryExpr {
      *              string literal instance should no longer
      *              be used.
      * */
-    constexpr StringLiteral(StringLiteral &&other) noexcept
-        : self(other.self) {
-        other.self = nullptr;
-    }
+    constexpr StringLiteral(StringLiteral &&other) noexcept : self(other.self) { other.self = nullptr; }
 
     /** Releases memory allocated by the string. */
     ~StringLiteral();

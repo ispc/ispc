@@ -20,9 +20,7 @@ IntegerLiteral::IntegerLiteral(BinFormat, const std::string_view &text) noexcept
     }
 }
 
-void IntegerLiteral::Accept(ASTNodeVisitor &visitor) const {
-    visitor.Visit(*this);
-}
+void IntegerLiteral::Accept(ASTNodeVisitor &visitor) const { visitor.Visit(*this); }
 
 namespace {
 
@@ -48,13 +46,9 @@ class StringSequenceParser final {
     std::size_t index = 0;
 
   public:
+    constexpr StringSequenceParser(const std::string_view &t) noexcept : text(t) {}
 
-    constexpr StringSequenceParser(const std::string_view &t) noexcept
-        : text(t) {}
-
-    constexpr bool IsDone() const noexcept {
-        return index >= text.size();
-    }
+    constexpr bool IsDone() const noexcept { return index >= text.size(); }
 
     std::optional<StringSequenceImpl> Parse() noexcept {
 
@@ -98,7 +92,6 @@ class StringSequenceParser final {
     }
 
   protected:
-
     StringSequenceImpl CompleteNormalSequence() noexcept {
 
         std::size_t length = 0;
@@ -136,8 +129,7 @@ class StringSequenceParser final {
 
         transformedText += static_cast<char>(value);
 
-        auto type = overflowed ? StringSequenceType::OctalDigitsOverflow
-                               : StringSequenceType::OctalDigits;
+        auto type = overflowed ? StringSequenceType::OctalDigitsOverflow : StringSequenceType::OctalDigits;
 
         return Make(type, length, std::move(transformedText));
     }
@@ -179,8 +171,7 @@ class StringSequenceParser final {
 
         transformedText += static_cast<char>(value);
 
-        auto type = overflowed ? StringSequenceType::HexDigitsOverflow
-                               : StringSequenceType::HexDigits;
+        auto type = overflowed ? StringSequenceType::HexDigitsOverflow : StringSequenceType::HexDigits;
 
         return Make(type, length, std::move(transformedText));
     }
@@ -195,11 +186,7 @@ class StringSequenceParser final {
 
         auto originalText = std::string(text.data() + index, length);
 
-        StringSequenceImpl sequence {
-            type,
-            std::move(originalText),
-            std::move(value)
-        };
+        StringSequenceImpl sequence{type, std::move(originalText), std::move(value)};
 
         index += length;
 
@@ -210,21 +197,13 @@ class StringSequenceParser final {
         return Make(StringSequenceType::EscapedChar, 2, std::string(&c, 1));
     }
 
-    static constexpr bool IsOctal(char c) noexcept {
-        return (c >= '0') && (c <= '7');
-    }
+    static constexpr bool IsOctal(char c) noexcept { return (c >= '0') && (c <= '7'); }
 
-    constexpr std::size_t Remaining() const noexcept {
-        return (index < text.size()) ? text.size() - index : 0;
-    }
+    constexpr std::size_t Remaining() const noexcept { return (index < text.size()) ? text.size() - index : 0; }
 
-    constexpr bool OutOfBounds(std::size_t offset) const noexcept {
-        return (index + offset) >= text.size();
-    }
+    constexpr bool OutOfBounds(std::size_t offset) const noexcept { return (index + offset) >= text.size(); }
 
-    constexpr char Peek(std::size_t offset) const noexcept {
-        return OutOfBounds(offset) ? 0 : text[index + offset];
-    }
+    constexpr char Peek(std::size_t offset) const noexcept { return OutOfBounds(offset) ? 0 : text[index + offset]; }
 };
 
 } // namespace
@@ -240,10 +219,8 @@ class StringLiteralImpl final {
     std::string transformedText;
 
   public:
-
     StringLiteralImpl(const Token &t)
-        : originalText(t.text, t.length),
-          token { t.type, originalText.data(), originalText.size() } {
+        : originalText(t.text, t.length), token{t.type, originalText.data(), originalText.size()} {
 
         StringSequenceParser parser(GetBodyOf(t.text, t.length));
 
@@ -263,31 +240,23 @@ class StringLiteralImpl final {
     StringSequence GetSequence(std::size_t index) const noexcept {
 
         if (index >= sequences.size())
-            return StringSequence {};
+            return StringSequence{};
 
         const auto &seq = sequences[index];
 
-        return {
-            seq.type,
-            std::string_view(seq.text.data(), seq.text.size()),
-            std::string_view(seq.transformedText.data(), seq.transformedText.size())
-        };
+        return {seq.type, std::string_view(seq.text.data(), seq.text.size()),
+                std::string_view(seq.transformedText.data(), seq.transformedText.size())};
     }
 
-    std::size_t GetSequenceCount() const noexcept {
-        return sequences.size();
-    }
+    std::size_t GetSequenceCount() const noexcept { return sequences.size(); }
 
     std::string_view GetText() const noexcept {
         return std::string_view(transformedText.data(), transformedText.size());
     }
 
-    Token GetToken() const noexcept {
-        return token;
-    }
+    Token GetToken() const noexcept { return token; }
 
   protected:
-
     static std::string_view GetBodyOf(const char *text, std::size_t length) {
         if ((length < 2) || (text[0] != '"') || (text[length - 1] != '"'))
             return std::string_view();
@@ -296,22 +265,19 @@ class StringLiteralImpl final {
     }
 };
 
-StringLiteral::StringLiteral(const Token &token)
-    : self(new StringLiteralImpl(token)) {}
+StringLiteral::StringLiteral(const Token &token) : self(new StringLiteralImpl(token)) {}
 
 StringLiteral::~StringLiteral() {
     delete self;
     self = nullptr;
 }
 
-void StringLiteral::Accept(ASTNodeVisitor &visitor) const {
-    visitor.Visit(*this);
-}
+void StringLiteral::Accept(ASTNodeVisitor &visitor) const { visitor.Visit(*this); }
 
 StringSequence StringLiteral::GetSequence(std::size_t index) const noexcept {
 
     if (!self)
-        return StringSequence {};
+        return StringSequence{};
 
     return self->GetSequence(index);
 }
@@ -335,7 +301,7 @@ std::string_view StringLiteral::GetText() const noexcept {
 Token StringLiteral::GetToken() const noexcept {
 
     if (!self)
-        return Token { TokenType::StringLiteral, "", 0 };
+        return Token{TokenType::StringLiteral, "", 0};
 
     return self->GetToken();
 }

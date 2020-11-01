@@ -16,25 +16,22 @@ namespace ispc {
 class ScannerImpl final : public TokenConsumer {
     yyscan_t flexScanner = nullptr;
     std::vector<std::unique_ptr<TokenConsumer>> consumers;
-public:
+
+  public:
     ScannerImpl() {
         if (ispclex_init_extra(this, &flexScanner) != 0)
             throw std::bad_alloc();
     }
 
-    ~ScannerImpl() {
-        ispclex_destroy(flexScanner);
-    }
+    ~ScannerImpl() { ispclex_destroy(flexScanner); }
 
-    void AddTokenConsumer(std::unique_ptr<TokenConsumer> &&consumer) {
-        consumers.emplace_back(std::move(consumer));
-    }
+    void AddTokenConsumer(std::unique_ptr<TokenConsumer> &&consumer) { consumers.emplace_back(std::move(consumer)); }
 
     void ScanBuffer(const char *text, std::size_t length) {
 
         length = (length > INT_MAX) ? INT_MAX : length;
 
-        yy_buffer_state *bufferState = ispc_scan_bytes(text, (int) length, flexScanner);
+        yy_buffer_state *bufferState = ispc_scan_bytes(text, (int)length, flexScanner);
 
         if (!bufferState)
             return; // TODO : Out of memory diagnostic
@@ -63,7 +60,7 @@ public:
         return true;
     }
 
-    void Consume(const Token& token) override {
+    void Consume(const Token &token) override {
         for (auto &consumer : consumers)
             consumer->Consume(token);
     }

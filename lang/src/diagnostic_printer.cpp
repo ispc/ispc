@@ -7,16 +7,14 @@ namespace ispc {
 class DiagnosticPrinterImpl final {
     /** The stream being printed to. */
     std::ostream &stream;
+
   public:
     DiagnosticPrinterImpl(std::ostream &stream_) : stream(stream_) {}
 
-    void Print(const Diagnostic &d) {
-        d.Print(stream);
-    }
+    void Print(const Diagnostic &d) { d.Print(stream); }
 };
 
-DiagnosticPrinter::DiagnosticPrinter(std::ostream &stream)
-    : self(new DiagnosticPrinterImpl(stream)) { }
+DiagnosticPrinter::DiagnosticPrinter(std::ostream &stream) : self(new DiagnosticPrinterImpl(stream)) {}
 
 DiagnosticPrinter::~DiagnosticPrinter() {
     delete self;
