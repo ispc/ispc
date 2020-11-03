@@ -445,7 +445,7 @@ gen_scatter(float)
 gen_scatter(i64)
 gen_scatter(double)
 
-packed_load_and_store()
+packed_load_and_store(FALSE)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; prefetch

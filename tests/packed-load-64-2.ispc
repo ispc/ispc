@@ -1,7 +1,7 @@
 export void f_f(uniform float RET[], uniform float aFOO[]) {
-    uniform int a[programCount];
+    uniform int64 a[programCount];
     a[programIndex] = aFOO[programIndex];
-    int aa = 15;
+    int64 aa = 15;
     if (programIndex < 2)
         packed_load_active(a, &aa);
     RET[programIndex] = aa;

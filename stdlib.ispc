@@ -1302,44 +1302,101 @@ static unsigned int64 exclusive_scan_or(unsigned int64 v) {
 ///////////////////////////////////////////////////////////////////////////
 // packed load, store
 
+/* unsigned int32 implementations. */
+// unsigned int32 load.
 static inline uniform int
 packed_load_active(uniform unsigned int a[],
                    varying unsigned int * uniform vals) {
-    return __packed_load_active(a, vals, (UIntMaskType)__mask);
+    return __packed_load_activei32(a, vals, (UIntMaskType)__mask);
 }
 
+// unsigned int32 store.
 static inline uniform int
 packed_store_active(uniform unsigned int a[],
                     unsigned int vals) {
-    return __packed_store_active(a, vals, (UIntMaskType)__mask);
+    return __packed_store_activei32(a, vals, (UIntMaskType)__mask);
 }
 
+// unsigned int32 store2.
 static inline uniform int
 packed_store_active2(uniform unsigned int a[],
                     unsigned int vals) {
-    return __packed_store_active2(a, vals, (UIntMaskType)__mask);
+    return __packed_store_active2i32(a, vals, (UIntMaskType)__mask);
 }
 
-
+/* int32 implementations. */
+// int32 load.
 static inline uniform int
 packed_load_active(uniform int a[], varying int * uniform vals) {
-    return __packed_load_active(a, vals, (IntMaskType)__mask);
+    return __packed_load_activei32(a, vals, (IntMaskType)__mask);
 }
 
+// int32 store.
 static inline uniform int
 packed_store_active(uniform int a[], int vals) {
-    return __packed_store_active(a, vals, (IntMaskType)__mask);
+    return __packed_store_activei32(a, vals, (IntMaskType)__mask);
 }
 
-static inline uniform int
-packed_store_active(bool active, uniform int a[], int vals) {
-    return __packed_store_active(a, vals, (IntMaskType)(-(int)active));
-}
-
+// int32 store2.
 static inline uniform int
 packed_store_active2(uniform int a[], int vals) {
-    return __packed_store_active2(a, vals, (IntMaskType)__mask);
+    return __packed_store_active2i32(a, vals, (IntMaskType)__mask);
 }
+
+// int32 store with lanes.
+static inline uniform int
+packed_store_active(bool active, uniform int a[], int vals) {
+    return __packed_store_activei32(a, vals, (IntMaskType)(-(int)active));
+}
+
+/* unsigned int64 implementations. */
+// unsigned int64 load.
+static inline uniform int
+packed_load_active(uniform unsigned int64 a[],
+                   varying unsigned int64 * uniform vals) {
+    return __packed_load_activei64(a, vals, (UIntMaskType)__mask);
+}
+
+// unsigned int64 store.
+static inline uniform int
+packed_store_active(uniform unsigned int64 a[],
+                    unsigned int64 vals) {
+    return __packed_store_activei64(a, vals, (UIntMaskType)__mask);
+}
+
+// unsigned int64 store2.
+static inline uniform int
+packed_store_active2(uniform unsigned int64 a[],
+                    unsigned int64 vals) {
+    return __packed_store_active2i64(a, vals, (UIntMaskType)__mask);
+}
+
+/* int64 implementations. */
+// int64 load.
+static inline uniform int
+packed_load_active(uniform int64 a[], varying int64 * uniform vals) {
+    return __packed_load_activei64(a, vals, (IntMaskType)__mask);
+}
+
+// int64 store.
+static inline uniform int
+packed_store_active(uniform int64 a[], int64 vals) {
+    return __packed_store_activei64(a, vals, (IntMaskType)__mask);
+}
+
+// int64 store2.
+static inline uniform int
+packed_store_active2(uniform int64 a[], int64 vals) {
+    return __packed_store_active2i64(a, vals, (IntMaskType)__mask);
+}
+
+// int64 store with lanes.
+static inline uniform int
+packed_store_active(bool active, uniform int64 a[], int64 vals) {
+    return __packed_store_activei64(a, vals, (IntMaskType)(-(int)active));
+}
+
+
 
 ///////////////////////////////////////////////////////////////////////////
 // streaming store
