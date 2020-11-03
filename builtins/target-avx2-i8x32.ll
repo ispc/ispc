@@ -871,7 +871,7 @@ scatterbo32_64(i64)
 scatterbo32_64(double)
 
 ;; TODO better intrinsic implementation is available
-packed_load_and_store()
+packed_load_and_store(FALSE)
 ;declare i32 @__packed_load_active(i32 * nocapture, <WIDTH x i32> * nocapture,
 ;                                  <WIDTH x i1>) nounwind
 ;declare i32 @__packed_store_active(i32 * nocapture, <WIDTH x i32> %vals,

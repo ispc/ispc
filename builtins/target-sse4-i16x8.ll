@@ -39,7 +39,7 @@ define(`MASK',`i16')
 include(`util.m4')
 
 stdlib_core()
-packed_load_and_store()
+packed_load_and_store(FALSE)
 scans()
 int64minmax()
 saturation_arithmetic()

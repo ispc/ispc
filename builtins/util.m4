@@ -6125,137 +6125,99 @@ define void @__masked_store_blend_i16(<16 x i16>* nocapture, <16 x i16>,
 ')
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; packed load and store functions
+;; packed load and store helper functions
 ;;
-;; These define functions to emulate those nice packed load and packed store
-;; instructions.  For packed store, given a pointer to destination array and 
-;; an offset into the array, for each lane where the mask is on, the
-;; corresponding value for that lane is stored into packed locations in the
-;; destination array.  For packed load, each lane that has an active mask
-;; loads a sequential value from the array.
+;; Implementations for different WIDTH.
+;; Cannot have a generic implementation because calculating atcive lanes require WIDTH.
+
+define(`packed_load_store_popcnt', `
+ifelse(WIDTH,  `4', `
+  %i8mask = zext <4 x i1> %i1mask to <4 x i8>
+  %i32mask = bitcast <4 x i8> %i8mask to i32
+  %ret = call i32 @llvm.ctpop.i32(i32 %i32mask)
+  ', WIDTH,  `8', `
+  %i8mask = bitcast <8 x i1> %i1mask to i8
+  %i32mask = zext i8 %i8mask to i32
+  %ret = call i32 @llvm.ctpop.i32(i32 %i32mask)
+  ', WIDTH, `16', `
+  %i16mask = bitcast <16 x i1> %i1mask to i16
+  %i32mask = zext i16 %i16mask to i32
+  %ret = call i32 @llvm.ctpop.i32(i32 %i32mask)
+  ', WIDTH, `32', `
+  %i32mask = bitcast <32 x i1> %i1mask to i32
+  %ret = call i32 @llvm.ctpop.i32(i32 %i32mask)
+  ', WIDTH, `64', `
+  %i64mask = bitcast <64 x i1> %i1mask to i64
+  %ret64 = call i64 @llvm.ctpop.i64(i64 %i64mask)
+  %ret = trunc i64 %ret64 to i32
+  ',
+                     `errprint(`ERROR: packed_load_and_store() macro called with unsupported width = 'WIDTH
+)
+                      m4exit(`1')')
+')
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; packed load and store helper
 ;;
-;; $1: vector width of the target
+;; Decides definition to be used for calculating active lanes based on WIDTH.
+;; Implement valid version of 'packed_store_active2' based on requirement.
+;;
+;; $1: Integer type for which function is to be created.
+;; $2: 'TRUE' if LLVM compressstore/expandload intrinsics should be used for implementation of '__packed_store_active2'.
+;;     This is the case for the targets with native support of these intrinsics (AVX512).
+;;     For other targets branchless emulation sequence should be used (triggered by 'FALSE').
+;; $3: Alignment for store.
 ;;
 ;; FIXME: use the per_lane macro, defined below, to implement these!
 
-define(`packed_load_and_store', `
+define(`packed_load_and_store_type', `
 
-define i32 @__packed_load_active(i32 * %startptr, <WIDTH x i32> * %val_ptr,
+declare <WIDTH x $1> @llvm.masked.expandload.vWIDTH$1 ($1*, <WIDTH x i1>, <WIDTH x $1>)
+declare void @llvm.masked.store.vWIDTH$1.p0vWIDTH$1(<WIDTH x $1>, <WIDTH x $1>*, i32, <WIDTH x i1>)
+define i32 @__packed_load_active$1($1 * %startptr, <WIDTH x $1> * %val_ptr,
                                  <WIDTH x MASK> %full_mask) nounwind alwaysinline {
-entry:
-  %mask = call i64 @__movmsk(<WIDTH x MASK> %full_mask)
-  %mask_known = call i1 @__is_compile_time_constant_mask(<WIDTH x MASK> %full_mask)
-  br i1 %mask_known, label %known_mask, label %unknown_mask
-
-known_mask:
-  %allon = icmp eq i64 %mask, ALL_ON_MASK
-  br i1 %allon, label %all_on, label %unknown_mask
-
-all_on:
-  ;; everyone wants to load, so just load an entire vector width in a single
-  ;; vector load
-  %vecptr = bitcast i32 *%startptr to <WIDTH x i32> *
-  %vec_load = load PTR_OP_ARGS(`<WIDTH x i32> ') %vecptr, align 4
-  store <WIDTH x i32> %vec_load, <WIDTH x i32> * %val_ptr, align 4
-  ret i32 WIDTH
-
-unknown_mask:
-  br label %loop
-
-loop:
-  %lane = phi i32 [ 0, %unknown_mask ], [ %nextlane, %loopend ]
-  %lanemask = phi i64 [ 1, %unknown_mask ], [ %nextlanemask, %loopend ]
-  %offset = phi i32 [ 0, %unknown_mask ], [ %nextoffset, %loopend ]
-
-  ; is the current lane on?
-  %and = and i64 %mask, %lanemask
-  %do_load = icmp eq i64 %and, %lanemask
-  br i1 %do_load, label %load, label %loopend 
-
-load:
-  %loadptr = getelementptr PTR_OP_ARGS(`i32') %startptr, i32 %offset
-  %loadval = load PTR_OP_ARGS(`i32 ') %loadptr
-  %val_ptr_i32 = bitcast <WIDTH x i32> * %val_ptr to i32 *
-  %storeptr = getelementptr PTR_OP_ARGS(`i32') %val_ptr_i32, i32 %lane
-  store i32 %loadval, i32 *%storeptr
-  %offset1 = add i32 %offset, 1
-  br label %loopend
-
-loopend:
-  %nextoffset = phi i32 [ %offset1, %load ], [ %offset, %loop ]
-  %nextlane = add i32 %lane, 1
-  %nextlanemask = mul i64 %lanemask, 2
-
-  ; are we done yet?
-  %test = icmp ne i32 %nextlane, WIDTH
-  br i1 %test, label %loop, label %done
-
-done:
-  ret i32 %nextoffset
+  %i1mask = icmp ne <WIDTH x MASK> %full_mask, zeroinitializer
+  %data = load PTR_OP_ARGS(`<WIDTH x $1> ') %val_ptr
+  %vec_load = call <WIDTH x $1> @llvm.masked.expandload.vWIDTH$1($1* %startptr, <WIDTH x i1> %i1mask, <WIDTH x $1> %data)
+  store <WIDTH x $1> %vec_load, <WIDTH x $1>* %val_ptr, align $3
+packed_load_store_popcnt()
+   ret i32 %ret
 }
 
-define i32 @__packed_store_active(i32 * %startptr, <WIDTH x i32> %vals,
+declare void @llvm.masked.compressstore.vWIDTH$1(<WIDTH  x $1>, $1* , <WIDTH  x i1> )
+define i32 @__packed_store_active$1($1* %startptr, <WIDTH x $1> %vals,
                                    <WIDTH x MASK> %full_mask) nounwind alwaysinline {
-entry:
-  %mask = call i64 @__movmsk(<WIDTH x MASK> %full_mask)
-  %mask_known = call i1 @__is_compile_time_constant_mask(<WIDTH x MASK> %full_mask)
-  br i1 %mask_known, label %known_mask, label %unknown_mask
-
-known_mask:
-  %allon = icmp eq i64 %mask, ALL_ON_MASK
-  br i1 %allon, label %all_on, label %unknown_mask
-
-all_on:
-  %vecptr = bitcast i32 *%startptr to <WIDTH x i32> *
-  store <WIDTH x i32> %vals, <WIDTH x i32> * %vecptr, align 4
-  ret i32 WIDTH
-
-unknown_mask:
-  br label %loop
-
-loop:
-  %lane = phi i32 [ 0, %unknown_mask ], [ %nextlane, %loopend ]
-  %lanemask = phi i64 [ 1, %unknown_mask ], [ %nextlanemask, %loopend ]
-  %offset = phi i32 [ 0, %unknown_mask ], [ %nextoffset, %loopend ]
-
-  ; is the current lane on?
-  %and = and i64 %mask, %lanemask
-  %do_store = icmp eq i64 %and, %lanemask
-  br i1 %do_store, label %store, label %loopend 
-
-store:
-  %storeval = extractelement <WIDTH x i32> %vals, i32 %lane
-  %storeptr = getelementptr PTR_OP_ARGS(`i32') %startptr, i32 %offset
-  store i32 %storeval, i32 *%storeptr
-  %offset1 = add i32 %offset, 1
-  br label %loopend
-
-loopend:
-  %nextoffset = phi i32 [ %offset1, %store ], [ %offset, %loop ]
-  %nextlane = add i32 %lane, 1
-  %nextlanemask = mul i64 %lanemask, 2
-
-  ; are we done yet?
-  %test = icmp ne i32 %nextlane, WIDTH
-  br i1 %test, label %loop, label %done
-
-done:
-  ret i32 %nextoffset
+  %i1mask = icmp ne <WIDTH x MASK> %full_mask, zeroinitializer
+  call void @llvm.masked.compressstore.vWIDTH$1(<WIDTH x $1> %vals, $1* %startptr, <WIDTH x i1> %i1mask)
+packed_load_store_popcnt()
+  ret i32 %ret
 }
 
+
+ifelse($2, `TRUE',
+`
+;; i1 mask variant requires different implementation and is here just for functional completeness.
+define i32 @__packed_store_active2$1($1 * %startptr, <WIDTH x $1> %vals,
+                                   <WIDTH x MASK> %full_mask) nounwind alwaysinline {
+  %ret = call i32 @__packed_store_active$1($1 * %startptr, <WIDTH x $1> %vals,
+                                         <WIDTH x MASK> %full_mask)
+  ret i32 %ret
+}
+',
+`
 ifelse(MASK, `i1',
 `
 ;; i1 mask variant requires different implementation and is here just for functional completeness.
-define i32 @__packed_store_active2(i32 * %startptr, <WIDTH x i32> %vals,
+define i32 @__packed_store_active2$1($1 * %startptr, <WIDTH x $1> %vals,
                                    <WIDTH x MASK> %full_mask) nounwind alwaysinline {
-  %ret = call i32 @__packed_store_active(i32 * %startptr, <WIDTH x i32> %vals,
+  %ret = call i32 @__packed_store_active$1($1 * %startptr, <WIDTH x $1> %vals,
                                          <WIDTH x MASK> %full_mask)
   ret i32 %ret
 }
 ',
 `
 ;; TODO: function needs to return i32, but not MASK type.
-define MASK @__packed_store_active2(i32 * %startptr, <WIDTH x i32> %vals,
+define MASK @__packed_store_active2$1($1 * %startptr, <WIDTH x $1> %vals,
                                    <WIDTH x MASK> %full_mask) nounwind alwaysinline {
 entry:
   %mask = call i64 @__movmsk(<WIDTH x MASK> %full_mask)
@@ -6267,8 +6229,8 @@ known_mask:
   br i1 %allon, label %all_on, label %unknown_mask
  
 all_on:
-  %vecptr = bitcast i32 *%startptr to <WIDTH x i32> *
-  store <WIDTH x i32> %vals, <WIDTH x i32> * %vecptr, align 4
+  %vecptr = bitcast $1 *%startptr to <WIDTH x $1> *
+  store <WIDTH x $1> %vals, <WIDTH x $1> * %vecptr, align 4
   ret MASK WIDTH
  
 unknown_mask:
@@ -6277,16 +6239,16 @@ unknown_mask:
 loop:
   %offset = phi MASK [ 0, %unknown_mask ], [ %ch_offset, %loop ]
   %i = phi i32 [ 0, %unknown_mask ], [ %ch_i, %loop ]
-  %storeval = extractelement <WIDTH x i32> %vals, i32 %i
+  %storeval = extractelement <WIDTH x $1> %vals, i32 %i
 
 ;; Offset has value in range from 0 to WIDTH-1. So it does not matter if we
 ;; zero or sign extending it, while zero extend is free. Also do nothing for
 ;; i64 MASK, as we need i64 value.
 ifelse(MASK, `i64',
-` %storeptr = getelementptr PTR_OP_ARGS(`i32') %startptr, MASK %offset',
+` %storeptr = getelementptr PTR_OP_ARGS(`$1') %startptr, MASK %offset',
 ` %offset1 = zext MASK %offset to i64
-  %storeptr = getelementptr PTR_OP_ARGS(`i32') %startptr, i64 %offset1')
-  store i32 %storeval, i32 *%storeptr
+  %storeptr = getelementptr PTR_OP_ARGS(`$1') %startptr, i64 %offset1')
+  store $1 %storeval, $1 *%storeptr
 
   %mull_mask = extractelement <WIDTH x MASK> %full_mask, i32 %i
   %ch_offset = sub MASK %offset, %mull_mask
@@ -6302,6 +6264,26 @@ done:
 ')
 ')
 
+')
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; packed load and store functions
+;;
+;; These define functions to emulate those nice packed load and packed store
+;; instructions.  For packed store, given a pointer to destination array and
+;; a varying value, for each lane where the mask is on, the
+;; corresponding value for that lane is stored into packed locations in the
+;; destination array.  For packed load, each lane that has an active mask
+;; loads a sequential value from the array.
+;;
+;; $1: 'TRUE' if LLVM compressstore/expandload intrinsics should be used for implementation of '__packed_store_active2'.
+;;     This is the case for the targets with native support of these intrinsics (AVX512).
+;;     For other targets branchless emulation sequence should be used (triggered by 'FALSE').
+
+define(`packed_load_and_store', `
+  packed_load_and_store_type(i32, $1, 4)
+  packed_load_and_store_type(i64, $1, 8)
+')
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; reduce_equal
 
