@@ -158,7 +158,7 @@ static void lPrintVersion() {
     printf("        disable-zmm\t\tDisable using zmm registers for avx512 targets in favour of ymm. This also affects "
            "ABI.\n");
 #ifdef ISPC_GENX_ENABLED
-    printf("        disable-genx-hardware-mask\t\tDisable emitting of GenX implicit hardware mask.\n");
+    printf("        emit-genx-hardware-mask\t\tEnable emitting of GenX implicit hardware mask.\n");
     printf("        enable-genx-foreach-varying\t\tEnable experimental foreach support inside varying control flow.\n");
 #endif
     printf("        fast-masked-vload\t\tFaster masked vector loads on SSE (may go past end of array)\n");
@@ -754,8 +754,8 @@ int main(int Argc, char *Argv[]) {
 #ifdef ISPC_GENX_ENABLED
             else if (!strcmp(opt, "disable-genx-gather-coalescing"))
                 g->opt.disableGenXGatherCoalescing = true;
-            else if (!strcmp(opt, "disable-genx-hardware-mask"))
-                g->opt.emitGenXHardwareMask = false;
+            else if (!strcmp(opt, "emit-genx-hardware-mask"))
+                g->opt.emitGenXHardwareMask = true;
             else if (!strcmp(opt, "enable-genx-foreach-varying"))
                 g->opt.enableForeachInsideVarying = true;
 #endif
