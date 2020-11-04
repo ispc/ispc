@@ -1,3 +1,5 @@
+// rule: skip on cpu=TGLLP
+// Test is unstable on TGLLP
 export void print_fuf(uniform float aFOO[], uniform float b) {
     float a = aFOO[programIndex];
     uniform bool uniBoolVal = (bool)b;
