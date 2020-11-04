@@ -920,7 +920,7 @@ define <WIDTH x $1>
     %res = call <WIDTH x $1> @llvm.genx.rdregioni.GEN_SUFFIX($1).GEN_SUFFIXN($1, WIDTH_X4).i16(<WIDTH_X4 x $1> %res64, i32 0, i32 WIDTH, i32 4, i16 0, i32 undef)
   ', $1,i16, `
     %res64 = call <WIDTH_X2 x $1> @llvm.genx.svm.gather.GEN_SUFFIXN($1, WIDTH_X2).GEN_SUFFIX(i1).GEN_SUFFIX(i64)(<WIDTH x MASK> %vecmask, i32 1, <WIDTH x i64> %offsets64, <WIDTH x $1> undef)
-    %res = call <WIDTH x $1> @llvm.genx.rdregioni.GEN_SUFFIX($1).GEN_SUFFIXN($1, WIDTH_X2).i16(<WIDTH_X2 x $1> %res64, i32 0, i32 WIDTH, i32 4, i16 0, i32 undef)
+    %res = call <WIDTH x $1> @llvm.genx.rdregioni.GEN_SUFFIX($1).GEN_SUFFIXN($1, WIDTH_X2).i16(<WIDTH_X2 x $1> %res64, i32 0, i32 WIDTH, i32 2, i16 0, i32 undef)
   ',`
     %res = call <WIDTH x $1> @llvm.genx.svm.gather.GEN_SUFFIX($1).GEN_SUFFIX(i1).GEN_SUFFIX(i64)(<WIDTH x MASK> %vecmask, i32 0, <WIDTH x i64> %offsets64, <WIDTH x $1> undef)
   ')
@@ -934,7 +934,7 @@ ifelse($1, i8,`
     %res = call <WIDTH x $1> @llvm.genx.rdregioni.GEN_SUFFIX($1).GEN_SUFFIXN($1, WIDTH_X4).i16(<WIDTH_X4 x $1> %res64, i32 0, i32 WIDTH, i32 4, i16 0, i32 undef)
   ', $1,i16, `
     %res64 = call <WIDTH_X2 x $1> @llvm.genx.svm.gather.GEN_SUFFIXN($1, WIDTH_X2).GEN_SUFFIX(i1).GEN_SUFFIX(i64)(<WIDTH x MASK> %vecmask, i32 1, <WIDTH x i64> %offsets, <WIDTH x $1> undef)
-    %res = call <WIDTH x $1> @llvm.genx.rdregioni.GEN_SUFFIX($1).GEN_SUFFIXN($1, WIDTH_X2).i16(<WIDTH_X2 x $1> %res64, i32 0, i32 WIDTH, i32 4, i16 0, i32 undef)
+    %res = call <WIDTH x $1> @llvm.genx.rdregioni.GEN_SUFFIX($1).GEN_SUFFIXN($1, WIDTH_X2).i16(<WIDTH_X2 x $1> %res64, i32 0, i32 WIDTH, i32 2, i16 0, i32 undef)
   ',`
     %res = call <WIDTH x $1> @llvm.genx.svm.gather.GEN_SUFFIX($1).GEN_SUFFIX(i1).GEN_SUFFIX(i64)(<WIDTH x MASK> %vecmask, i32 0, <WIDTH x i64> %offsets, <WIDTH x $1> undef)
   ')
