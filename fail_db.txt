@@ -29,7 +29,19 @@
 ./tests/funcptr-uniform-9.ispc runfail  genx64        genx-x8 unspec   Linux LLVM 10.0 clang++10.0  spv *
 ./tests/isnan_double.ispc runfail  genx64        genx-x8 unspec   Linux LLVM 10.0 clang++10.0  spv *
 ./tests/isnan_double.ispc runfail  genx64        genx-x16 unspec   Linux LLVM 10.0 clang++10.0  spv *
-
+./tests/chkstk.ispc runfail  genx64        genx-x8 unspec   Linux LLVM 10.0 clang++10.0  spv *
+./tests/foreach-22.ispc runfail  genx64        genx-x8 unspec   Linux LLVM 10.0 clang++10.0  spv *
+./tests/foreach-23.ispc runfail  genx64        genx-x8 unspec   Linux LLVM 10.0 clang++10.0  spv *
+./tests/foreach-24.ispc runfail  genx64        genx-x8 unspec   Linux LLVM 10.0 clang++10.0  spv *
+./tests/print_varying_simd.ispc runfail  genx64        genx-x8 unspec   Linux LLVM 10.0 clang++10.0  spv *
+./tests/recursion-forward-func-decl.ispc runfail  genx64        genx-x8 unspec   Linux LLVM 10.0 clang++10.0  spv *
+./tests/recursion.ispc runfail  genx64        genx-x8 unspec   Linux LLVM 10.0 clang++10.0  spv *
+./tests/foreach-22.ispc runfail  genx64        genx-x16 unspec   Linux LLVM 10.0 clang++10.0  spv *
+./tests/foreach-23.ispc runfail  genx64        genx-x16 unspec   Linux LLVM 10.0 clang++10.0  spv *
+./tests/foreach-24.ispc runfail  genx64        genx-x16 unspec   Linux LLVM 10.0 clang++10.0  spv *
+./tests/print_varying_simd.ispc runfail  genx64        genx-x16 unspec   Linux LLVM 10.0 clang++10.0  spv *
+./tests/recursion-forward-func-decl.ispc runfail  genx64        genx-x16 unspec   Linux LLVM 10.0 clang++10.0  spv *
+./tests/recursion.ispc runfail  genx64        genx-x16 unspec   Linux LLVM 10.0 clang++10.0  spv *
 .\tests\abs-int.ispc runfail  genx64        genx-x8 unspec Windows LLVM 10.0         cl  spv *
 .\tests\array-gather-multi-unif.ispc runfail  genx64        genx-x8 unspec Windows LLVM 10.0         cl  spv *
 .\tests\array-mixed-unif-vary-indexing.ispc runfail  genx64        genx-x8 unspec Windows LLVM 10.0         cl  spv *
