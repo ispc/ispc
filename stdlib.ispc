@@ -558,12 +558,24 @@ static inline uniform unsigned int64 packmask(bool v) {
 
 static inline void memcpy(void * uniform dst, void * uniform src,
                           uniform int32 count) {
-    __memcpy32((int8 * uniform)dst, (int8 * uniform)src, count);
+    if (__is_genx_target) {
+        for (uniform int j = 0; j < count; j++) {
+            ((int8* uniform)dst)[j] = ((int8* uniform)src)[j];
+        }
+    } else {
+        __memcpy32((int8 * uniform)dst, (int8 * uniform)src, count);
+    }
 }
 
 static inline void memcpy64(void * uniform dst, void * uniform src,
                           uniform int64 count) {
-    __memcpy64((int8 * uniform)dst, (int8 * uniform)src, count);
+    if (__is_genx_target) {
+        for (uniform int64 j = 0; j < count; j++) {
+            ((int8* uniform)dst)[j] = ((int8* uniform)src)[j];
+        }
+    } else {
+        __memcpy64((int8 * uniform)dst, (int8 * uniform)src, count);
+    }
 }
 
 static inline void memcpy(void * varying dst, void * varying src,
@@ -576,7 +588,13 @@ static inline void memcpy(void * varying dst, void * varying src,
 
     foreach_active (i) {
         void * uniform d = da[i], * uniform s = sa[i];
-        __memcpy32((int8 * uniform)d, (int8 * uniform)s, extract(count, i));
+        if (__is_genx_target) {
+            for (uniform int j = 0; j < extract(count,i); j++) {
+                ((int8* uniform)d)[j] = ((int8* uniform)s)[j];
+            }
+        } else {
+            __memcpy32((int8 * uniform)d, (int8 * uniform)s, extract(count, i));
+        }
     }
 }
 
@@ -590,18 +608,50 @@ static inline void memcpy64(void * varying dst, void * varying src,
 
     foreach_active (i) {
         void * uniform d = da[i], * uniform s = sa[i];
-        __memcpy64((int8 * uniform)d, (int8 * uniform)s, extract(count, i));
+        if (__is_genx_target) {
+            for (uniform int64 j = 0; j < extract(count,i); j++) {
+                ((int8* uniform)d)[j] = ((int8* uniform)s)[j];
+            }
+        } else {
+            __memcpy64((int8 * uniform)d, (int8 * uniform)s, extract(count, i));
+        }
     }
 }
 
 static inline void memmove(void * uniform dst, void * uniform src,
                           uniform int32 count) {
-    __memmove32((int8 * uniform)dst, (int8 * uniform)src, count);
+    if (__is_genx_target) {
+        if ((uintptr_t)dst - (uintptr_t)src >= (size_t)count) {
+            for (uniform int j = 0; j < count; j++) {
+                ((int8* uniform)dst)[j] = ((int8* uniform)src)[j];
+            }
+        }
+        else {
+            for (uniform int j = count-1; j >= 0; j--) {
+                ((int8* uniform)dst)[j] = ((int8* uniform)src)[j];
+            }
+        }
+    } else {
+        __memmove32((int8 * uniform)dst, (int8 * uniform)src, count);
+    }
 }
 
 static inline void memmove64(void * uniform dst, void * uniform src,
                              uniform int64 count) {
-    __memmove64((int8 * uniform)dst, (int8 * uniform)src, count);
+    if (__is_genx_target) {
+        if ((uintptr_t)dst - (uintptr_t)src >= (size_t)count) {
+            for (uniform int64 j = 0; j < count; j++) {
+                ((int8* uniform)dst)[j] = ((int8* uniform)src)[j];
+            }
+        }
+        else {
+            for (uniform int64 j = count-1; j >= 0; j--) {
+                ((int8* uniform)dst)[j] = ((int8* uniform)src)[j];
+            }
+        }
+    } else {
+        __memmove64((int8 * uniform)dst, (int8 * uniform)src, count);
+    }
 }
 
 static inline void memmove(void * varying dst, void * varying src,
@@ -614,7 +664,21 @@ static inline void memmove(void * varying dst, void * varying src,
 
     foreach_active (i) {
         void * uniform d = da[i], * uniform s = sa[i];
-        __memmove32((int8 * uniform)d, (int8 * uniform)s, extract(count, i));
+        uniform int c = extract(count, i);
+        if (__is_genx_target) {
+            if ((uintptr_t)d - (uintptr_t)s >= (size_t)c) {
+                for (uniform int j = 0; j < count; j++) {
+                    ((int8* uniform)d)[j] = ((int8* uniform)s)[j];
+                }
+            }
+            else {
+                for (uniform int j = c-1; j >= 0; j--) {
+                    ((int8* uniform)d)[j] = ((int8* uniform)s)[j];
+                }
+            }
+        } else {
+            __memmove32((int8 * uniform)d, (int8 * uniform)s, c);
+        }
     }
 }
 
@@ -628,18 +692,44 @@ static inline void memmove64(void * varying dst, void * varying src,
 
     foreach_active (i) {
         void * uniform d = da[i], * uniform s = sa[i];
-        __memmove64((int8 * uniform)d, (int8 * uniform)s, extract(count, i));
+        uniform int64 c = extract(count, i);
+        if (__is_genx_target) {
+            if ((uintptr_t)d - (uintptr_t)s >= (size_t)c) {
+                for (uniform int64 j = 0; j < count; j++) {
+                    ((int8* uniform)d)[j] = ((int8* uniform)s)[j];
+                }
+            }
+            else {
+                for (uniform int64 j = c-1; j >= 0; j--) {
+                    ((int8* uniform)d)[j] = ((int8* uniform)s)[j];
+                }
+            }
+        } else {
+            __memmove64((int8 * uniform)d, (int8 * uniform)s, c);
+        }
     }
 }
 
 static inline void memset(void * uniform ptr, uniform int8 val,
                           uniform int32 count) {
-    __memset32((int8 * uniform)ptr, val, count);
+    if (__is_genx_target) {
+        for (uniform int j = 0; j < count; j++) {
+            ((int8* uniform)ptr)[j] = val;
+        }
+    } else {
+        __memset32((int8 * uniform)ptr, val, count);
+    }
 }
 
 static inline void memset64(void * uniform ptr, uniform int8 val,
                           uniform int64 count) {
-    __memset64((int8 * uniform)ptr, val, count);
+    if (__is_genx_target) {
+        for (uniform int64 j = 0; j < count; j++) {
+            ((int8* uniform)ptr)[j] = val;
+        }
+    } else {
+        __memset64((int8 * uniform)ptr, val, count);
+    }
 }
 
 static inline void memset(void * varying ptr, int8 val, int32 count) {
@@ -647,7 +737,15 @@ static inline void memset(void * varying ptr, int8 val, int32 count) {
     pa[programIndex] = ptr;
 
     foreach_active (i) {
-        __memset32((int8 * uniform)pa[i], extract(val, i), extract(count, i));
+        if (__is_genx_target) {
+            void * uniform d = pa[i];
+            for (uniform int j = 0; j < extract(count, i); j++) {
+                ((int8* uniform)d)[j] = extract(val, i);
+            }
+        }
+        else {
+            __memset32((int8 * uniform)pa[i], extract(val, i), extract(count, i));
+        }
     }
 }
 
@@ -656,7 +754,15 @@ static inline void memset64(void * varying ptr, int8 val, int64 count) {
     pa[programIndex] = ptr;
 
     foreach_active (i) {
-        __memset64((int8 * uniform)pa[i], extract(val, i), extract(count, i));
+        if (__is_genx_target) {
+            void * uniform d = pa[i];
+            for (uniform int64 j = 0; j < extract(count, i); j++) {
+                ((int8* uniform)d)[j] = extract(val, i);
+            }
+        }
+        else {
+            __memset64((int8 * uniform)pa[i], extract(val, i), extract(count, i));
+        }
     }
 }
 
