@@ -2832,6 +2832,72 @@ static bool lGSToLoadStore(llvm::CallInst *callInst) {
 ///////////////////////////////////////////////////////////////////////////
 // MaskedStoreOptPass
 
+#ifdef ISPC_GENX_ENABLED
+static llvm::Function *lGenXMaskedInt8Inst(llvm::Instruction *inst, bool isStore) {
+    std::string maskedFuncName;
+    if (isStore) {
+        maskedFuncName = "masked_store_i8";
+    } else {
+        maskedFuncName = "masked_load_i8";
+    }
+    llvm::CallInst *callInst = llvm::dyn_cast<llvm::CallInst>(inst);
+    if (callInst != NULL && callInst->getCalledFunction()->getName().contains(maskedFuncName)) {
+        return NULL;
+    }
+    return m->module->getFunction("__" + maskedFuncName);
+}
+
+static llvm::CallInst *lGenXStoreInst(llvm::Value *val, llvm::Value *ptr, llvm::Instruction *inst) {
+    Assert(g->target->isGenXTarget());
+    Assert(llvm::isa<llvm::VectorType>(val->getType()));
+    Assert(llvm::isPowerOf2_32(val->getType()->getVectorNumElements()));
+    Assert(val->getType()->getPrimitiveSizeInBits() / 8 <= 8 * OWORD);
+
+    // The data write of svm store must have a size that is a power of two from 16 to 128
+    // bytes. However for int8 type and simd width = 8, the data write size is 8.
+    // So we use masked store function here instead of svm store which process int8 type
+    // correctly.
+    if (val->getType()->getPrimitiveSizeInBits() / 8 < 16) {
+        Assert(val->getType()->getScalarType() == LLVMTypes::Int8Type);
+        if (llvm::Function *maskedFunc = lGenXMaskedInt8Inst(inst, true))
+            return llvm::dyn_cast<llvm::CallInst>(lCallInst(maskedFunc, ptr, val, LLVMMaskAllOn, ""));
+        else {
+            return NULL;
+        }
+    }
+    llvm::Instruction *svm_st_zext = new llvm::PtrToIntInst(ptr, LLVMTypes::Int64Type, "svm_st_ptrtoint", inst);
+
+    llvm::Type *argTypes[] = {svm_st_zext->getType(), val->getType()};
+    auto Fn = llvm::GenXIntrinsic::getGenXDeclaration(m->module, llvm::GenXIntrinsic::genx_svm_block_st, argTypes);
+    return llvm::CallInst::Create(Fn, {svm_st_zext, val}, inst->getName());
+}
+
+static llvm::CallInst *lGenXLoadInst(llvm::Value *ptr, llvm::Type *retType, llvm::Instruction *inst) {
+    Assert(llvm::isa<llvm::VectorType>(retType));
+    Assert(llvm::isPowerOf2_32(retType->getVectorNumElements()));
+    Assert(retType->getPrimitiveSizeInBits());
+    Assert(retType->getPrimitiveSizeInBits() / 8 <= 8 * OWORD);
+    // The data read of svm load must have a size that is a power of two from 16 to 128
+    // bytes. However for int8 type and simd width = 8, the data read size is 8.
+    // So we use masked load function here instead of svm load which process int8 type
+    // correctly.
+    if (retType->getPrimitiveSizeInBits() / 8 < 16) {
+        Assert(retType->getScalarType() == LLVMTypes::Int8Type);
+        if (llvm::Function *maskedFunc = lGenXMaskedInt8Inst(inst, false))
+            return llvm::dyn_cast<llvm::CallInst>(lCallInst(maskedFunc, ptr, LLVMMaskAllOn, ""));
+        else {
+            return NULL;
+        }
+    }
+
+    llvm::Value *svm_ld_ptrtoint = new llvm::PtrToIntInst(ptr, LLVMTypes::Int64Type, "svm_ld_ptrtoint", inst);
+
+    auto Fn = llvm::GenXIntrinsic::getGenXDeclaration(m->module, llvm::GenXIntrinsic::genx_svm_block_ld,
+                                                      {retType, svm_ld_ptrtoint->getType()});
+
+    return llvm::CallInst::Create(Fn, svm_ld_ptrtoint, inst->getName());
+}
+#endif
 /** Masked stores are generally more complex than regular stores; for
     example, they require multiple instructions to simulate under SSE.
     This optimization detects cases where masked stores can be replaced
@@ -2893,15 +2959,7 @@ static bool lImproveMaskedStore(llvm::CallInst *callInst) {
         // is resolved after inlining. TODO: problems can be met here in case of Stack Calls.
         if (g->target->isGenXTarget() && GetAddressSpace(lvalue) == AddressSpace::External &&
             callInst->getParent()->getParent()->getLinkage() != llvm::GlobalValue::LinkageTypes::InternalLinkage) {
-            Assert(llvm::isa<llvm::VectorType>(rvalue->getType()));
-            Assert(llvm::isPowerOf2_32(rvalue->getType()->getVectorNumElements()));
-            Assert(rvalue->getType()->getPrimitiveSizeInBits() / 8 <= 8 * OWORD);
-            llvm::Instruction *svm_st_zext =
-                new llvm::PtrToIntInst(lvalue, LLVMTypes::Int64Type, "svm_st_ptrtoint", callInst);
-            llvm::Type *argTypes[] = {svm_st_zext->getType(), rvalue->getType()};
-            auto Fn =
-                llvm::GenXIntrinsic::getGenXDeclaration(m->module, llvm::GenXIntrinsic::genx_svm_block_st, argTypes);
-            store = lCallInst(Fn, svm_st_zext, rvalue, "", NULL);
+            store = lGenXStoreInst(rvalue, lvalue, callInst);
         } else if (!g->target->isGenXTarget() ||
                    (g->target->isGenXTarget() && GetAddressSpace(lvalue) == AddressSpace::Local))
 #endif
@@ -2988,16 +3046,7 @@ static bool lImproveMaskedLoad(llvm::CallInst *callInst, llvm::BasicBlock::itera
         // is resolved after inlining. TODO: problems can be met here in case of Stack Calls.
         if (g->target->isGenXTarget() && GetAddressSpace(ptr) == AddressSpace::External &&
             callInst->getParent()->getParent()->getLinkage() != llvm::GlobalValue::LinkageTypes::InternalLinkage) {
-            llvm::Type *retType = callInst->getType();
-            Assert(llvm::isa<llvm::VectorType>(retType));
-            Assert(llvm::isPowerOf2_32(retType->getVectorNumElements()));
-            Assert(retType->getPrimitiveSizeInBits() / 8 <= 8 * OWORD);
-            llvm::Value *svm_ld_ptrtoint =
-                new llvm::PtrToIntInst(ptr, LLVMTypes::Int64Type, "svm_ld_ptrtoint", callInst);
-            auto Fn = llvm::GenXIntrinsic::getGenXDeclaration(m->module, llvm::GenXIntrinsic::genx_svm_block_ld,
-                                                              {retType, svm_ld_ptrtoint->getType()});
-
-            load = llvm::CallInst::Create(Fn, svm_ld_ptrtoint, callInst->getName());
+            load = lGenXLoadInst(ptr, callInst->getType(), callInst);
         } else if (!g->target->isGenXTarget() ||
                    (g->target->isGenXTarget() && GetAddressSpace(ptr) == AddressSpace::Local))
 #endif
@@ -6455,15 +6504,8 @@ llvm::Instruction *FixAddressSpace::processVectorLoad(llvm::LoadInst *LI) {
         retType = llvm::VectorType::get(scalarType, retType->getVectorNumElements());
     }
 
-    Assert(llvm::isPowerOf2_32(retType->getVectorNumElements()));
-    Assert(retType->getPrimitiveSizeInBits() / 8 <= 8 * OWORD);
-    Assert(retType->getPrimitiveSizeInBits());
-
-    llvm::Value *svm_ld_ptrtoint = new llvm::PtrToIntInst(ptr, LLVMTypes::Int64Type, "svm_ld_ptrtoint", LI);
-    auto Fn = llvm::GenXIntrinsic::getGenXDeclaration(m->module, llvm::GenXIntrinsic::genx_svm_block_ld,
-                                                      {retType, svm_ld_ptrtoint->getType()});
-
-    llvm::Instruction *res = llvm::CallInst::Create(Fn, svm_ld_ptrtoint, LI->getName());
+    llvm::Instruction *res = lGenXLoadInst(ptr, retType, llvm::dyn_cast<llvm::Instruction>(LI));
+    Assert(res);
 
     if (isPtrLoad) {
         res->insertBefore(LI);
@@ -6476,6 +6518,7 @@ llvm::Instruction *FixAddressSpace::processVectorLoad(llvm::LoadInst *LI) {
 llvm::Instruction *FixAddressSpace::processVectorStore(llvm::StoreInst *SI) {
     llvm::Value *ptr = SI->getOperand(1);
     llvm::Value *val = SI->getOperand(0);
+    Assert(ptr != NULL);
     Assert(val != NULL);
 
     llvm::Type *valType = val->getType();
@@ -6493,15 +6536,7 @@ llvm::Instruction *FixAddressSpace::processVectorStore(llvm::StoreInst *SI) {
         val = new llvm::PtrToIntInst(val, valType, "svm_st_val_ptrtoint", SI);
     }
 
-    Assert(llvm::isPowerOf2_32(valType->getVectorNumElements()));
-    Assert(valType->getPrimitiveSizeInBits() / 8 <= 8 * OWORD);
-    Assert(valType->getPrimitiveSizeInBits());
-
-    llvm::Instruction *svm_st_zext = new llvm::PtrToIntInst(ptr, LLVMTypes::Int64Type, "svm_st_ptrtoint", SI);
-    llvm::Type *argTypes[] = {svm_st_zext->getType(), valType};
-    auto Fn = llvm::GenXIntrinsic::getGenXDeclaration(m->module, llvm::GenXIntrinsic::genx_svm_block_st, argTypes);
-
-    return llvm::CallInst::Create(Fn, {svm_st_zext, val}, "");
+    return lGenXStoreInst(ptr, val, llvm::dyn_cast<llvm::Instruction>(SI));
 }
 
 llvm::Instruction *FixAddressSpace::createInt8WrRegion(llvm::Value *Val, llvm::Value *Mask) {
