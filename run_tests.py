@@ -84,7 +84,7 @@ class Host(object):
                     ispc_exe = counter + os.sep + "ispc" + ispc_ext
         # checks the required ispc compiler otherwise prints an error message
         if ispc_exe == "":
-            error("ISPC compiler not found.\nAdded path to ispc compiler to your PATH variable or ISPC_HOME variable\n", 1)
+            error("ISPC compiler not found.\nAdd path to ispc compiler to your PATH or ISPC_HOME env variable\n", 1)
         # use relative path
         self.ispc_exe = os.path.relpath(ispc_exe, os.getcwd())
 
