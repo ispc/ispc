@@ -72,7 +72,7 @@ my_tag: &my_tag
           # Run examples
         - if [ -z "$WASM_FLAGS" ]; then ./perf.py -n 1; fi
           # Run tests for latest LLVM version
-        - if [ "$LLVM_VERSION" == "10.0" -a -z "$WASM_FLAGS" ]; then ./run_tests.py; ./run_tests.py -a x86; fi
+        - if [ "$LLVM_VERSION" == "11.0" -a -z "$WASM_FLAGS" ]; then ./run_tests.py; ./run_tests.py -a x86; fi
 
 stages:
   - check format
@@ -92,7 +92,14 @@ jobs:
       before_install:
       script:
         - ./check_format.sh clang-format-10
-    # LLVM 10.0 + Ubuntu 16.04: build, lit tests, examples (build + run), benchmarks (build + trial run), tests
+    # LLVM 11.0 + Ubuntu 16.04: build, lit tests, examples (build + run), benchmarks (build + trial run), tests
+    - <<: *my_tag
+      env:
+        - LLVM_VERSION=11.0 OS=Ubuntu16.04
+        - LLVM_TAR=llvm-11.0.0-ubuntu16.04-Release+Asserts-x86.arm.wasm.tar.xz
+        - LLVM_REPO=https://github.com/dbabokin/llvm-project
+        - ISPC_HOME=$TRAVIS_BUILD_DIR
+    # LLVM 10.0 + Ubuntu 16.04: build, lit tests, examples (build + run), benchmarks (build + trial run)
     - <<: *my_tag
       env:
         - LLVM_VERSION=10.0 OS=Ubuntu16.04
@@ -114,15 +121,15 @@ jobs:
         - LLVM_REPO=https://github.com/dbabokin/llvm-project
         - ISPC_HOME=$TRAVIS_BUILD_DIR
     # WASM enabled build
-    # LLVM 10.0 + Ubuntu 16.04: build, lit tests, examples (build), benchmarks (build + trial run)
+    # LLVM 11.0 + Ubuntu 16.04: build, lit tests, examples (build), benchmarks (build + trial run)
     - <<: *my_tag
       env:
-        - LLVM_VERSION=10.0 OS=Ubuntu16.04 WASM_FLAGS="-DWASM_ENABLED=ON"
-        - LLVM_TAR=llvm-10.0.1-ubuntu16.04-Release+Asserts-x86.arm.wasm.tar.xz
+        - LLVM_VERSION=11.0 OS=Ubuntu16.04 WASM_FLAGS="-DWASM_ENABLED=ON"
+        - LLVM_TAR=llvm-11.0.0-ubuntu16.04-Release+Asserts-x86.arm.wasm.tar.xz
         - LLVM_REPO=https://github.com/dbabokin/llvm-project
         - ISPC_HOME=$TRAVIS_BUILD_DIR
     # ARM build
-    # LLVM 10.0 + Ubuntu 18.04:
+    # LLVM 11.0 + Ubuntu 18.04:
     #   - ARM only (default): build, lit tests, examples (build)
     #   - ARM + x86: build, lit tests, examples (build), tests (aarch64)
     - stage: test
@@ -130,8 +137,8 @@ jobs:
       arch: arm64
       dist: bionic
       env:
-        - LLVM_VERSION=10.0 OS=Ubuntu18.04aarch64
-        - LLVM_TAR=llvm-10.0.1-ubuntu16.04aarch64-Release+Asserts-x86.arm.wasm.tar.xz
+        - LLVM_VERSION=11.0 OS=Ubuntu18.04aarch64
+        - LLVM_TAR=llvm-11.0.0-ubuntu16.04aarch64-Release+Asserts-x86.arm.wasm.tar.xz
         - LLVM_REPO=https://github.com/dbabokin/llvm-project
         - ISPC_HOME=$TRAVIS_BUILD_DIR
       before_install:
@@ -167,13 +174,13 @@ jobs:
         - export ISPC_HOME=`pwd`
         - ./run_tests.py --arch=aarch64 --target=neon-i32x4
     # macOS build
-    # LLVM 10.0 + macOS 10.15 Catalina: build, lit tests, examples (build)
+    # LLVM 11.0 + macOS 10.15 Catalina: build, lit tests, examples (build)
     - stage: test
       os: osx
       osx_image: xcode11.4
       env:
-        - LLVM_VERSION=10.0 OS=macOS10.15
-        - LLVM_TAR=llvm-10.0.1-macos10.15-Release+Asserts-x86.arm.wasm.tar.xz
+        - LLVM_VERSION=11.0 OS=macOS10.15
+        - LLVM_TAR=llvm-11.0.0-macos10.15-Release+Asserts-x86.arm.wasm.tar.xz
         - LLVM_REPO=https://github.com/dbabokin/llvm-project
         - ISPC_HOME=$TRAVIS_BUILD_DIR
       before_install:
