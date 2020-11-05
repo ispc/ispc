@@ -477,35 +477,42 @@ def build_ispc(version_LLVM, make):
     os.chdir(current_path)
 
 def execute_stability(stability, R, print_version):
-    stability1 = copy.deepcopy(stability)
+    global return_status
+    try:
+        stability1 = copy.deepcopy(stability)
 
-    b_temp = run_tests.run_tests(stability1, [], print_version)
-    temp = b_temp[0]
-    time = b_temp[1]
-    for j in range(0,4):
-        R[j][0] = R[j][0] + temp[j] # new_runfails, new_compfails, new_passes_runfails, new_passes_compfails
-        for i in range(0,len(temp[j])):
-            R[j][1].append(temp[4])
-    number_of_fails = temp[5]
-    number_of_new_fails = len(temp[0]) + len(temp[1])
-    number_of_passes = len(temp[2]) + len(temp[3])
-    if number_of_fails == 0:
-        str_fails = ". No fails"
-    else:
-        str_fails = ". Fails: " + str(number_of_fails)
-    if number_of_new_fails == 0:
-        str_new_fails = ", No new fails"
-    else:
-        str_new_fails = ", New fails: " + str(number_of_new_fails)
-    if number_of_passes == 0:
-        str_new_passes = "."
-    else:
-        str_new_passes = ", " + str(number_of_passes) + " new passes."
-    if stability.time:
-        str_time = " " + time + "\n"
-    else:
-        str_time = "\n"
-    print_debug(temp[4][1:-3] + stability1.ispc_flags + str_fails + str_new_fails + str_new_passes + str_time, False, stability_log)
+        b_temp = run_tests.run_tests(stability1, [], print_version)
+        temp = b_temp[0]
+        time = b_temp[1]
+        for j in range(0,4):
+            R[j][0] = R[j][0] + temp[j] # new_runfails, new_compfails, new_passes_runfails, new_passes_compfails
+            for i in range(0,len(temp[j])):
+                R[j][1].append(temp[4])
+        number_of_fails = temp[5]
+        number_of_new_fails = len(temp[0]) + len(temp[1])
+        number_of_passes = len(temp[2]) + len(temp[3])
+        if number_of_fails == 0:
+            str_fails = ". No fails"
+        else:
+            str_fails = ". Fails: " + str(number_of_fails)
+        if number_of_new_fails == 0:
+            str_new_fails = ", No new fails"
+        else:
+            str_new_fails = ", New fails: " + str(number_of_new_fails)
+        if number_of_passes == 0:
+            str_new_passes = "."
+        else:
+            str_new_passes = ", " + str(number_of_passes) + " new passes."
+        if stability.time:
+            str_time = " " + time + "\n"
+        else:
+            str_time = "\n"
+        print_debug(temp[4][1:-3] + stability1.ispc_flags + str_fails + str_new_fails + str_new_passes + str_time, False, stability_log)
+    except:
+        exc_type, exc_value, exc_traceback = sys.exc_info()
+        traceback.print_tb(exc_traceback, file=sys.stderr)
+        print_debug("ERROR: Exception in execute_stability: %s\n" % (sys.exc_info()[1]), False, stability_log)
+        return_status = 1
 
 
 '''
@@ -545,7 +552,6 @@ def concatenate_test_results(R1, R2):
     return R
 
 def validation_run(only, only_targets, reference_branch, number, notify, update, speed_number, make, perf_llvm, time):
-    global return_status
     os.chdir(os.environ["ISPC_HOME"])
     if current_OS != "Windows":
         os.environ["PATH"] = os.environ["ISPC_HOME"] + ":" + os.environ["PATH"]
@@ -696,13 +702,7 @@ def validation_run(only, only_targets, reference_branch, number, notify, update,
                             stability.ispc_flags = ispc_flags_tmp
                             if (i3 != 0):
                                 stability.ispc_flags += " -g"
-                            try:
-                                execute_stability(stability, R_tmp, print_version)
-                            except:
-                                exc_type, exc_value, exc_traceback = sys.exc_info()
-                                traceback.print_tb(exc_traceback, file=sys.stderr)
-                                print_debug("ERROR: Exception in execute_stability: %s\n" % (sys.exc_info()[1]), False, stability_log)
-                                return_status = 1
+                            execute_stability(stability, R_tmp, print_version)
                             print_version = 0
             for j in range(0,len(sde_targets)):
                 stability.target = sde_targets[j][1]
