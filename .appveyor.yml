@@ -32,13 +32,15 @@
 configuration: Release
 
 environment:
-  LLVM_LATEST: 10.0
+  LLVM_LATEST: 11.0
   DOCKER_PATH: "ispc/test_repo"
   matrix:
     - APPVEYOR_BUILD_WORKER_IMAGE: Ubuntu1604
       LLVM_VERSION: latest
     - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2019
       LLVM_VERSION: latest
+    - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2019
+      LLVM_VERSION: 10.0
     - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2019
       LLVM_VERSION: 9.0
     - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2017
@@ -61,7 +63,8 @@ for:
         if "%LLVM_VERSION%"=="latest" (set WASM=ON)
         if "%APPVEYOR_BUILD_WORKER_IMAGE%"=="Visual Studio 2017" ( (set generator="Visual Studio 15 Win64") & (set vsversion=2017))
         if "%APPVEYOR_BUILD_WORKER_IMAGE%"=="Visual Studio 2019" ( (set generator="Visual Studio 16") & (set vsversion=2019))
-        set LLVM_TAR=llvm-10.0.1-win.vs2019-Release+Asserts-x86.arm.wasm.zip
+        set LLVM_TAR=llvm-11.0.0-win.vs2019-Release+Asserts-x86.arm.wasm.7z
+        if "%LLVM_VERSION%"=="10.0" (set LLVM_TAR=llvm-10.0.1-win.vs2019-Release+Asserts-x86.arm.wasm.zip)
         if "%LLVM_VERSION%"=="9.0" (set LLVM_TAR=llvm-9.0.1-win.vs2017-Release+Asserts-x86.arm.wasm.zip)
         if "%LLVM_VERSION%"=="8.0" (set LLVM_TAR=llvm-8.0.1-win.vs2017-Release+Asserts-x86.arm.wasm.zip)
   install:
@@ -113,7 +116,7 @@ for:
         export CROSS_TOOLS=/usr/local/src/cross
         export MACOS_SDK=MacOSX10.13.sdk
         export WASM=OFF
-        export LLVM_TAR=llvm-10.0.1-ubuntu16.04-Release+Asserts-x86.arm.wasm.tar.xz
+        export LLVM_TAR=llvm-11.0.0-ubuntu16.04-Release+Asserts-x86.arm.wasm.tar.xz
   install:
     - sh: |-
         sudo apt-get update
