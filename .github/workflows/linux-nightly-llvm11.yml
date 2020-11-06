@@ -132,7 +132,7 @@ jobs:
       run: |
         # Setting PATH in prev step not surived moving to this step
         # use ADD_PATH to pass it through steps in this job.
-        echo "PATH=$ADD_PATH:$PATH" >> $GITHUB_ENV
+        export PATH=$ADD_PATH:$PATH
         ./alloy.py -r --only="stability current -O0 -O1 -O2" --only-targets="${{ matrix.target }}" --time --update-errors=FP
     - name: Upload fail_db.txt
       uses: actions/upload-artifact@v2
