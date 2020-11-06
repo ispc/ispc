@@ -43,8 +43,6 @@ environment:
       LLVM_VERSION: 10.0
     - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2019
       LLVM_VERSION: 9.0
-    - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2017
-      LLVM_VERSION: 8.0
 
 for:
 -
@@ -66,7 +64,6 @@ for:
         set LLVM_TAR=llvm-11.0.0-win.vs2019-Release+Asserts-x86.arm.wasm.7z
         if "%LLVM_VERSION%"=="10.0" (set LLVM_TAR=llvm-10.0.1-win.vs2019-Release+Asserts-x86.arm.wasm.zip)
         if "%LLVM_VERSION%"=="9.0" (set LLVM_TAR=llvm-9.0.1-win.vs2017-Release+Asserts-x86.arm.wasm.zip)
-        if "%LLVM_VERSION%"=="8.0" (set LLVM_TAR=llvm-8.0.1-win.vs2017-Release+Asserts-x86.arm.wasm.zip)
   install:
     - ps: choco install --no-progress winflexbison3 wget 7zip
     - cmd: |-
