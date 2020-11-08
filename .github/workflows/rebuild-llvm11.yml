@@ -95,14 +95,12 @@ jobs:
       shell: cmd
       run: |
         mkdir llvm
-        echo ::set-env name=LLVM_HOME::%GITHUB_WORKSPACE%\llvm
-        echo ::set-env name=ISPC_HOME::%GITHUB_WORKSPACE%
+        echo LLVM_HOME=%GITHUB_WORKSPACE%\llvm>> %GITHUB_ENV%
+        echo ISPC_HOME=%GITHUB_WORKSPACE%>> %GITHUB_ENV%
 
     - name: Build LLVM
       shell: cmd
       run: |
-        echo %LLVM_HOME%
-        echo %ISPC_HOME%
         python ./alloy.py -b --version=11.0 --verbose
         cd alloy_results* && type alloy_build.log
 
@@ -138,14 +136,12 @@ jobs:
       shell: cmd
       run: |
         mkdir llvm
-        echo ::set-env name=LLVM_HOME::%GITHUB_WORKSPACE%\llvm
-        echo ::set-env name=ISPC_HOME::%GITHUB_WORKSPACE%
+        echo LLVM_HOME=%GITHUB_WORKSPACE%\llvm>> %GITHUB_ENV%
+        echo ISPC_HOME=%GITHUB_WORKSPACE%>> %GITHUB_ENV%
 
     - name: Build LLVM
       shell: cmd
       run: |
-        echo %LLVM_HOME%
-        echo %ISPC_HOME%
         python ./alloy.py -b --version=11.0 --verbose --llvm-disable-assertions
         cd alloy_results* && type alloy_build.log
 
@@ -180,8 +176,8 @@ jobs:
         sudo xcode-select -switch /Applications/Xcode.app/Contents/Developer
         xcrun --show-sdk-path
         mkdir llvm
-        echo "::set-env name=LLVM_HOME::${GITHUB_WORKSPACE}/llvm"
-        echo "::set-env name=ISPC_HOME::${GITHUB_WORKSPACE}"
+        echo "LLVM_HOME=${GITHUB_WORKSPACE}/llvm" >> $GITHUB_ENV
+        echo "ISPC_HOME=${GITHUB_WORKSPACE}" >> $GITHUB_ENV
 
     - name: Check environment
       run: |
@@ -223,8 +219,8 @@ jobs:
         sudo xcode-select -switch /Applications/Xcode.app/Contents/Developer
         xcrun --show-sdk-path
         mkdir llvm
-        echo "::set-env name=LLVM_HOME::${GITHUB_WORKSPACE}/llvm"
-        echo "::set-env name=ISPC_HOME::${GITHUB_WORKSPACE}"
+        echo "LLVM_HOME=${GITHUB_WORKSPACE}/llvm" >> $GITHUB_ENV
+        echo "ISPC_HOME=${GITHUB_WORKSPACE}" >> $GITHUB_ENV
 
     - name: Check environment
       run: |
