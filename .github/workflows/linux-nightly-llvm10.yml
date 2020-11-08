@@ -9,6 +9,7 @@ on:
   push:
     branches:
       - '**test_nightly**'
+  workflow_dispatch:
 
 env:
   LLVM_VERSION: "10.0"

@@ -9,6 +9,7 @@ on:
       - "llvm_patches/*10_0*"
       - "alloy.py"
       - ".github/workflows/rebuild-llvm10.yml"
+  workflow_dispatch:
 
 jobs:
   # Building LLVM in docker, as using native Ubuntu 16.04 github-hosted image contains newer-than-expected libs and
