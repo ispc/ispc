@@ -108,13 +108,13 @@ jobs:
       shell: cmd
       run: |
         cd llvm
-        7z.exe a -t7z llvm-11.0.0-win.vs2019-Release+Asserts-x86.arm.wasm.zip bin-11.0
+        7z.exe a -t7z llvm-11.0.0-win.vs2019-Release+Asserts-x86.arm.wasm.7z bin-11.0
 
     - name: Upload package
       uses: actions/upload-artifact@v2
       with:
         name: llvm11_win
-        path: llvm/llvm-11.0.0-win.vs2019-Release+Asserts-x86.arm.wasm.zip
+        path: llvm/llvm-11.0.0-win.vs2019-Release+Asserts-x86.arm.wasm.7z
 
   win-build-release:
     runs-on: windows-latest
@@ -149,13 +149,13 @@ jobs:
       shell: cmd
       run: |
         cd llvm
-        7z.exe a -t7z llvm-11.0.0-win.vs2019-Release-x86.arm.wasm.zip bin-11.0
+        7z.exe a -t7z llvm-11.0.0-win.vs2019-Release-x86.arm.wasm.7z bin-11.0
 
     - name: Upload package
       uses: actions/upload-artifact@v2
       with:
         name: llvm11rel_win
-        path: llvm/llvm-11.0.0-win.vs2019-Release-x86.arm.wasm.zip
+        path: llvm/llvm-11.0.0-win.vs2019-Release-x86.arm.wasm.7z
 
   mac-build:
     runs-on: macos-10.15
