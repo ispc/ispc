@@ -9,6 +9,7 @@ on:
   push:
     branches:
       - '**test_nightly**'
+  workflow_dispatch:
 
 env:
   SDE_TAR_NAME: sde-external-8.59.0-2020-10-05-lin
