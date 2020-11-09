@@ -20,17 +20,69 @@
 #include <sstream>
 #include <vector>
 
+// ispcrt
+#include "detail/Exception.h"
+
 // level0
 #include <level_zero/ze_api.h>
 
-#define L0_SAFE_CALL(call)                                                                                             \
+namespace ispcrt {
+namespace gpu {
+
+static const ISPCRTError getIspcrtError(ze_result_t err) {
+    auto res = ISPCRT_UNKNOWN_ERROR;
+    switch (err) {
+        case ZE_RESULT_SUCCESS:
+            res = ISPCRT_NO_ERROR;
+            break;
+        case ZE_RESULT_ERROR_DEVICE_LOST:
+            res = ISPCRT_DEVICE_LOST;
+            break;
+        case ZE_RESULT_ERROR_INVALID_ARGUMENT:
+        case ZE_RESULT_ERROR_INVALID_NULL_HANDLE:
+        case ZE_RESULT_ERROR_INVALID_NULL_POINTER:
+        case ZE_RESULT_ERROR_INVALID_SIZE:
+        case ZE_RESULT_ERROR_UNSUPPORTED_SIZE:
+        case ZE_RESULT_ERROR_UNSUPPORTED_ALIGNMENT:
+        case ZE_RESULT_ERROR_INVALID_ENUMERATION:
+        case ZE_RESULT_ERROR_UNSUPPORTED_ENUMERATION:
+        case ZE_RESULT_ERROR_UNSUPPORTED_IMAGE_FORMAT:
+        case ZE_RESULT_ERROR_INVALID_NATIVE_BINARY:
+        case ZE_RESULT_ERROR_INVALID_GLOBAL_NAME:
+        case ZE_RESULT_ERROR_INVALID_KERNEL_NAME:
+        case ZE_RESULT_ERROR_INVALID_FUNCTION_NAME:
+        case ZE_RESULT_ERROR_INVALID_GROUP_SIZE_DIMENSION:
+        case ZE_RESULT_ERROR_INVALID_GLOBAL_WIDTH_DIMENSION:
+        case ZE_RESULT_ERROR_INVALID_KERNEL_ARGUMENT_INDEX:
+        case ZE_RESULT_ERROR_INVALID_KERNEL_ARGUMENT_SIZE:
+        case ZE_RESULT_ERROR_INVALID_KERNEL_ATTRIBUTE_VALUE:
+        case ZE_RESULT_ERROR_INVALID_MODULE_UNLINKED:
+        case ZE_RESULT_ERROR_INVALID_COMMAND_LIST_TYPE:
+        case ZE_RESULT_ERROR_OVERLAPPING_REGIONS:
+            res = ISPCRT_INVALID_ARGUMENT;
+            break;
+        case ZE_RESULT_ERROR_HANDLE_OBJECT_IN_USE:
+        case ZE_RESULT_ERROR_INVALID_SYNCHRONIZATION_OBJECT:
+            res = ISPCRT_INVALID_OPERATION;
+            break;
+        default:
+            res = ISPCRT_UNKNOWN_ERROR;
+    }
+    return res;
+}
+
+#define L0_THROW_IF(status)                                                                                            \
     {                                                                                                                  \
-        auto status = (call);                                                                                          \
         if (status != 0) {                                                                                             \
             std::stringstream ss;                                                                                      \
             ss << __FILE__ << ":" << __LINE__ << ": L0 error 0x" << std::hex << (int)status;                           \
-            throw std::runtime_error(ss.str());                                                                        \
+            throw ispcrt::base::ispcrt_runtime_error(ispcrt::gpu::getIspcrtError(status), ss.str());                   \
         }                                                                                                              \
+    }
+
+#define L0_SAFE_CALL(call)                                                                                             \
+    {                                                                                                                  \
+        L0_THROW_IF((call))                                                                                            \
     }
 
 #define L0_SAFE_CALL_NOEXCEPT(call)                                                                                    \
@@ -42,9 +94,6 @@
             std::cerr << ss.str() << std::endl;                                                                        \
         }                                                                                                              \
     }
-
-namespace ispcrt {
-namespace gpu {
 
 struct Future : public ispcrt::base::Future {
     Future() {}
@@ -107,7 +156,7 @@ struct EventPool {
         // Create pool
         ze_event_pool_desc_t eventPoolDesc = {};
         eventPoolDesc.count = POOL_SIZE;
-        // JZTODO: shouldn't it be host-visible?
+        // TODO: shouldn't it be host-visible?
         // ZE_EVENT_POOL_FLAG_HOST_VISIBLE
         eventPoolDesc.flags = (ze_event_pool_flag_t)(ZE_EVENT_POOL_FLAG_KERNEL_TIMESTAMP);
         L0_SAFE_CALL(zeEventPoolCreate(m_context, &eventPoolDesc, 1, &m_device, &m_pool));
@@ -181,7 +230,10 @@ struct MemoryView : public ispcrt::base::MemoryView {
   private:
     void allocate() {
         ze_device_mem_alloc_desc_t allocDesc = {};
-        L0_SAFE_CALL(zeMemAllocDevice(m_context, &allocDesc, m_size, m_size, m_device, &m_devicePtr));
+        auto status = zeMemAllocDevice(m_context, &allocDesc, m_size, m_size, m_device, &m_devicePtr);
+        if (status != ZE_RESULT_SUCCESS)
+            m_devicePtr = nullptr;
+        L0_THROW_IF(status);
     }
 
     void *m_hostPtr{nullptr};
@@ -193,35 +245,40 @@ struct MemoryView : public ispcrt::base::MemoryView {
 };
 
 struct Module : public ispcrt::base::Module {
-    Module(ze_device_handle_t device, ze_context_handle_t context, const char *moduleFile) : m_file(moduleFile) {
+    Module(ze_device_handle_t device, ze_context_handle_t context, const char *moduleFile, bool is_mock_dev)
+                : m_file(moduleFile) {
         std::ifstream is;
         ze_module_format_t moduleFormat = ZE_MODULE_FORMAT_IL_SPIRV;
         // Try to open spv file by default if ISPCRT_USE_ZEBIN is not set.
         // TODO: change default to zebin when it gets more mature
         const char *userZEBinFormatEnv = getenv("ISPCRT_USE_ZEBIN");
-        if (userZEBinFormatEnv) {
-            is.open(m_file + ".bin", std::ios::binary);
-            moduleFormat = ZE_MODULE_FORMAT_NATIVE;
-            if (!is.good())
-                throw std::runtime_error("Failed to open zebin file!");
-        } else {
-            // Try to read .spv file by default
-            is.open(m_file + ".spv", std::ios::binary);
-            if (!is.good())
-                throw std::runtime_error("Failed to open spv file!");
+
+        size_t codeSize = 0;
+        if (!is_mock_dev) {
+            if (userZEBinFormatEnv) {
+                is.open(m_file + ".bin", std::ios::binary);
+                moduleFormat = ZE_MODULE_FORMAT_NATIVE;
+                if (!is.good())
+                    throw std::runtime_error("Failed to open zebin file!");
+            } else {
+                // Try to read .spv file by default
+                is.open(m_file + ".spv", std::ios::binary);
+                if (!is.good())
+                    throw std::runtime_error("Failed to open spv file!");
+            }
+
+            is.seekg(0, std::ios::end);
+            codeSize = is.tellg();
+            is.seekg(0, std::ios::beg);
+
+            if (codeSize == 0)
+                throw std::runtime_error("Code size is '0'!");
+
+            m_code.resize(codeSize);
+
+            is.read((char *)m_code.data(), codeSize);
+            is.close();
         }
-
-        is.seekg(0, std::ios::end);
-        size_t codeSize = is.tellg();
-        is.seekg(0, std::ios::beg);
-
-        if (codeSize == 0)
-            throw std::runtime_error("Code size is '0'!");
-
-        m_code.resize(codeSize);
-
-        is.read((char *)m_code.data(), codeSize);
-        is.close();
 
         // Collect potential additional options for the compiler from the environment.
         // We assume some default options for the compiler, but we also
@@ -312,16 +369,13 @@ struct TaskQueue : public ispcrt::base::TaskQueue {
     TaskQueue(ze_device_handle_t device, ze_context_handle_t context) : m_ep(context, device) {
         ze_command_list_desc_t commandListDesc = {};
         L0_SAFE_CALL(zeCommandListCreate(context, device, &commandListDesc, &m_cl));
-
         if (m_cl == nullptr)
             throw std::runtime_error("Failed to create command list!");
-
         // Create a command queue
         ze_command_queue_desc_t commandQueueDesc = {};
         commandQueueDesc.mode = ZE_COMMAND_QUEUE_MODE_ASYNCHRONOUS;
         commandQueueDesc.priority = ZE_COMMAND_QUEUE_PRIORITY_NORMAL;
         L0_SAFE_CALL(zeCommandQueueCreate(context, device, &commandQueueDesc, &m_q));
-
         if (m_q == nullptr)
             throw std::runtime_error("Failed to create command queue!");
     }
@@ -431,6 +485,10 @@ GPUDevice::GPUDevice() {
         std::istringstream(gpuDeviceEnv) >> gpuDeviceToGrab;
     }
     auto gpuDevice = 0;
+
+    // We can use a mock device driver for testing
+    m_is_mock = getenv("ISPCRT_MOCK_DEVICE") != nullptr;
+
     for (auto &driver : allDrivers) {
         uint32_t deviceCount = 0;
         L0_SAFE_CALL(zeDeviceGet(driver, &deviceCount, nullptr));
@@ -440,6 +498,11 @@ GPUDevice::GPUDevice() {
         for (auto &device : allDevices) {
             ze_device_properties_t device_properties;
             L0_SAFE_CALL(zeDeviceGetProperties(device, &device_properties));
+            if (m_is_mock && std::string(device_properties.name) == "ISPCRT Mock Device") {
+                    m_device = device;
+                    m_driver = driver;
+                    break;
+            }
             if (device_properties.type == ZE_DEVICE_TYPE_GPU && device_properties.vendorId == 0x8086) {
                 gpuDevice++;
                 if (gpuDevice == gpuDeviceToGrab + 1) {
@@ -474,7 +537,7 @@ base::TaskQueue *GPUDevice::newTaskQueue() const {
 }
 
 base::Module *GPUDevice::newModule(const char *moduleFile) const {
-    return new gpu::Module((ze_device_handle_t)m_device, (ze_context_handle_t)m_context, moduleFile);
+    return new gpu::Module((ze_device_handle_t)m_device, (ze_context_handle_t)m_context, moduleFile, m_is_mock);
 }
 
 base::Kernel *GPUDevice::newKernel(const base::Module &module, const char *name) const {

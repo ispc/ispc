@@ -33,6 +33,7 @@ list(APPEND CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake)
 option(ISPCRT_BUILD_CPU "Enable CPU support in ispcrt" ON)
 option(ISPCRT_BUILD_GPU "Enable Level0 GPU support in ispcrt" ON)
 option(ISPCRT_BUILD_TASKING "Enable CPU tasking targets in ispcrt" ON)
+option(ISPCRT_BUILD_TESTS "Enable ispcrt tests" ON)
 
 if (NOT ISPCRT_BUILD_CPU AND NOT ISPCRT_BUILD_GPU)
   message(FATAL_ERROR "You must enable either CPU or GPU support!")
@@ -113,6 +114,12 @@ endmacro()
 
 build_ispcrt(SHARED ${PROJECT_NAME})
 build_ispcrt(STATIC ${PROJECT_NAME}_static)
+
+## Build tests ############################################################
+
+if (ISPCRT_BUILD_TESTS)
+  add_subdirectory(tests)
+endif()
 
 ## Install headers ############################################################
 
