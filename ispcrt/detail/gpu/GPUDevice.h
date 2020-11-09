@@ -23,6 +23,7 @@ struct GPUDevice : public base::Device {
     void *m_driver{nullptr};
     void *m_device{nullptr};
     void *m_context{nullptr};
+    bool  m_is_mock{false};
 };
 
 } // namespace ispcrt

@@ -6,6 +6,7 @@
 #include <exception>
 #include <iostream>
 // ispcrt
+#include "detail/Exception.h"
 #include "detail/Module.h"
 #include "detail/TaskQueue.h"
 
@@ -17,7 +18,10 @@
 #include "detail/gpu/GPUDevice.h"
 #endif
 
-static void defaultErrorFcn(ISPCRTError e, const char *msg) { std::cerr << "ISPCRT Error: " << std::endl; }
+static void defaultErrorFcn(ISPCRTError e, const char *msg) {
+    std::cerr << "ISPCRT Error (" << e << "): " << msg << std::endl;
+    exit(-1);
+}
 
 static ISPCRTErrorFunc g_errorFcn = &defaultErrorFcn;
 
@@ -35,6 +39,10 @@ static OBJECT_T &referenceFromHandle(HANDLE_T handle) {
 
 #define ISPCRT_CATCH_BEGIN try {
 #define ISPCRT_CATCH_END(a)                                                                                            \
+    }                                                                                                                  \
+    catch (const ispcrt::base::ispcrt_runtime_error &e) {                                                              \
+        handleError(e.e, e.what());                                                                                    \
+        return a;                                                                                                      \
     }                                                                                                                  \
     catch (const std::logic_error &e) {                                                                                \
         handleError(ISPCRT_INVALID_OPERATION, e.what());                                                               \

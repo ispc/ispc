@@ -45,7 +45,8 @@ typedef enum {
     ISPCRT_NO_ERROR = 0,
     ISPCRT_UNKNOWN_ERROR = 1,
     ISPCRT_INVALID_ARGUMENT = 2,
-    ISPCRT_INVALID_OPERATION = 3
+    ISPCRT_INVALID_OPERATION = 3,
+    ISPCRT_DEVICE_LOST = 4
 } ISPCRTError;
 
 typedef void (*ISPCRTErrorFunc)(ISPCRTError, const char *errorMessage);
