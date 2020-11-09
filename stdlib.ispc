@@ -3087,6 +3087,7 @@ static inline void sincos(float x_full, varying float * uniform sin_result,
     if (__have_native_trigonometry && !__is_genx_target)
     {
       __sincos_varying_float(x_full,sin_result,cos_result);
+      return;
     }
     if (__math_lib == __math_lib_svml) {
         __svml_sincosf(x_full, sin_result, cos_result);
@@ -3161,6 +3162,7 @@ static inline void sincos(uniform float x_full, uniform float * uniform sin_resu
     if (__have_native_trigonometry && !__is_genx_target)
     {
       __sincos_uniform_float(x_full, sin_result, cos_result);
+      return;
     }
     if (__math_lib == __math_lib_system ||
         __math_lib == __math_lib_svml) {
@@ -4179,6 +4181,7 @@ static inline void sincos(double x, varying double * uniform sin_result,
     if (__have_native_trigonometry)
     {
       __sincos_varying_double(x,sin_result,cos_result);
+      return;
     }
     if (__math_lib == __math_lib_svml)
     {
