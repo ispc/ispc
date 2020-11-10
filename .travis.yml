@@ -180,8 +180,9 @@ jobs:
         - wget $LLVM_REPO/releases/download/llvm-$LLVM_VERSION-ispc-dev/$LLVM_TAR
         - tar xvf $LLVM_TAR
         - export PATH=`pwd`/bin-$LLVM_VERSION/bin:$PATH
-        - brew update && brew install bison
+        - brew update && brew install bison flex
         - export PATH=/usr/local/opt/bison/bin:$PATH
+        - export PATH=/usr/local/opt/flex/bin:$PATH
       script:
         - mkdir build && cd build
         - cmake ..
