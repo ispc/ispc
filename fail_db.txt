@@ -1274,3 +1274,4 @@
 ./tests/local-atomics-varyingptr-2.ispc runfail  genx64       genx-x16 unspec   Linux LLVM 10.0 clang++10.0  spv *
 ./tests/local-atomics-varyingptr-3.ispc runfail  genx64       genx-x16 unspec   Linux LLVM 10.0 clang++10.0  spv *
 ./tests/local-atomics-varyingptr-4.ispc runfail  genx64       genx-x16 unspec   Linux LLVM 10.0 clang++10.0  spv *
+

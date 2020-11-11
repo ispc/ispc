@@ -578,7 +578,11 @@ def validation_run(only, only_targets, reference_branch, number, notify, update,
         stability.num_jobs = speed_number
         stability.verbose = False
         stability.time = time
-        stability.test_time = 600
+        # 900 is more than default value in run_tests.py (600).
+        # There's a single test, which requires longer time on AVX2 capable server (Github Action):
+        # tests/idiv.ispc running for avx512-i8x64 for x86 under SDE.
+        # For any other tests it should be more than enough.
+        stability.test_time = 900
         stability.csv = ""
         stability.non_interactive = True
         stability.update = update
