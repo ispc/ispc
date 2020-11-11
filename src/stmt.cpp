@@ -3400,7 +3400,12 @@ std::vector<llvm::Value *> PrintStmt::getDoPrintCMArgs(FunctionEmitContext *ctx)
     std::vector<llvm::Value *> doPrintCMArgs(GENX_NUM_IDX - 2);
     doPrintCMArgs[FORMAT_IDX] = ctx->GetStringPtr(format);
     doPrintCMArgs[WIDTH_IDX] = LLVMInt32(g->target->getVectorWidth());
-    doPrintCMArgs[MASK_IDX] = ctx->LaneMask(ctx->GenXSimdCFPredicate(LLVMMaskAllOn));
+    if (ctx->emitGenXHardwareMask()) {
+        doPrintCMArgs[MASK_IDX] = ctx->LaneMask(ctx->GenXSimdCFPredicate(LLVMMaskAllOn));
+    } else {
+        doPrintCMArgs[MASK_IDX] = ctx->LaneMask(ctx->GetFullMask());
+    }
+
     if (values == NULL) {
         doPrintCMArgs[ARGS_IDX] = llvm::Constant::getNullValue(LLVMTypes::Int32PointerType);
         doPrintCMArgs[TYPES_IDX] = ctx->GetStringPtr("");
@@ -3429,7 +3434,11 @@ static std::vector<llvm::Value *> getDoPrintLZArgs(const std::string &format, Pr
     auto argTypes = args.generateArgTypes();
     doPrintLZArgs[PrintStmt::FORMAT_IDX] = ctx->GenXLZFormatStr(formatBuilder.get(format, argTypes, pos));
     doPrintLZArgs[PrintStmt::WIDTH_IDX] = LLVMInt32(g->target->getVectorWidth());
-    doPrintLZArgs[PrintStmt::MASK_IDX] = ctx->LaneMask(ctx->GenXSimdCFPredicate(LLVMMaskAllOn));
+    if (ctx->emitGenXHardwareMask()) {
+        doPrintLZArgs[PrintStmt::MASK_IDX] = ctx->LaneMask(ctx->GenXSimdCFPredicate(LLVMMaskAllOn));
+    } else {
+        doPrintLZArgs[PrintStmt::MASK_IDX] = ctx->LaneMask(ctx->GetFullMask());
+    }
     doPrintLZArgs[PrintStmt::TYPES_IDX] = ctx->GetStringPtr(argTypes);
     doPrintLZArgs[PrintStmt::ARGS_IDX] = args.emitArgCode();
     doPrintLZArgs[PrintStmt::UNI_NUM_IDX] = LLVMInt32(args.countUniformArgs());
