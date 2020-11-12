@@ -10,7 +10,7 @@ export void f_f(uniform float RET[], uniform float aFOO[]) {
       if (__fast_idiv(num, div) != num/div) {
         ++errorCount;
         #pragma ignore warning(perf)
-#ifndef ISPC_GENX_ENABLED
+#ifndef ISPC_TARGET_GENX
         print("error %/% = %, got %\n", num, div, num/div, __fast_idiv(num,div));
 #endif
         if (errorCount > 32) break;
