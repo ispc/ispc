@@ -15,7 +15,7 @@ export void f_v(uniform float RET[]) {
     int errors = 0;
     for (uniform int i = 0; i < 8; ++i) {
         if (ok(r_f[i], vals_f[i%8]) == false) {
-#ifndef ISPC_GENX_ENABLED
+#ifndef ISPC_TARGET_GENX
             print("error @ %: got %, expected %\n", i, r_f[i], vals_f[i%8]);
 #endif
             ++errors;
@@ -26,7 +26,7 @@ export void f_v(uniform float RET[]) {
     }
     for (uniform int i = 0; i < 8; ++i) {
         if (ok(r_f[i], vals_f[i%8]) == false) {
-#ifndef ISPC_GENX_ENABLED
+#ifndef ISPC_TARGET_GENX
             print("error @ %: got %, expected %\n", i, r_f[i], vals_f[i%8]);
 #endif
             ++errors;
@@ -42,7 +42,7 @@ export void f_v(uniform float RET[]) {
 
     for (uniform int i = 0; i < 8; ++i) {
         if (ok(r_d[i], vals_d[i%8]) == false) {
-#ifndef ISPC_GENX_ENABLED
+#ifndef ISPC_TARGET_GENX
             print("error @ %: got %, expected %\n", i, r_d[i], vals_d[i%8]);
 #endif
             ++errors;
@@ -53,7 +53,7 @@ export void f_v(uniform float RET[]) {
     }
     for (uniform int i = 0; i < 8; ++i) {
         if (ok(r_d[i], vals_d[i%8]) == false) {
-#ifndef ISPC_GENX_ENABLED
+#ifndef ISPC_TARGET_GENX
             print("error @ %: got %, expected %\n", i, r_d[i], vals_d[i%8]);
 #endif
             ++errors;
