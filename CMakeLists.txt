@@ -194,7 +194,7 @@ find_package(BISON 3.0 REQUIRED)
     )
     endif()
 
-find_package(FLEX 2.5 REQUIRED)
+find_package(FLEX 2.6 REQUIRED)
     if (FLEX_FOUND)
         set(FLEX_INPUT  src/lex.ll)
         set(FLEX_OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_CFG_INTDIR}/lex.cpp)
