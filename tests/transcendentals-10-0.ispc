@@ -29,10 +29,10 @@ export void f_du(uniform float RET[], uniform double aFOO[], uniform double b) {
     double sincos_s, sincos_c;
     sincos(a, &sincos_s, &sincos_c);
 
-    RET[programIndex]  = abs(sincos_s - sin_a[programIndex]) < 1d-7 ? 0 : 1;
+    RET[programIndex] += abs(sincos_s - sin_a[programIndex]) < 1d-7 ? 0 : 1;
     RET[programIndex] += abs(sincos_c - cos_a[programIndex]) < 1d-7 ? 0 : 1;
 }
 
 export void result(uniform float RET[]) {
-    RET[programCount] = 0;
+    RET[programIndex] = 0;
 }
