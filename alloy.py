@@ -294,43 +294,13 @@ def build_LLVM(version_LLVM, folder, tarball, debug, selfbuild, extra, from_vali
 
         print_debug("Now we have compiler for selfbuild: " + selfbuild_compiler + "\n", from_validation, alloy_build)
     os.chdir(LLVM_BUILD)
-    if debug == False:
-        if current_OS != "Windows":
-            try_do_LLVM("configure release version ",
-                    "cmake -G " + "\"" + generator + "\"" + " -DCMAKE_EXPORT_COMPILE_COMMANDS=ON" +
-                    selfbuild_compiler +
-                    "  -DCMAKE_INSTALL_PREFIX=" + llvm_home + "/" + LLVM_BIN +
-                    "  -DCMAKE_BUILD_TYPE=Release" +
-                    llvm_enable_projects +
-                    get_llvm_enable_dump_switch(version_LLVM) +
-                    get_llvm_disable_assertions_switch(llvm_disable_assertions) +
-                    "  -DLLVM_INSTALL_UTILS=ON" +
-                    (("  -DGCC_INSTALL_PREFIX=" + gcc_toolchain_path) if gcc_toolchain_path != "" else "") +
-                    (("  -DCMAKE_C_COMPILER=" + gcc_toolchain_path+"/bin/gcc") if gcc_toolchain_path != "" and selfbuild_compiler == "" else "") +
-                    (("  -DCMAKE_CXX_COMPILER=" + gcc_toolchain_path+"/bin/g++") if gcc_toolchain_path != "" and selfbuild_compiler == "" else "") +
-                    (("  -DDEFAULT_SYSROOT=" + mac_system_root) if mac_system_root != "" else "") +
-                    "  -DLLVM_TARGETS_TO_BUILD=AArch64\;ARM\;X86" +
-                    "  -DLLVM_EXPERIMENTAL_TARGETS_TO_BUILD=WebAssembly" +
-                    " ../" + cmakelists_path,
-                    from_validation, verbose)
-        else:
-            try_do_LLVM("configure release version ",
-                    'cmake -Thost=x64 -G ' + '\"' + generator + '\"' + ' -DCMAKE_INSTALL_PREFIX="..\\'+ LLVM_BIN + '" ' +
-                    '  -DCMAKE_BUILD_TYPE=Release' +
-                    llvm_enable_projects +
-                    get_llvm_enable_dump_switch(version_LLVM) +
-                    get_llvm_disable_assertions_switch(llvm_disable_assertions) +
-                    '  -DLLVM_INSTALL_UTILS=ON' +
-                    '  -DLLVM_TARGETS_TO_BUILD=AArch64\;ARM\;X86' +
-                    '  -DLLVM_EXPERIMENTAL_TARGETS_TO_BUILD=WebAssembly' +
-                    '  -DLLVM_LIT_TOOLS_DIR="C:\\gnuwin32\\bin" ..\\' + cmakelists_path,
-                    from_validation, verbose)
-    else:
-        try_do_LLVM("configure debug version ",
+    build_type = "Release" if debug == False else "Debug"
+    if current_OS != "Windows":
+        try_do_LLVM("configure " + build_type + " version ",
                 "cmake -G " + "\"" + generator + "\"" + " -DCMAKE_EXPORT_COMPILE_COMMANDS=ON" +
                 selfbuild_compiler +
                 "  -DCMAKE_INSTALL_PREFIX=" + llvm_home + "/" + LLVM_BIN +
-                "  -DCMAKE_BUILD_TYPE=Debug" +
+                "  -DCMAKE_BUILD_TYPE=" + build_type +
                 llvm_enable_projects +
                 get_llvm_enable_dump_switch(version_LLVM) +
                 get_llvm_disable_assertions_switch(llvm_disable_assertions) +
@@ -343,13 +313,25 @@ def build_LLVM(version_LLVM, folder, tarball, debug, selfbuild, extra, from_vali
                 "  -DLLVM_EXPERIMENTAL_TARGETS_TO_BUILD=WebAssembly" +
                 " ../" + cmakelists_path,
                 from_validation, verbose)
+    else:
+        try_do_LLVM("configure " + build_type + " version ",
+                'cmake -Thost=x64 -G ' + '\"' + generator + '\"' + ' -DCMAKE_INSTALL_PREFIX="..\\'+ LLVM_BIN + '" ' +
+                '  -DCMAKE_BUILD_TYPE=' + build_type +
+                llvm_enable_projects +
+                get_llvm_enable_dump_switch(version_LLVM) +
+                get_llvm_disable_assertions_switch(llvm_disable_assertions) +
+                '  -DLLVM_INSTALL_UTILS=ON' +
+                '  -DLLVM_TARGETS_TO_BUILD=AArch64\;ARM\;X86' +
+                '  -DLLVM_EXPERIMENTAL_TARGETS_TO_BUILD=WebAssembly' +
+                '  -DLLVM_LIT_TOOLS_DIR="C:\\gnuwin32\\bin" ..\\' + cmakelists_path,
+                from_validation, verbose)
 
     # building llvm
     if current_OS != "Windows":
         try_do_LLVM("build LLVM ", make, from_validation, verbose)
         try_do_LLVM("install LLVM ", "make install", from_validation, verbose)
     else:
-        try_do_LLVM("build LLVM and then install LLVM ", "msbuild INSTALL.vcxproj /V:m /p:Platform=x64 /p:Configuration=Release /t:rebuild", from_validation, verbose)
+        try_do_LLVM("build LLVM and then install LLVM ", "msbuild INSTALL.vcxproj /V:m /p:Platform=x64 /p:Configuration=" + build_type + " /t:rebuild", from_validation, verbose)
     os.chdir(current_path)
 
 
@@ -892,8 +874,8 @@ def Main():
             if not (" " + iterator + " " in test_only_r):
                 error("unknown option for only: " + iterator, 1)
     if current_OS == "Windows":
-        if options.debug == True or options.selfbuild == True or options.tarball != "":
-            error("Debug, selfbuild and tarball options are unsupported on windows", 1)
+        if options.selfbuild == True or options.tarball != "":
+            error("Selfbuild and tarball options are unsupported on windows", 1)
     global f_date
     f_date = "logs"
     common.remove_if_exists(f_date)
@@ -1009,7 +991,7 @@ if __name__ == '__main__':
          'you have alternative gcc installation. Note that otherwise gcc from standard ' +
          'location will be used, not from your PATH', default="")
     llvm_group.add_option('--debug', dest='debug',
-        help='debug build of LLVM?', default=False, action="store_true")
+        help='debug build of LLVM', default=False, action="store_true")
     llvm_group.add_option('--folder', dest='folder',
         help='folder to build LLVM in', default="")
     llvm_group.add_option('--tarball', dest='tarball',
