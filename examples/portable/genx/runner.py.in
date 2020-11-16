@@ -87,7 +87,7 @@ print("Using runtime lib path: ", additional_libs)
 
 test_env = os.environ.copy()
 test_env["PATH"] += additional_path
-test_env["LD_LIBRARY_PATH"] = additional_libs
+test_env["LD_LIBRARY_PATH"] += additional_libs
 
 host_name = args.exe_name
 executable = os.path.join(test_dir, host_name)
