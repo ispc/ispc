@@ -1,4 +1,4 @@
-name: Linux benchmark tests / LLVM 10.0
+name: Linux benchmark tests / LLVM 11.0
 
 on:
   pull_request:
@@ -9,9 +9,9 @@ on:
       - '**test_bench**'
 
 env:
-  LLVM_VERSION: "10.0"
+  LLVM_VERSION: "11.0"
   LLVM_REPO: https://github.com/dbabokin/llvm-project
-  LLVM_TAR: llvm-10.0.1-ubuntu16.04-Release+Asserts-x86.arm.wasm.tar.xz
+  LLVM_TAR: llvm-11.0.0-ubuntu16.04-Release+Asserts-x86.arm.wasm.tar.xz
 
 jobs:
   linux-build:
@@ -38,6 +38,7 @@ jobs:
 
     - name: Build package
       run: |
+        echo PATH=$PATH
         cmake -B build -DISPC_PREPARE_PACKAGE=ON -DISPC_INCLUDE_BENCHMARKS=ON -DBENCHMARK_ENABLE_INSTALL=ON
         cmake --build build --target package -j4
 
@@ -52,7 +53,7 @@ jobs:
     - name: Upload package
       uses: actions/upload-artifact@v2
       with:
-        name: ispc_llvm10_linux
+        name: ispc_llvm11_linux_bench
         path: build/ispc-trunk-linux.tar.gz
 
   benchmarks:
@@ -63,7 +64,7 @@ jobs:
     - name: Download package
       uses: actions/download-artifact@v2
       with:
-        name: ispc_llvm10_linux
+        name: ispc_llvm11_linux_bench
     - name: Install dependencies and unpack artifacts
       run: |
         tar xvf ispc-trunk-linux.tar.gz
@@ -89,7 +90,7 @@ jobs:
     - name: Upload results
       uses: actions/upload-artifact@v2
       with:
-        name: ispc_llvm10_linux_bench_results
+        name: ispc_llvm11_linux_bench_results
         path: ispc-trunk-linux/benchmarks/out/*.json
     - name: Clean self-hosted runner
       run: rm -rf ${GITHUB_WORKSPACE:?}/* ${HOME:?}/* 
@@ -104,7 +105,7 @@ jobs:
       - name: Download benchmarks results
         uses: actions/download-artifact@v2
         with:
-          name: ispc_llvm10_linux_bench_results
+          name: ispc_llvm11_linux_bench_results
       - name: Upload bench datasets to calcite
         working-directory: .calcite
         run: |
