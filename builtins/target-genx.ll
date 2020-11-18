@@ -1271,3 +1271,27 @@ genx_atomics_decl(max)
 genx_atomics_decl(imax)
 genx_atomics_decl(min)
 genx_atomics_decl(imin)
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;; idiv implementation
+;; Uses cm builtin intrinsics from builtins-cm-<bit>.ll
+;; $1 LLVM type (e.g. i8, i32)
+;; $2 ISPC stdlib type (e.g int8, uint32)
+;; $3 cm intrinsic name (e.g. _Z24__cm_intrinsic_impl_sdivu2CMvb8_cS_)
+
+define(`genx_idiv_decl', `
+  declare <WIDTH x $1> @$3(<WIDTH x $1>, <WIDTH x $1>)
+  define <WIDTH x $1> @__idiv_$2(<WIDTH x $1>, <WIDTH x $1>) nounwind readnone alwaysinline{
+    %res = call <WIDTH x $1> @$3(<WIDTH x $1> %0, <WIDTH x $1> %1)
+    ret <WIDTH x $1> %res
+  }
+')
+
+genx_idiv_decl(i8, int8, CM_IMPL_IDIV_INT8)
+genx_idiv_decl(i16, int16, CM_IMPL_IDIV_INT16)
+genx_idiv_decl(i32, int32, CM_IMPL_IDIV_INT32)
+genx_idiv_decl(i8, uint8, CM_IMPL_IDIV_UINT8)
+genx_idiv_decl(i16, uint16, CM_IMPL_IDIV_UINT16)
+genx_idiv_decl(i32, uint32, CM_IMPL_IDIV_UINT32)

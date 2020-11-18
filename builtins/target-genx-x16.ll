@@ -38,4 +38,12 @@ define(`WIDTH_X4',`64')
 define(`GEN_SUFFIX',`CONCAT(`v16', GEN_TYPE($1))')
 define(`BITCAST_WIDTH',`i16')
 
+;; idiv cm intrinsics name
+define(`CM_IMPL_IDIV_INT8',`_Z24__cm_intrinsic_impl_sdivu2CMvb16_cS_')
+define(`CM_IMPL_IDIV_INT16',`_Z24__cm_intrinsic_impl_sdivu2CMvb16_sS_')
+define(`CM_IMPL_IDIV_INT32',`_Z24__cm_intrinsic_impl_sdivu2CMvb16_iS_')
+define(`CM_IMPL_IDIV_UINT8',`_Z24__cm_intrinsic_impl_udivu2CMvb16_hS_')
+define(`CM_IMPL_IDIV_UINT16',`_Z24__cm_intrinsic_impl_udivu2CMvb16_tS_')
+define(`CM_IMPL_IDIV_UINT32',`_Z24__cm_intrinsic_impl_udivu2CMvb16_jS_')
+
 include(`target-genx.ll')
