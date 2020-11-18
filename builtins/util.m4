@@ -6992,6 +6992,13 @@ declare i32 @__task_count0()  nounwind readnone alwaysinline
 declare i32 @__task_count1()  nounwind readnone alwaysinline
 declare i32 @__task_count2()  nounwind readnone alwaysinline
 declare i32 @__task_count()  nounwind readnone alwaysinline
+
+declare <WIDTH x i8> @__idiv_int8(<WIDTH x i8>, <WIDTH x i8>) nounwind readnone
+declare <WIDTH x i16> @__idiv_int16(<WIDTH x i16>, <WIDTH x i16>) nounwind readnone
+declare <WIDTH x i32> @__idiv_int32(<WIDTH x i32>, <WIDTH x i32>) nounwind readnone
+declare <WIDTH x i8> @__idiv_uint8(<WIDTH x i8>, <WIDTH x i8>) nounwind readnone
+declare <WIDTH x i16> @__idiv_uint16(<WIDTH x i16>, <WIDTH x i16>) nounwind readnone
+declare <WIDTH x i32> @__idiv_uint32(<WIDTH x i32>, <WIDTH x i32>) nounwind readnone
 ')
 
 define(`global_atomic_varying',`
@@ -7085,3 +7092,4 @@ define(`trigonometry_decl',`
     declare double @__atan_uniform_double(double) nounwind readnone
     declare double @__atan2_uniform_double(double,double) nounwind readnone
 ')
+
