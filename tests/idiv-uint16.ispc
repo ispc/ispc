@@ -1,3 +1,6 @@
+// rule: skip on arch=genx32
+// rule: skip on arch=genx64
+// test execution is too slow on gen currently
 export void f_f(uniform float RET[], uniform float aFOO[]) {
   uniform int errorCount = 0;
 
