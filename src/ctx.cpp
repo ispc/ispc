@@ -2408,26 +2408,29 @@ llvm::Value *FunctionEmitContext::LoadInst(llvm::Value *ptr, llvm::Value *mask, 
             // can just assume the natural alignment (0 here), but for varying
             // atomic types, we need to make sure that the compiler emits
             // unaligned vector loads, so we specify a reduced alignment here.
-            int align = 0;
             const AtomicType *atomicType = CastType<AtomicType>(ptrType->GetBaseType());
-            llvm::Value *inst;
-            if (atomicType != NULL && atomicType->IsVaryingType())
+
+#if ISPC_LLVM_VERSION <= ISPC_LLVM_10_0
+            llvm::LoadInst *inst = new llvm::LoadInst(ptr, name, false /* not volatile */, bblock);
+#else // LLVM 11.0+
+            llvm::PointerType *ptr_type = llvm::dyn_cast<llvm::PointerType>(ptr->getType());
+            llvm::LoadInst *inst =
+                new llvm::LoadInst(ptr_type->getPointerElementType(), ptr, name, false /* not volatile */, bblock);
+#endif
+
+            if (atomicType != NULL && atomicType->IsVaryingType()) {
                 // We actually just want to align to the vector element
                 // alignment, but can't easily get that here, so just tell LLVM
                 // it's totally unaligned.  (This shouldn't make any difference
                 // vs the proper alignment in practice.)
-                align = 1;
+                int align = 1;
 
 #if ISPC_LLVM_VERSION <= ISPC_LLVM_9_0
-            inst = new llvm::LoadInst(ptr, name, false /* not volatile */, align, bblock);
-#elif ISPC_LLVM_VERSION == ISPC_LLVM_10_0
-            inst =
-                new llvm::LoadInst(ptr, name, false /* not volatile */, llvm::MaybeAlign(align).valueOrOne(), bblock);
-#else // LLVM 11.0+
-            llvm::PointerType *ptr_type = llvm::dyn_cast<llvm::PointerType>(ptr->getType());
-            inst = new llvm::LoadInst(ptr_type->getPointerElementType(), ptr, name, false /* not volatile */,
-                                      llvm::MaybeAlign(align).valueOrOne(), bblock);
+                inst->setAlignment(align);
+#else // LLVM 10.0+
+                inst->setAlignment(llvm::MaybeAlign(align).valueOrOne());
 #endif
+            }
 
             AddDebugPos(inst);
             llvm::Value *loadVal = inst;
