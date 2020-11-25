@@ -6465,7 +6465,9 @@ static llvm::Pass *CreateMangleOpenCLBuiltins() { return new MangleOpenCLBuiltin
 
 class FixAddressSpace : public llvm::FunctionPass {
     llvm::Instruction *processVectorLoad(llvm::LoadInst *LI);
+    llvm::Instruction *processSVMVectorLoad(llvm::Instruction *LI);
     llvm::Instruction *processVectorStore(llvm::StoreInst *SI);
+    llvm::Instruction *processSVMVectorStore(llvm::Instruction *LI);
     llvm::Instruction *processGatherScatterPrivate(llvm::CallInst *CI, bool IsGather);
     llvm::Value *calculateGatherScatterAddress(llvm::Value *Ptr, llvm::Value *Offsets, llvm::Instruction *InsertBefore);
     llvm::Instruction *createInt8WrRegion(llvm::Value *Val, llvm::Value *Mask);
@@ -6560,6 +6562,28 @@ llvm::Instruction *FixAddressSpace::processVectorLoad(llvm::LoadInst *LI) {
     return res;
 }
 
+llvm::Instruction *FixAddressSpace::processSVMVectorLoad(llvm::Instruction *CI) {
+    llvm::Value *ptr = CI->getOperand(0);
+    llvm::Type *retType = CI->getType();
+
+    Assert(llvm::isa<llvm::VectorType>(retType));
+
+    if (GetAddressSpace(ptr) == AddressSpace::External)
+        return NULL;
+
+    // Conevrt int64 ptr to pointer
+    ptr = new llvm::IntToPtrInst(ptr, llvm::PointerType::get(retType, 0), CI->getName() + "_inttoptr", CI);
+    llvm::Instruction *loadInst = NULL;
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_11_0
+    loadInst = new llvm::LoadInst(llvm::dyn_cast<llvm::PointerType>(ptr->getType())->getPointerElementType(), loadInst,
+                                  CI->getName(), (llvm::Instruction *)NULL);
+#else
+    loadInst = new llvm::LoadInst(ptr, CI->getName(), (llvm::Instruction *)NULL);
+#endif
+    Assert(loadInst);
+    return loadInst;
+}
+
 llvm::Instruction *FixAddressSpace::processVectorStore(llvm::StoreInst *SI) {
     llvm::Value *ptr = SI->getOperand(1);
     llvm::Value *val = SI->getOperand(0);
@@ -6582,6 +6606,34 @@ llvm::Instruction *FixAddressSpace::processVectorStore(llvm::StoreInst *SI) {
     }
 
     return lGenXStoreInst(ptr, val, llvm::dyn_cast<llvm::Instruction>(SI));
+}
+
+llvm::Instruction *FixAddressSpace::processSVMVectorStore(llvm::Instruction *CI) {
+    llvm::Value *ptr = CI->getOperand(0);
+    llvm::Value *val = CI->getOperand(1);
+
+    Assert(ptr != NULL);
+    Assert(val != NULL);
+
+    llvm::Type *valType = val->getType();
+
+    Assert(llvm::isa<llvm::VectorType>(valType));
+
+    if (GetAddressSpace(ptr) == AddressSpace::External)
+        return NULL;
+
+    // Conevrt int64 ptr to pointer
+    ptr = new llvm::IntToPtrInst(ptr, llvm::PointerType::get(valType, 0), CI->getName() + "_inttoptr", CI);
+
+    llvm::Instruction *storeInst = NULL;
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_11_0
+    loadInst = new llvm::StoreInst(val, llvm::dyn_cast<llvm::PointerType>(ptr->getType())->getPointerElementType(),
+                                   storeInst, CI->getName(), (llvm::Instruction *)NULL);
+#else
+    storeInst = new llvm::StoreInst(val, ptr, (llvm::Instruction *)NULL);
+#endif
+    Assert(storeInst);
+    return storeInst;
 }
 
 llvm::Instruction *FixAddressSpace::createInt8WrRegion(llvm::Value *Val, llvm::Value *Mask) {
@@ -6726,6 +6778,20 @@ restart:
                     modifiedAny = true;
                     goto restart;
                 }
+            }
+        } else if (llvm::GenXIntrinsic::getGenXIntrinsicID(inst) == llvm::GenXIntrinsic::genx_svm_block_ld) {
+            llvm::Instruction *load_inst = processSVMVectorLoad(inst);
+            if (load_inst != NULL) {
+                applyReplace(load_inst, inst);
+                modifiedAny = true;
+                goto restart;
+            }
+        } else if (llvm::GenXIntrinsic::getGenXIntrinsicID(inst) == llvm::GenXIntrinsic::genx_svm_block_st) {
+            llvm::Instruction *store_inst = processSVMVectorStore(inst);
+            if (store_inst != NULL) {
+                applyReplace(store_inst, inst);
+                modifiedAny = true;
+                goto restart;
             }
         }
 // This transformation introduces an instruction sequence which leads to incorrect address:
