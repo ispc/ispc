@@ -16,6 +16,9 @@
 ./tests/idiv-uint8.ispc runfail  genx64        genx-x16 unspec   Linux LLVM 10.0 clang++10.0  spv *
 ./tests/idiv-uint16.ispc runfail  genx64        genx-x16 unspec   Linux LLVM 10.0 clang++10.0  spv *
 ./tests/masked-struct-scatter-varying.ispc runfail  genx64       genx-x16 unspec   Linux LLVM 10.0 clang++10.0  spv *
+./tests/memset-uniform-1.ispc runfail  genx64       genx-x16 unspec   Linux LLVM 10.0 clang++10.0  spv *
+./tests/memcpy-uniform-1.ispc runfail  genx64       genx-x16 unspec   Linux LLVM 10.0 clang++10.0  spv *
+./tests/memmove-uniform-1.ispc runfail  genx64       genx-x16 unspec   Linux LLVM 10.0 clang++10.0  spv *
 ./tests/pmuls-vi64.ispc runfail  genx64       genx-x16 unspec   Linux LLVM 10.0 clang++10.0  spv *
 ./tests/print_bool_simd.ispc runfail  genx64       genx-x16 unspec   Linux LLVM 10.0 clang++10.0  spv *
 ./tests/ptr-15.ispc runfail  genx64       genx-x16 unspec   Linux LLVM 10.0 clang++10.0  spv *
@@ -64,6 +67,9 @@
 ./tests/foreach-22.ispc runfail  genx64        genx-x8 unspec   Linux LLVM 10.0 clang++10.0  spv *
 ./tests/foreach-23.ispc runfail  genx64        genx-x8 unspec   Linux LLVM 10.0 clang++10.0  spv *
 ./tests/foreach-24.ispc runfail  genx64        genx-x8 unspec   Linux LLVM 10.0 clang++10.0  spv *
+./tests/memset-uniform-1.ispc runfail  genx64       genx-x8 unspec   Linux LLVM 10.0 clang++10.0  spv *
+./tests/memcpy-uniform-1.ispc runfail  genx64       genx-x8 unspec   Linux LLVM 10.0 clang++10.0  spv *
+./tests/memmove-uniform-1.ispc runfail  genx64       genx-x8 unspec   Linux LLVM 10.0 clang++10.0  spv *
 ./tests/recursion-forward-func-decl.ispc runfail  genx64        genx-x8 unspec   Linux LLVM 10.0 clang++10.0  spv *
 ./tests/recursion.ispc runfail  genx64        genx-x8 unspec   Linux LLVM 10.0 clang++10.0  spv *
 ./tests/transcendentals-5-0.ispc runfail  genx64        genx-x8 unspec   Linux LLVM 10.0 clang++10.0  spv *
