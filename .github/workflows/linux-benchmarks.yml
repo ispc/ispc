@@ -7,6 +7,7 @@ on:
     branches:
       - 'master'
       - '**test_bench**'
+  workflow_dispatch:
 
 env:
   LLVM_VERSION: "11.0"
