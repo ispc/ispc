@@ -1,6 +1,3 @@
-// rule: skip on arch=genx32
-// rule: skip on arch=genx64
-
 // make sure we reset the func mask in the foreach loop...
 
 void update(uniform float val[], const uniform float a[]) {
