@@ -33,7 +33,10 @@ jobs:
         echo "${GITHUB_WORKSPACE}/bin-$LLVM_VERSION/bin" >> $GITHUB_PATH
 
     - name: Check environment
+      env:
+        CALCITE_TOKEN: ${{ secrets.CALCITE_TOKEN }}
       run: |
+        [ -z "$CALCITE_TOKEN" ] && echo "CALCITE_TOKEN is empty" && exit 1 || echo "CALCITE_TOKEN is NOT empty"
         ./check_env.py
         which -a clang
         cat /proc/cpuinfo
