@@ -3,7 +3,7 @@
 
 Intel® Implicit SPMD Program Compiler (Intel® ISPC)
 ===================================================
-
+ 
 ``ispc`` is a compiler for a variant of the C programming language, with
 extensions for
 [single program, multiple data](http://en.wikipedia.org/wiki/SPMD)
