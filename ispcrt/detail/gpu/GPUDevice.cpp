@@ -385,6 +385,17 @@ struct TaskQueue : public ispcrt::base::TaskQueue {
             L0_SAFE_CALL_NOEXCEPT(zeCommandQueueDestroy(m_q));
         if (m_cl)
             L0_SAFE_CALL_NOEXCEPT(zeCommandListDestroy(m_cl));
+        // Clean up any events that could be in the queue
+        for (const auto &p : m_events) {
+            auto e = p.first;
+            auto f = p.second;
+            // Any commands associated with this future will never
+            // be executed so we mark the future as not valid
+            f->m_valid = false;
+            f->refDec();
+            m_ep.deleteEvent(e);
+        }
+        m_events.clear();
     }
 
     void barrier() override { L0_SAFE_CALL(zeCommandListAppendBarrier(m_cl, nullptr, 0, nullptr)); }
