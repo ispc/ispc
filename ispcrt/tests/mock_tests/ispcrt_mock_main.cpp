@@ -339,11 +339,7 @@ TEST_F(MockTestWithModuleQueueKernel, DISABLED_TaskQueue_FullKernelLaunch) {
     ASSERT_TRUE(f.valid());
 }
 
-// The test is disabled due to crash in EventPool destructor
-// The fix for this crash is to properly deallocate all events
-// that has been created in ::launch method and should be cleaned up
-// in sync (but sync never happens due to - for example program exit)
-TEST_F(MockTestWithModuleQueueKernel, DISABLED_TaskQueue_KernelLaunchNoSync) {
+TEST_F(MockTestWithModuleQueueKernel, TaskQueue_KernelLaunchNoSync) {
     auto tq = m_task_queue;
     auto f = tq.launch(m_kernel, 0);
     ASSERT_EQ(sm_rt_error, ISPCRT_NO_ERROR);
