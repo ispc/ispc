@@ -248,31 +248,7 @@ const AtomicType *AtomicType::GetAsUniformType() const {
         return this;
 
     if (asUniformType == NULL) {
-        BasicType bType = basicType;
-        // Varying bool needs to be handled differently since LLVMTypes::BoolVectorType
-        // is not always composed of i1.
-        if (basicType == TYPE_BOOL && variability == Variability::Varying) {
-            switch (g->target->getMaskBitCount()) {
-            case 1:
-                bType = TYPE_BOOL;
-                break;
-            case 8:
-                bType = TYPE_INT8;
-                break;
-            case 16:
-                bType = TYPE_INT16;
-                break;
-            case 32:
-                bType = TYPE_INT32;
-                break;
-            case 64:
-                bType = TYPE_INT64;
-                break;
-            default:
-                FATAL("Unhandled mask width");
-            }
-        }
-        asUniformType = new AtomicType(bType, Variability::Uniform, isConst);
+        asUniformType = new AtomicType(basicType, Variability::Uniform, isConst);
         if (variability == Variability::Varying)
             asUniformType->asVaryingType = this;
     }
