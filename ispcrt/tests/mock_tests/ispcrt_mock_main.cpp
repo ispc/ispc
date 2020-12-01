@@ -213,7 +213,8 @@ TEST_F(MockTest, TaskQueue_Constructor) {
     ASSERT_EQ(sm_rt_error, ISPCRT_NO_ERROR);
 }
 
-TEST_F(MockTest, TaskQueue_Constructor_zeEventPoolCreate) {
+// TODO: Enable the test when new Level Zero loader release is available
+TEST_F(MockTest, DISABLED_TaskQueue_Constructor_zeEventPoolCreate) {
     // Check if it's possible to create a task queue after the first try failed
     Config::setRetValue("zeEventPoolCreate", ZE_RESULT_ERROR_DEVICE_LOST);
     ispcrt::TaskQueue tq(m_device);
@@ -283,8 +284,9 @@ TEST_F(MockTest, TaskQueue_CopyToDevice_zeCommandListAppendMemoryCopy) {
 
 // TODO: Write test that will check if command list is cleaned up when zeCommandQueueCreate fails
 
+// TODO: Enable the test when new Level Zero loader release is available
 // Normal kernel launch (plus a few memory transfers) - but no waiting on future
-TEST_F(MockTestWithModuleQueueKernel, TaskQueue_FullKernelLaunchNoFuture) {
+TEST_F(MockTestWithModuleQueueKernel, DISABLED_TaskQueue_FullKernelLaunchNoFuture) {
     auto tq = m_task_queue;
     // Create an allocation
     std::vector<float> buf(64 * 1024);
@@ -309,8 +311,9 @@ TEST_F(MockTestWithModuleQueueKernel, TaskQueue_FullKernelLaunchNoFuture) {
     ASSERT_TRUE(Config::checkCmdList({}));
 }
 
+// TODO: Enable the test when new Level Zero loader release is available
 // Normal kernel launch (plus a few memory transfers)
-TEST_F(MockTestWithModuleQueueKernel, TaskQueue_FullKernelLaunch) {
+TEST_F(MockTestWithModuleQueueKernel, DISABLED_TaskQueue_FullKernelLaunch) {
     auto tq = m_task_queue;
     // Create an allocation
     std::vector<float> buf(64 * 1024);
@@ -352,7 +355,8 @@ TEST_F(MockTestWithModuleQueueKernel, DISABLED_TaskQueue_KernelLaunchNoSync) {
     ASSERT_FALSE(f.valid());
 }
 
-TEST_F(MockTestWithModuleQueueKernel, TaskQueue_FullKernelLaunch1) {
+// TODO: Enable the test when new Level Zero loader release is available
+TEST_F(MockTestWithModuleQueueKernel, DISABLED_TaskQueue_FullKernelLaunch1) {
     auto tq = m_task_queue;
     // Create an allocation
     std::vector<float> buf(64 * 1024);
