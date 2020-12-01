@@ -46,3 +46,8 @@ add_custom_target(${ISPCRT_TESTS_PROJECT_NAME})
 add_subdirectory(level_zero_mock)
 # Tests using Level Zero mock library
 add_subdirectory(mock_tests)
+
+# Install gtest libraries
+install(
+    TARGETS gtest gtest_main
+    LIBRARY DESTINATION ${CMAKE_BINARY_DIR}/tests)
