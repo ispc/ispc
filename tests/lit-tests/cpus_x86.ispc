@@ -22,6 +22,8 @@
 //; RUN: %{ispc} %s -o %t.o --nostdlib --target=sse2-i32x4 --cpu=skx
 //; RUN: %{ispc} %s -o %t.o --nostdlib --target=sse2-i32x4 --cpu=icelake-client
 //; RUN: %{ispc} %s -o %t.o --nostdlib --target=sse2-i32x4 --cpu=icl
+//; RUN: %{ispc} %s -o %t.o --nostdlib --target=sse2-i32x4 --cpu=icelake-server
+//; RUN: %{ispc} %s -o %t.o --nostdlib --target=sse2-i32x4 --cpu=icx
 
 // REQUIRES: X86_ENABLED
 

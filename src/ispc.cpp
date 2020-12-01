@@ -271,6 +271,15 @@ typedef enum {
     // Late Atom-like design. Supports SSE 4.2 + POPCNT/LZCNT.
     CPU_Silvermont,
 
+    CPU_ICX,
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_10_0
+    CPU_TGL,
+#endif
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_12_0
+    CPU_ADL,
+    CPU_SPR,
+#endif
+
 // FIXME: LLVM supports a ton of different ARM CPU variants--not just
 // cortex-a9 and a15.  We should be able to handle any of them that also
 // have NEON support.
@@ -354,6 +363,19 @@ class AllCPUs {
         names[CPU_ICL].push_back("icelake-client");
         names[CPU_ICL].push_back("icl");
 
+        names[CPU_ICX].push_back("icelake-server");
+        names[CPU_ICX].push_back("icx");
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_10_0
+        names[CPU_TGL].push_back("tigerlake");
+        names[CPU_TGL].push_back("tgl");
+#endif
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_12_0
+        names[CPU_ADL].push_back("alderlake");
+        names[CPU_ADL].push_back("adl");
+        names[CPU_SPR].push_back("sapphirerapids");
+        names[CPU_SPR].push_back("spr");
+#endif
+
 #ifdef ISPC_ARM_ENABLED
         names[CPU_CortexA9].push_back("cortex-a9");
 
@@ -382,9 +404,23 @@ class AllCPUs {
 
         compat[CPU_SKX] = Set(CPU_SKX, CPU_x86_64, CPU_Bonnell, CPU_Penryn, CPU_Core2, CPU_Nehalem, CPU_Silvermont,
                               CPU_SandyBridge, CPU_IvyBridge, CPU_Haswell, CPU_Broadwell, CPU_None);
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_12_0
+        compat[CPU_SPR] =
+            Set(CPU_SPR, CPU_x86_64, CPU_Bonnell, CPU_Penryn, CPU_Core2, CPU_Nehalem, CPU_Silvermont, CPU_SandyBridge,
+                CPU_IvyBridge, CPU_Haswell, CPU_Broadwell, CPU_SKX, CPU_ICL, CPU_ICX, CPU_TGL, CPU_ADL, CPU_None);
+        compat[CPU_ADL] = Set(CPU_ADL, CPU_x86_64, CPU_Bonnell, CPU_Penryn, CPU_Core2, CPU_Nehalem, CPU_Silvermont,
+                              CPU_SandyBridge, CPU_IvyBridge, CPU_Haswell, CPU_Broadwell, CPU_None);
+#endif
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_10_0
+        compat[CPU_TGL] =
+            Set(CPU_TGL, CPU_x86_64, CPU_Bonnell, CPU_Penryn, CPU_Core2, CPU_Nehalem, CPU_Silvermont, CPU_SandyBridge,
+                CPU_IvyBridge, CPU_Haswell, CPU_Broadwell, CPU_SKX, CPU_ICL, CPU_ICX, CPU_None);
+#endif
+        compat[CPU_ICX] = Set(CPU_ICX, CPU_x86_64, CPU_Bonnell, CPU_Penryn, CPU_Core2, CPU_Nehalem, CPU_Silvermont,
+                              CPU_SandyBridge, CPU_IvyBridge, CPU_Haswell, CPU_Broadwell, CPU_SKX, CPU_ICL, CPU_None);
 
-        compat[CPU_ICL] = Set(CPU_ICL, CPU_SKX, CPU_x86_64, CPU_Bonnell, CPU_Penryn, CPU_Core2, CPU_Nehalem,
-                              CPU_Silvermont, CPU_SandyBridge, CPU_IvyBridge, CPU_Haswell, CPU_Broadwell, CPU_None);
+        compat[CPU_ICL] = Set(CPU_ICL, CPU_x86_64, CPU_Bonnell, CPU_Penryn, CPU_Core2, CPU_Nehalem, CPU_Silvermont,
+                              CPU_SandyBridge, CPU_IvyBridge, CPU_Haswell, CPU_Broadwell, CPU_SKX, CPU_None);
 
         compat[CPU_Broadwell] = Set(CPU_x86_64, CPU_Bonnell, CPU_Penryn, CPU_Core2, CPU_Nehalem, CPU_Silvermont,
                                     CPU_SandyBridge, CPU_IvyBridge, CPU_Haswell, CPU_Broadwell, CPU_None);
@@ -517,11 +553,21 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, bool pic, boo
             m_ispc_target = ISPCTarget::avx512knl_i32x16;
             break;
 
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_12_0
+        case CPU_SPR:
+#endif
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_10_0
+        case CPU_TGL:
+#endif
+        case CPU_ICX:
         case CPU_ICL:
         case CPU_SKX:
             m_ispc_target = ISPCTarget::avx512skx_i32x16;
             break;
 
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_12_0
+        case CPU_ADL:
+#endif
         case CPU_Broadwell:
         case CPU_Haswell:
             m_ispc_target = ISPCTarget::avx2_i32x8;
