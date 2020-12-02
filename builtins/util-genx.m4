@@ -5014,22 +5014,17 @@ define void @__masked_store_blend_i16(<16 x i16>* nocapture, <16 x i16>,
 ')
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; packed load and store functions
+;; packed load and store helper
 ;;
-;; These define functions to emulate those nice packed load and packed store
-;; instructions.  For packed store, given a pointer to destination array and
-;; an offset into the array, for each lane where the mask is on, the
-;; corresponding value for that lane is stored into packed locations in the
-;; destination array.  For packed load, each lane that has an active mask
-;; loads a sequential value from the array.
+;; Implement valid version of 'packed_store_active2' based on 'type' specified.
 ;;
-;; $1: vector width of the target
+;; $1: Integer type for which function is to be created.
+;; $2: Alignment for store.
 ;;
 ;; FIXME: use the per_lane macro, defined below, to implement these!
+define(`packed_load_and_store_type', `
 
-define(`packed_load_and_store', `
-
-define i32 @__packed_load_active(i32 * %startptr, <WIDTH x i32> * %val_ptr,
+define i32 @__packed_load_active$1($1 * %startptr, <WIDTH x $1> * %val_ptr,
                                  <WIDTH x MASK> %full_mask) nounwind alwaysinline {
 entry:
   %mask = call i64 @__movmsk(<WIDTH x MASK> %full_mask)
@@ -5043,9 +5038,9 @@ known_mask:
 all_on:
   ;; everyone wants to load, so just load an entire vector width in a single
   ;; vector load
-  %vecptr = bitcast i32 *%startptr to <WIDTH x i32> *
-  %vec_load = load PTR_OP_ARGS(`<WIDTH x i32> ') %vecptr, align 4
-  store <WIDTH x i32> %vec_load, <WIDTH x i32> * %val_ptr, align 4
+  %vecptr = bitcast $1 *%startptr to <WIDTH x $1> *
+  %vec_load = load PTR_OP_ARGS(`<WIDTH x $1> ') %vecptr, align $2
+  store <WIDTH x $1> %vec_load, <WIDTH x $1> * %val_ptr, align $2
   ret i32 WIDTH
 
 unknown_mask:
@@ -5062,11 +5057,11 @@ loop:
   br i1 %do_load, label %load, label %loopend
 
 load:
-  %loadptr = getelementptr PTR_OP_ARGS(`i32') %startptr, i32 %offset
-  %loadval = load PTR_OP_ARGS(`i32 ') %loadptr
-  %val_ptr_i32 = bitcast <WIDTH x i32> * %val_ptr to i32 *
-  %storeptr = getelementptr PTR_OP_ARGS(`i32') %val_ptr_i32, i32 %lane
-  store i32 %loadval, i32 *%storeptr
+  %loadptr = getelementptr PTR_OP_ARGS(`$1') %startptr, i32 %offset
+  %loadval = load PTR_OP_ARGS(`$1 ') %loadptr
+  %val_ptr_type = bitcast <WIDTH x $1> * %val_ptr to $1 *
+  %storeptr = getelementptr PTR_OP_ARGS(`$1') %val_ptr_type, i32 %lane
+  store $1 %loadval, $1 *%storeptr
   %offset1 = add i32 %offset, 1
   br label %loopend
 
@@ -5083,7 +5078,7 @@ done:
   ret i32 %nextoffset
 }
 
-define i32 @__packed_store_active(i32 * %startptr, <WIDTH x i32> %vals,
+define i32 @__packed_store_active$1($1 * %startptr, <WIDTH x $1> %vals,
                                    <WIDTH x MASK> %full_mask) nounwind alwaysinline {
 entry:
   %mask = call i64 @__movmsk(<WIDTH x MASK> %full_mask)
@@ -5095,8 +5090,8 @@ known_mask:
   br i1 %allon, label %all_on, label %unknown_mask
 
 all_on:
-  %vecptr = bitcast i32 *%startptr to <WIDTH x i32> *
-  store <WIDTH x i32> %vals, <WIDTH x i32> * %vecptr, align 4
+  %vecptr = bitcast $1 *%startptr to <WIDTH x $1> *
+  store <WIDTH x $1> %vals, <WIDTH x $1> * %vecptr, align $2
   ret i32 WIDTH
 
 unknown_mask:
@@ -5113,9 +5108,9 @@ loop:
   br i1 %do_store, label %store, label %loopend
 
 store:
-  %storeval = extractelement <WIDTH x i32> %vals, i32 %lane
-  %storeptr = getelementptr PTR_OP_ARGS(`i32') %startptr, i32 %offset
-  store i32 %storeval, i32 *%storeptr
+  %storeval = extractelement <WIDTH x $1> %vals, i32 %lane
+  %storeptr = getelementptr PTR_OP_ARGS(`$1') %startptr, i32 %offset
+  store $1 %storeval, $1 *%storeptr
   %offset1 = add i32 %offset, 1
   br label %loopend
 
@@ -5132,12 +5127,27 @@ done:
   ret i32 %nextoffset
 }
 
-define i32 @__packed_store_active2(i32 * %startptr, <WIDTH x i32> %vals,
+define i32 @__packed_store_active2$1($1 * %startptr, <WIDTH x $1> %vals,
                                    <WIDTH x MASK> %full_mask) nounwind alwaysinline {
-  %res = call i32 @__packed_store_active(i32 * %startptr, <WIDTH x i32> %vals,
+  %res = call i32 @__packed_store_active$1($1 * %startptr, <WIDTH x $1> %vals,
                                    <WIDTH x MASK> %full_mask)
   ret i32 %res
 }
+')
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; packed load and store functions
+;;
+;; These define functions to emulate those nice packed load and packed store
+;; instructions.  For packed store, given a pointer to destination array and
+;; a varying value, for each lane where the mask is on, the
+;; corresponding value for that lane is stored into packed locations in the
+;; destination array.  For packed load, each lane that has an active mask
+;; loads a sequential value from the array.
+
+define(`packed_load_and_store', `
+  packed_load_and_store_type(i32, 4)
+  packed_load_and_store_type(i64, 8)
 ')
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
