@@ -1,6 +1,18 @@
 const fs = require('fs');
 const path = require('path');
 
+const defaultDatapointPolicies = {
+    // Median is a safe default to use, see https://doc.calcite.siliceum.com/performance/stability/statistics.html#descriptive-statistics for why we do not pick the mean.
+    aggregationPolicy: 'median',
+    // We want to consider only significant changes, in our case meaning 20% increase of the median.
+    // We chose 20% as a safe default since even when stabilized, a CPU can have such variations due to (for example) the Intel JCC Erratum. (https://www.intel.com/content/dam/support/us/en/documents/processors/mitigations-jump-conditional-code-erratum.pdf)
+    // We can at a later point in time lower this value if benchmarks are stable enough.
+    // See https://doc.calcite.siliceum.com/performance/stability/index.html for a reference of what can impact stability.
+    diffPolicy: 'relativeDifference',
+    regressionPolicy: 'lessIsBetter',
+    regressionArgument: 20
+};
+
 const fromGoogleBenchFile = (filePath, builder, calciteContext) => {
     const data = calciteContext.readJson(filePath);
     
@@ -13,6 +25,7 @@ const fromGoogleBenchFile = (filePath, builder, calciteContext) => {
             'real_time', {
                 values: [bench['real_time']],
                 unit: bench['time_unit'],
+                ...defaultDatapointPolicies
             }
         );
 
@@ -22,6 +35,7 @@ const fromGoogleBenchFile = (filePath, builder, calciteContext) => {
             'cpu_time', {
                 values: [bench['cpu_time']],
                 unit: bench['time_unit'],
+                ...defaultDatapointPolicies
             }
         );
     });
