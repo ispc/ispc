@@ -110,6 +110,9 @@ test_add(NAME sgemm TEST_IS_CM host_sgemm_cm 256 1 1 64)
 test_add(NAME sgemm TEST_IS_CM host_sgemm_cm 256 1 1 128)
 test_add(NAME sgemm TEST_IS_CM host_sgemm_cm 256 1 1 256)
 
+# DPCPP interoperability tests
+test_add(NAME simple-dpcpp TEST_IS_DPCPP host_simple-dpcpp)
+
 # perf tests
 test_add(NAME sgemm host_sgemm 128 100 1 4)
 test_add(NAME sgemm host_sgemm 128 100 1 8)

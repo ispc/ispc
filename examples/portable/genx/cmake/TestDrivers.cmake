@@ -36,7 +36,7 @@ configure_file(runner.py.in runner.py)
 set(TEST_RUNNER "${CMAKE_CURRENT_BINARY_DIR}/runner.py")
 
 function(test_add)
-    set(options TEST_IS_CM TEST_IS_ISPC TEST_IS_CM_RUNTIME TEST_IS_ISPCRT_RUNTIME)
+    set(options TEST_IS_CM TEST_IS_ISPC TEST_IS_CM_RUNTIME TEST_IS_ISPCRT_RUNTIME TEST_IS_DPCPP)
     set(oneValueArgs NAME RES_IMAGE REF_IMAGE)
     cmake_parse_arguments("PARSED_ARGS" "${options}" "${oneValueArgs}" "${multiValueArgs}" ${ARGN} )
 
@@ -50,6 +50,12 @@ function(test_add)
         set(SUPPORTED 0)
     endif()
     if (PARSED_ARGS_TEST_IS_CM AND NOT CMC_EXECUTABLE)
+        set(SUPPORTED 0)
+    endif()
+    if (PARSED_ARGS_TEST_IS_DPCPP AND WIN32)
+        set(SUPPORTED 0)
+    endif()
+    if (PARSED_ARGS_TEST_IS_DPCPP AND NOT ISPC_INCLUDE_DPCPP_EXAMPLES)
         set(SUPPORTED 0)
     endif()
     if (PARSED_ARGS_TEST_IS_CM)
@@ -68,7 +74,7 @@ function(test_add)
     endif()
     if (SUPPORTED EQUAL 1)
         add_test(NAME ${result_test_name}
-            COMMAND ${PYTHON_EXECUTABLE} ${TEST_RUNNER} ${REF_IMAGE_OPT} ${RES_IMAGE_OPT} 
+            COMMAND ${PYTHON_EXECUTABLE} ${TEST_RUNNER} ${REF_IMAGE_OPT} ${RES_IMAGE_OPT}
             ${PARSED_ARGS_NAME} ${PARSED_ARGS_UNPARSED_ARGUMENTS}
             WORKING_DIRECTORY ${EXECUTABLE_OUTPUT_PATH}
         )

@@ -36,6 +36,8 @@ project(GenxExamples)
 
 message(STATUS "Configuring GenX examples")
 
+option(ISPC_INCLUDE_DPCPP_EXAMPLES "Generate build targets for the ISPC/DPCPP interoperability examples" OFF)
+
 # CMC is needed for ISPC build so it should have been already found but it is possible to overwrite this with CM_INSTALL_PATH.
 if (CM_INSTALL_PATH)
     find_program (CMC_EXECUTABLE cmc PATHS ${CM_INSTALL_PATH}/bin NO_DEFAULT_PATH)
@@ -78,5 +80,6 @@ add_subdirectory(sgemm)
 add_subdirectory(aobench)
 add_subdirectory(mandelbrot)
 add_subdirectory(simple)
+add_subdirectory(simple-dpcpp)
 
 include(TestLists.txt)
