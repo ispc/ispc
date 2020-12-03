@@ -7,7 +7,7 @@
 #include "05_packed_load_store_ispc.h"
 
 static Docs docs("Check packed_load_active/packed_store_active implmentation of stdlib functions:\n"
-                 "[int32] x [all_off, 1/16, 1/8, 1/4, 1/2, 3/4, 7/8, 15/16, all_on] versions.\n");
+                 "[int32, int64] x [all_off, 1/16, 1/8, 1/4, 1/2, 3/4, 7/8, 15/16, all_on] versions.\n");
 
 // Minimum size is maximum target width, i.e. 64.
 // Larger buffer is better, but preferably to stay within L1.
@@ -155,5 +155,23 @@ PACKED_LOAD_STORE_COND(int32_t, int32, packed_store_active2, 1)
 PACKED_LOAD_STORE_COND(int32_t, int32, packed_store_active2, 3)
 PACKED_LOAD_STORE_COND(int32_t, int32, packed_store_active2, 7)
 PACKED_LOAD_STORE_COND(int32_t, int32, packed_store_active2, 15)
+
+PACKED_LOAD_STORE_COND(int64_t, int64, packed_load_active, 0)
+PACKED_LOAD_STORE_COND(int64_t, int64, packed_load_active, 1)
+PACKED_LOAD_STORE_COND(int64_t, int64, packed_load_active, 3)
+PACKED_LOAD_STORE_COND(int64_t, int64, packed_load_active, 7)
+PACKED_LOAD_STORE_COND(int64_t, int64, packed_load_active, 15)
+
+PACKED_LOAD_STORE_COND(int64_t, int64, packed_store_active, 0)
+PACKED_LOAD_STORE_COND(int64_t, int64, packed_store_active, 1)
+PACKED_LOAD_STORE_COND(int64_t, int64, packed_store_active, 3)
+PACKED_LOAD_STORE_COND(int64_t, int64, packed_store_active, 7)
+PACKED_LOAD_STORE_COND(int64_t, int64, packed_store_active, 15)
+
+PACKED_LOAD_STORE_COND(int64_t, int64, packed_store_active2, 0)
+PACKED_LOAD_STORE_COND(int64_t, int64, packed_store_active2, 1)
+PACKED_LOAD_STORE_COND(int64_t, int64, packed_store_active2, 3)
+PACKED_LOAD_STORE_COND(int64_t, int64, packed_store_active2, 7)
+PACKED_LOAD_STORE_COND(int64_t, int64, packed_store_active2, 15)
 
 BENCHMARK_MAIN();

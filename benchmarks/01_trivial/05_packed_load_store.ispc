@@ -55,3 +55,7 @@ export uniform int width() { return programCount; }
 PACKEDLOAD(int32)
 PACKEDSTORE(int32, packed_store_active)
 PACKEDSTORE(int32, packed_store_active2)
+
+PACKEDLOAD(int64)
+PACKEDSTORE(int64, packed_store_active)
+PACKEDSTORE(int64, packed_store_active2)
