@@ -17,8 +17,7 @@ set_target_properties(${TARGET_NAME} PROPERTIES
 )
 
 target_include_directories(${TARGET_NAME}
-    PUBLIC
-        ${CMAKE_CURRENT_SOURCE_DIR}
+    PUBLIC ${CMAKE_CURRENT_SOURCE_DIR} ${LEVEL_ZERO_INCLUDE_DIR}
 )
 
 install(
