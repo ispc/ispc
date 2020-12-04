@@ -270,7 +270,7 @@ class SymbolTable {
     /** Type definitions can't currently be scoped.
      */
     typedef std::map<std::string, const Type *> TypeMapType;
-    TypeMapType types;
+    std::vector<TypeMapType> types;
 };
 
 template <typename Predicate>

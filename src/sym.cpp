@@ -38,6 +38,9 @@
 #include "sym.h"
 #include "type.h"
 #include "util.h"
+#include <algorithm>
+#include <array>
+#include <iterator>
 #include <stdio.h>
 
 ///////////////////////////////////////////////////////////////////////////
@@ -74,12 +77,15 @@ void SymbolTable::PushScope() {
         sm = new SymbolMapType;
 
     variables.push_back(sm);
+    types.emplace_back();
 }
 
 void SymbolTable::PopScope() {
     Assert(variables.size() > 1);
+    Assert(types.size() > 1);
     freeSymbolMaps.push_back(variables.back());
     variables.pop_back();
+    types.pop_back();
 }
 
 bool SymbolTable::AddVariable(Symbol *symbol) {
@@ -173,25 +179,28 @@ bool SymbolTable::AddType(const char *name, const Type *type, SourcePos pos) {
         return false;
     }
 
-    types[name] = type;
+    Assert(types.size() > 0);
+
+    types.back()[name] = type;
     return true;
 }
 
 const Type *SymbolTable::LookupType(const char *name) const {
     // Again, search through the type maps backward to get scoping right.
-    TypeMapType::const_iterator iter = types.find(name);
-    if (iter != types.end())
-        return iter->second;
-    return NULL;
+    for (std::vector<TypeMapType>::const_reverse_iterator it = types.rbegin(); it != types.rend(); it++) {
+        TypeMapType::const_iterator type_it = it->find(name);
+        if (type_it != it->end())
+            return type_it->second;
+    }
+    return nullptr;
 }
 
 bool SymbolTable::ContainsType(const Type *type) const {
-    TypeMapType::const_iterator iter = types.begin();
-    while (iter != types.end()) {
-        if (iter->second == type) {
-            return true;
+    for (const TypeMapType &typeMap : types) {
+        for (const std::pair<const std::string, const Type *> &entry : typeMap) {
+            if (entry.second == type)
+                return true;
         }
-        iter++;
     }
     return false;
 }
@@ -245,28 +254,31 @@ std::vector<std::string> SymbolTable::closestTypeMatch(const char *str, bool str
     // maxDelta, return the first non-empty vector of one or more sets of
     // alternatives with minimal edit distance.
     const int maxDelta = 2;
-    std::vector<std::string> matches[maxDelta + 1];
+    std::array<std::vector<std::string>, maxDelta + 1> matches;
 
-    TypeMapType::const_iterator iter;
-    for (iter = types.begin(); iter != types.end(); ++iter) {
-        // Skip over either StructTypes or EnumTypes, depending on the
-        // value of the structsVsEnums parameter
-        bool isEnum = (CastType<EnumType>(iter->second) != NULL);
-        if (isEnum && structsVsEnums)
-            continue;
-        else if (!isEnum && !structsVsEnums)
-            continue;
+    for (const TypeMapType &typeMap : types) {
+        for (const std::pair<const std::string, const Type *> &entry : typeMap) {
+            // Skip over either StructTypes or EnumTypes, depending on the
+            // value of the structsVsEnums parameter
+            bool isEnum = (CastType<EnumType>(entry.second) != nullptr);
+            if (isEnum && structsVsEnums)
+                continue;
+            else if (!isEnum && !structsVsEnums)
+                continue;
 
-        int dist = StringEditDistance(str, iter->first, maxDelta + 1);
-        if (dist <= maxDelta)
-            matches[dist].push_back(iter->first);
+            int dist = StringEditDistance(str, entry.first, maxDelta + 1);
+            if (dist <= maxDelta)
+                matches[dist].push_back(entry.first);
+        }
     }
 
-    for (int i = 0; i <= maxDelta; ++i) {
-        if (matches[i].size())
-            return matches[i];
-    }
-    return std::vector<std::string>();
+    auto predicate = [](const std::vector<std::string> &set) { return set.empty(); };
+
+    auto result = std::find_if_not(matches.begin(), matches.end(), predicate);
+    if (result == matches.end())
+        return std::vector<std::string>();
+    else
+        return *result;
 }
 
 void SymbolTable::Print() {
@@ -296,11 +308,13 @@ void SymbolTable::Print() {
 
     depth = 0;
     fprintf(stderr, "Named types:\n---------------\n");
-    TypeMapType::iterator siter = types.begin();
-    while (siter != types.end()) {
-        fprintf(stderr, "%*c", depth, ' ');
-        fprintf(stderr, "%s -> %s\n", siter->first.c_str(), siter->second->GetString().c_str());
-        ++siter;
+    for (const TypeMapType &typeMap : types) {
+        for (const std::pair<const std::string, const Type *> &entry : typeMap) {
+            fprintf(stderr, "%*c", depth, ' ');
+            fprintf(stderr, "%s -> %s\n", entry.first.c_str(), entry.second->GetString().c_str());
+        }
+        fprintf(stderr, "\n");
+        depth += 4;
     }
 }
 
@@ -326,11 +340,10 @@ Symbol *SymbolTable::RandomSymbol() {
 }
 
 const Type *SymbolTable::RandomType() {
-    int count = types.size();
-    TypeMapType::iterator iter = types.begin();
-    while (count-- > 0) {
-        ++iter;
-        Assert(iter != types.end());
-    }
-    return iter->second;
+
+    int randomScopeIndex = ispcRand() % types.size();
+
+    int randomTypeIndex = ispcRand() % types[randomScopeIndex].size();
+
+    return std::next(types[randomScopeIndex].cbegin(), randomTypeIndex)->second;
 }
