@@ -6,8 +6,21 @@
 #include "../common.h"
 #include "05_packed_load_store_ispc.h"
 
-static Docs docs("Check packed_load_active/packed_store_active implmentation of stdlib functions:\n"
-                 "[int32, int64] x [all_off, 1/16, 1/8, 1/4, 1/2, 3/4, 7/8, 15/16, all_on] versions.\n");
+static Docs
+    docs("Check packed_load_active/packed_store_active implementation of stdlib functions:\n"
+         "[int32, int64] x [all_off, 1/16, 1/8, 1/4, 1/2, 3/4, 7/8, 15/16, all_on] versions.\n"
+         "Observation:\n"
+         " - it does make sense to test multiple mask pattern, as they behave substantantially differently for "
+         "different implementations\n"
+         " - implementations based on LLVM intrinsic is a good one, but not the best, as it don't do popcnt as "
+         "part of intrinsic\n"
+         " - performance was not evaluated for different data set sizes\n"
+         " - 1/16, 1/8 behave like 1/4 for 4 wide targets, similarly 1/16 on 8 wide is 1/8\n"
+         " - 1/2 even and 1/2 odd have different perfomance, that's not expected.\n"
+         " - 1/2 even is about 20% regression on AVX2 (LLVM intrinsics vs old manual implementation) that's might be "
+         "interesting to investigate\n"
+         "Expectation:\n"
+         " - No regressions\n");
 
 // Minimum size is maximum target width, i.e. 64.
 // Larger buffer is better, but preferably to stay within L1.
@@ -137,6 +150,13 @@ static void check_packed_store_active2_neq(T *src, T *dst, const unsigned int in
         state.SetComplexityN(state.range(0));                                                                          \
     }                                                                                                                  \
     BENCHMARK(FUNC##_##T_ISPC##_##ACTIVE_RATIO##_neq)->ARGS;
+
+// The last argument constant means the following:
+// 0 is all-on, all-off
+// 1 is 1/2 - even, odd
+// 3 is 1/4, 3/4
+// 7 is 1/8, 7/8
+// 15 is 1/16, 15/16
 
 PACKED_LOAD_STORE_COND(int32_t, int32, packed_load_active, 0)
 PACKED_LOAD_STORE_COND(int32_t, int32, packed_load_active, 1)
