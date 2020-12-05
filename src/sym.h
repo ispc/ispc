@@ -212,6 +212,14 @@ class SymbolTable {
     */
     const Type *LookupType(const char *name) const;
 
+    /** Looks for a type of the given name in the most local
+        scope in the symbol table. This is useful for determining
+        whether a type definition can assume a certain name.
+
+        @return A pointer to the type that was found or null.
+     */
+    const Type *LookupLocalType(const char *name) const;
+
     /** Look for a type given a pointer.
 
         @return True if found, False otherwise.

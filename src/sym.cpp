@@ -169,7 +169,7 @@ Symbol *SymbolTable::LookupFunction(const char *name, const FunctionType *type) 
 }
 
 bool SymbolTable::AddType(const char *name, const Type *type, SourcePos pos) {
-    const Type *t = LookupType(name);
+    const Type *t = LookupLocalType(name);
     if (t != NULL && CastType<UndefinedStructType>(t) == NULL) {
         // If we have a previous declaration of anything other than an
         // UndefinedStructType with this struct name, issue an error.  If
@@ -193,6 +193,17 @@ const Type *SymbolTable::LookupType(const char *name) const {
             return type_it->second;
     }
     return nullptr;
+}
+
+const Type *SymbolTable::LookupLocalType(const char *name) const {
+
+    Assert(types.size() > 0);
+
+    auto result = types.back().find(name);
+    if (result == types.back().end())
+        return nullptr;
+    else
+        return result->second;
 }
 
 bool SymbolTable::ContainsType(const Type *type) const {
