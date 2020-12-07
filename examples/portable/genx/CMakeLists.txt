@@ -81,5 +81,6 @@ add_subdirectory(aobench)
 add_subdirectory(mandelbrot)
 add_subdirectory(simple)
 add_subdirectory(simple-dpcpp)
+add_subdirectory(pipeline-dpcpp)
 
 include(TestLists.txt)
