@@ -779,6 +779,8 @@ int main(int Argc, char *Argv[]) {
                 g->opt.emitGenXHardwareMask = true;
             else if (!strcmp(opt, "enable-genx-foreach-varying"))
                 g->opt.enableForeachInsideVarying = true;
+            else if (!strcmp(opt, "disable-genx-private-intrinsics"))
+                g->opt.disableGenXPrivateIntrinsics = true;
 #endif
             else {
                 errorHandler.AddError("Unknown --opt= option \"%s\".", opt);

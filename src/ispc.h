@@ -540,6 +540,11 @@ struct Opt {
         based on impliit hardware mask. Forces generation of goto/join instructions
         in assembly.*/
     bool emitGenXHardwareMask;
+
+    /** Disables generation of GenX private intrinsics. Will be set by default when
+        TPM is mapped to SVM by default in backend.
+    */
+    bool disableGenXPrivateIntrinsics;
 #endif
 };
 

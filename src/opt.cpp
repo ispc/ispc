@@ -2977,7 +2977,6 @@ static bool lImproveMaskedStore(llvm::CallInst *callInst) {
                        MSInfo("__masked_store_i8", 1),         MSInfo("__masked_store_i16", 2),
                        MSInfo("__masked_store_i32", 4),        MSInfo("__masked_store_float", 4),
                        MSInfo("__masked_store_i64", 8),        MSInfo("__masked_store_double", 8)};
-
     llvm::Function *called = callInst->getCalledFunction();
 
     int nMSFuncs = sizeof(msInfo) / sizeof(msInfo[0]);
@@ -6036,82 +6035,86 @@ static bool lPromoteToPrivateMemory(llvm::CallInst *callInst) {
         llvm::Function *privateFunc;
     };
 
-    MemInfo memInfo[] = {
-        MemInfo("__masked_store_i8", "__masked_store_private_i8"),
-        MemInfo("__masked_store_i16", "__masked_store_private_i16"),
-        MemInfo("__masked_store_i32", "__masked_store_private_i32"),
-        MemInfo("__masked_store_float", "__masked_store_private_float"),
-        MemInfo("__masked_store_i64", "__masked_store_private_i64"),
-        MemInfo("__masked_store_double", "__masked_store_private_double"),
+    MemInfo memInfo[] = {MemInfo("__masked_load_i8", "__masked_load_private_i8"),
+                         MemInfo("__masked_load_i16", "__masked_load_private_i16"),
+                         MemInfo("__masked_load_i32", "__masked_load_private_i32"),
+                         MemInfo("__masked_load_float", "__masked_load_private_float"),
+                         MemInfo("__masked_load_i64", "__masked_load_private_i64"),
+                         MemInfo("__masked_load_double", "__masked_load_private_double")};
+    MemInfo privMemInfo[] = {MemInfo("__masked_store_i8", "__masked_store_private_i8"),
+                             MemInfo("__masked_store_i16", "__masked_store_private_i16"),
+                             MemInfo("__masked_store_i32", "__masked_store_private_i32"),
+                             MemInfo("__masked_store_float", "__masked_store_private_float"),
+                             MemInfo("__masked_store_i64", "__masked_store_private_i64"),
+                             MemInfo("__masked_store_double", "__masked_store_private_double"),
+                             MemInfo("__scatter32_i8", "__scatter32_private_i8"),
+                             MemInfo("__scatter32_i16", "__scatter32_private_i16"),
+                             MemInfo("__scatter32_i32", "__scatter32_private_i32"),
+                             MemInfo("__scatter32_i64", "__scatter32_private_i64"),
+                             MemInfo("__scatter32_float", "__scatter32_private_float"),
+                             MemInfo("__scatter32_double", "__scatter32_private_double"),
 
-        MemInfo("__masked_load_i8", "__masked_load_private_i8"),
-        MemInfo("__masked_load_i16", "__masked_load_private_i16"),
-        MemInfo("__masked_load_i32", "__masked_load_private_i32"),
-        MemInfo("__masked_load_float", "__masked_load_private_float"),
-        MemInfo("__masked_load_i64", "__masked_load_private_i64"),
-        MemInfo("__masked_load_double", "__masked_load_private_double"),
+                             MemInfo("__scatter64_i8", "__scatter64_private_i8"),
+                             MemInfo("__scatter64_i16", "__scatter64_private_i16"),
+                             MemInfo("__scatter64_i32", "__scatter64_private_i32"),
+                             MemInfo("__scatter64_i64", "__scatter64_private_i64"),
+                             MemInfo("__scatter64_float", "__scatter64_private_float"),
+                             MemInfo("__scatter64_double", "__scatter64_private_double"),
 
-        MemInfo("__scatter32_i8", "__scatter32_private_i8"),
-        MemInfo("__scatter32_i16", "__scatter32_private_i16"),
-        MemInfo("__scatter32_i32", "__scatter32_private_i32"),
-        MemInfo("__scatter32_i64", "__scatter32_private_i64"),
-        MemInfo("__scatter32_float", "__scatter32_private_float"),
-        MemInfo("__scatter32_double", "__scatter32_private_double"),
+                             MemInfo("__gather32_i8", "__gather32_private_i8"),
+                             MemInfo("__gather32_i16", "__gather32_private_i16"),
+                             MemInfo("__gather32_i32", "__gather32_private_i32"),
+                             MemInfo("__gather32_i64", "__gather32_private_i64"),
+                             MemInfo("__gather32_float", "__gather32_private_float"),
+                             MemInfo("__gather32_double", "__gather32_private_double"),
 
-        MemInfo("__scatter64_i8", "__scatter64_private_i8"),
-        MemInfo("__scatter64_i16", "__scatter64_private_i16"),
-        MemInfo("__scatter64_i32", "__scatter64_private_i32"),
-        MemInfo("__scatter64_i64", "__scatter64_private_i64"),
-        MemInfo("__scatter64_float", "__scatter64_private_float"),
-        MemInfo("__scatter64_double", "__scatter64_private_double"),
+                             MemInfo("__gather64_i8", "__gather64_private_i8"),
+                             MemInfo("__gather64_i16", "__gather64_private_i16"),
+                             MemInfo("__gather64_i32", "__gather64_private_i32"),
+                             MemInfo("__gather64_i64", "__gather64_private_i64"),
+                             MemInfo("__gather64_float", "__gather64_private_float"),
+                             MemInfo("__gather64_double", "__gather64_private_double"),
 
-        MemInfo("__gather32_i8", "__gather32_private_i8"),
-        MemInfo("__gather32_i16", "__gather32_private_i16"),
-        MemInfo("__gather32_i32", "__gather32_private_i32"),
-        MemInfo("__gather32_i64", "__gather32_private_i64"),
-        MemInfo("__gather32_float", "__gather32_private_float"),
-        MemInfo("__gather32_double", "__gather32_private_double"),
+                             MemInfo("__scatter_base_offsets32_i8", "__scatter_base_offsets32_private_i8"),
+                             MemInfo("__scatter_base_offsets32_i16", "__scatter_base_offsets32_private_i16"),
+                             MemInfo("__scatter_base_offsets32_i32", "__scatter_base_offsets32_private_i32"),
+                             MemInfo("__scatter_base_offsets32_i64", "__scatter_base_offsets32_private_i64"),
+                             MemInfo("__scatter_base_offsets32_float", "__scatter_base_offsets32_private_float"),
+                             MemInfo("__scatter_base_offsets32_double", "__scatter_base_offsets32_private_double"),
 
-        MemInfo("__gather64_i8", "__gather64_private_i8"),
-        MemInfo("__gather64_i16", "__gather64_private_i16"),
-        MemInfo("__gather64_i32", "__gather64_private_i32"),
-        MemInfo("__gather64_i64", "__gather64_private_i64"),
-        MemInfo("__gather64_float", "__gather64_private_float"),
-        MemInfo("__gather64_double", "__gather64_private_double"),
+                             MemInfo("__scatter_base_offsets64_i8", "__scatter_base_offsets64_private_i8"),
+                             MemInfo("__scatter_base_offsets64_i16", "__scatter_base_offsets64_private_i16"),
+                             MemInfo("__scatter_base_offsets64_i32", "__scatter_base_offsets64_private_i32"),
+                             MemInfo("__scatter_base_offsets64_i64", "__scatter_base_offsets64_private_i64"),
+                             MemInfo("__scatter_base_offsets64_float", "__scatter_base_offsets64_private_float"),
+                             MemInfo("__scatter_base_offsets64_double", "__scatter_base_offsets64_private_double"),
 
-        MemInfo("__scatter_base_offsets32_i8", "__scatter_base_offsets32_private_i8"),
-        MemInfo("__scatter_base_offsets32_i16", "__scatter_base_offsets32_private_i16"),
-        MemInfo("__scatter_base_offsets32_i32", "__scatter_base_offsets32_private_i32"),
-        MemInfo("__scatter_base_offsets32_i64", "__scatter_base_offsets32_private_i64"),
-        MemInfo("__scatter_base_offsets32_float", "__scatter_base_offsets32_private_float"),
-        MemInfo("__scatter_base_offsets32_double", "__scatter_base_offsets32_private_double"),
+                             MemInfo("__gather_base_offsets32_i8", "__gather_base_offsets32_private_i8"),
+                             MemInfo("__gather_base_offsets32_i16", "__gather_base_offsets32_private_i16"),
+                             MemInfo("__gather_base_offsets32_i32", "__gather_base_offsets32_private_i32"),
+                             MemInfo("__gather_base_offsets32_i64", "__gather_base_offsets32_private_i64"),
+                             MemInfo("__gather_base_offsets32_float", "__gather_base_offsets32_private_float"),
+                             MemInfo("__gather_base_offsets32_double", "__gather_base_offsets32_private_double"),
 
-        MemInfo("__scatter_base_offsets64_i8", "__scatter_base_offsets64_private_i8"),
-        MemInfo("__scatter_base_offsets64_i16", "__scatter_base_offsets64_private_i16"),
-        MemInfo("__scatter_base_offsets64_i32", "__scatter_base_offsets64_private_i32"),
-        MemInfo("__scatter_base_offsets64_i64", "__scatter_base_offsets64_private_i64"),
-        MemInfo("__scatter_base_offsets64_float", "__scatter_base_offsets64_private_float"),
-        MemInfo("__scatter_base_offsets64_double", "__scatter_base_offsets64_private_double"),
-
-        MemInfo("__gather_base_offsets32_i8", "__gather_base_offsets32_private_i8"),
-        MemInfo("__gather_base_offsets32_i16", "__gather_base_offsets32_private_i16"),
-        MemInfo("__gather_base_offsets32_i32", "__gather_base_offsets32_private_i32"),
-        MemInfo("__gather_base_offsets32_i64", "__gather_base_offsets32_private_i64"),
-        MemInfo("__gather_base_offsets32_float", "__gather_base_offsets32_private_float"),
-        MemInfo("__gather_base_offsets32_double", "__gather_base_offsets32_private_double"),
-
-        MemInfo("__gather_base_offsets64_i8", "__gather_base_offsets64_private_i8"),
-        MemInfo("__gather_base_offsets64_i16", "__gather_base_offsets64_private_i16"),
-        MemInfo("__gather_base_offsets64_i32", "__gather_base_offsets64_private_i32"),
-        MemInfo("__gather_base_offsets64_i64", "__gather_base_offsets64_private_i64"),
-        MemInfo("__gather_base_offsets64_float", "__gather_base_offsets64_private_float"),
-        MemInfo("__gather_base_offsets64_double", "__gather_base_offsets64_private_double"),
-    };
+                             MemInfo("__gather_base_offsets64_i8", "__gather_base_offsets64_private_i8"),
+                             MemInfo("__gather_base_offsets64_i16", "__gather_base_offsets64_private_i16"),
+                             MemInfo("__gather_base_offsets64_i32", "__gather_base_offsets64_private_i32"),
+                             MemInfo("__gather_base_offsets64_i64", "__gather_base_offsets64_private_i64"),
+                             MemInfo("__gather_base_offsets64_float", "__gather_base_offsets64_private_float"),
+                             MemInfo("__gather_base_offsets64_double", "__gather_base_offsets64_private_double")};
     MemInfo *info = NULL;
     for (unsigned int i = 0; i < sizeof(memInfo) / sizeof(memInfo[0]); ++i) {
         if (memInfo[i].originalFunc != NULL && callInst->getCalledFunction() == memInfo[i].originalFunc) {
             info = &memInfo[i];
             break;
+        }
+    }
+    if (!g->opt.disableGenXPrivateIntrinsics) {
+        for (unsigned int i = 0; i < sizeof(privMemInfo) / sizeof(privMemInfo[0]); ++i) {
+            if (privMemInfo[i].originalFunc != NULL && callInst->getCalledFunction() == privMemInfo[i].originalFunc) {
+                info = &privMemInfo[i];
+                break;
+            }
         }
     }
     if (info == NULL)
