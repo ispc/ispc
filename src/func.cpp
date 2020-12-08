@@ -537,10 +537,16 @@ void Function::GenerateIR() {
         // TODO_GEN: revise this one more time after testing of subroutines calls.
         const FunctionType *type = CastType<FunctionType>(sym->type);
         if ((type->isExported && type->isUnmasked) || (!type->isExported && !type->isTask)) {
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_10_0
+            llvm::TimeTraceScope TimeScope("emitCode", llvm::StringRef(sym->name));
+#endif
             FunctionEmitContext ec(this, sym, function, firstStmtPos);
             emitCode(&ec, function, firstStmtPos);
         }
     } else {
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_10_0
+        llvm::TimeTraceScope TimeScope("emitCode", llvm::StringRef(sym->name));
+#endif
         FunctionEmitContext ec(this, sym, function, firstStmtPos);
         emitCode(&ec, function, firstStmtPos);
     }
@@ -581,6 +587,9 @@ void Function::GenerateIR() {
                     // error, so don't worry about this one...
                     appFunction->eraseFromParent();
                 } else {
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_10_0
+                    llvm::TimeTraceScope TimeScope("emitCode", llvm::StringRef(sym->name));
+#endif
                     // And emit the code again
                     FunctionEmitContext ec(this, sym, appFunction, firstStmtPos);
                     emitCode(&ec, appFunction, firstStmtPos);
