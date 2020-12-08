@@ -1658,6 +1658,12 @@ Globals::Globals() {
     mangleFunctionsWithTarget = false;
     isMultiTargetCompilation = false;
     errorLimit = -1;
+
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_10_0
+    enableTimeTrace = false;
+    // set default granularity to 500.
+    timeTraceGranularity = 500;
+#endif
     target = NULL;
     ctx = new llvm::LLVMContext;
 

@@ -1066,6 +1066,9 @@ restart:
 
 bool IntrinsicsOpt::runOnFunction(llvm::Function &F) {
 
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_10_0
+    llvm::TimeTraceScope FuncScope("IntrinsicsOpt::runOnFunction", F.getName());
+#endif
     bool modifiedAny = false;
     for (llvm::BasicBlock &BB : F) {
         modifiedAny |= runOnBasicBlock(BB);
@@ -1236,6 +1239,9 @@ restart:
 
 bool InstructionSimplifyPass::runOnFunction(llvm::Function &F) {
 
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_10_0
+    llvm::TimeTraceScope FuncScope("InstructionSimplifyPass::runOnFunction", F.getName());
+#endif
     bool modifiedAny = false;
     for (llvm::BasicBlock &BB : F) {
         modifiedAny |= runOnBasicBlock(BB);
@@ -3123,6 +3129,9 @@ restart:
 
 bool ImproveMemoryOpsPass::runOnFunction(llvm::Function &F) {
 
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_10_0
+    llvm::TimeTraceScope FuncScope("ImproveMemoryOpsPass::runOnFunction", F.getName());
+#endif
     bool modifiedAny = false;
     for (llvm::BasicBlock &BB : F) {
         modifiedAny |= runOnBasicBlock(BB);
@@ -4126,6 +4135,9 @@ restart:
 
 bool GatherCoalescePass::runOnFunction(llvm::Function &F) {
 
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_10_0
+    llvm::TimeTraceScope FuncScope("GatherCoalescePass::runOnFunction", F.getName());
+#endif
     bool modifiedAny = false;
     for (llvm::BasicBlock &BB : F) {
         modifiedAny |= runOnBasicBlock(BB);
@@ -4455,6 +4467,9 @@ restart:
 
 bool ReplacePseudoMemoryOpsPass::runOnFunction(llvm::Function &F) {
 
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_10_0
+    llvm::TimeTraceScope FuncScope("ReplacePseudoMemoryOpsPass::runOnFunction", F.getName());
+#endif
     bool modifiedAny = false;
     for (llvm::BasicBlock &BB : F) {
         modifiedAny |= runOnBasicBlock(BB);
@@ -4558,6 +4573,9 @@ restart:
 
 bool IsCompileTimeConstantPass::runOnFunction(llvm::Function &F) {
 
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_10_0
+    llvm::TimeTraceScope FuncScope("IsCompileTimeConstantPass::runOnFunction", F.getName());
+#endif
     bool modifiedAny = false;
     for (llvm::BasicBlock &BB : F) {
         modifiedAny |= runOnBasicBlock(BB);
@@ -5183,6 +5201,9 @@ restart:
 
 bool PeepholePass::runOnFunction(llvm::Function &F) {
 
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_10_0
+    llvm::TimeTraceScope FuncScope("PeepholePass::runOnFunction", F.getName());
+#endif
     bool modifiedAny = false;
     for (llvm::BasicBlock &BB : F) {
         modifiedAny |= runOnBasicBlock(BB);
@@ -5278,6 +5299,9 @@ bool ReplaceStdlibShiftPass::runOnBasicBlock(llvm::BasicBlock &bb) {
 
 bool ReplaceStdlibShiftPass::runOnFunction(llvm::Function &F) {
 
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_10_0
+    llvm::TimeTraceScope FuncScope("ReplaceStdlibShiftPass::runOnFunction", F.getName());
+#endif
     bool modifiedAny = false;
     for (llvm::BasicBlock &BB : F) {
         modifiedAny |= runOnBasicBlock(BB);
@@ -5375,6 +5399,9 @@ llvm::Instruction *FixBooleanSelectPass::fixSelect(llvm::SelectInst *sel, llvm::
 }
 
 bool FixBooleanSelectPass::runOnFunction(llvm::Function &F) {
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_10_0
+    llvm::TimeTraceScope FuncScope("FixBooleanSelectPass::runOnFunction", F.getName());
+#endif
     bool modifiedAny = false;
 
     return modifiedAny;
@@ -5937,6 +5964,9 @@ bool GenXGatherCoalescing::runOnBasicBlock(llvm::BasicBlock &bb) {
 }
 
 bool GenXGatherCoalescing::runOnFunction(llvm::Function &F) {
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_10_0
+    llvm::TimeTraceScope FuncScope("GenXGatherCoalescing::runOnFunction", F.getName());
+#endif
     bool modifiedAny = false;
     for (llvm::BasicBlock &BB : F) {
         modifiedAny |= runOnBasicBlock(BB);
@@ -6083,6 +6113,9 @@ bool PromoteToPrivateMemoryPass::runOnBasicBlock(llvm::BasicBlock &bb) {
 
 bool PromoteToPrivateMemoryPass::runOnFunction(llvm::Function &F) {
 
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_10_0
+    llvm::TimeTraceScope FuncScope("PromoteToPrivateMemoryPass::runOnFunction", F.getName());
+#endif
     bool modifiedAny = false;
     for (llvm::BasicBlock &BB : F) {
         modifiedAny |= runOnBasicBlock(BB);
@@ -6148,6 +6181,9 @@ restart:
 
 bool ReplaceLLVMIntrinsics::runOnFunction(llvm::Function &F) {
 
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_10_0
+    llvm::TimeTraceScope FuncScope("ReplaceLLVMIntrinsics::runOnFunction", F.getName());
+#endif
     bool modifiedAny = false;
     for (llvm::BasicBlock &BB : F) {
         modifiedAny |= runOnBasicBlock(BB);
@@ -6242,6 +6278,9 @@ bool ReplaceUnsupportedInsts::runOnBasicBlock(llvm::BasicBlock &bb) {
 
 bool ReplaceUnsupportedInsts::runOnFunction(llvm::Function &F) {
 
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_10_0
+    llvm::TimeTraceScope FuncScope("ReplaceUnsupportedInsts::runOnFunction", F.getName());
+#endif
     bool modifiedAny = false;
     for (llvm::BasicBlock &BB : F) {
         modifiedAny |= runOnBasicBlock(BB);
@@ -6330,6 +6369,9 @@ bool CheckUnsupportedInsts::runOnBasicBlock(llvm::BasicBlock &bb) {
 }
 
 bool CheckUnsupportedInsts::runOnFunction(llvm::Function &F) {
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_10_0
+    llvm::TimeTraceScope FuncScope("CheckUnsupportedInsts::runOnFunction", F.getName());
+#endif
     bool modifiedAny = false;
     for (llvm::BasicBlock &BB : F) {
         modifiedAny |= runOnBasicBlock(BB);
@@ -6398,6 +6440,9 @@ bool MangleOpenCLBuiltins::runOnBasicBlock(llvm::BasicBlock &bb) {
 }
 
 bool MangleOpenCLBuiltins::runOnFunction(llvm::Function &F) {
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_10_0
+    llvm::TimeTraceScope FuncScope("MangleOpenCLBuiltins::runOnFunction", F.getName());
+#endif
     bool modifiedAny = false;
     for (llvm::BasicBlock &BB : F) {
         modifiedAny |= runOnBasicBlock(BB);
@@ -6717,6 +6762,9 @@ bool FixAddressSpace::runOnFunction(llvm::Function &F) {
     // Transformations are correct when the function is not internal.
     // This is due to address space calculation algorithm.
     // TODO: problems can be met in case of Stack Calls
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_10_0
+    llvm::TimeTraceScope FuncScope("FixAddressSpace::runOnFunction", F.getName());
+#endif
     if (F.getLinkage() == llvm::GlobalValue::LinkageTypes::InternalLinkage)
         return false;
 
@@ -6740,6 +6788,9 @@ class DemotePHIs : public llvm::FunctionPass {
 char DemotePHIs::ID = 0;
 
 bool DemotePHIs::runOnFunction(llvm::Function &F) {
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_10_0
+    llvm::TimeTraceScope FuncScope("DemotePHIs::runOnFunction", F.getName());
+#endif
     if (F.isDeclaration() || skipFunction(F))
         return false;
     std::vector<llvm::Instruction *> WorkList;

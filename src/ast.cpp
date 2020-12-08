@@ -44,6 +44,9 @@
 #include "sym.h"
 #include "util.h"
 
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_10_0
+#include <llvm/Support/TimeProfiler.h>
+#endif
 ///////////////////////////////////////////////////////////////////////////
 // ASTNode
 
@@ -59,6 +62,9 @@ void AST::AddFunction(Symbol *sym, Stmt *code) {
 }
 
 void AST::GenerateIR() {
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_10_0
+    llvm::TimeTraceScope TimeScope("GenerateIR");
+#endif
     for (unsigned int i = 0; i < functions.size(); ++i)
         functions[i]->GenerateIR();
 }

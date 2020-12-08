@@ -43,6 +43,10 @@
 
 #include <llvm/IR/DebugInfo.h>
 
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_10_0
+#include <llvm/Support/TimeProfiler.h>
+#endif
+
 #ifdef ISPC_GENX_ENABLED
 #include "ocl_igc_interface/igc_ocl_device_ctx.h"
 #include "ocl_igc_interface/platform_helper.h"
