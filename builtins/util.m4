@@ -4519,7 +4519,7 @@ declare void @__usedouble(<WIDTH x double>)
 
 define void @__keep_funcs_live(i8 * %ptr, <WIDTH x i8> %v8, <WIDTH x i16> %v16,
                                <WIDTH x i32> %v32, <WIDTH x i64> %v64,
-                               <WIDTH x MASK> %mask) {
+                               <WIDTH x MASK> %mask) noinline optnone {
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
   ;; loads
   %ml8  = call <WIDTH x i8>  @__masked_load_i8(i8 * %ptr, <WIDTH x MASK> %mask)
