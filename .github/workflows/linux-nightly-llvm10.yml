@@ -103,6 +103,7 @@ jobs:
         ./alloy.py -r --only="stability current -O0 -O1 -O2" --only-targets="${{ matrix.target }}" --time --update-errors=FP
     - name: Upload fail_db.txt
       uses: actions/upload-artifact@v2
+      if: failure()
       with:
         name: fail_db.${{matrix.target}}.txt
         path: fail_db.txt
