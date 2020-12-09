@@ -21,6 +21,48 @@
  */
 
 #include <level_zero/ze_api.h>
+#include "L0_helpers.h"
+
+template <typename T>
+struct gpu_allocator {
+    using value_type      = T;
+
+    gpu_allocator() = delete;
+    gpu_allocator(ze_device_handle_t device, ze_context_handle_t context) : m_device {device}, m_context {context} {}
+    gpu_allocator(const gpu_allocator&) = default;
+    ~gpu_allocator() = default;
+    gpu_allocator& operator=(const gpu_allocator&) = delete;
+
+    T* allocate(const size_t n) const;
+    void deallocate(T* const p, const size_t n) const;
+private:
+    ze_device_handle_t  m_device{nullptr};
+    ze_context_handle_t m_context{nullptr};
+};
+
+template <typename T>
+inline T *gpu_allocator<T>::allocate(const size_t n) const {
+    ze_device_mem_alloc_desc_t device_alloc_desc = {};
+    ze_host_mem_alloc_desc_t host_alloc_desc = {};
+
+    // Allocate a memory chunks that can be shared between the host and the device
+    void* ptr = nullptr;
+
+    auto status = zeMemAllocShared(m_context, &device_alloc_desc, &host_alloc_desc, n, alignof(T), m_device, (void**)&ptr);
+    if (status != 0) {
+        throw std::runtime_error("gpu_allocator<T>::allocate() - Level Zero error");
+    }
+    if (ptr == nullptr) {
+        throw std::bad_alloc();
+    }
+
+    return static_cast<T*>(ptr);
+}
+
+template <typename T>
+inline void gpu_allocator<T>::deallocate(T* const p, const size_t) const {
+    zeMemFree(m_context, p);
+}
 
 class DpcppApp {
   public:
@@ -30,18 +72,18 @@ class DpcppApp {
     bool run();
     void cleanup();
 
+    using gpu_vec = std::vector<float, gpu_allocator<float>>;
+
     // Transformation passes
-    void transformStage1(const std::vector<float>& in); // ISPC
-    void transformStage2(); // DPC++
-    std::vector<float> transformStage3(); // ISPC
+    void transformStage1(gpu_vec& in); // ISPC
+    void transformStage2(gpu_vec& in); // DPC++
+    void transformStage3(gpu_vec& in); // ISPC
 
     // Validation is done on the CPU
     std::vector<float> transformCpu(const std::vector<float>& in);
 
   private:
     bool m_initialized{false};
-    unsigned m_count{0};
-    float *m_shared_data{nullptr};
     ze_driver_handle_t m_driver{nullptr};
     ze_device_handle_t m_device{nullptr};
     ze_module_handle_t m_module{nullptr};
