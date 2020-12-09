@@ -45,23 +45,13 @@ void DpcppApp::initialize() {
     m_initialized = true;
 }
 
-void DpcppApp::transformStage1(const std::vector<float>& in) {
-    m_count = in.size();
-    const auto data_size = sizeof(float) * m_count;
-
-    ze_device_mem_alloc_desc_t device_alloc_desc = {};
-    ze_host_mem_alloc_desc_t host_alloc_desc = {};
-
-    // Allocate a memory chunks that can be shared between the host and the device
-    L0_SAFE_CALL(zeMemAllocShared(m_context, &device_alloc_desc, &host_alloc_desc, data_size, alignof(float),
-                                  m_device, (void**)&m_shared_data));
-
-    std::memcpy(m_shared_data, in.data(), data_size);
-
+void DpcppApp::transformStage1(gpu_vec& in) {
     // Setup kernel arguments
     L0_SAFE_CALL(zeCommandListReset(m_command_list));
-    L0_SAFE_CALL(zeKernelSetArgumentValue(m_kernel1, 0, sizeof(m_shared_data), &m_shared_data));
-    L0_SAFE_CALL(zeKernelSetArgumentValue(m_kernel1, 1, sizeof(m_count), &m_count));
+    float* data = in.data();
+    L0_SAFE_CALL(zeKernelSetArgumentValue(m_kernel1, 0, sizeof(data), &data));
+    auto data_size = in.size() * sizeof(float);
+    L0_SAFE_CALL(zeKernelSetArgumentValue(m_kernel1, 1, sizeof(data_size), &data_size));
     // Let the runtime know that kernel will access the shared memory
     ze_kernel_indirect_access_flags_t mem_flags = ZE_KERNEL_INDIRECT_ACCESS_FLAG_SHARED;
     L0_SAFE_CALL(zeKernelSetIndirectAccess(m_kernel1, mem_flags));
@@ -75,7 +65,7 @@ void DpcppApp::transformStage1(const std::vector<float>& in) {
     L0_SAFE_CALL(zeCommandQueueSynchronize(m_command_queue, std::numeric_limits<uint64_t>::max()));
 }
 
-void DpcppApp::transformStage2() {
+void DpcppApp::transformStage2(gpu_vec& in) {
     // Create SYCL objects from native Level Zero handles
     // Thanks to this API Level Zero (ISPC) based programs
     // can share device context with SYCL programs implemented
@@ -86,29 +76,29 @@ void DpcppApp::transformStage2() {
     auto q        = sycl::level_zero::make<cl::sycl::queue>(ctx, m_command_queue);
 
     // Set problem space
-    sycl::range<1> range { m_count };
+    sycl::range<1> range { in.size() };
 
     // Submit a job (implemented by a lambda function) to the queue
-    auto mem = m_shared_data; // cannot dereference *this on the device, so we need a copy
     // This kernel works on data previously modified by ISPC kernel in Stage 1
+    float* data = in.data();
     q.submit([&](cl::sycl::handler &cgh) {
         // Execute kernel in parallel instances
         cgh.parallel_for<class Stage2>(range, [=](cl::sycl::id<1> idx) {
-            auto v = mem[idx];
+            auto v = data[idx];
             v *= 2.0f;
-            mem[idx] = v;
+            data[idx] = v;
         });
     }).wait();
 }
 
-std::vector<float> DpcppApp::transformStage3() {
-    std::vector<float> out(m_count, 0.0f);
-
+void DpcppApp::transformStage3(gpu_vec& in) {
     // Setup kernel arguments
     // The kernel will work on memory that already is modifed in Stage 1 and Stage 2
     L0_SAFE_CALL(zeCommandListReset(m_command_list));
-    L0_SAFE_CALL(zeKernelSetArgumentValue(m_kernel2, 0, sizeof(m_shared_data), &m_shared_data));
-    L0_SAFE_CALL(zeKernelSetArgumentValue(m_kernel2, 1, sizeof(m_count), &m_count));
+    float* data = in.data();
+    L0_SAFE_CALL(zeKernelSetArgumentValue(m_kernel2, 0, sizeof(data), &data));
+    auto data_size = in.size() * sizeof(float);
+    L0_SAFE_CALL(zeKernelSetArgumentValue(m_kernel2, 1, sizeof(data_size), &data_size));
 
     // Run the ISPC kernel and transfer the results back from the GPU
     ze_group_count_t dispatchTraits = {(uint32_t)1, (uint32_t)1, 1};
@@ -119,14 +109,6 @@ std::vector<float> DpcppApp::transformStage3() {
     L0_SAFE_CALL(zeCommandListClose(m_command_list));
     L0_SAFE_CALL(zeCommandQueueExecuteCommandLists(m_command_queue, 1, &m_command_list, nullptr));
     L0_SAFE_CALL(zeCommandQueueSynchronize(m_command_queue, std::numeric_limits<uint64_t>::max()));
-
-    // Read back the memory from the device
-    std::memcpy(out.data(), m_shared_data, sizeof(float) * m_count);
-
-    // Perform cleanup of the shared memory space
-    L0_SAFE_CALL(zeMemFree(m_context, m_shared_data));
-
-    return out;
 }
 
 std::vector<float> DpcppApp::transformCpu(const std::vector<float>& in) {
@@ -138,7 +120,7 @@ std::vector<float> DpcppApp::transformCpu(const std::vector<float>& in) {
 }
 
 // Compare two float vectors with an Epsilon
-static bool operator==(const std::vector<float>& l, const std::vector<float>& r) {
+static bool operator==(const DpcppApp::gpu_vec& l, const std::vector<float>& r) {
     constexpr float EPSILON = 0.01f;
     if (l.size() != r.size())
         return false;
@@ -150,28 +132,37 @@ static bool operator==(const std::vector<float>& l, const std::vector<float>& r)
     return true;
 }
 
+static bool operator!=(const DpcppApp::gpu_vec& l, const std::vector<float>& r) {
+    return !(l == r);
+}
+
 bool DpcppApp::run() {
     if (!m_initialized)
         throw std::runtime_error("Trying to run test on uninitialized app");
 
     constexpr int COUNT = 16;
-    std::vector<float> vin(COUNT);
 
-    std::generate(vin.begin(), vin.end(), [i = 0]() mutable { return i++; });
+    gpu_allocator<float> ga(m_device, m_context);
+    gpu_vec data(COUNT, ga);
+    std::generate(data.begin(), data.end(), [i = 0]() mutable { return i++; });
+
     // Transform the data via set of stages, forming a pipeline
-    transformStage1(vin);
-    transformStage2();
-    auto vout = transformStage3();
+    transformStage1(data);
+    transformStage2(data);
+    transformStage3(data);
 
-    for (int i = 0; i < vout.size(); i++) {
-        std::cout << "out[" << i << "] = " << vout[i] << '\n';
+    for (int i = 0; i < data.size(); i++) {
+        std::cout << "data[" << i << "] = " << data[i] << '\n';
     }
 
     // Perform the same transformation on the CPU for validation purposes
-    auto vout_cpu = transformCpu(vin);
+    std::vector<float> data_for_val(COUNT);
+    std::generate(data_for_val.begin(), data_for_val.end(), [i = 0]() mutable { return i++; });
+
+    auto data_cpu = transformCpu(data_for_val);
 
     // Compare the results
-    if (vout != vout_cpu) {
+    if (data != data_cpu) {
         std::cout << "Validation failed!\n";
         return false;
     }
