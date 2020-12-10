@@ -1333,11 +1333,14 @@ std::string Target::GetTripleString() const {
         break;
     case TargetOS::macos:
         // asserts
-        if (m_arch != Arch::x86_64) {
-            Error(SourcePos(), "macOS target supports only x86_64.");
+        if (m_arch == Arch::x86_64) {
+            triple.setArchName("x86_64");
+        } else if (m_arch == Arch::aarch64) {
+            triple.setArchName("arm64");
+        } else {
+            Error(SourcePos(), "macOS target supports only x86_64 and aarch64.");
             exit(1);
         }
-        triple.setArch(llvm::Triple::ArchType::x86_64);
         triple.setVendor(llvm::Triple::VendorType::Apple);
         triple.setOS(llvm::Triple::OSType::MacOSX);
         break;
@@ -1513,10 +1516,10 @@ void Target::markFuncWithCallingConv(llvm::Function *func) {
         // have to marked with 'InReg' attribue.
         // Rules(Ref : https://docs.microsoft.com/en-us/cpp/cpp/vectorcall?view=vs-2019 )
         // Definitions:
-        // Integer Type : it fits in the native register size of the processor—for example,
+        // Integer Type : it fits in the native register size of the processor for example,
         // 4 bytes on an x86 machine.Integer types include pointer, reference, and struct or union types of 4 bytes or
         less.
-        // Vector Type : either a floating - point type—for example, a float or double—or an SIMD vector type—for
+        // Vector Type : either a floating - point type for example, a float or double or an SIMD vector type for
         // example, __m128 or __m256.
         // Rules for x86: Integer Type : The first two integer type arguments found in the
         // parameter list from left to right are placed in ECX and EDX, respectively.
