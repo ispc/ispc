@@ -53,9 +53,10 @@ def compareImages(image0, image1):
   try: line = subprocess.check_output("compare -metric MAE "+image0+" "+image1+" null:", stderr=subprocess.STDOUT, shell=True)
   except subprocess.CalledProcessError as e: line = e.output
 
-  error = float(line[line.index('(')+1:line.index(')')])
-  # Temporary set max_error to 0.1 to avoid build issues
-  max_error = 0.1
+  line_str = str(line)
+  error = float(line_str[line_str.index('(')+1:line_str.index(')')])
+  # Temporary set max_error to 0.02 to avoid build issues
+  max_error = 0.02
   if error > max_error:
     print("MAE error: " + str(error) + " is more then threshhold: " + str(max_error))
   else:
@@ -86,8 +87,14 @@ if os.name != 'nt':
 print("Using runtime lib path: ", additional_libs)
 
 test_env = os.environ.copy()
-test_env["PATH"] += additional_path
-test_env["LD_LIBRARY_PATH"] += additional_libs
+if "PATH" in test_env:
+  test_env["PATH"] += additional_path
+else:
+  test_env["PATH"] = additional_path
+if "LD_LIBRARY_PATH" in test_env:
+  test_env["LD_LIBRARY_PATH"] += additional_libs
+else:
+  test_env["LD_LIBRARY_PATH"] = additional_libs
 
 host_name = args.exe_name
 executable = os.path.join(test_dir, host_name)
