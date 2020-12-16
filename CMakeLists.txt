@@ -614,18 +614,24 @@ if (ISPC_PREPARE_PACKAGE)
     set(CPACK_PACKAGE_VERSION_PATCH ${ISPC_VERSION_PATCH}${ISPC_VERSION_SUFFIX})
     set(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_CURRENT_SOURCE_DIR}/LICENSE.txt")
     set(CPACK_RESOURCE_FILE_README "${CMAKE_CURRENT_SOURCE_DIR}/README.md")
-    if (${CPACK_PACKAGE_VERSION_PATCH} MATCHES ".*dev")
-        string(CONCAT CPACK_PACKAGE_FILE_NAME "${PROJECT_NAME}"
-                             "-trunk"
-                             "-${ISPC_SYSTEM_NAME}")
-    else()
-        string(CONCAT CPACK_PACKAGE_FILE_NAME "${PROJECT_NAME}"
-                             "-v${CPACK_PACKAGE_VERSION_MAJOR}"
-                             ".${CPACK_PACKAGE_VERSION_MINOR}"
-                             ".${CPACK_PACKAGE_VERSION_PATCH}"
-                             "-${ISPC_SYSTEM_NAME}")
+    # Allow use custom package name with -DISPC_PACKAGE_NAME
+    if (NOT ISPC_PACKAGE_NAME)
+        if (${CPACK_PACKAGE_VERSION_PATCH} MATCHES ".*dev")
+            string(CONCAT CPACK_PACKAGE_FILE_NAME "${PROJECT_NAME}"
+                                "-trunk"
+                                "-${ISPC_SYSTEM_NAME}")
+        else()
+            string(CONCAT CPACK_PACKAGE_FILE_NAME "${PROJECT_NAME}"
+                                "-v${CPACK_PACKAGE_VERSION_MAJOR}"
+                                ".${CPACK_PACKAGE_VERSION_MINOR}"
+                                ".${CPACK_PACKAGE_VERSION_PATCH}"
+                                "-${ISPC_SYSTEM_NAME}")
 
+        endif()
+    else()
+        set (CPACK_PACKAGE_FILE_NAME ${ISPC_PACKAGE_NAME})
     endif()
+
     if (WIN32)
         set(CPACK_PACKAGE_INSTALL_DIRECTORY "ISPC/${CPACK_PACKAGE_FILE_NAME}")
     endif()
