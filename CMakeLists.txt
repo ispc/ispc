@@ -627,7 +627,7 @@ if (ISPC_PREPARE_PACKAGE)
 
     endif()
     if (WIN32)
-        set(CPACK_PACKAGE_INSTALL_DIRECTORY "ISPC\\${CPACK_PACKAGE_FILE_NAME}")
+        set(CPACK_PACKAGE_INSTALL_DIRECTORY "ISPC/${CPACK_PACKAGE_FILE_NAME}")
     endif()
     set(CPACK_PACKAGE_VENDOR "Intel Corporation")
     include(CPack)
