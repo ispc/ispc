@@ -115,7 +115,11 @@ link to.
 Examples in ``ispc/examples/portable/genx/`` directory demonstrate how to use
 this API to run SPMD programs on CPU or GPU. You can see how to use
 ``oneAPI Level Zero`` runtime in ``sgemm`` example.
-
+It is also possible to run ISPC kernels using ``oneAPI Level Zero`` and SYCL
+kernels written in oneAPI DPC++ Compiler from the same process and share data
+between them. Try ``Simple-DPCPP`` and ``Pipeline-DPCPP`` examples to learn
+more about this possibility. Please keep in mind though that this
+feature is experimental.
 
 ISPCRT Objects
 --------------
@@ -174,6 +178,25 @@ the regular ISPC execution model is copied). All built-in variables used for
 that purpose (such as ``taskIndex``, ``taskCount``, ``programIndex``,
 ``programCount``) are available for use on GPU.
 
+Configuration
+-------------
+
+The behavior of ``ISPCRT`` can be configured using the following enviromental
+variables:
+* ``ISPCRT_USE_ZEBIN`` - use experimental Level Zero API native binary format.
+  Unlike SPIRV files, zebin files are not portable between different GPU types.
+* ``ISPCRT_IGC_OPTIONS`` - ``ISPCRT`` is using an Intel® Graphics Compiler (IGC)
+  to produce binary code that can be executed on the GPU. ``ISPCRT`` allows
+  for passing certain options to the IGC via ``ISPCRT_IGC_OPTIONS`` environment.
+  The content of this variable should be prefixed with ``+`` or ``=`` sign.
+  ``+`` means that the content of the variable should be added to the default
+  IGC options already passsed by the ``ISPCRT``, while ``=`` tells the ``ISPCRT``
+  to replace the default options with the content of the enviromental variable.
+* ``ISPCRT_GPU_DEVICE`` - if more than one supported GPU is present in the system,
+  the user can select the GPU device to be used by the ``ISPCRT`` using ``ISPCRT_GPU_DEVICE``
+  variable. It should be set to a number of a device as enumerated
+  by the Level Zero runtime. For example, in a system with two GPUs present,
+  the variable can be set to ``0`` or ``1``.
 
 Compiling and Running Simple ISPC Program
 =========================================
