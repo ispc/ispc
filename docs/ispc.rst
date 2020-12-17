@@ -3,7 +3,7 @@ Intel® ISPC User's Guide
 ========================
 
 The Intel® Implicit SPMD Program Compiler (Intel® ISPC) is a compiler for
-writing SPMD (single program multiple data) programs to run on the CPU or GPU.
+writing SPMD (single program multiple data) programs to run on the CPU and GPU.
 The SPMD
 programming approach is widely known to graphics and GPGPU programmers; it
 is used for GPU shaders and CUDA\* and OpenCL\* kernels, for example.  The
@@ -17,7 +17,7 @@ The main goals behind ``ispc`` are to:
 
 * Build a variant of the C programming language that delivers good
   performance to performance-oriented programmers who want to run SPMD
-  programs on CPUs or GPUs.
+  programs on CPUs and GPUs.
 * Provide a thin abstraction layer between the programmer and the
   hardware--in particular, to follow the lesson from C for serial programs
   of having an execution and data model where the programmer can cleanly
@@ -493,8 +493,8 @@ variables are non-vector quantities--this concept is discussed in detail in the
 `"uniform" and "varying" Qualifiers`_ section.
 
 Each iteration of the ``foreach`` loop works on a number of input values in
-parallel--depending on the compilation target chosen, it may be 4, 8, or
-even 16 elements of the ``vin`` array, processed efficiently with the CPU's or
+parallel--depending on the compilation target chosen, it may be 4, 8, 16, 32, or
+even 64 elements of the ``vin`` array, processed efficiently with the CPU's or
 GPU's SIMD hardware.  Here, the variable ``index`` takes all values from 0 to
 ``count-1``.  After the load from the array to the variable ``v``, the
 program can then proceed, doing computation and control flow based on the
@@ -657,7 +657,7 @@ To compile for Intel TGLLP platform:
 
    ispc foo.ispc -o foo.bin --target=genx-x16 --cpu=TGLLP --emit-zebin
 
-Currently-supported architectures are ``x86-64``, ``x86``, ``genx32``,
+Currently-supported architectures are ``x86``, ``x86-64``, ``genx32``,
 ``genx64``, and ``arm``.
 
 The target CPU determines both the default instruction set used as well as
@@ -961,9 +961,10 @@ and high performance.
 
 The number of program instances in a gang is relatively small; in practice,
 it's no more than 2-4x the native SIMD width of the hardware it is
-executing on.  (Thus, four or eight program instances in a gang on a CPU
-using the the 4-wide SSE instruction set, eight or sixteen on a CPU
-using 8-wide AVX, and eight or sixteen on a Intel GPU).
+executing on.  Thus, four or eight program instances in a gang on a CPU
+using the 4-wide SSE instruction set, eight or sixteen on a CPU
+using 8-wide AVX/AVX2, eight, sixteen, thirty two, or sixty four on AVX512 CPU,
+and eight or sixteen on a Intel GPU.
 
 Control Flow Within A Gang
 --------------------------
