@@ -36,6 +36,7 @@ Contents:
 * `FAQ`_
 
   + `How to Get an Assembly File from SPIR-V?`_
+  + `How to Debug on GPU?`_
 
 Using The ISPC Compiler
 =======================
@@ -583,8 +584,8 @@ The second set of rules is related to code branching.
   a = (x>0)?x:7;
 
 * Keep branches as small as possible. Common operations should be moved outside the branch.
-In case when large code branches are necessary, consider changing your algorithm to group
-data processed by one task to follow the same path in the branch.
+  In case when large code branches are necessary, consider changing your algorithm to group
+  data processed by one task to follow the same path in the branch.
 
 ::
 
@@ -634,3 +635,13 @@ Use ``ocloc`` tool installed as part of intel-ocloc package:
   ocloc disasm -file file_Gen9core.bin -device <name> -dump <FOLDER_TO_DUMP>
 
 You will get ``.asm`` files for each kernel in <FOLDER_TO_DUMP>.
+
+How to Debug on GPU?
+----------------------------------------
+
+To debug your application, you can use oneAPI Debugger as described here:
+`Get Started with GDB* for oneAPI on Linux* OS Host
+<https://software.intel.com/get-started-with-debugging-dpcpp-linux>`_.
+Debugger support is quite limited at this time but you can set breakpoints
+in kernel code, do step-by-step execution and print variables.
+
