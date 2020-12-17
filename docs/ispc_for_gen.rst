@@ -23,12 +23,15 @@ Contents:
 
   + `ISPCRT Objects`_
   + `Execution Model`_
+  + `Configuration`_
 
 * `Compiling and Running Simple ISPC Program`_
 
 * `Language Limitations and Known Issues`_
 
 * `Performance`_
+
+  + `Performance Guide for GPU Programming`_
 
 * `FAQ`_
 
@@ -79,6 +82,8 @@ Optionally you can use ``--emit-spirv`` flag:
 
 You can also generate L0 binary using ``--emit-zebin`` flag. Please note that
 currently SPIR-V format is more stable but feel free to experiment with L0 binary.
+When you use L0 binary you may want to pass some additional options to the vector
+backend. You can do this using ``--vc-options`` flag.
 
 Also two new ``arch`` options were introduced: ``genx32`` and ``genx64``.
 ``genx64`` is default and corresponds to 64-bit host and has 64-bit pointer size,
@@ -181,17 +186,20 @@ that purpose (such as ``taskIndex``, ``taskCount``, ``programIndex``,
 Configuration
 -------------
 
-The behavior of ``ISPCRT`` can be configured using the following enviromental
+The behavior of ``ISPCRT`` can be configured using the following environment
 variables:
+
 * ``ISPCRT_USE_ZEBIN`` - use experimental Level Zero API native binary format.
   Unlike SPIRV files, zebin files are not portable between different GPU types.
+
 * ``ISPCRT_IGC_OPTIONS`` - ``ISPCRT`` is using an Intel® Graphics Compiler (IGC)
   to produce binary code that can be executed on the GPU. ``ISPCRT`` allows
-  for passing certain options to the IGC via ``ISPCRT_IGC_OPTIONS`` environment.
+  for passing certain options to the IGC via ``ISPCRT_IGC_OPTIONS`` variable.
   The content of this variable should be prefixed with ``+`` or ``=`` sign.
   ``+`` means that the content of the variable should be added to the default
   IGC options already passsed by the ``ISPCRT``, while ``=`` tells the ``ISPCRT``
-  to replace the default options with the content of the enviromental variable.
+  to replace the default options with the content of the environment variable.
+
 * ``ISPCRT_GPU_DEVICE`` - if more than one supported GPU is present in the system,
   the user can select the GPU device to be used by the ``ISPCRT`` using ``ISPCRT_GPU_DEVICE``
   variable. It should be set to a number of a device as enumerated
@@ -241,7 +249,7 @@ in this program is the usage of the ``task`` keyword in the function definition
 instead of ``export``; this indicates that this function is a ``kernel`` so it
 can be called from the host.
 
-Second thing to notice is ``DEFINE_CPU_ENTRY_POINT`` which tells ``ISPCRT`` what
+The second thing to notice is ``DEFINE_CPU_ENTRY_POINT`` which tells ``ISPCRT`` what
 function is an entry point for CPU. If you look into the definition of
 ``DEFINE_CPU_ENTRY_POINT``, it is just simple ``launch`` call:
 
@@ -459,6 +467,153 @@ Intel(R) Core(TM) i9-9900K CPU @ 3.60GHz with Intel(R) Gen9 HD Graphics
 * @time of CPU run:			[16.343] milliseconds
 * @time of GPU run:			[17.294] milliseconds
 * @time of serial run:			[562] milliseconds
+
+Talking about real-world workloads, we demonstrate a good performance that is on par
+with CPU.
+
+Performance Guide for GPU Programming
+----------------------------------------
+
+There are several rules for GPU programming which can bring you better performance.
+
+**Reduce register pressure**
+
+The first guidance is to reduce number of local variables. All variables are stored
+in GPU registers, and in the case when number of variables exceeds the number of
+registers, time-costly ``register spill`` occurs.
+
+Intel GPU register file size is 128x8x32bit. Each 32-bit varying value takes
+8x32bit in SIMD-8, and 16x32bit in SIMD-16.
+
+To reduce number of local variables you can follow these simple rules:
+
+* Use uniform instead of varyings wherever it is possible. This practice
+  is good for both CPU and GPU but on GPU it is essential.
+
+::
+
+  // Good example
+  for(uniform int j=0;  j<3; j++) {
+      do_something();
+  }
+
+::
+
+  // Bad example
+  for(int j=0;  j<3; j++) {
+      do_something();
+  }
+
+* Avoid deep nesting code with lot of local variables. It is more effective
+  to split kernel into stages with separate variable scopes.
+
+* Avoid returning complex structures from functions. Instead of operation that
+  may need work on structure copy, consider to use reference or pointer. We're
+  working to make such optimization automatically for future release:
+
+::
+
+  // Instead of this:
+  struct ExampleStructure
+  {
+    //...
+  }
+
+  ExampleStructure createExampleStructure()
+  {
+    ExampleStructure retVal;
+    //... initialize
+    return retVal;
+  }
+
+  int test()
+  {
+    ExampleStructure s;
+    s = createExampleStructure();
+  }
+
+::
+
+  // Consider using pointer:
+  struct ExampleStructure
+  {
+    //...
+  }
+
+  void initExampleStructure(ExampleStructure* init)
+  {
+    //... initialize
+  }
+
+  int test()
+  {
+    ExampleStructure s;
+    initExampleStructure( &s );
+  }
+
+
+* Avoid recursion.
+
+* Use SIMD-8 where it is impossible to fit in the available register number.
+  If you see the warning message below during runtime, consider compiling your code
+  for SIMD-8 target (``--target=genx-x8``)
+
+::
+
+  Spill memory used = 32 bytes for kernel kernel_name___vyi
+
+**Code Branching**
+
+The second set of rules is related to code branching.
+
+* Use ``select`` instead of branching:
+
+::
+
+  // Consider using calculation instead of code branching:
+  if (x>0)
+    a = x;
+  else
+    a = 7;
+
+
+::
+
+  // May be implemented without branch:
+  a = (x>0)?x:7;
+
+* Keep branches as small as possible. Common operations should be moved outside the branch.
+In case when large code branches are necessary, consider changing your algorithm to group
+data processed by one task to follow the same path in the branch.
+
+::
+
+  // Both branches execute memory access to 'array'. In the case of split branch between
+  // different lanes, two memory access instructions would be executed.
+  if (x>0)
+    a = array[x];
+  else
+    a = array[0];
+
+
+::
+
+  // Instead move common part outside of the branch:
+  int i;
+  if (x>0)
+    i = x;
+  else
+    i = 0;
+  a = array[i];
+
+
+**Memory Operations**
+Remember that memory operations on GPU are expensive. We do not support dynamic
+memory allocations in kernel for GPU so use fixed-size buffers preallocated by the host.
+
+We have several memory optimizations for GPU like gather/scatter coalescing. However
+current implementation covers only limited number of cases and we expect to improve it
+for the next release.
 
 
 FAQ
