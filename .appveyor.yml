@@ -56,7 +56,6 @@ for:
         set LLVM_HOME=C:\projects\llvm
         set CROSS_TOOLS=C:\projects\cross
         set CHOCO_DIR=%ProgramData%\chocolatey
-        set MACOS_SDK=MacOSX10.13.sdk
         set WASM=OFF
         if "%LLVM_VERSION%"=="latest" (set WASM=ON)
         if "%APPVEYOR_BUILD_WORKER_IMAGE%"=="Visual Studio 2017" ( (set generator="Visual Studio 15 Win64") & (set vsversion=2017))
@@ -89,7 +88,7 @@ for:
         cd %ISPC_HOME%
         check_env.py
         mkdir build && cd build
-        cmake .. -Thost=x64 -G %generator% -DCMAKE_BUILD_TYPE=%configuration% -DCMAKE_INSTALL_PREFIX=%ISPC_HOME%\install -DISPC_PREPARE_PACKAGE=ON -DM4_EXECUTABLE=C:\cygwin64\bin\m4.exe -DISPC_CROSS=ON -DISPC_GNUWIN32_PATH=%CROSS_TOOLS%\gnuwin32 -DISPC_MACOS_SDK_PATH=%CROSS_TOOLS%\%MACOS_SDK% -DWASM_ENABLED=%WASM% -DISPC_INCLUDE_BENCHMARKS=ON
+        cmake .. -Thost=x64 -G %generator% -DCMAKE_BUILD_TYPE=%configuration% -DCMAKE_INSTALL_PREFIX=%ISPC_HOME%\install -DISPC_PREPARE_PACKAGE=ON -DM4_EXECUTABLE=C:\cygwin64\bin\m4.exe -DISPC_CROSS=ON -DISPC_GNUWIN32_PATH=%CROSS_TOOLS%\gnuwin32 -DWASM_ENABLED=%WASM% -DISPC_INCLUDE_BENCHMARKS=ON
   build_script:
     - cmd: msbuild %ISPC_HOME%\build\PACKAGE.vcxproj /p:Platform=x64 /p:Configuration=%configuration%
   test_script:
@@ -111,7 +110,6 @@ for:
         export ISPC_HOME=$APPVEYOR_BUILD_FOLDER
         export LLVM_HOME=$APPVEYOR_BUILD_FOLDER/llvm
         export CROSS_TOOLS=/usr/local/src/cross
-        export MACOS_SDK=MacOSX10.13.sdk
         export WASM=OFF
         export LLVM_TAR=llvm-11.0.0-ubuntu16.04-Release+Asserts-x86.arm.wasm.tar.xz
   install:
@@ -137,7 +135,7 @@ for:
   before_build:
     - sh: |-
         cd $ISPC_HOME && mkdir build && cd build
-        cmake ../ -DISPC_PREPARE_PACKAGE=ON -DCMAKE_INSTALL_PREFIX=$ISPC_HOME/install -DISPC_CROSS=ON -DISPC_MACOS_SDK_PATH=$CROSS_TOOLS/$MACOS_SDK -DWASM_ENABLED=$WASM
+        cmake ../ -DISPC_PREPARE_PACKAGE=ON -DCMAKE_INSTALL_PREFIX=$ISPC_HOME/install -DISPC_CROSS=ON -DWASM_ENABLED=$WASM
   build_script:
     - sh: make package -j4
 
@@ -151,7 +149,6 @@ cache:
   - '%CHOCO_DIR%\bin -> .appveyor.yml'
   - '%CHOCO_DIR%\lib -> .appveyor.yml'
   - '%CROSS_TOOLS%\gnuwin32 -> .appveyor-clean-cache.txt'
-  - '%CROSS_TOOLS%\%MACOS_SDK% -> .appveyor-clean-cache.txt'
 
 artifacts:
   - path: build/ispc-*
