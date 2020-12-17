@@ -3,7 +3,7 @@ Intel® ISPC User's Guide
 ========================
 
 The Intel® Implicit SPMD Program Compiler (Intel® ISPC) is a compiler for
-writing SPMD (single program multiple data) programs to run on the CPU.
+writing SPMD (single program multiple data) programs to run on the CPU or GPU.
 The SPMD
 programming approach is widely known to graphics and GPGPU programmers; it
 is used for GPU shaders and CUDA\* and OpenCL\* kernels, for example.  The
@@ -17,7 +17,7 @@ The main goals behind ``ispc`` are to:
 
 * Build a variant of the C programming language that delivers good
   performance to performance-oriented programmers who want to run SPMD
-  programs on CPUs.
+  programs on CPUs or GPUs.
 * Provide a thin abstraction layer between the programmer and the
   hardware--in particular, to follow the lesson from C for serial programs
   of having an execution and data model where the programmer can cleanly
@@ -494,8 +494,8 @@ variables are non-vector quantities--this concept is discussed in detail in the
 
 Each iteration of the ``foreach`` loop works on a number of input values in
 parallel--depending on the compilation target chosen, it may be 4, 8, or
-even 16 elements of the ``vin`` array, processed efficiently with the CPU's
-SIMD hardware.  Here, the variable ``index`` takes all values from 0 to
+even 16 elements of the ``vin`` array, processed efficiently with the CPU's or
+GPU's SIMD hardware.  Here, the variable ``index`` takes all values from 0 to
 ``count-1``.  After the load from the array to the variable ``v``, the
 program can then proceed, doing computation and control flow based on the
 values loaded.  The result from the running program instances is written to
@@ -636,7 +636,7 @@ Selecting The Compilation Target
 --------------------------------
 
 There are four options that affect the compilation target: ``--arch``,
-which sets the target architecture, ``--cpu``, which sets the target CPU,
+which sets the target architecture, ``--cpu``, which sets the target CPU or GPU,
 ``--target``, which sets the target instruction set, and ``--target-os``,
 which sets the target operating system.
 
@@ -651,7 +651,14 @@ the command line:
 
    ispc foo.ispc -o foo.obj --arch=x86
 
-Currently-supported architectures are ``x86-64``, ``x86``, and ``arm``.
+To compile for Intel TGLLP platform:
+
+::
+
+   ispc foo.ispc -o foo.bin --target=genx-x16 --cpu=TGLLP --emit-zebin
+
+Currently-supported architectures are ``x86-64``, ``x86``, ``genx32``,
+``genx64``, and ``arm``.
 
 The target CPU determines both the default instruction set used as well as
 which CPU architecture the code is tuned for.  ``ispc --help`` provides a
@@ -679,6 +686,8 @@ avx512skx    AVX 512 target (future Xeon CPUs)
 neon         ARM NEON
 sse2         SSE2 (early 2000s era x86 CPUs)
 sse4         SSE4 (generally 2008-2010 Intel CPUs)
+genx-x8      Intel GPU 8-wide SIMD
+genx-x16     Intel GPU 16-wide SIMD
 ============ =========================================================
 
 Consult your CPU's manual for specifics on which vector instruction set it
@@ -953,8 +962,8 @@ and high performance.
 The number of program instances in a gang is relatively small; in practice,
 it's no more than 2-4x the native SIMD width of the hardware it is
 executing on.  (Thus, four or eight program instances in a gang on a CPU
-using the the 4-wide SSE instruction set, and eight or sixteen on a CPU
-using 8-wide AVX.)
+using the the 4-wide SSE instruction set, eight or sixteen on a CPU
+using 8-wide AVX, and eight or sixteen on a Intel GPU).
 
 Control Flow Within A Gang
 --------------------------
@@ -1390,7 +1399,7 @@ The ISPC Language
 
 ``ispc`` is an extended version of the C programming language, providing a
 number of new features that make it easy to write high-performance SPMD
-programs for the CPU.  Note that between not only the few small syntactic
+programs for the CPU and GPU.  Note that between not only the few small syntactic
 differences between ``ispc`` and C code but more importantly ``ispc``'s
 fundamentally parallel execution model, C code can't just be recompiled to
 correctly run in parallel with ``ispc``.  However, starting with working C
