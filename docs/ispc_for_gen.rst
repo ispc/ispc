@@ -41,8 +41,8 @@ Contents:
 Using The ISPC Compiler
 =======================
 
-The output from ``ispc`` for GEN targets is SPIR-V file. SPIR-V output format
-is selected by default when one of ``genx`` targets is used:
+The output from ``ispc`` for GEN targets is SPIR-V file by default. It is used
+when one of ``genx`` targets is selected:
 
 ::
 
@@ -51,6 +51,8 @@ is selected by default when one of ``genx`` targets is used:
 The SPIR-V file is consumed by the runtime for further compilation and execution
 on GPU.
 
+You can also generate L0 binary using ``--emit-zebin`` flag. Please note that
+currently SPIR-V format is more stable but feel free to experiment with L0 binary.
 
 Environment
 -----------
@@ -58,7 +60,7 @@ Currently, ``Intel® ISPC for GEN`` is supported on Linux only but it is planned
 to be extended for Windows as well in a future release.
 Recommended and tested Linux distribution is Ubuntu 18.04.
 
-You need to have a system with ``Intel(R) Processor Graphics Gen9``.
+You need to have a system with ``Intel(R) Processor Graphics Gen9`` or later.
 
 For the execution of ISPC programs on GPU, please install `Intel(R)
 Graphics Compute Runtime <https://github.com/intel/compute-runtime/releases>`_
@@ -81,10 +83,9 @@ Optionally you can use ``--emit-spirv`` flag:
 
    ispc --target=genx-x8 --emit-spirv foo.ispc -o foo.spv
 
-You can also generate L0 binary using ``--emit-zebin`` flag. Please note that
-currently SPIR-V format is more stable but feel free to experiment with L0 binary.
-When you use L0 binary you may want to pass some additional options to the vector
-backend. You can do this using ``--vc-options`` flag.
+To generate L0 binary, use ``--emit-zebin`` flag. When you use L0 binary you may
+want to pass some additional options to the vector backend. You can do this using
+``--vc-options`` flag.
 
 Also two new ``arch`` options were introduced: ``genx32`` and ``genx64``.
 ``genx64`` is default and corresponds to 64-bit host and has 64-bit pointer size,
@@ -121,8 +122,8 @@ link to.
 Examples in ``ispc/examples/portable/genx/`` directory demonstrate how to use
 this API to run SPMD programs on CPU or GPU. You can see how to use
 ``oneAPI Level Zero`` runtime in ``sgemm`` example.
-It is also possible to run ISPC kernels using ``oneAPI Level Zero`` and SYCL
-kernels written in oneAPI DPC++ Compiler from the same process and share data
+It is also possible to run ISPC kernels and DPCPP kernels written with ``oneAPI
+DPC++ Compiler`` using ``oneAPI Level Zero`` from the same process and share data
 between them. Try ``Simple-DPCPP`` and ``Pipeline-DPCPP`` examples to learn
 more about this possibility. Please keep in mind though that this
 feature is experimental.
@@ -190,8 +191,8 @@ Configuration
 The behavior of ``ISPCRT`` can be configured using the following environment
 variables:
 
-* ``ISPCRT_USE_ZEBIN`` - use experimental Level Zero API native binary format.
-  Unlike SPIRV files, zebin files are not portable between different GPU types.
+* ``ISPCRT_USE_ZEBIN`` - use experimental L0 native binary format.
+  Unlike SPIR-V files, zebin files are not portable between different GPU types.
 
 * ``ISPCRT_IGC_OPTIONS`` - ``ISPCRT`` is using an Intel® Graphics Compiler (IGC)
   to produce binary code that can be executed on the GPU. ``ISPCRT`` allows
@@ -434,16 +435,27 @@ You can also run separate compilation commands to achieve the same result:
     /home/ispc/examples/portable/genx/simple/simple.cpp -L/usr/local/lib
     -Wl,-rpath,/home/install/lib /home/install/lib/libispcrt.so.1.13.0
 
+By default examples uses SPIR-V format. You can try them with L0 binary format:
+  ::
+
+    cd examples/portable/genx/build
+    cmake -DISPC_GENX_FORMAT=zebin ../
+    export ISPCRT_USE_ZEBIN=y
+    cd simple && ./host_simple --gpu
 
 Language Limitations and Known Issues
 =====================================
 
-The current release of ``Intel® ISPC for GEN`` is in alpha state so not all
-functionality is implemented yet. However, it is actively developed so we
-expect to cover missing features in the nearest future releases.
+The current release of ``Intel® ISPC for GEN`` is in beta state so you may face
+some issues. However, it is actively developed so we expect to fix remaining
+issues in the nearest future releases.
 Below is the list of known limitations:
 
 * Limited function pointers support
+* Double math functions like ``sin``, ``cos``, ``log`` etc. are extremely slow.
+* Integer fast division is not fast yet especially for unisgned types.
+* ``print`` doesn't work perfectly especially in deep control flow statements.
+  Also ``print`` is not supported with L0 binary format.
 * No ``prefetch`` support
 
 There are several features that we do not plan to implement for GPU:
@@ -469,8 +481,8 @@ Intel(R) Core(TM) i9-9900K CPU @ 3.60GHz with Intel(R) Gen9 HD Graphics
 * @time of GPU run:			[17.294] milliseconds
 * @time of serial run:			[562] milliseconds
 
-Talking about real-world workloads, we demonstrate a good performance that is on par
-with CPU.
+Talking about real-world workloads, usually we demonstrate a good performance on GPU
+that is on par with CPU.
 
 Performance Guide for GPU Programming
 ----------------------------------------
@@ -483,8 +495,8 @@ The first guidance is to reduce number of local variables. All variables are sto
 in GPU registers, and in the case when number of variables exceeds the number of
 registers, time-costly ``register spill`` occurs.
 
-Intel GPU register file size is 128x8x32bit. Each 32-bit varying value takes
-8x32bit in SIMD-8, and 16x32bit in SIMD-16.
+For example, Intel(R) Gen9 register file size is 128x8x32bit. Each 32-bit
+varying value takes 8x32bit in SIMD-8, and 16x32bit in SIMD-16.
 
 To reduce number of local variables you can follow these simple rules:
 
@@ -571,8 +583,7 @@ The second set of rules is related to code branching.
 
 ::
 
-  // Consider using calculation instead of code branching:
-  if (x>0)
+  if (x > 0)
     a = x;
   else
     a = 7;
@@ -581,7 +592,7 @@ The second set of rules is related to code branching.
 ::
 
   // May be implemented without branch:
-  a = (x>0)?x:7;
+  a = (x > 0)? x : 7;
 
 * Keep branches as small as possible. Common operations should be moved outside the branch.
   In case when large code branches are necessary, consider changing your algorithm to group
@@ -591,7 +602,7 @@ The second set of rules is related to code branching.
 
   // Both branches execute memory access to 'array'. In the case of split branch between
   // different lanes, two memory access instructions would be executed.
-  if (x>0)
+  if (x > 0)
     a = array[x];
   else
     a = array[0];
@@ -601,7 +612,7 @@ The second set of rules is related to code branching.
 
   // Instead move common part outside of the branch:
   int i;
-  if (x>0)
+  if (x > 0)
     i = x;
   else
     i = 0;
@@ -609,8 +620,10 @@ The second set of rules is related to code branching.
 
 
 **Memory Operations**
+
 Remember that memory operations on GPU are expensive. We do not support dynamic
-memory allocations in kernel for GPU so use fixed-size buffers preallocated by the host.
+memory allocations in kernel code for GPU so use fixed-size buffers preallocated
+by the host.
 
 We have several memory optimizations for GPU like gather/scatter coalescing. However
 current implementation covers only limited number of cases and we expect to improve it
