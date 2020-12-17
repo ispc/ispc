@@ -41,7 +41,7 @@ scriptPath="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 # Default values are below
 ispc_home=${scriptPath}/..
 llvm_dir=${ispc_home}/llvm
-llvm_version=10.0
+llvm_version=11.0
 ispc_build=${ispc_home}/build
 ispc_install=${ispc_home}/install
 speed=4
