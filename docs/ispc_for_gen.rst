@@ -77,13 +77,15 @@ Optionally you can use ``--emit-spirv`` flag:
 
    ispc --target=genx-x8 --emit-spirv foo.ispc -o foo.spv
 
+You can also generate L0 binary using ``--emit-zebin`` flag. Please note that
+currently SPIR-V format is more stable but feel free to experiment with L0 binary.
+
 Also two new ``arch`` options were introduced: ``genx32`` and ``genx64``.
 ``genx64`` is default and corresponds to 64-bit host and has 64-bit pointer size,
 ``genx32`` corresponds to 32-bit host and has 32-bit pointer size.
 
 To generate LLVM bitcode, use the ``--emit-llvm`` flag.
 To generate LLVM bitcode in textual form, use the ``--emit-llvm-text`` flag.
-
 
 Optimizations are on by default; they can be turned off with ``-O0``. However,
 for the current release, it is not recommended to use ``-O0``, there are several
@@ -97,7 +99,6 @@ By default, 64-bit addressing is used. You can change it to 32-bit addressing by
 using ``--addressing=32`` or ``--arch=genx32`` however pointer size should be
 the same for host and device code so 32-bit addressing will only work with
 32-bit host programs.
-
 
 ISPC Run Time (ISPCRT)
 ======================
@@ -368,7 +369,7 @@ And you can configure and build it using:
   cmake ../ -DISPC_EXECUTABLE_GPU=/home/install/bin/ispc && make
 
 
-You can also run separate compilation commands to achive the same result:
+You can also run separate compilation commands to achieve the same result:
 
 * Compile ISPC kernel for GPU:
   ::
@@ -410,20 +411,15 @@ functionality is implemented yet. However, it is actively developed so we
 expect to cover missing features in the nearest future releases.
 Below is the list of known limitations:
 
-* No function pointers support
+* Limited function pointers support
 * No ``prefetch`` support
-* No global atomics
-* No double precision math functions
-* Foreach inside varying control flow is not supported by default. However you
-  can enable it by using experimental flag ``--opt=enable-genx-foreach-varying``
-  but performance will degrade with this flag.
 
-There are several features which we do not plan to implement for GPU:
+There are several features that we do not plan to implement for GPU:
 
 * ``launch`` and ``sync`` keywords are not supported for GPU in ISPC program
   since kernel execution is managed in the host code now.
 
-* ``New`` and ``delete`` keywords are not expected to be supported in ISPC
+* ``new`` and ``delete`` keywords are not expected to be supported in ISPC
   program for GEN target. We expect all memory to be set up on the host side.
 
 * ``export`` functions must return ``void`` for GEN targets.
@@ -431,15 +427,15 @@ There are several features which we do not plan to implement for GPU:
 
 Performance
 ===========
-The performance of ``Intel® ISPC for GEN`` is not the goal of the current release.
-It has a room for improvements and we're working hard to make it better for
+The performance of ``Intel® ISPC for GEN`` was significantly improved in this release
+but still has room for improvements and we're working hard to make it better for
 the next release. Here are our results for ``mandelbrot`` which were obtained on
 Intel(R) Core(TM) i9-9900K CPU @ 3.60GHz with Intel(R) Gen9 HD Graphics
 (max compute units 24):
 
 * @time of CPU run:			[16.343] milliseconds
-* @time of GPU run:			[29.583] milliseconds
-* @time of serial run:			[566] milliseconds
+* @time of GPU run:			[17.294] milliseconds
+* @time of serial run:			[562] milliseconds
 
 
 FAQ
