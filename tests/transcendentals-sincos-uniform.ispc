@@ -1,3 +1,5 @@
+// sincos() function is available only on Linux.
+// rule: run on OS=linux
 // rule: skip on arch=genx32
 // rule: skip on arch=genx64
 // rule: skip on cpu=TGLLP

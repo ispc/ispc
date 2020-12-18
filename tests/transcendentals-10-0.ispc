@@ -1,7 +1,7 @@
+// sincos() function is available only on Linux.
 // rule: run on OS=linux
 // rule: skip on arch=genx32
 // rule: skip on arch=genx64
-// sincos() function is available only on Linux.
 
 
 export void f_du(uniform float RET[], uniform double aFOO[], uniform double b) {
