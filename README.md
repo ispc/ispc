@@ -16,7 +16,7 @@ Overview
 --------
 
 ``ispc`` compiles a C-based SPMD programming language to run on the SIMD
-units of CPUs or GPUs; it frequently provides a 3x or more speedup on architectures
+units of CPUs and GPUs; it frequently provides a 3x or more speedup on architectures
 with 4-wide vector SSE units and 5x-6x on architectures with 8-wide AVX vector units,
 without any of the difficulty of writing intrinsics code.  Parallelization
 across multiple cores is also supported by ``ispc``, making it
@@ -27,7 +27,7 @@ There are a few key principles in the design of ``ispc``:
 
   * To build a small set of extensions to the C language that
     would deliver excellent performance to performance-oriented
-    programmers who want to run SPMD programs on the CPU or GPU.
+    programmers who want to run SPMD programs on the CPU and GPU.
 
   * To provide a thin abstraction layer between the programmer
     and the hardware--in particular, to have an execution and
