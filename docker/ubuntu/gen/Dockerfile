@@ -59,7 +59,7 @@ RUN rm -rf packages
 WORKDIR /home/src
 RUN git clone https://github.com/intel/vc-intrinsics.git
 WORKDIR /home/src/vc-intrinsics
-RUN git checkout 017cfcd462cc79d5c7f4f83e9b37f69595d6512c
+RUN git checkout 2de2dd45caae5a69361b77412003ade9b5e198b7
 RUN mkdir -p build
 WORKDIR /home/src/vc-intrinsics/build
 RUN cmake -DLLVM_DIR=$LLVM_HOME/bin-$LLVM_VERSION/lib/cmake/llvm -DCMAKE_INSTALL_PREFIX=/home/deps ../ && make install -j`nproc`
