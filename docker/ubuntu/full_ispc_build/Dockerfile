@@ -13,7 +13,7 @@ ARG EXTRA_BUILD_ARG=
 #ENV http_proxy=http://proxy.yourcompany.com:888
 
 # Packages required to build ISPC and Clang.
-RUN apt-get -y update && apt-get install -y wget build-essential vim gcc g++ git subversion python3 m4 bison flex zlib1g-dev ncurses-dev libtinfo-dev libc6-dev-i386 && \
+RUN apt-get -y update && apt-get install -y wget build-essential vim gcc g++ git python3 m4 bison flex zlib1g-dev ncurses-dev libtinfo-dev libc6-dev-i386 && \
     rm -rf /var/lib/apt/lists/*
 
 # Download and install required version of cmake (3.13) for ISPC build
