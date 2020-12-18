@@ -6,7 +6,7 @@ MAINTAINER Dmitry Babokin <dmitry.y.babokin@intel.com>
 
 # Packages required to build ISPC and Clang.
 # RUN echo "proxy=http://proxy.yourcompany.com:888" >> /etc/dnf/dnf.conf
-RUN dnf install -y vim wget yum-utils gcc gcc-c++ git subversion python3 m4 bison flex patch make ncurses-devel zlib-devel glibc-devel.x86_64 glibc-devel.i686 && \
+RUN dnf install -y vim wget yum-utils gcc gcc-c++ git python3 m4 bison flex patch make ncurses-devel zlib-devel glibc-devel.x86_64 glibc-devel.i686 && \
     dnf clean -y all
 
 # These packages are required if you need to link IPSC with -static.
@@ -19,11 +19,6 @@ RUN wget https://github.com/Kitware/CMake/releases/download/v3.13.5/cmake-3.13.5
 
 # If you are behind a proxy, you need to configure git and svn.
 #RUN git config --global --add http.proxy http://proxy.yourcompany.com:888
-
-# Initialize svn configs
-#RUN svn --version --quiet
-#RUN echo "http-proxy-host=proxy.yourcompany.com" >> ~/.subversion/servers
-#RUN echo "http-proxy-port=888" >> ~/.subversion/servers
 
 WORKDIR /usr/local/src
 
