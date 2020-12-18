@@ -1,3 +1,76 @@
+=== v1.15.0 === (18 December 2020)
+An ISPC release with several improvements for CPU and Beta support of Intel
+graphics hardware architectures. The binaries in this release include CPU versions
+for Windows, Linux, and macOS, and a GPU-enabled Linux binary, which supports
+both CPU and GPU.
+CPU binaries are based on patched LLVM 11.0.0, GPU binary is based on patched
+LLVM 10.0.1.
+
+CPU changes include:
+
+- New loop unroll pragmas: '#pragma unroll' and '#pragma nounroll' directives
+  provide loop unrolling optimization hints to the compiler. This pragma may be used
+  immediately before a loop statement. Currently, this functionality is limited to
+  uniform for and do-while.
+- More efficient 'packed_[load|store]_active()' stdlib functions implementation
+  (up to 2.5x faster), which now supports 64 bit types.
+- New cpus: 'icelake-server', 'tigerlake' , 'alderlake', 'sapphirerapids'.
+- Several stability fixes related to SOA types, bool varying type initialization,
+  broken alignment information, type scoping.
+- Compile time improvements.
+ISPC support was added to CMake 3.19 so you can use now the standard CMake approach
+to find ISPC on the system and use it in your build.
+https://cmake.org/cmake/help/latest/release/3.19.html#languages
+
+Using GPU-enabled Linux binary you can build ISPC programs and run them on Intel(R)
+Core(tm) Processors with Gen9 graphics (formerly Skylake, Kaby Lake, Coffee Lake) and
+Gen12 graphics (TigerLake mobile CPU) using '--target' options ('genx-x8' and
+'genx-x16') and '--cpu' option for specifying particular platform (e.g. '--cpu=TGLLP').
+
+Stability and performance were significantly improved in this release. Here is the list
+of new features:
+
+- Initial support of ahead of time compilation to oneAPI Level Zero binary format using
+  '--emit-zebin' switch. You can use this binary from ISPC Runtime by setting
+  ISPCRT_USE_ZEBIN env variable to 1. Please note that SPIR-V format is still a
+  recommended and default way.
+- Initial function pointers implementation.
+- Global atomics support.
+- Double math functions support.
+- Memory functions support.
+- Reworked masking approach. We disabled genx hardware mask by default and use
+  a software mask by default.
+- Improved address spaces differentiation.
+- Initial debug support.
+- TGLLP (TigerLake mobile CPU) support ('--cpu=TGLLP').
+We also added examples to demonstrate interoperability with oneAPI DPC++ Compiler.
+More details about current state of GPU support are available here:
+https://ispc.github.io/ispc_for_gen.html
+
+For build instructions check our docker recipe:
+https://github.com/ispc/ispc/blob/master/docker/ubuntu/gen/Dockerfile
+
+GPU support is in Beta stage so you may experience some issues but we
+strongly encourage to try it out and give us feedback! You can reach us through
+Github discussions and issues, ISPC mailing list (ispc-users@googlegroups.com),
+or on Twitter (@ispc_updates).
+
+Runtime Dependencies:
+
+Intel(R) Graphics Compute Runtime
+https://github.com/intel/compute-runtime/releases/tag/20.50.18716
+Level Zero Loader
+https://github.com/oneapi-src/level-zero/releases/tag/v1.0.22
+OpenMP Runtime. Consult your Linux distribution documentation for the
+installation of OpenMP runtime instructions. No specific version is required.
+
+Components revisions used in GPU-enabled build:
+
+KhronosGroup/SPIRV-LLVM-Translator@ab5e12a
+intel/vc-intrinsics@2de2dd4
+oneapi-src/level-zero@c6fa2cd (v1.0.22)
+llvm/llvm-project@ef32c61 (llvmorg-10.0.1) + patches from llvm_patches folder
+
 === v1.14.1 === (28 August 2020)
 
 A minor ISPC update with a bug fix for AVX512 detection problem on macOS

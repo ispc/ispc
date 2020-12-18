@@ -62,6 +62,7 @@ Contents:
   + `Updating ISPC Programs For Changes In ISPC 1.13.0`_
   + `Updating ISPC Programs For Changes In ISPC 1.14.0`_
   + `Updating ISPC Programs For Changes In ISPC 1.14.1`_
+  + `Updating ISPC Programs For Changes In ISPC 1.15.0`_
 
 * `Getting Started with ISPC`_
 
@@ -440,6 +441,13 @@ Updating ISPC Programs For Changes In ISPC 1.14.1
 
 The release doesn't contain language changes, which may affect compatibility with
 older versions.
+
+Updating ISPC Programs For Changes In ISPC 1.15.0
+-------------------------------------------------
+
+The release has several new language features, which do not affect compatibility.
+Namely, packed_[load|store]_active() stdlib functions for 64 bit types, and loop
+unroll pragmas: "#pragma unroll" and "#pragma nounroll".
 
 
 Getting Started with ISPC
