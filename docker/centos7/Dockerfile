@@ -64,10 +64,7 @@ RUN git clone https://github.com/madler/zlib.git && cd zlib && mkdir build && cd
 WORKDIR /usr/local/src
 RUN git clone https://github.com/westes/flex.git && cd flex && git checkout v2.6.4 && ./autogen.sh && ./configure && make -j8 && make install
 
-# MacOSX10.14.sdk to enable cross compilation to macOS.
-COPY MacOSX10.14.sdk /usr/local/
-
 # Build ISPC
 RUN mkdir build
 WORKDIR /usr/local/src/ispc/build
-RUN cmake .. -DISPC_PREPARE_PACKAGE=ON -DISPC_CROSS=ON -DISPC_MACOS_SDK_PATH=/usr/local/MacOSX10.14.sdk && make -j8 package
+RUN cmake .. -DISPC_PREPARE_PACKAGE=ON -DISPC_CROSS=ON && make -j8 package
