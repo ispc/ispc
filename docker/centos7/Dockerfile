@@ -10,7 +10,7 @@ ARG LLVM_VERSION=11.0
 
 # Packages required to build ISPC and Clang.
 RUN yum -y update; yum -y install centos-release-scl epel-release; yum clean all
-RUN yum install -y vim wget yum-utils gcc gcc-c++ git subversion python3 m4 bison flex patch make ncurses-devel glibc-devel.x86_64 glibc-devel.i686 xz devtoolset-7 && \
+RUN yum install -y vim wget yum-utils gcc gcc-c++ git python3 m4 bison flex patch make ncurses-devel glibc-devel.x86_64 glibc-devel.i686 xz devtoolset-7 && \
     yum install -y libtool autopoint gettext-devel texinfo help2man && \
     yum clean -y all
 
