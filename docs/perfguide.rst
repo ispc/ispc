@@ -32,8 +32,6 @@ the most out of ``ispc`` in practice.
 
 * `Notices & Disclaimers`_
 
-* `Optimization Notice`_
-
 Key Concepts
 ============
 

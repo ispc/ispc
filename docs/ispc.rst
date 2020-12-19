@@ -192,8 +192,6 @@ Contents:
 
 * `Notices & Disclaimers`_
 
-* `Optimization Notice`_
-
 Recent Changes to ISPC
 ======================
 
