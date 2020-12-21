@@ -17,8 +17,9 @@ const fromGoogleBenchFile = (filePath, builder, calciteContext) => {
     const data = calciteContext.readJson(filePath);
     
     const testSuiteName = path.basename(data.context.executable);
-    
-    data.benchmarks.forEach((bench) => {
+
+    const benchsNoAggregate = data.benchmarks.filter(bench => bench.run_type === 'iteration');
+    benchsNoAggregate.forEach((bench) => {
         builder.addOrUpdateDataPoint(
             testSuiteName ,
             bench.run_name,
