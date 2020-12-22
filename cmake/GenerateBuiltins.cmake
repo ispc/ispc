@@ -134,7 +134,7 @@ function(builtin_to_cpp bit os_name arch supported_archs supported_oses resultFi
     if (${os_name} STREQUAL "macos")
         if (${target_arch} STREQUAL "x86_64")
             # Fall through (do not set SKIP to OFF!)
-        elseif(${target_arch} STREQUAL "aarch64")
+        elseif(${target_arch} STREQUAL "aarch64" AND ISPC_MACOS_ARM_TARGET)
             set(target_arch "arm64")
             # Fall through (do not set SKIP to OFF!)
         else()

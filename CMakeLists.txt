@@ -130,6 +130,25 @@ if (APPLE)
     endif()
 endif()
 
+set(ISPC_MACOS_ARM_TARGET OFF)
+if (ISPC_MACOS_TARGET AND ISPC_MACOS_SDK_PATH)
+    # Grepping path to figure out the version is not the most reliable way,
+    # but it seem to be the most practical.
+    string(REGEX MATCH "MacOSX([0-9]*.[0-9]*).sdk" _ ${ISPC_MACOS_SDK_PATH})
+    set(SDK_VER "${CMAKE_MATCH_1}")
+    message(STATUS "MacOS_SDK version: ${SDK_VER}")
+
+    if ("${SDK_VER}" STREQUAL "")
+        message(WARNING "MacOS SDK version was not detected, assuming 11.0, enabling ARM support")
+        set(ISPC_MACOS_ARM_TARGET ON)
+    elseif("${SDK_VER}" VERSION_GREATER_EQUAL "11.0")
+        message(STATUS "MacOS_SDK supports ARM (SDK ver >= 11.0)")
+        set(ISPC_MACOS_ARM_TARGET ON)
+    else()
+        message(STATUS "MacOS_SDK does NOT supports ARM (SDK ver < 11.0)")
+    endif()
+endif()
+
 # If GenX target is enabled, generate build targets for genx examples and ISPCRT
 if (GENX_ENABLED)
     option(ISPC_INCLUDE_RT "Generate build targets for ISPC runtime." ON)
