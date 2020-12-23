@@ -1473,11 +1473,15 @@ void FunctionEmitContext::AddDebugPos(llvm::Value *value, const SourcePos *pos, 
     llvm::Instruction *inst = llvm::dyn_cast<llvm::Instruction>(value);
     if (inst != NULL && m->diBuilder) {
         SourcePos p = pos ? *pos : currentPos;
-        if (p.first_line != 0)
+        if (p.first_line != 0) {
             // If first_line == 0, then we're in the middle of setting up
             // the standard library or the like; don't add debug positions
             // for those functions
-            inst->setDebugLoc(llvm::DebugLoc::get(p.first_line, p.first_column, scope ? scope : GetDIScope()));
+            scope = scope ? scope : GetDIScope();
+            llvm::DebugLoc diLoc =
+                llvm::DILocation::get(scope->getContext(), p.first_line, p.first_column, scope, nullptr, false);
+            inst->setDebugLoc(diLoc);
+        }
     }
 }
 
@@ -1518,9 +1522,10 @@ void FunctionEmitContext::EmitVariableDebugInfo(Symbol *sym) {
     llvm::DILocalVariable *var = m->diBuilder->createAutoVariable(
         scope, sym->name, sym->pos.GetDIFile(), sym->pos.first_line, diType, true /* preserve through opts */);
 
+    llvm::DebugLoc diLoc =
+        llvm::DILocation::get(scope->getContext(), sym->pos.first_line, sym->pos.first_column, scope, nullptr, false);
     llvm::Instruction *declareInst =
-        m->diBuilder->insertDeclare(sym->storagePtr, var, m->diBuilder->createExpression(),
-                                    llvm::DebugLoc::get(sym->pos.first_line, sym->pos.first_column, scope), bblock);
+        m->diBuilder->insertDeclare(sym->storagePtr, var, m->diBuilder->createExpression(), diLoc, bblock);
     AddDebugPos(declareInst, &sym->pos, scope);
 }
 
@@ -1535,9 +1540,10 @@ void FunctionEmitContext::EmitFunctionParameterDebugInfo(Symbol *sym, int argNum
         m->diBuilder->createParameterVariable(scope, sym->name, argNum + 1, sym->pos.GetDIFile(), sym->pos.first_line,
                                               diType, true /* preserve through opts */, flags);
 
+    llvm::DebugLoc diLoc =
+        llvm::DILocation::get(scope->getContext(), sym->pos.first_line, sym->pos.first_column, scope, nullptr, false);
     llvm::Instruction *declareInst =
-        m->diBuilder->insertDeclare(sym->storagePtr, var, m->diBuilder->createExpression(),
-                                    llvm::DebugLoc::get(sym->pos.first_line, sym->pos.first_column, scope), bblock);
+        m->diBuilder->insertDeclare(sym->storagePtr, var, m->diBuilder->createExpression(), diLoc, bblock);
     AddDebugPos(declareInst, &sym->pos, scope);
 }
 
