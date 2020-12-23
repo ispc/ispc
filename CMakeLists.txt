@@ -544,11 +544,31 @@ if (ISPC_INCLUDE_UTILS)
 endif()
 
 if (ISPC_INCLUDE_EXAMPLES AND NOT ISPC_PREPARE_PACKAGE)
-    add_subdirectory(examples)
+    include(ExternalProject)
+    ExternalProject_Add(ispc_examples
+        PREFIX examples
+        DEPENDS ispc
+        SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/examples"
+        CMAKE_CACHE_ARGS
+            -DISPC_BUILD:BOOL=TRUE
+            -DCMAKE_ISPC_COMPILER:PATH=$<TARGET_FILE:ispc>
+            -DISPC_EXECUTABLE:PATH=$<TARGET_FILE:ispc>
+        INSTALL_COMMAND ""
+    )
 endif()
 
 if (ISPC_INCLUDE_GENX_EXAMPLES AND NOT ISPC_PREPARE_PACKAGE)
-    add_subdirectory(examples/portable/genx)
+    include(ExternalProject)
+    ExternalProject_Add(ispc_genx_examples
+        PREFIX genx_examples
+        DEPENDS ispc
+        SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/examples/portable/genx"
+        CMAKE_CACHE_ARGS
+            -DISPC_BUILD:BOOL=TRUE
+            -DCMAKE_ISPC_COMPILER:PATH=$<TARGET_FILE:ispc>
+            -DISPC_EXECUTABLE:PATH=$<TARGET_FILE:ispc>
+        INSTALL_COMMAND ""
+    )
 endif()
 
 if (ISPC_INCLUDE_TESTS)
