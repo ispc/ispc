@@ -1042,7 +1042,7 @@ if __name__ == "__main__":
     parser.add_option("--file", dest='in_file', help='file to save run_tests output', default="")
 # __INTEL_EMBARGO_BEGIN__
     parser.add_option("--fulsim", dest='fulsim', help='Path to fulsim', default="")
-    parser.add_option("--platform", dest='platform', help='platform: skl or pvc', default="skl")
+    parser.add_option("--platform", dest='platform', help='platform: skl, dg2, pvc', default="skl")
     parser.add_option("--tbxport", dest='tbxport', help='Tbx port', default=4999, type="int", action="store")
 # __INTEL_EMBARGO_END__
     parser.add_option("--l0loader", dest='l0loader', help='Path to L0 loader', default="")

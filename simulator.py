@@ -18,6 +18,13 @@ class Simulator(object):
             fulsim_tbx = f"-socket tcp:{port}"
             fulsim_flags = f"-device pvc.8x8x8.B0 {flags}" \
                            f"-swsbcheck on"
+        elif platform == "dg2":
+            fulsim_tbx = f"-socket tcp:{port}"
+            # DG2 128EU - dg2.2x4x16
+            # DG2 512EU - dg2.8x4x16
+            fulsim_flags = f"-device dg2.2x4x16.b0 {flags}" \
+                           f"-swsbcheck on"
+
         elif simu_path != "":
             raise SystemError(f"Unsupported Fulsim platform \"{platform}\"")
 
