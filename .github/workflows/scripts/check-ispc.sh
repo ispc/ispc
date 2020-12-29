@@ -2,5 +2,4 @@
 cd build
 bin/check_isa
 bin/ispc --support-matrix
-make check-all
-make ispc_benchmarks && make test
+cmake --build . --target check-all ispc_benchmarks test
