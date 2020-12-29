@@ -54,6 +54,11 @@ function(add_ispc_example)
             ${example_TARGET_SOURCES}
         )
 
+    # Set C++ standard to C++11.
+    set_target_properties(${example_NAME} PROPERTIES
+        CXX_STANDARD 11
+        CXX_STANDARD_REQUIRED YES)
+
     set_property(TARGET ${example_NAME} PROPERTY POSITION_INDEPENDENT_CODE ON)
     set_property(TARGET ${example_NAME} PROPERTY ISPC_INSTRUCTION_SETS "${ISPC_TARGETS}")
     target_compile_options(${example_NAME} PRIVATE $<$<COMPILE_LANGUAGE:ISPC>:${example_ISPC_FLAGS}>)
