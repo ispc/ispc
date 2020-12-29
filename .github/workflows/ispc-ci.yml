@@ -1,0 +1,211 @@
+name: Tests
+
+on:
+  schedule:
+    # Run daily - test sse2-avx512 targets @ -O0/-O1/-O2
+    - cron:  '0 7 * * *'
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      flow_type:
+        description: 'Workflow flow type'
+        required: true
+        default: 'full'
+env:
+  SDE_TAR_NAME: sde-external-8.59.0-2020-10-05-lin
+  LLVM_REPO: https://github.com/dbabokin/llvm-project
+  TARGETS_SMOKE: '["avx2-i32x8"]'
+  TARGETS_FULL:  '["sse2-i32x4", "sse2-i32x8",
+                   "sse4-i8x16", "sse4-i16x8", "sse4-i32x4", "sse4-i32x8",
+                   "avx1-i32x4", "avx1-i32x8", "avx1-i32x16", "avx1-i64x4",
+                   "avx2-i8x32", "avx2-i16x16", "avx2-i32x4", "avx2-i32x8", "avx2-i32x16", "avx2-i64x4",
+                   "avx512knl-i32x16",
+                   "avx512skx-i32x8", "avx512skx-i32x16", "avx512skx-i8x64", "avx512skx-i16x32"]'
+
+jobs:
+  define-flow:
+    runs-on: ubuntu-latest
+    outputs:
+      tests_matrix_targets: ${{ steps.set-flow.outputs.matrix }}
+      flow_type: ${{ steps.set-flow.outputs.type }}
+    env:
+      # for debug purposes
+      REF_NAME: ${{ github.ref }}
+      EVENT_NAME: ${{ github.event_name }}
+
+      # define rule when to run full flow
+      RUN_FULL: ${{ (github.ref == 'refs/heads/master' && github.event_name == 'schedule') ||
+                    (github.event_name == 'workflow_dispatch' && github.event.inputs.flow_type == 'full') }}
+
+      # define rule when to run smoke flow
+      RUN_SMOKE: ${{ github.event_name == 'pull_request' ||
+                    (github.event_name == 'workflow_dispatch' && github.event.inputs.flow_type == 'smoke') }}
+    steps:
+    - name: Set workflow jobs flow
+      id: set-flow
+      run: |
+        # one and only one var should be set
+        [[ $RUN_SMOKE == false && $RUN_FULL == true ]] || [[ $RUN_SMOKE == true && $RUN_FULL == false ]] || ( echo "One and only one env var must be set: RUN_SMOKE or RUN_FULL"; exit 1)
+        $RUN_SMOKE && echo "::set-output name=type::smoke" || true
+        $RUN_FULL &&  echo "::set-output name=type::full" || true
+        # set tests matrix depends on flow
+        $RUN_SMOKE && echo "::set-output name=matrix::${TARGETS_SMOKE}" || true
+        $RUN_FULL &&  echo "::set-output name=matrix::${TARGETS_FULL}" || true
+
+  linux-build-ispc-llvm10:
+    needs: [define-flow]
+    if: ${{ needs.define-flow.outputs.flow_type == 'full' }}
+    runs-on: ubuntu-latest
+    env:
+      LLVM_VERSION: "10.0"
+      LLVM_TAR: llvm-10.0.1-ubuntu16.04-Release+Asserts-x86.arm.wasm.tar.xz
+
+    steps:
+    - uses: actions/checkout@v2
+      with:
+        submodules: true
+
+    - name: Install dependencies
+      run: |
+        .github/workflows/scripts/install-build-deps.sh
+
+    - name: Check environment
+      run: |
+        ./check_env.py
+        which -a clang
+        cat /proc/cpuinfo
+
+    - name: Build package
+      run: |
+        .github/workflows/scripts/build-ispc.sh
+
+    - name: Sanity testing (make check-all, make test)
+      run: |
+        .github/workflows/scripts/check-ispc.sh
+
+    - name: Upload package
+      uses: actions/upload-artifact@v2
+      with:
+        name: ispc_llvm10_linux
+        path: build/ispc-trunk-linux.tar.gz
+
+
+  linux-build-ispc-llvm11:
+    needs: [define-flow]
+    runs-on: ubuntu-latest
+    env:
+      LLVM_VERSION: "11.0"
+      LLVM_TAR: llvm-11.0.0-ubuntu16.04-Release+Asserts-x86.arm.wasm.tar.xz
+
+    steps:
+    - uses: actions/checkout@v2
+      with:
+        submodules: true
+
+    - name: Install dependencies
+      run: |
+        .github/workflows/scripts/install-build-deps.sh
+
+    - name: Check environment
+      run: |
+        ./check_env.py
+        which -a clang
+        cat /proc/cpuinfo
+
+    - name: Build package
+      run: |
+        .github/workflows/scripts/build-ispc.sh
+
+    - name: Sanity testing (make check-all, make test)
+      run: |
+        .github/workflows/scripts/check-ispc.sh
+
+    - name: Upload package
+      uses: actions/upload-artifact@v2
+      with:
+        name: ispc_llvm11_linux
+        path: build/ispc-trunk-linux.tar.gz
+
+  linux-test-llvm10:
+    needs: [define-flow, linux-build-ispc-llvm10]
+    runs-on: ubuntu-latest
+    continue-on-error: false
+    strategy:
+      fail-fast: false
+      matrix:
+        target: ${{fromJson(needs.define-flow.outputs.tests_matrix_targets)}}
+    steps:
+    - uses: actions/checkout@v2
+    - name: Download package
+      uses: actions/download-artifact@v2
+      with:
+        name: ispc_llvm10_linux
+
+    - name: Install dependencies and unpack artifacts
+      run: |
+        .github/workflows/scripts/install-test-deps.sh
+
+    - name: Check environment
+      run: |
+        cat /proc/cpuinfo
+
+    - name: Running tests
+      run: |
+        echo PATH=$PATH
+        ./alloy.py -r --only="stability current -O0 -O1 -O2" --only-targets="${{ matrix.target }}" --time --update-errors=FP
+
+    - name: Upload fail_db.txt
+      uses: actions/upload-artifact@v2
+      if: failure()
+      with:
+        name: fail_db.${{matrix.target}}.txt
+        path: fail_db.txt
+
+    - name: Check
+      run: |
+        # Print fails to the log.
+        git diff
+        # Exit with error code if there are fails.
+        [ -z "`git diff`" ]
+
+  linux-test-llvm11:
+    needs: [define-flow, linux-build-ispc-llvm11]
+    runs-on: ubuntu-latest
+    continue-on-error: false
+    strategy:
+      fail-fast: false
+      matrix:
+        target: ${{fromJson(needs.define-flow.outputs.tests_matrix_targets)}}
+    steps:
+    - uses: actions/checkout@v2
+    - name: Download package
+      uses: actions/download-artifact@v2
+      with:
+        name: ispc_llvm11_linux
+
+    - name: Install dependencies and unpack artifacts
+      run: |
+        .github/workflows/scripts/install-test-deps.sh
+
+    - name: Check environment
+      run: |
+        cat /proc/cpuinfo
+
+    - name: Running tests
+      run: |
+        echo PATH=$PATH
+        ./alloy.py -r --only="stability current -O0 -O1 -O2" --only-targets="${{ matrix.target }}" --time --update-errors=FP
+
+    - name: Upload fail_db.txt
+      uses: actions/upload-artifact@v2
+      if: failure()
+      with:
+        name: fail_db.${{matrix.target}}.txt
+        path: fail_db.txt
+
+    - name: Check
+      run: |
+        # Print fails to the log.
+        git diff
+        # Exit with error code if there are fails.
+        [ -z "`git diff`" ]
