@@ -48,7 +48,7 @@ More details about current state of GPU support are available here:
 https://ispc.github.io/ispc_for_gen.html
 
 For build instructions check our docker recipe:
-https://github.com/ispc/ispc/blob/master/docker/ubuntu/gen/Dockerfile
+https://github.com/ispc/ispc/blob/main/docker/ubuntu/gen/Dockerfile
 
 GPU support is in Beta stage so you may experience some issues but we
 strongly encourage to try it out and give us feedback! You can reach us through
@@ -118,7 +118,7 @@ abstraction for executing ISPC code on CPU and GPU.
 More details are available here: https://ispc.github.io/ispc_for_gen.html
 
 For build instructions check our docker recipe:
-https://github.com/ispc/ispc/blob/master/docker/ubuntu/gen/Dockerfile
+https://github.com/ispc/ispc/blob/main/docker/ubuntu/gen/Dockerfile
 
 The stability and performance of GPU part of this release is not mature yet but we
 strongly encourage to try it out and give us feedback! You can reach us through

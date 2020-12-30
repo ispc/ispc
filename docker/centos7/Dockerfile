@@ -2,7 +2,7 @@ FROM centos:7
 MAINTAINER Dmitry Babokin <dmitry.y.babokin@intel.com>
 
 ARG REPO=ispc/ispc
-ARG SHA=master
+ARG SHA=main
 ARG LLVM_VERSION=11.0
 
 # !!! Make sure that your docker config provides enough memory to the container,

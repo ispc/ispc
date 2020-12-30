@@ -198,7 +198,7 @@ Recent Changes to ISPC
 See the file `ReleaseNotes.txt`_ in the ``ispc`` distribution for a list
 of recent changes to the compiler.
 
-.. _ReleaseNotes.txt: https://raw.github.com/ispc/ispc/master/docs/ReleaseNotes.txt
+.. _ReleaseNotes.txt: https://raw.github.com/ispc/ispc/main/docs/ReleaseNotes.txt
 
 Updating ISPC Programs For Changes In ISPC 1.1
 ----------------------------------------------

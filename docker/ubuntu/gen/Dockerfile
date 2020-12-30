@@ -2,7 +2,7 @@ FROM ubuntu:18.04
 MAINTAINER Arina Neshlyaeva <arina.neshlyaeva@intel.com>
 
 ARG REPO=ispc/ispc
-ARG SHA=master
+ARG SHA=main
 ARG LLVM_VERSION=10.0
 ARG IGC_VER=5819
 ARG L0L_VER=1.0.22
