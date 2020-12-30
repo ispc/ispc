@@ -124,7 +124,7 @@ def checkout_LLVM(component, version_LLVM, target_dir, from_validation, verbose)
     # An example of using branch (instead of final tag) is the following (for 9.0):
     # git: "origin/release/9.x"
     if  version_LLVM == "trunk":
-        GIT_TAG="master"
+        GIT_TAG="main"
     elif  version_LLVM == "11_0":
         GIT_TAG="llvmorg-11.0.0"
     elif  version_LLVM == "10_0":
@@ -145,7 +145,7 @@ def checkout_LLVM(component, version_LLVM, target_dir, from_validation, verbose)
     try_do_LLVM("clone "+component+" from "+GIT_REPO_BASE+" to "+target_dir+" ",
                 "git clone "+GIT_REPO_BASE+" "+target_dir,
                 from_validation, verbose)
-    if GIT_TAG != "master":
+    if GIT_TAG != "main":
         os.chdir(target_dir)
         try_do_LLVM("switch to "+GIT_TAG+" tag ",
                     "git checkout -b "+GIT_TAG+" "+GIT_TAG, from_validation, verbose)
@@ -892,7 +892,7 @@ def Main():
         error("you ISPC_HOME and your current path are different! (" + os.environ["ISPC_HOME"] + " is not equal to " + os.getcwd() +
         ")\n", 2)
     if options.perf_llvm == True:
-        if options.branch == "master":
+        if options.branch == "main":
             options.branch = "trunk"
     global generator
     if options.generator:
@@ -1011,7 +1011,7 @@ if __name__ == '__main__':
     run_group = OptionGroup(parser, "Options for validation run",
                     "These options must be used with -r option.")
     run_group.add_option('--compare-with', dest='branch',
-        help='set performance reference point. Dafault: master', default="master")
+        help='set performance reference point. Dafault: main', default="main")
     run_group.add_option('--number', dest='number_for_performance',
         help='number of performance runs for each test. Default: 5', default=5)
     run_group.add_option('--notify', dest='notify',
