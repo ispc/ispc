@@ -1,4 +1,3 @@
-[![TravisCI build status (Linux)](https://travis-ci.com/ispc/ispc.svg?branch=main)](https://travis-ci.com/ispc/ispc)
 [![Appveyor build status (Windows)](https://ci.appveyor.com/api/projects/status/xfllw9vkp3lj4l0v/branch/main?svg=true)](https://ci.appveyor.com/project/ispc/ispc/branch/main)
 
 Intel® Implicit SPMD Program Compiler (Intel® ISPC)
