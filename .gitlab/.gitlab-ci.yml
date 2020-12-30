@@ -1,5 +1,5 @@
 variables:
-  RUN_ON_MASTER: "1"
+  RUN_ON_MAIN: "1"
 
 include:
   - project: 'ispc/ispc'
