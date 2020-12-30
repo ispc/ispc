@@ -34,7 +34,7 @@ jobs:
       EVENT_NAME: ${{ github.event_name }}
 
       # define rule when to run full flow
-      RUN_FULL: ${{ (github.ref == 'refs/heads/master' && github.event_name == 'schedule') ||
+      RUN_FULL: ${{ (github.ref == 'refs/heads/main' && github.event_name == 'schedule') ||
                     (github.event_name == 'workflow_dispatch' && github.event.inputs.flow_type == 'full') }}
 
       # define rule when to run smoke flow

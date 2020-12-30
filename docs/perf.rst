@@ -50,15 +50,15 @@ also included in the ``examples/`` directory.)
     - 17.53x
 
 
-.. _AOBench: https://github.com/ispc/ispc/tree/master/examples/aobench
-.. _Binomial Options: https://github.com/ispc/ispc/tree/master/examples/options
-.. _Black-Scholes Options: https://github.com/ispc/ispc/tree/master/examples/options
-.. _Deferred Shading: https://github.com/ispc/ispc/tree/master/examples/deferred
-.. _Mandelbrot Set: https://github.com/ispc/ispc/tree/master/examples/mandelbrot_tasks
-.. _Ray Tracer: https://github.com/ispc/ispc/tree/master/examples/rt
-.. _Perlin Noise Function: https://github.com/ispc/ispc/tree/master/examples/noise
-.. _3D Stencil: https://github.com/ispc/ispc/tree/master/examples/stencil
-.. _Volume Rendering: https://github.com/ispc/ispc/tree/master/examples/volume_rendering
+.. _AOBench: https://github.com/ispc/ispc/tree/main/examples/aobench
+.. _Binomial Options: https://github.com/ispc/ispc/tree/main/examples/options
+.. _Black-Scholes Options: https://github.com/ispc/ispc/tree/main/examples/options
+.. _Deferred Shading: https://github.com/ispc/ispc/tree/main/examples/deferred
+.. _Mandelbrot Set: https://github.com/ispc/ispc/tree/main/examples/mandelbrot_tasks
+.. _Ray Tracer: https://github.com/ispc/ispc/tree/main/examples/rt
+.. _Perlin Noise Function: https://github.com/ispc/ispc/tree/main/examples/noise
+.. _3D Stencil: https://github.com/ispc/ispc/tree/main/examples/stencil
+.. _Volume Rendering: https://github.com/ispc/ispc/tree/main/examples/volume_rendering
 
 
 The following table shows speedups for a number of the examples on a

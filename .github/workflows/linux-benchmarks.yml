@@ -2,10 +2,10 @@ name: Linux benchmarks / LLVM 11.0
 
 on:
   pull_request_target:
-    branches: ['master']
+    branches: ['main']
   push:
     branches:
-      - 'master'
+      - 'main'
       - '**test_bench**'
   workflow_dispatch:
 

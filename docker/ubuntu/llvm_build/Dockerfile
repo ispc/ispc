@@ -2,7 +2,7 @@ FROM ubuntu:16.04
 MAINTAINER Dmitry Babokin <dmitry.y.babokin@intel.com>
 
 ARG REPO=ispc/ispc
-ARG SHA=master
+ARG SHA=main
 ARG LLVM_VERSION=11.0
 ARG EXTRA_BUILD_ARG=
 

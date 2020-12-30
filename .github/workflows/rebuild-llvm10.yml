@@ -3,7 +3,7 @@ name: Rebuild LLVM 10.0
 on:
   push:
     branches:
-      - master
+      - main
       - '**rebuild_llvm**'
     paths:
       - "llvm_patches/*10_0*"
