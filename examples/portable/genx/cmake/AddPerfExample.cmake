@@ -123,10 +123,10 @@ function(add_perf_example)
             set_target_properties(${CM_HOST_BINARY} PROPERTIES FOLDER "GEN_Examples")
         else()
             add_custom_command(
-               OUTPUT ${parsed_CM_OBJ_NAME}
-               COMMAND ${CMC_EXECUTABLE} -march=SKL -fcmocl "-DCM_PTRSIZE=64" -emit-spirv -o ${parsed_CM_OBJ_NAME} ${CMAKE_CURRENT_SOURCE_DIR}/${parsed_CM_SRC_NAME}.cpp
-               VERBATIM
-               DEPENDS ${CMC_EXECUTABLE}
+                OUTPUT ${parsed_CM_OBJ_NAME}
+                COMMAND ${CMC_EXECUTABLE} -march=SKL -fcmocl "-DCM_PTRSIZE=64" -emit-spirv -o ${parsed_CM_OBJ_NAME} ${CMAKE_CURRENT_SOURCE_DIR}/${parsed_CM_SRC_NAME}.cpp
+                VERBATIM
+                DEPENDS ${CMC_EXECUTABLE}
             )
             target_compile_definitions(${CM_HOST_BINARY} PRIVATE ISPCRT CMKERNEL)
             target_include_directories(${CM_HOST_BINARY} PRIVATE ${COMMON_PATH})
