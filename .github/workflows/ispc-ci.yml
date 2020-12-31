@@ -15,18 +15,21 @@ env:
   SDE_TAR_NAME: sde-external-8.59.0-2020-10-05-lin
   LLVM_REPO: https://github.com/dbabokin/llvm-project
   TARGETS_SMOKE: '["avx2-i32x8"]'
+  OPTSETS_SMOKE: "-O2"
   TARGETS_FULL:  '["sse2-i32x4", "sse2-i32x8",
                    "sse4-i8x16", "sse4-i16x8", "sse4-i32x4", "sse4-i32x8",
                    "avx1-i32x4", "avx1-i32x8", "avx1-i32x16", "avx1-i64x4",
                    "avx2-i8x32", "avx2-i16x16", "avx2-i32x4", "avx2-i32x8", "avx2-i32x16", "avx2-i64x4",
                    "avx512knl-i32x16",
                    "avx512skx-i32x8", "avx512skx-i32x16", "avx512skx-i8x64", "avx512skx-i16x32"]'
+  OPTSETS_FULL: "-O0 -O1 -O2"
 
 jobs:
   define-flow:
     runs-on: ubuntu-latest
     outputs:
       tests_matrix_targets: ${{ steps.set-flow.outputs.matrix }}
+      tests_optsets: ${{ steps.set-flow.outputs.optsets }}
       flow_type: ${{ steps.set-flow.outputs.type }}
     env:
       # for debug purposes
@@ -51,6 +54,9 @@ jobs:
         # set tests matrix depends on flow
         $RUN_SMOKE && echo "::set-output name=matrix::${TARGETS_SMOKE}" || true
         $RUN_FULL &&  echo "::set-output name=matrix::${TARGETS_FULL}" || true
+        # set tests optsets
+        $RUN_SMOKE && echo "::set-output name=optsets::${OPTSETS_SMOKE}" || true
+        $RUN_FULL &&  echo "::set-output name=optsets::${OPTSETS_FULL}" || true
 
   linux-build-ispc-llvm10:
     needs: [define-flow]
@@ -152,7 +158,7 @@ jobs:
     - name: Running tests
       run: |
         echo PATH=$PATH
-        ./alloy.py -r --only="stability current -O0 -O1 -O2" --only-targets="${{ matrix.target }}" --time --update-errors=FP
+        ./alloy.py -r --only="stability current ${{ needs.define-flow.outputs.tests_optsets }}" --only-targets="${{ matrix.target }}" --time --update-errors=FP
 
     - name: Upload fail_db.txt
       uses: actions/upload-artifact@v2
@@ -194,7 +200,7 @@ jobs:
     - name: Running tests
       run: |
         echo PATH=$PATH
-        ./alloy.py -r --only="stability current -O0 -O1 -O2" --only-targets="${{ matrix.target }}" --time --update-errors=FP
+        ./alloy.py -r --only="stability current ${{ needs.define-flow.outputs.tests_optsets }}" --only-targets="${{ matrix.target }}" --time --update-errors=FP
 
     - name: Upload fail_db.txt
       uses: actions/upload-artifact@v2
