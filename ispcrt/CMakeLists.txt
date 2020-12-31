@@ -24,7 +24,7 @@ include(GNUInstallDirs)
 ## Establish project ##########################################################
 
 # TODO: use ISPC version here
-project(ispcrt VERSION 1.13.0 LANGUAGES C CXX)
+project(ispcrt VERSION 1.16.0 LANGUAGES C CXX)
 
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake)
 

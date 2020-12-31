@@ -38,7 +38,7 @@
 #pragma once
 
 #define ISPC_VERSION_MAJOR 1
-#define ISPC_VERSION_MINOR 15
+#define ISPC_VERSION_MINOR 16
 #define ISPC_VERSION "1.16.0dev"
 #include <llvm/Config/llvm-config.h>
 
