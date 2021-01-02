@@ -215,3 +215,47 @@ jobs:
         git diff
         # Exit with error code if there are fails.
         [ -z "`git diff`" ]
+
+  # Debug run is experimental with the purpose to see if it's capable to catch anything.
+  # So it's running in "full" mode only for now.
+  # Single target, as it should be representative enough.
+  linux-test-debug-llvm11:
+    needs: [define-flow, linux-build-ispc-llvm11]
+    if: ${{ needs.define-flow.outputs.flow_type == 'full' }}
+    runs-on: ubuntu-latest
+    continue-on-error: false
+    strategy:
+      fail-fast: false
+    steps:
+    - uses: actions/checkout@v2
+    - name: Download package
+      uses: actions/download-artifact@v2
+      with:
+        name: ispc_llvm11_linux
+
+    - name: Install dependencies and unpack artifacts
+      run: |
+        .github/workflows/scripts/install-test-deps.sh
+
+    - name: Check environment
+      run: |
+        cat /proc/cpuinfo
+
+    - name: Running tests
+      run: |
+        echo PATH=$PATH
+        ./alloy.py -r --only="stability current debug -O0 -O2" --only-targets="avx2-i32x8" --time --update-errors=FP
+
+    - name: Upload fail_db.txt
+      uses: actions/upload-artifact@v2
+      if: failure()
+      with:
+        name: fail_db.debug.txt
+        path: fail_db.txt
+
+    - name: Check
+      run: |
+        # Print fails to the log.
+        git diff
+        # Exit with error code if there are fails.
+        [ -z "`git diff`" ]
