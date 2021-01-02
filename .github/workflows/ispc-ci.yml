@@ -60,7 +60,7 @@ jobs:
 
   linux-build-ispc-llvm10:
     needs: [define-flow]
-    if: ${{ needs.define-flow.outputs.flow_type == 'full' }}
+    #if: ${{ needs.define-flow.outputs.flow_type == 'full' }}
     runs-on: ubuntu-latest
     env:
       LLVM_VERSION: "10.0"
