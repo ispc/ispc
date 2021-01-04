@@ -543,6 +543,19 @@ if (ISPC_INCLUDE_UTILS)
     endif()
 endif()
 
+if (ISPC_INCLUDE_TESTS)
+    add_subdirectory(tests)
+endif()
+
+if (ISPC_INCLUDE_BENCHMARKS)
+    enable_testing()
+    add_subdirectory(benchmarks)
+endif()
+
+if (ISPC_INCLUDE_RT)
+    add_subdirectory(ispcrt)
+endif()
+
 if (ISPC_INCLUDE_EXAMPLES AND NOT ISPC_PREPARE_PACKAGE)
     include(ExternalProject)
     ExternalProject_Add(ispc_examples
@@ -564,30 +577,18 @@ if (ISPC_INCLUDE_GENX_EXAMPLES AND NOT ISPC_PREPARE_PACKAGE)
     include(ExternalProject)
     ExternalProject_Add(ispc_genx_examples
         PREFIX genx_examples
-        DEPENDS ispc
+        DEPENDS ispc ispcrt
         SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/examples/portable/genx"
         CMAKE_CACHE_ARGS
             -DISPC_BUILD:BOOL=TRUE
             -DCMAKE_BUILD_TYPE:STRING=${CMAKE_BUILD_TYPE}
             -DCMAKE_ISPC_COMPILER:PATH=$<TARGET_FILE:ispc>
             -DISPC_EXECUTABLE:PATH=$<TARGET_FILE:ispc>
+            -DISPCRT_LIB:PATH=$<TARGET_FILE:ispcrt>
             -DCMAKE_C_COMPILER:PATH=${CMAKE_C_COMPILER}
             -DCMAKE_CXX_COMPILER:PATH=${CMAKE_CXX_COMPILER}
         INSTALL_COMMAND ""
     )
-endif()
-
-if (ISPC_INCLUDE_TESTS)
-    add_subdirectory(tests)
-endif()
-
-if (ISPC_INCLUDE_BENCHMARKS)
-    enable_testing()
-    add_subdirectory(benchmarks)
-endif()
-
-if (ISPC_INCLUDE_RT)
-    add_subdirectory(ispcrt)
 endif()
 
 # Install
