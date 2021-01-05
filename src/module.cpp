@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2020, Intel Corporation
+  Copyright (c) 2010-2021, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -1173,10 +1173,7 @@ bool Module::writeZEBin(llvm::Module *module, const char *outFileName) {
     std::string internalOptions;
     // Use L0 binary
     internalOptions.append(" -binary-format=").append("ze");
-    // Enable long long and double support for TGLLP
-    if (CPUName == "TGLLP") {
-        internalOptions.append(" -target-features=").append("+emulate_i64");
-    }
+
     auto optsBuf = CIF::Builtins::CreateConstBuffer(IGCMain.get(), options.c_str(), options.size());
     if (!optsBuf) {
         Error(SourcePos(), "Could not create IGC translation context (cbuff)\n");
