@@ -149,8 +149,8 @@ if (ISPC_MACOS_TARGET AND ISPC_MACOS_SDK_PATH)
     endif()
 endif()
 
-# If GenX target is enabled, generate build targets for genx examples and ISPCRT
-if (GENX_ENABLED)
+# If GenX target is enabled, generate build targets for genx examples and ISPCRT on Linux
+if (GENX_ENABLED AND UNIX)
     option(ISPC_INCLUDE_RT "Generate build targets for ISPC runtime." ON)
     option(ISPC_INCLUDE_GENX_EXAMPLES "Generate build targets for the ISPC GenX examples" ON)
 else()
@@ -567,7 +567,7 @@ if (ISPC_INCLUDE_EXAMPLES AND NOT ISPC_PREPARE_PACKAGE)
     )
 endif()
 
-if (ISPC_INCLUDE_GENX_EXAMPLES AND NOT ISPC_PREPARE_PACKAGE)
+if (ISPC_INCLUDE_GENX_EXAMPLES AND ISPC_INCLUDE_RT AND NOT ISPC_PREPARE_PACKAGE)
     include(ExternalProject)
     if (ISPC_INCLUDE_BENCHMARKS)
         # Duplicated ExternalProject_Add for xpu examples when
