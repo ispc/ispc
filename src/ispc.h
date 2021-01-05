@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2020, Intel Corporation
+  Copyright (c) 2010-2021, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -299,6 +299,8 @@ class Target {
 
     bool hasFp64Support() const { return m_hasFp64Support; }
 
+    bool warnFtoU32IsExpensive() const { return m_warnFtoU32IsExpensive; }
+
   private:
     /** llvm Target object representing this target. */
     const llvm::Target *m_target;
@@ -407,6 +409,9 @@ class Target {
 
     /** Indicates whether the target has FP64 support. */
     bool m_hasFp64Support;
+
+    /** Indicates whether the target has uint32 -> float cvt support **/
+    bool m_warnFtoU32IsExpensive;
 };
 
 /** @brief Structure that collects optimization options
