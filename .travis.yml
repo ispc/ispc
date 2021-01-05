@@ -108,13 +108,6 @@ jobs:
         - LLVM_TAR=llvm-10.0.1-ubuntu16.04-Release+Asserts-x86.arm.wasm.tar.xz
         - LLVM_REPO=https://github.com/dbabokin/llvm-project
         - ISPC_HOME=$TRAVIS_BUILD_DIR
-    # LLVM 9.0 + Ubuntu 16.04: build, lit tests, examples (build + run), benchmarks (build + trial run)
-    - <<: *my_tag
-      env:
-        - LLVM_VERSION=9.0 OS=Ubuntu16.04
-        - LLVM_TAR=llvm-9.0.1-ubuntu16.04-Release+Asserts-x86.arm.wasm.tar.xz
-        - LLVM_REPO=https://github.com/dbabokin/llvm-project
-        - ISPC_HOME=$TRAVIS_BUILD_DIR
     # WASM enabled build
     # LLVM 11.0 + Ubuntu 16.04: build, lit tests, examples (build), benchmarks (build + trial run)
     - <<: *my_tag

@@ -241,10 +241,8 @@ if (X86_ENABLED)
         avx2-i8x32 avx2-i16x16
         avx2-i32x4 avx2-i32x8 avx2-i32x16 avx2-i64x4
         avx512knl-i32x16
-        avx512skx-i32x16 avx512skx-i32x8)
-    if (${LLVM_VERSION_NUMBER} VERSION_GREATER_EQUAL "10.0.0")
-        list(APPEND ISPC_TARGETS avx512skx-i8x64 avx512skx-i16x32)
-    endif()
+        avx512skx-i32x16 avx512skx-i32x8
+        avx512skx-i8x64 avx512skx-i16x32)
 endif()
 if (ARM_ENABLED)
     list(APPEND ISPC_TARGETS neon-i8x16 neon-i16x8 neon-i32x4 neon-i32x8)
@@ -259,11 +257,7 @@ if (WASM_ENABLED)
 endif()
 
 set(CLANG_LIBRARY_LIST clangFrontend clangDriver clangSerialization clangParse clangSema clangAnalysis clangAST clangBasic clangEdit clangLex)
-set(LLVM_COMPONENTS engine ipo bitreader bitwriter instrumentation linker option)
-
-if (${LLVM_VERSION_NUMBER} VERSION_GREATER_EQUAL "10.0.0")
-    list(APPEND LLVM_COMPONENTS frontendopenmp)
-endif()
+set(LLVM_COMPONENTS engine ipo bitreader bitwriter instrumentation linker option frontendopenmp)
 
 if (X86_ENABLED)
     list(APPEND LLVM_COMPONENTS x86)

@@ -2,8 +2,6 @@
 // RUN: cat %T/1926.o.json \
 // RUN:   | FileCheck %s
 
-// REQUIRES: LLVM_10_0+
-
 // CHECK: "traceEvents"
 // CHECK: "detail"
 export uniform int foo(uniform int a[], uniform int count) {

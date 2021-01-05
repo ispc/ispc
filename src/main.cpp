@@ -55,9 +55,7 @@
 #include <llvm/Support/Signals.h>
 #include <llvm/Support/TargetRegistry.h>
 #include <llvm/Support/TargetSelect.h>
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_10_0
 #include <llvm/Support/ToolOutputFile.h>
-#endif
 
 #ifdef ISPC_HOST_IS_WINDOWS
 #define strcasecmp stricmp
@@ -181,11 +179,9 @@ static void lPrintVersion() {
     snprintf(targetHelp, sizeof(targetHelp), "[--target-os=<os>]\t\t\tSelect target OS.  <os>={%s}",
              g->target_registry->getSupportedOSes().c_str());
     PrintWithWordBreaks(targetHelp, 24, TerminalWidth(), stdout);
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_10_0
     printf("    [--time-trace]\t\t\tTurn on time profiler. Generates JSON file based on output filename.\n");
     printf("    [--time-trace-granularity=<value>\tMinimum time granularity (in microseconds) traced by time "
            "profiler.\n");
-#endif
     printf("    [--version]\t\t\t\tPrint ispc version\n");
 #ifdef ISPC_GENX_ENABLED
     printf("    [--vc-options=<\"-option1 -option2...\">]\t\t\t\tPass additional options to Vector Compiler backend\n");
@@ -462,7 +458,6 @@ static void setCallingConv(VectorCallStatus vectorCall, Arch arch) {
     }
 }
 
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_10_0
 static void writeCompileTimeFile(const char *outFileName) {
     llvm::SmallString<128> jsonFileName(outFileName);
     jsonFileName.append(".json");
@@ -479,7 +474,6 @@ static void writeCompileTimeFile(const char *outFileName) {
     of->keep();
     return;
 }
-#endif
 
 static std::set<int> ParsingPhases(char *stages, ArgErrors &errorHandler) {
     constexpr int parsing_limit = 100;
@@ -791,12 +785,10 @@ int main(int Argc, char *Argv[]) {
             }
         } else if (!strncmp(argv[i], "--force-alignment=", 18)) {
             g->forceAlignment = atoi(argv[i] + 18);
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_10_0
         } else if (!strcmp(argv[i], "--time-trace")) {
             g->enableTimeTrace = true;
         } else if (!strncmp(argv[i], "--time-trace-granularity=", 25)) {
             g->timeTraceGranularity = atoi(argv[i] + 25);
-#endif
         } else if (!strcmp(argv[i], "--woff") || !strcmp(argv[i], "-woff")) {
             g->disableWarnings = true;
             g->emitPerfWarnings = false;
@@ -1059,7 +1051,6 @@ int main(int Argc, char *Argv[]) {
 
     // This needs to happen after the TargetOS is decided.
     setCallingConv(vectorCall, arch);
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_10_0
     if (g->enableTimeTrace) {
         llvm::timeTraceProfilerInitialize(g->timeTraceGranularity, "ispc");
     }
@@ -1077,9 +1068,5 @@ int main(int Argc, char *Argv[]) {
         }
         llvm::timeTraceProfilerCleanup();
     }
-#else
-    int ret = Module::CompileAndOutput(file, arch, cpu, targets, flags, ot, outFileName, headerFileName, depsFileName,
-                                       depsTargetName, hostStubFileName, devStubFileName);
-#endif
     return ret;
 }

@@ -272,9 +272,7 @@ typedef enum {
     CPU_Silvermont,
 
     CPU_ICX,
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_10_0
     CPU_TGL,
-#endif
 #if ISPC_LLVM_VERSION >= ISPC_LLVM_12_0
     CPU_ADL,
     CPU_SPR,
@@ -365,10 +363,8 @@ class AllCPUs {
 
         names[CPU_ICX].push_back("icelake-server");
         names[CPU_ICX].push_back("icx");
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_10_0
         names[CPU_TGL].push_back("tigerlake");
         names[CPU_TGL].push_back("tgl");
-#endif
 #if ISPC_LLVM_VERSION >= ISPC_LLVM_12_0
         names[CPU_ADL].push_back("alderlake");
         names[CPU_ADL].push_back("adl");
@@ -411,11 +407,9 @@ class AllCPUs {
         compat[CPU_ADL] = Set(CPU_ADL, CPU_x86_64, CPU_Bonnell, CPU_Penryn, CPU_Core2, CPU_Nehalem, CPU_Silvermont,
                               CPU_SandyBridge, CPU_IvyBridge, CPU_Haswell, CPU_Broadwell, CPU_None);
 #endif
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_10_0
         compat[CPU_TGL] =
             Set(CPU_TGL, CPU_x86_64, CPU_Bonnell, CPU_Penryn, CPU_Core2, CPU_Nehalem, CPU_Silvermont, CPU_SandyBridge,
                 CPU_IvyBridge, CPU_Haswell, CPU_Broadwell, CPU_SKX, CPU_ICL, CPU_ICX, CPU_None);
-#endif
         compat[CPU_ICX] = Set(CPU_ICX, CPU_x86_64, CPU_Bonnell, CPU_Penryn, CPU_Core2, CPU_Nehalem, CPU_Silvermont,
                               CPU_SandyBridge, CPU_IvyBridge, CPU_Haswell, CPU_Broadwell, CPU_SKX, CPU_ICL, CPU_None);
 
@@ -556,9 +550,7 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, bool pic, boo
 #if ISPC_LLVM_VERSION >= ISPC_LLVM_12_0
         case CPU_SPR:
 #endif
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_10_0
         case CPU_TGL:
-#endif
         case CPU_ICX:
         case CPU_ICL:
         case CPU_SKX:
@@ -916,7 +908,6 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, bool pic, boo
         }
         break;
     case ISPCTarget::avx512skx_i8x64:
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_10_0 // LLVM 10.0+
         // This target is enabled only for LLVM 10.0 and later
         // because LLVM requires a number of fixes, which are
         // committed to LLVM 11.0 and can be applied to 10.0, but not
@@ -937,12 +928,7 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, bool pic, boo
         this->m_hasVecPrefetch = false;
         CPUfromISA = CPU_SKX;
         break;
-#else
-        unsupported_target = true;
-        break;
-#endif
     case ISPCTarget::avx512skx_i16x32:
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_10_0 // LLVM 10.0+
         // This target is enabled only for LLVM 10.0 and later
         // because LLVM requires a number of fixes, which are
         // committed to LLVM 11.0 and can be applied to 10.0, but not
@@ -963,10 +949,6 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, bool pic, boo
         this->m_hasVecPrefetch = false;
         CPUfromISA = CPU_SKX;
         break;
-#else
-        unsupported_target = true;
-        break;
-#endif
 #ifdef ISPC_ARM_ENABLED
     case ISPCTarget::neon_i8x16:
         this->m_isa = Target::NEON;
@@ -1662,11 +1644,9 @@ Globals::Globals() {
     isMultiTargetCompilation = false;
     errorLimit = -1;
 
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_10_0
     enableTimeTrace = false;
     // set default granularity to 500.
     timeTraceGranularity = 500;
-#endif
     target = NULL;
     ctx = new llvm::LLVMContext;
 

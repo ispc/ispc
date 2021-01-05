@@ -470,11 +470,7 @@ void GlobalsLocalization::LocalizeGlobals(LocalizationInfo &LI) {
         Instruction &FirstI = *Fn->getEntryBlock().begin();
         Type *ElemTy = GV->getType()->getElementType();
         AllocaInst *Alloca = new AllocaInst(ElemTy, 0, GV->getName() + ".local", &FirstI);
-#if ISPC_LLVM_VERSION <= ISPC_LLVM_9_0
-        Alloca->setAlignment(GV->getAlignment());
-#else // LLVM 10.0+
         Alloca->setAlignment(llvm::MaybeAlign(GV->getAlignment()));
-#endif
         if (!isa<UndefValue>(GV->getInitializer()))
             new StoreInst(GV->getInitializer(), Alloca, &FirstI);
 

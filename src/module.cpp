@@ -170,9 +170,7 @@ Module::Module(const char *fn) {
     module->setDataLayout(g->target->getDataLayout()->getStringRepresentation());
 
     if (g->generateDebuggingSymbols) {
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_10_0
         llvm::TimeTraceScope TimeScope("Create Debug Data");
-#endif
         // To enable debug information on Windows, we have to let llvm know, that
         // debug information should be emitted in CodeView format.
         if (g->target_os == TargetOS::windows) {
@@ -226,10 +224,8 @@ extern YY_BUFFER_STATE yy_create_buffer(FILE *, int);
 extern void yy_delete_buffer(YY_BUFFER_STATE);
 
 int Module::CompileFile() {
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_10_0
     llvm::TimeTraceScope CompileFileTimeScope(
         "CompileFile", llvm::StringRef(filename + ("_" + std::string(g->target->GetISAString()))));
-#endif
     extern void ParserInit();
     ParserInit();
 
@@ -238,18 +234,14 @@ int Module::CompileFile() {
     // variable 'm' to be initialized and available (which it isn't until
     // the Module constructor returns...)
     {
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_10_0
         llvm::TimeTraceScope TimeScope("DefineStdlib");
-#endif
         DefineStdlib(symbolTable, g->ctx, module, g->includeStdlib);
     }
 
     bool runPreprocessor = g->runCPP;
 
     if (runPreprocessor) {
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_10_0
         llvm::TimeTraceScope TimeScope("Frontend parser");
-#endif
         if (!IsStdin(filename)) {
             // Try to open the file first, since otherwise we crash in the
             // preprocessor if the file doesn't exist.
@@ -268,9 +260,7 @@ int Module::CompileFile() {
         yyparse();
         yy_delete_buffer(strbuf);
     } else {
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_10_0
         llvm::TimeTraceScope TimeScope("Frontend parser");
-#endif
         // No preprocessor, just open up the file if it's not stdin..
         FILE *f = NULL;
         if (IsStdin(filename)) {
@@ -297,9 +287,7 @@ int Module::CompileFile() {
 
     if (diBuilder)
         diBuilder->finalize();
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_10_0
     llvm::TimeTraceScope TimeScope("Optimize");
-#endif
     if (errorCount == 0)
         Optimize(module, g->opt.level);
 
@@ -1243,15 +1231,8 @@ bool Module::writeObjectFileOrAssembly(llvm::TargetMachine *targetMachine, llvm:
                                        const char *outFileName) {
     // Figure out if we're generating object file or assembly output, and
     // set binary output for object files
-#if ISPC_LLVM_VERSION <= ISPC_LLVM_9_0
-    Assert(!g->target->isGenXTarget());
-    llvm::TargetMachine::CodeGenFileType fileType =
-        (outputType == Object) ? llvm::TargetMachine::CGFT_ObjectFile : llvm::TargetMachine::CGFT_AssemblyFile;
-    bool binary = (fileType == llvm::TargetMachine::CGFT_ObjectFile);
-#else // LLVM 10.0+
     llvm::CodeGenFileType fileType = (outputType == Object) ? llvm::CGFT_ObjectFile : llvm::CGFT_AssemblyFile;
     bool binary = (fileType == llvm::CGFT_ObjectFile);
-#endif
 
     llvm::sys::fs::OpenFlags flags = binary ? llvm::sys::fs::F_None : llvm::sys::fs::F_Text;
 
@@ -2219,11 +2200,7 @@ void Module::execPreprocessor(const char *infilename, llvm::raw_string_ostream *
     inst.setTarget(target);
     inst.createSourceManager(inst.getFileManager());
 
-#if ISPC_LLVM_VERSION <= ISPC_LLVM_9_0
-    clang::FrontendInputFile inputFile(infilename, clang::InputKind::Unknown);
-#else // LLVM 10.0+
     clang::FrontendInputFile inputFile(infilename, clang::InputKind());
-#endif
 
     inst.InitializeSourceManager(inputFile);
 
@@ -2722,9 +2699,7 @@ int Module::CompileAndOutput(const char *srcFile, Arch arch, const char *cpu, st
 
         m = new Module(srcFile);
         if (m->CompileFile() == 0) {
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_10_0
             llvm::TimeTraceScope TimeScope("Backend");
-#endif
 #ifdef ISPC_GENX_ENABLED
             if (outputType == Asm || outputType == Object) {
                 if (g->target->isGenXTarget()) {
@@ -2855,9 +2830,7 @@ int Module::CompileAndOutput(const char *srcFile, Arch arch, const char *cpu, st
 
             m = new Module(srcFile);
             int compileFileError = m->CompileFile();
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_10_0
             llvm::TimeTraceScope TimeScope("Backend");
-#endif
             if (compileFileError == 0) {
                 // Create the dispatch module, unless already created;
                 // in the latter case, just do the checking

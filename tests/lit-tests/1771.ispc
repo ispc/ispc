@@ -5,7 +5,6 @@
 // RUN: %{ispc} %s --target=sse4-i16x8 --emit-asm -o - | FileCheck %s -check-prefix=CHECKSSE4_I16X8
 // RUN: %{ispc} %s --target=sse4-i8x16 --emit-asm -o - | FileCheck %s -check-prefix=CHECKSSE4_I8X16
 
-// REQUIRES: LLVM_10_0+
 // REQUIRES: X86_ENABLED
 
 // CHECKAVX2_I32X8: {{[a-z]*xor[a-z]*}}  %xmm0, %xmm0, %xmm0

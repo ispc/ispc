@@ -6,9 +6,6 @@
 
 // REQUIRES: X86_ENABLED
 
-// It doesn't work for anything earlier than 10.0, but it will not be fixed, so don't run.
-// REQUIRES: LLVM_10_0+
-
 extern uniform unsigned int64 var_6;
 extern uniform unsigned int16 var_11;
 extern uniform bool arr_201 [1] [15] [20];
