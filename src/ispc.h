@@ -192,6 +192,7 @@ class Target {
 #ifdef ISPC_XE_ENABLED
         GEN9,
         XELP,
+        XEHPG,
 #endif
         NUM_ISAS
     };
@@ -200,6 +201,7 @@ class Target {
     enum class XePlatform {
         gen9,
         xe_lp,
+        xe_hpg,
     };
 #endif
 
@@ -265,7 +267,7 @@ class Target {
 
     bool isXeTarget() {
 #ifdef ISPC_XE_ENABLED
-        return m_isa == Target::GEN9 || m_isa == Target::XELP;
+        return m_isa == Target::GEN9 || m_isa == Target::XELP || m_isa == Target::XEHPG;
 #else
         return false;
 #endif

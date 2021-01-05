@@ -68,6 +68,7 @@ const std::unordered_map<std::string, std::string> ISPCToNeoCPU{
     {"skl", "skl"},
     {"tgllp", "tgllp"},
     {"dg1", "dg1"},
+    {"dg2", "dg2"},
 };
 // clang-format on
 #endif
