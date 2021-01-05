@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2020, Intel Corporation
+  Copyright (c) 2010-2021, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -6088,7 +6088,12 @@ static llvm::Value *lTypeConvAtomic(FunctionEmitContext *ctx, llvm::Value *exprV
         case AtomicType::TYPE_UINT16:
         case AtomicType::TYPE_UINT32:
         case AtomicType::TYPE_UINT64:
-            if (fromType->IsVaryingType())
+            // float -> uint32 is the only conversion for which a signed cvt
+            // exists which cannot be used for unsigned.
+            // This is a problem for non-neon, non-avx512 targets from among
+            // arm/x86 cpu targets. Revisit for genx/wasm.
+            if (fromType->IsVaryingType() && (g->target->warnFtoU32IsExpensive() == true) &&
+                (fromType->basicType == AtomicType::TYPE_UINT32))
                 PerformanceWarning(pos, "Conversion from unsigned int to float is slow. "
                                         "Use \"int\" if possible");
             cast = ctx->CastInst(llvm::Instruction::UIToFP, // unsigned int to float
