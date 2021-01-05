@@ -190,7 +190,7 @@ endif(CMAKE_BUILD_TYPE)
 
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/ispcrt/cmake)
 include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/FixWindowsPath.cmake)
-include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/LLVMConfig.cmake)
+include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/FindLLVM.cmake)
 include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/Git.cmake)
 include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/GenerateBuiltins.cmake)
 include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/Stdlib.cmake)
