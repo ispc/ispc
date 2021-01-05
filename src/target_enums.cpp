@@ -160,6 +160,10 @@ ISPCTarget ParseISPCTarget(std::string target) {
         return ISPCTarget::xelp_x8;
     } else if (target == "xelp-x16" || target == "xelp") {
         return ISPCTarget::xelp_x16;
+    } else if (target == "xehpg-x8") {
+        return ISPCTarget::xehpg_x8;
+    } else if (target == "xehpg-x16") {
+        return ISPCTarget::xehpg_x16;
     }
 
     return ISPCTarget::error;
@@ -261,6 +265,10 @@ std::string ISPCTargetToString(ISPCTarget target) {
         return "xelp-x8";
     case ISPCTarget::xelp_x16:
         return "xelp-x16";
+    case ISPCTarget::xehpg_x8:
+        return "xehpg-x8";
+    case ISPCTarget::xehpg_x16:
+        return "xehpg-x16";
     case ISPCTarget::none:
     case ISPCTarget::error:
         // Fall through
@@ -327,6 +335,8 @@ bool ISPCTargetIsGen(ISPCTarget target) {
     case ISPCTarget::gen9_x16:
     case ISPCTarget::xelp_x8:
     case ISPCTarget::xelp_x16:
+    case ISPCTarget::xehpg_x8:
+    case ISPCTarget::xehpg_x16:
         return true;
     default:
         return false;

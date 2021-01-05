@@ -90,6 +90,8 @@ enum class ISPCTarget {
     gen9_x16,
     xelp_x8,
     xelp_x16,
+    xehpg_x8,
+    xehpg_x16,
     error
 };
 
