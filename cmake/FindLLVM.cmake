@@ -31,7 +31,7 @@
 #   SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #
-# ispc LLVMConfig.cmake
+# ispc FindLLVM.cmake
 #
 find_package(LLVM REQUIRED CONFIG)
     if (NOT LLVM_FOUND )
