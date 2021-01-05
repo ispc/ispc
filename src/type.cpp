@@ -1822,14 +1822,10 @@ llvm::DIType *StructType::GetDIType(llvm::DIScope *scope) const {
     llvm::DIFile *diFile = pos.GetDIFile();
     llvm::DINamespace *diSpace = pos.GetDINamespace();
     return m->diBuilder->createStructType(diSpace, GetString(), diFile,
-                                          pos.first_line,          // Line number
-                                          layout->getSizeInBits(), // Size in bits
-#if ISPC_LLVM_VERSION <= ISPC_LLVM_9_0
-                                          layout->getAlignment() * 8, // Alignment in bits
-#else                                                                 // LLVM 10.0+
+                                          pos.first_line,                     // Line number
+                                          layout->getSizeInBits(),            // Size in bits
                                           layout->getAlignment().value() * 8, // Alignment in bits
-#endif
-                                          llvm::DINode::FlagZero, // Flags
+                                          llvm::DINode::FlagZero,             // Flags
                                           NULL, elements);
 }
 

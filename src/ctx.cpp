@@ -309,21 +309,13 @@ FunctionEmitContext::FunctionEmitContext(Function *func, Symbol *funSym, llvm::F
             char buf[256];
             snprintf(buf, sizeof(buf), "__off_all_on_mask_%s", g->target->GetISAString());
 
-#if ISPC_LLVM_VERSION <= ISPC_LLVM_8_0
-            llvm::Constant *offFunc = m->module->getOrInsertFunction(buf, LLVMTypes::VoidType);
-#else // LLVM 9.0+
             llvm::FunctionCallee offFuncCallee = m->module->getOrInsertFunction(buf, LLVMTypes::VoidType);
             llvm::Constant *offFunc = llvm::cast<llvm::Constant>(offFuncCallee.getCallee());
-#endif
             AssertPos(currentPos, llvm::isa<llvm::Function>(offFunc));
             llvm::BasicBlock *offBB = llvm::BasicBlock::Create(*g->ctx, "entry", (llvm::Function *)offFunc, 0);
             llvm::StoreInst *inst = new llvm::StoreInst(LLVMMaskAllOff, globalAllOnMaskPtr, offBB);
             if (g->opt.forceAlignedMemory) {
-#if ISPC_LLVM_VERSION <= ISPC_LLVM_9_0
-                inst->setAlignment(g->target->getNativeVectorAlignment());
-#else // LLVM 10.0+
                 inst->setAlignment(llvm::MaybeAlign(g->target->getNativeVectorAlignment()).valueOrOne());
-#endif
             }
             llvm::ReturnInst::Create(*g->ctx, offBB);
         }
@@ -2288,11 +2280,7 @@ llvm::Value *FunctionEmitContext::LoadInst(llvm::Value *ptr, const Type *type, c
 #endif
 
     if (g->opt.forceAlignedMemory && llvm::dyn_cast<llvm::VectorType>(pt->getElementType())) {
-#if ISPC_LLVM_VERSION <= ISPC_LLVM_9_0
-        inst->setAlignment(g->target->getNativeVectorAlignment());
-#else // LLVM 10.0+
         inst->setAlignment(llvm::MaybeAlign(g->target->getNativeVectorAlignment()).valueOrOne());
-#endif
     }
 
     AddDebugPos(inst);
@@ -2431,11 +2419,7 @@ llvm::Value *FunctionEmitContext::LoadInst(llvm::Value *ptr, llvm::Value *mask, 
                 // vs the proper alignment in practice.)
                 int align = 1;
 
-#if ISPC_LLVM_VERSION <= ISPC_LLVM_9_0
-                inst->setAlignment(align);
-#else // LLVM 10.0+
                 inst->setAlignment(llvm::MaybeAlign(align).valueOrOne());
-#endif
             }
 
             AddDebugPos(inst);
@@ -2649,11 +2633,7 @@ llvm::Value *FunctionEmitContext::AllocaInst(llvm::Type *llvmType, const char *n
         align = g->target->getNativeVectorAlignment();
 
     if (align != 0) {
-#if ISPC_LLVM_VERSION <= ISPC_LLVM_9_0
-        inst->setAlignment(align);
-#else // LLVM 10.0+
         inst->setAlignment(llvm::MaybeAlign(align).valueOrOne());
-#endif
     }
     // Don't add debugging info to alloca instructions
     return inst;
@@ -2926,11 +2906,7 @@ void FunctionEmitContext::StoreInst(llvm::Value *value, llvm::Value *ptr, const 
     llvm::StoreInst *inst = new llvm::StoreInst(value, ptr, bblock);
 
     if (g->opt.forceAlignedMemory && llvm::dyn_cast<llvm::VectorType>(pt->getElementType())) {
-#if ISPC_LLVM_VERSION <= ISPC_LLVM_9_0
-        inst->setAlignment(g->target->getNativeVectorAlignment());
-#else // LLVM 10.0+
         inst->setAlignment(llvm::MaybeAlign(g->target->getNativeVectorAlignment()).valueOrOne());
-#endif
     }
 
 #ifdef ISPC_GENX_ENABLED
@@ -3025,16 +3001,10 @@ void FunctionEmitContext::MemcpyInst(llvm::Value *dest, llvm::Value *src, llvm::
     }
     if (align == NULL)
         align = LLVMInt32(1);
-#if ISPC_LLVM_VERSION <= ISPC_LLVM_8_0
-    llvm::Constant *mcFunc =
-        m->module->getOrInsertFunction("llvm.memcpy.p0i8.p0i8.i64", LLVMTypes::VoidType, LLVMTypes::VoidPointerType,
-                                       LLVMTypes::VoidPointerType, LLVMTypes::Int64Type, LLVMTypes::BoolType);
-#else // LLVM 9.0+
     llvm::FunctionCallee mcFuncCallee =
         m->module->getOrInsertFunction("llvm.memcpy.p0i8.p0i8.i64", LLVMTypes::VoidType, LLVMTypes::VoidPointerType,
                                        LLVMTypes::VoidPointerType, LLVMTypes::Int64Type, LLVMTypes::BoolType);
     llvm::Constant *mcFunc = llvm::cast<llvm::Constant>(mcFuncCallee.getCallee());
-#endif
     AssertPos(currentPos, mcFunc != NULL);
     AssertPos(currentPos, llvm::isa<llvm::Function>(mcFunc));
 

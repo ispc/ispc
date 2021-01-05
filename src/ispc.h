@@ -695,13 +695,12 @@ struct Globals {
 
     /* Number of errors to show in ISPC. */
     int errorLimit;
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_10_0
+
     /* When true, enable compile time tracing. */
     bool enableTimeTrace;
 
     /* When compile time tracing is enabled, set time granularity. */
     int timeTraceGranularity;
-#endif
 };
 
 enum {
