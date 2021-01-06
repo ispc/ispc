@@ -459,7 +459,7 @@ def perf(options1, args):
     examples_folder_ref = "examples_ref"
     examples_folder_test = "examples_test"
     install_prefix = "install"
-    cmake_command = "cmake -G " + "\"" + generator + "\"" + " -DCMAKE_INSTALL_PREFIX=" + install_prefix + " " + pwd + "examples"
+    cmake_command = "cmake -G " + "\"" + generator + "\"" + " -DCMAKE_INSTALL_PREFIX=" + install_prefix + " " + pwd + "examples" + os.sep + "cpu"
     if is_windows == False:
         cmake_command += " -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_C_COMPILER=clang"
     for target_i in range(target_number):
@@ -520,7 +520,7 @@ def perf(options1, args):
             # check that test exists
             if os.path.exists(folder) == False:
                 error("Can't find test %s. Your path is: \"%s\".\nChange current location to ISPC_HOME or set path to ISPC_HOME in --path.\n" %
-                 (lines[i][:-1], options.path), 1)
+                 (lines[i][:-1], folder), 1)
             if is_windows == False:
                 ex_command_ref = "cd "+ folder_ref + " && ./" + example + " " + command + " >> " + perf_temp + "_ref"
                 ex_command = "cd "+ folder + " && ./" + example + " " + command + " >> " + perf_temp + "_test"

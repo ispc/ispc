@@ -3344,12 +3344,12 @@ easily interoperate with software systems that have existing task systems
 for managing parallelism.  If you're using ``ispc`` with a system that
 isn't otherwise multi-threaded and don't want to write custom
 implementations of them, you can use the implementations of these functions
-provided in the ``examples/tasksys.cpp`` file in the ``ispc``
+provided in the ``examples/common/tasksys.cpp`` file in the ``ispc``
 distributions.
 
 If you are implementing your own task system, the remainder of this section
 discusses the requirements for these calls.  You will also likely want to
-review the example task systems in ``examples/tasksys.cpp`` for reference.
+review the example task systems in ``examples/common/tasksys.cpp`` for reference.
 If you are not implementing your own task system, you can skip reading the
 remainder of this section.
 

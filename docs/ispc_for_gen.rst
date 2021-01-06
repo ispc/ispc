@@ -119,7 +119,7 @@ and give us feedback!
 The ``ISPCRT`` provides C and C++ APIs which are documented in the header files
 (see ``ispcrt.h`` and ``ispcrt.hpp``) and distributed as a library that you can
 link to.
-Examples in ``ispc/examples/portable/genx/`` directory demonstrate how to use
+Examples in ``ispc/examples/xpu`` directory demonstrate how to use
 this API to run SPMD programs on CPU or GPU. You can see how to use
 ``oneAPI Level Zero`` runtime in ``sgemm`` example.
 It is also possible to run ISPC kernels and DPCPP kernels written with ``oneAPI
@@ -210,7 +210,7 @@ variables:
 
 Compiling and Running Simple ISPC Program
 =========================================
-The directory ``examples/portable/genx/simple`` in the ``ispc`` distribution
+The directory ``examples/xpu/simple`` in the ``ispc`` distribution
 includes a simple example of how to use ``ispc`` with a short C++ program for
 CPU and GPU targets with ISPC Run Time. See the file ``simple.ispc`` in that
 directory (also reproduced here.)
@@ -350,7 +350,7 @@ steps and executes it:
     queue.sync();
 
 
-To build and run examples go to ``examples/portable/genx`` and create
+To build and run examples go to ``examples/xpu`` and create
 ``build`` folder. Run ``cmake -DISPC_EXECUTABLE=<path_to_ispc_binary>
 -Dispcrt_DIR=<path_to_ispcrt_cmake> ../`` from ``build`` folder. Or add path
 to ``ispc`` to your PATH and just run ``cmake ../``. Build examples using ``make``.
@@ -408,8 +408,8 @@ You can also run separate compilation commands to achieve the same result:
   ::
 
     ispc -I /home/install/include/ispcrt -DISPC_GPU --target=genx-x8 --woff
-    -o /home/ispc/examples/portable/genx/simple/genx_simple.spv
-    /home/ispc/examples/portable/genx/simple/simple.ispc
+    -o /home/ispc/examples/xpu/simple/genx_simple.spv
+    /home/ispc/examples/xpu/simple/simple.ispc
 
 * Compile ISPC kernel for CPU:
   ::
@@ -417,9 +417,9 @@ You can also run separate compilation commands to achieve the same result:
     ispc -I /home/install/include/ispcrt --arch=x86-64
     --target=sse4-i32x4,avx1-i32x8,avx2-i32x8,avx512knl-i32x16,avx512skx-i32x16
     --woff --pic --opt=disable-assertions
-    -h /home/ispc/examples/portable/genx/simple/simple_ispc.h
-    -o /home/ispc/examples/portable/genx/simple/simple.dev.o
-    /home/ispc/examples/portable/genx/simple/simple.ispc
+    -h /home/ispc/examples/xpu/simple/simple_ispc.h
+    -o /home/ispc/examples/xpu/simple/simple.dev.o
+    /home/ispc/examples/xpu/simple/simple.ispc
 
 * Produce a library from object files:
   ::
@@ -431,14 +431,14 @@ You can also run separate compilation commands to achieve the same result:
   ::
 
     /usr/bin/c++  -DISPCRT -isystem /home/install/include/ispcrt -fPIE
-    -o /home/ispc/examples/portable/genx/simple/host_simple
-    /home/ispc/examples/portable/genx/simple/simple.cpp -L/usr/local/lib
+    -o /home/ispc/examples/xpu/simple/host_simple
+    /home/ispc/examples/xpu/simple/simple.cpp -L/usr/local/lib
     -Wl,-rpath,/home/install/lib /home/install/lib/libispcrt.so.1.13.0
 
 By default examples uses SPIR-V format. You can try them with L0 binary format:
   ::
 
-    cd examples/portable/genx/build
+    cd examples/xpu/build
     cmake -DISPC_GENX_FORMAT=zebin ../
     export ISPCRT_USE_ZEBIN=y
     cd simple && ./host_simple --gpu
