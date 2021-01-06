@@ -114,8 +114,7 @@ jobs:
       - name: Upload bench datasets to calcite
         working-directory: .calcite
         run: |
-          npm ci
-          npx calcite upload calcite.config.js
+          npx @siliceum/calcite-cli@0.7.2 upload calcite.config.js
         env:
           BENCH_OUTPUT_FILES: ${{github.workspace}}
           CALCITE_TOKEN: ${{ secrets.CALCITE_TOKEN }}
