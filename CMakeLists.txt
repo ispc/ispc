@@ -552,10 +552,10 @@ endif()
 
 if (ISPC_INCLUDE_EXAMPLES AND NOT ISPC_PREPARE_PACKAGE)
     include(ExternalProject)
-    ExternalProject_Add(ispc_examples
-        PREFIX examples
+    ExternalProject_Add(ispc_cpu_examples
+        PREFIX cpu_examples
         DEPENDS ispc
-        SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/examples"
+        SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/examples/cpu"
         CMAKE_CACHE_ARGS
             -DISPC_BUILD:BOOL=TRUE
             -DCMAKE_BUILD_TYPE:STRING=${CMAKE_BUILD_TYPE}
@@ -569,20 +569,42 @@ endif()
 
 if (ISPC_INCLUDE_GENX_EXAMPLES AND NOT ISPC_PREPARE_PACKAGE)
     include(ExternalProject)
-    ExternalProject_Add(ispc_genx_examples
-        PREFIX genx_examples
-        DEPENDS ispc ispcrt
-        SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/examples/portable/genx"
-        CMAKE_CACHE_ARGS
-            -DISPC_BUILD:BOOL=TRUE
-            -DCMAKE_BUILD_TYPE:STRING=${CMAKE_BUILD_TYPE}
-            -DCMAKE_ISPC_COMPILER:PATH=$<TARGET_FILE:ispc>
-            -DISPC_EXECUTABLE:PATH=$<TARGET_FILE:ispc>
-            -DISPCRT_LIB:PATH=$<TARGET_FILE:ispcrt>
-            -DCMAKE_C_COMPILER:PATH=${CMAKE_C_COMPILER}
-            -DCMAKE_CXX_COMPILER:PATH=${CMAKE_CXX_COMPILER}
-        INSTALL_COMMAND ""
+    if (ISPC_INCLUDE_BENCHMARKS)
+        # Duplicated ExternalProject_Add for xpu examples when
+        # ISPC_INCLUDE_BENCHMARKS is on and off since all efforts of
+        # using cmake generator conditional expressions were unsuccessful.
+        ExternalProject_Add(ispc_xpu_examples
+            PREFIX xpu_examples
+            DEPENDS ispc ispcrt benchmark
+            SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/examples/xpu"
+            CMAKE_CACHE_ARGS
+                -DISPC_BUILD:BOOL=TRUE
+                -DCMAKE_BUILD_TYPE:STRING=${CMAKE_BUILD_TYPE}
+                -DCMAKE_ISPC_COMPILER:PATH=$<TARGET_FILE:ispc>
+                -DISPC_EXECUTABLE:PATH=$<TARGET_FILE:ispc>
+                -DISPCRT_LIB:PATH=$<TARGET_FILE:ispcrt>
+                -DBENCHMARK_LIB:PATH=$<TARGET_FILE:benchmark>
+                -DCMAKE_C_COMPILER:PATH=${CMAKE_C_COMPILER}
+                -DCMAKE_CXX_COMPILER:PATH=${CMAKE_CXX_COMPILER}
+                -DISPC_INCLUDE_BENCHMARKS:BOOL=${ISPC_INCLUDE_BENCHMARKS}
+            INSTALL_COMMAND ""
+        )
+    else()
+        ExternalProject_Add(ispc_xpu_examples
+            PREFIX xpu_examples
+            DEPENDS ispc ispcrt
+            SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/examples/xpu"
+            CMAKE_CACHE_ARGS
+                -DISPC_BUILD:BOOL=TRUE
+                -DCMAKE_BUILD_TYPE:STRING=${CMAKE_BUILD_TYPE}
+                -DCMAKE_ISPC_COMPILER:PATH=$<TARGET_FILE:ispc>
+                -DISPC_EXECUTABLE:PATH=$<TARGET_FILE:ispc>
+                -DISPCRT_LIB:PATH=$<TARGET_FILE:ispcrt>
+                -DCMAKE_C_COMPILER:PATH=${CMAKE_C_COMPILER}
+                -DCMAKE_CXX_COMPILER:PATH=${CMAKE_CXX_COMPILER}
+            INSTALL_COMMAND ""
     )
+    endif()
 endif()
 
 # Install
@@ -591,7 +613,7 @@ if (ISPC_PREPARE_PACKAGE)
     if (GENX_ENABLED)
         install (DIRECTORY "${PROJECT_SOURCE_DIR}/examples/" DESTINATION examples)
     else()
-        install (DIRECTORY "${PROJECT_SOURCE_DIR}/examples/" DESTINATION examples PATTERN "portable" EXCLUDE)
+        install (DIRECTORY "${PROJECT_SOURCE_DIR}/examples/" DESTINATION examples PATTERN "xpu" EXCLUDE)
     endif()
     install (DIRECTORY "${PROJECT_SOURCE_DIR}/contrib/" DESTINATION contrib)
     install (FILES "${PROJECT_SOURCE_DIR}/LICENSE.txt" DESTINATION .)
