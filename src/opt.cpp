@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2020, Intel Corporation
+  Copyright (c) 2010-2021, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -6360,8 +6360,8 @@ bool CheckUnsupportedInsts::runOnBasicBlock(llvm::BasicBlock &bb) {
                 }
             }
         }
-        // Report error that double types are not supported for TGLLP
-        if (g->target->getGenxPlatform() == Target::GENX_PLATFORM::GENX_TGLLP) {
+        // Report error if double type is not supported by the target
+        if (!g->target->hasFp64Support()) {
             for (int i = 0; i < (int)inst->getNumOperands(); ++i) {
                 llvm::Type *t = inst->getOperand(i)->getType();
 
