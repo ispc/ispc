@@ -1,4 +1,4 @@
-;;  Copyright (c) 2010-2019, Intel Corporation
+;;  Copyright (c) 2010-2021, Intel Corporation
 ;;  All rights reserved.
 ;;
 ;;  Redistribution and use in source and binary forms, with or without
@@ -2027,6 +2027,55 @@ define void
   ret void
 }
 
+define void
+ @__aos_to_soa2_float4(<4 x float> %v0, <4 x float> %v1,
+         <4 x float> * noalias %out0, <4 x float> * noalias %out1) nounwind alwaysinline {
+  %t0 = shufflevector <4 x float> %v0, <4 x float> %v1, ; x0 x1 x2 x3
+    <4 x i32> <i32 0, i32 2, i32 4, i32 6>
+  %t1 = shufflevector <4 x float> %v0, <4 x float> %v1, ; y0 y1 y2 y3
+    <4 x i32> <i32 1, i32 3, i32 5, i32 7>
+  store <4 x float> %t0, <4 x float> * %out0
+  store <4 x float> %t1, <4 x float> * %out1
+  ret void
+}
+
+define void
+@__soa_to_aos2_float4(<4 x float> %v0, <4 x float> %v1,
+        <4 x float> * noalias %out0, <4 x float> * noalias %out1) nounwind alwaysinline {
+  %t0 = shufflevector <4 x float> %v0, <4 x float> %v1, ; x0 y0 x1 y1
+    <4 x i32> <i32 0, i32 4, i32 1, i32 5>
+  %t1 = shufflevector <4 x float> %v0, <4 x float> %v1, ; x2 y2 x3 y3
+    <4 x i32> <i32 2, i32 6, i32 3, i32 7>
+  store <4 x float> %t0, <4 x float> * %out0
+  store <4 x float> %t1, <4 x float> * %out1
+  ret void
+}
+
+define void
+@__aos_to_soa2_double4(<4 x double> %v0, <4 x double> %v1,
+        <4 x double> * noalias %out0, <4 x double> * noalias %out1) nounwind alwaysinline {
+  %t0 = shufflevector <4 x double> %v0, <4 x double> %v1, ; x0 x1 x2 x3
+    <4 x i32> <i32 0, i32 2, i32 4, i32 6>
+  %t1 = shufflevector <4 x double> %v0, <4 x double> %v1, ; y0 y1 y2 y3
+    <4 x i32> <i32 1, i32 3, i32 5, i32 7>
+  store <4 x double> %t0, <4 x double> * %out0
+  store <4 x double> %t1, <4 x double> * %out1
+  ret void
+}
+
+define void
+@__soa_to_aos2_double4(<4 x double> %v0, <4 x double> %v1,
+        <4 x double> * noalias %out0, <4 x double> * noalias %out1) nounwind alwaysinline {
+  %t0 = shufflevector <4 x double> %v0, <4 x double> %v1, ; x0 y0 x1 y1
+    <4 x i32> <i32 0, i32 4, i32 1, i32 5>
+  %t1 = shufflevector <4 x double> %v0, <4 x double> %v1, ; x2 y2 x3 y3
+    <4 x i32> <i32 2, i32 6, i32 3, i32 7>
+  store <4 x double> %t0, <4 x double> * %out0
+  store <4 x double> %t1, <4 x double> * %out1
+  ret void
+}
+
+
 ;; 8-wide
 ;; These functions implement the 8-wide variants of the AOS/SOA conversion
 ;; routines above.  These implementations are all built on top of the 4-wide
@@ -2361,6 +2410,55 @@ define void
          <4 x double> * %out2b)
   ret void
 }
+
+define void
+@__aos_to_soa2_float8(<8 x float> %v0, <8 x float> %v1,
+         <8 x float> * noalias %out0, <8 x float> * noalias %out1) nounwind alwaysinline {
+  %t0 = shufflevector <8 x float> %v0, <8 x float> %v1,
+         <8 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14>
+  %t1 = shufflevector <8 x float> %v0, <8 x float> %v1,
+         <8 x i32> <i32 1, i32 3, i32 5, i32 7, i32 9, i32 11, i32 13, i32 15>
+  store <8 x float> %t0, <8 x float> * %out0
+  store <8 x float> %t1, <8 x float> * %out1
+  ret void
+}
+
+define void
+@__soa_to_aos2_float8(<8 x float> %v0, <8 x float> %v1,
+          <8 x float> * noalias %out0, <8 x float> * noalias %out1) nounwind alwaysinline {
+  %t0 = shufflevector <8 x float> %v0, <8 x float> %v1,
+          <8 x i32> <i32 0, i32 8, i32 1, i32 9, i32 2, i32 10, i32 3, i32 11>
+  %t1 = shufflevector <8 x float> %v0, <8 x float> %v1,
+          <8 x i32> <i32 4, i32 12, i32 5, i32 13, i32 6, i32 14, i32 7, i32 15>
+  store <8 x float> %t0, <8 x float> * %out0
+  store <8 x float> %t1, <8 x float> * %out1
+  ret void
+}
+
+define void
+@__aos_to_soa2_double8(<8 x double> %v0, <8 x double> %v1,
+         <8 x double> * noalias %out0, <8 x double> * noalias %out1) nounwind alwaysinline {
+  %t0 = shufflevector <8 x double> %v0, <8 x double> %v1,
+         <8 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14>
+  %t1 = shufflevector <8 x double> %v0, <8 x double> %v1,
+         <8 x i32> <i32 1, i32 3, i32 5, i32 7, i32 9, i32 11, i32 13, i32 15>
+  store <8 x double> %t0, <8 x double> * %out0
+  store <8 x double> %t1, <8 x double> * %out1
+  ret void
+}
+
+define void
+@__soa_to_aos2_double8(<8 x double> %v0, <8 x double> %v1,
+         <8 x double> * noalias %out0, <8 x double> * noalias %out1) nounwind alwaysinline {
+  %t0 = shufflevector <8 x double> %v0, <8 x double> %v1,
+         <8 x i32> <i32 0, i32 8, i32 1, i32 9, i32 2, i32 10, i32 3, i32 11>
+  %t1 = shufflevector <8 x double> %v0, <8 x double> %v1,
+         <8 x i32> <i32 4, i32 12, i32 5, i32 13, i32 6, i32 14, i32 7, i32 15>
+  store <8 x double> %t0, <8 x double> * %out0
+  store <8 x double> %t1, <8 x double> * %out1
+  ret void
+}
+
 
 ;; 16-wide
 
@@ -2877,6 +2975,55 @@ define void
   ret void
 }
 
+define void
+@__aos_to_soa2_float16(<16 x float> %v0, <16 x float> %v1,
+         <16 x float> * noalias %out0, <16 x float> * noalias %out1) nounwind alwaysinline {
+  %t0 = shufflevector <16 x float> %v0, <16 x float> %v1,
+         <16 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14, i32 16, i32 18, i32 20, i32 22, i32 24, i32 26, i32 28, i32 30>
+  %t1 = shufflevector <16 x float> %v0, <16 x float> %v1,
+         <16 x i32>  <i32 1, i32 3, i32 5, i32 7, i32 9, i32 11, i32 13, i32 15, i32 17, i32 19, i32 21, i32 23, i32 25, i32 27, i32 29, i32 31>
+  store <16 x float> %t0, <16 x float> * %out0
+  store <16 x float> %t1, <16 x float> * %out1
+  ret void
+}
+
+define void
+@__soa_to_aos2_float16(<16 x float> %v0, <16 x float> %v1,
+         <16 x float> * noalias %out0, <16 x float> * noalias %out1) nounwind alwaysinline {
+  %t0 = shufflevector <16 x float> %v0, <16 x float> %v1,
+         <16 x i32> <i32 0, i32 16, i32 1, i32 17, i32 2, i32 18, i32 3, i32 19, i32 4, i32 20, i32 5, i32 21, i32 6, i32 22, i32 7, i32 23>
+  %t1 = shufflevector <16 x float> %v0, <16 x float> %v1,
+         <16 x i32> <i32 8, i32 24, i32 9, i32 25, i32 10, i32 26, i32 11, i32 27, i32 12, i32 28, i32 13, i32 29, i32 14, i32 30, i32 15, i32 31>
+  store <16 x float> %t0, <16 x float> * %out0
+  store <16 x float> %t1, <16 x float> * %out1
+  ret void
+}
+
+ define void
+@__aos_to_soa2_double16(<16 x double> %v0, <16 x double> %v1,
+         <16 x double> * noalias %out0, <16 x double> * noalias %out1) nounwind alwaysinline {
+  %t0 = shufflevector <16 x double> %v0, <16 x double> %v1,
+         <16 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14, i32 16, i32 18, i32 20, i32 22, i32 24, i32 26, i32 28, i32 30>
+  %t1 = shufflevector <16 x double> %v0, <16 x double> %v1,
+         <16 x i32> <i32 1, i32 3, i32 5, i32 7, i32 9, i32 11, i32 13, i32 15, i32 17, i32 19, i32 21, i32 23, i32 25, i32 27, i32 29, i32 31>
+  store <16 x double> %t0, <16 x double> * %out0
+  store <16 x double> %t1, <16 x double> * %out1
+  ret void
+}
+
+define void
+@__soa_to_aos2_double16(<16 x double> %v0, <16 x double> %v1,
+        <16 x double> * noalias %out0, <16 x double> * noalias %out1) nounwind alwaysinline {
+  %t0 = shufflevector <16 x double> %v0, <16 x double> %v1,
+         <16 x i32> <i32 0, i32 16, i32 1, i32 17, i32 2, i32 18, i32 3, i32 19, i32 4, i32 20, i32 5, i32 21, i32 6, i32 22, i32 7, i32 23>
+  %t1 = shufflevector <16 x double> %v0, <16 x double> %v1,
+         <16 x i32> <i32 8, i32 24, i32 9, i32 25, i32 10, i32 26, i32 11, i32 27, i32 12, i32 28, i32 13, i32 29, i32 14, i32 30, i32 15, i32 31>
+  store <16 x double> %t0, <16 x double> * %out0
+  store <16 x double> %t1, <16 x double> * %out1
+  ret void
+}
+
+
 ;; versions to be called from stdlib
 
 define void
@@ -3002,6 +3149,50 @@ define void
   call void @__soa_to_aos3_float`'WIDTH (<WIDTH x float> %v0, <WIDTH x float> %v1,
          <WIDTH x float> %v2, <WIDTH x float> * %out0, <WIDTH x float> * %out1,
          <WIDTH x float> * %out2)
+  ret void
+}
+
+define void
+@__aos_to_soa2_double(double * noalias %p,
+        <WIDTH x double> * %out0, <WIDTH x double> * %out1) nounwind alwaysinline {
+  %p0 = bitcast double * %p to <WIDTH x double> *
+  %v0 = load PTR_OP_ARGS(`<WIDTH x double> ')  %p0, align 4
+  %p1 = getelementptr PTR_OP_ARGS(`<WIDTH x double>') %p0, i32 1
+  %v1 = load PTR_OP_ARGS(`<WIDTH x double> ')  %p1, align 4
+  call void @__aos_to_soa2_double`'WIDTH (<WIDTH x double> %v0, <WIDTH x double> %v1,
+         <WIDTH x double> * %out0, <WIDTH x double> * %out1)
+  ret void
+}
+
+define void
+@__soa_to_aos2_double(<WIDTH x double> %v0, <WIDTH x double> %v1,
+                     double * noalias %p) nounwind alwaysinline {
+  %out0 = bitcast double * %p to <WIDTH x double> *
+  %out1 = getelementptr PTR_OP_ARGS(`<WIDTH x double>') %out0, i32 1
+  call void @__soa_to_aos2_double`'WIDTH (<WIDTH x double> %v0, <WIDTH x double> %v1,
+         <WIDTH x double> * %out0, <WIDTH x double> * %out1)
+  ret void
+}
+
+define void
+@__aos_to_soa2_float(float * noalias %p,
+        <WIDTH x float> * %out0, <WIDTH x float> * %out1) nounwind alwaysinline {
+  %p0 = bitcast float * %p to <WIDTH x float> *
+  %v0 = load PTR_OP_ARGS(`<WIDTH x float> ')  %p0, align 4
+  %p1 = getelementptr PTR_OP_ARGS(`<WIDTH x float>') %p0, i32 1
+  %v1 = load PTR_OP_ARGS(`<WIDTH x float> ')  %p1, align 4
+  call void @__aos_to_soa2_float`'WIDTH (<WIDTH x float> %v0, <WIDTH x float> %v1,
+         <WIDTH x float> * %out0, <WIDTH x float> * %out1)
+  ret void
+}
+
+define void
+@__soa_to_aos2_float(<WIDTH x float> %v0, <WIDTH x float> %v1,
+                     float * noalias %p) nounwind alwaysinline {
+  %out0 = bitcast float * %p to <WIDTH x float> *
+  %out1 = getelementptr PTR_OP_ARGS(`<WIDTH x float>') %out0, i32 1
+  call void @__soa_to_aos2_float`'WIDTH (<WIDTH x float> %v0, <WIDTH x float> %v1,
+         <WIDTH x float> * %out0, <WIDTH x float> * %out1)
   ret void
 }
 ')

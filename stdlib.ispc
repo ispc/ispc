@@ -1,6 +1,6 @@
 // -*- mode: c++ -*-
 /*
-  Copyright (c) 2010-2020, Intel Corporation
+  Copyright (c) 2010-2021, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -893,6 +893,17 @@ count_trailing_zeros(int64 v) {
 // AOS/SOA conversion
 
 static inline void
+aos_to_soa2(uniform float a[], varying float * uniform v0,
+            varying float * uniform v1) {
+    __aos_to_soa2_float(a, v0, v1);
+}
+
+static inline void
+soa_to_aos2(float v0, float v1, uniform float a[]) {
+    __soa_to_aos2_float(v0, v1, a);
+}
+
+static inline void
 aos_to_soa3(uniform float a[], varying float * uniform v0,
             varying float * uniform v1, varying float * uniform v2) {
     __aos_to_soa3_float(a, v0, v1, v2);
@@ -913,6 +924,19 @@ aos_to_soa4(uniform float a[], varying float * uniform v0,
 static inline void
 soa_to_aos4(float v0, float v1, float v2, float v3, uniform float a[]) {
     __soa_to_aos4_float(v0, v1, v2, v3, a);
+}
+
+static inline void
+aos_to_soa2(uniform int32 a[], varying int32 * uniform v0,
+            varying int32 * uniform v1) {
+    aos_to_soa2((uniform float * uniform)a, (varying float * uniform)v0,
+                (varying float * uniform)v1);
+}
+
+static inline void
+soa_to_aos2(int32 v0, int32 v1, uniform int32 a[]) {
+    soa_to_aos2(floatbits(v0), floatbits(v1),
+                (uniform float * uniform)a);
 }
 
 static inline void
@@ -945,6 +969,17 @@ soa_to_aos4(int32 v0, int32 v1, int32 v2, int32 v3, uniform int32 a[]) {
 
 
 static inline void
+aos_to_soa2(uniform double a[], varying double * uniform v0,
+            varying double * uniform v1) {
+    __aos_to_soa2_double(a, v0, v1);
+}
+
+static inline void
+soa_to_aos2(double v0, double v1, uniform double a[]) {
+    __soa_to_aos2_double(v0, v1, a);
+}
+
+static inline void
 aos_to_soa3(uniform double a[], varying double * uniform v0,
             varying double * uniform v1, varying double * uniform v2) {
     __aos_to_soa3_double(a, v0, v1, v2);
@@ -965,6 +1000,19 @@ aos_to_soa4(uniform double a[], varying double * uniform v0,
 static inline void
 soa_to_aos4(double v0, double v1, double v2, double v3, uniform double a[]) {
     __soa_to_aos4_double(v0, v1, v2, v3, a);
+}
+
+static inline void
+aos_to_soa2(uniform int64 a[], varying int64 * uniform v0,
+            varying int64 * uniform v1) {
+    aos_to_soa2((uniform double * uniform)a, (varying double * uniform)v0,
+                (varying double * uniform)v1);
+}
+
+static inline void
+soa_to_aos2(int64 v0, int64 v1, uniform int64 a[]) {
+    soa_to_aos2(doublebits(v0), doublebits(v1),
+                (uniform double * uniform)a);
 }
 
 static inline void

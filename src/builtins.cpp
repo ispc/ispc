@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2020, Intel Corporation
+  Copyright (c) 2010-2021, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -324,6 +324,20 @@ static void lSetInternalFunctions(llvm::Module *module) {
         "__add_varying_int64",
         "__all",
         "__any",
+        "__aos_to_soa2_double",
+        "__aos_to_soa2_double1",
+        "__aos_to_soa2_double16",
+        "__aos_to_soa2_double32",
+        "__aos_to_soa2_double4",
+        "__aos_to_soa2_double64",
+        "__aos_to_soa2_double8",
+        "__aos_to_soa2_float",
+        "__aos_to_soa2_float1",
+        "__aos_to_soa2_float16",
+        "__aos_to_soa2_float32",
+        "__aos_to_soa2_float4",
+        "__aos_to_soa2_float64",
+        "__aos_to_soa2_float8",
         "__aos_to_soa3_double",
         "__aos_to_soa3_double1",
         "__aos_to_soa3_double16",
@@ -660,6 +674,20 @@ static void lSetInternalFunctions(llvm::Module *module) {
         "__shuffle_i32",
         "__shuffle_i64",
         "__shuffle_i8",
+        "__soa_to_aos2_double",
+        "__soa_to_aos2_double1",
+        "__soa_to_aos2_double16",
+        "__soa_to_aos2_double32",
+        "__soa_to_aos2_double4",
+        "__soa_to_aos2_double64",
+        "__soa_to_aos2_double8",
+        "__soa_to_aos2_float",
+        "__soa_to_aos2_float1",
+        "__soa_to_aos2_float16",
+        "__soa_to_aos2_float32",
+        "__soa_to_aos2_float4",
+        "__soa_to_aos2_float64",
+        "__soa_to_aos2_float8",
         "__soa_to_aos3_double",
         "__soa_to_aos3_double1",
         "__soa_to_aos3_double16",
