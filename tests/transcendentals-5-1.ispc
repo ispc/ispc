@@ -1,5 +1,6 @@
 #include "../test_static.isph"
 // rule: skip on cpu=tgllp
+// rule: skip on cpu=dg2
 
 static double double4(uniform double a, uniform double b, uniform double c, 
                     uniform double d) {

@@ -1,5 +1,6 @@
 #include "../test_static.isph"
 // rule: skip on cpu=tgllp
+// rule: skip on cpu=dg2
 
 struct Point { double x; double y[3], z; };
 

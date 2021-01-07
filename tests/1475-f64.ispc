@@ -1,5 +1,6 @@
 #include "../test_static.isph"
 // rule: skip on cpu=tgllp
+// rule: skip on cpu=dg2
 
 // Testing double implementation of varying * varying
 void tests_double(uniform float RET[]) {
