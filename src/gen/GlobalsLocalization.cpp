@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2014, 2016-2020, Intel Corporation
+  Copyright (c) 2014, 2016-2021, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -53,8 +53,10 @@
 #include <llvm/GenXIntrinsics/GenXIntrOpts.h>
 #include <llvm/GenXIntrinsics/GenXIntrinsics.h>
 #include <llvm/GenXIntrinsics/GenXMetadata.h>
-#include <llvm/IR/CFG.h>
+#if ISPC_LLVM_VERSION < ISPC_LLVM_11_0
 #include <llvm/IR/CallSite.h>
+#endif
+#include <llvm/IR/CFG.h>
 #include <llvm/IR/DebugInfo.h>
 #include <llvm/IR/Dominators.h>
 #include <llvm/IR/Function.h>
@@ -470,7 +472,8 @@ void GlobalsLocalization::LocalizeGlobals(LocalizationInfo &LI) {
         Instruction &FirstI = *Fn->getEntryBlock().begin();
         Type *ElemTy = GV->getType()->getElementType();
         AllocaInst *Alloca = new AllocaInst(ElemTy, 0, GV->getName() + ".local", &FirstI);
-        Alloca->setAlignment(llvm::MaybeAlign(GV->getAlignment()));
+        Alloca->setAlignment(llvm::MaybeAlign(GV->getAlignment()).valueOrOne());
+
         if (!isa<UndefValue>(GV->getInitializer()))
             new StoreInst(GV->getInitializer(), Alloca, &FirstI);
 

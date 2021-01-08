@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2020, Intel Corporation
+  Copyright (c) 2010-2021, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -3685,8 +3685,17 @@ llvm::Value *FunctionEmitContext::GenXSimdCFPredicate(llvm::Value *value, llvm::
     AssertPos(currentPos, llvm::isa<llvm::VectorType>(value->getType()));
     llvm::VectorType *vt = llvm::dyn_cast<llvm::VectorType>(value->getType());
     if (defaults == NULL) {
-        defaults = llvm::ConstantVector::getSplat(value->getType()->getVectorNumElements(),
+#if ISPC_LLVM_VERSION < ISPC_LLVM_11_0
+        defaults = llvm::ConstantVector::getSplat(vt->getVectorNumElements(),
                                                   llvm::Constant::getNullValue(vt->getElementType()));
+#elif ISPC_LLVM_VERSION == ISPC_LLVM_11_0
+        defaults = llvm::ConstantVector::getSplat({static_cast<unsigned int>(vt->getNumElements()), false},
+                                                  llvm::Constant::getNullValue(vt->getElementType()));
+#else
+        defaults = llvm::ConstantVector::getSplat(
+            llvm::ElementCount::get(static_cast<unsigned int>(vt->getNumElements()), false),
+            llvm::Constant::getNullValue(vt->getElementType()));
+#endif
     }
 
     auto Fn = llvm::GenXIntrinsic::getGenXDeclaration(m->module, llvm::GenXIntrinsic::genx_simdcf_predicate,
