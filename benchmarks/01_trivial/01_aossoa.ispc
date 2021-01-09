@@ -50,6 +50,30 @@ AOS_TO_SOA3_STDLIB(float)
 AOS_TO_SOA3_STDLIB(int64)
 AOS_TO_SOA3_STDLIB(double)
 
+// Change layout from
+// input: a0 b0 a1 b1 a2 b2 ...
+// to
+// output a0 a1 ... aX b0 b1 ... bX aX+1 ...
+// where X = programCount - 1
+// input parameter "n" is number of elements input array. Must be multiple of 2*programCount;
+
+#define AOS_TO_SOA2_STDLIB(T)                                                                                          \
+    export void aos_to_soa2_stdlib_##T(uniform T *uniform input, uniform T *uniform output, uniform int n) {           \
+        uniform int chunk = 2 * programCount;                                                                          \
+        uniform int iterations = n / chunk;                                                                            \
+                                                                                                                       \
+        varying T *uniform output_varying = (varying T * uniform) output;                                              \
+                                                                                                                       \
+        for (uniform int i = 0; i < iterations; i++) {                                                                 \
+            aos_to_soa2(&input[chunk * i], &output_varying[i * 2], &output_varying[i * 2 + 1]);                        \
+        }                                                                                                              \
+    }
+
+AOS_TO_SOA2_STDLIB(int32)
+AOS_TO_SOA2_STDLIB(float)
+AOS_TO_SOA2_STDLIB(int64)
+AOS_TO_SOA2_STDLIB(double)
+
 #if TARGET_WIDTH == 4
 static const varying int vPerm40 = {0, 4, 1, 5};
 static const varying int vPerm41 = {2, 6, 3, 7};
@@ -229,3 +253,57 @@ AOS_TO_SOA3_ISPC(int32)
 AOS_TO_SOA3_ISPC(float)
 AOS_TO_SOA3_ISPC(int64)
 AOS_TO_SOA3_ISPC(double)
+
+///////////////////////////////////////////////
+#if TARGET_WIDTH == 4
+static const varying int vPerm20 = {0, 2, 4, 6};
+static const varying int vPerm21 = {1, 3, 5, 7};
+#elif TARGET_WIDTH == 8
+static const varying int vPerm20 = {0, 2, 4, 6, 8, 10, 12, 14};
+static const varying int vPerm21 = {1, 3, 5, 7, 9, 11, 13, 15};
+#elif TARGET_WIDTH == 16
+static const varying int vPerm20 = {0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30};
+static const varying int vPerm21 = {1, 3, 5, 7, 9, 11, 13, 15, 17, 19, 21, 23, 25, 27, 29, 31};
+#elif TARGET_WIDTH == 32
+static const varying int vPerm20 = {0,  2,  4,  6,  8,  10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30,
+                                    32, 34, 36, 38, 40, 42, 44, 46, 48, 50, 52, 54, 56, 58, 60, 62};
+static const varying int vPerm21 = {1,  3,  5,  7,  9,  11, 13, 15, 17, 19, 21, 23, 25, 27, 29, 31,
+                                    33, 35, 37, 39, 41, 43, 45, 47, 49, 51, 53, 55, 57, 59, 61, 63};
+#elif TARGET_WIDTH == 64
+static const varying int vPerm20 = {0,  2,  4,   6,   8,   10,  12,  14,  16,  18,  20,  22,  24,  26,  28,  30,
+                                    32, 34, 36,  38,  40,  42,  44,  46,  48,  50,  52,  54,  56,  58,  60,  62,
+                                    64, 66, 68,  70,  72,  74,  76,  78,  80,  82,  84,  86,  88,  90,  92,  94,
+                                    96, 98, 100, 102, 104, 106, 108, 110, 112, 114, 116, 118, 120, 122, 124, 126};
+static const varying int vPerm21 = {1,  3,  5,   7,   9,   11,  13,  15,  17,  19,  21,  23,  25,  27,  29,  31,
+                                    33, 35, 37,  39,  41,  43,  45,  47,  49,  51,  53,  55,  57,  59,  61,  63,
+                                    65, 67, 69,  71,  73,  75,  77,  79,  81,  83,  85,  87,  89,  91,  93,  95,
+                                    97, 99, 101, 103, 105, 107, 109, 111, 113, 115, 117, 119, 121, 123, 125, 127};
+#else
+#error "No implementation for this target"
+#endif
+
+#define AOS_TO_SOA2_ISPC(T)                                                                                            \
+    static inline void aos_to_soa2_ispc(uniform T src[], varying T *uniform v0, varying T *uniform v1) {               \
+                                                                                                                       \
+        const varying T src0 = src[programIndex];                                                                      \
+        const varying T src1 = src[programCount + programIndex];                                                       \
+                                                                                                                       \
+        *v0 = shuffle(src0, src1, vPerm20);                                                                            \
+        *v1 = shuffle(src0, src1, vPerm21);                                                                            \
+    }                                                                                                                  \
+                                                                                                                       \
+    export void aos_to_soa2_ispc_##T(uniform T *uniform input, uniform T *uniform output, uniform int n) {             \
+        uniform int chunk = 2 * programCount;                                                                          \
+        uniform int iterations = n / chunk;                                                                            \
+                                                                                                                       \
+        varying T *uniform output_varying = (varying T * uniform) output;                                              \
+                                                                                                                       \
+        for (uniform int i = 0; i < iterations; i++) {                                                                 \
+            aos_to_soa2_ispc(&input[chunk * i], &output_varying[i * 2], &output_varying[i * 2 + 1]);                   \
+        }                                                                                                              \
+    }
+
+AOS_TO_SOA2_ISPC(int32)
+AOS_TO_SOA2_ISPC(float)
+AOS_TO_SOA2_ISPC(int64)
+AOS_TO_SOA2_ISPC(double)

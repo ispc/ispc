@@ -4499,11 +4499,11 @@ the given array, starting at the given offset.
     void soa_to_aos3(int64 v0, int64 v1, int64 v2, uniform int64 a[])
 
 There are also variants of these functions that convert 4-wide values
-between AoS and SoA layouts.  In other words, ``aos_to_soa4()`` converts
-AoS data in memory laid out like ``r0 g0 b0 a0 r1 g1 b1 a1 ...`` to four
-``varying`` variables with values ``r0 r1...``, ``g0 g1...``, ``b0 b1...``,
-and ``a0 a1...``, reading a total of four times the gang size values from
-the given array, starting at the given offset.
+and 2-wide values between AoS and SoA layouts.
+In other words, ``aos_to_soa4()`` converts AoS data in memory laid out like
+``r0 g0 b0 a0 r1 g1 b1 a1 ...`` to four ``varying`` variables with values
+``r0 r1...``, ``g0 g1...``, ``b0 b1...``, and ``a0 a1...``, reading a total
+of four times the gang size values from the given array, starting at the given offset.
 
 ::
 
@@ -4515,6 +4515,17 @@ the given array, starting at the given offset.
                      varying int32 * uniform v3)
     void soa_to_aos4(float v0, float v1, float v2, float v3, uniform float a[])
     void soa_to_aos4(int32 v0, int32 v1, int32 v2, int32 v3, uniform int32 a[])
+
+The following 2-wide variant of these functions are also supported.
+
+::
+
+    void aos_to_soa2(uniform float a[], varying float * uniform v0,
+                     varying float * uniform v1)
+    void aos_to_soa2(uniform int32 a[], varying int32 * uniform v0,
+                     varying int32 * uniform v1)
+    void soa_to_aos2(float v0, float v1, uniform float a[])
+    void soa_to_aos2(int32 v0, int32 v1, uniform int32 a[])
 
 
 Conversions To and From Half-Precision Floats

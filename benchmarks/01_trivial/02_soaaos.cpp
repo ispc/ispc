@@ -20,31 +20,18 @@ static Docs docs("soa_to_aos*_stdlib_<type> - test for stdlib implimentation for
 // 256 * sizeof (int) << 12 = 4 Mb - expected to reside in L3.
 #define ARGS4 Arg(256)->Arg(256 << 4)->Arg(256 << 7)->Arg(256 << 12)
 #define ARGS3 Arg(192)->Arg(192 << 4)->Arg(192 << 7)->Arg(192 << 12)
+#define ARGS2 Arg(128)->Arg(128 << 4)->Arg(128 << 7)->Arg(128 << 12)
 
 // Helper functions
-template <typename T> static void init3(T *src, T *dst, int count) {
+template <typename T> static void init(T *src, T *dst, int factor, int count) {
     int width = ispc::width();
-    int chunk = width * 3;
+    int chunk = width * factor;
     for (int i = 0; i < count; i++) {
         int base = (i / chunk) * chunk;
         int in_chunk = i % chunk;
         int vec_num = in_chunk / width;
         int in_vec = in_chunk % width;
-        int value = base + in_vec * 3 + vec_num;
-        src[i] = static_cast<T>(value);
-        dst[i] = 0;
-    }
-}
-
-template <typename T> static void init4(T *src, T *dst, int count) {
-    int width = ispc::width();
-    int chunk = width * 4;
-    for (int i = 0; i < count; i++) {
-        int base = (i / chunk) * chunk;
-        int in_chunk = i % chunk;
-        int vec_num = in_chunk / width;
-        int in_vec = in_chunk % width;
-        int value = base + in_vec * 4 + vec_num;
+        int value = base + in_vec * factor + vec_num;
         src[i] = static_cast<T>(value);
         dst[i] = 0;
     }
@@ -66,7 +53,7 @@ template <typename T> static void check(T *dst, int count) {
         int count = static_cast<int>(state.range(0));                                                                  \
         T_C *src = static_cast<T_C *>(aligned_alloc_helper(sizeof(T_C) * count));                                      \
         T_C *dst = static_cast<T_C *>(aligned_alloc_helper(sizeof(T_C) * count));                                      \
-        init##N(src, dst, count);                                                                                      \
+        init(src, dst, N, count);                                                                                      \
                                                                                                                        \
         for (auto _ : state) {                                                                                         \
             ispc::soa_to_aos##N##_stdlib_##T_ISPC(src, dst, count);                                                    \
@@ -114,5 +101,10 @@ SOA_TO_AOS_STDLIB(3, double, double);
 // SOA_TO_AOS_ISPC(3, float, float);
 // SOA_TO_AOS_ISPC(3, int64_t, int64);
 // SOA_TO_AOS_ISPC(3, double, double);
+
+SOA_TO_AOS_STDLIB(2, int, int32);
+SOA_TO_AOS_STDLIB(2, float, float);
+SOA_TO_AOS_STDLIB(2, int64_t, int64);
+SOA_TO_AOS_STDLIB(2, double, double);
 
 BENCHMARK_MAIN();
