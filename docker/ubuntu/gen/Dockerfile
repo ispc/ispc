@@ -15,7 +15,7 @@ RUN apt-get -y update && apt-get install -y repo clang-8 build-essential libnuma
     rm -rf /var/lib/apt/lists/*
 
 # Download and install required version of cmake (3.14) for ISPC build
-RUN wget https://cmake.org/files/v3.14/cmake-3.14.0-Linux-x86_64.sh && mkdir /opt/cmake && sh cmake-3.14.0-Linux-x86_64.sh --prefix=/opt/cmake --skip-license && \
+RUN wget -q --retry-connrefused --waitretry=5 --read-timeout=20 --timeout=15 -t 5 https://cmake.org/files/v3.14/cmake-3.14.0-Linux-x86_64.sh && mkdir /opt/cmake && sh cmake-3.14.0-Linux-x86_64.sh --prefix=/opt/cmake --skip-license && \
     ln -s /opt/cmake/bin/cmake /usr/local/bin/cmake && ln -s /opt/cmake/bin/cmake /usr/bin/cmake && \
     ln -s /opt/cmake/bin/ctest /usr/local/bin/ctest && ln -s /opt/cmake/bin/ctest /usr/bin/ctest && rm cmake-3.14.0-Linux-x86_64.sh
 
@@ -35,19 +35,19 @@ RUN ./alloy.py -b --version=$LLVM_VERSION --selfbuild && \
 WORKDIR /home/packages
 
 # Compute runtime
-RUN wget https://github.com/intel/compute-runtime/releases/download/20.50.18716/intel-gmmlib_20.3.2_amd64.deb
-RUN wget https://github.com/intel/intel-graphics-compiler/releases/download/igc-1.0.5819/intel-igc-core_1.0.5819_amd64.deb
-RUN wget https://github.com/intel/intel-graphics-compiler/releases/download/igc-1.0.5819/intel-igc-opencl_1.0.5819_amd64.deb
-RUN wget https://github.com/intel/compute-runtime/releases/download/20.50.18716/intel-opencl_20.50.18716_amd64.deb
-RUN wget https://github.com/intel/compute-runtime/releases/download/20.50.18716/intel-ocloc_20.50.18716_amd64.deb
-RUN wget https://github.com/intel/compute-runtime/releases/download/20.50.18716/intel-level-zero-gpu_1.0.18716_amd64.deb
+RUN wget -q --retry-connrefused --waitretry=5 --read-timeout=20 --timeout=15 -t 5 https://github.com/intel/compute-runtime/releases/download/20.50.18716/intel-gmmlib_20.3.2_amd64.deb
+RUN wget -q --retry-connrefused --waitretry=5 --read-timeout=20 --timeout=15 -t 5 https://github.com/intel/intel-graphics-compiler/releases/download/igc-1.0.5819/intel-igc-core_1.0.5819_amd64.deb
+RUN wget -q --retry-connrefused --waitretry=5 --read-timeout=20 --timeout=15 -t 5 https://github.com/intel/intel-graphics-compiler/releases/download/igc-1.0.5819/intel-igc-opencl_1.0.5819_amd64.deb
+RUN wget -q --retry-connrefused --waitretry=5 --read-timeout=20 --timeout=15 -t 5 https://github.com/intel/compute-runtime/releases/download/20.50.18716/intel-opencl_20.50.18716_amd64.deb
+RUN wget -q --retry-connrefused --waitretry=5 --read-timeout=20 --timeout=15 -t 5 https://github.com/intel/compute-runtime/releases/download/20.50.18716/intel-ocloc_20.50.18716_amd64.deb
+RUN wget -q --retry-connrefused --waitretry=5 --read-timeout=20 --timeout=15 -t 5 https://github.com/intel/compute-runtime/releases/download/20.50.18716/intel-level-zero-gpu_1.0.18716_amd64.deb
 
-RUN wget https://github.com/intel/intel-graphics-compiler/releases/download/igc-1.0.$IGC_VER/intel-igc-opencl-devel_1.0.${IGC_VER}_amd64.deb
-RUN wget https://raw.githubusercontent.com/intel/intel-graphics-compiler/igc-1.0.$IGC_VER/inc/common/igfxfmid.h -O igfxfmid.h
+RUN wget -q --retry-connrefused --waitretry=5 --read-timeout=20 --timeout=15 -t 5 https://github.com/intel/intel-graphics-compiler/releases/download/igc-1.0.$IGC_VER/intel-igc-opencl-devel_1.0.${IGC_VER}_amd64.deb
+RUN wget -q --retry-connrefused --waitretry=5 --read-timeout=20 --timeout=15 -t 5 https://raw.githubusercontent.com/intel/intel-graphics-compiler/igc-1.0.$IGC_VER/inc/common/igfxfmid.h -O igfxfmid.h
 
 # L0 loaader
-RUN wget https://github.com/oneapi-src/level-zero/releases/download/v$L0L_VER/level-zero-devel_$L0L_VER+u18.04_amd64.deb
-RUN wget https://github.com/oneapi-src/level-zero/releases/download/v$L0L_VER/level-zero_$L0L_VER+u18.04_amd64.deb
+RUN wget -q --retry-connrefused --waitretry=5 --read-timeout=20 --timeout=15 -t 5 https://github.com/oneapi-src/level-zero/releases/download/v$L0L_VER/level-zero-devel_$L0L_VER+u18.04_amd64.deb
+RUN wget -q --retry-connrefused --waitretry=5 --read-timeout=20 --timeout=15 -t 5 https://github.com/oneapi-src/level-zero/releases/download/v$L0L_VER/level-zero_$L0L_VER+u18.04_amd64.deb
 
 # Install packages and clean up
 RUN dpkg -i *.deb
