@@ -18,6 +18,7 @@ static Docs docs("aos_to_soa*_stdlib_<type> - test for stdlib implimentation for
 // 256 * sizeof (int) << 12 = 4 Mb - expected to reside in L3.
 #define ARGS4 Arg(256)->Arg(256 << 4)->Arg(256 << 7)->Arg(256 << 12)
 #define ARGS3 Arg(192)->Arg(192 << 4)->Arg(192 << 7)->Arg(192 << 12)
+#define ARGS2 Arg(128)->Arg(128 << 4)->Arg(128 << 7)->Arg(128 << 12)
 
 // Helper functions
 template <typename T> static void init(T *src, T *dst, int count) {
@@ -27,33 +28,15 @@ template <typename T> static void init(T *src, T *dst, int count) {
     }
 }
 
-template <typename T> static void check4(T *dst, int count) {
+template <typename T> static void check(T *dst, int factor, int count) {
     int width = ispc::width();
-    int chunk = width * 4;
+    int chunk = width * factor;
     for (int i = 0; i < count; i++) {
         int base = (i / chunk) * chunk;
         int in_chunk = i % chunk;
         int vec_num = in_chunk / width;
         int in_vec = in_chunk % width;
-        int expected = base + in_vec * 4 + vec_num;
-        // Note, we use == comparison even for floating point types, as we expect that
-        // values are only copied, but not manipulated in any other way.
-        if (dst[i] != static_cast<T>(expected)) {
-            printf("Error i=%d, expected %d, returned %d\n", i, expected, static_cast<int>(dst[i]));
-            return;
-        }
-    }
-}
-
-template <typename T> static void check3(T *dst, int count) {
-    int width = ispc::width();
-    int chunk = width * 3;
-    for (int i = 0; i < count; i++) {
-        int base = (i / chunk) * chunk;
-        int in_chunk = i % chunk;
-        int vec_num = in_chunk / width;
-        int in_vec = in_chunk % width;
-        int expected = base + in_vec * 3 + vec_num;
+        int expected = base + in_vec * factor + vec_num;
         // Note, we use == comparison even for floating point types, as we expect that
         // values are only copied, but not manipulated in any other way.
         if (dst[i] != static_cast<T>(expected)) {
@@ -74,7 +57,7 @@ template <typename T> static void check3(T *dst, int count) {
             ispc::aos_to_soa##N##_stdlib_##T_ISPC(src, dst, count);                                                    \
         }                                                                                                              \
                                                                                                                        \
-        check##N(dst, count);                                                                                          \
+        check(dst, N, count);                                                                                          \
         aligned_free_helper(src);                                                                                      \
         aligned_free_helper(dst);                                                                                      \
     }                                                                                                                  \
@@ -91,7 +74,7 @@ template <typename T> static void check3(T *dst, int count) {
             ispc::aos_to_soa##N##_ispc_##T_ISPC(src, dst, count);                                                      \
         }                                                                                                              \
                                                                                                                        \
-        check##N(dst, count);                                                                                          \
+        check(dst, N, count);                                                                                          \
         aligned_free_helper(src);                                                                                      \
         aligned_free_helper(dst);                                                                                      \
     }                                                                                                                  \
@@ -116,5 +99,15 @@ AOS_TO_SOA_ISPC(3, int, int32);
 AOS_TO_SOA_ISPC(3, float, float);
 AOS_TO_SOA_ISPC(3, int64_t, int64);
 AOS_TO_SOA_ISPC(3, double, double);
+
+AOS_TO_SOA_STDLIB(2, int, int32);
+AOS_TO_SOA_STDLIB(2, float, float);
+AOS_TO_SOA_STDLIB(2, int64_t, int64);
+AOS_TO_SOA_STDLIB(2, double, double);
+
+AOS_TO_SOA_ISPC(2, int, int32);
+AOS_TO_SOA_ISPC(2, float, float);
+AOS_TO_SOA_ISPC(2, int64_t, int64);
+AOS_TO_SOA_ISPC(2, double, double);
 
 BENCHMARK_MAIN();

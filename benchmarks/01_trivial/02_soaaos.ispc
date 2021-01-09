@@ -48,3 +48,27 @@ SOA_TO_AOS3_STDLIB(int32)
 SOA_TO_AOS3_STDLIB(float)
 SOA_TO_AOS3_STDLIB(int64)
 SOA_TO_AOS3_STDLIB(double)
+
+// Change layout from
+// input a0 a1 ... aX b0 b1 ... bX ...
+// to
+// output: a0 b0 a1 b1 a2 b2 ...
+// where X = programCount - 1
+// input parameter "n" is number of elements input array. Must be multiple of 2*programCount;
+
+#define SOA_TO_AOS2_STDLIB(T)                                                                                          \
+    export void soa_to_aos2_stdlib_##T(uniform T *uniform input, uniform T *uniform output, uniform int n) {           \
+        uniform int chunk = 2 * programCount;                                                                          \
+        uniform int iterations = n / chunk;                                                                            \
+                                                                                                                       \
+        varying T *uniform input_varying = (varying T * uniform) input;                                                \
+                                                                                                                       \
+        for (uniform int i = 0; i < iterations; i++) {                                                                 \
+            soa_to_aos2(input_varying[i * 2], input_varying[i * 2 + 1], &output[chunk * i]);                           \
+        }                                                                                                              \
+    }
+
+SOA_TO_AOS2_STDLIB(int32)
+SOA_TO_AOS2_STDLIB(float)
+SOA_TO_AOS2_STDLIB(int64)
+SOA_TO_AOS2_STDLIB(double)
