@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-#  Copyright (c) 2013-2020, Intel Corporation
+#  Copyright (c) 2013-2021, Intel Corporation
 #  All rights reserved.
 #
 #  Redistribution and use in source and binary forms, with or without
@@ -36,6 +36,12 @@
 from collections import OrderedDict
 import re
 import traceback
+
+def alloy_error(line, error_type = 1):
+    global return_status
+    if error_type == 1:
+        return_status = 1
+    common.error(line, error_type)
 
 def tail_and_save(file_in, file_out, tail = 100):
     with open(file_in, 'r') as f_in:
@@ -113,7 +119,7 @@ def try_do_LLVM(text, command, from_validation, verbose=False):
             msg = MIMEMultipart()
             attach_mail_file(msg, stability_log, "stability.log")
             send_mail("ERROR: Non-zero exit status while executing " + command + ". Examine build log for more information.", msg)
-        error("can't " + text, 1)
+        alloy_error("can't " + text, 1)
     print_debug("DONE.\n", from_validation, alloy_build)
 
 def checkout_LLVM(component, version_LLVM, target_dir, from_validation, verbose):
@@ -140,7 +146,7 @@ def checkout_LLVM(component, version_LLVM, target_dir, from_validation, verbose)
     elif  version_LLVM == "6_0":
         GIT_TAG="llvmorg-6.0.1"
     else:
-        error("Unsupported llvm version: " + version_LLVM, 1)
+        alloy_error("Unsupported llvm version: " + version_LLVM, 1)
 
     try_do_LLVM("clone "+component+" from "+GIT_REPO_BASE+" to "+target_dir+" ",
                 "git clone "+GIT_REPO_BASE+" "+target_dir,
@@ -183,7 +189,7 @@ def build_LLVM(version_LLVM, folder, tarball, debug, selfbuild, extra, from_vali
     LLVM_BUILD="build-" + folder
     LLVM_BIN="bin-" + folder
     if os.path.exists(LLVM_BIN + os.sep + "bin") and not force:
-        error("you have folder " + LLVM_BIN + ".\nIf you want to rebuild use --force", 1)
+        alloy_error("you have folder " + LLVM_BIN + ".\nIf you want to rebuild use --force", 1)
     LLVM_BUILD_selfbuild = LLVM_BUILD + "_temp"
     LLVM_BIN_selfbuild = LLVM_BIN + "_temp"
     common.remove_if_exists(LLVM_SRC)
@@ -208,7 +214,7 @@ def build_LLVM(version_LLVM, folder, tarball, debug, selfbuild, extra, from_vali
         if found_xcrun:
             mac_system_root = "`xcrun --show-sdk-path`"
         else:
-            error("Can't find XCode (xcrun tool) - it's required on MacOS 10.9 and newer", 1)
+            alloy_error("Can't find XCode (xcrun tool) - it's required on MacOS 10.9 and newer", 1)
 
     if selfbuild:
         common.remove_if_exists(LLVM_BUILD_selfbuild)
@@ -389,7 +395,7 @@ def check_targets():
     hw_arch = take_lines("check_isa.exe", "first").split()[1]
 
     if not (hw_arch in target_dict):
-        error("Architecture " + hw_arch + " was not recognized", 1)
+        alloy_error("Architecture " + hw_arch + " was not recognized", 1)
 
     # Mark all compatible architecutres in the dictionary.
     for compatible_arch in target_dict[hw_arch][1]:
@@ -410,7 +416,7 @@ def check_targets():
     # now check what targets we have with the help of SDE
     sde_exists = get_sde()
     if sde_exists == "":
-        error("you haven't got sde neither in SDE_HOME nor in your PATH.\n" +
+        alloy_error("you haven't got sde neither in SDE_HOME nor in your PATH.\n" +
             "To test all platforms please set SDE_HOME to path containing SDE.\n" +
             "Please refer to http://www.intel.com/software/sde for SDE download information.", 2)
 
@@ -634,7 +640,7 @@ def validation_run(only, only_targets, reference_branch, number, notify, update,
                         sde_targets.append(sde_targets_t[j])
                         err = False
                 if err == True:
-                    error("You haven't sde for target " + i, 1)
+                    alloy_error("You haven't sde for target " + i, 1)
         else:
             targets = targets_t
             sde_targets = sde_targets_t
@@ -782,7 +788,7 @@ def validation_run(only, only_targets, reference_branch, number, notify, update,
         else:
             # build compiler with two different LLVM versions
             if len(check_LLVM([reference_branch])) != 0:
-                error("you haven't got llvm called " + reference_branch, 1)
+                alloy_error("you haven't got llvm called " + reference_branch, 1)
             build_ispc(newest_LLVM, make)
             os.rename("ispc", "ispc_ref")
             build_ispc(reference_branch, make)
@@ -850,7 +856,7 @@ def Main():
     # gcc and g++ options are equal and added for ease of use
     if options.ispc_build_compiler != "clang" and \
        options.ispc_build_compiler != "gcc":
-        error("unknow option for --ispc-build-compiler: " + options.ispc_build_compiler, 1)
+        alloy_error("unknow option for --ispc-build-compiler: " + options.ispc_build_compiler, 1)
         parser.print_help()
         exit(1)
 
@@ -861,21 +867,21 @@ def Main():
 
     setting_paths(options.llvm_home, options.ispc_home, options.sde_home)
     if os.environ.get("LLVM_HOME") == None:
-        error("you have no LLVM_HOME", 1)
+        alloy_error("you have no LLVM_HOME", 1)
     if os.environ.get("ISPC_HOME") == None:
-        error("you have no ISPC_HOME", 1)
+        alloy_error("you have no ISPC_HOME", 1)
     if options.notify != "":
         if os.environ.get("SMTP_ISPC") == None:
-            error("you have no SMTP_ISPC in your environment for option notify", 1)
+            alloy_error("you have no SMTP_ISPC in your environment for option notify", 1)
     if options.only != "":
         test_only_r = " 6.0 7.0 8.0 9.0 10.0 11.0 trunk current build stability performance x86 x86-64 x86_64 -O0 -O1 -O2 native debug nodebug "
         test_only = options.only.split(" ")
         for iterator in test_only:
             if not (" " + iterator + " " in test_only_r):
-                error("unknown option for only: " + iterator, 1)
+                alloy_error("unknown option for only: " + iterator, 1)
     if current_OS == "Windows":
         if options.selfbuild == True or options.tarball != "":
-            error("Selfbuild and tarball options are unsupported on windows", 1)
+            alloy_error("Selfbuild and tarball options are unsupported on windows", 1)
     global f_date
     f_date = "logs"
     common.remove_if_exists(f_date)
@@ -889,7 +895,7 @@ def Main():
     current_path = os.getcwd()
     make = "make -j" + options.speed
     if os.environ["ISPC_HOME"] != os.getcwd():
-        error("you ISPC_HOME and your current path are different! (" + os.environ["ISPC_HOME"] + " is not equal to " + os.getcwd() +
+        alloy_error("you ISPC_HOME and your current path are different! (" + os.environ["ISPC_HOME"] + " is not equal to " + os.getcwd() +
         ")\n", 2)
     if options.perf_llvm == True:
         if options.branch == "main":
@@ -918,7 +924,7 @@ def Main():
         os.chdir(current_path)
         date_name = "alloy_results_" + datetime.datetime.now().strftime('%Y_%m_%d_%H_%M_%S')
         if os.path.exists(date_name):
-            error("It's forbidden to run alloy two times in a second, logs are in ./logs", 1)
+            alloy_error("It's forbidden to run alloy two times in a second, logs are in ./logs", 1)
         os.rename(f_date, date_name)
         print_debug("Logs are in " + date_name + "\n", False, "")
         exit(return_status)
@@ -948,7 +954,6 @@ from email.encoders import encode_base64
 import run_tests
 import perf
 import common
-error = common.error
 take_lines = common.take_lines
 print_debug = common.print_debug
 make_sure_dir_exists = common.make_sure_dir_exists
