@@ -37,13 +37,13 @@ jobs:
         docker run ispc/ubuntu16.04
         export CONTAINER=`docker ps --all |head -2 |tail -1 |awk '//{print $1}'`
         sudo docker cp $CONTAINER:/usr/local/src/llvm/bin-11.0 .
-        tar cJvf llvm-11.0.0-ubuntu16.04-Release+Asserts-x86.arm.wasm.tar.xz bin-11.0
+        tar cJvf llvm-11.0.1-ubuntu16.04-Release+Asserts-x86.arm.wasm.tar.xz bin-11.0
 
     - name: Upload package
       uses: actions/upload-artifact@v2
       with:
         name: llvm11_linux
-        path: docker/ubuntu/llvm_build/llvm-11.0.0-ubuntu16.04-Release+Asserts-x86.arm.wasm.tar.xz
+        path: docker/ubuntu/llvm_build/llvm-11.0.1-ubuntu16.04-Release+Asserts-x86.arm.wasm.tar.xz
 
   linux-build-release:
     runs-on: ubuntu-latest
@@ -68,13 +68,13 @@ jobs:
         docker run ispc/ubuntu16.04
         export CONTAINER=`docker ps --all |head -2 |tail -1 |awk '//{print $1}'`
         sudo docker cp $CONTAINER:/usr/local/src/llvm/bin-11.0 .
-        tar cJvf llvm-11.0.0-ubuntu16.04-Release-x86.arm.wasm.tar.xz bin-11.0
+        tar cJvf llvm-11.0.1-ubuntu16.04-Release-x86.arm.wasm.tar.xz bin-11.0
 
     - name: Upload package
       uses: actions/upload-artifact@v2
       with:
         name: llvm11rel_linux
-        path: docker/ubuntu/llvm_build/llvm-11.0.0-ubuntu16.04-Release-x86.arm.wasm.tar.xz
+        path: docker/ubuntu/llvm_build/llvm-11.0.1-ubuntu16.04-Release-x86.arm.wasm.tar.xz
 
   win-build:
     runs-on: windows-latest
@@ -109,13 +109,13 @@ jobs:
       shell: cmd
       run: |
         cd llvm
-        7z.exe a -t7z llvm-11.0.0-win.vs2019-Release+Asserts-x86.arm.wasm.7z bin-11.0
+        7z.exe a -t7z llvm-11.0.1-win.vs2019-Release+Asserts-x86.arm.wasm.7z bin-11.0
 
     - name: Upload package
       uses: actions/upload-artifact@v2
       with:
         name: llvm11_win
-        path: llvm/llvm-11.0.0-win.vs2019-Release+Asserts-x86.arm.wasm.7z
+        path: llvm/llvm-11.0.1-win.vs2019-Release+Asserts-x86.arm.wasm.7z
 
   win-build-release:
     runs-on: windows-latest
@@ -150,13 +150,13 @@ jobs:
       shell: cmd
       run: |
         cd llvm
-        7z.exe a -t7z llvm-11.0.0-win.vs2019-Release-x86.arm.wasm.7z bin-11.0
+        7z.exe a -t7z llvm-11.0.1-win.vs2019-Release-x86.arm.wasm.7z bin-11.0
 
     - name: Upload package
       uses: actions/upload-artifact@v2
       with:
         name: llvm11rel_win
-        path: llvm/llvm-11.0.0-win.vs2019-Release-x86.arm.wasm.7z
+        path: llvm/llvm-11.0.1-win.vs2019-Release-x86.arm.wasm.7z
 
   mac-build:
     runs-on: macos-10.15
@@ -193,13 +193,13 @@ jobs:
     - name: Pack LLVM
       run: |
         cd llvm
-        tar cJvf llvm-11.0.0-macos10.15-Release+Asserts-x86.arm.wasm.tar.xz bin-11.0
+        tar cJvf llvm-11.0.1-macos10.15-Release+Asserts-x86.arm.wasm.tar.xz bin-11.0
 
     - name: Upload package
       uses: actions/upload-artifact@v2
       with:
         name: llvm11_macos
-        path: llvm/llvm-11.0.0-macos10.15-Release+Asserts-x86.arm.wasm.tar.xz
+        path: llvm/llvm-11.0.1-macos10.15-Release+Asserts-x86.arm.wasm.tar.xz
 
   mac-build-release:
     runs-on: macos-10.15
@@ -236,11 +236,11 @@ jobs:
     - name: Pack LLVM
       run: |
         cd llvm
-        tar cJvf llvm-11.0.0-macos10.15-Release-x86.arm.wasm.tar.xz bin-11.0
+        tar cJvf llvm-11.0.1-macos10.15-Release-x86.arm.wasm.tar.xz bin-11.0
 
     - name: Upload package
       uses: actions/upload-artifact@v2
       with:
         name: llvm11rel_macos
-        path: llvm/llvm-11.0.0-macos10.15-Release-x86.arm.wasm.tar.xz
+        path: llvm/llvm-11.0.1-macos10.15-Release-x86.arm.wasm.tar.xz
 
