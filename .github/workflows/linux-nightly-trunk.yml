@@ -40,20 +40,21 @@ jobs:
         docker run ispc/ubuntu16.04
         export CONTAINER=`docker ps --all |head -2 |tail -1 |awk '//{print $1}'`
         sudo docker cp $CONTAINER:/usr/local/src/llvm/bin-trunk .
-        tar cJvf llvm-trunk-ubuntu16.04-Release+Asserts-x86.arm.wasm.tar.xz bin-trunk
+        # Note using gzip here, instead of xz - trading of space for speed, as it's just for passing to another stage.
+        tar czvf llvm-trunk-ubuntu16.04-Release+Asserts-x86.arm.wasm.tar.gz bin-trunk
 
     - name: Upload package
       uses: actions/upload-artifact@v2
       with:
         name: llvm_trunk_linux
-        path: docker/ubuntu/llvm_build/llvm-trunk-ubuntu16.04-Release+Asserts-x86.arm.wasm.tar.xz
+        path: docker/ubuntu/llvm_build/llvm-trunk-ubuntu16.04-Release+Asserts-x86.arm.wasm.tar.gz
 
   linux-build-ispc-llvm-trunk:
     needs: [linux-build-llvm-trunk]
     runs-on: ubuntu-latest
     env:
       LLVM_VERSION: "trunk"
-      LLVM_TAR: llvm-trunk-ubuntu16.04-Release+Asserts-x86.arm.wasm.tar.xz
+      LLVM_TAR: llvm-trunk-ubuntu16.04-Release+Asserts-x86.arm.wasm.tar.gz
 
     steps:
     - uses: actions/checkout@v2
