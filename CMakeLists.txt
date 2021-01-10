@@ -145,8 +145,12 @@ endif()
 
 set(ISPC_MACOS_ARM_TARGET OFF)
 if (ISPC_MACOS_TARGET AND ISPC_MACOS_SDK_PATH)
+    if (IS_SYMLINK ${ISPC_MACOS_SDK_PATH})
+        file(READ_SYMLINK "${ISPC_MACOS_SDK_PATH}" ISPC_MACOS_SDK_PATH)
+    endif()
+
     # Grepping path to figure out the version is not the most reliable way,
-    # but it seem to be the most practical.
+    # but it seems to be the most practical.
     string(REGEX MATCH "MacOSX([0-9]*.[0-9]*).sdk" _ ${ISPC_MACOS_SDK_PATH})
     set(SDK_VER "${CMAKE_MATCH_1}")
     message(STATUS "MacOS_SDK version: ${SDK_VER}")
