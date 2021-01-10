@@ -77,7 +77,11 @@ endif()
 # Meta target for benchmarks
 add_custom_target(${BENCHMARKS_PROJECT_NAME})
 
-set(BENCHMARKS_ISPC_TARGETS "avx2-i32x8" CACHE STRING "Comma separated list of ISPC targets to build benchmarks")
+if (X86_HOST)
+    set(BENCHMARKS_ISPC_TARGETS "avx2-i32x8" CACHE STRING "Comma separated list of ISPC targets to build benchmarks")
+else()
+    set(BENCHMARKS_ISPC_TARGETS "neon-i32x4" CACHE STRING "Comma separated list of ISPC targets to build benchmarks")
+endif()
 set(BENCHMARKS_ISPC_FLAGS "-O3 --woff" CACHE STRING "Flags to pass to ISPC compiler to build benchmarks")
 message(STATUS "Using BENCHMARKS_ISPC_TARGETS: ${BENCHMARKS_ISPC_TARGETS}")
 message(STATUS "Using BENCHMARKS_ISPC_FLAGS: ${BENCHMARKS_ISPC_FLAGS}")

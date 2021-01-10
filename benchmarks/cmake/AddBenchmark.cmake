@@ -1,5 +1,5 @@
 #
-#  Copyright (c) 2020, Intel Corporation
+#  Copyright (c) 2020-2021, Intel Corporation
 #  All rights reserved.
 #
 #  Redistribution and use in source and binary forms, with or without
@@ -45,10 +45,20 @@ if(UNIX)
     string(STRIP ${ARCH} ARCH)
     execute_process(COMMAND getconf LONG_BIT OUTPUT_VARIABLE ARCH_BIT)
     string(STRIP ${ARCH_BIT} ARCH_BIT)
-    if(${ARCH_BIT} EQUAL 32)
-        set(ISPC_ARCH "x86")
+    if("${ARCH}" STREQUAL "x86")
+        if(${ARCH_BIT} EQUAL 32)
+            set(ISPC_ARCH "x86")
+        else()
+            set(ISPC_ARCH "x86-64")
+        endif()
+    elseif("${ARCH}" STREQUAL "arm")
+        if(${ARCH_BIT} EQUAL 32)
+            set(ISPC_ARCH "arm")
+        else()
+            set(ISPC_ARCH "aarch64")
+        endif()
     else()
-        set(ISPC_ARCH "x86-64")
+        message(FATAL_ERROR "Cannot detect host architecture for benchamrks: ${ARCH}.")
     endif()
 else()
     set(ARCH "x86")
