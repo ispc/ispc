@@ -1,7 +1,7 @@
 // Can't convert from type "varying float" to type "uniform float" for initializer
-// rule: skip on arch=*
-// rule: run on arch=x86
-// rule: run on arch=x86-64
+// rule: skip on arch=genx32
+// rule: skip on arch=genx64
+
 struct Point {
     uniform float x, y, z;
 };
