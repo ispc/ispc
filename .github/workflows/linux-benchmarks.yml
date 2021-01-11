@@ -105,6 +105,8 @@ jobs:
     continue-on-error: true
     needs: benchmarks
     runs-on: ubuntu-latest
+    env:
+      CALCITE_CLI: '@siliceum/calcite-cli@0.7.2'
     steps:
       - uses: actions/checkout@v2
       - name: Download benchmarks results
@@ -114,13 +116,21 @@ jobs:
       - name: Upload bench datasets to calcite
         working-directory: .calcite
         run: |
-          npx @siliceum/calcite-cli@0.7.2 upload calcite.config.js
+          npx ${{env.CALCITE_CLI}} upload calcite.config.js
         env:
           BENCH_OUTPUT_FILES: ${{github.workspace}}
           CALCITE_TOKEN: ${{ secrets.CALCITE_TOKEN }}
-      - name: Trigger calcite workflow
+      - name: Trigger calcite workflow (main)
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main' && success()
+        working-directory: .calcite
+        run: npx ${{env.CALCITE_CLI}} trigger ${{github.event.before}} -tt push_main
+        env:
+          CALCITE_TOKEN: ${{ secrets.CALCITE_TOKEN }}
+          
+      # Unused for now, until we have tokenless / new token management (never triggered since using pull_request_target)
+      - name: Trigger calcite workflow (PR)
         if: github.event_name == 'pull_request' && success()
         working-directory: .calcite
-        run: npx calcite trigger $(git cat-file -p HEAD | awk 'NR > 1 {if(/^parent/){print $2;}{exit}}') -tt pullrequest
+        run: npx ${{env.CALCITE_CLI}} trigger $(git cat-file -p HEAD | awk 'NR > 1 {if(/^parent/){print $2;}{exit}}') -tt pullrequest
         env:
           CALCITE_TOKEN: ${{ secrets.CALCITE_TOKEN }}
