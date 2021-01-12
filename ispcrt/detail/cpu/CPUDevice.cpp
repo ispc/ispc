@@ -3,8 +3,8 @@
 
 #include "CPUDevice.h"
 
-#ifdef _WIN32
-#error "Windows not yet supported!"
+#if defined(_WIN32) || defined(_WIN64)
+#include "windows.h"
 #else
 #include <dlfcn.h>
 #endif
@@ -52,10 +52,16 @@ struct Module : public ispcrt::base::Module {
         if (!m_file.empty()) {
 #if defined(__MACOSX__) || defined(__APPLE__)
             std::string ext = ".dylib";
+#elif defined(_WIN32) || defined(_WIN64)
+            std::string ext = ".dll";
 #else
             std::string ext = ".so";
 #endif
+#if defined _WIN32
+            m_lib = LoadLibrary((m_file + ext).c_str());
+#else
             m_lib = dlopen(("lib" + m_file + ext).c_str(), RTLD_LAZY | RTLD_LOCAL);
+#endif
 
             if (!m_lib)
                 throw std::logic_error("could not open CPU shared module file");
@@ -64,7 +70,11 @@ struct Module : public ispcrt::base::Module {
 
     ~Module() {
         if (m_lib)
+#if defined(_WIN32) || defined(_WIN64)
+            FreeLibrary((HMODULE)m_lib);
+#else
             dlclose(m_lib);
+#endif
     }
 
     void *lib() const { return m_lib; }
@@ -79,8 +89,11 @@ struct Kernel : public ispcrt::base::Kernel {
         const cpu::Module &module = (const cpu::Module &)_module;
 
         auto name = std::string(_name) + "_cpu_entry_point";
-
+#if defined(_WIN32) || defined(_WIN64)
+        void* fcn = GetProcAddress((HMODULE)module.lib(), name.c_str());
+#else
         void *fcn = dlsym(module.lib() ? module.lib() : RTLD_DEFAULT, name.c_str());
+#endif
 
         if (!fcn)
             throw std::logic_error("could not find CPU kernel function");
