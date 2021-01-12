@@ -2056,7 +2056,7 @@ template <typename T> static int countLeadingZeros(T val) {
 
     int leadingZeros = 0;
     size_t size = sizeof(T) * CHAR_BIT;
-    T msb = (T)(1 << (size - 1));
+    T msb = (T)(T(1) << (size - 1));
 
     while (size--) {
         if (msb & val) {
@@ -2084,7 +2084,7 @@ static ConstExpr *lConstFoldBinaryIntOp(BinaryExpr::Op op, const T *v0, const T 
 
     case BinaryExpr::Shl:
         for (int i = 0; i < count; ++i) {
-            result[i] = (v0[i] << v1[i]);
+            result[i] = (T(v0[i]) << v1[i]);
             if (v1[i] > countLeadingZeros(v0[i])) {
                 Warning(pos, "Binary expression with type \"%s\" can't represent value.",
                         carg0->GetType()->GetString().c_str());

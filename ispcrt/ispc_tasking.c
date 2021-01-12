@@ -25,9 +25,9 @@ void ISPCLaunch(void **taskGroupPtr, void *_func, void *data, int count0, int co
         const int threadIndex = 0;
         const int threadCount = 1;
 #endif
-
+        int i = 0;
 #pragma omp for schedule(runtime)
-        for (int i = 0; i < count; i++) {
+        for (i = 0; i < count; i++) {
             int taskIndex0 = i % count0;
             int taskIndex1 = (i / count0) % count1;
             int taskIndex2 = i / (count0 * count1);

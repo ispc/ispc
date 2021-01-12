@@ -3,8 +3,8 @@
 
 #include "GPUDevice.h"
 
-#ifdef _WIN32
-#error "Windows not yet supported!"
+#if defined(_WIN32) || defined(_WIN64)
+
 #else
 #include <dlfcn.h>
 #endif
@@ -251,7 +251,13 @@ struct Module : public ispcrt::base::Module {
         ze_module_format_t moduleFormat = ZE_MODULE_FORMAT_IL_SPIRV;
         // Try to open spv file by default if ISPCRT_USE_ZEBIN is not set.
         // TODO: change default to zebin when it gets more mature
+#if defined(_WIN32) || defined(_WIN64)
+        char* userZEBinFormatEnv = nullptr;
+        size_t userZEBinFormatEnvSz = 0;
+        _dupenv_s(&userZEBinFormatEnv, &userZEBinFormatEnvSz, "ISPCRT_USE_ZEBIN");
+#else
         const char *userZEBinFormatEnv = getenv("ISPCRT_USE_ZEBIN");
+#endif
 
         size_t codeSize = 0;
         if (!is_mock_dev) {
@@ -289,11 +295,16 @@ struct Module : public ispcrt::base::Module {
         // the options with the content of the env var.
         std::string igcOptions = "-vc-codegen -no-optimize";
         constexpr auto MAX_ISPCRT_IGC_OPTIONS = 2000UL;
-
+#if defined(_WIN32) || defined(_WIN64)
+        char* userIgcOptionsEnv = nullptr;
+        size_t userIgcOptionsEnvSz = 0;
+        _dupenv_s(&userIgcOptionsEnv, &userIgcOptionsEnvSz, "ISPCRT_IGC_OPTIONS");
+#else
         const char *userIgcOptionsEnv = getenv("ISPCRT_IGC_OPTIONS");
+#endif
         if (userIgcOptionsEnv) {
             // Copy at most MAX_ISPCRT_IGC_OPTIONS characters from the env - just to be safe
-            const auto copyChars = std::min(std::strlen(userIgcOptionsEnv), MAX_ISPCRT_IGC_OPTIONS);
+            const auto copyChars = std::min(std::strlen(userIgcOptionsEnv), (size_t)MAX_ISPCRT_IGC_OPTIONS);
             std::string userIgcOptions(userIgcOptionsEnv, copyChars);
             if (userIgcOptions.length() >= 3) {
                 auto prefix = userIgcOptions.substr(0, 2);
@@ -502,14 +513,26 @@ GPUDevice::GPUDevice() {
     // User can select particular device using env variable
     // By default first available device is selected
     auto gpuDeviceToGrab = 0;
+#if defined(_WIN32) || defined(_WIN64)
+    char* gpuDeviceEnv = nullptr;
+    size_t gpuDeviceEnvSz = 0;
+    _dupenv_s(&gpuDeviceEnv, &gpuDeviceEnvSz, "ISPCRT_GPU_DEVICE");
+#else
     const char *gpuDeviceEnv = getenv("ISPCRT_GPU_DEVICE");
+#endif
     if (gpuDeviceEnv) {
         std::istringstream(gpuDeviceEnv) >> gpuDeviceToGrab;
     }
     auto gpuDevice = 0;
 
     // We can use a mock device driver for testing
+#if defined(_WIN32) || defined(_WIN64)
+    char* m_is_mock = nullptr;
+    size_t m_is_mock_sz = 0;
+    _dupenv_s(&m_is_mock, &m_is_mock_sz, "ISPCRT_MOCK_DEVICE");
+#else
     m_is_mock = getenv("ISPCRT_MOCK_DEVICE") != nullptr;
+#endif
 
     for (auto &driver : allDrivers) {
         uint32_t deviceCount = 0;
