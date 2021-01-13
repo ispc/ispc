@@ -302,7 +302,7 @@ class FunctionEmitContext {
     llvm::Value *GetStringPtr(const std::string &str);
 
     /** Create a new basic block with given name */
-    llvm::BasicBlock *CreateBasicBlock(const char *name, llvm::BasicBlock *insertAfter = NULL);
+    llvm::BasicBlock *CreateBasicBlock(const llvm::Twine &name, llvm::BasicBlock *insertAfter = NULL);
 
     /** Given a vector with element type i1, return a vector of type
         LLVMTypes::BoolVectorType.  This method handles the conversion for
@@ -380,33 +380,33 @@ class FunctionEmitContext {
         this also handles applying the given operation to the vector
         elements. */
     llvm::Value *BinaryOperator(llvm::Instruction::BinaryOps inst, llvm::Value *v0, llvm::Value *v1,
-                                const char *name = NULL);
+                                const llvm::Twine &name = "");
 
     /** Emit the "not" operator.  Like BinaryOperator(), this also handles
         a VectorType-based operand. */
-    llvm::Value *NotOperator(llvm::Value *v, const char *name = NULL);
+    llvm::Value *NotOperator(llvm::Value *v, const llvm::Twine &name = "");
 
     /** Emit a comparison instruction.  If the operands are VectorTypes,
         then a value for the corresponding boolean VectorType is
         returned. */
     llvm::Value *CmpInst(llvm::Instruction::OtherOps inst, llvm::CmpInst::Predicate pred, llvm::Value *v0,
-                         llvm::Value *v1, const char *name = NULL);
+                         llvm::Value *v1, const llvm::Twine &name = "");
 
     /** Given a scalar value, return a vector of the same type (or an
         array, for pointer types). */
-    llvm::Value *SmearUniform(llvm::Value *value, const char *name = NULL);
+    llvm::Value *SmearUniform(llvm::Value *value, const llvm::Twine &name = "");
 
-    llvm::Value *BitCastInst(llvm::Value *value, llvm::Type *type, const char *name = NULL);
-    llvm::Value *PtrToIntInst(llvm::Value *value, const char *name = NULL);
-    llvm::Value *PtrToIntInst(llvm::Value *value, llvm::Type *type, const char *name = NULL);
-    llvm::Value *IntToPtrInst(llvm::Value *value, llvm::Type *type, const char *name = NULL);
+    llvm::Value *BitCastInst(llvm::Value *value, llvm::Type *type, const llvm::Twine &name = "");
+    llvm::Value *PtrToIntInst(llvm::Value *value, const llvm::Twine &name = "");
+    llvm::Value *PtrToIntInst(llvm::Value *value, llvm::Type *type, const llvm::Twine &name = "");
+    llvm::Value *IntToPtrInst(llvm::Value *value, llvm::Type *type, const llvm::Twine &name = "");
 
-    llvm::Instruction *TruncInst(llvm::Value *value, llvm::Type *type, const char *name = NULL);
+    llvm::Instruction *TruncInst(llvm::Value *value, llvm::Type *type, const llvm::Twine &name = "");
     llvm::Instruction *CastInst(llvm::Instruction::CastOps op, llvm::Value *value, llvm::Type *type,
-                                const char *name = NULL);
-    llvm::Instruction *FPCastInst(llvm::Value *value, llvm::Type *type, const char *name = NULL);
-    llvm::Instruction *SExtInst(llvm::Value *value, llvm::Type *type, const char *name = NULL);
-    llvm::Instruction *ZExtInst(llvm::Value *value, llvm::Type *type, const char *name = NULL);
+                                const llvm::Twine &name = "");
+    llvm::Instruction *FPCastInst(llvm::Value *value, llvm::Type *type, const llvm::Twine &name = "");
+    llvm::Instruction *SExtInst(llvm::Value *value, llvm::Type *type, const llvm::Twine &name = "");
+    llvm::Instruction *ZExtInst(llvm::Value *value, llvm::Type *type, const llvm::Twine &name = "");
 
     /** Given two integer-typed values (but possibly one vector and the
         other not, and or of possibly-different bit-widths), update their
@@ -426,9 +426,9 @@ class FunctionEmitContext {
         pointers.  The underlying type of the base pointer must be provided
         via the ptrType parameter */
     llvm::Value *GetElementPtrInst(llvm::Value *basePtr, llvm::Value *index, const Type *ptrType,
-                                   const char *name = NULL);
+                                   const llvm::Twine &name = "");
     llvm::Value *GetElementPtrInst(llvm::Value *basePtr, llvm::Value *index0, llvm::Value *index1, const Type *ptrType,
-                                   const char *name = NULL);
+                                   const llvm::Twine &name = "");
 
     /** This method returns a new pointer that represents offsetting the
         given base pointer to point at the given element number of the
@@ -436,26 +436,26 @@ class FunctionEmitContext {
         pointer must be a pointer to a structure type.  The ptrType gives
         the type of the pointer, though it may be NULL if the base pointer
         is uniform. */
-    llvm::Value *AddElementOffset(llvm::Value *basePtr, int elementNum, const Type *ptrType, const char *name = NULL,
-                                  const PointerType **resultPtrType = NULL);
+    llvm::Value *AddElementOffset(llvm::Value *basePtr, int elementNum, const Type *ptrType,
+                                  const llvm::Twine &name = "", const PointerType **resultPtrType = NULL);
 
     /** Bool is stored as i8 and <WIDTH x i8> but represented in IR as i1 and
      * <WIDTH x MASK>. This is a helper function to match bool size at storage
      * interface. */
-    llvm::Value *SwitchBoolSize(llvm::Value *value, llvm::Type *toType, const char *name = NULL);
+    llvm::Value *SwitchBoolSize(llvm::Value *value, llvm::Type *toType, const llvm::Twine &name = "");
     /** Load from the memory location(s) given by lvalue, using the given
         mask.  The lvalue may be varying, in which case this corresponds to
         a gather from the multiple memory locations given by the array of
         pointer values given by the lvalue.  If the lvalue is not varying,
         then both the mask pointer and the type pointer may be NULL. */
-    llvm::Value *LoadInst(llvm::Value *ptr, llvm::Value *mask, const Type *ptrType, const char *name = NULL,
+    llvm::Value *LoadInst(llvm::Value *ptr, llvm::Value *mask, const Type *ptrType, const llvm::Twine &name = "",
                           bool one_elem = false);
 
     /* Load from memory location(s) given.
      * 'type' needs to be provided when storage type is different from IR type. For example,
      * 'unform bool' is 'i1' in IR but stored as 'i8'.
      * Otherwise leave this as NULL. */
-    llvm::Value *LoadInst(llvm::Value *ptr, const Type *type = NULL, const char *name = NULL);
+    llvm::Value *LoadInst(llvm::Value *ptr, const Type *type = NULL, const llvm::Twine &name = "");
 
     /** Emits an alloca instruction to allocate stack storage for the given
         type.  If a non-zero alignment is specified, the object is also
@@ -463,7 +463,8 @@ class FunctionEmitContext {
         instruction is added at the start of the function in the entry
         basic block; if it should be added to the current basic block, then
         the atEntryBlock parameter should be false. */
-    llvm::Value *AllocaInst(llvm::Type *llvmType, const char *name = NULL, int align = 0, bool atEntryBlock = true);
+    llvm::Value *AllocaInst(llvm::Type *llvmType, const llvm::Twine &name = "", int align = 0,
+                            bool atEntryBlock = true);
 
     /** Emits an alloca instruction to allocate stack storage for the given
         type.  If a non-zero alignment is specified, the object is also
@@ -474,7 +475,7 @@ class FunctionEmitContext {
         This implementation is preferred when possible. It is needed when
         storage type is different from IR type. For example,
         'unform bool' is 'i1' in IR but stored as 'i8'. */
-    llvm::Value *AllocaInst(const Type *ptrType, const char *name = NULL, int align = 0, bool atEntryBlock = true);
+    llvm::Value *AllocaInst(const Type *ptrType, const llvm::Twine &name = "", int align = 0, bool atEntryBlock = true);
 
     /** Standard store instruction; for this variant, the lvalue must be a
         single pointer, not a varying lvalue.
@@ -502,39 +503,41 @@ class FunctionEmitContext {
     /** This convenience method maps to an llvm::ExtractElementInst if the
         given value is a llvm::VectorType, and to an llvm::ExtractValueInst
         otherwise. */
-    llvm::Value *ExtractInst(llvm::Value *v, int elt, const char *name = NULL);
+    llvm::Value *ExtractInst(llvm::Value *v, int elt, const llvm::Twine &name = "");
 
     /** This convenience method maps to an llvm::InsertElementInst if the
         given value is a llvm::VectorType, and to an llvm::InsertValueInst
         otherwise. */
-    llvm::Value *InsertInst(llvm::Value *v, llvm::Value *eltVal, int elt, const char *name = NULL);
+    llvm::Value *InsertInst(llvm::Value *v, llvm::Value *eltVal, int elt, const llvm::Twine &name = "");
 
     /** This convenience method maps to an llvm::ShuffleVectorInst. */
-    llvm::Value *ShuffleInst(llvm::Value *v1, llvm::Value *v2, llvm::Value *mask, const char *name = NULL);
+    llvm::Value *ShuffleInst(llvm::Value *v1, llvm::Value *v2, llvm::Value *mask, const llvm::Twine &name = "");
 
     /** This convenience method to generate broadcast pattern. It takes a value
         and a vector type. Type of the value must match element type of the
         vector. */
-    llvm::Value *BroadcastValue(llvm::Value *v, llvm::Type *vecType, const char *name = NULL);
+    llvm::Value *BroadcastValue(llvm::Value *v, llvm::Type *vecType, const llvm::Twine &name = "");
 
-    llvm::PHINode *PhiNode(llvm::Type *type, int count, const char *name = NULL);
-    llvm::Instruction *SelectInst(llvm::Value *test, llvm::Value *val0, llvm::Value *val1, const char *name = NULL);
+    llvm::PHINode *PhiNode(llvm::Type *type, int count, const llvm::Twine &name = "");
+    llvm::Instruction *SelectInst(llvm::Value *test, llvm::Value *val0, llvm::Value *val1,
+                                  const llvm::Twine &name = "");
 
     /** Emits IR to do a function call with the given arguments.  If the
         function type is a varying function pointer type, its full type
         must be provided in funcType.  funcType can be NULL if func is a
         uniform function pointer. */
     llvm::Value *CallInst(llvm::Value *func, const FunctionType *funcType, const std::vector<llvm::Value *> &args,
-                          const char *name = NULL);
+                          const llvm::Twine &name = "");
 
     /** This is a convenience method that issues a call instruction to a
         function that takes just a single argument. */
-    llvm::Value *CallInst(llvm::Value *func, const FunctionType *funcType, llvm::Value *arg, const char *name = NULL);
+    llvm::Value *CallInst(llvm::Value *func, const FunctionType *funcType, llvm::Value *arg,
+                          const llvm::Twine &name = "");
 
     /** This is a convenience method that issues a call instruction to a
         function that takes two arguments. */
     llvm::Value *CallInst(llvm::Value *func, const FunctionType *funcType, llvm::Value *arg0, llvm::Value *arg1,
-                          const char *name = NULL);
+                          const llvm::Twine &name = "");
 
     /** Launch an asynchronous task to run the given function, passing it
         he given argument values. */
@@ -756,9 +759,10 @@ class FunctionEmitContext {
     void maskedStore(llvm::Value *value, llvm::Value *ptr, const Type *ptrType, llvm::Value *mask);
     void storeUniformToSOA(llvm::Value *value, llvm::Value *ptr, llvm::Value *mask, const Type *valueType,
                            const PointerType *ptrType);
-    llvm::Value *loadUniformFromSOA(llvm::Value *ptr, llvm::Value *mask, const PointerType *ptrType, const char *name);
+    llvm::Value *loadUniformFromSOA(llvm::Value *ptr, llvm::Value *mask, const PointerType *ptrType,
+                                    const llvm::Twine &name = "");
 
-    llvm::Value *gather(llvm::Value *ptr, const PointerType *ptrType, llvm::Value *mask, const char *name);
+    llvm::Value *gather(llvm::Value *ptr, const PointerType *ptrType, llvm::Value *mask, const llvm::Twine &name = "");
 
     llvm::Value *addVaryingOffsetsIfNeeded(llvm::Value *ptr, const Type *ptrType);
 };

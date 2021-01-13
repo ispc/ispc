@@ -1605,23 +1605,6 @@ llvm::Value *LLVMShuffleVectors(llvm::Value *v1, llvm::Value *v2, int32_t shuf[]
     return new llvm::ShuffleVectorInst(v1, v2, vec, "shuffle", insertBefore);
 }
 
-const char *LLVMGetName(llvm::Value *v, const char *s) {
-    if (v == NULL)
-        return s;
-    std::string ret = std::string(v->getName());
-    ret += s;
-    return strdup(ret.c_str());
-}
-
-const char *LLVMGetName(const char *op, llvm::Value *v1, llvm::Value *v2) {
-    std::string r = op;
-    r += "_";
-    r += v1->getName().str();
-    r += "_";
-    r += v2->getName().str();
-    return strdup(r.c_str());
-}
-
 #ifdef ISPC_GENX_ENABLED
 bool lIsSVMLoad(llvm::Instruction *inst) {
     Assert(inst);
