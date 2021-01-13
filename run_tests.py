@@ -193,6 +193,34 @@ def check_print_output(output):
     else:
         return lines[0:len(lines)//2] == lines[len(lines)//2:len(lines)]
 
+def prerun_debug_check_genx():
+    os.environ['IGC_DumpToCurrentDir'] = '1'
+    os.environ['IGC_ShaderDumpEnable'] = '1'
+    os.environ['ISPCRT_IGC_OPTIONS'] = '+ -g'
+
+def postrun_debug_check_genx(test_name, exe_wd):
+    objdumpProc = subprocess.run('/usr/bin/objdump -h *_dwarf.elf', shell=True, cwd=exe_wd, universal_newlines=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+    readelfProc = subprocess.run('/usr/bin/readelf --debug-dump *_dwarf.elf', shell=True, cwd=exe_wd, universal_newlines=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+    if objdumpProc.returncode != 0:
+        print("[DEBUG CHECK] " + test_name + " - objdump failed - return code: " + str(objdumpProc.returncode))
+        return False
+    elif objdumpProc.stdout.find('.debug') == -1:
+        print("[DEBUG CHECK] " + test_name + " - objdump failed - couldn't find .debug info in *_dwarf.elf file")
+        return False
+    elif readelfProc.returncode != 0:
+        print("[DEBUG CHECK] " + test_name + " - readelf failed - return code: " + str(objdumpProc.returncode))
+        return False
+    elif readelfProc.stdout.find('Warning:') != -1 or readelfProc.stdout.find('Error:') != -1:
+        readelfOutput = readelfProc.stdout.splitlines()
+        print("[DEBUG CHECK] " + test_name + " - readelf return Warning / Error: \n")
+        for line in readelfOutput:
+            if line.find('Warning:') != -1 or line.find('Error:') != -1:
+                print(line)
+        return False
+    subprocess.run('rm -rf *_dwarf.elf', shell=True)
+    return True
+
+
 # run the commands in cmd_list
 def run_cmds(compile_cmds, run_cmd, filename, expect_failure, sig, exe_wd="."):
     for cmd in compile_cmds:
@@ -203,7 +231,11 @@ def run_cmds(compile_cmds, run_cmd, filename, expect_failure, sig, exe_wd="."):
             if output != "":
                 print_debug("%s" % output, s, run_tests_log)
             return Status.Compfail
+
     if not options.save_bin:
+        if options.debug_check and options.ispc_output == "spv":
+            prerun_debug_check_genx()
+
         (return_code, output, timeout) = run_command(run_cmd, options.test_time, cwd=exe_wd)
         if sig < 32:
             run_failed = (return_code != 0) or timeout
@@ -212,8 +244,13 @@ def run_cmds(compile_cmds, run_cmd, filename, expect_failure, sig, exe_wd="."):
             if not output_equality:
                 print_debug("Print outputs check failed\n", s, run_tests_log)
             run_failed = (return_code != 0) or not output_equality or timeout
+
+        if options.debug_check and options.ispc_output == "spv":
+            run_failed = not postrun_debug_check_genx(run_cmd, exe_wd)
+
     else:
         run_failed = 0
+
     surprise = ((expect_failure and not run_failed) or
                 (not expect_failure and run_failed))
     if surprise == True:
@@ -301,7 +338,12 @@ def run_test(testname, host, target):
     # filename is a path to the test from the current dir
     # ispc_exe_rel is a relative path to ispc
     filename = add_prefix(testname, host, target)
-    ispc_exe_rel = add_prefix(host.ispc_cmd, host, target)
+
+    # Debug check is now supported only for genx
+    if options.debug_check and target.is_genx():
+        ispc_exe_rel = add_prefix(host.ispc_cmd + " -g", host, target)
+    else:
+        ispc_exe_rel = add_prefix(host.ispc_cmd, host, target)
 
     # is this a test to make sure an error is issued?
     want_error = (filename.find("tests_errors") != -1)
@@ -821,9 +863,14 @@ def run_tests(options1, args, print_version):
     host = Host(platform.system())
     host.set_ispc_cmd(options.ispc_flags)
 
-    print_debug("Testing ispc: " + host.ispc_exe + "\n", s, run_tests_log)
-
     target = TargetConfig(options.arch, options.target, options.cpu)
+
+    if options.debug_check and (not target.is_genx() or not host.is_linux()):
+        print("--debug_check is supported only for genx target and only on Linux OS")
+        exit_code = 1
+        return 0
+
+    print_debug("Testing ispc: " + host.ispc_exe + "\n", s, run_tests_log)
 
     set_compiler_exe(host, options)
     set_ispc_output(target, options)
@@ -989,6 +1036,7 @@ if __name__ == "__main__":
     parser.add_option("--cpu", dest='cpu', help='Specify target ISPC CPU. For example: core2, skx, cortex-a9, SKL, TGLLP, etc.', default=None)
     parser.add_option("--ispc_output", dest='ispc_output', choices=['obj', 'spv', 'ze'], help='Specify ISPC output', default=None)
     parser.add_option("--fail_db", dest='fail_db', help='File to use as a fail database', default='fail_db.txt', type=str)
+    parser.add_option("--debug_check", dest='debug_check', help='Run tests in debug mode with validating debug info', default=False, action="store_true")
     parser.add_option("--verify", dest='verify', help='verify the fail database file', default=False, action="store_true")
     parser.add_option("--save-bin", dest='save_bin', help='compile and create bin, but don\'t execute it',
                   default=False, action="store_true")
