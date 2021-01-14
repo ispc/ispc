@@ -1660,8 +1660,10 @@ llvm::Value *lEmitLogicalOp(BinaryExpr::Op op, Expr *arg0, Expr *arg1, FunctionE
     // right side of the expression is a) relatively simple, and b) can be
     // safely executed with an all-off execution mask, then we just
     // evaluate both sides and then the logical operator in that case.
-    bool shortCircuit =
-        (EstimateCost(arg1) > PREDICATE_SAFE_IF_STATEMENT_COST || SafeToRunWithMaskAllOff(arg1) == false);
+    int threshold =
+        g->target->isGenXTarget() ? PREDICATE_SAFE_SHORT_CIRC_GENX_STATEMENT_COST : PREDICATE_SAFE_IF_STATEMENT_COST;
+    bool shortCircuit = (EstimateCost(arg1) > threshold || SafeToRunWithMaskAllOff(arg1) == false);
+
     // Skip short-circuiting for VectorTypes as well.
     if ((shortCircuit == false) || CastType<VectorType>(type0) != NULL || CastType<VectorType>(type1) != NULL) {
         // If one of the operands is uniform but the other is varying,
@@ -3230,10 +3232,10 @@ llvm::Value *SelectExpr::GetValue(FunctionEmitContext *ctx) const {
         // We don't want to incur the overhead for short-circuit evaluation
         // for expressions that are both computationally simple and safe to
         // run with an "all off" mask.
-        bool shortCircuit1 =
-            (::EstimateCost(expr1) > PREDICATE_SAFE_IF_STATEMENT_COST || SafeToRunWithMaskAllOff(expr1) == false);
-        bool shortCircuit2 =
-            (::EstimateCost(expr2) > PREDICATE_SAFE_IF_STATEMENT_COST || SafeToRunWithMaskAllOff(expr2) == false);
+        int threshold = g->target->isGenXTarget() ? PREDICATE_SAFE_SHORT_CIRC_GENX_STATEMENT_COST
+                                                  : PREDICATE_SAFE_IF_STATEMENT_COST;
+        bool shortCircuit1 = (::EstimateCost(expr1) > threshold || SafeToRunWithMaskAllOff(expr1) == false);
+        bool shortCircuit2 = (::EstimateCost(expr2) > threshold || SafeToRunWithMaskAllOff(expr2) == false);
 
         Debug(expr1->pos, "%sshort circuiting evaluation for select expr", shortCircuit1 ? "" : "Not ");
         Debug(expr2->pos, "%sshort circuiting evaluation for select expr", shortCircuit2 ? "" : "Not ");
