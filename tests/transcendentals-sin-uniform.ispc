@@ -6,7 +6,7 @@ uniform bool ok(uniform double x, uniform double ref) { return (abs(x - ref) < 1
 export void f_du(uniform float RET[], uniform double aFOO[], uniform double b) {
   for (uniform int i = 0; i != programCount; ++i) {
     uniform double arg = aFOO[i] + b;
-    uniform double ref = sin((float)arg);
+    uniform double ref = sin((uniform float)arg);
     uniform double res = sin(arg);
     uniform double delta = abs((res - ref) / ref);
     // native single precision sin on genx is pretty imprecise

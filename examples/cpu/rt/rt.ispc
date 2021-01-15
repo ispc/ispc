@@ -244,8 +244,8 @@ static void raytrace_tile(uniform int x0, uniform int x1,
                           uniform float image[], uniform int id[],
                           const uniform LinearBVHNode nodes[],
                           const uniform Triangle triangles[]) {
-    uniform float widthScale = (float)(baseWidth) / (float)(width);
-    uniform float heightScale = (float)(baseHeight) / (float)(height);
+    uniform float widthScale = (uniform float)(baseWidth) / (uniform float)(width);
+    uniform float heightScale = (uniform float)(baseHeight) / (uniform float)(height);
 
     foreach_tiled (y = y0 ... y1, x = x0 ... x1) {
         Ray ray;

@@ -2,8 +2,8 @@
 
 export void f_du(uniform float RET[], uniform double aFOO[], uniform double b) {
     double a = aFOO[programIndex];
-    RET[programIndex] = min(-10 * (a-3), (double).1f);
-    RET[programCount-1] = min(-10 * b, (double)2);
+    RET[programIndex] = min(-10 * (a-3), (varying double).1f);
+    RET[programCount-1] = min(-10 * b, (uniform double)2);
 }
 
 export void result(uniform float RET[]) {

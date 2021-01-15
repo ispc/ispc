@@ -1,7 +1,7 @@
 // rule: skip on cpu=TGLLP
 
 export void print_uf(uniform float a) {
-    uniform int intA = (int)a;
+    uniform int intA = (uniform int)a;
     uniform double uniDoubleVal  =  a + 13.25;
 
     print("Test uniform double: %\n", uniDoubleVal);

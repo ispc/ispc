@@ -10,7 +10,7 @@ export void f_du(uniform float RET[], uniform double aFOO[], uniform double b) {
     uniform double arg = aFOO[i];
     uniform float ref;
     uniform float ref2;
-    sincos((float)arg, &ref, &ref2);
+    sincos((uniform float)arg, &ref, &ref2);
     uniform double res;
     uniform double res2;
     sincos(arg, &res, &res2);

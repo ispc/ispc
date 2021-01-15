@@ -1,8 +1,8 @@
 export void f_f(uniform float RET[], uniform float aFOO[]) {
     float a = aFOO[programIndex];
     varying float * uniform pa = &a;
-    varying int * uniform pb = (varying int *)pa;
-    varying float *uniform pc = (varying float *)pb;
+    varying int * uniform pb = (varying int * uniform)pa;
+    varying float *uniform pc = (varying float * uniform)pb;
     *pc = programIndex;
     RET[programIndex] = *pc;
 }

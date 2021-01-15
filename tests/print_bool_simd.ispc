@@ -2,7 +2,7 @@
 // Test is unstable on TGLLP
 export void print_fuf(uniform float aFOO[], uniform float b) {
     float a = aFOO[programIndex];
-    uniform bool uniBoolVal = (bool)b;
+    uniform bool uniBoolVal = (uniform bool)b;
     bool varBoolVal = (bool)a;
     if (programIndex % 3 == 0)
         varBoolVal = false;

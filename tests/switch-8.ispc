@@ -10,7 +10,7 @@ int switchit(int a, uniform int b) {
             break;
         return 2;
     case 9999:
-        *((int *)NULL) = 0;
+        *((int * uniform)NULL) = 0;
     default:
     case 1:
     case 2:

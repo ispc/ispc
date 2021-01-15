@@ -1,5 +1,5 @@
 export void print_uf(uniform float a) {
-    uniform int intA = (int)a;
+    uniform int intA = (uniform int)a;
     uniform          int    uniIntVal     = -intA - 2;
     uniform unsigned int    uniUIntVal    =  intA + 2;
 

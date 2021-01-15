@@ -1,5 +1,5 @@
 export void f_f(uniform float RET[], uniform float aFOO[]) {
-    RET[programIndex] = sizeof((int)(2*10));
+    RET[programIndex] = sizeof((uniform int)(2*10));
 }
 
 export void result(uniform float RET[]) {

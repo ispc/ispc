@@ -157,8 +157,8 @@ IntersectLightsWithTileMinMax(
     uniform int32 tileLightIndices[]
     )
 {
-    uniform float gBufferScale_x = 0.5f * (float)gBufferWidth;
-    uniform float gBufferScale_y = 0.5f * (float)gBufferHeight;
+    uniform float gBufferScale_x = 0.5f * (uniform float)gBufferWidth;
+    uniform float gBufferScale_y = 0.5f * (uniform float)gBufferHeight;
 
     uniform float frustumPlanes_xy[4] = {
         -(cameraProj_11 * gBufferScale_x),
@@ -285,7 +285,7 @@ ShadeTile(
     )
 {
     if (tileNumLights == 0 || visualizeLightCount) {
-        uniform unsigned int8 c = (unsigned int8)(min(tileNumLights << 2, 255));
+        uniform unsigned int8 c = (uniform unsigned int8)(min(tileNumLights << 2, 255));
         for (uniform int32 y = tileStartY; y < tileEndY; ++y) {
             foreach (x = tileStartX ... tileEndX) {
                 int32 framebufferIndex = (y * gBufferWidth + x);
@@ -582,8 +582,8 @@ SplitTileMinMax(
     uniform int32 subtileNumLights[]
     )
 {
-    uniform float gBufferScale_x = 0.5f * (float)gBufferWidth;
-    uniform float gBufferScale_y = 0.5f * (float)gBufferHeight;
+    uniform float gBufferScale_x = 0.5f * (uniform float)gBufferWidth;
+    uniform float gBufferScale_y = 0.5f * (uniform float)gBufferHeight;
 
     uniform float frustumPlanes_xy[2] = { -(cameraProj_11 * gBufferScale_x),
                                            (cameraProj_22 * gBufferScale_y) };

@@ -2,6 +2,6 @@
 //  rule: run on arch=x86-64
 
 int32 foo(int * uniform x)  {
-    return (int32) x;
+    return (uniform int32) x;
 }
 

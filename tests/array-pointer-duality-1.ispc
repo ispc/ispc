@@ -1,7 +1,7 @@
 export void f_f(uniform float RET[], uniform float aFOO[]) {
     uniform float a[programCount+4];
     for (uniform int i = 0; i < programCount+4; ++i)
-        a[i] = aFOO[min((int)i, programCount)];
+        a[i] = aFOO[min((uniform int)i, programCount)];
 
     RET[programIndex] = *(a + 2);
 }

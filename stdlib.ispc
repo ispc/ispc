@@ -354,7 +354,7 @@ static inline uniform int8 extract(int8 x, uniform int i) {
 
 __declspec(safe,cost1)
 static inline uniform unsigned int8 extract(unsigned int8 x, uniform int i) {
-    return __extract_int8(x, (unsigned int)i);
+    return __extract_int8(x, (uniform unsigned int)i);
 }
 
 __declspec(safe,cost1)
@@ -364,7 +364,7 @@ static inline uniform int16 extract(int16 x, uniform int i) {
 
 __declspec(safe,cost1)
 static inline uniform unsigned int16 extract(unsigned int16 x, uniform int i) {
-    return __extract_int16(x, (unsigned int)i);
+    return __extract_int16(x, (uniform unsigned int)i);
 }
 
 __declspec(safe,cost1)
@@ -374,7 +374,7 @@ static inline uniform int32 extract(int32 x, uniform int i) {
 
 __declspec(safe,cost1)
 static inline uniform unsigned int32 extract(unsigned int32 x, uniform int i) {
-    return __extract_int32(x, (unsigned int)i);
+    return __extract_int32(x, (uniform unsigned int)i);
 }
 
 __declspec(safe,cost1)
@@ -389,13 +389,13 @@ static inline uniform int64 extract(int64 x, uniform int i) {
 
 __declspec(safe,cost1)
 static inline uniform unsigned int64 extract(unsigned int64 x, uniform int i) {
-    return __extract_int64(x, (unsigned int)i);
+    return __extract_int64(x, (uniform unsigned int)i);
 }
 
 // x[i] = v
 __declspec(safe,cost1)
 static inline float insert(float x, uniform int i, uniform float v) {
-    return floatbits(__insert_int32((int)intbits(x), i, (int)intbits(v)));
+    return floatbits(__insert_int32((int)intbits(x), i, (uniform int)intbits(v)));
 }
 
 __declspec(safe,cost1)
@@ -411,7 +411,7 @@ static inline int8 insert(int8 x, uniform int i, uniform int8 v) {
 __declspec(safe,cost1)
 static inline unsigned int8 insert(unsigned int8 x, uniform int i,
                                     uniform unsigned int8 v) {
-    return __insert_int8(x, (unsigned int)i, v);
+    return __insert_int8(x, (uniform unsigned int)i, v);
 }
 
 __declspec(safe,cost1)
@@ -422,7 +422,7 @@ static inline int16 insert(int16 x, uniform int i, uniform int16 v) {
 __declspec(safe,cost1)
 static inline unsigned int16 insert(unsigned int16 x, uniform int i,
                                     uniform unsigned int16 v) {
-    return __insert_int16(x, (unsigned int)i, v);
+    return __insert_int16(x, (uniform unsigned int)i, v);
 }
 
 __declspec(safe,cost1)
@@ -433,12 +433,12 @@ static inline int32 insert(int32 x, uniform int i, uniform int32 v) {
 __declspec(safe,cost1)
 static inline unsigned int32 insert(unsigned int32 x, uniform int i,
                                     uniform unsigned int32 v) {
-    return __insert_int32(x, (unsigned int)i, v);
+    return __insert_int32(x, (uniform unsigned int)i, v);
 }
 
 __declspec(safe,cost1)
 static inline double insert(double x, uniform int i, uniform double v) {
-    return doublebits(__insert_int64((int64)intbits(x), i, (int64)intbits(v)));
+    return doublebits(__insert_int64((int64)intbits(x), i, (uniform int64)intbits(v)));
 }
 
 __declspec(safe,cost1)
@@ -449,7 +449,7 @@ static inline int64 insert(int64 x, uniform int i, uniform int64 v) {
 __declspec(safe,cost1)
 static inline unsigned int64 insert(unsigned int64 x, uniform int i,
                                     uniform unsigned int64 v) {
-    return __insert_int64(x, (unsigned int)i, v);
+    return __insert_int64(x, (uniform unsigned int)i, v);
 }
 
 __declspec(safe,cost1)
@@ -509,7 +509,7 @@ static inline uniform int32 popcnt(uniform int32 v) {
 
 __declspec(safe)
 static inline uniform int popcnt(uniform int64 v) {
-    return (int32)__popcnt_int64(v);
+    return (uniform int32)__popcnt_int64(v);
 }
 
 __declspec(safe)
@@ -621,7 +621,7 @@ static inline void memcpy64(void * varying dst, void * varying src,
 static inline void memmove(void * uniform dst, void * uniform src,
                           uniform int32 count) {
     if (__is_genx_target) {
-        if ((uintptr_t)dst - (uintptr_t)src >= (size_t)count) {
+        if ((uniform uintptr_t)dst - (uniform uintptr_t)src >= (uniform size_t)count) {
             for (uniform int j = 0; j < count; j++) {
                 ((int8* uniform)dst)[j] = ((int8* uniform)src)[j];
             }
@@ -639,7 +639,7 @@ static inline void memmove(void * uniform dst, void * uniform src,
 static inline void memmove64(void * uniform dst, void * uniform src,
                              uniform int64 count) {
     if (__is_genx_target) {
-        if ((uintptr_t)dst - (uintptr_t)src >= (size_t)count) {
+        if ((uniform uintptr_t)dst - (uniform uintptr_t)src >= (uniform size_t)count) {
             for (uniform int64 j = 0; j < count; j++) {
                 ((int8* uniform)dst)[j] = ((int8* uniform)src)[j];
             }
@@ -666,7 +666,7 @@ static inline void memmove(void * varying dst, void * varying src,
         void * uniform d = da[i], * uniform s = sa[i];
         uniform int c = extract(count, i);
         if (__is_genx_target) {
-            if ((uintptr_t)d - (uintptr_t)s >= (size_t)c) {
+            if ((uniform uintptr_t)d - (uniform uintptr_t)s >= (uniform size_t)c) {
                 for (uniform int j = 0; j < count; j++) {
                     ((int8* uniform)d)[j] = ((int8* uniform)s)[j];
                 }
@@ -694,7 +694,7 @@ static inline void memmove64(void * varying dst, void * varying src,
         void * uniform d = da[i], * uniform s = sa[i];
         uniform int64 c = extract(count, i);
         if (__is_genx_target) {
-            if ((uintptr_t)d - (uintptr_t)s >= (size_t)c) {
+            if ((uniform uintptr_t)d - (uniform uintptr_t)s >= (uniform size_t)c) {
                 for (uniform int64 j = 0; j < count; j++) {
                     ((int8* uniform)d)[j] = ((int8* uniform)s)[j];
                 }
@@ -1205,22 +1205,22 @@ static inline uniform double select(uniform bool cond, uniform double t,
 
 __declspec(safe)
 static inline uniform int16 reduce_add(int8 x) {
-    return __reduce_add_int8(__mask ? x : (int8)0);
+    return __reduce_add_int8(__mask ? x : (varying int8)0);
 }
 
 __declspec(safe)
 static inline uniform unsigned int16 reduce_add(unsigned int8 x) {
-    return __reduce_add_int8(__mask ? x : (int8)0);
+    return __reduce_add_int8(__mask ? x : (varying int8)0);
 }
 
 __declspec(safe)
 static inline uniform int32 reduce_add(int16 x) {
-    return __reduce_add_int16(__mask ? x : (int16)0);
+    return __reduce_add_int16(__mask ? x : (varying int16)0);
 }
 
 __declspec(safe)
 static inline uniform unsigned int32 reduce_add(unsigned int16 x) {
-    return __reduce_add_int16(__mask ? x : (int16)0);
+    return __reduce_add_int16(__mask ? x : (varying int16)0);
 }
 
 __declspec(safe)
@@ -1670,7 +1670,7 @@ static inline varying int8 streaming_load(uniform int8 a[]) {
 
 __declspec(safe,cost1)
 static inline uniform unsigned int8 streaming_load_uniform(uniform unsigned int8 a[]) {
-    return (unsigned int8)__streaming_load_uniform_i8(a);
+    return (uniform unsigned int8)__streaming_load_uniform_i8(a);
 }
 
 __declspec(safe,cost1)
@@ -1690,7 +1690,7 @@ static inline varying int16 streaming_load(uniform int16 a[]) {
 
 __declspec(safe,cost1)
 static inline uniform unsigned int16 streaming_load_uniform(uniform unsigned int16 a[]) {
-    return (unsigned int16)__streaming_load_uniform_i16(a);
+    return (uniform unsigned int16)__streaming_load_uniform_i16(a);
 }
 
 __declspec(safe,cost1)
@@ -1710,7 +1710,7 @@ static inline varying int streaming_load(uniform int a[]) {
 
 __declspec(safe,cost1)
 static inline uniform unsigned int streaming_load_uniform(uniform unsigned int a[]) {
-    return (unsigned int)__streaming_load_uniform_i32(a);
+    return (uniform unsigned int)__streaming_load_uniform_i32(a);
 }
 
 __declspec(safe,cost1)
@@ -1730,7 +1730,7 @@ static inline varying int64 streaming_load(uniform int64 a[]) {
 
 __declspec(safe,cost1)
 static inline uniform unsigned int64 streaming_load_uniform(uniform unsigned int64 a[]) {
-    return (unsigned int64)__streaming_load_uniform_i64(a);
+    return (uniform unsigned int64)__streaming_load_uniform_i64(a);
 }
 
 __declspec(safe,cost1)
@@ -2964,7 +2964,7 @@ static inline uniform float sin(uniform float x_full) {
         static const uniform float two_over_pi_vec = 0.636619746685028076171875;
         uniform float scaled = x_full * two_over_pi_vec;
         uniform float k_real = floor(scaled);
-        uniform int k = (int)k_real;
+        uniform int k = (uniform int)k_real;
 
         // Reduced range version of x
         uniform float x = x_full - k_real * pi_over_two_vec;
@@ -3223,7 +3223,7 @@ static inline uniform float cos(uniform float x_full) {
         static const uniform float two_over_pi_vec = 0.636619746685028076171875;
         uniform float scaled = x_full * two_over_pi_vec;
         uniform float k_real = floor(scaled);
-        uniform int k = (int)k_real;
+        uniform int k = (uniform int)k_real;
 
         // Reduced range version of x
         uniform float x = x_full - k_real * pi_over_two_vec;
@@ -3538,7 +3538,7 @@ static inline uniform float tan(uniform float x_full) {
         uniform float scaled = y * four_over_pi_vec;
 
         uniform float k_real = floor(scaled);
-        uniform int k = (int)k_real;
+        uniform int k = (uniform int)k_real;
 
         uniform float x = y - k_real * pi_over_four_vec;
 
@@ -3861,7 +3861,7 @@ static inline uniform float exp(uniform float x_full) {
         uniform int n;
         x_full -= z * 0.693359375f;
         x_full -= z * -2.12194440e-4f;
-        n = (int)z;
+        n = (uniform int)z;
 
         z = x_full * x_full;
         z = (((((1.9875691500E-4f  * x_full + 1.3981999507E-3f) * x_full +
@@ -4252,7 +4252,7 @@ static inline uniform double ldexp(uniform double x, uniform int n) {
     uniform unsigned int64 ix = intbits(x);
     ex &= ix;
     ix = ix & ~0x7ff0000000000000;  // clear exponent
-    uniform int64 n64 = ((int64)n << 52) + ex;
+    uniform int64 n64 = ((uniform int64)n << 52) + ex;
     ix |= n64; // insert new exponent
     return doublebits(ix);
 }
@@ -4274,7 +4274,7 @@ static inline uniform double frexp(uniform double x, uniform int * uniform pw2) 
     uniform unsigned int64 ix = intbits(x);
     ex &= ix;
     ix &= ~0x7ff0000000000000;  // clear exponent
-    *pw2 = (int)(ex >> 52) - 1022; // compute exponent
+    *pw2 = (uniform int)(ex >> 52) - 1022; // compute exponent
     ix |= 0x3fe0000000000000;         // insert exponent +1 in x
     return doublebits(ix);
 }
@@ -4602,7 +4602,7 @@ static inline uniform float half_to_float(uniform unsigned int16 h) {
         // Fabian "ryg" Giesen.
         static const uniform unsigned int32 shifted_exp = 0x7c00ul << 13; // exponent mask after shift
 
-        uniform int32 o = ((int32)(h & 0x7fff)) << 13;     // exponent/mantissa bits
+        uniform int32 o = ((uniform int32)(h & 0x7fff)) << 13;     // exponent/mantissa bits
         uniform unsigned int32 exp = shifted_exp & o;   // just the exponent
         o += (uniform int32)(127 - 15) << 23;        // exponent adjust
 
@@ -4614,7 +4614,7 @@ static inline uniform float half_to_float(uniform unsigned int16 h) {
             o = intbits(floatbits(o) - floatbits(113ul << 23)); // renormalize
         }
 
-        o |= ((int32)(h & 0x8000)) << 16;    // sign bit
+        o |= ((uniform int32)(h & 0x8000)) << 16;    // sign bit
         return floatbits(o);
     }
 }
@@ -4632,9 +4632,9 @@ static inline float half_to_float(unsigned int16 h) {
 
         int32 o = ((int32)(h & 0x7ffful)) << 13;     // exponent/mantissa bits
         unsigned int32 exp = shifted_exp & o;   // just the exponent
-        o += (int32)(127 - 15) << 23;        // exponent adjust
+        o += (varying int32)(127 - 15) << 23;        // exponent adjust
 
-        int32 infnan_val = o + ((int32)(128 - 16) << 23);
+        int32 infnan_val = o + ((varying int32)(128 - 16) << 23);
         int32 zerodenorm_val = intbits(floatbits(o + (1ul<<23)) - floatbits(113ul << 23));
         int32 reg_val = (exp == 0) ? zerodenorm_val : o;
 
@@ -4759,11 +4759,11 @@ static inline uniform float half_to_float_fast(uniform unsigned int16 h) {
         return __half_to_float_uniform(h);
     }
     else {
-        uniform unsigned int32 hs = h & (int32)0x8000u;     // Pick off sign bit
-        uniform unsigned int32 hem = h & (int32)0x7fffu;    // Pick off exponent-mantissa bits
+        uniform unsigned int32 hs = h & (uniform int32)0x8000u;     // Pick off sign bit
+        uniform unsigned int32 hem = h & (uniform int32)0x7fffu;    // Pick off exponent-mantissa bits
 
-        uniform unsigned int32 xs = ((unsigned int32) hs) << 16;
-        uniform unsigned int32 xem = ((unsigned int32) hem) << 13;
+        uniform unsigned int32 xs = ((uniform unsigned int32) hs) << 16;
+        uniform unsigned int32 xem = ((uniform unsigned int32) hem) << 13;
 
         xem += 0x38000000;      // (127 - 15) << 23
 
@@ -4777,8 +4777,8 @@ static inline float half_to_float_fast(unsigned int16 h) {
         return __half_to_float_varying(h);
     }
     else {
-        unsigned int32 hs = h & (int32)0x8000u;     // Pick off sign bit
-        unsigned int32 hem = h & (int32)0x7fffu;    // Pick off exponent-mantissa bits
+        unsigned int32 hs = h & (varying int32)0x8000u;     // Pick off sign bit
+        unsigned int32 hem = h & (varying int32)0x7fffu;    // Pick off exponent-mantissa bits
 
         unsigned int32 xs = ((unsigned int32) hs) << 16;
         unsigned int32 xem = ((unsigned int32) hem) << 13;
@@ -4800,7 +4800,7 @@ static inline uniform int16 float_to_half_fast(uniform float f) {
 
         uniform unsigned int32 hs = (xs >> 16); // Sign bit
         // Exponent unbias the single, then bias the halfp
-        uniform int32 hes = ((int)(xe >> 23)) - 127 + 15;
+        uniform int32 hes = ((uniform int)(xe >> 23)) - 127 + 15;
         uniform unsigned int32 he = (hes << 10); // Exponent
         uniform int32 hm = (xm >> 13); // Mantissa
         uniform int32 ret = (hs | he | hm);
@@ -4809,7 +4809,7 @@ static inline uniform int16 float_to_half_fast(uniform float f) {
             // Round, might overflow to inf, this is OK
             ret += 1u;
 
-        return (int16)ret;
+        return (uniform int16)ret;
     }
 }
 
@@ -6666,7 +6666,7 @@ static unmasked inline int8 __fast_idiv(int8 numerator, uniform int8 divisor) {
   else {
       unsigned int8 sign = numerator >> 7;
       numerator ^= sign;
-      int16 mul = (int16)numerator * (int16)multiplier;
+      int16 mul = (int16)numerator * (varying int16)multiplier;
       mul >>= 8 + shift;
       return (int8)mul ^ sign;
   }
@@ -6710,7 +6710,7 @@ static unmasked inline int16 __fast_idiv(int16 numerator, uniform int16 divisor)
   else {
       unsigned int16 sign = numerator >> 15;
       numerator ^= sign;
-      int32 mul = (int32)numerator * (int32)multiplier;
+      int32 mul = (int32)numerator * (varying int32)multiplier;
       mul >>= 16 + shift;
       int16 result = mul;
       return result ^ sign;
@@ -6755,7 +6755,7 @@ static unmasked inline int32 __fast_idiv(int32 numerator, uniform int32 divisor)
   else {
       unsigned int32 sign = numerator >> 31;
       numerator ^= sign;
-      int64 mul = (int64)numerator * (int64)multiplier;
+      int64 mul = (int64)numerator * (varying int64)multiplier;
       mul >>= 32 + shift;
       int32 result = mul;
       return result ^ sign;

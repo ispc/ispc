@@ -192,7 +192,7 @@ ambient_occlusion(Isect &isect, uniform Plane &plane, uniform Sphere spheres[3],
         }
     }
 
-    occlusion = (ntheta * nphi - occlusion) / (float)(ntheta * nphi);
+    occlusion = (ntheta * nphi - occlusion) / (varying float)(ntheta * nphi);
     return occlusion;
 }
 
@@ -222,7 +222,7 @@ static void ao_scanlines(uniform int y0, uniform int y1, uniform int w,
         float py = -(y + dv - (h / 2.0f)) / (h / 2.0f);
 
         // Scale NDC based on width/height ratio, supporting non-square image output
-        px *= (float)w / (float)h;
+        px *= (varying float)w / (varying float)h;
 
         float ret = 0.f;
         Ray ray;

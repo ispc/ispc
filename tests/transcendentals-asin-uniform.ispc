@@ -3,7 +3,7 @@ uniform bool ok(uniform double x, uniform double ref) { return (abs(x - ref) < 1
 export void f_du(uniform float RET[], uniform double aFOO[], uniform double b) {
   for (uniform int i = 0; i != programCount; ++i) {
     uniform double arg = aFOO[i] / (programCount + 2.0);
-    uniform double ref = asin((float)arg);
+    uniform double ref = asin((uniform float)arg);
     uniform double res = asin(arg);
     RET[i] = ok(res, ref) ? 0. : 1.;
   }
