@@ -10,6 +10,7 @@ namespace ispcrt {
 
 struct GPUDevice : public base::Device {
     GPUDevice();
+    ~GPUDevice();
 
     base::MemoryView *newMemoryView(void *appMem, size_t numBytes) const override;
 

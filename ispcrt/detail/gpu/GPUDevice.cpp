@@ -539,6 +539,11 @@ GPUDevice::GPUDevice() {
         throw std::runtime_error("failed to create GPU context");
 }
 
+GPUDevice::~GPUDevice() {
+    if (m_context)
+        L0_SAFE_CALL_NOEXCEPT(zeContextDestroy((ze_context_handle_t)m_context));
+}
+
 base::MemoryView *GPUDevice::newMemoryView(void *appMem, size_t numBytes) const {
     return new gpu::MemoryView((ze_context_handle_t)m_context, (ze_device_handle_t)m_device, appMem, numBytes);
 }
