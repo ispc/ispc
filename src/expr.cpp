@@ -6879,6 +6879,11 @@ const Type *TypeCastExpr::GetType() const {
         return NULL;
     if (toType->HasUnboundVariability()) {
         if (fromType->IsUniformType()) {
+            Warning(pos,
+                    "Typecasting to type \"%s\" (variability not specified) from type \"%s\" "
+                    "will results in \"varying\" variability in future releases.\n"
+                    "Typecasting to \"uniform\" type will require \"uniform\" qualifier.\n",
+                    toType->GetString().c_str(), fromType->GetString().c_str());
             toType = type->ResolveUnboundVariability(Variability::Uniform);
         } else {
             toType = type->ResolveUnboundVariability(Variability::Varying);
@@ -6914,6 +6919,12 @@ Expr *TypeCastExpr::TypeCheck() {
         return NULL;
 
     if (toType->HasUnboundVariability() && fromType->IsUniformType()) {
+        Warning(pos,
+                "Typecasting to type \"%s\" (variability not specified) from type \"%s\" "
+                "will results in \"varying\" variability in future releases.\n"
+                "Typecasting to \"uniform\" type will require \"uniform\" qualifier.\n",
+                toType->GetString().c_str(), fromType->GetString().c_str());
+        toType = type->ResolveUnboundVariability(Variability::Uniform);
         TypeCastExpr *tce = new TypeCastExpr(toType->GetAsUniformType(), expr, pos);
         return ::TypeCheck(tce);
     }
