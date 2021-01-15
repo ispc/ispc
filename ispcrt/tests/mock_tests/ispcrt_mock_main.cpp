@@ -30,6 +30,10 @@ class MockTest : public ::testing::Test {
     void TearDown() override {
         ResetError();
         Config::cleanup();
+        // Make sure we can still recreate a device object
+        ispcrt::Device d(ISPCRT_DEVICE_TYPE_GPU);
+        ASSERT_EQ(sm_rt_error, ISPCRT_NO_ERROR);
+        ResetError();
     }
 
     void ResetError() { sm_rt_error = ISPCRT_NO_ERROR; }
@@ -80,10 +84,6 @@ TEST_F(MockTest, Device_Constructor_zeInit) {
     Config::setRetValue("zeInit", ZE_RESULT_ERROR_DEVICE_LOST);
     ispcrt::Device d(ISPCRT_DEVICE_TYPE_GPU);
     ASSERT_EQ(sm_rt_error, ISPCRT_DEVICE_LOST);
-    Config::setRetValue("zeInit", ZE_RESULT_SUCCESS);
-    ResetError();
-    ispcrt::Device d2(ISPCRT_DEVICE_TYPE_GPU);
-    ASSERT_EQ(sm_rt_error, ISPCRT_NO_ERROR);
 }
 
 TEST_F(MockTest, Device_Constructor_zeDeviceGet) {
@@ -91,10 +91,6 @@ TEST_F(MockTest, Device_Constructor_zeDeviceGet) {
     Config::setRetValue("zeDeviceGet", ZE_RESULT_ERROR_DEVICE_LOST);
     ispcrt::Device d(ISPCRT_DEVICE_TYPE_GPU);
     ASSERT_EQ(sm_rt_error, ISPCRT_DEVICE_LOST);
-    Config::setRetValue("zeDeviceGet", ZE_RESULT_SUCCESS);
-    ResetError();
-    ispcrt::Device d2(ISPCRT_DEVICE_TYPE_GPU);
-    ASSERT_EQ(sm_rt_error, ISPCRT_NO_ERROR);
 }
 
 TEST_F(MockTest, Device_Constructor_zeDeviceGetProperties) {
@@ -102,10 +98,6 @@ TEST_F(MockTest, Device_Constructor_zeDeviceGetProperties) {
     Config::setRetValue("zeDeviceGetProperties", ZE_RESULT_ERROR_DEVICE_LOST);
     ispcrt::Device d(ISPCRT_DEVICE_TYPE_GPU);
     ASSERT_EQ(sm_rt_error, ISPCRT_DEVICE_LOST);
-    Config::setRetValue("zeDeviceGetProperties", ZE_RESULT_SUCCESS);
-    ResetError();
-    ispcrt::Device d2(ISPCRT_DEVICE_TYPE_GPU);
-    ASSERT_EQ(sm_rt_error, ISPCRT_NO_ERROR);
 }
 
 TEST_F(MockTest, Device_Constructor_zeContextCreate) {
@@ -113,10 +105,6 @@ TEST_F(MockTest, Device_Constructor_zeContextCreate) {
     Config::setRetValue("zeContextCreate", ZE_RESULT_ERROR_DEVICE_LOST);
     ispcrt::Device d(ISPCRT_DEVICE_TYPE_GPU);
     ASSERT_EQ(sm_rt_error, ISPCRT_DEVICE_LOST);
-    Config::setRetValue("zeContextCreate", ZE_RESULT_SUCCESS);
-    ResetError();
-    ispcrt::Device d2(ISPCRT_DEVICE_TYPE_GPU);
-    ASSERT_EQ(sm_rt_error, ISPCRT_NO_ERROR);
 }
 
 /////////////////////////////////////////////////////////////////////
@@ -129,14 +117,10 @@ TEST_F(MockTest, Module_Constructor) {
 }
 
 TEST_F(MockTest, Module_Constructor_zeModuleCreate) {
-    // Check if it's possible to create a module after first try failed
+    // Check if error is reported from module constructor
     Config::setRetValue("zeModuleCreate", ZE_RESULT_ERROR_DEVICE_LOST);
     ispcrt::Module m(m_device, "");
     ASSERT_EQ(sm_rt_error, ISPCRT_DEVICE_LOST);
-    Config::setRetValue("zeModuleCreate", ZE_RESULT_SUCCESS);
-    ResetError();
-    ispcrt::Module m2(m_device, "");
-    ASSERT_EQ(sm_rt_error, ISPCRT_NO_ERROR);
 }
 
 /////////////////////////////////////////////////////////////////////
@@ -149,14 +133,10 @@ TEST_F(MockTestWithModule, Kernel_Constructor) {
 }
 
 TEST_F(MockTestWithModule, Kernel_Constructor_zeKernelCreate) {
-    // Check if it's possible to create a kernel after the first try failed
+    // Check if error is reported from kernel constructor
     Config::setRetValue("zeKernelCreate", ZE_RESULT_ERROR_DEVICE_LOST);
     ispcrt::Kernel k(m_device, m_module, "");
     ASSERT_EQ(sm_rt_error, ISPCRT_DEVICE_LOST);
-    Config::setRetValue("zeKernelCreate", ZE_RESULT_SUCCESS);
-    ResetError();
-    ispcrt::Kernel k2(m_device, m_module, "");
-    ASSERT_EQ(sm_rt_error, ISPCRT_NO_ERROR);
 }
 
 /////////////////////////////////////////////////////////////////////
@@ -178,30 +158,6 @@ TEST_F(MockTest, ArrayObj_zeMemAllocDevice) {
     ASSERT_EQ(sm_rt_error, ISPCRT_DEVICE_LOST);
     // Check that nullptr is returned
     ASSERT_EQ(dev_buf_ptr, nullptr);
-    Config::setRetValue("zeMemAllocDevice", ZE_RESULT_SUCCESS);
-    ResetError();
-    // Reset error and try again
-    dev_buf_ptr = buf_dev.devicePtr();
-    ASSERT_EQ(sm_rt_error, ISPCRT_NO_ERROR);
-    ASSERT_NE(dev_buf_ptr, nullptr);
-}
-
-TEST_F(MockTest, ArrayObj_zeMemAllocDevice_DiffObjs) {
-    std::vector<float> buf(64 * 1024);
-    ispcrt::Array<float> buf_dev(m_device, buf);
-    Config::setRetValue("zeMemAllocDevice", ZE_RESULT_ERROR_DEVICE_LOST);
-    auto dev_buf_ptr = buf_dev.devicePtr();
-    ASSERT_EQ(sm_rt_error, ISPCRT_DEVICE_LOST);
-    // Check that nullptr is returned
-    ASSERT_EQ(dev_buf_ptr, nullptr);
-    Config::setRetValue("zeMemAllocDevice", ZE_RESULT_SUCCESS);
-    ResetError();
-    // Reset error and try again, but create different object
-    ispcrt::Array<float> buf_dev2(m_device, buf);
-    auto dev_buf_ptr2 = buf_dev2.devicePtr();
-    ASSERT_EQ(sm_rt_error, ISPCRT_NO_ERROR);
-    ASSERT_EQ(dev_buf_ptr, nullptr);
-    ASSERT_NE(dev_buf_ptr2, nullptr);
 }
 
 /////////////////////////////////////////////////////////////////////
@@ -219,10 +175,6 @@ TEST_F(MockTest, DISABLED_TaskQueue_Constructor_zeEventPoolCreate) {
     Config::setRetValue("zeEventPoolCreate", ZE_RESULT_ERROR_DEVICE_LOST);
     ispcrt::TaskQueue tq(m_device);
     ASSERT_EQ(sm_rt_error, ISPCRT_DEVICE_LOST);
-    Config::setRetValue("zeEventPoolCreate", ZE_RESULT_SUCCESS);
-    ResetError();
-    ispcrt::TaskQueue tq2(m_device);
-    ASSERT_EQ(sm_rt_error, ISPCRT_NO_ERROR);
 }
 
 TEST_F(MockTest, TaskQueue_Constructor_zeCommandListCreate) {
@@ -230,10 +182,6 @@ TEST_F(MockTest, TaskQueue_Constructor_zeCommandListCreate) {
     Config::setRetValue("zeCommandListCreate", ZE_RESULT_ERROR_DEVICE_LOST);
     ispcrt::TaskQueue tq(m_device);
     ASSERT_EQ(sm_rt_error, ISPCRT_DEVICE_LOST);
-    Config::setRetValue("zeCommandListCreate", ZE_RESULT_SUCCESS);
-    ResetError();
-    ispcrt::TaskQueue tq2(m_device);
-    ASSERT_EQ(sm_rt_error, ISPCRT_NO_ERROR);
 }
 
 TEST_F(MockTest, TaskQueue_Constructor_zeCommandQueueCreate) {
@@ -241,10 +189,6 @@ TEST_F(MockTest, TaskQueue_Constructor_zeCommandQueueCreate) {
     Config::setRetValue("zeCommandQueueCreate", ZE_RESULT_ERROR_DEVICE_LOST);
     ispcrt::TaskQueue tq(m_device);
     ASSERT_EQ(sm_rt_error, ISPCRT_DEVICE_LOST);
-    Config::setRetValue("zeCommandQueueCreate", ZE_RESULT_SUCCESS);
-    ResetError();
-    ispcrt::TaskQueue tq2(m_device);
-    ASSERT_EQ(sm_rt_error, ISPCRT_NO_ERROR);
 }
 
 TEST_F(MockTest, TaskQueue_CopyToDevice) {
@@ -275,14 +219,8 @@ TEST_F(MockTest, TaskQueue_CopyToDevice_zeCommandListAppendMemoryCopy) {
     tq.copyToDevice(buf_dev);
     ASSERT_EQ(sm_rt_error, ISPCRT_DEVICE_LOST);
     ASSERT_TRUE(Config::checkCmdList({}));
-    Config::setRetValue("zeCommandListAppendMemoryCopy", ZE_RESULT_SUCCESS);
-    ResetError();
-    tq.copyToDevice(buf_dev);
-    ASSERT_EQ(sm_rt_error, ISPCRT_NO_ERROR);
-    ASSERT_TRUE(Config::checkCmdList({CmdListElem::MemoryCopy}));
 }
 
-// TODO: Write test that will check if command list is cleaned up when zeCommandQueueCreate fails
 
 // TODO: Enable the test when new Level Zero loader release is available
 // Normal kernel launch (plus a few memory transfers) - but no waiting on future
