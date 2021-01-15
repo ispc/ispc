@@ -78,12 +78,13 @@ macro(build_ispcrt SHARED_OR_STATIC TARGET_NAME)
   target_include_directories(${TARGET_NAME}
   PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}>
+    $<BUILD_INTERFACE:${LEVEL_ZERO_INCLUDE_DIR}>
     $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/ispcrt>
   )
 
   target_link_libraries(${TARGET_NAME}
   PUBLIC
-    $<$<BOOL:${ISPCRT_BUILD_GPU}>:level_zero>
+    $<$<BOOL:${ISPCRT_BUILD_GPU}>:${LEVEL_ZERO_LIB_LOADER}>
   PRIVATE
     ${CMAKE_DL_LIBS}
     $<$<BOOL:${ISPCRT_BUILD_TASKING}>:ispcrt_tasking>

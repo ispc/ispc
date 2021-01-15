@@ -40,6 +40,10 @@ extern "C" void ISPCLaunch(void **taskGroupPtr, void *_func, void *data, int cou
 #include <mutex>
 #include <thread>
 
+#if defined(_WIN32) || defined(_WIN64)
+#include <malloc.h>
+#endif
+
 using TaskFcn = std::function<void(size_t)>;
 
 struct Task {
@@ -164,6 +168,10 @@ extern "C" void ISPCLaunch(void **taskGroupPtr, void *_func, void *data, int cou
 extern "C" void ISPCSync(void *h) { free(h); }
 
 extern "C" void *ISPCAlloc(void **taskGroupPtr, int64_t size, int32_t alignment) {
+#if defined(_WIN32) || defined(_WIN64)
+    *taskGroupPtr = _aligned_malloc(size, alignment);
+#else
     *taskGroupPtr = aligned_alloc(alignment, size);
+#endif
     return *taskGroupPtr;
 }
