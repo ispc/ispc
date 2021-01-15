@@ -19,12 +19,12 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
-include(GNUInstallDirs)
-
 ## Establish project ##########################################################
 
 # TODO: use ISPC version here
-project(ispcrt VERSION 1.16.0 LANGUAGES C CXX)
+project(ispcrt VERSION 1.16.0 LANGUAGES CXX)
+
+include(GNUInstallDirs)
 
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake)
 
@@ -44,8 +44,14 @@ if (ISPCRT_BUILD_GPU)
 endif()
 
 if (ISPCRT_BUILD_TASKING)
-  # TODO: support multiple tasking system options
-  find_package(OpenMP REQUIRED)
+  add_library(ispcrt_tasking INTERFACE)
+  if (WIN32)
+    find_package(Threads REQUIRED)
+    target_link_libraries(ispcrt_tasking INTERFACE Threads::Threads)
+  else()
+    find_package(OpenMP REQUIRED)
+    target_link_libraries(ispcrt_tasking INTERFACE OpenMP::OpenMP_CXX)
+  endif()
 endif()
 
 ## Define a macro to build both static and shared versions of ispcrt
@@ -54,7 +60,7 @@ macro(build_ispcrt SHARED_OR_STATIC TARGET_NAME)
   ## Build library ##
 
   add_library(${TARGET_NAME} ${SHARED_OR_STATIC}
-    $<$<BOOL:${ISPCRT_BUILD_TASKING}>:ispc_tasking.c>
+    $<$<BOOL:${ISPCRT_BUILD_TASKING}>:ispc_tasking.cpp>
 
     ispcrt.cpp
     $<$<BOOL:${ISPCRT_BUILD_CPU}>:detail/cpu/CPUDevice.cpp>
@@ -80,8 +86,7 @@ macro(build_ispcrt SHARED_OR_STATIC TARGET_NAME)
     $<$<BOOL:${ISPCRT_BUILD_GPU}>:level_zero>
   PRIVATE
     ${CMAKE_DL_LIBS}
-    $<$<BOOL:${ISPCRT_BUILD_TASKING}>:OpenMP::OpenMP_CXX>
-    $<$<BOOL:${ISPCRT_BUILD_TASKING}>:OpenMP::OpenMP_C>
+    $<$<BOOL:${ISPCRT_BUILD_TASKING}>:ispcrt_tasking>
   )
 
   ## Install targets + exports ##
