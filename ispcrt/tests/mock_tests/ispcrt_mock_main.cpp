@@ -169,8 +169,7 @@ TEST_F(MockTest, TaskQueue_Constructor) {
     ASSERT_EQ(sm_rt_error, ISPCRT_NO_ERROR);
 }
 
-// TODO: Enable the test when new Level Zero loader release is available
-TEST_F(MockTest, DISABLED_TaskQueue_Constructor_zeEventPoolCreate) {
+TEST_F(MockTest, TaskQueue_Constructor_zeEventPoolCreate) {
     // Check if it's possible to create a task queue after the first try failed
     Config::setRetValue("zeEventPoolCreate", ZE_RESULT_ERROR_DEVICE_LOST);
     ispcrt::TaskQueue tq(m_device);
@@ -221,10 +220,8 @@ TEST_F(MockTest, TaskQueue_CopyToDevice_zeCommandListAppendMemoryCopy) {
     ASSERT_TRUE(Config::checkCmdList({}));
 }
 
-
-// TODO: Enable the test when new Level Zero loader release is available
 // Normal kernel launch (plus a few memory transfers) - but no waiting on future
-TEST_F(MockTestWithModuleQueueKernel, DISABLED_TaskQueue_FullKernelLaunchNoFuture) {
+TEST_F(MockTestWithModuleQueueKernel, TaskQueue_FullKernelLaunchNoFuture) {
     auto tq = m_task_queue;
     // Create an allocation
     std::vector<float> buf(64 * 1024);
@@ -249,9 +246,8 @@ TEST_F(MockTestWithModuleQueueKernel, DISABLED_TaskQueue_FullKernelLaunchNoFutur
     ASSERT_TRUE(Config::checkCmdList({}));
 }
 
-// TODO: Enable the test when new Level Zero loader release is available
 // Normal kernel launch (plus a few memory transfers)
-TEST_F(MockTestWithModuleQueueKernel, DISABLED_TaskQueue_FullKernelLaunch) {
+TEST_F(MockTestWithModuleQueueKernel, TaskQueue_FullKernelLaunch) {
     auto tq = m_task_queue;
     // Create an allocation
     std::vector<float> buf(64 * 1024);
@@ -287,33 +283,6 @@ TEST_F(MockTestWithModuleQueueKernel, TaskQueue_KernelLaunchNoSync) {
     ASSERT_TRUE(Config::checkCmdList({CmdListElem::KernelLaunch, CmdListElem::Barrier}));
     // Future should not be signaled
     ASSERT_FALSE(f.valid());
-}
-
-// TODO: Enable the test when new Level Zero loader release is available
-TEST_F(MockTestWithModuleQueueKernel, DISABLED_TaskQueue_FullKernelLaunch1) {
-    auto tq = m_task_queue;
-    // Create an allocation
-    std::vector<float> buf(64 * 1024);
-    ispcrt::Array<float> buf_dev(m_device, buf);
-    ASSERT_EQ(sm_rt_error, ISPCRT_NO_ERROR);
-    // "copy"
-    tq.copyToDevice(buf_dev);
-    ASSERT_EQ(sm_rt_error, ISPCRT_NO_ERROR);
-    ASSERT_TRUE(Config::checkCmdList({CmdListElem::MemoryCopy}));
-    tq.barrier();
-    ASSERT_EQ(sm_rt_error, ISPCRT_NO_ERROR);
-    ASSERT_TRUE(Config::checkCmdList({CmdListElem::MemoryCopy, CmdListElem::Barrier}));
-    auto f = tq.launch(m_kernel, 0);
-    ASSERT_EQ(sm_rt_error, ISPCRT_NO_ERROR);
-    ASSERT_TRUE(Config::checkCmdList({CmdListElem::MemoryCopy, CmdListElem::Barrier, CmdListElem::KernelLaunch}));
-    tq.barrier();
-    ASSERT_EQ(sm_rt_error, ISPCRT_NO_ERROR);
-    ASSERT_TRUE(Config::checkCmdList(
-        {CmdListElem::MemoryCopy, CmdListElem::Barrier, CmdListElem::KernelLaunch, CmdListElem::Barrier}));
-    tq.sync();
-    ASSERT_EQ(sm_rt_error, ISPCRT_NO_ERROR);
-    ASSERT_TRUE(Config::checkCmdList({}));
-    ASSERT_TRUE(f.valid());
 }
 
 } // namespace mock
