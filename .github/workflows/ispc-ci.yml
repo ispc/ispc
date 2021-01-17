@@ -12,7 +12,7 @@ on:
         required: true
         default: 'full'
 env:
-  SDE_TAR_NAME: sde-external-8.59.0-2020-10-05-lin
+  SDE_TAR_NAME: sde-external-8.59.0-2020-10-05
   LLVM_REPO: https://github.com/dbabokin/llvm-project
   TARGETS_SMOKE: '["avx2-i32x8"]'
   OPTSETS_SMOKE: "-O2"
