@@ -282,6 +282,11 @@ jobs:
       run: |
         .github/workflows/scripts/install-build-deps.ps1
 
+    - name: Check environment
+      shell: cmd
+      run: |
+        wmic cpu get caption, deviceid, name, numberofcores, maxclockspeed, status
+
     - name: Build package
       run: |
         .github/workflows/scripts/build-ispc.ps1
@@ -317,6 +322,11 @@ jobs:
     - name: Install dependencies
       run: |
         .github/workflows/scripts/install-build-deps.ps1
+
+    - name: Check environment
+      shell: cmd
+      run: |
+        wmic cpu get caption, deviceid, name, numberofcores, maxclockspeed, status
 
     - name: Build package
       run: |
@@ -355,6 +365,11 @@ jobs:
     - name: Install dependencies
       run: |
         .github/workflows/scripts/install-test-deps.ps1
+
+    - name: Check environment
+      shell: cmd
+      run: |
+        wmic cpu get caption, deviceid, name, numberofcores, maxclockspeed, status
 
     - name: Running tests
       run: |
@@ -396,6 +411,11 @@ jobs:
     - name: Install dependencies
       run: |
         .github/workflows/scripts/install-test-deps.ps1
+
+    - name: Check environment
+      shell: cmd
+      run: |
+        wmic cpu get caption, deviceid, name, numberofcores, maxclockspeed, status
 
     - name: Running tests
       run: |
