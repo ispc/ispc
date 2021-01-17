@@ -164,7 +164,7 @@ jobs:
       uses: actions/upload-artifact@v2
       if: failure()
       with:
-        name: fail_db.${{matrix.target}}.txt
+        name: fail_db.llvm10.${{matrix.target}}.txt
         path: fail_db.txt
 
     - name: Check
@@ -206,7 +206,7 @@ jobs:
       uses: actions/upload-artifact@v2
       if: failure()
       with:
-        name: fail_db.${{matrix.target}}.txt
+        name: fail_db.llvm11.${{matrix.target}}.txt
         path: fail_db.txt
 
     - name: Check
@@ -250,7 +250,7 @@ jobs:
       uses: actions/upload-artifact@v2
       if: failure()
       with:
-        name: fail_db.debug.txt
+        name: fail_db.llvm11.debug.txt
         path: fail_db.txt
 
     - name: Check
@@ -366,7 +366,7 @@ jobs:
       uses: actions/upload-artifact@v2
       if: failure()
       with:
-        name: fail_db.${{matrix.arch}}.${{matrix.target}}.txt
+        name: fail_db.llvm10.${{matrix.arch}}.${{matrix.target}}.txt
         path: fail_db.txt
 
     - name: Check
@@ -408,7 +408,7 @@ jobs:
       uses: actions/upload-artifact@v2
       if: failure()
       with:
-        name: fail_db.${{matrix.arch}}.${{matrix.target}}.txt
+        name: fail_db.llvm11.${{matrix.arch}}.${{matrix.target}}.txt
         path: fail_db.txt
 
     - name: Check
