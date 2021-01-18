@@ -170,21 +170,18 @@ TEST_F(MockTest, TaskQueue_Constructor) {
 }
 
 TEST_F(MockTest, TaskQueue_Constructor_zeEventPoolCreate) {
-    // Check if it's possible to create a task queue after the first try failed
     Config::setRetValue("zeEventPoolCreate", ZE_RESULT_ERROR_DEVICE_LOST);
     ispcrt::TaskQueue tq(m_device);
     ASSERT_EQ(sm_rt_error, ISPCRT_DEVICE_LOST);
 }
 
 TEST_F(MockTest, TaskQueue_Constructor_zeCommandListCreate) {
-    // Check if it's possible to create a task queue after the first try failed
     Config::setRetValue("zeCommandListCreate", ZE_RESULT_ERROR_DEVICE_LOST);
     ispcrt::TaskQueue tq(m_device);
     ASSERT_EQ(sm_rt_error, ISPCRT_DEVICE_LOST);
 }
 
 TEST_F(MockTest, TaskQueue_Constructor_zeCommandQueueCreate) {
-    // Check if it's possible to create a task queue after the first try failed
     Config::setRetValue("zeCommandQueueCreate", ZE_RESULT_ERROR_DEVICE_LOST);
     ispcrt::TaskQueue tq(m_device);
     ASSERT_EQ(sm_rt_error, ISPCRT_DEVICE_LOST);
@@ -216,6 +213,15 @@ TEST_F(MockTest, TaskQueue_CopyToDevice_zeCommandListAppendMemoryCopy) {
     // "copy", but fail
     Config::setRetValue("zeCommandListAppendMemoryCopy", ZE_RESULT_ERROR_DEVICE_LOST);
     tq.copyToDevice(buf_dev);
+    ASSERT_EQ(sm_rt_error, ISPCRT_DEVICE_LOST);
+    ASSERT_TRUE(Config::checkCmdList({}));
+}
+
+TEST_F(MockTest, TaskQueue_Barrier_zeCommandListAppendBarrier) {
+    ispcrt::TaskQueue tq(m_device);
+    ASSERT_EQ(sm_rt_error, ISPCRT_NO_ERROR);
+    Config::setRetValue("zeCommandListAppendBarrier", ZE_RESULT_ERROR_DEVICE_LOST);
+    tq.barrier();
     ASSERT_EQ(sm_rt_error, ISPCRT_DEVICE_LOST);
     ASSERT_TRUE(Config::checkCmdList({}));
 }
@@ -284,6 +290,21 @@ TEST_F(MockTestWithModuleQueueKernel, TaskQueue_KernelLaunchNoSync) {
     // Future should not be signaled
     ASSERT_FALSE(f.valid());
 }
+
+TEST_F(MockTestWithModuleQueueKernel, TaskQueue_Launch_zeKernelSetArgumentValue) {
+    Config::setRetValue("zeKernelSetArgumentValue", ZE_RESULT_ERROR_DEVICE_LOST);
+    m_task_queue.launch(m_kernel, 0);
+    ASSERT_EQ(sm_rt_error, ISPCRT_DEVICE_LOST);
+    ASSERT_TRUE(Config::checkCmdList({}));
+}
+
+TEST_F(MockTestWithModuleQueueKernel, DISABLED_TaskQueue_Launch_zeCommandListAppendLaunchKernel) {
+    Config::setRetValue("zeCommandListAppendLaunchKernel", ZE_RESULT_ERROR_DEVICE_LOST);
+    m_task_queue.launch(m_kernel, 0);
+    ASSERT_EQ(sm_rt_error, ISPCRT_DEVICE_LOST);
+    ASSERT_TRUE(Config::checkCmdList({}));
+}
+
 
 } // namespace mock
 } // namespace testing
