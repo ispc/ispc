@@ -217,6 +217,35 @@ TEST_F(MockTest, TaskQueue_CopyToDevice_zeCommandListAppendMemoryCopy) {
     ASSERT_TRUE(Config::checkCmdList({}));
 }
 
+TEST_F(MockTest, TaskQueue_CopyToHost) {
+    ispcrt::TaskQueue tq(m_device);
+    ASSERT_EQ(sm_rt_error, ISPCRT_NO_ERROR);
+    // Create an allocation
+    std::vector<float> buf(64 * 1024);
+    ispcrt::Array<float> buf_dev(m_device, buf);
+    ASSERT_EQ(sm_rt_error, ISPCRT_NO_ERROR);
+    // "copy"
+    tq.copyToHost(buf_dev);
+    ASSERT_EQ(sm_rt_error, ISPCRT_NO_ERROR);
+    ASSERT_TRUE(Config::checkCmdList({CmdListElem::MemoryCopy}));
+    tq.barrier();
+    ASSERT_EQ(sm_rt_error, ISPCRT_NO_ERROR);
+    ASSERT_TRUE(Config::checkCmdList({CmdListElem::MemoryCopy, CmdListElem::Barrier}));
+}
+
+TEST_F(MockTest, TaskQueue_CopyToHost_zeCommandListAppendMemoryCopy) {
+    ispcrt::TaskQueue tq(m_device);
+    ASSERT_EQ(sm_rt_error, ISPCRT_NO_ERROR);
+    // Create an allocation
+    std::vector<float> buf(64 * 1024);
+    ispcrt::Array<float> buf_dev(m_device, buf);
+    ASSERT_EQ(sm_rt_error, ISPCRT_NO_ERROR);
+    // "copy", but fail
+    Config::setRetValue("zeCommandListAppendMemoryCopy", ZE_RESULT_ERROR_DEVICE_LOST);
+    tq.copyToHost(buf_dev);
+    ASSERT_EQ(sm_rt_error, ISPCRT_DEVICE_LOST);
+}
+
 TEST_F(MockTest, TaskQueue_Barrier_zeCommandListAppendBarrier) {
     ispcrt::TaskQueue tq(m_device);
     ASSERT_EQ(sm_rt_error, ISPCRT_NO_ERROR);
@@ -295,16 +324,78 @@ TEST_F(MockTestWithModuleQueueKernel, TaskQueue_Launch_zeKernelSetArgumentValue)
     Config::setRetValue("zeKernelSetArgumentValue", ZE_RESULT_ERROR_DEVICE_LOST);
     m_task_queue.launch(m_kernel, 0);
     ASSERT_EQ(sm_rt_error, ISPCRT_DEVICE_LOST);
-    ASSERT_TRUE(Config::checkCmdList({}));
 }
 
-TEST_F(MockTestWithModuleQueueKernel, DISABLED_TaskQueue_Launch_zeCommandListAppendLaunchKernel) {
+TEST_F(MockTestWithModuleQueueKernel, TaskQueue_Launch_zeCommandListAppendLaunchKernel) {
     Config::setRetValue("zeCommandListAppendLaunchKernel", ZE_RESULT_ERROR_DEVICE_LOST);
     m_task_queue.launch(m_kernel, 0);
     ASSERT_EQ(sm_rt_error, ISPCRT_DEVICE_LOST);
-    ASSERT_TRUE(Config::checkCmdList({}));
 }
 
+TEST_F(MockTestWithModuleQueueKernel, TaskQueue_Sync_zeCommandListClose) {
+    auto tq = m_task_queue;
+    auto f = tq.launch(m_kernel, 0);
+    ASSERT_EQ(sm_rt_error, ISPCRT_NO_ERROR);
+    ASSERT_TRUE(Config::checkCmdList({CmdListElem::KernelLaunch}));
+    tq.barrier();
+    ASSERT_EQ(sm_rt_error, ISPCRT_NO_ERROR);
+    ASSERT_TRUE(Config::checkCmdList({CmdListElem::KernelLaunch, CmdListElem::Barrier}));
+    Config::setRetValue("zeCommandListClose", ZE_RESULT_ERROR_DEVICE_LOST);
+    m_task_queue.sync();
+    ASSERT_EQ(sm_rt_error, ISPCRT_DEVICE_LOST);
+}
+
+TEST_F(MockTestWithModuleQueueKernel, TaskQueue_Sync_zeCommandQueueExecuteCommandLists) {
+    auto tq = m_task_queue;
+    auto f = tq.launch(m_kernel, 0);
+    ASSERT_EQ(sm_rt_error, ISPCRT_NO_ERROR);
+    ASSERT_TRUE(Config::checkCmdList({CmdListElem::KernelLaunch}));
+    tq.barrier();
+    ASSERT_EQ(sm_rt_error, ISPCRT_NO_ERROR);
+    ASSERT_TRUE(Config::checkCmdList({CmdListElem::KernelLaunch, CmdListElem::Barrier}));
+    Config::setRetValue("zeCommandQueueExecuteCommandLists", ZE_RESULT_ERROR_DEVICE_LOST);
+    m_task_queue.sync();
+    ASSERT_EQ(sm_rt_error, ISPCRT_DEVICE_LOST);
+}
+
+TEST_F(MockTestWithModuleQueueKernel, TaskQueue_Sync_zeCommandQueueSynchronize) {
+    auto tq = m_task_queue;
+    auto f = tq.launch(m_kernel, 0);
+    ASSERT_EQ(sm_rt_error, ISPCRT_NO_ERROR);
+    ASSERT_TRUE(Config::checkCmdList({CmdListElem::KernelLaunch}));
+    tq.barrier();
+    ASSERT_EQ(sm_rt_error, ISPCRT_NO_ERROR);
+    ASSERT_TRUE(Config::checkCmdList({CmdListElem::KernelLaunch, CmdListElem::Barrier}));
+    Config::setRetValue("zeCommandQueueSynchronize", ZE_RESULT_ERROR_DEVICE_LOST);
+    m_task_queue.sync();
+    ASSERT_EQ(sm_rt_error, ISPCRT_DEVICE_LOST);
+}
+
+TEST_F(MockTestWithModuleQueueKernel, TaskQueue_Sync_zeCommandListReset) {
+    auto tq = m_task_queue;
+    auto f = tq.launch(m_kernel, 0);
+    ASSERT_EQ(sm_rt_error, ISPCRT_NO_ERROR);
+    ASSERT_TRUE(Config::checkCmdList({CmdListElem::KernelLaunch}));
+    tq.barrier();
+    ASSERT_EQ(sm_rt_error, ISPCRT_NO_ERROR);
+    ASSERT_TRUE(Config::checkCmdList({CmdListElem::KernelLaunch, CmdListElem::Barrier}));
+    Config::setRetValue("zeCommandListReset", ZE_RESULT_ERROR_DEVICE_LOST);
+    m_task_queue.sync();
+    ASSERT_EQ(sm_rt_error, ISPCRT_DEVICE_LOST);
+}
+
+TEST_F(MockTestWithModuleQueueKernel, TaskQueue_Sync_zeEventQueryKernelTimestamp) {
+    auto tq = m_task_queue;
+    auto f = tq.launch(m_kernel, 0);
+    ASSERT_EQ(sm_rt_error, ISPCRT_NO_ERROR);
+    ASSERT_TRUE(Config::checkCmdList({CmdListElem::KernelLaunch}));
+    tq.barrier();
+    ASSERT_EQ(sm_rt_error, ISPCRT_NO_ERROR);
+    ASSERT_TRUE(Config::checkCmdList({CmdListElem::KernelLaunch, CmdListElem::Barrier}));
+    Config::setRetValue("zeEventQueryKernelTimestamp", ZE_RESULT_ERROR_DEVICE_LOST);
+    m_task_queue.sync();
+    ASSERT_EQ(sm_rt_error, ISPCRT_DEVICE_LOST);
+}
 
 } // namespace mock
 } // namespace testing
