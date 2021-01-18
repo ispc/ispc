@@ -429,8 +429,14 @@ struct TaskQueue : public ispcrt::base::TaskQueue {
         if (event == nullptr)
             throw std::runtime_error("Failed to create event!");
 
-        L0_SAFE_CALL(
-            zeCommandListAppendLaunchKernel(m_cl, kernel.handle(), &dispatchTraits, event->handle(), 0, nullptr));
+        try {
+            L0_SAFE_CALL(
+                zeCommandListAppendLaunchKernel(m_cl, kernel.handle(), &dispatchTraits, event->handle(), 0, nullptr));
+        } catch (ispcrt::base::ispcrt_runtime_error &e) {
+            // cleanup and rethrow
+            m_ep.deleteEvent(event);
+            throw e;
+        }
 
         auto *future = new gpu::Future;
         assert(future);
