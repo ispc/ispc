@@ -235,6 +235,9 @@ void ispcrtSync(ISPCRTTaskQueue q) ISPCRT_CATCH_BEGIN {
 ISPCRT_CATCH_END()
 
 uint64_t ispcrtFutureGetTimeNs(ISPCRTFuture f) ISPCRT_CATCH_BEGIN {
+    if (!f)
+        return -1;
+
     auto &future = referenceFromHandle<ispcrt::base::Future>(f);
 
     if (!future.valid())

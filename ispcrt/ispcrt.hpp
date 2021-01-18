@@ -80,19 +80,14 @@ class Future : public GenericObject<ISPCRTFuture> {
   public:
     Future() = default;
     Future(ISPCRTFuture f);
-    ~Future();
+    ~Future() = default;
     bool valid() const;
     uint64_t time() const;
 };
 
-inline Future::Future(ISPCRTFuture f) : GenericObject<ISPCRTFuture>(f) { ispcrtRetain(f); }
+inline Future::Future(ISPCRTFuture f) : GenericObject<ISPCRTFuture>(f) { if (f) ispcrtRetain(f); }
 
-inline Future::~Future() {
-    assert(handle());
-    // release called by GenericObject destructor
-}
-
-inline bool Future::valid() const { return ispcrtFutureIsValid(handle()); }
+inline bool Future::valid() const { return handle() && ispcrtFutureIsValid(handle()); }
 
 inline uint64_t Future::time() const { return ispcrtFutureGetTimeNs(handle()); }
 
