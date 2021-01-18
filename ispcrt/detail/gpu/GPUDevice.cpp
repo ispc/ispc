@@ -416,9 +416,6 @@ struct TaskQueue : public ispcrt::base::TaskQueue {
                                  size_t dim2) override {
         auto &kernel = (gpu::Kernel &)k;
 
-        auto *future = new gpu::Future;
-        assert(future);
-
         void *param_ptr = nullptr;
 
         if (params)
@@ -434,7 +431,11 @@ struct TaskQueue : public ispcrt::base::TaskQueue {
 
         L0_SAFE_CALL(
             zeCommandListAppendLaunchKernel(m_cl, kernel.handle(), &dispatchTraits, event->handle(), 0, nullptr));
+
+        auto *future = new gpu::Future;
+        assert(future);
         m_events.push_back(std::make_pair(event, future));
+
         return future;
     }
 
