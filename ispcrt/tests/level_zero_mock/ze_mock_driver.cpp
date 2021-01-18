@@ -133,7 +133,8 @@ ze_result_t zeCommandListAppendBarrier(ze_command_list_handle_t hCommandList, ze
                                        uint32_t numWaitEvents, ze_event_handle_t *phWaitEvents) {
     if (hCommandList != CmdListHandle.get() || Config::isCmdListClosed())
         return ZE_RESULT_ERROR_INVALID_NULL_HANDLE;
-    Config::addToCmdList(CmdListElem::Barrier);
+    if (MOCK_SHOULD_SUCCEED)
+        Config::addToCmdList(CmdListElem::Barrier);
     MOCK_RET;
 }
 
@@ -231,7 +232,8 @@ ze_result_t zeCommandListAppendLaunchKernel(ze_command_list_handle_t hCommandLis
                                             uint32_t numWaitEvents, ze_event_handle_t *phWaitEvents) {
     if (hCommandList != CmdListHandle.get() || hKernel != KernelHandle.get() || !pLaunchFuncArgs)
         return ZE_RESULT_ERROR_INVALID_NULL_HANDLE;
-    Config::addToCmdList(CmdListElem::KernelLaunch);
+    if (MOCK_SHOULD_SUCCEED)
+        Config::addToCmdList(CmdListElem::KernelLaunch);
     MOCK_RET;
 }
 } // namespace driver
