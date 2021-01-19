@@ -74,7 +74,7 @@ mandelbrot_scanline(uniform float x0, uniform float dx,
     foreach (yi = ystart ... yend, xi = xstart ... xend) {
 #else
     uniform int ystart = taskIndex * span;
-    uniform int yend = min((taskIndex+1) * span, (unsigned int)height);
+    uniform int yend = min((taskIndex+1) * span, (uniform unsigned int)height);
 
     foreach (yi = ystart ... yend, xi = 0 ... width) {
 #endif

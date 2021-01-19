@@ -60,7 +60,7 @@ bs_task(uniform float Sa[], uniform float Xa[], uniform float Ta[],
         uniform float ra[], uniform float va[],
         uniform float result[], uniform int count) {
     uniform int first = taskIndex * (count/taskCount);
-    uniform int last = min(count, (int)((taskIndex+1) * (count/taskCount)));
+    uniform int last = min(count, (uniform int)((taskIndex+1) * (count/taskCount)));
 
     foreach (i = first ... last) {
         float S = Sa[i], X = Xa[i], T = Ta[i], r = ra[i], v = va[i];
@@ -76,7 +76,7 @@ export void
 black_scholes_ispc_tasks(uniform float Sa[], uniform float Xa[], uniform float Ta[],
                          uniform float ra[], uniform float va[],
                          uniform float result[], uniform int count) {
-    uniform int nTasks = max((int)64, (int)count/16384);
+    uniform int nTasks = max((uniform int)64, (uniform int)count/16384);
     launch[nTasks] bs_task(Sa, Xa, Ta, ra, va, result, count);
 }
 
@@ -107,7 +107,7 @@ binomial_put(float S, float X, float T, float r, float v) {
     float Pu = (disc - d) / (u - d);
 
     for (uniform int j = 0; j < BINOMIAL_NUM; ++j) {
-        float upow = pow(u, (float)(2*j-BINOMIAL_NUM));
+        float upow = pow(u, (uniform float)(2*j-BINOMIAL_NUM));
         V[j] = max(0., X - S * upow);
     }
 
@@ -135,7 +135,7 @@ binomial_task(uniform float Sa[], uniform float Xa[],
               uniform float va[], uniform float result[],
               uniform int count) {
     uniform int first = taskIndex * (count/taskCount);
-    uniform int last = min(count, (int)((taskIndex+1) * (count/taskCount)));
+    uniform int last = min(count, (uniform int)((taskIndex+1) * (count/taskCount)));
 
     foreach (i = first ... last) {
         float S = Sa[i], X = Xa[i], T = Ta[i], r = ra[i], v = va[i];
@@ -149,6 +149,6 @@ binomial_put_ispc_tasks(uniform float Sa[], uniform float Xa[],
                         uniform float Ta[], uniform float ra[],
                         uniform float va[], uniform float result[],
                         uniform int count) {
-    uniform int nTasks = max((int)64, (int)count/16384);
+    uniform int nTasks = max((uniform int)64, (uniform int)count/16384);
     launch[nTasks] binomial_task(Sa, Xa, Ta, ra, va, result, count);
 }
