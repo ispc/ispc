@@ -651,7 +651,7 @@ class StructType : public CollectionType {
   public:
     StructType(const std::string &name, const llvm::SmallVector<const Type *, 8> &elts,
                const llvm::SmallVector<std::string, 8> &eltNames, const llvm::SmallVector<SourcePos, 8> &eltPositions,
-               bool isConst, Variability variability, SourcePos pos);
+               bool isConst, Variability variability, bool isAnonymous, SourcePos pos);
 
     Variability GetVariability() const;
 
@@ -725,6 +725,7 @@ class StructType : public CollectionType {
     const llvm::SmallVector<SourcePos, 8> elementPositions;
     const Variability variability;
     const bool isConst;
+    const bool isAnonymous;
     const SourcePos pos;
 
     mutable llvm::SmallVector<const Type *, 8> finalElementTypes;
