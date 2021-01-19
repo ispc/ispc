@@ -1021,7 +1021,8 @@ struct_or_union_specifier
                   CastType<StructType>($1)->GetStructName() :
                   CastType<UndefinedStructType>($1)->GetStructName();
               StructType *st = new StructType(name, elementTypes, elementNames,
-                                              elementPositions, false, Variability::Unbound, @1);
+                                              elementPositions, false,
+                                              Variability::Unbound, false, @1);
               m->symbolTable->AddType(name.c_str(), st, @1);
               $$ = st;
           }
@@ -1037,7 +1038,7 @@ struct_or_union_specifier
               GetStructTypesNamesPositions(*$3, &elementTypes, &elementNames,
                                            &elementPositions);
               $$ = new StructType("", elementTypes, elementNames, elementPositions,
-                                  false, Variability::Unbound, @1);
+                                  false, Variability::Unbound, true, @1);
           }
           else
               $$ = NULL;
@@ -1048,7 +1049,7 @@ struct_or_union_specifier
           llvm::SmallVector<std::string, 8> elementNames;
           llvm::SmallVector<SourcePos, 8> elementPositions;
           $$ = new StructType("", elementTypes, elementNames, elementPositions,
-                              false, Variability::Unbound, @1);
+                              false, Variability::Unbound, true, @1);
       }
     | struct_or_union_and_name '{' '}'
       {
@@ -1060,7 +1061,7 @@ struct_or_union_specifier
               CastType<UndefinedStructType>($1)->GetStructName();
           StructType *st = new StructType(name, elementTypes,
                                           elementNames, elementPositions,
-                                          false, Variability::Unbound, @1);
+                                          false, Variability::Unbound, false, @1);
           m->symbolTable->AddType(name.c_str(), st, @2);
           $$ = st;
       }

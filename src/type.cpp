@@ -1541,23 +1541,22 @@ static std::string lMangleStructName(const std::string &name, Variability variab
 
 StructType::StructType(const std::string &n, const llvm::SmallVector<const Type *, 8> &elts,
                        const llvm::SmallVector<std::string, 8> &en, const llvm::SmallVector<SourcePos, 8> &ep, bool ic,
-                       Variability v, SourcePos p)
+                       Variability v, bool ia, SourcePos p)
     : CollectionType(STRUCT_TYPE), name(n), elementTypes(elts), elementNames(en), elementPositions(ep), variability(v),
-      isConst(ic), pos(p) {
+      isConst(ic), isAnonymous(ia), pos(p) {
     oppositeConstStructType = NULL;
     finalElementTypes.resize(elts.size(), NULL);
 
+    static int count = 0;
     if (variability != Variability::Unbound) {
         // For structs with non-unbound variability, we'll create the
         // correspoing LLVM struct type now, if one hasn't been made
         // already.
 
         // Create a unique anonymous struct name if we have an anonymous
-        // struct (name == ""), or if we are creating a derived type from
-        // an anonymous struct (e.g. the varying variant--name == '$').
-        if (name == "" || name[0] == '$') {
+        // struct (name == "").
+        if (name == "") {
             char buf[16];
-            static int count = 0;
             snprintf(buf, sizeof(buf), "$anon%d", count);
             name = std::string(buf);
             ++count;
@@ -1598,6 +1597,15 @@ StructType::StructType(const std::string &n, const llvm::SmallVector<const Type 
             // Definition for what was before just a declaration
             lStructTypeMap[mname]->setBody(elementTypes);
         }
+    }
+    // Create a unique anonymous struct name if we have an anonymous struct (name == "")
+    // Ensuring struct is created with a name, prevents each use of original
+    // struct from having different names causing type match errors.
+    if (name == "") {
+        char buf[16];
+        snprintf(buf, sizeof(buf), "$anon%d", count);
+        name = std::string(buf);
+        ++count;
     }
 }
 
@@ -1648,7 +1656,7 @@ const StructType *StructType::GetAsVaryingType() const {
         return this;
     else
         return new StructType(name, elementTypes, elementNames, elementPositions, isConst,
-                              Variability(Variability::Varying), pos);
+                              Variability(Variability::Varying), isAnonymous, pos);
 }
 
 const StructType *StructType::GetAsUniformType() const {
@@ -1656,7 +1664,7 @@ const StructType *StructType::GetAsUniformType() const {
         return this;
     else
         return new StructType(name, elementTypes, elementNames, elementPositions, isConst,
-                              Variability(Variability::Uniform), pos);
+                              Variability(Variability::Uniform), isAnonymous, pos);
 }
 
 const StructType *StructType::GetAsUnboundVariabilityType() const {
@@ -1664,7 +1672,7 @@ const StructType *StructType::GetAsUnboundVariabilityType() const {
         return this;
     else
         return new StructType(name, elementTypes, elementNames, elementPositions, isConst,
-                              Variability(Variability::Unbound), pos);
+                              Variability(Variability::Unbound), isAnonymous, pos);
 }
 
 const StructType *StructType::GetAsSOAType(int width) const {
@@ -1675,7 +1683,7 @@ const StructType *StructType::GetAsSOAType(int width) const {
         return NULL;
 
     return new StructType(name, elementTypes, elementNames, elementPositions, isConst,
-                          Variability(Variability::SOA, width), pos);
+                          Variability(Variability::SOA, width), isAnonymous, pos);
 }
 
 const StructType *StructType::ResolveUnboundVariability(Variability v) const {
@@ -1688,7 +1696,7 @@ const StructType *StructType::ResolveUnboundVariability(Variability v) const {
     // resolve to varying but later want to get the uniform version of this
     // type, for example, then we still have the information around about
     // which element types were originally unbound...
-    return new StructType(name, elementTypes, elementNames, elementPositions, isConst, v, pos);
+    return new StructType(name, elementTypes, elementNames, elementPositions, isConst, v, isAnonymous, pos);
 }
 
 const StructType *StructType::GetAsConstType() const {
@@ -1698,7 +1706,7 @@ const StructType *StructType::GetAsConstType() const {
         return oppositeConstStructType;
     else {
         oppositeConstStructType =
-            new StructType(name, elementTypes, elementNames, elementPositions, true, variability, pos);
+            new StructType(name, elementTypes, elementNames, elementPositions, true, variability, isAnonymous, pos);
         oppositeConstStructType->oppositeConstStructType = this;
         return oppositeConstStructType;
     }
@@ -1711,7 +1719,7 @@ const StructType *StructType::GetAsNonConstType() const {
         return oppositeConstStructType;
     else {
         oppositeConstStructType =
-            new StructType(name, elementTypes, elementNames, elementPositions, false, variability, pos);
+            new StructType(name, elementTypes, elementNames, elementPositions, false, variability, isAnonymous, pos);
         oppositeConstStructType->oppositeConstStructType = this;
         return oppositeConstStructType;
     }
@@ -1722,11 +1730,11 @@ std::string StructType::GetString() const {
     if (isConst)
         ret += "const ";
     ret += variability.GetString();
-    ret += " ";
+    ret += " struct ";
 
-    if (name[0] == '$') {
+    if (isAnonymous) {
         // Print the whole anonymous struct declaration
-        ret += std::string("struct { ") + name;
+        ret += name + std::string(" { ");
         for (unsigned int i = 0; i < elementTypes.size(); ++i) {
             ret += elementTypes[i]->GetString();
             ret += " ";
@@ -1735,7 +1743,6 @@ std::string StructType::GetString() const {
         }
         ret += "}";
     } else {
-        ret += "struct ";
         ret += name;
     }
 
