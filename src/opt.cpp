@@ -1045,7 +1045,7 @@ restart:
                     align = g->target->getNativeVectorAlignment();
                 else
                     align = callInst->getCalledFunction() == avxMaskedLoad32 ? 4 : 8;
-#if ISPC_LLVM_VERSION == ISPC_LLVM_10_0
+#if ISPC_LLVM_VERSION < ISPC_LLVM_11_0
                 llvm::Instruction *loadInst =
                     new llvm::LoadInst(castPtr, llvm::Twine(callInst->getArgOperand(0)->getName()) + "_load",
                                        false /* not volatile */, llvm::MaybeAlign(align), (llvm::Instruction *)NULL);
@@ -1472,7 +1472,7 @@ static llvm::Value *lGetBasePtrAndOffsets(llvm::Value *ptrs, llvm::Value **offse
                     llvm::Value *zeroMask =
 #if ISPC_LLVM_VERSION < ISPC_LLVM_11_0
                         llvm::ConstantVector::getSplat(cv->getType()->getVectorNumElements(),
-#elif ISPC_LLVM_VERSION == ISPC_LLVM_11_0
+#elif ISPC_LLVM_VERSION < ISPC_LLVM_12_0
                         llvm::ConstantVector::getSplat(
                             {llvm::dyn_cast<llvm::VectorType>(cv->getType())->getNumElements(), false},
 #else // LLVM 12.0+
@@ -1495,7 +1495,7 @@ static llvm::Value *lGetBasePtrAndOffsets(llvm::Value *ptrs, llvm::Value **offse
                         llvm::Value *zeroMask = llvm::ConstantVector::getSplat(
 #if ISPC_LLVM_VERSION < ISPC_LLVM_11_0
                             bop_var_type->getVectorNumElements(),
-#elif ISPC_LLVM_VERSION == ISPC_LLVM_11_0
+#elif ISPC_LLVM_VERSION < ISPC_LLVM_12_0
                             {llvm::dyn_cast<llvm::VectorType>(bop_var_type)->getNumElements(), false},
 #else // LLVM 12.0+
                             llvm::ElementCount::get(
@@ -2803,7 +2803,7 @@ static bool lGSToLoadStore(llvm::CallInst *callInst) {
             llvm::Value *zeroMask =
 #if ISPC_LLVM_VERSION < ISPC_LLVM_11_0
                 llvm::ConstantVector::getSplat(callInst->getType()->getVectorNumElements(),
-#elif ISPC_LLVM_VERSION == ISPC_LLVM_11_0
+#elif ISPC_LLVM_VERSION < ISPC_LLVM_12_0
                 llvm::ConstantVector::getSplat(
                     {llvm::dyn_cast<llvm::VectorType>(callInst->getType())->getNumElements(), false},
 
@@ -3100,7 +3100,7 @@ static bool lImproveMaskedLoad(llvm::CallInst *callInst, llvm::BasicBlock::itera
         {
             llvm::Type *ptrType = llvm::PointerType::get(callInst->getType(), 0);
             ptr = new llvm::BitCastInst(ptr, ptrType, "ptr_cast_for_load", callInst);
-#if ISPC_LLVM_VERSION == ISPC_LLVM_10_0
+#if ISPC_LLVM_VERSION < ISPC_LLVM_11_0
             load = new llvm::LoadInst(
                 ptr, callInst->getName(), false /* not volatile */,
                 llvm::MaybeAlign(g->opt.forceAlignedMemory ? g->target->getNativeVectorAlignment() : info->align)
@@ -3459,7 +3459,7 @@ llvm::Value *lGEPAndLoad(llvm::Value *basePtr, int64_t offset, int align, llvm::
                          llvm::Type *type) {
     llvm::Value *ptr = lGEPInst(basePtr, LLVMInt64(offset), "new_base", insertBefore);
     ptr = new llvm::BitCastInst(ptr, llvm::PointerType::get(type, 0), "ptr_cast", insertBefore);
-#if ISPC_LLVM_VERSION == ISPC_LLVM_10_0
+#if ISPC_LLVM_VERSION < ISPC_LLVM_11_0
     return new llvm::LoadInst(ptr, "gather_load", false /* not volatile */, llvm::MaybeAlign(align), insertBefore);
 #else // LLVM 11.0+
     return new llvm::LoadInst(llvm::dyn_cast<llvm::PointerType>(ptr->getType())->getPointerElementType(), ptr,
@@ -6183,7 +6183,7 @@ restart:
                 Args.push_back(llvm::ConstantVector::getSplat(
 #if ISPC_LLVM_VERSION < ISPC_LLVM_11_0
                     g->target->getNativeVectorWidth(),
-#elif ISPC_LLVM_VERSION == ISPC_LLVM_11_0
+#elif ISPC_LLVM_VERSION < ISPC_LLVM_12_0
                     {static_cast<unsigned int>(g->target->getNativeVectorWidth()), false},
 #else // LLVM 12.0+
                     llvm::ElementCount::get(static_cast<unsigned int>(g->target->getNativeVectorWidth()), false),
@@ -6195,7 +6195,7 @@ restart:
                 llvm::Value *zeroMask = llvm::ConstantVector::getSplat(
 #if ISPC_LLVM_VERSION < ISPC_LLVM_11_0
                     g->target->getNativeVectorWidth(),
-#elif ISPC_LLVM_VERSION == ISPC_LLVM_11_0
+#elif ISPC_LLVM_VERSION < ISPC_LLVM_12_0
                     {static_cast<unsigned int>(g->target->getNativeVectorWidth()), false},
 #else // LLVM 12.0+
                     llvm::ElementCount::get(static_cast<unsigned int>(g->target->getNativeVectorWidth()), false),
@@ -6567,7 +6567,7 @@ llvm::Value *FixAddressSpace::calculateGatherScatterAddress(llvm::Value *Ptr, ll
         llvm::Constant *zeroVec = llvm::ConstantVector::getSplat(
 #if ISPC_LLVM_VERSION < ISPC_LLVM_11_0
             addressType->getVectorNumElements(),
-#elif ISPC_LLVM_VERSION == ISPC_LLVM_11_0
+#elif ISPC_LLVM_VERSION < ISPC_LLVM_12_0
             {llvm::dyn_cast<llvm::VectorType>(addressType)->getNumElements(), false},
 #else
         llvm::ElementCount::get(
