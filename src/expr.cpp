@@ -94,6 +94,8 @@ Symbol *Expr::GetBaseSymbol() const {
     return NULL;
 }
 
+bool Expr::HasAmbiguousVariability(std::vector<const Expr *> &warn) const { return false; }
+
 #if 0
 /** If a conversion from 'fromAtomicType' to 'toAtomicType' may cause lost
     precision, issue a warning.  Don't warn for conversions to bool and
@@ -1909,6 +1911,34 @@ static bool lIsDifficultShiftAmount(Expr *expr) {
     return true;
 }
 
+bool BinaryExpr::HasAmbiguousVariability(std::vector<const Expr *> &warn) const {
+    bool isArg0Amb = false;
+    bool isArg1Amb = false;
+    if (arg0 != NULL) {
+        const Type *type0 = arg0->GetType();
+        if (arg0->HasAmbiguousVariability(warn)) {
+            isArg0Amb = true;
+        } else if ((type0 != NULL) && (type0->IsVaryingType())) {
+            // If either arg is varying, then the expression is un-ambiguously varying.
+            return false;
+        }
+    }
+    if (arg1 != NULL) {
+        const Type *type1 = arg1->GetType();
+        if (arg1->HasAmbiguousVariability(warn)) {
+            isArg1Amb = true;
+        } else if ((type1 != NULL) && (type1->IsVaryingType())) {
+            // If either arg is varying, then the expression is un-ambiguously varying.
+            return false;
+        }
+    }
+    if (isArg0Amb || isArg1Amb) {
+        return true;
+    }
+
+    return false;
+}
+
 llvm::Value *BinaryExpr::GetValue(FunctionEmitContext *ctx) const {
     if (!arg0 || !arg1) {
         AssertPos(pos, m->errorCount > 0);
@@ -3118,6 +3148,34 @@ static void lEmitSelectExprCode(FunctionEmitContext *ctx, llvm::Value *testVal, 
     ctx->SetCurrentBasicBlock(bbDone);
 }
 
+bool SelectExpr::HasAmbiguousVariability(std::vector<const Expr *> &warn) const {
+    bool isExpr1Amb = false;
+    bool isExpr2Amb = false;
+    if (expr1 != NULL) {
+        const Type *type1 = expr1->GetType();
+        if (expr1->HasAmbiguousVariability(warn)) {
+            isExpr1Amb = true;
+        } else if ((type1 != NULL) && (type1->IsVaryingType())) {
+            // If either expr is varying, then the expression is un-ambiguously varying.
+            return false;
+        }
+    }
+    if (expr2 != NULL) {
+        const Type *type2 = expr2->GetType();
+        if (expr2->HasAmbiguousVariability(warn)) {
+            isExpr2Amb = true;
+        } else if ((type2 != NULL) && (type2->IsVaryingType())) {
+            // If either arg is varying, then the expression is un-ambiguously varying.
+            return false;
+        }
+    }
+    if (isExpr1Amb || isExpr2Amb) {
+        return true;
+    }
+
+    return false;
+}
+
 llvm::Value *SelectExpr::GetValue(FunctionEmitContext *ctx) const {
     if (!expr1 || !expr2 || !test)
         return NULL;
@@ -3420,6 +3478,13 @@ FunctionCallExpr::FunctionCallExpr(Expr *f, ExprList *a, SourcePos p, bool il, E
     : Expr(p, FunctionCallExprID), isLaunch(il) {
     func = f;
     args = a;
+    std::vector<const Expr *> warn;
+    if (a->HasAmbiguousVariability(warn) == true) {
+        for (auto w : warn) {
+            const TypeCastExpr *tExpr = llvm::dyn_cast<TypeCastExpr>(w);
+            tExpr->PrintAmbiguousVariability();
+        }
+    }
     if (lce != NULL) {
         launchCountExpr[0] = lce[0];
         launchCountExpr[1] = lce[1];
@@ -3765,6 +3830,16 @@ void FunctionCallExpr::Print() const {
 
 ///////////////////////////////////////////////////////////////////////////
 // ExprList
+
+bool ExprList::HasAmbiguousVariability(std::vector<const Expr *> &warn) const {
+    bool hasAmbiguousVariability = false;
+    for (unsigned int i = 0; i < exprs.size(); ++i) {
+        if (exprs[i] != NULL) {
+            hasAmbiguousVariability |= exprs[i]->HasAmbiguousVariability(warn);
+        }
+    }
+    return hasAmbiguousVariability;
+}
 
 llvm::Value *ExprList::GetValue(FunctionEmitContext *ctx) const {
     FATAL("ExprList::GetValue() should never be called");
@@ -6581,6 +6656,33 @@ static llvm::Value *lUniformValueToVarying(FunctionEmitContext *ctx, llvm::Value
     return ctx->SmearUniform(value);
 }
 
+bool TypeCastExpr::HasAmbiguousVariability(std::vector<const Expr *> &warn) const {
+
+    if (expr == NULL)
+        return false;
+
+    const Type *toType = type, *fromType = expr->GetType();
+    if (toType == NULL || fromType == NULL)
+        return false;
+
+    if (toType->HasUnboundVariability() && fromType->IsUniformType()) {
+        warn.push_back(this);
+        return true;
+    }
+
+    return false;
+}
+
+void TypeCastExpr::PrintAmbiguousVariability() const {
+    Warning(pos,
+            "Typecasting to type \"%s\" (variability not specified) "
+            "from \"uniform\" type \"%s\" results in \"uniform\" variability.\n"
+            "In the context of function argument it may lead to unexpected behavior. "
+            "Casting to \"%s\" is recommended.",
+            (type->GetString()).c_str(), ((expr->GetType())->GetString()).c_str(),
+            (type->GetAsUniformType()->GetString()).c_str());
+}
+
 llvm::Value *TypeCastExpr::GetValue(FunctionEmitContext *ctx) const {
     if (!expr)
         return NULL;
@@ -6882,6 +6984,7 @@ const Type *TypeCastExpr::GetType() const {
     const Type *toType = type, *fromType = expr->GetType();
     if (toType == NULL || fromType == NULL)
         return NULL;
+
     if (toType->HasUnboundVariability()) {
         if (fromType->IsUniformType()) {
             toType = type->ResolveUnboundVariability(Variability::Uniform);

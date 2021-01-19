@@ -354,7 +354,7 @@ static inline uniform int8 extract(int8 x, uniform int i) {
 
 __declspec(safe,cost1)
 static inline uniform unsigned int8 extract(unsigned int8 x, uniform int i) {
-    return __extract_int8(x, (unsigned int)i);
+    return __extract_int8(x, (uniform unsigned int)i);
 }
 
 __declspec(safe,cost1)
@@ -364,7 +364,7 @@ static inline uniform int16 extract(int16 x, uniform int i) {
 
 __declspec(safe,cost1)
 static inline uniform unsigned int16 extract(unsigned int16 x, uniform int i) {
-    return __extract_int16(x, (unsigned int)i);
+    return __extract_int16(x, (uniform unsigned int)i);
 }
 
 __declspec(safe,cost1)
@@ -374,7 +374,7 @@ static inline uniform int32 extract(int32 x, uniform int i) {
 
 __declspec(safe,cost1)
 static inline uniform unsigned int32 extract(unsigned int32 x, uniform int i) {
-    return __extract_int32(x, (unsigned int)i);
+    return __extract_int32(x, (uniform unsigned int)i);
 }
 
 __declspec(safe,cost1)
@@ -389,13 +389,13 @@ static inline uniform int64 extract(int64 x, uniform int i) {
 
 __declspec(safe,cost1)
 static inline uniform unsigned int64 extract(unsigned int64 x, uniform int i) {
-    return __extract_int64(x, (unsigned int)i);
+    return __extract_int64(x, (uniform unsigned int)i);
 }
 
 // x[i] = v
 __declspec(safe,cost1)
 static inline float insert(float x, uniform int i, uniform float v) {
-    return floatbits(__insert_int32((int)intbits(x), i, (int)intbits(v)));
+    return floatbits(__insert_int32((int)intbits(x), i, (uniform int)intbits(v)));
 }
 
 __declspec(safe,cost1)
@@ -411,7 +411,7 @@ static inline int8 insert(int8 x, uniform int i, uniform int8 v) {
 __declspec(safe,cost1)
 static inline unsigned int8 insert(unsigned int8 x, uniform int i,
                                     uniform unsigned int8 v) {
-    return __insert_int8(x, (unsigned int)i, v);
+    return __insert_int8(x, (uniform unsigned int)i, v);
 }
 
 __declspec(safe,cost1)
@@ -422,7 +422,7 @@ static inline int16 insert(int16 x, uniform int i, uniform int16 v) {
 __declspec(safe,cost1)
 static inline unsigned int16 insert(unsigned int16 x, uniform int i,
                                     uniform unsigned int16 v) {
-    return __insert_int16(x, (unsigned int)i, v);
+    return __insert_int16(x, (uniform unsigned int)i, v);
 }
 
 __declspec(safe,cost1)
@@ -433,12 +433,12 @@ static inline int32 insert(int32 x, uniform int i, uniform int32 v) {
 __declspec(safe,cost1)
 static inline unsigned int32 insert(unsigned int32 x, uniform int i,
                                     uniform unsigned int32 v) {
-    return __insert_int32(x, (unsigned int)i, v);
+    return __insert_int32(x, (uniform unsigned int)i, v);
 }
 
 __declspec(safe,cost1)
 static inline double insert(double x, uniform int i, uniform double v) {
-    return doublebits(__insert_int64((int64)intbits(x), i, (int64)intbits(v)));
+    return doublebits(__insert_int64((int64)intbits(x), i, (uniform int64)intbits(v)));
 }
 
 __declspec(safe,cost1)
@@ -449,7 +449,7 @@ static inline int64 insert(int64 x, uniform int i, uniform int64 v) {
 __declspec(safe,cost1)
 static inline unsigned int64 insert(unsigned int64 x, uniform int i,
                                     uniform unsigned int64 v) {
-    return __insert_int64(x, (unsigned int)i, v);
+    return __insert_int64(x, (uniform unsigned int)i, v);
 }
 
 __declspec(safe,cost1)

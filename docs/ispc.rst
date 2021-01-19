@@ -1764,6 +1764,26 @@ are applicable (see `Uniform Control Flow`_, for example.)  Varying
 variables may be qualified with ``varying``, though doing so has no effect,
 as ``varying`` is the default.
 
+
+Typecasting from ``uniform`` expression to type with variability not specified
+results in ``uniform`` type. This will result in an ``ispc`` warning when used as
+a function argument. See code snippet demonstrating this warning below:
+
+::
+
+    float foo(uniform int B) {
+       return bar((float)B);
+    }
+
+::
+   Warning: Typecasting to type "/*unbound*/ float" (variability not specified)
+          from "uniform" type "uniform int32" results in "uniform" variability.
+          In the context of function argument it may lead to unexpected behavior.
+          Casting to "uniform float" is recommended.
+
+
+
+
 ``uniform`` variables can be modified as the program executes, but only in
 ways that preserve the property that they have a single value for the
 entire gang.  Thus, it's legal to add two uniform variables together and

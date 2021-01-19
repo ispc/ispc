@@ -105,6 +105,8 @@ class Expr : public ASTNode {
 
     /** Prints the expression to standard output (used for debugging). */
     virtual void Print() const = 0;
+
+    virtual bool HasAmbiguousVariability(std::vector<const Expr *> &warn) const;
 };
 
 /** @brief Unary expression */
@@ -179,6 +181,7 @@ class BinaryExpr : public Expr {
     int EstimateCost() const;
     std::pair<llvm::Constant *, bool> GetStorageConstant(const Type *type) const;
     std::pair<llvm::Constant *, bool> GetConstant(const Type *type) const;
+    bool HasAmbiguousVariability(std::vector<const Expr *> &warn) const;
 
     const Op op;
     Expr *arg0, *arg1;
@@ -236,6 +239,7 @@ class SelectExpr : public Expr {
     Expr *Optimize();
     Expr *TypeCheck();
     int EstimateCost() const;
+    bool HasAmbiguousVariability(std::vector<const Expr *> &warn) const;
 
     Expr *test, *expr1, *expr2;
 };
@@ -262,6 +266,7 @@ class ExprList : public Expr {
     ExprList *Optimize();
     ExprList *TypeCheck();
     int EstimateCost() const;
+    bool HasAmbiguousVariability(std::vector<const Expr *> &warn) const;
 
     std::vector<Expr *> exprs;
 };
@@ -505,6 +510,8 @@ class TypeCastExpr : public Expr {
     int EstimateCost() const;
     Symbol *GetBaseSymbol() const;
     std::pair<llvm::Constant *, bool> GetConstant(const Type *type) const;
+    bool HasAmbiguousVariability(std::vector<const Expr *> &warn) const;
+    void PrintAmbiguousVariability() const;
 
     const Type *type;
     Expr *expr;
