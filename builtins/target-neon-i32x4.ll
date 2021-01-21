@@ -3,7 +3,7 @@
 ;;
 ;;  Copyright(c) 2012-2013 Matt Pharr
 ;;  Copyright(c) 2013, 2015 Google, Inc.
-;;  Copyright(c) 2019 Intel
+;;  Copyright Intel Corporation
 ;;
 ;;  All rights reserved.
 ;;

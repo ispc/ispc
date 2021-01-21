@@ -2,7 +2,7 @@
 ;; target-neon-8.ll
 ;;
 ;;  Copyright(c) 2013-2015 Google, Inc.
-;;  Copyright(c) 2019 Intel
+;;  Copyright Intel Corporation
 ;;
 ;;  All rights reserved.
 ;;

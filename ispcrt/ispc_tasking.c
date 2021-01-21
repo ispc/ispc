@@ -1,4 +1,4 @@
-// Copyright 2020 Intel Corporation
+// Copyright Intel Corporation
 // SPDX-License-Identifier: BSD-3-Clause
 
 #include <stdint.h>

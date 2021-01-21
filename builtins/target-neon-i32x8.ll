@@ -1,7 +1,7 @@
 ;;
 ;; target-neon-32-x2.ll
 ;;
-;;  Copyright(c) 2019 Intel
+;;  Copyright Intel Corporation
 ;;
 ;;  All rights reserved.
 ;;
