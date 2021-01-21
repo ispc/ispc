@@ -21,6 +21,7 @@
  */
 
 #include <iostream>
+#include <iomanip>
 #include <vector>
 
 // Level Zero headers
@@ -36,65 +37,62 @@
 
 using namespace hostutil;
 
-void DpcppApp::initialize() {
-    if (initialized)
-        return;
-    L0InitContext(m_driver, m_device, m_context, m_module, m_command_queue, "genx_simple-dpcpp", false);
-    L0Create_Kernel(m_device, m_context, m_module, m_command_list, m_kernel, "simple_ispc");
+DpcppApp::DpcppApp() {
+    m_device = ispcrt::Device(ISPCRT_DEVICE_TYPE_GPU);
+    m_module = ispcrt::Module(m_device, "genx_simple-dpcpp");
+    m_kernel = ispcrt::Kernel(m_device, m_module, "simple_ispc");
+    m_queue  = ispcrt::TaskQueue(m_device);
     initialized = true;
 }
 
-std::vector<float> DpcppApp::transformIspc(const std::vector<float>& in) {
+std::vector<float> DpcppApp::transformIspc(std::vector<float>& in) {
     const auto count = in.size();
     std::vector<float> out(count, 0.0f);
 
-    void *in_dev = nullptr;
-    void *out_dev = nullptr;
-    void *params_dev = nullptr;
+    // Setup input array
+    ispcrt::Array<float> in_dev(m_device, in);
 
+    // Setup output array
+    ispcrt::Array<float> out_dev(m_device, out);
+
+    // Setup parameters structure
     struct Parameters {
         float *in;
         float *out;
         int    count;
     };
 
-    Parameters params;
+    Parameters p;
 
-    ze_device_mem_alloc_desc_t alloc_desc = {};
+    p.in = in_dev.devicePtr();
+    p.out = out_dev.devicePtr();
+    p.count = count;
 
-    // Allocate memory on the device
-    L0_SAFE_CALL(zeMemAllocDevice(m_context, &alloc_desc, count * sizeof(float), 0, m_device, &in_dev));
-    L0_SAFE_CALL(zeMemAllocDevice(m_context, &alloc_desc, count * sizeof(float), 0, m_device, &out_dev));
-    L0_SAFE_CALL(zeMemAllocDevice(m_context, &alloc_desc, sizeof(Parameters),    0, m_device, &params_dev));
+    auto p_dev = ispcrt::Array<Parameters>(m_device, p);
 
-    params.in  = reinterpret_cast<float*>(in_dev);
-    params.out = reinterpret_cast<float*>(out_dev);
-    params.count = count;
+    // ispcrt::Array objects which used as inputs for ISPC kernel should be
+    // explicitly copied to device from host
+    m_queue.copyToDevice(p_dev);
+    m_queue.copyToDevice(in_dev);
 
-    // Enqueue memory transfers, setup kernel arguments and prepare synchronization
-    L0_SAFE_CALL(zeCommandListReset(m_command_list));
-    L0_SAFE_CALL(
-        zeCommandListAppendMemoryCopy(m_command_list, in_dev, in.data(), in.size() * sizeof(float), nullptr, 0, nullptr));
-    L0_SAFE_CALL(
-        zeCommandListAppendMemoryCopy(m_command_list, params_dev, &params, sizeof(Parameters), nullptr, 0, nullptr));
-    L0_SAFE_CALL(zeKernelSetArgumentValue(m_kernel, 0, sizeof(&params), &params_dev));
-    L0_SAFE_CALL(zeCommandListAppendBarrier(m_command_list, nullptr, 0, nullptr));
+    // Make sure that input arrays were copied
+    m_queue.barrier();
 
-    // Run the ISPC kernel and transfer the results back from the GPU
-    ze_group_count_t dispatchTraits = {(uint32_t)1, (uint32_t)1, 1};
-    L0_SAFE_CALL(zeCommandListAppendLaunchKernel(m_command_list, m_kernel, &dispatchTraits, nullptr, 0, nullptr));
-    L0_SAFE_CALL(zeCommandListAppendBarrier(m_command_list, nullptr, 0, nullptr));
-    L0_SAFE_CALL(
-        zeCommandListAppendMemoryCopy(m_command_list, out.data(), out_dev, out.size() * sizeof(float), nullptr, 0, nullptr));
-    L0_SAFE_CALL(zeCommandListAppendBarrier(m_command_list, nullptr, 0, nullptr));
-    L0_SAFE_CALL(zeCommandListClose(m_command_list));
-    L0_SAFE_CALL(zeCommandQueueExecuteCommandLists(m_command_queue, 1, &m_command_list, nullptr));
-    L0_SAFE_CALL(zeCommandQueueSynchronize(m_command_queue, std::numeric_limits<uint64_t>::max()));
+    // Launch the kernel on the device using 1 thread
+    m_queue.launch(m_kernel, p_dev, 1);
 
-    // Perform cleanup
-    L0_SAFE_CALL(zeMemFree(m_context, in_dev));
-    L0_SAFE_CALL(zeMemFree(m_context, out_dev));
-    L0_SAFE_CALL(zeMemFree(m_context, params_dev));
+    // Make sure that execution completed
+    m_queue.barrier();
+
+    // ispcrt::Array objects which used as outputs of ISPC kernel should be
+    // explicitly copied to host from device
+    m_queue.copyToHost(out_dev);
+
+    // Make sure that input arrays were copied
+    m_queue.barrier();
+
+    // Execute queue and sync
+    m_queue.sync();
 
     return out;
 }
@@ -102,7 +100,7 @@ std::vector<float> DpcppApp::transformIspc(const std::vector<float>& in) {
 std::vector<float> DpcppApp::transformDpcpp(const std::vector<float>& in) {
     const auto count = in.size();
     std::vector<float> out(count, 0.0f);
-
+/*
     // Create SYCL objects from native Level Zero handles
     // Thanks to this API Level Zero (ISPC) based programs
     // can share device context with SYCL programs implemented
@@ -136,12 +134,12 @@ std::vector<float> DpcppApp::transformDpcpp(const std::vector<float>& in) {
         });
     });
 
-    // Use accessor to transfer data from the device
-    std::vector<float> res(count);
+    // Use accessor to transfer data from the device*/
+    std::vector<float> res(count);/*
     const auto out_host_access = out_buffer.get_access<cl::sycl::access::mode::read>();
     for (int i = 0; i < out_host_access.get_count(); i++) {
         res[i] = out_host_access[i];
-    }
+    }*/
     return res;
 }
 
@@ -174,8 +172,10 @@ bool DpcppApp::run() {
     std::generate(vin.begin(), vin.end(), [i = 0]() mutable { return i++; });
     auto vout_dpcpp = transformDpcpp(vin);
 
-    for (int i = 0; i < vout_dpcpp.size(); i++) {
-        std::cout << "out[" << i << "] = " << vout_dpcpp[i] << '\n';
+    std::cout << "           ISPC   DPCPP\n";
+    for (int i = 0; i < COUNT; i++) {
+        std::cout << "out[" << std::setw(2) << i << "] = " << std::setw(5) << std::setprecision(4) << vout_ispc[i]
+                  << std::setw(5) << std::setprecision(4) << vout_dpcpp[i] << '\n';
     }
 
     // Compare the results
@@ -188,17 +188,8 @@ bool DpcppApp::run() {
     return true;
 }
 
-void DpcppApp::cleanup() {
-    L0Destroy_Kernel(m_command_list, m_kernel);
-    L0DestroyContext(m_driver, m_device, m_context, m_module, m_command_queue);
-    initialized = false;
-}
-
 int main() {
     DpcppApp app;
-
-    app.initialize();
     bool pass = app.run();
-    app.cleanup();
     return pass ? 0 : -1;
 }
