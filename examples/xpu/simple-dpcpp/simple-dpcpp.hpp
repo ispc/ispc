@@ -20,25 +20,20 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 
-#include <level_zero/ze_api.h>
+#include "ispcrt.hpp"
 
 class DpcppApp {
   public:
-    DpcppApp() = default;
-
-    void initialize();
+    DpcppApp();
     bool run();
-    void cleanup();
-    std::vector<float> transformIspc(const std::vector<float>& in);
-    std::vector<float> transformDpcpp(const std::vector<float>& in);
 
   private:
+    std::vector<float> transformIspc(std::vector<float>& in);
+    std::vector<float> transformDpcpp(const std::vector<float>& in);
+
     bool initialized{false};
-    ze_driver_handle_t m_driver{nullptr};
-    ze_device_handle_t m_device{nullptr};
-    ze_module_handle_t m_module{nullptr};
-    ze_kernel_handle_t m_kernel{nullptr};
-    ze_context_handle_t m_context{nullptr};
-    ze_command_list_handle_t m_command_list{nullptr};
-    ze_command_queue_handle_t m_command_queue{nullptr};
+    ispcrt::Device m_device;
+    ispcrt::Module m_module;
+    ispcrt::Kernel m_kernel;
+    ispcrt::TaskQueue m_queue;
 };
