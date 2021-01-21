@@ -101,7 +101,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       LLVM_VERSION: "11.0"
-      LLVM_TAR: llvm-11.0.0-ubuntu16.04-Release+Asserts-x86.arm.wasm.tar.xz
+      LLVM_TAR: llvm-11.0.1-ubuntu16.04-Release+Asserts-x86.arm.wasm.tar.xz
 
     steps:
     - uses: actions/checkout@v2
@@ -300,7 +300,7 @@ jobs:
     runs-on: windows-latest
     env:
       LLVM_VERSION: "11.0"
-      LLVM_TAR: llvm-11.0.0-win.vs2019-Release+Asserts-x86.arm.wasm.7z
+      LLVM_TAR: llvm-11.0.1-win.vs2019-Release+Asserts-x86.arm.wasm.7z
       LLVM_HOME: "C:\\projects\\llvm"
       CROSS_TOOLS_GNUWIN32: "C:\\projects\\cross\\gnuwin32"
       BUILD_TYPE: "Release"
