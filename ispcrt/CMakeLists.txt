@@ -118,8 +118,13 @@ macro(build_ispcrt SHARED_OR_STATIC TARGET_NAME)
     ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
   )
 endmacro()
-
+if (WIN32)
+    set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS ON)
+endif()
 build_ispcrt(SHARED ${PROJECT_NAME})
+if (WIN32)
+    set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS OFF)
+endif()
 build_ispcrt(STATIC ${PROJECT_NAME}_static)
 
 ## Build tests ############################################################
