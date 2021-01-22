@@ -655,7 +655,7 @@ if (ISPC_PREPARE_PACKAGE)
 
     # CPack configuration
     if (WIN32)
-        set(CPACK_GENERATOR "WIX")
+        set(CPACK_GENERATOR "WIX" "ZIP")
         set(ISPC_SYSTEM_NAME "windows")
         # WIX generator expects version in format x.y.z where x, y, z are numbers
         set(CPACK_PACKAGE_VERSION "${ISPC_VERSION_MAJOR}.${ISPC_VERSION_MINOR}.${ISPC_VERSION_PATCH}")
