@@ -18,6 +18,10 @@ struct CPUDevice : public base::Device {
     base::Module *newModule(const char *moduleFile) const override;
 
     base::Kernel *newKernel(const base::Module &module, const char *name) const override;
+
+    void *platformNativeHandle() const override;
+    void *deviceNativeHandle() const override;
+    void *contextNativeHandle() const override;
 };
 
 } // namespace ispcrt

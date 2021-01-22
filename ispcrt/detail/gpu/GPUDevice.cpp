@@ -470,6 +470,10 @@ struct TaskQueue : public ispcrt::base::TaskQueue {
         m_events.clear();
     }
 
+    void* taskQueueNativeHandle() const override {
+        return m_q;
+    }
+
   private:
     ze_command_queue_handle_t m_q{nullptr};
     ze_command_list_handle_t m_cl{nullptr};
@@ -565,6 +569,18 @@ base::Module *GPUDevice::newModule(const char *moduleFile) const {
 
 base::Kernel *GPUDevice::newKernel(const base::Module &module, const char *name) const {
     return new gpu::Kernel(module, name);
+}
+
+void *GPUDevice::platformNativeHandle() const {
+    return m_driver;
+}
+
+void *GPUDevice::deviceNativeHandle() const {
+    return m_device;
+}
+
+void *GPUDevice::contextNativeHandle() const {
+    return m_context;
 }
 
 } // namespace ispcrt

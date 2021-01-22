@@ -143,6 +143,10 @@ struct TaskQueue : public ispcrt::base::TaskQueue {
     void sync() override {
         // no-op
     }
+
+    void* taskQueueNativeHandle() const override {
+        return nullptr;
+    }
 };
 } // namespace cpu
 
@@ -157,5 +161,11 @@ ispcrt::base::Module *CPUDevice::newModule(const char *moduleFile) const { retur
 ispcrt::base::Kernel *CPUDevice::newKernel(const ispcrt::base::Module &module, const char *name) const {
     return new cpu::Kernel(module, name);
 }
+
+void *CPUDevice::platformNativeHandle() const { return nullptr; }
+
+void *CPUDevice::deviceNativeHandle() const { return nullptr; }
+
+void *CPUDevice::contextNativeHandle() const { return nullptr; }
 
 } // namespace ispcrt

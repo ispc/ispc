@@ -103,8 +103,14 @@ void ispcrtSync(ISPCRTTaskQueue);
 // Futures and task timing ////////////////////////////////////////////////////
 
 uint64_t ispcrtFutureGetTimeNs(ISPCRTFuture);
-
 bool ispcrtFutureIsValid(ISPCRTFuture);
+
+// Access to objects of native runtime ///////////////////////////////////////
+
+ISPCRTGenericHandle ispcrtPlatformNativeHandle(ISPCRTDevice);
+ISPCRTGenericHandle ispcrtDeviceNativeHandle(ISPCRTDevice);
+ISPCRTGenericHandle ispcrtContextNativeHandle(ISPCRTDevice);
+ISPCRTGenericHandle ispcrtTaskQueueNativeHandle(ISPCRTTaskQueue);
 
 #ifdef __cplusplus
 } // extern "C"
