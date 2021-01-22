@@ -35,8 +35,6 @@ environment:
   LLVM_LATEST: 11.0
   DOCKER_PATH: "ispc/test_repo"
   matrix:
-    - APPVEYOR_BUILD_WORKER_IMAGE: Ubuntu1604
-      LLVM_VERSION: latest
     - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2019
       LLVM_VERSION: latest
     - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2019
@@ -70,6 +68,7 @@ for:
         if "%WASM%" == "ON" ( call scripts\install_emscripten.bat )
         if "%WASM%" == "ON" ( emcc --version )
         set DOCKER_NAME=%DOCKER_PATH%:win_llvm%LLVM_SHORT_VER%
+        %NONEEDDOCKER% docker inspect %DOCKER_PATH%
         %NONEEDDOCKER% docker pull %DOCKER_NAME%
         %NONEEDDOCKER% docker run -d %DOCKER_NAME% > container_id.txt
         %NONEEDDOCKER% set /p CONTAINER=<container_id.txt
