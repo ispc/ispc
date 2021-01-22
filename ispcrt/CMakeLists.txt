@@ -51,6 +51,7 @@ if (ISPCRT_BUILD_TASKING)
   else()
     find_package(OpenMP REQUIRED)
     target_link_libraries(ispcrt_tasking INTERFACE OpenMP::OpenMP_CXX)
+    target_compile_definitions(ispcrt_tasking INTERFACE ISPC_USE_OMP)
   endif()
 endif()
 
