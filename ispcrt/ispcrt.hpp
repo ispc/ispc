@@ -99,11 +99,17 @@ class Device : public GenericObject<ISPCRTDevice> {
   public:
     Device() = default;
     Device(ISPCRTDeviceType type);
+    void* nativePlatformHandle() const;
+    void* nativeDeviceHandle() const;
+    void* nativeContextHandle() const;
 };
 
 // Inlined definitions //
 
 inline Device::Device(ISPCRTDeviceType type) : GenericObject<ISPCRTDevice>(ispcrtGetDevice(type)) {}
+inline void* Device::nativePlatformHandle() const { return ispcrtPlatformNativeHandle(handle()); }
+inline void* Device::nativeDeviceHandle() const { return ispcrtDeviceNativeHandle(handle()); }
+inline void* Device::nativeContextHandle() const { return ispcrtContextNativeHandle(handle()); }
 
 /////////////////////////////////////////////////////////////////////////////
 // Arrays (MemoryView wrapper w/ element type) //////////////////////////////
@@ -209,6 +215,8 @@ class TaskQueue : public GenericObject<ISPCRTTaskQueue> {
     Future launch(const Kernel &k, const Array<T> &p, size_t dim0, size_t dim1, size_t dim2) const;
 
     void sync() const;
+
+    void* nativeTaskQueueHandle() const;
 };
 
 // Inlined definitions //
@@ -253,5 +261,7 @@ inline Future TaskQueue::launch(const Kernel &k, const Array<T> &p, size_t dim0,
 }
 
 inline void TaskQueue::sync() const { ispcrtSync(handle()); }
+
+inline void* TaskQueue::nativeTaskQueueHandle() const { return ispcrtTaskQueueNativeHandle(handle()); }
 
 } // namespace ispcrt

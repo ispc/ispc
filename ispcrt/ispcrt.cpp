@@ -253,4 +253,33 @@ bool ispcrtFutureIsValid(ISPCRTFuture f) ISPCRT_CATCH_BEGIN {
 }
 ISPCRT_CATCH_END(false)
 
+///////////////////////////////////////////////////////////////////////////////
+// Native handles//////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////
+
+ISPCRTGenericHandle ispcrtPlatformNativeHandle(ISPCRTDevice d) ISPCRT_CATCH_BEGIN {
+    const auto &device = referenceFromHandle<ispcrt::base::Device>(d);
+    return device.platformNativeHandle();
+}
+ISPCRT_CATCH_END(nullptr)
+
+ISPCRTGenericHandle ispcrtDeviceNativeHandle(ISPCRTDevice d) ISPCRT_CATCH_BEGIN {
+    const auto &device = referenceFromHandle<ispcrt::base::Device>(d);
+    return device.deviceNativeHandle();
+}
+ISPCRT_CATCH_END(nullptr)
+
+ISPCRTGenericHandle ispcrtContextNativeHandle(ISPCRTDevice d) ISPCRT_CATCH_BEGIN {
+    const auto &device = referenceFromHandle<ispcrt::base::Device>(d);
+    return device.contextNativeHandle();
+}
+ISPCRT_CATCH_END(nullptr)
+
+ISPCRTGenericHandle ispcrtTaskQueueNativeHandle(ISPCRTTaskQueue q) ISPCRT_CATCH_BEGIN {
+    const auto &queue = referenceFromHandle<ispcrt::base::TaskQueue>(q);
+    return queue.taskQueueNativeHandle();
+}
+ISPCRT_CATCH_END(nullptr)
+
+
 } // extern "C"

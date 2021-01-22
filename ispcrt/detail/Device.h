@@ -24,6 +24,10 @@ struct Device : public RefCounted {
     virtual Module *newModule(const char *moduleFile) const = 0;
 
     virtual Kernel *newKernel(const Module &module, const char *name) const = 0;
+
+    virtual void *platformNativeHandle() const = 0;
+    virtual void *deviceNativeHandle() const = 0;
+    virtual void *contextNativeHandle() const = 0;
 };
 
 } // namespace base

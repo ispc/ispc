@@ -20,6 +20,10 @@ struct GPUDevice : public base::Device {
 
     base::Kernel *newKernel(const base::Module &module, const char *name) const override;
 
+    void *platformNativeHandle() const override;
+    void *deviceNativeHandle() const override;
+    void *contextNativeHandle() const override;
+
   private:
     void *m_driver{nullptr};
     void *m_device{nullptr};
