@@ -100,15 +100,20 @@ std::vector<float> DpcppApp::transformIspc(std::vector<float>& in) {
 std::vector<float> DpcppApp::transformDpcpp(const std::vector<float>& in) {
     const auto count = in.size();
     std::vector<float> out(count, 0.0f);
-/*
-    // Create SYCL objects from native Level Zero handles
-    // Thanks to this API Level Zero (ISPC) based programs
+
+    // Create SYCL objects from native (Level Zero) handles
+    // Thanks to this API ISPCRT-based based programs
     // can share device context with SYCL programs implemented
     // using oneAPI DPC++ compiler
-    auto platform = sycl::level_zero::make<cl::sycl::platform>(m_driver);
-    auto device   = sycl::level_zero::make<cl::sycl::device>(platform, m_device);
-    auto ctx      = sycl::level_zero::make<cl::sycl::context>(platform.get_devices(), m_context);
-    auto q        = sycl::level_zero::make<cl::sycl::queue>(ctx, m_command_queue);
+    auto nativePlatform = static_cast<ze_driver_handle_t>(m_device.nativePlatformHandle());
+    auto nativeDevice   = static_cast<ze_device_handle_t>(m_device.nativeDeviceHandle());
+    auto nativeContext  = static_cast<ze_context_handle_t>(m_device.nativeContextHandle());
+    auto nativeQueue    = static_cast<ze_command_queue_handle_t>(m_queue.nativeTaskQueueHandle());
+
+    auto platform = sycl::level_zero::make<cl::sycl::platform>(nativePlatform);
+    auto device   = sycl::level_zero::make<cl::sycl::device>(platform, nativeDevice);
+    auto ctx      = sycl::level_zero::make<cl::sycl::context>(platform.get_devices(), nativeContext);
+    auto q        = sycl::level_zero::make<cl::sycl::queue>(ctx, nativeQueue);
 
     // Set problem space
     sycl::range<1> range { count };
@@ -135,11 +140,11 @@ std::vector<float> DpcppApp::transformDpcpp(const std::vector<float>& in) {
     });
 
     // Use accessor to transfer data from the device*/
-    std::vector<float> res(count);/*
+    std::vector<float> res(count);
     const auto out_host_access = out_buffer.get_access<cl::sycl::access::mode::read>();
     for (int i = 0; i < out_host_access.get_count(); i++) {
         res[i] = out_host_access[i];
-    }*/
+    }
     return res;
 }
 
@@ -173,9 +178,12 @@ bool DpcppApp::run() {
     auto vout_dpcpp = transformDpcpp(vin);
 
     std::cout << "           ISPC   DPCPP\n";
+    constexpr unsigned COLW = 6;
+    constexpr unsigned PREC = 3;
     for (int i = 0; i < COUNT; i++) {
-        std::cout << "out[" << std::setw(2) << i << "] = " << std::setw(5) << std::setprecision(4) << vout_ispc[i]
-                  << std::setw(5) << std::setprecision(4) << vout_dpcpp[i] << '\n';
+        std::cout << "out[" << std::setw(2) << i << "] = "
+                  << std::fixed << std::setw(COLW) << std::setprecision(PREC) << vout_ispc[i]
+                  << std::fixed << std::setw(COLW) << std::setprecision(PREC) << vout_dpcpp[i] << '\n';
     }
 
     // Compare the results
