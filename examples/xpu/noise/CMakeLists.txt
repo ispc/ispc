@@ -41,11 +41,10 @@ set(ISPC_SRC_NAME "noise.ispc")
 set(ISPC_TARGET "genx-x8")
 set(HOST_SOURCES noise.cpp noise_serial.cpp)
 
-if(UNIX)
-    add_perf_example(
-        ISPC_SRC_NAME ${ISPC_SRC_NAME}
-        TEST_NAME ${TEST_NAME}
-        ISPC_TARGET ${ISPC_TARGET}
-        HOST_SOURCES ${HOST_SOURCES}
-    )
-endif()
+add_perf_example(
+    ISPC_SRC_NAME ${ISPC_SRC_NAME}
+    TEST_NAME ${TEST_NAME}
+    ISPC_TARGET ${ISPC_TARGET}
+    HOST_SOURCES ${HOST_SOURCES}
+)
+

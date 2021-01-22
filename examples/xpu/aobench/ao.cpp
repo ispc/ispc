@@ -43,10 +43,12 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#ifdef __linux__
+#if defined(_WIN32) || defined(_WIN64)
 #include <malloc.h>
+#else
+#include <cstdlib>
 #endif
-#include "L0_helpers.h"
+
 #include "timing.h"
 #include <algorithm>
 #include <chrono>
@@ -56,14 +58,11 @@
 #include <math.h>
 #include <string>
 #include <sys/types.h>
-
 // ispcrt
 #include "ispcrt.h"
 
 #define NSUBSAMPLES 2
 #define CORRECTNESS_THRESHOLD 0.01
-
-using namespace hostutil;
 
 extern void ao_serial(int w, int h, int nsubsamples, float image[]);
 
@@ -122,7 +121,12 @@ static int run() {
 
     size_t imgSize = width * height * 3;
     img = new unsigned char[imgSize];
+
+#if defined(_WIN32) || defined(_WIN64)
+    fimg = (float *)_aligned_malloc(imgSize * sizeof(float), 4096);
+#else
     fimg = (float *)aligned_alloc(4096, imgSize * sizeof(float));
+#endif
 
     uint64_t minKernelClocksGPU = std::numeric_limits<uint64_t>::max();
 
@@ -201,7 +205,11 @@ static int run() {
     savePPM("ao-cpp-serial.ppm", width, height, fimg);
     printf("[aobench serial]:\t\t[%.3f] million cycles (%d x %d image)\n", minCyclesSerial, width, height);
     delete[] img;
+#if defined(_WIN32) || defined(_WIN64)
+    _aligned_free(fimg);
+#else
     free(fimg);
+#endif
     return 0;
 }
 

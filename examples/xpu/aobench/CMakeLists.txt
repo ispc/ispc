@@ -1,5 +1,5 @@
 #
-#  Copyright (c) 2020, Intel Corporation
+#  Copyright (c) 2020-2021, Intel Corporation
 #  All rights reserved.
 #
 #  Redistribution and use in source and binary forms, with or without
@@ -41,11 +41,9 @@ set(ISPC_SRC_NAME "aobench.ispc")
 set(ISPC_TARGET "genx-x16")
 set(HOST_SOURCES ao.cpp ao_serial.cpp)
 
-if(UNIX)
-    add_perf_example(
-        ISPC_SRC_NAME ${ISPC_SRC_NAME}
-        TEST_NAME ${TEST_NAME}
-        ISPC_TARGET ${ISPC_TARGET}
-        HOST_SOURCES ${HOST_SOURCES}
-    )
-endif()
+add_perf_example(
+    ISPC_SRC_NAME ${ISPC_SRC_NAME}
+    TEST_NAME ${TEST_NAME}
+    ISPC_TARGET ${ISPC_TARGET}
+    HOST_SOURCES ${HOST_SOURCES}
+)

@@ -30,6 +30,13 @@
    NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
    SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
+#ifdef _MSC_VER
+#define NOMINMAX
+#pragma warning(disable : 4244)
+#pragma warning(disable : 4305)
+// preventing MSVC fopen() deprecation complaints
+#define _CRT_SECURE_NO_DEPRECATE
+#endif
 
 #include <chrono>
 #include <cmath>
@@ -43,6 +50,7 @@
 
 // ispcrt
 #include "ispcrt.hpp"
+
 
 #define CORRECTNESS_THRESHOLD 0.0002
 #define WIDTH 768

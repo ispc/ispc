@@ -46,19 +46,17 @@ set(CM_OBJ_NAME "${CMAKE_CURRENT_BINARY_DIR}/naive_sgemm_cm_mt.spv")
 set(CM_TEST_NAME "naive_sgemm_cm")
 set(CM_HOST_SOURCES ${HOST_SOURCES})
 
-if(UNIX)
-    add_perf_example(
-        ISPC_SRC_NAME ${ISPC_SRC_NAME}
-        TEST_NAME ${TEST_NAME}
-        ISPC_TARGET ${ISPC_TARGET}
-        HOST_SOURCES ${HOST_SOURCES}
-        GBENCH
-        GBENCH_TEST_NAME bench-sgemm
-        GBENCH_SRC_NAME bench.cpp sgemm.cpp
-        CM_TEST
-        CM_SRC_NAME ${CM_SRC_NAME}
-        CM_TEST_NAME ${CM_TEST_NAME}
-        CM_HOST_SOURCES ${CM_HOST_SOURCES}
-        CM_OBJ_NAME ${CM_OBJ_NAME}
-    )
-endif()
+add_perf_example(
+    ISPC_SRC_NAME ${ISPC_SRC_NAME}
+    TEST_NAME ${TEST_NAME}
+    ISPC_TARGET ${ISPC_TARGET}
+    HOST_SOURCES ${HOST_SOURCES}
+    GBENCH
+    GBENCH_TEST_NAME bench-sgemm
+    GBENCH_SRC_NAME bench.cpp sgemm.cpp
+    CM_TEST
+    CM_SRC_NAME ${CM_SRC_NAME}
+    CM_TEST_NAME ${CM_TEST_NAME}
+    CM_HOST_SOURCES ${CM_HOST_SOURCES}
+    CM_OBJ_NAME ${CM_OBJ_NAME}
+)

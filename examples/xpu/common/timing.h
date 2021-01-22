@@ -97,11 +97,11 @@ static inline double rtc(void) {
 #endif // !WIN32
 #endif // !__arm__ && !__aarch64__
 
-static uint64_t start, end;
+static uint64_t ustart, uend;
 static double tstart, tend;
 
 static inline void reset_and_start_timer() {
-    start = rdtsc();
+    ustart = rdtsc();
 #ifndef WIN32
     // Unused in Windows build, rtc() causing link errors
     tstart = rtc();
@@ -111,8 +111,8 @@ static inline void reset_and_start_timer() {
 /* Returns the number of millions of elapsed processor cycles since the
    last reset_and_start_timer() call. */
 static inline double get_elapsed_mcycles() {
-    end = rdtsc();
-    return (end - start) / (1024. * 1024.);
+    uend = rdtsc();
+    return (uend - ustart) / (1024. * 1024.);
 }
 
 #ifndef WIN32

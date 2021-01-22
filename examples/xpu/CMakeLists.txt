@@ -38,6 +38,19 @@ message(STATUS "Configuring GenX examples")
 
 option(ISPC_INCLUDE_DPCPP_EXAMPLES "Generate build targets for the ISPC/DPCPP interoperability examples" OFF)
 
+if(CMAKE_BUILD_TYPE)
+    # Validate build type
+    set(CONFIGURATION_TYPES "Debug;Release;RelWithDebInfo")
+
+    string(FIND "${CONFIGURATION_TYPES}" "${CMAKE_BUILD_TYPE}" MATCHED_CONFIG)
+    if (${MATCHED_CONFIG} EQUAL -1)
+         message(FATAL_ERROR "CMAKE_BUILD_TYPE (${CMAKE_BUILD_TYPE}) allows only the following values: ${CONFIGURATION_TYPES}")
+    endif()
+else(NOT CMAKE_BUILD_TYPE)
+    set(CMAKE_BUILD_TYPE "Release")
+    message(STATUS "Build type not specified: Use Release by default.")
+endif(CMAKE_BUILD_TYPE)
+
 # CMC is needed for ISPC build so it should have been already found but it is possible to overwrite this with CM_INSTALL_PATH.
 if (CM_INSTALL_PATH)
     find_program (CMC_EXECUTABLE cmc PATHS ${CM_INSTALL_PATH}/bin NO_DEFAULT_PATH)
