@@ -566,6 +566,11 @@ endif()
 
 if (ISPC_INCLUDE_GENX_EXAMPLES AND ISPC_INCLUDE_RT AND NOT ISPC_PREPARE_PACKAGE)
     include(ExternalProject)
+    if (WIN32)
+        set(ISPCRT_LIB ${CMAKE_CURRENT_BINARY_DIR}/ispcrt/${CMAKE_CFG_INTDIR}/ispcrt.lib)
+    else()
+        set(ISPCRT_LIB $<TARGET_FILE:ispcrt>)
+    endif()
     if (ISPC_INCLUDE_BENCHMARKS)
         # Duplicated ExternalProject_Add for xpu examples when
         # ISPC_INCLUDE_BENCHMARKS is on and off since all efforts of
@@ -579,7 +584,9 @@ if (ISPC_INCLUDE_GENX_EXAMPLES AND ISPC_INCLUDE_RT AND NOT ISPC_PREPARE_PACKAGE)
                 -DCMAKE_BUILD_TYPE:STRING=${CMAKE_BUILD_TYPE}
                 -DCMAKE_ISPC_COMPILER:PATH=$<TARGET_FILE:ispc>
                 -DISPC_EXECUTABLE:PATH=$<TARGET_FILE:ispc>
-                -DISPCRT_LIB:PATH=$<TARGET_FILE:ispcrt>
+                -DISPCRT_LIB:PATH=${ISPCRT_LIB}
+                -DLEVEL_ZERO_ROOT:PATH=${LEVEL_ZERO_ROOT}
+                -DLEVEL_ZERO_LIB_LOADER:PATH=${LEVEL_ZERO_LIB_LOADER}
                 -DBENCHMARK_LIB:PATH=$<TARGET_FILE:benchmark>
                 -DCMAKE_C_COMPILER:PATH=${CMAKE_C_COMPILER}
                 -DCMAKE_CXX_COMPILER:PATH=${CMAKE_CXX_COMPILER}
@@ -596,7 +603,9 @@ if (ISPC_INCLUDE_GENX_EXAMPLES AND ISPC_INCLUDE_RT AND NOT ISPC_PREPARE_PACKAGE)
                 -DCMAKE_BUILD_TYPE:STRING=${CMAKE_BUILD_TYPE}
                 -DCMAKE_ISPC_COMPILER:PATH=$<TARGET_FILE:ispc>
                 -DISPC_EXECUTABLE:PATH=$<TARGET_FILE:ispc>
-                -DISPCRT_LIB:PATH=$<TARGET_FILE:ispcrt>
+                -DISPCRT_LIB:PATH=${ISPCRT_LIB}
+                -DLEVEL_ZERO_ROOT:PATH=${LEVEL_ZERO_ROOT}
+                -DLEVEL_ZERO_LIB_LOADER:PATH=${LEVEL_ZERO_LIB_LOADER}
                 -DCMAKE_C_COMPILER:PATH=${CMAKE_C_COMPILER}
                 -DCMAKE_CXX_COMPILER:PATH=${CMAKE_CXX_COMPILER}
             INSTALL_COMMAND ""
