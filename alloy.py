@@ -105,15 +105,13 @@ def try_do_LLVM(text, command, from_validation, verbose=False):
     if from_validation == True:
         text = text + "\n"
     print_debug("Trying to " + text, from_validation, alloy_build)
-    postfix = ""
-    if current_OS == "Windows":
-        postfix = " 1>> " + alloy_build + " 2>&1"
-    else:
-        if verbose:
-            postfix = " 2>&1 | tee " + alloy_build
-        else:
-            postfix = " >> " + alloy_build + " 2>> " + alloy_build
-    if os.system(command + postfix) != 0:
+
+    with subprocess.Popen(command, shell=True,universal_newlines=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT) as proc:
+        for line in proc.stdout:
+            print_debug(line, not verbose, alloy_build)
+    proc.wait()
+    exit_status = proc.returncode
+    if exit_status != 0:
         print_debug("ERROR.\n", from_validation, alloy_build)
         if options.notify != "":
             msg = MIMEMultipart()
