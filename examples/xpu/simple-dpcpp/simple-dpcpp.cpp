@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020, Intel Corporation
+ * Copyright (c) 2021, Intel Corporation
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -139,7 +139,7 @@ std::vector<float> DpcppApp::transformDpcpp(const std::vector<float>& in) {
         });
     });
 
-    // Use accessor to transfer data from the device*/
+    // Use accessor to transfer data from the device
     std::vector<float> res(count);
     const auto out_host_access = out_buffer.get_access<cl::sycl::access::mode::read>();
     for (int i = 0; i < out_host_access.get_count(); i++) {

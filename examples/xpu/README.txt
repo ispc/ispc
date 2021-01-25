@@ -91,9 +91,10 @@ This example demonstrate usage of pure Level 0.
 Simple-DPCPP
 ======================================
 This simple example demonstrates a basic scanerio of interoperability between ISPC
-and the oneAPI DPC++ Compiler. It runs an ISPC kernel in a Level Zero context and then
-a corresponding SYCL kernel in SYCL context created from the same Level Zero context.
-Then the results are compared to check if those are identical.
+and the oneAPI DPC++ Compiler. It runs an ISPC kernel using ISPC Run Time and then
+creates a SYCL context using native Level Zero handles obtained from ISPCRT.
+Then it runs a corresponding SYCL kernel in SYCL. The results are compared to confirm
+that those are identical.
 
 It requires oneAPI DPC++ Compiler.
 
@@ -106,6 +107,26 @@ cmake -DCMAKE_C_COMPILER=<dpcpp_path>/bin/clang -DCMAKE_CXX_COMPILER=<dpcpp_path
 Running this example may require setting the LD_LIBRARY_PATH environmental variable to include
 oneAPI DPC++ Compiler libraries.
 
+
+Simple-DPCPP-L0
+======================================
+This simple example demonstrates a basic scanerio of interoperability between ISPC
+and the oneAPI DPC++ Compiler. It runs an ISPC kernel in a Level Zero context and then
+a corresponding SYCL kernel in SYCL context created from the same Level Zero context.
+Then the results are compared to check if those are identical.
+The key difference between this and the previous example is that this one uses
+native Level Zero API then the previous one uses ISPCRT.
+
+It requires oneAPI DPC++ Compiler.
+
+To enable this example please configure the build of ISPC examples using the following
+command line:
+
+cmake -DCMAKE_C_COMPILER=<dpcpp_path>/bin/clang -DCMAKE_CXX_COMPILER=<dpcpp_path>/bin/clang++ \
+      -DISPC_INCLUDE_DPCPP_EXAMPLES=ON <examples source dir>
+
+Running this example may require setting the LD_LIBRARY_PATH environmental variable to include
+oneAPI DPC++ Compiler libraries.
 
 Pipeline-DPCPP
 ======================================
