@@ -69,7 +69,7 @@ for:
         cd %ISPC_HOME%
         if "%WASM%" == "ON" ( call scripts\install_emscripten.bat )
         if "%WASM%" == "ON" ( emcc --version )
-        set DOCKER_NAME=%DOCKER_PATH%:win_llvm%LLVM_SHORT_VER%
+        set DOCKER_NAME=%DOCKER_PATH%:win_llvm100
         %NONEEDDOCKER% docker pull %DOCKER_NAME%
         %NONEEDDOCKER% docker run -d %DOCKER_NAME% > container_id.txt
         %NONEEDDOCKER% set /p CONTAINER=<container_id.txt
