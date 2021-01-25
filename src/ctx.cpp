@@ -1020,8 +1020,7 @@ void FunctionEmitContext::EmitCaseLabel(int value, bool checkMask, SourcePos pos
     llvm::BasicBlock *bbCaseImpl = NULL;
     if (emitGenXHardwareMask()) {
         // Create basic block with actual case implementation
-        llvm::Twine bbName = llvm::Twine(bbCase->getName()) + "_impl";
-        bbCaseImpl = CreateBasicBlock(bbName, bbCase);
+        bbCaseImpl = CreateBasicBlock(llvm::Twine(bbCase->getName()) + "_impl", bbCase);
     }
 #endif
 
@@ -3142,8 +3141,8 @@ llvm::Value *FunctionEmitContext::BroadcastValue(llvm::Value *v, llvm::Type *vec
     llvm::Value *undef2 = llvm::UndefValue::get(vecType);
 
     // InsertElement
-    llvm::Twine tw = name.isTriviallyEmpty() ? (llvm::Twine(v->getName()) + "_broadcast") : name + llvm::Twine("_init");
-    llvm::Value *insert = InsertInst(undef1, v, 0, tw.str().c_str());
+    llvm::Value *insert =
+        InsertInst(undef1, v, 0, name.isTriviallyEmpty() ? (llvm::Twine(v->getName()) + "_broadcast") : name + "_init");
 
     // ShuffleVector
 #if ISPC_LLVM_VERSION < ISPC_LLVM_11_0
