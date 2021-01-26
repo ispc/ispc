@@ -72,11 +72,16 @@ function(test_add)
     if (PARSED_ARGS_RES_IMAGE)
         set (RES_IMAGE_OPT "-res_image" ${PARSED_ARGS_RES_IMAGE})
     endif()
+
+    if (WIN32)
+        set (TEST_REL_PATH ${PARSED_ARGS_NAME}/${CMAKE_BUILD_TYPE})
+    else()
+        set (TEST_REL_PATH ${PARSED_ARGS_NAME})
+    endif()
     if (SUPPORTED EQUAL 1)
         add_test(NAME ${result_test_name}
             COMMAND ${PYTHON_EXECUTABLE} ${TEST_RUNNER} ${REF_IMAGE_OPT} ${RES_IMAGE_OPT}
-            ${PARSED_ARGS_NAME} ${PARSED_ARGS_UNPARSED_ARGUMENTS}
-            WORKING_DIRECTORY ${EXECUTABLE_OUTPUT_PATH}
+            ${TEST_REL_PATH} ${PARSED_ARGS_UNPARSED_ARGUMENTS}
         )
     endif()
 endfunction()

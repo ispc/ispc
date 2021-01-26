@@ -135,13 +135,13 @@ static int run(unsigned int width, unsigned int height, unsigned int test_iterat
             queue.sync();
             auto res = queue.launch(kernel, p_dev, width / p.tile_size, height / p.tile_size);
             queue.barrier();
+            queue.copyToHost(buf_dev);
+            queue.barrier();
             queue.sync();
             if (res.valid()) {
                 kernelTicks = res.time() * 1e-6;
             }
             double mcycles = get_elapsed_mcycles();
-            queue.copyToHost(buf_dev);
-            queue.sync();
 
             // Print resulting time
             printf("@time of %s run:\t\t\t[%.3f] milliseconds\n", device_str, kernelTicks);

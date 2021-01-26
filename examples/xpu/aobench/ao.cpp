@@ -165,6 +165,8 @@ static int run() {
             auto res = ispcrtLaunch2D(queue, kernel, p_dev, height * width / 16, 1);
             ispcrtRetain(res);
             ispcrtDeviceBarrier(queue);
+            ispcrtCopyToHost(queue, buf_dev);
+            ispcrtDeviceBarrier(queue);
             ispcrtSync(queue);
 
             if (ispcrtFutureIsValid(res)) {
@@ -175,8 +177,6 @@ static int run() {
             printf("@time of %s run:\t\t\t[%.3f] milliseconds\n", device_str, kernelTicks);
             printf("@time of %s run:\t\t\t[%.3f] million cycles\n", device_str, mcycles);
             minCyclesISPC = std::min(minCyclesISPC, mcycles);
-            ispcrtCopyToHost(queue, buf_dev);
-            ispcrtSync(queue);
         }
 
         printf("[aobench ISPC GPU]:\t\t[%.3f] million cycles (%d x %d image)\n", minCyclesISPC, width, height);
