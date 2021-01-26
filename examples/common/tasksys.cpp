@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2011-2020, Intel Corporation
+  Copyright (c) 2011-2021, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -667,7 +667,7 @@ static void InitTaskSystem() {
                         exit(1);
                     }
 
-                    char name[32];
+                    char name[40];
                     bool success = false;
                     srand(time(NULL));
                     for (int i = 0; i < 10; i++) {
@@ -687,6 +687,11 @@ static void InitTaskSystem() {
                     }
 
                     threads = (pthread_t *)malloc(nThreads * sizeof(pthread_t));
+                    if (threads == NULL) {
+                        fprintf(stderr, "Error creating pthreads: %s\n", strerror(err));
+                        exit(1);
+                    }
+
                     for (int i = 0; i < nThreads; ++i) {
                         err = pthread_create(&threads[i], NULL, &lTaskEntry, (void *)((long long)i));
                         if (err != 0) {
