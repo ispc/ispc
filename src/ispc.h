@@ -42,7 +42,7 @@
 #include "target_registry.h"
 
 #if ISPC_LLVM_VERSION < OLDEST_SUPPORTED_LLVM || ISPC_LLVM_VERSION > LATEST_SUPPORTED_LLVM
-#error "Only LLVM 8.0 - 11.0 and 12.0 development branch are supported"
+#error "Only LLVM 8.0 - 12.0 and 13.0 development branch are supported"
 #endif
 
 #if defined(_WIN32) || defined(_WIN64)
