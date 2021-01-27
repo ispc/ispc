@@ -88,9 +88,8 @@ macro(build_ispcrt SHARED_OR_STATIC TARGET_NAME)
   )
 
   target_link_libraries(${TARGET_NAME}
-  PUBLIC
-    $<$<BOOL:${ISPCRT_BUILD_GPU}>:${LEVEL_ZERO_LIB_LOADER}>
   PRIVATE
+    $<$<BOOL:${ISPCRT_BUILD_GPU}>:${LEVEL_ZERO_LIB_LOADER}>
     ${CMAKE_DL_LIBS}
     $<$<BOOL:${ISPCRT_BUILD_TASKING}>:ispcrt_tasking>
   )
