@@ -18,7 +18,7 @@ env:
 jobs:
   # Building LLVM in docker, as using native Ubuntu 16.04 github-hosted image contains newer-than-expected libs and
   # makes the resulting build not usable on other Ubuntu 16.04 images.
-  linux-build-llvm-12.0:
+  linux-build-llvm-12_0:
     runs-on: ubuntu-latest
 
     steps:
@@ -47,11 +47,11 @@ jobs:
     - name: Upload package
       uses: actions/upload-artifact@v2
       with:
-        name: llvm_12.0_linux
+        name: llvm_12_0_linux
         path: docker/ubuntu/llvm_build/llvm-12.0-ubuntu16.04-Release+Asserts-x86.arm.wasm.tar.gz
 
-  linux-build-ispc-llvm-12.0:
-    needs: [linux-build-llvm-12.0]
+  linux-build-ispc-llvm-12_0:
+    needs: [linux-build-llvm-12_0]
     runs-on: ubuntu-latest
     env:
       LLVM_VERSION: "12.0"
@@ -65,7 +65,7 @@ jobs:
     - name: Download package
       uses: actions/download-artifact@v2
       with:
-        name: llvm_12.0_linux
+        name: llvm_12_0_linux
 
     - name: Install dependencies
       run: |
@@ -88,11 +88,11 @@ jobs:
     - name: Upload package
       uses: actions/upload-artifact@v2
       with:
-        name: ispc_llvm_12.0_linux
+        name: ispc_llvm_12_0_linux
         path: build/ispc-12.0-linux.tar.gz
 
-  linux-test-llvm-12.0:
-    needs: [linux-build-ispc-llvm-12.0]
+  linux-test-llvm-12_0:
+    needs: [linux-build-ispc-llvm-12_0]
     runs-on: ubuntu-latest
     continue-on-error: false
     strategy:
@@ -109,7 +109,7 @@ jobs:
     - name: Download package
       uses: actions/download-artifact@v2
       with:
-        name: ispc_llvm_12.0_linux
+        name: ispc_llvm_12_0_linux
 
     - name: Install dependencies and unpack artifacts
       run: |
