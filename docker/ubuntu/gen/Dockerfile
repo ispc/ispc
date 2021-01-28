@@ -43,7 +43,6 @@ RUN wget -q --retry-connrefused --waitretry=5 --read-timeout=20 --timeout=15 -t 
 RUN wget -q --retry-connrefused --waitretry=5 --read-timeout=20 --timeout=15 -t 5 https://github.com/intel/compute-runtime/releases/download/20.50.18716/intel-level-zero-gpu_1.0.18716_amd64.deb
 
 RUN wget -q --retry-connrefused --waitretry=5 --read-timeout=20 --timeout=15 -t 5 https://github.com/intel/intel-graphics-compiler/releases/download/igc-1.0.$IGC_VER/intel-igc-opencl-devel_1.0.${IGC_VER}_amd64.deb
-RUN wget -q --retry-connrefused --waitretry=5 --read-timeout=20 --timeout=15 -t 5 https://raw.githubusercontent.com/intel/intel-graphics-compiler/igc-1.0.$IGC_VER/inc/common/igfxfmid.h -O igfxfmid.h
 
 # L0 loaader
 RUN wget -q --retry-connrefused --waitretry=5 --read-timeout=20 --timeout=15 -t 5 https://github.com/oneapi-src/level-zero/releases/download/v$L0L_VER/level-zero-devel_$L0L_VER+u18.04_amd64.deb
@@ -51,7 +50,6 @@ RUN wget -q --retry-connrefused --waitretry=5 --read-timeout=20 --timeout=15 -t 
 
 # Install packages and clean up
 RUN dpkg -i *.deb
-RUN mkdir -p /usr/include/igdgmm/inc/common && cp igfxfmid.h /usr/include/igdgmm/inc/common
 WORKDIR /home
 RUN rm -rf packages
 
@@ -78,7 +76,7 @@ ENV PATH=$LLVM_HOME/bin-$LLVM_VERSION/bin:$PATH
 WORKDIR /home/src/ispc
 RUN mkdir -p build
 WORKDIR /home/src/ispc/build
-RUN cmake -DGENX_ENABLED=ON -DCMAKE_INSTALL_PREFIX=/home/ispc/ -DGENX_DEPS_DIR=/home/deps -DGENX_ADAPTOR_OCL_INCLUDES=/usr/local/include/igc ../ && make install -j`nproc`
+RUN cmake -DGENX_ENABLED=ON -DCMAKE_INSTALL_PREFIX=/home/ispc/ -DGENX_DEPS_DIR=/home/deps ../ && make install -j`nproc`
 RUN make check-all -j`nproc`
 # Add ISPC to PATH
 ENV PATH=/home/ispc/bin
