@@ -46,11 +46,6 @@
 #include <llvm/Support/TimeProfiler.h>
 
 #ifdef ISPC_GENX_ENABLED
-#include "ocl_igc_interface/igc_ocl_device_ctx.h"
-#include "ocl_igc_interface/platform_helper.h"
-
-#include "igfxfmid.h"
-
 #include <unordered_map>
 #endif
 
@@ -61,12 +56,12 @@ class raw_string_ostream;
 struct DispatchHeaderInfo;
 
 #ifdef ISPC_GENX_ENABLED
-static const std::unordered_map<std::string, PLATFORM> SupportedGenPlatforms = {
-    {"SKL", {IGFX_SKYLAKE, PCH_UNKNOWN, IGFX_GEN9_CORE, IGFX_GEN9_CORE, PLATFORM_NONE, 0, 9, 0, 0, GTTYPE_UNDEFINED}},
-    {"TGLLP",
-     {IGFX_TIGERLAKE_LP, PCH_UNKNOWN, IGFX_GEN12LP_CORE, IGFX_GEN12LP_CORE, PLATFORM_NONE, 0, 0, 0, 0,
-      GTTYPE_UNDEFINED}},
-};
+// Derived from ocloc_api.h
+using invokePtr = int (*)(unsigned, const char **, const uint32_t, const uint8_t **, const uint64_t *, const char **,
+                          const uint32_t, const uint8_t **, const uint64_t *, const char **, uint32_t *, uint8_t ***,
+                          uint64_t **, char ***);
+using freeOutputPtr = int (*)(uint32_t *, uint8_t ***, uint64_t **, char ***);
+const std::unordered_map<std::string, std::string> ISPCToNeoCPU{{"SKL", "skl"}, {"TGLLP", "tgllp"}, {"DG1", "dg1"}};
 #endif
 
 class Module {

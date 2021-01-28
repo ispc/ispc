@@ -96,15 +96,14 @@
 #include <llvm/Transforms/Utils/ValueMapper.h>
 
 #ifdef ISPC_GENX_ENABLED
-#include "cif/common/library_api.h"
 #include <LLVMSPIRVLib/LLVMSPIRVLib.h>
 #include <fstream>
 #if defined(_WIN64)
-#define IGC_LIBRARY_NAME "igc64.dll"
+#define OCLOC_LIBRARY_NAME "ocloc64.dll"
 #elif defined(_WIN32)
-#define IGC_LIBRARY_NAME "igc32.dll"
+#define OCLOC_LIBRARY_NAME "ocloc32.dll"
 #elif defined(__linux__)
-#define IGC_LIBRARY_NAME "libigc.so"
+#define OCLOC_LIBRARY_NAME "libocloc.so"
 #else
 #error "Unexpected platform"
 #endif
@@ -1109,6 +1108,33 @@ bool Module::writeSPIRV(llvm::Module *module, const char *outFileName) {
     return true;
 }
 
+// Translate ISPC CPU name to Neo representation
+static std::string translateCPU(const std::string &CPU) {
+    auto It = ISPCToNeoCPU.find(CPU);
+    Assert(It != ISPCToNeoCPU.end() && "Unexpected CPU");
+    return It->second;
+}
+
+// Copy outputs. Required file should have provided extension (it is
+// different for different binary kinds).
+static void saveOutput(uint32_t numOutputs, uint8_t **dataOutputs, uint64_t *lenOutputs, char **nameOutputs,
+                       std::vector<char> &oclocRes) {
+    const std::string &requiredExtension = ".bin";
+    llvm::ArrayRef<const uint8_t *> outBins{dataOutputs, numOutputs};
+    llvm::ArrayRef<uint64_t> outLens{lenOutputs, numOutputs};
+    llvm::ArrayRef<const char *> outNames{nameOutputs, numOutputs};
+    auto zip = llvm::zip(outBins, outLens, outNames);
+    using ZipTy = typename decltype(zip)::value_type;
+    auto binIt = std::find_if(zip.begin(), zip.end(), [&requiredExtension](ZipTy File) {
+        llvm::StringRef name{std::get<2>(File)};
+        return name.endswith(requiredExtension);
+    });
+    Assert(binIt != zip.end() && "Output binary is missing");
+
+    llvm::ArrayRef<uint8_t> binRef{std::get<0>(*binIt), static_cast<std::size_t>(std::get<1>(*binIt))};
+    oclocRes.assign(binRef.begin(), binRef.end());
+}
+
 bool Module::writeZEBin(llvm::Module *module, const char *outFileName) {
     std::stringstream translatedStream;
     bool success = translateToSPIRV(module, translatedStream);
@@ -1118,48 +1144,26 @@ bool Module::writeZEBin(llvm::Module *module, const char *outFileName) {
     const std::string &translatedStr = translatedStream.str();
     std::vector<char> spirStr(translatedStr.begin(), translatedStr.end());
 
-    std::string CPUName = g->target->getCPU();
+    const std::string CPUName = g->target->getCPU();
+    const std::string neoCPU = translateCPU(CPUName);
 
-    auto platformDescription = SupportedGenPlatforms.find(CPUName);
-    if (platformDescription == SupportedGenPlatforms.end()) {
-        Error(SourcePos(), "<%s> is not supported for SPIRV->OclGenBin translation\n", CPUName.c_str());
+    invokePtr invoke;
+    freeOutputPtr freeOutput;
+    auto oclocLib = llvm::sys::DynamicLibrary::getPermanentLibrary(OCLOC_LIBRARY_NAME);
+    if (!oclocLib.isValid()) {
+        Error(SourcePos(), "Cannot open '" OCLOC_LIBRARY_NAME "'\n");
         return false;
     }
-
-    auto IGCDL = llvm::sys::DynamicLibrary::getPermanentLibrary(IGC_LIBRARY_NAME);
-    if (!IGCDL.isValid()) {
-        Error(SourcePos(), "Cannot open '" IGC_LIBRARY_NAME "'\n");
+    invoke = reinterpret_cast<invokePtr>(oclocLib.getAddressOfSymbol("oclocInvoke"));
+    if (!invoke) {
+        Error(SourcePos(), "oclocInvoke symbol is missing \n");
         return false;
     }
-
-    auto *createIGCMainFunc =
-        reinterpret_cast<CIF::CreateCIFMainFunc_t>(IGCDL.getAddressOfSymbol(CIF::CreateCIFMainFuncName));
-    if (!createIGCMainFunc) {
-        Error(SourcePos(), "No main entry symbol in '" IGC_LIBRARY_NAME "'\n");
+    freeOutput = reinterpret_cast<freeOutputPtr>(oclocLib.getAddressOfSymbol("oclocFreeOutput"));
+    if (!freeOutput) {
+        Error(SourcePos(), "oclocFreeOutput symbol is missing \n");
         return false;
     }
-
-    auto IGCMain = CIF::RAII::UPtr(createIGCMainFunc());
-    if (!IGCMain) {
-        Error(SourcePos(), "Cannot create igc main\n");
-        return false;
-    }
-
-    auto IGCDeviceCtx = IGCMain->CreateInterface<IGC::IgcOclDeviceCtxTagOCL>();
-    if (!IGCDeviceCtx) {
-        Error(SourcePos(), "Cannot create igc device context\n");
-        return false;
-    }
-
-    auto IGCPlatform = IGCDeviceCtx->GetPlatformHandle();
-    if (!IGCPlatform) {
-        Error(SourcePos(), "Cannot retrieve igc platform\n");
-        return false;
-    }
-    PLATFORM platform = platformDescription->second;
-    IGC::PlatformHelper::PopulateInterfaceWith(*IGCPlatform, platform);
-
-    auto srcBuf = CIF::Builtins::CreateConstBuffer(IGCMain.get(), spirStr.data(), spirStr.size());
 
     std::string options{"-vc-codegen -no-optimize"};
     // Add debug option to VC backend of "-g" is set to ISPC
@@ -1171,49 +1175,51 @@ bool Module::writeZEBin(llvm::Module *module, const char *outFileName) {
         options.append(" " + g->vcOpts);
     }
     std::string internalOptions;
+
     // Use L0 binary
     internalOptions.append(" -binary-format=").append("ze");
 
-    auto optsBuf = CIF::Builtins::CreateConstBuffer(IGCMain.get(), options.c_str(), options.size());
-    if (!optsBuf) {
-        Error(SourcePos(), "Could not create IGC translation context (cbuff)\n");
+    const char *spvFileName = "ispc_spirv";
+
+    std::vector<const char *> oclocArgs;
+    oclocArgs.push_back("ocloc");
+    oclocArgs.push_back("compile");
+    oclocArgs.push_back("-device");
+    oclocArgs.push_back(neoCPU.c_str());
+    oclocArgs.push_back("-spirv_input");
+    oclocArgs.push_back("-file");
+    oclocArgs.push_back(spvFileName);
+    oclocArgs.push_back("-options");
+    oclocArgs.push_back(options.c_str());
+    oclocArgs.push_back("-internal_options");
+    oclocArgs.push_back(internalOptions.c_str());
+
+    uint32_t numOutputs = 0;
+    uint8_t **dataOutputs = nullptr;
+    uint64_t *lenOutputs = nullptr;
+    char **nameOutputs = nullptr;
+
+    static_assert(alignof(uint8_t) == alignof(char), "Possible unaligned access");
+    auto *spvSource = reinterpret_cast<const uint8_t *>(spirStr.data());
+    const uint64_t spvLen = spirStr.size();
+    if (invoke(oclocArgs.size(), oclocArgs.data(), 1, &spvSource, &spvLen, &spvFileName, 0, nullptr, nullptr, nullptr,
+               &numOutputs, &dataOutputs, &lenOutputs, &nameOutputs)) {
+        Error(SourcePos(), "Call to oclocInvoke failed \n");
         return false;
     }
 
-    auto intOptsBuf = CIF::Builtins::CreateConstBuffer(IGCMain.get(), internalOptions.c_str(), internalOptions.size());
-    if (!intOptsBuf) {
-        Error(SourcePos(), "Could not create IGC translation context (IntOpts)\n");
+    std::vector<char> oclocRes;
+    saveOutput(numOutputs, dataOutputs, lenOutputs, nameOutputs, oclocRes);
+    if (freeOutput(&numOutputs, &dataOutputs, &lenOutputs, &nameOutputs)) {
+        Error(SourcePos(), "Call to oclocFreeOutput failed \n");
         return false;
     }
 
-    auto IGCTranslationCtx = IGCDeviceCtx->CreateTranslationCtx(IGC::CodeType::spirV, IGC::CodeType::oclGenBin);
-    if (!IGCTranslationCtx) {
-        Error(SourcePos(), "Could not create SPIRV->OclGenBin translation context\n");
-        return false;
-    }
-
-    auto IGCOutput = IGCTranslationCtx->Translate(srcBuf.get(), optsBuf.get(), intOptsBuf.get(), nullptr, 0);
-    if (!IGCOutput) {
-        Error(SourcePos(), "SPIRV->OclGenBin translation produced not output\n");
-        return false;
-    }
-    if (!IGCOutput->Successful()) {
-        auto *logBegin = IGCOutput->GetBuildLog()->GetMemory<char>();
-        auto *logEnd = logBegin + IGCOutput->GetBuildLog()->GetSizeRaw();
-        std::string log(logBegin, logEnd);
-        Error(SourcePos(), "Translation failed!\n%s\n IGC options used: %s %s\n", log.c_str(), options.c_str(),
-              internalOptions.c_str());
-        return false;
-    }
-    size_t resultSize = IGCOutput->GetOutput()->GetSizeRaw();
-    auto *outBegin = IGCOutput->GetOutput()->GetMemory<char>();
-    auto *outEnd = outBegin + resultSize;
-    std::vector<char> igcRes = {outBegin, outEnd};
     if (!strcmp(outFileName, "-")) {
-        std::cout.write(igcRes.data(), igcRes.size());
+        std::cout.write(oclocRes.data(), oclocRes.size());
     } else {
         std::ofstream fos(outFileName, std::ios::binary);
-        fos.write(igcRes.data(), igcRes.size());
+        fos.write(oclocRes.data(), oclocRes.size());
     }
     return true;
 }
