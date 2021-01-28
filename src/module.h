@@ -61,7 +61,13 @@ using invokePtr = int (*)(unsigned, const char **, const uint32_t, const uint8_t
                           const uint32_t, const uint8_t **, const uint64_t *, const char **, uint32_t *, uint8_t ***,
                           uint64_t **, char ***);
 using freeOutputPtr = int (*)(uint32_t *, uint8_t ***, uint64_t **, char ***);
-const std::unordered_map<std::string, std::string> ISPCToNeoCPU{{"SKL", "skl"}, {"TGLLP", "tgllp"}, {"DG1", "dg1"}};
+// clang-format off
+const std::unordered_map<std::string, std::string> ISPCToNeoCPU{
+    {"SKL", "skl"},
+    {"TGLLP", "tgllp"},
+    {"DG1", "dg1"},
+};
+// clang-format on
 #endif
 
 class Module {
