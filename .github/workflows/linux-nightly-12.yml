@@ -1,0 +1,140 @@
+# Nightly Linux run.
+# Temporary workflow, until 12.0 is released.
+
+name: Nightly Linux tests / LLVM 12.0
+
+# Run daily - test sse2-avx512 targets @ -O0/-O1/-O2
+on:
+  schedule:
+    - cron:  '0 7 * * *'
+  push:
+    branches:
+      - '**test_nightly**'
+  workflow_dispatch:
+
+env:
+  SDE_TAR_NAME: sde-external-8.59.0-2020-10-05
+
+jobs:
+  # Building LLVM in docker, as using native Ubuntu 16.04 github-hosted image contains newer-than-expected libs and
+  # makes the resulting build not usable on other Ubuntu 16.04 images.
+  linux-build-llvm-12_0:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v2
+      with:
+        submodules: true
+
+    - name: Check environment
+      run: |
+        cat /proc/cpuinfo
+
+    - name: Build LLVM
+      run: |
+        cd docker/ubuntu/llvm_build
+        docker build --tag ispc/ubuntu16.04 --build-arg REPO=$GITHUB_REPOSITORY --build-arg SHA=$GITHUB_SHA --build-arg LLVM_VERSION=12.0 .
+
+    - name: Pack LLVM
+      run: |
+        cd docker/ubuntu/llvm_build
+        docker run ispc/ubuntu16.04
+        export CONTAINER=`docker ps --all |head -2 |tail -1 |awk '//{print $1}'`
+        sudo docker cp $CONTAINER:/usr/local/src/llvm/bin-12.0 .
+        # Note using gzip here, instead of xz - trading of space for speed, as it's just for passing to another stage.
+        tar czvf llvm-12.0-ubuntu16.04-Release+Asserts-x86.arm.wasm.tar.gz bin-12.0
+
+    - name: Upload package
+      uses: actions/upload-artifact@v2
+      with:
+        name: llvm_12_0_linux
+        path: docker/ubuntu/llvm_build/llvm-12.0-ubuntu16.04-Release+Asserts-x86.arm.wasm.tar.gz
+
+  linux-build-ispc-llvm-12_0:
+    needs: [linux-build-llvm-12_0]
+    runs-on: ubuntu-latest
+    env:
+      LLVM_VERSION: "12.0"
+      LLVM_TAR: llvm-12.0-ubuntu16.04-Release+Asserts-x86.arm.wasm.tar.gz
+
+    steps:
+    - uses: actions/checkout@v2
+      with:
+        submodules: true
+
+    - name: Download package
+      uses: actions/download-artifact@v2
+      with:
+        name: llvm_12_0_linux
+
+    - name: Install dependencies
+      run: |
+        .github/workflows/scripts/install-build-deps.sh
+
+    - name: Check environment
+      run: |
+        ./check_env.py
+        which -a clang
+        cat /proc/cpuinfo
+
+    - name: Build package
+      run: |
+        .github/workflows/scripts/build-ispc.sh
+
+    - name: Sanity testing (make check-all, make test)
+      run: |
+        .github/workflows/scripts/check-ispc.sh
+
+    - name: Upload package
+      uses: actions/upload-artifact@v2
+      with:
+        name: ispc_llvm_12_0_linux
+        path: build/ispc-12.0-linux.tar.gz
+
+  linux-test-llvm-12_0:
+    needs: [linux-build-ispc-llvm-12_0]
+    runs-on: ubuntu-latest
+    continue-on-error: false
+    strategy:
+      fail-fast: false
+      matrix:
+        target: [sse2-i32x4, sse2-i32x8,
+                 sse4-i8x16, sse4-i16x8, sse4-i32x4, sse4-i32x8,
+                 avx1-i32x4, avx1-i32x8, avx1-i32x16, avx1-i64x4,
+                 avx2-i8x32, avx2-i16x16, avx2-i32x4, avx2-i32x8, avx2-i32x16, avx2-i64x4,
+                 avx512knl-i32x16,
+                 avx512skx-i32x8, avx512skx-i32x16, avx512skx-i8x64, avx512skx-i16x32]
+    steps:
+    - uses: actions/checkout@v2
+    - name: Download package
+      uses: actions/download-artifact@v2
+      with:
+        name: ispc_llvm_12_0_linux
+
+    - name: Install dependencies and unpack artifacts
+      run: |
+        .github/workflows/scripts/install-test-deps.sh
+
+    - name: Check environment
+      run: |
+        cat /proc/cpuinfo
+
+    - name: Running tests
+      run: |
+        echo PATH=$PATH
+        ./alloy.py -r --only="stability current -O0 -O1 -O2" --only-targets="${{ matrix.target }}" --time --update-errors=FP
+
+    - name: Upload fail_db.txt
+      uses: actions/upload-artifact@v2
+      if: failure()
+      with:
+        name: fail_db.${{matrix.target}}.txt
+        path: fail_db.txt
+
+    - name: Check
+      run: |
+        # Print fails to the log.
+        git diff
+        # Exit with error code if there are fails.
+        [ -z "`git diff`" ]
+
