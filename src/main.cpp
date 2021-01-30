@@ -107,15 +107,10 @@ static void lPrintVersion() {
     PrintWithWordBreaks(cpuHelp, 16, TerminalWidth(), stdout);
     printf("    [-D<foo>]\t\t\t\t#define given value when running preprocessor\n");
     printf("    [--dev-stub <filename>]\t\tEmit device-side offload stub functions to file\n");
-    printf("    [--vectorcall/--no-vectorcall]\tEnable/disable vectorcall calling convention on Windows (x64 only). "
-           "Disabled by default\n");
     printf("    [--dllexport]\t\t\tMake non-static functions DLL exported.  Windows target only\n");
     printf("    [--dwarf-version={2,3,4}]\t\tGenerate source-level debug information with given DWARF version "
            "(triggers -g).  Ignored for Windows target\n");
     printf("    [--emit-asm]\t\t\tGenerate assembly language file as output\n");
-    printf("    [--x86-asm-syntax=<option>]\t\tSelect style of code if generating assembly\n");
-    printf("        intel\t\t\t\tEmit Intel-style assembly\n");
-    printf("        att\t\t\t\tEmit AT&T-style assembly\n");
     printf("    [--emit-llvm]\t\t\tEmit LLVM bitcode file as output\n");
     printf("    [--emit-llvm-text]\t\t\tEmit LLVM bitcode file as output in textual form\n");
     printf("    [--emit-obj]\t\t\tGenerate object file file as output (default)\n");
@@ -123,8 +118,8 @@ static void lPrintVersion() {
     printf("    [--emit-spirv]\t\t\tGenerate SPIR-V file as output\n");
     printf("    [--emit-zebin]\t\t\tGenerate L0 binary as output\n");
 #endif
-    printf("    [--force-alignment=<value>]\t\tForce alignment in memory allocations routine to be <value>\n");
     printf("    [--error-limit=<value>]\t\tLimit maximum number of errors emitting by ISPC to <value>\n");
+    printf("    [--force-alignment=<value>]\t\tForce alignment in memory allocations routine to be <value>\n");
     printf("    [-g]\t\t\t\tGenerate source-level debug information\n");
     printf("    [--help]\t\t\t\tPrint help\n");
     printf("    [--help-dev]\t\t\tPrint help for developer options\n");
@@ -182,6 +177,8 @@ static void lPrintVersion() {
     printf("    [--time-trace]\t\t\tTurn on time profiler. Generates JSON file based on output filename.\n");
     printf("    [--time-trace-granularity=<value>\tMinimum time granularity (in microseconds) traced by time "
            "profiler.\n");
+    printf("    [--vectorcall/--no-vectorcall]\tEnable/disable vectorcall calling convention on Windows (x64 only). "
+           "Disabled by default\n");
     printf("    [--version]\t\t\t\tPrint ispc version\n");
 #ifdef ISPC_GENX_ENABLED
     printf("    [--vc-options=<\"-option1 -option2...\">]\t\t\t\tPass additional options to Vector Compiler backend\n");
@@ -189,6 +186,9 @@ static void lPrintVersion() {
     printf("    [--werror]\t\t\t\tTreat warnings as errors\n");
     printf("    [--woff]\t\t\t\tDisable warnings\n");
     printf("    [--wno-perf]\t\t\tDon't issue warnings related to performance-related issues\n");
+    printf("    [--x86-asm-syntax=<option>]\t\tSelect style of code if generating assembly\n");
+    printf("        intel\t\t\t\tEmit Intel-style assembly\n");
+    printf("        att\t\t\t\tEmit AT&T-style assembly\n");
     printf("    [@<filename>]\t\t\tRead additional arguments from the given file\n");
     printf("    <file to compile or \"-\" for stdin>\n");
     exit(ret);
