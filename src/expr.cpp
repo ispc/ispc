@@ -4774,6 +4774,11 @@ llvm::Value *VectorMemberExpr::GetValue(FunctionEmitContext *ctx) const {
         // Allocate temporary memory to store the result
         llvm::Value *resultPtr = ctx->AllocaInst(memberType, "vector_tmp");
 
+        if (resultPtr == NULL) {
+            AssertPos(pos, m->errorCount > 0);
+            return NULL;
+        }
+
         // FIXME: we should be able to use the internal mask here according
         // to the same logic where it's used elsewhere
         llvm::Value *elementMask = ctx->GetFullMask();
