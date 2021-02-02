@@ -180,21 +180,13 @@ void SGEMMApp::run(SGEMMApp::RunResult &result, int m, int niter, int gx, int gy
         L0_SAFE_CALL(zeCommandQueueSynchronize(m_command_queue, std::numeric_limits<uint64_t>::max()));
         L0_SAFE_CALL(zeCommandListReset(m_command_list));
         // get time
-#if defined(_WIN32) || defined(_WIN64)
-        // Using of zeEventQueryKernelTimestamp on Windows when
-        // number of iterations is big causes memory corruptions in L0
-        // which are under investigation.
-        if (niter <= 1) {
-#endif
-            ze_kernel_timestamp_result_t tsResult;
-            L0_SAFE_CALL(zeEventQueryKernelTimestamp(m_event, &tsResult));
+        ze_kernel_timestamp_result_t tsResult;
+        L0_SAFE_CALL(zeEventQueryKernelTimestamp(m_event, &tsResult));
 
-            std::chrono::duration<uint64_t, std::nano> event_dur(
-                m_timestamp_freq * (tsResult.context.kernelEnd - tsResult.context.kernelStart));
-            gpu_duration += event_dur;
-#if defined(_WIN32) || defined(_WIN64)
-        }
-#endif
+        std::chrono::duration<uint64_t, std::nano> event_dur(
+            m_timestamp_freq * (tsResult.context.kernelEnd - tsResult.context.kernelStart));
+        gpu_duration += event_dur;
+        L0_SAFE_CALL(zeEventHostReset(m_event));
     }
     auto tot_dur = std::chrono::system_clock::now() - tot_wct;
     auto tot_nsecs = std::chrono::duration_cast<std::chrono::nanoseconds>(tot_dur);
