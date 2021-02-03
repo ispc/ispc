@@ -26,6 +26,19 @@ device using command line options:
 
 simple [ --cpu | --gpu ]
 
+Simple-USM
+==========
+
+This example corresponds to the Simple example, but uses shared memory
+mechanisms. The shared memory functionality in Level Zero allows
+for allocating memory that is shared between the CPU and the GPU
+and forms Unified Shared Memory (pointers valid on the CPU are also
+valid on the GPU). There is no need to explicitly copy data between
+the host and the device. This is handled by the Level Zero.
+
+The ISPC Run Time enables using the USM via Array type
+and provides an allocator that can be used in standard C++ containers, such
+as std::vector.
 
 AOBench
 =======

@@ -326,6 +326,12 @@ TEST_F(MockTestWithModuleQueueKernel, TaskQueue_Launch_zeKernelSetArgumentValue)
     ASSERT_EQ(sm_rt_error, ISPCRT_DEVICE_LOST);
 }
 
+TEST_F(MockTestWithModuleQueueKernel, TaskQueue_Launch_zeKernelSetIndirectAccess) {
+    Config::setRetValue("zeKernelSetIndirectAccess", ZE_RESULT_ERROR_DEVICE_LOST);
+    m_task_queue.launch(m_kernel, 0);
+    ASSERT_EQ(sm_rt_error, ISPCRT_DEVICE_LOST);
+}
+
 TEST_F(MockTestWithModuleQueueKernel, TaskQueue_Launch_zeCommandListAppendLaunchKernel) {
     Config::setRetValue("zeCommandListAppendLaunchKernel", ZE_RESULT_ERROR_DEVICE_LOST);
     m_task_queue.launch(m_kernel, 0);
@@ -395,6 +401,20 @@ TEST_F(MockTestWithModuleQueueKernel, TaskQueue_Sync_zeEventQueryKernelTimestamp
     Config::setRetValue("zeEventQueryKernelTimestamp", ZE_RESULT_ERROR_DEVICE_LOST);
     m_task_queue.sync();
     ASSERT_EQ(sm_rt_error, ISPCRT_DEVICE_LOST);
+}
+
+/// Compilation tests
+TEST(Compilation, SharedArray) {
+    auto d = Device(ISPCRT_DEVICE_TYPE_CPU);
+    struct Parameters { int i; };
+    auto pmv = ispcrt::Array<Parameters, ispcrt::AllocType::Shared>(d);
+    auto p = pmv.sharedPtr();
+    p->i = 1234;
+    auto pmv2 = ispcrt::Array<Parameters, ispcrt::AllocType::Shared>(d, 2);
+    p = pmv.sharedPtr();
+    p->i = 1234;
+    ispcrt::SharedMemoryAllocator<float> sma(d);
+    ispcrt::SharedVector<float> v(16, sma);
 }
 
 } // namespace mock

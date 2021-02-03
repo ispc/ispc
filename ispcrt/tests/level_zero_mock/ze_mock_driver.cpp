@@ -227,6 +227,10 @@ ze_result_t zeKernelSetArgumentValue(ze_kernel_handle_t hKernel, uint32_t argInd
     MOCK_RET;
 }
 
+ze_result_t zeKernelSetIndirectAccess(ze_kernel_handle_t hKernel, ze_kernel_indirect_access_flags_t) {
+    MOCK_RET;
+}
+
 ze_result_t zeCommandListAppendLaunchKernel(ze_command_list_handle_t hCommandList, ze_kernel_handle_t hKernel,
                                             const ze_group_count_t *pLaunchFuncArgs, ze_event_handle_t hSignalEvent,
                                             uint32_t numWaitEvents, ze_event_handle_t *phWaitEvents) {
@@ -303,6 +307,7 @@ ze_result_t zeGetKernelProcAddrTable(ze_api_version_t version, ze_kernel_dditabl
     pDdiTable->pfnCreate = ispcrt::testing::mock::driver::zeKernelCreate;
     pDdiTable->pfnDestroy = ispcrt::testing::mock::driver::zeKernelDestroy;
     pDdiTable->pfnSetArgumentValue = ispcrt::testing::mock::driver::zeKernelSetArgumentValue;
+    pDdiTable->pfnSetIndirectAccess = ispcrt::testing::mock::driver::zeKernelSetIndirectAccess;
     return ZE_RESULT_SUCCESS;
 }
 

@@ -133,9 +133,11 @@ static int run() {
     // Init compute device (CPU or GPU)
     auto run_kernel = [&](ISPCRTDeviceType type) {
         auto device = ispcrtGetDevice(type);
+        ISPCRTNewMemoryViewFlags flags;
+        flags.allocType = ISPCRT_ALLOC_TYPE_DEVICE;
 
         // Setup output array
-        auto buf_dev = ispcrtNewMemoryView(device, fimg, imgSize * sizeof(float));
+        auto buf_dev = ispcrtNewMemoryView(device, fimg, imgSize * sizeof(float), &flags);
 
         // Setup parameters structure
         Parameters p;
@@ -143,7 +145,7 @@ static int run() {
         p.height = height;
         p.image = (float *)ispcrtDevicePtr(buf_dev);
 
-        auto p_dev = ispcrtNewMemoryView(device, &p, sizeof(p));
+        auto p_dev = ispcrtNewMemoryView(device, &p, sizeof(p), &flags);
 
         // Create module and kernel to execute
         auto module = ispcrtLoadModule(device, "genx_aobench");

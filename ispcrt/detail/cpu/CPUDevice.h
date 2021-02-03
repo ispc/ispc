@@ -11,7 +11,7 @@ namespace ispcrt {
 struct CPUDevice : public base::Device {
     CPUDevice() = default;
 
-    base::MemoryView *newMemoryView(void *appMem, size_t numBytes) const override;
+    base::MemoryView *newMemoryView(void *appMem, size_t numBytes, bool shared) const override;
 
     base::TaskQueue *newTaskQueue() const override;
 

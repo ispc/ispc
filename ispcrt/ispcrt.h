@@ -71,10 +71,23 @@ uint64_t ispcrtGetDeviceTimeTickResolution();
 
 // MemoryViews ////////////////////////////////////////////////////////////////
 
-ISPCRTMemoryView ispcrtNewMemoryView(ISPCRTDevice, void *appMemory, size_t numBytes);
+// Choose allocation type
+typedef enum {
+    // Allocate memory on the device (and associate appMemory with this allocation)
+    ISPCRT_ALLOC_TYPE_DEVICE = 0,
+    // Allocate in the memory shared between the host and the device (ignore appMemory ptr)
+    ISPCRT_ALLOC_TYPE_SHARED,
+} ISPCRTAllocationType;
+
+typedef struct {
+    ISPCRTAllocationType allocType;
+} ISPCRTNewMemoryViewFlags;
+
+ISPCRTMemoryView ispcrtNewMemoryView(ISPCRTDevice, void *appMemory, size_t numBytes, ISPCRTNewMemoryViewFlags *flags);
 
 void *ispcrtHostPtr(ISPCRTMemoryView);
 void *ispcrtDevicePtr(ISPCRTMemoryView);
+void *ispcrtSharedPtr(ISPCRTMemoryView);
 
 size_t ispcrtSize(ISPCRTMemoryView);
 

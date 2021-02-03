@@ -132,9 +132,10 @@ ISPCRT_CATCH_END(nullptr)
 // MemoryViews ////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////
 
-ISPCRTMemoryView ispcrtNewMemoryView(ISPCRTDevice d, void *appMemory, size_t numBytes) ISPCRT_CATCH_BEGIN {
+ISPCRTMemoryView ispcrtNewMemoryView(ISPCRTDevice d, void *appMemory, size_t numBytes,
+                                     ISPCRTNewMemoryViewFlags *flags) ISPCRT_CATCH_BEGIN {
     const auto &device = referenceFromHandle<ispcrt::base::Device>(d);
-    return (ISPCRTMemoryView)device.newMemoryView(appMemory, numBytes);
+    return (ISPCRTMemoryView)device.newMemoryView(appMemory, numBytes, flags->allocType == ISPCRT_ALLOC_TYPE_SHARED);
 }
 ISPCRT_CATCH_END(nullptr)
 
@@ -155,6 +156,12 @@ size_t ispcrtSize(ISPCRTMemoryView h) ISPCRT_CATCH_BEGIN {
     return mv.numBytes();
 }
 ISPCRT_CATCH_END(0)
+
+void *ispcrtSharedPtr(ISPCRTMemoryView h) ISPCRT_CATCH_BEGIN {
+    auto &mv = referenceFromHandle<ispcrt::base::MemoryView>(h);
+    return mv.devicePtr();
+}
+ISPCRT_CATCH_END(nullptr)
 
 ///////////////////////////////////////////////////////////////////////////////
 // Kernels ////////////////////////////////////////////////////////////////////
