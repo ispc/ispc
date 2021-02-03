@@ -89,7 +89,7 @@ jobs:
       uses: actions/upload-artifact@v2
       with:
         name: ispc_llvm_12_0_linux
-        path: build/ispc-12.0-linux.tar.gz
+        path: build/ispc-trunk-linux.tar.gz
 
   linux-test-llvm-12_0:
     needs: [linux-build-ispc-llvm-12_0]
