@@ -140,7 +140,11 @@ The ``ISPC Run Time`` uses the following abstractions to manage code execution:
 * ``Memory view`` - represents data that need to be accessed by different
   ``devices``. For example, input data for code running on GPU must be firstly
   prepared by a CPU in its memory, then transferred to a GPU memory to perform
-  computations on.
+  computations on. ``Memory view`` can also represent memory allocated using
+  a Unified Shared Memory mechanism provided by ``oneAPI Level Zero``. Pointers
+  to data allocated in the USM are valid both on the host and on the device.
+  Also, there is no need to explicitly handle data movement between the CPU
+  and the GPU. This is handled automatically by the ``oneAPI Level Zero`` runtime.
 
 * ``Task queue`` - Each ``device`` has a task (command) queue and executes
   commands from it. The execution may be asynchronous, which means that subsequent
@@ -166,6 +170,12 @@ The ``ISPC Run Time`` uses the following abstractions to manage code execution:
   a ``task queue``. When the ``task queue`` is executed on a device, the
   ``future`` object becomes valid and can be used to retrieve information about
   the ``kernel`` execution.
+
+* ``Array`` - Conveniently wraps up memory view objects and allows for easy
+  allocation of memory on the device or in the Unified Shared Memory (USM).
+  The ISPCRT also provides an example allocator that makes it even more simple
+  to allocate data in the USM and a SharedVector class that serves the same
+  purpose. See XPU examples and documentation for more details.
 
 All ``ISPCRT`` objects support reference counting, which means that it is not
 necessary to perform detailed memory management. The objects will be released

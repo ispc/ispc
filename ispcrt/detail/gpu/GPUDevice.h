@@ -12,7 +12,7 @@ struct GPUDevice : public base::Device {
     GPUDevice();
     ~GPUDevice();
 
-    base::MemoryView *newMemoryView(void *appMem, size_t numBytes) const override;
+    base::MemoryView *newMemoryView(void *appMem, size_t numBytes, bool shared) const override;
 
     base::TaskQueue *newTaskQueue() const override;
 

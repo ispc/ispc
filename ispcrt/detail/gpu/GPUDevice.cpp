@@ -209,15 +209,19 @@ struct EventPool {
 };
 
 struct MemoryView : public ispcrt::base::MemoryView {
-    MemoryView(ze_context_handle_t context, ze_device_handle_t device, void *appMem, size_t numBytes)
-        : m_hostPtr(appMem), m_size(numBytes), m_context(context), m_device(device) {}
+    MemoryView(ze_context_handle_t context, ze_device_handle_t device, void *appMem, size_t numBytes, bool shared)
+        : m_hostPtr(appMem), m_size(numBytes), m_context(context), m_device(device), m_shared(shared) {}
 
     ~MemoryView() {
         if (m_devicePtr)
             L0_SAFE_CALL_NOEXCEPT(zeMemFree(m_context, m_devicePtr));
     }
 
-    void *hostPtr() { return m_hostPtr; };
+    bool isShared() { return m_shared; }
+
+    void *hostPtr() {
+        return m_shared ? devicePtr() : m_hostPtr;
+    };
 
     void *devicePtr() {
         if (!m_devicePtr)
@@ -229,13 +233,22 @@ struct MemoryView : public ispcrt::base::MemoryView {
 
   private:
     void allocate() {
-        ze_device_mem_alloc_desc_t allocDesc = {};
-        auto status = zeMemAllocDevice(m_context, &allocDesc, m_size, m_size, m_device, &m_devicePtr);
+        ze_result_t status;
+        if (m_shared) {
+            ze_device_mem_alloc_desc_t device_alloc_desc = {};
+            ze_host_mem_alloc_desc_t host_alloc_desc = {};
+            status = zeMemAllocShared(m_context, &device_alloc_desc, &host_alloc_desc,
+                                      m_size, 64, m_device, &m_devicePtr);
+        } else {
+            ze_device_mem_alloc_desc_t allocDesc = {};
+            status = zeMemAllocDevice(m_context, &allocDesc, m_size, m_size, m_device, &m_devicePtr);
+        }
         if (status != ZE_RESULT_SUCCESS)
             m_devicePtr = nullptr;
         L0_THROW_IF(status);
     }
 
+    bool m_shared{false};
     void *m_hostPtr{nullptr};
     void *m_devicePtr{nullptr};
     size_t m_size{0};
@@ -243,6 +256,7 @@ struct MemoryView : public ispcrt::base::MemoryView {
     ze_device_handle_t m_device{nullptr};
     ze_context_handle_t m_context{nullptr};
 };
+
 
 struct Module : public ispcrt::base::Module {
     Module(ze_device_handle_t device, ze_context_handle_t context, const char *moduleFile, bool is_mock_dev)
@@ -433,6 +447,9 @@ struct TaskQueue : public ispcrt::base::TaskQueue {
             param_ptr = params->devicePtr();
 
         L0_SAFE_CALL(zeKernelSetArgumentValue(kernel.handle(), 0, sizeof(void *), &param_ptr));
+        // Set indirect flag to allow USM access
+        ze_kernel_indirect_access_flags_t kernel_flags = ZE_KERNEL_INDIRECT_ACCESS_FLAG_SHARED;
+        L0_SAFE_CALL(zeKernelSetIndirectAccess(kernel.handle(), kernel_flags));
 
         ze_group_count_t dispatchTraits = {uint32_t(dim0), uint32_t(dim1), uint32_t(dim2)};
         auto event = m_ep.createEvent();
@@ -578,8 +595,8 @@ GPUDevice::~GPUDevice() {
         L0_SAFE_CALL_NOEXCEPT(zeContextDestroy((ze_context_handle_t)m_context));
 }
 
-base::MemoryView *GPUDevice::newMemoryView(void *appMem, size_t numBytes) const {
-    return new gpu::MemoryView((ze_context_handle_t)m_context, (ze_device_handle_t)m_device, appMem, numBytes);
+base::MemoryView *GPUDevice::newMemoryView(void *appMem, size_t numBytes, bool shared) const {
+    return new gpu::MemoryView((ze_context_handle_t)m_context, (ze_device_handle_t)m_device, appMem, numBytes, shared);
 }
 
 base::TaskQueue *GPUDevice::newTaskQueue() const {

@@ -34,7 +34,21 @@ struct Future : public ispcrt::base::Future {
 using CPUKernelEntryPoint = void (*)(void *, size_t, size_t, size_t);
 
 struct MemoryView : public ispcrt::base::MemoryView {
-    MemoryView(void *appMem, size_t numBytes) : m_mem(appMem), m_size(numBytes) {}
+    MemoryView(void *appMem, size_t numBytes, bool shared) :
+            m_mem(appMem), m_size(numBytes), m_shared(shared) {
+        if (m_shared) {
+            m_mem = malloc(m_size);
+            if (!m_mem)
+                throw std::bad_alloc();
+        }
+    }
+
+    ~MemoryView() {
+        if (m_shared)
+            free(m_mem);
+    }
+
+    bool isShared() { return m_shared; }
 
     void *hostPtr() { return m_mem; };
 
@@ -43,6 +57,7 @@ struct MemoryView : public ispcrt::base::MemoryView {
     size_t numBytes() { return m_size; };
 
   private:
+    bool m_shared{false};
     void *m_mem{nullptr};
     size_t m_size{0};
 };
@@ -163,8 +178,8 @@ struct TaskQueue : public ispcrt::base::TaskQueue {
 };
 } // namespace cpu
 
-ispcrt::base::MemoryView *CPUDevice::newMemoryView(void *appMem, size_t numBytes) const {
-    return new cpu::MemoryView(appMem, numBytes);
+ispcrt::base::MemoryView *CPUDevice::newMemoryView(void *appMem, size_t numBytes, bool shared) const {
+    return new cpu::MemoryView(appMem, numBytes, shared);
 }
 
 ispcrt::base::TaskQueue *CPUDevice::newTaskQueue() const { return new cpu::TaskQueue(); }
