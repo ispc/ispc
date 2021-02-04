@@ -1735,8 +1735,9 @@ is provided in parenthesis around the expression:
     int bar = (float)bar + (float)bar;  // 32-bit float addition
 
 If a ``bool`` is converted to an integer numeric type (``int``, ``int64``,
-etc.), then the result is the value one if the ``bool`` has the value
-``true`` and has the value zero otherwise.
+etc.), then the result is a non-zero value if the ``bool`` has the value
+``true`` and has the value zero otherwise. A ``bool`` with value ``true``
+is not guaranteed to be one if converted to an integer numeric type.
 
 Variables can be declared with the ``const`` qualifier, which prohibits
 their modification.
