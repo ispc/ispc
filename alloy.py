@@ -241,6 +241,10 @@ def build_LLVM(version_LLVM, folder, tarball, debug, selfbuild, extra, from_vali
             # otherwise a build error will occure (attempt to use just built libcxxabi, which was not built).
             # An option to build seems to be a better one.
             llvm_enable_projects +=";libcxx;libcxxabi"
+        if current_OS == "Linux":
+            # OpenMP is needed for GEN enabled builds.
+            # Starting from Ubuntu 20.04 libomp-dev package doesn't install omp.h to default location.
+            llvm_enable_projects +=";openmp"
         if extra == True:
             llvm_enable_projects +=";compiler-rt;clang-tools-extra"
     else:
