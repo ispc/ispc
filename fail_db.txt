@@ -52,6 +52,7 @@
 .\tests\atomics-varyingptr-2.ispc runfail  genx64        genx-x8 unspec Windows LLVM 11.0         cl  spv *
 .\tests\atomics-varyingptr-3.ispc runfail  genx64        genx-x8 unspec Windows LLVM 11.0         cl  spv *
 .\tests\atomics-varyingptr-4.ispc runfail  genx64        genx-x8 unspec Windows LLVM 11.0         cl  spv *
+.\tests\cfor-gs-double-improve-multidim-struct-1.ispc runfail  genx64        genx-x8 unspec Windows LLVM 11.0         cl  spv *
 .\tests\cfor-gs-improve-multidim-struct-1.ispc runfail  genx64        genx-x8 unspec Windows LLVM 11.0         cl  spv *
 .\tests\foreach-28.ispc runfail  genx64        genx-x8 unspec Windows LLVM 11.0         cl  spv *
 .\tests\foreach-29.ispc runfail  genx64        genx-x8 unspec Windows LLVM 11.0         cl  spv *
@@ -110,6 +111,8 @@
 .\tests\gather-int8.ispc runfail  genx64        genx-x8 unspec Windows LLVM 11.0         cl  spv *
 .\tests\global-array-3.ispc runfail  genx64        genx-x8 unspec Windows LLVM 11.0         cl  spv *
 .\tests\global-array-4.ispc runfail  genx64        genx-x8 unspec Windows LLVM 11.0         cl  spv *
+.\tests\gs-double-improve-multidim-struct-1.ispc runfail  genx64        genx-x8 unspec Windows LLVM 11.0         cl  spv *
+.\tests\gs-improve-multidim-struct-1.ispc runfail  genx64        genx-x8 unspec Windows LLVM 11.0         cl  spv *
 .\tests\isnan_double.ispc runfail  genx64        genx-x8 unspec Windows LLVM 11.0         cl  spv *
 .\tests\memcpy-uniform-1.ispc runfail  genx64        genx-x8 unspec Windows LLVM 11.0         cl  spv *
 .\tests\memset-uniform-1.ispc runfail  genx64        genx-x8 unspec Windows LLVM 11.0         cl  spv *
@@ -148,7 +151,6 @@
 .\tests\shuffle2-9.ispc runfail  genx64        genx-x8 unspec Windows LLVM 11.0         cl  spv *
 .\tests\soa-16.ispc runfail  genx64        genx-x8 unspec Windows LLVM 11.0         cl  spv *
 .\tests\soa-17.ispc runfail  genx64        genx-x8 unspec Windows LLVM 11.0         cl  spv *
-.\tests\soa-20.ispc runfail  genx64        genx-x8 unspec Windows LLVM 11.0         cl  spv *
 .\tests\soa-29.ispc runfail  genx64        genx-x8 unspec Windows LLVM 11.0         cl  spv *
 .\tests\soa-6.ispc runfail  genx64        genx-x8 unspec Windows LLVM 11.0         cl  spv *
 .\tests\soa-7.ispc runfail  genx64        genx-x8 unspec Windows LLVM 11.0         cl  spv *
@@ -254,6 +256,8 @@
 .\tests\gather-int8.ispc runfail  genx64       genx-x16 unspec Windows LLVM 11.0         cl  spv *
 .\tests\global-array-3.ispc runfail  genx64       genx-x16 unspec Windows LLVM 11.0         cl  spv *
 .\tests\global-array-4.ispc runfail  genx64       genx-x16 unspec Windows LLVM 11.0         cl  spv *
+.\tests\gs-double-improve-multidim-struct-1.ispc runfail  genx64       genx-x16 unspec Windows LLVM 11.0         cl  spv *
+.\tests\gs-improve-multidim-struct-1.ispc runfail  genx64       genx-x16 unspec Windows LLVM 11.0         cl  spv *
 .\tests\isnan_double.ispc runfail  genx64       genx-x16 unspec Windows LLVM 11.0         cl  spv *
 .\tests\masked-struct-scatter-varying.ispc runfail  genx64       genx-x16 unspec Windows LLVM 11.0         cl  spv *
 .\tests\nested-structs-2.ispc runfail  genx64       genx-x16 unspec Windows LLVM 11.0         cl  spv *
@@ -297,7 +301,6 @@
 .\tests\shuffle2-9.ispc runfail  genx64       genx-x16 unspec Windows LLVM 11.0         cl  spv *
 .\tests\soa-16.ispc runfail  genx64       genx-x16 unspec Windows LLVM 11.0         cl  spv *
 .\tests\soa-17.ispc runfail  genx64       genx-x16 unspec Windows LLVM 11.0         cl  spv *
-.\tests\soa-20.ispc runfail  genx64       genx-x16 unspec Windows LLVM 11.0         cl  spv *
 .\tests\soa-29.ispc runfail  genx64       genx-x16 unspec Windows LLVM 11.0         cl  spv *
 .\tests\struct-nested-1.ispc runfail  genx64       genx-x16 unspec Windows LLVM 11.0         cl  spv *
 .\tests\transcendentals-9-0.ispc runfail  genx64       genx-x16 unspec Windows LLVM 11.0         cl  spv *
