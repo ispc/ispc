@@ -2480,6 +2480,7 @@ static void lCreateDispatchFunction(llvm::Module *module, llvm::Function *setISA
     // Now we can load the system's ISA enumerant
 #if ISPC_LLVM_VERSION >= ISPC_LLVM_11_0
     llvm::PointerType *ptr_type = llvm::dyn_cast<llvm::PointerType>(systemBestISAPtr->getType());
+    Assert(ptr_type);
     llvm::Value *systemISA =
         new llvm::LoadInst(ptr_type->getPointerElementType(), systemBestISAPtr, "system_isa", bblock);
 #else
