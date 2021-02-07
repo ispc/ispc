@@ -162,6 +162,7 @@ Contents:
 
   + `Output Functions`_
   + `Assertions`_
+  + `Compiler Optimization Hints`_
   + `Cross-Program Instance Operations`_
 
     * `Reductions`_
@@ -3998,6 +3999,85 @@ To disable all of the assertions in a file that is being compiled (e.g.,
 for an optimized release build), use the ``--opt=disable-assertions``
 command-line argument.
 
+
+Compiler Optimization Hints
+---------------------------
+
+The ``ispc`` standard library includes a mechanism for adding ``assume()``
+statements to ``ispc`` program code. The ``assume()`` function takes a
+single uniform boolean expression as an argument. This expression is
+assumed to be ``true`` and this information will be used for optimization
+when possible. This feature is currently only available on CPU targets.
+
+The condition used in ``assume()`` statement will not be code generated and
+does not imply runtime checks. It will solely be used as optimization hint,
+if compiler is able to use this information.
+
+Below are some basic examples of this functionality.
+
+::
+
+    inline uniform int bar1(uniform int a, uniform int b) {
+        if (a < b)
+            return 2;
+        return 5;
+    }
+    uniform int foo1(uniform int a, uniform int b) {
+        assume(a < b);
+        return bar1(a, b);
+    }
+
+The ``assume()`` hint allows the compiler to resolve ``a < b`` during compile
+time in ``bar1()`` and return ``2`` thus removing the additional branch.
+
+
+::
+
+    inline void bar2(uniform int * uniform a) {
+        if (a != NULL) {
+            a[2] = 9;
+        }
+     }
+     void foo2(uniform int a[]) {
+        assume(a != NULL);
+        bar2(a);
+     }
+
+The ``assume()`` hint allows the compiler to remove ``a != NULL`` during compile
+time in ``bar2()`` thus removing the additional check.
+
+::
+
+    int foo3(uniform int a[], uniform int count) {
+        int ret = 0;
+        assume(count % programCount == 0);
+        foreach (i = 0 ... count) {
+            ret += a[i];
+        }
+        return ret;
+    }
+
+The ``assume()`` hint informs the compiler ``count`` is a multiple of
+``programCount`` during compile time. This results in removal of remainder
+loop usually required for ``foreach``.
+
+
+::
+
+   typedef float<TARGET_WIDTH> AlignedFloat;
+   unmasked void foo4(uniform float Result[], const uniform float Source1[], const uniform unsigned int Iterations)
+   {
+        assume(((uniform uint64)((void*)Source1) & (32 * TARGET_WIDTH)-1) == 0);
+        assume(((uniform uint64)((void*)Result) & (32 * TARGET_WIDTH)-1) == 0);
+        uniform AlignedFloat S1;
+        S1[programIndex] = Source1[programIndex];
+        const uniform AlignedFloat R = S1;
+        Result[programIndex] = R[programIndex];
+   }
+
+The ``assume()`` hint informs the compiler that memory locations used by
+loads and stores are aligned. This results in aligned instructions instead
+of unaligned instructions.
 
 Cross-Program Instance Operations
 ---------------------------------
