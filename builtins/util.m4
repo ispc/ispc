@@ -5687,6 +5687,15 @@ define void @__memset64(i8 * %dst, i8 %val, i64 %len) alwaysinline {
 }
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; assume
+declare void @llvm.assume(i1)
+
+define void @__do_assume_uniform(i1 %test) alwaysinline {
+  call void @llvm.assume(i1 %test)
+  ret void
+}
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; assert
 
 declare i32 @puts(i8*)

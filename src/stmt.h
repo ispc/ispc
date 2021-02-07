@@ -550,6 +550,8 @@ class AssertStmt : public Stmt {
     static inline bool classof(AssertStmt const *) { return true; }
     static inline bool classof(ASTNode const *N) { return N->getValueID() == AssertStmtID; }
 
+    void EmitAssertCode(FunctionEmitContext *ctx, const Type *type) const;
+    void EmitAssumeCode(FunctionEmitContext *ctx, const Type *type) const;
     void EmitCode(FunctionEmitContext *ctx) const;
     void Print(int indent) const;
 

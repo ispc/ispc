@@ -436,6 +436,7 @@ static void lSetInternalFunctions(llvm::Module *module) {
         "__divs_vi64",
         "__divus_ui64",
         "__divus_vi64",
+        "__do_assume_uniform",
         "__do_assert_uniform",
         "__do_assert_varying",
         "__do_print",

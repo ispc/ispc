@@ -3611,15 +3611,7 @@ int PrintStmt::EstimateCost() const { return COST_FUNCALL; }
 
 AssertStmt::AssertStmt(const std::string &msg, Expr *e, SourcePos p) : Stmt(p, AssertStmtID), message(msg), expr(e) {}
 
-void AssertStmt::EmitCode(FunctionEmitContext *ctx) const {
-    if (!ctx->GetCurrentBasicBlock())
-        return;
-
-    const Type *type;
-    if (expr == NULL || (type = expr->GetType()) == NULL) {
-        AssertPos(pos, m->errorCount > 0);
-        return;
-    }
+void AssertStmt::EmitAssertCode(FunctionEmitContext *ctx, const Type *type) const {
     bool isUniform = type->IsUniformType();
 
     // The actual functionality to do the check and then handle failure is
@@ -3655,6 +3647,43 @@ void AssertStmt::EmitCode(FunctionEmitContext *ctx) const {
     ctx->CallInst(assertFunc, NULL, args, "");
 
     free(errorString);
+}
+
+void AssertStmt::EmitAssumeCode(FunctionEmitContext *ctx, const Type *type) const {
+    bool isUniform = type->IsUniformType();
+
+    // Currently, we insert an assume only for uniform conditions.
+    if (!isUniform) {
+        return;
+    }
+
+    // The actual functionality to insert an 'llvm.assume' intrinsic is
+    // done via a builtin written in bitcode in builtins/util.m4.
+    llvm::Function *assumeFunc = m->module->getFunction("__do_assume_uniform");
+    AssertPos(pos, assumeFunc != NULL);
+
+    llvm::Value *exprValue = expr->GetValue(ctx);
+    if (exprValue == NULL) {
+        AssertPos(pos, m->errorCount > 0);
+        return;
+    }
+    ctx->CallInst(assumeFunc, NULL, exprValue, "");
+}
+
+void AssertStmt::EmitCode(FunctionEmitContext *ctx) const {
+    if (!ctx->GetCurrentBasicBlock())
+        return;
+
+    const Type *type;
+    if (expr == NULL || (type = expr->GetType()) == NULL) {
+        AssertPos(pos, m->errorCount > 0);
+        return;
+    }
+    if (g->opt.disableAsserts) {
+        EmitAssumeCode(ctx, type);
+    } else {
+        EmitAssertCode(ctx, type);
+    }
 }
 
 void AssertStmt::Print(int indent) const { printf("%*cAssert Stmt (%s)", indent, ' ', message.c_str()); }
