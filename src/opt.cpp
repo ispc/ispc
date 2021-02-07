@@ -2785,6 +2785,7 @@ static bool lGSToLoadStore(llvm::CallInst *callInst) {
 
             lCopyMetadata(ptr, callInst);
 #if ISPC_LLVM_VERSION >= ISPC_LLVM_11_0
+            Assert(llvm::isa<llvm::PointerType>(ptr->getType()));
             llvm::Value *scalarValue =
                 new llvm::LoadInst(llvm::dyn_cast<llvm::PointerType>(ptr->getType())->getPointerElementType(), ptr,
                                    callInst->getName(), callInst);
@@ -3107,6 +3108,7 @@ static bool lImproveMaskedLoad(llvm::CallInst *callInst, llvm::BasicBlock::itera
                     .valueOrOne(),
                 (llvm::Instruction *)NULL);
 #else // LLVM 11.0+
+            Assert(llvm::isa<llvm::PointerType>(ptr->getType()));
             load = new llvm::LoadInst(
                 llvm::dyn_cast<llvm::PointerType>(ptr->getType())->getPointerElementType(), ptr, callInst->getName(),
                 false /* not volatile */,
@@ -3462,6 +3464,7 @@ llvm::Value *lGEPAndLoad(llvm::Value *basePtr, int64_t offset, int align, llvm::
 #if ISPC_LLVM_VERSION < ISPC_LLVM_11_0
     return new llvm::LoadInst(ptr, "gather_load", false /* not volatile */, llvm::MaybeAlign(align), insertBefore);
 #else // LLVM 11.0+
+    Assert(llvm::isa<llvm::PointerType>(ptr->getType()));
     return new llvm::LoadInst(llvm::dyn_cast<llvm::PointerType>(ptr->getType())->getPointerElementType(), ptr,
                               "gather_load", false /* not volatile */, llvm::MaybeAlign(align).valueOrOne(),
                               insertBefore);
@@ -6638,6 +6641,7 @@ llvm::Instruction *FixAddressSpace::processSVMVectorLoad(llvm::Instruction *CI) 
     ptr = new llvm::IntToPtrInst(ptr, llvm::PointerType::get(retType, 0), CI->getName() + "_inttoptr", CI);
     llvm::Instruction *loadInst = NULL;
 #if ISPC_LLVM_VERSION >= ISPC_LLVM_11_0
+    Assert(llvm::isa<llvm::PointerType>(ptr->getType()));
     loadInst = new llvm::LoadInst(llvm::dyn_cast<llvm::PointerType>(ptr->getType())->getPointerElementType(), ptr,
                                   CI->getName(), false /* not volatile */,
                                   llvm::MaybeAlign(g->target->getNativeVectorAlignment()).valueOrOne(),
