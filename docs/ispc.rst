@@ -120,6 +120,7 @@ Contents:
   + `Expressions`_
 
     * `Dynamic Memory Allocation`_
+    * `Type Casting`_
 
   + `Control Flow`_
 
@@ -1764,25 +1765,8 @@ are applicable (see `Uniform Control Flow`_, for example.)  Varying
 variables may be qualified with ``varying``, though doing so has no effect,
 as ``varying`` is the default.
 
-
-Typecasting from ``uniform`` expression to type with variability not specified
-results in ``uniform`` type. This will result in an ``ispc`` warning when used as
-a function argument. See code snippet demonstrating this warning below:
-
-::
-
-    float foo(uniform int B) {
-       return bar((float)B);
-    }
-
-::
-   Warning: Typecasting to type "/*unbound*/ float" (variability not specified)
-          from "uniform" type "uniform int32" results in "uniform" variability.
-          In the context of function argument it may lead to unexpected behavior.
-          Casting to "uniform float" is recommended.
-
-
-
+There are two exceptions for this rule described in `Pointer Types`_ and
+`Type Casting`_ sections.
 
 ``uniform`` variables can be modified as the program executes, but only in
 ways that preserve the property that they have a single value for the
@@ -2649,6 +2633,38 @@ to have the value 10 and so forth.  In general, the rules for how
 initializer values provided in ``new`` statements are used to initialize
 complex data types follow the same rules as initializers for variables
 described in `Declarations and Initializers`_.
+
+
+Type Casting
+------------
+
+C-style type casting expression works as in C language with an exception that
+unbound type is not treated as ``varying`` by default.
+
+When typecasting to some type ``T`` without specifying a variability, the
+variability is derived from the type of expression being casted. I.e. the
+expression ``(int) E`` has the same variability as original expression ``E``.
+This feature may lead to confusion when the resulting expression is used
+as a function argument. Consider an example:
+
+::
+
+    float bar(uniform float f);
+    float bar(varying float f);
+    float foo(uniform int B) {
+       return bar((float)B);
+    }
+
+This code will yield the following warning suggesting to use fully qualified
+type in this case.
+
+::
+
+   Warning: Typecasting to type "/*unbound*/ float" (variability not specified)
+          from "uniform" type "uniform int32" results in "uniform" variability.
+          In the context of function argument it may lead to unexpected behavior.
+          Casting to "uniform float" is recommended.
+
 
 Control Flow
 ------------
