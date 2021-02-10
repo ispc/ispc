@@ -484,7 +484,6 @@ void Optimize(llvm::Module *module, int optLevel) {
 
 #if ISPC_LLVM_VERSION >= ISPC_LLVM_12_0
     llvm::SimplifyCFGOptions simplifyCFGopt;
-    simplifyCFGopt.HoistCommonInsts = true;
 #endif
     if (optLevel == 0) {
         // This is more or less the minimum set of optimizations that we
@@ -731,6 +730,8 @@ void Optimize(llvm::Module *module, int optLevel) {
         optPM.add(llvm::createAggressiveDCEPass());
         optPM.add(llvm::createInstructionCombiningPass());
 #if ISPC_LLVM_VERSION >= ISPC_LLVM_12_0
+        simplifyCFGopt.SinkCommonInsts = true;
+        simplifyCFGopt.HoistCommonInsts = true;
         optPM.add(llvm::createCFGSimplificationPass(simplifyCFGopt));
 #else
         optPM.add(llvm::createCFGSimplificationPass());
