@@ -204,8 +204,13 @@ Module::Module(const char *fn) {
             snprintf(producerString, sizeof(producerString), "ispc version %s (built on %s)", ISPC_VERSION, __DATE__);
 #endif
             auto srcFile = diBuilder->createFile(name, directory);
+            // Use DW_LANG_C_plus_plus to avoid problems with debigging on gen.
+            // The debugger reads symbols partially when a solib file is loaded.
+            // The kernel name is one of these read symbols. ISPC produces namespace
+            // for example "ispc::simple_ispc". Matching the breakpoint location
+            // "simple_ispc" with the symbol name fails if module language is C and not C++.
             diCompileUnit =
-                diBuilder->createCompileUnit(llvm::dwarf::DW_LANG_C99,                  /* lang */
+                diBuilder->createCompileUnit(llvm::dwarf::DW_LANG_C_plus_plus,          /* lang */
                                              srcFile,                                   /* filename */
                                              producerString,                            /* producer */
                                              g->opt.level > 0 /* is optimized */, "-g", /* command line args */
