@@ -116,7 +116,10 @@ static void lPrintVersion() {
     printf("    [--emit-obj]\t\t\tGenerate object file file as output (default)\n");
 #ifdef ISPC_GENX_ENABLED
     printf("    [--emit-spirv]\t\t\tGenerate SPIR-V file as output\n");
+    // AOT compilation is temporary disabled on Windows
+#ifndef ISPC_HOST_IS_WINDOWS
     printf("    [--emit-zebin]\t\t\tGenerate L0 binary as output\n");
+#endif
 #endif
     printf("    [--error-limit=<value>]\t\tLimit maximum number of errors emitting by ISPC to <value>\n");
     printf("    [--force-alignment=<value>]\t\tForce alignment in memory allocations routine to be <value>\n");
@@ -675,8 +678,11 @@ int main(int Argc, char *Argv[]) {
 #ifdef ISPC_GENX_ENABLED
         else if (!strcmp(argv[i], "--emit-spirv")) {
             ot = Module::SPIRV;
+            // AOT compilation is temporary disabled on Windows
+#ifndef ISPC_HOST_IS_WINDOWS
         } else if (!strcmp(argv[i], "--emit-zebin")) {
             ot = Module::ZEBIN;
+#endif
         }
 #endif
         else if (!strcmp(argv[i], "-I")) {
