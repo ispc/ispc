@@ -85,7 +85,7 @@ ISPCRT_CATCH_END()
 // Device initialization //////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////
 
-ISPCRTDevice ispcrtGetDevice(ISPCRTDeviceType type) ISPCRT_CATCH_BEGIN {
+ISPCRTDevice ispcrtGetDevice(ISPCRTDeviceType type, uint32_t deviceIdx) ISPCRT_CATCH_BEGIN {
     ispcrt::base::Device *device = nullptr;
 
     switch (type) {
@@ -108,7 +108,7 @@ ISPCRTDevice ispcrtGetDevice(ISPCRTDeviceType type) ISPCRT_CATCH_BEGIN {
     }
     case ISPCRT_DEVICE_TYPE_GPU:
 #ifdef ISPCRT_BUILD_GPU
-        device = new ispcrt::GPUDevice;
+        device = new ispcrt::GPUDevice(deviceIdx);
 #else
         throw std::runtime_error("GPU support not enabled");
 #endif
@@ -127,6 +127,61 @@ ISPCRTDevice ispcrtGetDevice(ISPCRTDeviceType type) ISPCRT_CATCH_BEGIN {
     return (ISPCRTDevice)device;
 }
 ISPCRT_CATCH_END(nullptr)
+
+uint32_t ispcrtGetDeviceCount(ISPCRTDeviceType type) ISPCRT_CATCH_BEGIN {
+    uint32_t devices = 0;
+
+    switch (type) {
+    case ISPCRT_DEVICE_TYPE_AUTO:
+        throw std::runtime_error("Device type must be specified");
+        break;
+    case ISPCRT_DEVICE_TYPE_GPU:
+#ifdef ISPCRT_BUILD_GPU
+        devices = ispcrt::gpu::deviceCount();
+#else
+        throw std::runtime_error("GPU support not enabled");
+#endif
+        break;
+    case ISPCRT_DEVICE_TYPE_CPU:
+#ifdef ISPCRT_BUILD_CPU
+        devices = ispcrt::cpu::deviceCount();
+#else
+        throw std::runtime_error("CPU support not enabled");
+#endif
+        break;
+    default:
+        throw std::runtime_error("Unknown device type queried!");
+    }
+
+    return devices;
+} ISPCRT_CATCH_END(0)
+
+void ispcrtGetDeviceInfo(ISPCRTDeviceType type, uint32_t deviceIdx, ISPCRTDeviceInfo *info) ISPCRT_CATCH_BEGIN {
+    if (info == nullptr)
+        throw std::runtime_error("info cannot be null!");
+
+    switch (type) {
+    case ISPCRT_DEVICE_TYPE_AUTO:
+        throw std::runtime_error("Device type must be specified");
+        break;
+    case ISPCRT_DEVICE_TYPE_GPU:
+#ifdef ISPCRT_BUILD_GPU
+        *info = ispcrt::gpu::deviceInfo(deviceIdx);
+#else
+        throw std::runtime_error("GPU support not enabled");
+#endif
+        break;
+    case ISPCRT_DEVICE_TYPE_CPU:
+#ifdef ISPCRT_BUILD_CPU
+        *info = ispcrt::cpu::deviceInfo(deviceIdx);
+#else
+        throw std::runtime_error("CPU support not enabled");
+#endif
+        break;
+    default:
+        throw std::runtime_error("Unknown device type queried!");
+    }
+} ISPCRT_CATCH_END()
 
 ///////////////////////////////////////////////////////////////////////////////
 // MemoryViews ////////////////////////////////////////////////////////////////

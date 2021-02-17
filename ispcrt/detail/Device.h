@@ -15,6 +15,7 @@ namespace base {
 
 struct Device : public RefCounted {
     Device() = default;
+
     virtual ~Device() = default;
 
     virtual MemoryView *newMemoryView(void *appMemory, size_t numBytes, bool shared) const = 0;

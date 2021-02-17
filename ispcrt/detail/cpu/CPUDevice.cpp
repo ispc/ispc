@@ -176,6 +176,18 @@ struct TaskQueue : public ispcrt::base::TaskQueue {
         return nullptr;
     }
 };
+
+uint32_t deviceCount() {
+    return 1;
+}
+
+ISPCRTDeviceInfo deviceInfo(uint32_t deviceIdx) {
+    ISPCRTDeviceInfo info;
+    info.deviceId = 0; // for CPU we don't support it yet
+    info.vendorId = 0;
+    return info;
+}
+
 } // namespace cpu
 
 ispcrt::base::MemoryView *CPUDevice::newMemoryView(void *appMem, size_t numBytes, bool shared) const {
