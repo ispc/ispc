@@ -73,6 +73,7 @@ struct Parameters {
     float *image;
 };
 
+static unsigned int gpu_device_idx;
 static unsigned int niterations;
 static unsigned int width, height;
 static unsigned char *img;
@@ -132,7 +133,7 @@ static int run() {
 
     // Init compute device (CPU or GPU)
     auto run_kernel = [&](ISPCRTDeviceType type) {
-        auto device = ispcrtGetDevice(type);
+        auto device = ispcrtGetDevice(type, gpu_device_idx);
         ISPCRTNewMemoryViewFlags flags;
         flags.allocType = ISPCRT_ALLOC_TYPE_DEVICE;
 
@@ -216,15 +217,19 @@ static int run() {
 }
 
 int main(int argc, char *argv[]) {
-    if (argc != 4) {
+    if (argc != 4 && argc != 5) {
         printf("%s\n", argv[0]);
-        printf("Usage: ao [num test iterations] [width] [height]\n");
-        getchar();
+        printf("Usage: ao num_test_iterations width height [gpu_device_index]\n");
         exit(-1);
+    } else if (argc == 4) {
+        niterations = atoi(argv[1]);
+        width = atoi(argv[2]);
+        height = atoi(argv[3]);
     } else {
         niterations = atoi(argv[1]);
         width = atoi(argv[2]);
         height = atoi(argv[3]);
+        gpu_device_idx = atoi(argv[4]);
     }
 
     int success = 0;

@@ -66,8 +66,17 @@ typedef enum {
     ISPCRT_DEVICE_TYPE_AUTO // try 'GPU', but fallback to 'CPU' if no GPUs found
 } ISPCRTDeviceType;
 
-ISPCRTDevice ispcrtGetDevice(ISPCRTDeviceType);
-uint64_t ispcrtGetDeviceTimeTickResolution();
+typedef struct {
+    uint32_t vendorId;
+    uint32_t deviceId;
+} ISPCRTDeviceInfo;
+
+// deviceIdx is an index of the device in the list of supported devices
+// The list of the supported devices can be obtained with a ispcrtGetDeviceCount call
+// and a series of ispcrtGetDeviceInfo calls
+ISPCRTDevice ispcrtGetDevice(ISPCRTDeviceType, uint32_t deviceIdx);
+uint32_t ispcrtGetDeviceCount(ISPCRTDeviceType);
+void ispcrtGetDeviceInfo(ISPCRTDeviceType, uint32_t deviceIdx, ISPCRTDeviceInfo*);
 
 // MemoryViews ////////////////////////////////////////////////////////////////
 

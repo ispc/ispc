@@ -508,13 +508,32 @@ struct TaskQueue : public ispcrt::base::TaskQueue {
     EventPool m_ep;
     std::vector<std::pair<Event *, Future *>> m_events;
 };
-} // namespace gpu
 
-GPUDevice::GPUDevice() {
-    static bool initialized = false;
 
-    if (!initialized)
-        L0_SAFE_CALL(zeInit(0));
+// limitation: we assume that there'll be only one driver
+// for Intel devices
+static std::vector<ze_device_handle_t> g_deviceList;
+
+static ze_driver_handle_t deviceDiscovery(bool *p_is_mock) {
+    static ze_driver_handle_t selectedDriver = nullptr;
+    bool is_mock = false;
+#if defined(_WIN32) || defined(_WIN64)
+    char* is_mock_s = nullptr;
+    size_t is_mock_sz = 0;
+    _dupenv_s(&is_mock_s, &is_mock_sz, "ISPCRT_MOCK_DEVICE");
+    is_mock = is_mock_s != nullptr;
+#else
+    is_mock = getenv("ISPCRT_MOCK_DEVICE") != nullptr;
+#endif
+
+    // Allow reinitialization of device list for mock device
+    if (!is_mock && selectedDriver != nullptr)
+        return selectedDriver;
+
+    g_deviceList.clear();
+
+    // zeInit can be called multiple times
+    L0_SAFE_CALL(zeInit(0));
 
     // Discover all the driver instances
     uint32_t driverCount = 0;
@@ -526,10 +545,59 @@ GPUDevice::GPUDevice() {
     std::vector<ze_driver_handle_t> allDrivers(driverCount);
     L0_SAFE_CALL(zeDriverGet(&driverCount, allDrivers.data()));
 
+    // Find only instances of Intel GPU device
+    // But we can use a mock device driver for testing
+    for (auto &driver : allDrivers) {
+        uint32_t deviceCount = 0;
+        L0_SAFE_CALL(zeDeviceGet(driver, &deviceCount, nullptr));
+        std::vector<ze_device_handle_t> allDevices(deviceCount);
+        L0_SAFE_CALL(zeDeviceGet(driver, &deviceCount, allDevices.data()));
+        for (auto &device : allDevices) {
+            ze_device_properties_t device_properties;
+            L0_SAFE_CALL(zeDeviceGetProperties(device, &device_properties));
+            if (device_properties.type == ZE_DEVICE_TYPE_GPU && device_properties.vendorId == 0x8086) {
+                if (selectedDriver != nullptr && driver != selectedDriver)
+                    throw std::runtime_error("there should be only one Intel driver in the system");
+                selectedDriver = driver;
+                g_deviceList.push_back(device);
+            }
+        }
+    }
+    if (p_is_mock != nullptr)
+        *p_is_mock = is_mock;
+    return selectedDriver;
+}
+
+uint32_t deviceCount() {
+    deviceDiscovery(nullptr);
+    return g_deviceList.size();
+}
+
+ISPCRTDeviceInfo deviceInfo(uint32_t deviceIdx) {
+    deviceDiscovery(nullptr);
+    if (deviceIdx >= g_deviceList.size())
+        throw std::runtime_error("Invalid device number");
+    ISPCRTDeviceInfo info;
+    ze_device_properties_t dp;
+    L0_SAFE_CALL(zeDeviceGetProperties(g_deviceList[deviceIdx], &dp));
+    info.deviceId = dp.deviceId;
+    info.vendorId = dp.vendorId;
+    return info;
+}
+
+} // namespace gpu
+
+
+// Use the first available device by default for now.
+// Later we may do something more sophisticated (e.g. use the one
+// with most FLOPs or have some kind of load balancing)
+GPUDevice::GPUDevice() : GPUDevice(0) {}
+
+GPUDevice::GPUDevice(uint32_t deviceIdx) {
     // Find an instance of Intel GPU device
     // User can select particular device using env variable
     // By default first available device is selected
-    auto gpuDeviceToGrab = 0;
+    auto gpuDeviceToGrab = deviceIdx;
 #if defined(_WIN32) || defined(_WIN64)
     char* gpuDeviceEnv = nullptr;
     size_t gpuDeviceEnvSz = 0;
@@ -540,50 +608,16 @@ GPUDevice::GPUDevice() {
     if (gpuDeviceEnv) {
         std::istringstream(gpuDeviceEnv) >> gpuDeviceToGrab;
     }
-    auto gpuDevice = 0;
 
-    // We can use a mock device driver for testing
-#if defined(_WIN32) || defined(_WIN64)
-    char* m_is_mock = nullptr;
-    size_t m_is_mock_sz = 0;
-    _dupenv_s(&m_is_mock, &m_is_mock_sz, "ISPCRT_MOCK_DEVICE");
-#else
-    m_is_mock = getenv("ISPCRT_MOCK_DEVICE") != nullptr;
-#endif
+    // Perform GPU discovery
+    m_driver = gpu::deviceDiscovery(&m_is_mock);
 
-    for (auto &driver : allDrivers) {
-        uint32_t deviceCount = 0;
-        L0_SAFE_CALL(zeDeviceGet(driver, &deviceCount, nullptr));
-        std::vector<ze_device_handle_t> allDevices(deviceCount);
-        L0_SAFE_CALL(zeDeviceGet(driver, &deviceCount, allDevices.data()));
-
-        for (auto &device : allDevices) {
-            ze_device_properties_t device_properties;
-            L0_SAFE_CALL(zeDeviceGetProperties(device, &device_properties));
-            if (m_is_mock && std::string(device_properties.name) == "ISPCRT Mock Device") {
-                    m_device = device;
-                    m_driver = driver;
-                    break;
-            }
-            if (device_properties.type == ZE_DEVICE_TYPE_GPU && device_properties.vendorId == 0x8086) {
-                gpuDevice++;
-                if (gpuDevice == gpuDeviceToGrab + 1) {
-                    m_device = device;
-                    m_driver = driver;
-                    break;
-                }
-            }
-        }
-
-        if (m_device)
-            break;
-    }
-
-    if (!m_device)
+    if (gpuDeviceToGrab >= gpu::g_deviceList.size())
         throw std::runtime_error("could not find a valid GPU device");
 
-    ze_context_desc_t contextDesc = {}; // use default values
+    m_device = gpu::g_deviceList[gpuDeviceToGrab];
 
+    ze_context_desc_t contextDesc = {}; // use default values
     L0_SAFE_CALL(zeContextCreate((ze_driver_handle_t)m_driver, &contextDesc, (ze_context_handle_t *)&m_context));
 
     if (!m_context)

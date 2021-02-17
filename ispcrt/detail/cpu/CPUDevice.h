@@ -8,6 +8,13 @@
 
 namespace ispcrt {
 
+namespace cpu {
+
+uint32_t deviceCount();
+ISPCRTDeviceInfo deviceInfo(uint32_t deviceIdx);
+
+}; // cpu
+
 struct CPUDevice : public base::Device {
     CPUDevice() = default;
 

@@ -6,10 +6,22 @@
 #include "../Device.h"
 #include "../Future.h"
 
+// std
+#include <unordered_map>
+#include <vector>
+
 namespace ispcrt {
+namespace gpu {
+
+uint32_t deviceCount();
+ISPCRTDeviceInfo deviceInfo(uint32_t deviceIdx);
+
+}; // gpu
 
 struct GPUDevice : public base::Device {
+
     GPUDevice();
+    GPUDevice(uint32_t deviceIdx);
     ~GPUDevice();
 
     base::MemoryView *newMemoryView(void *appMem, size_t numBytes, bool shared) const override;

@@ -107,18 +107,47 @@ class Device : public GenericObject<ISPCRTDevice> {
   public:
     Device() = default;
     Device(ISPCRTDeviceType type);
+    // deviceIdx is an index of the device in the list of supported devices
+    // The list of the supported devices can be obtained with:
+    // - allDevicesInformation() call or
+    // - deviceCount() call and a series of deviceInformation() calls
+    Device(ISPCRTDeviceType type, uint32_t deviceIdx);
     void* nativePlatformHandle() const;
     void* nativeDeviceHandle() const;
     void* nativeContextHandle() const;
+    // static methods to get information about available devices
+    static uint32_t deviceCount(ISPCRTDeviceType type);
+    static ISPCRTDeviceInfo deviceInformation(ISPCRTDeviceType type, uint32_t deviceIdx);
+    static std::vector<ISPCRTDeviceInfo> allDevicesInformation(ISPCRTDeviceType type);
 };
 
 // Inlined definitions //
+inline Device::Device(ISPCRTDeviceType type, uint32_t deviceIdx) :
+    GenericObject<ISPCRTDevice>(ispcrtGetDevice(type, deviceIdx)) { }
+inline Device::Device(ISPCRTDeviceType type) : Device(type, 0) {}
 
-inline Device::Device(ISPCRTDeviceType type) : GenericObject<ISPCRTDevice>(ispcrtGetDevice(type)) {}
 inline void* Device::nativePlatformHandle() const { return ispcrtPlatformNativeHandle(handle()); }
 inline void* Device::nativeDeviceHandle() const { return ispcrtDeviceNativeHandle(handle()); }
 inline void* Device::nativeContextHandle() const { return ispcrtContextNativeHandle(handle()); }
 
+inline uint32_t Device::deviceCount(ISPCRTDeviceType type) {
+    return ispcrtGetDeviceCount(type);
+}
+
+inline ISPCRTDeviceInfo Device::deviceInformation(ISPCRTDeviceType type, uint32_t deviceIdx) {
+    ISPCRTDeviceInfo devInfo;
+    ispcrtGetDeviceInfo(type, deviceIdx, &devInfo);
+    return devInfo;
+}
+
+inline std::vector<ISPCRTDeviceInfo> Device::allDevicesInformation(ISPCRTDeviceType type) {
+    auto devCount = ispcrtGetDeviceCount(type);
+    std::vector<ISPCRTDeviceInfo> devInfo(devCount);
+    for (int i = 0; i < devCount; i++) {
+        ispcrtGetDeviceInfo(type, i, &devInfo[i]);
+    }
+    return devInfo;
+}
 
 /////////////////////////////////////////////////////////////////////////////
 // Arrays (MemoryView wrapper w/ element type) //////////////////////////////

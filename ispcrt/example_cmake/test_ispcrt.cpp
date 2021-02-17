@@ -5,7 +5,7 @@
 #include "ispcrt.h"
 
 int main() {
-    ISPCRTDevice device = ispcrtGetDevice(ISPCRT_DEVICE_TYPE_AUTO);
+    ISPCRTDevice device = ispcrtGetDevice(ISPCRT_DEVICE_TYPE_AUTO, 0);
     ispcrtRelease(device);
 
     return 0;

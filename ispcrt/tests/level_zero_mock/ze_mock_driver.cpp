@@ -33,6 +33,19 @@ MockHandle<ze_command_queue_handle_t> CmdQueueHandle;
 MockHandle<ze_event_pool_handle_t> EventPoolHandle;
 MockHandle<ze_event_handle_t> LaunchEventHandle;
 
+bool ExpectedDevice(ze_device_handle_t hDevice) {
+    auto dp = reinterpret_cast<DeviceProperties*>(hDevice);
+    return dp == Config::getDevicePtr(Config::getExpectedDevice());
+}
+
+bool ValidDevice(ze_device_handle_t hDevice) {
+    auto dp = reinterpret_cast<DeviceProperties*>(hDevice);
+    for (int i = 0; i < Config::getDeviceCount(); i++)
+        if (dp == Config::getDevicePtr(i))
+            return true;
+    return false;
+}
+
 ze_result_t zeInit(ze_init_flags_t flags) { MOCK_RET; }
 
 ze_result_t zeDriverGet(uint32_t *pCount, ze_driver_handle_t *phDrivers) {
@@ -44,19 +57,25 @@ ze_result_t zeDriverGet(uint32_t *pCount, ze_driver_handle_t *phDrivers) {
 }
 
 ze_result_t zeDeviceGet(ze_driver_handle_t hDriver, uint32_t *pCount, ze_device_handle_t *phDevices) {
-    *pCount = 1;
+    *pCount = Config::getDeviceCount();
     if (phDevices) {
-        *phDevices = DeviceHandle.get();
+        for (int i = 0; i < *pCount; i++) {
+            phDevices[i] = reinterpret_cast<ze_device_handle_t>(Config::getDevicePtr(i));
+        }
     }
     MOCK_RET;
 }
 
 ze_result_t zeDeviceGetProperties(ze_device_handle_t hDevice, ze_device_properties_t *pDeviceProperties) {
-    if (hDevice != DeviceHandle.get() || pDeviceProperties == nullptr)
+    if (!ValidDevice(hDevice) || pDeviceProperties == nullptr)
         return ZE_RESULT_ERROR_INVALID_NULL_HANDLE;
+
+    auto dp = reinterpret_cast<DeviceProperties*>(hDevice);
 
     pDeviceProperties->stype = ZE_STRUCTURE_TYPE_DEVICE_PROPERTIES;
     pDeviceProperties->type = ZE_DEVICE_TYPE_GPU;
+    pDeviceProperties->deviceId = dp->deviceId;
+    pDeviceProperties->vendorId = dp->vendorId;
     std::strcpy(pDeviceProperties->name, "ISPCRT Mock Device");
 
     MOCK_RET;
@@ -75,7 +94,7 @@ ze_result_t zeContextDestroy(ze_context_handle_t hContext) {
 
 ze_result_t zeCommandQueueCreate(ze_context_handle_t hContext, ze_device_handle_t hDevice,
                                  const ze_command_queue_desc_t *desc, ze_command_queue_handle_t *phCommandQueue) {
-    if (hDevice != DeviceHandle.get() || hContext != ContextHandle.get() || desc == nullptr ||
+    if (!ExpectedDevice(hDevice) || hContext != ContextHandle.get() || desc == nullptr ||
         phCommandQueue == nullptr)
         return ZE_RESULT_ERROR_INVALID_NULL_HANDLE;
     *phCommandQueue = CmdQueueHandle.get();
@@ -103,7 +122,7 @@ ze_result_t zeCommandQueueSynchronize(ze_command_queue_handle_t hCommandQueue, u
 
 ze_result_t zeCommandListCreate(ze_context_handle_t hContext, ze_device_handle_t hDevice,
                                 const ze_command_list_desc_t *desc, ze_command_list_handle_t *phCommandList) {
-    if (hDevice != DeviceHandle.get() || hContext != ContextHandle.get() || desc == nullptr || phCommandList == nullptr)
+    if (!ExpectedDevice(hDevice) || hContext != ContextHandle.get() || desc == nullptr || phCommandList == nullptr)
         return ZE_RESULT_ERROR_INVALID_NULL_HANDLE;
     *phCommandList = CmdListHandle.get();
     MOCK_RET;
@@ -191,7 +210,7 @@ ze_result_t zeMemFree(ze_context_handle_t hContext, void *ptr) {
 
 ze_result_t zeModuleCreate(ze_context_handle_t hContext, ze_device_handle_t hDevice, const ze_module_desc_t *desc,
                            ze_module_handle_t *phModule, ze_module_build_log_handle_t *phBuildLog) {
-    if (hContext != ContextHandle.get() || hDevice != DeviceHandle.get())
+    if (hContext != ContextHandle.get() || !ExpectedDevice(hDevice))
         return ZE_RESULT_ERROR_INVALID_NULL_HANDLE;
 
     *phModule = ModuleHandle.get();
