@@ -132,6 +132,8 @@ def checkout_LLVM(component, version_LLVM, target_dir, from_validation, verbose)
     elif  version_LLVM == "12_0":
         # Update tag when 12.0 releases
         GIT_TAG="origin/release/12.x"
+    elif  version_LLVM == "11_1":
+        GIT_TAG="llvmorg-11.1.0"
     elif  version_LLVM == "11_0":
         GIT_TAG="llvmorg-11.0.1"
     elif  version_LLVM == "10_0":
