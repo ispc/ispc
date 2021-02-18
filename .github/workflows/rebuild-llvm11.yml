@@ -1,4 +1,4 @@
-name: Rebuild LLVM 11.0
+name: Rebuild LLVM 11.1
 
 on:
   push:
@@ -6,7 +6,7 @@ on:
       - main
       - '**rebuild_llvm**'
     paths:
-      - "llvm_patches/*11_0*"
+      - "llvm_patches/*11_1*"
       - "alloy.py"
       - ".github/workflows/rebuild-llvm11.yml"
   workflow_dispatch:
@@ -29,21 +29,21 @@ jobs:
     - name: Build LLVM
       run: |
         cd docker/ubuntu/llvm_build
-        docker build --tag ispc/ubuntu16.04 --build-arg REPO=$GITHUB_REPOSITORY --build-arg SHA=$GITHUB_SHA --build-arg LLVM_VERSION=11.0 .
+        docker build --tag ispc/ubuntu16.04 --build-arg REPO=$GITHUB_REPOSITORY --build-arg SHA=$GITHUB_SHA --build-arg LLVM_VERSION=11.1 .
 
     - name: Pack LLVM
       run: |
         cd docker/ubuntu/llvm_build
         docker run ispc/ubuntu16.04
         export CONTAINER=`docker ps --all |head -2 |tail -1 |awk '//{print $1}'`
-        sudo docker cp $CONTAINER:/usr/local/src/llvm/bin-11.0 .
-        tar cJvf llvm-11.0.1-ubuntu16.04-Release+Asserts-x86.arm.wasm.tar.xz bin-11.0
+        sudo docker cp $CONTAINER:/usr/local/src/llvm/bin-11.1 .
+        tar cJvf llvm-11.1.0-ubuntu16.04-Release+Asserts-x86.arm.wasm.tar.xz bin-11.1
 
     - name: Upload package
       uses: actions/upload-artifact@v2
       with:
         name: llvm11_linux
-        path: docker/ubuntu/llvm_build/llvm-11.0.1-ubuntu16.04-Release+Asserts-x86.arm.wasm.tar.xz
+        path: docker/ubuntu/llvm_build/llvm-11.1.0-ubuntu16.04-Release+Asserts-x86.arm.wasm.tar.xz
 
   linux-build-release:
     runs-on: ubuntu-latest
@@ -60,21 +60,21 @@ jobs:
     - name: Build LLVM
       run: |
         cd docker/ubuntu/llvm_build
-        docker build --tag ispc/ubuntu16.04 --build-arg REPO=$GITHUB_REPOSITORY --build-arg SHA=$GITHUB_SHA --build-arg LLVM_VERSION=11.0 --build-arg EXTRA_BUILD_ARG="--llvm-disable-assertions" .
+        docker build --tag ispc/ubuntu16.04 --build-arg REPO=$GITHUB_REPOSITORY --build-arg SHA=$GITHUB_SHA --build-arg LLVM_VERSION=11.1 --build-arg EXTRA_BUILD_ARG="--llvm-disable-assertions" .
 
     - name: Pack LLVM
       run: |
         cd docker/ubuntu/llvm_build
         docker run ispc/ubuntu16.04
         export CONTAINER=`docker ps --all |head -2 |tail -1 |awk '//{print $1}'`
-        sudo docker cp $CONTAINER:/usr/local/src/llvm/bin-11.0 .
-        tar cJvf llvm-11.0.1-ubuntu16.04-Release-x86.arm.wasm.tar.xz bin-11.0
+        sudo docker cp $CONTAINER:/usr/local/src/llvm/bin-11.1 .
+        tar cJvf llvm-11.1.0-ubuntu16.04-Release-x86.arm.wasm.tar.xz bin-11.1
 
     - name: Upload package
       uses: actions/upload-artifact@v2
       with:
         name: llvm11rel_linux
-        path: docker/ubuntu/llvm_build/llvm-11.0.1-ubuntu16.04-Release-x86.arm.wasm.tar.xz
+        path: docker/ubuntu/llvm_build/llvm-11.1.0-ubuntu16.04-Release-x86.arm.wasm.tar.xz
 
   win-build:
     runs-on: windows-latest
@@ -102,20 +102,20 @@ jobs:
     - name: Build LLVM
       shell: cmd
       run: |
-        python ./alloy.py -b --version=11.0 --verbose
+        python ./alloy.py -b --version=11.1 --verbose
         cd alloy_results* && type alloy_build.log
 
     - name: Pack LLVM
       shell: cmd
       run: |
         cd llvm
-        7z.exe a -t7z llvm-11.0.1-win.vs2019-Release+Asserts-x86.arm.wasm.7z bin-11.0
+        7z.exe a -t7z llvm-11.1.0-win.vs2019-Release+Asserts-x86.arm.wasm.7z bin-11.1
 
     - name: Upload package
       uses: actions/upload-artifact@v2
       with:
         name: llvm11_win
-        path: llvm/llvm-11.0.1-win.vs2019-Release+Asserts-x86.arm.wasm.7z
+        path: llvm/llvm-11.1.0-win.vs2019-Release+Asserts-x86.arm.wasm.7z
 
   win-build-release:
     runs-on: windows-latest
@@ -143,20 +143,20 @@ jobs:
     - name: Build LLVM
       shell: cmd
       run: |
-        python ./alloy.py -b --version=11.0 --verbose --llvm-disable-assertions
+        python ./alloy.py -b --version=11.1 --verbose --llvm-disable-assertions
         cd alloy_results* && type alloy_build.log
 
     - name: Pack LLVM
       shell: cmd
       run: |
         cd llvm
-        7z.exe a -t7z llvm-11.0.1-win.vs2019-Release-x86.arm.wasm.7z bin-11.0
+        7z.exe a -t7z llvm-11.1.0-win.vs2019-Release-x86.arm.wasm.7z bin-11.1
 
     - name: Upload package
       uses: actions/upload-artifact@v2
       with:
         name: llvm11rel_win
-        path: llvm/llvm-11.0.1-win.vs2019-Release-x86.arm.wasm.7z
+        path: llvm/llvm-11.1.0-win.vs2019-Release-x86.arm.wasm.7z
 
   mac-build:
     runs-on: macos-10.15
@@ -188,18 +188,18 @@ jobs:
 
     - name: Build LLVM
       run: |
-        ./alloy.py -b --version=11.0 --selfbuild --verbose
+        ./alloy.py -b --version=11.1 --selfbuild --verbose
 
     - name: Pack LLVM
       run: |
         cd llvm
-        tar cJvf llvm-11.0.1-macos10.15-Release+Asserts-x86.arm.wasm.tar.xz bin-11.0
+        tar cJvf llvm-11.1.0-macos10.15-Release+Asserts-x86.arm.wasm.tar.xz bin-11.1
 
     - name: Upload package
       uses: actions/upload-artifact@v2
       with:
         name: llvm11_macos
-        path: llvm/llvm-11.0.1-macos10.15-Release+Asserts-x86.arm.wasm.tar.xz
+        path: llvm/llvm-11.1.0-macos10.15-Release+Asserts-x86.arm.wasm.tar.xz
 
   mac-build-release:
     runs-on: macos-10.15
@@ -231,16 +231,16 @@ jobs:
 
     - name: Build LLVM
       run: |
-        ./alloy.py -b --version=11.0 --selfbuild --verbose --llvm-disable-assertions
+        ./alloy.py -b --version=11.1 --selfbuild --verbose --llvm-disable-assertions
 
     - name: Pack LLVM
       run: |
         cd llvm
-        tar cJvf llvm-11.0.1-macos10.15-Release-x86.arm.wasm.tar.xz bin-11.0
+        tar cJvf llvm-11.1.0-macos10.15-Release-x86.arm.wasm.tar.xz bin-11.1
 
     - name: Upload package
       uses: actions/upload-artifact@v2
       with:
         name: llvm11rel_macos
-        path: llvm/llvm-11.0.1-macos10.15-Release-x86.arm.wasm.tar.xz
+        path: llvm/llvm-11.1.0-macos10.15-Release-x86.arm.wasm.tar.xz
 
