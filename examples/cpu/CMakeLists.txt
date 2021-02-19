@@ -55,7 +55,9 @@ include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/AddISPCExample.cmake)
 
 if(WIN32)
     add_compile_definitions(WIN32)
-    add_compile_options(/EHsc)
+    if(MSVC)
+        add_compile_options(/EHsc)
+    endif()
 endif()
 
 if (NOT DEFINED ISPC_EXECUTABLE)
