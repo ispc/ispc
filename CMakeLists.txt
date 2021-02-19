@@ -406,18 +406,18 @@ target_include_directories(${PROJECT_NAME} PRIVATE
                            ${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_CFG_INTDIR})
 
 # Compile options
-if (UNIX)
-    target_compile_options(${PROJECT_NAME} PRIVATE -Wall -Wno-sign-compare -Wno-unused-function -Werror ${LLVM_CPP_FLAGS})
-    # Security options
-    target_compile_options(${PROJECT_NAME} PRIVATE -fstack-protector-strong
-                           -fdata-sections -ffunction-sections -fno-delete-null-pointer-checks
-                           -Wformat -Wformat-security -fpie -fwrapv)
-else()
+if (MSVC)
     target_compile_options(${PROJECT_NAME} PRIVATE /W3 /wd4146 /wd4800 /wd4996 /wd4355 /wd4624 /wd4244 /wd4141 /wd4291 /wd4018 /wd4267)
     # Security options
     target_compile_options(${PROJECT_NAME} PRIVATE /GS /DynamicBase)
     set_source_files_properties(${FLEX_OUTPUT} PROPERTIES COMPILE_FLAGS "/wd4005 /wd4003")
     set_source_files_properties(${BISON_OUTPUT} PROPERTIES COMPILE_FLAGS "/wd4005 /wd4065")
+else()
+    target_compile_options(${PROJECT_NAME} PRIVATE -Wall -Wno-sign-compare -Wno-unused-function -Werror ${LLVM_CPP_FLAGS})
+    # Security options
+    target_compile_options(${PROJECT_NAME} PRIVATE -fstack-protector-strong
+                           -fdata-sections -ffunction-sections -fno-delete-null-pointer-checks
+                           -Wformat -Wformat-security -fpie -fwrapv)
 endif()
 
 # Set C++ standard to C++14.
@@ -425,7 +425,7 @@ set_target_properties(${PROJECT_NAME} PROPERTIES
     CXX_STANDARD 14
     CXX_STANDARD_REQUIRED YES)
 
-if (UNIX)
+if (NOT MSVC)
     set_target_properties(${PROJECT_NAME} PROPERTIES CXX_EXTENSIONS OFF)
     target_compile_options(${PROJECT_NAME} PRIVATE -Wno-c99-extensions -Wno-deprecated-register -fno-rtti)
     if (ISPC_USE_ASAN)
@@ -435,7 +435,7 @@ endif()
 
 # Link options
 if (WIN32)
-    if (NOT CMAKE_BUILD_TYPE STREQUAL "DEBUG" )
+    if (MSVC AND NOT CMAKE_BUILD_TYPE STREQUAL "DEBUG" )
         target_link_options(${PROJECT_NAME} PUBLIC /OPT:REF /OPT:ICF)
     endif()
 elseif (APPLE)
