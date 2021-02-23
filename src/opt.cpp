@@ -626,7 +626,7 @@ void Optimize(llvm::Module *module, int optLevel) {
         // IPConstProp will not be supported by LLVM moving forward.
         // Switching to IPSCCP which is its recommended functional equivalent.
         // TODO : Make IPSCCP the default after ISPC 1.14 release.
-#if ISPC_LLVM_VERSION <= ISPC_LLVM_11_0
+#if ISPC_LLVM_VERSION < ISPC_LLVM_12_0
         optPM.add(llvm::createIPConstantPropagationPass());
 #else
         optPM.add(llvm::createIPSCCPPass());
