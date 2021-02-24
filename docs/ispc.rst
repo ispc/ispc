@@ -574,7 +574,7 @@ implementation of that algorithm.  After reading through that example, you
 may want to examine the source code of the various examples in the
 ``examples/`` directory of the ``ispc`` distribution.
 
-.. _Mandelbrot set example: http://ispc.github.com/example.html
+.. _Mandelbrot set example: http://ispc.github.io/example.html
 
 Using The ISPC Compiler
 =======================
@@ -5301,7 +5301,7 @@ can also have a significant effect on performance; in general, creating
 groups of work that will tend to do similar computation across the SPMD
 program instances improves performance.
 
-.. _ispc Performance Tuning Guide: http://ispc.github.com/perfguide.html
+.. _ispc Performance Tuning Guide: http://ispc.github.io/perfguide.html
 
 
 Notices & Disclaimers
