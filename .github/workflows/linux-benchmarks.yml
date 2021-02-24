@@ -1,4 +1,4 @@
-name: Linux benchmarks / LLVM 11.0
+name: Linux benchmarks / LLVM 11.1
 
 on:
   pull_request_target:
@@ -10,9 +10,9 @@ on:
   workflow_dispatch:
 
 env:
-  LLVM_VERSION: "11.0"
+  LLVM_VERSION: "11.1"
   LLVM_REPO: https://github.com/dbabokin/llvm-project
-  LLVM_TAR: llvm-11.0.1-ubuntu16.04-Release+Asserts-x86.arm.wasm.tar.xz
+  LLVM_TAR: llvm-11.1.0-ubuntu16.04-Release+Asserts-x86.arm.wasm.tar.xz
 
 jobs:
   linux-build:
