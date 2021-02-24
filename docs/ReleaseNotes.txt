@@ -623,7 +623,7 @@ New targets:
 * This release provides "beta" support for compiling to Intel® Xeon
   Phi™ processor, code named Knights Corner, the first processor in
   the Intel® Many Integrated Core Architecture.  See
-  http://ispc.github.com/ispc.html#compiling-for-the-intel-xeon-phi-architecture
+  http://ispc.github.io/ispc.html#compiling-for-the-intel-xeon-phi-architecture
   for more details on this support.
 
 * This release also has an "avx1.1" target, which provides support for the
@@ -633,15 +633,15 @@ New language features:
 
 * The foreach_active statement allows iteration over the active program
   instances in a gang.  (See
-  http://ispc.github.com/ispc.html#iteration-over-active-program-instances-foreach-active)
+  http://ispc.github.io/ispc.html#iteration-over-active-program-instances-foreach-active)
 
 * foreach_unique allows iterating over subsets of program instances in a
   gang that share the same value of a variable.  (See
-  http://ispc.github.com/ispc.html#iteration-over-unique-elements-foreach-unique)
+  http://ispc.github.io/ispc.html#iteration-over-unique-elements-foreach-unique)
 
 * An "unmasked" function qualifier and statement in the language allow
   re-activating execution of all program instances in a gang.  (See
-  http://ispc.github.com/ispc.html#re-establishing-the-execution-mask
+  http://ispc.github.io/ispc.html#re-establishing-the-execution-mask
 
 Standard library updates:
 
@@ -773,7 +773,7 @@ that may require changes to existing programs:
   struct elements don't have explicit "uniform" or "varying" qualifiers,
   they are said to have "unbound" variability.  When a struct type is
   instantiated, any unbound variability elements inherit the variability of
-  the parent struct type. See http://ispc.github.com/ispc.html#struct-types
+  the parent struct type. See http://ispc.github.io/ispc.html#struct-types
   for more details.
 
 ispc has a new language feature that makes it much easier to use the
@@ -782,7 +782,7 @@ data.  A new "soa<n>" qualifier can be applied to structure types to
 specify an n-wide SoA version of the corresponding type.  Array indexing
 and pointer operations with arrays SoA types automatically handles the
 two-stage indexing calculation to access the data.  See
-http://ispc.github.com/ispc.html#structure-of-array-types for more details.
+http://ispc.github.io/ispc.html#structure-of-array-types for more details.
 
 For more efficient access of data that is still in "array of structures"
 (AoS) format, ispc has a new "memory coalescing" optimization that
@@ -821,7 +821,7 @@ useful for debugging ispc programs.
 
 The compiler now supports dynamic memory allocation in ispc programs (with
 "new" and "delete" operators based on C++).  See
-http://ispc.github.com/ispc.html#dynamic-memory-allocation in the
+http://ispc.github.io/ispc.html#dynamic-memory-allocation in the
 documentation for more information.
 
 ispc now performs "short circuit" evaluation of the || and && logical
@@ -834,7 +834,7 @@ The standard library now provides "local" atomic operations, which are
 atomic across the gang of program instances (but not across other gangs or
 other hardware threads.  See the updated documentation on atomics for more
 information:
-http://ispc.github.com/ispc.html#atomic-operations-and-memory-fences.
+http://ispc.github.io/ispc.html#atomic-operations-and-memory-fences.
 
 The standard library now offers a clock() function, which returns a uniform
 int64 value that counts processor cycles; it can be used for
@@ -924,14 +924,14 @@ language syntax changes that will require modification of existing
 programs.  These changes should generally be straightforward and all are
 steps toward eliminating parts of ispc syntax that are incompatible with
 C/C++.  See
-http://ispc.github.com/ispc.html#updating-ispc-programs-for-changes-in-ispc-1-1
+http://ispc.github.io/ispc.html#updating-ispc-programs-for-changes-in-ispc-1-1
 for more information about these changes.
 
 ispc now fully supports pointers, including pointer arithmetic, implicit
 conversions of arrays to pointers, and all of the other capabilities of
-pointers in C.  See http://ispc.github.com/ispc.html#pointer-types for more
+pointers in C.  See http://ispc.github.io/ispc.html#pointer-types for more
 information about pointers in ispc and
-http://ispc.github.com/ispc.html#function-pointer-types for information
+http://ispc.github.io/ispc.html#function-pointer-types for information
 about function pointers in ispc.
 
 Reference types are now declared with C++ syntax (e.g. "const float &foo").
@@ -939,21 +939,21 @@ Reference types are now declared with C++ syntax (e.g. "const float &foo").
 ispc now supports 64-bit addressing.  For performance reasons, this
 capability is disabled by default (even on 64-bit targets), but can be
 enabled with a command-line flag:
-http://ispc.github.com/ispc.html#selecting-32-or-64-bit-addressing.
+http://ispc.github.io/ispc.html#selecting-32-or-64-bit-addressing.
 
 This release features new parallel "foreach" statements, which make it
 easier in many instances to map program instances to data for data-parallel
 computation than the programIndex/programCount mechanism:
-http://ispc.github.com/ispc.html#parallel-iteration-statements-foreach-and-foreach-tiled.
+http://ispc.github.io/ispc.html#parallel-iteration-statements-foreach-and-foreach-tiled.
 
 Finally, all of the system's documentation has been significantly revised.
 The documentation of ispc's parallel execution model has been rewritten:
-http://ispc.github.com/ispc.html#the-ispc-parallel-execution-model, and
+http://ispc.github.io/ispc.html#the-ispc-parallel-execution-model, and
 there is now a more specific discussion of similarities and differences
 between ispc and C/C++:
-http://ispc.github.com/ispc.html#relationship-to-the-c-programming-language.
-There is now a separate FAQ (http://ispc.github.com/faq.html), and a
-Performance Guide (http://ispc.github.com/perfguide.html).
+http://ispc.github.io/ispc.html#relationship-to-the-c-programming-language.
+There is now a separate FAQ (http://ispc.github.io/faq.html), and a
+Performance Guide (http://ispc.github.io/perfguide.html).
 
 === v1.0.12 === (20 October 2011)
 
@@ -963,7 +963,7 @@ higher performance for some workloads than the regular sse2 target.  (For
 other workloads, it may be slower.)
 
 The ispc language now includes an "assert()" statement.  See
-http://ispc.github.com/ispc.html#assertions for more information.
+http://ispc.github.io/ispc.html#assertions for more information.
 
 The compiler now sets a preprocessor #define based on the target ISA; for
 example, ISPC_TARGET_SSE4 is defined for the sse4 targets, and so forth.
@@ -971,7 +971,7 @@ example, ISPC_TARGET_SSE4 is defined for the sse4 targets, and so forth.
 The standard library now provides high-performance routines for converting
 between some "array of structures" and "structure of arrays" formats.
 See
-http://ispc.github.com/ispc.html#converting-between-array-of-structures-and-structure-of-arrays-layout
+http://ispc.github.io/ispc.html#converting-between-array-of-structures-and-structure-of-arrays-layout
 for more information.
 
 Inline functions now have static linkage.
@@ -986,7 +986,7 @@ are used as loop induction variables much better.
 The main new feature in this release is support for generating code for
 multiple targets (e.g., SSE2, SSE4, and AVX) and having the compiled code
 select the best variant at execution time.  For more information, see
-http://ispc.github.com/ispc.html#compiling-with-support-for-multiple-instruction-sets.
+http://ispc.github.io/ispc.html#compiling-with-support-for-multiple-instruction-sets.
 
 All of the examples now take advantage of the support for multiple
 compilation targets; thus, if one has an AVX system, it's not necessary to
@@ -1013,7 +1013,7 @@ for more details on the algorithm.)
 
 The mechanism for launching tasks from ispc code has been generalized to
 allow multiple tasks to be launched with a single launch call (see
-http://ispc.github.com/ispc.html#task-parallelism-language-syntax for more
+http://ispc.github.io/ispc.html#task-parallelism-language-syntax for more
 information.)
 
 A few new functions have been added to the standard library: num_cores()
@@ -1090,7 +1090,7 @@ standard library.  reduce_equal() checks to see if the given value is the
 same across all running program instances, and exclusive_scan_{and,or,and}()
 computes a scan over the given value in the running program instances.
 See the documentation of these new routines for more information:
-http://ispc.github.com/ispc.html#cross-program-instance-operations.
+http://ispc.github.io/ispc.html#cross-program-instance-operations.
 
 The simple task system implementations used in the examples have been
 improved.  The Windows version no nlonger has a hard limit on the number of
@@ -1103,11 +1103,11 @@ ray-marching volume rendering algorithm, and one that shows a 3D stencil
 computation, as might be done for PDE solutions.
 
 Standard library routines to issue prefetches have been added.  See the
-documentation for more details: http://ispc.github.com/ispc.html#prefetches.
+documentation for more details: http://ispc.github.io/ispc.html#prefetches.
 
 Fast versions of the float to half-precision float conversion routines have
 been added.  For more details, see:
-http://ispc.github.com/ispc.html#conversions-to-and-from-half-precision-floats.
+http://ispc.github.io/ispc.html#conversions-to-and-from-half-precision-floats.
 
 There is the usual set of small bug fixes.  Notably, a number of details
 related to handling 32 versus 64 bit targets have been fixed, which in turn
@@ -1119,7 +1119,7 @@ passed to them.
 Multi-element vector swizzles are supported; for example, given a 3-wide
 vector "foo", then expressions like "foo.zyx" and "foo.yz" can be used to
 construct other short vectors.  See
-http://ispc.github.com/ispc.html#short-vector-types
+http://ispc.github.io/ispc.html#short-vector-types
 for more details.  (Thanks to Pete Couperus for implementing this code!).
 
 int8 and int16 datatypes are now supported.  It is still generally more
@@ -1136,7 +1136,7 @@ implementation on OSX and a 2.9x speedup versus C on Windows.
 === v1.0.4 === (18 July 2011)
 
 enums are now supported in ispc; see the section on enumeration types in
-the documentation (http://ispc.github.com/ispc.html#enumeration-types) for
+the documentation (http://ispc.github.io/ispc.html#enumeration-types) for
 more informaiton.
 
 bools are converted to integers with zero extension, not sign extension as
@@ -1176,7 +1176,7 @@ ispc now supports the usual range of atomic operations (add, subtract, min,
 max, and, or, and xor) as well as atomic swap and atomic compare and
 exchange.  There is also a facility for inserting memory fences.  See the
 "Atomic Operations and Memory Fences" section of the user's guide
-(http://ispc.github.com/ispc.html#atomic-operations-and-memory-fences) for
+(http://ispc.github.io/ispc.html#atomic-operations-and-memory-fences) for
 more information.
 
 There are now both 'signed' and 'unsigned' variants of the standard library
