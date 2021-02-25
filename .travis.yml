@@ -99,14 +99,14 @@ jobs:
       env:
         - LLVM_VERSION=11.0 OS=Ubuntu16.04
         - LLVM_TAR=llvm-11.0.0-ubuntu16.04-Release+Asserts-x86.arm.wasm.tar.xz
-        - LLVM_REPO=https://github.com/dbabokin/llvm-project
+        - LLVM_REPO=https://github.com/ispc/llvm-project
         - ISPC_HOME=$TRAVIS_BUILD_DIR
     # LLVM 10.0 + Ubuntu 16.04: build, lit tests, examples (build + run), benchmarks (build + trial run)
     - <<: *my_tag
       env:
         - LLVM_VERSION=10.0 OS=Ubuntu16.04
         - LLVM_TAR=llvm-10.0.1-ubuntu16.04-Release+Asserts-x86.arm.wasm.tar.xz
-        - LLVM_REPO=https://github.com/dbabokin/llvm-project
+        - LLVM_REPO=https://github.com/ispc/llvm-project
         - ISPC_HOME=$TRAVIS_BUILD_DIR
     # WASM enabled build
     # LLVM 11.0 + Ubuntu 16.04: build, lit tests, examples (build), benchmarks (build + trial run)
@@ -114,7 +114,7 @@ jobs:
       env:
         - LLVM_VERSION=11.0 OS=Ubuntu16.04 WASM_FLAGS="-DWASM_ENABLED=ON"
         - LLVM_TAR=llvm-11.0.0-ubuntu16.04-Release+Asserts-x86.arm.wasm.tar.xz
-        - LLVM_REPO=https://github.com/dbabokin/llvm-project
+        - LLVM_REPO=https://github.com/ispc/llvm-project
         - ISPC_HOME=$TRAVIS_BUILD_DIR
     # ARM build
     # LLVM 11.0 + Ubuntu 18.04:
@@ -127,7 +127,7 @@ jobs:
       env:
         - LLVM_VERSION=11.0 OS=Ubuntu18.04aarch64
         - LLVM_TAR=llvm-11.0.0-ubuntu16.04aarch64-Release+Asserts-x86.arm.wasm.tar.xz
-        - LLVM_REPO=https://github.com/dbabokin/llvm-project
+        - LLVM_REPO=https://github.com/ispc/llvm-project
         - ISPC_HOME=$TRAVIS_BUILD_DIR
       before_install:
         - sudo apt-get update
@@ -169,7 +169,7 @@ jobs:
       env:
         - LLVM_VERSION=11.0 OS=macOS10.15
         - LLVM_TAR=llvm-11.0.0-macos10.15-Release+Asserts-x86.arm.wasm.tar.xz
-        - LLVM_REPO=https://github.com/dbabokin/llvm-project
+        - LLVM_REPO=https://github.com/ispc/llvm-project
         - ISPC_HOME=$TRAVIS_BUILD_DIR
       before_install:
         - wget $LLVM_REPO/releases/download/llvm-$LLVM_VERSION-ispc-dev/$LLVM_TAR
