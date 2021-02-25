@@ -7,7 +7,7 @@ echo "C:\tools\cygwin\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 
 # Download and unpack llvm
 mkdir ${env:LLVM_HOME}
 cd ${env:LLVM_HOME}
-wget -q --retry-connrefused --waitretry=5 --read-timeout=20 --timeout=15 -t 5 https://github.com/dbabokin/llvm-project/releases/download/llvm-${env:LLVM_VERSION}-ispc-dev/${env:LLVM_TAR}
+wget -q --retry-connrefused --waitretry=5 --read-timeout=20 --timeout=15 -t 5 https://github.com/ispc/llvm-project/releases/download/llvm-${env:LLVM_VERSION}-ispc-dev/${env:LLVM_TAR}
 7z.exe x -t7z ${env:LLVM_TAR}
 echo "${env:LLVM_HOME}\bin-${env:LLVM_VERSION}\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
 
