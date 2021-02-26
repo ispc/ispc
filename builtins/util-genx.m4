@@ -4279,6 +4279,13 @@ define void @__memset64(i8 * %dst, i8 %val, i64 %len) alwaysinline {
 }
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; assume dummy function
+
+define void @__do_assume_uniform(i1 %test) alwaysinline {
+  ret void
+}
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; assert
 
 declare <8 x i32> @llvm.genx.dword.atomic.add.v8i32.v8i1.v8i32(<8 x i1>, i32, <8 x i32>, <8 x i32>, <8 x i32>)

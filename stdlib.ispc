@@ -6809,9 +6809,7 @@ static unmasked inline int16 avg_down(int16 a, int16 b) {
 // Assume uniform/varying ops
 __declspec(safe)
 static inline void assume(uniform bool test) {
-    // To DO : Enable for genx.
-    if (__is_genx_target)
-        return;
+    // To DO : Enable for genx. Currently calls a dummy function.
     __do_assume_uniform(test);
     return;
 }
