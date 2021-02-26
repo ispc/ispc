@@ -3632,6 +3632,7 @@ void AssertStmt::EmitAssertCode(FunctionEmitContext *ctx, const Type *type) cons
     args.push_back(ctx->GetStringPtr(errorString));
     llvm::Value *exprValue = expr->GetValue(ctx);
     if (exprValue == NULL) {
+        free(errorString);
         AssertPos(pos, m->errorCount > 0);
         return;
     }
