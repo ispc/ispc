@@ -575,6 +575,11 @@ define <8 x double> @__ceil_varying_double(<8 x double>) nounwind readonly alway
 }
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; trunc float and double
+
+truncate()
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; masked store
 
 gen_masked_store(i8)

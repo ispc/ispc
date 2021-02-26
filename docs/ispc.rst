@@ -3661,6 +3661,9 @@ SSE or Intel® AVX, these functions all map to variants of the ``roundss`` and
     uniform float floor(uniform float x)
     float ceil(float x)
     uniform float ceil(uniform float x)
+    float trunc(float x)
+    uniform float trunc(uniform float x)
+
 
 ``rcp()`` computes an approximation to ``1/v``.  The amount of error is
 different on different architectures.

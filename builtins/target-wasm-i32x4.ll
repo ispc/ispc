@@ -295,6 +295,13 @@ define <4 x double> @__ceil_varying_double(<4 x double>) nounwind readonly alway
   unary1to4(double, @ceil)
 }
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; trunc float and double
+
+truncate()
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
 define float @__max_uniform_float(float, float) nounwind readnone alwaysinline {
   %cmp = fcmp ugt float %0, %1
   %r = select i1 %cmp, float %0, float %1

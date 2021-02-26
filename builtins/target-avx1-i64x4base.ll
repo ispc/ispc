@@ -141,6 +141,11 @@ define <4 x float> @__rsqrt_fast_varying_float(<4 x float> %v) nounwind readonly
 }
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; trunc() float and double
+
+truncate()
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; sqrt
 
 ;; sse intrinsic

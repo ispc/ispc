@@ -322,6 +322,11 @@ define <64 x double> @__ceil_varying_double(<64 x double> %v) nounwind readonly 
   ret <64 x double> %r
 }
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; trunc float and double
+
+truncate()
+
 ;; min/max
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; float min/max

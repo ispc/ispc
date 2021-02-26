@@ -1334,6 +1334,79 @@ define(`_forloop',
     `define(`$1', incr(indir(`$1')))$0($@)')')
 divert`'dnl
 
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; truncate()
+;; Implements uniform and varying trunc() for float and double types.
+;; This uses generic LLVM intrinsics.
+;;
+;; Takes no parameters
+
+define(`truncate', `
+declare float @llvm.genx.rndz.f32(float %val)
+define float @__trunc_uniform_float(float %val) {
+  %r = call float @llvm.genx.rndz.f32(float %val)
+  ret float %r
+}
+
+declare <WIDTH x float> @llvm.genx.rndz.v`'WIDTH`'f32(<WIDTH x float> %val)
+define <WIDTH x float> @__trunc_varying_float(<WIDTH x float> %val) {
+  %r = call <WIDTH x float> @llvm.genx.rndz.v`'WIDTH`'f32(<WIDTH x float> %val)
+  ret <WIDTH x float> %r
+}
+
+;; Currently, no intrinsic support exists for double. Hence emulating.
+;; This uses the same logic as libc trunc() implementation.
+define double @__trunc_uniform_double(double %val) nounwind readonly alwaysinline {
+  %double_to_int_bitcast = bitcast double %val to i64
+  %sign_and_exp = and i64 %double_to_int_bitcast, -4503599627370496
+  %mantissa = and i64 %double_to_int_bitcast, 4503599627370495
+  %exp.i.i = lshr i64 %double_to_int_bitcast, 52
+  %exp.i = and i64 %exp.i.i, 2047
+  %exp = sub i64 %exp.i, 1023  
+  %isZero = icmp sle i64 %exp, -1
+  %isInfNan = icmp eq i64 %exp.i, 2047
+
+  %trim_size = sub i64 52, %exp
+  %mantissa_shr = lshr i64 %mantissa, %trim_size
+  %mantissa_shl = shl i64 %mantissa_shr, %trim_size
+  %ret_non0_int = or i64 %sign_and_exp, %mantissa_shl
+
+  %sign = and i64 %double_to_int_bitcast, -9223372036854775808
+  %ret_0_int = or i64 %sign, 0
+
+  %ret_non_inf_nan = select i1 %isZero, i64 %ret_0_int, i64 %ret_non0_int
+  %ret_int = select i1 %isInfNan, i64 %double_to_int_bitcast, i64 %ret_non_inf_nan
+  %ret = bitcast i64 %ret_int to double
+  ret double %ret 
+}
+
+
+define <WIDTH x double> @__trunc_varying_double(<WIDTH x double> %val) {
+  %double_to_int_bitcast = bitcast <WIDTH x double> %val to <WIDTH x i64>
+   %sign_and_exp = and <WIDTH x i64> %double_to_int_bitcast, < forloop(i, 0, eval(WIDTH-2), `i64 -4503599627370496, ') i64 -4503599627370496 >
+  %mantissa = and <WIDTH x i64> %double_to_int_bitcast, < forloop(i, 0, eval(WIDTH-2), `i64 4503599627370495, ') i64 4503599627370495 >
+  %exp.i.i = lshr <WIDTH x i64> %double_to_int_bitcast, < forloop(i, 0, eval(WIDTH-2), `i64 52, ') i64 52 >
+  %exp.i = and <WIDTH x i64> %exp.i.i, < forloop(i, 0, eval(WIDTH-2), `i64 2047, ') i64 2047 >
+  %exp = sub <WIDTH x i64> %exp.i, < forloop(i, 0, eval(WIDTH-2), `i64 1023, ') i64 1023 >
+  %isZero = icmp sle <WIDTH x i64> %exp, < forloop(i, 0, eval(WIDTH-2), `i64 -1, ') i64 -1 >
+  %isInfNan = icmp eq <WIDTH x i64> %exp.i, < forloop(i, 0, eval(WIDTH-2), `i64 2047, ') i64 2047 >
+
+  %trim_size = sub <WIDTH x i64> < forloop(i, 0, eval(WIDTH-2), `i64 52, ') i64 52 >, %exp
+  %mantissa_shr = lshr <WIDTH x i64> %mantissa, %trim_size
+  %mantissa_shl = shl <WIDTH x i64> %mantissa_shr, %trim_size
+  %ret_non0_int = or <WIDTH x i64> %sign_and_exp, %mantissa_shl
+  
+  %sign = and <WIDTH x i64> %double_to_int_bitcast, < forloop(i, 0, eval(WIDTH-2), `i64 -9223372036854775808, ') i64 -9223372036854775808 >
+  %ret_0_int = and <WIDTH x i64> %sign, < forloop(i, 0, eval(WIDTH-2), `i64 0, ') i64 0 >
+
+  %ret_non_inf_nan = select <WIDTH x i1> %isZero, <WIDTH x i64> %ret_0_int, <WIDTH x i64> %ret_non0_int
+  %ret_int = select  <WIDTH x i1> %isInfNan, <WIDTH x i64> %double_to_int_bitcast, <WIDTH x i64> %ret_non_inf_nan
+  %ret = bitcast <WIDTH x i64> %ret_int to <WIDTH x double>
+  ret <WIDTH x double> %ret  
+}
+')
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; stdlib_core
 ;;

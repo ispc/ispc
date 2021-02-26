@@ -149,6 +149,11 @@ define <4 x double> @__ceil_varying_double(<4 x double>) nounwind readonly alway
 }
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; trunc float and double
+
+truncate()
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; min/max
 
 ; There is no blend instruction with SSE2, so we simulate it with bit
