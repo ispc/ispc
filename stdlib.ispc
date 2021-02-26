@@ -1946,6 +1946,26 @@ __declspec(safe,cost2)
 static inline uniform double ceil(uniform double x) {
     return __ceil_uniform_double(x);
 }
+///////////////////////////
+__declspec(safe,cost2)
+static inline float trunc(float x) {
+    return __trunc_varying_float(x);
+}
+
+__declspec(safe,cost2)
+static inline uniform float trunc(uniform float x) {
+    return __trunc_uniform_float(x);
+}
+
+__declspec(safe,cost2)
+static inline double trunc(double x) {
+    return __trunc_varying_double(x);
+}
+
+__declspec(safe,cost2)
+static inline uniform double trunc(uniform double x) {
+    return __trunc_uniform_double(x);
+}
 
 __declspec(safe)
 static inline float rcp(float v) {
