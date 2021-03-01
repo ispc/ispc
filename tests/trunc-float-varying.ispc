@@ -2,16 +2,16 @@
 export void f_f(uniform float RET[], uniform float aFOO[]) {
     float error = 0;
     RET[programIndex] = 0;
-    float deltaLow = 0.00001;
-    float deltaHigh = 0.99999;
+    float deltaLow = 0.2;
+    float deltaHigh = 0.8;
     float testVal;
     float resVal;
     float baseVal;
     float checkVal = 0;
 
-    //Case 1 : Covers range  -(programCount/2 -1) < val < +(programCount/2) including -1 < val < +1 with deltaLow.
+    // Case 1: Covers range  -(programCount/2 -1) < val < +(programCount/2) including -1 < val < +1 with deltaLow.
     // So, this covers +0.0, -0.0, -inf < val < 0 with decimal greater than 0.5, 0 < val < +inf with decimal less than 0.5
-    //For eg. for a 8 wide target, this will check values : -2.999990,-1.999990,-0.999990,0.000010,1.000010,2.000010,3.000010,4.000010
+    // For eg. for a 8 wide target, this will check values : -2.8, -1.8, -0.8, 0.2, 1.2, 2.2, 3.2, 4.2
     baseVal = aFOO[programIndex] - (programCount / 2);
     testVal = baseVal + deltaLow;
     resVal = trunc(testVal);
@@ -23,9 +23,9 @@ export void f_f(uniform float RET[], uniform float aFOO[]) {
         error++;
     }
 
-    //Case 2 : Covers range  -(programCount/2 -1) < val < +(programCount/2) including -1 < val < +1 with deltaHigh.
-     // So, this covers +0.0, -0.0, -inf < val < 0 with decimal less than 0.5, 0 < val < +inf with decimal greater than 0.5
-    //For eg. for a 8 wide target, this will check values : -2.000010,-1.000010,-0.000010,0.999990,1.999990,2.999990,3.999990,4.999990
+    // Case 2: Covers range  -(programCount/2 -1) < val < +(programCount/2) including -1 < val < +1 with deltaHigh.
+    // So, this covers +0.0, -0.0, -inf < val < 0 with decimal less than 0.5, 0 < val < +inf with decimal greater than 0.5
+    // For eg. for a 8 wide target, this will check values : -2.2, -1.2, -0.2, 0.2, 1.2, 2.2, 3.2, 4.2
     baseVal = aFOO[programIndex] - (programCount / 2);
     testVal = baseVal + deltaHigh;
     resVal = trunc(testVal);
@@ -37,7 +37,7 @@ export void f_f(uniform float RET[], uniform float aFOO[]) {
         error++;
     }
 
-    //Case 3 : Value +inf.
+    // Case 3: Value +inf.
     baseVal = aFOO[programIndex];
     testVal = baseVal / 0.0;
     resVal = trunc(testVal);
@@ -45,7 +45,7 @@ export void f_f(uniform float RET[], uniform float aFOO[]) {
         error++;
     }
 
-    //Case 4 : Value -inf.
+    // Case 4: Value -inf.
     baseVal = -aFOO[programIndex];
     testVal = baseVal / 0.0;
     resVal = trunc(testVal);
@@ -53,7 +53,7 @@ export void f_f(uniform float RET[], uniform float aFOO[]) {
         error++;
     }
 
-    //Case 5 : Value -nan.
+    // Case 5: Value -nan.
     baseVal = -aFOO[programIndex];
     testVal = sqrt(baseVal);
     resVal = trunc(testVal);
@@ -61,10 +61,24 @@ export void f_f(uniform float RET[], uniform float aFOO[]) {
         error++;
     }
 
-    //Case 6 : Value +nan.
+    // Case 6: Value +nan.
     testVal = testVal * -1;
     resVal = trunc(testVal);
     if (!isnan(resVal) || (signbits(testVal) != signbits(resVal))) {
+        error++;
+    }
+
+    // Case 7: Value +0.
+    testVal = +0.0;
+    resVal = trunc(testVal);
+    if (testVal != resVal) {
+        error++;
+    }
+
+    // Case 8: Value -0.
+    testVal = -0.0;
+    resVal = trunc(testVal);
+    if (testVal != resVal) {
         error++;
     }
 

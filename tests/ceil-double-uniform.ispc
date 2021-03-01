@@ -1,7 +1,7 @@
 // rule: skip on cpu=TGLLP
 
 export void f_f(uniform float RET[], uniform float aFOO[]) {
-    uniform double error = 0;
+    uniform float error = 0;
     RET[programIndex] = 0;
     uniform double deltaLow = 0.2d;
     uniform double deltaHigh = 0.8d;

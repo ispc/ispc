@@ -1,6 +1,6 @@
 
 export void f_f(uniform float RET[], uniform float aFOO[]) {
-    uniform double error = 0;
+    uniform float error = 0;
     RET[programIndex] = 0;
     uniform float deltaLow = 0.2;
     uniform float deltaHigh = 0.8;
