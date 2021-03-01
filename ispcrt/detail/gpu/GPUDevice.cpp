@@ -156,9 +156,7 @@ struct EventPool {
         // Create pool
         ze_event_pool_desc_t eventPoolDesc = {};
         eventPoolDesc.count = POOL_SIZE;
-        // TODO: shouldn't it be host-visible?
-        // ZE_EVENT_POOL_FLAG_HOST_VISIBLE
-        eventPoolDesc.flags = (ze_event_pool_flag_t)(ZE_EVENT_POOL_FLAG_KERNEL_TIMESTAMP);
+        eventPoolDesc.flags = (ze_event_pool_flag_t)(ZE_EVENT_POOL_FLAG_KERNEL_TIMESTAMP | ZE_EVENT_POOL_FLAG_HOST_VISIBLE);
         L0_SAFE_CALL(zeEventPoolCreate(m_context, &eventPoolDesc, 1, &m_device, &m_pool));
         if (!m_pool) {
             std::stringstream ss;

@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2020, Intel Corporation
+  Copyright (c) 2020-2021, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -178,7 +178,7 @@ void L0Create_EventPool(ze_device_handle_t hDevice, ze_context_handle_t hContext
     // Create event pool and enable time measurements
     ze_event_pool_desc_t eventPoolDesc = {};
     eventPoolDesc.count = size;
-    eventPoolDesc.flags = (ze_event_pool_flag_t)(ZE_EVENT_POOL_FLAG_KERNEL_TIMESTAMP);
+    eventPoolDesc.flags = (ze_event_pool_flag_t)(ZE_EVENT_POOL_FLAG_KERNEL_TIMESTAMP | ZE_EVENT_POOL_FLAG_HOST_VISIBLE);
     L0_SAFE_CALL(zeEventPoolCreate(hContext, &eventPoolDesc, 1, &hDevice, &hPool));
 }
 
