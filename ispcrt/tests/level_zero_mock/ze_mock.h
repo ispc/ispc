@@ -38,6 +38,15 @@ struct DeviceProperties {
     DeviceProperties(uint32_t vendorId, uint32_t deviceId) : vendorId(vendorId), deviceId(deviceId) {}
 };
 
+struct CallCounters {
+    static void inc(const std::string& fun);
+    static int  get(const std::string& fun);
+    static void resetAll();
+    static void resetOne(const std::string& fun);
+  private:
+    static std::unordered_map<std::string, int> counters;
+};
+
 class Config {
   public:
     static void setRetValue(const std::string &fun, ze_result_t result);

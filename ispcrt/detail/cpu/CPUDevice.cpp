@@ -168,6 +168,10 @@ struct TaskQueue : public ispcrt::base::TaskQueue {
         return future;
     }
 
+    void submit() override {
+        // no-op
+    }
+
     void sync() override {
         // no-op
     }

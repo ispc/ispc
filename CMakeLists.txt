@@ -118,6 +118,19 @@ else()
     endif()
 endif()
 
+# Get ispc version
+file(READ "${CMAKE_CURRENT_SOURCE_DIR}/src/ispc_version.h" ispc_ver)
+string(REGEX MATCH "ISPC_VERSION \"([0-9]*)\.([0-9]*)\.([0-9]*)([a-z]*)" _ ${ispc_ver})
+set(ISPC_VERSION_MAJOR ${CMAKE_MATCH_1})
+set(ISPC_VERSION_MINOR ${CMAKE_MATCH_2})
+set(ISPC_VERSION_PATCH ${CMAKE_MATCH_3})
+set(ISPC_VERSION_SUFFIX ${CMAKE_MATCH_4})
+if (${ISPC_VERSION_SUFFIX} MATCHES ".*dev")
+    set (REPO_TAG "main")
+else()
+    set (REPO_TAG "v${ISPC_VERSION_MAJOR}.${ISPC_VERSION_MINOR}.${ISPC_VERSION_PATCH}${ISPC_VERSION_SUFFIX}")
+endif()
+
 if (APPLE)
     # Use standard macOS SDK location if this is not specified.
     if (NOT ISPC_MACOS_SDK_PATH)
@@ -601,19 +614,6 @@ if (ISPC_PREPARE_PACKAGE)
     install (FILES "${PROJECT_SOURCE_DIR}/LICENSE.txt" DESTINATION .)
     install (FILES "${PROJECT_SOURCE_DIR}/third-party-programs.txt" DESTINATION .)
     install (FILES "${PROJECT_SOURCE_DIR}/docs/ReleaseNotes.txt" DESTINATION .)
-
-    # Get ispc version
-    file(READ "${CMAKE_CURRENT_SOURCE_DIR}/src/ispc_version.h" ispc_ver)
-    string(REGEX MATCH "ISPC_VERSION \"([0-9]*)\.([0-9]*)\.([0-9]*)([a-z]*)" _ ${ispc_ver})
-    set(ISPC_VERSION_MAJOR ${CMAKE_MATCH_1})
-    set(ISPC_VERSION_MINOR ${CMAKE_MATCH_2})
-    set(ISPC_VERSION_PATCH ${CMAKE_MATCH_3})
-    set(ISPC_VERSION_SUFFIX ${CMAKE_MATCH_4})
-    if (${ISPC_VERSION_SUFFIX} MATCHES ".*dev")
-        set (REPO_TAG "main")
-    else()
-        set (REPO_TAG "v${ISPC_VERSION_MAJOR}.${ISPC_VERSION_MINOR}.${ISPC_VERSION_PATCH}${ISPC_VERSION_SUFFIX}")
-    endif()
 
     # Clone corresponding version of documentation
     include(ExternalProject)

@@ -21,6 +21,7 @@ struct TaskQueue : public RefCounted {
 
     virtual base::Future *launch(Kernel &k, base::MemoryView *params, size_t dim0, size_t dim1, size_t dim2) = 0;
 
+    virtual void submit() = 0;
     virtual void sync() = 0;
 
     virtual void* taskQueueNativeHandle() const = 0;
