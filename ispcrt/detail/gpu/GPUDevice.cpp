@@ -471,9 +471,17 @@ struct TaskQueue : public ispcrt::base::TaskQueue {
         return future;
     }
 
-    void sync() override {
+    void submit() override {
+        if (m_submitted)
+            return;
         L0_SAFE_CALL(zeCommandListClose(m_cl));
         L0_SAFE_CALL(zeCommandQueueExecuteCommandLists(m_q, 1, &m_cl, nullptr));
+        m_submitted = true;
+    }
+
+    void sync() override {
+        if (!m_submitted)
+            submit();
         L0_SAFE_CALL(zeCommandQueueSynchronize(m_q, std::numeric_limits<uint64_t>::max()));
         L0_SAFE_CALL(zeCommandListReset(m_cl));
         // Update future objects corresponding to the events that have just completed
@@ -494,6 +502,7 @@ struct TaskQueue : public ispcrt::base::TaskQueue {
             m_ep.deleteEvent(e);
         }
         m_events.clear();
+        m_submitted = false;
     }
 
     void* taskQueueNativeHandle() const override {
@@ -503,6 +512,7 @@ struct TaskQueue : public ispcrt::base::TaskQueue {
   private:
     ze_command_queue_handle_t m_q{nullptr};
     ze_command_list_handle_t m_cl{nullptr};
+    bool  m_submitted{false};
     EventPool m_ep;
     std::vector<std::pair<Event *, Future *>> m_events;
 };

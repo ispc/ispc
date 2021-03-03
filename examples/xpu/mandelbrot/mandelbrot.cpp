@@ -132,6 +132,7 @@ static int run(unsigned int width, unsigned int height, unsigned int test_iterat
             reset_and_start_timer();
             queue.copyToDevice(p_dev);
             queue.barrier();
+            queue.submit();
             queue.sync();
             auto res = queue.launch(kernel, p_dev, width / p.tile_size, height / p.tile_size);
             queue.barrier();

@@ -13,6 +13,7 @@ namespace driver {
 
 #define MOCK_RET return Config::getRetValue(__FUNCTION__)
 #define MOCK_SHOULD_SUCCEED (Config::getRetValue(__FUNCTION__) == ZE_RESULT_SUCCESS)
+#define MOCK_CNT_CALL CallCounters::inc(__FUNCTION__)
 
 static unsigned MockHandleHandle = 1;
 
@@ -49,6 +50,7 @@ bool ValidDevice(ze_device_handle_t hDevice) {
 ze_result_t zeInit(ze_init_flags_t flags) { MOCK_RET; }
 
 ze_result_t zeDriverGet(uint32_t *pCount, ze_driver_handle_t *phDrivers) {
+    MOCK_CNT_CALL;
     if (*pCount == 0) {
         *pCount = 1;
     }
@@ -57,6 +59,7 @@ ze_result_t zeDriverGet(uint32_t *pCount, ze_driver_handle_t *phDrivers) {
 }
 
 ze_result_t zeDeviceGet(ze_driver_handle_t hDriver, uint32_t *pCount, ze_device_handle_t *phDevices) {
+    MOCK_CNT_CALL;
     *pCount = Config::getDeviceCount();
     if (phDevices) {
         for (int i = 0; i < *pCount; i++) {
@@ -67,6 +70,7 @@ ze_result_t zeDeviceGet(ze_driver_handle_t hDriver, uint32_t *pCount, ze_device_
 }
 
 ze_result_t zeDeviceGetProperties(ze_device_handle_t hDevice, ze_device_properties_t *pDeviceProperties) {
+    MOCK_CNT_CALL;
     if (!ValidDevice(hDevice) || pDeviceProperties == nullptr)
         return ZE_RESULT_ERROR_INVALID_NULL_HANDLE;
 
@@ -82,11 +86,13 @@ ze_result_t zeDeviceGetProperties(ze_device_handle_t hDevice, ze_device_properti
 }
 
 ze_result_t zeContextCreate(ze_driver_handle_t hDriver, const ze_context_desc_t *desc, ze_context_handle_t *phContext) {
+    MOCK_CNT_CALL;
     *phContext = ContextHandle.get();
     MOCK_RET;
 }
 
 ze_result_t zeContextDestroy(ze_context_handle_t hContext) {
+    MOCK_CNT_CALL;
     if (hContext != ContextHandle.get())
         return ZE_RESULT_ERROR_INVALID_NULL_HANDLE;
     MOCK_RET;
@@ -94,6 +100,7 @@ ze_result_t zeContextDestroy(ze_context_handle_t hContext) {
 
 ze_result_t zeCommandQueueCreate(ze_context_handle_t hContext, ze_device_handle_t hDevice,
                                  const ze_command_queue_desc_t *desc, ze_command_queue_handle_t *phCommandQueue) {
+    MOCK_CNT_CALL;
     if (!ExpectedDevice(hDevice) || hContext != ContextHandle.get() || desc == nullptr ||
         phCommandQueue == nullptr)
         return ZE_RESULT_ERROR_INVALID_NULL_HANDLE;
@@ -102,6 +109,7 @@ ze_result_t zeCommandQueueCreate(ze_context_handle_t hContext, ze_device_handle_
 }
 
 ze_result_t zeCommandQueueDestroy(ze_command_queue_handle_t hCommandQueue) {
+    MOCK_CNT_CALL;
     if (hCommandQueue != CmdQueueHandle.get())
         return ZE_RESULT_ERROR_INVALID_NULL_HANDLE;
     MOCK_RET;
@@ -109,12 +117,14 @@ ze_result_t zeCommandQueueDestroy(ze_command_queue_handle_t hCommandQueue) {
 
 ze_result_t zeCommandQueueExecuteCommandLists(ze_command_queue_handle_t hCommandQueue, uint32_t numCommandLists,
                                               ze_command_list_handle_t *phCommandLists, ze_fence_handle_t hFence) {
+    MOCK_CNT_CALL;
     if (hCommandQueue != CmdQueueHandle.get() || !Config::isCmdListClosed())
         return ZE_RESULT_ERROR_INVALID_NULL_HANDLE;
     MOCK_RET;
 }
 
 ze_result_t zeCommandQueueSynchronize(ze_command_queue_handle_t hCommandQueue, uint64_t timeout) {
+    MOCK_CNT_CALL;
     if (hCommandQueue != CmdQueueHandle.get() || !Config::isCmdListClosed())
         return ZE_RESULT_ERROR_INVALID_NULL_HANDLE;
     MOCK_RET;
@@ -122,6 +132,7 @@ ze_result_t zeCommandQueueSynchronize(ze_command_queue_handle_t hCommandQueue, u
 
 ze_result_t zeCommandListCreate(ze_context_handle_t hContext, ze_device_handle_t hDevice,
                                 const ze_command_list_desc_t *desc, ze_command_list_handle_t *phCommandList) {
+    MOCK_CNT_CALL;
     if (!ExpectedDevice(hDevice) || hContext != ContextHandle.get() || desc == nullptr || phCommandList == nullptr)
         return ZE_RESULT_ERROR_INVALID_NULL_HANDLE;
     *phCommandList = CmdListHandle.get();
@@ -129,12 +140,14 @@ ze_result_t zeCommandListCreate(ze_context_handle_t hContext, ze_device_handle_t
 }
 
 ze_result_t zeCommandListDestroy(ze_command_list_handle_t hCommandList) {
+    MOCK_CNT_CALL;
     if (hCommandList != CmdListHandle.get())
         return ZE_RESULT_ERROR_INVALID_NULL_HANDLE;
     MOCK_RET;
 }
 
 ze_result_t zeCommandListClose(ze_command_list_handle_t hCommandList) {
+    MOCK_CNT_CALL;
     if (hCommandList != CmdListHandle.get())
         return ZE_RESULT_ERROR_INVALID_NULL_HANDLE;
     Config::closeCmdList();
@@ -142,6 +155,7 @@ ze_result_t zeCommandListClose(ze_command_list_handle_t hCommandList) {
 }
 
 ze_result_t zeCommandListReset(ze_command_list_handle_t hCommandList) {
+    MOCK_CNT_CALL;
     if (hCommandList != CmdListHandle.get())
         return ZE_RESULT_ERROR_INVALID_NULL_HANDLE;
     Config::resetCmdList();
@@ -150,6 +164,7 @@ ze_result_t zeCommandListReset(ze_command_list_handle_t hCommandList) {
 
 ze_result_t zeCommandListAppendBarrier(ze_command_list_handle_t hCommandList, ze_event_handle_t hSignalEvent,
                                        uint32_t numWaitEvents, ze_event_handle_t *phWaitEvents) {
+    MOCK_CNT_CALL;
     if (hCommandList != CmdListHandle.get() || Config::isCmdListClosed())
         return ZE_RESULT_ERROR_INVALID_NULL_HANDLE;
     if (MOCK_SHOULD_SUCCEED)
@@ -160,6 +175,7 @@ ze_result_t zeCommandListAppendBarrier(ze_command_list_handle_t hCommandList, ze
 ze_result_t zeCommandListAppendMemoryCopy(ze_command_list_handle_t hCommandList, void *dstptr, const void *srcptr,
                                           size_t size, ze_event_handle_t hSignalEvent, uint32_t numWaitEvents,
                                           ze_event_handle_t *phWaitEvents) {
+    MOCK_CNT_CALL;
     if (hCommandList != CmdListHandle.get() || Config::isCmdListClosed())
         return ZE_RESULT_ERROR_INVALID_NULL_HANDLE;
     if (MOCK_SHOULD_SUCCEED)
@@ -169,6 +185,7 @@ ze_result_t zeCommandListAppendMemoryCopy(ze_command_list_handle_t hCommandList,
 
 ze_result_t zeEventPoolCreate(ze_context_handle_t hContext, const ze_event_pool_desc_t *desc, uint32_t numDevices,
                               ze_device_handle_t *phDevices, ze_event_pool_handle_t *phEventPool) {
+    MOCK_CNT_CALL;
     if (hContext != ContextHandle.get() || numDevices == 0 || !phDevices || !phEventPool)
         return ZE_RESULT_ERROR_INVALID_NULL_HANDLE;
     *phEventPool = EventPoolHandle.get();
@@ -176,24 +193,33 @@ ze_result_t zeEventPoolCreate(ze_context_handle_t hContext, const ze_event_pool_
 }
 
 ze_result_t zeEventPoolDestroy(ze_event_pool_handle_t hEventPool) {
+    MOCK_CNT_CALL;
     if (hEventPool != EventPoolHandle.get())
         return ZE_RESULT_ERROR_INVALID_NULL_HANDLE;
     MOCK_RET;
 }
 
 ze_result_t zeEventCreate(ze_event_pool_handle_t hEventPool, const ze_event_desc_t *desc, ze_event_handle_t *phEvent) {
+    MOCK_CNT_CALL;
     if (hEventPool != EventPoolHandle.get() || !desc || !phEvent)
         return ZE_RESULT_ERROR_INVALID_NULL_HANDLE;
     *phEvent = LaunchEventHandle.get();
     MOCK_RET;
 }
 
-ze_result_t zeEventDestroy(ze_event_handle_t hEvent) { MOCK_RET; }
+ze_result_t zeEventDestroy(ze_event_handle_t hEvent) {
+    MOCK_CNT_CALL;
+    MOCK_RET;
+}
 
-ze_result_t zeEventQueryKernelTimestamp(ze_event_handle_t hEvent, ze_kernel_timestamp_result_t *dstptr) { MOCK_RET; }
+ze_result_t zeEventQueryKernelTimestamp(ze_event_handle_t hEvent, ze_kernel_timestamp_result_t *dstptr) {
+    MOCK_CNT_CALL;
+    MOCK_RET;
+}
 
 ze_result_t zeMemAllocDevice(ze_context_handle_t hContext, const ze_device_mem_alloc_desc_t *device_desc, size_t size,
                              size_t alignment, ze_device_handle_t hDevice, void **pptr) {
+    MOCK_CNT_CALL;
     if (hContext != ContextHandle.get())
         return ZE_RESULT_ERROR_INVALID_NULL_HANDLE;
     if (MOCK_SHOULD_SUCCEED)
@@ -202,6 +228,7 @@ ze_result_t zeMemAllocDevice(ze_context_handle_t hContext, const ze_device_mem_a
 }
 
 ze_result_t zeMemFree(ze_context_handle_t hContext, void *ptr) {
+    MOCK_CNT_CALL;
     if (hContext != ContextHandle.get() || !ptr)
         return ZE_RESULT_ERROR_INVALID_NULL_HANDLE;
     delete[](uint8_t *) ptr;
@@ -210,6 +237,7 @@ ze_result_t zeMemFree(ze_context_handle_t hContext, void *ptr) {
 
 ze_result_t zeModuleCreate(ze_context_handle_t hContext, ze_device_handle_t hDevice, const ze_module_desc_t *desc,
                            ze_module_handle_t *phModule, ze_module_build_log_handle_t *phBuildLog) {
+    MOCK_CNT_CALL;
     if (hContext != ContextHandle.get() || !ExpectedDevice(hDevice))
         return ZE_RESULT_ERROR_INVALID_NULL_HANDLE;
 
@@ -219,6 +247,7 @@ ze_result_t zeModuleCreate(ze_context_handle_t hContext, ze_device_handle_t hDev
 }
 
 ze_result_t zeModuleDestroy(ze_module_handle_t hModule) {
+    MOCK_CNT_CALL;
     if (hModule != ModuleHandle.get())
         return ZE_RESULT_ERROR_INVALID_NULL_HANDLE;
 
@@ -226,6 +255,7 @@ ze_result_t zeModuleDestroy(ze_module_handle_t hModule) {
 }
 
 ze_result_t zeKernelCreate(ze_module_handle_t hModule, const ze_kernel_desc_t *desc, ze_kernel_handle_t *phKernel) {
+    MOCK_CNT_CALL;
     if (hModule != ModuleHandle.get())
         return ZE_RESULT_ERROR_INVALID_NULL_HANDLE;
 
@@ -235,6 +265,7 @@ ze_result_t zeKernelCreate(ze_module_handle_t hModule, const ze_kernel_desc_t *d
 }
 
 ze_result_t zeKernelDestroy(ze_kernel_handle_t hKernel) {
+    MOCK_CNT_CALL;
     if (hKernel != KernelHandle.get())
         return ZE_RESULT_ERROR_INVALID_NULL_HANDLE;
 
@@ -243,16 +274,19 @@ ze_result_t zeKernelDestroy(ze_kernel_handle_t hKernel) {
 
 ze_result_t zeKernelSetArgumentValue(ze_kernel_handle_t hKernel, uint32_t argIndex, size_t argSize,
                                      const void *pArgValue) {
+    MOCK_CNT_CALL;
     MOCK_RET;
 }
 
 ze_result_t zeKernelSetIndirectAccess(ze_kernel_handle_t hKernel, ze_kernel_indirect_access_flags_t) {
+    MOCK_CNT_CALL;
     MOCK_RET;
 }
 
 ze_result_t zeCommandListAppendLaunchKernel(ze_command_list_handle_t hCommandList, ze_kernel_handle_t hKernel,
                                             const ze_group_count_t *pLaunchFuncArgs, ze_event_handle_t hSignalEvent,
                                             uint32_t numWaitEvents, ze_event_handle_t *phWaitEvents) {
+    MOCK_CNT_CALL;
     if (hCommandList != CmdListHandle.get() || hKernel != KernelHandle.get() || !pLaunchFuncArgs)
         return ZE_RESULT_ERROR_INVALID_NULL_HANDLE;
     if (MOCK_SHOULD_SUCCEED)

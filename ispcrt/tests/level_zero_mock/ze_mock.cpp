@@ -9,6 +9,27 @@ namespace ispcrt {
 namespace testing {
 namespace mock {
 
+// Counters
+
+std::unordered_map<std::string, int> CallCounters::counters;
+
+void CallCounters::inc(const std::string& fun) {
+    counters[fun]++;
+}
+
+int  CallCounters::get(const std::string& fun) {
+    return counters[fun];
+}
+void CallCounters::resetAll() {
+    counters.clear();
+}
+
+void CallCounters::resetOne(const std::string& fun) {
+    counters[fun] = 0;
+}
+
+// Config
+
 std::unordered_map<std::string, ze_result_t> Config::resultsMap;
 std::vector<CmdListElem> Config::cmdList;
 bool Config::cmdListOpened = true;
