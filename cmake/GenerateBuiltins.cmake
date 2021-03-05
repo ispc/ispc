@@ -49,6 +49,13 @@ function(target_ll_to_cpp llFileName bit os_name resultFileName)
     set(inputFilePath builtins/${llFileName}.ll)
     set(includePath builtins)
     string(TOUPPER ${os_name} os_name_macro)
+
+    # Neon targets constrains: neon-i8x16 and neon-i16x8 are implemented only for 32 bit ARM.
+    if ("${bit}" STREQUAL "64" AND
+        (${llFileName} STREQUAL "target-neon-i8x16" OR ${llFileName} STREQUAL "target-neon-i16x8"))
+        return()
+    endif()
+
     set(output ${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_CFG_INTDIR}/builtins-${llFileName}-${bit}bit-${os_name}.cpp)
     add_custom_command(
         OUTPUT ${output}
