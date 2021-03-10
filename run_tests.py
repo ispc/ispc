@@ -201,6 +201,11 @@ def prerun_debug_check_genx():
 def postrun_debug_check_genx(test_name, exe_wd):
     objdumpProc = subprocess.run('/usr/bin/objdump -h *_dwarf.elf', shell=True, cwd=exe_wd, universal_newlines=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
     readelfProc = subprocess.run('/usr/bin/readelf --debug-dump *_dwarf.elf', shell=True, cwd=exe_wd, universal_newlines=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+
+    # Cleanup files used to check debug information
+    # since this directory may be reused by other tests.
+    subprocess.run('rm -rf *_dwarf.elf', shell=True)
+
     if objdumpProc.returncode != 0:
         print("[DEBUG CHECK] " + test_name + " - objdump failed - return code: " + str(objdumpProc.returncode))
         return False
@@ -217,7 +222,6 @@ def postrun_debug_check_genx(test_name, exe_wd):
             if line.find('Warning:') != -1 or line.find('Error:') != -1:
                 print(line)
         return False
-    subprocess.run('rm -rf *_dwarf.elf', shell=True)
     return True
 
 
