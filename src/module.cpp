@@ -96,6 +96,11 @@
 #include <llvm/Transforms/Utils/ValueMapper.h>
 
 #ifdef ISPC_GENX_ENABLED
+#include <llvm/GenXIntrinsics/GenXIntrinsics.h>
+#endif
+#include <llvm/Target/TargetIntrinsicInfo.h>
+
+#ifdef ISPC_GENX_ENABLED
 #include <LLVMSPIRVLib/LLVMSPIRVLib.h>
 #include <fstream>
 #if defined(_WIN64)
@@ -297,6 +302,69 @@ int Module::CompileFile() {
 
     return errorCount;
 }
+
+#ifdef ISPC_GENX_ENABLED
+Symbol *Module::AddLLVMIntrinsicDecl(const std::string &name, ExprList *args, SourcePos pos) {
+    if (g->enableIntrinsicCall == false) {
+        Error(SourcePos(), "Calling LLVM intrinsics from ISPC source code is an experimental feature,"
+                           " which can be enabled by passing \"--enable-intrinsic-call\" switch to the compiler.\n");
+        return nullptr;
+    }
+    llvm::GenXIntrinsic::ID ID = llvm::GenXIntrinsic::lookupGenXIntrinsicID(name);
+    if (ID == llvm::GenXIntrinsic::not_any_intrinsic) {
+        Error(pos, "LLVM intrinsic \"%s\" not supported.", name.c_str());
+        return nullptr;
+    }
+    std::vector<llvm::Type *> exprType;
+    int nInits = args->exprs.size();
+    if (llvm::GenXIntrinsic::isOverloadedRet(ID) || llvm::GenXIntrinsic::isOverloadedArg(ID, nInits)) {
+        for (int i = 0; i < nInits; ++i) {
+            exprType.push_back((args->exprs[i])->GetType()->LLVMType(g->ctx));
+        }
+    }
+    llvm::ArrayRef<llvm::Type *> argArr(exprType);
+    llvm::Function *funcDecl = llvm::GenXIntrinsic::getGenXDeclaration(module, ID, argArr);
+    Symbol *funcSym = CreateISPCSymbolForLLVMIntrinsic(funcDecl, symbolTable);
+    return funcSym;
+}
+
+#else
+Symbol *Module::AddLLVMIntrinsicDecl(const std::string &name, ExprList *args, SourcePos pos) {
+    if (g->enableIntrinsicCall == false) {
+        Error(SourcePos(), "Calling LLVM intrinsics from ISPC source code is an experimental feature,"
+                           " which can be enabled by passing \"--enable-intrinsic-call\" switch to the compiler.\n");
+        return nullptr;
+    }
+    llvm::TargetMachine *targetMachine = g->target->GetTargetMachine();
+    const llvm::TargetIntrinsicInfo *TII = targetMachine->getIntrinsicInfo();
+    llvm::Intrinsic::ID ID = llvm::Function::lookupIntrinsicID(llvm::StringRef(name));
+    if (ID == llvm::Intrinsic::not_intrinsic && TII) {
+        ID = static_cast<llvm::Intrinsic::ID>(TII->lookupName(llvm::StringRef(name)));
+    }
+
+    if (ID == llvm::Intrinsic::not_intrinsic) {
+        Error(pos, "LLVM intrinsic \"%s\" not supported.", name.c_str());
+        return nullptr;
+    }
+
+    std::vector<llvm::Type *> exprType;
+    if (llvm::Intrinsic::isOverloaded(ID)) {
+        int nInits = args->exprs.size();
+        for (int i = 0; i < nInits; ++i) {
+            exprType.push_back((args->exprs[i])->GetType()->LLVMType(g->ctx));
+        }
+    }
+    llvm::ArrayRef<llvm::Type *> argArr(exprType);
+    llvm::Function *funcDecl = llvm::Intrinsic::getDeclaration(module, ID, argArr);
+    llvm::StringRef funcName = funcDecl->getName();
+
+    if (g->target->checkIntrinsticSupport(funcName) == false) {
+        Error(pos, "LLVM intrinsic \"%s\" not supported on this target.", name.c_str());
+    }
+    Symbol *funcSym = CreateISPCSymbolForLLVMIntrinsic(funcDecl, symbolTable);
+    return funcSym;
+}
+#endif
 
 void Module::AddTypeDef(const std::string &name, const Type *type, SourcePos pos) {
     // Typedefs are easy; just add the mapping between the given name and
