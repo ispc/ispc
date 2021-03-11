@@ -1,4 +1,4 @@
-;;  Copyright (c) 2019, Intel Corporation
+;;  Copyright (c) 2019-2021, Intel Corporation
 ;;  All rights reserved.
 ;;
 ;;  Redistribution and use in source and binary forms, with or without
@@ -795,7 +795,6 @@ genx_masked_store_blend(double)
 genx_masked_store_blend(i64)
 
 define(`genx_masked_store', `
-declare void @llvm.genx.svm.block.st.i64.GEN_SUFFIX($1)(i64, <WIDTH x $1>)
 define void @__masked_store_$1(<WIDTH x $1>* nocapture, <WIDTH x $1>, <WIDTH x MASK> %mask) nounwind alwaysinline {
   %ptr = bitcast <WIDTH x $1>* %0 to i8*
   %broadcast_init = insertelement <WIDTH x i32> undef, i32 SIZEOF($1), i32 0
@@ -839,24 +838,24 @@ genx_masked_store(double)
 genx_masked_store(i64)
 
 define(`genx_masked_load', `
-declare <WIDTH x $1> @llvm.genx.svm.block.ld.GEN_SUFFIX($1).i64(i64)
-declare <WIDTH_X2 x $1> @llvm.genx.svm.block.ld.GEN_SUFFIXN($1, WIDTH_X2).i64(i64)
+declare <WIDTH x $1> @llvm.genx.svm.block.ld.unaligned.GEN_SUFFIX($1).i64(i64)
+declare <WIDTH_X2 x $1> @llvm.genx.svm.block.ld.unaligned.GEN_SUFFIXN($1, WIDTH_X2).i64(i64)
 define <WIDTH x $1> @__masked_load_$1(i8 *, <WIDTH x MASK> %mask) nounwind alwaysinline {
   %bitptr = bitcast i8* %0 to i64*
   %ptr = ptrtoint i64* %bitptr to i64
-  ;; According to genx.svm.block.ld specification the data to load must have
+  ;; According to genx.svm.block.ld.unaligned specification the data to load must have
   ;; a size that is a power of two from 16 to 128.
   ;; Here we process a special case when the data to read are less then 16 bytes
   ;; (which can happen for int8 and simd width 8).
   ifelse($1,i8, `
     ifelse(WIDTH,8, `
-      %res_tmp = call <16 x $1> @llvm.genx.svm.block.ld.GEN_SUFFIXN($1, 16).i64(i64 %ptr)
+      %res_tmp = call <16 x $1> @llvm.genx.svm.block.ld.unaligned.GEN_SUFFIXN($1, 16).i64(i64 %ptr)
       %res = shufflevector <16 x $1> %res_tmp, <16 x $1> undef, LINEAR_VECTOR(i32)
     ',`
-    %res = call <WIDTH x $1> @llvm.genx.svm.block.ld.GEN_SUFFIX($1).i64(i64 %ptr)
+    %res = call <WIDTH x $1> @llvm.genx.svm.block.ld.unaligned.GEN_SUFFIX($1).i64(i64 %ptr)
     ')
   ',`
-    %res = call <WIDTH x $1> @llvm.genx.svm.block.ld.GEN_SUFFIX($1).i64(i64 %ptr)
+    %res = call <WIDTH x $1> @llvm.genx.svm.block.ld.unaligned.GEN_SUFFIX($1).i64(i64 %ptr)
   ')
   %res_masked = select <WIDTH x MASK> %mask, <WIDTH x $1> %res, <WIDTH x $1> undef
   ret <WIDTH x $1> %res_masked

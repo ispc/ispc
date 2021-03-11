@@ -2948,7 +2948,7 @@ static llvm::CallInst *lGenXLoadInst(llvm::Value *ptr, llvm::Type *retType, llvm
 
     llvm::Value *svm_ld_ptrtoint = new llvm::PtrToIntInst(ptr, LLVMTypes::Int64Type, "svm_ld_ptrtoint", inst);
 
-    auto Fn = llvm::GenXIntrinsic::getGenXDeclaration(m->module, llvm::GenXIntrinsic::genx_svm_block_ld,
+    auto Fn = llvm::GenXIntrinsic::getGenXDeclaration(m->module, llvm::GenXIntrinsic::genx_svm_block_ld_unaligned,
                                                       {retType, svm_ld_ptrtoint->getType()});
 
     return llvm::CallInst::Create(Fn, svm_ld_ptrtoint, inst->getName());
@@ -6768,7 +6768,7 @@ restart:
                     goto restart;
                 }
             }
-        } else if (llvm::GenXIntrinsic::getGenXIntrinsicID(inst) == llvm::GenXIntrinsic::genx_svm_block_ld) {
+        } else if (llvm::GenXIntrinsic::getGenXIntrinsicID(inst) == llvm::GenXIntrinsic::genx_svm_block_ld_unaligned) {
             llvm::Instruction *load_inst = processSVMVectorLoad(inst);
             if (load_inst != NULL) {
                 applyReplace(load_inst, inst);
