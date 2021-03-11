@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2019-2020, Intel Corporation
+  Copyright (c) 2019-2021, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -185,7 +185,7 @@ static void L0InitContext(ze_device_handle_t &hDevice, ze_module_handle_t &hModu
     is.read((char *)codeBin, codeSize);
     is.close();
 
-    std::string igcOptions = "-vc-codegen -no-optimize";
+    std::string igcOptions = "-vc-codegen -no-optimize -Xfinalizer '-presched'";
     const char *userIgcOptionsEnv = getenv("ISPCRT_IGC_OPTIONS");
     if (userIgcOptionsEnv) {
         std::string userIgcOptions(userIgcOptionsEnv);

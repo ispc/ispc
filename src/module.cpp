@@ -1232,7 +1232,7 @@ bool Module::writeZEBin(llvm::Module *module, const char *outFileName) {
         return false;
     }
 
-    std::string options{"-vc-codegen -no-optimize"};
+    std::string options{"-vc-codegen -no-optimize -Xfinalizer '-presched'"};
     // Add debug option to VC backend of "-g" is set to ISPC
     if (g->generateDebuggingSymbols) {
         options.append(" -g");
