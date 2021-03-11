@@ -54,3 +54,11 @@
 void DefineStdlib(SymbolTable *symbolTable, llvm::LLVMContext *ctx, llvm::Module *module, bool includeStdlib);
 
 void AddBitcodeToModule(const BitcodeLib *lib, llvm::Module *module, SymbolTable *symbolTable = NULL);
+
+/** Create ISPC symbol for LLVM intrinsics and add it to the given module.
+
+    @param func            llvm::Function for the intrinsic to be added
+    @param symbolTable     SymbolTable in which to add symbol definitions
+    @return                Symbol created for the LLVM::Function
+ */
+Symbol *CreateISPCSymbolForLLVMIntrinsic(llvm::Function *func, SymbolTable *symbolTable);
