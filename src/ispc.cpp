@@ -300,6 +300,46 @@ typedef enum {
     sizeofCPUtype
 } CPUtype;
 
+/** This map is used to verify features available for supported CPUs
+    and is used whitelist target dependent intrisics.
+    The following LLVM files were used as reference :
+    CPU Features : <llvm>/lib/Support/X86TargetParser.cpp
+    X86 Intrinsics : <llvm>/include/llvm/IR/IntrinsicsX86.td */
+std::map<CPUtype, std::set<std::string>> CPUFeatures = {
+    {CPU_x86_64, {"sse", "sse2", "mmx"}},
+    {CPU_Bonnell, {"sse", "sse2", "mmx", "ssse3"}},
+    {CPU_Core2, {"sse", "sse2", "mmx", "ssse3"}},
+    {CPU_Penryn, {"sse", "sse2", "mmx", "ssse3", "sse41"}},
+    {CPU_Nehalem, {"sse", "sse2", "mmx", "ssse3", "sse41", "sse42"}},
+    {CPU_PS4, {}},
+    {CPU_SandyBridge, {"sse", "sse2", "mmx", "ssse3", "sse41", "sse42", "avx"}},
+    {CPU_IvyBridge, {"sse", "sse2", "mmx", "ssse3", "sse41", "sse42", "avx"}},
+    {CPU_Haswell, {"sse", "sse2", "mmx", "ssse3", "sse41", "sse42", "avx", "avx2"}},
+    {CPU_Broadwell, {"sse", "sse2", "mmx", "ssse3", "sse41", "sse42", "avx", "avx2"}},
+    {CPU_KNL, {"sse", "sse2", "mmx", "ssse3", "sse41", "sse42", "avx", "avx2", "avx512"}},
+    {CPU_SKX, {"sse", "sse2", "mmx", "ssse3", "sse41", "sse42", "avx", "avx2", "avx512"}},
+    {CPU_ICL, {"sse", "sse2", "mmx", "ssse3", "sse41", "sse42", "avx", "avx2", "avx512"}},
+    {CPU_Silvermont, {"sse", "sse2", "mmx", "ssse3", "sse41", "sse42"}},
+    {CPU_ICX, {"sse", "sse2", "mmx", "ssse3", "sse41", "sse42", "avx", "avx2", "avx512"}},
+    {CPU_TGL, {"sse", "sse2", "mmx", "ssse3", "sse41", "sse42", "avx", "avx2", "avx512"}},
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_12_0
+    {CPU_ADL, {"sse", "sse2", "mmx", "ssse3", "sse41", "sse42", "avx", "avx2"}},
+    {CPU_SPR, {"sse", "sse2", "mmx", "ssse3", "sse41", "sse42", "avx", "avx2", "avx512"}},
+#endif
+// TO-DO : Add features for remaining CPUs if valid.
+#ifdef ISPC_ARM_ENABLED
+    {CPU_CortexA9, {}},
+    {CPU_CortexA15, {}},
+    {CPU_CortexA35, {}},
+    {CPU_CortexA53, {}},
+    {CPU_CortexA57, {}},
+#endif
+#ifdef ISPC_GENX_ENABLED
+    {CPU_GENX, {}},
+    {CPU_GENX_TGLLP, {}}
+#endif
+};
+
 class AllCPUs {
   private:
     std::vector<std::vector<std::string>> names;
@@ -1236,6 +1276,43 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, bool pic, boo
     return;
 }
 
+bool Target::checkIntrinsticSupport(llvm::StringRef name) {
+    if (name.consume_front("llvm.") == false) {
+        return false;
+    }
+    // x86 specific intrinsics are verified using 'CPUFeatures'.
+    // TO-DO : Add relevant information tp 'CPUFeatures' for non x86 targets.
+    if (name.consume_front("x86.") == true) {
+        if (!ISPCTargetIsX86(m_ispc_target)) {
+            return false;
+        }
+        AllCPUs a;
+        std::string featureName = name.substr(0, name.find('.')).str();
+        if (CPUFeatures[a.GetTypeFromName(this->getCPU())].count(featureName) == 0) {
+            return false;
+        }
+    } else if (name.consume_front("arm.") == true) {
+        if (m_arch != Arch::arm) {
+            return false;
+        }
+        if (name.consume_front("neon.") != true) {
+            return false;
+        }
+    } else if (name.consume_front("aarch64.") == true) {
+        if (m_arch != Arch::aarch64) {
+            return false;
+        }
+        if (name.consume_front("neon.") != true) {
+            return false;
+        }
+    } else if (name.consume_front("wasm.") == true) {
+        // Add Condition in future if relevant.
+        // For now, returning 'true'.
+        return false;
+    }
+    return true;
+}
+
 std::string Target::SupportedCPUs() {
     AllCPUs a;
     return a.HumanReadableListOfNames();
@@ -1657,6 +1734,7 @@ Globals::Globals() {
     generateDebuggingSymbols = false;
     generateDWARFVersion = 3;
     enableFuzzTest = false;
+    enableIntrinsicCall = false;
     fuzzTestSeed = -1;
     mangleFunctionsWithTarget = false;
     isMultiTargetCompilation = false;
