@@ -14,18 +14,18 @@ struct vec3f {
     float z;
 };
 
-// CHECK_GENX_X16: call <16 x float> @llvm.genx.svm.block.ld.v16f32.i64
+// CHECK_GENX_X16: call <16 x float> @llvm.genx.svm.block.ld.unaligned.v16f32.i64
 // CHECK_GENX_X16: call void @llvm.genx.svm.block.st.i64.v16f32
-// CHECK_GENX_X8: call <8 x float> @llvm.genx.svm.block.ld.v8f32.i64
+// CHECK_GENX_X8: call <8 x float> @llvm.genx.svm.block.ld.unaligned.v8f32.i64
 // CHECK_GENX_X8: call void @llvm.genx.svm.block.st.i64.v8f32
 export void checkAddrSpace1(void *uniform _in, uniform float * uniform _out) {
   const varying vec3f *uniform in_test = (const varying vec3f *uniform) _in;
   _out[programIndex] = in_test->x;
 }
 
-// CHECK_GENX_X16: call <16 x float> @llvm.genx.svm.block.ld.v16f32.i64
+// CHECK_GENX_X16: call <16 x float> @llvm.genx.svm.block.ld.unaligned.v16f32.i64
 // CHECK_GENX_X16: call void @llvm.genx.svm.block.st.i64.v16f32
-// CHECK_GENX_X8: call <8 x float> @llvm.genx.svm.block.ld.v8f32.i64
+// CHECK_GENX_X8: call <8 x float> @llvm.genx.svm.block.ld.unaligned.v8f32.i64
 // CHECK_GENX_X8: call void @llvm.genx.svm.block.st.i64.v8f32
 export void checkAddrSpace2(void *uniform _out, uniform float * uniform _in) {
   varying vec3f *uniform out_test = (varying vec3f *uniform) _out;
