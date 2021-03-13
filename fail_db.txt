@@ -10,14 +10,12 @@
 ./tests/pdivus-vi32.ispc runfail  genx64        genx-x8 TGLLP   Linux LLVM 11.1 clang++11.1  spv *
 ./tests/soa-6.ispc runfail  genx64        genx-x8 TGLLP   Linux LLVM 11.1 clang++11.1  spv *
 ./tests/soa-7.ispc runfail  genx64        genx-x8 TGLLP   Linux LLVM 11.1 clang++11.1  spv *
-./tests/print_bool_simd.ispc runfail  genx64        genx-x8 unspec   Linux LLVM 11.1 clang++11.1  spv *
 ./tests/soa-6.ispc runfail  genx64        genx-x8 unspec   Linux LLVM 11.1 clang++11.1  spv *
 ./tests/soa-7.ispc runfail  genx64        genx-x8 unspec   Linux LLVM 11.1 clang++11.1  spv *
 ./tests/masked-struct-scatter-varying.ispc runfail  genx64       genx-x16 TGLLP   Linux LLVM 11.1 clang++11.1  spv *
 ./tests/pdivus-i32.ispc runfail  genx64       genx-x16 TGLLP   Linux LLVM 11.1 clang++11.1  spv *
 ./tests/pdivus-vi32.ispc runfail  genx64       genx-x16 TGLLP   Linux LLVM 11.1 clang++11.1  spv *
 ./tests/masked-struct-scatter-varying.ispc runfail  genx64       genx-x16 unspec   Linux LLVM 11.1 clang++11.1  spv *
-./tests/print_bool_simd.ispc runfail  genx64       genx-x16 unspec   Linux LLVM 11.1 clang++11.1  spv *
 .\tests\1546.ispc runfail  genx64        genx-x8 unspec Windows LLVM 11.1         cl  spv *
 .\tests\acos.ispc runfail  genx64        genx-x8 unspec Windows LLVM 11.1         cl  spv *
 .\tests\array-gather-multi-unif.ispc runfail  genx64        genx-x8 unspec Windows LLVM 11.1         cl  spv *
