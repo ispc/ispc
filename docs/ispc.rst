@@ -185,6 +185,8 @@ Contents:
     * `Prefetches`_
     * `System Information`_
 
+  + `LLVM Intrinsic functions`_
+
 * `Interoperability with the Application`_
 
   + `Interoperability Overview`_
@@ -4986,6 +4988,19 @@ the system:
 
 This value can be useful for adapting the granularity of parallel task
 decomposition depending on the number of processors in the system.
+
+
+LLVM Intrinsic functions
+---------------------------
+
+``ispc`` has an experimental feature to call LLVM intrinsics directly from
+ISPC source code. This feature can be enabled at compile time using
+``--enable-intrinsic-call``. The syntax is similar to a normal ISPC function
+call. For example,
+
+::
+
+    transpose = @llvm.matrix.transpose.v8f32.i32.i32(matrix, row, column);
 
 
 Interoperability with the Application

@@ -358,8 +358,8 @@ Symbol *Module::AddLLVMIntrinsicDecl(const std::string &name, ExprList *args, So
     llvm::Function *funcDecl = llvm::Intrinsic::getDeclaration(module, ID, argArr);
     llvm::StringRef funcName = funcDecl->getName();
 
-    if (g->target->checkIntrinsticSupport(funcName) == false) {
-        Error(pos, "LLVM intrinsic \"%s\" not supported on this target.", name.c_str());
+    if (g->target->checkIntrinsticSupport(funcName, pos) == false) {
+        return nullptr;
     }
     Symbol *funcSym = CreateISPCSymbolForLLVMIntrinsic(funcDecl, symbolTable);
     return funcSym;

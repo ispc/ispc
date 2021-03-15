@@ -7,21 +7,18 @@
     RET[programIndex] = 0;
     float matrix = aFOO[programIndex];
     uniform float t_matriz[programCount];
-    uniform int row = 0;
-    uniform int column = 0;
-    float transpose = aFOO[programIndex];
 #if TARGET_WIDTH == 4
-    row = 2;
-    column = 2;
-    transpose = @llvm.matrix.transpose.v8f32.i32.i32(matrix, 2, 2);
+    const uniform int row = 2;
+    const uniform int column = 2;
+    transpose = @llvm.matrix.transpose.v8f32.i32.i32(matrix, row, column);
 #elif TARGET_WIDTH == 8
-    row = 2;
-    column = 4;
-    transpose = @llvm.matrix.transpose.v8f32.i32.i32(matrix, 2, 4);
+    const uniform int row = 2;
+    const uniform int column = 4;
+    float transpose = @llvm.matrix.transpose.v8f32.i32.i32(matrix, row, column);
 #elif TARGET_WIDTH == 16
-    row = 4;
-    column = 4;
-    transpose = @llvm.matrix.transpose.v8f32.i32.i32(matrix, 4, 4);
+    const uniform int row = 4;
+    const uniform int column = 4;
+    float transpose = @llvm.matrix.transpose.v8f32.i32.i32(matrix, row, column);
 #endif
     t_matriz[programIndex] = transpose;
 

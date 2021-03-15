@@ -252,7 +252,7 @@ Symbol *CreateISPCSymbolForLLVMIntrinsic(llvm::Function *func, SymbolTable *symb
     std::string name = std::string(func->getName());
     const Type *returnType = lLLVMTypeToISPCType(ftype->getReturnType(), false);
     if (returnType == NULL) {
-        Debug(SourcePos(),
+        Error(SourcePos(),
               "Failed: return type not representable for "
               "Intrinsic %s.",
               name.c_str());
@@ -264,7 +264,7 @@ Symbol *CreateISPCSymbolForLLVMIntrinsic(llvm::Function *func, SymbolTable *symb
         const llvm::Type *llvmArgType = ftype->getParamType(j);
         const Type *type = lLLVMTypeToISPCType(llvmArgType, false);
         if (type == NULL) {
-            Debug(SourcePos(),
+            Error(SourcePos(),
                   "Failed: type of parameter %d not "
                   "representable for Intrinsic %s",
                   j, name.c_str());

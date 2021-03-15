@@ -1276,7 +1276,7 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, bool pic, boo
     return;
 }
 
-bool Target::checkIntrinsticSupport(llvm::StringRef name) {
+bool Target::checkIntrinsticSupport(llvm::StringRef name, SourcePos pos) {
     if (name.consume_front("llvm.") == false) {
         return false;
     }
@@ -1284,31 +1284,32 @@ bool Target::checkIntrinsticSupport(llvm::StringRef name) {
     // TO-DO : Add relevant information tp 'CPUFeatures' for non x86 targets.
     if (name.consume_front("x86.") == true) {
         if (!ISPCTargetIsX86(m_ispc_target)) {
+            Error(pos, "LLVM intrinsic \"%s\" supported only on \"x86\" target architecture.", name.data());
             return false;
         }
         AllCPUs a;
         std::string featureName = name.substr(0, name.find('.')).str();
         if (CPUFeatures[a.GetTypeFromName(this->getCPU())].count(featureName) == 0) {
+            Error(pos, "Target specfic LLVM intrinsic \"%s\" not supported on \"%s\" CPU.", name.data(),
+                  this->getCPU().c_str());
             return false;
         }
     } else if (name.consume_front("arm.") == true) {
         if (m_arch != Arch::arm) {
+            Error(pos, "LLVM intrinsic \"%s\" supported only on \"arm\" target architecture.", name.data());
             return false;
         }
-        if (name.consume_front("neon.") != true) {
-            return false;
-        }
+        // To-DO: Check 'CPUFeatures'.
     } else if (name.consume_front("aarch64.") == true) {
         if (m_arch != Arch::aarch64) {
+            Error(pos, "LLVM intrinsic \"%s\" supported only on \"aarch64\" target architecture.", name.data());
             return false;
         }
-        if (name.consume_front("neon.") != true) {
-            return false;
-        }
+        // To-DO: Check 'CPUFeatures'.
     } else if (name.consume_front("wasm.") == true) {
-        // Add Condition in future if relevant.
+        // TO-DO: Add Condition in future if relevant.
         // For now, returning 'true'.
-        return false;
+        return true;
     }
     return true;
 }

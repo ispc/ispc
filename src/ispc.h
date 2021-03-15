@@ -194,7 +194,7 @@ class Target {
     Target(Arch arch, const char *cpu, ISPCTarget isa, bool pic, bool printTarget);
 
     /** Check if LLVM intrinsic is supported for the current target. */
-    bool checkIntrinsticSupport(llvm::StringRef name);
+    bool checkIntrinsticSupport(llvm::StringRef name, SourcePos pos);
 
     /** Returns a comma-delimited string giving the names of the currently
         supported CPUs. */
