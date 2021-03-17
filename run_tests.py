@@ -187,6 +187,10 @@ def run_command(cmd, timeout=600, cwd="."):
 # (whether test and reference outputs are same)
 # NOTE: output contains both test and reference lines
 def check_print_output(output):
+    # if message about spill size is appeared, remove it from output
+    spill_line_idx = output.find("Spill")
+    if spill_line_idx != -1:
+        output = output[0:spill_line_idx]
     lines = output.splitlines()
     if len(lines) == 0 or len(lines) % 2:
         return False
