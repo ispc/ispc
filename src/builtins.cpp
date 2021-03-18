@@ -207,7 +207,7 @@ static bool lCreateISPCSymbol(llvm::Function *func, SymbolTable *symbolTable) {
         const Type *returnType = lLLVMTypeToISPCType(ftype->getReturnType(), intAsUnsigned);
         if (returnType == NULL) {
             Debug(SourcePos(),
-                  "Failed: return type not representable for "
+                  "Return type not representable for "
                   "builtin %s.",
                   name.c_str());
             // return type not representable in ispc -> not callable from ispc
@@ -223,7 +223,7 @@ static bool lCreateISPCSymbol(llvm::Function *func, SymbolTable *symbolTable) {
             const Type *type = lLLVMTypeToISPCType(llvmArgType, intAsUnsigned);
             if (type == NULL) {
                 Debug(SourcePos(),
-                      "Failed: type of parameter %d not "
+                      "Type of parameter %d not "
                       "representable for builtin %s",
                       j, name.c_str());
                 return false;
@@ -253,7 +253,7 @@ Symbol *CreateISPCSymbolForLLVMIntrinsic(llvm::Function *func, SymbolTable *symb
     const Type *returnType = lLLVMTypeToISPCType(ftype->getReturnType(), false);
     if (returnType == NULL) {
         Error(SourcePos(),
-              "Failed: return type not representable for "
+              "Return type not representable for "
               "Intrinsic %s.",
               name.c_str());
         // return type not representable in ispc -> not callable from ispc
@@ -265,7 +265,7 @@ Symbol *CreateISPCSymbolForLLVMIntrinsic(llvm::Function *func, SymbolTable *symb
         const Type *type = lLLVMTypeToISPCType(llvmArgType, false);
         if (type == NULL) {
             Error(SourcePos(),
-                  "Failed: type of parameter %d not "
+                  "Type of parameter %d not "
                   "representable for Intrinsic %s",
                   j, name.c_str());
             return nullptr;

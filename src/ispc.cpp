@@ -300,33 +300,35 @@ typedef enum {
     sizeofCPUtype
 } CPUtype;
 
-/** This map is used to verify features available for supported CPUs
-    and is used whitelist target dependent intrisics.
-    The following LLVM files were used as reference :
-    CPU Features : <llvm>/lib/Support/X86TargetParser.cpp
-    X86 Intrinsics : <llvm>/include/llvm/IR/IntrinsicsX86.td */
+// This map is used to verify features available for supported CPUs
+// and is used to filter target dependent intrisics and report an error.
+// This mechanism is not precise and doesn't take into account flavors
+// of AVX512, for example.
+// The following LLVM files were used as reference:
+// CPU Features: <llvm>/lib/Support/X86TargetParser.cpp
+// X86 Intrinsics: <llvm>/include/llvm/IR/IntrinsicsX86.td
 std::map<CPUtype, std::set<std::string>> CPUFeatures = {
-    {CPU_x86_64, {"sse", "sse2", "mmx"}},
-    {CPU_Bonnell, {"sse", "sse2", "mmx", "ssse3"}},
-    {CPU_Core2, {"sse", "sse2", "mmx", "ssse3"}},
-    {CPU_Penryn, {"sse", "sse2", "mmx", "ssse3", "sse41"}},
-    {CPU_Nehalem, {"sse", "sse2", "mmx", "ssse3", "sse41", "sse42"}},
+    {CPU_x86_64, {"mmx", "sse", "sse2"}},
+    {CPU_Bonnell, {"mmx", "sse", "sse2", "ssse3"}},
+    {CPU_Core2, {"mmx", "sse", "sse2", "ssse3"}},
+    {CPU_Penryn, {"mmx", "sse", "sse2", "ssse3", "sse41"}},
+    {CPU_Nehalem, {"mmx", "sse", "sse2", "ssse3", "sse41", "sse42"}},
     {CPU_PS4, {}},
-    {CPU_SandyBridge, {"sse", "sse2", "mmx", "ssse3", "sse41", "sse42", "avx"}},
-    {CPU_IvyBridge, {"sse", "sse2", "mmx", "ssse3", "sse41", "sse42", "avx"}},
-    {CPU_Haswell, {"sse", "sse2", "mmx", "ssse3", "sse41", "sse42", "avx", "avx2"}},
-    {CPU_Broadwell, {"sse", "sse2", "mmx", "ssse3", "sse41", "sse42", "avx", "avx2"}},
-    {CPU_KNL, {"sse", "sse2", "mmx", "ssse3", "sse41", "sse42", "avx", "avx2", "avx512"}},
-    {CPU_SKX, {"sse", "sse2", "mmx", "ssse3", "sse41", "sse42", "avx", "avx2", "avx512"}},
-    {CPU_ICL, {"sse", "sse2", "mmx", "ssse3", "sse41", "sse42", "avx", "avx2", "avx512"}},
-    {CPU_Silvermont, {"sse", "sse2", "mmx", "ssse3", "sse41", "sse42"}},
-    {CPU_ICX, {"sse", "sse2", "mmx", "ssse3", "sse41", "sse42", "avx", "avx2", "avx512"}},
-    {CPU_TGL, {"sse", "sse2", "mmx", "ssse3", "sse41", "sse42", "avx", "avx2", "avx512"}},
+    {CPU_SandyBridge, {"mmx", "sse", "sse2", "ssse3", "sse41", "sse42", "avx"}},
+    {CPU_IvyBridge, {"mmx", "sse", "sse2", "ssse3", "sse41", "sse42", "avx"}},
+    {CPU_Haswell, {"mmx", "sse", "sse2", "ssse3", "sse41", "sse42", "avx", "avx2"}},
+    {CPU_Broadwell, {"mmx", "sse", "sse2", "ssse3", "sse41", "sse42", "avx", "avx2"}},
+    {CPU_KNL, {"mmx", "sse", "sse2", "ssse3", "sse41", "sse42", "avx", "avx2", "avx512"}},
+    {CPU_SKX, {"mmx", "sse", "sse2", "ssse3", "sse41", "sse42", "avx", "avx2", "avx512"}},
+    {CPU_ICL, {"mmx", "sse", "sse2", "ssse3", "sse41", "sse42", "avx", "avx2", "avx512"}},
+    {CPU_Silvermont, {"mmx", "sse", "sse2", "ssse3", "sse41", "sse42"}},
+    {CPU_ICX, {"mmx", "sse", "sse2", "ssse3", "sse41", "sse42", "avx", "avx2", "avx512"}},
+    {CPU_TGL, {"mmx", "sse", "sse2", "ssse3", "sse41", "sse42", "avx", "avx2", "avx512"}},
 #if ISPC_LLVM_VERSION >= ISPC_LLVM_12_0
-    {CPU_ADL, {"sse", "sse2", "mmx", "ssse3", "sse41", "sse42", "avx", "avx2"}},
-    {CPU_SPR, {"sse", "sse2", "mmx", "ssse3", "sse41", "sse42", "avx", "avx2", "avx512"}},
+    {CPU_ADL, {"mmx", "sse", "sse2", "ssse3", "sse41", "sse42", "avx", "avx2"}},
+    {CPU_SPR, {"mmx", "sse", "sse2", "ssse3", "sse41", "sse42", "avx", "avx2", "avx512"}},
 #endif
-// TO-DO : Add features for remaining CPUs if valid.
+// TO-DO: Add features for remaining CPUs if valid.
 #ifdef ISPC_ARM_ENABLED
     {CPU_CortexA9, {}},
     {CPU_CortexA15, {}},
@@ -1281,7 +1283,7 @@ bool Target::checkIntrinsticSupport(llvm::StringRef name, SourcePos pos) {
         return false;
     }
     // x86 specific intrinsics are verified using 'CPUFeatures'.
-    // TO-DO : Add relevant information tp 'CPUFeatures' for non x86 targets.
+    // TO-DO: Add relevant information tp 'CPUFeatures' for non x86 targets.
     if (name.consume_front("x86.") == true) {
         if (!ISPCTargetIsX86(m_ispc_target)) {
             Error(pos, "LLVM intrinsic \"%s\" supported only on \"x86\" target architecture.", name.data());

@@ -303,13 +303,14 @@ int Module::CompileFile() {
     return errorCount;
 }
 
-#ifdef ISPC_GENX_ENABLED
 Symbol *Module::AddLLVMIntrinsicDecl(const std::string &name, ExprList *args, SourcePos pos) {
     if (g->enableIntrinsicCall == false) {
         Error(SourcePos(), "Calling LLVM intrinsics from ISPC source code is an experimental feature,"
                            " which can be enabled by passing \"--enable-intrinsic-call\" switch to the compiler.\n");
         return nullptr;
     }
+
+#ifdef ISPC_GENX_ENABLED
     llvm::GenXIntrinsic::ID ID = llvm::GenXIntrinsic::lookupGenXIntrinsicID(name);
     if (ID == llvm::GenXIntrinsic::not_any_intrinsic) {
         Error(pos, "LLVM intrinsic \"%s\" not supported.", name.c_str());
@@ -324,17 +325,7 @@ Symbol *Module::AddLLVMIntrinsicDecl(const std::string &name, ExprList *args, So
     }
     llvm::ArrayRef<llvm::Type *> argArr(exprType);
     llvm::Function *funcDecl = llvm::GenXIntrinsic::getGenXDeclaration(module, ID, argArr);
-    Symbol *funcSym = CreateISPCSymbolForLLVMIntrinsic(funcDecl, symbolTable);
-    return funcSym;
-}
-
 #else
-Symbol *Module::AddLLVMIntrinsicDecl(const std::string &name, ExprList *args, SourcePos pos) {
-    if (g->enableIntrinsicCall == false) {
-        Error(SourcePos(), "Calling LLVM intrinsics from ISPC source code is an experimental feature,"
-                           " which can be enabled by passing \"--enable-intrinsic-call\" switch to the compiler.\n");
-        return nullptr;
-    }
     llvm::TargetMachine *targetMachine = g->target->GetTargetMachine();
     const llvm::TargetIntrinsicInfo *TII = targetMachine->getIntrinsicInfo();
     llvm::Intrinsic::ID ID = llvm::Function::lookupIntrinsicID(llvm::StringRef(name));
@@ -361,10 +352,11 @@ Symbol *Module::AddLLVMIntrinsicDecl(const std::string &name, ExprList *args, So
     if (g->target->checkIntrinsticSupport(funcName, pos) == false) {
         return nullptr;
     }
+#endif
+
     Symbol *funcSym = CreateISPCSymbolForLLVMIntrinsic(funcDecl, symbolTable);
     return funcSym;
 }
-#endif
 
 void Module::AddTypeDef(const std::string &name, const Type *type, SourcePos pos) {
     // Typedefs are easy; just add the mapping between the given name and

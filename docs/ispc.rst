@@ -4994,9 +4994,28 @@ LLVM Intrinsic functions
 ---------------------------
 
 ``ispc`` has an experimental feature to call LLVM intrinsics directly from
-ISPC source code. This feature can be enabled at compile time using
-``--enable-intrinsic-call``. The syntax is similar to a normal ISPC function
-call. For example,
+``ispc`` source code.  It's strongly discouraged to use this feature in production
+code, unless the consequences are well understood.  Specifically:
+ * Availability and naming of LLVM intrinsics depend on the specific LLVM
+   version used for ``ispc`` build and may change without notice.
+ * Only basic verification of availability of target-specific intrinsics
+   on the target CPU is performed. The attempt of using not supported
+   intrinsics may lead to compiler crash.
+
+Using LLVM intrinsics is encouraged for experiments and may be useful in the
+following cases:
+ * If ``ispc`` fails to generate specific instruction, which is necessary
+   for better performance.
+ * If there's no higher level primitives (in standard library or language itself)
+   for some of instructions. For example, this might be the case with new
+   ISA extensions.
+
+If you found the case where the use of LLVM intrinsics is beneficial in your code,
+please let us know by opening an issue in ``ispc`` `bug tracker`_.
+
+To use this feature, ``--enable-intrinsic-call`` switch must be passed to ``ispc``.
+The syntax is similar to a normal function call, but the name must start with ``@`` symbol.
+For example:
 
 ::
 
