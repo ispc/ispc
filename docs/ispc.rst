@@ -146,6 +146,8 @@ Contents:
       + `Task Parallelism: "launch" and "sync" Statements`_
       + `Task Parallelism: Runtime Requirements`_
 
+  + `LLVM Intrinsic functions`_
+
 * `The ISPC Standard Library`_
 
   + `Basic Operations On Data`_
@@ -184,8 +186,6 @@ Contents:
     * `Atomic Operations and Memory Fences`_
     * `Prefetches`_
     * `System Information`_
-
-  + `LLVM Intrinsic functions`_
 
 * `Interoperability with the Application`_
 
@@ -3469,6 +3469,38 @@ and ``taskIndex2`` between zero and ``taskCount``, ``taskCount0``,
 the instances of the set of launched tasks is running.
 
 
+LLVM Intrinsic functions
+------------------------
+
+``ispc`` has an experimental feature to call LLVM intrinsics directly from
+``ispc`` source code.  It's strongly discouraged to use this feature in production
+code, unless the consequences are well understood.  Specifically:
+ * Availability and naming of LLVM intrinsics depend on the specific LLVM
+   version used for ``ispc`` build and may change without notice.
+ * Only basic verification of availability of target-specific intrinsics
+   on the target CPU is performed. The attempt of using not supported
+   intrinsics may lead to compiler crash.
+
+Using LLVM intrinsics is encouraged for experiments and may be useful in the
+following cases:
+ * If ``ispc`` fails to generate specific instruction, which is necessary
+   for better performance.
+ * If there's no higher level primitives (in standard library or language itself)
+   for some of instructions. For example, this might be the case with new
+   ISA extensions.
+
+If you found the case where the use of LLVM intrinsics is beneficial in your code,
+please let us know by opening an issue in ``ispc`` `bug tracker`_.
+
+To use this feature, ``--enable-intrinsic-call`` switch must be passed to ``ispc``.
+The syntax is similar to a normal function call, but the name must start with ``@`` symbol.
+For example:
+
+::
+
+    transpose = @llvm.matrix.transpose.v8f32.i32.i32(matrix, row, column);
+
+
 
 The ISPC Standard Library
 =========================
@@ -4988,38 +5020,6 @@ the system:
 
 This value can be useful for adapting the granularity of parallel task
 decomposition depending on the number of processors in the system.
-
-
-LLVM Intrinsic functions
----------------------------
-
-``ispc`` has an experimental feature to call LLVM intrinsics directly from
-``ispc`` source code.  It's strongly discouraged to use this feature in production
-code, unless the consequences are well understood.  Specifically:
- * Availability and naming of LLVM intrinsics depend on the specific LLVM
-   version used for ``ispc`` build and may change without notice.
- * Only basic verification of availability of target-specific intrinsics
-   on the target CPU is performed. The attempt of using not supported
-   intrinsics may lead to compiler crash.
-
-Using LLVM intrinsics is encouraged for experiments and may be useful in the
-following cases:
- * If ``ispc`` fails to generate specific instruction, which is necessary
-   for better performance.
- * If there's no higher level primitives (in standard library or language itself)
-   for some of instructions. For example, this might be the case with new
-   ISA extensions.
-
-If you found the case where the use of LLVM intrinsics is beneficial in your code,
-please let us know by opening an issue in ``ispc`` `bug tracker`_.
-
-To use this feature, ``--enable-intrinsic-call`` switch must be passed to ``ispc``.
-The syntax is similar to a normal function call, but the name must start with ``@`` symbol.
-For example:
-
-::
-
-    transpose = @llvm.matrix.transpose.v8f32.i32.i32(matrix, row, column);
 
 
 Interoperability with the Application
