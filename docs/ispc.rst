@@ -5211,6 +5211,19 @@ caches in anticipation of a write:
     void prefetchw_{l1,l2,l3}(void * uniform ptr)
     void prefetchw_{l1,l2,l3}(void * varying ptr)
 
+On GPU prefetches are supported on some targets, including Intel Xe HPC and
+Intel Xe HPG architectures.  It is required to pass the size of data being
+prefetched. The valid values are: 1 (for int8), 2 (for int16), 4 (for int32,
+float) and 8 (for int64, double).  If data size argument is not passed, the
+standard library will use 4 by default.  There is no L2 cache on GPU so
+``prefetch_l2()`` is mapped to ``prefetch_l3()`` and ``prefetch_nt()``
+reads-invalidates on L1 loads and caches in L3.
+
+::
+
+    void prefetch_{l1,l2,l3,nt}(void * uniform ptr, uniform int8 datasize)
+    void prefetch_{l1,l2,l3,nt}(void * varying ptr, uniform int8 datasize)
+
 System Information
 ------------------
 
