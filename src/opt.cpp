@@ -141,7 +141,7 @@ static llvm::Pass *CreateReplaceStdlibShiftPass();
 static llvm::Pass *CreateGenXGatherCoalescingPass();
 static llvm::Pass *CreatePromoteToPrivateMemoryPass();
 static llvm::Pass *CreateReplaceLLVMIntrinsics();
-static llvm::Pass *CreateReplaceUnsupportedInsts();
+static llvm::Pass *CreateFixDivisionInstructions();
 static llvm::Pass *CreateFixAddressSpace();
 static llvm::Pass *CreateDemotePHIs();
 static llvm::Pass *CreateCheckUnsupportedInsts();
@@ -517,9 +517,9 @@ void Optimize(llvm::Module *module, int optLevel) {
         optPM.add(CreateIsCompileTimeConstantPass(true));
 #ifdef ISPC_GENX_ENABLED
         if (g->target->isGenXTarget()) {
-            // InstructionCombining pass is required for ReplaceUnsupportedInsts
+            // InstructionCombining pass is required for FixDivisionInstructions
             optPM.add(llvm::createInstructionCombiningPass());
-            optPM.add(CreateReplaceUnsupportedInsts());
+            optPM.add(CreateFixDivisionInstructions());
             optPM.add(CreatePromoteToPrivateMemoryPass());
         }
 #endif
@@ -647,8 +647,9 @@ void Optimize(llvm::Module *module, int optLevel) {
 #endif
         optPM.add(llvm::createPruneEHPass());
 #ifdef ISPC_GENX_ENABLED
-        if (g->target->isGenXTarget())
-            optPM.add(CreateReplaceUnsupportedInsts());
+        if (g->target->isGenXTarget()) {
+            optPM.add(CreateFixDivisionInstructions());
+        }
 #endif
         optPM.add(llvm::createPostOrderFunctionAttrsLegacyPass());
         optPM.add(llvm::createReversePostOrderFunctionAttrsPass());
@@ -6063,6 +6064,12 @@ bool PromoteToPrivateMemoryPass::runOnFunction(llvm::Function &F) {
 
 static llvm::Pass *CreatePromoteToPrivateMemoryPass() { return new PromoteToPrivateMemoryPass(); }
 
+///////////////////////////////////////////////////////////////////////////
+// ReplaceLLVMIntrinsics
+
+/** This pass replaces LLVM intrinsics unsupported on GenX
+ */
+
 class ReplaceLLVMIntrinsics : public llvm::FunctionPass {
   public:
     static char ID;
@@ -6145,26 +6152,26 @@ bool ReplaceLLVMIntrinsics::runOnFunction(llvm::Function &F) {
 static llvm::Pass *CreateReplaceLLVMIntrinsics() { return new ReplaceLLVMIntrinsics(); }
 
 ///////////////////////////////////////////////////////////////////////////
-// ReplaceUnsupportedInsts
+// FixDivisionInstructions
 
-/** This pass replaces supported by LLVM IR, but unsupported by CM for GENX instructions.
-    For example there is IR for i64 div, but there is no div i64 in VISA and CM don't handle this situation,
-    so ISPC mustn't generate IR with i64 div
+/** This pass replaces instructions supported by LLVM IR, but not supported by GenX backend.
+    There is IR for i64 div, but there is no div i64 in VISA and GenX backend doesn't handle
+    this situation, so ISPC must not generate IR with i64 div.
  */
 
-class ReplaceUnsupportedInsts : public llvm::FunctionPass {
+class FixDivisionInstructions : public llvm::FunctionPass {
   public:
     static char ID;
-    ReplaceUnsupportedInsts() : FunctionPass(ID) {}
-    llvm::StringRef getPassName() const { return "Replace LLVM instructions, unsupported by CM"; }
+    FixDivisionInstructions() : FunctionPass(ID) {}
+    llvm::StringRef getPassName() const { return "Fix division instructions unsupported by VC backend"; }
     bool runOnBasicBlock(llvm::BasicBlock &BB);
     bool runOnFunction(llvm::Function &F);
 };
 
-char ReplaceUnsupportedInsts::ID = 0;
+char FixDivisionInstructions::ID = 0;
 
-bool ReplaceUnsupportedInsts::runOnBasicBlock(llvm::BasicBlock &bb) {
-    DEBUG_START_PASS("ReplaceUnsupportedInsts");
+bool FixDivisionInstructions::runOnBasicBlock(llvm::BasicBlock &bb) {
+    DEBUG_START_PASS("FixDivisionInstructions");
     bool modifiedAny = false;
 
     std::string name = "";
@@ -6211,7 +6218,7 @@ bool ReplaceUnsupportedInsts::runOnBasicBlock(llvm::BasicBlock &bb) {
                 }
                 if (name != "") {
                     func = m->module->getFunction(name);
-                    Assert(func != NULL && "ReplaceUnsupportedInsts: Can't find correct function!!!");
+                    Assert(func != NULL && "FixDivisionInstructions: Can't find correct function!!!");
                     llvm::SmallVector<llvm::Value *, 8> args;
                     args.push_back(inst->getOperand(0));
                     args.push_back(inst->getOperand(1));
@@ -6223,13 +6230,13 @@ bool ReplaceUnsupportedInsts::runOnBasicBlock(llvm::BasicBlock &bb) {
             }
         }
     }
-    DEBUG_END_PASS("ReplaceUnsupportedInsts");
+    DEBUG_END_PASS("FixDivisionInstructions");
     return modifiedAny;
 }
 
-bool ReplaceUnsupportedInsts::runOnFunction(llvm::Function &F) {
+bool FixDivisionInstructions::runOnFunction(llvm::Function &F) {
 
-    llvm::TimeTraceScope FuncScope("ReplaceUnsupportedInsts::runOnFunction", F.getName());
+    llvm::TimeTraceScope FuncScope("FixDivisionInstructions::runOnFunction", F.getName());
     bool modifiedAny = false;
     for (llvm::BasicBlock &BB : F) {
         modifiedAny |= runOnBasicBlock(BB);
@@ -6237,7 +6244,7 @@ bool ReplaceUnsupportedInsts::runOnFunction(llvm::Function &F) {
     return modifiedAny;
 }
 
-static llvm::Pass *CreateReplaceUnsupportedInsts() { return new ReplaceUnsupportedInsts(); }
+static llvm::Pass *CreateFixDivisionInstructions() { return new FixDivisionInstructions(); }
 
 ///////////////////////////////////////////////////////////////////////////
 // CheckUnsupportedInsts
@@ -6263,7 +6270,6 @@ bool CheckUnsupportedInsts::runOnBasicBlock(llvm::BasicBlock &bb) {
     bool modifiedAny = false;
     // This list contains regex expr for unsupported function names
     // To be extended
-    std::vector<std::regex> unsupportedFuncs = {std::regex("__(acos|asin|atan|atan2)_(uniform|varying)_(double)")};
 
     for (llvm::BasicBlock::iterator I = bb.begin(), E = --bb.end(); I != E; ++I) {
         llvm::Instruction *inst = &*I;
@@ -6271,31 +6277,9 @@ bool CheckUnsupportedInsts::runOnBasicBlock(llvm::BasicBlock &bb) {
         lGetSourcePosFromMetadata(inst, &pos);
         if (llvm::CallInst *ci = llvm::dyn_cast<llvm::CallInst>(inst)) {
             llvm::Function *func = ci->getCalledFunction();
-            if (func == NULL)
-                continue;
-            for (int i = 0; i < unsupportedFuncs.size(); i++) {
-                std::smatch match;
-                std::string funcName = func->getName().str();
-                if (std::regex_match(funcName, match, unsupportedFuncs[i])) {
-                    // We found unsupported function. Generate error and stop compilation.
-                    SourcePos pos;
-                    lGetSourcePosFromMetadata(ci, &pos);
-                    if (i == 0 && match.size() == 4) {
-                        std::string match_func = match[1].str();
-                        std::string match_var = match[2].str();
-                        std::string match_type = match[3].str();
-                        Error(pos, "\"%s(%s %s x)\" is not supported for genx-* targets yet\n", match_func.c_str(),
-                              match_var.c_str(), match_type.c_str());
-                    } else if (i == 1 && match.size() == 3) {
-                        Error(pos, "Global atomics are not supported for genx-* targets yet\n");
-                    } else {
-                        Error(pos, "\"%s\" is not supported for genx-* targets yet\n", funcName.c_str());
-                    }
-                }
-            }
             // Report error that prefetch is not supported on SKL and TGLLP
-            if (!g->target->hasGenxPrefetch()) {
-                if (func && func->getName().contains("prefetch")) {
+            if (func && func->getName().contains("genx.lsc.prefetch.stateless")) {
+                if (!g->target->hasGenxPrefetch()) {
                     Error(pos, "\'prefetch\' is not supported by %s\n", g->target->getCPU().c_str());
                 }
             }
@@ -6304,7 +6288,6 @@ bool CheckUnsupportedInsts::runOnBasicBlock(llvm::BasicBlock &bb) {
         if (!g->target->hasFp64Support()) {
             for (int i = 0; i < (int)inst->getNumOperands(); ++i) {
                 llvm::Type *t = inst->getOperand(i)->getType();
-
                 if (t == LLVMTypes::DoubleType || t == LLVMTypes::DoublePointerType ||
                     t == LLVMTypes::DoubleVectorType || t == LLVMTypes::DoubleVectorPointerType) {
                     Error(pos, "\'double\' type is not supported by the target\n");
