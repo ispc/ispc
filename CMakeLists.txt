@@ -353,6 +353,11 @@ if (WASM_ENABLED)
 endif()
 if (XE_ENABLED)
     list(APPEND ISPC_TARGETS gen9-x16 gen9-x8 xelp-x16 xelp-x8 xehpg-x16 xehpg-x8 xehpc-x16 xehpc-x32 xelpg-x16 xelpg-x8)
+# __INTEL_EMBARGO_BEGIN__
+    if( __INTEL_EMBARGO__)
+        set(EMBARGO_ENABLED ON)
+    endif(__INTEL_EMBARGO__)
+# __INTEL_EMBARGO_END__
     if(CMAKE_SIZEOF_VOID_P EQUAL 4)
         set(TARGET_MODIFIER "32")
         set(PB_PATH_MODIFIER "x86")
