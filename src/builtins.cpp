@@ -301,7 +301,7 @@ static void lUpdateIntrinsicsAttributes(llvm::Module *module) {
     for (auto F = module->begin(), E = module->end(); F != E; ++F) {
         llvm::Function *Fn = &*F;
 
-        if (llvm::GenXIntrinsic::isGenXIntrinsic(Fn)) {
+        if (Fn && llvm::GenXIntrinsic::isGenXIntrinsic(Fn)) {
             Fn->setAttributes(
                 llvm::GenXIntrinsic::getAttributes(Fn->getContext(), llvm::GenXIntrinsic::getGenXIntrinsicID(Fn)));
         }
