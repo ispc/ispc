@@ -475,8 +475,8 @@ void Optimize(llvm::Module *module, int optLevel) {
     DebugPassManager optPM;
 
     if (g->enableIntrinsicCall) {
-        /* Required for matrix intrinsics. This needs to happen before VerifierPass.
-         * TO-DO : Limit pass to only when llvm.matrix.* intrinsics are used. */
+        // Required for matrix intrinsics. This needs to happen before VerifierPass.
+        // TODO : Limit pass to only when llvm.matrix.* intrinsics are used.
         optPM.add(llvm::createLowerMatrixIntrinsicsPass()); // llvm.matrix
     }
     optPM.add(llvm::createVerifierPass(), 0);

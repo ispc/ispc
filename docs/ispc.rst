@@ -3500,8 +3500,6 @@ For example:
 
     transpose = @llvm.matrix.transpose.v8f32.i32.i32(matrix, row, column);
 
-
-
 The ISPC Standard Library
 =========================
 

@@ -328,7 +328,7 @@ std::map<CPUtype, std::set<std::string>> CPUFeatures = {
     {CPU_ADL, {"mmx", "sse", "sse2", "ssse3", "sse41", "sse42", "avx", "avx2"}},
     {CPU_SPR, {"mmx", "sse", "sse2", "ssse3", "sse41", "sse42", "avx", "avx2", "avx512"}},
 #endif
-// TO-DO: Add features for remaining CPUs if valid.
+// TODO: Add features for remaining CPUs if valid.
 #ifdef ISPC_ARM_ENABLED
     {CPU_CortexA9, {}},
     {CPU_CortexA15, {}},
@@ -1283,7 +1283,7 @@ bool Target::checkIntrinsticSupport(llvm::StringRef name, SourcePos pos) {
         return false;
     }
     // x86 specific intrinsics are verified using 'CPUFeatures'.
-    // TO-DO: Add relevant information tp 'CPUFeatures' for non x86 targets.
+    // TODO: Add relevant information to 'CPUFeatures' for non x86 targets.
     if (name.consume_front("x86.") == true) {
         if (!ISPCTargetIsX86(m_ispc_target)) {
             Error(pos, "LLVM intrinsic \"%s\" supported only on \"x86\" target architecture.", name.data());
@@ -1301,15 +1301,15 @@ bool Target::checkIntrinsticSupport(llvm::StringRef name, SourcePos pos) {
             Error(pos, "LLVM intrinsic \"%s\" supported only on \"arm\" target architecture.", name.data());
             return false;
         }
-        // To-DO: Check 'CPUFeatures'.
+        // TODO: Check 'CPUFeatures'.
     } else if (name.consume_front("aarch64.") == true) {
         if (m_arch != Arch::aarch64) {
             Error(pos, "LLVM intrinsic \"%s\" supported only on \"aarch64\" target architecture.", name.data());
             return false;
         }
-        // To-DO: Check 'CPUFeatures'.
+        // TODO: Check 'CPUFeatures'.
     } else if (name.consume_front("wasm.") == true) {
-        // TO-DO: Add Condition in future if relevant.
+        // TODO: Add Condition in future if relevant.
         // For now, returning 'true'.
         return true;
     }
