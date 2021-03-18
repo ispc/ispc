@@ -137,8 +137,6 @@ static llvm::Pass *CreateDebugPassFile(int number, llvm::StringRef name);
 
 static llvm::Pass *CreateReplaceStdlibShiftPass();
 
-static llvm::Pass *CreateFixBooleanSelectPass();
-
 #ifdef ISPC_GENX_ENABLED
 static llvm::Pass *CreateGenXGatherCoalescingPass();
 static llvm::Pass *CreatePromoteToPrivateMemoryPass();
@@ -819,8 +817,6 @@ void Optimize(llvm::Module *module, int optLevel) {
             optPM.add(llvm::createGenXSPIRVWriterAdaptorPass());
         }
 #endif
-        // Should be the last
-        optPM.add(CreateFixBooleanSelectPass(), 400);
     }
 
     // Finish up by making sure we didn't mess anything up in the IR along
@@ -5335,102 +5331,6 @@ bool ReplaceStdlibShiftPass::runOnFunction(llvm::Function &F) {
 }
 
 static llvm::Pass *CreateReplaceStdlibShiftPass() { return new ReplaceStdlibShiftPass(); }
-
-///////////////////////////////////////////////////////////////////////////////
-// FixBooleanSelect
-//
-// The problem is that in LLVM 3.3, optimizer doesn't like
-// the following instruction sequence:
-//    %cmp = fcmp olt <8 x float> %a, %b
-//    %sext_cmp = sext <8 x i1> %cmp to <8 x i32>
-//    %new_mask = and <8 x i32> %sext_cmp, %mask
-// and optimizes it to the following:
-//    %cmp = fcmp olt <8 x float> %a, %b
-//    %cond = select <8 x i1> %cmp, <8 x i32> %mask, <8 x i32> zeroinitializer
-//
-// It wouldn't be a problem if codegen produced good code for it. But it
-// doesn't, especially for vectors larger than native vectors.
-//
-// This optimization reverts this pattern and should be the last one before
-// code gen.
-//
-// Note that this problem was introduced in LLVM 3.3. But in LLVM 3.4 it was
-// fixed. See commit r194542.
-//
-// After LLVM 3.3 this optimization should probably stay for experimental
-// purposes and code should be compared with and without this optimization from
-// time to time to make sure that LLVM does right thing.
-///////////////////////////////////////////////////////////////////////////////
-
-class FixBooleanSelectPass : public llvm::FunctionPass {
-  public:
-    static char ID;
-    FixBooleanSelectPass() : FunctionPass(ID) {}
-
-    llvm::StringRef getPassName() const { return "Resolve \"replace extract insert chains\""; }
-    bool runOnFunction(llvm::Function &F);
-
-  private:
-    llvm::Instruction *fixSelect(llvm::SelectInst *sel, llvm::SExtInst *sext);
-};
-
-char FixBooleanSelectPass::ID = 0;
-
-llvm::Instruction *FixBooleanSelectPass::fixSelect(llvm::SelectInst *sel, llvm::SExtInst *sext) {
-    // Select instruction result type and its integer equivalent
-    llvm::VectorType *orig_type = llvm::dyn_cast<llvm::VectorType>(sel->getType());
-    Assert(orig_type);
-    llvm::VectorType *int_type = llvm::VectorType::getInteger(orig_type);
-
-    // Result value and optional pointer to instruction to delete
-    llvm::Instruction *result = 0, *optional_to_delete = 0;
-
-    // It can be vector of integers or vector of floating point values.
-    if (orig_type->getElementType()->isIntegerTy()) {
-        // Generate sext+and, remove select.
-        result = llvm::BinaryOperator::CreateAnd(sext, sel->getTrueValue(), "and_mask", sel);
-    } else {
-        llvm::BitCastInst *bc = llvm::dyn_cast<llvm::BitCastInst>(sel->getTrueValue());
-
-        if (bc && bc->hasOneUse() && bc->getSrcTy()->isIntOrIntVectorTy() && bc->getSrcTy()->isVectorTy() &&
-            llvm::isa<llvm::Instruction>(bc->getOperand(0)) &&
-            llvm::dyn_cast<llvm::Instruction>(bc->getOperand(0))->getParent() == sel->getParent()) {
-            // Bitcast is casting form integer type, it's operand is instruction, which is located in the same basic
-            // block (otherwise it's unsafe to use it). bitcast+select => sext+and+bicast Create and
-            llvm::BinaryOperator *and_inst = llvm::BinaryOperator::CreateAnd(sext, bc->getOperand(0), "and_mask", sel);
-            // Bitcast back to original type
-            result = new llvm::BitCastInst(and_inst, sel->getType(), "bitcast_mask_out", sel);
-            // Original bitcast will be removed
-            optional_to_delete = bc;
-        } else {
-            // General case: select => bitcast+sext+and+bitcast
-            // Bitcast
-            llvm::BitCastInst *bc_in = new llvm::BitCastInst(sel->getTrueValue(), int_type, "bitcast_mask_in", sel);
-            // And
-            llvm::BinaryOperator *and_inst = llvm::BinaryOperator::CreateAnd(sext, bc_in, "and_mask", sel);
-            // Bitcast back to original type
-            result = new llvm::BitCastInst(and_inst, sel->getType(), "bitcast_mask_out", sel);
-        }
-    }
-
-    // Done, finalize.
-    sel->replaceAllUsesWith(result);
-    sel->eraseFromParent();
-    if (optional_to_delete) {
-        optional_to_delete->eraseFromParent();
-    }
-
-    return result;
-}
-
-bool FixBooleanSelectPass::runOnFunction(llvm::Function &F) {
-    llvm::TimeTraceScope FuncScope("FixBooleanSelectPass::runOnFunction", F.getName());
-    bool modifiedAny = false;
-
-    return modifiedAny;
-}
-
-static llvm::Pass *CreateFixBooleanSelectPass() { return new FixBooleanSelectPass(); }
 
 #ifdef ISPC_GENX_ENABLED
 
