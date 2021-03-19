@@ -310,49 +310,51 @@ Symbol *Module::AddLLVMIntrinsicDecl(const std::string &name, ExprList *args, So
         return nullptr;
     }
 
+    llvm::Function *funcDecl = nullptr;
 #ifdef ISPC_GENX_ENABLED
-    llvm::GenXIntrinsic::ID ID = llvm::GenXIntrinsic::lookupGenXIntrinsicID(name);
-    if (ID == llvm::GenXIntrinsic::not_any_intrinsic) {
-        Error(pos, "LLVM intrinsic \"%s\" not supported.", name.c_str());
-        return nullptr;
-    }
-    std::vector<llvm::Type *> exprType;
-    int nInits = args->exprs.size();
-    if (llvm::GenXIntrinsic::isOverloadedRet(ID) || llvm::GenXIntrinsic::isOverloadedArg(ID, nInits)) {
-        for (int i = 0; i < nInits; ++i) {
-            exprType.push_back((args->exprs[i])->GetType()->LLVMType(g->ctx));
+    if (g->target->isGenXTarget()) {
+        llvm::GenXIntrinsic::ID ID = llvm::GenXIntrinsic::lookupGenXIntrinsicID(name);
+        if (ID == llvm::GenXIntrinsic::not_any_intrinsic) {
+            Error(pos, "LLVM intrinsic \"%s\" not supported.", name.c_str());
+            return nullptr;
         }
-    }
-    llvm::ArrayRef<llvm::Type *> argArr(exprType);
-    llvm::Function *funcDecl = llvm::GenXIntrinsic::getGenXDeclaration(module, ID, argArr);
-#else
-    llvm::TargetMachine *targetMachine = g->target->GetTargetMachine();
-    const llvm::TargetIntrinsicInfo *TII = targetMachine->getIntrinsicInfo();
-    llvm::Intrinsic::ID ID = llvm::Function::lookupIntrinsicID(llvm::StringRef(name));
-    if (ID == llvm::Intrinsic::not_intrinsic && TII) {
-        ID = static_cast<llvm::Intrinsic::ID>(TII->lookupName(llvm::StringRef(name)));
-    }
-
-    if (ID == llvm::Intrinsic::not_intrinsic) {
-        Error(pos, "LLVM intrinsic \"%s\" not supported.", name.c_str());
-        return nullptr;
-    }
-
-    std::vector<llvm::Type *> exprType;
-    if (llvm::Intrinsic::isOverloaded(ID)) {
+        std::vector<llvm::Type *> exprType;
         int nInits = args->exprs.size();
-        for (int i = 0; i < nInits; ++i) {
-            exprType.push_back((args->exprs[i])->GetType()->LLVMType(g->ctx));
+        if (llvm::GenXIntrinsic::isOverloadedRet(ID) || llvm::GenXIntrinsic::isOverloadedArg(ID, nInits)) {
+            for (int i = 0; i < nInits; ++i) {
+                exprType.push_back((args->exprs[i])->GetType()->LLVMType(g->ctx));
+            }
         }
-    }
-    llvm::ArrayRef<llvm::Type *> argArr(exprType);
-    llvm::Function *funcDecl = llvm::Intrinsic::getDeclaration(module, ID, argArr);
-    llvm::StringRef funcName = funcDecl->getName();
-
-    if (g->target->checkIntrinsticSupport(funcName, pos) == false) {
-        return nullptr;
+        llvm::ArrayRef<llvm::Type *> argArr(exprType);
+        funcDecl = llvm::GenXIntrinsic::getGenXDeclaration(module, ID, argArr);
     }
 #endif
+    if (!g->target->isGenXTarget()) {
+        llvm::TargetMachine *targetMachine = g->target->GetTargetMachine();
+        const llvm::TargetIntrinsicInfo *TII = targetMachine->getIntrinsicInfo();
+        llvm::Intrinsic::ID ID = llvm::Function::lookupIntrinsicID(llvm::StringRef(name));
+        if (ID == llvm::Intrinsic::not_intrinsic && TII) {
+            ID = static_cast<llvm::Intrinsic::ID>(TII->lookupName(llvm::StringRef(name)));
+        }
+        if (ID == llvm::Intrinsic::not_intrinsic) {
+            Error(pos, "LLVM intrinsic \"%s\" not supported.", name.c_str());
+            return nullptr;
+        }
+        std::vector<llvm::Type *> exprType;
+        if (llvm::Intrinsic::isOverloaded(ID)) {
+            int nInits = args->exprs.size();
+            for (int i = 0; i < nInits; ++i) {
+                exprType.push_back((args->exprs[i])->GetType()->LLVMType(g->ctx));
+            }
+        }
+        llvm::ArrayRef<llvm::Type *> argArr(exprType);
+        funcDecl = llvm::Intrinsic::getDeclaration(module, ID, argArr);
+        llvm::StringRef funcName = funcDecl->getName();
+
+        if (g->target->checkIntrinsticSupport(funcName, pos) == false) {
+            return nullptr;
+        }
+    }
 
     Symbol *funcSym = CreateISPCSymbolForLLVMIntrinsic(funcDecl, symbolTable);
     return funcSym;
