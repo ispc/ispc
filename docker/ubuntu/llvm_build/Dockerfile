@@ -15,7 +15,9 @@ ARG EXTRA_BUILD_ARG=
 RUN uname -a
 
 # Packages required to build ISPC and Clang.
-RUN apt-get -y update && apt-get install -y wget build-essential gcc g++ git python3 ncurses-dev libtinfo-dev && \
+# Adding this repository is needed for Ubuntu 16.04 to install python3.6.
+RUN apt-get -y update && apt-get install -y software-properties-common && add-apt-repository ppa:deadsnakes/ppa && \
+    apt-get -y update && apt-get install -y wget build-essential gcc g++ git python3.6 ncurses-dev libtinfo-dev && \
     rm -rf /var/lib/apt/lists/*
 
 # If you are behind a proxy, you need to configure git and svn.
