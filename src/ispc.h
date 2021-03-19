@@ -63,6 +63,8 @@
 #include <string>
 #include <vector>
 
+#include <llvm/ADT/StringRef.h>
+
 /** @def ISPC_MAX_NVEC maximum vector size of any of the compliation
     targets.
  */
@@ -190,6 +192,9 @@ class Target {
         name, if the name is a known target.  Returns true if the
         target was initialized and false if the name is unknown. */
     Target(Arch arch, const char *cpu, ISPCTarget isa, bool pic, bool printTarget);
+
+    /** Check if LLVM intrinsic is supported for the current target. */
+    bool checkIntrinsticSupport(llvm::StringRef name, SourcePos pos);
 
     /** Returns a comma-delimited string giving the names of the currently
         supported CPUs. */
@@ -669,6 +674,9 @@ struct Globals {
         with other tokens, in order to test error condition handling in the
         compiler. */
     bool enableFuzzTest;
+
+    /* If enabled, allows the user to directly call LLVM intrinsics. */
+    bool enableLLVMIntrinsics;
 
     /** Seed for random number generator used for fuzz testing. */
     int fuzzTestSeed;

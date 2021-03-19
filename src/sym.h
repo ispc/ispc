@@ -164,6 +164,19 @@ class SymbolTable {
         were found. */
     bool LookupFunction(const char *name, std::vector<Symbol *> *matches = NULL);
 
+    /** Adds the given function symbol for LLVM intrinsic to the symbol table.
+        @param symbol The function symbol to be added.
+
+        @return true if the symbol has been added.  False if another
+        function symbol with the same name and function signature is
+        already present in the symbol table. */
+    bool AddIntrinsics(Symbol *symbol);
+
+    /** Looks for a LLVM intrinsic function in the symbol table.
+
+        @return pointer to matching Symbol; NULL if none is found. */
+    Symbol *LookupIntrinsics(llvm::Function *func);
+
     /** Looks for a function with the given name and type
         in the symbol table.
 
@@ -274,6 +287,11 @@ class SymbolTable {
         have multiple function symbols associated with it. */
     typedef std::map<std::string, std::vector<Symbol *>> FunctionMapType;
     FunctionMapType functions;
+
+    /** This maps ISPC symbols for corresponding LLVM intrinsic functions.
+     */
+    typedef std::map<llvm::Function *, Symbol *> IntrinsicMapType;
+    IntrinsicMapType intrinsics;
 
     /** Type definitions can't currently be scoped.
      */

@@ -121,6 +121,8 @@ static void lPrintVersion() {
     printf("    [--emit-zebin]\t\t\tGenerate L0 binary as output\n");
 #endif
 #endif
+    printf("    [--enable-llvm-intrinsics]\t\tEnable experimental feature to call LLVM intrinsics from ISPC "
+           "source code\n");
     printf("    [--error-limit=<value>]\t\tLimit maximum number of errors emitting by ISPC to <value>\n");
     printf("    [--force-alignment=<value>]\t\tForce alignment in memory allocations routine to be <value>\n");
     printf("    [-g]\t\t\t\tGenerate source-level debug information\n");
@@ -685,7 +687,9 @@ int main(int Argc, char *Argv[]) {
 #endif
         }
 #endif
-        else if (!strcmp(argv[i], "-I")) {
+        else if (!strcmp(argv[i], "--enable-llvm-intrinsics")) {
+            g->enableLLVMIntrinsics = true;
+        } else if (!strcmp(argv[i], "-I")) {
             if (++i != argc) {
                 lParseInclude(argv[i]);
             } else {

@@ -202,7 +202,7 @@ struct ForeachDimension {
 %token TOKEN_AND_OP TOKEN_OR_OP TOKEN_MUL_ASSIGN TOKEN_DIV_ASSIGN TOKEN_MOD_ASSIGN
 %token TOKEN_ADD_ASSIGN TOKEN_SUB_ASSIGN TOKEN_LEFT_ASSIGN TOKEN_RIGHT_ASSIGN
 %token TOKEN_AND_ASSIGN TOKEN_OR_ASSIGN TOKEN_XOR_ASSIGN
-%token TOKEN_SIZEOF TOKEN_NEW TOKEN_DELETE TOKEN_IN
+%token TOKEN_SIZEOF TOKEN_NEW TOKEN_DELETE TOKEN_IN TOKEN_INTRINSIC_CALL
 
 %token TOKEN_EXTERN TOKEN_EXPORT TOKEN_STATIC TOKEN_INLINE TOKEN_NOINLINE TOKEN_VECTORCALL TOKEN_TASK TOKEN_DECLSPEC
 %token TOKEN_UNIFORM TOKEN_VARYING TOKEN_TYPEDEF TOKEN_SOA TOKEN_UNMASKED
@@ -219,7 +219,7 @@ struct ForeachDimension {
 %token TOKEN_SYNC TOKEN_PRINT TOKEN_ASSERT
 
 %type <expr> primary_expression postfix_expression integer_dotdotdot
-%type <expr> unary_expression cast_expression funcall_expression launch_expression
+%type <expr> unary_expression cast_expression funcall_expression launch_expression intrincall_expression
 %type <expr> multiplicative_expression additive_expression shift_expression
 %type <expr> relational_expression equality_expression and_expression
 %type <expr> exclusive_or_expression inclusive_or_expression
@@ -259,7 +259,7 @@ struct ForeachDimension {
 %type <storageClass> storage_class_specifier
 %type <declSpecs> declaration_specifiers
 
-%type <stringVal> string_constant
+%type <stringVal> string_constant intrinsic_name
 %type <constCharPtr> struct_or_union_name enum_identifier goto_identifier
 %type <constCharPtr> foreach_unique_identifier
 
@@ -477,6 +477,29 @@ postfix_expression
       { $$ = new UnaryExpr(UnaryExpr::PostDec, $1, Union(@1,@2)); }
     ;
 
+intrinsic_name
+    : TOKEN_INTRINSIC_CALL
+      {
+          $$ = yylval.stringVal;
+      }
+    ;
+
+intrincall_expression
+    : intrinsic_name '(' argument_expression_list ')'
+      {
+          std::string *name = $1;
+          name->erase(0, 1);
+          Symbol* sym = m->AddLLVMIntrinsicDecl(*name, $3, Union(@1,@4));
+          const char *fname = name->c_str();
+          const std::vector<Symbol *> funcs{sym};
+          FunctionSymbolExpr *fSym = NULL;
+          if (sym != NULL)
+              fSym = new FunctionSymbolExpr(fname, funcs, @1);
+          $$ = new FunctionCallExpr(fSym, $3, Union(@1,@4));
+
+      }
+    ;
+
 funcall_expression
     : postfix_expression
     | postfix_expression '(' ')'
@@ -504,6 +527,7 @@ argument_expression_list
 
 unary_expression
     : funcall_expression
+    | intrincall_expression
     | TOKEN_INC_OP unary_expression
       { $$ = new UnaryExpr(UnaryExpr::PreInc, $2, Union(@1, @2)); }
     | TOKEN_DEC_OP unary_expression

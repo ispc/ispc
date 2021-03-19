@@ -207,7 +207,7 @@ static bool lCreateISPCSymbol(llvm::Function *func, SymbolTable *symbolTable) {
         const Type *returnType = lLLVMTypeToISPCType(ftype->getReturnType(), intAsUnsigned);
         if (returnType == NULL) {
             Debug(SourcePos(),
-                  "Failed: return type not representable for "
+                  "Return type not representable for "
                   "builtin %s.",
                   name.c_str());
             // return type not representable in ispc -> not callable from ispc
@@ -223,7 +223,7 @@ static bool lCreateISPCSymbol(llvm::Function *func, SymbolTable *symbolTable) {
             const Type *type = lLLVMTypeToISPCType(llvmArgType, intAsUnsigned);
             if (type == NULL) {
                 Debug(SourcePos(),
-                      "Failed: type of parameter %d not "
+                      "Type of parameter %d not "
                       "representable for builtin %s",
                       j, name.c_str());
                 return false;
@@ -239,6 +239,45 @@ static bool lCreateISPCSymbol(llvm::Function *func, SymbolTable *symbolTable) {
     }
 
     return true;
+}
+
+Symbol *CreateISPCSymbolForLLVMIntrinsic(llvm::Function *func, SymbolTable *symbolTable) {
+    Symbol *existingSym = symbolTable->LookupIntrinsics(func);
+    if (existingSym != NULL) {
+        return existingSym;
+    }
+    SourcePos noPos;
+    noPos.name = "LLVM Intrinsic";
+    const llvm::FunctionType *ftype = func->getFunctionType();
+    std::string name = std::string(func->getName());
+    const Type *returnType = lLLVMTypeToISPCType(ftype->getReturnType(), false);
+    if (returnType == NULL) {
+        Error(SourcePos(),
+              "Return type not representable for "
+              "Intrinsic %s.",
+              name.c_str());
+        // return type not representable in ispc -> not callable from ispc
+        return nullptr;
+    }
+    llvm::SmallVector<const Type *, 8> argTypes;
+    for (unsigned int j = 0; j < ftype->getNumParams(); ++j) {
+        const llvm::Type *llvmArgType = ftype->getParamType(j);
+        const Type *type = lLLVMTypeToISPCType(llvmArgType, false);
+        if (type == NULL) {
+            Error(SourcePos(),
+                  "Type of parameter %d not "
+                  "representable for Intrinsic %s",
+                  j, name.c_str());
+            return nullptr;
+        }
+        argTypes.push_back(type);
+    }
+    FunctionType *funcType = new FunctionType(returnType, argTypes, noPos);
+    Debug(noPos, "Created Intrinsic symbol \"%s\" [%s]\n", name.c_str(), funcType->GetString().c_str());
+    Symbol *sym = new Symbol(name, noPos, funcType);
+    sym->function = func;
+    symbolTable->AddIntrinsics(sym);
+    return sym;
 }
 
 /** Given an LLVM module, create ispc symbols for the functions in the

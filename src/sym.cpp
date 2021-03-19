@@ -168,6 +168,25 @@ Symbol *SymbolTable::LookupFunction(const char *name, const FunctionType *type) 
     return NULL;
 }
 
+bool SymbolTable::AddIntrinsics(Symbol *symbol) {
+    if (LookupIntrinsics(symbol->function) != NULL) {
+        // A function of the same type has already been added to
+        // the symbol table
+        return false;
+    }
+    intrinsics[symbol->function] = symbol;
+    return true;
+}
+
+Symbol *SymbolTable::LookupIntrinsics(llvm::Function *func) {
+    IntrinsicMapType::iterator iter = intrinsics.find(func);
+    if (iter != intrinsics.end()) {
+        Symbol *funcs = iter->second;
+        return funcs;
+    }
+    return nullptr;
+}
+
 bool SymbolTable::AddType(const char *name, const Type *type, SourcePos pos) {
     const Type *t = LookupLocalType(name);
     if (t != NULL && CastType<UndefinedStructType>(t) == NULL) {
