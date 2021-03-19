@@ -304,9 +304,9 @@ int Module::CompileFile() {
 }
 
 Symbol *Module::AddLLVMIntrinsicDecl(const std::string &name, ExprList *args, SourcePos pos) {
-    if (g->enableIntrinsicCall == false) {
+    if (g->enableLLVMIntrinsics == false) {
         Error(SourcePos(), "Calling LLVM intrinsics from ISPC source code is an experimental feature,"
-                           " which can be enabled by passing \"--enable-intrinsic-call\" switch to the compiler.\n");
+                           " which can be enabled by passing \"--enable-llvm-intrinsics\" switch to the compiler.\n");
         return nullptr;
     }
 

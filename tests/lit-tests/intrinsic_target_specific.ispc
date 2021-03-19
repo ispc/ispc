@@ -1,5 +1,5 @@
-//; RUN: %{ispc} %s --target=avx2-i32x8 --enable-intrinsic-call
-//; RUN: not %{ispc} %s --target=sse2-i32x8 --enable-intrinsic-call --nowrap 2>&1 | FileCheck %s -check-prefix=CHECK_SSE2
+//; RUN: %{ispc} %s --target=avx2-i32x8 --enable-llvm-intrinsics
+//; RUN: not %{ispc} %s --target=sse2-i32x8 --enable-llvm-intrinsics --nowrap 2>&1 | FileCheck %s -check-prefix=CHECK_SSE2
 
 //; REQUIRES: X86_ENABLED
 

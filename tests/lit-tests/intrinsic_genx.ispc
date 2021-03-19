@@ -1,4 +1,4 @@
-// RUN: %{ispc} %s --target=genx-x16 --arch=genx64 --enable-intrinsic-call -h %t.h --emit-llvm-text -o %t.ll
+// RUN: %{ispc} %s --target=genx-x16 --arch=genx64 --enable-llvm-intrinsics -h %t.h --emit-llvm-text -o %t.ll
 // RUN: FileCheck --input-file=%t.ll %s
 
 // REQUIRES: GENX_ENABLED

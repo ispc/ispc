@@ -1,4 +1,4 @@
-//; RUN: %{ispc} %s --target=host --enable-intrinsic-call
+//; RUN: %{ispc} %s --target=host --enable-llvm-intrinsics
 
 // REQUIRES: X86_ENABLED
 

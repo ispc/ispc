@@ -1737,7 +1737,7 @@ Globals::Globals() {
     generateDebuggingSymbols = false;
     generateDWARFVersion = 3;
     enableFuzzTest = false;
-    enableIntrinsicCall = false;
+    enableLLVMIntrinsics = false;
     fuzzTestSeed = -1;
     mangleFunctionsWithTarget = false;
     isMultiTargetCompilation = false;

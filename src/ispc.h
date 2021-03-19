@@ -676,7 +676,7 @@ struct Globals {
     bool enableFuzzTest;
 
     /* If enabled, allows the user to directly call LLVM intrinsics. */
-    bool enableIntrinsicCall;
+    bool enableLLVMIntrinsics;
 
     /** Seed for random number generator used for fuzz testing. */
     int fuzzTestSeed;

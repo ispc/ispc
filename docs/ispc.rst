@@ -3492,7 +3492,7 @@ following cases:
 If you found the case where the use of LLVM intrinsics is beneficial in your code,
 please let us know by opening an issue in ``ispc`` `bug tracker`_.
 
-To use this feature, ``--enable-intrinsic-call`` switch must be passed to ``ispc``.
+To use this feature, ``--enable-llvm-intrinsics`` switch must be passed to ``ispc``.
 The syntax is similar to a normal function call, but the name must start with ``@`` symbol.
 For example:
 
