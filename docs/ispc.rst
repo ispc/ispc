@@ -3500,6 +3500,10 @@ For example:
 
     transpose = @llvm.matrix.transpose.v8f32.i32.i32(matrix, row, column);
 
+To detect if this feature is enabled during runtime, check if ``ISPC_LLVM_INTRINSICS_ENABLED``
+macro is defined.
+
+
 The ISPC Standard Library
 =========================
 

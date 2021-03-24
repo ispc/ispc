@@ -313,7 +313,7 @@ std::map<CPUtype, std::set<std::string>> CPUFeatures = {
     {CPU_Core2, {"mmx", "sse", "sse2", "ssse3"}},
     {CPU_Penryn, {"mmx", "sse", "sse2", "ssse3", "sse41"}},
     {CPU_Nehalem, {"mmx", "sse", "sse2", "ssse3", "sse41", "sse42"}},
-    {CPU_PS4, {}},
+    {CPU_PS4, {"mmx", "sse", "sse2", "ssse3", "sse41", "sse42", "avx"}},
     {CPU_SandyBridge, {"mmx", "sse", "sse2", "ssse3", "sse41", "sse42", "avx"}},
     {CPU_IvyBridge, {"mmx", "sse", "sse2", "ssse3", "sse41", "sse42", "avx"}},
     {CPU_Haswell, {"mmx", "sse", "sse2", "ssse3", "sse41", "sse42", "avx", "avx2"}},

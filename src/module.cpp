@@ -2296,6 +2296,9 @@ void Module::execPreprocessor(const char *infilename, llvm::raw_string_ostream *
     opts.addMacroDef("ISPC");
     opts.addMacroDef("PI=3.1415926535");
 
+    if (g->enableLLVMIntrinsics) {
+        opts.addMacroDef("ISPC_LLVM_INTRINSICS_ENABLED");
+    }
     // Add defs for ISPC_UINT_IS_DEFINED.
     // This lets the user know uint* is part of language.
     opts.addMacroDef("ISPC_UINT_IS_DEFINED");
