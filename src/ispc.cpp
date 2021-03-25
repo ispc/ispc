@@ -1717,7 +1717,7 @@ Opt::Opt() {
     disableGenXGatherCoalescing = false;
     enableForeachInsideVarying = false;
     emitGenXHardwareMask = false;
-    disableGenXPrivateIntrinsics = false;
+    disableGenXPrivateIntrinsics = true;
 #endif
 }
 
