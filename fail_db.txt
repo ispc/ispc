@@ -6,15 +6,11 @@
 % LLVM bugs in released versions, that we have to workaround by applying patches (see llvm_patches
 % folder). The recommended way to build LLVM on Unix is to use "alloy.py".
 %
-./tests/pdivus-i32.ispc runfail  genx64        genx-x8 TGLLP   Linux LLVM 11.1 clang++11.1  spv *
-./tests/pdivus-vi32.ispc runfail  genx64        genx-x8 TGLLP   Linux LLVM 11.1 clang++11.1  spv *
 ./tests/soa-6.ispc runfail  genx64        genx-x8 TGLLP   Linux LLVM 11.1 clang++11.1  spv *
 ./tests/soa-7.ispc runfail  genx64        genx-x8 TGLLP   Linux LLVM 11.1 clang++11.1  spv *
 ./tests/soa-6.ispc runfail  genx64        genx-x8 unspec   Linux LLVM 11.1 clang++11.1  spv *
 ./tests/soa-7.ispc runfail  genx64        genx-x8 unspec   Linux LLVM 11.1 clang++11.1  spv *
 ./tests/masked-struct-scatter-varying.ispc runfail  genx64       genx-x16 TGLLP   Linux LLVM 11.1 clang++11.1  spv *
-./tests/pdivus-i32.ispc runfail  genx64       genx-x16 TGLLP   Linux LLVM 11.1 clang++11.1  spv *
-./tests/pdivus-vi32.ispc runfail  genx64       genx-x16 TGLLP   Linux LLVM 11.1 clang++11.1  spv *
 ./tests/masked-struct-scatter-varying.ispc runfail  genx64       genx-x16 unspec   Linux LLVM 11.1 clang++11.1  spv *
 .\tests\1546.ispc runfail  genx64        genx-x8 unspec Windows LLVM 11.1         cl  spv *
 .\tests\acos.ispc runfail  genx64        genx-x8 unspec Windows LLVM 11.1         cl  spv *
@@ -111,7 +107,6 @@
 .\tests\global-array-4.ispc runfail  genx64        genx-x8 unspec Windows LLVM 11.1         cl  spv *
 .\tests\gs-double-improve-multidim-struct-1.ispc runfail  genx64        genx-x8 unspec Windows LLVM 11.1         cl  spv *
 .\tests\gs-improve-multidim-struct-1.ispc runfail  genx64        genx-x8 unspec Windows LLVM 11.1         cl  spv *
-.\tests\isnan_double.ispc runfail  genx64        genx-x8 unspec Windows LLVM 11.1         cl  spv *
 .\tests\memcpy-uniform-1.ispc runfail  genx64        genx-x8 unspec Windows LLVM 11.1         cl  spv *
 .\tests\memset-uniform-1.ispc runfail  genx64        genx-x8 unspec Windows LLVM 11.1         cl  spv *
 .\tests\nested-structs-2.ispc runfail  genx64        genx-x8 unspec Windows LLVM 11.1         cl  spv *
@@ -152,10 +147,6 @@
 .\tests\soa-29.ispc runfail  genx64        genx-x8 unspec Windows LLVM 11.1         cl  spv *
 .\tests\soa-6.ispc runfail  genx64        genx-x8 unspec Windows LLVM 11.1         cl  spv *
 .\tests\soa-7.ispc runfail  genx64        genx-x8 unspec Windows LLVM 11.1         cl  spv *
-.\tests\transcendentals-9-0.ispc runfail  genx64        genx-x8 unspec Windows LLVM 11.1         cl  spv *
-.\tests\transcendentals-9-1.ispc runfail  genx64        genx-x8 unspec Windows LLVM 11.1         cl  spv *
-.\tests\transcendentals-9-2.ispc runfail  genx64        genx-x8 unspec Windows LLVM 11.1         cl  spv *
-.\tests\transcendentals-9-3.ispc runfail  genx64        genx-x8 unspec Windows LLVM 11.1         cl  spv *
 .\tests\transcendentals-atan2-uniform.ispc runfail  genx64        genx-x8 unspec Windows LLVM 11.1         cl  spv *
 .\tests\transcendentals-atan2-varying.ispc runfail  genx64        genx-x8 unspec Windows LLVM 11.1         cl  spv *
 .\tests\transcendentals-log-uniform.ispc runfail  genx64        genx-x8 unspec Windows LLVM 11.1         cl  spv *
@@ -256,7 +247,6 @@
 .\tests\global-array-4.ispc runfail  genx64       genx-x16 unspec Windows LLVM 11.1         cl  spv *
 .\tests\gs-double-improve-multidim-struct-1.ispc runfail  genx64       genx-x16 unspec Windows LLVM 11.1         cl  spv *
 .\tests\gs-improve-multidim-struct-1.ispc runfail  genx64       genx-x16 unspec Windows LLVM 11.1         cl  spv *
-.\tests\isnan_double.ispc runfail  genx64       genx-x16 unspec Windows LLVM 11.1         cl  spv *
 .\tests\masked-struct-scatter-varying.ispc runfail  genx64       genx-x16 unspec Windows LLVM 11.1         cl  spv *
 .\tests\nested-structs-2.ispc runfail  genx64       genx-x16 unspec Windows LLVM 11.1         cl  spv *
 .\tests\packed-load-2.ispc runfail  genx64       genx-x16 unspec Windows LLVM 11.1         cl  spv *
@@ -301,10 +291,6 @@
 .\tests\soa-17.ispc runfail  genx64       genx-x16 unspec Windows LLVM 11.1         cl  spv *
 .\tests\soa-29.ispc runfail  genx64       genx-x16 unspec Windows LLVM 11.1         cl  spv *
 .\tests\struct-nested-1.ispc runfail  genx64       genx-x16 unspec Windows LLVM 11.1         cl  spv *
-.\tests\transcendentals-9-0.ispc runfail  genx64       genx-x16 unspec Windows LLVM 11.1         cl  spv *
-.\tests\transcendentals-9-1.ispc runfail  genx64       genx-x16 unspec Windows LLVM 11.1         cl  spv *
-.\tests\transcendentals-9-2.ispc runfail  genx64       genx-x16 unspec Windows LLVM 11.1         cl  spv *
-.\tests\transcendentals-9-3.ispc runfail  genx64       genx-x16 unspec Windows LLVM 11.1         cl  spv *
 .\tests\transcendentals-atan2-uniform.ispc runfail  genx64       genx-x16 unspec Windows LLVM 11.1         cl  spv *
 .\tests\transcendentals-atan2-varying.ispc runfail  genx64       genx-x16 unspec Windows LLVM 11.1         cl  spv *
 .\tests\transcendentals-log-uniform.ispc runfail  genx64       genx-x16 unspec Windows LLVM 11.1         cl  spv *
