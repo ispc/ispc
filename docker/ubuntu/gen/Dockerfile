@@ -79,4 +79,4 @@ WORKDIR /home/src/ispc/build
 RUN cmake -DGENX_ENABLED=ON -DCMAKE_INSTALL_PREFIX=/home/ispc/ -DGENX_DEPS_DIR=/home/deps ../ && make install -j`nproc`
 RUN make check-all -j`nproc`
 # Add ISPC to PATH
-ENV PATH=/home/ispc/bin
+ENV PATH=/home/ispc/bin:$PATH
