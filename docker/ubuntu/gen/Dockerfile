@@ -1,4 +1,4 @@
-FROM ubuntu:18.04
+FROM ubuntu:20.04
 MAINTAINER Arina Neshlyaeva <arina.neshlyaeva@intel.com>
 
 ARG REPO=ispc/ispc
@@ -10,8 +10,8 @@ ARG L0L_VER=1.0.22
 # otherwise LLVM build may fail, as it will use all the cores available to container.
 
 # Packages
-RUN apt-get -y update && apt-get install -y repo clang-8 build-essential libnuma1 opencl-headers ocl-icd-libopencl1 clinfo vim gcc g++ git python3 imagemagick \
-    m4 bison flex zlib1g-dev ncurses-dev libtinfo-dev libc6-dev-i386 cpio lsb-core wget netcat-openbsd libtbb-dev libglfw3-dev pkgconf gdb gcc-multilib g++-multilib curl libomp-dev && \
+RUN apt-get -y update && DEBIAN_FRONTEND=noninteractive apt-get install -y clang-8 build-essential libnuma1 opencl-headers ocl-icd-libopencl1 clinfo vim gcc g++ git python3 imagemagick \
+    m4 bison flex zlib1g-dev libncurses-dev libtinfo-dev libc6-dev-i386 cpio lsb-core wget netcat-openbsd libtbb-dev libglfw3-dev pkgconf gdb gcc-multilib g++-multilib curl libomp-dev && \
     rm -rf /var/lib/apt/lists/*
 
 # Download and install required version of cmake (3.14) for ISPC build
@@ -73,6 +73,7 @@ RUN cmake -DLLVM_DIR=$LLVM_HOME/bin-$LLVM_VERSION/lib/cmake/llvm/ -DCMAKE_INSTAL
 
 # ISPC build
 ENV PATH=$LLVM_HOME/bin-$LLVM_VERSION/bin:$PATH
+ENV LD_LIBRARY_PATH=$LLVM_HOME/bin-$LLVM_VERSION/lib:$LD_LIBRARY_PATH
 WORKDIR /home/src/ispc
 RUN mkdir -p build
 WORKDIR /home/src/ispc/build
