@@ -1,13 +1,13 @@
-// RUN: %{ispc} %s -DISPC_EXPORT --emit-llvm-text -O0 --nowrap -o %t.ll
+// RUN: %{ispc} %s -DISPC_EXPORT --emit-llvm-text --no-discard-value-names -O0 --nowrap -o %t.ll
 // RUN: FileCheck --input-file=%t.ll -check-prefix=CHECK_ISPC_EXPORT %s
 
-// RUN: %{ispc} %s -DISPC_UNMASKED --emit-llvm-text -O0 --nowrap -o %t.ll
+// RUN: %{ispc} %s -DISPC_UNMASKED --emit-llvm-text --no-discard-value-names -O0 --nowrap -o %t.ll
 // RUN: FileCheck --input-file=%t.ll -check-prefix=CHECK_ISPC_UNMASKED %s
 
-// RUN: %{ispc} %s -DISPC_NOQUALIF --emit-llvm-text -O0 --nowrap -o %t.ll
+// RUN: %{ispc} %s -DISPC_NOQUALIF --emit-llvm-text --no-discard-value-names -O0 --nowrap -o %t.ll
 // RUN: FileCheck --input-file=%t.ll -check-prefix=CHECK_ISPC_NOQUALIF %s
 
-// RUN: %{ispc} %s -DISPC_TASK --emit-llvm-text -O0 --nowrap -o %t.ll
+// RUN: %{ispc} %s -DISPC_TASK --emit-llvm-text --no-discard-value-names -O0 --nowrap -o %t.ll
 // RUN: FileCheck --input-file=%t.ll -check-prefix=CHECK_ISPC_TASK %s
 
 struct Parameters {

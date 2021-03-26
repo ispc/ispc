@@ -204,9 +204,17 @@ static void lPrintVersion() {
     printf("\nusage (developer options): ispc\n");
     printf("    [--debug]\t\t\t\tPrint information useful for debugging ispc\n");
     printf("    [--debug-llvm]\t\t\tEnable LLVM debugging information (dumps to stderr)\n");
-    printf("    [--print-target]\t\t\tPrint target's information\n");
-    printf("    [--fuzz-test]\t\t\tRandomly perturb program input to test error conditions\n");
+#ifndef ISPC_NO_DUMPS
+    printf("    [--debug-phase=<value>]\t\tSet optimization phases to dump. "
+           "--debug-phase=first,210:220,300,305,310:last\n");
+#endif
+    printf("    [--[no-]discard-value-names]\tDo not discard/Discard value names when generating LLVM IR.\n");
+#ifndef ISPC_NO_DUMPS
+    printf("    [--dump-file]\t\t\tDump module IR to file(s) in current directory\n");
+#endif
     printf("    [--fuzz-seed=<value>]\t\tSeed value for RNG for fuzz testing\n");
+    printf("    [--fuzz-test]\t\t\tRandomly perturb program input to test error conditions\n");
+    printf("    [--off-phase=<value>]\t\tSwitch off optimization phases. --off-phase=first,210:220,300,305,310:last\n");
     printf("    [--opt=<option>]\t\t\tSet optimization option\n");
     printf("        disable-all-on-optimizations\t\tDisable optimizations that take advantage of \"all on\" mask\n");
     printf("        disable-blended-masked-stores\t\tScalarize masked stores on SSE (vs. using vblendps)\n");
@@ -221,13 +229,8 @@ static void lPrintVersion() {
 #ifdef ISPC_GENX_ENABLED
     printf("        disable-genx-gather-coalescing\t\tDisable GenX gather coalescing.\n");
 #endif
+    printf("    [--print-target]\t\t\tPrint target's information\n");
     printf("    [--yydebug]\t\t\t\tPrint debugging information during parsing\n");
-#ifndef ISPC_NO_DUMPS
-    printf("    [--debug-phase=<value>]\t\tSet optimization phases to dump. "
-           "--debug-phase=first,210:220,300,305,310:last\n");
-    printf("    [--dump-file]\t\t\tDump module IR to file(s) in current directory\n");
-#endif
-    printf("    [--off-phase=<value>]\t\tSwitch off optimization phases. --off-phase=first,210:220,300,305,310:last\n");
     exit(ret);
 }
 
@@ -647,6 +650,10 @@ int main(int Argc, char *Argv[]) {
             g->debugPrint = true;
         else if (!strcmp(argv[i], "--debug-llvm"))
             llvm::DebugFlag = true;
+        else if (!strcmp(argv[i], "--discard-value-names"))
+            g->ctx->setDiscardValueNames(true);
+        else if (!strcmp(argv[i], "--no-discard-value-names"))
+            g->ctx->setDiscardValueNames(false);
         else if (!strcmp(argv[i], "--dllexport"))
             g->dllExport = true;
         else if (!strncmp(argv[i], "--dwarf-version=", 16)) {
