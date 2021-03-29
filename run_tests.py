@@ -130,6 +130,20 @@ class TargetConfig(object):
         if self.target == 'neon':
             self.arch = 'aarch64'
 
+# Representation of output which goes to console.
+# It consist of stdout & stderr.
+class Output(object):
+    stdout: str
+    stderr: str
+    def __init__(self, stdout, stderr):
+        self.stdout = stdout
+        self.stderr = stderr
+
+    # By default we can get string from instance of this class
+    # which will return merged stdout with stderr.
+    def __str__(self):
+        return self.stdout + self.stderr
+
 # test-running driver for ispc
 # utility routine to print an update on the number of tests that have been
 # finished.  Should be called with the lock held..
@@ -177,20 +191,13 @@ def run_command(cmd, timeout=600, cwd="."):
     except:
         print_debug("ERROR: The child (%s) raised an exception: %s\n" % (arg_list, sys.exc_info()[1]), s, run_tests_log)
         raise
-
-    output = ""
-    output += out[0].decode("utf-8")
-    output += out[1].decode("utf-8")
+    output = Output(out[0].decode("utf-8"), out[1].decode("utf-8"))
     return (proc.returncode, output, is_timeout)
 
 # checks whether print ouput is correct
 # (whether test and reference outputs are same)
 # NOTE: output contains both test and reference lines
 def check_print_output(output):
-    # if message about spill size is appeared, remove it from output
-    spill_line_idx = output.find("Spill")
-    if spill_line_idx != -1:
-        output = output[0:spill_line_idx]
     lines = output.splitlines()
     if len(lines) == 0 or len(lines) % 2:
         return False
@@ -248,7 +255,8 @@ def run_cmds(compile_cmds, run_cmd, filename, expect_failure, sig, exe_wd="."):
         if sig < 32:
             run_failed = (return_code != 0) or timeout
         else:
-            output_equality = check_print_output(output)
+            # check only stdout
+            output_equality = check_print_output(output.stdout)
             if not output_equality:
                 print_debug("Print outputs check failed\n", s, run_tests_log)
             run_failed = (return_code != 0) or not output_equality or timeout
@@ -369,7 +377,7 @@ def run_test(testname, host, target):
         firstline = firstline.rstrip()
         file.close()
 
-        if re.search(firstline, output) == None:
+        if re.search(firstline, output.__str__()) == None:
             print_debug("Didn't see expected error message %s from test %s.\nActual output:\n%s\n" % \
                 (firstline, testname, output), s, run_tests_log)
             return Status.Compfail
