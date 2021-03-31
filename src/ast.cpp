@@ -175,6 +175,7 @@ ASTNode *WalkAST(ASTNode *node, ASTPreCallBackFunc preFunc, ASTPostCallBackFunc 
         SizeOfExpr *soe;
         AddressOfExpr *aoe;
         NewExpr *newe;
+        AllocaExpr *alloce;
 
         if ((ue = llvm::dyn_cast<UnaryExpr>(node)) != NULL)
             ue->expr = (Expr *)WalkAST(ue->expr, preFunc, postFunc, data);
@@ -211,6 +212,8 @@ ASTNode *WalkAST(ASTNode *node, ASTPreCallBackFunc preFunc, ASTPostCallBackFunc 
             refderef->expr = (Expr *)WalkAST(refderef->expr, preFunc, postFunc, data);
         else if ((soe = llvm::dyn_cast<SizeOfExpr>(node)) != NULL)
             soe->expr = (Expr *)WalkAST(soe->expr, preFunc, postFunc, data);
+        else if ((alloce = llvm::dyn_cast<AllocaExpr>(node)) != NULL)
+            alloce->expr = (Expr *)WalkAST(alloce->expr, preFunc, postFunc, data);
         else if ((aoe = llvm::dyn_cast<AddressOfExpr>(node)) != NULL)
             aoe->expr = (Expr *)WalkAST(aoe->expr, preFunc, postFunc, data);
         else if ((newe = llvm::dyn_cast<NewExpr>(node)) != NULL) {

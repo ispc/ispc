@@ -634,6 +634,27 @@ class SizeOfExpr : public Expr {
     const Type *type;
 };
 
+//  Expression that allocates space in the stack frame of the caller
+//  and returns a pointer to the beginning of the allocated space.
+class AllocaExpr : public Expr {
+  public:
+    AllocaExpr(Expr *e, SourcePos p);
+
+    static inline bool classof(AllocaExpr const *) { return true; }
+    static inline bool classof(ASTNode const *N) { return N->getValueID() == AllocaExprID; }
+
+    llvm::Value *GetValue(FunctionEmitContext *ctx) const;
+    const Type *GetType() const;
+    void Print() const;
+    Expr *TypeCheck();
+    Expr *Optimize();
+    int EstimateCost() const;
+
+    // The expr should have size_t type and should evaluate to size
+    // of stack memory to be allocated.
+    Expr *expr;
+};
+
 /** @brief Expression representing a symbol reference in the program */
 class SymbolExpr : public Expr {
   public:

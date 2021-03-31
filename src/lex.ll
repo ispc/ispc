@@ -77,7 +77,7 @@ static int allTokens[] = {
   TOKEN_INT, TOKEN_INT8, TOKEN_INT16, TOKEN_INT, TOKEN_INT64, TOKEN_LAUNCH,
   TOKEN_UINT, TOKEN_UINT8, TOKEN_UINT16, TOKEN_UINT64,
   TOKEN_NEW, TOKEN_NULL, TOKEN_PRINT, TOKEN_RETURN, TOKEN_SOA, TOKEN_SIGNED,
-  TOKEN_SIZEOF, TOKEN_STATIC, TOKEN_STRUCT, TOKEN_SWITCH, TOKEN_SYNC,
+  TOKEN_SIZEOF, TOKEN_ALLOCA, TOKEN_STATIC, TOKEN_STRUCT, TOKEN_SWITCH, TOKEN_SYNC,
   TOKEN_TASK, TOKEN_TRUE, TOKEN_TYPEDEF, TOKEN_UNIFORM, TOKEN_UNMASKED,
   TOKEN_UNSIGNED, TOKEN_VARYING, TOKEN_VOID, TOKEN_WHILE,
   TOKEN_STRING_C_LITERAL, TOKEN_DOTDOTDOT,
@@ -147,6 +147,7 @@ void ParserInit() {
     tokenToName[TOKEN_SOA] = "soa";
     tokenToName[TOKEN_SIGNED] = "signed";
     tokenToName[TOKEN_SIZEOF] = "sizeof";
+    tokenToName[TOKEN_ALLOCA] = "alloca";
     tokenToName[TOKEN_STATIC] = "static";
     tokenToName[TOKEN_STRUCT] = "struct";
     tokenToName[TOKEN_SWITCH] = "switch";
@@ -268,6 +269,7 @@ void ParserInit() {
     tokenNameRemap["TOKEN_SOA"] = "\'soa\'";
     tokenNameRemap["TOKEN_SIGNED"] = "\'signed\'";
     tokenNameRemap["TOKEN_SIZEOF"] = "\'sizeof\'";
+    tokenNameRemap["TOKEN_ALLOCA"] = "\'TOKEN_ALLOCA\'";
     tokenNameRemap["TOKEN_STATIC"] = "\'static\'";
     tokenNameRemap["TOKEN_STRUCT"] = "\'struct\'";
     tokenNameRemap["TOKEN_SWITCH"] = "\'switch\'";
@@ -434,6 +436,7 @@ return { RT; return TOKEN_RETURN; }
 soa { RT; return TOKEN_SOA; }
 signed { RT; return TOKEN_SIGNED; }
 sizeof { RT; return TOKEN_SIZEOF; }
+alloca { RT; return TOKEN_ALLOCA; }
 static { RT; return TOKEN_STATIC; }
 struct { RT; return TOKEN_STRUCT; }
 switch { RT; return TOKEN_SWITCH; }
