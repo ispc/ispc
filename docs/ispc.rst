@@ -794,16 +794,16 @@ preprocessor runs:
 
   * - Symbol name
     - Value
-    - Use
+    - Description
   * - ISPC
     - 1
-    - Detecting that the ``ispc`` compiler is processing the file
+    - Enables detecting that the ``ispc`` compiler is processing the file
   * - ISPC_TARGET_{NEON, SSE2, SSE4, AVX, AVX2, AVX512KNL, AVX512SKX}
     - 1
-    - One of these will be set, depending on the compilation target.
+    - One of these will be set, depending on the compilation target
   * - ISPC_POINTER_SIZE
     - 32 or 64
-    - Number of bits used to represent a pointer for the target architecture.
+    - Number of bits used to represent a pointer for the target architecture
   * - ISPC_MAJOR_VERSION
     - 1
     - Major version of the ``ispc`` compiler/language
@@ -814,17 +814,20 @@ preprocessor runs:
     - 3.1415926535
     - Mathematics
   * - TARGET_WIDTH
-    - Vector width of the target, e.g., 8 for sse2-i32x8.
-    - Static varying initialization.
+    - Vector width of the target, e.g., 8 for sse2-i32x8
+    - Can be used for code versioning for static varying initialization
   * - TARGET_ELEMENT_WIDTH
-    - Element width in bytes, e.g., 4 for i32.
-    - Static varying initialization.
+    - Element width in bytes, e.g., 4 for i32
+    - Can be used for code versioning for static varying initialization
   * - ISPC_UINT_IS_DEFINED
-    - 1.
-    - Detecting if uint8/uint16/uint32/uint64 types are defined in the ISPC version.
+    - 1
+    - The macro is defined if uint8/uint16/uint32/uint64 types are defined in the ``ispc`` (it's defined in 1.13.0 and later)
   * - ISPC_FP64_SUPPORTED
-    - 1.
-    - Detecting if double type is supported by the target.
+    - 1
+    - The macro is defined if double type is supported by the target
+  * - ISPC_LLVM_INTRINSICS_ENABLED
+    - 1
+    - The macro is defined if LLVM intrinsics support is enabled
 
 ``ispc`` supports the following ``#pragma`` directives.
 
@@ -3502,7 +3505,7 @@ For example:
 
     transpose = @llvm.matrix.transpose.v8f32.i32.i32(matrix, row, column);
 
-To detect if this feature is enabled during runtime, check if ``ISPC_LLVM_INTRINSICS_ENABLED``
+To detect if this feature is enabled during compile time, check if ``ISPC_LLVM_INTRINSICS_ENABLED``
 macro is defined.
 
 
