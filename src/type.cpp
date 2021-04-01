@@ -2583,6 +2583,35 @@ static const Type *lVectorConvert(const Type *type, SourcePos pos, const char *r
     }
 }
 
+const Type *Type::AtomicIntegerPromote(const Type *type, SourcePos pos) {
+    if (Type::EqualIgnoringConst(type, AtomicType::UniformInt64) ||
+        Type::EqualIgnoringConst(type, AtomicType::VaryingInt64)) {
+        return type;
+    } else if (Type::EqualIgnoringConst(type, AtomicType::UniformUInt64) ||
+               Type::EqualIgnoringConst(type, AtomicType::VaryingUInt64)) {
+        return type;
+    } else if (Type::EqualIgnoringConst(type, AtomicType::UniformInt32) ||
+               Type::EqualIgnoringConst(type, AtomicType::VaryingInt32)) {
+        return type;
+    } else if (Type::EqualIgnoringConst(type, AtomicType::UniformUInt32) ||
+               Type::EqualIgnoringConst(type, AtomicType::VaryingUInt32)) {
+        return type;
+    } else if (Type::EqualIgnoringConst(type, AtomicType::UniformInt16) ||
+               Type::EqualIgnoringConst(type, AtomicType::UniformUInt16) ||
+               Type::EqualIgnoringConst(type, AtomicType::UniformInt8) ||
+               Type::EqualIgnoringConst(type, AtomicType::UniformUInt8) ||
+               Type::EqualIgnoringConst(type, AtomicType::UniformBool)) {
+        return AtomicType::UniformInt32;
+    } else if (Type::EqualIgnoringConst(type, AtomicType::VaryingInt16) ||
+               Type::EqualIgnoringConst(type, AtomicType::VaryingUInt16) ||
+               Type::EqualIgnoringConst(type, AtomicType::VaryingInt8) ||
+               Type::EqualIgnoringConst(type, AtomicType::VaryingUInt8) ||
+               Type::EqualIgnoringConst(type, AtomicType::VaryingBool)) {
+        return AtomicType::VaryingInt32;
+    }
+    return NULL;
+}
+
 const Type *Type::MoreGeneralType(const Type *t0, const Type *t1, SourcePos pos, const char *reason, bool forceVarying,
                                   int vecSize) {
     Assert(reason != NULL);

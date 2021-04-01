@@ -2519,8 +2519,14 @@ Expr *BinaryExpr::TypeCheck() {
                     return NULL;
                 type0 = arg0->GetType();
             }
-            arg1 = TypeConvertExpr(arg1, type0, "shift operator");
-            if (arg1 == NULL)
+            const Type *tType0 = Type::AtomicIntegerPromote(type0, pos);
+            if (!Type::EqualIgnoringConst(type0, tType0)) {
+                arg0 = TypeConvertExpr(arg0, tType0, "shift operator");
+            }
+            if (!Type::EqualIgnoringConst(type1, tType0)) {
+                arg1 = TypeConvertExpr(arg1, tType0, "shift operator");
+            }
+            if ((arg0 == NULL) || (arg1 == NULL))
                 return NULL;
         } else {
             const Type *promotedType = Type::MoreGeneralType(type0, type1, arg0->pos, "binary bit op");
