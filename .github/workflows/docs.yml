@@ -1,0 +1,33 @@
+name: Docs check
+
+on:
+  push:
+    path:
+      - "docs/**"
+  pull_request:
+    path:
+      - "docs/**"
+  workflow_dispatch:
+
+jobs:
+  linux-build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Check environment
+      run: |
+        cat /proc/cpuinfo
+
+    - name: Install dependencies
+      run: |
+        echo "APT::Acquire::Retries \"3\";" | sudo tee -a /etc/apt/apt.conf.d/80-retries
+        sudo apt-get update
+        sudo apt-get install python3-docutils
+
+    - name: Check docs build
+      run: |
+        cd docs
+        ./build.sh
+
