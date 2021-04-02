@@ -38,12 +38,13 @@ cmake_minimum_required(VERSION 3.13)
 
 set(TEST_NAME "aobench")
 set(ISPC_SRC_NAME "aobench.ispc")
-set(ISPC_TARGET "genx-x16")
+set(ISPC_TARGET_GEN "genx-x8")
+set(ISPC_TARGET_CPU "sse2-i32x8;sse4-i32x8;avx1-i32x8;avx2-i32x8;avx512skx-i32x8")
 set(HOST_SOURCES ao.cpp ao_serial.cpp)
 
 add_perf_example(
     ISPC_SRC_NAME ${ISPC_SRC_NAME}
     TEST_NAME ${TEST_NAME}
-    ISPC_TARGET ${ISPC_TARGET}
+    ISPC_TARGET_GEN ${ISPC_TARGET_GEN}
     HOST_SOURCES ${HOST_SOURCES}
 )
