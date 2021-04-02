@@ -1,5 +1,5 @@
 #
-#  Copyright (c) 2020, Intel Corporation
+#  Copyright (c) 2020-2021, Intel Corporation
 #  All rights reserved.
 #
 #  Redistribution and use in source and binary forms, with or without
@@ -38,14 +38,14 @@ cmake_minimum_required(VERSION 3.13)
 
 set(TEST_NAME "pipeline-dpcpp")
 set(ISPC_SRC_NAME "pipeline-dpcpp.ispc")
-set(ISPC_TARGET "genx-x8")
+set(ISPC_TARGET_GEN "genx-x8")
 set(DPCPP_HOST_SOURCES pipeline-dpcpp.cpp)
 
 if(UNIX)
     add_perf_example(
         ISPC_SRC_NAME ${ISPC_SRC_NAME}
         TEST_NAME ${TEST_NAME}
-        ISPC_TARGET ${ISPC_TARGET}
+        ISPC_TARGET_GEN ${ISPC_TARGET_GEN}
         DPCPP_HOST_SOURCES ${DPCPP_HOST_SOURCES}
     )
 endif()
