@@ -57,10 +57,10 @@ find_program(CLANG_EXECUTABLE NAMES clang
 
 find_program(CLANGPP_EXECUTABLE NAMES clang++
     PATHS ${LLVM_TOOLS_BINARY_DIR} PATH_SUFFIXES bin NO_DEFAULT_PATH)
-if (NOT CLANGPP_EXECUTABLE)
-    message(FATAL_ERROR "Failed to find clang++" )
-endif()
-message(STATUS "CLANGPP_EXECUTABLE: ${CLANGPP_EXECUTABLE}")
+    if (NOT CLANGPP_EXECUTABLE)
+        message(FATAL_ERROR "Failed to find clang++" )
+    endif()
+    message(STATUS "CLANGPP_EXECUTABLE: ${CLANGPP_EXECUTABLE}")
 
 if (GENX_ENABLED)
     find_program(CMC_EXECUTABLE NAMES cmc
