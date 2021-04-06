@@ -474,7 +474,7 @@ void GlobalsLocalization::LocalizeGlobals(LocalizationInfo &LI) {
         AllocaInst *Alloca = new AllocaInst(ElemTy, 0, GV->getName() + ".local", &FirstI);
         Alloca->setAlignment(llvm::MaybeAlign(GV->getAlignment()).valueOrOne());
 
-        if (!isa<UndefValue>(GV->getInitializer()))
+        if (GV->hasInitializer() && !isa<UndefValue>(GV->getInitializer()))
             new StoreInst(GV->getInitializer(), Alloca, &FirstI);
 
         GlobalsToReplace.insert(std::make_pair(GV, Alloca));
