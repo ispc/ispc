@@ -180,7 +180,7 @@ extern "C" void __do_print(const char *format, const char *types, WidthT width, 
 }
 
 #ifdef WASM
-int __num_cores() { return 1; }
+extern "C" int __num_cores() { return 1; }
 #else // WASM
 
 extern "C" int __num_cores() {
