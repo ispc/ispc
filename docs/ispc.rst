@@ -169,6 +169,7 @@ Contents:
 
     * `Reductions`_
 
+  + `Stack Memory Allocation`_
   + `Data Movement`_
 
     * `Setting and Copying Values In Memory`_
@@ -4391,6 +4392,21 @@ The use of exclusive scan to generate variable amounts of output from
 program instances into a compact output buffer is `discussed in the FAQ`_.
 
 .. _discussed in the FAQ: faq.html#how-can-a-gang-of-program-instances-generate-variable-amounts-of-output-efficiently
+
+
+Stack Memory Allocation
+-----------------------
+
+The ``ispc`` standard library includes an ``alloca()`` function that can be 
+used to allocate memory on the stack.
+
+::
+
+    void * uniform alloca(uniform size_t size);
+
+The ``alloca()`` function allocates ``size`` bytes of space in the stack
+frame of the caller.  This temporary space is automatically freed
+when the function that called ``alloca()`` returns to its caller.
 
 
 Data Movement

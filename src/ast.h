@@ -80,6 +80,7 @@ class ASTNode {
     enum ASTNodeTy {
         /* For classes inherited from Expr */
         AddressOfExprID,
+        AllocaExprID,
         AssignExprID,
         BinaryExprID,
         ConstExprID,

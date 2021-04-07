@@ -2606,6 +2606,43 @@ void FunctionEmitContext::addGSMetadata(llvm::Value *v, SourcePos pos) {
     inst->setMetadata("last_column", md);
 }
 
+llvm::Value *FunctionEmitContext::AllocaInst(llvm::Type *llvmType, llvm::Value *size, const llvm::Twine &name,
+                                             int align, bool atEntryBlock) {
+    if ((llvmType == NULL) || (size == NULL)) {
+        AssertPos(currentPos, m->errorCount > 0);
+        return NULL;
+    }
+
+    llvm::AllocaInst *inst = NULL;
+    if (atEntryBlock) {
+        // We usually insert it right before the jump instruction at the
+        // end of allocaBlock
+        llvm::Instruction *retInst = allocaBlock->getTerminator();
+        AssertPos(currentPos, retInst);
+        unsigned AS = llvmFunction->getParent()->getDataLayout().getAllocaAddrSpace();
+        inst = new llvm::AllocaInst(llvmType, AS, size, name, retInst);
+    } else {
+        // Unless the caller overrode the default and wants it in the
+        // current basic block
+        unsigned AS = llvmFunction->getParent()->getDataLayout().getAllocaAddrSpace();
+        inst = new llvm::AllocaInst(llvmType, AS, size, name, bblock);
+    }
+
+    // If no alignment was specified but we have an array of a uniform
+    // type, then align it to the native vector alignment; it's not
+    // unlikely that this array will be loaded into varying variables with
+    // what will be aligned accesses if the uniform -> varying load is done
+    // in regular chunks.
+    llvm::ArrayType *arrayType = llvm::dyn_cast<llvm::ArrayType>(llvmType);
+    if (align == 0 && arrayType != NULL && !llvm::isa<llvm::VectorType>(arrayType->getElementType()))
+        align = g->target->getNativeVectorAlignment();
+
+    if (align != 0) {
+        inst->setAlignment(llvm::MaybeAlign(align).valueOrOne());
+    }
+    return inst;
+}
+
 llvm::Value *FunctionEmitContext::AllocaInst(llvm::Type *llvmType, const llvm::Twine &name, int align,
                                              bool atEntryBlock) {
     if (llvmType == NULL) {

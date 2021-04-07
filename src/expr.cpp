@@ -7711,6 +7711,62 @@ std::pair<llvm::Constant *, bool> SizeOfExpr::GetConstant(const Type *rtype) con
 }
 
 ///////////////////////////////////////////////////////////////////////////
+// AllocaExpr
+
+AllocaExpr::AllocaExpr(Expr *e, SourcePos p) : Expr(p, AllocaExprID), expr(e) {}
+
+llvm::Value *AllocaExpr::GetValue(FunctionEmitContext *ctx) const {
+    ctx->SetDebugPos(pos);
+    if (expr == NULL)
+        return NULL;
+    llvm::Value *llvmValue = expr->GetValue(ctx);
+    if (llvmValue == NULL)
+        return NULL;
+    llvm::Value *resultPtr = ctx->AllocaInst((LLVMTypes::VoidPointerType)->getElementType(), llvmValue, "allocaExpr",
+                                             16, false); // 16 byte stack alignment.
+    return resultPtr;
+}
+
+const Type *AllocaExpr::GetType() const { return PointerType::Void; }
+
+void AllocaExpr::Print() const {
+    printf("AllocaExpr (");
+    if (expr != NULL)
+        expr->Print();
+    const Type *t = expr ? expr->GetType() : NULL;
+    if (t != NULL)
+        printf(" [type %s]", t->GetString().c_str());
+    printf(")");
+    pos.Print();
+}
+
+Expr *AllocaExpr::TypeCheck() {
+    if (expr == NULL) {
+        return NULL;
+    }
+
+    if (g->target->isGenXTarget()) {
+        Error(pos, "\"alloca()\" is not supported for genx-* targets yet.");
+        return NULL;
+    }
+    const Type *argType = expr ? expr->GetType() : NULL;
+    const Type *sizeType = m->symbolTable->LookupType("size_t");
+    if (!Type::Equal(sizeType->GetAsUniformType(), expr->GetType())) {
+        expr = TypeConvertExpr(expr, sizeType->GetAsUniformType(), "Alloca_arg");
+    }
+    if (expr == NULL) {
+        Error(pos, "\"alloca()\" cannot have an argument of type \"%s\".", argType->GetString().c_str());
+        return NULL;
+    }
+
+    return this;
+}
+
+Expr *AllocaExpr::Optimize() { return this; }
+
+int AllocaExpr::EstimateCost() const { return 0; }
+
+///////////////////////////////////////////////////////////////////////////
 // SymbolExpr
 
 SymbolExpr::SymbolExpr(Symbol *s, SourcePos p) : Expr(p, SymbolExprID) { symbol = s; }
