@@ -4397,8 +4397,8 @@ program instances into a compact output buffer is `discussed in the FAQ`_.
 Stack Memory Allocation
 -----------------------
 
-The ``ispc`` standard library includes a ``alloca()`` function that can be 
-used to allocate memory in stack.
+The ``ispc`` standard library includes an ``alloca()`` function that can be 
+used to allocate memory on the stack.
 
 ::
 
