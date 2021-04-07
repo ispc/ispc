@@ -4,6 +4,9 @@ MAINTAINER Dmitry Babokin <dmitry.y.babokin@intel.com>
 ARG REPO=ispc/ispc
 ARG SHA=main
 ARG LLVM_VERSION=11.1
+ARG L0L_VER=1.2.3
+ARG VC_INTRINSICS_COMMIT_SHA="d547de9478277e14896fa6418f6bb07ac07d7a1b"
+ARG SPIRV_TRANSLATOR_COMMIT_SHA="bea47b3d7528b8be7da88943d884cdb8d045e8a0"
 
 # !!! Make sure that your docker config provides enough memory to the container,
 # otherwise LLVM build may fail, as it will use all the cores available to container.
@@ -69,6 +72,7 @@ RUN git clone https://github.com/westes/flex.git && cd flex && git checkout v2.6
 WORKDIR /usr/local/src
 RUN git clone https://github.com/intel/vc-intrinsics.git
 WORKDIR /usr/local/src/vc-intrinsics
+RUN git checkout $VC_INTRINSICS_COMMIT_SHA
 RUN mkdir -p build
 WORKDIR /usr/local/src/vc-intrinsics/build
 RUN cmake -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_C_COMPILER=clang -DLLVM_DIR=$LLVM_HOME/bin-$LLVM_VERSION/lib/cmake/llvm -DCMAKE_INSTALL_PREFIX=$GENX_DEPS ../ && make install -j`nproc`
@@ -77,7 +81,7 @@ RUN cmake -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_C_COMPILER=clang -DLLVM_DIR=$LLVM
 WORKDIR /usr/local/src
 RUN git clone https://github.com/KhronosGroup/SPIRV-LLVM-Translator.git
 WORKDIR /usr/local/src/SPIRV-LLVM-Translator
-RUN git checkout llvm_release_110
+RUN git checkout $SPIRV_TRANSLATOR_COMMIT_SHA
 RUN mkdir -p build
 WORKDIR /usr/local/src/SPIRV-LLVM-Translator/build
 RUN cmake -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_C_COMPILER=clang -DLLVM_DIR=$LLVM_HOME/bin-$LLVM_VERSION/lib/cmake/llvm/ -DCMAKE_INSTALL_PREFIX=$GENX_DEPS ../ && make install -j`nproc`
@@ -86,7 +90,7 @@ RUN cmake -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_C_COMPILER=clang -DLLVM_DIR=$LLVM
 WORKDIR /usr/local/src
 RUN git clone https://github.com/oneapi-src/level-zero.git
 WORKDIR /usr/local/src/level-zero
-RUN git checkout v1.1.0
+RUN git checkout v$L0L_VER
 RUN mkdir -p build
 WORKDIR /usr/local/src/level-zero/build
 RUN cmake -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_C_COMPILER=clang -DCMAKE_INSTALL_PREFIX=/usr/local ../ && make install -j`nproc`
