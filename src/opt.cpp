@@ -6155,6 +6155,45 @@ class MangleOpenCLBuiltins : public llvm::FunctionPass {
 
 char MangleOpenCLBuiltins::ID = 0;
 
+static std::string mangleMathOCLBuiltin(const llvm::Function &func) {
+    Assert(func.getName().startswith("__spirv_ocl") && "wrong argument: ocl builtin is expected");
+    std::string mangledName;
+    llvm::Type *retType = func.getReturnType();
+    std::string funcName = func.getName().str();
+    std::vector<llvm::Type *> ArgTy;
+    // spirv OpenCL builtins are used for double types only
+    Assert(retType->isVectorTy() && llvm::dyn_cast<llvm::VectorType>(retType)->getElementType()->isDoubleTy() ||
+           retType->isSingleValueType() && retType->isDoubleTy());
+    if (retType->isVectorTy() && llvm::dyn_cast<llvm::VectorType>(retType)->getElementType()->isDoubleTy()) {
+        ArgTy.push_back(LLVMTypes::DoubleVectorType);
+        // _DvWIDTH suffix is used in target file to differentiate scalar
+        // and vector versions of intrinsics. Here we remove this
+        // suffix and mangle the name.
+        size_t pos = funcName.find("_DvWIDTH");
+        if (pos != std::string::npos) {
+            funcName.erase(pos, 8);
+        }
+    } else if (retType->isSingleValueType() && retType->isDoubleTy()) {
+        ArgTy.push_back(LLVMTypes::DoubleType);
+    }
+    mangleOpenClBuiltin(funcName, ArgTy, mangledName);
+    return mangledName;
+}
+
+static std::string manglePrintfOCLBuiltin(const llvm::Function &func) {
+    Assert(func.getName() == "__spirv_ocl_printf" && "wrong argument: ocl builtin is expected");
+    std::string mangledName;
+    mangleOpenClBuiltin(func.getName().str(), func.getArg(0)->getType(), mangledName);
+    return mangledName;
+}
+
+static std::string mangleOCLBuiltin(const llvm::Function &func) {
+    Assert(func.getName().startswith("__spirv_ocl") && "wrong argument: ocl builtin is expected");
+    if (func.getName() == "__spirv_ocl_printf")
+        return manglePrintfOCLBuiltin(func);
+    return mangleMathOCLBuiltin(func);
+}
+
 bool MangleOpenCLBuiltins::runOnBasicBlock(llvm::BasicBlock &bb) {
     DEBUG_START_PASS("MangleOpenCLBuiltins");
     bool modifiedAny = false;
@@ -6165,28 +6204,7 @@ bool MangleOpenCLBuiltins::runOnBasicBlock(llvm::BasicBlock &bb) {
             if (func == NULL)
                 continue;
             if (func->getName().startswith("__spirv_ocl")) {
-                std::string mangledName;
-                llvm::Type *retType = func->getReturnType();
-                std::string funcName = func->getName().str();
-                std::vector<llvm::Type *> ArgTy;
-                // spirv OpenCL builtins are used for double types only
-                Assert(retType->isVectorTy() &&
-                           llvm::dyn_cast<llvm::VectorType>(retType)->getElementType()->isDoubleTy() ||
-                       retType->isSingleValueType() && retType->isDoubleTy());
-                if (retType->isVectorTy() &&
-                    llvm::dyn_cast<llvm::VectorType>(retType)->getElementType()->isDoubleTy()) {
-                    ArgTy.push_back(LLVMTypes::DoubleVectorType);
-                    // _DvWIDTH suffix is used in target file to differentiate scalar
-                    // and vector versions of intrinsics. Here we remove this
-                    // suffix and mangle the name.
-                    size_t pos = funcName.find("_DvWIDTH");
-                    if (pos != std::string::npos) {
-                        funcName.erase(pos, 8);
-                    }
-                } else if (retType->isSingleValueType() && retType->isDoubleTy()) {
-                    ArgTy.push_back(LLVMTypes::DoubleType);
-                }
-                mangleOpenClBuiltin(funcName, ArgTy, mangledName);
+                std::string mangledName = mangleOCLBuiltin(*func);
                 func->setName(mangledName);
                 modifiedAny = true;
             }

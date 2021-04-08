@@ -623,7 +623,9 @@ void GlobalsLocalization::AnalyzeGlobals(CallGraph &CG) {
             // don't localize global constant format string if it's used by
             // print_index intrinsic
             bool UsesPrintIndex = std::any_of(GV.use_begin(), GV.use_end(), UsesPrintChecker);
-            return (GV.hasAttribute(genx::FunctionMD::GenXVolatile) || UsesPrintIndex);
+            // Avoid localizing constant addrspace as a workaround for print implementation.
+            // Constant strings should stay constant strings till spirv.
+            return GV.hasAttribute(genx::FunctionMD::GenXVolatile) || UsesPrintIndex || GV.getAddressSpace() != 0;
         },
         [&DL](const GlobalVariable &GV) { return calcGVWeight(GV, DL); });
     for (auto I = Funcs.begin(), E = Funcs.end(); I != E; ++I) {
