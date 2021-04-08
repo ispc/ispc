@@ -3288,6 +3288,7 @@ llvm::Value *FunctionEmitContext::CallInst(llvm::Value *func, const FunctionType
     // Most of the time, the mask is passed as the last argument.  this
     // isn't the case for things like intrinsics, builtins, and extern "C"
     // functions from the application.  Add the mask if it's needed.
+    // There may be more arguments than function parameters for vararg case.
     unsigned int calleeArgCount = lCalleeArgCount(func, funcType);
 
     // If we have ISPC external function without mask, we should cast all
@@ -3306,7 +3307,8 @@ llvm::Value *FunctionEmitContext::CallInst(llvm::Value *func, const FunctionType
         argVals = args;
     }
 
-    AssertPos(currentPos, argVals.size() + 1 == calleeArgCount || argVals.size() == calleeArgCount);
+    AssertPos(currentPos, (llvm::isa<llvm::Function>(func) && llvm::cast<llvm::Function>(func)->isVarArg()) ||
+                              argVals.size() + 1 == calleeArgCount || argVals.size() == calleeArgCount);
     if (argVals.size() + 1 == calleeArgCount) {
         llvm::Value *mask = NULL;
 
@@ -3841,17 +3843,25 @@ void FunctionEmitContext::GenXUniformMetadata(llvm::Value *v) {
     }
 }
 
-llvm::CallInst *FunctionEmitContext::GenXLZFormatStr(const std::string &str) {
-    auto *initializer = llvm::ConstantDataArray::getString(*g->ctx, str, true);
-    auto *GV = new llvm::GlobalVariable(*m->module, initializer->getType(), true /* const */,
-                                        llvm::GlobalValue::InternalLinkage, initializer, "lz_format_str");
+llvm::Constant *FunctionEmitContext::GenXCreateConstantString(llvm::StringRef str, llvm::StringRef name) {
+    auto *initializer = llvm::ConstantDataArray::getString(*g->ctx, str, /* AddNull */ true);
+    auto *GV = new llvm::GlobalVariable(*m->module, initializer->getType(),
+                                        /* const */ true, llvm::GlobalValue::InternalLinkage, initializer, name,
+                                        nullptr, llvm::GlobalVariable::NotThreadLocal,
+                                        /* Constant Addrspace */ 2);
+    GV->setAlignment(llvm::MaybeAlign(g->target->getDataLayout()->getABITypeAlignment(initializer->getType())));
+    GV->setUnnamedAddr(llvm::GlobalValue::UnnamedAddr::Global);
 
-    auto *GEP = GetElementPtrInst(GV, LLVMInt32(0), LLVMInt32(0), PointerType::GetUniform(AtomicType::UniformInt8),
-                                  "lz_format_str_ptr");
+    return llvm::ConstantExpr::getInBoundsGetElementPtr(GV->getValueType(), GV,
+                                                        llvm::ArrayRef<llvm::Constant *>{LLVMInt32(0), LLVMInt32(0)});
+}
 
-    auto Fn = llvm::GenXIntrinsic::getGenXDeclaration(m->module, llvm::GenXIntrinsic::genx_print_format_index,
-                                                      LLVMTypes::Int8PointerType);
-    return llvm::CallInst::Create(Fn, GEP, "lz_format_str_idx", bblock);
+llvm::Constant *FunctionEmitContext::GenXGetOrCreateConstantString(llvm::StringRef str, llvm::StringRef name) {
+    auto *GV = m->module->getGlobalVariable(name, /* AllowInternal */ true);
+    if (GV)
+        return llvm::ConstantExpr::getInBoundsGetElementPtr(
+            GV->getValueType(), GV, llvm::ArrayRef<llvm::Constant *>{LLVMInt32(0), LLVMInt32(0)});
+    return GenXCreateConstantString(str, name);
 }
 
 #endif

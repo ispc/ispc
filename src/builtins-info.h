@@ -101,6 +101,8 @@ inline Encoding getCorrespondingEncoding4Uniform(Encoding type) {
     return static_cast<Encoding>(type - (Encoding::VecBool - Encoding::Bool));
 }
 
+inline bool isUniformEncoding(Encoding type) { return type < Encoding::VecBool; }
+
 // same as getEncoding4Uniform, but it is a functor
 struct Encoding4Uniform {
     template <typename T> constexpr Encoding call() const { return getEncoding4Uniform<T>(); }

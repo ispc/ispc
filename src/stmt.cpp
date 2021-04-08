@@ -46,6 +46,8 @@
 #include "type.h"
 #include "util.h"
 
+#include <algorithm>
+#include <iterator>
 #include <map>
 #include <sstream>
 #include <stdio.h>
@@ -58,6 +60,7 @@
 #include <llvm/IR/Metadata.h>
 #include <llvm/IR/Module.h>
 #include <llvm/IR/Type.h>
+#include <llvm/IR/Value.h>
 #include <llvm/Support/raw_ostream.h>
 
 using namespace ispc;
@@ -3061,174 +3064,131 @@ static llvm::Function *getPrintImplFunc() {
 }
 
 #ifdef ISPC_GENX_ENABLED
+// Builds args for OCL printf function based on ISPC print args.
 class PrintArgsBuilder {
     // properly dereferenced and size extended value expressions
-    std::vector<ExprWithType> argExprs_;
-    FunctionEmitContext *ctx_;
+    std::vector<ExprWithType> argExprs;
+    FunctionEmitContext *ctx;
+
+    struct AdditionalData {
+        llvm::Value *mask;
+        enum { LeftParenthesisIdx = 0, RightParenthesisIdx, EmptyIdx, FalseIdx, TrueIdx, NumStrings };
+        std::array<llvm::Value *, NumStrings> strings;
+
+        AdditionalData() {}
+        AdditionalData(FunctionEmitContext *ctx) {
+            if (ctx->emitGenXHardwareMask())
+                mask = ctx->GenXSimdCFPredicate(LLVMMaskAllOn);
+            else
+                mask = ctx->GetFullMask();
+            strings[AdditionalData::LeftParenthesisIdx] =
+                ctx->GenXGetOrCreateConstantString("((", "ispc.print.left.parenthesis");
+            strings[AdditionalData::RightParenthesisIdx] =
+                ctx->GenXGetOrCreateConstantString("))", "ispc.print.right.parenthesis");
+            strings[AdditionalData::EmptyIdx] = ctx->GenXGetOrCreateConstantString("", "ispc.print.empty");
+            strings[AdditionalData::FalseIdx] = ctx->GenXGetOrCreateConstantString("false", "ispc.print.false");
+            strings[AdditionalData::TrueIdx] = ctx->GenXGetOrCreateConstantString("true", "ispc.print.true");
+        }
+    };
+    AdditionalData data;
 
   public:
-    PrintArgsBuilder() : argExprs_(), ctx_(NULL) {}
-    PrintArgsBuilder(FunctionEmitContext *ctx) : argExprs_(), ctx_(ctx) {}
+    PrintArgsBuilder() : ctx{NULL} {}
+    PrintArgsBuilder(FunctionEmitContext *ctxIn) : argExprs{}, ctx{ctxIn}, data{ctxIn} {}
 
     template <typename Iter>
-    PrintArgsBuilder(Iter first, Iter last, FunctionEmitContext *ctx) : argExprs_(), ctx_(ctx) {
-        std::transform(first, last, std::back_inserter(argExprs_),
+    PrintArgsBuilder(Iter first, Iter last, FunctionEmitContext *ctxIn) : PrintArgsBuilder{ctxIn} {
+        std::transform(first, last, std::back_inserter(argExprs),
                        [](Expr *expr) { return lProcessPrintArgType(expr); });
-        std::for_each(argExprs_.cbegin(), argExprs_.cend(),
+        std::for_each(argExprs.cbegin(), argExprs.cend(),
                       [](const ExprWithType &elem) { Assert(elem.expr && "must have all values processed"); });
-    }
-
-    void extendPtrTo64BitInt() {
-        std::for_each(argExprs_.begin(), argExprs_.end(), [](ExprWithType &exprWithType) {
-            if (exprWithType.expr->GetType()->IsPointerType())
-                exprWithType.expr = new TypeCastExpr(
-                    exprWithType.expr->GetType()->IsUniformType() ? AtomicType::UniformInt64 : AtomicType::VaryingInt64,
-                    exprWithType.expr, exprWithType.expr->pos);
-        });
     }
 
     // Returns new args builder with subset of original args.
     // Subset is defined with pair of indexes, element with \p end index is not included.
     PrintArgsBuilder extract(int beg, int end) const {
-        Assert(beg >= 0 && beg <= argExprs_.size() && end >= 0 && end <= argExprs_.size() &&
+        Assert(beg >= 0 && beg <= argExprs.size() && end >= 0 && end <= argExprs.size() &&
                "wrong argument: index is out of bound");
         Assert(beg <= end && "wrong arguments: beg must preceed end");
-        PrintArgsBuilder extraction(ctx_);
-        std::copy(std::next(argExprs_.begin(), beg), std::next(argExprs_.begin(), end),
-                  std::back_inserter(extraction.argExprs_));
+        PrintArgsBuilder extraction(ctx, data);
+        std::copy(std::next(argExprs.begin(), beg), std::next(argExprs.begin(), end),
+                  std::back_inserter(extraction.argExprs));
         return extraction;
     }
 
-    // the string that will later go as TYPES_IDX argument
+    // Combine all arg types into a continuous string.
     std::string generateArgTypes() const {
         std::string argTypes;
-        std::transform(argExprs_.cbegin(), argExprs_.cend(), std::back_inserter(argTypes),
+        std::transform(argExprs.cbegin(), argExprs.cend(), std::back_inserter(argTypes),
                        [](const ExprWithType &argInfo) { return argInfo.type; });
         return argTypes;
     }
 
-    // the value that will later go as ARGS_IDX argument
-    // Splits arguments into set of uints, stores them in uint[], returns pointer to it
-    llvm::Value *emitArgCode() const {
-        if (argExprs_.empty())
-            return llvm::Constant::getNullValue(LLVMTypes::Int32PointerType);
+    // Emit code for OCL printf arguments.
+    // Each generated arg is returned in the vector.
+    std::vector<llvm::Value *> emitArgCode() const {
+        if (argExprs.empty())
+            return {};
 
-        std::vector<llvm::Value *> argValues(argExprs_.size());
-        std::transform(argExprs_.cbegin(), argExprs_.cend(), argValues.begin(),
-                       [this](const ExprWithType &argInfo) { return argInfo.expr->GetValue(ctx_); });
-        std::vector<llvm::Value *> alignedArgValues;
-        createAlignedArgValues(argValues.cbegin(), argValues.cend(), std::back_inserter(alignedArgValues));
-        auto argAlloca = storeAlignedArgValues(alignedArgValues.cbegin(), alignedArgValues.cend());
-        return ctx_->BitCastInst(argAlloca, LLVMTypes::Int32PointerType);
-    }
-
-    // current implementation of __do_print_cm requires the number of uniform arguments with bool excluded
-    int countUniformArgs() const {
-        return std::count_if(argExprs_.cbegin(), argExprs_.cend(),
-                             [](const ExprWithType &argInfo) { return argInfo.expr->GetType()->IsUniformType(); });
-    }
-
-    // current implementation of __do_print_cm requires the number of varying arguments with bool excluded
-    int countVaryingArgs() const {
-        return std::count_if(argExprs_.cbegin(), argExprs_.cend(),
-                             [](const ExprWithType &argInfo) { return argInfo.expr->GetType()->IsVaryingType(); });
-    }
-
-    // current implementation of __do_print_cm requires the number of uniform arguments with bool excluded
-    int count64BitUniformArgs() const {
-        return std::count_if(argExprs_.cbegin(), argExprs_.cend(), [](const ExprWithType &argInfo) {
-            return argInfo.expr->GetType()->IsUniformType() &&
-                   g->target->getDataLayout()->getTypeSizeInBits(argInfo.expr->GetType()->LLVMType(g->ctx)) == 64;
-        });
-    }
-
-    // current implementation of __do_print_cm requires the number of varying arguments with bool excluded
-    int count64BitVaryingArgs() const {
-        return std::count_if(argExprs_.cbegin(), argExprs_.cend(), [](const ExprWithType &argInfo) {
-            return argInfo.expr->GetType()->IsVaryingType() &&
-                   g->target->getDataLayout()->getTypeSizeInBits(
-                       argInfo.expr->GetType()->LLVMType(g->ctx)->getScalarType()) == 64;
-        });
-    }
-
-    // current implementation of __do_print_cm requires the number of uniform arguments with bool excluded
-    int countNonBoolUniformArgs() const {
-        return std::count_if(argExprs_.cbegin(), argExprs_.cend(), [](const ExprWithType &argInfo) {
-            return argInfo.expr->GetType()->IsUniformType() && argInfo.type != PrintInfo::getEncoding4Uniform<bool>();
-        });
-    }
-
-    // current implementation of __do_print_cm requires the number of varying arguments with bool excluded
-    int countNonBoolVaryingArgs() const {
-        return std::count_if(argExprs_.cbegin(), argExprs_.cend(), [](const ExprWithType &argInfo) {
-            return argInfo.expr->GetType()->IsVaryingType() && argInfo.type != PrintInfo::getEncoding4Varying<bool>();
-        });
+        std::vector<llvm::Value *> Args;
+        // It would require at least the same amount of args. More if there're vector args.
+        Args.reserve(argExprs.size());
+        for (const ExprWithType &argInfo : argExprs)
+            writeRawArg(*argInfo.expr->GetValue(ctx), static_cast<PrintInfo::Encoding>(argInfo.type),
+                        std::back_inserter(Args));
+        return Args;
     }
 
   private:
-    // Aligned here means that every value is represented by set of i32
-    template <typename InputIter, typename OutputIter>
-    OutputIter createAlignedArgValues(InputIter first, InputIter last, OutputIter dst) const {
-        for (; first != last; ++first) {
-            auto arg = *first;
-            if (arg->getType()->isVectorTy())
-                dst = createAlignedVectorArgValue(arg, dst);
-            else
-                dst = createAlignedScalarArgValue(arg, dst);
+    PrintArgsBuilder(FunctionEmitContext *ctxIn, AdditionalData data) : argExprs{}, ctx{ctxIn}, data{std::move(data)} {}
+
+    // Emit code for ISPC print uniform arg.
+    // Most arg types are unchanged. Boolean arg should be transformed into string argument.
+    // Pointers to generated llvm::Value are stored into output iterator \p OutIt.
+    template <typename OutIter>
+    OutIter writeRawUniformArg(llvm::Value &rawArg, PrintInfo::Encoding type, OutIter OutIt) const {
+        if (type != PrintInfo::getEncoding4Uniform<bool>()) {
+            *OutIt++ = &rawArg;
+            return OutIt;
         }
-        return dst;
+        auto *argAsPred = ctx->CmpInst(llvm::Instruction::OtherOps::ICmp, llvm::CmpInst::Predicate::ICMP_NE, &rawArg,
+                                       LLVMInt32(0), "print.arg.bool.cast");
+        auto *argAsStr = ctx->SelectInst(argAsPred, data.strings[AdditionalData::TrueIdx],
+                                         data.strings[AdditionalData::FalseIdx], "print.arg.bool.str");
+        *OutIt++ = argAsStr;
+        return OutIt;
     }
 
-    // vector becomes separate scalars
-    template <typename OutputIter> OutputIter createAlignedVectorArgValue(llvm::Value *vecArg, OutputIter dst) const {
+    // Emit code for ISPC print varying arg.
+    // Each element of a vector is emitted as a separate OCL printf argument. Plus it is surounded by two string
+    // arguments to print additional parantheses when the corresponding lane is off. Pointers to generated llvm::Value
+    // are stored into output iterator \p OutIt.
+    template <typename OutIter>
+    OutIter writeRawVaryingArg(llvm::Value &rawArg, PrintInfo::Encoding type, OutIter OutIt) const {
         auto width = g->target->getVectorWidth();
-        for (auto lane = 0; lane < width; ++lane) {
-            auto scalarArg = ctx_->ExtractInst(vecArg, lane);
-            dst = createAlignedScalarArgValue(scalarArg, dst);
+        for (int idx = 0; idx != width; ++idx) {
+            auto *isLaneOn = ctx->ExtractInst(data.mask, idx, "print.arg.lane");
+            auto *leftParenthesis =
+                ctx->SelectInst(isLaneOn, data.strings[AdditionalData::EmptyIdx],
+                                data.strings[AdditionalData::LeftParenthesisIdx], "print.arg.left.par");
+            auto *rightParenthesis =
+                ctx->SelectInst(isLaneOn, data.strings[AdditionalData::EmptyIdx],
+                                data.strings[AdditionalData::RightParenthesisIdx], "print.arg.right.par");
+            auto *argElement = ctx->ExtractInst(&rawArg, idx, "print.arg.elem");
+            *OutIt++ = leftParenthesis;
+            OutIt = writeRawUniformArg(*argElement, PrintInfo::getCorrespondingEncoding4Uniform(type), OutIt);
+            *OutIt++ = rightParenthesis;
         }
-        return dst;
+        return OutIt;
     }
 
-    // 64-bit values must become 2 i32
-    template <typename OutputIter> OutputIter createAlignedScalarArgValue(llvm::Value *arg, OutputIter dst) const {
-        if (g->target->getDataLayout()->getTypeSizeInBits(arg->getType()) == 64) {
-            arg = castToIntIfNeeded(arg, LLVMTypes::Int64Type);
-            auto *lowArg = ctx_->TruncInst(arg, LLVMTypes::Int32Type);
-            auto *almostHiArg = ctx_->BinaryOperator(llvm::Instruction::LShr, arg, LLVMInt64(32));
-            auto *hiArg = ctx_->TruncInst(almostHiArg, LLVMTypes::Int32Type);
-            *dst++ = lowArg;
-            *dst++ = hiArg;
-            return dst;
-        } else {
-            Assert(g->target->getDataLayout()->getTypeSizeInBits(arg->getType()) == 32 &&
-                   "must be either 32 or 64 bit");
-            *dst++ = castToIntIfNeeded(arg, LLVMTypes::Int32Type);
-            return dst;
-        }
-    }
-
-    // creates alloca, stores values from [first, last) into it
-    // returns alloca value
-    template <typename InputIter> llvm::Value *storeAlignedArgValues(InputIter first, InputIter last) const {
-        auto numArgs = last - first;
-        auto arrTy = llvm::ArrayType::get(LLVMTypes::Int32Type, numArgs);
-        auto argAlloca = ctx_->AllocaInst(arrTy, "print_arg_ptrs");
-        for (int i = 0; first != last; ++first, ++i) {
-            auto curArgPtr = ctx_->AddElementOffset(argAlloca, i, NULL);
-            ctx_->StoreInst(*first, curArgPtr, NULL, true);
-        }
-        return argAlloca;
-    }
-
-    llvm::Value *castToIntIfNeeded(llvm::Value *val, llvm::Type *intTy) const {
-        Assert(intTy->isIntegerTy());
-        Assert(g->target->getDataLayout()->getTypeSizeInBits(val->getType()) == intTy->getPrimitiveSizeInBits());
-        if (val->getType() != intTy) {
-            if (val->getType()->isPointerTy())
-                return ctx_->PtrToIntInst(val, intTy);
-            return ctx_->BitCastInst(val, intTy);
-        }
-        return val;
+    // Emit printf OCL args (one or more) based on the single ISPC print arg \p rawArg and its \p type.
+    // Pointers to generated llvm::Value are stored into output iterator \p OutIt.
+    template <typename OutIter>
+    OutIter writeRawArg(llvm::Value &rawArg, PrintInfo::Encoding type, OutIter OutIt) const {
+        if (PrintInfo::isUniformEncoding(type))
+            return writeRawUniformArg(rawArg, type, OutIt);
+        return writeRawVaryingArg(rawArg, type, OutIt);
     }
 };
 
@@ -3402,57 +3362,16 @@ static std::vector<PrintSliceInfo> getPrintSlices(const std::string &format, Pri
     return printSlices;
 }
 
-// prepares arguments for __do_print_cm function
-std::vector<llvm::Value *> PrintStmt::getDoPrintCMArgs(FunctionEmitContext *ctx) const {
-    std::vector<llvm::Value *> doPrintCMArgs(GENX_NUM_IDX - 2);
-    doPrintCMArgs[FORMAT_IDX] = ctx->GetStringPtr(format);
-    doPrintCMArgs[WIDTH_IDX] = LLVMInt32(g->target->getVectorWidth());
-    if (ctx->emitGenXHardwareMask()) {
-        doPrintCMArgs[MASK_IDX] = ctx->LaneMask(ctx->GenXSimdCFPredicate(LLVMMaskAllOn));
-    } else {
-        doPrintCMArgs[MASK_IDX] = ctx->LaneMask(ctx->GetFullMask());
-    }
-
-    if (values == NULL) {
-        doPrintCMArgs[ARGS_IDX] = llvm::Constant::getNullValue(LLVMTypes::Int32PointerType);
-        doPrintCMArgs[TYPES_IDX] = ctx->GetStringPtr("");
-        doPrintCMArgs[UNI_NUM_IDX] = LLVMInt32(0);
-        doPrintCMArgs[VAR_NUM_IDX] = LLVMInt32(0);
-    } else {
-        PrintArgsBuilder argsBuilder;
-        ExprList *elist = llvm::dyn_cast<ExprList>(values);
-        if (elist)
-            argsBuilder = PrintArgsBuilder(elist->exprs.begin(), elist->exprs.end(), ctx);
-        else
-            argsBuilder = PrintArgsBuilder(&values, &values + 1, ctx);
-        doPrintCMArgs[TYPES_IDX] = ctx->GetStringPtr(argsBuilder.generateArgTypes());
-        doPrintCMArgs[ARGS_IDX] = argsBuilder.emitArgCode();
-        doPrintCMArgs[UNI_NUM_IDX] = LLVMInt32(argsBuilder.countNonBoolUniformArgs());
-        doPrintCMArgs[VAR_NUM_IDX] = LLVMInt32(argsBuilder.countNonBoolVaryingArgs());
-    }
-    return doPrintCMArgs;
-}
-
-// prepares arguments for __do_print_lz function
-static std::vector<llvm::Value *> getDoPrintLZArgs(const std::string &format, PrintLZFormatStrBuilder &formatBuilder,
+// prepares arguments for __spirv_ocl_printf function
+static std::vector<llvm::Value *> getOCLPrintfArgs(const std::string &format, PrintLZFormatStrBuilder &formatBuilder,
                                                    const PrintArgsBuilder &args, FunctionEmitContext *ctx,
                                                    const SourcePos &pos) {
-    std::vector<llvm::Value *> doPrintLZArgs(PrintStmt::GENX_NUM_IDX);
+    std::vector<llvm::Value *> allArgs;
     auto argTypes = args.generateArgTypes();
-    doPrintLZArgs[PrintStmt::FORMAT_IDX] = ctx->GenXLZFormatStr(formatBuilder.get(format, argTypes, pos));
-    doPrintLZArgs[PrintStmt::WIDTH_IDX] = LLVMInt32(g->target->getVectorWidth());
-    if (ctx->emitGenXHardwareMask()) {
-        doPrintLZArgs[PrintStmt::MASK_IDX] = ctx->LaneMask(ctx->GenXSimdCFPredicate(LLVMMaskAllOn));
-    } else {
-        doPrintLZArgs[PrintStmt::MASK_IDX] = ctx->LaneMask(ctx->GetFullMask());
-    }
-    doPrintLZArgs[PrintStmt::TYPES_IDX] = ctx->GetStringPtr(argTypes);
-    doPrintLZArgs[PrintStmt::ARGS_IDX] = args.emitArgCode();
-    doPrintLZArgs[PrintStmt::UNI_NUM_IDX] = LLVMInt32(args.countUniformArgs());
-    doPrintLZArgs[PrintStmt::VAR_NUM_IDX] = LLVMInt32(args.countVaryingArgs());
-    doPrintLZArgs[PrintStmt::UNI_64_NUM_IDX] = LLVMInt32(args.count64BitUniformArgs());
-    doPrintLZArgs[PrintStmt::VAR_64_NUM_IDX] = LLVMInt32(args.count64BitVaryingArgs());
-    return doPrintLZArgs;
+    allArgs.push_back(ctx->GenXCreateConstantString(formatBuilder.get(format, argTypes, pos), "lz_format_str"));
+    auto valueArgs = args.emitArgCode();
+    std::move(valueArgs.begin(), valueArgs.end(), std::back_inserter(allArgs));
+    return allArgs;
 }
 
 static PrintArgsBuilder getPrintArgsBuilder(Expr *values, FunctionEmitContext *ctx) {
@@ -3467,17 +3386,24 @@ static PrintArgsBuilder getPrintArgsBuilder(Expr *values, FunctionEmitContext *c
     }
 }
 
-void emitCode4LZPrintSlice(const PrintSliceInfo &printSlice, PrintLZFormatStrBuilder &formatBuilder,
-                           FunctionEmitContext *ctx, const SourcePos &pos) {
-    auto printImplArgs = getDoPrintLZArgs(printSlice.format_, formatBuilder, printSlice.args_, ctx, pos);
-    auto printImplFunc = getPrintImplFunc();
-    Assert(printImplFunc && "__do_print_lz function wasn't found");
-    ctx->CallInst(printImplFunc, NULL, printImplArgs, "");
+// This name should be also properly mangled. It happens later.
+static llvm::FunctionCallee getSPIRVOCLPrintfDecl() {
+    auto *PrintfTy = llvm::FunctionType::get(LLVMTypes::Int32Type,
+                                             llvm::PointerType::get(LLVMTypes::Int8Type, /* const addrspace */ 2),
+                                             /* isVarArg */ true);
+    return m->module->getOrInsertFunction("__spirv_ocl_printf", PrintfTy);
+}
+
+static void emitCode4LZPrintSlice(const PrintSliceInfo &printSlice, PrintLZFormatStrBuilder &formatBuilder,
+                                  FunctionEmitContext *ctx, const SourcePos &pos) {
+    auto printImplArgs = getOCLPrintfArgs(printSlice.format_, formatBuilder, printSlice.args_, ctx, pos);
+    auto printImplFunc = getSPIRVOCLPrintfDecl();
+    Assert(printImplFunc && "__spirv_ocl_printf declaration wasn't created");
+    ctx->CallInst(printImplFunc.getCallee(), NULL, printImplArgs, "");
 }
 
 void PrintStmt::emitCode4LZ(FunctionEmitContext *ctx) const {
     auto allArgs = getPrintArgsBuilder(values, ctx);
-    allArgs.extendPtrTo64BitInt();
     PrintLZFormatStrBuilder formatBuilder(g->target->getVectorWidth());
     auto printSlices = getPrintSlices(format, formatBuilder, allArgs, PrintInfo::LZMaxFormatStrSize);
     for (const auto &printSlice : printSlices)
@@ -3568,22 +3494,6 @@ std::vector<llvm::Value *> PrintStmt::getDoPrintArgs(FunctionEmitContext *ctx) c
     return doPrintArgs;
 }
 
-// prepares arguments for __do_print(_cm) function depending on target
-std::vector<llvm::Value *> PrintStmt::getPrintImplArgs(FunctionEmitContext *ctx) const {
-    std::vector<llvm::Value *> printImplArgs;
-    switch (g->target->getISA()) {
-#ifdef ISPC_GENX_ENABLED
-    case Target::GENX:
-        printImplArgs = getDoPrintCMArgs(ctx);
-        break;
-#endif // ISPC_GENX_ENABLED
-    default:
-        printImplArgs = getDoPrintArgs(ctx);
-        break;
-    }
-    return printImplArgs;
-}
-
 /* PrintStmt works closely with the __do_print() function implemented in
    the builtins-c-cpu.cpp file. In particular, the EmitCode() method here needs to
    take the arguments passed to it from ispc and generate a valid call to
@@ -3600,7 +3510,7 @@ void PrintStmt::EmitCode(FunctionEmitContext *ctx) const {
         return;
     }
 #endif /* ISPC_GENX_ENABLED */
-    auto printImplArgs = getPrintImplArgs(ctx);
+    auto printImplArgs = getDoPrintArgs(ctx);
     Assert(!printImplArgs.empty() && "Haven't managed to produce __do_print args");
     auto printImplFunc = getPrintImplFunc();
     AssertPos(pos, printImplFunc);

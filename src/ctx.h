@@ -41,6 +41,7 @@
 
 #include <map>
 
+#include <llvm/ADT/StringRef.h>
 #include <llvm/IR/DIBuilder.h>
 #include <llvm/IR/DebugInfo.h>
 #include <llvm/IR/InstrTypes.h>
@@ -577,8 +578,16 @@ class FunctionEmitContext {
         ISPCSIMDCFLowering expect that execMask have alloca+load+store. */
     void GenXEndUnmaskedRegion(llvm::Value *execMask);
 
-    /** Emit L0 format string using genx_print_format_index intrinsics. */
-    llvm::CallInst *GenXLZFormatStr(const std::string &str);
+    /** Emit a string in constant space and get pointer to its first element.
+        GEP constexpr is returned.
+        Args:
+          \p str - constant initializer;
+          \p name - constant name */
+    llvm::Constant *GenXCreateConstantString(llvm::StringRef str, llvm::StringRef name = "");
+    /** Similar to GenXCreateConstantString but searches for the constant with the provided name first.
+        If there's such constant returns pointer to its first element, otherwise creates new constant
+        and returns pointer to its first element. */
+    llvm::Constant *GenXGetOrCreateConstantString(llvm::StringRef str, llvm::StringRef name);
 
     /** Change scalar condition to vector condition before branching if
         emulated uniform condition was found in external scopes and start SIMD control
