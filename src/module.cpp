@@ -1144,18 +1144,12 @@ bool Module::translateToSPIRV(llvm::Module *module, std::stringstream &ss) {
     std::string err;
     SPIRV::TranslatorOpts Opts;
     Opts.enableAllExtensions();
-    // Pass this option to open source SPIR-V translator.
-    // This option will break internal version of SPIR-V translator.
-    llvm::cl::opt<bool> SPIRVAllowUnknownIntrinsics(
-        "spirv-allow-unknown-intrinsics", llvm::cl::init(true),
-        llvm::cl::desc("Unknown LLVM intrinsics will be translated as external function "
-                       "calls in SPIR-V"));
     llvm::cl::opt<bool> SPIRVAllowExtraDIExpressions(
         "spirv-allow-extra-diexpressions", llvm::cl::init(true),
         llvm::cl::desc("Allow DWARF operations not listed in the OpenCL.DebugInfo.100 "
                        "specification (experimental, may produce incompatible SPIR-V "
                        "module)"));
-    Opts.setSPIRVAllowUnknownIntrinsicsEnabled(SPIRVAllowUnknownIntrinsics);
+    Opts.setSPIRVAllowUnknownIntrinsics({"llvm.genx"});
     Opts.setAllowExtraDIExpressionsEnabled(SPIRVAllowExtraDIExpressions);
     Opts.setDesiredBIsRepresentation(SPIRV::BIsRepresentation::SPIRVFriendlyIR);
     Opts.setDebugInfoEIS(SPIRV::DebugInfoEIS::OpenCL_DebugInfo_100);
