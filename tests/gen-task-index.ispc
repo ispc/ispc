@@ -1,3 +1,4 @@
+// rule: skip on arch=*
 // rule: run on arch=genx32
 // rule: run on arch=genx64
 // TODO: the test should be reworked when atomic operation on gen are available.

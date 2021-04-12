@@ -1,3 +1,4 @@
+// rule: skip on arch=*
 // rule: run on arch=genx32
 // rule: run on arch=genx64
 

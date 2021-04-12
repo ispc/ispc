@@ -1,4 +1,5 @@
 // Can't convert from type "varying float" to type "uniform float" for initializer
+// rule: skip on arch=*
 // rule: run on arch=x86
 // rule: run on arch=x86-64
 struct Point {
@@ -6,7 +7,7 @@ struct Point {
 };
 
 export void f_fu(uniform float RET[], uniform float aFOO[], uniform float b) {
-    float a = aFOO[programIndex]; 
+    float a = aFOO[programIndex];
     uniform Point * uniform buf = uniform new uniform Point(a, b, 1234.);
     RET[programIndex] = buf->y;
     delete buf;
