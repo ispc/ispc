@@ -296,15 +296,40 @@ def add_prefix(path, host, target):
     path = os.path.abspath(path)
     return path
 
-# FIXME: needs documentation
-def check_test(filename, host, target):
-    prev_arch = False
-    prev_os = False
-    prev_cpu = False
-    done_arch = True
-    done_os = True
-    done_cpu = True
-    done = True
+# Return True if test should be skipped,
+# return False otherwise.
+#
+# Default rules are to run always:
+# //rule: run on <key>=*
+#
+# Rules can be overrriden by putting
+# comments to test file:
+# //rule: run on <key>=<value>
+# //rule: skip on <key>=<value>
+#
+# Currently supported keys are:
+# [arch, OS, cpu].
+#
+# * (asterisk) represent any value.
+#
+# Rules order is important,
+# rule may override all previous rules.
+#
+# Examples:
+#
+# 1. Run only on arch genx32 or arch genx64:
+# // rule: skip on arch=*
+# // rule: run on arch=genx32
+# // rule: run on arch=genx64
+#
+# 2. Run only on Linux OS:
+# // rule: skip on OS=*
+# // rule: run on OS=Linux
+#
+def check_if_skip_test(filename, host, target):
+    # by default we're not skipping test
+    skip = False
+
     if host.is_windows():
         oss = "windows"
     elif host.is_linux():
@@ -316,37 +341,33 @@ def check_test(filename, host, target):
     else:
         oss = "unknown"
 
-    with open(add_prefix(filename, host, target)) as f:
-        b = f.read()
-    for run in re.finditer('// *rule: run on .*', b):
-        arch = re.match('.* arch=.*', run.group())
-        if arch != None:
-            if re.search(' arch='+target.arch+'$', arch.group()) != None:
-                prev_arch = True
-            if re.search(' arch='+target.arch+' ', arch.group()) != None:
-                prev_arch = True
-            done_arch = prev_arch
-        OS = re.match('.* OS=.*', run.group())
-        if OS != None:
-            if re.search(' OS='+oss, OS.group()) != None:
-                prev_os = True
-            done_os = prev_os
-        cpu = re.match('.* cpu=.*', run.group())
-        if cpu != None:
-            if re.search(' cpu='+target.cpu, cpu.group()) != None:
-                prev_cpu = True
-            done_cpu = prev_cpu
-    done = done_arch and done_os and done_cpu
-    for skip in re.finditer('// *rule: skip on .*', b):
-        if re.search(' arch=' + target.arch + '$', skip.group())!=None:
-            done = False
-        if re.search(' arch=' + target.arch + ' ', skip.group())!=None:
-            done = False
-        if re.search(' OS=' + oss, skip.group())!=None:
-            done = False
-        if re.search(' cpu=' + target.cpu, skip.group())!=None:
-            done = False
-    return done
+    rule_values = {"arch": target.arch, "OS": oss, "cpu": target.cpu}
+
+    test_file_path = add_prefix(filename, host, target)
+    with open(test_file_path) as test_file:
+        # scan test file line by line
+        while True:
+            test_line = test_file.readline()
+            # EOF
+            if not test_line:
+                break;
+            rule = re.search('// *rule: (run|skip) on (arch|OS|cpu)=(.*)', test_line)
+            # no match for this line -> look at next line
+            if rule == None:
+                continue
+
+            rule_action = rule.group(1)
+            rule_key = rule.group(2)
+            rule_value = rule.group(3)
+
+            for key in rule_values.keys():
+                if rule_key == key:
+                    if rule_value == rule_values[key] or rule_value == "*":
+                        if rule_action == "run":
+                            skip = False
+                        elif rule_action == "skip":
+                            skip = True
+    return skip
 
 
 def run_test(testname, host, target):
@@ -567,7 +588,7 @@ def run_tasks_from_queue(queue, queue_ret, total_tests_arg, max_test_length_arg,
 
     for filename in iter(queue.get, 'STOP'):
         status = Status.Skip
-        if check_test(filename, host, target):
+        if not check_if_skip_test(filename, host, target):
             try:
                 status = run_test(filename, host, target)
             except:
