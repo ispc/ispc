@@ -258,6 +258,147 @@ define <WIDTH x double> @__sqrt_varying_double(<WIDTH x double>) nounwind readno
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; reductions
 
+ifelse(
+RUNTIME, `64', `
+dnl Reductions across lanes are only available in ARM64.
+declare i32 @llvm.aarch64.neon.umaxv.i32.v4i32(<4 x i32>)
+declare i32 @llvm.aarch64.neon.uminv.i32.v4i32(<4 x i32>)
+declare float @llvm.aarch64.neon.faddv.f32.v4f32(<4 x float>)
+declare float @llvm.aarch64.neon.fminv.f32.v4f32(<4 x float>)
+declare float @llvm.aarch64.neon.fmaxv.f32.v4f32(<4 x float>)
+declare i32 @llvm.aarch64.neon.saddv.i32.v8i8(<8 x i8>)
+declare i32 @llvm.aarch64.neon.saddv.i32.v4i16(<4 x i16>)
+declare i32 @llvm.aarch64.neon.saddv.i32.v4i32(<4 x i32>)
+declare i32 @llvm.aarch64.neon.sminv.i32.v4i32(<4 x i32>)
+declare i32 @llvm.aarch64.neon.smaxv.i32.v4i32(<4 x i32>)
+declare double @llvm.aarch64.neon.faddv.f64.v2f64(<2 x double>)
+declare <2 x double> @llvm.aarch64.neon.fmin.v2f64(<2 x double>, <2 x double>)
+declare double @llvm.aarch64.neon.fminv.f64.v2f64(<2 x double>)
+declare <2 x double> @llvm.aarch64.neon.fmax.v2f64(<2 x double>, <2 x double>)
+declare double @llvm.aarch64.neon.fmaxv.f64.v2f64(<2 x double>)
+declare i64 @llvm.aarch64.neon.saddv.i64.v2i64(<2 x i64>)
+
+define i64 @__movmsk(<4 x i32>) nounwind readnone alwaysinline {
+  %and_mask = and <4 x i32> %0, <i32 1, i32 2, i32 4, i32 8>
+  %v = call i32 @llvm.aarch64.neon.saddv.i32.v4i32(<4 x i32> %and_mask)
+  %mask64 = zext i32 %v to i64
+  ret i64 %mask64
+}
+
+define i1 @__any(<4 x i32>) nounwind readnone alwaysinline {
+  %v = call i32 @llvm.aarch64.neon.umaxv.i32.v4i32(<4 x i32> %0)
+  %cmp = icmp ne i32 %v, 0
+  ret i1 %cmp
+}
+
+define i1 @__all(<4 x i32>) nounwind readnone alwaysinline {
+  %v = call i32 @llvm.aarch64.neon.uminv.i32.v4i32(<4 x i32> %0)
+  %cmp = icmp ne i32 %v, 0
+  ret i1 %cmp
+}
+
+define i1 @__none(<4 x i32>) nounwind readnone alwaysinline {
+  %any = call i1 @__any(<4 x i32> %0)
+  %none = icmp eq i1 %any, 0
+  ret i1 %none
+}
+
+define float @__reduce_add_float(<4 x float>) nounwind readnone alwaysinline {
+  %r = call float @llvm.aarch64.neon.faddv.f32.v4f32(<4 x float> %0)
+  ret float %r
+}
+
+define float @__reduce_min_float(<4 x float>) nounwind readnone alwaysinline {
+  %r = call float @llvm.aarch64.neon.fminv.f32.v4f32(<4 x float> %0)
+  ret float %r
+}
+
+define float @__reduce_max_float(<4 x float>) nounwind readnone alwaysinline {
+  %r = call float @llvm.aarch64.neon.fmaxv.f32.v4f32(<4 x float> %0)
+  ret float %r
+}
+
+define i16 @__reduce_add_int8(<4 x i8>) nounwind readnone alwaysinline {
+  %v8 = shufflevector <4 x i8> %0, <4 x i8> zeroinitializer,
+           <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 4, i32 4, i32 4>
+  %r = call i32 @llvm.aarch64.neon.saddv.i32.v8i8(<8 x i8> %v8)
+  %r16 = trunc i32 %r to i16
+  ret i16 %r16
+}
+
+define i32 @__reduce_add_int16(<4 x i16>) nounwind readnone alwaysinline {
+  %r = call i32 @llvm.aarch64.neon.saddv.i32.v4i16(<4 x i16> %0)
+  ret i32 %r
+}
+
+define i64 @__reduce_add_int32(<4 x i32>) nounwind readnone alwaysinline {
+  %r = call i32 @llvm.aarch64.neon.saddv.i32.v4i32(<4 x i32> %0)
+  %r64 = sext i32 %r to i64
+  ret i64 %r64
+}
+
+define i32 @__reduce_min_int32(<4 x i32>) nounwind readnone alwaysinline {
+  %r = call i32 @llvm.aarch64.neon.sminv.i32.v4i32(<4 x i32> %0)
+  ret i32 %r
+}
+
+define i32 @__reduce_max_int32(<4 x i32>) nounwind readnone alwaysinline {
+  %r = call i32 @llvm.aarch64.neon.smaxv.i32.v4i32(<4 x i32> %0)
+  ret i32 %r
+}
+
+define i32 @__reduce_min_uint32(<4 x i32>) nounwind readnone alwaysinline {
+  %r = call i32 @llvm.aarch64.neon.uminv.i32.v4i32(<4 x i32> %0)
+  ret i32 %r
+}
+
+define i32 @__reduce_max_uint32(<4 x i32>) nounwind readnone alwaysinline {
+  %r = call i32 @llvm.aarch64.neon.umaxv.i32.v4i32(<4 x i32> %0)
+  ret i32 %r
+}
+
+define double @__reduce_add_double(<4 x double>) nounwind readnone alwaysinline {
+  %v0 = shufflevector <4 x double> %0, <4 x double> undef,
+                      <2 x i32> <i32 0, i32 1>
+  %v1 = shufflevector <4 x double> %0, <4 x double> undef,
+                      <2 x i32> <i32 2, i32 3>
+  %sum = fadd <2 x double> %v0, %v1
+  %m = call double @llvm.aarch64.neon.faddv.f64.v2f64(<2 x double> %sum)
+  ret double %m
+}
+
+define double @__reduce_min_double(<4 x double>) nounwind readnone alwaysinline {
+  %v0 = shufflevector <4 x double> %0, <4 x double> undef,
+                      <2 x i32> <i32 0, i32 1>
+  %v1 = shufflevector <4 x double> %0, <4 x double> undef,
+                      <2 x i32> <i32 2, i32 3>
+  %x = call <2 x double> @llvm.aarch64.neon.fmin.v2f64(<2 x double> %v0, <2 x double> %v1)
+  %m = call double @llvm.aarch64.neon.fminv.f64.v2f64(<2 x double> %x)
+  ret double %m
+}
+
+define double @__reduce_max_double(<4 x double>) nounwind readnone alwaysinline {
+  %v0 = shufflevector <4 x double> %0, <4 x double> undef,
+                      <2 x i32> <i32 0, i32 1>
+  %v1 = shufflevector <4 x double> %0, <4 x double> undef,
+                      <2 x i32> <i32 2, i32 3>
+  %x = call <2 x double> @llvm.aarch64.neon.fmax.v2f64(<2 x double> %v0, <2 x double> %v1)
+  %m = call double @llvm.aarch64.neon.fmaxv.f64.v2f64(<2 x double> %x)
+  ret double %m
+}
+
+define i64 @__reduce_add_int64(<4 x i64>) nounwind readnone alwaysinline {
+  %v0 = shufflevector <4 x i64> %0, <4 x i64> undef,
+                      <2 x i32> <i32 0, i32 1>
+  %v1 = shufflevector <4 x i64> %0, <4 x i64> undef,
+                      <2 x i32> <i32 2, i32 3>
+  %sum = add <2 x i64> %v0, %v1
+  %m = call i64 @llvm.aarch64.neon.saddv.i64.v2i64(<2 x i64> %sum)
+  ret i64 %m
+}
+',
+RUNTIME, `32',
+`
 define i64 @__movmsk(<4 x MASK>) nounwind readnone alwaysinline {
   %and_mask = and <4 x MASK> %0, <MASK 1, MASK 2, MASK 4, MASK 8>
   %v01 = shufflevector <4 x i32> %and_mask, <4 x i32> undef, <2 x i32> <i32 0, i32 1>
@@ -297,10 +438,10 @@ define i1 @__none(<4 x i32>) nounwind readnone alwaysinline {
   %none = icmp eq i1 %any, 0
   ret i1 %none
 }
-
-;; $1: scalar type
-;; $2: vector reduce function (2 x <2 x vec> -> <2 x vec>)
-;; $3 scalar reduce function
+'
+dnl $1: scalar type
+dnl $2: vector reduce function (2 x <2 x vec> -> <2 x vec>)
+dnl $3 scalar reduce function
 
 define(`neon_reduce', `
   %v0 = shufflevector <4 x $1> %0, <4 x $1> undef, <2 x i32> <i32 0, i32 1>
@@ -311,7 +452,7 @@ define(`neon_reduce', `
   %r = call $1$3 ($1 %vh0, $1 %vh1)
   ret $1 %r
 ')
-
+`
 declare <2 x float> @NEON_PREFIX_FPADD.v2f32(<2 x float>, <2 x float>) nounwind readnone
 
 define internal float @add_f32(float, float) nounwind readnone alwaysinline {
@@ -460,6 +601,7 @@ define i64 @__reduce_add_int64(<4 x i64>) nounwind readnone alwaysinline {
   %m = add i64 %e0, %e1
   ret i64 %m
 }
+')
 
 define i64 @__reduce_min_int64(<4 x i64>) nounwind readnone alwaysinline {
   reduce4(i64, @__min_varying_int64, @__min_uniform_int64)
