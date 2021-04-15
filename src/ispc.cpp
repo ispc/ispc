@@ -1016,7 +1016,7 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, bool pic, boo
         this->m_dataTypeWidth = 8;
         this->m_vectorWidth = 16;
         this->m_hasHalf = true; // ??
-        this->m_maskingIsFree = false;
+        this->m_maskingIsFree = (arch == Arch::aarch64);
         this->m_maskBitCount = 8;
         break;
     case ISPCTarget::neon_i16x8:
@@ -1026,7 +1026,7 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, bool pic, boo
         this->m_dataTypeWidth = 16;
         this->m_vectorWidth = 8;
         this->m_hasHalf = true; // ??
-        this->m_maskingIsFree = false;
+        this->m_maskingIsFree = (arch == Arch::aarch64);
         this->m_maskBitCount = 16;
         break;
     case ISPCTarget::neon_i32x4:
@@ -1036,7 +1036,7 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, bool pic, boo
         this->m_dataTypeWidth = 32;
         this->m_vectorWidth = 4;
         this->m_hasHalf = true; // ??
-        this->m_maskingIsFree = false;
+        this->m_maskingIsFree = (arch == Arch::aarch64);
         this->m_maskBitCount = 32;
         break;
     case ISPCTarget::neon_i32x8:
@@ -1046,7 +1046,7 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, bool pic, boo
         this->m_dataTypeWidth = 32;
         this->m_vectorWidth = 8;
         this->m_hasHalf = true; // ??
-        this->m_maskingIsFree = false;
+        this->m_maskingIsFree = (arch == Arch::aarch64);
         this->m_maskBitCount = 32;
         break;
 #else
