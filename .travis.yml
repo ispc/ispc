@@ -75,14 +75,14 @@ jobs:
         # "Native-only" build (i.e. only arm and aarch64 are supported).
         - mkdir build-arm && cd build-arm
         - cmake ..
-        - make -j4
+        - make -j32
         - make check-all
         - bin/ispc --support-matrix
         # Cross build (x86, x86-64, arm, aarch64 are supported, Linux only).
         - cd ..
         - mkdir build-all && cd build-all
         - cmake .. -DX86_ENABLED=ON
-        - make -j4
+        - make -j32
         - make check-all
         - bin/ispc --support-matrix
         - cp bin/ispc ..
