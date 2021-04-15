@@ -1,4 +1,4 @@
-#  Copyright (c) 2018-2020, Intel Corporation
+#  Copyright (c) 2018-2021, Intel Corporation
 #  All rights reserved.
 #
 #  Redistribution and use in source and binary forms, with or without
@@ -35,87 +35,12 @@
 # Otherwise during python invocation PATH is prepended by /usr/bin and it yields wrong llvm-as.
 language: minimal
 sudo: required
-services:
-    - docker
-dist: xenial
 
 # Note, global env variables are not used, even though they would make sense, because they appear first in
 # web view and hide matrix env variables.
 
-# Matrix expansion is not supported in builds stages, see: https://github.com/travis-ci/travis-ci/issues/8295
-# Using tags as workaround to reduce amount of copy-pasting.
-my_tag: &my_tag
-      stage: test
-      before_install:
-        # Repository is required for gcc 7.
-        - sudo add-apt-repository -y ppa:ubuntu-toolchain-r/test
-        - sudo apt-get update
-        - sudo apt-get install -y libc6-dev-i386 g++-multilib lib32stdc++6 gcc-7 g++-7
-        - if [ -n "$WASM_FLAGS" ]; then source scripts/install_emscripten.sh && emcc --version; fi
-        - if [ -n "$WASM_FLAGS" ]; then source scripts/install_v8.sh && v8 -e "console.log(\"V8 WORKS\")"; fi
-        - wget https://cmake.org/files/v3.17/cmake-3.17.3-Linux-x86_64.sh && mkdir /opt/cmake && sh cmake-3.17.3-Linux-x86_64.sh --prefix=/opt/cmake --skip-license && sudo ln -s /opt/cmake/bin/cmake /usr/local/bin/cmake && rm cmake-3.17.3-Linux-x86_64.sh
-        - export PATH=/opt/cmake/bin:$PATH
-        - cmake --version
-        - wget $LLVM_REPO/releases/download/llvm-$LLVM_VERSION-ispc-dev/$LLVM_TAR
-        - tar xvf $LLVM_TAR
-        - export PATH=`pwd`/bin-$LLVM_VERSION/bin:$PATH
-      script:
-        - mkdir build_$LLVM_VERSION && cd build_$LLVM_VERSION
-        - cmake -DCMAKE_INSTALL_PREFIX=$TRAVIS_BUILD_DIR -DISPC_INCLUDE_BENCHMARKS=ON $WASM_FLAGS ../
-          # Build ispc and check_isa utility. Run lit tests.
-        - make ispc check_isa check-all -j4
-          # Build benchmarks and test them.
-        - make ispc_benchmarks && make test
-          # Add ispc to the PATH
-        - export PATH=$ISPC_HOME/build_$LLVM_VERSION/bin:$PATH && cd $ISPC_HOME
-        - check_isa
-        - ispc --support-matrix
-        - ./check_env.py
-          # Run examples
-        - if [ -z "$WASM_FLAGS" ]; then ./perf.py -n 1; fi
-          # Run tests for latest LLVM version
-        - if [ "$LLVM_VERSION" == "11.0" -a -z "$WASM_FLAGS" ]; then ./run_tests.py; ./run_tests.py -a x86; fi
-
-stages:
-  - check format
-  - test
-
 jobs:
   include:
-    # Check source formatting
-    - stage: check format
-      os: linux
-      dist: focal
-      addons:
-        apt:
-          packages:
-            - clang-format
-      env: LLVM_VERSION=10.0 OS=Ubuntu20.04
-      before_install:
-      script:
-        - ./check_format.sh clang-format-10
-    # LLVM 11.0 + Ubuntu 16.04: build, lit tests, examples (build + run), benchmarks (build + trial run), tests
-    - <<: *my_tag
-      env:
-        - LLVM_VERSION=11.0 OS=Ubuntu16.04
-        - LLVM_TAR=llvm-11.0.0-ubuntu16.04-Release+Asserts-x86.arm.wasm.tar.xz
-        - LLVM_REPO=https://github.com/ispc/llvm-project
-        - ISPC_HOME=$TRAVIS_BUILD_DIR
-    # LLVM 10.0 + Ubuntu 16.04: build, lit tests, examples (build + run), benchmarks (build + trial run)
-    - <<: *my_tag
-      env:
-        - LLVM_VERSION=10.0 OS=Ubuntu16.04
-        - LLVM_TAR=llvm-10.0.1-ubuntu16.04-Release+Asserts-x86.arm.wasm.tar.xz
-        - LLVM_REPO=https://github.com/ispc/llvm-project
-        - ISPC_HOME=$TRAVIS_BUILD_DIR
-    # WASM enabled build
-    # LLVM 11.0 + Ubuntu 16.04: build, lit tests, examples (build), benchmarks (build + trial run)
-    - <<: *my_tag
-      env:
-        - LLVM_VERSION=11.0 OS=Ubuntu16.04 WASM_FLAGS="-DWASM_ENABLED=ON"
-        - LLVM_TAR=llvm-11.0.0-ubuntu16.04-Release+Asserts-x86.arm.wasm.tar.xz
-        - LLVM_REPO=https://github.com/ispc/llvm-project
-        - ISPC_HOME=$TRAVIS_BUILD_DIR
     # ARM build
     # LLVM 11.0 + Ubuntu 18.04:
     #   - ARM only (default): build, lit tests, examples (build)
@@ -125,8 +50,8 @@ jobs:
       arch: arm64
       dist: bionic
       env:
-        - LLVM_VERSION=11.0 OS=Ubuntu18.04aarch64
-        - LLVM_TAR=llvm-11.0.0-ubuntu16.04aarch64-Release+Asserts-x86.arm.wasm.tar.xz
+        - LLVM_VERSION=11.1 OS=Ubuntu18.04aarch64
+        - LLVM_TAR=llvm-11.1.0-ubuntu16.04aarch64-Release+Asserts-x86.arm.wasm.tar.xz
         - LLVM_REPO=https://github.com/ispc/llvm-project
         - ISPC_HOME=$TRAVIS_BUILD_DIR
       before_install:
@@ -146,11 +71,13 @@ jobs:
         - tar xvf $LLVM_TAR
         - export PATH=`pwd`/bin-$LLVM_VERSION/bin:$PATH
       script:
+        # "Native-only" build (i.e. only arm and aarch64 are supported).
         - mkdir build-arm && cd build-arm
         - cmake ..
         - make -j4
         - make check-all
         - bin/ispc --support-matrix
+        # Cross build (x86, x86-64, arm, aarch64 are supported, Linux only).
         - cd ..
         - mkdir build-all && cd build-all
         - cmake .. -DX86_ENABLED=ON
@@ -161,25 +88,3 @@ jobs:
         - cd ..
         - export ISPC_HOME=`pwd`
         - ./run_tests.py --arch=aarch64 --target=neon-i32x4
-    # macOS build
-    # LLVM 11.0 + macOS 10.15 Catalina: build, lit tests, examples (build)
-    - stage: test
-      os: osx
-      osx_image: xcode11.4
-      env:
-        - LLVM_VERSION=11.0 OS=macOS10.15
-        - LLVM_TAR=llvm-11.0.0-macos10.15-Release+Asserts-x86.arm.wasm.tar.xz
-        - LLVM_REPO=https://github.com/ispc/llvm-project
-        - ISPC_HOME=$TRAVIS_BUILD_DIR
-      before_install:
-        - wget $LLVM_REPO/releases/download/llvm-$LLVM_VERSION-ispc-dev/$LLVM_TAR
-        - tar xvf $LLVM_TAR
-        - export PATH=`pwd`/bin-$LLVM_VERSION/bin:$PATH
-        - brew update && brew install bison flex
-        - export PATH=/usr/local/opt/bison/bin:$PATH
-        - export PATH=/usr/local/opt/flex/bin:$PATH
-      script:
-        - mkdir build && cd build
-        - cmake ..
-        - make -j4
-        - make check-all
