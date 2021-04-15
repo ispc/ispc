@@ -1,4 +1,6 @@
-//; RUN: %{ispc} %s --target=host --enable-llvm-intrinsics
+//; RUN: %{ispc} %s --target=sse4-i32x4 --enable-llvm-intrinsics
+//; RUN: %{ispc} %s --target=avx2-i32x8 --enable-llvm-intrinsics
+//; RUN: %{ispc} %s --target=avx512skx-i32x16 --enable-llvm-intrinsics
 
 // REQUIRES: X86_ENABLED
 
@@ -10,7 +12,7 @@
 #if TARGET_WIDTH == 4
     const uniform int row = 2;
     const uniform int column = 2;
-    transpose = @llvm.matrix.transpose.v8f32.i32.i32(matrix, row, column);
+    float transpose = @llvm.matrix.transpose.v8f32.i32.i32(matrix, row, column);
 #elif TARGET_WIDTH == 8
     const uniform int row = 2;
     const uniform int column = 4;
