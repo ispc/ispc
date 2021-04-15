@@ -234,10 +234,27 @@ define float @__ceil_uniform_float(float) nounwind readonly alwaysinline {
   ret float %binop.i
 }
 
-;; FIXME: rounding doubles and double vectors needs to be implemented
-declare double @__round_uniform_double(double) nounwind readnone 
-declare double @__floor_uniform_double(double) nounwind readnone 
-declare double @__ceil_uniform_double(double) nounwind readnone 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; rounding doubles
+
+declare double @round(double)
+declare double @floor(double)
+declare double @ceil(double)
+
+define double @__round_uniform_double(double) nounwind readonly alwaysinline {
+  %r = call double @round(double %0)
+  ret double %r
+}
+
+define double @__floor_uniform_double(double) nounwind readonly alwaysinline {
+  %r = call double @floor(double %0)
+  ret double %r
+}
+
+define double @__ceil_uniform_double(double) nounwind readonly alwaysinline {
+  %r = call double @ceil(double %0)
+  ret double %r
+}
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; min/max
