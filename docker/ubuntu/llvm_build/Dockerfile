@@ -3,7 +3,7 @@ MAINTAINER Dmitry Babokin <dmitry.y.babokin@intel.com>
 
 ARG REPO=ispc/ispc
 ARG SHA=main
-ARG LLVM_VERSION=11.1
+ARG LLVM_VERSION=12.0
 ARG EXTRA_BUILD_ARG=
 
 # !!! Make sure that your docker config provides enough memory to the container,
