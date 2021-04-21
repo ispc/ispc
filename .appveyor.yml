@@ -1,4 +1,4 @@
-#  Copyright (c) 2018-2020, Intel Corporation
+#  Copyright (c) 2018-2021, Intel Corporation
 #  All rights reserved.
 #
 #  Redistribution and use in source and binary forms, with or without
@@ -32,7 +32,7 @@
 configuration: Release
 
 environment:
-  LLVM_LATEST: 11.1
+  LLVM_LATEST: 12.0
   DOCKER_PATH: "ispc/test_repo"
   matrix:
     - APPVEYOR_BUILD_WORKER_IMAGE: Ubuntu1604
@@ -40,7 +40,7 @@ environment:
     - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2019
       LLVM_VERSION: latest
     - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2019
-      LLVM_VERSION: 10.0
+      LLVM_VERSION: 11.1
 
 for:
 -
@@ -58,7 +58,8 @@ for:
         if "%LLVM_VERSION%"=="latest" (set WASM=ON)
         if "%APPVEYOR_BUILD_WORKER_IMAGE%"=="Visual Studio 2017" ( (set generator="Visual Studio 15 Win64") & (set vsversion=2017))
         if "%APPVEYOR_BUILD_WORKER_IMAGE%"=="Visual Studio 2019" ( (set generator="Visual Studio 16") & (set vsversion=2019))
-        set LLVM_TAR=llvm-11.1.0-win.vs2019-Release+Asserts-x86.arm.wasm.7z
+        set LLVM_TAR=llvm-12.0.0-win.vs2019-Release+Asserts-x86.arm.wasm.7z
+        if "%LLVM_VERSION%"=="11.1" (set LLVM_TAR=llvm-11.1.0-win.vs2019-Release+Asserts-x86.arm.wasm.7z)
         if "%LLVM_VERSION%"=="10.0" (set LLVM_TAR=llvm-10.0.1-win.vs2019-Release+Asserts-x86.arm.wasm.zip)
   install:
     - ps: choco install --no-progress winflexbison3 wget 7zip
@@ -108,7 +109,7 @@ for:
         export LLVM_HOME=$APPVEYOR_BUILD_FOLDER/llvm
         export CROSS_TOOLS=/usr/local/src/cross
         export WASM=OFF
-        export LLVM_TAR=llvm-11.1.0-ubuntu16.04-Release+Asserts-x86.arm.wasm.tar.xz
+        export LLVM_TAR=llvm-12.0.0-ubuntu16.04-Release+Asserts-x86.arm.wasm.tar.xz
   install:
     - sh: |-
         sudo apt-get update
