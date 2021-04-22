@@ -840,7 +840,8 @@ genx_masked_store(i64)
 define(`genx_masked_load', `
 declare <WIDTH x $1> @llvm.genx.svm.block.ld.unaligned.GEN_SUFFIX($1).i64(i64)
 declare <WIDTH_X2 x $1> @llvm.genx.svm.block.ld.unaligned.GEN_SUFFIXN($1, WIDTH_X2).i64(i64)
-define <WIDTH x $1> @__masked_load_$1(i8 *, <WIDTH x MASK> %mask) nounwind alwaysinline {
+
+define <WIDTH x $1> @__masked_load_blend_$1(i8 *, <WIDTH x MASK> %mask) nounwind alwaysinline {
   %bitptr = bitcast i8* %0 to i64*
   %ptr = ptrtoint i64* %bitptr to i64
   ;; According to genx.svm.block.ld.unaligned specification the data to load must have
@@ -859,6 +860,45 @@ define <WIDTH x $1> @__masked_load_$1(i8 *, <WIDTH x MASK> %mask) nounwind alway
   ')
   %res_masked = select <WIDTH x MASK> %mask, <WIDTH x $1> %res, <WIDTH x $1> undef
   ret <WIDTH x $1> %res_masked
+}
+
+define <WIDTH x $1> @__masked_load_$1(i8 *, <WIDTH x MASK> %mask) nounwind alwaysinline {
+entry:
+  %retptr = alloca <WIDTH x $1>
+  %mm = call i64 @__movmsk(<WIDTH x MASK> %mask)
+
+  ; if the first lane and the last lane are on, then it is safe to do a vector load
+  ; of the whole thing--what the lanes in the middle want turns out to not matter...
+  %mm_and_low = and i64 %mm, 1
+  %mm_and_high = and i64 %mm, MASK_HIGH_BIT_ON
+  %mm_and_high_shift = lshr i64 %mm_and_high, eval(WIDTH-1)
+  %mm_and_low_i1 = trunc i64 %mm_and_low to i1
+  %mm_and_high_shift_i1 = trunc i64 %mm_and_high_shift to i1
+  %can_vload = and i1 %mm_and_low_i1, %mm_and_high_shift_i1
+
+  ; if we are not able to do a singe vload, we will accumulate lanes in this memory..
+  %retptr32 = bitcast <WIDTH x $1> * %retptr to $1 *
+  br i1 %can_vload, label %vload, label %vgather
+
+vload:
+  %res = call <WIDTH x $1> @__masked_load_blend_$1(i8* %0, <WIDTH x MASK> %mask)
+  ret <WIDTH x $1> %res
+
+vgather:
+  %broadcast_init = insertelement <WIDTH x i32> undef, i32 SIZEOF($1), i32 0
+  %shuffle = shufflevector <WIDTH x i32> %broadcast_init, <WIDTH x i32> undef, <WIDTH x i32> zeroinitializer
+  %offsets = mul LINEAR_VECTOR(i32), %shuffle
+  ifelse(RUNTIME, `32',
+  `
+    %res_gather = call <WIDTH x $1> @__gather_base_offsets32_$1(i8 * %0, i32 1, <WIDTH x i32> %offsets, <WIDTH x MASK> %mask)
+  ',
+  RUNTIME, `64',
+  `
+    %offsets64 = zext <WIDTH x i32> %offsets to <WIDTH x i64>
+    %res_gather = call <WIDTH x $1> @__gather_base_offsets64_$1(i8 * %0, i32 1, <WIDTH x i64> %offsets64, <WIDTH x MASK> %mask)
+  ')
+
+  ret <WIDTH x $1> %res_gather
 }
 
 define <WIDTH x $1> @__masked_load_private_$1(i8 *, <WIDTH x MASK> %mask) nounwind alwaysinline {
