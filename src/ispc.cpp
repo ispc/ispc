@@ -1718,6 +1718,7 @@ Opt::Opt() {
     enableForeachInsideVarying = false;
     emitGenXHardwareMask = false;
     disableGenXPrivateIntrinsics = true;
+    enableGenXUnsafeMaskedLoad = false;
 #endif
 }
 

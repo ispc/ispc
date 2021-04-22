@@ -2606,16 +2606,18 @@ static llvm::Constant *lGetOffsetScaleVec(llvm::Value *offsetScale, llvm::Type *
 */
 static bool lGSToLoadStore(llvm::CallInst *callInst) {
     struct GatherImpInfo {
-        GatherImpInfo(const char *pName, const char *lmName, llvm::Type *st, int a)
+        GatherImpInfo(const char *pName, const char *lmName, const char *bmName, llvm::Type *st, int a)
             : align(a), isFactored(!g->target->hasGather()) {
             pseudoFunc = m->module->getFunction(pName);
             loadMaskedFunc = m->module->getFunction(lmName);
+            blendMaskedFunc = m->module->getFunction(bmName);
             Assert(pseudoFunc != NULL && loadMaskedFunc != NULL);
             scalarType = st;
         }
 
         llvm::Function *pseudoFunc;
         llvm::Function *loadMaskedFunc;
+        llvm::Function *blendMaskedFunc;
         llvm::Type *scalarType;
         const int align;
         const bool isFactored;
@@ -2624,40 +2626,40 @@ static bool lGSToLoadStore(llvm::CallInst *callInst) {
     GatherImpInfo gInfo[] = {
         GatherImpInfo(g->target->hasGather() ? "__pseudo_gather_base_offsets32_i8"
                                              : "__pseudo_gather_factored_base_offsets32_i8",
-                      "__masked_load_i8", LLVMTypes::Int8Type, 1),
+                      "__masked_load_i8", "__masked_load_blend_i8", LLVMTypes::Int8Type, 1),
         GatherImpInfo(g->target->hasGather() ? "__pseudo_gather_base_offsets32_i16"
                                              : "__pseudo_gather_factored_base_offsets32_i16",
-                      "__masked_load_i16", LLVMTypes::Int16Type, 2),
+                      "__masked_load_i16", "__masked_load_blend_i16", LLVMTypes::Int16Type, 2),
         GatherImpInfo(g->target->hasGather() ? "__pseudo_gather_base_offsets32_i32"
                                              : "__pseudo_gather_factored_base_offsets32_i32",
-                      "__masked_load_i32", LLVMTypes::Int32Type, 4),
+                      "__masked_load_i32", "__masked_load_blend_i32", LLVMTypes::Int32Type, 4),
         GatherImpInfo(g->target->hasGather() ? "__pseudo_gather_base_offsets32_float"
                                              : "__pseudo_gather_factored_base_offsets32_float",
-                      "__masked_load_float", LLVMTypes::FloatType, 4),
+                      "__masked_load_float", "__masked_load_blend_float", LLVMTypes::FloatType, 4),
         GatherImpInfo(g->target->hasGather() ? "__pseudo_gather_base_offsets32_i64"
                                              : "__pseudo_gather_factored_base_offsets32_i64",
-                      "__masked_load_i64", LLVMTypes::Int64Type, 8),
+                      "__masked_load_i64", "__masked_load_blend_i64", LLVMTypes::Int64Type, 8),
         GatherImpInfo(g->target->hasGather() ? "__pseudo_gather_base_offsets32_double"
                                              : "__pseudo_gather_factored_base_offsets32_double",
-                      "__masked_load_double", LLVMTypes::DoubleType, 8),
+                      "__masked_load_double", "__masked_load_blend_double", LLVMTypes::DoubleType, 8),
         GatherImpInfo(g->target->hasGather() ? "__pseudo_gather_base_offsets64_i8"
                                              : "__pseudo_gather_factored_base_offsets64_i8",
-                      "__masked_load_i8", LLVMTypes::Int8Type, 1),
+                      "__masked_load_i8", "__masked_load_blend_i8", LLVMTypes::Int8Type, 1),
         GatherImpInfo(g->target->hasGather() ? "__pseudo_gather_base_offsets64_i16"
                                              : "__pseudo_gather_factored_base_offsets64_i16",
-                      "__masked_load_i16", LLVMTypes::Int16Type, 2),
+                      "__masked_load_i16", "__masked_load_blend_i16", LLVMTypes::Int16Type, 2),
         GatherImpInfo(g->target->hasGather() ? "__pseudo_gather_base_offsets64_i32"
                                              : "__pseudo_gather_factored_base_offsets64_i32",
-                      "__masked_load_i32", LLVMTypes::Int32Type, 4),
+                      "__masked_load_i32", "__masked_load_blend_i32", LLVMTypes::Int32Type, 4),
         GatherImpInfo(g->target->hasGather() ? "__pseudo_gather_base_offsets64_float"
                                              : "__pseudo_gather_factored_base_offsets64_float",
-                      "__masked_load_float", LLVMTypes::FloatType, 4),
+                      "__masked_load_float", "__masked_load_blend_float", LLVMTypes::FloatType, 4),
         GatherImpInfo(g->target->hasGather() ? "__pseudo_gather_base_offsets64_i64"
                                              : "__pseudo_gather_factored_base_offsets64_i64",
-                      "__masked_load_i64", LLVMTypes::Int64Type, 8),
+                      "__masked_load_i64", "__masked_load_blend_i64", LLVMTypes::Int64Type, 8),
         GatherImpInfo(g->target->hasGather() ? "__pseudo_gather_base_offsets64_double"
                                              : "__pseudo_gather_factored_base_offsets64_double",
-                      "__masked_load_double", LLVMTypes::DoubleType, 8),
+                      "__masked_load_double", "__masked_load_blend_double", LLVMTypes::DoubleType, 8),
     };
 
     struct ScatterImpInfo {
@@ -2870,8 +2872,13 @@ static bool lGSToLoadStore(llvm::CallInst *callInst) {
                 }
                 lCopyMetadata(ptr, callInst);
                 Debug(pos, "Transformed gather to unaligned vector load!");
+                bool doBlendLoad = false;
+#ifdef ISPC_GENX_ENABLED
+                doBlendLoad = g->target->isGenXTarget() && g->opt.enableGenXUnsafeMaskedLoad;
+#endif
                 llvm::Instruction *newCall =
-                    lCallInst(gatherInfo->loadMaskedFunc, ptr, mask, llvm::Twine(ptr->getName()) + "_masked_load");
+                    lCallInst(doBlendLoad ? gatherInfo->blendMaskedFunc : gatherInfo->loadMaskedFunc, ptr, mask,
+                              llvm::Twine(ptr->getName()) + "_masked_load");
                 lCopyMetadata(newCall, callInst);
                 llvm::ReplaceInstWithInst(callInst, newCall);
                 return true;
@@ -3068,18 +3075,36 @@ static bool lImproveMaskedLoad(llvm::CallInst *callInst, llvm::BasicBlock::itera
         const int align;
     };
 
-    MLInfo mlInfo[] = {MLInfo("__masked_load_i8", 1),  MLInfo("__masked_load_i16", 2),
-                       MLInfo("__masked_load_i32", 4), MLInfo("__masked_load_float", 4),
-                       MLInfo("__masked_load_i64", 8), MLInfo("__masked_load_double", 8)};
-
     llvm::Function *called = callInst->getCalledFunction();
 
-    int nFuncs = sizeof(mlInfo) / sizeof(mlInfo[0]);
     MLInfo *info = NULL;
-    for (int i = 0; i < nFuncs; ++i) {
-        if (mlInfo[i].func != NULL && called == mlInfo[i].func) {
-            info = &mlInfo[i];
-            break;
+    if (g->target->isGenXTarget()) {
+        MLInfo genxInfo[] = {MLInfo("__masked_load_i8", 1),          MLInfo("__masked_load_i16", 2),
+                             MLInfo("__masked_load_i32", 4),         MLInfo("__masked_load_float", 4),
+                             MLInfo("__masked_load_i64", 8),         MLInfo("__masked_load_double", 8),
+                             MLInfo("__masked_load_blend_i8", 1),    MLInfo("__masked_load_blend_i16", 2),
+                             MLInfo("__masked_load_blend_i32", 4),   MLInfo("__masked_load_blend_float", 4),
+                             MLInfo("__masked_load_blend_i64", 8),   MLInfo("__masked_load_blend_double", 8),
+                             MLInfo("__masked_load_private_i8", 1),  MLInfo("__masked_load_private_i16", 2),
+                             MLInfo("__masked_load_private_i32", 4), MLInfo("__masked_load_private_float", 4),
+                             MLInfo("__masked_load_private_i64", 8), MLInfo("__masked_load_private_double", 8)};
+        int nFuncs = sizeof(genxInfo) / sizeof(genxInfo[0]);
+        for (int i = 0; i < nFuncs; ++i) {
+            if (genxInfo[i].func != NULL && called == genxInfo[i].func) {
+                info = &genxInfo[i];
+                break;
+            }
+        }
+    } else {
+        MLInfo mlInfo[] = {MLInfo("__masked_load_i8", 1),  MLInfo("__masked_load_i16", 2),
+                           MLInfo("__masked_load_i32", 4), MLInfo("__masked_load_float", 4),
+                           MLInfo("__masked_load_i64", 8), MLInfo("__masked_load_double", 8)};
+        int nFuncs = sizeof(mlInfo) / sizeof(mlInfo[0]);
+        for (int i = 0; i < nFuncs; ++i) {
+            if (mlInfo[i].func != NULL && called == mlInfo[i].func) {
+                info = &mlInfo[i];
+                break;
+            }
         }
     }
     if (info == NULL)
@@ -4900,6 +4925,12 @@ bool MakeInternalFuncsStaticPass::runOnModule(llvm::Module &module) {
         "__masked_load_private_i64",
         "__masked_load_private_float",
         "__masked_load_private_double",
+        "__masked_load_blend_i8",
+        "__masked_load_blend_i16",
+        "__masked_load_blend_i32",
+        "__masked_load_blend_i64",
+        "__masked_load_blend_float",
+        "__masked_load_blend_double",
         "__scatter32_private_i8",
         "__scatter32_private_i16",
         "__scatter32_private_i32",

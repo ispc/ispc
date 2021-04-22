@@ -803,6 +803,8 @@ int main(int Argc, char *Argv[]) {
                 g->opt.enableForeachInsideVarying = true;
             else if (!strcmp(opt, "disable-genx-private-intrinsics"))
                 g->opt.disableGenXPrivateIntrinsics = true;
+            else if (!strcmp(opt, "enable-genx-unsafe-masked-load"))
+                g->opt.enableGenXUnsafeMaskedLoad = true;
 #endif
             else {
                 errorHandler.AddError("Unknown --opt= option \"%s\".", opt);

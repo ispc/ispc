@@ -552,6 +552,12 @@ struct Opt {
         TPM is mapped to SVM by default in backend.
     */
     bool disableGenXPrivateIntrinsics;
+
+    /** Enables generation of masked loads implemented using svm loads which
+     * may lead to out of bound reads but bring prformance improvement in
+     * most of the cases.
+     */
+    bool enableGenXUnsafeMaskedLoad;
 #endif
 };
 

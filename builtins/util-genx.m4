@@ -3613,7 +3613,7 @@ define void @__keep_funcs_live(i8 * %ptr, <WIDTH x i8> %v8, <WIDTH x i16> %v16,
   %mld = call <WIDTH x double> @__masked_load_double(i8 * %ptr, <WIDTH x MASK> %mask)
   call void @__use_vd(<WIDTH x double> %mld)
 
-  ;; loads
+  ;; private loads
   %prml8  = call <WIDTH x i8>  @__masked_load_private_i8(i8 * %ptr, <WIDTH x MASK> %mask)
   call void @__use_vi8(<WIDTH x i8> %prml8)
   %prml16 = call <WIDTH x i16> @__masked_load_private_i16(i8 * %ptr, <WIDTH x MASK> %mask)
@@ -3626,6 +3626,20 @@ define void @__keep_funcs_live(i8 * %ptr, <WIDTH x i8> %v8, <WIDTH x i16> %v16,
   call void @__use_vi64(<WIDTH x i64> %prml64)
   %prmld = call <WIDTH x double> @__masked_load_private_double(i8 * %ptr, <WIDTH x MASK> %mask)
   call void @__use_vd(<WIDTH x double> %prmld)
+
+  ;; blend loads
+  %prmb8  = call <WIDTH x i8>  @__masked_load_blend_i8(i8 * %ptr, <WIDTH x MASK> %mask)
+  call void @__use_vi8(<WIDTH x i8> %prmb8)
+  %prmb16 = call <WIDTH x i16> @__masked_load_blend_i16(i8 * %ptr, <WIDTH x MASK> %mask)
+  call void @__use_vi16(<WIDTH x i16> %prmb16)
+  %prmb32 = call <WIDTH x i32> @__masked_load_blend_i32(i8 * %ptr, <WIDTH x MASK> %mask)
+  call void @__use_vi32(<WIDTH x i32> %prmb32)
+  %prmbf = call <WIDTH x float> @__masked_load_blend_float(i8 * %ptr, <WIDTH x MASK> %mask)
+  call void @__use_vf(<WIDTH x float> %prmbf)
+  %prmb64 = call <WIDTH x i64> @__masked_load_blend_i64(i8 * %ptr, <WIDTH x MASK> %mask)
+  call void @__use_vi64(<WIDTH x i64> %prmb64)
+  %prmbd = call <WIDTH x double> @__masked_load_blend_double(i8 * %ptr, <WIDTH x MASK> %mask)
+  call void @__use_vd(<WIDTH x double> %prmbd)
 
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
   ;; stores
