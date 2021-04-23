@@ -422,7 +422,7 @@ target_include_directories(${PROJECT_NAME} PRIVATE
 if (MSVC)
     target_compile_options(${PROJECT_NAME} PRIVATE /W3 /wd4146 /wd4800 /wd4996 /wd4355 /wd4624 /wd4244 /wd4141 /wd4291 /wd4018 /wd4267)
     # Security options
-    target_compile_options(${PROJECT_NAME} PRIVATE /GS /DynamicBase)
+    target_compile_options(${PROJECT_NAME} PRIVATE /GS)
     set_source_files_properties(${FLEX_OUTPUT} PROPERTIES COMPILE_FLAGS "/wd4005 /wd4003")
     set_source_files_properties(${BISON_OUTPUT} PROPERTIES COMPILE_FLAGS "/wd4005 /wd4065")
 else()
@@ -448,6 +448,7 @@ endif()
 
 # Link options
 if (WIN32)
+    target_link_options(${PROJECT_NAME} PRIVATE /DYNAMICBASE)
     if (MSVC AND NOT CMAKE_BUILD_TYPE STREQUAL "DEBUG" )
         target_link_options(${PROJECT_NAME} PUBLIC /OPT:REF /OPT:ICF)
     endif()
