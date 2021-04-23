@@ -4,6 +4,8 @@
 // RUN: FileCheck --input-file=%t.ll %s -check-prefix=CHECK_VARYING
 // RUN: %{ispc} %s --target=genx-x16 --arch=genx64 -DMASKED_ST --emit-llvm-text --nowrap -o %t.ll 2>&1 | FileCheck %s -check-prefix=CHECK_MASKED_ST_WARN
 // RUN: FileCheck --input-file=%t.ll %s -check-prefix=CHECK_MASKED_ST
+// RUN: %{ispc} %s --target=genx-x16 --arch=genx64 -DMASKED_ST --emit-llvm-text --opt=enable-genx-unsafe-masked-load --nowrap -o %t.ll 2>&1 | FileCheck %s -check-prefix=CHECK_MASKED_ST_WARN
+// RUN: FileCheck --input-file=%t.ll %s -check-prefix=CHECK_MASKED_ST_UNSAFE
 
 // RUN: %{ispc} %s --target=genx-x16 --arch=genx32 -DUNIFORM --emit-llvm-text --nowrap -o %t.ll 2>&1
 // RUN: FileCheck --input-file=%t.ll -check-prefix=CHECK_UNIFORM %s
@@ -11,6 +13,8 @@
 // RUN: FileCheck --input-file=%t.ll %s -check-prefix=CHECK_VARYING
 // RUN: %{ispc} %s --target=genx-x16 --arch=genx32 -DMASKED_ST --emit-llvm-text --nowrap -o %t.ll 2>&1 | FileCheck %s -check-prefix=CHECK_MASKED_ST_WARN
 // RUN: FileCheck --input-file=%t.ll %s -check-prefix=CHECK_MASKED_ST
+// RUN: %{ispc} %s --target=genx-x16 --arch=genx32 -DMASKED_ST --emit-llvm-text --opt=enable-genx-unsafe-masked-load --nowrap -o %t.ll 2>&1 | FileCheck %s -check-prefix=CHECK_MASKED_ST_WARN
+// RUN: FileCheck --input-file=%t.ll %s -check-prefix=CHECK_MASKED_ST_UNSAFE
 
 // REQUIRES: GENX_ENABLED
 export void vadd(uniform int n, uniform float aIN[], uniform float bIN[], uniform float cOUT[]) {
@@ -38,12 +42,20 @@ export void vadd(uniform int n, uniform float aIN[], uniform float bIN[], unifor
 #elif defined MASKED_ST
 // CHECK_MASKED_ST_WARN-NOT: Performance Warning: Gather required to load value.
 // CHECK_MASKED_ST_WARN: Performance Warning: Scatter required to store value.
+// CHECK_MASKED_ST_SAFE_WARN-NOT: Performance Warning: Gather required to load value.
+// CHECK_MASKED_ST_SAFE_WARN: Performance Warning: Scatter required to store value.
   for (int i = 0; i < n; n += programCount) {
 // CHECK_MASKED_ST: @llvm.genx.svm.block.ld
-    float a = aIN[i + programIndex];
 // CHECK_MASKED_ST: @llvm.genx.svm.block.ld
-    float b = bIN[i + programIndex];
+// CHECK_MASKED_ST: @llvm.genx.svm.gather
+// CHECK_MASKED_ST: @llvm.genx.svm.gather
 // CHECK_MASKED_ST: @llvm.genx.svm.scatter
+// CHECK_MASKED_ST_UNSAFE: @llvm.genx.svm.block.ld
+// CHECK_MASKED_ST_UNSAFE: @llvm.genx.svm.block.ld
+// CHECK_MASKED_ST_UNSAFE-NOT: @llvm.genx.svm.gather
+// CHECK_MASKED_ST_UNSAFE: @llvm.genx.svm.scatter
+    float a = aIN[i + programIndex];
+    float b = bIN[i + programIndex];
     cOUT[i + programIndex] = a + b;
   }
 #endif
