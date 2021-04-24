@@ -68,6 +68,8 @@
 #include <llvm/IR/Module.h>
 #include <llvm/IR/Type.h>
 
+using namespace ispc;
+
 /////////////////////////////////////////////////////////////////////////////////////
 // Expr
 
@@ -544,11 +546,11 @@ typecast_ok:
     return true;
 }
 
-bool CanConvertTypes(const Type *fromType, const Type *toType, const char *errorMsgBase, SourcePos pos) {
+bool ispc::CanConvertTypes(const Type *fromType, const Type *toType, const char *errorMsgBase, SourcePos pos) {
     return lDoTypeConv(fromType, toType, NULL, errorMsgBase == NULL, errorMsgBase, pos);
 }
 
-Expr *TypeConvertExpr(Expr *expr, const Type *toType, const char *errorMsgBase) {
+Expr *ispc::TypeConvertExpr(Expr *expr, const Type *toType, const char *errorMsgBase) {
     if (expr == NULL)
         return NULL;
 
@@ -565,7 +567,7 @@ Expr *TypeConvertExpr(Expr *expr, const Type *toType, const char *errorMsgBase) 
         return NULL;
 }
 
-bool PossiblyResolveFunctionOverloads(Expr *expr, const Type *type) {
+bool ispc::PossiblyResolveFunctionOverloads(Expr *expr, const Type *type) {
     FunctionSymbolExpr *fse = NULL;
     const FunctionType *funcType = NULL;
     if (CastType<PointerType>(type) != NULL && (funcType = CastType<FunctionType>(type->GetBaseType())) &&
@@ -594,7 +596,7 @@ bool PossiblyResolveFunctionOverloads(Expr *expr, const Type *type) {
     @param ctx       FunctionEmitContext to use for generating instructions
     @param pos       Source file position of the variable being initialized
 */
-void InitSymbol(llvm::Value *ptr, const Type *symType, Expr *initExpr, FunctionEmitContext *ctx, SourcePos pos) {
+void ispc::InitSymbol(llvm::Value *ptr, const Type *symType, Expr *initExpr, FunctionEmitContext *ctx, SourcePos pos) {
     if (initExpr == NULL)
         // leave it uninitialized
         return;
@@ -1624,7 +1626,7 @@ bool lCreateBinaryOperatorCall(const BinaryExpr::Op bop, Expr *a0, Expr *a1, Exp
     return abort;
 }
 
-Expr *MakeBinaryExpr(BinaryExpr::Op o, Expr *a, Expr *b, SourcePos p) {
+Expr *ispc::MakeBinaryExpr(BinaryExpr::Op o, Expr *a, Expr *b, SourcePos p) {
     Expr *op = NULL;
     bool abort = lCreateBinaryOperatorCall(o, a, b, op, p);
     if (op != NULL) {

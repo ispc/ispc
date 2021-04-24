@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2019, Intel Corporation
+  Copyright (c) 2010-2021, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -39,6 +39,8 @@
 
 #include "ast.h"
 #include "ispc.h"
+
+namespace ispc {
 
 /** @brief Interface class for statements in the ispc language.
 
@@ -584,3 +586,4 @@ class DeleteStmt : public Stmt {
 };
 
 extern Stmt *CreateForeachActiveStmt(Symbol *iterSym, Stmt *stmts, SourcePos pos);
+} // namespace ispc

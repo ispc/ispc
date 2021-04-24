@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2020, Intel Corporation
+  Copyright (c) 2010-2021, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -50,6 +50,8 @@
 #include <llvm/IR/Module.h>
 #include <llvm/IR/Value.h>
 #include <llvm/Support/MathExtras.h>
+
+using namespace ispc;
 
 /** Utility routine used in code that prints out declarations; returns true
     if the given name should be printed, false otherwise.  This allows us

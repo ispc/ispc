@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2020, Intel Corporation
+  Copyright (c) 2010-2021, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -47,6 +47,8 @@
 #include <set>
 #include <stdio.h>
 #include <string.h>
+
+using namespace ispc;
 
 static void lPrintTypeQualifiers(int typeQualifiers) {
     if (typeQualifiers & TYPEQUAL_INLINE)
@@ -668,10 +670,10 @@ void Declaration::Print(int indent) const {
 
 ///////////////////////////////////////////////////////////////////////////
 
-void GetStructTypesNamesPositions(const std::vector<StructDeclaration *> &sd,
-                                  llvm::SmallVector<const Type *, 8> *elementTypes,
-                                  llvm::SmallVector<std::string, 8> *elementNames,
-                                  llvm::SmallVector<SourcePos, 8> *elementPositions) {
+void ispc::GetStructTypesNamesPositions(const std::vector<StructDeclaration *> &sd,
+                                        llvm::SmallVector<const Type *, 8> *elementTypes,
+                                        llvm::SmallVector<std::string, 8> *elementNames,
+                                        llvm::SmallVector<SourcePos, 8> *elementPositions) {
     std::set<std::string> seenNames;
     for (unsigned int i = 0; i < sd.size(); ++i) {
         const Type *type = sd[i]->type;

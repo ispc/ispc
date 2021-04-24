@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2019-2020, Intel Corporation
+  Copyright (c) 2019-2021, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -39,6 +39,8 @@
 
 #include <string>
 #include <vector>
+
+namespace ispc {
 
 enum class CallingConv { uninitialized, defaultcall, x86_vectorcall };
 
@@ -95,3 +97,4 @@ bool ISPCTargetIsX86(ISPCTarget target);
 bool ISPCTargetIsNeon(ISPCTarget target);
 bool ISPCTargetIsWasm(ISPCTarget target);
 bool ISPCTargetIsGen(ISPCTarget target);
+} // namespace ispc

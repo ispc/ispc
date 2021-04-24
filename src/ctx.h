@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2019, Intel Corporation
+  Copyright (c) 2010-2021, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -45,6 +45,8 @@
 #include <llvm/IR/DebugInfo.h>
 #include <llvm/IR/InstrTypes.h>
 #include <llvm/IR/Instructions.h>
+
+namespace ispc {
 
 struct CFInfo;
 
@@ -774,3 +776,4 @@ class FunctionEmitContext {
 
     llvm::Value *addVaryingOffsetsIfNeeded(llvm::Value *ptr, const Type *ptrType);
 };
+} // namespace ispc

@@ -56,6 +56,9 @@
 #ifdef ISPC_GENX_ENABLED
 #include <llvm/GenXIntrinsics/GenXIntrinsics.h>
 #endif
+
+namespace ispc {
+
 /** This is a small utility structure that records information related to one
     level of nested control flow.  It's mostly used in correctly restoring
     the mask and other state as we exit control flow nesting levels.
@@ -3818,3 +3821,4 @@ bool FunctionEmitContext::emitGenXHardwareMask() {
 #endif
     return emitGenXHardwareMask;
 }
+} // namespace ispc

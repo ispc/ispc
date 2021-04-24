@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2019, Intel Corporation
+  Copyright (c) 2019-2021, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -38,6 +38,8 @@
 
 #include "bitcode_lib.h"
 #include "target_registry.h"
+
+using namespace ispc;
 
 // Dispatch constructor
 BitcodeLib::BitcodeLib(const unsigned char lib[], int size, TargetOS os)

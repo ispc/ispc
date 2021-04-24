@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2020, Intel Corporation
+  Copyright (c) 2010-2021, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -52,6 +52,8 @@
 namespace llvm {
 class raw_string_ostream;
 }
+
+namespace ispc {
 
 struct DispatchHeaderInfo;
 
@@ -219,3 +221,4 @@ inline Module::OutputFlags &operator&=(Module::OutputFlags &lhs, const __underly
 inline Module::OutputFlags operator|(const Module::OutputFlags lhs, const Module::OutputFlags rhs) {
     return (Module::OutputFlags)((__underlying_type(Module::OutputFlags))lhs | rhs);
 }
+} // namespace ispc

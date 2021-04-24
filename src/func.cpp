@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2011-2020, Intel Corporation
+  Copyright (c) 2011-2021, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -68,6 +68,8 @@
 #ifdef ISPC_GENX_ENABLED
 #include <llvm/GenXIntrinsics/GenXMetadata.h>
 #endif
+
+using namespace ispc;
 
 Function::Function(Symbol *s, Stmt *c) {
     sym = s;

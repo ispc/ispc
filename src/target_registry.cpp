@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2019-2020, Intel Corporation
+  Copyright (c) 2019-2021, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -41,6 +41,8 @@
 #include <numeric>
 #include <string>
 #include <vector>
+
+using namespace ispc;
 
 // Returns number of bits required to store this value
 static constexpr uint32_t bits_required(uint32_t x) {

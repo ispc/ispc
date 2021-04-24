@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2013, Intel Corporation
+  Copyright (c) 2010-2021, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -96,6 +96,8 @@ struct PragmaAttributes {
 
 #include <stdio.h>
 #include <llvm/IR/Constants.h>
+
+using namespace ispc;
 
 #define UNIMPLEMENTED \
         Error(yylloc, "Unimplemented parser functionality %s:%d", \

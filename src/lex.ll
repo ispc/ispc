@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2019, Intel Corporation
+  Copyright (c) 2010-2021, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -38,9 +38,11 @@
 #include "util.h"
 #include "module.h"
 #include "type.h"
-#include "parse.hh"
 #include <stdlib.h>
 #include <stdint.h>
+
+using namespace ispc;
+#include "parse.hh"
 
 static uint64_t lParseBinary(const char *ptr, SourcePos pos, char **endPtr);
 static int lParseInteger(bool dotdotdot);

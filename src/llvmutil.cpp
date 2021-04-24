@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2020, Intel Corporation
+  Copyright (c) 2010-2021, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -51,6 +51,8 @@
 #ifdef ISPC_GENX_ENABLED
 #include <llvm/GenXIntrinsics/GenXIntrinsics.h>
 #endif
+
+namespace ispc {
 
 llvm::Type *LLVMTypes::VoidType = NULL;
 llvm::PointerType *LLVMTypes::VoidPointerType = NULL;
@@ -1695,3 +1697,4 @@ AddressSpace GetAddressSpace(llvm::Value *v) {
     return AddressSpace::Local;
 }
 #endif
+} // namespace ispc

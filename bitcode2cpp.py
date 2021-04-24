@@ -83,7 +83,9 @@ width = 16
 
 name = "builtins_bitcode_" + target_os_old + "_" + target_arch + name;
 
-sys.stdout.write("#include \"bitcode_lib.h\"\n\n");
+sys.stdout.write("#include \"bitcode_lib.h\"\n\n")
+
+sys.stdout.write("using namespace ispc;\n\n")
 
 sys.stdout.write("extern const unsigned char " + name + "[] = {\n")
 
