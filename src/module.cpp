@@ -57,10 +57,6 @@
 #include <stdio.h>
 #include <sys/stat.h>
 #include <sys/types.h>
-#ifdef ISPC_HOST_IS_WINDOWS
-#include <io.h>
-#include <windows.h>
-#endif
 
 #include <clang/Basic/TargetInfo.h>
 #include <clang/Frontend/CompilerInstance.h>
@@ -114,6 +110,11 @@
 #endif
 
 #ifdef ISPC_HOST_IS_WINDOWS
+#include <io.h>
+// windows.h defines CALLBACK as __stdcall
+// clang/Analysis/CFG.h contains typename with name CALLBACK, which is got screwed up.
+// So we include it after clang includes.
+#include <windows.h>
 // Note that this define must be after clang includes, as they undefining this symbol.
 #define strcasecmp stricmp
 #endif
