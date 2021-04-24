@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2019, Intel Corporation
+  Copyright (c) 2019-2021, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -39,6 +39,8 @@
 
 #include "target_enums.h"
 
+namespace ispc {
+
 class BitcodeLib {
   public:
     enum class BitcodeLibType { Dispatch, Builtins_c, ISPC_target };
@@ -72,3 +74,5 @@ class BitcodeLib {
     const Arch getArch() const;
     const ISPCTarget getISPCTarget() const;
 };
+
+} // namespace ispc

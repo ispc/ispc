@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2019-2020, Intel Corporation
+  Copyright (c) 2019-2021, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -41,6 +41,8 @@
 #include "util.h"
 
 #include <cstring>
+
+namespace ispc {
 
 Arch ParseArch(std::string arch) {
     if (arch == "x86") {
@@ -408,3 +410,4 @@ TargetOS GetHostOS() {
     return TargetOS::error;
 #endif
 }
+} // namespace ispc

@@ -65,6 +65,8 @@
 #include <llvm/GenXIntrinsics/GenXIntrinsics.h>
 #endif
 
+using namespace ispc;
+
 extern int yyparse();
 struct yy_buffer_state;
 extern yy_buffer_state *yy_scan_string(const char *);
@@ -241,7 +243,7 @@ static bool lCreateISPCSymbol(llvm::Function *func, SymbolTable *symbolTable) {
     return true;
 }
 
-Symbol *CreateISPCSymbolForLLVMIntrinsic(llvm::Function *func, SymbolTable *symbolTable) {
+Symbol *ispc::CreateISPCSymbolForLLVMIntrinsic(llvm::Function *func, SymbolTable *symbolTable) {
     Symbol *existingSym = symbolTable->LookupIntrinsics(func);
     if (existingSym != NULL) {
         return existingSym;
@@ -930,7 +932,7 @@ static void lSetAlwaysInlineFunctions(llvm::Module *module) {
     @param module      Module to link the bitcode into
     @param symbolTable Symbol table to add definitions to
  */
-void AddBitcodeToModule(const BitcodeLib *lib, llvm::Module *module, SymbolTable *symbolTable) {
+void ispc::AddBitcodeToModule(const BitcodeLib *lib, llvm::Module *module, SymbolTable *symbolTable) {
     llvm::StringRef sb = llvm::StringRef((const char *)lib->getLib(), lib->getSize());
     llvm::MemoryBufferRef bcBuf = llvm::MemoryBuffer::getMemBuffer(sb)->getMemBufferRef();
 
@@ -1119,7 +1121,8 @@ static void emitLLVMUsed(llvm::Module &module, std::vector<llvm::Constant *> &li
     GV->setSection("llvm.metadata");
 }
 
-void DefineStdlib(SymbolTable *symbolTable, llvm::LLVMContext *ctx, llvm::Module *module, bool includeStdlibISPC) {
+void ispc::DefineStdlib(SymbolTable *symbolTable, llvm::LLVMContext *ctx, llvm::Module *module,
+                        bool includeStdlibISPC) {
     // debug_symbols are symbols that supposed to be preserved in debug information.
     // They will be referenced in llvm.used intrinsic to prevent they removal from
     // the object file.

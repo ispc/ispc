@@ -70,8 +70,10 @@
 #include <llvm/Target/TargetMachine.h>
 #include <llvm/Target/TargetOptions.h>
 
-Globals *g;
-Module *m;
+using namespace ispc;
+
+Globals *ispc::g;
+Module *ispc::m;
 
 ///////////////////////////////////////////////////////////////////////////
 // Target
@@ -1807,7 +1809,7 @@ bool SourcePos::operator==(const SourcePos &p2) const {
             last_line == p2.last_line && last_column == p2.last_column);
 }
 
-SourcePos Union(const SourcePos &p1, const SourcePos &p2) {
+SourcePos ispc::Union(const SourcePos &p1, const SourcePos &p2) {
     if (strcmp(p1.name, p2.name) != 0)
         return p1;
 

@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2020, Intel Corporation
+  Copyright (c) 2010-2021, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -56,6 +56,8 @@ class InsertElementInst;
 #else
 #define LLVMVECTOR llvm::VectorType
 #endif
+
+namespace ispc {
 
 /** This structure holds pointers to a variety of LLVM types; code
     elsewhere can use them from here, ratherthan needing to make more
@@ -333,3 +335,4 @@ enum AddressSpace { Local, Global, External };
 
 extern AddressSpace GetAddressSpace(llvm::Value *v);
 #endif
+} // namespace ispc

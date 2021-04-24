@@ -114,6 +114,8 @@
 #endif
 #endif
 
+using namespace ispc;
+
 /*! list of files encountered by the parser. this allows emitting of
     the module file's dependencies via the -MMM option */
 std::set<std::string> registeredDependencies;
@@ -231,11 +233,11 @@ extern void yy_switch_to_buffer(YY_BUFFER_STATE);
 extern YY_BUFFER_STATE yy_scan_string(const char *);
 extern YY_BUFFER_STATE yy_create_buffer(FILE *, int);
 extern void yy_delete_buffer(YY_BUFFER_STATE);
+extern void ParserInit();
 
 int Module::CompileFile() {
     llvm::TimeTraceScope CompileFileTimeScope(
         "CompileFile", llvm::StringRef(filename + ("_" + std::string(g->target->GetISAString()))));
-    extern void ParserInit();
     ParserInit();
 
     // FIXME: it'd be nice to do this in the Module constructor, but this
@@ -2114,7 +2116,7 @@ bool Module::writeHeader(const char *fn) {
     return true;
 }
 
-struct DispatchHeaderInfo {
+struct ispc::DispatchHeaderInfo {
     bool EmitUnifs;
     bool EmitFuncs;
     bool EmitFrontMatter;

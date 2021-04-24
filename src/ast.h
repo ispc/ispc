@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2011-2019, Intel Corporation
+  Copyright (c) 2011-2021, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -39,6 +39,8 @@
 
 #include "ispc.h"
 #include <vector>
+
+namespace ispc {
 
 /** @brief Abstract base class for nodes in the abstract syntax tree (AST).
 
@@ -200,3 +202,5 @@ extern int EstimateCost(ASTNode *root);
 /** Returns true if it would be safe to run the given code with an "all
     off" mask. */
 extern bool SafeToRunWithMaskAllOff(ASTNode *root);
+
+} // namespace ispc

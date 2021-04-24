@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2020, Intel Corporation
+  Copyright (c) 2010-2021, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -43,6 +43,8 @@
 #include <llvm/ADT/SmallVector.h>
 #include <llvm/IR/DerivedTypes.h>
 #include <llvm/IR/Type.h>
+
+namespace ispc {
 
 class ConstExpr;
 class StructType;
@@ -1011,3 +1013,5 @@ template <> inline const FunctionType *CastType(const Type *type) {
 }
 
 inline bool IsReferenceType(const Type *t) { return CastType<ReferenceType>(t) != NULL; }
+
+} // namespace ispc

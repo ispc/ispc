@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2020, Intel Corporation
+  Copyright (c) 2010-2021, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -56,6 +56,8 @@
 #include <llvm/Support/TargetRegistry.h>
 #include <llvm/Support/TargetSelect.h>
 #include <llvm/Support/ToolOutputFile.h>
+
+using namespace ispc;
 
 #ifdef ISPC_HOST_IS_WINDOWS
 #define strcasecmp stricmp

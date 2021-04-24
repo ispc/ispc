@@ -115,9 +115,12 @@
 #include <llvm/GenXIntrinsics/GenXSPIRVWriterAdaptor.h>
 // Used for GenX gather coalescing
 #include <llvm/Transforms/Utils/Local.h>
+
 // Constant in number of bytes.
 enum { BYTE = 1, WORD = 2, DWORD = 4, QWORD = 8, OWORD = 16, GRF = 32 };
 #endif
+
+using namespace ispc;
 
 static llvm::Pass *CreateIntrinsicsOptPass();
 static llvm::Pass *CreateInstructionSimplifyPass();
@@ -463,7 +466,7 @@ void DebugPassManager::add(llvm::Pass *P, int stage = -1) {
 }
 ///////////////////////////////////////////////////////////////////////////
 
-void Optimize(llvm::Module *module, int optLevel) {
+void ispc::Optimize(llvm::Module *module, int optLevel) {
 #ifndef ISPC_NO_DUMPS
     if (g->debugPrint) {
         printf("*** Code going into optimization ***\n");

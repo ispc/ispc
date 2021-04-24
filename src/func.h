@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2011-2019, Intel Corporation
+  Copyright (c) 2011-2021, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -41,6 +41,8 @@
 
 #include <vector>
 
+namespace ispc {
+
 class Function {
   public:
     Function(Symbol *sym, Stmt *code);
@@ -64,3 +66,4 @@ class Function {
     Symbol *taskIndexSym1, *taskCountSym1;
     Symbol *taskIndexSym2, *taskCountSym2;
 };
+} // namespace ispc

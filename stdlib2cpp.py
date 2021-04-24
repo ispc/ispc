@@ -4,6 +4,7 @@ import sys
 
 t=str(sys.argv[1])
 
+sys.stdout.write("namespace ispc {\n")
 sys.stdout.write("extern const char stdlib_" + t + "_code[] = {\n")
 
 width = 16
@@ -14,5 +15,6 @@ for i in range(0, len(data), 1):
     if i%width == (width-1):
         sys.stdout.write("\n")
 
-sys.stdout.write("0x00 };\n\n")
+sys.stdout.write("0x00 };\n")
+sys.stdout.write("} // namespace ispc\n")
                                     

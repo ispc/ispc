@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2020, Intel Corporation
+  Copyright (c) 2010-2021, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -67,13 +67,15 @@
 
 #include <llvm/IR/DataLayout.h>
 
+using namespace ispc;
+
 /** Returns the width of the terminal where the compiler is running.
     Finding this out may fail in a variety of reasonable situations (piping
     compiler output to 'less', redirecting output to a file, running the
     compiler under a debuffer; in this case, just return a reasonable
     default.
  */
-int TerminalWidth() {
+int ispc::TerminalWidth() {
     if (g->disableLineWrap)
         return 1 << 30;
 
@@ -207,7 +209,7 @@ static int lFindIndent(int numColons, const char *buf) {
 /** Print the given string to the given FILE, assuming the given output
     column width.  Break words as needed to avoid words spilling past the
     last column.  */
-void PrintWithWordBreaks(const char *buf, int indent, int columnWidth, FILE *out) {
+void ispc::PrintWithWordBreaks(const char *buf, int indent, int columnWidth, FILE *out) {
 #ifdef ISPC_HOST_IS_WINDOWS
     fputs(buf, out);
     fputs("\n", out);
@@ -348,7 +350,7 @@ static void lPrint(const char *type, bool isError, SourcePos p, const char *fmt,
     free(formattedBuf);
 }
 
-void Error(SourcePos p, const char *fmt, ...) {
+void ispc::Error(SourcePos p, const char *fmt, ...) {
     if (m != NULL) {
         ++m->errorCount;
         if ((g->errorLimit != -1) && (g->errorLimit <= m->errorCount - 1))
@@ -363,7 +365,7 @@ void Error(SourcePos p, const char *fmt, ...) {
     va_end(args);
 }
 
-void Debug(SourcePos p, const char *fmt, ...) {
+void ispc::Debug(SourcePos p, const char *fmt, ...) {
 #ifndef ISPC_NO_DUMPS
     if (!g->debugPrint || g->quiet)
         return;
@@ -375,7 +377,7 @@ void Debug(SourcePos p, const char *fmt, ...) {
 #endif
 }
 
-void Warning(SourcePos p, const char *fmt, ...) {
+void ispc::Warning(SourcePos p, const char *fmt, ...) {
 
     std::map<std::pair<int, std::string>, bool>::iterator turnOffWarnings_it =
         g->turnOffWarnings.find(std::pair<int, std::string>(p.last_line, std::string(p.name)));
@@ -394,7 +396,7 @@ void Warning(SourcePos p, const char *fmt, ...) {
     va_end(args);
 }
 
-void PerformanceWarning(SourcePos p, const char *fmt, ...) {
+void ispc::PerformanceWarning(SourcePos p, const char *fmt, ...) {
     std::string stdlibFile = "stdlib.ispc";
     std::string sourcePosName = p.name;
     if (!g->emitPerfWarnings ||
@@ -431,19 +433,19 @@ static void lPrintBugText() {
                     "like to fix!\n***\n");
 }
 
-[[noreturn]] void FatalError(const char *file, int line, const char *message) {
+[[noreturn]] void ispc::FatalError(const char *file, int line, const char *message) {
     fprintf(stderr, "%s(%d): FATAL ERROR: %s\n", file, line, message);
     lPrintBugText();
     abort();
 }
 
-void DoAssert(const char *file, int line, const char *expr) {
+void ispc::DoAssert(const char *file, int line, const char *expr) {
     fprintf(stderr, "%s:%u: Assertion failed: \"%s\".\n", file, line, expr);
     lPrintBugText();
     abort();
 }
 
-void DoAssertPos(SourcePos pos, const char *file, int line, const char *expr) {
+void ispc::DoAssertPos(SourcePos pos, const char *file, int line, const char *expr) {
     Error(pos, "Assertion failed (%s:%u): \"%s\".", file, line, expr);
     lPrintBugText();
     abort();
@@ -452,7 +454,7 @@ void DoAssertPos(SourcePos pos, const char *file, int line, const char *expr) {
 ///////////////////////////////////////////////////////////////////////////
 
 // http://en.wikipedia.org/wiki/Levenshtein_distance
-int StringEditDistance(const std::string &str1, const std::string &str2, int maxDist) {
+int ispc::StringEditDistance(const std::string &str1, const std::string &str2, int maxDist) {
     // Small hack: don't return 0 if the strings are the same; if we've
     // gotten here, there's been a parsing error, and suggesting the same
     // string isn't going to actually help things.
@@ -487,7 +489,7 @@ int StringEditDistance(const std::string &str1, const std::string &str2, int max
     return previous[n2];
 }
 
-std::vector<std::string> MatchStrings(const std::string &str, const std::vector<std::string> &options) {
+std::vector<std::string> ispc::MatchStrings(const std::string &str, const std::vector<std::string> &options) {
     if (str.size() == 0 || (str.size() == 1 && !isalpha(str[0])))
         // don't even try...
         return std::vector<std::string>();
@@ -513,8 +515,8 @@ std::vector<std::string> MatchStrings(const std::string &str, const std::vector<
     return std::vector<std::string>();
 }
 
-void GetDirectoryAndFileName(const std::string &currentDirectory, const std::string &relativeName,
-                             std::string *directory, std::string *filename) {
+void ispc::GetDirectoryAndFileName(const std::string &currentDirectory, const std::string &relativeName,
+                                   std::string *directory, std::string *filename) {
 #ifdef ISPC_HOST_IS_WINDOWS
     char path[MAX_PATH];
     const char *combPath = PathCombine(path, currentDirectory.c_str(), relativeName.c_str());
@@ -618,7 +620,7 @@ bool VerifyDataLayoutCompatibility(const std::string &module_dl, const std::stri
     return true;
 }
 
-bool IsStdin(const char *filepath) {
+bool ispc::IsStdin(const char *filepath) {
     Assert(filepath != nullptr);
     if (!strcmp(filepath, "-")) {
         return true;

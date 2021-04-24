@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2019, Intel Corporation
+  Copyright (c) 2019-2021, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -43,6 +43,7 @@
 #include <map>
 #include <vector>
 
+namespace ispc {
 // Some background information useful for understanding how this works.
 // - static variables with global or class scope and without constructor are
 //   initialized at load time.
@@ -107,3 +108,4 @@ class TargetLibRegistry {
 
     bool isSupported(ISPCTarget target, TargetOS os, Arch arch) const;
 };
+} // namespace ispc

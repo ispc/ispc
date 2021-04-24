@@ -97,6 +97,8 @@ class DIType;
 class DIScope;
 } // namespace llvm
 
+namespace ispc {
+
 class ArrayType;
 class AST;
 class ASTNode;
@@ -758,3 +760,4 @@ enum {
 
 extern Globals *g;
 extern Module *m;
+} // namespace ispc

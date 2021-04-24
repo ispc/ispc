@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2019, Intel Corporation
+  Copyright (c) 2010-2021, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -44,6 +44,20 @@
 #include <stdarg.h>
 #endif
 
+#ifdef __GNUG__
+#define PRINTF_FUNC __attribute__((format(printf, 2, 3)))
+#else
+#define PRINTF_FUNC
+#endif // __GNUG__
+
+// for cross-platform compatibility
+#ifdef ISPC_HOST_IS_WINDOWS
+int vasprintf(char **sptr, const char *fmt, va_list argv);
+int asprintf(char **sptr, const char *fmt, ...);
+#endif
+
+namespace ispc {
+
 struct SourcePos;
 
 /** Rounds up the given value to the next power of two, if it isn't a power
@@ -57,18 +71,6 @@ inline uint32_t RoundUpPow2(uint32_t v) {
     v |= v >> 16;
     return v + 1;
 }
-
-#ifdef __GNUG__
-#define PRINTF_FUNC __attribute__((format(printf, 2, 3)))
-#else
-#define PRINTF_FUNC
-#endif // __GNUG__
-
-// for cross-platform compatibility
-#ifdef ISPC_HOST_IS_WINDOWS
-int vasprintf(char **sptr, const char *fmt, va_list argv);
-int asprintf(char **sptr, const char *fmt, ...);
-#endif
 
 /** Prints a debugging message.  These messages are only printed if
     g->debugPrint is \c true.  In addition to a program source code
@@ -199,3 +201,4 @@ int TerminalWidth();
 /** Returns true is the filepath represents stdin, otherwise false.
  */
 bool IsStdin(const char *);
+} // namespace ispc

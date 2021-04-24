@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2019, Intel Corporation
+  Copyright (c) 2010-2021, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -40,6 +40,8 @@
 
 #include "ispc.h"
 
+namespace ispc {
+
 /** Adds declarations and definitions of ispc standard library functions
     and types to the given module.
 
@@ -62,3 +64,5 @@ void AddBitcodeToModule(const BitcodeLib *lib, llvm::Module *module, SymbolTable
     @return                Symbol created for the LLVM::Function
  */
 Symbol *CreateISPCSymbolForLLVMIntrinsic(llvm::Function *func, SymbolTable *symbolTable);
+
+} // namespace ispc

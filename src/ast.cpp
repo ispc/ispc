@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2011-2020, Intel Corporation
+  Copyright (c) 2011-2021, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -45,6 +45,9 @@
 #include "util.h"
 
 #include <llvm/Support/TimeProfiler.h>
+
+using namespace ispc;
+
 ///////////////////////////////////////////////////////////////////////////
 // ASTNode
 
@@ -67,7 +70,7 @@ void AST::GenerateIR() {
 
 ///////////////////////////////////////////////////////////////////////////
 
-ASTNode *WalkAST(ASTNode *node, ASTPreCallBackFunc preFunc, ASTPostCallBackFunc postFunc, void *data) {
+ASTNode *ispc::WalkAST(ASTNode *node, ASTPreCallBackFunc preFunc, ASTPostCallBackFunc postFunc, void *data) {
     if (node == NULL)
         return node;
 
@@ -236,19 +239,19 @@ ASTNode *WalkAST(ASTNode *node, ASTPreCallBackFunc preFunc, ASTPostCallBackFunc 
 
 static ASTNode *lOptimizeNode(ASTNode *node, void *) { return node->Optimize(); }
 
-ASTNode *Optimize(ASTNode *root) { return WalkAST(root, NULL, lOptimizeNode, NULL); }
+ASTNode *ispc::Optimize(ASTNode *root) { return WalkAST(root, NULL, lOptimizeNode, NULL); }
 
-Expr *Optimize(Expr *expr) { return (Expr *)Optimize((ASTNode *)expr); }
+Expr *ispc::Optimize(Expr *expr) { return (Expr *)Optimize((ASTNode *)expr); }
 
-Stmt *Optimize(Stmt *stmt) { return (Stmt *)Optimize((ASTNode *)stmt); }
+Stmt *ispc::Optimize(Stmt *stmt) { return (Stmt *)Optimize((ASTNode *)stmt); }
 
 static ASTNode *lTypeCheckNode(ASTNode *node, void *) { return node->TypeCheck(); }
 
-ASTNode *TypeCheck(ASTNode *root) { return WalkAST(root, NULL, lTypeCheckNode, NULL); }
+ASTNode *ispc::TypeCheck(ASTNode *root) { return WalkAST(root, NULL, lTypeCheckNode, NULL); }
 
-Expr *TypeCheck(Expr *expr) { return (Expr *)TypeCheck((ASTNode *)expr); }
+Expr *ispc::TypeCheck(Expr *expr) { return (Expr *)TypeCheck((ASTNode *)expr); }
 
-Stmt *TypeCheck(Stmt *stmt) { return (Stmt *)TypeCheck((ASTNode *)stmt); }
+Stmt *ispc::TypeCheck(Stmt *stmt) { return (Stmt *)TypeCheck((ASTNode *)stmt); }
 
 struct CostData {
     CostData() { cost = foreachDepth = 0; }
@@ -273,7 +276,7 @@ static ASTNode *lCostCallbackPost(ASTNode *node, void *d) {
     return node;
 }
 
-int EstimateCost(ASTNode *root) {
+int ispc::EstimateCost(ASTNode *root) {
     CostData data;
     WalkAST(root, lCostCallbackPre, lCostCallbackPost, &data);
     return data.cost;
@@ -419,7 +422,7 @@ static bool lCheckAllOffSafety(ASTNode *node, void *data) {
     return true;
 }
 
-bool SafeToRunWithMaskAllOff(ASTNode *root) {
+bool ispc::SafeToRunWithMaskAllOff(ASTNode *root) {
     bool safe = true;
     WalkAST(root, lCheckAllOffSafety, NULL, &safe);
     return safe;
