@@ -60,7 +60,6 @@
 #ifdef ISPC_HOST_IS_WINDOWS
 #include <io.h>
 #include <windows.h>
-#define strcasecmp stricmp
 #endif
 
 #include <clang/Basic/TargetInfo.h>
@@ -112,6 +111,11 @@
 #else
 #error "Unexpected platform"
 #endif
+#endif
+
+#ifdef ISPC_HOST_IS_WINDOWS
+// Note that this define must be after clang includes, as they undefining this symbol.
+#define strcasecmp stricmp
 #endif
 
 using namespace ispc;
