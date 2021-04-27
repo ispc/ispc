@@ -1016,6 +1016,15 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, bool pic, boo
         this->m_dataTypeWidth = 8;
         this->m_vectorWidth = 16;
         this->m_hasHalf = true; // ??
+        // https://github.com/ispc/ispc/issues/2052
+        // AArch64 disables Coherent Control Flow optimization because of a bug in
+        // LLVM aarch64 back-end that reduces the efficiency of simplifyCFG.
+        // Branches added by CCF can only be removed after the back-end formed
+        // fused-multiply-adds.  This reduces the quality of code as most of scalar
+        // optimizations will not apply.
+        // FIXME: Consider turning this optimization back on after
+        // https://reviews.llvm.org/D100963 gets committed to LLVM-13.
+        // This note applies to all NEON targets below.
         this->m_maskingIsFree = (arch == Arch::aarch64);
         this->m_maskBitCount = 8;
         break;
