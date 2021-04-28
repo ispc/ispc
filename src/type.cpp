@@ -2513,9 +2513,6 @@ llvm::FunctionType *FunctionType::LLVMFunctionType(llvm::LLVMContext *ctx, bool 
         return NULL;
     }
 
-    bool isStorageType = false;
-    if (CastType<AtomicType>(returnType) == NULL)
-        isStorageType = true;
     const Type *retType = returnType;
 
     llvm::Type *llvmReturnType = retType->LLVMType(g->ctx);
