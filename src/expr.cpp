@@ -7751,6 +7751,7 @@ Expr *AllocaExpr::TypeCheck() {
     }
     const Type *argType = expr ? expr->GetType() : NULL;
     const Type *sizeType = m->symbolTable->LookupType("size_t");
+    Assert(sizeType != NULL);
     if (!Type::Equal(sizeType->GetAsUniformType(), expr->GetType())) {
         expr = TypeConvertExpr(expr, sizeType->GetAsUniformType(), "Alloca_arg");
     }
