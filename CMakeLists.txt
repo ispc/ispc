@@ -427,9 +427,10 @@ if (MSVC)
     set_source_files_properties(${BISON_OUTPUT} PROPERTIES COMPILE_FLAGS "/wd4005 /wd4065")
 else()
     target_compile_options(${PROJECT_NAME} PRIVATE -Wall -Wno-sign-compare -Wno-unused-function -Werror ${LLVM_CPP_FLAGS})
-    if (${LLVM_VERSION_NUMBER} VERSION_GREATER_EQUAL "13.0.0")
-        set_source_files_properties(${BISON_CPP_OUTPUT} PROPERTIES COMPILE_FLAGS "-Wno-unused-but-set-variable")
-    endif()
+    # The change implementing -Wno-unused-but-set-variable in clang was reverted, so commenting out for now.
+    #if (${LLVM_VERSION_NUMBER} VERSION_GREATER_EQUAL "13.0.0")
+    #    set_source_files_properties(${BISON_CPP_OUTPUT} PROPERTIES COMPILE_FLAGS "-Wno-unused-but-set-variable")
+    #endif()
     # Security options
     target_compile_options(${PROJECT_NAME} PRIVATE -fstack-protector-strong
                            -fdata-sections -ffunction-sections -fno-delete-null-pointer-checks
