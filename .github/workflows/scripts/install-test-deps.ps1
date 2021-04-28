@@ -1,4 +1,5 @@
-choco install --no-progress wget
+# Choco-Install is GH Actions wrappers around choco, which does retries
+Choco-Install -PackageName wget
 
 # Install ISPC package
 $msiexecArgs = @(
