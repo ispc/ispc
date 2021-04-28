@@ -1,4 +1,9 @@
-choco install --no-progress winflexbison3 wget 7zip cygwin cyg-get
+# Choco-Install is GH Actions wrappers around choco, which does retries
+Choco-Install -PackageName winflexbison3
+Choco-Install -PackageName wget
+Choco-Install -PackageName 7zip
+Choco-Install -PackageName cygwin
+Choco-Install -PackageName cyg-get
 
 # Install M4 exec and put it into PATH
 cyg-get m4
