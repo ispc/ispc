@@ -60,22 +60,18 @@ BitcodeLib::BitcodeLib(const unsigned char lib[], int size, ISPCTarget target, T
 
 // TODO: this is debug version: either remove or make it use friendly.
 void BitcodeLib::print() const {
-    const char *type = nullptr;
     std::string os = OSToString(m_os);
     switch (m_type) {
     case BitcodeLibType::Dispatch: {
-        type = "Dispatch";
         printf("Type: dispatch.    size: %zu, OS: %s\n", m_size, os.c_str());
         break;
     }
     case BitcodeLibType::Builtins_c: {
-        type = "Builtins-c";
         std::string arch = ArchToString(m_arch);
         printf("Type: builtins-c.  size: %zu, OS: %s, arch: %s\n", m_size, os.c_str(), arch.c_str());
         break;
     }
     case BitcodeLibType::ISPC_target: {
-        type = "ISPC-target";
         std::string target = ISPCTargetToString(m_target);
         std::string arch = ArchToString(m_arch);
         printf("Type: ispc-target. size: %zu, OS: %s, target: %s, arch(runtime) %s\n", m_size, os.c_str(),

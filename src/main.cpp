@@ -536,6 +536,8 @@ static void lParseInclude(const char *path) {
     } while (pos_end != std::string::npos);
 }
 
+extern int yydebug;
+
 int main(int Argc, char *Argv[]) {
     std::vector<char *> argv;
     lGetAllArgs(Argc, Argv, argv);
@@ -867,7 +869,6 @@ int main(int Argc, char *Argv[]) {
         else if (!strcmp(argv[i], "--quiet"))
             g->quiet = true;
         else if (!strcmp(argv[i], "--yydebug")) {
-            extern int yydebug;
             yydebug = 1;
         } else if (!strcmp(argv[i], "-MMM")) {
             if (++i != argc) {

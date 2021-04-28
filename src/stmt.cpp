@@ -2267,9 +2267,8 @@ void ForeachUniqueStmt::EmitCode(FunctionEmitContext *ctx) const {
     // And we'll store its value into locally-allocated storage, for ease
     // of indexing over it with non-compile-time-constant indices.
     const Type *exprType;
-    llvm::VectorType *llvmExprType;
     if (exprValue == NULL || (exprType = expr->GetType()) == NULL ||
-        (llvmExprType = llvm::dyn_cast<llvm::VectorType>(exprValue->getType())) == NULL) {
+        llvm::dyn_cast<llvm::VectorType>(exprValue->getType()) == NULL) {
         Assert(m->errorCount > 0);
         return;
     }

@@ -5039,7 +5039,7 @@ llvm::Value *MemberExpr::GetLValue(FunctionEmitContext *ctx) const {
     if (elementNumber == -1)
         return NULL;
 
-    const Type *exprLValueType = dereferenceExpr ? expr->GetType() : expr->GetLValueType();
+    const Type *exprLValueType = dereferenceExpr ? exprType : expr->GetLValueType();
     ctx->SetDebugPos(pos);
     llvm::Value *ptr = ctx->AddElementOffset(basePtr, elementNumber, exprLValueType, basePtr->getName().str().c_str());
     if (ptr == NULL) {
@@ -7276,8 +7276,7 @@ llvm::Value *ReferenceExpr::GetValue(FunctionEmitContext *ctx) const {
     // value is NULL if the expression is a temporary; in this case, we'll
     // allocate storage for it so that we can return the pointer to that...
     const Type *type;
-    llvm::Type *llvmType;
-    if ((type = expr->GetType()) == NULL || (llvmType = type->LLVMType(g->ctx)) == NULL) {
+    if ((type = expr->GetType()) == NULL || type->LLVMType(g->ctx) == NULL) {
         AssertPos(pos, m->errorCount > 0);
         return NULL;
     }
@@ -7585,8 +7584,7 @@ Expr *AddressOfExpr::Optimize() { return this; }
 int AddressOfExpr::EstimateCost() const { return 0; }
 
 std::pair<llvm::Constant *, bool> AddressOfExpr::GetConstant(const Type *type) const {
-    const Type *exprType;
-    if (expr == NULL || (exprType = expr->GetType()) == NULL) {
+    if (expr == NULL || expr->GetType() == NULL) {
         AssertPos(pos, m->errorCount > 0);
         return std::pair<llvm::Constant *, bool>(NULL, false);
     }
