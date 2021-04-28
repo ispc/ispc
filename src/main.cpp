@@ -52,6 +52,7 @@
 
 #include <llvm/Support/CommandLine.h>
 #include <llvm/Support/Debug.h>
+#include <llvm/Support/FileSystem.h>
 #include <llvm/Support/Signals.h>
 #include <llvm/Support/TargetRegistry.h>
 #include <llvm/Support/TargetSelect.h>
@@ -471,7 +472,7 @@ static void setCallingConv(VectorCallStatus vectorCall, Arch arch) {
 static void writeCompileTimeFile(const char *outFileName) {
     llvm::SmallString<128> jsonFileName(outFileName);
     jsonFileName.append(".json");
-    llvm::sys::fs::OpenFlags flags = llvm::sys::fs::F_Text;
+    llvm::sys::fs::OpenFlags flags = llvm::sys::fs::OF_Text;
     std::error_code error;
     std::unique_ptr<llvm::ToolOutputFile> of(new llvm::ToolOutputFile(jsonFileName.c_str(), error, flags));
 
