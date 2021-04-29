@@ -39,10 +39,6 @@
 .\tests\atomics-varyingptr-2.ispc runfail  genx64        genx-x8 unspec Windows LLVM 11.1         cl  spv *
 .\tests\atomics-varyingptr-3.ispc runfail  genx64        genx-x8 unspec Windows LLVM 11.1         cl  spv *
 .\tests\atomics-varyingptr-4.ispc runfail  genx64        genx-x8 unspec Windows LLVM 11.1         cl  spv *
-.\tests\foreach-28.ispc runfail  genx64        genx-x8 unspec Windows LLVM 11.1         cl  spv *
-.\tests\foreach-29.ispc runfail  genx64        genx-x8 unspec Windows LLVM 11.1         cl  spv *
-.\tests\foreach-30.ispc runfail  genx64        genx-x8 unspec Windows LLVM 11.1         cl  spv *
-.\tests\foreach-31.ispc runfail  genx64        genx-x8 unspec Windows LLVM 11.1         cl  spv *
 .\tests\foreach-unique-1.ispc runfail  genx64        genx-x8 unspec Windows LLVM 11.1         cl  spv *
 .\tests\foreach-unique-10.ispc runfail  genx64        genx-x8 unspec Windows LLVM 11.1         cl  spv *
 .\tests\foreach-unique-11.ispc runfail  genx64        genx-x8 unspec Windows LLVM 11.1         cl  spv *
@@ -132,10 +128,6 @@
 .\tests\atomics-varyingptr-2.ispc runfail  genx64       genx-x16 unspec Windows LLVM 11.1         cl  spv *
 .\tests\atomics-varyingptr-3.ispc runfail  genx64       genx-x16 unspec Windows LLVM 11.1         cl  spv *
 .\tests\atomics-varyingptr-4.ispc runfail  genx64       genx-x16 unspec Windows LLVM 11.1         cl  spv *
-.\tests\foreach-28.ispc runfail  genx64       genx-x16 unspec Windows LLVM 11.1         cl  spv *
-.\tests\foreach-29.ispc runfail  genx64       genx-x16 unspec Windows LLVM 11.1         cl  spv *
-.\tests\foreach-30.ispc runfail  genx64       genx-x16 unspec Windows LLVM 11.1         cl  spv *
-.\tests\foreach-31.ispc runfail  genx64       genx-x16 unspec Windows LLVM 11.1         cl  spv *
 .\tests\foreach-unique-1.ispc runfail  genx64       genx-x16 unspec Windows LLVM 11.1         cl  spv *
 .\tests\foreach-unique-10.ispc runfail  genx64       genx-x16 unspec Windows LLVM 11.1         cl  spv *
 .\tests\foreach-unique-11.ispc runfail  genx64       genx-x16 unspec Windows LLVM 11.1         cl  spv *
