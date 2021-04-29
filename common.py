@@ -476,7 +476,7 @@ class ExecutionStateGatherer(object):
 
     def dump(self, fname, obj):
         import pickle
-        with open(fname, 'w') as fp:
+        with open(fname, 'wb') as fp:
             pickle.dump(obj, fp)  
 
     def undump(self, fname):
