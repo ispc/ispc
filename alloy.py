@@ -944,6 +944,10 @@ def Main():
     except Exception as e:
         print_debug("Exception: " + str(e), False, stability_log)
 
+    if current_OS == "Windows":
+        # Windows hangs from time to time on exit, so returning without cleanup.
+        sys.stdout.flush()
+        os._exit(return_status)
     exit(return_status)
 
 ###Main###
