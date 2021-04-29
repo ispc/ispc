@@ -502,7 +502,8 @@ def execute_stability(stability, R, print_version):
         else:
             str_time = "\n"
         print_debug(temp[4][1:-3] + stability1.ispc_flags + str_fails + str_new_fails + str_new_passes + str_time, False, stability_log)
-    except:
+    except Exception as e:
+        print_debug("Exception: " + str(e), False, stability_log)
         exc_type, exc_value, exc_traceback = sys.exc_info()
         traceback.print_tb(exc_traceback, file=sys.stderr)
         print_debug("ERROR: Exception in execute_stability: %s\n" % (sys.exc_info()[1]), False, stability_log)
@@ -817,7 +818,8 @@ def send_mail(body_header, msg):
         fp = open(os.environ["ISPC_HOME"] + os.sep + "notify_log.log", 'rb')
         f_lines = fp.readlines()
         fp.close()
-    except:
+    except Exception as e:
+        print_debug("Exception: " + str(e), False, stability_log)
         body_header += "\nUnable to open notify_log.log: " + str(sys.exc_info()) + "\n"
         print_debug("Unable to open notify_log.log: " + str(sys.exc_info()) + "\n", False, stability_log)
         return_status = 1
@@ -927,14 +929,22 @@ def Main():
         elapsed_time = time.time() - start_time
         if options.time:
             print_debug("Elapsed time: " + time.strftime('%Hh%Mm%Ssec.', time.gmtime(elapsed_time)) + "\n", False, "")
-    finally:
+    except Exception as e:
+        print_debug("Exception: " + str(e), False, stability_log)
+        return_status = 1
+
+    # Finish execution: time reporting and copy log
+    try:
         os.chdir(current_path)
         date_name = "alloy_results_" + datetime.datetime.now().strftime('%Y_%m_%d_%H_%M_%S')
         if os.path.exists(date_name):
             alloy_error("It's forbidden to run alloy two times in a second, logs are in ./logs", 1)
         os.rename(f_date, date_name)
         print_debug("Logs are in " + date_name + "\n", False, "")
-        exit(return_status)
+    except Exception as e:
+        print_debug("Exception: " + str(e), False, stability_log)
+
+    exit(return_status)
 
 ###Main###
 from optparse import OptionParser
