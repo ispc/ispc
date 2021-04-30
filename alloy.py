@@ -942,6 +942,7 @@ def Main():
         os.rename(f_date, date_name)
         print_debug("Logs are in " + date_name + "\n", False, "")
     except Exception as e:
+        # Do not return non-zero exit code here, as it's not a critical error and testing might be considered successful.
         print_debug("Exception: " + str(e), False, stability_log)
 
     if current_OS == "Windows":
