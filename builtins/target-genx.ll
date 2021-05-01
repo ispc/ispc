@@ -841,6 +841,8 @@ define(`genx_masked_load', `
 declare <WIDTH x $1> @llvm.genx.svm.block.ld.unaligned.GEN_SUFFIX($1).i64(i64)
 declare <WIDTH_X2 x $1> @llvm.genx.svm.block.ld.unaligned.GEN_SUFFIXN($1, WIDTH_X2).i64(i64)
 
+; Blend version is NOT safe w.r.t. crossing page boundaries, even if the mask is off
+; for the lanes that cross the page boundaries.
 define <WIDTH x $1> @__masked_load_blend_$1(i8 *, <WIDTH x MASK> %mask) nounwind alwaysinline {
   %bitptr = bitcast i8* %0 to i64*
   %ptr = ptrtoint i64* %bitptr to i64
@@ -862,6 +864,10 @@ define <WIDTH x $1> @__masked_load_blend_$1(i8 *, <WIDTH x MASK> %mask) nounwind
   ret <WIDTH x $1> %res_masked
 }
 
+; This version is safe w.r.t. crossing page boundaries and it contains the optimization
+; that is useful for Gen9 and TGL, but needs to be revised for later hardware.
+; The optimization has runtime check for first and last values of the mask and doing
+; either block load (if it is safe) or gather (if it is not safe).
 define <WIDTH x $1> @__masked_load_$1(i8 *, <WIDTH x MASK> %mask) nounwind alwaysinline {
 entry:
   %retptr = alloca <WIDTH x $1>
