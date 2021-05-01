@@ -34,7 +34,7 @@ ENV ISPC_HOME=/home/src/ispc
 
 # LLVM
 ENV LLVM_HOME=/home/tools/llvm/$LLVM_VERSION
-RUN ./alloy.py -b --version=$LLVM_VERSION --selfbuild && \
+RUN python3.6 ./alloy.py -b --version=$LLVM_VERSION --selfbuild && \
     rm -rf $LLVM_HOME/build-$LLVM_VERSION $LLVM_HOME/llvm-$LLVM_VERSION $LLVM_HOME/bin-"$LLVM_VERSION"_temp $LLVM_HOME/build-"$LLVM_VERSION"_temp
 
 WORKDIR /home/packages
