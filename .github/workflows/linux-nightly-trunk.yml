@@ -12,7 +12,7 @@ on:
   workflow_dispatch:
 
 env:
-  SDE_TAR_NAME: sde-external-8.59.0-2020-10-05
+  SDE_TAR_NAME: sde-external-8.63.0-2021-01-18
 
 jobs:
   # Building LLVM in docker, as using native Ubuntu 16.04 github-hosted image contains newer-than-expected libs and
