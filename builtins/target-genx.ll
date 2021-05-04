@@ -144,19 +144,17 @@ truncate()
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; rcp
+declare float @llvm.genx.inv.f32(float)
 
 define float @__rcp_uniform_float(float) nounwind readonly alwaysinline {
-  %mid_res = fdiv float 1., %0
-  ;; do one N-R iteration to improve precision
-  ;; return (2. - v * r) * r;
-  %mult = fmul float %0, %mid_res
-  %two_minus = fsub float 2., %mult
-  %res = fmul float %mid_res, %two_minus
+  ;; No need to make NR iteration to improve precision since precision
+  ;; on gen is high already (1UP)
+  %res = call float @__rcp_fast_uniform_float(float %0)
   ret float %res
 }
 
 define float @__rcp_fast_uniform_float(float) nounwind readonly alwaysinline {
-  %res = fdiv float 1., %0
+  %res = call float @llvm.genx.inv.f32(float %0)
   ret float %res
 }
 
@@ -473,19 +471,16 @@ define <WIDTH x i16> @__float_to_half_varying(<WIDTH x float> %v) nounwind readn
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; rcp
-
+declare <WIDTH x float> @llvm.genx.inv.GEN_SUFFIX(f32)(<WIDTH x float> %0)
 define <WIDTH x float> @__rcp_varying_float(<WIDTH x float>) nounwind readonly alwaysinline {
-  %r = fdiv <WIDTH x float> const_vector(float, 1.), %0
-  ;; do one N-R iteration to improve precision
-  ;; return (2. - v * r) * r;
-  %mult = fmul <WIDTH x float> %0, %r
-  %two_minus = fsub <WIDTH x float> const_vector(float, 2.), %mult
-  %res = fmul <WIDTH x float> %r, %two_minus
+  ;; No need to make NR iteration to improve precision since precision
+  ;; on gen is high already (1UP)
+  %res = call <WIDTH x float> @__rcp_fast_varying_float(<WIDTH x float> %0)
   ret <WIDTH x float> %res
 }
 
 define <WIDTH x float> @__rcp_fast_varying_float(<WIDTH x float>) nounwind readonly alwaysinline {
-  %res = fdiv <WIDTH x float> const_vector(float, 1.), %0
+  %res = call <WIDTH x float> @llvm.genx.inv.GEN_SUFFIX(f32)(<WIDTH x float> %0)
   ret <WIDTH x float> %res
 }
 
