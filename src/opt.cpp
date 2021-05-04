@@ -6180,7 +6180,8 @@ restart:
                     modifiedAny = true;
                     goto restart;
                 }
-            } else if (func && func->getName().equals("llvm.assume")) {
+            } else if (func && (func->getName().equals("llvm.assume") ||
+                                func->getName().equals("llvm.experimental.noalias.scope.decl"))) {
                 ci->eraseFromParent();
                 modifiedAny = true;
                 goto restart;
