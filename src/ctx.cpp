@@ -3738,7 +3738,11 @@ llvm::Value *FunctionEmitContext::GenXSimdCFAny(llvm::Value *value) {
 
 llvm::Value *FunctionEmitContext::GenXSimdCFPredicate(llvm::Value *value, llvm::Value *defaults) {
     AssertPos(currentPos, llvm::isa<llvm::VectorType>(value->getType()));
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_11_0
+    llvm::FixedVectorType *vt = llvm::dyn_cast<llvm::FixedVectorType>(value->getType());
+#else
     llvm::VectorType *vt = llvm::dyn_cast<llvm::VectorType>(value->getType());
+#endif
     if (defaults == NULL) {
 #if ISPC_LLVM_VERSION < ISPC_LLVM_11_0
         defaults = llvm::ConstantVector::getSplat(vt->getVectorNumElements(),

@@ -2916,9 +2916,13 @@ static llvm::Function *lGenXMaskedInt8Inst(llvm::Instruction *inst, bool isStore
 
 static llvm::CallInst *lGenXStoreInst(llvm::Value *val, llvm::Value *ptr, llvm::Instruction *inst) {
     Assert(g->target->isGenXTarget());
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_11_0
+    Assert(llvm::isa<llvm::FixedVectorType>(val->getType()));
+    llvm::FixedVectorType *valVecType = llvm::dyn_cast<llvm::FixedVectorType>(val->getType());
+#else
     Assert(llvm::isa<llvm::VectorType>(val->getType()));
-
     llvm::VectorType *valVecType = llvm::dyn_cast<llvm::VectorType>(val->getType());
+#endif
     Assert(llvm::isPowerOf2_32(valVecType->getNumElements()));
     Assert(valVecType->getPrimitiveSizeInBits() / 8 <= 8 * OWORD);
 
@@ -2942,9 +2946,13 @@ static llvm::CallInst *lGenXStoreInst(llvm::Value *val, llvm::Value *ptr, llvm::
 }
 
 static llvm::CallInst *lGenXLoadInst(llvm::Value *ptr, llvm::Type *retType, llvm::Instruction *inst) {
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_11_0
+    Assert(llvm::isa<llvm::FixedVectorType>(retType));
+    llvm::FixedVectorType *retVecType = llvm::dyn_cast<llvm::FixedVectorType>(retType);
+#else
     Assert(llvm::isa<llvm::VectorType>(retType));
-
     llvm::VectorType *retVecType = llvm::dyn_cast<llvm::VectorType>(retType);
+#endif
     Assert(llvm::isPowerOf2_32(retVecType->getNumElements()));
     Assert(retVecType->getPrimitiveSizeInBits());
     Assert(retVecType->getPrimitiveSizeInBits() / 8 <= 8 * OWORD);
@@ -5485,8 +5493,13 @@ static void lCreateBlockLDUse(llvm::Instruction *currInst, std::vector<llvm::Ext
         } else if (auto gather = lGetPseudoGather(llvm::dyn_cast<llvm::Instruction>(ui->getUser()))) {
             // Collect idxs from gather and fix users
             llvm::Value *res = llvm::UndefValue::get(gather->getType());
-            for (unsigned i = 0, end = llvm::dyn_cast<llvm::VectorType>(res->getType())->getNumElements(); i < end;
-                 ++i) {
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_11_0
+            for (unsigned i = 0, end = llvm::dyn_cast<llvm::FixedVectorType>(res->getType())->getNumElements(); i < end;
+                 ++i)
+#else
+            for (unsigned i = 0, end = llvm::dyn_cast<llvm::VectorType>(res->getType())->getNumElements(); i < end; ++i)
+#endif
+            {
                 // Get element via IEI
                 res = llvm::InsertElementInst::Create(res, EEIs[ptrUse.idxs[curr_idx++]],
                                                       llvm::ConstantInt::get(LLVMTypes::Int32Type, i),
@@ -5522,10 +5535,11 @@ static bool lVectorizeGEPs(llvm::Value *ptr, std::vector<PtrUse> &ptrUses, std::
 
     // Adjust values for vector load
 #if ISPC_LLVM_VERSION >= ISPC_LLVM_11_0
-    if (auto vecTy = llvm::dyn_cast<llvm::FixedVectorType>(type)) {
+    if (auto vecTy = llvm::dyn_cast<llvm::FixedVectorType>(type))
 #else
-    if (auto vecTy = llvm::dyn_cast<llvm::VectorType>(type)) {
+    if (auto vecTy = llvm::dyn_cast<llvm::VectorType>(type))
 #endif
+    {
         // Get single element size
         t_size /= vecTy->getNumElements();
         // Get single element type
@@ -6477,7 +6491,7 @@ llvm::Value *FixAddressSpace::calculateGatherScatterAddress(llvm::Value *Ptr, ll
 #if ISPC_LLVM_VERSION >= ISPC_LLVM_11_0
         Offsets,
         llvm::FixedVectorType::get(LLVMTypes::Int64Type,
-                                   llvm::dyn_cast<llvm::VectorType>(Offsets->getType())->getNumElements()),
+                                   llvm::dyn_cast<llvm::FixedVectorType>(Offsets->getType())->getNumElements()),
         "svm_offset_zext", InsertBefore);
 #else
         Offsets, llvm::VectorType::get(LLVMTypes::Int64Type, Offsets->getType()->getVectorNumElements()),
@@ -6492,7 +6506,7 @@ llvm::Value *FixAddressSpace::calculateGatherScatterAddress(llvm::Value *Ptr, ll
         llvm::Value *undefInsertValue =
 #if ISPC_LLVM_VERSION >= ISPC_LLVM_11_0
             llvm::UndefValue::get(llvm::FixedVectorType::get(
-                LLVMTypes::Int64Type, llvm::dyn_cast<llvm::VectorType>(addressType)->getNumElements()));
+                LLVMTypes::Int64Type, llvm::dyn_cast<llvm::FixedVectorType>(addressType)->getNumElements()));
 #else
             llvm::UndefValue::get(llvm::VectorType::get(LLVMTypes::Int64Type, addressType->getVectorNumElements()));
 #endif
@@ -6501,17 +6515,16 @@ llvm::Value *FixAddressSpace::calculateGatherScatterAddress(llvm::Value *Ptr, ll
 #if ISPC_LLVM_VERSION < ISPC_LLVM_11_0
             addressType->getVectorNumElements(),
 #elif ISPC_LLVM_VERSION < ISPC_LLVM_12_0
-            {llvm::dyn_cast<llvm::VectorType>(addressType)->getNumElements(), false},
+            {llvm::dyn_cast<llvm::FixedVectorType>(addressType)->getNumElements(), false},
 #else
-        llvm::ElementCount::get(
-                                llvm::dyn_cast<llvm::FixedVectorType>(addressType->getNumElements(), false),
+            llvm::ElementCount::get(llvm::dyn_cast<llvm::FixedVectorType>(addressType)->getNumElements(), false),
 #endif
             llvm::Constant::getNullValue(llvm::Type::getInt32Ty(InsertBefore->getContext())));
 
         llvm::Value *undefShuffleValue =
 #if ISPC_LLVM_VERSION >= ISPC_LLVM_11_0
             llvm::UndefValue::get(llvm::FixedVectorType::get(
-                LLVMTypes::Int64Type, llvm::dyn_cast<llvm::VectorType>(addressType)->getNumElements()));
+                LLVMTypes::Int64Type, llvm::dyn_cast<llvm::FixedVectorType>(addressType)->getNumElements()));
 #else
             llvm::UndefValue::get(llvm::VectorType::get(LLVMTypes::Int64Type, addressType->getVectorNumElements()));
 #endif
@@ -6542,7 +6555,8 @@ llvm::Instruction *FixAddressSpace::processVectorLoad(llvm::LoadInst *LI) {
         isPtrLoad = true;
         auto scalarType = g->target->is32Bit() ? LLVMTypes::Int32Type : LLVMTypes::Int64Type;
 #if ISPC_LLVM_VERSION >= ISPC_LLVM_11_0
-        retType = llvm::FixedVectorType::get(scalarType, llvm::dyn_cast<llvm::VectorType>(retType)->getNumElements());
+        retType =
+            llvm::FixedVectorType::get(scalarType, llvm::dyn_cast<llvm::FixedVectorType>(retType)->getNumElements());
 #else
         retType = llvm::VectorType::get(scalarType, retType->getVectorNumElements());
 #endif
@@ -6604,7 +6618,8 @@ llvm::Instruction *FixAddressSpace::processVectorStore(llvm::StoreInst *SI) {
     if (valType->getScalarType()->isPointerTy()) {
         auto scalarType = g->target->is32Bit() ? LLVMTypes::Int32Type : LLVMTypes::Int64Type;
 #if ISPC_LLVM_VERSION >= ISPC_LLVM_11_0
-        valType = llvm::FixedVectorType::get(scalarType, llvm::dyn_cast<llvm::VectorType>(valType)->getNumElements());
+        valType =
+            llvm::FixedVectorType::get(scalarType, llvm::dyn_cast<llvm::FixedVectorType>(valType)->getNumElements());
 #else
         valType = llvm::VectorType::get(scalarType, valType->getVectorNumElements());
 #endif
