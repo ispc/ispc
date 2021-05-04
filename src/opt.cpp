@@ -546,7 +546,8 @@ void ispc::Optimize(llvm::Module *module, int optLevel) {
             optPM.add(CreateFixAddressSpace());
             optPM.add(CreateMangleOpenCLBuiltins());
             // This pass is required to prepare LLVM IR for open source SPIR-V translator
-            optPM.add(llvm::createGenXSPIRVWriterAdaptorPass());
+            optPM.add(
+                llvm::createGenXSPIRVWriterAdaptorPass(true /*RewriteTypes*/, false /*RewriteSingleElementVectors*/));
         }
 #endif
         optPM.add(llvm::createGlobalDCEPass());
@@ -824,7 +825,8 @@ void ispc::Optimize(llvm::Module *module, int optLevel) {
             optPM.add(CreateFixAddressSpace());
             optPM.add(CreateMangleOpenCLBuiltins());
             // This pass is required to prepare LLVM IR for open source SPIR-V translator
-            optPM.add(llvm::createGenXSPIRVWriterAdaptorPass());
+            optPM.add(
+                llvm::createGenXSPIRVWriterAdaptorPass(true /*RewriteTypes*/, false /*RewriteSingleElementVectors*/));
         }
 #endif
     }
