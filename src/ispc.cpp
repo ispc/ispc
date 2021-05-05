@@ -183,8 +183,13 @@ static ISPCTarget lGetSystemISA() {
     bool avx512_vnni =         (info2[2] & (1 << 11)) != 0;
     bool avx512_bitalg =       (info2[2] & (1 << 12)) != 0;
     bool avx512_vpopcntdq =    (info2[2] & (1 << 14)) != 0;
+    bool avx_vnni =            (info3[0] & (1 << 4))  != 0;
     bool avx512_bf16 =         (info3[0] & (1 << 5))  != 0;
     bool avx512_vp2intersect = (info2[3] & (1 << 8))  != 0;
+    bool avx512_amx_bf16 =     (info2[3] & (1 << 22)) != 0;
+    bool avx512_amx_tile =     (info2[3] & (1 << 24)) != 0;
+    bool avx512_amx_int8 =     (info2[3] & (1 << 25)) != 0;
+    bool avx512_fp16 =         (info2[3] & (1 << 23)) != 0;
     // clang-format on
 
     if (osxsave && avx2 && avx512_f && __os_has_avx512_support()) {
@@ -198,6 +203,7 @@ static ISPCTarget lGetSystemISA() {
         // Cooper Lake server:       CPX = CLX + BF16
         // Ice Lake client & server: ICL = CLX + VBMI2 + GFNI + VAES + VPCLMULQDQ + BITALG + VPOPCNTDQ
         // Tiger Lake:               TGL = ICL + VP2INTERSECT
+        // Sapphire Rapids:          SPR = ICL + BF16 + AMX_BF16 + AMX_TILE + AMX_INT8 + AVX_VNNI + FP16
         bool knl = avx512_pf && avx512_er && avx512_cd;
         bool skx = avx512_dq && avx512_cd && avx512_bw && avx512_vl;
         bool clx = skx && avx512_vnni;
@@ -205,8 +211,14 @@ static ISPCTarget lGetSystemISA() {
         bool icl =
             clx && avx512_vbmi2 && avx512_gfni && avx512_vaes && avx512_vpclmulqdq && avx512_bitalg && avx512_vpopcntdq;
         bool tgl = icl && avx512_vp2intersect;
-#pragma unused(tgl, cpx)
-        if (skx) {
+        bool spr =
+            icl && avx512_bf16 && avx512_amx_bf16 && avx512_amx_tile && avx512_amx_int8 && avx_vnni && avx512_fp16;
+#pragma unused(cpx, tgl)
+        if (spr) {
+            // We don't care if AMX is enabled or not here, as AMX support is not implemented yet.
+            // TODO: use SKX target, before SPR is introduced.
+            return ISPCTarget::avx512skx_x16;
+        } else if (skx) {
             return ISPCTarget::avx512skx_x16;
         } else if (knl) {
             return ISPCTarget::avx512knl_x16;
