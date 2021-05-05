@@ -6144,7 +6144,10 @@ restart:
         llvm::Instruction *inst = &*I;
         if (llvm::CallInst *ci = llvm::dyn_cast<llvm::CallInst>(inst)) {
             llvm::Function *func = ci->getCalledFunction();
-            if (func && func->getName().equals("llvm.trap")) {
+            if (func == NULL || !func->isIntrinsic())
+                continue;
+
+            if (func->getName().equals("llvm.trap")) {
                 llvm::Type *argTypes[] = {LLVMTypes::Int1VectorType, LLVMTypes::Int16VectorType};
                 // Description of parameters for genx_raw_send_noresult can be found in target-genx.ll
                 auto Fn = +llvm::GenXIntrinsic::getGenXDeclaration(
@@ -6180,11 +6183,32 @@ restart:
                     modifiedAny = true;
                     goto restart;
                 }
-            } else if (func && (func->getName().equals("llvm.assume") ||
-                                func->getName().equals("llvm.experimental.noalias.scope.decl"))) {
+            } else if (func->getName().equals("llvm.assume") ||
+                       func->getName().equals("llvm.experimental.noalias.scope.decl")) {
+                // These intrinsics are not supported by backend so remove them.
                 ci->eraseFromParent();
                 modifiedAny = true;
                 goto restart;
+            } else if (func->getName().contains("llvm.abs")) {
+                // Replace llvm.asb with llvm.genx.aba.alternative
+                Assert(ci->getOperand(0));
+                llvm::Type *argType = ci->getOperand(0)->getType();
+
+                llvm::Type *Tys[2];
+                Tys[0] = func->getReturnType(); // return type
+                Tys[1] = argType;               // value type
+
+                llvm::GenXIntrinsic::ID genxAbsID =
+                    argType->isIntOrIntVectorTy() ? llvm::GenXIntrinsic::genx_absi : llvm::GenXIntrinsic::genx_absf;
+                auto Fn = llvm::GenXIntrinsic::getGenXDeclaration(m->module, genxAbsID, Tys);
+                Assert(Fn);
+                llvm::Instruction *newInst = llvm::CallInst::Create(Fn, ci->getOperand(0), "");
+                if (newInst != NULL) {
+                    lCopyMetadata(newInst, ci);
+                    llvm::ReplaceInstWithInst(ci, newInst);
+                    modifiedAny = true;
+                    goto restart;
+                }
             }
         }
     }
