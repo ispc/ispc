@@ -444,7 +444,10 @@ struct TaskQueue : public ispcrt::base::TaskQueue {
         if (params)
             param_ptr = params->devicePtr();
 
-        L0_SAFE_CALL(zeKernelSetArgumentValue(kernel.handle(), 0, sizeof(void *), &param_ptr));
+        // If param_ptr is nullptr, it was not set on host, so do not set kernel argument.
+        if (param_ptr != nullptr) {
+            L0_SAFE_CALL(zeKernelSetArgumentValue(kernel.handle(), 0, sizeof(void *), &param_ptr));
+        }
         // Set indirect flag to allow USM access
         ze_kernel_indirect_access_flags_t kernel_flags = ZE_KERNEL_INDIRECT_ACCESS_FLAG_SHARED;
         L0_SAFE_CALL(zeKernelSetIndirectAccess(kernel.handle(), kernel_flags));
