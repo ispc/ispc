@@ -416,7 +416,11 @@ TEST_F(MockTestWithModuleQueueKernel, TaskQueue_Sync) {
 
 TEST_F(MockTestWithModuleQueueKernel, TaskQueue_Launch_zeKernelSetArgumentValue) {
     Config::setRetValue("zeKernelSetArgumentValue", ZE_RESULT_ERROR_DEVICE_LOST);
-    m_task_queue.launch(m_kernel, 0);
+    // We need an argument to a kernel to make sure zeKernelSetArgumentValue is called
+    std::vector<float> buf(64);
+    ispcrt::Array<float> buf_dev(m_device, buf);
+    ASSERT_EQ(sm_rt_error, ISPCRT_NO_ERROR);
+    m_task_queue.launch(m_kernel, buf_dev, 0);
     ASSERT_EQ(sm_rt_error, ISPCRT_DEVICE_LOST);
 }
 
