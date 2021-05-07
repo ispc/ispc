@@ -142,7 +142,6 @@ static llvm::Pass *CreateReplaceStdlibShiftPass();
 
 #ifdef ISPC_GENX_ENABLED
 static llvm::Pass *CreateGenXGatherCoalescingPass();
-static llvm::Pass *CreatePromoteToPrivateMemoryPass();
 static llvm::Pass *CreateReplaceLLVMIntrinsics();
 static llvm::Pass *CreateFixDivisionInstructions();
 static llvm::Pass *CreateFixAddressSpace();
@@ -523,7 +522,6 @@ void ispc::Optimize(llvm::Module *module, int optLevel) {
             // InstructionCombining pass is required for FixDivisionInstructions
             optPM.add(llvm::createInstructionCombiningPass());
             optPM.add(CreateFixDivisionInstructions());
-            optPM.add(CreatePromoteToPrivateMemoryPass());
         }
 #endif
         optPM.add(llvm::createFunctionInliningPass());
@@ -657,10 +655,7 @@ void ispc::Optimize(llvm::Module *module, int optLevel) {
 #endif
         optPM.add(llvm::createPostOrderFunctionAttrsLegacyPass());
         optPM.add(llvm::createReversePostOrderFunctionAttrsPass());
-#ifdef ISPC_GENX_ENABLED
-        if (g->target->isGenXTarget())
-            optPM.add(CreatePromoteToPrivateMemoryPass());
-#endif
+
         // Next inline pass will remove functions, saved by __keep_funcs_live
         optPM.add(llvm::createFunctionInliningPass());
         optPM.add(llvm::createInstSimplifyLegacyPass());
@@ -721,10 +716,7 @@ void ispc::Optimize(llvm::Module *module, int optLevel) {
                 optPM.add(CreateGatherCoalescePass());
             }
         }
-#ifdef ISPC_GENX_ENABLED
-        if (g->target->isGenXTarget())
-            optPM.add(CreatePromoteToPrivateMemoryPass());
-#endif
+
         optPM.add(llvm::createFunctionInliningPass(), 265);
         optPM.add(llvm::createInstSimplifyLegacyPass());
         optPM.add(CreateIntrinsicsOptPass());
@@ -750,11 +742,7 @@ void ispc::Optimize(llvm::Module *module, int optLevel) {
         }
         optPM.add(CreateIntrinsicsOptPass(), 281);
         optPM.add(CreateInstructionSimplifyPass());
-#ifdef ISPC_GENX_ENABLED
-        if (g->target->isGenXTarget()) {
-            optPM.add(CreatePromoteToPrivateMemoryPass());
-        }
-#endif
+
         optPM.add(llvm::createFunctionInliningPass());
         optPM.add(llvm::createArgumentPromotionPass());
 
@@ -3093,15 +3081,12 @@ static bool lImproveMaskedLoad(llvm::CallInst *callInst, llvm::BasicBlock::itera
     MLInfo mlInfo[] = {MLInfo("__masked_load_i8", 1),  MLInfo("__masked_load_i16", 2),
                        MLInfo("__masked_load_i32", 4), MLInfo("__masked_load_float", 4),
                        MLInfo("__masked_load_i64", 8), MLInfo("__masked_load_double", 8)};
-    MLInfo genxInfo[] = {MLInfo("__masked_load_i8", 1),          MLInfo("__masked_load_i16", 2),
-                         MLInfo("__masked_load_i32", 4),         MLInfo("__masked_load_float", 4),
-                         MLInfo("__masked_load_i64", 8),         MLInfo("__masked_load_double", 8),
-                         MLInfo("__masked_load_blend_i8", 1),    MLInfo("__masked_load_blend_i16", 2),
-                         MLInfo("__masked_load_blend_i32", 4),   MLInfo("__masked_load_blend_float", 4),
-                         MLInfo("__masked_load_blend_i64", 8),   MLInfo("__masked_load_blend_double", 8),
-                         MLInfo("__masked_load_private_i8", 1),  MLInfo("__masked_load_private_i16", 2),
-                         MLInfo("__masked_load_private_i32", 4), MLInfo("__masked_load_private_float", 4),
-                         MLInfo("__masked_load_private_i64", 8), MLInfo("__masked_load_private_double", 8)};
+    MLInfo genxInfo[] = {MLInfo("__masked_load_i8", 1),        MLInfo("__masked_load_i16", 2),
+                         MLInfo("__masked_load_i32", 4),       MLInfo("__masked_load_float", 4),
+                         MLInfo("__masked_load_i64", 8),       MLInfo("__masked_load_double", 8),
+                         MLInfo("__masked_load_blend_i8", 1),  MLInfo("__masked_load_blend_i16", 2),
+                         MLInfo("__masked_load_blend_i32", 4), MLInfo("__masked_load_blend_float", 4),
+                         MLInfo("__masked_load_blend_i64", 8), MLInfo("__masked_load_blend_double", 8)};
     MLInfo *info = NULL;
     if (g->target->isGenXTarget()) {
         int nFuncs = sizeof(genxInfo) / sizeof(genxInfo[0]);
@@ -4361,21 +4346,7 @@ static bool lReplacePseudoGS(llvm::CallInst *callInst) {
         LowerGSInfo("__pseudo_gather64_float", "__gather64_float", true, false),
         LowerGSInfo("__pseudo_gather64_i64", "__gather64_i64", true, false),
         LowerGSInfo("__pseudo_gather64_double", "__gather64_double", true, false),
-#ifdef ISPC_GENX_ENABLED
-        LowerGSInfo("__pseudo_gather32_i8_private", "__gather32_private_i8", true, false),
-        LowerGSInfo("__pseudo_gather32_i16_private", "__gather32_private_i16", true, false),
-        LowerGSInfo("__pseudo_gather32_i32_private", "__gather32_private_i32", true, false),
-        LowerGSInfo("__pseudo_gather32_float_private", "__gather32_private_float", true, false),
-        LowerGSInfo("__pseudo_gather32_i64_private", "__gather32_private_i64", true, false),
-        LowerGSInfo("__pseudo_gather32_double_private", "__gather32_private_double", true, false),
 
-        LowerGSInfo("__pseudo_gather64_i8_private", "__gather64_private_i8", true, false),
-        LowerGSInfo("__pseudo_gather64_i16_private", "__gather64_private_i16", true, false),
-        LowerGSInfo("__pseudo_gather64_i32_private", "__gather64_private_i32", true, false),
-        LowerGSInfo("__pseudo_gather64_float_private", "__gather64_private_float", true, false),
-        LowerGSInfo("__pseudo_gather64_i64_private", "__gather64_private_i64", true, false),
-        LowerGSInfo("__pseudo_gather64_double_private", "__gather64_private_double", true, false),
-#endif
         LowerGSInfo("__pseudo_gather_factored_base_offsets32_i8", "__gather_factored_base_offsets32_i8", true, false),
         LowerGSInfo("__pseudo_gather_factored_base_offsets32_i16", "__gather_factored_base_offsets32_i16", true, false),
         LowerGSInfo("__pseudo_gather_factored_base_offsets32_i32", "__gather_factored_base_offsets32_i32", true, false),
@@ -4421,22 +4392,6 @@ static bool lReplacePseudoGS(llvm::CallInst *callInst) {
         LowerGSInfo("__pseudo_scatter64_float", "__scatter64_float", false, false),
         LowerGSInfo("__pseudo_scatter64_i64", "__scatter64_i64", false, false),
         LowerGSInfo("__pseudo_scatter64_double", "__scatter64_double", false, false),
-
-#ifdef ISPC_GENX_ENABLED
-        LowerGSInfo("__pseudo_scatter32_i8_private", "__scatter32_private_i8", false, false),
-        LowerGSInfo("__pseudo_scatter32_i16_private", "__scatter32_private_i16", false, false),
-        LowerGSInfo("__pseudo_scatter32_i32_private", "__scatter32_private_i32", false, false),
-        LowerGSInfo("__pseudo_scatter32_float_private", "__scatter32_private_float", false, false),
-        LowerGSInfo("__pseudo_scatter32_i64_private", "__scatter32_private_i64", false, false),
-        LowerGSInfo("__pseudo_scatter32_double_private", "__scatter32_private_double", false, false),
-
-        LowerGSInfo("__pseudo_scatter64_i8_private", "__scatter64_private_i8", false, false),
-        LowerGSInfo("__pseudo_scatter64_i16_private", "__scatter64_private_i16", false, false),
-        LowerGSInfo("__pseudo_scatter64_i32_private", "__scatter64_private_i32", false, false),
-        LowerGSInfo("__pseudo_scatter64_float_private", "__scatter64_private_float", false, false),
-        LowerGSInfo("__pseudo_scatter64_i64_private", "__scatter64_private_i64", false, false),
-        LowerGSInfo("__pseudo_scatter64_double_private", "__scatter64_private_double", false, false),
-#endif
 
         LowerGSInfo("__pseudo_scatter_factored_base_offsets32_i8", "__scatter_factored_base_offsets32_i8", false,
                     false),
@@ -4908,72 +4863,12 @@ bool MakeInternalFuncsStaticPass::runOnModule(llvm::Module &module) {
         "__prefetch_read_varying_nt",
         "__keep_funcs_live",
 #ifdef ISPC_GENX_ENABLED
-        "__gather_base_offsets32_private_i8",
-        "__gather_base_offsets32_private_i16",
-        "__gather_base_offsets32_private_i32",
-        "__gather_base_offsets32_private_i64",
-        "__gather_base_offsets32_private_float",
-        "__gather_base_offsets32_private_double",
-        "__gather_base_offsets64_private_i8",
-        "__gather_base_offsets64_private_i16",
-        "__gather_base_offsets64_private_i32",
-        "__gather_base_offsets64_private_i64",
-        "__gather_base_offsets64_private_float",
-        "__gather_base_offsets64_private_double",
-        "__gather32_private_i8",
-        "__gather32_private_i16",
-        "__gather32_private_i32",
-        "__gather32_private_i64",
-        "__gather32_private_float",
-        "__gather32_private_double",
-        "__gather64_private_i8",
-        "__gather64_private_i16",
-        "__gather64_private_i32",
-        "__gather64_private_i64",
-        "__gather64_private_float",
-        "__gather64_private_double",
-        "__masked_load_private_i8",
-        "__masked_load_private_i16",
-        "__masked_load_private_i32",
-        "__masked_load_private_i64",
-        "__masked_load_private_float",
-        "__masked_load_private_double",
         "__masked_load_blend_i8",
         "__masked_load_blend_i16",
         "__masked_load_blend_i32",
         "__masked_load_blend_i64",
         "__masked_load_blend_float",
         "__masked_load_blend_double",
-        "__scatter32_private_i8",
-        "__scatter32_private_i16",
-        "__scatter32_private_i32",
-        "__scatter32_private_i64",
-        "__scatter32_private_float",
-        "__scatter32_private_double",
-        "__scatter64_private_i8",
-        "__scatter64_private_i16",
-        "__scatter64_private_i32",
-        "__scatter64_private_i64",
-        "__scatter64_private_float",
-        "__scatter64_private_double",
-        "__scatter_base_offsets32_private_i8",
-        "__scatter_base_offsets32_private_i16",
-        "__scatter_base_offsets32_private_i32",
-        "__scatter_base_offsets32_private_i64",
-        "__scatter_base_offsets32_private_float",
-        "__scatter_base_offsets32_private_double",
-        "__scatter_base_offsets64_private_i8",
-        "__scatter_base_offsets64_private_i16",
-        "__scatter_base_offsets64_private_i32",
-        "__scatter_base_offsets64_private_i64",
-        "__scatter_base_offsets64_private_float",
-        "__scatter_base_offsets64_private_double",
-        "__masked_store_private_i8",
-        "__masked_store_private_i16",
-        "__masked_store_private_i32",
-        "__masked_store_private_i64",
-        "__masked_store_private_float",
-        "__masked_store_private_double",
 #endif
     };
 
@@ -5971,157 +5866,6 @@ bool GenXGatherCoalescing::runOnFunction(llvm::Function &F) {
 static llvm::Pass *CreateGenXGatherCoalescingPass() { return new GenXGatherCoalescing; }
 
 ///////////////////////////////////////////////////////////////////////////
-// PromoteToPrivateMemoryPass
-
-/** This pass checks if memory was allocated on stack and if yes,
-    replaces regular call with "private" call
- */
-class PromoteToPrivateMemoryPass : public llvm::FunctionPass {
-  public:
-    static char ID;
-    PromoteToPrivateMemoryPass() : FunctionPass(ID) {}
-
-    llvm::StringRef getPassName() const { return "Promote to Private Memory"; }
-    bool runOnBasicBlock(llvm::BasicBlock &BB);
-    bool runOnFunction(llvm::Function &F);
-};
-
-char PromoteToPrivateMemoryPass::ID = 0;
-
-static bool lPromoteToPrivateMemory(llvm::CallInst *callInst) {
-    struct MemInfo {
-        MemInfo(const char *oname, const char *pname) {
-            originalFunc = m->module->getFunction(oname);
-            privateFunc = m->module->getFunction(pname);
-            Assert(originalFunc != NULL && privateFunc != NULL);
-        }
-        llvm::Function *originalFunc;
-        llvm::Function *privateFunc;
-    };
-
-    MemInfo memInfo[] = {MemInfo("__masked_load_i8", "__masked_load_private_i8"),
-                         MemInfo("__masked_load_i16", "__masked_load_private_i16"),
-                         MemInfo("__masked_load_i32", "__masked_load_private_i32"),
-                         MemInfo("__masked_load_float", "__masked_load_private_float"),
-                         MemInfo("__masked_load_i64", "__masked_load_private_i64"),
-                         MemInfo("__masked_load_double", "__masked_load_private_double")};
-    MemInfo privMemInfo[] = {MemInfo("__masked_store_i8", "__masked_store_private_i8"),
-                             MemInfo("__masked_store_i16", "__masked_store_private_i16"),
-                             MemInfo("__masked_store_i32", "__masked_store_private_i32"),
-                             MemInfo("__masked_store_float", "__masked_store_private_float"),
-                             MemInfo("__masked_store_i64", "__masked_store_private_i64"),
-                             MemInfo("__masked_store_double", "__masked_store_private_double"),
-                             MemInfo("__scatter32_i8", "__scatter32_private_i8"),
-                             MemInfo("__scatter32_i16", "__scatter32_private_i16"),
-                             MemInfo("__scatter32_i32", "__scatter32_private_i32"),
-                             MemInfo("__scatter32_i64", "__scatter32_private_i64"),
-                             MemInfo("__scatter32_float", "__scatter32_private_float"),
-                             MemInfo("__scatter32_double", "__scatter32_private_double"),
-
-                             MemInfo("__scatter64_i8", "__scatter64_private_i8"),
-                             MemInfo("__scatter64_i16", "__scatter64_private_i16"),
-                             MemInfo("__scatter64_i32", "__scatter64_private_i32"),
-                             MemInfo("__scatter64_i64", "__scatter64_private_i64"),
-                             MemInfo("__scatter64_float", "__scatter64_private_float"),
-                             MemInfo("__scatter64_double", "__scatter64_private_double"),
-
-                             MemInfo("__gather32_i8", "__gather32_private_i8"),
-                             MemInfo("__gather32_i16", "__gather32_private_i16"),
-                             MemInfo("__gather32_i32", "__gather32_private_i32"),
-                             MemInfo("__gather32_i64", "__gather32_private_i64"),
-                             MemInfo("__gather32_float", "__gather32_private_float"),
-                             MemInfo("__gather32_double", "__gather32_private_double"),
-
-                             MemInfo("__gather64_i8", "__gather64_private_i8"),
-                             MemInfo("__gather64_i16", "__gather64_private_i16"),
-                             MemInfo("__gather64_i32", "__gather64_private_i32"),
-                             MemInfo("__gather64_i64", "__gather64_private_i64"),
-                             MemInfo("__gather64_float", "__gather64_private_float"),
-                             MemInfo("__gather64_double", "__gather64_private_double"),
-
-                             MemInfo("__scatter_base_offsets32_i8", "__scatter_base_offsets32_private_i8"),
-                             MemInfo("__scatter_base_offsets32_i16", "__scatter_base_offsets32_private_i16"),
-                             MemInfo("__scatter_base_offsets32_i32", "__scatter_base_offsets32_private_i32"),
-                             MemInfo("__scatter_base_offsets32_i64", "__scatter_base_offsets32_private_i64"),
-                             MemInfo("__scatter_base_offsets32_float", "__scatter_base_offsets32_private_float"),
-                             MemInfo("__scatter_base_offsets32_double", "__scatter_base_offsets32_private_double"),
-
-                             MemInfo("__scatter_base_offsets64_i8", "__scatter_base_offsets64_private_i8"),
-                             MemInfo("__scatter_base_offsets64_i16", "__scatter_base_offsets64_private_i16"),
-                             MemInfo("__scatter_base_offsets64_i32", "__scatter_base_offsets64_private_i32"),
-                             MemInfo("__scatter_base_offsets64_i64", "__scatter_base_offsets64_private_i64"),
-                             MemInfo("__scatter_base_offsets64_float", "__scatter_base_offsets64_private_float"),
-                             MemInfo("__scatter_base_offsets64_double", "__scatter_base_offsets64_private_double"),
-
-                             MemInfo("__gather_base_offsets32_i8", "__gather_base_offsets32_private_i8"),
-                             MemInfo("__gather_base_offsets32_i16", "__gather_base_offsets32_private_i16"),
-                             MemInfo("__gather_base_offsets32_i32", "__gather_base_offsets32_private_i32"),
-                             MemInfo("__gather_base_offsets32_i64", "__gather_base_offsets32_private_i64"),
-                             MemInfo("__gather_base_offsets32_float", "__gather_base_offsets32_private_float"),
-                             MemInfo("__gather_base_offsets32_double", "__gather_base_offsets32_private_double"),
-
-                             MemInfo("__gather_base_offsets64_i8", "__gather_base_offsets64_private_i8"),
-                             MemInfo("__gather_base_offsets64_i16", "__gather_base_offsets64_private_i16"),
-                             MemInfo("__gather_base_offsets64_i32", "__gather_base_offsets64_private_i32"),
-                             MemInfo("__gather_base_offsets64_i64", "__gather_base_offsets64_private_i64"),
-                             MemInfo("__gather_base_offsets64_float", "__gather_base_offsets64_private_float"),
-                             MemInfo("__gather_base_offsets64_double", "__gather_base_offsets64_private_double")};
-    MemInfo *info = NULL;
-    for (unsigned int i = 0; i < sizeof(memInfo) / sizeof(memInfo[0]); ++i) {
-        if (memInfo[i].originalFunc != NULL && callInst->getCalledFunction() == memInfo[i].originalFunc) {
-            info = &memInfo[i];
-            break;
-        }
-    }
-    if (!g->opt.disableGenXPrivateIntrinsics) {
-        for (unsigned int i = 0; i < sizeof(privMemInfo) / sizeof(privMemInfo[0]); ++i) {
-            if (privMemInfo[i].originalFunc != NULL && callInst->getCalledFunction() == privMemInfo[i].originalFunc) {
-                info = &privMemInfo[i];
-                break;
-            }
-        }
-    }
-    if (info == NULL)
-        return false;
-    llvm::Value *ptr = callInst->getOperand(0);
-    if (GetAddressSpace(ptr) != AddressSpace::External) {
-        callInst->setCalledFunction(info->privateFunc);
-    }
-    return true;
-}
-
-bool PromoteToPrivateMemoryPass::runOnBasicBlock(llvm::BasicBlock &bb) {
-    DEBUG_START_PASS("PromoteToPrivateMemoryPass");
-
-    bool modifiedAny = false;
-
-    for (llvm::BasicBlock::iterator iter = bb.begin(), e = bb.end(); iter != e; ++iter) {
-        llvm::CallInst *callInst = llvm::dyn_cast<llvm::CallInst>(&*iter);
-        if (callInst == NULL || callInst->getCalledFunction() == NULL)
-            continue;
-        if (lPromoteToPrivateMemory(callInst)) {
-            modifiedAny = true;
-        }
-    }
-
-    DEBUG_END_PASS("PromoteToPrivateMemoryPass");
-
-    return modifiedAny;
-}
-
-bool PromoteToPrivateMemoryPass::runOnFunction(llvm::Function &F) {
-
-    llvm::TimeTraceScope FuncScope("PromoteToPrivateMemoryPass::runOnFunction", F.getName());
-    bool modifiedAny = false;
-    for (llvm::BasicBlock &BB : F) {
-        modifiedAny |= runOnBasicBlock(BB);
-    }
-    return modifiedAny;
-}
-
-static llvm::Pass *CreatePromoteToPrivateMemoryPass() { return new PromoteToPrivateMemoryPass(); }
-
-///////////////////////////////////////////////////////////////////////////
 // ReplaceLLVMIntrinsics
 
 /** This pass replaces LLVM intrinsics unsupported on GenX
@@ -6480,10 +6224,6 @@ class FixAddressSpace : public llvm::FunctionPass {
     llvm::Instruction *processSVMVectorLoad(llvm::Instruction *LI);
     llvm::Instruction *processVectorStore(llvm::StoreInst *SI);
     llvm::Instruction *processSVMVectorStore(llvm::Instruction *LI);
-    llvm::Instruction *processGatherScatterPrivate(llvm::CallInst *CI, bool IsGather);
-    llvm::Value *calculateGatherScatterAddress(llvm::Value *Ptr, llvm::Value *Offsets, llvm::Instruction *InsertBefore);
-    llvm::Instruction *createInt8WrRegion(llvm::Value *Val, llvm::Value *Mask);
-    llvm::Instruction *createInt8RdRegion(llvm::Value *Val);
     void applyReplace(llvm::Instruction *Inst, llvm::Instruction *ToReplace);
 
   public:
@@ -6499,75 +6239,6 @@ char FixAddressSpace::ID = 0;
 void FixAddressSpace::applyReplace(llvm::Instruction *Inst, llvm::Instruction *ToReplace) {
     lCopyMetadata(Inst, ToReplace);
     llvm::ReplaceInstWithInst(ToReplace, Inst);
-}
-
-/** SVM gather/scatter takes offsets as an int64 value without ptr.
-    This creates some arithmetics to prepare address.
-    Ptr and Offsets are taken from gather/scatter.private
- */
-llvm::Value *FixAddressSpace::calculateGatherScatterAddress(llvm::Value *Ptr, llvm::Value *Offsets,
-                                                            llvm::Instruction *InsertBefore) {
-    Assert(Ptr);
-    Assert(Offsets);
-
-    Assert(Ptr->getType()->isPointerTy() && "Expected valid ptr from gather/scatter.private");
-    Assert(Offsets->getType()->isVectorTy() && "Expected valid offsets from gather/scatter.private");
-
-    llvm::Type *addressType = Offsets->getType();
-    llvm::Value *address = NULL;
-
-    // Cast offsets to int64
-    Offsets = new llvm::ZExtInst(
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_11_0
-        Offsets,
-        llvm::FixedVectorType::get(LLVMTypes::Int64Type,
-                                   llvm::dyn_cast<llvm::FixedVectorType>(Offsets->getType())->getNumElements()),
-        "svm_offset_zext", InsertBefore);
-#else
-        Offsets, llvm::VectorType::get(LLVMTypes::Int64Type, Offsets->getType()->getVectorNumElements()),
-        "svm_offset_zext", InsertBefore);
-#endif
-
-    if (!llvm::isa<llvm::ConstantPointerNull>(Ptr)) {
-        // Cast ptr to int64
-        address = new llvm::PtrToIntInst(Ptr, LLVMTypes::Int64Type, "svm_ptr_ptrtoint", InsertBefore);
-
-        // Vectorize ptr
-        llvm::Value *undefInsertValue =
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_11_0
-            llvm::UndefValue::get(llvm::FixedVectorType::get(
-                LLVMTypes::Int64Type, llvm::dyn_cast<llvm::FixedVectorType>(addressType)->getNumElements()));
-#else
-            llvm::UndefValue::get(llvm::VectorType::get(LLVMTypes::Int64Type, addressType->getVectorNumElements()));
-#endif
-        address = llvm::InsertElementInst::Create(undefInsertValue, address, LLVMInt32(0), "svm_ptr_iei", InsertBefore);
-        llvm::Constant *zeroVec = llvm::ConstantVector::getSplat(
-#if ISPC_LLVM_VERSION < ISPC_LLVM_11_0
-            addressType->getVectorNumElements(),
-#elif ISPC_LLVM_VERSION < ISPC_LLVM_12_0
-            {llvm::dyn_cast<llvm::FixedVectorType>(addressType)->getNumElements(), false},
-#else
-            llvm::ElementCount::get(llvm::dyn_cast<llvm::FixedVectorType>(addressType)->getNumElements(), false),
-#endif
-            llvm::Constant::getNullValue(llvm::Type::getInt32Ty(InsertBefore->getContext())));
-
-        llvm::Value *undefShuffleValue =
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_11_0
-            llvm::UndefValue::get(llvm::FixedVectorType::get(
-                LLVMTypes::Int64Type, llvm::dyn_cast<llvm::FixedVectorType>(addressType)->getNumElements()));
-#else
-            llvm::UndefValue::get(llvm::VectorType::get(LLVMTypes::Int64Type, addressType->getVectorNumElements()));
-#endif
-        address = new llvm::ShuffleVectorInst(address, undefShuffleValue, zeroVec, "svm_ptr_svi", InsertBefore);
-
-        // Calculate address
-        address = llvm::BinaryOperator::CreateAdd(address, Offsets, "svm_ptr_vec", InsertBefore);
-    } else {
-        // Ptr is null: take offsets directly
-        address = Offsets;
-    }
-
-    return address;
 }
 
 llvm::Instruction *FixAddressSpace::processVectorLoad(llvm::LoadInst *LI) {
@@ -6683,130 +6354,6 @@ llvm::Instruction *FixAddressSpace::processSVMVectorStore(llvm::Instruction *CI)
     return storeInst;
 }
 
-llvm::Instruction *FixAddressSpace::createInt8WrRegion(llvm::Value *Val, llvm::Value *Mask) {
-    int width = g->target->getVectorWidth();
-
-    llvm::Value *Args[8];
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_11_0
-    Args[0] = llvm::UndefValue::get(llvm::FixedVectorType::get(LLVMTypes::Int8Type, width * 4)); // old value
-#else
-    Args[0] = llvm::UndefValue::get(llvm::VectorType::get(LLVMTypes::Int8Type, width * 4)); // old value
-#endif
-    Args[1] = Val;                                                 // value to store
-    Args[2] = llvm::ConstantInt::get(LLVMTypes::Int32Type, 0);     // vstride
-    Args[3] = llvm::ConstantInt::get(LLVMTypes::Int32Type, width); // width
-    Args[4] = llvm::ConstantInt::get(LLVMTypes::Int32Type, 4);     // stride
-    Args[5] = llvm::ConstantInt::get(LLVMTypes::Int16Type, 0);     // offsets
-    Args[6] = llvm::ConstantInt::get(LLVMTypes::Int32Type, 0);     // parent width (ignored)
-    Args[7] = Mask;                                                // mask
-
-    llvm::Type *Tys[4];
-
-    Tys[0] = Args[0]->getType(); // return type
-    Tys[1] = Args[1]->getType(); // value type
-    Tys[2] = Args[5]->getType(); // offset type
-    Tys[3] = Args[7]->getType(); // mask type
-
-    auto WrReg = llvm::GenXIntrinsic::getGenXDeclaration(m->module, llvm::GenXIntrinsic::genx_wrregioni, Tys);
-
-    return llvm::CallInst::Create(WrReg, Args, "");
-}
-
-llvm::Instruction *FixAddressSpace::createInt8RdRegion(llvm::Value *Val) {
-    int width = g->target->getVectorWidth();
-
-    llvm::Value *Args[6];
-
-    Args[0] = Val;                                                 // value to read from
-    Args[1] = llvm::ConstantInt::get(LLVMTypes::Int32Type, 0);     // vstride
-    Args[2] = llvm::ConstantInt::get(LLVMTypes::Int32Type, width); // width
-    Args[3] = llvm::ConstantInt::get(LLVMTypes::Int32Type, 4);     // stride
-    Args[4] = llvm::ConstantInt::get(LLVMTypes::Int16Type, 0);     // offsets
-    Args[5] = llvm::ConstantInt::get(LLVMTypes::Int32Type, 0);     // parent width (ignored)
-
-    llvm::Type *Tys[3];
-
-    Tys[0] = LLVMTypes::Int8VectorType; // return type
-    Tys[1] = Args[0]->getType();        // value type
-    Tys[2] = Args[4]->getType();        // offset type
-
-    auto RdReg = llvm::GenXIntrinsic::getGenXDeclaration(m->module, llvm::GenXIntrinsic::genx_rdregioni, Tys);
-
-    return llvm::CallInst::Create(RdReg, Args, "svm_gather_rdreg");
-}
-
-llvm::Instruction *FixAddressSpace::processGatherScatterPrivate(llvm::CallInst *CI, bool IsGather) {
-    Assert((IsGather && llvm::GenXIntrinsic::getGenXIntrinsicID(CI) == llvm::GenXIntrinsic::genx_gather_private) ||
-           (!IsGather && llvm::GenXIntrinsic::getGenXIntrinsicID(CI) == llvm::GenXIntrinsic::genx_scatter_private));
-
-    int width = g->target->getVectorWidth();
-    llvm::Value *mask = CI->getOperand(0);
-    llvm::Value *ptr = CI->getOperand(1);
-    llvm::Value *offsets = CI->getOperand(2);
-    llvm::Value *value = CI->getOperand(3);
-
-    Assert(ptr);
-    Assert(offsets);
-
-    if ((llvm::isa<llvm::ConstantPointerNull>(ptr) && GetAddressSpace(offsets) != AddressSpace::External) ||
-        GetAddressSpace(ptr) != AddressSpace::External)
-        return NULL;
-
-    llvm::Value *address = calculateGatherScatterAddress(ptr, offsets, CI);
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_11_0
-    llvm::Type *i8VecType = llvm::FixedVectorType::get(LLVMTypes::Int8Type, width * 4);
-#else
-    llvm::Type *i8VecType = llvm::VectorType::get(LLVMTypes::Int8Type, width * 4);
-#endif
-
-    bool isInt8 = (value->getType()->getScalarType() == LLVMTypes::Int8Type);
-
-    Assert(address && "Bad gather/scatter address!");
-
-    if (isInt8 && !IsGather) {
-        // Special handler for i8 scatter
-        llvm::Instruction *wrReg = createInt8WrRegion(value, mask);
-        wrReg->insertBefore(CI);
-        value = wrReg;
-    }
-
-    llvm::Value *Args[] = {
-        mask,                                            // same as for gather/scatter.private
-        llvm::ConstantInt::get(LLVMTypes::Int32Type, 0), // log2(1) block
-        address,                                         // vectorized (ptr + offset)
-        value                                            // same as for gather/scatter.private
-    };
-
-    llvm::Type *Tys[3];
-
-    if (IsGather) {
-        // For svm.gather:
-        Tys[0] = isInt8 ? i8VecType : Args[3]->getType(); // return type
-        Tys[1] = Args[0]->getType();                      // mask type
-        Tys[2] = Args[2]->getType();                      // address type
-    } else {
-        // For svm.scatter:
-        Tys[0] = Args[0]->getType(); // mask type
-        Tys[1] = Args[2]->getType(); // address type
-        Tys[2] = Args[3]->getType(); // value type
-    }
-
-    auto Fn = llvm::GenXIntrinsic::getGenXDeclaration(
-        m->module, IsGather ? llvm::GenXIntrinsic::genx_svm_gather : llvm::GenXIntrinsic::genx_svm_scatter, Tys);
-    llvm::Instruction *res = llvm::CallInst::Create(Fn, Args, "");
-
-    if (IsGather)
-        res->setName(CI->getName());
-
-    if (isInt8 && IsGather) {
-        // Special handler for i8 gather
-        res->insertBefore(CI);
-        res = createInt8RdRegion(res);
-    }
-
-    return res;
-}
-
 bool FixAddressSpace::runOnBasicBlock(llvm::BasicBlock &bb) {
     DEBUG_START_PASS("FixAddressSpace");
     bool modifiedAny = false;
@@ -6849,31 +6396,6 @@ restart:
                 goto restart;
             }
         }
-// This transformation introduces an instruction sequence which leads to incorrect address:
-// trunc i64 %addr to i32 (required for gather.private/scatter.private)
-// add/mul ... %addr
-// zext i32 %addr to i64
-// For now correct svm instruction selection is made in backend.
-// TODO: uncomment this code when i64 is introduced to gather.private/scatter.private
-#if 0
-        else if (llvm::GenXIntrinsic::getGenXIntrinsicID(inst) == llvm::GenXIntrinsic::genx_gather_private) {
-            llvm::Instruction *svm_gather =
-                processGatherScatterPrivate(llvm::cast<llvm::CallInst>(inst), /* IsGather */ true);
-            if (svm_gather != NULL) {
-                applyReplace(svm_gather, inst);
-                modifiedAny = true;
-                goto restart;
-            }
-        } else if (llvm::GenXIntrinsic::getGenXIntrinsicID(inst) == llvm::GenXIntrinsic::genx_scatter_private) {
-            llvm::Instruction *svm_scatter =
-                processGatherScatterPrivate(llvm::cast<llvm::CallInst>(inst), /* IsGather */ false);
-            if (svm_scatter != NULL) {
-                applyReplace(svm_scatter, inst);
-                modifiedAny = true;
-                goto restart;
-            }
-        }
-#endif
     }
     DEBUG_END_PASS("Fix address space");
     return modifiedAny;

@@ -807,22 +807,6 @@ ifelse(RUNTIME, `32',
   ret void
 }
 
-define void @__masked_store_private_$1(<WIDTH x $1>* nocapture, <WIDTH x $1>, <WIDTH x MASK> %mask) nounwind alwaysinline {
-  %ptr = bitcast <WIDTH x $1>* %0 to i8*
-  %broadcast_init = insertelement <WIDTH x i32> undef, i32 SIZEOF($1), i32 0
-  %shuffle = shufflevector <WIDTH x i32> %broadcast_init, <WIDTH x i32> undef, <WIDTH x i32> zeroinitializer
-  %offsets = mul LINEAR_VECTOR(i32), %shuffle
-ifelse(RUNTIME, `32',
-`
-  call void @__scatter_base_offsets32_private_$1(i8* %ptr, i32 1, <WIDTH x i32> %offsets, <WIDTH x $1> %1, <WIDTH x MASK> %mask)
-  ',
-  RUNTIME, `64',
-`
-  %offsets64 = zext <WIDTH x i32> %offsets to <WIDTH x i64>
-  call void @__scatter_base_offsets64_private_$1(i8* %ptr, i32 1, <WIDTH x i64> %offsets64, <WIDTH x $1> %1, <WIDTH x MASK> %mask)
-')
-  ret void
-}
 ')
 
 genx_masked_store(i8)
@@ -902,12 +886,6 @@ vgather:
   ret <WIDTH x $1> %res_gather
 }
 
-define <WIDTH x $1> @__masked_load_private_$1(i8 *, <WIDTH x MASK> %mask) nounwind alwaysinline {
-  %bitptr = bitcast i8* %0 to <WIDTH x $1>*
-  %res = load <WIDTH x $1> , <WIDTH x $1>* %bitptr
-  %res_masked = select <WIDTH x MASK> %mask, <WIDTH x $1> %res, <WIDTH x $1> undef
-  ret <WIDTH x $1> %res_masked
-}
 ')
 
 genx_masked_load(i8)
@@ -922,7 +900,6 @@ genx_masked_load(i64)
 ;; TODO_GEN: add computation of the block size and the number of blocks for svm gather/scatter.
 define(`genx_gather', `
 declare <WIDTH x $1> @llvm.genx.svm.gather.GEN_SUFFIX($1).GEN_SUFFIX(i1).GEN_SUFFIX(i64)(<WIDTH x MASK>, i32, <WIDTH x i64>, <WIDTH x $1>)
-declare <WIDTH x $1> @llvm.genx.gather.private.GEN_SUFFIX($1).GEN_SUFFIX(i1).pi8.GEN_SUFFIX(i32)(<WIDTH x MASK>, i8*, <WIDTH x i32>, <WIDTH x $1>)
 
 define <WIDTH x $1>
 @__gather_base_offsets32_$1(i8 * %ptr, i32 %offset_scale, <WIDTH x i32> %offsets, <WIDTH x MASK> %vecmask) nounwind readonly alwaysinline {
@@ -948,25 +925,6 @@ define <WIDTH x $1>
   %shuffle = shufflevector <WIDTH x i64> %base, <WIDTH x i64> undef, <WIDTH x i32> zeroinitializer
   %new_offsets = add <WIDTH x i64> %new_offsets_scaled, %shuffle
   %res = call <WIDTH x $1> @__gather64_$1(<WIDTH x i64> %new_offsets, <WIDTH x MASK> %vecmask)
-  ret <WIDTH x $1> %res
-}
-
-define <WIDTH x $1>
-@__gather_base_offsets32_private_$1(i8 * %ptr, i32 %offset_scale, <WIDTH x i32> %offsets, <WIDTH x MASK> %vecmask) nounwind readonly alwaysinline {
-  %scale = insertelement <WIDTH x i32> undef, i32 %offset_scale, i32 0
-  %scale_shuffle = shufflevector <WIDTH x i32> %scale, <WIDTH x i32> undef, <WIDTH x i32> zeroinitializer
-  %new_offsets_scaled = mul <WIDTH x i32> %offsets, %scale_shuffle
-  %res = call <WIDTH x $1> @llvm.genx.gather.private.GEN_SUFFIX($1).GEN_SUFFIX(i1).pi8.GEN_SUFFIX(i32)(<WIDTH x MASK> %vecmask, i8* %ptr, <WIDTH x i32> %new_offsets_scaled, <WIDTH x $1> undef)
-  ret <WIDTH x $1> %res
-}
-
-define <WIDTH x $1>
-@__gather_base_offsets64_private_$1(i8 * %ptr, i32 %offset_scale, <WIDTH x i64> %offsets, <WIDTH x MASK> %vecmask) nounwind readonly alwaysinline {
-  %offsets32 = trunc <WIDTH x i64> %offsets to <WIDTH x i32>
-  %scale = insertelement <WIDTH x i32> undef, i32 %offset_scale, i32 0
-  %scale_shuffle = shufflevector <WIDTH x i32> %scale, <WIDTH x i32> undef, <WIDTH x i32> zeroinitializer
-  %new_offsets32_scaled = mul <WIDTH x i32> %offsets32, %scale_shuffle
-  %res = call <WIDTH x $1> @llvm.genx.gather.private.GEN_SUFFIX($1).GEN_SUFFIX(i1).pi8.GEN_SUFFIX(i32)(<WIDTH x MASK> %vecmask, i8* %ptr, <WIDTH x i32> %new_offsets32_scaled, <WIDTH x $1> undef)
   ret <WIDTH x $1> %res
 }
 
@@ -999,19 +957,6 @@ ifelse($1, i8,`
   ret <WIDTH x $1> %res
 }
 
-define <WIDTH x $1>
-@__gather32_private_$1(<WIDTH x i32> %offsets, <WIDTH x MASK> %vecmask) nounwind readonly alwaysinline {
-  ;; CM cannot process zeroinitializer as a base so we need to generate here llvm gather
-  %res = call <WIDTH x $1> @__gather_base_offsets32_private_$1(i8 * zeroinitializer, i32 1, <WIDTH x i32> %offsets, <WIDTH x MASK> %vecmask)
-  ret <WIDTH x $1> %res
-}
-
-define <WIDTH x $1>
-@__gather64_private_$1(<WIDTH x i64> %offsets, <WIDTH x MASK> %vecmask) nounwind readonly alwaysinline {
-  ;; CM cannot process zeroinitializer as a base so we need to generate here llvm gather
-  %res = call <WIDTH x $1> @__gather_base_offsets64_private_$1(i8 * zeroinitializer, i32 1, <WIDTH x i64> %offsets, <WIDTH x MASK> %vecmask)
-  ret <WIDTH x $1> %res
-}
 ')
 genx_gather(i8)
 genx_gather(i16)
@@ -1022,7 +967,6 @@ genx_gather(double)
 
 define(`genx_scatter', `
 declare void @llvm.genx.svm.scatter.GEN_SUFFIX(i1).GEN_SUFFIX(i64).GEN_SUFFIX($1)(<WIDTH x MASK>, i32, <WIDTH x i64>, <WIDTH x $1>)
-declare void @llvm.genx.scatter.private.GEN_SUFFIX(i1).pi8.GEN_SUFFIX(i32).GEN_SUFFIX($1)(<WIDTH x MASK>, i8*, <WIDTH x i32>, <WIDTH x $1>)
 
 define void
 @__scatter_base_offsets32_$1(i8* %ptr, i32 %offset_scale, <WIDTH x i32> %offsets, <WIDTH x $1> %vals, <WIDTH x MASK> %vecmask) nounwind {
@@ -1049,25 +993,6 @@ define void
   %new_offsets = add <WIDTH x i64> %new_offsets_scaled, %shuffle
   call void @__scatter64_$1(<WIDTH x i64> %new_offsets, <WIDTH x $1> %vals, <WIDTH x MASK> %vecmask)
   ret void
-}
-
-define void
-@__scatter_base_offsets32_private_$1(i8* %ptr, i32 %offset_scale, <WIDTH x i32> %offsets, <WIDTH x $1> %vals, <WIDTH x MASK> %vecmask) nounwind {
-  %scale = insertelement <WIDTH x i32> undef, i32 %offset_scale, i32 0
-  %scale_shuffle = shufflevector <WIDTH x i32> %scale, <WIDTH x i32> undef, <WIDTH x i32> zeroinitializer
-  %new_offsets_scaled = mul <WIDTH x i32> %offsets, %scale_shuffle
-  call void @llvm.genx.scatter.private.GEN_SUFFIX(i1).pi8.GEN_SUFFIX(i32).GEN_SUFFIX($1)(<WIDTH x MASK> %vecmask, i8* %ptr, <WIDTH x i32> %new_offsets_scaled, <WIDTH x $1> %vals)
-  ret void
-}
-
-define void
-@__scatter_base_offsets64_private_$1(i8* %ptr, i32 %offset_scale, <WIDTH x i64> %offsets, <WIDTH x $1> %vals, <WIDTH x MASK> %vecmask) nounwind {
-   %offsets32 = trunc <WIDTH x i64> %offsets to <WIDTH x i32>
-   %scale = insertelement <WIDTH x i32> undef, i32 %offset_scale, i32 0
-   %scale_shuffle = shufflevector <WIDTH x i32> %scale, <WIDTH x i32> undef, <WIDTH x i32> zeroinitializer
-   %new_offsets32_scaled = mul <WIDTH x i32> %offsets32, %scale_shuffle
-   call void @llvm.genx.scatter.private.GEN_SUFFIX(i1).pi8.GEN_SUFFIX(i32).GEN_SUFFIX($1)(<WIDTH x MASK> %vecmask, i8* %ptr, <WIDTH x i32> %new_offsets32_scaled, <WIDTH x $1> %vals)
-   ret void
 }
 
 define void
@@ -1099,19 +1024,6 @@ define void
   ret void
 }
 
-define void
-@__scatter32_private_$1(<WIDTH x i32> %offsets, <WIDTH x $1> %values, <WIDTH x MASK> %vecmask) nounwind alwaysinline {
-  ;; CM cannot process zeroinitializer as a base so we need to generate here llvm scatter
-  call void @__scatter_base_offsets32_private_$1(i8* zeroinitializer, i32 1, <WIDTH x i32> %offsets, <WIDTH x $1> %values, <WIDTH x MASK> %vecmask)
-  ret void
-}
-
-define void
-@__scatter64_private_$1(<WIDTH x i64> %offsets, <WIDTH x $1> %values, <WIDTH x MASK> %vecmask) nounwind alwaysinline {
-  ;; CM cannot process zeroinitializer as a base so we need to generate here llvm scatter
-  call void @__scatter_base_offsets64_private_$1(i8* zeroinitializer, i32 1, <WIDTH x i64> %offsets, <WIDTH x $1> %values, <WIDTH x MASK> %vecmask)
-  ret void
-}
 ')
 
 genx_scatter(i8)
