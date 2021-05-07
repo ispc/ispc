@@ -6327,7 +6327,7 @@ llvm::Instruction *FixAddressSpace::processVectorStore(llvm::StoreInst *SI) {
         val = new llvm::PtrToIntInst(val, valType, "svm_st_val_ptrtoint", SI);
     }
 
-    return lGenXStoreInst(ptr, val, llvm::dyn_cast<llvm::Instruction>(SI));
+    return lGenXStoreInst(val, ptr, llvm::dyn_cast<llvm::Instruction>(SI));
 }
 
 llvm::Instruction *FixAddressSpace::processSVMVectorStore(llvm::Instruction *CI) {
