@@ -548,11 +548,6 @@ struct Opt {
         in assembly.*/
     bool emitGenXHardwareMask;
 
-    /** Disables generation of GenX private intrinsics. Will be set by default when
-        TPM is mapped to SVM by default in backend.
-    */
-    bool disableGenXPrivateIntrinsics;
-
     /** Enables generation of masked loads implemented using svm loads which
      * may lead to out of bound reads but bring prformance improvement in
      * most of the cases.
