@@ -37,7 +37,7 @@ set(TEST_RUNNER "${CMAKE_CURRENT_BINARY_DIR}/runner.py")
 
 function(test_add)
     set(options TEST_IS_CM TEST_IS_ISPC TEST_IS_CM_RUNTIME TEST_IS_ISPCRT_RUNTIME TEST_IS_DPCPP)
-    set(oneValueArgs NAME RES_IMAGE REF_IMAGE)
+    set(oneValueArgs NAME RES_IMAGE REF_IMAGE IMAGE_CMP_TH)
     cmake_parse_arguments("PARSED_ARGS" "${options}" "${oneValueArgs}" "${multiValueArgs}" ${ARGN} )
 
     # If test is written with TEST_IS_CM_RUNTIME it is supported on Windows only
@@ -72,6 +72,10 @@ function(test_add)
     if (PARSED_ARGS_RES_IMAGE)
         set (RES_IMAGE_OPT "-res_image" ${PARSED_ARGS_RES_IMAGE})
     endif()
+    if (PARSED_ARGS_IMAGE_CMP_TH)
+        set (IMAGE_CMP_TH_OPT "-image_cmp_th" ${PARSED_ARGS_IMAGE_CMP_TH})
+    endif()
+
 
     if (WIN32)
         set (TEST_REL_PATH ${PARSED_ARGS_NAME}/${CMAKE_BUILD_TYPE})
@@ -80,7 +84,7 @@ function(test_add)
     endif()
     if (SUPPORTED EQUAL 1)
         add_test(NAME ${result_test_name}
-            COMMAND ${PYTHON_EXECUTABLE} ${TEST_RUNNER} ${REF_IMAGE_OPT} ${RES_IMAGE_OPT}
+            COMMAND ${PYTHON_EXECUTABLE} ${TEST_RUNNER} ${REF_IMAGE_OPT} ${RES_IMAGE_OPT} ${IMAGE_CMP_TH_OPT}
             ${TEST_REL_PATH} ${PARSED_ARGS_UNPARSED_ARGUMENTS}
         )
     endif()

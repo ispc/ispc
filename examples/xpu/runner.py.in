@@ -37,7 +37,16 @@ import subprocess
 import argparse
 import re
 
-def compareImages(image0, image1):
+from PIL import Image
+import numpy as np
+
+def get_img_diff_MSE(file_path_a, file_path_b):
+  image_a = Image.open(file_path_a)
+  image_b = Image.open(file_path_b)
+  diff = np.asarray(image_a) - np.asarray(image_b)
+  return np.mean(diff**2)
+
+def compare_images(image0, image1, image_cmp_th):
   if not image1:
     print("Incorrect arguments (image1 is None)")
     return False
@@ -50,24 +59,19 @@ def compareImages(image0, image1):
     print('No such file: {0}'.format(image1))
     return False
 
-  try: line = subprocess.check_output("compare -metric MAE "+image0+" "+image1+" null:", stderr=subprocess.STDOUT, shell=True)
-  except subprocess.CalledProcessError as e: line = e.output
-
-  line_str = str(line)
-  error = float(line_str[line_str.index('(')+1:line_str.index(')')])
-  # Temporary set max_error to 0.02 to avoid build issues
-  max_error = 0.02
-  if error > max_error:
-    print("MAE error: " + str(error) + " is more then threshhold: " + str(max_error))
+  error = get_img_diff_MSE(image0, image1)
+  if error > image_cmp_th:
+    print("Failed correctness test with MSE: %f / %f" % (error, image_cmp_th))
   else:
-    print("Passed correctness test with max error: " + str(max_error))
-  return error < max_error
+    print("Passed correctness test with MSE: %f / %f" % (error, image_cmp_th))
+  return error < image_cmp_th
 
 parser = argparse.ArgumentParser()
 parser.add_argument('dir', type=str)
 parser.add_argument('exe_name', type=str)
 parser.add_argument('-res_image', dest='res_image', type=str)
 parser.add_argument('-ref_image', dest='ref_image', type=str)
+parser.add_argument('-image_cmp_th', dest='image_cmp_th', type=float)
 args, unknown = parser.parse_known_args()
 
 print("Found additional arguments: ", unknown, " Will append these to cmd line.")
@@ -111,7 +115,7 @@ try:
     if p.returncode:
         raise subprocess.CalledProcessError('Workload returned non-zero error code')
     if args.res_image and args.ref_image:
-        if not compareImages(os.path.join(test_dir, args.res_image), os.path.join(test_dir, args.ref_image)):
+        if not compare_images(os.path.join(test_dir, args.res_image), os.path.join(test_dir, args.ref_image), args.image_cmp_th):
             sys.exit(-1)
         else:
             sys.exit(0)

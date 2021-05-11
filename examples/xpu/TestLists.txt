@@ -43,12 +43,12 @@ test_add(NAME simple-usm host_simple-usm --cpu)
 test_add(NAME simple-usm host_simple-usm --gpu)
 
 # iterations, width, height
-test_add(NAME aobench TEST_IS_ISPCRT_RUNTIME RES_IMAGE "ao-ispc-gpu.ppm" REF_IMAGE "ao-cpp-serial.ppm" host_aobench 3 32 32)
-test_add(NAME aobench TEST_IS_ISPCRT_RUNTIME RES_IMAGE "ao-ispc-gpu.ppm" REF_IMAGE "ao-cpp-serial.ppm" host_aobench 3 64 64)
-test_add(NAME aobench TEST_IS_ISPCRT_RUNTIME RES_IMAGE "ao-ispc-gpu.ppm" REF_IMAGE "ao-cpp-serial.ppm" host_aobench 3 128 128)
-test_add(NAME aobench TEST_IS_ISPCRT_RUNTIME RES_IMAGE "ao-ispc-gpu.ppm" REF_IMAGE "ao-cpp-serial.ppm" host_aobench 3 256 256)
+test_add(NAME aobench TEST_IS_ISPCRT_RUNTIME RES_IMAGE "ao-ispc-gpu.ppm" REF_IMAGE "ao-ispc-cpu.ppm" IMAGE_CMP_TH "0.005" host_aobench 3 32 32)
+test_add(NAME aobench TEST_IS_ISPCRT_RUNTIME RES_IMAGE "ao-ispc-gpu.ppm" REF_IMAGE "ao-ispc-cpu.ppm" IMAGE_CMP_TH "0.002" host_aobench 3 64 64)
+test_add(NAME aobench TEST_IS_ISPCRT_RUNTIME RES_IMAGE "ao-ispc-gpu.ppm" REF_IMAGE "ao-ispc-cpu.ppm" IMAGE_CMP_TH "0.004" host_aobench 3 128 128)
+test_add(NAME aobench TEST_IS_ISPCRT_RUNTIME RES_IMAGE "ao-ispc-gpu.ppm" REF_IMAGE "ao-ispc-cpu.ppm" IMAGE_CMP_TH "0.003" host_aobench 3 256 256)
 #
-test_add(NAME mandelbrot TEST_IS_ISPCRT_RUNTIME RES_IMAGE "mandelbrot-ispc-gpu.ppm" REF_IMAGE "mandelbrot-cpp-serial.ppm" host_mandelbrot)
+test_add(NAME mandelbrot TEST_IS_ISPCRT_RUNTIME RES_IMAGE "mandelbrot-ispc-gpu.ppm" REF_IMAGE "mandelbrot-ispc-cpu.ppm" IMAGE_CMP_TH "0.025" host_mandelbrot)
 test_add(NAME mandelbrot TEST_IS_ISPCRT_RUNTIME host_mandelbrot --scale=2)
 # iterations, gx, gy
 test_add(NAME noise host_noise 3 1 16)
