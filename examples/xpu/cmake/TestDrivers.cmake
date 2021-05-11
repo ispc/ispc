@@ -41,11 +41,7 @@ function(test_add)
     cmake_parse_arguments("PARSED_ARGS" "${options}" "${oneValueArgs}" "${multiValueArgs}" ${ARGN} )
 
     # If test is written with TEST_IS_CM_RUNTIME it is supported on Windows only
-    # If test is written with TEST_IS_ISPCRT_RUNTIME it is supported on Linux only
     set(SUPPORTED 1)
-    if (PARSED_ARGS_TEST_IS_ISPCRT_RUNTIME AND WIN32)
-        set(SUPPORTED 0)
-    endif()
     if (PARSED_ARGS_TEST_IS_CM_RUNTIME AND NOT WIN32)
         set(SUPPORTED 0)
     endif()
