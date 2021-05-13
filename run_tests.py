@@ -273,7 +273,7 @@ def run_cmds(compile_cmds, run_cmd, filename, expect_failure, sig, exe_wd="."):
         print_debug("Test %s %s (return code %d)            \n" % \
             (filename, "unexpectedly passed" if expect_failure else "failed",
              return_code), s, run_tests_log)
-    if output:
+    if str(output):
         print_debug("%s\n" % output, s, run_tests_log)
     if surprise == True:
         return Status.Runfail
