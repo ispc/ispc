@@ -4213,13 +4213,12 @@ const Type *IndexExpr::GetType() const {
     if (pointerType != NULL)
         // ptr[index] -> type that the pointer points to
         elementType = pointerType->GetBaseType();
-    else {
+    else if (const SequentialType *sequentialType = CastType<SequentialType>(baseExprType->GetReferenceTarget()))
         // sequential type[index] -> element type of the sequential type
-        const SequentialType *sequentialType = CastType<SequentialType>(baseExprType->GetReferenceTarget());
-        // Typechecking should have caught this...
-        AssertPos(pos, sequentialType != NULL);
         elementType = sequentialType->GetElementType();
-    }
+    else
+        // Not an expression that can be indexed into. Will result in error.
+        return NULL;
 
     // If we're indexing into a sequence of SOA types, the result type is
     // actually the underlying type, as a uniform or varying.  Get the
