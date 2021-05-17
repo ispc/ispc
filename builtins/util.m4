@@ -5034,6 +5034,34 @@ define void @__keep_funcs_live(i8 * %ptr, <WIDTH x i8> %v8, <WIDTH x i16> %v16,
   %mld = call <WIDTH x double> @__masked_load_double(i8 * %ptr, <WIDTH x MASK> %mask)
   call void @__usedouble(<WIDTH x double> %mld)
 
+  ;; private loads
+  %prml8  = call <WIDTH x i8>  @__masked_load_private_i8(i8 * %ptr, <WIDTH x MASK> %mask)
+  call void @__use8(<WIDTH x i8> %prml8)
+  %prml16 = call <WIDTH x i16> @__masked_load_private_i16(i8 * %ptr, <WIDTH x MASK> %mask)
+  call void @__use16(<WIDTH x i16> %prml16)
+  %prml32 = call <WIDTH x i32> @__masked_load_private_i32(i8 * %ptr, <WIDTH x MASK> %mask)
+  call void @__use32(<WIDTH x i32> %prml32)
+  %prmlf = call <WIDTH x float> @__masked_load_private_float(i8 * %ptr, <WIDTH x MASK> %mask)
+  call void @__usefloat(<WIDTH x float> %prmlf)
+  %prml64 = call <WIDTH x i64> @__masked_load_private_i64(i8 * %ptr, <WIDTH x MASK> %mask)
+  call void @__use64(<WIDTH x i64> %prml64)
+  %prmld = call <WIDTH x double> @__masked_load_private_double(i8 * %ptr, <WIDTH x MASK> %mask)
+  call void @__usedouble(<WIDTH x double> %prmld)
+
+  ;; blend loads
+  %prmb8  = call <WIDTH x i8>  @__masked_load_blend_i8(i8 * %ptr, <WIDTH x MASK> %mask)
+  call void @__use8(<WIDTH x i8> %prmb8)
+  %prmb16 = call <WIDTH x i16> @__masked_load_blend_i16(i8 * %ptr, <WIDTH x MASK> %mask)
+  call void @__use16(<WIDTH x i16> %prmb16)
+  %prmb32 = call <WIDTH x i32> @__masked_load_blend_i32(i8 * %ptr, <WIDTH x MASK> %mask)
+  call void @__use32(<WIDTH x i32> %prmb32)
+  %prmbf = call <WIDTH x float> @__masked_load_blend_float(i8 * %ptr, <WIDTH x MASK> %mask)
+  call void @__usefloat(<WIDTH x float> %prmbf)
+  %prmb64 = call <WIDTH x i64> @__masked_load_blend_i64(i8 * %ptr, <WIDTH x MASK> %mask)
+  call void @__use64(<WIDTH x i64> %prmb64)
+  %prmbd = call <WIDTH x double> @__masked_load_blend_double(i8 * %ptr, <WIDTH x MASK> %mask)
+  call void @__usedouble(<WIDTH x double> %prmbd)
+
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
   ;; stores
   %pv8 = bitcast i8 * %ptr to <WIDTH x i8> *
@@ -7489,6 +7517,20 @@ declare <WIDTH x i32> @__idiv_int32(<WIDTH x i32>, <WIDTH x i32>) nounwind readn
 declare <WIDTH x i8> @__idiv_uint8(<WIDTH x i8>, <WIDTH x i8>) nounwind readnone
 declare <WIDTH x i16> @__idiv_uint16(<WIDTH x i16>, <WIDTH x i16>) nounwind readnone
 declare <WIDTH x i32> @__idiv_uint32(<WIDTH x i32>, <WIDTH x i32>) nounwind readnone
+
+declare <WIDTH x i8> @__masked_load_private_i8(i8 *, <WIDTH x MASK> %mask)
+declare <WIDTH x i16> @__masked_load_private_i16(i8 *, <WIDTH x MASK> %mask)
+declare <WIDTH x i32> @__masked_load_private_i32(i8 *, <WIDTH x MASK> %mask)
+declare <WIDTH x i64> @__masked_load_private_i64(i8 *, <WIDTH x MASK> %mask)
+declare <WIDTH x float> @__masked_load_private_float(i8 *, <WIDTH x MASK> %mask)
+declare <WIDTH x double> @__masked_load_private_double(i8 *, <WIDTH x MASK> %mask)
+
+declare <WIDTH x i8> @__masked_load_blend_i8(i8 *, <WIDTH x MASK> %mask)
+declare <WIDTH x i16> @__masked_load_blend_i16(i8 *, <WIDTH x MASK> %mask)
+declare <WIDTH x i32> @__masked_load_blend_i32(i8 *, <WIDTH x MASK> %mask)
+declare <WIDTH x i64> @__masked_load_blend_i64(i8 *, <WIDTH x MASK> %mask)
+declare <WIDTH x float> @__masked_load_blend_float(i8 *, <WIDTH x MASK> %mask)
+declare <WIDTH x double> @__masked_load_blend_double(i8 *, <WIDTH x MASK> %mask)
 ')
 
 define(`global_atomic_varying',`

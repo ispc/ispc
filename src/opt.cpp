@@ -3086,18 +3086,24 @@ static bool lImproveMaskedLoad(llvm::CallInst *callInst, llvm::BasicBlock::itera
     };
 
     llvm::Function *called = callInst->getCalledFunction();
-
+    // TODO: we should use dynamic data structure for MLInfo and fill
+    // it differently for GenX and CPU targets. It will also help
+    // to avoid declaration of GenX intrinsics for CPU targets.
+    // It should be changed seamlessly here and in all similar places in this file.
+    MLInfo mlInfo[] = {MLInfo("__masked_load_i8", 1),  MLInfo("__masked_load_i16", 2),
+                       MLInfo("__masked_load_i32", 4), MLInfo("__masked_load_float", 4),
+                       MLInfo("__masked_load_i64", 8), MLInfo("__masked_load_double", 8)};
+    MLInfo genxInfo[] = {MLInfo("__masked_load_i8", 1),          MLInfo("__masked_load_i16", 2),
+                         MLInfo("__masked_load_i32", 4),         MLInfo("__masked_load_float", 4),
+                         MLInfo("__masked_load_i64", 8),         MLInfo("__masked_load_double", 8),
+                         MLInfo("__masked_load_blend_i8", 1),    MLInfo("__masked_load_blend_i16", 2),
+                         MLInfo("__masked_load_blend_i32", 4),   MLInfo("__masked_load_blend_float", 4),
+                         MLInfo("__masked_load_blend_i64", 8),   MLInfo("__masked_load_blend_double", 8),
+                         MLInfo("__masked_load_private_i8", 1),  MLInfo("__masked_load_private_i16", 2),
+                         MLInfo("__masked_load_private_i32", 4), MLInfo("__masked_load_private_float", 4),
+                         MLInfo("__masked_load_private_i64", 8), MLInfo("__masked_load_private_double", 8)};
     MLInfo *info = NULL;
     if (g->target->isGenXTarget()) {
-        MLInfo genxInfo[] = {MLInfo("__masked_load_i8", 1),          MLInfo("__masked_load_i16", 2),
-                             MLInfo("__masked_load_i32", 4),         MLInfo("__masked_load_float", 4),
-                             MLInfo("__masked_load_i64", 8),         MLInfo("__masked_load_double", 8),
-                             MLInfo("__masked_load_blend_i8", 1),    MLInfo("__masked_load_blend_i16", 2),
-                             MLInfo("__masked_load_blend_i32", 4),   MLInfo("__masked_load_blend_float", 4),
-                             MLInfo("__masked_load_blend_i64", 8),   MLInfo("__masked_load_blend_double", 8),
-                             MLInfo("__masked_load_private_i8", 1),  MLInfo("__masked_load_private_i16", 2),
-                             MLInfo("__masked_load_private_i32", 4), MLInfo("__masked_load_private_float", 4),
-                             MLInfo("__masked_load_private_i64", 8), MLInfo("__masked_load_private_double", 8)};
         int nFuncs = sizeof(genxInfo) / sizeof(genxInfo[0]);
         for (int i = 0; i < nFuncs; ++i) {
             if (genxInfo[i].func != NULL && called == genxInfo[i].func) {
@@ -3106,9 +3112,6 @@ static bool lImproveMaskedLoad(llvm::CallInst *callInst, llvm::BasicBlock::itera
             }
         }
     } else {
-        MLInfo mlInfo[] = {MLInfo("__masked_load_i8", 1),  MLInfo("__masked_load_i16", 2),
-                           MLInfo("__masked_load_i32", 4), MLInfo("__masked_load_float", 4),
-                           MLInfo("__masked_load_i64", 8), MLInfo("__masked_load_double", 8)};
         int nFuncs = sizeof(mlInfo) / sizeof(mlInfo[0]);
         for (int i = 0; i < nFuncs; ++i) {
             if (mlInfo[i].func != NULL && called == mlInfo[i].func) {
