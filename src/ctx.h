@@ -459,6 +459,11 @@ class FunctionEmitContext {
      * Otherwise leave this as NULL. */
     llvm::Value *LoadInst(llvm::Value *ptr, const Type *type = NULL, const llvm::Twine &name = "");
 
+    /** Emits addrspacecast instruction. Depending on atEntryBlock it is generated in
+        alloca block or in the current block.
+    */
+    llvm::Value *AddrSpaceCast(llvm::Value *val, AddressSpace as, bool atEntryBlock = false);
+
     /** Emits an alloca instruction to allocate stack storage of the given
         size.  If a non-zero alignment is specified, the object is also
         allocated at the given alignment.  By default, the alloca

@@ -120,7 +120,7 @@ Function::Function(Symbol *s, Stmt *c) {
             paramSym->parentFunction = this;
     }
 
-    if (type->isTask && (!g->target->isGenXTarget())) {
+    if (type->isTask && !g->target->isGenXTarget()) {
         threadIndexSym = m->symbolTable->LookupVariable("threadIndex");
         Assert(threadIndexSym);
         threadCountSym = m->symbolTable->LookupVariable("threadCount");
@@ -222,7 +222,9 @@ void Function::emitCode(FunctionEmitContext *ctx, llvm::Function *function, Sour
 #endif
     const FunctionType *type = CastType<FunctionType>(sym->type);
     Assert(type != NULL);
-    if (type->isTask == true && (!g->target->isGenXTarget())) {
+    // CPU tasks
+    if (type->isTask == true && !g->target->isGenXTarget()) {
+        Assert(type->IsISPCExternal() == false);
         // For tasks, there should always be three parameters: the
         // pointer to the structure that holds all of the arguments, the
         // thread index, and the thread count variables.
@@ -296,18 +298,27 @@ void Function::emitCode(FunctionEmitContext *ctx, llvm::Function *function, Sour
             // Allocate stack storage for the parameter and emit code
             // to store the its value there.
             argSym->storagePtr = ctx->AllocaInst(argSym->type, argSym->name.c_str());
+            // ISPC export and extern "C" functions have addrspace in the declaration on gen so
+            // we cast addrspace from generic to default in the alloca BB.
+            // define dso_local spir_func void @test(%S addrspace(4)* noalias %s)
+            // addrspacecast %S addrspace(4)* %s to %S*
+            llvm::Value *addrCasted = &*argIter;
+            if (type->RequiresAddrSpaceCasts(function) && llvm::isa<llvm::PointerType>(argIter->getType())) {
+                addrCasted = ctx->AddrSpaceCast(&*argIter, AddressSpace::ispc_default, true);
+            }
 
-            ctx->StoreInst(&*argIter, argSym->storagePtr, argSym->type);
+            ctx->StoreInst(addrCasted, argSym->storagePtr, argSym->type);
+
             ctx->EmitFunctionParameterDebugInfo(argSym, i);
         }
 
         // If the number of actual function arguments is equal to the
         // number of declared arguments in decl->functionParams, then we
         // don't have a mask parameter, so set it to be all on.  This
-        // happens for exmaple with 'export'ed functions that the app
-        // calls.
+        // happens for example with 'export'ed functions that the app
+        // calls, with tasks on GPU and with unmasked functions.
         if (argIter == function->arg_end()) {
-            Assert(type->isUnmasked || type->isExported || (g->target->isGenXTarget() && type->isTask));
+            Assert(type->isUnmasked || type->isExported || type->IsISPCExternal() || type->IsISPCKernel());
             ctx->SetFunctionMask(LLVMMaskAllOn);
         } else {
             Assert(type->isUnmasked == false);
@@ -423,79 +434,77 @@ void Function::emitCode(FunctionEmitContext *ctx, llvm::Function *function, Sour
         ctx->ReturnInst();
     }
 #ifdef ISPC_GENX_ENABLED
-    if (g->target->isGenXTarget()) {
+    if (type->IsISPCKernel()) {
         // Emit metadata for GENX kernel
-        if (type->isExported || type->isTask) {
-            llvm::LLVMContext &fContext = function->getContext();
-            llvm::NamedMDNode *mdKernels = m->module->getOrInsertNamedMetadata("genx.kernels");
 
-            std::string AsmName = (m->module->getName() + llvm::Twine('_') + llvm::Twine(mdKernels->getNumOperands()) +
-                                   llvm::Twine(".asm"))
-                                      .str();
+        llvm::LLVMContext &fContext = function->getContext();
+        llvm::NamedMDNode *mdKernels = m->module->getOrInsertNamedMetadata("genx.kernels");
 
-            // Kernel arg kinds
-            llvm::Type *i32Type = llvm::Type::getInt32Ty(fContext);
-            llvm::SmallVector<llvm::Metadata *, 8> argKinds;
-            llvm::SmallVector<llvm::Metadata *, 8> argInOutKinds;
-            llvm::SmallVector<llvm::Metadata *, 8> argOffsets;
-            llvm::SmallVector<llvm::Metadata *, 8> argTypeDescs;
+        std::string AsmName =
+            (m->module->getName() + llvm::Twine('_') + llvm::Twine(mdKernels->getNumOperands()) + llvm::Twine(".asm"))
+                .str();
 
-            // In ISPC we need only AK_NORMAL and IK_NORMAL now, in future it can change.
-            enum { AK_NORMAL, AK_SAMPLER, AK_SURFACE, AK_VME };
-            enum { IK_NORMAL, IK_INPUT, IK_OUTPUT, IK_INPUT_OUTPUT };
-            unsigned int offset = 32;
-            unsigned int grf_size = g->target->getGenxGrfSize();
-            for (int i = 0; i < args.size(); i++) {
-                const Type *T = args[i]->type;
-                argKinds.push_back(llvm::ValueAsMetadata::get(llvm::ConstantInt::get(i32Type, AK_NORMAL)));
-                argInOutKinds.push_back(llvm::ValueAsMetadata::get(llvm::ConstantInt::get(i32Type, IK_NORMAL)));
-                llvm::Type *argType = function->getArg(i)->getType();
-                if (argType->isPtrOrPtrVectorTy() || argType->isArrayTy()) {
-                    argTypeDescs.push_back(llvm::MDString::get(fContext, llvm::StringRef("svmptr_t read_write")));
-                } else {
-                    argTypeDescs.push_back(llvm::MDString::get(fContext, llvm::StringRef("")));
-                }
+        // Kernel arg kinds
+        llvm::Type *i32Type = llvm::Type::getInt32Ty(fContext);
+        llvm::SmallVector<llvm::Metadata *, 8> argKinds;
+        llvm::SmallVector<llvm::Metadata *, 8> argInOutKinds;
+        llvm::SmallVector<llvm::Metadata *, 8> argOffsets;
+        llvm::SmallVector<llvm::Metadata *, 8> argTypeDescs;
 
-                llvm::Type *type = T->LLVMType(&fContext);
-                unsigned bytes = type->getScalarSizeInBits() / 8;
-                if (bytes != 0) {
-                    offset = llvm::alignTo(offset, bytes);
-                }
-
-                if (llvm::isa<llvm::VectorType>(type)) {
-                    bytes = type->getPrimitiveSizeInBits() / 8;
-
-                    if ((offset & (grf_size - 1)) + bytes > grf_size)
-                        // GRF align if arg would cross GRF boundary
-                        offset = llvm::alignTo(offset, grf_size);
-                }
-
-                argOffsets.push_back(llvm::ValueAsMetadata::get(llvm::ConstantInt::get(i32Type, offset)));
-
-                offset += bytes;
+        // In ISPC we need only AK_NORMAL and IK_NORMAL now, in future it can change.
+        enum { AK_NORMAL, AK_SAMPLER, AK_SURFACE, AK_VME };
+        enum { IK_NORMAL, IK_INPUT, IK_OUTPUT, IK_INPUT_OUTPUT };
+        unsigned int offset = 32;
+        unsigned int grf_size = g->target->getGenxGrfSize();
+        for (int i = 0; i < args.size(); i++) {
+            const Type *T = args[i]->type;
+            argKinds.push_back(llvm::ValueAsMetadata::get(llvm::ConstantInt::get(i32Type, AK_NORMAL)));
+            argInOutKinds.push_back(llvm::ValueAsMetadata::get(llvm::ConstantInt::get(i32Type, IK_NORMAL)));
+            llvm::Type *argType = function->getArg(i)->getType();
+            if (argType->isPtrOrPtrVectorTy() || argType->isArrayTy()) {
+                argTypeDescs.push_back(llvm::MDString::get(fContext, llvm::StringRef("svmptr_t read_write")));
+            } else {
+                argTypeDescs.push_back(llvm::MDString::get(fContext, llvm::StringRef("")));
             }
 
-            // TODO: Number of fields is 9 now, and it is a magic number that seems
-            // to be not defined anywhere. Consider changing it when possible.
-            llvm::SmallVector<llvm::Metadata *, 9> mdArgs(9, nullptr);
-            mdArgs[llvm::genx::KernelMDOp::FunctionRef] = llvm::ValueAsMetadata::get(function);
-            mdArgs[llvm::genx::KernelMDOp::Name] = llvm::MDString::get(fContext, sym->name);
-            mdArgs[llvm::genx::KernelMDOp::ArgKinds] = llvm::MDNode::get(fContext, argKinds);
-            mdArgs[llvm::genx::KernelMDOp::SLMSize] =
-                llvm::ValueAsMetadata::get(llvm::ConstantInt::getNullValue(i32Type));
-            mdArgs[llvm::genx::KernelMDOp::ArgOffsets] =
-                llvm::ValueAsMetadata::get(llvm::ConstantInt::getNullValue(i32Type));
-            mdArgs[llvm::genx::KernelMDOp::ArgIOKinds] = llvm::MDNode::get(fContext, argInOutKinds);
-            mdArgs[llvm::genx::KernelMDOp::ArgTypeDescs] = llvm::MDNode::get(fContext, argTypeDescs);
-            mdArgs[llvm::genx::KernelMDOp::Reserved_0] =
-                llvm::ValueAsMetadata::get(llvm::ConstantInt::getNullValue(i32Type));
-            mdArgs[llvm::genx::KernelMDOp::BarrierCnt] =
-                llvm::ValueAsMetadata::get(llvm::ConstantInt::getNullValue(i32Type));
+            llvm::Type *type = T->LLVMType(&fContext);
+            unsigned bytes = type->getScalarSizeInBits() / 8;
+            if (bytes != 0) {
+                offset = llvm::alignTo(offset, bytes);
+            }
 
-            mdKernels->addOperand(llvm::MDNode::get(fContext, mdArgs));
-            // This is needed to run in L0 runtime.
-            function->addFnAttr("oclrt", "1");
+            if (llvm::isa<llvm::VectorType>(type)) {
+                bytes = type->getPrimitiveSizeInBits() / 8;
+
+                if ((offset & (grf_size - 1)) + bytes > grf_size)
+                    // GRF align if arg would cross GRF boundary
+                    offset = llvm::alignTo(offset, grf_size);
+            }
+
+            argOffsets.push_back(llvm::ValueAsMetadata::get(llvm::ConstantInt::get(i32Type, offset)));
+
+            offset += bytes;
         }
+
+        // TODO: Number of fields is 9 now, and it is a magic number that seems
+        // to be not defined anywhere. Consider changing it when possible.
+        llvm::SmallVector<llvm::Metadata *, 9> mdArgs(9, nullptr);
+        mdArgs[llvm::genx::KernelMDOp::FunctionRef] = llvm::ValueAsMetadata::get(function);
+        mdArgs[llvm::genx::KernelMDOp::Name] = llvm::MDString::get(fContext, sym->name);
+        mdArgs[llvm::genx::KernelMDOp::ArgKinds] = llvm::MDNode::get(fContext, argKinds);
+        mdArgs[llvm::genx::KernelMDOp::SLMSize] = llvm::ValueAsMetadata::get(llvm::ConstantInt::getNullValue(i32Type));
+        mdArgs[llvm::genx::KernelMDOp::ArgOffsets] =
+            llvm::ValueAsMetadata::get(llvm::ConstantInt::getNullValue(i32Type));
+        mdArgs[llvm::genx::KernelMDOp::ArgIOKinds] = llvm::MDNode::get(fContext, argInOutKinds);
+        mdArgs[llvm::genx::KernelMDOp::ArgTypeDescs] = llvm::MDNode::get(fContext, argTypeDescs);
+        mdArgs[llvm::genx::KernelMDOp::Reserved_0] =
+            llvm::ValueAsMetadata::get(llvm::ConstantInt::getNullValue(i32Type));
+        mdArgs[llvm::genx::KernelMDOp::BarrierCnt] =
+            llvm::ValueAsMetadata::get(llvm::ConstantInt::getNullValue(i32Type));
+
+        mdKernels->addOperand(llvm::MDNode::get(fContext, mdArgs));
+        // This is needed to run in L0 runtime.
+        function->addFnAttr("oclrt", "1");
     }
 #endif
 }
@@ -535,10 +544,10 @@ void Function::GenerateIR() {
     }
     // And we can now go ahead and emit the code
     if (g->target->isGenXTarget()) {
-        // For GEN target we emit code only for unmasked version of a kernel and subroutines.
-        // TODO_GEN: revise this one more time after testing of subroutines calls.
+        // For GEN target we do not emit code for masked version of a function
+        // if it is a kernel
         const FunctionType *type = CastType<FunctionType>(sym->type);
-        if ((type->isExported && type->isUnmasked) || (!type->isExported && !type->isTask)) {
+        if (!type->IsISPCKernel()) {
 #if ISPC_LLVM_VERSION >= ISPC_LLVM_10_0
             llvm::TimeTraceScope TimeScope("emitCode", llvm::StringRef(sym->name));
 #endif
@@ -557,47 +566,56 @@ void Function::GenerateIR() {
         // If the function is 'export'-qualified, emit a second version of
         // it without a mask parameter and without name mangling so that
         // the application can call it
-        // For gen we emit a version without mask parameter only for "export" -qualified functions and tasks.
-        if (type->isExported || (g->target->isGenXTarget() && type->isTask)) {
-            if ((!g->target->isGenXTarget() && !type->isTask) || g->target->isGenXTarget()) {
-                llvm::FunctionType *ftype = type->LLVMFunctionType(g->ctx, true);
-                llvm::GlobalValue::LinkageTypes linkage = llvm::GlobalValue::ExternalLinkage;
-                std::string functionName = sym->name;
-                if (g->mangleFunctionsWithTarget) {
-                    functionName += std::string("_") + g->target->GetISAString();
-                }
+        // For gen we emit a version without mask parameter only for ISPC kernels and
+        // ISPC external functions.
+        if (type->isExported || type->IsISPCExternal() || type->IsISPCKernel()) {
+            llvm::FunctionType *ftype = type->LLVMFunctionType(g->ctx, true);
+            llvm::GlobalValue::LinkageTypes linkage = llvm::GlobalValue::ExternalLinkage;
+            std::string functionName = sym->name;
+            if (g->mangleFunctionsWithTarget) {
+                functionName += std::string("_") + g->target->GetISAString();
+            }
 
-                llvm::Function *appFunction = llvm::Function::Create(ftype, linkage, functionName.c_str(), m->module);
-                appFunction->setDoesNotThrow();
-                g->target->markFuncWithCallingConv(appFunction);
+            llvm::Function *appFunction = llvm::Function::Create(ftype, linkage, functionName.c_str(), m->module);
+            appFunction->setDoesNotThrow();
+            g->target->markFuncWithCallingConv(appFunction);
 
-                // GenX kernel should have "dllexport" and "CMGenxMain" attribute
-                if (g->target->isGenXTarget()) {
+            // GenX kernel should have "dllexport" and "CMGenxMain" attribute,
+            // otherss have "CMStackCall" attribute
+            if (g->target->isGenXTarget()) {
+                if (type->IsISPCExternal()) {
+                    // Mark ISPCExternal() function as spirv_func and DSO local.
+                    appFunction->setCallingConv(llvm::CallingConv::SPIR_FUNC);
+                    appFunction->addFnAttr("CMStackCall");
+                    appFunction->setDSOLocal(true);
+                } else if (type->IsISPCKernel()) {
                     appFunction->setDLLStorageClass(llvm::GlobalValue::DLLExportStorageClass);
                     appFunction->addFnAttr("CMGenxMain");
                 }
+            }
 
+            if (function->getFunctionType()->getNumParams() > 0) {
                 for (int i = 0; i < function->getFunctionType()->getNumParams() - 1; i++) {
                     if (function->hasParamAttribute(i, llvm::Attribute::NoAlias)) {
                         appFunction->addParamAttr(i, llvm::Attribute::NoAlias);
                     }
                 }
-                g->target->markFuncWithTargetAttr(appFunction);
+            }
+            g->target->markFuncWithTargetAttr(appFunction);
 
-                if (appFunction->getName() != functionName) {
-                    // this was a redefinition for which we already emitted an
-                    // error, so don't worry about this one...
-                    appFunction->eraseFromParent();
-                } else {
+            if (appFunction->getName() != functionName) {
+                // this was a redefinition for which we already emitted an
+                // error, so don't worry about this one...
+                appFunction->eraseFromParent();
+            } else {
 #if ISPC_LLVM_VERSION >= ISPC_LLVM_10_0
-                    llvm::TimeTraceScope TimeScope("emitCode", llvm::StringRef(sym->name));
+                llvm::TimeTraceScope TimeScope("emitCode", llvm::StringRef(sym->name));
 #endif
-                    // And emit the code again
-                    FunctionEmitContext ec(this, sym, appFunction, firstStmtPos);
-                    emitCode(&ec, appFunction, firstStmtPos);
-                    if (m->errorCount == 0) {
-                        sym->exportedFunction = appFunction;
-                    }
+                // And emit the code again
+                FunctionEmitContext ec(this, sym, appFunction, firstStmtPos);
+                emitCode(&ec, appFunction, firstStmtPos);
+                if (m->errorCount == 0) {
+                    sym->exportedFunction = appFunction;
                 }
             }
         } else {

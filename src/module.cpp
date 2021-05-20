@@ -812,9 +812,8 @@ void Module::AddFunctionDeclaration(const std::string &name, const FunctionType 
                                                   ? llvm::GlobalValue::InternalLinkage
                                                   : llvm::GlobalValue::ExternalLinkage;
 
-    // For gen target all functions except genx kernel must be internal.
-    // Genx kernel functions are "export"-qualified functions and tasks.
-    if (g->target->isGenXTarget() && !functionType->isExported && !functionType->isTask)
+    // For gen target all functions except GenX kernels and ISPC external functions must be internal.
+    if (g->target->isGenXTarget() && !functionType->isExported && !functionType->isTask && !functionType->isExternC)
         linkage = llvm::GlobalValue::InternalLinkage;
 
     std::string functionName = name;
@@ -884,15 +883,22 @@ void Module::AddFunctionDeclaration(const std::string &name, const FunctionType 
     if (functionType->isTask && functionType->GetReturnType()->IsVoidType() == false)
         Error(pos, "Task-qualified functions must have void return type.");
 
-    if (g->target->isGenXTarget() && Type::Equal(functionType->GetReturnType(), AtomicType::Void) == false &&
-        functionType->isExported) {
-        // TODO_GEN: According to CM requirements kernel should have void type. It is strong restriction to ISPC
-        // language so we would need to think more about it in the future.
-        Error(pos, "Export-qualified functions must have void return type with \"genx\" target.");
+    // This limitation is due to ABI incompatibility between ISPC/ESIMD.
+    // ESIMD makes return value optimization transferring return value to the
+    // argument of the function.
+    if (functionType->IsISPCExternal() && functionType->GetReturnType()->IsVoidType() == false)
+        Warning(pos, "Export and extern \"C\"-qualified functions must have void return type for gen target.");
+
+    if (functionType->isExported || functionType->isExternC || functionType->IsISPCExternal() ||
+        functionType->IsISPCKernel()) {
+        lCheckForStructParameters(functionType, pos);
     }
 
-    if (functionType->isExported || functionType->isExternC || (g->target->isGenXTarget() && functionType->isTask)) {
-        lCheckForStructParameters(functionType, pos);
+    // Mark extern "C" functions as SPIR_FUNC for gen.
+    if (functionType->IsISPCExternal() && disableMask) {
+        function->setCallingConv(llvm::CallingConv::SPIR_FUNC);
+        function->addFnAttr("CMStackCall");
+        function->setDSOLocal(true);
     }
 
     // Loop over all of the arguments; process default values if present
@@ -911,7 +917,7 @@ void Module::AddFunctionDeclaration(const std::string &name, const FunctionType 
         if (functionType->isExported)
             lCheckExportedParameterTypes(argType, argName, argPos);
 #ifdef ISPC_GENX_ENABLED
-        if (g->target->isGenXTarget() && functionType->isTask)
+        if (functionType->IsISPCKernel())
             lCheckTaskParameterTypes(argType, argName, argPos);
 #endif
 

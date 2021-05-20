@@ -236,9 +236,9 @@ FunctionEmitContext::FunctionEmitContext(Function *func, Symbol *funSym, llvm::F
 
     // If the function doesn't have __mask in parameters, there is no need to
     // have function mask
-    if ((func->GetType()->isExported &&
+    if (((func->GetType()->isExported || func->GetType()->IsISPCExternal()) &&
          (lf->getFunctionType()->getNumParams() == func->GetType()->GetNumParameters())) ||
-        (func->GetType()->isUnmasked) || (func->GetType()->isTask)) {
+        (func->GetType()->isUnmasked) || func->GetType()->isTask) {
         functionMaskValue = NULL;
         fullMaskPointer = NULL;
     } else {
@@ -2611,6 +2611,23 @@ void FunctionEmitContext::addGSMetadata(llvm::Value *v, SourcePos pos) {
     inst->setMetadata("last_column", md);
 }
 
+llvm::Value *FunctionEmitContext::AddrSpaceCast(llvm::Value *val, AddressSpace as, bool atEntryBlock) {
+    Assert(llvm::isa<llvm::PointerType>(val->getType()));
+    llvm::PointerType *pt = llvm::dyn_cast<llvm::PointerType>(val->getType());
+    if (pt->getAddressSpace() == (unsigned)as) {
+        return val;
+    }
+    llvm::PointerType *newType = llvm::PointerType::get(pt->getPointerElementType(), (unsigned)as);
+    llvm::AddrSpaceCastInst *inst;
+    if (atEntryBlock) {
+        inst = new llvm::AddrSpaceCastInst(val, newType, val->getName() + "__cast", allocaBlock->getTerminator());
+    } else {
+        inst = new llvm::AddrSpaceCastInst(val, newType, val->getName() + "__cast", bblock);
+    }
+
+    return inst;
+}
+
 llvm::Value *FunctionEmitContext::AllocaInst(llvm::Type *llvmType, llvm::Value *size, const llvm::Twine &name,
                                              int align, bool atEntryBlock) {
     if ((llvmType == NULL) || (size == NULL)) {
@@ -2619,17 +2636,16 @@ llvm::Value *FunctionEmitContext::AllocaInst(llvm::Type *llvmType, llvm::Value *
     }
 
     llvm::AllocaInst *inst = NULL;
+    unsigned AS = llvmFunction->getParent()->getDataLayout().getAllocaAddrSpace();
     if (atEntryBlock) {
         // We usually insert it right before the jump instruction at the
         // end of allocaBlock
         llvm::Instruction *retInst = allocaBlock->getTerminator();
         AssertPos(currentPos, retInst);
-        unsigned AS = llvmFunction->getParent()->getDataLayout().getAllocaAddrSpace();
         inst = new llvm::AllocaInst(llvmType, AS, size, name, retInst);
     } else {
         // Unless the caller overrode the default and wants it in the
         // current basic block
-        unsigned AS = llvmFunction->getParent()->getDataLayout().getAllocaAddrSpace();
         inst = new llvm::AllocaInst(llvmType, AS, size, name, bblock);
     }
 
@@ -2656,17 +2672,16 @@ llvm::Value *FunctionEmitContext::AllocaInst(llvm::Type *llvmType, const llvm::T
     }
 
     llvm::AllocaInst *inst = NULL;
+    unsigned AS = llvmFunction->getParent()->getDataLayout().getAllocaAddrSpace();
     if (atEntryBlock) {
         // We usually insert it right before the jump instruction at the
         // end of allocaBlock
         llvm::Instruction *retInst = allocaBlock->getTerminator();
         AssertPos(currentPos, retInst);
-        unsigned AS = llvmFunction->getParent()->getDataLayout().getAllocaAddrSpace();
         inst = new llvm::AllocaInst(llvmType, AS, name, retInst);
     } else {
         // Unless the caller overrode the default and wants it in the
         // current basic block
-        unsigned AS = llvmFunction->getParent()->getDataLayout().getAllocaAddrSpace();
         inst = new llvm::AllocaInst(llvmType, AS, name, bblock);
     }
 
@@ -3269,12 +3284,28 @@ llvm::Value *FunctionEmitContext::CallInst(llvm::Value *func, const FunctionType
         AssertPos(currentPos, m->errorCount > 0);
         return NULL;
     }
-
-    std::vector<llvm::Value *> argVals = args;
+    std::vector<llvm::Value *> argVals;
     // Most of the time, the mask is passed as the last argument.  this
     // isn't the case for things like intrinsics, builtins, and extern "C"
     // functions from the application.  Add the mask if it's needed.
     unsigned int calleeArgCount = lCalleeArgCount(func, funcType);
+
+    // If we have ISPC external function without mask, we should cast all
+    // pointers to generic address space before call.
+    llvm::Function *f = llvm::dyn_cast<llvm::Function>(func);
+    if (funcType && funcType->RequiresAddrSpaceCasts(f)) {
+        for (llvm::Value *arg : args) {
+            if (llvm::isa<llvm::PointerType>(arg->getType())) {
+                llvm::Value *adrCast = AddrSpaceCast(arg, AddressSpace::ispc_generic);
+                argVals.push_back(adrCast);
+            } else {
+                argVals.push_back(arg);
+            }
+        }
+    } else {
+        argVals = args;
+    }
+
     AssertPos(currentPos, argVals.size() + 1 == calleeArgCount || argVals.size() == calleeArgCount);
     if (argVals.size() + 1 == calleeArgCount) {
         llvm::Value *mask = NULL;
@@ -3363,6 +3394,7 @@ llvm::Value *FunctionEmitContext::CallInst(llvm::Value *func, const FunctionType
 
         // First allocate memory to accumulate the various program
         // instances' return values...
+        Assert(funcType != NULL);
         const Type *returnType = funcType->GetReturnType();
         llvm::Type *llvmReturnType = returnType->LLVMType(g->ctx);
         llvm::Value *resultPtr = NULL;

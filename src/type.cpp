@@ -789,8 +789,8 @@ const Symbol *EnumType::GetEnumerator(int i) const { return enumerators[i]; }
 
 PointerType *PointerType::Void = new PointerType(AtomicType::Void, Variability(Variability::Uniform), false);
 
-PointerType::PointerType(const Type *t, Variability v, bool ic, bool is, bool fr)
-    : Type(POINTER_TYPE), variability(v), isConst(ic), isSlice(is), isFrozen(fr) {
+PointerType::PointerType(const Type *t, Variability v, bool ic, bool is, bool fr, AddressSpace as)
+    : Type(POINTER_TYPE), variability(v), isConst(ic), isSlice(is), isFrozen(fr), addrSpace(as) {
     baseType = t;
 }
 
@@ -864,6 +864,12 @@ const PointerType *PointerType::GetAsFrozenSlice() const {
     if (isFrozen)
         return this;
     return new PointerType(baseType, variability, isConst, true, true);
+}
+
+const PointerType *PointerType::GetWithAddrSpace(AddressSpace as) const {
+    if (addrSpace == as)
+        return this;
+    return new PointerType(baseType, variability, isConst, isSlice, isFrozen, as);
 }
 
 const PointerType *PointerType::ResolveUnboundVariability(Variability v) const {
@@ -1012,12 +1018,12 @@ llvm::Type *PointerType::LLVMType(llvm::LLVMContext *ctx) const {
         llvm::Type *ptype = NULL;
         const FunctionType *ftype = CastType<FunctionType>(baseType);
         if (ftype != NULL)
-            ptype = llvm::PointerType::get(ftype->LLVMFunctionType(ctx), 0);
+            ptype = llvm::PointerType::get(ftype->LLVMFunctionType(ctx), (unsigned)addrSpace);
         else {
             if (baseType->IsVoidType())
-                ptype = LLVMTypes::VoidPointerType;
+                ptype = llvm::PointerType::get(llvm::Type::getInt8Ty(*ctx), (unsigned)addrSpace);
             else
-                ptype = llvm::PointerType::get(baseType->LLVMStorageType(ctx), 0);
+                ptype = llvm::PointerType::get(baseType->LLVMStorageType(ctx), (unsigned)addrSpace);
         }
         return ptype;
     }
@@ -2035,7 +2041,9 @@ llvm::DIType *UndefinedStructType::GetDIType(llvm::DIScope *scope) const {
 ///////////////////////////////////////////////////////////////////////////
 // ReferenceType
 
-ReferenceType::ReferenceType(const Type *t) : Type(REFERENCE_TYPE), targetType(t) { asOtherConstType = NULL; }
+ReferenceType::ReferenceType(const Type *t, AddressSpace as) : Type(REFERENCE_TYPE), targetType(t), addrSpace(as) {
+    asOtherConstType = NULL;
+}
 
 Variability ReferenceType::GetVariability() const {
     if (targetType == NULL) {
@@ -2168,6 +2176,17 @@ const ReferenceType *ReferenceType::GetAsNonConstType() const {
     return asOtherConstType;
 }
 
+const ReferenceType *ReferenceType::GetWithAddrSpace(AddressSpace as) const {
+    if (targetType == NULL) {
+        Assert(m->errorCount > 0);
+        return NULL;
+    }
+    if (addrSpace == as)
+        return this;
+
+    return new ReferenceType(targetType, as);
+}
+
 std::string ReferenceType::GetString() const {
     if (targetType == NULL) {
         Assert(m->errorCount > 0);
@@ -2230,7 +2249,7 @@ llvm::Type *ReferenceType::LLVMType(llvm::LLVMContext *ctx) const {
         return NULL;
     }
 
-    return llvm::PointerType::get(t, 0);
+    return llvm::PointerType::get(t, (unsigned)addrSpace);
 }
 
 llvm::DIType *ReferenceType::GetDIType(llvm::DIScope *scope) const {
@@ -2280,6 +2299,8 @@ bool FunctionType::IsUnsignedType() const { return false; }
 bool FunctionType::IsConstType() const { return false; }
 
 bool FunctionType::IsISPCKernel() const { return g->target->isGenXTarget() && isTask; }
+
+bool FunctionType::IsISPCExternal() const { return g->target->isGenXTarget() && (isExported || isExternC); }
 
 const Type *FunctionType::GetBaseType() const {
     FATAL("FunctionType::GetBaseType() shouldn't be called");
@@ -2491,16 +2512,32 @@ llvm::FunctionType *FunctionType::LLVMFunctionType(llvm::LLVMContext *ctx, bool 
         Assert(paramTypes[i]->IsVoidType() == false);
 
         const Type *argType = paramTypes[i];
-        llvm::Type *t = argType->LLVMType(ctx);
-        if (t == NULL) {
+
+        // We should cast pointers to generic address spaces
+        // for ISPCExtenal functions (not-masked version) on gen target
+        llvm::Type *castedArgType = argType->LLVMType(ctx);
+
+        if (IsISPCExternal() && removeMask) {
+            if (argType->IsPointerType()) {
+                const PointerType *argPtr =
+                    (CastType<PointerType>(argType))->GetWithAddrSpace(AddressSpace::ispc_generic);
+                castedArgType = argPtr->LLVMType(ctx);
+            } else if (argType->IsReferenceType()) {
+                const ReferenceType *refPtr =
+                    (CastType<ReferenceType>(argType))->GetWithAddrSpace(AddressSpace::ispc_generic);
+                castedArgType = refPtr->LLVMType(ctx);
+            }
+        }
+
+        if (castedArgType == NULL) {
             Assert(m->errorCount > 0);
             return NULL;
         }
-        llvmArgTypes.push_back(t);
+        llvmArgTypes.push_back(castedArgType);
     }
 
     // And add the function mask, if asked for
-    if (!(removeMask || isUnmasked || (g->target->isGenXTarget() && isTask))) {
+    if (!(removeMask || isUnmasked || IsISPCKernel())) {
         llvmArgTypes.push_back(LLVMTypes::MaskType);
     }
 
@@ -2559,6 +2596,10 @@ const SourcePos &FunctionType::GetParameterSourcePos(int i) const {
 const std::string &FunctionType::GetParameterName(int i) const {
     Assert(i < (int)paramNames.size());
     return paramNames[i];
+}
+
+bool FunctionType::RequiresAddrSpaceCasts(const llvm::Function *func) const {
+    return IsISPCExternal() && func->getCallingConv() == llvm::CallingConv::SPIR_FUNC;
 }
 
 ///////////////////////////////////////////////////////////////////////////
