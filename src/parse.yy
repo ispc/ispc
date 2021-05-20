@@ -1336,17 +1336,17 @@ enumerator
     ;
 
 type_qualifier
-    : TOKEN_CONST      { $$ = TYPEQUAL_CONST; }
-    | TOKEN_UNIFORM    { $$ = TYPEQUAL_UNIFORM; }
-    | TOKEN_VARYING    { $$ = TYPEQUAL_VARYING; }
-    | TOKEN_TASK       { $$ = TYPEQUAL_TASK; }
-    | TOKEN_UNMASKED   { $$ = TYPEQUAL_UNMASKED; }
-    | TOKEN_EXPORT     { $$ = TYPEQUAL_EXPORT; }
-    | TOKEN_INLINE     { $$ = TYPEQUAL_INLINE; }
-    | TOKEN_NOINLINE   { $$ = TYPEQUAL_NOINLINE; }
-    | TOKEN_VECTORCALL { $$ = TYPEQUAL_VECTORCALL; }
-    | TOKEN_SIGNED     { $$ = TYPEQUAL_SIGNED; }
-    | TOKEN_UNSIGNED   { $$ = TYPEQUAL_UNSIGNED; }
+    : TOKEN_CONST         { $$ = TYPEQUAL_CONST; }
+    | TOKEN_UNIFORM       { $$ = TYPEQUAL_UNIFORM; }
+    | TOKEN_VARYING       { $$ = TYPEQUAL_VARYING; }
+    | TOKEN_TASK          { $$ = TYPEQUAL_TASK; }
+    | TOKEN_UNMASKED      { $$ = TYPEQUAL_UNMASKED; }
+    | TOKEN_EXPORT        { $$ = TYPEQUAL_EXPORT; }
+    | TOKEN_INLINE        { $$ = TYPEQUAL_INLINE; }
+    | TOKEN_NOINLINE      { $$ = TYPEQUAL_NOINLINE; }
+    | TOKEN_VECTORCALL    { $$ = TYPEQUAL_VECTORCALL; }
+    | TOKEN_SIGNED        { $$ = TYPEQUAL_SIGNED; }
+    | TOKEN_UNSIGNED      { $$ = TYPEQUAL_UNSIGNED; }
     ;
 
 type_qualifier_list

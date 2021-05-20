@@ -118,6 +118,15 @@ struct VariableDeclaration;
 
 enum StorageClass { SC_NONE, SC_EXTERN, SC_STATIC, SC_TYPEDEF, SC_EXTERN_C };
 
+// Enumerant for address spaces.
+enum class AddressSpace {
+    ispc_default,  // 0 = ispc_private
+    ispc_global,   // 1
+    ispc_constant, // 2
+    ispc_local,    // 3
+    ispc_generic,  // 4
+};
+
 /** @brief Representation of a range of positions in a source file.
 
     This class represents a range of characters in a source file

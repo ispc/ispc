@@ -37,6 +37,7 @@
 
 #pragma once
 
+#include "ispc.h"
 #include "ispc_version.h"
 
 #include <llvm/IR/Constants.h>
@@ -343,8 +344,12 @@ extern llvm::Value *LLVMShuffleVectors(llvm::Value *v1, llvm::Value *v2, int32_t
                                        llvm::Instruction *insertBefore);
 
 #ifdef ISPC_GENX_ENABLED
-enum AddressSpace { Local, Global, External };
-
+/** This is utility function to determine memory in which pointer was created.
+    For now we use only 3 values:
+    Global is used for pointers passed to kernel externally
+    Private is used for pointers created locally with alloca
+    Generic is currently used to identify Global variables
+*/
 extern AddressSpace GetAddressSpace(llvm::Value *v);
 #endif
 } // namespace ispc

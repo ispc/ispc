@@ -3082,11 +3082,11 @@ static bool lImproveMaskedStore(llvm::CallInst *callInst) {
         // InternalLinkage check is to prevent generation of SVM store when the pointer came from caller.
         // Since it can be allocated in a caller, it may be allocated on register. Possible svm store
         // is resolved after inlining. TODO: problems can be met here in case of Stack Calls.
-        if (g->target->isGenXTarget() && GetAddressSpace(lvalue) == AddressSpace::External &&
+        if (g->target->isGenXTarget() && GetAddressSpace(lvalue) == AddressSpace::ispc_global &&
             callInst->getParent()->getParent()->getLinkage() != llvm::GlobalValue::LinkageTypes::InternalLinkage) {
             store = lGenXStoreInst(rvalue, lvalue, callInst);
         } else if (!g->target->isGenXTarget() ||
-                   (g->target->isGenXTarget() && GetAddressSpace(lvalue) == AddressSpace::Local))
+                   (g->target->isGenXTarget() && GetAddressSpace(lvalue) == AddressSpace::ispc_default))
 #endif
         {
             llvm::Type *ptrType = llvm::PointerType::get(rvalueType, 0);
@@ -3105,7 +3105,7 @@ static bool lImproveMaskedStore(llvm::CallInst *callInst) {
         }
 #ifdef ISPC_GENX_ENABLED
     } else {
-        if (g->target->isGenXTarget() && GetAddressSpace(lvalue) == AddressSpace::External) {
+        if (g->target->isGenXTarget() && GetAddressSpace(lvalue) == AddressSpace::ispc_global) {
             // In thuis case we use masked_store which on genx target causes scatter usage.
             // Get the source position from the metadata attached to the call
             // instruction so that we can issue PerformanceWarning()s below.
@@ -3183,11 +3183,11 @@ static bool lImproveMaskedLoad(llvm::CallInst *callInst, llvm::BasicBlock::itera
         // InternalLinkage check is to prevent generation of SVM load when the pointer came from caller.
         // Since it can be allocated in a caller, it may be allocated on register. Possible svm load
         // is resolved after inlining. TODO: problems can be met here in case of Stack Calls.
-        if (g->target->isGenXTarget() && GetAddressSpace(ptr) == AddressSpace::External &&
+        if (g->target->isGenXTarget() && GetAddressSpace(ptr) == AddressSpace::ispc_global &&
             callInst->getParent()->getParent()->getLinkage() != llvm::GlobalValue::LinkageTypes::InternalLinkage) {
             load = lGenXLoadInst(ptr, callInst->getType(), callInst);
         } else if (!g->target->isGenXTarget() ||
-                   (g->target->isGenXTarget() && GetAddressSpace(ptr) == AddressSpace::Local))
+                   (g->target->isGenXTarget() && GetAddressSpace(ptr) == AddressSpace::ispc_default))
 #endif
         {
             llvm::Type *ptrType = llvm::PointerType::get(callInst->getType(), 0);
@@ -5821,7 +5821,7 @@ static bool lCheckForPossibleStore(llvm::Instruction *inst) {
             return true;
     } else if (auto SI = llvm::dyn_cast<llvm::StoreInst>(inst)) {
         // May introduce load-store-load sequence
-        if (GetAddressSpace(SI->getPointerOperand()) == AddressSpace::External)
+        if (GetAddressSpace(SI->getPointerOperand()) == AddressSpace::ispc_global)
             return true;
     }
 
@@ -5880,7 +5880,7 @@ static bool lVectorizeLoads(llvm::BasicBlock &bb) {
         // Since gathers work with SVM, this optimization
         // should be applied to external address space only
         llvm::Value *ptr = GEP->getPointerOperand();
-        if (GetAddressSpace(ptr) != AddressSpace::External)
+        if (GetAddressSpace(ptr) != AddressSpace::ispc_global)
             continue;
 
         // GEP was already added to the list for optimization
@@ -6248,7 +6248,7 @@ llvm::Instruction *FixAddressSpace::processVectorLoad(llvm::LoadInst *LI) {
 
     Assert(llvm::isa<llvm::VectorType>(LI->getType()));
 
-    if (GetAddressSpace(ptr) != AddressSpace::External)
+    if (GetAddressSpace(ptr) != AddressSpace::ispc_global)
         return NULL;
 
     // Ptr load should be done via inttoptr
@@ -6280,7 +6280,7 @@ llvm::Instruction *FixAddressSpace::processSVMVectorLoad(llvm::Instruction *CI) 
 
     Assert(llvm::isa<llvm::VectorType>(retType));
 
-    if (GetAddressSpace(ptr) == AddressSpace::External)
+    if (GetAddressSpace(ptr) == AddressSpace::ispc_global)
         return NULL;
 
     // Conevrt int64 ptr to pointer
@@ -6312,7 +6312,7 @@ llvm::Instruction *FixAddressSpace::processVectorStore(llvm::StoreInst *SI) {
 
     Assert(llvm::isa<llvm::VectorType>(valType));
 
-    if (GetAddressSpace(ptr) != AddressSpace::External)
+    if (GetAddressSpace(ptr) != AddressSpace::ispc_global)
         return NULL;
 
     // Ptr store should be done via ptrtoint
@@ -6342,7 +6342,7 @@ llvm::Instruction *FixAddressSpace::processSVMVectorStore(llvm::Instruction *CI)
 
     Assert(llvm::isa<llvm::VectorType>(valType));
 
-    if (GetAddressSpace(ptr) == AddressSpace::External)
+    if (GetAddressSpace(ptr) == AddressSpace::ispc_global)
         return NULL;
 
     // Conevrt int64 ptr to pointer

@@ -36,7 +36,6 @@
 */
 
 #include "llvmutil.h"
-#include "ispc.h"
 #include "type.h"
 
 #include <map>
@@ -1649,12 +1648,12 @@ bool lIsSVMLoad(llvm::Instruction *inst) {
 void lGetAddressSpace(llvm::Value *v, std::set<llvm::Value *> &done, std::set<AddressSpace> &addrSpaceVec) {
     if (done.find(v) != done.end()) {
         if (llvm::isa<llvm::PointerType>(v->getType()))
-            addrSpaceVec.insert(AddressSpace::External);
+            addrSpaceVec.insert(AddressSpace::ispc_global);
         return;
     }
     // Found global value
     if (llvm::isa<llvm::GlobalValue>(v)) {
-        addrSpaceVec.insert(AddressSpace::Global);
+        addrSpaceVec.insert(AddressSpace::ispc_generic);
         return;
     }
 
@@ -1672,7 +1671,7 @@ void lGetAddressSpace(llvm::Value *v, std::set<llvm::Value *> &done, std::set<Ad
     if (done.size() > 0 && inst == NULL) {
         // Found external pointer like "float* %aFOO"
         if (llvm::isa<llvm::PointerType>(v->getType()))
-            addrSpaceVec.insert(AddressSpace::External);
+            addrSpaceVec.insert(AddressSpace::ispc_global);
         return;
     }
 
@@ -1680,13 +1679,13 @@ void lGetAddressSpace(llvm::Value *v, std::set<llvm::Value *> &done, std::set<Ad
 
     // Found value allocated on stack like "%val = alloca [16 x float]"
     if (llvm::isa<llvm::AllocaInst>(v)) {
-        addrSpaceVec.insert(AddressSpace::Local);
+        addrSpaceVec.insert(AddressSpace::ispc_default);
         return;
     }
 
     if (inst == NULL || llvm::isa<llvm::CallInst>(v)) {
         if (llvm::isa<llvm::PointerType>(v->getType()) || (inst && lIsSVMLoad(inst)))
-            addrSpaceVec.insert(AddressSpace::External);
+            addrSpaceVec.insert(AddressSpace::ispc_global);
         return;
     }
     // For GEP we check only pointer operand, for the rest check all
@@ -1713,13 +1712,13 @@ AddressSpace GetAddressSpace(llvm::Value *v) {
     std::set<llvm::Value *> done;
     std::set<AddressSpace> addrSpaceVec;
     lGetAddressSpace(v, done, addrSpaceVec);
-    if (addrSpaceVec.find(AddressSpace::External) != addrSpaceVec.end()) {
-        return AddressSpace::External;
+    if (addrSpaceVec.find(AddressSpace::ispc_global) != addrSpaceVec.end()) {
+        return AddressSpace::ispc_global;
     }
-    if (addrSpaceVec.find(AddressSpace::Global) != addrSpaceVec.end()) {
-        return AddressSpace::Global;
+    if (addrSpaceVec.find(AddressSpace::ispc_generic) != addrSpaceVec.end()) {
+        return AddressSpace::ispc_generic;
     }
-    return AddressSpace::Local;
+    return AddressSpace::ispc_default;
 }
 #endif
 } // namespace ispc

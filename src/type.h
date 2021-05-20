@@ -420,9 +420,11 @@ class EnumType : public Type {
       Pointers to lvalues from structure member access have the frozen
       property; see discussion in comments in the StructMemberExpr class.
  */
+
 class PointerType : public Type {
   public:
-    PointerType(const Type *t, Variability v, bool isConst, bool isSlice = false, bool frozen = false);
+    PointerType(const Type *t, Variability v, bool isConst, bool isSlice = false, bool frozen = false,
+                AddressSpace as = AddressSpace::ispc_default);
 
     /** Helper method to return a uniform pointer to the given type. */
     static PointerType *GetUniform(const Type *t, bool isSlice = false);
@@ -455,6 +457,7 @@ class PointerType : public Type {
     const PointerType *ResolveUnboundVariability(Variability v) const;
     const PointerType *GetAsConstType() const;
     const PointerType *GetAsNonConstType() const;
+    const PointerType *GetWithAddrSpace(AddressSpace as) const;
 
     std::string GetString() const;
     std::string Mangle() const;
@@ -471,6 +474,7 @@ class PointerType : public Type {
     const bool isConst;
     const bool isSlice, isFrozen;
     const Type *baseType;
+    const AddressSpace addrSpace;
 };
 
 /** @brief Abstract base class for types that represent collections of
@@ -786,7 +790,7 @@ class UndefinedStructType : public Type {
  */
 class ReferenceType : public Type {
   public:
-    ReferenceType(const Type *targetType);
+    ReferenceType(const Type *targetType, AddressSpace as = AddressSpace::ispc_default);
 
     Variability GetVariability() const;
 
@@ -806,6 +810,7 @@ class ReferenceType : public Type {
 
     const ReferenceType *GetAsConstType() const;
     const ReferenceType *GetAsNonConstType() const;
+    const ReferenceType *GetWithAddrSpace(AddressSpace as) const;
 
     std::string GetString() const;
     std::string Mangle() const;
@@ -818,6 +823,7 @@ class ReferenceType : public Type {
   private:
     const Type *const targetType;
     mutable const ReferenceType *asOtherConstType;
+    const AddressSpace addrSpace;
 };
 
 /** @brief Type representing a function (return type + argument types)
@@ -848,6 +854,7 @@ class FunctionType : public Type {
     bool IsConstType() const;
 
     bool IsISPCKernel() const;
+    bool IsISPCExternal() const;
 
     const Type *GetBaseType() const;
     const Type *GetAsVaryingType() const;
@@ -883,6 +890,9 @@ class FunctionType : public Type {
     Expr *GetParameterDefault(int i) const;
     const SourcePos &GetParameterSourcePos(int i) const;
     const std::string &GetParameterName(int i) const;
+
+    /** This method determines if function requires addrspace casts at the beginning*/
+    bool RequiresAddrSpaceCasts(const llvm::Function *func) const;
 
     /** This value is true if the function had a 'task' qualifier in the
         source program. */
