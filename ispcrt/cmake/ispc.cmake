@@ -303,6 +303,7 @@ macro (ispc_compile_gpu parent_target output_prefix)
         ${ISPC_INCLUDE_DIR_PARMS}
         ${ISPC_GENX_OPT_FLAGS}
         -DISPC_GPU
+        ${ISPC_DEFINITIONS}
         --addressing=64
         --target=${ISPC_TARGET_GEN}
         ${ISPC_GPU_OUTPUT_OPT}
