@@ -21,7 +21,7 @@ RUN wget https://cmake.org/files/v3.14/cmake-3.14.0-Linux-x86_64.sh && mkdir /op
     ln -s /opt/cmake/bin/cmake /usr/local/bin/cmake && rm cmake-3.14.0-Linux-x86_64.sh
 
 # If you are behind a proxy, you need to configure git.
-RUN [ -n $http_proxy ] && git config --global --add http.proxy $http_proxy
+RUN if [ -v "$http_proxy" ]; then git config --global --add http.proxy "$http_proxy"; fi
 
 WORKDIR /usr/local/src
 

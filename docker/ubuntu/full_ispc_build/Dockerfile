@@ -9,9 +9,6 @@ ARG EXTRA_BUILD_ARG=
 # !!! Make sure that your docker config provides enough memory to the container,
 # otherwise LLVM build may fail, as it will use all the cores available to container.
 
-# If you are behind a proxy, let apt-get know about it
-#ENV http_proxy=http://proxy.yourcompany.com:888
-
 # Packages required to build ISPC and Clang.
 # Adding this repository is needed for Ubuntu 16.04 to install python3.6.
 RUN apt-get -y update && apt-get install -y software-properties-common && add-apt-repository ppa:deadsnakes/ppa && \
@@ -22,8 +19,8 @@ RUN apt-get -y update && apt-get install -y software-properties-common && add-ap
 RUN wget -q --retry-connrefused --waitretry=5 --read-timeout=20 --timeout=15 -t 5 https://github.com/Kitware/CMake/releases/download/v3.13.5/cmake-3.13.5-Linux-x86_64.sh && mkdir /opt/cmake && sh cmake-3.13.5-Linux-x86_64.sh --prefix=/opt/cmake --skip-license && \
     ln -s /opt/cmake/bin/cmake /usr/local/bin/cmake && rm cmake-3.13.5-Linux-x86_64.sh
 
-# If you are behind a proxy, you need to configure git and svn.
-#RUN git config --global --add http.proxy http://proxy.yourcompany.com:888
+# If you are behind a proxy, you need to configure git.
+RUN if [ -v "$http_proxy" ]; then git config --global --add http.proxy "$http_proxy"; fi
 
 WORKDIR /usr/local/src
 
