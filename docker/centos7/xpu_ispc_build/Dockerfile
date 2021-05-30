@@ -26,7 +26,7 @@ RUN wget -q --retry-connrefused --waitretry=5 --read-timeout=20 --timeout=15 -t 
     ln -s /opt/cmake/bin/cmake /usr/local/bin/cmake && rm cmake-3.14.0-Linux-x86_64.sh
 
 # If you are behind a proxy, you need to configure git.
-RUN [ -n $http_proxy ] && git config --global --add http.proxy $http_proxy
+RUN if [ -v "$http_proxy" ]; then git config --global --add http.proxy "$http_proxy"; fi
 
 WORKDIR /usr/local/src
 

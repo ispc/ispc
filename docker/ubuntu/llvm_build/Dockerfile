@@ -9,9 +9,6 @@ ARG EXTRA_BUILD_ARG=
 # !!! Make sure that your docker config provides enough memory to the container,
 # otherwise LLVM build may fail, as it will use all the cores available to container.
 
-# If you are behind a proxy, let apt-get know about it
-#ENV http_proxy=http://proxy.yourcompany.com:888
-
 RUN uname -a
 
 # Packages required to build ISPC and Clang.
@@ -20,8 +17,8 @@ RUN apt-get -y update && apt-get install -y software-properties-common && add-ap
     apt-get -y update && apt-get install -y wget build-essential gcc g++ git python3.6 ncurses-dev libtinfo-dev && \
     rm -rf /var/lib/apt/lists/*
 
-# If you are behind a proxy, you need to configure git and svn.
-#RUN git config --global --add http.proxy http://proxy.yourcompany.com:888
+# If you are behind a proxy, you need to configure git.
+RUN if [ -v "$http_proxy" ]; then git config --global --add http.proxy "$http_proxy"; fi
 
 # Download and install required version of cmake (3.13) for ISPC build
 RUN wget -q --retry-connrefused --waitretry=5 --read-timeout=20 --timeout=15 -t 5 https://github.com/Kitware/CMake/releases/download/v3.13.5/cmake-3.13.5-Linux-x86_64.sh && mkdir /opt/cmake && sh cmake-3.13.5-Linux-x86_64.sh --prefix=/opt/cmake --skip-license && \
