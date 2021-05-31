@@ -1,6 +1,7 @@
 name: M1 test
 on:
     - push
+    - workflow_dispatch
 
 jobs:
   try-macos-arm64:
