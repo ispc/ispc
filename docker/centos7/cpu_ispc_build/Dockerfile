@@ -1,4 +1,4 @@
-FROM centos:7
+FROM centos:7 AS llvm_only
 MAINTAINER Dmitry Babokin <dmitry.y.babokin@intel.com>
 
 ARG REPO=ispc/ispc
@@ -18,9 +18,10 @@ RUN yum install -y vim wget yum-utils gcc gcc-c++ git python3 m4 bison flex patc
 RUN yum install -y ncurses-static libstdc++-static && \
     yum clean -y all
 
-# Download and install required version of cmake (3.14) for ISPC build
-RUN wget -q --retry-connrefused --waitretry=5 --read-timeout=20 --timeout=15 -t 5 https://cmake.org/files/v3.14/cmake-3.14.0-Linux-x86_64.sh && mkdir /opt/cmake && sh cmake-3.14.0-Linux-x86_64.sh --prefix=/opt/cmake --skip-license && \
-    ln -s /opt/cmake/bin/cmake /usr/local/bin/cmake && rm cmake-3.14.0-Linux-x86_64.sh
+# Download and install required version of cmake (3.14 for x86, 3.20 for aarch64, as earlier versions are not available as binary distribution) for ISPC build
+RUN if [[ `uname -m` =~ "x86" ]]; then export CMAKE_URL="https://cmake.org/files/v3.14/cmake-3.14.0-Linux-x86_64.sh"; else export CMAKE_URL="https://github.com/Kitware/CMake/releases/download/v3.20.3/cmake-3.20.3-linux-aarch64.sh"; fi && \
+    wget -q --retry-connrefused --waitretry=5 --read-timeout=20 --timeout=15 -t 5 $CMAKE_URL && mkdir /opt/cmake && sh cmake-*.sh --prefix=/opt/cmake --skip-license && \
+    ln -s /opt/cmake/bin/cmake /usr/local/bin/cmake && rm -rf cmake-*.sh
 
 # If you are behind a proxy, you need to configure git.
 RUN if [ -v "$http_proxy" ]; then git config --global --add http.proxy "$http_proxy"; fi
@@ -45,7 +46,6 @@ WORKDIR /usr/local/src/ispc
 
 # Build Clang with all required patches.
 # Pass required LLVM_VERSION with --build-arg LLVM_VERSION=<version>.
-# By default 11.1 is used.
 # Note self-build options, it's required to build clang and ispc with the same compiler,
 # i.e. if clang was built by gcc, you may need to use gcc to build ispc (i.e. run "make gcc"),
 # or better do clang selfbuild and use it for ispc build as well (i.e. just "make").
@@ -54,6 +54,7 @@ RUN source /opt/rh/devtoolset-7/enable && \
     ./alloy.py -b --version=$LLVM_VERSION --selfbuild --llvm-disable-assertions && \
     rm -rf $LLVM_HOME/build-$LLVM_VERSION $LLVM_HOME/llvm-$LLVM_VERSION $LLVM_HOME/bin-"$LLVM_VERSION"_temp $LLVM_HOME/build-"$LLVM_VERSION"_temp
 
+FROM llvm_only AS ispc_build
 ENV PATH=$LLVM_HOME/bin-$LLVM_VERSION/bin:$PATH
 
 # Install newer zlib
@@ -67,4 +68,4 @@ RUN git clone https://github.com/westes/flex.git && cd flex && git checkout v2.6
 # Build ISPC
 RUN mkdir build
 WORKDIR /usr/local/src/ispc/build
-RUN cmake .. -DISPC_PREPARE_PACKAGE=ON -DISPC_CROSS=ON && make -j8 package
+RUN cmake .. -DISPC_PREPARE_PACKAGE=ON -DISPC_CROSS=ON && make -j8 package && make check-all
