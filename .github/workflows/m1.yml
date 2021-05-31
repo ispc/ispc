@@ -1,0 +1,18 @@
+name: M1 test
+on:
+    - push
+
+jobs:
+  try-macos-arm64:
+    name: Try macOS on M1
+    runs-on: [self-hosted, macOS, M1]
+    defaults:
+      run:
+        shell: "/usr/bin/arch -arch arm64e /bin/bash {0}"
+    steps:
+        - name: Status
+          run: |
+            clang --version
+            uname -a
+        - name: Checkout
+          uses: actions/checkout@v2
