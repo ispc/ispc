@@ -1,4 +1,4 @@
-FROM ubuntu:16.04
+FROM ubuntu:16.04 AS llvm_build_only
 MAINTAINER Dmitry Babokin <dmitry.y.babokin@intel.com>
 
 ARG REPO=ispc/ispc
@@ -9,10 +9,12 @@ ARG EXTRA_BUILD_ARG=
 # !!! Make sure that your docker config provides enough memory to the container,
 # otherwise LLVM build may fail, as it will use all the cores available to container.
 
+RUN uname -a
+
 # Packages required to build ISPC and Clang.
 # Adding this repository is needed for Ubuntu 16.04 to install python3.6.
 RUN apt-get -y update && apt-get install -y software-properties-common && add-apt-repository ppa:deadsnakes/ppa && \
-    apt-get -y update && apt-get install -y wget build-essential vim gcc g++ git python3.6 m4 bison flex zlib1g-dev ncurses-dev libtinfo-dev libc6-dev-i386 && \
+    apt-get -y update && apt-get install -y wget build-essential gcc g++ git python3.6 ncurses-dev libtinfo-dev && \
     rm -rf /var/lib/apt/lists/*
 
 # Download and install required version of cmake (3.13) for ISPC build
@@ -42,15 +44,19 @@ WORKDIR /usr/local/src/ispc
 
 # Build Clang with all required patches.
 # Pass required LLVM_VERSION with --build-arg LLVM_VERSION=<version>.
-# By default 11.1 is used.
 # Note self-build options, it's required to build clang and ispc with the same compiler,
 # i.e. if clang was built by gcc, you may need to use gcc to build ispc (i.e. run "make gcc"),
 # or better do clang selfbuild and use it for ispc build as well (i.e. just "make").
 # "rm" are just to keep docker image small.
-RUN python3.6 ./alloy.py -b --version=$LLVM_VERSION --selfbuild $EXTRA_BUILD_ARG && \
+RUN python3.6 ./alloy.py -b --version=$LLVM_VERSION --selfbuild --verbose $EXTRA_BUILD_ARG && \
     rm -rf $LLVM_HOME/build-$LLVM_VERSION $LLVM_HOME/llvm-$LLVM_VERSION $LLVM_HOME/bin-"$LLVM_VERSION"_temp $LLVM_HOME/build-"$LLVM_VERSION"_temp
 
 ENV PATH=$LLVM_HOME/bin-$LLVM_VERSION/bin:$PATH
+
+FROM llvm_build_only AS ispc_build
+
+RUN apt-get -y update && apt-get install -y m4 bison flex zlib1g-dev libc6-dev-i386 && \
+    rm -rf /var/lib/apt/lists/*
 
 # Configure ISPC build
 RUN mkdir build_$LLVM_VERSION

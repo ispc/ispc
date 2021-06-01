@@ -28,12 +28,12 @@ jobs:
 
     - name: Build LLVM
       run: |
-        cd docker/ubuntu/llvm_build
-        docker build --tag ispc/ubuntu16.04 --build-arg REPO=$GITHUB_REPOSITORY --build-arg SHA=$GITHUB_SHA --build-arg LLVM_VERSION=10.0 .
+        cd docker/ubuntu/cpu_ispc_build
+        docker build --tag ispc/ubuntu16.04 --target=llvm_build_only --build-arg REPO=$GITHUB_REPOSITORY --build-arg SHA=$GITHUB_SHA --build-arg LLVM_VERSION=10.0 .
 
     - name: Pack LLVM
       run: |
-        cd docker/ubuntu/llvm_build
+        cd docker/ubuntu/cpu_ispc_build
         docker run ispc/ubuntu16.04
         export CONTAINER=`docker ps --all |head -2 |tail -1 |awk '//{print $1}'`
         sudo docker cp $CONTAINER:/usr/local/src/llvm/bin-10.0 .
@@ -43,7 +43,7 @@ jobs:
       uses: actions/upload-artifact@v2
       with:
         name: llvm10_linux
-        path: docker/ubuntu/llvm_build/llvm-10.0.1-ubuntu16.04-Release+Asserts-x86.arm.wasm.tar.xz
+        path: docker/ubuntu/cpu_ispc_build/llvm-10.0.1-ubuntu16.04-Release+Asserts-x86.arm.wasm.tar.xz
 
   linux-build-release:
     runs-on: ubuntu-latest
@@ -59,12 +59,12 @@ jobs:
 
     - name: Build LLVM
       run: |
-        cd docker/ubuntu/llvm_build
-        docker build --tag ispc/ubuntu16.04 --build-arg REPO=$GITHUB_REPOSITORY --build-arg SHA=$GITHUB_SHA --build-arg LLVM_VERSION=10.0 --build-arg EXTRA_BUILD_ARG="--llvm-disable-assertions" .
+        cd docker/ubuntu/cpu_ispc_build
+        docker build --tag ispc/ubuntu16.04 --target=llvm_build_only --build-arg REPO=$GITHUB_REPOSITORY --build-arg SHA=$GITHUB_SHA --build-arg LLVM_VERSION=10.0 --build-arg EXTRA_BUILD_ARG="--llvm-disable-assertions" .
 
     - name: Pack LLVM
       run: |
-        cd docker/ubuntu/llvm_build
+        cd docker/ubuntu/cpu_ispc_build
         docker run ispc/ubuntu16.04
         export CONTAINER=`docker ps --all |head -2 |tail -1 |awk '//{print $1}'`
         sudo docker cp $CONTAINER:/usr/local/src/llvm/bin-10.0 .
@@ -74,7 +74,7 @@ jobs:
       uses: actions/upload-artifact@v2
       with:
         name: llvm10rel_linux
-        path: docker/ubuntu/llvm_build/llvm-10.0.1-ubuntu16.04-Release-x86.arm.wasm.tar.xz
+        path: docker/ubuntu/cpu_ispc_build/llvm-10.0.1-ubuntu16.04-Release-x86.arm.wasm.tar.xz
 
   win-build:
     runs-on: windows-latest
