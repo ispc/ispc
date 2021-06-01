@@ -31,12 +31,12 @@ jobs:
 
     - name: Build LLVM
       run: |
-        cd docker/ubuntu/llvm_build
-        docker build --tag ispc/ubuntu16.04 --build-arg REPO=$GITHUB_REPOSITORY --build-arg SHA=$GITHUB_SHA --build-arg LLVM_VERSION=trunk .
+        cd docker/ubuntu/cpu_ispc_build
+        docker build --tag ispc/ubuntu16.04 --target=llvm_build_only --build-arg REPO=$GITHUB_REPOSITORY --build-arg SHA=$GITHUB_SHA --build-arg LLVM_VERSION=trunk .
 
     - name: Pack LLVM
       run: |
-        cd docker/ubuntu/llvm_build
+        cd docker/ubuntu/cpu_ispc_build
         docker run ispc/ubuntu16.04
         export CONTAINER=`docker ps --all |head -2 |tail -1 |awk '//{print $1}'`
         sudo docker cp $CONTAINER:/usr/local/src/llvm/bin-trunk .
@@ -47,7 +47,7 @@ jobs:
       uses: actions/upload-artifact@v2
       with:
         name: llvm_trunk_linux
-        path: docker/ubuntu/llvm_build/llvm-trunk-ubuntu16.04-Release+Asserts-x86.arm.wasm.tar.gz
+        path: docker/ubuntu/cpu_ispc_build/llvm-trunk-ubuntu16.04-Release+Asserts-x86.arm.wasm.tar.gz
 
   linux-build-ispc-llvm-trunk:
     needs: [linux-build-llvm-trunk]
