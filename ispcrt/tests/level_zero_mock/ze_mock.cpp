@@ -63,7 +63,7 @@ void Config::closeCmdList() { cmdListOpened = false; }
 
 bool Config::isCmdListClosed() { return !cmdListOpened; }
 
-bool Config::checkCmdList(std::vector<CmdListElem> expected) { return expected == cmdList; }
+bool Config::checkCmdList(const std::vector<CmdListElem>& expected) { return expected == cmdList; }
 
 void Config::setDeviceCount(uint32_t count) {
     devices.clear();
