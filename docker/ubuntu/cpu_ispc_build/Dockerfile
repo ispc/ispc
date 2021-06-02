@@ -64,7 +64,7 @@ WORKDIR build_$LLVM_VERSION
 RUN cmake ../ -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_INSTALL_PREFIX=/usr/local/src/ispc/bin-$LLVM_VERSION
 
 # Build ISPC
-RUN make ispc -j8 && make install
+RUN make ispc -j8 && make check-all && make install
 WORKDIR ../
 RUN rm -rf build_$LLVM_VERSION
 
