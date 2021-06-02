@@ -1,4 +1,4 @@
-// Copyright 2020 Intel Corporation
+// Copyright 2020-2021 Intel Corporation
 // SPDX-License-Identifier: BSD-3-Clause
 
 #include "ispcrt.hpp"
@@ -87,6 +87,31 @@ class MockTestWithModuleQueueKernel : public MockTestWithModule {
         m_kernel = Kernel(m_device, m_module, "");
         ASSERT_EQ(sm_rt_error, ISPCRT_NO_ERROR);
         EXPECT_NE(m_kernel, 0);
+    }
+
+    void testMultipleKernelLaunches(unsigned launchCnt, bool expectError = false, unsigned errorIter = 0) {
+        ispcrt::TaskQueue tq(m_device); // use local queue to grab env variables setup
+        std::vector<CmdListElem> expectedCmdList;
+        std::vector<ispcrt::Future> futures;
+        for (unsigned i = 0; i < launchCnt; i++) {
+            auto f = tq.launch(m_kernel, 0);
+            if (expectError && i >= errorIter) {
+                ASSERT_NE(sm_rt_error, ISPCRT_NO_ERROR);
+                return;
+            }
+            else {
+                ASSERT_EQ(sm_rt_error, ISPCRT_NO_ERROR);
+            }
+            futures.push_back(f);
+            expectedCmdList.push_back(CmdListElem::KernelLaunch);
+            ASSERT_TRUE(Config::checkCmdList(expectedCmdList));
+        }
+        tq.sync();
+        ASSERT_EQ(sm_rt_error, ISPCRT_NO_ERROR);
+        ASSERT_TRUE(Config::checkCmdList({}));
+        for (const auto& f : futures) {
+            ASSERT_TRUE(f.valid());
+        }
     }
 
     ispcrt::TaskQueue m_task_queue;
@@ -351,6 +376,67 @@ TEST_F(MockTestWithModuleQueueKernel, TaskQueue_FullKernelLaunchViaSubmit) {
     ASSERT_EQ(sm_rt_error, ISPCRT_NO_ERROR);
     ASSERT_TRUE(Config::checkCmdList({}));
     ASSERT_TRUE(f.valid());
+}
+
+// Try to submit a lot of kernel launches
+TEST_F(MockTestWithModuleQueueKernel, TaskQueue_MultipleKernelLaunchesBasic) {
+    testMultipleKernelLaunches(1000);
+}
+
+// Check some other sizes
+TEST_F(MockTestWithModuleQueueKernel, TaskQueue_MultipleKernelLaunchesAdvanced) {
+    auto launches = std::vector<unsigned>({100, 1000, 10000, 50000});
+    for (auto l : launches) {
+        testMultipleKernelLaunches(l);
+    }
+}
+
+// Test the limit of number of launches
+TEST_F(MockTestWithModuleQueueKernel, TaskQueue_MultipleKernelLaunchesLimit) {
+    constexpr unsigned LIMIT = 100000;
+    // OK to add LIMIT kernel launches
+    testMultipleKernelLaunches(LIMIT);
+    // But not OK to add more
+    testMultipleKernelLaunches(LIMIT + 1, true, LIMIT);
+    ResetError();
+    Config::resetCmdList();
+    // Double check that we still can enqueue correct amount of events;
+    testMultipleKernelLaunches(LIMIT);
+
+}
+
+// Check if setting the expected maximum of kernel launches with env var works
+TEST_F(MockTestWithModuleQueueKernel, TaskQueue_MultipleKernelLaunchesEnvLimitCap) {
+    auto limits = std::vector<unsigned>({100, 1000, 10000});
+    for (auto limit : limits) {
+        setenv("ISPCRT_MAX_KERNEL_LAUNCHES", std::to_string(limit).c_str(), 1);
+        testMultipleKernelLaunches(limit);
+        testMultipleKernelLaunches(limit + 1, true, limit);
+        ResetError();
+        Config::resetCmdList();
+        testMultipleKernelLaunches(limit);
+        unsetenv("ISPCRT_MAX_KERNEL_LAUNCHES");
+    }
+}
+
+// Check that capping the value of kernel launches limit works
+// and produces expected warning
+TEST_F(MockTestWithModuleQueueKernel, TaskQueue_MultipleKernelLaunchesEnvLimit) {
+    constexpr const char* EXPECTED_WARNING =
+        "[ISPCRT][WARNING] ISPCRT_MAX_KERNEL_LAUNCHES value too large, using 100000 instead.\n";
+    // Set the limit to 200000
+    setenv("ISPCRT_MAX_KERNEL_LAUNCHES", "200000", 1);
+    // Check that it's OK to enqueue 100000 launches...
+    ::testing::internal::CaptureStderr();
+    testMultipleKernelLaunches(100000);
+    EXPECT_STREQ(::testing::internal::GetCapturedStderr().c_str(), EXPECTED_WARNING);
+    // ... but really the limit is 100000
+    ::testing::internal::CaptureStderr();
+    testMultipleKernelLaunches(100001, true, 100000);
+    EXPECT_STREQ(::testing::internal::GetCapturedStderr().c_str(), EXPECTED_WARNING);
+    ResetError();
+    Config::resetCmdList();
+    unsetenv("ISPCRT_MAX_KERNEL_LAUNCHES");
 }
 
 TEST_F(MockTestWithModuleQueueKernel, TaskQueue_KernelLaunchNoSync) {

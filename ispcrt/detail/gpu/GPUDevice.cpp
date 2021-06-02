@@ -133,9 +133,7 @@ struct Event {
         eventDesc.pNext = nullptr;
         eventDesc.signal = ZE_EVENT_SCOPE_FLAG_HOST;
         eventDesc.wait = ZE_EVENT_SCOPE_FLAG_HOST;
-
         L0_SAFE_CALL(zeEventCreate(m_pool, &eventDesc, &m_handle));
-
         if (!m_handle)
             throw std::runtime_error("Failed to create event!");
     }
@@ -145,7 +143,7 @@ struct Event {
 };
 
 struct EventPool {
-    constexpr static uint32_t POOL_SIZE = 100;
+    constexpr static uint32_t POOL_SIZE_CAP = 100000;
 
     EventPool(ze_context_handle_t context, ze_device_handle_t device) : m_context(context), m_device(device) {
         // Get device timestamp resolution
@@ -154,8 +152,31 @@ struct EventPool {
         m_timestampFreq = device_properties.timerResolution;
         m_timestampMaxValue = ~(-1 << device_properties.kernelTimestampValidBits);
         // Create pool
+
+        // User can set a lower limit for the pool size, which in fact limits
+        // the number of possible kernel launches. To make it more clear for the user,
+        // the variable is named ISPCRT_MAX_KERNEL_LAUNCHES
+        constexpr const char* POOL_SIZE_ENV_NAME = "ISPCRT_MAX_KERNEL_LAUNCHES";
+        auto poolSize = POOL_SIZE_CAP;
+    #if defined(_WIN32) || defined(_WIN64)
+        char* poolSizeEnv = nullptr;
+        size_t poolSizeEnvSz = 0;
+        _dupenv_s(&poolSizeEnv, &poolSizeEnvSz, POOL_SIZE_ENV_NAME);
+    #else
+        const char *poolSizeEnv = getenv(POOL_SIZE_ENV_NAME);
+    #endif
+        if (poolSizeEnv) {
+            std::istringstream(poolSizeEnv) >> poolSize;
+        }
+        if (poolSize > POOL_SIZE_CAP) {
+            m_poolSize = POOL_SIZE_CAP;
+            std::cerr << "[ISPCRT][WARNING] " << POOL_SIZE_ENV_NAME << " value too large, using " << POOL_SIZE_CAP << " instead." << std::endl;
+        } else {
+            m_poolSize = poolSize;
+        }
+
         ze_event_pool_desc_t eventPoolDesc = {};
-        eventPoolDesc.count = POOL_SIZE;
+        eventPoolDesc.count = m_poolSize;
         eventPoolDesc.flags = (ze_event_pool_flag_t)(ZE_EVENT_POOL_FLAG_KERNEL_TIMESTAMP | ZE_EVENT_POOL_FLAG_HOST_VISIBLE);
         L0_SAFE_CALL(zeEventPoolCreate(m_context, &eventPoolDesc, 1, &m_device, &m_pool));
         if (!m_pool) {
@@ -165,7 +186,7 @@ struct EventPool {
             throw std::runtime_error(ss.str());
         }
         // Put all event ids into a freelist
-        for (uint32_t i = 0; i < POOL_SIZE; i++) {
+        for (uint32_t i = 0; i < m_poolSize; i++) {
             m_freeList.push_back(i);
         }
     }
@@ -174,7 +195,7 @@ struct EventPool {
         if (m_pool) {
             L0_SAFE_CALL_NOEXCEPT(zeEventPoolDestroy(m_pool));
         }
-        assert(m_freeList.size() == POOL_SIZE);
+        assert(m_freeList.size() == m_poolSize);
         m_freeList.clear();
     }
 
@@ -203,6 +224,7 @@ struct EventPool {
     ze_event_pool_handle_t m_pool{nullptr};
     uint64_t m_timestampFreq;
     uint64_t m_timestampMaxValue;
+    uint32_t m_poolSize;
     std::deque<uint32_t> m_freeList;
 };
 
@@ -440,7 +462,6 @@ struct TaskQueue : public ispcrt::base::TaskQueue {
         auto &kernel = (gpu::Kernel &)k;
 
         void *param_ptr = nullptr;
-
         if (params)
             param_ptr = params->devicePtr();
 
@@ -451,13 +472,10 @@ struct TaskQueue : public ispcrt::base::TaskQueue {
         // Set indirect flag to allow USM access
         ze_kernel_indirect_access_flags_t kernel_flags = ZE_KERNEL_INDIRECT_ACCESS_FLAG_SHARED;
         L0_SAFE_CALL(zeKernelSetIndirectAccess(kernel.handle(), kernel_flags));
-
         ze_group_count_t dispatchTraits = {uint32_t(dim0), uint32_t(dim1), uint32_t(dim2)};
         auto event = m_ep.createEvent();
-
         if (event == nullptr)
             throw std::runtime_error("Failed to create event!");
-
         try {
             L0_SAFE_CALL(
                 zeCommandListAppendLaunchKernel(m_cl, kernel.handle(), &dispatchTraits, event->handle(), 0, nullptr));

@@ -56,7 +56,7 @@ class Config {
     static void resetCmdList();
     static void closeCmdList();
     static bool isCmdListClosed();
-    static bool checkCmdList(std::vector<CmdListElem> expected);
+    static bool checkCmdList(const std::vector<CmdListElem>& expected);
     static void setDeviceCount(uint32_t count);
     static DeviceProperties* getDevicePtr(uint32_t deviceIdx);
     static uint32_t getDeviceCount();

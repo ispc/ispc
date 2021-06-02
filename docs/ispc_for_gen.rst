@@ -217,6 +217,13 @@ variables:
   by the Level Zero runtime. For example, in a system with two GPUs present,
   the variable can be set to ``0`` or ``1``.
 
+* ``ISPCRT_MAX_KERNEL_LAUNCHES`` - there is a limit of the maximum number of enqueued
+  kernel launches in a given task queue. If the limit is reached, sync() method
+  needs to be called to submit the queue for execution. The limit is currently
+  set to 100000, but can be lowered (for example for testing) using this environmental variable.
+  Please note that the limit cannot be set to more than 100000. If a greater value is provided,
+  the ``ISPCRT`` will set the limit to the default value and display a warning message.
+
 Compiling and Running Simple ISPC Program
 =========================================
 The directory ``examples/xpu/simple`` in the ``ispc`` distribution
