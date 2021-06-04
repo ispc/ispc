@@ -3,10 +3,10 @@ MAINTAINER Dmitry Babokin <dmitry.y.babokin@intel.com>
 
 ARG REPO=ispc/ispc
 ARG SHA=main
-ARG LLVM_VERSION=11.1
+ARG LLVM_VERSION=12.0
 ARG L0L_VER=1.2.3
-ARG VC_INTRINSICS_COMMIT_SHA="d547de9478277e14896fa6418f6bb07ac07d7a1b"
-ARG SPIRV_TRANSLATOR_COMMIT_SHA="bea47b3d7528b8be7da88943d884cdb8d045e8a0"
+ARG VC_INTRINSICS_COMMIT_SHA="2d0795c6799d262a464e5e8b8f74b09dd3ec1054"
+ARG SPIRV_TRANSLATOR_COMMIT_SHA="0592c4f6fc42ec947f462e81628280e960a12042"
 
 # !!! Make sure that your docker config provides enough memory to the container,
 # otherwise LLVM build may fail, as it will use all the cores available to container.
@@ -49,7 +49,7 @@ WORKDIR /usr/local/src/ispc
 
 # Build Clang with all required patches.
 # Pass required LLVM_VERSION with --build-arg LLVM_VERSION=<version>.
-# By default 11.1 is used.
+# By default 12.0 is used.
 # Note self-build options, it's required to build clang and ispc with the same compiler,
 # i.e. if clang was built by gcc, you may need to use gcc to build ispc (i.e. run "make gcc"),
 # or better do clang selfbuild and use it for ispc build as well (i.e. just "make").
