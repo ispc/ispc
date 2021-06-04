@@ -59,6 +59,10 @@ set(BENCHMARK_ENABLE_TESTING OFF CACHE BOOL "Suppressing benchmark's tests" FORC
 set(BENCHMARK_ENABLE_INSTALL OFF CACHE BOOL "Suppressing benchmark's install" FORCE)
 add_subdirectory(vendor/google/benchmark)
 
+# Suppress warnings, as benchmarks are built with -Werror and trunk version of clang may trigger
+# new warnings, which are not yet fixed in Google Benchmark sources.
+target_compile_options(benchmark PRIVATE "-w")
+
 # Warn if build type is not release.
 if(CMAKE_BUILD_TYPE STREQUAL "Release")
     # NDEBUG may be excluded from build options globally, if LLVM build doesn't have that.
