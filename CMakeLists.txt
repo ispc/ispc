@@ -242,6 +242,10 @@ find_package(FLEX 2.6 REQUIRED)
 
 set (ISPC_MASKS 1 8 16 32 64)
 
+if (NOT X86_ENABLED AND NOT ARM_ENABLED AND NOT WASM_ENABLED AND NOT GENX_ENABLED)
+    message( FATAL_ERROR "Either X86, ARM, WASM or GENX targets need to be enabled.")
+endif ()
+
 if (X86_ENABLED)
     list(APPEND ISPC_TARGETS
         sse2-i32x4 sse2-i32x8
