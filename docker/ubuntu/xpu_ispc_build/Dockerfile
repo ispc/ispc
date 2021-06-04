@@ -3,13 +3,13 @@ MAINTAINER Arina Neshlyaeva <arina.neshlyaeva@intel.com>
 
 ARG REPO=ispc/ispc
 ARG SHA=main
-ARG LLVM_VERSION=11.1
-ARG IGC_VER=6646
+ARG LLVM_VERSION=12.0
+ARG IGC_VER=7423
 ARG L0L_VER=1.2.3
-ARG CR_VER=21.11.19310
-ARG CR_VER_SUFFIX=19310
-ARG VC_INTRINSICS_COMMIT_SHA="d547de9478277e14896fa6418f6bb07ac07d7a1b"
-ARG SPIRV_TRANSLATOR_COMMIT_SHA="bea47b3d7528b8be7da88943d884cdb8d045e8a0"
+ARG CR_VER=21.21.19914
+ARG CR_VER_SUFFIX=19914
+ARG VC_INTRINSICS_COMMIT_SHA="2d0795c6799d262a464e5e8b8f74b09dd3ec1054"
+ARG SPIRV_TRANSLATOR_COMMIT_SHA="0592c4f6fc42ec947f462e81628280e960a12042"
 
 # !!! Make sure that your docker config provides enough memory to the container,
 # otherwise LLVM build may fail, as it will use all the cores available to container.
@@ -34,18 +34,18 @@ ENV ISPC_HOME=/home/src/ispc
 
 # LLVM
 ENV LLVM_HOME=/home/tools/llvm/$LLVM_VERSION
-RUN python3.6 ./alloy.py -b --version=$LLVM_VERSION --selfbuild && \
+RUN python3 ./alloy.py -b --version=$LLVM_VERSION --selfbuild && \
     rm -rf $LLVM_HOME/build-$LLVM_VERSION $LLVM_HOME/llvm-$LLVM_VERSION $LLVM_HOME/bin-"$LLVM_VERSION"_temp $LLVM_HOME/build-"$LLVM_VERSION"_temp
 
 WORKDIR /home/packages
 
 # Compute runtime
-RUN wget -q --retry-connrefused --waitretry=5 --read-timeout=20 --timeout=15 -t 5 https://github.com/intel/compute-runtime/releases/download/${CR_VER}/intel-gmmlib_20.3.2_amd64.deb
+RUN wget -q --retry-connrefused --waitretry=5 --read-timeout=20 --timeout=15 -t 5 https://github.com/intel/compute-runtime/releases/download/${CR_VER}/intel-gmmlib_21.1.3_amd64.deb
 RUN wget -q --retry-connrefused --waitretry=5 --read-timeout=20 --timeout=15 -t 5 https://github.com/intel/intel-graphics-compiler/releases/download/igc-1.0.${IGC_VER}/intel-igc-core_1.0.${IGC_VER}_amd64.deb
 RUN wget -q --retry-connrefused --waitretry=5 --read-timeout=20 --timeout=15 -t 5 https://github.com/intel/intel-graphics-compiler/releases/download/igc-1.0.${IGC_VER}/intel-igc-opencl_1.0.${IGC_VER}_amd64.deb
 RUN wget -q --retry-connrefused --waitretry=5 --read-timeout=20 --timeout=15 -t 5 https://github.com/intel/compute-runtime/releases/download/${CR_VER}/intel-opencl_${CR_VER}_amd64.deb
 RUN wget -q --retry-connrefused --waitretry=5 --read-timeout=20 --timeout=15 -t 5 https://github.com/intel/compute-runtime/releases/download/${CR_VER}/intel-ocloc_${CR_VER}_amd64.deb
-RUN wget -q --retry-connrefused --waitretry=5 --read-timeout=20 --timeout=15 -t 5 https://github.com/intel/compute-runtime/releases/download/${CR_VER}/intel-level-zero-gpu_1.0.${CR_VER_SUFFIX}_amd64.deb
+RUN wget -q --retry-connrefused --waitretry=5 --read-timeout=20 --timeout=15 -t 5 https://github.com/intel/compute-runtime/releases/download/${CR_VER}/intel-level-zero-gpu_1.1.${CR_VER_SUFFIX}_amd64.deb
 
 RUN wget -q --retry-connrefused --waitretry=5 --read-timeout=20 --timeout=15 -t 5 https://github.com/intel/intel-graphics-compiler/releases/download/igc-1.0.${IGC_VER}/intel-igc-opencl-devel_1.0.${IGC_VER}_amd64.deb
 
