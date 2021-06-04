@@ -133,7 +133,7 @@ for:
   before_build:
     - sh: |-
         cd $ISPC_HOME && mkdir build && cd build
-        cmake ../ -DISPC_PREPARE_PACKAGE=ON -DCMAKE_INSTALL_PREFIX=$ISPC_HOME/install -DISPC_CROSS=ON -DWASM_ENABLED=$WASM
+        cmake ../ -DISPC_PREPARE_PACKAGE=ON -DCMAKE_INSTALL_PREFIX=$ISPC_HOME/install -DISPC_CROSS=ON -DWASM_ENABLED=$WASM -DCMAKE_CXX_FLAGS=-Werror
   build_script:
     - sh: make package -j4
 
