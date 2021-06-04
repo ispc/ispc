@@ -2,8 +2,8 @@
 Intel® ISPC for GEN
 ===================
 
-The Intel® Implicit SPMD Program Compiler (Intel® ISPC) got initial support for
-Intel GPUs recently. The compilation for a GPU is pretty straightforward from
+The Intel® Implicit SPMD Program Compiler (Intel® ISPC) is actively developed to support
+latest Intel GPUs. The compilation for a GPU is pretty straightforward from
 the user's point of view, but managing the execution of code on a GPU may add
 complexity. You can use a low-level API `oneAPI Level Zero
 <https://spec.oneapi.com/level-zero/latest/index.html>`_ to manage available GPU
@@ -53,12 +53,13 @@ on GPU.
 
 You can also generate L0 binary using ``--emit-zebin`` flag. Please note that
 currently SPIR-V format is more stable but feel free to experiment with L0 binary.
+L0 binary format is supported now on Linux platform only.
 
 Environment
 -----------
-Currently, ``Intel® ISPC for GEN`` is supported on Linux only but it is planned
-to be extended for Windows as well in a future release.
-Recommended and tested Linux distribution is Ubuntu 18.04.
+``Intel® ISPC for GEN`` is supported on Linux for quite a while (recommended
+and tested Linux distribution is Ubuntu 20.04) and it's got Windows support since
+v1.16.0.
 
 You need to have a system with ``Intel(R) Processor Graphics Gen9`` or later.
 
@@ -67,7 +68,7 @@ Graphics Compute Runtime <https://github.com/intel/compute-runtime/releases>`_
 and `Level Zero Loader <https://github.com/oneapi-src/level-zero/releases>`_.
 
 To use ISPC Run Time for CPU you need to have ``OpenMP runtime`` installed on
-your system. Consult your Linux distribution documentation for installation
+your system. Consult your Linux distribution documentation for the installation
 of OpenMP runtime instructions.
 
 
@@ -94,9 +95,7 @@ Also two new ``arch`` options were introduced: ``genx32`` and ``genx64``.
 To generate LLVM bitcode, use the ``--emit-llvm`` flag.
 To generate LLVM bitcode in textual form, use the ``--emit-llvm-text`` flag.
 
-Optimizations are on by default; they can be turned off with ``-O0``. However,
-for the current release, it is not recommended to use ``-O0``, there are several
-known issues.
+Optimizations are on by default; they can be turned off with ``-O0``.
 
 Generating a text assembly file using ``--emit-asm`` is not supported yet.
 See `How to Get an Assembly File from SPIR-V?`_ section about how to get the
@@ -285,7 +284,7 @@ depending on an input parameter. The device type is managed by
 ``ISPCRT_DEVICE_TYPE_GPU`` or ``ISPCRT_DEVICE_TYPE_AUTO`` (tries to use GPU, but
 fallback to CPU if no GPUs found).
 
-The prograam starts with including ``ISPCRT`` header:
+The program starts with including ``ISPCRT`` header:
 ::
 
   #include "ispcrt.hpp"
@@ -363,16 +362,18 @@ steps and executes it:
 To build and run examples go to ``examples/xpu`` and create
 ``build`` folder. Run ``cmake -DISPC_EXECUTABLE=<path_to_ispc_binary>
 -Dispcrt_DIR=<path_to_ispcrt_cmake> ../`` from ``build`` folder. Or add path
-to ``ispc`` to your PATH and just run ``cmake ../``. Build examples using ``make``.
+to ``ispc`` to your PATH and just run ``cmake ../``. On Windows you also need
+to pass ``-DLEVEL_ZERO_ROOT=<path_lo_level_zero>`` with PATH to ``oneAPI Level Zero``
+on the system. Build examples using ``make`` or using ``Visual Studio`` solution.
 Go to ``simple`` folder and see what files were generated:
 
 * ``genx_simple.spv`` contains SPIR-V representation. This file is passed
   by ``ISPCRT`` to ``Intel(R) Graphics Compute Runtime`` for execution on GPU.
 
-* ``libgenx_simple.so`` incorporates object files produced from ISPC kernel
-  for different targets (you can find them in ``local_ispc`` subfolder).
-  This library is loaded from host application ``host_simple`` and is used for
-  execution on CPU.
+* ``libgenx_simple.so`` on Linux / ``genx_simple.dll`` on Windows incorporates
+  object files produced from ISPC kernel for different targets (you can find
+  them in ``local_ispc`` subfolder). This library is loaded from host application
+  ``host_simple`` and is used for execution on CPU.
 
 * ``simple_ispc_<target>.h`` files include the declaration for the C-callable
   functions. They are not really used and produced just for the reference.
@@ -400,6 +401,7 @@ build system is the following:
 ::
 
   cmake_minimum_required(VERSION 3.14)
+  project(simple)
   find_package(ispcrt REQUIRED)
   add_executable(host_simple simple.cpp)
   add_ispc_kernel(genx_simple simple.ispc "")
@@ -409,27 +411,28 @@ build system is the following:
 And you can configure and build it using:
 ::
 
-  cmake ../ -DISPC_EXECUTABLE_GPU=/home/install/bin/ispc && make
+  cmake ../ -DISPC_EXECUTABLE_GPU=/home/ispc_package/bin/ispc && make
 
 
-You can also run separate compilation commands to achieve the same result:
+You can also run separate compilation commands to achieve the same result.
+Here are example commands for Linux:
 
 * Compile ISPC kernel for GPU:
   ::
 
-    ispc -I /home/install/include/ispcrt -DISPC_GPU --target=genx-x8 --woff
-    -o /home/ispc/examples/xpu/simple/genx_simple.spv
-    /home/ispc/examples/xpu/simple/simple.ispc
+    ispc -I /home/ispc_package/include/ispcrt -DISPC_GPU --target=genx-x8 --woff
+    -o /home/ispc_package/examples/xpu/simple/genx_simple.spv
+    /home/ispc_package/examples/xpu/simple/simple.ispc
 
 * Compile ISPC kernel for CPU:
   ::
 
-    ispc -I /home/install/include/ispcrt --arch=x86-64
+    ispc -I /home/ispc_package/include/ispcrt --arch=x86-64
     --target=sse4-i32x4,avx1-i32x8,avx2-i32x8,avx512knl-i32x16,avx512skx-i32x16
     --woff --pic --opt=disable-assertions
-    -h /home/ispc/examples/xpu/simple/simple_ispc.h
-    -o /home/ispc/examples/xpu/simple/simple.dev.o
-    /home/ispc/examples/xpu/simple/simple.ispc
+    -h /home/ispc_package/examples/xpu/simple/simple_ispc.h
+    -o /home/ispc_package/examples/xpu/simple/simple.dev.o
+    /home/ispc_package/examples/xpu/simple/simple.ispc
 
 * Produce a library from object files:
   ::
@@ -440,33 +443,37 @@ You can also run separate compilation commands to achieve the same result:
 * Compile and link host code:
   ::
 
-    /usr/bin/c++  -DISPCRT -isystem /home/install/include/ispcrt -fPIE
-    -o /home/ispc/examples/xpu/simple/host_simple
-    /home/ispc/examples/xpu/simple/simple.cpp -L/usr/local/lib
-    -Wl,-rpath,/home/install/lib /home/install/lib/libispcrt.so.1.13.0
+    /usr/bin/c++ -DISPCRT -isystem /home/ispc_package/include/ispcrt -fPIE
+    -o /home/ispc_package/examples/xpu/simple/host_simple
+    /home/ispc_package/examples/xpu/simple/simple.cpp -lispcrt -L/home/ispc_package/lib
+    -Wl,-rpath,/home/ispc_package/lib
 
-By default examples uses SPIR-V format. You can try them with L0 binary format:
+By default, examples use SPIR-V format. You can try them with L0 binary format:
   ::
 
     cd examples/xpu/build
-    cmake -DISPC_GENX_FORMAT=zebin ../
+    cmake -DISPC_GENX_FORMAT=zebin ../ && make
     export ISPCRT_USE_ZEBIN=y
     cd simple && ./host_simple --gpu
 
 Language Limitations and Known Issues
 =====================================
 
-The current release of ``Intel® ISPC for GEN`` is in beta state so you may face
-some issues. However, it is actively developed so we expect to fix remaining
-issues in the nearest future releases.
+The current release of ``Intel® ISPC for GEN`` is still in Beta stage so you may face
+some issues. However, it is actively developed so we expect to fix the remaining
+issues in the future releases.
 Below is the list of known limitations:
 
 * Limited function pointers support
+* Limited stack calls support. We recommend inlining functions as much as you can
+  by marking them ``inline``.
 * Double math functions like ``sin``, ``cos``, ``log`` etc. are extremely slow.
-* Integer fast division is not fast yet especially for unisgned types.
+* Integer fast division is not fast yet especially for unsigned types.
+* Float precision is slightly different on CPU and GPU, GPU is more precise.
+  Please consider it when designing your algorithms.
 * ``print`` doesn't work perfectly especially in deep control flow statements.
-  Also ``print`` is not supported with L0 binary format.
-* No ``prefetch`` support
+  Also, ``print`` is not supported with L0 binary format.
+
 
 There are several features that we do not plan to implement for GPU:
 
@@ -487,11 +494,11 @@ the next release. Here are our results for ``mandelbrot`` which were obtained on
 Intel(R) Core(TM) i9-9900K CPU @ 3.60GHz with Intel(R) Gen9 HD Graphics
 (max compute units 24):
 
-* @time of CPU run:			[16.343] milliseconds
-* @time of GPU run:			[17.294] milliseconds
-* @time of serial run:			[562] milliseconds
+* @time of CPU run:			[9.285] milliseconds
+* @time of GPU run:			[10.886] milliseconds
+* @time of serial run:			[569] milliseconds
 
-Talking about real-world workloads, usually we demonstrate a good performance on GPU
+Talking about real-world workloads, usually we demonstrate good performance on GPU
 that is on par with CPU.
 
 Performance Guide for GPU Programming
@@ -527,7 +534,8 @@ To reduce number of local variables you can follow these simple rules:
       do_something();
   }
 
-* Avoid deep nesting code with lot of local variables. It is more effective
+
+* Avoid nested code with a lot of local variables. It is more effective
   to split kernel into stages with separate variable scopes.
 
 * Avoid returning complex structures from functions. Instead of operation that
@@ -579,11 +587,12 @@ To reduce number of local variables you can follow these simple rules:
 
 * Use SIMD-8 where it is impossible to fit in the available register number.
   If you see the warning message below during runtime, consider compiling your code
-  for SIMD-8 target (``--target=genx-x8``)
+  for SIMD-8 target (``--target=genx-x8``).
 
 ::
 
   Spill memory used = 32 bytes for kernel kernel_name___vyi
+
 
 **Code Branching**
 
@@ -603,6 +612,23 @@ The second set of rules is related to code branching.
 
   // May be implemented without branch:
   a = (x > 0)? x : 7;
+
+
+When using ``select``, try to simplify it as much as possible:
+
+::
+
+  // Not optimized version:
+  varying int K;
+  uniform bool Constant;
+  ...
+  return bConstant == true ? inParam[0] : InParam[K];
+
+
+::
+
+  // Optimized version
+  return InParam[bConstant == true ? 0 : K];
 
 * Keep branches as small as possible. Common operations should be moved outside the branch.
   In case when large code branches are necessary, consider changing your algorithm to group
@@ -628,6 +654,32 @@ The second set of rules is related to code branching.
     i = 0;
   a = array[i];
 
+
+Similar situation with loops:
+
+::
+
+  // Good example
+  foreach (i = 0 ... WIDTH) {
+    p->output[i + WIDTH * taskIndex] = 0;
+    int temp = p->output[i + WIDTH * taskIndex];
+    for (int j = 0; j < DEPTH; j++) {
+      temp += N;
+      temp += M;
+    }
+    p->output[i + WIDTH * taskIndex] = temp;
+  }
+
+::
+
+  // Bad example
+  foreach (i = 0 ... WIDTH) {
+    p->output[i + WIDTH * taskIndex] = 0;
+    for (int j = 0; j < DEPTH; j++) {
+      p->output[i + WIDTH * taskIndex] += N;
+      p->output[i + WIDTH * taskIndex] += M;
+    }
+  }
 
 **Memory Operations**
 
@@ -667,4 +719,3 @@ To debug your application, you can use oneAPI Debugger as described here:
 <https://software.intel.com/get-started-with-debugging-dpcpp-linux>`_.
 Debugger support is quite limited at this time but you can set breakpoints
 in kernel code, do step-by-step execution and print variables.
-
