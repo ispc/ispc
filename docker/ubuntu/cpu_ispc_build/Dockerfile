@@ -61,7 +61,7 @@ RUN apt-get -y update && apt-get install -y m4 bison flex zlib1g-dev libc6-dev-i
 # Configure ISPC build
 RUN mkdir build_$LLVM_VERSION
 WORKDIR build_$LLVM_VERSION
-RUN cmake ../ -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_INSTALL_PREFIX=/usr/local/src/ispc/bin-$LLVM_VERSION
+RUN cmake ../ -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_INSTALL_PREFIX=/usr/local/src/ispc/bin-$LLVM_VERSION -DCMAKE_CXX_FLAGS=-Werror
 
 # Build ISPC
 RUN make ispc -j8 && make check-all && make install
