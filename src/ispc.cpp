@@ -1186,7 +1186,18 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, bool pic, boo
         if (arch == Arch::arm) {
             CPUID = CPU_CortexA9;
         } else if (arch == Arch::aarch64) {
-            CPUID = CPU_CortexA35;
+            if (g->target_os == TargetOS::ios) {
+                CPUID = CPU_AppleA7;
+            } else if (g->target_os == TargetOS::macos) {
+                // Open source LLVM doesn't has definition for M1 CPU, so use the latest iPhone CPU.
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_12_0
+                CPUID = CPU_AppleA14;
+#else
+                CPUID = CPU_AppleA13;
+#endif
+            } else {
+                CPUID = CPU_CortexA35;
+            }
         } else {
             UNREACHABLE();
         }
