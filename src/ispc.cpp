@@ -294,6 +294,16 @@ typedef enum {
     CPU_CortexA35,
     CPU_CortexA53,
     CPU_CortexA57,
+
+    // Apple CPUs.
+    CPU_AppleA7,
+    CPU_AppleA10,
+    CPU_AppleA11,
+    CPU_AppleA12,
+    CPU_AppleA13,
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_12_0
+    CPU_AppleA14,
+#endif
 #endif
 #ifdef ISPC_GENX_ENABLED
     CPU_GENX,
@@ -337,6 +347,14 @@ std::map<CPUtype, std::set<std::string>> CPUFeatures = {
     {CPU_CortexA35, {}},
     {CPU_CortexA53, {}},
     {CPU_CortexA57, {}},
+    {CPU_AppleA7, {}},
+    {CPU_AppleA10, {}},
+    {CPU_AppleA11, {}},
+    {CPU_AppleA12, {}},
+    {CPU_AppleA13, {}},
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_12_0
+    {CPU_AppleA14, {}},
+#endif
 #endif
 #ifdef ISPC_GENX_ENABLED
     {CPU_GENX, {}},
@@ -418,14 +436,19 @@ class AllCPUs {
 
 #ifdef ISPC_ARM_ENABLED
         names[CPU_CortexA9].push_back("cortex-a9");
-
         names[CPU_CortexA15].push_back("cortex-a15");
-
         names[CPU_CortexA35].push_back("cortex-a35");
-
         names[CPU_CortexA53].push_back("cortex-a53");
-
         names[CPU_CortexA57].push_back("cortex-a57");
+
+        names[CPU_AppleA7].push_back("apple-a7");
+        names[CPU_AppleA10].push_back("apple-a10");
+        names[CPU_AppleA11].push_back("apple-a11");
+        names[CPU_AppleA12].push_back("apple-a12");
+        names[CPU_AppleA13].push_back("apple-a13");
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_12_0
+        names[CPU_AppleA14].push_back("apple-a14");
+#endif
 #endif
 
 #ifdef ISPC_GENX_ENABLED
@@ -484,6 +507,14 @@ class AllCPUs {
         compat[CPU_CortexA35] = Set(CPU_CortexA35, CPU_None);
         compat[CPU_CortexA53] = Set(CPU_CortexA53, CPU_None);
         compat[CPU_CortexA57] = Set(CPU_CortexA57, CPU_None);
+        compat[CPU_AppleA7] = Set(CPU_AppleA7, CPU_None);
+        compat[CPU_AppleA10] = Set(CPU_AppleA10, CPU_None);
+        compat[CPU_AppleA11] = Set(CPU_AppleA11, CPU_None);
+        compat[CPU_AppleA12] = Set(CPU_AppleA12, CPU_None);
+        compat[CPU_AppleA13] = Set(CPU_AppleA13, CPU_None);
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_12_0
+        compat[CPU_AppleA14] = Set(CPU_AppleA14, CPU_None);
+#endif
 #endif
 
 #ifdef ISPC_GENX_ENABLED
@@ -575,6 +606,14 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, bool pic, boo
         case CPU_CortexA35:
         case CPU_CortexA53:
         case CPU_CortexA57:
+        case CPU_AppleA7:
+        case CPU_AppleA10:
+        case CPU_AppleA11:
+        case CPU_AppleA12:
+        case CPU_AppleA13:
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_12_0
+        case CPU_AppleA14:
+#endif
             m_ispc_target = ISPCTarget::neon_i32x4;
             break;
 #endif
