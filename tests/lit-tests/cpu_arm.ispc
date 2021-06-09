@@ -11,7 +11,7 @@
 //; RUN: %{ispc} %s -o %t.o --nostdlib --target=neon-i32x4 --cpu=apple-a12
 //; RUN: %{ispc} %s -o %t.o --nostdlib --target=neon-i32x4 --cpu=apple-a13
 
-// REQUIRES: ARM_ENABLED
+// REQUIRES: ARM_ENABLED && !WINDOWS_ENABLED
 
 uniform int i;
 
