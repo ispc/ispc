@@ -905,7 +905,9 @@ def run_tests(options1, args, print_version):
         exit_code = 1
         return 0
 
-    print_debug("Testing ispc: " + host.ispc_exe + "\n", s, run_tests_log)
+    print_debug("Testing ISPC compiler: " + host.ispc_exe + "\n", s, run_tests_log)
+    print_debug("Testing ISPC target: %s\n" % options.target, s, run_tests_log)
+    print_debug("Testing ISPC arch: %s\n" % options.arch, s, run_tests_log)
 
     set_compiler_exe(host, options)
     set_ispc_output(target, options)
