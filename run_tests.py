@@ -505,8 +505,6 @@ def run_test(testname, host, target):
                 cc_cmd = "%s -O2 -I. %s test_static.cpp -DTEST_SIG=%d -DTEST_WIDTH=%d %s -o %s" % \
                     (options.compiler_exe, gcc_arch, match, width, obj_name, exe_name)
 
-                if platform.system() == 'Darwin':
-                    cc_cmd += ' -Wl,-no_pie'
                 if should_fail:
                     cc_cmd += " -DEXPECT_FAILURE"
 
