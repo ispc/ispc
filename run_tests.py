@@ -540,7 +540,7 @@ def run_test(testname, host, target):
             exe_wd = os.path.realpath("./tests")
         # compile the ispc code, make the executable, and run it...
         ispc_cmd += " -h " + filename + ".h"
-        cc_cmd += " -DTEST_HEADER=<" + filename + ".h>"
+        cc_cmd += " -DTEST_HEADER=\"<" + filename + ".h>\""
         status = run_cmds([ispc_cmd, cc_cmd], options.wrapexe + " " + exe_name,
                           testname, should_fail, match, exe_wd=exe_wd)
 
