@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-#  Copyright (c) 2013-2020, Intel Corporation
+#  Copyright (c) 2013-2021, Intel Corporation
 #  All rights reserved.
 #
 #  Redistribution and use in source and binary forms, with or without
@@ -1040,6 +1040,24 @@ print_debug = common.print_debug
 error = common.error
 exit_code = 0
 
+# Use different default targets on different architectures.
+default_target = "sse4-i32x4"
+default_arch = "x86-64"
+if platform.machine() == "arm":
+    default_target = "neon-i32x4"
+    default_arch = "arm"
+elif platform.machine() == "aarch64":
+    default_target = "neon-i32x4"
+    default_arch = "aarch64"
+elif platform.machine() == "arm64":
+    default_target = "neon-i32x4"
+    default_arch = "aarch64"
+elif "86" in platform.machine():
+    # Some variant of x86: x86_64, i386, i486, i586, i686
+    pass
+else:
+    print_debug("WARNING: host machine was not recognized", False, "")
+
 if __name__ == "__main__":
     parser = OptionParser()
     parser.add_option("-r", "--random-shuffle", dest="random", help="Randomly order tests",
@@ -1047,9 +1065,9 @@ if __name__ == "__main__":
     parser.add_option("-f", "--ispc-flags", dest="ispc_flags", help="Additional flags for ispc (-g, -O1, ...)",
                   default="")
     parser.add_option('-t', '--target', dest='target',
-                  help=('Set compilation target. For example: sse4-i32x4, avx2-i32x8, avx512skx-i32x16, etc.'), default="sse4-i32x4")
+                  help=('Set compilation target. For example: sse4-i32x4, avx2-i32x8, avx512skx-i32x16, etc.'), default=default_target)
     parser.add_option('-a', '--arch', dest='arch',
-                  help='Set architecture (arm, aarch64, x86, x86-64, genx32, genx64)', default="x86-64")
+                  help='Set architecture (arm, aarch64, x86, x86-64, genx32, genx64)', default=default_arch)
     parser.add_option("-c", "--compiler", dest="compiler_exe", help="C/C++ compiler binary to use to run tests",
                   default=None)
     parser.add_option('-o', '--opt', dest='opt', choices=['', 'O0', 'O1', 'O2'], help='Set optimization level passed to the compiler (O0, O1, O2).',
