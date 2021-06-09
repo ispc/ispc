@@ -498,7 +498,7 @@ def run_test(testname, host, target):
                 elif target.arch == 'x86' or target.arch == "wasm32" or target.arch == 'genx32':
                     gcc_arch = '-m32'
                 elif target.arch == 'aarch64':
-                    gcc_arch = '-march=armv8-a -target aarch64-linux-gnueabi --static'
+                    gcc_arch = '-march=armv8-a'
                 else:
                     gcc_arch = '-m64'
 
