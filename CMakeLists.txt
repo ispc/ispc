@@ -147,7 +147,13 @@ endif()
 set(ISPC_MACOS_ARM_TARGET OFF)
 if (ISPC_MACOS_TARGET AND ISPC_MACOS_SDK_PATH)
     if (IS_SYMLINK ${ISPC_MACOS_SDK_PATH})
-        file(READ_SYMLINK "${ISPC_MACOS_SDK_PATH}" ISPC_MACOS_SDK_PATH)
+        # Follow symlinks, relative and absolute.
+        file(READ_SYMLINK "${ISPC_MACOS_SDK_PATH}" ISPC_MACOS_SDK_PATH_NEW)
+        if (NOT IS_ABSOLUTE "${ISPC_MACOS_SDK_PATH_NEW}")
+            get_filename_component(ISPC_MACOS_SDK_PATH_DIR "${ISPC_MACOS_SDK_PATH}" DIRECTORY)
+            set(ISPC_MACOS_SDK_PATH_NEW "${ISPC_MACOS_SDK_PATH_DIR}/${ISPC_MACOS_SDK_PATH_NEW}")
+        endif()
+        set(ISPC_MACOS_SDK_PATH "${ISPC_MACOS_SDK_PATH_NEW}")
     endif()
 
     # Grepping path to figure out the version is not the most reliable way,
