@@ -63,6 +63,7 @@ Contents:
   + `Updating ISPC Programs For Changes In ISPC 1.14.0`_
   + `Updating ISPC Programs For Changes In ISPC 1.14.1`_
   + `Updating ISPC Programs For Changes In ISPC 1.15.0`_
+  + `Updating ISPC Programs For Changes In ISPC 1.16.0`_
 
 * `Getting Started with ISPC`_
 
@@ -146,7 +147,7 @@ Contents:
       + `Task Parallelism: "launch" and "sync" Statements`_
       + `Task Parallelism: Runtime Requirements`_
 
-  + `LLVM Intrinsic functions`_
+  + `LLVM Intrinsic Functions`_
 
 * `The ISPC Standard Library`_
 
@@ -451,6 +452,20 @@ Updating ISPC Programs For Changes In ISPC 1.15.0
 The release has several new language features, which do not affect compatibility.
 Namely, packed_[load|store]_active() stdlib functions for 64 bit types, and loop
 unroll pragmas: "#pragma unroll" and "#pragma nounroll".
+
+Updating ISPC Programs For Changes In ISPC 1.16.0
+-------------------------------------------------
+
+The release has several new functions in the standard library, that can possbily
+affect compatibility:
+
+* ``alloca()`` - refer to `Stack Memory Allocation`_ for more details.
+* ``assume()`` - refer to `Compiler Optimization Hints`_ for more details.
+* ``trunc()`` - refer to `Basic Math Functions`_ for more details.
+
+The language got experimental feature for calling LLVM intrinsics. This
+should not affect compatibility with existing programs.
+See `LLVM Intrinsic Functions`_ for more details.
 
 
 Getting Started with ISPC
@@ -3473,7 +3488,7 @@ and ``taskIndex2`` between zero and ``taskCount``, ``taskCount0``,
 the instances of the set of launched tasks is running.
 
 
-LLVM Intrinsic functions
+LLVM Intrinsic Functions
 ------------------------
 
 ``ispc`` has an experimental feature to call LLVM intrinsics directly from
