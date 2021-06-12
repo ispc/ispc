@@ -61,7 +61,7 @@ Mandelbrot
 ==========
 
 Mandelbrot set generation.  This example is extensively documented at the
-http://ispc.github.com/example.html page. The comamnd line arguments are:
+https://ispc.github.io/example.html page. The comamnd line arguments are:
 mandelbrot [--scale=<factor>] [tasks iterations] [serial iterations]
 
 This examples also demontrates usage of C++ interface of ispcrt so you can see how to
