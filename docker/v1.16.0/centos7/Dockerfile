@@ -2,7 +2,7 @@ FROM centos:7
 MAINTAINER Dmitry Babokin <dmitry.y.babokin@intel.com>
 
 ARG REPO=ispc/ispc
-ARG SHA=main
+ARG SHA=v1.16.0
 ARG LLVM_VERSION=12.0
 ARG L0L_VER=1.2.3
 ARG VC_INTRINSICS_COMMIT_SHA="2d0795c6799d262a464e5e8b8f74b09dd3ec1054"
