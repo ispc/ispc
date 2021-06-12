@@ -79,7 +79,7 @@ Mandelbrot
 ==========
 
 Mandelbrot set generation.  This example is extensively documented at the
-http://ispc.github.com/example.html page.
+https://ispc.github.io/example.html page.
 
 
 Mandelbrot_tasks
