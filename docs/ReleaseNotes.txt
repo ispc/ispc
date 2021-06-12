@@ -1,4 +1,82 @@
+=== v1.16.0 === (11 June 2021)
+
+An ISPC release with language extensions for performance fine tuning, cpu
+definitions for `AlderLake` and `SapphireRapids` targets, support for macOS ARM
+targets, and massive update of Intel GPUs support. Windows and Linux binaries
+in this release support both CPU and GPU targets, while macOS binary supports
+only CPU. This release is based on patched LLVM 12.0.0.
+
+The language changes include the following:
+- The ability to directly call LLVM intrinsics from ISPC source. This should be
+  handy for performance fine tuning and reaching the hardware instructions not
+  yet covered by the standard library. Note that it is an experimental feature
+  and is enabled only with `--enable-llvm-intrinsics` switch. Please refer to
+  `LLVM Intrinsic Functions` section of the user manual for more details.
+- `assume()` optimization hint, which can be used for communicating assumptions
+  to the optimizer. It will not lead to runtime check, unlike `assert()` calls.
+  This is intended for optimizations like removing null pointer checks, removing
+  loop reminders, communicating alignment information to the optimizer, and etc.
+  Please refer to `Compiler Optimization Hints` section of the user manual for
+  more details.
+- Support for stack memory allocations through `alloca()` calls.
+- `trunc()` standard library functions.
+
+Changes for CPU targets:
+- CPU definitions for `AlderLake` and `SapphireRapids` were added: `alderlake`
+  and `sapphirerapids` respectively.
+- CPU definition for Apple ARM chips were added: `apple-a7`, `apple-a10`,
+  `apple-a11`, `apple-a12`, `apple-a13`, `apple-a14`.
+- Support for macOS ARM targets was added.
+
+Using GPU-enabled binaries you can build ISPC programs and run them on
+Intel(R) Core(tm) Processors with Gen9 graphics (formerly `Skylake`,
+`Kaby Lake`, `Coffee Lake`) and Gen12 graphics (TigerLake mobile CPU) using
+`--target` options (`genx-x8` and `genx-x16`) and `--cpu` option for
+specifying particular platform (e.g. `--cpu=TGLLP`).
+
+The main GPU feature of the current release is Windows support.
+There are also a bunch of stability and performance improvements.
+Here are some of them:
+- ISPC Runtime got support of unified shared memory and multi GPU. Also, there is
+  a new `TaskQueue::submit()` method which allows to start executing, but don't
+  wait for the completion.
+- Thread private memory was mapped to SVM in VC backend. It greatly improves
+  stability of the current release. It may affect performance on Gen9 graphics
+  but we do not expect any significant changes on Gen12.
+- L0 binary generation was reworked through libocloc. Supported on Linux only.
+
+More details about the current state of GPU support are available here:
+https://ispc.github.io/ispc_for_gen.html
+
+For build instructions check our docker recipe:
+https://github.com/ispc/ispc/blob/main/docker/ubuntu/xpu_ispc_build/Dockerfile
+
+GPU support is still in Beta stage so you may experience some issues but we
+strongly encourage you to try it out and give us feedback! You can reach us
+through Github discussions and issues, or on Twitter (@ispc_updates).
+
+Runtime Dependencies when targeting GPU:
+
+Linux:
+- Intel(R) Graphics Compute Runtime https://github.com/intel/compute-runtime/releases/tag/21.21.19914
+- Level Zero Loader https://github.com/oneapi-src/level-zero/releases/tag/v1.2.3
+- OpenMP Runtime. Consult your Linux distribution documentation for the
+  installation of OpenMP runtime instructions. No specific version is required.
+
+Windows:
+- Intel(R) Graphics - BETA Windows(R) 10 DCH Drivers 30.0.100.9667
+  https://downloadcenter.intel.com/download/30522/Intel-Graphics-BETA-Windows-10-DCH-Drivers
+- Level Zero Loader https://github.com/oneapi-src/level-zero/releases/tag/v1.2.3
+
+Components revisions used in GPU-enabled build:
+
+KhronosGroup/SPIRV-LLVM-Translator@0592c4f
+intel/vc-intrinsics@2d0795c
+oneapi-src/level-zero@0d30b1f (v1.2.3)
+llvm/llvm-project@d28af7c (llvmorg-12.0.0) + patches from llvm_patches folder
+
 === v1.15.0 === (18 December 2020)
+
 An ISPC release with several improvements for CPU and Beta support of Intel
 graphics hardware architectures. The binaries in this release include CPU versions
 for Windows, Linux, and macOS, and a GPU-enabled Linux binary, which supports
