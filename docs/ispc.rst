@@ -4077,7 +4077,7 @@ The ``ispc`` standard library includes a mechanism for adding ``assume()``
 statements to ``ispc`` program code. The ``assume()`` function takes a
 single uniform boolean expression as an argument. This expression is
 assumed to be ``true`` and this information will be used for optimization
-when possible. This feature is currently only available on CPU targets.
+when possible.
 
 The condition used in ``assume()`` statement will not be code generated and
 does not imply runtime checks. It will solely be used as optimization hint,

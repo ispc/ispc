@@ -6028,8 +6028,7 @@ restart:
                     modifiedAny = true;
                     goto restart;
                 }
-            } else if (func->getName().equals("llvm.assume") ||
-                       func->getName().equals("llvm.experimental.noalias.scope.decl")) {
+            } else if (func->getName().equals("llvm.experimental.noalias.scope.decl")) {
                 // These intrinsics are not supported by backend so remove them.
                 ci->eraseFromParent();
                 modifiedAny = true;
