@@ -1,5 +1,8 @@
 # Security Policy
+Intel is committed to rapidly addressing security vulnerabilities affecting
+our customers and providing clear guidance on the solution, impact, severity
+and mitigation.
 
-To report a security issue, email ispc-security-report@intel.com. 
-Do not include confidential information in the e-mail. ISPC team 
-will send a response indicating the next steps in handling your report. 
+## Reporting a Vulnerability
+Please report any security vulnerabilities in this project utilizing
+the guidelines [here](https://www.intel.com/content/www/us/en/security-center/vulnerability-handling-guidelines.html).
