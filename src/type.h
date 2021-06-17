@@ -312,6 +312,7 @@ class AtomicType : public Type {
         TYPE_UINT16,
         TYPE_INT32,
         TYPE_UINT32,
+        TYPE_FLOAT16,
         TYPE_FLOAT,
         TYPE_INT64,
         TYPE_UINT64,
@@ -328,6 +329,7 @@ class AtomicType : public Type {
     static const AtomicType *UniformUInt8, *VaryingUInt8;
     static const AtomicType *UniformUInt16, *VaryingUInt16;
     static const AtomicType *UniformUInt32, *VaryingUInt32;
+    static const AtomicType *UniformFloat16, *VaryingFloat16;
     static const AtomicType *UniformFloat, *VaryingFloat;
     static const AtomicType *UniformInt64, *VaryingInt64;
     static const AtomicType *UniformUInt64, *VaryingUInt64;

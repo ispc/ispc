@@ -143,6 +143,8 @@ const AtomicType *AtomicType::UniformInt32 = new AtomicType(AtomicType::TYPE_INT
 const AtomicType *AtomicType::VaryingInt32 = new AtomicType(AtomicType::TYPE_INT32, Variability::Varying, false);
 const AtomicType *AtomicType::UniformUInt32 = new AtomicType(AtomicType::TYPE_UINT32, Variability::Uniform, false);
 const AtomicType *AtomicType::VaryingUInt32 = new AtomicType(AtomicType::TYPE_UINT32, Variability::Varying, false);
+const AtomicType *AtomicType::UniformFloat16 = new AtomicType(AtomicType::TYPE_FLOAT16, Variability::Uniform, false);
+const AtomicType *AtomicType::VaryingFloat16 = new AtomicType(AtomicType::TYPE_FLOAT16, Variability::Varying, false);
 const AtomicType *AtomicType::UniformFloat = new AtomicType(AtomicType::TYPE_FLOAT, Variability::Uniform, false);
 const AtomicType *AtomicType::VaryingFloat = new AtomicType(AtomicType::TYPE_FLOAT, Variability::Varying, false);
 const AtomicType *AtomicType::UniformInt64 = new AtomicType(AtomicType::TYPE_INT64, Variability::Uniform, false);
@@ -169,7 +171,9 @@ bool Type::IsReferenceType() const { return (CastType<ReferenceType>(this) != NU
 
 bool Type::IsVoidType() const { return EqualIgnoringConst(this, AtomicType::Void); }
 
-bool AtomicType::IsFloatType() const { return (basicType == TYPE_FLOAT || basicType == TYPE_DOUBLE); }
+bool AtomicType::IsFloatType() const {
+    return (basicType == TYPE_FLOAT16 || basicType == TYPE_FLOAT || basicType == TYPE_DOUBLE);
+}
 
 bool AtomicType::IsIntType() const {
     return (basicType == TYPE_INT8 || basicType == TYPE_UINT8 || basicType == TYPE_INT16 || basicType == TYPE_UINT16 ||
@@ -312,6 +316,9 @@ std::string AtomicType::GetString() const {
     case TYPE_UINT32:
         ret += "unsigned int32";
         break;
+    case TYPE_FLOAT16:
+        ret += "float16";
+        break;
     case TYPE_FLOAT:
         ret += "float";
         break;
@@ -360,6 +367,9 @@ std::string AtomicType::Mangle() const {
         break;
     case TYPE_UINT32:
         ret += "u";
+        break;
+    case TYPE_FLOAT16:
+        ret += "h";
         break;
     case TYPE_FLOAT:
         ret += "f";
@@ -412,6 +422,9 @@ std::string AtomicType::GetCDeclaration(const std::string &name) const {
         break;
     case TYPE_UINT32:
         ret += "uint32_t";
+        break;
+    case TYPE_FLOAT16:
+        ret += "__fp16";
         break;
     case TYPE_FLOAT:
         ret += "float";
@@ -468,6 +481,8 @@ static llvm::Type *lGetAtomicLLVMType(llvm::LLVMContext *ctx, const AtomicType *
         case AtomicType::TYPE_INT32:
         case AtomicType::TYPE_UINT32:
             return isUniform ? LLVMTypes::Int32Type : LLVMTypes::Int32VectorType;
+        case AtomicType::TYPE_FLOAT16:
+            return isUniform ? LLVMTypes::Float16Type : LLVMTypes::Float16VectorType;
         case AtomicType::TYPE_FLOAT:
             return isUniform ? LLVMTypes::FloatType : LLVMTypes::FloatVectorType;
         case AtomicType::TYPE_INT64:
@@ -516,6 +531,9 @@ llvm::DIType *AtomicType::GetDIType(llvm::DIScope *scope) const {
             break;
         case TYPE_UINT32:
             return m->diBuilder->createBasicType("uint32", 32 /* size */, llvm::dwarf::DW_ATE_unsigned);
+            break;
+        case TYPE_FLOAT16:
+            return m->diBuilder->createBasicType("float16", 16 /* size */, llvm::dwarf::DW_ATE_float);
             break;
         case TYPE_FLOAT:
             return m->diBuilder->createBasicType("float", 32 /* size */, llvm::dwarf::DW_ATE_float);

@@ -64,6 +64,7 @@ llvm::Type *LLVMTypes::Int8Type = NULL;
 llvm::Type *LLVMTypes::Int16Type = NULL;
 llvm::Type *LLVMTypes::Int32Type = NULL;
 llvm::Type *LLVMTypes::Int64Type = NULL;
+llvm::Type *LLVMTypes::Float16Type = NULL;
 llvm::Type *LLVMTypes::FloatType = NULL;
 llvm::Type *LLVMTypes::DoubleType = NULL;
 
@@ -71,6 +72,7 @@ llvm::Type *LLVMTypes::Int8PointerType = NULL;
 llvm::Type *LLVMTypes::Int16PointerType = NULL;
 llvm::Type *LLVMTypes::Int32PointerType = NULL;
 llvm::Type *LLVMTypes::Int64PointerType = NULL;
+llvm::Type *LLVMTypes::Float16PointerType = NULL;
 llvm::Type *LLVMTypes::FloatPointerType = NULL;
 llvm::Type *LLVMTypes::DoublePointerType = NULL;
 
@@ -83,6 +85,7 @@ llvm::VectorType *LLVMTypes::Int8VectorType = NULL;
 llvm::VectorType *LLVMTypes::Int16VectorType = NULL;
 llvm::VectorType *LLVMTypes::Int32VectorType = NULL;
 llvm::VectorType *LLVMTypes::Int64VectorType = NULL;
+llvm::VectorType *LLVMTypes::Float16VectorType = NULL;
 llvm::VectorType *LLVMTypes::FloatVectorType = NULL;
 llvm::VectorType *LLVMTypes::DoubleVectorType = NULL;
 
@@ -90,6 +93,7 @@ llvm::Type *LLVMTypes::Int8VectorPointerType = NULL;
 llvm::Type *LLVMTypes::Int16VectorPointerType = NULL;
 llvm::Type *LLVMTypes::Int32VectorPointerType = NULL;
 llvm::Type *LLVMTypes::Int64VectorPointerType = NULL;
+llvm::Type *LLVMTypes::Float16VectorPointerType = NULL;
 llvm::Type *LLVMTypes::FloatVectorPointerType = NULL;
 llvm::Type *LLVMTypes::DoubleVectorPointerType = NULL;
 
@@ -112,6 +116,7 @@ void InitLLVMUtil(llvm::LLVMContext *ctx, Target &target) {
     LLVMTypes::Int16Type = llvm::Type::getInt16Ty(*ctx);
     LLVMTypes::Int32Type = llvm::Type::getInt32Ty(*ctx);
     LLVMTypes::Int64Type = llvm::Type::getInt64Ty(*ctx);
+    LLVMTypes::Float16Type = llvm::Type::getHalfTy(*ctx);
     LLVMTypes::FloatType = llvm::Type::getFloatTy(*ctx);
     LLVMTypes::DoubleType = llvm::Type::getDoubleTy(*ctx);
 
@@ -119,6 +124,7 @@ void InitLLVMUtil(llvm::LLVMContext *ctx, Target &target) {
     LLVMTypes::Int16PointerType = llvm::PointerType::get(LLVMTypes::Int16Type, 0);
     LLVMTypes::Int32PointerType = llvm::PointerType::get(LLVMTypes::Int32Type, 0);
     LLVMTypes::Int64PointerType = llvm::PointerType::get(LLVMTypes::Int64Type, 0);
+    LLVMTypes::Float16PointerType = llvm::PointerType::get(LLVMTypes::Float16Type, 0);
     LLVMTypes::FloatPointerType = llvm::PointerType::get(LLVMTypes::FloatType, 0);
     LLVMTypes::DoublePointerType = llvm::PointerType::get(LLVMTypes::DoubleType, 0);
 
@@ -153,6 +159,7 @@ void InitLLVMUtil(llvm::LLVMContext *ctx, Target &target) {
     LLVMTypes::Int16VectorType = LLVMVECTOR::get(LLVMTypes::Int16Type, target.getVectorWidth());
     LLVMTypes::Int32VectorType = LLVMVECTOR::get(LLVMTypes::Int32Type, target.getVectorWidth());
     LLVMTypes::Int64VectorType = LLVMVECTOR::get(LLVMTypes::Int64Type, target.getVectorWidth());
+    LLVMTypes::Float16VectorType = LLVMVECTOR::get(LLVMTypes::Float16Type, target.getVectorWidth());
     LLVMTypes::FloatVectorType = LLVMVECTOR::get(LLVMTypes::FloatType, target.getVectorWidth());
     LLVMTypes::DoubleVectorType = LLVMVECTOR::get(LLVMTypes::DoubleType, target.getVectorWidth());
 
@@ -160,6 +167,7 @@ void InitLLVMUtil(llvm::LLVMContext *ctx, Target &target) {
     LLVMTypes::Int16VectorPointerType = llvm::PointerType::get(LLVMTypes::Int16VectorType, 0);
     LLVMTypes::Int32VectorPointerType = llvm::PointerType::get(LLVMTypes::Int32VectorType, 0);
     LLVMTypes::Int64VectorPointerType = llvm::PointerType::get(LLVMTypes::Int64VectorType, 0);
+    LLVMTypes::Float16VectorPointerType = llvm::PointerType::get(LLVMTypes::Float16VectorType, 0);
     LLVMTypes::FloatVectorPointerType = llvm::PointerType::get(LLVMTypes::FloatVectorType, 0);
     LLVMTypes::DoubleVectorPointerType = llvm::PointerType::get(LLVMTypes::DoubleVectorType, 0);
 
@@ -254,6 +262,8 @@ llvm::ConstantInt *LLVMUInt64(uint64_t ival) {
     return llvm::ConstantInt::get(llvm::Type::getInt64Ty(*g->ctx), ival, false /*unsigned*/);
 }
 
+llvm::Constant *LLVMFloat16(llvm::APFloat fv) { return llvm::ConstantFP::get(llvm::Type::getHalfTy(*g->ctx), fv); }
+
 llvm::Constant *LLVMFloat(float fval) { return llvm::ConstantFP::get(llvm::Type::getFloatTy(*g->ctx), fval); }
 
 llvm::Constant *LLVMDouble(double dval) { return llvm::ConstantFP::get(llvm::Type::getDoubleTy(*g->ctx), dval); }
@@ -345,6 +355,21 @@ llvm::Constant *LLVMUInt32Vector(const uint32_t *ivec) {
     std::vector<llvm::Constant *> vals;
     for (int i = 0; i < g->target->getVectorWidth(); ++i)
         vals.push_back(LLVMUInt32(ivec[i]));
+    return llvm::ConstantVector::get(vals);
+}
+
+llvm::Constant *LLVMFloat16Vector(llvm::APFloat fval) {
+    llvm::Constant *v = LLVMFloat16(fval);
+    std::vector<llvm::Constant *> vals;
+    for (int i = 0; i < g->target->getVectorWidth(); ++i)
+        vals.push_back(v);
+    return llvm::ConstantVector::get(vals);
+}
+
+llvm::Constant *LLVMFloat16Vector(const llvm::APFloat *fvec) {
+    std::vector<llvm::Constant *> vals;
+    for (int i = 0; i < g->target->getVectorWidth(); ++i)
+        vals.push_back(LLVMFloat16(fvec[i]));
     return llvm::ConstantVector::get(vals);
 }
 

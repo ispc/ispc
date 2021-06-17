@@ -74,6 +74,7 @@ struct LLVMTypes {
     static llvm::Type *Int16Type;
     static llvm::Type *Int32Type;
     static llvm::Type *Int64Type;
+    static llvm::Type *Float16Type;
     static llvm::Type *FloatType;
     static llvm::Type *DoubleType;
 
@@ -81,6 +82,7 @@ struct LLVMTypes {
     static llvm::Type *Int16PointerType;
     static llvm::Type *Int32PointerType;
     static llvm::Type *Int64PointerType;
+    static llvm::Type *Float16PointerType;
     static llvm::Type *FloatPointerType;
     static llvm::Type *DoublePointerType;
 
@@ -93,6 +95,7 @@ struct LLVMTypes {
     static llvm::VectorType *Int16VectorType;
     static llvm::VectorType *Int32VectorType;
     static llvm::VectorType *Int64VectorType;
+    static llvm::VectorType *Float16VectorType;
     static llvm::VectorType *FloatVectorType;
     static llvm::VectorType *DoubleVectorType;
 
@@ -100,6 +103,7 @@ struct LLVMTypes {
     static llvm::Type *Int16VectorPointerType;
     static llvm::Type *Int32VectorPointerType;
     static llvm::Type *Int64VectorPointerType;
+    static llvm::Type *Float16VectorPointerType;
     static llvm::Type *FloatVectorPointerType;
     static llvm::Type *DoubleVectorPointerType;
 
@@ -134,6 +138,8 @@ extern llvm::ConstantInt *LLVMUInt32(uint32_t i);
 extern llvm::ConstantInt *LLVMInt64(int64_t i);
 /** Returns an LLVM i64 constant of the given value */
 extern llvm::ConstantInt *LLVMUInt64(uint64_t i);
+/** Returns an LLVM half constant of the given value */
+extern llvm::Constant *LLVMFloat16(llvm::APFloat f);
 /** Returns an LLVM float constant of the given value */
 extern llvm::Constant *LLVMFloat(float f);
 /** Returns an LLVM double constant of the given value */
@@ -175,6 +181,9 @@ extern llvm::Constant *LLVMInt64Vector(int64_t i);
     across all elements */
 extern llvm::Constant *LLVMUInt64Vector(uint64_t i);
 
+/** Returns an LLVM half vector constant of the given value smeared
+    across all elements */
+extern llvm::Constant *LLVMFloat16Vector(llvm::APFloat f);
 /** Returns an LLVM float vector constant of the given value smeared
     across all elements */
 extern llvm::Constant *LLVMFloatVector(float f);
@@ -227,6 +236,9 @@ extern llvm::Constant *LLVMInt64Vector(const int64_t *i);
     The array should have g->target.vectorWidth elements. */
 extern llvm::Constant *LLVMUInt64Vector(const uint64_t *i);
 
+/** Returns an LLVM half vector based on the given array of values.
+    The array should have g->target.vectorWidth elements. */
+extern llvm::Constant *LLVMFloat16Vector(const llvm::APFloat *f);
 /** Returns an LLVM float vector based on the given array of values.
     The array should have g->target.vectorWidth elements. */
 extern llvm::Constant *LLVMFloatVector(const float *f);
