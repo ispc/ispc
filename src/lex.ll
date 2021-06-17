@@ -512,9 +512,10 @@ L?\"(\\.|[^\\"])*\" { lStringConst(&yylval, &yylloc); return TOKEN_STRING_LITERA
 {FLOAT_NUMBER} {
     RT;
     std::string val(yytext);
-    std::string fp16("f16");
-    if (val.size() >= fp16.size() &&
-           val.compare(val.size() - fp16.size(), fp16.size(), fp16) == 0) {
+    std::string fp16S("f16");
+    std::string fp16C("F16");
+    if (val.size() >= fp16S.size() && ((val.compare(val.size() - fp16S.size(), fp16S.size(), fp16S) == 0)
+           || (val.compare(val.size() - fp16C.size(), fp16C.size(), fp16C) == 0))) {
         yylval.stringVal = new std::string(val.substr(0, val.length() - 3));
         return TOKEN_FLOAT16_CONSTANT;
     }

@@ -110,7 +110,10 @@ class Host(object):
 # The description of testing target configuration
 class TargetConfig(object):
     def __init__(self, arch, target, cpu):
-        self.arch = arch
+        if arch == "x86_64" or arch == "x86-64":
+            self.arch = "x86-64"
+        else:
+            self.arch = arch
         self.target = target
         self.genx = target.find("genx") != -1
         self.set_cpu(cpu)

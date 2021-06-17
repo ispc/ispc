@@ -1539,10 +1539,10 @@ The following reserved words from C89 are also reserved in ``ispc``:
 ``ispc`` additionally reserves the following words:
 
 ``bool``, ``delete``, ``export``, ``cdo``, ``cfor``, ``cif``, ``cwhile``,
-``false``, ``foreach``, ``foreach_active``, ``foreach_tiled``,
+``false``, ``float16``, ``foreach``, ``foreach_active``, ``foreach_tiled``,
 ``foreach_unique``, ``in``, ``inline``, ``noinline``, ``__vectorcall``, ``int8``, ``int16``,
-``int32``, ``int64``, ``launch``, ``new``, ``print``, ``soa``, ``sync``, ``task``,
-``true``, ``uniform``, and ``varying``.
+``int32``, ``int64``, ``launch``, ``new``, ``print``, ``uint8``, ``uint16``,
+``uint32``, ``uint64``, ``soa``, ``sync``, ``task``, ``true``, ``uniform``, and ``varying``.
 
 
 Lexical Structure
@@ -1614,6 +1614,14 @@ Floating-point constants can optionally have a "f" or "F" suffix (``ispc``
 currently treats all floating-point constants as having 32-bit precision,
 making this suffix not currently have an effect.)
 
+Half precision(16 bit) floating-point constants are represented by a "f16"
+or "F16" suffix. ``float16`` can be specified only in one of two ways
+
+::
+
+  float16 one = 1e0f16;  // 1.0
+  float16 one  = 1.f16;  // 1.0
+
 String constants in ``ispc`` are denoted by an opening double quote ``"``
 followed by any character other than a newline, up to a closing double
 quote.  Within the string, a number of special escape sequences can be used
@@ -1654,13 +1662,14 @@ doesn't support character constants.
 The following identifiers are reserved as language keywords: ``bool``,
 ``break``, ``case``, ``cdo``, ``cfor``, ``char``, ``cif``, ``cwhile``,
 ``const``, ``continue``, ``default``, ``do``, ``double``, ``else``,
-``enum``, ``export``, ``extern``, ``false``, ``float``, ``for``,
+``enum``, ``export``, ``extern``, ``false``, ``float``, ``float16``, ``for``,
 ``foreach``, ``foreach_active``, ``foreach_tiled``, ``foreach_unique``,
-``goto``, ``if``, ``in``, ``inline``, ``noinline``, ``__vectorcall``, ``int``, ``int8``,
+``goto``, ``if``, ``in``, ``inline``, ``noinline``, ``int``, ``int8``,
 ``int16``, ``int32``, ``int64``, ``launch``, ``NULL``, ``print``, ``return``,
 ``signed``, ``sizeof``, ``soa``, ``static``, ``struct``, ``switch``,
-``sync``, ``task``, ``true``, ``typedef``, ``uniform``, ``union``,
-``unsigned``, ``varying``, ``void``, ``volatile``, ``while``.
+``sync``, ``task``, ``true``, ``typedef``, ``uint``, ``uint8``,
+``uint16``, ``uint32``, ``uint64``, ``uniform``, ``union``, ``unsigned``,
+``varying``, ``__vectorcall``, ``void``, ``volatile``, ``while``.
 
 ``ispc`` defines the following operators and punctuation:
 
@@ -1721,6 +1730,7 @@ basic types:
 * ``int``: 32-bit signed integer; may also be specified as ``int32``.
 * ``unsigned int``: 32-bit unsigned integer; may also be specified as
   ``unsigned int32``, ``uint32`` or ``uint``.
+* ``float16``: 16-bit floating point value
 * ``float``: 32-bit floating point value
 * ``int64``: 64-bit signed integer.
 * ``unsigned int64``: 64-bit unsigned integer; may also be specified as ``uint64``.
@@ -1744,7 +1754,7 @@ general" of the two types, with the following precedence:
 ::
 
   double > uint64 > int64 > float > uint32 > int32 >
-      uint16 > int16 > uint8 > int8 > bool
+      float16 > uint16 > int16 > uint8 > int8 > bool
 
 In other words, adding an ``int64`` to a ``double`` causes the ``int64`` to
 be converted to a ``double``, the addition to be performed, and a
@@ -4724,9 +4734,9 @@ Conversions To and From Half-Precision Floats
 ---------------------------------------------
 
 There are functions to convert to and from the IEEE 16-bit floating-point
-format.  Note that there is no ``half`` data-type, and it isn't possible
-to do floating-point math directly with ``half`` types in ``ispc``; these
-functions facilitate converting to and from half-format data in memory.
+format.  Note that there is a ``float16`` data-type in ``ispc`` but with limited
+library support; these functions facilitate converting to and from half-format
+data in memory.
 
 To use them, half-format data should be loaded into an ``int16`` and the
 ``half_to_float()`` function used to convert it to a 32-bit floating point
