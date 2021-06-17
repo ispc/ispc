@@ -41,6 +41,7 @@ define(`GEN_TYPE',
 `ifelse($1, `i1', `i1',
         $1, `i8', `i8',
         $1, `i16', `i16',
+        $1, `half', `f16',
         $1, `i32', `i32',
         $1, `float', `f32',
         $1, `double', `f64',
@@ -53,6 +54,7 @@ define(`SIZEOF',
 `ifelse($1, `i1', 1,
         $1, `i8', 1,
         $1, `i16', 2,
+        $1, `half', 2,
         $1, `i32', 4,
         $1, `float', 4,
         $1, `double', 8,
@@ -144,6 +146,20 @@ truncate()
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; rcp
+declare half @llvm.genx.inv.f16(half)
+
+define half @__rcp_uniform_half(half) nounwind readonly alwaysinline {
+  ;; No need to make NR iteration to improve precision since precision
+  ;; on gen is high already (1UP)
+  %res = call half @__rcp_fast_uniform_half(half %0)
+  ret half %res
+}
+
+define half @__rcp_fast_uniform_half(half) nounwind readonly alwaysinline {
+  %res = call half @llvm.genx.inv.f16(half %0)
+  ret half %res
+}
+
 declare float @llvm.genx.inv.f32(float)
 
 define float @__rcp_uniform_float(float) nounwind readonly alwaysinline {
@@ -284,6 +300,7 @@ define <WIDTH x $1> @__min_varying_$4(<WIDTH x $1>, <WIDTH x $1>) nounwind reado
   ret <WIDTH x $1> %res
 }
 ')
+genx_maxmin(half, fmin, fmax, half)
 genx_maxmin(float, fmin, fmax, float)
 genx_maxmin(i32, smin, smax, int32)
 genx_maxmin(i64, smin, smax, int64)
@@ -483,6 +500,21 @@ define <WIDTH x float> @__rcp_fast_varying_float(<WIDTH x float>) nounwind reado
   %res = call <WIDTH x float> @llvm.genx.inv.GEN_SUFFIX(f32)(<WIDTH x float> %0)
   ret <WIDTH x float> %res
 }
+
+;; rcp
+declare <WIDTH x half> @llvm.genx.inv.GEN_SUFFIX(half)(<WIDTH x half> %0)
+define <WIDTH x half> @__rcp_varying_half(<WIDTH x half>) nounwind readonly alwaysinline {
+  ;; No need to make NR iteration to improve precision since precision
+  ;; on gen is high already (1UP)
+  %res = call <WIDTH x half> @__rcp_fast_varying_half(<WIDTH x half> %0)
+  ret <WIDTH x half> %res
+}
+
+define <WIDTH x half> @__rcp_fast_varying_half(<WIDTH x half>) nounwind readonly alwaysinline {
+  %res = call <WIDTH x half> @llvm.genx.inv.GEN_SUFFIX(half)(<WIDTH x half> %0)
+  ret <WIDTH x half> %res
+}
+
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; rsqrt
@@ -784,6 +816,7 @@ define void @__masked_store_blend_$1(<WIDTH x $1>* nocapture, <WIDTH x $1>,
 
 genx_masked_store_blend(i8)
 genx_masked_store_blend(i16)
+genx_masked_store_blend(half)
 genx_masked_store_blend(i32)
 genx_masked_store_blend(float)
 genx_masked_store_blend(double)
@@ -811,6 +844,7 @@ ifelse(RUNTIME, `32',
 
 genx_masked_store(i8)
 genx_masked_store(i16)
+genx_masked_store(half)
 genx_masked_store(i32)
 genx_masked_store(float)
 genx_masked_store(double)
@@ -890,6 +924,7 @@ vgather:
 
 genx_masked_load(i8)
 genx_masked_load(i16)
+genx_masked_load(half)
 genx_masked_load(i32)
 genx_masked_load(float)
 genx_masked_load(double)
@@ -960,6 +995,7 @@ ifelse($1, i8,`
 ')
 genx_gather(i8)
 genx_gather(i16)
+genx_gather(half)
 genx_gather(i32)
 genx_gather(float)
 genx_gather(i64)
@@ -1028,6 +1064,7 @@ define void
 
 genx_scatter(i8)
 genx_scatter(i16)
+genx_scatter(half)
 genx_scatter(i32)
 genx_scatter(float)
 genx_scatter(i64)
@@ -1066,6 +1103,25 @@ define <WIDTH x float> @__log_varying_float(<WIDTH x float>) nounwind readnone {
   ret <WIDTH x float> %res
 }
 
+
+define(`EXPF16', `0xH4170')
+define(`LOG2EF16', `0xH3DC5') ;; LOG2EF16 = log(2, e)
+declare half @llvm.genx.log.f16(half) nounwind readnone
+define half @__log_uniform_half(half) nounwind readnone {
+  %res2base = call half @llvm.genx.log.f16(half %0)
+  %res = fdiv half %res2base, LOG2EF16
+  ret half %res
+}
+
+declare <WIDTH x half> @llvm.genx.log.GEN_SUFFIX(half)(<WIDTH x half>) nounwind readnone
+define <WIDTH x half> @__log_varying_half(<WIDTH x half>) nounwind readnone {
+  %res2base = call <WIDTH x half> @llvm.genx.log.GEN_SUFFIX(half)(<WIDTH x half> %0)
+  %log2e = insertelement <WIDTH x half> undef, half LOG2EF16, i32 0
+  %log2e_shuffle = shufflevector <WIDTH x half> %log2e, <WIDTH x half> undef, <WIDTH x i32> zeroinitializer
+  %res = fdiv <WIDTH x half> %res2base, %log2e_shuffle
+  ret <WIDTH x half> %res
+}
+
 declare float @llvm.genx.pow(float, float) nounwind readnone
 define float @__pow_uniform_float(float, float) nounwind readnone {
   %res = call float @llvm.genx.pow(float %0, float %1)
@@ -1076,6 +1132,18 @@ declare <WIDTH x float> @llvm.genx.pow.GEN_SUFFIX(float).GEN_SUFFIX(float)(<WIDT
 define <WIDTH x float> @__pow_varying_float(<WIDTH x float>, <WIDTH x float>) nounwind readnone {
   %res = call <WIDTH x float> @llvm.genx.pow.GEN_SUFFIX(float).GEN_SUFFIX(float)(<WIDTH x float> %0, <WIDTH x float> %1)
   ret <WIDTH x float> %res
+}
+
+declare half @llvm.genx.pow.f16(half, half) nounwind readnone
+define half @__pow_uniform_half(half, half) nounwind readnone {
+  %res = call half @llvm.genx.pow.f16(half %0, half %1)
+  ret half %res
+}
+
+declare <WIDTH x half> @llvm.genx.pow.GEN_SUFFIX(half).GEN_SUFFIX(half)(<WIDTH x half>, <WIDTH x half>) nounwind readnone
+define <WIDTH x half> @__pow_varying_half(<WIDTH x half>, <WIDTH x half>) nounwind readnone {
+  %res = call <WIDTH x half> @llvm.genx.pow.GEN_SUFFIX(half).GEN_SUFFIX(half)(<WIDTH x half> %0, <WIDTH x half> %1)
+  ret <WIDTH x half> %res
 }
 
 define float @__exp_uniform_float(float) nounwind readnone {
@@ -1089,6 +1157,20 @@ define <WIDTH x float> @__exp_varying_float(<WIDTH x float>) nounwind readnone {
   %res = call <WIDTH x float> @llvm.genx.pow.GEN_SUFFIX(float).GEN_SUFFIX(float)(<WIDTH x float> %exp_shuffle, <WIDTH x float> %0)
   ret <WIDTH x float> %res
 }
+
+define half @__exp_uniform_half(half) nounwind readnone {
+  %res = call half @llvm.genx.pow.f16(half EXPF16, half %0)
+  ret half %res
+}
+
+define <WIDTH x half> @__exp_varying_half(<WIDTH x half>) nounwind readnone {
+  %exp = insertelement <WIDTH x half> undef, half EXPF16, i32 0
+  %exp_shuffle = shufflevector <WIDTH x half> %exp, <WIDTH x half> undef, <WIDTH x i32> zeroinitializer
+  %res = call <WIDTH x half> @llvm.genx.pow.GEN_SUFFIX(half).GEN_SUFFIX(half)(<WIDTH x half>
+          %exp_shuffle, <WIDTH x half> %0)
+  ret <WIDTH x half> %res
+}
+
 
 ;; Generates double math builtins for unfiorm and varying
 ;; $1 operation (e.g. pow, sin etc)
