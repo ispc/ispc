@@ -407,6 +407,11 @@ class ConstExpr : public Expr {
     /** Create a ConstExpr from a varying uint32 value */
     ConstExpr(const Type *t, uint32_t *u, SourcePos p);
 
+    /** Create a ConstExpr from a uniform float16 value */
+    ConstExpr(const Type *t, llvm::APFloat f, SourcePos p);
+    /** Create a ConstExpr from a varying float16 value */
+    ConstExpr(const Type *t, std::vector<llvm::APFloat> f, SourcePos p);
+
     /** Create a ConstExpr from a uniform float value */
     ConstExpr(const Type *t, float f, SourcePos p);
     /** Create a ConstExpr from a varying float value */
@@ -462,6 +467,7 @@ class ConstExpr : public Expr {
     int GetValues(uint8_t *, bool forceVarying = false) const;
     int GetValues(int16_t *, bool forceVarying = false) const;
     int GetValues(uint16_t *, bool forceVarying = false) const;
+    int GetValues(std::vector<llvm::APFloat> &, bool forceVarying = false) const;
     int GetValues(int32_t *, bool forceVarying = false) const;
     int GetValues(uint32_t *, bool forceVarying = false) const;
     int GetValues(float *, bool forceVarying = false) const;
@@ -491,6 +497,7 @@ class ConstExpr : public Expr {
         int64_t int64Val[ISPC_MAX_NVEC];
         uint64_t uint64Val[ISPC_MAX_NVEC];
     };
+    std::vector<llvm::APFloat> float16Val;
 };
 
 /** @brief Expression representing a type cast of the given expression to a
