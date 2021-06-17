@@ -41,6 +41,7 @@ reduce_equal(WIDTH)
 rdrand_definition()
 popcnt()
 ctlztz()
+halfTypeGenericImplementation()
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; broadcast/rotate/shuffle

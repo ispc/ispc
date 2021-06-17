@@ -118,6 +118,7 @@ define(`extract_4s', `
 
 gen_gather(i8)
 gen_gather(i16)
+gen_gather(half)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; int32 gathers

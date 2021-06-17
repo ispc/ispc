@@ -76,6 +76,7 @@ declare <WIDTH x i16> @__float_to_half_varying(<WIDTH x float> %v) nounwind read
 
 gen_gather_factored(i8)
 gen_gather_factored(i16)
+gen_gather_factored(half)
 gen_gather_factored(i32)
 gen_gather_factored(float)
 gen_gather_factored(i64)

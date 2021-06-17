@@ -40,6 +40,7 @@ popcnt()
 define_prefetches()
 define_shuffles()
 aossoa()
+halfTypeGenericImplementation()
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; rounding floats

@@ -40,6 +40,7 @@ stdlib_core()
 scans()
 reduce_equal(WIDTH)
 rdrand_decls()
+halfTypeGenericImplementation()
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Stub for mask conversion. LLVM's intrinsics want i1 mask, but we use i8
@@ -772,6 +773,7 @@ define i64 @__reduce_max_uint64(<32 x i64>) nounwind readnone alwaysinline {
 
 masked_load(i8,  1)
 masked_load(i16, 2)
+masked_load(half, 2)
 masked_load(i32, 4)
 masked_load(float, 4)
 masked_load(i64, 8)
@@ -821,6 +823,7 @@ define void @__masked_store_blend_i64(<WIDTH x i64>* nocapture,
 
 gen_gather(i8)
 gen_gather(i16)
+gen_gather(half)
 gen_gather(i32)
 gen_gather(float)
 gen_gather(i64)
@@ -844,6 +847,7 @@ define void @__scatter_base_offsets64_$1(i8* %ptr, i32 %scale, <WIDTH x i64> %of
 
 gen_scatter(i8)
 gen_scatter(i16)
+gen_scatter(half)
 gen_scatter(i32)
 gen_scatter(float)
 gen_scatter(i64)
@@ -851,6 +855,7 @@ gen_scatter(double)
 
 scatterbo32_64(i8)
 scatterbo32_64(i16)
+scatterbo32_64(half)
 scatterbo32_64(i32)
 scatterbo32_64(float)
 scatterbo32_64(i64)
