@@ -2101,6 +2101,12 @@ static bool lGSToGSBaseOffsets(llvm::CallInst *callInst) {
                g->target->hasGather() ? "__pseudo_gather_base_offsets32_i16"
                                       : "__pseudo_gather_factored_base_offsets32_i16",
                true, false),
+        GSInfo("__pseudo_gather32_half",
+               g->target->hasGather() ? "__pseudo_gather_base_offsets32_half"
+                                      : "__pseudo_gather_factored_base_offsets32_half",
+               g->target->hasGather() ? "__pseudo_gather_base_offsets32_half"
+                                      : "__pseudo_gather_factored_base_offsets32_half",
+               true, false),
         GSInfo("__pseudo_gather32_i32",
                g->target->hasGather() ? "__pseudo_gather_base_offsets32_i32"
                                       : "__pseudo_gather_factored_base_offsets32_i32",
@@ -2138,6 +2144,12 @@ static bool lGSToGSBaseOffsets(llvm::CallInst *callInst) {
                g->target->hasScatter() ? "__pseudo_scatter_base_offsets32_i16"
                                        : "__pseudo_scatter_factored_base_offsets32_i16",
                false, false),
+        GSInfo("__pseudo_scatter32_half",
+               g->target->hasScatter() ? "__pseudo_scatter_base_offsets32_half"
+                                       : "__pseudo_scatter_factored_base_offsets32_half",
+               g->target->hasScatter() ? "__pseudo_scatter_base_offsets32_half"
+                                       : "__pseudo_scatter_factored_base_offsets32_half",
+               false, false),
         GSInfo("__pseudo_scatter32_i32",
                g->target->hasScatter() ? "__pseudo_scatter_base_offsets32_i32"
                                        : "__pseudo_scatter_factored_base_offsets32_i32",
@@ -2173,6 +2185,12 @@ static bool lGSToGSBaseOffsets(llvm::CallInst *callInst) {
                                       : "__pseudo_gather_factored_base_offsets64_i16",
                g->target->hasGather() ? "__pseudo_gather_base_offsets32_i16"
                                       : "__pseudo_gather_factored_base_offsets32_i16",
+               true, false),
+        GSInfo("__pseudo_gather64_half",
+               g->target->hasGather() ? "__pseudo_gather_base_offsets64_half"
+                                      : "__pseudo_gather_factored_base_offsets64_half",
+               g->target->hasGather() ? "__pseudo_gather_base_offsets32_half"
+                                      : "__pseudo_gather_factored_base_offsets32_half",
                true, false),
         GSInfo("__pseudo_gather64_i32",
                g->target->hasGather() ? "__pseudo_gather_base_offsets64_i32"
@@ -2210,6 +2228,12 @@ static bool lGSToGSBaseOffsets(llvm::CallInst *callInst) {
                                        : "__pseudo_scatter_factored_base_offsets64_i16",
                g->target->hasScatter() ? "__pseudo_scatter_base_offsets32_i16"
                                        : "__pseudo_scatter_factored_base_offsets32_i16",
+               false, false),
+        GSInfo("__pseudo_scatter64_half",
+               g->target->hasScatter() ? "__pseudo_scatter_base_offsets64_half"
+                                       : "__pseudo_scatter_factored_base_offsets64_half",
+               g->target->hasScatter() ? "__pseudo_scatter_base_offsets32_half"
+                                       : "__pseudo_scatter_factored_base_offsets32_half",
                false, false),
         GSInfo("__pseudo_scatter64_i32",
                g->target->hasScatter() ? "__pseudo_scatter_base_offsets64_i32"
@@ -2413,6 +2437,11 @@ static bool lGSBaseOffsetsGetMoreConst(llvm::CallInst *callInst) {
                  g->target->hasGather() ? "__pseudo_gather_base_offsets32_i16"
                                         : "__pseudo_gather_factored_base_offsets32_i16",
                  true, false),
+        GSBOInfo(g->target->hasGather() ? "__pseudo_gather_base_offsets32_half"
+                                        : "__pseudo_gather_factored_base_offsets32_half",
+                 g->target->hasGather() ? "__pseudo_gather_base_offsets32_half"
+                                        : "__pseudo_gather_factored_base_offsets32_half",
+                 true, false),
         GSBOInfo(g->target->hasGather() ? "__pseudo_gather_base_offsets32_i32"
                                         : "__pseudo_gather_factored_base_offsets32_i32",
                  g->target->hasGather() ? "__pseudo_gather_base_offsets32_i32"
@@ -2443,6 +2472,11 @@ static bool lGSBaseOffsetsGetMoreConst(llvm::CallInst *callInst) {
                                          : "__pseudo_scatter_factored_base_offsets32_i16",
                  g->target->hasScatter() ? "__pseudo_scatter_base_offsets32_i16"
                                          : "__pseudo_scatter_factored_base_offsets32_i16",
+                 false, false),
+        GSBOInfo(g->target->hasScatter() ? "__pseudo_scatter_base_offsets32_half"
+                                         : "__pseudo_scatter_factored_base_offsets32_half",
+                 g->target->hasScatter() ? "__pseudo_scatter_base_offsets32_i16"
+                                         : "__pseudo_scatter_factored_base_offsets32_half",
                  false, false),
         GSBOInfo(g->target->hasScatter() ? "__pseudo_scatter_base_offsets32_i32"
                                          : "__pseudo_scatter_factored_base_offsets32_i32",
@@ -2620,6 +2654,9 @@ static bool lGSToLoadStore(llvm::CallInst *callInst) {
         GatherImpInfo(g->target->hasGather() ? "__pseudo_gather_base_offsets32_i16"
                                              : "__pseudo_gather_factored_base_offsets32_i16",
                       "__masked_load_i16", "__masked_load_blend_i16", LLVMTypes::Int16Type, 2),
+        GatherImpInfo(g->target->hasGather() ? "__pseudo_gather_base_offsets32_half"
+                                             : "__pseudo_gather_factored_base_offsets32_half",
+                      "__masked_load_half", "__masked_load_blend_half", LLVMTypes::Float16Type, 2),
         GatherImpInfo(g->target->hasGather() ? "__pseudo_gather_base_offsets32_i32"
                                              : "__pseudo_gather_factored_base_offsets32_i32",
                       "__masked_load_i32", "__masked_load_blend_i32", LLVMTypes::Int32Type, 4),
@@ -2638,6 +2675,9 @@ static bool lGSToLoadStore(llvm::CallInst *callInst) {
         GatherImpInfo(g->target->hasGather() ? "__pseudo_gather_base_offsets64_i16"
                                              : "__pseudo_gather_factored_base_offsets64_i16",
                       "__masked_load_i16", "__masked_load_blend_i16", LLVMTypes::Int16Type, 2),
+        GatherImpInfo(g->target->hasGather() ? "__pseudo_gather_base_offsets64_half"
+                                             : "__pseudo_gather_factored_base_offsets64_half",
+                      "__masked_load_half", "__masked_load_blend_half", LLVMTypes::Float16Type, 2),
         GatherImpInfo(g->target->hasGather() ? "__pseudo_gather_base_offsets64_i32"
                                              : "__pseudo_gather_factored_base_offsets64_i32",
                       "__masked_load_i32", "__masked_load_blend_i32", LLVMTypes::Int32Type, 4),
@@ -2674,6 +2714,9 @@ static bool lGSToLoadStore(llvm::CallInst *callInst) {
         ScatterImpInfo(g->target->hasScatter() ? "__pseudo_scatter_base_offsets32_i16"
                                                : "__pseudo_scatter_factored_base_offsets32_i16",
                        "__pseudo_masked_store_i16", LLVMTypes::Int16VectorPointerType, 2),
+        ScatterImpInfo(g->target->hasScatter() ? "__pseudo_scatter_base_offsets32_half"
+                                               : "__pseudo_scatter_factored_base_offsets32_half",
+                       "__pseudo_masked_store_half", LLVMTypes::Float16VectorPointerType, 2),
         ScatterImpInfo(g->target->hasScatter() ? "__pseudo_scatter_base_offsets32_i32"
                                                : "__pseudo_scatter_factored_base_offsets32_i32",
                        "__pseudo_masked_store_i32", LLVMTypes::Int32VectorPointerType, 4),
@@ -2692,6 +2735,9 @@ static bool lGSToLoadStore(llvm::CallInst *callInst) {
         ScatterImpInfo(g->target->hasScatter() ? "__pseudo_scatter_base_offsets64_i16"
                                                : "__pseudo_scatter_factored_base_offsets64_i16",
                        "__pseudo_masked_store_i16", LLVMTypes::Int16VectorPointerType, 2),
+        ScatterImpInfo(g->target->hasScatter() ? "__pseudo_scatter_base_offsets64_half"
+                                               : "__pseudo_scatter_factored_base_offsets64_half",
+                       "__pseudo_masked_store_half", LLVMTypes::Float16VectorPointerType, 2),
         ScatterImpInfo(g->target->hasScatter() ? "__pseudo_scatter_base_offsets64_i32"
                                                : "__pseudo_scatter_factored_base_offsets64_i32",
                        "__pseudo_masked_store_i32", LLVMTypes::Int32VectorPointerType, 4),
@@ -2983,15 +3029,27 @@ static bool lImproveMaskedStore(llvm::CallInst *callInst) {
         const int align;
     };
 
-    MSInfo msInfo[] = {MSInfo("__pseudo_masked_store_i8", 1),  MSInfo("__pseudo_masked_store_i16", 2),
-                       MSInfo("__pseudo_masked_store_i32", 4), MSInfo("__pseudo_masked_store_float", 4),
-                       MSInfo("__pseudo_masked_store_i64", 8), MSInfo("__pseudo_masked_store_double", 8),
-                       MSInfo("__masked_store_blend_i8", 1),   MSInfo("__masked_store_blend_i16", 2),
-                       MSInfo("__masked_store_blend_i32", 4),  MSInfo("__masked_store_blend_float", 4),
-                       MSInfo("__masked_store_blend_i64", 8),  MSInfo("__masked_store_blend_double", 8),
-                       MSInfo("__masked_store_i8", 1),         MSInfo("__masked_store_i16", 2),
-                       MSInfo("__masked_store_i32", 4),        MSInfo("__masked_store_float", 4),
-                       MSInfo("__masked_store_i64", 8),        MSInfo("__masked_store_double", 8)};
+    MSInfo msInfo[] = {MSInfo("__pseudo_masked_store_i8", 1),
+                       MSInfo("__pseudo_masked_store_i16", 2),
+                       MSInfo("__pseudo_masked_store_half", 2),
+                       MSInfo("__pseudo_masked_store_i32", 4),
+                       MSInfo("__pseudo_masked_store_float", 4),
+                       MSInfo("__pseudo_masked_store_i64", 8),
+                       MSInfo("__pseudo_masked_store_double", 8),
+                       MSInfo("__masked_store_blend_i8", 1),
+                       MSInfo("__masked_store_blend_i16", 2),
+                       MSInfo("__masked_store_blend_half", 2),
+                       MSInfo("__masked_store_blend_i32", 4),
+                       MSInfo("__masked_store_blend_float", 4),
+                       MSInfo("__masked_store_blend_i64", 8),
+                       MSInfo("__masked_store_blend_double", 8),
+                       MSInfo("__masked_store_i8", 1),
+                       MSInfo("__masked_store_i16", 2),
+                       MSInfo("__masked_store_half", 2),
+                       MSInfo("__masked_store_i32", 4),
+                       MSInfo("__masked_store_float", 4),
+                       MSInfo("__masked_store_i64", 8),
+                       MSInfo("__masked_store_double", 8)};
     llvm::Function *called = callInst->getCalledFunction();
 
     int nMSFuncs = sizeof(msInfo) / sizeof(msInfo[0]);
@@ -3078,13 +3136,15 @@ static bool lImproveMaskedLoad(llvm::CallInst *callInst, llvm::BasicBlock::itera
     // it differently for GenX and CPU targets. It will also help
     // to avoid declaration of GenX intrinsics for CPU targets.
     // It should be changed seamlessly here and in all similar places in this file.
-    MLInfo mlInfo[] = {MLInfo("__masked_load_i8", 1),  MLInfo("__masked_load_i16", 2),
-                       MLInfo("__masked_load_i32", 4), MLInfo("__masked_load_float", 4),
-                       MLInfo("__masked_load_i64", 8), MLInfo("__masked_load_double", 8)};
+    MLInfo mlInfo[] = {MLInfo("__masked_load_i8", 1),    MLInfo("__masked_load_i16", 2),
+                       MLInfo("__masked_load_half", 2),  MLInfo("__masked_load_i32", 4),
+                       MLInfo("__masked_load_float", 4), MLInfo("__masked_load_i64", 8),
+                       MLInfo("__masked_load_double", 8)};
     MLInfo genxInfo[] = {MLInfo("__masked_load_i8", 1),        MLInfo("__masked_load_i16", 2),
-                         MLInfo("__masked_load_i32", 4),       MLInfo("__masked_load_float", 4),
-                         MLInfo("__masked_load_i64", 8),       MLInfo("__masked_load_double", 8),
-                         MLInfo("__masked_load_blend_i8", 1),  MLInfo("__masked_load_blend_i16", 2),
+                         MLInfo("__masked_load_half", 2),      MLInfo("__masked_load_i32", 4),
+                         MLInfo("__masked_load_float", 4),     MLInfo("__masked_load_i64", 8),
+                         MLInfo("__masked_load_double", 8),    MLInfo("__masked_load_blend_i8", 1),
+                         MLInfo("__masked_load_blend_i16", 2), MLInfo("__masked_load_blend_half", 2),
                          MLInfo("__masked_load_blend_i32", 4), MLInfo("__masked_load_blend_float", 4),
                          MLInfo("__masked_load_blend_i64", 8), MLInfo("__masked_load_blend_double", 8)};
     MLInfo *info = NULL;
@@ -4286,6 +4346,7 @@ static bool lReplacePseudoMaskedStore(llvm::CallInst *callInst) {
     LMSInfo msInfo[] = {
         LMSInfo("__pseudo_masked_store_i8", "__masked_store_blend_i8", "__masked_store_i8"),
         LMSInfo("__pseudo_masked_store_i16", "__masked_store_blend_i16", "__masked_store_i16"),
+        LMSInfo("__pseudo_masked_store_half", "__masked_store_blend_half", "__masked_store_half"),
         LMSInfo("__pseudo_masked_store_i32", "__masked_store_blend_i32", "__masked_store_i32"),
         LMSInfo("__pseudo_masked_store_float", "__masked_store_blend_float", "__masked_store_float"),
         LMSInfo("__pseudo_masked_store_i64", "__masked_store_blend_i64", "__masked_store_i64"),
@@ -4335,6 +4396,7 @@ static bool lReplacePseudoGS(llvm::CallInst *callInst) {
     LowerGSInfo lgsInfo[] = {
         LowerGSInfo("__pseudo_gather32_i8", "__gather32_i8", true, false),
         LowerGSInfo("__pseudo_gather32_i16", "__gather32_i16", true, false),
+        LowerGSInfo("__pseudo_gather32_half", "__gather32_half", true, false),
         LowerGSInfo("__pseudo_gather32_i32", "__gather32_i32", true, false),
         LowerGSInfo("__pseudo_gather32_float", "__gather32_float", true, false),
         LowerGSInfo("__pseudo_gather32_i64", "__gather32_i64", true, false),
@@ -4342,6 +4404,7 @@ static bool lReplacePseudoGS(llvm::CallInst *callInst) {
 
         LowerGSInfo("__pseudo_gather64_i8", "__gather64_i8", true, false),
         LowerGSInfo("__pseudo_gather64_i16", "__gather64_i16", true, false),
+        LowerGSInfo("__pseudo_gather64_half", "__gather64_half", true, false),
         LowerGSInfo("__pseudo_gather64_i32", "__gather64_i32", true, false),
         LowerGSInfo("__pseudo_gather64_float", "__gather64_float", true, false),
         LowerGSInfo("__pseudo_gather64_i64", "__gather64_i64", true, false),
@@ -4349,6 +4412,8 @@ static bool lReplacePseudoGS(llvm::CallInst *callInst) {
 
         LowerGSInfo("__pseudo_gather_factored_base_offsets32_i8", "__gather_factored_base_offsets32_i8", true, false),
         LowerGSInfo("__pseudo_gather_factored_base_offsets32_i16", "__gather_factored_base_offsets32_i16", true, false),
+        LowerGSInfo("__pseudo_gather_factored_base_offsets32_half", "__gather_factored_base_offsets32_half", true,
+                    false),
         LowerGSInfo("__pseudo_gather_factored_base_offsets32_i32", "__gather_factored_base_offsets32_i32", true, false),
         LowerGSInfo("__pseudo_gather_factored_base_offsets32_float", "__gather_factored_base_offsets32_float", true,
                     false),
@@ -4358,6 +4423,8 @@ static bool lReplacePseudoGS(llvm::CallInst *callInst) {
 
         LowerGSInfo("__pseudo_gather_factored_base_offsets64_i8", "__gather_factored_base_offsets64_i8", true, false),
         LowerGSInfo("__pseudo_gather_factored_base_offsets64_i16", "__gather_factored_base_offsets64_i16", true, false),
+        LowerGSInfo("__pseudo_gather_factored_base_offsets64_half", "__gather_factored_base_offsets64_half", true,
+                    false),
         LowerGSInfo("__pseudo_gather_factored_base_offsets64_i32", "__gather_factored_base_offsets64_i32", true, false),
         LowerGSInfo("__pseudo_gather_factored_base_offsets64_float", "__gather_factored_base_offsets64_float", true,
                     false),
@@ -4367,6 +4434,7 @@ static bool lReplacePseudoGS(llvm::CallInst *callInst) {
 
         LowerGSInfo("__pseudo_gather_base_offsets32_i8", "__gather_base_offsets32_i8", true, false),
         LowerGSInfo("__pseudo_gather_base_offsets32_i16", "__gather_base_offsets32_i16", true, false),
+        LowerGSInfo("__pseudo_gather_base_offsets32_half", "__gather_base_offsets32_half", true, false),
         LowerGSInfo("__pseudo_gather_base_offsets32_i32", "__gather_base_offsets32_i32", true, false),
         LowerGSInfo("__pseudo_gather_base_offsets32_float", "__gather_base_offsets32_float", true, false),
         LowerGSInfo("__pseudo_gather_base_offsets32_i64", "__gather_base_offsets32_i64", true, false),
@@ -4374,6 +4442,7 @@ static bool lReplacePseudoGS(llvm::CallInst *callInst) {
 
         LowerGSInfo("__pseudo_gather_base_offsets64_i8", "__gather_base_offsets64_i8", true, false),
         LowerGSInfo("__pseudo_gather_base_offsets64_i16", "__gather_base_offsets64_i16", true, false),
+        LowerGSInfo("__pseudo_gather_base_offsets64_half", "__gather_base_offsets64_half", true, false),
         LowerGSInfo("__pseudo_gather_base_offsets64_i32", "__gather_base_offsets64_i32", true, false),
         LowerGSInfo("__pseudo_gather_base_offsets64_float", "__gather_base_offsets64_float", true, false),
         LowerGSInfo("__pseudo_gather_base_offsets64_i64", "__gather_base_offsets64_i64", true, false),
@@ -4381,6 +4450,7 @@ static bool lReplacePseudoGS(llvm::CallInst *callInst) {
 
         LowerGSInfo("__pseudo_scatter32_i8", "__scatter32_i8", false, false),
         LowerGSInfo("__pseudo_scatter32_i16", "__scatter32_i16", false, false),
+        LowerGSInfo("__pseudo_scatter32_half", "__scatter32_half", false, false),
         LowerGSInfo("__pseudo_scatter32_i32", "__scatter32_i32", false, false),
         LowerGSInfo("__pseudo_scatter32_float", "__scatter32_float", false, false),
         LowerGSInfo("__pseudo_scatter32_i64", "__scatter32_i64", false, false),
@@ -4388,6 +4458,7 @@ static bool lReplacePseudoGS(llvm::CallInst *callInst) {
 
         LowerGSInfo("__pseudo_scatter64_i8", "__scatter64_i8", false, false),
         LowerGSInfo("__pseudo_scatter64_i16", "__scatter64_i16", false, false),
+        LowerGSInfo("__pseudo_scatter64_half", "__scatter64_half", false, false),
         LowerGSInfo("__pseudo_scatter64_i32", "__scatter64_i32", false, false),
         LowerGSInfo("__pseudo_scatter64_float", "__scatter64_float", false, false),
         LowerGSInfo("__pseudo_scatter64_i64", "__scatter64_i64", false, false),
@@ -4396,6 +4467,8 @@ static bool lReplacePseudoGS(llvm::CallInst *callInst) {
         LowerGSInfo("__pseudo_scatter_factored_base_offsets32_i8", "__scatter_factored_base_offsets32_i8", false,
                     false),
         LowerGSInfo("__pseudo_scatter_factored_base_offsets32_i16", "__scatter_factored_base_offsets32_i16", false,
+                    false),
+        LowerGSInfo("__pseudo_scatter_factored_base_offsets32_half", "__scatter_factored_base_offsets32_half", false,
                     false),
         LowerGSInfo("__pseudo_scatter_factored_base_offsets32_i32", "__scatter_factored_base_offsets32_i32", false,
                     false),
@@ -4410,6 +4483,8 @@ static bool lReplacePseudoGS(llvm::CallInst *callInst) {
                     false),
         LowerGSInfo("__pseudo_scatter_factored_base_offsets64_i16", "__scatter_factored_base_offsets64_i16", false,
                     false),
+        LowerGSInfo("__pseudo_scatter_factored_base_offsets64_half", "__scatter_factored_base_offsets64_half", false,
+                    false),
         LowerGSInfo("__pseudo_scatter_factored_base_offsets64_i32", "__scatter_factored_base_offsets64_i32", false,
                     false),
         LowerGSInfo("__pseudo_scatter_factored_base_offsets64_float", "__scatter_factored_base_offsets64_float", false,
@@ -4421,6 +4496,7 @@ static bool lReplacePseudoGS(llvm::CallInst *callInst) {
 
         LowerGSInfo("__pseudo_scatter_base_offsets32_i8", "__scatter_base_offsets32_i8", false, false),
         LowerGSInfo("__pseudo_scatter_base_offsets32_i16", "__scatter_base_offsets32_i16", false, false),
+        LowerGSInfo("__pseudo_scatter_base_offsets32_half", "__scatter_base_offsets32_half", false, false),
         LowerGSInfo("__pseudo_scatter_base_offsets32_i32", "__scatter_base_offsets32_i32", false, false),
         LowerGSInfo("__pseudo_scatter_base_offsets32_float", "__scatter_base_offsets32_float", false, false),
         LowerGSInfo("__pseudo_scatter_base_offsets32_i64", "__scatter_base_offsets32_i64", false, false),
@@ -4428,6 +4504,7 @@ static bool lReplacePseudoGS(llvm::CallInst *callInst) {
 
         LowerGSInfo("__pseudo_scatter_base_offsets64_i8", "__scatter_base_offsets64_i8", false, false),
         LowerGSInfo("__pseudo_scatter_base_offsets64_i16", "__scatter_base_offsets64_i16", false, false),
+        LowerGSInfo("__pseudo_scatter_base_offsets64_half", "__scatter_base_offsets64_half", false, false),
         LowerGSInfo("__pseudo_scatter_base_offsets64_i32", "__scatter_base_offsets64_i32", false, false),
         LowerGSInfo("__pseudo_scatter_base_offsets64_float", "__scatter_base_offsets64_float", false, false),
         LowerGSInfo("__pseudo_scatter_base_offsets64_i64", "__scatter_base_offsets64_i64", false, false),
@@ -4747,114 +4824,133 @@ bool MakeInternalFuncsStaticPass::runOnModule(llvm::Module &module) {
         "__gather_factored_base_offsets32_i16",
         "__gather_factored_base_offsets32_i32",
         "__gather_factored_base_offsets32_i64",
+        "__gather_factored_base_offsets32_half",
         "__gather_factored_base_offsets32_float",
         "__gather_factored_base_offsets32_double",
         "__gather_factored_base_offsets64_i8",
         "__gather_factored_base_offsets64_i16",
         "__gather_factored_base_offsets64_i32",
         "__gather_factored_base_offsets64_i64",
+        "__gather_factored_base_offsets64_half",
         "__gather_factored_base_offsets64_float",
         "__gather_factored_base_offsets64_double",
         "__gather_base_offsets32_i8",
         "__gather_base_offsets32_i16",
         "__gather_base_offsets32_i32",
         "__gather_base_offsets32_i64",
+        "__gather_base_offsets32_half",
         "__gather_base_offsets32_float",
         "__gather_base_offsets32_double",
         "__gather_base_offsets64_i8",
         "__gather_base_offsets64_i16",
         "__gather_base_offsets64_i32",
         "__gather_base_offsets64_i64",
+        "__gather_base_offsets64_half",
         "__gather_base_offsets64_float",
         "__gather_base_offsets64_double",
         "__gather32_i8",
         "__gather32_i16",
         "__gather32_i32",
         "__gather32_i64",
+        "__gather32_half",
         "__gather32_float",
         "__gather32_double",
         "__gather64_i8",
         "__gather64_i16",
         "__gather64_i32",
         "__gather64_i64",
+        "__gather64_half",
         "__gather64_float",
         "__gather64_double",
         "__gather_elt32_i8",
         "__gather_elt32_i16",
         "__gather_elt32_i32",
         "__gather_elt32_i64",
+        "__gather_elt32_half",
         "__gather_elt32_float",
         "__gather_elt32_double",
         "__gather_elt64_i8",
         "__gather_elt64_i16",
         "__gather_elt64_i32",
         "__gather_elt64_i64",
+        "__gather_elt64_half",
         "__gather_elt64_float",
         "__gather_elt64_double",
         "__masked_load_i8",
         "__masked_load_i16",
         "__masked_load_i32",
         "__masked_load_i64",
+        "__masked_load_half",
         "__masked_load_float",
         "__masked_load_double",
         "__masked_store_i8",
         "__masked_store_i16",
         "__masked_store_i32",
         "__masked_store_i64",
+        "__masked_store_half",
         "__masked_store_float",
         "__masked_store_double",
         "__masked_store_blend_i8",
         "__masked_store_blend_i16",
         "__masked_store_blend_i32",
         "__masked_store_blend_i64",
+        "__masked_store_blend_half",
         "__masked_store_blend_float",
         "__masked_store_blend_double",
         "__scatter_factored_base_offsets32_i8",
         "__scatter_factored_base_offsets32_i16",
         "__scatter_factored_base_offsets32_i32",
         "__scatter_factored_base_offsets32_i64",
+        "__scatter_factored_base_offsets32_half",
         "__scatter_factored_base_offsets32_float",
         "__scatter_factored_base_offsets32_double",
         "__scatter_factored_base_offsets64_i8",
         "__scatter_factored_base_offsets64_i16",
         "__scatter_factored_base_offsets64_i32",
         "__scatter_factored_base_offsets64_i64",
+        "__scatter_factored_base_offsets64_half",
         "__scatter_factored_base_offsets64_float",
         "__scatter_factored_base_offsets64_double",
         "__scatter_base_offsets32_i8",
         "__scatter_base_offsets32_i16",
         "__scatter_base_offsets32_i32",
         "__scatter_base_offsets32_i64",
+        "__scatter_base_offsets32_half",
         "__scatter_base_offsets32_float",
         "__scatter_base_offsets32_double",
         "__scatter_base_offsets64_i8",
         "__scatter_base_offsets64_i16",
         "__scatter_base_offsets64_i32",
         "__scatter_base_offsets64_i64",
+        "__scatter_base_offsets64_half",
         "__scatter_base_offsets64_float",
         "__scatter_base_offsets64_double",
         "__scatter_elt32_i8",
         "__scatter_elt32_i16",
         "__scatter_elt32_i32",
         "__scatter_elt32_i64",
+        "__scatter_elt32_half",
         "__scatter_elt32_float",
         "__scatter_elt32_double",
         "__scatter_elt64_i8",
         "__scatter_elt64_i16",
         "__scatter_elt64_i32",
         "__scatter_elt64_i64",
+        "__scatter_elt64_half",
         "__scatter_elt64_float",
         "__scatter_elt64_double",
         "__scatter32_i8",
         "__scatter32_i16",
         "__scatter32_i32",
         "__scatter32_i64",
+        "__scatter32_half",
         "__scatter32_float",
         "__scatter32_double",
         "__scatter64_i8",
         "__scatter64_i16",
         "__scatter64_i32",
         "__scatter64_i64",
+        "__scatter64_half",
         "__scatter64_float",
         "__scatter64_double",
         "__prefetch_read_varying_1",
@@ -4867,6 +4963,7 @@ bool MakeInternalFuncsStaticPass::runOnModule(llvm::Module &module) {
         "__masked_load_blend_i16",
         "__masked_load_blend_i32",
         "__masked_load_blend_i64",
+        "__masked_load_blend_half",
         "__masked_load_blend_float",
         "__masked_load_blend_double",
 #endif

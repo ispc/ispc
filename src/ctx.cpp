@@ -2529,6 +2529,8 @@ llvm::Value *FunctionEmitContext::gather(llvm::Value *ptr, const PointerType *pt
         funcName = g->target->is32Bit() ? "__pseudo_gather32_i64" : "__pseudo_gather64_i64";
     else if (llvmReturnType == LLVMTypes::FloatVectorType)
         funcName = g->target->is32Bit() ? "__pseudo_gather32_float" : "__pseudo_gather64_float";
+    else if (llvmReturnType == LLVMTypes::Float16VectorType)
+        funcName = g->target->is32Bit() ? "__pseudo_gather32_half" : "__pseudo_gather64_half";
     else if (llvmReturnType == LLVMTypes::Int32VectorType)
         funcName = g->target->is32Bit() ? "__pseudo_gather32_i32" : "__pseudo_gather64_i32";
     else if (llvmReturnType == LLVMTypes::Int16VectorType)
@@ -2789,6 +2791,8 @@ void FunctionEmitContext::maskedStore(llvm::Value *value, llvm::Value *ptr, cons
         maskedStoreFunc = m->module->getFunction("__pseudo_masked_store_i64");
     } else if (llvmValueStorageType == LLVMTypes::FloatVectorType) {
         maskedStoreFunc = m->module->getFunction("__pseudo_masked_store_float");
+    } else if (llvmValueStorageType == LLVMTypes::Float16VectorType) {
+        maskedStoreFunc = m->module->getFunction("__pseudo_masked_store_half");
     } else if (llvmValueStorageType == LLVMTypes::Int32VectorType) {
         maskedStoreFunc = m->module->getFunction("__pseudo_masked_store_i32");
     } else if (llvmValueStorageType == LLVMTypes::Int16VectorType) {
@@ -2899,6 +2903,8 @@ void FunctionEmitContext::scatter(llvm::Value *value, llvm::Value *ptr, const Ty
         funcName = g->target->is32Bit() ? "__pseudo_scatter32_i64" : "__pseudo_scatter64_i64";
     } else if (llvmStorageType == LLVMTypes::FloatVectorType) {
         funcName = g->target->is32Bit() ? "__pseudo_scatter32_float" : "__pseudo_scatter64_float";
+    } else if (llvmStorageType == LLVMTypes::Float16VectorType) {
+        funcName = g->target->is32Bit() ? "__pseudo_scatter32_half" : "__pseudo_scatter64_half";
     } else if (llvmStorageType == LLVMTypes::Int32VectorType) {
         funcName = g->target->is32Bit() ? "__pseudo_scatter32_i32" : "__pseudo_scatter64_i32";
     } else if (llvmStorageType == LLVMTypes::Int16VectorType) {
