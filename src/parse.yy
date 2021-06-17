@@ -131,8 +131,8 @@ static const char *lBuiltinTokens[] = {
     "assert", "bool", "break", "case", "cdo",
     "cfor", "cif", "cwhile", "const", "continue", "default",
     "do", "delete", "double", "else", "enum", "export", "extern", "false",
-    "float", "for", "foreach", "foreach_active", "foreach_tiled",
-     "foreach_unique", "goto", "if", "in", "inline",
+    "float16", "float", "for", "foreach", "foreach_active", "foreach_tiled",
+    "foreach_unique", "goto", "if", "in", "inline",
     "int", "int8", "int16", "int32", "int64", "launch", "new", "NULL",
     "print", "return", "signed", "sizeof", "static", "struct", "switch",
     "sync", "task", "true", "typedef", "uniform", "unmasked", "unsigned",
@@ -140,7 +140,7 @@ static const char *lBuiltinTokens[] = {
 };
 
 static const char *lParamListTokens[] = {
-    "bool", "const", "double", "enum", "false", "float", "int",
+    "bool", "const", "double", "enum", "false", "float16", "float", "int",
     "int8", "int16", "int32", "int64", "signed", "struct", "true",
     "uniform", "unsigned", "varying", "void", NULL
 };
@@ -197,7 +197,7 @@ struct ForeachDimension {
 %token TOKEN_INT64_CONSTANT TOKEN_UINT64_CONSTANT
 %token TOKEN_INT32DOTDOTDOT_CONSTANT TOKEN_UINT32DOTDOTDOT_CONSTANT
 %token TOKEN_INT64DOTDOTDOT_CONSTANT TOKEN_UINT64DOTDOTDOT_CONSTANT
-%token TOKEN_FLOAT_CONSTANT TOKEN_DOUBLE_CONSTANT TOKEN_STRING_C_LITERAL
+%token TOKEN_FLOAT16_CONSTANT TOKEN_FLOAT_CONSTANT TOKEN_DOUBLE_CONSTANT TOKEN_STRING_C_LITERAL
 %token TOKEN_IDENTIFIER TOKEN_STRING_LITERAL TOKEN_TYPE_NAME TOKEN_PRAGMA TOKEN_NULL
 %token TOKEN_PTR_OP TOKEN_INC_OP TOKEN_DEC_OP TOKEN_LEFT_OP TOKEN_RIGHT_OP
 %token TOKEN_LE_OP TOKEN_GE_OP TOKEN_EQ_OP TOKEN_NE_OP
@@ -208,7 +208,7 @@ struct ForeachDimension {
 
 %token TOKEN_EXTERN TOKEN_EXPORT TOKEN_STATIC TOKEN_INLINE TOKEN_NOINLINE TOKEN_VECTORCALL TOKEN_TASK TOKEN_DECLSPEC
 %token TOKEN_UNIFORM TOKEN_VARYING TOKEN_TYPEDEF TOKEN_SOA TOKEN_UNMASKED
-%token TOKEN_CHAR TOKEN_INT TOKEN_SIGNED TOKEN_UNSIGNED TOKEN_FLOAT TOKEN_DOUBLE
+%token TOKEN_CHAR TOKEN_INT TOKEN_SIGNED TOKEN_UNSIGNED TOKEN_FLOAT16 TOKEN_FLOAT TOKEN_DOUBLE
 %token TOKEN_INT8 TOKEN_INT16 TOKEN_INT64 TOKEN_CONST TOKEN_VOID TOKEN_BOOL
 %token TOKEN_UINT8 TOKEN_UINT16 TOKEN_UINT TOKEN_UINT64
 %token TOKEN_ENUM TOKEN_STRUCT TOKEN_TRUE TOKEN_FALSE
@@ -338,6 +338,14 @@ primary_expression
     | TOKEN_UINT64_CONSTANT {
         $$ = new ConstExpr(AtomicType::UniformUInt64->GetAsConstType(),
                            (uint64_t)yylval.intVal, @1);
+    }
+    | TOKEN_FLOAT16_CONSTANT {
+         std::string sval = *(yylval.stringVal);
+         llvm::Type *hType = llvm::Type::getHalfTy(*g->ctx);
+         const llvm::fltSemantics &FS = hType->getFltSemantics();
+         llvm::APFloat f(FS, sval);
+         $$ = new ConstExpr(AtomicType::UniformFloat16->GetAsConstType(),
+                           f, @1);
     }
     | TOKEN_FLOAT_CONSTANT {
         $$ = new ConstExpr(AtomicType::UniformFloat->GetAsConstType(),
@@ -997,6 +1005,7 @@ atomic_var_type_specifier
     | TOKEN_UINT16 { $$ = AtomicType::UniformUInt16->GetAsUnboundVariabilityType(); }
     | TOKEN_INT { $$ = AtomicType::UniformInt32->GetAsUnboundVariabilityType(); }
     | TOKEN_UINT { $$ = AtomicType::UniformUInt32->GetAsUnboundVariabilityType(); }
+    | TOKEN_FLOAT16 { $$ = AtomicType::UniformFloat16->GetAsUnboundVariabilityType(); }
     | TOKEN_FLOAT { $$ = AtomicType::UniformFloat->GetAsUnboundVariabilityType(); }
     | TOKEN_DOUBLE { $$ = AtomicType::UniformDouble->GetAsUnboundVariabilityType(); }
     | TOKEN_INT64 { $$ = AtomicType::UniformInt64->GetAsUnboundVariabilityType(); }

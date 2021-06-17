@@ -73,7 +73,7 @@ static int allTokens[] = {
   TOKEN_CDO, TOKEN_CFOR, TOKEN_CIF, TOKEN_CWHILE,
   TOKEN_CONST, TOKEN_CONTINUE, TOKEN_DEFAULT, TOKEN_DO,
   TOKEN_DELETE, TOKEN_DOUBLE, TOKEN_ELSE, TOKEN_ENUM,
-  TOKEN_EXPORT, TOKEN_EXTERN, TOKEN_FALSE, TOKEN_FLOAT, TOKEN_FOR,
+  TOKEN_EXPORT, TOKEN_EXTERN, TOKEN_FALSE, TOKEN_FLOAT, TOKEN_FLOAT16, TOKEN_FOR,
   TOKEN_FOREACH, TOKEN_FOREACH_ACTIVE, TOKEN_FOREACH_TILED,
   TOKEN_FOREACH_UNIQUE, TOKEN_GOTO, TOKEN_IF, TOKEN_IN, TOKEN_INLINE,
   TOKEN_INT, TOKEN_INT8, TOKEN_INT16, TOKEN_INT, TOKEN_INT64, TOKEN_LAUNCH,
@@ -83,7 +83,7 @@ static int allTokens[] = {
   TOKEN_TASK, TOKEN_TRUE, TOKEN_TYPEDEF, TOKEN_UNIFORM, TOKEN_UNMASKED,
   TOKEN_UNSIGNED, TOKEN_VARYING, TOKEN_VOID, TOKEN_WHILE,
   TOKEN_STRING_C_LITERAL, TOKEN_DOTDOTDOT,
-  TOKEN_FLOAT_CONSTANT, TOKEN_DOUBLE_CONSTANT,
+  TOKEN_FLOAT_CONSTANT, TOKEN_FLOAT16_CONSTANT, TOKEN_DOUBLE_CONSTANT,
   TOKEN_INT8_CONSTANT, TOKEN_UINT8_CONSTANT,
   TOKEN_INT16_CONSTANT, TOKEN_UINT16_CONSTANT,
   TOKEN_INT32_CONSTANT, TOKEN_UINT32_CONSTANT,
@@ -121,6 +121,7 @@ void ParserInit() {
     tokenToName[TOKEN_EXTERN] = "extern";
     tokenToName[TOKEN_FALSE] = "false";
     tokenToName[TOKEN_FLOAT] = "float";
+    tokenToName[TOKEN_FLOAT16] = "float16";
     tokenToName[TOKEN_FOR] = "for";
     tokenToName[TOKEN_FOREACH] = "foreach";
     tokenToName[TOKEN_FOREACH_ACTIVE] = "foreach_active";
@@ -166,6 +167,7 @@ void ParserInit() {
     tokenToName[TOKEN_STRING_C_LITERAL] = "\"C\"";
     tokenToName[TOKEN_DOTDOTDOT] = "...";
     tokenToName[TOKEN_FLOAT_CONSTANT] = "TOKEN_FLOAT_CONSTANT";
+    tokenToName[TOKEN_FLOAT16_CONSTANT] = "TOKEN_FLOAT16_CONSTANT";
     tokenToName[TOKEN_DOUBLE_CONSTANT] = "TOKEN_DOUBLE_CONSTANT";
     tokenToName[TOKEN_INT8_CONSTANT] = "TOKEN_INT8_CONSTANT";
     tokenToName[TOKEN_UINT8_CONSTANT] = "TOKEN_UINT8_CONSTANT";
@@ -242,6 +244,7 @@ void ParserInit() {
     tokenNameRemap["TOKEN_EXTERN"] = "\'extern\'";
     tokenNameRemap["TOKEN_FALSE"] = "\'false\'";
     tokenNameRemap["TOKEN_FLOAT"] = "\'float\'";
+    tokenNameRemap["TOKEN_FLOAT16"] = "\'float16\'";
     tokenNameRemap["TOKEN_FOR"] = "\'for\'";
     tokenNameRemap["TOKEN_FOREACH"] = "\'foreach\'";
     tokenNameRemap["TOKEN_FOREACH_ACTIVE"] = "\'foreach_active\'";
@@ -288,6 +291,7 @@ void ParserInit() {
     tokenNameRemap["TOKEN_STRING_C_LITERAL"] = "\"C\"";
     tokenNameRemap["TOKEN_DOTDOTDOT"] = "\'...\'";
     tokenNameRemap["TOKEN_FLOAT_CONSTANT"] = "float constant";
+    tokenNameRemap["TOKEN_FLOAT16_CONSTANT"] = "float16 constant";
     tokenNameRemap["TOKEN_DOUBLE_CONSTANT"] = "double constant";
     tokenNameRemap["TOKEN_INT8_CONSTANT"] = "int8 constant";
     tokenNameRemap["TOKEN_UINT8_CONSTANT"] = "unsigned int8 constant";
@@ -364,7 +368,7 @@ inline int ispcRand() {
 WHITESPACE [ \t\r]+
 INT_NUMBER (([0-9]+)|(0x[0-9a-fA-F]+)|(0b[01]+))[uUlL]*[kMG]?[uUlL]*
 INT_NUMBER_DOTDOTDOT (([0-9]+)|(0x[0-9a-fA-F]+)|(0b[01]+))[uUlL]*[kMG]?[uUlL]*\.\.\.
-FLOAT_NUMBER (([0-9]+|(([0-9]+\.[0-9]*[fF]?)|(\.[0-9]+)))([eE][-+]?[0-9]+)?[fF]?)
+FLOAT_NUMBER (([0-9]+|(([0-9]+\.[0-9]*([fF]|[fF]16)?)|(\.[0-9]+)))([eE][-+]?[0-9]+)?([fF]|[fF]16)?)
 HEX_FLOAT_NUMBER (0x[01](\.[0-9a-fA-F]*)?p[-+]?[0-9]+[fF]?)
 FORTRAN_DOUBLE_NUMBER (([0-9]+\.[0-9]*[dD])|([0-9]+\.[0-9]*[dD][-+]?[0-9]+)|([0-9]+[dD][-+]?[0-9]+)|(\.[0-9]*[dD][-+]?[0-9]+))
 
@@ -414,6 +418,7 @@ foreach { RT; return TOKEN_FOREACH; }
 foreach_active { RT; return TOKEN_FOREACH_ACTIVE; }
 foreach_tiled { RT; return TOKEN_FOREACH_TILED; }
 foreach_unique { RT; return TOKEN_FOREACH_UNIQUE; }
+float16 { RT; return TOKEN_FLOAT16; }
 goto { RT; return TOKEN_GOTO; }
 if { RT; return TOKEN_IF; }
 in { RT; return TOKEN_IN; }
@@ -504,9 +509,15 @@ L?\"(\\.|[^\\"])*\" { lStringConst(&yylval, &yylloc); return TOKEN_STRING_LITERA
     return TOKEN_DOUBLE_CONSTANT;
 }
 
-
 {FLOAT_NUMBER} {
     RT;
+    std::string val(yytext);
+    std::string fp16("f16");
+    if (val.size() >= fp16.size() &&
+           val.compare(val.size() - fp16.size(), fp16.size(), fp16) == 0) {
+        yylval.stringVal = new std::string(val.substr(0, val.length() - 3));
+        return TOKEN_FLOAT16_CONSTANT;
+    }
     yylval.floatVal = (float)atof(yytext);
     return TOKEN_FLOAT_CONSTANT;
 }
