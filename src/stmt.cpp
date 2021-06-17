@@ -3021,6 +3021,12 @@ static ExprWithType lProcessPrintArgType(Expr *expr) {
         type = expr->GetType();
     }
 
+    if (Type::Equal(baseType, AtomicType::UniformFloat16)) {
+        expr = new TypeCastExpr(type->IsUniformType() ? AtomicType::UniformFloat : AtomicType::VaryingFloat, expr,
+                                expr->pos);
+        type = expr->GetType();
+    }
+
     char t = lEncodeType(type->GetAsNonConstType());
     if (t == '\0') {
         Error(expr->pos,
