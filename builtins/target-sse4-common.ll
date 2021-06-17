@@ -38,6 +38,7 @@ define_prefetches()
 define_shuffles()
 aossoa()
 rdrand_decls()
+halfTypeGenericImplementation()
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; rounding floats

@@ -59,6 +59,7 @@ svml_stubs(float,f,WIDTH)
 svml_stubs(double,d,WIDTH)
 define_avgs()
 saturation_arithmetic()
+halfTypeGenericImplementation()
 
 declare <4 x double> @llvm.sqrt.v4f64(<4 x double>)
 declare float @__half_to_float_uniform(i16 %v) nounwind readnone
@@ -497,6 +498,7 @@ define double @__ceil_uniform_double(double) nounwind readonly alwaysinline {
 
 gen_gather_factored(i8)
 gen_gather_factored(i16)
+gen_gather_factored(half)
 gen_gather_factored(i32)
 gen_gather_factored(float)
 gen_gather_factored(i64)
@@ -504,6 +506,7 @@ gen_gather_factored(double)
 
 masked_load(i8,  1)
 masked_load(i16, 2)
+masked_load(half, 2)
 masked_load(i32, 4)
 masked_load(float, 4)
 masked_load(i64, 8)
@@ -517,6 +520,7 @@ masked_store_float_double()
 
 gen_scatter(i8)
 gen_scatter(i16)
+gen_scatter(half)
 gen_scatter(i32)
 gen_scatter(float)
 gen_scatter(i64)

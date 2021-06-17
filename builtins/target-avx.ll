@@ -569,6 +569,7 @@ define void @__masked_store_blend_i64(<8 x i64>* nocapture %ptr, <8 x i64> %new,
 
 gen_scatter(i8)
 gen_scatter(i16)
+gen_scatter(half)
 gen_scatter(i32)
 gen_scatter(float)
 gen_scatter(i64)

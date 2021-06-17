@@ -505,6 +505,7 @@ define i64 @__reduce_max_uint64(<8 x i64>) nounwind readnone alwaysinline {
 
 masked_load(i8,  1)
 masked_load(i16, 2)
+masked_load(half, 2)
 
 declare <8 x i32> @llvm.x86.avx512.mask.loadu.d.256(i8*, <8 x i32>, i8)
 define <8 x i32> @__masked_load_i32(i8 * %ptr, <WIDTH x MASK> %mask) nounwind alwaysinline {
@@ -557,6 +558,7 @@ define <8 x double> @__masked_load_double(i8 * %ptr, <WIDTH x MASK> %mask) reado
 
 gen_masked_store(i8) ; llvm.x86.sse2.storeu.dq
 gen_masked_store(i16)
+gen_masked_store(half)
 
 declare void @llvm.x86.avx512.mask.storeu.d.256(i8*, <8 x i32>, i8)
 define void @__masked_store_i32(<8 x i32>* nocapture, <8 x i32> %v, <WIDTH x MASK> %mask) nounwind alwaysinline {
@@ -629,6 +631,14 @@ define void @__masked_store_blend_i16(<8 x i16>* nocapture, <8 x i16>,
   ret void
 }
 
+define void @__masked_store_blend_half(<8 x half>* nocapture, <8 x half>,
+                                        <WIDTH x MASK>) nounwind alwaysinline {
+  %v = load PTR_OP_ARGS(`<8 x half> ')  %0
+  %v1 = select <WIDTH x i1> %2, <8 x half> %1, <8 x half> %v
+  store <8 x half> %v1, <8 x half> * %0
+  ret void
+}
+
 define void @__masked_store_blend_i32(<8 x i32>* nocapture, <8 x i32>,
                                       <WIDTH x MASK>) nounwind alwaysinline {
   %v = load PTR_OP_ARGS(`<8 x i32> ')  %0
@@ -669,6 +679,9 @@ gen_gather(i8)
 
 ;; gather - i16
 gen_gather(i16)
+
+;; gather - half
+gen_gather(half)
 
 ;; gather - i32
 declare <8 x i32> @llvm.x86.avx512.gather3siv8.si(<8 x i32>, i8*, <8 x i32>, i8, i32)
@@ -768,6 +781,10 @@ gen_scatter(i8)
 ;; scatter - i16
 scatterbo32_64(i16)
 gen_scatter(i16)
+
+;; scatter - half
+scatterbo32_64(half)
+gen_scatter(half)
 
 ;; scatter - i32
 declare void @llvm.x86.avx512.scattersiv8.si(i8*, i8, <8 x i32>, <8 x i32>, i32)
