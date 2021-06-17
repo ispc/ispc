@@ -4687,7 +4687,7 @@ void DebugPassFile::run(llvm::Module &module, bool init) {
     std::error_code EC;
     char fname[100];
     snprintf(fname, sizeof(fname), "%s_%d_%s.ll", init ? "init" : "ir", pnum, sanitize(std::string(pname)).c_str());
-    llvm::raw_fd_ostream OS(fname, EC, llvm::sys::fs::F_None);
+    llvm::raw_fd_ostream OS(fname, EC, llvm::sys::fs::OF_None);
     Assert(!EC && "IR dump file creation failed!");
     module.print(OS, 0);
 }
