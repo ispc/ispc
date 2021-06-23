@@ -164,6 +164,7 @@ install(FILES
   cmake/Findlevel_zero.cmake
   cmake/Finddpcpp_compiler.cmake
   cmake/ispc.cmake
+  cmake/interop.cmake
 DESTINATION
   ${CMAKE_INSTALL_LIBDIR}/cmake/${PROJECT_NAME}-${PROJECT_VERSION}
 )

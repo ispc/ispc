@@ -5,6 +5,7 @@
 
 include("${CMAKE_CURRENT_LIST_DIR}/@PROJECT_NAME@_Exports.cmake")
 include("${CMAKE_CURRENT_LIST_DIR}/ispc.cmake")
+include("${CMAKE_CURRENT_LIST_DIR}/interop.cmake")
 
 check_required_components("@PROJECT_NAME@")
 
