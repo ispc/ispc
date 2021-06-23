@@ -1,4 +1,3 @@
-// rule: skip on cpu=TGLLP
 // rule: skip on arch=x86
 // rule: skip on arch=x86-64
 export void f_fu(uniform float RET[], uniform float aFOO[], uniform float b) {
