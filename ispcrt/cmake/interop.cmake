@@ -23,6 +23,71 @@ find_package(dpcpp_compiler)
 set(CMAKE_MODULE_PATH ${OLD_CMAKE_MODULE_PATH})
 unset(OLD_CMAKE_MODULE_PATH)
 
+# Create DPCPP library
+# target_name: name of the target to use for the created library
+# ARGN: DPCPP source files
+function (add_dpcpp_library target_name)
+    set(outdir ${CMAKE_CURRENT_BINARY_DIR})
+
+    set(DPCPP_CXX_FLAGS "")
+    if ("${CMAKE_BUILD_TYPE}" STREQUAL "Release")
+        set(DPCPP_CXX_FLAGS "-O3")
+    elseif ("${CMAKE_BUILD_TYPE}" STREQUAL "Debug")
+        set(DPCPP_CXX_FLAGS "-g")
+    elseif ("${CMAKE_BUILD_TYPE}" STREQUAL "RelWithDebInfo")
+        set(DPCPP_CXX_FLAGS "-O2 -g")
+    else()
+        message(FATAL_ERROR "add_dpcpp_library only supports Debug;Release;RelWithDebInfo build configs")
+    endif()
+
+    # Compile each DPCPP file
+    set(DPCPP_OBJECTS "")
+    foreach(src ${ARGN})
+        get_filename_component(fname ${src} NAME_WE)
+
+        # If input path is not absolute, prepend ${CMAKE_CURRENT_LIST_DIR}
+        if(NOT IS_ABSOLUTE ${src})
+            set(input ${CMAKE_CURRENT_LIST_DIR}/${src})
+        else()
+            set(input ${src})
+        endif()
+
+        set(result "${outdir}/${fname}.o")
+
+        if(DPCPP_ESIMD_INCLUDE_DIR)
+            string(REPLACE ";" ";-I;" DPCPP_ESIMD_INCLUDE_DIR_PARMS "${DPCPP_ESIMD_INCLUDE_DIR}")
+            set(DPCPP_ESIMD_INCLUDE_DIR_PARMS "-I" ${DPCPP_ESIMD_INCLUDE_DIR_PARMS})
+        endif()
+
+        if (NOT DPCPP_ESIMD_FLAGS)
+            set (DPCPP_ESIMD_FLAGS "")
+        endif()
+
+        add_custom_command(
+            DEPENDS ${input}
+            OUTPUT ${result}
+            COMMAND ${DPCPP_COMPILER}
+                -fsycl
+                -fPIE
+                -c
+                ${DPCPP_CXX_FLAGS}
+                ${DPCPP_ESIMD_INCLUDE_DIR_PARMS}
+                ${DPCPP_ESIMD_FLAGS}
+                -I ${CMAKE_CURRENT_SOURCE_DIR}
+                -o ${result}
+                ${input}
+            COMMENT "Building DPCPP object ${result}"
+        )
+
+        list(APPEND DPCPP_OBJECTS ${result})
+    endforeach()
+
+    add_library(${target_name} STATIC)
+    set_target_properties(${target_name} PROPERTIES
+        LINKER_LANGUAGE CXX
+        SOURCES "${DPCPP_OBJECTS}")
+endfunction()
+
 # Extract esimd bitcode
 # target_name: name of the target to use for the extracted bitcode. The bitcode
 #              file will be set as a ISPC_CUSTOM_DEPENDENCIES property on this target

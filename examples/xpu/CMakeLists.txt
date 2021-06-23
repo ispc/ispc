@@ -109,6 +109,7 @@ if (NOT ISPC_BUILD AND ISPC_INCLUDE_DPCPP_EXAMPLES)
     add_subdirectory(simple-dpcpp)
     add_subdirectory(simple-dpcpp-l0)
     add_subdirectory(pipeline-dpcpp)
+    add_subdirectory(simple-esimd)
 endif()
 
 include(TestLists.txt)
