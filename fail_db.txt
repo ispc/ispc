@@ -6,3 +6,9 @@
 % LLVM bugs in released versions, that we have to workaround by applying patches (see llvm_patches
 % folder). The recommended way to build LLVM on Unix is to use "alloy.py".
 %
+./tests/shuffle2-12.ispc runfail  genx64        genx-x8 TGLLP   Linux LLVM 12.0 clang++12.0  spv *
+./tests/shuffle2-12.ispc runfail  genx64        genx-x8 unspec   Linux LLVM 12.0 clang++12.0  spv *
+./tests/shuffle2-12.ispc runfail  genx64       genx-x16 TGLLP   Linux LLVM 12.0 clang++12.0  spv *
+./tests/shuffle2-12.ispc runfail  genx64       genx-x16 unspec   Linux LLVM 12.0 clang++12.0  spv *
+.\tests\shuffle2-12.ispc runfail  genx64        genx-x8 unspec Windows LLVM 12.0         cl  spv *
+.\tests\shuffle2-12.ispc runfail  genx64       genx-x16 unspec Windows LLVM 12.0         cl  spv *
