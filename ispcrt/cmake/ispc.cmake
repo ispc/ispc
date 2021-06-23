@@ -257,7 +257,7 @@ function (ispc_compile_gpu parent_target output_prefix)
   endif()
 
   if (NOT ISPC_TARGET_DIR)
-    set(ISPC_TARGET_DIR ${CMAKE_BINARY_DIR})
+    set(ISPC_TARGET_DIR ${CMAKE_CURRENT_BINARY_DIR})
   endif()
 
   set(outdir ${ISPC_TARGET_DIR})

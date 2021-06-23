@@ -119,6 +119,8 @@ test_add(NAME sgemm TEST_IS_CM host_sgemm_cm 256 1 1 256)
 test_add(NAME simple-dpcpp    TEST_IS_DPCPP host_simple-dpcpp)
 test_add(NAME simple-dpcpp-l0 TEST_IS_DPCPP host_simple-dpcpp-l0)
 test_add(NAME pipeline-dpcpp  TEST_IS_DPCPP host_pipeline-dpcpp)
+test_add(NAME simple-esimd    TEST_IS_DPCPP simple-esimd --gpu)
+test_add(NAME simple-esimd    TEST_IS_DPCPP simple-esimd --cpu)
 
 # perf tests
 test_add(NAME sgemm host_sgemm 128 100 1 4)
