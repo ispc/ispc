@@ -28,8 +28,8 @@ class DpcppApp {
     bool run();
 
   private:
-    std::vector<float> transformIspc(std::vector<float>& in);
-    std::vector<float> transformDpcpp(const std::vector<float>& in);
+    std::vector<float> transformIspc(std::vector<float> &in);
+    std::vector<float> transformDpcpp(const std::vector<float> &in);
 
     bool initialized{false};
     ispcrt::Device m_device;

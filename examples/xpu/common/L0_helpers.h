@@ -36,10 +36,10 @@
 
 #include <cassert>
 #include <fstream>
-#include <vector>
-#include <sstream>
 #include <level_zero/ze_api.h>
 #include <level_zero/zes_api.h>
+#include <sstream>
+#include <vector>
 
 #include "common_helpers.h"
 

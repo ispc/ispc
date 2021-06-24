@@ -29,8 +29,8 @@ class DpcppApp {
     void initialize();
     bool run();
     void cleanup();
-    std::vector<float> transformIspc(const std::vector<float>& in);
-    std::vector<float> transformDpcpp(const std::vector<float>& in);
+    std::vector<float> transformIspc(const std::vector<float> &in);
+    std::vector<float> transformDpcpp(const std::vector<float> &in);
 
   private:
     bool initialized{false};
