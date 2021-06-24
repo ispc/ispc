@@ -72,7 +72,8 @@ void DpcppApp::transformStage2(gpu_vec& in) {
     // using oneAPI DPC++ compiler
     auto platform = sycl::level_zero::make<cl::sycl::platform>(m_driver);
     auto device   = sycl::level_zero::make<cl::sycl::device>(platform, m_device);
-    auto ctx      = sycl::level_zero::make<cl::sycl::context>(platform.get_devices(), m_context);
+    // Set ownership of the native context handle to our app.
+    auto ctx      = sycl::level_zero::make<cl::sycl::context>(platform.get_devices(), m_context, sycl::level_zero::ownership::keep);
     auto q        = sycl::level_zero::make<cl::sycl::queue>(ctx, m_command_queue);
 
     // Set problem space

@@ -112,7 +112,8 @@ std::vector<float> DpcppApp::transformDpcpp(const std::vector<float>& in) {
 
     auto platform = sycl::level_zero::make<cl::sycl::platform>(nativePlatform);
     auto device   = sycl::level_zero::make<cl::sycl::device>(platform, nativeDevice);
-    auto ctx      = sycl::level_zero::make<cl::sycl::context>(platform.get_devices(), nativeContext);
+    // Set ownership of the native context handle to our app.
+    auto ctx      = sycl::level_zero::make<cl::sycl::context>(platform.get_devices(), nativeContext, sycl::level_zero::ownership::keep);
     auto q        = sycl::level_zero::make<cl::sycl::queue>(ctx, nativeQueue);
 
     // Set problem space
