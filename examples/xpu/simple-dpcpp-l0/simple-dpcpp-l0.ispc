@@ -34,7 +34,7 @@
 struct Parameters {
     float *vin;
     float *vout;
-    int    count;
+    int count;
 };
 
 task void simple_ispc(void *uniform _p) {
@@ -55,7 +55,6 @@ task void simple_ispc(void *uniform _p) {
         p->vout[index] = v;
     }
 }
-
 
 #include "ispcrt.isph"
 DEFINE_CPU_ENTRY_POINT(simple_ispc)

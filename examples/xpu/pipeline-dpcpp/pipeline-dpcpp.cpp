@@ -45,10 +45,10 @@ void DpcppApp::initialize() {
     m_initialized = true;
 }
 
-void DpcppApp::transformStage1(gpu_vec& in) {
+void DpcppApp::transformStage1(gpu_vec &in) {
     // Setup kernel arguments
     L0_SAFE_CALL(zeCommandListReset(m_command_list));
-    float* data = in.data();
+    float *data = in.data();
     L0_SAFE_CALL(zeKernelSetArgumentValue(m_kernel1, 0, sizeof(data), &data));
     auto data_size = in.size() * sizeof(float);
     L0_SAFE_CALL(zeKernelSetArgumentValue(m_kernel1, 1, sizeof(data_size), &data_size));
@@ -65,38 +65,39 @@ void DpcppApp::transformStage1(gpu_vec& in) {
     L0_SAFE_CALL(zeCommandQueueSynchronize(m_command_queue, std::numeric_limits<uint64_t>::max()));
 }
 
-void DpcppApp::transformStage2(gpu_vec& in) {
+void DpcppApp::transformStage2(gpu_vec &in) {
     // Create SYCL objects from native Level Zero handles
     // Thanks to this API Level Zero (ISPC) based programs
     // can share device context with SYCL programs implemented
     // using oneAPI DPC++ compiler
     auto platform = sycl::level_zero::make<cl::sycl::platform>(m_driver);
-    auto device   = sycl::level_zero::make<cl::sycl::device>(platform, m_device);
+    auto device = sycl::level_zero::make<cl::sycl::device>(platform, m_device);
     // Set ownership of the native context handle to our app.
-    auto ctx      = sycl::level_zero::make<cl::sycl::context>(platform.get_devices(), m_context, sycl::level_zero::ownership::keep);
-    auto q        = sycl::level_zero::make<cl::sycl::queue>(ctx, m_command_queue);
+    auto ctx =
+        sycl::level_zero::make<cl::sycl::context>(platform.get_devices(), m_context, sycl::level_zero::ownership::keep);
+    auto q = sycl::level_zero::make<cl::sycl::queue>(ctx, m_command_queue);
 
     // Set problem space
-    sycl::range<1> range { in.size() };
+    sycl::range<1> range{in.size()};
 
     // Submit a job (implemented by a lambda function) to the queue
     // This kernel works on data previously modified by ISPC kernel in Stage 1
-    float* data = in.data();
+    float *data = in.data();
     q.submit([&](cl::sycl::handler &cgh) {
-        // Execute kernel in parallel instances
-        cgh.parallel_for<class Stage2>(range, [=](cl::sycl::id<1> idx) {
-            auto v = data[idx];
-            v *= 2.0f;
-            data[idx] = v;
-        });
-    }).wait();
+         // Execute kernel in parallel instances
+         cgh.parallel_for<class Stage2>(range, [=](cl::sycl::id<1> idx) {
+             auto v = data[idx];
+             v *= 2.0f;
+             data[idx] = v;
+         });
+     }).wait();
 }
 
-void DpcppApp::transformStage3(gpu_vec& in) {
+void DpcppApp::transformStage3(gpu_vec &in) {
     // Setup kernel arguments
     // The kernel will work on memory that already is modifed in Stage 1 and Stage 2
     L0_SAFE_CALL(zeCommandListReset(m_command_list));
-    float* data = in.data();
+    float *data = in.data();
     L0_SAFE_CALL(zeKernelSetArgumentValue(m_kernel2, 0, sizeof(data), &data));
     auto data_size = in.size() * sizeof(float);
     L0_SAFE_CALL(zeKernelSetArgumentValue(m_kernel2, 1, sizeof(data_size), &data_size));
@@ -112,7 +113,7 @@ void DpcppApp::transformStage3(gpu_vec& in) {
     L0_SAFE_CALL(zeCommandQueueSynchronize(m_command_queue, std::numeric_limits<uint64_t>::max()));
 }
 
-std::vector<float> DpcppApp::transformCpu(const std::vector<float>& in) {
+std::vector<float> DpcppApp::transformCpu(const std::vector<float> &in) {
     std::vector<float> res(in.size());
     for (int i = 0; i < in.size(); i++) {
         res[i] = (in[i] + 1.0f) * 2.0f - 0.5f;
@@ -121,7 +122,7 @@ std::vector<float> DpcppApp::transformCpu(const std::vector<float>& in) {
 }
 
 // Compare two float vectors with an Epsilon
-static bool operator==(const DpcppApp::gpu_vec& l, const std::vector<float>& r) {
+static bool operator==(const DpcppApp::gpu_vec &l, const std::vector<float> &r) {
     constexpr float EPSILON = 0.01f;
     if (l.size() != r.size())
         return false;
@@ -133,9 +134,7 @@ static bool operator==(const DpcppApp::gpu_vec& l, const std::vector<float>& r) 
     return true;
 }
 
-static bool operator!=(const DpcppApp::gpu_vec& l, const std::vector<float>& r) {
-    return !(l == r);
-}
+static bool operator!=(const DpcppApp::gpu_vec &l, const std::vector<float> &r) { return !(l == r); }
 
 bool DpcppApp::run() {
     if (!m_initialized)

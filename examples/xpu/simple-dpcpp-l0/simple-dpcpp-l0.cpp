@@ -44,7 +44,7 @@ void DpcppApp::initialize() {
     initialized = true;
 }
 
-std::vector<float> DpcppApp::transformIspc(const std::vector<float>& in) {
+std::vector<float> DpcppApp::transformIspc(const std::vector<float> &in) {
     const auto count = in.size();
     std::vector<float> out(count, 0.0f);
 
@@ -55,7 +55,7 @@ std::vector<float> DpcppApp::transformIspc(const std::vector<float>& in) {
     struct Parameters {
         float *in;
         float *out;
-        int    count;
+        int count;
     };
 
     Parameters params;
@@ -65,16 +65,16 @@ std::vector<float> DpcppApp::transformIspc(const std::vector<float>& in) {
     // Allocate memory on the device
     L0_SAFE_CALL(zeMemAllocDevice(m_context, &alloc_desc, count * sizeof(float), 0, m_device, &in_dev));
     L0_SAFE_CALL(zeMemAllocDevice(m_context, &alloc_desc, count * sizeof(float), 0, m_device, &out_dev));
-    L0_SAFE_CALL(zeMemAllocDevice(m_context, &alloc_desc, sizeof(Parameters),    0, m_device, &params_dev));
+    L0_SAFE_CALL(zeMemAllocDevice(m_context, &alloc_desc, sizeof(Parameters), 0, m_device, &params_dev));
 
-    params.in  = reinterpret_cast<float*>(in_dev);
-    params.out = reinterpret_cast<float*>(out_dev);
+    params.in = reinterpret_cast<float *>(in_dev);
+    params.out = reinterpret_cast<float *>(out_dev);
     params.count = count;
 
     // Enqueue memory transfers, setup kernel arguments and prepare synchronization
     L0_SAFE_CALL(zeCommandListReset(m_command_list));
-    L0_SAFE_CALL(
-        zeCommandListAppendMemoryCopy(m_command_list, in_dev, in.data(), in.size() * sizeof(float), nullptr, 0, nullptr));
+    L0_SAFE_CALL(zeCommandListAppendMemoryCopy(m_command_list, in_dev, in.data(), in.size() * sizeof(float), nullptr, 0,
+                                               nullptr));
     L0_SAFE_CALL(
         zeCommandListAppendMemoryCopy(m_command_list, params_dev, &params, sizeof(Parameters), nullptr, 0, nullptr));
     L0_SAFE_CALL(zeKernelSetArgumentValue(m_kernel, 0, sizeof(&params), &params_dev));
@@ -84,8 +84,8 @@ std::vector<float> DpcppApp::transformIspc(const std::vector<float>& in) {
     ze_group_count_t dispatchTraits = {(uint32_t)1, (uint32_t)1, 1};
     L0_SAFE_CALL(zeCommandListAppendLaunchKernel(m_command_list, m_kernel, &dispatchTraits, nullptr, 0, nullptr));
     L0_SAFE_CALL(zeCommandListAppendBarrier(m_command_list, nullptr, 0, nullptr));
-    L0_SAFE_CALL(
-        zeCommandListAppendMemoryCopy(m_command_list, out.data(), out_dev, out.size() * sizeof(float), nullptr, 0, nullptr));
+    L0_SAFE_CALL(zeCommandListAppendMemoryCopy(m_command_list, out.data(), out_dev, out.size() * sizeof(float), nullptr,
+                                               0, nullptr));
     L0_SAFE_CALL(zeCommandListAppendBarrier(m_command_list, nullptr, 0, nullptr));
     L0_SAFE_CALL(zeCommandListClose(m_command_list));
     L0_SAFE_CALL(zeCommandQueueExecuteCommandLists(m_command_queue, 1, &m_command_list, nullptr));
@@ -99,7 +99,7 @@ std::vector<float> DpcppApp::transformIspc(const std::vector<float>& in) {
     return out;
 }
 
-std::vector<float> DpcppApp::transformDpcpp(const std::vector<float>& in) {
+std::vector<float> DpcppApp::transformDpcpp(const std::vector<float> &in) {
     const auto count = in.size();
     std::vector<float> out(count, 0.0f);
 
@@ -108,13 +108,14 @@ std::vector<float> DpcppApp::transformDpcpp(const std::vector<float>& in) {
     // can share device context with SYCL programs implemented
     // using oneAPI DPC++ compiler
     auto platform = sycl::level_zero::make<cl::sycl::platform>(m_driver);
-    auto device   = sycl::level_zero::make<cl::sycl::device>(platform, m_device);
+    auto device = sycl::level_zero::make<cl::sycl::device>(platform, m_device);
     // Set ownership of the native context handle to our app.
-    auto ctx      = sycl::level_zero::make<cl::sycl::context>(platform.get_devices(), m_context, sycl::level_zero::ownership::keep);
-    auto q        = sycl::level_zero::make<cl::sycl::queue>(ctx, m_command_queue);
+    auto ctx =
+        sycl::level_zero::make<cl::sycl::context>(platform.get_devices(), m_context, sycl::level_zero::ownership::keep);
+    auto q = sycl::level_zero::make<cl::sycl::queue>(ctx, m_command_queue);
 
     // Set problem space
-    sycl::range<1> range { count };
+    sycl::range<1> range{count};
     // Allocate buffers used for communication with the device
     sycl::buffer<float, 1> in_buffer(in.data(), range);
     sycl::buffer<float, 1> out_buffer(out.data(), range);
@@ -122,7 +123,7 @@ std::vector<float> DpcppApp::transformDpcpp(const std::vector<float>& in) {
     // Submit a job (implemented by a lambda function) to the queue
     q.submit([&](cl::sycl::handler &cgh) {
         // Accessors are used to access buffers on the device and on the host
-        auto in_access  = in_buffer.get_access<cl::sycl::access::mode::read>(cgh);
+        auto in_access = in_buffer.get_access<cl::sycl::access::mode::read>(cgh);
         auto out_access = out_buffer.get_access<cl::sycl::access::mode::write>(cgh);
 
         // Execute kernel in parallel instances
@@ -147,7 +148,7 @@ std::vector<float> DpcppApp::transformDpcpp(const std::vector<float>& in) {
 }
 
 // Compare two float vectors with an Epsilon
-static bool operator==(const std::vector<float>& l, const std::vector<float>& r) {
+static bool operator==(const std::vector<float> &l, const std::vector<float> &r) {
     constexpr float EPSILON = 0.01f;
     if (l.size() != r.size())
         return false;
