@@ -1055,8 +1055,9 @@ elif platform.machine() == "aarch64":
 elif platform.machine() == "arm64":
     default_target = "neon-i32x4"
     default_arch = "aarch64"
-elif "86" in platform.machine():
+elif "86" in platform.machine() or platform.machine() == "AMD64":
     # Some variant of x86: x86_64, i386, i486, i586, i686
+    # Windows reports platform as AMD64
     pass
 else:
     print_debug("WARNING: host machine was not recognized - " + str(platform.machine()), False, "")
