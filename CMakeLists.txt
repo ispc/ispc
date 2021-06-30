@@ -156,10 +156,11 @@ if (ISPC_MACOS_TARGET AND ISPC_MACOS_SDK_PATH)
         set(ISPC_MACOS_SDK_PATH "${ISPC_MACOS_SDK_PATH_NEW}")
     endif()
 
-    # Grepping path to figure out the version is not the most reliable way,
-    # but it seems to be the most practical.
-    string(REGEX MATCH "MacOSX([0-9]*.[0-9]*).sdk" _ ${ISPC_MACOS_SDK_PATH})
-    set(SDK_VER "${CMAKE_MATCH_1}")
+    set(command "xcrun" "-sdk" "${ISPC_MACOS_SDK_PATH}" "--show-sdk-version")
+    execute_process(COMMAND ${command}
+        OUTPUT_VARIABLE SDK_VER
+        OUTPUT_STRIP_TRAILING_WHITESPACE
+    )
     message(STATUS "MacOS_SDK version: ${SDK_VER}")
 
     if ("${SDK_VER}" STREQUAL "")
