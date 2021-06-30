@@ -72,6 +72,7 @@ parser.add_argument('exe_name', type=str)
 parser.add_argument('-res_image', dest='res_image', type=str)
 parser.add_argument('-ref_image', dest='ref_image', type=str)
 parser.add_argument('-image_cmp_th', dest='image_cmp_th', type=float)
+parser.add_argument('-dpcpp_spv', dest='dpcpp_spv', type=str)
 args, unknown = parser.parse_known_args()
 
 print("Found additional arguments: ", unknown, " Will append these to cmd line.")
@@ -99,6 +100,9 @@ if "LD_LIBRARY_PATH" in test_env:
   test_env["LD_LIBRARY_PATH"] += additional_libs
 else:
   test_env["LD_LIBRARY_PATH"] = additional_libs
+if args.dpcpp_spv:
+  test_env["SYCL_PROGRAM_COMPILE_OPTIONS"] = "-vc-codegen"
+  test_env["SYCL_USE_KERNEL_SPV"] = args.dpcpp_spv
 
 host_name = args.exe_name
 executable = os.path.join(test_dir, host_name)
