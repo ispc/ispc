@@ -48,7 +48,13 @@ endif()
 function (dpcpp_compile_source parent_target dpcpp_source output_name)
     get_filename_component(fname ${dpcpp_source} NAME_WE)
 
-    set(input ${CMAKE_CURRENT_LIST_DIR}/${dpcpp_source})
+    # If input path is not absolute, prepend ${CMAKE_CURRENT_LIST_DIR}
+    if(NOT IS_ABSOLUTE ${dpcpp_source})
+        set(input ${CMAKE_CURRENT_LIST_DIR}/${dpcpp_source})
+    else()
+        set(input ${dpcpp_source})
+    endif()
+
     set(outdir ${CMAKE_CURRENT_BINARY_DIR})
     set(result "${outdir}/${fname}.o")
 
@@ -88,12 +94,18 @@ endfunction()
 
 # Extrect esimd bitcode
 # parent_target: parent target to set dependency on
-# dpcpp_source: dpcpp object file name
+# dpcpp_obj: dpcpp object file name
 # output_name: output parameter - name of resulting bitcode file
 function (dpcpp_get_esimd_bitcode parent_target dpcpp_obj output_name)
     get_filename_component(fname ${dpcpp_obj} NAME_WE)
 
-    set(input ${dpcpp_obj})
+    # If input path is not absolute, prepend ${CMAKE_CURRENT_LIST_DIR}
+    if(NOT IS_ABSOLUTE ${dpcpp_obj})
+        set(input ${CMAKE_CURRENT_LIST_DIR}/${dpcpp_obj})
+    else()
+        set(input ${dpcpp_obj})
+    endif()
+
     set(outdir ${CMAKE_CURRENT_BINARY_DIR})
     set(bundler_result "${outdir}/${fname}.bc")
 
@@ -149,7 +161,12 @@ function (link_bitcode parent_target output_name)
     # Join all bitcode inputs to one string
     set(input "")
     foreach(src ${ARGN})
-        list(APPEND input "${src}")
+        # If input path is not absolute, prepend ${CMAKE_CURRENT_LIST_DIR}
+        if(NOT IS_ABSOLUTE ${src})
+            list(APPEND input "${CMAKE_CURRENT_LIST_DIR}/${src}")
+        else()
+            list(APPEND input "${src}")
+        endif()
     endforeach()
     set(outdir ${CMAKE_CURRENT_BINARY_DIR})
     set(result "${outdir}/${parent_target}_ispc2esimd.bc")
@@ -178,10 +195,50 @@ endfunction()
 # bc_input: name of bitcode fiel to translate
 function (translate_to_spirv parent_target bc_input)
     get_filename_component(fname ${bc_input} NAME_WE)
-    set(input ${bc_input})
+
+    # If input path is not absolute, prepend ${CMAKE_CURRENT_LIST_DIR}
+    if(NOT IS_ABSOLUTE ${bc_input})
+        set(input ${CMAKE_CURRENT_LIST_DIR}/${bc_input})
+    else()
+        set(input ${bc_input})
+    endif()
+
     set(outdir ${CMAKE_CURRENT_BINARY_DIR})
     set(result "${outdir}/${fname}.spv")
 
+    list(APPEND SPV_EXT "-all"
+                        "+SPV_EXT_shader_atomic_float_add"
+                        "+SPV_EXT_shader_atomic_float_min_max"
+                        "+SPV_KHR_no_integer_wrap_decoration"
+                        "+SPV_KHR_float_controls"
+                        "+SPV_INTEL_subgroups"
+                        "+SPV_INTEL_media_block_io"
+                        "+SPV_INTEL_fpga_reg"
+                        "+SPV_INTEL_device_side_avc_motion_estimation"
+                        "+SPV_INTEL_fpga_loop_controls"
+                        "+SPV_INTEL_fpga_memory_attributes"
+                        "+SPV_INTEL_fpga_memory_accesses"
+                        "+SPV_INTEL_unstructured_loop_controls"
+                        "+SPV_INTEL_blocking_pipes"
+                        "+SPV_INTEL_io_pipes"
+                        "+SPV_INTEL_function_pointers"
+                        "+SPV_INTEL_kernel_attributes"
+                        "+SPV_INTEL_float_controls2"
+                        "+SPV_INTEL_inline_assembly"
+                        "+SPV_INTEL_optimization_hints"
+                        "+SPV_INTEL_arbitrary_precision_integers"
+                        "+SPV_INTEL_vector_compute"
+                        "+SPV_INTEL_fast_composite"
+                        "+SPV_INTEL_fpga_buffer_location"
+                        "+SPV_INTEL_arbitrary_precision_fixed_point"
+                        "+SPV_INTEL_arbitrary_precision_floating_point"
+                        "+SPV_INTEL_variable_length_array"
+                        "+SPV_INTEL_fp_fast_math_mode"
+                        "+SPV_INTEL_fpga_cluster_attributes"
+                        "+SPV_INTEL_loop_fuse"
+                        "+SPV_INTEL_long_constant_composite"
+                        "+SPV_INTEL_fpga_invocation_pipelining_attributes")
+    string(REPLACE ";" "," SPV_EXT_PARMS "${SPV_EXT}")
     add_custom_command(
         OUTPUT ${result}
         DEPENDS ${input}
@@ -191,7 +248,10 @@ function (translate_to_spirv parent_target bc_input)
             -spirv-debug-info-version=ocl-100
             -spirv-allow-extra-diexpressions
             -spirv-allow-unknown-intrinsics=llvm.genx.
-            -spirv-ext=+all
+            # Not all extenstion are supported yet by VC backend
+            # so list here which are supported
+            #-spirv-ext=+all
+            -spirv-ext=${SPV_EXT_PARMS}
         COMMENT "Translating LLVM Bitcode to SPIR-V ${result}"
     )
     set_source_files_properties(${result} PROPERTIES GENERATED true)
@@ -221,7 +281,7 @@ function (link_ispc_esimd parent_target)
     set(ISPC_TARGET_DIR ${CMAKE_CURRENT_BINARY_DIR})
 
     foreach(src ${ARGN})
-        get_filename_component(ext ${src} EXT)
+        get_filename_component(ext ${src} LAST_EXT)
         # ISPC file
         if (ext STREQUAL ".ispc")
             ispc_compile_gpu(${parent_target} "ispc_" ispc_bc ${src})
@@ -233,7 +293,7 @@ function (link_ispc_esimd parent_target)
             list(APPEND DPCPP_OUTPUTS ${esimd_bc})
         # Precompiled DPCPP object
         elseif (ext STREQUAL ".o")
-            dpcpp_get_esimd_bitcode(${parent_target} ${dpcpp_obj} esimd_bc)
+            dpcpp_get_esimd_bitcode(${parent_target} ${src} esimd_bc)
             list(APPEND DPCPP_OUTPUTS ${esimd_bc})
         endif()
     endforeach()
