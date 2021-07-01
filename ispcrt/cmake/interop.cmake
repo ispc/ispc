@@ -94,16 +94,26 @@ endfunction()
 
 # Extrect esimd bitcode
 # parent_target: parent target to set dependency on
-# dpcpp_obj: dpcpp object file name
+# dpcpp_input: dpcpp object or archive file name
 # output_name: output parameter - name of resulting bitcode file
-function (dpcpp_get_esimd_bitcode parent_target dpcpp_obj output_name)
-    get_filename_component(fname ${dpcpp_obj} NAME_WE)
+function (dpcpp_get_esimd_bitcode parent_target dpcpp_input output_name)
+    get_filename_component(ext ${dpcpp_input} LAST_EXT)
+    # TODO: archives with several objects are not supported yet
+    if (ext STREQUAL ".o")
+        set(BUNDLER_TYPE "o")
+    elseif (ext STREQUAL ".a")
+        set(BUNDLER_TYPE "ao")
+    else()
+        message(FATAL_EROOR "Cannot extract bitcode from The file with extension " ${ext})
+    endif()
+
+    get_filename_component(fname ${dpcpp_input} NAME_WE)
 
     # If input path is not absolute, prepend ${CMAKE_CURRENT_LIST_DIR}
-    if(NOT IS_ABSOLUTE ${dpcpp_obj})
-        set(input ${CMAKE_CURRENT_LIST_DIR}/${dpcpp_obj})
+    if(NOT IS_ABSOLUTE ${dpcpp_input})
+        set(input ${CMAKE_CURRENT_LIST_DIR}/${dpcpp_input})
     else()
-        set(input ${dpcpp_obj})
+        set(input ${dpcpp_input})
     endif()
 
     set(outdir ${CMAKE_CURRENT_BINARY_DIR})
@@ -116,7 +126,7 @@ function (dpcpp_get_esimd_bitcode parent_target dpcpp_obj output_name)
             --inputs=${input}
             --unbundle
             --targets=sycl-spir64-unknown-unknown-sycldevice
-            --type=o
+            --type=${BUNDLER_TYPE}
             --outputs=${bundler_result}
         COMMENT "Extracting ESIMD Bitcode ${bundler_result}"
     )
@@ -292,9 +302,11 @@ function (link_ispc_esimd parent_target)
             dpcpp_get_esimd_bitcode(${parent_target} ${dpcpp_obj} esimd_bc)
             list(APPEND DPCPP_OUTPUTS ${esimd_bc})
         # Precompiled DPCPP object
-        elseif (ext STREQUAL ".o")
+        elseif (ext STREQUAL ".o" OR ext STREQUAL ".a")
             dpcpp_get_esimd_bitcode(${parent_target} ${src} esimd_bc)
             list(APPEND DPCPP_OUTPUTS ${esimd_bc})
+        else()
+            message(FATAL_ERROR "The file with extension " ${ext} " is not supported yet")
         endif()
     endforeach()
 
