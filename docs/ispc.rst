@@ -100,6 +100,11 @@ Contents:
 
   + `Relationship To The C Programming Language`_
   + `Lexical Structure`_
+
+    * `Integer Literals`_
+    * `Floating Point Literals`_
+    * `String Literals`_
+
   + `Types`_
 
     * `Basic Types and Type Qualifiers`_
@@ -1560,6 +1565,8 @@ underscore or an upper-case or lower-case letter, and then followed by
 zero or more letters, numbers, or underscores.  Identifiers that start with
 two underscores are reserved for use by the compiler.
 
+Integer Literals
+----------------
 Integer numeric constants can be specified in base 10, hexadecimal, or
 binary.  (Octal integer constants aren't supported).  Base 10 constants are
 given by a sequence of one or more digits from 0 to 9.  Hexadecimal
@@ -1587,40 +1594,56 @@ SI-inspired suffixes "k", "M", and "G" respectively:
    int two_megs = 2M; // 2 * 1024 * 1024
    int one_gig = 1G;  // 1024 * 1024 * 1024
 
-Floating-point constants can be specified in one of three ways.  First,
-they may be a sequence of zero or more digits from 0 to 9, followed by a
-period, followed by zero or more digits from 0 to 9. (There must be at
-least one digit before or after the period).
+Floating Point Literals
+-----------------------
 
-The second option is scientific notation, where a base value is specified
-as the first form of a floating-point constant but is then followed by an
-"e" or "E", then a plus sign or a minus sign, and then an exponent.
+ISPC supports 3 floating point types : ``float16``, ``float`` and ``double``.
 
-Finally, floating-point constants may be specified as hexadecimal
-constants; this form can ensure a perfectly bit-accurate representation of
-a particular floating-point number.  These are specified with an "0x"
-prefix, followed by a zero or a one, a period, and then the remainder of
-the mantissa in hexadecimal form, with digits from 0-9, a-f, or A-F.  The
-start of the exponent is denoted by a "p", which is then followed by an
-optional plus or minus sign and then digits from 0 to 9.  For example:
+* ``float16`` is an IEEE 754 half-precision (16 bit format) floating point type.
+* ``float`` is an IEEE 754 single-precision (32 bit format) floating point type.
+* ``double`` is an IEEE 754 double-precision (64 bit format) floating point type.
+
+Floating-point constants of all three types can be specified in one of three ways.
+
+* Decimal floating-point with radix separator - a sequence of zero of more
+  0-9 digits, followed by a period, followed by zero or more 0-9 digits.
+  There must be at least one digit before or after the period. If floating-point
+  suffix is used, radix separator is optional.
+* Scientific notation - a decimal base followed by an "e" or "E", then optional
+  plus or minus sign, and then a decimal exponent.
+* Hexadecimal floating-point constant - a hexadecimal constant (starting with
+  "0x prefix) with or without radix separator, followed by "p" and a hexadecimal
+  exponent value (without "0x" prefix). The exponent is never optional for
+  hexadecimal floating-point literals.
+
+The default type for floating-point literals is ``float``. Floating-point
+literals can be specified by adding one of the following suffixes:
+
+.. list-table:: Operators
+
+  * - Suffix
+    - Type
+  * - ``f16`` or ``F16``
+    - ``float16``
+  * - ``f`` or ``F``
+    - ``float``
+  * - ``d`` or ``D``
+    - ``double``
+
+
+For example:
+
+``float`` type floating point literals 
 
 ::
 
-  float two = 0x1p+1;  // 2.0
-  float pi  = 0x1.921fb54442d18p+1;  // 3.1415926535...
-  float neg = -0x1.ffep+11;  // -4095.
+  float two = 0x1p+1f;  // 2.0
+  float pi  = 0x1.921fb54442d18p+1f;  // 3.1415926535...
+  float neg = -0x1.ffep+11f;  // -4095.
 
-Floating-point constants can optionally have a "f" or "F" suffix (``ispc``
-currently treats all floating-point constants as having 32-bit precision,
-making this suffix not currently have an effect.)
 
-Half precision(16 bit) floating-point constants are represented by a "f16"
-or "F16" suffix. ``float16`` can be specified only in one of two ways
-
-::
-
-  float16 one = 1e0f16;  // 1.0
-  float16 one  = 1.f16;  // 1.0
+String Literals
+---------------
 
 String constants in ``ispc`` are denoted by an opening double quote ``"``
 followed by any character other than a newline, up to a closing double
