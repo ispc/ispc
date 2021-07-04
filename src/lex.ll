@@ -368,8 +368,8 @@ inline int ispcRand() {
 WHITESPACE [ \t\r]+
 INT_NUMBER (([0-9]+)|(0x[0-9a-fA-F]+)|(0b[01]+))[uUlL]*[kMG]?[uUlL]*
 INT_NUMBER_DOTDOTDOT (([0-9]+)|(0x[0-9a-fA-F]+)|(0b[01]+))[uUlL]*[kMG]?[uUlL]*\.\.\.
-FLOAT_NUMBER (([0-9]+|(([0-9]+\.[0-9]*([fF]|[fF]16)?)|(\.[0-9]+)))([eE][-+]?[0-9]+)?([fF]|[fF]16)?)
-HEX_FLOAT_NUMBER (0x[01](\.[0-9a-fA-F]*)?p[-+]?[0-9]+[fF]?)
+FLOAT_NUMBER (([0-9]+|(([0-9]+\.[0-9]*([fF]|[fF]16)?)|(\.[0-9]+)))([eE][-+]?[0-9]+)?([dD]|[fF]|[fF]16)?)
+HEX_FLOAT_NUMBER (0x[01](\.[0-9a-fA-F]*)?p[-+]?[0-9]+([dD]|[fF]|[fF]16)?)
 FORTRAN_DOUBLE_NUMBER (([0-9]+\.[0-9]*[dD])|([0-9]+\.[0-9]*[dD][-+]?[0-9]+)|([0-9]+[dD][-+]?[0-9]+)|(\.[0-9]*[dD][-+]?[0-9]+))
 
 
@@ -512,12 +512,18 @@ L?\"(\\.|[^\\"])*\" { lStringConst(&yylval, &yylloc); return TOKEN_STRING_LITERA
 {FLOAT_NUMBER} {
     RT;
     std::string val(yytext);
+    std::string fp64S("d");
+    std::string fp64C("D");
     std::string fp16S("f16");
     std::string fp16C("F16");
     if (val.size() >= fp16S.size() && ((val.compare(val.size() - fp16S.size(), fp16S.size(), fp16S) == 0)
            || (val.compare(val.size() - fp16C.size(), fp16C.size(), fp16C) == 0))) {
         yylval.stringVal = new std::string(val.substr(0, val.length() - 3));
         return TOKEN_FLOAT16_CONSTANT;
+    } else if (val.size() >= fp64S.size() && ((val.compare(val.size() - fp64S.size(), fp64S.size(), fp64S) == 0)
+           || (val.compare(val.size() - fp64C.size(), fp64C.size(), fp64C) == 0))) {
+        yylval.doubleVal = atof(yytext);
+        return TOKEN_DOUBLE_CONSTANT;
     }
     yylval.floatVal = (float)atof(yytext);
     return TOKEN_FLOAT_CONSTANT;
@@ -525,7 +531,23 @@ L?\"(\\.|[^\\"])*\" { lStringConst(&yylval, &yylloc); return TOKEN_STRING_LITERA
 
 {HEX_FLOAT_NUMBER} {
     RT;
-    yylval.floatVal = (float)lParseHexFloat(yytext);
+    std::string val(yytext);
+    std::string fp16S("f16");
+    std::string fp16C("F16");
+    if (val.size() >= fp16S.size() && ((val.compare(val.size() - fp16S.size(), fp16S.size(), fp16S) == 0)
+           || (val.compare(val.size() - fp16C.size(), fp16C.size(), fp16C) == 0))) {
+        yylval.stringVal = new std::string(val.substr(0, val.length() - 3));
+        return TOKEN_FLOAT16_CONSTANT;
+    }
+    double dval = lParseHexFloat(yytext);
+    std::string fp64S("d");
+    std::string fp64C("D");
+    if (val.size() >= fp64S.size() && ((val.compare(val.size() - fp64S.size(), fp64S.size(), fp64S) == 0)
+           || (val.compare(val.size() - fp64C.size(), fp64C.size(), fp64C) == 0))) {
+        yylval.doubleVal = dval;
+        return TOKEN_DOUBLE_CONSTANT;
+    }
+    yylval.floatVal = (float)dval;
     return TOKEN_FLOAT_CONSTANT;
 }
 
