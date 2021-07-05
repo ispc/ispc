@@ -513,9 +513,10 @@ def run_test(testname, host, target):
 
                 if target.is_genx():
                     exe_name = "%s.run" % os.path.basename(testname)
-                    cc_cmd = "%s -O2 -I. -lze_loader \
+                    cc_cmd = "%s -O0 -I. -I %s/include -lze_loader -L %s/lib \
                             %s %s -DTEST_SIG=%d -DTEST_WIDTH=%d -o %s" % \
-                            (options.compiler_exe, gcc_arch, add_prefix("test_static_l0.cpp", host, target), match, width, exe_name)
+                            (options.compiler_exe, options.l0loader, options.l0loader, gcc_arch, add_prefix("test_static_l0.cpp", host, target),
+                             match, width, exe_name)
                     exe_name = "./" + exe_name
                     cc_cmd += " -DTEST_ZEBIN" if options.ispc_output == "ze" else " -DTEST_SPV"
 
