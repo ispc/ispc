@@ -52,9 +52,6 @@ void DpcppApp::transformStage1(gpu_vec &in) {
     L0_SAFE_CALL(zeKernelSetArgumentValue(m_kernel1, 0, sizeof(data), &data));
     auto data_size = in.size() * sizeof(float);
     L0_SAFE_CALL(zeKernelSetArgumentValue(m_kernel1, 1, sizeof(data_size), &data_size));
-    // Let the runtime know that kernel will access the shared memory
-    ze_kernel_indirect_access_flags_t mem_flags = ZE_KERNEL_INDIRECT_ACCESS_FLAG_SHARED;
-    L0_SAFE_CALL(zeKernelSetIndirectAccess(m_kernel1, mem_flags));
 
     // Run the ISPC kernel
     ze_group_count_t dispatchTraits = {(uint32_t)1, (uint32_t)1, 1};
@@ -104,8 +101,6 @@ void DpcppApp::transformStage3(gpu_vec &in) {
 
     // Run the ISPC kernel and transfer the results back from the GPU
     ze_group_count_t dispatchTraits = {(uint32_t)1, (uint32_t)1, 1};
-    ze_kernel_indirect_access_flags_t mem_flags = ZE_KERNEL_INDIRECT_ACCESS_FLAG_SHARED;
-    L0_SAFE_CALL(zeKernelSetIndirectAccess(m_kernel2, mem_flags));
     L0_SAFE_CALL(zeCommandListAppendLaunchKernel(m_command_list, m_kernel2, &dispatchTraits, nullptr, 0, nullptr));
     L0_SAFE_CALL(zeCommandListAppendBarrier(m_command_list, nullptr, 0, nullptr));
     L0_SAFE_CALL(zeCommandListClose(m_command_list));

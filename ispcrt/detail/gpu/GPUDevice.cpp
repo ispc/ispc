@@ -393,6 +393,12 @@ struct Kernel : public ispcrt::base::Kernel {
         if (m_kernel == nullptr)
             throw std::runtime_error("Failed to load kernel!");
 
+        // Set device/shared indirect flags
+        ze_kernel_indirect_access_flags_t kernel_flags =
+            ZE_KERNEL_INDIRECT_ACCESS_FLAG_DEVICE | ZE_KERNEL_INDIRECT_ACCESS_FLAG_SHARED;
+
+        L0_SAFE_CALL(zeKernelSetIndirectAccess(m_kernel, kernel_flags));
+
         m_module->refInc();
     }
 
@@ -469,9 +475,7 @@ struct TaskQueue : public ispcrt::base::TaskQueue {
         if (param_ptr != nullptr) {
             L0_SAFE_CALL(zeKernelSetArgumentValue(kernel.handle(), 0, sizeof(void *), &param_ptr));
         }
-        // Set indirect flag to allow USM access
-        ze_kernel_indirect_access_flags_t kernel_flags = ZE_KERNEL_INDIRECT_ACCESS_FLAG_SHARED;
-        L0_SAFE_CALL(zeKernelSetIndirectAccess(kernel.handle(), kernel_flags));
+
         ze_group_count_t dispatchTraits = {uint32_t(dim0), uint32_t(dim1), uint32_t(dim2)};
         auto event = m_ep.createEvent();
         if (event == nullptr)
