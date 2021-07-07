@@ -178,6 +178,12 @@ TEST_F(MockTestWithModule, Kernel_Constructor_zeKernelCreate) {
     ASSERT_EQ(sm_rt_error, ISPCRT_DEVICE_LOST);
 }
 
+TEST_F(MockTestWithModule, Kernel_Constructor_zeKernelCreateSetIndirectAccess) {
+    Config::setRetValue("zeKernelSetIndirectAccess", ZE_RESULT_ERROR_DEVICE_LOST);
+    ispcrt::Kernel k(m_device, m_module, "");
+    ASSERT_EQ(sm_rt_error, ISPCRT_DEVICE_LOST);
+}
+
 /////////////////////////////////////////////////////////////////////
 // Memory allocation tests
 TEST_F(MockTestWithDevice, ArrayObj) {
@@ -507,12 +513,6 @@ TEST_F(MockTestWithModuleQueueKernel, TaskQueue_Launch_zeKernelSetArgumentValue)
     ispcrt::Array<float> buf_dev(m_device, buf);
     ASSERT_EQ(sm_rt_error, ISPCRT_NO_ERROR);
     m_task_queue.launch(m_kernel, buf_dev, 0);
-    ASSERT_EQ(sm_rt_error, ISPCRT_DEVICE_LOST);
-}
-
-TEST_F(MockTestWithModuleQueueKernel, TaskQueue_Launch_zeKernelSetIndirectAccess) {
-    Config::setRetValue("zeKernelSetIndirectAccess", ZE_RESULT_ERROR_DEVICE_LOST);
-    m_task_queue.launch(m_kernel, 0);
     ASSERT_EQ(sm_rt_error, ISPCRT_DEVICE_LOST);
 }
 
