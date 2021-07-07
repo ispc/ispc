@@ -1082,6 +1082,11 @@ const Type *UnaryExpr::GetType() const {
     if (type == NULL)
         return NULL;
 
+    // Unary expressions should be returning target types after updating
+    // reference address.
+    if (CastType<ReferenceType>(type) != NULL) {
+        type = type->GetReferenceTarget();
+    }
     // For all unary expressions besides logical not, the returned type is
     // the same as the source type.  Logical not always returns a bool
     // type, with the same shape as the input type.
