@@ -418,7 +418,7 @@ build system is the following:
 And you can configure and build it using:
 ::
 
-  cmake ../ -DISPC_EXECUTABLE_GPU=/home/ispc_package/bin/ispc && make
+  cmake ../ && make
 
 
 You can also run separate compilation commands to achieve the same result.
