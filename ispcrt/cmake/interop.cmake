@@ -40,6 +40,12 @@ else ()
     message(FATAL_ERROR "CMAKE_BUILD_TYPE (${CMAKE_BUILD_TYPE}) allows only the following values: Debug;Release;RelWithDebInfo")
 endif()
 
+# DPC++ compiler is required for all interoperability functions
+set(OLD_CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH})
+list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_LIST_DIR})
+find_package(dpcpp_compiler)
+set(CMAKE_MODULE_PATH ${OLD_CMAKE_MODULE_PATH})
+unset(OLD_CMAKE_MODULE_PATH)
 
 # Compile dpcpp source to object
 # parent_target: parent target to set dependency on

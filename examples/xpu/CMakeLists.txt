@@ -102,7 +102,7 @@ add_subdirectory(simple-usm)
 # DPC++ related examples should not run as part of ISPC_BUILD
 # They require complete ISPC installation and ISPC_INCLUDE_DPCPP_EXAMPLES turned ON
 if (NOT ISPC_BUILD AND ISPC_INCLUDE_DPCPP_EXAMPLES)
-    include(${ISPCRT_DIR}/Finddpcpp_compiler.cmake)
+    include(${ISPCRT_DIR}/interop.cmake)
     if (NOT "${CMAKE_CXX_COMPILER}" STREQUAL "${DPCPP_COMPILER}")
         message(FATAL_ERROR "CMAKE_CXX_COMPILER should be set to " ${DPCPP_COMPILER} " when ISPC_INCLUDE_DPCPP_EXAMPLES=ON" )
     endif()
