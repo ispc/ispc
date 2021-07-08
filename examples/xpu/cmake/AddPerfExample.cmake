@@ -62,7 +62,6 @@ function(add_perf_example)
     endif()
 
     # Compile device code
-    set(ISPC_EXECUTABLE_GPU ${ISPC_EXECUTABLE})
     set(ISPC_TARGET_GEN ${parsed_ISPC_TARGET_GEN})
 
     if (WIN32)

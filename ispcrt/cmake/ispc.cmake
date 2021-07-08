@@ -224,8 +224,6 @@ endfunction()
 ## GPU specific macros/options ################################################
 ###############################################################################
 
-find_program(ISPC_EXECUTABLE_GPU ispc-gpu DOC "Path to GEN enabled ISPC.")
-
 define_ispc_isa_options(GEN genx-x8 genx-x16)
 
 set(ISPC_GENX_ADDITIONAL_ARGS "" CACHE STRING "extra arguments to pass to ISPC for GEN targets")
@@ -298,7 +296,7 @@ macro (ispc_compile_gpu parent_target output_prefix)
     endif()
 
     add_custom_target(${ISPC_GPU_TARGET_NAME}
-      COMMAND ${ISPC_EXECUTABLE_GPU}
+      COMMAND ${ISPC_EXECUTABLE}
         -I ${CMAKE_CURRENT_SOURCE_DIR}
         ${ISPC_INCLUDE_DIR_PARMS}
         ${ISPC_GENX_OPT_FLAGS}
