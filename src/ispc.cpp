@@ -1299,7 +1299,10 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, bool pic, boo
         if (m_targetMachine != NULL)
             dl_string = m_targetMachine->createDataLayout().getStringRepresentation();
         if (isGenXTarget())
-            dl_string = m_arch == Arch::genx64 ? "e-p:64:64-i64:64-n8:16:32" : "e-p:32:32-i64:64-n8:16:32";
+            dl_string = m_arch == Arch::genx64 ? "e-p:64:64-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:"
+                                                 "256-v512:512-v1024:1024-n8:16:32:64"
+                                               : "e-p:32:32-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:"
+                                                 "256-v512:512-v1024:1024-n8:16:32:64";
 
         // 2. Finally set member data
         m_dataLayout = new llvm::DataLayout(dl_string);
