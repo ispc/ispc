@@ -108,7 +108,7 @@ function (dpcpp_get_esimd_bitcode parent_target dpcpp_input output_name)
     if (ext STREQUAL ".o")
         set(BUNDLER_TYPE "o")
     elseif (ext STREQUAL ".a")
-        set(BUNDLER_TYPE "ao")
+        set(BUNDLER_TYPE "a")
     else()
         message(FATAL_EROOR "Cannot extract bitcode from The file with extension " ${ext})
     endif()
@@ -123,18 +123,31 @@ function (dpcpp_get_esimd_bitcode parent_target dpcpp_input output_name)
     endif()
 
     set(outdir ${CMAKE_CURRENT_BINARY_DIR})
-    set(bundler_result "${outdir}/${fname}.bc")
+    set(bundler_result_tmp "${outdir}/${fname}.out")
 
     add_custom_command(
-        OUTPUT ${bundler_result}
+        OUTPUT ${bundler_result_tmp}
         DEPENDS ${input}
         COMMAND ${DPCPP_CLANG_BUNDLER}
             --inputs=${input}
             --unbundle
             --targets=sycl-spir64-unknown-unknown-sycldevice
             --type=${BUNDLER_TYPE}
-            --outputs=${bundler_result}
-        COMMENT "Extracting ESIMD Bitcode ${bundler_result}"
+            --outputs=${bundler_result_tmp}
+        COMMENT "Extracting ESIMD Bitcode ${bundler_result_tmp}"
+    )
+    set_source_files_properties(${bundler_result_tmp} PROPERTIES GENERATED true)
+
+    # Perform llvm-link command on resulting file
+    set(bundler_result "${outdir}/${fname}.bc")
+
+    add_custom_command(
+        OUTPUT ${bundler_result}
+        DEPENDS ${bundler_result_tmp}
+        COMMAND ${DPCPP_LLVM_LINK}
+            ${bundler_result_tmp}
+            -o ${bundler_result}
+        COMMENT "Linking LLVM Bitcode ${bundler_result}"
     )
     set_source_files_properties(${bundler_result} PROPERTIES GENERATED true)
 
