@@ -10,7 +10,7 @@ void foo0(uniform int &param_inout) {
     }
 }
 
-// Case 1: 'if' in 'foo1' uses result of pre inc operation '++param_inout'
+// Case 2: 'if' in 'foo1' uses result of pre inc operation '++param_inout'
 void foo1(uniform int &param_inout) {
     if (++param_inout > 0) {
         param_inout++;
