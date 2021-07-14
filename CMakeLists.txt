@@ -146,24 +146,37 @@ endif()
 
 set(ISPC_MACOS_ARM_TARGET OFF)
 if (ISPC_MACOS_TARGET AND ISPC_MACOS_SDK_PATH)
-    if (IS_SYMLINK ${ISPC_MACOS_SDK_PATH})
-        # Follow symlinks, relative and absolute.
-        file(READ_SYMLINK "${ISPC_MACOS_SDK_PATH}" ISPC_MACOS_SDK_PATH_NEW)
-        if (NOT IS_ABSOLUTE "${ISPC_MACOS_SDK_PATH_NEW}")
-            get_filename_component(ISPC_MACOS_SDK_PATH_DIR "${ISPC_MACOS_SDK_PATH}" DIRECTORY)
-            set(ISPC_MACOS_SDK_PATH_NEW "${ISPC_MACOS_SDK_PATH_DIR}/${ISPC_MACOS_SDK_PATH_NEW}")
+    # Get macOS SDK version.
+    # xcrun is known not to work for standalone SDK or in the default enviroment
+    # on some systems (without explicitly running "xcode-select -s <path>" first).
+    # So we try to get the version from the SDK path first, and then fall back
+    # to looking at the SDK folder name.
+    set(command "xcrun" "--sdk" ${ISPC_MACOS_SDK_PATH} "--show-sdk-version")
+    execute_process(COMMAND ${command}
+        OUTPUT_VARIABLE SDK_VER
+        RESULT_VARIABLE XCRUN_RESULT
+        OUTPUT_STRIP_TRAILING_WHITESPACE
+    )
+
+    if (NOT XCRUN_RESULT STREQUAL "0")
+        if (IS_SYMLINK ${ISPC_MACOS_SDK_PATH})
+            # Follow symlinks, relative and absolute.
+            file(READ_SYMLINK "${ISPC_MACOS_SDK_PATH}" ISPC_MACOS_SDK_PATH_NEW)
+            if (NOT IS_ABSOLUTE "${ISPC_MACOS_SDK_PATH_NEW}")
+                get_filename_component(ISPC_MACOS_SDK_PATH_DIR "${ISPC_MACOS_SDK_PATH}" DIRECTORY)
+                set(ISPC_MACOS_SDK_PATH_NEW "${ISPC_MACOS_SDK_PATH_DIR}/${ISPC_MACOS_SDK_PATH_NEW}")
+            endif()
+            set(ISPC_MACOS_SDK_PATH "${ISPC_MACOS_SDK_PATH_NEW}")
         endif()
-        set(ISPC_MACOS_SDK_PATH "${ISPC_MACOS_SDK_PATH_NEW}")
+
+        string(REGEX MATCH "MacOSX([0-9]*.[0-9]*).sdk" _ ${ISPC_MACOS_SDK_PATH})
+        set(SDK_VER "${CMAKE_MATCH_1}")
     endif()
 
-    # Grepping path to figure out the version is not the most reliable way,
-    # but it seems to be the most practical.
-    string(REGEX MATCH "MacOSX([0-9]*.[0-9]*).sdk" _ ${ISPC_MACOS_SDK_PATH})
-    set(SDK_VER "${CMAKE_MATCH_1}")
     message(STATUS "MacOS_SDK version: ${SDK_VER}")
 
     if ("${SDK_VER}" STREQUAL "")
-        message(WARNING "MacOS SDK version was not detected, assuming 11.0, enabling ARM support")
+        message(WARNING "MacOS SDK version was not detected, assuming 11.0 or later, enabling ARM support")
         set(ISPC_MACOS_ARM_TARGET ON)
     elseif("${SDK_VER}" VERSION_GREATER_EQUAL "11.0")
         message(STATUS "MacOS_SDK supports ARM (SDK ver >= 11.0)")
