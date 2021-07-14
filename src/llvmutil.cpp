@@ -264,9 +264,9 @@ llvm::ConstantInt *LLVMUInt64(uint64_t ival) {
 
 llvm::Constant *LLVMFloat16(llvm::APFloat fv) { return llvm::ConstantFP::get(llvm::Type::getHalfTy(*g->ctx), fv); }
 
-llvm::Constant *LLVMFloat(float fval) { return llvm::ConstantFP::get(llvm::Type::getFloatTy(*g->ctx), fval); }
+llvm::Constant *LLVMFloat(llvm::APFloat fval) { return llvm::ConstantFP::get(llvm::Type::getFloatTy(*g->ctx), fval); }
 
-llvm::Constant *LLVMDouble(double dval) { return llvm::ConstantFP::get(llvm::Type::getDoubleTy(*g->ctx), dval); }
+llvm::Constant *LLVMDouble(llvm::APFloat dval) { return llvm::ConstantFP::get(llvm::Type::getDoubleTy(*g->ctx), dval); }
 
 llvm::Constant *LLVMInt8Vector(int8_t ival) {
     llvm::Constant *v = LLVMInt8(ival);
@@ -373,7 +373,7 @@ llvm::Constant *LLVMFloat16Vector(const llvm::APFloat *fvec) {
     return llvm::ConstantVector::get(vals);
 }
 
-llvm::Constant *LLVMFloatVector(float fval) {
+llvm::Constant *LLVMFloatVector(llvm::APFloat fval) {
     llvm::Constant *v = LLVMFloat(fval);
     std::vector<llvm::Constant *> vals;
     for (int i = 0; i < g->target->getVectorWidth(); ++i)
@@ -381,14 +381,14 @@ llvm::Constant *LLVMFloatVector(float fval) {
     return llvm::ConstantVector::get(vals);
 }
 
-llvm::Constant *LLVMFloatVector(const float *fvec) {
+llvm::Constant *LLVMFloatVector(const llvm::APFloat *fvec) {
     std::vector<llvm::Constant *> vals;
     for (int i = 0; i < g->target->getVectorWidth(); ++i)
         vals.push_back(LLVMFloat(fvec[i]));
     return llvm::ConstantVector::get(vals);
 }
 
-llvm::Constant *LLVMDoubleVector(double dval) {
+llvm::Constant *LLVMDoubleVector(llvm::APFloat dval) {
     llvm::Constant *v = LLVMDouble(dval);
     std::vector<llvm::Constant *> vals;
     for (int i = 0; i < g->target->getVectorWidth(); ++i)
@@ -396,7 +396,7 @@ llvm::Constant *LLVMDoubleVector(double dval) {
     return llvm::ConstantVector::get(vals);
 }
 
-llvm::Constant *LLVMDoubleVector(const double *dvec) {
+llvm::Constant *LLVMDoubleVector(const llvm::APFloat *dvec) {
     std::vector<llvm::Constant *> vals;
     for (int i = 0; i < g->target->getVectorWidth(); ++i)
         vals.push_back(LLVMDouble(dvec[i]));
