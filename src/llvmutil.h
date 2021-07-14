@@ -142,9 +142,9 @@ extern llvm::ConstantInt *LLVMUInt64(uint64_t i);
 /** Returns an LLVM half constant of the given value */
 extern llvm::Constant *LLVMFloat16(llvm::APFloat f);
 /** Returns an LLVM float constant of the given value */
-extern llvm::Constant *LLVMFloat(float f);
+extern llvm::Constant *LLVMFloat(llvm::APFloat f);
 /** Returns an LLVM double constant of the given value */
-extern llvm::Constant *LLVMDouble(double f);
+extern llvm::Constant *LLVMDouble(llvm::APFloat f);
 
 /** Returns an LLVM boolean vector constant of the given value smeared
     across all elements */
@@ -187,10 +187,10 @@ extern llvm::Constant *LLVMUInt64Vector(uint64_t i);
 extern llvm::Constant *LLVMFloat16Vector(llvm::APFloat f);
 /** Returns an LLVM float vector constant of the given value smeared
     across all elements */
-extern llvm::Constant *LLVMFloatVector(float f);
+extern llvm::Constant *LLVMFloatVector(llvm::APFloat f);
 /** Returns an LLVM double vector constant of the given value smeared
     across all elements */
-extern llvm::Constant *LLVMDoubleVector(double f);
+extern llvm::Constant *LLVMDoubleVector(llvm::APFloat f);
 
 /** Returns a constant integer or vector (according to the given type) of
     the given signed integer value. */
@@ -242,10 +242,10 @@ extern llvm::Constant *LLVMUInt64Vector(const uint64_t *i);
 extern llvm::Constant *LLVMFloat16Vector(const std::vector<llvm::APFloat> &f);
 /** Returns an LLVM float vector based on the given array of values.
     The array should have g->target.vectorWidth elements. */
-extern llvm::Constant *LLVMFloatVector(const float *f);
+extern llvm::Constant *LLVMFloatVector(const std::vector<llvm::APFloat> &f);
 /** Returns an LLVM double vector based on the given array of values.
     The array should have g->target.vectorWidth elements. */
-extern llvm::Constant *LLVMDoubleVector(const double *f);
+extern llvm::Constant *LLVMDoubleVector(const std::vector<llvm::APFloat> &f);
 
 /** LLVM constant value representing an 'all on' SIMD lane mask */
 extern llvm::Constant *LLVMMaskAllOn;
