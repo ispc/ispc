@@ -147,7 +147,7 @@ endif()
 set(ISPC_MACOS_ARM_TARGET OFF)
 if (ISPC_MACOS_TARGET AND ISPC_MACOS_SDK_PATH)
     # Get macOS SDK version.
-    # xcrun is known not to work for standalone SDK or in the default enviroment
+    # xcrun is known not to work for standalone SDK or in the default environment
     # on some systems (without explicitly running "xcode-select -s <path>" first).
     # So we try to get the version from the SDK path first, and then fall back
     # to looking at the SDK folder name.
