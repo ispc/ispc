@@ -143,7 +143,6 @@ static llvm::Pass *CreateReplaceStdlibShiftPass();
 #ifdef ISPC_GENX_ENABLED
 static llvm::Pass *CreateGenXGatherCoalescingPass();
 static llvm::Pass *CreateReplaceLLVMIntrinsics();
-static llvm::Pass *CreateFixDivisionInstructions();
 static llvm::Pass *CreateFixAddressSpace();
 static llvm::Pass *CreateDemotePHIs();
 static llvm::Pass *CreateCheckUnsupportedInsts();
@@ -517,13 +516,6 @@ void ispc::Optimize(llvm::Module *module, int optLevel) {
 
         optPM.add(CreateIntrinsicsOptPass(), 102);
         optPM.add(CreateIsCompileTimeConstantPass(true));
-#ifdef ISPC_GENX_ENABLED
-        if (g->target->isGenXTarget()) {
-            // InstructionCombining pass is required for FixDivisionInstructions
-            optPM.add(llvm::createInstructionCombiningPass());
-            optPM.add(CreateFixDivisionInstructions());
-        }
-#endif
         optPM.add(llvm::createFunctionInliningPass());
         optPM.add(CreateMakeInternalFuncsStaticPass());
 #if ISPC_LLVM_VERSION >= ISPC_LLVM_12_0
@@ -648,11 +640,6 @@ void ispc::Optimize(llvm::Module *module, int optLevel) {
         optPM.add(llvm::createCFGSimplificationPass());
 #endif
         optPM.add(llvm::createPruneEHPass());
-#ifdef ISPC_GENX_ENABLED
-        if (g->target->isGenXTarget()) {
-            optPM.add(CreateFixDivisionInstructions());
-        }
-#endif
         optPM.add(llvm::createPostOrderFunctionAttrsLegacyPass());
         optPM.add(llvm::createReversePostOrderFunctionAttrsPass());
 
@@ -6073,101 +6060,6 @@ bool ReplaceLLVMIntrinsics::runOnFunction(llvm::Function &F) {
 }
 
 static llvm::Pass *CreateReplaceLLVMIntrinsics() { return new ReplaceLLVMIntrinsics(); }
-
-///////////////////////////////////////////////////////////////////////////
-// FixDivisionInstructions
-
-/** This pass replaces instructions supported by LLVM IR, but not supported by GenX backend.
-    There is IR for i64 div, but there is no div i64 in VISA and GenX backend doesn't handle
-    this situation, so ISPC must not generate IR with i64 div.
- */
-
-class FixDivisionInstructions : public llvm::FunctionPass {
-  public:
-    static char ID;
-    FixDivisionInstructions() : FunctionPass(ID) {}
-    llvm::StringRef getPassName() const { return "Fix division instructions unsupported by VC backend"; }
-    bool runOnBasicBlock(llvm::BasicBlock &BB);
-    bool runOnFunction(llvm::Function &F);
-};
-
-char FixDivisionInstructions::ID = 0;
-
-bool FixDivisionInstructions::runOnBasicBlock(llvm::BasicBlock &bb) {
-    DEBUG_START_PASS("FixDivisionInstructions");
-    bool modifiedAny = false;
-
-    std::string name = "";
-    llvm::Function *func;
-    for (llvm::BasicBlock::iterator I = bb.begin(), E = --bb.end(); I != E; ++I) {
-        llvm::Instruction *inst = &*I;
-        // for now, all replaced inst have 2 operands
-        if (inst->getNumOperands() > 1) {
-            auto type = inst->getOperand(0)->getType();
-            // for now, all replaced inst have i64 operands
-            if ((type == LLVMTypes::Int64Type) || (type == LLVMTypes::Int64VectorType)) {
-                switch (inst->getOpcode()) {
-                case llvm::Instruction::BinaryOps::UDiv:
-                    if (type == LLVMTypes::Int64Type) {
-                        name = "__divus_ui64";
-                    } else {
-                        name = "__divus_vi64";
-                    }
-                    break;
-                case llvm::Instruction::BinaryOps::SDiv:
-                    if (type == LLVMTypes::Int64Type) {
-                        name = "__divs_ui64";
-                    } else {
-                        name = "__divs_vi64";
-                    }
-                    break;
-                case llvm::Instruction::BinaryOps::URem:
-                    if (type == LLVMTypes::Int64Type) {
-                        name = "__remus_ui64";
-                    } else {
-                        name = "__remus_vi64";
-                    }
-                    break;
-                case llvm::Instruction::BinaryOps::SRem:
-                    if (type == LLVMTypes::Int64Type) {
-                        name = "__rems_ui64";
-                    } else {
-                        name = "__rems_vi64";
-                    }
-                    break;
-                default:
-                    name = "";
-                    break;
-                }
-                if (name != "") {
-                    func = m->module->getFunction(name);
-                    Assert(func != NULL && "FixDivisionInstructions: Can't find correct function!!!");
-                    llvm::SmallVector<llvm::Value *, 8> args;
-                    args.push_back(inst->getOperand(0));
-                    args.push_back(inst->getOperand(1));
-                    llvm::Instruction *newInst = llvm::CallInst::Create(func, args, name);
-                    llvm::ReplaceInstWithInst(inst, newInst);
-                    modifiedAny = true;
-                    I = newInst->getIterator();
-                }
-            }
-        }
-    }
-    DEBUG_END_PASS("FixDivisionInstructions");
-    return modifiedAny;
-}
-
-bool FixDivisionInstructions::runOnFunction(llvm::Function &F) {
-
-    llvm::TimeTraceScope FuncScope("FixDivisionInstructions::runOnFunction", F.getName());
-    bool modifiedAny = false;
-    for (llvm::BasicBlock &BB : F) {
-        modifiedAny |= runOnBasicBlock(BB);
-    }
-    return modifiedAny;
-}
-
-static llvm::Pass *CreateFixDivisionInstructions() { return new FixDivisionInstructions(); }
 
 ///////////////////////////////////////////////////////////////////////////
 // CheckUnsupportedInsts
