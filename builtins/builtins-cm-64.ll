@@ -726,7 +726,7 @@ define internal <4 x i8> @_ZN7details13__impl_divremILi4EEEu2CMvbT__cS1_S1_u2CMv
 }
 
 ; Function Attrs: noinline nounwind
-define dso_local <8 x i8> @_Z24__cm_intrinsic_impl_sdivu2CMvb8_cS_(<8 x i8>, <8 x i8>) #7 {
+define internal <8 x i8> @_Z24__cm_intrinsic_impl_sdivu2CMvb8_cS_(<8 x i8>, <8 x i8>) #7 {
   %3 = alloca <8 x i8>, align 8
   %4 = alloca <8 x i8>, align 8
   %5 = alloca <8 x i8>, align 8
@@ -772,7 +772,7 @@ define internal <8 x i8> @_ZN7details13__impl_divremILi8EEEu2CMvbT__cS1_S1_u2CMv
 }
 
 ; Function Attrs: noinline nounwind
-define dso_local <16 x i8> @_Z24__cm_intrinsic_impl_sdivu2CMvb16_cS_(<16 x i8>, <16 x i8>) #9 {
+define internal <16 x i8> @_Z24__cm_intrinsic_impl_sdivu2CMvb16_cS_(<16 x i8>, <16 x i8>) #9 {
   %3 = alloca <16 x i8>, align 16
   %4 = alloca <16 x i8>, align 16
   %5 = alloca <16 x i8>, align 16
@@ -1212,7 +1212,7 @@ define internal <4 x i16> @_ZN7details13__impl_divremILi4EEEu2CMvbT__sS1_S1_u2CM
 }
 
 ; Function Attrs: noinline nounwind
-define dso_local <8 x i16> @_Z24__cm_intrinsic_impl_sdivu2CMvb8_sS_(<8 x i16>, <8 x i16>) #9 {
+define internal <8 x i16> @_Z24__cm_intrinsic_impl_sdivu2CMvb8_sS_(<8 x i16>, <8 x i16>) #9 {
   %3 = alloca <8 x i16>, align 16
   %4 = alloca <8 x i16>, align 16
   %5 = alloca <8 x i16>, align 16
@@ -1281,7 +1281,7 @@ define internal <8 x i16> @_ZN7details13__impl_divremILi8EEEu2CMvbT__sS1_S1_u2CM
 }
 
 ; Function Attrs: noinline nounwind
-define dso_local <16 x i16> @_Z24__cm_intrinsic_impl_sdivu2CMvb16_sS_(<16 x i16>, <16 x i16>) #11 {
+define internal <16 x i16> @_Z24__cm_intrinsic_impl_sdivu2CMvb16_sS_(<16 x i16>, <16 x i16>) #11 {
   %3 = alloca <16 x i16>, align 32
   %4 = alloca <16 x i16>, align 32
   %5 = alloca <16 x i16>, align 32
@@ -2118,7 +2118,7 @@ define internal <4 x i32> @_ZN7details13__impl_divremILi4EEEu2CMvbT__iS1_S1_u2CM
 }
 
 ; Function Attrs: noinline nounwind
-define dso_local <8 x i32> @_Z24__cm_intrinsic_impl_sdivu2CMvb8_iS_(<8 x i32>, <8 x i32>) #17 {
+define internal <8 x i32> @_Z24__cm_intrinsic_impl_sdivu2CMvb8_iS_(<8 x i32>, <8 x i32>) #17 {
   %3 = alloca <8 x i32>, align 32
   %4 = alloca <8 x i32>, align 32
   %5 = alloca <8 x i32>, align 32
@@ -2304,7 +2304,7 @@ define internal <8 x i32> @_ZN7details13__impl_divremILi8EEEu2CMvbT__iS1_S1_u2CM
 }
 
 ; Function Attrs: noinline nounwind
-define dso_local <16 x i32> @_Z24__cm_intrinsic_impl_sdivu2CMvb16_iS_(<16 x i32>, <16 x i32>) #18 {
+define internal <16 x i32> @_Z24__cm_intrinsic_impl_sdivu2CMvb16_iS_(<16 x i32>, <16 x i32>) #18 {
   %3 = alloca <16 x i32>, align 64
   %4 = alloca <16 x i32>, align 64
   %5 = alloca <16 x i32>, align 64
@@ -2952,7 +2952,7 @@ define internal <4 x i8> @_ZN7details14__impl_udivremILi4EEEu2CMvbT__hS1_S1_u2CM
 }
 
 ; Function Attrs: noinline nounwind
-define dso_local <8 x i8> @_Z24__cm_intrinsic_impl_udivu2CMvb8_hS_(<8 x i8>, <8 x i8>) #15 {
+define internal <8 x i8> @_Z24__cm_intrinsic_impl_udivu2CMvb8_hS_(<8 x i8>, <8 x i8>) #15 {
   %3 = alloca <8 x i8>, align 8
   %4 = alloca <8 x i8>, align 8
   %5 = alloca <8 x i8>, align 8
@@ -2998,7 +2998,7 @@ define internal <8 x i8> @_ZN7details14__impl_udivremILi8EEEu2CMvbT__hS1_S1_u2CM
 }
 
 ; Function Attrs: noinline nounwind
-define dso_local <16 x i8> @_Z24__cm_intrinsic_impl_udivu2CMvb16_hS_(<16 x i8>, <16 x i8>) #16 {
+define internal <16 x i8> @_Z24__cm_intrinsic_impl_udivu2CMvb16_hS_(<16 x i8>, <16 x i8>) #16 {
   %3 = alloca <16 x i8>, align 16
   %4 = alloca <16 x i8>, align 16
   %5 = alloca <16 x i8>, align 16
@@ -3426,7 +3426,7 @@ define internal <4 x i16> @_ZN7details14__impl_udivremILi4EEEu2CMvbT__tS1_S1_u2C
 }
 
 ; Function Attrs: noinline nounwind
-define dso_local <8 x i16> @_Z24__cm_intrinsic_impl_udivu2CMvb8_tS_(<8 x i16>, <8 x i16>) #16 {
+define internal <8 x i16> @_Z24__cm_intrinsic_impl_udivu2CMvb8_tS_(<8 x i16>, <8 x i16>) #16 {
   %3 = alloca <8 x i16>, align 16
   %4 = alloca <8 x i16>, align 16
   %5 = alloca <8 x i16>, align 16
@@ -3492,7 +3492,7 @@ define internal <8 x i16> @_ZN7details14__impl_udivremILi8EEEu2CMvbT__tS1_S1_u2C
 }
 
 ; Function Attrs: noinline nounwind
-define dso_local <16 x i16> @_Z24__cm_intrinsic_impl_udivu2CMvb16_tS_(<16 x i16>, <16 x i16>) #17 {
+define internal <16 x i16> @_Z24__cm_intrinsic_impl_udivu2CMvb16_tS_(<16 x i16>, <16 x i16>) #17 {
   %3 = alloca <16 x i16>, align 32
   %4 = alloca <16 x i16>, align 32
   %5 = alloca <16 x i16>, align 32
@@ -4200,7 +4200,7 @@ define internal <4 x i32> @_ZN7details14__impl_udivremILi4EEEu2CMvbT__jS1_S1_u2C
 }
 
 ; Function Attrs: noinline nounwind
-define dso_local <8 x i32> @_Z24__cm_intrinsic_impl_udivu2CMvb8_jS_(<8 x i32>, <8 x i32>) #17 {
+define internal <8 x i32> @_Z24__cm_intrinsic_impl_udivu2CMvb8_jS_(<8 x i32>, <8 x i32>) #17 {
   %3 = alloca <8 x i32>, align 32
   %4 = alloca <8 x i32>, align 32
   %5 = alloca <8 x i32>, align 32
@@ -4346,7 +4346,7 @@ define internal <8 x i32> @_ZN7details14__impl_udivremILi8EEEu2CMvbT__jS1_S1_u2C
 }
 
 ; Function Attrs: noinline nounwind
-define dso_local <16 x i32> @_Z24__cm_intrinsic_impl_udivu2CMvb16_jS_(<16 x i32>, <16 x i32>) #18 {
+define internal <16 x i32> @_Z24__cm_intrinsic_impl_udivu2CMvb16_jS_(<16 x i32>, <16 x i32>) #18 {
   %3 = alloca <16 x i32>, align 64
   %4 = alloca <16 x i32>, align 64
   %5 = alloca <16 x i32>, align 64
