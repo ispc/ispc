@@ -1,4 +1,4 @@
-;;  Copyright (c) 2019, Intel Corporation
+;;  Copyright (c) 2019-2021, Intel Corporation
 ;;  All rights reserved.
 ;;
 ;;  Redistribution and use in source and binary forms, with or without
@@ -37,13 +37,5 @@ define(`WIDTH_X2',`16')
 define(`WIDTH_X4',`32')
 define(`GEN_SUFFIX',`CONCAT(`v8', GEN_TYPE($1))')
 define(`BITCAST_WIDTH',`i8')
-
-;; idiv cm intrinsics name
-define(`CM_IMPL_IDIV_INT8',`_Z24__cm_intrinsic_impl_sdivu2CMvb8_cS_')
-define(`CM_IMPL_IDIV_INT16',`_Z24__cm_intrinsic_impl_sdivu2CMvb8_sS_')
-define(`CM_IMPL_IDIV_INT32',`_Z24__cm_intrinsic_impl_sdivu2CMvb8_iS_')
-define(`CM_IMPL_IDIV_UINT8',`_Z24__cm_intrinsic_impl_udivu2CMvb8_hS_')
-define(`CM_IMPL_IDIV_UINT16',`_Z24__cm_intrinsic_impl_udivu2CMvb8_tS_')
-define(`CM_IMPL_IDIV_UINT32',`_Z24__cm_intrinsic_impl_udivu2CMvb8_jS_')
 
 include(`target-genx.ll')
