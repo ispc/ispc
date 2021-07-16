@@ -649,6 +649,8 @@ static void lSetInternalFunctions(llvm::Module *module) {
         "__psubus_vi64",
         "__rcp_fast_uniform_half",
         "__rcp_uniform_half",
+        "__rcp_fast_varying_half",
+        "__rcp_varying_half",
         "__rcp_fast_uniform_float",
         "__rcp_uniform_float",
         "__rcp_fast_varying_float",
