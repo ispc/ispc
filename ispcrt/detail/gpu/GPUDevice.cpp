@@ -32,43 +32,137 @@ namespace gpu {
 static const ISPCRTError getIspcrtError(ze_result_t err) {
     auto res = ISPCRT_UNKNOWN_ERROR;
     switch (err) {
-        case ZE_RESULT_SUCCESS:
-            res = ISPCRT_NO_ERROR;
-            break;
-        case ZE_RESULT_ERROR_DEVICE_LOST:
-            res = ISPCRT_DEVICE_LOST;
-            break;
-        case ZE_RESULT_ERROR_INVALID_ARGUMENT:
-        case ZE_RESULT_ERROR_INVALID_NULL_HANDLE:
-        case ZE_RESULT_ERROR_INVALID_NULL_POINTER:
-        case ZE_RESULT_ERROR_INVALID_SIZE:
-        case ZE_RESULT_ERROR_UNSUPPORTED_SIZE:
-        case ZE_RESULT_ERROR_UNSUPPORTED_ALIGNMENT:
-        case ZE_RESULT_ERROR_INVALID_ENUMERATION:
-        case ZE_RESULT_ERROR_UNSUPPORTED_ENUMERATION:
-        case ZE_RESULT_ERROR_UNSUPPORTED_IMAGE_FORMAT:
-        case ZE_RESULT_ERROR_INVALID_NATIVE_BINARY:
-        case ZE_RESULT_ERROR_INVALID_GLOBAL_NAME:
-        case ZE_RESULT_ERROR_INVALID_KERNEL_NAME:
-        case ZE_RESULT_ERROR_INVALID_FUNCTION_NAME:
-        case ZE_RESULT_ERROR_INVALID_GROUP_SIZE_DIMENSION:
-        case ZE_RESULT_ERROR_INVALID_GLOBAL_WIDTH_DIMENSION:
-        case ZE_RESULT_ERROR_INVALID_KERNEL_ARGUMENT_INDEX:
-        case ZE_RESULT_ERROR_INVALID_KERNEL_ARGUMENT_SIZE:
-        case ZE_RESULT_ERROR_INVALID_KERNEL_ATTRIBUTE_VALUE:
-        case ZE_RESULT_ERROR_INVALID_MODULE_UNLINKED:
-        case ZE_RESULT_ERROR_INVALID_COMMAND_LIST_TYPE:
-        case ZE_RESULT_ERROR_OVERLAPPING_REGIONS:
-            res = ISPCRT_INVALID_ARGUMENT;
-            break;
-        case ZE_RESULT_ERROR_HANDLE_OBJECT_IN_USE:
-        case ZE_RESULT_ERROR_INVALID_SYNCHRONIZATION_OBJECT:
-            res = ISPCRT_INVALID_OPERATION;
-            break;
-        default:
-            res = ISPCRT_UNKNOWN_ERROR;
+    case ZE_RESULT_SUCCESS:
+        res = ISPCRT_NO_ERROR;
+        break;
+    case ZE_RESULT_ERROR_DEVICE_LOST:
+        res = ISPCRT_DEVICE_LOST;
+        break;
+    case ZE_RESULT_ERROR_OUT_OF_HOST_MEMORY:
+    case ZE_RESULT_ERROR_OUT_OF_DEVICE_MEMORY:
+        res = ISPCRT_OUT_OF_MEMORY;
+        break;
+    case ZE_RESULT_ERROR_DEVICE_REQUIRES_RESET:
+        res = ISPCRT_DEVICE_RESET;
+        break;
+    case ZE_RESULT_ERROR_DEVICE_IN_LOW_POWER_STATE:
+        res = ISPCRT_DEVICE_LOWER_POWER;
+        break;
+    case ZE_RESULT_ERROR_UNINITIALIZED:
+        res = ISPCRT_UNINITIALIZED;
+        break;
+    case ZE_RESULT_ERROR_UNSUPPORTED_VERSION:
+    case ZE_RESULT_ERROR_UNSUPPORTED_FEATURE:
+        res = ISPCRT_UNSUPPORTED;
+        break;
+    case ZE_RESULT_ERROR_INVALID_ARGUMENT:
+    case ZE_RESULT_ERROR_INVALID_NULL_HANDLE:
+    case ZE_RESULT_ERROR_INVALID_NULL_POINTER:
+    case ZE_RESULT_ERROR_INVALID_SIZE:
+    case ZE_RESULT_ERROR_UNSUPPORTED_SIZE:
+    case ZE_RESULT_ERROR_UNSUPPORTED_ALIGNMENT:
+    case ZE_RESULT_ERROR_INVALID_ENUMERATION:
+    case ZE_RESULT_ERROR_UNSUPPORTED_ENUMERATION:
+    case ZE_RESULT_ERROR_UNSUPPORTED_IMAGE_FORMAT:
+    case ZE_RESULT_ERROR_INVALID_NATIVE_BINARY:
+    case ZE_RESULT_ERROR_INVALID_GLOBAL_NAME:
+    case ZE_RESULT_ERROR_INVALID_KERNEL_NAME:
+    case ZE_RESULT_ERROR_INVALID_FUNCTION_NAME:
+    case ZE_RESULT_ERROR_INVALID_GROUP_SIZE_DIMENSION:
+    case ZE_RESULT_ERROR_INVALID_GLOBAL_WIDTH_DIMENSION:
+    case ZE_RESULT_ERROR_INVALID_KERNEL_ARGUMENT_INDEX:
+    case ZE_RESULT_ERROR_INVALID_KERNEL_ARGUMENT_SIZE:
+    case ZE_RESULT_ERROR_INVALID_KERNEL_ATTRIBUTE_VALUE:
+    case ZE_RESULT_ERROR_INVALID_MODULE_UNLINKED:
+    case ZE_RESULT_ERROR_INVALID_COMMAND_LIST_TYPE:
+    case ZE_RESULT_ERROR_OVERLAPPING_REGIONS:
+        res = ISPCRT_INVALID_ARGUMENT;
+        break;
+    case ZE_RESULT_ERROR_HANDLE_OBJECT_IN_USE:
+    case ZE_RESULT_ERROR_INVALID_SYNCHRONIZATION_OBJECT:
+    case ZE_RESULT_ERROR_MODULE_BUILD_FAILURE:
+    case ZE_RESULT_ERROR_MODULE_LINK_FAILURE:
+        res = ISPCRT_INVALID_OPERATION;
+        break;
+    default:
+        res = ISPCRT_UNKNOWN_ERROR;
     }
     return res;
+}
+
+static const std::string getIspcrtErrorMessage(ze_result_t err) {
+    switch (err) {
+    case ZE_RESULT_SUCCESS:
+        return "";
+    case ZE_RESULT_ERROR_DEVICE_LOST:
+        return "Device hung, reset, was removed, or driver update occurred.";
+    case ZE_RESULT_ERROR_OUT_OF_HOST_MEMORY:
+        return "Insufficient host memory to satisfy call.";
+    case ZE_RESULT_ERROR_OUT_OF_DEVICE_MEMORY:
+        return "Insufficient device memory to satisfy call.";
+    case ZE_RESULT_ERROR_DEVICE_REQUIRES_RESET:
+        return "Device requires a reset.";
+    case ZE_RESULT_ERROR_DEVICE_IN_LOW_POWER_STATE:
+        return "Device currently in low power state.";
+    case ZE_RESULT_ERROR_UNINITIALIZED:
+        return "Driver is not initialized.";
+    case ZE_RESULT_ERROR_UNSUPPORTED_VERSION:
+        return "Unsupported version.";
+    case ZE_RESULT_ERROR_UNSUPPORTED_FEATURE:
+        return "Unsupported feature.";
+    case ZE_RESULT_ERROR_INVALID_ARGUMENT:
+        return "Invalid argument.";
+    case ZE_RESULT_ERROR_INVALID_NULL_HANDLE:
+        return "Handle argument is not valid.";
+    case ZE_RESULT_ERROR_INVALID_NULL_POINTER:
+        return "Pointer argument may not be nullptr.";
+    case ZE_RESULT_ERROR_INVALID_SIZE:
+        return "Size argument is invalid (e.g. must not be zero).";
+    case ZE_RESULT_ERROR_UNSUPPORTED_SIZE:
+        return "Size argument is not supported by the device (e.g. too large).";
+    case ZE_RESULT_ERROR_UNSUPPORTED_ALIGNMENT:
+        return "Alignment argument is not supported by the device (e.g. too small).";
+    case ZE_RESULT_ERROR_INVALID_ENUMERATION:
+        return "Enumerator argument is not valid.";
+    case ZE_RESULT_ERROR_UNSUPPORTED_ENUMERATION:
+        return "Enumerator argument is not supported by the device.";
+    case ZE_RESULT_ERROR_UNSUPPORTED_IMAGE_FORMAT:
+        return "Image format is not supported by the device.";
+    case ZE_RESULT_ERROR_INVALID_NATIVE_BINARY:
+        return "Native binary is not supported by the device.";
+    case ZE_RESULT_ERROR_INVALID_GLOBAL_NAME:
+        return "Global variable is not found in the module.";
+    case ZE_RESULT_ERROR_INVALID_KERNEL_NAME:
+        return "Kernel name is not found in the module.";
+    case ZE_RESULT_ERROR_INVALID_FUNCTION_NAME:
+        return "Function name is not found in the module.";
+    case ZE_RESULT_ERROR_INVALID_GROUP_SIZE_DIMENSION:
+        return "Group size dimension is not valid for the kernel or device.";
+    case ZE_RESULT_ERROR_INVALID_GLOBAL_WIDTH_DIMENSION:
+        return "Global width dimension is not valid for the kernel or device.";
+    case ZE_RESULT_ERROR_INVALID_KERNEL_ARGUMENT_INDEX:
+        return "Kernel argument index is not valid for kernel.";
+    case ZE_RESULT_ERROR_INVALID_KERNEL_ARGUMENT_SIZE:
+        return "Kernel argument size does not match kernel.";
+    case ZE_RESULT_ERROR_INVALID_KERNEL_ATTRIBUTE_VALUE:
+        return "Value of kernel attribute is not valid for the kernel or device.";
+    case ZE_RESULT_ERROR_INVALID_MODULE_UNLINKED:
+        return "Module with imports needs to be linked before kernels can be created from it.";
+    case ZE_RESULT_ERROR_INVALID_COMMAND_LIST_TYPE:
+        return "Command list type does not match command queue type.";
+    case ZE_RESULT_ERROR_OVERLAPPING_REGIONS:
+        return "Copy operations do not support overlapping regions of memory.";
+    case ZE_RESULT_ERROR_HANDLE_OBJECT_IN_USE:
+        return "Object pointed to by handle still in-use by device.";
+    case ZE_RESULT_ERROR_INVALID_SYNCHRONIZATION_OBJECT:
+        return "Synchronization object in invalid state.";
+    case ZE_RESULT_ERROR_MODULE_BUILD_FAILURE:
+        return "Error occurred when building module, see build log for details.";
+    case ZE_RESULT_ERROR_MODULE_LINK_FAILURE:
+        return "Error occurred when linking modules, see build log for details.";
+    default:
+        return "Unknown or internal error.";
+    }
 }
 
 #define L0_THROW_IF(status)                                                                                            \
@@ -76,6 +170,7 @@ static const ISPCRTError getIspcrtError(ze_result_t err) {
         if (status != 0) {                                                                                             \
             std::stringstream ss;                                                                                      \
             ss << __FILE__ << ":" << __LINE__ << ": L0 error 0x" << std::hex << (int)status;                           \
+            ss << ": " << ispcrt::gpu::getIspcrtErrorMessage(status);                                                  \
             throw ispcrt::base::ispcrt_runtime_error(ispcrt::gpu::getIspcrtError(status), ss.str());                   \
         }                                                                                                              \
     }
@@ -91,6 +186,7 @@ static const ISPCRTError getIspcrtError(ze_result_t err) {
         if (status != 0) {                                                                                             \
             std::stringstream ss;                                                                                      \
             ss << __FILE__ << ":" << __LINE__ << ": L0 error 0x" << std::hex << (int)status;                           \
+            ss << ": " << ispcrt::gpu::getIspcrtErrorMessage(status);                                                  \
             std::cerr << ss.str() << std::endl;                                                                        \
         }                                                                                                              \
     }
