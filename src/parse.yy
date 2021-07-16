@@ -343,17 +343,19 @@ primary_expression
          std::string sval = *(yylval.stringVal);
          llvm::Type *hType = llvm::Type::getHalfTy(*g->ctx);
          const llvm::fltSemantics &FS = hType->getFltSemantics();
-         llvm::APFloat f(FS, sval);
+         llvm::APFloat f16(FS, sval);
          $$ = new ConstExpr(AtomicType::UniformFloat16->GetAsConstType(),
-                           f, @1);
+                           f16, @1);
     }
     | TOKEN_FLOAT_CONSTANT {
+        llvm::APFloat f(yylval.floatVal);
         $$ = new ConstExpr(AtomicType::UniformFloat->GetAsConstType(),
-                           yylval.floatVal, @1);
+                           f, @1);
     }
     | TOKEN_DOUBLE_CONSTANT {
+        llvm::APFloat d(yylval.doubleVal);
         $$ = new ConstExpr(AtomicType::UniformDouble->GetAsConstType(),
-                           yylval.doubleVal, @1);
+                           d, @1);
     }
     | TOKEN_TRUE {
         $$ = new ConstExpr(AtomicType::UniformBool->GetAsConstType(), true, @1);
