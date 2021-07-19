@@ -51,7 +51,8 @@ unset(OLD_CMAKE_MODULE_PATH)
 # parent_target: parent target to set dependency on
 # dpcpp_source: dpcpp source file name
 # output_name: output parameter - name of resulting object file
-function (dpcpp_compile_source parent_target dpcpp_source output_name)
+# output_target: output parameter - name of resulting target
+function (dpcpp_compile_source parent_target dpcpp_source output_name output_target)
     get_filename_component(fname ${dpcpp_source} NAME_WE)
 
     # If input path is not absolute, prepend ${CMAKE_CURRENT_LIST_DIR}
@@ -73,8 +74,9 @@ function (dpcpp_compile_source parent_target dpcpp_source output_name)
         set (DPCPP_ESIMD_FLAGS "")
     endif()
 
-    add_custom_command(
-        OUTPUT ${result}
+    set(dpcpp_compile_target_name ${parent_target}_${dpcpp_source}_obj)
+    add_custom_target(
+        ${dpcpp_compile_target_name}
         DEPENDS ${input}
         COMMAND ${DPCPP_COMPILER}
             -fsycl
@@ -90,21 +92,22 @@ function (dpcpp_compile_source parent_target dpcpp_source output_name)
     )
     set_source_files_properties(${result} PROPERTIES GENERATED true)
 
-    # Wrapper custom target to add dependency to the parent target
-    set(dpcpp_compile_target_name ${parent_target}_${dpcpp_source}_obj)
-    add_custom_target(${dpcpp_compile_target_name} DEPENDS ${result})
+    # Add dependency to parent target
     add_dependencies(${parent_target} ${dpcpp_compile_target_name})
-    # Pass path to resulting dpcpp object to the parent target
+    # Pass path to resulting dpcpp object and resulting target to the parent target
     set(${output_name} ${result} PARENT_SCOPE)
+    set(${output_target} ${dpcpp_compile_target_name} PARENT_SCOPE)
 endfunction()
 
 # Extrect esimd bitcode
 # parent_target: parent target to set dependency on
 # dpcpp_input: dpcpp object or archive file name
+# deps_target: name of dependency target
 # output_name: output parameter - name of resulting bitcode file
-function (dpcpp_get_esimd_bitcode parent_target dpcpp_input output_name)
+# output_target: output parameter - name of resulting target
+function (dpcpp_get_esimd_bitcode parent_target dpcpp_input deps_target output_name output_target)
     get_filename_component(ext ${dpcpp_input} LAST_EXT)
-    # TODO: archives with several objects are not supported yet
+
     if (ext STREQUAL ".o")
         set(BUNDLER_TYPE "o")
     elseif (ext STREQUAL ".a")
@@ -123,43 +126,29 @@ function (dpcpp_get_esimd_bitcode parent_target dpcpp_input output_name)
     endif()
 
     set(outdir ${CMAKE_CURRENT_BINARY_DIR})
+    # Result after unbundle command
     set(bundler_result_tmp "${outdir}/${fname}.out")
+    # Result after bitcode linking of unbundled output
+    set(bundler_result "${outdir}/${fname}.bc")
+    # Intermediate bitcode file with link to the real one
+    set(lower_post_link "${outdir}/${fname}_lower.bc")
+    # Final esimd bitcode file
+    set(post_link_result "${outdir}/${fname}_lower_esimd_0.bc")
 
-    add_custom_command(
-        OUTPUT ${bundler_result_tmp}
-        DEPENDS ${input}
+    set(dpcpp_esimd_target_name ${fname}_bc)
+    add_custom_target(
+        ${dpcpp_esimd_target_name}
+        DEPENDS ${input} ${deps_target}
+        BYPRODUCTS ${lower_post_link}
         COMMAND ${DPCPP_CLANG_BUNDLER}
             --inputs=${input}
             --unbundle
             --targets=sycl-spir64-unknown-unknown-sycldevice
             --type=${BUNDLER_TYPE}
             --outputs=${bundler_result_tmp}
-        COMMENT "Extracting ESIMD Bitcode ${bundler_result_tmp}"
-    )
-    set_source_files_properties(${bundler_result_tmp} PROPERTIES GENERATED true)
-
-    # Perform llvm-link command on resulting file
-    set(bundler_result "${outdir}/${fname}.bc")
-
-    add_custom_command(
-        OUTPUT ${bundler_result}
-        DEPENDS ${bundler_result_tmp}
         COMMAND ${DPCPP_LLVM_LINK}
             ${bundler_result_tmp}
             -o ${bundler_result}
-        COMMENT "Linking LLVM Bitcode ${bundler_result}"
-    )
-    set_source_files_properties(${bundler_result} PROPERTIES GENERATED true)
-
-    # This is intermediate bitcode file with link to the real one
-    set(lower_post_link "${outdir}/${fname}_lower.bc")
-    # This is final esimd bitcode file
-    set(post_link_result "${outdir}/${fname}_lower_esimd_0.bc")
-
-    add_custom_command(
-        OUTPUT ${post_link_result}
-        DEPENDS ${bundler_result}
-        BYPRODUCTS ${lower_post_link}
         COMMAND ${DPCPP_SYCL_POST_LINK}
             -split=auto
             -symbols
@@ -168,25 +157,25 @@ function (dpcpp_get_esimd_bitcode parent_target dpcpp_input output_name)
             -spec-const=rt
             -o ${lower_post_link}
             ${bundler_result}
-        COMMENT "Lowering ESIMD ${post_link_result}"
+        COMMENT "Extracting ESIMD Bitcode ${bundler_result_tmp}"
     )
     set_source_files_properties(${post_link_result} PROPERTIES GENERATED true)
 
-    # Wrapper custom target to add dependency to the parent target
-    set(dpcpp_esimd_target_name ${fname}_bc)
-    add_custom_target(${dpcpp_esimd_target_name} DEPENDS ${post_link_result})
+    # Add dependency to parent target
     add_dependencies(${parent_target} ${dpcpp_esimd_target_name})
-
-    # Pass path to resulting esimd bitcode to the parent target
+    # Pass path to resulting esimd bitcode and resulting target to the parent target
     set(${output_name} ${post_link_result} PARENT_SCOPE)
+    set(${output_target} ${dpcpp_esimd_target_name} PARENT_SCOPE)
 endfunction()
 
 # Link bitcode files into one
 # parent_target: parent target to set dependency on
 # output_name: output parameter - name of resulting bitcode file. It will have
 # suffix _ispc2esimd
+# deps_target: name of dependency target
+# output_target: output parameter - name of resulting target
 # ARGN: names of bitcode file to link
-function (link_bitcode parent_target output_name)
+function (link_bitcode parent_target output_name deps_target output_target)
     # Join all bitcode inputs to one string
     set(input "")
     foreach(src ${ARGN})
@@ -200,9 +189,11 @@ function (link_bitcode parent_target output_name)
     set(outdir ${CMAKE_CURRENT_BINARY_DIR})
     set(result "${outdir}/${parent_target}_ispc2esimd.bc")
 
-    add_custom_command(
-        OUTPUT ${result}
-        DEPENDS ${input}
+    set(llvm_link_target_name ${parent_target}_ispc2esimd_bc)
+
+    add_custom_target(
+        ${llvm_link_target_name}
+        DEPENDS ${input} ${deps_target}
         COMMAND ${DPCPP_LLVM_LINK}
             ${input}
             -o ${result}
@@ -210,19 +201,18 @@ function (link_bitcode parent_target output_name)
     )
     set_source_files_properties(${result} PROPERTIES GENERATED true)
 
-    # Wrapper custom target to add dependency to the parent target
-    set(llvm_link_target_name ${parent_target}_ispc2esimd_bc)
-    add_custom_target(${llvm_link_target_name} DEPENDS ${result})
+    # Add dependency to parent target
     add_dependencies(${parent_target} ${llvm_link_target_name})
-
-    # Pass path to resulting linked bitcode file to the parent target
+    # Pass path to resulting linked bitcode file and resuulting target to the parent target
     set(${output_name} ${result} PARENT_SCOPE)
+    set(${output_target} ${llvm_link_target_name} PARENT_SCOPE)
 endfunction()
 
 # Link bitcode files into one
 # parent_target: parent target to set dependency on
 # bc_input: name of bitcode fiel to translate
-function (translate_to_spirv parent_target bc_input)
+# deps_target: name of dependency target
+function (translate_to_spirv parent_target bc_input deps_target)
     get_filename_component(fname ${bc_input} NAME_WE)
 
     # If input path is not absolute, prepend ${CMAKE_CURRENT_LIST_DIR}
@@ -268,9 +258,11 @@ function (translate_to_spirv parent_target bc_input)
                         "+SPV_INTEL_long_constant_composite"
                         "+SPV_INTEL_fpga_invocation_pipelining_attributes")
     string(REPLACE ";" "," SPV_EXT_PARMS "${SPV_EXT}")
-    add_custom_command(
-        OUTPUT ${result}
-        DEPENDS ${input}
+
+    set(llvm_spirv_target_name ${parent_target}_${fname}_spv)
+    add_custom_target(
+        ${llvm_spirv_target_name}
+        DEPENDS ${input} ${deps_target}
         COMMAND ${DPCPP_LLVM_SPIRV}
             ${input}
             -o ${result}
@@ -285,10 +277,9 @@ function (translate_to_spirv parent_target bc_input)
     )
     set_source_files_properties(${result} PROPERTIES GENERATED true)
 
-    # Wrapper custom target to add dependency to the parent target
-    set(llvm_spirv_target_name ${parent_target}_${fname}_spv)
-    add_custom_target(${llvm_spirv_target_name} DEPENDS ${result})
+    # Add dependency to parent target
     add_dependencies(${parent_target} ${llvm_spirv_target_name})
+
 endfunction()
 
 # Link ISPC and ESIMD GPU modules to SPIR-V and produce libraries required for CPU
@@ -305,6 +296,7 @@ function (link_ispc_esimd parent_target)
 
     set(ISPC_OUTPUTS "")
     set(DPCPP_OUTPUTS "")
+    set(DPCPP_DEPS_TARGETS "")
 
     set(ISPC_GENX_FORMAT "bc")
     set(ISPC_TARGET_DIR ${CMAKE_CURRENT_BINARY_DIR})
@@ -317,21 +309,24 @@ function (link_ispc_esimd parent_target)
             list(APPEND ISPC_OUTPUTS ${ispc_bc})
         # DPCPP source
         elseif (ext STREQUAL ".cpp")
-            dpcpp_compile_source(${parent_target} ${src} dpcpp_obj)
-            dpcpp_get_esimd_bitcode(${parent_target} ${dpcpp_obj} esimd_bc)
+            dpcpp_compile_source(${parent_target} ${src} dpcpp_obj dpcpp_dep_target)
+            dpcpp_get_esimd_bitcode(${parent_target} ${dpcpp_obj} ${dpcpp_dep_target} esimd_bc esimd_dep_target)
             list(APPEND DPCPP_OUTPUTS ${esimd_bc})
+            list(APPEND DPCPP_DEPS_TARGETS ${esimd_dep_target})
         # Precompiled DPCPP object
         elseif (ext STREQUAL ".o" OR ext STREQUAL ".a")
-            dpcpp_get_esimd_bitcode(${parent_target} ${src} esimd_bc)
+            dpcpp_get_esimd_bitcode(${parent_target} ${src} "" esimd_bc esimd_dep_target)
+            message(STATUS ${esimd_dep_target})
             list(APPEND DPCPP_OUTPUTS ${esimd_bc})
+            list(APPEND DPCPP_DEPS_TARGETS ${esimd_dep_target})
         else()
             message(FATAL_ERROR "The file with extension " ${ext} " is not supported yet")
         endif()
     endforeach()
 
-    link_bitcode(${parent_target} ispc2esimd_bc ${ISPC_OUTPUTS} ${DPCPP_OUTPUTS})
+    link_bitcode(${parent_target} ispc2esimd_bc ${DPCPP_DEPS_TARGETS} link_dep_target ${ISPC_OUTPUTS} ${DPCPP_OUTPUTS})
 
-    translate_to_spirv(${parent_target} ${ispc2esimd_bc})
+    translate_to_spirv(${parent_target} ${ispc2esimd_bc} ${link_dep_target})
 
     unset(ISPC_GENX_FORMAT)
     unset(ISPC_TARGET_DIR)
