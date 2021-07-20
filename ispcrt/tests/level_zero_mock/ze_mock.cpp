@@ -3,8 +3,6 @@
 
 #include "ze_mock.h"
 
-#include <cstring>
-
 namespace ispcrt {
 namespace testing {
 namespace mock {

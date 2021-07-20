@@ -2,7 +2,10 @@
 // SPDX-License-Identifier: BSD-3-Clause
 
 #pragma once
+#include <cstring>
+#include <stdexcept>
 #include <stdlib.h>
+#include <string>
 #include <unordered_map>
 #include <vector>
 
