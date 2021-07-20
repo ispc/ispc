@@ -4,6 +4,7 @@
 #include "ze_mock.h"
 
 #include <cstring>
+#include <string>
 #include <iostream>
 
 namespace ispcrt {
