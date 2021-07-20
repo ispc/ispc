@@ -2279,6 +2279,8 @@ bool FunctionType::IsUnsignedType() const { return false; }
 
 bool FunctionType::IsConstType() const { return false; }
 
+bool FunctionType::IsISPCKernel() const { return g->target->isGenXTarget() && isTask; }
+
 const Type *FunctionType::GetBaseType() const {
     FATAL("FunctionType::GetBaseType() shouldn't be called");
     return NULL;
