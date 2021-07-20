@@ -847,6 +847,8 @@ class FunctionType : public Type {
     bool IsUnsignedType() const;
     bool IsConstType() const;
 
+    bool IsISPCKernel() const;
+
     const Type *GetBaseType() const;
     const Type *GetAsVaryingType() const;
     const Type *GetAsUniformType() const;
