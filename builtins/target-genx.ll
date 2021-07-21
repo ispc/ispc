@@ -900,8 +900,21 @@ entry:
   br i1 %can_vload, label %vload, label %vgather
 
 vload:
-  %res = call <WIDTH x $1> @__masked_load_blend_$1(i8* %0, <WIDTH x MASK> %mask)
-  ret <WIDTH x $1> %res
+  ;; Blend version for v8i8 cannot be used here since it reads past the last lane,
+  ;; so our checks are not enough to be sure in safety of such operation.
+  ;; TODO: currently blend_i8 is not applied anywhere, maybe we can use it
+  ;; in a different way somehow.
+  ifelse($1,i8, `
+    ifelse(WIDTH,8, `
+      br label %vgather
+    ',`
+    %res = call <WIDTH x $1> @__masked_load_blend_$1(i8* %0, <WIDTH x MASK> %mask)
+    ret <WIDTH x $1> %res
+    ')
+  ',`
+    %res = call <WIDTH x $1> @__masked_load_blend_$1(i8* %0, <WIDTH x MASK> %mask)
+    ret <WIDTH x $1> %res
+  ')
 
 vgather:
   %broadcast_init = insertelement <WIDTH x i32> undef, i32 SIZEOF($1), i32 0
