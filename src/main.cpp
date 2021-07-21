@@ -690,14 +690,10 @@ int main(int Argc, char *Argv[]) {
         else if (!strcmp(argv[i], "--emit-obj"))
             ot = Module::Object;
 #ifdef ISPC_GENX_ENABLED
-        else if (!strcmp(argv[i], "--emit-spirv")) {
+        else if (!strcmp(argv[i], "--emit-spirv"))
             ot = Module::SPIRV;
-            // AOT compilation is temporary disabled on Windows
-#ifndef ISPC_HOST_IS_WINDOWS
-        } else if (!strcmp(argv[i], "--emit-zebin")) {
+        else if (!strcmp(argv[i], "--emit-zebin"))
             ot = Module::ZEBIN;
-#endif
-        }
 #endif
         else if (!strcmp(argv[i], "--enable-llvm-intrinsics")) {
             g->enableLLVMIntrinsics = true;
