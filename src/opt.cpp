@@ -517,6 +517,11 @@ void ispc::Optimize(llvm::Module *module, int optLevel) {
         optPM.add(CreateIntrinsicsOptPass(), 102);
         optPM.add(CreateIsCompileTimeConstantPass(true));
         optPM.add(llvm::createFunctionInliningPass());
+#ifdef ISPC_GENX_ENABLED
+        if (g->target->isGenXTarget()) {
+            optPM.add(CreateFixAddressSpace());
+        }
+#endif
         optPM.add(CreateMakeInternalFuncsStaticPass());
 #if ISPC_LLVM_VERSION >= ISPC_LLVM_12_0
         optPM.add(llvm::createCFGSimplificationPass(simplifyCFGopt));
@@ -533,7 +538,6 @@ void ispc::Optimize(llvm::Module *module, int optLevel) {
             optPM.add(llvm::createSROAPass());
             optPM.add(CreateReplaceLLVMIntrinsics());
             optPM.add(CreateCheckUnsupportedInsts());
-            optPM.add(CreateFixAddressSpace());
             optPM.add(CreateMangleOpenCLBuiltins());
             // This pass is required to prepare LLVM IR for open source SPIR-V translator
             optPM.add(
@@ -791,13 +795,17 @@ void ispc::Optimize(llvm::Module *module, int optLevel) {
         optPM.add(llvm::createFunctionInliningPass());
         optPM.add(llvm::createAggressiveDCEPass());
         optPM.add(llvm::createStripDeadPrototypesPass());
+#ifdef ISPC_GENX_ENABLED
+        if (g->target->isGenXTarget()) {
+            optPM.add(CreateFixAddressSpace());
+        }
+#endif
         optPM.add(CreateMakeInternalFuncsStaticPass());
         optPM.add(llvm::createGlobalDCEPass());
         optPM.add(llvm::createConstantMergePass());
 #ifdef ISPC_GENX_ENABLED
         if (g->target->isGenXTarget()) {
             optPM.add(CreateCheckUnsupportedInsts());
-            optPM.add(CreateFixAddressSpace());
             optPM.add(CreateMangleOpenCLBuiltins());
             // This pass is required to prepare LLVM IR for open source SPIR-V translator
             optPM.add(
@@ -2955,9 +2963,10 @@ static llvm::CallInst *lGenXStoreInst(llvm::Value *val, llvm::Value *ptr, llvm::
     // correctly.
     if (valVecType->getPrimitiveSizeInBits() / 8 < 16) {
         Assert(valVecType->getScalarType() == LLVMTypes::Int8Type);
-        if (llvm::Function *maskedFunc = lGenXMaskedInt8Inst(inst, true))
+        if (llvm::Function *maskedFunc = lGenXMaskedInt8Inst(inst, true)) {
+            // @__masked_store_$1(<WIDTH x $1>* nocapture, <WIDTH x $1>, <WIDTH x MASK> %mask)
             return llvm::dyn_cast<llvm::CallInst>(lCallInst(maskedFunc, ptr, val, LLVMMaskAllOn, ""));
-        else {
+        } else {
             return NULL;
         }
     }
@@ -2985,9 +2994,12 @@ static llvm::CallInst *lGenXLoadInst(llvm::Value *ptr, llvm::Type *retType, llvm
     // correctly.
     if (retVecType->getPrimitiveSizeInBits() / 8 < 16) {
         Assert(retVecType->getScalarType() == LLVMTypes::Int8Type);
-        if (llvm::Function *maskedFunc = lGenXMaskedInt8Inst(inst, false))
-            return llvm::dyn_cast<llvm::CallInst>(lCallInst(maskedFunc, ptr, LLVMMaskAllOn, ""));
-        else {
+        if (llvm::Function *maskedFunc = lGenXMaskedInt8Inst(inst, false)) {
+            // <WIDTH x $1> @__masked_load_i8(i8 *, <WIDTH x MASK> %mask)
+            // Cast pointer to i8*
+            ptr = new llvm::BitCastInst(ptr, LLVMTypes::Int8PointerType, "ptr_to_i8", inst);
+            return llvm::dyn_cast<llvm::CallInst>(lCallInst(maskedFunc, ptr, LLVMMaskAllOn, "_masked_load_i8"));
+        } else {
             return NULL;
         }
     }
