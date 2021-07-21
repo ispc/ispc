@@ -53,7 +53,6 @@ on GPU.
 
 You can also generate L0 binary using ``--emit-zebin`` flag. Please note that
 currently SPIR-V format is more stable but feel free to experiment with L0 binary.
-L0 binary format is supported now on Linux platform only.
 
 Environment
 -----------
