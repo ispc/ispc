@@ -1187,7 +1187,7 @@ Expr *UnaryExpr::Optimize() {
             int count = constExpr->GetValues(v);
             for (int i = 0; i < count; ++i)
                 v[i].changeSign();
-            return new ConstExpr(constExpr, v);
+            return new ConstExpr(type, v, pos);
         }
     }
     case BitNot: {
@@ -5392,66 +5392,6 @@ ConstExpr::ConstExpr(const Type *t, bool *b, SourcePos p) : Expr(p, ConstExprID)
                        Type::Equal(type, AtomicType::VaryingBool->GetAsConstType()));
     for (int j = 0; j < Count(); ++j)
         boolVal[j] = b[j];
-}
-
-// The llvm::APFloat value is guaranteed to be a double.
-ConstExpr::ConstExpr(ConstExpr *old, std::vector<llvm::APFloat> v) : Expr(old->pos, ConstExprID) {
-    type = old->type;
-
-    AtomicType::BasicType basicType = getBasicType();
-
-    switch (basicType) {
-    case AtomicType::TYPE_BOOL:
-        for (int i = 0; i < Count(); ++i)
-            boolVal[i] = v[i].isNonZero();
-        break;
-    case AtomicType::TYPE_INT8:
-        for (int i = 0; i < Count(); ++i)
-            int8Val[i] = (int)v[i].convertToDouble();
-        break;
-    case AtomicType::TYPE_UINT8:
-        for (int i = 0; i < Count(); ++i)
-            uint8Val[i] = (unsigned int)v[i].convertToDouble();
-        break;
-    case AtomicType::TYPE_INT16:
-        for (int i = 0; i < Count(); ++i)
-            int16Val[i] = (int)v[i].convertToDouble();
-        break;
-    case AtomicType::TYPE_UINT16:
-        for (int i = 0; i < Count(); ++i)
-            uint16Val[i] = (unsigned int)v[i].convertToDouble();
-        break;
-    case AtomicType::TYPE_INT32:
-        for (int i = 0; i < Count(); ++i)
-            int32Val[i] = (int)v[i].convertToDouble();
-        break;
-    case AtomicType::TYPE_UINT32:
-        for (int i = 0; i < Count(); ++i)
-            uint32Val[i] = (unsigned int)v[i].convertToDouble();
-        break;
-    case AtomicType::TYPE_FLOAT16:
-        for (int i = 0; i < Count(); ++i) {
-            llvm::APFloat apf = lCreateAPFloat(v[i], LLVMTypes::Float16Type);
-            fpVal.push_back(apf);
-        }
-        break;
-    case AtomicType::TYPE_FLOAT:
-        for (int i = 0; i < Count(); ++i) {
-            llvm::APFloat apf = lCreateAPFloat(v[i], LLVMTypes::FloatType);
-            fpVal.push_back(apf);
-        }
-        break;
-    case AtomicType::TYPE_DOUBLE:
-        fpVal = v;
-        break;
-    case AtomicType::TYPE_INT64:
-    case AtomicType::TYPE_UINT64:
-        // For now, this should never be reached
-        FATAL("fixme; we need another constructor so that we're not trying to pass "
-              "double values to init an int64 type...");
-    default:
-        FATAL("unimplemented const type");
-    }
 }
 
 ConstExpr::ConstExpr(ConstExpr *old, SourcePos p) : Expr(p, ConstExprID) {

@@ -426,10 +426,6 @@ class ConstExpr : public Expr {
     /** Create a ConstExpr from a varying bool value */
     ConstExpr(const Type *t, bool *b, SourcePos p);
 
-    /** Create a ConstExpr of the same type as the given old ConstExpr,
-        with values given by the "vales" parameter. */
-    ConstExpr(ConstExpr *old, std::vector<llvm::APFloat> v);
-
     /** Create ConstExpr with the same type and values as the given one,
         but at the given position. */
     ConstExpr(ConstExpr *old, SourcePos pos);
