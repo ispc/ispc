@@ -462,6 +462,7 @@ class ConstExpr : public Expr {
     int GetValues(uint32_t *, bool forceVarying = false) const;
     int GetValues(int64_t *, bool forceVarying = false) const;
     int GetValues(uint64_t *, bool forceVarying = false) const;
+    int GetValues(std::vector<llvm::APFloat> &) const;
 
     /** Return the number of values in the ConstExpr; should be either 1,
         if it has uniform type, or the target's vector width if it's

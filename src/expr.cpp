@@ -1181,7 +1181,7 @@ Expr *UnaryExpr::Optimize() {
             // into a double, do the negate as a double, and then return a
             // ConstExpr with the same type as the original...
             std::vector<llvm::APFloat> v;
-            int count = constExpr->GetValues(v, LLVMTypes::DoubleType);
+            int count = constExpr->GetValues(v);
             for (int i = 0; i < count; ++i)
                 v[i].changeSign();
             return new ConstExpr(constExpr, v);
@@ -5621,6 +5621,14 @@ static void lConvert(const From *from, std::vector<llvm::APFloat> &to, llvm::Typ
     if (forceVarying && count == 1)
         for (int i = 1; i < g->target->getVectorWidth(); ++i)
             to.push_back(to[0]);
+}
+
+int ConstExpr::GetValues(std::vector<llvm::APFloat> &fpt) const {
+    AtomicType::BasicType bType = getBasicType();
+    AssertPos(pos, (bType == AtomicType::TYPE_FLOAT16) || (bType == AtomicType::TYPE_FLOAT) ||
+                       (bType == AtomicType::TYPE_DOUBLE));
+    fpt = fpVal;
+    return Count();
 }
 
 int ConstExpr::GetValues(int64_t *ip, bool forceVarying) const {
