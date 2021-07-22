@@ -68,6 +68,21 @@ append_ispc_target_list(AVX512SKX)
 
 ## Macros ##
 
+macro (ispc_read_dependencies ISPC_DEPENDENCIES_FILE)
+  set(ISPC_DEPENDENCIES "")
+  if (EXISTS ${ISPC_DEPENDENCIES_FILE})
+    file(READ ${ISPC_DEPENDENCIES_FILE} contents)
+    string(REPLACE " " ";"     contents "${contents}")
+    string(REPLACE ";" "\\\\;" contents "${contents}")
+    string(REPLACE "\n" ";"    contents "${contents}")
+    foreach(dep ${contents})
+      if (EXISTS ${dep})
+        set(ISPC_DEPENDENCIES ${ISPC_DEPENDENCIES} ${dep})
+      endif (EXISTS ${dep})
+    endforeach(dep ${contents})
+  endif ()
+endmacro()
+
 macro (ispc_compile)
   set(ISPC_ADDITIONAL_ARGS "")
   # Check if CPU target is passed externally
@@ -133,18 +148,8 @@ macro (ispc_compile)
     set(outdir "${ISPC_TARGET_DIR}/local_ispc")
     set(input ${CMAKE_CURRENT_SOURCE_DIR}/${src})
 
-    set(deps "")
-    if (EXISTS ${outdir}/${fname}.dev.idep)
-      file(READ ${outdir}/${fname}.dev.idep contents)
-      string(REPLACE " " ";"     contents "${contents}")
-      string(REPLACE ";" "\\\\;" contents "${contents}")
-      string(REPLACE "\n" ";"    contents "${contents}")
-      foreach(dep ${contents})
-        if (EXISTS ${dep})
-          set(deps ${deps} ${dep})
-        endif (EXISTS ${dep})
-      endforeach(dep ${contents})
-    endif ()
+    set(ISPC_DEPENDENCIES_FILE ${outdir}/${fname}.dev.idep)
+    ispc_read_dependencies(${ISPC_DEPENDENCIES_FILE})
 
     set(results "${outdir}/${fname}.dev${ISPC_TARGET_EXT}")
     # if we have multiple targets add additional object files
@@ -176,10 +181,10 @@ macro (ispc_compile)
         --woff
         ${ISPC_ADDITIONAL_ARGS}
         -h ${ISPC_TARGET_DIR}/${fname}_ispc.h
-        -MMM  ${outdir}/${fname}.dev.idep
+        -MMM ${ISPC_DEPENDENCIES_FILE}
         -o ${outdir}/${fname}.dev${ISPC_TARGET_EXT}
         ${input}
-      DEPENDS ${input} ${deps}
+      DEPENDS ${input} ${ISPC_DEPENDENCIES}
       COMMENT "Building ISPC object ${outdir}/${fname}.dev${ISPC_TARGET_EXT}"
     )
 
@@ -309,9 +314,12 @@ function (ispc_compile_gpu parent_target output_prefix output_name)
       set(result "${outdir}/${output_prefix}${parent_target}.bc")
     endif()
 
+    set(ISPC_DEPENDENCIES_FILE ${outdir}/${fname}.gpu.dev.idep)
+    ispc_read_dependencies(${ISPC_DEPENDENCIES_FILE})
+
     add_custom_command(
       OUTPUT ${result}
-      DEPENDS ${input}
+      DEPENDS ${input} ${ISPC_DEPENDENCIES}
       COMMAND ${ISPC_EXECUTABLE}
         -I ${CMAKE_CURRENT_SOURCE_DIR}
         ${ISPC_INCLUDE_DIR_PARMS}
@@ -325,6 +333,7 @@ function (ispc_compile_gpu parent_target output_prefix output_name)
         ${ISPC_GENX_ADDITIONAL_ARGS}
         -o ${result}
         ${input}
+        -MMM ${ISPC_DEPENDENCIES_FILE}
       COMMENT "Building ISPC GPU object ${result}"
     )
 
