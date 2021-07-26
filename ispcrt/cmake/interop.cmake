@@ -8,20 +8,15 @@
 # This module contains helper functions allowing to link several modules on
 # LLVM IR level and translate final module to SPIR-V format.
 # For ISPC the workflow is easy:
-#   1. compile to .bc
-# This bitcode file is ready to be linked with others and translated to .spv
+#   1. compile to bitcode
+# This bitcode file is ready to be linked with others and translated to .spv.
 # For DPC++:
-#   1. compile source to object file using dpc++ compiler
-#   2. extract ESIMD bitcode using clang-offload-bundler
+#   1. extract ESIMD bitcode using clang-offload-bundler from DPC++ library
 #   3. lower extracted bitcode to real VC backend intrinsics using sycl-post-link
 # Lowered bitcode file can be linked with ISPC bitcode using llvm-link and
 # translated then to .spv with llvm-spirv.
-# Note that we can extract bitcode during dpc++ compilation in one step
-# instead of 1. and 2. But we assume that the most frequent case will be to link
-# with some library which contains precompiled objects. So getting bitcode is split
-# to two steps for more flexibility.
 
-# DPC++ compiler is required for all interoperability functions
+# Find DPCPP compiler
 set(OLD_CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH})
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_LIST_DIR})
 find_package(dpcpp_compiler)
@@ -121,7 +116,7 @@ endfunction()
 # ispc_target: the original ISPC target being linked
 # bc_target: name of bitcode file to translate
 function (translate_to_spirv target_name ispc_target bc_target)
-    # Name will be the ISPC targets bc file, but with the extension swapped to spv 
+    # Name will be the ISPC targets bc file, but with the extension swapped to spv
     # There may be multiple ISPC files (and so bc files) on the original ISPC target,
     # the linked output will take the name of the first one
     get_target_property(ISPC_BC_SOURCES ${ispc_target} ISPC_CUSTOM_DEPENDENCIES)
@@ -190,7 +185,7 @@ function (translate_to_spirv target_name ispc_target bc_target)
     )
 endfunction()
 
-# Link ISPC and ESIMD GPU modules to SPIR-V and produce libraries required for CPU
+# Link ISPC and ESIMD GPU modules to SPIR-V
 # ispc_target: the ispc kernel target previously compiled to bitcode
 # ARGN: list of compiled DPCPP targets to link the ispc target with
 function (link_ispc_esimd ispc_target)
