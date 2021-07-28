@@ -1,4 +1,5 @@
-export void f_fu(uniform float RET[], uniform float aFOO[], uniform float b) {
+#include "../test_static.isph"
+task void f_fu(uniform float RET[], uniform float aFOO[], uniform float b) {
     varying int8 a_max = 0x7F, a_min = -0x80; // max and min signed int8
     if (programIndex % 3 == 0) {
         RET[programIndex] = saturating_div(a_max, (varying int8) b);
@@ -11,7 +12,7 @@ export void f_fu(uniform float RET[], uniform float aFOO[], uniform float b) {
     } 
 }
 
-export void result(uniform float RET[]) {
+task void result(uniform float RET[]) {
     if (programIndex % 3 == 0) {
         RET[programIndex] = (varying int8) 25.4; // max / 5
     }

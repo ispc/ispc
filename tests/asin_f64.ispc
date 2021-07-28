@@ -1,9 +1,10 @@
+#include "../test_static.isph"
 // rule: skip on arch=genx32
 // rule: skip on arch=genx64
 // currently cos/sin/pow/sincos is very slow on gen so skip it
 bool ok(double x, double ref) { return (abs(x - ref) < 1e-6) || abs((x-ref)/ref) < 1e-4; }
 
-export void f_v(uniform float RET[]) {
+task void f_v(uniform float RET[]) {
     uniform double vals_d[8] = { 0, 1, 0.5, -1, -.87, -.25, 1e-3, -.99999999 };
     uniform double r_d[8];
     foreach (i = 0 ... 8) {
@@ -14,7 +15,7 @@ export void f_v(uniform float RET[]) {
     int errors = 0;
     for (uniform int i = 0; i < 8; ++i) {
         if (ok(r_d[i], vals_d[i%8]) == false) {
-#ifndef ISPC_TARGET_GENX
+#ifndef ISPC_GPU
             print("error @ %: got %, expected %\n", i, r_d[i], vals_d[i%8]);
 #endif
             ++errors;
@@ -25,7 +26,7 @@ export void f_v(uniform float RET[]) {
     }
     for (uniform int i = 0; i < 8; ++i) {
         if (ok(r_d[i], vals_d[i%8]) == false) {
-#ifndef ISPC_TARGET_GENX
+#ifndef ISPC_GPU
             print("error @ %: got %, expected %\n", i, r_d[i], vals_d[i%8]);
 #endif
             ++errors;
@@ -34,4 +35,4 @@ export void f_v(uniform float RET[]) {
     RET[programIndex] = errors;
 }
 
-export void result(uniform float RET[]) { RET[programIndex] = 0; }
+task void result(uniform float RET[]) { RET[programIndex] = 0; }

@@ -1,9 +1,10 @@
+#include "../test_static.isph"
 void update(varying float<2> * vp) {
     #pragma ignore warning(perf)
     vp->y = 0;
 }
 
-export void f_f(uniform float RET[], uniform float aFOO[]) {
+task void f_f(uniform float RET[], uniform float aFOO[]) {
     float<2> v[programCount];
     for (uniform int i = 0; i < programCount; ++i) {
         v[i].x = 2*i;
@@ -18,6 +19,6 @@ export void f_f(uniform float RET[], uniform float aFOO[]) {
     RET[programIndex] = v[programIndex].x;
 }
 
-export void result(uniform float RET[]) {
+task void result(uniform float RET[]) {
     RET[programIndex] = 2*programIndex;
 }

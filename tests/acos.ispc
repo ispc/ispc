@@ -1,6 +1,7 @@
+#include "../test_static.isph"
 bool ok(float x, float ref) { return (abs(x - ref) < 1e-4) || abs((x-ref)/ref) < 1e-4; }
 
-export void f_v(uniform float RET[]) {
+task void f_v(uniform float RET[]) {
     uniform float vals[8] = { 0, 1, 0.5, -1, -.87, -.25, 1e-3, -.99999999 };
     uniform float r[8];
     foreach (i = 0 ... 8) {
@@ -21,4 +22,4 @@ export void f_v(uniform float RET[]) {
     RET[programIndex] = errors;
 }
 
-export void result(uniform float RET[]) { RET[programIndex] = 0; }
+task void result(uniform float RET[]) { RET[programIndex] = 0; }

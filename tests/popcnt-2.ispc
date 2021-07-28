@@ -1,3 +1,4 @@
+#include "../test_static.isph"
 static int int4(uniform int a, uniform int b, uniform int c, 
                 uniform int d) {
     int ret = 0;
@@ -10,12 +11,12 @@ static int int4(uniform int a, uniform int b, uniform int c,
     return ret;
 }
 
-export void f_f(uniform float RET[], uniform float aFOO[]) {
+task void f_f(uniform float RET[], uniform float aFOO[]) {
     float a = aFOO[programIndex];
     RET[programIndex] = popcnt(int4(0xf0f0f0f0, 0xff, 0x10, 0));
 }
 
-export void result(uniform float RET[]) {
+task void result(uniform float RET[]) {
     for (uniform int i = 0; i < programCount; i += 4) {
         RET[i] = 16;
         RET[i+1] = 8;

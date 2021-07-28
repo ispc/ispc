@@ -1,3 +1,4 @@
+#include "../test_static.isph"
 struct S {
   float x, y;
   int i;
@@ -7,7 +8,7 @@ struct S {
 uniform S us;
 varying S vs;
 
-export void f_v(uniform float RET[]) {
+task void f_v(uniform float RET[]) {
     uniform S uus = {1.0, 2.0, 5, true};
     us = uus;
     vs = uus;
@@ -15,6 +16,6 @@ export void f_v(uniform float RET[]) {
 }
 
 
-export void result(uniform float RET[]) {
+task void result(uniform float RET[]) {
     RET[programIndex] = 8;
 }

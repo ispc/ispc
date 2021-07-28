@@ -1,3 +1,4 @@
+#include "../test_static.isph"
 // rule: skip on cpu=TGLLP
 
 // Testing double implementation of varying * varying
@@ -22,10 +23,10 @@ void tests_double(uniform float RET[]) {
 }
 
 
-export void f_v(uniform float RET[]) {
+task void f_v(uniform float RET[]) {
     RET[programIndex]  = 0;
     tests_double(RET);
 }
 
 
-export void result(uniform float RET[]) { RET[programIndex] = 0; }
+task void result(uniform float RET[]) { RET[programIndex] = 0; }

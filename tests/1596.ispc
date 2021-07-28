@@ -1,3 +1,4 @@
+#include "../test_static.isph"
 static uniform int sz = sizeof(uniform int);
 
 static uniform int a = 7;
@@ -15,7 +16,7 @@ uniform int *uniform aaa = &ii[1][2][3];
 
 static uniform int sVar_loc_global = sizeof(varying int8);
 
-export void f_v(uniform float RET[]) {
+task void f_v(uniform float RET[]) {
     static uniform int sVar_loc = sizeof(varying int8);
     RET[programIndex] = (1 * *pa) + (2 * *parr[2]) + (3 * *pb[1]) + (4 * *pb1[2]) + (5 * *aaa) + (6 * sz) + (7 * sVar) + (8 * sVar_loc) + (9 * sVar_loc_global);
 }
@@ -30,6 +31,6 @@ export void f_v(uniform float RET[]) {
 // sVar = 8 * WIDTH
 // sVar_loc = 1 * WIDTH
 // sVar_loc_global = 1 * WIDTH
-export void result(uniform float RET[]) {
+task void result(uniform float RET[]) {
     RET[programIndex] = (1 * 7) + (2 * 7) + (3 * 5) + (4 * 2) + (5 * 4) + (6 * 4) + (7 * (8 * programCount)) + (8 * (1 * programCount)) + (9 * (1 * programCount));
 }

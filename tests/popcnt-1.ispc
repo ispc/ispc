@@ -1,4 +1,5 @@
-export void f_f(uniform float RET[], uniform float aFOO[]) {
+#include "../test_static.isph"
+task void f_f(uniform float RET[], uniform float aFOO[]) {
     float a = aFOO[programIndex];
     RET[programIndex] = popcnt((int)a);
 }
@@ -13,8 +14,7 @@ static int manualpc(int v) {
     return count;
 }
 
-export void result(uniform float RET[]) { 
+task void result(uniform float RET[]) {
     assert(programCount <= 64);
     RET[programIndex] = manualpc(programIndex+1);
 }
-

@@ -1,4 +1,5 @@
-export void f_f(uniform float RET[], uniform float aFOO[]) {
+#include "../test_static.isph"
+task void f_f(uniform float RET[], uniform float aFOO[]) {
     RET[programIndex] = -1;
     #pragma ignore warning(perf)
     unsigned int64 a = aFOO[programIndex];
@@ -8,7 +9,7 @@ export void f_f(uniform float RET[], uniform float aFOO[]) {
     }
 }
 
-export void result(uniform float RET[]) {
+task void result(uniform float RET[]) {
     uniform int result[] = { 0, 1, 3, 0, 0, 0, 0, 0,
                              0, 0, 0, 0, 0, 0, 0, 0 };
     RET[programIndex] = -1;

@@ -1,4 +1,5 @@
-export void print_f(uniform float aFOO[]) {
+#include "../test_static.isph"
+task void print_f(uniform float aFOO[]) {
     float a = aFOO[programIndex];
     int intA = a;
     int64 varLongVal = -(int64)intA - 10000000000;
@@ -7,7 +8,7 @@ export void print_f(uniform float aFOO[]) {
     print("Test varying int64: %, %\n", varLongVal, varULongVal);
 }
 
-export void print_result() {
+task void print_result() {
     assert(programCount <= 64);
     print("Test varying int64: ");    
 

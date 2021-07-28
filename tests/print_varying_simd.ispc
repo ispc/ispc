@@ -1,6 +1,7 @@
+#include "../test_static.isph"
 #define TEST_SIMD
 
-export void print_f(uniform float aFOO[]) {
+task void print_f(uniform float aFOO[]) {
     float a = aFOO[programIndex];
     int intA = a;
 
@@ -8,7 +9,7 @@ export void print_f(uniform float aFOO[]) {
       print("Test varying simd: small ones: %\n", intA);
 }
 
-export void print_result() {
+task void print_result() {
     assert(programCount <= 64);
     print("Test varying simd: small ones: [((1)),2,((3)),4");
     if(programCount > 4)

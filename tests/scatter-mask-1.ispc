@@ -1,6 +1,7 @@
+#include "../test_static.isph"
 uniform float a[programCount];
 
-export void f_f(uniform float RET[], uniform float aFOO[]) {
+task void f_f(uniform float RET[], uniform float aFOO[]) {
     int index = aFOO[programIndex]-1; 
     if (index & 1) {
         #pragma ignore warning(perf)
@@ -9,6 +10,6 @@ export void f_f(uniform float RET[], uniform float aFOO[]) {
     RET[programIndex] = a[programIndex]; 
 }
 
-export void result(uniform float RET[]) {
+task void result(uniform float RET[]) {
     RET[programIndex] = (programIndex & 1) ? 1 : 0;
 }

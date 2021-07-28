@@ -1,4 +1,5 @@
-export void f_fu(uniform float RET[], uniform float aFOO[], uniform float b) {
+#include "../test_static.isph"
+task void f_fu(uniform float RET[], uniform float aFOO[], uniform float b) {
     int v = aFOO[programIndex];
     // Shift only if v is greater than 2.
     if(v > 2) v = shift(v, -1);
@@ -7,7 +8,7 @@ export void f_fu(uniform float RET[], uniform float aFOO[], uniform float b) {
     RET[programIndex] = v;
 }
 
-export void result(uniform float RET[]) {
+task void result(uniform float RET[]) {
      varying int val = programIndex + 1;
      val = val + 2;
      if(val > 2) val--;

@@ -1,3 +1,4 @@
+#include "../test_static.isph"
 int switchit(int a) {
     int res = 0;
     for (int i = 0; i < programIndex; ++i) {
@@ -27,13 +28,13 @@ int switchit(int a) {
     return res;
 }
 
-export void f_fu(uniform float RET[], uniform float aFOO[], uniform float b) {
+task void f_fu(uniform float RET[], uniform float aFOO[], uniform float b) {
     int a = aFOO[programIndex];
     int res = switchit(a);
     RET[programIndex] = res;
 }
 
-export void result(uniform float RET[]) {
+task void result(uniform float RET[]) {
     if (programIndex < 4)
         RET[programIndex] = programIndex * programIndex;
     else if (programIndex < 8)

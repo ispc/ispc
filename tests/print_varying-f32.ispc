@@ -1,11 +1,12 @@
-export void print_f(uniform float aFOO[]) {
+#include "../test_static.isph"
+task void print_f(uniform float aFOO[]) {
     float a = aFOO[programIndex];
     int intA = a;
     float varFloatVal =  a + 4.75;
     print("Test varying float: %\n", varFloatVal);
 }
 
-export void print_result() {
+task void print_result() {
     assert(programCount <= 64);
     print("Test varying float: ");
     // varFloatVal

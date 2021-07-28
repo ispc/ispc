@@ -1,7 +1,8 @@
+#include "../test_static.isph"
 #define NA 1
 #define NB 3
 
-export void f_f(uniform float RET[], uniform float aFOO[]) {
+task void f_f(uniform float RET[], uniform float aFOO[]) {
     uniform int a[NA][NB];
 
     for (uniform int i = 0; i < NA; ++i)
@@ -21,6 +22,6 @@ export void f_f(uniform float RET[], uniform float aFOO[]) {
     RET[programIndex] = errs;
 }
 
-export void result(uniform float RET[]) {
+task void result(uniform float RET[]) {
     RET[programIndex] = 0;
 }

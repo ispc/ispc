@@ -1,4 +1,5 @@
-export void print_uf(uniform float a) {
+#include "../test_static.isph"
+task void print_uf(uniform float a) {
     uniform int intA = (int)a;
     uniform          int    uniIntVal     = -intA - 2;
     uniform unsigned int    uniUIntVal    =  intA + 2;
@@ -6,6 +7,6 @@ export void print_uf(uniform float a) {
     print("Test uniform int32: %, %\n", uniIntVal, uniUIntVal);
 }
 
-export void print_result() {
+task void print_result() {
     print("Test uniform int32: -7, 7\n");
 }

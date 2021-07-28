@@ -1,3 +1,4 @@
+#include "../test_static.isph"
 // rule: skip on cpu=TGLLP
 
 static double double4(uniform double a, uniform double b, uniform double c, 
@@ -16,9 +17,9 @@ static double double4(uniform double a, uniform double b, uniform double c,
 
 bool ok(double x, double ref) { return (abs(x - ref) < 1d-15) || abs((x-ref)/ref) < 1d-14; }
 
-export void f_v(uniform float RET[]) {
+task void f_v(uniform float RET[]) {
     double v = double4((-9.424777984619141d0),(4.000000000000000d0),(10.000000000000000d0),(-10.000000000000000d0));
     double ref = double4((-2.3849760909612074d-08),(1.1578212823495775d0),(0.6483608274590867d0),(-0.6483608274590867d0));
     RET[programIndex] = ok(tan(v), ref) ? 1. : 0.;
 }
-export void result(uniform float RET[]) { RET[programIndex] = 1.; }
+task void result(uniform float RET[]) { RET[programIndex] = 1.; }

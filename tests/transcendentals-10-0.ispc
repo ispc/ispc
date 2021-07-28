@@ -1,3 +1,4 @@
+#include "../test_static.isph"
 // sincos() function is available only on Linux.
 // rule: skip on OS=*
 // rule: run on OS=linux
@@ -5,7 +6,7 @@
 // rule: skip on arch=genx64
 
 
-export void f_du(uniform float RET[], uniform double aFOO[], uniform double b) {
+task void f_du(uniform float RET[], uniform double aFOO[], uniform double b) {
     double a = aFOO[programIndex];
     uniform double sin_a[] = {0.8414709848078965, 0.9092974268256817, 0.1411200080598672, -0.7568024953079282, -0.9589242746631385, -0.2794154981989259, 0.6569865987187891, 0.9893582466233818,
                               0.4121184852417566, -0.5440211108893698, -0.9999902065507035, -0.5365729180004349, 0.4201670368266409, 0.9906073556948704, 0.6502878401571168, -0.2879033166650653,
@@ -34,6 +35,6 @@ export void f_du(uniform float RET[], uniform double aFOO[], uniform double b) {
     RET[programIndex] += abs(sincos_c - cos_a[programIndex]) < 1d-7 ? 0 : 1;
 }
 
-export void result(uniform float RET[]) {
+task void result(uniform float RET[]) {
     RET[programIndex] = 0;
 }

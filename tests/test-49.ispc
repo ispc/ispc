@@ -1,5 +1,6 @@
-export void f_v(uniform float RET[]) { int x = 1; x <<= 3; RET[programIndex] = (float)x; }
+#include "../test_static.isph"
+task void f_v(uniform float RET[]) { int x = 1; x <<= 3; RET[programIndex] = (float)x; }
 
-export void result(uniform float RET[]) {
+task void result(uniform float RET[]) {
     RET[programIndex] = 8.000000;
 }

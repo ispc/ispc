@@ -1,3 +1,4 @@
+#include "../test_static.isph"
 // rule: skip on arch=genx32
 // rule: skip on arch=genx64
 struct Point { float x, y, z; };
@@ -38,7 +39,7 @@ soa<8> Point * uniform aossoa(uniform Point aospts[], uniform int count) {
 
 }
 
-export void f_fu(uniform float RET[], uniform float aFOO[], uniform float b) {
+task void f_fu(uniform float RET[], uniform float aFOO[], uniform float b) {
     float a = aFOO[programIndex]; 
 
     uniform Point pts[programCount+4]; 
@@ -57,6 +58,6 @@ export void f_fu(uniform float RET[], uniform float aFOO[], uniform float b) {
     RET[programIndex] = soaPts[programIndex+3].z;
 }
 
-export void result(uniform float RET[]) {
+task void result(uniform float RET[]) {
     RET[programIndex] = 15*(programIndex+3);
 }

@@ -1,3 +1,4 @@
+#include "../test_static.isph"
 enum Enum111{
     One,
     Two,
@@ -14,12 +15,12 @@ int func(int<5>  x) {
 }
 
 
-export void f_v(uniform float RET[]) {
+task void f_v(uniform float RET[]) {
     uniform Enum111 enum_ = Three;
     int rval = func(enum_);
     RET[programIndex] = rval;
 }
 
-export void result(uniform float RET[]) {
+task void result(uniform float RET[]) {
     RET[programIndex] = 7;
 }

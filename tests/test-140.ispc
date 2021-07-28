@@ -1,10 +1,11 @@
-export void f_f(uniform float RET[], uniform float aFOO[]) {
+#include "../test_static.isph"
+task void f_f(uniform float RET[], uniform float aFOO[]) {
     #pragma ignore warning(perf)
     float a = aFOO[programIndex&3]; 
     RET[programIndex] = log(a); 
 }
 
-export void result(uniform float RET[]) {
+task void result(uniform float RET[]) {
   for (int i = 0; i < programCount; i += 4)
   {
     #pragma ignore warning

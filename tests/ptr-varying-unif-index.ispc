@@ -1,4 +1,5 @@
-export void f_f(uniform float RET[], uniform float aFOO[]) {
+#include "../test_static.isph"
+task void f_f(uniform float RET[], uniform float aFOO[]) {
     uniform float buf[programCount];
     uniform float * varying ptr = &buf[programCount - 1 - programIndex];
     #pragma ignore warning(perf)
@@ -6,6 +7,6 @@ export void f_f(uniform float RET[], uniform float aFOO[]) {
     RET[programIndex] = buf[programIndex];
 }
 
-export void result(uniform float RET[]) {
+task void result(uniform float RET[]) {
     RET[programIndex] = programCount - 1 - programIndex;
 }

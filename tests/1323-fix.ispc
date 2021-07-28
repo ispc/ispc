@@ -1,3 +1,4 @@
+#include "../test_static.isph"
 // This test is written to cover the scenario from issue 1323.
 // Structs with uniform vector elements directly or as nested elements fail
 // compilation when compiled for multiple targets. To test this use case, this
@@ -30,7 +31,7 @@ static float check_x1(uniform float3 a[]) {
 }
 
 
-export void f_v(uniform float RET[]) {
+task void f_v(uniform float RET[]) {
 
     AABB box;
     // Sets value of first vector element value
@@ -49,6 +50,6 @@ export void f_v(uniform float RET[]) {
 
 }
 
-export void result(uniform float RET[]) {
+task void result(uniform float RET[]) {
     RET[programIndex] = 16.0;
 }

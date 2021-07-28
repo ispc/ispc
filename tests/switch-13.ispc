@@ -1,3 +1,4 @@
+#include "../test_static.isph"
 int switchit(int a, uniform int b) {
     int r = -1;
     switch (b) {
@@ -14,12 +15,12 @@ int switchit(int a, uniform int b) {
     return r;
 }
 
-export void f_fu(uniform float RET[], uniform float aFOO[], uniform float b) {
+task void f_fu(uniform float RET[], uniform float aFOO[], uniform float b) {
     int a = aFOO[programIndex]; 
     int x = switchit(a, b);
     RET[programIndex] = x; 
 }
 
-export void result(uniform float RET[]) {
+task void result(uniform float RET[]) {
     RET[programIndex] = (programIndex & 1) ? 2 : 3;
 }

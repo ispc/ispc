@@ -1,6 +1,7 @@
+#include "../test_static.isph"
 uniform int foo(int i);
 
-export void f_f(uniform float RET[], uniform float aFOO[]) {
+task void f_f(uniform float RET[], uniform float aFOO[]) {
     uniform int x[21];
     for (uniform int i = 0; i < 21; ++i)
         x[i] = i;
@@ -16,6 +17,6 @@ export void f_f(uniform float RET[], uniform float aFOO[]) {
 }
 
 
-export void result(uniform float RET[]) {
+task void result(uniform float RET[]) {
     RET[programIndex] = min(programIndex, 20);
 }

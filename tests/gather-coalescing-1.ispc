@@ -1,10 +1,11 @@
+#include "../test_static.isph"
 #define LOAD(n)               \
     do {                      \
         if (n < programCount) \
             a[n] = aFOO[n];   \
     } while (false)
 
-export void f_f(uniform float RET[], uniform float aFOO[]) {
+task void f_f(uniform float RET[], uniform float aFOO[]) {
     uniform int a[programCount];
 
     // Initialization
@@ -37,7 +38,7 @@ export void f_f(uniform float RET[], uniform float aFOO[]) {
     RET[programIndex] = a[programIndex];
 }
 
-export void result(uniform float RET[]) {
+task void result(uniform float RET[]) {
     RET[programIndex] = (programIndex + 1) * (programIndex + 1);
 
     // Not loaded lanes

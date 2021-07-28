@@ -1,0 +1,83 @@
+/*
+  Copyright (c) 2021, Intel Corporation
+  All rights reserved.
+
+  Redistribution and use in source and binary forms, with or without
+  modification, are permitted provided that the following conditions are
+  met:
+
+    * Redistributions of source code must retain the above copyright
+      notice, this list of conditions and the following disclaimer.
+
+    * Redistributions in binary form must reproduce the above copyright
+      notice, this list of conditions and the following disclaimer in the
+      documentation and/or other materials provided with the distribution.
+
+    * Neither the name of Intel Corporation nor the names of its
+      contributors may be used to endorse or promote products derived from
+      this software without specific prior written permission.
+
+
+   THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS
+   IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
+   TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A
+   PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER
+   OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+   EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+   PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+   PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+   LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+   NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+   SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+*/
+#ifndef ISPC_GPU
+#if (TEST_SIG == 0)
+task void f_v(uniform float res[]);
+export void f_v_cpu_entry_point(uniform float res[]) { launch[1] f_v(res); }
+#elif (TEST_SIG == 1)
+task void f_f(uniform float res[], uniform float vfloat[]);
+export void f_f_cpu_entry_point(uniform float res[], uniform float vfloat[]) { launch[1] f_f(res, vfloat); }
+#elif (TEST_SIG == 2)
+task void f_fu(uniform float res[], uniform float vfloat[], uniform float b);
+export void f_fu_cpu_entry_point(uniform float res[], uniform float vfloat[], uniform float b) {
+    launch[1] f_fu(res, vfloat, b);
+}
+#elif (TEST_SIG == 3)
+task void f_fi(uniform float res[], uniform float vfloat[], uniform int vint[]);
+export void f_fi_cpu_entry_point(uniform float res[], uniform float vfloat[], uniform int vint[]) {
+    launch[1] f_fi(res, vfloat, vint);
+}
+#elif (TEST_SIG == 4)
+task void f_du(uniform float res[], uniform double a[], uniform double b);
+export void f_du_cpu_entry_point(uniform float res[], uniform double a[], uniform double b) {
+    launch[1] f_du(res, a, b);
+}
+#elif (TEST_SIG == 5)
+task void f_duf(uniform float res[], uniform double a[], uniform float b);
+export void f_duf_cpu_entry_point(uniform float res[], uniform double a[], uniform float b) {
+    launch[1] f_duf(res, a, b);
+}
+#elif (TEST_SIG == 6)
+task void f_di(uniform float res[], uniform double a[], uniform int b[]);
+export void f_di_cpu_entry_point(uniform float res[], uniform double a[], uniform int b[]) {
+    launch[1] f_di(res, a, b);
+}
+#elif (TEST_SIG == 32)
+task void print_uf(uniform float b);
+export void print_uf_cpu_entry_point(uniform float b) { launch[1] print_uf(b); }
+#elif (TEST_SIG == 33)
+task void print_f(uniform float vfloat[]);
+export void print_f_cpu_entry_point(uniform float vfloat[]) { launch[1] print_f(vfloat); }
+#elif (TEST_SIG == 34)
+task void print_fuf(uniform float vfloat[], uniform float b);
+export void print_fuf_cpu_entry_point(uniform float vfloat[], uniform float b) { launch[1] print_fuf(vfloat, b); }
+#endif
+
+#if (TEST_SIG < 32)
+task void result(uniform float res[]);
+export void result_cpu_entry_point(uniform float res[]) { launch[1] result(res); }
+#else
+task void print_result();
+export void print_result_cpu_entry_point() { launch[1] print_result(); }
+#endif
+#endif

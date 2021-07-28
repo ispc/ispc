@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2020, Intel Corporation
+  Copyright (c) 2010-2021, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -83,18 +83,18 @@
 #endif
 
 extern "C" {
-extern void CALLINGCONV f_v(float *result);
-extern void CALLINGCONV f_f(float *result, float *a);
-extern void CALLINGCONV f_fu(float *result, float *a, float b);
-extern void CALLINGCONV f_fi(float *result, float *a, int *b);
-extern void CALLINGCONV f_du(float *result, double *a, double b);
-extern void CALLINGCONV f_duf(float *result, double *a, float b);
-extern void CALLINGCONV f_di(float *result, double *a, int *b);
-extern void CALLINGCONV print_uf(float a);
-extern void CALLINGCONV print_f(float *a);
-extern void CALLINGCONV print_fuf(float *a, float b);
-extern void CALLINGCONV result(float *val);
-extern void CALLINGCONV print_result();
+extern void CALLINGCONV f_v_cpu_entry_point(float *result);
+extern void CALLINGCONV f_f_cpu_entry_point(float *result, float *a);
+extern void CALLINGCONV f_fu_cpu_entry_point(float *result, float *a, float b);
+extern void CALLINGCONV f_fi_cpu_entry_point(float *result, float *a, int *b);
+extern void CALLINGCONV f_du_cpu_entry_point(float *result, double *a, double b);
+extern void CALLINGCONV f_duf_cpu_entry_point(float *result, double *a, float b);
+extern void CALLINGCONV f_di_cpu_entry_point(float *result, double *a, int *b);
+extern void CALLINGCONV print_uf_cpu_entry_point(float a);
+extern void CALLINGCONV print_f_cpu_entry_point(float *a);
+extern void CALLINGCONV print_fuf_cpu_entry_point(float *a, float b);
+extern void CALLINGCONV result_cpu_entry_point(float *val);
+extern void CALLINGCONV print_result_cpu_entry_point();
 
 void ISPCLaunch(void **handlePtr, void *f, void *d, int, int, int);
 void ISPCSync(void *handle);
@@ -174,28 +174,28 @@ int main(int argc, char *argv[]) {
     float b = 5.;
 
 #if (TEST_SIG == 0)
-    f_v(returned_result);
+    f_v_cpu_entry_point(returned_result);
 #elif (TEST_SIG == 1)
-    f_f(returned_result, vfloat);
+    f_f_cpu_entry_point(returned_result, vfloat);
 #elif (TEST_SIG == 2)
-    f_fu(returned_result, vfloat, b);
+    f_fu_cpu_entry_point(returned_result, vfloat, b);
 #elif (TEST_SIG == 3)
-    f_fi(returned_result, vfloat, vint);
+    f_fi_cpu_entry_point(returned_result, vfloat, vint);
 #elif (TEST_SIG == 4)
-    f_du(returned_result, vdouble, b);
+    f_du_cpu_entry_point(returned_result, vdouble, b);
 #elif (TEST_SIG == 5)
-    f_duf(returned_result, vdouble, static_cast<float>(b));
+    f_duf_cpu_entry_point(returned_result, vdouble, static_cast<float>(b));
 #elif (TEST_SIG == 6)
-    f_di(returned_result, vdouble, vint2);
+    f_di_cpu_entry_point(returned_result, vdouble, vint2);
 #elif (TEST_SIG == 7)
     *returned_result = sizeof(ispc::f_sz);
     w = 1;
 #elif (TEST_SIG == 32)
-    print_uf(static_cast<float>(b));
+    print_uf_cpu_entry_point(static_cast<float>(b));
 #elif (TEST_SIG == 33)
-    print_f(vfloat);
+    print_f_cpu_entry_point(vfloat);
 #elif (TEST_SIG == 34)
-    print_fuf(vfloat, static_cast<float>(b));
+    print_fuf_cpu_entry_point(vfloat, static_cast<float>(b));
 #else
 #error "Unknown or unset TEST_SIG value"
 #endif
@@ -203,9 +203,9 @@ int main(int argc, char *argv[]) {
     float expected_result[ARRAY_SIZE];
     memset(expected_result, 0, ARRAY_SIZE * sizeof(float));
 #if (TEST_SIG < 32)
-    result(expected_result);
+    result_cpu_entry_point(expected_result);
 #else
-    print_result();
+    print_result_cpu_entry_point();
     return 0;
 #endif
 

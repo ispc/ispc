@@ -1,3 +1,4 @@
+#include "../test_static.isph"
 // rule: skip on arch=genx32
 // rule: skip on arch=genx64
 struct InnerUniform {
@@ -15,6 +16,6 @@ struct f_sz {
 export void keep_struct_declared(varying f_sz * uniform s) {
 }
 
-export void result(uniform float RET[]) {
+task void result(uniform float RET[]) {
     RET[0] = sizeof(f_sz);
 }

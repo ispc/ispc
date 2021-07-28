@@ -1,6 +1,7 @@
+#include "../test_static.isph"
 // rule: skip on cpu=TGLLP
 
-export void f_fu(uniform float RET[], uniform float aFOO[], uniform float b) {
+task void f_fu(uniform float RET[], uniform float aFOO[], uniform float b) {
     double v = aFOO[programIndex];
     uniform float m;
     if (v > 0 && v < 3)
@@ -8,4 +9,4 @@ export void f_fu(uniform float RET[], uniform float aFOO[], uniform float b) {
     RET[programIndex] = m;
 }
 
-export void result(uniform float RET[]) { RET[programIndex] = (programCount == 1) ? -1 : -2; }
+task void result(uniform float RET[]) { RET[programIndex] = (programCount == 1) ? -1 : -2; }

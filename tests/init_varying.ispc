@@ -1,3 +1,4 @@
+#include "../test_static.isph"
 #define TARGET_WIDTH_FOUR 4
 #define TARGET_WIDTH_EIGHT 8
 #define TARGET_WIDTH_SIXTEEN 16
@@ -17,7 +18,7 @@ struct Foo {
     float y;
 };
 
-export void f_f(uniform float RET[], uniform float aFOO[]) {
+task void f_f(uniform float RET[], uniform float aFOO[]) {
 
     RET[programIndex] = 0;
 
@@ -103,4 +104,4 @@ export void f_f(uniform float RET[], uniform float aFOO[]) {
 
 }
 
-export void result(uniform float RET[]) { RET[programIndex] = 0; }
+task void result(uniform float RET[]) { RET[programIndex] = 0; }

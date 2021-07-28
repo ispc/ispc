@@ -1,3 +1,4 @@
+#include "../test_static.isph"
 // rule: skip on cpu=TGLLP
 
 void var_store(uniform double a[], varying float x) {
@@ -22,7 +23,7 @@ uniform int uni_load(uniform double a[],uniform double x) {
     return ret;
 }
 
-export void f_f(uniform float RET[], uniform float aFOO[]) {
+task void f_f(uniform float RET[], uniform float aFOO[]) {
     RET[programIndex] = 0;
 
     uniform double a_1[programCount];
@@ -36,6 +37,6 @@ export void f_f(uniform float RET[], uniform float aFOO[]) {
     if(uni_load(a_3,x_3) != 0)RET[programIndex] = 1;
 }
 
-export void result(uniform float RET[]) {
+task void result(uniform float RET[]) {
     RET[programIndex] = 0;
 }

@@ -1,3 +1,4 @@
+#include "../test_static.isph"
 int off;
 
 
@@ -22,7 +23,7 @@ struct S operator/(struct S rr, struct S rv) {
 }
 
 
-export void f_f(uniform float RET[], uniform float aFOO[]) {
+task void f_f(uniform float RET[], uniform float aFOO[]) {
     struct S a;
     struct S b;
     struct S d;
@@ -42,7 +43,7 @@ export void f_f(uniform float RET[], uniform float aFOO[]) {
     RET[programIndex] = d.a;
 }
 
-export void result(uniform float RET[4]) {
+task void result(uniform float RET[4]) {
     if (programIndex % 2)
         RET[programIndex] = 2;
     else

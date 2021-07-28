@@ -1,9 +1,10 @@
+#include "../test_static.isph"
 struct Foo {
     float x;
     float f;
 };
 
-export void f_fi(uniform float RET[], uniform float aFOO[], uniform int bFOO[]) {
+task void f_fi(uniform float RET[], uniform float aFOO[], uniform int bFOO[]) {
     float a = aFOO[programIndex];
     int b = bFOO[programIndex];
     varying Foo myFoo = { a, b };
@@ -11,6 +12,6 @@ export void f_fi(uniform float RET[], uniform float aFOO[], uniform int bFOO[]) 
 }
 
 
-export void result(uniform float RET[]) {
+task void result(uniform float RET[]) {
     RET[programIndex] = 3 + 3 * programIndex;
 }

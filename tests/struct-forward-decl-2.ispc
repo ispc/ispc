@@ -1,3 +1,4 @@
+#include "../test_static.isph"
 struct Foo;
 
 void bing(Foo * uniform);
@@ -13,7 +14,7 @@ void bar(Foo * uniform f) {
 }
 
 
-export void f_f(uniform float RET[], uniform float aFOO[]) {
+task void f_f(uniform float RET[], uniform float aFOO[]) {
     uniform Foo fa, fb;
     fa.next = &fb;
     fb.f = aFOO[programIndex]; 
@@ -28,6 +29,6 @@ void bing(Foo * uniform f) {
     f->f *= 2;
 }
 
-export void result(uniform float RET[]) {
+task void result(uniform float RET[]) {
     RET[programIndex] = 2 + 2*programIndex;
 }

@@ -1,6 +1,7 @@
+#include "../test_static.isph"
 uniform int foo(int i);
 
-export void f_f(uniform float RET[], uniform float aFOO[]) {
+task void f_f(uniform float RET[], uniform float aFOO[]) {
     uniform float val[programCount];
     for (uniform int i = 0; i < programCount; ++i)
         val[i] = 0;
@@ -16,7 +17,7 @@ export void f_f(uniform float RET[], uniform float aFOO[]) {
     RET[programIndex] = sum; 
 }
 
-export void result(uniform float RET[]) {
+task void result(uniform float RET[]) {
     int pi = (programIndex >= 2) ? programIndex : 0;
     RET[programIndex] = reduce_add(pi);
 }

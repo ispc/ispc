@@ -1,8 +1,9 @@
-export void f_f(uniform float RET[], uniform float aFOO[]) {
+#include "../test_static.isph"
+task void f_f(uniform float RET[], uniform float aFOO[]) {
     uniform float * varying ap = &aFOO[programIndex];
     RET[programIndex] = *ap;
 }
 
-export void result(uniform float RET[]) {
+task void result(uniform float RET[]) {
     RET[programIndex] = 1+programIndex;
 }

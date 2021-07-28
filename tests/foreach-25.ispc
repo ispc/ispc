@@ -1,6 +1,7 @@
+#include "../test_static.isph"
 uniform int foo(int i);
 
-export void f_f(uniform float RET[], uniform float aFOO[]) {
+task void f_f(uniform float RET[], uniform float aFOO[]) {
     uniform int x[21];
 
     foreach (i = 0 ... 21) {
@@ -15,6 +16,6 @@ export void f_f(uniform float RET[], uniform float aFOO[]) {
 }
 
 
-export void result(uniform float RET[]) {
+task void result(uniform float RET[]) {
     RET[programIndex] = 0;
 }

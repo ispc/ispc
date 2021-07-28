@@ -1,4 +1,5 @@
-export void f_fu(uniform float RET[4], uniform float aFOO[4], uniform float b) {
+#include "../test_static.isph"
+task void f_fu(uniform float RET[4], uniform float aFOO[4], uniform float b) {
     #pragma ignore warning(perf)
     float a = aFOO[programIndex&0x3];
     float i, j;
@@ -13,7 +14,7 @@ export void f_fu(uniform float RET[4], uniform float aFOO[4], uniform float b) {
 }
 
 
-export void result(uniform float RET[]) {
+task void result(uniform float RET[]) {
     RET[programIndex] = 3;
     for (int i = 0; i < programCount; i += 4)
     {

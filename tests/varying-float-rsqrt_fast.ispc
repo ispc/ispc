@@ -1,4 +1,5 @@
-export void f_f(uniform float RET[], uniform float aFOO[]) {
+#include "../test_static.isph"
+task void f_f(uniform float RET[], uniform float aFOO[]) {
     float x = aFOO[programIndex];
     float d, invsqrt = rsqrt_fast(x);
     d = (x * (invsqrt * invsqrt)) - 1.;
@@ -9,6 +10,6 @@ export void f_f(uniform float RET[], uniform float aFOO[]) {
 }
 
 
-export void result(uniform float RET[]) {
+task void result(uniform float RET[]) {
        RET[programIndex] = 0;
 }

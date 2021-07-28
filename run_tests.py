@@ -424,7 +424,7 @@ def run_test(testname, host, target):
         match = -1
         for line in file:
             # look for lines with 'export'...
-            if line.find("export") == -1:
+            if line.find("task") == -1 and line.find("export") == -1:
                 continue
             # one of them should have a function with one of the
             # declarations in sig2def
@@ -520,11 +520,12 @@ def run_test(testname, host, target):
                     exe_name = "./" + exe_name
                     cc_cmd += " -DTEST_ZEBIN" if options.ispc_output == "ze" else " -DTEST_SPV"
 
-            ispc_cmd = ispc_exe_rel + " --woff %s -o %s --arch=%s --target=%s" % \
-                        (filename, obj_name, options.arch, genx_target if target.is_genx() else options.target)
+            ispc_cmd = ispc_exe_rel + " --woff %s -o %s --arch=%s --target=%s -DTEST_SIG=%d" % \
+                        (filename, obj_name, options.arch, genx_target if target.is_genx() else options.target, match)
 
             if target.is_genx():
                 ispc_cmd += " --emit-zebin" if options.ispc_output == "ze" else " --emit-spirv"
+                ispc_cmd += " -DISPC_GPU"
             if options.cpu != None:
                 ispc_cmd += " --cpu="+ options.cpu
 

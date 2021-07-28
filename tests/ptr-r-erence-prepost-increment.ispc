@@ -1,15 +1,16 @@
+#include "../test_static.isph"
 void foo(varying float * uniform x) {
     if ((*x) <= 2)
         ++(*x);
 }
 
-export void f_fu(uniform float ret[], uniform float a[], uniform float b) {
+task void f_fu(uniform float ret[], uniform float a[], uniform float b) {
     float aa = a[programIndex];
     foo(&aa);
     ret[programIndex] = aa;
 }
 
-export void result(uniform float r[]) {
+task void result(uniform float r[]) {
     r[programIndex] = 1+programIndex;
     r[0] = 2;
     r[1] = 3;

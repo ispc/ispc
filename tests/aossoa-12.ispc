@@ -1,4 +1,5 @@
-export void f_v(uniform float RET[]) {
+#include "../test_static.isph"
+task void f_v(uniform float RET[]) {
 #define width 4
 //CO    const uniform int width = 4;
     uniform int64 a[width*programCount], r[width*programCount];
@@ -19,7 +20,6 @@ export void f_v(uniform float RET[]) {
     RET[programIndex] = errs;
 }
 
-export void result(uniform float RET[]) {
+task void result(uniform float RET[]) {
     RET[programIndex] = 0;
 }
-

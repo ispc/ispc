@@ -1,3 +1,4 @@
+#include "../test_static.isph"
 // rule: skip on arch=x86
 // rule: skip on arch=x86-64
 static float float4(uniform float16 a, uniform float16 b, uniform float16 c, uniform float16 d) {
@@ -13,7 +14,7 @@ static float float4(uniform float16 a, uniform float16 b, uniform float16 c, uni
 
 bool ok(uniform float16 x, uniform float16 ref) { return (abs(x - ref) < 1e-2f16) || abs((x - ref) / ref) < 1e-1f16; }
 
-export void f_v(uniform float RET[]) {
+task void f_v(uniform float RET[]) {
 
     uniform float16 a = 1.96484;
     uniform float16 b = 6.80859;
@@ -39,4 +40,4 @@ export void f_v(uniform float RET[]) {
     res = pow(a, b);
     RET[programIndex] = ok(pow(a, b), ref) ? 1. : 0.;
 }
-export void result(uniform float RET[]) { RET[programIndex] = 1.; }
+task void result(uniform float RET[]) { RET[programIndex] = 1.; }
