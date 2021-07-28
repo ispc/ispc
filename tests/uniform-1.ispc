@@ -1,3 +1,4 @@
+#include "../test_static.isph"
 // rule: skip on arch=genx32
 // rule: skip on arch=genx64
 
@@ -19,7 +20,7 @@ task void f_f_task(uniform float RET[], uniform float aFOO[]) {
         RET[programCount/THREADS*taskIndex + programIndex] = sum;
 }
 
-export void f_f(uniform float RET[], uniform float aFOO[])
+task void f_f(uniform float RET[], uniform float aFOO[])
 {
     launch[THREADS] f_f_task(RET,  aFOO);
 }
@@ -30,6 +31,6 @@ task void result_task(uniform float RET[])
         RET[programCount/THREADS*taskIndex + programIndex] = ret;
 }
 
-export void result(uniform float RET[]) {
+task void result(uniform float RET[]) {
     launch[THREADS] result_task(RET);
 }

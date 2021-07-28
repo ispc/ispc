@@ -1,3 +1,4 @@
+#include "../test_static.isph"
 // make sure we reset the func mask in the foreach loop...
 
 void update(uniform float val[], const uniform float a[]) {
@@ -8,7 +9,7 @@ void update(uniform float val[], const uniform float a[]) {
     }
 }
 
-export void f_f(uniform float RET[], uniform float aFOO[]) {
+task void f_f(uniform float RET[], uniform float aFOO[]) {
     uniform float val[programCount+3];
     for (uniform int i = 0; i < programCount+3; ++i)
         val[i] = 0;
@@ -19,6 +20,6 @@ export void f_f(uniform float RET[], uniform float aFOO[]) {
     RET[programIndex] = val[3+programIndex];
 }
 
-export void result(uniform float RET[]) {
+task void result(uniform float RET[]) {
     RET[programIndex] = programIndex+3;
 }

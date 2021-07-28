@@ -1,7 +1,8 @@
+#include "../test_static.isph"
 // rule: skip on arch=genx32
 // rule: skip on arch=genx64
 
-export void f_f(uniform float RET[], uniform float aFOO[]) {
+task void f_f(uniform float RET[], uniform float aFOO[]) {
     int32 *buf = new int32[1024];
 
     for (uniform int i = 0; i < 1024; ++i) {
@@ -16,7 +17,7 @@ export void f_f(uniform float RET[], uniform float aFOO[]) {
     RET[programIndex] = buf[0];
 }
 
-export void result(uniform float RET[]) {
+task void result(uniform float RET[]) {
     RET[programIndex] = 10000 * programIndex;
     RET[2] = 10000 * 2 + programCount/2;
 }

@@ -1,3 +1,4 @@
+#include "../test_static.isph"
 void var_store(uniform int8 a[], varying int8 x) {
     streaming_store(a, x);
 }
@@ -41,7 +42,7 @@ uniform int uni_unsigned_load(uniform unsigned int8 a[],uniform unsigned int8 x)
     return ret;
 }
 
-export void f_f(uniform float RET[], uniform float aFOO[]) {
+task void f_f(uniform float RET[], uniform float aFOO[]) {
     RET[programIndex] = 0;
 
     uniform int8 a_1[programCount];
@@ -65,6 +66,6 @@ export void f_f(uniform float RET[], uniform float aFOO[]) {
     if(uni_unsigned_load(a_4,x_4) != 0)RET[programIndex] = 1;
 }
 
-export void result(uniform float RET[]) {
+task void result(uniform float RET[]) {
     RET[programIndex] = 0;
 }

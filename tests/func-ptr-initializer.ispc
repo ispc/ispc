@@ -1,3 +1,4 @@
+#include "../test_static.isph"
 typedef float (*func)();
 
 float foo();
@@ -7,11 +8,11 @@ struct X { func f, g; };
 
 static uniform X x = { foo, &bar };
 
-export void f_f(uniform float RET[], uniform float aFOO[]) {
+task void f_f(uniform float RET[], uniform float aFOO[]) {
     RET[programIndex] = x.f() + x.g();
 }
 
-export void result(uniform float RET[]) {
+task void result(uniform float RET[]) {
     RET[programIndex] = programIndex;
 }
 

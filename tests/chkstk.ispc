@@ -1,3 +1,4 @@
+#include "../test_static.isph"
 //test for 17631 bug in LLVM.
 
  
@@ -36,12 +37,12 @@ int CompressBlockBC7(int A, uniform float b)
     return B;
 }
  
-export void f_fu(uniform float RET[], uniform float aFOO[], uniform float b) {
+task void f_fu(uniform float RET[], uniform float aFOO[], uniform float b) {
     int A = programIndex;
     RET[programIndex] = CompressBlockBC7(A, b);
 }
  
-export void result(uniform float RET[]) {
+task void result(uniform float RET[]) {
     RET[programIndex] = 20;
     RET[0] = 30;
     RET[1] = 292;

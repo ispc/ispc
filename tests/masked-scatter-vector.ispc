@@ -1,6 +1,7 @@
+#include "../test_static.isph"
 typedef int<3> int3;
 
-export void f_fu(uniform float ret[], uniform float aa[], uniform float b) {
+task void f_fu(uniform float ret[], uniform float aa[], uniform float b) {
     float a = aa[programIndex];
     uniform int3 array[programCount+1];
     for (uniform int i = 0; i < programCount + 6 - b; ++i) {
@@ -17,7 +18,7 @@ export void f_fu(uniform float ret[], uniform float aa[], uniform float b) {
     ret[programIndex] = array[programIndex].y;
 }
 
-export void result(uniform float ret[]) {
+task void result(uniform float ret[]) {
     ret[programIndex] = 101+programIndex;
     ret[0] = 100;
 }

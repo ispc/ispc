@@ -1,4 +1,5 @@
-export void f_f(uniform float RET[], uniform float aFOO[]) {
+#include "../test_static.isph"
+task void f_f(uniform float RET[], uniform float aFOO[]) {
     float sum1 = 0, sum2 = 0;
     foreach (x = 0 ... 10, i = 0 ... 6) {
         sum1 += aFOO[i];
@@ -15,6 +16,6 @@ export void f_f(uniform float RET[], uniform float aFOO[]) {
     RET[programIndex] = sum1 - sum2;
 }
 
-export void result(uniform float RET[]) {
+task void result(uniform float RET[]) {
     RET[programIndex] = 0;
 }

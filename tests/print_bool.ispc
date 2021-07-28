@@ -1,4 +1,5 @@
-export void print_fuf(uniform float aFOO[], uniform float b) {
+#include "../test_static.isph"
+task void print_fuf(uniform float aFOO[], uniform float b) {
     float a = aFOO[programIndex];
     uniform bool uniBoolVal = (bool)b;
     bool varBoolVal = (bool)a;
@@ -9,7 +10,7 @@ export void print_fuf(uniform float aFOO[], uniform float b) {
     print(" varying: %, %\n", varBoolVal, !varBoolVal);
 }
 
-export void print_result() {
+task void print_result() {
     assert(programCount <= 64);
     print("Test bool: uniform: true, false; varying: [false,true,true,false");
     if (programCount > 4)

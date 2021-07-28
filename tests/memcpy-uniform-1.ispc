@@ -1,5 +1,6 @@
+#include "../test_static.isph"
 #define N 64
-export void f_f(uniform float RET[], uniform float aFOO[]) {
+task void f_f(uniform float RET[], uniform float aFOO[]) {
     int32 uniform src[N];
     int32 uniform dst[N];
 
@@ -12,9 +13,8 @@ export void f_f(uniform float RET[], uniform float aFOO[]) {
     RET[programIndex] = dst[programIndex];
 }
 
-export void result(uniform float RET[]) {
+task void result(uniform float RET[]) {
     RET[programIndex] = programIndex-1;
     RET[programCount-1] = 0;
     RET[0] = 0;
 }
-

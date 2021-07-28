@@ -1,6 +1,7 @@
+#include "../test_static.isph"
 // rule: skip on cpu=TGLLP
 // Test is unstable on TGLLP
-export void print_fuf(uniform float aFOO[], uniform float b) {
+task void print_fuf(uniform float aFOO[], uniform float b) {
     float a = aFOO[programIndex];
     uniform bool uniBoolVal = (bool)b;
     bool varBoolVal = (bool)a;
@@ -14,7 +15,7 @@ export void print_fuf(uniform float aFOO[], uniform float b) {
         print(" in simd cf: %, %.\n", varBoolVal, !varBoolVal);
 }
 
-export void print_result() {
+task void print_result() {
     assert(programCount <= 64);
     print("Test bool: uniform: true, false; varying: [false,true,true,false");
     if (programCount > 4)

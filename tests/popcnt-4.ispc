@@ -1,4 +1,5 @@
-export void f_f(uniform float RET[4], uniform float aFOO[]) {
+#include "../test_static.isph"
+task void f_f(uniform float RET[4], uniform float aFOO[]) {
     int64 a = aFOO[programIndex];
     a = (a < 3) ? 1 : 0;
     if ((programIndex & 1) != 0)
@@ -6,11 +7,10 @@ export void f_f(uniform float RET[4], uniform float aFOO[]) {
     RET[programIndex] = popcnt(a);
 }
 
-export void result(uniform float RET[]) { 
+task void result(uniform float RET[]) {
     RET[programIndex] = 0;
     if (programIndex & 1)
         ++RET[programIndex];
     if (programIndex < 2)
         ++RET[programIndex];
 }
-

@@ -1,8 +1,9 @@
+#include "../test_static.isph"
 // rule: skip on cpu=TGLLP
 
 struct Point { double x; float y[3], z; };
 
-export void f_fu(uniform float RET[], uniform float aFOO[], uniform float b) {
+task void f_fu(uniform float RET[], uniform float aFOO[], uniform float b) {
     #pragma ignore warning(perf)
     soa<4> Point pts[40];
     for (uniform int i = 0; i < 160; ++i) {
@@ -24,7 +25,7 @@ export void f_fu(uniform float RET[], uniform float aFOO[], uniform float b) {
     RET[programIndex] = pts[programIndex].y[2];
 }
 
-export void result(uniform float RET[]) {
+task void result(uniform float RET[]) {
     RET[programIndex] = -4 * (programIndex-1);
     RET[0] = 2;
     RET[1] = 12;

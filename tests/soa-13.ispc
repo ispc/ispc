@@ -1,7 +1,8 @@
+#include "../test_static.isph"
 struct Point { float x, y, z; };
 
 
-export void f_fu(uniform float RET[], uniform float aFOO[], uniform float b) {
+task void f_fu(uniform float RET[], uniform float aFOO[], uniform float b) {
     float a = aFOO[programIndex]; 
 
     soa<8> Point pts[10];
@@ -19,7 +20,7 @@ export void f_fu(uniform float RET[], uniform float aFOO[], uniform float b) {
     RET[programIndex] = pts[(int64)programIndex].z;
 }
 
-export void result(uniform float RET[]) {
+task void result(uniform float RET[]) {
     RET[programIndex] = 15*programIndex;
     RET[1] = 170;
 }

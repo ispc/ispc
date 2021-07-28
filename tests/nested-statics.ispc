@@ -1,4 +1,5 @@
-export void f_f(uniform float RET[], uniform float aFOO[]) {
+#include "../test_static.isph"
+task void f_f(uniform float RET[], uniform float aFOO[]) {
     static int a = 1234;
     {
         #pragma ignore warning
@@ -8,6 +9,6 @@ export void f_f(uniform float RET[], uniform float aFOO[]) {
     }
 }
 
-export void result(uniform float RET[]) {
+task void result(uniform float RET[]) {
     RET[programIndex] = 1;
 }

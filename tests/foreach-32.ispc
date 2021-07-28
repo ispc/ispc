@@ -1,4 +1,5 @@
-export void f_f(uniform float RET[], uniform float aFOO[]) {
+#include "../test_static.isph"
+task void f_f(uniform float RET[], uniform float aFOO[]) {
 #define A_BEGIN 11
 #define A_END   14
 #define B_BEGIN 28
@@ -26,6 +27,6 @@ export void f_f(uniform float RET[], uniform float aFOO[]) {
         RET[programIndex] = t; //this case is still unknown, error in general
 }
 
-export void result(uniform float RET[]) {
+task void result(uniform float RET[]) {
     RET[programIndex] = 0;
 }

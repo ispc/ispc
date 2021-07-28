@@ -1,8 +1,9 @@
+#include "../test_static.isph"
 const uniform float x = 1.;
 
-export void f_v(uniform float RET[]) {
+task void f_v(uniform float RET[]) {
     RET[programIndex] = x+x;
 }
 
 
-export void result(uniform float RET[]) { RET[programIndex] = 2; }
+task void result(uniform float RET[]) { RET[programIndex] = 2; }

@@ -1,3 +1,4 @@
+#include "../test_static.isph"
 void A1(float f)               {}
 void A2(float& f)              {}
 void A3(const float& f)        {} 
@@ -14,7 +15,7 @@ void A0(uniform int f)         {}
 
 
 
-export void f_fu(uniform float RET[], uniform float aFOO[], uniform float b) {
+task void f_fu(uniform float RET[], uniform float aFOO[], uniform float b) {
     varying float vf = 5;
     varying const float vcf = 5;
     varying float& vfr = vf;
@@ -37,4 +38,4 @@ export void f_fu(uniform float RET[], uniform float aFOO[], uniform float b) {
     RET[programIndex] = 1;
 }
 
-export void result(uniform float RET[]) { RET[programIndex] = 1; }
+task void result(uniform float RET[]) { RET[programIndex] = 1; }

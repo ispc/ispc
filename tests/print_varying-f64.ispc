@@ -1,6 +1,7 @@
+#include "../test_static.isph"
 // rule: skip on cpu=TGLLP
 
-export void print_f(uniform float aFOO[]) {
+task void print_f(uniform float aFOO[]) {
     double a = aFOO[programIndex];
     int intA = a;
     double varDoubleVal  =  a + 13.25;
@@ -8,7 +9,7 @@ export void print_f(uniform float aFOO[]) {
     print("Test varying double: %\n", varDoubleVal);
 }
 
-export void print_result() {
+task void print_result() {
     assert(programCount <= 64);
     print("Test varying double: ");
     

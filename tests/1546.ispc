@@ -1,6 +1,7 @@
+#include "../test_static.isph"
 noinline void swap(bool doSwap, float &a_foo, float &b_foo) { a_foo = doSwap ? b_foo : a_foo; }
 
-export void f_f(uniform float RET[], uniform float aFOO[]) {
+task void f_f(uniform float RET[], uniform float aFOO[]) {
     float a_foo = -1;
     float b_foo = aFOO[programIndex];
     RET[programIndex] = 0;
@@ -12,4 +13,4 @@ export void f_f(uniform float RET[], uniform float aFOO[]) {
         RET[programIndex] = 1;
 }
 
-export void result(uniform float RET[]) { RET[programIndex] = 0; }
+task void result(uniform float RET[]) { RET[programIndex] = 0; }

@@ -1,3 +1,4 @@
+#include "../test_static.isph"
 #define foo(x) ((int8)x / (programIndex-1))
 
 inline int fill(uniform float b[], int8 a) {
@@ -10,7 +11,7 @@ inline int fill(uniform float b[], int8 a) {
     return b[0];
 }
 
-export void f_f(uniform float RET[], uniform float fFOO[]) {
+task void f_f(uniform float RET[], uniform float fFOO[]) {
     float f = fFOO[programIndex];
     uniform float a[programCount], b[programCount];
     for (int i=0; i < programCount; i++) {
@@ -39,6 +40,6 @@ export void f_f(uniform float RET[], uniform float fFOO[]) {
     RET[programIndex] = 1;
 }
 
-export void result(uniform float RET[]) {
+task void result(uniform float RET[]) {
     RET[programIndex] = 1;
 }

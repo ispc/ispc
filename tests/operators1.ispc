@@ -1,3 +1,4 @@
+#include "../test_static.isph"
 struct S {
     float a;
 };
@@ -49,13 +50,13 @@ struct S a;
 struct S b;
 struct S d;
 
-export void f_f(uniform float RET[], uniform float aFOO[]) {
+task void f_f(uniform float RET[], uniform float aFOO[]) {
     a.a = 5;
     b.a = -5;
     d = a * b + b / a - a << (b - b) - a;
     RET[programIndex] = d.a;
 }
 
-export void result(uniform float RET[4]) {
+task void result(uniform float RET[4]) {
     RET[programIndex] = 12;
 }

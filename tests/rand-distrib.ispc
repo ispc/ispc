@@ -1,4 +1,5 @@
-export void f_f(uniform float RET[], uniform float aFOO[]) {
+#include "../test_static.isph"
+task void f_f(uniform float RET[], uniform float aFOO[]) {
     RNGState state;
     seed_rng(&state, programIndex);
     float sum = 0;
@@ -9,6 +10,6 @@ export void f_f(uniform float RET[], uniform float aFOO[]) {
     RET[programIndex] = (avg > 0.495 && avg < 0.505) ? 1 : 0;
 }
 
-export void result(uniform float RET[]) {
+task void result(uniform float RET[]) {
     RET[programIndex] = 1;
 }

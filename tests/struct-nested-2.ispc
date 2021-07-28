@@ -1,3 +1,4 @@
+#include "../test_static.isph"
 struct Vector { float x, y, z; };
 
 struct Ray { Vector o; float t; Vector d; };
@@ -19,7 +20,7 @@ void zero_dx(Ray &r) {
     r.d.x = 0;
 }
 
-export void f_fu(uniform float RET[], uniform float aFOO[], uniform float b) {
+task void f_fu(uniform float RET[], uniform float aFOO[], uniform float b) {
     float v = aFOO[programIndex];
     uniform Ray rays[programCount+1];
     init(rays, programCount+1, v);
@@ -28,6 +29,6 @@ export void f_fu(uniform float RET[], uniform float aFOO[], uniform float b) {
     RET[programIndex] = rg.o.z;
 }
 
-export void result(uniform float RET[]) {
+task void result(uniform float RET[]) {
     RET[programIndex] = 3 + 3*programIndex;
 }

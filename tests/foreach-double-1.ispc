@@ -1,3 +1,4 @@
+#include "../test_static.isph"
 // rule: skip on arch=genx32
 // rule: skip on arch=genx64
 
@@ -8,7 +9,7 @@ void copy(uniform double dst[], uniform double src[], uniform int count) {
         dst[i] = one * src[i];
 }
 
-export void f_f(uniform float RET[], uniform float aFOO[]) {
+task void f_f(uniform float RET[], uniform float aFOO[]) {
     uniform int count = 200 + aFOO[1];
     uniform double * uniform src = uniform new uniform double[count];
     for (uniform int i = 0; i < count; ++i)
@@ -25,6 +26,6 @@ export void f_f(uniform float RET[], uniform float aFOO[]) {
     RET[programIndex] = errors; 
 }
 
-export void result(uniform float RET[]) {
+task void result(uniform float RET[]) {
     RET[programIndex] = 0;
 }

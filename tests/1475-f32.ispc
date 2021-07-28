@@ -1,3 +1,4 @@
+#include "../test_static.isph"
 // Testing float implementation of varying * varying
 void tests_float(uniform float RET[]) {
     varying float p_foo[programCount];
@@ -19,10 +20,10 @@ void tests_float(uniform float RET[]) {
          RET[programIndex] = 1;
 }
 
-export void f_v(uniform float RET[]) {
+task void f_v(uniform float RET[]) {
     RET[programIndex]  = 0;
     tests_float(RET);
 }
 
 
-export void result(uniform float RET[]) { RET[programIndex] = 0; }
+task void result(uniform float RET[]) { RET[programIndex] = 0; }

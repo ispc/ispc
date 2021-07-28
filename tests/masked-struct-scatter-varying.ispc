@@ -1,6 +1,7 @@
+#include "../test_static.isph"
 struct Foo { float x; float y; };
 
-export void f_fu(uniform float ret[], uniform float aa[], uniform float b) {
+task void f_fu(uniform float ret[], uniform float aa[], uniform float b) {
     float a = aa[programIndex];
     Foo foo[programCount+1];
     for (uniform int i = 0; i < programCount+1; ++i)
@@ -19,6 +20,6 @@ export void f_fu(uniform float ret[], uniform float aa[], uniform float b) {
 //CO    print("% - %\n", programIndex, ret[programIndex]);
 }
 
-export void result(uniform float ret[]) {
+task void result(uniform float ret[]) {
     ret[programIndex] = 1001+programIndex;
 }

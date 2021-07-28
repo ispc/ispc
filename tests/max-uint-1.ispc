@@ -1,4 +1,5 @@
-export void f_fu(uniform float r[], uniform float a[], uniform float b) {
+#include "../test_static.isph"
+task void f_fu(uniform float r[], uniform float a[], uniform float b) {
     #pragma ignore warning(perf)
     unsigned int i = (unsigned int)a[programIndex];
     #pragma ignore warning(perf)
@@ -6,10 +7,8 @@ export void f_fu(uniform float r[], uniform float a[], uniform float b) {
     r[programCount-1] = max((unsigned int)10, (unsigned int)b);
 }
 
-export void result(uniform float r[]) { 
+task void result(uniform float r[]) {
     r[programIndex] = 1+programIndex;
     r[0] = 2;
     r[programCount - 1] = 10;
 }
-
-

@@ -1,3 +1,4 @@
+#include "../test_static.isph"
 int * uniform ptr = NULL;
 
 int func(int v) {
@@ -13,7 +14,7 @@ int func(int v) {
     return ret;
 }
 
-export void f_f(uniform float RET[], uniform float aFOO[]) {
+task void f_f(uniform float RET[], uniform float aFOO[]) {
     int count = 10;
     if (programIndex & 1)
         count = 0x7ffffff;
@@ -22,6 +23,6 @@ export void f_f(uniform float RET[], uniform float aFOO[]) {
         RET[programIndex] = func(programIndex & 1);
 }
 
-export void result(uniform float RET[]) {
+task void result(uniform float RET[]) {
     RET[programIndex] = !(programIndex & 1);
 }

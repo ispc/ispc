@@ -1,12 +1,13 @@
+#include "../test_static.isph"
 // rule: skip on arch=x86
 // rule: skip on arch=x86-64
-export void print_f(uniform float aFOO[]) {
+task void print_f(uniform float aFOO[]) {
     float16 a = aFOO[programIndex];
     float16 varFloatVal = a + 4.75f16;
     print("Test varying float: %\n", varFloatVal);
 }
 
-export void print_result() {
+task void print_result() {
     assert(programCount <= 64);
     print("Test varying float: ");
     // varFloatVal

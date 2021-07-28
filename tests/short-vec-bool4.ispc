@@ -1,8 +1,9 @@
+#include "../test_static.isph"
 typedef bool<4> bool4;
 
 
 // a[] = { 1, 2, 3, ... };
-export void f_f(uniform float RET[], uniform float a[]) {
+task void f_f(uniform float RET[], uniform float a[]) {
     RET[programIndex] = 0;
     int int_var = ((int)a[programIndex]) % 4;
 
@@ -90,4 +91,4 @@ export void f_f(uniform float RET[], uniform float a[]) {
         RET[programIndex] = -1;
 }
 
-export void result(uniform float ret[]) { ret[programIndex] = 0; }
+task void result(uniform float ret[]) { ret[programIndex] = 0; }

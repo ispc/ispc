@@ -1,4 +1,5 @@
-export void f_v(uniform float RET[]) {
+#include "../test_static.isph"
+task void f_v(uniform float RET[]) {
     varying struct { float x, y; int i; } a;
     a.x = 1;
     a.y = 2;
@@ -6,6 +7,6 @@ export void f_v(uniform float RET[]) {
 }
 
 
-export void result(uniform float RET[]) {
+task void result(uniform float RET[]) {
     RET[programIndex] = 3;
 }

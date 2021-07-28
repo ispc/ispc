@@ -1,3 +1,4 @@
+#include "../test_static.isph"
 struct Foo {
     float f;
     uniform int a;
@@ -12,7 +13,7 @@ void set(Foo f[], int offset, Foo val) {
     f[offset] = val;
 }
 
-export void f_f(uniform float RET[], uniform float aFOO[]) {
+task void f_f(uniform float RET[], uniform float aFOO[]) {
     float a = aFOO[programIndex]; 
     Foo foo[programCount+5];
     for (uniform int i = 0; i < programCount+5; ++i) {
@@ -28,7 +29,6 @@ export void f_f(uniform float RET[], uniform float aFOO[]) {
     RET[programIndex] = foo[programIndex].f; 
 }
 
-export void result(uniform float RET[]) {
+task void result(uniform float RET[]) {
     RET[programIndex] = 3+3*programIndex;
 }
-

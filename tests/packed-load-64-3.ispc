@@ -1,4 +1,5 @@
-export void f_f(uniform float RET[], uniform float aFOO[]) {
+#include "../test_static.isph"
+task void f_f(uniform float RET[], uniform float aFOO[]) {
     uniform int64 a[programCount];
     a[programIndex] = aFOO[programIndex];
     int64 aa;
@@ -8,6 +9,6 @@ export void f_f(uniform float RET[], uniform float aFOO[]) {
     RET[programIndex] = count;
 }
 
-export void result(uniform float RET[]) {
+task void result(uniform float RET[]) {
     RET[programIndex] = (programCount == 1) ? 1 : 2;
 }

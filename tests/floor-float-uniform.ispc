@@ -1,5 +1,6 @@
+#include "../test_static.isph"
 
-export void f_f(uniform float RET[], uniform float aFOO[]) {
+task void f_f(uniform float RET[], uniform float aFOO[]) {
     uniform float error = 0;
     RET[programIndex] = 0;
     uniform float deltaLow = 0.2;
@@ -123,6 +124,6 @@ export void f_f(uniform float RET[], uniform float aFOO[]) {
     RET[0] = error;
 }
 
-export void result(uniform float RET[]) {
+task void result(uniform float RET[]) {
     RET[0] = 0;
 }

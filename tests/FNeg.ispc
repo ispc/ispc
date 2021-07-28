@@ -1,3 +1,4 @@
+#include "../test_static.isph"
 uniform float Neg(uniform float inVal) {
     return -inVal;
 }
@@ -59,12 +60,11 @@ void test_vary(uniform float RET[]) {
 
 }
 
-export void f_v(uniform float RET[]) {
+task void f_v(uniform float RET[]) {
 
     test_vary(RET);
     test_uni(RET);
 
 }
 
-export void result(uniform float RET[]) { RET[programIndex] = 0; }
-
+task void result(uniform float RET[]) { RET[programIndex] = 0; }

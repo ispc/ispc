@@ -1,6 +1,7 @@
+#include "../test_static.isph"
 // rule: skip on cpu=TGLLP
 
-export void f_f(uniform float RET[], uniform float aFOO[]) {
+task void f_f(uniform float RET[], uniform float aFOO[]) {
     double x = aFOO[programIndex]*1d100;
     double d, invsqrt = rsqrt(x);
     d = (x * (invsqrt * invsqrt)) - 1.0d0;
@@ -9,6 +10,6 @@ export void f_f(uniform float RET[], uniform float aFOO[]) {
 }
 
 
-export void result(uniform float RET[]) {
+task void result(uniform float RET[]) {
        RET[programIndex] = 0;
 }

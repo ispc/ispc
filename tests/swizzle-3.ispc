@@ -1,4 +1,5 @@
-export void f_v(uniform float RET[]) {
+#include "../test_static.isph"
+task void f_v(uniform float RET[]) {
     float<3> a = {1,10,100};
     float<6> b = a.zxyyxz;
 
@@ -6,6 +7,6 @@ export void f_v(uniform float RET[]) {
 }
 
 
-export void result(uniform float RET[]) {
+task void result(uniform float RET[]) {
     RET[programIndex] = 0;
 }

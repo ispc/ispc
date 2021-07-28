@@ -1,4 +1,5 @@
-export void f_f(uniform float RET[], uniform float aFOO[]) {
+#include "../test_static.isph"
+task void f_f(uniform float RET[], uniform float aFOO[]) {
     float sum = 0;
     // Obscfucated way to make delta all one, but make that unclear to the
     // compiler
@@ -14,6 +15,6 @@ export void f_f(uniform float RET[], uniform float aFOO[]) {
     RET[programIndex] = extract(sum, 0);
 }
 
-export void result(uniform float RET[]) {
+task void result(uniform float RET[]) {
     RET[programIndex] = 136;
 }

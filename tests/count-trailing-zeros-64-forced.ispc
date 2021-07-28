@@ -1,3 +1,4 @@
+#include "../test_static.isph"
 const int64 bit_size = 64;
 const int64 a_bit_size = 3;
 const int64 max_a = 7; // must be 2^a_bit_size-1
@@ -9,7 +10,7 @@ static int64 calc_shift(int64 idx)
     return (idx * (bit_size / programCount)) % (max_shift + 1);
 }
 
-export void f_f(uniform float RET[], uniform float aFOO[]) {
+task void f_f(uniform float RET[], uniform float aFOO[]) {
     int64 a = aFOO[programIndex];
     a = a % (max_a + 1);
     // to make a = 0bXX1
@@ -19,6 +20,6 @@ export void f_f(uniform float RET[], uniform float aFOO[]) {
     RET[programIndex] = count_trailing_zeros(i);
 }
 
-export void result(uniform float RET[]) {
+task void result(uniform float RET[]) {
     RET[programIndex] = calc_shift(programIndex);
 }

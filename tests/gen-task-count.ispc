@@ -1,8 +1,9 @@
+#include "../test_static.isph"
 // rule: skip on arch=*
 // rule: run on arch=genx32
 // rule: run on arch=genx64
 
-export void f_t(uniform float RET[]) {
+task void f_t(uniform float RET[]) {
     foreach(i = 0 ... taskCount) {
         RET[i] = 0;
     }
@@ -12,7 +13,7 @@ export void f_t(uniform float RET[]) {
     RET[3] = taskCount2;
 }
 
-export void result_t(uniform float RET[], uniform int groupSpaceWidth, uniform int groupSpaceHeight) {
+task void result_t(uniform float RET[], uniform int groupSpaceWidth, uniform int groupSpaceHeight) {
     foreach(i = 0 ... taskCount) {
         RET[i] = 0;
     }

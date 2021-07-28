@@ -1,6 +1,7 @@
+#include "../test_static.isph"
 // rule: skip on arch=x86
 // rule: skip on arch=x86-64
-export void f_f(uniform float RET[], uniform float aFOO[]) {
+task void f_f(uniform float RET[], uniform float aFOO[]) {
 #pragma ignore warning(perf)
     varying float16 x = aFOO[programIndex];
     varying float16 d, ix;
@@ -14,4 +15,4 @@ export void f_f(uniform float RET[], uniform float aFOO[]) {
     }
 }
 
-export void result(uniform float RET[]) { RET[programIndex] = 1.; }
+task void result(uniform float RET[]) { RET[programIndex] = 1.; }

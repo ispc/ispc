@@ -1,6 +1,7 @@
+#include "../test_static.isph"
 // rule: skip on arch=x86
 // rule: skip on arch=x86-64
-export void f_v(uniform float RET[]) {
+task void f_v(uniform float RET[]) {
     float errors = 0;
     for (uniform int i = -2; i <= 2; ++i) {
         float16 f = log((float16)i);
@@ -22,4 +23,4 @@ export void f_v(uniform float RET[]) {
     RET[programIndex] = errors;
 }
 
-export void result(uniform float RET[]) { RET[programIndex] = 0; }
+task void result(uniform float RET[]) { RET[programIndex] = 0; }
