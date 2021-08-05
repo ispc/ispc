@@ -461,9 +461,9 @@ else()
                            -Wformat -Wformat-security -fpie -fwrapv)
 endif()
 
-# Set C++ standard to C++14.
+# Set C++ standard to C++17.
 set_target_properties(${PROJECT_NAME} PROPERTIES
-    CXX_STANDARD 14
+    CXX_STANDARD 17
     CXX_STANDARD_REQUIRED YES)
 
 if (NOT MSVC)
