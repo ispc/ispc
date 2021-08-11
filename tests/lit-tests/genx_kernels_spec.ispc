@@ -154,12 +154,12 @@ uniform int t1() {
 static uniform int t2() {
     return programCount;
 }
-// CHECK_FUNC_GPU-NOT: @t3__
+// CHECK_FUNC_GPU: @t3__
 // CHECK_FUNC_CPU: @t3__
 extern uniform int t3() {
     return programCount;
 }
-// CHECK_FUNC_GPU-NOT: @t4
+// CHECK_FUNC_GPU: @t4(
 // CHECK_FUNC_CPU: @t4(
 extern "C" uniform int t4(int p);
 extern uniform int t4_call() {

@@ -812,8 +812,10 @@ void Module::AddFunctionDeclaration(const std::string &name, const FunctionType 
                                                   ? llvm::GlobalValue::InternalLinkage
                                                   : llvm::GlobalValue::ExternalLinkage;
 
-    // For gen target all functions except GenX kernels and ISPC external functions must be internal.
-    if (g->target->isGenXTarget() && !functionType->isExported && !functionType->isTask && !functionType->isExternC)
+    // For gen target all functions except GenX kernels, external functions and explicitly marked extern functions must
+    // be internal.
+    if (g->target->isGenXTarget() && !functionType->IsISPCKernel() && !functionType->IsISPCExternal() &&
+        (storageClass != SC_EXTERN))
         linkage = llvm::GlobalValue::InternalLinkage;
 
     std::string functionName = name;
