@@ -7997,10 +7997,6 @@ Expr *AllocaExpr::TypeCheck() {
         return NULL;
     }
 
-    if (g->target->isGenXTarget()) {
-        Error(pos, "\"alloca()\" is not supported for genx-* targets yet.");
-        return NULL;
-    }
     const Type *argType = expr ? expr->GetType() : NULL;
     const Type *sizeType = m->symbolTable->LookupType("size_t");
     Assert(sizeType != NULL);
