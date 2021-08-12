@@ -38,6 +38,7 @@
 #pragma once
 
 #include "ispc.h"
+#include "type.h"
 
 #include <vector>
 
@@ -66,4 +67,34 @@ class Function {
     Symbol *taskIndexSym1, *taskCountSym1;
     Symbol *taskIndexSym2, *taskCountSym2;
 };
+
+class Template {
+  public:
+    Template(std::vector<const TypenameType *> *list, const std::string &n, const FunctionType *ft, StorageClass sclass,
+             bool isIn, bool isNoIn, bool isVecCall, std::vector<Symbol *> par, Stmt *c, SourcePos p);
+    std::string getName();
+    std::string getMangledName(std::unordered_map<std::string, const Type *> typeName);
+    std::vector<const TypenameType *> *getTypes();
+    const FunctionType *getFunctionType();
+    StorageClass getStorageClass();
+    bool getIsInline();
+    bool getIsNoInline();
+    bool getIsVectorCall();
+    SourcePos GetPos();
+    Stmt *getBody();
+    std::vector<Symbol *> getParams() { return params; }
+
+  private:
+    std::vector<const TypenameType *> *typenames;
+    const std::string name;
+    const FunctionType *ftype;
+    StorageClass sc;
+    bool isInline;
+    bool isNoInline;
+    bool isVectorCall;
+    Stmt *code;
+    SourcePos pos;
+    std::vector<Symbol *> params;
+};
+
 } // namespace ispc

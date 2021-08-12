@@ -626,3 +626,45 @@ void Function::GenerateIR() {
         }
     }
 }
+
+Template::Template(std::vector<const TypenameType *> *list, const std::string &n, const FunctionType *ft,
+                   StorageClass sclass, bool isIn, bool isNoIn, bool isVecCall, std::vector<Symbol *> par, Stmt *c,
+                   SourcePos p)
+    : name(n) {
+    typenames = list;
+    ftype = ft;
+    sc = sclass;
+    isInline = isIn;
+    isNoInline = isNoIn;
+    isVectorCall = isVecCall;
+    code = c;
+    pos = p;
+    params = par;
+}
+
+std::string Template::getName() { return name; }
+
+std::string Template::getMangledName(std::unordered_map<std::string, const Type *> typeName) {
+    std::string mangledName = name;
+    for (auto ty : typeName) {
+        // Assume varying default for mangling.
+        mangledName += (ty.second)->ResolveUnboundVariability(Variability::Varying)->Mangle();
+    }
+    return mangledName;
+}
+
+std::vector<const TypenameType *> *Template::getTypes() { return typenames; }
+
+const FunctionType *Template::getFunctionType() { return ftype; }
+
+StorageClass Template::getStorageClass() { return sc; }
+
+bool Template::getIsInline() { return isInline; }
+
+bool Template::getIsNoInline() { return isNoInline; }
+
+bool Template::getIsVectorCall() { return isVectorCall; }
+
+SourcePos Template::GetPos() { return pos; }
+
+Stmt *Template::getBody() { return code; }
