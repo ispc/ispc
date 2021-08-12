@@ -115,6 +115,7 @@ static int lYYTNameErr(char *yyres, const char *yystr);
 static void lSuggestBuiltinAlternates();
 static void lSuggestParamListAlternates();
 
+static void lAddTemplate(std::vector<const TypenameType *> *list, DeclSpecs *ds, Declarator *decl, Stmt *code);
 static void lAddDeclaration(DeclSpecs *ds, Declarator *decl);
 static void lAddFunctionParams(Declarator *decl);
 static void lAddMaskToSymbolTable(SourcePos pos);
@@ -188,6 +189,8 @@ struct ForeachDimension {
     std::pair<std::string, SourcePos> *declspecPair;
     std::vector<std::pair<std::string, SourcePos> > *declspecList;
     PragmaAttributes *pragmaAttributes;
+    const TypenameType *typeNameType;
+    std::vector<const TypenameType *> *typeNameTypeList;
 }
 
 
@@ -198,7 +201,8 @@ struct ForeachDimension {
 %token TOKEN_INT32DOTDOTDOT_CONSTANT TOKEN_UINT32DOTDOTDOT_CONSTANT
 %token TOKEN_INT64DOTDOTDOT_CONSTANT TOKEN_UINT64DOTDOTDOT_CONSTANT
 %token TOKEN_FLOAT16_CONSTANT TOKEN_FLOAT_CONSTANT TOKEN_DOUBLE_CONSTANT TOKEN_STRING_C_LITERAL
-%token TOKEN_IDENTIFIER TOKEN_STRING_LITERAL TOKEN_TYPE_NAME TOKEN_PRAGMA TOKEN_NULL
+%token TOKEN_IDENTIFIER TOKEN_STRING_LITERAL TOKEN_TEMPLATE TOKEN_TEMPLATE_NAME
+%token TOKEN_TEMPLATE_TYPE_NAME TOKEN_TYPE_NAME TOKEN_PRAGMA TOKEN_NULL
 %token TOKEN_PTR_OP TOKEN_INC_OP TOKEN_DEC_OP TOKEN_LEFT_OP TOKEN_RIGHT_OP
 %token TOKEN_LE_OP TOKEN_GE_OP TOKEN_EQ_OP TOKEN_NE_OP
 %token TOKEN_AND_OP TOKEN_OR_OP TOKEN_MUL_ASSIGN TOKEN_DIV_ASSIGN TOKEN_MOD_ASSIGN
@@ -221,7 +225,7 @@ struct ForeachDimension {
 %token TOKEN_SYNC TOKEN_PRINT TOKEN_ASSERT
 
 %type <expr> primary_expression postfix_expression integer_dotdotdot
-%type <expr> unary_expression cast_expression funcall_expression launch_expression intrincall_expression
+%type <expr> unary_expression cast_expression funcall_expression launch_expression intrincall_expression templatecall_expression
 %type <expr> multiplicative_expression additive_expression shift_expression
 %type <expr> relational_expression equality_expression and_expression
 %type <expr> exclusive_or_expression inclusive_or_expression
@@ -254,14 +258,14 @@ struct ForeachDimension {
 %type <type> struct_or_union_and_name
 %type <type> type_specifier type_name rate_qualified_type_specifier
 %type <type> short_vec_specifier
-%type <typeList> type_specifier_list
+%type <typeList> type_specifier_list rate_qualified_type_specifier_list
 %type <atomicType> atomic_var_type_specifier
 
 %type <typeQualifier> type_qualifier type_qualifier_list
 %type <storageClass> storage_class_specifier
 %type <declSpecs> declaration_specifiers
 
-%type <stringVal> string_constant intrinsic_name
+%type <stringVal> string_constant intrinsic_name template_name
 %type <constCharPtr> struct_or_union_name enum_identifier goto_identifier
 %type <constCharPtr> foreach_unique_identifier
 
@@ -273,6 +277,9 @@ struct ForeachDimension {
 
 %type <declspecPair> declspec_item
 %type <declspecList> declspec_specifier declspec_list
+
+%type <typeNameType> template_typename
+%type <typeNameTypeList> template_typename_list func_template
 
 %start translation_unit
 %%
@@ -520,6 +527,95 @@ funcall_expression
       { $$ = NULL; }
     ;
 
+templatecall_expression
+    : template_name '<' rate_qualified_type_specifier_list '>' '(' ')'
+      {
+          std::string *name = $1;
+          std::vector<std::pair<const Type *, SourcePos>> *vec = $3;
+          std::vector<Template *> tmpl;
+          m->symbolTable->LookupTemplate(*name, &tmpl);
+          $$ = m->InstantiateTemplates(*name, tmpl, vec, new ExprList(Union(@1,@5)), Union(@1,@6));
+      }
+    | template_name '<' rate_qualified_type_specifier_list '>' '(' argument_expression_list ')'
+      {
+          std::string *name = $1;
+          std::vector<std::pair<const Type *, SourcePos>> *vec = $3;
+          std::vector<Template *> tmpl;
+          ExprList *args = $6;
+          m->symbolTable->LookupTemplate(*name, &tmpl);
+          $$ =  m->InstantiateTemplates(*name, tmpl, vec, args, Union(@1,@7));
+       }
+    | template_name '<' rate_qualified_type_specifier_list '>' '(' error ')'
+      { $$ = NULL; }
+    ;
+
+template_name
+    : TOKEN_TEMPLATE_NAME
+      {
+          $$ = yylval.stringVal;
+      }
+    ;
+
+rate_qualified_type_specifier_list
+    : rate_qualified_type_specifier
+    {
+        if ($1 == NULL)
+            $$ = NULL;
+        else {
+            std::vector<std::pair<const Type *, SourcePos> > *vec =
+                new std::vector<std::pair<const Type *, SourcePos> >;
+            vec->push_back(std::make_pair($1, @1));
+            $$ = vec;
+        }
+    }
+    | rate_qualified_type_specifier_list ',' rate_qualified_type_specifier
+    {
+        $$ = $1;
+        if ($1 == NULL)
+            Assert(m->errorCount > 0);
+        else
+            $$->push_back(std::make_pair($3, @3));
+    }
+    ;
+
+func_template
+    : TOKEN_TEMPLATE '<' template_typename_list '>'
+      {
+          $$ = $3;
+      }
+    ;
+
+template_typename_list
+    : template_typename
+      {
+           std::vector<const TypenameType *> *list = new std::vector<const TypenameType *>;
+           list->push_back($1);
+           $$ = list;
+
+      }
+    | template_typename_list ',' template_typename
+      {
+           std::vector<const TypenameType *> *list = $1;
+           if (list == NULL) {
+               AssertPos(@1, m->errorCount > 0);
+               list = new std::vector<const TypenameType *>;
+           }
+           if ($3 != NULL)
+               list->push_back($3);
+           $$ = list;
+      }
+    ;
+
+template_typename
+    : TOKEN_TEMPLATE_TYPE_NAME TOKEN_IDENTIFIER
+    {
+         std::string *name = (yylval.stringVal);
+          TypenameType *tName = new TypenameType(*name, Variability::Unbound, false, @1);
+         $$ = tName;
+
+    }
+    ;
+
 argument_expression_list
     : assignment_expression      { $$ = new ExprList($1, @1); }
     | argument_expression_list ',' assignment_expression
@@ -538,6 +634,7 @@ argument_expression_list
 unary_expression
     : funcall_expression
     | intrincall_expression
+    | templatecall_expression
     | TOKEN_INC_OP unary_expression
       { $$ = new UnaryExpr(UnaryExpr::PreInc, $2, Union(@1, @2)); }
     | TOKEN_DEC_OP unary_expression
@@ -2106,6 +2203,7 @@ translation_unit
 
 external_declaration
     : function_definition
+    | func_template_definition
     | TOKEN_EXTERN TOKEN_STRING_C_LITERAL '{' declaration '}'
     | TOKEN_EXPORT '{' type_specifier_list '}' ';'
     {
@@ -2119,6 +2217,46 @@ external_declaration
                 lAddDeclaration($1->declSpecs, $1->declarators[i]);
     }
     | ';'
+    ;
+
+func_template_definition
+    : func_template
+    {
+        m->symbolTable->PushScope();
+        std::vector<const TypenameType *> *list = $1;
+        for(std::vector<const TypenameType *>::iterator it = list->begin(); it != list->end(); ++it) {
+             std::string name = (*it)->GetName();
+             SourcePos pos = (*it)->GetSourcePos();
+             m->AddTypeDef(name, *it, pos);
+        }
+    }
+    declaration_specifiers declarator
+    {
+
+        lAddFunctionParams($4);
+        lAddMaskToSymbolTable(@4);
+        if ($3->typeQualifiers & TYPEQUAL_TASK)
+            Error(@3, "'task' not supported for template.");
+
+    }
+    compound_statement
+    {
+        if ($4 != NULL) {
+            $4->InitFromDeclSpecs($3);
+            const FunctionType *funcType = CastType<FunctionType>($4->type);
+            if (funcType == NULL)
+                AssertPos(@3, m->errorCount > 0);
+            else if ($3->storageClass == SC_TYPEDEF)
+                Error(@3, "Illegal \"typedef\" provided with function definition.");
+            else {
+                Stmt *code = $6;
+                if (code == NULL) code = new StmtList(@6);
+                 lAddTemplate($1, $3, $4, code);
+            }
+        }
+        m->symbolTable->PopScope(); // push in lAddFunctionParams();
+        m->symbolTable->PopScope();
+    }
     ;
 
 function_definition
@@ -2246,6 +2384,52 @@ lSuggestParamListAlternates() {
         Error(yylloc, "%s", alts.c_str());
 }
 
+static void lAddTemplate(std::vector<const TypenameType *> *list, DeclSpecs
+*ds, Declarator *decl, Stmt *code) {
+    if (ds == NULL || decl == NULL)
+        // Error happened earlier during parsing
+        return;
+
+     decl->InitFromDeclSpecs(ds);
+
+    if (ds->storageClass == SC_TYPEDEF)
+        m->AddTypeDef(decl->name, decl->type, decl->pos);
+    else {
+        if (decl->type == NULL) {
+            Assert(m->errorCount > 0);
+            return;
+        }
+
+        std::vector<Symbol *> params;
+
+        // now loop over its parameters and add them to the symbol table
+        for (unsigned int i = 0; i < decl->functionParams.size(); ++i) {
+            Declaration *pdecl = decl->functionParams[i];
+            Assert(pdecl != NULL && pdecl->declarators.size() == 1);
+            Declarator *declarator = pdecl->declarators[0];
+            if (declarator == NULL)
+                AssertPos(decl->pos, m->errorCount > 0);
+            else {
+                params.push_back(m->symbolTable->LookupVariable(declarator->name.c_str()));
+
+            }
+
+        }
+        params.push_back(m->symbolTable->LookupVariable("__mask"));
+
+        decl->type = decl->type->ResolveUnboundVariability(Variability::Varying);
+
+        const FunctionType *ft = CastType<FunctionType>(decl->type);
+        if (ft != NULL) {
+            bool isInline = (ds->typeQualifiers & TYPEQUAL_INLINE);
+            bool isNoInline = (ds->typeQualifiers & TYPEQUAL_NOINLINE);
+            bool isVectorCall = (ds->typeQualifiers & TYPEQUAL_VECTORCALL);
+            m->AddTemplateDeclaration(list, decl->name, ft, ds->storageClass,
+                                      isInline, isNoInline, isVectorCall,
+                                      params, code, decl->pos);
+        }
+    }
+}
 
 static void
 lAddDeclaration(DeclSpecs *ds, Declarator *decl) {

@@ -80,7 +80,8 @@ static int allTokens[] = {
   TOKEN_UINT, TOKEN_UINT8, TOKEN_UINT16, TOKEN_UINT64,
   TOKEN_NEW, TOKEN_NULL, TOKEN_PRINT, TOKEN_RETURN, TOKEN_SOA, TOKEN_SIGNED,
   TOKEN_SIZEOF, TOKEN_ALLOCA, TOKEN_STATIC, TOKEN_STRUCT, TOKEN_SWITCH, TOKEN_SYNC,
-  TOKEN_TASK, TOKEN_TRUE, TOKEN_TYPEDEF, TOKEN_UNIFORM, TOKEN_UNMASKED,
+  TOKEN_TASK, TOKEN_TRUE, TOKEN_TYPEDEF, TOKEN_TEMPLATE,
+  TOKEN_TEMPLATE_TYPE_NAME, TOKEN_UNIFORM, TOKEN_UNMASKED,
   TOKEN_UNSIGNED, TOKEN_VARYING, TOKEN_VOID, TOKEN_WHILE,
   TOKEN_STRING_C_LITERAL, TOKEN_DOTDOTDOT,
   TOKEN_FLOAT_CONSTANT, TOKEN_FLOAT16_CONSTANT, TOKEN_DOUBLE_CONSTANT,
@@ -156,6 +157,8 @@ void ParserInit() {
     tokenToName[TOKEN_SWITCH] = "switch";
     tokenToName[TOKEN_SYNC] = "sync";
     tokenToName[TOKEN_TASK] = "task";
+    tokenToName[TOKEN_TEMPLATE] = "template";
+    tokenToName[TOKEN_TEMPLATE_TYPE_NAME] = "typename";
     tokenToName[TOKEN_TRUE] = "true";
     tokenToName[TOKEN_TYPEDEF] = "typedef";
     tokenToName[TOKEN_UNIFORM] = "uniform";
@@ -280,6 +283,8 @@ void ParserInit() {
     tokenNameRemap["TOKEN_SWITCH"] = "\'switch\'";
     tokenNameRemap["TOKEN_SYNC"] = "\'sync\'";
     tokenNameRemap["TOKEN_TASK"] = "\'task\'";
+    tokenNameRemap["TOKEN_TEMPLATE"] = "\'template\'";
+    tokenNameRemap["TOKEN_TEMPLATE_TYPE_NAME"] = "\'typename\'";
     tokenNameRemap["TOKEN_TRUE"] = "\'true\'";
     tokenNameRemap["TOKEN_TYPEDEF"] = "\'typedef\'";
     tokenNameRemap["TOKEN_UNIFORM"] = "\'uniform\'";
@@ -449,6 +454,8 @@ struct { RT; return TOKEN_STRUCT; }
 switch { RT; return TOKEN_SWITCH; }
 sync { RT; return TOKEN_SYNC; }
 task { RT; return TOKEN_TASK; }
+template { RT; return TOKEN_TEMPLATE; }
+typename { RT; return TOKEN_TEMPLATE_TYPE_NAME; }
 true { RT; return TOKEN_TRUE; }
 typedef { RT; return TOKEN_TYPEDEF; }
 uniform { RT; return TOKEN_UNIFORM; }
@@ -477,6 +484,8 @@ L?\"(\\.|[^\\"])*\" { lStringConst(&yylval, &yylloc); return TOKEN_STRING_LITERA
     yylval.stringVal = new std::string(yytext);
     if (m->symbolTable->LookupType(yytext) != NULL)
         return TOKEN_TYPE_NAME;
+    else if (m->symbolTable->LookupTemplate(yytext) == true)
+        return TOKEN_TEMPLATE_NAME;
     else
         return TOKEN_IDENTIFIER;
 }
