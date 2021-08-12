@@ -275,6 +275,9 @@ const AtomicType *AtomicType::GetAsSOAType(int width) const {
     return new AtomicType(basicType, Variability(Variability::SOA, width), isConst);
 }
 
+const AtomicType *AtomicType::ResolveTypenameType(std::unordered_map<std::string, const Type *> typenameMap) const {
+    return this;
+}
 const AtomicType *AtomicType::ResolveUnboundVariability(Variability v) const {
     Assert(v != Variability::Unbound);
     if (variability != Variability::Unbound)
@@ -570,6 +573,154 @@ llvm::DIType *AtomicType::GetDIType(llvm::DIScope *scope) const {
 }
 
 ///////////////////////////////////////////////////////////////////////////
+// TypenameType
+
+TypenameType::TypenameType(std::string n, Variability v, bool ic, SourcePos p)
+    : Type(TYPENAME_TYPE), name(n), variability(v), isConst(ic), pos(p) {
+    asOtherConstType = NULL;
+    asUniformType = asVaryingType = NULL;
+}
+
+Variability TypenameType::GetVariability() const { return variability; }
+
+bool TypenameType::IsBoolType() const { return false; }
+
+bool TypenameType::IsFloatType() const { return false; }
+
+bool TypenameType::IsIntType() const { return false; }
+
+bool TypenameType::IsUnsignedType() const { return false; }
+
+bool TypenameType::IsConstType() const { return isConst; }
+
+const Type *TypenameType::GetBaseType() const { return this; }
+
+const Type *TypenameType::GetAsVaryingType() const {
+    if (variability == Variability::Varying)
+        return this;
+    if (asVaryingType == NULL) {
+        asVaryingType = new TypenameType(name, Variability::Varying, isConst, pos);
+        if (variability == Variability::Uniform)
+            asVaryingType->asUniformType = this;
+    }
+    return asVaryingType;
+}
+
+const Type *TypenameType::GetAsUniformType() const {
+    if (variability == Variability::Uniform)
+        return this;
+    if (asUniformType == NULL) {
+        asUniformType = new TypenameType(name, Variability::Uniform, isConst, pos);
+        if (variability == Variability::Varying)
+            asUniformType->asVaryingType = this;
+    }
+    return asUniformType;
+}
+
+const Type *TypenameType::GetAsUnboundVariabilityType() const {
+    if (variability == Variability::Unbound)
+        return this;
+    return new TypenameType(name, Variability::Unbound, isConst, pos);
+}
+
+// Revisit : Should soa type be supported for typename strictly for function
+// template?
+const Type *TypenameType::GetAsSOAType(int width) const {
+    Error(pos, "soa type not supported for template typename.");
+    return this;
+}
+
+const Type *TypenameType::ResolveTypenameType(std::unordered_map<std::string, const Type *> typenameMap) const {
+    if (typenameMap.find(GetName()) == typenameMap.end()) {
+        Assert(m->errorCount > 0);
+        return NULL;
+    }
+    Variability v = variability;
+    if (v == Variability::Unbound)
+        v = Variability::Varying;
+    const Type *resolvedType = typenameMap[GetName()]->ResolveUnboundVariability(v);
+    if (isConst) {
+        resolvedType = resolvedType->GetAsConstType();
+    }
+    return resolvedType;
+}
+
+const Type *TypenameType::ResolveUnboundVariability(Variability v) const {
+    Assert(v != Variability::Unbound);
+    if (variability != Variability::Unbound)
+        return this;
+    return new TypenameType(name, v, isConst, pos);
+}
+
+const Type *TypenameType::GetAsConstType() const {
+    if (isConst == true)
+        return this;
+
+    if (asOtherConstType == NULL) {
+        asOtherConstType = new TypenameType(name, variability, true, pos);
+        asOtherConstType->asOtherConstType = this;
+    }
+    return asOtherConstType;
+}
+
+const Type *TypenameType::GetAsNonConstType() const {
+    if (isConst == false)
+        return this;
+
+    if (asOtherConstType == NULL) {
+        asOtherConstType = new TypenameType(name, variability, false, pos);
+        asOtherConstType->asOtherConstType = this;
+    }
+    return asOtherConstType;
+}
+
+std::string TypenameType::GetName() const { return name; }
+
+const SourcePos &TypenameType::GetSourcePos() const { return pos; }
+
+std::string TypenameType::GetString() const {
+    std::string ret;
+    if (isConst)
+        ret += "const ";
+
+    ret += variability.GetString();
+    ret += " ";
+    ret += name;
+    return ret;
+}
+
+std::string TypenameType::Mangle() const {
+    std::string ret;
+    if (isConst)
+        ret += "C";
+    ret += variability.MangleString();
+    ret += name;
+    return ret;
+}
+
+std::string TypenameType::GetCDeclaration(const std::string &cname) const {
+    std::string ret;
+    if (variability == Variability::Unbound) {
+        Assert(m->errorCount > 0);
+        return ret;
+    }
+    if (isConst)
+        ret += "const ";
+    ret += name;
+    if (lShouldPrintName(cname)) {
+        ret += " ";
+        ret += cname;
+    }
+    return ret;
+}
+
+// This should never be called.
+llvm::Type *TypenameType::LLVMType(llvm::LLVMContext *ctx) const { return nullptr; }
+
+// This should never be called.
+llvm::DIType *TypenameType::GetDIType(llvm::DIScope *scope) const { return nullptr; }
+
+///////////////////////////////////////////////////////////////////////////
 // EnumType
 
 EnumType::EnumType(SourcePos p) : Type(ENUM_TYPE), pos(p) {
@@ -605,6 +756,10 @@ const EnumType *EnumType::GetAsUniformType() const {
         enumType->variability = Variability::Uniform;
         return enumType;
     }
+}
+
+const EnumType *EnumType::ResolveTypenameType(std::unordered_map<std::string, const Type *> typenameMap) const {
+    return this;
 }
 
 const EnumType *EnumType::ResolveUnboundVariability(Variability v) const {
@@ -870,6 +1025,22 @@ const PointerType *PointerType::GetWithAddrSpace(AddressSpace as) const {
     if (addrSpace == as)
         return this;
     return new PointerType(baseType, variability, isConst, isSlice, isFrozen, as);
+}
+
+const PointerType *PointerType::ResolveTypenameType(std::unordered_map<std::string, const Type *> typenameMap) const {
+    if (baseType == NULL) {
+        Assert(m->errorCount > 0);
+        return NULL;
+    }
+
+    const Type *resType = baseType->ResolveTypenameType(typenameMap);
+    if (baseType == resType) {
+        return this;
+    }
+
+    const PointerType *pType = new PointerType(resType, variability, isConst, isSlice, isFrozen);
+    pType = pType->ResolveUnboundVariability(Variability::Varying);
+    return pType;
 }
 
 const PointerType *PointerType::ResolveUnboundVariability(Variability v) const {
@@ -1152,6 +1323,19 @@ const ArrayType *ArrayType::GetAsSOAType(int width) const {
     return new ArrayType(child->GetAsSOAType(width), numElements);
 }
 
+const ArrayType *ArrayType::ResolveTypenameType(std::unordered_map<std::string, const Type *> typenameMap) const {
+    if (child == NULL) {
+        Assert(m->errorCount > 0);
+        return NULL;
+    }
+
+    const Type *resType = child->ResolveTypenameType(typenameMap);
+    if (resType == child) {
+        return this;
+    }
+    return new ArrayType(resType, numElements);
+}
+
 const ArrayType *ArrayType::ResolveUnboundVariability(Variability v) const {
     if (child == NULL) {
         Assert(m->errorCount > 0);
@@ -1378,6 +1562,10 @@ const VectorType *VectorType::GetAsSOAType(int width) const {
     return new VectorType(base->GetAsSOAType(width), numElements);
 }
 
+const VectorType *VectorType::ResolveTypenameType(std::unordered_map<std::string, const Type *> typenameMap) const {
+    return this;
+}
+
 const VectorType *VectorType::ResolveUnboundVariability(Variability v) const {
     return new VectorType(base->ResolveUnboundVariability(v), numElements);
 }
@@ -1578,7 +1766,6 @@ StructType::StructType(const std::string &n, const llvm::SmallVector<const Type 
         // For structs with non-unbound variability, we'll create the
         // correspoing LLVM struct type now, if one hasn't been made
         // already.
-
         // Create a unique anonymous struct name if we have an anonymous
         // struct (name == "").
         if (name == "") {
@@ -1710,6 +1897,11 @@ const StructType *StructType::GetAsSOAType(int width) const {
 
     return new StructType(name, elementTypes, elementNames, elementPositions, isConst,
                           Variability(Variability::SOA, width), isAnonymous, pos);
+}
+
+// Revisit : Add as part of structure template.
+const StructType *StructType::ResolveTypenameType(std::unordered_map<std::string, const Type *> typenameMap) const {
+    return this;
 }
 
 const StructType *StructType::ResolveUnboundVariability(Variability v) const {
@@ -1976,6 +2168,12 @@ const UndefinedStructType *UndefinedStructType::GetAsSOAType(int width) const {
     return NULL;
 }
 
+// Revisit : Add as part of structure template.
+const UndefinedStructType *
+UndefinedStructType::ResolveTypenameType(std::unordered_map<std::string, const Type *> typenameMap) const {
+    return this;
+}
+
 const UndefinedStructType *UndefinedStructType::ResolveUnboundVariability(Variability v) const {
     if (variability != Variability::Unbound)
         return this;
@@ -2136,6 +2334,15 @@ const ReferenceType *ReferenceType::GetAsUnboundVariabilityType() const {
 const Type *ReferenceType::GetAsSOAType(int width) const {
     // FIXME: is this right?
     return new ArrayType(this, width);
+}
+
+const ReferenceType *
+ReferenceType::ResolveTypenameType(std::unordered_map<std::string, const Type *> typenameMap) const {
+    if (targetType == NULL) {
+        Assert(m->errorCount > 0);
+        return NULL;
+    }
+    return new ReferenceType(targetType->ResolveTypenameType(typenameMap));
 }
 
 const ReferenceType *ReferenceType::ResolveUnboundVariability(Variability v) const {
@@ -2325,6 +2532,30 @@ const Type *FunctionType::GetAsUnboundVariabilityType() const {
 const Type *FunctionType::GetAsSOAType(int width) const {
     FATAL("FunctionType::GetAsSOAType() shouldn't be called");
     return NULL;
+}
+
+const FunctionType *FunctionType::ResolveTypenameType(std::unordered_map<std::string, const Type *> typenameMap) const {
+    if (returnType == NULL) {
+        Assert(m->errorCount > 0);
+        return NULL;
+    }
+    const Type *rt = returnType->ResolveTypenameType(typenameMap);
+
+    llvm::SmallVector<const Type *, 8> pt;
+    for (unsigned int i = 0; i < paramTypes.size(); ++i) {
+        if (paramTypes[i] == NULL) {
+            Assert(m->errorCount > 0);
+            return NULL;
+        }
+        const Type *argt = paramTypes[i]->ResolveTypenameType(typenameMap);
+        pt.push_back(argt);
+    }
+
+    FunctionType *ret =
+        new FunctionType(rt, pt, paramNames, paramDefaults, paramPositions, isTask, isExported, isExternC, isUnmasked);
+    ret->isSafe = isSafe;
+    ret->costOverride = costOverride;
+    return ret;
 }
 
 const FunctionType *FunctionType::ResolveUnboundVariability(Variability v) const {

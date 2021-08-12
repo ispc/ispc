@@ -81,7 +81,8 @@ enum TypeId {
     STRUCT_TYPE,           // 5
     UNDEFINED_STRUCT_TYPE, // 6
     REFERENCE_TYPE,        // 7
-    FUNCTION_TYPE          // 8
+    FUNCTION_TYPE,         // 8
+    TYPENAME_TYPE          // 9
 };
 
 /** @brief Interface class that defines the type abstraction.
@@ -149,6 +150,9 @@ class Type {
     /** Returns true if the underlying type's uniform/varying-ness is
         unbound. */
     bool HasUnboundVariability() const { return GetVariability() == Variability::Unbound; }
+
+    /** Resolves type for 'TypenameType' if possible based on 'typenameMap. */
+    virtual const Type *ResolveTypenameType(std::unordered_map<std::string, const Type *> typenameMap) const = 0;
 
     /* Returns a type wherein any elements of the original type and
        contained types that have unbound variability have their variability
@@ -287,6 +291,7 @@ class AtomicType : public Type {
     const AtomicType *GetAsUnboundVariabilityType() const;
     const AtomicType *GetAsSOAType(int width) const;
 
+    const AtomicType *ResolveTypenameType(std::unordered_map<std::string, const Type *> typenameMap) const;
     const AtomicType *ResolveUnboundVariability(Variability v) const;
     const AtomicType *GetAsUnsignedType() const;
     const AtomicType *GetAsConstType() const;
@@ -344,6 +349,52 @@ class AtomicType : public Type {
     mutable const AtomicType *asOtherConstType, *asUniformType, *asVaryingType;
 };
 
+/** @brief Type representing a template typename type.
+
+    'TypenameType' should be resolved to its derived type before creating a function.
+    This should exist only as part of template and should get resolved during instantiation.
+ */
+class TypenameType : public Type {
+  public:
+    TypenameType(std::string, Variability v, bool ic, SourcePos pos);
+
+    Variability GetVariability() const;
+
+    bool IsBoolType() const;
+    bool IsFloatType() const;
+    bool IsIntType() const;
+    bool IsUnsignedType() const;
+    bool IsConstType() const;
+
+    const Type *GetBaseType() const;
+    const Type *GetAsVaryingType() const;
+    const Type *GetAsUniformType() const;
+    const Type *GetAsUnboundVariabilityType() const;
+    const Type *GetAsSOAType(int width) const;
+    const Type *ResolveTypenameType(std::unordered_map<std::string, const Type *> typenameMap) const;
+    const Type *ResolveUnboundVariability(Variability v) const;
+
+    const Type *GetAsConstType() const;
+    const Type *GetAsNonConstType() const;
+
+    std::string GetName() const;
+    const SourcePos &GetSourcePos() const;
+    std::string GetString() const;
+    std::string Mangle() const;
+    std::string GetCDeclaration(const std::string &name) const;
+
+    llvm::Type *LLVMType(llvm::LLVMContext *ctx) const;
+
+    llvm::DIType *GetDIType(llvm::DIScope *scope) const;
+
+  private:
+    const std::string name;
+    const Variability variability;
+    const bool isConst;
+    const SourcePos pos;
+    mutable const TypenameType *asOtherConstType, *asUniformType, *asVaryingType;
+};
+
 /** @brief Type implementation for enumerated types
  *
  *  Note that ISPC enum assumes 32 bit int as underlying type.
@@ -369,6 +420,7 @@ class EnumType : public Type {
     const EnumType *GetAsUnboundVariabilityType() const;
     const EnumType *GetAsSOAType(int width) const;
 
+    const EnumType *ResolveTypenameType(std::unordered_map<std::string, const Type *> typenameMap) const;
     const EnumType *ResolveUnboundVariability(Variability v) const;
     const EnumType *GetAsConstType() const;
     const EnumType *GetAsNonConstType() const;
@@ -454,6 +506,7 @@ class PointerType : public Type {
     const PointerType *GetAsUnboundVariabilityType() const;
     const PointerType *GetAsSOAType(int width) const;
 
+    const PointerType *ResolveTypenameType(std::unordered_map<std::string, const Type *> typenameMap) const;
     const PointerType *ResolveUnboundVariability(Variability v) const;
     const PointerType *GetAsConstType() const;
     const PointerType *GetAsNonConstType() const;
@@ -555,6 +608,7 @@ class ArrayType : public SequentialType {
     const ArrayType *GetAsUniformType() const;
     const ArrayType *GetAsUnboundVariabilityType() const;
     const ArrayType *GetAsSOAType(int width) const;
+    const ArrayType *ResolveTypenameType(std::unordered_map<std::string, const Type *> typenameMap) const;
     const ArrayType *ResolveUnboundVariability(Variability v) const;
 
     const ArrayType *GetAsUnsignedType() const;
@@ -622,6 +676,7 @@ class VectorType : public SequentialType {
     const VectorType *GetAsUniformType() const;
     const VectorType *GetAsUnboundVariabilityType() const;
     const VectorType *GetAsSOAType(int width) const;
+    const VectorType *ResolveTypenameType(std::unordered_map<std::string, const Type *> typenameMap) const;
     const VectorType *ResolveUnboundVariability(Variability v) const;
 
     const VectorType *GetAsUnsignedType() const;
@@ -675,6 +730,7 @@ class StructType : public CollectionType {
     const StructType *GetAsUniformType() const;
     const StructType *GetAsUnboundVariabilityType() const;
     const StructType *GetAsSOAType(int width) const;
+    const StructType *ResolveTypenameType(std::unordered_map<std::string, const Type *> typenameMap) const;
     const StructType *ResolveUnboundVariability(Variability v) const;
 
     const StructType *GetAsConstType() const;
@@ -763,6 +819,7 @@ class UndefinedStructType : public Type {
     const UndefinedStructType *GetAsUniformType() const;
     const UndefinedStructType *GetAsUnboundVariabilityType() const;
     const UndefinedStructType *GetAsSOAType(int width) const;
+    const UndefinedStructType *ResolveTypenameType(std::unordered_map<std::string, const Type *> typenameMap) const;
     const UndefinedStructType *ResolveUnboundVariability(Variability v) const;
 
     const UndefinedStructType *GetAsConstType() const;
@@ -806,6 +863,7 @@ class ReferenceType : public Type {
     const ReferenceType *GetAsUniformType() const;
     const ReferenceType *GetAsUnboundVariabilityType() const;
     const Type *GetAsSOAType(int width) const;
+    const ReferenceType *ResolveTypenameType(std::unordered_map<std::string, const Type *> typenameMap) const;
     const ReferenceType *ResolveUnboundVariability(Variability v) const;
 
     const ReferenceType *GetAsConstType() const;
@@ -861,6 +919,7 @@ class FunctionType : public Type {
     const Type *GetAsUniformType() const;
     const Type *GetAsUnboundVariabilityType() const;
     const Type *GetAsSOAType(int width) const;
+    const FunctionType *ResolveTypenameType(std::unordered_map<std::string, const Type *> typenameMap) const;
     const FunctionType *ResolveUnboundVariability(Variability v) const;
 
     const Type *GetAsConstType() const;
@@ -948,6 +1007,13 @@ template <typename T> inline const T *CastType(const Type *type) { return NULL; 
 template <> inline const AtomicType *CastType(const Type *type) {
     if (type != NULL && type->typeId == ATOMIC_TYPE)
         return (const AtomicType *)type;
+    else
+        return NULL;
+}
+
+template <> inline const TypenameType *CastType(const Type *type) {
+    if (type != NULL && type->typeId == TYPENAME_TYPE)
+        return (const TypenameType *)type;
     else
         return NULL;
 }
