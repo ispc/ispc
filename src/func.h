@@ -73,7 +73,7 @@ class Template {
     Template(std::vector<const TypenameType *> *list, const std::string &n, const FunctionType *ft, StorageClass sclass,
              bool isIn, bool isNoIn, bool isVecCall, std::vector<Symbol *> par, Stmt *c, SourcePos p);
     std::string getName();
-    std::string getMangledName(std::unordered_map<std::string, const Type *> typeName);
+    std::string getMangledName(std::unordered_map<std::string, const Type *> typeNameMap);
     std::vector<const TypenameType *> *getTypes();
     const FunctionType *getFunctionType();
     StorageClass getStorageClass();

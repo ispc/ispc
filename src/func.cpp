@@ -644,11 +644,11 @@ Template::Template(std::vector<const TypenameType *> *list, const std::string &n
 
 std::string Template::getName() { return name; }
 
-std::string Template::getMangledName(std::unordered_map<std::string, const Type *> typeName) {
+std::string Template::getMangledName(std::unordered_map<std::string, const Type *> typeNameMap) {
     std::string mangledName = name;
-    for (auto ty : typeName) {
+    for (auto ty : *typenames) {
         // Assume varying default for mangling.
-        mangledName += (ty.second)->ResolveUnboundVariability(Variability::Varying)->Mangle();
+        mangledName += typeNameMap[ty->GetName()]->ResolveUnboundVariability(Variability::Varying)->Mangle();
     }
     return mangledName;
 }
