@@ -101,6 +101,18 @@ class Module {
         provided statements to the module. */
     void AddFunctionDefinition(const std::string &name, const FunctionType *ftype, Stmt *code);
 
+    /** Create final 'Function' for template with derived types for TypenameType. */
+    void CreateTemplateFunction(Template *templ, std::unordered_map<std::string, const Type *> typeMap);
+
+    /** Resolve TypenameTypes and create 'FunctionTemplateCallExpr'. */
+    Expr *InstantiateTemplates(std::string name, std::vector<Template *> tmpl,
+                               std::vector<std::pair<const Type *, SourcePos>> *vec, ExprList *args, SourcePos pos);
+
+    /** Create a template defined by the given template data and add it to SymbolTable. */
+    void AddTemplateDeclaration(std::vector<const TypenameType *> *list, const std::string &name,
+                                const FunctionType *ftype, StorageClass sc, bool isInline, bool isNoInline,
+                                bool isVectorCall, std::vector<Symbol *> params, Stmt *code, SourcePos pos);
+
     /** Adds the given type to the set of types that have their definitions
         included in automatically generated header files. */
     void AddExportedTypes(const std::vector<std::pair<const Type *, SourcePos>> &types);

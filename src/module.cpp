@@ -294,6 +294,7 @@ int Module::CompileFile() {
         fclose(f);
     }
 
+    // CreateTemplateFunctions();
     if (g->NoOmitFramePointer)
         for (llvm::Function &f : *module)
             f.addFnAttr("no-frame-pointer-elim", "true");
@@ -994,6 +995,88 @@ void Module::AddFunctionDefinition(const std::string &name, const FunctionType *
     sym->type = type;
 
     ast->AddFunction(sym, code);
+}
+
+void Module::CreateTemplateFunction(Template *tmpl, std::unordered_map<std::string, const Type *> typeMap) {
+    symbolTable->PushScope();
+    symbolTable->PushScope();
+    std::vector<Symbol *> params = tmpl->getParams();
+    for (auto s : params) {
+        s->type = s->type->ResolveUnboundVariability(Variability::Varying);
+
+        const ArrayType *at = CastType<ArrayType>(s->type);
+        if (at != NULL) {
+            // As in C, arrays are passed to functions as pointers to
+            // their element type.  We'll just immediately make this
+            // change now.  (One shortcoming of losing the fact that
+            // the it was originally an array is that any warnings or
+            // errors later issued that print the function type will
+            // report this differently than it was originally declared
+            // in the function, but it's not clear that this is a
+            // significant problem.)
+            const Type *targetType = at->GetElementType();
+            if (targetType == NULL) {
+                AssertPos(tmpl->GetPos(), m->errorCount > 0);
+                return;
+            }
+
+            s->type = PointerType::GetUniform(targetType, at->IsSOAType());
+
+            // Make sure there are no unsized arrays (other than the
+            // first dimension) in function parameter lists.
+            at = CastType<ArrayType>(targetType);
+            while (at != NULL) {
+                if (at->GetElementCount() == 0)
+                    Error(tmpl->GetPos(), "Arrays with unsized dimensions in "
+                                          "dimensions after the first one are illegal in "
+                                          "function parameter lists.");
+                at = CastType<ArrayType>(at->GetElementType());
+            }
+        }
+
+        symbolTable->AddVariable(s->CloneNode(typeMap));
+    }
+    Stmt *body = (tmpl->getBody())->CloneNode(typeMap);
+    const FunctionType *tFtype = tmpl->getFunctionType()->ResolveTypenameType(typeMap);
+    AddFunctionDefinition(tmpl->getMangledName(typeMap), tFtype, body);
+    symbolTable->PopScope();
+    symbolTable->PopScope();
+}
+
+Expr *Module::InstantiateTemplates(std::string name, std::vector<Template *> templates,
+                                   std::vector<std::pair<const Type *, SourcePos>> *vec, ExprList *args,
+                                   SourcePos pos) {
+    FunctionTemplateCallExpr *fTempCall = nullptr;
+    for (auto &t : templates) {
+        Template *tmpl = t;
+        std::vector<const TypenameType *> *typenames = tmpl->getTypes();
+        // Check number of parameters and typenames to verify.
+        if ((tmpl->getName() == name) && (typenames->size() == vec->size()) &&
+            (tmpl->getFunctionType()->GetNumParameters() == args->exprs.size())) {
+            std::unordered_map<std::string, const Type *> typenameMap;
+            // Iterate through TypenameTypes and set corresponding
+            // instantiation type.
+            for (int index = 0; index < typenames->size(); index++) {
+                const TypenameType *tName = typenames->at(index);
+                const Type *dType = (vec->at(index).first);
+                typenameMap[tName->GetName()] = dType;
+            }
+            fTempCall = new FunctionTemplateCallExpr(tmpl, args, typenameMap, pos);
+            break;
+        }
+    }
+
+    if (!fTempCall) {
+        Error(pos, "Unable to find any matching overload for call to function template \"%s\".", name.c_str());
+    }
+    return fTempCall;
+}
+
+void Module::AddTemplateDeclaration(std::vector<const TypenameType *> *list, const std::string &name,
+                                    const FunctionType *ftype, StorageClass sc, bool isInline, bool isNoInline,
+                                    bool isVectorCall, std::vector<Symbol *> params, Stmt *code, SourcePos pos) {
+    Template *tmpl = ast->AddTemplate(list, name, ftype, sc, isInline, isNoInline, isVectorCall, params, code, pos);
+    symbolTable->AddTemplate(name, tmpl);
 }
 
 void Module::AddExportedTypes(const std::vector<std::pair<const Type *, SourcePos>> &types) {
