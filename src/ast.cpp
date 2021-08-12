@@ -62,6 +62,16 @@ void AST::AddFunction(Symbol *sym, Stmt *code) {
     functions.push_back(new Function(sym, code));
 }
 
+Template *AST::AddTemplate(std::vector<const TypenameType *> *list, const std::string &name, const FunctionType *ftype,
+                           StorageClass sc, bool isInline, bool isNoInline, bool isVectorCall,
+                           std::vector<Symbol *> params, Stmt *code, SourcePos pos) {
+    Template *tmpl = new Template(list, name, ftype, sc, isInline, isNoInline, isVectorCall, params, code, pos);
+    templates.push_back(tmpl);
+    return tmpl;
+}
+
+std::vector<Template *> AST::GetTemplate() { return templates; }
+
 void AST::GenerateIR() {
     llvm::TimeTraceScope TimeScope("GenerateIR");
     for (unsigned int i = 0; i < functions.size(); ++i)
@@ -169,6 +179,7 @@ ASTNode *ispc::WalkAST(ASTNode *node, ASTPreCallBackFunc preFunc, ASTPostCallBac
         SelectExpr *se;
         ExprList *el;
         FunctionCallExpr *fce;
+        FunctionTemplateCallExpr *ftce;
         IndexExpr *ie;
         MemberExpr *me;
         TypeCastExpr *tce;
@@ -200,6 +211,8 @@ ASTNode *ispc::WalkAST(ASTNode *node, ASTPreCallBackFunc preFunc, ASTPostCallBac
             fce->args = (ExprList *)WalkAST(fce->args, preFunc, postFunc, data);
             for (int k = 0; k < 3; k++)
                 fce->launchCountExpr[k] = (Expr *)WalkAST(fce->launchCountExpr[k], preFunc, postFunc, data);
+        } else if ((ftce = llvm::dyn_cast<FunctionTemplateCallExpr>(node)) != NULL) {
+            ftce->fCall = (Expr *)WalkAST(ftce->fCall, preFunc, postFunc, data);
         } else if ((ie = llvm::dyn_cast<IndexExpr>(node)) != NULL) {
             ie->baseExpr = (Expr *)WalkAST(ie->baseExpr, preFunc, postFunc, data);
             ie->index = (Expr *)WalkAST(ie->index, preFunc, postFunc, data);

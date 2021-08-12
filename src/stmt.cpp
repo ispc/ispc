@@ -85,6 +85,10 @@ void ExprStmt::EmitCode(FunctionEmitContext *ctx) const {
         expr->GetValue(ctx);
 }
 
+Stmt *ExprStmt::CloneNode(std::unordered_map<std::string, const Type *> typeMap) {
+    return new ExprStmt((expr == nullptr) ? expr : expr->CloneNode(typeMap), pos);
+}
+
 Stmt *ExprStmt::TypeCheck() { return this; }
 
 void ExprStmt::Print(int indent) const {
@@ -301,6 +305,19 @@ static bool checkInit(const Type *type, Expr **init) {
     return encounteredError;
 }
 
+Stmt *DeclStmt::CloneNode(std::unordered_map<std::string, const Type *> typeMap) {
+    std::vector<VariableDeclaration> clonedVars;
+    for (auto var : vars) {
+        Expr *clonedInit = (var.init == nullptr) ? var.init : (var.init)->CloneNode(typeMap);
+        Symbol *clonedSym = (var.sym)->CloneNode(typeMap);
+        m->symbolTable->AddVariable(clonedSym);
+        VariableDeclaration cloneDecl(clonedSym, clonedInit);
+        clonedVars.push_back(cloneDecl);
+    }
+    DeclStmt *clonedDecl = new DeclStmt(clonedVars, pos);
+    return clonedDecl;
+}
+
 Stmt *DeclStmt::TypeCheck() {
     bool encounteredError = false;
     for (unsigned int i = 0; i < vars.size(); ++i) {
@@ -456,6 +473,14 @@ void IfStmt::EmitCode(FunctionEmitContext *ctx) const {
     */
     else
         emitVaryingIf(ctx, testValue);
+}
+
+Stmt *IfStmt::CloneNode(std::unordered_map<std::string, const Type *> typeMap) {
+    Expr *clonedTestExpr = test->CloneNode(typeMap);
+    Stmt *clonedTrueStmts = (trueStmts == nullptr) ? trueStmts : trueStmts->CloneNode(typeMap);
+    Stmt *clonedFalseStmts = (falseStmts == nullptr) ? falseStmts : falseStmts->CloneNode(typeMap);
+    Stmt *clonedIfStmt = new IfStmt(clonedTestExpr, clonedTrueStmts, clonedFalseStmts, doAllCheck, pos);
+    return clonedIfStmt;
 }
 
 Stmt *IfStmt::TypeCheck() {
@@ -899,6 +924,13 @@ void DoStmt::EmitCode(FunctionEmitContext *ctx) const {
     ctx->EndLoop();
 }
 
+Stmt *DoStmt::CloneNode(std::unordered_map<std::string, const Type *> typeMap) {
+    Expr *clonedTestExpr = testExpr->CloneNode(typeMap);
+    Stmt *clonedBodyStmts = (bodyStmts == nullptr) ? bodyStmts : bodyStmts->CloneNode(typeMap);
+    Stmt *clonedDoStmt = new DoStmt(clonedTestExpr, clonedBodyStmts, doCoherentCheck, pos);
+    return clonedDoStmt;
+}
+
 Stmt *DoStmt::TypeCheck() {
     const Type *testType;
     if (testExpr != NULL && (testType = testExpr->GetType()) != NULL) {
@@ -1112,6 +1144,16 @@ void ForStmt::EmitCode(FunctionEmitContext *ctx) const {
     ctx->EndLoop();
 }
 
+Stmt *ForStmt::CloneNode(std::unordered_map<std::string, const Type *> typeMap) {
+    Expr *clonedTestExpr = test->CloneNode(typeMap);
+    Stmt *clonedInitStmts = (init == nullptr) ? init : init->CloneNode(typeMap);
+    Stmt *clonedStepStmts = (step == nullptr) ? step : step->CloneNode(typeMap);
+    Stmt *clonedBodyStmts = (stmts == nullptr) ? stmts : stmts->CloneNode(typeMap);
+    Stmt *clonedForStmt =
+        new ForStmt(clonedInitStmts, clonedTestExpr, clonedStepStmts, clonedBodyStmts, doCoherentCheck, pos);
+    return clonedForStmt;
+}
+
 Stmt *ForStmt::TypeCheck() {
     const Type *testType;
     if (test && (testType = test->GetType()) != NULL) {
@@ -1185,6 +1227,8 @@ void BreakStmt::EmitCode(FunctionEmitContext *ctx) const {
     ctx->Break(true);
 }
 
+Stmt *BreakStmt::CloneNode(std::unordered_map<std::string, const Type *> typeMap) { return new BreakStmt(pos); }
+
 Stmt *BreakStmt::TypeCheck() { return this; }
 
 int BreakStmt::EstimateCost() const { return COST_BREAK_CONTINUE; }
@@ -1207,6 +1251,8 @@ void ContinueStmt::EmitCode(FunctionEmitContext *ctx) const {
     ctx->SetDebugPos(pos);
     ctx->Continue(true);
 }
+
+Stmt *ContinueStmt::CloneNode(std::unordered_map<std::string, const Type *> typeMap) { return new ContinueStmt(pos); }
 
 Stmt *ContinueStmt::TypeCheck() { return this; }
 
@@ -1919,6 +1965,35 @@ void ForeachStmt::EmitCodeForGenX(FunctionEmitContext *ctx) const {
 }
 #endif
 
+Stmt *ForeachStmt::CloneNode(std::unordered_map<std::string, const Type *> typeMap) {
+    std::vector<Symbol *> clonedDimVariables;
+    std::vector<Expr *> clonedStartExprs;
+    std::vector<Expr *> clonedEndExprs;
+
+    for (auto dimVar : dimVariables) {
+        Symbol *clonedDimVar = dimVar->CloneNode(typeMap);
+        clonedDimVariables.push_back(clonedDimVar);
+    }
+
+    for (auto startExpr : startExprs) {
+        Expr *clonedStartExpr = startExpr->CloneNode(typeMap);
+        clonedStartExprs.push_back(clonedStartExpr);
+    }
+
+    for (auto endExpr : endExprs) {
+        Expr *clonedEndExpr = endExpr->CloneNode(typeMap);
+        clonedEndExprs.push_back(clonedEndExpr);
+    }
+
+    Stmt *clonedStmts = stmts->CloneNode(typeMap);
+
+    ForeachStmt *clonedStmt =
+        new ForeachStmt(clonedDimVariables, clonedStartExprs, clonedEndExprs, clonedStmts, isTiled, pos);
+    clonedStmt->loopAttribute = loopAttribute;
+
+    return clonedStmt;
+}
+
 Stmt *ForeachStmt::TypeCheck() {
     bool anyErrors = false;
     for (unsigned int i = 0; i < startExprs.size(); ++i) {
@@ -2180,6 +2255,16 @@ void ForeachActiveStmt::Print(int indent) const {
     printf("\n");
 }
 
+Stmt *ForeachActiveStmt::CloneNode(std::unordered_map<std::string, const Type *> typeMap) {
+    Symbol *clonedSym = sym->CloneNode(typeMap);
+    Stmt *clonedStmts = stmts->CloneNode(typeMap);
+
+    ForeachActiveStmt *clonedStmt = new ForeachActiveStmt(clonedSym, clonedStmts, pos);
+    clonedStmt->loopAttribute = loopAttribute;
+
+    return clonedStmt;
+}
+
 Stmt *ForeachActiveStmt::TypeCheck() {
     if (sym == NULL)
         return NULL;
@@ -2406,6 +2491,16 @@ void ForeachUniqueStmt::Print(int indent) const {
     printf("\n");
 }
 
+Stmt *ForeachUniqueStmt::CloneNode(std::unordered_map<std::string, const Type *> typeMap) {
+    Expr *clonedExpr = expr->CloneNode(typeMap);
+    Stmt *clonedStmts = stmts->CloneNode(typeMap);
+
+    ForeachUniqueStmt *clonedStmt = new ForeachUniqueStmt(sym->name.c_str(), clonedExpr, clonedStmts, pos);
+    clonedStmt->loopAttribute = loopAttribute;
+
+    return clonedStmt;
+}
+
 Stmt *ForeachUniqueStmt::TypeCheck() {
     const Type *type;
     if (sym == NULL || expr == NULL || (type = expr->GetType()) == NULL)
@@ -2472,6 +2567,10 @@ void CaseStmt::Print(int indent) const {
     stmts->Print(indent + 4);
 }
 
+Stmt *CaseStmt::CloneNode(std::unordered_map<std::string, const Type *> typeMap) {
+    return new CaseStmt(value, stmts->CloneNode(typeMap), pos);
+}
+
 Stmt *CaseStmt::TypeCheck() { return this; }
 
 int CaseStmt::EstimateCost() const { return 0; }
@@ -2492,6 +2591,10 @@ void DefaultStmt::Print(int indent) const {
     pos.Print();
     printf("\n");
     stmts->Print(indent + 4);
+}
+
+Stmt *DefaultStmt::CloneNode(std::unordered_map<std::string, const Type *> typeMap) {
+    return new DefaultStmt(stmts->CloneNode(typeMap), pos);
 }
 
 Stmt *DefaultStmt::TypeCheck() { return this; }
@@ -2668,6 +2771,10 @@ void SwitchStmt::Print(int indent) const {
     stmts->Print(indent + 4);
 }
 
+Stmt *SwitchStmt::CloneNode(std::unordered_map<std::string, const Type *> typeMap) {
+    return new SwitchStmt(expr->CloneNode(typeMap), stmts->CloneNode(typeMap), pos);
+}
+
 Stmt *SwitchStmt::TypeCheck() {
     const Type *exprType;
     if (expr == NULL || (exprType = expr->GetType()) == NULL) {
@@ -2753,6 +2860,10 @@ void UnmaskedStmt::Print(int indent) const {
     printf("\n");
 }
 
+Stmt *UnmaskedStmt::CloneNode(std::unordered_map<std::string, const Type *> typeMap) {
+    return new UnmaskedStmt(stmts->CloneNode(typeMap), pos);
+}
+
 Stmt *UnmaskedStmt::TypeCheck() { return this; }
 
 int UnmaskedStmt::EstimateCost() const { return COST_ASSIGN; }
@@ -2794,6 +2905,10 @@ void ReturnStmt::EmitCode(FunctionEmitContext *ctx) const {
 
     ctx->SetDebugPos(pos);
     ctx->CurrentLanesReturned(expr, true);
+}
+
+Stmt *ReturnStmt::CloneNode(std::unordered_map<std::string, const Type *> typeMap) {
+    return new ReturnStmt(expr->CloneNode(typeMap), pos);
 }
 
 Stmt *ReturnStmt::TypeCheck() { return this; }
@@ -2865,6 +2980,10 @@ void GotoStmt::Print(int indent) const { printf("%*cGoto label \"%s\"\n", indent
 
 Stmt *GotoStmt::Optimize() { return this; }
 
+Stmt *GotoStmt::CloneNode(std::unordered_map<std::string, const Type *> typeMap) {
+    return new GotoStmt(label.c_str(), pos, identifierPos);
+}
+
 Stmt *GotoStmt::TypeCheck() { return this; }
 
 int GotoStmt::EstimateCost() const { return COST_GOTO; }
@@ -2902,6 +3021,10 @@ void LabeledStmt::Print(int indent) const {
 
 Stmt *LabeledStmt::Optimize() { return this; }
 
+Stmt *LabeledStmt::CloneNode(std::unordered_map<std::string, const Type *> typeMap) {
+    return new LabeledStmt(name.c_str(), stmt->CloneNode(typeMap), pos);
+}
+
 Stmt *LabeledStmt::TypeCheck() {
     if (!isalpha(name[0]) || name[0] == '_') {
         Error(pos, "Label must start with either alphabetic character or '_'.");
@@ -2928,6 +3051,14 @@ void StmtList::EmitCode(FunctionEmitContext *ctx) const {
         if (stmts[i])
             stmts[i]->EmitCode(ctx);
     ctx->EndScope();
+}
+
+Stmt *StmtList::CloneNode(std::unordered_map<std::string, const Type *> typeMap) {
+    StmtList *clonedStmtList = new StmtList(pos);
+    for (auto stmt : stmts) {
+        clonedStmtList->Add(stmt->CloneNode(typeMap));
+    }
+    return clonedStmtList;
 }
 
 Stmt *StmtList::TypeCheck() { return this; }
@@ -3609,6 +3740,10 @@ void PrintStmt::EmitCode(FunctionEmitContext *ctx) const {
 
 void PrintStmt::Print(int indent) const { printf("%*cPrint Stmt (%s)", indent, ' ', format.c_str()); }
 
+Stmt *PrintStmt::CloneNode(std::unordered_map<std::string, const Type *> typeMap) {
+    return new PrintStmt(format, values->CloneNode(typeMap), pos);
+}
+
 Stmt *PrintStmt::TypeCheck() { return this; }
 
 int PrintStmt::EstimateCost() const { return COST_FUNCALL; }
@@ -3696,6 +3831,10 @@ void AssertStmt::EmitCode(FunctionEmitContext *ctx) const {
 
 void AssertStmt::Print(int indent) const { printf("%*cAssert Stmt (%s)", indent, ' ', message.c_str()); }
 
+Stmt *AssertStmt::CloneNode(std::unordered_map<std::string, const Type *> typeMap) {
+    return new AssertStmt(message, expr->CloneNode(typeMap), pos);
+}
+
 Stmt *AssertStmt::TypeCheck() {
     const Type *type;
     if (expr && (type = expr->GetType()) != NULL) {
@@ -3772,6 +3911,10 @@ void DeleteStmt::EmitCode(FunctionEmitContext *ctx) const {
 }
 
 void DeleteStmt::Print(int indent) const { printf("%*cDelete Stmt", indent, ' '); }
+
+Stmt *DeleteStmt::CloneNode(std::unordered_map<std::string, const Type *> typeMap) {
+    return new DeleteStmt(expr->CloneNode(typeMap), pos);
+}
 
 Stmt *DeleteStmt::TypeCheck() {
     const Type *exprType;

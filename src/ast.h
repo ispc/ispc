@@ -62,6 +62,10 @@ class ASTNode {
         error is encountered during optimization. */
     virtual ASTNode *Optimize() = 0;
 
+    /** CloneNode() creates a copy of the node with 'Typename' types replaced
+     * by actual types. */
+    virtual ASTNode *CloneNode(std::unordered_map<std::string, const Type *> typeMap) = 0;
+
     /** Type checking should be performed by the node when this method is
         called.  In the event of an error, a NULL value may be returned.
         As with ASTNode::Optimize(), the caller should store the returned
@@ -90,6 +94,7 @@ class ASTNode {
         PtrDerefExprID,
         RefDerefExprID,
         ExprListID,
+        FunctionTemplateCallExprID,
         FunctionCallExprID,
         FunctionSymbolExprID,
         IndexExprID,
@@ -144,12 +149,22 @@ class AST {
         information and source code. */
     void AddFunction(Symbol *sym, Stmt *code);
 
+    /** Add the AST for a template described by required information. */
+    Template *AddTemplate(std::vector<const TypenameType *> *list, const std::string &name, const FunctionType *ftype,
+                          StorageClass sc, bool isInline, bool isNoInline, bool isVectorCall,
+                          std::vector<Symbol *> params, Stmt *code, SourcePos pos);
+
+    /** Return the list of declared tamplates. */
+    std::vector<Template *> GetTemplate();
+
     /** Generate LLVM IR for all of the functions into the current
         module. */
     void GenerateIR();
 
   private:
     std::vector<Function *> functions;
+
+    std::vector<Template *> templates;
 };
 
 /** Callback function type for preorder traversial visiting function for

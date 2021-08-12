@@ -1219,6 +1219,10 @@ Expr *UnaryExpr::Optimize() {
     }
 }
 
+Expr *UnaryExpr::CloneNode(std::unordered_map<std::string, const Type *> typeMap) {
+    return new UnaryExpr(op, expr->CloneNode(typeMap), pos);
+}
+
 Expr *UnaryExpr::TypeCheck() {
     const Type *type;
     if (expr == NULL || (type = expr->GetType()) == NULL)
@@ -2368,6 +2372,10 @@ Expr *BinaryExpr::Optimize() {
         return this;
 }
 
+Expr *BinaryExpr::CloneNode(std::unordered_map<std::string, const Type *> typeMap) {
+    return new BinaryExpr(op, arg0->CloneNode(typeMap), arg1->CloneNode(typeMap), pos);
+}
+
 Expr *BinaryExpr::TypeCheck() {
     if (arg0 == NULL || arg1 == NULL)
         return NULL;
@@ -3017,6 +3025,10 @@ static bool lCheckForConstStructMember(SourcePos pos, const StructType *structTy
     return false;
 }
 
+Expr *AssignExpr::CloneNode(std::unordered_map<std::string, const Type *> typeMap) {
+    return new AssignExpr(op, lvalue->CloneNode(typeMap), rvalue->CloneNode(typeMap), pos);
+}
+
 Expr *AssignExpr::TypeCheck() {
     if (lvalue == NULL || rvalue == NULL)
         return NULL;
@@ -3425,6 +3437,10 @@ Expr *SelectExpr::Optimize() {
     }
 }
 
+Expr *SelectExpr::CloneNode(std::unordered_map<std::string, const Type *> typeMap) {
+    return new SelectExpr(test->CloneNode(typeMap), expr1->CloneNode(typeMap), expr2->CloneNode(typeMap), pos);
+}
+
 Expr *SelectExpr::TypeCheck() {
     if (test == NULL || expr1 == NULL || expr2 == NULL)
         return NULL;
@@ -3687,6 +3703,11 @@ Expr *FunctionCallExpr::Optimize() {
     return this;
 }
 
+Expr *FunctionCallExpr::CloneNode(std::unordered_map<std::string, const Type *> typeMap) {
+    // Revisit : launchCountExpr.
+    return new FunctionCallExpr(func->CloneNode(typeMap), args->CloneNode(typeMap), pos, isLaunch, launchCountExpr);
+}
+
 Expr *FunctionCallExpr::TypeCheck() {
     if (func == NULL || args == NULL)
         return NULL;
@@ -3848,6 +3869,144 @@ void FunctionCallExpr::Print() const {
 }
 
 ///////////////////////////////////////////////////////////////////////////
+// FunctionTemplateCallExpr
+
+/** We've got a call to the template to process.
+    We have 2 scenarios :
+    1. This is a call to template with derived/final type i.e., no TypenameType
+        In this case, we are free to instantiate the template with types, create
+        'FunctionSymbolExpr' and corresponding 'FunctionCallExpr'.
+    2. This is a call from another template with 'TypenameType' still not resolved
+        In this case, we know there is another 'CloneNode' which will take care of
+        the actual instantiation.
+ */
+
+FunctionTemplateCallExpr::FunctionTemplateCallExpr(Template *fT, ExprList *a,
+                                                   std::unordered_map<std::string, const Type *> tMap, SourcePos p)
+    : Expr(p, FunctionTemplateCallExprID) {
+    funcTemp = fT;
+    args = a;
+    typenameMap = tMap;
+    fCall = nullptr;
+    bool isFinalForm = true;
+    for (auto tps : typenameMap) {
+        const Type *dType = tps.second;
+        if (CastType<TypenameType>(dType) != nullptr) {
+            isFinalForm = false;
+        }
+    }
+
+    fType = funcTemp->getFunctionType()->ResolveTypenameType(typenameMap);
+    if (isFinalForm) {
+        fName = funcTemp->getMangledName(typenameMap);
+        if (!m->symbolTable->LookupFunction(fName.c_str(), fType)) {
+            m->symbolTable->SwitchToGlobalScope();
+            m->AddFunctionDeclaration(fName, fType, funcTemp->getStorageClass(), funcTemp->getIsInline(),
+                                      funcTemp->getIsNoInline(), funcTemp->getIsVectorCall(), funcTemp->GetPos());
+            m->CreateTemplateFunction(funcTemp, typenameMap);
+            m->symbolTable->SwitchToSavedScope();
+        }
+
+        std::vector<Symbol *> funs;
+        m->symbolTable->LookupFunction(fName.c_str(), &funs);
+        Expr *fSymExpr = nullptr;
+        if (funs.size() > 0) {
+            fSymExpr = new FunctionSymbolExpr(fName.c_str(), funs, funcTemp->GetPos());
+        } else {
+            Error(pos, "Unable to find any matching overload for call to function template \"%s\".",
+                  funcTemp->getName().c_str());
+        }
+        fCall = new FunctionCallExpr(fSymExpr, args, pos);
+    }
+}
+
+llvm::Value *FunctionTemplateCallExpr::GetValue(FunctionEmitContext *ctx) const {
+    if (fCall)
+        return fCall->GetValue(ctx);
+
+    return nullptr;
+}
+
+llvm::Value *FunctionTemplateCallExpr::GetLValue(FunctionEmitContext *ctx) const {
+    if (fCall)
+        return fCall->GetLValue(ctx);
+
+    return nullptr;
+}
+
+const Type *FunctionTemplateCallExpr::GetType() const {
+    if (fCall)
+        return fCall->GetType();
+    return fType->GetReturnType();
+}
+
+const Type *FunctionTemplateCallExpr::GetLValueType() const {
+    if (fCall)
+        return fCall->GetLValueType();
+
+    if (fType && (fType->GetReturnType()->IsPointerType() || fType->GetReturnType()->IsReferenceType())) {
+        return fType->GetReturnType();
+    } else {
+        // Only be a valid LValue type if the function
+        // returns a pointer or reference.
+        return nullptr;
+    }
+}
+
+Expr *FunctionTemplateCallExpr::Optimize() {
+    if (funcTemp == nullptr || args == nullptr)
+        return nullptr;
+    return this;
+}
+
+Expr *FunctionTemplateCallExpr::CloneNode(std::unordered_map<std::string, const Type *> typeMap) {
+    if (fCall)
+        return this;
+
+    std::unordered_map<std::string, const Type *> updatedTypenameMap = typenameMap;
+    for (auto &tps : updatedTypenameMap) {
+        const Type *dType = tps.second;
+        const TypenameType *tn = CastType<TypenameType>(dType);
+        if (tn != nullptr) {
+            tps.second = dType->ResolveTypenameType(typeMap);
+        }
+    }
+
+    return new FunctionTemplateCallExpr(funcTemp, args->CloneNode(typeMap), updatedTypenameMap, pos);
+}
+
+Expr *FunctionTemplateCallExpr::TypeCheck() {
+    if (fCall)
+        return fCall->TypeCheck();
+
+    return nullptr;
+}
+
+int FunctionTemplateCallExpr::EstimateCost() const {
+    if (fCall)
+        return fCall->EstimateCost();
+    // ???
+    return 0;
+}
+
+// Revisit
+void FunctionTemplateCallExpr::Print() const {
+    if (!funcTemp || !args || !GetType())
+        return;
+
+    printf("[%s] templatefuncall ", GetType()->GetString().c_str());
+    printf(" %s <", funcTemp->getName().c_str());
+    for (auto tps : typenameMap) {
+        printf(" typename(%s)", tps.first.c_str());
+    }
+    printf(">");
+    printf(" args (");
+    args->Print();
+    printf(")");
+    pos.Print();
+}
+
+///////////////////////////////////////////////////////////////////////////
 // ExprList
 
 bool ExprList::HasAmbiguousVariability(std::vector<const Expr *> &warn) const {
@@ -3871,6 +4030,14 @@ const Type *ExprList::GetType() const {
 }
 
 ExprList *ExprList::Optimize() { return this; }
+
+ExprList *ExprList::CloneNode(std::unordered_map<std::string, const Type *> typeMap) {
+    ExprList *clone = new ExprList(pos);
+    for (auto e : exprs) {
+        clone->exprs.push_back(e->CloneNode(typeMap));
+    }
+    return clone;
+}
 
 ExprList *ExprList::TypeCheck() { return this; }
 
@@ -4451,6 +4618,10 @@ Expr *IndexExpr::Optimize() {
     if (baseExpr == NULL || index == NULL)
         return NULL;
     return this;
+}
+
+Expr *IndexExpr::CloneNode(std::unordered_map<std::string, const Type *> typeMap) {
+    return new IndexExpr(baseExpr->CloneNode(typeMap), index->CloneNode(typeMap), pos);
 }
 
 Expr *IndexExpr::TypeCheck() {
@@ -5064,6 +5235,11 @@ llvm::Value *MemberExpr::GetLValue(FunctionEmitContext *ctx) const {
     ptr = lAddVaryingOffsetsIfNeeded(ctx, ptr, GetLValueType());
 
     return ptr;
+}
+
+Expr *MemberExpr::CloneNode(std::unordered_map<std::string, const Type *> typeMap) {
+    return expr ? MemberExpr::create(expr->CloneNode(typeMap), identifier.c_str(), pos, identifierPos, dereferenceExpr)
+                : nullptr;
 }
 
 Expr *MemberExpr::TypeCheck() { return expr ? this : NULL; }
@@ -6197,6 +6373,8 @@ std::pair<llvm::Constant *, bool> ConstExpr::GetConstant(const Type *constType) 
 
 Expr *ConstExpr::Optimize() { return this; }
 
+Expr *ConstExpr::CloneNode(std::unordered_map<std::string, const Type *> typeMap) { return new ConstExpr(this, pos); }
+
 Expr *ConstExpr::TypeCheck() { return this; }
 
 int ConstExpr::EstimateCost() const { return 0; }
@@ -7264,6 +7442,10 @@ static const Type *lDeconstifyType(const Type *t) {
         return t->GetAsNonConstType();
 }
 
+Expr *TypeCastExpr::CloneNode(std::unordered_map<std::string, const Type *> typeMap) {
+    return new TypeCastExpr(type->ResolveTypenameType(typeMap), expr->CloneNode(typeMap), pos);
+}
+
 Expr *TypeCastExpr::TypeCheck() {
     if (expr == NULL)
         return NULL;
@@ -7574,6 +7756,11 @@ Expr *ReferenceExpr::Optimize() {
     return this;
 }
 
+Expr *ReferenceExpr::CloneNode(std::unordered_map<std::string, const Type *> typeMap) {
+    if (expr == NULL)
+        return NULL;
+    return new ReferenceExpr(expr->CloneNode(typeMap), pos);
+}
 Expr *ReferenceExpr::TypeCheck() {
     if (expr == NULL)
         return NULL;
@@ -7659,6 +7846,12 @@ const Type *PtrDerefExpr::GetType() const {
         return type->GetBaseType()->GetAsVaryingType();
 }
 
+Expr *PtrDerefExpr::CloneNode(std::unordered_map<std::string, const Type *> typeMap) {
+    if (expr == NULL)
+        return NULL;
+    return new PtrDerefExpr(expr->CloneNode(typeMap), pos);
+}
+
 Expr *PtrDerefExpr::TypeCheck() {
     const Type *type;
     if (expr == NULL || (type = expr->GetType()) == NULL) {
@@ -7718,6 +7911,12 @@ const Type *RefDerefExpr::GetType() const {
 
     AssertPos(pos, CastType<ReferenceType>(type) != NULL);
     return type->GetReferenceTarget();
+}
+
+Expr *RefDerefExpr::CloneNode(std::unordered_map<std::string, const Type *> typeMap) {
+    if (expr == NULL)
+        return NULL;
+    return new RefDerefExpr(expr->CloneNode(typeMap), pos);
 }
 
 Expr *RefDerefExpr::TypeCheck() {
@@ -7811,6 +8010,16 @@ void AddressOfExpr::Print() const {
         printf("NULL expr");
     printf(")");
     pos.Print();
+}
+
+Expr *AddressOfExpr::CloneNode(std::unordered_map<std::string, const Type *> typeMap) {
+    const Type *exprType;
+    if (expr == NULL || (exprType = expr->GetType()) == NULL) {
+        AssertPos(pos, m->errorCount > 0);
+        return NULL;
+    }
+
+    return new AddressOfExpr(expr->CloneNode(typeMap), pos);
 }
 
 Expr *AddressOfExpr::TypeCheck() {
@@ -7927,6 +8136,12 @@ void SizeOfExpr::Print() const {
     pos.Print();
 }
 
+Expr *SizeOfExpr::CloneNode(std::unordered_map<std::string, const Type *> typeMap) {
+    if (expr != nullptr)
+        return new SizeOfExpr(expr->CloneNode(typeMap), pos);
+    return new SizeOfExpr(type->ResolveTypenameType(typeMap), pos);
+}
+
 Expr *SizeOfExpr::TypeCheck() {
     // Can't compute the size of a struct without a definition
     if (type != NULL && CastType<UndefinedStructType>(type) != NULL) {
@@ -7990,6 +8205,13 @@ void AllocaExpr::Print() const {
         printf(" [type %s]", t->GetString().c_str());
     printf(")");
     pos.Print();
+}
+
+Expr *AllocaExpr::CloneNode(std::unordered_map<std::string, const Type *> typeMap) {
+    if (expr == NULL) {
+        return NULL;
+    }
+    return new AllocaExpr(expr->CloneNode(typeMap), pos);
 }
 
 Expr *AllocaExpr::TypeCheck() {
@@ -8062,6 +8284,21 @@ Symbol *SymbolExpr::GetBaseSymbol() const { return symbol; }
 
 const Type *SymbolExpr::GetType() const { return symbol ? symbol->type : NULL; }
 
+Expr *SymbolExpr::CloneNode(std::unordered_map<std::string, const Type *> typeMap) {
+    if (symbol) {
+        const Type *sType = symbol->type;
+        if (const TypenameType *sTypeAsTN = CastType<TypenameType>(sType)) {
+            Symbol *s = m->symbolTable->LookupVariable(symbol->name.c_str());
+            AssertPos(pos, (s != nullptr));
+            return new SymbolExpr(s, pos);
+        } else {
+            Symbol *s = m->symbolTable->LookupVariable(symbol->name.c_str());
+            return new SymbolExpr(s, pos);
+        }
+    }
+    return this;
+}
+
 Expr *SymbolExpr::TypeCheck() { return this; }
 
 Expr *SymbolExpr::Optimize() {
@@ -8113,6 +8350,10 @@ llvm::Value *FunctionSymbolExpr::GetValue(FunctionEmitContext *ctx) const {
 }
 
 Symbol *FunctionSymbolExpr::GetBaseSymbol() const { return matchingFunc; }
+
+Expr *FunctionSymbolExpr::CloneNode(std::unordered_map<std::string, const Type *> typeMap) {
+    return new FunctionSymbolExpr(name.c_str(), candidateFunctions, pos);
+}
 
 Expr *FunctionSymbolExpr::TypeCheck() { return this; }
 
@@ -8494,6 +8735,8 @@ void SyncExpr::Print() const {
     pos.Print();
 }
 
+Expr *SyncExpr::CloneNode(std::unordered_map<std::string, const Type *> typeMap) { return new SyncExpr(pos); }
+
 Expr *SyncExpr::TypeCheck() { return this; }
 
 Expr *SyncExpr::Optimize() { return this; }
@@ -8506,6 +8749,10 @@ llvm::Value *NullPointerExpr::GetValue(FunctionEmitContext *ctx) const {
 }
 
 const Type *NullPointerExpr::GetType() const { return PointerType::Void; }
+
+Expr *NullPointerExpr::CloneNode(std::unordered_map<std::string, const Type *> typeMap) {
+    return new NullPointerExpr(pos);
+}
 
 Expr *NullPointerExpr::TypeCheck() { return this; }
 
@@ -8534,6 +8781,13 @@ int NullPointerExpr::EstimateCost() const { return 0; }
 
 ///////////////////////////////////////////////////////////////////////////
 // NewExpr
+
+NewExpr::NewExpr(const Type *t, Expr *init, Expr *count, bool isV, SourcePos p) : Expr(p, NewExprID) {
+    allocType = t;
+    initExpr = init;
+    countExpr = count;
+    isVarying = isV;
+}
 
 NewExpr::NewExpr(int typeQual, const Type *t, Expr *init, Expr *count, SourcePos tqPos, SourcePos p)
     : Expr(p, NewExprID) {
@@ -8674,6 +8928,14 @@ llvm::Value *NewExpr::GetValue(FunctionEmitContext *ctx) const {
 
         return ptrValue;
     }
+}
+
+Expr *NewExpr::CloneNode(std::unordered_map<std::string, const Type *> typeMap) {
+    if (allocType == NULL)
+        return NULL;
+
+    return new NewExpr(allocType, initExpr->CloneNode(typeMap),
+                       countExpr == nullptr ? nullptr : countExpr->CloneNode(typeMap), isVarying, pos);
 }
 
 const Type *NewExpr::GetType() const {

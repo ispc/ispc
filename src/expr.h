@@ -38,6 +38,7 @@
 #pragma once
 
 #include "ast.h"
+#include "func.h"
 #include "ispc.h"
 #include "type.h"
 
@@ -105,6 +106,8 @@ class Expr : public ASTNode {
         encountered, NULL should be returned. */
     virtual Expr *TypeCheck() = 0;
 
+    virtual Expr *CloneNode(std::unordered_map<std::string, const Type *> typeMap) = 0;
+
     /** Prints the expression to standard output (used for debugging). */
     virtual void Print() const = 0;
 
@@ -133,6 +136,7 @@ class UnaryExpr : public Expr {
     const Type *GetType() const;
     void Print() const;
     Expr *Optimize();
+    Expr *CloneNode(std::unordered_map<std::string, const Type *> typeMap);
     Expr *TypeCheck();
     int EstimateCost() const;
 
@@ -179,6 +183,7 @@ class BinaryExpr : public Expr {
     void Print() const;
 
     Expr *Optimize();
+    Expr *CloneNode(std::unordered_map<std::string, const Type *> typeMap);
     Expr *TypeCheck();
     int EstimateCost() const;
     std::pair<llvm::Constant *, bool> GetStorageConstant(const Type *type) const;
@@ -216,6 +221,7 @@ class AssignExpr : public Expr {
     void Print() const;
 
     Expr *Optimize();
+    Expr *CloneNode(std::unordered_map<std::string, const Type *> typeMap);
     Expr *TypeCheck();
     int EstimateCost() const;
 
@@ -239,6 +245,7 @@ class SelectExpr : public Expr {
     void Print() const;
 
     Expr *Optimize();
+    Expr *CloneNode(std::unordered_map<std::string, const Type *> typeMap);
     Expr *TypeCheck();
     int EstimateCost() const;
     bool HasAmbiguousVariability(std::vector<const Expr *> &warn) const;
@@ -266,6 +273,7 @@ class ExprList : public Expr {
     std::pair<llvm::Constant *, bool> GetStorageConstant(const Type *type) const;
     std::pair<llvm::Constant *, bool> GetConstant(const Type *type) const;
     ExprList *Optimize();
+    ExprList *CloneNode(std::unordered_map<std::string, const Type *> typeMap);
     ExprList *TypeCheck();
     int EstimateCost() const;
     bool HasAmbiguousVariability(std::vector<const Expr *> &warn) const;
@@ -289,6 +297,7 @@ class FunctionCallExpr : public Expr {
     void Print() const;
 
     Expr *Optimize();
+    Expr *CloneNode(std::unordered_map<std::string, const Type *> typeMap);
     Expr *TypeCheck();
     int EstimateCost() const;
 
@@ -296,6 +305,35 @@ class FunctionCallExpr : public Expr {
     ExprList *args;
     bool isLaunch;
     Expr *launchCountExpr[3];
+};
+
+/** @brief Expression representing a template function call.
+ */
+class FunctionTemplateCallExpr : public Expr {
+  public:
+    FunctionTemplateCallExpr(Template *fT, ExprList *a, std::unordered_map<std::string, const Type *> tMap,
+                             SourcePos p);
+
+    static inline bool classof(FunctionTemplateCallExpr const *) { return true; }
+    static inline bool classof(ASTNode const *N) { return N->getValueID() == FunctionTemplateCallExprID; }
+
+    llvm::Value *GetValue(FunctionEmitContext *ctx) const;
+    llvm::Value *GetLValue(FunctionEmitContext *ctx) const;
+    const Type *GetType() const;
+    const Type *GetLValueType() const;
+    void Print() const;
+
+    Expr *Optimize();
+    Expr *CloneNode(std::unordered_map<std::string, const Type *> typeMap);
+    Expr *TypeCheck();
+    int EstimateCost() const;
+
+    Template *funcTemp;
+    ExprList *args;
+    std::unordered_map<std::string, const Type *> typenameMap;
+    std::string fName;
+    Expr *fCall;
+    const FunctionType *fType;
 };
 
 /** @brief Expression representing indexing into something with an integer
@@ -318,6 +356,7 @@ class IndexExpr : public Expr {
     void Print() const;
 
     Expr *Optimize();
+    Expr *CloneNode(std::unordered_map<std::string, const Type *> typeMap);
     Expr *TypeCheck();
     int EstimateCost() const;
 
@@ -348,6 +387,7 @@ class MemberExpr : public Expr {
     Symbol *GetBaseSymbol() const;
     void Print() const;
     Expr *Optimize();
+    Expr *CloneNode(std::unordered_map<std::string, const Type *> typeMap);
     Expr *TypeCheck();
     int EstimateCost() const;
 
@@ -453,6 +493,7 @@ class ConstExpr : public Expr {
     std::pair<llvm::Constant *, bool> GetStorageConstant(const Type *type) const;
     std::pair<llvm::Constant *, bool> GetConstant(const Type *constType) const;
 
+    Expr *CloneNode(std::unordered_map<std::string, const Type *> typeMap);
     Expr *TypeCheck();
     Expr *Optimize();
     int EstimateCost() const;
@@ -514,6 +555,7 @@ class TypeCastExpr : public Expr {
     const Type *GetType() const;
     const Type *GetLValueType() const;
     void Print() const;
+    Expr *CloneNode(std::unordered_map<std::string, const Type *> typeMap);
     Expr *TypeCheck();
     Expr *Optimize();
     int EstimateCost() const;
@@ -540,6 +582,7 @@ class ReferenceExpr : public Expr {
     const Type *GetLValueType() const;
     Symbol *GetBaseSymbol() const;
     void Print() const;
+    Expr *CloneNode(std::unordered_map<std::string, const Type *> typeMap);
     Expr *TypeCheck();
     Expr *Optimize();
     int EstimateCost() const;
@@ -579,6 +622,7 @@ class PtrDerefExpr : public DerefExpr {
 
     const Type *GetType() const;
     void Print() const;
+    Expr *CloneNode(std::unordered_map<std::string, const Type *> typeMap);
     Expr *TypeCheck();
     int EstimateCost() const;
 };
@@ -594,6 +638,7 @@ class RefDerefExpr : public DerefExpr {
 
     const Type *GetType() const;
     void Print() const;
+    Expr *CloneNode(std::unordered_map<std::string, const Type *> typeMap);
     Expr *TypeCheck();
     int EstimateCost() const;
 };
@@ -611,6 +656,7 @@ class AddressOfExpr : public Expr {
     const Type *GetLValueType() const;
     Symbol *GetBaseSymbol() const;
     void Print() const;
+    Expr *CloneNode(std::unordered_map<std::string, const Type *> typeMap);
     Expr *TypeCheck();
     Expr *Optimize();
     int EstimateCost() const;
@@ -632,6 +678,7 @@ class SizeOfExpr : public Expr {
     llvm::Value *GetValue(FunctionEmitContext *ctx) const;
     const Type *GetType() const;
     void Print() const;
+    Expr *CloneNode(std::unordered_map<std::string, const Type *> typeMap);
     Expr *TypeCheck();
     Expr *Optimize();
     int EstimateCost() const;
@@ -655,6 +702,7 @@ class AllocaExpr : public Expr {
     llvm::Value *GetValue(FunctionEmitContext *ctx) const;
     const Type *GetType() const;
     void Print() const;
+    Expr *CloneNode(std::unordered_map<std::string, const Type *> typeMap);
     Expr *TypeCheck();
     Expr *Optimize();
     int EstimateCost() const;
@@ -677,6 +725,7 @@ class SymbolExpr : public Expr {
     const Type *GetType() const;
     const Type *GetLValueType() const;
     Symbol *GetBaseSymbol() const;
+    Expr *CloneNode(std::unordered_map<std::string, const Type *> typeMap);
     Expr *TypeCheck();
     Expr *Optimize();
     void Print() const;
@@ -699,6 +748,7 @@ class FunctionSymbolExpr : public Expr {
     llvm::Value *GetValue(FunctionEmitContext *ctx) const;
     const Type *GetType() const;
     Symbol *GetBaseSymbol() const;
+    Expr *CloneNode(std::unordered_map<std::string, const Type *> typeMap);
     Expr *TypeCheck();
     Expr *Optimize();
     void Print() const;
@@ -753,6 +803,7 @@ class SyncExpr : public Expr {
 
     llvm::Value *GetValue(FunctionEmitContext *ctx) const;
     const Type *GetType() const;
+    Expr *CloneNode(std::unordered_map<std::string, const Type *> typeMap);
     Expr *TypeCheck();
     Expr *Optimize();
     void Print() const;
@@ -769,6 +820,7 @@ class NullPointerExpr : public Expr {
 
     llvm::Value *GetValue(FunctionEmitContext *ctx) const;
     const Type *GetType() const;
+    Expr *CloneNode(std::unordered_map<std::string, const Type *> typeMap);
     Expr *TypeCheck();
     Expr *Optimize();
     std::pair<llvm::Constant *, bool> GetConstant(const Type *type) const;
@@ -781,6 +833,7 @@ class NullPointerExpr : public Expr {
 */
 class NewExpr : public Expr {
   public:
+    NewExpr(const Type *t, Expr *init, Expr *count, bool isV, SourcePos p);
     NewExpr(int typeQual, const Type *type, Expr *initializer, Expr *count, SourcePos tqPos, SourcePos p);
 
     static inline bool classof(NewExpr const *) { return true; }
@@ -788,6 +841,7 @@ class NewExpr : public Expr {
 
     llvm::Value *GetValue(FunctionEmitContext *ctx) const;
     const Type *GetType() const;
+    Expr *CloneNode(std::unordered_map<std::string, const Type *> typeMap);
     Expr *TypeCheck();
     Expr *Optimize();
     void Print() const;

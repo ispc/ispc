@@ -68,6 +68,7 @@ class Stmt : public ASTNode {
     // also provide a default implementation of Optimize(), since most
     // Stmts don't have anything to do here.
     virtual Stmt *Optimize();
+    virtual Stmt *CloneNode(std::unordered_map<std::string, const Type *> typeMap) = 0;
     virtual Stmt *TypeCheck() = 0;
 
     virtual void SetLoopAttribute(std::pair<Globals::pragmaUnrollType, int>);
@@ -84,6 +85,7 @@ class ExprStmt : public Stmt {
     void EmitCode(FunctionEmitContext *ctx) const;
     void Print(int indent) const;
 
+    Stmt *CloneNode(std::unordered_map<std::string, const Type *> typeMap);
     Stmt *TypeCheck();
     int EstimateCost() const;
 
@@ -112,6 +114,7 @@ class DeclStmt : public Stmt {
     void Print(int indent) const;
 
     Stmt *Optimize();
+    Stmt *CloneNode(std::unordered_map<std::string, const Type *> typeMap);
     Stmt *TypeCheck();
     int EstimateCost() const;
 
@@ -130,6 +133,7 @@ class IfStmt : public Stmt {
     void EmitCode(FunctionEmitContext *ctx) const;
     void Print(int indent) const;
 
+    Stmt *CloneNode(std::unordered_map<std::string, const Type *> typeMap);
     Stmt *TypeCheck();
     int EstimateCost() const;
 
@@ -169,6 +173,7 @@ class DoStmt : public Stmt {
     void EmitCode(FunctionEmitContext *ctx) const;
     void Print(int indent) const;
 
+    Stmt *CloneNode(std::unordered_map<std::string, const Type *> typeMap);
     Stmt *TypeCheck();
 
     std::pair<Globals::pragmaUnrollType, int> loopAttribute =
@@ -195,6 +200,7 @@ class ForStmt : public Stmt {
     void EmitCode(FunctionEmitContext *ctx) const;
     void Print(int indent) const;
 
+    Stmt *CloneNode(std::unordered_map<std::string, const Type *> typeMap);
     Stmt *TypeCheck();
 
     std::pair<Globals::pragmaUnrollType, int> loopAttribute =
@@ -227,6 +233,7 @@ class BreakStmt : public Stmt {
     void EmitCode(FunctionEmitContext *ctx) const;
     void Print(int indent) const;
 
+    Stmt *CloneNode(std::unordered_map<std::string, const Type *> typeMap);
     Stmt *TypeCheck();
     int EstimateCost() const;
 };
@@ -243,6 +250,7 @@ class ContinueStmt : public Stmt {
     void EmitCode(FunctionEmitContext *ctx) const;
     void Print(int indent) const;
 
+    Stmt *CloneNode(std::unordered_map<std::string, const Type *> typeMap);
     Stmt *TypeCheck();
     int EstimateCost() const;
 };
@@ -263,6 +271,7 @@ class ForeachStmt : public Stmt {
     void EmitCode(FunctionEmitContext *ctx) const;
     void Print(int indent) const;
 
+    Stmt *CloneNode(std::unordered_map<std::string, const Type *> typeMap);
     Stmt *TypeCheck();
     std::pair<Globals::pragmaUnrollType, int> loopAttribute =
         std::pair<Globals::pragmaUnrollType, int>(Globals::pragmaUnrollType::none, -1);
@@ -288,6 +297,7 @@ class ForeachActiveStmt : public Stmt {
     void EmitCode(FunctionEmitContext *ctx) const;
     void Print(int indent) const;
 
+    Stmt *CloneNode(std::unordered_map<std::string, const Type *> typeMap);
     Stmt *TypeCheck();
     std::pair<Globals::pragmaUnrollType, int> loopAttribute =
         std::pair<Globals::pragmaUnrollType, int>(Globals::pragmaUnrollType::none, -1);
@@ -311,6 +321,7 @@ class ForeachUniqueStmt : public Stmt {
     void EmitCode(FunctionEmitContext *ctx) const;
     void Print(int indent) const;
 
+    Stmt *CloneNode(std::unordered_map<std::string, const Type *> typeMap);
     Stmt *TypeCheck();
     std::pair<Globals::pragmaUnrollType, int> loopAttribute =
         std::pair<Globals::pragmaUnrollType, int>(Globals::pragmaUnrollType::none, -1);
@@ -334,6 +345,7 @@ class UnmaskedStmt : public Stmt {
     void EmitCode(FunctionEmitContext *ctx) const;
     void Print(int indent) const;
 
+    Stmt *CloneNode(std::unordered_map<std::string, const Type *> typeMap);
     Stmt *TypeCheck();
     int EstimateCost() const;
 
@@ -352,6 +364,7 @@ class ReturnStmt : public Stmt {
     void EmitCode(FunctionEmitContext *ctx) const;
     void Print(int indent) const;
 
+    Stmt *CloneNode(std::unordered_map<std::string, const Type *> typeMap);
     Stmt *TypeCheck();
     int EstimateCost() const;
 
@@ -371,6 +384,7 @@ class CaseStmt : public Stmt {
     void EmitCode(FunctionEmitContext *ctx) const;
     void Print(int indent) const;
 
+    Stmt *CloneNode(std::unordered_map<std::string, const Type *> typeMap);
     Stmt *TypeCheck();
     int EstimateCost() const;
 
@@ -391,6 +405,7 @@ class DefaultStmt : public Stmt {
     void EmitCode(FunctionEmitContext *ctx) const;
     void Print(int indent) const;
 
+    Stmt *CloneNode(std::unordered_map<std::string, const Type *> typeMap);
     Stmt *TypeCheck();
     int EstimateCost() const;
 
@@ -408,6 +423,7 @@ class SwitchStmt : public Stmt {
     void EmitCode(FunctionEmitContext *ctx) const;
     void Print(int indent) const;
 
+    Stmt *CloneNode(std::unordered_map<std::string, const Type *> typeMap);
     Stmt *TypeCheck();
     int EstimateCost() const;
 
@@ -429,6 +445,7 @@ class GotoStmt : public Stmt {
     void Print(int indent) const;
 
     Stmt *Optimize();
+    Stmt *CloneNode(std::unordered_map<std::string, const Type *> typeMap);
     Stmt *TypeCheck();
     int EstimateCost() const;
 
@@ -450,6 +467,7 @@ class LabeledStmt : public Stmt {
     void Print(int indent) const;
 
     Stmt *Optimize();
+    Stmt *CloneNode(std::unordered_map<std::string, const Type *> typeMap);
     Stmt *TypeCheck();
     int EstimateCost() const;
 
@@ -471,6 +489,7 @@ class StmtList : public Stmt {
     void EmitCode(FunctionEmitContext *ctx) const;
     void Print(int indent) const;
 
+    Stmt *CloneNode(std::unordered_map<std::string, const Type *> typeMap);
     Stmt *TypeCheck();
     int EstimateCost() const;
 
@@ -501,6 +520,7 @@ class PrintStmt : public Stmt {
     void EmitCode(FunctionEmitContext *ctx) const;
     void Print(int indent) const;
 
+    Stmt *CloneNode(std::unordered_map<std::string, const Type *> typeMap);
     Stmt *TypeCheck();
     int EstimateCost() const;
 
@@ -557,6 +577,7 @@ class AssertStmt : public Stmt {
     void EmitCode(FunctionEmitContext *ctx) const;
     void Print(int indent) const;
 
+    Stmt *CloneNode(std::unordered_map<std::string, const Type *> typeMap);
     Stmt *TypeCheck();
     int EstimateCost() const;
 
@@ -578,6 +599,7 @@ class DeleteStmt : public Stmt {
     void EmitCode(FunctionEmitContext *ctx) const;
     void Print(int indent) const;
 
+    Stmt *CloneNode(std::unordered_map<std::string, const Type *> typeMap);
     Stmt *TypeCheck();
     int EstimateCost() const;
 
