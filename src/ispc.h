@@ -61,6 +61,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string>
+#include <unordered_map>
 #include <vector>
 
 #include <llvm/ADT/StringRef.h>
@@ -113,7 +114,9 @@ class PointerType;
 class Stmt;
 class Symbol;
 class SymbolTable;
+class Template;
 class Type;
+class TypenameType;
 struct VariableDeclaration;
 
 enum StorageClass { SC_NONE, SC_EXTERN, SC_STATIC, SC_TYPEDEF, SC_EXTERN_C };

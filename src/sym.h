@@ -105,6 +105,8 @@ class Symbol {
     /*!< For symbols that are parameters to functions or are
          variables declared inside functions, this gives the
          function they're in. */
+
+    Symbol *CloneNode(std::unordered_map<std::string, const Type *> typenameMap);
 };
 
 /** @brief Symbol table that holds all known symbols during parsing and compilation.
@@ -165,6 +167,18 @@ class SymbolTable {
         resolve which one (if any) to use.  Returns true if any matches
         were found. */
     bool LookupFunction(const char *name, std::vector<Symbol *> *matches = NULL);
+
+    /** Adds the given template to the symbol table.
+        @param name The template name.
+        @param tmpl The template to be stored. */
+    void AddTemplate(std::string name, Template *tmpl);
+
+    /** Looks for the template or templates with the given name.
+        If multiple templates are present for a given name, all of them will
+        be returned in the provided vector and it's up the the caller to
+        resolve which one (if any) to use.  Returns true if any matches
+        were found. */
+    bool LookupTemplate(std::string name, std::vector<Template *> *matches = NULL);
 
     /** Adds the given function symbol for LLVM intrinsic to the symbol table.
         @param symbol The function symbol to be added.
@@ -268,6 +282,13 @@ class SymbolTable {
     /** Returns a random type from the symbol table. */
     const Type *RandomType();
 
+    /** Switch to Global Scope from a local Scope. */
+    void SwitchToGlobalScope();
+
+    /** Switch to last Saved Scope. Important to remember we might be dealing with
+        multiple saved scopes in case of nested calls. */
+    void SwitchToSavedScope();
+
   private:
     std::vector<std::string> closestTypeMatch(const char *str, bool structsVsEnums) const;
 
@@ -279,6 +300,12 @@ class SymbolTable {
      */
     typedef std::map<std::string, Symbol *> SymbolMapType;
     std::vector<SymbolMapType *> variables;
+
+    /** This member variable holds one or more saved scopes.
+        This allows us to flip between global and local scopes.
+        Each 'std::vector<SymbolMapType *>' holds one saved scope.
+     */
+    std::vector<std::vector<SymbolMapType *>> savedVariableScopes;
 
     std::vector<SymbolMapType *> freeSymbolMaps;
 
@@ -299,6 +326,12 @@ class SymbolTable {
      */
     typedef std::map<std::string, const Type *> TypeMapType;
     std::vector<TypeMapType> types;
+    std::vector<std::vector<TypeMapType>> savedTypeScopes;
+
+    /** This maps templates for template name.
+     */
+    typedef std::map<std::string, std::vector<Template *>> TemplateMapType;
+    TemplateMapType templates;
 };
 
 template <typename Predicate>

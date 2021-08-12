@@ -58,6 +58,15 @@ Symbol::Symbol(const std::string &n, SourcePos p, const Type *t, StorageClass sc
     parentFunction = NULL;
 }
 
+Symbol *Symbol::CloneNode(std::unordered_map<std::string, const Type *> typenameMap) {
+    const Type *clonedType = type->ResolveTypenameType(typenameMap);
+    Symbol *clonedSym = new Symbol(name, pos, clonedType, storageClass);
+    clonedSym->constValue = constValue;
+    clonedSym->varyingCFDepth = varyingCFDepth;
+    clonedSym->parentFunction = parentFunction; // revisit
+    return clonedSym;
+}
+
 ///////////////////////////////////////////////////////////////////////////
 // SymbolTable
 
@@ -90,9 +99,42 @@ void SymbolTable::PopScope() {
     types.pop_back();
 }
 
+void SymbolTable::SwitchToGlobalScope() {
+    Assert(variables.size() > 0);
+    Assert(types.size() > 0);
+
+    std::vector<SymbolMapType *> savedVariables;
+    std::vector<TypeMapType> savedTypes;
+    while (variables.size() > 1) {
+        savedVariables.push_back(variables.back());
+        variables.pop_back();
+        savedTypes.push_back(types.back());
+        types.pop_back();
+    }
+
+    if (savedVariables.size() > 0) {
+        savedVariableScopes.push_back(savedVariables);
+        savedTypeScopes.push_back(savedTypes);
+    }
+}
+
+void SymbolTable::SwitchToSavedScope() {
+    if (savedVariableScopes.size() == 0)
+        return;
+    std::vector<SymbolMapType *> savedVariables = savedVariableScopes.back();
+    savedVariableScopes.pop_back();
+    std::vector<TypeMapType> savedTypes = savedTypeScopes.back();
+    savedTypeScopes.pop_back();
+    while (savedVariables.size() > 0) {
+        variables.push_back(savedVariables.back());
+        savedVariables.pop_back();
+        types.push_back(savedTypes.back());
+        savedTypes.pop_back();
+    }
+}
+
 bool SymbolTable::AddVariable(Symbol *symbol) {
     Assert(symbol != NULL);
-
     // Check to see if a symbol of the same name has already been declared.
     for (int i = (int)variables.size() - 1; i >= 0; --i) {
         SymbolMapType &sm = *(variables[i]);
@@ -168,6 +210,27 @@ Symbol *SymbolTable::LookupFunction(const char *name, const FunctionType *type) 
         }
     }
     return NULL;
+}
+
+void SymbolTable::AddTemplate(std::string name, Template *tmpl) {
+    // Revisit : possibly check if pre-existing.
+    std::vector<Template *> &tempOverloads = templates[name];
+    tempOverloads.push_back(tmpl);
+    return;
+}
+
+bool SymbolTable::LookupTemplate(std::string name, std::vector<Template *> *matches) {
+    TemplateMapType::iterator iter = templates.find(name);
+    if (iter != templates.end()) {
+        if (matches == NULL)
+            return true;
+        else {
+            const std::vector<Template *> &tmpls = iter->second;
+            for (int j = 0; j < (int)tmpls.size(); ++j)
+                matches->push_back(tmpls[j]);
+        }
+    }
+    return matches ? (matches->size() > 0) : false;
 }
 
 bool SymbolTable::AddIntrinsics(Symbol *symbol) {
