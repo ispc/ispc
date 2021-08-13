@@ -2,10 +2,7 @@
 // sincos() function is available only on Linux.
 // rule: skip on OS=*
 // rule: run on OS=linux
-// rule: skip on arch=genx32
-// rule: skip on arch=genx64
-
-
+// rule: skip on cpu=TGLLP
 task void f_du(uniform float RET[], uniform double aFOO[], uniform double b) {
     double a = aFOO[programIndex];
     uniform double sin_a[] = {0.8414709848078965, 0.9092974268256817, 0.1411200080598672, -0.7568024953079282, -0.9589242746631385, -0.2794154981989259, 0.6569865987187891, 0.9893582466233818,

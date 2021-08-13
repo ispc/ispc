@@ -2,10 +2,7 @@
 // sincos() function is available only on Linux.
 // rule: skip on OS=*
 // rule: run on OS=linux
-// rule: skip on arch=genx32
-// rule: skip on arch=genx64
 // rule: skip on cpu=TGLLP
-// currently cos/sin/pow/sincos is very slow on gen so skip it
 uniform bool ok(uniform double x, uniform double ref) { return (abs(x - ref) < 1d-5) || abs((x-ref)/ref) < 1d-4; }
 task void f_du(uniform float RET[], uniform double aFOO[], uniform double b) {
   for (uniform int i = 0; i != programCount; ++i) {
