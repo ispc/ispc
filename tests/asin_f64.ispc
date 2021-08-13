@@ -1,7 +1,5 @@
 #include "../test_static.isph"
-// rule: skip on arch=genx32
-// rule: skip on arch=genx64
-// currently cos/sin/pow/sincos is very slow on gen so skip it
+// rule: skip on cpu=TGLLP
 bool ok(double x, double ref) { return (abs(x - ref) < 1e-6) || abs((x-ref)/ref) < 1e-4; }
 
 task void f_v(uniform float RET[]) {
