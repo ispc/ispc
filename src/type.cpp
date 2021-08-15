@@ -636,9 +636,15 @@ const Type *TypenameType::ResolveTypenameType(std::unordered_map<std::string, co
         return NULL;
     }
     Variability v = variability;
-    if (v == Variability::Unbound)
-        v = Variability::Varying;
-    const Type *resolvedType = typenameMap[GetName()]->ResolveUnboundVariability(v);
+
+    const Type *resolvedType = typenameMap[GetName()];
+    if ((resolvedType->GetVariability() == Variability::Unbound) && (v == Variability::Unbound)) {
+        resolvedType = resolvedType->ResolveUnboundVariability(Variability::Varying);
+    } else if (resolvedType->GetVariability() == Variability::Unbound) {
+        resolvedType = resolvedType->ResolveUnboundVariability(v);
+    } else if (!((resolvedType->GetVariability() == v) || (v == Variability::Unbound))) {
+        Error(pos, "Variability mismatch between typename type and instantiation type.");
+    }
     if (isConst) {
         resolvedType = resolvedType->GetAsConstType();
     }

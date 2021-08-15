@@ -257,7 +257,6 @@ void Declarator::InitFromDeclSpecs(DeclSpecs *ds) {
     const Type *baseType = ds->GetBaseType(pos);
 
     InitFromType(baseType, ds);
-
     if (type == NULL) {
         AssertPos(pos, m->errorCount > 0);
         return;
@@ -454,7 +453,9 @@ void Declarator::InitFromType(const Type *baseType, DeclSpecs *ds) {
                 snprintf(buf, sizeof(buf), "__anon_parameter_%d", i);
                 decl->name = buf;
             }
-            decl->type = decl->type->ResolveUnboundVariability(Variability::Varying);
+            // Revisit - extend to derived typename types??
+            if (CastType<TypenameType>(decl->type) == nullptr)
+                decl->type = decl->type->ResolveUnboundVariability(Variability::Varying);
 
             if (d->declSpecs->storageClass != SC_NONE)
                 Error(decl->pos,

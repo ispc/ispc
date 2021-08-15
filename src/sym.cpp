@@ -60,6 +60,7 @@ Symbol::Symbol(const std::string &n, SourcePos p, const Type *t, StorageClass sc
 
 Symbol *Symbol::CloneNode(std::unordered_map<std::string, const Type *> typenameMap) {
     const Type *clonedType = type->ResolveTypenameType(typenameMap);
+    clonedType = clonedType->ResolveUnboundVariability(Variability::Varying);
     Symbol *clonedSym = new Symbol(name, pos, clonedType, storageClass);
     clonedSym->constValue = constValue;
     clonedSym->varyingCFDepth = varyingCFDepth;

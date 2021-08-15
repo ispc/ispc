@@ -294,7 +294,6 @@ int Module::CompileFile() {
         fclose(f);
     }
 
-    // CreateTemplateFunctions();
     if (g->NoOmitFramePointer)
         for (llvm::Function &f : *module)
             f.addFnAttr("no-frame-pointer-elim", "true");
@@ -1002,8 +1001,6 @@ void Module::CreateTemplateFunction(Template *tmpl, std::unordered_map<std::stri
     symbolTable->PushScope();
     std::vector<Symbol *> params = tmpl->getParams();
     for (auto s : params) {
-        s->type = s->type->ResolveUnboundVariability(Variability::Varying);
-
         const ArrayType *at = CastType<ArrayType>(s->type);
         if (at != NULL) {
             // As in C, arrays are passed to functions as pointers to
@@ -1036,6 +1033,7 @@ void Module::CreateTemplateFunction(Template *tmpl, std::unordered_map<std::stri
 
         symbolTable->AddVariable(s->CloneNode(typeMap));
     }
+
     Stmt *body = (tmpl->getBody())->CloneNode(typeMap);
     const FunctionType *tFtype = tmpl->getFunctionType()->ResolveTypenameType(typeMap);
     AddFunctionDefinition(tmpl->getMangledName(typeMap), tFtype, body);

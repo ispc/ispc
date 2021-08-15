@@ -2232,7 +2232,6 @@ func_template_definition
     }
     declaration_specifiers declarator
     {
-
         lAddFunctionParams($4);
         lAddMaskToSymbolTable(@4);
         if ($3->typeQualifiers & TYPEQUAL_TASK)
@@ -2417,8 +2416,6 @@ static void lAddTemplate(std::vector<const TypenameType *> *list, DeclSpecs
         }
         params.push_back(m->symbolTable->LookupVariable("__mask"));
 
-        decl->type = decl->type->ResolveUnboundVariability(Variability::Varying);
-
         const FunctionType *ft = CastType<FunctionType>(decl->type);
         if (ft != NULL) {
             bool isInline = (ds->typeQualifiers & TYPEQUAL_INLINE);
@@ -2447,7 +2444,6 @@ lAddDeclaration(DeclSpecs *ds, Declarator *decl) {
         }
 
         decl->type = decl->type->ResolveUnboundVariability(Variability::Varying);
-
         const FunctionType *ft = CastType<FunctionType>(decl->type);
         if (ft != NULL) {
             bool isInline = (ds->typeQualifiers & TYPEQUAL_INLINE);

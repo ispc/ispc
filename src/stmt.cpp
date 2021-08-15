@@ -2908,7 +2908,10 @@ void ReturnStmt::EmitCode(FunctionEmitContext *ctx) const {
 }
 
 Stmt *ReturnStmt::CloneNode(std::unordered_map<std::string, const Type *> typeMap) {
-    return new ReturnStmt(expr->CloneNode(typeMap), pos);
+    if (expr)
+        return new ReturnStmt(expr->CloneNode(typeMap), pos);
+
+    return this;
 }
 
 Stmt *ReturnStmt::TypeCheck() { return this; }

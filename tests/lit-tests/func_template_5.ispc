@@ -12,3 +12,9 @@ template <typename T> noinline T add2(T A, T B) { return A + B; }
 float foo0(float A, float B, float C) { return add2<varying float>(A, B, C); }
 
 float foo1(float A, float B) { return add2<varying float, int>(A, B); }
+
+//; CHECK: 18:11: Error: Variability mismatch between
+
+template <typename T> void mismatchedVar(varying T arg) { return; }
+
+void foo2(uniform int arg) { mismatchedVar<uniform int>(arg); }
