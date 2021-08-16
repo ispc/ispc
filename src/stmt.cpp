@@ -3075,7 +3075,7 @@ class PrintArgsBuilder {
         enum { LeftParenthesisIdx = 0, RightParenthesisIdx, EmptyIdx, FalseIdx, TrueIdx, NumStrings };
         std::array<llvm::Value *, NumStrings> strings;
 
-        AdditionalData() {}
+        AdditionalData() { mask = NULL; }
         AdditionalData(FunctionEmitContext *ctx) {
             if (ctx->emitGenXHardwareMask())
                 mask = ctx->GenXSimdCFPredicate(LLVMMaskAllOn);
