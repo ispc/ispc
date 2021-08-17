@@ -42,7 +42,7 @@ set(TARGET_NAME "simple-esimd")
 add_executable(${TARGET_NAME} simple.cpp)
 add_dpcpp_library(${TARGET_NAME}_esimd simple-esimd.cpp)
 
-set(ISPC_GENX_FORMAT "bc")
+set(ISPC_XE_FORMAT "bc")
 add_ispc_kernel(${TARGET_NAME}_ispc2esimd simple-esimd.ispc "")
 # Link for GPU
 link_ispc_esimd(${TARGET_NAME}_ispc2esimd ${TARGET_NAME}_esimd)
