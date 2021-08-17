@@ -150,10 +150,14 @@ ISPCTarget ParseISPCTarget(std::string target) {
         return ISPCTarget::neon_i32x8;
     } else if (target == "wasm-i32x4") {
         return ISPCTarget::wasm_i32x4;
-    } else if (target == "genx-x8") {
-        return ISPCTarget::genx_x8;
-    } else if (target == "genx-x16" || target == "genx") {
-        return ISPCTarget::genx_x16;
+    } else if (target == "gen9-x8") {
+        return ISPCTarget::gen9_x8;
+    } else if (target == "gen9-x16" || target == "gen9") {
+        return ISPCTarget::gen9_x16;
+    } else if (target == "xelp-x8") {
+        return ISPCTarget::xelp_x8;
+    } else if (target == "xelp-x16" || target == "xelp") {
+        return ISPCTarget::xelp_x16;
     }
 
     return ISPCTarget::error;
@@ -245,10 +249,14 @@ std::string ISPCTargetToString(ISPCTarget target) {
         return "neon-i32x8";
     case ISPCTarget::wasm_i32x4:
         return "wasm-i32x4";
-    case ISPCTarget::genx_x8:
-        return "genx-x8";
-    case ISPCTarget::genx_x16:
-        return "genx-x16";
+    case ISPCTarget::gen9_x8:
+        return "gen9-x8";
+    case ISPCTarget::gen9_x16:
+        return "gen9-x16";
+    case ISPCTarget::xelp_x8:
+        return "xelp-x8";
+    case ISPCTarget::xelp_x16:
+        return "xelp-x16";
     case ISPCTarget::none:
     case ISPCTarget::error:
         // Fall through
@@ -310,8 +318,10 @@ bool ISPCTargetIsWasm(ISPCTarget target) {
 
 bool ISPCTargetIsGen(ISPCTarget target) {
     switch (target) {
-    case ISPCTarget::genx_x8:
-    case ISPCTarget::genx_x16:
+    case ISPCTarget::gen9_x8:
+    case ISPCTarget::gen9_x16:
+    case ISPCTarget::xelp_x8:
+    case ISPCTarget::xelp_x16:
         return true;
     default:
         return false;

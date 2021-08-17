@@ -38,4 +38,4 @@ define(`WIDTH_X4',`32')
 define(`GEN_SUFFIX',`CONCAT(`v8', GEN_TYPE($1))')
 define(`BITCAST_WIDTH',`i8')
 
-include(`target-genx.ll')
+include(`target-xe.ll')

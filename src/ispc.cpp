@@ -1131,7 +1131,8 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, bool pic, boo
         break;
 #endif
 #ifdef ISPC_XE_ENABLED
-    case ISPCTarget::genx_x8:
+    case ISPCTarget::gen9_x8:
+    case ISPCTarget::xelp_x8:
         this->m_isa = Target::GENX;
         this->m_nativeVectorWidth = 8;
         this->m_nativeVectorAlignment = 64;
@@ -1146,7 +1147,8 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, bool pic, boo
         this->m_hasGather = this->m_hasScatter = true;
         CPUfromISA = CPU_GENX;
         break;
-    case ISPCTarget::genx_x16:
+    case ISPCTarget::gen9_x16:
+    case ISPCTarget::xelp_x16:
         this->m_isa = Target::GENX;
         this->m_nativeVectorWidth = 16;
         this->m_nativeVectorAlignment = 64;
@@ -1162,8 +1164,10 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, bool pic, boo
         CPUfromISA = CPU_GENX;
         break;
 #else
-    case ISPCTarget::genx_x8:
-    case ISPCTarget::genx_x16:
+    case ISPCTarget::gen9_x8:
+    case ISPCTarget::gen9_x16:
+    case ISPCTarget::xelp_x8:
+    case ISPCTarget::xelp_x16:
         unsupported_target = true;
         break;
 #endif
