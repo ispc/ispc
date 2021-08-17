@@ -241,7 +241,7 @@ endfunction()
 ## GPU specific macros/options ################################################
 ###############################################################################
 
-define_ispc_isa_options(GEN genx-x8 genx-x16)
+define_ispc_isa_options(XE genx-x8 genx-x16)
 
 set(ISPC_GENX_ADDITIONAL_ARGS "" CACHE STRING "extra arguments to pass to ISPC for GEN targets")
 
@@ -252,8 +252,8 @@ function (ispc_compile_gpu parent_target output_prefix)
   endif()
 
   # Check If GPU target is passed externally
-  if (NOT ISPC_TARGET_GEN)
-    set(ISPC_TARGET_GEN "genx-x8")
+  if (NOT ISPC_TARGET_XE)
+    set(ISPC_TARGET_XE "genx-x8")
   endif()
 
   if (NOT ISPC_TARGET_DIR)
@@ -263,7 +263,7 @@ function (ispc_compile_gpu parent_target output_prefix)
   set(outdir ${ISPC_TARGET_DIR})
 
   set(ISPC_PROGRAM_COUNT 16)
-  if ("${ISPC_TARGET_GEN}" STREQUAL "genx-x8")
+  if ("${ISPC_TARGET_XE}" STREQUAL "genx-x8")
     set(ISPC_PROGRAM_COUNT 8)
   endif()
 
@@ -338,7 +338,7 @@ function (ispc_compile_gpu parent_target output_prefix)
         -DISPC_GPU
         ${ISPC_DEFINITIONS}
         --addressing=64
-        --target=${ISPC_TARGET_GEN}
+        --target=${ISPC_TARGET_XE}
         ${ISPC_GPU_OUTPUT_OPT}
         --woff
         ${ISPC_GENX_ADDITIONAL_ARGS}
