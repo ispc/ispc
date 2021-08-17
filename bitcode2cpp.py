@@ -127,7 +127,7 @@ elif args[0].type == 'ispc-target':
         arch = "arm" if args[0].runtime == "32" else "aarch64" if args[0].runtime == "64" else "error"
     elif "wasm" in target:
         arch = "wasm32"
-    elif "genx" in target:
+    elif ("gen9" in target) or ("xe" in target):
         arch = "genx32" if args[0].runtime == "32" else "genx64" if args[0].runtime == "64" else "error"
     else:
         sys.stderr.write("Unknown target detected: " + target + "\n")

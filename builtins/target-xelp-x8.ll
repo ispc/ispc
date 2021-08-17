@@ -29,13 +29,13 @@
 ;;   NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 ;;   SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-define(`WIDTH',`16')
-define(`HALF_WIDTH',`8')
-define(`QUARTER_WIDTH',`4')
-define(`QUAVER_WIDTH',`2')
-define(`WIDTH_X2',`32')
-define(`WIDTH_X4',`64')
-define(`GEN_SUFFIX',`CONCAT(`v16', GEN_TYPE($1))')
-define(`BITCAST_WIDTH',`i16')
+define(`WIDTH',`8')
+define(`HALF_WIDTH',`4')
+define(`QUARTER_WIDTH',`2')
+define(`QUAVER_WIDTH',`1')
+define(`WIDTH_X2',`16')
+define(`WIDTH_X4',`32')
+define(`GEN_SUFFIX',`CONCAT(`v8', GEN_TYPE($1))')
+define(`BITCAST_WIDTH',`i8')
 
-include(`target-genx.ll')
+include(`target-xe.ll')
