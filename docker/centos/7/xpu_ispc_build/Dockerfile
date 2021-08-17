@@ -39,7 +39,7 @@ RUN mkdir /usr/local/src/llvm
 
 ENV ISPC_HOME=/usr/local/src/ispc
 ENV LLVM_HOME=/usr/local/src/llvm
-ENV GENX_DEPS=/usr/local/deps
+ENV XE_DEPS=/usr/local/deps
 
 # If you are going to run test for future platforms, go to
 # http://www.intel.com/software/sde and download the latest version,
@@ -74,7 +74,7 @@ WORKDIR /usr/local/src/vc-intrinsics
 RUN git checkout $VC_INTRINSICS_COMMIT_SHA
 RUN mkdir -p build
 WORKDIR /usr/local/src/vc-intrinsics/build
-RUN cmake -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_C_COMPILER=clang -DLLVM_DIR=$LLVM_HOME/bin-$LLVM_VERSION/lib/cmake/llvm -DCMAKE_INSTALL_PREFIX=$GENX_DEPS ../ && make install -j`nproc`
+RUN cmake -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_C_COMPILER=clang -DLLVM_DIR=$LLVM_HOME/bin-$LLVM_VERSION/lib/cmake/llvm -DCMAKE_INSTALL_PREFIX=$XE_DEPS ../ && make install -j`nproc`
 
 # SPIRV Translator
 WORKDIR /usr/local/src
@@ -83,7 +83,7 @@ WORKDIR /usr/local/src/SPIRV-LLVM-Translator
 RUN git checkout $SPIRV_TRANSLATOR_COMMIT_SHA
 RUN mkdir -p build
 WORKDIR /usr/local/src/SPIRV-LLVM-Translator/build
-RUN cmake -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_C_COMPILER=clang -DLLVM_DIR=$LLVM_HOME/bin-$LLVM_VERSION/lib/cmake/llvm/ -DCMAKE_INSTALL_PREFIX=$GENX_DEPS ../ && make install -j`nproc`
+RUN cmake -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_C_COMPILER=clang -DLLVM_DIR=$LLVM_HOME/bin-$LLVM_VERSION/lib/cmake/llvm/ -DCMAKE_INSTALL_PREFIX=$XE_DEPS ../ && make install -j`nproc`
 
 # L0
 WORKDIR /usr/local/src
@@ -98,4 +98,4 @@ RUN cmake -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_C_COMPILER=clang -DCMAKE_INSTALL_
 ENV LD_LIBRARY_PATH=$LLVM_HOME/bin-$LLVM_VERSION/lib:$LD_LIBRARY_PATH
 RUN mkdir build
 WORKDIR /usr/local/src/ispc/build
-RUN cmake .. -DISPC_PREPARE_PACKAGE=ON -DISPC_CROSS=ON -DXE_ENABLED=ON -DGENX_DEPS_DIR=$GENX_DEPS && make -j8 package
+RUN cmake .. -DISPC_PREPARE_PACKAGE=ON -DISPC_CROSS=ON -DXE_ENABLED=ON -DXE_DEPS_DIR=$XE_DEPS && make -j8 package
