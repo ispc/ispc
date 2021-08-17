@@ -442,7 +442,7 @@ endif()
 # Include directories
 target_include_directories(${PROJECT_NAME} PRIVATE
                            ${LLVM_INCLUDE_DIRS}
-                           ${GENX_DEPS_DIR}/include
+                           ${XE_DEPS_DIR}/include
                            ${CMAKE_CURRENT_SOURCE_DIR}/src
                            ${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_CFG_INTDIR})
 
@@ -516,7 +516,7 @@ target_link_libraries(${PROJECT_NAME} ${LLVM_LIBRARY_LIST} ${CMAKE_DL_LIBS})
 if (XE_ENABLED)
     # Link against GEN libraries
     foreach(genLib ${GEN_LIBRARY_LIST})
-        find_library(${genLib}Path NAMES ${genLib} HINTS ${GENX_DEPS_DIR}/lib)
+        find_library(${genLib}Path NAMES ${genLib} HINTS ${XE_DEPS_DIR}/lib)
         list(APPEND GEN_LIBRARY_FULL_PATH_LIST ${${genLib}Path})
     endforeach()
     target_link_libraries(${PROJECT_NAME} ${GEN_LIBRARY_FULL_PATH_LIST})
