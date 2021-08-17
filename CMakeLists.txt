@@ -186,10 +186,10 @@ if (ISPC_MACOS_TARGET AND ISPC_MACOS_SDK_PATH)
     endif()
 endif()
 
-# If GenX target is enabled, generate build targets for genx examples and ISPCRT on Linux
+# If Xe target is enabled, generate build targets for Xe examples and ISPCRT on Linux
 if (XE_ENABLED)
     option(ISPC_INCLUDE_RT "Generate build targets for ISPC runtime." ON)
-    option(ISPC_INCLUDE_GENX_EXAMPLES "Generate build targets for the ISPC GenX examples" ON)
+    option(ISPC_INCLUDE_XE_EXAMPLES "Generate build targets for the ISPC Xe examples" ON)
 endif()
 
 if (UNIX)
@@ -267,7 +267,7 @@ find_package(FLEX 2.6 REQUIRED)
 set (ISPC_MASKS 1 8 16 32 64)
 
 if (NOT X86_ENABLED AND NOT ARM_ENABLED AND NOT WASM_ENABLED AND NOT XE_ENABLED)
-    message( FATAL_ERROR "Either X86, ARM, WASM or GENX targets need to be enabled.")
+    message( FATAL_ERROR "Either X86, ARM, WASM or XE targets need to be enabled.")
 endif ()
 
 if (X86_ENABLED)
@@ -316,7 +316,7 @@ if (XE_ENABLED)
         set(PB_PATH_MODIFIER "x64")
     endif()
 
-    list(APPEND GEN_LIBRARY_LIST LLVMGenXIntrinsics LLVMSPIRVLib)
+    list(APPEND XE_LIBRARY_LIST LLVMGenXIntrinsics LLVMSPIRVLib)
 endif()
 
 get_llvm_libfiles(LLVM_LIBRARY_LIST ${LLVM_COMPONENTS})
@@ -514,12 +514,12 @@ target_link_libraries(${PROJECT_NAME} ${CLANG_LIBRARY_FULL_PATH_LIST})
 target_link_libraries(${PROJECT_NAME} ${LLVM_LIBRARY_LIST} ${CMAKE_DL_LIBS})
 
 if (XE_ENABLED)
-    # Link against GEN libraries
-    foreach(genLib ${GEN_LIBRARY_LIST})
-        find_library(${genLib}Path NAMES ${genLib} HINTS ${XE_DEPS_DIR}/lib)
-        list(APPEND GEN_LIBRARY_FULL_PATH_LIST ${${genLib}Path})
+    # Link against Xe libraries
+    foreach(xeLib ${XE_LIBRARY_LIST})
+        find_library(${xeLib}Path NAMES ${xeLib} HINTS ${XE_DEPS_DIR}/lib)
+        list(APPEND XE_LIBRARY_FULL_PATH_LIST ${${xeLib}Path})
     endforeach()
-    target_link_libraries(${PROJECT_NAME} ${GEN_LIBRARY_FULL_PATH_LIST})
+    target_link_libraries(${PROJECT_NAME} ${XE_LIBRARY_FULL_PATH_LIST})
 endif()
 
 if (NOT WIN32 AND NOT APPLE)
@@ -584,7 +584,7 @@ if (ISPC_INCLUDE_EXAMPLES AND NOT ISPC_PREPARE_PACKAGE)
     )
 endif()
 
-if (ISPC_INCLUDE_GENX_EXAMPLES AND ISPC_INCLUDE_RT AND NOT ISPC_PREPARE_PACKAGE)
+if (ISPC_INCLUDE_XE_EXAMPLES AND ISPC_INCLUDE_RT AND NOT ISPC_PREPARE_PACKAGE)
     include(ExternalProject)
     if (WIN32)
         set(ISPCRT_LIB ${CMAKE_CURRENT_BINARY_DIR}/ispcrt/${CMAKE_CFG_INTDIR}/ispcrt.lib)

@@ -243,7 +243,7 @@ endfunction()
 
 define_ispc_isa_options(XE genx-x8 genx-x16)
 
-set(ISPC_GENX_ADDITIONAL_ARGS "" CACHE STRING "extra arguments to pass to ISPC for GEN targets")
+set(ISPC_XE_ADDITIONAL_ARGS "" CACHE STRING "extra arguments to pass to ISPC for Xe targets")
 
 function (ispc_compile_gpu parent_target output_prefix)
   if(ISPC_INCLUDE_DIR)
@@ -267,50 +267,50 @@ function (ispc_compile_gpu parent_target output_prefix)
     set(ISPC_PROGRAM_COUNT 8)
   endif()
 
-  set(ISPC_GENX_FLAGS_DEBUG "-g" CACHE STRING "ISPC GENX Debug flags")
-  mark_as_advanced(ISPC_GENX_FLAGS_DEBUG)
-  set(ISPC_GENX_FLAGS_RELEASE "-O3" CACHE STRING "ISPC GENX Release flags")
-  mark_as_advanced(ISPC_GENX_FLAGS_RELEASE)
-  set(ISPC_GENX_FLAGS_RELWITHDEBINFO "-O2 -g" CACHE STRING "ISPC GENX Release with Debug symbols flags")
-  mark_as_advanced(ISPC_GENX_FLAGS_RELWITHDEBINFO)
+  set(ISPC_XE_FLAGS_DEBUG "-g" CACHE STRING "ISPC Xe Debug flags")
+  mark_as_advanced(ISPC_XE_FLAGS_DEBUG)
+  set(ISPC_XE_FLAGS_RELEASE "-O3" CACHE STRING "ISPC Xe Release flags")
+  mark_as_advanced(ISPC_XE_FLAGS_RELEASE)
+  set(ISPC_XE_FLAGS_RELWITHDEBINFO "-O2 -g" CACHE STRING "ISPC Xe Release with Debug symbols flags")
+  mark_as_advanced(ISPC_XE_FLAGS_RELWITHDEBINFO)
 
   if (NOT CMAKE_BUILD_TYPE)
     set (CMAKE_BUILD_TYPE "Release")
   endif()
   if (WIN32 OR "${CMAKE_BUILD_TYPE}" STREQUAL "Release")
-    set(ISPC_GENX_OPT_FLAGS ${ISPC_GENX_FLAGS_RELEASE})
+    set(ISPC_XE_OPT_FLAGS ${ISPC_XE_FLAGS_RELEASE})
   elseif ("${CMAKE_BUILD_TYPE}" STREQUAL "Debug")
-    set(ISPC_GENX_OPT_FLAGS ${ISPC_GENX_FLAGS_DEBUG})
+    set(ISPC_XE_OPT_FLAGS ${ISPC_XE_FLAGS_DEBUG})
   elseif ("${CMAKE_BUILD_TYPE}" STREQUAL "RelWithDebInfo")
-    set(ISPC_GENX_OPT_FLAGS ${ISPC_GENX_FLAGS_RELWITHDEBINFO})
+    set(ISPC_XE_OPT_FLAGS ${ISPC_XE_FLAGS_RELWITHDEBINFO})
   else ()
     message(FATAL_ERROR "CMAKE_BUILD_TYPE (${CMAKE_BUILD_TYPE}) allows only the following values: Debug;Release;RelWithDebInfo")
   endif()
   # turn space sparated list into ';' separated list
-  string(REPLACE " " ";" ISPC_GENX_OPT_FLAGS "${ISPC_GENX_OPT_FLAGS}")
+  string(REPLACE " " ";" ISPC_XE_OPT_FLAGS "${ISPC_XE_OPT_FLAGS}")
 
   # Additional flags passed by user
-  if (NOT ISPC_GENX_ADDITIONAL_ARGS)
-    set(ISPC_GENX_ADDITIONAL_ARGS "")
+  if (NOT ISPC_XE_ADDITIONAL_ARGS)
+    set(ISPC_XE_ADDITIONAL_ARGS "")
   endif()
 
   # Output ISPC module format passed by user
-  if (NOT ISPC_GENX_FORMAT)
-    set (ISPC_GENX_FORMAT "spv")
+  if (NOT ISPC_XE_FORMAT)
+    set (ISPC_XE_FORMAT "spv")
   endif()
 
-  if (ISPC_GENX_FORMAT STREQUAL "spv")
+  if (ISPC_XE_FORMAT STREQUAL "spv")
     set(ISPC_GPU_OUTPUT_OPT "--emit-spirv")
     set(ISPC_GPU_TARGET_NAME ${parent_target}_spv)
-  elseif (ISPC_GENX_FORMAT STREQUAL "zebin")
+  elseif (ISPC_XE_FORMAT STREQUAL "zebin")
     set(ISPC_GPU_OUTPUT_OPT "--emit-zebin")
     set(ISPC_GPU_TARGET_NAME ${parent_target}_bin)
-  elseif (ISPC_GENX_FORMAT STREQUAL "bc")
+  elseif (ISPC_XE_FORMAT STREQUAL "bc")
     set(ISPC_GPU_OUTPUT_OPT "--emit-llvm")
     set(ISPC_GPU_TARGET_NAME ${parent_target}_bc)
   endif()
 
-  set(ISPC_GENX_COMPILE_OUTPUTS "")
+  set(ISPC_XE_COMPILE_OUTPUTS "")
   foreach(src ${ARGN})
     get_filename_component(fname ${src} NAME_WE)
     get_filename_component(dir ${src} PATH)
@@ -320,11 +320,11 @@ function (ispc_compile_gpu parent_target output_prefix)
     set(ISPC_DEPENDENCIES_FILE ${outdir}/${fname}.gpu.dev.idep)
     ispc_read_dependencies(${ISPC_DEPENDENCIES_FILE})
 
-    if (ISPC_GENX_FORMAT STREQUAL "spv")
+    if (ISPC_XE_FORMAT STREQUAL "spv")
       set(result "${outdir}/${output_prefix}${parent_target}.spv")
-    elseif (ISPC_GENX_FORMAT STREQUAL "zebin")
+    elseif (ISPC_XE_FORMAT STREQUAL "zebin")
       set(result "${outdir}/${output_prefix}${parent_target}.bin")
-    elseif (ISPC_GENX_FORMAT STREQUAL "bc")
+    elseif (ISPC_XE_FORMAT STREQUAL "bc")
       set(result "${outdir}/${output_prefix}${parent_target}.bc")
     endif()
 
@@ -334,14 +334,14 @@ function (ispc_compile_gpu parent_target output_prefix)
       COMMAND ${ISPC_EXECUTABLE}
         -I ${CMAKE_CURRENT_SOURCE_DIR}
         ${ISPC_INCLUDE_DIR_PARMS}
-        ${ISPC_GENX_OPT_FLAGS}
+        ${ISPC_XE_OPT_FLAGS}
         -DISPC_GPU
         ${ISPC_DEFINITIONS}
         --addressing=64
         --target=${ISPC_TARGET_XE}
         ${ISPC_GPU_OUTPUT_OPT}
         --woff
-        ${ISPC_GENX_ADDITIONAL_ARGS}
+        ${ISPC_XE_ADDITIONAL_ARGS}
         -o ${result}
         ${input}
         -MMM ${ISPC_DEPENDENCIES_FILE}
@@ -349,12 +349,12 @@ function (ispc_compile_gpu parent_target output_prefix)
     )
     set_source_files_properties(${result} PROPERTIES GENERATED true)
 
-    list(APPEND ISPC_GENX_COMPILE_OUTPUTS ${result})
+    list(APPEND ISPC_XE_COMPILE_OUTPUTS ${result})
   endforeach()
 
-  add_custom_target(${ISPC_GPU_TARGET_NAME} DEPENDS ${ISPC_GENX_COMPILE_OUTPUTS} )
+  add_custom_target(${ISPC_GPU_TARGET_NAME} DEPENDS ${ISPC_XE_COMPILE_OUTPUTS} )
   set_target_properties(${ISPC_GPU_TARGET_NAME} PROPERTIES
-      ISPC_CUSTOM_DEPENDENCIES ${ISPC_GENX_COMPILE_OUTPUTS}
+      ISPC_CUSTOM_DEPENDENCIES ${ISPC_XE_COMPILE_OUTPUTS}
   )
 
   add_dependencies(${parent_target} ${ISPC_GPU_TARGET_NAME})

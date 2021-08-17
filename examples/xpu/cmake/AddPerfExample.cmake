@@ -33,7 +33,7 @@
 function(add_perf_example)
     set(options CM_TEST GBENCH)
     set(oneValueArgs ISPC_SRC_NAME ISPC_TARGET_XE CM_SRC_NAME CM_OBJ_NAME TEST_NAME CM_TEST_NAME GBENCH_TEST_NAME)
-    set(multiValueArgs ISPC_GENX_ADDITIONAL_ARGS HOST_SOURCES CM_HOST_SOURCES DPCPP_HOST_SOURCES GBENCH_SRC_NAME)
+    set(multiValueArgs ISPC_XE_ADDITIONAL_ARGS HOST_SOURCES CM_HOST_SOURCES DPCPP_HOST_SOURCES GBENCH_SRC_NAME)
     cmake_parse_arguments("parsed" "${options}" "${oneValueArgs}" "${multiValueArgs}" ${ARGN} )
 
     # Compile host code
@@ -69,7 +69,7 @@ function(add_perf_example)
     else()
         set(ISPC_TARGET_DIR ${CMAKE_CURRENT_BINARY_DIR})
     endif()
-    set(ISPC_GENX_ADDITIONAL_ARGS ${parsed_ISPC_GENX_ADDITIONAL_ARGS})
+    set(ISPC_XE_ADDITIONAL_ARGS ${parsed_ISPC_XE_ADDITIONAL_ARGS})
 
     # Add "ispcrt" suffix here to avoid CMake target conflicts with CPU examples
     add_ispc_kernel("genx_${parsed_TEST_NAME}" "${parsed_ISPC_SRC_NAME}" "")

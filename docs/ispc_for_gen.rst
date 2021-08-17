@@ -458,7 +458,7 @@ By default, examples use SPIR-V format. You can try them with L0 binary format:
   ::
 
     cd examples/xpu/build
-    cmake -DISPC_GENX_FORMAT=zebin ../ && make
+    cmake -DISPC_XE_FORMAT=zebin ../ && make
     export ISPCRT_USE_ZEBIN=y
     cd simple && ./host_simple --gpu
 
