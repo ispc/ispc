@@ -193,7 +193,7 @@ class Target {
     };
 
 #ifdef ISPC_XE_ENABLED
-    enum GENX_PLATFORM {
+    enum class XePlatform {
         GENX_GEN9,
         GENX_TGLLP,
     };
@@ -268,7 +268,7 @@ class Target {
     }
 
 #ifdef ISPC_XE_ENABLED
-    GENX_PLATFORM getGenxPlatform() const;
+    XePlatform getGenxPlatform() const;
     uint32_t getGenxGrfSize() const;
     bool hasGenxPrefetch() const;
 #endif
