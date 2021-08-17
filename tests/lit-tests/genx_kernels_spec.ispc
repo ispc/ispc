@@ -40,7 +40,7 @@
 // RUN: FileCheck --input-file=%t.ll -check-prefix=CHECK_FUNC_CPU %s
 // RUN: %{ispc} %s --target=avx2-i32x16 -DCHECK_DIAG --nowrap -o %t.o 2>&1
 // RUN: not %{ispc} %s --target=avx2-i32x16 -DCHECK_DIAG_TASK --nowrap -o %t.o 2>&1 | FileCheck %s -check-prefix=CHECK_RET_VAL_TASK_ERROR
-// REQUIRES: GENX_ENABLED
+// REQUIRES: XE_ENABLED
 
 // CHECK_DATALAYOUT: target datalayout = "e-p:64:64-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256-v512:512-v1024:1024-n8:16:32:64"
 // CHECK_DATALAYOUT: target triple = "spir64-unknown-unknown"

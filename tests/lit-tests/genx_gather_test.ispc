@@ -2,7 +2,7 @@
 // RUN: FileCheck --input-file=%t.ll %s
 // RUN: %{ispc} %s --target=genx-x16 --no-discard-value-names --arch=genx32 -h %t.h --emit-llvm-text -o %t.ll
 // RUN: FileCheck --input-file=%t.ll %s
-// REQUIRES: GENX_ENABLED
+// REQUIRES: XE_ENABLED
 
 struct vec3f {
     float x;

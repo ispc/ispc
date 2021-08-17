@@ -77,7 +77,7 @@
 // RUN: %{ispc} %s --target=genx-x8 --arch=genx64 -DMASKED_ST -DTEST_I16 --emit-llvm-text --opt=enable-genx-unsafe-masked-load --nowrap -o %t.ll 2>&1 | FileCheck %s -check-prefix=CHECK_MASKED_ST_WARN
 // RUN: FileCheck --input-file=%t.ll %s -check-prefix=CHECK_MASKED_ST_UNSAFE_I16_SIMD8
 
-// REQUIRES: GENX_ENABLED
+// REQUIRES: XE_ENABLED
 #ifdef TEST_I8
 typedef int8 T;
 #elif TEST_I16

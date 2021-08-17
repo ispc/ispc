@@ -5,7 +5,7 @@
 // RUN: FileCheck %s -check-prefix=CHECK_FOO2 -input-file=foo2_kernel_KernelHeap.asm
 // RUN: FileCheck %s -check-prefix=CHECK_FOO3 -input-file=foo3_kernel_KernelHeap.asm
 
-// REQUIRES: GENX_ENABLED
+// REQUIRES: XE_ENABLED
 // REQUIRES: OCLOC_INSTALLED
 // REQUIRES-NOT: WINDOWS_ENABLED
 
