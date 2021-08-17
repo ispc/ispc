@@ -405,7 +405,7 @@ if (ARM_ENABLED)
     target_compile_definitions(${PROJECT_NAME} PRIVATE ISPC_ARM_ENABLED)
 endif()
 if (GENX_ENABLED)
-    target_compile_definitions(${PROJECT_NAME} PRIVATE ISPC_GENX_ENABLED)
+    target_compile_definitions(${PROJECT_NAME} PRIVATE ISPC_XE_ENABLED)
 endif()
 
 if (WASM_ENABLED)

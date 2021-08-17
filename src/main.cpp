@@ -117,7 +117,7 @@ static void lPrintVersion() {
     printf("    [--emit-llvm]\t\t\tEmit LLVM bitcode file as output\n");
     printf("    [--emit-llvm-text]\t\t\tEmit LLVM bitcode file as output in textual form\n");
     printf("    [--emit-obj]\t\t\tGenerate object file file as output (default)\n");
-#ifdef ISPC_GENX_ENABLED
+#ifdef ISPC_XE_ENABLED
     printf("    [--emit-spirv]\t\t\tGenerate SPIR-V file as output\n");
     // AOT compilation is temporary disabled on Windows
 #ifndef ISPC_HOST_IS_WINDOWS
@@ -161,7 +161,7 @@ static void lPrintVersion() {
     printf("        disable-loop-unroll\t\tDisable loop unrolling.\n");
     printf("        disable-zmm\t\tDisable using zmm registers for avx512 targets in favour of ymm. This also affects "
            "ABI.\n");
-#ifdef ISPC_GENX_ENABLED
+#ifdef ISPC_XE_ENABLED
     printf("        emit-genx-hardware-mask\t\tEnable emitting of GenX implicit hardware mask.\n");
     printf("        enable-genx-foreach-varying\t\tEnable experimental foreach support inside varying control flow.\n");
 #endif
@@ -188,7 +188,7 @@ static void lPrintVersion() {
     printf("    [--vectorcall/--no-vectorcall]\tEnable/disable vectorcall calling convention on Windows (x64 only). "
            "Disabled by default\n");
     printf("    [--version]\t\t\t\tPrint ispc version\n");
-#ifdef ISPC_GENX_ENABLED
+#ifdef ISPC_XE_ENABLED
     printf("    [--vc-options=<\"-option1 -option2...\">]\t\t\t\tPass additional options to Vector Compiler backend\n");
 #endif
     printf("    [--werror]\t\t\t\tTreat warnings as errors\n");
@@ -229,7 +229,7 @@ static void lPrintVersion() {
     printf("        disable-handle-pseudo-memory-ops\tLeave __pseudo_* calls for gather/scatter/etc. in final IR\n");
     printf("        disable-uniform-control-flow\t\tDisable uniform control flow optimizations\n");
     printf("        disable-uniform-memory-optimizations\tDisable uniform-based coherent memory access\n");
-#ifdef ISPC_GENX_ENABLED
+#ifdef ISPC_XE_ENABLED
     printf("        disable-genx-gather-coalescing\t\tDisable GenX gather coalescing.\n");
 #endif
     printf("    [--print-target]\t\t\tPrint target's information\n");
@@ -689,7 +689,7 @@ int main(int Argc, char *Argv[]) {
             ot = Module::BitcodeText;
         else if (!strcmp(argv[i], "--emit-obj"))
             ot = Module::Object;
-#ifdef ISPC_GENX_ENABLED
+#ifdef ISPC_XE_ENABLED
         else if (!strcmp(argv[i], "--emit-spirv"))
             ot = Module::SPIRV;
         else if (!strcmp(argv[i], "--emit-zebin"))
@@ -790,7 +790,7 @@ int main(int Argc, char *Argv[]) {
                 g->opt.disableGatherScatterFlattening = true;
             else if (!strcmp(opt, "disable-uniform-memory-optimizations"))
                 g->opt.disableUniformMemoryOptimizations = true;
-#ifdef ISPC_GENX_ENABLED
+#ifdef ISPC_XE_ENABLED
             else if (!strcmp(opt, "disable-genx-gather-coalescing"))
                 g->opt.disableGenXGatherCoalescing = true;
             else if (!strcmp(opt, "emit-genx-hardware-mask"))
@@ -915,7 +915,7 @@ int main(int Argc, char *Argv[]) {
 
         else if (strncmp(argv[i], "--off-phase=", 12) == 0) {
             g->off_stages = ParsingPhases(argv[i] + strlen("--off-phase="), errorHandler);
-#ifdef ISPC_GENX_ENABLED
+#ifdef ISPC_XE_ENABLED
         } else if (!strncmp(argv[i], "--vc-options=", 12)) {
             g->vcOpts = argv[i] + strlen("--vc-options=");
 #endif
@@ -1056,7 +1056,7 @@ int main(int Argc, char *Argv[]) {
             arch = Arch::wasm32;
             g->target_os = TargetOS::web;
         }
-#ifdef ISPC_GENX_ENABLED
+#ifdef ISPC_XE_ENABLED
         if (ISPCTargetIsGen(target)) {
             Assert(targets.size() == 1 && "multi-target is not supported for genx-* targets yet.");
             // Generate .spv for gen target instead of object by default.

@@ -562,7 +562,7 @@ class FunctionEmitContext {
     void SyncInst();
 
     llvm::Instruction *ReturnInst();
-#ifdef ISPC_GENX_ENABLED
+#ifdef ISPC_XE_ENABLED
     /** Emit genx_simdcf_any intrinsic.
         Required when GenX hardware mask is emitted. */
     llvm::Value *GenXSimdCFAny(llvm::Value *value);
@@ -673,7 +673,7 @@ class FunctionEmitContext {
         the running lanes have executed a 'continue' statement. */
     llvm::BasicBlock *continueTarget;
 
-#ifdef ISPC_GENX_ENABLED
+#ifdef ISPC_XE_ENABLED
     /** Final basic block of the function. It is used for GenX to
         disable returned lanes until return point is reached. */
     llvm::BasicBlock *returnPoint;

@@ -1326,7 +1326,7 @@ static void lGetSpans(int dimsLeft, int nDims, int itemsLeft, bool isTiled, int 
  */
 void ForeachStmt::EmitCode(FunctionEmitContext *ctx) const {
 
-#ifdef ISPC_GENX_ENABLED
+#ifdef ISPC_XE_ENABLED
     if (ctx->emitGenXHardwareMask()) {
         EmitCodeForGenX(ctx);
         return;
@@ -1758,7 +1758,7 @@ void ForeachStmt::EmitCode(FunctionEmitContext *ctx) const {
     ctx->EndScope();
 }
 
-#ifdef ISPC_GENX_ENABLED
+#ifdef ISPC_XE_ENABLED
 /* Emit code for a foreach statement on GenX. We effectively emit code to run
    the set of n-dimensional nested loops corresponding to the dimensionality of
    the foreach statement along with the extra logic to deal with mismatches
@@ -2053,7 +2053,7 @@ void ForeachActiveStmt::EmitCode(FunctionEmitContext *ctx) const {
     // to this)...
     llvm::Value *oldFullMask = NULL;
     bool uniformEmulated = false;
-#ifdef ISPC_GENX_ENABLED
+#ifdef ISPC_XE_ENABLED
     if (ctx->emitGenXHardwareMask()) {
         // Emulate uniform to make proper continue handler
         uniformEmulated = true;
@@ -2246,7 +2246,7 @@ void ForeachUniqueStmt::EmitCode(FunctionEmitContext *ctx) const {
     // off going in to this)...
     llvm::Value *oldFullMask = NULL;
     bool emulatedUniform = false;
-#ifdef ISPC_GENX_ENABLED
+#ifdef ISPC_XE_ENABLED
     if (ctx->emitGenXHardwareMask()) {
         // Emulating uniform behavior for proper continue handling
         emulatedUniform = true;
@@ -2626,7 +2626,7 @@ void SwitchStmt::EmitCode(FunctionEmitContext *ctx) const {
 
     bool isUniformCF = (type->IsUniformType() && lHasVaryingBreakOrContinue(stmts) == false);
     bool emulateUniform = false;
-#ifdef ISPC_GENX_ENABLED
+#ifdef ISPC_XE_ENABLED
     if (ctx->emitGenXHardwareMask()) {
         if (isUniformCF && ctx->inGenXSimdCF()) {
             // Broadcast value to work with EM. We are doing
@@ -2726,7 +2726,7 @@ void UnmaskedStmt::EmitCode(FunctionEmitContext *ctx) const {
     if (!ctx->emitGenXHardwareMask()) {
         stmts->EmitCode(ctx);
     } else {
-#ifdef ISPC_GENX_ENABLED
+#ifdef ISPC_XE_ENABLED
         // For gen we insert special intrinsics at the beginning and end of unmasked region.
         // Correct execution mask will be set in CMSIMDCFLowering
         llvm::Value *oldInternalMask = ctx->GenXStartUnmaskedRegion();
@@ -2825,7 +2825,7 @@ void GotoStmt::EmitCode(FunctionEmitContext *ctx) const {
     if (!ctx->GetCurrentBasicBlock())
         return;
 
-#ifdef ISPC_GENX_ENABLED
+#ifdef ISPC_XE_ENABLED
     if ((ctx->emitGenXHardwareMask() && ctx->inGenXSimdCF()) || ctx->VaryingCFDepth() > 0) {
 #else
     if (ctx->VaryingCFDepth() > 0) {
@@ -3051,11 +3051,11 @@ static ExprWithType lProcessPrintArgType(Expr *expr) {
 static llvm::Function *getPrintImplFunc() {
     llvm::Function *printImplFunc = nullptr;
     switch (g->target->getISA()) {
-#ifdef ISPC_GENX_ENABLED
+#ifdef ISPC_XE_ENABLED
     case Target::GENX:
         printImplFunc = m->module->getFunction("__do_print_lz");
         break;
-#endif /* ISPC_GENX_ENABLED */
+#endif /* ISPC_XE_ENABLED */
     default:
         printImplFunc = m->module->getFunction("__do_print");
         break;
@@ -3063,7 +3063,7 @@ static llvm::Function *getPrintImplFunc() {
     return printImplFunc;
 }
 
-#ifdef ISPC_GENX_ENABLED
+#ifdef ISPC_XE_ENABLED
 // Builds args for OCL printf function based on ISPC print args.
 class PrintArgsBuilder {
     // properly dereferenced and size extended value expressions
@@ -3410,7 +3410,7 @@ void PrintStmt::emitCode4LZ(FunctionEmitContext *ctx) const {
         emitCode4LZPrintSlice(printSlice, formatBuilder, ctx, pos);
 }
 
-#endif // ISPC_GENX_ENABLED
+#endif // ISPC_XE_ENABLED
 
 /** Given an Expr for a value to be printed, emit the code to evaluate the
     expression and store the result to alloca's memory.  Update the
@@ -3504,12 +3504,12 @@ void PrintStmt::EmitCode(FunctionEmitContext *ctx) const {
     if (!ctx->GetCurrentBasicBlock())
         return;
     ctx->SetDebugPos(pos);
-#ifdef ISPC_GENX_ENABLED
+#ifdef ISPC_XE_ENABLED
     if (g->target->isGenXTarget()) {
         emitCode4LZ(ctx);
         return;
     }
-#endif /* ISPC_GENX_ENABLED */
+#endif /* ISPC_XE_ENABLED */
     auto printImplArgs = getDoPrintArgs(ctx);
     Assert(!printImplArgs.empty() && "Haven't managed to produce __do_print args");
     auto printImplFunc = getPrintImplFunc();
@@ -3554,7 +3554,7 @@ void AssertStmt::EmitAssertCode(FunctionEmitContext *ctx, const Type *type) cons
         return;
     }
     args.push_back(exprValue);
-#ifdef ISPC_GENX_ENABLED
+#ifdef ISPC_XE_ENABLED
     if (ctx->emitGenXHardwareMask())
         // This will create mask according to current EM on SIMD CF Lowering.
         // The result will be like       mask = select (EM, AllOn, AllFalse)

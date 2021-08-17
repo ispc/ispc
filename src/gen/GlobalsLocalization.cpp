@@ -35,7 +35,7 @@
     @brief Localize global variables used in kernels
 */
 
-#ifdef ISPC_GENX_ENABLED
+#ifdef ISPC_XE_ENABLED
 #define DEBUG_TYPE "localize_globals"
 
 #include "GlobalsLocalization.h"

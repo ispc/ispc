@@ -53,7 +53,7 @@
 #include <llvm/IR/Metadata.h>
 #include <llvm/IR/Module.h>
 
-#ifdef ISPC_GENX_ENABLED
+#ifdef ISPC_XE_ENABLED
 #include <llvm/GenXIntrinsics/GenXIntrinsics.h>
 #endif
 
@@ -272,7 +272,7 @@ FunctionEmitContext::FunctionEmitContext(Function *func, Symbol *funSym, llvm::F
         returnValuePtr = AllocaInst(returnType, "return_value_memory");
     }
 
-#ifdef ISPC_GENX_ENABLED
+#ifdef ISPC_XE_ENABLED
     if (emitGenXHardwareMask()) {
         /* Create return point for GenX */
         returnPoint = llvm::BasicBlock::Create(*g->ctx, "return_point", llvmFunction, 0);
@@ -908,7 +908,7 @@ void FunctionEmitContext::EmitDefaultLabel(bool checkMask, SourcePos pos) {
     // should have been provided in the previous call to SwitchInst().
     AssertPos(currentPos, defaultBlock != NULL);
 
-#ifdef ISPC_GENX_ENABLED
+#ifdef ISPC_XE_ENABLED
     llvm::BasicBlock *bbDefaultImpl = NULL;
     if (emitGenXHardwareMask()) {
         // Create basic block with actual default implementation
@@ -920,7 +920,7 @@ void FunctionEmitContext::EmitDefaultLabel(bool checkMask, SourcePos pos) {
         // The previous case in the switch fell through, or we're in a
         // varying switch; terminate the current block with a jump to the
         // block for the code for the default label.
-#ifdef ISPC_GENX_ENABLED
+#ifdef ISPC_XE_ENABLED
         if (emitGenXHardwareMask() && !inGenXSimdCF()) {
             // Skip check, branch directly to implementation
             BranchInst(bbDefaultImpl);
@@ -930,7 +930,7 @@ void FunctionEmitContext::EmitDefaultLabel(bool checkMask, SourcePos pos) {
     }
     SetCurrentBasicBlock(defaultBlock);
 
-#ifdef ISPC_GENX_ENABLED
+#ifdef ISPC_XE_ENABLED
     if (switchConditionWasUniform && emitGenXHardwareMask()) {
         // Find next basic block after default
         auto iter = nextBlocks->find(defaultBlock);
@@ -1034,7 +1034,7 @@ void FunctionEmitContext::EmitCaseLabel(int value, bool checkMask, SourcePos pos
         }
     AssertPos(currentPos, bbCase != NULL);
 
-#ifdef ISPC_GENX_ENABLED
+#ifdef ISPC_XE_ENABLED
     llvm::BasicBlock *bbCaseImpl = NULL;
     if (emitGenXHardwareMask()) {
         // Create basic block with actual case implementation
@@ -1044,7 +1044,7 @@ void FunctionEmitContext::EmitCaseLabel(int value, bool checkMask, SourcePos pos
 
     if (bblock != NULL) {
         // fall through from the previous case
-#ifdef ISPC_GENX_ENABLED
+#ifdef ISPC_XE_ENABLED
         if (emitGenXHardwareMask() && llvm::isa<llvm::VectorType>(switchExpr->getType())) {
             // EM will be restored after this branch.
             // We need to skip case check for lanes that are
@@ -1061,7 +1061,7 @@ void FunctionEmitContext::EmitCaseLabel(int value, bool checkMask, SourcePos pos
     }
     SetCurrentBasicBlock(bbCase);
 
-#ifdef ISPC_GENX_ENABLED
+#ifdef ISPC_XE_ENABLED
     if (switchConditionWasUniform && emitGenXHardwareMask()) {
         // Find the next basic block after this case
         std::map<llvm::BasicBlock *, llvm::BasicBlock *>::const_iterator iter;
@@ -2542,7 +2542,7 @@ llvm::Value *FunctionEmitContext::gather(llvm::Value *ptr, const PointerType *pt
 
     llvm::Function *gatherFunc = m->module->getFunction(funcName);
     AssertPos(currentPos, gatherFunc != NULL);
-#ifdef ISPC_GENX_ENABLED
+#ifdef ISPC_XE_ENABLED
     if (emitGenXHardwareMask()) {
         // Predicate ISPC mask with gen execution mask so
         // after CMSimdCFLoweringPass pseudo_gather will have correct masked value.
@@ -2818,7 +2818,7 @@ void FunctionEmitContext::maskedStore(llvm::Value *value, llvm::Value *ptr, cons
     }
     AssertPos(currentPos, maskedStoreFunc != NULL);
 
-#ifdef ISPC_GENX_ENABLED
+#ifdef ISPC_XE_ENABLED
     if (emitGenXHardwareMask()) {
         mask = GenXSimdCFPredicate(mask);
     }
@@ -2932,7 +2932,7 @@ void FunctionEmitContext::scatter(llvm::Value *value, llvm::Value *ptr, const Ty
     AssertPos(currentPos, scatterFunc != NULL);
 
     AddInstrumentationPoint("scatter");
-#ifdef ISPC_GENX_ENABLED
+#ifdef ISPC_XE_ENABLED
     if (emitGenXHardwareMask()) {
         // Predicate ISPC mask with gen execution mask so
         // after CMSimdCFLoweringPass pseudo_scatter will have correct masked value.
@@ -2976,7 +2976,7 @@ void FunctionEmitContext::StoreInst(llvm::Value *value, llvm::Value *ptr, const 
         inst->setAlignment(llvm::MaybeAlign(g->target->getNativeVectorAlignment()).valueOrOne());
     }
 
-#ifdef ISPC_GENX_ENABLED
+#ifdef ISPC_XE_ENABLED
     // For uniform data like short vectors we need to add ISPC-Uniform metadata
     // to exclude these instructions from predication in SIMDCFLowering pass.
     llvm::VectorType *ty = llvm::dyn_cast<llvm::VectorType>(value->getType());
@@ -3080,7 +3080,7 @@ void FunctionEmitContext::MemcpyInst(llvm::Value *dest, llvm::Value *src, llvm::
     args.push_back(src);
     args.push_back(count);
     args.push_back(LLVMFalse); /* not volatile */
-#ifdef ISPC_GENX_ENABLED
+#ifdef ISPC_XE_ENABLED
     llvm::Value *callinst = CallInst(mcFunc, NULL, args, "");
     if (emitGenXHardwareMask()) {
         GenXUniformMetadata(callinst);
@@ -3133,7 +3133,7 @@ llvm::Instruction *FunctionEmitContext::BranchInst(llvm::BasicBlock *trueBlock, 
         AssertPos(currentPos, m->errorCount > 0);
         return b;
     }
-#ifdef ISPC_GENX_ENABLED
+#ifdef ISPC_XE_ENABLED
     if (emitGenXHardwareMask())
         test = GenXPrepareVectorBranch(test);
 #endif
@@ -3312,7 +3312,7 @@ llvm::Value *FunctionEmitContext::CallInst(llvm::Value *func, const FunctionType
     if (argVals.size() + 1 == calleeArgCount) {
         llvm::Value *mask = NULL;
 
-#ifdef ISPC_GENX_ENABLED
+#ifdef ISPC_XE_ENABLED
         if (emitGenXHardwareMask())
             // This will create mask according to current EM on SIMD CF Lowering.
             // The result will be like       mask = select (EM, AllOn, AllFalse)
@@ -3410,7 +3410,7 @@ llvm::Value *FunctionEmitContext::CallInst(llvm::Value *func, const FunctionType
         llvm::Value *oldFullMask = NULL;
         llvm::Value *maskPtr = AllocaInst(LLVMTypes::MaskType);
         if (emitGenXHardwareMask()) {
-#ifdef ISPC_GENX_ENABLED
+#ifdef ISPC_XE_ENABLED
             // Current mask will be calculated according to EM mask
             oldFullMask = GenXSimdCFPredicate(LLVMMaskAllOn);
             StoreInst(oldFullMask, maskPtr, NULL, true);
@@ -3555,7 +3555,7 @@ llvm::Instruction *FunctionEmitContext::ReturnInst() {
         // Add a sync call at the end of any function that launched tasks
         SyncInst();
 
-#ifdef ISPC_GENX_ENABLED
+#ifdef ISPC_XE_ENABLED
     if (emitGenXHardwareMask()) {
         // Branch to return point. It will turn off lanes
         // in varying CF. For uniform CF it will be considered
@@ -3751,7 +3751,7 @@ CFInfo *FunctionEmitContext::popCFState() {
     return ci;
 }
 
-#ifdef ISPC_GENX_ENABLED
+#ifdef ISPC_XE_ENABLED
 bool FunctionEmitContext::inGenXSimdCF() const {
     // Go backwards through controlFlowInfo, since we add new nested scopes
     // to the back.
@@ -3868,7 +3868,7 @@ llvm::Constant *FunctionEmitContext::GenXGetOrCreateConstantString(llvm::StringR
 
 bool FunctionEmitContext::emitGenXHardwareMask() {
     bool emitGenXHardwareMask = g->target->isGenXTarget();
-#ifdef ISPC_GENX_ENABLED
+#ifdef ISPC_XE_ENABLED
     emitGenXHardwareMask &= g->opt.emitGenXHardwareMask;
 #endif
     return emitGenXHardwareMask;

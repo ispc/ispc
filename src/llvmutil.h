@@ -343,7 +343,7 @@ extern llvm::Value *LLVMConcatVectors(llvm::Value *v1, llvm::Value *v2, llvm::In
 extern llvm::Value *LLVMShuffleVectors(llvm::Value *v1, llvm::Value *v2, int32_t shuf[], int shufSize,
                                        llvm::Instruction *insertBefore);
 
-#ifdef ISPC_GENX_ENABLED
+#ifdef ISPC_XE_ENABLED
 /** This is utility function to determine memory in which pointer was created.
     For now we use only 3 values:
     Global is used for pointers passed to kernel externally

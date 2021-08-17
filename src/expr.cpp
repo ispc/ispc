@@ -8027,7 +8027,7 @@ llvm::Value *SymbolExpr::GetValue(FunctionEmitContext *ctx) const {
     ctx->SetDebugPos(pos);
 
     std::string loadName = symbol->name + std::string("_load");
-#ifdef ISPC_GENX_ENABLED
+#ifdef ISPC_XE_ENABLED
     // TODO: this is a temporary workaround and will be changed as part
     // of SPIR-V emitting solution
     if (ctx->emitGenXHardwareMask() && symbol->name == "__mask") {

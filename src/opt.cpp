@@ -107,7 +107,7 @@
 #include <llvm/Support/FileSystem.h>
 #include <llvm/Support/Regex.h>
 #endif
-#ifdef ISPC_GENX_ENABLED
+#ifdef ISPC_XE_ENABLED
 #include "gen/GlobalsLocalization.h"
 #include <LLVMSPIRVLib/LLVMSPIRVLib.h>
 #include <llvm/GenXIntrinsics/GenXIntrOpts.h>
@@ -140,7 +140,7 @@ static llvm::Pass *CreateDebugPassFile(int number, llvm::StringRef name);
 
 static llvm::Pass *CreateReplaceStdlibShiftPass();
 
-#ifdef ISPC_GENX_ENABLED
+#ifdef ISPC_XE_ENABLED
 static llvm::Pass *CreateGenXGatherCoalescingPass();
 static llvm::Pass *CreateReplaceLLVMIntrinsics();
 static llvm::Pass *CreateFixAddressSpace();
@@ -497,7 +497,7 @@ void ispc::Optimize(llvm::Module *module, int optLevel) {
         // run absolutely no optimizations, since the front-end needs us to
         // take the various __pseudo_* functions it has emitted and turn
         // them into something that can actually execute.
-#ifdef ISPC_GENX_ENABLED
+#ifdef ISPC_XE_ENABLED
         if (g->target->isGenXTarget()) {
             // Global DCE is required for ISPCSimdCFLoweringPass
             optPM.add(llvm::createGlobalDCEPass());
@@ -517,7 +517,7 @@ void ispc::Optimize(llvm::Module *module, int optLevel) {
         optPM.add(CreateIntrinsicsOptPass(), 102);
         optPM.add(CreateIsCompileTimeConstantPass(true));
         optPM.add(llvm::createFunctionInliningPass());
-#ifdef ISPC_GENX_ENABLED
+#ifdef ISPC_XE_ENABLED
         if (g->target->isGenXTarget()) {
             optPM.add(CreateFixAddressSpace());
         }
@@ -528,7 +528,7 @@ void ispc::Optimize(llvm::Module *module, int optLevel) {
 #else
         optPM.add(llvm::createCFGSimplificationPass());
 #endif
-#ifdef ISPC_GENX_ENABLED
+#ifdef ISPC_XE_ENABLED
         if (g->target->isGenXTarget()) {
             optPM.add(llvm::createPromoteMemoryToRegisterPass());
             optPM.add(llvm::createGlobalsLocalizationPass());
@@ -558,7 +558,7 @@ void ispc::Optimize(llvm::Module *module, int optLevel) {
 
         optPM.add(llvm::createGlobalDCEPass(), 184);
 
-#ifdef ISPC_GENX_ENABLED
+#ifdef ISPC_XE_ENABLED
         if (g->target->isGenXTarget()) {
             // FIXME: temporary solution
             optPM.add(llvm::createBreakCriticalEdgesPass());
@@ -671,7 +671,7 @@ void ispc::Optimize(llvm::Module *module, int optLevel) {
         optPM.add(llvm::createSROAPass());
 
         optPM.add(llvm::createInstructionCombiningPass());
-#ifdef ISPC_GENX_ENABLED
+#ifdef ISPC_XE_ENABLED
         if (g->target->isGenXTarget()) {
             // Inline
             optPM.add(llvm::createCorrelatedValuePropagationPass());
@@ -694,7 +694,7 @@ void ispc::Optimize(llvm::Module *module, int optLevel) {
 
         if (g->opt.disableGatherScatterOptimizations == false && g->target->getVectorWidth() > 1) {
             optPM.add(llvm::createInstructionCombiningPass(), 255);
-#ifdef ISPC_GENX_ENABLED
+#ifdef ISPC_XE_ENABLED
             if (g->target->isGenXTarget() && !g->opt.disableGenXGatherCoalescing)
                 optPM.add(CreateGenXGatherCoalescingPass());
 #endif
@@ -786,7 +786,7 @@ void ispc::Optimize(llvm::Module *module, int optLevel) {
 #endif
         optPM.add(llvm::createInstructionCombiningPass());
         optPM.add(CreateInstructionSimplifyPass());
-#ifdef ISPC_GENX_ENABLED
+#ifdef ISPC_XE_ENABLED
         if (g->target->isGenXTarget()) {
             optPM.add(CreateReplaceLLVMIntrinsics());
         }
@@ -795,7 +795,7 @@ void ispc::Optimize(llvm::Module *module, int optLevel) {
         optPM.add(llvm::createFunctionInliningPass());
         optPM.add(llvm::createAggressiveDCEPass());
         optPM.add(llvm::createStripDeadPrototypesPass());
-#ifdef ISPC_GENX_ENABLED
+#ifdef ISPC_XE_ENABLED
         if (g->target->isGenXTarget()) {
             optPM.add(CreateFixAddressSpace());
         }
@@ -803,7 +803,7 @@ void ispc::Optimize(llvm::Module *module, int optLevel) {
         optPM.add(CreateMakeInternalFuncsStaticPass());
         optPM.add(llvm::createGlobalDCEPass());
         optPM.add(llvm::createConstantMergePass());
-#ifdef ISPC_GENX_ENABLED
+#ifdef ISPC_XE_ENABLED
         if (g->target->isGenXTarget()) {
             optPM.add(CreateCheckUnsupportedInsts());
             optPM.add(CreateMangleOpenCLBuiltins());
@@ -2904,7 +2904,7 @@ static bool lGSToLoadStore(llvm::CallInst *callInst) {
                 lCopyMetadata(ptr, callInst);
                 Debug(pos, "Transformed gather to unaligned vector load!");
                 bool doBlendLoad = false;
-#ifdef ISPC_GENX_ENABLED
+#ifdef ISPC_XE_ENABLED
                 doBlendLoad = g->target->isGenXTarget() && g->opt.enableGenXUnsafeMaskedLoad;
 #endif
                 llvm::Instruction *newCall =
@@ -2930,7 +2930,7 @@ static bool lGSToLoadStore(llvm::CallInst *callInst) {
 ///////////////////////////////////////////////////////////////////////////
 // MaskedStoreOptPass
 
-#ifdef ISPC_GENX_ENABLED
+#ifdef ISPC_XE_ENABLED
 static llvm::Function *lGenXMaskedInt8Inst(llvm::Instruction *inst, bool isStore) {
     std::string maskedFuncName;
     if (isStore) {
@@ -3078,7 +3078,7 @@ static bool lImproveMaskedStore(llvm::CallInst *callInst) {
         // The mask is all on, so turn this into a regular store
         llvm::Type *rvalueType = rvalue->getType();
         llvm::Instruction *store = NULL;
-#ifdef ISPC_GENX_ENABLED
+#ifdef ISPC_XE_ENABLED
         // InternalLinkage check is to prevent generation of SVM store when the pointer came from caller.
         // Since it can be allocated in a caller, it may be allocated on register. Possible svm store
         // is resolved after inlining. TODO: problems can be met here in case of Stack Calls.
@@ -3103,7 +3103,7 @@ static bool lImproveMaskedStore(llvm::CallInst *callInst) {
             llvm::ReplaceInstWithInst(callInst, store);
             return true;
         }
-#ifdef ISPC_GENX_ENABLED
+#ifdef ISPC_XE_ENABLED
     } else {
         if (g->target->isGenXTarget() && GetAddressSpace(lvalue) == AddressSpace::ispc_global) {
             // In thuis case we use masked_store which on genx target causes scatter usage.
@@ -3179,7 +3179,7 @@ static bool lImproveMaskedLoad(llvm::CallInst *callInst, llvm::BasicBlock::itera
     } else if (maskStatus == MaskStatus::all_on) {
         // The mask is all on, so turn this into a regular load
         llvm::Instruction *load = NULL;
-#ifdef ISPC_GENX_ENABLED
+#ifdef ISPC_XE_ENABLED
         // InternalLinkage check is to prevent generation of SVM load when the pointer came from caller.
         // Since it can be allocated in a caller, it may be allocated on register. Possible svm load
         // is resolved after inlining. TODO: problems can be met here in case of Stack Calls.
@@ -4957,7 +4957,7 @@ bool MakeInternalFuncsStaticPass::runOnModule(llvm::Module &module) {
         "__prefetch_read_varying_3",
         "__prefetch_read_varying_nt",
         "__keep_funcs_live",
-#ifdef ISPC_GENX_ENABLED
+#ifdef ISPC_XE_ENABLED
         "__masked_load_blend_i8",
         "__masked_load_blend_i16",
         "__masked_load_blend_i32",
@@ -5381,7 +5381,7 @@ bool ReplaceStdlibShiftPass::runOnFunction(llvm::Function &F) {
 
 static llvm::Pass *CreateReplaceStdlibShiftPass() { return new ReplaceStdlibShiftPass(); }
 
-#ifdef ISPC_GENX_ENABLED
+#ifdef ISPC_XE_ENABLED
 
 ///////////////////////////////////////////////////////////////////////////
 // GenXGatherCoalescingPass

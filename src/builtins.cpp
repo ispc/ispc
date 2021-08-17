@@ -61,7 +61,7 @@
 #include <llvm/Support/MemoryBuffer.h>
 #include <llvm/Target/TargetMachine.h>
 
-#ifdef ISPC_GENX_ENABLED
+#ifdef ISPC_XE_ENABLED
 #include <llvm/GenXIntrinsics/GenXIntrinsics.h>
 #endif
 
@@ -307,7 +307,7 @@ static void lAddModuleSymbols(llvm::Module *module, SymbolTable *symbolTable) {
 }
 
 static void lUpdateIntrinsicsAttributes(llvm::Module *module) {
-#ifdef ISPC_GENX_ENABLED
+#ifdef ISPC_XE_ENABLED
     for (auto F = module->begin(), E = module->end(); F != E; ++F) {
         llvm::Function *Fn = &*F;
 
@@ -486,12 +486,12 @@ static void lSetInternalFunctions(llvm::Module *module) {
         "__do_assert_uniform",
         "__do_assert_varying",
         "__do_print",
-#ifdef ISPC_GENX_ENABLED
+#ifdef ISPC_XE_ENABLED
         "__do_print_cm",
         "__do_print_lz",
         "__do_print_cm_str",
         "__send_eot",
-#endif //ISPC_GENX_ENABLED
+#endif //ISPC_XE_ENABLED
         "__doublebits_uniform_int64",
         "__doublebits_varying_int64",
         "__exclusive_scan_add_double",
@@ -909,7 +909,7 @@ static void lSetInternalFunctions(llvm::Module *module) {
         "ISPCAlloc",
         "ISPCLaunch",
         "ISPCSync",
-// ISPC_GENX_ENABLED
+// ISPC_XE_ENABLED
         "__task_index0",
         "__task_index1",
         "__task_index2",
@@ -932,9 +932,9 @@ static void lSetInternalFunctions(llvm::Module *module) {
 
 static void lSetAlwaysInlineFunctions(llvm::Module *module) {
     std::vector<const char *> names = {
-#ifdef ISPC_GENX_ENABLED
+#ifdef ISPC_XE_ENABLED
         "__do_print_cm", "__do_print_lz"
-#endif /* ISPC_GENX_ENABLED */
+#endif /* ISPC_XE_ENABLED */
     };
     for (auto name : names) {
         llvm::Function *f = module->getFunction(name);
