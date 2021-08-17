@@ -47,7 +47,7 @@
 #include <llvm/IR/Instructions.h>
 #include <llvm/IR/Module.h>
 
-#ifdef ISPC_GENX_ENABLED
+#ifdef ISPC_XE_ENABLED
 #include <llvm/GenXIntrinsics/GenXIntrinsics.h>
 #endif
 
@@ -1631,7 +1631,7 @@ llvm::Value *LLVMShuffleVectors(llvm::Value *v1, llvm::Value *v2, int32_t shuf[]
     return new llvm::ShuffleVectorInst(v1, v2, vec, "shuffle", insertBefore);
 }
 
-#ifdef ISPC_GENX_ENABLED
+#ifdef ISPC_XE_ENABLED
 bool lIsSVMLoad(llvm::Instruction *inst) {
     Assert(inst);
 

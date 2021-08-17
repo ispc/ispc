@@ -186,13 +186,13 @@ class Target {
 #ifdef ISPC_WASM_ENABLED
         WASM,
 #endif
-#ifdef ISPC_GENX_ENABLED
+#ifdef ISPC_XE_ENABLED
         GENX,
 #endif
         NUM_ISAS
     };
 
-#ifdef ISPC_GENX_ENABLED
+#ifdef ISPC_XE_ENABLED
     enum GENX_PLATFORM {
         GENX_GEN9,
         GENX_TGLLP,
@@ -260,14 +260,14 @@ class Target {
     ISA getISA() const { return m_isa; }
 
     bool isGenXTarget() {
-#ifdef ISPC_GENX_ENABLED
+#ifdef ISPC_XE_ENABLED
         return m_isa == Target::GENX;
 #else
         return false;
 #endif
     }
 
-#ifdef ISPC_GENX_ENABLED
+#ifdef ISPC_XE_ENABLED
     GENX_PLATFORM getGenxPlatform() const;
     uint32_t getGenxGrfSize() const;
     bool hasGenxPrefetch() const;
@@ -542,7 +542,7 @@ struct Opt {
         Affects only >= 512 bit wide targets and only if avx512vl is available */
     bool disableZMM;
 
-#ifdef ISPC_GENX_ENABLED
+#ifdef ISPC_XE_ENABLED
     /** Disables optimization that coalesce gathers on GenX. This is
         likely only useful for measuring the impact of this optimization */
     bool disableGenXGatherCoalescing;
@@ -658,7 +658,7 @@ struct Globals {
         manual.) */
     bool emitInstrumentation;
 
-#ifdef ISPC_GENX_ENABLED
+#ifdef ISPC_XE_ENABLED
     /** Arguments to pass to Vector Compiler backend for offline
     compilation to L0 binary */
     std::string vcOpts;

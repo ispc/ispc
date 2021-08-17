@@ -65,7 +65,7 @@
 #include <llvm/Target/TargetOptions.h>
 #include <llvm/Transforms/IPO.h>
 
-#ifdef ISPC_GENX_ENABLED
+#ifdef ISPC_XE_ENABLED
 #include <llvm/GenXIntrinsics/GenXMetadata.h>
 #endif
 
@@ -433,7 +433,7 @@ void Function::emitCode(FunctionEmitContext *ctx, llvm::Function *function, Sour
         // return instruction.  Need to add a return instruction.
         ctx->ReturnInst();
     }
-#ifdef ISPC_GENX_ENABLED
+#ifdef ISPC_XE_ENABLED
     if (type->IsISPCKernel()) {
         // Emit metadata for GENX kernel
 

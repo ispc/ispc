@@ -305,7 +305,7 @@ typedef enum {
     CPU_AppleA14,
 #endif
 #endif
-#ifdef ISPC_GENX_ENABLED
+#ifdef ISPC_XE_ENABLED
     CPU_GENX,
     CPU_GENX_TGLLP,
 #endif
@@ -356,7 +356,7 @@ std::map<CPUtype, std::set<std::string>> CPUFeatures = {
     {CPU_AppleA14, {}},
 #endif
 #endif
-#ifdef ISPC_GENX_ENABLED
+#ifdef ISPC_XE_ENABLED
     {CPU_GENX, {}},
     {CPU_GENX_TGLLP, {}}
 #endif
@@ -451,7 +451,7 @@ class AllCPUs {
 #endif
 #endif
 
-#ifdef ISPC_GENX_ENABLED
+#ifdef ISPC_XE_ENABLED
         names[CPU_GENX].push_back("SKL");
         names[CPU_GENX_TGLLP].push_back("TGLLP");
         names[CPU_GENX_TGLLP].push_back("DG1");
@@ -517,7 +517,7 @@ class AllCPUs {
 #endif
 #endif
 
-#ifdef ISPC_GENX_ENABLED
+#ifdef ISPC_XE_ENABLED
         compat[CPU_GENX] = Set(CPU_GENX, CPU_None);
         compat[CPU_GENX_TGLLP] = Set(CPU_GENX_TGLLP, CPU_GENX, CPU_None);
 #endif
@@ -618,7 +618,7 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, bool pic, boo
             break;
 #endif
 
-#ifdef ISPC_GENX_ENABLED
+#ifdef ISPC_XE_ENABLED
         case CPU_GENX:
             m_ispc_target = ISPCTarget::genx_x16;
             break;
@@ -692,7 +692,7 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, bool pic, boo
 #endif
         } else
 #endif
-#if ISPC_GENX_ENABLED
+#if ISPC_XE_ENABLED
             if (ISPCTargetIsGen(m_ispc_target)) {
             arch = Arch::genx64;
         } else
@@ -738,7 +738,7 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, bool pic, boo
               target_string.c_str());
         return;
     }
-#ifdef ISPC_GENX_ENABLED
+#ifdef ISPC_XE_ENABLED
     if ((ISPCTargetIsGen(m_ispc_target)) && (CPUID == CPU_GENX_TGLLP)) {
         m_hasFp64Support = false;
     }
@@ -1130,7 +1130,7 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, bool pic, boo
         unsupported_target = true;
         break;
 #endif
-#ifdef ISPC_GENX_ENABLED
+#ifdef ISPC_XE_ENABLED
     case ISPCTarget::genx_x8:
         this->m_isa = Target::GENX;
         this->m_nativeVectorWidth = 8;
@@ -1407,7 +1407,7 @@ std::string Target::GetTripleString() const {
             Error(SourcePos(), "Unknown arch.");
             exit(1);
         }
-#ifdef ISPC_GENX_ENABLED
+#ifdef ISPC_XE_ENABLED
         if (m_arch == Arch::genx32 || m_arch == Arch::genx64) {
             //"spir64-unknown-unknown"
             triple.setVendor(llvm::Triple::VendorType::UnknownVendor);
@@ -1438,7 +1438,7 @@ std::string Target::GetTripleString() const {
             Error(SourcePos(), "Unknown arch.");
             exit(1);
         }
-#ifdef ISPC_GENX_ENABLED
+#ifdef ISPC_XE_ENABLED
         if (m_arch == Arch::genx32 || m_arch == Arch::genx64) {
             //"spir64-unknown-unknown"
             triple.setVendor(llvm::Triple::VendorType::UnknownVendor);
@@ -1568,7 +1568,7 @@ const char *Target::ISAToString(ISA isa) {
         return "avx512knl";
     case Target::SKX_AVX512:
         return "avx512skx";
-#ifdef ISPC_GENX_ENABLED
+#ifdef ISPC_XE_ENABLED
     case Target::GENX:
         return "genx";
 #endif
@@ -1593,7 +1593,7 @@ const char *Target::ISAToTargetString(ISA isa) {
     case Target::WASM:
         return "wasm-i32x4";
 #endif
-#ifdef ISPC_GENX_ENABLED
+#ifdef ISPC_XE_ENABLED
     case Target::GENX:
         return "genx-x16";
 #endif
@@ -1706,7 +1706,7 @@ void Target::markFuncWithCallingConv(llvm::Function *func) {
     }
 }
 
-#ifdef ISPC_GENX_ENABLED
+#ifdef ISPC_XE_ENABLED
 Target::GENX_PLATFORM Target::getGenxPlatform() const {
     AllCPUs a;
     switch (a.GetTypeFromName(m_cpu)) {
@@ -1766,7 +1766,7 @@ Opt::Opt() {
     disableUniformMemoryOptimizations = false;
     disableCoalescing = false;
     disableZMM = false;
-#ifdef ISPC_GENX_ENABLED
+#ifdef ISPC_XE_ENABLED
     disableGenXGatherCoalescing = false;
     enableForeachInsideVarying = false;
     emitGenXHardwareMask = false;

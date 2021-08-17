@@ -90,12 +90,12 @@
 #include <llvm/Transforms/IPO.h>
 #include <llvm/Transforms/Utils/ValueMapper.h>
 
-#ifdef ISPC_GENX_ENABLED
+#ifdef ISPC_XE_ENABLED
 #include <llvm/GenXIntrinsics/GenXIntrinsics.h>
 #endif
 #include <llvm/Target/TargetIntrinsicInfo.h>
 
-#ifdef ISPC_GENX_ENABLED
+#ifdef ISPC_XE_ENABLED
 #include <LLVMSPIRVLib/LLVMSPIRVLib.h>
 #include <fstream>
 #if defined(_WIN64)
@@ -318,7 +318,7 @@ Symbol *Module::AddLLVMIntrinsicDecl(const std::string &name, ExprList *args, So
     }
 
     llvm::Function *funcDecl = nullptr;
-#ifdef ISPC_GENX_ENABLED
+#ifdef ISPC_XE_ENABLED
     if (g->target->isGenXTarget()) {
         llvm::GenXIntrinsic::ID ID = llvm::GenXIntrinsic::lookupGenXIntrinsicID(name);
         if (ID == llvm::GenXIntrinsic::not_any_intrinsic) {
@@ -653,7 +653,7 @@ static void lCheckExportedParameterTypes(const Type *type, const std::string &na
     }
 }
 
-#ifdef ISPC_GENX_ENABLED
+#ifdef ISPC_XE_ENABLED
 // For gen target we have the same limitations in input parameters as for "export" functions
 static void lCheckTaskParameterTypes(const Type *type, const std::string &name, SourcePos pos) {
     if (lRecursiveCheckValidParamType(type, false, false, name, pos) == false) {
@@ -918,7 +918,7 @@ void Module::AddFunctionDeclaration(const std::string &name, const FunctionType 
         // JCB nomosoa - Varying is now a-ok.
         if (functionType->isExported)
             lCheckExportedParameterTypes(argType, argName, argPos);
-#ifdef ISPC_GENX_ENABLED
+#ifdef ISPC_XE_ENABLED
         if (functionType->IsISPCKernel())
             lCheckTaskParameterTypes(argType, argName, argPos);
 #endif
@@ -1058,7 +1058,7 @@ bool Module::writeOutput(OutputType outputType, OutputFlags flags, const char *o
                 if (strcasecmp(suffix, "o") && strcasecmp(suffix, "obj"))
                     fileType = "object";
                 break;
-#ifdef ISPC_GENX_ENABLED
+#ifdef ISPC_XE_ENABLED
             case ZEBIN:
                 if (strcasecmp(suffix, "bin"))
                     fileType = "L0 binary";
@@ -1108,7 +1108,7 @@ bool Module::writeOutput(OutputType outputType, OutputFlags flags, const char *o
         return writeDevStub(outFileName);
     else if ((outputType == Bitcode) || (outputType == BitcodeText))
         return writeBitcode(module, outFileName, outputType);
-#ifdef ISPC_GENX_ENABLED
+#ifdef ISPC_XE_ENABLED
     else if (outputType == SPIRV)
         return writeSPIRV(module, outFileName);
     else if (outputType == ZEBIN)
@@ -1147,7 +1147,7 @@ bool Module::writeBitcode(llvm::Module *module, const char *outFileName, OutputT
     return true;
 }
 
-#ifdef ISPC_GENX_ENABLED
+#ifdef ISPC_XE_ENABLED
 bool Module::translateToSPIRV(llvm::Module *module, std::stringstream &ss) {
     std::string err;
     SPIRV::TranslatorOpts Opts;
@@ -1308,7 +1308,7 @@ bool Module::writeZEBin(llvm::Module *module, const char *outFileName) {
     }
     return true;
 }
-#endif // ISPC_GENX_ENABLED
+#endif // ISPC_XE_ENABLED
 
 bool Module::writeObjectFileOrAssembly(OutputType outputType, const char *outFileName) {
     llvm::TargetMachine *targetMachine = g->target->GetTargetMachine();
@@ -2792,7 +2792,7 @@ int Module::CompileAndOutput(const char *srcFile, Arch arch, const char *cpu, st
         m = new Module(srcFile);
         if (m->CompileFile() == 0) {
             llvm::TimeTraceScope TimeScope("Backend");
-#ifdef ISPC_GENX_ENABLED
+#ifdef ISPC_XE_ENABLED
             if (outputType == Asm || outputType == Object) {
                 if (g->target->isGenXTarget()) {
                     Error(SourcePos(), "%s output is not supported yet for \"genx-*\" targets. ",
