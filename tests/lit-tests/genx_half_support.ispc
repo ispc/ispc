@@ -3,7 +3,7 @@
 // RUN: %{ispc} %s --target=genx-x8 --arch=genx64 -DUNIFORM --emit-llvm-text --nowrap -o %t.ll
 // RUN: FileCheck --input-file=%t.ll -check-prefix=CHECK_GENX_8 %s
 
-// REQUIRES: GENX_ENABLED
+// REQUIRES: XE_ENABLED
 struct FVector
 {
 	float V[3];

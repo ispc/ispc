@@ -52,7 +52,7 @@ endif()
 option(X86_ENABLED "Enable x86 support" ${X86_HOST})
 option(ARM_ENABLED "Enable ARM support" ON)
 option(WASM_ENABLED "Enable experimental Web Assembly support" OFF)
-option(GENX_ENABLED "Enable GenX support" OFF)
+option(XE_ENABLED "Enable Intel Xe support" OFF)
 option(ISPC_INCLUDE_EXAMPLES "Generate build targets for the ISPC examples" ON)
 option(ISPC_INCLUDE_DPCPP_EXAMPLES "Generate build targets for the ISPC/DPCPP interoperability examples" OFF)
 option(ISPC_INCLUDE_TESTS "Generate build targets for the ISPC tests." ON)
@@ -187,7 +187,7 @@ if (ISPC_MACOS_TARGET AND ISPC_MACOS_SDK_PATH)
 endif()
 
 # If GenX target is enabled, generate build targets for genx examples and ISPCRT on Linux
-if (GENX_ENABLED)
+if (XE_ENABLED)
     option(ISPC_INCLUDE_RT "Generate build targets for ISPC runtime." ON)
     option(ISPC_INCLUDE_GENX_EXAMPLES "Generate build targets for the ISPC GenX examples" ON)
 endif()
@@ -266,7 +266,7 @@ find_package(FLEX 2.6 REQUIRED)
 
 set (ISPC_MASKS 1 8 16 32 64)
 
-if (NOT X86_ENABLED AND NOT ARM_ENABLED AND NOT WASM_ENABLED AND NOT GENX_ENABLED)
+if (NOT X86_ENABLED AND NOT ARM_ENABLED AND NOT WASM_ENABLED AND NOT XE_ENABLED)
     message( FATAL_ERROR "Either X86, ARM, WASM or GENX targets need to be enabled.")
 endif ()
 
@@ -306,7 +306,7 @@ endif()
 if (WASM_ENABLED)
     list(APPEND LLVM_COMPONENTS webassembly)
 endif()
-if (GENX_ENABLED)
+if (XE_ENABLED)
     list(APPEND ISPC_TARGETS genx-x16 genx-x8)
     if(CMAKE_SIZEOF_VOID_P EQUAL 4)
         set(TARGET_MODIFIER "32")
@@ -372,7 +372,7 @@ target_sources(${PROJECT_NAME}
         "src/lex.ll"
 )
 
-if (GENX_ENABLED)
+if (XE_ENABLED)
     target_sources(${PROJECT_NAME} PRIVATE "src/gen/GlobalsLocalization.cpp")
 endif()
 
@@ -404,7 +404,7 @@ endif()
 if (ARM_ENABLED)
     target_compile_definitions(${PROJECT_NAME} PRIVATE ISPC_ARM_ENABLED)
 endif()
-if (GENX_ENABLED)
+if (XE_ENABLED)
     target_compile_definitions(${PROJECT_NAME} PRIVATE ISPC_XE_ENABLED)
 endif()
 
@@ -513,7 +513,7 @@ target_link_libraries(${PROJECT_NAME} ${CLANG_LIBRARY_FULL_PATH_LIST})
 # Link against LLVM libraries
 target_link_libraries(${PROJECT_NAME} ${LLVM_LIBRARY_LIST} ${CMAKE_DL_LIBS})
 
-if (GENX_ENABLED)
+if (XE_ENABLED)
     # Link against GEN libraries
     foreach(genLib ${GEN_LIBRARY_LIST})
         find_library(${genLib}Path NAMES ${genLib} HINTS ${GENX_DEPS_DIR}/lib)
@@ -634,7 +634,7 @@ endif()
 # Install
 install (TARGETS ${PROJECT_NAME} DESTINATION bin)
 if (ISPC_PREPARE_PACKAGE)
-    if (GENX_ENABLED)
+    if (XE_ENABLED)
         install (DIRECTORY "${PROJECT_SOURCE_DIR}/examples/" DESTINATION examples)
     else()
         install (DIRECTORY "${PROJECT_SOURCE_DIR}/examples/" DESTINATION examples PATTERN "xpu" EXCLUDE)

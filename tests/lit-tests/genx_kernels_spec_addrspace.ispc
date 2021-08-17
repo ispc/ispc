@@ -5,7 +5,7 @@
 // RUN: %{ispc} %s --target=avx2 --emit-llvm-text --nowrap --no-discard-value-names -O0 -o %t.ll
 // RUN: FileCheck --input-file=%t.ll -check-prefix=CHECK-CPU %s
 
-// REQUIRES: GENX_ENABLED
+// REQUIRES: XE_ENABLED
 struct ISPCParams {
     int *img_buf;
     int img_size;

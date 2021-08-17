@@ -3,7 +3,7 @@
 // RUN: %{ispc} %s --target=genx-x8 --nowrap -O0 --emit-llvm-text -o - | FileCheck %s -check-prefix=CHECK-GEN
 
 // REQUIRES: X86_ENABLED
-// REQUIRES: GENX_ENABLED
+// REQUIRES: XE_ENABLED
 
 extern void goo(uniform int *uniform alloca_ptr);
 // CHECK: @foo0
