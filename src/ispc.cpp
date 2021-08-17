@@ -1707,17 +1707,17 @@ void Target::markFuncWithCallingConv(llvm::Function *func) {
 }
 
 #ifdef ISPC_XE_ENABLED
-Target::GENX_PLATFORM Target::getGenxPlatform() const {
+Target::XePlatform Target::getGenxPlatform() const {
     AllCPUs a;
     switch (a.GetTypeFromName(m_cpu)) {
     case CPU_GENX:
-        return GENX_PLATFORM::GENX_GEN9;
+        return XePlatform::GENX_GEN9;
     case CPU_GENX_TGLLP:
-        return GENX_PLATFORM::GENX_TGLLP;
+        return XePlatform::GENX_TGLLP;
     default:
-        return GENX_PLATFORM::GENX_GEN9;
+        return XePlatform::GENX_GEN9;
     }
-    return GENX_PLATFORM::GENX_GEN9;
+    return XePlatform::GENX_GEN9;
 }
 
 uint32_t Target::getGenxGrfSize() const {
