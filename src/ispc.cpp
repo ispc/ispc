@@ -620,10 +620,10 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, bool pic, boo
 
 #ifdef ISPC_XE_ENABLED
         case CPU_GENX:
-            m_ispc_target = ISPCTarget::genx_x16;
+            m_ispc_target = ISPCTarget::gen9_x16;
             break;
         case CPU_GENX_TGLLP:
-            m_ispc_target = ISPCTarget::genx_x16;
+            m_ispc_target = ISPCTarget::xelp_x16;
             break;
 #endif
 
@@ -1570,7 +1570,7 @@ const char *Target::ISAToString(ISA isa) {
         return "avx512skx";
 #ifdef ISPC_XE_ENABLED
     case Target::GENX:
-        return "genx";
+        return "gen9";
 #endif
     default:
         FATAL("Unhandled target in ISAToString()");
@@ -1595,7 +1595,7 @@ const char *Target::ISAToTargetString(ISA isa) {
 #endif
 #ifdef ISPC_XE_ENABLED
     case Target::GENX:
-        return "genx-x16";
+        return "gen9-x16";
 #endif
     case Target::SSE2:
         return "sse2-i32x4";
@@ -1711,19 +1711,19 @@ Target::XePlatform Target::getGenxPlatform() const {
     AllCPUs a;
     switch (a.GetTypeFromName(m_cpu)) {
     case CPU_GENX:
-        return XePlatform::GENX_GEN9;
+        return XePlatform::gen9;
     case CPU_GENX_TGLLP:
-        return XePlatform::GENX_TGLLP;
+        return XePlatform::xe_lp;
     default:
-        return XePlatform::GENX_GEN9;
+        return XePlatform::gen9;
     }
-    return XePlatform::GENX_GEN9;
+    return XePlatform::gen9;
 }
 
 uint32_t Target::getGenxGrfSize() const {
     switch (getGenxPlatform()) {
-    case GENX_GEN9:
-    case GENX_TGLLP:
+    case XePlatform::gen9:
+    case XePlatform::xe_lp:
         return 32;
     default:
         return 32;
@@ -1733,8 +1733,8 @@ uint32_t Target::getGenxGrfSize() const {
 
 bool Target::hasGenxPrefetch() const {
     switch (getGenxPlatform()) {
-    case GENX_GEN9:
-    case GENX_TGLLP:
+    case XePlatform::gen9:
+    case XePlatform::xe_lp:
         return false;
     default:
         return true;

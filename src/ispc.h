@@ -194,8 +194,8 @@ class Target {
 
 #ifdef ISPC_XE_ENABLED
     enum class XePlatform {
-        GENX_GEN9,
-        GENX_TGLLP,
+        gen9,
+        xe_lp,
     };
 #endif
 
