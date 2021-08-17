@@ -44,7 +44,7 @@ task void print_result() {
               ",false,false,true,false,false,true,false,false"
               ",true,false,false,true,false,false,true,false"
               ",false,true,false,false,true,false,false,true");
-#ifndef ISPC_TARGET_GENX
+#ifndef ISPC_GPU
         print("]; in simd cf: [_________,_________,true,false");
 #else
         print("]; in simd cf: [((false)),((true)),true,false");
@@ -62,7 +62,7 @@ task void print_result() {
               ",true,true,false,true,true,false,true,true"
               ",false,true,true,false,true,true,false,true"
               ",true,false,true,true,false,true,true,false");
-#ifndef ISPC_TARGET_GENX
+#ifndef ISPC_GPU
     print("], [_________,_________,false,true");
 #else
     print("], [((true)),((false)),false,true");

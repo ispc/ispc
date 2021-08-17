@@ -8,10 +8,6 @@ task void f_v(uniform float RET[]) {
         h = float_to_half(f);
 
         int mismatches = (!isnan(f) && i != h);
-        if (any(mismatches != 0))
-#ifndef ISPC_TARGET_GENX
-            print("mismatch: orig int16 % -> float % -> half %\n", i, f, h);
-#endif
         errors += reduce_add(mismatches);
     }
 
