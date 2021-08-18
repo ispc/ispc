@@ -400,7 +400,7 @@ void IfStmt::EmitCode(FunctionEmitContext *ctx) const {
         return;
 
     bool emulateUniform = false;
-    if (ctx->emitGenXHardwareMask() && !isUniform) {
+    if (ctx->emitXeHardwareMask() && !isUniform) {
         /* With "genx" target we generate uniform control flow but
            emit varying using CM simdcf.any intrinsic. We mark the scope as
            emulateUniform = true to let nested scopes know that they should
@@ -798,7 +798,7 @@ void DoStmt::EmitCode(FunctionEmitContext *ctx) const {
     llvm::BasicBlock *bexit = ctx->CreateBasicBlock("do_exit", btest);
     bool emulateUniform = false;
     llvm::Instruction *branchInst = NULL;
-    if (ctx->emitGenXHardwareMask() && !uniformTest) {
+    if (ctx->emitXeHardwareMask() && !uniformTest) {
         /* With "genx" target we generate uniform control flow but
            emit varying using CM simdcf.any intrinsic. We mark the scope as
            emulateUniform = true to let nested scopes know that they should
@@ -982,7 +982,7 @@ void ForStmt::EmitCode(FunctionEmitContext *ctx) const {
     bool uniformTest = test ? test->GetType()->IsUniformType()
                             : (!g->opt.disableUniformControlFlow && !lHasVaryingBreakOrContinue(stmts));
     bool emulateUniform = false;
-    if (ctx->emitGenXHardwareMask() && !uniformTest) {
+    if (ctx->emitXeHardwareMask() && !uniformTest) {
         /* With "genx" target we generate uniform control flow but
            emit varying using CM simdcf.any intrinsic. We mark the scope as
            emulateUniform = true to let nested scopes know that they should
@@ -1032,7 +1032,7 @@ void ForStmt::EmitCode(FunctionEmitContext *ctx) const {
             if (test)
                 Warning(test->pos, "Uniform condition supplied to cfor/cwhile "
                                    "statement.");
-        if (!ctx->emitGenXHardwareMask())
+        if (!ctx->emitXeHardwareMask())
             AssertPos(pos, ltest->getType() == LLVMTypes::BoolType);
         ctx->BranchInst(bloop, bexit, ltest);
     } else {
@@ -1327,7 +1327,7 @@ static void lGetSpans(int dimsLeft, int nDims, int itemsLeft, bool isTiled, int 
 void ForeachStmt::EmitCode(FunctionEmitContext *ctx) const {
 
 #ifdef ISPC_XE_ENABLED
-    if (ctx->emitGenXHardwareMask()) {
+    if (ctx->emitXeHardwareMask()) {
         EmitCodeForGenX(ctx);
         return;
     }
@@ -2054,7 +2054,7 @@ void ForeachActiveStmt::EmitCode(FunctionEmitContext *ctx) const {
     llvm::Value *oldFullMask = NULL;
     bool uniformEmulated = false;
 #ifdef ISPC_XE_ENABLED
-    if (ctx->emitGenXHardwareMask()) {
+    if (ctx->emitXeHardwareMask()) {
         // Emulate uniform to make proper continue handler
         uniformEmulated = true;
         // Current mask will be calculated according to EM mask
@@ -2109,7 +2109,7 @@ void ForeachActiveStmt::EmitCode(FunctionEmitContext *ctx) const {
 
         // Don't need to change this mask in XE: execution
         // is performed according to GenX EM
-        if (!ctx->emitGenXHardwareMask())
+        if (!ctx->emitXeHardwareMask())
             ctx->SetInternalMask(iterMask);
 
         // Also update the bitvector of lanes left to turn off the bit for
@@ -2123,7 +2123,7 @@ void ForeachActiveStmt::EmitCode(FunctionEmitContext *ctx) const {
         // and onward to run the loop body...
         // Set GenX EM through simdcf.goto
         // The EM will be restored when CheckForMore is reached
-        if (ctx->emitGenXHardwareMask()) {
+        if (ctx->emitXeHardwareMask()) {
             ctx->BranchInst(bbBody, bbCheckForMore, iterMask);
         } else {
             ctx->BranchInst(bbBody);
@@ -2247,7 +2247,7 @@ void ForeachUniqueStmt::EmitCode(FunctionEmitContext *ctx) const {
     llvm::Value *oldFullMask = NULL;
     bool emulatedUniform = false;
 #ifdef ISPC_XE_ENABLED
-    if (ctx->emitGenXHardwareMask()) {
+    if (ctx->emitXeHardwareMask()) {
         // Emulating uniform behavior for proper continue handling
         emulatedUniform = true;
         // Current mask will be calculated according to EM mask
@@ -2328,7 +2328,7 @@ void ForeachUniqueStmt::EmitCode(FunctionEmitContext *ctx) const {
 
         // Don't need to change this mask in XE: execution
         // is performed according to GenX EM
-        if (!ctx->emitGenXHardwareMask())
+        if (!ctx->emitXeHardwareMask())
             ctx->SetInternalMask(loopMask);
 
         // Also update the bitvector of lanes left to process in subsequent
@@ -2343,7 +2343,7 @@ void ForeachUniqueStmt::EmitCode(FunctionEmitContext *ctx) const {
         // and onward...
         // Set GenX EM through simdcf.goto
         // The EM will be restored when CheckForMore is reached
-        if (ctx->emitGenXHardwareMask()) {
+        if (ctx->emitXeHardwareMask()) {
             ctx->BranchInst(bbBody, bbCheckForMore, loopMask);
         } else {
             ctx->BranchInst(bbBody);
@@ -2627,7 +2627,7 @@ void SwitchStmt::EmitCode(FunctionEmitContext *ctx) const {
     bool isUniformCF = (type->IsUniformType() && lHasVaryingBreakOrContinue(stmts) == false);
     bool emulateUniform = false;
 #ifdef ISPC_XE_ENABLED
-    if (ctx->emitGenXHardwareMask()) {
+    if (ctx->emitXeHardwareMask()) {
         if (isUniformCF && ctx->inGenXSimdCF()) {
             // Broadcast value to work with EM. We are doing
             // it here because it is too late to make CMP
@@ -2723,7 +2723,7 @@ void UnmaskedStmt::EmitCode(FunctionEmitContext *ctx) const {
 
     ctx->SetInternalMask(LLVMMaskAllOn);
     ctx->SetFunctionMask(LLVMMaskAllOn);
-    if (!ctx->emitGenXHardwareMask()) {
+    if (!ctx->emitXeHardwareMask()) {
         stmts->EmitCode(ctx);
     } else {
 #ifdef ISPC_XE_ENABLED
@@ -2826,7 +2826,7 @@ void GotoStmt::EmitCode(FunctionEmitContext *ctx) const {
         return;
 
 #ifdef ISPC_XE_ENABLED
-    if ((ctx->emitGenXHardwareMask() && ctx->inGenXSimdCF()) || ctx->VaryingCFDepth() > 0) {
+    if ((ctx->emitXeHardwareMask() && ctx->inGenXSimdCF()) || ctx->VaryingCFDepth() > 0) {
 #else
     if (ctx->VaryingCFDepth() > 0) {
 #endif
@@ -3077,7 +3077,7 @@ class PrintArgsBuilder {
 
         AdditionalData() { mask = NULL; }
         AdditionalData(FunctionEmitContext *ctx) {
-            if (ctx->emitGenXHardwareMask())
+            if (ctx->emitXeHardwareMask())
                 mask = ctx->GenXSimdCFPredicate(LLVMMaskAllOn);
             else
                 mask = ctx->GetFullMask();
@@ -3555,7 +3555,7 @@ void AssertStmt::EmitAssertCode(FunctionEmitContext *ctx, const Type *type) cons
     }
     args.push_back(exprValue);
 #ifdef ISPC_XE_ENABLED
-    if (ctx->emitGenXHardwareMask())
+    if (ctx->emitXeHardwareMask())
         // This will create mask according to current EM on SIMD CF Lowering.
         // The result will be like       mask = select (EM, AllOn, AllFalse)
         args.push_back(ctx->GenXSimdCFPredicate(LLVMMaskAllOn));

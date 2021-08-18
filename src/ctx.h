@@ -608,7 +608,7 @@ class FunctionEmitContext {
     /** Enables emitting of genx.any intrinsics and the control flow which is
         based on impliit hardware mask. Forces generation of goto/join instructions
         in assembly. */
-    bool emitGenXHardwareMask();
+    bool emitXeHardwareMask();
 
     /** @} */
 

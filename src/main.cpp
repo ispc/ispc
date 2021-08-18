@@ -794,7 +794,7 @@ int main(int Argc, char *Argv[]) {
             else if (!strcmp(opt, "disable-genx-gather-coalescing"))
                 g->opt.disableGenXGatherCoalescing = true;
             else if (!strcmp(opt, "emit-genx-hardware-mask"))
-                g->opt.emitGenXHardwareMask = true;
+                g->opt.emitXeHardwareMask = true;
             else if (!strcmp(opt, "enable-genx-foreach-varying"))
                 g->opt.enableForeachInsideVarying = true;
             else if (!strcmp(opt, "enable-genx-unsafe-masked-load"))
