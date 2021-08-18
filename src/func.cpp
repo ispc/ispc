@@ -435,7 +435,7 @@ void Function::emitCode(FunctionEmitContext *ctx, llvm::Function *function, Sour
     }
 #ifdef ISPC_XE_ENABLED
     if (type->IsISPCKernel()) {
-        // Emit metadata for GENX kernel
+        // Emit metadata for XE kernel
 
         llvm::LLVMContext &fContext = function->getContext();
         llvm::NamedMDNode *mdKernels = m->module->getOrInsertNamedMetadata("genx.kernels");

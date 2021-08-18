@@ -765,7 +765,7 @@ enum {
     PREDICATE_SAFE_IF_STATEMENT_COST = 6,
     // For gen target we want to avoid branches as much as possible
     // so we use increased cost here
-    PREDICATE_SAFE_SHORT_CIRC_GENX_STATEMENT_COST = 10,
+    PREDICATE_SAFE_SHORT_CIRC_XE_STATEMENT_COST = 10,
 };
 
 extern Globals *g;
