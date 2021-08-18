@@ -306,11 +306,11 @@ typedef enum {
 #endif
 #endif
 #ifdef ISPC_XE_ENABLED
-    CPU_GENX,
-    CPU_GENX_TGLLP,
+    GPU_SKL,
+    GPU_TGLLP,
 #endif
-    sizeofCPUtype
-} CPUtype;
+    sizeofDeviceType
+} DeviceType;
 
 // This map is used to verify features available for supported CPUs
 // and is used to filter target dependent intrisics and report an error.
@@ -319,7 +319,7 @@ typedef enum {
 // The following LLVM files were used as reference:
 // CPU Features: <llvm>/lib/Support/X86TargetParser.cpp
 // X86 Intrinsics: <llvm>/include/llvm/IR/IntrinsicsX86.td
-std::map<CPUtype, std::set<std::string>> CPUFeatures = {
+std::map<DeviceType, std::set<std::string>> CPUFeatures = {
     {CPU_x86_64, {"mmx", "sse", "sse2"}},
     {CPU_Bonnell, {"mmx", "sse", "sse2", "ssse3"}},
     {CPU_Core2, {"mmx", "sse", "sse2", "ssse3"}},
@@ -357,24 +357,24 @@ std::map<CPUtype, std::set<std::string>> CPUFeatures = {
 #endif
 #endif
 #ifdef ISPC_XE_ENABLED
-    {CPU_GENX, {}},
-    {CPU_GENX_TGLLP, {}}
+    {GPU_SKL, {}},
+    {GPU_TGLLP, {}}
 #endif
 };
 
 class AllCPUs {
   private:
     std::vector<std::vector<std::string>> names;
-    std::vector<std::set<CPUtype>> compat;
+    std::vector<std::set<DeviceType>> compat;
 
-    std::set<CPUtype> Set(int type, ...) {
-        std::set<CPUtype> retn;
+    std::set<DeviceType> Set(int type, ...) {
+        std::set<DeviceType> retn;
         va_list args;
 
-        retn.insert((CPUtype)type);
+        retn.insert((DeviceType)type);
         va_start(args, type);
         while ((type = va_arg(args, int)) != CPU_None)
-            retn.insert((CPUtype)type);
+            retn.insert((DeviceType)type);
         va_end(args);
 
         return retn;
@@ -382,8 +382,8 @@ class AllCPUs {
 
   public:
     AllCPUs() {
-        names = std::vector<std::vector<std::string>>(sizeofCPUtype);
-        compat = std::vector<std::set<CPUtype>>(sizeofCPUtype);
+        names = std::vector<std::vector<std::string>>(sizeofDeviceType);
+        compat = std::vector<std::set<DeviceType>>(sizeofDeviceType);
 
         names[CPU_None].push_back("");
 
@@ -452,12 +452,12 @@ class AllCPUs {
 #endif
 
 #ifdef ISPC_XE_ENABLED
-        names[CPU_GENX].push_back("SKL");
-        names[CPU_GENX_TGLLP].push_back("TGLLP");
-        names[CPU_GENX_TGLLP].push_back("DG1");
+        names[GPU_SKL].push_back("SKL");
+        names[GPU_TGLLP].push_back("TGLLP");
+        names[GPU_TGLLP].push_back("DG1");
 #endif
 
-        Assert(names.size() == sizeofCPUtype);
+        Assert(names.size() == sizeofDeviceType);
 
         compat[CPU_Silvermont] =
             Set(CPU_x86_64, CPU_Bonnell, CPU_Penryn, CPU_Core2, CPU_Nehalem, CPU_Silvermont, CPU_None);
@@ -518,14 +518,14 @@ class AllCPUs {
 #endif
 
 #ifdef ISPC_XE_ENABLED
-        compat[CPU_GENX] = Set(CPU_GENX, CPU_None);
-        compat[CPU_GENX_TGLLP] = Set(CPU_GENX_TGLLP, CPU_GENX, CPU_None);
+        compat[GPU_SKL] = Set(GPU_SKL, CPU_None);
+        compat[GPU_TGLLP] = Set(GPU_TGLLP, GPU_SKL, CPU_None);
 #endif
     }
 
     std::string HumanReadableListOfNames() {
         std::stringstream CPUs;
-        for (int i = CPU_x86_64; i < sizeofCPUtype; i++) {
+        for (int i = CPU_x86_64; i < sizeofDeviceType; i++) {
             CPUs << names[i][0];
             if (names[i].size() > 1) {
                 CPUs << " (synonyms: " << names[i][1];
@@ -533,30 +533,30 @@ class AllCPUs {
                     CPUs << ", " << names[i][j];
                 CPUs << ")";
             }
-            if (i < sizeofCPUtype - 1)
+            if (i < sizeofDeviceType - 1)
                 CPUs << ", ";
         }
         return CPUs.str();
     }
 
-    std::string &GetDefaultNameFromType(CPUtype type) {
-        Assert((type >= CPU_None) && (type < sizeofCPUtype));
+    std::string &GetDefaultNameFromType(DeviceType type) {
+        Assert((type >= CPU_None) && (type < sizeofDeviceType));
         return names[type][0];
     }
 
-    CPUtype GetTypeFromName(std::string name) {
-        CPUtype retn = CPU_None;
+    DeviceType GetTypeFromName(std::string name) {
+        DeviceType retn = CPU_None;
 
-        for (int i = 1; (retn == CPU_None) && (i < sizeofCPUtype); i++)
+        for (int i = 1; (retn == CPU_None) && (i < sizeofDeviceType); i++)
             for (int j = 0, je = names[i].size(); (retn == CPU_None) && (j < je); j++)
                 if (!name.compare(names[i][j]))
-                    retn = (CPUtype)i;
+                    retn = (DeviceType)i;
         return retn;
     }
 
-    bool BackwardCompatible(CPUtype what, CPUtype with) {
-        Assert((what > CPU_None) && (what < sizeofCPUtype));
-        Assert((with > CPU_None) && (with < sizeofCPUtype));
+    bool BackwardCompatible(DeviceType what, DeviceType with) {
+        Assert((what > CPU_None) && (what < sizeofDeviceType));
+        Assert((with > CPU_None) && (with < sizeofDeviceType));
         return compat[what].find(with) != compat[what].end();
     }
 };
@@ -569,7 +569,7 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, bool pic, boo
       m_hasScatter(false), m_hasTranscendentals(false), m_hasTrigonometry(false), m_hasRsqrtd(false), m_hasRcpd(false),
       m_hasVecPrefetch(false), m_hasSaturatingArithmetic(false), m_hasFp64Support(true),
       m_warnFtoU32IsExpensive(false) {
-    CPUtype CPUID = CPU_None, CPUfromISA = CPU_None;
+    DeviceType CPUID = CPU_None, CPUfromISA = CPU_None;
     AllCPUs a;
     std::string featuresString;
 
@@ -619,10 +619,10 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, bool pic, boo
 #endif
 
 #ifdef ISPC_XE_ENABLED
-        case CPU_GENX:
+        case GPU_SKL:
             m_ispc_target = ISPCTarget::gen9_x16;
             break;
-        case CPU_GENX_TGLLP:
+        case GPU_TGLLP:
             m_ispc_target = ISPCTarget::xelp_x16;
             break;
 #endif
@@ -739,7 +739,7 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, bool pic, boo
         return;
     }
 #ifdef ISPC_XE_ENABLED
-    if ((ISPCTargetIsGen(m_ispc_target)) && (CPUID == CPU_GENX_TGLLP)) {
+    if ((ISPCTargetIsGen(m_ispc_target)) && (CPUID == GPU_TGLLP)) {
         m_hasFp64Support = false;
     }
     // In case of gen target addressing should correspond to host addressing. Otherwise SVM pointers will not work.
@@ -1145,7 +1145,7 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, bool pic, boo
         this->m_hasTranscendentals = true;
         this->m_hasTrigonometry = true;
         this->m_hasGather = this->m_hasScatter = true;
-        CPUfromISA = CPU_GENX;
+        CPUfromISA = GPU_SKL;
         break;
     case ISPCTarget::gen9_x16:
     case ISPCTarget::xelp_x16:
@@ -1161,7 +1161,7 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, bool pic, boo
         this->m_hasTranscendentals = true;
         this->m_hasTrigonometry = true;
         this->m_hasGather = this->m_hasScatter = true;
-        CPUfromISA = CPU_GENX;
+        CPUfromISA = GPU_SKL;
         break;
 #else
     case ISPCTarget::gen9_x8:
@@ -1714,9 +1714,9 @@ void Target::markFuncWithCallingConv(llvm::Function *func) {
 Target::XePlatform Target::getGenxPlatform() const {
     AllCPUs a;
     switch (a.GetTypeFromName(m_cpu)) {
-    case CPU_GENX:
+    case GPU_SKL:
         return XePlatform::gen9;
-    case CPU_GENX_TGLLP:
+    case GPU_TGLLP:
         return XePlatform::xe_lp;
     default:
         return XePlatform::gen9;
