@@ -38,7 +38,7 @@ cmake_minimum_required(VERSION 3.13)
 
 set(TEST_NAME "simple")
 set(ISPC_SRC_NAME "simple.ispc")
-set(ISPC_TARGET_XE "genx-x8")
+set(ISPC_TARGET_XE "gen9-x8")
 set(HOST_SOURCES simple.cpp)
 
 add_perf_example(
