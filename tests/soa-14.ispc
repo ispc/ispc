@@ -1,6 +1,6 @@
 #include "../test_static.isph"
-// rule: skip on arch=genx32
-// rule: skip on arch=genx64
+// rule: skip on arch=xe32
+// rule: skip on arch=xe64
 struct Point { float x, y, z; };
 
 
