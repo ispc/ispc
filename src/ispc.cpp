@@ -1773,7 +1773,7 @@ Opt::Opt() {
 #ifdef ISPC_XE_ENABLED
     disableGenXGatherCoalescing = false;
     enableForeachInsideVarying = false;
-    emitGenXHardwareMask = false;
+    emitXeHardwareMask = false;
     enableGenXUnsafeMaskedLoad = false;
 #endif
 }
