@@ -108,7 +108,7 @@
 #include <llvm/Support/Regex.h>
 #endif
 #ifdef ISPC_XE_ENABLED
-#include "gen/GlobalsLocalization.h"
+#include "xe/GlobalsLocalization.h"
 #include <LLVMSPIRVLib/LLVMSPIRVLib.h>
 #include <llvm/GenXIntrinsics/GenXIntrOpts.h>
 #include <llvm/GenXIntrinsics/GenXIntrinsics.h>

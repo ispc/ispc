@@ -373,7 +373,7 @@ target_sources(${PROJECT_NAME}
 )
 
 if (XE_ENABLED)
-    target_sources(${PROJECT_NAME} PRIVATE "src/gen/GlobalsLocalization.cpp")
+    target_sources(${PROJECT_NAME} PRIVATE "src/xe/GlobalsLocalization.cpp")
 endif()
 
 # To show stdlib.ispc in VS solution:
