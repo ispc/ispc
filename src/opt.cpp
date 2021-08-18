@@ -6001,7 +6001,7 @@ restart:
             if (func->getName().equals("llvm.trap")) {
                 llvm::Type *argTypes[] = {LLVMTypes::Int1VectorType, LLVMTypes::Int16VectorType};
                 // Description of parameters for genx_raw_send_noresult can be found in target-genx.ll
-                auto Fn = +llvm::GenXIntrinsic::getGenXDeclaration(
+                auto Fn = llvm::GenXIntrinsic::getGenXDeclaration(
                     m->module, llvm::GenXIntrinsic::genx_raw_send_noresult, argTypes);
                 llvm::SmallVector<llvm::Value *, 8> Args;
                 Args.push_back(llvm::ConstantInt::get(LLVMTypes::Int32Type, 0));
