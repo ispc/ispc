@@ -38,7 +38,7 @@ cmake_minimum_required(VERSION 3.13)
 
 set(TEST_NAME "simple-dpcpp-l0")
 set(ISPC_SRC_NAME "simple-dpcpp-l0.ispc")
-set(ISPC_TARGET_XE "genx-x8")
+set(ISPC_TARGET_XE "gen9-x8")
 set(DPCPP_HOST_SOURCES simple-dpcpp-l0.cpp)
 
 if(UNIX)
