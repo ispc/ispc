@@ -1,6 +1,6 @@
 // This test checks calls of export and extern "C" functions on CPU and GPU based on close to real-life example.
 // RUN: %{ispc} %s --target=gen9-x8 --emit-llvm-text --nowrap --no-discard-value-names -O0 -o %t.ll
-// RUN: FileCheck --input-file=%t.ll -check-prefix=CHECK-GEN %s
+// RUN: FileCheck --input-file=%t.ll -check-prefix=CHECK-XE %s
 
 // RUN: %{ispc} %s --target=avx2 --emit-llvm-text --nowrap --no-discard-value-names -O0 -o %t.ll
 // RUN: FileCheck --input-file=%t.ll -check-prefix=CHECK-CPU %s
@@ -35,34 +35,34 @@ inline void contextInit(uniform Context *uniform context) {
     context->y = 1;
 }
 
-// CHECK-GEN: define internal void @swap___{{.*}}
-// CHECK-GEN: define void @intersectISPC___{{.*}}(i1 %{{.*}}, %v8_uniform_Context* noalias %{{.*}}, %v8_uniform_RayHit* noalias %{{.*}}, float* noalias %{{.*}}, i8* noalias %{{.*}}, <8 x i1> %__mask)
-// CHECK-GEN-NOT: addrspacecast %v8_uniform_Context addrspace(4)* %{{.*}} to %v8_uniform_Context*
-// CHECK-GEN-NOT: addrspacecast %v8_uniform_RayHit addrspace(4)* %{{.*}} to %v8_uniform_RayHit*
-// CHECK-GEN-NOT: addrspacecast i8 addrspace(4)* %{{.*}} to i8*
-// CHECK-GEN: call void @swap___{{.*}}
+// CHECK-XE: define internal void @swap___{{.*}}
+// CHECK-XE: define void @intersectISPC___{{.*}}(i1 %{{.*}}, %v8_uniform_Context* noalias %{{.*}}, %v8_uniform_RayHit* noalias %{{.*}}, float* noalias %{{.*}}, i8* noalias %{{.*}}, <8 x i1> %__mask)
+// CHECK-XE-NOT: addrspacecast %v8_uniform_Context addrspace(4)* %{{.*}} to %v8_uniform_Context*
+// CHECK-XE-NOT: addrspacecast %v8_uniform_RayHit addrspace(4)* %{{.*}} to %v8_uniform_RayHit*
+// CHECK-XE-NOT: addrspacecast i8 addrspace(4)* %{{.*}} to i8*
+// CHECK-XE: call void @swap___{{.*}}
 
-// CHECK-GEN: declare dso_local spir_func void @intersectExternal(%v8_uniform_Context addrspace(4)* noalias, %v8_uniform_RayHit addrspace(4)* noalias, float addrspace(4)* noalias, i8 addrspace(4)* noalias)
+// CHECK-XE: declare dso_local spir_func void @intersectExternal(%v8_uniform_Context addrspace(4)* noalias, %v8_uniform_RayHit addrspace(4)* noalias, float addrspace(4)* noalias, i8 addrspace(4)* noalias)
 
-// CHECK-GEN: define void @ispc_test___{{.*}}(<8 x float>* noalias %out, <8 x i1> %__mask)
+// CHECK-XE: define void @ispc_test___{{.*}}(<8 x float>* noalias %out, <8 x i1> %__mask)
 
-// CHECK-GEN: define dso_local spir_func void @intersectISPC(i1 %{{.*}}, %v8_uniform_Context addrspace(4)* noalias %{{.*}}, %v8_uniform_RayHit addrspace(4)* noalias %{{.*}}, float addrspace(4)* noalias %{{.*}}, i8 addrspace(4)* noalias %{{.*}})
-// CHECK-GEN: addrspacecast %v8_uniform_Context addrspace(4)* %{{.*}} to %v8_uniform_Context*
-// CHECK-GEN: addrspacecast %v8_uniform_RayHit addrspace(4)* %{{.*}} to %v8_uniform_RayHit*
-// CHECK-GEN: addrspacecast i8 addrspace(4)* %{{.*}} to i8*
-// CHECK-GEN: call void @swap___{{.*}}
+// CHECK-XE: define dso_local spir_func void @intersectISPC(i1 %{{.*}}, %v8_uniform_Context addrspace(4)* noalias %{{.*}}, %v8_uniform_RayHit addrspace(4)* noalias %{{.*}}, float addrspace(4)* noalias %{{.*}}, i8 addrspace(4)* noalias %{{.*}})
+// CHECK-XE: addrspacecast %v8_uniform_Context addrspace(4)* %{{.*}} to %v8_uniform_Context*
+// CHECK-XE: addrspacecast %v8_uniform_RayHit addrspace(4)* %{{.*}} to %v8_uniform_RayHit*
+// CHECK-XE: addrspacecast i8 addrspace(4)* %{{.*}} to i8*
+// CHECK-XE: call void @swap___{{.*}}
 
-// CHECK-GEN: define dllexport spir_kernel void @kernel(i8 addrspace(1)*
-// CHECK-GEN: addrspacecast %v8_uniform_Context* %{{.*}} to %v8_uniform_Context addrspace(4)*
-// CHECK-GEN: addrspacecast %v8_uniform_RayHit* %{{.*}} to %v8_uniform_RayHit addrspace(4)*
-// CHECK-GEN: addrspacecast float* %{{.*}} to float addrspace(4)*
-// CHECK-GEN: addrspacecast i8* %{{.*}} to i8 addrspace(4)*
-// CHECK-GEN: call void @intersectExternal(%v8_uniform_Context addrspace(4)* %{{.*}}, %v8_uniform_RayHit addrspace(4)* %{{.*}}, float addrspace(4)* %{{.*}}, i8 addrspace(4)* %{{.*}})
-// CHECK-GEN: call void @intersectISPC___{{.*}}(i1 {{.*}}, %v8_uniform_Context* {{.*}}, %v8_uniform_RayHit* {{.*}}, float* {{.*}}, i8* {{.*}}, <8 x i1> {{.*}}
+// CHECK-XE: define dllexport spir_kernel void @kernel(i8 addrspace(1)*
+// CHECK-XE: addrspacecast %v8_uniform_Context* %{{.*}} to %v8_uniform_Context addrspace(4)*
+// CHECK-XE: addrspacecast %v8_uniform_RayHit* %{{.*}} to %v8_uniform_RayHit addrspace(4)*
+// CHECK-XE: addrspacecast float* %{{.*}} to float addrspace(4)*
+// CHECK-XE: addrspacecast i8* %{{.*}} to i8 addrspace(4)*
+// CHECK-XE: call void @intersectExternal(%v8_uniform_Context addrspace(4)* %{{.*}}, %v8_uniform_RayHit addrspace(4)* %{{.*}}, float addrspace(4)* %{{.*}}, i8 addrspace(4)* %{{.*}})
+// CHECK-XE: call void @intersectISPC___{{.*}}(i1 {{.*}}, %v8_uniform_Context* {{.*}}, %v8_uniform_RayHit* {{.*}}, float* {{.*}}, i8* {{.*}}, <8 x i1> {{.*}}
 
-// CHECK-GEN: define dso_local spir_func void @ispc_test(<8 x float> addrspace(4)* noalias %out)
-// CHECK-GEN: define dllexport spir_kernel void @ispc_kernel(i8 addrspace(1)*
-// CHECK-GEN: call void @ispc_test___{{.*}}(<8 x float>* {{.*}})
+// CHECK-XE: define dso_local spir_func void @ispc_test(<8 x float> addrspace(4)* noalias %out)
+// CHECK-XE: define dllexport spir_kernel void @ispc_kernel(i8 addrspace(1)*
+// CHECK-XE: call void @ispc_test___{{.*}}(<8 x float>* {{.*}})
 
 // CHECK-CPU: define void @swap___{{.*}}
 // CHECK-CPU: define void @intersectISPC___{{.*}}(i1 %{{.*}}, %v8_uniform_Context* noalias %{{.*}}, %v8_uniform_RayHit* noalias %{{.*}}, float* noalias %{{.*}}, i8* noalias %{{.*}}, <8 x i32> %__mask)
