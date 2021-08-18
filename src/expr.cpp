@@ -1679,7 +1679,7 @@ llvm::Value *lEmitLogicalOp(BinaryExpr::Op op, Expr *arg0, Expr *arg1, FunctionE
     // safely executed with an all-off execution mask, then we just
     // evaluate both sides and then the logical operator in that case.
     int threshold =
-        g->target->isGenXTarget() ? PREDICATE_SAFE_SHORT_CIRC_GENX_STATEMENT_COST : PREDICATE_SAFE_IF_STATEMENT_COST;
+        g->target->isGenXTarget() ? PREDICATE_SAFE_SHORT_CIRC_XE_STATEMENT_COST : PREDICATE_SAFE_IF_STATEMENT_COST;
     bool shortCircuit = (EstimateCost(arg1) > threshold || SafeToRunWithMaskAllOff(arg1) == false);
 
     // Skip short-circuiting for VectorTypes as well.
@@ -3249,7 +3249,7 @@ llvm::Value *SelectExpr::GetValue(FunctionEmitContext *ctx) const {
         // We don't want to incur the overhead for short-circuit evaluation
         // for expressions that are both computationally simple and safe to
         // run with an "all off" mask.
-        int threshold = g->target->isGenXTarget() ? PREDICATE_SAFE_SHORT_CIRC_GENX_STATEMENT_COST
+        int threshold = g->target->isGenXTarget() ? PREDICATE_SAFE_SHORT_CIRC_XE_STATEMENT_COST
                                                   : PREDICATE_SAFE_IF_STATEMENT_COST;
         bool shortCircuit1 = (::EstimateCost(expr1) > threshold || SafeToRunWithMaskAllOff(expr1) == false);
         bool shortCircuit2 = (::EstimateCost(expr2) > threshold || SafeToRunWithMaskAllOff(expr2) == false);

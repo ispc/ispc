@@ -2107,7 +2107,7 @@ void ForeachActiveStmt::EmitCode(FunctionEmitContext *ctx) const {
             ctx->CmpInst(llvm::Instruction::ICmp, llvm::CmpInst::ICMP_EQ, firstSet32Smear, programIndex);
         iterMask = ctx->I1VecToBoolVec(iterMask);
 
-        // Don't need to change this mask in GENX: execution
+        // Don't need to change this mask in XE: execution
         // is performed according to GenX EM
         if (!ctx->emitGenXHardwareMask())
             ctx->SetInternalMask(iterMask);
@@ -2326,7 +2326,7 @@ void ForeachUniqueStmt::EmitCode(FunctionEmitContext *ctx) const {
         llvm::Value *loopMask =
             ctx->BinaryOperator(llvm::Instruction::And, oldMask, matchingLanes, "foreach_unique_loop_mask");
 
-        // Don't need to change this mask in GENX: execution
+        // Don't need to change this mask in XE: execution
         // is performed according to GenX EM
         if (!ctx->emitGenXHardwareMask())
             ctx->SetInternalMask(loopMask);
