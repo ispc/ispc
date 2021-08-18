@@ -268,9 +268,9 @@ class Target {
     }
 
 #ifdef ISPC_XE_ENABLED
-    XePlatform getGenxPlatform() const;
-    uint32_t getGenxGrfSize() const;
-    bool hasGenxPrefetch() const;
+    XePlatform getXePlatform() const;
+    uint32_t getXeGrfSize() const;
+    bool hasXePrefetch() const;
 #endif
 
     Arch getArch() const { return m_arch; }
@@ -543,9 +543,9 @@ struct Opt {
     bool disableZMM;
 
 #ifdef ISPC_XE_ENABLED
-    /** Disables optimization that coalesce gathers on GenX. This is
+    /** Disables optimization that coalesce gathers on Xe. This is
         likely only useful for measuring the impact of this optimization */
-    bool disableGenXGatherCoalescing;
+    bool disableXeGatherCoalescing;
 
     /** Enables experimental support of foreach statement inside varying CF.
         Current implementation brings performance degradation due to ineffective
@@ -561,7 +561,7 @@ struct Opt {
      * may lead to out of bound reads but bring prformance improvement in
      * most of the cases.
      */
-    bool enableGenXUnsafeMaskedLoad;
+    bool enableXeUnsafeMaskedLoad;
 #endif
 };
 
@@ -763,7 +763,7 @@ enum {
 
     CHECK_MASK_AT_FUNCTION_START_COST = 16,
     PREDICATE_SAFE_IF_STATEMENT_COST = 6,
-    // For gen target we want to avoid branches as much as possible
+    // For Xe target we want to avoid branches as much as possible
     // so we use increased cost here
     PREDICATE_SAFE_SHORT_CIRC_XE_STATEMENT_COST = 10,
 };

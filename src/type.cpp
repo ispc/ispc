@@ -2514,7 +2514,7 @@ llvm::FunctionType *FunctionType::LLVMFunctionType(llvm::LLVMContext *ctx, bool 
         const Type *argType = paramTypes[i];
 
         // We should cast pointers to generic address spaces
-        // for ISPCExtenal functions (not-masked version) on gen target
+        // for ISPCExtenal functions (not-masked version) on Xe target
         llvm::Type *castedArgType = argType->LLVMType(ctx);
 
         if (IsISPCExternal() && removeMask) {

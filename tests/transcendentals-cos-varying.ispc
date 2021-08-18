@@ -5,7 +5,7 @@ task void f_du(uniform float RET[], uniform double aFOO[], uniform double b) {
   varying double arg = aFOO[programIndex] + b;
   varying double ref = cos((float)arg);
   varying double res = cos(arg);
-  // native single precision cos on genx is pretty imprecise
+  // native single precision cos on Xe is pretty imprecise
   RET[programIndex] = ok(res, ref) ? 0. : 1.;
 }
 

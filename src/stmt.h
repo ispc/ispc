@@ -258,7 +258,7 @@ class ForeachStmt : public Stmt {
     static inline bool classof(ASTNode const *N) { return N->getValueID() == ForeachStmtID; }
 
 #ifdef ISPC_XE_ENABLED
-    void EmitCodeForGenX(FunctionEmitContext *ctx) const;
+    void EmitCodeForXe(FunctionEmitContext *ctx) const;
 #endif
     void EmitCode(FunctionEmitContext *ctx) const;
     void Print(int indent) const;
@@ -524,7 +524,7 @@ class PrintStmt : public Stmt {
         VAR_NUM_IDX,    // number of all varying values
         UNI_64_NUM_IDX, // number of 64-bit uniform values
         VAR_64_NUM_IDX, // number of 64-bit varying values
-        GENX_NUM_IDX,   // number of arguments of __do_print_cm
+        XE_NUM_IDX,     // number of arguments of __do_print_cm
 #endif                  // ISPC_XE_ENABLED
                         // number of arguments of __do_print
         STD_NUM_IDX = ARGS_IDX + 1

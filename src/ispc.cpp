@@ -710,7 +710,7 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, bool pic, boo
             break;
         }
     }
-    // For gen target we do not need to create target/targetMachine
+    // For Xe target we do not need to create target/targetMachine
     if (this->m_target == NULL && !ISPCTargetIsGen(m_ispc_target)) {
         std::string error_message;
         error_message = "Invalid architecture \"";
@@ -742,7 +742,7 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, bool pic, boo
     if ((ISPCTargetIsGen(m_ispc_target)) && (CPUID == GPU_TGLLP)) {
         m_hasFp64Support = false;
     }
-    // In case of gen target addressing should correspond to host addressing. Otherwise SVM pointers will not work.
+    // In case of Xe target addressing should correspond to host addressing. Otherwise SVM pointers will not work.
     if (arch == Arch::genx32) {
         g->opt.force32BitAddressing = true;
     } else if (arch == Arch::genx64) {
@@ -1269,7 +1269,7 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, bool pic, boo
         if (g->opt.disableFMA == false)
             options.AllowFPOpFusion = llvm::FPOpFusion::Fast;
 
-        // For gen target we do not need to create target/targetMachine
+        // For Xe target we do not need to create target/targetMachine
         if (!isXeTarget()) {
             m_targetMachine = m_target->createTargetMachine(triple, m_cpu, featuresString, options, relocModel);
             Assert(m_targetMachine != NULL);
@@ -1711,7 +1711,7 @@ void Target::markFuncWithCallingConv(llvm::Function *func) {
 }
 
 #ifdef ISPC_XE_ENABLED
-Target::XePlatform Target::getGenxPlatform() const {
+Target::XePlatform Target::getXePlatform() const {
     AllCPUs a;
     switch (a.GetTypeFromName(m_cpu)) {
     case GPU_SKL:
@@ -1724,8 +1724,8 @@ Target::XePlatform Target::getGenxPlatform() const {
     return XePlatform::gen9;
 }
 
-uint32_t Target::getGenxGrfSize() const {
-    switch (getGenxPlatform()) {
+uint32_t Target::getXeGrfSize() const {
+    switch (getXePlatform()) {
     case XePlatform::gen9:
     case XePlatform::xe_lp:
         return 32;
@@ -1735,8 +1735,8 @@ uint32_t Target::getGenxGrfSize() const {
     return 32;
 }
 
-bool Target::hasGenxPrefetch() const {
-    switch (getGenxPlatform()) {
+bool Target::hasXePrefetch() const {
+    switch (getXePlatform()) {
     case XePlatform::gen9:
     case XePlatform::xe_lp:
         return false;
@@ -1771,10 +1771,10 @@ Opt::Opt() {
     disableCoalescing = false;
     disableZMM = false;
 #ifdef ISPC_XE_ENABLED
-    disableGenXGatherCoalescing = false;
+    disableXeGatherCoalescing = false;
     enableForeachInsideVarying = false;
     emitXeHardwareMask = false;
-    enableGenXUnsafeMaskedLoad = false;
+    enableXeUnsafeMaskedLoad = false;
 #endif
 }
 

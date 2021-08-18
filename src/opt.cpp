@@ -113,7 +113,7 @@
 #include <llvm/GenXIntrinsics/GenXIntrOpts.h>
 #include <llvm/GenXIntrinsics/GenXIntrinsics.h>
 #include <llvm/GenXIntrinsics/GenXSPIRVWriterAdaptor.h>
-// Used for GenX gather coalescing
+// Used for Xe gather coalescing
 #include <llvm/Transforms/Utils/Local.h>
 
 // Constant in number of bytes.
@@ -141,7 +141,7 @@ static llvm::Pass *CreateDebugPassFile(int number, llvm::StringRef name);
 static llvm::Pass *CreateReplaceStdlibShiftPass();
 
 #ifdef ISPC_XE_ENABLED
-static llvm::Pass *CreateGenXGatherCoalescingPass();
+static llvm::Pass *CreateXeGatherCoalescingPass();
 static llvm::Pass *CreateReplaceLLVMIntrinsics();
 static llvm::Pass *CreateFixAddressSpace();
 static llvm::Pass *CreateDemotePHIs();
@@ -695,8 +695,8 @@ void ispc::Optimize(llvm::Module *module, int optLevel) {
         if (g->opt.disableGatherScatterOptimizations == false && g->target->getVectorWidth() > 1) {
             optPM.add(llvm::createInstructionCombiningPass(), 255);
 #ifdef ISPC_XE_ENABLED
-            if (g->target->isXeTarget() && !g->opt.disableGenXGatherCoalescing)
-                optPM.add(CreateGenXGatherCoalescingPass());
+            if (g->target->isXeTarget() && !g->opt.disableXeGatherCoalescing)
+                optPM.add(CreateXeGatherCoalescingPass());
 #endif
             optPM.add(CreateImproveMemoryOpsPass());
 
@@ -754,7 +754,7 @@ void ispc::Optimize(llvm::Module *module, int optLevel) {
         optPM.add(CreateInstructionSimplifyPass());
         optPM.add(llvm::createIndVarSimplifyPass());
         // Currently CM does not support memset/memcpy
-        // so this pass is temporary disabled for GEN.
+        // so this pass is temporary disabled for Xe.
         if (!g->target->isXeTarget()) {
             optPM.add(llvm::createLoopIdiomPass());
         }
@@ -768,7 +768,7 @@ void ispc::Optimize(llvm::Module *module, int optLevel) {
         optPM.add(CreateIntrinsicsOptPass());
         optPM.add(CreateInstructionSimplifyPass());
         // Currently CM does not support memset/memcpy
-        // so this pass is temporary disabled for GEN.
+        // so this pass is temporary disabled for Xe.
         if (!g->target->isXeTarget()) {
             optPM.add(llvm::createMemCpyOptPass());
         }
@@ -2815,7 +2815,7 @@ static bool lGSToLoadStore(llvm::CallInst *callInst) {
             // handled as a scalar load and broadcast across the lanes.
             Debug(pos, "Transformed gather to scalar load and broadcast!");
             llvm::Value *ptr;
-            // For gen we need to cast the base first and only after that get common pointer otherwise
+            // For Xe we need to cast the base first and only after that get common pointer otherwise
             // CM backend will be broken on bitcast i8* to T* instruction with following load.
             // For this we need to re-calculate the offset basing on type sizes.
             if (g->target->isXeTarget()) {
@@ -2890,7 +2890,7 @@ static bool lGSToLoadStore(llvm::CallInst *callInst) {
 
             if (gatherInfo != NULL) {
                 if (g->target->isXeTarget()) {
-                    // For gen we need to cast the base first and only after that get common pointer otherwise
+                    // For Xe we need to cast the base first and only after that get common pointer otherwise
                     // CM backend will be broken on bitcast i8* to T* instruction with following load.
                     // For this we need to re-calculate the offset basing on type sizes.
                     // Second bitcast to void* does not cause such problem in backend.
@@ -2905,7 +2905,7 @@ static bool lGSToLoadStore(llvm::CallInst *callInst) {
                 Debug(pos, "Transformed gather to unaligned vector load!");
                 bool doBlendLoad = false;
 #ifdef ISPC_XE_ENABLED
-                doBlendLoad = g->target->isXeTarget() && g->opt.enableGenXUnsafeMaskedLoad;
+                doBlendLoad = g->target->isXeTarget() && g->opt.enableXeUnsafeMaskedLoad;
 #endif
                 llvm::Instruction *newCall =
                     lCallInst(doBlendLoad ? gatherInfo->blendMaskedFunc : gatherInfo->loadMaskedFunc, ptr, mask,
@@ -2931,7 +2931,7 @@ static bool lGSToLoadStore(llvm::CallInst *callInst) {
 // MaskedStoreOptPass
 
 #ifdef ISPC_XE_ENABLED
-static llvm::Function *lGenXMaskedInt8Inst(llvm::Instruction *inst, bool isStore) {
+static llvm::Function *lXeMaskedInt8Inst(llvm::Instruction *inst, bool isStore) {
     std::string maskedFuncName;
     if (isStore) {
         maskedFuncName = "masked_store_i8";
@@ -2945,7 +2945,7 @@ static llvm::Function *lGenXMaskedInt8Inst(llvm::Instruction *inst, bool isStore
     return m->module->getFunction("__" + maskedFuncName);
 }
 
-static llvm::CallInst *lGenXStoreInst(llvm::Value *val, llvm::Value *ptr, llvm::Instruction *inst) {
+static llvm::CallInst *lXeStoreInst(llvm::Value *val, llvm::Value *ptr, llvm::Instruction *inst) {
     Assert(g->target->isXeTarget());
 #if ISPC_LLVM_VERSION >= ISPC_LLVM_11_0
     Assert(llvm::isa<llvm::FixedVectorType>(val->getType()));
@@ -2963,7 +2963,7 @@ static llvm::CallInst *lGenXStoreInst(llvm::Value *val, llvm::Value *ptr, llvm::
     // correctly.
     if (valVecType->getPrimitiveSizeInBits() / 8 < 16) {
         Assert(valVecType->getScalarType() == LLVMTypes::Int8Type);
-        if (llvm::Function *maskedFunc = lGenXMaskedInt8Inst(inst, true)) {
+        if (llvm::Function *maskedFunc = lXeMaskedInt8Inst(inst, true)) {
             // @__masked_store_$1(<WIDTH x $1>* nocapture, <WIDTH x $1>, <WIDTH x MASK> %mask)
             return llvm::dyn_cast<llvm::CallInst>(lCallInst(maskedFunc, ptr, val, LLVMMaskAllOn, ""));
         } else {
@@ -2977,7 +2977,7 @@ static llvm::CallInst *lGenXStoreInst(llvm::Value *val, llvm::Value *ptr, llvm::
     return llvm::CallInst::Create(Fn, {svm_st_zext, val}, inst->getName());
 }
 
-static llvm::CallInst *lGenXLoadInst(llvm::Value *ptr, llvm::Type *retType, llvm::Instruction *inst) {
+static llvm::CallInst *lXeLoadInst(llvm::Value *ptr, llvm::Type *retType, llvm::Instruction *inst) {
 #if ISPC_LLVM_VERSION >= ISPC_LLVM_11_0
     Assert(llvm::isa<llvm::FixedVectorType>(retType));
     llvm::FixedVectorType *retVecType = llvm::dyn_cast<llvm::FixedVectorType>(retType);
@@ -2994,7 +2994,7 @@ static llvm::CallInst *lGenXLoadInst(llvm::Value *ptr, llvm::Type *retType, llvm
     // correctly.
     if (retVecType->getPrimitiveSizeInBits() / 8 < 16) {
         Assert(retVecType->getScalarType() == LLVMTypes::Int8Type);
-        if (llvm::Function *maskedFunc = lGenXMaskedInt8Inst(inst, false)) {
+        if (llvm::Function *maskedFunc = lXeMaskedInt8Inst(inst, false)) {
             // <WIDTH x $1> @__masked_load_i8(i8 *, <WIDTH x MASK> %mask)
             // Cast pointer to i8*
             ptr = new llvm::BitCastInst(ptr, LLVMTypes::Int8PointerType, "ptr_to_i8", inst);
@@ -3084,7 +3084,7 @@ static bool lImproveMaskedStore(llvm::CallInst *callInst) {
         // is resolved after inlining. TODO: problems can be met here in case of Stack Calls.
         if (g->target->isXeTarget() && GetAddressSpace(lvalue) == AddressSpace::ispc_global &&
             callInst->getParent()->getParent()->getLinkage() != llvm::GlobalValue::LinkageTypes::InternalLinkage) {
-            store = lGenXStoreInst(rvalue, lvalue, callInst);
+            store = lXeStoreInst(rvalue, lvalue, callInst);
         } else if (!g->target->isXeTarget() ||
                    (g->target->isXeTarget() && GetAddressSpace(lvalue) == AddressSpace::ispc_default))
 #endif
@@ -3106,7 +3106,7 @@ static bool lImproveMaskedStore(llvm::CallInst *callInst) {
 #ifdef ISPC_XE_ENABLED
     } else {
         if (g->target->isXeTarget() && GetAddressSpace(lvalue) == AddressSpace::ispc_global) {
-            // In thuis case we use masked_store which on genx target causes scatter usage.
+            // In thuis case we use masked_store which on Xe target causes scatter usage.
             // Get the source position from the metadata attached to the call
             // instruction so that we can issue PerformanceWarning()s below.
             SourcePos pos;
@@ -3132,26 +3132,26 @@ static bool lImproveMaskedLoad(llvm::CallInst *callInst, llvm::BasicBlock::itera
 
     llvm::Function *called = callInst->getCalledFunction();
     // TODO: we should use dynamic data structure for MLInfo and fill
-    // it differently for GenX and CPU targets. It will also help
-    // to avoid declaration of GenX intrinsics for CPU targets.
+    // it differently for Xe and CPU targets. It will also help
+    // to avoid declaration of Xe intrinsics for CPU targets.
     // It should be changed seamlessly here and in all similar places in this file.
     MLInfo mlInfo[] = {MLInfo("__masked_load_i8", 1),    MLInfo("__masked_load_i16", 2),
                        MLInfo("__masked_load_half", 2),  MLInfo("__masked_load_i32", 4),
                        MLInfo("__masked_load_float", 4), MLInfo("__masked_load_i64", 8),
                        MLInfo("__masked_load_double", 8)};
-    MLInfo genxInfo[] = {MLInfo("__masked_load_i8", 1),        MLInfo("__masked_load_i16", 2),
-                         MLInfo("__masked_load_half", 2),      MLInfo("__masked_load_i32", 4),
-                         MLInfo("__masked_load_float", 4),     MLInfo("__masked_load_i64", 8),
-                         MLInfo("__masked_load_double", 8),    MLInfo("__masked_load_blend_i8", 1),
-                         MLInfo("__masked_load_blend_i16", 2), MLInfo("__masked_load_blend_half", 2),
-                         MLInfo("__masked_load_blend_i32", 4), MLInfo("__masked_load_blend_float", 4),
-                         MLInfo("__masked_load_blend_i64", 8), MLInfo("__masked_load_blend_double", 8)};
+    MLInfo xeInfo[] = {MLInfo("__masked_load_i8", 1),        MLInfo("__masked_load_i16", 2),
+                       MLInfo("__masked_load_half", 2),      MLInfo("__masked_load_i32", 4),
+                       MLInfo("__masked_load_float", 4),     MLInfo("__masked_load_i64", 8),
+                       MLInfo("__masked_load_double", 8),    MLInfo("__masked_load_blend_i8", 1),
+                       MLInfo("__masked_load_blend_i16", 2), MLInfo("__masked_load_blend_half", 2),
+                       MLInfo("__masked_load_blend_i32", 4), MLInfo("__masked_load_blend_float", 4),
+                       MLInfo("__masked_load_blend_i64", 8), MLInfo("__masked_load_blend_double", 8)};
     MLInfo *info = NULL;
     if (g->target->isXeTarget()) {
-        int nFuncs = sizeof(genxInfo) / sizeof(genxInfo[0]);
+        int nFuncs = sizeof(xeInfo) / sizeof(xeInfo[0]);
         for (int i = 0; i < nFuncs; ++i) {
-            if (genxInfo[i].func != NULL && called == genxInfo[i].func) {
-                info = &genxInfo[i];
+            if (xeInfo[i].func != NULL && called == xeInfo[i].func) {
+                info = &xeInfo[i];
                 break;
             }
         }
@@ -3185,7 +3185,7 @@ static bool lImproveMaskedLoad(llvm::CallInst *callInst, llvm::BasicBlock::itera
         // is resolved after inlining. TODO: problems can be met here in case of Stack Calls.
         if (g->target->isXeTarget() && GetAddressSpace(ptr) == AddressSpace::ispc_global &&
             callInst->getParent()->getParent()->getLinkage() != llvm::GlobalValue::LinkageTypes::InternalLinkage) {
-            load = lGenXLoadInst(ptr, callInst->getType(), callInst);
+            load = lXeLoadInst(ptr, callInst->getType(), callInst);
         } else if (!g->target->isXeTarget() ||
                    (g->target->isXeTarget() && GetAddressSpace(ptr) == AddressSpace::ispc_default))
 #endif
@@ -5384,23 +5384,23 @@ static llvm::Pass *CreateReplaceStdlibShiftPass() { return new ReplaceStdlibShif
 #ifdef ISPC_XE_ENABLED
 
 ///////////////////////////////////////////////////////////////////////////
-// GenXGatherCoalescingPass
+// XeGatherCoalescingPass
 
-/** This pass performs gather coalescing for GenX target.
+/** This pass performs gather coalescing for Xe target.
  */
-class GenXGatherCoalescing : public llvm::FunctionPass {
+class XeGatherCoalescing : public llvm::FunctionPass {
   public:
     static char ID;
-    GenXGatherCoalescing() : FunctionPass(ID) {}
+    XeGatherCoalescing() : FunctionPass(ID) {}
 
-    llvm::StringRef getPassName() const { return "GenX Gather Coalescing"; }
+    llvm::StringRef getPassName() const { return "Xe Gather Coalescing"; }
 
     bool runOnBasicBlock(llvm::BasicBlock &BB);
 
     bool runOnFunction(llvm::Function &Fn);
 };
 
-char GenXGatherCoalescing::ID = 0;
+char XeGatherCoalescing::ID = 0;
 
 // Returns pointer to pseudo_gather CallInst if inst is
 // actually a pseudo_gather
@@ -5830,8 +5830,8 @@ static bool lCheckForPossibleStore(llvm::Instruction *inst) {
 }
 
 // Run optimization for all collected GEPs
-static bool lRunGenXCoalescing(std::map<llvm::Value *, std::map<llvm::Type *, std::vector<PtrUse>>> &ptrUses,
-                               std::vector<llvm::Instruction *> &dead) {
+static bool lRunXeCoalescing(std::map<llvm::Value *, std::map<llvm::Type *, std::vector<PtrUse>>> &ptrUses,
+                             std::vector<llvm::Instruction *> &dead) {
     bool modifiedAny = false;
 
     for (auto data : ptrUses) {
@@ -5862,7 +5862,7 @@ static bool lVectorizeLoads(llvm::BasicBlock &bb) {
         // Check for possible load-store-load sequence
         if (lCheckForPossibleStore(inst)) {
             // Perform early run of the optimization
-            modifiedAny |= lRunGenXCoalescing(ptrUses, dead);
+            modifiedAny |= lRunXeCoalescing(ptrUses, dead);
             // All current changes were applied
             ptrUses.clear();
             handledGEPs.clear();
@@ -5926,7 +5926,7 @@ static bool lVectorizeLoads(llvm::BasicBlock &bb) {
     }
 
     // Run optimization
-    modifiedAny |= lRunGenXCoalescing(ptrUses, dead);
+    modifiedAny |= lRunXeCoalescing(ptrUses, dead);
 
     // TODO: perform investigation on compilation failure with it
 #if 0
@@ -5938,20 +5938,20 @@ static bool lVectorizeLoads(llvm::BasicBlock &bb) {
     return modifiedAny;
 }
 
-bool GenXGatherCoalescing::runOnBasicBlock(llvm::BasicBlock &bb) {
-    DEBUG_START_PASS("GenXGatherCoalescing");
+bool XeGatherCoalescing::runOnBasicBlock(llvm::BasicBlock &bb) {
+    DEBUG_START_PASS("XeGatherCoalescing");
 
     bool modifiedAny = lPrepareGEPs(bb);
 
     modifiedAny |= lVectorizeLoads(bb);
 
-    DEBUG_END_PASS("GenXGatherCoalescing");
+    DEBUG_END_PASS("XeGatherCoalescing");
 
     return modifiedAny;
 }
 
-bool GenXGatherCoalescing::runOnFunction(llvm::Function &F) {
-    llvm::TimeTraceScope FuncScope("GenXGatherCoalescing::runOnFunction", F.getName());
+bool XeGatherCoalescing::runOnFunction(llvm::Function &F) {
+    llvm::TimeTraceScope FuncScope("XeGatherCoalescing::runOnFunction", F.getName());
     bool modifiedAny = false;
     for (llvm::BasicBlock &BB : F) {
         modifiedAny |= runOnBasicBlock(BB);
@@ -5959,12 +5959,12 @@ bool GenXGatherCoalescing::runOnFunction(llvm::Function &F) {
     return modifiedAny;
 }
 
-static llvm::Pass *CreateGenXGatherCoalescingPass() { return new GenXGatherCoalescing; }
+static llvm::Pass *CreateXeGatherCoalescingPass() { return new XeGatherCoalescing; }
 
 ///////////////////////////////////////////////////////////////////////////
 // ReplaceLLVMIntrinsics
 
-/** This pass replaces LLVM intrinsics unsupported on GenX
+/** This pass replaces LLVM intrinsics unsupported on Xe
  */
 
 class ReplaceLLVMIntrinsics : public llvm::FunctionPass {
@@ -6042,9 +6042,9 @@ restart:
                 Tys[0] = func->getReturnType(); // return type
                 Tys[1] = argType;               // value type
 
-                llvm::GenXIntrinsic::ID genxAbsID =
+                llvm::GenXIntrinsic::ID xeAbsID =
                     argType->isIntOrIntVectorTy() ? llvm::GenXIntrinsic::genx_absi : llvm::GenXIntrinsic::genx_absf;
-                auto Fn = llvm::GenXIntrinsic::getGenXDeclaration(m->module, genxAbsID, Tys);
+                auto Fn = llvm::GenXIntrinsic::getGenXDeclaration(m->module, xeAbsID, Tys);
                 Assert(Fn);
                 llvm::Instruction *newInst = llvm::CallInst::Create(Fn, ci->getOperand(0), "");
                 if (newInst != NULL) {
@@ -6075,7 +6075,7 @@ static llvm::Pass *CreateReplaceLLVMIntrinsics() { return new ReplaceLLVMIntrins
 ///////////////////////////////////////////////////////////////////////////
 // CheckUnsupportedInsts
 
-/** This pass checks if there are any functions used which are not supported currently for gen target,
+/** This pass checks if there are any functions used which are not supported currently for Xe target,
     reports error and stops compilation.
  */
 
@@ -6084,7 +6084,7 @@ class CheckUnsupportedInsts : public llvm::FunctionPass {
     static char ID;
     CheckUnsupportedInsts(bool last = false) : FunctionPass(ID) {}
 
-    llvm::StringRef getPassName() const { return "Check unsupported instructions for gen target"; }
+    llvm::StringRef getPassName() const { return "Check unsupported instructions for Xe target"; }
     bool runOnBasicBlock(llvm::BasicBlock &BB);
     bool runOnFunction(llvm::Function &F);
 };
@@ -6105,7 +6105,7 @@ bool CheckUnsupportedInsts::runOnBasicBlock(llvm::BasicBlock &bb) {
             llvm::Function *func = ci->getCalledFunction();
             // Report error that prefetch is not supported on SKL and TGLLP
             if (func && func->getName().contains("genx.lsc.prefetch.stateless")) {
-                if (!g->target->hasGenxPrefetch()) {
+                if (!g->target->hasXePrefetch()) {
                     Error(pos, "\'prefetch\' is not supported by %s\n", g->target->getCPU().c_str());
                 }
             }
@@ -6140,7 +6140,7 @@ static llvm::Pass *CreateCheckUnsupportedInsts() { return new CheckUnsupportedIn
 ///////////////////////////////////////////////////////////////////////////
 // MangleOpenCLBuiltins
 
-/** This pass mangles SPIR-V OpenCL builtins used in gen target file
+/** This pass mangles SPIR-V OpenCL builtins used in Xe target file
  */
 
 class MangleOpenCLBuiltins : public llvm::FunctionPass {
@@ -6280,7 +6280,7 @@ llvm::Instruction *FixAddressSpace::processVectorLoad(llvm::LoadInst *LI) {
         retType = llvm::VectorType::get(scalarType, retType->getVectorNumElements());
 #endif
     }
-    llvm::Instruction *res = lGenXLoadInst(ptr, retType, llvm::dyn_cast<llvm::Instruction>(LI));
+    llvm::Instruction *res = lXeLoadInst(ptr, retType, llvm::dyn_cast<llvm::Instruction>(LI));
     Assert(res);
 
     if (isPtrLoad) {
@@ -6333,7 +6333,7 @@ llvm::Instruction *FixAddressSpace::processVectorStore(llvm::StoreInst *SI) {
         return NULL;
 
     // Ptr store should be done via ptrtoint
-    // Note: it doesn't look like a normal case for GenX target
+    // Note: it doesn't look like a normal case for Xe target
     if (valType->getScalarType()->isPointerTy()) {
         auto scalarType = g->target->is32Bit() ? LLVMTypes::Int32Type : LLVMTypes::Int64Type;
 #if ISPC_LLVM_VERSION >= ISPC_LLVM_11_0
@@ -6345,7 +6345,7 @@ llvm::Instruction *FixAddressSpace::processVectorStore(llvm::StoreInst *SI) {
         val = new llvm::PtrToIntInst(val, valType, "svm_st_val_ptrtoint", SI);
     }
 
-    return lGenXStoreInst(val, ptr, llvm::dyn_cast<llvm::Instruction>(SI));
+    return lXeStoreInst(val, ptr, llvm::dyn_cast<llvm::Instruction>(SI));
 }
 
 llvm::Instruction *FixAddressSpace::processSVMVectorStore(llvm::Instruction *CI) {

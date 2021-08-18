@@ -1,4 +1,4 @@
-# This patch is needed for ISPC for Gen only
+# This patch is needed for ISPC for Xe only
 
 # Transformation of add to or is not safe for VC backend.
 

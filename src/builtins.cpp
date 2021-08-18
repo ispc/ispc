@@ -1005,8 +1005,8 @@ void ispc::AddBitcodeToModule(const BitcodeLib *lib, llvm::Module *module, Symbo
 
         if (g->target->isXeTarget()) {
             // Maybe we will use it for other targets in future,
-            // but now it is needed only by GenX. We need
-            // to update attributes because GenX intrinsics are
+            // but now it is needed only by Xe. We need
+            // to update attributes because Xe intrinsics are
             // separated from the others and it is not done by default
             lUpdateIntrinsicsAttributes(bcModule);
         }
@@ -1031,7 +1031,7 @@ void ispc::AddBitcodeToModule(const BitcodeLib *lib, llvm::Module *module, Symbo
 
         lSetInternalFunctions(module);
         if (g->target->isXeTarget()) {
-            // For now this function is used for gen target only
+            // For now this function is used for Xe target only
             // TODO: check if its usage affects CPU targets
             lSetAlwaysInlineFunctions(module);
         }

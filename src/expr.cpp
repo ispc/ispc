@@ -3249,8 +3249,8 @@ llvm::Value *SelectExpr::GetValue(FunctionEmitContext *ctx) const {
         // We don't want to incur the overhead for short-circuit evaluation
         // for expressions that are both computationally simple and safe to
         // run with an "all off" mask.
-        int threshold = g->target->isXeTarget() ? PREDICATE_SAFE_SHORT_CIRC_XE_STATEMENT_COST
-                                                  : PREDICATE_SAFE_IF_STATEMENT_COST;
+        int threshold =
+            g->target->isXeTarget() ? PREDICATE_SAFE_SHORT_CIRC_XE_STATEMENT_COST : PREDICATE_SAFE_IF_STATEMENT_COST;
         bool shortCircuit1 = (::EstimateCost(expr1) > threshold || SafeToRunWithMaskAllOff(expr1) == false);
         bool shortCircuit2 = (::EstimateCost(expr2) > threshold || SafeToRunWithMaskAllOff(expr2) == false);
 
@@ -6378,7 +6378,7 @@ static llvm::Value *lTypeConvAtomic(FunctionEmitContext *ctx, llvm::Value *exprV
             // float -> uint32 is the only conversion for which a signed cvt
             // exists which cannot be used for unsigned.
             // This is a problem for non-neon, non-avx512 targets from among
-            // arm/x86 cpu targets. Revisit for genx/wasm.
+            // arm/x86 cpu targets. Revisit for Xe/wasm.
             if (fromType->IsVaryingType() && (g->target->warnFtoU32IsExpensive() == true) &&
                 (fromType->basicType == AtomicType::TYPE_UINT32))
                 PerformanceWarning(pos, "Conversion from unsigned int to float is slow. "
@@ -8031,7 +8031,7 @@ llvm::Value *SymbolExpr::GetValue(FunctionEmitContext *ctx) const {
     // TODO: this is a temporary workaround and will be changed as part
     // of SPIR-V emitting solution
     if (ctx->emitXeHardwareMask() && symbol->name == "__mask") {
-        return ctx->GenXSimdCFPredicate(LLVMMaskAllOn);
+        return ctx->XeSimdCFPredicate(LLVMMaskAllOn);
     }
 #endif
     return ctx->LoadInst(symbol->storagePtr, symbol->type, loadName.c_str());

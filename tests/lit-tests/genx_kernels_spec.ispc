@@ -1,4 +1,4 @@
-// This test checks correct emitting of LLVM IR functions definitions for genx tasks, export and extern "C" functions.
+// This test checks correct emitting of LLVM IR functions definitions for Xe tasks, export and extern "C" functions.
 // It also checks datalayout and metadata.
 // RUN: %{ispc} %s --target=gen9-x16 --emit-llvm-text --no-discard-value-names -o %t.ll
 // RUN: FileCheck --input-file=%t.ll -check-prefix=CHECK_EXPORT_F1_GPU %s
@@ -188,7 +188,7 @@ export void t5_call(uniform int p[]) {
 
 // Diagnostics
 #ifdef CHECK_DIAG
-// CHECK_RET_VAL_EXPORT_WARN_GPU: Warning: Export and extern "C"-qualified functions must have void return type for gen target.
+// CHECK_RET_VAL_EXPORT_WARN_GPU: Warning: Export and extern "C"-qualified functions must have void return type for Xe target.
 export uniform int check_diag() {
     return programCount;
 }
