@@ -2298,9 +2298,9 @@ bool FunctionType::IsUnsignedType() const { return false; }
 
 bool FunctionType::IsConstType() const { return false; }
 
-bool FunctionType::IsISPCKernel() const { return g->target->isGenXTarget() && isTask; }
+bool FunctionType::IsISPCKernel() const { return g->target->isXeTarget() && isTask; }
 
-bool FunctionType::IsISPCExternal() const { return g->target->isGenXTarget() && (isExported || isExternC); }
+bool FunctionType::IsISPCExternal() const { return g->target->isXeTarget() && (isExported || isExternC); }
 
 const Type *FunctionType::GetBaseType() const {
     FATAL("FunctionType::GetBaseType() shouldn't be called");
@@ -2498,7 +2498,7 @@ const std::string FunctionType::GetReturnTypeString() const {
 }
 
 llvm::FunctionType *FunctionType::LLVMFunctionType(llvm::LLVMContext *ctx, bool removeMask) const {
-    if (!g->target->isGenXTarget() && isTask == true) {
+    if (!g->target->isXeTarget() && isTask == true) {
         Assert(removeMask == false);
     }
 
@@ -2542,7 +2542,7 @@ llvm::FunctionType *FunctionType::LLVMFunctionType(llvm::LLVMContext *ctx, bool 
     }
 
     std::vector<llvm::Type *> callTypes;
-    if (isTask && (!g->target->isGenXTarget())) {
+    if (isTask && (!g->target->isXeTarget())) {
         // Tasks take three arguments: a pointer to a struct that holds the
         // actual task arguments, the thread index, and the total number of
         // threads the tasks system has running.  (Task arguments are

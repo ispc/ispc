@@ -481,7 +481,7 @@ void ispc::Optimize(llvm::Module *module, int optLevel) {
     optPM.add(llvm::createVerifierPass(), 0);
 
     optPM.add(new llvm::TargetLibraryInfoWrapperPass(llvm::Triple(module->getTargetTriple())));
-    if (!g->target->isGenXTarget()) {
+    if (!g->target->isXeTarget()) {
         llvm::TargetMachine *targetMachine = g->target->GetTargetMachine();
         optPM.getPM().add(createTargetTransformInfoWrapperPass(targetMachine->getTargetIRAnalysis()));
     }
@@ -498,7 +498,7 @@ void ispc::Optimize(llvm::Module *module, int optLevel) {
         // take the various __pseudo_* functions it has emitted and turn
         // them into something that can actually execute.
 #ifdef ISPC_XE_ENABLED
-        if (g->target->isGenXTarget()) {
+        if (g->target->isXeTarget()) {
             // Global DCE is required for ISPCSimdCFLoweringPass
             optPM.add(llvm::createGlobalDCEPass());
             // FIXME: temporary solution
@@ -518,7 +518,7 @@ void ispc::Optimize(llvm::Module *module, int optLevel) {
         optPM.add(CreateIsCompileTimeConstantPass(true));
         optPM.add(llvm::createFunctionInliningPass());
 #ifdef ISPC_XE_ENABLED
-        if (g->target->isGenXTarget()) {
+        if (g->target->isXeTarget()) {
             optPM.add(CreateFixAddressSpace());
         }
 #endif
@@ -529,7 +529,7 @@ void ispc::Optimize(llvm::Module *module, int optLevel) {
         optPM.add(llvm::createCFGSimplificationPass());
 #endif
 #ifdef ISPC_XE_ENABLED
-        if (g->target->isGenXTarget()) {
+        if (g->target->isXeTarget()) {
             optPM.add(llvm::createPromoteMemoryToRegisterPass());
             optPM.add(llvm::createGlobalsLocalizationPass());
             // Remove dead globals after localization
@@ -559,7 +559,7 @@ void ispc::Optimize(llvm::Module *module, int optLevel) {
         optPM.add(llvm::createGlobalDCEPass(), 184);
 
 #ifdef ISPC_XE_ENABLED
-        if (g->target->isGenXTarget()) {
+        if (g->target->isXeTarget()) {
             // FIXME: temporary solution
             optPM.add(llvm::createBreakCriticalEdgesPass());
             optPM.add(CreateDemotePHIs());
@@ -672,7 +672,7 @@ void ispc::Optimize(llvm::Module *module, int optLevel) {
 
         optPM.add(llvm::createInstructionCombiningPass());
 #ifdef ISPC_XE_ENABLED
-        if (g->target->isGenXTarget()) {
+        if (g->target->isXeTarget()) {
             // Inline
             optPM.add(llvm::createCorrelatedValuePropagationPass());
             optPM.add(llvm::createInstructionCombiningPass());
@@ -695,7 +695,7 @@ void ispc::Optimize(llvm::Module *module, int optLevel) {
         if (g->opt.disableGatherScatterOptimizations == false && g->target->getVectorWidth() > 1) {
             optPM.add(llvm::createInstructionCombiningPass(), 255);
 #ifdef ISPC_XE_ENABLED
-            if (g->target->isGenXTarget() && !g->opt.disableGenXGatherCoalescing)
+            if (g->target->isXeTarget() && !g->opt.disableGenXGatherCoalescing)
                 optPM.add(CreateGenXGatherCoalescingPass());
 #endif
             optPM.add(CreateImproveMemoryOpsPass());
@@ -755,7 +755,7 @@ void ispc::Optimize(llvm::Module *module, int optLevel) {
         optPM.add(llvm::createIndVarSimplifyPass());
         // Currently CM does not support memset/memcpy
         // so this pass is temporary disabled for GEN.
-        if (!g->target->isGenXTarget()) {
+        if (!g->target->isXeTarget()) {
             optPM.add(llvm::createLoopIdiomPass());
         }
         optPM.add(llvm::createLoopDeletionPass());
@@ -769,7 +769,7 @@ void ispc::Optimize(llvm::Module *module, int optLevel) {
         optPM.add(CreateInstructionSimplifyPass());
         // Currently CM does not support memset/memcpy
         // so this pass is temporary disabled for GEN.
-        if (!g->target->isGenXTarget()) {
+        if (!g->target->isXeTarget()) {
             optPM.add(llvm::createMemCpyOptPass());
         }
         optPM.add(llvm::createSCCPPass());
@@ -787,7 +787,7 @@ void ispc::Optimize(llvm::Module *module, int optLevel) {
         optPM.add(llvm::createInstructionCombiningPass());
         optPM.add(CreateInstructionSimplifyPass());
 #ifdef ISPC_XE_ENABLED
-        if (g->target->isGenXTarget()) {
+        if (g->target->isXeTarget()) {
             optPM.add(CreateReplaceLLVMIntrinsics());
         }
 #endif
@@ -796,7 +796,7 @@ void ispc::Optimize(llvm::Module *module, int optLevel) {
         optPM.add(llvm::createAggressiveDCEPass());
         optPM.add(llvm::createStripDeadPrototypesPass());
 #ifdef ISPC_XE_ENABLED
-        if (g->target->isGenXTarget()) {
+        if (g->target->isXeTarget()) {
             optPM.add(CreateFixAddressSpace());
         }
 #endif
@@ -804,7 +804,7 @@ void ispc::Optimize(llvm::Module *module, int optLevel) {
         optPM.add(llvm::createGlobalDCEPass());
         optPM.add(llvm::createConstantMergePass());
 #ifdef ISPC_XE_ENABLED
-        if (g->target->isGenXTarget()) {
+        if (g->target->isXeTarget()) {
             optPM.add(CreateCheckUnsupportedInsts());
             optPM.add(CreateMangleOpenCLBuiltins());
             // This pass is required to prepare LLVM IR for open source SPIR-V translator
@@ -2583,7 +2583,7 @@ static llvm::Value *lComputeCommonPointer(llvm::Value *base, llvm::Value *offset
     Assert(firstOffset != NULL);
     llvm::Value *typeScaleValue =
         firstOffset->getType() == LLVMTypes::Int32Type ? LLVMInt32(typeScale) : LLVMInt64(typeScale);
-    if (g->target->isGenXTarget() && typeScale > 1) {
+    if (g->target->isXeTarget() && typeScale > 1) {
         firstOffset = llvm::BinaryOperator::Create(llvm::Instruction::SDiv, firstOffset, typeScaleValue,
                                                    "scaled_offset", insertBefore);
     }
@@ -2818,7 +2818,7 @@ static bool lGSToLoadStore(llvm::CallInst *callInst) {
             // For gen we need to cast the base first and only after that get common pointer otherwise
             // CM backend will be broken on bitcast i8* to T* instruction with following load.
             // For this we need to re-calculate the offset basing on type sizes.
-            if (g->target->isGenXTarget()) {
+            if (g->target->isXeTarget()) {
                 base = new llvm::BitCastInst(base, llvm::PointerType::get(scalarType, 0), base->getName(), callInst);
                 ptr = lComputeCommonPointer(base, fullOffsets, callInst, typeScale);
             } else {
@@ -2889,7 +2889,7 @@ static bool lGSToLoadStore(llvm::CallInst *callInst) {
             llvm::Value *ptr;
 
             if (gatherInfo != NULL) {
-                if (g->target->isGenXTarget()) {
+                if (g->target->isXeTarget()) {
                     // For gen we need to cast the base first and only after that get common pointer otherwise
                     // CM backend will be broken on bitcast i8* to T* instruction with following load.
                     // For this we need to re-calculate the offset basing on type sizes.
@@ -2905,7 +2905,7 @@ static bool lGSToLoadStore(llvm::CallInst *callInst) {
                 Debug(pos, "Transformed gather to unaligned vector load!");
                 bool doBlendLoad = false;
 #ifdef ISPC_XE_ENABLED
-                doBlendLoad = g->target->isGenXTarget() && g->opt.enableGenXUnsafeMaskedLoad;
+                doBlendLoad = g->target->isXeTarget() && g->opt.enableGenXUnsafeMaskedLoad;
 #endif
                 llvm::Instruction *newCall =
                     lCallInst(doBlendLoad ? gatherInfo->blendMaskedFunc : gatherInfo->loadMaskedFunc, ptr, mask,
@@ -2946,7 +2946,7 @@ static llvm::Function *lGenXMaskedInt8Inst(llvm::Instruction *inst, bool isStore
 }
 
 static llvm::CallInst *lGenXStoreInst(llvm::Value *val, llvm::Value *ptr, llvm::Instruction *inst) {
-    Assert(g->target->isGenXTarget());
+    Assert(g->target->isXeTarget());
 #if ISPC_LLVM_VERSION >= ISPC_LLVM_11_0
     Assert(llvm::isa<llvm::FixedVectorType>(val->getType()));
     llvm::FixedVectorType *valVecType = llvm::dyn_cast<llvm::FixedVectorType>(val->getType());
@@ -3082,11 +3082,11 @@ static bool lImproveMaskedStore(llvm::CallInst *callInst) {
         // InternalLinkage check is to prevent generation of SVM store when the pointer came from caller.
         // Since it can be allocated in a caller, it may be allocated on register. Possible svm store
         // is resolved after inlining. TODO: problems can be met here in case of Stack Calls.
-        if (g->target->isGenXTarget() && GetAddressSpace(lvalue) == AddressSpace::ispc_global &&
+        if (g->target->isXeTarget() && GetAddressSpace(lvalue) == AddressSpace::ispc_global &&
             callInst->getParent()->getParent()->getLinkage() != llvm::GlobalValue::LinkageTypes::InternalLinkage) {
             store = lGenXStoreInst(rvalue, lvalue, callInst);
-        } else if (!g->target->isGenXTarget() ||
-                   (g->target->isGenXTarget() && GetAddressSpace(lvalue) == AddressSpace::ispc_default))
+        } else if (!g->target->isXeTarget() ||
+                   (g->target->isXeTarget() && GetAddressSpace(lvalue) == AddressSpace::ispc_default))
 #endif
         {
             llvm::Type *ptrType = llvm::PointerType::get(rvalueType, 0);
@@ -3105,7 +3105,7 @@ static bool lImproveMaskedStore(llvm::CallInst *callInst) {
         }
 #ifdef ISPC_XE_ENABLED
     } else {
-        if (g->target->isGenXTarget() && GetAddressSpace(lvalue) == AddressSpace::ispc_global) {
+        if (g->target->isXeTarget() && GetAddressSpace(lvalue) == AddressSpace::ispc_global) {
             // In thuis case we use masked_store which on genx target causes scatter usage.
             // Get the source position from the metadata attached to the call
             // instruction so that we can issue PerformanceWarning()s below.
@@ -3147,7 +3147,7 @@ static bool lImproveMaskedLoad(llvm::CallInst *callInst, llvm::BasicBlock::itera
                          MLInfo("__masked_load_blend_i32", 4), MLInfo("__masked_load_blend_float", 4),
                          MLInfo("__masked_load_blend_i64", 8), MLInfo("__masked_load_blend_double", 8)};
     MLInfo *info = NULL;
-    if (g->target->isGenXTarget()) {
+    if (g->target->isXeTarget()) {
         int nFuncs = sizeof(genxInfo) / sizeof(genxInfo[0]);
         for (int i = 0; i < nFuncs; ++i) {
             if (genxInfo[i].func != NULL && called == genxInfo[i].func) {
@@ -3183,11 +3183,11 @@ static bool lImproveMaskedLoad(llvm::CallInst *callInst, llvm::BasicBlock::itera
         // InternalLinkage check is to prevent generation of SVM load when the pointer came from caller.
         // Since it can be allocated in a caller, it may be allocated on register. Possible svm load
         // is resolved after inlining. TODO: problems can be met here in case of Stack Calls.
-        if (g->target->isGenXTarget() && GetAddressSpace(ptr) == AddressSpace::ispc_global &&
+        if (g->target->isXeTarget() && GetAddressSpace(ptr) == AddressSpace::ispc_global &&
             callInst->getParent()->getParent()->getLinkage() != llvm::GlobalValue::LinkageTypes::InternalLinkage) {
             load = lGenXLoadInst(ptr, callInst->getType(), callInst);
-        } else if (!g->target->isGenXTarget() ||
-                   (g->target->isGenXTarget() && GetAddressSpace(ptr) == AddressSpace::ispc_default))
+        } else if (!g->target->isXeTarget() ||
+                   (g->target->isXeTarget() && GetAddressSpace(ptr) == AddressSpace::ispc_default))
 #endif
         {
             llvm::Type *ptrType = llvm::PointerType::get(callInst->getType(), 0);

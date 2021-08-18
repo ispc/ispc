@@ -189,7 +189,7 @@ Module::Module(const char *fn) {
         } else {
             // When we link with CM, "Dwarf version" and "Debug info version" is already set
             // so we don't need to do this here.  Otherwise VerifyModule will be broken.
-            if (!g->target->isGenXTarget()) {
+            if (!g->target->isXeTarget()) {
                 module->addModuleFlag(llvm::Module::Warning, "Dwarf Version", g->generateDWARFVersion);
             }
         }
@@ -319,7 +319,7 @@ Symbol *Module::AddLLVMIntrinsicDecl(const std::string &name, ExprList *args, So
 
     llvm::Function *funcDecl = nullptr;
 #ifdef ISPC_XE_ENABLED
-    if (g->target->isGenXTarget()) {
+    if (g->target->isXeTarget()) {
         llvm::GenXIntrinsic::ID ID = llvm::GenXIntrinsic::lookupGenXIntrinsicID(name);
         if (ID == llvm::GenXIntrinsic::not_any_intrinsic) {
             Error(pos, "LLVM intrinsic \"%s\" not supported.", name.c_str());
@@ -336,7 +336,7 @@ Symbol *Module::AddLLVMIntrinsicDecl(const std::string &name, ExprList *args, So
         funcDecl = llvm::GenXIntrinsic::getGenXDeclaration(module, ID, argArr);
     }
 #endif
-    if (!g->target->isGenXTarget()) {
+    if (!g->target->isXeTarget()) {
         llvm::TargetMachine *targetMachine = g->target->GetTargetMachine();
         const llvm::TargetIntrinsicInfo *TII = targetMachine->getIntrinsicInfo();
         llvm::Intrinsic::ID ID = llvm::Function::lookupIntrinsicID(llvm::StringRef(name));
@@ -814,7 +814,7 @@ void Module::AddFunctionDeclaration(const std::string &name, const FunctionType 
 
     // For gen target all functions except GenX kernels, external functions and explicitly marked extern functions must
     // be internal.
-    if (g->target->isGenXTarget() && !functionType->IsISPCKernel() && !functionType->IsISPCExternal() &&
+    if (g->target->isXeTarget() && !functionType->IsISPCKernel() && !functionType->IsISPCExternal() &&
         (storageClass != SC_EXTERN))
         linkage = llvm::GlobalValue::InternalLinkage;
 
@@ -862,7 +862,7 @@ void Module::AddFunctionDeclaration(const std::string &name, const FunctionType 
     }
 
     if (functionType->isTask) {
-        if (!g->target->isGenXTarget()) {
+        if (!g->target->isXeTarget()) {
             // This also applies transitively to members I think?
             function->addParamAttr(0, llvm::Attribute::NoAlias);
         }
@@ -1022,7 +1022,7 @@ bool Module::writeOutput(OutputType outputType, OutputFlags flags, const char *o
     if (g->generateDebuggingSymbols == true) {
         // For GenX target: when we link with CM, "Dwarf version" and "Debug info version" is already set
         // so we don't need to do this here.  Otherwise VerifyModule will be broken.
-        if (!g->target->isGenXTarget()) {
+        if (!g->target->isXeTarget()) {
             module->addModuleFlag(llvm::Module::Warning, "Debug Info Version", llvm::DEBUG_METADATA_VERSION);
         }
     }
@@ -2383,7 +2383,7 @@ void Module::execPreprocessor(const char *infilename, llvm::raw_string_ostream *
         }
     }
 
-    if (g->target->isGenXTarget()) {
+    if (g->target->isXeTarget()) {
         opts.addMacroDef("taskIndex=__taskIndex()");
         opts.addMacroDef("taskCount=__taskCount()");
         opts.addMacroDef("taskCount0=__taskCount0()");
@@ -2794,16 +2794,16 @@ int Module::CompileAndOutput(const char *srcFile, Arch arch, const char *cpu, st
             llvm::TimeTraceScope TimeScope("Backend");
 #ifdef ISPC_XE_ENABLED
             if (outputType == Asm || outputType == Object) {
-                if (g->target->isGenXTarget()) {
+                if (g->target->isXeTarget()) {
                     Error(SourcePos(), "%s output is not supported yet for \"genx-*\" targets. ",
                           (outputType == Asm) ? "assembly" : "binary");
                     return 1;
                 }
             }
-            if (g->target->isGenXTarget() && outputType == OutputType::Object) {
+            if (g->target->isXeTarget() && outputType == OutputType::Object) {
                 outputType = OutputType::ZEBIN;
             }
-            if (!g->target->isGenXTarget() && (outputType == OutputType::ZEBIN || outputType == OutputType::SPIRV)) {
+            if (!g->target->isXeTarget() && (outputType == OutputType::ZEBIN || outputType == OutputType::SPIRV)) {
                 Error(SourcePos(), "SPIR-V and L0 binary formats are supported for gen target only");
                 return 1;
             }

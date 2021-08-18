@@ -259,7 +259,7 @@ class Target {
 
     ISA getISA() const { return m_isa; }
 
-    bool isGenXTarget() {
+    bool isXeTarget() {
 #ifdef ISPC_XE_ENABLED
         return m_isa == Target::XE;
 #else
