@@ -1768,7 +1768,7 @@ void ForeachStmt::EmitCode(FunctionEmitContext *ctx) const {
    for full and partial masks due to it.
 */
 void ForeachStmt::EmitCodeForGenX(FunctionEmitContext *ctx) const {
-    AssertPos(pos, g->target->isGenXTarget());
+    AssertPos(pos, g->target->isXeTarget());
 
     if (ctx->GetCurrentBasicBlock() == NULL || stmts == NULL)
         return;
@@ -3505,7 +3505,7 @@ void PrintStmt::EmitCode(FunctionEmitContext *ctx) const {
         return;
     ctx->SetDebugPos(pos);
 #ifdef ISPC_XE_ENABLED
-    if (g->target->isGenXTarget()) {
+    if (g->target->isXeTarget()) {
         emitCode4LZ(ctx);
         return;
     }
@@ -3626,7 +3626,7 @@ int AssertStmt::EstimateCost() const { return COST_ASSERT; }
 DeleteStmt::DeleteStmt(Expr *e, SourcePos p) : Stmt(p, DeleteStmtID) { expr = e; }
 
 void DeleteStmt::EmitCode(FunctionEmitContext *ctx) const {
-    if (g->target->isGenXTarget()) {
+    if (g->target->isXeTarget()) {
         Error(pos, "\"delete\" statement is not supported for genx-* targets yet.");
         return;
     }

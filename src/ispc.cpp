@@ -1263,14 +1263,14 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, bool pic, boo
 #endif
 
         // Support 'i64' and 'double' types in cm
-        if (isGenXTarget())
+        if (isXeTarget())
             featuresString += "+longlong";
 
         if (g->opt.disableFMA == false)
             options.AllowFPOpFusion = llvm::FPOpFusion::Fast;
 
         // For gen target we do not need to create target/targetMachine
-        if (!isGenXTarget()) {
+        if (!isXeTarget()) {
             m_targetMachine = m_target->createTargetMachine(triple, m_cpu, featuresString, options, relocModel);
             Assert(m_targetMachine != NULL);
 
@@ -1302,7 +1302,7 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, bool pic, boo
         std::string dl_string;
         if (m_targetMachine != NULL)
             dl_string = m_targetMachine->createDataLayout().getStringRepresentation();
-        if (isGenXTarget())
+        if (isXeTarget())
             dl_string = m_arch == Arch::genx64 ? "e-p:64:64-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:"
                                                  "256-v512:512-v1024:1024-n8:16:32:64"
                                                : "e-p:32:32-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:"
@@ -1332,7 +1332,7 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, bool pic, boo
     m_valid = !error;
 
     if (printTarget) {
-        if (!isGenXTarget()) {
+        if (!isXeTarget()) {
             printf("Target Triple: %s\n", m_targetMachine->getTargetTriple().str().c_str());
             printf("Target CPU: %s\n", m_targetMachine->getTargetCPU().str().c_str());
             printf("Target Feature String: %s\n", m_targetMachine->getTargetFeatureString().str().c_str());

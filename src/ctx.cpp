@@ -3587,7 +3587,7 @@ llvm::Instruction *FunctionEmitContext::ReturnInst() {
 
 llvm::Value *FunctionEmitContext::LaunchInst(llvm::Value *callee, std::vector<llvm::Value *> &argVals,
                                              llvm::Value *launchCount[3]) {
-    if (g->target->isGenXTarget()) {
+    if (g->target->isXeTarget()) {
         Error(currentPos, "\"launch\" keyword is not supported for genx-* targets");
         return NULL;
     }
@@ -3655,7 +3655,7 @@ llvm::Value *FunctionEmitContext::LaunchInst(llvm::Value *callee, std::vector<ll
 }
 
 void FunctionEmitContext::SyncInst() {
-    if (g->target->isGenXTarget()) {
+    if (g->target->isXeTarget()) {
         Error(currentPos, "\"sync\" keyword is not supported for genx-* targets");
         return;
     }
@@ -3867,7 +3867,7 @@ llvm::Constant *FunctionEmitContext::GenXGetOrCreateConstantString(llvm::StringR
 #endif
 
 bool FunctionEmitContext::emitGenXHardwareMask() {
-    bool emitGenXHardwareMask = g->target->isGenXTarget();
+    bool emitGenXHardwareMask = g->target->isXeTarget();
 #ifdef ISPC_XE_ENABLED
     emitGenXHardwareMask &= g->opt.emitGenXHardwareMask;
 #endif

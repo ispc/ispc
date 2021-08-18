@@ -120,7 +120,7 @@ Function::Function(Symbol *s, Stmt *c) {
             paramSym->parentFunction = this;
     }
 
-    if (type->isTask && !g->target->isGenXTarget()) {
+    if (type->isTask && !g->target->isXeTarget()) {
         threadIndexSym = m->symbolTable->LookupVariable("threadIndex");
         Assert(threadIndexSym);
         threadCountSym = m->symbolTable->LookupVariable("threadCount");
@@ -223,7 +223,7 @@ void Function::emitCode(FunctionEmitContext *ctx, llvm::Function *function, Sour
     const FunctionType *type = CastType<FunctionType>(sym->type);
     Assert(type != NULL);
     // CPU tasks
-    if (type->isTask == true && !g->target->isGenXTarget()) {
+    if (type->isTask == true && !g->target->isXeTarget()) {
         Assert(type->IsISPCExternal() == false);
         // For tasks, there should always be three parameters: the
         // pointer to the structure that holds all of the arguments, the
@@ -355,7 +355,7 @@ void Function::emitCode(FunctionEmitContext *ctx, llvm::Function *function, Sour
         // on, all off, or mixed.  If this is a simple function, then this
         // isn't worth the code bloat / overhead.
         bool checkMask =
-            (!g->target->isGenXTarget() && type->isTask == true) ||
+            (!g->target->isXeTarget() && type->isTask == true) ||
             ((function->getAttributes().getFnAttributes().hasAttribute(llvm::Attribute::AlwaysInline) == false) &&
              costEstimate > CHECK_MASK_AT_FUNCTION_START_COST);
         checkMask &= (type->isUnmasked == false);
@@ -543,7 +543,7 @@ void Function::GenerateIR() {
             firstStmtPos = code->pos;
     }
     // And we can now go ahead and emit the code
-    if (g->target->isGenXTarget()) {
+    if (g->target->isXeTarget()) {
         // For GEN target we do not emit code for masked version of a function
         // if it is a kernel
         const FunctionType *type = CastType<FunctionType>(sym->type);
@@ -582,7 +582,7 @@ void Function::GenerateIR() {
 
             // GenX kernel should have "dllexport" and "CMGenxMain" attribute,
             // otherss have "CMStackCall" attribute
-            if (g->target->isGenXTarget()) {
+            if (g->target->isXeTarget()) {
                 if (type->IsISPCExternal()) {
                     // Mark ISPCExternal() function as spirv_func and DSO local.
                     appFunction->setCallingConv(llvm::CallingConv::SPIR_FUNC);
@@ -620,7 +620,7 @@ void Function::GenerateIR() {
             }
         } else {
             // In case if it is not the kernel, mark function as a stack call
-            if (g->target->isGenXTarget()) {
+            if (g->target->isXeTarget()) {
                 function->addFnAttr("CMStackCall");
             }
         }

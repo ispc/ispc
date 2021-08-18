@@ -1003,7 +1003,7 @@ void ispc::AddBitcodeToModule(const BitcodeLib *lib, llvm::Module *module, Symbo
         bcModule->setTargetTriple(mTriple.str());
         bcModule->setDataLayout(module->getDataLayout());
 
-        if (g->target->isGenXTarget()) {
+        if (g->target->isXeTarget()) {
             // Maybe we will use it for other targets in future,
             // but now it is needed only by GenX. We need
             // to update attributes because GenX intrinsics are
@@ -1030,7 +1030,7 @@ void ispc::AddBitcodeToModule(const BitcodeLib *lib, llvm::Module *module, Symbo
         }
 
         lSetInternalFunctions(module);
-        if (g->target->isGenXTarget()) {
+        if (g->target->isXeTarget()) {
             // For now this function is used for gen target only
             // TODO: check if its usage affects CPU targets
             lSetAlwaysInlineFunctions(module);
@@ -1189,7 +1189,7 @@ void ispc::DefineStdlib(SymbolTable *symbolTable, llvm::LLVMContext *ctx, llvm::
     lDefineConstantInt("__have_native_rcpd", g->target->hasRcpd(), module, symbolTable, debug_symbols);
     lDefineConstantInt("__have_saturating_arithmetic", g->target->hasSatArith(), module, symbolTable, debug_symbols);
 
-    lDefineConstantInt("__is_genx_target", (int)(g->target->isGenXTarget()), module, symbolTable, debug_symbols);
+    lDefineConstantInt("__is_genx_target", (int)(g->target->isXeTarget()), module, symbolTable, debug_symbols);
 
     if (g->forceAlignment != -1) {
         llvm::GlobalVariable *alignment = module->getGlobalVariable("memory_alignment", true);

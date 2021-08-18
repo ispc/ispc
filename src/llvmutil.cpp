@@ -611,8 +611,8 @@ static bool lIsFirstElementConstVector(llvm::Value *v) {
     // FIXME: skipping instruction and using getOperand(1) without checking for instruction type is incorrect!
     // This yields failing tests/write-same-loc.ispc for 32 bit targets (x86).
     // Need to understand what initial intent was here (what instruction supposed to be handled).
-    // TODO: after fixing FIXME above isGenXTarget() needs to be removed.
-    if (g->target->isGenXTarget()) {
+    // TODO: after fixing FIXME above isXeTarget() needs to be removed.
+    if (g->target->isXeTarget()) {
         if (cv == NULL && llvm::isa<llvm::Instruction>(v)) {
             cv = llvm::dyn_cast<llvm::ConstantVector>(llvm::dyn_cast<llvm::Instruction>(v)->getOperand(1));
         }
