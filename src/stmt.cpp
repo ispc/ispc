@@ -1779,13 +1779,13 @@ void ForeachStmt::EmitCodeForXe(FunctionEmitContext *ctx) const {
 
     llvm::Value *execMask = NULL;
     if (g->opt.enableForeachInsideVarying) {
-        Warning(pos, "\"foreach\" statement is not optimized for genx-* targets yet.");
+        Warning(pos, "\"foreach\" statement is not optimized for Xe targets yet.");
         ctx->SetInternalMask(LLVMMaskAllOn);
         ctx->SetFunctionMask(LLVMMaskAllOn);
         execMask = ctx->XeStartUnmaskedRegion();
     } else {
-        Warning(pos, "\"foreach\" statement is not supported under varying CF for genx-* targets yet. Make sure that"
-                     " it is not called under varying CF or use \"--opt=enable-genx-foreach-varying\" to enable its "
+        Warning(pos, "\"foreach\" statement is not supported under varying CF for Xe targets yet. Make sure that"
+                     " it is not called under varying CF or use \"--opt=enable-xe-foreach-varying\" to enable its "
                      "experimental support.");
     }
     llvm::BasicBlock *bbBody = ctx->CreateBasicBlock("foreach_body", ctx->GetCurrentBasicBlock());
@@ -3627,7 +3627,7 @@ DeleteStmt::DeleteStmt(Expr *e, SourcePos p) : Stmt(p, DeleteStmtID) { expr = e;
 
 void DeleteStmt::EmitCode(FunctionEmitContext *ctx) const {
     if (g->target->isXeTarget()) {
-        Error(pos, "\"delete\" statement is not supported for genx-* targets yet.");
+        Error(pos, "\"delete\" statement is not supported for Xe targets yet.");
         return;
     }
 

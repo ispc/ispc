@@ -3588,7 +3588,7 @@ llvm::Instruction *FunctionEmitContext::ReturnInst() {
 llvm::Value *FunctionEmitContext::LaunchInst(llvm::Value *callee, std::vector<llvm::Value *> &argVals,
                                              llvm::Value *launchCount[3]) {
     if (g->target->isXeTarget()) {
-        Error(currentPos, "\"launch\" keyword is not supported for genx-* targets");
+        Error(currentPos, "\"launch\" keyword is not supported for Xe targets");
         return NULL;
     }
 
@@ -3656,7 +3656,7 @@ llvm::Value *FunctionEmitContext::LaunchInst(llvm::Value *callee, std::vector<ll
 
 void FunctionEmitContext::SyncInst() {
     if (g->target->isXeTarget()) {
-        Error(currentPos, "\"sync\" keyword is not supported for genx-* targets");
+        Error(currentPos, "\"sync\" keyword is not supported for Xe targets");
         return;
     }
 

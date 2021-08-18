@@ -162,8 +162,8 @@ static void lPrintVersion() {
     printf("        disable-zmm\t\tDisable using zmm registers for avx512 targets in favour of ymm. This also affects "
            "ABI.\n");
 #ifdef ISPC_XE_ENABLED
-    printf("        emit-genx-hardware-mask\t\tEnable emitting of GenX implicit hardware mask.\n");
-    printf("        enable-genx-foreach-varying\t\tEnable experimental foreach support inside varying control flow.\n");
+    printf("        emit-xe-hardware-mask\t\tEnable emitting of Xe implicit hardware mask.\n");
+    printf("        enable-xe-foreach-varying\t\tEnable experimental foreach support inside varying control flow.\n");
 #endif
     printf("        fast-masked-vload\t\tFaster masked vector loads on SSE (may go past end of array)\n");
     printf("        fast-math\t\t\tPerform non-IEEE-compliant optimizations of numeric expressions\n");
@@ -230,7 +230,8 @@ static void lPrintVersion() {
     printf("        disable-uniform-control-flow\t\tDisable uniform control flow optimizations\n");
     printf("        disable-uniform-memory-optimizations\tDisable uniform-based coherent memory access\n");
 #ifdef ISPC_XE_ENABLED
-    printf("        disable-genx-gather-coalescing\t\tDisable GenX gather coalescing.\n");
+    printf("        disable-xe-gather-coalescing\t\tDisable Xe gather coalescing\n");
+    printf("        enable-xe-unsafe-masked-load\t\tEnable Xe unsafe masked load\n");
 #endif
     printf("    [--print-target]\t\t\tPrint target's information\n");
     printf("    [--yydebug]\t\t\t\tPrint debugging information during parsing\n");
@@ -791,13 +792,13 @@ int main(int Argc, char *Argv[]) {
             else if (!strcmp(opt, "disable-uniform-memory-optimizations"))
                 g->opt.disableUniformMemoryOptimizations = true;
 #ifdef ISPC_XE_ENABLED
-            else if (!strcmp(opt, "disable-genx-gather-coalescing"))
+            else if (!strcmp(opt, "disable-xe-gather-coalescing"))
                 g->opt.disableXeGatherCoalescing = true;
-            else if (!strcmp(opt, "emit-genx-hardware-mask"))
+            else if (!strcmp(opt, "emit-xe-hardware-mask"))
                 g->opt.emitXeHardwareMask = true;
-            else if (!strcmp(opt, "enable-genx-foreach-varying"))
+            else if (!strcmp(opt, "enable-xe-foreach-varying"))
                 g->opt.enableForeachInsideVarying = true;
-            else if (!strcmp(opt, "enable-genx-unsafe-masked-load"))
+            else if (!strcmp(opt, "enable-xe-unsafe-masked-load"))
                 g->opt.enableXeUnsafeMaskedLoad = true;
 #endif
             else {
@@ -1058,10 +1059,10 @@ int main(int Argc, char *Argv[]) {
         }
 #ifdef ISPC_XE_ENABLED
         if (ISPCTargetIsGen(target)) {
-            Assert(targets.size() == 1 && "multi-target is not supported for genx-* targets yet.");
+            Assert(targets.size() == 1 && "multi-target is not supported for Xe targets yet.");
             // Generate .spv for Xe target instead of object by default.
             if (ot == Module::Object) {
-                Warning(SourcePos(), "Emitting spir-v file for genx-* targets.");
+                Warning(SourcePos(), "Emitting spir-v file for Xe targets.");
                 ot = Module::SPIRV;
             }
         }
