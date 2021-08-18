@@ -1,6 +1,6 @@
 // This test checks correct emitting of LLVM IR functions definitions for genx tasks, export and extern "C" functions.
 // It also checks datalayout and metadata.
-// RUN: %{ispc} %s --target=genx-x16 --emit-llvm-text --no-discard-value-names -o %t.ll
+// RUN: %{ispc} %s --target=gen9-x16 --emit-llvm-text --no-discard-value-names -o %t.ll
 // RUN: FileCheck --input-file=%t.ll -check-prefix=CHECK_EXPORT_F1_GPU %s
 // RUN: FileCheck --input-file=%t.ll -check-prefix=CHECK_TASK_F1_GPU %s
 // RUN: FileCheck --input-file=%t.ll -check-prefix=CHECK_EXPORT_F2_GPU %s
@@ -18,8 +18,8 @@
 // RUN: FileCheck --input-file=%t.ll -check-prefix=CHECK_METADATA %s
 // RUN: FileCheck --input-file=%t.ll -check-prefix=CHECK_DATALAYOUT %s
 // RUN: FileCheck --input-file=%t.ll -check-prefix=CHECK_FUNC_GPU %s
-// RUN: %{ispc} %s --target=genx-x16 -DCHECK_DIAG --nowrap --emit-spirv -o %t.spv 2>&1 | FileCheck %s -check-prefix=CHECK_RET_VAL_EXPORT_WARN_GPU
-// RUN: not %{ispc} %s --target=genx-x16 -DCHECK_DIAG_TASK --nowrap --emit-spirv -o %t.spv 2>&1 | FileCheck %s -check-prefix=CHECK_RET_VAL_TASK_ERROR
+// RUN: %{ispc} %s --target=gen9-x16 -DCHECK_DIAG --nowrap --emit-spirv -o %t.spv 2>&1 | FileCheck %s -check-prefix=CHECK_RET_VAL_EXPORT_WARN_GPU
+// RUN: not %{ispc} %s --target=gen9-x16 -DCHECK_DIAG_TASK --nowrap --emit-spirv -o %t.spv 2>&1 | FileCheck %s -check-prefix=CHECK_RET_VAL_TASK_ERROR
 
 // CPU run to avoid regressions
 // RUN: %{ispc} %s --target=avx2-i32x16 --emit-llvm-text --no-discard-value-names -o %t.ll

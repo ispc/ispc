@@ -1,10 +1,10 @@
-// RUN: %{ispc} %s --target=genx-x16 --arch=genx64 -h %t.h --emit-llvm-text -o %t.ll
+// RUN: %{ispc} %s --target=gen9-x16 --arch=genx64 -h %t.h --emit-llvm-text -o %t.ll
 // RUN: FileCheck --input-file=%t.ll %s
-// RUN: %{ispc} %s --target=genx-x8 --arch=genx64 -h %t.h --emit-llvm-text -o %t.ll
+// RUN: %{ispc} %s --target=gen9-x8 --arch=genx64 -h %t.h --emit-llvm-text -o %t.ll
 // RUN: FileCheck --input-file=%t.ll %s
-// RUN: %{ispc} %s --target=genx-x16 --arch=genx32 -h %t.h --emit-llvm-text -o %t.ll
+// RUN: %{ispc} %s --target=gen9-x16 --arch=genx32 -h %t.h --emit-llvm-text -o %t.ll
 // RUN: FileCheck --input-file=%t.ll %s
-// RUN: %{ispc} %s --target=genx-x8 --arch=genx32 -h %t.h --emit-llvm-text -o %t.ll
+// RUN: %{ispc} %s --target=gen9-x8 --arch=genx32 -h %t.h --emit-llvm-text -o %t.ll
 // RUN: FileCheck --input-file=%t.ll %s
 // REQUIRES: XE_ENABLED
 
