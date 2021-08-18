@@ -115,12 +115,12 @@ class TargetConfig(object):
         else:
             self.arch = arch
         self.target = target
-        self.genx = target.find("genx") != -1
+        self.xe = target.find("gen9") != -1 or target.find("xe") != -1
         self.set_cpu(cpu)
         self.set_target()
 
-    def is_genx(self):
-        return self.genx
+    def is_xe(self):
+        return self.xe
 
     def set_cpu(self, cpu):
         if cpu is not None:
@@ -207,12 +207,12 @@ def check_print_output(output):
     else:
         return lines[0:len(lines)//2] == lines[len(lines)//2:len(lines)]
 
-def prerun_debug_check_genx():
+def prerun_debug_check_xe():
     os.environ['IGC_DumpToCurrentDir'] = '1'
     os.environ['IGC_ShaderDumpEnable'] = '1'
     os.environ['ISPCRT_IGC_OPTIONS'] = '+ -g'
 
-def postrun_debug_check_genx(test_name, exe_wd):
+def postrun_debug_check_xe(test_name, exe_wd):
     objdumpProc = subprocess.run('/usr/bin/objdump -h *_dwarf.elf', shell=True, cwd=exe_wd, universal_newlines=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
     readelfProc = subprocess.run('/usr/bin/readelf --debug-dump *_dwarf.elf', shell=True, cwd=exe_wd, universal_newlines=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
 
@@ -252,7 +252,7 @@ def run_cmds(compile_cmds, run_cmd, filename, expect_failure, sig, exe_wd="."):
 
     if not options.save_bin:
         if options.debug_check and options.ispc_output == "spv":
-            prerun_debug_check_genx()
+            prerun_debug_check_xe()
 
         (return_code, output, timeout) = run_command(run_cmd, options.test_time, cwd=exe_wd)
         if sig < 32:
@@ -265,7 +265,7 @@ def run_cmds(compile_cmds, run_cmd, filename, expect_failure, sig, exe_wd="."):
             run_failed = (return_code != 0) or not output_equality or timeout
 
         if options.debug_check and options.ispc_output == "spv":
-            run_failed = not postrun_debug_check_genx(run_cmd, exe_wd)
+            run_failed = not postrun_debug_check_xe(run_cmd, exe_wd)
 
     else:
         run_failed = 0
@@ -289,9 +289,9 @@ def add_prefix(path, host, target):
     # On Windows we run tests in tmp dir, so the root is one level up.
         input_prefix = "..\\"
     else:
-        # For Gen target we run tests in tmp dir since output file has
+        # For Xe target we run tests in tmp dir since output file has
         # the same name for all tests, so the root is one level up
-        if target.is_genx():
+        if target.is_xe():
             input_prefix = "../"
         else:
             input_prefix = ""
@@ -379,8 +379,8 @@ def run_test(testname, host, target):
     # ispc_exe_rel is a relative path to ispc
     filename = add_prefix(testname, host, target)
 
-    # Debug check is now supported only for genx
-    if options.debug_check and target.is_genx():
+    # Debug check is now supported only for xe
+    if options.debug_check and target.is_xe():
         ispc_exe_rel = add_prefix(host.ispc_cmd + " -g", host, target)
     else:
         ispc_exe_rel = add_prefix(host.ispc_cmd, host, target)
@@ -449,9 +449,16 @@ def run_test(testname, host, target):
                 width = 8
             elif options.target == "neon":
                 width = 4
-            elif re.search('genx', options.target) != None:
+            elif re.search('gen9', options.target) != None:
                 width = 16
-                target_match = re.match('(genx-x)([0-9]*)', options.target)
+                target_match = re.match('(gen9-x)([0-9]*)', options.target)
+                if target_match != None:
+                    width = int(target_match.group(2))
+                else:
+                    width = 16
+            elif re.search('xe', options.target) != None:
+                width = 16
+                target_match = re.match('(xe.*-x)([0-9]*)', options.target)
                 if target_match != None:
                     width = int(target_match.group(2))
                 else:
@@ -465,10 +472,10 @@ def run_test(testname, host, target):
             error("unable to find function signature in test %s\n" % testname, 0)
             return Status.Compfail
         else:
-            genx_target = options.target
+            xe_target = options.target
             if host.is_windows():
-                if target.is_genx():
-                    obj_name = "test_genx.bin" if options.ispc_output == "ze" else "test_genx.spv"
+                if target.is_xe():
+                    obj_name = "test_xe.bin" if options.ispc_output == "ze" else "test_xe.spv"
                 else:
                     obj_name = "%s.obj" % os.path.basename(filename)
 
@@ -479,15 +486,15 @@ def run_test(testname, host, target):
 
                 cc_cmd = "%s /I. /Zi /nologo /DTEST_SIG=%d /DTEST_WIDTH=%d %s %s /Fe%s" % \
                          (options.compiler_exe, match, width, add_prefix("test_static.cpp", host, target), obj_name, exe_name)
-                if target.is_genx():
+                if target.is_xe():
                     cc_cmd = "%s /I. /I%s\\include /nologo /DTEST_SIG=%d /DTEST_WIDTH=%d %s %s /Fe%s ze_loader.lib /link /LIBPATH:%s\\lib" % \
                          (options.compiler_exe, options.l0loader, match, width, " /DTEST_ZEBIN" if options.ispc_output == "ze" else " /DTEST_SPV", \
                          add_prefix("test_static_l0.cpp", host, target), exe_name, options.l0loader)
                 if should_fail:
                     cc_cmd += " /DEXPECT_FAILURE"
             else:
-                if target.is_genx():
-                    obj_name = "test_genx.bin" if options.ispc_output == "ze" else "test_genx.spv"
+                if target.is_xe():
+                    obj_name = "test_xe.bin" if options.ispc_output == "ze" else "test_xe.spv"
                 else:
                     obj_name = "%s.o" % testname
 
@@ -511,7 +518,7 @@ def run_test(testname, host, target):
                 if should_fail:
                     cc_cmd += " -DEXPECT_FAILURE"
 
-                if target.is_genx():
+                if target.is_xe():
                     exe_name = "%s.run" % os.path.basename(testname)
                     cc_cmd = "%s -O0 -I. -I %s/include -lze_loader -L %s/lib \
                             %s %s -DTEST_SIG=%d -DTEST_WIDTH=%d -o %s" % \
@@ -521,9 +528,9 @@ def run_test(testname, host, target):
                     cc_cmd += " -DTEST_ZEBIN" if options.ispc_output == "ze" else " -DTEST_SPV"
 
             ispc_cmd = ispc_exe_rel + " --woff %s -o %s --arch=%s --target=%s -DTEST_SIG=%d" % \
-                        (filename, obj_name, options.arch, genx_target if target.is_genx() else options.target, match)
+                        (filename, obj_name, options.arch, xe_target if target.is_xe() else options.target, match)
 
-            if target.is_genx():
+            if target.is_xe():
                 ispc_cmd += " --emit-zebin" if options.ispc_output == "ze" else " --emit-spirv"
                 ispc_cmd += " -DISPC_GPU"
             if options.cpu != None:
@@ -580,7 +587,7 @@ def run_tasks_from_queue(queue, queue_ret, total_tests_arg, max_test_length_arg,
     global run_tests_log
     run_tests_log = glob_var[4]
 
-    if host.is_windows() or target.is_genx():
+    if host.is_windows() or target.is_xe():
         tmpdir = "tmp%d" % os.getpid()
         while os.access(tmpdir, os.F_OK):
             tmpdir = "%sx" % tmpdir
@@ -622,7 +629,7 @@ def run_tasks_from_queue(queue, queue_ret, total_tests_arg, max_test_length_arg,
         except:
             None
     else:
-        if target.is_genx():
+        if target.is_xe():
             try:
                 os.chdir("..")
                 os.rmdir(tmpdir)
@@ -823,12 +830,12 @@ def set_compiler_exe(host, options):
 # set ISPC output format
 def set_ispc_output(target, options):
     if options.ispc_output == None:
-        if target.is_genx():
+        if target.is_xe():
             options.ispc_output = "spv"
         else:
             options.ispc_output = "obj"
     else:
-        if not target.is_genx() and not options.ispc_output=="obj" or target.is_genx() and options.ispc_output=="obj":
+        if not target.is_xe() and not options.ispc_output=="obj" or target.is_xe() and options.ispc_output=="obj":
             error("unsupported test output \"%s\" is specified for target: %s \n" % (options.ispc_output, target.target), 1)
 
 # returns the list of test files
@@ -905,8 +912,8 @@ def run_tests(options1, args, print_version):
 
     target = TargetConfig(options.arch, options.target, options.cpu)
 
-    if options.debug_check and (not target.is_genx() or not host.is_linux()):
-        print("--debug_check is supported only for genx target and only on Linux OS")
+    if options.debug_check and (not target.is_xe() or not host.is_linux()):
+        print("--debug_check is supported only for xe target and only on Linux OS")
         exit_code = 1
         return 0
 

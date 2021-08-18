@@ -159,9 +159,9 @@ static void L0InitContext(ze_device_handle_t &hDevice, ze_module_handle_t &hModu
 
     std::ifstream is;
 #ifdef TEST_ZEBIN
-    std::string fn = "test_genx.bin";
+    std::string fn = "test_xe.bin";
 #else
-    std::string fn = "test_genx.spv";
+    std::string fn = "test_xe.spv";
 #endif
     is.open(fn, std::ios::binary);
     if (!is.good()) {
@@ -689,7 +689,7 @@ int main(int argc, char *argv[]) {
     L0Launch_F_DI(hDevice, hModule, hContext, hCommandQueue, return_data, vdouble_data, vint2_data);
 #elif (TEST_SIG == 7)
 // L0Launch_F_SZ(return_data);
-#error "Currently unsupported for GEN"
+#error "Currently unsupported for Xe"
 #elif (TEST_SIG == 8)
     int groupSpaceWidth = 2;
     int groupSpaceHeight = 8;
