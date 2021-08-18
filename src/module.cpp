@@ -660,20 +660,20 @@ static void lCheckTaskParameterTypes(const Type *type, const std::string &name, 
         if (CastType<PointerType>(type))
             Error(pos,
                   "Varying pointer type parameter \"%s\" is illegal "
-                  "in an \"task\" for genx-* targets.",
+                  "in an \"task\" for Xe targets.",
                   name.c_str());
         if (CastType<StructType>(type->GetBaseType()))
             Error(pos,
                   "Struct parameter \"%s\" with vector typed "
-                  "member(s) is illegal in an \"task\" for genx-* targets.",
+                  "member(s) is illegal in an \"task\" for Xe targets.",
                   name.c_str());
         else if (CastType<VectorType>(type))
             Error(pos,
                   "Vector-typed parameter \"%s\" is illegal in an \"task\" "
-                  "for genx-* targets.",
+                  "for Xe targets.",
                   name.c_str());
         else
-            Error(pos, "Varying parameter \"%s\" is illegal in an \"task\" for genx-* targets.", name.c_str());
+            Error(pos, "Varying parameter \"%s\" is illegal in an \"task\" for Xe targets.", name.c_str());
     }
 }
 #endif
@@ -2795,7 +2795,7 @@ int Module::CompileAndOutput(const char *srcFile, Arch arch, const char *cpu, st
 #ifdef ISPC_XE_ENABLED
             if (outputType == Asm || outputType == Object) {
                 if (g->target->isXeTarget()) {
-                    Error(SourcePos(), "%s output is not supported yet for \"genx-*\" targets. ",
+                    Error(SourcePos(), "%s output is not supported yet for Xe targets. ",
                           (outputType == Asm) ? "assembly" : "binary");
                     return 1;
                 }

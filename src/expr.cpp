@@ -8687,7 +8687,7 @@ Expr *NewExpr::TypeCheck() {
     }
 
     if (g->target->isXeTarget()) {
-        Error(pos, "\"new\" is not supported for genx-* targets yet.");
+        Error(pos, "\"new\" is not supported for Xe targets yet.");
         return NULL;
     }
 
