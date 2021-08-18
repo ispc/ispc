@@ -58,7 +58,7 @@
 #endif
 
 ///////////////////////////////////////////////////////////////////////////
-// Gen specific primitives
+// Xe specific primitives
 
 __declspec(safe,cost0) static inline uniform int __taskIndex0() { return __task_index0(); }
 __declspec(safe,cost0) static inline uniform int __taskIndex1() { return __task_index1(); }
@@ -624,7 +624,7 @@ static inline uniform unsigned int64 packmask(bool v) {
 
 static inline void memcpy(void * uniform dst, void * uniform src,
                           uniform int32 count) {
-    if (__is_genx_target) {
+    if (__is_xe_target) {
         for (uniform int j = 0; j < count; j++) {
             ((int8* uniform)dst)[j] = ((int8* uniform)src)[j];
         }
@@ -635,7 +635,7 @@ static inline void memcpy(void * uniform dst, void * uniform src,
 
 static inline void memcpy64(void * uniform dst, void * uniform src,
                           uniform int64 count) {
-    if (__is_genx_target) {
+    if (__is_xe_target) {
         for (uniform int64 j = 0; j < count; j++) {
             ((int8* uniform)dst)[j] = ((int8* uniform)src)[j];
         }
@@ -654,7 +654,7 @@ static inline void memcpy(void * varying dst, void * varying src,
 
     foreach_active (i) {
         void * uniform d = da[i], * uniform s = sa[i];
-        if (__is_genx_target) {
+        if (__is_xe_target) {
             for (uniform int j = 0; j < extract(count,i); j++) {
                 ((int8* uniform)d)[j] = ((int8* uniform)s)[j];
             }
@@ -674,7 +674,7 @@ static inline void memcpy64(void * varying dst, void * varying src,
 
     foreach_active (i) {
         void * uniform d = da[i], * uniform s = sa[i];
-        if (__is_genx_target) {
+        if (__is_xe_target) {
             for (uniform int64 j = 0; j < extract(count,i); j++) {
                 ((int8* uniform)d)[j] = ((int8* uniform)s)[j];
             }
@@ -686,7 +686,7 @@ static inline void memcpy64(void * varying dst, void * varying src,
 
 static inline void memmove(void * uniform dst, void * uniform src,
                           uniform int32 count) {
-    if (__is_genx_target) {
+    if (__is_xe_target) {
         if ((uintptr_t)dst - (uintptr_t)src >= (size_t)count) {
             for (uniform int j = 0; j < count; j++) {
                 ((int8* uniform)dst)[j] = ((int8* uniform)src)[j];
@@ -704,7 +704,7 @@ static inline void memmove(void * uniform dst, void * uniform src,
 
 static inline void memmove64(void * uniform dst, void * uniform src,
                              uniform int64 count) {
-    if (__is_genx_target) {
+    if (__is_xe_target) {
         if ((uintptr_t)dst - (uintptr_t)src >= (size_t)count) {
             for (uniform int64 j = 0; j < count; j++) {
                 ((int8* uniform)dst)[j] = ((int8* uniform)src)[j];
@@ -731,7 +731,7 @@ static inline void memmove(void * varying dst, void * varying src,
     foreach_active (i) {
         void * uniform d = da[i], * uniform s = sa[i];
         uniform int c = extract(count, i);
-        if (__is_genx_target) {
+        if (__is_xe_target) {
             if ((uintptr_t)d - (uintptr_t)s >= (size_t)c) {
                 for (uniform int j = 0; j < count; j++) {
                     ((int8* uniform)d)[j] = ((int8* uniform)s)[j];
@@ -759,7 +759,7 @@ static inline void memmove64(void * varying dst, void * varying src,
     foreach_active (i) {
         void * uniform d = da[i], * uniform s = sa[i];
         uniform int64 c = extract(count, i);
-        if (__is_genx_target) {
+        if (__is_xe_target) {
             if ((uintptr_t)d - (uintptr_t)s >= (size_t)c) {
                 for (uniform int64 j = 0; j < count; j++) {
                     ((int8* uniform)d)[j] = ((int8* uniform)s)[j];
@@ -778,7 +778,7 @@ static inline void memmove64(void * varying dst, void * varying src,
 
 static inline void memset(void * uniform ptr, uniform int8 val,
                           uniform int32 count) {
-    if (__is_genx_target) {
+    if (__is_xe_target) {
         for (uniform int j = 0; j < count; j++) {
             ((int8* uniform)ptr)[j] = val;
         }
@@ -789,7 +789,7 @@ static inline void memset(void * uniform ptr, uniform int8 val,
 
 static inline void memset64(void * uniform ptr, uniform int8 val,
                           uniform int64 count) {
-    if (__is_genx_target) {
+    if (__is_xe_target) {
         for (uniform int64 j = 0; j < count; j++) {
             ((int8* uniform)ptr)[j] = val;
         }
@@ -803,7 +803,7 @@ static inline void memset(void * varying ptr, int8 val, int32 count) {
     pa[programIndex] = ptr;
 
     foreach_active (i) {
-        if (__is_genx_target) {
+        if (__is_xe_target) {
             void * uniform d = pa[i];
             for (uniform int j = 0; j < extract(count, i); j++) {
                 ((int8* uniform)d)[j] = extract(val, i);
@@ -820,7 +820,7 @@ static inline void memset64(void * varying ptr, int8 val, int64 count) {
     pa[programIndex] = ptr;
 
     foreach_active (i) {
-        if (__is_genx_target) {
+        if (__is_xe_target) {
             void * uniform d = pa[i];
             for (uniform int64 j = 0; j < extract(count, i); j++) {
                 ((int8* uniform)d)[j] = extract(val, i);
@@ -2117,7 +2117,7 @@ static inline uniform double rcp(uniform double v) {
 
 __declspec(safe)
 static inline float16 rcp(float16 v) {
-  if (__is_genx_target)
+  if (__is_xe_target)
     return __rcp_varying_half(v);
   else
       return (float16)(rcp((float)v));
@@ -2125,7 +2125,7 @@ static inline float16 rcp(float16 v) {
 
 __declspec(safe)
 static inline uniform float16 rcp(uniform float16 v) {
-  if (__is_genx_target)
+  if (__is_xe_target)
     return __rcp_uniform_half(v);
   else
     return (uniform float16)(rcp((uniform float)v));
@@ -3187,7 +3187,7 @@ static inline float asin(float x0) {
     bool isnan = (x > 1);
     float v;
 
-    if (__have_native_trigonometry && !__is_genx_target)
+    if (__have_native_trigonometry && !__is_xe_target)
     {
       return __asin_varying_float(x0);
     }
@@ -3252,7 +3252,7 @@ static inline uniform float asin(uniform float x0) {
     uniform float x = abs(x0);
     uniform bool isnan = (x > 1);
     uniform float v;
-    if (__have_native_trigonometry && !__is_genx_target)
+    if (__have_native_trigonometry && !__is_xe_target)
     {
       return __asin_uniform_float(x0);
     }
@@ -3440,7 +3440,7 @@ static inline uniform float cos(uniform float x_full) {
 
 __declspec(safe)
 static inline float acos(float v) {
-  if (__have_native_trigonometry && !__is_genx_target)
+  if (__have_native_trigonometry && !__is_xe_target)
     return __acos_varying_float(v);
   else
     return 1.57079637050628662109375 - asin(v);
@@ -3448,7 +3448,7 @@ static inline float acos(float v) {
 
 __declspec(safe)
 static inline uniform float acos(uniform float v) {
-  if (__have_native_trigonometry && !__is_genx_target)
+  if (__have_native_trigonometry && !__is_xe_target)
     return __acos_uniform_float(v);
   else
     return 1.57079637050628662109375 - asin(v);
@@ -3457,7 +3457,7 @@ static inline uniform float acos(uniform float v) {
 __declspec(safe)
 static inline void sincos(float x_full, varying float * uniform sin_result,
                           varying float * uniform cos_result) {
-    if (__have_native_trigonometry && !__is_genx_target)
+    if (__have_native_trigonometry && !__is_xe_target)
     {
       __sincos_varying_float(x_full,sin_result,cos_result);
       return;
@@ -3532,7 +3532,7 @@ static inline void sincos(float x_full, varying float * uniform sin_result,
 __declspec(safe)
 static inline void sincos(uniform float x_full, uniform float * uniform sin_result,
                           uniform float * uniform cos_result) {
-    if (__have_native_trigonometry && !__is_genx_target)
+    if (__have_native_trigonometry && !__is_xe_target)
     {
       __sincos_uniform_float(x_full, sin_result, cos_result);
       return;
@@ -3758,7 +3758,7 @@ static inline uniform float tan(uniform float x_full) {
 
 __declspec(safe)
 static inline float atan(float x_full) {
-    if (__have_native_trigonometry && !__is_genx_target)
+    if (__have_native_trigonometry && !__is_xe_target)
     {
       return __atan_varying_float(x_full);
     }
@@ -3813,7 +3813,7 @@ static inline float atan(float x_full) {
 
 __declspec(safe)
 static inline uniform float atan(uniform float x_full) {
-    if (__have_native_trigonometry && !__is_genx_target)
+    if (__have_native_trigonometry && !__is_xe_target)
     {
       return __atan_uniform_float(x_full);
     }
@@ -3861,7 +3861,7 @@ static inline uniform float atan(uniform float x_full) {
 
 __declspec(safe)
 static inline float atan2(float y, float x) {
-    if (__have_native_trigonometry && !__is_genx_target)
+    if (__have_native_trigonometry && !__is_xe_target)
     {
       return __atan2_varying_float(y,x);
     }
@@ -3904,7 +3904,7 @@ static inline float atan2(float y, float x) {
 
 __declspec(safe)
 static inline uniform float atan2(uniform float y, uniform float x) {
-    if (__have_native_trigonometry && !__is_genx_target)
+    if (__have_native_trigonometry && !__is_xe_target)
     {
       return __atan2_uniform_float(y,x);
     }
@@ -6830,7 +6830,7 @@ static const uniform int64 __idiv_table_s32[][3] = {
 __declspec(safe)
 static unmasked inline unsigned int8
 __fast_idiv(unsigned int8 numerator, uniform unsigned int8 divisor) {
-  if (__is_genx_target) {
+  if (__is_xe_target) {
      return __idiv_uint8(numerator, divisor);
   }
   uniform int64 method = __idiv_table_u8[divisor-2][0];
@@ -6853,7 +6853,7 @@ __fast_idiv(unsigned int8 numerator, uniform unsigned int8 divisor) {
 
 __declspec(safe)
 static unmasked inline int8 __fast_idiv(int8 numerator, uniform int8 divisor) {
-  if (__is_genx_target) {
+  if (__is_xe_target) {
      return __idiv_int8(numerator, divisor);
   }
   uniform int8 method = __idiv_table_s8[divisor-2][0];
@@ -6874,7 +6874,7 @@ static unmasked inline int8 __fast_idiv(int8 numerator, uniform int8 divisor) {
 __declspec(safe)
 static unmasked inline unsigned int16 __fast_idiv(unsigned int16 numerator,
                                                   uniform unsigned int16 divisor) {
-  if (__is_genx_target) {
+  if (__is_xe_target) {
      return __idiv_uint16(numerator, divisor);
   }
   uniform int64 method = __idiv_table_u16[divisor-2][0];
@@ -6897,7 +6897,7 @@ static unmasked inline unsigned int16 __fast_idiv(unsigned int16 numerator,
 
 __declspec(safe)
 static unmasked inline int16 __fast_idiv(int16 numerator, uniform int16 divisor) {
-  if (__is_genx_target) {
+  if (__is_xe_target) {
      return __idiv_int16(numerator, divisor);
   }
   uniform int64 method = __idiv_table_s16[divisor-2][0];
@@ -6919,7 +6919,7 @@ static unmasked inline int16 __fast_idiv(int16 numerator, uniform int16 divisor)
 __declspec(safe)
 static unmasked inline inline unsigned int32 __fast_idiv(unsigned int32 numerator,
                                                          uniform unsigned int32 divisor) {
-  if (__is_genx_target) {
+  if (__is_xe_target) {
      return __idiv_uint32(numerator, divisor);
   }
   uniform int64 method = __idiv_table_u32[divisor-2][0];
@@ -6942,7 +6942,7 @@ static unmasked inline inline unsigned int32 __fast_idiv(unsigned int32 numerato
 
 __declspec(safe)
 static unmasked inline int32 __fast_idiv(int32 numerator, uniform int32 divisor) {
-  if (__is_genx_target) {
+  if (__is_xe_target) {
      return __idiv_int32(numerator, divisor);
   }
   uniform int64 method = __idiv_table_s32[divisor-2][0];
