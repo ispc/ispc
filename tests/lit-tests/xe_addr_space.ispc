@@ -1,10 +1,10 @@
-// RUN: %{ispc} %s --target=gen9-x16 --arch=genx64 -h %t.h --emit-llvm-text -o %t.ll
+// RUN: %{ispc} %s --target=gen9-x16 --arch=xe64 -h %t.h --emit-llvm-text -o %t.ll
 // RUN: FileCheck --input-file=%t.ll -check-prefix=CHECK_XE_X16 %s
-// RUN: %{ispc} %s --target=gen9-x16 --arch=genx32 -h %t.h --emit-llvm-text -o %t.ll
+// RUN: %{ispc} %s --target=gen9-x16 --arch=xe32 -h %t.h --emit-llvm-text -o %t.ll
 // RUN: FileCheck --input-file=%t.ll -check-prefix=CHECK_XE_X16 %s
-// RUN: %{ispc} %s --target=gen9-x8 --arch=genx64 -h %t.h --emit-llvm-text -o %t.ll
+// RUN: %{ispc} %s --target=gen9-x8 --arch=xe64 -h %t.h --emit-llvm-text -o %t.ll
 // RUN: FileCheck --input-file=%t.ll -check-prefix=CHECK_XE_X8 %s
-// RUN: %{ispc} %s --target=gen9-x8 --arch=genx32 -h %t.h --emit-llvm-text -o %t.ll
+// RUN: %{ispc} %s --target=gen9-x8 --arch=xe32 -h %t.h --emit-llvm-text -o %t.ll
 // RUN: FileCheck --input-file=%t.ll -check-prefix=CHECK_XE_X8 %s
 // REQUIRES: XE_ENABLED
 

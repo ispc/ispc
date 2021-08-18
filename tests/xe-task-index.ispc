@@ -1,7 +1,7 @@
 #include "../test_static.isph"
 // rule: skip on arch=*
-// rule: run on arch=genx32
-// rule: run on arch=genx64
+// rule: run on arch=xe32
+// rule: run on arch=xe64
 // TODO: the test should be reworked when atomic operation on gen are available.
 // It is hard to check taskIndex now.
 
