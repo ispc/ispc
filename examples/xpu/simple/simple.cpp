@@ -111,7 +111,7 @@ static int run(const ISPCRTDeviceType device_type, const unsigned int SIZE) {
     auto p_dev = ispcrt::Array<Parameters>(device, p);
 
     // Create module and kernel to execute
-    ispcrt::Module module(device, "genx_simple");
+    ispcrt::Module module(device, "xe_simple");
     ispcrt::Kernel kernel(device, module, "simple_ispc");
 
     // Create task queue and execute kernel

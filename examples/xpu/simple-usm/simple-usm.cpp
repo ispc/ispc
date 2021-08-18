@@ -108,7 +108,7 @@ static int run(const ISPCRTDeviceType device_type, const unsigned int SIZE) {
     pp->count = SIZE;
 
     // Create module and kernel to execute
-    ispcrt::Module module(device, "genx_simple-usm");
+    ispcrt::Module module(device, "xe_simple-usm");
     ispcrt::Kernel kernel(device, module, "simple_ispc");
 
     // Create task queue and execute kernel

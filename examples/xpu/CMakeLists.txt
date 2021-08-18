@@ -32,9 +32,9 @@
 
 cmake_minimum_required(VERSION 3.12)
 
-project(GenxExamples)
+project(XeExamples)
 
-message(STATUS "Configuring GenX examples")
+message(STATUS "Configuring Xe examples")
 
 option(ISPC_INCLUDE_DPCPP_EXAMPLES "Generate build targets for the ISPC/DPCPP interoperability examples" OFF)
 

@@ -149,7 +149,7 @@ static int run() {
         auto p_dev = ispcrtNewMemoryView(device, &p, sizeof(p), &flags);
 
         // Create module and kernel to execute
-        auto module = ispcrtLoadModule(device, "genx_aobench");
+        auto module = ispcrtLoadModule(device, "xe_aobench");
         auto kernel = ispcrtNewKernel(device, module, "ao_ispc");
         // Create task queue and execute kernel
         auto queue = ispcrtNewTaskQueue(device);
@@ -234,7 +234,7 @@ int main(int argc, char *argv[]) {
 
     int success = 0;
 
-    std::cout << "Running test with " << niterations << " iterations of ISPC on GEN and CPU on " << width << " * "
+    std::cout << "Running test with " << niterations << " iterations of ISPC on Xe and CPU on " << width << " * "
               << height << " size." << std::endl;
     success = run();
 

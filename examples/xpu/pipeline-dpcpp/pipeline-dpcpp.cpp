@@ -39,7 +39,7 @@ using namespace hostutil;
 void DpcppApp::initialize() {
     if (m_initialized)
         return;
-    L0InitContext(m_driver, m_device, m_context, m_module, m_command_queue, "genx_pipeline-dpcpp", false);
+    L0InitContext(m_driver, m_device, m_context, m_module, m_command_queue, "xe_pipeline-dpcpp", false);
     L0Create_Kernel(m_device, m_context, m_module, m_command_list, m_kernel1, "stage1");
     L0Create_Kernel(m_device, m_context, m_module, m_command_list, m_kernel2, "stage3");
     m_initialized = true;

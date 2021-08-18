@@ -41,7 +41,7 @@ set(ISPC_SRC_NAME "naive_sgemm.ispc")
 set(ISPC_TARGET_XE "gen9-x16")
 set(HOST_SOURCES sgemm.cpp main.cpp)
 
-set(CM_SRC_NAME "NaiveCMSgemm_genx")
+set(CM_SRC_NAME "NaiveCMSgemm_xe")
 set(CM_OBJ_NAME "${CMAKE_CURRENT_BINARY_DIR}/naive_sgemm_cm_mt.spv")
 set(CM_TEST_NAME "naive_sgemm_cm")
 set(CM_HOST_SOURCES ${HOST_SOURCES})
