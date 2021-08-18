@@ -34,7 +34,7 @@ target datalayout = "e-p:32:32-i64:64-n8:16:32";
 define(`MASK',`i1')
 define(`HAVE_GATHER',`1')
 define(`HAVE_SCATTER',`1')
-include(`util-genx.m4')
+include(`util-xe.m4')
 
 define(`CONCAT',`$1$2')
 define(`GEN_TYPE',
