@@ -72,7 +72,7 @@ function(add_perf_example)
     set(ISPC_XE_ADDITIONAL_ARGS ${parsed_ISPC_XE_ADDITIONAL_ARGS})
 
     # Add "ispcrt" suffix here to avoid CMake target conflicts with CPU examples
-    add_ispc_kernel("genx_${parsed_TEST_NAME}" "${parsed_ISPC_SRC_NAME}" "")
+    add_ispc_kernel("xe_${parsed_TEST_NAME}" "${parsed_ISPC_SRC_NAME}" "")
 
     # Show ispc source in VS solution:
     if (WIN32)
@@ -124,8 +124,8 @@ function(add_perf_example)
         list(APPEND CM_BUILD_OUTPUT ${parsed_CM_OBJ_NAME})
         add_executable(${CM_HOST_BINARY} ${parsed_CM_HOST_SOURCES} ${parsed_CM_OBJ_NAME})
         if (WIN32)
-            message(WARNING "GEN examples are not supported on Windows")
-            set_target_properties(${CM_HOST_BINARY} PROPERTIES FOLDER "GEN_Examples")
+            message(WARNING "Xe examples are not supported on Windows")
+            set_target_properties(${CM_HOST_BINARY} PROPERTIES FOLDER "Xe_Examples")
         else()
             add_custom_command(
                 OUTPUT ${parsed_CM_OBJ_NAME}

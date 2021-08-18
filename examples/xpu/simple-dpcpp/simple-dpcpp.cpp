@@ -39,7 +39,7 @@ using namespace hostutil;
 
 DpcppApp::DpcppApp() {
     m_device = ispcrt::Device(ISPCRT_DEVICE_TYPE_GPU);
-    m_module = ispcrt::Module(m_device, "genx_simple-dpcpp");
+    m_module = ispcrt::Module(m_device, "xe_simple-dpcpp");
     m_kernel = ispcrt::Kernel(m_device, m_module, "simple_ispc");
     m_queue = ispcrt::TaskQueue(m_device);
     initialized = true;

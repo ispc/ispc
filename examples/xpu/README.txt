@@ -2,21 +2,21 @@
 ISPC Examples README
 ====================
 
-This directory has a number of sample ispc programs ported to GEN. Before building them,
+This directory has a number of sample ispc programs ported to Xe. Before building them,
 install the appropriate ispc compiler binary and runtime into a directory in your path.
 Add ISPC binary to your PATH. Then, do the following:
 mkdir build
 cd build
 cmake ../
 
-Some of the benchmarks are running ispc for CPU/GEN and then regular serial C++ implementations,
+Some of the benchmarks are running ispc for CPU/Xe and then regular serial C++ implementations,
 printing out execution time.
 
 Simple
 ======
 
 This is the most basic example. It executes a simple kernel on target device
-(which can be a GEN GPU or CPU) and demonstrates basics concepts
+(which can be a Xe GPU or CPU) and demonstrates basics concepts
 of ISPC Runtime API (such as device, module, kernel, memory view).
 It uses C++ API of ispcrt.
 
@@ -54,7 +54,7 @@ execute the same ISPC kernel on CPU and GPU in a semaless way.
 
 It executes the program for the given number of iterations, rendering an
 (xres x yres) image each time and measuring the computation time with
-serial and ispc implementations on CPU and GEN.
+serial and ispc implementations on CPU and Xe.
 
 
 Mandelbrot
@@ -69,7 +69,7 @@ execute the same ISPC kernel on CPU and GPU in a semaless way.
 
 It executes the program for the given number of iterations, rendering an
 image of fixed size each time and measuring the computation time with
-serial and ispc implementations on CPU and GEN.
+serial and ispc implementations on CPU and Xe.
 You can change scale of the image with --scale option.
 
 
@@ -87,7 +87,7 @@ execute the same ISPC kernel on CPU and GPU in a semaless way.
 
 It executes the program for the given number of iterations in particular
 thread space, rendering an image of fixed size each time and measuring the
-computation time with serial and ispc implementations on CPU and GEN.
+computation time with serial and ispc implementations on CPU and Xe.
 
 
 SGEMM
