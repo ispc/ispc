@@ -210,7 +210,7 @@ static const bool lIsTargetValidforArch(ISPCTarget target, Arch arch) {
         if (arch != Arch::arm && arch != Arch::aarch64)
             ret = false;
     } else if (ISPCTargetIsGen(target)) {
-        if (arch != Arch::genx32 && arch != Arch::genx64)
+        if (arch != Arch::xe32 && arch != Arch::xe64)
             ret = false;
     }
 
@@ -694,7 +694,7 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, bool pic, boo
 #endif
 #if ISPC_XE_ENABLED
             if (ISPCTargetIsGen(m_ispc_target)) {
-            arch = Arch::genx64;
+            arch = Arch::xe64;
         } else
 #endif
             arch = Arch::x86_64;
@@ -743,9 +743,9 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, bool pic, boo
         m_hasFp64Support = false;
     }
     // In case of Xe target addressing should correspond to host addressing. Otherwise SVM pointers will not work.
-    if (arch == Arch::genx32) {
+    if (arch == Arch::xe32) {
         g->opt.force32BitAddressing = true;
-    } else if (arch == Arch::genx64) {
+    } else if (arch == Arch::xe64) {
         g->opt.force32BitAddressing = false;
     }
 #endif
@@ -1303,10 +1303,10 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, bool pic, boo
         if (m_targetMachine != NULL)
             dl_string = m_targetMachine->createDataLayout().getStringRepresentation();
         if (isXeTarget())
-            dl_string = m_arch == Arch::genx64 ? "e-p:64:64-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:"
-                                                 "256-v512:512-v1024:1024-n8:16:32:64"
-                                               : "e-p:32:32-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:"
-                                                 "256-v512:512-v1024:1024-n8:16:32:64";
+            dl_string = m_arch == Arch::xe64 ? "e-p:64:64-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:"
+                                               "256-v512:512-v1024:1024-n8:16:32:64"
+                                             : "e-p:32:32-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:"
+                                               "256-v512:512-v1024:1024-n8:16:32:64";
 
         // 2. Finally set member data
         m_dataLayout = new llvm::DataLayout(dl_string);
@@ -1403,16 +1403,16 @@ std::string Target::GetTripleString() const {
         } else if (m_arch == Arch::aarch64) {
             Error(SourcePos(), "Aarch64 is not supported on Windows.");
             exit(1);
-        } else if (m_arch == Arch::genx32) {
+        } else if (m_arch == Arch::xe32) {
             triple.setArchName("spir");
-        } else if (m_arch == Arch::genx64) {
+        } else if (m_arch == Arch::xe64) {
             triple.setArchName("spir64");
         } else {
             Error(SourcePos(), "Unknown arch.");
             exit(1);
         }
 #ifdef ISPC_XE_ENABLED
-        if (m_arch == Arch::genx32 || m_arch == Arch::genx64) {
+        if (m_arch == Arch::xe32 || m_arch == Arch::xe64) {
             //"spir64-unknown-unknown"
             triple.setVendor(llvm::Triple::VendorType::UnknownVendor);
             triple.setOS(llvm::Triple::OSType::UnknownOS);
@@ -1434,16 +1434,16 @@ std::string Target::GetTripleString() const {
             triple.setArchName("armv7");
         } else if (m_arch == Arch::aarch64) {
             triple.setArchName("aarch64");
-        } else if (m_arch == Arch::genx32) {
+        } else if (m_arch == Arch::xe32) {
             triple.setArchName("spir");
-        } else if (m_arch == Arch::genx64) {
+        } else if (m_arch == Arch::xe64) {
             triple.setArchName("spir64");
         } else {
             Error(SourcePos(), "Unknown arch.");
             exit(1);
         }
 #ifdef ISPC_XE_ENABLED
-        if (m_arch == Arch::genx32 || m_arch == Arch::genx64) {
+        if (m_arch == Arch::xe32 || m_arch == Arch::xe64) {
             //"spir64-unknown-unknown"
             triple.setVendor(llvm::Triple::VendorType::UnknownVendor);
             triple.setOS(llvm::Triple::OSType::UnknownOS);
@@ -1452,8 +1452,8 @@ std::string Target::GetTripleString() const {
 #endif
         triple.setVendor(llvm::Triple::VendorType::UnknownVendor);
         triple.setOS(llvm::Triple::OSType::Linux);
-        if (m_arch == Arch::x86 || m_arch == Arch::x86_64 || m_arch == Arch::aarch64 || m_arch == Arch::genx32 ||
-            m_arch == Arch::genx64) {
+        if (m_arch == Arch::x86 || m_arch == Arch::x86_64 || m_arch == Arch::aarch64 || m_arch == Arch::xe32 ||
+            m_arch == Arch::xe64) {
             triple.setEnvironment(llvm::Triple::EnvironmentType::GNU);
         } else if (m_arch == Arch::arm) {
             triple.setEnvironment(llvm::Triple::EnvironmentType::GNUEABIHF);

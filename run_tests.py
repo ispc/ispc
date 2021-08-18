@@ -320,10 +320,10 @@ def add_prefix(path, host, target):
 #
 # Examples:
 #
-# 1. Run only on arch genx32 or arch genx64:
+# 1. Run only on arch xe32 or arch xe64:
 # // rule: skip on arch=*
-# // rule: run on arch=genx32
-# // rule: run on arch=genx64
+# // rule: run on arch=xe32
+# // rule: run on arch=xe64
 #
 # 2. Run only on Linux OS:
 # // rule: skip on OS=*
@@ -505,7 +505,7 @@ def run_test(testname, host, target):
 
                 if target.arch == 'arm':
                     gcc_arch = '--with-fpu=hardfp -marm -mfpu=neon -mfloat-abi=hard'
-                elif target.arch == 'x86' or target.arch == "wasm32" or target.arch == 'genx32':
+                elif target.arch == 'x86' or target.arch == "wasm32" or target.arch == 'xe32':
                     gcc_arch = '-m32'
                 elif target.arch == 'aarch64':
                     gcc_arch = '-march=armv8-a'
@@ -1080,7 +1080,7 @@ if __name__ == "__main__":
     parser.add_option('-t', '--target', dest='target',
                   help=('Set compilation target. For example: sse4-i32x4, avx2-i32x8, avx512skx-i32x16, etc.'), default=default_target)
     parser.add_option('-a', '--arch', dest='arch',
-                  help='Set architecture (arm, aarch64, x86, x86-64, genx32, genx64)', default=default_arch)
+                  help='Set architecture (arm, aarch64, x86, x86-64, xe32, xe64)', default=default_arch)
     parser.add_option("-c", "--compiler", dest="compiler_exe", help="C/C++ compiler binary to use to run tests",
                   default=None)
     parser.add_option('-o', '--opt', dest='opt', choices=['', 'O0', 'O1', 'O2'], help='Set optimization level passed to the compiler (O0, O1, O2).',

@@ -55,10 +55,10 @@ Arch ParseArch(std::string arch) {
         return Arch::aarch64;
     } else if (arch == "wasm32") {
         return Arch::wasm32;
-    } else if (arch == "genx32") {
-        return Arch::genx32;
-    } else if (arch == "genx64") {
-        return Arch::genx64;
+    } else if (arch == "xe32") {
+        return Arch::xe32;
+    } else if (arch == "xe64") {
+        return Arch::xe64;
     }
     return Arch::error;
 }
@@ -77,10 +77,10 @@ std::string ArchToString(Arch arch) {
         return "aarch64";
     case Arch::wasm32:
         return "wasm32";
-    case Arch::genx32:
-        return "genx32";
-    case Arch::genx64:
-        return "genx64";
+    case Arch::xe32:
+        return "xe32";
+    case Arch::xe64:
+        return "xe64";
     case Arch::error:
         return "error";
     default:
