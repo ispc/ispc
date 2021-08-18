@@ -1,7 +1,7 @@
-// RUN: %{ispc} %s --target=genx-x16 --arch=genx64 --emit-spirv --nowrap -o %t.spv
-// RUN: %{ispc} %s --target=genx-x16 --arch=genx64 --cpu=SKL --emit-spirv --nowrap -o %t.spv
-// RUN: not %{ispc} %s --target=genx-x16 --arch=genx64 --cpu=TGLLP --emit-spirv --nowrap -o %t.spv 2>&1 | FileCheck %s -check-prefix=CHECK_DOUBLE_ERROR
-// RUN: not %{ispc} %s --target=genx-x16 --arch=genx64 --cpu=DG1 --emit-spirv --nowrap -o %t.spv 2>&1 | FileCheck %s -check-prefix=CHECK_DOUBLE_ERROR
+// RUN: %{ispc} %s --target=gen9-x16 --arch=genx64 --emit-spirv --nowrap -o %t.spv
+// RUN: %{ispc} %s --target=gen9-x16 --arch=genx64 --cpu=SKL --emit-spirv --nowrap -o %t.spv
+// RUN: not %{ispc} %s --target=xelp-x16 --arch=genx64 --cpu=TGLLP --emit-spirv --nowrap -o %t.spv 2>&1 | FileCheck %s -check-prefix=CHECK_DOUBLE_ERROR
+// RUN: not %{ispc} %s --target=xelp-x16 --arch=genx64 --cpu=DG1 --emit-spirv --nowrap -o %t.spv 2>&1 | FileCheck %s -check-prefix=CHECK_DOUBLE_ERROR
 
 // REQUIRES: XE_ENABLED
 

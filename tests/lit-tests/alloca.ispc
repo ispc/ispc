@@ -1,6 +1,6 @@
 // Test to check 'alloca()' implementation.
 // RUN: %{ispc} %s --target=host --nowrap -O0 --emit-llvm-text -o - | FileCheck %s
-// RUN: %{ispc} %s --target=genx-x8 --nowrap -O0 --emit-llvm-text -o - | FileCheck %s -check-prefix=CHECK-GEN
+// RUN: %{ispc} %s --target=gen9-x8 --nowrap -O0 --emit-llvm-text -o - | FileCheck %s -check-prefix=CHECK-GEN
 
 // REQUIRES: X86_ENABLED
 // REQUIRES: XE_ENABLED
