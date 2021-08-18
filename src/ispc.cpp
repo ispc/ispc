@@ -1133,7 +1133,7 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, bool pic, boo
 #ifdef ISPC_XE_ENABLED
     case ISPCTarget::gen9_x8:
     case ISPCTarget::xelp_x8:
-        this->m_isa = Target::GENX;
+        this->m_isa = Target::XE;
         this->m_nativeVectorWidth = 8;
         this->m_nativeVectorAlignment = 64;
         this->m_vectorWidth = 8;
@@ -1149,7 +1149,7 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, bool pic, boo
         break;
     case ISPCTarget::gen9_x16:
     case ISPCTarget::xelp_x16:
-        this->m_isa = Target::GENX;
+        this->m_isa = Target::XE;
         this->m_nativeVectorWidth = 16;
         this->m_nativeVectorAlignment = 64;
         this->m_vectorWidth = 16;
@@ -1573,7 +1573,7 @@ const char *Target::ISAToString(ISA isa) {
     case Target::SKX_AVX512:
         return "avx512skx";
 #ifdef ISPC_XE_ENABLED
-    case Target::GENX:
+    case Target::XE:
         return "gen9";
 #endif
     default:
@@ -1598,7 +1598,7 @@ const char *Target::ISAToTargetString(ISA isa) {
         return "wasm-i32x4";
 #endif
 #ifdef ISPC_XE_ENABLED
-    case Target::GENX:
+    case Target::XE:
         return "gen9-x16";
 #endif
     case Target::SSE2:
