@@ -216,7 +216,7 @@ Module::Module(const char *fn) {
             snprintf(producerString, sizeof(producerString), "ispc version %s (built on %s)", ISPC_VERSION, __DATE__);
 #endif
             auto srcFile = diBuilder->createFile(name, directory);
-            // Use DW_LANG_C_plus_plus to avoid problems with debigging on gen.
+            // Use DW_LANG_C_plus_plus to avoid problems with debigging on Xe.
             // The debugger reads symbols partially when a solib file is loaded.
             // The kernel name is one of these read symbols. ISPC produces namespace
             // for example "ispc::simple_ispc". Matching the breakpoint location
@@ -654,7 +654,7 @@ static void lCheckExportedParameterTypes(const Type *type, const std::string &na
 }
 
 #ifdef ISPC_XE_ENABLED
-// For gen target we have the same limitations in input parameters as for "export" functions
+// For Xe target we have the same limitations in input parameters as for "export" functions
 static void lCheckTaskParameterTypes(const Type *type, const std::string &name, SourcePos pos) {
     if (lRecursiveCheckValidParamType(type, false, false, name, pos) == false) {
         if (CastType<PointerType>(type))
@@ -812,7 +812,7 @@ void Module::AddFunctionDeclaration(const std::string &name, const FunctionType 
                                                   ? llvm::GlobalValue::InternalLinkage
                                                   : llvm::GlobalValue::ExternalLinkage;
 
-    // For gen target all functions except GenX kernels, external functions and explicitly marked extern functions must
+    // For Xe target all functions except Xe kernels, external functions and explicitly marked extern functions must
     // be internal.
     if (g->target->isXeTarget() && !functionType->IsISPCKernel() && !functionType->IsISPCExternal() &&
         (storageClass != SC_EXTERN))
@@ -889,14 +889,14 @@ void Module::AddFunctionDeclaration(const std::string &name, const FunctionType 
     // ESIMD makes return value optimization transferring return value to the
     // argument of the function.
     if (functionType->IsISPCExternal() && functionType->GetReturnType()->IsVoidType() == false)
-        Warning(pos, "Export and extern \"C\"-qualified functions must have void return type for gen target.");
+        Warning(pos, "Export and extern \"C\"-qualified functions must have void return type for Xe target.");
 
     if (functionType->isExported || functionType->isExternC || functionType->IsISPCExternal() ||
         functionType->IsISPCKernel()) {
         lCheckForStructParameters(functionType, pos);
     }
 
-    // Mark extern "C" functions as SPIR_FUNC for gen.
+    // Mark extern "C" functions as SPIR_FUNC for Xe.
     if (functionType->IsISPCExternal() && disableMask) {
         function->setCallingConv(llvm::CallingConv::SPIR_FUNC);
         function->addFnAttr("CMStackCall");
@@ -913,7 +913,7 @@ void Module::AddFunctionDeclaration(const std::string &name, const FunctionType 
         Expr *defaultValue = functionType->GetParameterDefault(i);
         const SourcePos &argPos = functionType->GetParameterSourcePos(i);
 
-        // If the function is exported or in case of gen target is task, make sure that the parameter
+        // If the function is exported or in case of Xe target is task, make sure that the parameter
         // doesn't have any funky stuff going on in it.
         // JCB nomosoa - Varying is now a-ok.
         if (functionType->isExported)
@@ -1020,7 +1020,7 @@ bool Module::writeOutput(OutputType outputType, OutputFlags flags, const char *o
     // "Debug Info Version" constant to the module. LLVM will ignore
     // our Debug Info metadata without it.
     if (g->generateDebuggingSymbols == true) {
-        // For GenX target: when we link with CM, "Dwarf version" and "Debug info version" is already set
+        // For Xe target: when we link with CM, "Dwarf version" and "Debug info version" is already set
         // so we don't need to do this here.  Otherwise VerifyModule will be broken.
         if (!g->target->isXeTarget()) {
             module->addModuleFlag(llvm::Module::Warning, "Debug Info Version", llvm::DEBUG_METADATA_VERSION);
@@ -2804,7 +2804,7 @@ int Module::CompileAndOutput(const char *srcFile, Arch arch, const char *cpu, st
                 outputType = OutputType::ZEBIN;
             }
             if (!g->target->isXeTarget() && (outputType == OutputType::ZEBIN || outputType == OutputType::SPIRV)) {
-                Error(SourcePos(), "SPIR-V and L0 binary formats are supported for gen target only");
+                Error(SourcePos(), "SPIR-V and L0 binary formats are supported for Xe target only");
                 return 1;
             }
 #endif

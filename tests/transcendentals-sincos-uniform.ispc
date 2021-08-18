@@ -13,7 +13,7 @@ task void f_du(uniform float RET[], uniform double aFOO[], uniform double b) {
     uniform double res;
     uniform double res2;
     sincos(arg, &res, &res2);
-    // native single precision sin and cos on genx is pretty imprecise
+    // native single precision sin and cos on Xe is pretty imprecise
     RET[i] = ok(res, ref) && ok(res2, ref2) ? 0.0 : 1.0;
   }
 }

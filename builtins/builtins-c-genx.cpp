@@ -476,5 +476,5 @@ extern "C" __declspec(cm_builtin) __declspec(genx_no_SIMD_pred) void __do_print_
     }
 }
 
-// TODO: implement correctly for genx if possible
+// TODO: implement correctly for Xe if possible
 extern "C" int __declspec(cm_builtin) __num_cores() { return -1; }

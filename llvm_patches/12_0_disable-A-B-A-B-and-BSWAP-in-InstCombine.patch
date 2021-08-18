@@ -1,4 +1,4 @@
-# This patch is needed for ISPC for Gen only
+# This patch is needed for ISPC for Xe only
 
 # 1. Transformation of add to or is not safe for VC backend.
 # 2. bswap intrinsics is not supported in VC backend yet.

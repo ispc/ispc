@@ -564,45 +564,45 @@ class FunctionEmitContext {
     llvm::Instruction *ReturnInst();
 #ifdef ISPC_XE_ENABLED
     /** Emit genx_simdcf_any intrinsic.
-        Required when GenX hardware mask is emitted. */
-    llvm::Value *GenXSimdCFAny(llvm::Value *value);
+        Required when Xe hardware mask is emitted. */
+    llvm::Value *XeSimdCFAny(llvm::Value *value);
 
     /** Emit genx_simdcf_predicate intrinsic
-        Required when GenX hardware mask is emitted. */
-    llvm::Value *GenXSimdCFPredicate(llvm::Value *values, llvm::Value *defaults = NULL);
+        Required when Xe hardware mask is emitted. */
+    llvm::Value *XeSimdCFPredicate(llvm::Value *values, llvm::Value *defaults = NULL);
 
     /** Start unmasked region. Sets execution mask to all-active, and return the old mask.*/
-    llvm::Value *GenXStartUnmaskedRegion();
+    llvm::Value *XeStartUnmaskedRegion();
 
     /** End unmasked region. Sets execution mask back using the value from unmask-begin.
         ISPCSIMDCFLowering expect that execMask have alloca+load+store. */
-    void GenXEndUnmaskedRegion(llvm::Value *execMask);
+    void XeEndUnmaskedRegion(llvm::Value *execMask);
 
     /** Emit a string in constant space and get pointer to its first element.
         GEP constexpr is returned.
         Args:
           \p str - constant initializer;
           \p name - constant name */
-    llvm::Constant *GenXCreateConstantString(llvm::StringRef str, llvm::StringRef name = "");
-    /** Similar to GenXCreateConstantString but searches for the constant with the provided name first.
+    llvm::Constant *XeCreateConstantString(llvm::StringRef str, llvm::StringRef name = "");
+    /** Similar to XeCreateConstantString but searches for the constant with the provided name first.
         If there's such constant returns pointer to its first element, otherwise creates new constant
         and returns pointer to its first element. */
-    llvm::Constant *GenXGetOrCreateConstantString(llvm::StringRef str, llvm::StringRef name);
+    llvm::Constant *XeGetOrCreateConstantString(llvm::StringRef str, llvm::StringRef name);
 
     /** Change scalar condition to vector condition before branching if
         emulated uniform condition was found in external scopes and start SIMD control
         flow with simdcf.any intrinsic.
-        Required when GenX hardware mask is emitted. */
-    llvm::Value *GenXPrepareVectorBranch(llvm::Value *value);
+        Required when Xe hardware mask is emitted. */
+    llvm::Value *XePrepareVectorBranch(llvm::Value *value);
 
     /** Emit ISPC-Uniform metadata to llvm instruction. Instruction with
         such metadata will not be predicated in ISPCSIMDCFLowering pass.
-        Required when GenX hardware mask is emitted. */
-    void GenXUniformMetadata(llvm::Value *v);
+        Required when Xe hardware mask is emitted. */
+    void XeUniformMetadata(llvm::Value *v);
 
-    /** Check if current control flow block is inside GenX SIND CF
-        Required when GenX hardware mask is emitted. */
-    bool inGenXSimdCF() const;
+    /** Check if current control flow block is inside Xe SIND CF
+        Required when Xe hardware mask is emitted. */
+    bool inXeSimdCF() const;
 
 #endif
     /** Enables emitting of genx.any intrinsics and the control flow which is
@@ -674,7 +674,7 @@ class FunctionEmitContext {
     llvm::BasicBlock *continueTarget;
 
 #ifdef ISPC_XE_ENABLED
-    /** Final basic block of the function. It is used for GenX to
+    /** Final basic block of the function. It is used for Xe to
         disable returned lanes until return point is reached. */
     llvm::BasicBlock *returnPoint;
 #endif

@@ -792,13 +792,13 @@ int main(int Argc, char *Argv[]) {
                 g->opt.disableUniformMemoryOptimizations = true;
 #ifdef ISPC_XE_ENABLED
             else if (!strcmp(opt, "disable-genx-gather-coalescing"))
-                g->opt.disableGenXGatherCoalescing = true;
+                g->opt.disableXeGatherCoalescing = true;
             else if (!strcmp(opt, "emit-genx-hardware-mask"))
                 g->opt.emitXeHardwareMask = true;
             else if (!strcmp(opt, "enable-genx-foreach-varying"))
                 g->opt.enableForeachInsideVarying = true;
             else if (!strcmp(opt, "enable-genx-unsafe-masked-load"))
-                g->opt.enableGenXUnsafeMaskedLoad = true;
+                g->opt.enableXeUnsafeMaskedLoad = true;
 #endif
             else {
                 errorHandler.AddError("Unknown --opt= option \"%s\".", opt);
@@ -1059,7 +1059,7 @@ int main(int Argc, char *Argv[]) {
 #ifdef ISPC_XE_ENABLED
         if (ISPCTargetIsGen(target)) {
             Assert(targets.size() == 1 && "multi-target is not supported for genx-* targets yet.");
-            // Generate .spv for gen target instead of object by default.
+            // Generate .spv for Xe target instead of object by default.
             if (ot == Module::Object) {
                 Warning(SourcePos(), "Emitting spir-v file for genx-* targets.");
                 ot = Module::SPIRV;

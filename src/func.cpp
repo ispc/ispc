@@ -298,7 +298,7 @@ void Function::emitCode(FunctionEmitContext *ctx, llvm::Function *function, Sour
             // Allocate stack storage for the parameter and emit code
             // to store the its value there.
             argSym->storagePtr = ctx->AllocaInst(argSym->type, argSym->name.c_str());
-            // ISPC export and extern "C" functions have addrspace in the declaration on gen so
+            // ISPC export and extern "C" functions have addrspace in the declaration on Xe so
             // we cast addrspace from generic to default in the alloca BB.
             // define dso_local spir_func void @test(%S addrspace(4)* noalias %s)
             // addrspacecast %S addrspace(4)* %s to %S*
@@ -455,7 +455,7 @@ void Function::emitCode(FunctionEmitContext *ctx, llvm::Function *function, Sour
         enum { AK_NORMAL, AK_SAMPLER, AK_SURFACE, AK_VME };
         enum { IK_NORMAL, IK_INPUT, IK_OUTPUT, IK_INPUT_OUTPUT };
         unsigned int offset = 32;
-        unsigned int grf_size = g->target->getGenxGrfSize();
+        unsigned int grf_size = g->target->getXeGrfSize();
         for (int i = 0; i < args.size(); i++) {
             const Type *T = args[i]->type;
             argKinds.push_back(llvm::ValueAsMetadata::get(llvm::ConstantInt::get(i32Type, AK_NORMAL)));
@@ -544,7 +544,7 @@ void Function::GenerateIR() {
     }
     // And we can now go ahead and emit the code
     if (g->target->isXeTarget()) {
-        // For GEN target we do not emit code for masked version of a function
+        // For Xe target we do not emit code for masked version of a function
         // if it is a kernel
         const FunctionType *type = CastType<FunctionType>(sym->type);
         if (!type->IsISPCKernel()) {
@@ -566,7 +566,7 @@ void Function::GenerateIR() {
         // If the function is 'export'-qualified, emit a second version of
         // it without a mask parameter and without name mangling so that
         // the application can call it
-        // For gen we emit a version without mask parameter only for ISPC kernels and
+        // For Xe we emit a version without mask parameter only for ISPC kernels and
         // ISPC external functions.
         if (type->isExported || type->IsISPCExternal() || type->IsISPCKernel()) {
             llvm::FunctionType *ftype = type->LLVMFunctionType(g->ctx, true);
@@ -580,7 +580,7 @@ void Function::GenerateIR() {
             appFunction->setDoesNotThrow();
             g->target->markFuncWithCallingConv(appFunction);
 
-            // GenX kernel should have "dllexport" and "CMGenxMain" attribute,
+            // Xe kernel should have "dllexport" and "CMGenxMain" attribute,
             // otherss have "CMStackCall" attribute
             if (g->target->isXeTarget()) {
                 if (type->IsISPCExternal()) {

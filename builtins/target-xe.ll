@@ -217,8 +217,8 @@ define double @__sqrt_uniform_double(double) nounwind alwaysinline {
 ;; fast math mode
 
 ;; In CPU fastmath set FTZ (flush-to-zero) and DAZ (denormals-are-zero)
-;; GenX CM have per kernel setting of CM_DENORM_RTZ (Set all denorms to zero) - applied as attribute to kernel function; enabled by default
-;; So in GenX fastmath enabled by default
+;; Xe CM have per kernel setting of CM_DENORM_RTZ (Set all denorms to zero) - applied as attribute to kernel function; enabled by default
+;; So in Xe fastmath enabled by default
 define void @__fastmath() nounwind alwaysinline {
   ret void
 }

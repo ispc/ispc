@@ -7,7 +7,7 @@ task void f_du(uniform float RET[], uniform double aFOO[], uniform double b) {
     uniform double ref = sin((float)arg);
     uniform double res = sin(arg);
     uniform double delta = abs((res - ref) / ref);
-    // native single precision sin on genx is pretty imprecise
+    // native single precision sin on Xe is pretty imprecise
     RET[i] = ok(res, ref) ? 0. : 1.;
   }
 }

@@ -32,7 +32,7 @@
 */
 
 /** @file GlobalsLocalization.h
-    @brief Define extra passes required for Gen target
+    @brief Define extra passes required for Xe target
 */
 
 #include "../ispc_version.h"
