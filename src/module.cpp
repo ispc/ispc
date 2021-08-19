@@ -1157,15 +1157,15 @@ bool Module::translateToSPIRV(llvm::Module *module, std::stringstream &ss) {
         llvm::cl::desc("Allow DWARF operations not listed in the OpenCL.DebugInfo.100 "
                        "specification (experimental, may produce incompatible SPIR-V "
                        "module)"));
-#if ISPC_LLVM_VERSION < ISPC_LLVM_12_0
-    Opts.setSPIRVAllowUnknownIntrinsics({"llvm.genx"});
-#else
+#if ISPC_LLVM_VERSION == ISPC_LLVM_12_0
     llvm::cl::opt<bool> SPIRVAllowUnknownIntrinsics(
         "spirv-allow-unknown-intrinsics", llvm::cl::init(true),
         llvm::cl::desc("Unknown LLVM intrinsics will be translated as external function "
                        "calls in SPIR-V"));
 
     Opts.setSPIRVAllowUnknownIntrinsicsEnabled(SPIRVAllowUnknownIntrinsics);
+#else
+    Opts.setSPIRVAllowUnknownIntrinsics({"llvm.genx"});
 #endif
     Opts.setAllowExtraDIExpressionsEnabled(SPIRVAllowExtraDIExpressions);
     Opts.setDesiredBIsRepresentation(SPIRV::BIsRepresentation::SPIRVFriendlyIR);
