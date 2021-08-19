@@ -187,7 +187,8 @@ class Target {
         WASM,
 #endif
 #ifdef ISPC_XE_ENABLED
-        XE,
+        GEN9,
+        XELP,
 #endif
         NUM_ISAS
     };
@@ -261,7 +262,7 @@ class Target {
 
     bool isXeTarget() {
 #ifdef ISPC_XE_ENABLED
-        return m_isa == Target::XE;
+        return m_isa == Target::GEN9 || m_isa == Target::XELP;
 #else
         return false;
 #endif
