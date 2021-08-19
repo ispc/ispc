@@ -5782,7 +5782,7 @@ static bool lPrepareGEPs(llvm::BasicBlock &bb) {
                 if (GEP->getNumOperands() == 2)
                     foundGEP = GEP;
                 else
-                    foundGEP = llvm::GetElementPtrInst::Create(nullptr, ptr, {idx}, "lowered_gep", GEP);
+                    foundGEP = llvm::GetElementPtrInst::Create(PTYPE(ptr), ptr, {idx}, "lowered_gep", GEP);
 
                 ptrData[ptr][idx] = foundGEP;
             }
@@ -5794,7 +5794,11 @@ static bool lPrepareGEPs(llvm::BasicBlock &bb) {
             args.push_back(llvm::Constant::getNullValue(GEP->getOperand(1)->getType()));
             for (unsigned i = 2, end = GEP->getNumOperands(); i < end; ++i)
                 args.push_back(GEP->getOperand(i));
-            auto foundGEPUser = llvm::GetElementPtrInst::Create(nullptr, foundGEP, args, "lowered_gep_succ", GEP);
+            Assert(foundGEP != NULL);
+            Assert(llvm::isa<llvm::GetElementPtrInst>(foundGEP));
+            auto foundGEPUser = llvm::GetElementPtrInst::Create(
+                llvm::dyn_cast<llvm::GetElementPtrInst>(foundGEP)->getSourceElementType(), foundGEP, args,
+                "lowered_gep_succ", GEP);
             GEP->replaceAllUsesWith(foundGEPUser);
             lCopyMetadata(foundGEPUser, GEP);
             dead.push_back(GEP);
@@ -5896,8 +5900,9 @@ static bool lVectorizeLoads(llvm::BasicBlock &bb) {
         // It is not done now.
         if (!GEP->hasAllConstantIndices()) {
             llvm::GetElementPtrInst *newGEP = llvm::GetElementPtrInst::Create(
-                nullptr, GEP, {llvm::dyn_cast<llvm::ConstantInt>(llvm::ConstantInt::get(LLVMTypes::Int32Type, 0))},
-                "ptr_bypass", GEP->getParent());
+                GEP->getSourceElementType(), GEP,
+                {llvm::dyn_cast<llvm::ConstantInt>(llvm::ConstantInt::get(LLVMTypes::Int32Type, 0))}, "ptr_bypass",
+                GEP->getParent());
             newGEP->moveAfter(GEP);
             GEP->replaceAllUsesWith(newGEP);
             lCopyMetadata(newGEP, GEP);
