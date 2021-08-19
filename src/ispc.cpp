@@ -1132,8 +1132,7 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, bool pic, boo
 #endif
 #ifdef ISPC_XE_ENABLED
     case ISPCTarget::gen9_x8:
-    case ISPCTarget::xelp_x8:
-        this->m_isa = Target::XE;
+        this->m_isa = Target::GEN9;
         this->m_nativeVectorWidth = 8;
         this->m_nativeVectorAlignment = 64;
         this->m_vectorWidth = 8;
@@ -1147,9 +1146,23 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, bool pic, boo
         this->m_hasGather = this->m_hasScatter = true;
         CPUfromISA = GPU_SKL;
         break;
+    case ISPCTarget::xelp_x8:
+        this->m_isa = Target::XELP;
+        this->m_nativeVectorWidth = 8;
+        this->m_nativeVectorAlignment = 64;
+        this->m_vectorWidth = 8;
+        this->m_dataTypeWidth = 32;
+        this->m_hasHalf = true;
+        this->m_maskingIsFree = true;
+        this->m_maskBitCount = 1;
+        this->m_hasSaturatingArithmetic = true;
+        this->m_hasTranscendentals = true;
+        this->m_hasTrigonometry = true;
+        this->m_hasGather = this->m_hasScatter = true;
+        CPUfromISA = GPU_TGLLP;
+        break;
     case ISPCTarget::gen9_x16:
-    case ISPCTarget::xelp_x16:
-        this->m_isa = Target::XE;
+        this->m_isa = Target::GEN9;
         this->m_nativeVectorWidth = 16;
         this->m_nativeVectorAlignment = 64;
         this->m_vectorWidth = 16;
@@ -1162,6 +1175,21 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, bool pic, boo
         this->m_hasTrigonometry = true;
         this->m_hasGather = this->m_hasScatter = true;
         CPUfromISA = GPU_SKL;
+        break;
+    case ISPCTarget::xelp_x16:
+        this->m_isa = Target::XELP;
+        this->m_nativeVectorWidth = 16;
+        this->m_nativeVectorAlignment = 64;
+        this->m_vectorWidth = 16;
+        this->m_dataTypeWidth = 32;
+        this->m_hasHalf = true;
+        this->m_maskingIsFree = true;
+        this->m_maskBitCount = 1;
+        this->m_hasSaturatingArithmetic = true;
+        this->m_hasTranscendentals = true;
+        this->m_hasTrigonometry = true;
+        this->m_hasGather = this->m_hasScatter = true;
+        CPUfromISA = GPU_TGLLP;
         break;
 #else
     case ISPCTarget::gen9_x8:
@@ -1573,8 +1601,10 @@ const char *Target::ISAToString(ISA isa) {
     case Target::SKX_AVX512:
         return "avx512skx";
 #ifdef ISPC_XE_ENABLED
-    case Target::XE:
+    case Target::GEN9:
         return "gen9";
+    case Target::XELP:
+        return "xelp";
 #endif
     default:
         FATAL("Unhandled target in ISAToString()");
@@ -1598,8 +1628,10 @@ const char *Target::ISAToTargetString(ISA isa) {
         return "wasm-i32x4";
 #endif
 #ifdef ISPC_XE_ENABLED
-    case Target::XE:
+    case Target::GEN9:
         return "gen9-x16";
+    case Target::XELP:
+        return "xelp-x16";
 #endif
     case Target::SSE2:
         return "sse2-i32x4";

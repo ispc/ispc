@@ -3052,7 +3052,8 @@ static llvm::Function *getPrintImplFunc() {
     llvm::Function *printImplFunc = nullptr;
     switch (g->target->getISA()) {
 #ifdef ISPC_XE_ENABLED
-    case Target::XE:
+    case Target::GEN9:
+    case Target::XELP:
         printImplFunc = m->module->getFunction("__do_print_lz");
         break;
 #endif /* ISPC_XE_ENABLED */
