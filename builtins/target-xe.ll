@@ -150,7 +150,7 @@ declare half @llvm.genx.inv.f16(half)
 
 define half @__rcp_uniform_half(half) nounwind readonly alwaysinline {
   ;; No need to make NR iteration to improve precision since precision
-  ;; on gen is high already (1UP)
+  ;; on Xe is high already (1UP)
   %res = call half @__rcp_fast_uniform_half(half %0)
   ret half %res
 }
@@ -164,7 +164,7 @@ declare float @llvm.genx.inv.f32(float)
 
 define float @__rcp_uniform_float(float) nounwind readonly alwaysinline {
   ;; No need to make NR iteration to improve precision since precision
-  ;; on gen is high already (1UP)
+  ;; on Xe is high already (1UP)
   %res = call float @__rcp_fast_uniform_float(float %0)
   ret float %res
 }
@@ -254,7 +254,7 @@ define <WIDTH x double> @__max_varying_double(<WIDTH x double>, <WIDTH x double>
 
 ;; Generates rdregion intrinsics needed for reductions
 ;; $1 LLVM IR type
-define(`genx_rdregion', `
+define(`xe_rdregion', `
   declare <HALF_WIDTH x $1> @llvm.genx.$2.GEN_SUFFIXN($1,HALF_WIDTH).GEN_SUFFIX($1).i16(<WIDTH x $1>, i32, i32, i32, i16, i32)
   declare <QUARTER_WIDTH x $1> @llvm.genx.$2.GEN_SUFFIXN($1,QUARTER_WIDTH).GEN_SUFFIXN($1, HALF_WIDTH).i16(<HALF_WIDTH x $1>, i32, i32, i32, i16, i32)
   declare <QUAVER_WIDTH x $1> @llvm.genx.$2.GEN_SUFFIXN($1,QUAVER_WIDTH).GEN_SUFFIXN($1, QUARTER_WIDTH).i16(<QUARTER_WIDTH x $1>, i32, i32, i32, i16, i32)
@@ -263,10 +263,10 @@ define(`genx_rdregion', `
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Generates max/min builtins for unfiorm and varying
 ;; $1 LLVM IR type
-;; $2 gen intrinsic min name
-;; $3 gen intrinsic max name
+;; $2 Xe intrinsic min name
+;; $3 Xe intrinsic max name
 ;; $4 type-based builtin suffix
-define(`genx_maxmin', `
+define(`xe_maxmin', `
 declare $1 @llvm.genx.$2.GEN_TYPE($1).GEN_TYPE($1)($1, $1)
 declare $1 @llvm.genx.$3.GEN_TYPE($1).GEN_TYPE($1)($1, $1)
 declare <WIDTH x $1> @llvm.genx.$2.GEN_SUFFIX($1).GEN_SUFFIX($1)(<WIDTH x $1>, <WIDTH x $1>)
@@ -300,16 +300,16 @@ define <WIDTH x $1> @__min_varying_$4(<WIDTH x $1>, <WIDTH x $1>) nounwind reado
   ret <WIDTH x $1> %res
 }
 ')
-genx_maxmin(half, fmin, fmax, half)
-genx_maxmin(float, fmin, fmax, float)
-genx_maxmin(i32, smin, smax, int32)
-genx_maxmin(i64, smin, smax, int64)
-genx_maxmin(i32, umin, umax, uint32)
-genx_maxmin(i64, umin, umax, uint64)
+xe_maxmin(half, fmin, fmax, half)
+xe_maxmin(float, fmin, fmax, float)
+xe_maxmin(i32, smin, smax, int32)
+xe_maxmin(i64, smin, smax, int64)
+xe_maxmin(i32, umin, umax, uint32)
+xe_maxmin(i64, umin, umax, uint64)
 
-genx_rdregion(float, rdregionf)
-genx_rdregion(i32, rdregioni)
-genx_rdregion(i64, rdregioni)
+xe_rdregion(float, rdregionf)
+xe_rdregion(i32, rdregioni)
+xe_rdregion(i64, rdregioni)
 
 ;; int8 and int16 types are processed differently so declare them in advance
 declare <WIDTH x i8> @llvm.genx.rdregioni.GEN_SUFFIX(i8).GEN_SUFFIXN(i8, WIDTH_X4).i16(<WIDTH_X4 x i8>, i32, i32, i32, i16, i32)
@@ -415,7 +415,7 @@ define i32 @__task_count()  nounwind readnone alwaysinline {
   ret i32 %res
 }
 
-define(`__genx_task_count', `
+define(`__xe_task_count', `
   %l_size = call <3 x i32> @llvm.genx.local.size.v3i32()
   %l_size_v = extractelement <3 x i32> %l_size, i32 $1
   %gr_count = call <3 x i32> @llvm.genx.group.count.v3i32()
@@ -425,18 +425,18 @@ define(`__genx_task_count', `
 ')
 
 define i32 @__task_count0()  nounwind readnone alwaysinline {
-   __genx_task_count(0)
+   __xe_task_count(0)
 }
 
 define i32 @__task_count1()  nounwind readnone alwaysinline {
-  __genx_task_count(1)
+  __xe_task_count(1)
 }
 
 define i32 @__task_count2()  nounwind readnone alwaysinline {
-  __genx_task_count(2)
+  __xe_task_count(2)
 }
 
-define(`__genx_task_index', `
+define(`__xe_task_index', `
   %gr_id_v = call i32 @llvm.genx.group.id.$2()
   %l_id = call <3 x i32> @llvm.genx.local.id.v3i32()
   %l_id_v = extractelement <3 x i32> %l_id, i32 $1
@@ -448,15 +448,15 @@ define(`__genx_task_index', `
 ')
 
 define i32 @__task_index0()  nounwind readnone alwaysinline {
-   __genx_task_index(0, x)
+   __xe_task_index(0, x)
 }
 
 define i32 @__task_index1()  nounwind readnone alwaysinline {
-   __genx_task_index(1, y)
+   __xe_task_index(1, y)
 }
 
 define i32 @__task_index2()  nounwind readnone alwaysinline {
-   __genx_task_index(2, z)
+   __xe_task_index(2, z)
 }
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -491,7 +491,7 @@ define <WIDTH x i16> @__float_to_half_varying(<WIDTH x float> %v) nounwind readn
 declare <WIDTH x float> @llvm.genx.inv.GEN_SUFFIX(f32)(<WIDTH x float> %0)
 define <WIDTH x float> @__rcp_varying_float(<WIDTH x float>) nounwind readonly alwaysinline {
   ;; No need to make NR iteration to improve precision since precision
-  ;; on gen is high already (1UP)
+  ;; on Xe is high already (1UP)
   %res = call <WIDTH x float> @__rcp_fast_varying_float(<WIDTH x float> %0)
   ret <WIDTH x float> %res
 }
@@ -505,7 +505,7 @@ define <WIDTH x float> @__rcp_fast_varying_float(<WIDTH x float>) nounwind reado
 declare <WIDTH x half> @llvm.genx.inv.GEN_SUFFIX(half)(<WIDTH x half> %0)
 define <WIDTH x half> @__rcp_varying_half(<WIDTH x half>) nounwind readonly alwaysinline {
   ;; No need to make NR iteration to improve precision since precision
-  ;; on gen is high already (1UP)
+  ;; on Xe is high already (1UP)
   %res = call <WIDTH x half> @__rcp_fast_varying_half(<WIDTH x half> %0)
   ret <WIDTH x half> %res
 }
@@ -677,7 +677,7 @@ define i1 @__none(<WIDTH x MASK>) nounwind readnone alwaysinline {
   ret i1 %v_not
 }
 
-define(`genx_add', `
+define(`xe_add', `
 define internal <WIDTH x $1> @__add_varying_$2(<WIDTH x $1>,
                                   <WIDTH x $1>) nounwind readnone alwaysinline {
   %r = add <WIDTH x $1> %0, %1
@@ -690,11 +690,11 @@ define internal $1 @__add_uniform_$2($1, $1) nounwind readnone alwaysinline {
 }
 ')
 
-genx_add(i16, i16)
-genx_add(i32, int32)
-genx_add(i64, int64)
+xe_add(i16, i16)
+xe_add(i32, int32)
+xe_add(i64, int64)
 
-define(`genx_fadd', `
+define(`xe_fadd', `
 define internal <WIDTH x $1> @__fadd_varying_$1(<WIDTH x $1>,
                                   <WIDTH x $1>) nounwind readnone alwaysinline {
   %r = fadd <WIDTH x $1> %0, %1
@@ -707,18 +707,18 @@ define internal $1 @__fadd_uniform_$1($1, $1) nounwind readnone alwaysinline {
 }
 ')
 
-genx_fadd(float)
-genx_fadd(double)
+xe_fadd(float)
+xe_fadd(double)
 
 define(`reduce_func',
 `ifelse(WIDTH, `32', `reduce16($1, $2, $3, $4)',
         WIDTH, `16', `reduce16($1, $2, $3, $4)',
                      `reduce8($1, $2, $3, $4)')')
 
-define(`reducegen_func',
-`ifelse(WIDTH, `32', `reducegen32($1, $2, $3, $4, $5)',
-        WIDTH, `16', `reducegen16($1, $2, $3, $4, $5)',
-                     `reducegen8($1, $2, $3, $4, $5)')')
+define(`reducexe_func',
+`ifelse(WIDTH, `32', `reducexe32($1, $2, $3, $4, $5)',
+        WIDTH, `16', `reducexe16($1, $2, $3, $4, $5)',
+                     `reducexe8($1, $2, $3, $4, $5)')')
 
 define i16 @__reduce_add_int8(<WIDTH x i8>) nounwind readnone alwaysinline {
   %ext = zext <WIDTH x i8> %0 to <WIDTH x i16>
@@ -748,27 +748,27 @@ define i64 @__reduce_add_int64(<WIDTH x i64>) nounwind readnone {
 }
 
 define i32 @__reduce_min_int32(<WIDTH x i32>) nounwind readnone {
-  reducegen_func(i32, smin, rdregioni, %0, 4)
+  reducexe_func(i32, smin, rdregioni, %0, 4)
 }
 
 define i32 @__reduce_max_int32(<WIDTH x i32>) nounwind readnone {
-  reducegen_func(i32, smax, rdregioni, %0, 4)
+  reducexe_func(i32, smax, rdregioni, %0, 4)
 }
 
 define i32 @__reduce_min_uint32(<WIDTH x i32>) nounwind readnone {
-  reducegen_func(i32, umin, rdregioni, %0, 4)
+  reducexe_func(i32, umin, rdregioni, %0, 4)
 }
 
 define i32 @__reduce_max_uint32(<WIDTH x i32>) nounwind readnone {
-  reducegen_func(i32, umax, rdregioni, %0, 4)
+  reducexe_func(i32, umax, rdregioni, %0, 4)
 }
 
 define float @__reduce_min_float(<WIDTH x float>) nounwind readnone {
-  reducegen_func(float, fmin, rdregionf, %0, 4)
+  reducexe_func(float, fmin, rdregionf, %0, 4)
 }
 
 define float @__reduce_max_float(<WIDTH x float>) nounwind readnone {
-  reducegen_func(float, fmax, rdregionf, %0, 4)
+  reducexe_func(float, fmax, rdregionf, %0, 4)
 }
 
 define double @__reduce_min_double(<WIDTH x double>) nounwind readnone {
@@ -780,19 +780,19 @@ define double @__reduce_max_double(<WIDTH x double>) nounwind readnone {
 }
 
 define i64 @__reduce_min_int64(<WIDTH x i64>) nounwind readnone {
-  reducegen_func(i64, smin, rdregioni, %0, 8)
+  reducexe_func(i64, smin, rdregioni, %0, 8)
 }
 
 define i64 @__reduce_max_int64(<WIDTH x i64>) nounwind readnone {
-  reducegen_func(i64, smax, rdregioni, %0, 8)
+  reducexe_func(i64, smax, rdregioni, %0, 8)
 }
 
 define i64 @__reduce_min_uint64(<WIDTH x i64>) nounwind readnone {
-  reducegen_func(i64, umin, rdregioni, %0, 8)
+  reducexe_func(i64, umin, rdregioni, %0, 8)
 }
 
 define i64 @__reduce_max_uint64(<WIDTH x i64>) nounwind readnone {
-  reducegen_func(i64, umax, rdregioni, %0, 8)
+  reducexe_func(i64, umax, rdregioni, %0, 8)
 }
 
 reduce_equal(WIDTH)
@@ -800,7 +800,7 @@ reduce_equal(WIDTH)
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; masked store
 
-define(`genx_masked_store_blend', `
+define(`xe_masked_store_blend', `
 declare void @llvm.genx.vstore.GEN_SUFFIX($1)(<WIDTH x $1>, <WIDTH x $1>*)
 declare <WIDTH x $1> @llvm.genx.vload.GEN_SUFFIX($1)(<WIDTH x $1>*)
 
@@ -814,15 +814,15 @@ define void @__masked_store_blend_$1(<WIDTH x $1>* nocapture, <WIDTH x $1>,
 }
 ')
 
-genx_masked_store_blend(i8)
-genx_masked_store_blend(i16)
-genx_masked_store_blend(half)
-genx_masked_store_blend(i32)
-genx_masked_store_blend(float)
-genx_masked_store_blend(double)
-genx_masked_store_blend(i64)
+xe_masked_store_blend(i8)
+xe_masked_store_blend(i16)
+xe_masked_store_blend(half)
+xe_masked_store_blend(i32)
+xe_masked_store_blend(float)
+xe_masked_store_blend(double)
+xe_masked_store_blend(i64)
 
-define(`genx_masked_store', `
+define(`xe_masked_store', `
 define void @__masked_store_$1(<WIDTH x $1>* nocapture, <WIDTH x $1>, <WIDTH x MASK> %mask) nounwind alwaysinline {
   %ptr = bitcast <WIDTH x $1>* %0 to i8*
   %broadcast_init = insertelement <WIDTH x i32> undef, i32 SIZEOF($1), i32 0
@@ -842,15 +842,15 @@ ifelse(RUNTIME, `32',
 
 ')
 
-genx_masked_store(i8)
-genx_masked_store(i16)
-genx_masked_store(half)
-genx_masked_store(i32)
-genx_masked_store(float)
-genx_masked_store(double)
-genx_masked_store(i64)
+xe_masked_store(i8)
+xe_masked_store(i16)
+xe_masked_store(half)
+xe_masked_store(i32)
+xe_masked_store(float)
+xe_masked_store(double)
+xe_masked_store(i64)
 
-define(`genx_masked_load', `
+define(`xe_masked_load', `
 declare <WIDTH x $1> @llvm.genx.svm.block.ld.unaligned.GEN_SUFFIX($1).i64(i64)
 declare <WIDTH_X2 x $1> @llvm.genx.svm.block.ld.unaligned.GEN_SUFFIXN($1, WIDTH_X2).i64(i64)
 
@@ -935,18 +935,18 @@ vgather:
 
 ')
 
-genx_masked_load(i8)
-genx_masked_load(i16)
-genx_masked_load(half)
-genx_masked_load(i32)
-genx_masked_load(float)
-genx_masked_load(double)
-genx_masked_load(i64)
+xe_masked_load(i8)
+xe_masked_load(i16)
+xe_masked_load(half)
+xe_masked_load(i32)
+xe_masked_load(float)
+xe_masked_load(double)
+xe_masked_load(i64)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; gather/scatter
 ;; TODO_GEN: add computation of the block size and the number of blocks for svm gather/scatter.
-define(`genx_gather', `
+define(`xe_gather', `
 declare <WIDTH x $1> @llvm.genx.svm.gather.GEN_SUFFIX($1).GEN_SUFFIX(i1).GEN_SUFFIX(i64)(<WIDTH x MASK>, i32, <WIDTH x i64>, <WIDTH x $1>)
 
 define <WIDTH x $1>
@@ -1006,15 +1006,15 @@ ifelse($1, i8,`
 }
 
 ')
-genx_gather(i8)
-genx_gather(i16)
-genx_gather(half)
-genx_gather(i32)
-genx_gather(float)
-genx_gather(i64)
-genx_gather(double)
+xe_gather(i8)
+xe_gather(i16)
+xe_gather(half)
+xe_gather(i32)
+xe_gather(float)
+xe_gather(i64)
+xe_gather(double)
 
-define(`genx_scatter', `
+define(`xe_scatter', `
 declare void @llvm.genx.svm.scatter.GEN_SUFFIX(i1).GEN_SUFFIX(i64).GEN_SUFFIX($1)(<WIDTH x MASK>, i32, <WIDTH x i64>, <WIDTH x $1>)
 
 define void
@@ -1075,13 +1075,13 @@ define void
 
 ')
 
-genx_scatter(i8)
-genx_scatter(i16)
-genx_scatter(half)
-genx_scatter(i32)
-genx_scatter(float)
-genx_scatter(i64)
-genx_scatter(double)
+xe_scatter(i8)
+xe_scatter(i16)
+xe_scatter(half)
+xe_scatter(i32)
+xe_scatter(float)
+xe_scatter(i64)
+xe_scatter(double)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; int8/int16 builtins
@@ -1187,7 +1187,7 @@ define <WIDTH x half> @__exp_varying_half(<WIDTH x half>) nounwind readnone {
 
 ;; Generates double math builtins for unfiorm and varying
 ;; $1 operation (e.g. pow, sin etc)
-define(`genx_double_math', `
+define(`xe_double_math', `
 declare double @__spirv_ocl_$1(double) nounwind readnone
 define double @__$1_uniform_double(double) nounwind readnone {
   %res = call double @__spirv_ocl_$1(double %0)
@@ -1201,14 +1201,14 @@ define <WIDTH x double> @__$1_varying_double(<WIDTH x double>) nounwind readnone
 }
 ')
 
-genx_double_math(exp)
-genx_double_math(log)
-genx_double_math(sin)
-genx_double_math(cos)
-genx_double_math(tan)
-genx_double_math(asin)
-genx_double_math(acos)
-genx_double_math(atan)
+xe_double_math(exp)
+xe_double_math(log)
+xe_double_math(sin)
+xe_double_math(cos)
+xe_double_math(tan)
+xe_double_math(asin)
+xe_double_math(acos)
+xe_double_math(atan)
 
 ;; sin is returned value
 ;; cos is returned through pointer
@@ -1296,11 +1296,11 @@ trigonometry_decl()
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ;; atomics
-;; Generates atomics intrinsics. Gen intrinsics are supported for WIDTH = 1, 2, 4, 8
+;; Generates atomics intrinsics. Xe intrinsics are supported for WIDTH = 1, 2, 4, 8
 ;; so for WIDTH = 16 or more we will use 8-wide width intrinsics.
 ;; $1 atomic operation (e.g. max, min...)
 
-define(`genx_atomics_decl', `
+define(`xe_atomics_decl', `
   declare <1 x i32> @llvm.genx.svm.atomic.$1.v1i32.v1i1.v1i64(<1 x i1>, <1 x i64>, <1 x i32>, <1 x i32>)
   declare <1 x i64> @llvm.genx.svm.atomic.$1.v1i64.v1i1.v1i64(<1 x i1>, <1 x i64>, <1 x i64>, <1 x i64>)
   declare <8 x i32> @llvm.genx.svm.atomic.$1.v8i32.v8i1.v8i64(<8 x i1>, <8 x i64>, <8 x i32>, <8 x i32>)
@@ -1312,37 +1312,37 @@ declare <1 x i64> @llvm.genx.svm.atomic.cmpxchg.v1i64.v1i1.v1i64(<1 x i1>, <1 x 
 declare <8 x i32> @llvm.genx.svm.atomic.cmpxchg.v8i32.v8i1.v8i64(<8 x i1>, <8 x i64>, <8 x i32>, <8 x i32>, <8 x i32>)
 declare <8 x i64> @llvm.genx.svm.atomic.cmpxchg.v8i64.v8i1.v8i64(<8 x i1>, <8 x i64>, <8 x i64>, <8 x i64>, <8 x i64>)
 
-genx_atomics_decl(add)
-genx_atomics_decl(xchg)
-genx_atomics_decl(sub)
-genx_atomics_decl(and)
-genx_atomics_decl(or)
-genx_atomics_decl(xor)
-genx_atomics_decl(max)
-genx_atomics_decl(imax)
-genx_atomics_decl(min)
-genx_atomics_decl(imin)
+xe_atomics_decl(add)
+xe_atomics_decl(xchg)
+xe_atomics_decl(sub)
+xe_atomics_decl(and)
+xe_atomics_decl(or)
+xe_atomics_decl(xor)
+xe_atomics_decl(max)
+xe_atomics_decl(imax)
+xe_atomics_decl(min)
+xe_atomics_decl(imin)
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ;; idiv implementation
-;; For gen target the fastest way to make idiv operations is to generate
+;; For Xe target the fastest way to make idiv operations is to generate
 ;; LLVM instructions, VC backend effectevly process it.
 ;; $1 LLVM type (e.g. i8, i32)
 ;; $2 ISPC stdlib type (e.g int8, uint32)
 ;; $3 llvm function
 
-define(`genx_idiv_decl', `
+define(`xe_idiv_decl', `
   define <WIDTH x $1> @__idiv_$2(<WIDTH x $1>, <WIDTH x $1>) nounwind readnone alwaysinline{
     %res = $3 <WIDTH x $1> %0, %1
     ret <WIDTH x $1> %res
   }
 ')
 
-genx_idiv_decl(i8, int8, sdiv)
-genx_idiv_decl(i16, int16, sdiv)
-genx_idiv_decl(i32, int32, sdiv)
-genx_idiv_decl(i8, uint8, udiv)
-genx_idiv_decl(i16, uint16, udiv)
-genx_idiv_decl(i32, uint32, udiv)
+xe_idiv_decl(i8, int8, sdiv)
+xe_idiv_decl(i16, int16, sdiv)
+xe_idiv_decl(i32, int32, sdiv)
+xe_idiv_decl(i8, uint8, udiv)
+xe_idiv_decl(i16, uint16, udiv)
+xe_idiv_decl(i32, uint32, udiv)
