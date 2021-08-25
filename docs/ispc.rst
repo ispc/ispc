@@ -681,10 +681,10 @@ To compile for Intel TGLLP platform:
 
 ::
 
-   ispc foo.ispc -o foo.bin --target=genx-x16 --cpu=TGLLP --emit-zebin
+   ispc foo.ispc -o foo.bin --target=xelp-x16 --cpu=TGLLP --emit-zebin
 
-Currently-supported architectures are ``x86``, ``x86-64``, ``genx32``,
-``genx64``, and ``arm``.
+Currently-supported architectures are ``x86``, ``x86-64``, ``xe32``,
+``xe64``, ``arm``, and ``aarch64``.
 
 The target CPU determines both the default instruction set used as well as
 which CPU architecture the code is tuned for.  ``ispc --help`` provides a
@@ -712,8 +712,8 @@ avx512skx    AVX 512 target (future Xeon CPUs)
 neon         ARM NEON
 sse2         SSE2 (early 2000s era x86 CPUs)
 sse4         SSE4 (generally 2008-2010 Intel CPUs)
-genx-x8      Intel GPU 8-wide SIMD
-genx-x16     Intel GPU 16-wide SIMD
+gen9         Intel Gen9 GPU
+xelp         Intel XeLP GPU
 ============ =========================================================
 
 Consult your CPU's manual for specifics on which vector instruction set it
