@@ -499,13 +499,13 @@ define(`reduce16', `
 '
 )
 
-;; Do an optimized for gen reduction over a 8-wide vector
+;; Do an optimized for Xe reduction over a 8-wide vector
 ;; $1: type of final scalar result
 ;; $2: genx reduction intrinsic name
 ;; $3: rdregioni or rdregionf
 ;; $4: input vector
 ;; $5: scale
-define(`reducegen8', `
+define(`reducexe8', `
   %scale2 = mul i16 $5, 4
   %v3 = call <4 x $1> @llvm.genx.$3.GEN_SUFFIXN($1, 4).GEN_SUFFIXN($1, 8).i16(<8 x $1> $4, i32 0, i32 4, i32 1, i16 0, i32 undef)
   %v4 = call <4 x $1> @llvm.genx.$3.GEN_SUFFIXN($1, 4).GEN_SUFFIXN($1, 8).i16(<8 x $1> $4, i32 0, i32 4, i32 1, i16 %scale2, i32 undef)
@@ -521,13 +521,13 @@ define(`reducegen8', `
 '
 )
 
-;; Do an optimized for gen reduction over a 16-wide vector
+;; Do an optimized for Xe reduction over a 16-wide vector
 ;; $1: type of final scalar result
 ;; $2: genx reduction intrinsic name
 ;; $3: rdregioni or rdregionf
 ;; $4: input vector
 ;; $5: scale
-define(`reducegen16', `
+define(`reducexe16', `
   %scale1 = mul i16 $5, 8
   %v1 = call <8 x $1> @llvm.genx.$3.GEN_SUFFIXN($1, 8).GEN_SUFFIX($1).i16(<16 x $1> $4, i32 0, i32 8, i32 1, i16 0, i32 undef)
   %v2 = call <8 x $1> @llvm.genx.$3.GEN_SUFFIXN($1, 8).GEN_SUFFIX($1).i16(<16 x $1> $4, i32 0, i32 8, i32 1, i16 %scale1, i32 undef)
