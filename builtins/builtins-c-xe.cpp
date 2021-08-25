@@ -31,7 +31,7 @@
    SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-/** @file builtins-c-genx.cpp
+/** @file builtins-c-xe.cpp
     @brief Standard library function implementations written in CM.
 
     This file provides CM implementations of various functions that can be
