@@ -1,5 +1,5 @@
 ; ModuleID = 'test64.bc'
-source_filename = "builtins/builtins-c-genx.cpp"
+source_filename = "builtins/builtins-c-xe.cpp"
 target datalayout = "e-p:64:64-i64:64-n8:16:32"
 target triple = "genx64-unknown-linux-gnu"
 
@@ -11269,7 +11269,7 @@ attributes #33 = { alwaysinline nounwind "correctly-rounded-divide-sqrt-fp-math"
 !llvm.ident = !{!6}
 
 !0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, file: !1, producer: "clang version 8.0.1 (ssh://gerrit-gfx.intel.com:29418/gfx/cmc/clang 61d84c8cc7a1840fc8c03b9b141db309011ab4c3) (ssh://gerrit-gfx.intel.com:29418/gfx/cmc/llvm 7add6781ee5118530a30e8c8de1be942a2139139)", isOptimized: true, runtimeVersion: 0, emissionKind: LineTablesOnly, enums: !2, nameTableKind: None)
-!1 = !DIFile(filename: "builtins/builtins-c-genx.cpp", directory: "/home/ispc")
+!1 = !DIFile(filename: "builtins/builtins-c-xe.cpp", directory: "/home/ispc")
 !2 = !{}
 !3 = !{i32 2, !"Dwarf Version", i32 4}
 !4 = !{i32 2, !"Debug Info Version", i32 3}
