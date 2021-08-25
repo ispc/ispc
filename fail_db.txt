@@ -1,4 +1,4 @@
-% List of known fails.
+ List of known fails.
 % The list is unordered and contains information about commonly used platforms / configurations.
 % Our goal is to maintain this list for Linux, macOS and Windows with reasonably new compilers.
 % Note, that it's important which C++ compiler was used.
@@ -6,49 +6,3 @@
 % LLVM bugs in released versions, that we have to workaround by applying patches (see llvm_patches
 % folder). The recommended way to build LLVM on Unix is to use "alloy.py".
 %
-./tests/shuffle2-12.ispc runfail  genx64        genx-x8 TGLLP   Linux LLVM 12.0 clang++12.0  spv *
-./tests/shuffle2-12.ispc runfail  genx64        genx-x8 unspec   Linux LLVM 12.0 clang++12.0  spv *
-./tests/shuffle2-12.ispc runfail  genx64       genx-x16 TGLLP   Linux LLVM 12.0 clang++12.0  spv *
-./tests/shuffle2-12.ispc runfail  genx64       genx-x16 unspec   Linux LLVM 12.0 clang++12.0  spv *
-.\tests\shuffle2-12.ispc runfail  genx64        genx-x8 TGLLP Windows LLVM 12.0         cl  spv *
-.\tests\shuffle2-12.ispc runfail  genx64        genx-x8 unspec Windows LLVM 12.0         cl  spv *
-.\tests\shuffle2-12.ispc runfail  genx64       genx-x16 TGLLP Windows LLVM 12.0         cl  spv *
-.\tests\shuffle2-12.ispc runfail  genx64       genx-x16 unspec Windows LLVM 12.0         cl  spv *
-.\tests\print_bool.ispc runfail  genx64        genx-x8 unspec Windows LLVM 12.0         cl  ze *
-.\tests\print_bool_simd.ispc runfail  genx64        genx-x8 unspec Windows LLVM 12.0         cl  ze *
-.\tests\print_hello.ispc runfail  genx64        genx-x8 unspec Windows LLVM 12.0         cl  ze *
-.\tests\print_uniform-f16.ispc runfail  genx64        genx-x8 unspec Windows LLVM 12.0         cl  ze *
-.\tests\print_uniform-f32.ispc runfail  genx64        genx-x8 unspec Windows LLVM 12.0         cl  ze *
-.\tests\print_uniform-f64.ispc runfail  genx64        genx-x8 unspec Windows LLVM 12.0         cl  ze *
-.\tests\print_uniform-i16.ispc runfail  genx64        genx-x8 unspec Windows LLVM 12.0         cl  ze *
-.\tests\print_uniform-i32.ispc runfail  genx64        genx-x8 unspec Windows LLVM 12.0         cl  ze *
-.\tests\print_uniform-i64.ispc runfail  genx64        genx-x8 unspec Windows LLVM 12.0         cl  ze *
-.\tests\print_uniform-i8.ispc runfail  genx64        genx-x8 unspec Windows LLVM 12.0         cl  ze *
-.\tests\print_varying-f16.ispc runfail  genx64        genx-x8 unspec Windows LLVM 12.0         cl  ze *
-.\tests\print_varying-f32.ispc runfail  genx64        genx-x8 unspec Windows LLVM 12.0         cl  ze *
-.\tests\print_varying-f64.ispc runfail  genx64        genx-x8 unspec Windows LLVM 12.0         cl  ze *
-.\tests\print_varying-i16.ispc runfail  genx64        genx-x8 unspec Windows LLVM 12.0         cl  ze *
-.\tests\print_varying-i32.ispc runfail  genx64        genx-x8 unspec Windows LLVM 12.0         cl  ze *
-.\tests\print_varying-i64.ispc runfail  genx64        genx-x8 unspec Windows LLVM 12.0         cl  ze *
-.\tests\print_varying-i8.ispc runfail  genx64        genx-x8 unspec Windows LLVM 12.0         cl  ze *
-.\tests\print_varying_simd.ispc runfail  genx64        genx-x8 unspec Windows LLVM 12.0         cl  ze *
-.\tests\shuffle2-12.ispc runfail  genx64        genx-x8 unspec Windows LLVM 12.0         cl  ze *
-.\tests\print_bool.ispc runfail  genx64       genx-x16 unspec Windows LLVM 12.0         cl  ze *
-.\tests\print_bool_simd.ispc runfail  genx64       genx-x16 unspec Windows LLVM 12.0         cl  ze *
-.\tests\print_hello.ispc runfail  genx64       genx-x16 unspec Windows LLVM 12.0         cl  ze *
-.\tests\print_uniform-f16.ispc runfail  genx64       genx-x16 unspec Windows LLVM 12.0         cl  ze *
-.\tests\print_uniform-f32.ispc runfail  genx64       genx-x16 unspec Windows LLVM 12.0         cl  ze *
-.\tests\print_uniform-f64.ispc runfail  genx64       genx-x16 unspec Windows LLVM 12.0         cl  ze *
-.\tests\print_uniform-i16.ispc runfail  genx64       genx-x16 unspec Windows LLVM 12.0         cl  ze *
-.\tests\print_uniform-i32.ispc runfail  genx64       genx-x16 unspec Windows LLVM 12.0         cl  ze *
-.\tests\print_uniform-i64.ispc runfail  genx64       genx-x16 unspec Windows LLVM 12.0         cl  ze *
-.\tests\print_uniform-i8.ispc runfail  genx64       genx-x16 unspec Windows LLVM 12.0         cl  ze *
-.\tests\print_varying-f16.ispc runfail  genx64       genx-x16 unspec Windows LLVM 12.0         cl  ze *
-.\tests\print_varying-f32.ispc runfail  genx64       genx-x16 unspec Windows LLVM 12.0         cl  ze *
-.\tests\print_varying-f64.ispc runfail  genx64       genx-x16 unspec Windows LLVM 12.0         cl  ze *
-.\tests\print_varying-i16.ispc runfail  genx64       genx-x16 unspec Windows LLVM 12.0         cl  ze *
-.\tests\print_varying-i32.ispc runfail  genx64       genx-x16 unspec Windows LLVM 12.0         cl  ze *
-.\tests\print_varying-i64.ispc runfail  genx64       genx-x16 unspec Windows LLVM 12.0         cl  ze *
-.\tests\print_varying-i8.ispc runfail  genx64       genx-x16 unspec Windows LLVM 12.0         cl  ze *
-.\tests\print_varying_simd.ispc runfail  genx64       genx-x16 unspec Windows LLVM 12.0         cl  ze *
-.\tests\shuffle2-12.ispc runfail  genx64       genx-x16 unspec Windows LLVM 12.0         cl  ze *
