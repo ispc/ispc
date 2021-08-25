@@ -1,6 +1,6 @@
-===================
-Intel® ISPC for GEN
-===================
+==================
+Intel® ISPC for Xe
+==================
 
 The Intel® Implicit SPMD Program Compiler (Intel® ISPC) is actively developed to support
 latest Intel GPUs. The compilation for a GPU is pretty straightforward from
@@ -41,12 +41,12 @@ Contents:
 Using The ISPC Compiler
 =======================
 
-The output from ``ispc`` for GEN targets is SPIR-V file by default. It is used
-when one of ``genx`` targets is selected:
+The output from ``ispc`` for Xe targets is SPIR-V file by default. It is used
+when one of ``gen9`` or ``xe`` targets is selected:
 
 ::
 
-   ispc foo.ispc --target=genx-x8 -o foo.spv
+   ispc foo.ispc --target=gen9-x8 -o foo.spv
 
 The SPIR-V file is consumed by the runtime for further compilation and execution
 on GPU.
@@ -56,7 +56,7 @@ currently SPIR-V format is more stable but feel free to experiment with L0 binar
 
 Environment
 -----------
-``Intel® ISPC for GEN`` is supported on Linux for quite a while (recommended
+``Intel® ISPC for Xe`` is supported on Linux for quite a while (recommended
 and tested Linux distribution is Ubuntu 20.04) and it's got Windows support since
 v1.16.0.
 
@@ -74,22 +74,23 @@ of OpenMP runtime instructions.
 Basic Command-line Options
 --------------------------
 
-Two new targets were introduced for GPU support: ``genx-x8`` and ``genx-x16``.
+Four new targets were introduced for GPU support: ``gen9-x8``, ``gen9-x16``,
+``xelp-x8``, and ``xelp-x16``.
 
 If the ``-o`` flag is given, ``ispc`` will generate a SPIR-V output file.
 Optionally you can use ``--emit-spirv`` flag:
 
 ::
 
-   ispc --target=genx-x8 --emit-spirv foo.ispc -o foo.spv
+   ispc --target=gen9-x8 --emit-spirv foo.ispc -o foo.spv
 
 To generate L0 binary, use ``--emit-zebin`` flag. When you use L0 binary you may
 want to pass some additional options to the vector backend. You can do this using
 ``--vc-options`` flag.
 
-Also two new ``arch`` options were introduced: ``genx32`` and ``genx64``.
-``genx64`` is default and corresponds to 64-bit host and has 64-bit pointer size,
-``genx32`` corresponds to 32-bit host and has 32-bit pointer size.
+Also two new ``arch`` options were introduced: ``xe32`` and ``xe64``.
+``xe64`` is default and corresponds to 64-bit host and has 64-bit pointer size,
+``xe32`` corresponds to 32-bit host and has 32-bit pointer size.
 
 To generate LLVM bitcode, use the ``--emit-llvm`` flag.
 To generate LLVM bitcode in textual form, use the ``--emit-llvm-text`` flag.
@@ -101,7 +102,7 @@ See `How to Get an Assembly File from SPIR-V?`_ section about how to get the
 assembly from SPIR-V file.
 
 By default, 64-bit addressing is used. You can change it to 32-bit addressing by
-using ``--addressing=32`` or ``--arch=genx32`` however pointer size should be
+using ``--addressing=32`` or ``--arch=xe32`` however pointer size should be
 the same for host and device code so 32-bit addressing will only work with
 32-bit host programs.
 
@@ -324,13 +325,13 @@ into ``ispcrt::Array`` for correct passing to ISPC kernel.
 Then we set up module and kernel to execute:
 ::
 
-    ispcrt::Module module(device, "genx_simple");
+    ispcrt::Module module(device, "xe_simple");
     ispcrt::Kernel kernel(device, module, "simple_ispc");
 
 The name of the module must correspond to the name of output from ISPC compilation
 without extension. So in this example ``simple.ispc`` will be compiled to
-``genx_simple.spv`` for GPU and to ``libgenx_simple.so`` for CPU so we use
-``genx_simple`` as the module name.
+``xe_simple.spv`` for GPU and to ``libxe_simple.so`` for CPU so we use
+``xe_simple`` as the module name.
 The name of the kernel is just the name of the required ``task`` function from
 the ISPC kernel.
 
@@ -373,10 +374,10 @@ to pass ``-DLEVEL_ZERO_ROOT=<path_lo_level_zero>`` with PATH to ``oneAPI Level Z
 on the system. Build examples using ``make`` or using ``Visual Studio`` solution.
 Go to ``simple`` folder and see what files were generated:
 
-* ``genx_simple.spv`` contains SPIR-V representation. This file is passed
+* ``xe_simple.spv`` contains SPIR-V representation. This file is passed
   by ``ISPCRT`` to ``Intel(R) Graphics Compute Runtime`` for execution on GPU.
 
-* ``libgenx_simple.so`` on Linux / ``genx_simple.dll`` on Windows incorporates
+* ``libxe_simple.so`` on Linux / ``xe_simple.dll`` on Windows incorporates
   object files produced from ISPC kernel for different targets (you can find
   them in ``local_ispc`` subfolder). This library is loaded from host application
   ``host_simple`` and is used for execution on CPU.
@@ -410,7 +411,7 @@ build system is the following:
   project(simple)
   find_package(ispcrt REQUIRED)
   add_executable(host_simple simple.cpp)
-  add_ispc_kernel(genx_simple simple.ispc "")
+  add_ispc_kernel(xe_simple simple.ispc "")
   target_link_libraries(host_simple PRIVATE ispcrt::ispcrt)
 
 
@@ -426,8 +427,8 @@ Here are example commands for Linux:
 * Compile ISPC kernel for GPU:
   ::
 
-    ispc -I /home/ispc_package/include/ispcrt -DISPC_GPU --target=genx-x8 --woff
-    -o /home/ispc_package/examples/xpu/simple/genx_simple.spv
+    ispc -I /home/ispc_package/include/ispcrt -DISPC_GPU --target=gen9-x8 --woff
+    -o /home/ispc_package/examples/xpu/simple/xe_simple.spv
     /home/ispc_package/examples/xpu/simple/simple.ispc
 
 * Compile ISPC kernel for CPU:
@@ -443,7 +444,7 @@ Here are example commands for Linux:
 * Produce a library from object files:
   ::
 
-    /usr/bin/c++ -fPIC -shared -Wl,-soname,libgenx_simple.so -o libgenx_simple.so
+    /usr/bin/c++ -fPIC -shared -Wl,-soname,libxe_simple.so -o libxe_simple.so
     simple.dev*.o
 
 * Compile and link host code:
@@ -465,7 +466,7 @@ By default, examples use SPIR-V format. You can try them with L0 binary format:
 Language Limitations and Known Issues
 =====================================
 
-The current release of ``Intel® ISPC for GEN`` is still in Beta stage so you may face
+The current release of ``Intel® ISPC for Xe`` is still in Beta stage so you may face
 some issues. However, it is actively developed so we expect to fix the remaining
 issues in the future releases.
 Below is the list of known limitations:
@@ -487,14 +488,14 @@ There are several features that we do not plan to implement for GPU:
   since kernel execution is managed in the host code now.
 
 * ``new`` and ``delete`` keywords are not expected to be supported in ISPC
-  program for GEN target. We expect all memory to be set up on the host side.
+  program for Xe target. We expect all memory to be set up on the host side.
 
-* ``export`` functions must return ``void`` for GEN targets.
+* ``export`` functions must return ``void`` for Xe targets.
 
 
 Performance
 ===========
-The performance of ``Intel® ISPC for GEN`` was significantly improved in this release
+The performance of ``Intel® ISPC for Xe`` was significantly improved in this release
 but still has room for improvements and we're working hard to make it better for
 the next release. Here are our results for ``mandelbrot`` which were obtained on
 Intel(R) Core(TM) i9-9900K CPU @ 3.60GHz with Intel(R) Gen9 HD Graphics
@@ -593,7 +594,7 @@ To reduce number of local variables you can follow these simple rules:
 
 * Use SIMD-8 where it is impossible to fit in the available register number.
   If you see the warning message below during runtime, consider compiling your code
-  for SIMD-8 target (``--target=genx-x8``).
+  for SIMD-8 target (``--target=gen9-x8``).
 
 ::
 
