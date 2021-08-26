@@ -43,7 +43,7 @@ task void f_f(uniform float RET[], uniform float aFOO[]) {
     }
 
     // Range -1 > val > 1 is tested separately since different
-    // emulation sequence is used for this on gen.
+    // emulation sequence is used for this on Xe.
     // Case 5: Value 0 < val < +0.5.
     baseVal = 0;
     testVal = baseVal + deltaLow;
