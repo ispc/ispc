@@ -46,7 +46,7 @@ Here are some of them:
 - L0 binary generation was reworked through libocloc. Supported on Linux only.
 
 More details about the current state of GPU support are available here:
-https://ispc.github.io/ispc_for_gen.html
+https://ispc.github.io/ispc_for_xe.html
 
 For build instructions check our docker recipe:
 https://github.com/ispc/ispc/blob/main/docker/ubuntu/xpu_ispc_build/Dockerfile
@@ -123,7 +123,7 @@ of new features:
 - TGLLP (TigerLake mobile CPU) support ('--cpu=TGLLP').
 We also added examples to demonstrate interoperability with oneAPI DPC++ Compiler.
 More details about current state of GPU support are available here:
-https://ispc.github.io/ispc_for_gen.html
+https://ispc.github.io/ispc_for_xe.html
 
 For build instructions check our docker recipe:
 https://github.com/ispc/ispc/blob/main/docker/ubuntu/gen/Dockerfile
@@ -193,7 +193,7 @@ through SPIR-V interface. This release also includes ISPC Runtime based on
 'oneAPI Level Zero' for GPU and 'OpenMP Runtime' for CPU, which creates unified
 abstraction for executing ISPC code on CPU and GPU.
 
-More details are available here: https://ispc.github.io/ispc_for_gen.html
+More details are available here: https://ispc.github.io/ispc_for_xe.html
 
 For build instructions check our docker recipe:
 https://github.com/ispc/ispc/blob/main/docker/ubuntu/gen/Dockerfile
