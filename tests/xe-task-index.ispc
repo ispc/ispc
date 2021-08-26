@@ -2,7 +2,7 @@
 // rule: skip on arch=*
 // rule: run on arch=xe32
 // rule: run on arch=xe64
-// TODO: the test should be reworked when atomic operation on gen are available.
+// TODO: the test should be reworked when atomic operation on Xe are available.
 // It is hard to check taskIndex now.
 
 task void f_t(uniform float RET[]) {
