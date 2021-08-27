@@ -507,16 +507,16 @@ define(`reduce16', `
 ;; $5: scale
 define(`reducexe8', `
   %scale2 = mul i16 $5, 4
-  %v3 = call <4 x $1> @llvm.genx.$3.GEN_SUFFIXN($1, 4).GEN_SUFFIXN($1, 8).i16(<8 x $1> $4, i32 0, i32 4, i32 1, i16 0, i32 undef)
-  %v4 = call <4 x $1> @llvm.genx.$3.GEN_SUFFIXN($1, 4).GEN_SUFFIXN($1, 8).i16(<8 x $1> $4, i32 0, i32 4, i32 1, i16 %scale2, i32 undef)
-  %m2 = call <4 x $1> @llvm.genx.$2.GEN_SUFFIXN($1, 4).GEN_SUFFIXN($1, 4)(<4 x $1> %v3, <4 x $1> %v4)
+  %v3 = call <4 x $1> @llvm.genx.$3.XE_SUFFIXN($1, 4).XE_SUFFIXN($1, 8).i16(<8 x $1> $4, i32 0, i32 4, i32 1, i16 0, i32 undef)
+  %v4 = call <4 x $1> @llvm.genx.$3.XE_SUFFIXN($1, 4).XE_SUFFIXN($1, 8).i16(<8 x $1> $4, i32 0, i32 4, i32 1, i16 %scale2, i32 undef)
+  %m2 = call <4 x $1> @llvm.genx.$2.XE_SUFFIXN($1, 4).XE_SUFFIXN($1, 4)(<4 x $1> %v3, <4 x $1> %v4)
   %scale3 = mul i16 $5, 2
-  %v5 = call <2 x $1> @llvm.genx.$3.GEN_SUFFIXN($1, 2).GEN_SUFFIXN($1, 4).i16(<4 x $1> %m2, i32 0, i32 2, i32 1, i16 0, i32 undef)
-  %v6 = call <2 x $1> @llvm.genx.$3.GEN_SUFFIXN($1, 2).GEN_SUFFIXN($1, 4).i16(<4 x $1> %m2, i32 0, i32 2, i32 1, i16 %scale3, i32 undef)
-  %m3 = call <2 x $1> @llvm.genx.$2.GEN_SUFFIXN($1, 2).GEN_SUFFIXN($1, 2)(<2 x $1> %v5, <2 x $1> %v6)
+  %v5 = call <2 x $1> @llvm.genx.$3.XE_SUFFIXN($1, 2).XE_SUFFIXN($1, 4).i16(<4 x $1> %m2, i32 0, i32 2, i32 1, i16 0, i32 undef)
+  %v6 = call <2 x $1> @llvm.genx.$3.XE_SUFFIXN($1, 2).XE_SUFFIXN($1, 4).i16(<4 x $1> %m2, i32 0, i32 2, i32 1, i16 %scale3, i32 undef)
+  %m3 = call <2 x $1> @llvm.genx.$2.XE_SUFFIXN($1, 2).XE_SUFFIXN($1, 2)(<2 x $1> %v5, <2 x $1> %v6)
   %m3a = extractelement <2 x $1> %m3, i32 0
   %m3b = extractelement <2 x $1> %m3, i32 1
-  %m = call $1 @llvm.genx.$2.GEN_TYPE($1).GEN_TYPE($1)($1 %m3a, $1 %m3b)
+  %m = call $1 @llvm.genx.$2.XE_TYPE($1).XE_TYPE($1)($1 %m3a, $1 %m3b)
   ret $1 %m
 '
 )
@@ -529,20 +529,20 @@ define(`reducexe8', `
 ;; $5: scale
 define(`reducexe16', `
   %scale1 = mul i16 $5, 8
-  %v1 = call <8 x $1> @llvm.genx.$3.GEN_SUFFIXN($1, 8).GEN_SUFFIX($1).i16(<16 x $1> $4, i32 0, i32 8, i32 1, i16 0, i32 undef)
-  %v2 = call <8 x $1> @llvm.genx.$3.GEN_SUFFIXN($1, 8).GEN_SUFFIX($1).i16(<16 x $1> $4, i32 0, i32 8, i32 1, i16 %scale1, i32 undef)
-  %m1 = call <8 x $1> @llvm.genx.$2.GEN_SUFFIXN($1, 8).GEN_SUFFIXN($1, 8)(<8 x $1> %v1, <8 x $1> %v2)
+  %v1 = call <8 x $1> @llvm.genx.$3.XE_SUFFIXN($1, 8).XE_SUFFIX($1).i16(<16 x $1> $4, i32 0, i32 8, i32 1, i16 0, i32 undef)
+  %v2 = call <8 x $1> @llvm.genx.$3.XE_SUFFIXN($1, 8).XE_SUFFIX($1).i16(<16 x $1> $4, i32 0, i32 8, i32 1, i16 %scale1, i32 undef)
+  %m1 = call <8 x $1> @llvm.genx.$2.XE_SUFFIXN($1, 8).XE_SUFFIXN($1, 8)(<8 x $1> %v1, <8 x $1> %v2)
   %scale2 = mul i16 $5, 4
-  %v3 = call <4 x $1> @llvm.genx.$3.GEN_SUFFIXN($1, 4).GEN_SUFFIXN($1, 8).i16(<8 x $1> %m1, i32 0, i32 4, i32 1, i16 0, i32 undef)
-  %v4 = call <4 x $1> @llvm.genx.$3.GEN_SUFFIXN($1, 4).GEN_SUFFIXN($1, 8).i16(<8 x $1> %m1, i32 0, i32 4, i32 1, i16 %scale2, i32 undef)
-  %m2 = call <4 x $1> @llvm.genx.$2.GEN_SUFFIXN($1, 4).GEN_SUFFIXN($1, 4)(<4 x $1> %v3, <4 x $1> %v4)
+  %v3 = call <4 x $1> @llvm.genx.$3.XE_SUFFIXN($1, 4).XE_SUFFIXN($1, 8).i16(<8 x $1> %m1, i32 0, i32 4, i32 1, i16 0, i32 undef)
+  %v4 = call <4 x $1> @llvm.genx.$3.XE_SUFFIXN($1, 4).XE_SUFFIXN($1, 8).i16(<8 x $1> %m1, i32 0, i32 4, i32 1, i16 %scale2, i32 undef)
+  %m2 = call <4 x $1> @llvm.genx.$2.XE_SUFFIXN($1, 4).XE_SUFFIXN($1, 4)(<4 x $1> %v3, <4 x $1> %v4)
   %scale3 = mul i16 $5, 2
-  %v5 = call <2 x $1> @llvm.genx.$3.GEN_SUFFIXN($1, 2).GEN_SUFFIXN($1, 4).i16(<4 x $1> %m2, i32 0, i32 2, i32 1, i16 0, i32 undef)
-  %v6 = call <2 x $1> @llvm.genx.$3.GEN_SUFFIXN($1, 2).GEN_SUFFIXN($1, 4).i16(<4 x $1> %m2, i32 0, i32 2, i32 1, i16 %scale3, i32 undef)
-  %m3 = call <2 x $1> @llvm.genx.$2.GEN_SUFFIXN($1, 2).GEN_SUFFIXN($1, 2)(<2 x $1> %v5, <2 x $1> %v6)
+  %v5 = call <2 x $1> @llvm.genx.$3.XE_SUFFIXN($1, 2).XE_SUFFIXN($1, 4).i16(<4 x $1> %m2, i32 0, i32 2, i32 1, i16 0, i32 undef)
+  %v6 = call <2 x $1> @llvm.genx.$3.XE_SUFFIXN($1, 2).XE_SUFFIXN($1, 4).i16(<4 x $1> %m2, i32 0, i32 2, i32 1, i16 %scale3, i32 undef)
+  %m3 = call <2 x $1> @llvm.genx.$2.XE_SUFFIXN($1, 2).XE_SUFFIXN($1, 2)(<2 x $1> %v5, <2 x $1> %v6)
   %m3a = extractelement <2 x $1> %m3, i32 0
   %m3b = extractelement <2 x $1> %m3, i32 1
-  %m = call $1 @llvm.genx.$2.GEN_TYPE($1).GEN_TYPE($1)($1 %m3a, $1 %m3b)
+  %m = call $1 @llvm.genx.$2.XE_TYPE($1).XE_TYPE($1)($1 %m3a, $1 %m3b)
   ret $1 %m
 '
 )
@@ -1414,7 +1414,7 @@ define <$1 x $3> @__atomic_$2_$4_global($3 * %ptr, <$1 x $3> %val,
     %ptr_to_int = ptrtoint $3* %ptr to i64
     %base = insertelement <WIDTH x i64> undef, i64 %ptr_to_int, i32 0
     %shuffle = shufflevector <WIDTH x i64> %base, <WIDTH x i64> undef, <WIDTH x i32> zeroinitializer
-    %res = call <$1 x $3> @llvm.genx.svm.atomic.$2.GEN_SUFFIX($3).GEN_SUFFIX(i1).GEN_SUFFIX(i64)(<$1 x i1> %m, <$1 x i64> %shuffle, <$1 x $3> %val, <$1 x $3> %dst_load)
+    %res = call <$1 x $3> @llvm.genx.svm.atomic.$2.XE_SUFFIX($3).XE_SUFFIX(i1).XE_SUFFIX(i64)(<$1 x i1> %m, <$1 x i64> %shuffle, <$1 x $3> %val, <$1 x $3> %dst_load)
   ',`
     %ret_ptr = alloca <$1 x $3>
     per_lane($1, <$1 x MASK> %m, `
@@ -1450,7 +1450,7 @@ define $3 @__atomic_$2_uniform_$4_global($3 * %ptr, $3 %val) nounwind alwaysinli
   %ptr_to_int = ptrtoint $3* %ptr to i64
   %ptr_to_int_v = bitcast i64 %ptr_to_int to <1 x i64>
   %val_v = bitcast $3 %val to <1 x $3>
-  %res_v = call <1 x $3> @llvm.genx.svm.atomic.$2.GEN_SUFFIXN($3, 1).v1i1.v1i64(<1 x i1> <i1 true>, <1 x i64> %ptr_to_int_v, <1 x $3> %val_v, <1 x $3> %dst_load), !ISPC-Uniform !1
+  %res_v = call <1 x $3> @llvm.genx.svm.atomic.$2.XE_SUFFIXN($3, 1).v1i1.v1i64(<1 x i1> <i1 true>, <1 x i64> %ptr_to_int_v, <1 x $3> %val_v, <1 x $3> %dst_load), !ISPC-Uniform !1
   %res = extractelement <1 x $3> %res_v, i32 0 
   ret $3 %res
 }
@@ -1480,7 +1480,7 @@ define $3 @__atomic_$2_uniform_$4_global($3 * %ptr, $3 %val) nounwind alwaysinli
   %ptr_to_int = ptrtoint $3* %ptr to i64
   %ptr_to_int_v = bitcast i64 %ptr_to_int to <1 x i64>
   %val_v = bitcast $3 %val to <1 x $3>
-  %res_v = call <1 x $3> @llvm.genx.svm.atomic.$5.GEN_SUFFIXN($3, 1).v1i1.v1i64(<1 x i1> <i1 true>, <1 x i64> %ptr_to_int_v, <1 x $3> %val_v, <1 x $3> %dst_load), !ISPC-Uniform !1
+  %res_v = call <1 x $3> @llvm.genx.svm.atomic.$5.XE_SUFFIXN($3, 1).v1i1.v1i64(<1 x i1> <i1 true>, <1 x i64> %ptr_to_int_v, <1 x $3> %val_v, <1 x $3> %dst_load), !ISPC-Uniform !1
   %res = extractelement <1 x $3> %res_v, i32 0 
   ret $3 %res
 }
@@ -1499,7 +1499,7 @@ define $2 @__atomic_swap_uniform_$3_global($2* %ptr, $2 %val) nounwind alwaysinl
   %ptr_to_int = ptrtoint $2* %ptr to i64
   %ptr_to_int_v = bitcast i64 %ptr_to_int to <1 x i64>
   %val_v = bitcast $2 %val to <1 x $2>
-  %res_v = call <1 x $2> @llvm.genx.svm.atomic.xchg.GEN_SUFFIXN($2, 1).v1i1.v1i64(<1 x i1> <i1 true>, <1 x i64> %ptr_to_int_v, <1 x $2> %val_v, <1 x $2> %dst_load), !ISPC-Uniform !1
+  %res_v = call <1 x $2> @llvm.genx.svm.atomic.xchg.XE_SUFFIXN($2, 1).v1i1.v1i64(<1 x i1> <i1 true>, <1 x i64> %ptr_to_int_v, <1 x $2> %val_v, <1 x $2> %dst_load), !ISPC-Uniform !1
   %res = extractelement <1 x $2> %res_v, i32 0 
   ret $2 %res
 }
@@ -1520,7 +1520,7 @@ define <$1 x $2> @__atomic_compare_exchange_$3_global($2* %ptr, <$1 x $2> %cmp,
     %ptr_to_int = ptrtoint $2* %ptr to i64
     %base = insertelement <WIDTH x i64> undef, i64 %ptr_to_int, i32 0
     %shuffle = shufflevector <WIDTH x i64> %base, <WIDTH x i64> undef, <WIDTH x i32> zeroinitializer
-    %res = call <$1 x $2> @llvm.genx.svm.atomic.cmpxchg.GEN_SUFFIX($2).GEN_SUFFIX(i1).GEN_SUFFIX(i64)(<$1 x i1> %mask, <$1 x i64> %shuffle, <$1 x $2> %val, <$1 x $2> %cmp, <$1 x $2> %dst_load)
+    %res = call <$1 x $2> @llvm.genx.svm.atomic.cmpxchg.XE_SUFFIX($2).XE_SUFFIX(i1).XE_SUFFIX(i64)(<$1 x i1> %mask, <$1 x i64> %shuffle, <$1 x $2> %val, <$1 x $2> %cmp, <$1 x $2> %dst_load)
   ',`
     %ret_ptr = alloca <$1 x $2>
       per_lane($1, <$1 x MASK> %mask, `
@@ -1543,7 +1543,7 @@ define $2 @__atomic_compare_exchange_uniform_$3_global($2* %ptr, $2 %cmp,
   %ptr_to_int_v = bitcast i64 %ptr_to_int to <1 x i64>
   %val_v = bitcast $2 %val to <1 x $2>
   %cmp_v = bitcast $2 %cmp to <1 x $2>
-  %res_v = call <1 x $2> @llvm.genx.svm.atomic.cmpxchg.GEN_SUFFIXN($2, 1).v1i1.v1i64(<1 x i1> <i1 true>, <1 x i64> %ptr_to_int_v, <1 x $2> %val_v, <1 x $2> %cmp_v, <1 x $2> %dst_load), !ISPC-Uniform !1
+  %res_v = call <1 x $2> @llvm.genx.svm.atomic.cmpxchg.XE_SUFFIXN($2, 1).v1i1.v1i64(<1 x i1> <i1 true>, <1 x i64> %ptr_to_int_v, <1 x $2> %val_v, <1 x $2> %cmp_v, <1 x $2> %dst_load), !ISPC-Uniform !1
   %res = extractelement <1 x $2> %res_v, i32 0 
   ret $2 %res
 }
@@ -4230,7 +4230,7 @@ declare <8 x i32> @llvm.genx.dword.atomic.add.v8i32.v8i1.v8i32(<8 x i1>, i32, <8
 declare void @llvm.genx.oword.st.v8i32(i32, i32, <8 x i32>)
 declare void @llvm.genx.oword.st.v128i8(i32, i32, <128 x i8>)
 declare i32 @llvm.genx.predefined.surface(i32)
-declare void @llvm.genx.raw.send.noresult.v32i16.GEN_SUFFIX(i1).v32i16(i32, <WIDTH x i1>, i32, i32, <32 x i16>)
+declare void @llvm.genx.raw.send.noresult.v32i16.XE_SUFFIX(i1).v32i16(i32, <WIDTH x i1>, i32, i32, <32 x i16>)
 
 
 define void @__send_eot() {
@@ -4261,7 +4261,7 @@ define void @__send_eot() {
 ;; [3:0]             Target Function ID
 ;;
 ;; 33554448 = 0b10000000000000000000010000
-  call void @llvm.genx.raw.send.noresult.v32i16.GEN_SUFFIX(i1).v32i16(i32 0, ALL_TRUE_VECTOR, i32 39, i32 33554448, <32 x i16> zeroinitializer)
+  call void @llvm.genx.raw.send.noresult.v32i16.XE_SUFFIX(i1).v32i16(i32 0, ALL_TRUE_VECTOR, i32 39, i32 33554448, <32 x i16> zeroinitializer)
   ret void
 }
 

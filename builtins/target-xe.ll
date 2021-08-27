@@ -37,7 +37,7 @@ define(`HAVE_SCATTER',`1')
 include(`util-xe.m4')
 
 define(`CONCAT',`$1$2')
-define(`GEN_TYPE',
+define(`XE_TYPE',
 `ifelse($1, `i1', `i1',
         $1, `i8', `i8',
         $1, `i16', `i16',
@@ -48,7 +48,7 @@ define(`GEN_TYPE',
         $1, `i64', `i64')')
 
 
-define(`GEN_SUFFIXN',`CONCAT(`v', CONCAT($2, GEN_TYPE($1)))')
+define(`XE_SUFFIXN',`CONCAT(`v', CONCAT($2, XE_TYPE($1)))')
 
 define(`SIZEOF',
 `ifelse($1, `i1', 1,
@@ -76,8 +76,8 @@ rdrand_decls()
 
 declare float @llvm.genx.rndd.f32(float)
 declare float @llvm.genx.rndu.f32(float)
-declare <WIDTH x float> @llvm.genx.rndu.GEN_SUFFIX(float)(<WIDTH x float>)
-declare <WIDTH x float> @llvm.genx.rndd.GEN_SUFFIX(float)(<WIDTH x float>)
+declare <WIDTH x float> @llvm.genx.rndu.XE_SUFFIX(float)(<WIDTH x float>)
+declare <WIDTH x float> @llvm.genx.rndd.XE_SUFFIX(float)(<WIDTH x float>)
 
 
 define float @__floor_uniform_float(float) nounwind readonly alwaysinline {
@@ -255,9 +255,9 @@ define <WIDTH x double> @__max_varying_double(<WIDTH x double>, <WIDTH x double>
 ;; Generates rdregion intrinsics needed for reductions
 ;; $1 LLVM IR type
 define(`xe_rdregion', `
-  declare <HALF_WIDTH x $1> @llvm.genx.$2.GEN_SUFFIXN($1,HALF_WIDTH).GEN_SUFFIX($1).i16(<WIDTH x $1>, i32, i32, i32, i16, i32)
-  declare <QUARTER_WIDTH x $1> @llvm.genx.$2.GEN_SUFFIXN($1,QUARTER_WIDTH).GEN_SUFFIXN($1, HALF_WIDTH).i16(<HALF_WIDTH x $1>, i32, i32, i32, i16, i32)
-  declare <QUAVER_WIDTH x $1> @llvm.genx.$2.GEN_SUFFIXN($1,QUAVER_WIDTH).GEN_SUFFIXN($1, QUARTER_WIDTH).i16(<QUARTER_WIDTH x $1>, i32, i32, i32, i16, i32)
+  declare <HALF_WIDTH x $1> @llvm.genx.$2.XE_SUFFIXN($1,HALF_WIDTH).XE_SUFFIX($1).i16(<WIDTH x $1>, i32, i32, i32, i16, i32)
+  declare <QUARTER_WIDTH x $1> @llvm.genx.$2.XE_SUFFIXN($1,QUARTER_WIDTH).XE_SUFFIXN($1, HALF_WIDTH).i16(<HALF_WIDTH x $1>, i32, i32, i32, i16, i32)
+  declare <QUAVER_WIDTH x $1> @llvm.genx.$2.XE_SUFFIXN($1,QUAVER_WIDTH).XE_SUFFIXN($1, QUARTER_WIDTH).i16(<QUARTER_WIDTH x $1>, i32, i32, i32, i16, i32)
 ')
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -267,36 +267,36 @@ define(`xe_rdregion', `
 ;; $3 Xe intrinsic max name
 ;; $4 type-based builtin suffix
 define(`xe_maxmin', `
-declare $1 @llvm.genx.$2.GEN_TYPE($1).GEN_TYPE($1)($1, $1)
-declare $1 @llvm.genx.$3.GEN_TYPE($1).GEN_TYPE($1)($1, $1)
-declare <WIDTH x $1> @llvm.genx.$2.GEN_SUFFIX($1).GEN_SUFFIX($1)(<WIDTH x $1>, <WIDTH x $1>)
-declare <HALF_WIDTH x $1> @llvm.genx.$2.GEN_SUFFIXN($1, HALF_WIDTH).GEN_SUFFIXN($1, HALF_WIDTH)(<HALF_WIDTH x $1>, <HALF_WIDTH x $1>)
-declare <QUARTER_WIDTH x $1> @llvm.genx.$2.GEN_SUFFIXN($1, QUARTER_WIDTH).GEN_SUFFIXN($1, QUARTER_WIDTH)(<QUARTER_WIDTH x $1>, <QUARTER_WIDTH x $1>)
-declare <QUAVER_WIDTH x $1> @llvm.genx.$2.GEN_SUFFIXN($1, QUAVER_WIDTH).GEN_SUFFIXN($1, QUAVER_WIDTH)(<QUAVER_WIDTH x $1>, <QUAVER_WIDTH x $1>)
+declare $1 @llvm.genx.$2.XE_TYPE($1).XE_TYPE($1)($1, $1)
+declare $1 @llvm.genx.$3.XE_TYPE($1).XE_TYPE($1)($1, $1)
+declare <WIDTH x $1> @llvm.genx.$2.XE_SUFFIX($1).XE_SUFFIX($1)(<WIDTH x $1>, <WIDTH x $1>)
+declare <HALF_WIDTH x $1> @llvm.genx.$2.XE_SUFFIXN($1, HALF_WIDTH).XE_SUFFIXN($1, HALF_WIDTH)(<HALF_WIDTH x $1>, <HALF_WIDTH x $1>)
+declare <QUARTER_WIDTH x $1> @llvm.genx.$2.XE_SUFFIXN($1, QUARTER_WIDTH).XE_SUFFIXN($1, QUARTER_WIDTH)(<QUARTER_WIDTH x $1>, <QUARTER_WIDTH x $1>)
+declare <QUAVER_WIDTH x $1> @llvm.genx.$2.XE_SUFFIXN($1, QUAVER_WIDTH).XE_SUFFIXN($1, QUAVER_WIDTH)(<QUAVER_WIDTH x $1>, <QUAVER_WIDTH x $1>)
 
-declare <WIDTH x $1> @llvm.genx.$3.GEN_SUFFIX($1).GEN_SUFFIX($1)(<WIDTH x $1>, <WIDTH x $1>)
-declare <HALF_WIDTH x $1> @llvm.genx.$3.GEN_SUFFIXN($1, HALF_WIDTH).GEN_SUFFIXN($1, HALF_WIDTH)(<HALF_WIDTH x $1>, <HALF_WIDTH x $1>)
-declare <QUARTER_WIDTH x $1> @llvm.genx.$3.GEN_SUFFIXN($1, QUARTER_WIDTH).GEN_SUFFIXN($1, QUARTER_WIDTH)(<QUARTER_WIDTH x $1>, <QUARTER_WIDTH x $1>)
-declare <QUAVER_WIDTH x $1> @llvm.genx.$3.GEN_SUFFIXN($1, QUAVER_WIDTH).GEN_SUFFIXN($1, QUAVER_WIDTH)(<QUAVER_WIDTH x $1>, <QUAVER_WIDTH x $1>)
+declare <WIDTH x $1> @llvm.genx.$3.XE_SUFFIX($1).XE_SUFFIX($1)(<WIDTH x $1>, <WIDTH x $1>)
+declare <HALF_WIDTH x $1> @llvm.genx.$3.XE_SUFFIXN($1, HALF_WIDTH).XE_SUFFIXN($1, HALF_WIDTH)(<HALF_WIDTH x $1>, <HALF_WIDTH x $1>)
+declare <QUARTER_WIDTH x $1> @llvm.genx.$3.XE_SUFFIXN($1, QUARTER_WIDTH).XE_SUFFIXN($1, QUARTER_WIDTH)(<QUARTER_WIDTH x $1>, <QUARTER_WIDTH x $1>)
+declare <QUAVER_WIDTH x $1> @llvm.genx.$3.XE_SUFFIXN($1, QUAVER_WIDTH).XE_SUFFIXN($1, QUAVER_WIDTH)(<QUAVER_WIDTH x $1>, <QUAVER_WIDTH x $1>)
 
 
 define $1 @__max_uniform_$4($1, $1) nounwind readonly alwaysinline {
-  %res = call $1 @llvm.genx.$3.GEN_TYPE($1).GEN_TYPE($1)($1 %0, $1 %1)
+  %res = call $1 @llvm.genx.$3.XE_TYPE($1).XE_TYPE($1)($1 %0, $1 %1)
   ret $1 %res
 }
 
 define $1 @__min_uniform_$4($1, $1) nounwind readonly alwaysinline {
-  %res = call $1 @llvm.genx.$2.GEN_TYPE($1).GEN_TYPE($1)($1 %0, $1 %1)
+  %res = call $1 @llvm.genx.$2.XE_TYPE($1).XE_TYPE($1)($1 %0, $1 %1)
   ret $1 %res
 }
 
 define <WIDTH x $1> @__max_varying_$4(<WIDTH x $1>, <WIDTH x $1>) nounwind readonly alwaysinline {
-  %res = call <WIDTH x $1> @llvm.genx.$3.GEN_SUFFIX($1).GEN_SUFFIX($1)(<WIDTH x $1> %0, <WIDTH x $1> %1)
+  %res = call <WIDTH x $1> @llvm.genx.$3.XE_SUFFIX($1).XE_SUFFIX($1)(<WIDTH x $1> %0, <WIDTH x $1> %1)
   ret <WIDTH x $1> %res
 }
 
 define <WIDTH x $1> @__min_varying_$4(<WIDTH x $1>, <WIDTH x $1>) nounwind readonly alwaysinline {
-  %res = call <WIDTH x $1> @llvm.genx.$2.GEN_SUFFIX($1).GEN_SUFFIX($1)(<WIDTH x $1> %0, <WIDTH x $1> %1)
+  %res = call <WIDTH x $1> @llvm.genx.$2.XE_SUFFIX($1).XE_SUFFIX($1)(<WIDTH x $1> %0, <WIDTH x $1> %1)
   ret <WIDTH x $1> %res
 }
 ')
@@ -312,14 +312,14 @@ xe_rdregion(i32, rdregioni)
 xe_rdregion(i64, rdregioni)
 
 ;; int8 and int16 types are processed differently so declare them in advance
-declare <WIDTH x i8> @llvm.genx.rdregioni.GEN_SUFFIX(i8).GEN_SUFFIXN(i8, WIDTH_X4).i16(<WIDTH_X4 x i8>, i32, i32, i32, i16, i32)
-declare <WIDTH x i16> @llvm.genx.rdregioni.GEN_SUFFIX(i16).GEN_SUFFIXN(i16, WIDTH_X2).i16(<WIDTH_X2 x i16>, i32, i32, i32, i16, i32)
-declare <WIDTH_X4 x i8> @llvm.genx.svm.gather.GEN_SUFFIXN(i8, WIDTH_X4).GEN_SUFFIX(i1).GEN_SUFFIX(i64)(<WIDTH x MASK>, i32, <WIDTH x i64>, <WIDTH x i8>)
-declare <WIDTH_X2 x i16> @llvm.genx.svm.gather.GEN_SUFFIXN(i16, WIDTH_X2).GEN_SUFFIX(i1).GEN_SUFFIX(i64)(<WIDTH x MASK>, i32, <WIDTH x i64>, <WIDTH x i16>)
-declare <WIDTH_X4 x i8> @llvm.genx.wrregioni.GEN_SUFFIXN(i8, WIDTH_X4).GEN_SUFFIX(i8).i16.GEN_SUFFIX(i1)(<WIDTH_X4 x i8>, <WIDTH x i8>, i32, i32, i32, i16, i32, <WIDTH x MASK>)
-declare <WIDTH_X2 x i16> @llvm.genx.wrregioni.GEN_SUFFIXN(i16, WIDTH_X2).GEN_SUFFIX(i16).i16.GEN_SUFFIX(i1)(<WIDTH_X2 x i16>, <WIDTH x i16>, i32, i32, i32, i16, i32, <WIDTH x MASK>)
-declare void @llvm.genx.svm.scatter.GEN_SUFFIX(i1).GEN_SUFFIX(i64).GEN_SUFFIXN(i8, WIDTH_X4)(<WIDTH x MASK>, i32, <WIDTH x i64>, <WIDTH_X4 x i8>)
-declare void @llvm.genx.svm.scatter.GEN_SUFFIX(i1).GEN_SUFFIX(i64).GEN_SUFFIXN(i16, WIDTH_X2)(<WIDTH x MASK>, i32, <WIDTH x i64>, <WIDTH_X2 x i16>)
+declare <WIDTH x i8> @llvm.genx.rdregioni.XE_SUFFIX(i8).XE_SUFFIXN(i8, WIDTH_X4).i16(<WIDTH_X4 x i8>, i32, i32, i32, i16, i32)
+declare <WIDTH x i16> @llvm.genx.rdregioni.XE_SUFFIX(i16).XE_SUFFIXN(i16, WIDTH_X2).i16(<WIDTH_X2 x i16>, i32, i32, i32, i16, i32)
+declare <WIDTH_X4 x i8> @llvm.genx.svm.gather.XE_SUFFIXN(i8, WIDTH_X4).XE_SUFFIX(i1).XE_SUFFIX(i64)(<WIDTH x MASK>, i32, <WIDTH x i64>, <WIDTH x i8>)
+declare <WIDTH_X2 x i16> @llvm.genx.svm.gather.XE_SUFFIXN(i16, WIDTH_X2).XE_SUFFIX(i1).XE_SUFFIX(i64)(<WIDTH x MASK>, i32, <WIDTH x i64>, <WIDTH x i16>)
+declare <WIDTH_X4 x i8> @llvm.genx.wrregioni.XE_SUFFIXN(i8, WIDTH_X4).XE_SUFFIX(i8).i16.XE_SUFFIX(i1)(<WIDTH_X4 x i8>, <WIDTH x i8>, i32, i32, i32, i16, i32, <WIDTH x MASK>)
+declare <WIDTH_X2 x i16> @llvm.genx.wrregioni.XE_SUFFIXN(i16, WIDTH_X2).XE_SUFFIX(i16).i16.XE_SUFFIX(i1)(<WIDTH_X2 x i16>, <WIDTH x i16>, i32, i32, i32, i16, i32, <WIDTH x MASK>)
+declare void @llvm.genx.svm.scatter.XE_SUFFIX(i1).XE_SUFFIX(i64).XE_SUFFIXN(i8, WIDTH_X4)(<WIDTH x MASK>, i32, <WIDTH x i64>, <WIDTH_X4 x i8>)
+declare void @llvm.genx.svm.scatter.XE_SUFFIX(i1).XE_SUFFIX(i64).XE_SUFFIXN(i16, WIDTH_X2)(<WIDTH x MASK>, i32, <WIDTH x i64>, <WIDTH_X2 x i16>)
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; horizontal ops / reductions
 
@@ -488,7 +488,7 @@ define <WIDTH x i16> @__float_to_half_varying(<WIDTH x float> %v) nounwind readn
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; rcp
-declare <WIDTH x float> @llvm.genx.inv.GEN_SUFFIX(f32)(<WIDTH x float> %0)
+declare <WIDTH x float> @llvm.genx.inv.XE_SUFFIX(f32)(<WIDTH x float> %0)
 define <WIDTH x float> @__rcp_varying_float(<WIDTH x float>) nounwind readonly alwaysinline {
   ;; No need to make NR iteration to improve precision since precision
   ;; on Xe is high already (1UP)
@@ -497,12 +497,12 @@ define <WIDTH x float> @__rcp_varying_float(<WIDTH x float>) nounwind readonly a
 }
 
 define <WIDTH x float> @__rcp_fast_varying_float(<WIDTH x float>) nounwind readonly alwaysinline {
-  %res = call <WIDTH x float> @llvm.genx.inv.GEN_SUFFIX(f32)(<WIDTH x float> %0)
+  %res = call <WIDTH x float> @llvm.genx.inv.XE_SUFFIX(f32)(<WIDTH x float> %0)
   ret <WIDTH x float> %res
 }
 
 ;; rcp
-declare <WIDTH x half> @llvm.genx.inv.GEN_SUFFIX(half)(<WIDTH x half> %0)
+declare <WIDTH x half> @llvm.genx.inv.XE_SUFFIX(half)(<WIDTH x half> %0)
 define <WIDTH x half> @__rcp_varying_half(<WIDTH x half>) nounwind readonly alwaysinline {
   ;; No need to make NR iteration to improve precision since precision
   ;; on Xe is high already (1UP)
@@ -511,7 +511,7 @@ define <WIDTH x half> @__rcp_varying_half(<WIDTH x half>) nounwind readonly alwa
 }
 
 define <WIDTH x half> @__rcp_fast_varying_half(<WIDTH x half>) nounwind readonly alwaysinline {
-  %res = call <WIDTH x half> @llvm.genx.inv.GEN_SUFFIX(half)(<WIDTH x half> %0)
+  %res = call <WIDTH x half> @llvm.genx.inv.XE_SUFFIX(half)(<WIDTH x half> %0)
   ret <WIDTH x half> %res
 }
 
@@ -519,9 +519,9 @@ define <WIDTH x half> @__rcp_fast_varying_half(<WIDTH x half>) nounwind readonly
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; rsqrt
 
-declare <WIDTH x float> @llvm.genx.rsqrt.GEN_SUFFIX(f32)(<WIDTH x float>)
+declare <WIDTH x float> @llvm.genx.rsqrt.XE_SUFFIX(f32)(<WIDTH x float>)
 define <WIDTH x float> @__rsqrt_varying_float(<WIDTH x float> %v) nounwind readonly alwaysinline {
-  %r = call <WIDTH x float> @llvm.genx.rsqrt.GEN_SUFFIX(f32)(<WIDTH x float> %v)
+  %r = call <WIDTH x float> @llvm.genx.rsqrt.XE_SUFFIX(f32)(<WIDTH x float> %v)
   ;; Newton-Raphson iteration to improve precision
   ;;  return 0.5 * r * (3. - (v * r) * r);
   %mult = fmul <WIDTH x float> %v, %r
@@ -533,25 +533,25 @@ define <WIDTH x float> @__rsqrt_varying_float(<WIDTH x float> %v) nounwind reado
 }
 
 define <WIDTH x float> @__rsqrt_fast_varying_float(<WIDTH x float>) nounwind readonly alwaysinline {
-  %res = call <WIDTH x float> @llvm.genx.rsqrt.GEN_SUFFIX(f32)(<WIDTH x float> %0)
+  %res = call <WIDTH x float> @llvm.genx.rsqrt.XE_SUFFIX(f32)(<WIDTH x float> %0)
   ret <WIDTH x float> %res
 }
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; sqrt
 
-declare <WIDTH x float> @llvm.genx.sqrt.GEN_SUFFIX(f32)(<WIDTH x float>)
+declare <WIDTH x float> @llvm.genx.sqrt.XE_SUFFIX(f32)(<WIDTH x float>)
 define <WIDTH x float> @__sqrt_varying_float(<WIDTH x float>) nounwind readonly alwaysinline {
-  %res = call <WIDTH x float> @llvm.genx.sqrt.GEN_SUFFIX(f32)(<WIDTH x float> %0)
+  %res = call <WIDTH x float> @llvm.genx.sqrt.XE_SUFFIX(f32)(<WIDTH x float> %0)
   ret <WIDTH x float> %res
 }
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; double precision sqrt
 
-declare <WIDTH x double> @llvm.genx.ieee.sqrt.GEN_SUFFIX(d64)(<WIDTH x double>)
+declare <WIDTH x double> @llvm.genx.ieee.sqrt.XE_SUFFIX(d64)(<WIDTH x double>)
 define <WIDTH x double> @__sqrt_varying_double(<WIDTH x double>) nounwind alwaysinline {
-  %res = call <WIDTH x double> @llvm.genx.ieee.sqrt.GEN_SUFFIX(d64)(<WIDTH x double> %0)
+  %res = call <WIDTH x double> @llvm.genx.ieee.sqrt.XE_SUFFIX(d64)(<WIDTH x double> %0)
   ret <WIDTH x double> %res
 }
 
@@ -582,12 +582,12 @@ define <WIDTH x float> @__round_varying_float(<WIDTH x float>) nounwind readonly
 
 
 define <WIDTH x float> @__floor_varying_float(<WIDTH x float>) nounwind readonly alwaysinline {
-    %res = call <WIDTH x float> @llvm.genx.rndd.GEN_SUFFIX(float)(<WIDTH x float> %0)
+    %res = call <WIDTH x float> @llvm.genx.rndd.XE_SUFFIX(float)(<WIDTH x float> %0)
     ret <WIDTH x float> %res
 }
 
 define <WIDTH x float> @__ceil_varying_float(<WIDTH x float>) nounwind readonly alwaysinline  {
-    %res = call <WIDTH x float> @llvm.genx.rndu.GEN_SUFFIX(float)(<WIDTH x float> %0)
+    %res = call <WIDTH x float> @llvm.genx.rndu.XE_SUFFIX(float)(<WIDTH x float> %0)
     ret <WIDTH x float> %res
 }
 
@@ -652,8 +652,8 @@ svml_stubs(double,d,WIDTH)
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; horizontal ops / reductions
 
-declare i1 @llvm.genx.any.GEN_SUFFIX(i1)(<WIDTH x MASK>)
-declare i1 @llvm.genx.all.GEN_SUFFIX(i1)(<WIDTH x MASK>)
+declare i1 @llvm.genx.any.XE_SUFFIX(i1)(<WIDTH x MASK>)
+declare i1 @llvm.genx.all.XE_SUFFIX(i1)(<WIDTH x MASK>)
 
 define i64 @__movmsk(<WIDTH x MASK>) nounwind readnone alwaysinline {
   %v = bitcast <WIDTH x MASK> %0 to BITCAST_WIDTH
@@ -662,17 +662,17 @@ define i64 @__movmsk(<WIDTH x MASK>) nounwind readnone alwaysinline {
 }
 
 define i1 @__any(<WIDTH x MASK>) nounwind readnone alwaysinline {
-  %v = call i1 @llvm.genx.any.GEN_SUFFIX(i1)(<WIDTH x MASK> %0)
+  %v = call i1 @llvm.genx.any.XE_SUFFIX(i1)(<WIDTH x MASK> %0)
   ret i1 %v
 }
 
 define i1 @__all(<WIDTH x MASK>) nounwind readnone alwaysinline {
-  %v = call i1 @llvm.genx.all.GEN_SUFFIX(i1)(<WIDTH x MASK> %0) nounwind readnone
+  %v = call i1 @llvm.genx.all.XE_SUFFIX(i1)(<WIDTH x MASK> %0) nounwind readnone
   ret i1 %v
 }
 
 define i1 @__none(<WIDTH x MASK>) nounwind readnone alwaysinline {
-  %v = call i1 @llvm.genx.any.GEN_SUFFIX(i1)(<WIDTH x MASK> %0) nounwind readnone
+  %v = call i1 @llvm.genx.any.XE_SUFFIX(i1)(<WIDTH x MASK> %0) nounwind readnone
   %v_not = icmp eq i1 %v, 0
   ret i1 %v_not
 }
@@ -801,8 +801,8 @@ reduce_equal(WIDTH)
 ;; masked store
 
 define(`xe_masked_store_blend', `
-declare void @llvm.genx.vstore.GEN_SUFFIX($1)(<WIDTH x $1>, <WIDTH x $1>*)
-declare <WIDTH x $1> @llvm.genx.vload.GEN_SUFFIX($1)(<WIDTH x $1>*)
+declare void @llvm.genx.vstore.XE_SUFFIX($1)(<WIDTH x $1>, <WIDTH x $1>*)
+declare <WIDTH x $1> @llvm.genx.vload.XE_SUFFIX($1)(<WIDTH x $1>*)
 
 define void @__masked_store_blend_$1(<WIDTH x $1>* nocapture, <WIDTH x $1>,
                                       <WIDTH x MASK> %mask) nounwind
@@ -851,8 +851,8 @@ xe_masked_store(double)
 xe_masked_store(i64)
 
 define(`xe_masked_load', `
-declare <WIDTH x $1> @llvm.genx.svm.block.ld.unaligned.GEN_SUFFIX($1).i64(i64)
-declare <WIDTH_X2 x $1> @llvm.genx.svm.block.ld.unaligned.GEN_SUFFIXN($1, WIDTH_X2).i64(i64)
+declare <WIDTH x $1> @llvm.genx.svm.block.ld.unaligned.XE_SUFFIX($1).i64(i64)
+declare <WIDTH_X2 x $1> @llvm.genx.svm.block.ld.unaligned.XE_SUFFIXN($1, WIDTH_X2).i64(i64)
 
 ; Blend version is NOT safe w.r.t. crossing page boundaries, even if the mask is off
 ; for the lanes that cross the page boundaries.
@@ -865,13 +865,13 @@ define <WIDTH x $1> @__masked_load_blend_$1(i8 *, <WIDTH x MASK> %mask) nounwind
   ;; (which can happen for int8 and simd width 8).
   ifelse($1,i8, `
     ifelse(WIDTH,8, `
-      %res_tmp = call <16 x $1> @llvm.genx.svm.block.ld.unaligned.GEN_SUFFIXN($1, 16).i64(i64 %ptr)
+      %res_tmp = call <16 x $1> @llvm.genx.svm.block.ld.unaligned.XE_SUFFIXN($1, 16).i64(i64 %ptr)
       %res = shufflevector <16 x $1> %res_tmp, <16 x $1> undef, LINEAR_VECTOR(i32)
     ',`
-    %res = call <WIDTH x $1> @llvm.genx.svm.block.ld.unaligned.GEN_SUFFIX($1).i64(i64 %ptr)
+    %res = call <WIDTH x $1> @llvm.genx.svm.block.ld.unaligned.XE_SUFFIX($1).i64(i64 %ptr)
     ')
   ',`
-    %res = call <WIDTH x $1> @llvm.genx.svm.block.ld.unaligned.GEN_SUFFIX($1).i64(i64 %ptr)
+    %res = call <WIDTH x $1> @llvm.genx.svm.block.ld.unaligned.XE_SUFFIX($1).i64(i64 %ptr)
   ')
   %res_masked = select <WIDTH x MASK> %mask, <WIDTH x $1> %res, <WIDTH x $1> undef
   ret <WIDTH x $1> %res_masked
@@ -947,7 +947,7 @@ xe_masked_load(i64)
 ;; gather/scatter
 ;; TODO_GEN: add computation of the block size and the number of blocks for svm gather/scatter.
 define(`xe_gather', `
-declare <WIDTH x $1> @llvm.genx.svm.gather.GEN_SUFFIX($1).GEN_SUFFIX(i1).GEN_SUFFIX(i64)(<WIDTH x MASK>, i32, <WIDTH x i64>, <WIDTH x $1>)
+declare <WIDTH x $1> @llvm.genx.svm.gather.XE_SUFFIX($1).XE_SUFFIX(i1).XE_SUFFIX(i64)(<WIDTH x MASK>, i32, <WIDTH x i64>, <WIDTH x $1>)
 
 define <WIDTH x $1>
 @__gather_base_offsets32_$1(i8 * %ptr, i32 %offset_scale, <WIDTH x i32> %offsets, <WIDTH x MASK> %vecmask) nounwind readonly alwaysinline {
@@ -980,13 +980,13 @@ define <WIDTH x $1>
 @__gather32_$1(<WIDTH x i32> %offsets, <WIDTH x MASK> %vecmask) nounwind readonly alwaysinline {
   %offsets64 = zext <WIDTH x i32> %offsets to <WIDTH x i64>
   ifelse($1, i8,`
-    %res64 = call <WIDTH_X4 x $1> @llvm.genx.svm.gather.GEN_SUFFIXN($1, WIDTH_X4).GEN_SUFFIX(i1).GEN_SUFFIX(i64)(<WIDTH x MASK> %vecmask, i32 0, <WIDTH x i64> %offsets64, <WIDTH x $1> undef)
-    %res = call <WIDTH x $1> @llvm.genx.rdregioni.GEN_SUFFIX($1).GEN_SUFFIXN($1, WIDTH_X4).i16(<WIDTH_X4 x $1> %res64, i32 0, i32 WIDTH, i32 4, i16 0, i32 undef)
+    %res64 = call <WIDTH_X4 x $1> @llvm.genx.svm.gather.XE_SUFFIXN($1, WIDTH_X4).XE_SUFFIX(i1).XE_SUFFIX(i64)(<WIDTH x MASK> %vecmask, i32 0, <WIDTH x i64> %offsets64, <WIDTH x $1> undef)
+    %res = call <WIDTH x $1> @llvm.genx.rdregioni.XE_SUFFIX($1).XE_SUFFIXN($1, WIDTH_X4).i16(<WIDTH_X4 x $1> %res64, i32 0, i32 WIDTH, i32 4, i16 0, i32 undef)
   ', $1,i16, `
-    %res64 = call <WIDTH_X2 x $1> @llvm.genx.svm.gather.GEN_SUFFIXN($1, WIDTH_X2).GEN_SUFFIX(i1).GEN_SUFFIX(i64)(<WIDTH x MASK> %vecmask, i32 1, <WIDTH x i64> %offsets64, <WIDTH x $1> undef)
-    %res = call <WIDTH x $1> @llvm.genx.rdregioni.GEN_SUFFIX($1).GEN_SUFFIXN($1, WIDTH_X2).i16(<WIDTH_X2 x $1> %res64, i32 0, i32 WIDTH, i32 2, i16 0, i32 undef)
+    %res64 = call <WIDTH_X2 x $1> @llvm.genx.svm.gather.XE_SUFFIXN($1, WIDTH_X2).XE_SUFFIX(i1).XE_SUFFIX(i64)(<WIDTH x MASK> %vecmask, i32 1, <WIDTH x i64> %offsets64, <WIDTH x $1> undef)
+    %res = call <WIDTH x $1> @llvm.genx.rdregioni.XE_SUFFIX($1).XE_SUFFIXN($1, WIDTH_X2).i16(<WIDTH_X2 x $1> %res64, i32 0, i32 WIDTH, i32 2, i16 0, i32 undef)
   ',`
-    %res = call <WIDTH x $1> @llvm.genx.svm.gather.GEN_SUFFIX($1).GEN_SUFFIX(i1).GEN_SUFFIX(i64)(<WIDTH x MASK> %vecmask, i32 0, <WIDTH x i64> %offsets64, <WIDTH x $1> undef)
+    %res = call <WIDTH x $1> @llvm.genx.svm.gather.XE_SUFFIX($1).XE_SUFFIX(i1).XE_SUFFIX(i64)(<WIDTH x MASK> %vecmask, i32 0, <WIDTH x i64> %offsets64, <WIDTH x $1> undef)
   ')
   ret <WIDTH x $1> %res
 }
@@ -994,13 +994,13 @@ define <WIDTH x $1>
 define <WIDTH x $1>
 @__gather64_$1(<WIDTH x i64> %offsets, <WIDTH x MASK> %vecmask) nounwind readonly alwaysinline {
 ifelse($1, i8,`
-    %res64 = call <WIDTH_X4 x $1> @llvm.genx.svm.gather.GEN_SUFFIXN($1, WIDTH_X4).GEN_SUFFIX(i1).GEN_SUFFIX(i64)(<WIDTH x MASK> %vecmask, i32 0, <WIDTH x i64> %offsets, <WIDTH x $1> undef)
-    %res = call <WIDTH x $1> @llvm.genx.rdregioni.GEN_SUFFIX($1).GEN_SUFFIXN($1, WIDTH_X4).i16(<WIDTH_X4 x $1> %res64, i32 0, i32 WIDTH, i32 4, i16 0, i32 undef)
+    %res64 = call <WIDTH_X4 x $1> @llvm.genx.svm.gather.XE_SUFFIXN($1, WIDTH_X4).XE_SUFFIX(i1).XE_SUFFIX(i64)(<WIDTH x MASK> %vecmask, i32 0, <WIDTH x i64> %offsets, <WIDTH x $1> undef)
+    %res = call <WIDTH x $1> @llvm.genx.rdregioni.XE_SUFFIX($1).XE_SUFFIXN($1, WIDTH_X4).i16(<WIDTH_X4 x $1> %res64, i32 0, i32 WIDTH, i32 4, i16 0, i32 undef)
   ', $1,i16, `
-    %res64 = call <WIDTH_X2 x $1> @llvm.genx.svm.gather.GEN_SUFFIXN($1, WIDTH_X2).GEN_SUFFIX(i1).GEN_SUFFIX(i64)(<WIDTH x MASK> %vecmask, i32 1, <WIDTH x i64> %offsets, <WIDTH x $1> undef)
-    %res = call <WIDTH x $1> @llvm.genx.rdregioni.GEN_SUFFIX($1).GEN_SUFFIXN($1, WIDTH_X2).i16(<WIDTH_X2 x $1> %res64, i32 0, i32 WIDTH, i32 2, i16 0, i32 undef)
+    %res64 = call <WIDTH_X2 x $1> @llvm.genx.svm.gather.XE_SUFFIXN($1, WIDTH_X2).XE_SUFFIX(i1).XE_SUFFIX(i64)(<WIDTH x MASK> %vecmask, i32 1, <WIDTH x i64> %offsets, <WIDTH x $1> undef)
+    %res = call <WIDTH x $1> @llvm.genx.rdregioni.XE_SUFFIX($1).XE_SUFFIXN($1, WIDTH_X2).i16(<WIDTH_X2 x $1> %res64, i32 0, i32 WIDTH, i32 2, i16 0, i32 undef)
   ',`
-    %res = call <WIDTH x $1> @llvm.genx.svm.gather.GEN_SUFFIX($1).GEN_SUFFIX(i1).GEN_SUFFIX(i64)(<WIDTH x MASK> %vecmask, i32 0, <WIDTH x i64> %offsets, <WIDTH x $1> undef)
+    %res = call <WIDTH x $1> @llvm.genx.svm.gather.XE_SUFFIX($1).XE_SUFFIX(i1).XE_SUFFIX(i64)(<WIDTH x MASK> %vecmask, i32 0, <WIDTH x i64> %offsets, <WIDTH x $1> undef)
   ')
   ret <WIDTH x $1> %res
 }
@@ -1015,7 +1015,7 @@ xe_gather(i64)
 xe_gather(double)
 
 define(`xe_scatter', `
-declare void @llvm.genx.svm.scatter.GEN_SUFFIX(i1).GEN_SUFFIX(i64).GEN_SUFFIX($1)(<WIDTH x MASK>, i32, <WIDTH x i64>, <WIDTH x $1>)
+declare void @llvm.genx.svm.scatter.XE_SUFFIX(i1).XE_SUFFIX(i64).XE_SUFFIX($1)(<WIDTH x MASK>, i32, <WIDTH x i64>, <WIDTH x $1>)
 
 define void
 @__scatter_base_offsets32_$1(i8* %ptr, i32 %offset_scale, <WIDTH x i32> %offsets, <WIDTH x $1> %vals, <WIDTH x MASK> %vecmask) nounwind {
@@ -1048,13 +1048,13 @@ define void
 @__scatter32_$1(<WIDTH x i32> %ptrs, <WIDTH x $1> %values, <WIDTH x MASK> %vecmask) nounwind alwaysinline {
   %offsets64 = zext <WIDTH x i32> %ptrs to <WIDTH x i64>
   ifelse($1,i8, `
-    %res = tail call <WIDTH_X4 x $1> @llvm.genx.wrregioni.GEN_SUFFIXN($1, WIDTH_X4).GEN_SUFFIX($1).i16.GEN_SUFFIX(i1)(<WIDTH_X4 x $1> undef, <WIDTH x $1> %values, i32 0, i32 WIDTH, i32 4, i16 0, i32 0, <WIDTH x MASK> %vecmask)
-    call void @llvm.genx.svm.scatter.GEN_SUFFIX(i1).GEN_SUFFIX(i64).GEN_SUFFIXN($1, WIDTH_X4)(<WIDTH x MASK> %vecmask, i32 0, <WIDTH x i64> %offsets64, <WIDTH_X4 x $1> %res)
+    %res = tail call <WIDTH_X4 x $1> @llvm.genx.wrregioni.XE_SUFFIXN($1, WIDTH_X4).XE_SUFFIX($1).i16.XE_SUFFIX(i1)(<WIDTH_X4 x $1> undef, <WIDTH x $1> %values, i32 0, i32 WIDTH, i32 4, i16 0, i32 0, <WIDTH x MASK> %vecmask)
+    call void @llvm.genx.svm.scatter.XE_SUFFIX(i1).XE_SUFFIX(i64).XE_SUFFIXN($1, WIDTH_X4)(<WIDTH x MASK> %vecmask, i32 0, <WIDTH x i64> %offsets64, <WIDTH_X4 x $1> %res)
   ', $1,i16, `
-    %res = tail call <WIDTH_X2 x $1> @llvm.genx.wrregioni.GEN_SUFFIXN($1, WIDTH_X2).GEN_SUFFIX($1).i16.GEN_SUFFIX(i1)(<WIDTH_X2 x $1> undef, <WIDTH x $1> %values, i32 0, i32 WIDTH, i32 2, i16 0, i32 0, <WIDTH x MASK> %vecmask)
-    call void @llvm.genx.svm.scatter.GEN_SUFFIX(i1).GEN_SUFFIX(i64).GEN_SUFFIXN($1, WIDTH_X2)(<WIDTH x MASK> %vecmask, i32 1, <WIDTH x i64> %offsets64, <WIDTH_X2 x $1> %res)
+    %res = tail call <WIDTH_X2 x $1> @llvm.genx.wrregioni.XE_SUFFIXN($1, WIDTH_X2).XE_SUFFIX($1).i16.XE_SUFFIX(i1)(<WIDTH_X2 x $1> undef, <WIDTH x $1> %values, i32 0, i32 WIDTH, i32 2, i16 0, i32 0, <WIDTH x MASK> %vecmask)
+    call void @llvm.genx.svm.scatter.XE_SUFFIX(i1).XE_SUFFIX(i64).XE_SUFFIXN($1, WIDTH_X2)(<WIDTH x MASK> %vecmask, i32 1, <WIDTH x i64> %offsets64, <WIDTH_X2 x $1> %res)
   ',`
-    call void @llvm.genx.svm.scatter.GEN_SUFFIX(i1).GEN_SUFFIX(i64).GEN_SUFFIX($1)(<WIDTH x MASK> %vecmask, i32 0, <WIDTH x i64> %offsets64, <WIDTH x $1> %values)
+    call void @llvm.genx.svm.scatter.XE_SUFFIX(i1).XE_SUFFIX(i64).XE_SUFFIX($1)(<WIDTH x MASK> %vecmask, i32 0, <WIDTH x i64> %offsets64, <WIDTH x $1> %values)
   ')
   ret void
 }
@@ -1062,13 +1062,13 @@ define void
 define void
 @__scatter64_$1(<WIDTH x i64> %ptrs, <WIDTH x $1> %values, <WIDTH x MASK> %vecmask) nounwind alwaysinline {
   ifelse($1,i8, `
-    %res = tail call <WIDTH_X4 x $1> @llvm.genx.wrregioni.GEN_SUFFIXN($1, WIDTH_X4).GEN_SUFFIX($1).i16.GEN_SUFFIX(i1)(<WIDTH_X4 x $1> undef, <WIDTH x $1> %values, i32 0, i32 WIDTH, i32 4, i16 0, i32 0, <WIDTH x MASK> %vecmask)
-    call void @llvm.genx.svm.scatter.GEN_SUFFIX(i1).GEN_SUFFIX(i64).GEN_SUFFIXN(i8, WIDTH_X4)(<WIDTH x MASK> %vecmask, i32 0, <WIDTH x i64> %ptrs, <WIDTH_X4 x $1> %res)
+    %res = tail call <WIDTH_X4 x $1> @llvm.genx.wrregioni.XE_SUFFIXN($1, WIDTH_X4).XE_SUFFIX($1).i16.XE_SUFFIX(i1)(<WIDTH_X4 x $1> undef, <WIDTH x $1> %values, i32 0, i32 WIDTH, i32 4, i16 0, i32 0, <WIDTH x MASK> %vecmask)
+    call void @llvm.genx.svm.scatter.XE_SUFFIX(i1).XE_SUFFIX(i64).XE_SUFFIXN(i8, WIDTH_X4)(<WIDTH x MASK> %vecmask, i32 0, <WIDTH x i64> %ptrs, <WIDTH_X4 x $1> %res)
   ', $1,i16, `
-    %res = tail call <WIDTH_X2 x $1> @llvm.genx.wrregioni.GEN_SUFFIXN($1, WIDTH_X2).GEN_SUFFIX($1).i16.GEN_SUFFIX(i1)(<WIDTH_X2 x $1> undef, <WIDTH x $1> %values, i32 0, i32 WIDTH, i32 2, i16 0, i32 0, <WIDTH x MASK> %vecmask)
-    call void @llvm.genx.svm.scatter.GEN_SUFFIX(i1).GEN_SUFFIX(i64).GEN_SUFFIXN($1, WIDTH_X2)(<WIDTH x MASK> %vecmask, i32 1, <WIDTH x i64> %ptrs, <WIDTH_X2 x $1> %res)
+    %res = tail call <WIDTH_X2 x $1> @llvm.genx.wrregioni.XE_SUFFIXN($1, WIDTH_X2).XE_SUFFIX($1).i16.XE_SUFFIX(i1)(<WIDTH_X2 x $1> undef, <WIDTH x $1> %values, i32 0, i32 WIDTH, i32 2, i16 0, i32 0, <WIDTH x MASK> %vecmask)
+    call void @llvm.genx.svm.scatter.XE_SUFFIX(i1).XE_SUFFIX(i64).XE_SUFFIXN($1, WIDTH_X2)(<WIDTH x MASK> %vecmask, i32 1, <WIDTH x i64> %ptrs, <WIDTH_X2 x $1> %res)
   ',`
-    call void @llvm.genx.svm.scatter.GEN_SUFFIX(i1).GEN_SUFFIX(i64).GEN_SUFFIX($1)(<WIDTH x MASK> %vecmask, i32 0, <WIDTH x i64> %ptrs, <WIDTH x $1> %values)
+    call void @llvm.genx.svm.scatter.XE_SUFFIX(i1).XE_SUFFIX(i64).XE_SUFFIX($1)(<WIDTH x MASK> %vecmask, i32 0, <WIDTH x i64> %ptrs, <WIDTH x $1> %values)
   ')
   ret void
 }
@@ -1107,9 +1107,9 @@ define float @__log_uniform_float(float) nounwind readnone {
   ret float %res
 }
 
-declare <WIDTH x float> @llvm.genx.log.GEN_SUFFIX(float)(<WIDTH x float>) nounwind readnone
+declare <WIDTH x float> @llvm.genx.log.XE_SUFFIX(float)(<WIDTH x float>) nounwind readnone
 define <WIDTH x float> @__log_varying_float(<WIDTH x float>) nounwind readnone {
-  %res2base = call <WIDTH x float> @llvm.genx.log.GEN_SUFFIX(float)(<WIDTH x float> %0)
+  %res2base = call <WIDTH x float> @llvm.genx.log.XE_SUFFIX(float)(<WIDTH x float> %0)
   %log2e = insertelement <WIDTH x float> undef, float LOG2E, i32 0
   %log2e_shuffle = shufflevector <WIDTH x float> %log2e, <WIDTH x float> undef, <WIDTH x i32> zeroinitializer
   %res = fdiv <WIDTH x float> %res2base, %log2e_shuffle
@@ -1126,9 +1126,9 @@ define half @__log_uniform_half(half) nounwind readnone {
   ret half %res
 }
 
-declare <WIDTH x half> @llvm.genx.log.GEN_SUFFIX(half)(<WIDTH x half>) nounwind readnone
+declare <WIDTH x half> @llvm.genx.log.XE_SUFFIX(half)(<WIDTH x half>) nounwind readnone
 define <WIDTH x half> @__log_varying_half(<WIDTH x half>) nounwind readnone {
-  %res2base = call <WIDTH x half> @llvm.genx.log.GEN_SUFFIX(half)(<WIDTH x half> %0)
+  %res2base = call <WIDTH x half> @llvm.genx.log.XE_SUFFIX(half)(<WIDTH x half> %0)
   %log2e = insertelement <WIDTH x half> undef, half LOG2EF16, i32 0
   %log2e_shuffle = shufflevector <WIDTH x half> %log2e, <WIDTH x half> undef, <WIDTH x i32> zeroinitializer
   %res = fdiv <WIDTH x half> %res2base, %log2e_shuffle
@@ -1141,9 +1141,9 @@ define float @__pow_uniform_float(float, float) nounwind readnone {
   ret float %res
 }
 
-declare <WIDTH x float> @llvm.genx.pow.GEN_SUFFIX(float).GEN_SUFFIX(float)(<WIDTH x float>, <WIDTH x float>) nounwind readnone
+declare <WIDTH x float> @llvm.genx.pow.XE_SUFFIX(float).XE_SUFFIX(float)(<WIDTH x float>, <WIDTH x float>) nounwind readnone
 define <WIDTH x float> @__pow_varying_float(<WIDTH x float>, <WIDTH x float>) nounwind readnone {
-  %res = call <WIDTH x float> @llvm.genx.pow.GEN_SUFFIX(float).GEN_SUFFIX(float)(<WIDTH x float> %0, <WIDTH x float> %1)
+  %res = call <WIDTH x float> @llvm.genx.pow.XE_SUFFIX(float).XE_SUFFIX(float)(<WIDTH x float> %0, <WIDTH x float> %1)
   ret <WIDTH x float> %res
 }
 
@@ -1153,9 +1153,9 @@ define half @__pow_uniform_half(half, half) nounwind readnone {
   ret half %res
 }
 
-declare <WIDTH x half> @llvm.genx.pow.GEN_SUFFIX(half).GEN_SUFFIX(half)(<WIDTH x half>, <WIDTH x half>) nounwind readnone
+declare <WIDTH x half> @llvm.genx.pow.XE_SUFFIX(half).XE_SUFFIX(half)(<WIDTH x half>, <WIDTH x half>) nounwind readnone
 define <WIDTH x half> @__pow_varying_half(<WIDTH x half>, <WIDTH x half>) nounwind readnone {
-  %res = call <WIDTH x half> @llvm.genx.pow.GEN_SUFFIX(half).GEN_SUFFIX(half)(<WIDTH x half> %0, <WIDTH x half> %1)
+  %res = call <WIDTH x half> @llvm.genx.pow.XE_SUFFIX(half).XE_SUFFIX(half)(<WIDTH x half> %0, <WIDTH x half> %1)
   ret <WIDTH x half> %res
 }
 
@@ -1167,7 +1167,7 @@ define float @__exp_uniform_float(float) nounwind readnone {
 define <WIDTH x float> @__exp_varying_float(<WIDTH x float>) nounwind readnone {
   %exp = insertelement <WIDTH x float> undef, float EXP, i32 0
   %exp_shuffle = shufflevector <WIDTH x float> %exp, <WIDTH x float> undef, <WIDTH x i32> zeroinitializer
-  %res = call <WIDTH x float> @llvm.genx.pow.GEN_SUFFIX(float).GEN_SUFFIX(float)(<WIDTH x float> %exp_shuffle, <WIDTH x float> %0)
+  %res = call <WIDTH x float> @llvm.genx.pow.XE_SUFFIX(float).XE_SUFFIX(float)(<WIDTH x float> %exp_shuffle, <WIDTH x float> %0)
   ret <WIDTH x float> %res
 }
 
@@ -1179,7 +1179,7 @@ define half @__exp_uniform_half(half) nounwind readnone {
 define <WIDTH x half> @__exp_varying_half(<WIDTH x half>) nounwind readnone {
   %exp = insertelement <WIDTH x half> undef, half EXPF16, i32 0
   %exp_shuffle = shufflevector <WIDTH x half> %exp, <WIDTH x half> undef, <WIDTH x i32> zeroinitializer
-  %res = call <WIDTH x half> @llvm.genx.pow.GEN_SUFFIX(half).GEN_SUFFIX(half)(<WIDTH x half>
+  %res = call <WIDTH x half> @llvm.genx.pow.XE_SUFFIX(half).XE_SUFFIX(half)(<WIDTH x half>
           %exp_shuffle, <WIDTH x half> %0)
   ret <WIDTH x half> %res
 }
@@ -1259,9 +1259,9 @@ define float @__sin_uniform_float(float) nounwind readnone {
   ret float %res
 }
 
-declare <WIDTH x float> @llvm.genx.sin.GEN_SUFFIX(float)(<WIDTH x float>) nounwind readnone
+declare <WIDTH x float> @llvm.genx.sin.XE_SUFFIX(float)(<WIDTH x float>) nounwind readnone
 define <WIDTH x float> @__sin_varying_float(<WIDTH x float>) nounwind readnone {
-  %res = call <WIDTH x float> @llvm.genx.sin.GEN_SUFFIX(float)(<WIDTH x float> %0)
+  %res = call <WIDTH x float> @llvm.genx.sin.XE_SUFFIX(float)(<WIDTH x float> %0)
   ret <WIDTH x float> %res
 }
 
@@ -1271,9 +1271,9 @@ define float @__cos_uniform_float(float) nounwind readnone {
   ret float %res
 }
 
-declare <WIDTH x float> @llvm.genx.cos.GEN_SUFFIX(float)(<WIDTH x float>) nounwind readnone
+declare <WIDTH x float> @llvm.genx.cos.XE_SUFFIX(float)(<WIDTH x float>) nounwind readnone
 define <WIDTH x float> @__cos_varying_float(<WIDTH x float>) nounwind readnone {
-  %res = call <WIDTH x float> @llvm.genx.cos.GEN_SUFFIX(float)(<WIDTH x float> %0)
+  %res = call <WIDTH x float> @llvm.genx.cos.XE_SUFFIX(float)(<WIDTH x float> %0)
   ret <WIDTH x float> %res
 }
 
@@ -1285,8 +1285,8 @@ define float @__tan_uniform_float(float) nounwind readnone {
 }
 
 define <WIDTH x float> @__tan_varying_float(<WIDTH x float>) nounwind readnone {
-  %cos = call <WIDTH x float> @llvm.genx.cos.GEN_SUFFIX(float)(<WIDTH x float> %0)
-  %sin = call <WIDTH x float> @llvm.genx.sin.GEN_SUFFIX(float)(<WIDTH x float> %0)
+  %cos = call <WIDTH x float> @llvm.genx.cos.XE_SUFFIX(float)(<WIDTH x float> %0)
+  %sin = call <WIDTH x float> @llvm.genx.sin.XE_SUFFIX(float)(<WIDTH x float> %0)
   %res = fdiv <WIDTH x float> %sin, %cos
   ret <WIDTH x float> %res
 }

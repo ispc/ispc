@@ -35,7 +35,7 @@ define(`QUARTER_WIDTH',`2')
 define(`QUAVER_WIDTH',`1')
 define(`WIDTH_X2',`16')
 define(`WIDTH_X4',`32')
-define(`GEN_SUFFIX',`CONCAT(`v8', GEN_TYPE($1))')
+define(`XE_SUFFIX',`CONCAT(`v8', XE_TYPE($1))')
 define(`BITCAST_WIDTH',`i8')
 
 include(`target-xe.ll')
