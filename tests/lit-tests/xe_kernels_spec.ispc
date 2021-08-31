@@ -15,9 +15,10 @@
 // RUN: FileCheck --input-file=%t.ll -check-prefix=CHECK_TASK_F6_GPU %s
 // RUN: FileCheck --input-file=%t.ll -check-prefix=CHECK_EXPORT_F7_GPU %s
 // RUN: FileCheck --input-file=%t.ll -check-prefix=CHECK_TASK_F7_GPU %s
-// RUN: FileCheck --input-file=%t.ll -check-prefix=CHECK_METADATA %s
 // RUN: FileCheck --input-file=%t.ll -check-prefix=CHECK_DATALAYOUT %s
 // RUN: FileCheck --input-file=%t.ll -check-prefix=CHECK_FUNC_GPU %s
+// RUN: FileCheck --input-file=%t.ll -check-prefix=CHECK_METADATA %s
+// RUN: %{ispc} %s --target=gen9-x16 --emit-llvm-text -g --nowrap --no-discard-value-names -o - | FileCheck -check-prefix=CHECK_METADATA_DEBUG %s
 // RUN: %{ispc} %s --target=gen9-x16 -DCHECK_DIAG --nowrap --emit-spirv -o %t.spv 2>&1 | FileCheck %s -check-prefix=CHECK_RET_VAL_EXPORT_WARN_GPU
 // RUN: not %{ispc} %s --target=gen9-x16 -DCHECK_DIAG_TASK --nowrap --emit-spirv -o %t.spv 2>&1 | FileCheck %s -check-prefix=CHECK_RET_VAL_TASK_ERROR
 
@@ -139,8 +140,8 @@ task void f7_task() {}
 // CHECK_METADATA: { {{.*}} "CMStackCall" "VCFunction" "VCStackCall" }
 // CHECK_METADATA: { {{.*}} "CMGenxMain" "VCFunction"{{.*}} "oclrt"="1" }
 
-// CHECK_METADATA: !"Dwarf Version"
-// CHECK_METADATA: !"Debug Info Version"
+// CHECK_METADATA-NOT: !"Debug Info Version"
+// CHECK_METADATA_DEBUG: !"Debug Info Version"
 
 // Check linkage of non-kernel/non-export functions
 // On GPU they have internal linkage

@@ -187,11 +187,7 @@ Module::Module(const char *fn) {
         if (g->target_os == TargetOS::windows) {
             module->addModuleFlag(llvm::Module::Warning, "CodeView", 1);
         } else {
-            // When we link with CM, "Dwarf version" and "Debug info version" is already set
-            // so we don't need to do this here.  Otherwise VerifyModule will be broken.
-            if (!g->target->isXeTarget()) {
-                module->addModuleFlag(llvm::Module::Warning, "Dwarf Version", g->generateDWARFVersion);
-            }
+            module->addModuleFlag(llvm::Module::Warning, "Dwarf Version", g->generateDWARFVersion);
         }
         diBuilder = new llvm::DIBuilder(*module);
 
@@ -1020,11 +1016,7 @@ bool Module::writeOutput(OutputType outputType, OutputFlags flags, const char *o
     // "Debug Info Version" constant to the module. LLVM will ignore
     // our Debug Info metadata without it.
     if (g->generateDebuggingSymbols == true) {
-        // For Xe target: when we link with CM, "Dwarf version" and "Debug info version" is already set
-        // so we don't need to do this here.  Otherwise VerifyModule will be broken.
-        if (!g->target->isXeTarget()) {
-            module->addModuleFlag(llvm::Module::Warning, "Debug Info Version", llvm::DEBUG_METADATA_VERSION);
-        }
+        module->addModuleFlag(llvm::Module::Warning, "Debug Info Version", llvm::DEBUG_METADATA_VERSION);
     }
 
     // SIC! (verifyModule() == TRUE) means "failed", see llvm-link code.
