@@ -512,22 +512,14 @@ class PrintStmt : public Stmt {
 #endif // ISPC_XE_ENABLED
 
     enum {
-        FORMAT_IDX, // the format string
-        TYPES_IDX,  // a string encoding the types of the values being printed,
-                    // one character per value
-        WIDTH_IDX,  // the number of running program instances (i.e. the target's
-                    // vector width)
-        MASK_IDX,   // the current lane mask
-        ARGS_IDX,   // a pointer to an array of pointers to the values to be printed
-#ifdef ISPC_XE_ENABLED
-        UNI_NUM_IDX,    // number of all uniform values
-        VAR_NUM_IDX,    // number of all varying values
-        UNI_64_NUM_IDX, // number of 64-bit uniform values
-        VAR_64_NUM_IDX, // number of 64-bit varying values
-        XE_NUM_IDX,     // number of arguments of __do_print_cm
-#endif                  // ISPC_XE_ENABLED
-                        // number of arguments of __do_print
-        STD_NUM_IDX = ARGS_IDX + 1
+        FORMAT_IDX,                // the format string
+        TYPES_IDX,                 // a string encoding the types of the values being printed,
+                                   // one character per value
+        WIDTH_IDX,                 // the number of running program instances (i.e. the target's
+                                   // vector width)
+        MASK_IDX,                  // the current lane mask
+        ARGS_IDX,                  // a pointer to an array of pointers to the values to be printed
+        STD_NUM_IDX = ARGS_IDX + 1 // number of arguments of __do_print
     };
 
     /** Format string for the print() statement. */

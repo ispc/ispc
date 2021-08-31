@@ -487,9 +487,6 @@ static void lSetInternalFunctions(llvm::Module *module) {
         "__do_assert_varying",
         "__do_print",
 #ifdef ISPC_XE_ENABLED
-        "__do_print_cm",
-        "__do_print_lz",
-        "__do_print_cm_str",
         "__send_eot",
 #endif //ISPC_XE_ENABLED
         "__doublebits_uniform_int64",
@@ -930,23 +927,6 @@ static void lSetInternalFunctions(llvm::Module *module) {
     }
 }
 
-static void lSetAlwaysInlineFunctions(llvm::Module *module) {
-    std::vector<const char *> names = {
-#ifdef ISPC_XE_ENABLED
-        "__do_print_cm", "__do_print_lz"
-#endif /* ISPC_XE_ENABLED */
-    };
-    for (auto name : names) {
-        llvm::Function *f = module->getFunction(name);
-        if (f) {
-            if (f->hasFnAttribute(llvm::Attribute::NoInline)) {
-                f->removeFnAttr(llvm::Attribute::NoInline);
-            }
-            f->addFnAttr(llvm::Attribute::AlwaysInline);
-        }
-    }
-}
-
 /** This utility function takes serialized binary LLVM bitcode and adds its
     definitions to the given module.  Functions in the bitcode that can be
     mapped to ispc functions are also added to the symbol table.
@@ -1030,11 +1010,7 @@ void ispc::AddBitcodeToModule(const BitcodeLib *lib, llvm::Module *module, Symbo
         }
 
         lSetInternalFunctions(module);
-        if (g->target->isXeTarget()) {
-            // For now this function is used for Xe target only
-            // TODO: check if its usage affects CPU targets
-            lSetAlwaysInlineFunctions(module);
-        }
+
         if (symbolTable != NULL)
             lAddModuleSymbols(module, symbolTable);
         lCheckModuleIntrinsics(module);

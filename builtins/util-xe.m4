@@ -4226,12 +4226,8 @@ define void @__do_assume_uniform(i1 %test) alwaysinline {
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; assert
 
-declare <8 x i32> @llvm.genx.dword.atomic.add.v8i32.v8i1.v8i32(<8 x i1>, i32, <8 x i32>, <8 x i32>, <8 x i32>)
-declare void @llvm.genx.oword.st.v8i32(i32, i32, <8 x i32>)
-declare void @llvm.genx.oword.st.v128i8(i32, i32, <128 x i8>)
-declare i32 @llvm.genx.predefined.surface(i32)
 declare void @llvm.genx.raw.send.noresult.v32i16.XE_SUFFIX(i1).v32i16(i32, <WIDTH x i1>, i32, i32, <32 x i16>)
-
+declare i32 @__spirv_ocl_printf(i8 addrspace(2)*, ...)
 
 define void @__send_eot() {
 ;; llvm.genx.raw.send.noresult : vISA RAW_SEND instruction with no result
@@ -4265,31 +4261,11 @@ define void @__send_eot() {
   ret void
 }
 
-define internal void @__do_print_cm_str(i8*) alwaysinline {
-;; predefined.surface return Value: surface index of the specified id
-;; id 2 is stdout
-  %buf = tail call i32 @llvm.genx.predefined.surface(i32 2)
-  %atomic_add = tail call <8 x i32> @llvm.genx.dword.atomic.add.v8i32.v8i1.v8i32(<8 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>, i32 %buf, <8 x i32> <i32 0, i32 4, i32 8,
-i32 12, i32 16, i32 20, i32 24, i32 28>, <8 x i32> <i32 192, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0>, <8 x i32> zeroinitializer), !ISPC-Uniform !1
-  %extract = extractelement <8 x i32> %atomic_add, i32 0
-  %lshr1 = lshr i32 %extract, 4
-  tail call void @llvm.genx.oword.st.v8i32(i32 %buf, i32 %lshr1, <8 x i32> <i32 5, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0>), !ISPC-Uniform !1
-  %add1 = add i32 %extract, 32
-  %lshr2 = lshr i32 %add1, 4
-  %strpointer = bitcast i8* %0 to <128 x i8>*
-  %str1 = load PTR_OP_ARGS(`<128 x i8> ')  %strpointer
-;; 128 is maximalsize for oword.st
-;; TODO: add strlen as function parameter and call @llvm.genx.oword.st.v128i8 in a loop
-  tail call void @llvm.genx.oword.st.v128i8(i32 %buf, i32 %lshr2, <128 x i8> %str1), !ISPC-Uniform !1
-  ret void
-}
-
-
-define void @__do_assert_uniform(i8 *%str, i1 %test, <WIDTH x MASK> %mask) {
+define void @__do_assert_uniform(i8 addrspace(2) *%str, i1 %test, <WIDTH x MASK> %mask) {
   br i1 %test, label %ok, label %fail
 
 fail:
-  call void @__do_print_cm_str(i8* %str)
+  %res = call i32 (i8 addrspace(2)*, ...) @__spirv_ocl_printf(i8 addrspace(2)* %str)
   call void @__send_eot()
   ret void
 
@@ -4298,7 +4274,7 @@ ok:
 }
 
 
-define void @__do_assert_varying(i8 *%str, <WIDTH x MASK> %test,
+define void @__do_assert_varying(i8 addrspace(2) *%str, <WIDTH x MASK> %test,
                                  <WIDTH x MASK> %mask) {
   %nottest = xor <WIDTH x MASK> %test,
                  < forloop(i, 1, eval(WIDTH-1), `MASK -1, ') MASK -1 >
@@ -4308,7 +4284,7 @@ define void @__do_assert_varying(i8 *%str, <WIDTH x MASK> %test,
   br i1 %all_ok, label %ok, label %fail
 
 fail:
-  call void @__do_print_cm_str(i8* %str)
+  %res = call i32 (i8 addrspace(2)*, ...) @__spirv_ocl_printf(i8 addrspace(2)* %str)
   call void @__send_eot()
   ret void
 

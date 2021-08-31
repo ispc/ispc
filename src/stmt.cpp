@@ -3049,18 +3049,8 @@ static ExprWithType lProcessPrintArgType(Expr *expr) {
 
 // Returns pointer to __do_print function
 static llvm::Function *getPrintImplFunc() {
-    llvm::Function *printImplFunc = nullptr;
-    switch (g->target->getISA()) {
-#ifdef ISPC_XE_ENABLED
-    case Target::GEN9:
-    case Target::XELP:
-        printImplFunc = m->module->getFunction("__do_print_lz");
-        break;
-#endif /* ISPC_XE_ENABLED */
-    default:
-        printImplFunc = m->module->getFunction("__do_print");
-        break;
-    }
+    Assert(g->target->isXeTarget() == false);
+    llvm::Function *printImplFunc = m->module->getFunction("__do_print");
     return printImplFunc;
 }
 
@@ -3210,7 +3200,6 @@ class PrintLZFormatStrBuilder {
 
     // Based on original ISPC format string, and encoded arg types
     // generates printf format string.
-    // More info is in the comment to __do_print_lz function.
     std::string get(const std::string &ISPCFormat, const std::string &argTypes, const SourcePos &pos) {
         std::string format;
         format.reserve(ISPCFormat.size());
@@ -3547,7 +3536,13 @@ void AssertStmt::EmitAssertCode(FunctionEmitContext *ctx, const Type *type) cons
     }
 
     std::vector<llvm::Value *> args;
-    args.push_back(ctx->GetStringPtr(errorString));
+#ifdef ISPC_XE_ENABLED
+    if (g->target->isXeTarget()) {
+        PrintLZFormatStrBuilder formatBuilder(g->target->getVectorWidth());
+        args.push_back(ctx->XeCreateConstantString(errorString, "lz_format_str"));
+    } else
+#endif
+        args.push_back(ctx->GetStringPtr(errorString));
     llvm::Value *exprValue = expr->GetValue(ctx);
     if (exprValue == NULL) {
         free(errorString);
