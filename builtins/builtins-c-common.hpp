@@ -32,7 +32,7 @@
 */
 
 /** @file builtins-c-common.cpp
-    @brief Shared code base for __do_print and __do_print_cm.
+    @brief Basic methods for print implementations. Currenly is used by __do_print
 
     This library provides instruments for parsing ISPC print format strings,
     some useful adapters, and other minor helper instruments.
