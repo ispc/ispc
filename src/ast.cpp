@@ -407,16 +407,29 @@ static bool lCheckAllOffSafety(ASTNode *node, void *data) {
 
     /*
       Don't allow turning if/else to straight-line-code if we
-      assign to a uniform.
+      assign to a uniform or post-/pre- increment/decrement.
     */
     AssignExpr *ae;
     if ((ae = llvm::dyn_cast<AssignExpr>(node)) != NULL) {
-        if (ae->GetType()) {
-            if (ae->GetType()->IsUniformType()) {
-                *okPtr = false;
-                return false;
-            }
+        if (ae->GetType() && ae->GetType()->IsUniformType()) {
+            *okPtr = false;
+            return false;
         }
+    }
+
+    UnaryExpr *ue;
+    if ((ue = llvm::dyn_cast<UnaryExpr>(node)) != NULL &&
+        (ue->op == UnaryExpr::PreInc || ue->op == UnaryExpr::PreDec || ue->op == UnaryExpr::PostInc ||
+         ue->op == UnaryExpr::PostDec)) {
+        if (ue->GetType() && ue->GetType()->IsUniformType()) {
+            *okPtr = false;
+            return false;
+        }
+    }
+
+    if (llvm::dyn_cast<SyncExpr>(node) != NULL || llvm::dyn_cast<AllocaExpr>(node) != NULL) {
+        *okPtr = false;
+        return false;
     }
 
     return true;
