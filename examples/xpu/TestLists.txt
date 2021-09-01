@@ -122,6 +122,8 @@ test_add(NAME pipeline-dpcpp  TEST_IS_DPCPP host_pipeline-dpcpp)
 test_add(NAME simple-esimd    TEST_IS_DPCPP simple-esimd --gpu)
 test_add(NAME simple-esimd    TEST_IS_DPCPP simple-esimd --cpu)
 test_add(NAME vadd-esimd      TEST_IS_DPCPP DPCPP_SPV "vadd-esimd_ispc2esimd.spv" vadd-esimd)
+test_add(NAME callback-esimd  TEST_IS_DPCPP DPCPP_SPV "callback-esimd_ispc2esimd.spv" callback-esimd --cpu)
+test_add(NAME callback-esimd  TEST_IS_DPCPP DPCPP_SPV "callback-esimd_ispc2esimd.spv" callback-esimd --gpu)
 
 # perf tests
 test_add(NAME sgemm host_sgemm 128 100 1 4)
