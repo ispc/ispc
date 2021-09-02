@@ -3660,6 +3660,8 @@ bool FullResolveOverloads(Expr *func, ExprList *args, std::vector<const Type *> 
 const Type *FunctionCallExpr::GetType() const {
     std::vector<const Type *> argTypes;
     std::vector<bool> argCouldBeNULL, argIsConstant;
+    if (func == NULL || args == NULL)
+        return NULL;
     if (FullResolveOverloads(func, args, &argTypes, &argCouldBeNULL, &argIsConstant) == true) {
         FunctionSymbolExpr *fse = llvm::dyn_cast<FunctionSymbolExpr>(func);
         if (fse != NULL) {
