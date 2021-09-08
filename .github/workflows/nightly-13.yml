@@ -171,13 +171,15 @@ jobs:
       shell: cmd
       run: |
         cd llvm
-        7z.exe a -t7z llvm-13.0.0-win.vs2019-Release+Asserts-x86.arm.wasm.7z bin-13.0
+        set TAR_BASE_NAME=llvm-13.0.0-win.vs2019-Release+Asserts-x86.arm.wasm
+        7z.exe a -ttar -snl %TAR_BASE_NAME%.tar bin-13.0
+        7z.exe a -t7z %TAR_BASE_NAME%.tar.7z %TAR_BASE_NAME%.tar
 
     - name: Upload package
       uses: actions/upload-artifact@v2
       with:
         name: llvm_13_win
-        path: llvm/llvm-13.0.0-win.vs2019-Release+Asserts-x86.arm.wasm.7z
+        path: llvm/llvm-13.0.0-win.vs2019-Release+Asserts-x86.arm.wasm.tar.7z
 
 
   win-build-ispc-llvm-13:
@@ -185,7 +187,7 @@ jobs:
     runs-on: windows-latest
     env:
       LLVM_VERSION: "13.0"
-      LLVM_TAR: llvm-13.0.0-win.vs2019-Release+Asserts-x86.arm.wasm.7z
+      LLVM_TAR: llvm-13.0.0-win.vs2019-Release+Asserts-x86.arm.wasm.tar.7z
       LLVM_HOME: "C:\\projects\\llvm"
       CROSS_TOOLS_GNUWIN32: "C:\\projects\\cross\\gnuwin32"
       BUILD_TYPE: "Release"
