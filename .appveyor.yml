@@ -58,9 +58,8 @@ for:
         if "%LLVM_VERSION%"=="latest" (set WASM=ON)
         if "%APPVEYOR_BUILD_WORKER_IMAGE%"=="Visual Studio 2017" ( (set generator="Visual Studio 15 Win64") & (set vsversion=2017))
         if "%APPVEYOR_BUILD_WORKER_IMAGE%"=="Visual Studio 2019" ( (set generator="Visual Studio 16") & (set vsversion=2019))
-        set LLVM_TAR=llvm-12.0.1-win.vs2019-Release+Asserts-x86.arm.wasm.7z
-        if "%LLVM_VERSION%"=="11.1" (set LLVM_TAR=llvm-11.1.0-win.vs2019-Release+Asserts-x86.arm.wasm.7z)
-        if "%LLVM_VERSION%"=="10.0" (set LLVM_TAR=llvm-10.0.1-win.vs2019-Release+Asserts-x86.arm.wasm.zip)
+        set LLVM_TAR=llvm-12.0.1-win.vs2019-Release+Asserts-x86.arm.wasm.tar.7z
+        if "%LLVM_VERSION%"=="11.1" (set LLVM_TAR=llvm-11.1.0-win.vs2019-Release+Asserts-x86.arm.wasm.tar.7z)
   install:
     - ps: choco install --no-progress winflexbison3 wget 7zip
     - cmd: |-
@@ -79,6 +78,7 @@ for:
         mkdir %LLVM_HOME% && cd %LLVM_HOME%
         wget -q https://github.com/ispc/llvm-project/releases/download/llvm-%LLVM_VERSION%-ispc-dev/%LLVM_TAR%
         7z.exe x -t7z %LLVM_TAR%
+        7z.exe x -ttar llvm*tar
         set PATH=%LLVM_HOME%\bin-%LLVM_VERSION%\bin;%PATH%
   before_build:
     - cmd: |-
