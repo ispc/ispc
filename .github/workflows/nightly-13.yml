@@ -226,7 +226,7 @@ jobs:
     - name: Upload package
       uses: actions/upload-artifact@v2
       with:
-        name: ispc_llvm_13_win
+        name: ispc_llvm13_win
         path: build/ispc-trunk-windows.msi
 
 
