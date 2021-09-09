@@ -354,6 +354,8 @@ TargetOS ParseOS(std::string os) {
         return TargetOS::ios;
     } else if (os == "ps4") {
         return TargetOS::ps4;
+    } else if (os == "ps5") {
+        return TargetOS::ps5;
     } else if (os == "web") {
         return TargetOS::web;
     }
@@ -378,6 +380,8 @@ std::string OSToString(TargetOS os) {
         return "iOS";
     case TargetOS::ps4:
         return "PS4";
+    case TargetOS::ps5:
+        return "PS5";
     case TargetOS::web:
         return "web";
     case TargetOS::error:
@@ -404,6 +408,8 @@ std::string OSToLowerString(TargetOS os) {
         return "ios";
     case TargetOS::ps4:
         return "ps4";
+    case TargetOS::ps5:
+        return "ps5";
     case TargetOS::web:
         return "web";
     case TargetOS::error:

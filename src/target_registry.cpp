@@ -167,6 +167,7 @@ const BitcodeLib *TargetLibRegistry::getISPCTargetLib(ISPCTarget target, TargetO
     case TargetOS::android:
     case TargetOS::ios:
     case TargetOS::ps4:
+    case TargetOS::ps5:
         os = TargetOS::linux;
         break;
     case TargetOS::error:

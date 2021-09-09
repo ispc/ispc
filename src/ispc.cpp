@@ -452,6 +452,7 @@ class AllCPUs {
 
         names[CPU_ZNVER1].push_back("znver1");
         names[CPU_ZNVER2].push_back("znver2");
+        names[CPU_ZNVER2].push_back("ps5");
 #if ISPC_LLVM_VERSION >= ISPC_LLVM_12_0
         names[CPU_ZNVER3].push_back("znver3");
 #endif
@@ -1613,6 +1614,16 @@ std::string Target::GetTripleString() const {
             exit(1);
         }
         // "x86_64-scei-ps4"
+        triple.setArch(llvm::Triple::ArchType::x86_64);
+        triple.setVendor(llvm::Triple::VendorType::SCEI);
+        triple.setOS(llvm::Triple::OSType::PS4);
+        break;
+    case TargetOS::ps5:
+        if (m_arch != Arch::x86_64) {
+            Error(SourcePos(), "PS5 target supports only x86_64.");
+            exit(1);
+        }
+        // "x86_64-scei-ps4", as "ps5" was not yet officially upstreamed to LLVM.
         triple.setArch(llvm::Triple::ArchType::x86_64);
         triple.setVendor(llvm::Triple::VendorType::SCEI);
         triple.setOS(llvm::Triple::OSType::PS4);
