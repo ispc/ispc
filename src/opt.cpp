@@ -1458,7 +1458,7 @@ static llvm::Value *lGetBasePtrAndOffsets(llvm::Value *ptrs, llvm::Value **offse
                 // We expect here ConstantVector as
                 // <i64 4, i64 undef, i64 undef, i64 undef, i64 undef, i64 undef, i64 undef, i64 undef>
                 llvm::ConstantVector *cv = llvm::dyn_cast<llvm::ConstantVector>(bop_var->getOperand(1));
-                llvm::Value *shuffle_offset = NULL;
+                llvm::Instruction *shuffle_offset = NULL;
                 if (cv != NULL) {
                     llvm::Value *zeroMask =
 #if ISPC_LLVM_VERSION < ISPC_LLVM_11_0
@@ -1494,7 +1494,8 @@ static llvm::Value *lGetBasePtrAndOffsets(llvm::Value *ptrs, llvm::Value **offse
 #endif
                             llvm::Constant::getNullValue(llvm::Type::getInt32Ty(*g->ctx)));
                         shuffle_offset = new llvm::ShuffleVectorInst(bop_var, llvm::UndefValue::get(bop_var_type),
-                                                                     zeroMask, "shuffle", bop_var);
+                                                                     zeroMask, "shuffle");
+                        shuffle_offset->insertAfter(bop_var);
                     }
                 }
                 if (shuffle_offset != NULL) {
