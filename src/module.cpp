@@ -892,11 +892,18 @@ void Module::AddFunctionDeclaration(const std::string &name, const FunctionType 
         lCheckForStructParameters(functionType, pos);
     }
 
-    // Mark extern "C" functions as SPIR_FUNC for Xe.
+    // Mark ISPC external functions as SPIR_FUNC for Xe.
     if (functionType->IsISPCExternal() && disableMask) {
         function->setCallingConv(llvm::CallingConv::SPIR_FUNC);
-        function->addFnAttr("CMStackCall");
         function->setDSOLocal(true);
+    }
+    // Mark with corresponding attribute
+    if (g->target->isXeTarget()) {
+        if (functionType->IsISPCKernel()) {
+            function->addFnAttr("CMGenxMain");
+        } else {
+            function->addFnAttr("CMStackCall");
+        }
     }
 
     // Loop over all of the arguments; process default values if present

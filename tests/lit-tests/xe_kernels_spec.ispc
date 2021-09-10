@@ -137,7 +137,11 @@ export void f7() {}
 // CHECK_TASK_F7_CPU-NOT: void @f7_task()
 task void f7_task() {}
 
+// If there is no "CMGenxMain" attribute for function, "VCFunction" attribute
+// should always go with "VCStackCall" attribute for function
+// definitions and declarations
 // CHECK_METADATA: { {{.*}} "CMStackCall" "VCFunction" "VCStackCall" }
+// CHECK_METADATA-NOT: { {{.*}} "VCFunction" }
 // CHECK_METADATA: { {{.*}} "CMGenxMain" "VCFunction"{{.*}} "oclrt"="1" }
 
 // CHECK_METADATA-NOT: !"Debug Info Version"
