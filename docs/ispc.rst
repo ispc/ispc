@@ -405,7 +405,7 @@ should not affect compatibility.
 
 This release introduces experimental cross OS compilation support and ARM/AARCH64
 support. It also contains a new 128-bit AVX2 target (avx2-i32x4) and a CPU
-definition for Ice Lake client (--cpu=icl).
+definition for Ice Lake client (--device=icl).
 
 Updating ISPC Programs For Changes In ISPC 1.13.0
 -------------------------------------------------
@@ -662,9 +662,9 @@ Selecting The Compilation Target
 --------------------------------
 
 There are four options that affect the compilation target: ``--arch``,
-which sets the target architecture, ``--cpu``, which sets the target CPU or GPU,
-``--target``, which sets the target instruction set, and ``--target-os``,
-which sets the target operating system.
+which sets the target architecture, ``--device`` (also may be spelled as ``--cpu``),
+which sets the target CPU or GPU, ``--target``, which sets the target instruction
+set, and ``--target-os``, which sets the target operating system.
 
 If none of these options is specified, ``ispc`` generates code for the host
 OS and for the architecture of the system the compiler is running on (i.e.
@@ -681,7 +681,7 @@ To compile for Intel TGLLP platform:
 
 ::
 
-   ispc foo.ispc -o foo.bin --target=xelp-x16 --cpu=TGLLP --emit-zebin
+   ispc foo.ispc -o foo.bin --target=xelp-x16 --device=TGLLP --emit-zebin
 
 Currently-supported architectures are ``x86``, ``x86-64``, ``xe32``,
 ``xe64``, ``arm``, and ``aarch64``.
@@ -693,7 +693,7 @@ on which you're running ``ispc`` is used to determine the target CPU.
 
 ::
 
-   ispc foo.ispc -o foo.obj --cpu=corei7-avx
+   ispc foo.ispc -o foo.obj --device=corei7-avx
 
 Next, ``--target`` selects the target instruction set.  The target
 string is of the form ``[ISA]-i[mask size]x[gang size]``.  For example,

@@ -603,8 +603,8 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, bool pic, boo
         CPUID = a.GetTypeFromName(cpu);
         if (CPUID == CPU_None) {
             Error(SourcePos(),
-                  "Error: CPU type \"%s\" unknown. Supported"
-                  " CPUs: %s.",
+                  "Error: Device type \"%s\" unknown. Supported"
+                  " devices: %s.",
                   cpu, a.HumanReadableListOfNames().c_str());
             return;
         }
@@ -702,7 +702,7 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, bool pic, boo
             std::string target_string = ISPCTargetToString(m_ispc_target);
             Warning(SourcePos(),
                     "No --target specified on command-line."
-                    " Using ISA \"%s\" based on specified CPU \"%s\".",
+                    " Using ISA \"%s\" based on specified device \"%s\".",
                     target_string.c_str(), cpu);
         }
     }
@@ -1271,8 +1271,8 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, bool pic, boo
         if ((CPUfromISA != CPU_None) && !a.BackwardCompatible(CPUID, CPUfromISA)) {
             std::string target_string = ISPCTargetToString(m_ispc_target);
             Error(SourcePos(),
-                  "The requested CPU (%s) is incompatible"
-                  " with the CPU required for %s target (%s)",
+                  "The requested device (%s) is incompatible"
+                  " with the device required for %s target (%s)",
                   cpu, target_string.c_str(), a.GetDefaultNameFromType(CPUfromISA).c_str());
             return;
         }

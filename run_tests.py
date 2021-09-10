@@ -533,8 +533,8 @@ def run_test(testname, host, target):
             if target.is_xe():
                 ispc_cmd += " --emit-zebin" if options.ispc_output == "ze" else " --emit-spirv"
                 ispc_cmd += " -DISPC_GPU"
-            if options.cpu != None:
-                ispc_cmd += " --cpu="+ options.cpu
+            if options.device != None:
+                ispc_cmd += " --device="+ options.device
 
             if options.opt == 'O0':
                 ispc_cmd += " -O0"
@@ -910,7 +910,7 @@ def run_tests(options1, args, print_version):
     host = Host(platform.system())
     host.set_ispc_cmd(options.ispc_flags)
 
-    target = TargetConfig(options.arch, options.target, options.cpu)
+    target = TargetConfig(options.arch, options.target, options.device)
 
     if options.debug_check and (not target.is_xe() or not host.is_linux()):
         print("--debug_check is supported only for xe target and only on Linux OS")
@@ -1101,7 +1101,7 @@ if __name__ == "__main__":
                   action = "store_true")
     parser.add_option("--file", dest='in_file', help='file to save run_tests output', default="")
     parser.add_option("--l0loader", dest='l0loader', help='Path to L0 loader', default="")
-    parser.add_option("--cpu", dest='cpu', help='Specify target ISPC CPU. For example: core2, skx, cortex-a9, SKL, TGLLP, etc.', default=None)
+    parser.add_option("--device", dest='device', help='Specify target ISPC device. For example: core2, skx, cortex-a9, SKL, TGLLP, etc.', default=None)
     parser.add_option("--ispc_output", dest='ispc_output', choices=['obj', 'spv', 'ze'], help='Specify ISPC output', default=None)
     parser.add_option("--fail_db", dest='fail_db', help='File to use as a fail database', default='fail_db.txt', type=str)
     parser.add_option("--debug_check", dest='debug_check', help='Run tests in debug mode with validating debug info', default=False, action="store_true")

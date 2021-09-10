@@ -103,13 +103,14 @@ static void lPrintVersion() {
 #ifndef ISPC_HOST_IS_WINDOWS
     printf("    [--colored-output]\t\tAlways use terminal colors in error/warning messages\n");
 #endif
-    printf("    ");
-    char cpuHelp[2048];
-    snprintf(cpuHelp, sizeof(cpuHelp), "[--cpu=<cpu>]\t\t\tSelect target CPU type\n<cpu>={%s}\n",
-             Target::SupportedCPUs().c_str());
-    PrintWithWordBreaks(cpuHelp, 16, TerminalWidth(), stdout);
+    printf("    [--cpu=<type>]\t\t\tAn alias for [--device=<type>] switch\n");
     printf("    [-D<foo>]\t\t\t\t#define given value when running preprocessor\n");
     printf("    [--dev-stub <filename>]\t\tEmit device-side offload stub functions to file\n");
+    printf("    ");
+    char cpuHelp[2048];
+    snprintf(cpuHelp, sizeof(cpuHelp), "[--device=<type>]\t\t\tSelect target device\n<type>={%s}\n",
+             Target::SupportedCPUs().c_str());
+    PrintWithWordBreaks(cpuHelp, 16, TerminalWidth(), stdout);
     printf("    [--dllexport]\t\t\tMake non-static functions DLL exported.  Windows target only\n");
     printf("    [--dwarf-version={2,3,4}]\t\tGenerate source-level debug information with given DWARF version "
            "(triggers -g).  Ignored for Windows target\n");
@@ -645,6 +646,8 @@ int main(int Argc, char *Argv[]) {
                                       "only intel and att are allowed.",
                                       argv[i] + 17);
             }
+        } else if (!strncmp(argv[i], "--device=", 9)) {
+            cpu = argv[i] + 9;
         } else if (!strncmp(argv[i], "--cpu=", 6)) {
             cpu = argv[i] + 6;
         } else if (!strcmp(argv[i], "--fast-math")) {
