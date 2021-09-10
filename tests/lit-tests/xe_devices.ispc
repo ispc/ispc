@@ -16,6 +16,16 @@
 // RUN: %{ispc} %s -o %t.spv --nostdlib --target=xelp-x16 --device=tgllp
 // RUN: %{ispc} %s -o %t.spv --nostdlib --target=xelp-x16 --device=dg1
 
+// XeHPG
+// RUN: not %{ispc} %s -o %t.spv --nostdlib --target=xehpg-x8 --device=skl
+// RUN: not %{ispc} %s -o %t.spv --nostdlib --target=xehpg-x8 --device=tgllp
+// RUN: not %{ispc} %s -o %t.spv --nostdlib --target=xehpg-x8 --device=dg1
+// RUN: %{ispc} %s -o %t.spv --nostdlib --target=xehpg-x8 --device=dg2
+// RUN: not %{ispc} %s -o %t.spv --nostdlib --target=xehpg-x16 --device=skl
+// RUN: not %{ispc} %s -o %t.spv --nostdlib --target=xehpg-x16 --device=tgllp
+// RUN: not %{ispc} %s -o %t.spv --nostdlib --target=xehpg-x16 --device=dg1
+// RUN: %{ispc} %s -o %t.spv --nostdlib --target=xehpg-x16 --device=dg2
+
 // REQUIRES: XE_ENABLED
 
 uniform int i;
