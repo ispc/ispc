@@ -200,7 +200,7 @@ ispcrt::base::MemoryView *CPUDevice::newMemoryView(void *appMem, size_t numBytes
 
 ispcrt::base::TaskQueue *CPUDevice::newTaskQueue() const { return new cpu::TaskQueue(); }
 
-ispcrt::base::Module *CPUDevice::newModule(const char *moduleFile) const { return new cpu::Module(moduleFile); }
+ispcrt::base::Module *CPUDevice::newModule(const char *moduleFile, const ISPCRTModuleOptions &moduleOpts) const { return new cpu::Module(moduleFile); }
 
 ispcrt::base::Kernel *CPUDevice::newKernel(const ispcrt::base::Module &module, const char *name) const {
     return new cpu::Kernel(module, name);

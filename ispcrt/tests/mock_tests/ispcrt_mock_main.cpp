@@ -155,6 +155,21 @@ TEST_F(MockTestWithDevice, Module_Constructor) {
     ASSERT_EQ(sm_rt_error, ISPCRT_NO_ERROR);
 }
 
+TEST_F(MockTestWithDevice, Module_Constructor_zeModuleCreateWithOptions) {
+    // Create module with options
+    ISPCRTModuleOptions opts = {};
+    ispcrt::Module m(m_device, "", opts);
+    ASSERT_EQ(sm_rt_error, ISPCRT_NO_ERROR);
+}
+
+TEST_F(MockTestWithDevice, Module_Constructor_zeModuleCreateWithStackSize) {
+    // Create module with stack size
+    ISPCRTModuleOptions opts;
+    opts.stackSize = 32000;
+    ispcrt::Module m(m_device, "", opts);
+    ASSERT_EQ(sm_rt_error, ISPCRT_NO_ERROR);
+}
+
 TEST_F(MockTestWithDevice, Module_Constructor_zeModuleCreate) {
     // Check if error is reported from module constructor
     Config::setRetValue("zeModuleCreate", ZE_RESULT_ERROR_DEVICE_LOST);

@@ -22,7 +22,7 @@ struct CPUDevice : public base::Device {
 
     base::TaskQueue *newTaskQueue() const override;
 
-    base::Module *newModule(const char *moduleFile) const override;
+    base::Module *newModule(const char *moduleFile, const ISPCRTModuleOptions &moduleOpts) const override;
 
     base::Kernel *newKernel(const base::Module &module, const char *name) const override;
 

@@ -107,8 +107,11 @@ void *ispcrtSharedPtr(ISPCRTMemoryView);
 size_t ispcrtSize(ISPCRTMemoryView);
 
 // Kernels ////////////////////////////////////////////////////////////////////
+typedef struct {
+    uint32_t stackSize;
+} ISPCRTModuleOptions;
 
-ISPCRTModule ispcrtLoadModule(ISPCRTDevice, const char *moduleFile);
+ISPCRTModule ispcrtLoadModule(ISPCRTDevice, const char *moduleFile, ISPCRTModuleOptions);
 ISPCRTKernel ispcrtNewKernel(ISPCRTDevice, ISPCRTModule, const char *name);
 
 // Task queues ////////////////////////////////////////////////////////////////
