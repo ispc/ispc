@@ -222,9 +222,9 @@ ISPCRT_CATCH_END(nullptr)
 // Kernels ////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////
 
-ISPCRTModule ispcrtLoadModule(ISPCRTDevice d, const char *moduleFile) ISPCRT_CATCH_BEGIN {
+ISPCRTModule ispcrtLoadModule(ISPCRTDevice d, const char *moduleFile, ISPCRTModuleOptions moduleOpts) ISPCRT_CATCH_BEGIN {
     const auto &device = referenceFromHandle<ispcrt::base::Device>(d);
-    return (ISPCRTModule)device.newModule(moduleFile);
+    return (ISPCRTModule)device.newModule(moduleFile, moduleOpts);
 }
 ISPCRT_CATCH_END(nullptr)
 

@@ -156,7 +156,10 @@ The ``ISPC Run Time`` uses the following abstractions to manage code execution:
 
 * ``Module`` - represents a set of ``kernels`` that are compiled together and
   thus can share some common code. In this sense, SPIR-V file produced by ``ispc``
-  is a ``module`` for the ``ISPCRT``.
+  is a ``module`` for the ``ISPCRT``. User can provide additional options for
+  module compilation using ``ISPCRTModuleOptions``. Currently ``ISPCRTModuleOptions``
+  structure allows to set stack size for VC backend which is used to compile SPIR-V.
+  The set of supported options will be extended as needed.
 
 * ``Kernel`` - is a function that is an entry point to a ``module`` and can be
   called by inserting kernel execution command into a ``task queue``. A kernel

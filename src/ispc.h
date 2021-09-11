@@ -667,7 +667,7 @@ struct Globals {
     compilation to L0 binary */
     std::string vcOpts;
 
-    /*Stateless stack memory size in VC backend*/
+    /* Stateless stack memory size in VC backend */
     unsigned int stackMemSize;
 #endif
 

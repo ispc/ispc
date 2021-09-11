@@ -22,7 +22,7 @@ struct Device : public RefCounted {
 
     virtual TaskQueue *newTaskQueue() const = 0;
 
-    virtual Module *newModule(const char *moduleFile) const = 0;
+    virtual Module *newModule(const char *moduleFile, const ISPCRTModuleOptions &opts) const = 0;
 
     virtual Kernel *newKernel(const Module &module, const char *name) const = 0;
 

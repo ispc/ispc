@@ -319,16 +319,17 @@ template <typename T> using SharedVector = std::vector<T, ispcrt::SharedMemoryAl
 // Module wrapper ///////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////////////////////
 
+
 class Module : public GenericObject<ISPCRTModule> {
   public:
     Module() = default;
-    Module(const Device &device, const char *moduleName);
+    Module(const Device &device, const char *moduleName, const ISPCRTModuleOptions &opts = ISPCRTModuleOptions{});
 };
 
 // Inlined definitions //
 
-inline Module::Module(const Device &device, const char *moduleName)
-    : GenericObject<ISPCRTModule>(ispcrtLoadModule(device.handle(), moduleName)) {}
+inline Module::Module(const Device &device, const char *moduleName, const ISPCRTModuleOptions &opts)
+    : GenericObject<ISPCRTModule>(ispcrtLoadModule(device.handle(), moduleName, opts)) {}
 
 /////////////////////////////////////////////////////////////////////////////
 // Kernel wrapper ///////////////////////////////////////////////////////////

@@ -375,7 +375,7 @@ struct MemoryView : public ispcrt::base::MemoryView {
 
 
 struct Module : public ispcrt::base::Module {
-    Module(ze_device_handle_t device, ze_context_handle_t context, const char *moduleFile, bool is_mock_dev)
+    Module(ze_device_handle_t device, ze_context_handle_t context, const char *moduleFile, const bool is_mock_dev, const ISPCRTModuleOptions &opts)
                 : m_file(moduleFile) {
         std::ifstream is;
         ze_module_format_t moduleFormat = ZE_MODULE_FORMAT_IL_SPIRV;
@@ -424,6 +424,11 @@ struct Module : public ispcrt::base::Module {
         // be added to the default igc options, while '=' will replace
         // the options with the content of the env var.
         std::string igcOptions = "-vc-codegen -no-optimize -Xfinalizer '-presched'";
+        // If stackSize has default value 0, do not set -stateless-stack-mem-size,
+        // it will be set to 8192 in VC backend by default.
+        if (opts.stackSize > 0) {
+            igcOptions += " -stateless-stack-mem-size=" + std::to_string(opts.stackSize);
+        }
         constexpr auto MAX_ISPCRT_IGC_OPTIONS = 2000UL;
 #if defined(_WIN32) || defined(_WIN64)
         char* userIgcOptionsEnv = nullptr;
@@ -766,8 +771,8 @@ base::TaskQueue *GPUDevice::newTaskQueue() const {
     return new gpu::TaskQueue((ze_device_handle_t)m_device, (ze_context_handle_t)m_context);
 }
 
-base::Module *GPUDevice::newModule(const char *moduleFile) const {
-    return new gpu::Module((ze_device_handle_t)m_device, (ze_context_handle_t)m_context, moduleFile, m_is_mock);
+base::Module *GPUDevice::newModule(const char *moduleFile, const ISPCRTModuleOptions &opts) const {
+    return new gpu::Module((ze_device_handle_t)m_device, (ze_context_handle_t)m_context, moduleFile, m_is_mock, opts);
 }
 
 base::Kernel *GPUDevice::newKernel(const base::Module &module, const char *name) const {
