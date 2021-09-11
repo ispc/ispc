@@ -65,9 +65,9 @@ using invokePtr = int (*)(unsigned, const char **, const uint32_t, const uint8_t
 using freeOutputPtr = int (*)(uint32_t *, uint8_t ***, uint64_t **, char ***);
 // clang-format off
 const std::unordered_map<std::string, std::string> ISPCToNeoCPU{
-    {"SKL", "skl"},
-    {"TGLLP", "tgllp"},
-    {"DG1", "dg1"},
+    {"skl", "skl"},
+    {"tgllp", "tgllp"},
+    {"dg1", "dg1"},
 };
 // clang-format on
 #endif

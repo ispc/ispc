@@ -677,11 +677,11 @@ the command line:
 
    ispc foo.ispc -o foo.obj --arch=x86
 
-To compile for Intel TGLLP platform:
+To compile for Intel Xe LP platform:
 
 ::
 
-   ispc foo.ispc -o foo.bin --target=xelp-x16 --device=TGLLP --emit-zebin
+   ispc foo.ispc -o foo.bin --target=xelp-x16 --device=tgllp --emit-zebin
 
 Currently-supported architectures are ``x86``, ``x86-64``, ``xe32``,
 ``xe64``, ``arm``, and ``aarch64``.

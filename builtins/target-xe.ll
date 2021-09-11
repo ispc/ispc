@@ -878,7 +878,7 @@ define <WIDTH x $1> @__masked_load_blend_$1(i8 *, <WIDTH x MASK> %mask) nounwind
 }
 
 ; This version is safe w.r.t. crossing page boundaries and it contains the optimization
-; that is useful for Gen9 and TGL, but needs to be revised for later hardware.
+; that is useful for Gen9 and XeLP, but needs to be revised for later hardware.
 ; The optimization has runtime check for first and last values of the mask and doing
 ; either block load (if it is safe) or gather (if it is not safe).
 define <WIDTH x $1> @__masked_load_$1(i8 *, <WIDTH x MASK> %mask) nounwind alwaysinline {

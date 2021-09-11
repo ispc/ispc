@@ -470,9 +470,9 @@ class AllCPUs {
 #endif
 
 #ifdef ISPC_XE_ENABLED
-        names[GPU_SKL].push_back("SKL");
-        names[GPU_TGLLP].push_back("TGLLP");
-        names[GPU_TGLLP].push_back("DG1");
+        names[GPU_SKL].push_back("skl");
+        names[GPU_TGLLP].push_back("tgllp");
+        names[GPU_TGLLP].push_back("dg1");
 #endif
 
         Assert(names.size() == sizeofDeviceType);

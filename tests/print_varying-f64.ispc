@@ -1,5 +1,5 @@
 #include "../test_static.isph"
-// rule: skip on cpu=TGLLP
+// rule: skip on cpu=tgllp
 
 task void print_f(uniform float aFOO[]) {
     double a = aFOO[programIndex];

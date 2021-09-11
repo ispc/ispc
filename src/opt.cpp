@@ -6109,7 +6109,8 @@ bool CheckUnsupportedInsts::runOnBasicBlock(llvm::BasicBlock &bb) {
         lGetSourcePosFromMetadata(inst, &pos);
         if (llvm::CallInst *ci = llvm::dyn_cast<llvm::CallInst>(inst)) {
             llvm::Function *func = ci->getCalledFunction();
-            // Report error that prefetch is not supported on SKL and TGLLP
+
+            // Report error that prefetch is not supported on skl and tgllp
             if (func && func->getName().contains("genx.lsc.prefetch.stateless")) {
                 if (!g->target->hasXePrefetch()) {
                     Error(pos, "\'prefetch\' is not supported by %s\n", g->target->getCPU().c_str());
