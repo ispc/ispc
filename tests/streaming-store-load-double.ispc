@@ -1,5 +1,5 @@
 #include "../test_static.isph"
-// rule: skip on cpu=TGLLP
+// rule: skip on cpu=tgllp
 
 void var_store(uniform double a[], varying float x) {
     streaming_store(a, x);

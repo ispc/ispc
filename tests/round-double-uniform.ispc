@@ -1,5 +1,5 @@
 #include "../test_static.isph"
-// rule: skip on cpu=TGLLP
+// rule: skip on cpu=tgllp
 
 task void f_f(uniform float RET[], uniform float aFOO[]) {
     uniform float error = 0;

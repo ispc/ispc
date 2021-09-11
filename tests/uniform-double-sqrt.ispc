@@ -1,5 +1,5 @@
 #include "../test_static.isph"
-// rule: skip on cpu=TGLLP
+// rule: skip on cpu=tgllp
 
 bool ok(double x, double ref) { return (abs(x - ref) < 1d-15) || abs((x-ref)/ref) < 1d-14; }
 

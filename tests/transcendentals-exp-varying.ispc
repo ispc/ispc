@@ -1,5 +1,5 @@
 #include "../test_static.isph"
-// rule: skip on cpu=TGLLP
+// rule: skip on cpu=tgllp
 bool ok(double x, double ref) { return (abs(x - ref) < 1d-7) || abs((x-ref)/ref) < 1d-6; }
 task void f_du(uniform float RET[], uniform double aFOO[], uniform double b) {
   varying double ref = exp((float)aFOO[programIndex]);

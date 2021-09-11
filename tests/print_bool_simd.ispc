@@ -1,6 +1,6 @@
 #include "../test_static.isph"
-// rule: skip on cpu=TGLLP
-// Test is unstable on TGLLP
+// rule: skip on cpu=tgllp
+// Test is unstable on tgllp
 task void print_fuf(uniform float aFOO[], uniform float b) {
     float a = aFOO[programIndex];
     uniform bool uniBoolVal = (bool)b;
