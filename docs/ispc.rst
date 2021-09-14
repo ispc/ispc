@@ -4675,6 +4675,18 @@ the given array, starting at the given offset.
     void soa_to_aos3(double v0, double v1, double v2, uniform double a[])
     void soa_to_aos3(int64 v0, int64 v1, int64 v2, uniform int64 a[])
 
+Note that these functions do not take the current program execution mask into account; they
+unconditionally read and write three times the gang size. Hence, if the iteration count
+is not an integer multiple of the program count, ``aos_to_soa3()`` will read past the end of
+the input data and ``soa_to_aos3()`` will write past the end of the output data. To avoid memory
+corruption in this case, one of the following approaches can be taken:
+
+* Ensure that the data buffers have a size that is a multiple of ``programCount``, so that
+  the read/write overflow does not cause memory corruption
+* For the main loop, mask the iteration count to be a multiple of ``programCount`` and add
+  a manual "remainder" loop (which will probably use a gather/scatter) for the remaining
+  iterations
+
 There are also variants of these functions that convert 4-wide values
 and 2-wide values between AoS and SoA layouts.
 In other words, ``aos_to_soa4()`` converts AoS data in memory laid out like
