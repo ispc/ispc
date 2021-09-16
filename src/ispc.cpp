@@ -1680,7 +1680,11 @@ llvm::Value *Target::StructOffset(llvm::Type *type, int element, llvm::BasicBloc
 
 void Target::markFuncWithTargetAttr(llvm::Function *func) {
     if (m_tf_attributes) {
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_14_0
+        func->addFnAttrs(*m_tf_attributes);
+#else
         func->addAttributes(llvm::AttributeList::FunctionIndex, *m_tf_attributes);
+#endif
     }
 }
 
