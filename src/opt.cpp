@@ -143,7 +143,6 @@ static llvm::Pass *CreateReplaceStdlibShiftPass();
 #ifdef ISPC_XE_ENABLED
 static llvm::Pass *CreateXeGatherCoalescingPass();
 static llvm::Pass *CreateReplaceLLVMIntrinsics();
-static llvm::Pass *CreateFixAddressSpace();
 static llvm::Pass *CreateDemotePHIs();
 static llvm::Pass *CreateCheckUnsupportedInsts();
 static llvm::Pass *CreateMangleOpenCLBuiltins();
@@ -517,11 +516,6 @@ void ispc::Optimize(llvm::Module *module, int optLevel) {
         optPM.add(CreateIntrinsicsOptPass(), 102);
         optPM.add(CreateIsCompileTimeConstantPass(true));
         optPM.add(llvm::createFunctionInliningPass());
-#ifdef ISPC_XE_ENABLED
-        if (g->target->isXeTarget()) {
-            optPM.add(CreateFixAddressSpace());
-        }
-#endif
         optPM.add(CreateMakeInternalFuncsStaticPass());
 #if ISPC_LLVM_VERSION >= ISPC_LLVM_12_0
         optPM.add(llvm::createCFGSimplificationPass(simplifyCFGopt));
@@ -795,11 +789,6 @@ void ispc::Optimize(llvm::Module *module, int optLevel) {
         optPM.add(llvm::createFunctionInliningPass());
         optPM.add(llvm::createAggressiveDCEPass());
         optPM.add(llvm::createStripDeadPrototypesPass());
-#ifdef ISPC_XE_ENABLED
-        if (g->target->isXeTarget()) {
-            optPM.add(CreateFixAddressSpace());
-        }
-#endif
         optPM.add(CreateMakeInternalFuncsStaticPass());
         optPM.add(llvm::createGlobalDCEPass());
         optPM.add(llvm::createConstantMergePass());
@@ -6232,216 +6221,6 @@ bool MangleOpenCLBuiltins::runOnFunction(llvm::Function &F) {
 }
 
 static llvm::Pass *CreateMangleOpenCLBuiltins() { return new MangleOpenCLBuiltins(); }
-
-///////////////////////////////////////////////////////////////////////////
-// FixAddressSpace
-
-/** This pass fixes should go close to the end of optimizations. It fixes address space issues
-    caused by functions inlining and LLVM optimizations.
-    TODO: the implemenattion is not completed yet, it just unblocks work on openvkl kernel.
-    1. fix where needed svn.block.ld -> load, svm.block.st -> store
-    2. svm gathers/scatters <-> private gathers/scatters
-    3. ideally generate LLVM vector loads/stores in ImproveOptMemory pass, fix address space here
- */
-
-class FixAddressSpace : public llvm::FunctionPass {
-    llvm::Instruction *processVectorLoad(llvm::LoadInst *LI);
-    llvm::Instruction *processSVMVectorLoad(llvm::Instruction *LI);
-    llvm::Instruction *processVectorStore(llvm::StoreInst *SI);
-    llvm::Instruction *processSVMVectorStore(llvm::Instruction *LI);
-    void applyReplace(llvm::Instruction *Inst, llvm::Instruction *ToReplace);
-
-  public:
-    static char ID;
-    FixAddressSpace() : FunctionPass(ID) {}
-    llvm::StringRef getPassName() const { return "Fix address space"; }
-    bool runOnBasicBlock(llvm::BasicBlock &BB);
-    bool runOnFunction(llvm::Function &F);
-};
-
-char FixAddressSpace::ID = 0;
-
-void FixAddressSpace::applyReplace(llvm::Instruction *Inst, llvm::Instruction *ToReplace) {
-    lCopyMetadata(Inst, ToReplace);
-    llvm::ReplaceInstWithInst(ToReplace, Inst);
-}
-
-llvm::Instruction *FixAddressSpace::processVectorLoad(llvm::LoadInst *LI) {
-    llvm::Value *ptr = LI->getOperand(0);
-    llvm::Type *retType = LI->getType();
-
-    Assert(llvm::isa<llvm::VectorType>(LI->getType()));
-
-    if (GetAddressSpace(ptr) != AddressSpace::ispc_global)
-        return NULL;
-
-    // Ptr load should be done via inttoptr
-    bool isPtrLoad = false;
-    if (retType->getScalarType()->isPointerTy()) {
-        isPtrLoad = true;
-        auto scalarType = g->target->is32Bit() ? LLVMTypes::Int32Type : LLVMTypes::Int64Type;
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_11_0
-        retType =
-            llvm::FixedVectorType::get(scalarType, llvm::dyn_cast<llvm::FixedVectorType>(retType)->getNumElements());
-#else
-        retType = llvm::VectorType::get(scalarType, retType->getVectorNumElements());
-#endif
-    }
-    llvm::Instruction *res = lXeLoadInst(ptr, retType, llvm::dyn_cast<llvm::Instruction>(LI));
-    Assert(res);
-
-    if (isPtrLoad) {
-        res->insertBefore(LI);
-        res = new llvm::IntToPtrInst(res, LI->getType(), "svm_ld_inttoptr");
-    }
-
-    return res;
-}
-
-llvm::Instruction *FixAddressSpace::processSVMVectorLoad(llvm::Instruction *CI) {
-    llvm::Value *ptr = CI->getOperand(0);
-    llvm::Type *retType = CI->getType();
-
-    Assert(llvm::isa<llvm::VectorType>(retType));
-
-    if (GetAddressSpace(ptr) == AddressSpace::ispc_global)
-        return NULL;
-
-    // Conevrt int64 ptr to pointer
-    ptr = new llvm::IntToPtrInst(ptr, llvm::PointerType::get(retType, 0), CI->getName() + "_inttoptr", CI);
-    llvm::Instruction *loadInst = NULL;
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_11_0
-    Assert(llvm::isa<llvm::PointerType>(ptr->getType()));
-    loadInst = new llvm::LoadInst(llvm::dyn_cast<llvm::PointerType>(ptr->getType())->getPointerElementType(), ptr,
-                                  CI->getName(), false /* not volatile */,
-                                  llvm::MaybeAlign(g->target->getNativeVectorAlignment()).valueOrOne(),
-                                  (llvm::Instruction *)NULL);
-#else
-    loadInst = new llvm::LoadInst(ptr, CI->getName(), false,
-                                  llvm::MaybeAlign(g->target->getNativeVectorAlignment()).valueOrOne(),
-                                  (llvm::Instruction *)NULL);
-#endif
-
-    Assert(loadInst);
-    return loadInst;
-}
-
-llvm::Instruction *FixAddressSpace::processVectorStore(llvm::StoreInst *SI) {
-    llvm::Value *ptr = SI->getOperand(1);
-    llvm::Value *val = SI->getOperand(0);
-    Assert(ptr != NULL);
-    Assert(val != NULL);
-
-    llvm::Type *valType = val->getType();
-
-    Assert(llvm::isa<llvm::VectorType>(valType));
-
-    if (GetAddressSpace(ptr) != AddressSpace::ispc_global)
-        return NULL;
-
-    // Ptr store should be done via ptrtoint
-    // Note: it doesn't look like a normal case for Xe target
-    if (valType->getScalarType()->isPointerTy()) {
-        auto scalarType = g->target->is32Bit() ? LLVMTypes::Int32Type : LLVMTypes::Int64Type;
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_11_0
-        valType =
-            llvm::FixedVectorType::get(scalarType, llvm::dyn_cast<llvm::FixedVectorType>(valType)->getNumElements());
-#else
-        valType = llvm::VectorType::get(scalarType, valType->getVectorNumElements());
-#endif
-        val = new llvm::PtrToIntInst(val, valType, "svm_st_val_ptrtoint", SI);
-    }
-
-    return lXeStoreInst(val, ptr, llvm::dyn_cast<llvm::Instruction>(SI));
-}
-
-llvm::Instruction *FixAddressSpace::processSVMVectorStore(llvm::Instruction *CI) {
-    llvm::Value *ptr = CI->getOperand(0);
-    llvm::Value *val = CI->getOperand(1);
-
-    Assert(ptr != NULL);
-    Assert(val != NULL);
-
-    llvm::Type *valType = val->getType();
-
-    Assert(llvm::isa<llvm::VectorType>(valType));
-
-    if (GetAddressSpace(ptr) == AddressSpace::ispc_global)
-        return NULL;
-
-    // Conevrt int64 ptr to pointer
-    ptr = new llvm::IntToPtrInst(ptr, llvm::PointerType::get(valType, 0), CI->getName() + "_inttoptr", CI);
-
-    llvm::Instruction *storeInst = NULL;
-    storeInst = new llvm::StoreInst(val, ptr, (llvm::Instruction *)NULL,
-                                    llvm::MaybeAlign(g->target->getNativeVectorAlignment()).valueOrOne());
-    Assert(storeInst);
-    return storeInst;
-}
-
-bool FixAddressSpace::runOnBasicBlock(llvm::BasicBlock &bb) {
-    DEBUG_START_PASS("FixAddressSpace");
-    bool modifiedAny = false;
-
-restart:
-    for (llvm::BasicBlock::iterator I = bb.begin(), E = --bb.end(); I != E; ++I) {
-        llvm::Instruction *inst = &*I;
-        if (llvm::LoadInst *ld = llvm::dyn_cast<llvm::LoadInst>(inst)) {
-            if (llvm::isa<llvm::VectorType>(ld->getType())) {
-                llvm::Instruction *load_inst = processVectorLoad(ld);
-                if (load_inst != NULL) {
-                    applyReplace(load_inst, ld);
-                    modifiedAny = true;
-                    goto restart;
-                }
-            }
-        } else if (llvm::StoreInst *st = llvm::dyn_cast<llvm::StoreInst>(inst)) {
-            llvm::Value *val = st->getOperand(0);
-            Assert(val != NULL);
-            if (llvm::isa<llvm::VectorType>(val->getType())) {
-                llvm::Instruction *store_inst = processVectorStore(st);
-                if (store_inst != NULL) {
-                    applyReplace(store_inst, st);
-                    modifiedAny = true;
-                    goto restart;
-                }
-            }
-        } else if (llvm::GenXIntrinsic::getGenXIntrinsicID(inst) == llvm::GenXIntrinsic::genx_svm_block_ld_unaligned) {
-            llvm::Instruction *load_inst = processSVMVectorLoad(inst);
-            if (load_inst != NULL) {
-                applyReplace(load_inst, inst);
-                modifiedAny = true;
-                goto restart;
-            }
-        } else if (llvm::GenXIntrinsic::getGenXIntrinsicID(inst) == llvm::GenXIntrinsic::genx_svm_block_st) {
-            llvm::Instruction *store_inst = processSVMVectorStore(inst);
-            if (store_inst != NULL) {
-                applyReplace(store_inst, inst);
-                modifiedAny = true;
-                goto restart;
-            }
-        }
-    }
-    DEBUG_END_PASS("Fix address space");
-    return modifiedAny;
-}
-
-bool FixAddressSpace::runOnFunction(llvm::Function &F) {
-    // Transformations are correct when the function is not internal.
-    // This is due to address space calculation algorithm.
-    // TODO: problems can be met in case of Stack Calls
-    llvm::TimeTraceScope FuncScope("FixAddressSpace::runOnFunction", F.getName());
-    if (F.getLinkage() == llvm::GlobalValue::LinkageTypes::InternalLinkage)
-        return false;
-
-    bool modifiedAny = false;
-    for (llvm::BasicBlock &BB : F) {
-        modifiedAny |= runOnBasicBlock(BB);
-    }
-    return modifiedAny;
-}
-
-static llvm::Pass *CreateFixAddressSpace() { return new FixAddressSpace(); }
 
 class DemotePHIs : public llvm::FunctionPass {
   public:
