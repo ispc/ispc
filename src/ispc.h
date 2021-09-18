@@ -666,6 +666,9 @@ struct Globals {
     /** Arguments to pass to Vector Compiler backend for offline
     compilation to L0 binary */
     std::string vcOpts;
+
+    /*Stateless stack memory size in VC backend*/
+    unsigned int stackMemSize;
 #endif
 
     bool noPragmaOnce;

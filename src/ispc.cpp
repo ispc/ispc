@@ -1911,6 +1911,9 @@ Globals::Globals() {
     timeTraceGranularity = 500;
     target = NULL;
     ctx = new llvm::LLVMContext;
+#ifdef ISPC_XE_ENABLED
+    stackMemSize = 0;
+#endif
 
 #ifdef ISPC_HOST_IS_WINDOWS
     _getcwd(currentDirectory, sizeof(currentDirectory));

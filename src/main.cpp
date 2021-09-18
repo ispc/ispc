@@ -202,6 +202,9 @@ static void lPrintVersion() {
     printf("    [--x86-asm-syntax=<option>]\t\tSelect style of code if generating assembly\n");
     printf("        intel\t\t\t\tEmit Intel-style assembly\n");
     printf("        att\t\t\t\tEmit AT&T-style assembly\n");
+#ifdef ISPC_XE_ENABLED
+    printf("    [--xe-stack-mem-size=<value>\t\tSet size of stateless stack memory in VC backend.\n");
+#endif
     printf("    [@<filename>]\t\t\tRead additional arguments from the given file\n");
     printf("    <file to compile or \"-\" for stdin>\n");
     exit(ret);
@@ -924,8 +927,11 @@ int main(int Argc, char *Argv[]) {
         else if (strncmp(argv[i], "--off-phase=", 12) == 0) {
             g->off_stages = ParsingPhases(argv[i] + strlen("--off-phase="), errorHandler);
 #ifdef ISPC_XE_ENABLED
-        } else if (!strncmp(argv[i], "--vc-options=", 12)) {
+        } else if (!strncmp(argv[i], "--vc-options=", 13)) {
             g->vcOpts = argv[i] + strlen("--vc-options=");
+        } else if (!strncmp(argv[i], "--xe-stack-mem-size=", 20)) {
+            unsigned int memSize = atoi(argv[i] + 20);
+            g->stackMemSize = memSize;
 #endif
         } else if (!strcmp(argv[i], "-v") || !strcmp(argv[i], "--version")) {
             lPrintVersion();

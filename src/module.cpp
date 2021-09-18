@@ -1258,6 +1258,13 @@ bool Module::writeZEBin(llvm::Module *module, const char *outFileName) {
     if (g->vcOpts != "") {
         options.append(" " + g->vcOpts);
     }
+
+    // Add stack size info
+    // If stackMemSize has default value 0, do not set -stateless-stack-mem-size,
+    // it will be set to 8192 in VC backend by default.
+    if (g->stackMemSize > 0) {
+        options.append(" -stateless-stack-mem-size=" + std::to_string(g->stackMemSize));
+    }
     std::string internalOptions;
 
     // Use L0 binary
