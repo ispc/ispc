@@ -350,8 +350,8 @@ def build_LLVM(version_LLVM, folder, tarball, debug, selfbuild, extra, from_vali
 
 
 def unsupported_llvm_targets(LLVM_VERSION):
-    prohibited_list = {"6.0":["avx512skx-i32x8", "avx512skx-i8x64", "avx512skx-i16x32"],
-                       "7.0":["avx512skx-i32x8", "avx512skx-i8x64", "avx512skx-i16x32"],
+    prohibited_list = {"6.0":["avx512skx-i32x8", "avx512skx-i32x4", "avx512skx-i8x64", "avx512skx-i16x32"],
+                       "7.0":["avx512skx-i32x8", "avx512skx-i32x4", "avx512skx-i8x64", "avx512skx-i16x32"],
                        "8.0":["avx512skx-i8x64", "avx512skx-i16x32"],
                        "9.0":["avx512skx-i8x64", "avx512skx-i16x32"]
                        }
@@ -396,7 +396,7 @@ def check_targets():
                  ["SSE2", "SSE4", "AVX", "AVX2"], "-hsw", False]),
       ("KNL",    [["avx512knl-i32x16"],
                  ["SSE2", "SSE4", "AVX", "AVX2", "KNL"], "-knl", False]),
-      ("SKX",    [["avx512skx-i32x16", "avx512skx-i32x8", "avx512skx-i8x64", "avx512skx-i16x32"],
+      ("SKX",    [["avx512skx-i32x16", "avx512skx-i32x8", "avx512skx-i32x4", "avx512skx-i8x64", "avx512skx-i16x32"],
                  ["SSE2", "SSE4", "AVX", "AVX2", "SKX"], "-skx", False])
     ])
 
