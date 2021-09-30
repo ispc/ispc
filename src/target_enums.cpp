@@ -136,6 +136,8 @@ ISPCTarget ParseISPCTarget(std::string target) {
         return ISPCTarget::avx512skx_i32x16;
     } else if (target == "avx512skx-i32x8") {
         return ISPCTarget::avx512skx_i32x8;
+    } else if (target == "avx512skx-i32x4") {
+        return ISPCTarget::avx512skx_i32x4;
     } else if (target == "avx512skx-i8x64") {
         return ISPCTarget::avx512skx_i8x64;
     } else if (target == "avx512skx-i16x32") {
@@ -233,6 +235,8 @@ std::string ISPCTargetToString(ISPCTarget target) {
         return "avx512knl-i32x16";
     case ISPCTarget::avx512skx_i32x8:
         return "avx512skx-i32x8";
+    case ISPCTarget::avx512skx_i32x4:
+        return "avx512skx-i32x4";
     case ISPCTarget::avx512skx_i32x16:
         return "avx512skx-i32x16";
     case ISPCTarget::avx512skx_i8x64:
@@ -286,6 +290,7 @@ bool ISPCTargetIsX86(ISPCTarget target) {
     case ISPCTarget::avx2_i64x4:
     case ISPCTarget::avx512knl_i32x16:
     case ISPCTarget::avx512skx_i32x8:
+    case ISPCTarget::avx512skx_i32x4:
     case ISPCTarget::avx512skx_i32x16:
     case ISPCTarget::avx512skx_i8x64:
     case ISPCTarget::avx512skx_i16x32:
