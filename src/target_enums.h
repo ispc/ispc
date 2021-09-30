@@ -76,6 +76,7 @@ enum class ISPCTarget {
     avx2_i32x16,
     avx2_i64x4,
     avx512knl_i32x16,
+    avx512skx_i32x4,
     avx512skx_i32x8,
     avx512skx_i32x16,
     avx512skx_i8x64,
