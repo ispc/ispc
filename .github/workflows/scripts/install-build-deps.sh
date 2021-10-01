@@ -6,7 +6,7 @@ for i in {1..5}
 do
   sudo apt-get update | tee log${i}.txt
   sudo apt-get install bison flex libc6-dev-i386 g++-multilib lib32stdc++6 ncurses-dev | tee -a log${i}.txt
-  if [[ ! `grep "Err:" log${i}.txt` ]]; then
+  if [[ ! `grep "^Err: " log${i}.txt` && ! `grep "^E: " log${i}.txt` ]]; then
     echo "APT packages installation was successful"
     break
   else
