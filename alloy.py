@@ -570,7 +570,7 @@ def validation_run(only, only_targets, reference_branch, number, notify, update,
 # stability constant options
         stability.save_bin = False
         stability.random = False
-        stability.ispc_flags = ""
+        stability.ispc_flags = options.ispc_flags
         stability.compiler_exe = None
         stability.num_jobs = speed_number
         stability.verbose = False
@@ -1040,7 +1040,9 @@ if __name__ == '__main__':
     run_group = OptionGroup(parser, "Options for validation run",
                     "These options must be used with -r option.")
     run_group.add_option('--compare-with', dest='branch',
-        help='set performance reference point. Dafault: main', default="main")
+        help='set performance reference point. Default: main', default="main")
+    run_group.add_option('--ispc-flags', dest='ispc_flags',
+        help='extra ispc flags.', default="")
     run_group.add_option('--number', dest='number_for_performance',
         help='number of performance runs for each test. Default: 5', default=5)
     run_group.add_option('--notify', dest='notify',
