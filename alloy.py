@@ -571,7 +571,7 @@ def validation_run(only, only_targets, reference_branch, number, notify, update,
         stability.save_bin = False
         stability.random = False
         stability.ispc_flags = options.ispc_flags
-        stability.compiler_exe = None
+        stability.compiler_exe = options.compiler_exe
         stability.num_jobs = speed_number
         stability.verbose = False
         stability.time = time
@@ -1041,6 +1041,8 @@ if __name__ == '__main__':
                     "These options must be used with -r option.")
     run_group.add_option('--compare-with', dest='branch',
         help='set performance reference point. Default: main', default="main")
+    run_group.add_option('--compiler', dest='compiler_exe',
+        help='C/C++ compiler binary to use to run tests.', default=None)
     run_group.add_option('--ispc-flags', dest='ispc_flags',
         help='extra ispc flags.', default="")
     run_group.add_option('--number', dest='number_for_performance',
