@@ -8,7 +8,7 @@ on:
   workflow_dispatch:
     inputs:
       flow_type:
-        description: 'Workflow flow type'
+        description: 'Workflow flow type (full or smoke)'
         required: true
         default: 'full'
 env:
