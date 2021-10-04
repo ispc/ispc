@@ -687,13 +687,6 @@ def validation_run(only, only_targets, reference_branch, number, notify, update,
                     print_debug("Warning: target " + stability.target + " is not supported in LLVM " + LLVM[i] + "\n", False, stability_log)
                     continue
 
-                # *always* specify default values for global variables on each loop iteration
-                stability.wrapexe = ""
-                stability.compiler_exe = None
-                # choosing right compiler for a given target
-                # sometimes clang++ is not avaluable. if --ispc-build-compiler = gcc we will pass in g++ compiler
-                if options.ispc_build_compiler == "gcc":
-                    stability.compiler_exe = "g++"
                 # now set archs for targets
                 arch = archs
                 for i1 in range(0,len(arch)):
@@ -712,13 +705,7 @@ def validation_run(only, only_targets, reference_branch, number, notify, update,
                 if (stability.target in unsupported_llvm_targets(LLVM[i])):
                     print_debug("Warning: target " + stability.target + " is not supported in LLVM " + LLVM[i] + "\n", False, stability_log)
                     continue
-                # *always* specify default values for global variables on each loop iteration
-                stability.wrapexe = ""
-                stability.compiler_exe = None
-                # choosing right compiler for a given target
-                # sometimes clang++ is not avaluable. if --ispc-build-compiler = gcc we will pass in g++ compiler
-                if options.ispc_build_compiler == "gcc":
-                    stability.compiler_exe = "g++"
+
                 stability.wrapexe = get_sde() + " " + sde_targets[j][0] + " -- "
                 arch = archs
                 for i1 in range(0,len(arch)):
