@@ -54,12 +54,12 @@ jobs:
         $RUN_SMOKE && echo "::set-output name=optsets::${OPTSETS_SMOKE}" || true
         $RUN_FULL &&  echo "::set-output name=optsets::${OPTSETS_FULL}" || true
 
-  linux-build-ispc-llvm12:
+  linux-build-ispc-llvm13:
     needs: [define-flow]
     runs-on: ubuntu-latest
     env:
-      LLVM_VERSION: "12.0"
-      LLVM_TAR: llvm-12.0.1-ubuntu16.04-Release+Asserts-x86.arm.wasm.tar.xz
+      LLVM_VERSION: "13.0"
+      LLVM_TAR: llvm-13.0.0-ubuntu16.04-Release+Asserts-x86.arm.wasm.tar.xz
 
     steps:
     - uses: actions/checkout@v2
@@ -87,12 +87,12 @@ jobs:
     - name: Upload package
       uses: actions/upload-artifact@v2
       with:
-        name: ispc_llvm12_linux
+        name: ispc_llvm13_linux
         path: build/ispc-trunk-linux.tar.gz
 
 
-  linux-test-llvm12:
-    needs: [define-flow, linux-build-ispc-llvm12]
+  linux-test-llvm13:
+    needs: [define-flow, linux-build-ispc-llvm13]
     runs-on: ubuntu-latest
     continue-on-error: false
     strategy:
@@ -104,7 +104,7 @@ jobs:
     - name: Download package
       uses: actions/download-artifact@v2
       with:
-        name: ispc_llvm12_linux
+        name: ispc_llvm13_linux
 
     - name: Install dependencies and unpack artifacts
       run: |
@@ -129,6 +129,6 @@ jobs:
       uses: actions/upload-artifact@v2
       if: failure()
       with:
-        name: fail_db.llvm12.${{matrix.target}}.txt
+        name: fail_db.llvm13.${{matrix.target}}.txt
         path: fail_db.txt
 
