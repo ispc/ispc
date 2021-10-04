@@ -173,8 +173,6 @@ jobs:
     continue-on-error: false
     strategy:
       fail-fast: false
-      matrix:
-        target: ${{fromJson(needs.define-flow.outputs.tests_matrix_targets)}}
     steps:
     - uses: actions/checkout@v2
     - name: Download package
@@ -463,7 +461,6 @@ jobs:
       fail-fast: false
       matrix:
         arch: [x86, x86-64]
-        target: ${{fromJson(needs.define-flow.outputs.tests_matrix_targets)}}
 
     steps:
     - uses: actions/checkout@v2
