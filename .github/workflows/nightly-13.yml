@@ -1,14 +1,15 @@
 # Nightly Linux run.
 
+####################################################################
+# Currently disabled. To be reenabled for 14.0 when it's branched. #
+####################################################################
+
 name: Nightly tests / LLVM 13.0
 
 # Run daily - test sse2-avx512 targets @ -O0/-O1/-O2
 on:
-  schedule:
-    - cron:  '0 7 * * *'
-  push:
-    branches:
-      - '**test_nightly**'
+  #  schedule:
+  #    - cron:  '0 7 * * *'
   workflow_dispatch:
 
 env:
