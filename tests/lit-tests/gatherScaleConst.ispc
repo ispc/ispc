@@ -20,9 +20,9 @@
 
 //; CHECK_AVX2_I32X16: llvm.x86.avx2.gather.d.ps.256
 
-//; CHECK_AVX512KNL_I32X16: llvm.x86.avx512.gather.dps.512
+//; CHECK_AVX512KNL_I32X16: llvm.x86.avx512.mask.gather.dps.512
 
-//; CHECK_AVX512SKX_I32X16: llvm.x86.avx512.gather.dps.512
+//; CHECK_AVX512SKX_I32X16: llvm.x86.avx512.mask.gather.dps.512
 struct Foo {
     uniform float x[programCount + 1];
 };
@@ -47,11 +47,11 @@ void f_fu(uniform float RET[], uniform float aFOO[]) {
 //; CHECK_AVX2_I32X16: llvm.x86.avx2.gather.d.ps.256
 //; CHECK_AVX2_I32X16-NOT: llvm.x86.avx2.gather.d.ps.256
 
-//; CHECK_AVX512KNL_I32X16: llvm.x86.avx512.gather.dps.512
-//; CHECK_AVX512KNL_I32X16-NOT: llvm.x86.avx512.gather.dps.512
+//; CHECK_AVX512KNL_I32X16: llvm.x86.avx512.mask.gather.dps.512
+//; CHECK_AVX512KNL_I32X16-NOT: llvm.x86.avx512.mask.gather.dps.512
 
-//; CHECK_AVX512SKX_I32X16: llvm.x86.avx512.gather.dps.512
-//; CHECK_AVX512SKX_I32X16-NOT: llvm.x86.avx512.gather.dps.512
+//; CHECK_AVX512SKX_I32X16: llvm.x86.avx512.mask.gather.dps.512
+//; CHECK_AVX512SKX_I32X16-NOT: llvm.x86.avx512.mask.gather.dps.512
     if ((int)a & 1) {
 #pragma ignore warning(perf)
         RET[programIndex] = foo.x[a - 1];
