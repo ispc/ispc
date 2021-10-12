@@ -51,22 +51,6 @@ def tail_and_save(file_in, file_out, tail = 100):
         f_out.writelines(lines)
 
 
-def attach_mail_file(msg, filename, name, tail = -1):
-    if os.path.exists(filename):
-        if tail > 0:
-            tail_and_save(filename, filename + '.tail', tail)
-            fp = open(filename + '.tail', "rb")
-        else:
-            fp = open(filename, "rb")
-
-        to_attach = MIMEBase("application", "octet-stream")
-        to_attach.set_payload(fp.read())
-        encode_base64(to_attach)
-        to_attach.add_header("Content-Disposition", "attachment", filename=name)
-        fp.close()
-        msg.attach(to_attach)
-
-
 def setting_paths(llvm, ispc, sde):
     if llvm != "":
         os.environ["LLVM_HOME"]=llvm
@@ -113,10 +97,6 @@ def try_do_LLVM(text, command, from_validation, verbose=False):
     exit_status = proc.returncode
     if exit_status != 0:
         print_debug("ERROR.\n", from_validation, alloy_build)
-        if options.notify != "":
-            msg = MIMEMultipart()
-            attach_mail_file(msg, stability_log, "stability.log")
-            send_mail("ERROR: Non-zero exit status while executing " + command + ". Examine build log for more information.", msg)
         alloy_error("can't " + text, 1)
     print_debug("DONE.\n", from_validation, alloy_build)
 
@@ -535,19 +515,15 @@ def concatenate_test_results(R1, R2):
         R[j][1] = R1[j][1] + R2[j][1]
     return R
 
-def validation_run(only, only_targets, reference_branch, number, notify, update, speed_number, make, perf_llvm, time):
+def validation_run(only, only_targets, reference_branch, number, update, speed_number, make, perf_llvm, time):
     os.chdir(os.environ["ISPC_HOME"])
     if current_OS != "Windows":
         os.environ["PATH"] = os.environ["ISPC_HOME"] + ":" + os.environ["PATH"]
-    if options.notify != "":
-        common.remove_if_exists(os.environ["ISPC_HOME"] + os.sep + "notify_log.log")
-        msg = MIMEMultipart()
     print_debug("Command: " + ' '.join(sys.argv) + "\n", False, "")
     print_debug("Folder: " + os.environ["ISPC_HOME"] + "\n", False, "")
     date = datetime.datetime.now()
     print_debug("Date: " + date.strftime('%H:%M %d/%m/%Y') + "\n", False, "")
     newest_LLVM="13.0"
-    msg_additional_info = ""
 # *** *** ***
 # Stability validation run
 # *** *** ***
@@ -713,12 +689,6 @@ def validation_run(only, only_targets, reference_branch, number, notify, update,
         print_debug("\n----------------------------------------\nTOTAL:\n", False, stability_log)
         output_test_results(R)
         print_debug("__________________Watch stability.log for details_________________\n", False, stability_log)
-        if options.notify != "":
-            # e-mail header for performance test:
-            msg_additional_info += "New runfails(%d) New compfails(%d) New passes runfails(%d) New passes compfails(%d)" \
-                                                                      % (len(R[0][0]), len(R[1][0]), len(R[2][0]), len(R[3][0]))
-            attach_mail_file(msg, stability.in_file, "run_tests_log.log", 100)
-            attach_mail_file(msg, stability_log, "stability.log")
 
 # *** *** ***
 # Performance validation run
@@ -778,48 +748,9 @@ def validation_run(only, only_targets, reference_branch, number, notify, update,
             build_ispc(reference_branch, make)
         # begin validation run for performance. output is inserted into perf()
         perf.perf(performance, [])
-        if options.notify != "":
-            attach_mail_file(msg, performance.in_file, "performance.log")
-            attach_mail_file(msg, "." + os.sep + "logs" + os.sep + "perf_build.log", "perf_build.log")
     # dumping gathered info to the file
     common.ex_state.dump(alloy_folder + "test_table.dump", common.ex_state.tt)
 
-    # sending e-mail with results
-    if options.notify != "":
-        send_mail(msg_additional_info, msg)
-
-def send_mail(body_header, msg):
-    global return_status
-    try:
-        fp = open(os.environ["ISPC_HOME"] + os.sep + "notify_log.log", 'rb')
-        f_lines = fp.readlines()
-        fp.close()
-    except Exception as e:
-        print_debug("Exception: " + str(e), False, stability_log)
-        body_header += "\nUnable to open notify_log.log: " + str(sys.exc_info()) + "\n"
-        print_debug("Unable to open notify_log.log: " + str(sys.exc_info()) + "\n", False, stability_log)
-        return_status = 1
-
-    body = "Hostname: " + common.get_host_name() + "\n\n"
-
-    if  not sys.exc_info()[0] == None:
-        body += "ERROR: Exception(last) - " + str(sys.exc_info()) + '\n'
-
-    body += body_header + '\n'
-    for i in range(0, len(f_lines)):
-        body += f_lines[i][:-1]
-        body += '   \n'
-
-    attach_mail_file(msg, alloy_build, "alloy_build.log", 100) # build.log is always being sent
-    smtp_server = os.environ["SMTP_ISPC"]
-    msg['Subject'] = options.notify_subject
-    msg['From'] = "ISPC_test_system"
-    msg['To'] = options.notify
-    text = MIMEText(body, "", "KOI-8")
-    msg.attach(text)
-    s = smtplib.SMTP(smtp_server)
-    s.sendmail(options.notify, options.notify.split(" "), msg.as_string())
-    s.quit()
 
 def Main():
     global current_OS
@@ -845,19 +776,11 @@ def Main():
         parser.print_help()
         exit(1)
 
-    if options.notify != "":
-        # in case 'notify' option is used but build (in '-b' for example) failed we do not want to have trash in our message body
-        # NOTE! 'notify.log' must also be cleaned up at the beginning of every message sending function, i.e. in 'validation_run()'
-        common.remove_if_exists(os.environ["ISPC_HOME"] + os.sep + "notify_log.log")
-
     setting_paths(options.llvm_home, options.ispc_home, options.sde_home)
     if os.environ.get("LLVM_HOME") == None:
         alloy_error("you have no LLVM_HOME", 1)
     if os.environ.get("ISPC_HOME") == None:
         alloy_error("you have no ISPC_HOME", 1)
-    if options.notify != "":
-        if os.environ.get("SMTP_ISPC") == None:
-            alloy_error("you have no SMTP_ISPC in your environment for option notify", 1)
     if options.only != "":
         test_only_r = " 6.0 7.0 8.0 9.0 10.0 11.0 12.0 13.0 trunk current build stability performance x86 x86-64 x86_64 -O0 -O1 -O2 native debug nodebug "
         test_only = options.only.split(" ")
@@ -880,7 +803,7 @@ def Main():
     current_path = os.getcwd()
     make = "make -j" + options.speed
     if os.environ["ISPC_HOME"] != os.getcwd():
-        alloy_error("you ISPC_HOME and your current path are different! (" + os.environ["ISPC_HOME"] + " is not equal to " + os.getcwd() +
+        alloy_error("your ISPC_HOME and your current path are different! (" + os.environ["ISPC_HOME"] + " is not equal to " + os.getcwd() +
         ")\n", 2)
     if options.perf_llvm == True:
         if options.branch == "main":
@@ -900,7 +823,7 @@ def Main():
                     options.debug, options.selfbuild, options.extra, False, options.force, make, options.gcc_toolchain_path, options.llvm_disable_assertions, options.verbose)
         if options.validation_run:
             validation_run(options.only, options.only_targets, options.branch,
-                    options.number_for_performance, options.notify, options.update, int(options.speed),
+                    options.number_for_performance, options.update, int(options.speed),
                     make, options.perf_llvm, options.time)
         elapsed_time = time.time() - start_time
         if options.time:
@@ -944,10 +867,6 @@ import multiprocessing
 import subprocess
 import re
 from shutil import copyfile
-from email.mime.multipart import MIMEMultipart
-from email.mime.base import MIMEBase
-from email.mime.text import MIMEText
-from email.encoders import encode_base64
 # our drivers
 import run_tests
 import perf
@@ -970,7 +889,7 @@ if __name__ == '__main__':
     "Stability validation run with LLVM 7.0, 8.0; -O0; x86,\nupdate fail_db.txt with passes and fails\n\talloy.py -r --only='7.0 -O0 stability 8.0 x86' --update-errors=FP\n" +
     "Try to build compiler with all LLVM\n\talloy.py -r --only=build\n" +
     "Performance validation run with 10 runs of each test and comparing to branch 'old'\n\talloy.py -r --only=performance --compare-with=old --number=10\n" +
-    "Validation run. Update fail_db.txt with new fails, send results to my@my.com\n\talloy.py -r --update-errors=F --notify='my@my.com'\n" +
+    "Validation run. Update fail_db.txt with new fails\n\talloy.py -r --update-errors=F\n" +
     "Test KNL target (requires sde)\n\talloy.py -r --only='stability' --only-targets='avx512knl-i32x16'\n")
 
     num_threads="%s" % multiprocessing.cpu_count()
@@ -1018,10 +937,6 @@ if __name__ == '__main__':
         help='extra ispc flags.', default="")
     run_group.add_option('--number', dest='number_for_performance',
         help='number of performance runs for each test. Default: 5', default=5)
-    run_group.add_option('--notify', dest='notify',
-        help='email to sent results to', default="")
-    run_group.add_option('--notify-subject', dest='notify_subject',
-        help='set the subject of the notification email, the default is ISPC test system results', default="ISPC test system results")
     run_group.add_option('--update-errors', dest='update',
         help='rewrite fail_db.txt file according to received results (F or FP)', default="")
     run_group.add_option('--only-targets', dest='only_targets',
