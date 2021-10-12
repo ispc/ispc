@@ -315,6 +315,20 @@ TEST_F(MockTestWithDevice, TaskQueue_Barrier_zeCommandListAppendBarrier) {
     ASSERT_TRUE(Config::checkCmdList({}));
 }
 
+TEST_F(MockTestWithDevice, TaskQueue_CopyToDevice_NoBarriers) {
+    ispcrt::TaskQueue tq(m_device);
+    ASSERT_EQ(sm_rt_error, ISPCRT_NO_ERROR);
+    // Create an allocation
+    std::vector<float> buf(64 * 1024);
+    ispcrt::Array<float> buf_dev(m_device, buf);
+    ASSERT_EQ(sm_rt_error, ISPCRT_NO_ERROR);
+    // "copy"
+    tq.copyToDevice(buf_dev);
+    // Event should be created before appending memory copy
+    ASSERT_EQ(CallCounters::get("zeEventCreate"), 1);
+    ASSERT_EQ(CallCounters::get("zeCommandListAppendMemoryCopy"), 1);
+}
+
 // Normal kernel launch (plus a few memory transfers) - but no waiting on future
 TEST_F(MockTestWithModuleQueueKernel, TaskQueue_FullKernelLaunchNoFuture) {
     auto tq = m_task_queue;

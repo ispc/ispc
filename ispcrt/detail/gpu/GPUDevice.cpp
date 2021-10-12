@@ -238,39 +238,50 @@ struct Event {
     uint32_t m_index{0};
 };
 
+typedef enum {
+    ISPCRT_EVENT_POOL_COMPUTE,
+    ISPCRT_EVENT_POOL_COPY
+} ISPCRTEventPoolType;
+
 struct EventPool {
     constexpr static uint32_t POOL_SIZE_CAP = 100000;
 
-    EventPool(ze_context_handle_t context, ze_device_handle_t device) : m_context(context), m_device(device) {
+    EventPool(ze_context_handle_t context, ze_device_handle_t device, 
+              ISPCRTEventPoolType type = ISPCRTEventPoolType::ISPCRT_EVENT_POOL_COMPUTE)
+                : m_context(context), m_device(device) {
         // Get device timestamp resolution
         ze_device_properties_t device_properties;
         L0_SAFE_CALL(zeDeviceGetProperties(m_device, &device_properties));
         m_timestampFreq = device_properties.timerResolution;
         m_timestampMaxValue = ~(-1 << device_properties.kernelTimestampValidBits);
         // Create pool
-
-        // User can set a lower limit for the pool size, which in fact limits
-        // the number of possible kernel launches. To make it more clear for the user,
-        // the variable is named ISPCRT_MAX_KERNEL_LAUNCHES
-        constexpr const char* POOL_SIZE_ENV_NAME = "ISPCRT_MAX_KERNEL_LAUNCHES";
         auto poolSize = POOL_SIZE_CAP;
-    #if defined(_WIN32) || defined(_WIN64)
-        char* poolSizeEnv = nullptr;
-        size_t poolSizeEnvSz = 0;
-        _dupenv_s(&poolSizeEnv, &poolSizeEnvSz, POOL_SIZE_ENV_NAME);
-    #else
-        const char *poolSizeEnv = getenv(POOL_SIZE_ENV_NAME);
-    #endif
-        if (poolSizeEnv) {
-            std::istringstream(poolSizeEnv) >> poolSize;
+        // For compute event pool check if ISPCRT_MAX_KERNEL_LAUNCHES is set
+        if (type == ISPCRTEventPoolType::ISPCRT_EVENT_POOL_COMPUTE) {
+            // User can set a lower limit for the pool size, which in fact limits
+            // the number of possible kernel launches. To make it more clear for the user,
+            // the variable is named ISPCRT_MAX_KERNEL_LAUNCHES
+            constexpr const char* POOL_SIZE_ENV_NAME = "ISPCRT_MAX_KERNEL_LAUNCHES";
+        #if defined(_WIN32) || defined(_WIN64)
+            char* poolSizeEnv = nullptr;
+            size_t poolSizeEnvSz = 0;
+            _dupenv_s(&poolSizeEnv, &poolSizeEnvSz, POOL_SIZE_ENV_NAME);
+        #else
+            const char *poolSizeEnv = getenv(POOL_SIZE_ENV_NAME);
+        #endif
+            if (poolSizeEnv) {
+                std::istringstream(poolSizeEnv) >> poolSize;
+            }
+            if (poolSize > POOL_SIZE_CAP) {
+                m_poolSize = POOL_SIZE_CAP;
+                std::cerr << "[ISPCRT][WARNING] " << POOL_SIZE_ENV_NAME << " value too large, using " << POOL_SIZE_CAP << " instead." << std::endl;
+            } else {
+                m_poolSize = poolSize;
+            }
         }
-        if (poolSize > POOL_SIZE_CAP) {
-            m_poolSize = POOL_SIZE_CAP;
-            std::cerr << "[ISPCRT][WARNING] " << POOL_SIZE_ENV_NAME << " value too large, using " << POOL_SIZE_CAP << " instead." << std::endl;
-        } else {
+        else {
             m_poolSize = poolSize;
         }
-
         ze_event_pool_desc_t eventPoolDesc = {};
         eventPoolDesc.count = m_poolSize;
         eventPoolDesc.flags = (ze_event_pool_flag_t)(ZE_EVENT_POOL_FLAG_KERNEL_TIMESTAMP | ZE_EVENT_POOL_FLAG_HOST_VISIBLE);
@@ -518,7 +529,8 @@ struct Kernel : public ispcrt::base::Kernel {
 };
 
 struct TaskQueue : public ispcrt::base::TaskQueue {
-    TaskQueue(ze_device_handle_t device, ze_context_handle_t context) : m_ep(context, device) {
+    TaskQueue(ze_device_handle_t device, ze_context_handle_t context) : m_ep_compute(context, device, ISPCRT_EVENT_POOL_COMPUTE), 
+                                                                        m_ep_copy(context, device, ISPCRT_EVENT_POOL_COPY) {
         ze_command_list_desc_t commandListDesc = {};
         L0_SAFE_CALL(zeCommandListCreate(context, device, &commandListDesc, &m_cl));
         if (m_cl == nullptr)
@@ -538,29 +550,44 @@ struct TaskQueue : public ispcrt::base::TaskQueue {
         if (m_cl)
             L0_SAFE_CALL_NOEXCEPT(zeCommandListDestroy(m_cl));
         // Clean up any events that could be in the queue
-        for (const auto &p : m_events) {
+        for (const auto &p : m_events_compute_list) {
             auto e = p.first;
             auto f = p.second;
             // Any commands associated with this future will never
             // be executed so we mark the future as not valid
             f->m_valid = false;
             f->refDec();
-            m_ep.deleteEvent(e);
+            m_ep_compute.deleteEvent(e);
         }
-        m_events.clear();
+        for (const auto &p : m_events_copy_list) {
+            m_ep_copy.deleteEvent(p);
+        }
+
+        m_events_compute_list.clear();
+        m_events_copy_list.clear();
     }
 
     void barrier() override { L0_SAFE_CALL(zeCommandListAppendBarrier(m_cl, nullptr, 0, nullptr)); }
 
     void copyToHost(ispcrt::base::MemoryView &mv) override {
         auto &view = (gpu::MemoryView &)mv;
-        L0_SAFE_CALL(zeCommandListAppendMemoryCopy(m_cl, view.hostPtr(), view.devicePtr(), view.numBytes(), nullptr, 0,
-                                                   nullptr));
+        // Form a vector of compute events which should complete before copying memory to host
+        std::vector<ze_event_handle_t> waitEvents;
+        for (const auto &ev : m_events_compute_list) {
+            waitEvents.push_back(ev.first->handle());
+        }
+        L0_SAFE_CALL(zeCommandListAppendMemoryCopy(m_cl, view.hostPtr(), view.devicePtr(), view.numBytes(), nullptr, waitEvents.size(),
+                                                   waitEvents.data()));
     }
 
     void copyToDevice(ispcrt::base::MemoryView &mv) override {
         auto &view = (gpu::MemoryView &)mv;
-        L0_SAFE_CALL(zeCommandListAppendMemoryCopy(m_cl, view.devicePtr(), view.hostPtr(), view.numBytes(), nullptr, 0,
+        // Create event which will signal when memory copy is completed and add it to the m_events_copy_list
+        auto copyEvent = m_ep_copy.createEvent();
+        if (copyEvent == nullptr)
+            throw std::runtime_error("Failed to create event to sync memory copy!");
+        m_events_copy_list.push_back(copyEvent);
+        L0_SAFE_CALL(zeCommandListAppendMemoryCopy(m_cl, view.devicePtr(), view.hostPtr(), view.numBytes(), copyEvent->handle(), 0,
                                                    nullptr));
     }
 
@@ -578,21 +605,27 @@ struct TaskQueue : public ispcrt::base::TaskQueue {
         }
 
         ze_group_count_t dispatchTraits = {uint32_t(dim0), uint32_t(dim1), uint32_t(dim2)};
-        auto event = m_ep.createEvent();
+        auto event = m_ep_compute.createEvent();
         if (event == nullptr)
             throw std::runtime_error("Failed to create event!");
+        // Form a list of L0 copy events
+        std::vector<ze_event_handle_t> waitEvents;
+        for (const auto &ev : m_events_copy_list) {
+            waitEvents.push_back(ev->handle());
+        }
         try {
+            // Wait for L0 copy events before launching the kernel
             L0_SAFE_CALL(
-                zeCommandListAppendLaunchKernel(m_cl, kernel.handle(), &dispatchTraits, event->handle(), 0, nullptr));
+                zeCommandListAppendLaunchKernel(m_cl, kernel.handle(), &dispatchTraits, event->handle(), waitEvents.size(), waitEvents.data()));
         } catch (ispcrt::base::ispcrt_runtime_error &e) {
             // cleanup and rethrow
-            m_ep.deleteEvent(event);
+            m_ep_compute.deleteEvent(event);
             throw e;
         }
 
         auto *future = new gpu::Future;
         assert(future);
-        m_events.push_back(std::make_pair(event, future));
+        m_events_compute_list.push_back(std::make_pair(event, future));
 
         return future;
     }
@@ -611,7 +644,7 @@ struct TaskQueue : public ispcrt::base::TaskQueue {
         L0_SAFE_CALL(zeCommandQueueSynchronize(m_q, std::numeric_limits<uint64_t>::max()));
         L0_SAFE_CALL(zeCommandListReset(m_cl));
         // Update future objects corresponding to the events that have just completed
-        for (const auto &p : m_events) {
+        for (const auto &p : m_events_compute_list) {
             auto e = p.first;
             auto f = p.second;
             ze_kernel_timestamp_result_t tsResult;
@@ -620,14 +653,18 @@ struct TaskQueue : public ispcrt::base::TaskQueue {
                 f->m_time = (tsResult.context.kernelEnd - tsResult.context.kernelStart);
             } else {
                 f->m_time =
-                    ((m_ep.getTimestampMaxValue() - tsResult.context.kernelStart) + tsResult.context.kernelEnd + 1);
+                    ((m_ep_compute.getTimestampMaxValue() - tsResult.context.kernelStart) + tsResult.context.kernelEnd + 1);
             }
-            f->m_time *= m_ep.getTimestampRes();
+            f->m_time *= m_ep_compute.getTimestampRes();
             f->m_valid = true;
             f->refDec();
-            m_ep.deleteEvent(e);
+            m_ep_compute.deleteEvent(e);
         }
-        m_events.clear();
+        for (const auto &ev : m_events_copy_list) {
+            m_ep_copy.deleteEvent(ev);
+        }
+        m_events_compute_list.clear();
+        m_events_copy_list.clear();
         m_submitted = false;
     }
 
@@ -639,8 +676,9 @@ struct TaskQueue : public ispcrt::base::TaskQueue {
     ze_command_queue_handle_t m_q{nullptr};
     ze_command_list_handle_t m_cl{nullptr};
     bool  m_submitted{false};
-    EventPool m_ep;
-    std::vector<std::pair<Event *, Future *>> m_events;
+    EventPool m_ep_compute, m_ep_copy;
+    std::vector<std::pair<Event *, Future *>> m_events_compute_list;
+    std::vector<Event*> m_events_copy_list;
 };
 
 
