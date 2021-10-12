@@ -163,14 +163,10 @@ static int run() {
         for (unsigned int i = 0; i < niterations; i++) {
             memset((void *)fimg, 0, sizeof(float) * width * height * 3);
             ispcrtCopyToDevice(queue, p_dev);
-            ispcrtDeviceBarrier(queue);
-            ispcrtSync(queue);
             reset_and_start_timer();
             auto res = ispcrtLaunch2D(queue, kernel, p_dev, height * width / 16, 1);
             ispcrtRetain(res);
-            ispcrtDeviceBarrier(queue);
             ispcrtCopyToHost(queue, buf_dev);
-            ispcrtDeviceBarrier(queue);
             ispcrtSync(queue);
 
             if (ispcrtFutureIsValid(res)) {

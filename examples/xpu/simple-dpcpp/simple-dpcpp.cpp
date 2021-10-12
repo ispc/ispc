@@ -75,21 +75,12 @@ std::vector<float> DpcppApp::transformIspc(std::vector<float> &in) {
     m_queue.copyToDevice(p_dev);
     m_queue.copyToDevice(in_dev);
 
-    // Make sure that input arrays were copied
-    m_queue.barrier();
-
     // Launch the kernel on the device using 1 thread
     m_queue.launch(m_kernel, p_dev, 1);
-
-    // Make sure that execution completed
-    m_queue.barrier();
 
     // ispcrt::Array objects which used as outputs of ISPC kernel should be
     // explicitly copied to host from device
     m_queue.copyToHost(out_dev);
-
-    // Make sure that input arrays were copied
-    m_queue.barrier();
 
     // Execute queue and sync
     m_queue.sync();

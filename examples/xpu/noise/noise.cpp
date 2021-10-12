@@ -117,11 +117,8 @@ static int run(int niter, int gx, int gy) {
         for (unsigned int i = 0; i < niter; i++) {
             reset_and_start_timer();
             queue.copyToDevice(p_dev);
-            queue.barrier();
             auto res = queue.launch(kernel, p_dev, gx, gy);
-            queue.barrier();
             queue.copyToHost(buf_dev);
-            queue.barrier();
             queue.sync();
             if (res.valid()) {
                 kernelTicks = res.time() * 1e-6;

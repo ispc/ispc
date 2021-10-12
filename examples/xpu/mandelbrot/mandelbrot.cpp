@@ -131,13 +131,8 @@ static int run(unsigned int width, unsigned int height, unsigned int test_iterat
         for (unsigned int i = 0; i < test_iterations[0]; ++i) {
             reset_and_start_timer();
             queue.copyToDevice(p_dev);
-            queue.barrier();
-            queue.submit();
-            queue.sync();
             auto res = queue.launch(kernel, p_dev, width / p.tile_size, height / p.tile_size);
-            queue.barrier();
             queue.copyToHost(buf_dev);
-            queue.barrier();
             queue.sync();
             if (res.valid()) {
                 kernelTicks = res.time() * 1e-6;
