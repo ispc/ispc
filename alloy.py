@@ -173,7 +173,7 @@ def get_llvm_disable_assertions_switch(llvm_disable_assertions):
     else:
         return "  -DLLVM_ENABLE_ASSERTIONS=ON"
 
-def build_LLVM(version_LLVM, folder, tarball, debug, selfbuild, extra, from_validation, force, make, gcc_toolchain_path, llvm_disable_assertions, verbose):
+def build_LLVM(version_LLVM, folder, debug, selfbuild, extra, from_validation, force, make, gcc_toolchain_path, llvm_disable_assertions, verbose):
     print_debug("Building LLVM. Version: " + version_LLVM + ".\n", from_validation, alloy_build)
     # Here we understand what and where do we want to build
     current_path = os.getcwd()
@@ -226,42 +226,29 @@ def build_LLVM(version_LLVM, folder, tarball, debug, selfbuild, extra, from_vali
     print_debug("Using folders: " + LLVM_SRC + " " + LLVM_BUILD + " " + LLVM_BIN + " in " +
         llvm_home + "\n", from_validation, alloy_build)
     # load llvm
-    llvm_enable_projects = ""
-    if tarball == "":
-        checkout_LLVM("llvm", version_LLVM, LLVM_SRC, from_validation, verbose)
-        llvm_enable_projects = "  -DLLVM_ENABLE_PROJECTS=\"clang"
-        if current_OS == "MacOS" and int(current_OS_version.split(".")[0]) >= 13:
-            # Starting with MacOS 10.9 Maverics, the system doesn't contain headers for standard C++ library and
-            # the default library is libc++, bit libstdc++. The headers are part of XCode now. But we are checking out
-            # headers as part of LLVM source tree, so they will be installed in clang location and clang will be able
-            # to find them. Though they may not match to the library installed in the system, but seems that this should
-            # not happen.
-            # Note, that we can also build a libc++ library, but it must be on system default location or should be passed
-            # to the linker explicitly (either through command line or environment variables). So we are not doing it
-            # currently to make the build process easier.
+    checkout_LLVM("llvm", version_LLVM, LLVM_SRC, from_validation, verbose)
+    llvm_enable_projects = " -DLLVM_ENABLE_PROJECTS=\"clang"
+    if current_OS == "MacOS" and int(current_OS_version.split(".")[0]) >= 13:
+        # Starting with MacOS 10.9 Maverics, the system doesn't contain headers for standard C++ library and
+        # the default library is libc++, bit libstdc++. The headers are part of XCode now. But we are checking out
+        # headers as part of LLVM source tree, so they will be installed in clang location and clang will be able
+        # to find them. Though they may not match to the library installed in the system, but seems that this should
+        # not happen.
+        # Note, that we can also build a libc++ library, but it must be on system default location or should be passed
+        # to the linker explicitly (either through command line or environment variables). So we are not doing it
+        # currently to make the build process easier.
 
-            # We either need to explicitly opt-out from using libcxxabi from this repo, or build and use it,
-            # otherwise a build error will occure (attempt to use just built libcxxabi, which was not built).
-            # An option to build seems to be a better one.
-            llvm_enable_projects +=";libcxx;libcxxabi"
-        if current_OS == "Linux":
-            # OpenMP is needed for Xe enabled builds.
-            # Starting from Ubuntu 20.04 libomp-dev package doesn't install omp.h to default location.
-            llvm_enable_projects +=";openmp"
-        if extra == True:
-            llvm_enable_projects +=";compiler-rt;clang-tools-extra"
-    else:
-        tar = tarball.split(" ")
-        os.makedirs(LLVM_SRC)
-        os.chdir(LLVM_SRC)
-        try_do_LLVM("untar LLVM from " + tar[0] + " ",
-                    "tar -xvzf " + tar[0] + " --strip-components 1", from_validation, verbose)
-        os.chdir("./tools")
-        os.makedirs("clang")
-        os.chdir("./clang")
-        try_do_LLVM("untar clang from " + tar[1] + " ",
-                    "tar -xvzf " + tar[1] + " --strip-components 1", from_validation, verbose)
-        os.chdir("../../")
+        # We either need to explicitly opt-out from using libcxxabi from this repo, or build and use it,
+        # otherwise a build error will occure (attempt to use just built libcxxabi, which was not built).
+        # An option to build seems to be a better one.
+        llvm_enable_projects +=";libcxx;libcxxabi"
+    if current_OS == "Linux":
+        # OpenMP is needed for Xe enabled builds.
+        # Starting from Ubuntu 20.04 libomp-dev package doesn't install omp.h to default location.
+        llvm_enable_projects +=";openmp"
+    if extra == True:
+        llvm_enable_projects +=";compiler-rt;clang-tools-extra"
+
     # paching llvm
     llvm_enable_projects += "\""
     os.chdir(LLVM_SRC)
@@ -878,8 +865,8 @@ def Main():
             if not (" " + iterator + " " in test_only_r):
                 alloy_error("unknown option for only: " + iterator, 1)
     if current_OS == "Windows":
-        if options.selfbuild == True or options.tarball != "":
-            alloy_error("Selfbuild and tarball options are unsupported on windows", 1)
+        if options.selfbuild == True:
+            alloy_error("Selfbuild is not supported on Windows", 1)
     global f_date
     f_date = "logs"
     common.remove_if_exists(f_date)
@@ -909,7 +896,7 @@ def Main():
     try:
         start_time = time.time()
         if options.build_llvm:
-            build_LLVM(options.version, options.folder, options.tarball,
+            build_LLVM(options.version, options.folder,
                     options.debug, options.selfbuild, options.extra, False, options.force, make, options.gcc_toolchain_path, options.llvm_disable_assertions, options.verbose)
         if options.validation_run:
             validation_run(options.only, options.only_targets, options.branch,
@@ -975,9 +962,8 @@ if __name__ == '__main__':
         def format_epilog(self, formatter):
             return self.epilog
     examples =  ("Examples:\n" +
-    "Download and build LLVM from trunk\n\talloy.py -b\n" +
-    "Download and build LLVM 8.0. Rewrite LLVM folders\n\talloy.py -b --version=8.0 --force\n" +
-    "Untar files llvm.tgz clang.tgz, build LLVM from them in folder bin-from_tar\n\talloy.py -b --tarball='llvm.tgz clang.tgz' --folder=from_tar\n" +
+    "Download and build LLVM trunk\n\talloy.py -b\n" +
+    "Download and build LLVM 13.0. Rewrite LLVM folders\n\talloy.py -b --version=13.0 --force\n" +
     "Validation run with LLVM trunk; x86, x86-64; -O2;\nall supported targets; performance\n\talloy.py -r\n" +
     "Validation run with all avx targets and sse4-i8x16 without performance\n\talloy.py -r --only=stability --only-targets='avx sse4-i8x16'\n" +
     "Validation run with avx2-i32x8, all sse4 and sse2 targets\nand all targets with i32x16\n\talloy.py -r --only-targets='avx2-i32x8 sse4 i32x16 sse2'\n" +
@@ -1010,8 +996,6 @@ if __name__ == '__main__':
         help='debug build of LLVM', default=False, action="store_true")
     llvm_group.add_option('--folder', dest='folder',
         help='folder to build LLVM in', default="")
-    llvm_group.add_option('--tarball', dest='tarball',
-        help='"llvm_tarball clang_tarball"', default="")
     llvm_group.add_option('--selfbuild', dest='selfbuild',
         help='make selfbuild of LLVM and clang', default=False, action="store_true")
     llvm_group.add_option('--llvm-disable-assertions', dest='llvm_disable_assertions',
