@@ -176,9 +176,7 @@ static const std::string getIspcrtErrorMessage(ze_result_t err) {
     }
 
 #define L0_SAFE_CALL(call)                                                                                             \
-    {                                                                                                                  \
-        L0_THROW_IF((call))                                                                                            \
-    }
+    { L0_THROW_IF((call)) }
 
 #define L0_SAFE_CALL_NOEXCEPT(call)                                                                                    \
     {                                                                                                                  \
@@ -238,17 +236,14 @@ struct Event {
     uint32_t m_index{0};
 };
 
-typedef enum {
-    ISPCRT_EVENT_POOL_COMPUTE,
-    ISPCRT_EVENT_POOL_COPY
-} ISPCRTEventPoolType;
+typedef enum { ISPCRT_EVENT_POOL_COMPUTE, ISPCRT_EVENT_POOL_COPY } ISPCRTEventPoolType;
 
 struct EventPool {
     constexpr static uint32_t POOL_SIZE_CAP = 100000;
 
-    EventPool(ze_context_handle_t context, ze_device_handle_t device, 
+    EventPool(ze_context_handle_t context, ze_device_handle_t device,
               ISPCRTEventPoolType type = ISPCRTEventPoolType::ISPCRT_EVENT_POOL_COMPUTE)
-                : m_context(context), m_device(device) {
+        : m_context(context), m_device(device) {
         // Get device timestamp resolution
         ze_device_properties_t device_properties;
         L0_SAFE_CALL(zeDeviceGetProperties(m_device, &device_properties));
@@ -261,30 +256,31 @@ struct EventPool {
             // User can set a lower limit for the pool size, which in fact limits
             // the number of possible kernel launches. To make it more clear for the user,
             // the variable is named ISPCRT_MAX_KERNEL_LAUNCHES
-            constexpr const char* POOL_SIZE_ENV_NAME = "ISPCRT_MAX_KERNEL_LAUNCHES";
-        #if defined(_WIN32) || defined(_WIN64)
-            char* poolSizeEnv = nullptr;
+            constexpr const char *POOL_SIZE_ENV_NAME = "ISPCRT_MAX_KERNEL_LAUNCHES";
+#if defined(_WIN32) || defined(_WIN64)
+            char *poolSizeEnv = nullptr;
             size_t poolSizeEnvSz = 0;
             _dupenv_s(&poolSizeEnv, &poolSizeEnvSz, POOL_SIZE_ENV_NAME);
-        #else
+#else
             const char *poolSizeEnv = getenv(POOL_SIZE_ENV_NAME);
-        #endif
+#endif
             if (poolSizeEnv) {
                 std::istringstream(poolSizeEnv) >> poolSize;
             }
             if (poolSize > POOL_SIZE_CAP) {
                 m_poolSize = POOL_SIZE_CAP;
-                std::cerr << "[ISPCRT][WARNING] " << POOL_SIZE_ENV_NAME << " value too large, using " << POOL_SIZE_CAP << " instead." << std::endl;
+                std::cerr << "[ISPCRT][WARNING] " << POOL_SIZE_ENV_NAME << " value too large, using " << POOL_SIZE_CAP
+                          << " instead." << std::endl;
             } else {
                 m_poolSize = poolSize;
             }
-        }
-        else {
+        } else {
             m_poolSize = poolSize;
         }
         ze_event_pool_desc_t eventPoolDesc = {};
         eventPoolDesc.count = m_poolSize;
-        eventPoolDesc.flags = (ze_event_pool_flag_t)(ZE_EVENT_POOL_FLAG_KERNEL_TIMESTAMP | ZE_EVENT_POOL_FLAG_HOST_VISIBLE);
+        eventPoolDesc.flags =
+            (ze_event_pool_flag_t)(ZE_EVENT_POOL_FLAG_KERNEL_TIMESTAMP | ZE_EVENT_POOL_FLAG_HOST_VISIBLE);
         L0_SAFE_CALL(zeEventPoolCreate(m_context, &eventPoolDesc, 1, &m_device, &m_pool));
         if (!m_pool) {
             std::stringstream ss;
@@ -346,9 +342,7 @@ struct MemoryView : public ispcrt::base::MemoryView {
 
     bool isShared() { return m_shared; }
 
-    void *hostPtr() {
-        return m_shared ? devicePtr() : m_hostPtr;
-    };
+    void *hostPtr() { return m_shared ? devicePtr() : m_hostPtr; };
 
     void *devicePtr() {
         if (!m_devicePtr)
@@ -364,8 +358,8 @@ struct MemoryView : public ispcrt::base::MemoryView {
         if (m_shared) {
             ze_device_mem_alloc_desc_t device_alloc_desc = {};
             ze_host_mem_alloc_desc_t host_alloc_desc = {};
-            status = zeMemAllocShared(m_context, &device_alloc_desc, &host_alloc_desc,
-                                      m_size, 64, m_device, &m_devicePtr);
+            status =
+                zeMemAllocShared(m_context, &device_alloc_desc, &host_alloc_desc, m_size, 64, m_device, &m_devicePtr);
         } else {
             ze_device_mem_alloc_desc_t allocDesc = {};
             status = zeMemAllocDevice(m_context, &allocDesc, m_size, m_size, m_device, &m_devicePtr);
@@ -384,16 +378,16 @@ struct MemoryView : public ispcrt::base::MemoryView {
     ze_context_handle_t m_context{nullptr};
 };
 
-
 struct Module : public ispcrt::base::Module {
-    Module(ze_device_handle_t device, ze_context_handle_t context, const char *moduleFile, const bool is_mock_dev, const ISPCRTModuleOptions &opts)
-                : m_file(moduleFile) {
+    Module(ze_device_handle_t device, ze_context_handle_t context, const char *moduleFile, const bool is_mock_dev,
+           const ISPCRTModuleOptions &opts)
+        : m_file(moduleFile) {
         std::ifstream is;
         ze_module_format_t moduleFormat = ZE_MODULE_FORMAT_IL_SPIRV;
         // Try to open spv file by default if ISPCRT_USE_ZEBIN is not set.
         // TODO: change default to zebin when it gets more mature
 #if defined(_WIN32) || defined(_WIN64)
-        char* userZEBinFormatEnv = nullptr;
+        char *userZEBinFormatEnv = nullptr;
         size_t userZEBinFormatEnvSz = 0;
         _dupenv_s(&userZEBinFormatEnv, &userZEBinFormatEnvSz, "ISPCRT_USE_ZEBIN");
 #else
@@ -442,7 +436,7 @@ struct Module : public ispcrt::base::Module {
         }
         constexpr auto MAX_ISPCRT_IGC_OPTIONS = 2000UL;
 #if defined(_WIN32) || defined(_WIN64)
-        char* userIgcOptionsEnv = nullptr;
+        char *userIgcOptionsEnv = nullptr;
         size_t userIgcOptionsEnvSz = 0;
         _dupenv_s(&userIgcOptionsEnv, &userIgcOptionsEnvSz, "ISPCRT_IGC_OPTIONS");
 #else
@@ -529,8 +523,8 @@ struct Kernel : public ispcrt::base::Kernel {
 };
 
 struct TaskQueue : public ispcrt::base::TaskQueue {
-    TaskQueue(ze_device_handle_t device, ze_context_handle_t context) : m_ep_compute(context, device, ISPCRT_EVENT_POOL_COMPUTE), 
-                                                                        m_ep_copy(context, device, ISPCRT_EVENT_POOL_COPY) {
+    TaskQueue(ze_device_handle_t device, ze_context_handle_t context)
+        : m_ep_compute(context, device, ISPCRT_EVENT_POOL_COMPUTE), m_ep_copy(context, device, ISPCRT_EVENT_POOL_COPY) {
         ze_command_list_desc_t commandListDesc = {};
         L0_SAFE_CALL(zeCommandListCreate(context, device, &commandListDesc, &m_cl));
         if (m_cl == nullptr)
@@ -576,8 +570,8 @@ struct TaskQueue : public ispcrt::base::TaskQueue {
         for (const auto &ev : m_events_compute_list) {
             waitEvents.push_back(ev.first->handle());
         }
-        L0_SAFE_CALL(zeCommandListAppendMemoryCopy(m_cl, view.hostPtr(), view.devicePtr(), view.numBytes(), nullptr, waitEvents.size(),
-                                                   waitEvents.data()));
+        L0_SAFE_CALL(zeCommandListAppendMemoryCopy(m_cl, view.hostPtr(), view.devicePtr(), view.numBytes(), nullptr,
+                                                   waitEvents.size(), waitEvents.data()));
     }
 
     void copyToDevice(ispcrt::base::MemoryView &mv) override {
@@ -587,8 +581,8 @@ struct TaskQueue : public ispcrt::base::TaskQueue {
         if (copyEvent == nullptr)
             throw std::runtime_error("Failed to create event to sync memory copy!");
         m_events_copy_list.push_back(copyEvent);
-        L0_SAFE_CALL(zeCommandListAppendMemoryCopy(m_cl, view.devicePtr(), view.hostPtr(), view.numBytes(), copyEvent->handle(), 0,
-                                                   nullptr));
+        L0_SAFE_CALL(zeCommandListAppendMemoryCopy(m_cl, view.devicePtr(), view.hostPtr(), view.numBytes(),
+                                                   copyEvent->handle(), 0, nullptr));
     }
 
     ispcrt::base::Future *launch(ispcrt::base::Kernel &k, ispcrt::base::MemoryView *params, size_t dim0, size_t dim1,
@@ -615,8 +609,8 @@ struct TaskQueue : public ispcrt::base::TaskQueue {
         }
         try {
             // Wait for L0 copy events before launching the kernel
-            L0_SAFE_CALL(
-                zeCommandListAppendLaunchKernel(m_cl, kernel.handle(), &dispatchTraits, event->handle(), waitEvents.size(), waitEvents.data()));
+            L0_SAFE_CALL(zeCommandListAppendLaunchKernel(m_cl, kernel.handle(), &dispatchTraits, event->handle(),
+                                                         waitEvents.size(), waitEvents.data()));
         } catch (ispcrt::base::ispcrt_runtime_error &e) {
             // cleanup and rethrow
             m_ep_compute.deleteEvent(event);
@@ -652,8 +646,8 @@ struct TaskQueue : public ispcrt::base::TaskQueue {
             if (tsResult.context.kernelEnd >= tsResult.context.kernelStart) {
                 f->m_time = (tsResult.context.kernelEnd - tsResult.context.kernelStart);
             } else {
-                f->m_time =
-                    ((m_ep_compute.getTimestampMaxValue() - tsResult.context.kernelStart) + tsResult.context.kernelEnd + 1);
+                f->m_time = ((m_ep_compute.getTimestampMaxValue() - tsResult.context.kernelStart) +
+                             tsResult.context.kernelEnd + 1);
             }
             f->m_time *= m_ep_compute.getTimestampRes();
             f->m_valid = true;
@@ -668,19 +662,16 @@ struct TaskQueue : public ispcrt::base::TaskQueue {
         m_submitted = false;
     }
 
-    void* taskQueueNativeHandle() const override {
-        return m_q;
-    }
+    void *taskQueueNativeHandle() const override { return m_q; }
 
   private:
     ze_command_queue_handle_t m_q{nullptr};
     ze_command_list_handle_t m_cl{nullptr};
-    bool  m_submitted{false};
+    bool m_submitted{false};
     EventPool m_ep_compute, m_ep_copy;
     std::vector<std::pair<Event *, Future *>> m_events_compute_list;
-    std::vector<Event*> m_events_copy_list;
+    std::vector<Event *> m_events_copy_list;
 };
-
 
 // limitation: we assume that there'll be only one driver
 // for Intel devices
@@ -690,7 +681,7 @@ static ze_driver_handle_t deviceDiscovery(bool *p_is_mock) {
     static ze_driver_handle_t selectedDriver = nullptr;
     bool is_mock = false;
 #if defined(_WIN32) || defined(_WIN64)
-    char* is_mock_s = nullptr;
+    char *is_mock_s = nullptr;
     size_t is_mock_sz = 0;
     _dupenv_s(&is_mock_s, &is_mock_sz, "ISPCRT_MOCK_DEVICE");
     is_mock = is_mock_s != nullptr;
@@ -759,7 +750,6 @@ ISPCRTDeviceInfo deviceInfo(uint32_t deviceIdx) {
 
 } // namespace gpu
 
-
 // Use the first available device by default for now.
 // Later we may do something more sophisticated (e.g. use the one
 // with most FLOPs or have some kind of load balancing)
@@ -771,7 +761,7 @@ GPUDevice::GPUDevice(uint32_t deviceIdx) {
     // By default first available device is selected
     auto gpuDeviceToGrab = deviceIdx;
 #if defined(_WIN32) || defined(_WIN64)
-    char* gpuDeviceEnv = nullptr;
+    char *gpuDeviceEnv = nullptr;
     size_t gpuDeviceEnvSz = 0;
     _dupenv_s(&gpuDeviceEnv, &gpuDeviceEnvSz, "ISPCRT_GPU_DEVICE");
 #else
@@ -817,16 +807,10 @@ base::Kernel *GPUDevice::newKernel(const base::Module &module, const char *name)
     return new gpu::Kernel(module, name);
 }
 
-void *GPUDevice::platformNativeHandle() const {
-    return m_driver;
-}
+void *GPUDevice::platformNativeHandle() const { return m_driver; }
 
-void *GPUDevice::deviceNativeHandle() const {
-    return m_device;
-}
+void *GPUDevice::deviceNativeHandle() const { return m_device; }
 
-void *GPUDevice::contextNativeHandle() const {
-    return m_context;
-}
+void *GPUDevice::contextNativeHandle() const { return m_context; }
 
 } // namespace ispcrt
