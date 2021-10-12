@@ -219,6 +219,23 @@ struct Event {
 
     uint32_t index() { return m_index; }
 
+    void resetEvent() { L0_SAFE_CALL(zeEventHostReset(m_handle)); }
+
+    bool isReady() {
+        ze_result_t eventStatus = zeEventQueryStatus(m_handle);
+        // Event completed
+        if (eventStatus == ZE_RESULT_SUCCESS) {
+            return true;
+        }
+        return false;
+    }
+
+    bool isActive() { return m_in_use; }
+
+    void setActive() { m_in_use = true; }
+
+    void setFree() { m_in_use = false; }
+
   private:
     void create() {
         ze_event_desc_t eventDesc = {};
@@ -234,6 +251,9 @@ struct Event {
     ze_event_handle_t m_handle{nullptr};
     ze_event_pool_handle_t m_pool{nullptr};
     uint32_t m_index{0};
+    // This property tracks if event is "active" and should be used as
+    // dependency for kernel launches.
+    bool m_in_use{false};
 };
 
 typedef enum { ISPCRT_EVENT_POOL_COMPUTE, ISPCRT_EVENT_POOL_COPY } ISPCRTEventPoolType;
@@ -577,10 +597,26 @@ struct TaskQueue : public ispcrt::base::TaskQueue {
     void copyToDevice(ispcrt::base::MemoryView &mv) override {
         auto &view = (gpu::MemoryView &)mv;
         // Create event which will signal when memory copy is completed and add it to the m_events_copy_list
-        auto copyEvent = m_ep_copy.createEvent();
-        if (copyEvent == nullptr)
-            throw std::runtime_error("Failed to create event to sync memory copy!");
-        m_events_copy_list.push_back(copyEvent);
+        Event *copyEvent = nullptr;
+        if (m_events_copy_list.size() > 0) {
+            for (const auto &ev : m_events_copy_list) {
+                // If event is completed, reuse it
+                if (ev->isReady()) {
+                    copyEvent = ev;
+                    copyEvent->resetEvent();
+                    copyEvent->setActive();
+                    break;
+                }
+            }
+        }
+        if (copyEvent == nullptr) {
+            copyEvent = m_ep_copy.createEvent();
+            if (copyEvent == nullptr)
+                throw std::runtime_error("Failed to create event to sync memory copy!");
+            copyEvent->setActive();
+            m_events_copy_list.push_back(copyEvent);
+        }
+
         L0_SAFE_CALL(zeCommandListAppendMemoryCopy(m_cl, view.devicePtr(), view.hostPtr(), view.numBytes(),
                                                    copyEvent->handle(), 0, nullptr));
     }
@@ -602,10 +638,13 @@ struct TaskQueue : public ispcrt::base::TaskQueue {
         auto event = m_ep_compute.createEvent();
         if (event == nullptr)
             throw std::runtime_error("Failed to create event!");
-        // Form a list of L0 copy events
+        // Form a list of L0 copy events currently active to set as
+        // dependencies for kernel launch
         std::vector<ze_event_handle_t> waitEvents;
         for (const auto &ev : m_events_copy_list) {
-            waitEvents.push_back(ev->handle());
+            if (ev->isActive()) {
+                waitEvents.push_back(ev->handle());
+            }
         }
         try {
             // Wait for L0 copy events before launching the kernel
@@ -654,12 +693,14 @@ struct TaskQueue : public ispcrt::base::TaskQueue {
             f->refDec();
             m_ep_compute.deleteEvent(e);
         }
-        for (const auto &ev : m_events_copy_list) {
-            m_ep_copy.deleteEvent(ev);
-        }
+
         m_events_compute_list.clear();
-        m_events_copy_list.clear();
         m_submitted = false;
+
+        // Mark events in the list to be reused
+        for (const auto &ev : m_events_copy_list) {
+            ev->setFree();
+        }
     }
 
     void *taskQueueNativeHandle() const override { return m_q; }
