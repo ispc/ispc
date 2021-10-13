@@ -34,8 +34,19 @@
 # // Author: Filippov Ilia
 
 from collections import OrderedDict
+from enum import Enum, auto
 import re
 import traceback
+
+class SelfbuildType(Enum):
+    # not a selfbuild
+    SINGLE = auto()
+    # complete selfbuild
+    SELF = auto()
+    # first phase of selfbuild only
+    SELF_PHASE1 = auto()
+    # second phase of selfbuild only
+    SELF_PHASE2 = auto()
 
 def alloy_error(line, error_type = 1):
     global return_status
@@ -176,9 +187,17 @@ def build_LLVM(version_LLVM, folder, debug, selfbuild, extra, from_validation, f
         alloy_error("you have folder " + LLVM_BIN + ".\nIf you want to rebuild use --force", 1)
     LLVM_BUILD_selfbuild = LLVM_BUILD + "_temp"
     LLVM_BIN_selfbuild = LLVM_BIN + "_temp"
-    common.remove_if_exists(LLVM_SRC)
-    common.remove_if_exists(LLVM_BUILD)
-    common.remove_if_exists(LLVM_BIN)
+
+    # Selfbuild phase2 assumes that directories are already create, for all other cases, create them.
+    if selfbuild is SelfbuildType.SINGLE or selfbuild is SelfbuildType.SELF or selfbuild is SelfbuildType.SELF_PHASE1:
+        common.remove_if_exists(LLVM_SRC)
+        common.remove_if_exists(LLVM_BUILD)
+        common.remove_if_exists(LLVM_BIN)
+    if selfbuild is SelfbuildType.SELF or selfbuild is SelfbuildType.SELF_PHASE1:
+        common.remove_if_exists(LLVM_BUILD_selfbuild)
+        common.remove_if_exists(LLVM_BIN_selfbuild)
+    print_debug("Using folders: " + LLVM_SRC + " " + LLVM_BUILD + " " + LLVM_BIN + " in " +
+        llvm_home + "\n", from_validation, alloy_build)
 
     # Starting from MacOS 10.9 Maverics, C and C++ library headers are part of the SDK, not the OS itself.
     # System root must be specified during the compiler build, so the compiler knows the default location to search for headers.
@@ -200,13 +219,7 @@ def build_LLVM(version_LLVM, folder, debug, selfbuild, extra, from_validation, f
         else:
             alloy_error("Can't find XCode (xcrun tool) - it's required on MacOS 10.9 and newer", 1)
 
-    if selfbuild:
-        common.remove_if_exists(LLVM_BUILD_selfbuild)
-        common.remove_if_exists(LLVM_BIN_selfbuild)
-    print_debug("Using folders: " + LLVM_SRC + " " + LLVM_BUILD + " " + LLVM_BIN + " in " +
-        llvm_home + "\n", from_validation, alloy_build)
-    # load llvm
-    checkout_LLVM("llvm", version_LLVM, LLVM_SRC, from_validation, verbose)
+    # prepare configuration parameters
     llvm_enable_projects = " -DLLVM_ENABLE_PROJECTS=\"clang"
     if current_OS == "MacOS" and int(current_OS_version.split(".")[0]) >= 13:
         # Starting with MacOS 10.9 Maverics, the system doesn't contain headers for standard C++ library and
@@ -228,21 +241,23 @@ def build_LLVM(version_LLVM, folder, debug, selfbuild, extra, from_validation, f
         llvm_enable_projects +=";openmp"
     if extra == True:
         llvm_enable_projects +=";compiler-rt;clang-tools-extra"
-
-    # paching llvm
     llvm_enable_projects += "\""
-    os.chdir(LLVM_SRC)
-    patches = glob.glob(os.environ["ISPC_HOME"] + os.sep + "llvm_patches" + os.sep + "*.*")
-    for patch in patches:
-        if version_LLVM in os.path.basename(patch):
-            try_do_LLVM("patch LLVM with patch " + patch + " ", "git apply " + patch, from_validation, verbose)
-    os.chdir("../")
-    # configuring llvm, build first part of selfbuild
-    os.makedirs(LLVM_BUILD)
-    os.makedirs(LLVM_BIN)
-    selfbuild_compiler = ""
+
+    if selfbuild is SelfbuildType.SINGLE or selfbuild is SelfbuildType.SELF or selfbuild is SelfbuildType.SELF_PHASE1:
+        # clone llvm repo
+        checkout_LLVM("llvm", version_LLVM, LLVM_SRC, from_validation, verbose)
+
+        # patch llvm
+        os.chdir(LLVM_SRC)
+        patches = glob.glob(os.environ["ISPC_HOME"] + os.sep + "llvm_patches" + os.sep + "*.*")
+        for patch in patches:
+            if version_LLVM in os.path.basename(patch):
+                try_do_LLVM("patch LLVM with patch " + patch + " ", "git apply " + patch, from_validation, verbose)
+        os.chdir("../")
+
+    # configuring llvm and build for first phase of selfbuild
     cmakelists_path = LLVM_SRC + "/llvm"
-    if selfbuild:
+    if selfbuild is SelfbuildType.SELF or selfbuild is SelfbuildType.SELF_PHASE1:
         print_debug("Making selfbuild and use folders " + LLVM_BUILD_selfbuild + " and " +
             LLVM_BIN_selfbuild + "\n", from_validation, alloy_build)
         os.makedirs(LLVM_BUILD_selfbuild)
@@ -264,56 +279,62 @@ def build_LLVM(version_LLVM, folder, debug, selfbuild, extra, from_validation, f
                 "  -DLLVM_EXPERIMENTAL_TARGETS_TO_BUILD=WebAssembly" +
                 " ../" + cmakelists_path,
                 from_validation, verbose)
-        selfbuild_compiler = ("  -DCMAKE_C_COMPILER=" +llvm_home+ "/" + LLVM_BIN_selfbuild + "/bin/clang " +
-                              "  -DCMAKE_CXX_COMPILER="+llvm_home+ "/" + LLVM_BIN_selfbuild + "/bin/clang++ ")
-        try_do_LLVM("build release version for selfbuild ",
-                    make, from_validation, verbose)
-        try_do_LLVM("install release version for selfbuild ",
-                    "make install",
-                    from_validation, verbose)
+        try_do_LLVM("build release version for selfbuild ", make, from_validation, verbose)
+        try_do_LLVM("install release version for selfbuild ", "make install", from_validation, verbose)
         os.chdir("../")
 
-        print_debug("Now we have compiler for selfbuild: " + selfbuild_compiler + "\n", from_validation, alloy_build)
-    os.chdir(LLVM_BUILD)
-    build_type = "Release" if debug == False else "Debug"
-    if current_OS != "Windows":
-        try_do_LLVM("configure " + build_type + " version ",
-                "cmake -G " + "\"" + generator + "\"" + " -DCMAKE_EXPORT_COMPILE_COMMANDS=ON" +
-                selfbuild_compiler +
-                "  -DCMAKE_INSTALL_PREFIX=" + llvm_home + "/" + LLVM_BIN +
-                "  -DCMAKE_BUILD_TYPE=" + build_type +
-                llvm_enable_projects +
-                get_llvm_enable_dump_switch(version_LLVM) +
-                get_llvm_disable_assertions_switch(llvm_disable_assertions) +
-                "  -DLLVM_INSTALL_UTILS=ON" +
-                (("  -DGCC_INSTALL_PREFIX=" + gcc_toolchain_path) if gcc_toolchain_path != "" else "") +
-                (("  -DCMAKE_C_COMPILER=" + gcc_toolchain_path+"/bin/gcc") if gcc_toolchain_path != "" and selfbuild_compiler == "" else "") +
-                (("  -DCMAKE_CXX_COMPILER=" + gcc_toolchain_path+"/bin/g++") if gcc_toolchain_path != "" and selfbuild_compiler == "" else "") +
-                (("  -DDEFAULT_SYSROOT=" + mac_system_root) if mac_system_root != "" else "") +
-                "  -DLLVM_TARGETS_TO_BUILD=AArch64\;ARM\;X86" +
-                "  -DLLVM_EXPERIMENTAL_TARGETS_TO_BUILD=WebAssembly" +
-                " ../" + cmakelists_path,
-                from_validation, verbose)
-    else:
-        try_do_LLVM("configure " + build_type + " version ",
-                'cmake -Thost=x64 -G ' + '\"' + generator + '\"' + ' -DCMAKE_INSTALL_PREFIX="..\\'+ LLVM_BIN + '" ' +
-                '  -DCMAKE_BUILD_TYPE=' + build_type +
-                llvm_enable_projects +
-                get_llvm_enable_dump_switch(version_LLVM) +
-                get_llvm_disable_assertions_switch(llvm_disable_assertions) +
-                '  -DLLVM_INSTALL_UTILS=ON' +
-                '  -DLLVM_TARGETS_TO_BUILD=AArch64\;ARM\;X86' +
-                '  -DLLVM_EXPERIMENTAL_TARGETS_TO_BUILD=WebAssembly' +
-                '  -DLLVM_LIT_TOOLS_DIR="C:\\gnuwin32\\bin" ..\\' + cmakelists_path,
-                from_validation, verbose)
+    # set compiler to use if this is selfbuild
+    selfbuild_compiler = ""
+    if selfbuild is SelfbuildType.SELF or selfbuild is SelfbuildType.SELF_PHASE2:
+        selfbuild_compiler = ("  -DCMAKE_C_COMPILER=" +llvm_home+ "/" + LLVM_BIN_selfbuild + "/bin/clang " +
+                              "  -DCMAKE_CXX_COMPILER="+llvm_home+ "/" + LLVM_BIN_selfbuild + "/bin/clang++ ")
+        print_debug("Use compiler for selfbuild: " + selfbuild_compiler + "\n", from_validation, alloy_build)
 
-    # building llvm
-    if current_OS != "Windows":
-        try_do_LLVM("build LLVM ", make, from_validation, verbose)
-        try_do_LLVM("install LLVM ", "make install", from_validation, verbose)
-    else:
-        try_do_LLVM("build LLVM and then install LLVM ", "msbuild INSTALL.vcxproj /V:m /p:Platform=x64 /p:Configuration=" + build_type + " /t:rebuild", from_validation, verbose)
-    os.chdir(current_path)
+
+    # configure and build for regular build or second phase of selfbuild
+    if selfbuild is SelfbuildType.SINGLE or selfbuild is SelfbuildType.SELF or selfbuild is SelfbuildType.SELF_PHASE2:
+        os.makedirs(LLVM_BUILD)
+        os.makedirs(LLVM_BIN)
+        os.chdir(LLVM_BUILD)
+        build_type = "Release" if debug == False else "Debug"
+        if current_OS != "Windows":
+            try_do_LLVM("configure " + build_type + " version ",
+                    "cmake -G " + "\"" + generator + "\"" + " -DCMAKE_EXPORT_COMPILE_COMMANDS=ON" +
+                    selfbuild_compiler +
+                    "  -DCMAKE_INSTALL_PREFIX=" + llvm_home + "/" + LLVM_BIN +
+                    "  -DCMAKE_BUILD_TYPE=" + build_type +
+                    llvm_enable_projects +
+                    get_llvm_enable_dump_switch(version_LLVM) +
+                    get_llvm_disable_assertions_switch(llvm_disable_assertions) +
+                    "  -DLLVM_INSTALL_UTILS=ON" +
+                    (("  -DGCC_INSTALL_PREFIX=" + gcc_toolchain_path) if gcc_toolchain_path != "" else "") +
+                    (("  -DCMAKE_C_COMPILER=" + gcc_toolchain_path+"/bin/gcc") if gcc_toolchain_path != "" and selfbuild_compiler == "" else "") +
+                    (("  -DCMAKE_CXX_COMPILER=" + gcc_toolchain_path+"/bin/g++") if gcc_toolchain_path != "" and selfbuild_compiler == "" else "") +
+                    (("  -DDEFAULT_SYSROOT=" + mac_system_root) if mac_system_root != "" else "") +
+                    "  -DLLVM_TARGETS_TO_BUILD=AArch64\;ARM\;X86" +
+                    "  -DLLVM_EXPERIMENTAL_TARGETS_TO_BUILD=WebAssembly" +
+                    " ../" + cmakelists_path,
+                    from_validation, verbose)
+        else:
+            try_do_LLVM("configure " + build_type + " version ",
+                    'cmake -Thost=x64 -G ' + '\"' + generator + '\"' + ' -DCMAKE_INSTALL_PREFIX="..\\'+ LLVM_BIN + '" ' +
+                    '  -DCMAKE_BUILD_TYPE=' + build_type +
+                    llvm_enable_projects +
+                    get_llvm_enable_dump_switch(version_LLVM) +
+                    get_llvm_disable_assertions_switch(llvm_disable_assertions) +
+                    '  -DLLVM_INSTALL_UTILS=ON' +
+                    '  -DLLVM_TARGETS_TO_BUILD=AArch64\;ARM\;X86' +
+                    '  -DLLVM_EXPERIMENTAL_TARGETS_TO_BUILD=WebAssembly' +
+                    '  -DLLVM_LIT_TOOLS_DIR="C:\\gnuwin32\\bin" ..\\' + cmakelists_path,
+                    from_validation, verbose)
+
+        # building llvm
+        if current_OS != "Windows":
+            try_do_LLVM("build LLVM ", make, from_validation, verbose)
+            try_do_LLVM("install LLVM ", "make install", from_validation, verbose)
+        else:
+            try_do_LLVM("build LLVM and then install LLVM ", "msbuild INSTALL.vcxproj /V:m /p:Platform=x64 /p:Configuration=" + build_type + " /t:rebuild", from_validation, verbose)
+        os.chdir(current_path)
 
 
 def unsupported_llvm_targets(LLVM_VERSION):
@@ -776,6 +797,17 @@ def Main():
         parser.print_help()
         exit(1)
 
+    # check and normalize selfbuild switches
+    selfbuild = SelfbuildType.SINGLE
+    if (options.selfbuild and (options.selfbuild_phase1 or options.selfbuild_phase2)) or (options.selfbuild_phase1 and options.selfbuild_phase2):
+        alloy_error("Only one of --selfbuild* switches can be used at the same time", 1)
+    if options.selfbuild:
+        selfbuild = SelfbuildType.SELF
+    if options.selfbuild_phase1:
+        selfbuild = SelfbuildType.SELF_PHASE1
+    if options.selfbuild_phase2:
+        selfbuild = SelfbuildType.SELF_PHASE2
+
     setting_paths(options.llvm_home, options.ispc_home, options.sde_home)
     if os.environ.get("LLVM_HOME") == None:
         alloy_error("you have no LLVM_HOME", 1)
@@ -787,9 +819,8 @@ def Main():
         for iterator in test_only:
             if not (" " + iterator + " " in test_only_r):
                 alloy_error("unknown option for only: " + iterator, 1)
-    if current_OS == "Windows":
-        if options.selfbuild == True:
-            alloy_error("Selfbuild is not supported on Windows", 1)
+    if current_OS == "Windows" and selfbuild is not SelfbuildType.SINGLE:
+        alloy_error("Selfbuild is not supported on Windows", 1)
     global f_date
     f_date = "logs"
     common.remove_if_exists(f_date)
@@ -820,7 +851,7 @@ def Main():
         start_time = time.time()
         if options.build_llvm:
             build_LLVM(options.version, options.folder,
-                    options.debug, options.selfbuild, options.extra, False, options.force, make, options.gcc_toolchain_path, options.llvm_disable_assertions, options.verbose)
+                    options.debug, selfbuild, options.extra, False, options.force, make, options.gcc_toolchain_path, options.llvm_disable_assertions, options.verbose)
         if options.validation_run:
             validation_run(options.only, options.only_targets, options.branch,
                     options.number_for_performance, options.update, int(options.speed),
@@ -829,7 +860,7 @@ def Main():
         if options.time:
             print_debug("Elapsed time: " + time.strftime('%Hh%Mm%Ssec.', time.gmtime(elapsed_time)) + "\n", False, "")
     except Exception as e:
-        print_debug("Exception: " + str(e), False, stability_log)
+        print_debug("Exception: " + str(e) + "\n", False, stability_log)
         return_status = 1
 
     # Finish execution: time reporting and copy log
@@ -917,6 +948,10 @@ if __name__ == '__main__':
         help='folder to build LLVM in', default="")
     llvm_group.add_option('--selfbuild', dest='selfbuild',
         help='make selfbuild of LLVM and clang', default=False, action="store_true")
+    llvm_group.add_option('--selfbuild-phase1', dest='selfbuild_phase1',
+        help='make selfbuild of LLVM and clang, first phase only', default=False, action="store_true")
+    llvm_group.add_option('--selfbuild-phase2', dest='selfbuild_phase2',
+        help='make selfbuild of LLVM and clang, second phase only', default=False, action="store_true")
     llvm_group.add_option('--llvm-disable-assertions', dest='llvm_disable_assertions',
         help='build LLVM with assertions disabled', default=False, action="store_true")
     llvm_group.add_option('--force', dest='force',
