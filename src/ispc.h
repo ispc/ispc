@@ -63,6 +63,9 @@
 #include <string>
 #include <vector>
 
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_14_0
+#include <llvm/ADT/APFloat.h>
+#endif
 #include <llvm/ADT/StringRef.h>
 
 /** @def ISPC_MAX_NVEC maximum vector size of any of the compliation
