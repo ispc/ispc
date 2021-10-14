@@ -1,10 +1,13 @@
+ARG LLVM_VERSION=12.0
+
 FROM ubuntu:20.04 AS llvm_build_only
 MAINTAINER Dmitry Babokin <dmitry.y.babokin@intel.com>
+SHELL ["/bin/bash", "-c"]
 
 ARG REPO=ispc/ispc
 ARG SHA=main
-ARG LLVM_VERSION=12.0
-ARG EXTRA_BUILD_ARG=
+ARG LLVM_VERSION
+ARG EXTRA_BUILD_ARG
 
 # !!! Make sure that your docker config provides enough memory to the container,
 # otherwise LLVM build may fail, as it will use all the cores available to container.
@@ -33,6 +36,8 @@ RUN python3 ./alloy.py -b --version=$LLVM_VERSION --selfbuild --verbose $EXTRA_B
 ENV PATH=$LLVM_HOME/bin-$LLVM_VERSION/bin:$PATH
 
 FROM llvm_build_only AS ispc_build
+
+ARG LLVM_VERSION
 
 RUN apt-get -y update && apt-get install -y m4 bison flex zlib1g-dev \
     libc6-dev-i386-cross libc6-dev-arm64-cross libc6-dev-armhf-cross libc6-dev-arm64-cross && \

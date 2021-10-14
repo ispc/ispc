@@ -1,5 +1,6 @@
 FROM centos:7
 MAINTAINER Dmitry Babokin <dmitry.y.babokin@intel.com>
+SHELL ["/bin/bash", "-c"]
 
 ARG REPO=ispc/ispc
 ARG SHA=main
