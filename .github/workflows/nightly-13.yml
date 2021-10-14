@@ -19,7 +19,9 @@ env:
 jobs:
   # Building LLVM in docker, as using native Ubuntu 16.04 github-hosted image contains newer-than-expected libs and
   # makes the resulting build not usable on other Ubuntu 16.04 images.
-  linux-build-llvm-13:
+  # Doing Linux build in two stages, as self-build is required, but Github Action runners are not always capable
+  # to finish the full job in less than 6 hours.
+  linux-build-llvm-13-1:
     runs-on: ubuntu-latest
 
     steps:
@@ -34,14 +36,46 @@ jobs:
     - name: Build LLVM
       run: |
         cd docker/ubuntu/16.04/cpu_ispc_build
-        docker build --tag ispc/ubuntu16.04 --target=llvm_build_only --build-arg REPO=$GITHUB_REPOSITORY --build-arg SHA=$GITHUB_SHA --build-arg LLVM_VERSION=13.0 .
+        docker buildx create --use
+        docker buildx build --tag ispc/ubuntu16.04:stage1 --target=llvm_build_step1 --cache-to=type=local,dest=cache.local --build-arg REPO=$GITHUB_REPOSITORY --build-arg SHA=$GITHUB_SHA --build-arg LLVM_VERSION=13.0 .
+
+    - name: Upload package
+      uses: actions/upload-artifact@v2
+      with:
+        name: llvm13_linux_stage1_cache
+        path: docker/ubuntu/16.04/cpu_ispc_build/cache.local
+
+  linux-build-llvm-13-2:
+    needs: [linux-build-llvm-13-1]
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v2
+      with:
+        submodules: true
+
+    - name: Check environment
+      run: |
+        cat /proc/cpuinfo
+
+    - name: Download package
+      uses: actions/download-artifact@v2
+      with:
+        name: llvm13_linux_stage1_cache
+        path: docker/ubuntu/16.04/cpu_ispc_build/cache.local
+
+    - name: Build LLVM
+      run: |
+        cd docker/ubuntu/16.04/cpu_ispc_build
+        ls -al
+        docker buildx create --use
+        docker buildx build --tag ispc/ubuntu16.04:stage2 --target=llvm_build_step2 --cache-from=type=local,src=cache.local --build-arg REPO=$GITHUB_REPOSITORY --build-arg SHA=$GITHUB_SHA --build-arg LLVM_VERSION=13.0 --output=type=tar,dest=result.tar .
 
     - name: Pack LLVM
       run: |
         cd docker/ubuntu/16.04/cpu_ispc_build
-        docker run ispc/ubuntu16.04
-        export CONTAINER=`docker ps --all |head -2 |tail -1 |awk '//{print $1}'`
-        sudo docker cp $CONTAINER:/usr/local/src/llvm/bin-13.0 .
+        tar xvf result.tar usr/local/src/llvm
+        mv usr/local/src/llvm/bin-13.0 .
         # Note using gzip here, instead of xz - trading of space for speed, as it's just for passing to another stage.
         tar czvf llvm-13.0.0-ubuntu16.04-Release+Asserts-x86.arm.wasm.tar.gz bin-13.0
 
@@ -52,7 +86,7 @@ jobs:
         path: docker/ubuntu/16.04/cpu_ispc_build/llvm-13.0.0-ubuntu16.04-Release+Asserts-x86.arm.wasm.tar.gz
 
   linux-build-ispc-llvm-13:
-    needs: [linux-build-llvm-13]
+    needs: [linux-build-llvm-13-2]
     runs-on: ubuntu-latest
     env:
       LLVM_VERSION: "13.0"
