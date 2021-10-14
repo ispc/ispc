@@ -1,9 +1,12 @@
+ARG LLVM_VERSION=12.0
+
 FROM centos:7 AS llvm_only
 MAINTAINER Dmitry Babokin <dmitry.y.babokin@intel.com>
+SHELL ["/bin/bash", "-c"]
 
 ARG REPO=ispc/ispc
 ARG SHA=main
-ARG LLVM_VERSION=12.0
+ARG LLVM_VERSION
 
 # !!! Make sure that your docker config provides enough memory to the container,
 # otherwise LLVM build may fail, as it will use all the cores available to container.
@@ -55,6 +58,8 @@ RUN source /opt/rh/devtoolset-7/enable && \
     rm -rf $LLVM_HOME/build-$LLVM_VERSION $LLVM_HOME/llvm-$LLVM_VERSION $LLVM_HOME/bin-"$LLVM_VERSION"_temp $LLVM_HOME/build-"$LLVM_VERSION"_temp
 
 FROM llvm_only AS ispc_build
+
+ARG LLVM_VERSION
 ENV PATH=$LLVM_HOME/bin-$LLVM_VERSION/bin:$PATH
 
 # Install newer zlib

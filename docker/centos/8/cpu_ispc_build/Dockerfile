@@ -1,9 +1,12 @@
+ARG LLVM_VERSION=12.0
+
 FROM centos:8 AS llvm_only
 MAINTAINER Dmitry Babokin <dmitry.y.babokin@intel.com>
+SHELL ["/bin/bash", "-c"]
 
 ARG REPO=ispc/ispc
 ARG SHA=main
-ARG LLVM_VERSION=12.0
+ARG LLVM_VERSION
 
 # !!! Make sure that your docker config provides enough memory to the container,
 # otherwise LLVM build may fail, as it will use all the cores available to container.
@@ -57,6 +60,8 @@ RUN ./alloy.py -b --version=$LLVM_VERSION --selfbuild --verbose && \
 ENV PATH=$LLVM_HOME/bin-$LLVM_VERSION/bin:$PATH
 
 FROM llvm_only AS ispc_build
+
+ARG LLVM_VERSION
 
 RUN dnf -y update && dnf install -y m4 bison flex && dnf clean -y all
 RUN if [[ `uname -m` =~ "x86" ]]; then dnf -y update && dnf install -y glibc-devel.i686 && dnf clean -y all; fi

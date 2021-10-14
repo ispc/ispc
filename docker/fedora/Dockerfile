@@ -1,5 +1,6 @@
 FROM fedora:26
 MAINTAINER Dmitry Babokin <dmitry.y.babokin@intel.com>
+SHELL ["/bin/bash", "-c"]
 
 # !!! Make sure that your docker config provides enough memory to the container,
 # otherwise LLVM build may fail, as it will use all the cores available to container.

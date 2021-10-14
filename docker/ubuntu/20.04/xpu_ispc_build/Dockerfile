@@ -1,5 +1,6 @@
 FROM ubuntu:20.04
 MAINTAINER Arina Neshlyaeva <arina.neshlyaeva@intel.com>
+SHELL ["/bin/bash", "-c"]
 
 ARG REPO=ispc/ispc
 ARG SHA=main
