@@ -1,6 +1,6 @@
 ARG LLVM_VERSION=12.0
 
-FROM ubuntu:16.04 AS llvm_build_only
+FROM ubuntu:16.04 AS llvm_build_step1
 MAINTAINER Dmitry Babokin <dmitry.y.babokin@intel.com>
 SHELL ["/bin/bash", "-c"]
 
@@ -51,13 +51,18 @@ WORKDIR /usr/local/src/ispc
 # i.e. if clang was built by gcc, you may need to use gcc to build ispc (i.e. run "make gcc"),
 # or better do clang selfbuild and use it for ispc build as well (i.e. just "make").
 # "rm" are just to keep docker image small.
-RUN python3.6 ./alloy.py -b --version=$LLVM_VERSION --selfbuild --verbose $EXTRA_BUILD_ARG && \
-    rm -rf $LLVM_HOME/build-$LLVM_VERSION $LLVM_HOME/llvm-$LLVM_VERSION $LLVM_HOME/bin-"$LLVM_VERSION"_temp $LLVM_HOME/build-"$LLVM_VERSION"_temp
+RUN python3.6 ./alloy.py -b --version=$LLVM_VERSION --selfbuild-phase1 --verbose $EXTRA_BUILD_ARG && \
+    rm -rf $LLVM_HOME/build-"$LLVM_VERSION"_temp
 
+FROM llvm_build_step1 AS llvm_build_step2
+ARG LLVM_VERSION
+ARG EXTRA_BUILD_ARG
+
+RUN python3.6 ./alloy.py -b --version=$LLVM_VERSION --selfbuild-phase2 --verbose $EXTRA_BUILD_ARG && \
+    rm -rf $LLVM_HOME/build-$LLVM_VERSION $LLVM_HOME/llvm-$LLVM_VERSION $LLVM_HOME/bin-"$LLVM_VERSION"_temp
 ENV PATH=$LLVM_HOME/bin-$LLVM_VERSION/bin:$PATH
 
-FROM llvm_build_only AS ispc_build
-
+FROM llvm_build_step2 AS ispc_build
 ARG LLVM_VERSION
 
 # ISPC builds in C++17 mode and will fail without modern libstdc++
