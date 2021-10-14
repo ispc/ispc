@@ -60,7 +60,11 @@ FROM llvm_build_only AS ispc_build
 
 ARG LLVM_VERSION
 
-RUN apt-get -y update && apt-get install -y m4 bison flex zlib1g-dev libc6-dev-i386 && \
+# ISPC builds in C++17 mode and will fail without modern libstdc++
+# Also install regular ISPC dependencies
+RUN add-apt-repository ppa:ubuntu-toolchain-r/test -y && apt-get -y update && \
+    apt-get install -y libstdc++-9-dev && \
+    apt-get install -y m4 bison flex zlib1g-dev libc6-dev-i386 && \
     rm -rf /var/lib/apt/lists/*
 
 # Configure ISPC build
