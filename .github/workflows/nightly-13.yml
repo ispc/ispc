@@ -14,6 +14,7 @@ on:
 
 env:
   SDE_TAR_NAME: sde-external-8.69.1-2021-07-18
+  USER_AGENT: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/94.0.4606.81 Safari/537.36"
 
 jobs:
   # Building LLVM in docker, as using native Ubuntu 16.04 github-hosted image contains newer-than-expected libs and
