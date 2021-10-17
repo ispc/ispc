@@ -19,7 +19,7 @@ Note that adding all of these `Dockerfile`s to regular CI runs is currently prob
 
 By default `Dockerfile`s are assumed to be built as `x86` images, but some can be built as `aarch64` images (note that `ispc` is a cross-compiler, so regardless the host arch, it can target any supported CPU architecuture, if it's enabled in `ispc` build).
 
- * [ubuntu/16.04/cpu\_ispc\_build/Dockerfile](ubuntu/16.04/cpu_ispc_build/Dockerfile) `Ubuntu 16.04` image. CPU only. Ubuntu 16.04 is used to enabled maximum compatibility. The image is used in CI for nightly LLVM builds.
+ * [ubuntu/16.04/cpu\_ispc\_build/Dockerfile](ubuntu/16.04/cpu_ispc_build/Dockerfile) `Ubuntu 16.04` image. CPU only. Ubuntu 16.04 is used to enabled maximum compatibility. This Dockerfile does LLVM selfbuild in two stages, which enables splitting it to two separate CI jobs. The image is used in CI for nightly LLVM builds.
  * [ubuntu/20.04/cpu\_ispc\_build/Dockerfile](ubuntu/20.04/cpu_ispc_build/Dockerfile) `Ubuntu 20.04` image. CPU only. Works on both `x86` and `aarch64`.
  * [ubuntu/20.04/xpu\_ispc\_build/Dockerfile](ubuntu/20.04/xpu_ispc_build/Dockerfile) `Ubuntu 20.04` image. XPU (CPU+GPU). This is the recommended environment for XPU experiments.
  * [centos/7/cpu\_ispc\_build/Dockerfile](centos/7/cpu_ispc_build/Dockerfile) `CentOS 7` image. CPU only. Works on both `x86` and `aarch64`.
