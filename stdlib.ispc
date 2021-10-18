@@ -1131,6 +1131,22 @@ static inline void prefetch_nt(const void * uniform ptr) {
      __prefetch_read_uniform_nt((uniform int8 * uniform)ptr);
 }
 
+__declspec(safe,cost1)
+static inline void prefetchw_l1(const void * uniform ptr) {
+    __prefetch_write_uniform_1((uniform int8 * uniform)ptr);
+}
+
+__declspec(safe,cost1)
+static inline void prefetchw_l2(const void * uniform ptr) {
+    __prefetch_write_uniform_2((uniform int8 * uniform)ptr);
+}
+
+__declspec(safe,cost1)
+static inline void prefetchw_l3(const void * uniform ptr) {
+    __prefetch_write_uniform_3((uniform int8 * uniform)ptr);
+}
+
+
 static inline void prefetch_l1(const void * varying ptr) {
     __pseudo_prefetch_read_varying_1((int64)ptr, (IntMaskType)__mask);
 }
@@ -1145,6 +1161,21 @@ static inline void prefetch_l3(const void * varying ptr) {
 
 static inline void prefetch_nt(const void * varying ptr) {
     __pseudo_prefetch_read_varying_nt((int64)ptr, (IntMaskType)__mask);
+}
+
+__declspec(safe,cost1)
+static inline void prefetchw_l1(const void * varying ptr) {
+    __pseudo_prefetch_write_varying_1((int64)ptr, (IntMaskType)__mask);
+}
+
+__declspec(safe,cost1)
+static inline void prefetchw_l2(const void * varying ptr) {
+    __pseudo_prefetch_write_varying_2((int64)ptr, (IntMaskType)__mask);
+}
+
+__declspec(safe,cost1)
+static inline void prefetchw_l3(const void * varying ptr) {
+    __pseudo_prefetch_write_varying_3((int64)ptr, (IntMaskType)__mask);
 }
 
 ///////////////////////////////////////////////////////////////////////////

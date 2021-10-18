@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2021, Intel Corporation
+  Copyright (c) 2010-2022, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -2263,6 +2263,20 @@ static bool lGSToGSBaseOffsets(llvm::CallInst *callInst) {
                g->target->hasVecPrefetch() ? "__pseudo_prefetch_read_varying_nt_native" : "__prefetch_read_varying_nt",
                g->target->hasVecPrefetch() ? "__pseudo_prefetch_read_varying_nt_native" : "__prefetch_read_varying_nt",
                false, true),
+
+        GSInfo("__pseudo_prefetch_write_varying_1",
+               g->target->hasVecPrefetch() ? "__pseudo_prefetch_write_varying_1_native" : "__prefetch_write_varying_1",
+               g->target->hasVecPrefetch() ? "__pseudo_prefetch_write_varying_1_native" : "__prefetch_write_varying_1",
+               false, true),
+        GSInfo("__pseudo_prefetch_write_varying_2",
+               g->target->hasVecPrefetch() ? "__pseudo_prefetch_write_varying_2_native" : "__prefetch_write_varying_2",
+               g->target->hasVecPrefetch() ? "__pseudo_prefetch_write_varying_2_native" : "__prefetch_write_varying_2",
+               false, true),
+
+        GSInfo("__pseudo_prefetch_write_varying_3",
+               g->target->hasVecPrefetch() ? "__pseudo_prefetch_write_varying_3_native" : "__prefetch_write_varying_3",
+               g->target->hasVecPrefetch() ? "__pseudo_prefetch_write_varying_3_native" : "__prefetch_write_varying_3",
+               false, true),
     };
 
     int numGSFuncs = sizeof(gsFuncs) / sizeof(gsFuncs[0]);
@@ -2499,6 +2513,21 @@ static bool lGSBaseOffsetsGetMoreConst(llvm::CallInst *callInst) {
         GSBOInfo(
             g->target->hasVecPrefetch() ? "__pseudo_prefetch_read_varying_nt_native" : "__prefetch_read_varying_nt",
             g->target->hasVecPrefetch() ? "__pseudo_prefetch_read_varying_nt_native" : "__prefetch_read_varying_nt",
+            false, true),
+
+        GSBOInfo(
+            g->target->hasVecPrefetch() ? "__pseudo_prefetch_write_varying_1_native" : "__prefetch_write_varying_1",
+            g->target->hasVecPrefetch() ? "__pseudo_prefetch_write_varying_1_native" : "__prefetch_write_varying_1",
+            false, true),
+
+        GSBOInfo(
+            g->target->hasVecPrefetch() ? "__pseudo_prefetch_write_varying_2_native" : "__prefetch_write_varying_2",
+            g->target->hasVecPrefetch() ? "__pseudo_prefetch_write_varying_2_native" : "__prefetch_write_varying_2",
+            false, true),
+
+        GSBOInfo(
+            g->target->hasVecPrefetch() ? "__pseudo_prefetch_write_varying_3_native" : "__prefetch_write_varying_3",
+            g->target->hasVecPrefetch() ? "__pseudo_prefetch_write_varying_3_native" : "__prefetch_write_varying_3",
             false, true),
     };
 
@@ -4510,6 +4539,15 @@ static bool lReplacePseudoGS(llvm::CallInst *callInst) {
 
         LowerGSInfo("__pseudo_prefetch_read_varying_nt", "__prefetch_read_varying_nt", false, true),
         LowerGSInfo("__pseudo_prefetch_read_varying_nt_native", "__prefetch_read_varying_nt_native", false, true),
+
+        LowerGSInfo("__pseudo_prefetch_write_varying_1", "__prefetch_write_varying_1", false, true),
+        LowerGSInfo("__pseudo_prefetch_write_varying_1_native", "__prefetch_write_varying_1_native", false, true),
+
+        LowerGSInfo("__pseudo_prefetch_write_varying_2", "__prefetch_write_varying_2", false, true),
+        LowerGSInfo("__pseudo_prefetch_write_varying_2_native", "__prefetch_write_varying_2_native", false, true),
+
+        LowerGSInfo("__pseudo_prefetch_write_varying_3", "__prefetch_write_varying_3", false, true),
+        LowerGSInfo("__pseudo_prefetch_write_varying_3_native", "__prefetch_write_varying_3_native", false, true),
     };
 
     llvm::Function *calledFunc = callInst->getCalledFunction();
@@ -4946,6 +4984,9 @@ bool MakeInternalFuncsStaticPass::runOnModule(llvm::Module &module) {
         "__prefetch_read_varying_2",
         "__prefetch_read_varying_3",
         "__prefetch_read_varying_nt",
+        "__prefetch_write_varying_1",
+        "__prefetch_write_varying_2",
+        "__prefetch_write_varying_3",
         "__keep_funcs_live",
 #ifdef ISPC_XE_ENABLED
         "__masked_load_blend_i8",
