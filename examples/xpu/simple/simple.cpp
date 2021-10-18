@@ -126,10 +126,8 @@ static int run(const ISPCRTDeviceType device_type, const unsigned int SIZE) {
     // explicitly copied to device from host
     queue.copyToDevice(p_dev);
     queue.copyToDevice(vin_dev);
-
     // Launch the kernel on the device using 1 thread
     auto res = queue.launch(kernel, p_dev, 1);
-
     // ispcrt::Array objects which used as outputs of ISPC kernel should be
     // explicitly copied to host from device
     queue.copyToHost(vout_dev);
