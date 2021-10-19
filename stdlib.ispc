@@ -4546,17 +4546,6 @@ static inline double sin(double x) {
         return ret;
     }
 }
-__declspec(safe)
-static inline uniform double asin(uniform double x) {
-    if (__have_native_trigonometry)
-    {
-      return __asin_uniform_double(x);
-    }
-    else
-    {
-      return __stdlib_asin(x);
-    }
-}
 
 __declspec(safe)
 static inline uniform double sin(uniform double x) {
@@ -4569,22 +4558,15 @@ static inline uniform double sin(uniform double x) {
 }
 
 __declspec(safe)
-static inline double acos(const double v) {
-    if (__have_native_trigonometry) {
-        return __acos_varying_double(v);
-    } else if (__math_lib == __math_lib_svml) {
-        return __svml_acosd(v);
-    } else {
-        return 1.57079637050628662109375d0 - asin(v);
+static inline uniform double asin(uniform double x) {
+    if (__have_native_trigonometry)
+    {
+      return __asin_uniform_double(x);
     }
-}
-
-__declspec(safe)
-static inline uniform double acos(const uniform double v) {
-  if (__have_native_trigonometry)
-    return __acos_uniform_double(v);
-  else
-    return 1.57079637050628662109375d0 - asin(v);
+    else
+    {
+      return __stdlib_asin(x);
+    }
 }
 
 __declspec(safe)
@@ -4635,6 +4617,25 @@ static inline uniform double cos(uniform double x) {
     }
     else
         return __stdlib_cos(x);
+}
+
+__declspec(safe)
+static inline double acos(const double v) {
+    if (__have_native_trigonometry) {
+        return __acos_varying_double(v);
+    } else if (__math_lib == __math_lib_svml) {
+        return __svml_acosd(v);
+    } else {
+        return 1.57079637050628662109375d0 - asin(v);
+    }
+}
+
+__declspec(safe)
+static inline uniform double acos(const uniform double v) {
+  if (__have_native_trigonometry)
+    return __acos_uniform_double(v);
+  else
+    return 1.57079637050628662109375d0 - asin(v);
 }
 
 __declspec(safe)
