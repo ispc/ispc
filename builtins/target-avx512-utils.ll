@@ -294,30 +294,24 @@ define float @__rsqrt_fast_uniform_float(float) nounwind readonly alwaysinline {
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; rcp
 
-declare <4 x float> @llvm.x86.sse.rcp.ss(<4 x float>) nounwind readnone
-
-define float @__rcp_uniform_float(float) nounwind readonly alwaysinline {
-  ; do the rcpss call
-  ;    uniform float iv = extract(__rcp_u(v), 0);
-  ;    return iv * (2. - v * iv);
-  %vecval = insertelement <4 x float> undef, float %0, i32 0
-  %call = call <4 x float> @llvm.x86.sse.rcp.ss(<4 x float> %vecval)
-  %scall = extractelement <4 x float> %call, i32 0
-
-  ; do one N-R iteration to improve precision, as above
-  %v_iv = fmul float %0, %scall
-  %two_minus = fsub float 2., %v_iv
-  %iv_mul = fmul float %scall, %two_minus
-  ret float %iv_mul
-}
-
+declare <4 x float> @llvm.x86.avx512.rcp14.ss(<4 x float>, <4 x float>, <4 x float>, i8) nounwind readnone
 define float @__rcp_fast_uniform_float(float) nounwind readonly alwaysinline {
-  ;    uniform float iv = extract(__rcp_u(v), 0);
-  ;    return iv;
   %vecval = insertelement <4 x float> undef, float %0, i32 0
-  %call = call <4 x float> @llvm.x86.sse.rcp.ss(<4 x float> %vecval)
+  %call = call <4 x float> @llvm.x86.avx512.rcp14.ss(<4 x float> %vecval, <4 x float> %vecval, <4 x float> undef, i8 -1)
   %scall = extractelement <4 x float> %call, i32 0
   ret float %scall
+}
+
+define float @__rcp_uniform_float(float %v) nounwind readonly alwaysinline {
+  %iv = call float @__rcp_fast_uniform_float(float %v)
+
+  ; do one N-R iteration to improve precision
+  ; iv = rcp(v)
+  ; iv * (2. - v * iv)
+  %v_iv = fmul float %v, %iv
+  %two_minus = fsub float 2., %v_iv
+  %iv_mul = fmul float %iv, %two_minus
+  ret float %iv_mul
 }
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
