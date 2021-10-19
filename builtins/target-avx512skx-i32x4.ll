@@ -1,4 +1,4 @@
-;;  Copyright (c) 2016-2020, Intel Corporation
+;;  Copyright (c) 2016-2021, Intel Corporation
 ;;  All rights reserved.
 ;;
 ;;  Redistribution and use in source and binary forms, with or without
@@ -37,16 +37,15 @@ include(`target-avx512-common-4.ll')
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; rcp, rsqrt
 
-define(`rcp_rsqrt_varying_float_skx_4',`
 declare <4 x float> @llvm.x86.avx512.rcp14.ps.128(<4 x float>, <4 x float>, i8) nounwind readnone
 define <4 x float> @__rcp_varying_float(<4 x float>) nounwind readonly alwaysinline {
   %call = call <4 x float> @llvm.x86.avx512.rcp14.ps.128(<4 x float> %0, <4 x float> undef, i8 -1)
   ;; do one Newton-Raphson iteration to improve precision
   ;;  float iv = __rcp_v(v);
   ;;  return iv * (2. - v * iv);
-  %v_iv = fmul <4 x float> %0`,' %call
-  %two_minus = fsub <4 x float> <float 2.`,' float 2.`,' float 2.`,' float 2.>`,' %v_iv
-  %iv_mul = fmul <4 x float> %call`,'  %two_minus
+  %v_iv = fmul <4 x float> %0, %call
+  %two_minus = fsub <4 x float> <float 2., float 2., float 2., float 2.>, %v_iv
+  %iv_mul = fmul <4 x float> %call,  %two_minus
   ret <4 x float> %iv_mul
 }
 define <4 x float> @__rcp_fast_varying_float(<4 x float>) nounwind readonly alwaysinline {
@@ -54,25 +53,22 @@ define <4 x float> @__rcp_fast_varying_float(<4 x float>) nounwind readonly alwa
   ret <4 x float> %ret
 }
 
-declare <4 x float> @llvm.x86.avx512.rsqrt14.ps.128(<4 x float>`,'  <4 x float>`,'  i8) nounwind readnone
+declare <4 x float> @llvm.x86.avx512.rsqrt14.ps.128(<4 x float>,  <4 x float>,  i8) nounwind readnone
 define <4 x float> @__rsqrt_varying_float(<4 x float> %v) nounwind readonly alwaysinline {
-  %is = call <4 x float> @llvm.x86.avx512.rsqrt14.ps.128(<4 x float> %v`,'  <4 x float> undef`,'  i8 -1)
+  %is = call <4 x float> @llvm.x86.avx512.rsqrt14.ps.128(<4 x float> %v,  <4 x float> undef,  i8 -1)
   ; Newton-Raphson iteration to improve precision
   ;  float is = __rsqrt_v(v);
   ;  return 0.5 * is * (3. - (v * is) * is);
-  %v_is = fmul <4 x float> %v`,'  %is
-  %v_is_is = fmul <4 x float> %v_is`,'  %is
-  %three_sub = fsub <4 x float> <float 3.`,' float 3.`,' float 3.`,' float 3.>`,' %v_is_is
-  %is_mul = fmul <4 x float> %is`,'  %three_sub
-  %half_scale = fmul <4 x float> <float 0.5`,' float 0.5`,' float 0.5`,' float 0.5>`,' %is_mul
+  %v_is = fmul <4 x float> %v,  %is
+  %v_is_is = fmul <4 x float> %v_is,  %is
+  %three_sub = fsub <4 x float> <float 3., float 3., float 3., float 3.>, %v_is_is
+  %is_mul = fmul <4 x float> %is,  %three_sub
+  %half_scale = fmul <4 x float> <float 0.5, float 0.5, float 0.5, float 0.5>, %is_mul
   ret <4 x float> %half_scale
 }
 define <4 x float> @__rsqrt_fast_varying_float(<4 x float> %v) nounwind readonly alwaysinline {
-  %ret = call <4 x float> @llvm.x86.avx512.rsqrt14.ps.128(<4 x float> %v`,'  <4 x float> undef`,'  i8 -1)
+  %ret = call <4 x float> @llvm.x86.avx512.rsqrt14.ps.128(<4 x float> %v,  <4 x float> undef,  i8 -1)
   ret <4 x float> %ret
 }
-')
-
-rcp_rsqrt_varying_float_skx_4()
 
 ;;saturation_arithmetic_novec()
