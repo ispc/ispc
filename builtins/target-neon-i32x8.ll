@@ -763,6 +763,7 @@ define <8 x i16> @__psubus_vi16(<8 x i16>, <8 x i16>) {
 
 rsqrtd_decl()
 rcpd_decl()
+rcph_decl()
 
 transcendetals_decl()
 trigonometry_decl()

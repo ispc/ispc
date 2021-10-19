@@ -8009,9 +8009,12 @@ declare  double @__rsqrt_uniform_double(double)
 declare <WIDTH x double> @__rsqrt_varying_double(<WIDTH x double>)
 ')
 
-define(`rcpd_decl', `
+define(`rcph_decl', `
 declare  half @__rcp_uniform_half(half)
 declare <WIDTH x half> @__rcp_varying_half(<WIDTH x half>)
+')
+
+define(`rcpd_decl', `
 declare  double @__rcp_uniform_double(double)
 declare <WIDTH x double> @__rcp_varying_double(<WIDTH x double>)
 ')

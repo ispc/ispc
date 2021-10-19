@@ -618,6 +618,7 @@ define <16 x i16> @__avg_down_int16(<16 x i16>, <16 x i16>) nounwind readnone al
 
 rsqrtd_decl()
 rcpd_decl()
+rcph_decl()
 
 transcendetals_decl()
 trigonometry_decl()
