@@ -265,13 +265,16 @@ define double @__max_uniform_double(double, double) nounwind readnone alwaysinli
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; rsqrt
 
-declare <4 x float> @llvm.x86.sse.rsqrt.ss(<4 x float>) nounwind readnone
+declare <4 x float> @llvm.x86.avx512.rsqrt14.ss(<4 x float>, <4 x float>, <4 x float>, i8) nounwind readnone
+define float @__rsqrt_fast_uniform_float(float) nounwind readonly alwaysinline {
+  %v = insertelement <4 x float> undef, float %0, i32 0
+  %vis = call <4 x float> @llvm.x86.avx512.rsqrt14.ss(<4 x float> %v, <4 x float> %v, <4 x float> undef, i8 -1)
+  %is = extractelement <4 x float> %vis, i32 0
+  ret float %is
+}
 
 define float @__rsqrt_uniform_float(float) nounwind readonly alwaysinline {
-  ;  uniform float is = extract(__rsqrt_u(v), 0);
-  %v = insertelement <4 x float> undef, float %0, i32 0
-  %vis = call <4 x float> @llvm.x86.sse.rsqrt.ss(<4 x float> %v)
-  %is = extractelement <4 x float> %vis, i32 0
+  %is = call float @__rsqrt_fast_uniform_float(float %0)
 
   ; Newton-Raphson iteration to improve precision
   ;  return 0.5 * is * (3. - (v * is) * is);
@@ -281,14 +284,6 @@ define float @__rsqrt_uniform_float(float) nounwind readonly alwaysinline {
   %is_mul = fmul float %is, %three_sub
   %half_scale = fmul float 0.5, %is_mul
   ret float %half_scale
-}
-
-define float @__rsqrt_fast_uniform_float(float) nounwind readonly alwaysinline {
-  ;  uniform float is = extract(__rsqrt_u(v), 0);
-  %v = insertelement <4 x float> undef, float %0, i32 0
-  %vis = call <4 x float> @llvm.x86.sse.rsqrt.ss(<4 x float> %v)
-  %is = extractelement <4 x float> %vis, i32 0
-  ret float %is
 }
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
