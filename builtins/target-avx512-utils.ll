@@ -265,6 +265,7 @@ define double @__max_uniform_double(double, double) nounwind readnone alwaysinli
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; rsqrt
 
+define(`rsqrt14_uniform', `
 declare <4 x float> @llvm.x86.avx512.rsqrt14.ss(<4 x float>, <4 x float>, <4 x float>, i8) nounwind readnone
 define float @__rsqrt_fast_uniform_float(float) nounwind readonly alwaysinline {
   %v = insertelement <4 x float> undef, float %0, i32 0
@@ -285,10 +286,12 @@ define float @__rsqrt_uniform_float(float) nounwind readonly alwaysinline {
   %half_scale = fmul float 0.5, %is_mul
   ret float %half_scale
 }
+')
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; rcp
 
+define(`rcp14_uniform', `
 declare <4 x float> @llvm.x86.avx512.rcp14.ss(<4 x float>, <4 x float>, <4 x float>, i8) nounwind readnone
 define float @__rcp_fast_uniform_float(float) nounwind readonly alwaysinline {
   %vecval = insertelement <4 x float> undef, float %0, i32 0
@@ -308,6 +311,7 @@ define float @__rcp_uniform_float(float %v) nounwind readonly alwaysinline {
   %iv_mul = fmul float %iv, %two_minus
   ret float %iv_mul
 }
+')
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; sqrt

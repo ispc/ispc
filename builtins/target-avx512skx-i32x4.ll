@@ -37,6 +37,7 @@ include(`target-avx512-common-4.ll')
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; rcp, rsqrt
 
+rcp14_uniform()
 declare <4 x float> @llvm.x86.avx512.rcp14.ps.128(<4 x float>, <4 x float>, i8) nounwind readnone
 define <4 x float> @__rcp_varying_float(<4 x float>) nounwind readonly alwaysinline {
   %call = call <4 x float> @llvm.x86.avx512.rcp14.ps.128(<4 x float> %0, <4 x float> undef, i8 -1)
@@ -53,6 +54,7 @@ define <4 x float> @__rcp_fast_varying_float(<4 x float>) nounwind readonly alwa
   ret <4 x float> %ret
 }
 
+rsqrt14_uniform()
 declare <4 x float> @llvm.x86.avx512.rsqrt14.ps.128(<4 x float>,  <4 x float>,  i8) nounwind readnone
 define <4 x float> @__rsqrt_varying_float(<4 x float> %v) nounwind readonly alwaysinline {
   %is = call <4 x float> @llvm.x86.avx512.rsqrt14.ps.128(<4 x float> %v,  <4 x float> undef,  i8 -1)
