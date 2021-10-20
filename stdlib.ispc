@@ -2116,6 +2116,24 @@ static inline uniform double rcp(uniform double v) {
 }
 
 __declspec(safe)
+static inline double rcp_fast(double v) {
+    if (__have_native_rcpd) {
+        return __rcp_fast_varying_double(v);
+    } else {
+        return __rcp_safe_varying_double(v);
+    }
+}
+
+__declspec(safe)
+static inline uniform double rcp_fast(uniform double v) {
+    if (__have_native_rcpd) {
+        return __rcp_fast_uniform_double(v);
+    } else {
+        return __rcp_safe_uniform_double(v);
+    }
+}
+
+__declspec(safe)
 static inline float16 rcp(float16 v) {
   if (__is_xe_target)
     return __rcp_varying_half(v);
@@ -4452,6 +4470,25 @@ static inline uniform double rsqrt(uniform double v) {
   else
     return __rsqrt_safe_uniform_double(v);
 }
+
+__declspec(safe)
+static inline double rsqrt_fast(double v) {
+    if (__have_native_rsqrtd) {
+        return __rsqrt_fast_varying_double(v);
+    } else {
+        return __rsqrt_safe_varying_double(v);
+    }
+}
+
+__declspec(safe)
+static inline uniform double rsqrt_fast(uniform double v) {
+    if (__have_native_rsqrtd) {
+        return __rsqrt_fast_uniform_double(v);
+    } else {
+        return __rsqrt_safe_uniform_double(v);
+    }
+}
+
 __declspec(safe)
 static inline double ldexp(double x, int n) {
     unsigned int64 ex = 0x7ff0000000000000;

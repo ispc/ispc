@@ -1008,7 +1008,7 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, bool pic, boo
         this->m_hasTranscendentals = false;
         // For MIC it is set to true due to performance reasons. The option should be tested.
         this->m_hasTrigonometry = false;
-        this->m_hasRsqrtd = this->m_hasRcpd = false;
+        this->m_hasRsqrtd = this->m_hasRcpd = true;
         this->m_hasVecPrefetch = false;
         CPUfromISA = CPU_KNL;
         break;
@@ -1025,7 +1025,7 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, bool pic, boo
         this->m_hasGather = this->m_hasScatter = true;
         this->m_hasTranscendentals = false;
         this->m_hasTrigonometry = false;
-        this->m_hasRsqrtd = this->m_hasRcpd = false;
+        this->m_hasRsqrtd = this->m_hasRcpd = true;
         this->m_hasVecPrefetch = false;
         CPUfromISA = CPU_SKX;
         this->m_funcAttributes.push_back(std::make_pair("prefer-vector-width", "256"));
@@ -1044,7 +1044,7 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, bool pic, boo
         this->m_hasGather = this->m_hasScatter = true;
         this->m_hasTranscendentals = false;
         this->m_hasTrigonometry = false;
-        this->m_hasRsqrtd = this->m_hasRcpd = false;
+        this->m_hasRsqrtd = this->m_hasRcpd = true;
         this->m_hasVecPrefetch = false;
         CPUfromISA = CPU_SKX;
         this->m_funcAttributes.push_back(std::make_pair("prefer-vector-width", "256"));
@@ -1063,7 +1063,7 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, bool pic, boo
         this->m_hasGather = this->m_hasScatter = true;
         this->m_hasTranscendentals = false;
         this->m_hasTrigonometry = false;
-        this->m_hasRsqrtd = this->m_hasRcpd = false;
+        this->m_hasRsqrtd = this->m_hasRcpd = true;
         this->m_hasVecPrefetch = false;
         CPUfromISA = CPU_SKX;
         if (g->opt.disableZMM) {
