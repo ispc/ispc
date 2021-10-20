@@ -42,28 +42,58 @@ svml(ISA)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; rcp, rsqrt
+;; On KNL use rcp14/rsqrt14 for fast versions and rcp28/rsqrt28 for regular versions.
+;; And no need for Newton-Raphson iterations.
 
-rcp14_uniform()
-declare <16 x float> @llvm.x86.avx512.rcp28.ps(<16 x float>, <16 x float>, i16, i32) nounwind readnone
-define <16 x float> @__rcp_varying_float(<16 x float>) nounwind readonly alwaysinline {
-  %res = call <16 x float> @llvm.x86.avx512.rcp28.ps(<16 x float> %0, <16 x float> undef, i16 -1, i32 8)
-  ret <16 x float> %res
+;; rcp float
+declare <4 x float> @llvm.x86.avx512.rcp14.ss(<4 x float>, <4 x float>, <4 x float>, i8) nounwind readnone
+define float @__rcp_fast_uniform_float(float) nounwind readonly alwaysinline {
+  %vecval = insertelement <4 x float> undef, float %0, i32 0
+  %call = call <4 x float> @llvm.x86.avx512.rcp14.ss(<4 x float> %vecval, <4 x float> %vecval, <4 x float> undef, i8 -1)
+  %scall = extractelement <4 x float> %call, i32 0
+  ret float %scall
 }
-declare <16 x float> @llvm.x86.avx512.rsqrt28.ps(<16 x float>, <16 x float>, i16, i32) nounwind readnone
-define <16 x float> @__rsqrt_varying_float(<16 x float> %v) nounwind readonly alwaysinline {
-  %res = call <16 x float> @llvm.x86.avx512.rsqrt28.ps(<16 x float> %v, <16 x float> undef, i16 -1, i32 8)
-  ret <16 x float> %res
+declare <4 x float> @llvm.x86.avx512.rcp28.ss(<4 x float>, <4 x float>, <4 x float>, i8, i32) nounwind readnone
+define float @__rcp_uniform_float(float) nounwind readonly alwaysinline {
+  %vecval = insertelement <4 x float> undef, float %0, i32 0
+  %call = call <4 x float> @llvm.x86.avx512.rcp28.ss(<4 x float> %vecval, <4 x float> %vecval, <4 x float> undef, i8 -1, i32 8)
+  %scall = extractelement <4 x float> %call, i32 0
+  ret float %scall
 }
-
-rsqrt14_uniform()
 declare <16 x float> @llvm.x86.avx512.rcp14.ps.512(<16 x float>, <16 x float>, i16) nounwind readnone
 define <16 x float> @__rcp_fast_varying_float(<16 x float>) nounwind readonly alwaysinline {
   %res = call <16 x float> @llvm.x86.avx512.rcp14.ps.512(<16 x float> %0, <16 x float> undef, i16 -1)
   ret <16 x float> %res
 }
+declare <16 x float> @llvm.x86.avx512.rcp28.ps(<16 x float>, <16 x float>, i16, i32) nounwind readnone
+define <16 x float> @__rcp_varying_float(<16 x float>) nounwind readonly alwaysinline {
+  %res = call <16 x float> @llvm.x86.avx512.rcp28.ps(<16 x float> %0, <16 x float> undef, i16 -1, i32 8)
+  ret <16 x float> %res
+}
+
+;; rsqrt float
+declare <4 x float> @llvm.x86.avx512.rsqrt14.ss(<4 x float>, <4 x float>, <4 x float>, i8) nounwind readnone
+define float @__rsqrt_fast_uniform_float(float) nounwind readonly alwaysinline {
+  %v = insertelement <4 x float> undef, float %0, i32 0
+  %vis = call <4 x float> @llvm.x86.avx512.rsqrt14.ss(<4 x float> %v, <4 x float> %v, <4 x float> undef, i8 -1)
+  %is = extractelement <4 x float> %vis, i32 0
+  ret float %is
+}
+declare <4 x float> @llvm.x86.avx512.rsqrt28.ss(<4 x float>, <4 x float>, <4 x float>, i8, i32) nounwind readnone
+define float @__rsqrt_uniform_float(float) nounwind readonly alwaysinline {
+  %v = insertelement <4 x float> undef, float %0, i32 0
+  %vis = call <4 x float> @llvm.x86.avx512.rsqrt28.ss(<4 x float> %v, <4 x float> %v, <4 x float> undef, i8 -1, i32 8)
+  %is = extractelement <4 x float> %vis, i32 0
+  ret float %is
+}
 declare <16 x float> @llvm.x86.avx512.rsqrt14.ps.512(<16 x float>, <16 x float>, i16) nounwind readnone
 define <16 x float> @__rsqrt_fast_varying_float(<16 x float> %v) nounwind readonly alwaysinline {
   %res = call <16 x float> @llvm.x86.avx512.rsqrt14.ps.512(<16 x float> %v, <16 x float> undef, i16 -1)
+  ret <16 x float> %res
+}
+declare <16 x float> @llvm.x86.avx512.rsqrt28.ps(<16 x float>, <16 x float>, i16, i32) nounwind readnone
+define <16 x float> @__rsqrt_varying_float(<16 x float> %v) nounwind readonly alwaysinline {
+  %res = call <16 x float> @llvm.x86.avx512.rsqrt28.ps(<16 x float> %v, <16 x float> undef, i16 -1, i32 8)
   ret <16 x float> %res
 }
 
