@@ -286,6 +286,27 @@ define float @__rsqrt_uniform_float(float) nounwind readonly alwaysinline {
   %half_scale = fmul float 0.5, %is_mul
   ret float %half_scale
 }
+
+declare <2 x double> @llvm.x86.avx512.rsqrt14.sd(<2 x double>, <2 x double>, <2 x double>, i8) nounwind readnone
+define double @__rsqrt_fast_uniform_double(double) nounwind readonly alwaysinline {
+  %v = insertelement <2 x double> undef, double %0, i32 0
+  %vis = call <2 x double> @llvm.x86.avx512.rsqrt14.sd(<2 x double> %v, <2 x double> %v, <2 x double> undef, i8 -1)
+  %is = extractelement <2 x double> %vis, i32 0
+  ret double %is
+}
+
+define double @__rsqrt_uniform_double(double) nounwind readonly alwaysinline {
+  %is = call double @__rsqrt_fast_uniform_double(double %0)
+
+  ; Newton-Raphson iteration to improve precision
+  ;  return 0.5 * is * (3. - (v * is) * is);
+  %v_is = fmul double %0, %is
+  %v_is_is = fmul double %v_is, %is
+  %three_sub = fsub double 3., %v_is_is
+  %is_mul = fmul double %is, %three_sub
+  %half_scale = fmul double 0.5, %is_mul
+  ret double %half_scale
+}
 ')
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -310,6 +331,26 @@ define float @__rcp_uniform_float(float %v) nounwind readonly alwaysinline {
   %two_minus = fsub float 2., %v_iv
   %iv_mul = fmul float %iv, %two_minus
   ret float %iv_mul
+}
+
+declare <2 x double> @llvm.x86.avx512.rcp14.sd(<2 x double>, <2 x double>, <2 x double>, i8) nounwind readnone
+define double @__rcp_fast_uniform_double(double) nounwind readonly alwaysinline {
+  %vecval = insertelement <2 x double> undef, double %0, i32 0
+  %call = call <2 x double> @llvm.x86.avx512.rcp14.sd(<2 x double> %vecval, <2 x double> %vecval, <2 x double> undef, i8 -1)
+  %scall = extractelement <2 x double> %call, i32 0
+  ret double %scall
+}
+
+define double @__rcp_uniform_double(double %v) nounwind readonly alwaysinline {
+  %iv = call double @__rcp_fast_uniform_double(double %v)
+
+  ; do one N-R iteration to improve precision
+  ; iv = rcp(v)
+  ; iv * (2. - v * iv)
+  %v_iv = fmul double %v, %iv
+  %two_minus = fsub double 2., %v_iv
+  %iv_mul = fmul double %iv, %two_minus
+  ret double %iv_mul
 }
 ')
 

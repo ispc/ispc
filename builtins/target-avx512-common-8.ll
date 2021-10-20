@@ -1016,8 +1016,6 @@ define_avgs()
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; reciprocals in double precision, if supported
 
-rsqrtd_decl()
-rcpd_decl()
 rcph_decl()
 
 transcendetals_decl()

@@ -71,6 +71,40 @@ define <16 x float> @__rcp_varying_float(<16 x float>) nounwind readonly alwaysi
   ret <16 x float> %res
 }
 
+;; rcp double
+declare <2 x double> @llvm.x86.avx512.rcp14.sd(<2 x double>, <2 x double>, <2 x double>, i8) nounwind readnone
+define double @__rcp_fast_uniform_double(double) nounwind readonly alwaysinline {
+  %vecval = insertelement <2 x double> undef, double %0, i32 0
+  %call = call <2 x double> @llvm.x86.avx512.rcp14.sd(<2 x double> %vecval, <2 x double> %vecval, <2 x double> undef, i8 -1)
+  %scall = extractelement <2 x double> %call, i32 0
+  ret double %scall
+}
+declare <2 x double> @llvm.x86.avx512.rcp28.sd(<2 x double>, <2 x double>, <2 x double>, i8, i32) nounwind readnone
+define double @__rcp_uniform_double(double) nounwind readonly alwaysinline {
+  %vecval = insertelement <2 x double> undef, double %0, i32 0
+  %call = call <2 x double> @llvm.x86.avx512.rcp28.sd(<2 x double> %vecval, <2 x double> %vecval, <2 x double> undef, i8 -1, i32 8)
+  %scall = extractelement <2 x double> %call, i32 0
+  ret double %scall
+}
+declare <8 x double> @llvm.x86.avx512.rcp14.pd.512(<8 x double>, <8 x double>, i8) nounwind readnone
+define <16 x double> @__rcp_fast_varying_double(<16 x double> %val) nounwind readonly alwaysinline {
+  %val_lo = shufflevector <16 x double> %val, <16 x double> undef, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  %val_hi = shufflevector <16 x double> %val, <16 x double> undef, <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+  %res_lo = call <8 x double> @llvm.x86.avx512.rcp14.pd.512(<8 x double> %val_lo, <8 x double> undef, i8 -1)
+  %res_hi = call <8 x double> @llvm.x86.avx512.rcp14.pd.512(<8 x double> %val_hi, <8 x double> undef, i8 -1)
+  %res = shufflevector <8 x double> %res_lo, <8 x double> %res_hi, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+  ret <16 x double> %res
+}
+declare <8 x double> @llvm.x86.avx512.rcp28.pd(<8 x double>, <8 x double>, i8, i32) nounwind readnone
+define <16 x double> @__rcp_varying_double(<16 x double> %val) nounwind readonly alwaysinline {
+  %val_lo = shufflevector <16 x double> %val, <16 x double> undef, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  %val_hi = shufflevector <16 x double> %val, <16 x double> undef, <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+  %res_lo = call <8 x double> @llvm.x86.avx512.rcp28.pd(<8 x double> %val_lo, <8 x double> undef, i8 -1, i32 8)
+  %res_hi = call <8 x double> @llvm.x86.avx512.rcp28.pd(<8 x double> %val_hi, <8 x double> undef, i8 -1, i32 8)
+  %res = shufflevector <8 x double> %res_lo, <8 x double> %res_hi, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+  ret <16 x double> %res
+}
+
 ;; rsqrt float
 declare <4 x float> @llvm.x86.avx512.rsqrt14.ss(<4 x float>, <4 x float>, <4 x float>, i8) nounwind readnone
 define float @__rsqrt_fast_uniform_float(float) nounwind readonly alwaysinline {
@@ -95,6 +129,40 @@ declare <16 x float> @llvm.x86.avx512.rsqrt28.ps(<16 x float>, <16 x float>, i16
 define <16 x float> @__rsqrt_varying_float(<16 x float> %v) nounwind readonly alwaysinline {
   %res = call <16 x float> @llvm.x86.avx512.rsqrt28.ps(<16 x float> %v, <16 x float> undef, i16 -1, i32 8)
   ret <16 x float> %res
+}
+
+;; rsqrt double
+declare <2 x double> @llvm.x86.avx512.rsqrt14.sd(<2 x double>, <2 x double>, <2 x double>, i8) nounwind readnone
+define double @__rsqrt_fast_uniform_double(double) nounwind readonly alwaysinline {
+  %v = insertelement <2 x double> undef, double %0, i32 0
+  %vis = call <2 x double> @llvm.x86.avx512.rsqrt14.sd(<2 x double> %v, <2 x double> %v, <2 x double> undef, i8 -1)
+  %is = extractelement <2 x double> %vis, i32 0
+  ret double %is
+}
+declare <2 x double> @llvm.x86.avx512.rsqrt28.sd(<2 x double>, <2 x double>, <2 x double>, i8, i32) nounwind readnone
+define double @__rsqrt_uniform_double(double) nounwind readonly alwaysinline {
+  %v = insertelement <2 x double> undef, double %0, i32 0
+  %vis = call <2 x double> @llvm.x86.avx512.rsqrt28.sd(<2 x double> %v, <2 x double> %v, <2 x double> undef, i8 -1, i32 8)
+  %is = extractelement <2 x double> %vis, i32 0
+  ret double %is
+}
+declare <8 x double> @llvm.x86.avx512.rsqrt14.pd.512(<8 x double>, <8 x double>, i8) nounwind readnone
+define <16 x double> @__rsqrt_fast_varying_double(<16 x double> %val) nounwind readonly alwaysinline {
+  %val_lo = shufflevector <16 x double> %val, <16 x double> undef, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  %val_hi = shufflevector <16 x double> %val, <16 x double> undef, <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+  %res_lo = call <8 x double> @llvm.x86.avx512.rsqrt14.pd.512(<8 x double> %val_lo, <8 x double> undef, i8 -1)
+  %res_hi = call <8 x double> @llvm.x86.avx512.rsqrt14.pd.512(<8 x double> %val_hi, <8 x double> undef, i8 -1)
+  %res = shufflevector <8 x double> %res_lo, <8 x double> %res_hi, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+  ret <16 x double> %res
+}
+declare <8 x double> @llvm.x86.avx512.rsqrt28.pd(<8 x double>, <8 x double>, i8, i32) nounwind readnone
+define <16 x double> @__rsqrt_varying_double(<16 x double> %val) nounwind readonly alwaysinline {
+  %val_lo = shufflevector <16 x double> %val, <16 x double> undef, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  %val_hi = shufflevector <16 x double> %val, <16 x double> undef, <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+  %res_lo = call <8 x double> @llvm.x86.avx512.rsqrt28.pd(<8 x double> %val_lo, <8 x double> undef, i8 -1, i32 8)
+  %res_hi = call <8 x double> @llvm.x86.avx512.rsqrt28.pd(<8 x double> %val_hi, <8 x double> undef, i8 -1, i32 8)
+  %res = shufflevector <8 x double> %res_lo, <8 x double> %res_hi, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+  ret <16 x double> %res
 }
 
 ;;saturation_arithmetic_novec()
