@@ -43,6 +43,7 @@ svml(ISA)
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; rcp, rsqrt
 
+rcp14_uniform()
 declare <16 x float> @llvm.x86.avx512.rcp28.ps(<16 x float>, <16 x float>, i16, i32) nounwind readnone
 define <16 x float> @__rcp_varying_float(<16 x float>) nounwind readonly alwaysinline {
   %res = call <16 x float> @llvm.x86.avx512.rcp28.ps(<16 x float> %0, <16 x float> undef, i16 -1, i32 8)
@@ -54,6 +55,7 @@ define <16 x float> @__rsqrt_varying_float(<16 x float> %v) nounwind readonly al
   ret <16 x float> %res
 }
 
+rsqrt14_uniform()
 declare <16 x float> @llvm.x86.avx512.rcp14.ps.512(<16 x float>, <16 x float>, i16) nounwind readnone
 define <16 x float> @__rcp_fast_varying_float(<16 x float>) nounwind readonly alwaysinline {
   %res = call <16 x float> @llvm.x86.avx512.rcp14.ps.512(<16 x float> %0, <16 x float> undef, i16 -1)
