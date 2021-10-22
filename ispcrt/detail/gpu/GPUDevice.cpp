@@ -203,6 +203,54 @@ struct Future : public ispcrt::base::Future {
     bool m_valid{false};
 };
 
+struct CommandList {
+    CommandList(ze_device_handle_t device, ze_context_handle_t context, const uint32_t ordinal)
+        : m_device(device), m_context(context), m_ordinal(ordinal) {
+        ze_command_list_desc_t commandListDesc = {ZE_STRUCTURE_TYPE_COMMAND_LIST_DESC, nullptr, m_ordinal, 0};
+
+        L0_SAFE_CALL(zeCommandListCreate(m_context, m_device, &commandListDesc, &m_handle));
+        if (!m_handle)
+            throw std::runtime_error("Failed to create command list!");
+    }
+
+    ze_command_list_handle_t handle() const { return m_handle; }
+
+    ~CommandList() {
+        if (m_handle)
+            L0_SAFE_CALL_NOEXCEPT(zeCommandListDestroy(m_handle));
+    }
+
+    uint32_t ordinal() { return m_ordinal; }
+
+    void reset() {
+        if (m_numCommands > 0) {
+            L0_SAFE_CALL(zeCommandListReset(m_handle));
+        }
+        m_submitted = false;
+        m_numCommands = 0;
+    }
+
+    void submit(ze_command_queue_handle_t q) {
+        if (!m_submitted && m_numCommands > 0) {
+            L0_SAFE_CALL(zeCommandListClose(m_handle));
+            L0_SAFE_CALL(zeCommandQueueExecuteCommandLists(q, 1, &m_handle, nullptr));
+            m_submitted = true;
+        }
+    }
+
+    void inc() { m_numCommands++; }
+
+    uint32_t count() { return m_numCommands; }
+
+  private:
+    ze_command_list_handle_t m_handle{nullptr};
+    ze_context_handle_t m_context{nullptr};
+    ze_device_handle_t m_device{nullptr};
+    const uint32_t m_ordinal{0};
+    bool m_submitted{false};
+    uint32_t m_numCommands{0};
+};
+
 struct Event {
     Event(ze_event_pool_handle_t pool, uint32_t index) : m_pool(pool), m_index(index) {}
 
@@ -543,74 +591,51 @@ struct Kernel : public ispcrt::base::Kernel {
 };
 
 struct TaskQueue : public ispcrt::base::TaskQueue {
-    TaskQueue(ze_device_handle_t device, ze_context_handle_t context)
+    TaskQueue(ze_device_handle_t device, ze_context_handle_t context, const bool is_mock_dev)
         : m_ep_compute(context, device, ISPCRT_EVENT_POOL_COMPUTE), m_ep_copy(context, device, ISPCRT_EVENT_POOL_COPY) {
         m_context = context;
         m_device = device;
-        // Discover all command queue groups
-        uint32_t queueGroupCount = 0;
-        L0_SAFE_CALL(zeDeviceGetCommandQueueGroupProperties(device, &queueGroupCount, nullptr));
-        ze_command_queue_group_properties_t *queueGroupProperties = (ze_command_queue_group_properties_t *)malloc(
-            queueGroupCount * sizeof(ze_command_queue_group_properties_t));
-        zeDeviceGetCommandQueueGroupProperties(device, &queueGroupCount, queueGroupProperties);
+
         uint32_t copyOrdinal = std::numeric_limits<uint32_t>::max();
         uint32_t computeOrdinal = 0;
-        if (queueGroupProperties != NULL) {
-            for (uint32_t i = 0; i < queueGroupCount; i++) {
-                if (queueGroupProperties[i].flags & ZE_COMMAND_QUEUE_GROUP_PROPERTY_FLAG_COMPUTE) {
-                    computeOrdinal = i;
-                    break;
-                }
-            }
 
-            for (uint32_t i = 0; i < queueGroupCount; i++) {
-                if ((queueGroupProperties[i].flags & ZE_COMMAND_QUEUE_GROUP_PROPERTY_FLAG_COMPUTE) == 0 &&
-                    (queueGroupProperties[i].flags & ZE_COMMAND_QUEUE_GROUP_PROPERTY_FLAG_COPY)) {
-                    copyOrdinal = i;
-                    break;
+        if (!is_mock_dev) {
+            // Discover all command queue groups
+            uint32_t queueGroupCount = 0;
+            L0_SAFE_CALL(zeDeviceGetCommandQueueGroupProperties(device, &queueGroupCount, nullptr));
+            ze_command_queue_group_properties_t *queueGroupProperties = (ze_command_queue_group_properties_t *)malloc(
+                queueGroupCount * sizeof(ze_command_queue_group_properties_t));
+            zeDeviceGetCommandQueueGroupProperties(device, &queueGroupCount, queueGroupProperties);
+
+            if (queueGroupProperties != NULL) {
+                for (uint32_t i = 0; i < queueGroupCount; i++) {
+                    if (queueGroupProperties[i].flags & ZE_COMMAND_QUEUE_GROUP_PROPERTY_FLAG_COMPUTE) {
+                        computeOrdinal = i;
+                        break;
+                    }
+                }
+
+                for (uint32_t i = 0; i < queueGroupCount; i++) {
+                    if ((queueGroupProperties[i].flags & ZE_COMMAND_QUEUE_GROUP_PROPERTY_FLAG_COMPUTE) == 0 &&
+                        (queueGroupProperties[i].flags & ZE_COMMAND_QUEUE_GROUP_PROPERTY_FLAG_COPY)) {
+                        copyOrdinal = i;
+                        break;
+                    }
                 }
             }
+            free(queueGroupProperties);
         }
 
         if (copyOrdinal == std::numeric_limits<uint32_t>::max()) {
-            std::cout << "Using compute engine for copies\n";
             copyOrdinal = computeOrdinal;
-        } else {
-            std::cout << "Using copy engines for copies\n";
         }
 
-        free(queueGroupProperties);
+        m_cl = createCommandList(computeOrdinal);
+        m_cl_mem_d2h = createCommandList(copyOrdinal);
+        m_cl_mem_h2d = createCommandList(copyOrdinal);
 
-        // Create a command list
-        ze_command_list_desc_t commandListDescCompute = {
-            ZE_STRUCTURE_TYPE_COMMAND_LIST_DESC, nullptr, computeOrdinal,
-            0 // flags
-        };
-        // Create a command list
-        ze_command_list_desc_t commandListDescCopy = {
-            ZE_STRUCTURE_TYPE_COMMAND_LIST_DESC, nullptr, copyOrdinal,
-            0 // flags
-        };
-
-        L0_SAFE_CALL(zeCommandListCreate(context, device, &commandListDescCompute, &m_cl));
-        L0_SAFE_CALL(zeCommandListCreate(context, device, &commandListDescCopy, &m_cl_mem_d2h));
-        L0_SAFE_CALL(zeCommandListCreate(context, device, &commandListDescCopy, &m_cl_mem_h2d));
-        if (m_cl == nullptr)
-            throw std::runtime_error("Failed to create command list!");
-        // Create a command queue
-        ze_command_queue_desc_t commandQueueDesc = {};
-        commandQueueDesc.mode = ZE_COMMAND_QUEUE_MODE_ASYNCHRONOUS;
-        commandQueueDesc.priority = ZE_COMMAND_QUEUE_PRIORITY_NORMAL;
-        commandQueueDesc.ordinal = computeOrdinal;
-
-        L0_SAFE_CALL(zeCommandQueueCreate(context, device, &commandQueueDesc, &m_q));
-        ze_command_queue_desc_t commandQueueDescCopy = {};
-        commandQueueDescCopy.mode = ZE_COMMAND_QUEUE_MODE_ASYNCHRONOUS;
-        commandQueueDescCopy.priority = ZE_COMMAND_QUEUE_PRIORITY_NORMAL;
-        commandQueueDescCopy.ordinal = copyOrdinal;
-        L0_SAFE_CALL(zeCommandQueueCreate(context, device, &commandQueueDescCopy, &m_q_copy));
-        if (m_q == nullptr)
-            throw std::runtime_error("Failed to create command queue!");
+        createCommandQueue(&m_q, computeOrdinal);
+        createCommandQueue(&m_q_copy, copyOrdinal);
     }
 
     ~TaskQueue() {
@@ -618,8 +643,7 @@ struct TaskQueue : public ispcrt::base::TaskQueue {
             L0_SAFE_CALL_NOEXCEPT(zeCommandQueueDestroy(m_q));
         if (m_q_copy)
             L0_SAFE_CALL_NOEXCEPT(zeCommandQueueDestroy(m_q_copy));
-        if (m_cl)
-            L0_SAFE_CALL_NOEXCEPT(zeCommandListDestroy(m_cl));
+
         // Clean up any events that could be in the queue
         for (const auto &p : m_events_compute_list) {
             auto e = p.first;
@@ -636,12 +660,9 @@ struct TaskQueue : public ispcrt::base::TaskQueue {
 
         m_events_compute_list.clear();
         m_events_copy_list.clear();
-
-        L0_SAFE_CALL_NOEXCEPT(zeCommandListDestroy(m_cl_mem_h2d));
-        L0_SAFE_CALL_NOEXCEPT(zeCommandListDestroy(m_cl_mem_d2h));
     }
 
-    void barrier() override { L0_SAFE_CALL(zeCommandListAppendBarrier(m_cl, nullptr, 0, nullptr)); }
+    void barrier() override { L0_SAFE_CALL(zeCommandListAppendBarrier(m_cl->handle(), nullptr, 0, nullptr)); }
 
     void copyToHost(ispcrt::base::MemoryView &mv) override {
         auto &view = (gpu::MemoryView &)mv;
@@ -650,9 +671,9 @@ struct TaskQueue : public ispcrt::base::TaskQueue {
         for (const auto &ev : m_events_compute_list) {
             waitEvents.push_back(ev.first->handle());
         }
-        L0_SAFE_CALL(zeCommandListAppendMemoryCopy(m_cl_mem_d2h, view.hostPtr(), view.devicePtr(), view.numBytes(),
-                                                   nullptr, waitEvents.size(), waitEvents.data()));
-        m_cl_mem_d2h_count++;
+        L0_SAFE_CALL(zeCommandListAppendMemoryCopy(m_cl_mem_d2h->handle(), view.hostPtr(), view.devicePtr(),
+                                                   view.numBytes(), nullptr, waitEvents.size(), waitEvents.data()));
+        m_cl_mem_d2h->inc();
     }
 
     void copyToDevice(ispcrt::base::MemoryView &mv) override {
@@ -677,9 +698,9 @@ struct TaskQueue : public ispcrt::base::TaskQueue {
             copyEvent->setActive();
             m_events_copy_list.push_back(copyEvent);
         }
-        L0_SAFE_CALL(zeCommandListAppendMemoryCopy(m_cl_mem_h2d, view.devicePtr(), view.hostPtr(), view.numBytes(),
-                                                   copyEvent->handle(), 0, nullptr));
-        m_cl_mem_h2d_count++;
+        L0_SAFE_CALL(zeCommandListAppendMemoryCopy(m_cl_mem_h2d->handle(), view.devicePtr(), view.hostPtr(),
+                                                   view.numBytes(), copyEvent->handle(), 0, nullptr));
+        m_cl_mem_h2d->inc();
     }
 
     ispcrt::base::Future *launch(ispcrt::base::Kernel &k, ispcrt::base::MemoryView *params, size_t dim0, size_t dim1,
@@ -709,8 +730,9 @@ struct TaskQueue : public ispcrt::base::TaskQueue {
         }
         try {
             // Wait for L0 copy events before launching the kernel
-            L0_SAFE_CALL(zeCommandListAppendLaunchKernel(m_cl, kernel.handle(), &dispatchTraits, event->handle(),
-                                                         waitEvents.size(), waitEvents.data()));
+            L0_SAFE_CALL(zeCommandListAppendLaunchKernel(m_cl->handle(), kernel.handle(), &dispatchTraits,
+                                                         event->handle(), waitEvents.size(), waitEvents.data()));
+            m_cl->inc();
         } catch (ispcrt::base::ispcrt_runtime_error &e) {
             // cleanup and rethrow
             m_ep_compute.deleteEvent(event);
@@ -725,32 +747,27 @@ struct TaskQueue : public ispcrt::base::TaskQueue {
     }
 
     void submit() override {
-        if (!m_submitted_h2d && m_cl_mem_h2d_count > 0) {
-            L0_SAFE_CALL(zeCommandListClose(m_cl_mem_h2d));
-            L0_SAFE_CALL(zeCommandQueueExecuteCommandLists(m_q_copy, 1, &m_cl_mem_h2d, nullptr));
-            m_cl_mem_h2d_count = 0;
-            m_submitted_h2d = true;
-        }
-        if (m_events_compute_list.size() && !m_submitted) {
-            L0_SAFE_CALL(zeCommandListClose(m_cl));
-            L0_SAFE_CALL(zeCommandQueueExecuteCommandLists(m_q, 1, &m_cl, nullptr));
-            m_submitted = true;
-        }
-        if (!m_submitted_d2h && m_cl_mem_d2h_count > 0) {
-            L0_SAFE_CALL(zeCommandListClose(m_cl_mem_d2h));
-            L0_SAFE_CALL(zeCommandQueueExecuteCommandLists(m_q_copy, 1, &m_cl_mem_d2h, nullptr));
-            m_cl_mem_d2h_count = 0;
-            m_submitted_d2h = true;
-        }
+        m_cl_mem_h2d->submit(m_q_copy);
+        m_cl->submit(m_q);
+        m_cl_mem_d2h->submit(m_q_copy);
     }
 
     void sync() override {
-        if (!m_submitted_h2d || !m_submitted_d2h || !m_submitted)
-            submit();
-        L0_SAFE_CALL(zeCommandQueueSynchronize(m_q, std::numeric_limits<uint64_t>::max()));
-        L0_SAFE_CALL(zeCommandListReset(m_cl_mem_h2d));
-        L0_SAFE_CALL(zeCommandListReset(m_cl));
-        L0_SAFE_CALL(zeCommandListReset(m_cl_mem_d2h));
+        // Submit command lists
+        submit();
+
+        // Synchronize
+        // TODO: Since all commands are connected using events
+        // we need only one queue synchronize here
+        if (m_events_compute_list.size()) {
+            L0_SAFE_CALL(zeCommandQueueSynchronize(m_q, std::numeric_limits<uint64_t>::max()));
+            m_cl->reset();
+        }
+        if (m_cl_mem_h2d->count() > 0 || m_cl_mem_d2h->count() > 0) {
+            L0_SAFE_CALL(zeCommandQueueSynchronize(m_q_copy, std::numeric_limits<uint64_t>::max()));
+            m_cl_mem_h2d->reset();
+            m_cl_mem_d2h->reset();
+        }
 
         // Update future objects corresponding to the events that have just completed
         for (const auto &p : m_events_compute_list) {
@@ -771,9 +788,6 @@ struct TaskQueue : public ispcrt::base::TaskQueue {
         }
 
         m_events_compute_list.clear();
-        m_submitted = false;
-        m_submitted_d2h = false;
-        m_submitted_h2d = false;
 
         // Mark events in the list to be reused
         for (const auto &ev : m_events_copy_list) {
@@ -786,19 +800,36 @@ struct TaskQueue : public ispcrt::base::TaskQueue {
   private:
     ze_command_queue_handle_t m_q{nullptr};
     ze_command_queue_handle_t m_q_copy{nullptr};
-    ze_command_list_handle_t m_cl{nullptr};
-    bool m_submitted{false};
-    bool m_submitted_h2d{false};
-    bool m_submitted_d2h{false};
-    EventPool m_ep_compute, m_ep_copy;
-    std::vector<std::pair<Event *, Future *>> m_events_compute_list;
-    std::vector<Event *> m_events_copy_list;
     ze_context_handle_t m_context{nullptr};
     ze_device_handle_t m_device{nullptr};
-    ze_command_list_handle_t m_cl_mem_h2d;
-    int m_cl_mem_h2d_count{0};
-    ze_command_list_handle_t m_cl_mem_d2h;
-    int m_cl_mem_d2h_count{0};
+
+    CommandList *m_cl{nullptr};
+    CommandList *m_cl_mem_h2d{nullptr};
+    CommandList *m_cl_mem_d2h{nullptr};
+    EventPool m_ep_compute, m_ep_copy;
+    std::vector<std::pair<Event *, Future *>> m_events_compute_list;
+
+    // Pool for copy events
+    std::vector<Event *> m_events_copy_list;
+
+    CommandList *createCommandList(uint32_t ordinal) {
+        auto cmdl = new CommandList(m_device, m_context, ordinal);
+        assert(cmdl);
+        return cmdl;
+    }
+
+    void createCommandQueue(ze_command_queue_handle_t *q, uint32_t ordinal) {
+        // Create compute command queue
+        ze_command_queue_desc_t commandQueueDesc = {};
+        commandQueueDesc.mode = ZE_COMMAND_QUEUE_MODE_ASYNCHRONOUS;
+        commandQueueDesc.priority = ZE_COMMAND_QUEUE_PRIORITY_NORMAL;
+        commandQueueDesc.ordinal = ordinal;
+
+        L0_SAFE_CALL(zeCommandQueueCreate(m_context, m_device, &commandQueueDesc, q));
+
+        if (q == nullptr)
+            throw std::runtime_error("Failed to create command queue!");
+    }
 };
 
 // limitation: we assume that there'll be only one driver
@@ -924,7 +955,7 @@ base::MemoryView *GPUDevice::newMemoryView(void *appMem, size_t numBytes, bool s
 }
 
 base::TaskQueue *GPUDevice::newTaskQueue() const {
-    return new gpu::TaskQueue((ze_device_handle_t)m_device, (ze_context_handle_t)m_context);
+    return new gpu::TaskQueue((ze_device_handle_t)m_device, (ze_context_handle_t)m_context, m_is_mock);
 }
 
 base::Module *GPUDevice::newModule(const char *moduleFile, const ISPCRTModuleOptions &opts) const {
