@@ -203,54 +203,6 @@ struct Future : public ispcrt::base::Future {
     bool m_valid{false};
 };
 
-struct CommandList {
-    CommandList(ze_device_handle_t device, ze_context_handle_t context, const uint32_t ordinal)
-        : m_device(device), m_context(context), m_ordinal(ordinal) {
-        ze_command_list_desc_t commandListDesc = {ZE_STRUCTURE_TYPE_COMMAND_LIST_DESC, nullptr, m_ordinal, 0};
-
-        L0_SAFE_CALL(zeCommandListCreate(m_context, m_device, &commandListDesc, &m_handle));
-        if (!m_handle)
-            throw std::runtime_error("Failed to create command list!");
-    }
-
-    ze_command_list_handle_t handle() const { return m_handle; }
-
-    ~CommandList() {
-        if (m_handle)
-            L0_SAFE_CALL_NOEXCEPT(zeCommandListDestroy(m_handle));
-    }
-
-    uint32_t ordinal() { return m_ordinal; }
-
-    void reset() {
-        if (m_numCommands > 0) {
-            L0_SAFE_CALL(zeCommandListReset(m_handle));
-        }
-        m_submitted = false;
-        m_numCommands = 0;
-    }
-
-    void submit(ze_command_queue_handle_t q) {
-        if (!m_submitted && m_numCommands > 0) {
-            L0_SAFE_CALL(zeCommandListClose(m_handle));
-            L0_SAFE_CALL(zeCommandQueueExecuteCommandLists(q, 1, &m_handle, nullptr));
-            m_submitted = true;
-        }
-    }
-
-    void inc() { m_numCommands++; }
-
-    uint32_t count() { return m_numCommands; }
-
-  private:
-    ze_command_list_handle_t m_handle{nullptr};
-    ze_context_handle_t m_context{nullptr};
-    ze_device_handle_t m_device{nullptr};
-    const uint32_t m_ordinal{0};
-    bool m_submitted{false};
-    uint32_t m_numCommands{0};
-};
-
 struct Event {
     Event(ze_event_pool_handle_t pool, uint32_t index) : m_pool(pool), m_index(index) {}
 
@@ -302,6 +254,68 @@ struct Event {
     // This property tracks if event is "active" and should be used as
     // dependency for kernel launches.
     bool m_in_use{false};
+};
+
+struct CommandList {
+    CommandList(ze_device_handle_t device, ze_context_handle_t context, const uint32_t ordinal)
+        : m_device(device), m_context(context), m_ordinal(ordinal) {
+        ze_command_list_desc_t commandListDesc = {ZE_STRUCTURE_TYPE_COMMAND_LIST_DESC, nullptr, m_ordinal, 0};
+
+        L0_SAFE_CALL(zeCommandListCreate(m_context, m_device, &commandListDesc, &m_handle));
+        if (!m_handle)
+            throw std::runtime_error("Failed to create command list!");
+    }
+
+    ze_command_list_handle_t handle() const { return m_handle; }
+
+    ~CommandList() {
+        if (m_handle)
+            L0_SAFE_CALL_NOEXCEPT(zeCommandListDestroy(m_handle));
+        m_events.clear();
+    }
+
+    uint32_t ordinal() { return m_ordinal; }
+
+    void reset() {
+        if (m_numCommands > 0) {
+            L0_SAFE_CALL(zeCommandListReset(m_handle));
+        }
+        m_submitted = false;
+        m_numCommands = 0;
+        m_events.clear();
+    }
+
+    void submit(ze_command_queue_handle_t q) {
+        if (!m_submitted && m_numCommands > 0) {
+            L0_SAFE_CALL(zeCommandListClose(m_handle));
+            L0_SAFE_CALL(zeCommandQueueExecuteCommandLists(q, 1, &m_handle, nullptr));
+            m_submitted = true;
+        }
+    }
+
+    void inc() { m_numCommands++; }
+
+    uint32_t count() { return m_numCommands; }
+
+    void addEvent(Event *event) { m_events.push_back(event); }
+
+    std::vector<ze_event_handle_t> getEventHandlers() {
+        std::vector<ze_event_handle_t> hEvents;
+        for (const auto &ev : m_events) {
+            hEvents.push_back(ev->handle());
+        }
+        return hEvents;
+    }
+
+  private:
+    ze_command_list_handle_t m_handle{nullptr};
+    ze_context_handle_t m_context{nullptr};
+    ze_device_handle_t m_device{nullptr};
+    const uint32_t m_ordinal{0};
+    bool m_submitted{false};
+    uint32_t m_numCommands{0};
+    // List of events associated with command list
+    std::vector<Event *> m_events;
 };
 
 typedef enum { ISPCRT_EVENT_POOL_COMPUTE, ISPCRT_EVENT_POOL_COPY } ISPCRTEventPoolType;
@@ -363,6 +377,10 @@ struct EventPool {
     }
 
     ~EventPool() {
+        for (const auto &p : m_events_pool) {
+            deleteEvent(p);
+        }
+        m_events_pool.clear();
         if (m_pool) {
             L0_SAFE_CALL_NOEXCEPT(zeEventPoolDestroy(m_pool));
         }
@@ -386,6 +404,36 @@ struct EventPool {
         delete e;
     }
 
+    Event *getEvent() {
+        // Get event from pool or create a new one if there is no ready event yet
+        Event *event = nullptr;
+        if (m_events_pool.size() > 0) {
+            for (const auto &ev : m_events_pool) {
+                // If event is completed, reuse it
+                if (ev->isReady()) {
+                    event = ev;
+                    event->resetEvent();
+                    event->setActive();
+                    break;
+                }
+            }
+        }
+        if (event == nullptr) {
+            event = createEvent();
+            if (event == nullptr)
+                throw std::runtime_error("Failed to create event");
+            event->setActive();
+            m_events_pool.push_back(event);
+        }
+        return event;
+    }
+
+    void releaseEvents() {
+        for (const auto &ev : m_events_pool) {
+            ev->setFree();
+        }
+    }
+
     uint64_t getTimestampRes() const { return m_timestampFreq; }
     uint64_t getTimestampMaxValue() const { return m_timestampMaxValue; }
 
@@ -397,6 +445,8 @@ struct EventPool {
     uint64_t m_timestampMaxValue;
     uint32_t m_poolSize;
     std::deque<uint32_t> m_freeList;
+    // Events pool for reuse
+    std::vector<Event *> m_events_pool;
 };
 
 struct MemoryView : public ispcrt::base::MemoryView {
@@ -635,6 +685,7 @@ struct TaskQueue : public ispcrt::base::TaskQueue {
         m_cl_mem_h2d = createCommandList(copyOrdinal);
 
         createCommandQueue(&m_q, computeOrdinal);
+        // TODO: if there is no copy engine in HW, no need to create separate queue
         createCommandQueue(&m_q_copy, copyOrdinal);
     }
 
@@ -654,12 +705,8 @@ struct TaskQueue : public ispcrt::base::TaskQueue {
             f->refDec();
             m_ep_compute.deleteEvent(e);
         }
-        for (const auto &p : m_events_copy_list) {
-            m_ep_copy.deleteEvent(p);
-        }
 
         m_events_compute_list.clear();
-        m_events_copy_list.clear();
     }
 
     void barrier() override { L0_SAFE_CALL(zeCommandListAppendBarrier(m_cl->handle(), nullptr, 0, nullptr)); }
@@ -673,34 +720,18 @@ struct TaskQueue : public ispcrt::base::TaskQueue {
         }
         L0_SAFE_CALL(zeCommandListAppendMemoryCopy(m_cl_mem_d2h->handle(), view.hostPtr(), view.devicePtr(),
                                                    view.numBytes(), nullptr, waitEvents.size(), waitEvents.data()));
+
         m_cl_mem_d2h->inc();
     }
 
     void copyToDevice(ispcrt::base::MemoryView &mv) override {
         auto &view = (gpu::MemoryView &)mv;
-        // Create event which will signal when memory copy is completed and add it to the m_events_copy_list
-        Event *copyEvent = nullptr;
-        if (m_events_copy_list.size() > 0) {
-            for (const auto &ev : m_events_copy_list) {
-                // If event is completed, reuse it
-                if (ev->isReady()) {
-                    copyEvent = ev;
-                    copyEvent->resetEvent();
-                    copyEvent->setActive();
-                    break;
-                }
-            }
-        }
-        if (copyEvent == nullptr) {
-            copyEvent = m_ep_copy.createEvent();
-            if (copyEvent == nullptr)
-                throw std::runtime_error("Failed to create event to sync memory copy!");
-            copyEvent->setActive();
-            m_events_copy_list.push_back(copyEvent);
-        }
+        // Create event which will signal when memory copy is completed
+        Event *copyEvent = m_ep_copy.getEvent();
         L0_SAFE_CALL(zeCommandListAppendMemoryCopy(m_cl_mem_h2d->handle(), view.devicePtr(), view.hostPtr(),
                                                    view.numBytes(), copyEvent->handle(), 0, nullptr));
         m_cl_mem_h2d->inc();
+        m_cl_mem_h2d->addEvent(copyEvent);
     }
 
     ispcrt::base::Future *launch(ispcrt::base::Kernel &k, ispcrt::base::MemoryView *params, size_t dim0, size_t dim1,
@@ -720,18 +751,10 @@ struct TaskQueue : public ispcrt::base::TaskQueue {
         auto event = m_ep_compute.createEvent();
         if (event == nullptr)
             throw std::runtime_error("Failed to create event!");
-        // Form a list of L0 copy events currently active to set as
-        // dependencies for kernel launch
-        std::vector<ze_event_handle_t> waitEvents;
-        for (const auto &ev : m_events_copy_list) {
-            if (ev->isActive()) {
-                waitEvents.push_back(ev->handle());
-            }
-        }
         try {
-            // Wait for L0 copy events before launching the kernel
             L0_SAFE_CALL(zeCommandListAppendLaunchKernel(m_cl->handle(), kernel.handle(), &dispatchTraits,
-                                                         event->handle(), waitEvents.size(), waitEvents.data()));
+                                                         event->handle(), m_cl_mem_h2d->getEventHandlers().size(),
+                                                         m_cl_mem_h2d->getEventHandlers().data()));
             m_cl->inc();
         } catch (ispcrt::base::ispcrt_runtime_error &e) {
             // cleanup and rethrow
@@ -788,11 +811,7 @@ struct TaskQueue : public ispcrt::base::TaskQueue {
         }
 
         m_events_compute_list.clear();
-
-        // Mark events in the list to be reused
-        for (const auto &ev : m_events_copy_list) {
-            ev->setFree();
-        }
+        m_ep_copy.releaseEvents();
     }
 
     void *taskQueueNativeHandle() const override { return m_q; }
@@ -808,9 +827,6 @@ struct TaskQueue : public ispcrt::base::TaskQueue {
     CommandList *m_cl_mem_d2h{nullptr};
     EventPool m_ep_compute, m_ep_copy;
     std::vector<std::pair<Event *, Future *>> m_events_compute_list;
-
-    // Pool for copy events
-    std::vector<Event *> m_events_copy_list;
 
     CommandList *createCommandList(uint32_t ordinal) {
         auto cmdl = new CommandList(m_device, m_context, ordinal);
