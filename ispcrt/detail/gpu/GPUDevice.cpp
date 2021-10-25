@@ -681,23 +681,23 @@ struct TaskQueue : public ispcrt::base::TaskQueue {
         } else {
             useCopyEngine = true;
         }
-        m_cl = createCommandList(computeOrdinal);
+        m_cl_compute = createCommandList(computeOrdinal);
         m_cl_mem_d2h = createCommandList(copyOrdinal);
         m_cl_mem_h2d = createCommandList(copyOrdinal);
 
-        createCommandQueue(&m_q, computeOrdinal);
+        createCommandQueue(&m_q_compute, computeOrdinal);
         // If there is no copy engine in HW, no need to create separate queue
         if (useCopyEngine) {
             createCommandQueue(&m_q_copy, copyOrdinal);
         } else {
-            m_q_copy = m_q;
+            m_q_copy = m_q_compute;
         }
     }
 
     ~TaskQueue() {
-        if (m_q)
-            L0_SAFE_CALL_NOEXCEPT(zeCommandQueueDestroy(m_q));
-        if (m_q_copy && m_q_copy != m_q)
+        if (m_q_compute)
+            L0_SAFE_CALL_NOEXCEPT(zeCommandQueueDestroy(m_q_compute));
+        if (m_q_copy && m_q_copy != m_q_compute)
             L0_SAFE_CALL_NOEXCEPT(zeCommandQueueDestroy(m_q_copy));
 
         // Clean up any events that could be in the queue
@@ -714,7 +714,7 @@ struct TaskQueue : public ispcrt::base::TaskQueue {
         m_events_compute_list.clear();
     }
 
-    void barrier() override { L0_SAFE_CALL(zeCommandListAppendBarrier(m_cl->handle(), nullptr, 0, nullptr)); }
+    void barrier() override { L0_SAFE_CALL(zeCommandListAppendBarrier(m_cl_compute->handle(), nullptr, 0, nullptr)); }
 
     void copyToHost(ispcrt::base::MemoryView &mv) override {
         auto &view = (gpu::MemoryView &)mv;
@@ -757,10 +757,10 @@ struct TaskQueue : public ispcrt::base::TaskQueue {
         if (event == nullptr)
             throw std::runtime_error("Failed to create event!");
         try {
-            L0_SAFE_CALL(zeCommandListAppendLaunchKernel(m_cl->handle(), kernel.handle(), &dispatchTraits,
+            L0_SAFE_CALL(zeCommandListAppendLaunchKernel(m_cl_compute->handle(), kernel.handle(), &dispatchTraits,
                                                          event->handle(), m_cl_mem_h2d->getEventHandlers().size(),
                                                          m_cl_mem_h2d->getEventHandlers().data()));
-            m_cl->inc();
+            m_cl_compute->inc();
         } catch (ispcrt::base::ispcrt_runtime_error &e) {
             // cleanup and rethrow
             m_ep_compute.deleteEvent(event);
@@ -776,7 +776,7 @@ struct TaskQueue : public ispcrt::base::TaskQueue {
 
     void submit() override {
         m_cl_mem_h2d->submit(m_q_copy);
-        m_cl->submit(m_q);
+        m_cl_compute->submit(m_q_compute);
         m_cl_mem_d2h->submit(m_q_copy);
     }
 
@@ -794,7 +794,7 @@ struct TaskQueue : public ispcrt::base::TaskQueue {
                 // If there are commands in compute list, run sync of compute queue -
                 // it will ensure that dependent copy commands from host to device were executed before.
                 if (anyComputeCommand()) {
-                    L0_SAFE_CALL(zeCommandQueueSynchronize(m_q, std::numeric_limits<uint64_t>::max()));
+                    L0_SAFE_CALL(zeCommandQueueSynchronize(m_q_compute, std::numeric_limits<uint64_t>::max()));
                 }
                 // If there are commands in copy to device commandlist only, run sync of copy queue.
                 else if (anyH2DCopyCommand()) {
@@ -807,7 +807,7 @@ struct TaskQueue : public ispcrt::base::TaskQueue {
                 L0_SAFE_CALL(zeCommandQueueSynchronize(m_q_compute, std::numeric_limits<uint64_t>::max()));
             }
         }
-        m_cl->reset();
+        m_cl_compute->reset();
         m_cl_mem_h2d->reset();
         m_cl_mem_d2h->reset();
 
@@ -833,15 +833,15 @@ struct TaskQueue : public ispcrt::base::TaskQueue {
         m_ep_copy.releaseEvents();
     }
 
-    void *taskQueueNativeHandle() const override { return m_q; }
+    void *taskQueueNativeHandle() const override { return m_q_compute; }
 
   private:
-    ze_command_queue_handle_t m_q{nullptr};
+    ze_command_queue_handle_t m_q_compute{nullptr};
     ze_command_queue_handle_t m_q_copy{nullptr};
     ze_context_handle_t m_context{nullptr};
     ze_device_handle_t m_device{nullptr};
 
-    CommandList *m_cl{nullptr};
+    CommandList *m_cl_compute{nullptr};
     CommandList *m_cl_mem_h2d{nullptr};
     CommandList *m_cl_mem_d2h{nullptr};
     EventPool m_ep_compute, m_ep_copy;
