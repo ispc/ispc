@@ -628,7 +628,13 @@ def file_check(results, host, target):
         compiler_version = options.compiler_exe + temp3.group()
     else:
         compiler_version = "cl"
-    cpu = target.cpu
+
+    # We need to distinguish between presilicon and hw
+    if len(options.fulsim) > 0:
+        cpu = target.cpu + "_presi"
+    else:
+        cpu = target.cpu
+
     possible_compilers=set()
     for x in f_lines:
         if x.startswith("."):
