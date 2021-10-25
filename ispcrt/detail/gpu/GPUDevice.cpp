@@ -678,21 +678,26 @@ struct TaskQueue : public ispcrt::base::TaskQueue {
 
         if (copyOrdinal == std::numeric_limits<uint32_t>::max()) {
             copyOrdinal = computeOrdinal;
+        } else {
+            useCopyEngine = true;
         }
-
         m_cl = createCommandList(computeOrdinal);
         m_cl_mem_d2h = createCommandList(copyOrdinal);
         m_cl_mem_h2d = createCommandList(copyOrdinal);
 
         createCommandQueue(&m_q, computeOrdinal);
-        // TODO: if there is no copy engine in HW, no need to create separate queue
-        createCommandQueue(&m_q_copy, copyOrdinal);
+        // If there is no copy engine in HW, no need to create separate queue
+        if (useCopyEngine) {
+            createCommandQueue(&m_q_copy, copyOrdinal);
+        } else {
+            m_q_copy = m_q;
+        }
     }
 
     ~TaskQueue() {
         if (m_q)
             L0_SAFE_CALL_NOEXCEPT(zeCommandQueueDestroy(m_q));
-        if (m_q_copy)
+        if (m_q_copy && m_q_copy != m_q)
             L0_SAFE_CALL_NOEXCEPT(zeCommandQueueDestroy(m_q_copy));
 
         // Clean up any events that could be in the queue
@@ -782,14 +787,23 @@ struct TaskQueue : public ispcrt::base::TaskQueue {
         // Synchronize
         // TODO: Since all commands are connected using events
         // we need only one queue synchronize here
-        if (m_events_compute_list.size()) {
-            L0_SAFE_CALL(zeCommandQueueSynchronize(m_q, std::numeric_limits<uint64_t>::max()));
-            m_cl->reset();
-        }
-        if (m_cl_mem_h2d->count() > 0 || m_cl_mem_d2h->count() > 0) {
-            L0_SAFE_CALL(zeCommandQueueSynchronize(m_q_copy, std::numeric_limits<uint64_t>::max()));
-            m_cl_mem_h2d->reset();
-            m_cl_mem_d2h->reset();
+        if (useCopyEngine) {
+            if (m_events_compute_list.size()) {
+                L0_SAFE_CALL(zeCommandQueueSynchronize(m_q, std::numeric_limits<uint64_t>::max()));
+                m_cl->reset();
+            }
+            if (m_cl_mem_h2d->count() > 0 || m_cl_mem_d2h->count() > 0) {
+                L0_SAFE_CALL(zeCommandQueueSynchronize(m_q_copy, std::numeric_limits<uint64_t>::max()));
+                m_cl_mem_h2d->reset();
+                m_cl_mem_d2h->reset();
+            }
+        } else {
+            if (m_events_compute_list.size() || m_cl_mem_h2d->count() > 0 || m_cl_mem_d2h->count() > 0) {
+                L0_SAFE_CALL(zeCommandQueueSynchronize(m_q, std::numeric_limits<uint64_t>::max()));
+                m_cl->reset();
+                m_cl_mem_h2d->reset();
+                m_cl_mem_d2h->reset();
+            }
         }
 
         // Update future objects corresponding to the events that have just completed
@@ -827,6 +841,8 @@ struct TaskQueue : public ispcrt::base::TaskQueue {
     CommandList *m_cl_mem_d2h{nullptr};
     EventPool m_ep_compute, m_ep_copy;
     std::vector<std::pair<Event *, Future *>> m_events_compute_list;
+
+    bool useCopyEngine{false};
 
     CommandList *createCommandList(uint32_t ordinal) {
         auto cmdl = new CommandList(m_device, m_context, ordinal);
