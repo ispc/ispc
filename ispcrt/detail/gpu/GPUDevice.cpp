@@ -785,26 +785,31 @@ struct TaskQueue : public ispcrt::base::TaskQueue {
         submit();
 
         // Synchronize
-        // TODO: Since all commands are connected using events
-        // we need only one queue synchronize here
         if (useCopyEngine) {
-            if (m_events_compute_list.size()) {
-                L0_SAFE_CALL(zeCommandQueueSynchronize(m_q, std::numeric_limits<uint64_t>::max()));
-                m_cl->reset();
-            }
-            if (m_cl_mem_h2d->count() > 0 || m_cl_mem_d2h->count() > 0) {
+            // If there are commands to copy from device to host,
+            // run sync of copy queue - it will ensure that all commands in pipeline were executed before.
+            if (anyD2HCopyCommand()) {
                 L0_SAFE_CALL(zeCommandQueueSynchronize(m_q_copy, std::numeric_limits<uint64_t>::max()));
-                m_cl_mem_h2d->reset();
-                m_cl_mem_d2h->reset();
+            } else {
+                // If there are commands in compute list, run sync of compute queue -
+                // it will ensure that dependent copy commands from host to device were executed before.
+                if (anyComputeCommand()) {
+                    L0_SAFE_CALL(zeCommandQueueSynchronize(m_q, std::numeric_limits<uint64_t>::max()));
+                }
+                // If there are commands in copy to device commandlist only, run sync of copy queue.
+                else if (anyH2DCopyCommand()) {
+                    L0_SAFE_CALL(zeCommandQueueSynchronize(m_q_copy, std::numeric_limits<uint64_t>::max()));
+                }
             }
         } else {
-            if (m_events_compute_list.size() || m_cl_mem_h2d->count() > 0 || m_cl_mem_d2h->count() > 0) {
-                L0_SAFE_CALL(zeCommandQueueSynchronize(m_q, std::numeric_limits<uint64_t>::max()));
-                m_cl->reset();
-                m_cl_mem_h2d->reset();
-                m_cl_mem_d2h->reset();
+            // If we have any command in one of our command lists, make queue sync
+            if (anyD2HCopyCommand() || anyH2DCopyCommand() || anyComputeCommand()) {
+                L0_SAFE_CALL(zeCommandQueueSynchronize(m_q_compute, std::numeric_limits<uint64_t>::max()));
             }
         }
+        m_cl->reset();
+        m_cl_mem_h2d->reset();
+        m_cl_mem_d2h->reset();
 
         // Update future objects corresponding to the events that have just completed
         for (const auto &p : m_events_compute_list) {
@@ -862,6 +867,10 @@ struct TaskQueue : public ispcrt::base::TaskQueue {
         if (q == nullptr)
             throw std::runtime_error("Failed to create command queue!");
     }
+
+    bool anyH2DCopyCommand() { return m_cl_mem_h2d->count() > 0; }
+    bool anyD2HCopyCommand() { return m_cl_mem_d2h->count() > 0; }
+    bool anyComputeCommand() { return m_events_compute_list.size(); }
 };
 
 // limitation: we assume that there'll be only one driver
