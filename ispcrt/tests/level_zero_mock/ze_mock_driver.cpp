@@ -109,30 +109,29 @@ ze_result_t zeCommandQueueCreate(ze_context_handle_t hContext, ze_device_handle_
     if (!ExpectedDevice(hDevice) || hContext != ContextHandle.get() || desc == nullptr ||
         phCommandQueue == nullptr)
         return ZE_RESULT_ERROR_INVALID_NULL_HANDLE;
-    *phCommandQueue = CmdQueueHandle.create();
+    *phCommandQueue = CmdQueueHandle.get();
     MOCK_RET;
 }
 
 ze_result_t zeCommandQueueDestroy(ze_command_queue_handle_t hCommandQueue) {
     MOCK_CNT_CALL;
-    /*if (hCommandQueue != CmdQueueHandle.get())
-        return ZE_RESULT_ERROR_INVALID_NULL_HANDLE;*/
+    if (hCommandQueue != CmdQueueHandle.get())
+        return ZE_RESULT_ERROR_INVALID_NULL_HANDLE;
     MOCK_RET;
 }
 
 ze_result_t zeCommandQueueExecuteCommandLists(ze_command_queue_handle_t hCommandQueue, uint32_t numCommandLists,
                                               ze_command_list_handle_t *phCommandLists, ze_fence_handle_t hFence) {
     MOCK_CNT_CALL;
-    //if (hCommandQueue != CmdQueueHandle.get() || !Config::isCmdListClosed())
-    if (!Config::isCmdListClosed())
+    if (hCommandQueue != CmdQueueHandle.get() || !Config::isCmdListClosed())
         return ZE_RESULT_ERROR_INVALID_NULL_HANDLE;
     MOCK_RET;
 }
 
 ze_result_t zeCommandQueueSynchronize(ze_command_queue_handle_t hCommandQueue, uint64_t timeout) {
     MOCK_CNT_CALL;
-    /*if (hCommandQueue != CmdQueueHandle.get() || !Config::isCmdListClosed())
-        return ZE_RESULT_ERROR_INVALID_NULL_HANDLE;*/
+    if (hCommandQueue != CmdQueueHandle.get() || !Config::isCmdListClosed())
+        return ZE_RESULT_ERROR_INVALID_NULL_HANDLE;
     MOCK_RET;
 }
 
