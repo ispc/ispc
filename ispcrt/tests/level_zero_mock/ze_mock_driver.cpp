@@ -213,7 +213,17 @@ ze_result_t zeEventDestroy(ze_event_handle_t hEvent) {
     MOCK_RET;
 }
 
+ze_result_t zeEventQueryStatus(ze_event_handle_t hEvent) {
+    MOCK_CNT_CALL;
+    MOCK_RET;
+}
+
 ze_result_t zeEventQueryKernelTimestamp(ze_event_handle_t hEvent, ze_kernel_timestamp_result_t *dstptr) {
+    MOCK_CNT_CALL;
+    MOCK_RET;
+}
+
+ze_result_t zeEventHostReset(ze_event_handle_t hEvent) {
     MOCK_CNT_CALL;
     MOCK_RET;
 }
@@ -348,6 +358,8 @@ ze_result_t zeGetEventProcAddrTable(ze_api_version_t version, ze_event_dditable_
     pDdiTable->pfnCreate = ispcrt::testing::mock::driver::zeEventCreate;
     pDdiTable->pfnDestroy = ispcrt::testing::mock::driver::zeEventDestroy;
     pDdiTable->pfnQueryKernelTimestamp = ispcrt::testing::mock::driver::zeEventQueryKernelTimestamp;
+    pDdiTable->pfnQueryStatus = ispcrt::testing::mock::driver::zeEventQueryStatus;
+    pDdiTable->pfnHostReset = ispcrt::testing::mock::driver::zeEventHostReset;
     return ZE_RESULT_SUCCESS;
 }
 
