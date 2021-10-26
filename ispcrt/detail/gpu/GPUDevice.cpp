@@ -276,13 +276,17 @@ struct CommandList {
 
     uint32_t ordinal() { return m_ordinal; }
 
+    void clear() {
+        m_numCommands = 0;
+        m_events.clear();
+        m_submitted = false;
+    }
+
     void reset() {
         if (m_numCommands > 0) {
             L0_SAFE_CALL(zeCommandListReset(m_handle));
         }
-        m_submitted = false;
-        m_numCommands = 0;
-        m_events.clear();
+        clear();
     }
 
     void submit(ze_command_queue_handle_t q) {
@@ -293,7 +297,10 @@ struct CommandList {
         }
     }
 
-    void inc() { m_numCommands++; }
+    void inc() {
+        m_numCommands++;
+        m_submitted = false;
+    }
 
     uint32_t count() { return m_numCommands; }
 
