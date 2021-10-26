@@ -648,8 +648,17 @@ struct TaskQueue : public ispcrt::base::TaskQueue {
 
         uint32_t copyOrdinal = std::numeric_limits<uint32_t>::max();
         uint32_t computeOrdinal = 0;
+        bool isCopyEngineEnabled = true;
+#if defined(_WIN32) || defined(_WIN64)
+        char *is_disable_copy_eng_s = nullptr;
+        size_t is_disable_copy_eng_sz = 0;
+        _dupenv_s(&is_disable_copy_eng_s, &is_disable_copy_eng_sz, "ISPCRT_DISABLE_COPY_ENGINE");
+        isCopyEngineEnabled = (is_disable_copy_eng_s == nullptr);
+#else
+        isCopyEngineEnabled = getenv("ISPCRT_DISABLE_COPY_ENGINE") == nullptr;
+#endif
 
-        if (!is_mock_dev) {
+        if (!is_mock_dev && isCopyEngineEnabled) {
             // Discover all command queue groups
             uint32_t queueGroupCount = 0;
             L0_SAFE_CALL(zeDeviceGetCommandQueueGroupProperties(device, &queueGroupCount, nullptr));
