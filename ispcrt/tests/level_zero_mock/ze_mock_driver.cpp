@@ -20,10 +20,6 @@ static unsigned MockHandleHandle = 1;
 
 template <typename HT> struct MockHandle {
     HT get() { return handle; }
-    HT create() {
-        handle = reinterpret_cast<HT>(MockHandleHandle++);
-        return handle;
-    }
     MockHandle() { handle = reinterpret_cast<HT>(MockHandleHandle++); }
 
   private:
@@ -140,29 +136,29 @@ ze_result_t zeCommandListCreate(ze_context_handle_t hContext, ze_device_handle_t
     MOCK_CNT_CALL;
     if (!ExpectedDevice(hDevice) || hContext != ContextHandle.get() || desc == nullptr || phCommandList == nullptr)
         return ZE_RESULT_ERROR_INVALID_NULL_HANDLE;
-    *phCommandList = CmdListHandle.create();
+    *phCommandList = CmdListHandle.get();
     MOCK_RET;
 }
 
 ze_result_t zeCommandListDestroy(ze_command_list_handle_t hCommandList) {
     MOCK_CNT_CALL;
-    /*if (hCommandList != CmdListHandle.get())
-        return ZE_RESULT_ERROR_INVALID_NULL_HANDLE;*/
+    if (hCommandList != CmdListHandle.get())
+        return ZE_RESULT_ERROR_INVALID_NULL_HANDLE;
     MOCK_RET;
 }
 
 ze_result_t zeCommandListClose(ze_command_list_handle_t hCommandList) {
     MOCK_CNT_CALL;
-    /*if (hCommandList != CmdListHandle.get())
-        return ZE_RESULT_ERROR_INVALID_NULL_HANDLE;*/
+    if (hCommandList != CmdListHandle.get())
+        return ZE_RESULT_ERROR_INVALID_NULL_HANDLE;
     Config::closeCmdList();
     MOCK_RET;
 }
 
 ze_result_t zeCommandListReset(ze_command_list_handle_t hCommandList) {
     MOCK_CNT_CALL;
-    /*if (hCommandList != CmdListHandle.get())
-        return ZE_RESULT_ERROR_INVALID_NULL_HANDLE;*/
+    if (hCommandList != CmdListHandle.get())
+        return ZE_RESULT_ERROR_INVALID_NULL_HANDLE;
     Config::resetCmdList();
     MOCK_RET;
 }
@@ -170,8 +166,7 @@ ze_result_t zeCommandListReset(ze_command_list_handle_t hCommandList) {
 ze_result_t zeCommandListAppendBarrier(ze_command_list_handle_t hCommandList, ze_event_handle_t hSignalEvent,
                                        uint32_t numWaitEvents, ze_event_handle_t *phWaitEvents) {
     MOCK_CNT_CALL;
-    //if (hCommandList != CmdListHandle.get() || Config::isCmdListClosed())
-    if (Config::isCmdListClosed())
+    if (hCommandList != CmdListHandle.get() || Config::isCmdListClosed())
         return ZE_RESULT_ERROR_INVALID_NULL_HANDLE;
     if (MOCK_SHOULD_SUCCEED)
         Config::addToCmdList(CmdListElem::Barrier);
@@ -182,8 +177,7 @@ ze_result_t zeCommandListAppendMemoryCopy(ze_command_list_handle_t hCommandList,
                                           size_t size, ze_event_handle_t hSignalEvent, uint32_t numWaitEvents,
                                           ze_event_handle_t *phWaitEvents) {
     MOCK_CNT_CALL;
-    //if (hCommandList != CmdListHandle.get() || Config::isCmdListClosed())
-    if (Config::isCmdListClosed())
+    if (hCommandList != CmdListHandle.get() || Config::isCmdListClosed())
         return ZE_RESULT_ERROR_INVALID_NULL_HANDLE;
     if (MOCK_SHOULD_SUCCEED)
         Config::addToCmdList(CmdListElem::MemoryCopy);
@@ -294,8 +288,7 @@ ze_result_t zeCommandListAppendLaunchKernel(ze_command_list_handle_t hCommandLis
                                             const ze_group_count_t *pLaunchFuncArgs, ze_event_handle_t hSignalEvent,
                                             uint32_t numWaitEvents, ze_event_handle_t *phWaitEvents) {
     MOCK_CNT_CALL;
-    //if (hCommandList != CmdListHandle.get() || hKernel != KernelHandle.get() || !pLaunchFuncArgs)
-    if (hKernel != KernelHandle.get() || !pLaunchFuncArgs)
+    if (hCommandList != CmdListHandle.get() || hKernel != KernelHandle.get() || !pLaunchFuncArgs)
         return ZE_RESULT_ERROR_INVALID_NULL_HANDLE;
     if (MOCK_SHOULD_SUCCEED)
         Config::addToCmdList(CmdListElem::KernelLaunch);
