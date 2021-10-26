@@ -419,8 +419,6 @@ inline Future TaskQueue::launch(const Kernel &k, const Array<T,AT> &p, size_t di
     return ispcrtLaunch3D(handle(), k.handle(), p.handle(), dim0, dim1, dim2);
 }
 
-inline void TaskQueue::submit() const { ispcrtSubmit(handle()); }
-
 inline void TaskQueue::sync() const { ispcrtSync(handle()); }
 
 inline void* TaskQueue::nativeTaskQueueHandle() const { return ispcrtTaskQueueNativeHandle(handle()); }

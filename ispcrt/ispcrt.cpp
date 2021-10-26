@@ -290,12 +290,6 @@ ISPCRTFuture ispcrtLaunch3D(ISPCRTTaskQueue q, ISPCRTKernel k, ISPCRTMemoryView 
 }
 ISPCRT_CATCH_END(nullptr)
 
-void ispcrtSubmit(ISPCRTTaskQueue q) ISPCRT_CATCH_BEGIN {
-    auto &queue = referenceFromHandle<ispcrt::base::TaskQueue>(q);
-    queue.submit();
-}
-ISPCRT_CATCH_END()
-
 void ispcrtSync(ISPCRTTaskQueue q) ISPCRT_CATCH_BEGIN {
     auto &queue = referenceFromHandle<ispcrt::base::TaskQueue>(q);
     queue.sync();

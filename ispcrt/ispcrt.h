@@ -129,7 +129,6 @@ ISPCRTFuture ispcrtLaunch2D(ISPCRTTaskQueue, ISPCRTKernel, ISPCRTMemoryView para
 ISPCRTFuture ispcrtLaunch3D(ISPCRTTaskQueue, ISPCRTKernel, ISPCRTMemoryView params, size_t dim0, size_t dim1,
                             size_t dim2);
 
-void ispcrtSubmit(ISPCRTTaskQueue);
 void ispcrtSync(ISPCRTTaskQueue);
 
 // Futures and task timing ////////////////////////////////////////////////////

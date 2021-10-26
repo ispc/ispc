@@ -131,7 +131,6 @@ static int run(const ISPCRTDeviceType device_type, const unsigned int SIZE) {
     // ispcrt::Array objects which used as outputs of ISPC kernel should be
     // explicitly copied to host from device
     queue.copyToHost(vout_dev);
-
     // Execute queue and sync
     queue.sync();
     double time = -1.0;

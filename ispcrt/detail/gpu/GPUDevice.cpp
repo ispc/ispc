@@ -807,12 +807,6 @@ struct TaskQueue : public ispcrt::base::TaskQueue {
         return future;
     }
 
-    void submit() override {
-        m_cl_mem_h2d->submit(m_q_copy);
-        m_cl_compute->submit(m_q_compute);
-        m_cl_mem_d2h->submit(m_q_copy);
-    }
-
     void sync() override {
         // Submit command lists
         submit();
@@ -899,6 +893,12 @@ struct TaskQueue : public ispcrt::base::TaskQueue {
 
         if (q == nullptr)
             throw std::runtime_error("Failed to create command queue!");
+    }
+
+    void submit() override {
+        m_cl_mem_h2d->submit(m_q_copy);
+        m_cl_compute->submit(m_q_compute);
+        m_cl_mem_d2h->submit(m_q_copy);
     }
 
     bool anyH2DCopyCommand() { return m_cl_mem_h2d->count() > 0; }
