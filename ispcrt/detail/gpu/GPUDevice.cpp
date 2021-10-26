@@ -648,6 +648,7 @@ struct TaskQueue : public ispcrt::base::TaskQueue {
 
         uint32_t copyOrdinal = std::numeric_limits<uint32_t>::max();
         uint32_t computeOrdinal = 0;
+        // Check env variable before queue configuration
         bool isCopyEngineEnabled = true;
 #if defined(_WIN32) || defined(_WIN64)
         char *is_disable_copy_eng_s = nullptr;
@@ -658,7 +659,17 @@ struct TaskQueue : public ispcrt::base::TaskQueue {
         isCopyEngineEnabled = getenv("ISPCRT_DISABLE_COPY_ENGINE") == nullptr;
 #endif
 
-        if (!is_mock_dev && isCopyEngineEnabled) {
+        bool useMultipleCommandLists = true;
+#if defined(_WIN32) || defined(_WIN64)
+        char *use_use_multi_cmdl_s = nullptr;
+        size_t use_use_multi_cmdl_sz = 0;
+        _dupenv_s(&use_use_multi_cmdl_s, &use_use_multi_cmdl_sz, "ISPCRT_DISABLE_MULTI_COMMAND_LISTS");
+        useMultipleCommandLists = (use_use_multi_cmdl_s == nullptr);
+#else
+        useMultipleCommandLists = getenv("ISPCRT_DISABLE_MULTI_COMMAND_LISTS") == nullptr;
+#endif
+        // No need to create copy queue if only one command list is requested.
+        if (!is_mock_dev && isCopyEngineEnabled && useMultipleCommandLists) {
             // Discover all command queue groups
             uint32_t queueGroupCount = 0;
             L0_SAFE_CALL(zeDeviceGetCommandQueueGroupProperties(device, &queueGroupCount, nullptr));
@@ -690,9 +701,15 @@ struct TaskQueue : public ispcrt::base::TaskQueue {
         } else {
             useCopyEngine = true;
         }
+
         m_cl_compute = createCommandList(computeOrdinal);
-        m_cl_mem_d2h = createCommandList(copyOrdinal);
-        m_cl_mem_h2d = createCommandList(copyOrdinal);
+        if (!is_mock_dev && useMultipleCommandLists) {
+            m_cl_mem_d2h = createCommandList(copyOrdinal);
+            m_cl_mem_h2d = createCommandList(copyOrdinal);
+        } else {
+            m_cl_mem_d2h = m_cl_compute;
+            m_cl_mem_h2d = m_cl_compute;
+        }
 
         createCommandQueue(&m_q_compute, computeOrdinal);
         // If there is no copy engine in HW, no need to create separate queue
