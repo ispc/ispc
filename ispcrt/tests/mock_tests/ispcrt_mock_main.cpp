@@ -315,7 +315,7 @@ TEST_F(MockTestWithDevice, TaskQueue_Barrier_zeCommandListAppendBarrier) {
     ASSERT_TRUE(Config::checkCmdList({}));
 }
 
-TEST_F(MockTestWithDevice, TaskQueue_CopyToDevice_NoBarriers) {
+TEST_F(MockTestWithDevice, TaskQueue_CopyToDevice_Events) {
     ispcrt::TaskQueue tq(m_device);
     ASSERT_EQ(sm_rt_error, ISPCRT_NO_ERROR);
     // Create an allocation
@@ -327,6 +327,76 @@ TEST_F(MockTestWithDevice, TaskQueue_CopyToDevice_NoBarriers) {
     // Event should be created before appending memory copy
     ASSERT_EQ(CallCounters::get("zeEventCreate"), 1);
     ASSERT_EQ(CallCounters::get("zeCommandListAppendMemoryCopy"), 1);
+    ASSERT_EQ(sm_rt_error, ISPCRT_NO_ERROR);
+    ASSERT_TRUE(Config::checkCmdList({CmdListElem::MemoryCopy}));
+    // "sync"
+    tq.sync();
+    ASSERT_EQ(CallCounters::get("zeCommandListClose"), 1);
+    ASSERT_EQ(CallCounters::get("zeCommandQueueExecuteCommandLists"), 1);
+    ASSERT_EQ(CallCounters::get("zeCommandListReset"), 1);
+    ASSERT_EQ(sm_rt_error, ISPCRT_NO_ERROR);
+    ASSERT_TRUE(Config::checkCmdList({}));
+}
+
+TEST_F(MockTestWithDevice, TaskQueue_CopyToDevice_Reuse_Events) {
+    ispcrt::TaskQueue tq(m_device);
+    ASSERT_EQ(sm_rt_error, ISPCRT_NO_ERROR);
+    // Create an allocation
+    std::vector<float> buf(64 * 1024);
+    ispcrt::Array<float> buf_dev(m_device, buf);
+    ASSERT_EQ(sm_rt_error, ISPCRT_NO_ERROR);
+    // "copy"
+    tq.copyToDevice(buf_dev);
+    // Event should be created before appending memory copy
+    ASSERT_EQ(CallCounters::get("zeEventCreate"), 1);
+    ASSERT_EQ(CallCounters::get("zeCommandListAppendMemoryCopy"), 1);
+    ASSERT_EQ(sm_rt_error, ISPCRT_NO_ERROR);
+    ASSERT_TRUE(Config::checkCmdList({CmdListElem::MemoryCopy}));
+    // "sync"
+    tq.sync();
+    ASSERT_EQ(CallCounters::get("zeCommandListClose"), 1);
+    ASSERT_EQ(CallCounters::get("zeCommandQueueExecuteCommandLists"), 1);
+    ASSERT_EQ(CallCounters::get("zeCommandListReset"), 1);
+    ASSERT_EQ(sm_rt_error, ISPCRT_NO_ERROR);
+    ASSERT_TRUE(Config::checkCmdList({}));
+    // "copy"
+    tq.copyToDevice(buf_dev);
+    // Event should be reused so the count of zeEventCreate is still 1
+    ASSERT_EQ(CallCounters::get("zeEventCreate"), 1);
+    ASSERT_EQ(CallCounters::get("zeEventQueryStatus"), 1);
+    ASSERT_EQ(CallCounters::get("zeEventHostReset"), 1);
+    ASSERT_EQ(sm_rt_error, ISPCRT_NO_ERROR);
+    ASSERT_TRUE(Config::checkCmdList({CmdListElem::MemoryCopy}));
+    // "sync"
+    tq.sync();
+    ASSERT_EQ(CallCounters::get("zeCommandListClose"), 2);
+    ASSERT_EQ(CallCounters::get("zeCommandQueueExecuteCommandLists"), 2);
+    ASSERT_EQ(CallCounters::get("zeCommandListReset"), 2);
+    ASSERT_EQ(sm_rt_error, ISPCRT_NO_ERROR);
+    ASSERT_TRUE(Config::checkCmdList({}));
+}
+
+TEST_F(MockTestWithDevice, TaskQueue_CopyToHost_Events) {
+    ispcrt::TaskQueue tq(m_device);
+    ASSERT_EQ(sm_rt_error, ISPCRT_NO_ERROR);
+    // Create an allocation
+    std::vector<float> buf(64 * 1024);
+    ispcrt::Array<float> buf_dev(m_device, buf);
+    ASSERT_EQ(sm_rt_error, ISPCRT_NO_ERROR);
+    // "copy"
+    tq.copyToHost(buf_dev);
+    // No events should be created
+    ASSERT_EQ(CallCounters::get("zeEventCreate"), 0);
+    ASSERT_EQ(CallCounters::get("zeCommandListAppendMemoryCopy"), 1);
+    ASSERT_EQ(sm_rt_error, ISPCRT_NO_ERROR);
+    ASSERT_TRUE(Config::checkCmdList({CmdListElem::MemoryCopy}));
+    // "sync"
+    tq.sync();
+    ASSERT_EQ(CallCounters::get("zeCommandListClose"), 1);
+    ASSERT_EQ(CallCounters::get("zeCommandQueueExecuteCommandLists"), 1);
+    ASSERT_EQ(CallCounters::get("zeCommandListReset"), 1);
+    ASSERT_EQ(sm_rt_error, ISPCRT_NO_ERROR);
+    ASSERT_TRUE(Config::checkCmdList({}));
 }
 
 // Normal kernel launch (plus a few memory transfers) - but no waiting on future
@@ -340,16 +410,13 @@ TEST_F(MockTestWithModuleQueueKernel, TaskQueue_FullKernelLaunchNoFuture) {
     tq.copyToDevice(buf_dev);
     ASSERT_EQ(sm_rt_error, ISPCRT_NO_ERROR);
     ASSERT_TRUE(Config::checkCmdList({CmdListElem::MemoryCopy}));
-    tq.barrier();
-    ASSERT_EQ(sm_rt_error, ISPCRT_NO_ERROR);
-    ASSERT_TRUE(Config::checkCmdList({CmdListElem::MemoryCopy, CmdListElem::Barrier}));
     tq.launch(m_kernel, 0);
     ASSERT_EQ(sm_rt_error, ISPCRT_NO_ERROR);
-    ASSERT_TRUE(Config::checkCmdList({CmdListElem::MemoryCopy, CmdListElem::Barrier, CmdListElem::KernelLaunch}));
+    ASSERT_TRUE(Config::checkCmdList({CmdListElem::MemoryCopy, CmdListElem::KernelLaunch}));
     tq.barrier();
     ASSERT_EQ(sm_rt_error, ISPCRT_NO_ERROR);
     ASSERT_TRUE(Config::checkCmdList(
-        {CmdListElem::MemoryCopy, CmdListElem::Barrier, CmdListElem::KernelLaunch, CmdListElem::Barrier}));
+        {CmdListElem::MemoryCopy, CmdListElem::KernelLaunch, CmdListElem::Barrier}));
     tq.sync();
     ASSERT_EQ(sm_rt_error, ISPCRT_NO_ERROR);
     ASSERT_TRUE(Config::checkCmdList({}));
@@ -366,16 +433,13 @@ TEST_F(MockTestWithModuleQueueKernel, TaskQueue_FullKernelLaunch) {
     tq.copyToDevice(buf_dev);
     ASSERT_EQ(sm_rt_error, ISPCRT_NO_ERROR);
     ASSERT_TRUE(Config::checkCmdList({CmdListElem::MemoryCopy}));
-    tq.barrier();
-    ASSERT_EQ(sm_rt_error, ISPCRT_NO_ERROR);
-    ASSERT_TRUE(Config::checkCmdList({CmdListElem::MemoryCopy, CmdListElem::Barrier}));
     auto f = tq.launch(m_kernel, 0);
     ASSERT_EQ(sm_rt_error, ISPCRT_NO_ERROR);
-    ASSERT_TRUE(Config::checkCmdList({CmdListElem::MemoryCopy, CmdListElem::Barrier, CmdListElem::KernelLaunch}));
+    ASSERT_TRUE(Config::checkCmdList({CmdListElem::MemoryCopy, CmdListElem::KernelLaunch}));
     tq.barrier();
     ASSERT_EQ(sm_rt_error, ISPCRT_NO_ERROR);
     ASSERT_TRUE(Config::checkCmdList(
-        {CmdListElem::MemoryCopy, CmdListElem::Barrier, CmdListElem::KernelLaunch, CmdListElem::Barrier}));
+        {CmdListElem::MemoryCopy, CmdListElem::KernelLaunch, CmdListElem::Barrier}));
     tq.sync();
     ASSERT_EQ(sm_rt_error, ISPCRT_NO_ERROR);
     ASSERT_TRUE(Config::checkCmdList({}));
