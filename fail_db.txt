@@ -1,4 +1,3 @@
- List of known fails.
 % The list is unordered and contains information about commonly used platforms / configurations.
 % Our goal is to maintain this list for Linux, macOS and Windows with reasonably new compilers.
 % Note, that it's important which C++ compiler was used.
@@ -6,5 +5,12 @@
 % LLVM bugs in released versions, that we have to workaround by applying patches (see llvm_patches
 % folder). The recommended way to build LLVM on Unix is to use "alloy.py".
 %
-./tests/short-vec-6.ispc runfail  xe64        gen9-x8 unspec   Linux LLVM 12.0 clang++12.0 O0 spv *
-./tests/short-vec-6.ispc runfail  xe64       gen9-x16 unspec   Linux LLVM 12.0 clang++12.0 O0 spv *
+ List of known fails.
+./tests/funcptr-varying-3.ispc runfail    xe64        gen9-x8 unspec   Linux LLVM 12.0 clang++12.0 O0 spv *
+./tests/recursion-forward-func-decl.ispc runfail    xe64        gen9-x8 unspec   Linux LLVM 12.0 clang++12.0 O0 spv *
+./tests/recursion.ispc runfail    xe64        gen9-x8 unspec   Linux LLVM 12.0 clang++12.0 O0 spv *
+./tests/funcptr-varying-3.ispc runfail    xe64       gen9-x16 unspec   Linux LLVM 12.0 clang++12.0 O0 spv *
+./tests/recursion-forward-func-decl.ispc runfail    xe64       gen9-x16 unspec   Linux LLVM 12.0 clang++12.0 O0 spv *
+./tests/recursion.ispc runfail    xe64       gen9-x16 unspec   Linux LLVM 12.0 clang++12.0 O0 spv *
+./tests/short-vec-6.ispc runfail    xe64        gen9-x8 unspec   Linux LLVM 12.0 clang++12.0 O0 spv *
+./tests/short-vec-6.ispc runfail    xe64       gen9-x16 unspec   Linux LLVM 12.0 clang++12.0 O0 spv *
