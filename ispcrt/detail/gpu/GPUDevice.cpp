@@ -325,13 +325,13 @@ struct CommandList {
     std::vector<Event *> m_events;
 };
 
-typedef enum { ISPCRT_EVENT_POOL_COMPUTE, ISPCRT_EVENT_POOL_COPY } ISPCRTEventPoolType;
+enum class ISPCRTEventPoolType { compute, copy };
 
 struct EventPool {
     constexpr static uint32_t POOL_SIZE_CAP = 100000;
 
     EventPool(ze_context_handle_t context, ze_device_handle_t device,
-              ISPCRTEventPoolType type = ISPCRTEventPoolType::ISPCRT_EVENT_POOL_COMPUTE)
+              ISPCRTEventPoolType type = ISPCRTEventPoolType::compute)
         : m_context(context), m_device(device) {
         // Get device timestamp resolution
         ze_device_properties_t device_properties;
@@ -341,7 +341,7 @@ struct EventPool {
         // Create pool
         auto poolSize = POOL_SIZE_CAP;
         // For compute event pool check if ISPCRT_MAX_KERNEL_LAUNCHES is set
-        if (type == ISPCRTEventPoolType::ISPCRT_EVENT_POOL_COMPUTE) {
+        if (type == ISPCRTEventPoolType::compute) {
             // User can set a lower limit for the pool size, which in fact limits
             // the number of possible kernel launches. To make it more clear for the user,
             // the variable is named ISPCRT_MAX_KERNEL_LAUNCHES
@@ -649,7 +649,8 @@ struct Kernel : public ispcrt::base::Kernel {
 
 struct TaskQueue : public ispcrt::base::TaskQueue {
     TaskQueue(ze_device_handle_t device, ze_context_handle_t context, const bool is_mock_dev)
-        : m_ep_compute(context, device, ISPCRT_EVENT_POOL_COMPUTE), m_ep_copy(context, device, ISPCRT_EVENT_POOL_COPY) {
+        : m_ep_compute(context, device, ISPCRTEventPoolType::compute),
+          m_ep_copy(context, device, ISPCRTEventPoolType::copy) {
         m_context = context;
         m_device = device;
 
