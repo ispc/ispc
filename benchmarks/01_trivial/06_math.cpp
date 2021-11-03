@@ -86,10 +86,10 @@ template <typename T> static void init_one(T *src, T *dst, int count) {
     }
 }
 
-template <typename T> static void check_sqrt(T *src, T *dst, int count) {
+template <typename T, typename F> static void check(T *src, T *dst, int count, F fp) {
     T eps = 0.001f;
     for (int i = 0; i < count; i++) {
-        T expected = std::sqrt(src[i]);
+        T expected = fp(src[i]);
         if (std::abs(expected - dst[i]) > eps) {
             printf("Error i=%d, expected %g, return %g\n", i, expected, dst[i]);
             return;
@@ -97,31 +97,16 @@ template <typename T> static void check_sqrt(T *src, T *dst, int count) {
     }
 }
 
-template <typename T> static void check_rsqrt(T *src, T *dst, int count) {
+template <typename T, typename F> static void check2(T *src1, T *src2, T *dst, int count, F fp) {
     T eps = 0.001f;
     for (int i = 0; i < count; i++) {
-        T expected = 1.0 / std::sqrt(src[i]);
+        T expected = fp(src1[i], src2[i]);
         if (std::abs(expected - dst[i]) > eps) {
             printf("Error i=%d, expected %g, return %g\n", i, expected, dst[i]);
             return;
         }
     }
 }
-
-template <typename T> static void check_rsqrt_fast(T *src, T *dst, int count) { check_rsqrt(src, dst, count); }
-
-template <typename T> static void check_rcp(T *src, T *dst, int count) {
-    T eps = 0.001f;
-    for (int i = 0; i < count; i++) {
-        T expected = 1.0 / src[i];
-        if (std::abs(expected - dst[i]) > eps) {
-            printf("Error i=%d, expected %g, return %g\n", i, expected, dst[i]);
-            return;
-        }
-    }
-}
-
-template <typename T> static void check_rcp_fast(T *src, T *dst, int count) { check_rcp(src, dst, count); }
 
 template <typename T> static void check_ldexp(T *src1, int *src2, T *dst, int count) {
     T eps = 0.001f;
@@ -146,118 +131,8 @@ template <typename T> static void check_frexp(T *src, T *dst1, int *dst2, int co
     }
 }
 
-template <typename T> static void check_sin(T *src, T *dst, int count) {
-    T eps = 0.001f;
-    for (int i = 0; i < count; i++) {
-        T expected = std::sin(src[i]);
-        if (std::abs(expected - dst[i]) > eps) {
-            printf("Error i=%d, expected %g, return %g\n", i, expected, dst[i]);
-            return;
-        }
-    }
-}
-
-template <typename T> static void check_asin(T *src, T *dst, int count) {
-    T eps = 0.001f;
-    for (int i = 0; i < count; i++) {
-        T expected = std::asin(src[i]);
-        if (std::abs(expected - dst[i]) > eps) {
-            printf("Error i=%d, expected %g, return %g\n", i, expected, dst[i]);
-            return;
-        }
-    }
-}
-
-template <typename T> static void check_cos(T *src, T *dst, int count) {
-    T eps = 0.001f;
-    for (int i = 0; i < count; i++) {
-        T expected = std::cos(src[i]);
-        if (std::abs(expected - dst[i]) > eps) {
-            printf("Error i=%d, expected %g, return %g\n", i, expected, dst[i]);
-            return;
-        }
-    }
-}
-
-template <typename T> static void check_acos(T *src, T *dst, int count) {
-    T eps = 0.001f;
-    for (int i = 0; i < count; i++) {
-        T expected = std::acos(src[i]);
-        if (std::abs(expected - dst[i]) > eps) {
-            printf("Error i=%d, expected %g, return %g\n", i, expected, dst[i]);
-            return;
-        }
-    }
-}
-
-template <typename T> static void check_tan(T *src, T *dst, int count) {
-    T eps = 0.001f;
-    for (int i = 0; i < count; i++) {
-        T expected = std::tan(src[i]);
-        if (std::abs(expected - dst[i]) > eps) {
-            printf("Error i=%d, expected %g, return %g\n", i, expected, dst[i]);
-            return;
-        }
-    }
-}
-
-template <typename T> static void check_atan(T *src, T *dst, int count) {
-    T eps = 0.001f;
-    for (int i = 0; i < count; i++) {
-        T expected = std::atan(src[i]);
-        if (std::abs(expected - dst[i]) > eps) {
-            printf("Error i=%d, expected %g, return %g\n", i, expected, dst[i]);
-            return;
-        }
-    }
-}
-
-template <typename T> static void check_atan2(T *src1, T *src2, T *dst, int count) {
-    T eps = 0.001f;
-    for (int i = 0; i < count; i++) {
-        T expected = std::atan2(src1[i], src2[i]);
-        if (std::abs(expected - dst[i]) > eps) {
-            printf("Error i=%d, expected %g, return %g\n", i, expected, dst[i]);
-            return;
-        }
-    }
-}
-
-template <typename T> static void check_exp(T *src, T *dst, int count) {
-    T eps = 0.001f;
-    for (int i = 0; i < count; i++) {
-        T expected = std::exp(src[i]);
-        if (std::abs(expected - dst[i]) > eps) {
-            printf("Error i=%d, expected %g, return %g\n", i, expected, dst[i]);
-            return;
-        }
-    }
-}
-
-template <typename T> static void check_log(T *src, T *dst, int count) {
-    T eps = 0.001f;
-    for (int i = 0; i < count; i++) {
-        T expected = std::log(src[i]);
-        if (std::abs(expected - dst[i]) > eps) {
-            printf("Error i=%d, expected %g, return %g\n", i, expected, dst[i]);
-            return;
-        }
-    }
-}
-
-template <typename T> static void check_pow(T *src1, T *src2, T *dst, int count) {
-    T eps = 0.001f;
-    for (int i = 0; i < count; i++) {
-        T expected = std::pow(src1[i], src2[i]);
-        if (std::abs(expected - dst[i]) > eps) {
-            printf("Error i=%d, expected %g, return %g\n", i, expected, dst[i]);
-            return;
-        }
-    }
-}
-
 // Functions with single source, single destination.
-#define TEST(NAME, T, INIT)                                                                                            \
+#define TEST(NAME, T, INIT, CHECK)                                                                                     \
     static void NAME##_##T(benchmark::State &state) {                                                                  \
         int count = static_cast<int>(state.range(0));                                                                  \
         T *src = static_cast<T *>(aligned_alloc_helper(sizeof(T) * count));                                            \
@@ -268,14 +143,14 @@ template <typename T> static void check_pow(T *src1, T *src2, T *dst, int count)
             ispc::NAME##_##T(src, dst, count);                                                                         \
         }                                                                                                              \
                                                                                                                        \
-        check_##NAME(src, dst, count);                                                                                 \
+        check(src, dst, count, [](T x) { return CHECK; });                                                             \
         aligned_free_helper(src);                                                                                      \
         aligned_free_helper(dst);                                                                                      \
     }                                                                                                                  \
     BENCHMARK(NAME##_##T)->ARGS;
 
 // Functions with two sources of the same type, single destination.
-#define TEST2(NAME, T, INIT)                                                                                           \
+#define TEST2(NAME, T, INIT, CHECK)                                                                                    \
     static void NAME##_##T(benchmark::State &state) {                                                                  \
         int count = static_cast<int>(state.range(0));                                                                  \
         T *src1 = static_cast<T *>(aligned_alloc_helper(sizeof(T) * count));                                           \
@@ -287,7 +162,7 @@ template <typename T> static void check_pow(T *src1, T *src2, T *dst, int count)
             ispc::NAME##_##T(src1, src2, dst, count);                                                                  \
         }                                                                                                              \
                                                                                                                        \
-        check_##NAME(src1, src2, dst, count);                                                                          \
+        check2(src1, src2, dst, count, [](T x, T y) { return CHECK; });                                                \
         aligned_free_helper(src1);                                                                                     \
         aligned_free_helper(src2);                                                                                     \
         aligned_free_helper(dst);                                                                                      \
@@ -334,41 +209,41 @@ template <typename T> static void check_pow(T *src1, T *src2, T *dst, int count)
     }                                                                                                                  \
     BENCHMARK(NAME##_##T)->ARGS;
 
-TEST(sqrt, float, init_linear)
-TEST(sqrt, double, init_linear)
-TEST(rsqrt, float, init_linear)
-TEST(rsqrt, double, init_linear)
-TEST(rsqrt_fast, float, init_linear)
-TEST(rsqrt_fast, double, init_linear)
-TEST(rcp, float, init_linear)
-TEST(rcp, double, init_linear)
-TEST(rcp_fast, float, init_linear)
-TEST(rcp_fast, double, init_linear)
+TEST(sqrt, float, init_linear, std::sqrt(x))
+TEST(sqrt, double, init_linear, std::sqrt(x))
+TEST(rsqrt, float, init_linear, 1.0f / std::sqrt(x))
+TEST(rsqrt, double, init_linear, 1.0 / std::sqrt(x))
+TEST(rsqrt_fast, float, init_linear, 1.0f / std::sqrt(x))
+TEST(rsqrt_fast, double, init_linear, 1.0 / std::sqrt(x))
+TEST(rcp, float, init_linear, 1.0f / x)
+TEST(rcp, double, init_linear, 1.0 / x)
+TEST(rcp_fast, float, init_linear, 1.0f / x)
+TEST(rcp_fast, double, init_linear, 1.0 / x)
 TEST3(ldexp, float, init_ldexp)
 TEST3(ldexp, double, init_ldexp)
 TEST4(frexp, float, init_frexp)
 TEST4(frexp, double, init_frexp)
 
-TEST(sin, float, init_pi)
-TEST(sin, double, init_pi)
-TEST(asin, float, init_one)
-TEST(asin, double, init_one)
-TEST(cos, float, init_pi)
-TEST(cos, double, init_pi)
-TEST(acos, float, init_one)
-TEST(acos, double, init_one)
-TEST(tan, float, init_half_pi)
-TEST(tan, double, init_half_pi)
-TEST(atan, float, init_linear)
-TEST(atan, double, init_linear)
-TEST2(atan2, float, init_linear2)
-TEST2(atan2, double, init_linear2)
+TEST(sin, float, init_pi, std::sin(x))
+TEST(sin, double, init_pi, std::sin(x))
+TEST(asin, float, init_one, std::asin(x))
+TEST(asin, double, init_one, std::asin(x))
+TEST(cos, float, init_pi, std::cos(x))
+TEST(cos, double, init_pi, std::cos(x))
+TEST(acos, float, init_one, std::acos(x))
+TEST(acos, double, init_one, std::acos(x))
+TEST(tan, float, init_half_pi, std::tan(x))
+TEST(tan, double, init_half_pi, std::tan(x))
+TEST(atan, float, init_linear, std::atan(x))
+TEST(atan, double, init_linear, std::atan(x))
+TEST2(atan2, float, init_linear2, std::atan2(x, y))
+TEST2(atan2, double, init_linear2, std::atan2(x, y))
 
-TEST(exp, float, init_pi)
-TEST(exp, double, init_pi)
-TEST(log, float, init_linear)
-TEST(log, double, init_linear)
-TEST2(pow, float, init_linear2)
-TEST2(pow, double, init_linear2)
+TEST(exp, float, init_pi, std::exp(x))
+TEST(exp, double, init_pi, std::exp(x))
+TEST(log, float, init_linear, std::log(x))
+TEST(log, double, init_linear, std::log(x))
+TEST2(pow, float, init_linear2, std::pow(x, y))
+TEST2(pow, double, init_linear2, std::pow(x, y))
 
 BENCHMARK_MAIN();
