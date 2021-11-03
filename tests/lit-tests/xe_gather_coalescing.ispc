@@ -1,21 +1,32 @@
 // RUN: %{ispc} %s --target=gen9-x16 --arch=xe64 -h %t.h --emit-llvm-text -o %t.ll
-// RUN: FileCheck --input-file=%t.ll %s
+// RUN: FileCheck --input-file=%t.ll %s --check-prefixes CHECK_ALL,CHECK_BLOCK
 // RUN: %{ispc} %s --target=gen9-x8 --arch=xe64 -h %t.h --emit-llvm-text -o %t.ll
-// RUN: FileCheck --input-file=%t.ll %s
+// RUN: FileCheck --input-file=%t.ll %s --check-prefixes CHECK_ALL,CHECK_BLOCK
 // RUN: %{ispc} %s --target=gen9-x16 --arch=xe32 -h %t.h --emit-llvm-text -o %t.ll
-// RUN: FileCheck --input-file=%t.ll %s
+// RUN: FileCheck --input-file=%t.ll %s --check-prefixes CHECK_ALL,CHECK_BLOCK
 // RUN: %{ispc} %s --target=gen9-x8 --arch=xe32 -h %t.h --emit-llvm-text -o %t.ll
-// RUN: FileCheck --input-file=%t.ll %s
+// RUN: FileCheck --input-file=%t.ll %s --check-prefixes CHECK_ALL,CHECK_BLOCK
+
+// RUN: %{ispc} %s --target=gen9-x16 --arch=xe64 -h %t.h --emit-llvm-text -o %t.ll --opt=build-llvm-loads-on-xe-gather-coalescing
+// RUN: FileCheck --input-file=%t.ll %s --check-prefixes CHECK_ALL,CHECK_LOAD
+// RUN: %{ispc} %s --target=gen9-x8 --arch=xe64 -h %t.h --emit-llvm-text -o %t.ll --opt=build-llvm-loads-on-xe-gather-coalescing
+// RUN: FileCheck --input-file=%t.ll %s --check-prefixes CHECK_ALL,CHECK_LOAD
+// RUN: %{ispc} %s --target=gen9-x16 --arch=xe32 -h %t.h --emit-llvm-text -o %t.ll --opt=build-llvm-loads-on-xe-gather-coalescing
+// RUN: FileCheck --input-file=%t.ll %s --check-prefixes CHECK_ALL,CHECK_LOAD
+// RUN: %{ispc} %s --target=gen9-x8 --arch=xe32 -h %t.h --emit-llvm-text -o %t.ll --opt=build-llvm-loads-on-xe-gather-coalescing
+// RUN: FileCheck --input-file=%t.ll %s --check-prefixes CHECK_ALL,CHECK_LOAD
 // REQUIRES: XE_ENABLED
 
 #define LOAD(n)               \
     do {                      \
         if (n < programCount) \
-            a[n] = _in[n];   \
+            a[n] = _in[n];    \
     } while (false)
 
-// CHECK: @llvm.genx.svm.block.ld
-export void gather_coalescing(uniform float _out[], uniform float _in[]) {
+// CHECK_ALL-LABEL: gather_coalescing
+// CHECK_BLOCK: @llvm.genx.svm.block.ld
+// CHECK_LOAD: %vectorized_ld_exp = load
+task void gather_coalescing(uniform float _out[], uniform float _in[]) {
     uniform int a[programCount];
 
     // Initialization

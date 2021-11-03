@@ -238,6 +238,10 @@ static void lPrintVersion() {
     printf("        disable-uniform-memory-optimizations\tDisable uniform-based coherent memory access\n");
 #ifdef ISPC_XE_ENABLED
     printf("        disable-xe-gather-coalescing\t\tDisable Xe gather coalescing\n");
+    printf("        threshold-for-xe-gather-coalescing=<0>\tMinimal number of eliminated memory instructions for "
+           "Xe gather coalescing.\n");
+    printf("        build-llvm-loads-on-xe-gather-coalescing\t\tExperimental: build standard llvm loads on "
+           "Xe gather coalescing.\n");
     printf("        enable-xe-unsafe-masked-load\t\tEnable Xe unsafe masked load\n");
 #endif
     printf("    [--print-target]\t\t\tPrint target's information\n");
@@ -819,6 +823,10 @@ int main(int Argc, char *Argv[]) {
 #ifdef ISPC_XE_ENABLED
             else if (!strcmp(opt, "disable-xe-gather-coalescing"))
                 g->opt.disableXeGatherCoalescing = true;
+            else if (!strncmp(opt, "threshold-for-xe-gather-coalescing=", 37))
+                g->opt.thresholdForXeGatherCoalescing = atoi(opt + 37);
+            else if (!strcmp(opt, "build-llvm-loads-on-xe-gather-coalescing"))
+                g->opt.buildLLVMLoadsOnXeGatherCoalescing = true;
             else if (!strcmp(opt, "emit-xe-hardware-mask"))
                 g->opt.emitXeHardwareMask = true;
             else if (!strcmp(opt, "enable-xe-foreach-varying"))
