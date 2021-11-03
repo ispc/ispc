@@ -2973,7 +2973,8 @@ static llvm::Function *lXeMaskedInst(llvm::Instruction *inst, bool isStore, llvm
         maskedFuncName += "double";
 
     llvm::CallInst *callInst = llvm::dyn_cast<llvm::CallInst>(inst);
-    if (callInst != NULL && callInst->getCalledFunction()->getName().contains(maskedFuncName)) {
+    if (callInst != NULL && callInst->getCalledFunction() != NULL &&
+        callInst->getCalledFunction()->getName().contains(maskedFuncName)) {
         return NULL;
     }
     return m->module->getFunction("__" + maskedFuncName);
@@ -5450,584 +5451,898 @@ static llvm::Pass *CreateReplaceStdlibShiftPass() { return new ReplaceStdlibShif
 #ifdef ISPC_XE_ENABLED
 
 ///////////////////////////////////////////////////////////////////////////
-// XeGatherCoalescingPass
+// Xe Coalescing passes
 
-/** This pass performs gather coalescing for Xe target.
+/*
+ * MemoryCoalescing: basis for store/load coalescing optimizations.
+ *
+ * Memory coalescing tries to merge several memory operations into
+ * wider ones. There are two different flows for store and load coalescings.
+ *
+ * This is a function pass. Each BB is handled separately.
+ *
+ * The general idea of optimization is to iterate over BB and analyse pointers
+ * for all optimization targets (target is an instruction that can be optimized).
+ * Instructions that uses the same pointer can be coalesced.
+ *
+ * Each memory instruction has a pointer operand. To perform coalescing,
+ * we need to determine its base pointer and offset for it. This is done
+ * via recurrent algorithm. Only constant offset can be handled.
+ * TODO: found in experiments: sometimes pointer is passed as null
+ * and actual pointer came via calculated offset. Such situation is not
+ * handled now (Target: Xe-TPM).
+ *
+ * Sometimies coalescing can fail in case when it is not sure if the
+ * transformation is actually safe. This can happen if some "bad"
+ * instructions met between optimization targets. To handle this, all
+ * optimization targets are collected in several blocks. They also can be
+ * treated as non-interfering fragments of BB. Each block can be
+ * safely optimized. Bad instructions trigger creation of such blocks.
+ * For now, stopper detection is implemented in a general way for all
+ * types of coalescing. It can be changed in future.
+ *
+ * Basicly, implementation can treat offset in different ways. Afterall,
+ * implementation builds accesses for optimized instructions. All
+ * offsets are presented in bytes now.
+ *
+ * To create new coalescing type, one should implement several handlers.
+ * More info about them below.
+ *
+ * There are also some helpers that are not used by optimization
+ * directly, but can be used by several coalescing implementations.
+ * Such helpers contains some general stuff.
  */
-class XeGatherCoalescing : public llvm::FunctionPass {
+class MemoryCoalescing : public llvm::FunctionPass {
+  protected:
+    typedef int64_t OffsetT;
+    typedef llvm::SmallVector<OffsetT, 16> OffsetsVecT;
+    typedef llvm::SmallVector<llvm::Instruction *, 4> BlockInstsVecT;
+
+    // Available coalescing types
+    enum class MemType { OPT_LOAD, OPT_STORE };
+
+    // Inst optimization data
+    class InstData {
+      public:
+        // Instruction itself
+        llvm::Instruction *Inst;
+        // Offsets for memory accesses
+        OffsetsVecT Offsets;
+        // Unused for loads, stored value for stores
+        llvm::Value *Val;
+        InstData() = delete;
+        InstData(llvm::Instruction *Inst, OffsetsVecT &Offsets, llvm::Value *Val)
+            : Inst(Inst), Offsets(Offsets), Val(Val) {}
+    };
+
+    // Ptr optimization data
+    class PtrData {
+      public:
+        // The insertion point for the ptr users.
+        // All instructions will be placed before it.
+        // InsertPoint should be the first instruction in block for load coalescing
+        // and the last one for store coalescing. This is achieved by different
+        // traversal in both types of optimization.
+        llvm::Instruction *InsertPoint;
+        // Data for insts that use this ptr
+        std::vector<InstData> InstsData;
+        PtrData() : InsertPoint(nullptr) {}
+        void addInstruction(llvm::Instruction *Inst, OffsetsVecT &Offsets, llvm::Value *Val) {
+            InstsData.push_back(InstData(Inst, Offsets, Val));
+            if (!InsertPoint)
+                InsertPoint = Inst;
+        }
+    };
+
+    // Data for optimization block
+    class OptBlock {
+      public:
+        // Data for all ptrs in the block
+        std::unordered_map<llvm::Value *, PtrData> PtrsData;
+        void addInstruction(llvm::Instruction *Inst, llvm::Value *Ptr, OffsetsVecT &Offsets,
+                            llvm::Value *Val = nullptr) {
+            PtrsData[Ptr].addInstruction(Inst, Offsets, Val);
+        }
+    };
+
+    // Instructions that are possibly dead. It includes some newly created instructions that
+    // are created during optimization and memory instructions that are optimized out. All
+    // instructions from this list are treated as dead if they don't have any users.
+    std::set<llvm::Instruction *> PossiblyDead;
+    // Modification flag
+    bool modifiedAny = false;
+    // Address space for optimization
+    // TODO: not obvious how it would work with TPM on Xe now.
+    AddressSpace AddrSpace;
+
+  private:
+    // Info for complex GEPs
+    struct GEPVarOffsetInfo {
+        llvm::Instruction *GEP;
+        llvm::User::value_op_iterator FirstConstUse;
+        GEPVarOffsetInfo(llvm::Instruction *GEP) : GEP(GEP) {}
+    };
+
+    // DenseMap helper for complex GEPs
+    struct DenseMapInfo {
+        static inline GEPVarOffsetInfo getEmptyKey() {
+            return GEPVarOffsetInfo(llvm::DenseMapInfo<llvm::Instruction *>::getEmptyKey());
+        }
+        static inline GEPVarOffsetInfo getTombstoneKey() {
+            return GEPVarOffsetInfo(llvm::DenseMapInfo<llvm::Instruction *>::getTombstoneKey());
+        }
+        static inline bool isSentinel(const GEPVarOffsetInfo &Val) {
+            return Val.GEP == getEmptyKey().GEP || Val.GEP == getTombstoneKey().GEP;
+        }
+        static unsigned getHashValue(const GEPVarOffsetInfo &Val) {
+            return hash_combine_range(Val.GEP->value_op_begin(), Val.FirstConstUse);
+        }
+        static bool isEqual(const GEPVarOffsetInfo &LHS, const GEPVarOffsetInfo &RHS) {
+            if (isSentinel(LHS) || isSentinel(RHS))
+                return LHS.GEP == RHS.GEP;
+
+            for (auto lhs_it = LHS.GEP->value_op_begin(), rhs_it = RHS.GEP->value_op_begin(), lhs_e = LHS.FirstConstUse,
+                      rhs_e = RHS.FirstConstUse;
+                 lhs_it != lhs_e || rhs_it != rhs_e; ++lhs_it, ++rhs_it) {
+                if (lhs_it == lhs_e || rhs_it == rhs_e)
+                    return false;
+                if (*lhs_it != *rhs_it)
+                    return false;
+            }
+
+            return true;
+        }
+    };
+
+    // Helper for ptr offset analysis. It holds
+    // Ptr+Offset data. IsConstantOffset is used to
+    // check if optimization is appliable for such ptr.
+    // Ptr can be null, in this case only Offset
+    // matters. This is used for arithmetic analysis.
+    // The data is consistent only if the IsConstantOffset
+    // flag is true.
+    struct BasePtrInfo {
+        llvm::Value *Ptr;
+        OffsetT Offset;
+        bool IsConstantOffset;
+
+        BasePtrInfo() : Ptr(nullptr), Offset(0), IsConstantOffset(false) {}
+    };
+
+    // Coalescing type
+    const MemType OptType;
+    // Cached data for visited ptr instructions
+    std::unordered_map<llvm::Value *, BasePtrInfo> BasePtrInfoCache;
+    // Cached data for complex GEPs partial replacements
+    llvm::DenseMap<GEPVarOffsetInfo, llvm::Value *, DenseMapInfo> ComplexGEPsInfoCache;
+    // Blocks to be optimized
+    std::vector<OptBlock> Blocks;
+
+    // Find base ptr and its offset
+    BasePtrInfo findBasePtr(llvm::Value *PtrOperand);
+    // Analyse GEP that has variable offset. This is used by findBasePtr.
+    // Such GEPs can have same variable part while the final (different) part is constant.
+    BasePtrInfo analyseVarOffsetGEP(llvm::GetElementPtrInst *GEP);
+    // Analyse arithmetics. That allows to handle more cases when offset is calculated not via GEP.
+    // TODO: not implemented now, returns result with IsConstantOffset=false.
+    BasePtrInfo analyseArithmetics(llvm::BinaryOperator *Arithm);
+    // Return true if Inst blocks further optimization of currently collected
+    // optimization targets. This is a stopper for collecting
+    // instructions.
+    bool stopsOptimization(llvm::Instruction *Inst) const;
+    // Add Block to blocks list and return new one.
+    OptBlock finishBlock(OptBlock &Block);
+    // Collect data for optimization
+    void analyseInsts(llvm::BasicBlock &BB);
+    // Apply coalescing
+    void applyOptimization();
+    // Delete dead instructions
+    void deletePossiblyDeadInsts();
+    // Reset all internal structures
+    void clear();
+
+  protected:
+    // Initialization
+    MemoryCoalescing(char &ID, MemType OptType, AddressSpace AddrSpace)
+        : FunctionPass(ID), AddrSpace(AddrSpace), OptType(OptType) {}
+    // Optimization runner
+    bool runOnFunction(llvm::Function &Fn);
+
+    /* ------ Handlers ------ */
+    // Methods in this block are interface for different coalescing types.
+
+    // Return true if coalescing can handle Inst.
+    virtual bool isOptimizationTarget(llvm::Instruction *Inst) const = 0;
+    // Return pointer value or null if there is no one. This should handle
+    // all optimization targets.
+    virtual llvm::Value *getPointer(llvm::Instruction *Inst) const = 0;
+    // Return offset for implied values. Scatter and gathers, for example,
+    // can have vectorized offset, so the result is a list. If the offset
+    // is not constant, return empty list. This should handle all optimization
+    // targets.
+    virtual OffsetsVecT getOffset(llvm::Instruction *Inst) const = 0;
+    // Return value being stored. For load coalescing, simply return null.
+    // This function is not called under load coalescing. For store coalescing,
+    // this should handle all optimizations target.
+    virtual llvm::Value *getStoredValue(llvm::Instruction *Inst) const = 0;
+    // Perform optimization on ptr data.
+    virtual void optimizePtr(llvm::Value *Ptr, PtrData &PD, llvm::Instruction *InsertPoint) = 0;
+
+    // TODO: this handler must call runOnBasicBlockImpl to run optimization.
+    // This function is needed due to DEBUG_START/END_PASS logic. Maybe there is
+    // a better way to solve it.
+    virtual void runOnBasicBlock(llvm::BasicBlock &BB) = 0;
+    void runOnBasicBlockImpl(llvm::BasicBlock &BB);
+
+    /* ------- Helpers ------ */
+    // Methods in this block are not used in optimization directly
+    // and can be invoked by handlers implementations
+
+    // Collect constant offsets from vector. If offset is not a constant, empty list
+    // is returned.
+    OffsetsVecT getConstOffsetFromVector(llvm::Value *VecVal) const;
+    // Multiplies all elements by scale.
+    void applyScale(OffsetsVecT &Offsets, OffsetT scale) const;
+    // Build InsertElementInst. This is offset based insertion and it can deal with mixed types.
+    llvm::Value *buildIEI(llvm::Value *InsertTo, llvm::Value *Val, OffsetT OffsetBytes,
+                          llvm::Instruction *InsertBefore) const;
+    // Build ExtractElementInst. This is offset based extraction and it can deal with mixed types.
+    llvm::Value *buildEEI(llvm::Value *ExtractFrom, OffsetT OffsetBytes, llvm::Type *DstTy,
+                          llvm::Instruction *InsertBefore) const;
+    // Build Cast (BitCast or IntToPtr)
+    llvm::Value *buildCast(llvm::Value *Val, llvm::Type *DstTy, llvm::Instruction *InsertBefore) const;
+    // Extract element from block values. Can aggregate value from several block instructions.
+    llvm::Value *extractValueFromBlock(const BlockInstsVecT &BlockInstsVec, OffsetT OffsetBytes, llvm::Type *DstTy,
+                                       llvm::Instruction *InsertBefore) const;
+    // Get scalar type size in bytes
+    unsigned getScalarTypeSize(llvm::Type *Ty) const;
+};
+
+// Optimization runner
+bool MemoryCoalescing::runOnFunction(llvm::Function &Fn) {
+    llvm::TimeTraceScope FuncScope("MemoryCoalescing::runOnFunction", Fn.getName());
+    for (llvm::BasicBlock &BB : Fn) {
+        runOnBasicBlock(BB);
+    }
+
+    return modifiedAny;
+}
+
+// Find base pointer info for ptr operand.
+MemoryCoalescing::BasePtrInfo MemoryCoalescing::findBasePtr(llvm::Value *PtrOperand) {
+    // Look for previously handled value
+    auto it = BasePtrInfoCache.find(PtrOperand);
+    if (it != BasePtrInfoCache.end())
+        return it->second;
+
+    BasePtrInfo res;
+    if (auto BCI = llvm::dyn_cast<llvm::BitCastInst>(PtrOperand)) {
+        res = findBasePtr(BCI->getOperand(0));
+    } else if (auto GEP = llvm::dyn_cast<llvm::GetElementPtrInst>(PtrOperand)) {
+        if (GEP->hasAllConstantIndices()) {
+            // Easy case. Collect offset.
+            llvm::APInt acc(g->target->is32Bit() ? 32 : 64, 0, true);
+            bool checker = GEP->accumulateConstantOffset(GEP->getModule()->getDataLayout(), acc);
+            Assert(checker);
+
+            // Run this analysis for GEP's ptr operand to handle possible bypasses
+            res = findBasePtr(GEP->getPointerOperand());
+            res.Offset += acc.getSExtValue();
+        } else {
+            // Bad case. We need partialy use the data in this GEP - there might be
+            // intersections with others. The handler for this case is implemented
+            // in a separate method.
+            res = analyseVarOffsetGEP(GEP);
+        }
+    } else if (auto Arithm = llvm::dyn_cast<llvm::BinaryOperator>(PtrOperand)) {
+        // Handle arithmetics
+        res = analyseArithmetics(Arithm);
+    } else if (llvm::isa<llvm::PointerType>(PtrOperand->getType())) {
+        // This block is reached when no possible bypasses are left.
+        // Use this ptr as a base
+        res.Ptr = PtrOperand;
+        res.Offset = 0;
+        res.IsConstantOffset = true;
+    } else if (auto Const = llvm::dyn_cast<llvm::ConstantInt>(PtrOperand)) {
+        // Constant operand - set offset.
+        res.Ptr = nullptr;
+        res.Offset = Const->getSExtValue();
+        res.IsConstantOffset = true;
+    } else {
+        // That is a non-constant offset
+        res.IsConstantOffset = false;
+    }
+
+    // Finally, cache result and return
+    BasePtrInfoCache[PtrOperand] = res;
+    return res;
+}
+
+// Analyse GEP that has some indices non-constant.
+// TODO: Consider adding full chain analysis. Decided to leave this idea for now
+// because it may introduce many redundant address calculations: current approach
+// would copy full chain even if some common part could be calculated somewhere eariler.
+MemoryCoalescing::BasePtrInfo MemoryCoalescing::analyseVarOffsetGEP(llvm::GetElementPtrInst *GEP) {
+    BasePtrInfo res;
+    // Find the last constant idxs: we may be able to use them as constant offset for
+    // several GEPs with common pre-constant part
+    auto FirstConstIdx = GEP->getNumOperands();
+    for (unsigned i = FirstConstIdx - 1; i >= 0; --i) {
+        if (!llvm::isa<llvm::ConstantInt>(GEP->getOperand(i)))
+            break;
+        FirstConstIdx = i;
+    }
+    // Early return in case when no constant offset was found:
+    // further actions are useless.
+    if (GEP->getNumOperands() == FirstConstIdx) {
+        res.Ptr = GEP;
+        res.Offset = 0;
+        res.IsConstantOffset = true;
+        return res;
+    }
+    // Initialize var offset ops info.
+    auto FirstConstUse = GEP->value_op_begin();
+    for (unsigned i = 0; i < FirstConstIdx; ++i)
+        FirstConstUse++;
+    GEPVarOffsetInfo GEPVarOffsetData(GEP);
+    GEPVarOffsetData.FirstConstUse = FirstConstUse;
+    // Try to find existing dangling PartialGEP for such Ops combination
+    // or create new one.
+    auto DanglingGEP_it = ComplexGEPsInfoCache.find(GEPVarOffsetData);
+    if (DanglingGEP_it == ComplexGEPsInfoCache.end()) {
+        std::vector<llvm::Value *> PartialIdxs;
+        for (unsigned i = 1; i < FirstConstIdx; ++i)
+            PartialIdxs.push_back(GEP->getOperand(i));
+        auto ret = ComplexGEPsInfoCache.insert(
+            {GEPVarOffsetData,
+             llvm::GetElementPtrInst::Create(nullptr, GEP->getPointerOperand(), PartialIdxs, "partial_gep")});
+        DanglingGEP_it = ret.first;
+    }
+    llvm::Value *DanglingGEP = DanglingGEP_it->second;
+    // Collect idxs. We will use them to find offset. Push zero constant first:
+    // this will be needed for correct offset accumulation further.
+    std::vector<llvm::Value *> Idxs = {llvm::ConstantInt::get(LLVMTypes::Int32Type, 0)};
+    for (unsigned i = FirstConstIdx; i < GEP->getNumOperands(); ++i) {
+        Idxs.push_back(GEP->getOperand(i));
+    }
+    // Get partial GEP type
+    llvm::PointerType *PartialType = llvm::cast<llvm::PointerType>(DanglingGEP->getType());
+    // Create temporary GEP that will help us to get some useful info
+    llvm::GetElementPtrInst *GEPHelper =
+        llvm::GetElementPtrInst::Create(nullptr, llvm::ConstantPointerNull::get(PartialType), Idxs);
+    // Accumulate offset from helper
+    llvm::APInt acc(g->target->is32Bit() ? 32 : 64, 0, true);
+    bool checker = GEPHelper->accumulateConstantOffset(GEP->getModule()->getDataLayout(), acc);
+    Assert(checker);
+    // Finally, store data.
+    res.Ptr = DanglingGEP;
+    res.Offset = acc.getSExtValue();
+    res.IsConstantOffset = true;
+
+    return res;
+}
+
+// Analyse arithmetic calculations on pointer.
+// TODO: not implemented, returns stopper
+MemoryCoalescing::BasePtrInfo MemoryCoalescing::analyseArithmetics(llvm::BinaryOperator *Arithm) {
+    BasePtrInfo res;
+    res.IsConstantOffset = false;
+    return res;
+}
+
+// Basic block optimization runner.
+// TODO: runOnBasicBlock must call it to run optimization. See comment above.
+void MemoryCoalescing::runOnBasicBlockImpl(llvm::BasicBlock &BB) {
+    analyseInsts(BB);
+    applyOptimization();
+    deletePossiblyDeadInsts();
+    clear();
+}
+
+void MemoryCoalescing::deletePossiblyDeadInsts() {
+    for (auto *Inst : PossiblyDead) {
+        if (Inst->use_empty())
+            Inst->eraseFromParent();
+    }
+}
+
+void MemoryCoalescing::clear() {
+    BasePtrInfoCache.clear();
+    ComplexGEPsInfoCache.clear();
+    PossiblyDead.clear();
+    Blocks.clear();
+}
+
+// Analyse instructions in BB. Gather them into optimizable blocks.
+void MemoryCoalescing::analyseInsts(llvm::BasicBlock &BB) {
+    auto bi = BB.begin(), be = BB.end();
+    auto rbi = BB.rbegin(), rbe = BB.rend();
+    Assert(OptType == MemType::OPT_LOAD || OptType == MemType::OPT_STORE);
+    OptBlock CurrentBlock;
+    for (; (OptType == MemType::OPT_LOAD) ? (bi != be) : (rbi != rbe);) {
+        llvm::Instruction *Inst = NULL;
+        if (OptType == MemType::OPT_LOAD) {
+            Inst = &*bi;
+            ++bi;
+        } else {
+            Inst = &*rbi;
+            ++rbi;
+        }
+
+        if (isOptimizationTarget(Inst)) {
+            // Find ptr and offsets
+            BasePtrInfo BasePtr = findBasePtr(getPointer(Inst));
+            OffsetsVecT Offsets = getOffset(Inst);
+            if (BasePtr.IsConstantOffset && BasePtr.Ptr && !Offsets.empty()) {
+                if (OptType == MemType::OPT_STORE && !CurrentBlock.PtrsData.empty()) {
+                    Assert(CurrentBlock.PtrsData.size() == 1 && "Store coalescing can handle only one pointer at once");
+                    if (CurrentBlock.PtrsData.find(BasePtr.Ptr) == CurrentBlock.PtrsData.end()) {
+                        // Finish current block so the instruction is added to the new one
+                        CurrentBlock = finishBlock(CurrentBlock);
+                    }
+                }
+
+                // Recalculate offsets for BasePtr
+                for (auto &Offset : Offsets)
+                    Offset += BasePtr.Offset;
+                // Add inst to block
+                CurrentBlock.addInstruction(Inst, BasePtr.Ptr, Offsets,
+                                            OptType == MemType::OPT_STORE ? getStoredValue(Inst) : nullptr);
+                // Instruction that was added to the block won't block optimization
+                continue;
+            }
+        }
+
+        if (stopsOptimization(Inst)) {
+            // Add current block and create new one
+            CurrentBlock = finishBlock(CurrentBlock);
+        }
+    }
+
+    // Add current block
+    Blocks.push_back(CurrentBlock);
+}
+
+// Apply optimization for all optimizable blocks.
+void MemoryCoalescing::applyOptimization() {
+    for (auto &Block : Blocks) {
+        for (auto &PD : Block.PtrsData) {
+            // Apply dangling GEP
+            if (auto *GEP = llvm::dyn_cast<llvm::GetElementPtrInst>(PD.first))
+                if (!GEP->getParent())
+                    GEP->insertBefore(PD.second.InsertPoint);
+            // Run optimization
+            optimizePtr(PD.first, PD.second, PD.second.InsertPoint);
+        }
+    }
+}
+
+// Check whether instruction blocks optimization.
+// Optimization target checker should be called before because any store
+// blocks optimization in general case.
+bool MemoryCoalescing::stopsOptimization(llvm::Instruction *Inst) const {
+    if (OptType == MemType::OPT_LOAD) {
+        // For load coalescing, only stores can introduce problems.
+        if (auto CI = llvm::dyn_cast<llvm::CallInst>(Inst)) {
+            // Such call may introduce load-store-load sequence
+            if (!CI->onlyReadsMemory())
+                for (unsigned i = 0; i < Inst->getNumOperands(); ++i)
+                    if (GetAddressSpace(Inst->getOperand(i)) == AddrSpace)
+                        return true;
+        } else if (auto SI = llvm::dyn_cast<llvm::StoreInst>(Inst)) {
+            // May introduce load-store-load sequence
+            if (GetAddressSpace(SI->getPointerOperand()) == AddrSpace)
+                return true;
+        }
+    } else if (OptType == MemType::OPT_STORE) {
+        // For store coalescing, both loads and stores can introduce problems.
+        if (auto CI = llvm::dyn_cast<llvm::CallInst>(Inst)) {
+            // Such call may introduce store-load/store-store sequence
+            for (unsigned i = 0; i < Inst->getNumOperands(); ++i) {
+                if (GetAddressSpace(Inst->getOperand(i)) == AddrSpace)
+                    return true;
+            }
+        } else if (auto LI = llvm::dyn_cast<llvm::LoadInst>(Inst)) {
+            // May introduce store-load-store sequence
+            if (GetAddressSpace(LI->getPointerOperand()) == AddrSpace)
+                return true;
+        } else if (auto SI = llvm::dyn_cast<llvm::StoreInst>(Inst)) {
+            // May introduce store-store-store sequence
+            if (GetAddressSpace(SI->getPointerOperand()) == AddrSpace)
+                return true;
+        }
+    } else
+        Assert(0 && "Bad optimization type");
+
+    return false;
+}
+
+// Store current block and init new one.
+MemoryCoalescing::OptBlock MemoryCoalescing::finishBlock(MemoryCoalescing::OptBlock &Block) {
+    Blocks.push_back(Block);
+    return OptBlock();
+}
+
+// Get constant offset from vector.
+MemoryCoalescing::OffsetsVecT MemoryCoalescing::getConstOffsetFromVector(llvm::Value *VecVal) const {
+    Assert(VecVal && llvm::isa<llvm::VectorType>(VecVal->getType()) && "Expected vector type");
+    OffsetsVecT res;
+    auto ConstVec = llvm::dyn_cast<llvm::ConstantDataVector>(VecVal);
+
+    if (!ConstVec)
+        return res;
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_11_0
+    for (unsigned i = 0, size = llvm::cast<llvm::FixedVectorType>(ConstVec->getType())->getNumElements(); i < size;
+         ++i) {
+#else
+    for (unsigned i = 0, size = llvm::cast<llvm::VectorType>(ConstVec->getType())->getNumElements(); i < size; ++i) {
+#endif
+        auto ConstantInt = llvm::dyn_cast<llvm::ConstantInt>(ConstVec->getElementAsConstant(i));
+        if (!ConstantInt) {
+            // Actually, we don't expect this to happen
+            res.clear();
+            break;
+        }
+        res.push_back(ConstantInt->getSExtValue());
+    }
+
+    return res;
+}
+
+// Apply scale on offsets.
+void MemoryCoalescing::applyScale(MemoryCoalescing::OffsetsVecT &Offsets, MemoryCoalescing::OffsetT Scale) const {
+    for (auto &Offset : Offsets)
+        Offset *= Scale;
+}
+
+unsigned MemoryCoalescing::getScalarTypeSize(llvm::Type *Ty) const {
+    Ty = Ty->getScalarType();
+    if (Ty->isPointerTy())
+        return g->target->is32Bit() ? 4 : 8;
+    return Ty->getPrimitiveSizeInBits() >> 3;
+}
+
+llvm::Value *MemoryCoalescing::buildIEI(llvm::Value *InsertTo, llvm::Value *Val, MemoryCoalescing::OffsetT OffsetBytes,
+                                        llvm::Instruction *InsertBefore) const {
+    llvm::Type *ScalarType = InsertTo->getType()->getScalarType();
+    llvm::Type *ValTy = Val->getType();
+
+    Assert(!ValTy->isVectorTy() && !ValTy->isAggregateType() && "Expected scalar type");
+    Assert(InsertTo->getType()->isVectorTy() && "Expected vector type");
+
+    unsigned ScalarTypeBytes = getScalarTypeSize(ScalarType);
+    unsigned ValTyBytes = getScalarTypeSize(ValTy);
+    unsigned Idx = OffsetBytes / ScalarTypeBytes;
+    unsigned Rem = OffsetBytes % ScalarTypeBytes;
+    Idx = Rem ? Idx + 1 : Idx;
+    llvm::Value *FinalInsertElement = Val;
+    if (ValTy != ScalarType) {
+        if (ValTyBytes == ScalarTypeBytes) {
+            // Apply cast
+            FinalInsertElement = buildCast(Val, ScalarType, InsertBefore);
+        } else {
+            // Need to create eei-cast-iei-cast chain.
+            // Extract scalar type value
+            auto *EEI = llvm::ExtractElementInst::Create(InsertTo, llvm::ConstantInt::get(LLVMTypes::Int64Type, Idx),
+                                                         "mem_coal_diff_ty_eei", InsertBefore);
+            // Cast it to vector of smaller types
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_11_0
+            auto *Cast = buildCast(EEI, llvm::FixedVectorType::get(ValTy, ScalarTypeBytes / ValTyBytes), InsertBefore);
+#else
+            auto *Cast = buildCast(EEI, llvm::VectorType::get(ValTy, ScalarTypeBytes / ValTyBytes), InsertBefore);
+#endif
+            // Insert value into casted type. Do it via this builder so we don't duplicate logic of offset calculations.
+            auto *IEI = buildIEI(Cast, Val, Rem, InsertBefore);
+            // Cast to original type
+            FinalInsertElement = buildCast(IEI, ScalarType, InsertBefore);
+        }
+    }
+
+    return llvm::InsertElementInst::Create(
+        InsertTo, FinalInsertElement, llvm::ConstantInt::get(LLVMTypes::Int64Type, Idx), "mem_coal_iei", InsertBefore);
+}
+
+llvm::Value *MemoryCoalescing::buildCast(llvm::Value *Val, llvm::Type *DstTy, llvm::Instruction *InsertBefore) const {
+    // No cast needed: early return
+    if (Val->getType() == DstTy)
+        return Val;
+
+    if (DstTy->isPointerTy() && !Val->getType()->isPointerTy()) {
+        return new llvm::IntToPtrInst(Val, DstTy, "coal_diff_ty_ptr_cast", InsertBefore);
+    } else if (!DstTy->isPointerTy() && Val->getType()->isPointerTy()) {
+        auto *PtrToInt = new llvm::PtrToIntInst(Val, g->target->is32Bit() ? LLVMTypes::Int32Type : LLVMTypes::Int64Type,
+                                                "coal_diff_ty_ptr_cast", InsertBefore);
+        return buildCast(PtrToInt, DstTy, InsertBefore);
+    } else {
+        return new llvm::BitCastInst(Val, DstTy, "coal_diff_ty_cast", InsertBefore);
+    }
+}
+
+llvm::Value *MemoryCoalescing::buildEEI(llvm::Value *ExtractFrom, MemoryCoalescing::OffsetT OffsetBytes,
+                                        llvm::Type *DstTy, llvm::Instruction *InsertBefore) const {
+    Assert(!DstTy->isVectorTy() && !DstTy->isAggregateType() && "Expected scalar type");
+    Assert(ExtractFrom->getType()->isVectorTy() && "Expected vector type");
+
+    llvm::Type *ScalarType = ExtractFrom->getType()->getScalarType();
+    unsigned ScalarTypeBytes = getScalarTypeSize(ScalarType);
+    unsigned DstTyBytes = getScalarTypeSize(DstTy);
+    unsigned Idx = OffsetBytes / ScalarTypeBytes;
+    unsigned Rem = OffsetBytes % ScalarTypeBytes;
+    llvm::Value *Res = nullptr;
+
+    if (Rem != 0) {
+        // Unaligned case: the resulting value starts inside Idx element.
+        // TODO: this is handled via shuffle vector. Actually, it can be done
+        // for all cases, but it is possible that such shuffle vector would
+        // introduce redundant instructions. This should be investigated
+        // at least on Xe target.
+
+        // Cast source to byte vector
+        Res = buildCast(
+            ExtractFrom,
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_11_0
+            llvm::FixedVectorType::get(LLVMTypes::Int8Type,
+                                       ScalarTypeBytes *
+                                           llvm::cast<llvm::FixedVectorType>(ExtractFrom->getType())->getNumElements()),
+#else
+            llvm::VectorType::get(LLVMTypes::Int8Type,
+                                  ScalarTypeBytes *
+                                      llvm::cast<llvm::VectorType>(ExtractFrom->getType())->getNumElements()),
+#endif
+            InsertBefore);
+        // Prepare Idxs vector for shuffle vector
+        std::vector<unsigned int> ByteIdxs(DstTyBytes);
+        OffsetT CurrIdx = OffsetBytes;
+        for (auto &Val : ByteIdxs)
+            Val = CurrIdx++;
+        llvm::ArrayRef<unsigned int> ByteIdxsArg(ByteIdxs);
+        // Extract bytes via shuffle vector
+        Res = new llvm::ShuffleVectorInst(Res, llvm::UndefValue::get(Res->getType()),
+                                          llvm::ConstantDataVector::get(*g->ctx, ByteIdxsArg), "coal_unaligned_loader",
+                                          InsertBefore);
+        // Cast byte vector to scalar value
+        Res = buildCast(Res, llvm::IntegerType::get(*g->ctx, /* NumBits */ DstTyBytes << 3), InsertBefore);
+        // Cast to actual DstTy
+        return buildCast(Res, DstTy, InsertBefore);
+    }
+
+    Res = llvm::ExtractElementInst::Create(ExtractFrom, llvm::ConstantInt::get(LLVMTypes::Int64Type, Idx),
+                                           "mem_coal_eei", InsertBefore);
+    if (DstTy == ScalarType) {
+        // Done here
+        return Res;
+    } else if (DstTyBytes == ScalarTypeBytes) {
+        // Just create bitcast
+        return buildCast(Res, DstTy, InsertBefore);
+    }
+
+    // Smaller type case. Need to insert cast-eei chain.
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_11_0
+    auto Cast = buildCast(Res, llvm::FixedVectorType::get(DstTy, ScalarTypeBytes / DstTyBytes), InsertBefore);
+#else
+    auto Cast = buildCast(Res, llvm::VectorType::get(DstTy, ScalarTypeBytes / DstTyBytes), InsertBefore);
+#endif
+    // Now call the builder with adjusted types
+    return buildEEI(Cast, Rem, DstTy, InsertBefore);
+}
+
+llvm::Value *MemoryCoalescing::extractValueFromBlock(const MemoryCoalescing::BlockInstsVecT &BlockInstsVec,
+                                                     MemoryCoalescing::OffsetT OffsetBytes, llvm::Type *DstTy,
+                                                     llvm::Instruction *InsertBefore) const {
+    Assert(BlockInstsVec.size() > 0);
+    OffsetT BlockSizeInBytes = getScalarTypeSize(BlockInstsVec[0]->getType()) *
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_11_0
+                               llvm::cast<llvm::FixedVectorType>(BlockInstsVec[0]->getType())->getNumElements();
+#else
+                               llvm::cast<llvm::VectorType>(BlockInstsVec[0]->getType())->getNumElements();
+#endif
+    unsigned StartIdx = OffsetBytes / BlockSizeInBytes;
+    unsigned EndIdx = (OffsetBytes + getScalarTypeSize(DstTy) - 1) / BlockSizeInBytes;
+    unsigned BlocksAffected = EndIdx - StartIdx + 1;
+    Assert(EndIdx < BlockInstsVec.size());
+    if (BlocksAffected == 1) {
+        // Simple case: just get value needed
+        return buildEEI(BlockInstsVec[StartIdx], OffsetBytes % BlockSizeInBytes, DstTy, InsertBefore);
+    } else {
+        // Need to get value from several blocks
+        llvm::Value *ByteVec = llvm::UndefValue::get(
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_11_0
+            llvm::FixedVectorType::get(LLVMTypes::Int8Type, getScalarTypeSize(DstTy)));
+#else
+            llvm::VectorType::get(LLVMTypes::Int8Type, getScalarTypeSize(DstTy)));
+#endif
+        for (OffsetT CurrOffset = OffsetBytes, TargetOffset = 0; CurrOffset < OffsetBytes + getScalarTypeSize(DstTy);
+             ++CurrOffset, ++TargetOffset) {
+            unsigned Idx = CurrOffset / BlockSizeInBytes;
+            unsigned LocalOffset = CurrOffset % BlockSizeInBytes;
+            llvm::Value *Elem = buildEEI(BlockInstsVec[Idx], LocalOffset, LLVMTypes::Int8Type, InsertBefore);
+            ByteVec = buildIEI(ByteVec, Elem, TargetOffset, InsertBefore);
+        }
+        llvm::Value *ScalarizedByteVec = buildCast(
+            ByteVec, llvm::IntegerType::get(*g->ctx, /* NumBits */ getScalarTypeSize(DstTy) << 3), InsertBefore);
+        return buildCast(ScalarizedByteVec, DstTy, InsertBefore);
+    }
+}
+
+class XeGatherCoalescing : public MemoryCoalescing {
+  private:
+    bool isOptimizationTarget(llvm::Instruction *Inst) const;
+    llvm::Value *getPointer(llvm::Instruction *Inst) const;
+    OffsetsVecT getOffset(llvm::Instruction *Inst) const;
+    llvm::Value *getStoredValue(llvm::Instruction *Inst) const { return nullptr; }
+    void optimizePtr(llvm::Value *Ptr, PtrData &PD, llvm::Instruction *InsertPoint);
+    void runOnBasicBlock(llvm::BasicBlock &BB);
+
+    llvm::CallInst *getPseudoGatherConstOffset(llvm::Instruction *Inst) const;
+
   public:
     static char ID;
-    XeGatherCoalescing() : FunctionPass(ID) {}
+    XeGatherCoalescing() : MemoryCoalescing(ID, MemoryCoalescing::MemType::OPT_LOAD, AddressSpace::ispc_global) {}
 
     llvm::StringRef getPassName() const { return "Xe Gather Coalescing"; }
-
-    bool runOnBasicBlock(llvm::BasicBlock &BB);
-
-    bool runOnFunction(llvm::Function &Fn);
 };
 
 char XeGatherCoalescing::ID = 0;
 
-// Returns pointer to pseudo_gather CallInst if inst is
-// actually a pseudo_gather
-static llvm::CallInst *lGetPseudoGather(llvm::Instruction *inst) {
-    if (auto CI = llvm::dyn_cast<llvm::CallInst>(inst)) {
-        if (CI->getCalledFunction()->getName().startswith("__pseudo_gather_base_offsets"))
-            return CI;
+void XeGatherCoalescing::runOnBasicBlock(llvm::BasicBlock &bb) {
+    DEBUG_START_PASS("XeGatherCoalescing");
+    runOnBasicBlockImpl(bb);
+    DEBUG_END_PASS("XeGatherCoalescing");
+}
+
+void XeGatherCoalescing::optimizePtr(llvm::Value *Ptr, PtrData &PD, llvm::Instruction *InsertPoint) {
+    // Analyse memory accesses
+    OffsetT MinIdx = INT64_MAX;
+    OffsetT MaxIdx = INT64_MIN;
+    unsigned TotalMemOpsCounter = PD.InstsData.size();
+    llvm::Type *LargestType = nullptr;
+    unsigned LargestTypeSize = 0;
+    for (auto &ID : PD.InstsData) {
+        // Adjust borders
+        for (auto Idx : ID.Offsets) {
+            MaxIdx = std::max(Idx, MaxIdx);
+            MinIdx = std::min(Idx, MinIdx);
+        }
+        // Largest type is needed to handle the case with different type sizes
+        unsigned TypeSize = getScalarTypeSize(ID.Inst->getType());
+        if (TypeSize > LargestTypeSize) {
+            LargestTypeSize = TypeSize;
+            LargestType = ID.Inst->getType()->getScalarType();
+            if (LargestType->isPointerTy())
+                LargestType = g->target->is32Bit() ? LLVMTypes::Int32Type : LLVMTypes::Int64Type;
+        }
+    }
+
+    // Calculate data length
+    Assert(LargestTypeSize > 0);
+    uint64_t DataSize = MaxIdx - MinIdx + LargestTypeSize;
+    // Calculate size of block loads in powers of two:
+    // block loads are aligned to OWORDs
+    unsigned ReqSize = 1;
+    while (ReqSize < DataSize)
+        ReqSize <<= 1;
+
+    // Adjust req size and calculate num if insts needed
+    // TODO: experiment showed performance improvement with
+    // max ReqSize of 4 * OWORD instead of 8 * OWORD.
+    // Further investigation is needed.
+    unsigned MemInstsNeeded = 1;
+    if (ReqSize > 4 * OWORD) {
+        // Dealing with powers of two
+        MemInstsNeeded = ReqSize / (4 * OWORD);
+        ReqSize = 4 * OWORD;
+    }
+
+    // TODO: not clear if we should skip it
+    if (ReqSize < OWORD) {
+        // Skip for now.
+        return;
+    }
+
+    // Check for threshold
+    int MemOpsDiff = TotalMemOpsCounter - MemInstsNeeded;
+    if (MemOpsDiff < g->opt.thresholdForXeGatherCoalescing) {
+        return;
+    }
+
+    // Build block loads
+    BlockInstsVecT BlockLDs;
+    for (unsigned i = 0; i < MemInstsNeeded; ++i) {
+        llvm::Constant *Offset = llvm::ConstantInt::get(LLVMTypes::Int64Type, MinIdx + i * ReqSize);
+        llvm::PtrToIntInst *PtrToInt =
+            new llvm::PtrToIntInst(Ptr, LLVMTypes::Int64Type, "vectorized_ptrtoint", InsertPoint);
+        llvm::Instruction *Addr = llvm::BinaryOperator::CreateAdd(PtrToInt, Offset, "vectorized_address", InsertPoint);
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_11_0
+        llvm::Type *RetType = llvm::FixedVectorType::get(LargestType, ReqSize / LargestTypeSize);
+#else
+        llvm::Type *RetType = llvm::VectorType::get(LargestType, ReqSize / LargestTypeSize);
+#endif
+        llvm::Instruction *LD = nullptr;
+        if (g->opt.buildLLVMLoadsOnXeGatherCoalescing) {
+            // Experiment: build standard llvm load instead of block ld
+            llvm::IntToPtrInst *PtrForLd =
+                new llvm::IntToPtrInst(Addr, llvm::PointerType::get(RetType, 0), "vectorized_address_ptr", InsertPoint);
+            LD = new llvm::LoadInst(RetType, PtrForLd, "vectorized_ld_exp", InsertPoint);
+        } else {
+            llvm::Function *Fn = llvm::GenXIntrinsic::getGenXDeclaration(
+                m->module, llvm::GenXIntrinsic::genx_svm_block_ld_unaligned, {RetType, Addr->getType()});
+            LD = llvm::CallInst::Create(Fn, {Addr}, "vectorized_ld", InsertPoint);
+        }
+        BlockLDs.push_back(LD);
+    }
+
+    // Replace users
+    for (auto &ID : PD.InstsData) {
+        if (auto *LI = llvm::dyn_cast<llvm::LoadInst>(ID.Inst)) {
+            // Adjust offset
+            OffsetT Offset = ID.Offsets[0] - MinIdx;
+            LI->replaceAllUsesWith(extractValueFromBlock(BlockLDs, Offset, LI->getType(), InsertPoint));
+        } else if (auto *Gather = getPseudoGatherConstOffset(ID.Inst)) {
+            llvm::Value *NewVal = llvm::UndefValue::get(Gather->getType());
+            unsigned CurrElem = 0;
+            for (auto Offset : ID.Offsets) {
+                // Adjust offset
+                OffsetT AdjOffset = Offset - MinIdx;
+                auto *ExtractedValue =
+                    extractValueFromBlock(BlockLDs, AdjOffset, Gather->getType()->getScalarType(), InsertPoint);
+                NewVal = llvm::InsertElementInst::Create(NewVal, ExtractedValue,
+                                                         llvm::ConstantInt::get(LLVMTypes::Int64Type, CurrElem),
+                                                         "gather_coal_iei", InsertPoint);
+                ++CurrElem;
+            }
+            Gather->replaceAllUsesWith(NewVal);
+        }
+
+        // Mark to delete
+        PossiblyDead.insert(ID.Inst);
+    }
+
+    // Done
+    modifiedAny = true;
+}
+
+llvm::CallInst *XeGatherCoalescing::getPseudoGatherConstOffset(llvm::Instruction *Inst) const {
+    if (auto CI = llvm::dyn_cast<llvm::CallInst>(Inst)) {
+        llvm::Function *Function = CI->getCalledFunction();
+        if (Function && Function->getName().startswith("__pseudo_gather_base_offsets"))
+            if (llvm::isa<llvm::ConstantDataVector>(CI->getOperand(2)))
+                return CI;
     }
     return nullptr;
 }
 
-// Returns type of GEP users: nullptr in case when type is
-// different.
-//
-// TODO: currently only few instructions are handled:
-//   - load (scalar, see TODO below)
-//   - bitcast (checking it users)
-//   - pseudo_gather: see lGetPseudoGather
-static llvm::Type *lGetLoadsType(llvm::Instruction *inst) {
-    llvm::Type *ty = nullptr;
-
-    // Bad user was provided
-    if (!inst)
-        return nullptr;
-
-    for (auto ui = inst->use_begin(), ue = inst->use_end(); ui != ue; ++ui) {
-
-        llvm::Instruction *user = llvm::dyn_cast<llvm::Instruction>(ui->getUser());
-        llvm::Type *curr_type = nullptr;
-
-        // Bitcast appeared, go through it
-        if (auto BCI = llvm::dyn_cast<llvm::BitCastInst>(user)) {
-            if (!(curr_type = lGetLoadsType(BCI)))
-                return nullptr;
-        } else {
-            // Load is OK if it is scalar
-            // TODO: perform full investigation on situation
-            // with non-scalar loads
-            if (auto LI = llvm::dyn_cast<llvm::LoadInst>(user)) {
-                if (LI->getType()->isVectorTy())
-                    return nullptr;
-                curr_type = LI->getType();
-            } else if (lGetPseudoGather(user)) {
-                curr_type = user->getType();
-            } else
-                continue;
-        }
-
-        if (!curr_type || (ty && ty != curr_type))
-            return nullptr;
-
-        ty = curr_type;
+bool XeGatherCoalescing::isOptimizationTarget(llvm::Instruction *Inst) const {
+    if (auto LI = llvm::dyn_cast<llvm::LoadInst>(Inst)) {
+        if (!LI->getType()->isVectorTy() && !LI->getType()->isAggregateType())
+            return GetAddressSpace(LI->getPointerOperand()) == AddrSpace;
+    } else if (auto Gather = getPseudoGatherConstOffset(Inst)) {
+        return GetAddressSpace(getPointer(Gather)) == AddrSpace;
     }
-
-    return ty;
-}
-
-// Struct that contains info about memory users
-struct PtrUse {
-    llvm::Instruction *user; // Ptr
-
-    std::vector<int64_t> idxs; // Users a presented in this list like it was Ptr[idx]
-                               // TODO: current implementation depends on traverse order:
-                               //       see lCreateBlockLDUse and lCollectIdxs
-
-    llvm::Type *type; // Currently loads are grouped by types.
-                      // TODO: it can be optimized
-
-    int64_t &getScalarIdx() { return idxs[0]; }
-};
-
-// Create users for newly created block ld
-// TODO: current implementation depends on traverse order: see lCollectIdxs
-static void lCreateBlockLDUse(llvm::Instruction *currInst, std::vector<llvm::ExtractElementInst *> EEIs, PtrUse &ptrUse,
-                              int &curr_idx, std::vector<llvm::Instruction *> &dead) {
-    for (auto ui = currInst->use_begin(), ue = currInst->use_end(); ui != ue; ++ui) {
-        if (auto BCI = llvm::dyn_cast<llvm::BitCastInst>(ui->getUser())) {
-            // Go through bitcast
-            lCreateBlockLDUse(BCI, EEIs, ptrUse, curr_idx, dead);
-        } else if (auto LI = llvm::dyn_cast<llvm::LoadInst>(ui->getUser())) {
-            // Only scalar loads are supported now
-            llvm::ExtractElementInst *EEI = EEIs[ptrUse.idxs[curr_idx++]];
-            LI->replaceAllUsesWith(EEI);
-            lCopyMetadata(EEI, LI);
-            dead.push_back(LI);
-        } else if (auto gather = lGetPseudoGather(llvm::dyn_cast<llvm::Instruction>(ui->getUser()))) {
-            // Collect idxs from gather and fix users
-            llvm::Value *res = llvm::UndefValue::get(gather->getType());
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_11_0
-            for (unsigned i = 0, end = llvm::dyn_cast<llvm::FixedVectorType>(res->getType())->getNumElements(); i < end;
-                 ++i)
-#else
-            for (unsigned i = 0, end = llvm::dyn_cast<llvm::VectorType>(res->getType())->getNumElements(); i < end; ++i)
-#endif
-            {
-                // Get element via IEI
-                res = llvm::InsertElementInst::Create(res, EEIs[ptrUse.idxs[curr_idx++]],
-                                                      llvm::ConstantInt::get(LLVMTypes::Int32Type, i),
-                                                      "coalesced_gather_iei", gather);
-            }
-            gather->replaceAllUsesWith(res);
-            lCopyMetadata(res, gather);
-            dead.push_back(gather);
-        } else {
-            continue;
-        }
-    }
-}
-
-// Perform optimization from GEPs
-static bool lVectorizeGEPs(llvm::Value *ptr, std::vector<PtrUse> &ptrUses, std::vector<llvm::Instruction *> &dead) {
-    // Calculate memory width for GEPs
-    int64_t min_idx = INT64_MAX;
-    int64_t max_idx = INT64_MIN;
-    for (auto elem : ptrUses) {
-        for (auto i : elem.idxs) {
-            int64_t idx = i;
-            max_idx = std::max(idx, max_idx);
-            min_idx = std::min(idx, min_idx);
-        }
-    }
-    llvm::Type *type = ptrUses[0].type;
-    llvm::Type *scalar_type = type;
-    llvm::Instruction *insertBefore = ptrUses[0].user;
-
-    // Calculate element size in bytes
-    uint64_t t_size = type->getPrimitiveSizeInBits() >> 3;
-
-    // Adjust values for vector load
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_11_0
-    if (auto vecTy = llvm::dyn_cast<llvm::FixedVectorType>(type))
-#else
-    if (auto vecTy = llvm::dyn_cast<llvm::VectorType>(type))
-#endif
-    {
-        // Get single element size
-        t_size /= vecTy->getNumElements();
-        // Get single element type
-        scalar_type = vecTy->getScalarType();
-    }
-
-    // Pointer load should be done via inttoptr: replace type
-    bool loadingPtr = false;
-    llvm::Type *originalType = scalar_type;
-    if (auto pTy = llvm::dyn_cast<llvm::PointerType>(scalar_type)) {
-        scalar_type = g->target->is32Bit() ? LLVMTypes::Int32Type : LLVMTypes::Int64Type;
-        t_size = scalar_type->getPrimitiveSizeInBits() >> 3;
-        loadingPtr = true;
-    }
-
-    // Calculate length of array that needs to be loaded.
-    // Idxs are in bytes now.
-    uint64_t data_size = max_idx - min_idx + t_size;
-
-    unsigned loads_needed = 1;
-    uint64_t reqSize = 1;
-
-    // Required load size. It can be 1, 2, 4, 8 OWORDs
-    while (reqSize < data_size)
-        reqSize <<= 1;
-
-    // Adjust number of loads.
-    // TODO: it is not clear if we should adjust
-    // load size here
-    if (reqSize > 8 * OWORD) {
-        loads_needed = reqSize / (8 * OWORD);
-        reqSize = 8 * OWORD;
-    }
-
-    // TODO: it is not clear if we should skip it or not
-    if (reqSize < OWORD) {
-        // Skip it for now
-        return false;
-    }
-
-    // Coalesce loads/gathers
-    std::vector<llvm::ExtractElementInst *> EEIs;
-    for (unsigned i = 0; i < loads_needed; ++i) {
-        llvm::Constant *offset = llvm::ConstantInt::get(LLVMTypes::Int64Type, min_idx + i * reqSize);
-        llvm::PtrToIntInst *ptrToInt =
-            new llvm::PtrToIntInst(ptr, LLVMTypes::Int64Type, "vectorized_ptrtoint", insertBefore);
-        llvm::Instruction *addr = llvm::BinaryOperator::CreateAdd(ptrToInt, offset, "vectorized_address", insertBefore);
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_11_0
-        llvm::Type *retType = llvm::FixedVectorType::get(scalar_type, reqSize / t_size);
-#else
-        llvm::Type *retType = llvm::VectorType::get(scalar_type, reqSize / t_size);
-#endif
-        llvm::Function *fn = llvm::GenXIntrinsic::getGenXDeclaration(
-            m->module, llvm::GenXIntrinsic::genx_svm_block_ld_unaligned, {retType, addr->getType()});
-        llvm::Instruction *ld = llvm::CallInst::Create(fn, {addr}, "vectorized_ld", insertBefore);
-
-        if (loadingPtr) {
-            // Cast int to ptr via inttoptr
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_11_0
-            ld = new llvm::IntToPtrInst(ld, llvm::FixedVectorType::get(originalType, reqSize / t_size),
-                                        "vectorized_inttoptr", insertBefore);
-#else
-            ld = new llvm::IntToPtrInst(ld, llvm::VectorType::get(originalType, reqSize / t_size),
-                                        "vectorized_inttoptr", insertBefore);
-#endif
-        }
-
-        // Scalar extracts for all loaded elements
-        for (unsigned j = 0; j < reqSize / t_size; ++j) {
-            auto EEI = llvm::ExtractElementInst::Create(ld, llvm::ConstantInt::get(LLVMTypes::Int64Type, j),
-                                                        "vectorized_extr_elem", ld->getParent());
-            EEIs.push_back(EEI);
-            EEI->moveAfter(ld);
-        }
-    }
-
-    // Change value in users and delete redundant insts
-    for (auto elem : ptrUses) {
-        // Recalculate idx: we are going to use extractelement
-        for (auto &index : elem.idxs) {
-            index -= min_idx;
-            index /= t_size;
-        }
-        int curr_idx = 0;
-        lCreateBlockLDUse(elem.user, EEIs, elem, curr_idx, dead);
-    }
-
-    return true;
-}
-
-// Get idxs from current instruction users
-// TODO: current implementation depends on traverse order: see lCreateBlockLDUse
-static void lCollectIdxs(llvm::Instruction *inst, std::vector<int64_t> &idxs, int64_t original_idx) {
-    for (auto ui = inst->use_begin(), ue = inst->use_end(); ui != ue; ++ui) {
-
-        llvm::Instruction *user = llvm::dyn_cast<llvm::Instruction>(ui->getUser());
-
-        if (auto BCI = llvm::dyn_cast<llvm::BitCastInst>(user)) {
-            // Bitcast appeared, go through it
-            lCollectIdxs(BCI, idxs, original_idx);
-        } else {
-            if (auto LI = llvm::dyn_cast<llvm::LoadInst>(user)) {
-                // Only scalar loads are supported now. It should be checked earlier.
-                Assert(!LI->getType()->isVectorTy());
-                idxs.push_back(original_idx);
-            } else if (auto gather = lGetPseudoGather(user)) {
-                // Collect gather's idxs
-                auto scale_c = llvm::dyn_cast<llvm::ConstantInt>(gather->getOperand(1));
-                int64_t scale = scale_c->getSExtValue();
-                auto offset = llvm::dyn_cast<llvm::ConstantDataVector>(gather->getOperand(2));
-
-                for (unsigned i = 0, size = offset->getType()->getNumElements(); i < size; ++i) {
-                    int64_t curr_offset =
-                        llvm::dyn_cast<llvm::ConstantInt>(offset->getElementAsConstant(i))->getSExtValue() * scale +
-                        original_idx;
-                    idxs.push_back(curr_offset);
-                }
-            } else {
-                continue;
-            }
-        }
-    }
-}
-
-// Update GEP index in case of nested GEP interaction
-static void lSetRealPtr(llvm::GetElementPtrInst *GEP) {
-    llvm::GetElementPtrInst *predGEP = llvm::dyn_cast<llvm::GetElementPtrInst>(GEP->getPointerOperand());
-    // The deepest GEP
-    if (!predGEP)
-        return;
-    // Pred is a bypass
-    if (predGEP->hasAllConstantIndices() && predGEP->getNumOperands() == 2 &&
-        llvm::dyn_cast<llvm::Constant>(predGEP->getOperand(1))->isNullValue()) {
-        // Go through several bypasses
-        lSetRealPtr(predGEP);
-        GEP->setOperand(0, predGEP->getPointerOperand());
-    }
-}
-
-static bool lSkipInst(llvm::Instruction *inst) {
-    // TODO: this variable should have different
-    // value for scatter coalescing
-    unsigned min_operands = 1;
-
-    // Skip phis
-    if (llvm::isa<llvm::PHINode>(inst))
-        return true;
-    // Skip obviously wrong instruction
-    if (inst->getNumOperands() < min_operands)
-        return true;
-    // Skip GEPs: handle its users instead
-    if (llvm::isa<llvm::GetElementPtrInst>(inst))
-        return true;
 
     return false;
 }
 
-// Prepare GEPs for further optimization:
-//   - Simplify complex GEPs
-//   - Copy GEPs that are located in other BBs
-//   - Resolve possible duplications in current BB
-// TODO: it looks possible to find common pointers in
-//       some cases. Not implemented now.
-static bool lPrepareGEPs(llvm::BasicBlock &bb) {
-    bool changed = true;
-    bool modified = false;
-    // TODO: this variable should have different
-    // value for scatter coalescing
-    unsigned gep_operand_index = 0;
+MemoryCoalescing::OffsetsVecT XeGatherCoalescing::getOffset(llvm::Instruction *Inst) const {
+    OffsetsVecT Res;
 
-    while (changed) {
-        changed = false;
-
-        std::map<llvm::Value *, std::map<llvm::Value *, llvm::Value *>> ptrData;
-        std::vector<llvm::Instruction *> dead;
-        std::map<llvm::Value *, llvm::Value *> movedGEPs;
-        for (auto bi = bb.begin(), be = bb.end(); bi != be; ++bi) {
-            llvm::Instruction *inst = &*bi;
-
-            if (lSkipInst(inst))
-                continue;
-
-            llvm::GetElementPtrInst *GEP = llvm::dyn_cast<llvm::GetElementPtrInst>(inst->getOperand(gep_operand_index));
-            if (!GEP) {
-                continue;
-            }
-
-            // Set real pointer in order to ignore possible bypasses
-            lSetRealPtr(GEP);
-
-            // Copy GEP to current BB
-            if (GEP->getParent() != &bb) {
-                auto it = movedGEPs.end();
-                if ((it = movedGEPs.find(GEP)) == movedGEPs.end()) {
-                    auto newGEP = llvm::dyn_cast<llvm::GetElementPtrInst>(GEP->clone());
-                    Assert(newGEP != nullptr);
-                    newGEP->insertBefore(inst);
-                    inst->setOperand(gep_operand_index, newGEP);
-                    movedGEPs[GEP] = newGEP;
-                    dead.push_back(GEP);
-                    GEP = newGEP;
-                    changed = true;
-                } else {
-                    GEP = llvm::dyn_cast<llvm::GetElementPtrInst>(it->second);
-                    Assert(GEP != nullptr);
-                    inst->setOperand(gep_operand_index, GEP);
-                    // Do not handle GEP during one BB run twice
-                    continue;
-                }
-            }
-
-            // GEP is ready for optimization
-            if (GEP->hasAllConstantIndices())
-                continue;
-            // TODO: Currently skipping constants at first index
-            // We can handle const-(const)*-arg-(arg)*-const-(const)*
-            // pattern if the first 4 fields are the same for some GEPs
-            if (llvm::dyn_cast<llvm::Constant>(GEP->getOperand(1)))
-                continue;
-            // Not interested in it
-            if (!GEP->getNumUses())
-                continue;
-
-            llvm::Value *ptr = GEP->getPointerOperand();
-            llvm::Value *idx = GEP->getOperand(1);
-            llvm::Value *foundGEP = nullptr;
-            auto it = ptrData[ptr].find(idx);
-
-            if (it != ptrData[ptr].end()) {
-                foundGEP = it->second;
-                // Duplication: just move uses
-                if (GEP->getNumOperands() == 2) {
-                    if (GEP != foundGEP) {
-                        GEP->replaceAllUsesWith(foundGEP);
-                        lCopyMetadata(foundGEP, GEP);
-                        dead.push_back(GEP);
-                        changed = true;
-                    }
-
-                    continue;
-                }
-            } else {
-                // Don't need to create new GEP, use this one
-                if (GEP->getNumOperands() == 2)
-                    foundGEP = GEP;
-                else
-                    foundGEP = llvm::GetElementPtrInst::Create(PTYPE(ptr), ptr, {idx}, "lowered_gep", GEP);
-
-                ptrData[ptr][idx] = foundGEP;
-            }
-
-            if (foundGEP == GEP)
-                continue;
-
-            std::vector<llvm::Value *> args;
-            args.push_back(llvm::Constant::getNullValue(GEP->getOperand(1)->getType()));
-            for (unsigned i = 2, end = GEP->getNumOperands(); i < end; ++i)
-                args.push_back(GEP->getOperand(i));
-            Assert(foundGEP != NULL);
-            Assert(llvm::isa<llvm::GetElementPtrInst>(foundGEP));
-            auto foundGEPUser = llvm::GetElementPtrInst::Create(
-                llvm::dyn_cast<llvm::GetElementPtrInst>(foundGEP)->getSourceElementType(), foundGEP, args,
-                "lowered_gep_succ", GEP);
-            GEP->replaceAllUsesWith(foundGEPUser);
-            lCopyMetadata(foundGEPUser, GEP);
-            dead.push_back(GEP);
-            changed = true;
-        }
-
-        for (auto inst : dead) {
-            llvm::RecursivelyDeleteTriviallyDeadInstructions(inst);
-        }
-
-        if (changed)
-            modified = true;
+    if (llvm::isa<llvm::LoadInst>(Inst))
+        Res.push_back(0);
+    else if (auto Gather = getPseudoGatherConstOffset(Inst)) {
+        Res = getConstOffsetFromVector(Gather->getOperand(2));
+        applyScale(Res, llvm::cast<llvm::ConstantInt>(Gather->getOperand(1))->getSExtValue());
     }
 
-    return modified;
+    return Res;
 }
 
-// Return true if there is a possibility of
-// load-store-load sequence due to current instruction
-static bool lCheckForPossibleStore(llvm::Instruction *inst) {
-    if (auto CI = llvm::dyn_cast<llvm::CallInst>(inst)) {
-        // Such call may introduce load-store-load sequence
-        if (!CI->onlyReadsMemory())
-            return true;
-    } else if (auto SI = llvm::dyn_cast<llvm::StoreInst>(inst)) {
-        // May introduce load-store-load sequence
-        if (GetAddressSpace(SI->getPointerOperand()) == AddressSpace::ispc_global)
-            return true;
+llvm::Value *XeGatherCoalescing::getPointer(llvm::Instruction *Inst) const {
+    if (auto LI = llvm::dyn_cast<llvm::LoadInst>(Inst)) {
+        return LI->getPointerOperand();
+    } else if (auto Gather = getPseudoGatherConstOffset(Inst)) {
+        return Gather->getOperand(0);
     }
 
-    // No possible bad store detected
-    return false;
-}
-
-// Run optimization for all collected GEPs
-static bool lRunXeCoalescing(std::map<llvm::Value *, std::map<llvm::Type *, std::vector<PtrUse>>> &ptrUses,
-                             std::vector<llvm::Instruction *> &dead) {
-    bool modifiedAny = false;
-
-    for (auto data : ptrUses) {
-        for (auto data_t : data.second)
-            modifiedAny |= lVectorizeGEPs(data.first, data_t.second, dead);
-    }
-
-    return modifiedAny;
-}
-
-// Analyze and optimize loads/gathers in current BB
-static bool lVectorizeLoads(llvm::BasicBlock &bb) {
-    bool modifiedAny = false;
-
-    // TODO: this variable should have different
-    // value for scatter coalescing
-    unsigned gep_operand_index = 0;
-
-    std::map<llvm::Value *, std::map<llvm::Type *, std::vector<PtrUse>>> ptrUses;
-    std::vector<llvm::Instruction *> dead;
-    std::set<llvm::GetElementPtrInst *> handledGEPs;
-    for (auto bi = bb.begin(), be = bb.end(); bi != be; ++bi) {
-        llvm::Instruction *inst = &*bi;
-
-        if (lSkipInst(inst))
-            continue;
-
-        // Check for possible load-store-load sequence
-        if (lCheckForPossibleStore(inst)) {
-            // Perform early run of the optimization
-            modifiedAny |= lRunXeCoalescing(ptrUses, dead);
-            // All current changes were applied
-            ptrUses.clear();
-            handledGEPs.clear();
-            continue;
-        }
-
-        // Get GEP operand: current algorithm is based on GEPs
-        // TODO: this fact leads to a problem with PTR[0]: it can be
-        // accessed without GEP. The possible solution is to build GEP
-        // during preprocessing GEPs.
-        llvm::GetElementPtrInst *GEP = llvm::dyn_cast<llvm::GetElementPtrInst>(inst->getOperand(gep_operand_index));
-        if (!GEP)
-            continue;
-
-        // Since gathers work with SVM, this optimization
-        // should be applied to external address space only
-        llvm::Value *ptr = GEP->getPointerOperand();
-        if (GetAddressSpace(ptr) != AddressSpace::ispc_global)
-            continue;
-
-        // GEP was already added to the list for optimization
-        if (handledGEPs.count(GEP))
-            continue;
-        handledGEPs.insert(GEP);
-
-        // All GEPs that are located in other BB should be copied during preprocessing
-        Assert(GEP->getParent() == &bb);
-
-        // Create bypass for bad GEPs
-        // TODO: that can be applied to several GEPs, so they can be grouped.
-        // It is not done now.
-        if (!GEP->hasAllConstantIndices()) {
-            llvm::GetElementPtrInst *newGEP = llvm::GetElementPtrInst::Create(
-                GEP->getSourceElementType(), GEP,
-                {llvm::dyn_cast<llvm::ConstantInt>(llvm::ConstantInt::get(LLVMTypes::Int32Type, 0))}, "ptr_bypass",
-                GEP->getParent());
-            newGEP->moveAfter(GEP);
-            GEP->replaceAllUsesWith(newGEP);
-            lCopyMetadata(newGEP, GEP);
-            newGEP->setOperand(0, GEP);
-            GEP = newGEP;
-            continue;
-        }
-
-        // Calculate GEP offset
-        llvm::APInt acc(g->target->is32Bit() ? 32 : 64, 0, true);
-        bool checker = GEP->accumulateConstantOffset(GEP->getParent()->getParent()->getParent()->getDataLayout(), acc);
-        Assert(checker);
-
-        // Skip unsuitable GEPs
-        llvm::Type *ty = nullptr;
-        if (!(ty = lGetLoadsType(GEP)))
-            continue;
-
-        // Collect used idxs
-        int64_t idx = acc.getSExtValue();
-        std::vector<int64_t> idxs;
-        lCollectIdxs(GEP, idxs, idx);
-
-        // Store data for GEP
-        ptrUses[ptr][ty].push_back({GEP, idxs, ty});
-    }
-
-    // Run optimization
-    modifiedAny |= lRunXeCoalescing(ptrUses, dead);
-
-    // TODO: perform investigation on compilation failure with it
-#if 0
-    for (auto d : dead) {
-        llvm::RecursivelyDeleteTriviallyDeadInstructions(d);
-    }
-#endif
-
-    return modifiedAny;
-}
-
-bool XeGatherCoalescing::runOnBasicBlock(llvm::BasicBlock &bb) {
-    DEBUG_START_PASS("XeGatherCoalescing");
-
-    bool modifiedAny = lPrepareGEPs(bb);
-
-    modifiedAny |= lVectorizeLoads(bb);
-
-    DEBUG_END_PASS("XeGatherCoalescing");
-
-    return modifiedAny;
-}
-
-bool XeGatherCoalescing::runOnFunction(llvm::Function &F) {
-    llvm::TimeTraceScope FuncScope("XeGatherCoalescing::runOnFunction", F.getName());
-    bool modifiedAny = false;
-    for (llvm::BasicBlock &BB : F) {
-        modifiedAny |= runOnBasicBlock(BB);
-    }
-    return modifiedAny;
+    return nullptr;
 }
 
 static llvm::Pass *CreateXeGatherCoalescingPass() { return new XeGatherCoalescing; }

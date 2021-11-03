@@ -553,6 +553,16 @@ struct Opt {
         likely only useful for measuring the impact of this optimization */
     bool disableXeGatherCoalescing;
 
+    /** Minimal difference between the number of eliminated loads and
+        the number of newly created mem insts. Default value is zero:
+        assuming that gather is more dufficult due to address calculations.
+        the default value should be adjusted with some experiments. */
+    int thresholdForXeGatherCoalescing;
+
+    /** Experimental: Xe gather coalescing will generate standard
+        vectorized llvm loads instead of block ld intrinsics. */
+    bool buildLLVMLoadsOnXeGatherCoalescing;
+
     /** Enables experimental support of foreach statement inside varying CF.
         Current implementation brings performance degradation due to ineffective
         implementation of unmasked.*/
