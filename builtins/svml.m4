@@ -1,4 +1,4 @@
-;;  Copyright (c) 2013-2015, Intel Corporation
+;;  Copyright (c) 2013-2021, Intel Corporation
 ;;  All rights reserved.
 ;;
 ;;  Redistribution and use in source and binary forms, with or without
@@ -40,6 +40,7 @@ define(`svml_stubs',`
   declare <$3 x $1> @__svml_sin$2(<$3 x $1>) nounwind readnone alwaysinline
   declare <$3 x $1> @__svml_asin$2(<$3 x $1>) nounwind readnone alwaysinline 
   declare <$3 x $1> @__svml_cos$2(<$3 x $1>) nounwind readnone alwaysinline 
+  declare <$3 x $1> @__svml_acos$2(<$3 x $1>) nounwind readnone alwaysinline
   declare void @__svml_sincos$2(<$3 x $1>, <$3 x $1> *, <$3 x $1> *) nounwind alwaysinline 
   declare <$3 x $1> @__svml_tan$2(<$3 x $1>) nounwind readnone alwaysinline 
   declare <$3 x $1> @__svml_atan$2(<$3 x $1>) nounwind readnone alwaysinline 
@@ -47,6 +48,8 @@ define(`svml_stubs',`
   declare <$3 x $1> @__svml_exp$2(<$3 x $1>) nounwind readnone alwaysinline 
   declare <$3 x $1> @__svml_log$2(<$3 x $1>) nounwind readnone alwaysinline 
   declare <$3 x $1> @__svml_pow$2(<$3 x $1>, <$3 x $1>) nounwind readnone alwaysinline 
+  declare <$3 x $1> @__svml_sqrt$2(<$3 x $1>) nounwind readnone alwaysinline
+  declare <$3 x $1> @__svml_invsqrt$2(<$3 x $1>) nounwind readnone alwaysinline
 ')
 
 ;; svml_declare : declaration of __svml_* intrinsics 
@@ -59,6 +62,7 @@ define(`svml_declare',`
   declare <$3 x $1> @__svml_sin$2(<$3 x $1>) nounwind readnone
   declare <$3 x $1> @__svml_asin$2(<$3 x $1>) nounwind readnone
   declare <$3 x $1> @__svml_cos$2(<$3 x $1>) nounwind readnone
+  declare <$3 x $1> @__svml_acos$2(<$3 x $1>) nounwind readnone
   declare <$3 x $1> @__svml_sincos$2(<$3 x $1> *, <$3 x $1>) nounwind readnone
   declare <$3 x $1> @__svml_tan$2(<$3 x $1>) nounwind readnone
   declare <$3 x $1> @__svml_atan$2(<$3 x $1>) nounwind readnone
@@ -66,6 +70,8 @@ define(`svml_declare',`
   declare <$3 x $1> @__svml_exp$2(<$3 x $1>) nounwind readnone
   declare <$3 x $1> @__svml_log$2(<$3 x $1>) nounwind readnone
   declare <$3 x $1> @__svml_pow$2(<$3 x $1>, <$3 x $1>) nounwind readnone
+  declare <$3 x $1> @__svml_sqrt$2(<$3 x $1>) nounwind readnone
+  declare <$3 x $1> @__svml_invsqrt$2(<$3 x $1>) nounwind readnone
 ');
 
 ;; defintition of __svml_* internal functions
@@ -80,6 +86,7 @@ define(`svml_define',`
     %ret = call <$3 x $1> @__svml_sin$2(<$3 x $1> %0)
     ret <$3 x $1> %ret
   }
+
   define <$3 x $1> @__svml_asin$4(<$3 x $1>) nounwind readnone alwaysinline {
     %ret = call <$3 x $1> @__svml_asin$2(<$3 x $1> %0)
     ret <$3 x $1> %ret
@@ -87,6 +94,11 @@ define(`svml_define',`
 
   define <$3 x $1> @__svml_cos$4(<$3 x $1>) nounwind readnone alwaysinline {
     %ret = call <$3 x $1> @__svml_cos$2(<$3 x $1> %0)
+    ret <$3 x $1> %ret
+  }
+
+  define <$3 x $1> @__svml_acos$4(<$3 x $1>) nounwind readnone alwaysinline {
+    %ret = call <$3 x $1> @__svml_acos$2(<$3 x $1> %0)
     ret <$3 x $1> %ret
   }
 
@@ -123,6 +135,16 @@ define(`svml_define',`
 
   define <$3 x $1> @__svml_pow$4(<$3 x $1>, <$3 x $1>) nounwind readnone alwaysinline {
     %ret = call <$3 x $1> @__svml_pow$2(<$3 x $1> %0, <$3 x $1> %1)
+    ret <$3 x $1> %ret
+  }
+
+  define <$3 x $1> @__svml_sqrt$4(<$3 x $1>) nounwind readnone alwaysinline {
+    %ret = call <$3 x $1> @__svml_sqrt$2(<$3 x $1> %0)
+    ret <$3 x $1> %ret
+  }
+
+  define <$3 x $1> @__svml_invsqrt$4(<$3 x $1>) nounwind readnone alwaysinline {
+    %ret = call <$3 x $1> @__svml_invsqrt$2(<$3 x $1> %0)
     ret <$3 x $1> %ret
   }
 ')
@@ -180,6 +202,10 @@ define(`svml_define_x',`
     unary$3to$5(ret, $1, @__svml_cos$2, %0)
     ret <$5 x $1> %ret
   }
+  define <$5 x $1> @__svml_acos$4(<$5 x $1>) nounwind readnone alwaysinline {
+    unary$3to$5(ret, $1, @__svml_acos$2, %0)
+    ret <$5 x $1> %ret
+  }
   define void @__svml_sincos$4(<$5 x $1>,<$5 x $1>*,<$5 x $1>*) nounwind alwaysinline 
   {
     %s = call <$5 x $1> @__svml_sin$4(<$5 x $1> %0)
@@ -210,6 +236,14 @@ define(`svml_define_x',`
   }
   define <$5 x $1> @__svml_pow$4(<$5 x $1>,<$5 x $1>) nounwind readnone alwaysinline {
     binary$3to$5(ret, $1, @__svml_pow$2, %0, %1)
+    ret <$5 x $1> %ret
+  }
+  define <$5 x $1> @__svml_sqrt$4(<$5 x $1>) nounwind readnone alwaysinline {
+    unary$3to$5(ret, $1, @__svml_sqrt$2, %0)
+    ret <$5 x $1> %ret
+  }
+  define <$5 x $1> @__svml_invsqrt$4(<$5 x $1>) nounwind readnone alwaysinline {
+    unary$3to$5(ret, $1, @__svml_invsqrt$2, %0)
     ret <$5 x $1> %ret
   }
 ')

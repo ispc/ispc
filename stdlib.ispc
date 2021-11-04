@@ -2969,7 +2969,11 @@ atomic_compare_exchange_local(void ** ptr, void * oldval,
 
 __declspec(safe)
 static inline float sqrt(float v) {
-    return __sqrt_varying_float(v);
+    if (__math_lib == __math_lib_svml) {
+        return __svml_sqrtf(v);
+    } else {
+        return __sqrt_varying_float(v);
+    }
 }
 
 __declspec(safe)
@@ -2979,7 +2983,11 @@ static inline uniform float sqrt(uniform float v) {
 
 __declspec(safe)
 static inline float rsqrt(float v) {
-    return __rsqrt_varying_float(v);
+    if (__math_lib == __math_lib_svml) {
+        return __svml_invsqrtf(v);
+    } else {
+        return __rsqrt_varying_float(v);
+    }
 }
 
 __declspec(safe)
@@ -3440,10 +3448,13 @@ static inline uniform float cos(uniform float x_full) {
 
 __declspec(safe)
 static inline float acos(float v) {
-  if (__have_native_trigonometry && !__is_xe_target)
-    return __acos_varying_float(v);
-  else
-    return 1.57079637050628662109375 - asin(v);
+    if (__have_native_trigonometry && !__is_xe_target) {
+        return __acos_varying_float(v);
+    } else if (__math_lib == __math_lib_svml) {
+        return __svml_acosf(v);
+    } else {
+        return 1.57079637050628662109375 - asin(v);
+    }
 }
 
 __declspec(safe)
@@ -4388,7 +4399,11 @@ static inline uniform float pow(uniform float a, uniform float b) {
 
 __declspec(safe)
 static inline double sqrt(double v) {
-    return __sqrt_varying_double(v);
+    if (__math_lib == __math_lib_svml) {
+        return __svml_sqrtd(v);
+    } else {
+        return __sqrt_varying_double(v);
+    }
 }
 
 __declspec(safe)
@@ -4420,10 +4435,13 @@ static inline QUAL double __rsqrt_safe_##QUAL##_double (QUAL double x)    \
 RSQRTD(varying)
 __declspec(safe)
 static inline double rsqrt(double v) {
-  if (__have_native_rsqrtd)
-    return __rsqrt_varying_double(v);
-  else
-    return __rsqrt_safe_varying_double(v);
+    if (__math_lib == __math_lib_svml) {
+        return __svml_invsqrtd(v);
+    } else if (__have_native_rsqrtd) {
+        return __rsqrt_varying_double(v);
+    } else {
+        return __rsqrt_safe_varying_double(v);
+    }
 }
 
 RSQRTD(uniform)
@@ -4521,10 +4539,13 @@ static inline uniform double sin(uniform double x) {
 
 __declspec(safe)
 static inline double acos(const double v) {
-  if (__have_native_trigonometry)
-    return __acos_varying_double(v);
-  else
-    return 1.57079637050628662109375d0 - asin(v);
+    if (__have_native_trigonometry) {
+        return __acos_varying_double(v);
+    } else if (__math_lib == __math_lib_svml) {
+        return __svml_acosd(v);
+    } else {
+        return 1.57079637050628662109375d0 - asin(v);
+    }
 }
 
 __declspec(safe)
