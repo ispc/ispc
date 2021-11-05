@@ -59,11 +59,12 @@ define(`svml_stubs',`
 ;;      double:  "2"(sse)  "4"(avx)   "8"(avx512)
 ;; $3 - vector width
 define(`svml_declare',`
+  %struct.__svml_sincos_ret$2 = type { <$3 x $1>, <$3 x $1> }
   declare <$3 x $1> @__svml_sin$2(<$3 x $1>) nounwind readnone
   declare <$3 x $1> @__svml_asin$2(<$3 x $1>) nounwind readnone
   declare <$3 x $1> @__svml_cos$2(<$3 x $1>) nounwind readnone
   declare <$3 x $1> @__svml_acos$2(<$3 x $1>) nounwind readnone
-  declare <$3 x $1> @__svml_sincos$2(<$3 x $1> *, <$3 x $1>) nounwind readnone
+  declare %struct.__svml_sincos_ret$2 @__svml_sincos$2(<$3 x $1>) nounwind readnone
   declare <$3 x $1> @__svml_tan$2(<$3 x $1>) nounwind readnone
   declare <$3 x $1> @__svml_atan$2(<$3 x $1>) nounwind readnone
   declare <$3 x $1> @__svml_atan2$2(<$3 x $1>, <$3 x $1>) nounwind readnone
@@ -103,8 +104,11 @@ define(`svml_define',`
   }
 
   define void @__svml_sincos$4(<$3 x $1>, <$3 x $1> *, <$3 x $1> *) nounwind alwaysinline {
-    %s = call <$3 x $1> @__svml_sincos$2(<$3 x $1> * %2, <$3 x $1> %0)
-    store <$3 x $1> %s, <$3 x $1> * %1
+    %ret = call %struct.__svml_sincos_ret$2 @__svml_sincos$2(<$3 x $1> %0)
+    %sin = extractvalue %struct.__svml_sincos_ret$2 %ret, 0
+    %cos = extractvalue %struct.__svml_sincos_ret$2 %ret, 1
+    store <$3 x $1> %sin, <$3 x $1> * %1
+    store <$3 x $1> %cos, <$3 x $1> * %2
     ret void
   }
 
