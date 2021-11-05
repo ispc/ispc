@@ -36,6 +36,8 @@ if(CMAKE_BUILD_TYPE STREQUAL "Release")
     # But building Google Test, we need it to let it know that optimized build is used.
     target_compile_definitions(gtest PRIVATE NDEBUG)
 endif()
+# This is WA for https://github.com/google/googletest/issues/1305
+target_compile_options(gmock PRIVATE -Wno-deprecated-copy)
 
 ####################### Configure and add submodules  ########################
 
