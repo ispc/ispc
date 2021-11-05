@@ -1084,7 +1084,7 @@ if __name__ == "__main__":
     parser.add_option("-c", "--compiler", dest="compiler_exe", help="C/C++ compiler binary to use to run tests",
                   default=None)
     parser.add_option('-o', '--opt', dest='opt', choices=['', 'O0', 'O1', 'O2'], help='Set optimization level passed to the compiler (O0, O1, O2).',
-                  default='')
+                  default='O2')
     parser.add_option('-j', '--jobs', dest='num_jobs', help='Maximum number of jobs to run in parallel',
                   default="1024", type="int")
     parser.add_option('-v', '--verbose', dest='verbose', help='Enable verbose output',
