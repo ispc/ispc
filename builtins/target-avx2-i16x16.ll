@@ -565,15 +565,15 @@ popcnt()
 ctlztz()
 
 
-; FIXME: need either to wire these up to the 8-wide SVML entrypoints,
-; or, use the macro to call the 4-wide ones twice with our 8-wide
-; vectors...
-
 ;; svml
 
 include(`svml.m4')
-svml_stubs(float,f,WIDTH)
-svml_stubs(double,d,WIDTH)
+svml_declare(float,f8,8)
+svml_define_x(float,f8,8,f,WIDTH)
+
+;; double precision
+svml_declare(double,4,4)
+svml_define_x(double,4,4,d,WIDTH)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; reductions
