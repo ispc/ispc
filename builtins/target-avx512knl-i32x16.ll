@@ -1,4 +1,4 @@
-;;  Copyright (c) 2015-2019, Intel Corporation
+;;  Copyright (c) 2015-2021, Intel Corporation
 ;;  All rights reserved.
 ;;
 ;;  Redistribution and use in source and binary forms, with or without
@@ -32,6 +32,12 @@
 define(`WIDTH',`16')
 
 include(`target-avx512-common.ll')
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; svml
+
+include(`svml.m4')
+svml(AVX512KNL)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; rcp, rsqrt

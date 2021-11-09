@@ -1,4 +1,4 @@
-;;  Copyright (c) 2013-2019, Intel Corporation
+;;  Copyright (c) 2013-2021, Intel Corporation
 ;;  All rights reserved.
 ;;
 ;;  Redistribution and use in source and binary forms, with or without
@@ -159,25 +159,13 @@ define <4 x float> @__sqrt_varying_float(<4 x float>) nounwind readonly alwaysin
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; double precision sqrt
 
-;; avx§ intrinsic
+;; avx intrinsic
 declare <4 x double> @llvm.x86.avx.sqrt.pd.256(<4 x double>) nounwind readnone
 
 define <4 x double> @__sqrt_varying_double(<4 x double>) nounwind alwaysinline {
   %call = call <4 x double> @llvm.x86.avx.sqrt.pd.256(<4 x double> %0)
   ret <4 x double> %call
 }
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; svml
-
-include(`svml.m4')
-;; single precision
-svml_declare(float,f4,4)
-svml_define(float,f4,4,f)
-
-;; double precision
-svml_declare(double,4,4)
-svml_define(double,4,4,d)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; float min/max

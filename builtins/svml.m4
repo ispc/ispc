@@ -78,11 +78,13 @@ define(`svml_declare',`
 ;; defintition of __svml_* internal functions
 ;; $1 - type ("float" or "double")
 ;; $2 - __svml_* intrinsic function suffix 
-;;      float:  "f4"(sse) "f8"(avx) "f16"(avx512)
-;;      double:  "2"(sse)  "4"(avx)   "8"(avx512)
+;;      float:  "f4"(xmm) "f8"(ymm) "f16"(zmm)
+;;      double:  "2"(xmm)  "4"(ymm)   "8"(zmm)
 ;; $3 - vector width
 ;; $4 - svml internal function suffix ("f" for float, "d" for double)
 define(`svml_define',`
+  svml_declare($1, $2, $3)
+
   define <$3 x $1> @__svml_sin$4(<$3 x $1>) nounwind readnone alwaysinline {
     %ret = call <$3 x $1> @__svml_sin$2(<$3 x $1> %0)
     ret <$3 x $1> %ret
@@ -157,8 +159,8 @@ define(`svml_define',`
 ;; svml_define_x : defintition of __svml_* internal functions operation on extended width
 ;; $1 - type ("float" or "double")
 ;; $2 - __svml_* intrinsic function suffix 
-;;      float:  "f4"(sse) "f8"(avx) "f16"(avx512)
-;;      double:  "2"(sse)  "4"(avx)   "8"(avx512)
+;;      float:  "f4"(xmm) "f8"(ymm) "f16"(zmm)
+;;      double:  "2"(xmm)  "4"(ymm)   "8"(zmm)
 ;; $3 - vector width
 ;; $4 - svml internal function suffix ("f" for float, "d" for double)
 ;; $5 - extended width, must be at least twice the native vector width
@@ -194,6 +196,8 @@ define(`svml_define',`
 ;;  ret void
 ;;}
 define(`svml_define_x',`
+  svml_declare($1, $2, $3)
+
   define <$5 x $1> @__svml_sin$4(<$5 x $1>) nounwind readnone alwaysinline {
     unary$3to$5(ret, $1, @__svml_sin$2, %0)
     ret <$5 x $1> %ret
@@ -250,5 +254,116 @@ define(`svml_define_x',`
     unary$3to$5(ret, $1, @__svml_invsqrt$2, %0)
     ret <$5 x $1> %ret
   }
+')
+
+;; svml() - define SVML implementation for float and double types.
+;; The function requires WIDTH macro to be defined in the calling context.
+;; $1 - ISA, either SSE2, SSE4, AVX1, AVX2, AVX512KNL, or AVX512SKX.
+define(`svml', `
+  ifelse($1, `SSE2', `
+    ifelse(WIDTH, `4', `
+      svml_define(float,f4,4,f)
+      svml_define_x(double,2,2,d,4)
+    ',
+    WIDTH, `8', `
+      svml_define_x(float,f4,4,f,8)
+      svml_define_x(double,2,2,d,8)
+    ', `
+      errprint(`ERROR: svml() call cannot handle width: 'WIDTH` for ISA: '$1)
+      m4exit(`1')
+    ')
+  ',
+  $1, `SSE4', `
+    ifelse(WIDTH, `4', `
+      svml_define(float,f4,4,f)
+      svml_define_x(double,2,2,d,4)
+    ',
+    WIDTH, `8', `
+      svml_define_x(float,f4,4,f,8)
+      svml_define_x(double,2,2,d,8)
+    ',
+    WIDTH, `16', `
+      svml_define_x(float,f4,4,f,16)
+      svml_define_x(double,2,2,d,16)
+    ', `
+      errprint(`ERROR: svml() call cannot handle width: 'WIDTH` for ISA: '$1)
+      m4exit(`1')
+    ')
+  ',
+  $1, `AVX1', `
+    ifelse(WIDTH, `4', `
+      svml_define(float,f4,4,f)
+      svml_define(double,4,4,d)
+    ',
+    WIDTH, `8', `
+      svml_define(float,f8,8,f)
+      svml_define_x(double,4,4,d,8)
+    ',
+    WIDTH, `16', `
+      svml_define_x(float,f8,8,f,16)
+      svml_define_x(double,4,4,d,16)
+    ', `
+      errprint(`ERROR: svml() call cannot handle width: 'WIDTH` for ISA: '$1)
+      m4exit(`1')
+    ')
+  ',
+  $1, `AVX2', `
+    ifelse(WIDTH, `4', `
+      svml_define(float,f4,4,f)
+      svml_define(double,4,4,d)
+    ',
+    WIDTH, `8', `
+      svml_define(float,f8,8,f)
+      svml_define_x(double,4,4,d,8)
+    ',
+    WIDTH, `16', `
+      svml_define_x(float,f8,8,f,16)
+      svml_define_x(double,4,4,d,16)
+    ',
+    WIDTH, `32', `
+      svml_define_x(float,f8,8,f,32)
+      svml_define_x(double,4,4,d,32)
+    ', `
+      errprint(`ERROR: svml() call cannot handle width: 'WIDTH` for ISA: '$1)
+      m4exit(`1')
+    ')
+  ',
+  $1, `AVX512SKX', `
+    ifelse(WIDTH, `4', `
+      svml_define(float,f4,4,f)
+      svml_define(double,4,4,d)
+    ',
+    WIDTH, `8', `
+      svml_define(float,f8,8,f)
+      svml_define_x(double,4,4,d,8) ;; avoid zmm, so double pumping
+    ',
+    WIDTH, `16', `
+      svml_define(float,f16,16,f)
+      svml_define_x(double,8,8,d,16)
+    ',
+    WIDTH, `32', `
+      svml_define_x(float,f16,16,f,32)
+      svml_define_x(double,8,8,d,32)
+    ',
+    WIDTH, `64', `
+      svml_define_x(float,f16,16,f,64)
+      svml_define_x(double,8,8,d,64)
+    ', `
+      errprint(`ERROR: svml() call cannot handle width: 'WIDTH` for ISA: '$1)
+      m4exit(`1')
+    ')
+  ',
+  $1, `AVX512KNL', `
+    ifelse(WIDTH, `16', `
+      svml_define(float,f16,16,f)
+      svml_define_x(double,8,8,d,16)
+    ', `
+      errprint(`ERROR: svml() call cannot handle width: 'WIDTH` for ISA: '$1)
+      m4exit(`1')
+    ')
+  ', `
+    errprint(`ERROR: First svml() parameter is not properly defined: '$1)
+    m4exit(`1')
+  ')
 ')
 

@@ -1,4 +1,4 @@
-;;  Copyright (c) 2010-2019, Intel Corporation
+;;  Copyright (c) 2010-2021, Intel Corporation
 ;;  All rights reserved.
 ;;
 ;;  Redistribution and use in source and binary forms, with or without
@@ -114,17 +114,10 @@ define <8 x float> @__sqrt_varying_float(<8 x float>) nounwind readonly alwaysin
 }
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-; svml stuff
+; svml
 
 include(`svml.m4')
-;; single precision
-svml_declare(float,f4,4)
-svml_define_x(float,f4,4,f,8)
-
-;; double precision
-svml_declare(double,2,2)
-svml_define_x(double,2,2,d,8)
-
+svml(SSE4)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; float min/max
