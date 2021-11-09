@@ -1,4 +1,4 @@
-;;  Copyright (c) 2019, Intel Corporation
+;;  Copyright (c) 2019-2021, Intel Corporation
 ;;  All rights reserved.
 ;;
 ;;  Redistribution and use in source and binary forms, with or without
@@ -266,16 +266,10 @@ define <4 x i32> @__max_varying_uint32(<4 x i32>, <4 x i32>) nounwind readonly a
 }
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; svml stuff
+;; svml
 
 include(`svml.m4')
-;; single precision
-svml_declare(float,f4,4)
-svml_define(float,f4,4,f)
-
-;; double precision
-svml_declare(double,4,4)
-svml_define(double,4,4,d)
+svml(AVX2)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; mask handling

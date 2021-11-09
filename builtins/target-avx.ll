@@ -1,4 +1,4 @@
-;;  Copyright (c) 2010-2019, Intel Corporation
+;;  Copyright (c) 2010-2021, Intel Corporation
 ;;  All rights reserved.
 ;;
 ;;  Redistribution and use in source and binary forms, with or without
@@ -191,19 +191,6 @@ define <8 x double> @__max_varying_double(<8 x double>, <8 x double>) nounwind r
   binary4to8(ret, double, @llvm.x86.avx.max.pd.256, %0, %1)
   ret <8 x double> %ret
 }
-
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; svml
-
-include(`svml.m4')
-;; single precision
-svml_declare(float,f8,8)
-svml_define(float,f8,8,f)
-
-;; double precision
-svml_declare(double,4,4)
-svml_define_x(double,4,4,d,8)
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

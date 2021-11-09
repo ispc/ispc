@@ -1,5 +1,5 @@
 ;;  Copyright (c) 2013, 2015, Google, Inc.
-;;  Copyright(c) 2019 Intel
+;;  Copyright(c) 2019-2021, Intel Corporation
 ;;  All rights reserved.
 ;;
 ;;  Redistribution and use in source and binary forms, with or without
@@ -226,12 +226,7 @@ define <8 x double> @__max_varying_double(<8 x double>, <8 x double>) nounwind r
 ;; svml
 
 include(`svml.m4')
-svml_declare(float,f4,4)
-svml_define_x(float,f4,4,f,WIDTH)
-
-;; double precision
-svml_declare(double,2,2)
-svml_define_x(double,2,2,d,WIDTH)
+svml(SSE4)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; horizontal ops / reductions

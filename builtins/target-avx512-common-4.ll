@@ -1,4 +1,4 @@
-;;  Copyright (c) 2020, Intel Corporation
+;;  Copyright (c) 2020-2021, Intel Corporation
 ;;  All rights reserved.
 ;;
 ;;  Redistribution and use in source and binary forms, with or without
@@ -237,16 +237,11 @@ define <4 x double> @__sqrt_varying_double(<4 x double>) nounwind alwaysinline {
   ret <4 x double> %res
 }
 
-;; TODO: should we use masked versions of SVML functions?
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; svml
 
 include(`svml.m4')
-svml_declare(float,f4,4)
-svml_define(float,f4,4,f)
-
-;; double precision
-svml_declare(double,4,4)
-svml_define(double,4,4,d)
+svml(AVX512SKX)
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

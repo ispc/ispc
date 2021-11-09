@@ -1,4 +1,4 @@
-;;  Copyright (c) 2020, Intel Corporation
+;;  Copyright (c) 2020-2021, Intel Corporation
 ;;  All rights reserved.
 ;;
 ;;  Redistribution and use in source and binary forms, with or without
@@ -605,16 +605,11 @@ define <64 x float> @__rcp_fast_varying_float(<64 x float> %v) nounwind readnone
 popcnt()
 ctlztz()
 
-
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; svml
 
 include(`svml.m4')
-svml_declare(float,f16,16)
-svml_define_x(float,f16,16,f,WIDTH)
-
-;; double precision
-svml_declare(double,8,8)
-svml_define_x(double,8,8,d,WIDTH)
+svml(AVX512SKX)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; reductions

@@ -1,4 +1,4 @@
-;;  Copyright (c) 2013, Intel Corporation
+;;  Copyright (c) 2013-2021, Intel Corporation
 ;;  All rights reserved.
 ;;
 ;;  Redistribution and use in source and binary forms, with or without
@@ -32,6 +32,12 @@
 include(`target-avx1-i64x4base.ll')
 
 rdrand_decls()
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; svml
+
+include(`svml.m4')
+svml(AVX1)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; int min/max

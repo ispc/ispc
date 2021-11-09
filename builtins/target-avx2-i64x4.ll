@@ -1,4 +1,4 @@
-;;  Copyright (c) 2013-2019, Intel Corporation
+;;  Copyright (c) 2013-2021, Intel Corporation
 ;;  All rights reserved.
 ;;
 ;;  Redistribution and use in source and binary forms, with or without
@@ -34,6 +34,12 @@ define(`HAVE_GATHER', `1')
 include(`target-avx1-i64x4base.ll')
 
 rdrand_definition()
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; svml
+
+include(`svml.m4')
+svml(AVX2)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; int min/max
