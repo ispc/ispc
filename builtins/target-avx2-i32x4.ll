@@ -274,8 +274,8 @@ svml_declare(float,f4,4)
 svml_define(float,f4,4,f)
 
 ;; double precision
-svml_declare(double,2,2)
-svml_define_x(double,2,2,d,4)
+svml_declare(double,4,4)
+svml_define(double,4,4,d)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; mask handling
