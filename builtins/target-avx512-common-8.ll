@@ -311,12 +311,12 @@ define <8 x double> @__sqrt_varying_double(<8 x double>) nounwind alwaysinline {
 ;; svml
 
 include(`svml.m4')
-svml_declare(float,f16,8)
-svml_define(float,f16,8,f)
+svml_declare(float,f8,8)
+svml_define(float,f8,8,f)
 
 ;; double precision
-svml_declare(double,8,4)
-svml_define_x(double,8,4,d,8)
+svml_declare(double,4,4)
+svml_define_x(double,4,4,d,8)
 
 
 
