@@ -782,6 +782,13 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, bool pic, boo
         g->opt.force32BitAddressing = false;
     }
 #endif
+
+    // Check math library
+    if (g->mathLib == Globals::Math_SVML && !ISPCTargetIsX86(m_ispc_target)) {
+        Error(SourcePos(), "SVML math library is supported for x86 targets only.");
+        return;
+    }
+
     // Check default LLVM generated targets
     bool unsupported_target = false;
     switch (m_ispc_target) {
