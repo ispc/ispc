@@ -256,11 +256,31 @@ define(`svml_define_x',`
   }
 ')
 
+;; Based on RUNTIME macro (32 or 64) set SVML_SUFFIX to first or second argument.
+;; $1 - 32 bit suffix
+;; $2 - 64 bit suffix
+define(`svml_set_suffix', `
+  ifelse(RUNTIME, `32', `define(SVML_SUFFIX, _$1)',
+         RUNTIME, `64', `define(SVML_SUFFIX, _$2)',`
+    errprint(`ERROR: svml() call cannot handle runtime: 'RUNTIME)
+    m4exit(`1')
+  ')
+')
+
 ;; svml() - define SVML implementation for float and double types.
 ;; The function requires WIDTH macro to be defined in the calling context.
 ;; $1 - ISA, either SSE2, SSE4, AVX1, AVX2, AVX512KNL, or AVX512SKX.
+;;
+;; A handy command to verify SVML implementation across all targets that support it:
+;; alloy.py -r --only="current stability -O2 -O1 -O0" --only-targets="sse avx" --ispc-flags="--math-lib=svml" --compiler=icpx --time
+;;
+;; SVML has generic versions of all supported functions, which dispatches to ISA-specific versions.
+;; The drawback is that dispatch trampoline takes a few cycles.
+;; We use specific versions when possbile, i.e. when there's a full set of functions we need with a certain suffix.
 define(`svml', `
   ifelse($1, `SSE2', `
+    ;; there is no one-size-fits-all suffix for SSE2
+    ;; so using generic version, which dispateches to the right one.
     ifelse(WIDTH, `4', `
       svml_define(float,f4,4,f)
       svml_define_x(double,2,2,d,4)
@@ -274,6 +294,8 @@ define(`svml', `
     ')
   ',
   $1, `SSE4', `
+    ;; due to incremental nature of SSE2/SSE3/SSSE3/SSE4.1 there is no one-size-fits-all suffix,
+    ;; so using generic version, which dispateches to the right one.
     ifelse(WIDTH, `4', `
       svml_define(float,f4,4,f)
       svml_define_x(double,2,2,d,4)
@@ -291,72 +313,77 @@ define(`svml', `
     ')
   ',
   $1, `AVX1', `
+    svml_set_suffix(`g9',`e9')
+    ;; note, avx1-i32x4 is an alias for sse4-i32x4
     ifelse(WIDTH, `4', `
       svml_define(float,f4,4,f)
       svml_define(double,4,4,d)
     ',
     WIDTH, `8', `
-      svml_define(float,f8,8,f)
-      svml_define_x(double,4,4,d,8)
+      svml_define(float,f8`'SVML_SUFFIX,8,f)
+      svml_define_x(double,4`'SVML_SUFFIX,4,d,8)
     ',
     WIDTH, `16', `
-      svml_define_x(float,f8,8,f,16)
-      svml_define_x(double,4,4,d,16)
+      svml_define_x(float,f8`'SVML_SUFFIX,8,f,16)
+      svml_define_x(double,4`'SVML_SUFFIX,4,d,16)
     ', `
       errprint(`ERROR: svml() call cannot handle width: 'WIDTH` for ISA: '$1)
       m4exit(`1')
     ')
   ',
   $1, `AVX2', `
+    svml_set_suffix(`s9',`l9')
     ifelse(WIDTH, `4', `
-      svml_define(float,f4,4,f)
-      svml_define(double,4,4,d)
+      svml_define(float,f4`'SVML_SUFFIX,4,f)
+      svml_define(double,4`'SVML_SUFFIX,4,d)
     ',
     WIDTH, `8', `
-      svml_define(float,f8,8,f)
-      svml_define_x(double,4,4,d,8)
+      svml_define(float,f8`'SVML_SUFFIX,8,f)
+      svml_define_x(double,4`'SVML_SUFFIX,4,d,8)
     ',
     WIDTH, `16', `
-      svml_define_x(float,f8,8,f,16)
-      svml_define_x(double,4,4,d,16)
+      svml_define_x(float,f8`'SVML_SUFFIX,8,f,16)
+      svml_define_x(double,4`'SVML_SUFFIX,4,d,16)
     ',
     WIDTH, `32', `
-      svml_define_x(float,f8,8,f,32)
-      svml_define_x(double,4,4,d,32)
+      svml_define_x(float,f8`'SVML_SUFFIX,8,f,32)
+      svml_define_x(double,4`'SVML_SUFFIX,4,d,32)
     ', `
       errprint(`ERROR: svml() call cannot handle width: 'WIDTH` for ISA: '$1)
       m4exit(`1')
     ')
   ',
   $1, `AVX512SKX', `
+    svml_set_suffix(`x0',`z0')
     ifelse(WIDTH, `4', `
-      svml_define(float,f4,4,f)
-      svml_define(double,4,4,d)
+      svml_define(float,f4`'SVML_SUFFIX,4,f)
+      svml_define(double,4`'SVML_SUFFIX,4,d)
     ',
     WIDTH, `8', `
-      svml_define(float,f8,8,f)
-      svml_define_x(double,4,4,d,8) ;; avoid zmm, so double pumping
+      svml_define(float,f8`'SVML_SUFFIX,8,f)
+      svml_define_x(double,4`'SVML_SUFFIX,4,d,8) ;; avoid zmm, so double pumping
     ',
     WIDTH, `16', `
-      svml_define(float,f16,16,f)
-      svml_define_x(double,8,8,d,16)
+      svml_define(float,f16`'SVML_SUFFIX,16,f)
+      svml_define_x(double,8`'SVML_SUFFIX,8,d,16)
     ',
     WIDTH, `32', `
-      svml_define_x(float,f16,16,f,32)
-      svml_define_x(double,8,8,d,32)
+      svml_define_x(float,f16`'SVML_SUFFIX,16,f,32)
+      svml_define_x(double,8`'SVML_SUFFIX,8,d,32)
     ',
     WIDTH, `64', `
-      svml_define_x(float,f16,16,f,64)
-      svml_define_x(double,8,8,d,64)
+      svml_define_x(float,f16`'SVML_SUFFIX,16,f,64)
+      svml_define_x(double,8`'SVML_SUFFIX,8,d,64)
     ', `
       errprint(`ERROR: svml() call cannot handle width: 'WIDTH` for ISA: '$1)
       m4exit(`1')
     ')
   ',
   $1, `AVX512KNL', `
+    svml_set_suffix(`a3',`b3')
     ifelse(WIDTH, `16', `
-      svml_define(float,f16,16,f)
-      svml_define_x(double,8,8,d,16)
+      svml_define(float,f16`'SVML_SUFFIX,16,f)
+      svml_define_x(double,8`'SVML_SUFFIX,8,d,16)
     ', `
       errprint(`ERROR: svml() call cannot handle width: 'WIDTH` for ISA: '$1)
       m4exit(`1')
