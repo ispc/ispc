@@ -790,6 +790,10 @@ struct TaskQueue : public ispcrt::base::TaskQueue {
         std::array<uint32_t, 3> suggestedGroupSize = {0};
         L0_SAFE_CALL(zeKernelSuggestGroupSize(kernel.handle(), dim0, dim1, dim2, &suggestedGroupSize[0],
                                               &suggestedGroupSize[1], &suggestedGroupSize[2]));
+        // TODO: Is this needed? Didn't find info in spec on the valid values that zeKernelSuggestGroupSize will return
+        suggestedGroupSize[0] = std::max(suggestedGroupSize[0], uint32_t(1));
+        suggestedGroupSize[1] = std::max(suggestedGroupSize[1], uint32_t(1));
+        suggestedGroupSize[2] = std::max(suggestedGroupSize[2], uint32_t(1));
 
         L0_SAFE_CALL(
             zeKernelSetGroupSize(kernel.handle(), suggestedGroupSize[0], suggestedGroupSize[1], suggestedGroupSize[2]));
