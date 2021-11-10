@@ -554,6 +554,27 @@ TEST_F(MockTestWithModuleQueueKernel, TaskQueue_Launch_zeCommandListAppendLaunch
     ASSERT_EQ(sm_rt_error, ISPCRT_DEVICE_LOST);
 }
 
+TEST_F(MockTestWithModuleQueueKernel, TaskQueue_Launch_zeKernelSuggestGroupSize) {
+    Config::setRetValue("zeKernelSuggestGroupSize", ZE_RESULT_ERROR_DEVICE_LOST);
+    m_task_queue.launch(m_kernel, 0);
+    ASSERT_EQ(sm_rt_error, ISPCRT_DEVICE_LOST);
+}
+
+TEST_F(MockTestWithModuleQueueKernel, TaskQueue_Launch_zeKernelSetGroupSize) {
+    Config::setRetValue("zeKernelSetGroupSize", ZE_RESULT_ERROR_DEVICE_LOST);
+    m_task_queue.launch(m_kernel, 0);
+    ASSERT_EQ(sm_rt_error, ISPCRT_DEVICE_LOST);
+}
+
+TEST_F(MockTestWithModuleQueueKernel, TaskQueue_KernelLaunchGroupSize) {
+    m_task_queue.launch(m_kernel, 0);
+    ASSERT_EQ(sm_rt_error, ISPCRT_NO_ERROR);
+    ASSERT_EQ(CallCounters::get("zeKernelSuggestGroupSize"), 1);
+    ASSERT_EQ(CallCounters::get("zeKernelSetGroupSize"), 1);
+    ASSERT_EQ(CallCounters::get("zeCommandListAppendLaunchKernel"), 1);
+    ASSERT_TRUE(Config::checkCmdList({CmdListElem::KernelLaunch}));
+}
+
 TEST_F(MockTestWithModuleQueueKernel, TaskQueue_Sync_zeCommandQueueSynchronize) {
     auto tq = m_task_queue;
     auto f = tq.launch(m_kernel, 0);
