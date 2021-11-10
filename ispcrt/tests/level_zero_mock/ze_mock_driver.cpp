@@ -294,6 +294,32 @@ ze_result_t zeKernelSetIndirectAccess(ze_kernel_handle_t hKernel, ze_kernel_indi
     MOCK_RET;
 }
 
+ze_result_t zeKernelSuggestGroupSize(ze_kernel_handle_t hKernel, uint32_t globalSizeX,
+                                     uint32_t globalSizeY, uint32_t globalSizeZ,
+                                     uint32_t* groupSizeX, uint32_t* groupSizeY,
+                                     uint32_t* groupSizeZ) {
+    MOCK_CNT_CALL;
+    if (hKernel != KernelHandle.get()) {
+        return ZE_RESULT_ERROR_INVALID_NULL_HANDLE;
+    }
+    if (groupSizeX == NULL || groupSizeY == NULL || groupSizeZ == NULL) {
+        return ZE_RESULT_ERROR_INVALID_NULL_POINTER;
+    }
+    *groupSizeX = 1;
+    *groupSizeY = 1;
+    *groupSizeZ = 1;
+    MOCK_RET;
+}
+
+ze_result_t zeKernelSetGroupSize(ze_kernel_handle_t hKernel, uint32_t groupSizeX,
+                                 uint32_t groupSizeY, uint32_t groupSizeZ) {
+    MOCK_CNT_CALL;
+    if (hKernel != KernelHandle.get()) {
+        return ZE_RESULT_ERROR_INVALID_NULL_HANDLE;
+    }
+    MOCK_RET;
+}
+
 ze_result_t zeCommandListAppendLaunchKernel(ze_command_list_handle_t hCommandList, ze_kernel_handle_t hKernel,
                                             const ze_group_count_t *pLaunchFuncArgs, ze_event_handle_t hSignalEvent,
                                             uint32_t numWaitEvents, ze_event_handle_t *phWaitEvents) {
@@ -374,6 +400,8 @@ ze_result_t zeGetKernelProcAddrTable(ze_api_version_t version, ze_kernel_dditabl
     pDdiTable->pfnDestroy = ispcrt::testing::mock::driver::zeKernelDestroy;
     pDdiTable->pfnSetArgumentValue = ispcrt::testing::mock::driver::zeKernelSetArgumentValue;
     pDdiTable->pfnSetIndirectAccess = ispcrt::testing::mock::driver::zeKernelSetIndirectAccess;
+    pDdiTable->pfnSetGroupSize = ispcrt::testing::mock::driver::zeKernelSetGroupSize;
+    pDdiTable->pfnSuggestGroupSize = ispcrt::testing::mock::driver::zeKernelSuggestGroupSize;
     return ZE_RESULT_SUCCESS;
 }
 
