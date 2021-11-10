@@ -10,6 +10,7 @@
 #endif
 // std
 #include <algorithm>
+#include <array>
 #include <cassert>
 #include <cstring>
 #include <deque>
@@ -786,7 +787,16 @@ struct TaskQueue : public ispcrt::base::TaskQueue {
             L0_SAFE_CALL(zeKernelSetArgumentValue(kernel.handle(), 0, sizeof(void *), &param_ptr));
         }
 
-        ze_group_count_t dispatchTraits = {uint32_t(dim0), uint32_t(dim1), uint32_t(dim2)};
+        std::array<uint32_t, 3> suggestedGroupSize = {0};
+        L0_SAFE_CALL(zeKernelSuggestGroupSize(kernel.handle(), dim0, dim1, dim2, &suggestedGroupSize[0],
+                                              &suggestedGroupSize[1], &suggestedGroupSize[2]));
+
+        L0_SAFE_CALL(
+            zeKernelSetGroupSize(kernel.handle(), suggestedGroupSize[0], suggestedGroupSize[1], suggestedGroupSize[2]));
+
+        const ze_group_count_t dispatchTraits = {uint32_t(dim0) / suggestedGroupSize[0],
+                                                 uint32_t(dim1) / suggestedGroupSize[1],
+                                                 uint32_t(dim2) / suggestedGroupSize[2]};
         auto event = m_ep_compute.createEvent();
         if (event == nullptr)
             throw std::runtime_error("Failed to create event!");
