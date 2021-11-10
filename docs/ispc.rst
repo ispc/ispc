@@ -3682,8 +3682,10 @@ for this argument.
   approximately 1.45e-6 over the range -10pi to 10pi.)
 * ``fast``: more efficient but lower accuracy versions of the default ``ispc``
   implementations.
-* ``svml``: use Intel "Short Vector Math Library".  Use
-  ``icpc`` to link your final executable so that the appropriate libraries
+* ``svml``: use Intel "Short Vector Math Library".  This is a proprietary
+  library shipped as part of Intel® oneAPI DPC++/C++ Compiler (``icx``/``icpx``)
+  and Intel® oneAPI C++ Compiler Classic (``icc``/``icpc``).  Use either of
+  them to link your final executable so that the appropriate libraries
   are linked.
 * ``system``: use the system's math library.  On many systems, these
   functions are more accurate than both of ``ispc``'s implementations.
