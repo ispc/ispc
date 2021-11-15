@@ -335,10 +335,16 @@ struct EventPool {
               ISPCRTEventPoolType type = ISPCRTEventPoolType::compute)
         : m_context(context), m_device(device) {
         // Get device timestamp resolution
-        ze_device_properties_t device_properties;
+        ze_device_properties_t device_properties = {ZE_STRUCTURE_TYPE_DEVICE_PROPERTIES};
         L0_SAFE_CALL(zeDeviceGetProperties(m_device, &device_properties));
         m_timestampFreq = device_properties.timerResolution;
-        m_timestampMaxValue = ~(-1 << device_properties.kernelTimestampValidBits);
+        if(device_properties.kernelTimestampValidBits < 64) {
+            m_timestampMaxValue = ((uint64_t)1 << device_properties.kernelTimestampValidBits) - 1;
+        } else {
+            // We can't calculate max using bitshifting for 64 bits
+            // so simple solution for this case.
+            m_timestampMaxValue = (uint64_t)-1;
+        }
         // Create pool
         auto poolSize = POOL_SIZE_CAP;
         // For compute event pool check if ISPCRT_MAX_KERNEL_LAUNCHES is set
@@ -862,6 +868,8 @@ struct TaskQueue : public ispcrt::base::TaskQueue {
             if (tsResult.context.kernelEnd >= tsResult.context.kernelStart) {
                 f->m_time = (tsResult.context.kernelEnd - tsResult.context.kernelStart);
             } else {
+                // If we overflow kernelEnd counter then this method
+                // should be used for calculate time.
                 f->m_time = ((m_ep_compute.getTimestampMaxValue() - tsResult.context.kernelStart) +
                              tsResult.context.kernelEnd + 1);
             }
