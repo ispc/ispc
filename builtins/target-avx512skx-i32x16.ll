@@ -124,23 +124,35 @@ define <16 x double> @__rsqrt_fast_varying_double(<16 x double> %val) nounwind r
   %res = shufflevector <8 x double> %res_lo, <8 x double> %res_hi, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
   ret <16 x double> %res
 }
+declare <8 x i1> @llvm.x86.avx512.fpclass.pd.512(<8 x double>, i32)
 define <16 x double> @__rsqrt_varying_double(<16 x double> %v) nounwind readonly alwaysinline {
+  ; detect +/-0 and +inf to deal with them differently.
+  %val_lo = shufflevector <16 x double> %v, <16 x double> undef, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  %val_hi = shufflevector <16 x double> %v, <16 x double> undef, <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+  %corner_cases_lo = call <8 x i1> @llvm.x86.avx512.fpclass.pd.512(<8 x double> %val_lo, i32 14)
+  %corner_cases_hi = call <8 x i1> @llvm.x86.avx512.fpclass.pd.512(<8 x double> %val_hi, i32 14)
+  %corner_cases = shufflevector <8 x i1> %corner_cases_lo, <8 x i1> %corner_cases_hi, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
   %is = call <16 x double> @__rsqrt_fast_varying_double(<16 x double> %v)
-  ; Newton-Raphson iteration to improve precision
-  ;  double is = __rsqrt_v(v);
-  ;  return 0.5 * is * (3. - (v * is) * is);
+
+  ; Precision refinement sequence based on minimax approximation.
+  ; This sequence is a little slower than Newton-Raphson, but has much better precision
+  ; Relative error is around 3 ULPs.
+  ; t1 = 1.0 - (v * is) * is
+  ; t2 = 0.37500000407453632 + t1 * 0.31250000550062401
+  ; t3 = 0.5 + t1 * t2
+  ; t4 = is + (t1*is) * t3
   %v_is = fmul <16 x double> %v,  %is
   %v_is_is = fmul <16 x double> %v_is,  %is
-  %three_sub = fsub <16 x double> <double 3., double 3., double 3., double 3.,
-                                   double 3., double 3., double 3., double 3.,
-                                   double 3., double 3., double 3., double 3.,
-                                   double 3., double 3., double 3., double 3.>, %v_is_is
-  %is_mul = fmul <16 x double> %is,  %three_sub
-  %half_scale = fmul <16 x double> <double 0.5, double 0.5, double 0.5, double 0.5,
-                                    double 0.5, double 0.5, double 0.5, double 0.5,
-                                    double 0.5, double 0.5, double 0.5, double 0.5,
-                                    double 0.5, double 0.5, double 0.5, double 0.5>, %is_mul
-  ret <16 x double> %half_scale
+  %t1 = fsub <16 x double> <double 1., double 1., double 1., double 1., double 1., double 1., double 1., double 1., double 1., double 1., double 1., double 1., double 1., double 1., double 1., double 1.>, %v_is_is
+  %t1_03125 = fmul <16 x double> <double 0.31250000550062401, double 0.31250000550062401, double 0.31250000550062401, double 0.31250000550062401, double 0.31250000550062401, double 0.31250000550062401, double 0.31250000550062401, double 0.31250000550062401, double 0.31250000550062401, double 0.31250000550062401, double 0.31250000550062401, double 0.31250000550062401, double 0.31250000550062401, double 0.31250000550062401, double 0.31250000550062401, double 0.31250000550062401>, %t1
+  %t2 = fadd <16 x double> <double 0.37500000407453632, double 0.37500000407453632, double 0.37500000407453632, double 0.37500000407453632, double 0.37500000407453632, double 0.37500000407453632, double 0.37500000407453632, double 0.37500000407453632, double 0.37500000407453632, double 0.37500000407453632, double 0.37500000407453632, double 0.37500000407453632, double 0.37500000407453632, double 0.37500000407453632, double 0.37500000407453632, double 0.37500000407453632>, %t1_03125
+  %t1_t2 = fmul <16 x double> %t1, %t2
+  %t3 = fadd <16 x double> <double 0.5, double 0.5, double 0.5, double 0.5, double 0.5, double 0.5, double 0.5, double 0.5, double 0.5, double 0.5, double 0.5, double 0.5, double 0.5, double 0.5, double 0.5, double 0.5>, %t1_t2
+  %t1_is = fmul <16 x double> %t1, %is
+  %t1_is_t3 = fmul <16 x double> %t1_is, %t3
+  %t4 = fadd <16 x double> %is, %t1_is_t3
+  %ret = select <16 x i1> %corner_cases, <16 x double> %is, <16 x double> %t4
+  ret <16 x double> %ret
 }
 
 ;;saturation_arithmetic_novec()

@@ -98,17 +98,30 @@ define <4 x double> @__rsqrt_fast_varying_double(<4 x double> %val) nounwind rea
   %res = call <4 x double> @llvm.x86.avx512.rsqrt14.pd.256(<4 x double> %val, <4 x double> undef, i8 -1)
   ret <4 x double> %res
 }
+declare <4 x i1> @llvm.x86.avx512.fpclass.pd.256(<4 x double>, i32)
 define <4 x double> @__rsqrt_varying_double(<4 x double> %v) nounwind readonly alwaysinline {
+  %corner_cases = call <4 x i1> @llvm.x86.avx512.fpclass.pd.256(<4 x double> %v, i32 14)
   %is = call <4 x double> @__rsqrt_fast_varying_double(<4 x double> %v)
-  ; Newton-Raphson iteration to improve precision
-  ;  double is = __rsqrt_v(v);
-  ;  return 0.5 * is * (3. - (v * is) * is);
+
+  ; Precision refinement sequence based on minimax approximation.
+  ; This sequence is a little slower than Newton-Raphson, but has much better precision
+  ; Relative error is around 3 ULPs.
+  ; t1 = 1.0 - (v * is) * is
+  ; t2 = 0.37500000407453632 + t1 * 0.31250000550062401
+  ; t3 = 0.5 + t1 * t2
+  ; t4 = is + (t1*is) * t3
   %v_is = fmul <4 x double> %v,  %is
   %v_is_is = fmul <4 x double> %v_is,  %is
-  %three_sub = fsub <4 x double> <double 3., double 3., double 3., double 3.>, %v_is_is
-  %is_mul = fmul <4 x double> %is,  %three_sub
-  %half_scale = fmul <4 x double> <double 0.5, double 0.5, double 0.5, double 0.5>, %is_mul
-  ret <4 x double> %half_scale
+  %t1 = fsub <4 x double> <double 1., double 1., double 1., double 1.>, %v_is_is
+  %t1_03125 = fmul <4 x double> <double 0.31250000550062401, double 0.31250000550062401, double 0.31250000550062401, double 0.31250000550062401>, %t1
+  %t2 = fadd <4 x double> <double 0.37500000407453632, double 0.37500000407453632, double 0.37500000407453632, double 0.37500000407453632>, %t1_03125
+  %t1_t2 = fmul <4 x double> %t1, %t2
+  %t3 = fadd <4 x double> <double 0.5, double 0.5, double 0.5, double 0.5>, %t1_t2
+  %t1_is = fmul <4 x double> %t1, %is
+  %t1_is_t3 = fmul <4 x double> %t1_is, %t3
+  %t4 = fadd <4 x double> %is, %t1_is_t3
+  %ret = select <4 x i1> %corner_cases, <4 x double> %is, <4 x double> %t4
+  ret <4 x double> %ret
 }
 
 ;;saturation_arithmetic_novec()
