@@ -110,19 +110,35 @@ define <8 x double> @__rsqrt_fast_varying_double(<8 x double> %val) nounwind rea
   %res = shufflevector <4 x double> %res_lo, <4 x double> %res_hi, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
   ret <8 x double> %res
 }
+declare <4 x i1> @llvm.x86.avx512.fpclass.pd.256(<4 x double>, i32)
 define <8 x double> @__rsqrt_varying_double(<8 x double> %v) nounwind readonly alwaysinline {
+  ; detect +/-0 and +inf to deal with them differently.
+  %val_lo = shufflevector <8 x double> %v, <8 x double> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %val_hi = shufflevector <8 x double> %v, <8 x double> undef, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+  %corner_cases_lo = call <4 x i1> @llvm.x86.avx512.fpclass.pd.256(<4 x double> %val_lo, i32 14)
+  %corner_cases_hi = call <4 x i1> @llvm.x86.avx512.fpclass.pd.256(<4 x double> %val_hi, i32 14)
+  %corner_cases = shufflevector <4 x i1> %corner_cases_lo, <4 x i1> %corner_cases_hi, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
   %is = call <8 x double> @__rsqrt_fast_varying_double(<8 x double> %v)
-  ; Newton-Raphson iteration to improve precision
-  ;  double is = __rsqrt_v(v);
-  ;  return 0.5 * is * (3. - (v * is) * is);
+
+  ; Precision refinement sequence based on minimax approximation.
+  ; This sequence is a little slower than Newton-Raphson, but has much better precision
+  ; Relative error is around 3 ULPs.
+  ; t1 = 1.0 - (v * is) * is
+  ; t2 = 0.37500000407453632 + t1 * 0.31250000550062401
+  ; t3 = 0.5 + t1 * t2
+  ; t4 = is + (t1*is) * t3
   %v_is = fmul <8 x double> %v,  %is
   %v_is_is = fmul <8 x double> %v_is,  %is
-  %three_sub = fsub <8 x double> <double 3., double 3., double 3., double 3.,
-                                   double 3., double 3., double 3., double 3.>, %v_is_is
-  %is_mul = fmul <8 x double> %is,  %three_sub
-  %half_scale = fmul <8 x double> <double 0.5, double 0.5, double 0.5, double 0.5,
-                                    double 0.5, double 0.5, double 0.5, double 0.5>, %is_mul
-  ret <8 x double> %half_scale
+  %t1 = fsub <8 x double> <double 1., double 1., double 1., double 1., double 1., double 1., double 1., double 1.>, %v_is_is
+  %t1_03125 = fmul <8 x double> <double 0.31250000550062401, double 0.31250000550062401, double 0.31250000550062401, double 0.31250000550062401, double 0.31250000550062401, double 0.31250000550062401, double 0.31250000550062401, double 0.31250000550062401>, %t1
+  %t2 = fadd <8 x double> <double 0.37500000407453632, double 0.37500000407453632, double 0.37500000407453632, double 0.37500000407453632, double 0.37500000407453632, double 0.37500000407453632, double 0.37500000407453632, double 0.37500000407453632>, %t1_03125
+  %t1_t2 = fmul <8 x double> %t1, %t2
+  %t3 = fadd <8 x double> <double 0.5, double 0.5, double 0.5, double 0.5, double 0.5, double 0.5, double 0.5, double 0.5>, %t1_t2
+  %t1_is = fmul <8 x double> %t1, %is
+  %t1_is_t3 = fmul <8 x double> %t1_is, %t3
+  %t4 = fadd <8 x double> %is, %t1_is_t3
+  %ret = select <8 x i1> %corner_cases, <8 x double> %is, <8 x double> %t4
+  ret <8 x double> %ret
 }
 
 ;;saturation_arithmetic_novec()

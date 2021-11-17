@@ -1,4 +1,4 @@
-;;  Copyright (c) 2015-2020, Intel Corporation
+;;  Copyright (c) 2015-2021, Intel Corporation
 ;;  All rights reserved.
 ;;
 ;;  Redistribution and use in source and binary forms, with or without
@@ -295,17 +295,33 @@ define double @__rsqrt_fast_uniform_double(double) nounwind readonly alwaysinlin
   ret double %is
 }
 
-define double @__rsqrt_uniform_double(double) nounwind readonly alwaysinline {
-  %is = call double @__rsqrt_fast_uniform_double(double %0)
+declare i8 @llvm.x86.avx512.mask.fpclass.sd(<2 x double>, i32, i8)
+define double @__rsqrt_uniform_double(double %v) nounwind readonly alwaysinline {
+  ; detect +/-0 and +inf to deal with them differently.
+  %vec = insertelement <2 x double> undef, double %v, i32 0
+  %corner_cases_i8 = call i8 @llvm.x86.avx512.mask.fpclass.sd(<2 x double> %vec, i32 14, i8 -1)
+  %corner_cases = icmp ne i8 %corner_cases_i8, 0
+  %is = call double @__rsqrt_fast_uniform_double(double %v)
 
-  ; Newton-Raphson iteration to improve precision
-  ;  return 0.5 * is * (3. - (v * is) * is);
-  %v_is = fmul double %0, %is
-  %v_is_is = fmul double %v_is, %is
-  %three_sub = fsub double 3., %v_is_is
-  %is_mul = fmul double %is, %three_sub
-  %half_scale = fmul double 0.5, %is_mul
-  ret double %half_scale
+  ; Precision refinement sequence based on minimax approximation.
+  ; This sequence is a little slower than Newton-Raphson, but has much better precision
+  ; Relative error is around 3 ULPs.
+  ; t1 = 1.0 - (v * is) * is
+  ; t2 = 0.37500000407453632 + t1 * 0.31250000550062401
+  ; t3 = 0.5 + t1 * t2
+  ; t4 = is + (t1*is) * t3
+  %v_is = fmul double %v,  %is
+  %v_is_is = fmul double %v_is,  %is
+  %t1 = fsub double 1., %v_is_is
+  %t1_03125 = fmul double 0.31250000550062401, %t1
+  %t2 = fadd double 0.37500000407453632, %t1_03125
+  %t1_t2 = fmul double %t1, %t2
+  %t3 = fadd double 0.5, %t1_t2
+  %t1_is = fmul double %t1, %is
+  %t1_is_t3 = fmul double %t1_is, %t3
+  %t4 = fadd double %is, %t1_is_t3
+  %ret = select i1 %corner_cases, double %is, double %t4
+  ret double %ret
 }
 ')
 
