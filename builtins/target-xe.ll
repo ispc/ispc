@@ -350,11 +350,11 @@ declare <3 x i32> @llvm.genx.local.size.v3i32()
 
 define i32 @__task_index()  nounwind readnone alwaysinline {
 ;; linear_group_id() * linear_local_size() + linear_local_id();
-;; linear_group_id = group_count(0) * group_count(1) * group_id(2) +
-;;                   group_count(0) * group_id(1) + group_id(0);
+;; linear_group_id = group_count(0) * (group_count(1) * group_id(2) +
+;;                   + group_id(1)) + group_id(0);
 ;; linear_local_size = local_size(0) * local_size(1) * local_size(2);
-;; linear_local_id = local_size(0) * local_size(1) * local_id(2) +
-;;                   local_size(0) * local_id(1) + local_id(0);
+;; linear_local_id = local_size(0) * (local_size(1) * local_id(2) +
+;;                   + local_id(1)) + local_id(0);
 ;; linear_group_id
   %gr_id_x = call i32 @llvm.genx.group.id.x()
   %gr_id_y = call i32 @llvm.genx.group.id.y()
@@ -363,11 +363,10 @@ define i32 @__task_index()  nounwind readnone alwaysinline {
   %gr_count_x = extractelement <3 x i32> %gr_count, i32 0
   %gr_count_y = extractelement <3 x i32> %gr_count, i32 1
   %gr_count_z = extractelement <3 x i32> %gr_count, i32 2
-  %gr_count_xy = mul i32 %gr_count_x, %gr_count_y
-  %gr_count_xy_z = mul i32 %gr_count_xy, %gr_id_z
-  %gr_count_x_y = mul i32 %gr_count_x, %gr_id_y
-  %gr_id_temp = add i32 %gr_count_x_y, %gr_count_xy_z
-  %gr_id = add i32 %gr_id_temp, %gr_id_x
+  %gr_count_y_z = mul i32 %gr_count_y, %gr_id_z
+  %gr_id_y_z_temp = add i32 %gr_count_y_z, %gr_id_y
+  %gr_id_x_y_z_temp = mul i32 %gr_id_y_z_temp, %gr_count_x
+  %gr_id = add i32 %gr_id_x_y_z_temp, %gr_id_x
 
 ;; linear_local_size
   %l_size = call <3 x i32> @llvm.genx.local.size.v3i32()
@@ -382,10 +381,10 @@ define i32 @__task_index()  nounwind readnone alwaysinline {
   %l_id_x = extractelement <3 x i32> %l_id, i32 0
   %l_id_y = extractelement <3 x i32> %l_id, i32 1
   %l_id_z = extractelement <3 x i32> %l_id, i32 2
-  %l_is_z_size = mul i32 %l_size_xy, %l_id_z
-  %l_is_y_size = mul i32 %l_size_x, %l_id_y
-  %l_is_yz_size = add i32 %l_is_z_size, %l_is_y_size
-  %l_local_id = add i32 %l_is_yz_size, %l_id_x
+  %l_is_y_z_size = mul i32 %l_size_y, %l_id_z
+  %l_is_y_z_size_temp = add i32 %l_is_y_z_size, %l_id_y
+  %l_is_x_y_z_size_temp = mul i32 %l_is_y_z_size_temp, %l_size_x
+  %l_local_id = add i32 %l_is_x_y_z_size_temp, %l_id_x
 
   %res_temp = mul i32 %gr_id, %l_size_xyz
   %res = add i32 %res_temp, %l_local_id
@@ -398,20 +397,13 @@ define i32 @__task_count()  nounwind readnone alwaysinline {
 ;; linear_local_size = local_size(0) * local_size(1) * local_size(2);
 ;; linear_local_size
   %l_size = call <3 x i32> @llvm.genx.local.size.v3i32()
-  %l_size_x = extractelement <3 x i32> %l_size, i32 0
-  %l_size_y = extractelement <3 x i32> %l_size, i32 1
-  %l_size_z = extractelement <3 x i32> %l_size, i32 2
-  %l_size_xy = mul i32 %l_size_x, %l_size_y
-  %l_size_xyz = mul i32 %l_size_xy, %l_size_z
-;; linear_group_count
   %gr_count = call <3 x i32> @llvm.genx.group.count.v3i32()
-  %gr_count_x = extractelement <3 x i32> %gr_count, i32 0
-  %gr_count_y = extractelement <3 x i32> %gr_count, i32 1
-  %gr_count_z = extractelement <3 x i32> %gr_count, i32 2
-  %gr_count_xy = mul i32 %gr_count_x, %gr_count_y
-  %gr_count_xyz = mul i32 %gr_count_xy, %gr_count_z
-;; linear_group_count * linear_local_size
-  %res = mul i32 %l_size_xyz, %gr_count_xyz
+  %gr_size_count = mul <3 x i32> %l_size, %gr_count
+  %gr_size_count_x = extractelement <3 x i32> %gr_size_count, i32 0
+  %gr_size_count_y = extractelement <3 x i32> %gr_size_count, i32 1
+  %gr_size_count_z = extractelement <3 x i32> %gr_size_count, i32 2
+  %gr_size_count_xy = mul i32 %gr_size_count_x, %gr_size_count_y
+  %res = mul i32 %gr_size_count_xy, %gr_size_count_z
   ret i32 %res
 }
 
