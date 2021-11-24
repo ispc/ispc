@@ -3621,7 +3621,7 @@ llvm::Value *FunctionCallExpr::GetValue(FunctionEmitContext *ctx) const {
                                        launchCountExpr[2]->GetValue(ctx)};
 
         if (launchCount[0] != NULL)
-            ctx->LaunchInst(callee, argVals, launchCount);
+            ctx->LaunchInst(callee, argVals, launchCount, ft);
     } else
         retVal = ctx->CallInst(callee, ft, argVals, isVoidFunc ? "" : "calltmp");
 
