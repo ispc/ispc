@@ -3590,7 +3590,7 @@ llvm::Instruction *FunctionEmitContext::ReturnInst() {
 }
 
 llvm::Value *FunctionEmitContext::LaunchInst(llvm::Value *callee, std::vector<llvm::Value *> &argVals,
-                                             llvm::Value *launchCount[3]) {
+                                             llvm::Value *launchCount[3], const FunctionType *funcType) {
     if (g->target->isXeTarget()) {
         Error(currentPos, "\"launch\" keyword is not supported for Xe targets");
         return NULL;
@@ -3601,11 +3601,20 @@ llvm::Value *FunctionEmitContext::LaunchInst(llvm::Value *callee, std::vector<ll
         return NULL;
     }
 
+    if (!(llvm::isa<llvm::Function>(callee) || llvm::isa<llvm::PointerType>(callee->getType()))) {
+        Error(currentPos, "Must provide function name or uniform function pointer to \"task\"-qualified function for "
+                          "\"launch\" expression");
+        return NULL;
+    }
+
     launchedTasks = true;
 
-    AssertPos(currentPos, llvm::isa<llvm::Function>(callee));
-    llvm::Type *argType = (llvm::dyn_cast<llvm::Function>(callee))->arg_begin()->getType();
+    AssertPos(currentPos, funcType != NULL);
+    llvm::Type *llvmFuncType = funcType->LLVMFunctionType(g->ctx);
+    AssertPos(currentPos, funcType->LLVMFunctionType(g->ctx)->getFunctionNumParams() > 0);
+    llvm::Type *argType = llvmFuncType->getFunctionParamType(0);
     AssertPos(currentPos, llvm::PointerType::classof(argType));
+
     llvm::PointerType *pt = llvm::dyn_cast<llvm::PointerType>(argType);
     AssertPos(currentPos, pt);
     AssertPos(currentPos, llvm::StructType::classof(pt->getElementType()));

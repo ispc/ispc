@@ -557,7 +557,8 @@ class FunctionEmitContext {
 
     /** Launch an asynchronous task to run the given function, passing it
         he given argument values. */
-    llvm::Value *LaunchInst(llvm::Value *callee, std::vector<llvm::Value *> &argVals, llvm::Value *launchCount[3]);
+    llvm::Value *LaunchInst(llvm::Value *callee, std::vector<llvm::Value *> &argVals, llvm::Value *launchCount[3],
+                            const FunctionType *funcType);
 
     void SyncInst();
 
