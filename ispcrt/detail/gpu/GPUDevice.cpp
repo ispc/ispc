@@ -1561,7 +1561,9 @@ struct TaskQueue : public ispcrt::base::TaskQueue {
         suggestedGroupSize[0] = std::max(suggestedGroupSize[0], uint32_t(1));
         suggestedGroupSize[1] = std::max(suggestedGroupSize[1], uint32_t(1));
         suggestedGroupSize[2] = std::max(suggestedGroupSize[2], uint32_t(1));
-
+        suggestedGroupSize[0] = get_number_envvar(ISPCRT_GPU_THREAD_GROUP_SIZE_X, suggestedGroupSize[0]);
+        suggestedGroupSize[1] = get_number_envvar(ISPCRT_GPU_THREAD_GROUP_SIZE_Y, suggestedGroupSize[1]);
+        suggestedGroupSize[2] = get_number_envvar(ISPCRT_GPU_THREAD_GROUP_SIZE_Z, suggestedGroupSize[2]);
         L0_SAFE_CALL(
             zeKernelSetGroupSize(kernel.handle(), suggestedGroupSize[0], suggestedGroupSize[1], suggestedGroupSize[2]));
 
