@@ -901,12 +901,6 @@ void Module::AddFunctionDeclaration(const std::string &name, const FunctionType 
     if (functionType->isTask && functionType->GetReturnType()->IsVoidType() == false)
         Error(pos, "Task-qualified functions must have void return type.");
 
-    // This limitation is due to ABI incompatibility between ISPC/ESIMD.
-    // ESIMD makes return value optimization transferring return value to the
-    // argument of the function.
-    if (functionType->IsISPCExternal() && functionType->GetReturnType()->IsVoidType() == false)
-        Warning(pos, "Export and extern \"C\"-qualified functions must have void return type for Xe target.");
-
     if (functionType->isExported || functionType->isExternC || functionType->IsISPCExternal() ||
         functionType->IsISPCKernel()) {
         lCheckForStructParameters(functionType, pos);

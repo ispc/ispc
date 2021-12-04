@@ -19,7 +19,7 @@
 // RUN: FileCheck --input-file=%t.ll -check-prefix=CHECK_FUNC_GPU %s
 // RUN: FileCheck --input-file=%t.ll -check-prefix=CHECK_METADATA %s
 // RUN: %{ispc} %s --target=gen9-x16 --emit-llvm-text -g --nowrap --no-discard-value-names -o - | FileCheck -check-prefix=CHECK_METADATA_DEBUG %s
-// RUN: %{ispc} %s --target=gen9-x16 -DCHECK_DIAG --nowrap --emit-spirv -o %t.spv 2>&1 | FileCheck %s -check-prefix=CHECK_RET_VAL_EXPORT_WARN_GPU
+// RUN: %{ispc} %s --target=gen9-x16 -DCHECK_DIAG --nowrap --emit-spirv -o %t.spv 2>&1
 // RUN: not %{ispc} %s --target=gen9-x16 -DCHECK_DIAG_TASK --nowrap --emit-spirv -o %t.spv 2>&1 | FileCheck %s -check-prefix=CHECK_RET_VAL_TASK_ERROR
 
 // CPU run to avoid regressions
@@ -193,7 +193,6 @@ export void t5_call(uniform int p[]) {
 
 // Diagnostics
 #ifdef CHECK_DIAG
-// CHECK_RET_VAL_EXPORT_WARN_GPU: Warning: Export and extern "C"-qualified functions must have void return type for Xe target.
 export uniform int check_diag() {
     return programCount;
 }
