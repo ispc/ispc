@@ -604,10 +604,11 @@ void Function::GenerateIR() {
         return;
     }
 
-    // If function is an 'extern C', it cannot be defined in ISPC.
+    // If function is an 'extern C', it cannot be defined in ISPC for CPU.
+    // For GPU we allow extern "C" functions for interoperability.
     const FunctionType *type = CastType<FunctionType>(sym->type);
     Assert(type != NULL);
-    if (type->isExternC) {
+    if (!g->target->isXeTarget() && type->isExternC) {
         Error(sym->pos, "\n\'extern \"C\"\' function \"%s\" cannot be defined in ISPC.", sym->name.c_str());
         return;
     }
