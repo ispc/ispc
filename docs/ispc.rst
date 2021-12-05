@@ -1570,7 +1570,7 @@ Integer Literals
 Integer numeric constants can be specified in base 10, hexadecimal, or
 binary.  (Octal integer constants aren't supported).  Base 10 constants are
 given by a sequence of one or more digits from 0 to 9.  Hexadecimal
-constants are denoted by a leading ``0x`` and then one or more digits from
+constants are denoted by a leading ``0x`` or ``0X`` and then one or more digits from
 0-9, a-f, or A-F.  Finally, binary constants are denoted by a leading
 ``0b`` and then a sequence of 1s and 0s.
 
@@ -1612,8 +1612,8 @@ Floating-point constants of all three types can be specified in one of three way
 * Scientific notation - a decimal base followed by an "e" or "E", then optional
   plus or minus sign, and then a decimal exponent.
 * Hexadecimal floating-point constant - a hexadecimal constant (starting with
-  "0x" prefix) with or without radix separator, followed by a "p" or "P" and
-  a hexadecimal exponent value (without "0x" prefix). The exponent is never
+  "0x" or "0X" prefix) with or without radix separator, followed by a "p" or "P" and
+  a hexadecimal exponent value (without "0x"/"0X" prefix). The exponent is never
   optional for hexadecimal floating-point literals.
 
 The default type for floating-point literals is ``float``. Floating-point

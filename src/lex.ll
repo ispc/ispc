@@ -366,10 +366,10 @@ inline int ispcRand() {
 %option nounistd
 
 WHITESPACE [ \t\r]+
-INT_NUMBER (([0-9]+)|(0x[0-9a-fA-F]+)|(0b[01]+))[uUlL]*[kMG]?[uUlL]*
-INT_NUMBER_DOTDOTDOT (([0-9]+)|(0x[0-9a-fA-F]+)|(0b[01]+))[uUlL]*[kMG]?[uUlL]*\.\.\.
+INT_NUMBER (([0-9]+)|(0[xX][0-9a-fA-F]+)|(0b[01]+))[uUlL]*[kMG]?[uUlL]*
+INT_NUMBER_DOTDOTDOT (([0-9]+)|(0[xX][0-9a-fA-F]+)|(0b[01]+))[uUlL]*[kMG]?[uUlL]*\.\.\.
 FLOAT_NUMBER (([0-9]+|(([0-9]+\.[0-9]*([fF]|[fF]16)?)|(\.[0-9]+)))([eE][-+]?[0-9]+)?([dD]|[fF]|[fF]16)?)
-HEX_FLOAT_NUMBER (0x[01](\.[0-9a-fA-F]*)?[pP][-+]?[0-9]+([dD]|[fF]|[fF]16)?)
+HEX_FLOAT_NUMBER (0[xX][01](\.[0-9a-fA-F]*)?[pP][-+]?[0-9]+([dD]|[fF]|[fF]16)?)
 FORTRAN_DOUBLE_NUMBER (([0-9]+\.[0-9]*[dD])|([0-9]+\.[0-9]*[dD][-+]?[0-9]+)|([0-9]+[dD][-+]?[0-9]+)|(\.[0-9]*[dD][-+]?[0-9]+))
 
 
@@ -1095,7 +1095,7 @@ static double
 lParseHexFloat(const char *ptr) {
     Assert(ptr != NULL);
 
-    Assert(ptr[0] == '0' && ptr[1] == 'x');
+    Assert(ptr[0] == '0' && (ptr[1] == 'x' || ptr[1] == 'X'));
     ptr += 2;
 
     // Start initializing the mantissa
