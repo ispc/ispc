@@ -5456,7 +5456,7 @@ llvm::Value *ConstExpr::GetValue(FunctionEmitContext *ctx) const {
     case AtomicType::TYPE_UINT32:
         return isVarying ? LLVMUInt32Vector(uint32Val) : LLVMUInt32(uint32Val[0]);
     case AtomicType::TYPE_FLOAT16:
-        return isVarying ? LLVMFloat16Vector(&float16Val[0]) : LLVMFloat16(float16Val[0]);
+        return isVarying ? LLVMFloat16Vector(float16Val) : LLVMFloat16(float16Val[0]);
     case AtomicType::TYPE_FLOAT:
         return isVarying ? LLVMFloatVector(floatVal) : LLVMFloat(floatVal[0]);
     case AtomicType::TYPE_INT64:
@@ -6128,6 +6128,14 @@ static std::pair<llvm::Constant *, bool> lGetConstExprConstant(const Type *const
             return std::pair<llvm::Constant *, bool>(LLVMInt32(iv[0]), isNotValidForMultiTargetGlobal);
         else
             return std::pair<llvm::Constant *, bool>(LLVMInt32Vector(iv), isNotValidForMultiTargetGlobal);
+    } else if (Type::Equal(constType, AtomicType::UniformFloat16) ||
+               Type::Equal(constType, AtomicType::VaryingFloat16)) {
+        std::vector<llvm::APFloat> f16v;
+        cExpr->GetValues(f16v, constType->IsVaryingType());
+        if (constType->IsUniformType())
+            return std::pair<llvm::Constant *, bool>(LLVMFloat16(f16v[0]), isNotValidForMultiTargetGlobal);
+        else
+            return std::pair<llvm::Constant *, bool>(LLVMFloat16Vector(f16v), isNotValidForMultiTargetGlobal);
     } else if (Type::Equal(constType, AtomicType::UniformUInt32) || Type::Equal(constType, AtomicType::VaryingUInt32) ||
                CastType<EnumType>(constType) != NULL) {
         uint32_t uiv[ISPC_MAX_NVEC];
