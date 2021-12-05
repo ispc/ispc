@@ -1,284 +1,58 @@
 //; RUN: %{ispc} %s --target=host --emit-asm -O0 --nostdlib -o - | FileCheck %s
 
-// Formats (sign-exponent-matissa)
-// float16: 1-5-10  / exponent range [-14, 15]
-// float:   1-8-23  / exponent range [-126, 127]
-// double:  1-11-52 / exponent range [-1022, 1023]
+// Lexing and parsing focused test for double floating point literals.
 
-// Biased exponent (w bits):
-// - integers between 1 and 2^w-2 - normal numbers;
-// - 0 is reserved for +/-0 and subnormals;
-// - 2^w-1 is reserved for +/-inf and NaNs;
+// no exponent
+// CHECK: d1:
+// CHECK: 0x4000000000000000
+// CHECK: 0x4000000000000000
+// CHECK: 0x3fe0000000000000
+// CHECK: 0x4004000000000000
+uniform double d1 = 2d;
+uniform double d2 = 2.d;
+uniform double d3 = .5d;
+uniform double d4 = 2.5d;
 
-// Infinity is represented by the largest biased exponent allowed by the format and a mantissa of zero.
+// exponent without sign
+// CHECK: d5:
+// CHECK: 0x4034000000000000
+// CHECK: 0x4034000000000000
+// CHECK: 0x4014000000000000
+// CHECK: 0x4039000000000000
+uniform double d5 = 2e1d;
+uniform double d6 = 2.e1d;
+uniform double d7 = .5e1d;
+uniform double d8 = 2.5e1d;
 
-// Test 3 types of literals:
-// - decimal
-// - scientific
-// - hexadecimal
-// for 3 floating point types:
-// - float16
-// - float
-// - double
+// exponent with + sign
+// CHECK: d9:
+// CHECK: 0x4034000000000000
+// CHECK: 0x4034000000000000
+// CHECK: 0x4014000000000000
+// CHECK: 0x4039000000000000
+uniform double d9 = 2e+1d;
+uniform double d10 = 2.e+1d;
+uniform double d11 = .5e+1d;
+uniform double d12 = 2.5e+1d;
 
-// Also, as an exception from general rule "Fortran double" format is accepted:
-// - scientific format with "d" or "D" used instead of "e" is treated as double.
+// exponent with - sign
+// CHECK: d13:
+// CHECK: 0x3fc999999999999a
+// CHECK: 0x3fc999999999999a
+// CHECK: 0x3fa999999999999a
+// CHECK: 0x3fd0000000000000
+uniform double d13 = 2e-1d;
+uniform double d14 = 2.e-1d;
+uniform double d15 = .5e-1d;
+uniform double d16 = 2.5e-1d;
 
-// Use f/F, f16/F16, d/D, e/E, p/P, and 0x/0X  in different combinations to cover more cases in lexer.
-
-// A testing methodology remark: we check assembler output, as it prints values
-// in binary representation, which is easy to verify.
-// While LLVM IR prints floating point values with random beautification - i.e.
-// depending on the value it may print scientific or binary form. In the binary
-// form it prints "double" representation for both "float" and "double".
-
-
-////////////////////////////////////////////////////////////////////////////////
-// float16
-////////////////////////////////////////////////////////////////////////////////
-
-// smallest positive subnormal number (0-00000-0000000001)
-// CHECK: h1_v1:
-// CHECK-COUNT-3: 0x0001
-uniform float16 h1_v1 = 0.000000059604645f16;
-uniform float16 h1_v2 = 5.9604645e-8f16;
-uniform float16 h1_v3 = 0x1p-24f16;
-// largest positive subnormal number  (0-00000-1111111111)
-// CHECK: h2_v1:
-// CHECK-COUNT-3: 0x03ff
-uniform float16 h2_v1 = 0.000060975552F16;
-uniform float16 h2_v2 = 6.0975552e-5F16;
-uniform float16 h2_v3 = 0x0.ffcp-14F16;
-// smallest positive normal number    (0-00001-0000000000)
-// CHECK: h3_v1:
-// CHECK-COUNT-3: 0x0400
-uniform float16 h3_v1 = 0.00006103515625f16;
-uniform float16 h3_v2 = 6.103515625E-5f16;
-uniform float16 h3_v3 = 0x1P-14f16;
-// largest positive normal number     (0-11110-1111111111)
-// CHECK: h4_v1:
-// CHECK-COUNT-3: 0x7bff
-uniform float16 h4_v1 = 65504.F16;
-uniform float16 h4_v2 = 6.5504e4F16;
-uniform float16 h4_v3 = 0X1.ffcp+15F16;
-// nearest value to 1/3
-// CHECK: h5_v1:
-// CHECK-COUNT-3: 0x3555
-uniform float16 h5_v1 = 0.33325195f16;
-uniform float16 h5_v2 = 0.33325195e+0f16;
-uniform float16 h5_v3 = 0x1.554p-2f16;
-// largest number less than one
-// CHECK: h6_v1:
-// CHECK-COUNT-3: 0x3bff
-uniform float16 h6_v1 = 0.99951172F16;
-uniform float16 h6_v2 = 0.99951172E-0F16;
-uniform float16 h6_v3 = 0x1.ffcP-1F16;
-// one
-// CHECK: h7_v1:
-// CHECK-COUNT-3: 0x3c00
-uniform float16 h7_v1 = 1.0f16;
-uniform float16 h7_v2 = 1.e+0f16;
-uniform float16 h7_v3 = 0x1p+0f16;
-// smallest number larger than one
-// CHECK: h8_v1:
-// CHECK-COUNT-3: 0x3c01
-uniform float16 h8_v1 = 1.00097656F16;
-uniform float16 h8_v2 = 1.00097656e0F16;
-uniform float16 h8_v3 = 0X1.004p0F16;
-// +0
-// CHECK: h9_v1
-// CHECK-COUNT-3: zerofill
-uniform float16 h9_v1 = 0.0f16;
-uniform float16 h9_v2 = 0.0E+0f16;
-uniform float16 h9_v3 = 0x0P0f16;
-// -0
-// CHECK: h10_v1:
-// CHECK-COUNT-3: 0x8000
-uniform float16 h10_v1 = -0.0F16;
-uniform float16 h10_v2 = -0.0e+0F16;
-uniform float16 h10_v3 = -0x0p0F16;
-// +Inf
-// 65520 is the first to round to Inf
-// 1.e+5 is some value larger than maximum representable.
-// 0x1p16 is exact bit representation of Inf
-// CHECK: h11_v1:
-// CHECK-COUNT-3: 0x7c00
-uniform float16 h11_v1 = 65520.f16;
-uniform float16 h11_v2 = 1.e+5f16;
-uniform float16 h11_v3 = 0x1p16f16;
-// -Inf
-// CHECK: h12_v1:
-// CHECK-COUNT-3: 0xfc00
-uniform float16 h12_v1 = -65520.F16;
-uniform float16 h12_v2 = -1.E+5F16;
-uniform float16 h12_v3 = -0X1P16F16;
-
-
-////////////////////////////////////////////////////////////////////////////////
-// float
-////////////////////////////////////////////////////////////////////////////////
-
-// smallest positive subnormal number (0-00000000-00000000000000000000001)
-// CHECK: f1_v1:
-// CHECK-COUNT-3: 0x00000001
-uniform float f1_v1 = 0.00000000000000000000000000000000000000000000140129846432481707092372958328991613128026194187651577175706828388979108268586060148663818836212158203125;
-uniform float f1_v2 = 1.401298464324817e-45;
-uniform float f1_v3 = 0x1p-149;
-// largest positive subnormal number  (0-00000000-11111111111111111111111)
-// CHECK: f2_v1:
-// CHECK-COUNT-3: 0x007fffff
-uniform float f2_v1 = 0.00000000000000000000000000000000000001175494210692441075487029444849287348827052428745893333857174530571588870475618904265502351336181163787841796875f;
-uniform float f2_v2 = 1.1754942106924411e-38f;
-uniform float f2_v3 = 0x0.fffffep-126f;
-// smallest positive normal number    (0-00000001-00000000000000000000000)
-// CHECK: f3_v1:
-// CHECK-COUNT-3: 0x00800000
-uniform float f3_v1 = 0.000000000000000000000000000000000000011754943508222875079687365372222456778186655567720875215087517062784172594547271728515625;
-uniform float f3_v2 = 1.1754943508222875E-38;
-uniform float f3_v3 = 0x1P-126;
-// largest positive normal number     (0-11111110-11111111111111111111111)
-// CHECK: f4_v1:
-// CHECK-COUNT-3: 0x7f7fffff
-uniform float f4_v1 = 340282346638528859811704183484516925440.F;
-uniform float f4_v2 = 3.4028234663852886e+38F;
-uniform float f4_v3 = 0X1.fffffep+127F;
-// nearest value to 1/3
-// CHECK: f5_v1:
-// CHECK-COUNT-3: 0x3eaaaaaa
-uniform float f5_v1 = 0.3333333134651184;
-uniform float f5_v2 = 0.3333333134651184e+0;
-uniform float f5_v3 = 0x1.555554p-2;
-// largest number less than one
-// CHECK: f6_v1:
-// CHECK-COUNT-3: 0x3f7fffff
-uniform float f6_v1 = 0.9999999403953552f;
-uniform float f6_v2 = 0.9999999403953552E-0f;
-uniform float f6_v3 = 0x1.fffffeP-1f;
-// one
-// CHECK: f7_v1:
-// CHECK-COUNT-3: 0x3f800000
-uniform float f7_v1 = 1.0;
-uniform float f7_v2 = 1.e+0;
-uniform float f7_v3 = 0x1p+0;
-// smallest number larger than one
-// CHECK: f8_v1:
-// CHECK-COUNT-3: 0x3f800001
-uniform float f8_v1 = 1.0000001192092896F;
-uniform float f8_v2 = 1.0000001192092896e0F;
-uniform float f8_v3 = 0X1.000002p0F;
-// +0
-// CHECK: f9_v1
-// CHECK-COUNT-3: zerofill
-uniform float f9_v1 = 0.0;
-uniform float f9_v2 = 0.0E+0;
-uniform float f9_v3 = 0x0P0;
-// -0
-// CHECK: f10_v1:
-// CHECK-COUNT-3: 0x80000000
-uniform float f10_v1 = -0.0f;
-uniform float f10_v2 = -0.0e+0f;
-uniform float f10_v3 = -0x0p0f;
-// +Inf
-// CHECK: f11_v1:
-// CHECK-COUNT-3: 0x7f800000
-uniform float f11_v1 = 340282356800000000000000000000000000000.;
-uniform float f11_v2 = 1.e+39;
-uniform float f11_v3 = 0x1p128;
-// -Inf
-// CHECK: f12_v1:
-// CHECK-COUNT-3: 0xff800000
-uniform float f12_v1 = -340282356800000000000000000000000000000F;
-uniform float f12_v2 = -1.E+39F;
-uniform float f12_v3 = -0X1P128F;
-
-
-////////////////////////////////////////////////////////////////////////////////
-// double
-////////////////////////////////////////////////////////////////////////////////
-
-// smallest positive subnormal number
-// CHECK: d1_v1:
-// CHECK-COUNT-3: 0x0000000000000001
-uniform double d1_v1 = 0.000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000004940656458412465441765687928682213723650598026143247644255856825006755072702087518652998363616359923797965646954457177309266567103559397963987747960107818781263007131903114045278458171678489821036887186360569987307230500063874091535649843873124733972731696151400317153853980741262385655911710266585566867681870395603106249319452715914924553293054565444011274801297099995419319894090804165633245247571478690147267801593552386115501348035264934720193790268107107491703332226844753335720832431936092382893458368060106011506169809753078342277318329247904982524730776375927247874656084778203734469699533647017972677717585125660551199131504891101451037862738167250955837389733598993664809941164205702637090279242767544565229087538682506419718265533447265625d;
-uniform double d1_v2 = 5e-324d;
-uniform double d1_v3 = 5d-324;
-// FIXME: this is parsed incorretly!!!
-uniform double d1_v4 = 0x1p-1074d;
-// largest positive subnormal number
-// CHECK: d2_v1:
-// CHECK-COUNT-4: 0x000fffffffffffff
-uniform double d2_v1 = 0.000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000022250738585072008890245868760858598876504231122409594654935248025624400092282356951787758888037591552642309780950434312085877387158357291821993020294379224223559819827501242041788969571311791082261043971979604000454897391938079198936081525613113376149842043271751033627391549782731594143828136275113838604094249464942286316695429105080201815926642134996606517803095075913058719846423906068637102005108723282784678843631944515866135041223479014792369585208321597621066375401613736583044193603714778355306682834535634005074073040135602968046375918583163124224521599262546494300836851861719422417646455137135420132217031370496583210154654068035397417906022589503023501937519773030945763173210852507299305089761582519159720757232455434770912461317493580281734466552734375D;
-uniform double d2_v2 = 2.225073858507201e-308D;
-uniform double d2_v3 = 2.225073858507201D-308;
-uniform double d2_v4 = 0x0.fffffffffffffp-1022D;
-// smallest positive normal number
-// CHECK: d3_v1:
-// CHECK-COUNT-4: 0x0010000000000000
-uniform double d3_v1 = 0.00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000002225073858507201383090232717332404064219215980462331830553327416887204434813918195854283159012511020564067339731035811005152434161553460108856012385377718821130777993532002330479610147442583636071921565046942503734208375250806650616658158948720491179968591639648500635908770118304874799780887753749949451580451605050915399856582470818645113537935804992115981085766051992433352114352390148795699609591288891602992641511063466313393663477586513029371762047325631781485664350872122828637642044846811407613911477062801689853244110024161447421618567166150540154285084716752901903161322778896729707373123334086988983175067838846926092773977972858659654941091369095406136467568702398678315290680984617210924625396728515625d;
-uniform double d3_v2 = 2.2250738585072014e-308d;
-uniform double d3_v3 = 2.2250738585072014d-308;
-uniform double d3_v4 = 0x1p-1022d;
-// largest positive normal number
-// CHECK: d4_v1:
-// CHECK-COUNT-4: 0x7fefffffffffffff
-uniform double d4_v1 = 179769313486231570814527423731704356798070567525844996598917476803157260780028538760589558632766878171540458953514382464234321326889464182768467546703537516986049910576551282076245490090389328944075868508455133942304583236903222948165808559332123348274797826204144723168738177180919299881250404026184124858368D;
-uniform double d4_v2 = 1.7976931348623157e+308D;
-uniform double d4_v3 = 1.7976931348623157D+308;
-uniform double d4_v4 = 0X1.fffffffffffffp+1023D;
-// nearest value to 1/3
-// CHECK: d5_v1:
-// CHECK-COUNT-4: 0x3fd5555555555555
-uniform double d5_v1 = 0.3333333333333333d;
-uniform double d5_v2 = 0.3333333333333333e0d;
-uniform double d5_v3 = 0.3333333333333333d0;
-uniform double d5_v4 = 0x1.5555555555555p-2d;
-
-// largest number less than one
-// CHECK: d6_v1:
-// CHECK-COUNT-4: 0x3fefffffffffffff
-uniform double d6_v1 = 0.9999999999999999D;
-uniform double d6_v2 = 0.9999999999999999e-0D;
-uniform double d6_v3 = 0.9999999999999999D-0;
-uniform double d6_v4 = 0x1.fffffffffffffp-1D;
-// one
-// CHECK: d7_v1:
-// CHECK-COUNT-4: 0x3ff0000000000000
-uniform double d7_v1 = 1d;
-uniform double d7_v2 = 1.e+0d;
-uniform double d7_v3 = 1.d+0;
-uniform double d7_v4 = 0x1p0d;
-// smallest number larger than one
-// CHECK: d8_v1:
-// CHECK-COUNT-4: 0x3ff0000000000001
-uniform double d8_v1 = 1.0000000000000002220446049250313080847263336181640625D;
-uniform double d8_v2 = 1.0000000000000002E+0D;
-uniform double d8_v3 = 1.0000000000000002D+0;
-uniform double d8_v4 = 0X1.0000000000001p0D;
-// +0
-// CHECK: d9_v1
-// CHECK-COUNT-4: zerofill
-uniform double d9_v1 = 0.0d;
-uniform double d9_v2 = 0.0e+0d;
-uniform double d9_v3 = 0.0d+0;
-uniform double d9_v4 = 0x0p0d;
-// -0
-// CHECK: d10_v1:
-// CHECK-COUNT-4: 0x8000000000000000
-uniform double d10_v1 = -0.0D;
-uniform double d10_v2 = -0.0e+0D;
-uniform double d10_v3 = -0.0D+0;
-uniform double d10_v4 = -0x0p0D;
-// +Inf
-// CHECK: d11_v1:
-// CHECK-COUNT-4: 0x7ff0000000000000
-uniform double d11_v1 = 179769313486231590000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000.d;
-uniform double d11_v2 = 1.e+309d;
-uniform double d11_v3 = 1.d+309;
-uniform double d11_v4 = 0x1p1024d;
-// -Inf
-// CHECK: d12_v1:
-// CHECK-COUNT-4: 0xfff0000000000000
-uniform double d12_v1 = -179769313486231590000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000.D;
-uniform double d12_v2 = -1.e+309D;
-uniform double d12_v3 = -1.D+309;
-uniform double d12_v4 = -0X1p1024D;
+// Fortran double format
+// CHECK: d17:
+// CHECK: 0x4034000000000000
+// CHECK: 0x4034000000000000
+// CHECK: 0x4014000000000000
+// CHECK: 0x4039000000000000
+uniform double d17 = 2d1;
+uniform double d18 = 2.d1;
+uniform double d19 = .5d1;
+uniform double d20 = 2.5d1;
