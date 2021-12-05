@@ -1611,9 +1611,12 @@ Floating-point constants of all three types can be specified in one of three way
   suffix is used, radix separator is optional.
 * Scientific notation - a decimal base followed by an "e" or "E", then optional
   plus or minus sign, and then a decimal exponent.
-* Hexadecimal floating-point constant - a hexadecimal constant (starting with
-  "0x" or "0X" prefix) with or without radix separator, followed by a "p" or "P" and
-  a hexadecimal exponent value (without "0x"/"0X" prefix). The exponent is never
+* Hexadecimal floating-point constant - bit-accurate representation of a particular
+  floating-point number. It starts with "0x" or "0X" prefix, followed by a zero
+  or a one, a period, and then the remainder of the mantissa in hexadecimal form,
+  with digits from 0-9, a-f, or A-F. The start of the exponent is denoted by a "p"
+  or "P", which is then followed by an optional plus or minus sign and then digits
+  from 0 to 9, representing decimal value of the exponent. The exponent is never
   optional for hexadecimal floating-point literals.
 
 The default type for floating-point literals is ``float``. Floating-point
