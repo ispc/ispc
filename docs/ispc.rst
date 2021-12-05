@@ -1612,9 +1612,9 @@ Floating-point constants of all three types can be specified in one of three way
 * Scientific notation - a decimal base followed by an "e" or "E", then optional
   plus or minus sign, and then a decimal exponent.
 * Hexadecimal floating-point constant - a hexadecimal constant (starting with
-  "0x prefix) with or without radix separator, followed by "p" and a hexadecimal
-  exponent value (without "0x" prefix). The exponent is never optional for
-  hexadecimal floating-point literals.
+  "0x" prefix) with or without radix separator, followed by a "p" or "P" and
+  a hexadecimal exponent value (without "0x" prefix). The exponent is never
+  optional for hexadecimal floating-point literals.
 
 The default type for floating-point literals is ``float``. Floating-point
 literals can be specified by adding one of the following suffixes:
@@ -1633,7 +1633,7 @@ literals can be specified by adding one of the following suffixes:
 
 For example:
 
-``float`` type floating point literals 
+``float`` type floating point literals
 
 ::
 
