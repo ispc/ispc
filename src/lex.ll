@@ -368,7 +368,7 @@ inline int ispcRand() {
 WHITESPACE [ \t\r]+
 INT_NUMBER (([0-9]+)|(0[xX][0-9a-fA-F]+)|(0b[01]+))[uUlL]*[kMG]?[uUlL]*
 INT_NUMBER_DOTDOTDOT (([0-9]+)|(0[xX][0-9a-fA-F]+)|(0b[01]+))[uUlL]*[kMG]?[uUlL]*\.\.\.
-FLOAT_NUMBER (([0-9]+|(([0-9]+\.[0-9]*([fF]|[fF]16)?)|(\.[0-9]+)))([eE][-+]?[0-9]+)?([dD]|[fF]|[fF]16)?)
+FLOAT_NUMBER (([0-9]+|(([0-9]+\.[0-9]*)|(\.[0-9]+)))([eE][-+]?[0-9]+)?([dD]|[fF]|[fF]16)?)
 HEX_FLOAT_NUMBER (0[xX][01](\.[0-9a-fA-F]*)?[pP][-+]?[0-9]+([dD]|[fF]|[fF]16)?)
 FORTRAN_DOUBLE_NUMBER (([0-9]+\.[0-9]*[dD])|([0-9]+\.[0-9]*[dD][-+]?[0-9]+)|([0-9]+[dD][-+]?[0-9]+)|(\.[0-9]*[dD][-+]?[0-9]+))
 
