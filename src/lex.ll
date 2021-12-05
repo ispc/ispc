@@ -369,7 +369,7 @@ WHITESPACE [ \t\r]+
 INT_NUMBER (([0-9]+)|(0x[0-9a-fA-F]+)|(0b[01]+))[uUlL]*[kMG]?[uUlL]*
 INT_NUMBER_DOTDOTDOT (([0-9]+)|(0x[0-9a-fA-F]+)|(0b[01]+))[uUlL]*[kMG]?[uUlL]*\.\.\.
 FLOAT_NUMBER (([0-9]+|(([0-9]+\.[0-9]*([fF]|[fF]16)?)|(\.[0-9]+)))([eE][-+]?[0-9]+)?([dD]|[fF]|[fF]16)?)
-HEX_FLOAT_NUMBER (0x[01](\.[0-9a-fA-F]*)?p[-+]?[0-9]+([dD]|[fF]|[fF]16)?)
+HEX_FLOAT_NUMBER (0x[01](\.[0-9a-fA-F]*)?[pP][-+]?[0-9]+([dD]|[fF]|[fF]16)?)
 FORTRAN_DOUBLE_NUMBER (([0-9]+\.[0-9]*[dD])|([0-9]+\.[0-9]*[dD][-+]?[0-9]+)|([0-9]+[dD][-+]?[0-9]+)|(\.[0-9]*[dD][-+]?[0-9]+))
 
 
@@ -1109,9 +1109,9 @@ lParseHexFloat(const char *ptr) {
         ++ptr;
 
         double scale = 1. / 16.;
-        // Keep going until we come to the 'p', which indicates that we've
+        // Keep going until we come to the 'p'/'P', which indicates that we've
         // come to the exponent
-        while (*ptr != 'p') {
+        while (*ptr != 'p' && *ptr != 'P') {
             // Figure out the raw value from 0-15
             int digit;
             if (*ptr >= '0' && *ptr <= '9')
@@ -1132,9 +1132,9 @@ lParseHexFloat(const char *ptr) {
     else
         // If there's not a '.', then we better be going straight to the
         // exponent
-        Assert(*ptr == 'p');
+        Assert(*ptr == 'p' || *ptr == 'P');
 
-    ++ptr; // skip the 'p'
+    ++ptr; // skip the 'p'/'P'
 
     // interestingly enough, the exponent is provided base 10..
     char* endptr = NULL;
