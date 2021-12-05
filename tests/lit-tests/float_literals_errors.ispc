@@ -10,3 +10,11 @@ float f1 = 0x2p1;
 // CHECK: 12:12: Error: syntax error
 // There must be at least one digit before or after the period.
 float f2 = .f;
+
+// Fixed bugs in literals definition
+// "f" and "f16" suffix should not appear in the FP literal in scientific form twice.
+// These constants should not be parsed and an error should be reported.
+// CHECK: 18:16: Error: syntax error
+float f3 = 0.1fe+1f;
+// CHECK: 20:18: Error: syntax error
+float f4 = 0.1f16e+1f16;
