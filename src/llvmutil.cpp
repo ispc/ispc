@@ -365,7 +365,7 @@ llvm::Constant *LLVMFloat16Vector(llvm::APFloat fval) {
     return llvm::ConstantVector::get(vals);
 }
 
-llvm::Constant *LLVMFloat16Vector(const llvm::APFloat *fvec) {
+llvm::Constant *LLVMFloat16Vector(const std::vector<llvm::APFloat> &fvec) {
     std::vector<llvm::Constant *> vals;
     for (int i = 0; i < g->target->getVectorWidth(); ++i)
         vals.push_back(LLVMFloat16(fvec[i]));

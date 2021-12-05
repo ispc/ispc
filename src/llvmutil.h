@@ -239,7 +239,7 @@ extern llvm::Constant *LLVMUInt64Vector(const uint64_t *i);
 
 /** Returns an LLVM half vector based on the given array of values.
     The array should have g->target.vectorWidth elements. */
-extern llvm::Constant *LLVMFloat16Vector(const llvm::APFloat *f);
+extern llvm::Constant *LLVMFloat16Vector(const std::vector<llvm::APFloat> &f);
 /** Returns an LLVM float vector based on the given array of values.
     The array should have g->target.vectorWidth elements. */
 extern llvm::Constant *LLVMFloatVector(const float *f);
