@@ -1645,6 +1645,16 @@ For example:
   float neg = -0x1.ffep+11f;  // -4095.
 
 
+Also, "Fortran double" format is accepted - a scientific notation with a literal
+"d" or "D" used instead of "e". This notation yields a double precision floating
+point literal:
+
+::
+
+  double d1 = 1.234d+3;  // 1234.0d
+  double d2 = 1.234e+3d; // 1234.0d
+
+
 String Literals
 ---------------
 
