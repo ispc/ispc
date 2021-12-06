@@ -245,6 +245,7 @@ find_package(BISON 3.0 REQUIRED)
             COMMAND ${BISON_EXECUTABLE} -d -t -v
                 --output=${BISON_CPP_OUTPUT}
                 ${BISON_INPUT}
+            MAIN_DEPENDENCY ${BISON_INPUT}
             COMMENT "Generating parse.cc"
             WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
     )
@@ -259,6 +260,7 @@ find_package(FLEX 2.6 REQUIRED)
             COMMAND ${FLEX_EXECUTABLE}
                 --outfile=${FLEX_OUTPUT}
                 ${FLEX_INPUT}
+            MAIN_DEPENDENCY ${FLEX_INPUT}
             COMMENT "Generating lex.cpp"
             WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
         )
