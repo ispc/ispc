@@ -133,7 +133,7 @@ static const char *lBuiltinTokens[] = {
     "do", "delete", "double", "else", "enum", "export", "extern", "false",
     "float16", "float", "for", "foreach", "foreach_active", "foreach_tiled",
     "foreach_unique", "goto", "if", "in", "inline",
-    "int", "int8", "int16", "int32", "int64", "launch", "new", "NULL",
+    "int", "int8", "int16", "int32", "int64", "invoke_sycl", "launch", "new", "NULL",
     "print", "return", "signed", "sizeof", "static", "struct", "switch",
     "sync", "task", "true", "typedef", "uniform", "unmasked", "unsigned",
     "varying", "void", "while", NULL
@@ -218,13 +218,14 @@ struct ForeachDimension {
 %token TOKEN_FOREACH_UNIQUE TOKEN_FOREACH_ACTIVE TOKEN_DOTDOTDOT
 %token TOKEN_FOR TOKEN_GOTO TOKEN_CONTINUE TOKEN_BREAK TOKEN_RETURN
 %token TOKEN_CIF TOKEN_CDO TOKEN_CFOR TOKEN_CWHILE
-%token TOKEN_SYNC TOKEN_PRINT TOKEN_ASSERT
+%token TOKEN_SYNC TOKEN_PRINT TOKEN_ASSERT TOKEN_INVOKE_SYCL
 
 %type <expr> primary_expression postfix_expression integer_dotdotdot
 %type <expr> unary_expression cast_expression funcall_expression launch_expression intrincall_expression
 %type <expr> multiplicative_expression additive_expression shift_expression
 %type <expr> relational_expression equality_expression and_expression
 %type <expr> exclusive_or_expression inclusive_or_expression
+%type <expr> invoke_sycl_expression
 %type <expr> logical_and_expression logical_or_expression new_expression
 %type <expr> conditional_expression assignment_expression expression
 %type <expr> initializer constant_expression for_test
@@ -472,6 +473,19 @@ launch_expression
        }
     ;
 
+invoke_sycl_expression
+    : TOKEN_INVOKE_SYCL '(' postfix_expression ')'
+      {
+          $$ = new FunctionCallExpr($3, new ExprList(@4), Union(@1,@4), false, NULL, true);
+      }
+    | TOKEN_INVOKE_SYCL '(' postfix_expression ',' argument_expression_list ')'
+      {
+          $$ = new FunctionCallExpr($3, $5, Union(@1,@6), false, NULL, true);
+      }
+    | TOKEN_INVOKE_SYCL '(' error ')'
+      { $$ = NULL; }
+    ;
+
 postfix_expression
     : primary_expression
     | postfix_expression '[' expression ']'
@@ -540,6 +554,7 @@ argument_expression_list
 unary_expression
     : funcall_expression
     | intrincall_expression
+    | invoke_sycl_expression
     | TOKEN_INC_OP unary_expression
       { $$ = new UnaryExpr(UnaryExpr::PreInc, $2, Union(@1, @2)); }
     | TOKEN_DEC_OP unary_expression

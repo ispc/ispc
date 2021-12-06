@@ -3643,8 +3643,8 @@ void SelectExpr::Print(Indent &indent) const {
 ///////////////////////////////////////////////////////////////////////////
 // FunctionCallExpr
 
-FunctionCallExpr::FunctionCallExpr(Expr *f, ExprList *a, SourcePos p, bool il, Expr *lce[3])
-    : Expr(p, FunctionCallExprID), isLaunch(il) {
+FunctionCallExpr::FunctionCallExpr(Expr *f, ExprList *a, SourcePos p, bool il, Expr *lce[3], bool iis)
+    : Expr(p, FunctionCallExprID), isLaunch(il), isInvoke(iis) {
     func = f;
     args = a;
     std::vector<const Expr *> warn;
@@ -3772,8 +3772,13 @@ llvm::Value *FunctionCallExpr::GetValue(FunctionEmitContext *ctx) const {
 
         if (launchCount[0] != NULL)
             ctx->LaunchInst(callee, argVals, launchCount, ft);
-    } else
-        retVal = ctx->CallInst(callee, ft, argVals, isVoidFunc ? "" : "calltmp");
+    } else {
+        if (isInvoke) {
+            return ctx->InvokeSyclInst(callee, ft, argVals);
+        } else {
+            retVal = ctx->CallInst(callee, ft, argVals, isVoidFunc ? "" : "calltmp");
+        }
+    }
 
     if (isVoidFunc)
         return NULL;
@@ -3959,6 +3964,22 @@ Expr *FunctionCallExpr::TypeCheck() {
         }
         AssertPos(pos, launchCountExpr[0] == NULL);
     }
+    if (isInvoke && !funcType->isExternSYCL) {
+        Error(pos, "\"invoke_sycl\" expression illegal with non-\'extern \"SYCL\"\'-"
+                   "qualified function.");
+        return NULL;
+    }
+
+    if (isInvoke && !funcType->isRegCall) {
+        Error(pos, "\"invoke_sycl\" expression can be only used with \'__regcall\'-"
+                   "qualified function.");
+        return NULL;
+    }
+
+    if (!isInvoke && funcType->isExternSYCL) {
+        Error(pos, "Illegal to call \'extern \"SYCL\"\'-qualified function without \"invoke_sycl\" expression.");
+        return NULL;
+    }
 
     if (func == NULL || args == NULL)
         return NULL;
@@ -3968,6 +3989,8 @@ Expr *FunctionCallExpr::TypeCheck() {
 int FunctionCallExpr::EstimateCost() const {
     if (isLaunch)
         return COST_TASK_LAUNCH;
+    if (isInvoke)
+        return COST_INVOKE;
 
     const Type *type = func->GetType();
     if (type == NULL)
@@ -3996,7 +4019,7 @@ void FunctionCallExpr::Print(Indent &indent) const {
 
     indent.Print("FunctionCallExpr", pos);
 
-    printf("[%s] %s\n", GetType()->GetString().c_str(), isLaunch ? "launch" : "");
+    printf("[%s] %s %s\n", GetType()->GetString().c_str(), isLaunch ? "launch" : "", isInvoke ? "invoke_sycl" : "");
     indent.pushList(2);
     indent.setNextLabel("func");
     func->Print(indent);
