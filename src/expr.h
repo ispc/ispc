@@ -274,7 +274,8 @@ class ExprList : public Expr {
  */
 class FunctionCallExpr : public Expr {
   public:
-    FunctionCallExpr(Expr *func, ExprList *args, SourcePos p, bool isLaunch = false, Expr *launchCountExpr[3] = NULL);
+    FunctionCallExpr(Expr *func, ExprList *args, SourcePos p, bool isLaunch = false, Expr *launchCountExpr[3] = NULL,
+                     bool isInvoke = false);
 
     static inline bool classof(FunctionCallExpr const *) { return true; }
     static inline bool classof(ASTNode const *N) { return N->getValueID() == FunctionCallExprID; }
@@ -292,6 +293,7 @@ class FunctionCallExpr : public Expr {
     Expr *func;
     ExprList *args;
     bool isLaunch;
+    bool isInvoke;
     Expr *launchCountExpr[3];
 };
 

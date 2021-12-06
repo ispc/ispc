@@ -639,12 +639,13 @@ void Function::GenerateIR() {
     } else {
         // In case of multi-target compilation for extern "C" functions which were defined, we want
         // to have a target-specific implementation for each target similar to exported functions.
-        // However declarations of extern "C"/"SYCL" functions must be not-mangled and therefore, the calls to such functions
-        // must be not-mangled. The trick to support target-specific implementation in such case is to generate
-        // definition of target-specific implementation mangled with target ("name_<target>") which would be called from
-        // a dispatch function. Since we use not-mangled names in the call, it will be a call to a dispatch function
-        // which will resolve to particular implementation. The condition below ensures that in case of multi-target
-        // compilation we will emit only one-per-target definition of extern "C" function mangled with <target> suffix.
+        // However declarations of extern "C"/"SYCL" functions must be not-mangled and therefore, the calls to such
+        // functions must be not-mangled. The trick to support target-specific implementation in such case is to
+        // generate definition of target-specific implementation mangled with target ("name_<target>") which would be
+        // called from a dispatch function. Since we use not-mangled names in the call, it will be a call to a dispatch
+        // function which will resolve to particular implementation. The condition below ensures that in case of
+        // multi-target compilation we will emit only one-per-target definition of extern "C" function mangled with
+        // <target> suffix.
         if (!((type->isExternC || type->isExternSYCL) && g->mangleFunctionsWithTarget)) {
 #if ISPC_LLVM_VERSION >= ISPC_LLVM_10_0
             llvm::TimeTraceScope TimeScope("emitCode", llvm::StringRef(sym->name));

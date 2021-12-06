@@ -2549,6 +2549,13 @@ llvm::FunctionType *FunctionType::LLVMFunctionType(llvm::LLVMContext *ctx, bool 
                 castedArgType = refPtr->LLVMType(ctx);
             }
         }
+        // For extern "SYCL" functions on Xe targets broadcast uniform parameters
+        // to varying to match IGC signature by vISA level.
+        if (g->target->isXeTarget() && isExternSYCL) {
+            if (argType->IsUniformType()) {
+                castedArgType = argType->GetAsVaryingType()->LLVMType(ctx);
+            }
+        }
 
         if (castedArgType == NULL) {
             Assert(m->errorCount > 0);
@@ -2594,6 +2601,13 @@ llvm::FunctionType *FunctionType::LLVMFunctionType(llvm::LLVMContext *ctx, bool 
     const Type *retType = returnType;
 
     llvm::Type *llvmReturnType = retType->LLVMType(g->ctx);
+    // For extern "SYCL" functions on XE targets broadcast uniform return value
+    // to varying to match IGC signature by vISA level.
+    if (g->target->isXeTarget() && isExternSYCL) {
+        if (!retType->IsVoidType() && retType->IsUniformType()) {
+            llvmReturnType = retType->GetAsVaryingType()->LLVMType(ctx);
+        }
+    }
     if (llvmReturnType == NULL)
         return NULL;
     return llvm::FunctionType::get(llvmReturnType, callTypes, false);

@@ -563,6 +563,11 @@ class FunctionEmitContext {
     void SyncInst();
 
     llvm::Instruction *ReturnInst();
+
+    /** Emits code for invoke_sycl*/
+    llvm::Value *InvokeSyclInst(llvm::Value *func, const FunctionType *funcType,
+                                const std::vector<llvm::Value *> &args);
+
 #ifdef ISPC_XE_ENABLED
     /** Emit genx_simdcf_any intrinsic.
         Required when Xe hardware mask is emitted. */

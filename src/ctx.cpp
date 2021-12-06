@@ -3910,4 +3910,78 @@ bool FunctionEmitContext::emitXeHardwareMask() {
 #endif
     return emitXeHardwareMask;
 }
+
+llvm::Value *FunctionEmitContext::InvokeSyclInst(llvm::Value *func, const FunctionType *funcType,
+                                                 const std::vector<llvm::Value *> &args) {
+    Assert(funcType != NULL);
+    const Type *returnType = funcType->GetReturnType();
+    // Broadcast uniform return value to varying to match IGC signature by vISA level
+    // for extern "SYCL" functions on Xe targets
+    bool broadcastReturnVal = g->target->isXeTarget() && !returnType->IsVoidType() && returnType->IsUniformType();
+    if (broadcastReturnVal) {
+        returnType = returnType->GetAsVaryingType();
+    }
+// Setting of HW mask before invoking external function does not work currently and
+// requires unification between VC and scalar backends. So invoke_sycl is supported
+// in convergent CF only.
+// TODO: enable setting HW mask when it is supported in backend
+#if 0
+    llvm::BasicBlock *bbExternalCall = NULL;
+    llvm::BasicBlock *bbExternalCallJoin = NULL;
+#endif
+    llvm::Value *resultPtr = NULL;
+    if (returnType->IsVoidType() == false)
+        resultPtr = AllocaInst(returnType);
+#if 0
+    // Prototype set of HW mask before invoke_sycl call
+    if (g->target->isXeTarget()) {
+        bbExternalCall = CreateBasicBlock("external_func_call", GetCurrentBasicBlock());
+        bbExternalCallJoin = CreateBasicBlock("external_func_join", bbExternalCall);
+        llvm::Value *simdcf = XeSimdCFAny(GetInternalMask());
+        BranchInst(bbExternalCall, bbExternalCallJoin, simdcf);
+        SetCurrentBasicBlock(bbExternalCall);
+    }
+#endif
+    // Broadcast uniform function arguments to varying to match IGC signature by vISA level
+    // for extern "SYCL" functions on Xe targets
+    std::vector<llvm::Value *> argsFinal;
+    for (int i = 0; i < args.size(); i++) {
+        llvm::Value *argCast = args[i];
+        if (g->target->isXeTarget() && funcType->isExternSYCL && funcType->GetParameterType(i)->IsUniformType()) {
+            if (!llvm::isa<llvm::VectorType>(argCast->getType())) {
+                if (argCast->getType()->isPointerTy()) {
+                    argCast = PtrToIntInst(argCast, LLVMTypes::Int64Type, argCast->getName() + "_ptrtoint");
+                }
+                llvm::VectorType *typecast = llvm::dyn_cast<llvm::VectorType>(
+                    funcType->GetParameterType(i)->GetAsVaryingType()->LLVMType(g->ctx));
+
+                argCast = BroadcastValue(argCast, typecast, argCast->getName() + "_broadcast");
+            }
+        }
+        argsFinal.push_back(argCast);
+    }
+
+    llvm::Value *callResult = CallInst(func, funcType, argsFinal, returnType->IsVoidType() ? "" : "calltmp");
+    if (returnType->IsVoidType() == false) {
+        StoreInst(callResult, resultPtr);
+    }
+#if 0
+    // Finish SIMDCall BB
+    if (g->target->isXeTarget()) {
+        BranchInst(bbExternalCallJoin);
+        SetCurrentBasicBlock(bbExternalCallJoin);
+    }
+#endif
+    if (resultPtr) {
+        llvm::Value *res = LoadInst(resultPtr, returnType);
+        if (broadcastReturnVal) {
+            // If return value was broadcasted, extract the first element from broadcasted result
+            // and use it as a final result.
+            res = ExtractInst(res, 0);
+        }
+        return res;
+    }
+    return NULL;
+}
+
 } // namespace ispc
