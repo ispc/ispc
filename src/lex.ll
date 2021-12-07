@@ -46,6 +46,7 @@ using namespace ispc;
 
 static uint64_t lParseBinary(const char *ptr, SourcePos pos, char **endPtr);
 static int lParseInteger(bool dotdotdot);
+static int lParseFP();
 static void lCComment(SourcePos *);
 static void lCppComment(SourcePos *);
 static void lNextValidChar(SourcePos *, char const*&);
@@ -368,8 +369,11 @@ inline int ispcRand() {
 WHITESPACE [ \t\r]+
 INT_NUMBER (([0-9]+)|(0[xX][0-9a-fA-F]+)|(0b[01]+))[uUlL]*[kMG]?[uUlL]*
 INT_NUMBER_DOTDOTDOT (([0-9]+)|(0[xX][0-9a-fA-F]+)|(0b[01]+))[uUlL]*[kMG]?[uUlL]*\.\.\.
-FLOAT_NUMBER (([0-9]+|(([0-9]+\.[0-9]*)|(\.[0-9]+)))([eE][-+]?[0-9]+)?([dD]|[fF]|[fF]16)?)
-HEX_FLOAT_NUMBER (0[xX][01](\.[0-9a-fA-F]*)?[pP][-+]?[0-9]+([dD]|[fF]|[fF]16)?)
+FLOAT_NUMBER_DECIMAL ((([0-9]+\.[0-9]*)|(\.[0-9]+))([dD]|[fF]|[fF]16)?)
+FLOAT_NUMBER_DECIMAL_DEPRECATED ([0-9]+[fF])
+FLOAT_NUMBER_DECIMAL_ILLEGAL ([0-9]+([dD]|[fF]16))
+FLOAT_NUMBER_SCIENTIFIC (([0-9]+|(([0-9]+\.[0-9]*)|(\.[0-9]+)))([eE][-+]?[0-9]+)([dD]|[fF]|[fF]16)?)
+FLOAT_NUMBER_HEXADECIMAL (0[xX][01](\.[0-9a-fA-F]*)?[pP][-+]?[0-9]+([dD]|[fF]|[fF]16)?)
 FORTRAN_DOUBLE_NUMBER (([0-9]+|(([0-9]+\.[0-9]*)|(\.[0-9]+)))([dD][-+]?[0-9]+))
 
 
@@ -509,27 +513,24 @@ L?\"(\\.|[^\\"])*\" { lStringConst(&yylval, &yylloc); return TOKEN_STRING_LITERA
     return TOKEN_DOUBLE_CONSTANT;
 }
 
-{FLOAT_NUMBER} {
+{FLOAT_NUMBER_DECIMAL}|{FLOAT_NUMBER_SCIENTIFIC} {
     RT;
-    std::string val(yytext);
-    std::string fp64S("d");
-    std::string fp64C("D");
-    std::string fp16S("f16");
-    std::string fp16C("F16");
-    if (val.size() >= fp16S.size() && ((val.compare(val.size() - fp16S.size(), fp16S.size(), fp16S) == 0)
-           || (val.compare(val.size() - fp16C.size(), fp16C.size(), fp16C) == 0))) {
-        yylval.stringVal = new std::string(val.substr(0, val.length() - 3));
-        return TOKEN_FLOAT16_CONSTANT;
-    } else if (val.size() >= fp64S.size() && ((val.compare(val.size() - fp64S.size(), fp64S.size(), fp64S) == 0)
-           || (val.compare(val.size() - fp64C.size(), fp64C.size(), fp64C) == 0))) {
-        yylval.doubleVal = atof(yytext);
-        return TOKEN_DOUBLE_CONSTANT;
-    }
-    yylval.floatVal = (float)atof(yytext);
-    return TOKEN_FLOAT_CONSTANT;
+    return lParseFP();
 }
 
-{HEX_FLOAT_NUMBER} {
+{FLOAT_NUMBER_DECIMAL_DEPRECATED} {
+    RT;
+    Warning(yylloc, "single precision floating point literal should have a radix separator (dot)");
+    return lParseFP();
+}
+
+{FLOAT_NUMBER_DECIMAL_ILLEGAL} {
+    RT;
+    Error(yylloc, "floating point literal should have a radix separator (dot)");
+    return lParseFP();
+}
+
+{FLOAT_NUMBER_HEXADECIMAL} {
     RT;
     std::string val(yytext);
     std::string fp16S("f16");
@@ -738,6 +739,26 @@ lParseInteger(bool dotdotdot) {
                 return TOKEN_UINT64_CONSTANT;
         }
     }
+}
+
+static int
+lParseFP() {
+    std::string val(yytext);
+    std::string fp64S("d");
+    std::string fp64C("D");
+    std::string fp16S("f16");
+    std::string fp16C("F16");
+    if (val.size() >= fp16S.size() && ((val.compare(val.size() - fp16S.size(), fp16S.size(), fp16S) == 0)
+           || (val.compare(val.size() - fp16C.size(), fp16C.size(), fp16C) == 0))) {
+        yylval.stringVal = new std::string(val.substr(0, val.length() - 3));
+        return TOKEN_FLOAT16_CONSTANT;
+    } else if (val.size() >= fp64S.size() && ((val.compare(val.size() - fp64S.size(), fp64S.size(), fp64S) == 0)
+           || (val.compare(val.size() - fp64C.size(), fp64C.size(), fp64C) == 0))) {
+        yylval.doubleVal = atof(yytext);
+        return TOKEN_DOUBLE_CONSTANT;
+    }
+    yylval.floatVal = (float)atof(yytext);
+    return TOKEN_FLOAT_CONSTANT;
 }
 
 

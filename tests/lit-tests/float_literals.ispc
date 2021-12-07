@@ -3,12 +3,11 @@
 // Lexing and parsing focused test for double floating point literals.
 
 // no exponent
-// CHECK: d1:
-// CHECK: 0x4000000000000000
+// CHECK: d2:
 // CHECK: 0x4000000000000000
 // CHECK: 0x3fe0000000000000
 // CHECK: 0x4004000000000000
-uniform double d1 = 2d;
+// uniform double d1 = 2d; // this is illegal
 uniform double d2 = 2.d;
 uniform double d3 = .5d;
 uniform double d4 = 2.5d;
