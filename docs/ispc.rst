@@ -5393,6 +5393,23 @@ This code calls ``erf()`` once for each active program instance, passing it
 the program instance's value of ``v`` and storing the result in the
 instance's ``result`` value.
 
+``extern "C"`` function may also have a definition. On GPU it is intended to make
+a function (not a kernel!) callable from a different module. On CPU it is not
+advised to have ``extern "C"`` functions with definitions and to use ``export``
+functions instead, which are designed to be entry points from C/C++.
+Below is a comparison between ``export``, ``extern`` and ``extern "C"`` functions.
+
+=============================================== ====================== ========================= ======================
+Feature                                          ``export`` functions   ``extern "C"`` functions  ``extern`` functions
+----------------------------------------------- ---------------------- ------------------------- ----------------------
+Varying parameters support                      No                     Yes                       Yes
+Dispatch function for multi-target compilation  Yes                    Yes                       No
+Mangled name                                    No                     No                        Yes
+Mask parameter                                  No                     No                        Yes
+Calling convention specifier support            No                     Yes                       No
+Declaration in header file                      Yes                    No                        No
+=============================================== ====================== ========================= ======================
+
 Data Layout
 -----------
 

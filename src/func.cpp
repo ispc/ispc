@@ -395,7 +395,8 @@ void Function::emitCode(FunctionEmitContext *ctx, llvm::Function *function, Sour
         // happens for example with 'export'ed functions that the app
         // calls, with tasks on GPU and with unmasked functions.
         if (argIter == function->arg_end()) {
-            Assert(type->isUnmasked || type->isExported || type->IsISPCExternal() || type->IsISPCKernel());
+            Assert(type->isUnmasked || type->isExported || type->isExternC || type->IsISPCExternal() ||
+                   type->IsISPCKernel());
             ctx->SetFunctionMask(LLVMMaskAllOn);
         } else {
             Assert(type->isUnmasked == false);
@@ -604,14 +605,8 @@ void Function::GenerateIR() {
         return;
     }
 
-    // If function is an 'extern C', it cannot be defined in ISPC for CPU.
-    // For GPU we allow extern "C" functions for interoperability.
     const FunctionType *type = CastType<FunctionType>(sym->type);
     Assert(type != NULL);
-    if (!g->target->isXeTarget() && type->isExternC) {
-        Error(sym->pos, "\n\'extern \"C\"\' function \"%s\" cannot be defined in ISPC.", sym->name.c_str());
-        return;
-    }
 
     // Figure out a reasonable source file position for the start of the
     // function body.  If possible, get the position of the first actual
@@ -637,20 +632,31 @@ void Function::GenerateIR() {
             emitCode(&ec, function, firstStmtPos);
         }
     } else {
+        // In case of multi-target compilation for extern "C" functions which were defined, we want
+        // to have a target-specific implementation for each target similar to exported functions.
+        // However declarations of extern "C" functions must be not-mangled and therefore, the calls to such functions
+        // must be not-mangled. The trick to support target-specific implementation in such case is to generate
+        // definition of target-specific implementation mangled with target ("name_<target>") which would be called from
+        // a dispatch function. Since we use not-mangled names in the call, it will be a call to a dispatch function
+        // which will resolve to particular implementation. The condition below ensures that in case of multi-target
+        // compilation we will emit only one-per-target definition of extern "C" function mangled with <target> suffix.
+        if (!(type->isExternC && g->mangleFunctionsWithTarget)) {
 #if ISPC_LLVM_VERSION >= ISPC_LLVM_10_0
-        llvm::TimeTraceScope TimeScope("emitCode", llvm::StringRef(sym->name));
+            llvm::TimeTraceScope TimeScope("emitCode", llvm::StringRef(sym->name));
 #endif
-        FunctionEmitContext ec(this, sym, function, firstStmtPos);
-        emitCode(&ec, function, firstStmtPos);
+            FunctionEmitContext ec(this, sym, function, firstStmtPos);
+            emitCode(&ec, function, firstStmtPos);
+        }
     }
 
     if (m->errorCount == 0) {
         // If the function is 'export'-qualified, emit a second version of
         // it without a mask parameter and without name mangling so that
-        // the application can call it
+        // the application can call it.
+        // For 'extern "C"' we emit the version without mask parameter only.
         // For Xe we emit a version without mask parameter only for ISPC kernels and
         // ISPC external functions.
-        if (type->isExported || type->IsISPCExternal() || type->IsISPCKernel()) {
+        if (type->isExported || type->isExternC || type->IsISPCExternal() || type->IsISPCKernel()) {
             llvm::FunctionType *ftype = type->LLVMFunctionType(g->ctx, true);
             llvm::GlobalValue::LinkageTypes linkage = llvm::GlobalValue::ExternalLinkage;
             std::string functionName = sym->name;
