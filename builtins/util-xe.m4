@@ -4748,15 +4748,14 @@ define double @__stdlib_pow(double, double) nounwind readnone alwaysinline {
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; atomics and memory barriers
-
+;; Performs barrier synchronization for all threads within the same thread group.
+;; The barrier instruction causes the executing thread to wait until all threads
+;; in the same thread group have executed the barrier instruction. Memory
+;; ordering is also guaranteed by this instruction. The behavior is undefined
+;; if this instruction is executed in divergent control flow.
+declare void @llvm.genx.barrier()
 define void @__memory_barrier() nounwind readnone alwaysinline {
-  ;; see http://llvm.org/bugs/show_bug.cgi?id=2829.  It seems like we
-  ;; only get an MFENCE on x86 if "device" is true, but IMHO we should
-  ;; in the case where the first 4 args are true but it is false.
-  ;; So we just always set that to true...
-  ;; LLVM.MEMORY.BARRIER was deprecated from version 3.0
-  ;; Replacing it with relevant instruction
-  fence seq_cst
+  call void @llvm.genx.barrier()
   ret void
 }
 
