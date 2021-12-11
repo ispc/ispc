@@ -3416,9 +3416,9 @@ Expr *SelectExpr::Optimize() {
         } else if (Type::Equal(exprType, AtomicType::VaryingFloat)) {
             return lConstFoldSelect<float>(bv, constExpr1, constExpr2, exprType, pos);
         } else if (Type::Equal(exprType, AtomicType::VaryingDouble)) {
-            return lConstFoldSelect<bool>(bv, constExpr1, constExpr2, exprType, pos);
-        } else if (Type::Equal(exprType, AtomicType::VaryingBool)) {
             return lConstFoldSelect<double>(bv, constExpr1, constExpr2, exprType, pos);
+        } else if (Type::Equal(exprType, AtomicType::VaryingBool)) {
+            return lConstFoldSelect<bool>(bv, constExpr1, constExpr2, exprType, pos);
         }
 
         return this;
