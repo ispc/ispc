@@ -2362,20 +2362,27 @@ Expr *BinaryExpr::Optimize() {
     ConstExpr *constArg1 = llvm::dyn_cast<ConstExpr>(arg1);
 
     if (g->opt.fastMath) {
+        // TODO: consider moving fast-math optimizations to backend
+
         // optimizations related to division by floats..
 
         // transform x / const -> x * (1/const)
         if (op == Div && constArg1 != NULL) {
             const Type *type1 = constArg1->GetType();
-            if (Type::EqualIgnoringConst(type1, AtomicType::UniformFloat) ||
-                Type::EqualIgnoringConst(type1, AtomicType::VaryingFloat)) {
-                std::vector<llvm::APFloat> val;
-                int count = constArg1->GetValues(val, LLVMTypes::FloatType);
+            if (Type::EqualIgnoringConst(type1, AtomicType::UniformFloat16) ||
+                Type::EqualIgnoringConst(type1, AtomicType::VaryingFloat16) ||
+                Type::EqualIgnoringConst(type1, AtomicType::UniformFloat) ||
+                Type::EqualIgnoringConst(type1, AtomicType::VaryingFloat) ||
+                Type::EqualIgnoringConst(type1, AtomicType::UniformDouble) ||
+                Type::EqualIgnoringConst(type1, AtomicType::VaryingDouble)) {
+                llvm::Type *eltType = type1->GetAsUniformType()->LLVMType(g->ctx);
+                std::vector<llvm::APFloat> constVal;
+                int count = constArg1->GetValues(constVal, eltType);
                 std::vector<llvm::APFloat> inv;
                 for (int i = 0; i < count; ++i) {
-                    llvm::APFloat in(1.0f);
-                    in.divide(val[i], llvm::APFloat::rmNearestTiesToEven);
-                    inv.push_back(in);
+                    llvm::APFloat reciprocal = lCreateAPFloat(1.0, eltType);
+                    reciprocal.divide(constVal[i], llvm::APFloat::rmNearestTiesToEven);
+                    inv.push_back(reciprocal);
                 }
                 Expr *einv = new ConstExpr(type1, inv, constArg1->pos);
                 Expr *e = new BinaryExpr(Mul, arg0, einv, pos);
@@ -2389,8 +2396,12 @@ Expr *BinaryExpr::Optimize() {
         // transform x / y -> x * rcp(y)
         if (op == Div) {
             const Type *type1 = arg1->GetType();
-            if (Type::EqualIgnoringConst(type1, AtomicType::UniformFloat) ||
-                Type::EqualIgnoringConst(type1, AtomicType::VaryingFloat)) {
+            if (Type::EqualIgnoringConst(type1, AtomicType::UniformFloat16) ||
+                Type::EqualIgnoringConst(type1, AtomicType::VaryingFloat16) ||
+                Type::EqualIgnoringConst(type1, AtomicType::UniformFloat) ||
+                Type::EqualIgnoringConst(type1, AtomicType::VaryingFloat) ||
+                Type::EqualIgnoringConst(type1, AtomicType::UniformDouble) ||
+                Type::EqualIgnoringConst(type1, AtomicType::VaryingDouble)) {
                 // Get the symbol for the appropriate builtin
                 std::vector<Symbol *> rcpFuns;
                 m->symbolTable->LookupFunction("rcp", &rcpFuns);
@@ -2399,20 +2410,22 @@ Expr *BinaryExpr::Optimize() {
                     ExprList *args = new ExprList(arg1, arg1->pos);
                     Expr *rcpCall = new FunctionCallExpr(rcpSymExpr, args, arg1->pos);
                     rcpCall = ::TypeCheck(rcpCall);
-                    if (rcpCall == NULL)
-                        return NULL;
-                    rcpCall = ::Optimize(rcpCall);
-                    if (rcpCall == NULL)
-                        return NULL;
+                    if (rcpCall != NULL) {
+                        rcpCall = ::Optimize(rcpCall);
+                        if (rcpCall != NULL) {
+                            Expr *ret = new BinaryExpr(Mul, arg0, rcpCall, pos);
+                            ret = ::TypeCheck(ret);
+                            if (ret == NULL)
+                                return NULL;
+                            return ::Optimize(ret);
+                        }
+                    }
+                }
 
-                    Expr *ret = new BinaryExpr(Mul, arg0, rcpCall, pos);
-                    ret = ::TypeCheck(ret);
-                    if (ret == NULL)
-                        return NULL;
-                    return ::Optimize(ret);
-                } else
-                    Warning(pos, "rcp() not found from stdlib.  Can't apply "
-                                 "fast-math rcp optimization.");
+                Warning(pos,
+                        "rcp(%s) not found from stdlib.  Can't apply "
+                        "fast-math rcp optimization.",
+                        type1->GetString().c_str());
             }
         }
     }
