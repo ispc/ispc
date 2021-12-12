@@ -1177,9 +1177,12 @@ Expr *UnaryExpr::Optimize() {
                    Type::EqualIgnoringConst(type, AtomicType::VaryingUInt8)) {
             return lOptimizeNegate<uint8_t>(constExpr, type, pos);
         } else {
-            // For all the other types, it's safe to stuff whatever we have
-            // into a double, do the negate as a double, and then return a
-            // ConstExpr with the same type as the original...
+            AssertPos(pos, Type::EqualIgnoringConst(type, AtomicType::UniformFloat16) ||
+                               Type::EqualIgnoringConst(type, AtomicType::VaryingFloat16) ||
+                               Type::EqualIgnoringConst(type, AtomicType::UniformFloat) ||
+                               Type::EqualIgnoringConst(type, AtomicType::VaryingFloat) ||
+                               Type::EqualIgnoringConst(type, AtomicType::UniformDouble) ||
+                               Type::EqualIgnoringConst(type, AtomicType::VaryingDouble));
             std::vector<llvm::APFloat> v;
             int count = constExpr->GetValues(v);
             for (int i = 0; i < count; ++i)
