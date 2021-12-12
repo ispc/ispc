@@ -5587,94 +5587,6 @@ int ConstExpr::GetValues(std::vector<llvm::APFloat> &fpt) const {
     return Count();
 }
 
-int ConstExpr::GetValues(int64_t *ip, bool forceVarying) const {
-    switch (getBasicType()) {
-    case AtomicType::TYPE_BOOL:
-        lConvert(boolVal, ip, Count(), forceVarying);
-        break;
-    case AtomicType::TYPE_INT8:
-        lConvert(int8Val, ip, Count(), forceVarying);
-        break;
-    case AtomicType::TYPE_UINT8:
-        lConvert(uint8Val, ip, Count(), forceVarying);
-        break;
-    case AtomicType::TYPE_INT16:
-        lConvert(int16Val, ip, Count(), forceVarying);
-        break;
-    case AtomicType::TYPE_UINT16:
-        lConvert(uint16Val, ip, Count(), forceVarying);
-        break;
-    case AtomicType::TYPE_INT32:
-        lConvert(int32Val, ip, Count(), forceVarying);
-        break;
-    case AtomicType::TYPE_UINT32:
-        lConvert(uint32Val, ip, Count(), forceVarying);
-        break;
-    case AtomicType::TYPE_FLOAT16:
-        lConvert(&fpVal[0], ip, Count(), forceVarying);
-        break;
-    case AtomicType::TYPE_FLOAT:
-        lConvert(&fpVal[0], ip, Count(), forceVarying);
-        break;
-    case AtomicType::TYPE_DOUBLE:
-        lConvert(&fpVal[0], ip, Count(), forceVarying);
-        break;
-    case AtomicType::TYPE_INT64:
-        lConvert(int64Val, ip, Count(), forceVarying);
-        break;
-    case AtomicType::TYPE_UINT64:
-        lConvert(uint64Val, ip, Count(), forceVarying);
-        break;
-    default:
-        FATAL("unimplemented const type");
-    }
-    return Count();
-}
-
-int ConstExpr::GetValues(uint64_t *up, bool forceVarying) const {
-    switch (getBasicType()) {
-    case AtomicType::TYPE_BOOL:
-        lConvert(boolVal, up, Count(), forceVarying);
-        break;
-    case AtomicType::TYPE_INT8:
-        lConvert(int8Val, up, Count(), forceVarying);
-        break;
-    case AtomicType::TYPE_UINT8:
-        lConvert(uint8Val, up, Count(), forceVarying);
-        break;
-    case AtomicType::TYPE_INT16:
-        lConvert(int16Val, up, Count(), forceVarying);
-        break;
-    case AtomicType::TYPE_UINT16:
-        lConvert(uint16Val, up, Count(), forceVarying);
-        break;
-    case AtomicType::TYPE_INT32:
-        lConvert(int32Val, up, Count(), forceVarying);
-        break;
-    case AtomicType::TYPE_UINT32:
-        lConvert(uint32Val, up, Count(), forceVarying);
-        break;
-    case AtomicType::TYPE_FLOAT16:
-        lConvert(&fpVal[0], up, Count(), forceVarying);
-        break;
-    case AtomicType::TYPE_FLOAT:
-        lConvert(&fpVal[0], up, Count(), forceVarying);
-        break;
-    case AtomicType::TYPE_DOUBLE:
-        lConvert(&fpVal[0], up, Count(), forceVarying);
-        break;
-    case AtomicType::TYPE_INT64:
-        lConvert(int64Val, up, Count(), forceVarying);
-        break;
-    case AtomicType::TYPE_UINT64:
-        lConvert(uint64Val, up, Count(), forceVarying);
-        break;
-    default:
-        FATAL("unimplemented const type");
-    }
-    return Count();
-}
-
 int ConstExpr::GetValues(std::vector<llvm::APFloat> &fpt, llvm::Type *type, bool forceVarying) const {
     switch (getBasicType()) {
     case AtomicType::TYPE_BOOL:
@@ -5698,60 +5610,16 @@ int ConstExpr::GetValues(std::vector<llvm::APFloat> &fpt, llvm::Type *type, bool
     case AtomicType::TYPE_UINT32:
         lConvert(uint32Val, fpt, type, Count(), forceVarying);
         break;
-    case AtomicType::TYPE_FLOAT16:
-    case AtomicType::TYPE_FLOAT:
-    case AtomicType::TYPE_DOUBLE:
-        lConvert(&fpVal[0], fpt, type, Count(), forceVarying);
-        break;
     case AtomicType::TYPE_INT64:
         lConvert(int64Val, fpt, type, Count(), forceVarying);
         break;
     case AtomicType::TYPE_UINT64:
         lConvert(uint64Val, fpt, type, Count(), forceVarying);
         break;
-    default:
-        FATAL("unimplemented const type");
-    }
-    return Count();
-}
-
-int ConstExpr::GetValues(bool *b, bool forceVarying) const {
-    switch (getBasicType()) {
-    case AtomicType::TYPE_BOOL:
-        lConvert(boolVal, b, Count(), forceVarying);
-        break;
-    case AtomicType::TYPE_INT8:
-        lConvert(int8Val, b, Count(), forceVarying);
-        break;
-    case AtomicType::TYPE_UINT8:
-        lConvert(uint8Val, b, Count(), forceVarying);
-        break;
-    case AtomicType::TYPE_INT16:
-        lConvert(int16Val, b, Count(), forceVarying);
-        break;
-    case AtomicType::TYPE_UINT16:
-        lConvert(uint16Val, b, Count(), forceVarying);
-        break;
-    case AtomicType::TYPE_INT32:
-        lConvert(int32Val, b, Count(), forceVarying);
-        break;
-    case AtomicType::TYPE_UINT32:
-        lConvert(uint32Val, b, Count(), forceVarying);
-        break;
     case AtomicType::TYPE_FLOAT16:
-        lConvert(&fpVal[0], b, Count(), forceVarying);
-        break;
     case AtomicType::TYPE_FLOAT:
-        lConvert(&fpVal[0], b, Count(), forceVarying);
-        break;
     case AtomicType::TYPE_DOUBLE:
-        lConvert(&fpVal[0], b, Count(), forceVarying);
-        break;
-    case AtomicType::TYPE_INT64:
-        lConvert(int64Val, b, Count(), forceVarying);
-        break;
-    case AtomicType::TYPE_UINT64:
-        lConvert(uint64Val, b, Count(), forceVarying);
+        lConvert(&fpVal[0], fpt, type, Count(), forceVarying);
         break;
     default:
         FATAL("unimplemented const type");
@@ -5759,269 +5627,62 @@ int ConstExpr::GetValues(bool *b, bool forceVarying) const {
     return Count();
 }
 
-int ConstExpr::GetValues(int8_t *ip, bool forceVarying) const {
-    switch (getBasicType()) {
-    case AtomicType::TYPE_BOOL:
-        lConvert(boolVal, ip, Count(), forceVarying);
-        break;
-    case AtomicType::TYPE_INT8:
-        lConvert(int8Val, ip, Count(), forceVarying);
-        break;
-    case AtomicType::TYPE_UINT8:
-        lConvert(uint8Val, ip, Count(), forceVarying);
-        break;
-    case AtomicType::TYPE_INT16:
-        lConvert(int16Val, ip, Count(), forceVarying);
-        break;
-    case AtomicType::TYPE_UINT16:
-        lConvert(uint16Val, ip, Count(), forceVarying);
-        break;
-    case AtomicType::TYPE_INT32:
-        lConvert(int32Val, ip, Count(), forceVarying);
-        break;
-    case AtomicType::TYPE_UINT32:
-        lConvert(uint32Val, ip, Count(), forceVarying);
-        break;
-    case AtomicType::TYPE_FLOAT16:
-        lConvert(&fpVal[0], ip, Count(), forceVarying);
-        break;
-    case AtomicType::TYPE_FLOAT:
-        lConvert(&fpVal[0], ip, Count(), forceVarying);
-        break;
-    case AtomicType::TYPE_DOUBLE:
-        lConvert(&fpVal[0], ip, Count(), forceVarying);
-        break;
-    case AtomicType::TYPE_INT64:
-        lConvert(int64Val, ip, Count(), forceVarying);
-        break;
-    case AtomicType::TYPE_UINT64:
-        lConvert(uint64Val, ip, Count(), forceVarying);
-        break;
-    default:
-        FATAL("unimplemented const type");
-    }
+#define CONVERT_SWITCH                                                                                                 \
+    switch (getBasicType()) {                                                                                          \
+    case AtomicType::TYPE_BOOL:                                                                                        \
+        lConvert(boolVal, toPtr, Count(), forceVarying);                                                               \
+        break;                                                                                                         \
+    case AtomicType::TYPE_INT8:                                                                                        \
+        lConvert(int8Val, toPtr, Count(), forceVarying);                                                               \
+        break;                                                                                                         \
+    case AtomicType::TYPE_UINT8:                                                                                       \
+        lConvert(uint8Val, toPtr, Count(), forceVarying);                                                              \
+        break;                                                                                                         \
+    case AtomicType::TYPE_INT16:                                                                                       \
+        lConvert(int16Val, toPtr, Count(), forceVarying);                                                              \
+        break;                                                                                                         \
+    case AtomicType::TYPE_UINT16:                                                                                      \
+        lConvert(uint16Val, toPtr, Count(), forceVarying);                                                             \
+        break;                                                                                                         \
+    case AtomicType::TYPE_INT32:                                                                                       \
+        lConvert(int32Val, toPtr, Count(), forceVarying);                                                              \
+        break;                                                                                                         \
+    case AtomicType::TYPE_UINT32:                                                                                      \
+        lConvert(uint32Val, toPtr, Count(), forceVarying);                                                             \
+        break;                                                                                                         \
+    case AtomicType::TYPE_INT64:                                                                                       \
+        lConvert(int64Val, toPtr, Count(), forceVarying);                                                              \
+        break;                                                                                                         \
+    case AtomicType::TYPE_UINT64:                                                                                      \
+        lConvert(uint64Val, toPtr, Count(), forceVarying);                                                             \
+        break;                                                                                                         \
+    case AtomicType::TYPE_FLOAT16:                                                                                     \
+    case AtomicType::TYPE_FLOAT:                                                                                       \
+    case AtomicType::TYPE_DOUBLE:                                                                                      \
+        lConvert(&fpVal[0], toPtr, Count(), forceVarying);                                                             \
+        break;                                                                                                         \
+    default:                                                                                                           \
+        FATAL("unimplemented const type");                                                                             \
+    }                                                                                                                  \
     return Count();
-}
 
-int ConstExpr::GetValues(uint8_t *up, bool forceVarying) const {
-    switch (getBasicType()) {
-    case AtomicType::TYPE_BOOL:
-        lConvert(boolVal, up, Count(), forceVarying);
-        break;
-    case AtomicType::TYPE_INT8:
-        lConvert(int8Val, up, Count(), forceVarying);
-        break;
-    case AtomicType::TYPE_UINT8:
-        lConvert(uint8Val, up, Count(), forceVarying);
-        break;
-    case AtomicType::TYPE_INT16:
-        lConvert(int16Val, up, Count(), forceVarying);
-        break;
-    case AtomicType::TYPE_UINT16:
-        lConvert(uint16Val, up, Count(), forceVarying);
-        break;
-    case AtomicType::TYPE_INT32:
-        lConvert(int32Val, up, Count(), forceVarying);
-        break;
-    case AtomicType::TYPE_UINT32:
-        lConvert(uint32Val, up, Count(), forceVarying);
-        break;
-    case AtomicType::TYPE_FLOAT16:
-        lConvert(&fpVal[0], up, Count(), forceVarying);
-        break;
-    case AtomicType::TYPE_FLOAT:
-        lConvert(&fpVal[0], up, Count(), forceVarying);
-        break;
-    case AtomicType::TYPE_DOUBLE:
-        lConvert(&fpVal[0], up, Count(), forceVarying);
-        break;
-    case AtomicType::TYPE_INT64:
-        lConvert(int64Val, up, Count(), forceVarying);
-        break;
-    case AtomicType::TYPE_UINT64:
-        lConvert(uint64Val, up, Count(), forceVarying);
-        break;
-    default:
-        FATAL("unimplemented const type");
-    }
-    return Count();
-}
+int ConstExpr::GetValues(bool *toPtr, bool forceVarying) const { CONVERT_SWITCH; }
 
-int ConstExpr::GetValues(int16_t *ip, bool forceVarying) const {
-    switch (getBasicType()) {
-    case AtomicType::TYPE_BOOL:
-        lConvert(boolVal, ip, Count(), forceVarying);
-        break;
-    case AtomicType::TYPE_INT8:
-        lConvert(int8Val, ip, Count(), forceVarying);
-        break;
-    case AtomicType::TYPE_UINT8:
-        lConvert(uint8Val, ip, Count(), forceVarying);
-        break;
-    case AtomicType::TYPE_INT16:
-        lConvert(int16Val, ip, Count(), forceVarying);
-        break;
-    case AtomicType::TYPE_UINT16:
-        lConvert(uint16Val, ip, Count(), forceVarying);
-        break;
-    case AtomicType::TYPE_INT32:
-        lConvert(int32Val, ip, Count(), forceVarying);
-        break;
-    case AtomicType::TYPE_UINT32:
-        lConvert(uint32Val, ip, Count(), forceVarying);
-        break;
-    case AtomicType::TYPE_FLOAT16:
-        lConvert(&fpVal[0], ip, Count(), forceVarying);
-        break;
-    case AtomicType::TYPE_FLOAT:
-        lConvert(&fpVal[0], ip, Count(), forceVarying);
-        break;
-    case AtomicType::TYPE_DOUBLE:
-        lConvert(&fpVal[0], ip, Count(), forceVarying);
-        break;
-    case AtomicType::TYPE_INT64:
-        lConvert(int64Val, ip, Count(), forceVarying);
-        break;
-    case AtomicType::TYPE_UINT64:
-        lConvert(uint64Val, ip, Count(), forceVarying);
-        break;
-    default:
-        FATAL("unimplemented const type");
-    }
-    return Count();
-}
+int ConstExpr::GetValues(int8_t *toPtr, bool forceVarying) const { CONVERT_SWITCH; }
 
-int ConstExpr::GetValues(uint16_t *up, bool forceVarying) const {
-    switch (getBasicType()) {
-    case AtomicType::TYPE_BOOL:
-        lConvert(boolVal, up, Count(), forceVarying);
-        break;
-    case AtomicType::TYPE_INT8:
-        lConvert(int8Val, up, Count(), forceVarying);
-        break;
-    case AtomicType::TYPE_UINT8:
-        lConvert(uint8Val, up, Count(), forceVarying);
-        break;
-    case AtomicType::TYPE_INT16:
-        lConvert(int16Val, up, Count(), forceVarying);
-        break;
-    case AtomicType::TYPE_UINT16:
-        lConvert(uint16Val, up, Count(), forceVarying);
-        break;
-    case AtomicType::TYPE_INT32:
-        lConvert(int32Val, up, Count(), forceVarying);
-        break;
-    case AtomicType::TYPE_UINT32:
-        lConvert(uint32Val, up, Count(), forceVarying);
-        break;
-    case AtomicType::TYPE_FLOAT16:
-        lConvert(&fpVal[0], up, Count(), forceVarying);
-        break;
-    case AtomicType::TYPE_FLOAT:
-        lConvert(&fpVal[0], up, Count(), forceVarying);
-        break;
-    case AtomicType::TYPE_DOUBLE:
-        lConvert(&fpVal[0], up, Count(), forceVarying);
-        break;
-    case AtomicType::TYPE_INT64:
-        lConvert(int64Val, up, Count(), forceVarying);
-        break;
-    case AtomicType::TYPE_UINT64:
-        lConvert(uint64Val, up, Count(), forceVarying);
-        break;
-    default:
-        FATAL("unimplemented const type");
-    }
-    return Count();
-}
+int ConstExpr::GetValues(uint8_t *toPtr, bool forceVarying) const { CONVERT_SWITCH; }
 
-int ConstExpr::GetValues(int32_t *ip, bool forceVarying) const {
-    switch (getBasicType()) {
-    case AtomicType::TYPE_BOOL:
-        lConvert(boolVal, ip, Count(), forceVarying);
-        break;
-    case AtomicType::TYPE_INT8:
-        lConvert(int8Val, ip, Count(), forceVarying);
-        break;
-    case AtomicType::TYPE_UINT8:
-        lConvert(uint8Val, ip, Count(), forceVarying);
-        break;
-    case AtomicType::TYPE_INT16:
-        lConvert(int16Val, ip, Count(), forceVarying);
-        break;
-    case AtomicType::TYPE_UINT16:
-        lConvert(uint16Val, ip, Count(), forceVarying);
-        break;
-    case AtomicType::TYPE_INT32:
-        lConvert(int32Val, ip, Count(), forceVarying);
-        break;
-    case AtomicType::TYPE_UINT32:
-        lConvert(uint32Val, ip, Count(), forceVarying);
-        break;
-    case AtomicType::TYPE_FLOAT16:
-        lConvert(&fpVal[0], ip, Count(), forceVarying);
-        break;
-    case AtomicType::TYPE_FLOAT:
-        lConvert(&fpVal[0], ip, Count(), forceVarying);
-        break;
-    case AtomicType::TYPE_DOUBLE:
-        lConvert(&fpVal[0], ip, Count(), forceVarying);
-        break;
-    case AtomicType::TYPE_INT64:
-        lConvert(int64Val, ip, Count(), forceVarying);
-        break;
-    case AtomicType::TYPE_UINT64:
-        lConvert(uint64Val, ip, Count(), forceVarying);
-        break;
-    default:
-        FATAL("unimplemented const type");
-    }
-    return Count();
-}
+int ConstExpr::GetValues(int16_t *toPtr, bool forceVarying) const { CONVERT_SWITCH; }
 
-int ConstExpr::GetValues(uint32_t *up, bool forceVarying) const {
-    switch (getBasicType()) {
-    case AtomicType::TYPE_BOOL:
-        lConvert(boolVal, up, Count(), forceVarying);
-        break;
-    case AtomicType::TYPE_INT8:
-        lConvert(int8Val, up, Count(), forceVarying);
-        break;
-    case AtomicType::TYPE_UINT8:
-        lConvert(uint8Val, up, Count(), forceVarying);
-        break;
-    case AtomicType::TYPE_INT16:
-        lConvert(int16Val, up, Count(), forceVarying);
-        break;
-    case AtomicType::TYPE_UINT16:
-        lConvert(uint16Val, up, Count(), forceVarying);
-        break;
-    case AtomicType::TYPE_INT32:
-        lConvert(int32Val, up, Count(), forceVarying);
-        break;
-    case AtomicType::TYPE_UINT32:
-        lConvert(uint32Val, up, Count(), forceVarying);
-        break;
-    case AtomicType::TYPE_FLOAT16:
-        lConvert(&fpVal[0], up, Count(), forceVarying);
-        break;
-    case AtomicType::TYPE_FLOAT:
-        lConvert(&fpVal[0], up, Count(), forceVarying);
-        break;
-    case AtomicType::TYPE_DOUBLE:
-        lConvert(&fpVal[0], up, Count(), forceVarying);
-        break;
-    case AtomicType::TYPE_INT64:
-        lConvert(int64Val, up, Count(), forceVarying);
-        break;
-    case AtomicType::TYPE_UINT64:
-        lConvert(uint64Val, up, Count(), forceVarying);
-        break;
-    default:
-        FATAL("unimplemented const type");
-    }
-    return Count();
-}
+int ConstExpr::GetValues(uint16_t *toPtr, bool forceVarying) const { CONVERT_SWITCH; }
+
+int ConstExpr::GetValues(int32_t *toPtr, bool forceVarying) const { CONVERT_SWITCH; }
+
+int ConstExpr::GetValues(uint32_t *toPtr, bool forceVarying) const { CONVERT_SWITCH; }
+
+int ConstExpr::GetValues(int64_t *toPtr, bool forceVarying) const { CONVERT_SWITCH; }
+
+int ConstExpr::GetValues(uint64_t *toPtr, bool forceVarying) const { CONVERT_SWITCH; }
 
 int ConstExpr::Count() const { return GetType()->IsVaryingType() ? g->target->getVectorWidth() : 1; }
 
