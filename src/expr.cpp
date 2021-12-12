@@ -863,6 +863,16 @@ static llvm::Constant *lLLVMConstantValue(const Type *type, llvm::LLVMContext *c
             unsigned int i = (unsigned int)value;
             return isUniform ? LLVMUInt32(i) : LLVMUInt32Vector(i);
         }
+        case AtomicType::TYPE_INT64: {
+            int64_t i = (int64_t)value;
+            Assert((double)i == value);
+            return isUniform ? LLVMInt64(i) : LLVMInt64Vector(i);
+        }
+        case AtomicType::TYPE_UINT64: {
+            uint64_t i = (uint64_t)value;
+            Assert(value == (int64_t)i);
+            return isUniform ? LLVMUInt64(i) : LLVMUInt64Vector(i);
+        }
         case AtomicType::TYPE_FLOAT16: {
             llvm::APFloat apf16 = lCreateAPFloat(value, LLVMTypes::Float16Type);
             return isUniform ? LLVMFloat16(apf16) : LLVMFloat16Vector(apf16);
@@ -870,16 +880,6 @@ static llvm::Constant *lLLVMConstantValue(const Type *type, llvm::LLVMContext *c
         case AtomicType::TYPE_FLOAT: {
             llvm::APFloat apf = lCreateAPFloat(value, LLVMTypes::FloatType);
             return isUniform ? LLVMFloat(apf) : LLVMFloatVector(apf);
-        }
-        case AtomicType::TYPE_UINT64: {
-            uint64_t i = (uint64_t)value;
-            Assert(value == (int64_t)i);
-            return isUniform ? LLVMUInt64(i) : LLVMUInt64Vector(i);
-        }
-        case AtomicType::TYPE_INT64: {
-            int64_t i = (int64_t)value;
-            Assert((double)i == value);
-            return isUniform ? LLVMInt64(i) : LLVMInt64Vector(i);
         }
         case AtomicType::TYPE_DOUBLE: {
             llvm::APFloat apd = lCreateAPFloat(value, LLVMTypes::DoubleType);
@@ -5434,6 +5434,12 @@ ConstExpr::ConstExpr(ConstExpr *old, SourcePos p) : Expr(p, ConstExprID) {
     case AtomicType::TYPE_UINT32:
         memcpy(uint32Val, old->uint32Val, Count() * sizeof(uint32_t));
         break;
+    case AtomicType::TYPE_INT64:
+        memcpy(int64Val, old->int64Val, Count() * sizeof(int64_t));
+        break;
+    case AtomicType::TYPE_UINT64:
+        memcpy(uint64Val, old->uint64Val, Count() * sizeof(uint64_t));
+        break;
     case AtomicType::TYPE_FLOAT16:
         fpVal = old->fpVal;
         break;
@@ -5442,12 +5448,6 @@ ConstExpr::ConstExpr(ConstExpr *old, SourcePos p) : Expr(p, ConstExprID) {
         break;
     case AtomicType::TYPE_DOUBLE:
         fpVal = old->fpVal;
-        break;
-    case AtomicType::TYPE_INT64:
-        memcpy(int64Val, old->int64Val, Count() * sizeof(int64_t));
-        break;
-    case AtomicType::TYPE_UINT64:
-        memcpy(uint64Val, old->uint64Val, Count() * sizeof(uint64_t));
         break;
     default:
         FATAL("unimplemented const type");
@@ -5490,14 +5490,14 @@ llvm::Value *ConstExpr::GetValue(FunctionEmitContext *ctx) const {
         return isVarying ? LLVMInt32Vector(int32Val) : LLVMInt32(int32Val[0]);
     case AtomicType::TYPE_UINT32:
         return isVarying ? LLVMUInt32Vector(uint32Val) : LLVMUInt32(uint32Val[0]);
-    case AtomicType::TYPE_FLOAT16:
-        return isVarying ? LLVMFloat16Vector(fpVal) : LLVMFloat16(fpVal[0]);
-    case AtomicType::TYPE_FLOAT:
-        return isVarying ? LLVMFloatVector(fpVal) : LLVMFloat(fpVal[0]);
     case AtomicType::TYPE_INT64:
         return isVarying ? LLVMInt64Vector(int64Val) : LLVMInt64(int64Val[0]);
     case AtomicType::TYPE_UINT64:
         return isVarying ? LLVMUInt64Vector(uint64Val) : LLVMUInt64(uint64Val[0]);
+    case AtomicType::TYPE_FLOAT16:
+        return isVarying ? LLVMFloat16Vector(fpVal) : LLVMFloat16(fpVal[0]);
+    case AtomicType::TYPE_FLOAT:
+        return isVarying ? LLVMFloatVector(fpVal) : LLVMFloat(fpVal[0]);
     case AtomicType::TYPE_DOUBLE:
         return isVarying ? LLVMDoubleVector(fpVal) : LLVMDouble(fpVal[0]);
     default:
@@ -5739,14 +5739,6 @@ static std::pair<llvm::Constant *, bool> lGetConstExprConstant(const Type *const
             return std::pair<llvm::Constant *, bool>(LLVMUInt16(uiv[0]), isNotValidForMultiTargetGlobal);
         else
             return std::pair<llvm::Constant *, bool>(LLVMUInt16Vector(uiv), isNotValidForMultiTargetGlobal);
-    } else if (Type::Equal(constType, AtomicType::UniformFloat16) ||
-               Type::Equal(constType, AtomicType::VaryingFloat16)) {
-        std::vector<llvm::APFloat> f16v;
-        cExpr->GetValues(f16v, LLVMTypes::Float16Type, constType->IsVaryingType());
-        if (constType->IsUniformType())
-            return std::pair<llvm::Constant *, bool>(LLVMFloat16(f16v[0]), isNotValidForMultiTargetGlobal);
-        else
-            return std::pair<llvm::Constant *, bool>(LLVMFloat16Vector(f16v), isNotValidForMultiTargetGlobal);
     } else if (Type::Equal(constType, AtomicType::UniformInt32) || Type::Equal(constType, AtomicType::VaryingInt32)) {
         int32_t iv[ISPC_MAX_NVEC];
         cExpr->GetValues(iv, constType->IsVaryingType());
@@ -5762,13 +5754,6 @@ static std::pair<llvm::Constant *, bool> lGetConstExprConstant(const Type *const
             return std::pair<llvm::Constant *, bool>(LLVMUInt32(uiv[0]), isNotValidForMultiTargetGlobal);
         else
             return std::pair<llvm::Constant *, bool>(LLVMUInt32Vector(uiv), isNotValidForMultiTargetGlobal);
-    } else if (Type::Equal(constType, AtomicType::UniformFloat) || Type::Equal(constType, AtomicType::VaryingFloat)) {
-        std::vector<llvm::APFloat> fv;
-        cExpr->GetValues(fv, LLVMTypes::FloatType, constType->IsVaryingType());
-        if (constType->IsUniformType())
-            return std::pair<llvm::Constant *, bool>(LLVMFloat(fv[0]), isNotValidForMultiTargetGlobal);
-        else
-            return std::pair<llvm::Constant *, bool>(LLVMFloatVector(fv), isNotValidForMultiTargetGlobal);
     } else if (Type::Equal(constType, AtomicType::UniformInt64) || Type::Equal(constType, AtomicType::VaryingInt64)) {
         int64_t iv[ISPC_MAX_NVEC];
         cExpr->GetValues(iv, constType->IsVaryingType());
@@ -5783,6 +5768,21 @@ static std::pair<llvm::Constant *, bool> lGetConstExprConstant(const Type *const
             return std::pair<llvm::Constant *, bool>(LLVMUInt64(uiv[0]), isNotValidForMultiTargetGlobal);
         else
             return std::pair<llvm::Constant *, bool>(LLVMUInt64Vector(uiv), isNotValidForMultiTargetGlobal);
+    } else if (Type::Equal(constType, AtomicType::UniformFloat16) ||
+               Type::Equal(constType, AtomicType::VaryingFloat16)) {
+        std::vector<llvm::APFloat> f16v;
+        cExpr->GetValues(f16v, LLVMTypes::Float16Type, constType->IsVaryingType());
+        if (constType->IsUniformType())
+            return std::pair<llvm::Constant *, bool>(LLVMFloat16(f16v[0]), isNotValidForMultiTargetGlobal);
+        else
+            return std::pair<llvm::Constant *, bool>(LLVMFloat16Vector(f16v), isNotValidForMultiTargetGlobal);
+    } else if (Type::Equal(constType, AtomicType::UniformFloat) || Type::Equal(constType, AtomicType::VaryingFloat)) {
+        std::vector<llvm::APFloat> fv;
+        cExpr->GetValues(fv, LLVMTypes::FloatType, constType->IsVaryingType());
+        if (constType->IsUniformType())
+            return std::pair<llvm::Constant *, bool>(LLVMFloat(fv[0]), isNotValidForMultiTargetGlobal);
+        else
+            return std::pair<llvm::Constant *, bool>(LLVMFloatVector(fv), isNotValidForMultiTargetGlobal);
     } else if (Type::Equal(constType, AtomicType::UniformDouble) || Type::Equal(constType, AtomicType::VaryingDouble)) {
         std::vector<llvm::APFloat> dv;
         cExpr->GetValues(dv, LLVMTypes::DoubleType, constType->IsVaryingType());
@@ -5854,17 +5854,17 @@ void ConstExpr::Print() const {
         case AtomicType::TYPE_UINT32:
             printf("%u", uint32Val[i]);
             break;
-        case AtomicType::TYPE_FLOAT16:
-            printf("%f", fpVal[i].convertToFloat());
-            break;
-        case AtomicType::TYPE_FLOAT:
-            printf("%f", fpVal[i].convertToFloat());
-            break;
         case AtomicType::TYPE_INT64:
             printf("%" PRId64, int64Val[i]);
             break;
         case AtomicType::TYPE_UINT64:
             printf("%" PRIu64, uint64Val[i]);
+            break;
+        case AtomicType::TYPE_FLOAT16:
+            printf("%f", fpVal[i].convertToFloat());
+            break;
+        case AtomicType::TYPE_FLOAT:
+            printf("%f", fpVal[i].convertToFloat());
             break;
         case AtomicType::TYPE_DOUBLE:
             printf("%f", fpVal[i].convertToDouble());
@@ -6196,6 +6196,12 @@ static llvm::Value *lTypeConvAtomic(FunctionEmitContext *ctx, llvm::Value *exprV
         case AtomicType::TYPE_UINT16:
             cast = exprVal;
             break;
+        case AtomicType::TYPE_INT32:
+        case AtomicType::TYPE_UINT32:
+        case AtomicType::TYPE_INT64:
+        case AtomicType::TYPE_UINT64:
+            cast = ctx->TruncInst(exprVal, targetType, cOpName);
+            break;
         case AtomicType::TYPE_FLOAT16:
             if (fromType->IsVaryingType())
                 PerformanceWarning(pos, "Conversion from float16 to unsigned int is slow. "
@@ -6209,12 +6215,6 @@ static llvm::Value *lTypeConvAtomic(FunctionEmitContext *ctx, llvm::Value *exprV
                                         "Use \"int\" if possible");
             cast = ctx->CastInst(llvm::Instruction::FPToUI, // unsigned int
                                  exprVal, targetType, cOpName);
-            break;
-        case AtomicType::TYPE_INT32:
-        case AtomicType::TYPE_UINT32:
-        case AtomicType::TYPE_INT64:
-        case AtomicType::TYPE_UINT64:
-            cast = ctx->TruncInst(exprVal, targetType, cOpName);
             break;
         case AtomicType::TYPE_DOUBLE:
             if (fromType->IsVaryingType())
@@ -6283,6 +6283,10 @@ static llvm::Value *lTypeConvAtomic(FunctionEmitContext *ctx, llvm::Value *exprV
         case AtomicType::TYPE_UINT32:
             cast = exprVal;
             break;
+        case AtomicType::TYPE_INT64:
+        case AtomicType::TYPE_UINT64:
+            cast = ctx->TruncInst(exprVal, targetType, cOpName);
+            break;
         case AtomicType::TYPE_FLOAT16:
             if (fromType->IsVaryingType())
                 PerformanceWarning(pos, "Conversion from float16 to unsigned int is slow. "
@@ -6296,10 +6300,6 @@ static llvm::Value *lTypeConvAtomic(FunctionEmitContext *ctx, llvm::Value *exprV
                                         "Use \"int\" if possible");
             cast = ctx->CastInst(llvm::Instruction::FPToUI, // unsigned int
                                  exprVal, targetType, cOpName);
-            break;
-        case AtomicType::TYPE_INT64:
-        case AtomicType::TYPE_UINT64:
-            cast = ctx->TruncInst(exprVal, targetType, cOpName);
             break;
         case AtomicType::TYPE_DOUBLE:
             if (fromType->IsVaryingType())
@@ -6364,6 +6364,10 @@ static llvm::Value *lTypeConvAtomic(FunctionEmitContext *ctx, llvm::Value *exprV
         case AtomicType::TYPE_UINT32:
             cast = ctx->ZExtInst(exprVal, targetType, cOpName);
             break;
+        case AtomicType::TYPE_INT64:
+        case AtomicType::TYPE_UINT64:
+            cast = exprVal;
+            break;
         case AtomicType::TYPE_FLOAT16:
             if (fromType->IsVaryingType())
                 PerformanceWarning(pos, "Conversion from float16 to unsigned int64 is slow. "
@@ -6377,10 +6381,6 @@ static llvm::Value *lTypeConvAtomic(FunctionEmitContext *ctx, llvm::Value *exprV
                                         "Use \"int64\" if possible");
             cast = ctx->CastInst(llvm::Instruction::FPToUI, // signed int
                                  exprVal, targetType, cOpName);
-            break;
-        case AtomicType::TYPE_INT64:
-        case AtomicType::TYPE_UINT64:
-            cast = exprVal;
             break;
         case AtomicType::TYPE_DOUBLE:
             if (fromType->IsVaryingType())
@@ -6424,6 +6424,13 @@ static llvm::Value *lTypeConvAtomic(FunctionEmitContext *ctx, llvm::Value *exprV
             cast = ctx->CmpInst(llvm::Instruction::ICmp, llvm::CmpInst::ICMP_NE, exprVal, zero, cOpName);
             break;
         }
+        case AtomicType::TYPE_INT64:
+        case AtomicType::TYPE_UINT64: {
+            llvm::Value *zero =
+                fromType->IsUniformType() ? (llvm::Value *)LLVMInt64(0) : (llvm::Value *)LLVMInt64Vector((int64_t)0);
+            cast = ctx->CmpInst(llvm::Instruction::ICmp, llvm::CmpInst::ICMP_NE, exprVal, zero, cOpName);
+            break;
+        }
         case AtomicType::TYPE_FLOAT16: {
             llvm::APFloat zf16 = llvm::APFloat::getZero((LLVMTypes::Float16Type)->getFltSemantics());
             llvm::Value *zero =
@@ -6436,13 +6443,6 @@ static llvm::Value *lTypeConvAtomic(FunctionEmitContext *ctx, llvm::Value *exprV
             llvm::Value *zero =
                 fromType->IsUniformType() ? (llvm::Value *)LLVMFloat(zf) : (llvm::Value *)LLVMFloatVector(zf);
             cast = ctx->CmpInst(llvm::Instruction::FCmp, llvm::CmpInst::FCMP_ONE, exprVal, zero, cOpName);
-            break;
-        }
-        case AtomicType::TYPE_INT64:
-        case AtomicType::TYPE_UINT64: {
-            llvm::Value *zero =
-                fromType->IsUniformType() ? (llvm::Value *)LLVMInt64(0) : (llvm::Value *)LLVMInt64Vector((int64_t)0);
-            cast = ctx->CmpInst(llvm::Instruction::ICmp, llvm::CmpInst::ICMP_NE, exprVal, zero, cOpName);
             break;
         }
         case AtomicType::TYPE_DOUBLE: {
@@ -7029,16 +7029,6 @@ Expr *TypeCastExpr::Optimize() {
         constExpr->GetValues(uv, forceVarying);
         return new ConstExpr(toType, uv, pos);
     }
-    case AtomicType::TYPE_FLOAT: {
-        std::vector<llvm::APFloat> fv;
-        constExpr->GetValues(fv, LLVMTypes::FloatType, forceVarying);
-        return new ConstExpr(toType, fv, pos);
-    }
-    case AtomicType::TYPE_FLOAT16: {
-        std::vector<llvm::APFloat> fh;
-        constExpr->GetValues(fh, LLVMTypes::Float16Type, forceVarying);
-        return new ConstExpr(toType, fh, pos);
-    }
     case AtomicType::TYPE_INT64: {
         int64_t iv[ISPC_MAX_NVEC];
         constExpr->GetValues(iv, forceVarying);
@@ -7048,6 +7038,16 @@ Expr *TypeCastExpr::Optimize() {
         uint64_t uv[ISPC_MAX_NVEC];
         constExpr->GetValues(uv, forceVarying);
         return new ConstExpr(toType, uv, pos);
+    }
+    case AtomicType::TYPE_FLOAT16: {
+        std::vector<llvm::APFloat> fh;
+        constExpr->GetValues(fh, LLVMTypes::Float16Type, forceVarying);
+        return new ConstExpr(toType, fh, pos);
+    }
+    case AtomicType::TYPE_FLOAT: {
+        std::vector<llvm::APFloat> fv;
+        constExpr->GetValues(fv, LLVMTypes::FloatType, forceVarying);
+        return new ConstExpr(toType, fv, pos);
     }
     case AtomicType::TYPE_DOUBLE: {
         std::vector<llvm::APFloat> dv;
