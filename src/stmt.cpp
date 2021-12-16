@@ -3054,6 +3054,19 @@ static llvm::Function *getPrintImplFunc() {
     return printImplFunc;
 }
 
+// Check if number of requested arguments in format string corresponds to actual number of arguments
+static bool checkFormatString(const std::string &format, const int nArgs, const SourcePos &pos) {
+    // We do not allow escape percent sign in ISPC as %%, so treat it as two args
+    const int argsInFormat = std::count(format.begin(), format.end(), '%');
+    if (nArgs < argsInFormat) {
+        Error(pos, "Not enough arguments are provided in print call");
+        return false;
+    } else if (nArgs > argsInFormat) {
+        Error(pos, "Too much arguments are provided in print call");
+        return false;
+    }
+    return true;
+}
 #ifdef ISPC_XE_ENABLED
 // Builds args for OCL printf function based on ISPC print args.
 class PrintArgsBuilder {
@@ -3202,6 +3215,8 @@ class PrintLZFormatStrBuilder {
     // generates printf format string.
     std::string get(const std::string &ISPCFormat, const std::string &argTypes, const SourcePos &pos) {
         std::string format;
+        if (!checkFormatString(ISPCFormat, argTypes.size(), pos))
+            return "";
         format.reserve(ISPCFormat.size());
         auto curISPCFormatIt = ISPCFormat.begin();
         for (auto type : argTypes) {
@@ -3312,13 +3327,15 @@ class PrintLZFormatStrBuilder {
 // info is used unchanged \p typeWeightFirst is returned.
 template <typename FormatIt, typename TypeWeightIt>
 std::tuple<FormatIt, TypeWeightIt> splitValidFormat(FormatIt formatFirst, FormatIt formatLast,
-                                                    TypeWeightIt typeWeightFirst, int LZPrintFormatLimit) {
+                                                    TypeWeightIt typeWeightFirst, int LZPrintFormatLimit,
+                                                    const std::vector<int> argWeights) {
     int sum = 0;
     // space for '\0'
     --LZPrintFormatLimit;
     for (; formatFirst != formatLast; ++formatFirst) {
         char curCh = *formatFirst;
-        if (curCh == '%') {
+        // Check that typeWeightFirst can be safely derefrenced here
+        if ((curCh == '%') && (typeWeightFirst != argWeights.end())) {
             sum += *typeWeightFirst;
             if (sum <= LZPrintFormatLimit)
                 ++typeWeightFirst;
@@ -3332,9 +3349,13 @@ std::tuple<FormatIt, TypeWeightIt> splitValidFormat(FormatIt formatFirst, Format
 
 // Splits original print into several prints with valid length format strings.
 static std::vector<PrintSliceInfo> getPrintSlices(const std::string &format, PrintLZFormatStrBuilder &formatBuilder,
-                                                  const PrintArgsBuilder &args, const int LZPrintFormatLimit) {
+                                                  const PrintArgsBuilder &args, const int LZPrintFormatLimit,
+                                                  const SourcePos &pos) {
     auto argTypes = args.generateArgTypes();
     std::vector<PrintSliceInfo> printSlices;
+    if (!checkFormatString(format, argTypes.size(), pos)) {
+        return printSlices;
+    }
     std::vector<int> argWeights(argTypes.size());
     std::transform(argTypes.begin(), argTypes.end(), argWeights.begin(), [&formatBuilder](char type) {
         return formatBuilder.getOrCreateSpecifier(static_cast<PrintInfo::Encoding>(type)).size();
@@ -3344,7 +3365,8 @@ static std::vector<PrintSliceInfo> getPrintSlices(const std::string &format, Pri
     for (auto curFormat = format.begin(), lastFormat = format.end(); curFormat != lastFormat;) {
         auto prevFormat = curFormat;
         auto prevArgWeight = curArgWeight;
-        std::tie(curFormat, curArgWeight) = splitValidFormat(curFormat, lastFormat, curArgWeight, LZPrintFormatLimit);
+        std::tie(curFormat, curArgWeight) =
+            splitValidFormat(curFormat, lastFormat, curArgWeight, LZPrintFormatLimit, argWeights);
         Assert(curFormat > prevFormat && "haven't managed to split format string");
         printSlices.push_back({std::string(prevFormat, curFormat),
                                args.extract(prevArgWeight - firstArgWeight, curArgWeight - firstArgWeight)});
@@ -3395,7 +3417,7 @@ static void emitCode4LZPrintSlice(const PrintSliceInfo &printSlice, PrintLZForma
 void PrintStmt::emitCode4LZ(FunctionEmitContext *ctx) const {
     auto allArgs = getPrintArgsBuilder(values, ctx);
     PrintLZFormatStrBuilder formatBuilder(g->target->getVectorWidth());
-    auto printSlices = getPrintSlices(format, formatBuilder, allArgs, PrintInfo::LZMaxFormatStrSize);
+    auto printSlices = getPrintSlices(format, formatBuilder, allArgs, PrintInfo::LZMaxFormatStrSize, pos);
     for (const auto &printSlice : printSlices)
         emitCode4LZPrintSlice(printSlice, formatBuilder, ctx, pos);
 }
@@ -3444,6 +3466,8 @@ std::vector<llvm::Value *> PrintStmt::getDoPrintArgs(FunctionEmitContext *ctx) c
     std::string argTypes;
 
     if (values == NULL) {
+        // Check requested format
+        checkFormatString(format, 0, pos);
         llvm::Type *ptrPtrType = llvm::PointerType::get(LLVMTypes::VoidPointerType, 0);
         doPrintArgs[ARGS_IDX] = llvm::Constant::getNullValue(ptrPtrType);
     } else {
@@ -3452,6 +3476,8 @@ std::vector<llvm::Value *> PrintStmt::getDoPrintArgs(FunctionEmitContext *ctx) c
         // for the 5th __do_print() argument
         ExprList *elist = llvm::dyn_cast<ExprList>(values);
         int nArgs = elist ? elist->exprs.size() : 1;
+        // Check requested format
+        checkFormatString(format, nArgs, pos);
         // Allocate space for the array of pointers to values to be printed
         llvm::Type *argPtrArrayType = llvm::ArrayType::get(LLVMTypes::VoidPointerType, nArgs);
         llvm::Value *argPtrArray = ctx->AllocaInst(argPtrArrayType, "print_arg_ptrs");
