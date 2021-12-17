@@ -44,7 +44,7 @@ Using The ISPC Compiler
 The output from ``ispc`` for Xe targets is SPIR-V file by default. It is used
 when one of ``gen9`` or ``xe`` targets is selected:
 
-::
+.. code-block:: console
 
    ispc foo.ispc --target=gen9-x8 -o foo.spv
 
@@ -80,7 +80,7 @@ Four new targets were introduced for GPU support: ``gen9-x8``, ``gen9-x16``,
 If the ``-o`` flag is given, ``ispc`` will generate a SPIR-V output file.
 Optionally you can use ``--emit-spirv`` flag:
 
-::
+.. code-block:: console
 
    ispc --target=gen9-x8 --emit-spirv foo.ispc -o foo.spv
 
@@ -234,7 +234,7 @@ includes a simple example of how to use ``ispc`` with a short C++ program for
 CPU and GPU targets with ISPC Run Time. See the file ``simple.ispc`` in that
 directory (also reproduced here.)
 
-::
+.. code-block:: cpp
 
   struct Parameters {
       float *vin;
@@ -274,7 +274,7 @@ The second thing to notice is ``DEFINE_CPU_ENTRY_POINT`` which tells ``ISPCRT`` 
 function is an entry point for CPU. If you look into the definition of
 ``DEFINE_CPU_ENTRY_POINT``, it is just simple ``launch`` call:
 
-::
+.. code-block:: cpp
 
   launch[dim0, dim1, dim2] fcn_name(parameters);
 
@@ -295,17 +295,20 @@ depending on an input parameter. The device type is managed by
 fallback to CPU if no GPUs found).
 
 The program starts with including ``ISPCRT`` header:
-::
+
+.. code-block:: cpp
 
   #include "ispcrt.hpp"
 
 After that ``ISPCRT`` device is created:
-::
+
+.. code-block:: cpp
 
   ispcrt::Device device(device_type)
 
 Then we're setting up parameters for ISPC kernel:
-::
+
+.. code-block:: cpp
 
     // Setup input array
     ispcrt::Array<float> vin_dev(device, vin);
@@ -326,7 +329,8 @@ Notice that all reference types like arrays and structures should be wrapped up
 into ``ispcrt::Array`` for correct passing to ISPC kernel.
 
 Then we set up module and kernel to execute:
-::
+
+.. code-block:: cpp
 
     ispcrt::Module module(device, "xe_simple");
     ispcrt::Kernel kernel(device, module, "simple_ispc");
@@ -340,7 +344,8 @@ the ISPC kernel.
 
 The rest of the program creates ``ispcrt::TaskQueue``, fills it with required
 steps and executes it:
-::
+
+.. code-block:: cpp
 
     ispcrt::TaskQueue queue(device);
 
@@ -391,7 +396,7 @@ Go to ``simple`` folder and see what files were generated:
 * ``host_simple`` is the main executable. When it runs, it generates
   the expected output:
 
-::
+.. code-block:: console
 
     Executed on: Auto
     0: simple(0.000000) = 0.000000
@@ -408,7 +413,7 @@ into ISPC distribution package.
 So the complete ``CMakeFile.txt`` to build ``simple`` example extracted from ISPC
 build system is the following:
 
-::
+.. code-block:: cmake
 
   cmake_minimum_required(VERSION 3.14)
   project(simple)
@@ -419,7 +424,8 @@ build system is the following:
 
 
 And you can configure and build it using:
-::
+
+.. code-block:: console
 
   cmake ../ && make
 
@@ -428,14 +434,16 @@ You can also run separate compilation commands to achieve the same result.
 Here are example commands for Linux:
 
 * Compile ISPC kernel for GPU:
-  ::
+* 
+  .. code-block:: console
 
     ispc -I /home/ispc_package/include/ispcrt -DISPC_GPU --target=gen9-x8 --woff
     -o /home/ispc_package/examples/xpu/simple/xe_simple.spv
     /home/ispc_package/examples/xpu/simple/simple.ispc
 
 * Compile ISPC kernel for CPU:
-  ::
+* 
+  .. code-block:: console
 
     ispc -I /home/ispc_package/include/ispcrt --arch=x86-64
     --target=sse4-i32x4,avx1-i32x8,avx2-i32x8,avx512knl-i32x16,avx512skx-i32x16
@@ -445,13 +453,15 @@ Here are example commands for Linux:
     /home/ispc_package/examples/xpu/simple/simple.ispc
 
 * Produce a library from object files:
-  ::
+* 
+  .. code-block:: console
 
     /usr/bin/c++ -fPIC -shared -Wl,-soname,libxe_simple.so -o libxe_simple.so
     simple.dev*.o
 
 * Compile and link host code:
-  ::
+* 
+  .. code-block:: console
 
     /usr/bin/c++ -DISPCRT -isystem /home/ispc_package/include/ispcrt -fPIE
     -o /home/ispc_package/examples/xpu/simple/host_simple
@@ -459,7 +469,8 @@ Here are example commands for Linux:
     -Wl,-rpath,/home/ispc_package/lib
 
 By default, examples use SPIR-V format. You can try them with L0 binary format:
-  ::
+
+  .. code-block:: console
 
     cd examples/xpu/build
     cmake -DISPC_XE_FORMAT=zebin ../ && make
@@ -530,14 +541,14 @@ To reduce number of local variables you can follow these simple rules:
 * Use uniform instead of varyings wherever it is possible. This practice
   is good for both CPU and GPU but on GPU it is essential.
 
-::
+.. code-block:: cpp
 
   // Good example
   for(uniform int j=0;  j<3; j++) {
       do_something();
   }
 
-::
+.. code-block:: cpp
 
   // Bad example
   for(int j=0;  j<3; j++) {
@@ -552,7 +563,7 @@ To reduce number of local variables you can follow these simple rules:
   may need work on structure copy, consider to use reference or pointer. We're
   working to make such optimization automatically for future release:
 
-::
+.. code-block:: cpp
 
   // Instead of this:
   struct ExampleStructure
@@ -573,7 +584,7 @@ To reduce number of local variables you can follow these simple rules:
     s = createExampleStructure();
   }
 
-::
+.. code-block:: cpp
 
   // Consider using pointer:
   struct ExampleStructure
@@ -599,7 +610,7 @@ To reduce number of local variables you can follow these simple rules:
   If you see the warning message below during runtime, consider compiling your code
   for SIMD-8 target (``--target=gen9-x8``).
 
-::
+.. code-block:: console
 
   Spill memory used = 32 bytes for kernel kernel_name___vyi
 
@@ -610,7 +621,7 @@ The second set of rules is related to code branching.
 
 * Use ``select`` instead of branching:
 
-::
+.. code-block:: cpp
 
   if (x > 0)
     a = x;
@@ -618,7 +629,7 @@ The second set of rules is related to code branching.
     a = 7;
 
 
-::
+.. code-block:: cpp
 
   // May be implemented without branch:
   a = (x > 0)? x : 7;
@@ -626,7 +637,7 @@ The second set of rules is related to code branching.
 
 When using ``select``, try to simplify it as much as possible:
 
-::
+.. code-block:: cpp
 
   // Not optimized version:
   varying int K;
@@ -635,7 +646,7 @@ When using ``select``, try to simplify it as much as possible:
   return bConstant == true ? inParam[0] : InParam[K];
 
 
-::
+.. code-block:: cpp
 
   // Optimized version
   return InParam[bConstant == true ? 0 : K];
@@ -644,7 +655,7 @@ When using ``select``, try to simplify it as much as possible:
   In case when large code branches are necessary, consider changing your algorithm to group
   data processed by one task to follow the same path in the branch.
 
-::
+.. code-block:: cpp
 
   // Both branches execute memory access to 'array'. In the case of split branch between
   // different lanes, two memory access instructions would be executed.
@@ -654,7 +665,7 @@ When using ``select``, try to simplify it as much as possible:
     a = array[0];
 
 
-::
+.. code-block:: cpp
 
   // Instead move common part outside of the branch:
   int i;
@@ -667,7 +678,7 @@ When using ``select``, try to simplify it as much as possible:
 
 Similar situation with loops:
 
-::
+.. code-block:: cpp
 
   // Good example
   foreach (i = 0 ... WIDTH) {
@@ -680,7 +691,7 @@ Similar situation with loops:
     p->output[i + WIDTH * taskIndex] = temp;
   }
 
-::
+.. code-block:: cpp
 
   // Bad example
   foreach (i = 0 ... WIDTH) {
@@ -709,12 +720,13 @@ How to Get an Assembly File from SPIR-V?
 ----------------------------------------
 
 Use ``ocloc`` tool installed as part of intel-ocloc package:
-::
+
+.. code-block:: console
 
   // Create binary first
   ocloc compile -file file.spv -spirv_input -options "-vc-codegen" -device <name>
 
-::
+.. code-block:: console
 
   // Then disassemble it
   ocloc disasm -file file_Gen9core.bin -device <name> -dump <FOLDER_TO_DUMP>
