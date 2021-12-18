@@ -1,12 +1,8 @@
-//==------ noinline_bypointers_vadd.cpp  - DPC++ ESIMD on-device test ------==//
-//
-// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
-// See https://llvm.org/LICENSE.txt for license information.
-// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
-//
-//===----------------------------------------------------------------------===//
+/*
+  Copyright (c) 2021, Intel Corporation
+*/
 
-#include <CL/sycl.hpp>
+#include <sycl.hpp>
 #include <sycl/ext/intel/experimental/esimd.hpp>
 
 #include <iostream>
@@ -105,7 +101,7 @@ int main(void) {
         free(B, ctxt);
         free(C, ctxt);
 
-        return e.get_cl_code();
+        return 1;
     }
 
     int err_cnt = 0;
