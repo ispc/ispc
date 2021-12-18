@@ -1,7 +1,9 @@
-//==---------------- callback-esimd.cpp - DPC++ ESIMD calling ISPC function pointer test ---------==//
+/*
+  Copyright (c) 2021, Intel Corporation
+*/
 
-#include <CL/sycl.hpp>
 #include <iostream>
+#include <sycl.hpp>
 #include <sycl/ext/intel/experimental/esimd.hpp>
 
 using namespace sycl::ext::intel::experimental::esimd;
@@ -16,4 +18,3 @@ struct CallbackObject {
 extern "C" SYCL_EXTERNAL SYCL_ESIMD_FUNCTION float runCallbackEsimd(CallbackObject *object) {
     return object->function(object, -1.f);
 }
-
