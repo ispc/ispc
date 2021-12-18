@@ -29,8 +29,8 @@
 #include <level_zero/zes_api.h>
 
 // SYCL and interoperability headers
-#include <CL/sycl.hpp>
-#include <CL/sycl/backend/level_zero.hpp>
+#include <sycl.hpp>
+#include <sycl/ext/oneapi/backend/level_zero.hpp>
 
 #include "L0_helpers.h"
 #include "simple-dpcpp.hpp"
@@ -101,12 +101,14 @@ std::vector<float> DpcppApp::transformDpcpp(const std::vector<float> &in) {
     auto nativeContext = static_cast<ze_context_handle_t>(m_device.nativeContextHandle());
     auto nativeQueue = static_cast<ze_command_queue_handle_t>(m_queue.nativeTaskQueueHandle());
 
-    auto platform = sycl::level_zero::make<cl::sycl::platform>(nativePlatform);
-    auto device = sycl::level_zero::make<cl::sycl::device>(platform, nativeDevice);
-    // Set ownership of the native context handle to our app.
-    auto ctx = sycl::level_zero::make<cl::sycl::context>(platform.get_devices(), nativeContext,
-                                                         sycl::level_zero::ownership::keep);
-    auto q = sycl::level_zero::make<cl::sycl::queue>(ctx, nativeQueue);
+    auto platform = sycl::ext::oneapi::level_zero::make_platform((uintptr_t)nativePlatform);
+    auto device = sycl::ext::oneapi::level_zero::make_device(platform, (uintptr_t)nativeDevice);
+
+    auto ctx =
+        sycl::ext::oneapi::level_zero::make_context(platform.get_devices(), (uintptr_t)nativeContext,
+                                                    /*keep ownership of nativeContext handler on ISPC side*/ true);
+    auto q = sycl::ext::oneapi::level_zero::make_queue(ctx, (uintptr_t)nativeQueue,
+                                                       /*keep ownership of nativeQueue handler on ISPC side*/ true);
 
     // Set problem space
     sycl::range<1> range{count};
