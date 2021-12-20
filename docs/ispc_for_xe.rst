@@ -32,6 +32,9 @@ Contents:
 * `Performance`_
 
   + `Performance Guide for GPU Programming`_
+  + `Tools for Performance Analysis`_
+
++ `Interoperability`
 
 * `FAQ`_
 
@@ -152,7 +155,11 @@ The ``ISPC Run Time`` uses the following abstractions to manage code execution:
 
 * ``Barrier`` - synchronization primitive that can be inserted into
   a ``task queue`` to make sure that all tasks previously inserted into this
-  queue have completed execution.
+  queue have completed execution. It is not needed to include ``barrier``
+  between memory copy and kernel execution. All memory scheduled to be copied before the
+  kernel execution will complete before the kernel start.
+  This is implemented by ``ISPC Runtime`` using finer grain mechanisms than
+  a barrier and is more efficient.
 
 * ``Module`` - represents a set of ``kernels`` that are compiled together and
   thus can share some common code. In this sense, SPIR-V file produced by ``ispc``
@@ -203,7 +210,7 @@ Configuration
 The behavior of ``ISPCRT`` can be configured using the following environment
 variables:
 
-* ``ISPCRT_USE_ZEBIN`` - use experimental L0 native binary format.
+* ``ISPCRT_USE_ZEBIN`` - when defined forces to use experimental L0 native binary format.
   Unlike SPIR-V files, zebin files are not portable between different GPU types.
 
 * ``ISPCRT_IGC_OPTIONS`` - ``ISPCRT`` is using an Intel® Graphics Compiler (IGC)
@@ -226,6 +233,10 @@ variables:
   set to 100000, but can be lowered (for example for testing) using this environmental variable.
   Please note that the limit cannot be set to more than 100000. If a greater value is provided,
   the ``ISPCRT`` will set the limit to the default value and display a warning message.
+
+Also you can use ``ISPCRTModuleOptions`` structure to pass specific options to GPU module.
+Currently we support only one setting - ``stackSize`` which determines the stack size
+in VC backend. The default value is 8192.
 
 Compiling and Running Simple ISPC Program
 =========================================
@@ -354,21 +365,12 @@ steps and executes it:
     queue.copyToDevice(p_dev);
     queue.copyToDevice(vin_dev);
 
-    // Make sure that input arrays were copied
-    queue.barrier();
-
     // Launch the kernel on the device using 1 thread
     queue.launch(kernel, p_dev, 1);
-
-    // Make sure that execution completed
-    queue.barrier();
 
     // ispcrt::Array objects which used as outputs of ISPC kernel should be
     // explicitly copied to host from device
     queue.copyToHost(vout_dev);
-
-    // Make sure that input arrays were copied
-    queue.barrier();
 
     // Execute queue and sync
     queue.sync();
@@ -434,7 +436,7 @@ You can also run separate compilation commands to achieve the same result.
 Here are example commands for Linux:
 
 * Compile ISPC kernel for GPU:
-* 
+*
   .. code-block:: console
 
     ispc -I /home/ispc_package/include/ispcrt -DISPC_GPU --target=gen9-x8 --woff
@@ -442,7 +444,7 @@ Here are example commands for Linux:
     /home/ispc_package/examples/xpu/simple/simple.ispc
 
 * Compile ISPC kernel for CPU:
-* 
+*
   .. code-block:: console
 
     ispc -I /home/ispc_package/include/ispcrt --arch=x86-64
@@ -453,14 +455,14 @@ Here are example commands for Linux:
     /home/ispc_package/examples/xpu/simple/simple.ispc
 
 * Produce a library from object files:
-* 
+*
   .. code-block:: console
 
     /usr/bin/c++ -fPIC -shared -Wl,-soname,libxe_simple.so -o libxe_simple.so
     simple.dev*.o
 
 * Compile and link host code:
-* 
+*
   .. code-block:: console
 
     /usr/bin/c++ -DISPCRT -isystem /home/ispc_package/include/ispcrt -fPIE
@@ -480,20 +482,21 @@ By default, examples use SPIR-V format. You can try them with L0 binary format:
 Language Limitations and Known Issues
 =====================================
 
-The current release of ``Intel® ISPC for Xe`` is still in Beta stage so you may face
-some issues. However, it is actively developed so we expect to fix the remaining
-issues in the future releases.
-Below is the list of known limitations:
+Below is the list of known limitations of ``Intel® ISPC for Xe``:
 
-* Limited function pointers support
+* Limited function pointers support on Xe platforms. You may experience
+  incorrect program execution, so we recommend avoiding usage of function pointers.
+  Also ``print`` is not supported within functions called through function pointer.
 * Limited stack calls support. We recommend inlining functions as much as you can
   by marking them ``inline``.
-* Double math functions like ``sin``, ``cos``, ``log`` etc. are extremely slow.
-* Integer fast division is not fast yet especially for unsigned types.
-* Float precision is slightly different on CPU and GPU, GPU is more precise.
-  Please consider it when designing your algorithms.
-* ``print`` doesn't work perfectly especially in deep control flow statements.
-  Also, ``print`` is not supported with L0 binary format.
+* Floating point computations are not guaranteed to be bit-reproducible between
+  CPU and GPU. Specifically this true for math library functions. Please consider
+  it when designing your algorithms.
+* ``alloca`` with non-constant parameter is not supported yet.
+* Global variables are "kernel-local". Unlike on CPU, the value of global variable on GPU
+  will not be kept between multiple launches.
+* VC backend does not support modules with unresolved dependencies, so before passing
+  SPIR-V module to ISPC Runtime, ensure that all dependencies are resolved.
 
 
 There are several features that we do not plan to implement for GPU:
@@ -519,8 +522,9 @@ Intel(R) Core(TM) i9-9900K CPU @ 3.60GHz with Intel(R) Gen9 HD Graphics
 * @time of GPU run:			[10.886] milliseconds
 * @time of serial run:			[569] milliseconds
 
-Talking about real-world workloads, usually we demonstrate good performance on GPU
-that is on par with CPU.
+Talking about real-world workloads, ISPC provides a way to write a program
+that has good hardware utilization, but resulting performance depends a lot
+on many other factors, including proper data set partitioning and memory management.
 
 Performance Guide for GPU Programming
 ----------------------------------------
@@ -541,19 +545,19 @@ To reduce number of local variables you can follow these simple rules:
 * Use uniform instead of varyings wherever it is possible. This practice
   is good for both CPU and GPU but on GPU it is essential.
 
-.. code-block:: cpp
+  .. code-block:: cpp
 
-  // Good example
-  for(uniform int j=0;  j<3; j++) {
-      do_something();
-  }
+    // Good example
+    for(uniform int j=0; j<3; j++) {
+        do_something();
+    }
 
-.. code-block:: cpp
+  .. code-block:: cpp
 
-  // Bad example
-  for(int j=0;  j<3; j++) {
-      do_something();
-  }
+    // Bad example
+    for(int j=0; j<3; j++) {
+        do_something();
+    }
 
 
 * Avoid nested code with a lot of local variables. It is more effective
@@ -563,45 +567,45 @@ To reduce number of local variables you can follow these simple rules:
   may need work on structure copy, consider to use reference or pointer. We're
   working to make such optimization automatically for future release:
 
-.. code-block:: cpp
+  .. code-block:: cpp
 
-  // Instead of this:
-  struct ExampleStructure
-  {
-    //...
-  }
+    // Instead of this:
+    struct ExampleStructure
+    {
+      //...
+    }
 
-  ExampleStructure createExampleStructure()
-  {
-    ExampleStructure retVal;
-    //... initialize
-    return retVal;
-  }
+    ExampleStructure createExampleStructure()
+    {
+      ExampleStructure retVal;
+      //... initialize
+      return retVal;
+    }
 
-  int test()
-  {
-    ExampleStructure s;
-    s = createExampleStructure();
-  }
+    int test()
+    {
+      ExampleStructure s;
+      s = createExampleStructure();
+    }
 
-.. code-block:: cpp
+  .. code-block:: cpp
 
-  // Consider using pointer:
-  struct ExampleStructure
-  {
-    //...
-  }
+    // Consider using pointer:
+    struct ExampleStructure
+    {
+      //...
+    }
 
-  void initExampleStructure(ExampleStructure* init)
-  {
-    //... initialize
-  }
+    void initExampleStructure(ExampleStructure* init)
+    {
+      //... initialize
+    }
 
-  int test()
-  {
-    ExampleStructure s;
-    initExampleStructure( &s );
-  }
+    int test()
+    {
+      ExampleStructure s;
+      initExampleStructure( &s );
+    }
 
 
 * Avoid recursion.
@@ -610,9 +614,9 @@ To reduce number of local variables you can follow these simple rules:
   If you see the warning message below during runtime, consider compiling your code
   for SIMD-8 target (``--target=gen9-x8``).
 
-.. code-block:: console
+  .. code-block:: console
 
-  Spill memory used = 32 bytes for kernel kernel_name___vyi
+    Spill memory used = 32 bytes for kernel kernel_name___vyi
 
 
 **Code Branching**
@@ -621,86 +625,87 @@ The second set of rules is related to code branching.
 
 * Use ``select`` instead of branching:
 
-.. code-block:: cpp
+  .. code-block:: cpp
 
-  if (x > 0)
-    a = x;
-  else
-    a = 7;
-
-
-.. code-block:: cpp
-
-  // May be implemented without branch:
-  a = (x > 0)? x : 7;
+    if (x > 0)
+      a = x;
+    else
+      a = 7;
 
 
-When using ``select``, try to simplify it as much as possible:
+  .. code-block:: cpp
 
-.. code-block:: cpp
-
-  // Not optimized version:
-  varying int K;
-  uniform bool Constant;
-  ...
-  return bConstant == true ? inParam[0] : InParam[K];
+    // May be implemented without branch:
+    a = (x > 0)? x : 7;
 
 
-.. code-block:: cpp
+  When using ``select``, try to simplify it as much as possible:
 
-  // Optimized version
-  return InParam[bConstant == true ? 0 : K];
+  .. code-block:: cpp
+
+    // Not optimized version:
+    varying int K;
+    uniform bool Constant;
+    ...
+    return bConstant == true ? inParam[0] : InParam[K];
+
+
+  .. code-block:: cpp
+
+    // Optimized version
+    return InParam[bConstant == true ? 0 : K];
 
 * Keep branches as small as possible. Common operations should be moved outside the branch.
   In case when large code branches are necessary, consider changing your algorithm to group
   data processed by one task to follow the same path in the branch.
 
-.. code-block:: cpp
+  .. code-block:: cpp
 
-  // Both branches execute memory access to 'array'. In the case of split branch between
-  // different lanes, two memory access instructions would be executed.
-  if (x > 0)
-    a = array[x];
-  else
-    a = array[0];
-
-
-.. code-block:: cpp
-
-  // Instead move common part outside of the branch:
-  int i;
-  if (x > 0)
-    i = x;
-  else
-    i = 0;
-  a = array[i];
+    // Both branches execute memory access to 'array'. In the case of split branch between
+    // different lanes, two memory access instructions would be executed.
+    if (x > 0)
+      a = array[x];
+    else
+      a = array[0];
 
 
-Similar situation with loops:
+  .. code-block:: cpp
 
-.. code-block:: cpp
+    // Instead move common part outside of the branch:
+    int i;
+    if (x > 0)
+      i = x;
+    else
+      i = 0;
+    a = array[i];
 
-  // Good example
-  foreach (i = 0 ... WIDTH) {
-    p->output[i + WIDTH * taskIndex] = 0;
-    int temp = p->output[i + WIDTH * taskIndex];
-    for (int j = 0; j < DEPTH; j++) {
-      temp += N;
-      temp += M;
+
+  Similar situation with loops:
+
+  .. code-block:: cpp
+
+    // Good example
+    uniform int j;
+    foreach (i = 0 ... WIDTH) {
+      p->output[i + WIDTH * taskIndex] = 0;
+      int temp = p->output[i + WIDTH * taskIndex];
+      for (j = 0; j < DEPTH; j++) {
+        temp += N;
+        temp += M;
+      }
+      p->output[i + WIDTH * taskIndex] = temp;
     }
-    p->output[i + WIDTH * taskIndex] = temp;
-  }
 
-.. code-block:: cpp
+  .. code-block:: cpp
 
-  // Bad example
-  foreach (i = 0 ... WIDTH) {
-    p->output[i + WIDTH * taskIndex] = 0;
-    for (int j = 0; j < DEPTH; j++) {
-      p->output[i + WIDTH * taskIndex] += N;
-      p->output[i + WIDTH * taskIndex] += M;
+    // Bad example
+    foreach (i = 0 ... WIDTH) {
+      p->output[i + WIDTH * taskIndex] = 0;
+      for (int j = 0; j < DEPTH; j++) {
+        p->output[i + WIDTH * taskIndex] += N;
+        p->output[i + WIDTH * taskIndex] += M;
+      }
     }
-  }
 
 **Memory Operations**
 
@@ -711,6 +716,43 @@ by the host.
 We have several memory optimizations for GPU like gather/scatter coalescing. However
 current implementation covers only limited number of cases and we expect to improve it
 for the next release.
+
+Tools for Performance Analysis
+------------------------------
+
+To analyze performance of your program on Intel GPU we recommend the following tools:
+
+* `GTPin
+  <https://www.intel.com/content/www/us/en/developer/articles/tool/gtpin.html>`_
+  dynamic binary instrumentation command line framework for profiling a code
+  running on Xe Execution Units.
+
+
+* `Profiling Tools Interfaces for GPU
+  <https://github.com/intel/pti-gpu>`_
+  a bunch of useful tracing and instrumentation tools including ``ze_tracer`` that allows
+  to analyze performance of ``Level Zero`` calls which is the base of ``ISPC Runtime``.
+
+
+* `Intel(R) VTune Profiler
+  <https://www.intel.com/content/www/us/en/developer/tools/oneapi/vtune-profiler.html#gs.jxstae>`_
+  a performance analysis tool for different hardware targets (CPU, GPU, FPGA) and OS platforms (Linux,
+  Windows etc.).
+
+Note, that most of these tools report SIMD width for ISPC kernels as 1. However,
+it actually means that ISPC kernel may have "any" SIMD width. VC backend can optimize some
+instructions to wider SIMD width than was requested by ISPC ``--target`` option.
+
+
+Interoperability
+================
+
+ISPC experimentally supports interoperability with `Explicit SIMD SYCL* Extension (ESIMD)
+<https://www.intel.com/content/www/us/en/develop/documentation/oneapi-dpcpp-cpp-compiler-dev-guide-and-reference/top/optimization-and-programming-guide/vectorization/explicit-vector-programming/explicit-simd-sycl-extension.html>`_.
+
+You can call ``ESIMD`` function from ``ISPC`` kernel and vice versa. To experiment with this feature,
+please include ``interop.cmake`` to your CMakeLists.txt and use ``add_ispc_kernel`` and
+``link_ispc_esimd`` functions. See ``simple-esimd`` example as a reference.
 
 
 FAQ
