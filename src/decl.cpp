@@ -557,6 +557,7 @@ void Declarator::InitFromType(const Type *baseType, DeclSpecs *ds) {
         bool isExported = ds && ((ds->typeQualifiers & TYPEQUAL_EXPORT) != 0);
         bool isTask = ds && ((ds->typeQualifiers & TYPEQUAL_TASK) != 0);
         bool isUnmasked = ds && ((ds->typeQualifiers & TYPEQUAL_UNMASKED) != 0);
+        bool isVectorCall = ds && ((ds->typeQualifiers & TYPEQUAL_VECTORCALL) != 0);
 
         if (isExported && isTask) {
             Error(pos, "Function can't have both \"task\" and \"export\" "
@@ -583,7 +584,7 @@ void Declarator::InitFromType(const Type *baseType, DeclSpecs *ds) {
         }
 
         const FunctionType *functionType = new FunctionType(returnType, args, argNames, argDefaults, argPos, isTask,
-                                                            isExported, isExternC, isUnmasked);
+                                                            isExported, isExternC, isUnmasked, isVectorCall);
 
         // handle any explicit __declspecs on the function
         if (ds != NULL) {
