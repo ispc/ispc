@@ -886,10 +886,7 @@ void Module::AddFunctionDeclaration(const std::string &name, const FunctionType 
             function->addParamAttr(0, llvm::Attribute::NoAlias);
         }
     }
-    if (((isVectorCall) && (storageClass == SC_EXTERN_C)) || (storageClass != SC_EXTERN_C)) {
-        g->target->markFuncWithCallingConv(function);
-    }
-
+    function->setCallingConv(functionType->GetCallingConv());
     g->target->markFuncWithTargetAttr(function);
 
     // Make sure that the return type isn't 'varying' or vector typed if
@@ -917,7 +914,6 @@ void Module::AddFunctionDeclaration(const std::string &name, const FunctionType 
 
     // Mark ISPC external functions as SPIR_FUNC for Xe.
     if (functionType->IsISPCExternal() && disableMask) {
-        function->setCallingConv(llvm::CallingConv::SPIR_FUNC);
         function->setDSOLocal(true);
     }
     // Mark with corresponding attribute
@@ -2616,13 +2612,16 @@ static void lCreateDispatchFunction(llvm::Module *module, llvm::Function *setISA
     // type is the same across all architectures, however in different
     // modules it may have dissimilar names. The loop below works this
     // around.
-
+    unsigned int callingConv = llvm::CallingConv::C;
     for (int i = 0; i < Target::NUM_ISAS; ++i) {
         if (funcs.func[i]) {
 
             targetFuncs[i] =
                 llvm::Function::Create(ftype, llvm::GlobalValue::ExternalLinkage, funcs.func[i]->getName(), module);
-            g->target->markFuncWithCallingConv(targetFuncs[i]);
+            // Calling convention should be the same for all dispatched functions
+            callingConv = funcs.FTs[i]->GetCallingConv();
+            targetFuncs[i]->setCallingConv(callingConv);
+
         } else
             targetFuncs[i] = NULL;
     }
@@ -2632,7 +2631,8 @@ static void lCreateDispatchFunction(llvm::Module *module, llvm::Function *setISA
     // Now we can emit the definition of the dispatch function..
     llvm::Function *dispatchFunc =
         llvm::Function::Create(ftype, llvm::GlobalValue::ExternalLinkage, name.c_str(), module);
-    g->target->markFuncWithCallingConv(dispatchFunc);
+    dispatchFunc->setCallingConv(callingConv);
+
     llvm::BasicBlock *bblock = llvm::BasicBlock::Create(*g->ctx, "entry", dispatchFunc);
 
     // Start by calling out to the function that determines the system's
@@ -2688,15 +2688,11 @@ static void lCreateDispatchFunction(llvm::Module *module, llvm::Function *setISA
         }
         if (voidReturn) {
             llvm::CallInst *callInst = llvm::CallInst::Create(targetFuncs[i], args, "", callBBlock);
-            if (g->calling_conv == CallingConv::x86_vectorcall) {
-                callInst->setCallingConv(llvm::CallingConv::X86_VectorCall);
-            }
+            callInst->setCallingConv(targetFuncs[i]->getCallingConv());
             llvm::ReturnInst::Create(*g->ctx, callBBlock);
         } else {
             llvm::CallInst *callInst = llvm::CallInst::Create(targetFuncs[i], args, "ret_value", callBBlock);
-            if (g->calling_conv == CallingConv::x86_vectorcall) {
-                callInst->setCallingConv(llvm::CallingConv::X86_VectorCall);
-            }
+            callInst->setCallingConv(targetFuncs[i]->getCallingConv());
             llvm::ReturnInst::Create(*g->ctx, callInst, callBBlock);
         }
 
