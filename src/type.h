@@ -885,6 +885,9 @@ class FunctionType : public Type {
         present, removed from the return function signature. */
     llvm::FunctionType *LLVMFunctionType(llvm::LLVMContext *ctx, bool disableMask = false) const;
 
+    /* This method returns appropriate llvm::CallingConv for the function*/
+    const unsigned int GetCallingConv() const;
+
     int GetNumParameters() const { return (int)paramTypes.size(); }
     const Type *GetParameterType(int i) const;
     Expr *GetParameterDefault(int i) const;

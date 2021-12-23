@@ -177,10 +177,10 @@ extern uniform int t4_call() {
 extern "C" void t5(uniform int p[]);
 // CHECK_FUNC_GPU: void @t5_call___{{.*}}
 // CHECK_FUNC_GPU: addrspacecast i32* %p to i32 addrspace(4)*
-// CHECK_FUNC_GPU: call void @t5(i32 addrspace(4)* %{{.*}})
+// CHECK_FUNC_GPU: call spir_func void @t5(i32 addrspace(4)* %{{.*}})
 
 // CHECK_FUNC_GPU: dso_local spir_func void @t5_call(i32 addrspace(4)* noalias %p) {{.*}}
-// CHECK_FUNC_GPU: call void @t5(i32 addrspace(4)* %p)
+// CHECK_FUNC_GPU: call spir_func void @t5(i32 addrspace(4)* %p)
 
 // CHECK_FUNC_CPU: void @t5_call___{{.*}}
 // CHECK_FUNC_CPU: call void @t5(i32* %p)

@@ -1820,6 +1820,8 @@ void Target::markFuncWithTargetAttr(llvm::Function *func) {
 }
 
 void Target::markFuncWithCallingConv(llvm::Function *func) {
+    assert("markFuncWithCallingConv is deprecated, use llvm::Function::setCallingConv(llvm::CallingConv) and "
+           "FunctionType::GetCallingConv() instead.");
     assert(g->calling_conv != CallingConv::uninitialized);
     if (g->calling_conv == CallingConv::x86_vectorcall) {
         func->setCallingConv(llvm::CallingConv::X86_VectorCall);

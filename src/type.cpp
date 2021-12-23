@@ -2571,6 +2571,25 @@ llvm::FunctionType *FunctionType::LLVMFunctionType(llvm::LLVMContext *ctx, bool 
     return llvm::FunctionType::get(llvmReturnType, callTypes, false);
 }
 
+const unsigned int FunctionType::GetCallingConv() const {
+    // Default calling convention on CPU targets ISPC is CallingConv::C
+    // except the case when CallingConv::x86_vectorcall is specified explicitly.
+    // For Xe targets it is either CallingConv::SPIR_KERNEL for kernels or
+    // CallingConv::SPIR_FUNC for all other functions.
+    if (g->target->isXeTarget()) {
+        if (IsISPCKernel()) {
+            return (unsigned int)llvm::CallingConv::SPIR_KERNEL;
+        } else {
+            return (unsigned int)llvm::CallingConv::SPIR_FUNC;
+        }
+    }
+    if (g->calling_conv == CallingConv::x86_vectorcall) {
+        if ((isVectorCall && isExternC) || !isExternC)
+            return (unsigned int)llvm::CallingConv::X86_VectorCall;
+    }
+    return (unsigned int)llvm::CallingConv::C;
+}
+
 const Type *FunctionType::GetParameterType(int i) const {
     Assert(i < (int)paramTypes.size());
     return paramTypes[i];

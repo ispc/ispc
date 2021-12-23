@@ -3340,12 +3340,14 @@ llvm::Value *FunctionEmitContext::CallInst(llvm::Value *func, const FunctionType
         // If function pointer, it's safe to assume  that we use the cached calling convention
         // since this has to be a user defined function.
         llvm::Function *funcForConv = llvm::dyn_cast<llvm::Function>(func);
-
-        if (g->calling_conv == CallingConv::x86_vectorcall) {
-            if (funcForConv) {
-                callinst->setCallingConv(funcForConv->getCallingConv());
-            } else {
+        if (funcForConv) {
+            callinst->setCallingConv(funcForConv->getCallingConv());
+        } else {
+            if (g->calling_conv == CallingConv::x86_vectorcall) {
                 callinst->setCallingConv(llvm::CallingConv::X86_VectorCall);
+            } else {
+                if (funcType != NULL)
+                    callinst->setCallingConv(funcType->GetCallingConv());
             }
         }
 

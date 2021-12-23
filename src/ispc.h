@@ -245,7 +245,10 @@ class Target {
     /** Mark LLVM function with target specific attribute, if required. */
     void markFuncWithTargetAttr(llvm::Function *func);
 
-    /** Set LLVM function with Calling Convention. */
+    /** Set LLVM function with Calling Convention.
+        The usage of this function is deprecated. The preferred way is to use
+        llvm::Function::setCallingConv(llvm::CallingConv) and FunctionType::GetCallingConv())
+    */
     void markFuncWithCallingConv(llvm::Function *func);
 
     const llvm::Target *getTarget() const { return m_target; }

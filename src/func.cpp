@@ -654,14 +654,13 @@ void Function::GenerateIR() {
 
             llvm::Function *appFunction = llvm::Function::Create(ftype, linkage, functionName.c_str(), m->module);
             appFunction->setDoesNotThrow();
-            g->target->markFuncWithCallingConv(appFunction);
+            appFunction->setCallingConv(type->GetCallingConv());
 
             // Xe kernel should have "dllexport" and "CMGenxMain" attribute,
             // otherss have "CMStackCall" attribute
             if (g->target->isXeTarget()) {
                 if (type->IsISPCExternal()) {
-                    // Mark ISPCExternal() function as spirv_func and DSO local.
-                    appFunction->setCallingConv(llvm::CallingConv::SPIR_FUNC);
+                    // Mark ISPCExternal() function as DSO local.
                     appFunction->addFnAttr("CMStackCall");
                     appFunction->setDSOLocal(true);
                 } else if (type->IsISPCKernel()) {
