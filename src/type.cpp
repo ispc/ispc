@@ -2610,10 +2610,6 @@ const std::string &FunctionType::GetParameterName(int i) const {
     return paramNames[i];
 }
 
-bool FunctionType::RequiresAddrSpaceCasts(const llvm::Function *func) const {
-    return IsISPCExternal() && func->getCallingConv() == llvm::CallingConv::SPIR_FUNC;
-}
-
 ///////////////////////////////////////////////////////////////////////////
 // Type
 

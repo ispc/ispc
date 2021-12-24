@@ -359,6 +359,8 @@ void Function::emitCode(FunctionEmitContext *ctx, llvm::Function *function, Sour
     } else {
         // Regular, non-task function or GPU task
         llvm::Function::arg_iterator argIter = function->arg_begin();
+        llvm::FunctionType *fType = type->LLVMFunctionType(g->ctx);
+        Assert(fType->getFunctionNumParams() >= args.size());
         for (unsigned int i = 0; i < args.size(); ++i, ++argIter) {
             Symbol *argSym = args[i];
             if (argSym == NULL)
@@ -375,9 +377,12 @@ void Function::emitCode(FunctionEmitContext *ctx, llvm::Function *function, Sour
             // define dso_local spir_func void @test(%S addrspace(4)* noalias %s)
             // addrspacecast %S addrspace(4)* %s to %S*
             llvm::Value *addrCasted = &*argIter;
-            if (type->RequiresAddrSpaceCasts(function) && llvm::isa<llvm::PointerType>(argIter->getType())) {
-                addrCasted = ctx->AddrSpaceCast(&*argIter, AddressSpace::ispc_default, true);
+#ifdef ISPC_XE_ENABLED
+            // Update addrspace of passed argument if needed for Xe target
+            if (g->target->isXeTarget()) {
+                addrCasted = ctx->XeUpdateAddrSpaceForParam(addrCasted, fType, i, true);
             }
+#endif
 
             ctx->StoreInst(addrCasted, argSym->storagePtr, argSym->type);
 

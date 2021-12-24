@@ -2611,7 +2611,7 @@ void FunctionEmitContext::addGSMetadata(llvm::Value *v, SourcePos pos) {
     inst->setMetadata("last_column", md);
 }
 
-llvm::Value *FunctionEmitContext::AddrSpaceCast(llvm::Value *val, AddressSpace as, bool atEntryBlock) {
+llvm::Value *FunctionEmitContext::AddrSpaceCastInst(llvm::Value *val, AddressSpace as, bool atEntryBlock) {
     Assert(llvm::isa<llvm::PointerType>(val->getType()));
     llvm::PointerType *pt = llvm::dyn_cast<llvm::PointerType>(val->getType());
     if (pt->getAddressSpace() == (unsigned)as) {
@@ -3291,18 +3291,20 @@ llvm::Value *FunctionEmitContext::CallInst(llvm::Value *func, const FunctionType
     // There may be more arguments than function parameters for vararg case.
     unsigned int calleeArgCount = lCalleeArgCount(func, funcType);
 
-    // If we have ISPC external function without mask, we should cast all
-    // pointers to generic address space before call.
-    llvm::Function *f = llvm::dyn_cast<llvm::Function>(func);
-    if (funcType && funcType->RequiresAddrSpaceCasts(f)) {
-        for (llvm::Value *arg : args) {
-            if (llvm::isa<llvm::PointerType>(arg->getType())) {
-                llvm::Value *adrCast = AddrSpaceCast(arg, AddressSpace::ispc_generic);
-                argVals.push_back(adrCast);
-            } else {
-                argVals.push_back(arg);
-            }
+    // For Xe targets check the LLVM function signature and cast address space of
+    // passed arguments if needed
+    if (g->target->isXeTarget() && funcType) {
+#ifdef ISPC_XE_ENABLED
+        bool disableMask = args.size() == calleeArgCount;
+        llvm::FunctionType *llvmFuncType = funcType->LLVMFunctionType(g->ctx, disableMask);
+        Assert(args.size() <= llvmFuncType->getFunctionNumParams());
+        for (int i = 0; i < args.size(); i++) {
+            llvm::Value *adrCast = args[i];
+            // Update addrspace of passed argument if needed for Xe target
+            adrCast = XeUpdateAddrSpaceForParam(adrCast, llvmFuncType, i);
+            argVals.push_back(adrCast);
         }
+#endif
     } else {
         argVals = args;
     }
@@ -3877,6 +3879,26 @@ llvm::Constant *FunctionEmitContext::XeGetOrCreateConstantString(llvm::StringRef
         return llvm::ConstantExpr::getInBoundsGetElementPtr(
             GV->getValueType(), GV, llvm::ArrayRef<llvm::Constant *>{LLVMInt32(0), LLVMInt32(0)});
     return XeCreateConstantString(str, name);
+}
+
+llvm::Value *FunctionEmitContext::XeUpdateAddrSpaceForParam(llvm::Value *val, const llvm::FunctionType *fType,
+                                                            const unsigned int paramIndex, bool atEntryBlock) {
+    Assert(val != NULL);
+    llvm::Value *adrCast = val;
+    if (fType->getFunctionNumParams() >= paramIndex) {
+        // We need to check addrspace for arguments with pointer type only
+        llvm::PointerType *valType = llvm::dyn_cast<llvm::PointerType>(val->getType());
+        llvm::PointerType *fArgType = llvm::dyn_cast<llvm::PointerType>(fType->getFunctionParamType(paramIndex));
+        if (valType && fArgType) {
+            // Compare address spaces and make cast if needed
+            const unsigned int paramAddrSpace = fArgType->getPointerAddressSpace();
+            const unsigned int argAddrSpace = valType->getPointerAddressSpace();
+            if (argAddrSpace != paramAddrSpace) {
+                adrCast = AddrSpaceCastInst(val, ispc::AddressSpace(paramAddrSpace), atEntryBlock);
+            }
+        }
+    }
+    return adrCast;
 }
 
 #endif
