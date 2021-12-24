@@ -663,6 +663,9 @@ void Function::GenerateIR() {
             if (g->mangleFunctionsWithTarget) {
                 functionName += std::string("_") + g->target->GetISAString();
             }
+            if (type->isRegCall) {
+                g->target->markFuncNameWithRegCallPrefix(functionName);
+            }
 
             llvm::Function *appFunction = llvm::Function::Create(ftype, linkage, functionName.c_str(), m->module);
             appFunction->setDoesNotThrow();

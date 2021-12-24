@@ -94,6 +94,7 @@ static int allTokens[] = {
   TOKEN_MUL_ASSIGN, TOKEN_DIV_ASSIGN, TOKEN_MOD_ASSIGN, TOKEN_ADD_ASSIGN,
   TOKEN_SUB_ASSIGN, TOKEN_LEFT_ASSIGN, TOKEN_RIGHT_ASSIGN, TOKEN_AND_ASSIGN,
   TOKEN_XOR_ASSIGN, TOKEN_OR_ASSIGN, TOKEN_PTR_OP, TOKEN_NOINLINE, TOKEN_VECTORCALL,
+  TOKEN_REGCALL,
   ';', '{', '}', ',', ':', '=', '(', ')', '[', ']', '.', '&', '!', '~', '-',
   '+', '*', '/', '%', '<', '>', '^', '|', '?',
 };
@@ -134,6 +135,7 @@ void ParserInit() {
     tokenToName[TOKEN_INLINE] = "inline";
     tokenToName[TOKEN_NOINLINE] = "noinline";
     tokenToName[TOKEN_VECTORCALL] = "__vectorcall";
+    tokenToName[TOKEN_REGCALL] = "__regcall";
     tokenToName[TOKEN_INT] = "int";
     tokenToName[TOKEN_UINT] = "uint";
     tokenToName[TOKEN_INT8] = "int8";
@@ -258,6 +260,7 @@ void ParserInit() {
     tokenNameRemap["TOKEN_INLINE"] = "\'inline\'";
     tokenNameRemap["TOKEN_NOINLINE"] = "\'noinline\'";
     tokenNameRemap["TOKEN_VECTORCALL"] = "\'__vectorcall\'";
+    tokenNameRemap["TOKEN_REGCALL"] = "\'__regcall\'";
     tokenNameRemap["TOKEN_INT"] = "\'int\'";
     tokenNameRemap["TOKEN_UINT"] = "\'uint\'";
     tokenNameRemap["TOKEN_INT8"] = "\'int8\'";
@@ -429,6 +432,7 @@ in { RT; return TOKEN_IN; }
 inline { RT; return TOKEN_INLINE; }
 noinline { RT; return TOKEN_NOINLINE; }
 __vectorcall { RT; return TOKEN_VECTORCALL; }
+__regcall { RT; return TOKEN_REGCALL; }
 int { RT; return TOKEN_INT; }
 uint { RT; return TOKEN_UINT; }
 int8 { RT; return TOKEN_INT8; }

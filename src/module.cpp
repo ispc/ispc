@@ -721,7 +721,7 @@ static void lCheckForStructParameters(const FunctionType *ftype, SourcePos pos) 
  */
 void Module::AddFunctionDeclaration(const std::string &name, const FunctionType *functionType,
                                     StorageClass storageClass, bool isInline, bool isNoInline, bool isVectorCall,
-                                    SourcePos pos) {
+                                    bool isRegCall, SourcePos pos) {
     Assert(functionType != NULL);
 
     // If a global variable with the same name has already been declared
@@ -845,6 +845,11 @@ void Module::AddFunctionDeclaration(const std::string &name, const FunctionType 
             functionName += g->target->GetISAString();
         }
     }
+
+    if (isRegCall) {
+        g->target->markFuncNameWithRegCallPrefix(functionName);
+    }
+
     llvm::Function *function = llvm::Function::Create(llvmFunctionType, linkage, functionName.c_str(), module);
 
     if (g->target_os == TargetOS::windows) {
@@ -872,6 +877,13 @@ void Module::AddFunctionDeclaration(const std::string &name, const FunctionType 
         if (g->target_os != TargetOS::windows) {
             Error(pos, "Illegal to use \"__vectorcall\" qualifier on function \"%s\" for non-Windows OS.",
                   name.c_str());
+            return;
+        }
+    }
+
+    if (isRegCall) {
+        if ((storageClass != SC_EXTERN_C)) {
+            Error(pos, "Illegal to use \"__regcall\" qualifier on non-extern function \"%s\".", name.c_str());
             return;
         }
     }
@@ -2622,9 +2634,14 @@ static void lCreateDispatchFunction(llvm::Module *module, llvm::Function *setISA
 
     bool voidReturn = ftype->getReturnType()->isVoidTy();
 
+    std::string functionName = name;
+    if (callingConv == llvm::CallingConv::X86_RegCall) {
+        g->target->markFuncNameWithRegCallPrefix(functionName);
+    }
+
     // Now we can emit the definition of the dispatch function..
     llvm::Function *dispatchFunc =
-        llvm::Function::Create(ftype, llvm::GlobalValue::ExternalLinkage, name.c_str(), module);
+        llvm::Function::Create(ftype, llvm::GlobalValue::ExternalLinkage, functionName.c_str(), module);
     dispatchFunc->setCallingConv(callingConv);
 
     llvm::BasicBlock *bblock = llvm::BasicBlock::Create(*g->ctx, "entry", dispatchFunc);

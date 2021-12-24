@@ -242,6 +242,9 @@ class Target {
         of the structure where the element is located. */
     llvm::Value *StructOffset(llvm::Type *type, int element, llvm::BasicBlock *insertAtEnd);
 
+    /** Update function name with __regcall3_ prefix. */
+    void markFuncNameWithRegCallPrefix(std::string &funcName) const;
+
     /** Mark LLVM function with target specific attribute, if required. */
     void markFuncWithTargetAttr(llvm::Function *func);
 

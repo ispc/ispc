@@ -558,6 +558,7 @@ void Declarator::InitFromType(const Type *baseType, DeclSpecs *ds) {
         bool isTask = ds && ((ds->typeQualifiers & TYPEQUAL_TASK) != 0);
         bool isUnmasked = ds && ((ds->typeQualifiers & TYPEQUAL_UNMASKED) != 0);
         bool isVectorCall = ds && ((ds->typeQualifiers & TYPEQUAL_VECTORCALL) != 0);
+        bool isRegCall = ds && ((ds->typeQualifiers & TYPEQUAL_REGCALL) != 0);
 
         if (isExported && isTask) {
             Error(pos, "Function can't have both \"task\" and \"export\" "
@@ -584,7 +585,7 @@ void Declarator::InitFromType(const Type *baseType, DeclSpecs *ds) {
         }
 
         const FunctionType *functionType = new FunctionType(returnType, args, argNames, argDefaults, argPos, isTask,
-                                                            isExported, isExternC, isUnmasked, isVectorCall);
+                                                            isExported, isExternC, isUnmasked, isVectorCall, isRegCall);
 
         // handle any explicit __declspecs on the function
         if (ds != NULL) {
@@ -673,7 +674,9 @@ void Declaration::DeclareFunctions() {
         bool isInline = (declSpecs->typeQualifiers & TYPEQUAL_INLINE);
         bool isNoInline = (declSpecs->typeQualifiers & TYPEQUAL_NOINLINE);
         bool isVectorCall = (declSpecs->typeQualifiers & TYPEQUAL_VECTORCALL);
-        m->AddFunctionDeclaration(decl->name, ftype, decl->storageClass, isInline, isNoInline, isVectorCall, decl->pos);
+        bool isRegCall = (declSpecs->typeQualifiers & TYPEQUAL_REGCALL);
+        m->AddFunctionDeclaration(decl->name, ftype, decl->storageClass, isInline, isNoInline, isVectorCall, isRegCall,
+                                  decl->pos);
     }
 }
 
