@@ -894,9 +894,6 @@ class FunctionType : public Type {
     const SourcePos &GetParameterSourcePos(int i) const;
     const std::string &GetParameterName(int i) const;
 
-    /** This method determines if function requires addrspace casts at the beginning*/
-    bool RequiresAddrSpaceCasts(const llvm::Function *func) const;
-
     /** This value is true if the function had a 'task' qualifier in the
         source program. */
     const bool isTask;
