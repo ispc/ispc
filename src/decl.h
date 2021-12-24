@@ -80,6 +80,7 @@ class Declarator;
 #define TYPEQUAL_UNMASKED (1 << 8)
 #define TYPEQUAL_NOINLINE (1 << 9)
 #define TYPEQUAL_VECTORCALL (1 << 10)
+#define TYPEQUAL_REGCALL (1 << 11)
 
 /** @brief Representation of the declaration specifiers in a declaration.
 

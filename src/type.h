@@ -843,7 +843,7 @@ class FunctionType : public Type {
     FunctionType(const Type *returnType, const llvm::SmallVector<const Type *, 8> &argTypes,
                  const llvm::SmallVector<std::string, 8> &argNames, const llvm::SmallVector<Expr *, 8> &argDefaults,
                  const llvm::SmallVector<SourcePos, 8> &argPos, bool isTask, bool isExported, bool isExternC,
-                 bool isUnmasked, bool isVectorCall);
+                 bool isUnmasked, bool isVectorCall, bool isRegCall);
 
     Variability GetVariability() const;
 
@@ -916,6 +916,9 @@ class FunctionType : public Type {
 
     /** Indicates whether the function has __vectorcall attribute. */
     const bool isVectorCall;
+
+    /** Indicates whether the function has __regcall attribute. */
+    const bool isRegCall;
 
     /** Indicates whether this function has been declared to be safe to run
         with an all-off mask. */

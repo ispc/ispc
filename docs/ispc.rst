@@ -1604,9 +1604,10 @@ The following reserved words from C89 are also reserved in ``ispc``:
 
 ``bool``, ``delete``, ``export``, ``cdo``, ``cfor``, ``cif``, ``cwhile``,
 ``false``, ``float16``, ``foreach``, ``foreach_active``, ``foreach_tiled``,
-``foreach_unique``, ``in``, ``inline``, ``noinline``, ``__vectorcall``, ``int8``, ``int16``,
-``int32``, ``int64``, ``launch``, ``new``, ``print``, ``uint8``, ``uint16``,
-``uint32``, ``uint64``, ``soa``, ``sync``, ``task``, ``true``, ``uniform``, and ``varying``.
+``foreach_unique``, ``in``, ``inline``, ``noinline``, ``__regcall``,
+``__vectorcall``, ``int8``, ``int16``, ``int32``, ``int64``, ``launch``,
+``new``, ``print``, ``uint8``, ``uint16``, ``uint32``, ``uint64``, ``soa``,
+``sync``, ``task``, ``true``, ``uniform``, and ``varying``.
 
 
 Lexical Structure
@@ -1770,7 +1771,7 @@ The following identifiers are reserved as language keywords: ``bool``,
 ``signed``, ``sizeof``, ``soa``, ``static``, ``struct``, ``switch``,
 ``sync``, ``task``, ``true``, ``typedef``, ``uint``, ``uint8``,
 ``uint16``, ``uint32``, ``uint64``, ``uniform``, ``union``, ``unsigned``,
-``varying``, ``__vectorcall``, ``void``, ``volatile``, ``while``.
+``varying``, ``__regcall``, ``__vectorcall``, ``void``, ``volatile``, ``while``.
 
 ``ispc`` defines the following operators and punctuation:
 
@@ -5327,6 +5328,11 @@ qualifier.
 
 ``__vectorcall`` can only be used for ``extern "C"`` function declarations and
 on Windows OS.
+
+Also ``extern "C"`` functions can be marked with ``__regcall`` calling convention.
+This calling convention makes return values and function arguments passed through
+registers in most cases. Note, that ``__regcall3__`` prefix will be added to the
+function name.
 
 **Only a single function call is made back to C++ for the entire gang of
 running program instances**.  Furthermore, function calls back to C/C++ are not

@@ -1809,6 +1809,8 @@ llvm::Value *Target::StructOffset(llvm::Type *type, int element, llvm::BasicBloc
         return LLVMInt64(offset);
 }
 
+void Target::markFuncNameWithRegCallPrefix(std::string &funcName) const { funcName = "__regcall3__" + funcName; }
+
 void Target::markFuncWithTargetAttr(llvm::Function *func) {
     if (m_tf_attributes) {
 #if ISPC_LLVM_VERSION >= ISPC_LLVM_14_0

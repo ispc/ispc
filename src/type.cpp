@@ -2259,7 +2259,7 @@ llvm::DIType *ReferenceType::GetDIType(llvm::DIScope *scope) const {
 
 FunctionType::FunctionType(const Type *r, const llvm::SmallVector<const Type *, 8> &a, SourcePos p)
     : Type(FUNCTION_TYPE), isTask(false), isExported(false), isExternC(false), isUnmasked(false), isVectorCall(false),
-      returnType(r), paramTypes(a), paramNames(llvm::SmallVector<std::string, 8>(a.size(), "")),
+      isRegCall(false), returnType(r), paramTypes(a), paramNames(llvm::SmallVector<std::string, 8>(a.size(), "")),
       paramDefaults(llvm::SmallVector<Expr *, 8>(a.size(), NULL)),
       paramPositions(llvm::SmallVector<SourcePos, 8>(a.size(), p)) {
     Assert(returnType != NULL);
@@ -2269,9 +2269,10 @@ FunctionType::FunctionType(const Type *r, const llvm::SmallVector<const Type *, 
 
 FunctionType::FunctionType(const Type *r, const llvm::SmallVector<const Type *, 8> &a,
                            const llvm::SmallVector<std::string, 8> &an, const llvm::SmallVector<Expr *, 8> &ad,
-                           const llvm::SmallVector<SourcePos, 8> &ap, bool it, bool is, bool ec, bool ium, bool ivc)
-    : Type(FUNCTION_TYPE), isTask(it), isExported(is), isExternC(ec), isUnmasked(ium), isVectorCall(ivc), returnType(r),
-      paramTypes(a), paramNames(an), paramDefaults(ad), paramPositions(ap) {
+                           const llvm::SmallVector<SourcePos, 8> &ap, bool it, bool is, bool ec, bool ium, bool ivc,
+                           bool irc)
+    : Type(FUNCTION_TYPE), isTask(it), isExported(is), isExternC(ec), isUnmasked(ium), isVectorCall(ivc),
+      isRegCall(irc), returnType(r), paramTypes(a), paramNames(an), paramDefaults(ad), paramPositions(ap) {
     Assert(paramTypes.size() == paramNames.size() && paramNames.size() == paramDefaults.size() &&
            paramDefaults.size() == paramPositions.size());
     Assert(returnType != NULL);
@@ -2337,7 +2338,7 @@ const FunctionType *FunctionType::ResolveUnboundVariability(Variability v) const
     }
 
     FunctionType *ret = new FunctionType(rt, pt, paramNames, paramDefaults, paramPositions, isTask, isExported,
-                                         isExternC, isUnmasked, isVectorCall);
+                                         isExternC, isUnmasked, isVectorCall, isRegCall);
     ret->isSafe = isSafe;
     ret->costOverride = costOverride;
 
@@ -2574,10 +2575,14 @@ llvm::FunctionType *FunctionType::LLVMFunctionType(llvm::LLVMContext *ctx, bool 
 }
 
 const unsigned int FunctionType::GetCallingConv() const {
-    // Default calling convention on CPU targets ISPC is CallingConv::C
-    // except the case when CallingConv::x86_vectorcall is specified explicitly.
+    // Default calling convention on CPU targets is CallingConv::C.
+    // If __vectorcall or __regcall is specified explicitly, corresponding
+    // llvm::CallingConv will be used.
     // For Xe targets it is either CallingConv::SPIR_KERNEL for kernels or
     // CallingConv::SPIR_FUNC for all other functions.
+    if (isRegCall && isExternC)
+        return (unsigned int)llvm::CallingConv::X86_RegCall;
+
     if (g->target->isXeTarget()) {
         if (IsISPCKernel()) {
             return (unsigned int)llvm::CallingConv::SPIR_KERNEL;
@@ -2585,6 +2590,7 @@ const unsigned int FunctionType::GetCallingConv() const {
             return (unsigned int)llvm::CallingConv::SPIR_FUNC;
         }
     }
+
     if (g->calling_conv == CallingConv::x86_vectorcall) {
         if ((isVectorCall && isExternC) || !isExternC)
             return (unsigned int)llvm::CallingConv::X86_VectorCall;
@@ -2598,6 +2604,8 @@ const std::string FunctionType::GetNameForCallConv() const {
         return "";
     case llvm::CallingConv::X86_VectorCall:
         return "vectorcall";
+    case llvm::CallingConv::X86_RegCall:
+        return "regcall";
     case llvm::CallingConv::SPIR_FUNC:
         return "spir_func";
     case llvm::CallingConv::SPIR_KERNEL:
