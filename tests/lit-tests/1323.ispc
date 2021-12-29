@@ -3,6 +3,9 @@
 // RUN: FileCheck --input-file=%t.h %s -check-prefix=CHECK_ALIGN
 // REQUIRES: X86_ENABLED
 
+// This needs to be fixed, see #2164 for more details.
+// XFAIL: LLVM_14_0+
+
 // CHECK_TYPES: type { <4 x float> }
 // CHECK_TYPES-NEXT: type { <8 x i32> }
 // CHECK_TYPES-NEXT: type { <4 x i8> }
