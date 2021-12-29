@@ -3820,6 +3820,7 @@ Expr *FunctionCallExpr::TypeCheck() {
     }
 
     FunctionSymbolExpr *fse = llvm::dyn_cast<FunctionSymbolExpr>(func);
+    const FunctionType *funcType = nullptr;
     if (fse != NULL) {
         // Regular function call
         if (fse->ResolveOverloads(args->pos, argTypes, &argCouldBeNULL, &argIsConstant) == false)
@@ -3829,36 +3830,15 @@ Expr *FunctionCallExpr::TypeCheck() {
         if (func == NULL)
             return NULL;
 
-        const FunctionType *ft = CastType<FunctionType>(func->GetType());
-        if (ft == NULL) {
+        funcType = CastType<FunctionType>(func->GetType());
+        if (funcType == NULL) {
             const PointerType *pt = CastType<PointerType>(func->GetType());
-            ft = (pt == NULL) ? NULL : CastType<FunctionType>(pt->GetBaseType());
+            funcType = (pt == NULL) ? NULL : CastType<FunctionType>(pt->GetBaseType());
         }
 
-        if (ft == NULL) {
+        if (funcType == NULL) {
             Error(pos, "Valid function name must be used for function call.");
             return NULL;
-        }
-
-        if (ft->isTask) {
-            if (!isLaunch)
-                Error(pos, "\"launch\" expression needed to call function "
-                           "with \"task\" qualifier.");
-            for (int k = 0; k < 3; k++) {
-                if (!launchCountExpr[k])
-                    return NULL;
-
-                launchCountExpr[k] = TypeConvertExpr(launchCountExpr[k], AtomicType::UniformInt32, "task launch count");
-                if (launchCountExpr[k] == NULL)
-                    return NULL;
-            }
-        } else {
-            if (isLaunch) {
-                Error(pos, "\"launch\" expression illegal with non-\"task\"-"
-                           "qualified function.");
-                return NULL;
-            }
-            AssertPos(pos, launchCountExpr[0] == NULL);
         }
     } else {
         // Call through a function pointer
@@ -3867,7 +3847,6 @@ Expr *FunctionCallExpr::TypeCheck() {
             return NULL;
 
         // Make sure we do in fact have a function to call
-        const FunctionType *funcType;
         if (CastType<PointerType>(fptrType) == NULL ||
             (funcType = CastType<FunctionType>(fptrType->GetBaseType())) == NULL) {
             Error(func->pos, "Must provide function name or function pointer for "
@@ -3927,6 +3906,27 @@ Expr *FunctionCallExpr::TypeCheck() {
                 return NULL;
             }
         }
+    }
+
+    if (funcType->isTask) {
+        if (!isLaunch)
+            Error(pos, "\"launch\" expression needed to call function "
+                       "with \"task\" qualifier.");
+        for (int k = 0; k < 3; k++) {
+            if (!launchCountExpr[k])
+                return NULL;
+
+            launchCountExpr[k] = TypeConvertExpr(launchCountExpr[k], AtomicType::UniformInt32, "task launch count");
+            if (launchCountExpr[k] == NULL)
+                return NULL;
+        }
+    } else {
+        if (isLaunch) {
+            Error(pos, "\"launch\" expression illegal with non-\"task\"-"
+                       "qualified function.");
+            return NULL;
+        }
+        AssertPos(pos, launchCountExpr[0] == NULL);
     }
 
     if (func == NULL || args == NULL)
