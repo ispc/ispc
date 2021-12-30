@@ -1405,14 +1405,14 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, bool pic, boo
         this->m_is32Bit = (getDataLayout()->getPointerSize() == 4);
 
         // TO-DO : Revisit addition of "target-features" and "target-cpu" for ARM support.
-        llvm::AttrBuilder fattrBuilder;
+        llvm::AttrBuilder *fattrBuilder = new llvm::AttrBuilder();
 #ifdef ISPC_ARM_ENABLED
         if (m_isa == Target::NEON)
-            fattrBuilder.addAttribute("target-cpu", this->m_cpu);
+            fattrBuilder->addAttribute("target-cpu", this->m_cpu);
 #endif
         for (auto const &f_attr : m_funcAttributes)
-            fattrBuilder.addAttribute(f_attr.first, f_attr.second);
-        this->m_tf_attributes = new llvm::AttrBuilder(fattrBuilder);
+            fattrBuilder->addAttribute(f_attr.first, f_attr.second);
+        this->m_tf_attributes = fattrBuilder;
 
         Assert(this->m_vectorWidth <= ISPC_MAX_NVEC);
     }
