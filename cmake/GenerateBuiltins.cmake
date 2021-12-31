@@ -45,6 +45,29 @@ elseif (UNIX)
     set(TARGET_OS_LIST_FOR_LL "unix")
 endif()
 
+# Explicitly enumerate .ll and .m4 files included by target .ll files.
+# This is overly conservative, as they are added to every target .ll file.
+# But m4 doesn't support building depfile, so explicit enumeration is the
+# easiest workaround.
+list(APPEND M4_IMPLICIT_DEPENDENCIES
+    builtins/builtins-cm-32.ll
+    builtins/builtins-cm-64.ll
+    builtins/svml.m4
+    builtins/target-avx-common.ll
+    builtins/target-avx-x2.ll
+    builtins/target-avx.ll
+    builtins/target-avx1-i64x4base.ll
+    builtins/target-avx512-common-4.ll
+    builtins/target-avx512-common-8.ll
+    builtins/target-avx512-common.ll
+    builtins/target-avx512-utils.ll
+    builtins/target-neon-common.ll
+    builtins/target-sse2-common.ll
+    builtins/target-sse4-common.ll
+    builtins/target-xe.ll
+    builtins/util-xe.m4
+    builtins/util.m4)
+
 function(target_ll_to_cpp llFileName bit os_name resultFileName)
     set(inputFilePath builtins/${llFileName}.ll)
     set(includePath builtins)
@@ -63,7 +86,7 @@ function(target_ll_to_cpp llFileName bit os_name resultFileName)
             -DLLVM_VERSION=${LLVM_VERSION} -DBUILD_OS=${os_name_macro} -DRUNTIME=${bit} ${inputFilePath}
             | \"${Python3_EXECUTABLE}\" bitcode2cpp.py ${inputFilePath} --type=ispc-target --runtime=${bit} --os=${os_name_macro} --llvm_as ${LLVM_AS_EXECUTABLE}
             > ${output}
-        DEPENDS ${inputFilePath} bitcode2cpp.py
+        DEPENDS ${inputFilePath} bitcode2cpp.py ${M4_IMPLICIT_DEPENDENCIES}
         WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
     )
     set(${resultFileName} ${output} PARENT_SCOPE)
@@ -309,7 +332,7 @@ function(builtin_xe_to_cpp bit resultFileName)
               | \"${Python3_EXECUTABLE}\" bitcode2cpp.py cm --type=builtins-c --runtime=${bit}
               --os=${os_name} --arch=${target_arch} --llvm_as ${LLVM_AS_EXECUTABLE}
               > ${output}
-          DEPENDS ${inputFilePath}
+          DEPENDS ${inputFilePath} bitcode2cpp.py
           WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
           )
       set(${resultFileName} ${output} PARENT_SCOPE)
