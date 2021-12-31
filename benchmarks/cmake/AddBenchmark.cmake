@@ -194,6 +194,11 @@ macro(compile_benchmark_test name)
         ${name}
         PRIVATE ${name}.cpp)
 
+    target_compile_definitions(
+        ${name}
+        PRIVATE BENCHMARKS_ISPC_TARGETS=\"${BENCHMARKS_ISPC_TARGETS}\"
+                BENCHMARKS_ISPC_FLAGS=\"${BENCHMARKS_ISPC_FLAGS}\")
+
     # Turn on AVX2 support in the C++ compiler to be able to use AVX2 intrinsics.
     if((CMAKE_CXX_COMPILER_ID MATCHES "GNU") OR (CMAKE_CXX_COMPILER_ID MATCHES "Clang"))
         add_compile_options(-mavx2)
