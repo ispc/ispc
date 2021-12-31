@@ -13,7 +13,11 @@
 
 class Docs {
   public:
-    Docs(std::string message) { std::cout << message << "\n"; }
+    Docs(std::string message) {
+        std::cout << "BENCHMARKS_ISPC_TARGETS: " << BENCHMARKS_ISPC_TARGETS << "\n";
+        std::cout << "BENCHMARKS_ISPC_FLAGS: " << BENCHMARKS_ISPC_FLAGS << "\n";
+        std::cout << message << "\n";
+    }
 };
 
 // Helper function to enabled allocated allocations.
