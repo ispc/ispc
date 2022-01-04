@@ -14,6 +14,8 @@ static Docs docs("Check perfomance of math functions.\n"
                  "Expectations:\n"
                  " - No regressions\n");
 
+WARM_UP_RUN();
+
 // Minimum size is maximum target width * 4, i.e. 64*4 = 256.
 // 256 * sizeof (int) = 1kb - expected to reside in L1
 // 256 * sizeof (int) << 4 = 16kb - expected to reside in L1

@@ -2,7 +2,10 @@
 #include <cmath>
 #include <stdio.h>
 
+#include "../common.h"
 #include "test01_ispc.h"
+
+WARM_UP_RUN();
 
 const float eps = 0.00001f;
 #define ARGS Arg(100)->Arg(1000)->Arg(10000)
