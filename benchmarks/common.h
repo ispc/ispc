@@ -38,3 +38,28 @@ void aligned_free_helper(void *ptr) {
     free(ptr);
 #endif
 }
+
+// Warm up run
+// Despite other ways of CPU stabilization, on some CPUSs we need to do a "warm up" in order to get more stable results.
+// This also helps stabilizing results when other ways to fix frequency are not available / not applicable.
+#define WARM_UP_RUN()                                                                                                  \
+    static void warm_up(benchmark::State &state) {                                                                     \
+        int count = static_cast<int>(state.range(0));                                                                  \
+        float *src = static_cast<float *>(aligned_alloc_helper(sizeof(float) * count));                                \
+        float *dst = static_cast<float *>(aligned_alloc_helper(sizeof(float) * count));                                \
+        for (int i = 0; i < count; i++) {                                                                              \
+            src[i] = 1.0f;                                                                                             \
+            dst[i] = 0.0f;                                                                                             \
+        }                                                                                                              \
+                                                                                                                       \
+        for (auto _ : state) {                                                                                         \
+            for (int i = 0; i < count; i++) {                                                                          \
+                benchmark::DoNotOptimize(dst[i] = src[i] * 2.0f + 3.0f);                                               \
+            }                                                                                                          \
+        }                                                                                                              \
+                                                                                                                       \
+        aligned_free_helper(src);                                                                                      \
+        aligned_free_helper(dst);                                                                                      \
+    }                                                                                                                  \
+    BENCHMARK(warm_up)->Arg(256)->Arg(256 << 4)->Arg(256 << 7)->Arg(256 << 12);
+

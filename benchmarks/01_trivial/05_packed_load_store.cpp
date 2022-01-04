@@ -22,6 +22,8 @@ static Docs
          "Expectation:\n"
          " - No regressions\n");
 
+WARM_UP_RUN();
+
 // Minimum size is maximum target width, i.e. 64.
 // Larger buffer is better, but preferably to stay within L1.
 #define ARGS Arg(8192)

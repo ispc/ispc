@@ -13,6 +13,8 @@ static Docs docs("soa_to_aos*_stdlib_<type> - test for stdlib implimentation for
                  "TODO:\n"
                  " - ISPC source code implementation.\n");
 
+WARM_UP_RUN();
+
 // Minimum size is maximum target width * 4, i.e. 64*4 = 256.
 // 256 * sizeof (int) = 1kb - expected to reside in L1
 // 256 * sizeof (int) << 4 = 16kb - expected to reside in L1
