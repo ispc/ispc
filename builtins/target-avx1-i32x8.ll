@@ -39,7 +39,7 @@ saturation_arithmetic()
 ;; svml
 
 include(`svml.m4')
-svml(AVX1)
+svml(ISA)
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

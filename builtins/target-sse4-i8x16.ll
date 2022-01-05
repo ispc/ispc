@@ -235,7 +235,7 @@ define <16 x double> @__max_varying_double(<16 x double>, <16 x double>) nounwin
 ;; svml
 
 include(`svml.m4')
-svml(SSE4)
+svml(ISA)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; horizontal ops / reductions

@@ -227,7 +227,7 @@ define <8 x double> @__max_varying_double(<8 x double>, <8 x double>) nounwind r
 ;; svml
 
 include(`svml.m4')
-svml(SSE4)
+svml(ISA)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; horizontal ops / reductions
