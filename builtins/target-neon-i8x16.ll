@@ -36,6 +36,7 @@
 
 define(`WIDTH',`16')
 define(`MASK',`i8')
+define(`ISA',`NEON')
 
 include(`util.m4')
 include(`target-neon-common.ll')

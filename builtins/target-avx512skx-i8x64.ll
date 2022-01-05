@@ -33,6 +33,7 @@ define(`WIDTH',`64')
 define(`MASK',`i1')
 define(`HAVE_GATHER',`1')
 define(`HAVE_SCATTER',`1')
+define(`ISA',`AVX512SKX')
 
 include(`util.m4')
 

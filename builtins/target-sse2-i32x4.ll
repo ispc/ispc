@@ -35,6 +35,7 @@
 ; Define some basics for a 4-wide target
 define(`WIDTH',`4')
 define(`MASK',`i32')
+define(`ISA',`SSE2')
 include(`util.m4')
 
 stdlib_core()

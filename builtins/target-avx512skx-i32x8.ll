@@ -30,6 +30,7 @@
 ;;   SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 define(`WIDTH',`8')
+define(`ISA',`AVX512SKX')
 
 include(`target-avx512-common-8.ll')
 

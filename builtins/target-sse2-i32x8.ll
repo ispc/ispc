@@ -38,6 +38,7 @@
 
 define(`WIDTH',`8')
 define(`MASK',`i32')
+define(`ISA',`SSE2')
 include(`util.m4')
 
 stdlib_core()

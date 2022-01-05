@@ -30,6 +30,7 @@
 ;;   SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.  
 
 define(`HAVE_GATHER', `1')
+define(`ISA',`AVX2')
 
 include(`target-avx-x2.ll')
 
