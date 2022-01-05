@@ -42,11 +42,11 @@ inline void contextInit(uniform Context *uniform context) {
 // CHECK-XE-NOT: addrspacecast i8 addrspace(4)* %{{.*}} to i8*
 // CHECK-XE: call spir_func void @swap___{{.*}}
 
-// CHECK-XE: declare dso_local spir_func void @intersectExternal(%v8_uniform_Context addrspace(4)* noalias, %v8_uniform_RayHit addrspace(4)* noalias, float addrspace(4)* noalias, i8 addrspace(4)* noalias)
+// CHECK-XE: declare spir_func void @intersectExternal(%v8_uniform_Context addrspace(4)* noalias, %v8_uniform_RayHit addrspace(4)* noalias, float addrspace(4)* noalias, i8 addrspace(4)* noalias)
 
 // CHECK-XE: define spir_func void @ispc_test___{{.*}}(<8 x float>* noalias %out, <8 x i1> %__mask)
 
-// CHECK-XE: define dso_local spir_func void @intersectISPC(i1 %{{.*}}, %v8_uniform_Context addrspace(4)* noalias %{{.*}}, %v8_uniform_RayHit addrspace(4)* noalias %{{.*}}, float addrspace(4)* noalias %{{.*}}, i8 addrspace(4)* noalias %{{.*}})
+// CHECK-XE: define spir_func void @intersectISPC(i1 %{{.*}}, %v8_uniform_Context addrspace(4)* noalias %{{.*}}, %v8_uniform_RayHit addrspace(4)* noalias %{{.*}}, float addrspace(4)* noalias %{{.*}}, i8 addrspace(4)* noalias %{{.*}})
 // CHECK-XE: addrspacecast %v8_uniform_Context addrspace(4)* %{{.*}} to %v8_uniform_Context*
 // CHECK-XE: addrspacecast %v8_uniform_RayHit addrspace(4)* %{{.*}} to %v8_uniform_RayHit*
 // CHECK-XE: addrspacecast i8 addrspace(4)* %{{.*}} to i8*
@@ -60,7 +60,7 @@ inline void contextInit(uniform Context *uniform context) {
 // CHECK-XE: call spir_func void @intersectExternal(%v8_uniform_Context addrspace(4)* %{{.*}}, %v8_uniform_RayHit addrspace(4)* %{{.*}}, float addrspace(4)* %{{.*}}, i8 addrspace(4)* %{{.*}})
 // CHECK-XE: call spir_func void @intersectISPC___{{.*}}(i1 {{.*}}, %v8_uniform_Context* {{.*}}, %v8_uniform_RayHit* {{.*}}, float* {{.*}}, i8* {{.*}}, <8 x i1> {{.*}}
 
-// CHECK-XE: define dso_local spir_func void @ispc_test(<8 x float> addrspace(4)* noalias %out)
+// CHECK-XE: define spir_func void @ispc_test(<8 x float> addrspace(4)* noalias %out)
 // CHECK-XE: define dllexport spir_kernel void @ispc_kernel(i8 addrspace(1)*
 // CHECK-XE: call spir_func void @ispc_test___{{.*}}(<8 x float>* {{.*}})
 

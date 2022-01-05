@@ -675,9 +675,8 @@ void Function::GenerateIR() {
             // otherss have "CMStackCall" attribute
             if (g->target->isXeTarget()) {
                 if (type->IsISPCExternal()) {
-                    // Mark ISPCExternal() function as DSO local.
                     appFunction->addFnAttr("CMStackCall");
-                    appFunction->setDSOLocal(true);
+
                 } else if (type->IsISPCKernel()) {
                     appFunction->setDLLStorageClass(llvm::GlobalValue::DLLExportStorageClass);
                     appFunction->addFnAttr("CMGenxMain");

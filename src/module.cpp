@@ -918,10 +918,6 @@ void Module::AddFunctionDeclaration(const std::string &name, const FunctionType 
         lCheckForStructParameters(functionType, pos);
     }
 
-    // Mark ISPC external functions as SPIR_FUNC for Xe.
-    if (functionType->IsISPCExternal() && disableMask) {
-        function->setDSOLocal(true);
-    }
     // Mark with corresponding attribute
     if (g->target->isXeTarget()) {
         if (functionType->IsISPCKernel()) {
