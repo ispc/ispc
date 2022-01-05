@@ -610,7 +610,7 @@ ctlztz()
 ;; svml
 
 include(`svml.m4')
-svml(AVX512SKX)
+svml(ISA)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; reductions

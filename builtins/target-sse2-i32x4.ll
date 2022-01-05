@@ -512,7 +512,7 @@ define <4 x float> @__sqrt_varying_float(<4 x float>) nounwind readonly alwaysin
 ; svml
 
 include(`svml.m4')
-svml(SSE2)
+svml(ISA)
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

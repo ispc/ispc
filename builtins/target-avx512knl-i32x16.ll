@@ -38,7 +38,7 @@ include(`target-avx512-common.ll')
 ;; svml
 
 include(`svml.m4')
-svml(AVX512KNL)
+svml(ISA)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; rcp, rsqrt

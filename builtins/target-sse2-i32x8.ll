@@ -118,7 +118,7 @@ define <8 x float> @__sqrt_varying_float(<8 x float>) nounwind readonly alwaysin
 ; svml
 
 include(`svml.m4')
-svml(SSE2)
+svml(ISA)
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

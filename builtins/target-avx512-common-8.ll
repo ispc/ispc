@@ -311,7 +311,7 @@ define <8 x double> @__sqrt_varying_double(<8 x double>) nounwind alwaysinline {
 ;; svml
 
 include(`svml.m4')
-svml(AVX512SKX)
+svml(ISA)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; reductions

@@ -270,7 +270,7 @@ define <4 x i32> @__max_varying_uint32(<4 x i32>, <4 x i32>) nounwind readonly a
 ;; svml
 
 include(`svml.m4')
-svml(AVX2)
+svml(ISA)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; mask handling

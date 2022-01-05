@@ -38,7 +38,7 @@ rdrand_decls()
 ;; svml
 
 include(`svml.m4')
-svml(AVX1)
+svml(ISA)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; int min/max
