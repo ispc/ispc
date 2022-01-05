@@ -36,6 +36,7 @@
 ; Define common 4-wide stuff
 define(`WIDTH',`8')
 define(`MASK',`i16')
+define(`ISA',`SSE4')
 include(`util.m4')
 
 stdlib_core()

@@ -33,6 +33,7 @@ define(`HAVE_GATHER', `1')
 ; Define common 4-wide stuff
 define(`WIDTH',`4')
 define(`MASK',`i32')
+define(`ISA',`AVX2')
 include(`util.m4')
 
 stdlib_core()

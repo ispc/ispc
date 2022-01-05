@@ -41,6 +41,7 @@ define(`WIDTH',`4')
 define(`BUILD_OS',`UNIX')
 define(`RUNTIME',`32')
 define(`MASK',`i32')
+define(`ISA',`WASM')
 ;; Wasm has custom clock function
 define(`HAS_CUSTOM_CLOCK',`1')
 

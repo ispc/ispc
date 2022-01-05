@@ -32,6 +32,7 @@
 define(`WIDTH',`16')
 define(`MASK',`i16')
 define(`HAVE_GATHER',`1')
+define(`ISA',`AVX2')
 
 include(`util.m4')
 
