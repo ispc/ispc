@@ -132,6 +132,38 @@ function (dpcpp_get_esimd_bitcode target_name library)
     )
 endfunction()
 
+# Extract dpcpp sycl bitcode
+# target_name: name of the target to use for the extracted bitcode. The bitcode
+#              file will be set as a ISPC_CUSTOM_DEPENDENCIES property on this target
+# library: the library to extract bitcode from
+function (dpcpp_get_sycl_bitcode target_name library)
+    set(outdir ${CMAKE_CURRENT_BINARY_DIR})
+    # Result after unbundle command
+    set(bundler_result_tmp "${outdir}/${target_name}.out")
+    # Result after bitcode linking of unbundled output
+    set(bundler_result "${outdir}/${target_name}.bc")
+
+    add_custom_command(
+        DEPENDS ${library}
+        OUTPUT ${bundler_result}
+        COMMAND ${DPCPP_CLANG_BUNDLER}
+            --inputs=$<TARGET_FILE:${library}>
+            --unbundle
+            --targets=sycl-spir64-unknown-unknown-sycldevice
+            --type=a
+            --outputs=${bundler_result_tmp}
+        COMMAND ${DPCPP_LLVM_LINK}
+            ${bundler_result_tmp}
+            -o ${bundler_result}
+        COMMENT "Extracting DPC++ Bitcode ${bundler_result}"
+    )
+
+    add_custom_target(${target_name} DEPENDS ${bundler_result})
+    set_target_properties(${target_name} PROPERTIES
+        ISPC_CUSTOM_DEPENDENCIES ${bundler_result}
+    )
+endfunction()
+
 # Link bitcode files into one
 # target_name: target to generate for the linked bitcode output
 # ARGN: targets whose ISPC_CUSTOM_DEPENDENCIES properties are the bitcode files to link
@@ -284,4 +316,38 @@ function (link_ispc_esimd ispc_target)
         ${ispc_target}_ispc2esimd_bc)
 
     add_dependencies(${ispc_target} ${ispc_target}_ispc2esimd_spv)
+endfunction()
+
+# Link ISPC and DPC++ GPU modules to SPIR-V
+# ispc_target: the ispc kernel target previously compiled to bitcode
+# ARGN: list of compiled DPCPP targets to link the ispc target with
+function (link_ispc_dpcpp ispc_target)
+    if (NOT BUILD_GPU)
+        message(FATAL_ERROR "Linking of ISPC/DPC++ modules is supported on GPU only")
+    endif()
+
+    if (NOT TARGET ${ispc_target}_bc)
+        message(FATAL_ERROR "ISPC target ${ispc_target} must be compiled to bc for ISPC/DPC++ linking")
+    endif()
+
+    set(DPCPP_BC_TARGETS "")
+    foreach(lib ${ARGN})
+        set(bc_target_name ${lib}_bc)
+        if (NOT TARGET ${bc_target_name})
+            dpcpp_get_sycl_bitcode(${bc_target_name} ${lib})
+        endif()
+        list(APPEND DPCPP_BC_TARGETS ${bc_target_name})
+    endforeach()
+
+    # Link ISPC and DPC++ on LLVM bitcode level
+    link_bitcode(${ispc_target}_ispc2dpcpp_bc
+        ${ispc_target}_bc
+        ${DPCPP_BC_TARGETS})
+
+    # Translate linked bitcode to SPIR-V
+    translate_to_spirv(${ispc_target}_ispc2dpcpp_spv
+        ${ispc_target}_bc
+        ${ispc_target}_ispc2dpcpp_bc)
+
+    add_dependencies(${ispc_target} ${ispc_target}_ispc2dpcpp_spv)
 endfunction()
