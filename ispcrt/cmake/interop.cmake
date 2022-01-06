@@ -54,13 +54,13 @@ function (add_dpcpp_library target_name)
 
         set(result "${outdir}/${fname}.o")
 
-        if(DPCPP_ESIMD_INCLUDE_DIR)
-            string(REPLACE ";" ";-I;" DPCPP_ESIMD_INCLUDE_DIR_PARMS "${DPCPP_ESIMD_INCLUDE_DIR}")
-            set(DPCPP_ESIMD_INCLUDE_DIR_PARMS "-I" ${DPCPP_ESIMD_INCLUDE_DIR_PARMS})
+        if(DPCPP_CUSTOM_INCLUDE_DIR)
+            string(REPLACE ";" ";-I;" DPCPP_CUSTOM_INCLUDE_DIR_PARMS "${DPCPP_CUSTOM_INCLUDE_DIR}")
+            set(DPCPP_CUSTOM_INCLUDE_DIR_PARMS "-I" ${DPCPP_CUSTOM_INCLUDE_DIR_PARMS})
         endif()
 
-        if (NOT DPCPP_ESIMD_FLAGS)
-            set (DPCPP_ESIMD_FLAGS "")
+        if (NOT DPCPP_CUSTOM_FLAGS)
+            set (DPCPP_CUSTOM_FLAGS "")
         endif()
 
         add_custom_command(
@@ -71,8 +71,8 @@ function (add_dpcpp_library target_name)
                 -fPIE
                 -c
                 ${DPCPP_CXX_FLAGS}
-                ${DPCPP_ESIMD_INCLUDE_DIR_PARMS}
-                ${DPCPP_ESIMD_FLAGS}
+                ${DPCPP_CUSTOM_INCLUDE_DIR_PARMS}
+                ${DPCPP_CUSTOM_FLAGS}
                 -I ${CMAKE_CURRENT_SOURCE_DIR}
                 -o ${result}
                 ${input}
