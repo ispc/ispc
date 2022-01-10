@@ -6234,10 +6234,13 @@ static std::string mangleMathOCLBuiltin(const llvm::Function &func) {
     std::string funcName = func.getName().str();
     std::vector<llvm::Type *> ArgTy;
     // spirv OpenCL builtins are used for double types only
-    Assert(retType->isVectorTy() && llvm::dyn_cast<llvm::VectorType>(retType)->getElementType()->isDoubleTy() ||
+    Assert(retType->isVectorTy() && llvm::dyn_cast<llvm::FixedVectorType>(retType)->getElementType()->isDoubleTy() ||
            retType->isSingleValueType() && retType->isDoubleTy());
-    if (retType->isVectorTy() && llvm::dyn_cast<llvm::VectorType>(retType)->getElementType()->isDoubleTy()) {
-        ArgTy.push_back(LLVMTypes::DoubleVectorType);
+    if (retType->isVectorTy() && llvm::dyn_cast<llvm::FixedVectorType>(retType)->getElementType()->isDoubleTy()) {
+        // Get vector width from retType. Required width may be different from target width
+        // for example for 32-width targets
+        ArgTy.push_back(llvm::FixedVectorType::get(LLVMTypes::DoubleType,
+                                                   llvm::dyn_cast<llvm::FixedVectorType>(retType)->getNumElements()));
         // _DvWIDTH suffix is used in target file to differentiate scalar
         // and vector versions of intrinsics. Here we remove this
         // suffix and mangle the name.
