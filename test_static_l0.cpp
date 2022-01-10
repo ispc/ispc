@@ -696,7 +696,7 @@ int main(int argc, char *argv[]) {
 #error "Currently unsupported for Xe"
 #elif (TEST_SIG == 8)
     int groupSpaceWidth = 2;
-    int groupSpaceHeight = 8;
+    int groupSpaceHeight = 16;
     assert(N >= groupSpaceWidth * groupSpaceHeight);
     L0Launch_F_Threads(hDevice, hModule, hContext, hCommandQueue, return_data, groupSpaceWidth, groupSpaceHeight);
     L0Launch_Result_Threads(hDevice, hModule, hContext, hCommandQueue, expect_data, groupSpaceWidth, groupSpaceHeight);
