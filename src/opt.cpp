@@ -2950,13 +2950,28 @@ static bool lGSToLoadStore(llvm::CallInst *callInst) {
 // MaskedStoreOptPass
 
 #ifdef ISPC_XE_ENABLED
-static llvm::Function *lXeMaskedInt8Inst(llvm::Instruction *inst, bool isStore) {
+static llvm::Function *lXeMaskedInst(llvm::Instruction *inst, bool isStore, llvm::Type *type) {
     std::string maskedFuncName;
     if (isStore) {
-        maskedFuncName = "masked_store_i8";
+        maskedFuncName = "masked_store_";
     } else {
-        maskedFuncName = "masked_load_i8";
+        maskedFuncName = "masked_load_";
     }
+    if (type == LLVMTypes::Int8Type)
+        maskedFuncName += "i8";
+    else if (type == LLVMTypes::Int16Type)
+        maskedFuncName += "i16";
+    else if (type == LLVMTypes::Int32Type)
+        maskedFuncName += "i32";
+    else if (type == LLVMTypes::Int64Type)
+        maskedFuncName += "i64";
+    else if (type == LLVMTypes::Float16Type)
+        maskedFuncName += "half";
+    else if (type == LLVMTypes::FloatType)
+        maskedFuncName += "float";
+    else if (type == LLVMTypes::DoubleType)
+        maskedFuncName += "double";
+
     llvm::CallInst *callInst = llvm::dyn_cast<llvm::CallInst>(inst);
     if (callInst != NULL && callInst->getCalledFunction()->getName().contains(maskedFuncName)) {
         return NULL;
@@ -2974,21 +2989,31 @@ static llvm::CallInst *lXeStoreInst(llvm::Value *val, llvm::Value *ptr, llvm::In
     llvm::VectorType *valVecType = llvm::dyn_cast<llvm::VectorType>(val->getType());
 #endif
     Assert(llvm::isPowerOf2_32(valVecType->getNumElements()));
-    Assert(valVecType->getPrimitiveSizeInBits() / 8 <= 8 * OWORD);
 
     // The data write of svm store must have a size that is a power of two from 16 to 128
     // bytes. However for int8 type and simd width = 8, the data write size is 8.
     // So we use masked store function here instead of svm store which process int8 type
     // correctly.
+    bool isMaskedStoreRequired = false;
     if (valVecType->getPrimitiveSizeInBits() / 8 < 16) {
-        Assert(valVecType->getScalarType() == LLVMTypes::Int8Type);
-        if (llvm::Function *maskedFunc = lXeMaskedInt8Inst(inst, true)) {
-            // @__masked_store_$1(<WIDTH x $1>* nocapture, <WIDTH x $1>, <WIDTH x MASK> %mask)
+        Assert(valVecType->getScalarType() == LLVMTypes::Int8Type && g->target->getVectorWidth() == 8);
+        isMaskedStoreRequired = true;
+    } else if (valVecType->getPrimitiveSizeInBits() / 8 > 8 * OWORD) {
+        // The data write of svm store must be less than 8 * OWORD. However for
+        // double or int64 types for simd32 targets it is bigger so use masked_store implementation
+        Assert((valVecType->getScalarType() == LLVMTypes::Int64Type ||
+                valVecType->getScalarType() == LLVMTypes::DoubleType) &&
+               g->target->getVectorWidth() == 32);
+        isMaskedStoreRequired = true;
+    }
+    if (isMaskedStoreRequired) {
+        if (llvm::Function *maskedFunc = lXeMaskedInst(inst, true, valVecType->getScalarType())) {
             return llvm::dyn_cast<llvm::CallInst>(lCallInst(maskedFunc, ptr, val, LLVMMaskAllOn, ""));
         } else {
             return NULL;
         }
     }
+
     llvm::Instruction *svm_st_zext = new llvm::PtrToIntInst(ptr, LLVMTypes::Int64Type, "svm_st_ptrtoint", inst);
 
     llvm::Type *argTypes[] = {svm_st_zext->getType(), val->getType()};
@@ -3006,23 +3031,33 @@ static llvm::CallInst *lXeLoadInst(llvm::Value *ptr, llvm::Type *retType, llvm::
 #endif
     Assert(llvm::isPowerOf2_32(retVecType->getNumElements()));
     Assert(retVecType->getPrimitiveSizeInBits());
-    Assert(retVecType->getPrimitiveSizeInBits() / 8 <= 8 * OWORD);
     // The data read of svm load must have a size that is a power of two from 16 to 128
     // bytes. However for int8 type and simd width = 8, the data read size is 8.
     // So we use masked load function here instead of svm load which process int8 type
     // correctly.
+    bool isMaskedLoadRequired = false;
     if (retVecType->getPrimitiveSizeInBits() / 8 < 16) {
-        Assert(retVecType->getScalarType() == LLVMTypes::Int8Type);
-        if (llvm::Function *maskedFunc = lXeMaskedInt8Inst(inst, false)) {
+        Assert(retVecType->getScalarType() == LLVMTypes::Int8Type && g->target->getVectorWidth() == 8);
+        isMaskedLoadRequired = true;
+    } else if (retVecType->getPrimitiveSizeInBits() / 8 > 8 * OWORD) {
+        // The data write of svm store must be less than 8 * OWORD. However for
+        // double or int64 types for simd32 targets it is bigger so use masked_store implementation
+        Assert((retVecType->getScalarType() == LLVMTypes::Int64Type ||
+                retVecType->getScalarType() == LLVMTypes::DoubleType) &&
+               g->target->getVectorWidth() == 32);
+        isMaskedLoadRequired = true;
+    }
+
+    if (isMaskedLoadRequired) {
+        if (llvm::Function *maskedFunc = lXeMaskedInst(inst, false, retVecType->getScalarType())) {
             // <WIDTH x $1> @__masked_load_i8(i8 *, <WIDTH x MASK> %mask)
             // Cast pointer to i8*
             ptr = new llvm::BitCastInst(ptr, LLVMTypes::Int8PointerType, "ptr_to_i8", inst);
-            return llvm::dyn_cast<llvm::CallInst>(lCallInst(maskedFunc, ptr, LLVMMaskAllOn, "_masked_load_i8"));
+            return llvm::dyn_cast<llvm::CallInst>(lCallInst(maskedFunc, ptr, LLVMMaskAllOn, "_masked_load_"));
         } else {
             return NULL;
         }
     }
-
     llvm::Value *svm_ld_ptrtoint = new llvm::PtrToIntInst(ptr, LLVMTypes::Int64Type, "svm_ld_ptrtoint", inst);
 
     auto Fn = llvm::GenXIntrinsic::getGenXDeclaration(m->module, llvm::GenXIntrinsic::genx_svm_block_ld_unaligned,
