@@ -1,5 +1,5 @@
 #
-#  Copyright (c) 2018-2021, Intel Corporation
+#  Copyright (c) 2018-2022, Intel Corporation
 #  All rights reserved.
 #
 #  Redistribution and use in source and binary forms, with or without
@@ -386,10 +386,10 @@ endif()
 
 # Build definitions
 target_compile_definitions(${PROJECT_NAME} PRIVATE ${LLVM_VERSION})
+string(TIMESTAMP BUILD_DATE "%Y%m%d")
+target_compile_definitions(${PROJECT_NAME} PRIVATE BUILD_DATE=\"${BUILD_DATE}\"
+                                                   BUILD_VERSION=\"${GIT_COMMIT_HASH}\")
 if (UNIX)
-    string(TIMESTAMP BUILD_DATE "%Y%m%d")
-    target_compile_definitions(${PROJECT_NAME} PRIVATE BUILD_DATE=\"${BUILD_DATE}\"
-                            BUILD_VERSION=\"${GIT_COMMIT_HASH}\")
     # Compile-time protection against static sized buffer overflows.
     target_compile_definitions(${PROJECT_NAME} PRIVATE "_FORTIFY_SOURCE=2")
 else()

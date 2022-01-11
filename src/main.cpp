@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2021, Intel Corporation
+  Copyright (c) 2010-2022, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -78,13 +78,9 @@ using namespace ispc;
 #endif // ISPC_HOST_IS_WINDOWS
 
 static void lPrintVersion() {
+    printf("%s\n", ISPC_VERSION_STRING);
 #ifdef ISPC_HOST_IS_WINDOWS
-    printf("Intel(r) Implicit SPMD Program Compiler (Intel(r) ISPC), %s (build date %s, LLVM %s)\n"
-           "Supported Visual Studio versions: %s.\n",
-           ISPC_VERSION, BUILD_DATE, ISPC_LLVM_VERSION_STRING, ISPC_VS_VERSION);
-#else
-    printf("Intel(r) Implicit SPMD Program Compiler (Intel(r) ISPC), %s (build %s @ %s, LLVM %s)\n", ISPC_VERSION,
-           BUILD_VERSION, BUILD_DATE, ISPC_LLVM_VERSION_STRING);
+    printf("Supported Visual Studio versions: %s.\n", ISPC_VS_VERSION);
 #endif
 
 // The recommended way to build ISPC assumes custom LLVM build with a set of patches.

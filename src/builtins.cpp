@@ -1008,6 +1008,12 @@ void ispc::AddBitcodeToModule(const BitcodeLib *lib, llvm::Module *module, Symbo
             }
         }
 
+        // Remove clang ID metadata from the bitcode module, as we don't need it.
+        llvm::NamedMDNode *identMD = bcModule->getNamedMetadata("llvm.ident");
+        if (identMD) {
+            identMD->eraseFromParent();
+        }
+
         std::unique_ptr<llvm::Module> M(bcModule);
         if (llvm::Linker::linkModules(*module, std::move(M))) {
             Error(SourcePos(), "Error linking stdlib bitcode.");
