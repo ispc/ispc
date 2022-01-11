@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2021, Intel Corporation
+  Copyright (c) 2010-2022, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -41,6 +41,7 @@
 #include "ctx.h"
 #include "expr.h"
 #include "func.h"
+#include "ispc_version.h"
 #include "llvmutil.h"
 #include "opt.h"
 #include "stmt.h"
@@ -51,6 +52,7 @@
 #include <algorithm>
 #include <ctype.h>
 #include <fcntl.h>
+#include <iostream>
 #include <set>
 #include <sstream>
 #include <stdarg.h>
@@ -59,6 +61,7 @@
 #include <sys/types.h>
 
 #include <clang/Basic/TargetInfo.h>
+#include <clang/Basic/Version.h>
 #include <clang/Frontend/CompilerInstance.h>
 #include <clang/Frontend/TextDiagnosticPrinter.h>
 #include <clang/Frontend/Utils.h>
@@ -180,6 +183,17 @@ Module::Module(const char *fn) {
     // DataLayout information supposed to be managed in single place in Target class.
     module->setDataLayout(g->target->getDataLayout()->getStringRepresentation());
 
+    // Version strings.
+    // Have ISPC details and LLVM details as two separate strings attached to !llvm.ident.
+    llvm::NamedMDNode *identMetadata = module->getOrInsertNamedMetadata("llvm.ident");
+    std::string ispcVersion = std::string(ISPC_VERSION_STRING);
+    std::string llvmVersion = clang::getClangToolFullVersion("LLVM");
+
+    llvm::Metadata *identNode[] = {llvm::MDString::get(*g->ctx, ispcVersion)};
+    identMetadata->addOperand(llvm::MDNode::get(*g->ctx, identNode));
+    llvm::Metadata *identNode2[] = {llvm::MDString::get(*g->ctx, llvmVersion)};
+    identMetadata->addOperand(llvm::MDNode::get(*g->ctx, identNode2));
+
     if (g->generateDebuggingSymbols) {
         llvm::TimeTraceScope TimeScope("Create Debug Data");
         // To enable debug information on Windows, we have to let llvm know, that
@@ -204,13 +218,6 @@ Module::Module(const char *fn) {
         } else {
             std::string directory, name;
             GetDirectoryAndFileName(g->currentDirectory, filename, &directory, &name);
-            char producerString[512];
-#if defined(BUILD_VERSION) && defined(BUILD_DATE)
-            snprintf(producerString, sizeof(producerString), "ispc version %s (build %s on %s)", ISPC_VERSION,
-                     BUILD_VERSION, BUILD_DATE);
-#else
-            snprintf(producerString, sizeof(producerString), "ispc version %s (built on %s)", ISPC_VERSION, __DATE__);
-#endif
             auto srcFile = diBuilder->createFile(name, directory);
             // Use DW_LANG_C_plus_plus to avoid problems with debigging on Xe.
             // The debugger reads symbols partially when a solib file is loaded.
@@ -220,7 +227,7 @@ Module::Module(const char *fn) {
             diCompileUnit =
                 diBuilder->createCompileUnit(llvm::dwarf::DW_LANG_C_plus_plus,          /* lang */
                                              srcFile,                                   /* filename */
-                                             producerString,                            /* producer */
+                                             ispcVersion.c_str(),                       /* producer */
                                              g->opt.level > 0 /* is optimized */, "-g", /* command line args */
                                              0 /* run time version */);
         }

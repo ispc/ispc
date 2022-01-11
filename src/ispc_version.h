@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2015-2021, Intel Corporation
+  Copyright (c) 2015-2022, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -66,3 +66,7 @@
 #if ISPC_LLVM_VERSION < OLDEST_SUPPORTED_LLVM || ISPC_LLVM_VERSION > LATEST_SUPPORTED_LLVM
 #error "Unhandled LLVM version"
 #endif
+
+#define ISPC_VERSION_STRING                                                                                            \
+    "Intel(r) Implicit SPMD Program Compiler (Intel(r) ISPC), " ISPC_VERSION " (build " BUILD_VERSION " @ " BUILD_DATE \
+    ", LLVM " ISPC_LLVM_VERSION_STRING ")"
